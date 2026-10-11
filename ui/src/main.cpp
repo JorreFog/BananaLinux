@@ -332,6 +332,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant)
 	};
 	ui.setHome(0);
 	Settings settings(&be, o.assets, o.data, o.h / 480.0f, variant);
+	settings.setSync(true);
 	LowBattery low;
 	be.overlay = [&](int screen) { if (screen == 0 && low.showing(now)) settings.notice(low.title, low.body, low.percent); };
 	while (std::getline(ss, cmd, ';'))
@@ -371,12 +372,31 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant)
 			bool used = ui.press(btn);
 			logf("press %s: %s, view %d sys %d game %d", b.c_str(), used ? "used" : "unused", (int)ui.view(), ui.systemIndex(), ui.gameIndex());
 		}
+		else if (op == "touch")
+		{
+			// touch <screen> <x> <y>: a tap, in px of a 640x480 panel
+			int scr = 1; float x = 0, y = 0;
+			cs >> scr >> x >> y;
+			float k = o.h / 480.0f;
+			if (settings.isOpen() && scr == 1)
+			{
+				settings.touch(x * k, y * k, true);
+				logf("touch %.0f %.0f: settings result %d", x, y, (int)settings.touch(x * k, y * k, false));
+			}
+			else
+			{
+				ui.touch(scr, x * k, y * k, true);
+				logf("touch %.0f %.0f: %s", x, y, ui.touch(scr, x * k, y * k, false) ? "used" : "unused");
+			}
+		}
 		else if (op == "shot")
 		{
 			std::string name; cs >> name;
 			double t0 = 0, t1 = 0;
 			if (settings.isOpen())
 			{
+				settings.update(now);	// what came back since the last command (a press skips the update below)
+				settings.update(now);
 				settings.render();
 				t0 = nowMs(); settings.render(); t1 = nowMs();
 			}
@@ -421,6 +441,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant)
 			logf("bench: %d frames, %.2f ms average, %.2f ms worst, %d of %d screens unchanged", n, total / n, worst, be.skipped, 2 * n);
 		}
 		else if (!op.empty()) { logf("unknown command %s", op.c_str()); return 2; }
+		if (settings.isOpen()) { settings.update(now); settings.update(now); }
 		if (lib.pendingLaunch() >= 0) { logf("launch %d: %s", lib.pendingLaunch(), lib.gameAt(lib.pendingLaunch()).path.c_str()); lib.clearLaunch(); }
 		ui.update(now);
 		if (rearrange(lib, ui)) logf("shelf: %d systems, cursor on %s", lib.systemCount(), lib.shelf(ui.systemIndex()).def.id.c_str());
@@ -754,6 +775,11 @@ int main(int argc, char** argv)
 			if (rearrange(lib, *ui)) dirty = true;
 		}
 		if (input.rescanDue()) input.open(o.touch, disp.width(), disp.height());	// a pad came or went
+		if (settingsView.isOpen())
+		{
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			if (settingsView.update(now)) dirty = true;	// a Wi-Fi scan came back, a network joined
+		}
 		int g = lib.pendingLaunch();
 		if (g >= 0)
 		{
@@ -802,7 +828,7 @@ int main(int argc, char** argv)
 		int timeout;
 		{
 			std::lock_guard<std::mutex> l(worker.uiLock);
-			timeout = want ? -1 : (settingsView.isOpen() ? -1 : ui->nextWake());	// a frame is wanted: the flip event wakes us
+			timeout = want ? -1 : (settingsView.isOpen() ? settingsView.nextWake(now) : ui->nextWake());	// a frame is wanted: the flip event wakes us
 		}
 		int toMinute = (int)((60 - wall % 60) * 1000);
 		if (timeout < 0 || timeout > toMinute) timeout = want ? timeout : toMinute;

@@ -61,6 +61,15 @@ change rebuilds the engine in the other palette), `banana/bananad.conf` (then SI
 zoneinfo files on the root): banana-ui sets `TZ` for itself and every game it starts, so a DS game's clock is local
 too, and bananad takes it for its logs on SIGHUP.
 
+**Wi-Fi** (Settings > Network): the networks around from `wifi scan` (wpa_cli's scan results, one row per name,
+strongest first, with its signal, a lock, *Saved* or *Connected*), run on a thread so the menu never waits. A on a
+network with a password opens a keyboard: four rows of ten keys in three layers and a row of wide keys, driven by
+the d-pad (A types, B deletes, X capitals, Y space, START joins) or by touch on the bottom panel. Joining writes the
+network's block first in `banana/wifi.conf` (WPA3-only networks get `key_mgmt=SAE`; a block for the same name is
+replaced), restarts wpa_supplicant and follows `wifi status` until it has an address. udhcpc is started by
+wpa_cli's action script only once wpa_supplicant is connected, so a handheld with no network in reach isn't kept
+awake asking for an address. Company (802.1X) and WEP networks are listed but go in `wifi.conf` by hand.
+
 **Low battery**: at 20% (the LED turns red), 10% and 5% (it blinks) on the battery, a notice in the bubble style
 over the bottom of the top panel for 8 s, the status bar's battery three times its size; any button hides it.
 Each step shows once until the charger has been on, and a step passed during a game shows when the menu is back.

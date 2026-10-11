@@ -1,10 +1,10 @@
 #!/bin/sh
 # The RG DS's Wi-Fi (RTL8821CS on SDIO) doesn't come back from a suspend by itself: unload it before, load it after
-# and reconnect when it was connected. "post" runs in the background, after the game and the menu are back.
+# and start it again when it was on. "post" runs in the background, after the game and the menu are back.
 [ -d /sys/module/rtw88_8821cs ] || [ -f /run/banana/wifi-unloaded ] || exit 0	# no Wi-Fi: nothing to do, at once
 case $1 in
 pre)
-    [ "$(cat /sys/class/net/wlan0/operstate 2>/dev/null)" = up ] && touch /run/banana/wifi-was-up
+    [ -f /run/banana/wpa.pid ] && touch /run/banana/wifi-was-up
     /usr/libexec/banana/wifi down
     modprobe -r rtw88_8821cs 2>/dev/null
     touch /run/banana/wifi-unloaded

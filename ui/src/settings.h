@@ -10,6 +10,7 @@
 //   /sys/class/backlight + /data/banana/backlight   brightness
 #include "../rnds/RndsUI.h"
 #include "input.h"
+#include "wifi.h"
 #include <map>
 #include <string>
 #include <vector>
@@ -22,7 +23,7 @@ namespace banana
 		Settings(rnds::Backend* be, const std::string& assets, const std::string& dataDir, float scale, const std::string& variant);
 		void setVariant(const std::string& variant);
 		void open();
-		void close() { mOpen = false; }
+		void close() { mOpen = false; page = LIST; }
 		bool isOpen() const { return mOpen; }
 
 		// what the host has to do after an input
@@ -30,6 +31,12 @@ namespace banana
 		Result press(Key k);
 		Result touch(float x, float y, bool down);	// bottom panel, device px
 		void render();
+		// background work (the Wi-Fi scan, joining a network): true when something changed and wants a frame
+		bool update(double nowMs);
+		// ms until update() has something to do, -1 nothing pending
+		int nextWake(double nowMs) const;
+		// run commands at once instead of in the background (the headless test)
+		void setSync(bool on) { sync = on; }
 
 		// a notice over the screen being drawn (between the backend's beginScreen and endScreen): the battery icon at
 		// percent, a title and a line or two, in the bubble style near the bottom of the panel
@@ -42,7 +49,7 @@ namespace banana
 			std::string file, key;					// where it is kept ("" for the special ones)
 			std::vector<std::string> names, values;	// shown, stored
 			int at = 0;
-			enum Kind { CHOICE, BRIGHTNESS, INFO, ACTION } kind = CHOICE;
+			enum Kind { CHOICE, BRIGHTNESS, INFO, ACTION, PAGE } kind = CHOICE;
 		};
 		rnds::Backend* be;
 		std::string assets, data;
@@ -53,6 +60,38 @@ namespace banana
 		bool downOnRow = false;
 		float downX = 0, downY = 0;
 		std::string about, wifiInfo;
+
+		// the Wi-Fi pages: the networks around, and the keyboard for a password (settings-wifi.cpp)
+		enum Page { LIST, NETWORKS, KEYBOARD } page = LIST;
+		std::string wifiTool, wifiConf;
+		bool sync = false;
+		wifi::Job scanJob, statusJob;
+		std::vector<wifi::Network> nets;
+		wifi::Status wstat;
+		bool scanning = false, scannedOnce = false, wifiEnabled = true;
+		int nsel = 0, ntop = 0;
+		std::string joining, message;	// the network being joined; the last thing to tell
+		double joinStart = 0, nextStatus = 0, nextScan = 0, now = 0;
+		wifi::Network target;			// the network the keyboard is for
+		std::string pw;
+		int kcol = 0, krow = 1, layer = 0;	// the keyboard's selection (column 0..9, row 0..4), lower / upper / symbols
+
+		bool wifiOn() const;
+		void openNetworks();
+		void startScan();
+		void pollStatus();
+		void markNetworks();
+		void join(const wifi::Network& n, const std::string& password);
+		Result pressNetworks(Key k);
+		Result pressKeyboard(Key k);
+		Result touchNetworks(float cx, float cy);
+		Result touchKeyboard(float cx, float cy);
+		Result keyboardKey(int row, int col);
+		void renderNetworks();
+		void renderKeyboard();
+		void bars(int n, float x, float y, const rnds::Color& on, const rnds::Color& off);
+		void lock(float x, float y, const rnds::Color& c);
+		std::string fit(const std::string& t, bool medium, float size, float width);
 
 		std::shared_ptr<rnds::Font> R, M;
 		struct Cached { rnds::TexPtr tex; int ox = 0, oy = 0; float w = 0; };

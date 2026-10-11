@@ -21,7 +21,9 @@
 - [x] A settings screen in the menu (Start): theme, brightness, motion, sounds, clock, boot animation, sleep, lid,
       LEDs, DS renderer / shader / 3D resolution, Wi-Fi on/off, About, restart, shut down
 - [x] The time zone (POSIX rules for 30 regions, summer time included; the menu, the games and bananad's logs)
-- [ ] Settings still to come: choosing a Wi-Fi network (an on-screen keyboard), volume
+- [x] Choosing a Wi-Fi network: the networks around (signal, lock, saved), the password on an on-screen keyboard
+      (buttons or touch), WPA2 and WPA3; forgetting one
+- [ ] Settings still to come: volume
 - [x] RetroArch and the libretro cores for the other systems (Buildroot packages), on one panel (settings: top or bottom)
 - [x] The Favorites shelf and the favourite systems' order updated as soon as the shelf shows again
 - [x] Input hotplug in banana-ui (USB and Bluetooth pads, watched with inotify)

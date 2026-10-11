@@ -5,7 +5,8 @@ BIOS files go in bios/.
 Box art (optional): roms/<system>/media/box/<game file name>.png  (also media/cart, media/label),
 or an EmulationStation gamelist.xml with its images, as scrapers write them.
 
-Wi-Fi: put your network in banana/wifi.conf:
+Wi-Fi: Settings (Start) > Network lists the networks around and joins one, the password typed on the
+keyboard there. Or put your network in banana/wifi.conf on a computer:
     network={
         ssid="My network"
         psk="password"

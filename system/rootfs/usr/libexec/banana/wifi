@@ -1,26 +1,62 @@
 #!/bin/sh
-# Wi-Fi from /data/banana/wifi.conf (a wpa_supplicant network block, which can be written on a computer):
+# Wi-Fi. The networks are wpa_supplicant network blocks in /data/banana/wifi.conf, written by Settings > Network
+# or on a computer:
 #   network={
 #       ssid="My network"
 #       psk="password"
 #   }
-#   wifi up | down
+#   wifi up | down | restart     wpa_supplicant on wlan0 (also with no networks yet)
+#   wifi scan                    the networks around (wpa_cli scan_results), starting wpa_supplicant if needed
+#   wifi status                  the connection (wpa_cli status)
+# An address is asked for (udhcpc) only once wpa_supplicant is connected: wpa_cli runs this script as its action
+# script, "wifi wlan0 CONNECTED|DISCONNECTED", so nothing wakes the handheld while there is no network.
 CONF=/data/banana/wifi.conf
+CTRL=/run/wpa_supplicant
+W="wpa_cli -p $CTRL -i wlan0"
+stop() { [ -f "$1" ] && kill $(cat "$1") 2>/dev/null; rm -f "$1"; }
 case $1 in
 up)
-    [ -f $CONF ] || exit 1
     for i in 1 2 3 4 5 6 7 8 9 10; do [ -d /sys/class/net/wlan0 ] && break; sleep 0.5; done
-    { echo "ctrl_interface=/run/wpa_supplicant"; echo "update_config=0"; cat $CONF; } > /run/banana/wpa.conf
+    [ -d /sys/class/net/wlan0 ] || exit 1
+    [ -f /run/banana/wpa.pid ] && exit 0
+    { echo "ctrl_interface=$CTRL"; echo "update_config=0"; echo "p2p_disabled=1"; [ -f $CONF ] && cat $CONF; } > /run/banana/wpa.conf
     ip link set wlan0 up
-    wpa_supplicant -B -i wlan0 -c /run/banana/wpa.conf -P /run/banana/wpa.pid
-    udhcpc -b -q -t 10 -i wlan0 -p /run/banana/udhcpc.pid -s /usr/share/udhcpc/default.script >/dev/null 2>&1 &&
-        ntpd -q -n -p pool.ntp.org >/dev/null 2>&1 && hwclock -w 2>/dev/null
+    wpa_supplicant -B -i wlan0 -c /run/banana/wpa.conf -P /run/banana/wpa.pid || exit 1
+    $W -a /usr/libexec/banana/wifi -B -P /run/banana/wpa_cli.pid
     ;;
 down)
-    [ -f /run/banana/udhcpc.pid ] && kill $(cat /run/banana/udhcpc.pid) 2>/dev/null
-    [ -f /run/banana/wpa.pid ] && kill $(cat /run/banana/wpa.pid) 2>/dev/null
-    rm -f /run/banana/udhcpc.pid /run/banana/wpa.pid
+    stop /run/banana/wpa_cli.pid
+    stop /run/banana/udhcpc.pid
+    stop /run/banana/wpa.pid
     ip link set wlan0 down 2>/dev/null
     ;;
-*) echo "usage: wifi up|down" >&2; exit 1 ;;
+restart)
+    "$0" down
+    sleep 0.2
+    "$0" up
+    ;;
+scan)
+    [ -f /run/banana/wpa.pid ] || "$0" up || exit 1
+    $W scan >/dev/null      # FAIL-BUSY while one is running: its results come all the same
+    sleep 3
+    $W scan_results
+    ;;
+status)
+    [ -f /run/banana/wpa.pid ] && $W status
+    ;;
+wlan0)
+    # wpa_cli's events
+    case $2 in
+    CONNECTED)
+        stop /run/banana/udhcpc.pid
+        udhcpc -b -t 5 -i wlan0 -p /run/banana/udhcpc.pid -s /usr/share/udhcpc/default.script >/dev/null 2>&1 &&
+            { ntpd -q -n -p pool.ntp.org >/dev/null 2>&1 && hwclock -w 2>/dev/null; } &
+        ;;
+    DISCONNECTED)
+        stop /run/banana/udhcpc.pid
+        ;;
+    esac
+    ;;
+*) echo "usage: wifi up|down|restart|scan|status" >&2; exit 1 ;;
 esac
+exit 0

@@ -140,6 +140,9 @@ namespace banana
 	{
 		R = rnds::Font::load(assets + "/fonts/PixelifySans-Regular.ttf");
 		M = rnds::Font::load(assets + "/fonts/PixelifySans-Medium.ttf");
+		const char* tool = getenv("BANANA_WIFI");	// the test's stand-in
+		wifiTool = tool ? tool : "/usr/libexec/banana/wifi";
+		wifiConf = data + "/wifi.conf";
 		build();
 	}
 
@@ -222,6 +225,7 @@ namespace banana
 			"/data/retroarch/retroarch.cfg", "video_monitor_index", { "Top", "Bottom" }, { "2", "1" });
 		const char* W = "Network";
 		add(W, "phone", "Wi-Fi", "", menu, "wifi", { "On", "Off" }, { "on", "off" });
+		add(W, "phone", "Network", "The networks around: A on one joins it, with a password typed on the keyboard here (or by touch).", "", "network", {}, {}, Item::PAGE);
 		const char* S = "System";
 		{
 			std::vector<std::string> names, tzs;
@@ -320,6 +324,9 @@ namespace banana
 		for (auto& it : items) load(it);
 		refreshInfo();
 		armed = -1;
+		page = LIST;
+		message.clear();
+		if (wifiOn() && !statusJob.running()) statusJob.start(wifiTool + " status", sync);	// the network's name on its row
 		mOpen = true;
 	}
 
@@ -372,6 +379,12 @@ namespace banana
 	{
 		Item& it = items[sel];
 		if (it.kind == Item::INFO) return NONE;
+		if (it.kind == Item::PAGE)
+		{
+			if (dir <= 0) return NONE;
+			openNetworks();
+			return MOVED;
+		}
 		if (it.kind == Item::ACTION)
 		{
 			if (dir <= 0) { armed = -1; return MOVED; }
@@ -391,6 +404,8 @@ namespace banana
 
 	Settings::Result Settings::press(Key k)
 	{
+		if (page == NETWORKS) return pressNetworks(k);
+		if (page == KEYBOARD) return pressKeyboard(k);
 		switch (k)
 		{
 		case Key::UP: case Key::DOWN:
@@ -433,6 +448,8 @@ namespace banana
 		if (down) { downX = cx; downY = cy; downOnRow = true; return NONE; }
 		if (!downOnRow) return NONE;
 		downOnRow = false;
+		if (page == NETWORKS) return touchNetworks(cx, cy);
+		if (page == KEYBOARD) return touchKeyboard(cx, cy);
 		// the chips: B on the left, A on the right
 		if (downY >= 418 && downY <= 466)
 		{
@@ -637,6 +654,8 @@ namespace banana
 
 	void Settings::render()
 	{
+		if (page == NETWORKS) { renderNetworks(); return; }
+		if (page == KEYBOARD) { renderKeyboard(); return; }
 		SPal p = pal(light);
 		const Item& cur = items[sel];
 
@@ -651,7 +670,7 @@ namespace banana
 		if (!value.empty()) text(value, true, 22, 170, 130, p.accent);
 		std::string help = cur.help;
 		if (cur.kind == Item::INFO) help = about;
-		if (cur.key == "wifi") help = "Wi-Fi: " + wifiInfo + ". Networks go in banana/wifi.conf on the card (see banana/README.txt).";
+		if (cur.key == "wifi") help = "Wi-Fi: " + wifiInfo + ". Network, below, joins one; networks can also be written in banana/wifi.conf on a computer (see banana/README.txt).";
 		wrapped(help, 20, 50, 196, 540, 7, p.muted);
 		be->endScreen();
 
@@ -676,22 +695,458 @@ namespace banana
 			if (it.kind == Item::CHOICE || it.kind == Item::BRIGHTNESS) v = it.names[it.at];
 			else if (it.kind == Item::ACTION) v = armed == i ? "Press A again" : "";
 			else if (it.kind == Item::INFO) v = "";
+			else if (it.kind == Item::PAGE) v = wstat.connected ? fit(wstat.ssid, true, 19, 300) : (wifiOn() ? "Choose" : "");
 			if (v.empty()) continue;
 			float vw = text(v, true, 19, 0, 0, p.ink, false, 0, true);
 			Color vc = on ? (armed == i ? p.accent : p.ink) : p.muted;
-			if (it.kind == Item::ACTION) { text(v, true, 19, 586 - vw, y + 17, vc); continue; }
+			if (it.kind == Item::ACTION || it.kind == Item::PAGE) { text(v, true, 19, 586 - vw, y + 17, vc); continue; }
 			arrow(true, 576, y + 21, vc);
 			text(v, true, 19, 566 - vw, y + 17, vc);
 			arrow(false, 556 - vw - 2 - std::round(13 / 2.0f + 1), y + 21, vc);
 		}
 		float bw = faceWidth("B", "Back");
 		face("B", "Back", 18, bw);
-		std::string act = cur.kind == Item::ACTION ? (armed == sel ? "Confirm" : cur.label) : cur.kind == Item::INFO ? "" : "Change";
+		std::string act = cur.kind == Item::ACTION ? (armed == sel ? "Confirm" : cur.label) : cur.kind == Item::INFO ? "" : cur.kind == Item::PAGE ? "Open" : "Change";
 		if (!act.empty())
 		{
 			float aw = faceWidth("A", act);
 			face("A", act, 622 - aw, aw);
 		}
+		be->endScreen();
+	}
+
+	// ---- Wi-Fi: the networks around, and a keyboard for the password ----------------------------------------------
+	bool Settings::wifiOn() const
+	{
+		return getConfValue(data + "/settings.conf", "wifi", getConfValue("/etc/banana/settings.conf", "wifi", "on")) != "off";
+	}
+
+	void Settings::openNetworks()
+	{
+		page = NETWORKS;
+		nsel = ntop = 0;
+		message.clear();
+		wifiEnabled = wifiOn();
+		if (!wifiEnabled) { nets.clear(); return; }
+		startScan();
+		pollStatus();
+	}
+
+	void Settings::startScan()
+	{
+		if (scanJob.running()) return;
+		scanning = true;
+		scanJob.start(wifiTool + " scan", sync);
+		nextScan = now + 15000;		// again while the page is open: the list follows the handheld around
+	}
+
+	void Settings::pollStatus()
+	{
+		if (!statusJob.running()) statusJob.start(wifiTool + " status", sync);
+		nextStatus = now + 1500;
+	}
+
+	void Settings::markNetworks()
+	{
+		std::string selName = nsel < (int)nets.size() ? nets[nsel].ssid : "";
+		auto saved = wifi::savedNames(wifiConf);
+		for (auto& n : nets)
+		{
+			n.saved = std::find(saved.begin(), saved.end(), n.ssid) != saved.end();
+			n.current = wstat.connected && n.ssid == wstat.ssid;
+		}
+		std::stable_partition(nets.begin(), nets.end(), [](const wifi::Network& n) { return n.current; });	// the connected one first
+		// the cursor stays on the network it was on
+		for (int i = 0; i < (int)nets.size(); i++) if (nets[i].ssid == selName) nsel = i;
+		nsel = std::max(0, std::min(nsel, (int)nets.size() - 1));
+		if (nsel < ntop) ntop = nsel;
+		if (nsel >= ntop + ROWS) ntop = nsel - ROWS + 1;
+	}
+
+	bool Settings::update(double t)
+	{
+		now = t;
+		if (!mOpen) return false;
+		if (page == NETWORKS && wifiEnabled)
+		{
+			if (!joining.empty() && now >= nextStatus) pollStatus();
+			if (joining.empty() && now >= nextScan) startScan();
+		}
+		bool changed = false;
+		std::string out;
+		if (scanJob.take(out))
+		{
+			nets = wifi::parseScan(out);
+			scanning = false;
+			scannedOnce = true;
+			markNetworks();
+			changed = true;
+		}
+		if (statusJob.take(out))
+		{
+			wifi::Status st = wifi::parseStatus(out);
+			changed |= st.connected != wstat.connected || st.ssid != wstat.ssid || st.ip != wstat.ip;
+			wstat = st;
+			if (!joining.empty() && st.connected && st.ssid == joining && !st.ip.empty())
+			{
+				message = "Connected to " + joining + " (" + st.ip + ").";
+				joining.clear();
+				changed = true;
+			}
+			markNetworks();
+		}
+		if (!joining.empty() && now - joinStart > 30000)
+		{
+			message = wstat.connected && wstat.ssid == joining ? "Joined " + joining + ", but it gave the handheld no address."
+				: "Couldn't join " + joining + ". If the password was wrong, A on it types it again.";
+			joining.clear();
+			changed = true;
+		}
+		return changed;
+	}
+
+	int Settings::nextWake(double t) const
+	{
+		if (!mOpen) return -1;
+		if (scanJob.running() || statusJob.running()) return 100;
+		if (page != NETWORKS || !wifiEnabled) return -1;
+		double due = joining.empty() ? nextScan : std::min(nextStatus, joinStart + 30001);
+		return std::max(0, (int)(due - t));
+	}
+
+	void Settings::join(const wifi::Network& n, const std::string& password)
+	{
+		page = NETWORKS;
+		if (!wifi::remember(wifiConf, n, password)) { message = "Couldn't write banana/wifi.conf on the card."; return; }
+		if (!wifiEnabled)
+		{
+			setConfValue(data + "/settings.conf", "wifi", "on");
+			for (auto& it : items) if (it.key == "wifi") load(it);
+			wifiEnabled = true;
+		}
+		spawn(wifiTool.c_str(), "restart");		// wpa_supplicant again, with the network first
+		joining = n.ssid;
+		joinStart = now;
+		nextStatus = now + 2000;
+		message = "Joining " + n.ssid + "...";
+		markNetworks();
+	}
+
+	Settings::Result Settings::pressNetworks(Key k)
+	{
+		int n = (int)nets.size();
+		switch (k)
+		{
+		case Key::UP: case Key::DOWN:
+			if (!n) return NONE;
+			nsel = (nsel + (k == Key::UP ? -1 : 1) + n) % n;
+			if (nsel < ntop) ntop = nsel;
+			if (nsel >= ntop + ROWS) ntop = nsel - ROWS + 1;
+			return MOVED;
+		case Key::A: case Key::RIGHT:
+		{
+			if (!n || !joining.empty()) return NONE;
+			const wifi::Network& net = nets[nsel];
+			if (net.unsupported)
+				message = net.ssid + " signs in a way the menu can't (a company network, or the old WEP): it can be written in banana/wifi.conf on a computer.";
+			else if (net.current)
+				message = "Connected to " + net.ssid + (wstat.ip.empty() ? "." : " (" + wstat.ip + ").");
+			else if (!net.secured)
+				join(net, "");
+			else
+			{
+				target = net;
+				pw.clear();
+				layer = 0; krow = 1; kcol = 0;
+				message.clear();
+				page = KEYBOARD;
+			}
+			return MOVED;
+		}
+		case Key::X:
+			message.clear();
+			if (!wifiEnabled)
+			{
+				setConfValue(data + "/settings.conf", "wifi", "on");
+				for (auto& it : items) if (it.key == "wifi") load(it);
+				wifiEnabled = true;
+			}
+			startScan();
+			return MOVED;
+		case Key::Y:
+		{
+			if (!n || !nets[nsel].saved) return NONE;
+			std::string name = nets[nsel].ssid;
+			if (wifi::forget(wifiConf, name))
+			{
+				message = name + " forgotten: its password is gone from banana/wifi.conf.";
+				if (name == joining) joining.clear();
+				spawn(wifiTool.c_str(), "restart");
+				markNetworks();
+			}
+			return MOVED;
+		}
+		case Key::B: case Key::LEFT: page = LIST; message.clear(); return MOVED;
+		case Key::START: page = LIST; mOpen = false; return CLOSED;
+		default: return NONE;
+		}
+	}
+
+	// the keyboard: four rows of ten keys in three layers, and a row of wider keys
+	static const char* KEYS[3][4] = {
+		{ "1234567890", "qwertyuiop", "asdfghjkl;", "zxcvbnm,./" },
+		{ "!@#$%^&*()", "QWERTYUIOP", "ASDFGHJKL:", "ZXCVBNM<>?" },
+		{ "~`'\"-_=+\\|", "[]{}<>()!?", "@#$%^&*;:/", ",.?!@#&*-_" },
+	};
+	static const struct { const char* name; int c0, span; } FKEYS[] = {
+		{ "Shift", 0, 2 }, { "#+=", 2, 2 }, { "Space", 4, 3 }, { "Del", 7, 1 }, { "Join", 8, 2 },
+	};
+	static int fkeyAt(int col)
+	{
+		for (int i = 0; i < 5; i++) if (col >= FKEYS[i].c0 && col < FKEYS[i].c0 + FKEYS[i].span) return i;
+		return 0;
+	}
+	static const float KX = 18, KPITCH = 60.4f, KY = 20, KROW = 80, KH = 70;
+
+	Settings::Result Settings::keyboardKey(int row, int col)
+	{
+		if (row < 4)
+		{
+			if (pw.size() < 63) pw += KEYS[layer][row][col];
+			message.clear();
+			return MOVED;
+		}
+		switch (fkeyAt(col))
+		{
+		case 0: layer = layer == 1 ? 0 : 1; break;
+		case 1: layer = layer == 2 ? 0 : 2; break;
+		case 2: if (pw.size() < 63) pw += ' '; break;
+		case 3: if (!pw.empty()) pw.pop_back(); break;
+		case 4:
+			if (!wifi::passwordOk(pw))
+			{
+				message = "A Wi-Fi password has 8 to 63 characters; this one has " + std::to_string(pw.size()) + ".";
+				return MOVED;
+			}
+			join(target, pw);
+			pw.clear();
+			return CHANGED;
+		}
+		message.clear();
+		return MOVED;
+	}
+
+	Settings::Result Settings::pressKeyboard(Key k)
+	{
+		int d = k == Key::LEFT || k == Key::UP ? -1 : 1;
+		switch (k)
+		{
+		case Key::LEFT: case Key::RIGHT:
+			if (krow == 4) kcol = FKEYS[(fkeyAt(kcol) + d + 5) % 5].c0;
+			else kcol = (kcol + d + 10) % 10;
+			return MOVED;
+		case Key::UP: case Key::DOWN:
+			krow = (krow + d + 5) % 5;
+			return MOVED;
+		case Key::A: return keyboardKey(krow, kcol);
+		case Key::B:
+			if (pw.empty()) { page = NETWORKS; message.clear(); return MOVED; }
+			pw.pop_back();
+			return MOVED;
+		case Key::X: layer = layer == 1 ? 0 : 1; return MOVED;
+		case Key::Y: if (pw.size() < 63) pw += ' '; return MOVED;
+		case Key::START: return keyboardKey(4, FKEYS[4].c0);
+		default: return NONE;
+		}
+	}
+
+	Settings::Result Settings::touchNetworks(float cx, float cy)
+	{
+		if (downY >= 418 && downY <= 466)
+		{
+			if (downX < 320) return pressNetworks(Key::B);
+			return pressNetworks(Key::A);
+		}
+		for (int r = 0; r < ROWS && ntop + r < (int)nets.size(); r++)
+		{
+			float ry = 82 + r * 64;
+			if (downY < ry || downY > ry + 56) continue;
+			if (ntop + r != nsel) { nsel = ntop + r; return MOVED; }
+			return pressNetworks(Key::A);
+		}
+		if (std::fabs(cy - downY) > 40 && !nets.empty())
+		{
+			int n = (int)nets.size();
+			ntop = std::max(0, std::min(n - ROWS, ntop + (cy < downY ? ROWS : -ROWS)));
+			nsel = std::max(ntop, std::min(nsel, ntop + ROWS - 1));
+			return MOVED;
+		}
+		return NONE;
+	}
+
+	Settings::Result Settings::touchKeyboard(float cx, float cy)
+	{
+		(void)cx; (void)cy;
+		if (downY >= 418 && downY <= 466)
+		{
+			if (downX < 320) return pressKeyboard(Key::B);
+			return pressKeyboard(Key::START);
+		}
+		int row = (int)std::floor((downY - KY) / KROW);
+		if (row < 0 || row > 4 || downY - KY - row * KROW > KH) return NONE;
+		int col = (int)std::floor((downX - KX) / KPITCH);
+		if (col < 0 || col > 9) return NONE;
+		krow = row;
+		kcol = row == 4 ? FKEYS[fkeyAt(col)].c0 : col;
+		return keyboardKey(row, col);
+	}
+
+	// ---- Wi-Fi: drawing --------------------------------------------------------------------------------------------
+	std::string Settings::fit(const std::string& t, bool medium, float size, float width)
+	{
+		if (text(t, medium, size, 0, 0, Color(), false, 0, true) <= width) return t;
+		std::string r = t;
+		while (!r.empty())
+		{
+			do r.pop_back(); while (!r.empty() && ((unsigned char)r.back() & 0xc0) == 0x80);	// a whole UTF-8 character
+			if (!r.empty() && ((unsigned char)r.back() & 0xc0) == 0xc0) r.pop_back();
+			if (text(r + "...", medium, size, 0, 0, Color(), false, 0, true) <= width) return r + "...";
+		}
+		return "...";
+	}
+
+	// signal: three steps, the lit ones in ink
+	void Settings::bars(int n, float x, float y, const Color& on, const Color& off)
+	{
+		for (int i = 0; i < 3; i++)
+		{
+			float h = 8 + 6 * i, bx = x + i * 9;
+			be->fill(std::round(X(bx)), std::round(X(y - h)), std::round(X(6)), std::round(X(h)), i < n ? on : off);
+		}
+	}
+
+	// a padlock on a 2 px grid
+	void Settings::lock(float x, float y, const Color& c)
+	{
+		auto r = [&](float rx, float ry, float rw, float rh) { be->fill(std::round(X(x + rx)), std::round(X(y + ry)), std::round(X(rw)), std::round(X(rh)), c); };
+		r(3, 0, 6, 2);
+		r(1, 2, 2, 6);
+		r(9, 2, 2, 6);
+		r(0, 8, 12, 10);
+	}
+
+	void Settings::renderNetworks()
+	{
+		SPal p = pal(light);
+		const wifi::Network* cur = nsel < (int)nets.size() ? &nets[nsel] : nullptr;
+		be->beginScreen(0);
+		box("screen", false, 0, 0, 640, 480);
+		box("hero", false, 18, 20, 604, 436);
+		icon("phone", 50, 56, 3);
+		text("Network", true, 17, 170, 62, p.muted, true, 1.4f);
+		text("Wi-Fi networks", true, 30, 170, 88, p.ink);
+		std::string st = !wifiEnabled ? "Wi-Fi is off" : !joining.empty() ? "Joining " + joining
+			: wstat.connected ? "Connected to " + wstat.ssid : "Not connected";
+		text(fit(st, true, 22, 420), true, 22, 170, 130, p.accent);
+		std::string help = message;
+		if (help.empty())
+			help = !wifiEnabled ? "Wi-Fi is switched off. X switches it on and searches."
+				: "A joins the network chosen, with its password typed on the keyboard (or by touch). X searches again, Y forgets a saved network. Passwords are kept in banana/wifi.conf on the card.";
+		wrapped(help, 20, 50, 196, 540, 7, p.muted);
+		be->endScreen();
+
+		be->beginScreen(1);
+		box("screen", false, 0, 0, 640, 480);
+		box("bubble", false, 18, 14, 604, 54);
+		text("Networks", true, 22, 38, 28, p.ink);
+		std::string count = scanning && nets.empty() ? "Searching..." : std::to_string(nets.size()) + (nets.size() == 1 ? " network" : " networks");
+		float cw = text(count, true, 17, 0, 0, p.muted, false, 0, true);
+		text(count, true, 17, 602 - cw, 31, p.muted);
+		Color dim(p.muted.r, p.muted.g, p.muted.b, 0.35f);
+		for (int r = 0; r < ROWS && ntop + r < (int)nets.size(); r++)
+		{
+			const wifi::Network& n = nets[ntop + r];
+			bool on = ntop + r == nsel;
+			float y = 82 + r * 64;
+			box("slot", on, 18, y, 604, 56);
+			Color c = on ? p.ink : p.muted;
+			float right = 572;
+			bars(n.bars(), right, y + 40, c, dim);
+			right -= 10;
+			if (n.secured || n.unsupported) { right -= 12; lock(right, y + 19, c); right -= 12; }
+			std::string tag = n.current ? "Connected" : n.ssid == joining ? "Joining" : n.saved ? "Saved" : "";
+			if (!tag.empty())
+			{
+				float tw = text(tag, true, 17, 0, 0, c, false, 0, true);
+				right -= tw;
+				text(tag, true, 17, right, y + 18, n.current ? p.accent : c);
+				right -= 14;
+			}
+			text(fit(n.ssid, true, 20, right - 38), true, 20, 38, y + 16, c);
+		}
+		if (nets.empty() && wifiEnabled && !scanning && scannedOnce) text("No networks found. X searches again.", true, 20, 38, 98, p.muted);
+		float bw = faceWidth("B", "Back");
+		face("B", "Back", 18, bw);
+		std::string act = !cur || cur->current || cur->unsupported || !joining.empty() ? "" : cur->secured ? "Password" : "Join";
+		if (!act.empty())
+		{
+			float aw = faceWidth("A", act);
+			face("A", act, 622 - aw, aw);
+		}
+		be->endScreen();
+	}
+
+	void Settings::renderKeyboard()
+	{
+		SPal p = pal(light);
+		be->beginScreen(0);
+		box("screen", false, 0, 0, 640, 480);
+		box("hero", false, 18, 20, 604, 436);
+		icon("phone", 50, 56, 3);
+		text("Password for", true, 17, 170, 62, p.muted, true, 1.4f);
+		text(fit(target.ssid, true, 30, 420), true, 30, 170, 88, p.ink);
+		box("slot", true, 50, 150, 540, 56);
+		// the end of the password when it is longer than the field
+		std::string shown = pw;
+		float w = text(shown, true, 22, 0, 0, p.ink, false, 0, true);
+		while (w > 480 && shown.size() > 1) { shown.erase(0, 1); w = text("..." + shown, true, 22, 0, 0, p.ink, false, 0, true); }
+		if (shown != pw) shown = "..." + shown;
+		if (pw.empty()) w = 0;
+		else text(shown, true, 22, 70, 165, p.ink);
+		be->fill(std::round(X(72 + w)), std::round(X(166)), std::round(X(10)), std::round(X(24)), p.accent);	// the cursor
+		std::string n = std::to_string(pw.size()) + (pw.size() == 1 ? " character" : " characters");
+		text(n, true, 17, 50, 216, p.muted);
+		std::string help = !message.empty() ? message
+			: "A types the key, B deletes, X capitals, Y a space, START joins. Or type on the bottom screen. The password is kept in banana/wifi.conf on the card.";
+		wrapped(help, 20, 50, 252, 540, 6, message.empty() ? p.muted : p.accent);
+		be->endScreen();
+
+		be->beginScreen(1);
+		box("screen", false, 0, 0, 640, 480);
+		for (int r = 0; r < 4; r++)
+			for (int c = 0; c < 10; c++)
+			{
+				float x = KX + c * KPITCH, y = KY + r * KROW;
+				bool on = r == krow && c == kcol;
+				box("slot", on, x, y, KPITCH - 6, KH);
+				std::string k(1, KEYS[layer][r][c]);
+				float tw = text(k, true, 26, 0, 0, p.ink, false, 0, true);
+				text(k, true, 26, x + std::round((KPITCH - 6 - tw) / 2), y + 18, on ? p.ink : p.muted);
+			}
+		int fsel = krow == 4 ? fkeyAt(kcol) : -1;
+		for (int i = 0; i < 5; i++)
+		{
+			float x = KX + FKEYS[i].c0 * KPITCH, y = KY + 4 * KROW, kw = FKEYS[i].span * KPITCH - 6;
+			box("slot", i == fsel, x, y, kw, KH);
+			std::string k = i == 1 && layer == 2 ? "abc" : FKEYS[i].name;
+			bool lit = (i == 0 && layer == 1) || (i == 1 && layer == 2);
+			float tw = text(k, true, 20, 0, 0, p.ink, false, 0, true);
+			text(k, true, 20, x + std::round((kw - tw) / 2), y + 22, lit ? p.accent : i == fsel ? p.ink : p.muted);
+		}
+		float bw = faceWidth("B", pw.empty() ? "Back" : "Delete");
+		face("B", pw.empty() ? "Back" : "Delete", 18, bw);
+		float aw = faceWidth("START", "Join");
+		face("START", "Join", 622 - aw, aw);
 		be->endScreen();
 	}
 }
