@@ -70,7 +70,9 @@ Built and checked in this repository's CI and by hand:
 - The boot animation renders at both panel sizes (`make test` shoots it at three moments).
 - Both Buildroot defconfigs load in Buildroot 2026.02.3 with every option kept.
 - RetroArch (with exactly the package's configure options) and all seven cores build and link for aarch64 against
-  an arm64 sysroot here; banana-ui links against the real arm64 libraries.
+  an arm64 sysroot here; banana-ui links against the real arm64 libraries, and the aarch64 banana-ui, run under
+  QEMU, draws the boot animation, the menu and the settings the same as the x86 build (at most 1 colour level
+  apart, from fused multiply-adds).
 - ROCKNIX's 45 RK3566 kernel patches plus the input-polldev patch apply cleanly to Linux 7.2.7, the kernel config
   fragment applies as written, and the whole kernel builds (a 25 MB `Image`) with the panels, joypad, touch, codec,
   amplifiers and battery built in; the RG DS and RG DS Plus device trees compile.
