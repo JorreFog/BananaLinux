@@ -14,9 +14,13 @@ SUPERDRASTIC_LICENSE_FILES = LICENSE THIRD_PARTY.md
 SUPERDRASTIC_DEPENDENCIES = libdrm host-python3
 
 SUPERDRASTIC_RC = src/third_party/rcheevos
+# Without Buildroot's large-file defines: resume.c interposes both open and open64 (fopen and fopen64), and with
+# _FILE_OFFSET_BITS=64 glibc renames open to open64, so the file would define the symbol twice. off_t is 64 bits
+# on AArch64 whatever the define.
+SUPERDRASTIC_CFLAGS = $(filter-out -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64,$(TARGET_CFLAGS))
 define SUPERDRASTIC_BUILD_CMDS
 	cd $(@D) && $(HOST_DIR)/bin/python3 src/rast/kerngen.py src/rast/rast_kern.S
-	cd $(@D) && $(TARGET_CC) $(TARGET_CFLAGS) -O2 -shared -fPIC -Wall -Wno-unused-function \
+	cd $(@D) && $(TARGET_CC) $(SUPERDRASTIC_CFLAGS) -O2 -shared -fPIC -Wall -Wno-unused-function \
 		-DDSFLIP_VERSION="\"$$(cat VERSION)-banana\"" -DRC_DISABLE_LUA -DRC_CLIENT_SUPPORTS_HASH \
 		-I$(STAGING_DIR)/usr/include/libdrm -I$(SUPERDRASTIC_RC)/include -I$(SUPERDRASTIC_RC)/src -Isrc/third_party/stb \
 		-o libsuperdrastic.so \
