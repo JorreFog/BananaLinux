@@ -69,6 +69,8 @@ BR2_PACKAGE_BANANA_UI=y
 BR2_PACKAGE_BANANAD=y
 BR2_PACKAGE_SUPERDRASTIC=y
 BR2_PACKAGE_DRASTIC=y
+# the other systems: RetroArch and its cores (all on by default under it)
+BR2_PACKAGE_RETROARCH=y
 
 # what the menu, sleep and the games need
 BR2_PACKAGE_ALSA_LIB=y

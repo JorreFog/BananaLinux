@@ -1,0 +1,43 @@
+# the libretro cores, one per system in /etc/banana/systems.conf (each built and checked for aarch64)
+
+config BR2_PACKAGE_LIBRETRO_GPSP
+	bool "libretro-gpsp"
+	default y
+	help
+	  Game Boy Advance, with its ARM64 dynamic recompiler.
+
+config BR2_PACKAGE_LIBRETRO_GAMBATTE
+	bool "libretro-gambatte"
+	default y
+	help
+	  Game Boy and Game Boy Color.
+
+config BR2_PACKAGE_LIBRETRO_FCEUMM
+	bool "libretro-fceumm"
+	default y
+	help
+	  NES and Famicom.
+
+config BR2_PACKAGE_LIBRETRO_SNES9X
+	bool "libretro-snes9x"
+	default y
+	help
+	  Super Nintendo.
+
+config BR2_PACKAGE_LIBRETRO_PICODRIVE
+	bool "libretro-picodrive"
+	default y
+	help
+	  Mega Drive, Master System, Mega CD and 32X.
+
+config BR2_PACKAGE_LIBRETRO_PCSX_REARMED
+	bool "libretro-pcsx-rearmed"
+	default y
+	help
+	  PlayStation, with its ARM64 dynamic recompiler (ari64) and NEON GPU.
+
+config BR2_PACKAGE_LIBRETRO_MUPEN64PLUS_NEXT
+	bool "libretro-mupen64plus-next"
+	default y
+	help
+	  Nintendo 64, with GLES3 and its ARM64 dynamic recompiler.

@@ -23,6 +23,7 @@ saves, settings) goes on an exFAT partition any computer can open.
 | **Boot animation** | From banana-ui's first frame, while the library loads on another thread: the bunch drops onto the top panel and BANANA types itself in; on the bottom panel the BANANA cartridge goes into the console with the menu's own insert motion, clicks, and the power light turns green. Then it dissolves into the menu. |
 | **Light** | The menu draws a frame in well under a millisecond when only one screen changes, skips any screen whose content didn't change, and sleeps in `poll()` between frames. While a game runs it closes the display, the input devices and the sound device: the game has the handheld to itself. |
 | **Sleep** | Close the lid or tap power: the game is paused, the handheld suspends to RAM, and opening the lid wakes it where you left off. Ten idle minutes in the menu do the same. Hold power to shut down. A battery about to run out shuts down cleanly. (`bananad`) |
+| **Other systems** | RetroArch 1.22 on one panel (top by default; the other panel and its backlight go off), KMS + GLES, with its RGUI pixel menu and cores built for the RK3566's Cortex-A55 with their ARM64 recompilers: GBA (gpSP), Game Boy (Gambatte), NES (FCEUmm), SNES (Snes9x), Mega Drive (PicoDrive), PlayStation (PCSX ReARMed), N64 (Mupen64Plus-Next). |
 | **Performance** | DS games run through [SuperDrastic](https://github.com/JorreFog/SuperDrastic): each DS screen straight to its own panel, 2x resolution, its own per-game CPU governor. Every system gets a clock profile (`banana-perf`); the menu runs at the lowest clocks. |
 | **Boot** | U-Boot with no delay, a kernel with the panels, buttons, touch and sound built in (no module loading before the menu), no initramfs, root mounted by the kernel, and an init script that only mounts the data partition before the menu starts. |
 
@@ -68,6 +69,8 @@ Built and checked in this repository's CI and by hand:
   leaves the RG DS's measured timing alone and brings the RG DS Plus's from 60.17 to 59.9994 Hz.
 - The boot animation renders at both panel sizes (`make test` shoots it at three moments).
 - Both Buildroot defconfigs load in Buildroot 2026.02.3 with every option kept.
+- RetroArch (with exactly the package's configure options) and all seven cores build and link for aarch64 against
+  an arm64 sysroot here; banana-ui links against the real arm64 libraries.
 - ROCKNIX's 45 RK3566 kernel patches plus the input-polldev patch apply cleanly to Linux 7.2.7, the kernel config
   fragment applies as written, and the whole kernel builds (a 25 MB `Image`) with the panels, joypad, touch, codec,
   amplifiers and battery built in; the RG DS and RG DS Plus device trees compile.

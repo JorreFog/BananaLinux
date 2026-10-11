@@ -13,5 +13,8 @@ Banana's own code (ui/src, system/, buildroot/package, tools/) is under the MIT 
 | ROCKNIX joypad driver | buildroot/board/rgds/kernel/rocknix-* | [hackbar/rocknix-joypad](https://github.com/hackbar/rocknix-joypad) | GPL-2.0-or-later |
 | RK3568 TF-A (BL31) | buildroot/board/rgds/rkbin | [rockchip-linux/rkbin](https://github.com/rockchip-linux/rkbin) | Rockchip's binary license (rkbin/LICENSE) |
 
-Downloaded at build time, not kept here: Linux, U-Boot, Buildroot and its packages, SuperDrastic (MIT) and DraStic
+RetroArch's joypad map for the RG DS (`buildroot/package/retroarch/retrogame_joypad.cfg`) is ROCKNIX's (GPL-2.0).
+
+Downloaded at build time, not kept here: RetroArch (GPL-3.0) and its cores (gpSP, Gambatte, FCEUmm, PCSX ReARMed and
+Mupen64Plus-Next: GPL-2.0; Snes9x and PicoDrive: non-commercial licences), libudev-zero (ISC), Linux, U-Boot, Buildroot and its packages, SuperDrastic (MIT) and DraStic
 (proprietary freeware by Exophase, the build ROCKNIX packages; not redistributed by this repository).

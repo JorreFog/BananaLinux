@@ -180,6 +180,9 @@ namespace banana
 		add(N, "nds", "Shader", "Crisp: exact pixel-area scaling. Grid: the DS's LCD grid. FSR: smooth edges, the heaviest. None costs no GPU work.", sd, "DSFLIP_SHADER",
 			{ "None", "Crisp", "Crisp + DS colours", "LCD grid", "LCD grid + colours", "FSR" }, { "none", "ds-crisp", "ds-crisp-color", "ds-grid", "ds-grid-color", "ds-fsr" });
 		add(N, "nds", "3D resolution", "2x draws the DS's 3D at twice its size on these panels, at full speed with SuperDrastic.", dcfg, "hires_3d", { "2x", "1x" }, { "1", "0" });
+		const char* O = "Other systems";
+		add(O, "gamepad", "Screen", "Which panel the systems other than the DS use (RetroArch). The other panel is switched off.",
+			"/data/retroarch/retroarch.cfg", "video_monitor_index", { "Top", "Bottom" }, { "2", "1" });
 		const char* W = "Network";
 		add(W, "phone", "Wi-Fi", "", menu, "wifi", { "On", "Off" }, { "on", "off" });
 		const char* S = "System";
@@ -214,6 +217,7 @@ namespace banana
 		if (it.file == data + "/bananad.conf") def = getConfValue("/etc/banana/bananad.conf", it.key, def);
 		if (it.file == data + "/settings.conf") def = getConfValue("/etc/banana/settings.conf", it.key, def);
 		if (it.key == "led_brightness") def = getConfValue("/etc/banana/bananad.conf", it.key, "128");
+		if (it.key == "video_monitor_index") def = getConfValue("/etc/banana/retroarch.cfg", it.key, "2");
 		std::string v = getConfValue(it.file, it.key, def);
 		it.at = 0;
 		for (size_t i = 0; i < it.values.size(); i++)
@@ -297,6 +301,15 @@ namespace banana
 			return;
 		}
 		if (it.file.find("superdrastic.conf") != std::string::npos) setConfValue(it.file, it.key, v, "=");
+		else if (it.file.find("retroarch.cfg") != std::string::npos)
+		{
+			// RetroArch's settings: from Banana's defaults the first time
+			if (access(it.file.c_str(), F_OK) != 0)
+			{
+				if (system("mkdir -p /data/retroarch && cp -n /etc/banana/retroarch.cfg /data/retroarch/ 2>/dev/null") != 0) {}
+			}
+			setConfValue(it.file, it.key, "\"" + v + "\"");	// RetroArch quotes its values
+		}
 		else if (it.file.find("drastic.cfg") != std::string::npos)
 		{
 			// DraStic's own settings live with DraStic on the data partition, made on its first run: make them now

@@ -1,0 +1,6 @@
+config BR2_PACKAGE_LIBUDEV_ZERO
+	bool "libudev-zero"
+	depends on BR2_TOOLCHAIN_HAS_THREADS
+	help
+	  libudev without the udev daemon (devices found in sysfs): what RetroArch's and SDL's input need on a
+	  system with devtmpfs only, as Banana is. https://github.com/illiliti/libudev-zero

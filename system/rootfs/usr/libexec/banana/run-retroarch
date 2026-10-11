@@ -6,4 +6,5 @@ CORE=/usr/lib/libretro/$1_libretro.so
 [ -f "$CORE" ] || { echo "no core $1" >&2; exit 1; }
 CFG=/data/retroarch/retroarch.cfg
 [ -f $CFG ] || { mkdir -p /data/retroarch; cp /etc/banana/retroarch.cfg $CFG; }
+mkdir -p /data/saves /data/states /data/screenshots
 exec retroarch --config $CFG -L "$CORE" "$2"
