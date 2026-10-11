@@ -226,6 +226,7 @@ namespace banana
 		const char* W = "Network";
 		add(W, "phone", "Wi-Fi", "", menu, "wifi", { "On", "Off" }, { "on", "off" });
 		add(W, "phone", "Network", "The networks around: A on one joins it, with a password typed on the keyboard here (or by touch).", "", "network", {}, {}, Item::PAGE);
+		add(W, "phone", "File sharing", "", menu, "share", { "Off", "On" }, { "off", "on" });
 		const char* S = "System";
 		{
 			std::vector<std::string> names, tzs;
@@ -301,6 +302,7 @@ namespace banana
 			snprintf(space, sizeof space, "%.1f GB free of %.1f GB", vf.f_bavail * (double)vf.f_frsize / 1e9, vf.f_blocks * (double)vf.f_frsize / 1e9);
 		// Wi-Fi: the address, if there is one
 		wifiInfo = "Off";
+		ip.clear();
 		std::string state = readLine("/sys/class/net/wlan0/operstate");
 		if (!state.empty())
 		{
@@ -309,7 +311,10 @@ namespace banana
 			ifreq ifr = {};
 			strncpy(ifr.ifr_name, "wlan0", IFNAMSIZ - 1);
 			if (fd >= 0 && ioctl(fd, SIOCGIFADDR, &ifr) == 0)
-				wifiInfo = std::string("Connected: ") + inet_ntoa(((sockaddr_in*)&ifr.ifr_addr)->sin_addr);
+			{
+				ip = inet_ntoa(((sockaddr_in*)&ifr.ifr_addr)->sin_addr);
+				wifiInfo = "Connected: " + ip;
+			}
 			if (fd >= 0) ::close(fd);
 		}
 		std::ostringstream a;
@@ -373,6 +378,7 @@ namespace banana
 		if (it.file == data + "/bananad.conf") poke("bananad");
 		if (it.key == "timezone") { setenv("TZ", v.c_str(), 1); tzset(); poke("bananad"); }	// bananad's logs too
 		if (it.key == "wifi") spawn("/usr/libexec/banana/wifi", v == "on" ? "up" : "down");
+		if (it.key == "share") spawn("/usr/libexec/banana/share", v == "on" ? "up" : "down");
 	}
 
 	Settings::Result Settings::change(int dir)
@@ -671,6 +677,14 @@ namespace banana
 		std::string help = cur.help;
 		if (cur.kind == Item::INFO) help = about;
 		if (cur.key == "wifi") help = "Wi-Fi: " + wifiInfo + ". Network, below, joins one; networks can also be written in banana/wifi.conf on a computer (see banana/README.txt).";
+		if (cur.key == "share")
+		{
+			std::string at = ip.empty() ? "<address>" : ip;
+			help = "The card on the network: \\\\" + at + "\\banana in Windows' File Explorer, smb://" + at +
+				"/banana on a Mac (Finder, Go, Connect to Server). Anyone on the network can open it with no password: "
+				"leave it off on networks you don't trust.";
+			if (ip.empty()) help += " (Not connected to Wi-Fi now.)";
+		}
 		wrapped(help, 20, 50, 196, 540, 7, p.muted);
 		be->endScreen();
 

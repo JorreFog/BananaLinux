@@ -42,6 +42,8 @@ banana-perf ui
     if [ -f /data/banana/wifi.conf ] && ! grep -q '^ *wifi *= *off' /data/banana/settings.conf 2>/dev/null; then
         /usr/libexec/banana/wifi up
     fi
+    # file sharing, when switched on in the settings
+    grep -q '^ *share *= *on' /data/banana/settings.conf 2>/dev/null && /usr/libexec/banana/share up
     /usr/libexec/banana/panel-tune
 ) &
 exit 0

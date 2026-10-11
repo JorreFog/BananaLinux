@@ -70,6 +70,13 @@ replaced), restarts wpa_supplicant and follows `wifi status` until it has an add
 wpa_cli's action script only once wpa_supplicant is connected, so a handheld with no network in reach isn't kept
 awake asking for an address. Company (802.1X) and WEP networks are listed but go in `wifi.conf` by hand.
 
+**File sharing** (Settings > Network): the card's data partition as `\\<address>\banana` over SMB3, served by
+the kernel (`ksmbd`, a module loaded only when sharing is switched on) and ksmbd-tools' `ksmbd.mountd`, as a guest
+share forced to root (exFAT has no owners) with DOS attributes not stored (exFAT has no extended attributes). No
+password, so it is off by default and the settings screen says so. banana-ui watches the ROM folders (inotify):
+games copied in are read into the library once the copying has been quiet for 2 s, while the menu shows its home
+screen.
+
 **Low battery**: at 20% (the LED turns red), 10% and 5% (it blinks) on the battery, a notice in the bubble style
 over the bottom of the top panel for 8 s, the status bar's battery three times its size; any button hides it.
 Each step shows once until the charger has been on, and a step passed during a game shows when the menu is back.

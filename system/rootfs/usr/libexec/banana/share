@@ -1,0 +1,38 @@
+#!/bin/sh
+# File sharing: the card's data partition (/data: roms, bios, saves, banana/...) on the network over SMB3, through
+# the kernel's own server (ksmbd, a module loaded only now) and ksmbd-tools. Guest access, no password: the
+# settings screen says so, and it is off until switched on there (Settings > Network > File sharing).
+#   share up | down
+CONF=/run/banana/ksmbd.conf
+case $1 in
+up)
+    modprobe ksmbd 2>/dev/null || exit 1
+    pidof ksmbd.mountd >/dev/null && exit 0
+    cat > $CONF <<'CONF'
+[global]
+	server string = Banana
+	netbios name = BANANA
+	map to guest = bad user
+	guest account = nobody
+[banana]
+	comment = Banana: games, BIOS, saves and settings
+	path = /data
+	read only = no
+	guest ok = yes
+	force user = root
+	force group = root
+	; exFAT has no extended attributes to keep DOS attributes in
+	store dos attributes = no
+	hide dot files = yes
+CONF
+    : > /run/banana/ksmbdpwd.db
+    ksmbd.mountd -C $CONF -P /run/banana/ksmbdpwd.db
+    ;;
+down)
+    ksmbd.control -s >/dev/null 2>&1
+    for i in 1 2 3 4 5 6 7 8 9 10; do pidof ksmbd.mountd >/dev/null || break; sleep 0.2; done
+    modprobe -r ksmbd 2>/dev/null
+    ;;
+*) echo "usage: share up|down" >&2; exit 1 ;;
+esac
+exit 0

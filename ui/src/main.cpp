@@ -38,6 +38,7 @@
 #include <poll.h>
 #include <sstream>
 #include <sys/eventfd.h>
+#include <sys/inotify.h>
 #include <sys/wait.h>
 #include <thread>
 #include <time.h>
@@ -261,6 +262,29 @@ static bool rearrange(Host& lib, rnds::UI& ui)
 	ui.setHome(to);
 	return true;
 }
+
+// ---- games copied onto the card while the menu runs (file sharing) ------------------------------------------------
+// inotify on the ROM folders; the library is read again once the copying has been quiet for 2 s, and only while the
+// menu shows its home screen (a game list under the cursor isn't reshuffled)
+struct RomWatch
+{
+	int fd = -1;
+	double due = 0;
+	void watch(const std::vector<std::string>& dirs)
+	{
+		if (fd < 0) fd = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
+		if (fd < 0) return;
+		for (auto& d : dirs)	// a folder that isn't there yet is caught by its parent's watch, then added here
+			inotify_add_watch(fd, d.c_str(), IN_CREATE | IN_DELETE | IN_MOVED_FROM | IN_MOVED_TO | IN_CLOSE_WRITE);
+	}
+	void read(double now)
+	{
+		char buf[4096];
+		bool any = false;
+		while (::read(fd, buf, sizeof buf) > 0) any = true;
+		if (any) due = now + 2000;
+	}
+};
 
 // ---- the low-battery notice ---------------------------------------------------------------------------------------
 // At 20% (the LED turns red), 10% and 5% (it blinks), on the battery: a notice over the top panel for 8 s, which any
@@ -634,6 +658,8 @@ int main(int argc, char** argv)
 	Settings settingsView(&be, o.assets, o.data, scale, variant);
 	LowBattery low;
 	bool batteryDue = true;
+	RomWatch roms;
+	roms.watch(lib.watchDirs());
 	be.overlay = [&](int screen) { if (screen == 0 && low.showing(nowMs())) settingsView.notice(low.title, low.body, low.percent); };
 
 	// what a change on the settings screen means for the menu (called with uiLock held)
@@ -813,6 +839,23 @@ int main(int argc, char** argv)
 		time_t wall = time(nullptr);
 		int minute = (int)(wall / 60);
 		if (minute != lastMinute) { lastMinute = minute; dirty = true; batteryDue = true; }
+		if (roms.due > 0 && now >= roms.due && !settingsView.isOpen())
+		{
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			if (ui->view() == rnds::UI::HOME)
+			{
+				roms.due = 0;
+				std::string id = lib.systemCount() ? lib.shelf(ui->systemIndex()).def.id : "";
+				lib.scan();
+				int at = 0;
+				for (int i = 0; i < lib.systemCount(); i++) if (lib.shelf(i).def.id == id) at = i;
+				ui->dataChanged();
+				ui->setHome(at);
+				roms.watch(lib.watchDirs());
+				logf("the games on the card changed: %d systems", lib.systemCount());
+				dirty = true;
+			}
+		}
 		if (batteryDue)
 		{
 			batteryDue = false;
@@ -849,6 +892,16 @@ int main(int argc, char** argv)
 		if (timeout < 0 || timeout > toMinute) timeout = want ? timeout : toMinute;
 		int r = rep.wait(now);
 		if (r >= 0 && (timeout < 0 || r < timeout)) timeout = r;
+		bool rescanCan;
+		{
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			rescanCan = roms.due > 0 && !settingsView.isOpen() && ui->view() == rnds::UI::HOME;	// else the next press brings it
+		}
+		if (rescanCan)
+		{
+			int left = std::max(0, (int)(roms.due - now)) + 1;
+			if (timeout < 0 || left < timeout) timeout = left;
+		}
 		if (low.showing(now))
 		{
 			int left = (int)(low.until - now) + 1;
@@ -858,6 +911,7 @@ int main(int argc, char** argv)
 		std::vector<pollfd> fds;
 		fds.push_back({ sigPipe[0], POLLIN, 0 });
 		fds.push_back({ worker.wakeFd, POLLIN, 0 });
+		if (roms.fd >= 0) fds.push_back({ roms.fd, POLLIN, 0 });
 		if (disp.isOpen()) fds.push_back({ disp.pollFd(), POLLIN, 0 });
 		for (int fd : input.fds()) fds.push_back({ fd, POLLIN, 0 });
 		int n = poll(fds.data(), fds.size(), timeout);
@@ -877,6 +931,8 @@ int main(int argc, char** argv)
 					if (c == SIGUSR1) { std::lock_guard<std::mutex> l(worker.uiLock); be.invalidate(); ui->dataChanged(); dirty = true; batteryDue = true; }
 				}
 			}
+			else if (p.fd == roms.fd)
+				roms.read(nowMs());
 			else if (p.fd == worker.wakeFd)
 			{
 				uint64_t v;

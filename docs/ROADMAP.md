@@ -35,4 +35,6 @@
 - [ ] Kernel trimming for size and boot time (initcall_debug on the device first)
 - [x] The ROM's own icon on cartridges inside `.zip` files (banana-ui's streaming zip reader, zlib)
 - [ ] RetroAchievements progress on the shelf
-- [ ] An SSH/Samba service you can switch on, off by default
+- [x] File sharing over Wi-Fi, off by default: the card's data partition over SMB3 (the kernel's ksmbd, loaded only
+      when switched on), games copied in show up in the menu by themselves
+- [ ] SSH for development, off by default

@@ -43,3 +43,6 @@ CONFIG_CPU_FREQ_GOV_POWERSAVE=y
 # CONFIG_KALLSYMS_ALL is not set
 # CONFIG_IKCONFIG is not set
 # CONFIG_SCHED_AUTOGROUP is not set
+# file sharing over Wi-Fi (Settings > Network > File sharing): the kernel's SMB3 server, a module loaded only when
+# sharing is switched on
+CONFIG_SMB_SERVER=m

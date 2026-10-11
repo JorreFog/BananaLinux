@@ -336,6 +336,19 @@ namespace banana
 		return "";
 	}
 
+	std::vector<std::string> Library::watchDirs() const
+	{
+		std::vector<std::string> r = { romRoot };
+		for (auto& d : defs)
+		{
+			std::string dir = romRoot + "/" + d.folder;
+			r.push_back(dir);
+			r.push_back(dir + "/media");
+			for (const char* m : { "box", "cart", "label" }) r.push_back(dir + "/media/" + m);
+		}
+		return r;
+	}
+
 	void Library::scan()
 	{
 		loadState();
