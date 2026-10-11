@@ -45,12 +45,27 @@ jobs:
     strategy:
       matrix:
         board: [rgds, rgds-plus]
+    env:
+      BR2_DL_DIR: ${{ github.workspace }}/dl
     steps:
       - uses: actions/checkout@v4
+      - name: Free disk space (the toolchain, LLVM for Mesa and the kernel need ~40 GB)
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h /
       - name: Packages
-        run: sudo apt-get update && sudo apt-get install -y build-essential bc bison flex libssl-dev libelf-dev unzip rsync cpio python3-dev swig libgnutls28-dev
+        run: sudo apt-get update && sudo apt-get install -y build-essential bc bison flex libssl-dev libelf-dev unzip rsync cpio file wget python3-dev swig libgnutls28-dev
+      - name: Downloads cache
+        uses: actions/cache@v4
+        with:
+          path: dl
+          key: dl-${{ hashFiles('buildroot/configs/*', 'buildroot/package/**') }}
+          restore-keys: dl-
       - name: Build
         run: make ${{ matrix.board }}
+      - name: Build log on failure
+        if: failure()
+        run: tail -n 200 output/${{ matrix.board }}/build/*/.stamp_* 2>/dev/null | tail -n 50; ls -t output/${{ matrix.board }}/build | head -5
       - uses: actions/upload-artifact@v4
         with:
           name: banana-${{ matrix.board }}

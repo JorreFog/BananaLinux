@@ -7,12 +7,13 @@
 # The same archive ROCKNIX's drastic-sa package downloads
 DRASTIC_VERSION = 1.0
 DRASTIC_SOURCE = drastic.tar.gz
-DRASTIC_SITE = https://github.com/ROCKNIX/packages/raw/main
+DRASTIC_SITE = https://raw.githubusercontent.com/ROCKNIX/packages/main
 DRASTIC_LICENSE = Proprietary (freeware)
 DRASTIC_REDISTRIBUTE = NO
 
+# the archive is drastic/drastic_aarch64/...
 define DRASTIC_EXTRACT_CMDS
-	$(TAR) -xzf $(DRASTIC_DL_DIR)/$(DRASTIC_SOURCE) -C $(@D)
+	$(TAR) -xzf $(DRASTIC_DL_DIR)/$(DRASTIC_SOURCE) -C $(@D) --strip-components=1
 endef
 
 # ROCKNIX's settings and button map for the RG DS (board/rgds/drastic.cfg), with what ROCKNIXDS turns on for

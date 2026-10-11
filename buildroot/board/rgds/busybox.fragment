@@ -1,0 +1,5 @@
+# Banana: what its scripts use beyond Buildroot's busybox configuration
+# the clock from the network once Wi-Fi is up (usr/libexec/banana/wifi)
+CONFIG_NTPD=y
+# /etc/sysctl.d/banana.conf at boot (rcS)
+CONFIG_SYSCTL=y
