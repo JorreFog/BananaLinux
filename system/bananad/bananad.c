@@ -18,7 +18,8 @@
  *     rk817. The route is ALSA's default device, written to /run/banana/asound.conf (/etc/asound.conf points
  *     there), so everything opened after a change follows it; the volume keys change the card that plays.
  *
- * Settings: /etc/banana/bananad.conf, then /data/banana/bananad.conf (key = value lines, see bananad.conf).
+ * Settings: /etc/banana/bananad.conf, then /data/banana/bananad.conf (key = value lines, see bananad.conf); SIGHUP
+ * reads them again (the menu's settings screen sends it).
  * It reads the input devices alongside banana-ui and the games (evdev allows many readers) and grabs nothing.
  */
 #define _GNU_SOURCE
@@ -65,6 +66,9 @@ static void audio_route(void);
 static int headphones;
 static int fn_held, power_down, lid_closed;
 static double power_since, last_input, ignore_power_until;
+
+static volatile sig_atomic_t reload;
+static void on_hup(int sig) { (void)sig; reload = 1; }
 
 static double mono(void)
 {
@@ -497,10 +501,12 @@ static int battery_state(char *name, size_t n, int *pct, int *charging)
 	return found;
 }
 
+int leds_last = -2;	/* the upper LED's state as last set; -2: set it again */
 static void leds_update(void)
 {
 	static char green[300], red[300], amber[300];
-	static int looked, last = -2;
+	static int looked;
+	int last = leds_last;
 	if (!looked) {
 		looked = 1;
 		led_path("power", green, sizeof green);
@@ -514,7 +520,7 @@ static void leds_update(void)
 	/* the upper LED: green, red when low, blinking red when critical (not while charging) */
 	int state = level <= 0 ? 0 : (!charging && pct >= 0 && pct <= cfg.led_critical) ? 3 : (!charging && pct >= 0 && pct <= cfg.led_low) ? 2 : 1;
 	if (state != last) {
-		last = state;
+		leds_last = state;
 		led_set(green, state == 1 ? "on" : "off", level);
 		led_set(red, state == 3 ? "blink" : state == 2 ? "on" : "off", level);
 		/* the lower LED: amber while charging, driven by the kernel from the charger's state */
@@ -626,6 +632,9 @@ int main(int argc, char **argv)
 	load_conf("/etc/banana/bananad.conf");
 	load_conf("/data/banana/bananad.conf");
 	signal(SIGCHLD, SIG_DFL);
+	struct sigaction sa = { 0 };
+	sa.sa_handler = on_hup;		/* no SA_RESTART: poll() returns, and the loop reloads */
+	sigaction(SIGHUP, &sa, NULL);
 	mkdir("/run/banana", 0755);
 
 	int ino = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
@@ -651,6 +660,14 @@ int main(int argc, char **argv)
 		int timeout = power_down ? 100 : (save_volume_at > 0 || save_backlight_at > 0) ? 500 : 15000;
 		poll(pf, n, timeout);
 		double now = mono();
+		if (reload) {
+			reload = 0;
+			load_conf("/etc/banana/bananad.conf");
+			load_conf("/data/banana/bananad.conf");
+			leds_last = -2;
+			leds_update();
+			say("settings read again: lid %s, auto-sleep %d min, LEDs %d", cfg.lid_sleep ? "sleeps" : "ignored", cfg.autosleep_min, cfg.led_brightness);
+		}
 
 		for (int i = 0; i < ndev; i++) {
 			if (!(pf[i].revents & POLLIN)) continue;

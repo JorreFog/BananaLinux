@@ -19,6 +19,7 @@ saves, settings) goes on an exFAT partition any computer can open.
 | | |
 |---|---|
 | **The menu** | ROCKNIXDS Pixel, the same engine (imported unchanged from ROCKNIXDS) drawn in software straight onto both panels by `banana-ui`: the system shelf, DS cartridges with their label art, box covers, play stats, the cartridge sliding into the console. Dark and light. Banana's mark is the BananaUI bunch redrawn as pixel art in the theme's icon style. |
+| **Settings** | Start in the menu: theme, brightness, motion, sounds, clock, the boot animation, sleep when idle, the lid, the LEDs, the DS renderer, shader and 3D resolution, Wi-Fi, About, restart and shut down. In the same look, applied at once. |
 | **Boot animation** | From banana-ui's first frame, while the library loads on another thread: the bunch drops onto the top panel and BANANA types itself in; on the bottom panel the BANANA cartridge goes into the console with the menu's own insert motion, clicks, and the power light turns green. Then it dissolves into the menu. |
 | **Light** | The menu draws a frame in well under a millisecond when only one screen changes, skips any screen whose content didn't change, and sleeps in `poll()` between frames. While a game runs it closes the display, the input devices and the sound device: the game has the handheld to itself. |
 | **Sleep** | Close the lid or tap power: the game is paused, the handheld suspends to RAM, and opening the lid wakes it where you left off. Ten idle minutes in the menu do the same. Hold power to shut down. A battery about to run out shuts down cleanly. (`bananad`) |
@@ -30,7 +31,12 @@ saves, settings) goes on an exFAT partition any computer can open.
   <img src="docs/img/menu-library.png" width="248" alt="The DS library: game cartridges on the bottom screen, the selected game's stats on the top">
   <img src="docs/img/menu-ready.png" width="248" alt="The ready screen: the cartridge going into the console">
 </p>
-<p align="center"><sub>banana-ui's own frames (headless renders, <code>make test</code>), with a test library of made-up games.</sub></p>
+<p align="center">
+  <img src="docs/img/menu-settings.png" width="248" alt="The settings screen: the selected setting's icon, name, value and description on the top screen; the list of settings as slots with left and right arrows on the bottom">
+  <img src="docs/img/menu-settings-system.png" width="248" alt="The settings screen on the System section: About, Restart, Shut down">
+</p>
+<p align="center"><sub>banana-ui's own frames (headless renders, <code>make test</code>), with a test library of made-up games.
+Start opens the settings.</sub></p>
 
 ## Made for the RG DS and RG DS Plus
 

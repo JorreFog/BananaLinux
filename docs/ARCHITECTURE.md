@@ -54,6 +54,11 @@ ROCKNIXDS, ES is the Source and its GL renderer the Backend. In Banana:
   picture worker and signals, with a timeout from the engine's next animation step or the next minute (the
   clock). Nothing runs while nothing changes.
 
+**Settings** (`src/settings.cpp`, Start): drawn with the engine's own box styles and Pixelify Sans through the
+same Backend. Each change is written at once to the file that owns it: `banana/settings.conf` (the menu; a theme
+change rebuilds the engine in the other palette), `banana/bananad.conf` (then SIGHUP to bananad), 
+`banana/superdrastic.conf` (read by run-drastic), DraStic's `drastic.cfg`, and the backlights.
+
 Starting a game: banana-ui writes the game's pid to `/run/banana/game.pid`, closes the display, the input
 devices and the sound device, sets the system's clock profile, and runs its `run` command. When the game exits it
 takes the panels back, records the play, and shows the game's library again.

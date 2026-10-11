@@ -1,0 +1,78 @@
+#pragma once
+// banana-ui: the settings screen (Start in the menu), drawn in ROCKNIXDS Pixel's look with the engine's own pieces
+// (its box styles painted by rnds::paintBox, Pixelify Sans, the theme's pixel icons). Bottom panel: the list, one
+// row per setting in the slots' style, ◀ value ▶ on the right, and the B / A chips; top panel: the setting's
+// section icon, its name and what it does. Every change is applied and saved at once:
+//   /data/banana/settings.conf     the menu's (theme, motion, sounds, clock, splash, Wi-Fi)
+//   /data/banana/bananad.conf      sleep and the LEDs (bananad reloads it on SIGHUP)
+//   /data/banana/superdrastic.conf the DS renderer and shader (run-drastic reads it)
+//   /data/drastic/config/drastic.cfg  the DS's 3D resolution
+//   /sys/class/backlight + /data/banana/backlight   brightness
+#include "../rnds/RndsUI.h"
+#include "input.h"
+#include <map>
+#include <string>
+#include <vector>
+
+namespace banana
+{
+	class Settings
+	{
+	public:
+		Settings(rnds::Backend* be, const std::string& assets, const std::string& dataDir, float scale, const std::string& variant);
+		void setVariant(const std::string& variant);
+		void open();
+		void close() { mOpen = false; }
+		bool isOpen() const { return mOpen; }
+
+		// what the host has to do after an input
+		enum Result { NONE, MOVED, CHANGED, CLOSED, THEME, REBOOT, POWEROFF };
+		Result press(Key k);
+		Result touch(float x, float y, bool down);	// bottom panel, device px
+		void render();
+
+	private:
+		struct Item
+		{
+			std::string section, icon, label, help;
+			std::string file, key;					// where it is kept ("" for the special ones)
+			std::vector<std::string> names, values;	// shown, stored
+			int at = 0;
+			enum Kind { CHOICE, BRIGHTNESS, INFO, ACTION } kind = CHOICE;
+		};
+		rnds::Backend* be;
+		std::string assets, data;
+		float s;
+		bool light = false, mOpen = false;
+		std::vector<Item> items;
+		int sel = 0, top = 0, armed = -1;			// armed: an action waiting for its second A
+		bool downOnRow = false;
+		float downX = 0, downY = 0;
+		std::string about, wifiInfo;
+
+		std::shared_ptr<rnds::Font> R, M;
+		struct Cached { rnds::TexPtr tex; int ox = 0, oy = 0; float w = 0; };
+		std::map<std::string, Cached> cache;
+
+		void build();
+		void load(Item& it);
+		Result change(int dir);
+		void save(const Item& it);
+		void refreshInfo();
+
+		// drawing, in CSS px of a 640x480 panel
+		float X(float v) const { return v * s; }
+		void box(const std::string& kind, bool on, float x, float y, float w, float h);
+		float text(const std::string& t, bool medium, float size, float x, float top, const rnds::Color& c, bool upper = false, float ls = 0, bool measureOnly = false);
+		void wrapped(const std::string& t, float size, float x, float top, float width, int maxLines, const rnds::Color& c);
+		void icon(const std::string& name, float x, float y, int scale);
+		void arrow(bool right, float x, float y, const rnds::Color& c);
+		void face(const std::string& key, const std::string& label, float x, float w);
+		float faceWidth(const std::string& key, const std::string& label);
+		static constexpr int ROWS = 5;
+	};
+
+	// key = value files: the line for key changed (or added), the rest kept; written beside and renamed over
+	void setConfValue(const std::string& path, const std::string& key, const std::string& value, const char* sep = " = ");
+	std::string getConfValue(const std::string& path, const std::string& key, const std::string& def);
+}

@@ -8,7 +8,7 @@ CXXFLAGS ?= -O2
 override CXXFLAGS += -std=c++17 -Wall -Wno-unused-function
 override LDLIBS += -lpthread
 
-SRC = src/main.cpp src/soft.cpp src/kms.cpp src/input.cpp src/library.cpp src/sound.cpp src/splash.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp
+SRC = src/main.cpp src/soft.cpp src/kms.cpp src/input.cpp src/library.cpp src/sound.cpp src/splash.cpp src/settings.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp
 PKGS = freetype2 libdrm
 ifeq ($(ALSA),1)
 PKGS += alsa

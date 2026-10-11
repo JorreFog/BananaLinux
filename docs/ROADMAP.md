@@ -15,7 +15,9 @@
 
 ## 0.2: a handheld you can use every day
 
-- [ ] A settings screen in the menu (Start): theme, sounds, sleep, Wi-Fi networks, brightness, the clock, time zone
+- [x] A settings screen in the menu (Start): theme, brightness, motion, sounds, clock, boot animation, sleep, lid,
+      LEDs, DS renderer / shader / 3D resolution, Wi-Fi on/off, About, restart, shut down
+- [ ] Settings still to come: choosing a Wi-Fi network (an on-screen keyboard), the time zone, volume
 - [ ] RetroArch and the libretro cores for the other systems (Buildroot packages), set up for one panel
 - [ ] The Favorites shelf refreshing as soon as a game is starred (now on the next scan)
 - [ ] Input hotplug in banana-ui (USB and Bluetooth pads)

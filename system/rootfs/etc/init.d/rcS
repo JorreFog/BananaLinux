@@ -36,7 +36,10 @@ banana-perf ui
 # not needed for the menu's first frame
 (
     modprobe -a rtw88_8821cs 2>/dev/null
-    [ -f /data/banana/wifi.conf ] && /usr/libexec/banana/wifi up
+    # Wi-Fi when there is a network to join and the settings screen didn't switch it off
+    if [ -f /data/banana/wifi.conf ] && ! grep -q '^ *wifi *= *off' /data/banana/settings.conf 2>/dev/null; then
+        /usr/libexec/banana/wifi up
+    fi
     hwclock -s 2>/dev/null
     /usr/libexec/banana/panel-tune
 ) &

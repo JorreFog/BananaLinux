@@ -7,4 +7,6 @@ T=$1
 rm -f "$T"/etc/init.d/S[0-9]*
 # the data partition's mount point, and the boot partition's
 mkdir -p "$T/data" "$T/run" "$T/boot"
+# the version the settings screen's About shows
+cp "$(dirname "$0")/../../../VERSION" "$T/etc/banana/version"
 rm -rf "$T/usr/share/man" "$T/usr/share/doc" "$T/usr/share/info"

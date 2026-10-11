@@ -18,6 +18,7 @@
 #include "library.h"
 #include "soft.h"
 #include "splash.h"
+#include "settings.h"
 #include "sound.h"
 
 #include <atomic>
@@ -126,6 +127,12 @@ struct Worker
 		wakeFd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
 		ui->setNotifiers([this] { kick(); }, [this] { uint64_t one = 1; if (write(wakeFd, &one, 8) < 0) {} });
 		th = std::thread([this] { run(); });
+	}
+	// a new UI (the theme changed): called with uiLock held
+	void attach(rnds::UI* u)
+	{
+		ui = u;
+		ui->setNotifiers([this] { kick(); }, [this] { uint64_t one = 1; if (write(wakeFd, &one, 8) < 0) {} });
 	}
 	void kick()
 	{
@@ -255,6 +262,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant)
 		return stbi_write_png(path.c_str(), o.w, o.h, 3, rgb.data(), o.w * 3) != 0;
 	};
 	ui.setHome(0);
+	Settings settings(&be, o.assets, o.data, o.h / 480.0f, variant);
 	while (std::getline(ss, cmd, ';'))
 	{
 		std::stringstream cs(cmd);
@@ -268,20 +276,37 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant)
 		{
 			std::string b; cs >> b;
 			static const std::map<std::string, Key> keys = { { "left", Key::LEFT }, { "right", Key::RIGHT }, { "up", Key::UP }, { "down", Key::DOWN },
-				{ "a", Key::A }, { "b", Key::B }, { "x", Key::X }, { "y", Key::Y }, { "l", Key::L }, { "r", Key::R } };
+				{ "a", Key::A }, { "b", Key::B }, { "x", Key::X }, { "y", Key::Y }, { "l", Key::L }, { "r", Key::R }, { "start", Key::START } };
 			rnds::UI::Button btn;
 			auto it = keys.find(b);
-			if (it == keys.end() || !uiButton(it->second, btn)) { logf("unknown button %s", b.c_str()); return 2; }
+			if (it == keys.end()) { logf("unknown button %s", b.c_str()); return 2; }
+			if (settings.isOpen() || it->second == Key::START)
+			{
+				if (!settings.isOpen()) { settings.open(); logf("press %s: settings open", b.c_str()); continue; }
+				int r = (int)settings.press(it->second);
+				logf("press %s: settings %s", b.c_str(), settings.isOpen() ? ("result " + std::to_string(r)).c_str() : "closed");
+				continue;
+			}
+			if (!uiButton(it->second, btn)) { logf("unknown button %s", b.c_str()); return 2; }
 			bool used = ui.press(btn);
 			logf("press %s: %s, view %d sys %d game %d", b.c_str(), used ? "used" : "unused", (int)ui.view(), ui.systemIndex(), ui.gameIndex());
 		}
 		else if (op == "shot")
 		{
 			std::string name; cs >> name;
-			settle(); ui.render(); settle(); ui.render();
-			double t0 = nowMs();
-			ui.render();
-			double t1 = nowMs();
+			double t0 = 0, t1 = 0;
+			if (settings.isOpen())
+			{
+				settings.render();
+				t0 = nowMs(); settings.render(); t1 = nowMs();
+			}
+			else
+			{
+				settle(); ui.render(); settle(); ui.render();
+				t0 = nowMs();
+				ui.render();
+				t1 = nowMs();
+			}
 			if (!save(0, o.headless + name + "-top.png") || !save(1, o.headless + name + "-bot.png")) { logf("can't write %s", name.c_str()); return 1; }
 			logf("shot %s (frame %.2f ms, wake %d)", name.c_str(), t1 - t0, ui.nextWake());
 		}
@@ -473,11 +498,11 @@ int main(int argc, char** argv)
 	});
 	playSplash(disp, be, o, variant, settings["splash"] != "off", ready, sound, sigPipe[0]);
 	loader.join();
-	rnds::UI& ui = *uiPtr;
-	ui.setLog([](const std::string& m) { logf("%s", m.c_str()); });
+	rnds::UI* ui = uiPtr.get();
+	ui->setLog([](const std::string& m) { logf("%s", m.c_str()); });
 	Worker worker;
-	worker.start(&ui);
-	dissolveToMenu(disp, be, ui);
+	worker.start(ui);
+	dissolveToMenu(disp, be, *ui);
 
 	Input input;
 	input.open(o.touch, disp.width(), disp.height());
@@ -485,23 +510,91 @@ int main(int argc, char** argv)
 	Repeat rep;
 	bool dirty = true, quit = false;
 	int lastMinute = -1;
+	float scale = disp.height() / 480.0f;
+	Settings settingsView(&be, o.assets, o.data, scale, variant);
+
+	// what a change on the settings screen means for the menu (called with uiLock held)
+	auto applySettings = [&](Settings::Result r)
+	{
+		switch (r)
+		{
+		case Settings::MOVED: sound.play("scroll"); break;
+		case Settings::CHANGED:
+		{
+			settings = readSettings(o.data + "/settings.conf");
+			lib.motion = settings["motion"] != "off";
+			lib.twelveHour = settings["clock"] == "12h";
+			sound.enabled = settings["sounds"] != "off";
+			ui->dataChanged();
+			sound.play("select");
+			break;
+		}
+		case Settings::THEME:
+		{
+			// the menu again in the other palette, on the system it was showing
+			settings = readSettings(o.data + "/settings.conf");
+			variant = settings["theme"] == "light" ? "light" : "dark";
+			int sys = ui->systemIndex();
+			uiPtr.reset(new rnds::UI(&lib, &be, o.assets, scale, variant));
+			ui = uiPtr.get();
+			ui->setLog([](const std::string& m) { logf("%s", m.c_str()); });
+			worker.attach(ui);
+			ui->setHome(sys);
+			sound.play("select");
+			break;
+		}
+		case Settings::CLOSED: sound.play("back"); break;
+		case Settings::REBOOT: logf("restarting"); kill(1, SIGTERM); break;		// busybox init: SIGTERM reboots
+		case Settings::POWEROFF: logf("shutting down"); kill(1, SIGUSR2); break;	// and SIGUSR2 powers off
+		default: break;
+		}
+		dirty = true;
+	};
 
 	auto handle = [&](const InputEvent& ev)
 	{
-		if (ev.type == InputEvent::TOUCH_DOWN) { std::lock_guard<std::mutex> l(worker.uiLock); dirty |= ui.touch(ev.screen, ev.x, ev.y, true); return; }
-		if (ev.type == InputEvent::TOUCH_MOVE) { std::lock_guard<std::mutex> l(worker.uiLock); dirty |= ui.touchMove(ev.screen, ev.x, ev.y); return; }
-		if (ev.type == InputEvent::TOUCH_UP) { std::lock_guard<std::mutex> l(worker.uiLock); dirty |= ui.touch(ev.screen, ev.x, ev.y, false); return; }
+		if (settingsView.isOpen())
+		{
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			if (ev.type == InputEvent::TOUCH_DOWN && ev.screen == 1) settingsView.touch(ev.x, ev.y, true);
+			else if (ev.type == InputEvent::TOUCH_UP && ev.screen == 1) applySettings(settingsView.touch(ev.x, ev.y, false));
+			else if (ev.type == InputEvent::RELEASE) { if (rep.key == ev.key) rep.key = Key::NONE; }
+			else if (ev.type == InputEvent::PRESS)
+			{
+				applySettings(settingsView.press(ev.key));
+				if (ev.key == Key::UP || ev.key == Key::DOWN || ev.key == Key::LEFT || ev.key == Key::RIGHT)
+				{
+					rep.key = ev.key; rep.since = rep.last = nowMs();
+				}
+			}
+			return;
+		}
+		if (ev.type == InputEvent::PRESS && ev.key == Key::START)
+		{
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			if (ui->view() == rnds::UI::LAUNCH) return;
+			ui->touchCancel();
+			settingsView.setVariant(variant);
+			settingsView.open();
+			rep.key = Key::NONE;
+			sound.play("select");
+			dirty = true;
+			return;
+		}
+		if (ev.type == InputEvent::TOUCH_DOWN) { std::lock_guard<std::mutex> l(worker.uiLock); dirty |= ui->touch(ev.screen, ev.x, ev.y, true); return; }
+		if (ev.type == InputEvent::TOUCH_MOVE) { std::lock_guard<std::mutex> l(worker.uiLock); dirty |= ui->touchMove(ev.screen, ev.x, ev.y); return; }
+		if (ev.type == InputEvent::TOUCH_UP) { std::lock_guard<std::mutex> l(worker.uiLock); dirty |= ui->touch(ev.screen, ev.x, ev.y, false); return; }
 		if (ev.type == InputEvent::RELEASE) { if (rep.key == ev.key) rep.key = Key::NONE; return; }
 		rnds::UI::Button b;
 		if (!uiButton(ev.key, b)) return;
 		double now = nowMs();
 		std::lock_guard<std::mutex> l(worker.uiLock);
-		ui.update(now);
-		auto before = ui.view();
-		if (ui.press(b))
+		ui->update(now);
+		auto before = ui->view();
+		if (ui->press(b))
 		{
 			dirty = true;
-			if (const char* s = soundOf(ev.key, before, ui.view())) sound.play(s);
+			if (const char* s = soundOf(ev.key, before, ui->view())) sound.play(s);
 		}
 		if (ev.key == Key::LEFT || ev.key == Key::RIGHT || ev.key == Key::UP || ev.key == Key::DOWN || ev.key == Key::L || ev.key == Key::R)
 		{
@@ -517,14 +610,14 @@ int main(int argc, char** argv)
 		logf("starting %s: %s", sd.id.c_str(), cmd.c_str());
 		{
 			std::ofstream f(o.data + "/last-system");
-			f << ui.systemIndex() << "\n";
+			f << ui->systemIndex() << "\n";
 		}
 		// everything the game wants goes back to the system: the panels, the buttons, the sound device
 		sound.release();
 		input.close();
 		disp.close();
 		rep.key = Key::NONE;
-		if (system(("banana-perf game " + shellQuote(sd.perf.empty() ? "balanced" : sd.perf)).c_str()) != 0) {}
+		if (system(("banana-perf " + shellQuote(sd.perf.empty() ? "balanced" : sd.perf)).c_str()) != 0) {}
 		double start = nowMs();
 		pid_t pid = fork();
 		if (pid == 0)
@@ -554,8 +647,8 @@ int main(int argc, char** argv)
 		input.open(o.touch, disp.width(), disp.height());
 		std::lock_guard<std::mutex> l(worker.uiLock);
 		if (secs >= 5) lib.recordPlay(game, secs);	// a start that failed straight away isn't a play
-		ui.dataChanged();
-		ui.setLibrary(lib.currentShelf(), game);
+		ui->dataChanged();
+		ui->setLibrary(lib.currentShelf(), game);
 		dirty = true;
 	};
 
@@ -565,7 +658,7 @@ int main(int argc, char** argv)
 		double now = nowMs();
 		{
 			std::lock_guard<std::mutex> l(worker.uiLock);
-			ui.update(now);
+			ui->update(now);
 		}
 		int g = lib.pendingLaunch();
 		if (g >= 0)
@@ -578,7 +671,8 @@ int main(int argc, char** argv)
 		{
 			rnds::UI::Button b;
 			std::lock_guard<std::mutex> l(worker.uiLock);
-			if (uiButton(rep.key, b) && ui.press(b)) { dirty = true; sound.play("scroll"); }
+			if (settingsView.isOpen()) applySettings(settingsView.press(rep.key));
+			else if (uiButton(rep.key, b) && ui->press(b)) { dirty = true; sound.play("scroll"); }
 		}
 		// the clock on the top screen
 		time_t wall = time(nullptr);
@@ -588,13 +682,14 @@ int main(int argc, char** argv)
 		bool want;
 		{
 			std::lock_guard<std::mutex> l(worker.uiLock);
-			want = dirty || ui.animating() || ui.nextWake() == 0;
+			want = dirty || (!settingsView.isOpen() && (ui->animating() || ui->nextWake() == 0));
 		}
 		if (want && disp.isOpen() && !disp.flipPending())
 		{
 			{
 				std::lock_guard<std::mutex> l(worker.uiLock);
-				ui.render();
+				if (settingsView.isOpen()) settingsView.render();
+				else ui->render();
 			}
 			const uint32_t* scr[2] = { be.pixels(0), be.pixels(1) };
 			int y0[2], y1[2];
@@ -608,7 +703,7 @@ int main(int argc, char** argv)
 		int timeout;
 		{
 			std::lock_guard<std::mutex> l(worker.uiLock);
-			timeout = want ? -1 : ui.nextWake();	// a frame is wanted: the flip event wakes us
+			timeout = want ? -1 : (settingsView.isOpen() ? -1 : ui->nextWake());	// a frame is wanted: the flip event wakes us
 		}
 		int toMinute = (int)((60 - wall % 60) * 1000);
 		if (timeout < 0 || timeout > toMinute) timeout = want ? timeout : toMinute;
@@ -649,7 +744,7 @@ int main(int argc, char** argv)
 	}
 	{
 		std::ofstream f(o.data + "/last-system");
-		f << ui.systemIndex() << "\n";
+		f << ui->systemIndex() << "\n";
 	}
 	worker.finish();
 	return 0;

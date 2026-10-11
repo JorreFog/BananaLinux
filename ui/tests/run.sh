@@ -14,7 +14,7 @@ for size in 640x480 1024x768; do
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" \
         --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" \
         --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
-        --script "splash boot-drop 200; splash boot-word 700; splash boot-click 1100 1; home 0; wait 2400; shot home; bench 120; press a; wait 2400; shot lib; press right; wait 2400; shot lib2; bench 120; press a; wait 3000; shot ready" \
+        --script "splash boot-drop 200; splash boot-word 700; splash boot-click 1100 1; home 0; wait 2400; shot home; bench 120; press a; wait 2400; shot lib; press right; wait 2400; shot lib2; bench 120; press a; wait 3000; shot ready; press b; press b; press start; press down; shot settings; press r; press r; press r; press r; shot settings-system; press b" \
         2> "$log" || { echo "FAIL $size: banana-ui exited $?"; fail=1; continue; }
     check() { grep -q "$1" "$log" || { echo "FAIL $size: no '$1'"; fail=1; }; }
     check "press a: used, view 1"          # home -> the DS library
@@ -22,7 +22,9 @@ for size in 640x480 1024x768; do
     check "press a: used, view 2"          # library -> ready screen
     check "launch 1: .*Monkey Puzzle League.nds"
     check "splash boot-click at 1100 ms"
-    for s in boot-drop boot-word boot-click home lib lib2 ready; do
+    check "press start: settings open"
+    check "press b: settings closed"
+    for s in boot-drop boot-word boot-click home lib lib2 ready settings settings-system; do
         for p in top bot; do
             f=$OUT/$size-$s-$p.png
             [ -s "$f" ] || { echo "FAIL $size: no $f"; fail=1; continue; }
