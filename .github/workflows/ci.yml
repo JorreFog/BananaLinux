@@ -51,7 +51,7 @@ jobs:
       BR2_DL_DIR: ${{ github.workspace }}/dl
     steps:
       - uses: actions/checkout@v4
-      - name: Free disk space (the toolchain, LLVM for Mesa and the kernel need ~40 GB)
+      - name: Free disk space (the toolchain, the kernel, Mesa and RetroArch)
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
           df -h /

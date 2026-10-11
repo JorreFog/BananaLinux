@@ -146,6 +146,11 @@ front porch change within 0.002 Hz of 60 that keeps every number's digit count, 
 when that gains at least 0.005 Hz. The RG DS is left as it is; the RG DS Plus goes from 60.17 Hz to 59.999 Hz
 (with the clock it asks for, 62.77 MHz; the real one decides). Its report: `banana/panel-tune.txt`.
 
+**GPU.** The Mali-G52 through Mesa's Panfrost (`buildroot/package/mesa3d-panfrost`): Mesa 25.0.7 built with Panfrost
+alone, EGL on DRM, OpenGL ES and GBM, and no LLVM. Bifrost's shader compiler is Mesa's own; later Mesa releases
+precompile Panfrost's internal shaders from OpenCL C, so Buildroot's mesa3d would build LLVM and clang for the
+host and put LLVM on the handheld. The module is loaded by rcS after the menu's first frame.
+
 **LEDs.** `green:power`, `red:status` and `amber:charging` (pwm-leds). bananad sets them only when the battery's
 state changes, which the kernel announces as power_supply uevents (a netlink socket; there is no udev): the amber
 LED follows the charger's own LED trigger (`<battery>-charging`), the critical blink is the kernel's timer trigger.
