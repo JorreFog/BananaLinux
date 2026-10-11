@@ -1,0 +1,3 @@
+ROCKNIXDS Pixel engine, imported by tools/import-rnds.sh. Don't edit these files here: change them in ROCKNIXDS
+(dii-ess-aye/es-rgds-rnds.patch) and import again, so both frontends stay the same.
+ROCKNIXDS commit: 8b8f72cd70f0d198612ea8e6651fae71664aa97b

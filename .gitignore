@@ -1,0 +1,6 @@
+/output/
+/.buildroot/
+/ui/banana-ui
+/ui/tests/out/
+/system/bananad/bananad
+*.o

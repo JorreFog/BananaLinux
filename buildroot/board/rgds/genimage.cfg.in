@@ -1,0 +1,32 @@
+# Banana's SD card: U-Boot where the RK3568's boot ROM looks for it (sector 64), a small FAT boot partition (kernel,
+# device tree, extlinux.conf) and the squashfs root. The data partition (exFAT, the rest of the card) is made on
+# the first boot, so the image stays small and quick to write.
+image boot.vfat {
+	vfat {
+		label = "BANANA-BOOT"
+		files = { "Image", "@DTB@.dtb" }
+		file extlinux/extlinux.conf { image = "extlinux.conf" }
+	}
+	size = 64M
+}
+
+image banana-@BOARD@.img {
+	hdimage {
+		partition-table-type = "gpt"
+	}
+	partition u-boot {
+		in-partition-table = false
+		image = "u-boot-rockchip.bin"
+		offset = 32K
+	}
+	partition boot {
+		partition-type-uuid = "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7"
+		bootable = true
+		image = "boot.vfat"
+		offset = 16M
+	}
+	partition banana-root {
+		partition-type-uuid = "0FC63DAF-8483-4772-8E79-3D69D8477DE4"
+		image = "rootfs.squashfs"
+	}
+}

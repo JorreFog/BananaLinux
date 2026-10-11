@@ -1,0 +1,40 @@
+#!/bin/sh
+# Banana's whole boot. Everything the menu needs is built into the kernel (panels, buttons, touch, sound), so
+# there is nothing to wait for here but the data partition; Wi-Fi and the clock come up in the background.
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+mount -t devtmpfs devtmpfs /dev 2>/dev/null
+mkdir -p /dev/pts /dev/shm
+mount -t devpts devpts /dev/pts
+mount -t tmpfs -o mode=0755,nosuid,nodev tmpfs /run
+mount -t tmpfs -o mode=1777,nosuid,nodev tmpfs /tmp
+mkdir -p /run/banana /var/log
+[ -f /etc/sysctl.d/banana.conf ] && sysctl -q -p /etc/sysctl.d/banana.conf
+syslogd -O /run/banana/messages -s 256 -b 1
+hostname banana
+
+# the card we booted from: root is its second partition, the games and settings its third
+# (root=PARTLABEL=banana-root: whichever card slot it is in)
+for u in /sys/class/block/*p2/uevent; do
+    grep -q '^PARTNAME=banana-root$' "$u" 2>/dev/null || continue
+    p=${u%/uevent}; DISK=/dev/${p##*/}; DISK=${DISK%p2}
+done
+[ -n "$DISK" ] || DISK=/dev/mmcblk0
+echo "$DISK" > /run/banana/disk
+[ -b ${DISK}p3 ] || /usr/libexec/banana/firstboot "$DISK"
+# exFAT, so the card can be read and filled on any computer
+mount -t exfat -o noatime,uid=0,gid=0,fmask=0000,dmask=0000,iocharset=utf8,errors=remount-ro ${DISK}p3 /data ||
+    { fsck.exfat -y ${DISK}p3; mount -t exfat -o noatime,uid=0,gid=0,fmask=0000,dmask=0000 ${DISK}p3 /data; }
+/usr/libexec/banana/data-layout
+
+bananad &
+banana-perf ui
+
+# not needed for the menu's first frame
+(
+    modprobe -a rtw88_8821cs 2>/dev/null
+    [ -f /data/banana/wifi.conf ] && /usr/libexec/banana/wifi up
+    hwclock -s 2>/dev/null
+) &
+exit 0

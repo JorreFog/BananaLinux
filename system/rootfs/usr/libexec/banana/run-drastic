@@ -1,0 +1,18 @@
+#!/bin/sh
+# Nintendo DS: DraStic, through SuperDrastic straight onto both panels (each DS screen on its own panel, 2x
+# internal resolution, its own CPU governor). DraStic and its settings live in /data/drastic so its saves, states
+# and configuration survive updates; the first run copies the program there.
+#   run-drastic <rom>
+D=/data/drastic
+SD=/usr/lib/superdrastic
+if [ ! -x $D/drastic ]; then
+    [ -d /usr/share/drastic ] || { echo "DraStic isn't installed" >&2; exit 1; }
+    mkdir -p $D && cp -rn /usr/share/drastic/. $D/
+fi
+cd $D
+# banana-ui has let go of the panels completely (it closes its display while a game runs)
+export DSFLIP_HANDOVER=none DSFLIP_DRASTIC_DIR=$D DSFLIP_TOP=${BANANA_TOP:-DSI-2}
+# SuperDrastic's memory (per-game clocks, RetroAchievements login) and logs on the data partition, not beside it
+export DSFLIP_DATA=/data/superdrastic DSFLIP_LOGDIR=/data/banana/logs/superdrastic
+[ -f /data/banana/superdrastic.conf ] && . /data/banana/superdrastic.conf
+exec $SD/superdrastic-run $D/drastic "$1"

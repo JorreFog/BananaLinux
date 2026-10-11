@@ -1,0 +1,13 @@
+#!/bin/sh
+# First boot: the data partition (games, saves, settings) fills the rest of the card. The image is small so it
+# writes quickly; this takes a few seconds, once.
+#   firstboot <disk>          e.g. /dev/mmcblk1
+set -e
+DISK=$1
+echo "Banana: making the data partition on $DISK" > /dev/kmsg
+# the GPT's backup header to the real end of the card, then a partition over everything after the root
+sfdisk --relocate gpt-bak-std "$DISK"
+echo ',,EBD0A0A2-B9E5-4433-87C0-68B6B72699C7,,' | sfdisk --no-reread --no-tell-kernel --append --wipe-partitions always "$DISK"
+partx --add --nr 3 "$DISK" || partx --update "$DISK"
+for i in 1 2 3 4 5 6 7 8 9 10; do [ -b ${DISK}p3 ] && break; sleep 0.2; done
+mkfs.exfat -L BANANA ${DISK}p3

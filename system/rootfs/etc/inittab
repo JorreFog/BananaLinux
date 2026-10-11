@@ -1,0 +1,7 @@
+# Banana: busybox init. rcS mounts and starts what the menu needs, in parallel where it can; the menu then runs
+# for as long as the handheld is on (started again if it ever stops).
+::sysinit:/etc/init.d/rcS
+::respawn:/usr/bin/banana-ui-session
+ttyS2::respawn:/sbin/getty -L ttyS2 1500000 vt100
+::shutdown:/etc/init.d/rcK
+::ctrlaltdel:/sbin/reboot

@@ -1,0 +1,7 @@
+config BR2_PACKAGE_DRASTIC
+	bool "drastic"
+	depends on BR2_TOOLCHAIN_USES_GLIBC
+	select BR2_PACKAGE_SDL2
+	help
+	  DraStic, the Nintendo DS emulator by Exophase (proprietary freeware), the Linux aarch64 build that ROCKNIX
+	  packages. Installed to /usr/share/drastic; run-drastic copies it to the data partition on first use.

@@ -1,0 +1,42 @@
+# Banana's changes over ROCKNIX's RK3566 kernel config (linux-rocknix.config): a kernel that boots straight to a
+# read-only squashfs root, with nothing on the boot path the menu doesn't need.
+CONFIG_LOCALVERSION="-banana"
+# no initramfs: root=PARTLABEL=banana-root, mounted by the kernel itself
+CONFIG_INITRAMFS_SOURCE=""
+# root on squashfs, LZ4 (the fastest to decompress)
+CONFIG_SQUASHFS=y
+CONFIG_SQUASHFS_LZ4=y
+CONFIG_SQUASHFS_FILE_DIRECT=y
+CONFIG_SQUASHFS_COMPILE_DECOMP_MULTI_PERCPU=y
+# CONFIG_SQUASHFS_COMPILE_DECOMP_SINGLE is not set
+# the menu draws on KMS directly: no fbdev, no console on the panels, no VTs to switch
+# CONFIG_DRM_FBDEV_EMULATION is not set
+# CONFIG_FRAMEBUFFER_CONSOLE is not set
+# CONFIG_VT is not set
+# CONFIG_LOGO is not set
+# the menu's hardware built in (the joypad and DSI panel drivers are added by external.mk)
+CONFIG_INPUT_JOYSTICK=y
+# the joypad driver polls through the old input-polldev API (ROCKNIX's RK3326 patch brings it back)
+CONFIG_INPUT_POLLDEV=y
+CONFIG_DRM_MIPI_DSI=y
+CONFIG_TOUCHSCREEN_GOODIX=y
+# Panfrost (Mesa) for SuperDrastic's shaders and RetroArch's GLES; loaded after the menu is up
+CONFIG_DRM_PANFROST=m
+# suspend to RAM
+CONFIG_SUSPEND=y
+CONFIG_PM_SLEEP=y
+# CONFIG_PM_AUTOSLEEP is not set
+# CONFIG_PM_WAKELOCKS is not set
+# start on schedutil; banana-perf picks per profile
+# CONFIG_CPU_FREQ_DEFAULT_GOV_PERFORMANCE is not set
+CONFIG_CPU_FREQ_DEFAULT_GOV_SCHEDUTIL=y
+CONFIG_CPU_FREQ_GOV_SCHEDUTIL=y
+CONFIG_CPU_FREQ_GOV_POWERSAVE=y
+# not used on a handheld that boots from an SD card
+# CONFIG_BTRFS_FS is not set
+# CONFIG_XFS_FS is not set
+# CONFIG_NFS_FS is not set
+# CONFIG_ROOT_NFS is not set
+# CONFIG_KALLSYMS_ALL is not set
+# CONFIG_IKCONFIG is not set
+# CONFIG_SCHED_AUTOGROUP is not set

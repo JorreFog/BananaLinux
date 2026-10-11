@@ -1,0 +1,9 @@
+# Banana: straight to the kernel, no countdown, nothing on the panels
+CONFIG_BOOTDELAY=0
+CONFIG_AUTOBOOT=y
+CONFIG_SILENT_CONSOLE=n
+CONFIG_DISPLAY_BOARDINFO=n
+CONFIG_DISPLAY_CPUINFO=n
+# only the SD card is a boot target (the RG DS's eMMC holds Android)
+CONFIG_ENV_IS_NOWHERE=y
+CONFIG_ENV_IS_IN_MMC=n

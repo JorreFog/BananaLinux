@@ -1,0 +1,10 @@
+config BR2_PACKAGE_SUPERDRASTIC
+	bool "superdrastic"
+	depends on BR2_TOOLCHAIN_USES_GLIBC
+	select BR2_PACKAGE_LIBDRM
+	select BR2_PACKAGE_ALSA_LIB
+	select BR2_PACKAGE_LIBCURL
+	select BR2_PACKAGE_ZLIB
+	help
+	  SuperDrastic: DraStic straight onto both panels, with frame pacing, shaders, touch, the microphone,
+	  RetroAchievements and its own CPU governor (github.com/JorreFog/SuperDrastic).

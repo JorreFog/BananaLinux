@@ -1,0 +1,4 @@
+config BR2_PACKAGE_BANANAD
+	bool "bananad"
+	help
+	  Banana's power daemon: sleep (power button, lid, idle), shutdown, volume and brightness keys, battery guard.

@@ -1,0 +1,6 @@
+#!/bin/sh
+# The menu, with its log on the data partition (the last two runs) so a problem can be read on a computer
+LOG=/data/banana/logs/banana-ui.log
+mkdir -p /data/banana/logs
+[ -f $LOG ] && mv -f $LOG $LOG.1
+exec /usr/bin/banana-ui > $LOG 2>&1

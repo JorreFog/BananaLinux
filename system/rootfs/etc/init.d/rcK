@@ -1,0 +1,9 @@
+#!/bin/sh
+# Shutdown: stop what writes to the card, then unmount it cleanly
+killall -TERM banana-ui retroarch drastic 2>/dev/null
+sleep 1
+killall wpa_supplicant udhcpc 2>/dev/null
+hwclock -w 2>/dev/null
+sync
+umount /data 2>/dev/null || mount -o remount,ro /data
+sync

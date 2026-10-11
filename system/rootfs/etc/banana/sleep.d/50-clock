@@ -1,0 +1,4 @@
+#!/bin/sh
+# The system clock stops in suspend on some boards: take the RTC's time after waking
+[ "$1" = post ] && hwclock -s 2>/dev/null
+exit 0

@@ -1,0 +1,15 @@
+#!/bin/sh
+# The RG DS's Wi-Fi (RTL8821CS on SDIO) doesn't come back from a suspend by itself: unload it before, load it after
+# and reconnect when it was connected.
+case $1 in
+pre)
+    if [ "$(cat /sys/class/net/wlan0/operstate 2>/dev/null)" = up ]; then touch /run/banana/wifi-was-up; fi
+    /usr/libexec/banana/wifi down
+    modprobe -r rtw88_8821cs 2>/dev/null
+    ;;
+post)
+    modprobe rtw88_8821cs 2>/dev/null
+    [ -f /run/banana/wifi-was-up ] && { rm -f /run/banana/wifi-was-up; /usr/libexec/banana/wifi up & }
+    ;;
+esac
+exit 0

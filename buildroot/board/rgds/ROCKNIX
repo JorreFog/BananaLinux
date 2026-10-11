@@ -1,0 +1,5 @@
+# The ROCKNIX commit Banana's RG DS hardware support comes from (tools/sync-rocknix-hw.sh)
+commit=7af4b5bcf33a762216b4c2a23fa058f1afdade56
+linux=7.2.7
+joypad=d02ed13aae08113f6f9e0e9d699cb29bb3450fa2
+rkbin=74213af1e952c4683d2e35952507133b61394862

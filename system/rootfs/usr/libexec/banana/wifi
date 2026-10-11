@@ -1,0 +1,26 @@
+#!/bin/sh
+# Wi-Fi from /data/banana/wifi.conf (a wpa_supplicant network block, which can be written on a computer):
+#   network={
+#       ssid="My network"
+#       psk="password"
+#   }
+#   wifi up | down
+CONF=/data/banana/wifi.conf
+case $1 in
+up)
+    [ -f $CONF ] || exit 1
+    for i in 1 2 3 4 5 6 7 8 9 10; do [ -d /sys/class/net/wlan0 ] && break; sleep 0.5; done
+    { echo "ctrl_interface=/run/wpa_supplicant"; echo "update_config=0"; cat $CONF; } > /run/banana/wpa.conf
+    ip link set wlan0 up
+    wpa_supplicant -B -i wlan0 -c /run/banana/wpa.conf -P /run/banana/wpa.pid
+    udhcpc -b -q -t 10 -i wlan0 -p /run/banana/udhcpc.pid -s /usr/share/udhcpc/default.script >/dev/null 2>&1 &&
+        ntpd -q -n -p pool.ntp.org >/dev/null 2>&1 && hwclock -w 2>/dev/null
+    ;;
+down)
+    [ -f /run/banana/udhcpc.pid ] && kill $(cat /run/banana/udhcpc.pid) 2>/dev/null
+    [ -f /run/banana/wpa.pid ] && kill $(cat /run/banana/wpa.pid) 2>/dev/null
+    rm -f /run/banana/udhcpc.pid /run/banana/wpa.pid
+    ip link set wlan0 down 2>/dev/null
+    ;;
+*) echo "usage: wifi up|down" >&2; exit 1 ;;
+esac

@@ -1,0 +1,6 @@
+DEFAULT banana
+TIMEOUT 0
+LABEL banana
+  LINUX /Image
+  FDT /@DTB@.dtb
+  APPEND root=PARTLABEL=banana-root rootfstype=squashfs ro rootwait quiet loglevel=3 console=ttyS2,1500000 init=/sbin/init

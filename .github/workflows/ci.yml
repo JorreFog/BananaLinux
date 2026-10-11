@@ -1,0 +1,57 @@
+name: CI
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      image:
+        description: "Also build the SD card images (an hour or more)"
+        type: boolean
+        default: false
+
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Packages
+        run: sudo apt-get update && sudo apt-get install -y libfreetype-dev libdrm-dev libasound2-dev imagemagick g++-aarch64-linux-gnu
+      - name: banana-ui (headless test, both panel sizes)
+        run: make test
+      - name: banana-ui with ALSA
+        run: make -C ui clean && make -C ui
+      - name: bananad (native and aarch64)
+        run: |
+          make -C system/bananad CFLAGS="-O2 -Werror"
+          make -C system/bananad clean
+          make -C system/bananad CC=aarch64-linux-gnu-gcc CFLAGS="-O2 -Werror"
+      - name: Shell scripts parse
+        run: for f in system/rootfs/etc/init.d/* system/rootfs/usr/bin/* system/rootfs/usr/libexec/banana/* system/rootfs/etc/banana/sleep.d/* buildroot/board/rgds/*.sh tools/*.sh; do sh -n "$f" || exit 1; done
+      - name: Buildroot defconfigs keep every option
+        run: |
+          git clone --depth 1 --branch 2026.02.3 https://github.com/buildroot/buildroot /tmp/br
+          for d in banana_rgds_defconfig banana_rgds_plus_defconfig; do
+            make -s -C /tmp/br BR2_EXTERNAL=$PWD/buildroot O=/tmp/out-$d $d
+            grep -E '^BR2_|^# BR2_.* is not set' buildroot/configs/$d | while IFS= read -r l; do
+              grep -qxF "$l" /tmp/out-$d/.config || { echo "$d drops: $l"; exit 1; }
+            done
+          done
+
+  image:
+    if: github.event_name == 'workflow_dispatch' && inputs.image
+    needs: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    strategy:
+      matrix:
+        board: [rgds, rgds-plus]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Packages
+        run: sudo apt-get update && sudo apt-get install -y build-essential bc bison flex libssl-dev libelf-dev unzip rsync cpio python3-dev swig libgnutls28-dev
+      - name: Build
+        run: make ${{ matrix.board }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: banana-${{ matrix.board }}
+          path: output/${{ matrix.board }}/images/banana-${{ matrix.board }}.img.gz

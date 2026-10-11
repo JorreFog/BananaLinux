@@ -1,0 +1,581 @@
+// banana-ui: Banana's frontend. ROCKNIXDS Pixel's engine (ui/rnds, imported unchanged) drawn in software straight
+// onto the RG DS's two panels: no EmulationStation, no compositor, no GPU. It sleeps in poll() until a button, a
+// finished picture or an animation step needs a frame, and gives the panels, the input devices and the sound device
+// away completely while a game runs.
+//
+//   banana-ui [--assets DIR] [--systems FILE] [--roms DIR] [--data DIR]
+//   banana-ui --headless OUTPREFIX --script "home 0; wait 2400; shot home" [--size 640x480] ...   (renders PNGs)
+#define STB_IMAGE_IMPLEMENTATION
+#define STBI_ONLY_PNG
+#define STBI_ONLY_JPEG
+#include "../third_party/stb_image.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "../third_party/stb_image_write.h"
+
+#include "../rnds/RndsUI.h"
+#include "input.h"
+#include "kms.h"
+#include "library.h"
+#include "soft.h"
+#include "sound.h"
+
+#include <atomic>
+#include <cerrno>
+#include <cstdarg>
+#include <cmath>
+#include <condition_variable>
+#include <csignal>
+#include <cstdio>
+#include <cstring>
+#include <fcntl.h>
+#include <fstream>
+#include <map>
+#include <mutex>
+#include <poll.h>
+#include <sstream>
+#include <sys/eventfd.h>
+#include <sys/wait.h>
+#include <thread>
+#include <time.h>
+#include <unistd.h>
+
+using namespace banana;
+
+static double nowMs()
+{
+	timespec ts;
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	return ts.tv_sec * 1000.0 + ts.tv_nsec / 1e6;
+}
+
+static void logf(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
+static void logf(const char* fmt, ...)
+{
+	va_list ap;
+	va_start(ap, fmt);
+	fprintf(stderr, "banana-ui: ");
+	vfprintf(stderr, fmt, ap);
+	fputc('\n', stderr);
+	va_end(ap);
+}
+
+static rnds::Bitmap stbDecode(const std::string& path)
+{
+	rnds::Bitmap b;
+	int w, h, n;
+	unsigned char* p = stbi_load(path.c_str(), &w, &h, &n, 4);
+	if (!p) return b;
+	b.w = w; b.h = h;
+	b.px.assign(p, p + (size_t)w * h * 4);
+	stbi_image_free(p);
+	return b;
+}
+
+// settings.conf: key = value lines (theme, motion, sounds, clock)
+static std::map<std::string, std::string> readSettings(const std::string& path)
+{
+	std::map<std::string, std::string> r;
+	std::ifstream f(path);
+	std::string ln;
+	while (std::getline(f, ln))
+	{
+		size_t eq = ln.find('=');
+		if (ln.empty() || ln[0] == '#' || eq == std::string::npos) continue;
+		auto t = [](std::string s) { size_t a = s.find_first_not_of(" \t\r"), b = s.find_last_not_of(" \t\r"); return a == std::string::npos ? std::string() : s.substr(a, b - a + 1); };
+		r[t(ln.substr(0, eq))] = t(ln.substr(eq + 1));
+	}
+	return r;
+}
+
+static std::string shellQuote(const std::string& s)
+{
+	std::string r = "'";
+	for (char c : s) { if (c == '\'') r += "'\\''"; else r += c; }
+	return r + "'";
+}
+
+static std::string replaceAll(std::string s, const std::string& from, const std::string& to)
+{
+	for (size_t at = 0; (at = s.find(from, at)) != std::string::npos; at += to.size()) s.replace(at, from.size(), to);
+	return s;
+}
+
+// ---- the Source with a few host settings on top -------------------------------------------------------------------
+struct Host : Library
+{
+	using Library::Library;
+	bool motion = true;
+	bool topMotion() override { return motion; }
+};
+
+// ---- the worker that decodes and fits pictures off the main thread ----------------------------------------------
+struct Worker
+{
+	rnds::UI* ui = nullptr;
+	std::mutex uiLock, wlock;
+	std::condition_variable cv;
+	bool stop = false, work = false;
+	int wakeFd = -1;		// eventfd: a job finished, the main loop has something to upload
+	std::thread th;
+
+	void start(rnds::UI* u)
+	{
+		ui = u;
+		wakeFd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+		ui->setNotifiers([this] { kick(); }, [this] { uint64_t one = 1; if (write(wakeFd, &one, 8) < 0) {} });
+		th = std::thread([this] { run(); });
+	}
+	void kick()
+	{
+		{ std::lock_guard<std::mutex> l(wlock); work = true; }
+		cv.notify_all();
+	}
+	void run()
+	{
+		for (;;)
+		{
+			{
+				std::unique_lock<std::mutex> l(wlock);
+				cv.wait(l, [this] { return stop || work; });
+				if (stop) return;
+				work = false;
+			}
+			for (;;)
+			{
+				{ std::lock_guard<std::mutex> l(wlock); if (stop) return; }
+				std::lock_guard<std::mutex> l(uiLock);
+				if (!ui->workOnce()) break;
+			}
+		}
+	}
+	void finish()
+	{
+		{ std::lock_guard<std::mutex> l(wlock); stop = true; }
+		cv.notify_all();
+		if (th.joinable()) th.join();
+		if (wakeFd >= 0) close(wakeFd);
+	}
+};
+
+// ---- signals: a self-pipe ---------------------------------------------------------------------------------------
+static int sigPipe[2] = { -1, -1 };
+static void onSignal(int sig)
+{
+	char c = (char)sig;
+	int e = errno;
+	if (write(sigPipe[1], &c, 1) < 0) {}
+	errno = e;
+}
+
+struct Options
+{
+	std::string assets = "/usr/share/banana/rnds", splash = "/usr/share/banana/splash";
+	std::string systems = "/etc/banana/systems.conf", roms = "/data/roms", data = "/data/banana";
+	std::string top = "DSI-2", touch = "fe5e0000.i2c";
+	std::string headless, script;
+	int w = 640, h = 480;
+};
+
+static std::string envOr(const char* name, const std::string& def)
+{
+	const char* v = getenv(name);
+	return v && *v ? v : def;
+}
+
+// ---- held buttons repeat, like a list in any frontend -----------------------------------------------------------
+struct Repeat
+{
+	Key key = Key::NONE;
+	double since = 0, last = 0;
+	bool due(double now)
+	{
+		if (key == Key::NONE) return false;
+		double held = now - since, gap = held > 1500 ? 60 : 120;
+		if (held < 400 || now - last < gap) return false;
+		last = now;
+		return true;
+	}
+	int wait(double now) const
+	{
+		if (key == Key::NONE) return -1;
+		double held = now - since;
+		if (held < 400) return (int)std::ceil(400 - held);
+		double gap = held > 1500 ? 60 : 120;
+		return (int)std::max(0.0, std::ceil(last + gap - now));
+	}
+};
+
+static bool uiButton(Key k, rnds::UI::Button& b)
+{
+	switch (k)
+	{
+	case Key::LEFT: b = rnds::UI::LEFT; return true;
+	case Key::RIGHT: b = rnds::UI::RIGHT; return true;
+	case Key::UP: b = rnds::UI::UP; return true;
+	case Key::DOWN: b = rnds::UI::DOWN; return true;
+	case Key::A: b = rnds::UI::A; return true;
+	case Key::B: b = rnds::UI::B; return true;
+	case Key::X: b = rnds::UI::X; return true;
+	case Key::Y: b = rnds::UI::Y; return true;
+	case Key::L: b = rnds::UI::L; return true;
+	case Key::R: b = rnds::UI::R; return true;
+	default: return false;
+	}
+}
+
+static const char* soundOf(Key k, rnds::UI::View before, rnds::UI::View after)
+{
+	switch (k)
+	{
+	case Key::LEFT: case Key::RIGHT: case Key::UP: case Key::DOWN: case Key::L: case Key::R: return "scroll";
+	case Key::A: return after == rnds::UI::LAUNCH && before != rnds::UI::LAUNCH ? "ready" : "select";
+	case Key::B: return "back";
+	case Key::Y: return "fav";
+	case Key::X: return "select";
+	default: return nullptr;
+	}
+}
+
+// ---- headless: the same UI rendered to PNGs, for tests and screenshots ------------------------------------------
+static int runHeadless(const Options& o, Host& lib, const std::string& variant)
+{
+	SoftBackend be(o.w, o.h);
+	rnds::UI ui(&lib, &be, o.assets, o.h / 480.0f, variant);
+	double now = 100000;
+	std::stringstream ss(o.script);
+	std::string cmd;
+	auto settle = [&] { ui.update(now); ui.finishWork(); ui.update(now); };
+	auto save = [&](int s, const std::string& path)
+	{
+		std::vector<uint8_t> rgb((size_t)o.w * o.h * 3);
+		const uint32_t* p = be.pixels(s);
+		for (size_t i = 0; i < (size_t)o.w * o.h; i++) { rgb[i * 3] = (p[i] >> 16) & 255; rgb[i * 3 + 1] = (p[i] >> 8) & 255; rgb[i * 3 + 2] = p[i] & 255; }
+		return stbi_write_png(path.c_str(), o.w, o.h, 3, rgb.data(), o.w * 3) != 0;
+	};
+	ui.setHome(0);
+	while (std::getline(ss, cmd, ';'))
+	{
+		std::stringstream cs(cmd);
+		std::string op;
+		cs >> op;
+		ui.update(now);
+		if (op == "home") { int s = 0; cs >> s; ui.setHome(s); }
+		else if (op == "lib") { int s = 0, g = 0; cs >> s >> g; lib.openLibrary(s); ui.setLibrary(s, g); }
+		else if (op == "wait") { double ms = 0; cs >> ms; now += ms; }
+		else if (op == "press")
+		{
+			std::string b; cs >> b;
+			static const std::map<std::string, Key> keys = { { "left", Key::LEFT }, { "right", Key::RIGHT }, { "up", Key::UP }, { "down", Key::DOWN },
+				{ "a", Key::A }, { "b", Key::B }, { "x", Key::X }, { "y", Key::Y }, { "l", Key::L }, { "r", Key::R } };
+			rnds::UI::Button btn;
+			auto it = keys.find(b);
+			if (it == keys.end() || !uiButton(it->second, btn)) { logf("unknown button %s", b.c_str()); return 2; }
+			bool used = ui.press(btn);
+			logf("press %s: %s, view %d sys %d game %d", b.c_str(), used ? "used" : "unused", (int)ui.view(), ui.systemIndex(), ui.gameIndex());
+		}
+		else if (op == "shot")
+		{
+			std::string name; cs >> name;
+			settle(); ui.render(); settle(); ui.render();
+			double t0 = nowMs();
+			ui.render();
+			double t1 = nowMs();
+			if (!save(0, o.headless + name + "-top.png") || !save(1, o.headless + name + "-bot.png")) { logf("can't write %s", name.c_str()); return 1; }
+			logf("shot %s (frame %.2f ms, wake %d)", name.c_str(), t1 - t0, ui.nextWake());
+		}
+		else if (op == "bench")
+		{
+			// N frames 16.7 ms apart, as the panels would show them: the engine's and the backend's time per frame
+			int n = 60; cs >> n;
+			double total = 0, worst = 0;
+			be.skipped = 0;
+			for (int i = 0; i < n; i++)
+			{
+				now += 1000.0 / 60;
+				double t0 = nowMs();
+				ui.update(now);
+				ui.finishWork();
+				ui.render();
+				double dt = nowMs() - t0;
+				total += dt; worst = std::max(worst, dt);
+			}
+			logf("bench: %d frames, %.2f ms average, %.2f ms worst, %d of %d screens unchanged", n, total / n, worst, be.skipped, 2 * n);
+		}
+		else if (!op.empty()) { logf("unknown command %s", op.c_str()); return 2; }
+		if (lib.pendingLaunch() >= 0) { logf("launch %d: %s", lib.pendingLaunch(), lib.gameAt(lib.pendingLaunch()).path.c_str()); lib.clearLaunch(); }
+	}
+	return 0;
+}
+
+// the boot splash across both panels (left half top, right half bottom) while the library is read
+static void showSplash(Display& disp, SoftBackend& be, const std::string& dir, const std::string& variant)
+{
+	std::string path = dir + "/" + variant + "-" + (be.width() > 640 ? "1024" : "640") + ".png";
+	int w, h, n;
+	unsigned char* p = stbi_load(path.c_str(), &w, &h, &n, 4);
+	if (!p) return;
+	if (w == be.width() * 2 && h == be.height())
+	{
+		be.blitRgba(0, p, w, 0);
+		be.blitRgba(1, p, w, be.width());
+		const uint32_t* scr[2] = { be.pixels(0), be.pixels(1) };
+		int y0[2], y1[2];
+		be.takeDamage(0, y0[0], y1[0]); be.takeDamage(1, y0[1], y1[1]);
+		disp.present(scr, y0, y1);
+	}
+	stbi_image_free(p);
+}
+
+int main(int argc, char** argv)
+{
+	Options o;
+	o.assets = envOr("BANANA_ASSETS", o.assets);
+	o.systems = envOr("BANANA_SYSTEMS", o.systems);
+	o.roms = envOr("BANANA_ROMS", o.roms);
+	o.data = envOr("BANANA_DATA", o.data);
+	o.top = envOr("BANANA_TOP", o.top);
+	o.touch = envOr("BANANA_TOUCH", o.touch);
+	for (int i = 1; i < argc; i++)
+	{
+		std::string a = argv[i];
+		auto next = [&]() -> std::string { if (i + 1 >= argc) { logf("%s needs a value", a.c_str()); exit(2); } return argv[++i]; };
+		if (a == "--assets") o.assets = next();
+		else if (a == "--splash") o.splash = next();
+		else if (a == "--systems") o.systems = next();
+		else if (a == "--roms") o.roms = next();
+		else if (a == "--data") o.data = next();
+		else if (a == "--headless") o.headless = next();
+		else if (a == "--script") o.script = next();
+		else if (a == "--size") { std::string s = next(); if (sscanf(s.c_str(), "%dx%d", &o.w, &o.h) != 2) { logf("bad size"); return 2; } }
+		else { logf("unknown option %s", a.c_str()); return 2; }
+	}
+
+	rnds::setDecoder(stbDecode);
+	auto settings = readSettings(o.data + "/settings.conf");
+	std::string variant = settings["theme"] == "light" ? "light" : "dark";
+	Host lib(o.systems, o.roms, o.data, o.assets);
+	lib.motion = settings["motion"] != "off";
+	lib.twelveHour = settings["clock"] == "12h";
+
+	if (!o.headless.empty())
+	{
+		lib.scan();
+		return runHeadless(o, lib, variant);
+	}
+
+	if (pipe2(sigPipe, O_CLOEXEC | O_NONBLOCK)) return 1;
+	struct sigaction sa = {};
+	sa.sa_handler = onSignal;
+	sigaction(SIGTERM, &sa, nullptr);
+	sigaction(SIGINT, &sa, nullptr);
+	sigaction(SIGUSR1, &sa, nullptr);	// bananad after a resume: draw everything again
+	signal(SIGPIPE, SIG_IGN);
+
+	Display disp;
+	std::string err;
+	// the panels' drivers may still be probing when init starts us
+	for (int tries = 0; !disp.open(o.top, err); tries++)
+	{
+		if (tries >= 100) { logf("%s", err.c_str()); return 1; }
+		usleep(50000);
+	}
+	SoftBackend be(disp.width(), disp.height());
+	showSplash(disp, be, o.splash, variant);
+	logf("panels %dx%d", disp.width(), disp.height());
+
+	double t0 = nowMs();
+	lib.scan();
+	logf("library: %d shelves in %.0f ms", lib.systemCount(), nowMs() - t0);
+
+	Sound sound(o.assets + "/sounds");
+	sound.enabled = settings["sounds"] != "off";
+	lib.onCue = [&sound](const std::string& n) { sound.play(n); };
+
+	rnds::UI ui(&lib, &be, o.assets, disp.height() / 480.0f, variant);
+	ui.setLog([](const std::string& m) { logf("%s", m.c_str()); });
+	Worker worker;
+	worker.start(&ui);
+
+	int startSys = 0;
+	{
+		std::ifstream f(o.data + "/last-system");
+		f >> startSys;
+		if (startSys < 0 || startSys >= lib.systemCount()) startSys = 0;
+	}
+	ui.setHome(startSys);
+
+	Input input;
+	input.open(o.touch, disp.width(), disp.height());
+
+	Repeat rep;
+	bool dirty = true, quit = false;
+	int lastMinute = -1;
+
+	auto handle = [&](const InputEvent& ev)
+	{
+		if (ev.type == InputEvent::TOUCH_DOWN) { std::lock_guard<std::mutex> l(worker.uiLock); dirty |= ui.touch(ev.screen, ev.x, ev.y, true); return; }
+		if (ev.type == InputEvent::TOUCH_MOVE) { std::lock_guard<std::mutex> l(worker.uiLock); dirty |= ui.touchMove(ev.screen, ev.x, ev.y); return; }
+		if (ev.type == InputEvent::TOUCH_UP) { std::lock_guard<std::mutex> l(worker.uiLock); dirty |= ui.touch(ev.screen, ev.x, ev.y, false); return; }
+		if (ev.type == InputEvent::RELEASE) { if (rep.key == ev.key) rep.key = Key::NONE; return; }
+		rnds::UI::Button b;
+		if (!uiButton(ev.key, b)) return;
+		double now = nowMs();
+		std::lock_guard<std::mutex> l(worker.uiLock);
+		ui.update(now);
+		auto before = ui.view();
+		if (ui.press(b))
+		{
+			dirty = true;
+			if (const char* s = soundOf(ev.key, before, ui.view())) sound.play(s);
+		}
+		if (ev.key == Key::LEFT || ev.key == Key::RIGHT || ev.key == Key::UP || ev.key == Key::DOWN || ev.key == Key::L || ev.key == Key::R)
+		{
+			rep.key = ev.key; rep.since = rep.last = now;
+		}
+	};
+
+	auto runGame = [&](int game)
+	{
+		const SystemDef& sd = lib.systemOf(game);
+		std::string rom = lib.gameAt(game).path;
+		std::string cmd = replaceAll(replaceAll(sd.run, "%ROM%", shellQuote(rom)), "%SYSTEM%", shellQuote(sd.id));
+		logf("starting %s: %s", sd.id.c_str(), cmd.c_str());
+		{
+			std::ofstream f(o.data + "/last-system");
+			f << ui.systemIndex() << "\n";
+		}
+		// everything the game wants goes back to the system: the panels, the buttons, the sound device
+		sound.release();
+		input.close();
+		disp.close();
+		rep.key = Key::NONE;
+		if (system(("banana-perf game " + shellQuote(sd.perf.empty() ? "balanced" : sd.perf)).c_str()) != 0) {}
+		double start = nowMs();
+		pid_t pid = fork();
+		if (pid == 0)
+		{
+			setsid();
+			signal(SIGPIPE, SIG_DFL);
+			sigset_t none;
+			sigemptyset(&none);
+			sigprocmask(SIG_SETMASK, &none, nullptr);
+			setenv("BANANA_ROM", rom.c_str(), 1);
+			setenv("BANANA_SYSTEM", sd.id.c_str(), 1);
+			execl("/bin/sh", "sh", "-c", cmd.c_str(), (char*)nullptr);
+			_exit(127);
+		}
+		int status = 0;
+		if (pid > 0)
+		{
+			std::ofstream("/run/banana/game.pid") << pid << "\n";	// bananad: the game to pause before a sleep
+			while (waitpid(pid, &status, 0) < 0 && errno == EINTR) {}
+			unlink("/run/banana/game.pid");
+		}
+		long secs = (long)((nowMs() - start) / 1000);
+		if (system("banana-perf ui") != 0) {}
+		logf("game ended after %ld s (status %d)", secs, status);
+		for (int tries = 0; !disp.open(o.top, err) && tries < 100; tries++) usleep(50000);
+		be.invalidate();
+		input.open(o.touch, disp.width(), disp.height());
+		std::lock_guard<std::mutex> l(worker.uiLock);
+		if (secs >= 5) lib.recordPlay(game, secs);	// a start that failed straight away isn't a play
+		ui.dataChanged();
+		ui.setLibrary(lib.currentShelf(), game);
+		dirty = true;
+	};
+
+	if (system("banana-perf ui") != 0) {}
+	while (!quit)
+	{
+		double now = nowMs();
+		{
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			ui.update(now);
+		}
+		int g = lib.pendingLaunch();
+		if (g >= 0)
+		{
+			lib.clearLaunch();
+			runGame(g);
+			continue;
+		}
+		if (rep.due(now))
+		{
+			rnds::UI::Button b;
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			if (uiButton(rep.key, b) && ui.press(b)) { dirty = true; sound.play("scroll"); }
+		}
+		// the clock on the top screen
+		time_t wall = time(nullptr);
+		int minute = (int)(wall / 60);
+		if (minute != lastMinute) { lastMinute = minute; dirty = true; }
+
+		bool want;
+		{
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			want = dirty || ui.animating() || ui.nextWake() == 0;
+		}
+		if (want && disp.isOpen() && !disp.flipPending())
+		{
+			{
+				std::lock_guard<std::mutex> l(worker.uiLock);
+				ui.render();
+			}
+			const uint32_t* scr[2] = { be.pixels(0), be.pixels(1) };
+			int y0[2], y1[2];
+			be.takeDamage(0, y0[0], y1[0]);
+			be.takeDamage(1, y0[1], y1[1]);
+			disp.present(scr, y0, y1);
+			dirty = false;
+			continue;	// see whether the next frame is due before sleeping
+		}
+
+		int timeout;
+		{
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			timeout = want ? -1 : ui.nextWake();	// a frame is wanted: the flip event wakes us
+		}
+		int toMinute = (int)((60 - wall % 60) * 1000);
+		if (timeout < 0 || timeout > toMinute) timeout = want ? timeout : toMinute;
+		int r = rep.wait(now);
+		if (r >= 0 && (timeout < 0 || r < timeout)) timeout = r;
+
+		std::vector<pollfd> fds;
+		fds.push_back({ sigPipe[0], POLLIN, 0 });
+		fds.push_back({ worker.wakeFd, POLLIN, 0 });
+		if (disp.isOpen()) fds.push_back({ disp.pollFd(), POLLIN, 0 });
+		for (int fd : input.fds()) fds.push_back({ fd, POLLIN, 0 });
+		int n = poll(fds.data(), fds.size(), timeout);
+		if (n == 0 && !want) dirty = true;	// the engine's next step is due
+		if (n <= 0) continue;
+		for (auto& p : fds)
+		{
+			if (!(p.revents & POLLIN)) continue;
+			if (p.fd == sigPipe[0])
+			{
+				char c;
+				while (read(sigPipe[0], &c, 1) == 1)
+				{
+					if (c == SIGTERM || c == SIGINT) quit = true;
+					if (c == SIGUSR1) { disp.restore(); be.invalidate(); dirty = true; }
+				}
+			}
+			else if (p.fd == worker.wakeFd)
+			{
+				uint64_t v;
+				if (read(worker.wakeFd, &v, 8) < 0) {}
+				dirty = true;
+			}
+			else if (disp.isOpen() && p.fd == disp.pollFd())
+				disp.handleEvents();
+			else
+				input.read(p.fd, handle);
+		}
+	}
+	{
+		std::ofstream f(o.data + "/last-system");
+		f << ui.systemIndex() << "\n";
+	}
+	worker.finish();
+	return 0;
+}

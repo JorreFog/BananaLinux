@@ -1,0 +1,28 @@
+#!/bin/sh
+# Clock profiles. The menu draws a frame in a few milliseconds and sleeps in between, so it runs on the lowest
+# clocks; a game gets the profile its system asks for (systems.conf's perf).
+#   banana-perf ui | powersave | balanced | performance | superdrastic
+# superdrastic: the "performance" governor, which SuperDrastic's own governor takes over (it picks the lowest clock
+# at which the game drops no frames, per game); the GPU stays on demand.
+CPU=/sys/devices/system/cpu/cpufreq/policy0
+GPU=$(ls -d /sys/class/devfreq/*.gpu 2>/dev/null | head -n1)
+[ -d $CPU ] || exit 0
+freqs=$(cat $CPU/scaling_available_frequencies 2>/dev/null)
+lo=$(cat $CPU/cpuinfo_min_freq) hi=$(cat $CPU/cpuinfo_max_freq)
+# the highest available frequency at or under $1 kHz
+cap() { best=$lo; for f in $freqs; do [ $f -le $1 ] && [ $f -gt $best ] && best=$f; done; echo $best; }
+cpu() {   # cpu <governor> <max kHz>
+    echo $lo > $CPU/scaling_min_freq
+    echo $2 > $CPU/scaling_max_freq
+    echo $1 > $CPU/scaling_governor
+}
+gpu() { [ -n "$GPU" ] && echo $1 > $GPU/governor 2>/dev/null; }
+case $1 in
+ui)           cpu schedutil $(cap 1104000); gpu powersave ;;
+powersave)    cpu schedutil $(cap 1416000); gpu simple_ondemand ;;
+balanced)     cpu schedutil $hi; gpu simple_ondemand ;;
+performance)  cpu performance $hi; gpu performance ;;
+superdrastic) cpu performance $hi; gpu simple_ondemand ;;
+*) echo "usage: banana-perf ui|powersave|balanced|performance|superdrastic" >&2; exit 1 ;;
+esac
+exit 0

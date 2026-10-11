@@ -1,0 +1,9 @@
+#!/bin/sh
+# The other systems: RetroArch with one libretro core, on its KMS driver (no compositor), configuration and saves
+# on the data partition.
+#   run-retroarch <core> <rom>       e.g. run-retroarch gpsp /data/roms/gba/game.gba
+CORE=/usr/lib/libretro/$1_libretro.so
+[ -f "$CORE" ] || { echo "no core $1" >&2; exit 1; }
+CFG=/data/retroarch/retroarch.cfg
+[ -f $CFG ] || { mkdir -p /data/retroarch; cp /etc/banana/retroarch.cfg $CFG; }
+exec retroarch --config $CFG -L "$CORE" "$2"
