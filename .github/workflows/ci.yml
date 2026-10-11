@@ -57,14 +57,33 @@ jobs:
           df -h /
       - name: Packages
         run: sudo apt-get update && sudo apt-get install -y build-essential bc bison flex libssl-dev libelf-dev unzip rsync cpio file wget python3-dev swig libgnutls28-dev
-      - name: Downloads cache
-        uses: actions/cache@v4
+      # downloads and the compiler cache, kept even when the build fails (the next attempt starts from them)
+      - name: Restore downloads
+        uses: actions/cache/restore@v4
         with:
           path: dl
           key: dl-${{ hashFiles('buildroot/configs/*', 'buildroot/package/**') }}
           restore-keys: dl-
+      - name: Restore compiler cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.buildroot-ccache
+          key: ccache-${{ matrix.board }}-${{ github.run_id }}
+          restore-keys: ccache-${{ matrix.board }}-
       - name: Build
         run: make ${{ matrix.board }}
+      - name: Save downloads
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: dl
+          key: dl-${{ hashFiles('buildroot/configs/*', 'buildroot/package/**') }}-${{ matrix.board }}-${{ github.run_id }}
+      - name: Save compiler cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.buildroot-ccache
+          key: ccache-${{ matrix.board }}-${{ github.run_id }}
       - name: Build log on failure
         if: failure()
         run: tail -n 200 output/${{ matrix.board }}/build/*/.stamp_* 2>/dev/null | tail -n 50; ls -t output/${{ matrix.board }}/build | head -5
