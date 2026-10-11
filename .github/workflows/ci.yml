@@ -112,7 +112,7 @@ jobs:
           name: banana-${{ matrix.board }}
           path: image
       - name: Packages
-        run: sudo apt-get update && sudo apt-get install -y qemu-system-arm qemu-utils mtools exfatprogs
+        run: sudo apt-get update && sudo apt-get install -y qemu-system-arm qemu-utils mtools exfatprogs exfat-fuse
       - name: Boot the image in QEMU
         run: sh tools/qemu-boot.sh image/banana-${{ matrix.board }}.img.gz qemu-out
       - name: Serial log on failure

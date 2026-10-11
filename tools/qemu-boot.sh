@@ -158,8 +158,9 @@ trap cleanup EXIT
 with_data() {   # with_data <command...>: the card's data partition (exFAT) mounted at $DATA, by the kernel or by FUSE
     DATA=$OUT/data; mkdir -p "$DATA"
     LOOP=$($SUDO losetup -f --show -o $(part_offset 4) "$CARD") || { bad "no loop device for the card"; return 1; }
-    $SUDO mount -t exfat "$LOOP" "$DATA" 2>/dev/null || $SUDO mount.exfat-fuse "$LOOP" "$DATA" 2>/dev/null ||
-        { bad "the data partition can't be mounted (no exFAT in the kernel, no exfat-fuse)"; $SUDO losetup -d "$LOOP"; return 1; }
+    $SUDO modprobe exfat 2>/dev/null || true
+    $SUDO mount -t exfat "$LOOP" "$DATA" 2> "$OUT/mount.err" || $SUDO mount.exfat-fuse "$LOOP" "$DATA" 2>> "$OUT/mount.err" ||
+        { bad "the data partition can't be mounted (no exFAT in the kernel, no exfat-fuse): $(tr '\n' ' ' < "$OUT/mount.err")"; $SUDO losetup -d "$LOOP"; return 1; }
     "$@"; r=$?
     $SUDO umount "$DATA" 2>/dev/null || $SUDO fusermount -u "$DATA"; $SUDO losetup -d "$LOOP"; LOOP=; DATA=
     return $r
