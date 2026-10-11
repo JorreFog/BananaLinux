@@ -25,6 +25,8 @@ namespace banana
 		// bottomTouch: a fragment of the bottom touchscreen's device path ("fe5e0000.i2c")
 		void open(const std::string& bottomTouch, int panelW, int panelH);
 		void close();
+		// a device came or went in /dev/input (watched with inotify): open() again to take it
+		bool rescanDue() { bool r = rescan; rescan = false; return r; }
 		std::vector<int> fds() const;
 		// read what is waiting on fd; events go to sink
 		void read(int fd, const std::function<void(const InputEvent&)>& sink);
@@ -42,5 +44,7 @@ namespace banana
 		};
 		std::vector<Dev> devs;
 		int pw = 640, ph = 480;
+		int watch = -1;
+		bool rescan = false;
 	};
 }

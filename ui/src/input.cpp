@@ -4,6 +4,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <linux/input.h>
+#include <sys/inotify.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
 
@@ -48,6 +49,8 @@ namespace banana
 	{
 		close();
 		pw = panelW; ph = panelH;
+		watch = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
+		if (watch >= 0) inotify_add_watch(watch, "/dev/input", IN_CREATE | IN_DELETE | IN_ATTRIB);
 		DIR* d = opendir("/dev/input");
 		if (!d) return;
 		while (dirent* e = readdir(d))
@@ -86,20 +89,31 @@ namespace banana
 	{
 		for (auto& d : devs) ::close(d.fd);
 		devs.clear();
+		if (watch >= 0) ::close(watch);
+		watch = -1;
 	}
 
 	std::vector<int> Input::fds() const
 	{
 		std::vector<int> r;
 		for (auto& d : devs) r.push_back(d.fd);
+		if (watch >= 0) r.push_back(watch);
 		return r;
 	}
 
 	void Input::read(int fd, const std::function<void(const InputEvent&)>& sink)
 	{
+		if (fd == watch)
+		{
+			char buf[4096];
+			while (::read(fd, buf, sizeof buf) > 0) {}
+			rescan = true;
+			return;
+		}
 		Dev* dv = nullptr;
 		for (auto& d : devs) if (d.fd == fd) dv = &d;
 		if (!dv) return;
+		// a device that went away: its next read fails, and the rescan drops it
 		input_event ev[64];
 		ssize_t n;
 		while ((n = ::read(fd, ev, sizeof ev)) > 0)

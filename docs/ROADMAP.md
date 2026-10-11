@@ -19,8 +19,8 @@
       LEDs, DS renderer / shader / 3D resolution, Wi-Fi on/off, About, restart, shut down
 - [ ] Settings still to come: choosing a Wi-Fi network (an on-screen keyboard), the time zone, volume
 - [ ] RetroArch and the libretro cores for the other systems (Buildroot packages), set up for one panel
-- [ ] The Favorites shelf refreshing as soon as a game is starred (now on the next scan)
-- [ ] Input hotplug in banana-ui (USB and Bluetooth pads)
+- [x] The Favorites shelf and the favourite systems' order updated as soon as the shelf shows again
+- [x] Input hotplug in banana-ui (USB and Bluetooth pads, watched with inotify)
 - [ ] A low-battery warning before the shutdown
 - [ ] Updates: a new root squashfs written to an inactive slot from the menu, kept atomic
 

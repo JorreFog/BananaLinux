@@ -245,6 +245,22 @@ static const char* soundOf(Key k, rnds::UI::View before, rnds::UI::View after)
 	}
 }
 
+// a favourite starred or unstarred: once the shelf shows, the Favorites collection and the favourite systems are put
+// right, and the cursor stays on the system it was on
+static bool rearrange(Host& lib, rnds::UI& ui)
+{
+	if (!lib.favouritesChanged() || ui.view() != rnds::UI::HOME) return false;
+	int at = ui.systemIndex();
+	std::string id = at >= 0 && at < lib.systemCount() ? lib.shelf(at).def.id : "";
+	lib.arrange();
+	int to = 0;
+	for (int i = 0; i < lib.systemCount(); i++)
+		if (lib.shelf(i).def.id == id) to = i;
+	ui.dataChanged();
+	ui.setHome(to);
+	return true;
+}
+
 // ---- headless: the same UI rendered to PNGs, for tests and screenshots ------------------------------------------
 static int runHeadless(const Options& o, Host& lib, const std::string& variant)
 {
@@ -342,6 +358,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant)
 		}
 		else if (!op.empty()) { logf("unknown command %s", op.c_str()); return 2; }
 		if (lib.pendingLaunch() >= 0) { logf("launch %d: %s", lib.pendingLaunch(), lib.gameAt(lib.pendingLaunch()).path.c_str()); lib.clearLaunch(); }
+		ui.update(now);
+		if (rearrange(lib, ui)) logf("shelf: %d systems, cursor on %s", lib.systemCount(), lib.shelf(ui.systemIndex()).def.id.c_str());
 	}
 	return 0;
 }
@@ -660,6 +678,11 @@ int main(int argc, char** argv)
 			std::lock_guard<std::mutex> l(worker.uiLock);
 			ui->update(now);
 		}
+		{
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			if (rearrange(lib, *ui)) dirty = true;
+		}
+		if (input.rescanDue()) input.open(o.touch, disp.width(), disp.height());	// a pad came or went
 		int g = lib.pendingLaunch();
 		if (g >= 0)
 		{

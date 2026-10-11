@@ -36,6 +36,7 @@ namespace banana
 		bool favorites = false;		// the Favorites collection
 		std::vector<Game> games;	// favourites: copies, with sysOf giving each one's own system
 		std::vector<int> sysOf;
+		int order = 0;				// its place in systems.conf
 	};
 
 	class Library : public rnds::Source
@@ -44,6 +45,10 @@ namespace banana
 		// romRoot: where the system folders are; dataDir: Banana's own files (stats, favourites); assets: the theme's rnds/
 		Library(const std::string& confPath, const std::string& romRoot, const std::string& dataDir, const std::string& assets);
 		void scan();	// (re)read everything from disk
+		// a favourite was starred or unstarred since the shelf was arranged: arrange() puts the Favorites collection
+		// and the favourite systems right (from memory; the host calls it when the shelf is showing)
+		bool favouritesChanged() const { return changed; }
+		void arrange();
 		int pendingLaunch() const { return launchGame; }
 		void clearLaunch() { launchGame = -1; }
 		const Shelf& shelf(int i) const { return shelves[i]; }
@@ -87,6 +92,7 @@ namespace banana
 		struct Stat { int plays = 0; long seconds = 0; time_t last = 0; };
 		std::map<std::string, Stat> stats;			// "<system>/<rel>"
 		int lib = 0, home = 0, launchGame = -1;
+		bool changed = false;
 
 		void loadDefs();
 		void loadLooks();

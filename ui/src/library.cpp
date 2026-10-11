@@ -344,6 +344,7 @@ namespace banana
 		{
 			Shelf sh;
 			sh.def = def;
+			sh.order = (int)(&def - &defs[0]);
 			std::string dir = romRoot + "/" + def.folder;
 			std::vector<std::string> rels;
 			listRoms(dir, "", def.exts, rels, 0);
@@ -380,29 +381,44 @@ namespace banana
 			std::sort(sh.games.begin(), sh.games.end(), [](const Game& a, const Game& b) { return lower(a.title) < lower(b.title); });
 			if (!sh.games.empty() || def.always) shelves.push_back(sh);
 		}
-		// Favorites: a collection after the systems, when there is something in it
+		arrange();
+		if (lib >= (int)shelves.size()) lib = 0;
+	}
+
+	// the shelf's order and the Favorites collection, from the systems' games and the favourites as they are now
+	void Library::arrange()
+	{
+		shelves.erase(std::remove_if(shelves.begin(), shelves.end(), [](const Shelf& s) { return s.favorites; }), shelves.end());
+		// the configured order, favourite systems first
+		std::stable_sort(shelves.begin(), shelves.end(), [this](const Shelf& a, const Shelf& b)
+		{
+			int fa = (int)favSystems.count(a.def.id), fb = (int)favSystems.count(b.def.id);
+			return fa != fb ? fa > fb : a.order < b.order;
+		});
+		// Favorites: a collection after the systems (its place among them as a favourite itself), when not empty
 		Shelf fav;
 		fav.favorites = true;
+		fav.order = 1 << 20;
 		fav.def.id = "favorites"; fav.def.name = "Favorites"; fav.def.maker = "Collection";
 		for (int s = 0; s < (int)shelves.size(); s++)
 			for (auto& g : shelves[s].games)
 				if (g.fav) { fav.games.push_back(g); fav.sysOf.push_back(s); }
-		if (!fav.games.empty()) shelves.push_back(fav);
-		// favourite systems first, keeping the configured order otherwise
-		std::stable_sort(shelves.begin(), shelves.end(), [this](const Shelf& a, const Shelf& b)
+		std::sort(fav.games.begin(), fav.games.end(), [](const Game& a, const Game& b) { return lower(a.title) < lower(b.title); });
+		// sysOf follows the sort: find each game's system again by its path
+		for (size_t k = 0; k < fav.games.size(); k++)
+			for (int s = 0; s < (int)shelves.size(); s++)
+				if (fav.games[k].path.compare(0, romRoot.size() + shelves[s].def.folder.size() + 2, romRoot + "/" + shelves[s].def.folder + "/") == 0)
+					{ fav.sysOf[k] = s; break; }
+		if (!fav.games.empty())
 		{
-			return favSystems.count(a.def.id) > favSystems.count(b.def.id);
-		});
-		// sysOf indexes moved with the sort: point them at the systems again
-		for (auto& sh : shelves)
-		{
-			if (!sh.favorites) continue;
-			for (size_t k = 0; k < sh.games.size(); k++)
-				for (int s = 0; s < (int)shelves.size(); s++)
-					if (!shelves[s].favorites && sh.games[k].path.compare(0, romRoot.size() + 1 + shelves[s].def.folder.size() + 1, romRoot + "/" + shelves[s].def.folder + "/") == 0)
-						{ sh.sysOf[k] = s; break; }
+			// after the favourite systems when the collection is starred itself, else at the end
+			size_t at = shelves.size();
+			if (favSystems.count("favorites"))
+				for (at = 0; at < shelves.size() && favSystems.count(shelves[at].def.id); at++) {}
+			shelves.insert(shelves.begin() + (long)at, fav);
 		}
 		if (lib >= (int)shelves.size()) lib = 0;
+		changed = false;
 	}
 
 	Game* Library::sourceOf(int shelf, int game, int* sys)
@@ -569,6 +585,7 @@ namespace banana
 		const std::string& id = shelves[sys].def.id;
 		if (!favSystems.erase(id)) favSystems.insert(id);
 		saveFavs();
+		changed = true;
 	}
 
 	void Library::toggleGameFav(int game)
@@ -581,6 +598,7 @@ namespace banana
 		if (g->fav) favGames.insert(key); else favGames.erase(key);
 		if (shelves[lib].favorites) shelves[lib].games[game].fav = g->fav;
 		saveFavs();
+		changed = true;
 	}
 
 	std::string Library::emptyTitle()
