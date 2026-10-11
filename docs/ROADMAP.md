@@ -2,6 +2,8 @@
 
 ## 0.1: first boot on the hardware
 
+- [x] The whole system booted end to end in QEMU (`tools/qemu-boot.sh`, the CI's `boot` job): the first boot's
+      partitioning, the menu on both panels, a game started from the library, a shutdown from the settings
 - [ ] A full image build (`make rgds`, or the CI's `image` job), and the first boot on an RG DS and an RG DS Plus
 - [ ] Both panels up from banana-ui; touch on the bottom panel where the finger is
 - [ ] Buttons and their mapping (A = east, B = south: the RG DS's Nintendo layout)

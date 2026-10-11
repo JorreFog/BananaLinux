@@ -91,3 +91,35 @@ jobs:
         with:
           name: banana-${{ matrix.board }}
           path: output/${{ matrix.board }}/images/banana-${{ matrix.board }}.img.gz
+
+  # the whole image booted in QEMU: the first boot makes the data partition, the menu comes up on both panels, a
+  # game is started from the library and the menu comes back, a shutdown from the settings powers the VM off; the
+  # screenshots and the card's logs are kept as an artifact
+  boot:
+    if: github.event_name == 'workflow_dispatch' && inputs.image
+    needs: image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      matrix:
+        board: [rgds, rgds-plus]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: banana-${{ matrix.board }}
+          path: image
+      - name: Packages
+        run: sudo apt-get update && sudo apt-get install -y qemu-system-arm qemu-utils mtools exfatprogs
+      - name: Boot the image in QEMU
+        run: tools/qemu-boot.sh image/banana-${{ matrix.board }}.img.gz qemu-out
+      - name: Serial log on failure
+        if: failure()
+        run: tail -n 80 qemu-out/serial.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qemu-boot-${{ matrix.board }}
+          path: |
+            qemu-out/*.png
+            qemu-out/*.log

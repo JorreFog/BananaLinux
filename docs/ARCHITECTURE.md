@@ -170,6 +170,19 @@ rk817 (card 0) with its `Playback Mux` on HP. RG DS Plus: playback on the aw8816
 | `performance` | performance | performance | N64, ports |
 | `superdrastic` | performance (SuperDrastic's own governor takes over: the lowest clock with no dropped frames, per game) | on demand | Nintendo DS |
 
+## Booting it without the handheld
+
+`tools/qemu-boot.sh` boots a card image on QEMU's `virt` machine with the same kernel and root: the card on a PCI
+SDHCI (so it is `mmcblk0`, and the first boot partitions it as on the RG DS), two 640x480 panels on a virtio GPU
+(`Virtual-1`, `Virtual-2`), a virtio keyboard and tablet for the buttons and the touchscreen. Three kernel
+parameters make the image fit a display other than the RG DS's: `banana.console=1` sends rcS's milestones and
+banana-ui's log to the console (the serial port here, the UART on the handheld), `banana.top=` names the top
+panel's connector and `banana.touch=` the bottom touchscreen's device. The test script drives the menu through
+QEMU's monitor (`sendkey`, `screendump`) and reads the card's partition afterwards. The CI's `boot` job runs it on
+every image it builds, for both boards, and keeps the screenshots and logs as an artifact. What it can't test:
+the panels' DSI timing, sleep (QEMU's `virt` has no suspend to RAM), sound, Wi-Fi, the GPU (the emulators run
+without it, so a DS game only gets as far as its launcher).
+
 ## Hardware support
 
 `buildroot/board/rgds` is ROCKNIX's RK3566 support at a pinned commit (`ROCKNIX`), copied by

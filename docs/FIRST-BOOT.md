@@ -57,6 +57,10 @@ Send those files back and say what you saw. Some cases:
 - **Slow wake from sleep**: set `sleep_debug = yes` in `banana/bananad.conf`, sleep and wake a few times, and send
   `sleep.log` and `sleep-devices.log`: they show which part of the handheld takes the time.
 
+A serial cable on the RG DS's UART (`ttyS2`, 1500000 baud) shows everything as it happens; with `banana.console=1`
+added to `extlinux/extlinux.conf`'s `APPEND` on the boot partition, rcS's milestones and the menu's log go there
+too, as they do in QEMU (`tools/qemu-boot.sh`).
+
 With Wi-Fi working, SSH saves taking the card out: put your public key in `banana/ssh/authorized_keys`, switch on
 Settings > System > SSH, then `ssh root@<address>` (the address is in Settings > Wi-Fi's description). `dmesg`,
 `cat /run/banana/boot-times` and `tail -f /data/banana/logs/banana-ui.log` all work there.

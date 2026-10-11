@@ -87,6 +87,11 @@ Built and checked in this repository's CI and by hand:
   fragment applies as written, and the whole kernel builds (a 25 MB `Image`) with the panels, joypad, touch, codec,
   amplifiers and battery built in; the RG DS and RG DS Plus device trees compile.
 
+- The whole system boots end to end in QEMU (`tools/qemu-boot.sh`): the kernel, init, the first boot's
+  partitioning and exFAT, bananad, the menu on two virtual panels, a game started from the library and the menu
+  back, a shutdown from the settings, the card's logs afterwards. The CI's `boot` job runs it on every image it
+  builds.
+
 Not done yet: a full image build (it needs the network access Buildroot downloads with; the CI's `image` job does
 it), and anything on the hardware: the boot time, suspend and resume of the panels and Wi-Fi, the panels' handover
 to SuperDrastic, the RG DS Plus's sound routing and panel tuning on a real unit. See [docs/ROADMAP.md](docs/ROADMAP.md).
@@ -104,6 +109,16 @@ make rgds-plus     # output/rgds-plus/images/banana-rgds-plus.img.gz
 The first build fetches Buildroot and everything it builds, and takes an hour or more. Write the `.img.gz` to a
 microSD card with balenaEtcher. On the first boot Banana makes the data partition from the rest of the card (a few
 seconds); then put games in `roms/nds` and so on from any computer (see `banana/README.txt` on the card).
+
+The whole image boots in QEMU, with no handheld (`tools/qemu-boot.sh`, and the CI's `boot` job after every image
+build): the card on an emulated SD host, two 640x480 panels on a virtio GPU, a keyboard for the buttons. It runs the
+first boot (the data partition made from the rest of the card), screenshots both panels, starts a game from the
+library, shuts down from the settings, and reads the card's logs:
+
+```sh
+tools/qemu-boot.sh output/rgds/images/banana-rgds.img.gz        # the test; screenshots and logs in qemu-out/
+tools/qemu-boot.sh output/rgds/images/banana-rgds.img.gz --interactive   # a window: arrows, Enter = A, Backspace = B
+```
 
 Working on the menu needs no handheld:
 

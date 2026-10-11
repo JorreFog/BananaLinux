@@ -12,6 +12,8 @@ mount -t tmpfs -o mode=1777,nosuid,nodev tmpfs /tmp
 mkdir -p /run/banana /var/log
 # boot milestones, seconds since the kernel started (logs/boot.txt)
 mark() { read up rest < /proc/uptime; printf '%-28s %6.2f s\n' "$1" "$up" >> /run/banana/boot-times; }
+# banana.console=1 on the kernel's command line: the boot's progress on the console (the UART, QEMU's serial)
+grep -q 'banana\.console=1' /proc/cmdline && mark() { read up rest < /proc/uptime; printf '%-28s %6.2f s\n' "$1" "$up" | tee -a /run/banana/boot-times > /dev/console; }
 mark "rcS: started"
 [ -f /etc/sysctl.d/banana.conf ] && sysctl -q -p /etc/sysctl.d/banana.conf
 syslogd -O /run/banana/messages -s 256 -b 1
@@ -67,20 +69,6 @@ banana-perf ui
     grep -q '^ *ssh *= *on' /data/banana/settings.conf 2>/dev/null && /usr/libexec/banana/ssh up
     /usr/libexec/banana/panel-tune
 ) &
-# the boot, to read on a computer: logs/boot.txt (the milestones above, the kernel's, banana-ui's) and
-# logs/dmesg.txt (the kernel's log; the previous boot's in dmesg.1.txt)
-(
-    sleep 20
-    L=/data/banana/logs
-    mkdir -p $L
-    [ -f $L/dmesg.txt ] && mv -f $L/dmesg.txt $L/dmesg.1.txt
-    dmesg > $L/dmesg.txt
-    {
-        date
-        cat /proc/cmdline
-        t=$(dmesg | sed -n 's/^\[ *\([0-9.]*\)\] Run .* as init process.*/\1/p' | head -n 1)
-        [ -n "$t" ] && printf '%-28s %6.2f s\n' "kernel: init started" "$t"
-        cat /run/banana/boot-times
-    } > $L/boot.txt
-) &
+# the boot, to read on a computer (logs/boot.txt, logs/dmesg.txt), once it has settled; rcK writes it again at shutdown
+( sleep 20; /usr/libexec/banana/boot-log ) &
 exit 0

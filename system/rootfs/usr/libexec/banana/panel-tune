@@ -6,7 +6,7 @@
 REPORT=/data/banana/panel-tune.txt
 [ -f $REPORT ] && exit 0
 sleep 5     # the panels lit and the menu up first
-mountpoint -q /sys/kernel/debug || mount -t debugfs debugfs /sys/kernel/debug
+grep -qs ' /sys/kernel/debug ' /proc/mounts || mount -t debugfs debugfs /sys/kernel/debug
 DTB=/boot/$(sed -n 's/^ *FDT \/*//p' /boot/extlinux/extlinux.conf 2>/dev/null)
 # a card it can't tune says why, once (delete the report to try again)
 [ -f "$DTB" ] || { { date; echo "no boot DTB found (is /boot mounted?)"; } > $REPORT; exit 1; }

@@ -94,3 +94,13 @@ CONFIG_SMB_SERVER=m
 # CONFIG_RTL8723BS is not set
 # CONFIG_TCP_CONG_ADVANCED is not set
 # CONFIG_UNIX_DIAG is not set
+# the whole image booted in QEMU (tools/qemu-boot.sh, the CI's boot job): a PCI host, an SD card on a PCI SDHCI
+# (so the card is mmcblk0 as on the handheld), two panels on a virtio GPU, a virtio keyboard and tablet, the RTC
+CONFIG_PCI=y
+CONFIG_PCI_HOST_GENERIC=y
+CONFIG_VIRTIO_MENU=y
+CONFIG_VIRTIO_PCI=y
+CONFIG_VIRTIO_INPUT=y
+CONFIG_DRM_VIRTIO_GPU=y
+CONFIG_MMC_SDHCI_PCI=y
+CONFIG_RTC_DRV_PL031=y

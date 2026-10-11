@@ -35,7 +35,7 @@ namespace banana
 		struct Dev
 		{
 			int fd = -1;
-			bool touch = false;
+			bool touch = false, pointer = false;	// pointer: an absolute pointer whose button is BTN_LEFT
 			int screen = 1;
 			int minX = 0, maxX = 0, minY = 0, maxY = 0;
 			int x = 0, y = 0;

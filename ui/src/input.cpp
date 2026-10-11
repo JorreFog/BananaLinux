@@ -64,12 +64,17 @@ namespace banana
 			ioctl(fd, EVIOCGBIT(EV_ABS, sizeof abs), abs);
 			Dev dv;
 			dv.fd = fd;
-			if (testBit(abs, ABS_MT_POSITION_X) && testBit(abs, ABS_MT_POSITION_Y))
+			// a touchscreen (multitouch, or single-touch with BTN_TOUCH), or an absolute pointer (QEMU's tablet, a
+			// graphics tablet: BTN_LEFT on ABS_X/Y, and not a pad's stick)
+			bool mt = testBit(abs, ABS_MT_POSITION_X) && testBit(abs, ABS_MT_POSITION_Y);
+			bool st = !mt && testBit(abs, ABS_X) && testBit(abs, ABS_Y) && (testBit(keys, BTN_TOUCH) || (testBit(keys, BTN_LEFT) && !testBit(keys, BTN_SOUTH)));
+			if (mt || st)
 			{
 				dv.touch = true;
+				dv.pointer = st && !testBit(keys, BTN_TOUCH);
 				input_absinfo ax = {}, ay = {};
-				ioctl(fd, EVIOCGABS(ABS_MT_POSITION_X), &ax);
-				ioctl(fd, EVIOCGABS(ABS_MT_POSITION_Y), &ay);
+				ioctl(fd, EVIOCGABS(mt ? ABS_MT_POSITION_X : ABS_X), &ax);
+				ioctl(fd, EVIOCGABS(mt ? ABS_MT_POSITION_Y : ABS_Y), &ay);
 				dv.minX = ax.minimum; dv.maxX = ax.maximum; dv.minY = ay.minimum; dv.maxY = ay.maximum;
 				dv.screen = sysPath(e->d_name).find(bottomTouch) != std::string::npos ? 1 : 0;
 			}
@@ -126,7 +131,7 @@ namespace banana
 					if (e.type == EV_ABS && (e.code == ABS_MT_POSITION_X || e.code == ABS_X)) { dv->x = e.value; dv->moved = true; }
 					else if (e.type == EV_ABS && (e.code == ABS_MT_POSITION_Y || e.code == ABS_Y)) { dv->y = e.value; dv->moved = true; }
 					else if (e.type == EV_ABS && e.code == ABS_MT_TRACKING_ID && e.value < 0) dv->down = false;
-					else if (e.type == EV_KEY && e.code == BTN_TOUCH) dv->down = e.value != 0;
+					else if (e.type == EV_KEY && (e.code == BTN_TOUCH || (dv->pointer && e.code == BTN_LEFT))) dv->down = e.value != 0;
 					else if (e.type == EV_SYN && e.code == SYN_REPORT)
 					{
 						InputEvent o;

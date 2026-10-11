@@ -6,6 +6,7 @@ sleep 1
 /usr/libexec/banana/ssh down 2>/dev/null
 /usr/libexec/banana/wifi down 2>/dev/null
 hwclock -w 2>/dev/null
+/usr/libexec/banana/boot-log       # the boot's log, complete, whenever the handheld is turned off
 sync
 umount /data 2>/dev/null || mount -o remount,ro /data
 sync

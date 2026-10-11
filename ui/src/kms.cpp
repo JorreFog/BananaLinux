@@ -57,25 +57,32 @@ namespace banana
 			closedir(d);
 		}
 		std::sort(cards.begin(), cards.end());
-		err = "no DRM device with two connected DSI panels";
+		// the panels' connector type from the top one's name ("DSI-2"; "Virtual-2" on QEMU's virtio GPU)
+		std::string type = top.substr(0, top.find('-'));
+		err = "no DRM device with two connected " + type + " panels";
 		for (auto& path : cards)
 		{
 			int f = ::open(path.c_str(), O_RDWR | O_CLOEXEC);
 			if (f < 0) continue;
 			drmModeRes* res = drmModeGetResources(f);
 			if (!res) { ::close(f); continue; }
-			struct Found { uint32_t conn, crtc; drmModeModeInfo mode; bool top; };
+			struct Found { uint32_t conn, crtc; drmModeModeInfo mode; bool top; std::vector<drmModeModeInfo> modes; };
 			std::vector<Found> found;
 			std::vector<uint32_t> used;
 			for (int i = 0; i < res->count_connectors && found.size() < 2; i++)
 			{
 				drmModeConnector* c = drmModeGetConnector(f, res->connectors[i]);
 				if (!c) continue;
-				if (c->connector_type == DRM_MODE_CONNECTOR_DSI && c->connection == DRM_MODE_CONNECTED && c->count_modes > 0)
+				const char* tn = drmModeGetConnectorTypeName(c->connector_type);
+				if (tn && type == tn && c->connection == DRM_MODE_CONNECTED && c->count_modes > 0)
 				{
+					// the mode: the kernel command line's (video=<connector>:<mode>) first, then the panel's preferred one
 					drmModeModeInfo mode = c->modes[0];
 					for (int m = 0; m < c->count_modes; m++)
 						if (c->modes[m].type & DRM_MODE_TYPE_PREFERRED) { mode = c->modes[m]; break; }
+					for (int m = 0; m < c->count_modes; m++)
+						if (c->modes[m].type & DRM_MODE_TYPE_USERDEF) { mode = c->modes[m]; break; }
+					std::vector<drmModeModeInfo> modes(c->modes, c->modes + c->count_modes);
 					// a CRTC this connector's encoders can drive and the other panel doesn't have
 					uint32_t crtc = 0;
 					for (int e = 0; e < c->count_encoders && !crtc; e++)
@@ -90,9 +97,9 @@ namespace banana
 					if (crtc)
 					{
 						char name[32];
-						snprintf(name, sizeof name, "DSI-%u", c->connector_type_id);
+						snprintf(name, sizeof name, "%s-%u", tn, c->connector_type_id);
 						used.push_back(crtc);
-						found.push_back({ c->connector_id, crtc, mode, top == name });
+						found.push_back({ c->connector_id, crtc, mode, top == name, modes });
 					}
 				}
 				drmModeFreeConnector(c);
@@ -102,6 +109,11 @@ namespace banana
 			// screen 0 is the top panel: the named connector, else the second one
 			if (!found[0].top && !found[1].top) std::swap(found[0], found[1]);
 			if (found[1].top) std::swap(found[0], found[1]);
+			// the panels' preferred modes differ (a display that isn't the RG DS's pair): the bottom one takes the top's
+			// size when it has it
+			if (found[0].mode.hdisplay != found[1].mode.hdisplay || found[0].mode.vdisplay != found[1].mode.vdisplay)
+				for (auto& m : found[1].modes)
+					if (m.hdisplay == found[0].mode.hdisplay && m.vdisplay == found[0].mode.vdisplay) { found[1].mode = m; break; }
 			if (found[0].mode.hdisplay != found[1].mode.hdisplay || found[0].mode.vdisplay != found[1].mode.vdisplay)
 			{
 				err = "the two panels have different modes";

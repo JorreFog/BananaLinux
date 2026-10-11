@@ -1,0 +1,17 @@
+#!/bin/sh
+# The boot, to read on a computer: logs/boot.txt (the milestones rcS and banana-ui marked, seconds since the kernel
+# started, with the kernel's own: when it started init) and logs/dmesg.txt (the kernel's log; the previous boot's
+# in dmesg.1.txt). Run by rcS 20 s after boot and by rcK at shutdown, so the file is complete either way.
+L=/data/banana/logs
+mkdir -p $L 2>/dev/null || exit 0
+[ -f /run/banana/dmesg-saved ] && mv -f $L/dmesg.txt $L/dmesg.1.txt 2>/dev/null
+dmesg > $L/dmesg.txt 2>/dev/null
+touch /run/banana/dmesg-saved
+{
+    date
+    cat /proc/cmdline
+    t=$(dmesg 2>/dev/null | sed -n 's/^\[ *\([0-9.]*\)\] Run .* as init process.*/\1/p' | head -n 1)
+    [ -n "$t" ] && printf '%-28s %6.2f s\n' "kernel: init started" "$t"
+    cat /run/banana/boot-times 2>/dev/null
+} > $L/boot.txt.new 2>/dev/null && mv -f $L/boot.txt.new $L/boot.txt
+exit 0

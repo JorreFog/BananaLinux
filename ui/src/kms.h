@@ -10,7 +10,8 @@ namespace banana
 	{
 	public:
 		~Display() { close(); }
-		// the first DRM device with two connected DSI panels; top is the connector shown as the top screen ("DSI-2")
+		// the first DRM device with two connected panels of top's connector type; top is the connector shown as the
+		// top screen ("DSI-2" on the handheld; "Virtual-2" on QEMU's virtio GPU, see tools/qemu-boot.sh)
 		bool open(const std::string& top, std::string& err);
 		void close();
 		bool isOpen() const { return fd >= 0; }
