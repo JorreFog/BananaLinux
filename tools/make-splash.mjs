@@ -16,8 +16,8 @@ import fs from 'fs';
 const [rnds, bananas, out] = process.argv.slice(2);
 const b64 = f => fs.readFileSync(f).toString('base64');
 const shell = `data:image/png;base64,${b64(rnds + '/game_slot.png')}`;
-// the console: the back of the lower half as pixel art (tools/make-console.py), per palette, its top at 300
-const consoleOf = name => `data:image/png;base64,${b64(rnds + '/console-' + name + '@1x.png')}`;
+// the console: the back of a DSi XL as pixel art (tools/make-console.py), per palette and scale, its top at 322
+const consoleOf = (name, scale) => `data:image/png;base64,${b64(rnds + '/console-' + name + (scale > 1 ? '@1.6x' : '@1x') + '.png')}`;
 const banana = `data:image/png;base64,${b64(bananas + '/banana-48.png')}`;
 const pal = {
   dark: { name: 'dark', bg: '#17161c', dot: 'rgba(255,255,255,.14)', dot2: 'rgba(255,255,255,.07)', edge: '#e8e2d3', panel: '#17161c',
@@ -31,10 +31,10 @@ body { width: 640px; height: 480px; background: transparent; image-rendering: pi
 .scr { position: absolute; left: 0; top: 0; width: 640px; height: 480px; overflow: hidden; background-color: ${p.bg};
   background-image: url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4' shape-rendering='crispEdges'><rect width='1' height='1' fill='${p.dot}'/><rect x='2' y='2' width='1' height='1' fill='${p.dot2}'/></svg>`)}");
   background-size: 4px 4px; }
-.console { position: absolute; left: 40px; top: 290px; width: 560px; height: 300px; image-rendering: pixelated; }
+.console { position: absolute; left: 40px; top: 322px; width: 560px; height: 172px; }
 .mouth { position: absolute; left: 260px; top: 316px; width: 120px; height: 28px; border: 3px solid ${p.edge}; border-radius: 6px;
   background: ${p.mouth}; box-shadow: inset 0 6px 0 rgba(0,0,0,.5); }
-.led { position: absolute; left: 446px; top: 324px; width: 14px; height: 10px; background: ${p.edge}; }
+.led { position: absolute; left: 409px; top: 336px; width: 14px; height: 10px; background: ${p.edge}; }
 .led i { position: absolute; left: 2px; top: 2px; width: 10px; height: 6px; background: #7a2a30; }
 .lip { position: absolute; left: 260px; top: 325px; width: 120px; height: 19px; border: 3px solid ${p.edge}; border-top: 0;
   border-radius: 0 0 6px 6px; background: ${p.mouth}; }
@@ -47,7 +47,7 @@ body { width: 640px; height: 480px; background: transparent; image-rendering: pi
 `;
 const pages = {
   top: p => `<div class="scr"></div>`,
-  bot: p => `<div class="scr"><img class="console" src="${consoleOf(p.name)}"><div class="mouth"></div><div class="led"><i></i></div></div>`,
+  bot: (p, scale) => `<div class="scr"><img class="console" src="${consoleOf(p.name, scale)}"><div class="mouth"></div><div class="led"><i></i></div></div>`,
   lip: p => `<div class="lip"></div>`,
 };
 const b = await chromium.launch();
@@ -61,8 +61,8 @@ const shot = async (scale, body, style, path, clip) => {
 for (const [scale, size] of [[1, 640], [1.6, 1024]]) {
   for (const [variant, p] of Object.entries(pal))
     for (const [name, body] of Object.entries(pages))
-      await shot(scale, body(p), css(p), `${out}/${variant}-${size}-${name}.png`,
-        name === 'lip' ? { x: 227, y: 325, width: 186, height: 22 } : undefined);
+      await shot(scale, body(p, scale), css(p), `${out}/${variant}-${size}-${name}.png`,
+        name === 'lip' ? { x: 257, y: 325, width: 126, height: 22 } : undefined);
   await shot(scale, `<div class="cart"><div class="art"><img src="${banana}"></div><img src="${shell}"></div>`, css(pal.dark),
     `${out}/cart-${size}.png`, { x: 0, y: 0, width: 100, height: 104 });
 }

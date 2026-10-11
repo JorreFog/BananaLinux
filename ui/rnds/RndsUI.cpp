@@ -1772,13 +1772,13 @@ namespace rnds
 			float mouthY = ry + 170, clipY = mouthY + 9;
 			// Banana: the back of the console as pixel art, 560 wide, its slot where the box's mouth is (tools/make-console.py)
 			const Bitmap& console = lightTheme ? consoleLight : consoleDark;
-			if (!console.empty()) drawSprite(still(lightTheme ? "console-light" : "console-dark", console, false), 40, ry + 144);
+			if (!console.empty()) drawSprite(still(lightTheme ? "console-light" : "console-dark", console, false), 40, mouthY + 6);
 			else drawBox(heroBox(), 150, ry + 154, 340, 110);
 			drawBox(slotMouthBox(), 260, mouthY, 120, 28);	// Banana: a card-sized slot (was 180 wide at 230)
 			bool clicked = t >= INS_LIFT + INS_SLIDE;
 			Color led = clicked ? Color::hex(0x3ce07a) : Color::hex(0x7a2a30);
-			be->fill(std::round(X(446)), std::round(X(mouthY + 8)), std::round(X(14)), std::round(X(10)), EDGE);
-			be->fill(std::round(X(448)), std::round(X(mouthY + 10)), std::round(X(10)), std::round(X(6)), led);
+			be->fill(std::round(X(409)), std::round(X(mouthY + 20)), std::round(X(14)), std::round(X(10)), EDGE);	// Banana: right of the slot, on the slab
+			be->fill(std::round(X(411)), std::round(X(mouthY + 22)), std::round(X(10)), std::round(X(6)), led);
 
 			// where the cartridge's top is: lift, then down into the slot with an accelerating fall, a click past the
 			// end, and back up onto it

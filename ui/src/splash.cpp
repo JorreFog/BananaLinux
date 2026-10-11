@@ -228,7 +228,7 @@ namespace banana
 		blit(bot, lip, X(LIP_X), X(CLIP_Y), H);
 		if (t >= CLICK_AT)
 		{
-			fill(bot, X(448), X(326), X(10), X(6), 0xff3ce07au);	// the power light, green
+			fill(bot, X(411), X(338), X(10), X(6), 0xff3ce07au);	// the power light, green
 			if (!cued) { cued = true; if (onCue) onCue("insert"); }
 			double ct = t - CLICK_AT;
 			if (ct < 240)
