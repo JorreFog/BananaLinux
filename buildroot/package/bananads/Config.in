@@ -1,0 +1,11 @@
+config BR2_PACKAGE_BANANADS
+	bool "bananads"
+	depends on BR2_TOOLCHAIN_USES_GLIBC
+	select BR2_PACKAGE_LIBDRM
+	select BR2_PACKAGE_ALSA_LIB
+	select BR2_PACKAGE_ZLIB
+	help
+	  BananaDS, Banana's own Nintendo DS emulator (github.com/JorreFog/BananaDS), to come. The package is the
+	  slot it goes into: its version, build and install are in bananads.mk, the launcher is
+	  /usr/libexec/banana/run-bananads (docs/EMULATORS.md says what it is given and what is expected of it), and
+	  Settings > Nintendo DS > Emulator switches the DS shelf to it. Not in the defconfigs until it builds.

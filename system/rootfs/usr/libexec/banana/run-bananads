@@ -1,0 +1,17 @@
+#!/bin/sh
+# Nintendo DS: BananaDS, when it is ready (docs/EMULATORS.md is the contract this launcher keeps; the lines marked
+# FILL IN follow BananaDS's own command line once it has one).
+#   run-bananads <rom>
+[ -x /usr/bin/bananads ] || { echo "BananaDS isn't installed" >&2; exit 1; }
+D=/data/bananads                       # its own settings and memory (per-game clocks, what it remembers)
+L=/data/banana/logs/bananads           # its logs, readable on a computer
+mkdir -p $D $L /data/saves/nds /data/states/nds
+# what Banana gives every DS emulator
+export BANANADS_TOP=${BANANA_TOP:-DSI-2}         # the top panel's connector (the other connected panel is the bottom)
+export BANANADS_TOUCH=${BANANA_TOUCH:-fe5e0000.i2c}  # the bottom panel's touchscreen (part of its sysfs path)
+export BANANADS_DATA=$D BANANADS_LOGDIR=$L
+export BANANADS_SAVES=/data/saves/nds BANANADS_STATES=/data/states/nds BANANADS_BIOS=/data/bios
+# the user's choices from Settings > Nintendo DS (renderer, shader, 3D resolution) are in superdrastic.conf as
+# DSFLIP_RAST, DSFLIP_SHADER and drastic.cfg's hires_3d; BananaDS reads its own file (FILL IN when it has one)
+[ -f /data/banana/bananads.conf ] && . /data/banana/bananads.conf
+exec /usr/bin/bananads "$1"            # FILL IN: BananaDS's arguments, if it takes the above as arguments instead

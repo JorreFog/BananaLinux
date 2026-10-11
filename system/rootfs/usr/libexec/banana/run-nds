@@ -1,0 +1,17 @@
+#!/bin/sh
+# Nintendo DS: the emulator chosen in Settings > Nintendo DS > Emulator (banana/settings.conf nds_emulator:
+# superdrastic or bananads), or whichever is installed. Each emulator has its own launcher with the same contract
+# (docs/EMULATORS.md): run-drastic (DraStic through SuperDrastic) and run-bananads (BananaDS).
+#   run-nds <rom>
+want=$(sed -n 's/^ *nds_emulator *= *//p' /data/banana/settings.conf 2>/dev/null | head -n 1)
+have_bananads=0; [ -x /usr/bin/bananads ] && have_bananads=1
+have_drastic=0; { [ -x /data/drastic/drastic ] || [ -d /usr/share/drastic ]; } && have_drastic=1
+case $want in
+bananads) [ $have_bananads = 1 ] || { echo "BananaDS isn't installed: DraStic instead" >&2; want=superdrastic; } ;;
+*) want=superdrastic ;;
+esac
+[ $want = superdrastic ] && [ $have_drastic = 0 ] && [ $have_bananads = 1 ] && want=bananads
+case $want in
+bananads) exec /usr/libexec/banana/run-bananads "$1" ;;
+*) exec /usr/libexec/banana/run-drastic "$1" ;;
+esac
