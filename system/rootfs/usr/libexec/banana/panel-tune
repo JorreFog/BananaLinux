@@ -1,0 +1,15 @@
+#!/bin/sh
+# Once per card: both panels' refresh as close to 60 Hz as their real pixel clock allows (banana-panel-tune reads
+# the clock from the kernel and rewrites the timing in the boot DTB; from the next boot). The RG DS's DTB already
+# has ROCKNIXDS's measured timing (60.0013 Hz) and is left alone; the RG DS Plus's is tuned here. The report is in
+# /data/banana/panel-tune.txt; delete that file to tune again.
+REPORT=/data/banana/panel-tune.txt
+[ -f $REPORT ] && exit 0
+sleep 5     # the panels lit and the menu up first
+mountpoint -q /sys/kernel/debug || mount -t debugfs debugfs /sys/kernel/debug
+DTB=/boot/$(sed -n 's/^ *FDT \/*//p' /boot/extlinux/extlinux.conf)
+[ -f "$DTB" ] || exit 1
+mount -o remount,rw /boot || exit 1
+{ date; banana-panel-tune "$DTB"; } > $REPORT.new 2>&1 && mv $REPORT.new $REPORT
+sync
+mount -o remount,ro /boot

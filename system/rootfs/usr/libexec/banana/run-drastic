@@ -14,5 +14,8 @@ cd $D
 export DSFLIP_HANDOVER=none DSFLIP_DRASTIC_DIR=$D DSFLIP_TOP=${BANANA_TOP:-DSI-2}
 # SuperDrastic's memory (per-game clocks, RetroAchievements login) and logs on the data partition, not beside it
 export DSFLIP_DATA=/data/superdrastic DSFLIP_LOGDIR=/data/banana/logs/superdrastic
+# ROCKNIXDS's defaults: the Gengis Engine renderer (DraStic's picture with ~12% less CPU work a frame) and
+# SuperDrastic's own CPU governor (the lowest clock with no dropped frames, remembered per game)
+export DSFLIP_RAST=${DSFLIP_RAST:-1} DSFLIP_CPUGOV=${DSFLIP_CPUGOV:-1}
 [ -f /data/banana/superdrastic.conf ] && . /data/banana/superdrastic.conf
 exec $SD/superdrastic-run $D/drastic "$1"

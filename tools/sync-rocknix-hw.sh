@@ -47,7 +47,8 @@ for dir in projects/ROCKNIX/packages/linux/patches/mainline $D/patches/linux pac
     done
 done
 # the joypad driver needs input-polldev, which mainline removed: ROCKNIX's RK3326 patch adds it back
-git -C "$R" sparse-checkout add /projects/ROCKNIX/devices/RK3326/patches/linux/003-input-add-input-polldev-driver.patch
+git -C "$R" sparse-checkout add /projects/ROCKNIX/devices/RK3326/patches/linux/003-input-add-input-polldev-driver.patch \
+    /projects/ROCKNIX/packages/emulators/standalone/drastic-sa/config/RK3566/drastic.cfg.rgds
 cp "$R/projects/ROCKNIX/devices/RK3326/patches/linux/003-input-add-input-polldev-driver.patch" \
     "$B/linux-patches/6-rk3326-003-input-add-input-polldev-driver.patch"
 # patches for Mali's kbase driver, which Banana doesn't use (it runs Panfrost)
@@ -56,6 +57,8 @@ rm -f "$B"/linux-patches/*mali* "$B"/linux-patches/*i915*
 cp $R/$D/linux/dts/rockchip/rk3568-anbernic-rg-ds.dts $R/$D/linux/dts/rockchip/rk3568-anbernic-rg-ds-plus.dts "$B/dts/"
 cp $R/$D/linux/linux.aarch64.conf "$B/linux-rocknix.config"
 cp $R/projects/ROCKNIX/packages/linux-drivers/generic-dsi/sources/panel-generic-dsi.c "$B/kernel/"
+# DraStic's settings and button map for the RG DS (the drastic package turns on 2x resolution and threaded 3D)
+cp $R/projects/ROCKNIX/packages/emulators/standalone/drastic-sa/config/RK3566/drastic.cfg.rgds "$B/drastic.cfg"
 cp $R/$D/patches/u-boot-Specific/*.patch "$B/uboot-patches/" 2>/dev/null ||
     cp $R/$D/packages/u-boot-Specific/patches/*.patch "$B/uboot-patches/"
 

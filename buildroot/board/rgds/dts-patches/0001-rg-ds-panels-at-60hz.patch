@@ -1,0 +1,27 @@
+Banana: both RG DS panels at 60.0013 Hz instead of 60.10 Hz
+
+ROCKNIXDS's measured panel fix (dii-ess-aye/device/apply-60hz-dtb.sh), built in: the porches change and the pixel
+clock stays 42134 kHz, because pll_vpll is 126.4 MHz and the VOP divides it by a whole number (any lower clock falls
+to /4, about 45 Hz). With the real dclk of 42133334 Hz (clk_summary on an RG DS): 42133334 / (1353 x 519) = 60.0013.
+A refresh this close to 60 Hz lets SuperDrastic pace DraStic's 60 frames a second with no frame repeated or dropped.
+
+--- a/rk3568-anbernic-rg-ds.dts	2026-10-11 09:35:31.727844489 +0000
++++ b/rk3568-anbernic-rg-ds.dts	2026-10-11 09:35:31.730353427 +0000
+@@ -466,7 +466,7 @@
+ 		panel_description =
+ 			"G size=81,61 delays=20,10,50,120,50 format=rgb888 lanes=4 flags=0xc03",
+ 
+-			"M clock=42134 horizontal=640,260,220,260 vertical=480,10,2,16 default=1",
++			"M clock=42134 horizontal=640,233,220,260 vertical=480,21,2,16 default=1",
+ 
+ 			"I seq=e000", "I seq=e193", "I seq=e265", "I seq=e3f8",
+ 			"I seq=8003",
+@@ -555,7 +555,7 @@
+ 		panel_description =
+ 			"G size=81,61 delays=20,10,50,120,50 format=rgb888 lanes=4 flags=0xc03",
+ 
+-			"M clock=42134 horizontal=640,260,220,260 vertical=480,10,2,16 default=1",
++			"M clock=42134 horizontal=640,233,220,260 vertical=480,21,2,16 default=1",
+ 
+ 			"I seq=e000", "I seq=e193", "I seq=e265", "I seq=e3f8",
+ 			"I seq=8003",

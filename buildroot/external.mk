@@ -2,7 +2,8 @@ include $(sort $(wildcard $(BR2_EXTERNAL_BANANA_PATH)/package/*/*.mk))
 
 # The RG DS's drivers that mainline doesn't have, built into the kernel (no module loading before the menu): the
 # generic DSI panel driver both panels use, and the ADC joypad driver for the sticks and buttons. Plus the two
-# handhelds' device trees. All from ROCKNIX (tools/sync-rocknix-hw.sh).
+# handhelds' device trees, from ROCKNIX (tools/sync-rocknix-hw.sh), with Banana's changes to them (dts-patches: the
+# RG DS's panels at 60 Hz).
 BANANA_RGDS = $(BR2_EXTERNAL_BANANA_PATH)/board/rgds
 define BANANA_LINUX_RGDS_DRIVERS
 	cp $(BANANA_RGDS)/kernel/panel-generic-dsi.c $(LINUX_DIR)/drivers/gpu/drm/panel/
@@ -12,6 +13,9 @@ define BANANA_LINUX_RGDS_DRIVERS
 	grep -q rocknix-singleadc-joypad.o $(LINUX_DIR)/drivers/input/joystick/Makefile || \
 		echo 'obj-$$(CONFIG_INPUT_JOYSTICK) += rocknix-singleadc-joypad.o' >> $(LINUX_DIR)/drivers/input/joystick/Makefile
 	cp $(BANANA_RGDS)/dts/*.dts $(LINUX_DIR)/arch/arm64/boot/dts/rockchip/
+	for p in $(sort $(wildcard $(BANANA_RGDS)/dts-patches/*.patch)); do \
+		patch -p1 -N -d $(LINUX_DIR)/arch/arm64/boot/dts/rockchip < $$p || exit 1; \
+	done
 	for d in $(notdir $(basename $(wildcard $(BANANA_RGDS)/dts/*.dts))); do \
 		grep -q "$$d.dtb" $(LINUX_DIR)/arch/arm64/boot/dts/rockchip/Makefile || \
 			echo "dtb-\$$(CONFIG_ARCH_ROCKCHIP) += $$d.dtb" >> $(LINUX_DIR)/arch/arm64/boot/dts/rockchip/Makefile; \

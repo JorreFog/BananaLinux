@@ -5,6 +5,6 @@ set -e
 T=$1
 # init's own scripts replace Buildroot's (rcS here starts everything)
 rm -f "$T"/etc/init.d/S[0-9]*
-# the data partition's mount point
-mkdir -p "$T/data" "$T/run"
+# the data partition's mount point, and the boot partition's
+mkdir -p "$T/data" "$T/run" "$T/boot"
 rm -rf "$T/usr/share/man" "$T/usr/share/doc" "$T/usr/share/info"

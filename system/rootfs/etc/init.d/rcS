@@ -27,6 +27,8 @@ echo "$DISK" > /run/banana/disk
 mount -t exfat -o noatime,uid=0,gid=0,fmask=0000,dmask=0000,iocharset=utf8,errors=remount-ro ${DISK}p3 /data ||
     { fsck.exfat -y ${DISK}p3; mount -t exfat -o noatime,uid=0,gid=0,fmask=0000,dmask=0000 ${DISK}p3 /data; }
 /usr/libexec/banana/data-layout
+# the boot partition, read-only (the panel tuner writes the DTB there once)
+mount -t vfat -o ro,noatime ${DISK}p1 /boot 2>/dev/null
 
 bananad &
 banana-perf ui
@@ -36,5 +38,6 @@ banana-perf ui
     modprobe -a rtw88_8821cs 2>/dev/null
     [ -f /data/banana/wifi.conf ] && /usr/libexec/banana/wifi up
     hwclock -s 2>/dev/null
+    /usr/libexec/banana/panel-tune
 ) &
 exit 0

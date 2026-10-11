@@ -24,7 +24,9 @@ can read and fill it). The root is never written to; nothing on it can be corrup
    Wi-Fi and Panfrost are modules, loaded after the menu is up. No fbcon, no VTs, no boot logo.
 4. busybox init runs `/etc/init.d/rcS`: mount `/proc`, `/sys`, `/run`, `/tmp`, the data partition; start
    `bananad`; set the menu's clocks. Wi-Fi, the clock and the rest go to the background.
-5. init starts `banana-ui`, which shows the splash on both panels while it reads the library, then the menu.
+5. init starts `banana-ui`. It opens the panels and plays the boot animation from its first frame while another
+   thread reads the library and builds the menu; when both are done it dissolves into the menu (four steps of an
+   ordered dither in the animation's own pixel size). `splash = off` in settings.conf goes straight to the menu.
 
 What is worth measuring on the device: U-Boot to kernel, kernel to init (the MMC probe and `rootwait`), and init
 to the menu's first frame. The kernel's `initcall_debug` and banana-ui's log (it logs the library scan's time)
@@ -72,6 +74,25 @@ nothing):
 - **Battery** at 3% and discharging for two readings in a row: clean shutdown.
 
 All of it is set in `/etc/banana/bananad.conf`, overridden by `/data/banana/bananad.conf`.
+
+## The rest of the hardware
+
+**Panels.** Each panel's timing is text in the device tree (the generic DSI driver's `panel_description`). The RG
+DS's carries ROCKNIXDS's measured retune (`board/rgds/dts-patches`): front porches 233 and 21 instead of 260 and 10,
+60.0013 Hz from the real 42133334 Hz clock instead of 60.10 Hz. `banana-panel-tune` runs once per card after the
+first boot: it reads each VOP's real pixel clock (`dclk_vop0/1` in debugfs' clk_summary), looks for the smallest
+front porch change within 0.002 Hz of 60 that keeps every number's digit count, and rewrites the boot DTB in place
+when that gains at least 0.005 Hz. The RG DS is left as it is; the RG DS Plus goes from 60.17 Hz to 59.999 Hz
+(with the clock it asks for, 62.77 MHz; the real one decides). Its report: `banana/panel-tune.txt`.
+
+**LEDs.** `green:power`, `red:status` and `amber:charging` (pwm-leds). bananad sets them only when the battery's
+state changes, which the kernel announces as power_supply uevents (a netlink socket; there is no udev): the amber
+LED follows the charger's own LED trigger (`<battery>-charging`), the critical blink is the kernel's timer trigger.
+
+**Sound.** No sound server: ALSA's default device is written by bananad to `/run/banana/asound.conf`. RG DS: the
+rk817 (card 0) with its `Playback Mux` on HP. RG DS Plus: playback on the aw88166 card, or on the rk817 while its
+`Headphones Jack` switch is on; capture always from the rk817 (the microphone). Volume keys: `PCM` on the aw88166,
+`Master` on the rk817. A program opened before a change keeps its device until it opens it again.
 
 ## Clocks: banana-perf
 

@@ -7,8 +7,10 @@
 - [ ] Buttons and their mapping (A = east, B = south: the RG DS's Nintendo layout)
 - [ ] Suspend and resume: the panels, sound, Wi-Fi, the lid, the power key; standby drain over a night
 - [ ] The display handover to SuperDrastic and back (`DSFLIP_HANDOVER=none`)
-- [ ] Sound: the mixer control for the volume keys (`bananad.conf`'s `mixer`), the AW88166 amplifier's firmware, and
-      ROCKNIX's ALSA UCM profiles for the RG DS Plus (`/usr/share/alsa/ucm2/Anbernic/RG-DS-Plus`)
+- [ ] Sound on the units: the controls bananad assumes (`Playback Mux`, `Master`, the aw88166's `PCM`), the AW88166
+      amplifier's firmware, the headphone jack's switch on the RG DS Plus
+- [ ] The RG DS Plus's real pixel clock and banana-panel-tune's result (`banana/panel-tune.txt`)
+- [ ] Headphones plugged in during a game: move the playing stream too (now: from the next time a program opens sound)
 - [ ] Boot time, measured: U-Boot, kernel, init, first frame
 
 ## 0.2: a handheld you can use every day
