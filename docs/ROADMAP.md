@@ -37,4 +37,4 @@
 - [ ] RetroAchievements progress on the shelf
 - [x] File sharing over Wi-Fi, off by default: the card's data partition over SMB3 (the kernel's ksmbd, loaded only
       when switched on), games copied in show up in the menu by themselves
-- [ ] SSH for development, off by default
+- [x] SSH for working on Banana, off by default (dropbear, keys only, from banana/ssh/authorized_keys)

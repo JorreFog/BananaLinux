@@ -16,6 +16,9 @@ File sharing: Settings > File sharing puts this card on the network (\\<address>
 smb://<address>/banana on a Mac), so games can be copied in over Wi-Fi. No password: leave it off on networks
 you don't trust.
 
+SSH (for working on Banana itself): put your public key in banana/ssh/authorized_keys, switch on
+Settings > SSH, then ssh root@<address>. Keys only, no passwords.
+
 Settings: banana/settings.conf (menu), banana/bananad.conf (sleep, power), banana/systems.conf (a copy of
 the systems list, to add or change emulators).
 Logs: banana/logs/.

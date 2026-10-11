@@ -44,6 +44,7 @@ banana-perf ui
     fi
     # file sharing, when switched on in the settings
     grep -q '^ *share *= *on' /data/banana/settings.conf 2>/dev/null && /usr/libexec/banana/share up
+    grep -q '^ *ssh *= *on' /data/banana/settings.conf 2>/dev/null && /usr/libexec/banana/ssh up
     /usr/libexec/banana/panel-tune
 ) &
 exit 0
