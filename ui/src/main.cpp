@@ -111,6 +111,8 @@ struct Host : Library
 	using Library::Library;
 	bool motion = true;
 	bool topMotion() override { return motion; }
+	std::string batteryShown = "icon";		// "icon", or "text": the percentage too
+	std::string batteryMode() override { return batteryShown; }
 };
 
 // ---- the worker that decodes and fits pictures off the main thread ----------------------------------------------
@@ -592,6 +594,7 @@ int main(int argc, char** argv)
 	Host lib(o.systems, o.roms, o.data, o.assets);
 	lib.motion = settings["motion"] != "off";
 	lib.twelveHour = settings["clock"] == "12h";
+	lib.batteryShown = settings["battery"] == "percent" ? "text" : "icon";
 
 	if (!o.headless.empty())
 	{
@@ -673,6 +676,7 @@ int main(int argc, char** argv)
 			settings = readSettings(o.data + "/settings.conf");
 			lib.motion = settings["motion"] != "off";
 			lib.twelveHour = settings["clock"] == "12h";
+			lib.batteryShown = settings["battery"] == "percent" ? "text" : "icon";
 			sound.enabled = settings["sounds"] != "off";
 			ui->dataChanged();
 			sound.play("select");
