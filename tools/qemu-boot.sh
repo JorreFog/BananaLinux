@@ -185,7 +185,14 @@ wait $QEMU 2>/dev/null || true
 boot fourth
 grep -q "rcS: slot b booted" "$OUT/serial.log" && ok "the fourth boot ran slot b: the update" || bad "the fourth boot didn't run slot b"
 shot fourth-menu
-shutdown_from_settings fourth
+# Start > System > Previous version (two rows under Time zone) > A twice: back to slot a from the next boot
+key s pgdn pgdn pgdn pgdn pgdn down down ret ret
+for i in $(seq 120); do kill -0 $QEMU 2>/dev/null || break; sleep 0.5; done
+kill -0 $QEMU 2>/dev/null && { bad "no restart from Previous version"; kill $QEMU; } || ok "restarted from Previous version"
+wait $QEMU 2>/dev/null || true
+boot fifth
+grep -q "rcS: slot a booted" "$OUT/serial.log" && ok "the fifth boot ran slot a again: the version before the update" || bad "the fifth boot didn't run slot a"
+shutdown_from_settings fifth
 show_logs() {
     echo "--- the card's logs/boot.txt"; cat "$DATA/banana/logs/boot.txt" 2>/dev/null || true
     [ -f "$DATA/banana/logs/boot.txt" ] && ok "logs/boot.txt written" || bad "no logs/boot.txt"

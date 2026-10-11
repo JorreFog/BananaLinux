@@ -31,6 +31,13 @@ Write it to a microSD card with balenaEtcher (it takes the `.gz` as it is), put 
 - **Wi-Fi**: Settings > Network, choose your network, type the password.
 - **A DS game**, and a game for another system (GBA, SNES...).
 
+## Updating later
+
+A build's `banana-<handheld>-<version>.update.tar` goes in `banana/updates/` on the card (from a computer, or over
+Wi-Fi with Settings > File sharing on); Settings > System > Update lists it, A twice writes it to the card's other
+system slot and checks it, A restarts into it. The version before stays on the card: Settings > System >
+Previous version restarts into it. Nothing on the data partition (games, saves, settings) is touched by either.
+
 ## When something is wrong
 
 Everything Banana knows about a boot is in `banana/logs/` on the card (put it in a computer):
