@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Packages
-        run: sudo apt-get update && sudo apt-get install -y libfreetype-dev libdrm-dev libasound2-dev imagemagick g++-aarch64-linux-gnu
+        run: sudo apt-get update && sudo apt-get install -y libfreetype-dev libdrm-dev libasound2-dev zlib1g-dev imagemagick g++-aarch64-linux-gnu
       - name: banana-ui (headless test, both panel sizes)
         run: make test
       - name: banana-ui with ALSA

@@ -515,7 +515,8 @@ namespace banana
 		r.time = fmtTime(g.seconds);
 		r.box = g.box; r.cart = g.cart; r.label = g.label;
 		std::string ext = lower(g.path.substr(g.path.rfind('.') + 1));
-		if (ext == "nds") r.rom = g.path;	// the DS ROM's own icon when there is no art
+		// the DS ROM's own icon when there is no art (from inside a .zip too)
+		if (ext == "nds" || (ext == "zip" && systemOf(i).id == "nds")) r.rom = g.path;
 		r.icon = lookOf(systemOf(i).id).icon;
 		r.achLabel = "No achievements";
 		r.fav = g.fav;

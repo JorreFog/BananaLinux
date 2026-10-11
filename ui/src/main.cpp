@@ -19,6 +19,7 @@
 #include "soft.h"
 #include "splash.h"
 #include "settings.h"
+#include "zip.h"
 #include "sound.h"
 
 #include <atomic>
@@ -372,6 +373,19 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant)
 			bool used = ui.press(btn);
 			logf("press %s: %s, view %d sys %d game %d", b.c_str(), used ? "used" : "unused", (int)ui.view(), ui.systemIndex(), ui.gameIndex());
 		}
+		else if (op == "romicon")
+		{
+			// romicon <path>: the DS ROM's own icon (from a .nds or a .zip), and a pixel from its middle
+			std::string path;
+			std::getline(cs >> std::ws, path);
+			rnds::Bitmap b = rnds::romIcon(path);
+			if (b.empty()) logf("romicon %s: none", path.c_str());
+			else
+			{
+				const uint8_t* px = &b.px[(16 * b.w + 16) * 4];
+				logf("romicon %s: %dx%d, middle #%02x%02x%02x", path.c_str(), b.w, b.h, px[0], px[1], px[2]);
+			}
+		}
 		else if (op == "touch")
 		{
 			// touch <screen> <x> <y>: a tap, in px of a 640x480 panel
@@ -546,6 +560,7 @@ int main(int argc, char** argv)
 	}
 
 	rnds::setDecoder(stbDecode);
+	rnds::setZipReader(readZip);	// the icon of a DS ROM kept in a .zip
 	auto settings = readSettings(o.data + "/settings.conf");
 	// the time zone, for the clock and every game started from here (a POSIX rule, see settings.cpp)
 	if (!settings["timezone"].empty()) { setenv("TZ", settings["timezone"].c_str(), 1); tzset(); }

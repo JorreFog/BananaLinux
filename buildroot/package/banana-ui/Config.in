@@ -5,5 +5,6 @@ config BR2_PACKAGE_BANANA_UI
 	select BR2_PACKAGE_FREETYPE
 	select BR2_PACKAGE_LIBDRM
 	select BR2_PACKAGE_ALSA_LIB
+	select BR2_PACKAGE_ZLIB
 	help
 	  Banana's frontend: ROCKNIXDS Pixel's engine drawn in software straight onto both panels.

@@ -33,6 +33,6 @@
 ## Later
 
 - [ ] Kernel trimming for size and boot time (initcall_debug on the device first)
-- [ ] The ROM's own icon on cartridges inside `.zip` files (the engine supports it; banana-ui needs a zip reader)
+- [x] The ROM's own icon on cartridges inside `.zip` files (banana-ui's streaming zip reader, zlib)
 - [ ] RetroAchievements progress on the shelf
 - [ ] An SSH/Samba service you can switch on, off by default
