@@ -7,6 +7,7 @@
 #include "../rnds/RndsUI.h"
 #include <cstdint>
 #include <cstring>
+#include <functional>
 #include <vector>
 
 namespace banana
@@ -47,6 +48,9 @@ namespace banana
 		void popClip() override;
 		void beginScreen(int screen) override;
 		void endScreen() override;
+
+		// drawn over every screen just before it ends (the menu's notices), so it is part of the screen's draw list
+		std::function<void(int screen)> overlay;
 
 		// screens drawn this frame whose draw list matched the previous frame's (left as they were)
 		int skipped = 0;

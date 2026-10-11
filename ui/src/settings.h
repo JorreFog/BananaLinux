@@ -31,6 +31,10 @@ namespace banana
 		Result touch(float x, float y, bool down);	// bottom panel, device px
 		void render();
 
+		// a notice over the screen being drawn (between the backend's beginScreen and endScreen): the battery icon at
+		// percent, a title and a line or two, in the bubble style near the bottom of the panel
+		void notice(const std::string& title, const std::string& body, int percent);
+
 	private:
 		struct Item
 		{

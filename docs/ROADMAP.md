@@ -24,7 +24,7 @@
 - [x] RetroArch and the libretro cores for the other systems (Buildroot packages), on one panel (settings: top or bottom)
 - [x] The Favorites shelf and the favourite systems' order updated as soon as the shelf shows again
 - [x] Input hotplug in banana-ui (USB and Bluetooth pads, watched with inotify)
-- [ ] A low-battery warning before the shutdown
+- [x] A low-battery warning before the shutdown (a notice over the top panel at 20%, 10% and 5%)
 - [ ] Updates: a new root squashfs written to an inactive slot from the menu, kept atomic
 
 ## Later

@@ -261,6 +261,59 @@ static bool rearrange(Host& lib, rnds::UI& ui)
 	return true;
 }
 
+// ---- the low-battery notice ---------------------------------------------------------------------------------------
+// At 20% (the LED turns red), 10% and 5% (it blinks), on the battery: a notice over the top panel for 8 s, which any
+// button hides. Each step once, until the charger has been on; a step passed during a game shows when the menu is
+// back. bananad does the shutting down (battery_shutdown_percent); this only says it is coming.
+struct LowBattery
+{
+	int shownStep = 101, percent = -1;
+	double until = 0;
+	std::string title, body;
+
+	bool showing(double now) const { return until > now; }
+	// true when the notice came or went
+	bool check(const Library::Power& p, int shutdownAt, double now)
+	{
+		if (p.percent < 0) return false;
+		if (p.charging)
+		{
+			shownStep = 101;
+			return hide(now);
+		}
+		int step = p.percent <= 5 ? 5 : p.percent <= 10 ? 10 : p.percent <= 20 ? 20 : 0;
+		if (!step || step >= shownStep) return false;
+		shownStep = step;
+		percent = p.percent;
+		until = now + 8000;
+		std::string off = std::to_string(shutdownAt) + "%";
+		if (step == 5)
+		{
+			title = "Battery nearly empty: " + std::to_string(percent) + "%";
+			body = "Save your game now. At " + off + " Banana closes it and shuts down.";
+		}
+		else
+		{
+			title = "Battery low: " + std::to_string(percent) + "%";
+			body = step == 10 ? "Plug in the charger soon. At " + off + " Banana closes the game and shuts down."
+				: "Time to find the charger.";
+		}
+		return true;
+	}
+	bool hide(double now)
+	{
+		bool was = showing(now);
+		until = 0;
+		return was;
+	}
+};
+
+static int shutdownPercent(const std::string& data)
+{
+	return atoi(getConfValue(data + "/bananad.conf", "battery_shutdown_percent",
+		getConfValue("/etc/banana/bananad.conf", "battery_shutdown_percent", "3")).c_str());
+}
+
 // ---- headless: the same UI rendered to PNGs, for tests and screenshots ------------------------------------------
 static int runHeadless(const Options& o, Host& lib, const std::string& variant)
 {
@@ -279,6 +332,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant)
 	};
 	ui.setHome(0);
 	Settings settings(&be, o.assets, o.data, o.h / 480.0f, variant);
+	LowBattery low;
+	be.overlay = [&](int screen) { if (screen == 0 && low.showing(now)) settings.notice(low.title, low.body, low.percent); };
 	while (std::getline(ss, cmd, ';'))
 	{
 		std::stringstream cs(cmd);
@@ -288,6 +343,14 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant)
 		if (op == "home") { int s = 0; cs >> s; ui.setHome(s); }
 		else if (op == "lib") { int s = 0, g = 0; cs >> s >> g; lib.openLibrary(s); ui.setLibrary(s, g); }
 		else if (op == "wait") { double ms = 0; cs >> ms; now += ms; }
+		else if (op == "battery")
+		{
+			// battery <percent> [charging]: what /sys would say from now on
+			std::string ch;
+			cs >> lib.testPower.percent >> ch;
+			lib.testPower.charging = ch == "charging";
+			if (low.check(lib.power(), shutdownPercent(o.data), now)) logf("battery %d%%: notice %s", lib.testPower.percent, low.showing(now) ? low.title.c_str() : "hidden");
+		}
 		else if (op == "press")
 		{
 			std::string b; cs >> b;
@@ -296,6 +359,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant)
 			rnds::UI::Button btn;
 			auto it = keys.find(b);
 			if (it == keys.end()) { logf("unknown button %s", b.c_str()); return 2; }
+			if (low.hide(now)) logf("press %s: notice hidden", b.c_str());
 			if (settings.isOpen() || it->second == Key::START)
 			{
 				if (!settings.isOpen()) { settings.open(); logf("press %s: settings open", b.c_str()); continue; }
@@ -530,6 +594,9 @@ int main(int argc, char** argv)
 	int lastMinute = -1;
 	float scale = disp.height() / 480.0f;
 	Settings settingsView(&be, o.assets, o.data, scale, variant);
+	LowBattery low;
+	bool batteryDue = true;
+	be.overlay = [&](int screen) { if (screen == 0 && low.showing(nowMs())) settingsView.notice(low.title, low.body, low.percent); };
 
 	// what a change on the settings screen means for the menu (called with uiLock held)
 	auto applySettings = [&](Settings::Result r)
@@ -571,6 +638,7 @@ int main(int argc, char** argv)
 
 	auto handle = [&](const InputEvent& ev)
 	{
+		if ((ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) && low.hide(nowMs())) dirty = true;
 		if (settingsView.isOpen())
 		{
 			std::lock_guard<std::mutex> l(worker.uiLock);
@@ -668,6 +736,7 @@ int main(int argc, char** argv)
 		ui->dataChanged();
 		ui->setLibrary(lib.currentShelf(), game);
 		dirty = true;
+		batteryDue = true;	// a step passed during the game shows now
 	};
 
 	if (system("banana-perf ui") != 0) {}
@@ -700,7 +769,12 @@ int main(int argc, char** argv)
 		// the clock on the top screen
 		time_t wall = time(nullptr);
 		int minute = (int)(wall / 60);
-		if (minute != lastMinute) { lastMinute = minute; dirty = true; }
+		if (minute != lastMinute) { lastMinute = minute; dirty = true; batteryDue = true; }
+		if (batteryDue)
+		{
+			batteryDue = false;
+			if (low.check(lib.power(), shutdownPercent(o.data), now)) dirty = true;
+		}
 
 		bool want;
 		{
@@ -732,6 +806,11 @@ int main(int argc, char** argv)
 		if (timeout < 0 || timeout > toMinute) timeout = want ? timeout : toMinute;
 		int r = rep.wait(now);
 		if (r >= 0 && (timeout < 0 || r < timeout)) timeout = r;
+		if (low.showing(now))
+		{
+			int left = (int)(low.until - now) + 1;
+			if (timeout < 0 || left < timeout) timeout = left;
+		}
 
 		std::vector<pollfd> fds;
 		fds.push_back({ sigPipe[0], POLLIN, 0 });
@@ -752,7 +831,7 @@ int main(int argc, char** argv)
 					if (c == SIGTERM || c == SIGINT) quit = true;
 					// after a wake: the kernel has the panels showing our buffers again; a redraw brings the clock and
 					// the battery up to date (no modeset: that would run the panels' power-on sequence once more)
-					if (c == SIGUSR1) { std::lock_guard<std::mutex> l(worker.uiLock); be.invalidate(); ui->dataChanged(); dirty = true; }
+					if (c == SIGUSR1) { std::lock_guard<std::mutex> l(worker.uiLock); be.invalidate(); ui->dataChanged(); dirty = true; batteryDue = true; }
 				}
 			}
 			else if (p.fd == worker.wakeFd)

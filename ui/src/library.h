@@ -61,6 +61,11 @@ namespace banana
 		std::function<void(const std::string&)> onCue;
 		bool twelveHour = false;
 
+		// the battery: percent (-1 unknown) and whether it is charging (or full on the charger)
+		struct Power { int percent = -1; bool charging = false; };
+		Power power();
+		Power testPower;	// headless: used instead of /sys when its percent is set
+
 		// rnds::Source
 		int systemCount() override { return (int)shelves.size(); }
 		rnds::SysInfo system(int i) override;

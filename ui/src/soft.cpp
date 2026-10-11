@@ -123,6 +123,7 @@ namespace banana
 
 	void SoftBackend::endScreen()
 	{
+		if (overlay) overlay(cur);
 		if (rec[cur] == last[cur]) { skipped++; return; }
 		// from black, as ES's renderer clears before each frame (the screen's corners aren't covered by the engine)
 		std::fill(scr[cur].begin(), scr[cur].end(), 0xff000000u);

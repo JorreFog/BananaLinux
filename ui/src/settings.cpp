@@ -569,6 +569,30 @@ namespace banana
 		text(label, true, 19, x + 15 + kw + 8, 431, p.ink);
 	}
 
+	void Settings::notice(const std::string& title, const std::string& body, int percent)
+	{
+		SPal p = pal(light);
+		box("bubble", false, 40, 344, 560, 104);
+		// the status bar's battery, three times its size on the same pixel grid, its level red at 10% and under
+		auto it = cache.find("battery");
+		if (it == cache.end())
+		{
+			rnds::Bitmap b = rnds::decodeFile(assets + "/battery@1x.png");
+			Cached c;
+			if (!b.empty()) c.tex = be->upload(b, false);
+			it = cache.emplace("battery", c).first;
+		}
+		int k = std::max(1, (int)std::lround(3 * s));
+		float bx = std::round(X(66)), by = std::round(X(375));
+		if (it->second.tex)
+			be->draw(it->second.tex, bx, by, (float)it->second.tex->w * k, (float)it->second.tex->h * k, p.ink);
+		int lv = percent <= 0 ? 0 : std::max(1, (int)std::lround(16 * std::min(100, percent) / 100.0f));
+		Color lc = percent <= 10 ? (light ? Color::hex(0xc8382d) : Color::hex(0xff5a4f)) : p.accent;
+		if (lv > 0) be->fill(bx + 3 * k, by + 3 * k, (float)lv * k, (float)8 * k, lc);
+		text(title, true, 22, 172, 360, p.ink);
+		wrapped(body, 18, 172, 392, 404, 2, p.muted);
+	}
+
 	void Settings::render()
 	{
 		SPal p = pal(light);

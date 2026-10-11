@@ -59,6 +59,13 @@ same Backend. Each change is written at once to the file that owns it: `banana/s
 change rebuilds the engine in the other palette), `banana/bananad.conf` (then SIGHUP to bananad), 
 `banana/superdrastic.conf` (read by run-drastic), DraStic's `drastic.cfg`, and the backlights.
 
+**Low battery**: at 20% (the LED turns red), 10% and 5% (it blinks) on the battery, a notice in the bubble style
+over the bottom of the top panel for 8 s, the status bar's battery three times its size; any button hides it.
+Each step shows once until the charger has been on, and a step passed during a game shows when the menu is back.
+banana-ui reads the battery with the clock (once a minute), after a game and after a wake; bananad does the
+shutting down. The notice is drawn by the backend at the end of the top screen's draw list, so it shows over the
+settings too and costs nothing while it doesn't change.
+
 Starting a game: banana-ui writes the game's pid to `/run/banana/game.pid`, closes the display, the input
 devices and the sound device, sets the system's clock profile, and runs its `run` command. When the game exits it
 takes the panels back, records the play, and shows the game's library again.

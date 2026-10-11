@@ -542,21 +542,32 @@ namespace banana
 		return b;
 	}
 
-	float Library::battery()
+	Library::Power Library::power()
 	{
+		if (testPower.percent >= 0) return testPower;
+		Power r;
 		DIR* d = opendir("/sys/class/power_supply");
-		if (!d) return -1;
-		float r = -1;
+		if (!d) return r;
 		while (dirent* e = readdir(d))
 		{
 			if (e->d_name[0] == '.') continue;
 			std::string base = std::string("/sys/class/power_supply/") + e->d_name;
 			if (readLine(base + "/type") != "Battery") continue;
 			std::string cap = readLine(base + "/capacity");
-			if (!cap.empty()) { r = std::min(100, std::max(0, atoi(cap.c_str()))) / 100.0f; break; }
+			if (cap.empty()) continue;
+			r.percent = std::min(100, std::max(0, atoi(cap.c_str())));
+			std::string st = readLine(base + "/status");
+			r.charging = st == "Charging" || st == "Full";
+			break;
 		}
 		closedir(d);
 		return r;
+	}
+
+	float Library::battery()
+	{
+		Power p = power();
+		return p.percent < 0 ? -1 : p.percent / 100.0f;
 	}
 
 	bool Library::online()
