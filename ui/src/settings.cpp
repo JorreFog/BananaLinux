@@ -244,6 +244,7 @@ namespace banana
 		add(S, "gear", "Update", "A new version of Banana from a package on the card, written to the other slot and run from the next restart; this one stays as it is until then.", "", "update", {}, {}, Item::PAGE);
 		add(S, "gear", "Previous version", "Restarts into the other slot: the version that ran before the last update. Press A twice.", "", "switch", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "SSH", "", menu, "ssh", { "Off", "On" }, { "off", "on" });
+		add(S, "gear", "First-time setup", "The steps from the first boot again: Wi-Fi, the time zone, the RetroAchievements and ScreenScraper accounts.", "", "setup", {}, {}, Item::PAGE);
 		add(S, "gear", "About", "", "", "", {}, {}, Item::INFO);
 		add(S, "gear", "Restart", "Restarts the handheld. Press A twice.", "", "reboot", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "Shut down", "Turns the handheld off. Press A twice. (Or hold the power button.)", "", "poweroff", { "" }, { "" }, Item::ACTION);
@@ -429,7 +430,7 @@ namespace banana
 		if (it.kind == Item::PAGE)
 		{
 			if (dir <= 0) return NONE;
-			if (it.key == "update") openUpdates(); else openNetworks();
+			if (it.key == "update") openUpdates(); else if (it.key == "setup") openSetup(); else openNetworks();
 			return MOVED;
 		}
 		if (it.kind == Item::ACTION)
@@ -464,6 +465,7 @@ namespace banana
 		if (page == NETWORKS) return pressNetworks(k);
 		if (page == KEYBOARD) return pressKeyboard(k);
 		if (page == UPDATES) return pressUpdates(k);
+		if (page == SETUP) return pressSetup(k);
 		switch (k)
 		{
 		case Key::UP: case Key::DOWN:
@@ -508,6 +510,18 @@ namespace banana
 		downOnRow = false;
 		if (page == NETWORKS) return touchNetworks(cx, cy);
 		if (page == KEYBOARD) return touchKeyboard(cx, cy);
+		if (page == SETUP)
+		{
+			if (downY >= 418 && downY <= 466) return pressSetup(downX < 320 ? Key::B : Key::A);
+			for (int r = 0; r < 5; r++)
+			{
+				float ry = 82 + r * 64;
+				if (downY < ry || downY > ry + 56) continue;
+				if (r != wsel) { wsel = r; return MOVED; }
+				return pressSetup(Key::A);
+			}
+			return NONE;
+		}
 		if (page == UPDATES)
 		{
 			if (downY >= 418 && downY <= 466) return pressUpdates(downX < 320 ? Key::B : Key::A);
@@ -727,6 +741,7 @@ namespace banana
 		if (page == NETWORKS) { renderNetworks(); return; }
 		if (page == KEYBOARD) { renderKeyboard(); return; }
 		if (page == UPDATES) { renderUpdates(); return; }
+		if (page == SETUP) { renderSetup(); return; }
 		SPal p = pal(light);
 		const Item& cur = items[sel];
 
@@ -946,10 +961,7 @@ namespace banana
 			else
 			{
 				target = net;
-				pw.clear();
-				layer = 0; krow = 1; kcol = 0;
-				message.clear();
-				page = KEYBOARD;
+				startEntry(ENTRY_WIFI, "Password for", net.ssid, NETWORKS);
 			}
 			return MOVED;
 		}
@@ -976,8 +988,8 @@ namespace banana
 			}
 			return MOVED;
 		}
-		case Key::B: case Key::LEFT: page = LIST; message.clear(); return MOVED;
-		case Key::START: page = LIST; mOpen = false; return CLOSED;
+		case Key::B: case Key::LEFT: page = wizard ? SETUP : LIST; message.clear(); return MOVED;
+		case Key::START: if (wizard) { page = SETUP; return MOVED; } page = LIST; mOpen = false; return CLOSED;
 		default: return NONE;
 		}
 	}
@@ -989,7 +1001,7 @@ namespace banana
 		{ "~`'\"-_=+\\|", "[]{}<>()!?", "@#$%^&*;:/", ",.?!@#&*-_" },
 	};
 	static const struct { const char* name; int c0, span; } FKEYS[] = {
-		{ "Shift", 0, 2 }, { "#+=", 2, 2 }, { "Space", 4, 3 }, { "Del", 7, 1 }, { "Join", 8, 2 },
+		{ "Shift", 0, 2 }, { "#+=", 2, 2 }, { "Space", 4, 3 }, { "Del", 7, 1 }, { "Done", 8, 2 },
 	};
 	static int fkeyAt(int col)
 	{
@@ -1012,15 +1024,7 @@ namespace banana
 		case 1: layer = layer == 2 ? 0 : 2; break;
 		case 2: if (pw.size() < 63) pw += ' '; break;
 		case 3: if (!pw.empty()) pw.pop_back(); break;
-		case 4:
-			if (!wifi::passwordOk(pw))
-			{
-				message = "A Wi-Fi password has 8 to 63 characters; this one has " + std::to_string(pw.size()) + ".";
-				return MOVED;
-			}
-			join(target, pw);
-			pw.clear();
-			return CHANGED;
+		case 4: return finishEntry();
 		}
 		message.clear();
 		return MOVED;
@@ -1040,7 +1044,7 @@ namespace banana
 			return MOVED;
 		case Key::A: return keyboardKey(krow, kcol);
 		case Key::B:
-			if (pw.empty()) { page = NETWORKS; message.clear(); return MOVED; }
+			if (pw.empty()) { page = entryBack; message.clear(); return MOVED; }
 			pw.pop_back();
 			return MOVED;
 		case Key::X: layer = layer == 1 ? 0 : 1; return MOVED;
@@ -1193,8 +1197,8 @@ namespace banana
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon("phone", 50, 56, 3);
-		text("Password for", true, 17, 170, 62, p.muted, true, 1.4f);
-		text(fit(target.ssid, true, 30, 420), true, 30, 170, 88, p.ink);
+		text(entryTitle, true, 17, 170, 62, p.muted, true, 1.4f);
+		text(fit(entrySub, true, 30, 420), true, 30, 170, 88, p.ink);
 		box("slot", true, 50, 150, 540, 56);
 		// the end of the password when it is longer than the field
 		std::string shown = pw;
@@ -1207,7 +1211,8 @@ namespace banana
 		std::string n = std::to_string(pw.size()) + (pw.size() == 1 ? " character" : " characters");
 		text(n, true, 17, 50, 216, p.muted);
 		std::string help = !message.empty() ? message
-			: "A types the key, B deletes, X capitals, Y a space, START joins. Or type on the bottom screen. The password is kept in banana/wifi.conf on the card.";
+			: entry == ENTRY_WIFI ? "A types the key, B deletes, X capitals, Y a space, START joins. Or type on the bottom screen. The password is kept in banana/wifi.conf on the card."
+			: "A types the key, B deletes, X capitals, Y a space, START when it is typed. Or type on the bottom screen. Accounts are kept in banana/accounts.conf on the card.";
 		wrapped(help, 20, 50, 252, 540, 6, message.empty() ? p.muted : p.accent);
 		be->endScreen();
 
@@ -1235,8 +1240,9 @@ namespace banana
 		}
 		float bw = faceWidth("B", pw.empty() ? "Back" : "Delete");
 		face("B", pw.empty() ? "Back" : "Delete", 18, bw);
-		float aw = faceWidth("START", "Join");
-		face("START", "Join", 622 - aw, aw);
+		const char* done = entry == ENTRY_WIFI ? "Join" : "Done";
+		float aw = faceWidth("START", done);
+		face("START", done, 622 - aw, aw);
 		be->endScreen();
 	}
 
@@ -1351,6 +1357,172 @@ namespace banana
 			float aw = faceWidth("A", act);
 			face("A", act, 622 - aw, aw);
 		}
+		be->endScreen();
+	}
+
+	// ---- the keyboard's purposes, and the accounts file -------------------------------------------------------
+	void Settings::startEntry(Entry e, const std::string& title, const std::string& sub, Page back, const std::string& start)
+	{
+		entry = e; entryTitle = title; entrySub = sub; entryBack = back;
+		pw = start;
+		layer = 0; krow = 1; kcol = 0;
+		message.clear();
+		page = KEYBOARD;
+	}
+
+	std::string Settings::account(const char* key)
+	{
+		return getConfValue(data + "/accounts.conf", key, "");
+	}
+
+	Settings::Result Settings::finishEntry()
+	{
+		switch (entry)
+		{
+		case ENTRY_WIFI:
+			if (!wifi::passwordOk(pw))
+			{
+				message = "A Wi-Fi password has 8 to 63 characters; this one has " + std::to_string(pw.size()) + ".";
+				return MOVED;
+			}
+			join(target, pw);
+			pw.clear();
+			if (wizard) page = SETUP;
+			return CHANGED;
+		case ENTRY_RA_USER:
+			if (pw.empty()) { message = "The account's name, as on retroachievements.org."; return MOVED; }
+			setConfValue(data + "/accounts.conf", "ra_user", pw, "=");
+			startEntry(ENTRY_RA_PASS, "RetroAchievements password for", pw, entryBack);
+			return CHANGED;
+		case ENTRY_RA_PASS:
+			setConfValue(data + "/accounts.conf", "ra_password", pw, "=");
+			pw.clear();
+			page = entryBack;
+			message.clear();
+			return CHANGED;
+		case ENTRY_SS_USER:
+			if (pw.empty()) { message = "The account's name, as on screenscraper.fr."; return MOVED; }
+			setConfValue(data + "/accounts.conf", "ss_user", pw, "=");
+			startEntry(ENTRY_SS_PASS, "ScreenScraper password for", pw, entryBack);
+			return CHANGED;
+		case ENTRY_SS_PASS:
+			setConfValue(data + "/accounts.conf", "ss_password", pw, "=");
+			pw.clear();
+			page = entryBack;
+			message.clear();
+			return CHANGED;
+		}
+		return NONE;
+	}
+
+	// ---- the first-time setup ----------------------------------------------------------------------------------
+	void Settings::openSetup()
+	{
+		for (auto& it : items) load(it);
+		refreshInfo();
+		wizard = true;
+		wsel = 0; armed = -1;
+		message.clear();
+		page = SETUP;
+		if (wifiOn() && !statusJob.running()) statusJob.start(wifiTool + " status", sync);
+	}
+
+	void Settings::setupDone()
+	{
+		std::ofstream(data + "/setup-done") << "done\n";
+		wizard = false;
+		page = LIST;
+		mOpen = false;
+	}
+
+	Settings::Result Settings::pressSetup(Key k)
+	{
+		Item* tz = nullptr;
+		for (auto& it : items) if (it.key == "timezone") tz = &it;
+		switch (k)
+		{
+		case Key::UP: case Key::DOWN:
+			wsel = (wsel + (k == Key::UP ? -1 : 1) + 5) % 5;
+			message.clear();
+			return MOVED;
+		case Key::LEFT: case Key::RIGHT:
+			if (wsel != 1 || !tz) return NONE;
+			{
+				int n = (int)tz->values.size();
+				tz->at = (tz->at + (k == Key::LEFT ? -1 : 1) + n) % n;
+				save(*tz);
+			}
+			return CHANGED;
+		case Key::A:
+			switch (wsel)
+			{
+			case 0: openNetworks(); return MOVED;
+			case 1: return pressSetup(Key::RIGHT);
+			case 2: startEntry(ENTRY_RA_USER, "RetroAchievements", "Account name", SETUP, account("ra_user")); return MOVED;
+			case 3: startEntry(ENTRY_SS_USER, "ScreenScraper", "Account name", SETUP, account("ss_user")); return MOVED;
+			default: setupDone(); return CLOSED;
+			}
+		case Key::B: case Key::START:
+			setupDone();		// skipped: Settings > System > First-time setup brings it back
+			return CLOSED;
+		default: return NONE;
+		}
+	}
+
+	void Settings::renderSetup()
+	{
+		SPal p = pal(light);
+		Item* tz = nullptr;
+		for (auto& it : items) if (it.key == "timezone") tz = &it;
+		std::string ra = account("ra_user"), ss = account("ss_user");
+		static const char* names[5] = { "Wi-Fi", "Time zone", "RetroAchievements", "ScreenScraper", "Finish" };
+		std::string status[5] = {
+			wstat.connected ? "Connected to " + wstat.ssid : wifiOn() ? "Not connected" : "Off",
+			tz ? tz->names[tz->at] : "",
+			ra.empty() ? "Not signed in" : ra,
+			ss.empty() ? "Not signed in" : ss,
+			"" };
+		static const char* helps[5] = {
+			"Your home network: the games' achievements, the clock and the art need it. A picks it from the networks around; the password goes in on the keyboard.",
+			"The clock on the top screen, and the games' own clocks. Left and right change it.",
+			"Your retroachievements.org account: DraStic and RetroArch unlock achievements with it. A types the name, then the password. Leave it if you have none.",
+			"Your screenscraper.fr account, for the box art and cartridge labels when they are fetched. A types the name, then the password. Leave it if you have none.",
+			"Everything here is in the settings too (Start in the menu), and this setup is under System > First-time setup. A finishes." };
+		be->beginScreen(0);
+		box("screen", false, 0, 0, 640, 480);
+		box("hero", false, 18, 20, 604, 436);
+		icon("gear", 50, 56, 3);
+		text("First-time setup", true, 17, 170, 62, p.muted, true, 1.4f);
+		text(names[wsel], true, 30, 170, 88, p.ink);
+		if (!status[wsel].empty()) text(fit(status[wsel], true, 22, 420), true, 22, 170, 130, p.accent);
+		wrapped(message.empty() ? helps[wsel] : message, 20, 50, 196, 540, 7, p.muted);
+		be->endScreen();
+
+		be->beginScreen(1);
+		box("screen", false, 0, 0, 640, 480);
+		box("bubble", false, 18, 14, 604, 54);
+		text("Welcome to Banana", true, 22, 38, 28, p.ink);
+		std::string count = std::to_string(wsel + 1) + " / 5";
+		float cw = text(count, true, 17, 0, 0, p.muted, false, 0, true);
+		text(count, true, 17, 602 - cw, 31, p.muted);
+		for (int r = 0; r < 5; r++)
+		{
+			bool on = r == wsel;
+			float y = 82 + r * 64;
+			box("slot", on, 18, y, 604, 56);
+			Color c = on ? p.ink : p.muted;
+			text(names[r], true, 20, 38, y + 16, c);
+			if (status[r].empty()) continue;
+			std::string v = fit(status[r], true, 19, 300);
+			float vw = text(v, true, 19, 0, 0, c, false, 0, true);
+			if (r == 1) { arrow(true, 576, y + 21, c); text(v, true, 19, 566 - vw, y + 17, c); arrow(false, 556 - vw - 2 - std::round(13 / 2.0f + 1), y + 21, c); }
+			else text(v, true, 19, 586 - vw, y + 17, c);
+		}
+		float bw = faceWidth("B", "Skip");
+		face("B", "Skip", 18, bw);
+		const char* act = wsel == 4 ? "Finish" : wsel == 1 ? "Next zone" : "Open";
+		float aw = faceWidth("A", act);
+		face("A", act, 622 - aw, aw);
 		be->endScreen();
 	}
 }

@@ -409,6 +409,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant)
 			bool used = ui.press(btn);
 			logf("press %s: %s, view %d sys %d game %d", b.c_str(), used ? "used" : "unused", (int)ui.view(), ui.systemIndex(), ui.gameIndex());
 		}
+		else if (op == "setup") { settings.setup(); logf("setup open"); }
 		else if (op == "romicon")
 		{
 			// romicon <path>: the DS ROM's own icon (from a .nds or a .zip), and a pixel from its middle
@@ -671,6 +672,8 @@ int main(int argc, char** argv)
 	worker.start(ui);
 	dissolveToMenu(disp, be, *ui);
 	bootMark("banana-ui: the menu");
+	// the first boot after the installation: the setup (Wi-Fi, the time zone, the accounts) before anything else
+	bool firstSetup = access((o.data + "/setup-done").c_str(), F_OK) != 0;
 
 	Input input;
 	input.open(o.touch, disp.width(), disp.height());
@@ -682,6 +685,7 @@ int main(int argc, char** argv)
 	Settings settingsView(&be, o.assets, o.data, scale, variant);
 	LowBattery low;
 	bool batteryDue = true;
+	if (firstSetup) { settingsView.setup(); logf("first-time setup"); }
 	RomWatch roms;
 	roms.watch(lib.watchDirs());
 	be.overlay = [&](int screen) { if (screen == 0 && low.showing(nowMs())) settingsView.notice(low.title, low.body, low.percent); };

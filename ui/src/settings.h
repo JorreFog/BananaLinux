@@ -23,7 +23,8 @@ namespace banana
 		Settings(rnds::Backend* be, const std::string& assets, const std::string& dataDir, float scale, const std::string& variant);
 		void setVariant(const std::string& variant);
 		void open();
-		void close() { mOpen = false; page = LIST; }
+		void close() { mOpen = false; page = LIST; wizard = false; }
+		void setup() { mOpen = true; openSetup(); }	// the first-time setup, from the host
 		bool isOpen() const { return mOpen; }
 
 		// what the host has to do after an input
@@ -62,7 +63,23 @@ namespace banana
 		std::string about, wifiInfo, ip;
 
 		// the Wi-Fi pages: the networks around, and the keyboard for a password (settings-wifi.cpp)
-		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES } page = LIST;
+		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP } page = LIST;
+		// the keyboard types a text for a purpose: a Wi-Fi password, or an account's name or password
+		// (banana/accounts.conf: RetroAchievements for DraStic and RetroArch, ScreenScraper for the scraper to come)
+		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS } entry = ENTRY_WIFI;
+		std::string entryTitle, entrySub;
+		Page entryBack = NETWORKS;
+		void startEntry(Entry e, const std::string& title, const std::string& sub, Page back, const std::string& start = "");
+		Result finishEntry();
+		std::string account(const char* key);
+		// the first-time setup: the steps (Wi-Fi, the time zone, RetroAchievements, ScreenScraper), run once after
+		// the installation (banana/setup-done is written at the end) and from Settings > System
+		bool wizard = false;
+		int wsel = 0;
+		void openSetup();
+		Result pressSetup(Key k);
+		void renderSetup();
+		void setupDone();
 		std::string wifiTool, wifiConf;
 		bool sync = false;
 		wifi::Job scanJob, statusJob;

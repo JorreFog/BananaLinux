@@ -7,6 +7,13 @@ CORE=/usr/lib/libretro/$1_libretro.so
 CFG=/data/retroarch/retroarch.cfg
 [ -f $CFG ] || { mkdir -p /data/retroarch; cp /etc/banana/retroarch.cfg $CFG; }
 mkdir -p /data/saves /data/states /data/screenshots
+# the RetroAchievements account from the setup (banana/accounts.conf) into RetroArch's own settings
+A=/data/banana/accounts.conf
+if [ -f $A ]; then
+    u=$(sed -n 's/^ra_user=//p' $A | head -n 1); w=$(sed -n 's/^ra_password=//p' $A | head -n 1)
+    set_cfg() { grep -q "^$1 = " $CFG && sed -i "s|^$1 = .*|$1 = \"$2\"|" $CFG || echo "$1 = \"$2\"" >> $CFG; }
+    if [ -n "$u" ]; then set_cfg cheevos_enable true; set_cfg cheevos_username "$u"; set_cfg cheevos_password "$w"; else set_cfg cheevos_enable false; fi
+fi
 # anything RetroArch keeps that retroarch.cfg doesn't place (remaps, core options, playlists...) under the card's
 # retroarch folder, not ~/.config on the read-only root
 export HOME=/data/retroarch XDG_CONFIG_HOME=/data/retroarch

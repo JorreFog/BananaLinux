@@ -17,8 +17,11 @@ Write it to a microSD card with balenaEtcher (it takes the `.gz` as it is), put 
 1. A second or two after power-on, the boot animation on both panels: the bananas drop onto the top screen, the
    cartridge goes into the console on the bottom one. The very first boot spends a few more seconds before it,
    making the data partition from the rest of the card.
-2. The menu, on the Nintendo DS with no games: "Copy .nds files to roms/nds".
-3. Power off (Start > System > Shut down, or hold power 2 s), put the card in a computer: a `BANANA` drive with
+2. The first-time setup, on both panels: Wi-Fi (the networks around, the password on the keyboard), the time
+   zone, a RetroAchievements account, a ScreenScraper account; B skips it (Settings > System > First-time setup
+   brings it back), A on Finish ends it.
+3. The menu, on the Nintendo DS with no games: "Copy .nds files to roms/nds".
+4. Power off (Start > System > Shut down, or hold power 2 s), put the card in a computer: a `BANANA` drive with
    `roms/`, `bios/`, `banana/` and so on. Games go in `roms/nds`, `roms/gba`... (`banana/README.txt`).
 
 ## Things to try

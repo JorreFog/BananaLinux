@@ -33,6 +33,9 @@
 - [x] Updates: two root slots, a package per build, written to the slot not in use from Settings > System > Update,
       checked, the switch at the end, `Previous version` to go back; proven in QEMU
 
+- [x] The first-time setup after the install: Wi-Fi, the time zone, a RetroAchievements account, a ScreenScraper
+      account (`banana/accounts.conf`, read by the launchers); B skips it, Settings > System > First-time setup
+      brings it back
 - [x] Resource use: the kernel trimmed to the two handhelds' hardware, the menu's memory measured, bananad idle
       about once a minute, the panels dimmed when idle, Wi-Fi scans backed off, no hardening overhead
 

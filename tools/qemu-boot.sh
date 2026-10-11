@@ -169,6 +169,10 @@ echo "1. the first boot: the data partition made, the menu, a shutdown"
 boot first
 grep -q "rcS: data partition ready" "$OUT/serial.log" && ok "the data partition was made and mounted" || bad "no data partition"
 grep -q "panels 640x480" "$OUT/serial.log" && ok "both panels opened at 640x480" || bad "the panels didn't open"
+# the first-time setup opens over the menu on a first boot; B skips it (and writes setup-done on the card)
+grep -q "banana-ui: first-time setup" "$OUT/serial.log" && ok "the first-time setup opened" || bad "no first-time setup on the first boot"
+shot first-setup
+key backspace; sleep 1
 shot first-menu
 key s; sleep 1; shot first-settings; key backspace; sleep 0.5
 shutdown_from_settings first
@@ -179,12 +183,14 @@ add_game() {    # a DS game and a GBA one, so both launchers run (DraStic's and 
     head -c 65536 /dev/zero > "$DATA/roms/gba/Boot Test Advance.gba"
     ls "$DATA/banana/" | tr '\n' ' '; echo
     [ -f "$DATA/banana/README.txt" ] && ok "the card has its folders and README" || bad "no README on the card"
+    [ -f "$DATA/banana/setup-done" ] && ok "the skipped setup is remembered on the card" || bad "no setup-done on the card"
 }
 with_data add_game
 
 echo "2. the second boot: the library, a DS game and a GBA game started and ended, the menu back, a shutdown"
 boot second
 grep -q "rcS: data partition ready" "$OUT/serial.log" && ok "the data partition mounted again" || bad "no data partition the second time"
+grep -q "banana-ui: first-time setup" "$OUT/serial.log" && bad "the first-time setup opened again" || ok "no setup the second time"
 sleep 5; measure second-menu
 key ret; sleep 1; shot second-library
 grep -q "Boot Test" "$OUT/serial.log" || true

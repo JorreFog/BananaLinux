@@ -78,6 +78,13 @@ change rebuilds the engine in the other palette), `banana/bananad.conf` (then SI
 zoneinfo files on the root): banana-ui sets `TZ` for itself and every game it starts, so a DS game's clock is local
 too, and bananad takes it for its logs on SIGHUP.
 
+**First-time setup**: with no `banana/setup-done` on the card, the menu opens the setup after the boot animation:
+five steps on the settings' own pages (Wi-Fi through the network chooser, the time zone, RetroAchievements and
+ScreenScraper through the keyboard, Finish). The accounts go to `banana/accounts.conf` (`ra_user`, `ra_password`,
+`ss_user`, `ss_password`); run-drastic hands the RetroAchievements one to SuperDrastic (`DSFLIP_RA_*`) and
+run-retroarch writes it into RetroArch's `cheevos_*`. Skipping writes `setup-done` too; Settings > System >
+First-time setup runs it again.
+
 **Wi-Fi** (Settings > Network): the networks around from `wifi scan` (wpa_cli's scan results, one row per name,
 strongest first, with its signal, a lock, *Saved* or *Connected*), run on a thread so the menu never waits. A on a
 network with a password opens a keyboard: four rows of ten keys in three layers and a row of wide keys, driven by
@@ -222,7 +229,9 @@ without it, so a DS game only gets as far as its launcher).
 ## Hardware support
 
 `buildroot/board/rgds` is ROCKNIX's RK3566 support at a pinned commit (`ROCKNIX`), copied by
-`tools/sync-rocknix-hw.sh`: its kernel patches in its own order, the RG DS and RG DS Plus device trees, its kernel
-config (Banana's changes are in `linux-banana.fragment`), the generic DSI panel and joypad drivers (built in via
-`external.mk`), the input-polldev patch the joypad driver needs, its U-Boot patches, and the RK3568 BL31 it boots
-with. A newer ROCKNIX is one command and a diff.
+`tools/sync-rocknix-hw.sh`: those of its kernel patches that touch what the two handhelds have (in ROCKNIX's
+order; the ones for other handhelds' device trees, panels and drivers are left out, since the kernel builds every
+Rockchip device tree and a patch for another handheld's can assume ROCKNIX patches Banana hasn't), the RG DS and
+RG DS Plus device trees, its kernel config (Banana's changes are in `linux-banana.fragment`), the generic DSI panel
+and joypad drivers (built in via `external.mk`), the input-polldev patch the joypad driver needs, its U-Boot
+patches, and the RK3568 BL31 it boots with. A newer ROCKNIX is one command and a diff.

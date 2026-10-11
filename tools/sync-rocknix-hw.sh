@@ -54,6 +54,18 @@ cp "$R/projects/ROCKNIX/devices/RK3326/patches/linux/003-input-add-input-polldev
 # patches for Mali's kbase driver, which Banana doesn't use (it runs Panfrost), and for Bluetooth, which Banana's
 # kernel leaves out (one of them needs fuzz to apply, which Buildroot's patch -F0 refuses)
 rm -f "$B"/linux-patches/*mali* "$B"/linux-patches/*i915* "$B"/linux-patches/*Bluetooth*
+# patches for hardware the two handhelds haven't (the kernel's "all" builds every Rockchip device tree, so a patch
+# for another handheld's tree that assumes ROCKNIX's other patches breaks the build): device-tree patches that
+# touch nothing the RG DS's tree includes (rk3568.dtsi, rk356x-base.dtsi), Qualcomm's display, the iMON remote,
+# the panels of other handhelds, perf's Rust build, the initramfs warning
+rm -f "$B"/linux-patches/*msm* "$B"/linux-patches/*imon* "$B"/linux-patches/*rust-build* "$B"/linux-patches/*initramfs* \
+      "$B"/linux-patches/*st7703* "$B"/linux-patches/*st7701* "$B"/linux-patches/*nv3051d*
+for p in "$B"/linux-patches/*.patch; do
+    files=$(sed -n 's#^+++ b/##p' "$p")
+    [ -n "$files" ] || continue
+    echo "$files" | grep -qv '^arch/arm64/boot/dts/' && continue
+    echo "$files" | grep -q 'rk356x-base\.dtsi\|rk3568' || rm -f "$p"
+done
 
 cp $R/$D/linux/dts/rockchip/rk3568-anbernic-rg-ds.dts $R/$D/linux/dts/rockchip/rk3568-anbernic-rg-ds-plus.dts "$B/dts/"
 cp $R/$D/linux/linux.aarch64.conf "$B/linux-rocknix.config"

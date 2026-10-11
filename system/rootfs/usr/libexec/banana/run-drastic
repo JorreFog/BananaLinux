@@ -17,5 +17,11 @@ export DSFLIP_DATA=/data/superdrastic DSFLIP_LOGDIR=/data/banana/logs/superdrast
 # ROCKNIXDS's defaults: the Gengis Engine renderer (DraStic's picture with ~12% less CPU work a frame) and
 # SuperDrastic's own CPU governor (the lowest clock with no dropped frames, remembered per game)
 export DSFLIP_RAST=${DSFLIP_RAST:-1} DSFLIP_CPUGOV=${DSFLIP_CPUGOV:-1}
+# the RetroAchievements account from the setup (banana/accounts.conf), for SuperDrastic's achievements
+A=/data/banana/accounts.conf
+if [ -f $A ]; then
+    u=$(sed -n 's/^ra_user=//p' $A | head -n 1); w=$(sed -n 's/^ra_password=//p' $A | head -n 1)
+    [ -n "$u" ] && export DSFLIP_RA_USER="$u" DSFLIP_RA_PASSWORD="$w"
+fi
 [ -f /data/banana/superdrastic.conf ] && . /data/banana/superdrastic.conf
 exec $SD/superdrastic-run $D/drastic "$1"

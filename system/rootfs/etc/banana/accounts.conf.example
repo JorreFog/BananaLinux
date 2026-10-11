@@ -1,0 +1,6 @@
+# Accounts from the first-time setup (Settings > System > First-time setup): name and password, one each line.
+# ra_*: retroachievements.org (DraStic and RetroArch); ss_*: screenscraper.fr (the art scraper, to come)
+ra_user=
+ra_password=
+ss_user=
+ss_password=
