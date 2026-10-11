@@ -10,6 +10,9 @@ mount -t devpts devpts /dev/pts
 mount -t tmpfs -o mode=0755,nosuid,nodev tmpfs /run
 mount -t tmpfs -o mode=1777,nosuid,nodev tmpfs /tmp
 mkdir -p /run/banana /var/log
+# boot milestones, seconds since the kernel started (logs/boot.txt)
+mark() { read up rest < /proc/uptime; printf '%-28s %6.2f s\n' "$1" "$up" >> /run/banana/boot-times; }
+mark "rcS: started"
 [ -f /etc/sysctl.d/banana.conf ] && sysctl -q -p /etc/sysctl.d/banana.conf
 syslogd -O /run/banana/messages -s 256 -b 1
 hostname banana
@@ -41,6 +44,7 @@ data || {
     echo "${DISK}p3 could not be mounted" > /run/banana/data-failed
 }
 /usr/libexec/banana/data-layout
+mark "rcS: data partition ready"
 # the boot partition, read-only (the panel tuner writes the DTB there once)
 mount -t vfat -o ro,noatime ${DISK}p1 /boot 2>/dev/null
 
@@ -62,5 +66,21 @@ banana-perf ui
     grep -q '^ *share *= *on' /data/banana/settings.conf 2>/dev/null && /usr/libexec/banana/share up
     grep -q '^ *ssh *= *on' /data/banana/settings.conf 2>/dev/null && /usr/libexec/banana/ssh up
     /usr/libexec/banana/panel-tune
+) &
+# the boot, to read on a computer: logs/boot.txt (the milestones above, the kernel's, banana-ui's) and
+# logs/dmesg.txt (the kernel's log; the previous boot's in dmesg.1.txt)
+(
+    sleep 20
+    L=/data/banana/logs
+    mkdir -p $L
+    [ -f $L/dmesg.txt ] && mv -f $L/dmesg.txt $L/dmesg.1.txt
+    dmesg > $L/dmesg.txt
+    {
+        date
+        cat /proc/cmdline
+        t=$(dmesg | sed -n 's/^\[ *\([0-9.]*\)\] Run .* as init process.*/\1/p' | head -n 1)
+        [ -n "$t" ] && printf '%-28s %6.2f s\n' "kernel: init started" "$t"
+        cat /run/banana/boot-times
+    } > $L/boot.txt
 ) &
 exit 0

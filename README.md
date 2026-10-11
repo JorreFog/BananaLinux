@@ -7,7 +7,8 @@ sleeps when you close the lid, and gives the games every cycle.</b></p>
 
 > [!WARNING]
 > Banana is at its start (0.1.0-dev). Everything here builds and is tested off the device (see *Status*), but no
-> image has booted on an RG DS yet. Don't flash it expecting a working handheld.
+> image has booted on an RG DS yet. Don't flash it expecting a working handheld; if you do, [docs/FIRST-BOOT.md](docs/FIRST-BOOT.md)
+> says what to try and which logs to send back.
 
 ## What it is
 
@@ -122,7 +123,7 @@ ui/banana-ui --headless out/ --assets ui/assets/rnds --roms <roms> --data <dir> 
 | `system/rootfs/` | init, first boot, `banana-perf`, sleep hooks, the game launchers, default settings |
 | `buildroot/` | the Buildroot tree: defconfigs, Banana's packages, the RG DS board (kernel patches, device trees, drivers, U-Boot, image layout) |
 | `tools/` | `import-rnds.sh` (the menu engine from ROCKNIXDS), `sync-rocknix-hw.sh` (the hardware support from ROCKNIX), the pixel bunch, the logo and the boot animation's still layers |
-| `docs/` | [ARCHITECTURE.md](docs/ARCHITECTURE.md): boot, partitions, sleep, performance and the menu in detail |
+| `docs/` | [ARCHITECTURE.md](docs/ARCHITECTURE.md): boot, partitions, sleep, performance and the menu in detail; [FIRST-BOOT.md](docs/FIRST-BOOT.md): the first boot on the hardware, and the logs it leaves |
 
 ## Credits
 

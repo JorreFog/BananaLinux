@@ -288,6 +288,16 @@ struct RomWatch
 	}
 };
 
+// ---- boot timing: seconds since the kernel started, for logs/boot.txt (rcS gathers /run/banana/boot-times) ------
+static void bootMark(const char* what)
+{
+	timespec t;
+	clock_gettime(CLOCK_BOOTTIME, &t);
+	double s = t.tv_sec + t.tv_nsec / 1e9;
+	logf("%s at %.2f s after the kernel started", what, s);
+	if (FILE* f = fopen("/run/banana/boot-times", "a")) { fprintf(f, "%-28s %6.2f s\n", what, s); fclose(f); }
+}
+
 // ---- the low-battery notice ---------------------------------------------------------------------------------------
 // At 20% (the LED turns red), 10% and 5% (it blinks), on the battery: a notice over the top panel for 8 s, which any
 // button hides. Each step once, until the charger has been on; a step passed during a game shows when the menu is
@@ -620,6 +630,7 @@ int main(int argc, char** argv)
 	}
 	SoftBackend be(disp.width(), disp.height());
 	logf("panels %dx%d", disp.width(), disp.height());
+	bootMark("banana-ui: panels open");
 
 	Sound sound(o.assets + "/sounds");
 	sound.enabled = settings["sounds"] != "off";
@@ -650,6 +661,7 @@ int main(int argc, char** argv)
 	Worker worker;
 	worker.start(ui);
 	dissolveToMenu(disp, be, *ui);
+	bootMark("banana-ui: the menu");
 
 	Input input;
 	input.open(o.touch, disp.width(), disp.height());
