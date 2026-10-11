@@ -681,7 +681,7 @@ static void leds_update(void)
 	}
 }
 
-/* the kernel's uevents (no udev here): a power_supply one means the battery or the charger changed */
+/* the kernel's uevents (no udev here): the battery and the charger, and drivers for USB devices plugged in */
 static int uevent_open(void)
 {
 	int fd = socket(AF_NETLINK, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC, NETLINK_KOBJECT_UEVENT);
@@ -691,15 +691,62 @@ static int uevent_open(void)
 	return fd;
 }
 
-static int uevent_power(int fd)
+/* a program in the background, not waited for (a double fork: no zombie, SIGCHLD stays default) */
+static void spawn_bg(char *const argv[])
+{
+	pid_t p = fork();
+	if (p == 0) {
+		if (fork() == 0) { execv(argv[0], argv); _exit(127); }
+		_exit(0);
+	}
+	if (p > 0) while (waitpid(p, NULL, 0) < 0 && errno == EINTR) {}
+}
+
+/* a USB device's driver, as udev would load it: the module its MODALIAS names (an Xbox pad's xpad, a USB serial
+ * adapter's); the handheld's own hardware is built into the kernel */
+static void load_driver(const char *alias)
+{
+	if (strncmp(alias, "usb:", 4)) return;
+	char a[256];
+	snprintf(a, sizeof a, "%s", alias);
+	char *argv[] = { "/sbin/modprobe", "-q", a, NULL };
+	spawn_bg(argv);
+}
+
+/* the USB devices there before bananad started (a pad plugged in at boot) */
+static void load_drivers_present(void)
+{
+	DIR *d = opendir("/sys/bus/usb/devices");
+	if (!d) return;
+	struct dirent *e;
+	while ((e = readdir(d))) {
+		if (e->d_name[0] == '.') continue;
+		char p[320], alias[256];
+		snprintf(p, sizeof p, "/sys/bus/usb/devices/%s/modalias", e->d_name);
+		FILE *f = fopen(p, "r");
+		if (!f) continue;
+		if (fgets(alias, sizeof alias, f)) { alias[strcspn(alias, "\n")] = 0; load_driver(alias); }
+		fclose(f);
+	}
+	closedir(d);
+}
+
+/* the kernel's uevents: true when one was about the battery or the charger; a device added gets its driver */
+static int uevent_read(int fd)
 {
 	char buf[8192];
 	ssize_t n;
 	int hit = 0;
 	while ((n = recv(fd, buf, sizeof buf - 1, 0)) > 0) {
 		buf[n] = 0;
-		for (char *p = buf; p < buf + n; p += strlen(p) + 1)
+		const char *alias = NULL;
+		int add = 0;
+		for (char *p = buf; p < buf + n; p += strlen(p) + 1) {
 			if (!strcmp(p, "SUBSYSTEM=power_supply")) hit = 1;
+			else if (!strcmp(p, "ACTION=add")) add = 1;
+			else if (!strncmp(p, "MODALIAS=", 9)) alias = p + 9;
+		}
+		if (add && alias) load_driver(alias);
 	}
 	return hit;
 }
@@ -796,6 +843,7 @@ int main(int argc, char **argv)
 	audio_setup();
 	restore_settings();
 	int uev = uevent_open();
+	load_drivers_present();
 	leds_update();
 	last_input = mono();
 	double next_battery = 0;
@@ -829,7 +877,7 @@ int main(int argc, char **argv)
 			while ((r = read(devfd[i], ev, sizeof ev)) > 0)
 				for (int k = 0; k < r / (ssize_t)sizeof ev[0]; k++) handle(&ev[k]);
 		}
-		if (uev_at >= 0 && (pf[uev_at].revents & POLLIN) && uevent_power(uev)) leds_update();
+		if (uev_at >= 0 && (pf[uev_at].revents & POLLIN) && uevent_read(uev)) leds_update();
 		save_settings(now);
 		if (ino_at >= 0 && (pf[ino_at].revents & POLLIN)) {
 			char buf[4096];

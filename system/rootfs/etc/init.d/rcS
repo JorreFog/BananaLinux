@@ -36,7 +36,9 @@ banana-perf ui
 # not needed for the menu's first frame
 (
     hwclock -s 2>/dev/null
-    modprobe -a rtw88_8821cs 2>/dev/null
+    # the GPU (SuperDrastic's shaders, RetroArch's GLES) and the Wi-Fi: modules, and with no udev nothing loads a
+    # module by itself (bananad loads USB devices' drivers as they come)
+    modprobe -a panfrost rtw88_8821cs 2>/dev/null
     # Wi-Fi when there is a network to join and the settings screen didn't switch it off (Settings > Network
     # starts it to search when there is none yet)
     if [ -f /data/banana/wifi.conf ] && ! grep -q '^ *wifi *= *off' /data/banana/settings.conf 2>/dev/null; then

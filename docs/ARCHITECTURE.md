@@ -21,7 +21,8 @@ can read and fill it). The root is never written to; nothing on it can be corrup
    rootwait quiet`. There is no initramfs: the kernel mounts the root itself.
 3. Everything the menu needs is built into the kernel: the two DSI panels (the generic DSI panel driver), the
    buttons (ROCKNIX's ADC joypad driver), the touchscreens, the RK817 codec and the speaker amplifiers, the battery.
-   Wi-Fi and Panfrost are modules, loaded after the menu is up. No fbcon, no VTs, no boot logo.
+   Wi-Fi and Panfrost are modules, loaded by rcS after the menu is up (there is no udev; bananad loads the
+   drivers USB devices ask for, an Xbox pad's xpad, from their uevents' MODALIAS, as udev would). No fbcon, no VTs, no boot logo.
 4. busybox init runs `/etc/init.d/rcS`: mount `/proc`, `/sys`, `/run`, `/tmp`, the data partition; start
    `bananad`; set the menu's clocks. Wi-Fi, the clock and the rest go to the background.
 5. init starts `banana-ui`. It opens the panels and plays the boot animation from its first frame while another
