@@ -23,7 +23,7 @@ banana-ui: $(SRC) $(wildcard src/*.h rnds/*.h)
 host:
 	$(MAKE) ALSA=0 banana-ui
 
-install: banana-ui
+install:
 	install -D -m 755 banana-ui $(DESTDIR)/usr/bin/banana-ui
 	mkdir -p $(DESTDIR)/usr/share/banana
 	cp -r assets/rnds $(DESTDIR)/usr/share/banana/rnds

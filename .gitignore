@@ -3,5 +3,6 @@
 /ui/banana-ui
 /ui/tests/out/
 /system/bananad/bananad
+/system/bananad/banana-panel-tune
 *.o
 /banana-*.bundle

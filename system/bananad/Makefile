@@ -6,7 +6,7 @@ bananad: bananad.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $<
 banana-panel-tune: banana-panel-tune.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $< -lm
-install: all
+install:
 	install -D -m 755 bananad $(DESTDIR)/usr/sbin/bananad
 	install -D -m 755 banana-panel-tune $(DESTDIR)/usr/sbin/banana-panel-tune
 clean:
