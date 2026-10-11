@@ -36,8 +36,9 @@ namespace banana
 		void takeDamage(int screen, int& y0, int& y1);
 		// everything again (new scanout buffers): the next frame is drawn in full
 		void invalidate() { for (int s = 0; s < 2; s++) { dmg0[s] = 0; dmg1[s] = H; last[s].clear(); } }
-		// put a picture straight on a screen (the splash): src is RGBA8, sx its first column
-		void blitRgba(int screen, const uint8_t* src, int srcW, int sx);
+		// a screen's pixels to draw on directly (the boot animation): all of it counts as changed, and the engine's
+		// next frame is drawn over all of it
+		uint32_t* canvas(int screen) { dmg0[screen] = 0; dmg1[screen] = H; last[screen].clear(); return scr[screen].data(); }
 
 		rnds::TexPtr upload(const rnds::Bitmap& b, bool smooth) override;
 		void draw(const rnds::TexPtr& t, float x, float y, float w, float h, const rnds::Color& tint) override;

@@ -1,52 +1,57 @@
 #!/usr/bin/env python3
-"""Banana's status-bar logo, in the place and style of ROCKNIXDS Pixel's: the word in the Unbounded font (light),
-then the RG DS's two screens as a small stacked glyph, at 1x (134x20, the RG DS) and 1.6x (214x32, the RG DS Plus).
-Drawn 8x larger and filtered down, so its edges are anti-aliased the way a browser draws the original SVG.
+"""Banana's status-bar logo for ROCKNIXDS Pixel's brand chip: the pixel-art bunch (tools/make-pixel-banana.py) and
+BANANA in the theme's Pixelify Sans, drawn hard-edged (no anti-aliasing) with a two-tone fill and a 1 px drop
+shadow, at 1x (134x20, the RG DS) and 1.6x (214x32, the RG DS Plus). The chip's slot is fixed (RndsUI draws it at
+148.23 x 26 CSS px); the logo is centred in it.
 
-    tools/make-logo.py <Unbounded-VF.ttf> <out dir> [big.png]   (writes logo@1x.png and logo@1.6x.png)
-
-The font is in ROCKNIXDS's logo/ folder (SIL Open Font License)."""
+    tools/make-logo.py <PixelifySans-Medium.ttf> <pixel banana dir> <out dir> [splash dir]"""
 import sys
 from PIL import Image, ImageDraw, ImageFont
 
-YELLOW = (245, 197, 24, 255)
-GREY = (138, 138, 138, 255)
-W1, H1 = 134, 20
-SS = 8
+LIGHT = (255, 222, 82, 255)
+DARK = (238, 160, 24, 255)
+SHADOW = (0, 0, 0, 255)
 
 
-def draw(scale):
-    w, h = round(W1 * scale), round(H1 * scale)
-    big = Image.new("RGBA", (w * SS, h * SS), (0, 0, 0, 0))
-    d = ImageDraw.Draw(big)
-    font = ImageFont.truetype(sys.argv[1], int(h * SS * 0.86))
-    try:
-        font.set_variation_by_axes([300])
-    except Exception:
-        pass
-    # "BANA" yellow, "NA" grey, as ROCKNIX is red and grey
-    parts = [("BANA", YELLOW), ("NA", GREY)]
-    asc = font.getbbox("BANANA")
-    text_w = sum(font.getlength(t) for t, _ in parts)
-    glyph_w = h * SS * 0.62
-    gap = h * SS * 0.28
-    x = (w * SS - (text_w + gap + glyph_w)) / 2
-    y = (h * SS - (asc[3] - asc[1])) / 2 - asc[1]
-    for t, c in parts:
-        d.text((x, y), t, font=font, fill=c)
-        x += font.getlength(t)
-    # the two screens: two rounded outlines stacked, the top one yellow
-    gx = x + gap
-    sw = max(SS, round(h * SS * 0.09))
-    gh = (h * SS - sw) / 2
-    for i, c in enumerate((YELLOW, GREY)):
-        top = i * (gh + sw * 0.5)
-        d.rounded_rectangle([gx, top + sw * 0.5, gx + glyph_w, top + gh], radius=sw * 1.2, outline=c, width=sw)
-    return big.resize((w, h), Image.LANCZOS)
+# Pixelify Sans is drawn on a grid of about 92 font units (of 1000): at 1000/92 px one font pixel is one screen pixel,
+# and the text is then scaled up by a whole number, so every font pixel is a clean square
+GRID_SIZE = 1000 / 92
 
 
-out = sys.argv[2]
-draw(1).save(out + "/logo@1x.png")
-draw(1.6).save(out + "/logo@1.6x.png")
-if len(sys.argv) > 3:
-    draw(8).save(sys.argv[3])     # a large one for the splash (tools/make-splash.mjs)
+def text_layer(font_path, scale, text):
+    font = ImageFont.truetype(font_path, GRID_SIZE)
+    l, t, r, b = font.getbbox(text)
+    im = Image.new("L", (int(r - l) + 4, int(b - t) + 4), 0)
+    d = ImageDraw.Draw(im)
+    d.fontmode = "1"        # whole pixels only
+    d.text((2 - l, 2 - t), text, font=font, fill=255)
+    im = im.crop(im.getbbox())
+    return im.resize((im.width * scale, im.height * scale), Image.NEAREST)
+
+
+def logo(font_path, bananas, w, h, text_scale, banana_px, gap):
+    mask = text_layer(font_path, text_scale, "BANANA")
+    ban = Image.open(f"{bananas}/banana-{banana_px}.png").convert("RGBA")
+    total = ban.width + gap + mask.width + 1
+    out = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    x0 = (w - total) // 2
+    out.alpha_composite(ban, (x0, (h - ban.height) // 2))
+    tx, ty = x0 + ban.width + gap, (h - mask.height - 1) // 2 + 1
+    # the fill: light over the top half, darker below, like the bananas' own shading
+    fill = Image.new("RGBA", mask.size, DARK)
+    ImageDraw.Draw(fill).rectangle([0, 0, mask.width, mask.height * 11 // 20], fill=LIGHT)
+    shadow = Image.new("RGBA", mask.size, SHADOW)
+    sh = text_scale // 2 + (1 if text_scale > 2 else 0)     # the drop shadow: one font pixel down and right, about
+    out.paste(shadow, (tx + sh, ty + sh), mask)
+    out.paste(fill, (tx, ty), mask)
+    return out
+
+
+font, bananas, out = sys.argv[1], sys.argv[2], sys.argv[3]
+logo(font, bananas, 134, 20, 2, 20, 6).save(out + "/logo@1x.png")
+logo(font, bananas, 214, 32, 3, 32, 9).save(out + "/logo@1.6x.png")
+if len(sys.argv) > 4:
+    # for the boot animation (src/splash.cpp): the words as masks, one font pixel per image pixel; banana-ui scales
+    # them by whole numbers
+    for name, word in (("word", "BANANA"), ("loading", "LOADING")):
+        text_layer(font, 1, word).save(f"{sys.argv[4]}/{name}.png")

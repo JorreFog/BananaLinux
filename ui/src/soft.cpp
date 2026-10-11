@@ -308,16 +308,4 @@ namespace banana
 			}
 		}
 	}
-
-	void SoftBackend::blitRgba(int screen, const uint8_t* src, int srcW, int sx)
-	{
-		for (int y = 0; y < H; y++)
-		{
-			uint32_t* d = &scr[screen][(size_t)y * W];
-			const uint8_t* s = src + ((size_t)y * srcW + sx) * 4;
-			for (int x = 0; x < W; x++, s += 4) d[x] = 0xff000000u | (s[0] << 16) | (s[1] << 8) | s[2];
-		}
-		dmg0[screen] = 0; dmg1[screen] = H;
-		last[screen].clear();	// the engine's next frame is drawn over all of it
-	}
 }

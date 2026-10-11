@@ -8,7 +8,7 @@ CXXFLAGS ?= -O2
 override CXXFLAGS += -std=c++17 -Wall -Wno-unused-function
 override LDLIBS += -lpthread
 
-SRC = src/main.cpp src/soft.cpp src/kms.cpp src/input.cpp src/library.cpp src/sound.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp
+SRC = src/main.cpp src/soft.cpp src/kms.cpp src/input.cpp src/library.cpp src/sound.cpp src/splash.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp
 PKGS = freetype2 libdrm
 ifeq ($(ALSA),1)
 PKGS += alsa
@@ -28,6 +28,7 @@ install: banana-ui
 	mkdir -p $(DESTDIR)/usr/share/banana
 	cp -r assets/rnds $(DESTDIR)/usr/share/banana/rnds
 	cp -r assets/splash $(DESTDIR)/usr/share/banana/splash
+	cp -r assets/banana $(DESTDIR)/usr/share/banana/banana
 
 clean:
 	rm -f banana-ui

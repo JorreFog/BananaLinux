@@ -17,6 +17,7 @@
 #include "kms.h"
 #include "library.h"
 #include "soft.h"
+#include "splash.h"
 #include "sound.h"
 
 #include <atomic>
@@ -30,6 +31,7 @@
 #include <fcntl.h>
 #include <fstream>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <poll.h>
 #include <sstream>
@@ -169,7 +171,7 @@ static void onSignal(int sig)
 
 struct Options
 {
-	std::string assets = "/usr/share/banana/rnds", splash = "/usr/share/banana/splash";
+	std::string assets = "/usr/share/banana/rnds", splash = "/usr/share/banana/splash", banana = "/usr/share/banana/banana";
 	std::string systems = "/etc/banana/systems.conf", roms = "/data/roms", data = "/data/banana";
 	std::string top = "DSI-2", touch = "fe5e0000.i2c";
 	std::string headless, script;
@@ -283,6 +285,18 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant)
 			if (!save(0, o.headless + name + "-top.png") || !save(1, o.headless + name + "-bot.png")) { logf("can't write %s", name.c_str()); return 1; }
 			logf("shot %s (frame %.2f ms, wake %d)", name.c_str(), t1 - t0, ui.nextWake());
 		}
+		else if (op == "splash")
+		{
+			// splash <name> <ms> [ready]: the boot animation at that time
+			std::string name; double t = 0; int ready = 0;
+			cs >> name >> t >> ready;
+			static Splash sp;
+			static bool loaded = false;
+			if (!loaded && !(loaded = sp.load(o.splash, o.banana + "/banana-48.png", variant, o.w, o.h))) { logf("no splash assets in %s", o.splash.c_str()); return 1; }
+			sp.draw(be.canvas(0), be.canvas(1), t, ready != 0);
+			if (!save(0, o.headless + name + "-top.png") || !save(1, o.headless + name + "-bot.png")) return 1;
+			logf("splash %s at %.0f ms", name.c_str(), t);
+		}
 		else if (op == "bench")
 		{
 			// N frames 16.7 ms apart, as the panels would show them: the engine's and the backend's time per frame
@@ -307,23 +321,75 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant)
 	return 0;
 }
 
-// the boot splash across both panels (left half top, right half bottom) while the library is read
-static void showSplash(Display& disp, SoftBackend& be, const std::string& dir, const std::string& variant)
+// ---- the boot animation and the hand-over to the menu --------------------------------------------------------
+// one frame to the panels, then wait for its flip (or a signal)
+static void showFrame(Display& disp, SoftBackend& be, int sig)
 {
-	std::string path = dir + "/" + variant + "-" + (be.width() > 640 ? "1024" : "640") + ".png";
-	int w, h, n;
-	unsigned char* p = stbi_load(path.c_str(), &w, &h, &n, 4);
-	if (!p) return;
-	if (w == be.width() * 2 && h == be.height())
+	const uint32_t* scr[2] = { be.pixels(0), be.pixels(1) };
+	int y0[2], y1[2];
+	be.takeDamage(0, y0[0], y1[0]);
+	be.takeDamage(1, y0[1], y1[1]);
+	if (!disp.present(scr, y0, y1)) return;
+	while (disp.flipPending())
 	{
-		be.blitRgba(0, p, w, 0);
-		be.blitRgba(1, p, w, be.width());
-		const uint32_t* scr[2] = { be.pixels(0), be.pixels(1) };
-		int y0[2], y1[2];
-		be.takeDamage(0, y0[0], y1[0]); be.takeDamage(1, y0[1], y1[1]);
-		disp.present(scr, y0, y1);
+		pollfd p[2] = { { disp.pollFd(), POLLIN, 0 }, { sig, POLLIN, 0 } };
+		if (poll(p, sig >= 0 ? 2 : 1, 100) <= 0 || (sig >= 0 && (p[1].revents & POLLIN))) return;
+		disp.handleEvents();
 	}
-	stbi_image_free(p);
+}
+
+static Splash gSplash;
+
+// plays until the intro is over and the menu is ready (with the animation off: only the wait for the menu)
+static void playSplash(Display& disp, SoftBackend& be, const Options& o, const std::string& variant, bool on,
+	std::atomic<bool>& ready, Sound& sound, int sig)
+{
+	if (!on || !gSplash.load(o.splash, o.banana + "/banana-48.png", variant, be.width(), be.height()))
+	{
+		while (!ready) usleep(2000);
+		return;
+	}
+	gSplash.onCue = [&sound](const std::string& n) { sound.play(n); };
+	double t0 = nowMs();
+	for (;;)
+	{
+		double t = nowMs() - t0;
+		bool r = ready;
+		if (gSplash.finished(t, r)) break;
+		gSplash.draw(be.canvas(0), be.canvas(1), t, r);
+		showFrame(disp, be, sig);
+		int wait = gSplash.nextFrame(nowMs() - t0, ready);
+		if (wait > 16) usleep(std::min(wait, 50) * 1000);	// waiting on the library: look again now and then
+	}
+}
+
+// the splash dissolves into the menu in four steps of an ordered dither, in blocks of the splash's own pixels
+static void dissolveToMenu(Display& disp, SoftBackend& be, rnds::UI& ui)
+{
+	if (!gSplash.played()) return;
+	size_t n = (size_t)be.width() * be.height();
+	std::vector<uint32_t> was[2] = { std::vector<uint32_t>(be.pixels(0), be.pixels(0) + n), std::vector<uint32_t>(be.pixels(1), be.pixels(1) + n) };
+	static const int bayer[16] = { 0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5 };
+	int block = std::max(1, (int)std::lround(2 * be.height() / 480.0f));
+	for (int step = 1; step <= 4; step++)
+	{
+		ui.update(nowMs());
+		ui.finishWork();
+		be.invalidate();
+		ui.render();
+		if (step < 4)
+			for (int s = 0; s < 2; s++)
+			{
+				uint32_t* d = be.canvas(s);
+				for (int y = 0; y < be.height(); y++)
+					for (int x = 0; x < be.width(); x++)
+						if (bayer[((y / block) & 3) * 4 + ((x / block) & 3)] >= step * 4)
+							d[(size_t)y * be.width() + x] = was[s][(size_t)y * be.width() + x];
+			}
+		showFrame(disp, be, -1);
+		showFrame(disp, be, -1);	// each step for two frames
+	}
+	be.invalidate();	// the menu's next frame is drawn in full
 }
 
 int main(int argc, char** argv)
@@ -341,6 +407,7 @@ int main(int argc, char** argv)
 		auto next = [&]() -> std::string { if (i + 1 >= argc) { logf("%s needs a value", a.c_str()); exit(2); } return argv[++i]; };
 		if (a == "--assets") o.assets = next();
 		else if (a == "--splash") o.splash = next();
+		else if (a == "--banana") o.banana = next();
 		else if (a == "--systems") o.systems = next();
 		else if (a == "--roms") o.roms = next();
 		else if (a == "--data") o.data = next();
@@ -380,29 +447,37 @@ int main(int argc, char** argv)
 		usleep(50000);
 	}
 	SoftBackend be(disp.width(), disp.height());
-	showSplash(disp, be, o.splash, variant);
 	logf("panels %dx%d", disp.width(), disp.height());
-
-	double t0 = nowMs();
-	lib.scan();
-	logf("library: %d shelves in %.0f ms", lib.systemCount(), nowMs() - t0);
 
 	Sound sound(o.assets + "/sounds");
 	sound.enabled = settings["sounds"] != "off";
 	lib.onCue = [&sound](const std::string& n) { sound.play(n); };
 
-	rnds::UI ui(&lib, &be, o.assets, disp.height() / 480.0f, variant);
+	// the library and the menu are made on another thread while the boot animation plays
+	std::unique_ptr<rnds::UI> uiPtr;
+	std::atomic<bool> ready{ false };
+	std::thread loader([&]
+	{
+		double t0 = nowMs();
+		lib.scan();
+		logf("library: %d shelves in %.0f ms", lib.systemCount(), nowMs() - t0);
+		int startSys = 0;
+		{
+			std::ifstream f(o.data + "/last-system");
+			f >> startSys;
+			if (startSys < 0 || startSys >= lib.systemCount()) startSys = 0;
+		}
+		uiPtr.reset(new rnds::UI(&lib, &be, o.assets, disp.height() / 480.0f, variant));
+		uiPtr->setHome(startSys);
+		ready = true;
+	});
+	playSplash(disp, be, o, variant, settings["splash"] != "off", ready, sound, sigPipe[0]);
+	loader.join();
+	rnds::UI& ui = *uiPtr;
 	ui.setLog([](const std::string& m) { logf("%s", m.c_str()); });
 	Worker worker;
 	worker.start(&ui);
-
-	int startSys = 0;
-	{
-		std::ifstream f(o.data + "/last-system");
-		f >> startSys;
-		if (startSys < 0 || startSys >= lib.systemCount()) startSys = 0;
-	}
-	ui.setHome(startSys);
+	dissolveToMenu(disp, be, ui);
 
 	Input input;
 	input.open(o.touch, disp.width(), disp.height());
