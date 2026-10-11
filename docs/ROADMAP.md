@@ -4,7 +4,9 @@
 
 - [x] The whole system booted end to end in QEMU (`tools/qemu-boot.sh`, the CI's `boot` job): the first boot's
       partitioning, the menu on both panels, a game started from the library, a shutdown from the settings
-- [ ] A full image build (`make rgds`, or the CI's `image` job), and the first boot on an RG DS and an RG DS Plus
+- [x] A full image build: the CI's `image` job builds both cards (`banana-rgds.img.gz`, `banana-rgds-plus.img.gz`
+      and their update packages), and its `boot` job runs each real image through the five-phase QEMU test
+- [ ] The first boot on an RG DS and an RG DS Plus
 - [ ] Both panels up from banana-ui; touch on the bottom panel where the finger is
 - [ ] Buttons and their mapping (A = east, B = south: the RG DS's Nintendo layout)
 - [ ] Suspend and resume on the units: the panels, sound, Wi-Fi, the lid, the power key, the RTC battery check;
