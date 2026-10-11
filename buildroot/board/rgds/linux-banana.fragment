@@ -85,7 +85,6 @@ CONFIG_SMB_SERVER=m
 # CONFIG_NTFS_FS is not set
 # CONFIG_NTFS3_FS is not set
 # CONFIG_VIDEO_ROCKCHIP_RGA is not set
-# CONFIG_VIDEO_HANTRO is not set
 # CONFIG_USB_PULSE8_CEC is not set
 # CONFIG_USB_RAINSHADOW_CEC is not set
 # CONFIG_SERIO_SERPORT is not set
@@ -104,3 +103,49 @@ CONFIG_VIRTIO_INPUT=y
 CONFIG_DRM_VIRTIO_GPU=y
 CONFIG_MMC_SDHCI_PCI=y
 CONFIG_RTC_DRV_PL031=y
+# the VM's network (tools/qemu-boot.sh measures the system over SSH); USB Ethernet adapters are already in
+CONFIG_VIRTIO_NET=y
+# what the two device trees don't have, out of ROCKNIX's config shared by many RK3566 handhelds: a smaller kernel in
+# memory and fewer drivers to probe at boot. The panels are the generic DSI driver; the touchscreens Goodix GT911;
+# the sound the RK817 codec with the AW87391 (RG DS) and AW88166 (RG DS Plus) amplifiers; no HDMI, no camera.
+# CONFIG_ROCKCHIP_DW_HDMI is not set
+# CONFIG_DRM_LOAD_EDID_FIRMWARE is not set
+# CONFIG_DRM_MALI_DISPLAY is not set
+# CONFIG_DRM_MIPI_DBI is not set
+# CONFIG_DRM_PANEL_MIPI_DBI is not set
+# CONFIG_DRM_PANEL_ELIDA_KD35T133 is not set
+# CONFIG_DRM_PANEL_HIMAX_HX8394 is not set
+# CONFIG_DRM_PANEL_JADARD_JD9365DA_H3 is not set
+# CONFIG_DRM_PANEL_MAGNACHIP_D53E6EA8966 is not set
+# CONFIG_DRM_PANEL_NEWVISION_NV3051D is not set
+# CONFIG_DRM_PANEL_SITRONIX_ST7701 is not set
+# CONFIG_DRM_PANEL_SITRONIX_ST7703 is not set
+# CONFIG_TOUCHSCREEN_ATMEL_MXT is not set
+# CONFIG_TOUCHSCREEN_HYNITRON_CSTXXX is not set
+# CONFIG_TOUCHSCREEN_USB_COMPOSITE is not set
+# CONFIG_SND_SOC_ES8316 is not set
+# CONFIG_SND_SOC_ES8328_I2C is not set
+# CONFIG_SND_SOC_ES8328_SPI is not set
+# CONFIG_SND_SOC_MAX98090 is not set
+# CONFIG_SND_SOC_TS3A227E is not set
+# CONFIG_SND_SOC_RK3288_HDMI_ANALOG is not set
+# CONFIG_SND_SOC_FSL_SAI is not set
+# CONFIG_SND_SOC_ROCKCHIP_PDM is not set
+# CONFIG_SND_SOC_ROCKCHIP_SPDIF is not set
+# CONFIG_SND_SOC_SPDIF is not set
+# CONFIG_SND_SEQUENCER is not set
+# CONFIG_SND_TEST_COMPONENT is not set
+# CONFIG_SND_AUDIO_GRAPH_CARD2_CUSTOM_SAMPLE is not set
+# CONFIG_MEDIA_SUPPORT is not set
+# CONFIG_USB_GADGET is not set
+# CONFIG_FUSE_FS is not set
+# CONFIG_OVERLAY_FS is not set
+# CONFIG_MTD is not set
+# CONFIG_SPI_ROCKCHIP is not set
+# CONFIG_NET_SCHED is not set
+# CONFIG_VLAN_8021Q is not set
+# CONFIG_CRYPTO_USER_API_HASH is not set
+# CONFIG_CRYPTO_USER_API_SKCIPHER is not set
+# CONFIG_PROFILING is not set
+# CONFIG_ZRAM is not set
+# CONFIG_SWAP is not set

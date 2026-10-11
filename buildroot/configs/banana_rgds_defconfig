@@ -2,6 +2,10 @@
 BR2_aarch64=y
 BR2_cortex_a55=y
 BR2_OPTIMIZE_2=y
+# a handheld that runs its own games for one person: no stack protector in every function and no eager binding of
+# every symbol at start (emulator cycles and start-up time); FORTIFY level 1 stays, it costs nothing
+BR2_SSP_NONE=y
+BR2_RELRO_PARTIAL=y
 BR2_TOOLCHAIN_EXTERNAL=y
 BR2_TOOLCHAIN_EXTERNAL_BOOTLIN=y
 BR2_TOOLCHAIN_EXTERNAL_BOOTLIN_AARCH64_GLIBC_STABLE=y
@@ -93,6 +97,7 @@ BR2_PACKAGE_UTIL_LINUX_PARTX=y
 BR2_PACKAGE_WPA_SUPPLICANT=y
 BR2_PACKAGE_WPA_SUPPLICANT_WPA3=y
 BR2_PACKAGE_WPA_SUPPLICANT_CLI=y
+BR2_PACKAGE_WPA_SUPPLICANT_AUTOSCAN=y
 BR2_PACKAGE_KSMBD_TOOLS=y
 BR2_PACKAGE_DROPBEAR=y
 # BR2_PACKAGE_DROPBEAR_CLIENT is not set

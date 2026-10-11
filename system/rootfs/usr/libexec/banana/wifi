@@ -20,7 +20,8 @@ up)
     [ -d /sys/class/net/wlan0 ] || exit 1
     [ -f /run/banana/wpa.pid ] && kill -0 $(cat /run/banana/wpa.pid) 2>/dev/null && exit 0
     rm -f /run/banana/wpa.pid    # one that died
-    { echo "ctrl_interface=$CTRL"; echo "update_config=0"; echo "p2p_disabled=1"; [ -f $CONF ] && cat $CONF; } > /run/banana/wpa.conf
+    # with no known network in reach, scans back off from every 3 s to every 5 min (the radio mostly asleep)
+    { echo "ctrl_interface=$CTRL"; echo "update_config=0"; echo "p2p_disabled=1"; echo "autoscan=exponential:3:300"; [ -f $CONF ] && cat $CONF; } > /run/banana/wpa.conf
     ip link set wlan0 up
     wpa_supplicant -B -i wlan0 -c /run/banana/wpa.conf -P /run/banana/wpa.pid || exit 1
     $W -a /usr/libexec/banana/wifi -B -P /run/banana/wpa_cli.pid

@@ -18,6 +18,7 @@ IMG=$1; OUT=${2:-qemu-out}
 [ -n "$IMG" ] && [ -f "$IMG" ] || { echo "usage: $0 <banana-*.img[.gz]> [out dir | --interactive]" >&2; exit 2; }
 HERE=$(cd "$(dirname "$0")/.." && pwd)
 MODE=test; [ "$OUT" = --interactive ] && { MODE=interactive; OUT=qemu-out; }
+SSH_PORT=${SSH_PORT:-$((2200 + $$ % 800))}      # the VM's SSH, on the host: ssh -p $SSH_PORT root@127.0.0.1
 mkdir -p "$OUT"; OUT=$(cd "$OUT" && pwd)
 CARD=$OUT/card.img
 case $IMG in *.gz) gunzip -c "$IMG" > "$CARD" ;; *) cp "$IMG" "$CARD" ;; esac
@@ -44,6 +45,7 @@ run_qemu() {    # run_qemu <display and serial arguments>
     qemu-system-aarch64 -M virt -cpu cortex-a55 -smp 4 -m 1024 -kernel "$OUT/Image" -append "$APPEND" \
         -device sdhci-pci -drive if=none,id=sd,file="$CARD",format=raw -device sd-card,drive=sd \
         -device virtio-gpu-pci,id=gpu,max_outputs=2,xres=640,yres=480 -device virtio-keyboard-pci -device virtio-tablet-pci \
+        -device virtio-net-pci,netdev=n0 -netdev user,id=n0,hostfwd=tcp:127.0.0.1:$SSH_PORT-:22 \
         -no-reboot -rtc base=utc "$@"
 }
 # an update package made from the system on the card itself (version qemu-test), as the build makes them
@@ -66,6 +68,34 @@ if [ $MODE = interactive ]; then
     run_qemu -display gtk -serial stdio
     exit $?
 fi
+
+# measuring: a key for the VM's SSH (dropbear, switched on in the card's settings from the second boot), and what
+# the system costs from inside: memory, the menu's and bananad's own, how idle the CPUs are
+vm() { ssh -q -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=3 -i "$OUT/ssh-key" -p $SSH_PORT root@127.0.0.1 "$@"; }
+enable_ssh() {
+    [ -f "$OUT/ssh-key" ] || ssh-keygen -q -t ed25519 -N "" -f "$OUT/ssh-key"
+    mkdir -p "$DATA/banana/ssh"; cat "$OUT/ssh-key.pub" > "$DATA/banana/ssh/authorized_keys"
+    grep -q '^ssh = ' "$DATA/banana/settings.conf" && sed -i 's/^ssh = .*/ssh = on/' "$DATA/banana/settings.conf" || echo "ssh = on" >> "$DATA/banana/settings.conf"
+}
+measure() {     # measure <name>: the VM's resources, into $OUT/resources-<name>.txt and the log
+    for i in $(seq 60); do vm true 2>/dev/null && break; sleep 1; done
+    vm true 2>/dev/null || { bad "$1: no SSH into the VM"; return 1; }
+    ok "$1: SSH into the VM answers"
+    vm 'sh -s' > "$OUT/resources-$1.txt" <<'VM'
+echo "--- memory (kB): total, used by everything, available, free, cached"
+awk '/^MemTotal/{t=$2} /^MemAvailable/{a=$2} /^MemFree/{f=$2} /^Cached/{c=$2} END{printf "total %d  used %d  available %d  free %d  cached %d\n", t, t-a, a, f, c}' /proc/meminfo
+echo "--- each program's own memory (RSS, kB)"
+for p in /proc/[0-9]*; do n=$(cat $p/comm 2>/dev/null); r=$(awk '/^VmRSS/{print $2}' $p/status 2>/dev/null); [ -n "$r" ] && printf '%8d %s\n' "$r" "$n"; done | sort -rn | head -n 8
+echo "--- the CPUs over 5 s: idle share"
+read c u n s i rest < /proc/stat; sleep 5; read c u2 n2 s2 i2 rest < /proc/stat
+echo "idle $(( (i2 - i) * 100 / ((u2 + n2 + s2 + i2) - (u + n + s + i)) ))%  (user+nice+sys $(( (u2 + n2 + s2) - (u + n + s) )) ticks, idle $(( i2 - i )) ticks)"
+echo "--- the root, the modules, uptime"
+df -h / | tail -n 1 | awk '{print "root " $2 " (" $3 " used)"}'
+cut -d' ' -f1,2 /proc/modules | tr '\n' ' '; echo
+awk '{print "uptime " $1 " s"}' /proc/uptime
+VM
+    sed 's/^/    /' "$OUT/resources-$1.txt"
+}
 
 # ---- the test ------------------------------------------------------------------------------------------------
 pass=0 fail=0
@@ -142,7 +172,8 @@ grep -q "panels 640x480" "$OUT/serial.log" && ok "both panels opened at 640x480"
 shot first-menu
 key s; sleep 1; shot first-settings; key backspace; sleep 0.5
 shutdown_from_settings first
-add_game() {    # a DS game and a GBA one, so both launchers run (DraStic's and RetroArch's)
+add_game() {    # a DS game and a GBA one, so both launchers run (DraStic's and RetroArch's); SSH for measuring
+    enable_ssh
     mkdir -p "$DATA/roms/nds" "$DATA/roms/gba"
     head -c 65536 /dev/zero > "$DATA/roms/nds/Boot Test.nds"
     head -c 65536 /dev/zero > "$DATA/roms/gba/Boot Test Advance.gba"
@@ -154,6 +185,7 @@ with_data add_game
 echo "2. the second boot: the library, a DS game and a GBA game started and ended, the menu back, a shutdown"
 boot second
 grep -q "rcS: data partition ready" "$OUT/serial.log" && ok "the data partition mounted again" || bad "no data partition the second time"
+sleep 5; measure second-menu
 key ret; sleep 1; shot second-library
 grep -q "Boot Test" "$OUT/serial.log" || true
 key ret            # the ready screen: the cartridge goes in and the game starts

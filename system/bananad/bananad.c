@@ -61,11 +61,14 @@ static struct {
 	int fast_resume;		/* devices resume in parallel (/sys/power/pm_async) */
 	double sleep_check_hours;	/* asleep: wake this often to look at the battery (0: never) */
 	int sleep_poweroff_pct;	/* found at or under this while asleep: shut down cleanly */
-} cfg = { "auto", 5, 8, 10, 1, 2000, 3, "deep", 128, 20, 5, 1, 4, 5 };
+	double dim_min;			/* idle minutes in the menu before the panels dim (0: never) */
+	int dim_pct;			/* dimmed to this percent of their brightness */
+} cfg = { "auto", 5, 8, 10, 1, 2000, 3, "deep", 128, 20, 5, 1, 4, 5, 2, 30 };
 
 static int devfd[MAXDEV], ndev;
 static void leds_update(void);
 static void audio_route(void);
+static void undim(void);
 static int headphones;
 static int fn_held, power_down, lid_closed;
 static double power_since, last_input, ignore_power_until;
@@ -122,6 +125,8 @@ static void load_conf(const char *path)
 		else if (!strcmp(k, "fast_resume")) cfg.fast_resume = !strcmp(v, "yes") || !strcmp(v, "1");
 		else if (!strcmp(k, "sleep_check_hours")) cfg.sleep_check_hours = atof(v);
 		else if (!strcmp(k, "sleep_poweroff_percent")) cfg.sleep_poweroff_pct = atoi(v);
+		else if (!strcmp(k, "dim_minutes")) cfg.dim_min = atof(v);
+		else if (!strcmp(k, "dim_percent")) cfg.dim_pct = atoi(v);
 	}
 	fclose(f);
 }
@@ -401,6 +406,7 @@ static void suspend_now(const char *why)
 	pid_t ui = ui_pid();
 	if (ui && !game) kill(ui, SIGUSR1);	/* draws both panels again (the clock and the battery moved on) */
 	double t_back = mono();
+	undim();
 	hooks("post", 1);
 	/* the press that woke us comes in now: it is not a new request. Draining also drops the lid-open event, so the
 	 * lid's state is read from the kernel instead */
@@ -570,6 +576,45 @@ static int backlight_permille(void)
 	}
 	closedir(d);
 	return r;
+}
+
+/* idle in the menu: the panels down to dim_percent of what they were, back at the first press (the levels are
+ * remembered here, not saved: the user's brightness is untouched) */
+static int dimmed, dim_count;
+static char dim_name[4][256];
+static int dim_level[4];
+static void dim(void)
+{
+	DIR *d = opendir("/sys/class/backlight");
+	if (!d) return;
+	struct dirent *e;
+	dim_count = 0;
+	while ((e = readdir(d)) && dim_count < 4) {
+		if (e->d_name[0] == '.' || strlen(e->d_name) >= sizeof dim_name[0]) continue;
+		char p[600], v[32];
+		snprintf(dim_name[dim_count], sizeof dim_name[0], "%s", e->d_name);
+		snprintf(p, sizeof p, "/sys/class/backlight/%.255s/brightness", dim_name[dim_count]);
+		int cur = read_int(p, -1);
+		if (cur < 0) continue;
+		dim_level[dim_count++] = cur;
+		int nv = cur * cfg.dim_pct / 100;
+		if (nv < 1) nv = 1;
+		snprintf(v, sizeof v, "%d", nv);
+		write_file(p, v);
+	}
+	closedir(d);
+	dimmed = dim_count > 0;
+}
+static void undim(void)
+{
+	if (!dimmed) return;
+	for (int i = 0; i < dim_count; i++) {
+		char p[600], v[32];
+		snprintf(p, sizeof p, "/sys/class/backlight/%.255s/brightness", dim_name[i]);
+		snprintf(v, sizeof v, "%d", dim_level[i]);
+		write_file(p, v);
+	}
+	dimmed = 0;
 }
 
 static void save_settings(double now)
@@ -788,9 +833,10 @@ static void open_inputs(void)
 static void handle(const struct input_event *e)
 {
 	double now = mono();
-	if (e->type == EV_KEY) last_input = now;
+	if (e->type == EV_KEY) { last_input = now; undim(); }
 	if (e->type == EV_SW && e->code == SW_LID) {
 		lid_closed = e->value;
+		if (!lid_closed) undim();
 		if (lid_closed && cfg.lid_sleep) suspend_now("lid closed");
 		else if (!lid_closed || !cfg.lid_sleep) backlights_power(!lid_closed);	/* no sleep: at least the panels go dark */
 		return;
@@ -872,7 +918,18 @@ int main(int argc, char **argv)
 		int ino_at = -1, uev_at = -1;
 		if (ino >= 0) { ino_at = n; pf[n++] = (struct pollfd){ ino, POLLIN, 0 }; }
 		if (uev >= 0) { uev_at = n; pf[n++] = (struct pollfd){ uev, POLLIN, 0 }; }
-		int timeout = power_down ? 100 : (save_volume_at > 0 || save_backlight_at > 0) ? 500 : 15000;
+		/* sleep until something is due: the battery look (a minute), the dim or the auto-sleep deadline, the lid
+		 * check, a pending save, the power button's hold; nothing wakes bananad otherwise */
+		double tnow = mono(), wait = next_battery - tnow;
+		int game = pid_of("/run/banana/game.pid") != 0;
+		if (!game) {
+			if (cfg.autosleep_min > 0) { double d = cfg.autosleep_min * 60.0 - (tnow - last_input); if (d < wait) wait = d; }
+			if (cfg.dim_min > 0 && !dimmed) { double d = cfg.dim_min * 60.0 - (tnow - last_input); if (d < wait) wait = d; }
+		}
+		if (lid_closed && cfg.lid_sleep) { double d = 5.0 - (tnow - last_input); if (d < wait) wait = d; }
+		if ((save_volume_at > 0 || save_backlight_at > 0) && wait > 0.5) wait = 0.5;
+		if (power_down && wait > 0.1) wait = 0.1;
+		int timeout = wait <= 0 ? 20 : (int)(wait * 1000) + 20;
 		poll(pf, n, timeout);
 		double now = mono();
 		if (reload) {
@@ -904,8 +961,10 @@ int main(int argc, char **argv)
 
 		if (power_down && now - power_since >= cfg.power_long_ms / 1000.0) { power_down = 0; shutdown_now("power held"); }
 
-		/* idle in the menu (no game running) */
-		if (cfg.autosleep_min > 0 && !pid_of("/run/banana/game.pid") && now - last_input >= cfg.autosleep_min * 60.0)
+		/* idle in the menu (no game running): the panels dim, then it sleeps */
+		game = pid_of("/run/banana/game.pid") != 0;
+		if (cfg.dim_min > 0 && !dimmed && !game && !lid_closed && now - last_input >= cfg.dim_min * 60.0) dim();
+		if (cfg.autosleep_min > 0 && !game && now - last_input >= cfg.autosleep_min * 60.0)
 			suspend_now("idle");
 		/* started or woken with the lid shut */
 		if (lid_closed && cfg.lid_sleep && now - last_input > 5) suspend_now("lid still closed");

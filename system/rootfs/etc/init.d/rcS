@@ -67,6 +67,12 @@ banana-perf ui
     if [ -f /data/banana/wifi.conf ] && ! grep -q '^ *wifi *= *off' /data/banana/settings.conf 2>/dev/null; then
         /usr/libexec/banana/wifi up
     fi
+    # a wired network when there is one (a USB Ethernet adapter; QEMU's virtio): an address by DHCP
+    for e in /sys/class/net/eth*; do
+        [ -d "$e" ] || continue
+        n=${e##*/}
+        ip link set $n up && udhcpc -b -q -t 5 -i $n -p /run/banana/udhcpc-$n.pid -s /usr/share/udhcpc/default.script >/dev/null 2>&1
+    done
     # file sharing, when switched on in the settings
     grep -q '^ *share *= *on' /data/banana/settings.conf 2>/dev/null && /usr/libexec/banana/share up
     grep -q '^ *ssh *= *on' /data/banana/settings.conf 2>/dev/null && /usr/libexec/banana/ssh up

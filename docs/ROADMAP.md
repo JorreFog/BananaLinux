@@ -25,7 +25,7 @@
 - [x] The time zone (POSIX rules for 30 regions, summer time included; the menu, the games and bananad's logs)
 - [x] Choosing a Wi-Fi network: the networks around (signal, lock, saved), the password on an on-screen keyboard
       (buttons or touch), WPA2 and WPA3; forgetting one
-- [ ] Settings still to come: volume
+- [x] Volume in the settings
 - [x] RetroArch and the libretro cores for the other systems (Buildroot packages), on one panel (settings: top or bottom)
 - [x] The Favorites shelf and the favourite systems' order updated as soon as the shelf shows again
 - [x] Input hotplug in banana-ui (USB and Bluetooth pads, watched with inotify)
@@ -33,9 +33,13 @@
 - [x] Updates: two root slots, a package per build, written to the slot not in use from Settings > System > Update,
       checked, the switch at the end, `Previous version` to go back; proven in QEMU
 
+- [x] Resource use: the kernel trimmed to the two handhelds' hardware, the menu's memory measured, bananad idle
+      about once a minute, the panels dimmed when idle, Wi-Fi scans backed off, no hardening overhead
+
 ## Later
 
-- [ ] Kernel trimming for size and boot time (initcall_debug on the device first)
+- [x] Kernel trimming: the modules cut to what the handhelds use, then the drivers to what their device trees have
+      (initcall_debug on the device may find more)
 - [x] The ROM's own icon on cartridges inside `.zip` files (banana-ui's streaming zip reader, zlib)
 - [ ] RetroAchievements progress on the shelf
 - [x] File sharing over Wi-Fi, off by default: the card's data partition over SMB3 (the kernel's ksmbd, loaded only

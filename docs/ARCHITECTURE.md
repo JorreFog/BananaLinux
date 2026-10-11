@@ -148,9 +148,29 @@ What a wake costs is then the kernel's device resume: on the RG DS mostly the tw
 card; on the RG DS Plus the panels take about a fifth of that. `system/bananad/tests/sleep-test.sh` runs all of the
 above against a made-up `/sys` in its own namespaces (a FIFO for `/sys/power/state`, real input events for the lid).
 
-Hold power 2 s to shut down; volume keys change the mixer, F + volume the backlights; a battery at 3% and
-discharging shuts down cleanly. Settings: `/etc/banana/bananad.conf`, overridden by `/data/banana/bananad.conf`
+Two idle minutes in the menu dim both panels to 30% (`dim_minutes`, `dim_percent`); the first press brings them
+back, and a game is never dimmed. bananad itself sleeps in `poll()` until something is due (the battery look once a
+minute, the dim or sleep deadline, a pending save), so an idle handheld wakes it about once a minute. Hold power
+2 s to shut down; volume keys change the mixer, F + volume the backlights; a battery at 3% and discharging shuts
+down cleanly. Settings: `/etc/banana/bananad.conf`, overridden by `/data/banana/bananad.conf`
 (the settings screen writes it and sends SIGHUP).
+
+## What it costs
+
+Measured in the VM (`tools/qemu-boot.sh`, a 1 GB machine, idle in the menu): 95 MB used in all, the kernel and its
+caches included; banana-ui 23.5 MB resident (its scanout buffers and the boot animation's layers in that; 8 MB
+headless at 640x480, 12 MB at 1024x768), bananad 1.6 MB, init, getty and the shells 1.3 MB each; the CPUs 99%
+idle. The menu draws only when something changes and sleeps in `poll()` otherwise; bananad wakes about once a
+minute; no sound server, no udev, no compositor, no shell waiting for input. The kernel is built for these two handhelds
+only: from ROCKNIX's RK3566 config, shared by many devices, Banana's fragment leaves out what the two device trees
+don't have (other panels, touchscreens and codecs, HDMI, cameras, USB gadget mode, packet filtering, Bluetooth,
+FUSE, swap, netsched), so the kernel in memory is smaller and boot probes fewer drivers; fourteen modules remain
+(Wi-Fi, the GPU, xpad, file sharing, virtio for QEMU). Wi-Fi's scans back off to one every five minutes when no
+known network is in reach. Buildroot builds everything with `-O2` for the Cortex-A55, without the stack protector
+in every function and without eager symbol binding at start: a single-user game device gets the cycles instead.
+RetroArch runs with two swapchain images and nothing behind the game (no rewind buffer, no run-ahead, no shader
+pass, no save-state thumbnails). `tools/qemu-boot.sh` measures all of this from inside the VM over SSH
+(`resources-*.txt`: memory, each program's own, the CPUs' idle share).
 
 ## The rest of the hardware
 

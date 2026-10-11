@@ -422,6 +422,15 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant)
 				logf("romicon %s: %dx%d, middle #%02x%02x%02x", path.c_str(), b.w, b.h, px[0], px[1], px[2]);
 			}
 		}
+		else if (op == "mem")
+		{
+			// mem: what the process holds now (RSS) and the texture cache's share of it
+			std::ifstream st("/proc/self/status");
+			std::string ln, rss;
+			while (std::getline(st, ln)) if (ln.compare(0, 6, "VmRSS:") == 0) rss = ln.substr(6);
+			rnds::UI::CacheStats cs = ui.cacheStats();
+			logf("mem: RSS%s; texture cache %zu entries, %.1f MB of a %.1f MB budget", rss.c_str(), cs.entries, cs.bytes / 1048576.0, cs.budget / 1048576.0);
+		}
 		else if (op == "touch")
 		{
 			// touch <screen> <x> <y>: a tap, in px of a 640x480 panel
