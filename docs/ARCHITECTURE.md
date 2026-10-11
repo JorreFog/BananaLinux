@@ -5,20 +5,36 @@
 | Where | What | Size |
 |---|---|---|
 | sector 64 (32 KiB) | U-Boot for the RK3568 (`u-boot-rockchip.bin`: Rockchip's DRAM init, U-Boot SPL, TF-A BL31, U-Boot) | ~1.5 MB |
-| partition 1, `BANANA-BOOT` (FAT) | `Image`, the handheld's device tree, `extlinux/extlinux.conf` | 64 MB |
-| partition 2, `banana-root` (squashfs, LZ4) | the system, read-only | tens of MB |
-| partition 3, `BANANA` (exFAT) | made on the first boot from the rest of the card: `roms/`, `bios/`, `saves/`, `states/`, `banana/` (settings, logs, play stats, favourites), `drastic/`, `superdrastic/` | the rest |
+| partition 1, `BANANA-BOOT` (FAT) | `a/Image` and `a/<handheld>.dtb` (and `b/` after an update), `extlinux/extlinux.conf` with a label per slot and `DEFAULT` naming the one to boot | 64 MB |
+| partition 2, `banana-root-a` (squashfs, LZ4) | the system, read-only | 256 MB (tens used) |
+| partition 3, `banana-root-b` | the other slot: empty until the first update writes the new system there | 256 MB |
+| partition 4, `BANANA` (exFAT) | made on the first boot from the rest of the card: `roms/`, `bios/`, `saves/`, `states/`, `banana/` (settings, logs, play stats, favourites, `updates/`), `drastic/`, `superdrastic/` | the rest |
 
-The image only holds the first two partitions, so it is small and quick to write. `/usr/libexec/banana/firstboot`
+The image holds the first three partitions (the empty slot costs nothing compressed), so it is small and quick to
+write. `/usr/libexec/banana/firstboot`
 moves the GPT's backup header to the end of the card, adds partition 3 and formats it (exFAT, so Windows and macOS
 can read and fill it). The root is never written to; nothing on it can be corrupted by pulling the battery.
+
+## Updates
+
+The build makes `banana-<board>-<version>.update.tar` next to the image: `Image`, the device tree, `rootfs.squashfs`,
+`VERSION`, `board` and their `sha256sums`. Put in `banana/updates/` on the card (file sharing copies it over Wi-Fi)
+it appears in Settings > System > Update. `/usr/libexec/banana/update apply` checks every file's hash, refuses a
+package for the other handheld, writes the squashfs to the slot not in use (16 MB at a time, the progress on the
+screen), reads it back and compares the hash, copies the kernel and device tree to the boot partition's `b/` (or
+`a/`), checks those too, and only then rewrites `extlinux.conf`'s `DEFAULT` (a tiny file, renamed over the old one).
+The running system is never touched; a failure at any step leaves everything as it was; the new system runs from
+the restart. `Previous version` switches `DEFAULT` back to the other slot, so a version that misbehaves is one
+restart away from the one before it. Each update is a line in `banana/logs/updates.log`, and the new device tree
+is retuned by `banana-panel-tune` on its first boot. `tools/qemu-boot.sh` applies an update in the VM and boots
+the other slot, reading `extlinux.conf` as U-Boot does.
 
 ## Boot
 
 1. The boot ROM loads U-Boot from sector 64. U-Boot is built with no boot delay, no environment and only the SD card
    as a target (ROCKNIX's Quartz64-based configuration for these handhelds, `board/rgds/uboot-*`).
-2. U-Boot reads `extlinux.conf` and starts the kernel with `root=PARTLABEL=banana-root rootfstype=squashfs ro
-   rootwait quiet`. There is no initramfs: the kernel mounts the root itself.
+2. U-Boot reads `extlinux.conf` and starts the `DEFAULT` slot's kernel with `root=PARTLABEL=banana-root-a` (or
+   `-b`) `rootfstype=squashfs ro rootwait quiet`. There is no initramfs: the kernel mounts the root itself.
 3. Everything the menu needs is built into the kernel: the two DSI panels (the generic DSI panel driver), the
    buttons (ROCKNIX's ADC joypad driver), the touchscreens, the RK817 codec and the speaker amplifiers, the battery.
    Wi-Fi and Panfrost are modules, loaded by rcS after the menu is up (there is no udev; bananad loads the

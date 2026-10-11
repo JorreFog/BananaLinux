@@ -26,15 +26,42 @@ SUDO=; [ "$(id -u)" = 0 ] || SUDO=sudo
 # the partitions' offsets, from the image's GPT
 part_offset() { sfdisk -J "$CARD" | python3 -c "import json,sys; p=json.load(sys.stdin)['partitiontable']['partitions']; print(p[$1-1]['start']*512)"; }
 BOOT_AT=$(part_offset 1)
-mcopy -n -i "$CARD@@$BOOT_AT" ::/Image "$OUT/Image"
-# video=: QEMU reports only the output a window is attached to as connected; the kernel is told both are, at 640x480
-APPEND="root=PARTLABEL=banana-root rootfstype=squashfs ro rootwait quiet loglevel=3 console=ttyAMA0 video=Virtual-1:640x480e video=Virtual-2:640x480e banana.console=1 banana.top=Virtual-2 banana.touch=virtio"
+case $(basename "$IMG") in banana-rgds-plus*) BOARD=rgds-plus ;; *) BOARD=rgds ;; esac
+# the kernel and root the card would boot, as U-Boot reads them: extlinux.conf's DEFAULT label (the slot an update
+# switched to), its LINUX file and its root=. video=: QEMU reports only the output a window is attached to as
+# connected; the kernel is told both are, at 640x480
+pick_kernel() {
+    mcopy -o -i "$CARD@@$BOOT_AT" ::/extlinux/extlinux.conf "$OUT/extlinux.conf"
+    LABEL=$(sed -n 's/^DEFAULT *//p' "$OUT/extlinux.conf" | head -n 1)
+    KERNEL=$(awk -v l="$LABEL" '$1 == "LABEL" { cur = $2 } $1 == "LINUX" && cur == l { print $2 }' "$OUT/extlinux.conf")
+    ROOT=$(awk -v l="$LABEL" '$1 == "LABEL" { cur = $2 } $1 == "APPEND" && cur == l { for (i = 2; i <= NF; i++) if ($i ~ /^root=/) print $i }' "$OUT/extlinux.conf")
+    mcopy -o -i "$CARD@@$BOOT_AT" "::$KERNEL" "$OUT/Image"
+    APPEND="$ROOT rootfstype=squashfs ro rootwait quiet loglevel=3 console=ttyAMA0 video=Virtual-1:640x480e video=Virtual-2:640x480e banana.console=1 banana.top=Virtual-2 banana.touch=virtio"
+    echo "booting label $LABEL: $KERNEL, $ROOT"
+}
+pick_kernel
 run_qemu() {    # run_qemu <display and serial arguments>
     qemu-system-aarch64 -M virt -cpu cortex-a55 -smp 4 -m 1024 -kernel "$OUT/Image" -append "$APPEND" \
         -device sdhci-pci -drive if=none,id=sd,file="$CARD",format=raw -device sd-card,drive=sd \
         -device virtio-gpu-pci,id=gpu,max_outputs=2,xres=640,yres=480 -device virtio-keyboard-pci -device virtio-tablet-pci \
         -no-reboot -rtc base=utc "$@"
 }
+# an update package made from the system on the card itself (version qemu-test), as the build makes them
+make_update() {    # make_update <dir>
+    U=$1/banana-$BOARD-qemu-test.update; rm -rf "$U"; mkdir -p "$U"
+    mcopy -o -i "$CARD@@$BOOT_AT" ::/a/Image "$U/Image"
+    DTB=$(mdir -i "$CARD@@$BOOT_AT" -b ::/a/ | grep -i '\.dtb$' | head -n 1); DTB=${DTB##*/}
+    mcopy -o -i "$CARD@@$BOOT_AT" "::/a/$DTB" "$U/$DTB"
+    # the squashfs out of slot a, its size from its superblock (bytes_used, 8 bytes at offset 40)
+    off=$(part_offset 2)
+    size=$(python3 -c "import struct, sys; f = open(sys.argv[1], 'rb'); f.seek($off + 40); print(struct.unpack('<Q', f.read(8))[0])" "$CARD")
+    dd if="$CARD" of="$U/rootfs.squashfs" bs=1M iflag=skip_bytes,count_bytes skip=$off count=$size status=none
+    echo qemu-test > "$U/VERSION"; echo "$BOARD" > "$U/board"
+    (cd "$U" && sha256sum Image "$DTB" rootfs.squashfs > sha256sums)
+    tar -C "$1" -cf "$U.tar" "$(basename "$U")"; rm -rf "$U"
+    ls -la "$U.tar" | awk '{print $5, $9}'
+}
+
 if [ $MODE = interactive ]; then
     run_qemu -display gtk -serial stdio
     exit $?
@@ -75,8 +102,9 @@ wait_for() {    # wait_for <pattern> <seconds> <what>: in the serial log
     for i in $(seq $(($2 * 2))); do grep -q "$1" "$OUT/serial.log" 2>/dev/null && { ok "$3 ($(grep -o "at [0-9.]* s" "$OUT/serial.log" | tail -n 1 | sed 's/at //'))"; return 0; }; sleep 0.5; done
     bad "$3: not within $2 s"; return 1
 }
-boot() {    # boot <name>: start the VM, wait for the menu
+boot() {    # boot <name>: start the VM (with the kernel and root the card's extlinux.conf names), wait for the menu
     rm -f "$MON"
+    pick_kernel
     : > "$OUT/serial.log"
     run_qemu -display none -serial file:"$OUT/serial.log" -monitor unix:"$MON",server,nowait > "$OUT/qemu-$1.log" 2>&1 &
     QEMU=$!
@@ -99,7 +127,7 @@ cleanup() {
 trap cleanup EXIT
 with_data() {   # with_data <command...>: the card's data partition (exFAT) mounted at $DATA, by the kernel or by FUSE
     DATA=$OUT/data; mkdir -p "$DATA"
-    LOOP=$($SUDO losetup -f --show -o $(part_offset 3) "$CARD") || { bad "no loop device for the card"; return 1; }
+    LOOP=$($SUDO losetup -f --show -o $(part_offset 4) "$CARD") || { bad "no loop device for the card"; return 1; }
     $SUDO mount -t exfat "$LOOP" "$DATA" 2>/dev/null || $SUDO mount.exfat-fuse "$LOOP" "$DATA" 2>/dev/null ||
         { bad "the data partition can't be mounted (no exFAT in the kernel, no exfat-fuse)"; $SUDO losetup -d "$LOOP"; return 1; }
     "$@"; r=$?
@@ -140,10 +168,29 @@ for i in $(seq 120); do [ "$(grep -c 'game ended' "$OUT/serial.log")" -ge 2 ] &&
 [ "$(grep -c 'game ended' "$OUT/serial.log")" -ge 2 ] && ok "the GBA game ended and the menu came back" || bad "the GBA game didn't end within 60 s"
 sleep 2
 shutdown_from_settings second
+
+echo "3. an update: the package applied from the settings, the next boot runs the other slot"
+add_update() { mkdir -p "$DATA/banana/updates"; make_update "$DATA/banana/updates"; }
+with_data add_update
+boot third
+grep -q "rcS: slot a booted" "$OUT/serial.log" && ok "the third boot ran slot a" || bad "the third boot didn't say it ran slot a"
+# Start > System (five sections on) > Update (the row under Time zone) > the package > A again to confirm
+key s pgdn pgdn pgdn pgdn pgdn down ret; sleep 1; shot third-updates; key ret ret
+wait_for "written to slot b" 300 "the update was written to slot b and checked"
+sleep 2; shot third-updated
+key ret            # Restart
+for i in $(seq 120); do kill -0 $QEMU 2>/dev/null || break; sleep 0.5; done
+kill -0 $QEMU 2>/dev/null && { bad "no restart after the update"; kill $QEMU; } || ok "restarted after the update"
+wait $QEMU 2>/dev/null || true
+boot fourth
+grep -q "rcS: slot b booted" "$OUT/serial.log" && ok "the fourth boot ran slot b: the update" || bad "the fourth boot didn't run slot b"
+shot fourth-menu
+shutdown_from_settings fourth
 show_logs() {
     echo "--- the card's logs/boot.txt"; cat "$DATA/banana/logs/boot.txt" 2>/dev/null || true
     [ -f "$DATA/banana/logs/boot.txt" ] && ok "logs/boot.txt written" || bad "no logs/boot.txt"
     ls "$DATA/banana/logs/" | tr '\n' ' '; echo
+    echo "--- logs/updates.log"; cat "$DATA/banana/logs/updates.log" 2>/dev/null || echo "(none)"
 }
 with_data show_logs
 echo "qemu boot test: $pass passed, $fail failed ($OUT)"

@@ -90,7 +90,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: banana-${{ matrix.board }}
-          path: output/${{ matrix.board }}/images/banana-${{ matrix.board }}.img.gz
+          path: |
+            output/${{ matrix.board }}/images/banana-${{ matrix.board }}.img.gz
+            output/${{ matrix.board }}/images/banana-${{ matrix.board }}-*.update.tar
 
   # the whole image booted in QEMU: the first boot makes the data partition, the menu comes up on both panels, a
   # game is started from the library and the menu comes back, a shutdown from the settings powers the VM off; the

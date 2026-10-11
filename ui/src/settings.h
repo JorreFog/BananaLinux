@@ -62,7 +62,7 @@ namespace banana
 		std::string about, wifiInfo, ip;
 
 		// the Wi-Fi pages: the networks around, and the keyboard for a password (settings-wifi.cpp)
-		enum Page { LIST, NETWORKS, KEYBOARD } page = LIST;
+		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES } page = LIST;
 		std::string wifiTool, wifiConf;
 		bool sync = false;
 		wifi::Job scanJob, statusJob;
@@ -75,6 +75,19 @@ namespace banana
 		wifi::Network target;			// the network the keyboard is for
 		std::string pw;
 		int kcol = 0, krow = 1, layer = 0;	// the keyboard's selection (column 0..9, row 0..4), lower / upper / symbols
+
+		// the updates page: the packages in banana/updates on the card, one being applied (settings-update)
+		struct Pkg { std::string path, version, board; };
+		std::vector<Pkg> pkgs;
+		int usel = 0;
+		std::string ustatus;			// the updater's status line ("writing 42%", "done 0.2.0", "failed: ...")
+		bool applying = false, updated = false;
+		double nextStatus2 = 0;
+		std::string slot, version, board;
+		void openUpdates();
+		void pollUpdate();
+		Result pressUpdates(Key k);
+		void renderUpdates();
 
 		bool wifiOn() const;
 		void openNetworks();

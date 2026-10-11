@@ -1,9 +1,9 @@
 #!/bin/sh
 # First boot: the data partition (games, saves, settings) fills the rest of the card. The image is small so it
 # writes quickly; this takes a few seconds, once.
-#   firstboot <disk>              e.g. /dev/mmcblk1: make the partition and format it
+#   firstboot <disk>              e.g. /dev/mmcblk1: make the partition (the fourth: boot, two root slots, data) and format it
 #   firstboot --format <disk>     format it only (a first boot cut off before it was formatted)
-# The partition is named banana-new until it has been formatted, then banana-data: rcS formats a partition 3
+# The partition is named banana-new until it has been formatted, then banana-data: rcS formats a partition 4
 # named banana-new again, and nothing else, so an interrupted first boot finishes on the next one and a card with
 # data on it is never formatted.
 set -e
@@ -14,11 +14,11 @@ if [ "$1" != --format ]; then
     sfdisk --relocate gpt-bak-std "$DISK"
     echo 'type=EBD0A0A2-B9E5-4433-87C0-68B6B72699C7, name="banana-new"' |
         sfdisk --no-reread --no-tell-kernel --append --wipe-partitions always "$DISK"
-    partx --add --nr 3 "$DISK" || partx --update "$DISK"
-    for i in 1 2 3 4 5 6 7 8 9 10; do [ -b ${DISK}p3 ] && break; sleep 0.2; done
+    partx --add --nr 4 "$DISK" || partx --update "$DISK"
+    for i in 1 2 3 4 5 6 7 8 9 10; do [ -b ${DISK}p4 ] && break; sleep 0.2; done
 else
     DISK=$2
     echo "Banana: formatting the data partition on $DISK (the first boot was cut off)" > /dev/kmsg
 fi
-mkfs.exfat -L BANANA ${DISK}p3
-sfdisk --no-reread --no-tell-kernel --part-label "$DISK" 3 banana-data
+mkfs.exfat -L BANANA ${DISK}p4
+sfdisk --no-reread --no-tell-kernel --part-label "$DISK" 4 banana-data

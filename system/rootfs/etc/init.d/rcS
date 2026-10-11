@@ -19,31 +19,34 @@ mark "rcS: started"
 syslogd -O /run/banana/messages -s 256 -b 1
 hostname banana
 
-# the card we booted from: root is its second partition, the games and settings its third
-# (root=PARTLABEL=banana-root: whichever card slot it is in)
+# the card we booted from: the system is one of its two root slots (partitions 2 and 3, banana-root-a and -b; the
+# kernel's root= says which one booted), the games and settings its fourth partition
 for u in /sys/class/block/*p2/uevent; do
-    grep -q '^PARTNAME=banana-root$' "$u" 2>/dev/null || continue
+    grep -q '^PARTNAME=banana-root-a$' "$u" 2>/dev/null || continue
     p=${u%/uevent}; DISK=/dev/${p##*/}; DISK=${DISK%p2}
 done
 [ -n "$DISK" ] || DISK=/dev/mmcblk0
 echo "$DISK" > /run/banana/disk
-if [ ! -b ${DISK}p3 ]; then
+SLOT=a; grep -q 'root=PARTLABEL=banana-root-b' /proc/cmdline && SLOT=b
+echo "$SLOT" > /run/banana/slot
+mark "rcS: slot $SLOT booted"
+if [ ! -b ${DISK}p4 ]; then
     /usr/libexec/banana/firstboot "$DISK"
-elif grep -q '^PARTNAME=banana-new$' /sys/class/block/${DISK##*/}p3/uevent 2>/dev/null; then
+elif grep -q '^PARTNAME=banana-new$' /sys/class/block/${DISK##*/}p4/uevent 2>/dev/null; then
     # a first boot cut off before the partition was formatted (it is still named banana-new): format it now
     /usr/libexec/banana/firstboot --format "$DISK"
 fi
 # exFAT, so the card can be read and filled on any computer
-data() { mount -t exfat -o noatime,uid=0,gid=0,fmask=0000,dmask=0000,iocharset=utf8,errors=remount-ro ${DISK}p3 /data 2>/dev/null; }
+data() { mount -t exfat -o noatime,uid=0,gid=0,fmask=0000,dmask=0000,iocharset=utf8,errors=remount-ro ${DISK}p4 /data 2>/dev/null; }
 data || {
-    fsck.exfat -y ${DISK}p3 >/dev/null 2>&1
+    fsck.exfat -y ${DISK}p4 >/dev/null 2>&1
     data
 } ||
     # formatted another way on a computer (FAT32...): whatever the kernel can mount
-    mount -o noatime ${DISK}p3 /data 2>/dev/null || {
+    mount -o noatime ${DISK}p4 /data 2>/dev/null || {
     # nothing readable: the menu still comes up (and says so), with nothing kept until the next boot
     mount -t tmpfs -o mode=0755 tmpfs /data
-    echo "${DISK}p3 could not be mounted" > /run/banana/data-failed
+    echo "${DISK}p4 could not be mounted" > /run/banana/data-failed
 }
 /usr/libexec/banana/data-layout
 mark "rcS: data partition ready"

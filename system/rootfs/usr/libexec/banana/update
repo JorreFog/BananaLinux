@@ -1,0 +1,119 @@
+#!/bin/sh
+# Updates. The card has two root slots (partitions 2 and 3, banana-root-a and banana-root-b) and a kernel for each
+# in the boot partition (a/, b/); extlinux.conf's DEFAULT names the one that boots. An update package (the
+# banana-<board>-<version>.update.tar the build makes: Image, the device tree, rootfs.squashfs, VERSION, board,
+# sha256sums) is written to the slot not in use, checked against its hashes as written, and only then made the
+# default: the running system is never touched, and a failure leaves everything as it was. Settings > System >
+# Update runs this and shows its progress (/run/banana/update-status: one line, "writing 42%", "done <version>",
+# "failed: <why>"...).
+#   update list                     the packages in banana/updates/ on the card: path, version, board
+#   update apply <package>          write it to the other slot and make it the default (then restart)
+#   update switch [a|b]             make the other slot (or the one named) the default, when it holds a system
+#   update status                   which slot is running, which is the default, what each holds
+DISK=$(cat /run/banana/disk 2>/dev/null || echo /dev/mmcblk0)
+SLOT=$(cat /run/banana/slot 2>/dev/null || echo a)
+BOARD=$(cat /etc/banana/board 2>/dev/null)
+STATUS=/run/banana/update-status
+UPDATES=/data/banana/updates
+other() { [ "$1" = a ] && echo b || echo a; }
+partition() { [ "$1" = a ] && echo ${DISK}p2 || echo ${DISK}p3; }
+status() { echo "$*" > $STATUS.new && mv -f $STATUS.new $STATUS; }
+fail() { status "failed: $*"; echo "update: $*" >&2; mount -o remount,ro /boot 2>/dev/null; exit 1; }
+boot_rw() { mount -o remount,rw /boot || fail "the boot partition can't be written"; }
+boot_ro() { sync; mount -o remount,ro /boot 2>/dev/null; }
+default_slot() { sed -n 's/^DEFAULT *//p' /boot/extlinux/extlinux.conf 2>/dev/null | head -n 1; }
+set_default() {   # set_default <slot>: extlinux.conf rewritten, the small file renamed over the old one
+    boot_rw
+    sed "s/^DEFAULT .*/DEFAULT $1/" /boot/extlinux/extlinux.conf > /boot/extlinux/extlinux.conf.new &&
+        mv -f /boot/extlinux/extlinux.conf.new /boot/extlinux/extlinux.conf || fail "can't write extlinux.conf"
+    boot_ro
+}
+hash_of() { sha256sum "$1" | cut -d' ' -f1; }
+
+case $1 in
+list)
+    mkdir -p $UPDATES 2>/dev/null
+    for p in $UPDATES/*.update.tar $UPDATES/*.update; do
+        [ -e "$p" ] || continue
+        n=$(basename "$p" .tar); n=${n%.update}; n=${n#banana-}
+        # banana-<board>-<version>: the board is the part up to the first "-" (rgds, rgds-plus comes with "-")
+        case $n in
+        rgds-plus-*) b=rgds-plus; v=${n#rgds-plus-} ;;
+        rgds-*) b=rgds; v=${n#rgds-} ;;
+        *) b=?; v=$n ;;
+        esac
+        printf '%s\t%s\t%s\n' "$p" "$v" "$b"
+    done
+    ;;
+status)
+    echo "running: $SLOT, default: $(default_slot)"
+    for s in a b; do
+        if [ -f /boot/$s/Image ]; then echo "slot $s: a system (kernel $(wc -c < /boot/$s/Image) bytes)"; else echo "slot $s: empty"; fi
+    done
+    ;;
+switch)
+    to=${2:-$(other $SLOT)}
+    [ -f /boot/$to/Image ] || fail "slot $to holds no system"
+    set_default $to
+    status "switched $to"
+    echo "the next boot runs slot $to"
+    ;;
+apply)
+    P=$2
+    [ -e "$P" ] || fail "no such package: $P"
+    status "checking"
+    DIR=$P
+    if [ -f "$P" ]; then
+        # a tar: unpacked on the card next to it (the squashfs is too big for memory to be sure of)
+        X=$UPDATES/.unpack; rm -rf "$X"; mkdir -p "$X"
+        tar -xf "$P" -C "$X" || fail "the package can't be unpacked"
+        DIR=$(ls -d "$X"/*/ 2>/dev/null | head -n 1); DIR=${DIR%/}
+        [ -n "$DIR" ] || DIR=$X
+    fi
+    for f in Image rootfs.squashfs VERSION board sha256sums; do [ -f "$DIR/$f" ] || fail "the package has no $f"; done
+    DTB=$(ls "$DIR"/*.dtb 2>/dev/null | head -n 1); [ -n "$DTB" ] || fail "the package has no device tree"
+    PB=$(cat "$DIR/board"); PV=$(cat "$DIR/VERSION")
+    [ -z "$BOARD" ] || [ "$PB" = "$BOARD" ] || fail "that is a package for the $PB, this is the $BOARD"
+    # every file as the build hashed it
+    while read -r h f; do
+        [ -f "$DIR/$f" ] || fail "the package has no $f"
+        [ "$(hash_of "$DIR/$f")" = "$h" ] || fail "$f is damaged (its hash is wrong)"
+    done < "$DIR/sha256sums"
+    ROOT_HASH=$(sed -n 's/ \+rootfs.squashfs$//p' "$DIR/sha256sums")
+    TO=$(other $SLOT); PART=$(partition $TO)
+    [ -b "$PART" ] || fail "no partition for slot $TO ($PART)"
+    SIZE=$(wc -c < "$DIR/rootfs.squashfs")
+    LIMIT=$(( $(cat /sys/class/block/${PART##*/}/size) * 512 ))
+    [ "$SIZE" -le "$LIMIT" ] || fail "the system ($SIZE bytes) doesn't fit the slot ($LIMIT bytes)"
+    # the root, in 16 MB pieces so the progress can be told
+    CHUNK=16
+    pieces=$(( (SIZE + CHUNK * 1048576 - 1) / (CHUNK * 1048576) ))
+    i=0
+    while [ $i -lt $pieces ]; do
+        status "writing $(( i * 100 / pieces ))%"
+        dd if="$DIR/rootfs.squashfs" of="$PART" bs=${CHUNK}M skip=$i seek=$i count=1 conv=fsync,notrunc 2>/dev/null || fail "writing slot $TO failed"
+        i=$((i + 1))
+    done
+    sync
+    status "verifying"
+    [ "$(head -c "$SIZE" "$PART" | sha256sum | cut -d' ' -f1)" = "$ROOT_HASH" ] || fail "slot $TO reads back wrong"
+    # the kernel and device tree beside it, then the switch
+    boot_rw
+    mkdir -p /boot/$TO
+    for f in Image "$(basename "$DTB")"; do
+        cp "$DIR/$f" "/boot/$TO/$f.new" && mv -f "/boot/$TO/$f.new" "/boot/$TO/$f" || fail "can't write /boot/$TO/$f"
+        [ "$(hash_of "/boot/$TO/$f")" = "$(hash_of "$DIR/$f")" ] || fail "/boot/$TO/$f reads back wrong"
+    done
+    # an old kernel of another name in that slot would only take room
+    for f in /boot/$TO/*.dtb; do [ "$(basename "$f")" = "$(basename "$DTB")" ] || rm -f "$f"; done
+    boot_ro
+    set_default $TO
+    rm -f /data/banana/panel-tune.txt      # the new device tree is tuned on its first boot
+    [ -d "$UPDATES/.unpack" ] && rm -rf "$UPDATES/.unpack"
+    mkdir -p /data/banana/logs; echo "$(date '+%Y-%m-%d %H:%M:%S') $PV to slot $TO from $(basename "$P")" >> /data/banana/logs/updates.log
+    status "done $PV"
+    echo "update $PV written to slot $TO; restart to run it"
+    ;;
+*) echo "usage: update list | apply <package> | switch [a|b] | status" >&2; exit 2 ;;
+esac
+exit 0

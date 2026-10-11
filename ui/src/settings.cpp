@@ -75,12 +75,12 @@ namespace banana
 	}
 
 	// a program in the background, not waited for (Wi-Fi coming up takes seconds)
-	static void spawn(const char* path, const char* arg)
+	static void spawn(const char* path, const char* arg, const char* arg2 = nullptr)
 	{
 		pid_t p = fork();
 		if (p == 0)
 		{
-			if (fork() == 0) { setsid(); execl(path, path, arg, (char*)nullptr); _exit(127); }
+			if (fork() == 0) { setsid(); execl(path, path, arg, arg2, (char*)nullptr); _exit(127); }
 			_exit(0);
 		}
 		if (p > 0) waitpid(p, nullptr, 0);
@@ -239,6 +239,8 @@ namespace banana
 			add(S, "gear", "Time zone", "The clock's time zone, summer time included, for the menu and the games (a DS game's clock too). The time itself comes from Wi-Fi or the handheld's own clock.",
 				menu, "timezone", names, tzs);
 		}
+		add(S, "gear", "Update", "A new version of Banana from a package on the card, written to the other slot and run from the next restart; this one stays as it is until then.", "", "update", {}, {}, Item::PAGE);
+		add(S, "gear", "Previous version", "Restarts into the other slot: the version that ran before the last update. Press A twice.", "", "switch", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "SSH", "", menu, "ssh", { "Off", "On" }, { "off", "on" });
 		add(S, "gear", "About", "", "", "", {}, {}, Item::INFO);
 		add(S, "gear", "Restart", "Restarts the handheld. Press A twice.", "", "reboot", { "" }, { "" }, Item::ACTION);
@@ -305,7 +307,9 @@ namespace banana
 
 	void Settings::refreshInfo()
 	{
-		std::string version = readLine("/etc/banana/version");
+		version = readLine("/etc/banana/version");
+		slot = readLine("/run/banana/slot");
+		board = readLine("/etc/banana/board");
 		std::string model;
 		{
 			std::ifstream f("/proc/device-tree/model");
@@ -343,7 +347,7 @@ namespace banana
 			if (fd >= 0) ::close(fd);
 		}
 		std::ostringstream a;
-		a << "Banana " << (version.empty() ? "dev" : version) << " on the " << (model.empty() ? "handheld" : model) << ". ";
+		a << "Banana " << (version.empty() ? "dev" : version) << (slot.empty() ? "" : " (slot " + slot + ")") << " on the " << (model.empty() ? "handheld" : model) << ". ";
 		if (battery >= 0) a << "Battery " << battery << "%. ";
 		if (space[0]) a << "Card: " << space << ".";
 		about = a.str();
@@ -423,13 +427,23 @@ namespace banana
 		if (it.kind == Item::PAGE)
 		{
 			if (dir <= 0) return NONE;
-			openNetworks();
+			if (it.key == "update") openUpdates(); else openNetworks();
 			return MOVED;
 		}
 		if (it.kind == Item::ACTION)
 		{
 			if (dir <= 0) { armed = -1; return MOVED; }
 			if (armed != sel) { armed = sel; return MOVED; }
+			if (it.key == "switch")
+			{
+				// the other slot made the default, then a restart; the script says why not when it can't
+				armed = -1;
+				FILE* p = popen("/usr/libexec/banana/update switch 2>&1", "r");
+				std::string out;
+				if (p) { char ln[256]; while (fgets(ln, sizeof ln, p)) out += ln; if (pclose(p) == 0) return REBOOT; }
+				message = out.empty() ? "The other slot holds no system." : out;
+				return MOVED;
+			}
 			return it.key == "reboot" ? REBOOT : POWEROFF;
 		}
 		int n = (int)it.values.size();
@@ -447,6 +461,7 @@ namespace banana
 	{
 		if (page == NETWORKS) return pressNetworks(k);
 		if (page == KEYBOARD) return pressKeyboard(k);
+		if (page == UPDATES) return pressUpdates(k);
 		switch (k)
 		{
 		case Key::UP: case Key::DOWN:
@@ -491,6 +506,18 @@ namespace banana
 		downOnRow = false;
 		if (page == NETWORKS) return touchNetworks(cx, cy);
 		if (page == KEYBOARD) return touchKeyboard(cx, cy);
+		if (page == UPDATES)
+		{
+			if (downY >= 418 && downY <= 466) return pressUpdates(downX < 320 ? Key::B : Key::A);
+			for (int r = 0; r < ROWS && r < (int)pkgs.size(); r++)
+			{
+				float ry = 82 + r * 64;
+				if (downY < ry || downY > ry + 56) continue;
+				if (r != usel) { usel = r; armed = -1; return MOVED; }
+				return pressUpdates(Key::A);
+			}
+			return NONE;
+		}
 		// the chips: B on the left, A on the right
 		if (downY >= 418 && downY <= 466)
 		{
@@ -697,6 +724,7 @@ namespace banana
 	{
 		if (page == NETWORKS) { renderNetworks(); return; }
 		if (page == KEYBOARD) { renderKeyboard(); return; }
+		if (page == UPDATES) { renderUpdates(); return; }
 		SPal p = pal(light);
 		const Item& cur = items[sel];
 
@@ -715,6 +743,7 @@ namespace banana
 		if (cur.key == "ssh")
 			help = "For working on Banana itself: ssh root@" + (ip.empty() ? std::string("<address>") : ip) +
 				", with the public keys in banana/ssh/authorized_keys on the card (no passwords). Files: scp -O (dropbear has no SFTP), or File sharing.";
+		if (cur.key == "switch" && !message.empty()) help = message;
 		if (cur.key == "share")
 		{
 			std::string at = ip.empty() ? "<address>" : ip;
@@ -825,6 +854,12 @@ namespace banana
 			if (joining.empty() && now >= nextScan) startScan();
 		}
 		bool changed = false;
+		if (page == UPDATES && applying && now >= nextStatus2)
+		{
+			std::string before = ustatus;
+			pollUpdate();
+			changed |= ustatus != before;
+		}
 		std::string out;
 		if (scanJob.take(out))
 		{
@@ -861,6 +896,7 @@ namespace banana
 	{
 		if (!mOpen) return -1;
 		if (scanJob.running() || statusJob.running()) return 100;
+		if (page == UPDATES && applying) return std::max(0, (int)(nextStatus2 - t));
 		if (page != NETWORKS || !wifiEnabled) return -1;
 		double due = joining.empty() ? nextScan : std::min(nextStatus, joinStart + 30001);
 		return std::max(0, (int)(due - t));
@@ -1199,6 +1235,120 @@ namespace banana
 		face("B", pw.empty() ? "Back" : "Delete", 18, bw);
 		float aw = faceWidth("START", "Join");
 		face("START", "Join", 622 - aw, aw);
+		be->endScreen();
+	}
+
+	// ---- updates: the packages on the card, one applied by the update script ---------------------------------------
+	void Settings::openUpdates()
+	{
+		page = UPDATES;
+		usel = 0; armed = -1;
+		message.clear();
+		ustatus.clear();
+		applying = false; updated = false;
+		pkgs.clear();
+		if (FILE* p = popen("/usr/libexec/banana/update list 2>/dev/null", "r"))
+		{
+			char ln[1024];
+			while (fgets(ln, sizeof ln, p))
+			{
+				std::string l = trim(ln);
+				size_t t1 = l.find('\t'), t2 = t1 == std::string::npos ? t1 : l.find('\t', t1 + 1);
+				if (t1 == std::string::npos || t2 == std::string::npos) continue;
+				pkgs.push_back({ l.substr(0, t1), l.substr(t1 + 1, t2 - t1 - 1), l.substr(t2 + 1) });
+			}
+			pclose(p);
+		}
+	}
+
+	void Settings::pollUpdate()
+	{
+		nextStatus2 = now + 500;
+		ustatus = readLine("/run/banana/update-status");
+		if (ustatus.compare(0, 4, "done") == 0) { applying = false; updated = true; }
+		else if (ustatus.compare(0, 6, "failed") == 0) applying = false;
+	}
+
+	Settings::Result Settings::pressUpdates(Key k)
+	{
+		int n = (int)pkgs.size();
+		switch (k)
+		{
+		case Key::UP: case Key::DOWN:
+			if (!n || applying) return NONE;
+			usel = (usel + (k == Key::UP ? -1 : 1) + n) % n;
+			armed = -1;
+			return MOVED;
+		case Key::A: case Key::RIGHT:
+			if (updated) return REBOOT;			// "Restart": the new version runs from the next boot
+			if (!n || applying) return NONE;
+			if (armed != 1000 + usel) { armed = 1000 + usel; return MOVED; }	// A again to go ahead
+			armed = -1;
+			unlink("/run/banana/update-status");
+			ustatus = "starting";
+			applying = true;
+			nextStatus2 = now + 500;
+			spawn("/usr/libexec/banana/update", "apply", pkgs[usel].path.c_str());
+			return MOVED;
+		case Key::B: case Key::LEFT:
+			if (applying) return NONE;			// not while a slot is being written
+			page = LIST; armed = -1; message.clear();
+			return MOVED;
+		case Key::START:
+			if (applying) return NONE;
+			page = LIST; mOpen = false; return CLOSED;
+		default: return NONE;
+		}
+	}
+
+	void Settings::renderUpdates()
+	{
+		SPal p = pal(light);
+		be->beginScreen(0);
+		box("screen", false, 0, 0, 640, 480);
+		box("hero", false, 18, 20, 604, 436);
+		icon("gear", 50, 56, 3);
+		text("System", true, 17, 170, 62, p.muted, true, 1.4f);
+		text("Update", true, 30, 170, 88, p.ink);
+		std::string st = applying ? "Writing the update: " + ustatus : updated ? "Written: restart to run it" : ustatus.compare(0, 6, "failed") == 0 ? "Failed" : "Running " + (version.empty() ? std::string("dev") : version) + (slot.empty() ? "" : ", slot " + slot);
+		text(fit(st, true, 22, 420), true, 22, 170, 130, p.accent);
+		std::string help;
+		if (applying) help = "The new version is being written to the other slot and checked; this one isn't touched. Don't turn the handheld off. It takes a minute or two.";
+		else if (updated) help = "The new version is in the other slot and will run from the next restart. A restarts now. If it ever fails to start, Previous version brings this one back.";
+		else if (ustatus.compare(0, 6, "failed") == 0) help = "The update wasn't applied: " + ustatus.substr(8) + ". This version is untouched.";
+		else if (pkgs.empty()) help = "No update packages found. Put a banana-" + (board.empty() ? std::string("<board>") : board) + "-<version>.update.tar from a release in banana/updates on the card (File sharing can copy it over Wi-Fi), then come back here.";
+		else help = "A on a package writes it to the other slot and checks it; the running version stays until the restart. Packages are in banana/updates on the card.";
+		wrapped(help, 20, 50, 196, 540, 7, p.muted);
+		be->endScreen();
+
+		be->beginScreen(1);
+		box("screen", false, 0, 0, 640, 480);
+		box("bubble", false, 18, 14, 604, 54);
+		text("Update packages", true, 22, 38, 28, p.ink);
+		std::string count = std::to_string(pkgs.size()) + (pkgs.size() == 1 ? " package" : " packages");
+		float cw = text(count, true, 17, 0, 0, p.muted, false, 0, true);
+		text(count, true, 17, 602 - cw, 31, p.muted);
+		for (int r = 0; r < ROWS && r < (int)pkgs.size(); r++)
+		{
+			const Pkg& k = pkgs[r];
+			bool on = r == usel;
+			float y = 82 + r * 64;
+			box("slot", on, 18, y, 604, 56);
+			Color c = on ? p.ink : p.muted;
+			text(fit("Banana " + k.version, true, 20, 330), true, 20, 38, y + 16, c);
+			std::string tag = armed == 1000 + r ? "Press A again" : (k.board == board || board.empty() ? "for the " + k.board : "not for this handheld");
+			float tw = text(tag, true, 17, 0, 0, c, false, 0, true);
+			text(tag, true, 17, 586 - tw, y + 18, armed == 1000 + r ? p.accent : c);
+		}
+		if (pkgs.empty()) text("Nothing in banana/updates on the card.", true, 20, 38, 98, p.muted);
+		float bw = faceWidth("B", "Back");
+		if (!applying) face("B", "Back", 18, bw);
+		std::string act = updated ? "Restart" : applying || pkgs.empty() ? "" : armed == 1000 + usel ? "Confirm" : "Update";
+		if (!act.empty())
+		{
+			float aw = faceWidth("A", act);
+			face("A", act, 622 - aw, aw);
+		}
 		be->endScreen();
 	}
 }

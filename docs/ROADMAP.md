@@ -30,7 +30,8 @@
 - [x] The Favorites shelf and the favourite systems' order updated as soon as the shelf shows again
 - [x] Input hotplug in banana-ui (USB and Bluetooth pads, watched with inotify)
 - [x] A low-battery warning before the shutdown (a notice over the top panel at 20%, 10% and 5%)
-- [ ] Updates: a new root squashfs written to an inactive slot from the menu, kept atomic
+- [x] Updates: two root slots, a package per build, written to the slot not in use from Settings > System > Update,
+      checked, the switch at the end, `Previous version` to go back; proven in QEMU
 
 ## Later
 
