@@ -17,7 +17,10 @@ SUPERDRASTIC_RC = src/third_party/rcheevos
 # Without Buildroot's large-file defines: resume.c interposes both open and open64 (fopen and fopen64), and with
 # _FILE_OFFSET_BITS=64 glibc renames open to open64, so the file would define the symbol twice. off_t is 64 bits
 # on AArch64 whatever the define.
-SUPERDRASTIC_CFLAGS = $(filter-out -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64,$(TARGET_CFLAGS))
+# And NDEBUG: audio.c includes stb_vorbis under "#pragma GCC visibility push(hidden)", which re-includes assert.h,
+# and the toolchain's GCC 14 makes that redeclaration of __assert_fail hidden, so the library can't link it from
+# libc. A release build has no use for the asserts anyway (upstream builds with clang, which doesn't do this).
+SUPERDRASTIC_CFLAGS = $(filter-out -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64,$(TARGET_CFLAGS)) -DNDEBUG
 define SUPERDRASTIC_BUILD_CMDS
 	cd $(@D) && $(HOST_DIR)/bin/python3 src/rast/kerngen.py src/rast/rast_kern.S
 	cd $(@D) && $(TARGET_CC) $(SUPERDRASTIC_CFLAGS) -O2 -shared -fPIC -Wall -Wno-unused-function \
