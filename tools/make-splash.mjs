@@ -18,10 +18,10 @@ const b64 = f => fs.readFileSync(f).toString('base64');
 const shell = `data:image/png;base64,${b64(rnds + '/game_slot.png')}`;
 const banana = `data:image/png;base64,${b64(bananas + '/banana-48.png')}`;
 const pal = {
-  dark: { bg: '#121820', dot: 'rgba(255,255,255,.14)', dot2: 'rgba(255,255,255,.07)', edge: '#d5dee8', panel: '#121820',
-          band: '#2e3a48', low: '#070a0e', mouth: '#05080b', shade: 'rgba(0,0,0,.45)' },
-  light: { bg: '#e6ebf0', dot: 'rgba(20,35,58,.07)', dot2: 'rgba(20,35,58,.035)', edge: '#2b3644', panel: '#edf1f6',
-           band: '#ffffff', low: '#c5cfda', mouth: '#1d2733', shade: 'rgba(20,35,58,.25)' },
+  dark: { bg: '#17161c', dot: 'rgba(255,255,255,.14)', dot2: 'rgba(255,255,255,.07)', edge: '#e8e2d3', panel: '#17161c',
+          band: '#3a3540', low: '#0b0a0d', mouth: '#070609', shade: 'rgba(0,0,0,.45)' },
+  light: { bg: '#f3efe6', dot: 'rgba(20,35,58,.07)', dot2: 'rgba(20,35,58,.035)', edge: '#3a342c', panel: '#f6f2ea',
+           band: '#ffffff', low: '#d8d0c0', mouth: '#2a2620', shade: 'rgba(20,35,58,.25)' },
 };
 const css = p => `
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -40,7 +40,7 @@ body { width: 640px; height: 480px; background: transparent; image-rendering: pi
 .lip::before { content: ''; position: absolute; left: -3px; right: -3px; top: 0; height: 3px; background: ${p.edge}; }
 .cart { position: absolute; left: 0; top: 0; width: 200px; height: 208px; }
 .cart .art { position: absolute; left: 8px; top: 8px; width: 184px; height: 172px;
-  background: linear-gradient(135deg, #07091f, #26307a 58%, #4a2c86); }
+  background: linear-gradient(135deg, #1f1405, #7a5a10 58%, #b8861e); }
 .cart .art img { position: absolute; left: 44px; top: 38px; width: 96px; height: 96px; }
 .cart > img { position: absolute; left: 0; top: 0; width: 200px; height: 208px; }
 `;

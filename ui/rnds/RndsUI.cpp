@@ -67,50 +67,50 @@ namespace rnds
 	static Pal darkPal()
 	{
 		Pal p;
-		p.ink = Color::hex(0xe7eef6); p.muted = Color::hex(0x93a0b0); p.line = Color::hex(0x7d8b9c);
-		p.edge = Color::hex(0xd5dee8); p.navy = Color::hex(0xe7f4ff); p.red = Color::hex(0xff3b4a);
+		p.ink = Color::hex(0xf1ede2); p.muted = Color::hex(0xa39d8e); p.line = Color::hex(0x8a8374);
+		p.edge = Color::hex(0xe8e2d3); p.navy = Color::hex(0xfff6dc); p.red = Color::hex(0xff3b4a);
 		p.shade40 = Color(0, 0, 0, 0.4f); p.shade45 = Color(0, 0, 0, 0.45f); p.shade35 = Color(0, 0, 0, 0.35f);
-		p.blackish = Color::hex(0x070a0e);
-		p.screenBg = Color::hex(0x121820); p.screenFrame = p.blackish; p.screenBand = Color::hex(0x243040);
+		p.blackish = Color::hex(0x0b0a0d);
+		p.screenBg = Color::hex(0x17161c); p.screenFrame = p.blackish; p.screenBand = Color::hex(0x2e2b33);
 		p.ditherA = Color(1, 1, 1, 0.14f); p.ditherB = Color(1, 1, 1, 0.07f);
-		p.sheetBase = Color::hex(0x10161e); p.sheetMix = 0.34f; p.sheetHi = Color(1, 1, 1, 0.1f); p.sheetLo = p.shade35;
-		p.panelBand = Color::hex(0x2e3a48); p.panelBody = Color::hex(0x121820); p.panelLow = p.blackish;
-		p.chipBand = Color::hex(0x243040); p.chipBody = Color::hex(0x0e141c);
-		p.frameBorder = Color::hex(0xd5dee8); p.frameBg = Color::hex(0x12181f);
-		p.meterBg = Color::hex(0x10161e); p.brandBg = Color::hex(0x1b2330); p.kbdBg = Color::hex(0xe7eef6);
-		p.kbdInk = Color::hex(0x121820); p.rule = Color::hex(0x3a4654);
-		p.bubbleBand = Color::hex(0x2c3848); p.bubbleBody = Color::hex(0x141b24); p.bubbleLow = Color::hex(0x0c1218);
-		p.trackBg = Color::hex(0x0c1016); p.trackHi = Color::hex(0x2a3544); p.trackShade = p.shade45;
-		p.slotOn = Color::hex(0xffffff); p.railBg = Color::hex(0x0c1016); p.faceMuted = Color::hex(0x3a4654);
+		p.sheetBase = Color::hex(0x15141a); p.sheetMix = 0.34f; p.sheetHi = Color(1, 1, 1, 0.1f); p.sheetLo = p.shade35;
+		p.panelBand = Color::hex(0x3a3540); p.panelBody = Color::hex(0x17161c); p.panelLow = p.blackish;
+		p.chipBand = Color::hex(0x2e2b33); p.chipBody = Color::hex(0x121117);
+		p.frameBorder = Color::hex(0xe8e2d3); p.frameBg = Color::hex(0x17161c);
+		p.meterBg = Color::hex(0x15141a); p.brandBg = Color::hex(0x262219); p.kbdBg = Color::hex(0xf1ede2);
+		p.kbdInk = Color::hex(0x17161c); p.rule = Color::hex(0x45403d);
+		p.bubbleBand = Color::hex(0x38333b); p.bubbleBody = Color::hex(0x191820); p.bubbleLow = Color::hex(0x0f0e13);
+		p.trackBg = Color::hex(0x100f14); p.trackHi = Color::hex(0x353039); p.trackShade = p.shade45;
+		p.slotOn = Color::hex(0xffffff); p.railBg = Color::hex(0x100f14); p.faceMuted = Color::hex(0x45403d);
 		p.favBorder = p.red; p.favBand = Color::hex(0x5a2430); p.favBody = Color::hex(0x2a1016); p.favInk = Color::hex(0xff8a96);
 		p.glint = Color(1, 1, 1, 0.28f); p.floor = Color(0, 0, 0, 0.35f);
-		p.slotDark = Color::hex(0x05080b); p.slotLip = Color::hex(0x3a4654);
-		p.cartLabel = Color::hex(0xe7eef6);
+		p.slotDark = Color::hex(0x070609); p.slotLip = Color::hex(0x45403d);
+		p.cartLabel = Color::hex(0xf1ede2);
 		return p;
 	}
 
 	static Pal lightPal()
 	{
 		Pal p;
-		p.ink = Color::hex(0x1d2733); p.muted = Color::hex(0x66758a); p.line = Color::hex(0x8d9bab);
-		p.edge = Color::hex(0x2b3644); p.navy = Color::hex(0xf2faff); p.red = Color::hex(0xe23b4a);
-		Color sh = Color::hex(0x14233a);
+		p.ink = Color::hex(0x2a2620); p.muted = Color::hex(0x7a7262); p.line = Color::hex(0xa69d8c);
+		p.edge = Color::hex(0x3a342c); p.navy = Color::hex(0xfffaf0); p.red = Color::hex(0xe23b4a);
+		Color sh = Color::hex(0x3a2e14);
 		p.shade40 = Color(sh.r, sh.g, sh.b, 0.22f); p.shade45 = Color(sh.r, sh.g, sh.b, 0.25f); p.shade35 = Color(sh.r, sh.g, sh.b, 0.14f);
 		p.blackish = Color(sh.r, sh.g, sh.b, 0.3f);
-		p.screenBg = Color::hex(0xe6ebf0); p.screenFrame = Color::hex(0xb9c4d0); p.screenBand = Color::hex(0xfbfcfd);
+		p.screenBg = Color::hex(0xf3efe6); p.screenFrame = Color::hex(0xd4ccbd); p.screenBand = Color::hex(0xfdfcf9);
 		p.ditherA = Color(sh.r, sh.g, sh.b, 0.07f); p.ditherB = Color(sh.r, sh.g, sh.b, 0.035f);
-		p.sheetBase = Color::hex(0xfafbfc); p.sheetMix = 0.3f; p.sheetHi = Color(1, 1, 1, 0.55f); p.sheetLo = Color(sh.r, sh.g, sh.b, 0.12f);
-		p.panelBand = Color::hex(0xffffff); p.panelBody = Color::hex(0xedf1f6); p.panelLow = Color::hex(0xc5cfda);
-		p.chipBand = Color::hex(0xffffff); p.chipBody = Color::hex(0xeef2f7);
-		p.frameBorder = Color::hex(0x2b3644); p.frameBg = Color::hex(0xdfe5ec);
-		p.meterBg = Color::hex(0xd6dde6); p.brandBg = Color::hex(0x1b2330); p.kbdBg = Color::hex(0x2b3644);
-		p.kbdInk = Color::hex(0xf2f6fa); p.rule = Color::hex(0xc3ccd6);
-		p.bubbleBand = Color::hex(0xffffff); p.bubbleBody = Color::hex(0xf4f7fa); p.bubbleLow = Color::hex(0xcfd8e2);
-		p.trackBg = Color::hex(0xd9e0e8); p.trackHi = Color::hex(0xffffff); p.trackShade = Color(sh.r, sh.g, sh.b, 0.18f);
-		p.slotOn = Color::hex(0x1a6ea3); p.railBg = Color::hex(0xd9e0e8); p.faceMuted = Color::hex(0xc3ccd6);
+		p.sheetBase = Color::hex(0xfdfbf6); p.sheetMix = 0.3f; p.sheetHi = Color(1, 1, 1, 0.55f); p.sheetLo = Color(sh.r, sh.g, sh.b, 0.12f);
+		p.panelBand = Color::hex(0xffffff); p.panelBody = Color::hex(0xf6f2ea); p.panelLow = Color::hex(0xd8d0c0);
+		p.chipBand = Color::hex(0xffffff); p.chipBody = Color::hex(0xf6f2ea);
+		p.frameBorder = Color::hex(0x3a342c); p.frameBg = Color::hex(0xebe5d9);
+		p.meterBg = Color::hex(0xe3dccd); p.brandBg = Color::hex(0x262219); p.kbdBg = Color::hex(0x3a342c);
+		p.kbdInk = Color::hex(0xf2f6fa); p.rule = Color::hex(0xd6cfc0);
+		p.bubbleBand = Color::hex(0xffffff); p.bubbleBody = Color::hex(0xfaf7f0); p.bubbleLow = Color::hex(0xddd5c6);
+		p.trackBg = Color::hex(0xe6dfd0); p.trackHi = Color::hex(0xffffff); p.trackShade = Color(sh.r, sh.g, sh.b, 0.18f);
+		p.slotOn = Color::hex(0xf0b429); p.railBg = Color::hex(0xe6dfd0); p.faceMuted = Color::hex(0xd6cfc0);
 		p.favBorder = p.red; p.favBand = Color::hex(0xfff2f3); p.favBody = Color::hex(0xffdfe3); p.favInk = Color::hex(0xc8283a);
 		p.glint = Color(1, 1, 1, 0.45f); p.floor = Color(sh.r, sh.g, sh.b, 0.2f);
-		p.slotDark = Color::hex(0x1d2733); p.slotLip = Color::hex(0x8d9bab);
+		p.slotDark = Color::hex(0x2a2620); p.slotLip = Color::hex(0xa69d8c);
 		p.cartLabel = Color::hex(0xffffff);
 		return p;
 	}
@@ -1151,8 +1151,8 @@ namespace rnds
 		}
 		BoxCss plateBox()
 		{
-			BoxCss b; b.key = "plate"; b.radius = 18; b.border = 3; b.borderColor = EDGE; b.bg = Color::hex(0x1a6ea3);
-			b.bands = { Band{ 0, 14, Color::hex(0x7ec8ee) }, Band{ 132, -1, Color::hex(0x0c3d5c) } };
+			BoxCss b; b.key = "plate"; b.radius = 18; b.border = 3; b.borderColor = EDGE; b.bg = Color::hex(0xf0b429);
+			b.bands = { Band{ 0, 14, Color::hex(0xffe68a) }, Band{ 132, -1, Color::hex(0x8a5a00) } };
 			b.shadows = { inset(0, -8, 0, Color(0, 0, 0, 0.35f)), outer(4, 4, SHADE40) };
 			return b;
 		}
@@ -1173,8 +1173,8 @@ namespace rnds
 		}
 		BoxCss thumbBox()
 		{
-			BoxCss b; b.key = "thumb"; b.radius = 2; b.border = 2; b.borderColor = EDGE; b.bg = Color::hex(0x3d8ec8);
-			b.bands = { Band{ 0, 4, Color::hex(0xb7e6ff) } };
+			BoxCss b; b.key = "thumb"; b.radius = 2; b.border = 2; b.borderColor = EDGE; b.bg = Color::hex(0xf0b429);
+			b.bands = { Band{ 0, 4, Color::hex(0xffe68a) } };
 			return b;
 		}
 		BoxCss faceBox(int kind, bool pressed)
@@ -1555,7 +1555,7 @@ namespace rnds
 			Sprite a = arrow(right);
 			if (!a.valid()) return;
 			float dx = std::round(X(x)) - (right ? a.tex->w : 0), dy = std::round(X(cy) - a.tex->h / 2.0f);
-			be->draw(a.tex, dx, dy, (float)a.tex->w, (float)a.tex->h, held ? Color::hex(0x3d8ec8) : INK);
+			be->draw(a.tex, dx, dy, (float)a.tex->w, (float)a.tex->h, held ? Color::hex(0xf0b429) : INK);
 		}
 
 		// a triangle painted once about its own apex and drawn at (cx, top) CSS px (the letter bubble's pointer moves)

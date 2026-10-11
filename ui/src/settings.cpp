@@ -111,23 +111,23 @@ namespace banana
 		SPal p;
 		if (!light)
 		{
-			p.ink = Color::hex(0xe7eef6); p.muted = Color::hex(0x93a0b0); p.line = Color::hex(0x7d8b9c); p.edge = Color::hex(0xd5dee8);
-			p.screenBg = Color::hex(0x121820); p.screenFrame = Color::hex(0x070a0e); p.screenBand = Color::hex(0x243040);
+			p.ink = Color::hex(0xf1ede2); p.muted = Color::hex(0xa39d8e); p.line = Color::hex(0x8a8374); p.edge = Color::hex(0xe8e2d3);
+			p.screenBg = Color::hex(0x17161c); p.screenFrame = Color::hex(0x0b0a0d); p.screenBand = Color::hex(0x2e2b33);
 			p.ditherA = Color(1, 1, 1, 0.14f); p.ditherB = Color(1, 1, 1, 0.07f);
-			p.panelBand = Color::hex(0x2e3a48); p.panelBody = Color::hex(0x121820); p.panelLow = Color::hex(0x070a0e);
-			p.bubbleBand = Color::hex(0x2c3848); p.bubbleBody = Color::hex(0x141b24); p.bubbleLow = Color::hex(0x0c1218);
-			p.slotOn = Color::hex(0xffffff); p.kbdBg = Color::hex(0xe7eef6); p.kbdInk = Color::hex(0x121820);
-			p.blackish = Color::hex(0x070a0e); p.shade45 = Color(0, 0, 0, 0.45f);
+			p.panelBand = Color::hex(0x3a3540); p.panelBody = Color::hex(0x17161c); p.panelLow = Color::hex(0x0b0a0d);
+			p.bubbleBand = Color::hex(0x38333b); p.bubbleBody = Color::hex(0x191820); p.bubbleLow = Color::hex(0x0f0e13);
+			p.slotOn = Color::hex(0xffffff); p.kbdBg = Color::hex(0xf1ede2); p.kbdInk = Color::hex(0x17161c);
+			p.blackish = Color::hex(0x0b0a0d); p.shade45 = Color(0, 0, 0, 0.45f);
 		}
 		else
 		{
-			Color sh = Color::hex(0x14233a);
-			p.ink = Color::hex(0x1d2733); p.muted = Color::hex(0x66758a); p.line = Color::hex(0x8d9bab); p.edge = Color::hex(0x2b3644);
-			p.screenBg = Color::hex(0xe6ebf0); p.screenFrame = Color::hex(0xb9c4d0); p.screenBand = Color::hex(0xfbfcfd);
+			Color sh = Color::hex(0x3a2e14);
+			p.ink = Color::hex(0x2a2620); p.muted = Color::hex(0x7a7262); p.line = Color::hex(0xa69d8c); p.edge = Color::hex(0x3a342c);
+			p.screenBg = Color::hex(0xf3efe6); p.screenFrame = Color::hex(0xd4ccbd); p.screenBand = Color::hex(0xfdfcf9);
 			p.ditherA = Color(sh.r, sh.g, sh.b, 0.07f); p.ditherB = Color(sh.r, sh.g, sh.b, 0.035f);
-			p.panelBand = Color::hex(0xffffff); p.panelBody = Color::hex(0xedf1f6); p.panelLow = Color::hex(0xc5cfda);
-			p.bubbleBand = Color::hex(0xffffff); p.bubbleBody = Color::hex(0xf4f7fa); p.bubbleLow = Color::hex(0xcfd8e2);
-			p.slotOn = Color::hex(0x1a6ea3); p.kbdBg = Color::hex(0x2b3644); p.kbdInk = Color::hex(0xf2f6fa);
+			p.panelBand = Color::hex(0xffffff); p.panelBody = Color::hex(0xf6f2ea); p.panelLow = Color::hex(0xd8d0c0);
+			p.bubbleBand = Color::hex(0xffffff); p.bubbleBody = Color::hex(0xfaf7f0); p.bubbleLow = Color::hex(0xddd5c6);
+			p.slotOn = Color::hex(0xf0b429); p.kbdBg = Color::hex(0x3a342c); p.kbdInk = Color::hex(0xf2f6fa);
 			p.blackish = Color(sh.r, sh.g, sh.b, 0.3f); p.shade45 = Color(sh.r, sh.g, sh.b, 0.25f);
 		}
 		p.accent = light ? Color::hex(0xc07a00) : Color::hex(0xffd23f);	// the bananas' yellow for values being changed

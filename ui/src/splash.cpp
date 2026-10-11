@@ -86,8 +86,8 @@ namespace banana
 		if (!loadRgba(banana, bunch.px, bunch.w, bunch.h)) return false;
 		if (!loadMask(dir + "/word.png", word.w, word.h, word.a, word.letters)) return false;
 		if (!loadMask(dir + "/loading.png", loading.w, loading.h, loading.a, loading.letters)) return false;
-		ink = light ? 0xff1d2733u : 0xffe7eef6u;
-		muted = light ? 0xff66758au : 0xff93a0b0u;
+		ink = light ? 0xff2a2620u : 0xfff1ede2u;
+		muted = light ? 0xff7a7262u : 0xffa39d8eu;
 		return true;
 	}
 
@@ -236,7 +236,7 @@ namespace banana
 				// sparks off the slot's corners, as the menu's insert
 				float k = rnds::stepsEnd(3, (float)(ct / 240));
 				float dd = 8 + 18 * k;
-				uint32_t sp = mul255(light ? 0xff1d2733u : 0xffffffffu, (uint32_t)std::lround(255 * (1 - k * 0.8f)));
+				uint32_t sp = mul255(light ? 0xff2a2620u : 0xffffffffu, (uint32_t)std::lround(255 * (1 - k * 0.8f)));
 				for (float x : { 232.0f, 404.0f })
 				{
 					float dir = x < 320 ? -1.0f : 1.0f;

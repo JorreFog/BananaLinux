@@ -37,3 +37,6 @@ ROCKNIXDS Pixel engine, imported by tools/import-rnds.sh. Don't edit these files
 ROCKNIXDS commit: $commit
 EOF
 echo "imported ROCKNIXDS Pixel from $commit"
+
+# Banana's palette over the theme's (the engine, banana-ui's copies, the splash's stills: run tools/make-splash.mjs after)
+sh "$HERE/tools/banana-palette.sh"
