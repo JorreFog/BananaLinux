@@ -4,3 +4,4 @@
 /ui/tests/out/
 /system/bananad/bananad
 *.o
+/banana-*.bundle
