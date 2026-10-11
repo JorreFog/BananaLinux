@@ -526,6 +526,8 @@ int main(int argc, char** argv)
 
 	rnds::setDecoder(stbDecode);
 	auto settings = readSettings(o.data + "/settings.conf");
+	// the time zone, for the clock and every game started from here (a POSIX rule, see settings.cpp)
+	if (!settings["timezone"].empty()) { setenv("TZ", settings["timezone"].c_str(), 1); tzset(); }
 	std::string variant = settings["theme"] == "light" ? "light" : "dark";
 	Host lib(o.systems, o.roms, o.data, o.assets);
 	lib.motion = settings["motion"] != "off";

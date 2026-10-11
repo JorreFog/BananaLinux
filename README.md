@@ -19,7 +19,7 @@ saves, settings) goes on an exFAT partition any computer can open.
 | | |
 |---|---|
 | **The menu** | ROCKNIXDS Pixel, the same engine (imported unchanged from ROCKNIXDS) drawn in software straight onto both panels by `banana-ui`: the system shelf, DS cartridges with their label art, box covers, play stats, the cartridge sliding into the console. Dark and light. Banana's mark is the BananaUI bunch redrawn as pixel art in the theme's icon style. |
-| **Settings** | Start in the menu: theme, brightness, motion, sounds, clock, the boot animation, sleep when idle, the lid, the LEDs, the DS renderer, shader and 3D resolution, Wi-Fi, About, restart and shut down. In the same look, applied at once. |
+| **Settings** | Start in the menu: theme, brightness, motion, sounds, clock, the boot animation, sleep when idle, the lid, the LEDs, the DS renderer, shader and 3D resolution, Wi-Fi, the time zone, About, restart and shut down. In the same look, applied at once. |
 | **Boot animation** | From banana-ui's first frame, while the library loads on another thread: the bunch drops onto the top panel and BANANA types itself in; on the bottom panel the BANANA cartridge goes into the console with the menu's own insert motion, clicks, and the power light turns green. Then it dissolves into the menu. |
 | **Light** | The menu draws a frame in well under a millisecond when only one screen changes, skips any screen whose content didn't change, and sleeps in `poll()` between frames. While a game runs it closes the display, the input devices and the sound device: the game has the handheld to itself. |
 | **Sleep** | Close the lid and it is asleep in a moment: the game paused where it was, the card flushed, the handheld suspended to RAM. Open it and the game carries on as the panels light up: the game and the menu are resumed first, Wi-Fi and the rest catch up behind them, and the devices resume in parallel. Woken with the lid shut (the power button in a bag) it goes straight back to sleep. While asleep it checks the battery every 4 hours and shuts down cleanly (the game saves first) before it could run flat. Ten idle minutes in the menu also sleep; hold power to shut down. The menu warns at 20%, 10% and 5%. (`bananad`, tested in `system/bananad/tests/sleep-test.sh`) |
@@ -34,7 +34,7 @@ saves, settings) goes on an exFAT partition any computer can open.
 </p>
 <p align="center">
   <img src="docs/img/menu-settings.png" width="248" alt="The settings screen: the selected setting's icon, name, value and description on the top screen; the list of settings as slots with left and right arrows on the bottom">
-  <img src="docs/img/menu-settings-system.png" width="248" alt="The settings screen on the System section: About, Restart, Shut down">
+  <img src="docs/img/menu-settings-system.png" width="248" alt="The settings screen on the System section: the time zone set to London, Dublin, Lisbon, then About, Restart, Shut down">
   <img src="docs/img/menu-battery.png" width="248" alt="The low-battery notice over the top screen: the battery icon nearly empty in red, Battery nearly empty: 4%, save your game now">
 </p>
 <p align="center"><sub>banana-ui's own frames (headless renders, <code>make test</code>), with a test library of made-up games.

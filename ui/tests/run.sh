@@ -14,7 +14,7 @@ for size in 640x480 1024x768; do
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" \
         --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" \
         --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
-        --script "splash boot-drop 200; splash boot-word 700; splash boot-click 1100 1; home 0; wait 2400; shot home; bench 120; press a; wait 2400; shot lib; press right; wait 2400; shot lib2; bench 120; press a; wait 3000; shot ready; press b; press b; press start; press down; shot settings; press r; press r; press r; press r; shot settings-system; press b; battery 50; battery 19; shot battery-low; press left; battery 18; battery 4; wait 2400; shot battery-empty; battery 4 charging; battery 19" \
+        --script "splash boot-drop 200; splash boot-word 700; splash boot-click 1100 1; home 0; wait 2400; shot home; bench 120; press a; wait 2400; shot lib; press right; wait 2400; shot lib2; bench 120; press a; wait 3000; shot ready; press b; press b; press start; press down; shot settings; press r; press r; press r; press r; press r; shot settings-system; press right; shot settings-tz; press b; battery 50; battery 19; shot battery-low; press left; battery 18; battery 4; wait 2400; shot battery-empty; battery 4 charging; battery 19" \
         2> "$log" || { echo "FAIL $size: banana-ui exited $?"; fail=1; continue; }
     check() { grep -q "$1" "$log" || { echo "FAIL $size: no '$1'"; fail=1; }; }
     check "press a: used, view 1"          # home -> the DS library
@@ -24,13 +24,14 @@ for size in 640x480 1024x768; do
     check "splash boot-click at 1100 ms"
     check "press start: settings open"
     check "press b: settings closed"
+    grep -q '^timezone = [^U]' "$FX/data/settings.conf" || { echo "FAIL $size: the time zone wasn't saved"; fail=1; }
     check "battery 19%: notice Battery low: 19%"
     check "press left: notice hidden"
     check "battery 4%: notice Battery nearly empty: 4%"
     check "battery 4%: notice hidden"      # the charger on
     [ "$(grep -c 'notice Battery low: 19%' "$log")" = 2 ] || { echo "FAIL $size: the notice didn't come back after charging"; fail=1; }
     grep -q "battery 18%" "$log" && { echo "FAIL $size: a second notice in the same step"; fail=1; }
-    for s in boot-drop boot-word boot-click home lib lib2 ready settings settings-system battery-low battery-empty; do
+    for s in boot-drop boot-word boot-click home lib lib2 ready settings settings-system settings-tz battery-low battery-empty; do
         for p in top bot; do
             f=$OUT/$size-$s-$p.png
             [ -s "$f" ] || { echo "FAIL $size: no $f"; fail=1; continue; }

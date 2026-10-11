@@ -126,6 +126,23 @@ static void load_conf(const char *path)
 	fclose(f);
 }
 
+/* the time zone the settings screen keeps in banana-ui's settings.conf (a POSIX rule), for sleep.log's times */
+static void load_timezone(void)
+{
+	FILE *f = fopen("/data/banana/settings.conf", "r");
+	if (!f) return;
+	char ln[256];
+	while (fgets(ln, sizeof ln, f)) {
+		char *eq = strchr(ln, '=');
+		if (ln[0] == '#' || !eq) continue;
+		*eq = 0;
+		char *k = ln, *v = eq + 1;
+		trim(k); trim(v);
+		if (!strcmp(k, "timezone") && *v) { setenv("TZ", v, 1); tzset(); }
+	}
+	fclose(f);
+}
+
 static int write_file(const char *path, const char *s)
 {
 	int fd = open(path, O_WRONLY | O_TRUNC | O_CLOEXEC);	/* as a shell's > does (sysfs takes it) */
@@ -765,6 +782,7 @@ int main(int argc, char **argv)
 	test_lid = getenv("BANANAD_TEST_LID");
 	load_conf("/etc/banana/bananad.conf");
 	load_conf("/data/banana/bananad.conf");
+	load_timezone();
 	signal(SIGCHLD, SIG_DFL);
 	struct sigaction sa = { 0 };
 	sa.sa_handler = on_hup;		/* no SA_RESTART: poll() returns, and the loop reloads */
@@ -798,6 +816,7 @@ int main(int argc, char **argv)
 			reload = 0;
 			load_conf("/etc/banana/bananad.conf");
 			load_conf("/data/banana/bananad.conf");
+			load_timezone();
 			leds_last = -2;
 			leds_update();
 			say("settings read again: lid %s, auto-sleep %d min, LEDs %d", cfg.lid_sleep ? "sleeps" : "ignored", cfg.autosleep_min, cfg.led_brightness);

@@ -149,6 +149,41 @@ namespace banana
 		if (l != light) { light = l; cache.clear(); }
 	}
 
+	// time zones as POSIX TZ rules (glibc reads them from TZ with no zoneinfo files): the offset and the summer time
+	// rules as they stand, one entry per rule with the places that follow it
+	static const struct { const char* name; const char* tz; } ZONES[] = {
+		{ "UTC", "UTC0" },
+		{ "London, Dublin, Lisbon", "GMT0BST,M3.5.0/1,M10.5.0" },
+		{ "Lagos, Algiers", "WAT-1" },
+		{ "Amsterdam, Berlin, Paris, Rome", "CET-1CEST,M3.5.0,M10.5.0/3" },
+		{ "Johannesburg", "SAST-2" },
+		{ "Athens, Helsinki, Kyiv", "EET-2EEST,M3.5.0/3,M10.5.0/4" },
+		{ "Cairo", "EET-2EEST,M4.5.5/0,M10.5.4/24" },
+		{ "Istanbul, Riyadh, Nairobi", "<+03>-3" },
+		{ "Moscow", "MSK-3" },
+		{ "Dubai", "<+04>-4" },
+		{ "Karachi", "PKT-5" },
+		{ "India", "IST-5:30" },
+		{ "Bangkok, Jakarta", "<+07>-7" },
+		{ "Beijing, Singapore, Perth", "CST-8" },
+		{ "Tokyo, Seoul", "JST-9" },
+		{ "Adelaide", "ACST-9:30ACDT,M10.1.0,M4.1.0/3" },
+		{ "Brisbane", "AEST-10" },
+		{ "Sydney, Melbourne", "AEST-10AEDT,M10.1.0,M4.1.0/3" },
+		{ "Auckland", "NZST-12NZDT,M9.5.0,M4.1.0/3" },
+		{ "Honolulu", "HST10" },
+		{ "Anchorage", "AKST9AKDT,M3.2.0,M11.1.0" },
+		{ "Los Angeles, Vancouver", "PST8PDT,M3.2.0,M11.1.0" },
+		{ "Phoenix", "MST7" },
+		{ "Denver, Calgary", "MST7MDT,M3.2.0,M11.1.0" },
+		{ "Mexico City", "CST6" },
+		{ "Chicago, Winnipeg", "CST6CDT,M3.2.0,M11.1.0" },
+		{ "New York, Toronto", "EST5EDT,M3.2.0,M11.1.0" },
+		{ "Halifax", "AST4ADT,M3.2.0,M11.1.0" },
+		{ "Santiago", "<-04>4<-03>,M9.1.6/24,M4.1.6/24" },
+		{ "Sao Paulo, Buenos Aires", "<-03>3" },
+	};
+
 	void Settings::build()
 	{
 		std::string menu = data + "/settings.conf", power = data + "/bananad.conf", sd = data + "/superdrastic.conf";
@@ -188,6 +223,12 @@ namespace banana
 		const char* W = "Network";
 		add(W, "phone", "Wi-Fi", "", menu, "wifi", { "On", "Off" }, { "on", "off" });
 		const char* S = "System";
+		{
+			std::vector<std::string> names, tzs;
+			for (auto& z : ZONES) { names.push_back(z.name); tzs.push_back(z.tz); }
+			add(S, "gear", "Time zone", "The clock's time zone, summer time included, for the menu and the games (a DS game's clock too). The time itself comes from Wi-Fi or the handheld's own clock.",
+				menu, "timezone", names, tzs);
+		}
 		add(S, "gear", "About", "", "", "", {}, {}, Item::INFO);
 		add(S, "gear", "Restart", "Restarts the handheld. Press A twice.", "", "reboot", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "Shut down", "Turns the handheld off. Press A twice. (Or hold the power button.)", "", "poweroff", { "" }, { "" }, Item::ACTION);
@@ -323,6 +364,7 @@ namespace banana
 		}
 		else setConfValue(it.file, it.key, v);
 		if (it.file == data + "/bananad.conf") poke("bananad");
+		if (it.key == "timezone") { setenv("TZ", v.c_str(), 1); tzset(); poke("bananad"); }	// bananad's logs too
 		if (it.key == "wifi") spawn("/usr/libexec/banana/wifi", v == "on" ? "up" : "down");
 	}
 
