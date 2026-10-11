@@ -114,10 +114,16 @@ grep -q "panels 640x480" "$OUT/serial.log" && ok "both panels opened at 640x480"
 shot first-menu
 key s; sleep 1; shot first-settings; key backspace; sleep 0.5
 shutdown_from_settings first
-add_game() { mkdir -p "$DATA/roms/nds"; head -c 65536 /dev/zero > "$DATA/roms/nds/Boot Test.nds"; ls "$DATA/banana/" | tr '\n' ' '; echo; [ -f "$DATA/banana/README.txt" ] && ok "the card has its folders and README" || bad "no README on the card"; }
+add_game() {    # a DS game and a GBA one, so both launchers run (DraStic's and RetroArch's)
+    mkdir -p "$DATA/roms/nds" "$DATA/roms/gba"
+    head -c 65536 /dev/zero > "$DATA/roms/nds/Boot Test.nds"
+    head -c 65536 /dev/zero > "$DATA/roms/gba/Boot Test Advance.gba"
+    ls "$DATA/banana/" | tr '\n' ' '; echo
+    [ -f "$DATA/banana/README.txt" ] && ok "the card has its folders and README" || bad "no README on the card"
+}
 with_data add_game
 
-echo "2. the second boot: the library, a game started and ended, the menu back, a shutdown"
+echo "2. the second boot: the library, a DS game and a GBA game started and ended, the menu back, a shutdown"
 boot second
 grep -q "rcS: data partition ready" "$OUT/serial.log" && ok "the data partition mounted again" || bad "no data partition the second time"
 key ret; sleep 1; shot second-library
@@ -126,6 +132,13 @@ key ret            # the ready screen: the cartridge goes in and the game starts
 wait_for "starting nds" 30 "the game was started (run-nds)"
 wait_for "game ended" 60 "the game ended and the menu took the panels back"
 sleep 2; shot second-after-game
+# the GBA shelf (RetroArch's launcher): home, the next system, its library, its game
+key backspace right ret; sleep 1; shot second-gba
+key ret
+wait_for "starting gba" 30 "the GBA game was started (run-retroarch)"
+for i in $(seq 120); do [ "$(grep -c 'game ended' "$OUT/serial.log")" -ge 2 ] && break; sleep 0.5; done
+[ "$(grep -c 'game ended' "$OUT/serial.log")" -ge 2 ] && ok "the GBA game ended and the menu came back" || bad "the GBA game didn't end within 60 s"
+sleep 2
 shutdown_from_settings second
 show_logs() {
     echo "--- the card's logs/boot.txt"; cat "$DATA/banana/logs/boot.txt" 2>/dev/null || true

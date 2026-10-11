@@ -449,7 +449,14 @@ static void audio_find_cards(void)
 		else if (strstr(ln, "rk817") && card_codec < 0) card_codec = n;
 	}
 	fclose(f);
-	if (card_codec < 0) card_codec = 0;
+	/* a card that isn't the rk817 or the aw88166 (a USB sound card alone): the first one; none at all stays -1 */
+	if (card_codec < 0 && card_speaker < 0) {
+		FILE *g = fopen("/proc/asound/cards", "r");
+		char ln[256];
+		int n;
+		while (g && fgets(ln, sizeof ln, g)) if (sscanf(ln, " %d [", &n) == 1) { card_codec = n; break; }
+		if (g) fclose(g);
+	}
 }
 
 static void audio_route(void)
@@ -481,8 +488,9 @@ static void audio_route(void)
 static void audio_setup(void)
 {
 	audio_find_cards();
+	if (card_codec < 0) { audio_route(); return; }	/* no sound card at all (QEMU): nothing to set */
 	/* the rk817's output path: HP drives both its jack and (on the RG DS) the speaker amplifier */
-	char c[8];
+	char c[16];
 	snprintf(c, sizeof c, "%d", card_codec);
 	char *argv[] = { "amixer", "-q", "-c", c, "sset", "Playback Mux", "HP", NULL };
 	run(argv);
@@ -491,7 +499,7 @@ static void audio_setup(void)
 
 static void volume(int dir)
 {
-	char step[16], c[8];
+	char step[16], c[16];
 	snprintf(step, sizeof step, "%d%%%c", cfg.volume_step, dir > 0 ? '+' : '-');
 	snprintf(c, sizeof c, "%d", card_play);
 	/* the aw88166's own control is "PCM"; the rk817's is "Master" */
