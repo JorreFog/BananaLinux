@@ -71,6 +71,12 @@ Built and checked in this repository's CI and by hand:
 - `bananad` and `banana-panel-tune` build without warnings for aarch64; the tuner, run on the real device trees,
   leaves the RG DS's measured timing alone and brings the RG DS Plus's from 60.17 to 59.9994 Hz.
 - The boot animation renders at both panel sizes (`make test` shoots it at three moments).
+- The settings' Wi-Fi pages run against a stand-in `wifi` script in `make test`: the network list, a password typed
+  by touch on the on-screen keyboard, joining, forgetting, open and WPA3-only networks, checked in the `wifi.conf`
+  they write. The low-battery notice, the time zone (all 30 rules against the tz database) and a DS ROM's icon read
+  out of a `.zip` are checked there too.
+- `bananad`'s sleep runs against a made-up `/sys` in its own namespaces (`system/bananad/tests/sleep-test.sh`, in
+  CI); the SSH script against a real dropbear.
 - Both Buildroot defconfigs load in Buildroot 2026.02.3 with every option kept.
 - RetroArch (with exactly the package's configure options) and all seven cores build and link for aarch64 against
   an arm64 sysroot here; banana-ui links against the real arm64 libraries, and the aarch64 banana-ui, run under
