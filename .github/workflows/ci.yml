@@ -25,6 +25,8 @@ jobs:
           make -C system/bananad CFLAGS="-O2 -Werror"
           make -C system/bananad clean
           make -C system/bananad CC=aarch64-linux-gnu-gcc CFLAGS="-O2 -Werror"
+      - name: Sleep (bananad against a made-up /sys in its own namespaces)
+        run: sudo system/bananad/tests/sleep-test.sh
       - name: Shell scripts parse
         run: for f in system/rootfs/etc/init.d/* system/rootfs/usr/bin/* system/rootfs/usr/libexec/banana/* system/rootfs/etc/banana/sleep.d/* buildroot/board/rgds/*.sh tools/*.sh; do sh -n "$f" || exit 1; done
       - name: Buildroot defconfigs keep every option

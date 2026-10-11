@@ -66,19 +66,44 @@ takes the panels back, records the play, and shows the game's library again.
 ## Sleep: bananad
 
 `bananad` reads every input device next to the menu and the games (evdev allows several readers; it grabs
-nothing):
+nothing). Closing the lid (the hall sensor, `SW_LID`), a short press of power, or 10 idle minutes in the menu put
+the handheld to sleep:
 
-- **Power button** (short press), **lid closed** (the hall sensor, `SW_LID`), or **10 minutes idle in the menu**:
-  suspend. The game's process group gets `SIGSTOP`, `/etc/banana/sleep.d/*` run with `pre` (Wi-Fi down and its
-  driver unloaded: the RTL8821CS doesn't survive a suspend otherwise), `deep` is chosen in
-  `/sys/power/mem_sleep` and `mem` written to `/sys/power/state`. The device tree marks the lid and the power key
-  as wakeup sources. After waking, the hooks run with `post`, the game gets `SIGCONT`, banana-ui gets `SIGUSR1`
-  (it shows its panels again), and the button press that woke the handheld is ignored.
-- **Power held 2 s**: the game gets `SIGTERM` (to write its saves), then a clean shutdown.
-- **Volume keys**: the mixer; **F + volume**: both backlights.
-- **Battery** at 3% and discharging for two readings in a row: clean shutdown.
+1. The game's process group gets `SIGSTOP` (ROCKNIX found DraStic's dynarec must not run on while the clocks drop).
+2. `/etc/banana/sleep.d/*` run with `pre` (Wi-Fi down and its driver unloaded: the RTL8821CS doesn't survive a
+   suspend otherwise; nothing at all when Wi-Fi is off).
+3. `sync()`: this kernel has `SUSPEND_SKIP_SYNC`, so the flush is bananad's (with saves written within 2 s anyway,
+   `vm.dirty_expire`).
+4. The RTC alarm for the battery check (`sleep_check_hours`, 4), devices set to resume in parallel
+   (`/sys/power/pm_async`, `fast_resume`; ROCKNIX's kernel patch turns it off by default), `deep` in
+   `/sys/power/mem_sleep`, and `mem` to `/sys/power/state`: TF-A powers the SoC down, DRAM self-refreshes.
 
-All of it is set in `/etc/banana/bananad.conf`, overridden by `/data/banana/bananad.conf`.
+The device tree makes the lid (on opening only) and the RK817 PMIC (the power key, the RTC alarm) wakeup sources.
+When `/sys/power/state` returns:
+
+- **The battery check's alarm** (the RTC clears `wakealarm` when it fires): at `sleep_poweroff_percent` (5%) or
+  under, the game gets `SIGCONT` and then `SIGTERM` to write its saves, and the handheld shuts down; otherwise
+  straight back to sleep, nothing else run.
+- **Anything with the lid still shut** (the power button pressed in a bag): straight back to sleep.
+- **The lid opened, or the power button with the lid open**: the game gets `SIGCONT` and banana-ui `SIGUSR1` (a
+  redraw: the kernel's DRM resume has already put our buffers back on the panels, so no modeset), all within a
+  fraction of a millisecond of the kernel returning; then the `post` hooks (Wi-Fi back) in the background, the LEDs,
+  the headphone route; the press that woke it is ignored.
+
+If a suspend fails, bananad goes on more carefully by itself: devices one at a time, then `s2idle`; if even that
+fails with the lid shut, both backlights go off until it opens. With lid sleep switched off, closing the lid only
+turns the backlights off. Every sleep is a line in `banana/logs/sleep.log` (time to suspend, time asleep, why it
+woke, how long the game and the menu took to come back); with `sleep_debug = yes` the kernel's per-device times go
+to `banana/logs/sleep-devices.log`, slowest first.
+
+What a wake costs is then the kernel's device resume: on the RG DS mostly the two panels' power-on sequences
+(ROCKNIX's 20 + 10 + 50 ms, the init commands and 120 ms after sleep-out, one panel after the other) and the SD
+card; on the RG DS Plus the panels take about a fifth of that. `system/bananad/tests/sleep-test.sh` runs all of the
+above against a made-up `/sys` in its own namespaces (a FIFO for `/sys/power/state`, real input events for the lid).
+
+Hold power 2 s to shut down; volume keys change the mixer, F + volume the backlights; a battery at 3% and
+discharging shuts down cleanly. Settings: `/etc/banana/bananad.conf`, overridden by `/data/banana/bananad.conf`
+(the settings screen writes it and sends SIGHUP).
 
 ## The rest of the hardware
 

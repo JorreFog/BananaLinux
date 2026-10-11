@@ -750,7 +750,9 @@ int main(int argc, char** argv)
 				while (read(sigPipe[0], &c, 1) == 1)
 				{
 					if (c == SIGTERM || c == SIGINT) quit = true;
-					if (c == SIGUSR1) { disp.restore(); be.invalidate(); dirty = true; }
+					// after a wake: the kernel has the panels showing our buffers again; a redraw brings the clock and
+					// the battery up to date (no modeset: that would run the panels' power-on sequence once more)
+					if (c == SIGUSR1) { std::lock_guard<std::mutex> l(worker.uiLock); be.invalidate(); ui->dataChanged(); dirty = true; }
 				}
 			}
 			else if (p.fd == worker.wakeFd)

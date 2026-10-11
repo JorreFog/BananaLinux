@@ -1,0 +1,21 @@
+#!/bin/sh
+# With sleep_debug = yes in banana/bananad.conf: what each device's suspend and resume cost, from the kernel
+# (pm_print_times), the slowest first, in banana/logs/sleep-devices.log. For finding what holds a wake-up up.
+grep -qs '^ *sleep_debug *= *yes' /data/banana/bananad.conf || exit 0
+case $1 in
+pre)
+    echo 1 > /sys/power/pm_print_times 2>/dev/null
+    echo "banana-sleep-mark" > /dev/kmsg
+    ;;
+post)
+    sleep 1     # the kernel's last lines in
+    {
+        echo "== $(date '+%Y-%m-%d %H:%M:%S')"
+        # everything after the mark: the PM summary lines, then the 15 slowest device calls on the way back
+        dmesg | sed -n '/banana-sleep-mark/,$p' | grep -E 'PM: (suspend|resume)[^,]*(took|complete|exit|entry)' | sed 's/^\[[^]]*\] //'
+        dmesg | sed -n '/banana-sleep-mark/,$p' | sed -n 's/.*call \([^ ]*\)+.* returned [0-9-]* after \([0-9]*\) usecs.*/\2 \1/p' |
+            sort -rn | head -n 15 | awk '{ printf "  %7.1f ms  %s\n", $1 / 1000, $2 }'
+    } >> /data/banana/logs/sleep-devices.log
+    ;;
+esac
+exit 0

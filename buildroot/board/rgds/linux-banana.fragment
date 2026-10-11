@@ -22,9 +22,12 @@ CONFIG_DRM_MIPI_DSI=y
 CONFIG_TOUCHSCREEN_GOODIX=y
 # Panfrost (Mesa) for SuperDrastic's shaders and RetroArch's GLES; loaded after the menu is up
 CONFIG_DRM_PANFROST=m
-# suspend to RAM
+# suspend to RAM; PM_DEBUG for /sys/power/pm_print_times (each device's suspend and resume time in dmesg, to find
+# what holds a wake-up up on the hardware)
 CONFIG_SUSPEND=y
 CONFIG_PM_SLEEP=y
+CONFIG_PM_DEBUG=y
+CONFIG_PM_SLEEP_DEBUG=y
 # CONFIG_PM_AUTOSLEEP is not set
 # CONFIG_PM_WAKELOCKS is not set
 # start on schedutil; banana-perf picks per profile

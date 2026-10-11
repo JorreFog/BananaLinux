@@ -5,7 +5,10 @@
 - [ ] A full image build (`make rgds`, or the CI's `image` job), and the first boot on an RG DS and an RG DS Plus
 - [ ] Both panels up from banana-ui; touch on the bottom panel where the finger is
 - [ ] Buttons and their mapping (A = east, B = south: the RG DS's Nintendo layout)
-- [ ] Suspend and resume: the panels, sound, Wi-Fi, the lid, the power key; standby drain over a night
+- [ ] Suspend and resume on the units: the panels, sound, Wi-Fi, the lid, the power key, the RTC battery check;
+      standby drain over a night
+- [ ] Wake-up time measured (`sleep_debug = yes`), then cut: the panels' power-on delays on the RG DS, the SD card's
+      re-initialisation (MMC_CAP_RUNTIME_RESUME would take it off the wake path), whether Wi-Fi can stay loaded
 - [ ] The display handover to SuperDrastic and back (`DSFLIP_HANDOVER=none`)
 - [ ] Sound on the units: the controls bananad assumes (`Playback Mux`, `Master`, the aw88166's `PCM`), the AW88166
       amplifier's firmware, the headphone jack's switch on the RG DS Plus

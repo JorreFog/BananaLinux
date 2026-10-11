@@ -58,7 +58,10 @@ static struct {
 	char mem_sleep[16];		/* deep (suspend to RAM) or s2idle */
 	int led_brightness;		/* 0..255; 0: the LEDs stay off */
 	int led_low, led_critical;	/* percent: red, blinking red */
-} cfg = { "auto", 5, 8, 10, 1, 2000, 3, "deep", 128, 20, 5 };
+	int fast_resume;		/* devices resume in parallel (/sys/power/pm_async) */
+	double sleep_check_hours;	/* asleep: wake this often to look at the battery (0: never) */
+	int sleep_poweroff_pct;	/* found at or under this while asleep: shut down cleanly */
+} cfg = { "auto", 5, 8, 10, 1, 2000, 3, "deep", 128, 20, 5, 1, 4, 5 };
 
 static int devfd[MAXDEV], ndev;
 static void leds_update(void);
@@ -116,13 +119,16 @@ static void load_conf(const char *path)
 		else if (!strcmp(k, "led_brightness")) cfg.led_brightness = atoi(v);
 		else if (!strcmp(k, "led_low_percent")) cfg.led_low = atoi(v);
 		else if (!strcmp(k, "led_critical_percent")) cfg.led_critical = atoi(v);
+		else if (!strcmp(k, "fast_resume")) cfg.fast_resume = !strcmp(v, "yes") || !strcmp(v, "1");
+		else if (!strcmp(k, "sleep_check_hours")) cfg.sleep_check_hours = atof(v);
+		else if (!strcmp(k, "sleep_poweroff_percent")) cfg.sleep_poweroff_pct = atoi(v);
 	}
 	fclose(f);
 }
 
 static int write_file(const char *path, const char *s)
 {
-	int fd = open(path, O_WRONLY | O_CLOEXEC);
+	int fd = open(path, O_WRONLY | O_TRUNC | O_CLOEXEC);	/* as a shell's > does (sysfs takes it) */
 	if (fd < 0) return -1;
 	ssize_t n = write(fd, s, strlen(s));
 	int e = errno;
@@ -163,8 +169,21 @@ static int run(char *const argv[])
 	return st;
 }
 
-/* every executable in /etc/banana/sleep.d, in name order, with "pre" or "post" */
-static void hooks(const char *when)
+/* every executable in /etc/banana/sleep.d, in name order, with "pre" or "post"; background: not waited for (after a
+ * wake, the game and the menu come first and Wi-Fi catches up) */
+static void hooks_run(const char *when);
+static void hooks(const char *when, int background)
+{
+	if (!background) { hooks_run(when); return; }
+	pid_t p = fork();
+	if (p == 0) {
+		if (fork() == 0) { setsid(); hooks_run(when); _exit(0); }
+		_exit(0);
+	}
+	if (p > 0) while (waitpid(p, NULL, 0) < 0 && errno == EINTR) {}
+}
+
+static void hooks_run(const char *when)
 {
 	struct dirent **list;
 	int n = scandir("/etc/banana/sleep.d", &list, NULL, alphasort);
@@ -207,8 +226,10 @@ static pid_t ui_pid(void)
 }
 
 /* the lid's state as the kernel has it now (EVIOCGSW), not from events: closed means closed on any device */
+static const char *test_lid;	/* tests (tests/sleep-test.sh): the lid's state from this file, not the kernel */
 static void read_lid(void)
 {
+	if (test_lid) { lid_closed = read_int(test_lid, 0); return; }
 	lid_closed = 0;
 	for (int i = 0; i < ndev; i++) {
 		unsigned long sw[(SW_MAX + 8 * sizeof(long)) / (8 * sizeof(long))] = { 0 };
@@ -236,26 +257,134 @@ static void drain_inputs(void)
 		while (read(devfd[i], ev, sizeof ev) > 0) {}
 }
 
-static void suspend_now(const char *why)
+/* ---- sleep ------------------------------------------------------------------------------------------------------
+ * Closing the lid: the game is paused, the pre-sleep hooks run (Wi-Fi down), the card is flushed (this kernel skips
+ * its own sync), an RTC alarm is set for the battery check, and the SoC suspends to RAM. Opening the lid: the game
+ * and the menu go on first, then the post-sleep hooks in the background. Woken with the lid still shut (the power
+ * button pressed in a bag, the battery check): straight back to sleep, without running anything again. */
+static void shutdown_now(const char *why);
+static int battery_discharging_pct(void);
+static int sleep_fallback;		/* 0 as configured; 1 devices one at a time; 2 also s2idle (a suspend failed) */
+
+static void sleep_log(const char *fmt, ...)
 {
-	say("sleeping (%s)", why);
-	pid_t game = pid_of("/run/banana/game.pid");
-	pid_t pg = game ? getpgid(game) : 0;
-	if (pg > 0) kill(-pg, SIGSTOP);
-	hooks("pre");
-	sync();
-	/* deep: suspend to RAM (the RK3566's TF-A turns the SoC off and keeps DRAM in self-refresh); s2idle if the
-	 * kernel doesn't offer it */
+	char line[256];
+	va_list ap;
+	va_start(ap, fmt);
+	vsnprintf(line, sizeof line, fmt, ap);
+	va_end(ap);
+	say("%s", line);
+	const char *path = "/data/banana/logs/sleep.log";
+	struct stat st;
+	if (!stat(path, &st) && st.st_size > 64 * 1024) rename(path, "/data/banana/logs/sleep.log.1");
+	FILE *f = fopen(path, "a");
+	if (!f) return;
+	time_t now = time(NULL);
+	char when[32];
+	strftime(when, sizeof when, "%Y-%m-%d %H:%M:%S", localtime(&now));
+	fprintf(f, "%s %s\n", when, line);
+	fclose(f);
+}
+
+/* the RTC alarm that wakes the handheld for the battery check; 0 clears it. Returns the alarm's time (0: none) */
+static time_t rtc_alarm(int seconds)
+{
+	write_file("/sys/class/rtc/rtc0/wakealarm", "0");
+	if (seconds <= 0) return 0;
+	char v[32];
+	snprintf(v, sizeof v, "+%d", seconds);
+	if (write_file("/sys/class/rtc/rtc0/wakealarm", v)) return 0;
+	return time(NULL) + seconds;
+}
+
+static void sleep_mode(void)
+{
+	/* deep: suspend to RAM (TF-A turns the SoC off, DRAM in self-refresh); s2idle as the fallback */
 	char modes[128];
 	read_str("/sys/power/mem_sleep", modes, sizeof modes);
-	if (strstr(modes, cfg.mem_sleep)) write_file("/sys/power/mem_sleep", cfg.mem_sleep);
+	const char *want = sleep_fallback >= 2 ? "s2idle" : cfg.mem_sleep;
+	char chosen[32];
+	snprintf(chosen, sizeof chosen, "[%s]", want);
+	if (strstr(modes, want) && !strstr(modes, chosen)) write_file("/sys/power/mem_sleep", want);	/* only if it changes */
+	write_file("/sys/power/pm_async", cfg.fast_resume && sleep_fallback == 0 ? "1" : "0");
+}
+
+/* the backlights off and on again without changing their level (the lid shut with sleep off) */
+static void backlights_power(int on)
+{
+	DIR *d = opendir("/sys/class/backlight");
+	if (!d) return;
+	struct dirent *e;
+	while ((e = readdir(d))) {
+		if (e->d_name[0] == '.') continue;
+		char p[320];
+		snprintf(p, sizeof p, "/sys/class/backlight/%s/bl_power", e->d_name);
+		write_file(p, on ? "0" : "4");
+	}
+	closedir(d);
+}
+
+static void suspend_now(const char *why)
+{
 	double t0 = mono();
-	if (write_file("/sys/power/state", "mem")) say("suspend failed: %s", strerror(errno));
-	say("awake after %.0f s", mono() - t0);
-	hooks("post");
+	pid_t game = pid_of("/run/banana/game.pid");
+	pid_t pg = game ? getpgid(game) : 0;
+	if (pg > 0) kill(-pg, SIGSTOP);	/* DraStic's dynarec mustn't run on while the clocks drop (ROCKNIX's finding) */
+	hooks("pre", 0);
+	sync();
+	sleep_mode();
+	int cycles = 0, rtc_wakes = 0, failures = 0;
+	double asleep = 0;
+	const char *woke = "?";
+	for (;;) {
+		time_t alarm = rtc_alarm((int)(cfg.sleep_check_hours * 3600));
+		double t_in = mono();
+		struct timespec b0, b1;
+		clock_gettime(CLOCK_BOOTTIME, &b0);	/* BOOTTIME counts the time asleep, MONOTONIC doesn't */
+		if (cycles == 0) sleep_log("sleep (%s): %.0f ms to suspend%s", why, (t_in - t0) * 1000, game ? ", game paused" : "");
+		int r = write_file("/sys/power/state", "mem");
+		int err = errno;
+		clock_gettime(CLOCK_BOOTTIME, &b1);
+		/* the RTC clears wakealarm when the alarm fires: set before, empty now, is the battery check's wake */
+		char pending[32];
+		read_str("/sys/class/rtc/rtc0/wakealarm", pending, sizeof pending);
+		int rtc_fired = alarm && (!pending[0] || time(NULL) >= alarm);
+		rtc_alarm(0);
+		cycles++;
+		if (r) {
+			/* it didn't suspend: devices one at a time, then the lighter s2idle, then give up and blank the panels */
+			failures++;
+			sleep_log("suspend failed (%s)%s", strerror(err), sleep_fallback < 2 ? ": trying the safer way" : "");
+			if (sleep_fallback < 2 && failures <= 2) { sleep_fallback++; sleep_mode(); usleep(200000); continue; }
+			woke = "failed";
+			if (lid_closed) backlights_power(0);	/* can't sleep: at least dark until the lid opens */
+			break;
+		}
+		asleep += (b1.tv_sec - b0.tv_sec) + (b1.tv_nsec - b0.tv_nsec) / 1e9;
+		/* why it woke: the battery check's alarm, or someone (lid, power button) */
+		if (rtc_fired) {
+			rtc_wakes++;
+			int pct = battery_discharging_pct();
+			if (pct >= 0 && pct <= cfg.sleep_poweroff_pct) {
+				sleep_log("battery check: %d%% after %.1f h asleep: shutting down", pct, asleep / 3600);
+				if (pg > 0) kill(-pg, SIGCONT);	/* the game gets SIGTERM next, to write its saves */
+				shutdown_now("battery empty while asleep");
+				return;
+			}
+			continue;	/* enough battery: back to sleep at once */
+		}
+		read_lid();
+		if (lid_closed && cfg.lid_sleep) { woke = "lid shut"; continue; }	/* not meant: back to sleep */
+		woke = lid_closed ? "power button" : "lid opened";
+		break;
+	}
+	/* awake: the game and the menu first */
+	double t_wake = mono();
 	if (pg > 0) kill(-pg, SIGCONT);
 	pid_t ui = ui_pid();
-	if (ui && !game) kill(ui, SIGUSR1);	/* draw both panels again */
+	if (ui && !game) kill(ui, SIGUSR1);	/* draws both panels again (the clock and the battery moved on) */
+	double t_back = mono();
+	hooks("post", 1);
 	/* the press that woke us comes in now: it is not a new request. Draining also drops the lid-open event, so the
 	 * lid's state is read from the kernel instead */
 	drain_inputs();
@@ -265,6 +394,9 @@ static void suspend_now(const char *why)
 	ignore_power_until = mono() + 1.0;
 	power_down = 0;
 	last_input = mono();
+	sleep_log("awake (%s) after %.0f s asleep%s%s, game and menu back %.1f ms after the kernel", woke, asleep,
+		rtc_wakes ? ", battery checked" : "", cycles - rtc_wakes > 1 ? ", slept again with the lid shut" : "",
+		(t_back - t_wake) * 1000);
 }
 
 static void shutdown_now(const char *why)
@@ -581,6 +713,7 @@ static void handle(const struct input_event *e)
 	if (e->type == EV_SW && e->code == SW_LID) {
 		lid_closed = e->value;
 		if (lid_closed && cfg.lid_sleep) suspend_now("lid closed");
+		else if (!lid_closed || !cfg.lid_sleep) backlights_power(!lid_closed);	/* no sleep: at least the panels go dark */
 		return;
 	}
 	if (e->type == EV_SW && e->code == SW_HEADPHONE_INSERT) {
@@ -629,6 +762,7 @@ int main(int argc, char **argv)
 {
 	(void)argc; (void)argv;
 	openlog("bananad", LOG_PID, LOG_DAEMON);
+	test_lid = getenv("BANANAD_TEST_LID");
 	load_conf("/etc/banana/bananad.conf");
 	load_conf("/data/banana/bananad.conf");
 	signal(SIGCHLD, SIG_DFL);
