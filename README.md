@@ -43,6 +43,12 @@ saves, settings) goes on an exFAT partition any computer can open.
 </p>
 <p align="center"><sub>banana-ui's own frames (headless renders, <code>make test</code>), with a test library of made-up games.
 Start opens the settings.</sub></p>
+<p align="center">
+  <img src="docs/img/qemu-library.png" width="248" alt="The DS library as the whole system shows it in QEMU: the game's cartridge on the bottom panel, its page on the top">
+  <img src="docs/img/qemu-update.png" width="248" alt="Settings > System > Update in QEMU after an update was written to the other slot: Written, restart to run it">
+</p>
+<p align="center"><sub>The whole image running in QEMU (<code>tools/qemu-boot.sh</code>): the kernel, init, bananad and the menu on two
+virtual panels; the second picture is the update that the next boot ran from the other slot.</sub></p>
 
 ## Made for the RG DS and RG DS Plus
 
