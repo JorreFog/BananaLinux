@@ -1,6 +1,8 @@
 #!/bin/sh
 # The menu, with its log on the data partition (the last two runs) so a problem can be read on a computer
 LOG=/data/banana/logs/banana-ui.log
-mkdir -p /data/banana/logs
+mkdir -p /data/banana/logs 2>/dev/null && touch $LOG.w 2>/dev/null && rm -f $LOG.w || LOG=/run/banana/banana-ui.log
 [ -f $LOG ] && mv -f $LOG $LOG.1
+# a copy of the systems list on the card replaces the built-in one
+[ -f /data/banana/systems.conf ] && export BANANA_SYSTEMS=/data/banana/systems.conf
 exec /usr/bin/banana-ui > $LOG 2>&1

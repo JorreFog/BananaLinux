@@ -7,4 +7,7 @@ CORE=/usr/lib/libretro/$1_libretro.so
 CFG=/data/retroarch/retroarch.cfg
 [ -f $CFG ] || { mkdir -p /data/retroarch; cp /etc/banana/retroarch.cfg $CFG; }
 mkdir -p /data/saves /data/states /data/screenshots
+# anything RetroArch keeps that retroarch.cfg doesn't place (remaps, core options, playlists...) under the card's
+# retroarch folder, not ~/.config on the read-only root
+export HOME=/data/retroarch XDG_CONFIG_HOME=/data/retroarch
 exec retroarch --config $CFG -L "$CORE" "$2"

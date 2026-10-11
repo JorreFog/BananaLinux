@@ -626,13 +626,18 @@ namespace banana
 		changed = true;
 	}
 
+	// rcS couldn't mount the card's data partition (a tmpfs stands in for it)
+	static bool dataFailed() { return access("/run/banana/data-failed", F_OK) == 0; }
+
 	std::string Library::emptyTitle()
 	{
+		if (dataFailed()) return "Can't read the card's games";
 		return lib < (int)shelves.size() && shelves[lib].favorites ? "Nothing here yet" : "No games yet";
 	}
 
 	std::string Library::emptyHint()
 	{
+		if (dataFailed()) return "The BANANA partition needs exFAT";
 		if (lib >= (int)shelves.size()) return "";
 		const Shelf& s = shelves[lib];
 		if (s.favorites) return "Y on a game adds it here";

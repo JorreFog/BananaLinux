@@ -1,0 +1,5 @@
+config BR2_PACKAGE_ROCKNIX_EXTRA_FIRMWARE
+	bool "rocknix-extra-firmware"
+	help
+	  The RG DS Plus's speaker amplifiers' configuration (aw88166_acf.bin): the AW88166 driver keeps the amplifiers
+	  off until it has loaded it. From ROCKNIX's extra-firmware, at the commit ROCKNIX pins.

@@ -19,6 +19,6 @@ you don't trust.
 SSH (for working on Banana itself): put your public key in banana/ssh/authorized_keys, switch on
 Settings > SSH, then ssh root@<address>. Keys only, no passwords.
 
-Settings: banana/settings.conf (menu), banana/bananad.conf (sleep, power), banana/systems.conf (a copy of
-the systems list, to add or change emulators).
+Settings: banana/settings.conf (menu), banana/bananad.conf (sleep, power), banana/systems.conf (the systems
+list, to add or change emulators: copy banana/systems.conf.default to it and change the copy).
 Logs: banana/logs/.

@@ -2,7 +2,9 @@
 # Shutdown: stop what writes to the card, then unmount it cleanly
 killall -TERM banana-ui retroarch drastic 2>/dev/null
 sleep 1
-killall wpa_supplicant udhcpc 2>/dev/null
+/usr/libexec/banana/share down 2>/dev/null     # a computer's open files on the card
+/usr/libexec/banana/ssh down 2>/dev/null
+/usr/libexec/banana/wifi down 2>/dev/null
 hwclock -w 2>/dev/null
 sync
 umount /data 2>/dev/null || mount -o remount,ro /data
