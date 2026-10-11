@@ -148,11 +148,12 @@ namespace banana
 			}
 	}
 
-	// BANANA: one letter more every LETTER ms, each popping up from one word-pixel lower; two tones and a shadow,
-	// as the status bar's logo
+	// BANANAOS: one letter more every LETTER ms, each popping up from one word-pixel lower; BANANA in two banana
+	// tones, OS in white, and a shadow, as the status bar's logo (tools/make-logo.py)
 	void Splash::drawWord(uint32_t* d, double t) const
 	{
 		int n = (int)word.letters.size();
+		const int white = 2;		// the last two letters, OS
 		int shown = t < WORD_AT ? 0 : std::min(n, 1 + (int)((t - WORD_AT) / LETTER));
 		int x = (W - word.w * KW) / 2, y = X(WORD_Y);
 		int sh = std::max(1, KW / 3);
@@ -166,7 +167,8 @@ namespace banana
 			for (int my = 0; my < word.h; my++)
 				for (int mx = c0; mx < c1; mx++)
 					if (word.a[(size_t)my * word.w + mx])
-						fill(d, x + mx * KW, y + dy + my * KW, KW, KW, my < (word.h * 11 + 19) / 20 ? 0xffffde52u : 0xffeea018u);
+						fill(d, x + mx * KW, y + dy + my * KW, KW, KW,
+						     i >= n - white ? 0xffffffffu : my < (word.h * 11 + 19) / 20 ? 0xffffde52u : 0xffeea018u);
 		}
 	}
 
