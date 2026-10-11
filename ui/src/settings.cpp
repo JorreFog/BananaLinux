@@ -204,6 +204,8 @@ namespace banana
 		add(D, "picture", "Brightness", "Both panels' backlights. F + volume changes it anywhere, in games too.", "", "",
 			{ "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "100", "200", "300", "400", "500", "600", "700", "800", "900", "1000" }, Item::BRIGHTNESS);
 		add(D, "picture", "Motion", "The top screen's bob and shine. Off holds it still and saves a little battery.", menu, "motion", { "On", "Off" }, { "on", "off" });
+		add(D, "music", "Volume", "The speakers or the headphones, whichever is playing. The volume keys change it anywhere.", "", "",
+			{ "0%", "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "0", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100" }, Item::VOLUME);
 		add(D, "music", "Menu sounds", "The menu's clicks, and the cartridge going into the console.", menu, "sounds", { "On", "Off" }, { "on", "off" });
 		add(D, "picture", "Battery", "The battery on the top screen: its icon, or its icon and how full it is.", menu, "battery", { "Icon", "Icon and %" }, { "icon", "percent" });
 		add(D, "picture", "Clock", "How the time on the top screen is written.", menu, "clock", { "24-hour", "12-hour" }, { "24h", "12h" });
@@ -259,6 +261,25 @@ namespace banana
 				closedir(d);
 			}
 			it.at = pm < 0 ? 9 : std::min(9, std::max(0, (pm + 50) / 100 - 1));
+			return;
+		}
+		if (it.kind == Item::VOLUME)
+		{
+			// the playing card's control (bananad writes which), its level from amixer: "[57%]"
+			int pct = -1;
+			std::string mixer = readLine("/run/banana/mixer");
+			if (!mixer.empty())
+			{
+				FILE* p = popen(("amixer -c " + mixer.substr(0, mixer.find(' ')) + " sget '" + mixer.substr(mixer.find(' ') + 1) + "' 2>/dev/null").c_str(), "r");
+				if (p)
+				{
+					char ln[256];
+					while (pct < 0 && fgets(ln, sizeof ln, p))
+						if (const char* b = strchr(ln, '[')) { int v; if (sscanf(b, "[%d%%]", &v) == 1) pct = v; }
+					pclose(p);
+				}
+			}
+			it.at = pct < 0 ? 5 : std::min(10, std::max(0, (pct + 5) / 10));
 			return;
 		}
 		if (it.kind != Item::CHOICE) return;
@@ -357,6 +378,15 @@ namespace banana
 			std::ofstream(data + "/backlight") << pm << "\n";	// bananad restores it at boot
 			return;
 		}
+		if (it.kind == Item::VOLUME)
+		{
+			std::string mixer = readLine("/run/banana/mixer");
+			if (mixer.empty()) return;
+			std::string card = mixer.substr(0, mixer.find(' ')), control = mixer.substr(mixer.find(' ') + 1);
+			if (system(("amixer -q -c " + card + " sset '" + control + "' " + v + "% 2>/dev/null").c_str()) != 0) {}
+			poke("bananad");	// it keeps the level across reboots
+			return;
+		}
 		if (it.file.find("superdrastic.conf") != std::string::npos) setConfValue(it.file, it.key, v, "=");
 		else if (it.file.find("retroarch.cfg") != std::string::npos)
 		{
@@ -402,7 +432,7 @@ namespace banana
 		}
 		int n = (int)it.values.size();
 		int at = it.at + dir;
-		if (it.kind == Item::BRIGHTNESS) at = std::min(n - 1, std::max(0, at));	// a slider stops at its ends
+		if (it.kind == Item::BRIGHTNESS || it.kind == Item::VOLUME) at = std::min(n - 1, std::max(0, at));	// a slider stops at its ends
 		else at = (at + n) % n;
 		if (at == it.at) return NONE;
 		it.at = at;
@@ -675,7 +705,7 @@ namespace banana
 		icon(cur.icon, 50, 56, 3);
 		text(cur.section, true, 17, 170, 62, p.muted, true, 1.4f);
 		text(cur.label, true, 30, 170, 88, p.ink);
-		std::string value = cur.kind == Item::CHOICE || cur.kind == Item::BRIGHTNESS ? cur.names[cur.at] : "";
+		std::string value = cur.kind == Item::CHOICE || cur.kind == Item::BRIGHTNESS || cur.kind == Item::VOLUME ? cur.names[cur.at] : "";
 		if (!value.empty()) text(value, true, 22, 170, 130, p.accent);
 		std::string help = cur.help;
 		if (cur.kind == Item::INFO) help = about;
@@ -712,7 +742,7 @@ namespace banana
 			box("slot", on, 18, y, 604, 56);
 			text(it.label, true, 20, 38, y + 16, on ? p.ink : p.muted);
 			std::string v;
-			if (it.kind == Item::CHOICE || it.kind == Item::BRIGHTNESS) v = it.names[it.at];
+			if (it.kind == Item::CHOICE || it.kind == Item::BRIGHTNESS || it.kind == Item::VOLUME) v = it.names[it.at];
 			else if (it.kind == Item::ACTION) v = armed == i ? "Press A again" : "";
 			else if (it.kind == Item::INFO) v = "";
 			else if (it.kind == Item::PAGE) v = wstat.connected ? fit(wstat.ssid, true, 19, 300) : (wifiOn() ? "Choose" : "");

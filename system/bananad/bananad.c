@@ -467,6 +467,13 @@ static void audio_route(void)
 		fclose(f);
 		rename("/run/banana/asound.conf.new", "/run/banana/asound.conf");
 	}
+	/* the control the volume keys change, for the settings screen's Volume (amixer -c <card> sset <control>) */
+	f = fopen("/run/banana/mixer.new", "w");
+	if (f) {
+		fprintf(f, "%d %s\n", card_play, strcmp(cfg.mixer, "auto") ? cfg.mixer : card_play == card_speaker ? "PCM" : "Master");
+		fclose(f);
+		rename("/run/banana/mixer.new", "/run/banana/mixer");
+	}
 	say("sound: playback on card %d (%s), recording on card %d", card_play,
 	    card_play == card_speaker ? "speakers" : headphones ? "headphones" : "codec", card_codec);
 }
@@ -865,6 +872,7 @@ int main(int argc, char **argv)
 			load_conf("/etc/banana/bananad.conf");
 			load_conf("/data/banana/bananad.conf");
 			load_timezone();
+			save_volume_at = mono() + 2;	/* the settings screen may have set the volume: keep it as the keys' is kept */
 			leds_last = -2;
 			leds_update();
 			say("settings read again: lid %s, auto-sleep %d min, LEDs %d", cfg.lid_sleep ? "sleeps" : "ignored", cfg.autosleep_min, cfg.led_brightness);

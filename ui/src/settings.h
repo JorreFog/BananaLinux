@@ -49,7 +49,7 @@ namespace banana
 			std::string file, key;					// where it is kept ("" for the special ones)
 			std::vector<std::string> names, values;	// shown, stored
 			int at = 0;
-			enum Kind { CHOICE, BRIGHTNESS, INFO, ACTION, PAGE } kind = CHOICE;
+			enum Kind { CHOICE, BRIGHTNESS, VOLUME, INFO, ACTION, PAGE } kind = CHOICE;
 		};
 		rnds::Backend* be;
 		std::string assets, data;

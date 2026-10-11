@@ -11,7 +11,6 @@ CONFIG_SQUASHFS_COMPILE_DECOMP_MULTI_PERCPU=y
 # CONFIG_SQUASHFS_COMPILE_DECOMP_SINGLE is not set
 # the menu draws on KMS directly: no fbdev, no console on the panels, no VTs to switch
 # CONFIG_DRM_FBDEV_EMULATION is not set
-# CONFIG_FRAMEBUFFER_CONSOLE is not set
 # CONFIG_VT is not set
 # CONFIG_LOGO is not set
 # the menu's hardware built in (the joypad and DSI panel drivers are added by external.mk)
@@ -39,10 +38,59 @@ CONFIG_CPU_FREQ_GOV_POWERSAVE=y
 # CONFIG_BTRFS_FS is not set
 # CONFIG_XFS_FS is not set
 # CONFIG_NFS_FS is not set
-# CONFIG_ROOT_NFS is not set
 # CONFIG_KALLSYMS_ALL is not set
 # CONFIG_IKCONFIG is not set
 # CONFIG_SCHED_AUTOGROUP is not set
 # file sharing over Wi-Fi (Settings > Network > File sharing): the kernel's SMB3 server, a module loaded only when
 # sharing is switched on
 CONFIG_SMB_SERVER=m
+# out of ROCKNIX's config, shared by many devices, what the RG DS never uses: a smaller root (modules) and nothing
+# on the network path (no packet filtering or connection tracking on every Wi-Fi packet)
+# CONFIG_NETFILTER is not set
+# CONFIG_BRIDGE is not set
+# CONFIG_OPENVSWITCH is not set
+# CONFIG_NET_IPIP is not set
+# CONFIG_NET_IPGRE_DEMUX is not set
+# CONFIG_NET_MPLS_GSO is not set
+# CONFIG_NET_NSH is not set
+# CONFIG_WIREGUARD is not set
+# CONFIG_TUN is not set
+# CONFIG_VETH is not set
+# CONFIG_PPP is not set
+# Wi-Fi: the RTL8821CS on SDIO alone (rtw88_8821cs)
+# CONFIG_WLAN_VENDOR_ADMTEK is not set
+# CONFIG_WLAN_VENDOR_ATH is not set
+# CONFIG_WLAN_VENDOR_ATMEL is not set
+# CONFIG_WLAN_VENDOR_MEDIATEK is not set
+# CONFIG_WLAN_VENDOR_RALINK is not set
+# CONFIG_WLAN_VENDOR_ZYDAS is not set
+# CONFIG_RTL_CARDS is not set
+# CONFIG_RTL8XXXU is not set
+# CONFIG_RTW89 is not set
+# CONFIG_RTW88_8822BS is not set
+# CONFIG_RTW88_8822BU is not set
+# CONFIG_RTW88_8822CS is not set
+# CONFIG_RTW88_8822CU is not set
+# CONFIG_RTW88_8723DS is not set
+# CONFIG_RTW88_8723CS is not set
+# CONFIG_RTW88_8723DU is not set
+# CONFIG_RTW88_8821CU is not set
+# CONFIG_RTW88_8821AU is not set
+# CONFIG_RTW88_8812AU is not set
+# CONFIG_RTW88_8814AU is not set
+# no Bluetooth stack in userspace yet: the kernel's would only take room
+# CONFIG_BT is not set
+# USB serial adapters, NTFS, the video codec and 2D blocks, USB CEC adapters, serial mice
+# CONFIG_USB_SERIAL is not set
+# CONFIG_NTFS_FS is not set
+# CONFIG_NTFS3_FS is not set
+# CONFIG_VIDEO_ROCKCHIP_RGA is not set
+# CONFIG_VIDEO_HANTRO is not set
+# CONFIG_USB_PULSE8_CEC is not set
+# CONFIG_USB_RAINSHADOW_CEC is not set
+# CONFIG_SERIO_SERPORT is not set
+# CONFIG_NFSD is not set
+# CONFIG_RTL8187 is not set
+# CONFIG_RTL8723BS is not set
+# CONFIG_TCP_CONG_ADVANCED is not set
+# CONFIG_UNIX_DIAG is not set
