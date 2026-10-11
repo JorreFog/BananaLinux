@@ -14,8 +14,8 @@ namespace banana
 
 	// the layout, in CSS px of a 640x480 panel
 	static constexpr float BUNCH_Y = 96, WORD_Y = 268, LOAD_Y = 342, DOTS_Y = 368;
-	static constexpr float CART_X = 220, CART_Y0 = 66, CLIP_Y = 325, LIP_X = 227;
-	static constexpr float CART_END = CLIP_Y - 94;	// the cartridge's top once it is in: 94 of its 208 px still show
+	static constexpr float CART_X = 270, CART_Y0 = 66, CLIP_Y = 325, LIP_X = 257;
+	static constexpr float CART_END = CLIP_Y - 47;	// the cartridge's top once it is in: 47 of its 104 px still show
 
 	static inline uint32_t mul255(uint32_t p, uint32_t k)
 	{
@@ -212,7 +212,7 @@ namespace banana
 		{
 			float p = rnds::stepsEnd(6, (float)(t / CART_IN));
 			float e = 1 - (1 - p) * (1 - p);
-			cy = -208 + (CART_Y0 + 208) * e;
+			cy = -104 + (CART_Y0 + 104) * e;
 		}
 		else if (t < INSERT_AT) cy = CART_Y0;
 		else if (t < INSERT_AT + INS_LIFT) cy = CART_Y0 - 6 * rnds::stepsEnd(2, (float)((t - INSERT_AT) / INS_LIFT));
@@ -237,7 +237,7 @@ namespace banana
 				float k = rnds::stepsEnd(3, (float)(ct / 240));
 				float dd = 8 + 18 * k;
 				uint32_t sp = mul255(light ? 0xff2a2620u : 0xffffffffu, (uint32_t)std::lround(255 * (1 - k * 0.8f)));
-				for (float x : { 232.0f, 404.0f })
+				for (float x : { 262.0f, 378.0f })
 				{
 					float dir = x < 320 ? -1.0f : 1.0f;
 					fill(bot, X(x + dir * dd), X(CLIP_Y - 6 - dd * 0.6f), X(4), X(4), sp);

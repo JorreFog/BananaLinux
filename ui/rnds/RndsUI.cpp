@@ -1770,11 +1770,11 @@ namespace rnds
 			double t = now - launchT0;
 			// the console under it: a face with the slot's mouth and a power light
 			float mouthY = ry + 170, clipY = mouthY + 9;
-			// Banana: the back of the console as pixel art (its body's top where the box's was, the hinge above it)
+			// Banana: the back of the console as pixel art, 560 wide, its slot where the box's mouth is (tools/make-console.py)
 			const Bitmap& console = lightTheme ? consoleLight : consoleDark;
-			if (!console.empty()) drawSprite(still(lightTheme ? "console-light" : "console-dark", console, false), 150, ry + 154 - 26);
+			if (!console.empty()) drawSprite(still(lightTheme ? "console-light" : "console-dark", console, false), 40, ry + 144);
 			else drawBox(heroBox(), 150, ry + 154, 340, 110);
-			drawBox(slotMouthBox(), 230, mouthY, 180, 28);
+			drawBox(slotMouthBox(), 260, mouthY, 120, 28);	// Banana: a card-sized slot (was 180 wide at 230)
 			bool clicked = t >= INS_LIFT + INS_SLIDE;
 			Color led = clicked ? Color::hex(0x3ce07a) : Color::hex(0x7a2a30);
 			be->fill(std::round(X(446)), std::round(X(mouthY + 8)), std::round(X(14)), std::round(X(10)), EDGE);
@@ -1801,7 +1801,7 @@ namespace rnds
 			Sprite c = cart(artOf(game(ui->mGame)), 100, 104);
 			drawSprite(c, 270, y);
 			be->popClip();
-			be->fill(std::round(X(233)), std::round(X(clipY - 1)), std::round(X(174)), std::round(X(3)), P.slotLip);
+			be->fill(std::round(X(263)), std::round(X(clipY - 1)), std::round(X(114)), std::round(X(3)), P.slotLip);
 
 			// the click: sparks off the slot's corners for a moment
 			double ct = t - (INS_LIFT + INS_SLIDE);

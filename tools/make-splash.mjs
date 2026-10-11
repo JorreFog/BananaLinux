@@ -16,7 +16,7 @@ import fs from 'fs';
 const [rnds, bananas, out] = process.argv.slice(2);
 const b64 = f => fs.readFileSync(f).toString('base64');
 const shell = `data:image/png;base64,${b64(rnds + '/game_slot.png')}`;
-// the console: the back of the lower half as pixel art (tools/make-console.py), per palette, its body's top at 300
+// the console: the back of the lower half as pixel art (tools/make-console.py), per palette, its top at 300
 const consoleOf = name => `data:image/png;base64,${b64(rnds + '/console-' + name + '@1x.png')}`;
 const banana = `data:image/png;base64,${b64(bananas + '/banana-48.png')}`;
 const pal = {
@@ -31,19 +31,19 @@ body { width: 640px; height: 480px; background: transparent; image-rendering: pi
 .scr { position: absolute; left: 0; top: 0; width: 640px; height: 480px; overflow: hidden; background-color: ${p.bg};
   background-image: url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4' shape-rendering='crispEdges'><rect width='1' height='1' fill='${p.dot}'/><rect x='2' y='2' width='1' height='1' fill='${p.dot2}'/></svg>`)}");
   background-size: 4px 4px; }
-.console { position: absolute; left: 150px; top: 274px; width: 340px; height: 136px; image-rendering: pixelated; }
-.mouth { position: absolute; left: 230px; top: 316px; width: 180px; height: 28px; border: 3px solid ${p.edge}; border-radius: 6px;
+.console { position: absolute; left: 40px; top: 290px; width: 560px; height: 300px; image-rendering: pixelated; }
+.mouth { position: absolute; left: 260px; top: 316px; width: 120px; height: 28px; border: 3px solid ${p.edge}; border-radius: 6px;
   background: ${p.mouth}; box-shadow: inset 0 6px 0 rgba(0,0,0,.5); }
 .led { position: absolute; left: 446px; top: 324px; width: 14px; height: 10px; background: ${p.edge}; }
 .led i { position: absolute; left: 2px; top: 2px; width: 10px; height: 6px; background: #7a2a30; }
-.lip { position: absolute; left: 230px; top: 325px; width: 180px; height: 19px; border: 3px solid ${p.edge}; border-top: 0;
+.lip { position: absolute; left: 260px; top: 325px; width: 120px; height: 19px; border: 3px solid ${p.edge}; border-top: 0;
   border-radius: 0 0 6px 6px; background: ${p.mouth}; }
 .lip::before { content: ''; position: absolute; left: -3px; right: -3px; top: 0; height: 3px; background: ${p.edge}; }
-.cart { position: absolute; left: 0; top: 0; width: 200px; height: 208px; }
-.cart .art { position: absolute; left: 8px; top: 8px; width: 184px; height: 172px;
+.cart { position: absolute; left: 0; top: 0; width: 100px; height: 104px; }
+.cart .art { position: absolute; left: 4px; top: 4px; width: 92px; height: 86px;
   background: linear-gradient(135deg, #1f1405, #7a5a10 58%, #b8861e); }
-.cart .art img { position: absolute; left: 44px; top: 38px; width: 96px; height: 96px; }
-.cart > img { position: absolute; left: 0; top: 0; width: 200px; height: 208px; }
+.cart .art img { position: absolute; left: 22px; top: 19px; width: 48px; height: 48px; }
+.cart > img { position: absolute; left: 0; top: 0; width: 100px; height: 104px; }
 `;
 const pages = {
   top: p => `<div class="scr"></div>`,
@@ -64,6 +64,6 @@ for (const [scale, size] of [[1, 640], [1.6, 1024]]) {
       await shot(scale, body(p), css(p), `${out}/${variant}-${size}-${name}.png`,
         name === 'lip' ? { x: 227, y: 325, width: 186, height: 22 } : undefined);
   await shot(scale, `<div class="cart"><div class="art"><img src="${banana}"></div><img src="${shell}"></div>`, css(pal.dark),
-    `${out}/cart-${size}.png`, { x: 0, y: 0, width: 200, height: 208 });
+    `${out}/cart-${size}.png`, { x: 0, y: 0, width: 100, height: 104 });
 }
 await b.close();
