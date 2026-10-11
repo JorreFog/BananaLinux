@@ -51,8 +51,9 @@ git -C "$R" sparse-checkout add /projects/ROCKNIX/devices/RK3326/patches/linux/0
     /projects/ROCKNIX/packages/emulators/standalone/drastic-sa/config/RK3566/drastic.cfg.rgds
 cp "$R/projects/ROCKNIX/devices/RK3326/patches/linux/003-input-add-input-polldev-driver.patch" \
     "$B/linux-patches/6-rk3326-003-input-add-input-polldev-driver.patch"
-# patches for Mali's kbase driver, which Banana doesn't use (it runs Panfrost)
-rm -f "$B"/linux-patches/*mali* "$B"/linux-patches/*i915*
+# patches for Mali's kbase driver, which Banana doesn't use (it runs Panfrost), and for Bluetooth, which Banana's
+# kernel leaves out (one of them needs fuzz to apply, which Buildroot's patch -F0 refuses)
+rm -f "$B"/linux-patches/*mali* "$B"/linux-patches/*i915* "$B"/linux-patches/*Bluetooth*
 
 cp $R/$D/linux/dts/rockchip/rk3568-anbernic-rg-ds.dts $R/$D/linux/dts/rockchip/rk3568-anbernic-rg-ds-plus.dts "$B/dts/"
 cp $R/$D/linux/linux.aarch64.conf "$B/linux-rocknix.config"

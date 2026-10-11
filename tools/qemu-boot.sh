@@ -89,13 +89,21 @@ shutdown_from_settings() {  # Start > Up (wraps to the last row, Shut down) > A 
     for i in $(seq 120); do kill -0 $QEMU 2>/dev/null || { ok "$1: shut down from the settings, the VM powered off"; wait $QEMU 2>/dev/null; return 0; }; sleep 0.5; done
     bad "$1: still running 60 s after the shutdown"; kill $QEMU 2>/dev/null; return 1
 }
+# whatever happens, the card is unmounted and the VM stopped on the way out
+cleanup() {
+    [ -n "$QEMU" ] && { kill $QEMU 2>/dev/null || true; }
+    [ -n "$DATA" ] && { $SUDO umount "$DATA" 2>/dev/null || $SUDO fusermount -u "$DATA" 2>/dev/null || true; }
+    [ -n "$LOOP" ] && { $SUDO losetup -d "$LOOP" 2>/dev/null || true; }
+    return 0
+}
+trap cleanup EXIT
 with_data() {   # with_data <command...>: the card's data partition (exFAT) mounted at $DATA, by the kernel or by FUSE
     DATA=$OUT/data; mkdir -p "$DATA"
     LOOP=$($SUDO losetup -f --show -o $(part_offset 3) "$CARD") || { bad "no loop device for the card"; return 1; }
     $SUDO mount -t exfat "$LOOP" "$DATA" 2>/dev/null || $SUDO mount.exfat-fuse "$LOOP" "$DATA" 2>/dev/null ||
         { bad "the data partition can't be mounted (no exFAT in the kernel, no exfat-fuse)"; $SUDO losetup -d "$LOOP"; return 1; }
     "$@"; r=$?
-    $SUDO umount "$DATA"; $SUDO losetup -d "$LOOP"
+    $SUDO umount "$DATA" 2>/dev/null || $SUDO fusermount -u "$DATA"; $SUDO losetup -d "$LOOP"; LOOP=; DATA=
     return $r
 }
 

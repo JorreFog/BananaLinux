@@ -5,6 +5,15 @@ include $(sort $(wildcard $(BR2_EXTERNAL_BANANA_PATH)/package/*/*.mk))
 # handhelds' device trees, from ROCKNIX (tools/sync-rocknix-hw.sh), with Banana's changes to them (dts-patches: the
 # RG DS's panels at 60 Hz).
 BANANA_RGDS = $(BR2_EXTERNAL_BANANA_PATH)/board/rgds
+# ROCKNIX's kernel patches, applied as ROCKNIX applies them (patch -p1, fuzz allowed): a few of them were written
+# against a slightly different kernel and only fit with fuzz, which Buildroot's own patch step (-F0) refuses
+define BANANA_LINUX_ROCKNIX_PATCHES
+	for p in $(sort $(wildcard $(BANANA_RGDS)/linux-patches/*.patch)); do \
+		echo "Applying $$(basename $$p)"; \
+		patch -p1 -N --no-backup-if-mismatch -d $(LINUX_DIR) < $$p || exit 1; \
+	done
+endef
+LINUX_POST_PATCH_HOOKS += BANANA_LINUX_ROCKNIX_PATCHES
 define BANANA_LINUX_RGDS_DRIVERS
 	cp $(BANANA_RGDS)/kernel/panel-generic-dsi.c $(LINUX_DIR)/drivers/gpu/drm/panel/
 	grep -q panel-generic-dsi.o $(LINUX_DIR)/drivers/gpu/drm/panel/Makefile || \

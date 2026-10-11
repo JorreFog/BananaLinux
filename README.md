@@ -83,7 +83,7 @@ Built and checked in this repository's CI and by hand:
   an arm64 sysroot here; banana-ui links against the real arm64 libraries, and the aarch64 banana-ui, run under
   QEMU, draws the boot animation, the menu and the settings the same as the x86 build (at most 1 colour level
   apart, from fused multiply-adds).
-- ROCKNIX's 45 RK3566 kernel patches plus the input-polldev patch apply cleanly to Linux 7.2.7, the kernel config
+- ROCKNIX's 43 RK3566 kernel patches plus the input-polldev patch apply to Linux 7.2.7 as ROCKNIX applies them (patch -p1; the two Bluetooth patches are left out, Bluetooth being off in Banana's kernel), the kernel config
   fragment applies as written, and the whole kernel builds (a 25 MB `Image`) with the panels, joypad, touch, codec,
   amplifiers and battery built in; the RG DS and RG DS Plus device trees compile.
 
