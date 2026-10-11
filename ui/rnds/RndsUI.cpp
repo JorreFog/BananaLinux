@@ -208,6 +208,8 @@ namespace rnds
 		std::shared_ptr<Font> R, M;
 		std::shared_ptr<const Bitmap> shell;	// game_slot.png (shared with the cartridge jobs, not copied into each)
 		Bitmap logo, wifi, batt;	// pre-rendered at this scale
+		Bitmap consoleDark, consoleLight;	// Banana: the console the cartridge goes into (tools/make-console.py), per theme
+		bool lightTheme = false;
 
 		std::map<std::string, CacheEntry> cache;
 		uint64_t frame = 1;
@@ -257,7 +259,8 @@ namespace rnds
 
 		void setPalette(const std::string& variant)
 		{
-			P = variant == "light" ? lightPal() : darkPal();
+			lightTheme = variant == "light";
+			P = lightTheme ? lightPal() : darkPal();
 			INK = P.ink; MUTED = P.muted; LINE = P.line; EDGE = P.edge; NAVY = P.navy; RED = P.red;
 			SHADE40 = P.shade40; SHADE45 = P.shade45; SHADE35 = P.shade35; BLACKISH = P.blackish;
 		}
@@ -377,6 +380,8 @@ namespace rnds
 			logo = loadPng("logo" + sfx);
 			wifi = loadPng("wifi" + sfx);
 			batt = loadPng("battery" + sfx);
+			consoleDark = loadPng("console-dark" + sfx);
+			consoleLight = loadPng("console-light" + sfx);
 		}
 
 		// ---- boxes ----
@@ -1765,7 +1770,10 @@ namespace rnds
 			double t = now - launchT0;
 			// the console under it: a face with the slot's mouth and a power light
 			float mouthY = ry + 170, clipY = mouthY + 9;
-			drawBox(heroBox(), 150, ry + 154, 340, 110);
+			// Banana: the back of the console as pixel art (its body's top where the box's was, the hinge above it)
+			const Bitmap& console = lightTheme ? consoleLight : consoleDark;
+			if (!console.empty()) drawSprite(still(lightTheme ? "console-light" : "console-dark", console, false), 150, ry + 154 - 26);
+			else drawBox(heroBox(), 150, ry + 154, 340, 110);
 			drawBox(slotMouthBox(), 230, mouthY, 180, 28);
 			bool clicked = t >= INS_LIFT + INS_SLIDE;
 			Color led = clicked ? Color::hex(0x3ce07a) : Color::hex(0x7a2a30);

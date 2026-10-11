@@ -16,11 +16,13 @@ import fs from 'fs';
 const [rnds, bananas, out] = process.argv.slice(2);
 const b64 = f => fs.readFileSync(f).toString('base64');
 const shell = `data:image/png;base64,${b64(rnds + '/game_slot.png')}`;
+// the console: the back of the lower half as pixel art (tools/make-console.py), per palette, its body's top at 300
+const consoleOf = name => `data:image/png;base64,${b64(rnds + '/console-' + name + '@1x.png')}`;
 const banana = `data:image/png;base64,${b64(bananas + '/banana-48.png')}`;
 const pal = {
-  dark: { bg: '#17161c', dot: 'rgba(255,255,255,.14)', dot2: 'rgba(255,255,255,.07)', edge: '#e8e2d3', panel: '#17161c',
+  dark: { name: 'dark', bg: '#17161c', dot: 'rgba(255,255,255,.14)', dot2: 'rgba(255,255,255,.07)', edge: '#e8e2d3', panel: '#17161c',
           band: '#3a3540', low: '#0b0a0d', mouth: '#070609', shade: 'rgba(0,0,0,.45)' },
-  light: { bg: '#f3efe6', dot: 'rgba(20,35,58,.07)', dot2: 'rgba(20,35,58,.035)', edge: '#3a342c', panel: '#f6f2ea',
+  light: { name: 'light', bg: '#f3efe6', dot: 'rgba(20,35,58,.07)', dot2: 'rgba(20,35,58,.035)', edge: '#3a342c', panel: '#f6f2ea',
            band: '#ffffff', low: '#d8d0c0', mouth: '#2a2620', shade: 'rgba(20,35,58,.25)' },
 };
 const css = p => `
@@ -29,8 +31,7 @@ body { width: 640px; height: 480px; background: transparent; image-rendering: pi
 .scr { position: absolute; left: 0; top: 0; width: 640px; height: 480px; overflow: hidden; background-color: ${p.bg};
   background-image: url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4' shape-rendering='crispEdges'><rect width='1' height='1' fill='${p.dot}'/><rect x='2' y='2' width='1' height='1' fill='${p.dot2}'/></svg>`)}");
   background-size: 4px 4px; }
-.console { position: absolute; left: 150px; top: 300px; width: 340px; height: 200px; border: 3px solid ${p.edge}; border-radius: 18px;
-  background: linear-gradient(${p.band} 0 8px, ${p.panel} 8px); box-shadow: inset 0 -6px 0 ${p.low}, 4px 4px 0 ${p.shade}; }
+.console { position: absolute; left: 150px; top: 274px; width: 340px; height: 136px; image-rendering: pixelated; }
 .mouth { position: absolute; left: 230px; top: 316px; width: 180px; height: 28px; border: 3px solid ${p.edge}; border-radius: 6px;
   background: ${p.mouth}; box-shadow: inset 0 6px 0 rgba(0,0,0,.5); }
 .led { position: absolute; left: 446px; top: 324px; width: 14px; height: 10px; background: ${p.edge}; }
@@ -46,7 +47,7 @@ body { width: 640px; height: 480px; background: transparent; image-rendering: pi
 `;
 const pages = {
   top: p => `<div class="scr"></div>`,
-  bot: p => `<div class="scr"><div class="console"></div><div class="mouth"></div><div class="led"><i></i></div></div>`,
+  bot: p => `<div class="scr"><img class="console" src="${consoleOf(p.name)}"><div class="mouth"></div><div class="led"><i></i></div></div>`,
   lip: p => `<div class="lip"></div>`,
 };
 const b = await chromium.launch();
