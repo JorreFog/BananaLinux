@@ -57,9 +57,6 @@ def console(t, font, logo, word):
     d.rounded_rectangle((0, 0, W - 1, H - 1), radius=22, fill=B, outline=E, width=3)
     d.rectangle((3, 3, W - 4, 9), fill=t["band"])
     d.rectangle((3, H - 13, W - 4, H - 4), fill=t["low"])
-    # the hinge's two knuckles show above the rim's ends as darker notches
-    for x0, x1 in ((36, 160), (W - 161, W - 37)):
-        d.rectangle((x0, 3, x1, 9), fill=t["low"])
 
     # the card slot: a dark recess the UI's mouth sits in, SLOT-1 over it, the card pictogram under it
     d.rounded_rectangle((mx - 6, my - 6, mx + mw + 5, my + mh + 5), radius=10, fill=t["low"], outline=E, width=2)
@@ -94,11 +91,11 @@ def console(t, font, logo, word):
     d.rectangle((3, 144, 8, 150), fill=t["muted"])
 
     # the wordmark, where the maker's is: BANANAOS from the status bar's chip (the bunch and the word), centred
-    lx = (W - logo.width) // 2 - 10
+    lx = (W - logo.width) // 2
     ly = my + mh + 40
     im.alpha_composite(logo, (lx, ly))
     # the fine print under it: four rows of muted dashes, the last two shorter
-    for i, (x0, x1) in enumerate(((100, 400), (104, 396), (140, 360), (190, 310))):
+    for i, (x0, x1) in enumerate(((130, 430), (134, 426), (170, 390), (220, 340))):
         y = ly + logo.height + 12 + i * 6
         x = x0
         while x < x1:
@@ -106,16 +103,16 @@ def console(t, font, logo, word):
             x += 12
     # the conformity marks: four little boxes in a row
     yb = ly + logo.height + 44
-    for x in (150, 190, 230, 270):
+    for x in (207, 247, 287, 327):
         d.rectangle((x, yb, x + 26, yb + 15), outline=t["line"], width=2)
         d.rectangle((x + 7, yb + 5, x + 18, yb + 9), fill=t["line"])
     # the maker's pill, with the word
-    px, py, pw, ph = 180, yb + 24, 130, 22
+    px, py, pw, ph = 215, yb + 24, 130, 22
     d.rounded_rectangle((px, py, px + pw, py + ph), radius=11, fill=B, outline=t["muted"], width=2)
     word2 = word.resize((word.width * 2, word.height * 2), Image.NEAREST)
     im.paste(Image.new("RGBA", word2.size, t["muted"] + (255,)), (px + (pw - word2.width) // 2 + 1, py + (ph - word2.height) // 2 + 1), word2)
     # the serial sticker: paper with a barcode and a number line
-    sx, sy = 160, yb + 56
+    sx, sy = 195, yb + 56
     d.rectangle((sx, sy, sx + 170, sy + 22), fill=t["paper"])
     x = sx + 6
     for k, wbar in enumerate((2, 4, 2, 2, 6, 2, 4, 2, 2, 4, 6, 2, 2, 4, 2, 2, 6, 4, 2, 2, 4, 2, 2, 6, 2, 4, 2)):
