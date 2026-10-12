@@ -346,6 +346,22 @@ static void backlights_power(int on)
 	closedir(d);
 }
 
+/* a game on one panel (RetroArch) keeps the other one's backlight off: run-retroarch names it in this file, and a
+ * wake-up or the lid opening, which switch the backlights on, leave that one dark again */
+static void panel_off_again(void)
+{
+	char bl[256] = "";
+	FILE *f = fopen("/run/banana/panel-off", "r");
+	if (!f) return;
+	if (fgets(bl, sizeof bl, f)) bl[strcspn(bl, "\n")] = 0;
+	fclose(f);
+	if (!strncmp(bl, "/sys/class/backlight/", 21) && !strstr(bl, "..")) {
+		char p[300];
+		snprintf(p, sizeof p, "%s/bl_power", bl);
+		write_file(p, "4");
+	}
+}
+
 static void suspend_now(const char *why)
 {
 	double t0 = mono();
@@ -408,6 +424,7 @@ static void suspend_now(const char *why)
 	double t_back = mono();
 	undim();
 	hooks("post", 1);
+	panel_off_again();
 	/* the press that woke us comes in now: it is not a new request. Draining also drops the lid-open event, so the
 	 * lid's state is read from the kernel instead */
 	drain_inputs();
@@ -838,7 +855,7 @@ static void handle(const struct input_event *e)
 		lid_closed = e->value;
 		if (!lid_closed) undim();
 		if (lid_closed && cfg.lid_sleep) suspend_now("lid closed");
-		else if (!lid_closed || !cfg.lid_sleep) backlights_power(!lid_closed);	/* no sleep: at least the panels go dark */
+		else if (!lid_closed || !cfg.lid_sleep) { backlights_power(!lid_closed); if (!lid_closed) panel_off_again(); }	/* no sleep: at least the panels go dark */
 		return;
 	}
 	if (e->type == EV_SW && e->code == SW_HEADPHONE_INSERT) {

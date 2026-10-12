@@ -368,10 +368,10 @@ namespace banana
 					listRoms(full, rel, exts, out, depth + 1);
 				continue;
 			}
-			size_t dot = name.rfind('.');
-			if (dot == std::string::npos) continue;
-			std::string ext = lower(name.substr(dot + 1));
-			if (std::find(exts.begin(), exts.end(), ext) != exts.end()) out.push_back(rel);
+			// an extension can have dots of its own (PICO-8's "p8.png": a plain .png isn't a cart)
+			std::string ln = lower(name);
+			for (const std::string& x : exts)
+				if (ln.size() > x.size() + 1 && ln.compare(ln.size() - x.size() - 1, std::string::npos, "." + x) == 0) { out.push_back(rel); break; }
 		}
 		closedir(d);
 	}
@@ -419,6 +419,7 @@ namespace banana
 				g.rel = rel; g.path = dir + "/" + rel;
 				std::string base = rel.substr(rel.rfind('/') == std::string::npos ? 0 : rel.rfind('/') + 1);
 				std::string stem = base.substr(0, base.rfind('.'));
+				if (lower(stem).size() > 3 && lower(stem).compare(stem.size() - 3, 3, ".p8") == 0) stem.resize(stem.size() - 3);	// a .p8.png cart
 				g.title = cleanTitle(stem);
 				auto it = gl.find(rel);
 				if (it != gl.end())

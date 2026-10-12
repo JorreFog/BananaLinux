@@ -1,0 +1,16 @@
+#!/bin/sh
+# PICO-8: Lexaloffle's own PICO-8 when its Raspberry Pi/ARM64 build is on the card (roms/pico-8/pico8_64, bought from
+# lexaloffle.com; an empty file named Splore.p8 beside it opens Splore, its online cart browser), else the free fake-08
+# in RetroArch.
+#   run-pico8 <cart>
+DIR=/data/roms/pico-8
+case "$(basename "$1" | tr A-Z a-z)" in *splore*) SPLORE=1 ;; *) SPLORE= ;; esac
+if [ -f $DIR/pico8_64 ]; then
+    chmod 755 $DIR/pico8_64 2>/dev/null
+    # its settings and saves in the folder itself; SDL straight to the panels (KMS) and ALSA
+    export HOME=$DIR SDL_VIDEODRIVER=kmsdrm SDL_AUDIODRIVER=alsa
+    if [ -n "$SPLORE" ]; then exec $DIR/pico8_64 -home $DIR -root_path $DIR -joystick 0 -splore
+    else exec $DIR/pico8_64 -home $DIR -root_path $DIR -joystick 0 -run "$1"; fi
+fi
+[ -n "$SPLORE" ] && { echo "Splore needs the official PICO-8 (pico8_64) in roms/pico-8" >&2; exit 1; }
+exec /usr/libexec/banana/run-retroarch fake08 "$1"

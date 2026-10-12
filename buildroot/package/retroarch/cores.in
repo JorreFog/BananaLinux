@@ -41,3 +41,9 @@ config BR2_PACKAGE_LIBRETRO_MUPEN64PLUS_NEXT
 	default y
 	help
 	  Nintendo 64, with GLES3 and its ARM64 dynamic recompiler.
+
+config BR2_PACKAGE_LIBRETRO_FAKE08
+	bool "libretro-fake08"
+	default y
+	help
+	  PICO-8 carts (.p8 and .p8.png), when the official PICO-8 isn't on the card.

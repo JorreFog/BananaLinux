@@ -17,4 +17,22 @@ fi
 # anything RetroArch keeps that retroarch.cfg doesn't place (remaps, core options, playlists...) under the card's
 # retroarch folder, not ~/.config on the read-only root
 export HOME=/data/retroarch XDG_CONFIG_HOME=/data/retroarch
-exec retroarch --config $CFG -L "$CORE" "$2"
+# the panel RetroArch doesn't use (video_monitor_index: 2 the top, 1 the bottom) stays black: its backlight off while
+# the game runs. Each panel's backlight is the one its DSI node names (fe060000 the bottom, DSI-1; fe070000 the top).
+MON=$(sed -n 's/^video_monitor_index = "\([0-9]\)"/\1/p' $CFG | tail -n 1)
+DT=/proc/device-tree
+case ${MON:-2} in 2) DSI=fe060000 ;; *) DSI=fe070000 ;; esac
+PH=$(od -An -tx1 $DT/dsi@$DSI/panel@0/backlight 2>/dev/null | tr -d ' \n')
+BL=
+for b in $DT/backlight*; do
+    [ -n "$PH" ] && [ "$(od -An -tx1 $b/phandle 2>/dev/null | tr -d ' \n')" = "$PH" ] && BL=/sys/class/backlight/$(basename $b)
+done
+[ -n "$BL" ] && [ -w $BL/bl_power ] || BL=
+[ -n "$BL" ] && { echo 4 > $BL/bl_power; echo $BL > /run/banana/panel-off; }	# bananad keeps it off after a wake-up
+retroarch --config $CFG -L "$CORE" "$2" &
+P=$!
+trap 'kill -TERM $P 2>/dev/null' TERM INT HUP
+wait $P; S=$?
+while kill -0 $P 2>/dev/null; do wait $P; S=$?; done	# a trap interrupted the wait: until RetroArch has quit
+[ -n "$BL" ] && { rm -f /run/banana/panel-off; echo 0 > $BL/bl_power; }
+exit $S
