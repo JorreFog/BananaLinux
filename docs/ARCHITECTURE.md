@@ -61,12 +61,18 @@ ROCKNIXDS, ES is the Source and its GL renderer the Backend. In Banana:
   from an EmulationStation `gamelist.xml` when one is there (a card scraped under ROCKNIX keeps its art) or from
   `media/box|cart|label/<rom name>.png`, and Banana's own play counts, play time and favourites.
 - **Backend** (`src/soft.cpp`): software, on the CPU. Each screen's draw calls are recorded and compared with the
-  last frame's; a screen whose list didn't change keeps its pixels (most animations move one screen). A screen
-  that changed is drawn from black, mostly with copies: each texture's rows are stored as runs of transparent,
-  opaque and blended pixels, so opaque runs are `memcpy`, transparent runs are skipped and only edges are
-  blended. In the benchmark (`bench` in a headless script) an idle frame costs well under a millisecond on a PC.
+  last frame's, draw by draw, each with the rectangle it can touch (its clip resolved), in order: a screen whose
+  list didn't change keeps its pixels (most animations move one screen), and in one that changed only the
+  rectangles of the draws that came, went or moved are cleared to black and drawn again, every draw that touches
+  them clipped to them (a moving cursor redraws the cursor, not the screen). Drawing is mostly copies: each
+  texture's rows are stored as runs of transparent, opaque and blended pixels, so opaque runs are `memcpy`,
+  transparent runs are skipped and only edges are blended. A texture drawn at another size (the shelf's tile
+  pictures, the system icons) keeps its samples for each size and sub-pixel phase it is drawn at again, so a tile
+  at rest or moving by whole pixels is copied, not resampled. The frames are the same, pixel for pixel, as drawing
+  every screen from black. In the benchmark (`bench` in a headless script, which also says how much of the
+  screens was drawn again) an idle frame costs well under a millisecond on a PC.
 - **Display** (`src/kms.cpp`): KMS dumb buffers, two per panel, page flips on vblank. The screens are composed in
-  cached memory and only changed rows are copied into the (uncached) scanout buffer.
+  cached memory and only the rectangle that changed is copied into the (uncached) scanout buffer.
 - **Main loop** (`src/main.cpp`): `poll()` on the buttons, the touchscreen, the DRM device (flip events), the
   picture worker and signals, with a timeout from the engine's next animation step or the next minute (the
   clock). Nothing runs while nothing changes.
