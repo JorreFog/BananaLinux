@@ -33,6 +33,13 @@ shader=$(sed -n 's/^ *DSFLIP_SHADER *= *//p' /data/banana/superdrastic.conf 2>/d
 # Settings > Nintendo DS > Quick resume (settings.conf's quick_resume): off, a quit ends the game and the next start
 # is from its title (no resume state written or loaded)
 grep -q '^ *quick_resume *= *on' /data/banana/settings.conf 2>/dev/null || export BANANADS_RESUME_ON_QUIT=off BANANADS_RESUME_ON_START=off
+# the RetroAchievements account from the setup (banana/accounts.conf), for BananaDS's achievements (as run-drastic
+# gives SuperDrastic's)
+A=/data/banana/accounts.conf
+if [ -f $A ]; then
+    u=$(sed -n 's/^ra_user=//p' $A | head -n 1); w=$(sed -n 's/^ra_password=//p' $A | head -n 1)
+    [ -n "$u" ] && export BANANADS_RA_USER="$u" BANANADS_RA_PASSWORD="$w"
+fi
 # the DS's user name: the handheld's
 export BANANADS_FIRMWARE_NICKNAME=${BANANADS_FIRMWARE_NICKNAME:-Banana}
 # anything else for one run: /data/banana/bananads.env (shell assignments, exported), e.g. BANANADS_KMS_STATS=600
