@@ -1,0 +1,9 @@
+config BR2_PACKAGE_ROCKNIXDS_BANK
+	bool "rocknixds-bank"
+	default y
+	depends on BR2_aarch64
+	select BR2_PACKAGE_SDL2
+	help
+	  ROCKNIXDS Bank & Trade: a Pokémon bank, PKHeX's legality checks and Wi-Fi trading, on its own tile on the
+	  shelf. ROCKNIXDS's own self-contained .NET build (no .NET runtime needed), on both panels through Banana's
+	  SDL patch (SDL_BANANA_PANELS).

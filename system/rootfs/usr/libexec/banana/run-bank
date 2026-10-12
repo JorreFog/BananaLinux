@@ -1,0 +1,24 @@
+#!/bin/sh
+# ROCKNIXDS Bank & Trade (the shelf's app tile): a Pokémon bank, PKHeX's legality checks and Wi-Fi trading, on both
+# panels as one window, which SDL's dummy driver puts on them itself (SDL_BANANA_PANELS: Banana's SDL patch), touches
+# on the bottom panel's half. The bank, its settings and the save backups are on the card (/data/apps/bank); saves are
+# found where DraStic, BananaDS and RetroArch keep them.
+#   run-bank [entry]
+APP=/usr/share/banana/apps/bank/rocknixds-bank
+D=/data/apps/bank
+mkdir -p $D
+CFG=$D/bank.json
+[ -f $CFG ] || cat > $CFG <<JSON
+{
+  "saveFolders": ["/data/drastic/backup", "/data/saves", "/data/roms"],
+  "dataFolder": "$D",
+  "padDevice": "retrogame_joypad"
+}
+JSON
+# the window: side by side (the top panel left, the bottom right) at the panels' size
+LAYOUT=side
+[ "$(head -n 1 /sys/class/drm/card0-DSI-1/modes 2>/dev/null)" = 1024x768 ] && LAYOUT=plus
+export ROCKNIXDS_BANK_CONFIG=$CFG HOME=$D DOTNET_GCConserveMemory=5 DOTNET_CLI_TELEMETRY_OPTOUT=1
+export SDL_VIDEODRIVER=evdev SDL_BANANA_PANELS=side SDL_BANANA_TOP=${BANANA_TOP:-DSI-2}
+cd $D
+exec $APP/rocknixds-bank --layout $LAYOUT

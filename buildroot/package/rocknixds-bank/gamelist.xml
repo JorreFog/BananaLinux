@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<gameList>
+	<game>
+		<path>./Bank &amp; Trade.app</path>
+		<name>Bank &amp; Trade</name>
+		<desc>A Pokémon bank, legality checker and trading app, built on PKHeX.Core.</desc>
+		<image>./media/bank-image.png</image>
+		<thumbnail>./media/bank-thumb.png</thumbnail>
+		<marquee>./media/bank-marquee.png</marquee>
+		<genre>Tool</genre>
+		<releasedate>20261006T000000</releasedate>
+	</game>
+</gameList>

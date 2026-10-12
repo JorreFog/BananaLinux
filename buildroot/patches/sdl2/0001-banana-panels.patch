@@ -1,0 +1,390 @@
+From: JorreFog <JorreFog@users.noreply.github.com>
+Subject: [PATCH] Banana: the dummy driver's window on both panels; evdev devices found without udev
+
+SDL_BANANA_PANELS=side|stack makes the dummy video driver's display the RG DS's two panels together: each frame of
+the window's framebuffer goes straight onto them (raw DRM: two dumb buffers a panel, page flips paced to the
+refresh, the panels' own modes kept), and the bottom panel's touchscreen lands on the bottom panel's part of the
+window. For apps made for a window over both panels under sway (ROCKNIXDS Bank & Trade), on a system with no
+compositor. Without the variable the dummy driver is unchanged (SuperDrastic runs DraStic on it).
+
+And with no libudev, SDL's evdev input found no devices at all (a TODO): /dev/input/event* are scanned and
+classed by their capabilities instead.
+
+Upstream-Status: Inappropriate [Banana-specific]
+---
+diff --color -ruN a/SDL2-2.32.10/src/core/linux/SDL_evdev.c SDL2-2.32.10/src/core/linux/SDL_evdev.c
+--- a/src/core/linux/SDL_evdev.c	2025-01-01 16:47:53.000000000 +0100
++++ b/src/core/linux/SDL_evdev.c	2026-10-12 15:18:57.562363391 +0200
+@@ -30,6 +30,9 @@
+  */
+ 
+ #include "SDL_evdev.h"
++#ifdef SDL_VIDEO_DRIVER_DUMMY
++#include "../../video/dummy/SDL_bananapanels.h"
++#endif
+ #include "SDL_evdev_kbd.h"
+ 
+ #include <sys/stat.h>
+@@ -207,7 +210,31 @@
+                     }
+                 }
+             } else {
+-                /* TODO: Scan the devices manually, like a caveman */
++                /* Banana (no udev daemon): scan the devices manually, like a caveman. Each event device's
++                   capabilities give its class, as udev's would. Not for the plain dummy driver, which reads no
++                   input (SuperDrastic's DraStic: its keyboard must stay as it is). */
++                const char *vd = SDL_GetHint(SDL_HINT_VIDEODRIVER);
++                int i;
++                for (i = 0; i < 64 && !(vd && SDL_strcmp(vd, "dummy") == 0); i++) {
++                    char path[32];
++                    unsigned long ev[NBITS(EV_MAX)], abs[NBITS(ABS_MAX)], key[NBITS(KEY_MAX)], rel[NBITS(REL_MAX)];
++                    int fd, cls;
++                    (void)SDL_snprintf(path, sizeof(path), "/dev/input/event%d", i);
++                    fd = open(path, O_RDONLY | O_CLOEXEC);
++                    if (fd < 0) {
++                        continue;
++                    }
++                    SDL_zeroa(ev); SDL_zeroa(abs); SDL_zeroa(key); SDL_zeroa(rel);
++                    ioctl(fd, EVIOCGBIT(0, sizeof(ev)), ev);
++                    ioctl(fd, EVIOCGBIT(EV_ABS, sizeof(abs)), abs);
++                    ioctl(fd, EVIOCGBIT(EV_KEY, sizeof(key)), key);
++                    ioctl(fd, EVIOCGBIT(EV_REL, sizeof(rel)), rel);
++                    close(fd);
++                    cls = SDL_EVDEV_GuessDeviceClass(ev, abs, key, rel);
++                    if (cls & (SDL_UDEV_DEVICE_MOUSE | SDL_UDEV_DEVICE_KEYBOARD | SDL_UDEV_DEVICE_TOUCHSCREEN | SDL_UDEV_DEVICE_TOUCHPAD)) {
++                        SDL_EVDEV_device_added(path, cls);
++                    }
++                }
+             }
+         }
+ #endif /* SDL_USE_LIBUDEV */
+@@ -515,6 +542,9 @@
+                             norm_y = (float)(item->touchscreen_data->slots[j].y - item->touchscreen_data->min_y) /
+                                      (float)item->touchscreen_data->range_y;
+ 
++#ifdef SDL_VIDEO_DRIVER_DUMMY
++                            BP_MapTouch(&norm_x, &norm_y);   /* Banana: onto the bottom panel's part of the window */
++#endif
+                             if (item->touchscreen_data->range_pressure > 0) {
+                                 norm_pressure = (float)(item->touchscreen_data->slots[j].pressure - item->touchscreen_data->min_pressure) /
+                                                 (float)item->touchscreen_data->range_pressure;
+diff --color -ruN a/SDL2-2.32.10/src/video/dummy/SDL_bananapanels.c SDL2-2.32.10/src/video/dummy/SDL_bananapanels.c
+--- a/src/video/dummy/SDL_bananapanels.c	1970-01-01 01:00:00.000000000 +0100
++++ b/src/video/dummy/SDL_bananapanels.c	2026-10-12 15:08:08.818480268 +0200
+@@ -0,0 +1,246 @@
++/*
++  Banana: the dummy video driver's window on both panels of the RG DS (BananaLinux, no compositor).
++
++  With SDL_BANANA_PANELS=side (the top panel on the left, the bottom one on the right, as sway lays them out on
++  ROCKNIX) or stack (the top panel above the bottom one), the display is the two panels together, every frame of the
++  window's framebuffer goes straight onto them (two dumb buffers a panel, a page flip each, paced to the refresh), and
++  touches on the bottom panel's touchscreen land on the bottom panel's part of the window. Without it the driver is
++  SDL's own dummy driver (SuperDrastic runs DraStic on that and draws the panels itself).
++
++  The panels keep the modes they have (DRM master, but no mode change). SDL_BANANA_TOP names the top panel's connector
++  (default DSI-2). Raw DRM ioctls: no libdrm.
++*/
++#include "../../SDL_internal.h"
++
++#ifdef SDL_VIDEO_DRIVER_DUMMY
++
++#include "SDL_error.h"
++#include "SDL_stdinc.h"
++#include "SDL_bananapanels.h"
++
++#include <errno.h>
++#include <fcntl.h>
++#include <poll.h>
++#include <stdio.h>
++#include <string.h>
++#include <sys/ioctl.h>
++#include <sys/mman.h>
++#include <unistd.h>
++#include <drm/drm.h>
++#include <drm/drm_mode.h>
++
++typedef struct
++{
++    Uint32 conn, crtc, w, h;
++    struct drm_mode_modeinfo mode;
++    struct { Uint32 handle, fb, pitch; Uint64 size; Uint8 *map; } buf[2];
++    int front;
++} BP_Panel;
++
++static int bp_fd = -1, bp_on, bp_side, bp_pending, bp_W, bp_H;
++static BP_Panel bp_p[2];   /* 0 the top panel, 1 the bottom one */
++
++static int bp_ioctl(unsigned long req, void *arg)
++{
++    int r;
++    do r = ioctl(bp_fd, req, arg); while (r == -1 && (errno == EINTR || errno == EAGAIN));
++    return r;
++}
++
++static const char *bp_conn_name(Uint32 type)
++{
++    switch (type) {
++    case DRM_MODE_CONNECTOR_DSI: return "DSI";
++    case DRM_MODE_CONNECTOR_HDMIA: return "HDMI-A";
++    case DRM_MODE_CONNECTOR_eDP: return "eDP";
++    case DRM_MODE_CONNECTOR_VIRTUAL: return "Virtual";
++    default: return "Unknown";
++    }
++}
++
++/* the panel a connector drives now: its CRTC and mode */
++static int bp_panel(Uint32 conn_id, BP_Panel *pn, char *name, size_t n)
++{
++    struct drm_mode_get_connector c;
++    struct drm_mode_get_encoder e;
++    struct drm_mode_crtc cr;
++    SDL_zero(c);
++    c.connector_id = conn_id;
++    if (bp_ioctl(DRM_IOCTL_MODE_GETCONNECTOR, &c) || c.connection != 1 || !c.encoder_id) return -1;
++    SDL_snprintf(name, n, "%s-%u", bp_conn_name(c.connector_type), c.connector_type_id);
++    SDL_zero(e);
++    e.encoder_id = c.encoder_id;
++    if (bp_ioctl(DRM_IOCTL_MODE_GETENCODER, &e) || !e.crtc_id) return -1;
++    SDL_zero(cr);
++    cr.crtc_id = e.crtc_id;
++    if (bp_ioctl(DRM_IOCTL_MODE_GETCRTC, &cr) || !cr.mode_valid) return -1;
++    pn->conn = conn_id; pn->crtc = e.crtc_id; pn->mode = cr.mode;
++    pn->w = cr.mode.hdisplay; pn->h = cr.mode.vdisplay;
++    return 0;
++}
++
++static int bp_buffers(BP_Panel *pn)
++{
++    int k;
++    for (k = 0; k < 2; k++) {
++        struct drm_mode_create_dumb cd;
++        struct drm_mode_fb_cmd fb;
++        struct drm_mode_map_dumb md;
++        SDL_zero(cd);
++        cd.width = pn->w; cd.height = pn->h; cd.bpp = 32;
++        if (bp_ioctl(DRM_IOCTL_MODE_CREATE_DUMB, &cd)) return -1;
++        pn->buf[k].handle = cd.handle; pn->buf[k].pitch = cd.pitch; pn->buf[k].size = cd.size;
++        SDL_zero(fb);
++        fb.width = pn->w; fb.height = pn->h; fb.pitch = cd.pitch; fb.bpp = 32; fb.depth = 24; fb.handle = cd.handle;
++        if (bp_ioctl(DRM_IOCTL_MODE_ADDFB, &fb)) return -1;
++        pn->buf[k].fb = fb.fb_id;
++        SDL_zero(md);
++        md.handle = cd.handle;
++        if (bp_ioctl(DRM_IOCTL_MODE_MAP_DUMB, &md)) return -1;
++        pn->buf[k].map = mmap(NULL, cd.size, PROT_READ | PROT_WRITE, MAP_SHARED, bp_fd, md.offset);
++        if (pn->buf[k].map == MAP_FAILED) { pn->buf[k].map = NULL; return -1; }
++        SDL_memset(pn->buf[k].map, 0, cd.size);
++    }
++    return 0;
++}
++
++static void bp_free(void)
++{
++    int s, k;
++    if (bp_fd < 0) return;
++    for (s = 0; s < 2; s++) {
++        for (k = 0; k < 2; k++) {
++            if (bp_p[s].buf[k].map) munmap(bp_p[s].buf[k].map, bp_p[s].buf[k].size);
++            if (bp_p[s].buf[k].fb) { Uint32 id = bp_p[s].buf[k].fb; bp_ioctl(DRM_IOCTL_MODE_RMFB, &id); }
++            if (bp_p[s].buf[k].handle) { struct drm_mode_destroy_dumb dd; dd.handle = bp_p[s].buf[k].handle; bp_ioctl(DRM_IOCTL_MODE_DESTROY_DUMB, &dd); }
++        }
++    }
++    SDL_zero(bp_p);
++    close(bp_fd);
++    bp_fd = -1;
++}
++
++int BP_Init(int *w, int *h)
++{
++    const char *how = SDL_getenv("SDL_BANANA_PANELS"), *topname = SDL_getenv("SDL_BANANA_TOP");
++    struct drm_mode_card_res res;
++    Uint32 conns[16];
++    int i, found = 0;
++    if (!how || !*how) return -1;
++    bp_side = SDL_strcmp(how, "stack") != 0;
++    if (!topname || !*topname) topname = "DSI-2";
++    bp_fd = open("/dev/dri/card0", O_RDWR | O_CLOEXEC);
++    if (bp_fd < 0) return SDL_SetError("SDL_BANANA_PANELS: /dev/dri/card0: %s", strerror(errno));
++    ioctl(bp_fd, DRM_IOCTL_SET_MASTER, 0);   /* the menu has let go of the display: ours is the first open */
++    SDL_zero(res);
++    if (bp_ioctl(DRM_IOCTL_MODE_GETRESOURCES, &res)) goto fail;
++    if (res.count_connectors > 16) res.count_connectors = 16;
++    res.connector_id_ptr = (Uint64)(uintptr_t)conns;
++    res.count_fbs = res.count_crtcs = res.count_encoders = 0;
++    if (bp_ioctl(DRM_IOCTL_MODE_GETRESOURCES, &res)) goto fail;
++    for (i = 0; i < (int)res.count_connectors && found < 2; i++) {
++        BP_Panel pn;
++        char name[32];
++        SDL_zero(pn);
++        if (bp_panel(conns[i], &pn, name, sizeof name)) continue;
++        if (!SDL_strcmp(name, topname)) {
++            if (bp_p[0].conn) continue;
++            bp_p[0] = pn;
++        } else {
++            if (bp_p[1].conn) continue;
++            bp_p[1] = pn;
++        }
++        found++;
++    }
++    if (!bp_p[0].conn || !bp_p[1].conn) { SDL_SetError("SDL_BANANA_PANELS: two panels not found"); goto fail; }
++    for (i = 0; i < 2; i++) {
++        struct drm_mode_crtc sc;
++        if (bp_buffers(&bp_p[i])) { SDL_SetError("SDL_BANANA_PANELS: no scanout buffers"); goto fail; }
++        SDL_zero(sc);
++        sc.crtc_id = bp_p[i].crtc; sc.fb_id = bp_p[i].buf[0].fb;
++        sc.set_connectors_ptr = (Uint64)(uintptr_t)&bp_p[i].conn; sc.count_connectors = 1;
++        sc.mode = bp_p[i].mode; sc.mode_valid = 1;
++        if (bp_ioctl(DRM_IOCTL_MODE_SETCRTC, &sc)) { SDL_SetError("SDL_BANANA_PANELS: can't show a buffer (no DRM master?)"); goto fail; }
++        bp_p[i].front = 0;
++    }
++    bp_W = bp_side ? (int)(bp_p[0].w + bp_p[1].w) : (int)SDL_max(bp_p[0].w, bp_p[1].w);
++    bp_H = bp_side ? (int)SDL_max(bp_p[0].h, bp_p[1].h) : (int)(bp_p[0].h + bp_p[1].h);
++    *w = bp_W; *h = bp_H;
++    bp_on = 1;
++    return 0;
++fail:
++    bp_free();
++    return -1;
++}
++
++int BP_Active(void) { return bp_on; }
++
++/* the panel's place in the window */
++static void bp_rect(int s, int *x, int *y)
++{
++    *x = bp_side && s == 1 ? (int)bp_p[0].w : 0;
++    *y = !bp_side && s == 1 ? (int)bp_p[0].h : 0;
++}
++
++static void bp_wait_flips(void)
++{
++    while (bp_pending > 0) {
++        struct pollfd pf;
++        char ev[1024];
++        ssize_t n, off = 0;
++        pf.fd = bp_fd; pf.events = POLLIN; pf.revents = 0;
++        if (poll(&pf, 1, 100) <= 0) { bp_pending = 0; return; }   /* a flip never came (asleep?): don't hang */
++        n = read(bp_fd, ev, sizeof ev);
++        if (n <= 0) return;
++        while (off + (ssize_t)sizeof(struct drm_event) <= n) {
++            struct drm_event *e = (struct drm_event *)(ev + off);
++            if (e->type == DRM_EVENT_FLIP_COMPLETE && bp_pending > 0) bp_pending--;
++            off += e->length;
++        }
++    }
++}
++
++/* one frame of the window (XRGB8888, w x h) onto the panels: each into its hidden buffer, then flipped */
++int BP_Present(const void *pixels, int pitch, int w, int h)
++{
++    int s;
++    if (!bp_on) return 0;
++    bp_wait_flips();
++    for (s = 0; s < 2; s++) {
++        BP_Panel *pn = &bp_p[s];
++        int back = pn->front ^ 1, x0, y0, y, rows, cols;
++        struct drm_mode_crtc_page_flip pf;
++        bp_rect(s, &x0, &y0);
++        rows = SDL_min((int)pn->h, h - y0);
++        cols = SDL_min((int)pn->w, w - x0);
++        if (rows <= 0 || cols <= 0) continue;
++        for (y = 0; y < rows; y++)
++            SDL_memcpy(pn->buf[back].map + (size_t)y * pn->buf[back].pitch,
++                       (const Uint8 *)pixels + (size_t)(y0 + y) * pitch + (size_t)x0 * 4, (size_t)cols * 4);
++        SDL_zero(pf);
++        pf.crtc_id = pn->crtc; pf.fb_id = pn->buf[back].fb; pf.flags = DRM_MODE_PAGE_FLIP_EVENT;
++        if (bp_ioctl(DRM_IOCTL_MODE_PAGE_FLIP, &pf) == 0) bp_pending++;
++        pn->front = back;
++    }
++    return 0;
++}
++
++/* a touch on the bottom panel's touchscreen (0..1 over it) as a place in the window (0..1 over the window) */
++void BP_MapTouch(float *x, float *y)
++{
++    int x0, y0;
++    if (!bp_on) return;
++    bp_rect(1, &x0, &y0);
++    *x = (x0 + *x * bp_p[1].w) / bp_W;
++    *y = (y0 + *y * bp_p[1].h) / bp_H;
++}
++
++void BP_Quit(void)
++{
++    if (!bp_on) return;
++    bp_wait_flips();
++    bp_on = 0;
++    bp_free();   /* closing the device gives the display back (the menu takes it again) */
++}
++
++#endif /* SDL_VIDEO_DRIVER_DUMMY */
+diff --color -ruN a/SDL2-2.32.10/src/video/dummy/SDL_bananapanels.h SDL2-2.32.10/src/video/dummy/SDL_bananapanels.h
+--- a/src/video/dummy/SDL_bananapanels.h	1970-01-01 01:00:00.000000000 +0100
++++ b/src/video/dummy/SDL_bananapanels.h	2026-10-12 15:07:26.708958934 +0200
+@@ -0,0 +1,15 @@
++/*
++  Banana: the dummy video driver's window on both panels of the RG DS (SDL_BANANA_PANELS; SDL_bananapanels.c).
++*/
++#include "../../SDL_internal.h"
++
++#ifndef SDL_bananapanels_h_
++#define SDL_bananapanels_h_
++
++extern int BP_Init(int *w, int *h);          /* 0: on, and the two panels' size together */
++extern int BP_Active(void);
++extern int BP_Present(const void *pixels, int pitch, int w, int h);
++extern void BP_MapTouch(float *x, float *y);
++extern void BP_Quit(void);
++
++#endif /* SDL_bananapanels_h_ */
+diff --color -ruN a/SDL2-2.32.10/src/video/dummy/SDL_nullframebuffer.c SDL2-2.32.10/src/video/dummy/SDL_nullframebuffer.c
+--- a/src/video/dummy/SDL_nullframebuffer.c	2025-01-01 16:47:53.000000000 +0100
++++ b/src/video/dummy/SDL_nullframebuffer.c	2026-10-12 15:07:26.723871115 +0200
+@@ -24,6 +24,7 @@
+ 
+ #include "../SDL_sysvideo.h"
+ #include "SDL_nullframebuffer_c.h"
++#include "SDL_bananapanels.h"
+ 
+ #define DUMMY_SURFACE "_SDL_DummySurface"
+ 
+@@ -62,6 +63,9 @@
+     }
+ 
+     /* Send the data to the display */
++    if (BP_Active()) {
++        return BP_Present(surface->pixels, surface->pitch, surface->w, surface->h);
++    }
+     if (SDL_getenv("SDL_VIDEO_DUMMY_SAVE_FRAMES")) {
+         char file[128];
+         (void)SDL_snprintf(file, sizeof(file), "SDL_window%" SDL_PRIu32 "-%8.8d.bmp",
+diff --color -ruN a/SDL2-2.32.10/src/video/dummy/SDL_nullvideo.c SDL2-2.32.10/src/video/dummy/SDL_nullvideo.c
+--- a/src/video/dummy/SDL_nullvideo.c	2025-01-01 16:47:53.000000000 +0100
++++ b/src/video/dummy/SDL_nullvideo.c	2026-10-12 15:07:26.723739187 +0200
+@@ -46,6 +46,7 @@
+ #include "SDL_nullvideo.h"
+ #include "SDL_nullevents_c.h"
+ #include "SDL_nullframebuffer_c.h"
++#include "SDL_bananapanels.h"
+ #include "SDL_hints.h"
+ 
+ #define DUMMYVID_DRIVER_NAME       "dummy"
+@@ -150,6 +151,10 @@
+     mode.w = 1024;
+     mode.h = 768;
+     mode.refresh_rate = 60;
++    /* Banana: both panels as the display (SDL_BANANA_PANELS) */
++    if (SDL_getenv("SDL_BANANA_PANELS") && BP_Init(&mode.w, &mode.h) < 0) {
++        return -1;
++    }
+     mode.driverdata = NULL;
+     if (SDL_AddBasicVideoDisplay(&mode) < 0) {
+         return -1;
+@@ -167,6 +172,7 @@
+ 
+ void DUMMY_VideoQuit(_THIS)
+ {
++    BP_Quit();
+ #ifdef SDL_INPUT_LINUXEV
+     SDL_EVDEV_Quit();
+ #endif
