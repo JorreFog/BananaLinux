@@ -154,6 +154,12 @@ ui/banana-ui --headless out/ --assets ui/assets/rnds --roms <roms> --data <dir> 
 | `tools/` | `import-rnds.sh` (the menu engine from ROCKNIXDS), `sync-rocknix-hw.sh` (the hardware support from ROCKNIX), the pixel bunch, the logo and the boot animation's still layers |
 | `docs/` | [ARCHITECTURE.md](docs/ARCHITECTURE.md): boot, partitions, sleep, performance and the menu in detail; [FIRST-BOOT.md](docs/FIRST-BOOT.md): the first boot on the hardware, and the logs it leaves |
 
+## Made with AI
+
+BananaOS is developed with the help of AI: much of the code, the tests and the documentation was written with
+Claude (Anthropic) as a coding assistant, directed, reviewed and tested on real RG DS and RG DS Plus hardware by
+the project's maintainer. Bug reports and contributions from people are just as welcome.
+
 ## Credits
 
 The menu is ROCKNIXDS Pixel, from [ROCKNIXDS](https://github.com/JorreFog/ROCKNIXDS). Banana's mark is the
