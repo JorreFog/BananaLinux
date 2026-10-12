@@ -9,6 +9,7 @@
 
 namespace rnds
 {
+	std::string brandNote;
 	Accent accent = { 0xf0b429, 0xffe68a, 0x8a5a00, 0xffcf5c, 0xc98f12 };
 	static const struct { const char* name; Accent a; } ACCENTS[] = {
 		{ "yellow", { 0xf0b429, 0xffe68a, 0x8a5a00, 0xffcf5c, 0xc98f12 } },
@@ -1335,6 +1336,7 @@ namespace rnds
 			else if (!batt.empty() && !bmode.empty())
 				battery(44);
 			drawBox(brandBox(), brandX, 19 + ry, 148.23f, 26);
+			if (!brandNote.empty()) drawText(brandNote, ts(false, 18), brandX + 148.23f + 10, 22 + ry, MUTED);	// what this build is
 			if (!logo.empty())
 				drawSprite(still("logo", logo, true), brandX + 7, 22 + ry);
 

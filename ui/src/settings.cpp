@@ -263,6 +263,14 @@ namespace banana
 		add(N, "nds", "Edge marking", "BananaDS: the outlines some games draw round their 3D models (Zelda, Kirby, many Pokémon battles). Off leaves them out.",
 			bds, "render.edge_marking", { "On", "Off" }, { "on", "off" });
 		add(N, "nds", "Fog", "BananaDS: the distance fog some games draw in 3D. Off leaves it out.", bds, "render.fog", { "On", "Off" }, { "on", "off" });
+		add(N, "nds", "Frame pacing", "BananaDS: Panels runs the DS at the panels' 60 Hz, a new frame every refresh (0.3% fast, the sound matched). DS rate keeps the DS's own 59.83 Hz, a frame shown twice every ~6 s.",
+			bds, "kms.pace", { "Panels", "DS rate" }, { "display", "ds" });
+		add(N, "nds", "CPU clock", "BananaDS: Saves battery finds the lowest clock each game runs at full speed and remembers it. Always full keeps the top clock.",
+			bds, "cpugov", { "Saves battery", "Always full" }, { "on", "off" });
+		add(N, "nds", "Timing", "BananaDS: Fast lets the two CPUs run longer between meeting (about 10% faster). Accurate is melonDS's own, for a game that misbehaves.",
+			bds, "core.slice", { "Fast", "Accurate" }, { "auto", "64" });
+		add(N, "nds", "Microphone", "BananaDS: how loud a blow or a word must be to reach the game.", bds, "mic.threshold",
+			{ "Medium", "High", "Low", "Off" }, { "0.15", "0.03", "0.3", "0" });
 		const char* O = "Other systems";
 		add(O, "gamepad", "Screen", "Which panel the systems other than the DS use (RetroArch). The other panel is switched off.",
 			"/data/retroarch/retroarch.cfg", "video_monitor_index", { "Top", "Bottom" }, { "2", "1" });

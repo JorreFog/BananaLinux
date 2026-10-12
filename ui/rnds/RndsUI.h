@@ -124,6 +124,7 @@ namespace rnds
 	// the accent: the selected plate, the scroll thumb, held icons, the settings' pick, and every yellow of the logo
 	// and the boot animation (setAccent before the UI is made; Banana's settings: yellow, blue, red, green, purple,
 	// pink)
+	extern std::string brandNote;	// beside the logo at the top (Banana: "Pre-alpha 0.1.0"); empty: nothing
 	struct Accent { uint32_t base, light, dark, band, low; };
 	extern Accent accent;
 	bool setAccent(const std::string& name);		// false: unknown, the yellow kept

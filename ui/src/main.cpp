@@ -660,6 +660,14 @@ int main(int argc, char** argv)
 	if (!settings["timezone"].empty()) { setenv("TZ", settings["timezone"].c_str(), 1); tzset(); }
 	std::string variant = settings["theme"] == "light" ? "light" : "dark";
 	rnds::setAccent(settings["accent"]);	// before anything is drawn: the splash and the menu in it
+	// beside the logo: the release stage and the version ("0.1.0-dev" -> "Pre-alpha 0.1.0"; /etc/banana/stage names
+	// another stage)
+	{
+		std::string v, stage = "Pre-alpha";
+		std::ifstream("/etc/banana/version") >> v;
+		std::ifstream sf("/etc/banana/stage"); std::string st; if (std::getline(sf, st) && !st.empty()) stage = st;
+		if (!v.empty()) rnds::brandNote = stage + " " + v.substr(0, v.find('-'));
+	}
 	Host lib(o.systems, o.roms, o.data, o.assets);
 	lib.motion = settings["motion"] != "off";
 	lib.twelveHour = settings["clock"] == "12h";
