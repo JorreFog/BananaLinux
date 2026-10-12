@@ -8,12 +8,14 @@
 #
 ################################################################################
 
-BANANADS_VERSION = 49d6e6c3e7a08a24bd37df8bed1aee7d19c868a8
+BANANADS_VERSION = 481634f11f937b90129681973fb1e2c25cd382fa
 BANANADS_SITE = https://github.com/JorreFog/SuperDrastic.git
 BANANADS_SITE_METHOD = git
 BANANADS_SUBDIR = bananads
 BANANADS_LICENSE = GPL-3.0+
 BANANADS_LICENSE_FILES = bananads/LICENSE
+# a build folder of its own (bananads/buildroot-build): melonDS's teakra refuses to configure in its source folder
+BANANADS_SUPPORTS_IN_SOURCE_BUILD = NO
 # libdrm (the panels), ALSA (sound and the microphone), zlib (melonDS)
 BANANADS_DEPENDENCIES = libdrm alsa-lib zlib host-pkgconf
 

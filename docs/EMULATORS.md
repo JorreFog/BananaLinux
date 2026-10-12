@@ -79,15 +79,17 @@ handhelds themselves.
   with CMake for the handhelds (melonDS's JIT, `-mcpu=cortex-a55`, link-time optimization, no SDL, ALSA, the KMS
   frontend). Its build would fetch melonDS at configure time; here melonDS is a second download at the commit
   BananaDS pins, and BananaDS's patches to it are applied by Buildroot's patch step. `/usr/bin/bananads`.
-- **The display**: `frontend=kms`: DRM master, both panels' modes as they are, each frame into dumb buffers and
-  both panels in one atomic commit, the plane scaling 256x192 (512x384 at 2x) to the panel; frames queue one
-  refresh, so a game alternating 19 ms and 12 ms frames still shows a new frame each refresh. In QEMU the virtio GPU
-  can't scale planes, so the CPU scales by a whole number instead.
+- **The display**: `frontend=kms`: DRM master, both panels' modes as they are, each frame's lines drawn straight
+  into dumb buffers (no copy) and both panels in one atomic commit from a `SCHED_FIFO` presenter, the plane scaling
+  256x192 (512x384 at 2x) to the panel; frames queue one refresh, so a game alternating 19 ms and 12 ms frames
+  still shows a new frame each refresh. In QEMU the virtio GPU can't scale planes, so the frame is copied and scaled
+  by a whole number on the CPU instead.
 - **Input**: the pad and keyboards read (never grabbed), the bottom touchscreen by `BANANADS_TOUCH`. F + Start quits
   (with the resume state), F + R saves slot 1, F + L loads it.
-- **Clocks**: its own governor (SuperDrastic's, ported): under `banana-perf superdrastic`'s `performance`
-  governor it lowers `scaling_max_freq` to the lowest clock with no dropped frames, remembered per game in
-  `/data/bananads/cpugov`, and puts it back on exit.
+- **Clocks**: its own governor: under `banana-perf superdrastic`'s `performance` governor it lowers
+  `scaling_max_freq` a step at a time while the game keeps the DS's pace, steps up as soon as it falls a frame
+  behind (and keeps off that clock for a while, remembered per game in `/data/bananads/cpugov`), and puts it back on
+  exit.
 - **Quitting**: F + Start, or `SIGTERM` (shutdown while playing): the resume state, then the save, then the panels
   are given back.
 
