@@ -257,6 +257,10 @@ namespace banana
 		add(N, "nds", "Shader", "Crisp: exact pixel-area scaling. Grid: the DS's LCD grid. FSR: smooth edges, the heaviest. None costs no GPU work.", sd, "DSFLIP_SHADER",
 			{ "None", "Crisp", "Crisp + DS colours", "LCD grid", "LCD grid + colours", "FSR" }, { "none", "ds-crisp", "ds-crisp-color", "ds-grid", "ds-grid-color", "ds-fsr" });
 		add(N, "nds", "3D resolution", "2x draws the DS's 3D at twice its size on these panels, at full speed with SuperDrastic.", dcfg, "hires_3d", { "2x", "1x" }, { "1", "0" });
+		const std::string bds = "/data/bananads/bananads.conf";
+		add(N, "nds", "Edge marking", "BananaDS: the outlines some games draw round their 3D models (Zelda, Kirby, many Pokémon battles). Off leaves them out.",
+			bds, "render.edge_marking", { "On", "Off" }, { "on", "off" });
+		add(N, "nds", "Fog", "BananaDS: the distance fog some games draw in 3D. Off leaves it out.", bds, "render.fog", { "On", "Off" }, { "on", "off" });
 		const char* O = "Other systems";
 		add(O, "gamepad", "Screen", "Which panel the systems other than the DS use (RetroArch). The other panel is switched off.",
 			"/data/retroarch/retroarch.cfg", "video_monitor_index", { "Top", "Bottom" }, { "2", "1" });
@@ -445,7 +449,11 @@ namespace banana
 			}
 			setConfValue(it.file, it.key, v);
 		}
-		else setConfValue(it.file, it.key, v);
+		else
+		{
+			if (it.file.compare(0, 15, "/data/bananads/") == 0 && system("mkdir -p /data/bananads") != 0) {}	// before BananaDS's first run
+			setConfValue(it.file, it.key, v);
+		}
 		if (it.file == data + "/bananad.conf") poke("bananad");
 		if (it.key == "timezone") { setenv("TZ", v.c_str(), 1); tzset(); poke("bananad"); }	// bananad's logs too
 		if (it.key == "wifi") spawn("/usr/libexec/banana/wifi", v == "on" ? "up" : "down");
