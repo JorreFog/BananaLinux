@@ -1,6 +1,7 @@
 #include <ctime>
 #include "settings.h"
 #include <algorithm>
+#include <cctype>
 #include <arpa/inet.h>
 #include <cmath>
 #include <cstdio>
@@ -406,8 +407,43 @@ namespace banana
 		about = a.str();
 	}
 
+	int Settings::groupOf(int item) const
+	{
+		for (int g = 0; g < (int)groups.size(); g++) if (items[item].section == groups[g]) return g;
+		return 0;
+	}
+	int Settings::groupStart(int g) const
+	{
+		for (int i = 0; i < (int)items.size(); i++) if (items[i].section == groups[g]) return i;
+		return 0;
+	}
+	int Settings::groupEnd(int g) const
+	{
+		int i = groupStart(g);
+		while (i < (int)items.size() && items[i].section == groups[g]) i++;
+		return i;
+	}
+	std::string Settings::groupHint(int g) const
+	{
+		// the first few settings' names, as the in-game menu's tiles say what is behind them
+		std::string h;
+		int n = 0;
+		for (int i = groupStart(g); i < groupEnd(g) && n < 2; i++, n++)
+		{
+			std::string l = items[i].label;
+			for (auto& ch : l) ch = (char)std::tolower((unsigned char)ch);
+			h += (n ? ", " : "") + l;
+		}
+		return h;
+	}
+
 	void Settings::open()
 	{
+		if (groups.empty())
+			for (auto& it : items)
+				if (std::find(groups.begin(), groups.end(), it.section) == groups.end()) groups.push_back(it.section);
+		inGroups = true;
+		gsel = groupOf(sel);
 		for (auto& it : items) load(it);
 		refreshInfo();
 		armed = -1;
@@ -518,12 +554,15 @@ namespace banana
 		if (page == KEYBOARD) return pressKeyboard(k);
 		if (page == UPDATES) return pressUpdates(k);
 		if (page == SETUP) return pressSetup(k);
+		if (inGroups) return pressGroups(k);
+		int g = groupOf(sel), b = groupStart(g), e = groupEnd(g);
 		switch (k)
 		{
 		case Key::UP: case Key::DOWN:
 		{
-			int n = (int)items.size();
-			sel = (sel + (k == Key::UP ? -1 : 1) + n) % n;
+			// round within the group's own list
+			int n = e - b;
+			sel = b + (sel - b + (k == Key::UP ? -1 : 1) + n) % n;
 			armed = -1;
 			if (sel < top) top = sel;
 			if (sel >= top + ROWS) top = sel - ROWS + 1;
@@ -532,23 +571,39 @@ namespace banana
 		}
 		case Key::L: case Key::R:
 		{
-			// the first item of the previous / next section
-			int n = (int)items.size(), i = sel;
-			std::string cur = items[sel].section;
-			if (k == Key::R) { while (i < n && items[i].section == cur) i++; if (i >= n) i = 0; }
-			else
-			{
-				while (i > 0 && items[i - 1].section == cur) i--;
-				if (i == 0) i = n - 1; else i--;
-				std::string prev = items[i].section;
-				while (i > 0 && items[i - 1].section == prev) i--;
-			}
-			sel = i; armed = -1;
-			top = std::max(0, std::min(sel, (int)items.size() - ROWS));
+			// the previous / next group's list
+			int n = (int)groups.size();
+			gsel = (g + (k == Key::R ? 1 : -1) + n) % n;
+			sel = top = groupStart(gsel);
+			armed = -1;
+			if (items[sel].kind == Item::INFO) refreshInfo();
 			return MOVED;
 		}
 		case Key::LEFT: return change(-1);
 		case Key::RIGHT: case Key::A: return change(1);
+		case Key::B: inGroups = true; gsel = g; armed = -1; return MOVED;	// back to the groups
+		case Key::START: mOpen = false; return CLOSED;
+		default: return NONE;
+		}
+	}
+
+	Settings::Result Settings::pressGroups(Key k)
+	{
+		int n = (int)groups.size();
+		switch (k)
+		{
+		// a grid of three columns, as the in-game menu's main page
+		case Key::LEFT: gsel = (gsel + n - 1) % n; return MOVED;
+		case Key::RIGHT: gsel = (gsel + 1) % n; return MOVED;
+		case Key::UP: case Key::DOWN: gsel = (gsel + (k == Key::UP ? n - 3 : 3)) % n; return MOVED;
+		case Key::L: gsel = (gsel + n - 1) % n; return MOVED;
+		case Key::R: gsel = (gsel + 1) % n; return MOVED;
+		case Key::A:
+			inGroups = false;
+			sel = top = groupStart(gsel);
+			armed = -1;
+			if (items[sel].kind == Item::INFO) refreshInfo();
+			return MOVED;
 		case Key::B: case Key::START: mOpen = false; return CLOSED;
 		default: return NONE;
 		}
@@ -586,13 +641,26 @@ namespace banana
 			}
 			return NONE;
 		}
-		// the chips: B on the left, A on the right
+		if (inGroups)
+		{
+			if (downY >= 418 && downY <= 466) return pressGroups(downX < 320 ? Key::B : Key::A);
+			for (int g = 0; g < (int)groups.size(); g++)
+			{
+				float x = 18 + (g % 3) * 204, y = 82 + (g / 3) * 166;
+				if (downX < x || downX > x + 196 || downY < y || downY > y + 158) continue;
+				if (g != gsel) { gsel = g; return MOVED; }
+				return pressGroups(Key::A);
+			}
+			return NONE;
+		}
+		int gEnd = groupEnd(groupOf(sel));
+		// the chips: B on the left (back to the groups), A on the right
 		if (downY >= 418 && downY <= 466)
 		{
-			if (downX < 320) { mOpen = false; return CLOSED; }
+			if (downX < 320) return press(Key::B);
 			return change(1);
 		}
-		for (int r = 0; r < ROWS && top + r < (int)items.size(); r++)
+		for (int r = 0; r < ROWS && top + r < gEnd; r++)
 		{
 			float ry = 82 + r * 64;
 			if (downY < ry || downY > ry + 56) continue;
@@ -601,11 +669,11 @@ namespace banana
 			// the selected row: its value's left half steps back, the rest forward
 			return change(downX < 400 && items[i].kind != Item::ACTION ? -1 : 1);
 		}
-		// a swipe up or down scrolls
+		// a swipe up or down scrolls (within the group)
 		if (std::fabs(cy - downY) > 40)
 		{
-			int n = (int)items.size();
-			top = std::max(0, std::min(n - ROWS, top + (cy < downY ? ROWS : -ROWS)));
+			int gb = groupStart(groupOf(sel));
+			top = std::max(gb, std::min(std::max(gb, gEnd - ROWS), top + (cy < downY ? ROWS : -ROWS)));
 			sel = std::max(top, std::min(sel, top + ROWS - 1));
 			return MOVED;
 		}
@@ -807,14 +875,65 @@ namespace banana
 		if (percent > 0) be->fill(x, y, std::max(1.0f, std::round(w * percent / 100.0f)), h, p.accent);
 	}
 
+	// the groups: a grid of tiles in the in-game menu's look (its main page), the group's icon, name and what is in it;
+	// the top panel says what the selected group holds
+	void Settings::renderGroups()
+	{
+		SPal p = pal(light);
+		int g0 = std::max(0, std::min(gsel, (int)groups.size() - 1));
+		const Item& first = items[groupStart(g0)];
+
+		be->beginScreen(0);
+		box("screen", false, 0, 0, 640, 480);
+		box("hero", false, 18, 20, 604, 436);
+		icon(first.icon, 50, 56, 3);
+		text("Settings", true, 17, 170, 62, p.muted, true, 1.4f);
+		text(groups[g0], true, 30, 170, 88, p.ink);
+		char n[32];
+		snprintf(n, sizeof n, "%d settings", groupEnd(g0) - groupStart(g0));
+		text(n, true, 22, 170, 130, p.accent);
+		std::string all;
+		for (int i = groupStart(g0); i < groupEnd(g0); i++) all += (all.empty() ? "" : ", ") + items[i].label;
+		wrapped(all + ".", 20, 50, 196, 540, 7, p.muted);
+		be->endScreen();
+
+		be->beginScreen(1);
+		box("screen", false, 0, 0, 640, 480);
+		box("bubble", false, 18, 14, 604, 54);
+		text("Settings", true, 22, 38, 28, p.ink);
+		const char* sub = "Choose a group";
+		float sw = text(sub, true, 17, 0, 0, p.muted, false, 0, true);
+		text(sub, true, 17, 602 - sw, 31, p.muted);
+		for (int g = 0; g < (int)groups.size() && g < 6; g++)
+		{
+			bool on = g == gsel;
+			float x = 18 + (g % 3) * 204, y = 82 + (g / 3) * 166;
+			box(on ? "pick" : "slot", on, x, y, 196, 158);
+			icon(items[groupStart(g)].icon, x + 98 - 23, y + 22, 2);	// (the icons are 24 px: 48 here)
+			std::string label = fit(groups[g], true, 19, 180);
+			float lw = text(label, true, 19, 0, 0, p.ink, false, 0, true);
+			text(label, true, 19, x + 98 - lw / 2, y + 84, on ? p.onPick : p.ink);
+			std::string hint = fit(groupHint(g), false, 14, 176);
+			float hw = text(hint, false, 14, 0, 0, p.muted, false, 0, true);
+			text(hint, false, 14, x + 98 - hw / 2, y + 114, on ? p.onPickAccent : p.muted);
+		}
+		float bw = faceWidth("B", "Close");
+		face("B", "Close", 18, bw);
+		float aw = faceWidth("A", "Open");
+		face("A", "Open", 622 - aw, aw);
+		be->endScreen();
+	}
+
 	void Settings::render()
 	{
 		if (page == NETWORKS) { renderNetworks(); return; }
 		if (page == KEYBOARD) { renderKeyboard(); return; }
 		if (page == UPDATES) { renderUpdates(); return; }
 		if (page == SETUP) { renderSetup(); return; }
+		if (inGroups) { renderGroups(); return; }
 		SPal p = pal(light);
 		const Item& cur = items[sel];
+		int gb = groupStart(groupOf(sel)), ge = groupEnd(groupOf(sel));
 
 		// ---- top: what the selected setting is ----
 		be->beginScreen(0);
@@ -847,12 +966,12 @@ namespace banana
 		be->beginScreen(1);
 		box("screen", false, 0, 0, 640, 480);
 		box("bubble", false, 18, 14, 604, 54);
-		text("Settings", true, 22, 38, 28, p.ink);
+		text(cur.section, true, 22, 38, 28, p.ink);
 		char count[32];
-		snprintf(count, sizeof count, "%02d / %02d", sel + 1, (int)items.size());
+		snprintf(count, sizeof count, "%02d / %02d", sel - gb + 1, ge - gb);
 		float cw = text(count, true, 17, 0, 0, p.muted, false, 0, true);
 		text(count, true, 17, 602 - cw, 31, p.muted);
-		for (int r = 0; r < ROWS && top + r < (int)items.size(); r++)
+		for (int r = 0; r < ROWS && top + r < ge; r++)
 		{
 			int i = top + r;
 			const Item& it = items[i];

@@ -61,6 +61,16 @@ namespace banana
 		bool light = false, mOpen = false;
 		std::vector<Item> items;
 		int sel = 0, top = 0, armed = -1;			// armed: an action waiting for its second A
+		// the groups (the items' sections, in order): Settings opens on a grid of them, as the in-game menu's main page;
+		// A opens one's list, B goes back to the grid
+		std::vector<std::string> groups;
+		int gsel = 0;
+		bool inGroups = true;
+		int groupOf(int item) const;			// the group an item is in
+		int groupStart(int g) const, groupEnd(int g) const;	// its items: [start, end)
+		std::string groupHint(int g) const;		// what is in it, for its tile
+		Result pressGroups(Key k);
+		void renderGroups();
 		bool downOnRow = false;
 		float downX = 0, downY = 0;
 		std::string about, wifiInfo, ip;
