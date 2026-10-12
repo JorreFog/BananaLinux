@@ -1238,7 +1238,8 @@ namespace banana
 		for (int i = 0; i < 5; i++) if (col >= FKEYS[i].c0 && col < FKEYS[i].c0 + FKEYS[i].span) return i;
 		return 0;
 	}
-	static const float KX = 18, KPITCH = 60.4f, KY = 20, KROW = 80, KH = 70;
+	// the bottom panel: the text being typed in a field at the top, the keys under it, the button chips at the bottom
+	static const float KX = 18, KPITCH = 60.4f, KY = 80, KROW = 66, KH = 58;
 
 	Settings::Result Settings::keyboardKey(int row, int col)
 	{
@@ -1278,6 +1279,7 @@ namespace banana
 			pw.pop_back();
 			return MOVED;
 		case Key::X: layer = layer == 1 ? 0 : 1; return MOVED;
+		case Key::L: layer = layer == 2 ? 0 : 2; return MOVED;	// the symbols
 		case Key::Y: if (pw.size() < 63) pw += ' '; return MOVED;
 		case Key::START: return keyboardKey(4, FKEYS[4].c0);
 		default: return NONE;
@@ -1441,36 +1443,60 @@ namespace banana
 		std::string n = std::to_string(pw.size()) + (pw.size() == 1 ? " character" : " characters");
 		text(n, true, 17, 50, 216, p.muted);
 		std::string help = !message.empty() ? message
-			: entry == ENTRY_WIFI ? "A types the key, B deletes, X capitals, Y a space, START joins. Or type on the bottom screen. The password is kept in banana/wifi.conf on the card."
-			: "A types the key, B deletes, X capitals, Y a space, START when it is typed. Or type on the bottom screen. Accounts are kept in banana/accounts.conf on the card.";
+			: entry == ENTRY_WIFI ? "A types the key, B deletes, X capitals, L symbols, Y a space, START joins. Or tap the keys. The password is kept in banana/wifi.conf on the card."
+			: "A types the key, B deletes, X capitals, L symbols, Y a space, START when it is typed. Or tap the keys. Accounts are kept in banana/accounts.conf on the card.";
 		wrapped(help, 20, 50, 252, 540, 6, message.empty() ? p.muted : p.accent);
 		be->endScreen();
 
 		be->beginScreen(1);
 		box("screen", false, 0, 0, 640, 480);
+		// the text being typed, here too, so the keys and what they make are seen together
+		box("slot", true, 18, 12, 604, 56);
+		{
+			std::string t = pw;
+			float tw = text(t, true, 24, 0, 0, p.ink, false, 0, true);
+			while (tw > 500 && t.size() > 1) { t.erase(0, 1); tw = text("..." + t, true, 24, 0, 0, p.ink, false, 0, true); }
+			if (t != pw) t = "..." + t;
+			if (pw.empty()) { tw = 0; text(entrySub.empty() ? "Type here" : entrySub, true, 22, 38, 28, p.muted); }
+			else text(t, true, 24, 38, 27, p.ink);
+			be->fill(std::round(X(40 + tw)), std::round(X(26)), std::round(X(10)), std::round(X(28)), p.accent);	// the cursor
+			std::string n = std::to_string(pw.size());
+			float nw = text(n, true, 17, 0, 0, p.muted, false, 0, true);
+			text(n, true, 17, 600 - nw, 31, p.muted);
+		}
+		// the keys: the selected one in the menu's yellow, the others light on dark
 		for (int r = 0; r < 4; r++)
 			for (int c = 0; c < 10; c++)
 			{
 				float x = KX + c * KPITCH, y = KY + r * KROW;
 				bool on = r == krow && c == kcol;
-				box("slot", on, x, y, KPITCH - 6, KH);
+				box(on ? "pick" : "slot", on, x, y, KPITCH - 6, KH);
 				std::string k(1, KEYS[layer][r][c]);
-				float tw = text(k, true, 26, 0, 0, p.ink, false, 0, true);
-				text(k, true, 26, x + std::round((KPITCH - 6 - tw) / 2), y + 18, on ? p.ink : p.muted);
+				float tw = text(k, true, 28, 0, 0, p.ink, false, 0, true);
+				text(k, true, 28, x + std::round((KPITCH - 6 - tw) / 2), y + 13, on ? p.onPick : p.ink);
 			}
 		int fsel = krow == 4 ? fkeyAt(kcol) : -1;
 		for (int i = 0; i < 5; i++)
 		{
 			float x = KX + FKEYS[i].c0 * KPITCH, y = KY + 4 * KROW, kw = FKEYS[i].span * KPITCH - 6;
-			box("slot", i == fsel, x, y, kw, KH);
-			std::string k = i == 1 && layer == 2 ? "abc" : FKEYS[i].name;
+			bool on = i == fsel;
+			box(on ? "pick" : "slot", on, x, y, kw, KH);
+			std::string k = i == 1 && layer == 2 ? "abc" : i == 0 && layer == 1 ? "SHIFT" : FKEYS[i].name;
+			if (i == 4) k = entry == ENTRY_WIFI ? "Join" : "Done";
 			bool lit = (i == 0 && layer == 1) || (i == 1 && layer == 2);
-			float tw = text(k, true, 20, 0, 0, p.ink, false, 0, true);
-			text(k, true, 20, x + std::round((kw - tw) / 2), y + 22, lit ? p.accent : i == fsel ? p.ink : p.muted);
+			float tw = text(k, true, 21, 0, 0, p.ink, false, 0, true);
+			text(k, true, 21, x + std::round((kw - tw) / 2), y + 17, on ? p.onPick : lit ? p.accent : p.ink);
 		}
-		float bw = faceWidth("B", pw.empty() ? "Back" : "Delete");
-		face("B", pw.empty() ? "Back" : "Delete", 18, bw);
-		const char* done = entry == ENTRY_WIFI ? "Join" : "Done";
+		// the buttons that work anywhere on the keyboard
+		const std::string bl = pw.empty() ? "Back" : "Delete", done = entry == ENTRY_WIFI ? "Join" : "Done";
+		float x = 18;
+		struct { const char* key; std::string label; } chips[] = { { "B", bl }, { "X", "Shift" }, { "Y", "Space" } };
+		for (auto& c : chips)
+		{
+			float w = faceWidth(c.key, c.label);
+			face(c.key, c.label, x, w);
+			x += w + 8;
+		}
 		float aw = faceWidth("START", done);
 		face("START", done, 622 - aw, aw);
 		be->endScreen();
