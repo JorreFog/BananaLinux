@@ -258,8 +258,11 @@ namespace banana
 		add(N, "nds", "Quick resume", "On: quitting keeps where you are, and the game goes on from there next time (a shutdown too). Off: quitting ends the game, which starts from its title next time.",
 			menu, "quick_resume", { "Off", "On" }, { "off", "on" });
 		add(N, "nds", "Renderer", "Gengis Engine draws the same picture as DraStic with about 12% less CPU work a frame.", sd, "DSFLIP_RAST", { "Gengis Engine", "DraStic" }, { "1", "0" });
-		add(N, "nds", "Shader", "Crisp: exact pixel-area scaling. Grid: the DS's LCD grid. FSR: smooth edges, the heaviest. None costs no GPU work.", sd, "DSFLIP_SHADER",
-			{ "None", "Crisp", "Crisp + DS colours", "LCD grid", "LCD grid + colours", "FSR" }, { "none", "ds-crisp", "ds-crisp-color", "ds-grid", "ds-grid-color", "ds-fsr" });
+		add(N, "nds", "Shader", "Both emulators. Crisp: exact pixel-area scaling. Grid and LCD: the DS's screen grid. Colours: the DS's own, duller colours. CRT: a TV's scanlines. FSR: smooth edges, the heaviest. None costs no GPU work.", sd, "DSFLIP_SHADER",
+			{ "None", "Crisp", "Crisp + DS colours", "LCD grid", "LCD grid + colours", "FSR", "LCD (DS colours)", "LCD 1x", "LCD 3x", "Fast LCD",
+			  "DS colours", "Retro", "Bevel", "Sharp bilinear", "Sharp + scanlines", "Fast CRT", "FXAA", "Integer", "Integer fill" },
+			{ "none", "ds-crisp", "ds-crisp-color", "ds-grid", "ds-grid-color", "ds-fsr", "lcd1x-nds", "lcd1x", "lcd3x", "zfast-lcd",
+			  "nds-color", "retro-v2", "bevel", "sharp-bilinear", "sharp-bilinear-scanlines", "zfast-crt", "fxaa", "ds-integer", "ds-integer-fill" });
 		add(N, "nds", "3D resolution", "2x draws the DS's 3D at twice its size on these panels, at full speed with SuperDrastic.", dcfg, "hires_3d", { "2x", "1x" }, { "1", "0" });
 		const std::string bds = "/data/bananads/bananads.conf";
 		add(N, "nds", "Edge marking", "BananaDS: the outlines some games draw round their 3D models (Zelda, Kirby, many Pokémon battles). Off leaves them out.",

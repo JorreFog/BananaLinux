@@ -6,7 +6,7 @@
 
 # Built from source (its build.sh, with Buildroot's GCC instead of clang). It links libdrm only; EGL/GLES (shaders),
 # ALSA, libcurl and zlib are loaded at run time when present.
-SUPERDRASTIC_VERSION = 86cd4bc6263b1e36931b8d9907512b6ff19fb3d8
+SUPERDRASTIC_VERSION = adbf916e74f6d0dcb36778e0bbb69cb3a2059059
 SUPERDRASTIC_SITE = https://github.com/JorreFog/SuperDrastic.git
 SUPERDRASTIC_SITE_METHOD = git
 SUPERDRASTIC_LICENSE = MIT
