@@ -1299,7 +1299,7 @@ namespace rnds
 		float pop() { double t = now - popAt; if (t < 0 || t >= 320) return 0; return 6 * (1 - easeOut3((float)(t / 320))); }
 		static float bobAt(double since) { double t = std::fmod(std::max(0.0, since), 2400.0) / 2400.0; return (float)(-4 * (0.5 - 0.5 * std::cos(2 * M_PI * t))); }
 		static float marchAt(double since) { return (float)(16 * std::fmod(std::max(0.0, since), 800.0) / 800.0); }
-		float bob() { return holdStill ? 0 : bobAt(now - topAt); }
+		float bob() { return 0; }	// Banana: no bob (the home screen's icon and a game list's cover hold still: it cost CPU all the time)
 		float march() { return marchAt(now - topAt); }
 		float thumbValue()
 		{
@@ -2179,7 +2179,7 @@ namespace rnds
 				if (std::round(f(t + dt) * sc) != v0) return dt;
 			return limit;
 		};
-		double next = d->holdStill ? 1e9 : nextPixel(&Impl::bobAt, 1200);	// held still: no bob
+		double next = 1e9;	// Banana: no bob, so nothing to wake for on the home screen
 		if (mView != HOME)
 		{
 			next = std::min(next, nextPixel(&Impl::marchAt, 400));

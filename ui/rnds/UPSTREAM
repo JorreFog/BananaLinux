@@ -3,4 +3,5 @@ ROCKNIXDS Pixel engine, imported by tools/import-rnds.sh. Don't edit these files
 ROCKNIXDS commit: 8b8f72cd70f0d198612ea8e6651fae71664aa97b
 Local changes since that commit (speed only, frames bit-identical): RndsRaster.cpp's box painter (coverage per row and
 column, the flat core, toBitmap), glyph advance and glyph bitmap memos, resize's column weights, and RndsUI.cpp's text
-cache keys. Carry them into ROCKNIXDS's patch before importing again, or they are lost.
+cache keys; and one that changes frames: no bob (bob() is 0 and nextWake doesn't wake for it), as the RG DS Plus's
+menu spent CPU on it all the time. Carry them into ROCKNIXDS's patch before importing again, or they are lost.
