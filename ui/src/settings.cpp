@@ -325,17 +325,14 @@ namespace banana
 		}
 		if (it.kind == Item::VOLUME)
 		{
-			// the playing card's control (bananad writes which), its level from amixer: "[57%]"
+			// the playing card's level, from the volume script (bananad writes which card plays)
 			int pct = -1;
-			std::string mixer = readLine("/run/banana/mixer");
-			if (!mixer.empty())
 			{
-				FILE* p = popen(("amixer -c " + mixer.substr(0, mixer.find(' ')) + " sget '" + mixer.substr(mixer.find(' ') + 1) + "' 2>/dev/null").c_str(), "r");
+				FILE* p = popen("/usr/libexec/banana/volume get 2>/dev/null", "r");
 				if (p)
 				{
-					char ln[256];
-					while (pct < 0 && fgets(ln, sizeof ln, p))
-						if (const char* b = strchr(ln, '[')) { int v; if (sscanf(b, "[%d%%]", &v) == 1) pct = v; }
+					char ln[64];
+					if (fgets(ln, sizeof ln, p)) { int v; if (sscanf(ln, "%d", &v) == 1) pct = v; }
 					pclose(p);
 				}
 			}
@@ -442,10 +439,7 @@ namespace banana
 		}
 		if (it.kind == Item::VOLUME)
 		{
-			std::string mixer = readLine("/run/banana/mixer");
-			if (mixer.empty()) return;
-			std::string card = mixer.substr(0, mixer.find(' ')), control = mixer.substr(mixer.find(' ') + 1);
-			if (system(("amixer -q -c " + card + " sset '" + control + "' " + v + "% 2>/dev/null").c_str()) != 0) {}
+			if (system(("/usr/libexec/banana/volume set " + std::to_string(atoi(v.c_str())) + " 2>/dev/null").c_str()) != 0) {}
 			poke("bananad");	// it keeps the level across reboots
 			return;
 		}

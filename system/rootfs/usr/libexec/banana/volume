@@ -1,0 +1,50 @@
+#!/bin/sh
+# The volume of the card that plays now, in percent: the volume keys (bananad) and Settings > Volume both use this.
+#   volume get              the level, 0-100
+#   volume set <0-100>
+#   volume up|down <n>      n percent louder or quieter
+# bananad writes which card plays and its control to /run/banana/mixer ("<card> <control>"). The rk817's Master
+# (the RG DS's speaker, the jack) is a plain level and amixer's percent is right for it. The RG DS Plus's speakers are
+# two aw88166 amplifiers whose control is an attenuation instead: 0 the loudest, 1023 mute, 64 a 6 dB step, and
+# this kernel names them "Left PCM" and "Right PCM" (amixer's "PCM" isn't there, so the keys changed nothing). Their
+# percent is 50 dB of range, 2.5 dB a 5% step, and 0% is mute.
+read -r CARD CONTROL < /run/banana/mixer 2>/dev/null || exit 1
+AW=
+if [ "$(cat /proc/asound/card$CARD/id 2>/dev/null)" = aw88166 ]; then
+    AW="$CONTROL"
+    amixer -c $CARD sget "$CONTROL" >/dev/null 2>&1 || AW="Left $CONTROL|Right $CONTROL"
+fi
+
+raw() {   # raw <control>: the amplifier's attenuation now
+    amixer -c $CARD sget "$1" 2>/dev/null | sed -n 's/.*Playback \([0-9]*\) \[.*/\1/p' | head -n 1
+}
+get() {
+    if [ -n "$AW" ]; then
+        v=$(raw "${AW%%|*}"); [ -n "$v" ] || exit 1
+        [ $v -ge 1023 ] && echo 0 && return
+        p=$((100 - (v * 3 + 8) / 16)); [ $p -lt 1 ] && p=1
+        echo $p
+    else
+        amixer -c $CARD sget "$CONTROL" 2>/dev/null | sed -n 's/.*\[\([0-9]*\)%\].*/\1/p' | head -n 1
+    fi
+}
+set_to() {
+    p=$1; [ $p -lt 0 ] && p=0; [ $p -gt 100 ] && p=100
+    if [ -n "$AW" ]; then
+        if [ $p = 0 ]; then v=1023; else v=$(((100 - p) * 16 / 3)); fi
+        IFS='|'; for c in $AW; do amixer -q -c $CARD sset "$c" $v || exit 1; done
+    else
+        amixer -q -c $CARD sset "$CONTROL" $p% || exit 1
+    fi
+}
+
+case $1 in
+get) get ;;
+set) set_to "${2:-0}" ;;
+up|down)
+    p=$(get); [ -n "$p" ] || exit 1
+    n=${2:-5}; [ $1 = down ] && n=-$n
+    set_to $((p + n))
+    ;;
+*) echo "volume get | set <0-100> | up <n> | down <n>" >&2; exit 2 ;;
+esac

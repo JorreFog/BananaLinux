@@ -522,12 +522,10 @@ static void audio_setup(void)
 
 static void volume(int dir)
 {
-	char step[16], c[16];
-	snprintf(step, sizeof step, "%d%%%c", cfg.volume_step, dir > 0 ? '+' : '-');
-	snprintf(c, sizeof c, "%d", card_play);
-	/* the aw88166's own control is "PCM"; the rk817's is "Master" */
-	char *control = strcmp(cfg.mixer, "auto") ? cfg.mixer : card_play == card_speaker ? "PCM" : "Master";
-	char *argv[] = { "amixer", "-q", "-c", c, "sset", control, step, NULL };
+	/* the volume script changes the control /run/banana/mixer names, the aw88166's as an attenuation (see it) */
+	char step[16];
+	snprintf(step, sizeof step, "%d", cfg.volume_step);
+	char *argv[] = { "/usr/libexec/banana/volume", dir > 0 ? "up" : "down", step, NULL };
 	run(argv);
 	save_volume_at = mono() + 2;
 }
