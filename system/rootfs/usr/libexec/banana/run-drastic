@@ -7,7 +7,13 @@ D=/data/drastic
 SD=/usr/lib/superdrastic
 if [ ! -x $D/drastic ]; then
     [ -d /usr/share/drastic ] || { echo "DraStic isn't installed" >&2; exit 1; }
-    mkdir -p $D && cp -rn /usr/share/drastic/. $D/
+    # each file and folder that isn't there yet (BusyBox's cp -rn <dir>/. copies nothing at all, even into an empty
+    # folder; the settings screen may already have made config/drastic.cfg)
+    mkdir -p $D/config
+    for f in /usr/share/drastic/* /usr/share/drastic/config/*; do
+        t=$D/${f#/usr/share/drastic/}
+        [ -e "$t" ] || cp -a "$f" "$t"
+    done
 fi
 cd $D
 # banana-ui has let go of the panels completely (it closes its display while a game runs)

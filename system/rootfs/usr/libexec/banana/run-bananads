@@ -19,7 +19,10 @@ export BANANADS_FRONTEND=kms BANANADS_SAVE_DIR=/data/saves/nds BANANADS_STATE_DI
 export BANANADS_LOG_FILE=$L/bananads.log
 # Settings > Nintendo DS: the 3D resolution (drastic.cfg's hires_3d, shared with DraStic) and the renderer (Gengis
 # Engine, superdrastic.conf's DSFLIP_RAST=1, or the emulator's own: melonDS's software renderer for BananaDS)
-hires=$(sed -n 's/^ *hires_3d *= *//p' /data/drastic/config/drastic.cfg 2>/dev/null | head -n 1)
+# (the card has no drastic.cfg until DraStic's first run or the setting's first change: then the packaged one's
+# value, which is what the settings screen shows)
+dcfg=/data/drastic/config/drastic.cfg; [ -f $dcfg ] || dcfg=/usr/share/drastic/config/drastic.cfg
+hires=$(sed -n 's/^ *hires_3d *= *//p' $dcfg 2>/dev/null | head -n 1)
 rast=$(sed -n 's/^ *DSFLIP_RAST *= *//p' /data/banana/superdrastic.conf 2>/dev/null | head -n 1)
 [ "$hires" = 1 ] && export BANANADS_RENDER_SCALE=2
 [ "$rast" = 0 ] && export BANANADS_RENDER_RENDERER=soft
