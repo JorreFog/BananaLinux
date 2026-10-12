@@ -53,6 +53,11 @@
 - [x] Kernel trimming: the modules cut to what the handhelds use, then the drivers to what their device trees have
       (initcall_debug on the device may find more)
 - [x] The ROM's own icon on cartridges inside `.zip` files (banana-ui's streaming zip reader, zlib)
+- [ ] One card for both handhelds (`make universal`, built but not in CI): U-Boot reads the SARADC's channel 5
+      (about 1.06 V on the RG DS, 1.77 V on the Plus, measured in Linux) and loads the matching device tree
+      (extlinux.conf's FDTDIR); one update package for both. Open: a test U-Boot with it, built with clang, didn't
+      boot the RG DS. Next: a GCC build with and without the detection, to tell the compiler from the reading
+      (uboot-patches-universal/, uboot-universal.fragment)
 - [ ] RetroAchievements progress on the shelf
 - [x] File sharing over Wi-Fi, off by default: the card's data partition over SMB3 (the kernel's ksmbd, loaded only
       when switched on), games copied in show up in the menu by themselves
