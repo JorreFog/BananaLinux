@@ -1,8 +1,8 @@
 #!/bin/sh
 # Updates. The card has two root slots (partitions 2 and 3, banana-root-a and banana-root-b) and a kernel for each
 # in the boot partition (a/, b/); extlinux.conf's DEFAULT names the one that boots. An update package (the
-# banana-<board>-<version>.update.tar the build makes: Image, the device tree, rootfs.squashfs, VERSION, board,
-# sha256sums) is written to the slot not in use, checked against its hashes as written, and only then made the
+# banana-<board>-<version>.update.tar the build makes: Image, the device tree (both, for the universal board: U-Boot
+# picks one, extlinux.conf's FDTDIR), rootfs.squashfs, VERSION, board, sha256sums) is written to the slot not in use, checked against its hashes as written, and only then made the
 # default: the running system is never touched, and a failure leaves everything as it was. Settings > System >
 # Update runs this and shows its progress (/run/banana/update-status: one line, "writing 42%", "done <version>",
 # "failed: <why>"...).
@@ -39,6 +39,7 @@ list)
         # banana-<board>-<version>: the board is the part up to the first "-" (rgds, rgds-plus comes with "-")
         case $n in
         rgds-plus-*) b=rgds-plus; v=${n#rgds-plus-} ;;
+        universal-*) b=universal; v=${n#universal-} ;;
         rgds-*) b=rgds; v=${n#rgds-} ;;
         *) b=?; v=$n ;;
         esac
@@ -73,7 +74,9 @@ apply)
     for f in Image rootfs.squashfs VERSION board sha256sums; do [ -f "$DIR/$f" ] || fail "the package has no $f"; done
     DTB=$(ls "$DIR"/*.dtb 2>/dev/null | head -n 1); [ -n "$DTB" ] || fail "the package has no device tree"
     PB=$(cat "$DIR/board"); PV=$(cat "$DIR/VERSION")
-    [ -z "$BOARD" ] || [ "$PB" = "$BOARD" ] || fail "that is a package for the $PB, this is the $BOARD"
+    # a universal package fits any card (it has this handheld's device tree too; a card made for one handheld names
+    # its device tree in extlinux.conf, which the package keeps the name of)
+    [ -z "$BOARD" ] || [ "$PB" = "$BOARD" ] || [ "$PB" = universal ] || fail "that is a package for the $PB, this is the $BOARD"
     # every file as the build hashed it
     while read -r h f; do
         [ -f "$DIR/$f" ] || fail "the package has no $f"
@@ -100,12 +103,12 @@ apply)
     # the kernel and device tree beside it, then the switch
     boot_rw
     mkdir -p /boot/$TO
-    for f in Image "$(basename "$DTB")"; do
+    for f in Image $(cd "$DIR" && ls *.dtb); do
         cp "$DIR/$f" "/boot/$TO/$f.new" && mv -f "/boot/$TO/$f.new" "/boot/$TO/$f" || fail "can't write /boot/$TO/$f"
         [ "$(hash_of "/boot/$TO/$f")" = "$(hash_of "$DIR/$f")" ] || fail "/boot/$TO/$f reads back wrong"
     done
-    # an old kernel of another name in that slot would only take room
-    for f in /boot/$TO/*.dtb; do [ "$(basename "$f")" = "$(basename "$DTB")" ] || rm -f "$f"; done
+    # device trees the package doesn't have would be old ones: they go
+    for f in /boot/$TO/*.dtb; do [ -f "$DIR/$(basename "$f")" ] || rm -f "$f"; done
     boot_ro
     set_default $TO
     rm -f /data/banana/panel-tune.txt      # the new device tree is tuned on its first boot

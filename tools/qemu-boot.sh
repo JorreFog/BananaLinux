@@ -27,7 +27,7 @@ SUDO=; [ "$(id -u)" = 0 ] || SUDO=sudo
 # the partitions' offsets, from the image's GPT
 part_offset() { sfdisk -J "$CARD" | python3 -c "import json,sys; p=json.load(sys.stdin)['partitiontable']['partitions']; print(p[$1-1]['start']*512)"; }
 BOOT_AT=$(part_offset 1)
-case $(basename "$IMG") in banana-rgds-plus*) BOARD=rgds-plus ;; *) BOARD=rgds ;; esac
+case $(basename "$IMG") in banana-rgds-plus*) BOARD=rgds-plus ;; banana-universal*) BOARD=universal ;; *) BOARD=rgds ;; esac
 # the kernel and root the card would boot, as U-Boot reads them: extlinux.conf's DEFAULT label (the slot an update
 # switched to), its LINUX file and its root=. video=: QEMU reports only the output a window is attached to as
 # connected; the kernel is told both are, at 640x480
@@ -52,14 +52,15 @@ run_qemu() {    # run_qemu <display and serial arguments>
 make_update() {    # make_update <dir>
     U=$1/banana-$BOARD-qemu-test.update; rm -rf "$U"; mkdir -p "$U"
     mcopy -o -i "$CARD@@$BOOT_AT" ::/a/Image "$U/Image"
-    DTB=$(mdir -i "$CARD@@$BOOT_AT" -b ::/a/ | grep -i '\.dtb$' | head -n 1); DTB=${DTB##*/}
-    mcopy -o -i "$CARD@@$BOOT_AT" "::/a/$DTB" "$U/$DTB"
+    DTBS=; for d in $(mdir -i "$CARD@@$BOOT_AT" -b ::/a/ | grep -i '\.dtb$'); do
+        d=${d##*/}; DTBS="$DTBS $d"; mcopy -o -i "$CARD@@$BOOT_AT" "::/a/$d" "$U/$d"
+    done
     # the squashfs out of slot a, its size from its superblock (bytes_used, 8 bytes at offset 40)
     off=$(part_offset 2)
     size=$(python3 -c "import struct, sys; f = open(sys.argv[1], 'rb'); f.seek($off + 40); print(struct.unpack('<Q', f.read(8))[0])" "$CARD")
     dd if="$CARD" of="$U/rootfs.squashfs" bs=1M iflag=skip_bytes,count_bytes skip=$off count=$size status=none
     echo qemu-test > "$U/VERSION"; echo "$BOARD" > "$U/board"
-    (cd "$U" && sha256sum Image "$DTB" rootfs.squashfs > sha256sums)
+    (cd "$U" && sha256sum Image $DTBS rootfs.squashfs > sha256sums)
     tar -C "$1" -cf "$U.tar" "$(basename "$U")"; rm -rf "$U"
     ls -la "$U.tar" | awk '{print $5, $9}'
 }

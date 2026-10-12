@@ -2,6 +2,7 @@
 #
 #   make rgds          the RG DS's SD card image        -> output/rgds/images/banana-rgds.img.gz
 #   make rgds-plus     the RG DS Plus's SD card image   -> output/rgds-plus/images/banana-rgds-plus.img.gz
+#   make universal     one card for both                -> output/universal/images/banana-universal.img.gz
 #   make ui            banana-ui for this computer (headless renders, no panels needed)
 #   make test          renders the menu headless from a test library and checks it (needs ImageMagick)
 #   make menuconfig-rgds / linux-menuconfig-rgds ...   any Buildroot target, per board
@@ -10,7 +11,7 @@
 BUILDROOT_VERSION = 2026.02.3
 BUILDROOT_DIR ?= $(CURDIR)/.buildroot
 OUT ?= $(CURDIR)/output
-BOARDS = rgds rgds-plus
+BOARDS = rgds rgds-plus universal
 
 $(BUILDROOT_DIR)/Makefile:
 	git clone --depth 1 --branch $(BUILDROOT_VERSION) https://github.com/buildroot/buildroot $(BUILDROOT_DIR)

@@ -1,0 +1,17 @@
+--- a/arch/arm/dts/rk3566-quartz64-a-u-boot.dtsi	2026-10-12 17:58:54.193273132 +0200
++++ b/arch/arm/dts/rk3566-quartz64-a-u-boot.dtsi	2026-10-12 17:58:54.194547407 +0200
+@@ -40,3 +40,14 @@
+ &vcc_sd_h {
+ 	bootph-pre-ram;
+ };
++
++/*
++ * Banana: one card for the RG DS and the RG DS Plus. The SARADC's channel 5 tells them apart (about 1.06 V on the
++ * RG DS, 1.77 V on the Plus, measured in Linux), read by the preboot (uboot-banana.fragment). Its reference is the
++ * fixed 1.8 V the boards' device trees give it, stated here rather than taken from a regulator: this tree is the
++ * Quartz64's, whose regulators aren't the handhelds'.
++ */
++&saradc {
++	vdd-microvolts = <1800000>;
++	status = "okay";
++};

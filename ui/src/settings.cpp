@@ -1410,7 +1410,7 @@ namespace banana
 			box(on ? "pick" : "slot", on, 18, y, 604, 56);
 			Color c = on ? p.onPick : p.muted;
 			text(fit("Banana " + k.version, true, 20, 330), true, 20, 38, y + 16, c);
-			std::string tag = armed == 1000 + r ? "Press A again" : (k.board == board || board.empty() ? "for the " + k.board : "not for this handheld");
+			std::string tag = armed == 1000 + r ? "Press A again" : (k.board == board || board.empty() || k.board == "universal" ? (k.board == "universal" ? std::string("for both handhelds") : "for the " + k.board) : "not for this handheld");
 			float tw = text(tag, true, 17, 0, 0, c, false, 0, true);
 			text(tag, true, 17, 586 - tw, y + 18, armed == 1000 + r ? (on ? p.onPickAccent : p.accent) : c);
 		}

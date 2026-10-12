@@ -32,7 +32,7 @@ jobs:
       - name: Buildroot defconfigs keep every option
         run: |
           git clone --depth 1 --branch 2026.02.3 https://github.com/buildroot/buildroot /tmp/br
-          for d in banana_rgds_defconfig banana_rgds_plus_defconfig; do
+          for d in banana_rgds_defconfig banana_rgds_plus_defconfig banana_universal_defconfig; do
             make -s -C /tmp/br BR2_EXTERNAL=$PWD/buildroot O=/tmp/out-$d $d
             grep -E '^BR2_|^# BR2_.* is not set' buildroot/configs/$d | while IFS= read -r l; do
               grep -qxF "$l" /tmp/out-$d/.config || { echo "$d drops: $l"; exit 1; }
@@ -46,7 +46,7 @@ jobs:
     timeout-minutes: 360
     strategy:
       matrix:
-        board: [rgds, rgds-plus]
+        board: [universal]
     env:
       BR2_DL_DIR: ${{ github.workspace }}/dl
     steps:
@@ -104,7 +104,7 @@ jobs:
     timeout-minutes: 45
     strategy:
       matrix:
-        board: [rgds, rgds-plus]
+        board: [universal]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4

@@ -7,3 +7,12 @@ CONFIG_DISPLAY_CPUINFO=n
 # only the SD card is a boot target (the RG DS's eMMC holds Android)
 CONFIG_ENV_IS_NOWHERE=y
 CONFIG_ENV_IS_IN_MMC=n
+# one card for both handhelds: the SARADC's channel 5 (uboot-patches/003) read before booting, about 1.06 V on the
+# RG DS and 1.77 V on the RG DS Plus, picks the device tree a universal card's extlinux.conf loads (FDTDIR, by
+# $fdtfile); banana_board and banana_adc go on the kernel's command line. No reading (an error): the RG DS's. A
+# card for one handheld names its device tree itself (FDT) and isn't affected.
+CONFIG_ADC=y
+CONFIG_SARADC_ROCKCHIP=y
+CONFIG_CMD_ADC=y
+CONFIG_USE_PREBOOT=y
+CONFIG_PREBOOT="adc single saradc@fe720000 5 banana_adc; if test ${banana_adc} -gt 1400000; then setenv banana_board rgds-plus; setenv fdtfile rk3568-anbernic-rg-ds-plus.dtb; else setenv banana_board rgds; setenv fdtfile rk3568-anbernic-rg-ds.dtb; fi"

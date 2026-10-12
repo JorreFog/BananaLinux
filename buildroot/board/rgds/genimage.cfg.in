@@ -6,7 +6,7 @@ image boot.vfat {
 	vfat {
 		label = "BANANA-BOOT"
 		file a/Image { image = "Image" }
-		file a/@DTB@.dtb { image = "@DTB@.dtb" }
+@DTBFILES@
 		file extlinux/extlinux.conf { image = "extlinux.conf" }
 	}
 	size = 64M
