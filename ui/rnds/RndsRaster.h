@@ -110,12 +110,21 @@ namespace rnds
 
 	private:
 		Font() {}
+		friend TextLine layoutLine(const std::u32string& text, const TextStyle& st);
 		friend TextBitmap renderLine(const TextLine& line, const TextStyle& st, float scale, float baselineCss, float leftFrac, float topFrac);
 		std::vector<uint8_t> mData;
 		FT_Face mFace = nullptr;
 		int mUpm = 1000, mAsc = 0, mDesc = 0;
 		std::unordered_map<uint32_t, unsigned> mGlyphIndex;
 		unsigned glyphIndex(uint32_t cp);
+		int advanceLocked(uint32_t cp, uint32_t next, float size);	// advance() with the FreeType lock held
+		// memos of the FreeType results (all under the FreeType lock): advances by (cp, next, size), rendered glyphs by
+		// (glyph, 26.6 size, load flags)
+		struct Key3 { uint32_t a, b, c; bool operator==(const Key3& o) const { return a == o.a && b == o.b && c == o.c; } };
+		struct Key3Hash { size_t operator()(const Key3& k) const { return ((size_t)k.a * 0x9E3779B1u) ^ ((size_t)k.b * 0x85EBCA77u) ^ ((size_t)k.c * 0xC2B2AE3Du); } };
+		struct Glyph { bool ok = false; int left = 0, top = 0; unsigned rows = 0, width = 0; std::vector<uint8_t> px; };
+		std::unordered_map<Key3, int, Key3Hash> mAdvance;
+		std::unordered_map<Key3, Glyph, Key3Hash> mGlyphs;
 	};
 
 	struct TextStyle

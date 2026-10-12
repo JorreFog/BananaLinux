@@ -374,6 +374,17 @@ namespace rnds
 	int Font::advance(uint32_t cp, uint32_t next, float size)
 	{
 		std::lock_guard<std::mutex> lock(sFtLock);
+		return advanceLocked(cp, next, size);
+	}
+
+	int Font::advanceLocked(uint32_t cp, uint32_t next, float size)
+	{
+		uint32_t sb;
+		memcpy(&sb, &size, sizeof sb);
+		auto it = mAdvance.find(Key3{ cp, next, sb });
+		if (it != mAdvance.end())
+			return it->second;
+		int& memo = mAdvance[Key3{ cp, next, sb }];
 		unsigned gi = glyphIndex(cp);
 		FT_Fixed adv = 0;
 		FT_Get_Advance(mFace, gi, FT_LOAD_NO_SCALE, &adv);
@@ -384,6 +395,7 @@ namespace rnds
 			if (FT_Get_Kerning(mFace, gi, glyphIndex(next), FT_KERNING_UNSCALED, &k) == 0 && k.x != 0)
 				a += roundi(k.x * size / mUpm);
 		}
+		memo = a;
 		return a;
 	}
 
@@ -431,12 +443,14 @@ namespace rnds
 	{
 		TextLine line;
 		line.text = prepared(text, st);
+		line.x.reserve(line.text.size());
 		float pen = 0;
+		std::lock_guard<std::mutex> lock(sFtLock);
 		for (size_t i = 0; i < line.text.size(); i++)
 		{
 			line.x.push_back(pen);
 			uint32_t next = i + 1 < line.text.size() ? line.text[i + 1] : 0;
-			pen += st.font->advance(line.text[i], next, st.size) + st.letterSpacing;
+			pen += st.font->advanceLocked(line.text[i], next, st.size) + st.letterSpacing;
 		}
 		line.width = pen;
 		return line;
@@ -526,7 +540,8 @@ namespace rnds
 		std::lock_guard<std::mutex> lock(sFtLock);
 		FT_Face face = st.font->mFace;
 		float size = st.size * scale;
-		FT_Set_Char_Size(face, 0, (FT_F26Dot6)roundi(size * 64), 72, 72);
+		int size64 = roundi(size * 64);
+		FT_Set_Char_Size(face, 0, (FT_F26Dot6)size64, 72, 72);
 
 		float asc = st.font->mAsc * size / st.font->mUpm, desc = st.font->mDesc * size / st.font->mUpm;
 		int pad = (int)std::ceil(size * 0.3f) + 2;
@@ -544,25 +559,49 @@ namespace rnds
 		for (size_t i = 0; i < line.text.size(); i++)
 		{
 			unsigned gi = st.font->glyphIndex(line.text[i]);
-			if (FT_Load_Glyph(face, gi, flags) != 0)
-				continue;
 			float penX = pad + leftFrac + line.x[i] * scale;
 			int ix = subpixel ? (int)std::floor(penX) : roundi(penX);
 			int iy = roundi(baseline);
-			if (subpixel && face->glyph->format == FT_GLYPH_FORMAT_OUTLINE)
-				FT_Outline_Translate(&face->glyph->outline, (FT_Pos)roundi((penX - ix) * 64), 0);
-			if (FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL) != 0)
+			// the rendered glyph (without a subpixel shift it doesn't depend on the pen position): kept per font
+			Font::Glyph tmp;
+			Font::Glyph* gl = &tmp;
+			bool fresh = true;
+			if (!subpixel)
+			{
+				auto r = st.font->mGlyphs.emplace(Font::Key3{ gi, (uint32_t)size64, (uint32_t)flags }, Font::Glyph());
+				gl = &r.first->second;
+				fresh = r.second;
+			}
+			if (fresh)
+			{
+				if (FT_Load_Glyph(face, gi, flags) != 0)
+					continue;
+				if (subpixel && face->glyph->format == FT_GLYPH_FORMAT_OUTLINE)
+					FT_Outline_Translate(&face->glyph->outline, (FT_Pos)roundi((penX - ix) * 64), 0);
+				if (FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL) != 0)
+					continue;
+				FT_GlyphSlot g = face->glyph;
+				gl->ok = true;
+				gl->left = g->bitmap_left;
+				gl->top = g->bitmap_top;
+				gl->rows = g->bitmap.rows;
+				gl->width = g->bitmap.width;
+				gl->px.resize((size_t)gl->rows * gl->width);
+				for (unsigned r = 0; r < gl->rows; r++)
+					if (gl->width)
+						memcpy(&gl->px[(size_t)r * gl->width], g->bitmap.buffer + r * g->bitmap.pitch, gl->width);
+			}
+			if (!gl->ok)
 				continue;
-			FT_GlyphSlot g = face->glyph;
-			int gx = ix + g->bitmap_left;
-			int gy = iy - g->bitmap_top;
-			for (unsigned r = 0; r < g->bitmap.rows; r++)
+			int gx = ix + gl->left;
+			int gy = iy - gl->top;
+			for (unsigned r = 0; r < gl->rows; r++)
 			{
 				int ty = gy + (int)r;
 				if (ty < 0 || ty >= b.h)
 					continue;
-				const unsigned char* src = g->bitmap.buffer + r * g->bitmap.pitch;
-				for (unsigned c = 0; c < g->bitmap.width; c++)
+				const unsigned char* src = gl->px.data() + (size_t)r * gl->width;
+				for (unsigned c = 0; c < gl->width; c++)
 				{
 					int tx = gx + (int)c;
 					if (tx < 0 || tx >= b.w || !src[c])
@@ -625,21 +664,41 @@ namespace rnds
 				}
 			return out;
 		}
-		// area average (premultiplied) when shrinking
+		// area average (premultiplied) when shrinking; each column's source span and weights are the same on every row
+		std::vector<int> xFirst(w), xStart(w + 1);
+		std::vector<float> xw;
+		for (int x = 0; x < w; x++)
+		{
+			float x0 = x * sx, x1 = (x + 1) * sx;
+			xFirst[x] = (int)std::floor(x0);
+			xStart[x] = (int)xw.size();
+			for (int xx = xFirst[x]; xx < (int)std::ceil(x1) && xx < src.w; xx++)
+				xw.push_back(std::min(x1, xx + 1.0f) - std::max(x0, (float)xx));
+		}
+		xStart[w] = (int)xw.size();
+		std::vector<int> yys;
+		std::vector<float> yws;
 		for (int y = 0; y < h; y++)
 		{
 			float y0 = y * sy, y1 = (y + 1) * sy;
+			yys.clear(); yws.clear();
+			for (int yy = (int)std::floor(y0); yy < (int)std::ceil(y1) && yy < src.h; yy++)
+			{
+				float wy = std::min(y1, yy + 1.0f) - std::max(y0, (float)yy);
+				if (wy <= 0) continue;
+				yys.push_back(yy); yws.push_back(wy);
+			}
 			for (int x = 0; x < w; x++)
 			{
-				float x0 = x * sx, x1 = (x + 1) * sx;
 				float acc[4] = { 0, 0, 0, 0 }, tot = 0;
-				for (int yy = (int)std::floor(y0); yy < (int)std::ceil(y1) && yy < src.h; yy++)
+				for (size_t j = 0; j < yys.size(); j++)
 				{
-					float wy = std::min(y1, yy + 1.0f) - std::max(y0, (float)yy);
-					if (wy <= 0) continue;
-					for (int xx = (int)std::floor(x0); xx < (int)std::ceil(x1) && xx < src.w; xx++)
+					int yy = yys[j];
+					float wy = yws[j];
+					for (int k = xStart[x]; k < xStart[x + 1]; k++)
 					{
-						float wx = std::min(x1, xx + 1.0f) - std::max(x0, (float)xx);
+						int xx = xFirst[x] + (k - xStart[x]);
+						float wx = xw[k];
 						if (wx <= 0) continue;
 						float wgt = wx * wy;
 						const uint8_t* p = &src.px[((size_t)yy * src.w + xx) * ch];

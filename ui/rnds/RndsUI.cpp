@@ -479,7 +479,10 @@ namespace rnds
 		{
 			int dw = (int)std::lround(X(w)), dh = (int)std::lround(X(h));
 			char k[64];
-			snprintf(k, sizeof k, "mask:%dx%d:%.2f", dw, dh, X(radius));
+			float xr = X(radius);
+			uint32_t rb;
+			memcpy(&rb, &xr, sizeof rb);
+			snprintf(k, sizeof k, "mask:%dx%d:%08x", dw, dh, (unsigned)rb);
 			if (auto e = find(k)) return e->sp;
 			float r = X(radius);
 			request(k, G_BOX, true, [dw, dh, r](float&, float&) -> Bitmap { return paintMask(dw, dh, r); });
@@ -535,11 +538,13 @@ namespace rnds
 			int ix = (int)std::floor(bx), iy = (int)std::floor(by);
 			float fx = bx - ix, fy = by - iy;
 			int qx = (int)std::lround(fx * 8), qy = (int)std::lround(fy * 8);
-			std::string key = "txt:";
-			for (auto ch : l.text) { key += std::to_string((unsigned)ch); key += ','; }
-			char k[96];
-			snprintf(k, sizeof k, "|%p|%.2f|%.3f|%.3f|%d|%d|%.2f", (void*)t.f, t.size, t.ls, lh, qx, qy, s);
-			key += k;
+			// "txt:", the characters, then a fixed-size tail of the style and placement (raw bytes: no formatting per frame)
+			struct { const Font* f; float size, ls, lh; int qx, qy; float s; } tail = { t.f, t.size, t.ls, lh, qx, qy, s };
+			std::string key;
+			key.reserve(4 + l.text.size() * sizeof(char32_t) + sizeof tail);
+			key = "txt:";
+			key.append((const char*)l.text.data(), l.text.size() * sizeof(char32_t));
+			key.append((const char*)&tail, sizeof tail);
 			CacheEntry* e = find(key);
 			if (!e)
 			{
