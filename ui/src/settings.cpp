@@ -300,7 +300,7 @@ namespace banana
 		add(S, "gear", "Update", "A new version of Banana from a package on the card, written to the other slot and run from the next restart; this one stays as it is until then.", "", "update", {}, {}, Item::PAGE);
 		add(S, "gear", "Previous version", "Restarts into the other slot: the version that ran before the last update. Press A twice.", "", "switch", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "SSH", "", menu, "ssh", { "Off", "On" }, { "off", "on" });
-		add(S, "gear", "First-time setup", "The steps from the first boot again: Wi-Fi, the time zone, the RetroAchievements and ScreenScraper accounts.", "", "setup", {}, {}, Item::PAGE);
+		add(S, "gear", "First-time setup", "The steps from the first boot again: Wi-Fi, the time zone and the RetroAchievements account (ScreenScraper: not available yet).", "", "setup", {}, {}, Item::PAGE);
 		add(S, "gear", "About", "", "", "", {}, {}, Item::INFO);
 		add(S, "gear", "Restart", "Restarts the handheld. Press A twice.", "", "reboot", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "Shut down", "Turns the handheld off. Press A twice. (Or hold the power button.)", "", "poweroff", { "" }, { "" }, Item::ACTION);
@@ -626,6 +626,7 @@ namespace banana
 			{
 				float ry = 82 + r * 64;
 				if (downY < ry || downY > ry + 56) continue;
+				if (r == 3) return NONE;	// ScreenScraper: greyed out
 				if (r != wsel) { wsel = r; return MOVED; }
 				return pressSetup(Key::A);
 			}
@@ -1858,6 +1859,7 @@ namespace banana
 		{
 		case Key::UP: case Key::DOWN:
 			wsel = (wsel + (k == Key::UP ? -1 : 1) + 5) % 5;
+			if (wsel == 3) wsel = (wsel + (k == Key::UP ? -1 : 1) + 5) % 5;	// ScreenScraper: shown, not usable yet
 			message.clear();
 			return MOVED;
 		case Key::LEFT: case Key::RIGHT:
@@ -1874,7 +1876,7 @@ namespace banana
 			case 0: openNetworks(); return MOVED;
 			case 1: return pressSetup(Key::RIGHT);
 			case 2: startEntry(ENTRY_RA_USER, "RetroAchievements", "Account name", SETUP, account("ra_user")); return MOVED;
-			case 3: startEntry(ENTRY_SS_USER, "ScreenScraper", "Account name", SETUP, account("ss_user")); return MOVED;
+			case 3: return NONE;	// ScreenScraper isn't used yet (greyed out)
 			default: setupDone(); return CLOSED;
 			}
 		case Key::B: case Key::START:
@@ -1895,7 +1897,7 @@ namespace banana
 			wstat.connected ? "Connected to " + wstat.ssid : wifiOn() ? "Not connected" : "Off",
 			tz ? tz->names[tz->at] : "",
 			ra.empty() ? "Not signed in" : ra,
-			ss.empty() ? "Not signed in" : ss,
+			"Not available yet",	// ScreenScraper: no scraper uses it yet (the row is greyed out and skipped)
 			"" };
 		static const char* helps[5] = {
 			"Your home network: the games' achievements, the clock and the art need it. A picks it from the networks around; the password goes in on the keyboard.",
@@ -1926,6 +1928,7 @@ namespace banana
 			float y = 82 + r * 64;
 			box(on ? "pick" : "slot", on, 18, y, 604, 56);
 			Color c = on ? p.onPick : p.muted;
+			if (r == 3) { c = p.muted; c.a = 0.4f; }	// ScreenScraper: greyed out
 			text(names[r], true, 20, 38, y + 16, c);
 			if (status[r].empty()) continue;
 			std::string v = fit(status[r], true, 19, 300);
