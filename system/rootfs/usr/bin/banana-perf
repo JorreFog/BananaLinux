@@ -1,6 +1,6 @@
 #!/bin/sh
 # Clock profiles. The menu draws a frame in a few milliseconds and sleeps in between, so it runs on the lowest
-# clocks; a game gets the profile its system asks for (systems.conf's perf).
+# clocks (up to 1416 MHz while it animates: at 1104 its transitions missed refreshes); a game gets the profile its system asks for (systems.conf's perf).
 #   banana-perf ui | powersave | balanced | performance | superdrastic
 # superdrastic: the "performance" governor, which the DS emulator's own governor takes over (SuperDrastic's, and
 # BananaDS's port of it: the lowest clock at which the game drops no frames, per game, through scaling_max_freq,
@@ -19,7 +19,7 @@ cpu() {   # cpu <governor> <max kHz>
 }
 gpu() { [ -n "$GPU" ] && echo $1 > $GPU/governor 2>/dev/null; }
 case $1 in
-ui)           cpu schedutil $(cap 1104000); gpu powersave ;;
+ui)           cpu schedutil $(cap 1416000); gpu powersave ;;   # (schedutil: only while an animation draws; 1104 missed frames)
 powersave)    cpu schedutil $(cap 1416000); gpu simple_ondemand ;;
 balanced)     cpu schedutil $hi; gpu simple_ondemand ;;
 performance)  cpu performance $hi; gpu performance ;;

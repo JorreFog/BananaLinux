@@ -45,7 +45,7 @@ namespace banana
 			const uint8_t* s = &b.px[i * 4];
 			uint32_t a = s[3];
 			auto m = [a](uint32_t v) { uint32_t x = v * a + 128; return (x + (x >> 8)) >> 8; };
-			px[i] = (a << 24) | (m(s[0]) << 16) | (m(s[1]) << 8) | m(s[2]);
+			px[i] = rnds::tintAccent((a << 24) | (m(s[0]) << 16) | (m(s[1]) << 8) | m(s[2]));	// the accent's banana
 		}
 		return true;
 	}
@@ -122,7 +122,7 @@ namespace banana
 				if (!(p >> 24)) continue;
 				// the shine: a diagonal stripe of pale yellow across the fruit (not the outline)
 				int diag = sx + (bunch.h - sy);
-				if ((p & 0xffffff) != 0 && diag >= band && diag < band + 4) p = 0xfffff0b4u;
+				if ((p & 0xffffff) != 0 && diag >= band && diag < band + 4) p = rnds::tintAccent(0xfffff0b4u);
 				for (int ky = 0; ky < K; ky++)
 				{
 					int yy = y + sy * K + ky;
@@ -168,7 +168,7 @@ namespace banana
 				for (int mx = c0; mx < c1; mx++)
 					if (word.a[(size_t)my * word.w + mx])
 						fill(d, x + mx * KW, y + dy + my * KW, KW, KW,
-						     i >= n - white ? 0xffffffffu : my < (word.h * 11 + 19) / 20 ? 0xffffde52u : 0xffeea018u);
+						     i >= n - white ? 0xffffffffu : my < (word.h * 11 + 19) / 20 ? rnds::tintAccent(0xffffde52u) : rnds::tintAccent(0xffeea018u));
 		}
 	}
 
@@ -180,15 +180,15 @@ namespace banana
 		float by = BUNCH_Y;
 		if (t < DROP)
 		{
-			// falling, faster as it goes, in 8 steps
-			float p = rnds::stepsEnd(8, (float)(t / DROP));
+			// falling, faster as it goes (smooth: steps() looked like a low frame rate on the handheld)
+			float p = (float)(t / DROP);
 			by = -bunch.h * K / s + (BUNCH_Y + bunch.h * K / s) * p * p;
 		}
-		else if (t < DROP + BOUNCE_UP) by = BUNCH_Y - 10 * rnds::stepsEnd(3, (float)((t - DROP) / BOUNCE_UP));
-		else if (t < DROP + BOUNCE_UP + BOUNCE_DOWN) by = BUNCH_Y - 10 + 10 * rnds::stepsEnd(2, (float)((t - DROP - BOUNCE_UP) / BOUNCE_DOWN));
+		else if (t < DROP + BOUNCE_UP) { float q = (float)((t - DROP) / BOUNCE_UP); by = BUNCH_Y - 10 * (1 - (1 - q) * (1 - q)); }	// up, slowing
+		else if (t < DROP + BOUNCE_UP + BOUNCE_DOWN) { float q = (float)((t - DROP - BOUNCE_UP) / BOUNCE_DOWN); by = BUNCH_Y - 10 + 10 * q * q; }	// down, faster
 		else if (t >= SHINE_AT + SHINE && !ready)
 			by = BUNCH_Y - 3 * (((int)((t - SHINE_AT - SHINE) / BOB)) % 2);	// still loading: the menu's bob
-		double shine = t >= SHINE_AT && t < SHINE_AT + SHINE ? rnds::stepsEnd(8, (float)((t - SHINE_AT) / SHINE)) : -1;
+		double shine = t >= SHINE_AT && t < SHINE_AT + SHINE ? (t - SHINE_AT) / SHINE : -1;
 		drawBunch(top, bx, X(by), shine);
 		drawWord(top, t);
 		if (t >= LOAD_AT)
@@ -210,21 +210,21 @@ namespace banana
 		float cy;
 		if (t < CART_IN)
 		{
-			float p = rnds::stepsEnd(6, (float)(t / CART_IN));
+			float p = (float)(t / CART_IN);
 			float e = 1 - (1 - p) * (1 - p);
 			cy = -104 + (CART_Y0 + 104) * e;
 		}
 		else if (t < INSERT_AT) cy = CART_Y0;
-		else if (t < INSERT_AT + INS_LIFT) cy = CART_Y0 - 6 * rnds::stepsEnd(2, (float)((t - INSERT_AT) / INS_LIFT));
+		else if (t < INSERT_AT + INS_LIFT) { float q = (float)((t - INSERT_AT) / INS_LIFT); cy = CART_Y0 - 6 * (1 - (1 - q) * (1 - q)); }
 		else if (t < CLICK_AT)
 		{
 			float e = rnds::cubicBezier(0.55f, 0, 0.9f, 0.45f, (float)((t - INSERT_AT - INS_LIFT) / INS_SLIDE));
 			cy = (CART_Y0 - 6) + (CART_END + 3 - (CART_Y0 - 6)) * e;
 		}
 		else if (t < CLICK_AT + INS_CLICK) cy = CART_END + 3;
-		else if (t < CLICK_AT + INS_CLICK + INS_SETTLE) cy = CART_END + 3 - 3 * rnds::stepsEnd(3, (float)((t - CLICK_AT - INS_CLICK) / INS_SETTLE));
+		else if (t < CLICK_AT + INS_CLICK + INS_SETTLE) { float q = (float)((t - CLICK_AT - INS_CLICK) / INS_SETTLE); cy = CART_END + 3 - 3 * (1 - (1 - q) * (1 - q)); }
 		else cy = CART_END;
-		blit(bot, cart, X(CART_X), X(std::round(cy)), X(CLIP_Y));
+		blit(bot, cart, X(CART_X), X(cy), X(CLIP_Y));
 		blit(bot, lip, X(LIP_X), X(CLIP_Y), H);
 		if (t >= CLICK_AT)
 		{
@@ -234,7 +234,7 @@ namespace banana
 			if (ct < 240)
 			{
 				// sparks off the slot's corners, as the menu's insert
-				float k = rnds::stepsEnd(3, (float)(ct / 240));
+				float k = (float)(ct / 240);
 				float dd = 8 + 18 * k;
 				uint32_t sp = mul255(light ? 0xff2a2620u : 0xffffffffu, (uint32_t)std::lround(255 * (1 - k * 0.8f)));
 				for (float x : { 262.0f, 378.0f })

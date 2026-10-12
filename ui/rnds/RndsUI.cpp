@@ -9,6 +9,61 @@
 
 namespace rnds
 {
+	Accent accent = { 0xf0b429, 0xffe68a, 0x8a5a00, 0xffcf5c, 0xc98f12 };
+	static const struct { const char* name; Accent a; } ACCENTS[] = {
+		{ "yellow", { 0xf0b429, 0xffe68a, 0x8a5a00, 0xffcf5c, 0xc98f12 } },
+		{ "blue",   { 0x4a9fe0, 0xb7e1ff, 0x0f3f66, 0x7cc0f2, 0x2f7fc0 } },
+		{ "red",    { 0xe8574d, 0xffb8b0, 0x7a1a14, 0xf58a80, 0xc23b32 } },
+		{ "green",  { 0x56bf6b, 0xbff0c8, 0x1d5a2b, 0x86d896, 0x3d9a52 } },
+		{ "purple", { 0xa07ae6, 0xddd0ff, 0x43266e, 0xbfa4f2, 0x7f58c4 } },
+		{ "pink",   { 0xec6fa8, 0xffc6e0, 0x7a1f4a, 0xf59cc4, 0xc9508a } },
+	};
+	bool setAccent(const std::string& name)
+	{
+		for (auto& e : ACCENTS) if (name == e.name) { accent = e.a; return true; }
+		accent = ACCENTS[0].a;
+		return false;
+	}
+	static void rgb2hsv(float r, float g, float b, float& h, float& s, float& v)
+	{
+		float mx = std::max(r, std::max(g, b)), mn = std::min(r, std::min(g, b)), d = mx - mn;
+		v = mx; s = mx > 0 ? d / mx : 0; h = 0;
+		if (d > 0) h = mx == r ? 60 * std::fmod((g - b) / d + 6, 6.0f) : mx == g ? 60 * ((b - r) / d + 2) : 60 * ((r - g) / d + 4);
+	}
+	static void hsv2rgb(float h, float s, float v, float& r, float& g, float& b)
+	{
+		h = std::fmod(h + 360, 360.0f);
+		float c = v * s, x = c * (1 - std::fabs(std::fmod(h / 60, 2.0f) - 1)), m = v - c;
+		int k = (int)(h / 60) % 6;
+		float rr[6] = { c, x, 0, 0, x, c }, gg[6] = { x, c, c, x, 0, 0 }, bb[6] = { 0, 0, x, c, c, x };
+		r = rr[k] + m; g = gg[k] + m; b = bb[k] + m;
+	}
+	// a yellow (hue 25-70, saturated) moved by the yellow's hue, saturation and value to the accent's: the same shading
+	static bool tintRgb(uint8_t& r, uint8_t& g, uint8_t& b)
+	{
+		if (accent.base == 0xf0b429) return false;
+		float h, s, v; rgb2hsv(r / 255.f, g / 255.f, b / 255.f, h, s, v);
+		if (h < 25 || h > 70 || s < 0.3f || v < 0.12f) return false;
+		float ah, as, av, yh, ys, yv;
+		rgb2hsv(((accent.base >> 16) & 255) / 255.f, ((accent.base >> 8) & 255) / 255.f, (accent.base & 255) / 255.f, ah, as, av);
+		rgb2hsv(0xf0 / 255.f, 0xb4 / 255.f, 0x29 / 255.f, yh, ys, yv);
+		float nr, ng, nb;
+		hsv2rgb(h - yh + ah, std::min(1.0f, s * as / ys), std::min(1.0f, v * av / yv), nr, ng, nb);
+		r = (uint8_t)std::lround(nr * 255); g = (uint8_t)std::lround(ng * 255); b = (uint8_t)std::lround(nb * 255);
+		return true;
+	}
+	void tintAccent(Bitmap& bm)
+	{
+		if (bm.alpha || accent.base == 0xf0b429) return;
+		for (size_t i = 0; i + 3 < bm.px.size(); i += 4) tintRgb(bm.px[i], bm.px[i + 1], bm.px[i + 2]);
+	}
+	uint32_t tintAccent(uint32_t c)
+	{
+		uint8_t r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255;
+		if (!tintRgb(r, g, b)) return c;
+		return (c & 0xff000000u) | (uint32_t)r << 16 | (uint32_t)g << 8 | b;
+	}
+
 	// ---- timing ---------------------------------------------------------------------------------------------------------
 
 	float cubicBezier(float x1, float y1, float x2, float y2, float p)
@@ -107,7 +162,7 @@ namespace rnds
 		p.kbdInk = Color::hex(0xf2f6fa); p.rule = Color::hex(0xd6cfc0);
 		p.bubbleBand = Color::hex(0xffffff); p.bubbleBody = Color::hex(0xfaf7f0); p.bubbleLow = Color::hex(0xddd5c6);
 		p.trackBg = Color::hex(0xe6dfd0); p.trackHi = Color::hex(0xffffff); p.trackShade = Color(sh.r, sh.g, sh.b, 0.18f);
-		p.slotOn = Color::hex(0xf0b429); p.railBg = Color::hex(0xe6dfd0); p.faceMuted = Color::hex(0xd6cfc0);
+		p.slotOn = Color::hex(accent.base); p.railBg = Color::hex(0xe6dfd0); p.faceMuted = Color::hex(0xd6cfc0);
 		p.favBorder = p.red; p.favBand = Color::hex(0xfff2f3); p.favBody = Color::hex(0xffdfe3); p.favInk = Color::hex(0xc8283a);
 		p.glint = Color(1, 1, 1, 0.45f); p.floor = Color(sh.r, sh.g, sh.b, 0.2f);
 		p.slotDark = Color::hex(0x2a2620); p.slotLip = Color::hex(0xa69d8c);
@@ -379,6 +434,7 @@ namespace rnds
 			shell = std::make_shared<const Bitmap>(loadPng("game_slot.png"));
 			std::string sfx = s > 1.3f ? "@1.6x.png" : "@1x.png";
 			logo = loadPng("logo" + sfx);
+			tintAccent(logo);
 			wifi = loadPng("wifi" + sfx);
 			batt = loadPng("battery" + sfx);
 			consoleDark = loadPng("console-dark" + sfx);
@@ -756,7 +812,7 @@ namespace rnds
 			{
 				float p = (float)((now - st.o0) / 240.0);
 				if (p >= 1) { st.otrans = false; o = st.toO; }
-				else o = st.fromO + (st.toO - st.fromO) * stepsEnd(4, p);
+				else o = st.fromO + (st.toO - st.fromO) * p;
 			}
 			else o = st.toO;
 		}
@@ -769,7 +825,7 @@ namespace rnds
 			float e = cubicBezier(0.2f, 1.4f, 0.32f, 1, p);
 			x = st.gFromX + (st.gToX - st.gFromX) * e;
 			sc = st.gS;
-			o = st.gO * (1 - stepsEnd(4, p));
+			o = st.gO * (1 - p);
 			return o > 0;
 		}
 
@@ -1174,8 +1230,8 @@ namespace rnds
 		}
 		BoxCss plateBox()
 		{
-			BoxCss b; b.key = "plate"; b.radius = 18; b.border = 3; b.borderColor = EDGE; b.bg = Color::hex(0xf0b429);
-			b.bands = { Band{ 0, 14, Color::hex(0xffe68a) }, Band{ 132, -1, Color::hex(0x8a5a00) } };
+			BoxCss b; b.key = "plate"; b.radius = 18; b.border = 3; b.borderColor = EDGE; b.bg = Color::hex(accent.base);
+			b.bands = { Band{ 0, 14, Color::hex(accent.light) }, Band{ 132, -1, Color::hex(accent.dark) } };
 			b.shadows = { inset(0, -8, 0, Color(0, 0, 0, 0.35f)), outer(4, 4, SHADE40) };
 			return b;
 		}
@@ -1196,8 +1252,8 @@ namespace rnds
 		}
 		BoxCss thumbBox()
 		{
-			BoxCss b; b.key = "thumb"; b.radius = 2; b.border = 2; b.borderColor = EDGE; b.bg = Color::hex(0xf0b429);
-			b.bands = { Band{ 0, 4, Color::hex(0xffe68a) } };
+			BoxCss b; b.key = "thumb"; b.radius = 2; b.border = 2; b.borderColor = EDGE; b.bg = Color::hex(accent.base);
+			b.bands = { Band{ 0, 4, Color::hex(accent.light) } };
 			return b;
 		}
 		BoxCss faceBox(int kind, bool pressed)
@@ -1228,21 +1284,20 @@ namespace rnds
 
 		// ---- animation values ----
 		bool holdStill = false;	// the source's topMotion() off: no rise, no bob (read in update)
-		float rise(double at) { double t = now - at; if (holdStill || t < 0 || t >= 280) return 0; return 10 * (1 - stepsEnd(4, (float)(t / 280))); }
-		float pop() { double t = now - popAt; if (t < 0 || t >= 320) return 0; return 6 * (1 - stepsEnd(3, (float)(t / 320))); }
-		float bob()
-		{
-			if (holdStill) return 0;
-			double t = std::fmod(std::max(0.0, now - topAt), 2400.0) / 2400.0;
-			if (t < 0.5) return -4 * stepsEnd(2, (float)(t / 0.5));
-			return -4 + 4 * stepsEnd(2, (float)((t - 0.5) / 0.5));
-		}
-		float march() { double t = std::fmod(std::max(0.0, now - topAt), 800.0) / 800.0; return 16 * stepsEnd(4, (float)t); }
+		// Banana: every motion is a smooth curve, drawn at the panels' rate (the mockup's steps() read as a low frame
+		// rate on the handheld); the looping ones wake the menu when they move a pixel (nextWake), not every refresh
+		static float easeOut3(float q) { q = std::min(1.0f, std::max(0.0f, q)); return 1 - (1 - q) * (1 - q) * (1 - q); }
+		float rise(double at) { double t = now - at; if (holdStill || t < 0 || t >= 280) return 0; return 10 * (1 - easeOut3((float)(t / 280))); }
+		float pop() { double t = now - popAt; if (t < 0 || t >= 320) return 0; return 6 * (1 - easeOut3((float)(t / 320))); }
+		static float bobAt(double since) { double t = std::fmod(std::max(0.0, since), 2400.0) / 2400.0; return (float)(-4 * (0.5 - 0.5 * std::cos(2 * M_PI * t))); }
+		static float marchAt(double since) { return (float)(16 * std::fmod(std::max(0.0, since), 800.0) / 800.0); }
+		float bob() { return holdStill ? 0 : bobAt(now - topAt); }
+		float march() { return marchAt(now - topAt); }
 		float thumbValue()
 		{
 			double t = now - thumbAt;
 			if (t >= 350 || t < 0) return thumbTo;
-			return thumbFrom + (thumbTo - thumbFrom) * stepsEnd(5, (float)(t / 350));
+			return thumbFrom + (thumbTo - thumbFrom) * easeOut3((float)(t / 350));
 		}
 
 		// ---- drawing: top screen ----
@@ -1318,7 +1373,7 @@ namespace rnds
 				if (t < GLINT_SWEEP)
 				{
 					Sprite gl = glint(h);
-					float k = stepsEnd(8, (float)(t / GLINT_SWEEP));
+					float k = (float)(t / GLINT_SWEEP);
 					float gw = gl.tex ? gl.tex->w / s : 0;
 					float gx = x - gw + (w + gw) * k;
 					be->pushClip(std::round(X(x)), std::round(X(y + b)), std::round(X(w)), std::round(X(h)));
@@ -1578,7 +1633,7 @@ namespace rnds
 			Sprite a = arrow(right);
 			if (!a.valid()) return;
 			float dx = std::round(X(x)) - (right ? a.tex->w : 0), dy = std::round(X(cy) - a.tex->h / 2.0f);
-			be->draw(a.tex, dx, dy, (float)a.tex->w, (float)a.tex->h, held ? Color::hex(0xf0b429) : INK);
+			be->draw(a.tex, dx, dy, (float)a.tex->w, (float)a.tex->h, held ? Color::hex(accent.base) : INK);
 		}
 
 		// a triangle painted once about its own apex and drawn at (cx, top) CSS px (the letter bubble's pointer moves)
@@ -1814,7 +1869,7 @@ namespace rnds
 			// end, and back up onto it
 			float y0 = ry + 14, yEnd = clipY - 47;
 			float y;
-			if (t < INS_LIFT) y = y0 - 6 * stepsEnd(2, (float)(t / INS_LIFT));
+			if (t < INS_LIFT) { float q = (float)(t / INS_LIFT); y = y0 - 6 * (1 - (1 - q) * (1 - q)); }
 			else if (t < INS_LIFT + INS_SLIDE)
 			{
 				float e = cubicBezier(0.55f, 0, 0.9f, 0.45f, (float)((t - INS_LIFT) / INS_SLIDE));
@@ -1822,7 +1877,7 @@ namespace rnds
 			}
 			else if (t < INS_LIFT + INS_SLIDE + INS_CLICK) y = yEnd + 3;
 			else if (t < INS_LIFT + INS_SLIDE + INS_CLICK + INS_SETTLE)
-				y = yEnd + 3 - 3 * stepsEnd(3, (float)((t - INS_LIFT - INS_SLIDE - INS_CLICK) / INS_SETTLE));
+				{ float q = (float)((t - INS_LIFT - INS_SLIDE - INS_CLICK) / INS_SETTLE); y = yEnd + 3 - 3 * (1 - (1 - q) * (1 - q)); }
 			else y = yEnd;
 			y = std::round(y);
 
@@ -1837,7 +1892,7 @@ namespace rnds
 			double ct = t - (INS_LIFT + INS_SLIDE);
 			if (ct >= 0 && ct < 240)
 			{
-				float k = stepsEnd(3, (float)(ct / 240));
+				float k = (float)(ct / 240);
 				float d = 8 + 18 * k;
 				Color sp(1, 1, 1, 1 - k * 0.8f);
 				const float sx[2] = { 262, 378 };
@@ -2103,16 +2158,24 @@ namespace rnds
 	{
 		if (animating()) return 0;
 		double now = d->now;
-		// the looping animations step: the icon or cover bob every 600 ms; on a game list also the meter stripes every
-		// 200 ms and, every 5 s, the cover's shine in 8 steps
+		// the looping animations: the icon or cover's bob and, on a game list, the meter's stripes wake the menu when
+		// they next move a whole pixel (smooth motion at the cost of a frame per pixel, not one per refresh); the
+		// cover's shine, every 5 s, is drawn every refresh while it sweeps
 		double t = now - d->topAt;
-		auto nextOf = [t](double period) { return (std::floor(t / period) + 1) * period - t; };
-		double next = d->holdStill ? 1e9 : nextOf(600);	// held still: no bob to step
+		const float sc = d->s;
+		auto nextPixel = [&](float (*f)(double), double limit)
+		{
+			const float v0 = std::round(f(t) * sc);
+			for (double dt = 8; dt <= limit; dt += 8)
+				if (std::round(f(t + dt) * sc) != v0) return dt;
+			return limit;
+		};
+		double next = d->holdStill ? 1e9 : nextPixel(&Impl::bobAt, 1200);	// held still: no bob
 		if (mView != HOME)
 		{
-			next = std::min(next, nextOf(200));
-			double g = std::fmod(t, Impl::GLINT_PERIOD), step = Impl::GLINT_SWEEP / 8;
-			next = std::min(next, g < Impl::GLINT_SWEEP ? (std::floor(g / step) + 1) * step - g : Impl::GLINT_PERIOD - g);
+			next = std::min(next, nextPixel(&Impl::marchAt, 400));
+			double g = std::fmod(t, Impl::GLINT_PERIOD);
+			next = std::min(next, g < Impl::GLINT_SWEEP ? 0.0 : Impl::GLINT_PERIOD - g);
 		}
 		return next >= 1e9 ? -1 : (int)std::ceil(next);
 	}

@@ -154,12 +154,12 @@ namespace banana
 			p.ditherA = Color(sh.r, sh.g, sh.b, 0.07f); p.ditherB = Color(sh.r, sh.g, sh.b, 0.035f);
 			p.panelBand = Color::hex(0xffffff); p.panelBody = Color::hex(0xf6f2ea); p.panelLow = Color::hex(0xd8d0c0);
 			p.bubbleBand = Color::hex(0xffffff); p.bubbleBody = Color::hex(0xfaf7f0); p.bubbleLow = Color::hex(0xddd5c6);
-			p.slotOn = Color::hex(0xf0b429); p.kbdBg = Color::hex(0x3a342c); p.kbdInk = Color::hex(0xf2f6fa);
+			p.slotOn = Color::hex(rnds::accent.base); p.kbdBg = Color::hex(0x3a342c); p.kbdInk = Color::hex(0xf2f6fa);
 			p.blackish = Color(sh.r, sh.g, sh.b, 0.3f); p.shade45 = Color(sh.r, sh.g, sh.b, 0.25f);
 		}
-		p.accent = light ? Color::hex(0xc07a00) : Color::hex(0xffd23f);	// the bananas' yellow for values being changed
-		p.pick = Color::hex(0xf0b429); p.pickBand = Color::hex(0xffcf5c); p.pickLow = Color::hex(0xc98f12);
-		p.pickEdge = light ? Color::hex(0x8a5a00) : Color::hex(0xffffff);
+		p.accent = Color::hex(rnds::tintAccent(light ? 0xffc07a00u : 0xffffd23fu) & 0xffffff);	// the accent for values being changed
+		p.pick = Color::hex(rnds::accent.base); p.pickBand = Color::hex(rnds::accent.band); p.pickLow = Color::hex(rnds::accent.low);
+		p.pickEdge = light ? Color::hex(rnds::accent.dark) : Color::hex(0xffffff);
 		p.onPick = Color::hex(0x17161c); p.onPickAccent = Color::hex(0x7a3a00);
 		return p;
 	}
@@ -179,7 +179,7 @@ namespace banana
 	void Settings::setVariant(const std::string& v)
 	{
 		bool l = v == "light";
-		if (l != light) { light = l; cache.clear(); }
+		light = l; cache.clear();	// (also for a new accent: the boxes are drawn again)
 	}
 
 	// time zones as POSIX TZ rules (glibc reads them from TZ with no zoneinfo files): the offset and the summer time
@@ -231,6 +231,8 @@ namespace banana
 		};
 		const char* D = "Display & sound";
 		add(D, "picture", "Theme", "ROCKNIXDS Pixel's two palettes: dark, or light for daylight.", menu, "theme", { "Dark", "Light" }, { "dark", "light" });
+		add(D, "picture", "Accent colour", "The colour of the selection, the logo and the boot animation's banana.", menu, "accent",
+			{ "Yellow", "Blue", "Red", "Green", "Purple", "Pink" }, { "yellow", "blue", "red", "green", "purple", "pink" });
 		add(D, "picture", "Brightness", "Both panels' backlights. F + volume changes it anywhere, in games too.", "", "",
 			{ "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "100", "200", "300", "400", "500", "600", "700", "800", "900", "1000" }, Item::BRIGHTNESS);
 		add(D, "picture", "Motion", "The top screen's bob and shine. Off holds it still and saves a little battery.", menu, "motion", { "On", "Off" }, { "on", "off" });
@@ -495,6 +497,7 @@ namespace banana
 		it.at = at;
 		save(it);
 		if (it.key == "theme") { setVariant(it.values[at]); return THEME; }
+		if (it.key == "accent") { rnds::setAccent(it.values[at]); setVariant(light ? "light" : "dark"); return THEME; }
 		return CHANGED;
 	}
 

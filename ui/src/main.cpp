@@ -551,32 +551,80 @@ static void playSplash(Display& disp, SoftBackend& be, const Options& o, const s
 	}
 }
 
-// the splash dissolves into the menu in four steps of an ordered dither, in blocks of the splash's own pixels
-static void dissolveToMenu(Display& disp, SoftBackend& be, rnds::UI& ui)
+// the splash hands over to the menu through an iris: on each panel a circle round its centre closes over the splash's
+// last frame to black, holds, then opens on the menu. Its edge goes in steps of the splash's own pixels (2 at 480
+// lines), as pixel art would draw it; timed by the clock, a frame each refresh
+static void irisToMenu(Display& disp, SoftBackend& be, rnds::UI& ui)
 {
 	if (!gSplash.played()) return;
-	size_t n = (size_t)be.width() * be.height();
+	const int W = be.width(), H = be.height();
+	const size_t n = (size_t)W * H;
 	std::vector<uint32_t> was[2] = { std::vector<uint32_t>(be.pixels(0), be.pixels(0) + n), std::vector<uint32_t>(be.pixels(1), be.pixels(1) + n) };
-	static const int bayer[16] = { 0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5 };
-	int block = std::max(1, (int)std::lround(2 * be.height() / 480.0f));
-	for (int step = 1; step <= 4; step++)
+	// the menu's first frame drawn now, before the circle closes (its first draw takes ~130 ms: the glyphs and boxes
+	// made; with the splash's last frame still and on screen that wait doesn't show), the splash's put back; its
+	// frames are then drawn live as the circle opens
+	ui.update(nowMs());
+	ui.finishWork();
+	be.invalidate();
+	ui.render();
+	for (int sc = 0; sc < 2; sc++) std::copy(was[sc].begin(), was[sc].end(), be.canvas(sc));
+	std::vector<uint32_t> menu[2] = { std::vector<uint32_t>(n), std::vector<uint32_t>(n) };
+	const int block = std::max(1, (int)std::lround(2 * H / 480.0f));
+	const float full = std::sqrt((float)(W * W + H * H)) / 2 + block;	// the corners
+	const double CLOSE = 360, HOLD = 70, OPEN = 450;
+	auto frame = [&](const std::vector<uint32_t>* src, float r)
 	{
-		ui.update(nowMs());
-		ui.finishWork();
-		be.invalidate();
-		ui.render();
-		if (step < 4)
-			for (int s = 0; s < 2; s++)
+		for (int sc = 0; sc < 2; sc++)
+		{
+			uint32_t* d = be.canvas(sc);
+			for (int y0 = 0; y0 < H; y0 += block)
 			{
-				uint32_t* d = be.canvas(s);
-				for (int y = 0; y < be.height(); y++)
-					for (int x = 0; x < be.width(); x++)
-						if (bayer[((y / block) & 3) * 4 + ((x / block) & 3)] >= step * 4)
-							d[(size_t)y * be.width() + x] = was[s][(size_t)y * be.width() + x];
+				// the row band's half-width inside the circle, in whole blocks
+				float dy = (y0 + block * 0.5f) - H * 0.5f;
+				float h2 = r * r - dy * dy;
+				int half = h2 > 0 ? (int)(std::sqrt(h2) / block) * block : -1;
+				int xa = half < 0 ? W : std::max(0, W / 2 - half), xb = half < 0 ? W : std::min(W, W / 2 + half);
+				for (int y = y0; y < std::min(H, y0 + block); y++)
+				{
+					uint32_t* row = d + (size_t)y * W;
+					const uint32_t* sr = src[sc].data() + (size_t)y * W;
+					if (xa > 0) std::fill(row, row + xa, 0xff000000u);
+					if (xb > xa) std::copy(sr + xa, sr + xb, row + xa);
+					if (xb < W) std::fill(row + std::max(xa, xb), row + W, 0xff000000u);
+				}
 			}
+		}
+		be.invalidate();
 		showFrame(disp, be, -1);
-		showFrame(disp, be, -1);	// each step for two frames
+	};
+	const double t0 = nowMs();
+	for (;;)	// closing over the splash: slow at first, faster into the point (no lingering at a small circle)
+	{
+		double p = (nowMs() - t0) / CLOSE;
+		if (p >= 1) break;
+		frame(was, full * (float)(1 - p * p));
 	}
+	frame(was, 0);
+	const double t1 = nowMs();
+	// while it is black: the menu as it will be once its own intro is over (300 ms on, before the opening ends, so
+	// the menu's clock never goes back), opened on as a still picture: a live menu frame (16-20 ms) each refresh
+	// made the opening miss refreshes
+	ui.update(t1 + 300);
+	be.invalidate();
+	ui.render();
+	for (int sc = 0; sc < 2; sc++) std::copy(be.canvas(sc), be.canvas(sc) + n, menu[sc].begin());
+	for (int sc = 0; sc < 2; sc++) std::fill(be.canvas(sc), be.canvas(sc) + n, 0xff000000u);	// black again
+	be.invalidate();
+	while (nowMs() - t1 < HOLD) showFrame(disp, be, -1);
+	const double t2 = nowMs();
+	for (;;)	// opening on the menu: fast at first, settling
+	{
+		double p = (nowMs() - t2) / OPEN;
+		if (p >= 1) break;
+		float e = (float)p; e = 1 - (1 - e) * (1 - e) * (1 - e);
+		frame(menu, full * e);
+	}
+	for (int sc = 0; sc < 2; sc++) std::copy(menu[sc].begin(), menu[sc].end(), be.canvas(sc));
 	be.invalidate();	// the menu's next frame is drawn in full
 }
 
@@ -611,6 +659,7 @@ int main(int argc, char** argv)
 	// the time zone, for the clock and every game started from here (a POSIX rule, see settings.cpp)
 	if (!settings["timezone"].empty()) { setenv("TZ", settings["timezone"].c_str(), 1); tzset(); }
 	std::string variant = settings["theme"] == "light" ? "light" : "dark";
+	rnds::setAccent(settings["accent"]);	// before anything is drawn: the splash and the menu in it
 	Host lib(o.systems, o.roms, o.data, o.assets);
 	lib.motion = settings["motion"] != "off";
 	lib.twelveHour = settings["clock"] == "12h";
@@ -662,6 +711,10 @@ int main(int argc, char** argv)
 		}
 		uiPtr.reset(new rnds::UI(&lib, &be, o.assets, disp.height() / 480.0f, variant));
 		uiPtr->setHome(startSys);
+		// the menu's pictures decoded here too, while the animation plays (on the main thread at the hand-over they
+		// stopped the screens for ~200 ms)
+		uiPtr->update(nowMs());
+		uiPtr->finishWork();
 		ready = true;
 	});
 	playSplash(disp, be, o, variant, settings["splash"] != "off", ready, sound, sigPipe[0]);
@@ -670,7 +723,7 @@ int main(int argc, char** argv)
 	ui->setLog([](const std::string& m) { logf("%s", m.c_str()); });
 	Worker worker;
 	worker.start(ui);
-	dissolveToMenu(disp, be, *ui);
+	irisToMenu(disp, be, *ui);
 	bootMark("banana-ui: the menu");
 	// the first boot after the installation: the setup (Wi-Fi, the time zone, the accounts) before anything else
 	bool firstSetup = access((o.data + "/setup-done").c_str(), F_OK) != 0;

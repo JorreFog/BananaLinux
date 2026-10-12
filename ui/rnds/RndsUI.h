@@ -121,6 +121,15 @@ namespace rnds
 	inline float stepsEnd(int n, float p) { return p >= 1 ? 1 : (p <= 0 ? 0 : (float)(int)(p * n) / n); }
 
 	// ---- the UI -------------------------------------------------------------------------------------------------------
+	// the accent: the selected plate, the scroll thumb, held icons, the settings' pick, and every yellow of the logo
+	// and the boot animation (setAccent before the UI is made; Banana's settings: yellow, blue, red, green, purple,
+	// pink)
+	struct Accent { uint32_t base, light, dark, band, low; };
+	extern Accent accent;
+	bool setAccent(const std::string& name);		// false: unknown, the yellow kept
+	void tintAccent(Bitmap& b);						// RGBA8: its yellows in the accent's hue (nothing with the yellow)
+	uint32_t tintAccent(uint32_t argb);				// one colour, 0xAARRGGBB (premultiplied is fine: hue and ratios)
+
 	class UI
 	{
 	public:

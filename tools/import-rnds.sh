@@ -29,6 +29,8 @@ cp -r "$DARK/rnds" "$HERE/ui/assets/rnds"
 
 # Banana's own pictures over ROCKNIXDS's (the logo; see ui/assets/overrides)
 cp "$HERE"/ui/assets/overrides/*.png "$HERE/ui/assets/rnds/"
+# and system icons Banana redrew (icons/: ports.png, its PC three pixels lower, centred as the others)
+cp "$HERE"/ui/assets/overrides/icons/*.png "$HERE/ui/assets/rnds/icons/"
 
 commit=$(git -C "$SRC" rev-parse HEAD 2>/dev/null || echo unknown)
 cat > "$HERE/ui/rnds/UPSTREAM" <<EOF
