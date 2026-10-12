@@ -10,6 +10,11 @@ sleeps when you close the lid, and gives the games every cycle.</b></p>
 > day to day), but things are still missing and some are rough (see *Status*). If you try it,
 > [docs/FIRST-BOOT.md](docs/FIRST-BOOT.md) says which logs to send back when something goes wrong.
 
+> [!NOTE]
+> **Made with AI.** BananaOS is developed with the help of AI: much of the code, the tests and the documentation
+> was written with Claude (Anthropic) as a coding assistant, directed, reviewed and tested on real RG DS and RG DS
+> Plus hardware by the project's maintainer. Bug reports and contributions from people are just as welcome.
+
 ## What it is
 
 Banana is a whole system for the RG DS, built with Buildroot: a mainline kernel with ROCKNIX's RG DS support,
@@ -153,12 +158,6 @@ ui/banana-ui --headless out/ --assets ui/assets/rnds --roms <roms> --data <dir> 
 | `buildroot/` | the Buildroot tree: defconfigs, Banana's packages, the RG DS board (kernel patches, device trees, drivers, U-Boot, image layout) |
 | `tools/` | `import-rnds.sh` (the menu engine from ROCKNIXDS), `sync-rocknix-hw.sh` (the hardware support from ROCKNIX), the pixel bunch, the logo and the boot animation's still layers |
 | `docs/` | [ARCHITECTURE.md](docs/ARCHITECTURE.md): boot, partitions, sleep, performance and the menu in detail; [FIRST-BOOT.md](docs/FIRST-BOOT.md): the first boot on the hardware, and the logs it leaves |
-
-## Made with AI
-
-BananaOS is developed with the help of AI: much of the code, the tests and the documentation was written with
-Claude (Anthropic) as a coding assistant, directed, reviewed and tested on real RG DS and RG DS Plus hardware by
-the project's maintainer. Bug reports and contributions from people are just as welcome.
 
 ## Credits
 
