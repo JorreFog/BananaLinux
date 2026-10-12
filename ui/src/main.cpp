@@ -679,7 +679,7 @@ int main(int argc, char** argv)
 	input.open(o.touch, disp.width(), disp.height());
 
 	Repeat rep;
-	bool dirty = true, quit = false;
+	bool dirty = true, quit = false, drawn = false;	// drawn: a frame on the canvas waiting for the flips
 	int lastMinute = -1;
 	float scale = disp.height() / 480.0f;
 	Settings settingsView(&be, o.assets, o.data, scale, variant);
@@ -795,6 +795,7 @@ int main(int argc, char** argv)
 		sound.release();
 		input.close();
 		disp.close();
+		drawn = false;	// the menu is drawn afresh when the panels come back
 		rep.key = Key::NONE;
 		if (system(("banana-perf " + shellQuote(sd.perf.empty() ? "balanced" : sd.perf)).c_str()) != 0) {}
 		double start = nowMs();
@@ -896,29 +897,37 @@ int main(int argc, char** argv)
 			std::lock_guard<std::mutex> l(worker.uiLock);
 			want = dirty || (!settingsView.isOpen() && (ui->animating() || ui->nextWake() == 0));
 		}
-		if (want && disp.isOpen() && !disp.flipPending())
+		// the next frame is drawn while the last one's flips are still pending (present copies it out, so the canvas is
+		// free again at once), and handed over when both panels have flipped: drawing (~10 ms on the RG DS) and the wait
+		// for the two panels' unaligned vblanks overlap instead of adding up to two refreshes a frame
+		if (want && disp.isOpen() && !drawn)
 		{
 			{
 				std::lock_guard<std::mutex> l(worker.uiLock);
 				if (settingsView.isOpen()) settingsView.render();
 				else ui->render();
 			}
+			drawn = true;
+			dirty = false;
+		}
+		if (drawn && disp.isOpen() && !disp.flipPending())
+		{
 			const uint32_t* scr[2] = { be.pixels(0), be.pixels(1) };
 			int y0[2], y1[2];
 			be.takeDamage(0, y0[0], y1[0]);
 			be.takeDamage(1, y0[1], y1[1]);
 			disp.present(scr, y0, y1);
-			dirty = false;
+			drawn = false;
 			continue;	// see whether the next frame is due before sleeping
 		}
 
 		int timeout;
 		{
 			std::lock_guard<std::mutex> l(worker.uiLock);
-			timeout = want ? -1 : (settingsView.isOpen() ? settingsView.nextWake(now) : ui->nextWake());	// a frame is wanted: the flip event wakes us
+			timeout = want || drawn ? -1 : (settingsView.isOpen() ? settingsView.nextWake(now) : ui->nextWake());	// a frame is wanted: the flip event wakes us
 		}
 		int toMinute = (int)((60 - wall % 60) * 1000);
-		if (timeout < 0 || timeout > toMinute) timeout = want ? timeout : toMinute;
+		if (timeout < 0 || timeout > toMinute) timeout = want || drawn ? timeout : toMinute;
 		int r = rep.wait(now);
 		if (r >= 0 && (timeout < 0 || r < timeout)) timeout = r;
 		bool rescanCan;
