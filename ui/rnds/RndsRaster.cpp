@@ -36,7 +36,41 @@ namespace rnds
 
 	// ---- Surface ------------------------------------------------------------------------------------------------------
 
-	Surface::Surface(int w_, int h_) : w(w_ > 0 ? w_ : 0), h(h_ > 0 ? h_ : 0), d((size_t)(w_ > 0 ? w_ : 0) * (h_ > 0 ? h_ : 0) * 4, 0.0f) {}
+	Surface::Surface(int w_, int h_) : w(w_ > 0 ? w_ : 0), h(h_ > 0 ? h_ : 0), d((size_t)w * h * 4) {}
+
+	// source-over c through coverage(x, y) (integer pixel coords) over [x0,x1) x [y0,y1), skipping [sx0,sx1) x [sy0,sy1)
+	template<typename F> static void fillFrame(Surface& s, int x0, int y0, int x1, int y1, int sx0, int sy0, int sx1, int sy1, const Color& c, F coverage)
+	{
+		if (c.a <= 0)
+			return;
+		x0 = std::max(x0, 0); y0 = std::max(y0, 0);
+		x1 = std::min(x1, s.w); y1 = std::min(y1, s.h);
+		for (int y = y0; y < y1; y++)
+		{
+			float* row = &s.d[((size_t)y * s.w) * 4];
+			bool skipRow = y >= sy0 && y < sy1 && sx1 > sx0;
+			// the row is up to two spans, either side of the skipped part
+			int e0 = skipRow ? std::min(x1, std::max(x0, sx0)) : x1;
+			int b1 = skipRow ? std::max(x0, std::min(x1, sx1)) : x1;
+			for (int part = 0; part < 2; part++)
+			{
+				int xa = part ? b1 : x0, xb = part ? x1 : e0;
+				for (int x = xa; x < xb; x++)
+				{
+					float cov = coverage(x, y);
+					if (cov <= 0)
+						continue;
+					float a = c.a * (cov > 1 ? 1 : cov);
+					float* p = row + x * 4;
+					float k = 1 - a;
+					p[0] = c.r * a + p[0] * k;
+					p[1] = c.g * a + p[1] * k;
+					p[2] = c.b * a + p[2] * k;
+					p[3] = a + p[3] * k;
+				}
+			}
+		}
+	}
 
 	template<typename F> void Surface::paint(int x0, int y0, int x1, int y1, const Color& c, F coverage)
 	{
@@ -46,29 +80,7 @@ namespace rnds
 	// like paint(), but skips [sx0,sx1) x [sy0,sy1), where the caller knows the coverage is 0
 	template<typename F> void Surface::paintFrame(int x0, int y0, int x1, int y1, int sx0, int sy0, int sx1, int sy1, const Color& c, F coverage)
 	{
-		if (c.a <= 0)
-			return;
-		x0 = std::max(x0, 0); y0 = std::max(y0, 0);
-		x1 = std::min(x1, w); y1 = std::min(y1, h);
-		for (int y = y0; y < y1; y++)
-		{
-			float* row = &d[((size_t)y * w) * 4];
-			bool skipRow = y >= sy0 && y < sy1 && sx1 > sx0;
-			for (int x = x0; x < x1; x++)
-			{
-				if (skipRow && x >= sx0 && x < sx1) { x = sx1 - 1; continue; }
-				float cov = coverage(x + 0.5f, y + 0.5f);
-				if (cov <= 0)
-					continue;
-				float a = c.a * (cov > 1 ? 1 : cov);
-				float* p = row + x * 4;
-				float k = 1 - a;
-				p[0] = c.r * a + p[0] * k;
-				p[1] = c.g * a + p[1] * k;
-				p[2] = c.b * a + p[2] * k;
-				p[3] = a + p[3] * k;
-			}
-		}
+		fillFrame(*this, x0, y0, x1, y1, sx0, sy0, sx1, sy1, c, [&](int x, int y) { return coverage(x + 0.5f, y + 0.5f); });
 	}
 
 	void Surface::drawBitmap(const Bitmap& b, float dx, float dy, const Color& tint)
@@ -113,6 +125,10 @@ namespace rnds
 		Bitmap b;
 		b.w = w; b.h = h;
 		b.px.assign((size_t)w * h * 4, 0);
+		// runs of the same premultiplied pixel (flat fills) convert once
+		float last[4] = { 0, 0, 0, 0 };
+		uint8_t lastOut[4] = { 0, 0, 0, 0 };
+		bool haveLast = false;
 		for (size_t i = 0; i < (size_t)w * h; i++)
 		{
 			const float* p = &d[i * 4];
@@ -120,15 +136,24 @@ namespace rnds
 			uint8_t* o = &b.px[i * 4];
 			if (a <= 0.0005f)
 				continue;
+			if (haveLast && std::memcmp(p, last, sizeof last) == 0)
+			{
+				std::memcpy(o, lastOut, 4);
+				continue;
+			}
 			o[0] = (uint8_t)roundi(clamp01(p[0] / a) * 255);
 			o[1] = (uint8_t)roundi(clamp01(p[1] / a) * 255);
 			o[2] = (uint8_t)roundi(clamp01(p[2] / a) * 255);
 			o[3] = (uint8_t)roundi(clamp01(a) * 255);
+			std::memcpy(last, p, sizeof last);
+			std::memcpy(lastOut, o, 4);
+			haveLast = true;
 		}
 		if (bleed)
 		{
-			// transparent pixels take a neighbour's colour, so linear filtering doesn't pull black into edges
-			std::vector<uint8_t> src = b.px;
+			// transparent pixels take a neighbour's colour, so linear filtering doesn't pull black into edges.
+			// Only alpha-0 pixels change, and only their colour, from neighbours with alpha != 0 (which never
+			// change): so this can work in place.
 			for (int y = 0; y < h; y++)
 				for (int x = 0; x < w; x++)
 				{
@@ -141,7 +166,7 @@ namespace rnds
 						int nx = x + dx[k], ny = y + dy[k];
 						if (nx < 0 || ny < 0 || nx >= w || ny >= h)
 							continue;
-						const uint8_t* s = &src[((size_t)ny * w + nx) * 4];
+						const uint8_t* s = &b.px[((size_t)ny * w + nx) * 4];
 						if (s[3] != 0) { o[0] = s[0]; o[1] = s[1]; o[2] = s[2]; break; }
 					}
 				}
@@ -175,6 +200,62 @@ namespace rnds
 		return clamp01(0.5f - dist);
 	}
 
+	// RRect::coverage at the pixel centres of [x0,x1) x [y0,y1), with the parts that depend on only one axis worked
+	// out once per column and row. at() gives exactly what coverage() gives.
+	struct RRectGrid
+	{
+		struct Axis { float q, c; bool out; };	// q: |p - centre| - half + rr; c: the plain rect's 1-D overlap
+		bool empty;
+		float rr;
+		int x0, y0;
+		std::vector<Axis> cols, rows;
+
+		RRectGrid(const RRect& r, int x0_, int y0_, int x1, int y1) : x0(x0_), y0(y0_)
+		{
+			empty = r.w <= 0 || r.h <= 0;
+			float hw = r.w * 0.5f, hh = r.h * 0.5f;
+			rr = std::min(r.r, std::min(hw, hh));
+			if (empty)
+				return;
+			cols.resize(std::max(x1 - x0, 0));
+			rows.resize(std::max(y1 - y0, 0));
+			for (int i = 0; i < (int)cols.size(); i++)
+			{
+				float px = (x0 + i) + 0.5f;
+				Axis& a = cols[i];
+				a.out = px < r.x - 0.5f || px > r.x + r.w + 0.5f;
+				a.q = std::fabs(px - (r.x + hw)) - hw + rr;
+				a.c = clamp01(std::min(px + 0.5f, r.x + r.w) - std::max(px - 0.5f, r.x));
+			}
+			for (int i = 0; i < (int)rows.size(); i++)
+			{
+				float py = (y0 + i) + 0.5f;
+				Axis& a = rows[i];
+				a.out = py < r.y - 0.5f || py > r.y + r.h + 0.5f;
+				a.q = std::fabs(py - (r.y + hh)) - hh + rr;
+				a.c = clamp01(std::min(py + 0.5f, r.y + r.h) - std::max(py - 0.5f, r.y));
+			}
+		}
+
+		float at(int x, int y) const
+		{
+			if (empty)
+				return 0;
+			const Axis& cx = cols[x - x0];
+			const Axis& cy = rows[y - y0];
+			if (cx.out || cy.out)
+				return 0;
+			float qx = cx.q, qy = cy.q;
+			if (rr > 0 && qx <= 0 && qy <= 0 && std::max(qx, qy) - rr <= -0.5f)
+				return 1;
+			if (rr <= 0)
+				return cx.c * cy.c;
+			float ox = std::max(qx, 0.0f), oy = std::max(qy, 0.0f);
+			float dist = (ox > 0 && oy > 0 ? std::sqrt(ox * ox + oy * oy) : ox + oy) + std::min(std::max(qx, qy), 0.0f) - rr;
+			return clamp01(0.5f - dist);
+		}
+	};
+
 	// 1-D overlap of the pixel [p-0.5, p+0.5) with [a, b)
 	static inline float overlap(float p, float a, float b) { return clamp01(std::min(p + 0.5f, b) - std::max(p - 0.5f, a)); }
 
@@ -198,6 +279,9 @@ namespace rnds
 		// the part of the box that no corner reaches: coverage 1 there for B and P
 		float core = std::max(st.radius, 0.0f) + st.border + 2;
 		int cx0 = (int)std::floor(ox + core), cy0 = (int)std::floor(oy + core), cx1 = (int)std::ceil(ox + w - core), cy1 = (int)std::ceil(oy + h - core);
+		// B and P sampled at every pixel centre of the surface
+		RRectGrid Bg(B, 0, 0, W, H), Pg(P, 0, 0, W, H);
+		// (a coverage is at most 1, so c * (1 - 1) is 0 whatever c is: those pixels return 0 early)
 
 		// outer shadows, bottom-most first, clipped out of the border box
 		for (int i = (int)st.shadows.size() - 1; i >= 0; i--)
@@ -206,21 +290,47 @@ namespace rnds
 			if (sh.inset)
 				continue;
 			RRect S(B.x + sh.dx - sh.spread, B.y + sh.dy - sh.spread, B.w + 2 * sh.spread, B.h + 2 * sh.spread, B.r > 0 ? B.r + sh.spread : 0);
-			s.paintFrame((int)std::floor(S.x), (int)std::floor(S.y), (int)std::ceil(S.x + S.w), (int)std::ceil(S.y + S.h), cx0, cy0, cx1, cy1, sh.c,
-				[&](float x, float y) { return S.coverage(x, y) * (1 - B.coverage(x, y)); });
+			RRectGrid Sg(S, 0, 0, W, H);
+			fillFrame(s, (int)std::floor(S.x), (int)std::floor(S.y), (int)std::ceil(S.x + S.w), (int)std::ceil(S.y + S.h), cx0, cy0, cx1, cy1, sh.c,
+				[&](int x, int y) { float b = Bg.at(x, y); return b >= 1 ? 0.0f : Sg.at(x, y) * (1 - b); });
 		}
 
+		// The core: B's coverage is exactly 1 there, and nothing was painted in it yet, so after the background (and
+		// each band, whose coverage there only depends on the row) every core row is one colour. Blend one pixel per
+		// row and copy it across.
+		int kx0 = std::max(cx0, 0), kx1 = std::min(cx1, W), ky0 = std::max(cy0, 0), ky1 = std::min(cy1, H);
+		auto coreRows = [&](int y0, int y1, const Color& c, auto rowCov)
+		{
+			if (c.a <= 0 || kx1 <= kx0)
+				return;
+			for (int y = std::max(y0, ky0); y < std::min(y1, ky1); y++)
+			{
+				float cov = rowCov(y);
+				if (cov <= 0)
+					continue;
+				float a = c.a * (cov > 1 ? 1 : cov);
+				float* p = &s.d[((size_t)y * W + kx0) * 4];
+				float k = 1 - a;
+				p[0] = c.r * a + p[0] * k;
+				p[1] = c.g * a + p[1] * k;
+				p[2] = c.b * a + p[2] * k;
+				p[3] = a + p[3] * k;
+				for (int x = kx0 + 1; x < kx1; x++)
+					std::memcpy(p + (x - kx0) * 4, p, 4 * sizeof(float));
+			}
+		};
+
 		// background colour (clip: border box)
-		// (in the core B's coverage is exactly 1: no corner, no edge to work out)
-		auto inCore = [&](float x, float y) { return x > cx0 && x < cx1 && y > cy0 && y < cy1; };
-		s.paint(ox, oy, ox + w, oy + h, st.bg, [&](float x, float y) { return inCore(x, y) ? 1.0f : B.coverage(x, y); });
+		fillFrame(s, ox, oy, ox + w, oy + h, cx0, cy0, cx1, cy1, st.bg, [&](int x, int y) { return Bg.at(x, y); });
+		coreRows(oy, oy + h, st.bg, [](int) { return 1.0f; });
 
 		// gradient bands (origin: padding box)
 		for (auto& band : st.bands)
 		{
 			float y0 = P.y + band.y0, y1 = band.y1 < 0 ? P.y + P.h : P.y + band.y1;
-			s.paint(ox, (int)std::floor(y0), ox + w, (int)std::ceil(y1), band.c,
-				[&](float x, float y) { return (inCore(x, y) ? 1.0f : B.coverage(x, y)) * overlap(y, y0, y1); });
+			auto ov = [&](int y) { return overlap(y + 0.5f, y0, y1); };
+			fillFrame(s, ox, (int)std::floor(y0), ox + w, (int)std::ceil(y1), cx0, cy0, cx1, cy1, band.c, [&](int x, int y) { return Bg.at(x, y) * ov(y); });
+			coreRows((int)std::floor(y0), (int)std::ceil(y1), band.c, [&](int y) { return 1.0f * ov(y); });
 		}
 
 		// the dither tile: 4x4 CSS px, white 14% at (0,0) and 7% at (2,2), 1x1 each. The tile is an SVG with
@@ -246,7 +356,7 @@ namespace rnds
 				{
 					const Color* c = rowA[y] && colA[x] ? &w14 : (rowB[y] && colB[x] ? &w07 : nullptr);
 					if (!c) continue;
-					float cov = (x >= cx0 && x < cx1 && y >= cy0 && y < cy1) ? 1.0f : B.coverage(x + 0.5f, y + 0.5f);
+					float cov = (x >= cx0 && x < cx1 && y >= cy0 && y < cy1) ? 1.0f : Bg.at(x, y);
 					if (cov <= 0) continue;
 					float a = c->a * cov;
 					float* p = &s.d[((size_t)y * W + x) * 4];
@@ -265,12 +375,15 @@ namespace rnds
 			RRect hole(P.x + sh.dx + sh.spread, P.y + sh.dy + sh.spread, P.w - 2 * sh.spread, P.h - 2 * sh.spread, std::max(0.0f, P.r - sh.spread));
 			float reach = core + std::fabs(sh.dx) + std::fabs(sh.dy) + sh.spread;
 			int hx0 = (int)std::floor(ox + reach), hy0 = (int)std::floor(oy + reach), hx1 = (int)std::ceil(ox + w - reach), hy1 = (int)std::ceil(oy + h - reach);
-			s.paintFrame(ox, oy, ox + w, oy + h, hx0, hy0, hx1, hy1, sh.c, [&](float x, float y) { return P.coverage(x, y) * (1 - hole.coverage(x, y)); });
+			RRectGrid Hg(hole, 0, 0, W, H);
+			fillFrame(s, ox, oy, ox + w, oy + h, hx0, hy0, hx1, hy1, sh.c,
+				[&](int x, int y) { float p = Pg.at(x, y); if (p <= 0) return 0.0f; float o = Hg.at(x, y); return o >= 1 ? 0.0f : p * (1 - o); });
 		}
 
 		// border
 		if (st.border > 0)
-			s.paintFrame(ox, oy, ox + w, oy + h, cx0, cy0, cx1, cy1, st.borderColor, [&](float x, float y) { return B.coverage(x, y) * (1 - P.coverage(x, y)); });
+			fillFrame(s, ox, oy, ox + w, oy + h, cx0, cy0, cx1, cy1, st.borderColor,
+				[&](int x, int y) { float p = Pg.at(x, y); return p >= 1 ? 0.0f : Bg.at(x, y) * (1 - p); });
 
 		out.bmp = s.toBitmap(bleed);
 		out.originX = ox;
@@ -283,10 +396,10 @@ namespace rnds
 		Bitmap b;
 		b.w = w; b.h = h; b.alpha = true;
 		b.px.assign((size_t)w * h, 0);
-		RRect r(0, 0, (float)w, (float)h, radius);
+		RRectGrid r(RRect(0, 0, (float)w, (float)h, radius), 0, 0, w, h);
 		for (int y = 0; y < h; y++)
 			for (int x = 0; x < w; x++)
-				b.px[(size_t)y * w + x] = (uint8_t)roundi(r.coverage(x + 0.5f, y + 0.5f) * 255);
+				b.px[(size_t)y * w + x] = (uint8_t)roundi(r.at(x, y) * 255);
 		return b;
 	}
 
