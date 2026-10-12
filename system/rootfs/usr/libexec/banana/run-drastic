@@ -35,14 +35,17 @@ fi
 export DSFLIP_MENU_THEME=banana
 # Quit game (the menu) and a shutdown while playing save the spot to a resume state, loaded once at the next start of
 # the game. One older than the game's own save is dropped: loading it would put back an older in-game save too.
-G=$(basename "$1"); G=${G%.*}
-R=$D/savestates/$G.resume.dss
-mkdir -p $D/savestates
-RLOAD=0
-if [ -f "$R" ]; then
-    if [ -f "$D/backup/$G.dsv" ] && [ "$D/backup/$G.dsv" -nt "$R" ]; then rm -f "$R"; else RLOAD=1; fi
+# Only with Settings > Nintendo DS > Quick resume on (settings.conf's quick_resume); off, a quit ends the game.
+if grep -q '^ *quick_resume *= *on' /data/banana/settings.conf 2>/dev/null; then
+    G=$(basename "$1"); G=${G%.*}
+    R=$D/savestates/$G.resume.dss
+    mkdir -p $D/savestates
+    RLOAD=0
+    if [ -f "$R" ]; then
+        if [ -f "$D/backup/$G.dsv" ] && [ "$D/backup/$G.dsv" -nt "$R" ]; then rm -f "$R"; else RLOAD=1; fi
+    fi
+    export DSFLIP_RESUME_FILE="$R" DSFLIP_RESUME_LOAD=$RLOAD
 fi
-export DSFLIP_RESUME_FILE="$R" DSFLIP_RESUME_LOAD=$RLOAD
 # the settings screen's choices (KEY=value lines), exported to SuperDrastic
 if [ -f /data/banana/superdrastic.conf ]; then set -a; . /data/banana/superdrastic.conf; set +a; fi
 exec $SD/superdrastic-run $D/drastic "$1"

@@ -255,6 +255,8 @@ namespace banana
 		const char* N = "Nintendo DS";
 		add(N, "nds", "Emulator", "SuperDrastic: DraStic straight onto both panels, with its own renderer and governor. BananaDS: Banana's own emulator (melonDS with the Gengis Engine), 2x like DraStic. Both have their menu on L3.",
 			menu, "nds_emulator", { "SuperDrastic", "BananaDS" }, { "superdrastic", "bananads" });
+		add(N, "nds", "Quick resume", "On: quitting keeps where you are, and the game goes on from there next time (a shutdown too). Off: quitting ends the game, which starts from its title next time.",
+			menu, "quick_resume", { "Off", "On" }, { "off", "on" });
 		add(N, "nds", "Renderer", "Gengis Engine draws the same picture as DraStic with about 12% less CPU work a frame.", sd, "DSFLIP_RAST", { "Gengis Engine", "DraStic" }, { "1", "0" });
 		add(N, "nds", "Shader", "Crisp: exact pixel-area scaling. Grid: the DS's LCD grid. FSR: smooth edges, the heaviest. None costs no GPU work.", sd, "DSFLIP_SHADER",
 			{ "None", "Crisp", "Crisp + DS colours", "LCD grid", "LCD grid + colours", "FSR" }, { "none", "ds-crisp", "ds-crisp-color", "ds-grid", "ds-grid-color", "ds-fsr" });

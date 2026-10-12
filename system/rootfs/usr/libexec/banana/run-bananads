@@ -26,9 +26,33 @@ hires=$(sed -n 's/^ *hires_3d *= *//p' $dcfg 2>/dev/null | head -n 1)
 rast=$(sed -n 's/^ *DSFLIP_RAST *= *//p' /data/banana/superdrastic.conf 2>/dev/null | head -n 1)
 [ "$hires" = 1 ] && export BANANADS_RENDER_SCALE=2
 [ "$rast" = 0 ] && export BANANADS_RENDER_RENDERER=soft
+# ...and the shader (DSFLIP_SHADER, the same choice for both emulators): BananaDS runs SuperDrastic's shader pass on
+# SuperDrastic's shader files
+shader=$(sed -n 's/^ *DSFLIP_SHADER *= *//p' /data/banana/superdrastic.conf 2>/dev/null | head -n 1)
+[ -n "$shader" ] && export BANANADS_KMS_SHADER=$shader DSFLIP_SHADER_DIR=/usr/lib/superdrastic/shaders
+# Settings > Nintendo DS > Quick resume (settings.conf's quick_resume): off, a quit ends the game and the next start
+# is from its title (no resume state written or loaded)
+grep -q '^ *quick_resume *= *on' /data/banana/settings.conf 2>/dev/null || export BANANADS_RESUME_ON_QUIT=off BANANADS_RESUME_ON_START=off
 # the DS's user name: the handheld's
 export BANANADS_FIRMWARE_NICKNAME=${BANANADS_FIRMWARE_NICKNAME:-Banana}
 # anything else for one run: /data/banana/bananads.env (shell assignments, exported), e.g. BANANADS_KMS_STATS=600
 if [ -f /data/banana/bananads.env ]; then set -a; . /data/banana/bananads.env; set +a; fi
+# a zipped game (the library lists .zip for the DS, DraStic opens them): BananaDS opens .nds only, so the zip's game is
+# unpacked once into the card's cache, named after the zip (its saves and states then go by the name the menu shows),
+# and unpacked again only when the zip is newer
+ROM=$1
+case "$ROM" in
+*.zip|*.ZIP)
+    C=/data/bananads/unzipped; mkdir -p $C
+    N=$(basename "$ROM"); N=$C/${N%.*}.nds
+    if [ ! -f "$N" ] || [ "$ROM" -nt "$N" ]; then
+        rm -rf $C/*.nds $C/.unzip    # one game unpacked at a time: they are large
+        mkdir -p $C/.unzip && unzip -q -o "$ROM" -d $C/.unzip
+        E=$(find $C/.unzip -type f -iname '*.nds' | head -n 1)
+        [ -n "$E" ] && mv -f "$E" "$N"; rm -rf $C/.unzip
+        [ -f "$N" ] || { echo "no .nds in $ROM" >&2; exit 1; }
+    fi
+    ROM=$N ;;
+esac
 cd $D
-exec /usr/bin/bananads "$1"
+exec /usr/bin/bananads "$ROM"
