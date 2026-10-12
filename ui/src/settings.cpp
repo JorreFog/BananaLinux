@@ -723,6 +723,12 @@ namespace banana
 				st.bands = { rnds::Band{ 0, X(8), p.bubbleBand }, rnds::Band{ X(8), -1, p.panelBody } };
 				st.shadows = { inset(0, -X(4), 0, p.panelLow), outer(X(3), X(3), p.blackish) };
 			}
+			else if (kind == "osd")	// ROCKNIXDS's pop-up card (SuperDrastic's ui.c): a light border, dark and dotted inside
+			{
+				st.radius = X(10); st.border = std::max(2.0f, std::round(2 * s)); st.borderColor = Color::hex(0xf1ede2);
+				st.bg = Color::hex(0x211f26); st.dither = true;
+				p.ditherA = Color(1, 1, 1, 0.10f); p.ditherB = Color(1, 1, 1, 0.05f);
+			}
 			else if (kind == "kbd") { st.radius = X(4); st.bg = p.kbdBg; }
 			st.ditherScale = s; st.ditherA = p.ditherA; st.ditherB = p.ditherB;
 			rnds::PaintedBox pb = rnds::paintBox(st, dw, dh);
@@ -875,15 +881,36 @@ namespace banana
 
 	void Settings::level(const std::string& label, int percent)
 	{
-		SPal p = pal(light);
+		// ROCKNIXDS's volume indicator (SuperDrastic's ui.c render_volume), in the same place: a pill at the top of the
+		// top panel, a speaker (crossed out at 0) or a sun, the in-game menu's 10-segment bar and the percent
+		static const char* const VOL[12] = { "............", ".....#......", "....##...#..", "...###....#.", "####.#..#..#", "#..#.#...#.#",
+			"#..#.#...#.#", "####.#..#..#", "...###....#.", "....##...#..", ".....#......", "............" };
+		static const char* const MUTE[12] = { "............", ".....#......", "....##......", "...###.#...#", "####.#..#.#.", "#..#.#...#..",
+			"#..#.#...#..", "####.#..#.#.", "...###.#...#", "....##......", ".....#......", "............" };
+		static const char* const SUN[12] = { ".....##.....", ".#...##...#.", "..#......#..", "....####....", "...######...", "##.######.##",
+			"##.######.##", "...######...", "....####....", "..#......#..", ".#...##...#.", ".....##....." };
 		percent = std::min(100, std::max(0, percent));
-		box("bubble", false, 120, 368, 400, 84);
-		text(label, true, 20, 146, 382, p.ink);
-		std::string v = percent == 0 && label == "Volume" ? "Muted" : std::to_string(percent) + "%";
-		text(v, true, 20, 420, 382, p.accent);
-		float x = std::round(X(146)), y = std::round(X(420)), w = std::round(X(348)), h = std::max(2.0f, std::round(X(10)));
-		be->fill(x, y, w, h, p.muted);
-		if (percent > 0) be->fill(x, y, std::max(1.0f, std::round(w * percent / 100.0f)), h, p.accent);
+		bool sun = label == "Brightness";
+		const Color light = Color::hex(0xf1ede2), bar = Color::hex(0xffe68a), off = Color::hex(0x3a3540), red = Color::hex(0xff8a96);
+		const float w = 310, h = 42, x0 = (640 - w) / 2, y0 = 4, x1 = x0 + w, cy = y0 + h / 2;
+		box("osd", false, x0, y0, w, h);
+		int k = std::max(2, (int)std::lround(2 * s));	// device px per icon pixel
+		const char* const* ic = sun ? SUN : percent <= 0 ? MUTE : VOL;
+		float ix = std::round(X(x0 + 14)), iy = std::round(X(cy)) - 6 * k;
+		for (int r = 0; r < 12; r++)
+			for (int c = 0; c < 12; c++)
+				if (ic[r][c] == '#') be->fill(ix + c * k, iy + r * k, (float)k, (float)k, !sun && percent <= 0 ? red : light);
+		char t[8];
+		snprintf(t, sizeof t, "%d%%", percent);
+		float tw = text(t, true, 19, 0, 0, bar, false, 0, true);
+		text(t, true, 19, x1 - 14 - tw, y0 + 11, bar);
+		float bx0 = x0 + 14 + 12.0f * k / s + 12, bx1 = x1 - 14 - text("100%", true, 19, 0, 0, bar, false, 0, true) - 10;
+		float seg = (bx1 - bx0) / 10, gap = std::max(2.0f, std::round(3 * s)) / s;
+		for (int i = 0; i < 10; i++)
+		{
+			float sx = std::round(X(bx0 + i * seg)), ex = std::round(X(bx0 + (i + 1) * seg - gap));
+			be->fill(sx, std::round(X(cy - 8)), ex - sx, std::round(X(16)), i < (percent + 5) / 10 ? bar : off);
+		}
 	}
 
 	// the groups: a grid of tiles in the in-game menu's look (its main page), the group's icon, name and what is in it;
