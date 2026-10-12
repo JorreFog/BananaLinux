@@ -41,25 +41,36 @@ namespace banana
 	}
 
 	// a row's runs from a per-pixel kind
-	template<typename K> static void encodeRuns(SoftTex& t, K kindAt)
+	// a row's runs from each pixel's alpha (or coverage): the byte at a[0], a[step], ... of each row, rows stride
+	// bytes apart
+	static void encodeRuns(SoftTex& t, const uint8_t* a, size_t step, size_t stride)
 	{
 		t.rowAt.resize(t.h + 1);
 		t.runs.clear();
+		t.runs.reserve((size_t)t.h * 4);
 		for (int y = 0; y < t.h; y++)
 		{
 			t.rowAt[y] = (uint32_t)t.runs.size();
+			const uint8_t* r = a + (size_t)y * stride;
 			int x = 0;
 			while (x < t.w)
 			{
-				uint32_t k = kindAt(x, y);
+				uint8_t v = r[(size_t)x * step];
 				int e = x + 1;
-				while (e < t.w && kindAt(e, y) == k) e++;
+				uint32_t k;
+				if (v == 0) { k = SoftTex::CLEAR; while (e < t.w && r[(size_t)e * step] == 0) e++; }
+				else if (v == 255) { k = SoftTex::SOLID; while (e < t.w && r[(size_t)e * step] == 255) e++; }
+				else { k = SoftTex::MIXED; while (e < t.w && (uint8_t)(r[(size_t)e * step] - 1) < 254) e++; }
 				t.runs.push_back((k << 30) | (uint32_t)(e - x));
 				x = e;
 			}
 		}
 		t.rowAt[t.h] = (uint32_t)t.runs.size();
 	}
+
+	// the alpha byte of the premultiplied words' rows (the word's top byte: the fourth in memory)
+	static_assert(__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__, "the alpha byte is read from the words' memory");
+	static void encodeRuns(SoftTex& t) { encodeRuns(t, (const uint8_t*)t.px.data() + 3, 4, (size_t)t.w * 4); }
 
 	SoftBackend::SoftBackend(int w, int h) : W(w), H(h)
 	{
@@ -79,9 +90,7 @@ namespace banana
 		if (b.alpha)
 		{
 			t->a8.assign(b.px.begin(), b.px.begin() + n);
-			const uint8_t* a = t->a8.data();
-			int w = b.w;
-			encodeRuns(*t, [a, w](int x, int y) { uint8_t c = a[(size_t)y * w + x]; return c == 0 ? SoftTex::CLEAR : (c == 255 ? SoftTex::SOLID : SoftTex::MIXED); });
+			encodeRuns(*t, t->a8.data(), 1, (size_t)b.w);
 			return t;
 		}
 		t->px.resize(n);
@@ -95,9 +104,7 @@ namespace banana
 			t->px[i] = (a << 24) | (m(s[0]) << 16) | (m(s[1]) << 8) | m(s[2]);
 		}
 		t->opaque = opaque;
-		const uint32_t* p = t->px.data();
-		int w = b.w;
-		encodeRuns(*t, [p, w](int x, int y) { uint32_t a = p[(size_t)y * w + x] >> 24; return a == 0 ? SoftTex::CLEAR : (a == 255 ? SoftTex::SOLID : SoftTex::MIXED); });
+		encodeRuns(*t);
 		return t;
 	}
 
@@ -460,8 +467,8 @@ namespace banana
 				st->w = key.bw; st->h = key.bh; st->alpha = t->alpha;
 				if (t->alpha) st->a8.resize((size_t)st->w * st->h); else st->px.resize((size_t)st->w * st->h);
 				sample(t, x, y, w, h, bx0, by0, bx1, by1, st->px.data(), st->a8.data(), st->w);
-				if (t->alpha) { const uint8_t* a = st->a8.data(); int sw = st->w; encodeRuns(*st, [a, sw](int x, int y) { uint8_t c = a[(size_t)y * sw + x]; return c == 0 ? SoftTex::CLEAR : (c == 255 ? SoftTex::SOLID : SoftTex::MIXED); }); }
-				else { const uint32_t* p = st->px.data(); int sw = st->w; encodeRuns(*st, [p, sw](int x, int y) { uint32_t a = p[(size_t)y * sw + x] >> 24; return a == 0 ? SoftTex::CLEAR : (a == 255 ? SoftTex::SOLID : SoftTex::MIXED); }); }
+				if (t->alpha) encodeRuns(*st, st->a8.data(), 1, (size_t)st->w);
+				else encodeRuns(*st);
 				e.tex = st;
 			}
 			if (e.tex) { blitRuns(e.tex.get(), bx0, by0, x0, y0, x1, y1, tr, tg, tb, ta, tintWord); return; }
