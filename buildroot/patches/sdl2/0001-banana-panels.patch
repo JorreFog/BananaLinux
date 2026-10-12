@@ -6,6 +6,8 @@ the window's framebuffer goes straight onto them (raw DRM: two dumb buffers a pa
 refresh, the panels' own modes kept), and the bottom panel's touchscreen lands on the bottom panel's part of the
 window. For apps made for a window over both panels under sway (ROCKNIXDS Bank & Trade), on a system with no
 compositor. Without the variable the dummy driver is unchanged (SuperDrastic runs DraStic on it).
+The offscreen driver does the same for OpenGL ES apps (an EGL pbuffer, each frame read back at the swap, with
+evdev's input): LÖVE apps such as eReaderDS.
 
 And with no libudev, SDL's evdev input found no devices at all (a TODO): /dev/input/event* are scanned and
 classed by their capabilities instead.
@@ -70,8 +72,8 @@ diff --color -ruN a/SDL2-2.32.10/src/core/linux/SDL_evdev.c SDL2-2.32.10/src/cor
                                                  (float)item->touchscreen_data->range_pressure;
 diff --color -ruN a/SDL2-2.32.10/src/video/dummy/SDL_bananapanels.c SDL2-2.32.10/src/video/dummy/SDL_bananapanels.c
 --- a/src/video/dummy/SDL_bananapanels.c	1970-01-01 01:00:00.000000000 +0100
-+++ b/src/video/dummy/SDL_bananapanels.c	2026-10-12 15:08:08.818480268 +0200
-@@ -0,0 +1,246 @@
++++ b/src/video/dummy/SDL_bananapanels.c	2026-10-12 15:21:43.702415984 +0200
+@@ -0,0 +1,276 @@
 +/*
 +  Banana: the dummy video driver's window on both panels of the RG DS (BananaLinux, no compositor).
 +
@@ -83,6 +85,8 @@ diff --color -ruN a/SDL2-2.32.10/src/video/dummy/SDL_bananapanels.c SDL2-2.32.10
 +
 +  The panels keep the modes they have (DRM master, but no mode change). SDL_BANANA_TOP names the top panel's connector
 +  (default DSI-2). Raw DRM ioctls: no libdrm.
++
++  The offscreen driver does the same for GL (OpenGL ES through an EGL pbuffer): each frame is read back at the swap.
 +*/
 +#include "../../SDL_internal.h"
 +
@@ -299,6 +303,34 @@ diff --color -ruN a/SDL2-2.32.10/src/video/dummy/SDL_bananapanels.c SDL2-2.32.10
 +    return 0;
 +}
 +
++/* the same from a GL read-back: RGBA, the last row first */
++int BP_PresentRGBA(const void *pixels, int w, int h)
++{
++    int s;
++    if (!bp_on) return 0;
++    bp_wait_flips();
++    for (s = 0; s < 2; s++) {
++        BP_Panel *pn = &bp_p[s];
++        int back = pn->front ^ 1, x0, y0, y, x, rows, cols;
++        struct drm_mode_crtc_page_flip pf;
++        bp_rect(s, &x0, &y0);
++        rows = SDL_min((int)pn->h, h - y0);
++        cols = SDL_min((int)pn->w, w - x0);
++        if (rows <= 0 || cols <= 0) continue;
++        for (y = 0; y < rows; y++) {
++            const Uint8 *src = (const Uint8 *)pixels + ((size_t)(h - 1 - (y0 + y)) * w + x0) * 4;
++            Uint32 *dst = (Uint32 *)(pn->buf[back].map + (size_t)y * pn->buf[back].pitch);
++            for (x = 0; x < cols; x++, src += 4)
++                dst[x] = (Uint32)src[2] | (Uint32)src[1] << 8 | (Uint32)src[0] << 16;
++        }
++        SDL_zero(pf);
++        pf.crtc_id = pn->crtc; pf.fb_id = pn->buf[back].fb; pf.flags = DRM_MODE_PAGE_FLIP_EVENT;
++        if (bp_ioctl(DRM_IOCTL_MODE_PAGE_FLIP, &pf) == 0) bp_pending++;
++        pn->front = back;
++    }
++    return 0;
++}
++
 +/* a touch on the bottom panel's touchscreen (0..1 over it) as a place in the window (0..1 over the window) */
 +void BP_MapTouch(float *x, float *y)
 +{
@@ -320,8 +352,8 @@ diff --color -ruN a/SDL2-2.32.10/src/video/dummy/SDL_bananapanels.c SDL2-2.32.10
 +#endif /* SDL_VIDEO_DRIVER_DUMMY */
 diff --color -ruN a/SDL2-2.32.10/src/video/dummy/SDL_bananapanels.h SDL2-2.32.10/src/video/dummy/SDL_bananapanels.h
 --- a/src/video/dummy/SDL_bananapanels.h	1970-01-01 01:00:00.000000000 +0100
-+++ b/src/video/dummy/SDL_bananapanels.h	2026-10-12 15:07:26.708958934 +0200
-@@ -0,0 +1,15 @@
++++ b/src/video/dummy/SDL_bananapanels.h	2026-10-12 15:21:43.702372863 +0200
+@@ -0,0 +1,16 @@
 +/*
 +  Banana: the dummy video driver's window on both panels of the RG DS (SDL_BANANA_PANELS; SDL_bananapanels.c).
 +*/
@@ -333,6 +365,7 @@ diff --color -ruN a/SDL2-2.32.10/src/video/dummy/SDL_bananapanels.h SDL2-2.32.10
 +extern int BP_Init(int *w, int *h);          /* 0: on, and the two panels' size together */
 +extern int BP_Active(void);
 +extern int BP_Present(const void *pixels, int pitch, int w, int h);
++extern int BP_PresentRGBA(const void *pixels, int w, int h);   /* a GL read-back: RGBA, bottom-up */
 +extern void BP_MapTouch(float *x, float *y);
 +extern void BP_Quit(void);
 +
@@ -388,3 +421,139 @@ diff --color -ruN a/SDL2-2.32.10/src/video/dummy/SDL_nullvideo.c SDL2-2.32.10/sr
  #ifdef SDL_INPUT_LINUXEV
      SDL_EVDEV_Quit();
  #endif
+diff --color -ruN a/SDL2-2.32.10/src/video/offscreen/SDL_offscreenevents.c SDL2-2.32.10/src/video/offscreen/SDL_offscreenevents.c
+--- a/src/video/offscreen/SDL_offscreenevents.c	2025-01-01 16:47:53.000000000 +0100
++++ b/src/video/offscreen/SDL_offscreenevents.c	2026-10-12 15:21:52.029365426 +0200
+@@ -29,10 +29,20 @@
+ 
+ #include "SDL_offscreenvideo.h"
+ #include "SDL_offscreenevents_c.h"
++#include "../dummy/SDL_bananapanels.h"
++
++#ifdef SDL_INPUT_LINUXEV
++extern void SDL_EVDEV_Poll(void);
++#endif
+ 
+ void OFFSCREEN_PumpEvents(_THIS)
+ {
+-    /* do nothing. */
++#if defined(SDL_VIDEO_DRIVER_DUMMY) && defined(SDL_INPUT_LINUXEV)
++    /* Banana: on the panels, the pad, keys and the touchscreen through evdev */
++    if (BP_Active()) {
++        SDL_EVDEV_Poll();
++    }
++#endif
+ }
+ 
+ #endif /* SDL_VIDEO_DRIVER_OFFSCREEN */
+diff --color -ruN a/SDL2-2.32.10/src/video/offscreen/SDL_offscreenframebuffer.c SDL2-2.32.10/src/video/offscreen/SDL_offscreenframebuffer.c
+--- a/src/video/offscreen/SDL_offscreenframebuffer.c	2025-01-01 16:47:53.000000000 +0100
++++ b/src/video/offscreen/SDL_offscreenframebuffer.c	2026-10-12 15:22:04.441743233 +0200
+@@ -24,6 +24,7 @@
+ 
+ #include "../SDL_sysvideo.h"
+ #include "SDL_offscreenframebuffer_c.h"
++#include "../dummy/SDL_bananapanels.h"
+ 
+ #define OFFSCREEN_SURFACE "_SDL_DummySurface"
+ 
+@@ -63,6 +64,11 @@
+     }
+ 
+     /* Send the data to the display */
++#ifdef SDL_VIDEO_DRIVER_DUMMY
++    if (BP_Active()) {
++        return BP_Present(surface->pixels, surface->pitch, surface->w, surface->h);
++    }
++#endif
+     if (SDL_getenv("SDL_VIDEO_OFFSCREEN_SAVE_FRAMES")) {
+         char file[128];
+         (void)SDL_snprintf(file, sizeof(file), "SDL_window%" SDL_PRIu32 "-%8.8d.bmp",
+diff --color -ruN a/SDL2-2.32.10/src/video/offscreen/SDL_offscreenopengles.c SDL2-2.32.10/src/video/offscreen/SDL_offscreenopengles.c
+--- a/src/video/offscreen/SDL_offscreenopengles.c	2025-01-01 16:47:53.000000000 +0100
++++ b/src/video/offscreen/SDL_offscreenopengles.c	2026-10-12 15:22:04.441821981 +0200
+@@ -25,6 +25,7 @@
+ #include "SDL_offscreenopengles.h"
+ #include "SDL_offscreenvideo.h"
+ #include "SDL_offscreenwindow.h"
++#include "../dummy/SDL_bananapanels.h"
+ 
+ /* EGL implementation of SDL OpenGL support */
+ 
+@@ -78,6 +79,27 @@
+ {
+     OFFSCREEN_Window *offscreen_wind = window->driverdata;
+ 
++#ifdef SDL_VIDEO_DRIVER_DUMMY
++    /* Banana: the frame onto the panels (SDL_BANANA_PANELS), read back before the swap */
++    if (BP_Active()) {
++        static void (*readPixels)(int, int, int, int, unsigned int, unsigned int, void *);
++        static void *buf;
++        static size_t bufsize;
++        size_t need = (size_t)window->w * window->h * 4;
++        if (!readPixels) {
++            readPixels = (void (*)(int, int, int, int, unsigned int, unsigned int, void *))SDL_GL_GetProcAddress("glReadPixels");
++        }
++        if (need > bufsize) {
++            void *nb = SDL_realloc(buf, need);
++            if (nb) { buf = nb; bufsize = need; }
++        }
++        if (readPixels && buf && need <= bufsize) {
++            readPixels(0, 0, window->w, window->h, 0x1908 /* GL_RGBA */, 0x1401 /* GL_UNSIGNED_BYTE */, buf);
++            BP_PresentRGBA(buf, window->w, window->h);
++        }
++    }
++#endif
++
+     return SDL_EGL_SwapBuffers(_this, offscreen_wind->egl_surface);
+ }
+ 
+diff --color -ruN a/SDL2-2.32.10/src/video/offscreen/SDL_offscreenvideo.c SDL2-2.32.10/src/video/offscreen/SDL_offscreenvideo.c
+--- a/src/video/offscreen/SDL_offscreenvideo.c	2025-01-01 16:47:53.000000000 +0100
++++ b/src/video/offscreen/SDL_offscreenvideo.c	2026-10-12 15:21:52.029183825 +0200
+@@ -33,6 +33,11 @@
+ #include "SDL_video.h"
+ 
+ #include "SDL_offscreenvideo.h"
++#include "../dummy/SDL_bananapanels.h"
++#ifdef SDL_INPUT_LINUXEV
++extern int SDL_EVDEV_Init(void);
++extern void SDL_EVDEV_Quit(void);
++#endif
+ #include "SDL_offscreenevents_c.h"
+ #include "SDL_offscreenframebuffer_c.h"
+ #include "SDL_offscreenopengles.h"
+@@ -109,6 +114,18 @@
+     mode.h = 768;
+     mode.refresh_rate = 0;
+     mode.driverdata = NULL;
++#ifdef SDL_VIDEO_DRIVER_DUMMY
++    /* Banana: both panels as the display (SDL_BANANA_PANELS), with evdev's input */
++    if (SDL_getenv("SDL_BANANA_PANELS")) {
++        if (BP_Init(&mode.w, &mode.h) < 0) {
++            return -1;
++        }
++        mode.refresh_rate = 60;
++#ifdef SDL_INPUT_LINUXEV
++        SDL_EVDEV_Init();
++#endif
++    }
++#endif
+     if (SDL_AddBasicVideoDisplay(&mode) < 0) {
+         return -1;
+     }
+@@ -127,6 +144,14 @@
+ 
+ void OFFSCREEN_VideoQuit(_THIS)
+ {
++#ifdef SDL_VIDEO_DRIVER_DUMMY
++    if (BP_Active()) {
++#ifdef SDL_INPUT_LINUXEV
++        SDL_EVDEV_Quit();
++#endif
++        BP_Quit();
++    }
++#endif
+ }
+ 
+ #endif /* SDL_VIDEO_DRIVER_OFFSCREEN */
