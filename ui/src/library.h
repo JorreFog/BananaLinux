@@ -18,6 +18,7 @@ namespace banana
 		std::string id, name, maker, folder, run, perf;
 		std::vector<std::string> exts;	// lower case, no dot
 		bool always = false;			// on the shelf with no games (the DS: a fresh card shows where games go)
+		bool flat = false;				// games only in the folder itself (ports: their own folders hold scripts too)
 	};
 
 	struct Game

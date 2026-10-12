@@ -8,6 +8,10 @@ mkdir -p $D/banana/logs $D/bios $D/saves $D/states
 awk '/^\[/{if(id!="")print (f!=""?f:id); id=substr($0,2,length($0)-2); f=""} /^folder *=/{sub(/^folder *= */,""); f=$0} END{if(id!="")print (f!=""?f:id)}' \
     "$SYSTEMS" | while read -r f; do case $f in /*) ;; *) mkdir -p "$D/roms/$f" ;; esac; done
 [ -f $D/banana/settings.conf ] || cp /etc/banana/settings.conf $D/banana/settings.conf
+# Ports' PortMaster entry (run-port puts PortMaster itself on the card the first time it starts)
+if [ -d $D/roms/ports ] && [ ! -f $D/roms/ports/PortMaster.sh ] && [ -f /usr/share/banana/portmaster/PortMaster.zip ]; then
+    printf '#!/bin/bash\n# PortMaster: installs and runs ports (portmaster.games)\nexec bash /roms/ports/PortMaster/PortMaster.sh\n' > $D/roms/ports/PortMaster.sh
+fi
 # the built-in systems list, to copy as banana/systems.conf and change (kept up to date with the system)
 cmp -s /etc/banana/systems.conf $D/banana/systems.conf.default 2>/dev/null || cp /etc/banana/systems.conf $D/banana/systems.conf.default
 [ -f $D/banana/README.txt ] || cp /etc/banana/README.txt $D/banana/README.txt

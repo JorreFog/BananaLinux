@@ -1,0 +1,23 @@
+#!/bin/sh
+# Ports: a port's script (PortMaster's, or any .sh in roms/ports) with bash, as ROCKNIX runs them. PortMaster itself
+# is the "PortMaster" entry: its release (kept in the image) is put on the card the first time, and it updates itself
+# there. Ports draw on the top panel (SDL's KMSDRM display 0: SDL_KMSDRM_FIRST, Banana's SDL patch); the bottom one
+# stays dark. Their files and settings go under /data/home, not the read-only root.
+#   run-port <script>
+P=/data/roms/ports
+if [ ! -f $P/PortMaster/PortMaster.sh ] && [ -f /usr/share/banana/portmaster/PortMaster.zip ]; then
+    mkdir -p $P && unzip -q -o /usr/share/banana/portmaster/PortMaster.zip -d $P && echo "PortMaster put on the card"
+fi
+export HOME=/data/home XDG_DATA_HOME=/data/home/.local/share XDG_CONFIG_HOME=/data/home/.config XDG_RUNTIME_DIR=/run
+mkdir -p $XDG_DATA_HOME $XDG_CONFIG_HOME
+export SDL_KMSDRM_FIRST=${BANANA_TOP:-DSI-2} TERM=linux
+. /usr/libexec/banana/one-panel
+one_panel_dark top
+cd "$(dirname "$1")"
+bash "$1" &
+C=$!
+trap 'kill -TERM $C 2>/dev/null' TERM INT HUP
+wait $C; S=$?
+while kill -0 $C 2>/dev/null; do wait $C; S=$?; done
+one_panel_restore
+exit $S

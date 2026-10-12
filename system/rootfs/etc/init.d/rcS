@@ -7,6 +7,12 @@ mount -t sysfs sysfs /sys
 mount -t devtmpfs devtmpfs /dev 2>/dev/null
 mkdir -p /dev/pts /dev/shm
 mount -t devpts devpts /dev/pts
+mount -t tmpfs -o mode=1777,nosuid,nodev tmpfs /dev/shm
+# what udev would make: bash's <(...) needs /dev/fd (PortMaster's scripts use it), and some programs open /dev/stdin
+ln -sfn /proc/self/fd /dev/fd
+ln -sfn /proc/self/fd/0 /dev/stdin
+ln -sfn /proc/self/fd/1 /dev/stdout
+ln -sfn /proc/self/fd/2 /dev/stderr
 mount -t tmpfs -o mode=0755,nosuid,nodev tmpfs /run
 mount -t tmpfs -o mode=1777,nosuid,nodev tmpfs /tmp
 mkdir -p /run/banana /var/log

@@ -1,0 +1,10 @@
+config BR2_PACKAGE_PORTMASTER
+	bool "portmaster"
+	default y
+	depends on BR2_PACKAGE_PYTHON3 && BR2_PACKAGE_BASH
+	select BR2_PACKAGE_SDL2_TTF
+	select BR2_PACKAGE_SDL2_IMAGE
+	help
+	  PortMaster (portmaster.games): installs and runs ports, games made for handhelds. Its release is kept in the
+	  image and put on the card (roms/ports/PortMaster) the first time Ports' PortMaster entry starts; it updates
+	  itself there.

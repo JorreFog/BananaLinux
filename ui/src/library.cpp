@@ -212,7 +212,7 @@ namespace banana
 		loadLooks();
 	}
 
-	// systems.conf: [id] sections of key = value (name, maker, folder, ext, run, perf, always)
+	// systems.conf: [id] sections of key = value (name, maker, folder, ext, run, perf, always, flat)
 	void Library::loadDefs()
 	{
 		defs.clear();
@@ -239,6 +239,7 @@ namespace banana
 			else if (k == "run") cur->run = v;
 			else if (k == "perf") cur->perf = v;
 			else if (k == "always") cur->always = v == "yes" || v == "1" || v == "true";
+			else if (k == "flat") cur->flat = v == "yes" || v == "1" || v == "true";
 			else if (k == "ext")
 			{
 				std::istringstream is(v);
@@ -357,7 +358,7 @@ namespace banana
 		writeAtomic(dataDir + "/playstats.tsv", out);
 	}
 
-	static void listRoms(const std::string& dir, const std::string& relDir, const std::vector<std::string>& exts, std::vector<std::string>& out, int depth)
+	static void listRoms(const std::string& dir, const std::string& relDir, const std::vector<std::string>& exts, std::vector<std::string>& out, int depth, int maxDepth = 2)
 	{
 		DIR* d = opendir(dir.c_str());
 		if (!d) return;
@@ -371,8 +372,8 @@ namespace banana
 			{
 				// art and ES's own folders are not games
 				std::string ln = lower(name);
-				if (depth < 2 && ln != "media" && ln != "images" && ln != "videos" && ln != "manuals" && ln != "downloaded_images")
-					listRoms(full, rel, exts, out, depth + 1);
+				if (depth < maxDepth && ln != "media" && ln != "images" && ln != "videos" && ln != "manuals" && ln != "downloaded_images")
+					listRoms(full, rel, exts, out, depth + 1, maxDepth);
 				continue;
 			}
 			// an extension can have dots of its own (PICO-8's "p8.png": a plain .png isn't a cart)
@@ -418,7 +419,7 @@ namespace banana
 			sh.order = (int)(&def - &defs[0]);
 			std::string dir = folderPath(romRoot, def.folder);
 			std::vector<std::string> rels;
-			listRoms(dir, "", def.exts, rels, 0);
+			listRoms(dir, "", def.exts, rels, 0, def.flat ? 0 : 2);
 			auto gl = readGamelist(dir);
 			for (auto& rel : rels)
 			{

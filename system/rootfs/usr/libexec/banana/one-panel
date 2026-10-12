@@ -1,0 +1,23 @@
+# Sourced by launchers of programs that draw on one panel: the other panel stays black, its backlight off while the
+# program runs. Each panel's backlight is the one its DSI node names (fe060000 the bottom, DSI-1; fe070000 the top).
+# bananad turns it off again after a wake-up or the lid opening (/run/banana/panel-off).
+#   one_panel_dark top|bottom     the panel the program draws on
+#   one_panel_restore
+ONE_PANEL_BL=
+one_panel_dark() {
+    local DT=/proc/device-tree DSI PH b
+    case $1 in top) DSI=fe060000 ;; *) DSI=fe070000 ;; esac
+    PH=$(od -An -tx1 $DT/dsi@$DSI/panel@0/backlight 2>/dev/null | tr -d ' \n')
+    ONE_PANEL_BL=
+    for b in $DT/backlight*; do
+        [ -n "$PH" ] && [ "$(od -An -tx1 $b/phandle 2>/dev/null | tr -d ' \n')" = "$PH" ] && ONE_PANEL_BL=/sys/class/backlight/$(basename $b)
+    done
+    [ -n "$ONE_PANEL_BL" ] && [ -w $ONE_PANEL_BL/bl_power ] || { ONE_PANEL_BL=; return 0; }
+    echo 4 > $ONE_PANEL_BL/bl_power
+    echo $ONE_PANEL_BL > /run/banana/panel-off
+}
+one_panel_restore() {
+    [ -n "$ONE_PANEL_BL" ] || return 0
+    rm -f /run/banana/panel-off
+    echo 0 > $ONE_PANEL_BL/bl_power
+}

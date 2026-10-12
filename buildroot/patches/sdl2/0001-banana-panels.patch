@@ -9,6 +9,9 @@ compositor. Without the variable the dummy driver is unchanged (SuperDrastic run
 The offscreen driver does the same for OpenGL ES apps (an EGL pbuffer, each frame read back at the swap, with
 evdev's input): LÖVE apps such as eReaderDS.
 
+SDL_KMSDRM_FIRST names the KMSDRM connector that becomes display 0 ("DSI-2": the top panel), where apps open their
+window; without it SDL's order puts the bottom panel first on the RG DS.
+
 And with no libudev, SDL's evdev input found no devices at all (a TODO): /dev/input/event* are scanned and
 classed by their capabilities instead.
 
@@ -421,6 +424,52 @@ diff --color -ruN a/SDL2-2.32.10/src/video/dummy/SDL_nullvideo.c SDL2-2.32.10/sr
  #ifdef SDL_INPUT_LINUXEV
      SDL_EVDEV_Quit();
  #endif
+diff --color -ruN a/SDL2-2.32.10/src/video/kmsdrm/SDL_kmsdrmvideo.c SDL2-2.32.10/src/video/kmsdrm/SDL_kmsdrmvideo.c
+--- a/src/video/kmsdrm/SDL_kmsdrmvideo.c	2025-01-01 16:47:53.000000000 +0100
++++ b/src/video/kmsdrm/SDL_kmsdrmvideo.c	2026-10-12 15:30:37.153585391 +0200
+@@ -964,7 +964,13 @@
+     }
+ 
+     /* Iterate on the available connectors. For every connected connector,
+-       we create an SDL_Display and add it to the list of SDL Displays. */
++       we create an SDL_Display and add it to the list of SDL Displays.
++       Banana: SDL_KMSDRM_FIRST names a connector ("DSI-2", the RG DS's top panel) that becomes display 0, where
++       apps open their window: it is added in a first pass, the others in a second. */
++    {
++    const char *first = SDL_getenv("SDL_KMSDRM_FIRST");
++    int pass;
++    for (pass = (first && *first) ? 0 : 1; pass < 2; pass++)
+     for (i = 0; i < resources->count_connectors; i++) {
+         drmModeConnector *connector = KMSDRM_drmModeGetConnector(viddata->drm_fd,
+                                                                  resources->connectors[i]);
+@@ -972,6 +978,19 @@
+         if (!connector) {
+             continue;
+         }
++        if (first && *first) {
++            char name[32];
++            const char *type = connector->connector_type == DRM_MODE_CONNECTOR_DSI ? "DSI"
++                             : connector->connector_type == DRM_MODE_CONNECTOR_HDMIA ? "HDMI-A"
++                             : connector->connector_type == DRM_MODE_CONNECTOR_eDP ? "eDP" : "?";
++            SDL_bool is_first;
++            (void)SDL_snprintf(name, sizeof(name), "%s-%u", type, connector->connector_type_id);
++            is_first = SDL_strcmp(name, first) == 0 ? SDL_TRUE : SDL_FALSE;
++            if (is_first != (pass == 0 ? SDL_TRUE : SDL_FALSE)) {
++                KMSDRM_drmModeFreeConnector(connector);
++                continue;
++            }
++        }
+ 
+         if (connector->connection == DRM_MODE_CONNECTED && connector->count_modes) {
+             /* If it's a connected connector with available videomodes, try to add
+@@ -984,6 +1003,7 @@
+             KMSDRM_drmModeFreeConnector(connector);
+         }
+     }
++    }
+ 
+     /* Have we added any SDL displays? */
+     if (!SDL_GetNumVideoDisplays()) {
 diff --color -ruN a/SDL2-2.32.10/src/video/offscreen/SDL_offscreenevents.c SDL2-2.32.10/src/video/offscreen/SDL_offscreenevents.c
 --- a/src/video/offscreen/SDL_offscreenevents.c	2025-01-01 16:47:53.000000000 +0100
 +++ b/src/video/offscreen/SDL_offscreenevents.c	2026-10-12 15:21:52.029365426 +0200
