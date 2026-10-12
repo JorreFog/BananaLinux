@@ -211,14 +211,16 @@ namespace rnds
 		}
 
 		// background colour (clip: border box)
-		s.paint(ox, oy, ox + w, oy + h, st.bg, [&](float x, float y) { return B.coverage(x, y); });
+		// (in the core B's coverage is exactly 1: no corner, no edge to work out)
+		auto inCore = [&](float x, float y) { return x > cx0 && x < cx1 && y > cy0 && y < cy1; };
+		s.paint(ox, oy, ox + w, oy + h, st.bg, [&](float x, float y) { return inCore(x, y) ? 1.0f : B.coverage(x, y); });
 
 		// gradient bands (origin: padding box)
 		for (auto& band : st.bands)
 		{
 			float y0 = P.y + band.y0, y1 = band.y1 < 0 ? P.y + P.h : P.y + band.y1;
 			s.paint(ox, (int)std::floor(y0), ox + w, (int)std::ceil(y1), band.c,
-				[&](float x, float y) { return B.coverage(x, y) * overlap(y, y0, y1); });
+				[&](float x, float y) { return (inCore(x, y) ? 1.0f : B.coverage(x, y)) * overlap(y, y0, y1); });
 		}
 
 		// the dither tile: 4x4 CSS px, white 14% at (0,0) and 7% at (2,2), 1x1 each. The tile is an SVG with

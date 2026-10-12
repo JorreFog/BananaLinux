@@ -35,6 +35,12 @@ namespace banana
 			bool same(const Scaled& o) const { return phX == o.phX && phY == o.phY && w == o.w && h == o.h && bw == o.bw && bh == o.bh; }
 		};
 		std::vector<Scaled> scaled;
+		// a smooth RGBA texture's rows blended down to a draw's rows (each texel column's two rows by the row's
+		// fraction, channels in 32-bit lanes: red and blue, then alpha and green), for the last height and vertical
+		// phase it was drawn at (the last two: the shelf draws its tiles at rest and the selected one, growing): a draw
+		// moving sideways only blends across columns
+		struct Rows { double phY = -1; float h = -1; int rows = 0; std::vector<uint64_t> lanes; };
+		Rows vRows[2];
 	};
 
 	class SoftBackend : public rnds::Backend
@@ -100,6 +106,7 @@ namespace banana
 		Clip bounds(const Cmd& c, const Clip& clip) const;
 		void addDirty(const Clip& r);
 		void redraw(const Clip& r);
+		const uint64_t* vertical(SoftTex* t, float y, float h, int64_t stepY, int by0, int by1);
 		void columns(const SoftTex* t, float x, int64_t stepX, int bx0, int x0, int n);
 		void sample(const SoftTex* t, float x, float y, float w, float h, int x0, int y0, int x1, int y1, uint32_t* px, uint8_t* a8, int stride);
 		void blitRuns(const SoftTex* t, int bx0, int by0, int x0, int y0, int x1, int y1, uint32_t tr, uint32_t tg, uint32_t tb, uint32_t ta, uint32_t tintWord);

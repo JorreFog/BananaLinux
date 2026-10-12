@@ -296,6 +296,37 @@ namespace banana
 		return (uint32_t)rb | (uint32_t)(rb >> 16) | ((uint32_t)ag << 8) | ((uint32_t)(ag >> 16) << 8);
 	}
 
+	// a smooth RGBA texture's columns blended down to each row of a draw's box [by0, by1) (see SoftTex::vLanes)
+	const uint64_t* SoftBackend::vertical(SoftTex* t, float y, float h, int64_t stepY, int by0, int by1)
+	{
+		double phY = (by0 + 0.5) - y;
+		int rows = by1 - by0;
+		auto same = [&](const SoftTex::Rows& r) { return r.phY == phY && r.h == h && r.rows == rows; };
+		if (same(t->vRows[0])) return t->vRows[0].lanes.data();
+		std::swap(t->vRows[0], t->vRows[1]);	// most recent first
+		if (same(t->vRows[0])) return t->vRows[0].lanes.data();
+		SoftTex::Rows& r = t->vRows[0];
+		r.phY = phY; r.h = h; r.rows = rows;
+		r.lanes.resize((size_t)rows * t->w * 2);
+		for (int j = 0; j < rows; j++)
+		{
+			int64_t sv = (int64_t)(((by0 + j + 0.5) - y) * stepY) - 32768;
+			int syA = (int)(sv >> 16); uint64_t fy = (uint64_t)((sv >> 8) & 255);
+			if (sv < 0) { syA = 0; fy = 0; }
+			int syB = std::min(syA + 1, t->h - 1);
+			syA = std::min(syA, t->h - 1);
+			const uint32_t* r0 = &t->px[(size_t)syA * t->w];
+			const uint32_t* r1 = &t->px[(size_t)syB * t->w];
+			uint64_t* o = &r.lanes[(size_t)j * t->w * 2];
+			for (int i = 0; i < t->w; i++)
+			{
+				o[2 * i] = lanesRB(r0[i]) * (256 - fy) + lanesRB(r1[i]) * fy;
+				o[2 * i + 1] = lanesAG(r0[i]) * (256 - fy) + lanesAG(r1[i]) * fy;
+			}
+		}
+		return r.lanes.data();
+	}
+
 	// the source columns of n pixels from x0 of a draw at x whose box starts at bx0 (16.16 steps from pixel centres,
 	// counted from the box, so a pixel samples the same texels however the draw is clipped)
 	void SoftBackend::columns(const SoftTex* t, float x, int64_t stepX, int bx0, int x0, int n)
@@ -448,6 +479,7 @@ namespace banana
 		int64_t stepX = (int64_t)((double)t->w / w * 65536.0), stepY = (int64_t)((double)t->h / h * 65536.0);
 		int n = x1 - x0;
 		columns(t, x, stepX, bx0, x0, n);
+		const uint64_t* vrows = t->smooth && !t->alpha ? vertical(t, y, h, stepY, by0, by1) : nullptr;
 		for (int yy = y0; yy < y1; yy++)
 		{
 			uint32_t* d = &scr[cur][(size_t)yy * W + x0];
@@ -482,11 +514,18 @@ namespace banana
 				}
 				continue;
 			}
-			const uint32_t* r0 = &t->px[(size_t)syA * t->w];
-			const uint32_t* r1 = &t->px[(size_t)syB * t->w];
+			// the weighted sum split exactly: ((256 - fx) * V(a) + fx * V(b) + 32768) >> 16 with V a column's two
+			// texels times (256 - fy) and fy
+			const uint64_t* v = &vrows[(size_t)(yy - by0) * t->w * 2];
+			const uint64_t half = 0x0000800000008000ull, lane = 0x000000ff000000ffull;
 			for (int i = 0; i < n; i++)
 			{
-				uint32_t s = bilinear(r0, r1, colA[i], colB[i], colF[i], fy);
+				uint64_t fx = colF[i], gx = 256 - fx;
+				const uint64_t* va = v + 2 * colA[i];
+				const uint64_t* vb = v + 2 * colB[i];
+				uint64_t rb = ((va[0] * gx + vb[0] * fx + half) >> 16) & lane;
+				uint64_t ag = ((va[1] * gx + vb[1] * fx + half) >> 16) & lane;
+				uint32_t s = (uint32_t)rb | (uint32_t)(rb >> 16) | ((uint32_t)ag << 8) | ((uint32_t)(ag >> 16) << 8);
 				if (!plain) s = tinted(s, tr, tg, tb, ta);
 				d[i] = over(s, d[i]);
 			}
