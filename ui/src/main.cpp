@@ -489,6 +489,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant)
 			int n = 60; cs >> n;
 			double total = 0, worst = 0;
 			be.skipped = 0;
+			be.redrawn = 0;
 			for (int i = 0; i < n; i++)
 			{
 				now += 1000.0 / 60;
@@ -499,7 +500,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant)
 				double dt = nowMs() - t0;
 				total += dt; worst = std::max(worst, dt);
 			}
-			logf("bench: %d frames, %.2f ms average, %.2f ms worst, %d of %d screens unchanged", n, total / n, worst, be.skipped, 2 * n);
+			logf("bench: %d frames, %.2f ms average, %.2f ms worst, %d of %d screens unchanged, %.1f%% of pixels drawn again", n, total / n, worst,
+				be.skipped, 2 * n, 100.0 * be.redrawn / (2.0 * n * be.width() * be.height()));
 		}
 		else if (!op.empty()) { logf("unknown command %s", op.c_str()); return 2; }
 		if (settings.isOpen()) { settings.update(now); settings.update(now); }
@@ -515,10 +517,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant)
 static void showFrame(Display& disp, SoftBackend& be, int sig)
 {
 	const uint32_t* scr[2] = { be.pixels(0), be.pixels(1) };
-	int y0[2], y1[2];
-	be.takeDamage(0, y0[0], y1[0]);
-	be.takeDamage(1, y0[1], y1[1]);
-	if (!disp.present(scr, y0, y1)) return;
+	Damage dmg[2] = { be.takeDamage(0), be.takeDamage(1) };
+	if (!disp.present(scr, dmg)) return;
 	while (disp.flipPending())
 	{
 		pollfd p[2] = { { disp.pollFd(), POLLIN, 0 }, { sig, POLLIN, 0 } };
@@ -987,10 +987,8 @@ int main(int argc, char** argv)
 		if (drawn && disp.isOpen() && !disp.flipPending())
 		{
 			const uint32_t* scr[2] = { be.pixels(0), be.pixels(1) };
-			int y0[2], y1[2];
-			be.takeDamage(0, y0[0], y1[0]);
-			be.takeDamage(1, y0[1], y1[1]);
-			disp.present(scr, y0, y1);
+			Damage dmg[2] = { be.takeDamage(0), be.takeDamage(1) };
+			disp.present(scr, dmg);
 			drawn = false;
 			continue;	// see whether the next frame is due before sleeping
 		}

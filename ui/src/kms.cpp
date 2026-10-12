@@ -153,28 +153,27 @@ namespace banana
 		pending = 0;
 	}
 
-	bool Display::present(const uint32_t* const screens[2], const int y0[2], const int y1[2])
+	bool Display::present(const uint32_t* const screens[2], const Damage dmg[2])
 	{
 		if (fd < 0 || pending) return false;
 		bool any = false;
 		for (int s = 0; s < 2; s++)
 		{
 			Panel& pn = p[s];
-			// the hidden buffer missed what changed since it was shown: this frame's rows and the last frame's
+			// the hidden buffer missed what changed since it was shown: this frame's part and the last frame's
 			int back = pn.front ^ 1;
-			int a = y0[s], b = y1[s];
-			if (pn.dmg0[back] < pn.dmg1[back])
-			{
-				if (a >= b) { a = pn.dmg0[back]; b = pn.dmg1[back]; }
-				else { a = std::min(a, pn.dmg0[back]); b = std::max(b, pn.dmg1[back]); }
-			}
-			pn.dmg0[back] = 0; pn.dmg1[back] = 0;
-			if (a >= b) continue;
-			a = std::max(a, 0); b = std::min(b, H);
+			Damage d = dmg[s];
+			d.add(pn.missed[back]);
+			pn.missed[back] = Damage();
+			d.x0 = std::max(d.x0, 0); d.y0 = std::max(d.y0, 0);
+			d.x1 = std::min(d.x1, W); d.y1 = std::min(d.y1, H);
+			if (d.empty()) continue;
 			Buf& bf = pn.buf[back];
-			for (int y = a; y < b; y++)
-				memcpy(bf.map + (size_t)y * bf.pitch, screens[s] + (size_t)y * W, (size_t)W * 4);
-			pn.dmg0[pn.front] = y0[s]; pn.dmg1[pn.front] = y1[s];	// the buffer going hidden misses this frame
+			// only the columns that changed: the scanout buffer is uncached, every byte written costs
+			size_t n = (size_t)(d.x1 - d.x0) * 4;
+			for (int y = d.y0; y < d.y1; y++)
+				memcpy(bf.map + (size_t)y * bf.pitch + (size_t)d.x0 * 4, screens[s] + (size_t)y * W + d.x0, n);
+			pn.missed[pn.front] = dmg[s];	// the buffer going hidden misses this frame
 			if (drmModePageFlip(fd, pn.crtc, bf.fb, DRM_MODE_PAGE_FLIP_EVENT, &pending) == 0)
 			{
 				pending++;
