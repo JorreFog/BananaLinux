@@ -794,6 +794,19 @@ namespace banana
 		wrapped(body, 18, 172, 392, 404, 2, p.muted);
 	}
 
+	void Settings::level(const std::string& label, int percent)
+	{
+		SPal p = pal(light);
+		percent = std::min(100, std::max(0, percent));
+		box("bubble", false, 120, 368, 400, 84);
+		text(label, true, 20, 146, 382, p.ink);
+		std::string v = percent == 0 && label == "Volume" ? "Muted" : std::to_string(percent) + "%";
+		text(v, true, 20, 420, 382, p.accent);
+		float x = std::round(X(146)), y = std::round(X(420)), w = std::round(X(348)), h = std::max(2.0f, std::round(X(10)));
+		be->fill(x, y, w, h, p.muted);
+		if (percent > 0) be->fill(x, y, std::max(1.0f, std::round(w * percent / 100.0f)), h, p.accent);
+	}
+
 	void Settings::render()
 	{
 		if (page == NETWORKS) { renderNetworks(); return; }

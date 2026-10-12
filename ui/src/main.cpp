@@ -32,6 +32,7 @@
 #include <cstring>
 #include <fcntl.h>
 #include <fstream>
+#include <sys/stat.h>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -685,6 +686,7 @@ int main(int argc, char** argv)
 	sigaction(SIGTERM, &sa, nullptr);
 	sigaction(SIGINT, &sa, nullptr);
 	sigaction(SIGUSR1, &sa, nullptr);	// bananad after a resume: draw everything again
+	sigaction(SIGUSR2, &sa, nullptr);	// bananad after a volume or brightness key: the level card (/run/banana/osd)
 	signal(SIGPIPE, SIG_IGN);
 
 	Display disp;
@@ -749,7 +751,17 @@ int main(int argc, char** argv)
 	if (firstSetup) { settingsView.setup(); logf("first-time setup"); }
 	RomWatch roms;
 	roms.watch(lib.watchDirs());
-	be.overlay = [&](int screen) { if (screen == 0 && low.showing(nowMs())) settingsView.notice(low.title, low.body, low.percent); };
+	// the volume and brightness keys' level card, 1.5 s from the last key (bananad changes the level and says so)
+	std::string osdLabel;
+	int osdPercent = 0;
+	double osdUntil = 0;
+	be.overlay = [&](int screen)
+	{
+		if (screen != 0) return;
+		double t = nowMs();
+		if (low.showing(t)) settingsView.notice(low.title, low.body, low.percent);
+		else if (osdUntil > t) settingsView.level(osdLabel, osdPercent);
+	};
 
 	// what a change on the settings screen means for the menu (called with uiLock held)
 	auto applySettings = [&](Settings::Result r)
@@ -1006,6 +1018,11 @@ int main(int argc, char** argv)
 			int left = (int)(low.until - now) + 1;
 			if (timeout < 0 || left < timeout) timeout = left;
 		}
+		if (osdUntil > now)
+		{
+			int left = (int)(osdUntil - now) + 1;
+			if (timeout < 0 || left < timeout) timeout = left;
+		}
 
 		std::vector<pollfd> fds;
 		fds.push_back({ sigPipe[0], POLLIN, 0 });
@@ -1028,6 +1045,20 @@ int main(int argc, char** argv)
 					// after a wake: the kernel has the panels showing our buffers again; a redraw brings the clock and
 					// the battery up to date (no modeset: that would run the panels' power-on sequence once more)
 					if (c == SIGUSR1) { std::lock_guard<std::mutex> l(worker.uiLock); be.invalidate(); ui->dataChanged(); dirty = true; batteryDue = true; }
+					if (c == SIGUSR2)
+					{
+						// "volume 85" / "brightness 40", written just now (an old one is from a key pressed in a game)
+						struct stat st;
+						std::ifstream f("/run/banana/osd");
+						std::string what; int pct = -1;
+						if (stat("/run/banana/osd", &st) == 0 && time(nullptr) - st.st_mtime <= 2 && (f >> what >> pct) && pct >= 0)
+						{
+							osdLabel = what == "brightness" ? "Brightness" : "Volume";
+							osdPercent = pct;
+							osdUntil = nowMs() + 1500;
+							dirty = true;
+						}
+					}
 				}
 			}
 			else if (p.fd == roms.fd)

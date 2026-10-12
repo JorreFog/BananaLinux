@@ -42,6 +42,9 @@ namespace banana
 		// a notice over the screen being drawn (between the backend's beginScreen and endScreen): the battery icon at
 		// percent, a title and a line or two, in the bubble style near the bottom of the panel
 		void notice(const std::string& title, const std::string& body, int percent);
+		// the volume or brightness keys' level: a small bubble near the bottom of the panel, its label, the percent and
+		// a bar (drawn like notice)
+		void level(const std::string& label, int percent);
 
 	private:
 		struct Item

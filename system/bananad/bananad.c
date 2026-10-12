@@ -247,6 +247,21 @@ static pid_t ui_pid(void)
 	return r;
 }
 
+/* the menu's level card for a volume or brightness key: what changed and its percent in /run/banana/osd, then
+ * SIGUSR2 tells banana-ui to show it (it ignores a file older than a moment, e.g. one written during a game) */
+static void osd(const char *what, int percent)
+{
+	char v[64];
+	snprintf(v, sizeof v, "%s %d\n", what, percent);
+	FILE *f = fopen("/run/banana/osd.new", "w");
+	if (!f) return;
+	fputs(v, f);
+	fclose(f);
+	rename("/run/banana/osd.new", "/run/banana/osd");
+	pid_t ui = ui_pid();
+	if (ui > 0) kill(ui, SIGUSR2);
+}
+
 /* the lid's state as the kernel has it now (EVIOCGSW), not from events: closed means closed on any device */
 static const char *test_lid;	/* tests (tests/sleep-test.sh): the lid's state from this file, not the kernel */
 static void read_lid(void)
@@ -528,6 +543,13 @@ static void volume(int dir)
 	char *argv[] = { "/usr/libexec/banana/volume", dir > 0 ? "up" : "down", step, NULL };
 	run(argv);
 	save_volume_at = mono() + 2;
+	int pct = -1;
+	FILE *p = popen("/usr/libexec/banana/volume get 2>/dev/null", "r");
+	if (p) {
+		if (fscanf(p, "%d", &pct) != 1) pct = -1;
+		pclose(p);
+	}
+	if (pct >= 0) osd("volume", pct);
 }
 
 static void brightness(int dir)
@@ -535,6 +557,7 @@ static void brightness(int dir)
 	DIR *d = opendir("/sys/class/backlight");
 	if (!d) return;
 	struct dirent *e;
+	int pct = -1;
 	while ((e = readdir(d))) {
 		if (e->d_name[0] == '.') continue;
 		char p[320], v[32];
@@ -549,9 +572,11 @@ static void brightness(int dir)
 		if (nv > max) nv = max;
 		snprintf(v, sizeof v, "%d", nv);
 		write_file(p, v);
+		if (max > 0) pct = nv * 100 / max;
 	}
 	closedir(d);
 	save_backlight_at = mono() + 2;
+	if (pct >= 0) osd("brightness", pct);
 }
 
 /* both backlights at a fraction of their maximum */
