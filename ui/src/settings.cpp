@@ -1748,6 +1748,7 @@ namespace banana
 
 	void Settings::startRaCheck(const std::string& user, const std::string& pass)
 	{
+		if (const char* e = getenv("BANANA_RA_CHECK"); e && !strcmp(e, "0")) return;	// (the headless test: no server)
 		auto c = std::make_shared<RaCheck>();
 		raCheck = c;
 		toast("RetroAchievements", "Checking the account " + user + "...", 0x6ab0ff, 0, 30000);
