@@ -1,5 +1,10 @@
 include $(sort $(wildcard $(BR2_EXTERNAL_BANANA_PATH)/package/*/*.mk))
 
+# SDL2 with its dummy video driver (Buildroot leaves it out): SuperDrastic runs DraStic with SDL_VIDEODRIVER=dummy and
+# draws to the panels itself. Without the driver SDL_Init(VIDEO) fails and DraStic crashes a second in (its benchmark
+# table indexed with garbage). The last --enable/--disable wins in configure.
+SDL2_CONF_OPTS += --enable-video-dummy
+
 # The RG DS's drivers that mainline doesn't have, built into the kernel (no module loading before the menu): the
 # generic DSI panel driver both panels use, and the ADC joypad driver for the sticks and buttons. Plus the two
 # handhelds' device trees, from ROCKNIX (tools/sync-rocknix-hw.sh), with Banana's changes to them (dts-patches: the

@@ -232,6 +232,7 @@ namespace rnds
 		std::string shellKey;
 		std::vector<SlotState> slots;
 		int prevCenter = -1;
+		int lastDir = 0;		// the d-pad's direction of the last step (nudge), for a move that is as short both ways
 		float thumbFrom = 0, thumbTo = 0;
 		double thumbAt = -1e9;
 		bool thumbKnown = false;
@@ -779,6 +780,10 @@ namespace rnds
 			int c = center();
 			// how far the centre moved (in items, the short way round)
 			int move = prevCenter >= 0 && prevCenter < n ? delta(c, prevCenter, n) : 0;
+			// half way round (two items: either way is one step) the pressed direction says which way it went, so
+			// left slides left and right slides right
+			if (lastDir && n % 2 == 0 && std::abs(move) == n / 2) move = lastDir > 0 ? n / 2 : -(n / 2);
+			lastDir = 0;
 			if (std::abs(move) > 3) animate = false;
 			prevCenter = c;
 			for (int i = 0; i < n; i++)
@@ -872,6 +877,7 @@ namespace rnds
 
 		void nudge(int dir)
 		{
+			lastDir = dir;
 			if (ui->mView == HOME) setSystem(ui->mSys + dir);
 			else if (ui->mView == LIBRARY) setGame(ui->mGame + dir);
 		}

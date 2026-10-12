@@ -16,6 +16,8 @@ if [ ! -x $D/drastic ]; then
     done
 fi
 cd $D
+# DraStic writes beside $HOME (SDL's cache); / is read-only
+export HOME=$D XDG_RUNTIME_DIR=/run
 # banana-ui has let go of the panels completely (it closes its display while a game runs)
 export DSFLIP_HANDOVER=none DSFLIP_DRASTIC_DIR=$D DSFLIP_TOP=${BANANA_TOP:-DSI-2}
 # SuperDrastic's memory (per-game clocks, RetroAchievements login) and logs on the data partition, not beside it
@@ -29,5 +31,18 @@ if [ -f $A ]; then
     u=$(sed -n 's/^ra_user=//p' $A | head -n 1); w=$(sed -n 's/^ra_password=//p' $A | head -n 1)
     [ -n "$u" ] && export DSFLIP_RA_USER="$u" DSFLIP_RA_PASSWORD="$w"
 fi
-[ -f /data/banana/superdrastic.conf ] && . /data/banana/superdrastic.conf
+# the in-game menu (L3) in BananaOS's colours and fonts
+export DSFLIP_MENU_THEME=banana
+# Quit game (the menu) and a shutdown while playing save the spot to a resume state, loaded once at the next start of
+# the game. One older than the game's own save is dropped: loading it would put back an older in-game save too.
+G=$(basename "$1"); G=${G%.*}
+R=$D/savestates/$G.resume.dss
+mkdir -p $D/savestates
+RLOAD=0
+if [ -f "$R" ]; then
+    if [ -f "$D/backup/$G.dsv" ] && [ "$D/backup/$G.dsv" -nt "$R" ]; then rm -f "$R"; else RLOAD=1; fi
+fi
+export DSFLIP_RESUME_FILE="$R" DSFLIP_RESUME_LOAD=$RLOAD
+# the settings screen's choices (KEY=value lines), exported to SuperDrastic
+if [ -f /data/banana/superdrastic.conf ]; then set -a; . /data/banana/superdrastic.conf; set +a; fi
 exec $SD/superdrastic-run $D/drastic "$1"
