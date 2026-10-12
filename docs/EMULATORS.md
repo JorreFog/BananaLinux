@@ -86,6 +86,9 @@ handhelds themselves.
   by a whole number on the CPU instead.
 - **Input**: the pad and keyboards read (never grabbed), the bottom touchscreen by `BANANADS_TOUCH`. F + Start quits
   (with the resume state), F + R saves slot 1, F + L loads it.
+- **In-game menu**: L3 pauses the game and opens SuperDrastic's menu, in BananaOS's colours, on both panels: Resume,
+  Save and Load (8 slots with their pictures; a load can be undone), Quick settings (volume and brightness the way
+  bananad keeps them, the microphone's meter and a blow), Restart game, Quit game. Touch works on it too.
 - **Clocks**: its own governor: under `banana-perf superdrastic`'s `performance` governor it lowers
   `scaling_max_freq` a step at a time while the game keeps the DS's pace, steps up as soon as it falls a frame
   behind (and keeps off that clock for a while, remembered per game in `/data/bananads/cpugov`), and puts it back on

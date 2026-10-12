@@ -1,3 +1,4 @@
+#include <ctime>
 #include "settings.h"
 #include <algorithm>
 #include <arpa/inet.h>
@@ -105,7 +106,33 @@ namespace banana
 		Color ink, muted, line, edge, screenBg, screenFrame, screenBand, ditherA, ditherB;
 		Color panelBand, panelBody, panelLow, bubbleBand, bubbleBody, bubbleLow, slotOn, kbdBg, kbdInk, blackish, shade45;
 		Color accent;
+		// the selected row of a list: the yellow plate the shelf's cartridge stands on (the engine's START plate), dark
+		// text on it, and a dark amber for what the accent marks elsewhere ("Connected", "Press A again")
+		Color pick, pickBand, pickLow, pickEdge, onPick, onPickAccent;
 	};
+	// Update's row: how many update packages wait in banana/updates on the card ("" for none); looked at once every
+	// 2 s at most (the list is drawn on every change)
+	static std::string updatesWaiting()
+	{
+		static time_t at = 0;
+		static std::string v;
+		time_t now = time(nullptr);
+		if (now - at < 2 && at) return v;
+		at = now;
+		int n = 0;
+		if (DIR* d = opendir("/data/banana/updates"))
+		{
+			while (dirent* e = readdir(d))
+			{
+				size_t l = strlen(e->d_name);
+				if (l > 11 && !strcmp(e->d_name + l - 11, ".update.tar")) n++;
+			}
+			closedir(d);
+		}
+		v = n == 0 ? "" : n == 1 ? "1 package" : std::to_string(n) + " packages";
+		return v;
+	}
+
 	static SPal pal(bool light)
 	{
 		SPal p;
@@ -131,6 +158,9 @@ namespace banana
 			p.blackish = Color(sh.r, sh.g, sh.b, 0.3f); p.shade45 = Color(sh.r, sh.g, sh.b, 0.25f);
 		}
 		p.accent = light ? Color::hex(0xc07a00) : Color::hex(0xffd23f);	// the bananas' yellow for values being changed
+		p.pick = Color::hex(0xf0b429); p.pickBand = Color::hex(0xffcf5c); p.pickLow = Color::hex(0xc98f12);
+		p.pickEdge = light ? Color::hex(0x8a5a00) : Color::hex(0xffffff);
+		p.onPick = Color::hex(0x17161c); p.onPickAccent = Color::hex(0x7a3a00);
 		return p;
 	}
 
@@ -578,6 +608,12 @@ namespace banana
 				st.radius = X(2); st.bg = p.screenBg; st.dither = true;
 				st.shadows = { inset(0, 0, X(4), p.screenFrame), inset(0, X(8), 0, p.screenBand) };
 			}
+			else if (kind == "pick")	// a list's selected row ("slot" otherwise)
+			{
+				st.radius = X(14); st.border = b3; st.borderColor = p.pickEdge; st.bg = p.pick;
+				st.bands = { rnds::Band{ 0, X(8), p.pickBand }, rnds::Band{ X(8), -1, p.pick } };
+				st.shadows = { inset(0, -X(6), 0, p.pickLow), outer(X(3), X(3), p.shade45) };
+			}
 			else if (kind == "hero" || kind == "slot")
 			{
 				bool hero = kind == "hero";
@@ -787,16 +823,18 @@ namespace banana
 			const Item& it = items[i];
 			bool on = i == sel;
 			float y = 82 + r * 64;
-			box("slot", on, 18, y, 604, 56);
-			text(it.label, true, 20, 38, y + 16, on ? p.ink : p.muted);
+			box(on ? "pick" : "slot", on, 18, y, 604, 56);
+			text(it.label, true, 20, 38, y + 16, on ? p.onPick : p.muted);
 			std::string v;
 			if (it.kind == Item::CHOICE || it.kind == Item::BRIGHTNESS || it.kind == Item::VOLUME) v = it.names[it.at];
 			else if (it.kind == Item::ACTION) v = armed == i ? "Press A again" : "";
 			else if (it.kind == Item::INFO) v = "";
-			else if (it.kind == Item::PAGE) v = wstat.connected ? fit(wstat.ssid, true, 19, 300) : (wifiOn() ? "Choose" : "");
+			// a page's row: Network the network it is on; Update the packages waiting on the card; the others nothing
+			else if (it.kind == Item::PAGE && it.key == "network") v = wstat.connected ? fit(wstat.ssid, true, 19, 300) : (wifiOn() ? "Choose" : "");
+			else if (it.kind == Item::PAGE && it.key == "update") v = updatesWaiting();
 			if (v.empty()) continue;
 			float vw = text(v, true, 19, 0, 0, p.ink, false, 0, true);
-			Color vc = on ? (armed == i ? p.accent : p.ink) : p.muted;
+			Color vc = on ? (armed == i ? p.onPickAccent : p.onPick) : p.muted;
 			if (it.kind == Item::ACTION || it.kind == Item::PAGE) { text(v, true, 19, 586 - vw, y + 17, vc); continue; }
 			arrow(true, 576, y + 21, vc);
 			text(v, true, 19, 566 - vw, y + 17, vc);
@@ -1156,16 +1194,16 @@ namespace banana
 		std::string count = scanning && nets.empty() ? "Searching..." : std::to_string(nets.size()) + (nets.size() == 1 ? " network" : " networks");
 		float cw = text(count, true, 17, 0, 0, p.muted, false, 0, true);
 		text(count, true, 17, 602 - cw, 31, p.muted);
-		Color dim(p.muted.r, p.muted.g, p.muted.b, 0.35f);
+		Color dim(p.muted.r, p.muted.g, p.muted.b, 0.35f), dimOn(0.09f, 0.09f, 0.11f, 0.3f);
 		for (int r = 0; r < ROWS && ntop + r < (int)nets.size(); r++)
 		{
 			const wifi::Network& n = nets[ntop + r];
 			bool on = ntop + r == nsel;
 			float y = 82 + r * 64;
-			box("slot", on, 18, y, 604, 56);
-			Color c = on ? p.ink : p.muted;
+			box(on ? "pick" : "slot", on, 18, y, 604, 56);
+			Color c = on ? p.onPick : p.muted;
 			float right = 572;
-			bars(n.bars(), right, y + 40, c, dim);
+			bars(n.bars(), right, y + 40, c, on ? dimOn : dim);
 			right -= 10;
 			if (n.secured || n.unsupported) { right -= 12; lock(right, y + 19, c); right -= 12; }
 			std::string tag = n.current ? "Connected" : n.ssid == joining ? "Joining" : n.saved ? "Saved" : "";
@@ -1173,7 +1211,7 @@ namespace banana
 			{
 				float tw = text(tag, true, 17, 0, 0, c, false, 0, true);
 				right -= tw;
-				text(tag, true, 17, right, y + 18, n.current ? p.accent : c);
+				text(tag, true, 17, right, y + 18, n.current ? (on ? p.onPickAccent : p.accent) : c);
 				right -= 14;
 			}
 			text(fit(n.ssid, true, 20, right - 38), true, 20, 38, y + 16, c);
@@ -1341,12 +1379,12 @@ namespace banana
 			const Pkg& k = pkgs[r];
 			bool on = r == usel;
 			float y = 82 + r * 64;
-			box("slot", on, 18, y, 604, 56);
-			Color c = on ? p.ink : p.muted;
+			box(on ? "pick" : "slot", on, 18, y, 604, 56);
+			Color c = on ? p.onPick : p.muted;
 			text(fit("Banana " + k.version, true, 20, 330), true, 20, 38, y + 16, c);
 			std::string tag = armed == 1000 + r ? "Press A again" : (k.board == board || board.empty() ? "for the " + k.board : "not for this handheld");
 			float tw = text(tag, true, 17, 0, 0, c, false, 0, true);
-			text(tag, true, 17, 586 - tw, y + 18, armed == 1000 + r ? p.accent : c);
+			text(tag, true, 17, 586 - tw, y + 18, armed == 1000 + r ? (on ? p.onPickAccent : p.accent) : c);
 		}
 		if (pkgs.empty()) text("Nothing in banana/updates on the card.", true, 20, 38, 98, p.muted);
 		float bw = faceWidth("B", "Back");
@@ -1509,8 +1547,8 @@ namespace banana
 		{
 			bool on = r == wsel;
 			float y = 82 + r * 64;
-			box("slot", on, 18, y, 604, 56);
-			Color c = on ? p.ink : p.muted;
+			box(on ? "pick" : "slot", on, 18, y, 604, 56);
+			Color c = on ? p.onPick : p.muted;
 			text(names[r], true, 20, 38, y + 16, c);
 			if (status[r].empty()) continue;
 			std::string v = fit(status[r], true, 19, 300);

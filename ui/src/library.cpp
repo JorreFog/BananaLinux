@@ -1,5 +1,6 @@
 #include "library.h"
 #include <algorithm>
+#include <cerrno>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
@@ -8,6 +9,9 @@
 #include <sstream>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <glob.h>
+#include "../rnds/RndsRaster.h"
+#include "../third_party/stb_image_write.h"
 
 namespace banana
 {
@@ -147,6 +151,53 @@ namespace banana
 	}
 
 	// ---- setup ------------------------------------------------------------------------------------------------------
+	// A DS game with no box art: its own icon (the banner's 32x32, as the bottom screen's cartridge shows it) drawn up
+	// with hard pixel edges to the cover's size on this panel (the cover frame is 214 CSS px wide, 1.6x on the RG DS
+	// Plus's 1024x768), written once to <data>/cache/icons, so the top screen's cover and the home screen's
+	// last-played cartridge show the game instead of the system's console. "" when the ROM has no icon.
+	static std::string romIconCover(const std::string& dataDir, const std::string& rom)
+	{
+		static int size = 0;
+		if (!size)
+		{
+			int w = 640;
+			glob_t g;
+			if (!glob("/sys/class/drm/card*-DSI-*/modes", 0, nullptr, &g))
+			{
+				for (size_t i = 0; i < g.gl_pathc && w == 640; i++)
+					if (FILE* f = fopen(g.gl_pathv[i], "r")) { int a, b; if (fscanf(f, "%dx%d", &a, &b) == 2 && a > 0) w = a; fclose(f); }
+				globfree(&g);
+			}
+			size = (int)std::lround(214.0 * w / 640);
+		}
+		std::string base = rom.substr(rom.find_last_of('/') + 1);
+		for (char& c : base) if (c == '/' || c == '\\') c = '_';
+		std::string dir = dataDir + "/cache/icons", out = dir + "/" + base + "." + std::to_string(size) + ".png";
+		struct stat st;
+		if (!stat(out.c_str(), &st)) return st.st_size > 0 ? out : "";
+		rnds::Bitmap ic = rnds::romIcon(rom);
+		if (mkdir((dataDir + "/cache").c_str(), 0755) && errno != EEXIST) return "";
+		if (mkdir(dir.c_str(), 0755) && errno != EEXIST) return "";
+		if (ic.empty() || ic.alpha || ic.px.size() < (size_t)ic.w * ic.h * 4)
+		{
+			if (FILE* f = fopen(out.c_str(), "w")) fclose(f);	// (an empty file: no icon, asked once)
+			return "";
+		}
+		std::vector<uint8_t> big((size_t)size * size * 4);
+		for (int y = 0; y < size; y++)
+			for (int x = 0; x < size; x++)
+				memcpy(&big[((size_t)y * size + x) * 4], &ic.px[((size_t)(y * ic.h / size) * ic.w + x * ic.w / size) * 4], 4);
+		std::string tmp = out + ".tmp";
+		if (!stbi_write_png(tmp.c_str(), size, size, 4, big.data(), size * 4) || rename(tmp.c_str(), out.c_str())) { unlink(tmp.c_str()); return ""; }
+		return out;
+	}
+	static bool isDsRom(const std::string& path, const std::string& system)
+	{
+		std::string ext = path.substr(path.rfind('.') + 1);
+		for (char& c : ext) c = (char)tolower((unsigned char)c);
+		return ext == "nds" || (ext == "zip" && system == "nds");
+	}
+
 	Library::Library(const std::string& conf, const std::string& roms, const std::string& data, const std::string& a)
 		: confPath(conf), romRoot(roms), dataDir(data), assets(a)
 	{
@@ -507,6 +558,8 @@ namespace banana
 			r.resumeEyebrow = g.last > 0 ? "Last played" : "Not played yet";
 			r.resumeTitle = g.title;
 			r.resumeBox = g.box; r.resumeCart = g.cart; r.resumeLabel = g.label;
+			if (g.box.empty() && g.cart.empty() && g.label.empty() && isDsRom(g.path, s.def.id))
+				r.resumeLabel = romIconCover(dataDir, g.path);	// the game's own icon on the chip's cartridge
 		}
 		return r;
 	}
@@ -527,6 +580,7 @@ namespace banana
 		r.last = relDay(g.last);
 		r.time = fmtTime(g.seconds);
 		r.box = g.box; r.cart = g.cart; r.label = g.label;
+		if (r.box.empty() && isDsRom(g.path, systemOf(i).id)) r.box = romIconCover(dataDir, g.path);	// its own icon
 		std::string ext = lower(g.path.substr(g.path.rfind('.') + 1));
 		// the DS ROM's own icon when there is no art (from inside a .zip too)
 		if (ext == "nds" || (ext == "zip" && systemOf(i).id == "nds")) r.rom = g.path;
