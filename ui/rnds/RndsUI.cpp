@@ -799,6 +799,14 @@ namespace rnds
 					st.trans = false; st.otrans = false; st.ghost = false;
 					st.toX = tx; st.toS = tsc; st.toO = to;
 				}
+				else if (wrapped && endless(n))
+				{
+					// the copy that is now this item's place was a whole loop from it: it slides on from there
+					float shift = (float)(d - (st.d - move)) * 122.0f;
+					st.fromX = cx + shift; st.fromS = cs; st.toX = tx; st.toS = tsc; st.t0 = now; st.trans = true;
+					st.ghost = false;
+					if (to != st.toO) { st.fromO = co; st.toO = to; st.o0 = now; st.otrans = true; }
+				}
 				else if (wrapped)
 				{
 					if (std::abs(st.d) <= 3 && co > 0)
@@ -828,6 +836,10 @@ namespace rnds
 				st.known = true;
 			}
 		}
+
+		// two to four items go round as an endless strip (copies a loop away on both sides); more fill the screen and
+		// wrap the old way (the item leaves on one side and comes in on the other)
+		static bool endless(int n) { return n >= 2 && n <= 4; }
 
 		float thumbLeft(int at, int n, float inner) { return n < 2 ? 0 : at * (inner - 42) / (n - 1); }
 
@@ -1695,16 +1707,28 @@ namespace rnds
 					order.push_back({ z, i });
 				}
 				std::stable_sort(order.begin(), order.end(), [](const std::pair<int, int>& a, const std::pair<int, int>& b) { return a.first < b.first; });
-				// the copies leaving round the end go under everything
+				// the copies leaving round the end go under everything; with few items (endless(): two to four) the
+				// strip goes round instead: each item also a whole loop away on either side, where that is on screen
+				// (-2 - k marks loop k), so four items show two left and two right and every copy slides with the strip
 				std::vector<std::pair<int, int>> all;
 				for (auto& o : order) if (slots[o.second].ghost) all.push_back({ -1, o.second });
+				if (endless(n))
+					for (int k : { -2, -1, 1, 2 })
+						for (auto& o : order) all.push_back({ -2 - (k + 2), o.second });
 				all.insert(all.end(), order.begin(), order.end());
 				for (auto& o : all)
 				{
 					int i = o.second;
 					float tx, sc, op;
-					if (o.first < 0) { if (!ghostValue(slots[i], tx, sc, op)) continue; }
+					if (o.first == -1) { if (!ghostValue(slots[i], tx, sc, op)) continue; }
 					else slotValue(slots[i], tx, sc, op);
+					if (o.first <= -2)
+					{
+						int k = -o.first - 4;	// -2, -3, -5, -6: loops -2, -1, 1, 2
+						tx += k * n * 122.0f;
+						if (std::fabs(tx) > 3.2f * 122.0f) continue;
+						sc = std::fabs(tx) < 61.0f ? sc : 0.84f;
+					}
 					if (op <= 0) continue;
 					Xf xf; xf.ox = 320; xf.oy = ry + 16; xf.sc = sc; xf.tx = tx; xf.alpha = op;
 					if (v == HOME)
@@ -1870,7 +1894,12 @@ namespace rnds
 				slotValue(slots[i], tx, sc, op);
 				if (op <= 0) continue;
 				float sx = 320 - 48 * sc + tx, sy = g.reelY + 16, sw = 96 * sc;
-				if (!in(sx, sy, sw, sw)) continue;
+				bool hit = in(sx, sy, sw, sw);
+				int ns = (int)slots.size();
+				if (endless(ns))
+					for (int k : { -2, -1, 1, 2 })
+						if (in(320 - 48 * 0.84f + tx + k * ns * 122.0f, sy, 96 * 0.84f, 96 * 0.84f)) hit = true;
+				if (!hit) continue;
 				int d = slots[i].d, z = d == 0 ? 4 : 3 - std::min(std::abs(d), 2);
 				if (z >= bestZ) { bestZ = z; best = i; }
 			}
