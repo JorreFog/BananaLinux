@@ -152,6 +152,7 @@ namespace banana
 		float text(const std::string& t, bool medium, float size, float x, float top, const rnds::Color& c, bool upper = false, float ls = 0, bool measureOnly = false);
 		void wrapped(const std::string& t, float size, float x, float top, float width, int maxLines, const rnds::Color& c);
 		void icon(const std::string& name, float x, float y, int scale);
+		void iconCentred(const std::string& name, float cx, float y, int scale);
 		void arrow(bool right, float x, float y, const rnds::Color& c);
 		void face(const std::string& key, const std::string& label, float x, float w);
 		float faceWidth(const std::string& key, const std::string& label);

@@ -780,6 +780,17 @@ namespace banana
 		}
 	}
 
+	// an icon centred on cx (its own width: the icons aren't all the same size)
+	void Settings::iconCentred(const std::string& name, float cx, float y, int scale)
+	{
+		icon(name, -10000, -10000, scale);	// (loads it into the cache; off screen)
+		auto it = cache.find("icon:" + name);
+		if (it == cache.end() || !it->second.tex) return;
+		int k = std::max(1, (int)std::lround(scale * s));
+		float w = (float)it->second.tex->w * k;	// device px
+		be->draw(it->second.tex, std::round(X(cx) - w / 2), std::round(X(y)), w, (float)it->second.tex->h * k, Color(1, 1, 1, 1));
+	}
+
 	void Settings::icon(const std::string& name, float x, float y, int scale)
 	{
 		std::string key = "icon:" + name;
@@ -909,7 +920,7 @@ namespace banana
 			bool on = g == gsel;
 			float x = 18 + (g % 3) * 204, y = 82 + (g / 3) * 166;
 			box(on ? "pick" : "slot", on, x, y, 196, 158);
-			icon(items[groupStart(g)].icon, x + 98 - 23, y + 22, 2);	// (the icons are 24 px: 48 here)
+			iconCentred(items[groupStart(g)].icon, x + 98, y + 22, 2);
 			std::string label = fit(groups[g], true, 19, 180);
 			float lw = text(label, true, 19, 0, 0, p.ink, false, 0, true);
 			text(label, true, 19, x + 98 - lw / 2, y + 84, on ? p.onPick : p.ink);
