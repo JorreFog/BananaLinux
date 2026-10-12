@@ -1,0 +1,7 @@
+config BR2_PACKAGE_DODAKVARTER
+	bool "dodakvarter"
+	default y
+	select BR2_PACKAGE_LIBDRM
+	help
+	  Döda Kvarter, ROCKNIXDS's zombie roguelike made for both screens (the top the game, the bottom the
+	  inventory), on its own tile on the shelf. It draws straight to the panels (KMS) and loads ALSA at run time.

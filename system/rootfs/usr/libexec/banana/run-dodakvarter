@@ -1,0 +1,8 @@
+#!/bin/sh
+# Döda Kvarter (the shelf's app tile): straight onto both panels, as ROCKNIXDS runs it, with its settings, scores and
+# the run in progress on the card (they survive updates). banana-ui has let go of the panels.
+#   run-dodakvarter [entry]
+export DK_DATA=/data/apps/dodakvarter
+mkdir -p $DK_DATA
+cd $DK_DATA
+exec /usr/bin/dodakvarter --backend kms

@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<gameList>
+	<game>
+		<path>./Döda Kvarter.app</path>
+		<name>Döda Kvarter</name>
+		<desc>A zombie roguelike for both screens, set in a Swedish suburb at night.</desc>
+		<image>./media/dodakvarter-image.png</image>
+		<thumbnail>./media/dodakvarter-thumb.png</thumbnail>
+		<marquee>./media/dodakvarter-marquee.png</marquee>
+		<genre>Shooter / Roguelike</genre>
+		<releasedate>20261006T000000</releasedate>
+	</game>
+</gameList>

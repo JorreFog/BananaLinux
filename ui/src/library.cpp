@@ -198,6 +198,13 @@ namespace banana
 		return ext == "nds" || (ext == "zip" && system == "nds");
 	}
 
+	// a system's folder: under the card's roms, or an absolute path (an app shipped with the system, whose one entry
+	// is in /usr/share/banana/apps/<id>)
+	static std::string folderPath(const std::string& romRoot, const std::string& folder)
+	{
+		return !folder.empty() && folder[0] == '/' ? folder : romRoot + "/" + folder;
+	}
+
 	Library::Library(const std::string& conf, const std::string& roms, const std::string& data, const std::string& a)
 		: confPath(conf), romRoot(roms), dataDir(data), assets(a)
 	{
@@ -392,7 +399,7 @@ namespace banana
 		std::vector<std::string> r = { romRoot };
 		for (auto& d : defs)
 		{
-			std::string dir = romRoot + "/" + d.folder;
+			std::string dir = folderPath(romRoot, d.folder);
 			r.push_back(dir);
 			r.push_back(dir + "/media");
 			for (const char* m : { "box", "cart", "label" }) r.push_back(dir + "/media/" + m);
@@ -409,7 +416,7 @@ namespace banana
 			Shelf sh;
 			sh.def = def;
 			sh.order = (int)(&def - &defs[0]);
-			std::string dir = romRoot + "/" + def.folder;
+			std::string dir = folderPath(romRoot, def.folder);
 			std::vector<std::string> rels;
 			listRoms(dir, "", def.exts, rels, 0);
 			auto gl = readGamelist(dir);
@@ -472,7 +479,7 @@ namespace banana
 		// sysOf follows the sort: find each game's system again by its path
 		for (size_t k = 0; k < fav.games.size(); k++)
 			for (int s = 0; s < (int)shelves.size(); s++)
-				if (fav.games[k].path.compare(0, romRoot.size() + shelves[s].def.folder.size() + 2, romRoot + "/" + shelves[s].def.folder + "/") == 0)
+				if (fav.games[k].path.compare(0, folderPath(romRoot, shelves[s].def.folder).size() + 1, folderPath(romRoot, shelves[s].def.folder) + "/") == 0)
 					{ fav.sysOf[k] = s; break; }
 		if (!fav.games.empty())
 		{
