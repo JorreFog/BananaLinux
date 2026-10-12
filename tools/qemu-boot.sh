@@ -198,11 +198,12 @@ key ret; sleep 1; shot second-library
 grep -q "Boot Test" "$OUT/serial.log" || true
 key ret            # the ready screen: the cartridge goes in and the game starts
 wait_for "starting nds" 30 "the game was started (run-nds)"
-# DraStic keeps running even on the empty test ROM (it used to exit only because it was never copied onto the card):
-# F + Start quits it, as a player does (bananad stops the game; SuperDrastic's runner saves a resume state first)
+# DraStic keeps running even on the empty test ROM (it used to exit only because it was never copied onto the card).
+# The VM's keyboard isn't the pad SuperDrastic's F + Start reads, so the game is stopped as a shutdown stops it: a TERM
+# to it (SuperDrastic's runner saves a resume state first, within 5 s)
 sleep 10; shot second-game
-key f1-s
-wait_for "game ended" 60 "F + Start quit the DS game and the menu took the panels back"
+vm 'kill -TERM $(cat /run/banana/game.pid)' || true
+wait_for "game ended" 60 "a TERM ended the DS game and the menu took the panels back"
 sleep 2; shot second-after-game
 # the GBA shelf (RetroArch's launcher): home, the next system, its library, its game
 key backspace right ret; sleep 1; shot second-gba
