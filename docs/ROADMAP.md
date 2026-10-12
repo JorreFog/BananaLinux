@@ -19,6 +19,9 @@
 - [ ] The RG DS Plus's real pixel clock and banana-panel-tune's result (`banana/panel-tune.txt`)
 - [ ] Headphones plugged in during a game: move the playing stream too (now: from the next time a program opens sound)
 - [ ] Boot time, measured: U-Boot, kernel, init, first frame
+- [ ] BananaDS on the units: its KMS frontend on the panels (`kms.stats`: no repeats or drops at the panels' rate),
+      its governor's clocks, sound and the microphone; then `power.cpu_latency_us` A/B with the battery's cost, and
+      the kernel options turned off for it (BananaDS's docs/BANANALINUX.md, B3/B4) A/B in a game
 
 ## 0.2: a handheld you can use every day
 
@@ -40,6 +43,10 @@
       brings it back
 - [x] Resource use: the kernel trimmed to the two handhelds' hardware, the menu's memory measured, bananad idle
       about once a minute, the panels dimmed when idle, Wi-Fi scans backed off, no hardening overhead
+
+- [x] BananaDS in the image: its package (CMake, melonDS pinned and patched by Buildroot), its KMS frontend and
+      governor, the launcher passing the contract and the menu's choices as its settings, Settings > Nintendo DS >
+      Emulator to switch to it; a DS homebrew ROM run from the menu in QEMU (`tools/qemu-boot.sh`, phase 2b)
 
 ## Later
 

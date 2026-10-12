@@ -70,14 +70,41 @@ emulator reads them from its launcher's environment or gets its own file and a r
 
 ## BananaDS
 
-The slot is ready: `buildroot/package/bananads` (fill in the commit, the build and the install),
-`/usr/libexec/banana/run-bananads` (the environment above as `BANANADS_*`, fill in the command line), and
-Settings > Nintendo DS > Emulator. Until the package is in the defconfigs, `run-nds` runs DraStic whatever the
-setting says. What BananaDS gets from the launcher:
+BananaDS (melonDS's core with SuperDrastic's display path, governor and sound; `bananads/` in
+github.com/JorreFog/SuperDrastic) is in both images. Settings > Nintendo DS > Emulator switches the DS shelf to it
+(`nds_emulator = bananads` in `banana/settings.conf`); DraStic stays the default until BananaDS has run on the
+handhelds themselves.
+
+- **The package** (`buildroot/package/bananads`): BananaDS at a pinned commit of the SuperDrastic repository, built
+  with CMake for the handhelds (melonDS's JIT, `-mcpu=cortex-a55`, link-time optimization, no SDL, ALSA, the KMS
+  frontend). Its build would fetch melonDS at configure time; here melonDS is a second download at the commit
+  BananaDS pins, and BananaDS's patches to it are applied by Buildroot's patch step. `/usr/bin/bananads`.
+- **The display**: `frontend=kms`: DRM master, both panels' modes as they are, each frame into dumb buffers and
+  both panels in one atomic commit, the plane scaling 256x192 (512x384 at 2x) to the panel; frames queue one
+  refresh, so a game alternating 19 ms and 12 ms frames still shows a new frame each refresh. In QEMU the virtio GPU
+  can't scale planes, so the CPU scales by a whole number instead.
+- **Input**: the pad and keyboards read (never grabbed), the bottom touchscreen by `BANANADS_TOUCH`. F + Start quits
+  (with the resume state), F + R saves slot 1, F + L loads it.
+- **Clocks**: its own governor (SuperDrastic's, ported): under `banana-perf superdrastic`'s `performance`
+  governor it lowers `scaling_max_freq` to the lowest clock with no dropped frames, remembered per game in
+  `/data/bananads/cpugov`, and puts it back on exit.
+- **Quitting**: F + Start, or `SIGTERM` (shutdown while playing): the resume state, then the save, then the panels
+  are given back.
+
+What the launcher (`run-bananads`) gives it: the contract's names, and the same as BananaDS's own settings (it reads
+every `BANANADS_<KEY>` as the setting `<key>`, over `/data/bananads/bananads.conf`):
 
 ```
-BANANADS_TOP      the top panel's connector            BANANADS_TOUCH   the bottom touchscreen's sysfs name
-BANANADS_DATA     /data/bananads                        BANANADS_LOGDIR  /data/banana/logs/bananads
-BANANADS_SAVES    /data/saves/nds                       BANANADS_STATES  /data/states/nds
-BANANADS_BIOS     /data/bios                            argument 1       the ROM (.nds or .zip)
+BANANADS_TOP      the top panel's connector            BANANADS_TOUCH       the bottom touchscreen's sysfs name
+BANANADS_DATA     /data/bananads                        BANANADS_LOGDIR      /data/banana/logs/bananads
+BANANADS_SAVES    /data/saves/nds                       BANANADS_STATES      /data/states/nds
+BANANADS_BIOS     /data/bios                            argument 1           the ROM (.nds or .zip)
+BANANADS_FRONTEND kms                                   BANANADS_LOG_FILE    logs/bananads/bananads.log (.1: the last)
+BANANADS_SAVE_DIR /data/saves/nds                       BANANADS_STATE_DIR   /data/states/nds
+BANANADS_RENDER_SCALE 2  with 3D resolution 2x          BANANADS_RENDER_RENDERER soft  with the renderer "DraStic"
 ```
+
+`/data/banana/bananads.env` (shell assignments) adds settings for every run, e.g. `BANANADS_KMS_STATS=600` (the
+frame statistics in the log) or `BANANADS_POWER_CPU_LATENCY_US=100` (the cores kept out of deep idle while a game
+runs: ~1.5% faster, a battery cost not measured yet). BananaDS needs no BIOS or firmware files (melonDS's FreeBIOS and a
+generated firmware).

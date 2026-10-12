@@ -2,8 +2,9 @@
 # Clock profiles. The menu draws a frame in a few milliseconds and sleeps in between, so it runs on the lowest
 # clocks; a game gets the profile its system asks for (systems.conf's perf).
 #   banana-perf ui | powersave | balanced | performance | superdrastic
-# superdrastic: the "performance" governor, which SuperDrastic's own governor takes over (it picks the lowest clock
-# at which the game drops no frames, per game); the GPU stays on demand.
+# superdrastic: the "performance" governor, which the DS emulator's own governor takes over (SuperDrastic's, and
+# BananaDS's port of it: the lowest clock at which the game drops no frames, per game, through scaling_max_freq,
+# put back when the game ends); the GPU stays on demand.
 CPU=/sys/devices/system/cpu/cpufreq/policy0
 GPU=$(ls -d /sys/class/devfreq/*.gpu 2>/dev/null | head -n1)
 [ -d $CPU ] || exit 0

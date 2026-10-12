@@ -193,6 +193,7 @@ boot second
 grep -q "rcS: data partition ready" "$OUT/serial.log" && ok "the data partition mounted again" || bad "no data partition the second time"
 grep -q "banana-ui: first-time setup" "$OUT/serial.log" && bad "the first-time setup opened again" || ok "no setup the second time"
 sleep 5; measure second-menu
+HAVE_BANANADS=0; vm test -x /usr/bin/bananads 2>/dev/null && HAVE_BANANADS=1
 key ret; sleep 1; shot second-library
 grep -q "Boot Test" "$OUT/serial.log" || true
 key ret            # the ready screen: the cartridge goes in and the game starts
@@ -207,6 +208,45 @@ for i in $(seq 120); do [ "$(grep -c 'game ended' "$OUT/serial.log")" -ge 2 ] &&
 [ "$(grep -c 'game ended' "$OUT/serial.log")" -ge 2 ] && ok "the GBA game ended and the menu came back" || bad "the GBA game didn't end within 60 s"
 sleep 2
 shutdown_from_settings second
+
+# BananaDS, when the image has it: a DS homebrew ROM (tools/test-roms/ds2dtest.nds, the 2D engines' test from
+# BananaDS's tests/ds2dtest) as the only DS game, the emulator chosen in the settings, started from the menu: both
+# screens on both panels through its KMS frontend, then F + Start quits it (with its resume state) and the menu comes
+# back. In QEMU the virtio GPU's planes can't scale, so the frames are scaled by the CPU (logged as such).
+ROM=$HERE/tools/test-roms/ds2dtest.nds
+if [ $HAVE_BANANADS = 1 ] && [ -f "$ROM" ]; then
+    echo "2b. BananaDS: a DS game from the menu on both panels by KMS, F + Start to quit"
+    prep_bananads() {
+        rm -f "$DATA/roms/nds/"*.nds
+        cp "$ROM" "$DATA/roms/nds/BananaDS Test.nds"
+        sed -i '/^nds_emulator/d' "$DATA/banana/settings.conf" 2>/dev/null || true
+        echo "nds_emulator = bananads" >> "$DATA/banana/settings.conf"
+        echo 0 > "$DATA/banana/last-system"
+        echo "BANANADS_KMS_STATS=30" > "$DATA/banana/bananads.env"
+    }
+    with_data prep_bananads
+    boot bananads
+    key ret; sleep 1
+    key ret
+    wait_for "starting nds" 30 "the DS game was started (run-nds, BananaDS chosen)"
+    sleep 20; shot bananads-game
+    measure bananads-game
+    grep -q " bananads$" "$OUT/resources-bananads-game.txt" && ok "BananaDS is running" || bad "no bananads process during the game"
+    key f1-s
+    wait_for "game ended" 60 "F + Start quit BananaDS and the menu took the panels back"
+    sleep 2; shot bananads-after
+    shutdown_from_settings bananads
+    check_bananads() {
+        L=$DATA/banana/logs/bananads/bananads.log
+        echo "--- logs/bananads/bananads.log"; grep "^\[kms\]\|^\[cpugov\]\|BananaDS" "$L" 2>/dev/null | head -n 12 | sed 's/^/    /'
+        grep -q "\[kms\] .* top, .* bottom" "$L" 2>/dev/null && ok "BananaDS opened both panels" || bad "BananaDS didn't open the panels"
+        grep -q "\[kms\] .* frames shown in" "$L" 2>/dev/null && ok "BananaDS put frames on the panels" || bad "no frames shown by BananaDS"
+        ls "$DATA/states/nds/"*resume* > /dev/null 2>&1 && ok "BananaDS wrote its resume state on quitting" || bad "no resume state after quitting"
+    }
+    with_data check_bananads
+else
+    echo "2b. BananaDS: not in this image (or no test ROM): skipped"
+fi
 
 echo "3. an update: the package applied from the settings, the next boot runs the other slot"
 add_update() { mkdir -p "$DATA/banana/updates"; make_update "$DATA/banana/updates"; }

@@ -149,3 +149,17 @@ CONFIG_VIRTIO_NET=y
 # CONFIG_PROFILING is not set
 # CONFIG_ZRAM is not set
 # CONFIG_SWAP is not set
+
+# Less kernel overhead under a game (BananaDS's docs/BANANALINUX.md, B4): ROCKNIX's base config carries spinlock
+# debugging (checks on every lock the scheduler, futexes, DRM and ALSA take, the most likely to cost a
+# multi-threaded emulator time), every allocated and every freed page zeroed, hardened user copies, the strong stack
+# protector, devres debugging and a randomised kernel base. A single-user game console needs none of them. Debugging
+# as a menu (DEBUG_KERNEL) stays: PM_DEBUG's sleep timings are under it.
+# CONFIG_DEBUG_SPINLOCK is not set
+# CONFIG_INIT_ON_ALLOC_DEFAULT_ON is not set
+# CONFIG_INIT_ON_FREE_DEFAULT_ON is not set
+# CONFIG_HARDENED_USERCOPY is not set
+# CONFIG_STACKPROTECTOR is not set
+# CONFIG_DEBUG_DEVRES is not set
+# CONFIG_DEBUG_BUGVERBOSE is not set
+# CONFIG_RANDOMIZE_BASE is not set

@@ -1,17 +1,31 @@
 #!/bin/sh
-# Nintendo DS: BananaDS, when it is ready (docs/EMULATORS.md is the contract this launcher keeps; the lines marked
-# FILL IN follow BananaDS's own command line once it has one).
+# Nintendo DS: BananaDS (docs/EMULATORS.md is the contract this launcher keeps). BananaDS takes every setting from
+# the environment as BANANADS_<KEY> (its docs/SETTINGS.md: render.scale is BANANADS_RENDER_SCALE), over its own
+# file /data/bananads/bananads.conf, so the places and the menu's choices are passed that way.
 #   run-bananads <rom>
 [ -x /usr/bin/bananads ] || { echo "BananaDS isn't installed" >&2; exit 1; }
-D=/data/bananads                       # its own settings and memory (per-game clocks, what it remembers)
+D=/data/bananads                       # its settings (bananads.conf) and memory (cpugov/: per-game clocks)
 L=/data/banana/logs/bananads           # its logs, readable on a computer
 mkdir -p $D $L /data/saves/nds /data/states/nds
-# what Banana gives every DS emulator
+# what Banana gives every DS emulator, under the contract's names
 export BANANADS_TOP=${BANANA_TOP:-DSI-2}         # the top panel's connector (the other connected panel is the bottom)
 export BANANADS_TOUCH=${BANANA_TOUCH:-fe5e0000.i2c}  # the bottom panel's touchscreen (part of its sysfs path)
 export BANANADS_DATA=$D BANANADS_LOGDIR=$L
 export BANANADS_SAVES=/data/saves/nds BANANADS_STATES=/data/states/nds BANANADS_BIOS=/data/bios
-# the user's choices from Settings > Nintendo DS (renderer, shader, 3D resolution) are in superdrastic.conf as
-# DSFLIP_RAST, DSFLIP_SHADER and drastic.cfg's hires_3d; BananaDS reads its own file (FILL IN when it has one)
-[ -f /data/banana/bananads.conf ] && . /data/banana/bananads.conf
-exec /usr/bin/bananads "$1"            # FILL IN: BananaDS's arguments, if it takes the above as arguments instead
+# ...and as BananaDS's settings: the panels (frontend=kms: both screens straight onto them, its own CPU governor
+# under banana-perf's "performance"), the saves and states, the log (the last session's kept as .1)
+export BANANADS_FRONTEND=kms BANANADS_SAVE_DIR=/data/saves/nds BANANADS_STATE_DIR=/data/states/nds
+[ -f $L/bananads.log ] && mv -f $L/bananads.log $L/bananads.1.log
+export BANANADS_LOG_FILE=$L/bananads.log
+# Settings > Nintendo DS: the 3D resolution (drastic.cfg's hires_3d, shared with DraStic) and the renderer (Gengis
+# Engine, superdrastic.conf's DSFLIP_RAST=1, or the emulator's own: melonDS's software renderer for BananaDS)
+hires=$(sed -n 's/^ *hires_3d *= *//p' /data/drastic/config/drastic.cfg 2>/dev/null | head -n 1)
+rast=$(sed -n 's/^ *DSFLIP_RAST *= *//p' /data/banana/superdrastic.conf 2>/dev/null | head -n 1)
+[ "$hires" = 1 ] && export BANANADS_RENDER_SCALE=2
+[ "$rast" = 0 ] && export BANANADS_RENDER_RENDERER=soft
+# the DS's user name: the handheld's
+export BANANADS_FIRMWARE_NICKNAME=${BANANADS_FIRMWARE_NICKNAME:-Banana}
+# anything else for one run: /data/banana/bananads.env (shell assignments, exported), e.g. BANANADS_KMS_STATS=600
+if [ -f /data/banana/bananads.env ]; then set -a; . /data/banana/bananads.env; set +a; fi
+cd $D
+exec /usr/bin/bananads "$1"

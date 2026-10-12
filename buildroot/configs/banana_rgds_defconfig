@@ -74,6 +74,7 @@ BR2_PACKAGE_BANANA_UI=y
 BR2_PACKAGE_BANANAD=y
 BR2_PACKAGE_SUPERDRASTIC=y
 BR2_PACKAGE_DRASTIC=y
+BR2_PACKAGE_BANANADS=y
 # the other systems: RetroArch and its cores (all on by default under it)
 BR2_PACKAGE_RETROARCH=y
 
