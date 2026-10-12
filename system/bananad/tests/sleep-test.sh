@@ -163,6 +163,29 @@ echo $GAME > /run/banana/game.pid; sleep 2
 rm -f /run/banana/game.pid
 stop
 
+echo "8. charging: the lid shut keeps it awake and dark (the charging light stays on); unplugged, it sleeps"
+mkdir -p /sys/class/power_supply/charger
+echo USB > /sys/class/power_supply/charger/type; echo 1 > /sys/class/power_supply/charger/online
+echo $GAME > /run/banana/game.pid
+start
+echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1; sleep 1
+asleep 2>/dev/null && bad "it suspended while charging" || ok "no suspend while charging"
+[ "$(cat /sys/class/backlight/backlight0/bl_power)" = 4 ] && ok "panels dark" || bad "backlight bl_power $(cat /sys/class/backlight/backlight0/bl_power)"
+a=$(cat /sys/class/leds/amber:charging/brightness)
+[ -n "$a" ] && [ "$a" != 0 ] && ok "charging light on ($a)" || bad "charging light off ('$a')"
+[ "$(gstate)" = T ] && ok "game paused" || bad "game not paused ($(gstate))"
+echo 0 > /run/test/lid; sleep 1
+[ "$(cat /sys/class/backlight/backlight0/bl_power)" = 0 ] && ok "panels back when the lid opens" || bad "panels still dark"
+[ "$(gstate)" != T ] && ok "game running again" || bad "game still paused"
+grep -q 'dark while charging for' /data/banana/logs/sleep.log && ok "logged" || bad "not logged"
+echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1; sleep 1
+echo 0 > /sys/class/power_supply/charger/online
+asleep && ok "asleep once the charger is pulled out" || bad "no sleep after unplugging"
+echo 0 > /run/test/lid; wake
+rm -rf /sys/class/power_supply/charger
+rm -f /run/banana/game.pid
+stop
+
 kill $UI $GAME 2>/dev/null || true
 echo "sleep test: $pass passed, $fail failed"
 [ $fail = 0 ]

@@ -8,8 +8,9 @@
  *   - Volume keys change the mixer; F (BTN_MODE) + volume changes both panels' backlights.
  *   - A battery about to run out shuts the handheld down before the data partition can be cut off mid-write.
  *   - The LEDs, as on ROCKNIX's RG DS: the upper one green, red at 20%, blinking red at 5%; the lower one amber while
- *     charging. The kernel drives them (the charger's LED trigger, the timer trigger for the blink): bananad only
- *     changes them when the battery's state changes, which the kernel announces (power_supply uevents).
+ *     the charger is plugged in and the battery isn't full (steady: from the charger's online state, not the gauge's
+ *     status, which says "Charging" only for a moment). The kernel blinks the red one (its timer trigger): bananad
+ *     only changes them when the power state changes (power_supply uevents, and the battery poll).
  *   - Brightness and volume are kept across reboots (/data/banana/backlight, /data/banana/asound.state).
  *   - Sound goes where it should with no sound server: the RG DS has one card (the rk817 codec, its playback mux set
  *     to HP, which drives the speaker amplifier and the jack, as ROCKNIX sets it); the RG DS Plus has two (the
@@ -377,6 +378,7 @@ static void panel_off_again(void)
 	}
 }
 
+static int charger_online(void);
 static void suspend_now(const char *why)
 {
 	double t0 = mono();
@@ -386,10 +388,25 @@ static void suspend_now(const char *why)
 	hooks("pre", 0);
 	sync();
 	sleep_mode();
-	int cycles = 0, rtc_wakes = 0, failures = 0;
-	double asleep = 0;
+	int cycles = 0, rtc_wakes = 0, failures = 0, dark = 0;
+	double asleep = 0, dark_from = 0, led_at = 0;
 	const char *woke = "?";
 	for (;;) {
+		/* charging with the lid shut: no suspend, which turns the charging light off (it is a PWM LED, and the PWM
+		 * stops in suspend). Dark and awake instead, the game still paused, until the lid opens (back as from a
+		 * sleep) or the charger is pulled out (then a real sleep). */
+		if (lid_closed && charger_online()) {
+			if (!dark) {
+				dark = 1; dark_from = mono();
+				backlights_power(0);
+				sleep_log("%s while charging: dark and awake, so the charging light stays on%s", why, game ? ", game paused" : "");
+			}
+			if (mono() >= led_at) { leds_update(); led_at = mono() + 10; }	/* (it goes out when the battery is full) */
+			usleep(500000);
+			read_lid();
+			if (!lid_closed) { woke = "lid opened"; break; }
+			continue;
+		}
 		time_t alarm = rtc_alarm((int)(cfg.sleep_check_hours * 3600));
 		double t_in = mono();
 		struct timespec b0, b1;
@@ -433,6 +450,7 @@ static void suspend_now(const char *why)
 	}
 	/* awake: the game and the menu first */
 	double t_wake = mono();
+	if (dark) backlights_power(!lid_closed);
 	if (pg > 0) kill(-pg, SIGCONT);
 	pid_t ui = ui_pid();
 	if (ui && !game) kill(ui, SIGUSR1);	/* draws both panels again (the clock and the battery moved on) */
@@ -449,6 +467,7 @@ static void suspend_now(const char *why)
 	ignore_power_until = mono() + 1.0;
 	power_down = 0;
 	last_input = mono();
+	if (dark) sleep_log("dark while charging for %.0f s", t_wake - dark_from);
 	sleep_log("awake (%s) after %.0f s asleep%s%s, game and menu back %.1f ms after the kernel", woke, asleep,
 		rtc_wakes ? ", battery checked" : "", cycles - rtc_wakes > 1 ? ", slept again with the lid shut" : "",
 		(t_back - t_wake) * 1000);
@@ -750,7 +769,30 @@ static int battery_state(char *name, size_t n, int *pct, int *charging)
 	return found;
 }
 
+/* a charger plugged in: a power supply that isn't the battery (USB, Mains) and is online. The battery's own status is
+ * no use for the charging LED: the rk817's gauge says "Charging" only for a moment after the cable goes in, then
+ * "Discharging" or "Not charging" while it still charges (the amber LED on its trigger lit up and went out again) */
+static int charger_online(void)
+{
+	DIR *d = opendir("/sys/class/power_supply");
+	if (!d) return 0;
+	struct dirent *e;
+	int on = 0;
+	while (!on && (e = readdir(d))) {
+		if (e->d_name[0] == '.') continue;
+		char p[320], s[32];
+		snprintf(p, sizeof p, "/sys/class/power_supply/%s/type", e->d_name);
+		read_str(p, s, sizeof s);
+		if (!strcmp(s, "Battery")) continue;
+		snprintf(p, sizeof p, "/sys/class/power_supply/%s/online", e->d_name);
+		on = read_int(p, 0) > 0;
+	}
+	closedir(d);
+	return on;
+}
+
 int leds_last = -2;	/* the upper LED's state as last set; -2: set it again */
+static int amber_last = -2;	/* the charging LED's, the same way */
 static void leds_update(void)
 {
 	static char green[300], red[300], amber[300];
@@ -765,6 +807,8 @@ static void leds_update(void)
 	char bat[256] = "";
 	int pct = -1, charging = 0;
 	if (!battery_state(bat, sizeof bat, &pct, &charging)) pct = 100;
+	int plugged = charger_online();
+	if (plugged) charging = 1;	/* plugged in counts as charging (see charger_online) */
 	int level = cfg.led_brightness;
 	/* the upper LED: green, red when low, blinking red when critical (not while charging) */
 	int state = level <= 0 ? 0 : (!charging && pct >= 0 && pct <= cfg.led_critical) ? 3 : (!charging && pct >= 0 && pct <= cfg.led_low) ? 2 : 1;
@@ -772,12 +816,13 @@ static void leds_update(void)
 		leds_last = state;
 		led_set(green, state == 1 ? "on" : "off", level);
 		led_set(red, state == 3 ? "blink" : state == 2 ? "on" : "off", level);
-		/* the lower LED: amber while charging, driven by the kernel from the charger's state */
-		char trig[300];
-		snprintf(trig, sizeof trig, "%s-charging", bat);
-		if (level <= 0 || !bat[0]) led_set(amber, "off", 0);
-		else led_set(amber, trig, level);
 		say("LEDs: battery %d%%%s", pct, charging ? ", charging" : "");
+	}
+	/* the lower LED: amber, steady, the whole time the charger is plugged in and the battery isn't full */
+	int amber_on = level > 0 && plugged && (pct < 0 || pct < 100);
+	if (amber_on != amber_last || last == -2) {
+		amber_last = amber_on;
+		led_set(amber, amber_on ? "on" : "off", level);
 	}
 }
 
@@ -1004,7 +1049,8 @@ int main(int argc, char **argv)
 		/* idle in the menu (no game running): the panels dim, then it sleeps */
 		game = pid_of("/run/banana/game.pid") != 0;
 		if (cfg.dim_min > 0 && !dimmed && !game && !lid_closed && now - last_input >= cfg.dim_min * 60.0) dim();
-		if (cfg.autosleep_min > 0 && !game && now - last_input >= cfg.autosleep_min * 60.0)
+		/* (not while charging: a sleep would put the charging light out; the menu stays dimmed instead) */
+		if (cfg.autosleep_min > 0 && !game && now - last_input >= cfg.autosleep_min * 60.0 && !charger_online())
 			suspend_now("idle");
 		/* started or woken with the lid shut */
 		if (lid_closed && cfg.lid_sleep && now - last_input > 5) suspend_now("lid still closed");
