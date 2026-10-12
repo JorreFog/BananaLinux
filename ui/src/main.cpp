@@ -761,6 +761,7 @@ int main(int argc, char** argv)
 		double t = nowMs();
 		if (low.showing(t)) settingsView.notice(low.title, low.body, low.percent);
 		else if (osdUntil > t) settingsView.level(osdLabel, osdPercent);
+		else settingsView.drawToast(t);	// (only while Settings is open: the account check's result)
 	};
 
 	// what a change on the settings screen means for the menu (called with uiLock held)

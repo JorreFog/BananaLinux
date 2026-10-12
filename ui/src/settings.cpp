@@ -1,6 +1,8 @@
 #include <ctime>
 #include "settings.h"
 #include <algorithm>
+#include <dlfcn.h>
+#include <thread>
 #include <cctype>
 #include <arpa/inet.h>
 #include <cmath>
@@ -1095,6 +1097,19 @@ namespace banana
 	{
 		now = t;
 		if (!mOpen) return false;
+		if (raCheck)
+		{
+			std::lock_guard<std::mutex> l(raCheck->mu);
+			if (raCheck->done)
+			{
+				const int kind = raCheck->kind;
+				toast(kind == 1 ? "RetroAchievements" : "RetroAchievements login failed", raCheck->l2,
+					kind == 1 ? 0x6ad07a : 0xff7a4a, kind == 1 ? 1 : 2, kind == 1 ? 5000 : 7000);
+				message = kind == 1 ? "" : raCheck->l2;
+				raCheck.reset();
+				return true;
+			}
+		}
 		if (page == NETWORKS && wifiEnabled)
 		{
 			if (!joining.empty() && now >= nextStatus) pollStatus();
@@ -1142,6 +1157,15 @@ namespace banana
 	int Settings::nextWake(double t) const
 	{
 		if (!mOpen) return -1;
+		int w = pageWake(t);
+		// the account check's answer, and the pop-up going away
+		int mine = raCheck ? 200 : toastUntil > t ? std::max(0, (int)(toastUntil - t) + 1) : -1;
+		if (mine >= 0 && (w < 0 || mine < w)) w = mine;
+		return w;
+	}
+
+	int Settings::pageWake(double t) const
+	{
 		if (scanJob.running() || statusJob.running()) return 100;
 		if (page == UPDATES && applying) return std::max(0, (int)(nextStatus2 - t));
 		if (page != NETWORKS || !wifiEnabled) return -1;
@@ -1652,6 +1676,7 @@ namespace banana
 			return CHANGED;
 		case ENTRY_RA_PASS:
 			setConfValue(data + "/accounts.conf", "ra_password", pw, "=");
+			startRaCheck(account("ra_user"), pw);	// says at once whether the login works
 			pw.clear();
 			page = entryBack;
 			message.clear();
@@ -1669,6 +1694,139 @@ namespace banana
 			return CHANGED;
 		}
 		return NONE;
+	}
+
+	// ---- the RetroAchievements account check --------------------------------------------------------------------
+	// The server's own login (dorequest.php r=login2, what rcheevos sends) with the name and password just typed: a
+	// pop-up says whether they work before the first game does. libcurl is dlopen()ed (busybox's wget has no HTTPS).
+	namespace
+	{
+		struct Curl
+		{
+			void* (*init)(void) = nullptr;
+			int (*setopt)(void*, int, ...) = nullptr;
+			int (*perform)(void*) = nullptr;
+			int (*getinfo)(void*, int, ...) = nullptr;
+			void (*cleanup)(void*) = nullptr;
+			char* (*escape)(void*, const char*, int) = nullptr;
+			void (*freep)(void*) = nullptr;
+			bool load()
+			{
+				void* l = dlopen("libcurl.so.4", RTLD_NOW | RTLD_LOCAL);
+				if (!l) return false;
+				init = (void* (*)(void))dlsym(l, "curl_easy_init");
+				setopt = (int (*)(void*, int, ...))dlsym(l, "curl_easy_setopt");
+				perform = (int (*)(void*))dlsym(l, "curl_easy_perform");
+				getinfo = (int (*)(void*, int, ...))dlsym(l, "curl_easy_getinfo");
+				cleanup = (void (*)(void*))dlsym(l, "curl_easy_cleanup");
+				escape = (char* (*)(void*, const char*, int))dlsym(l, "curl_easy_escape");
+				freep = (void (*)(void*))dlsym(l, "curl_free");
+				return init && setopt && perform && getinfo && cleanup && escape && freep;
+			}
+		};
+		size_t onBody(char* p, size_t sz, size_t n, void* u) { ((std::string*)u)->append(p, sz * n); return sz * n; }
+		// "Key":"value" or "Key":123 in the server's JSON (enough for its flat login reply)
+		std::string jsonField(const std::string& j, const std::string& key)
+		{
+			size_t at = j.find("\"" + key + "\"");
+			if (at == std::string::npos) return "";
+			at = j.find(':', at);
+			if (at == std::string::npos) return "";
+			at++;
+			while (at < j.size() && j[at] == ' ') at++;
+			if (at < j.size() && j[at] == '"')
+			{
+				std::string v;
+				for (size_t i = at + 1; i < j.size() && j[i] != '"'; i++) v += j[i] == '\\' && i + 1 < j.size() ? j[++i] : j[i];
+				return v;
+			}
+			size_t e = at;
+			while (e < j.size() && j[e] != ',' && j[e] != '}') e++;
+			return j.substr(at, e - at);
+		}
+	}
+
+	void Settings::startRaCheck(const std::string& user, const std::string& pass)
+	{
+		auto c = std::make_shared<RaCheck>();
+		raCheck = c;
+		toast("RetroAchievements", "Checking the account " + user + "...", 0x6ab0ff, 0, 30000);
+		std::thread([c, user, pass]
+		{
+			int kind = 3;
+			std::string l2 = "No connection: check Wi-Fi, then try again from the setup";
+			Curl cu;
+			if (cu.load())
+				if (void* h = cu.init())
+				{
+					enum { WRITEDATA = 10001, URL = 10002, POSTFIELDS = 10015, USERAGENT = 10018, WRITEFUNCTION = 20011, TIMEOUT = 13,
+						NOSIGNAL = 99, RESPONSE_CODE = 0x200002 };
+					char* eu = cu.escape(h, user.c_str(), (int)user.size());
+					char* ep = cu.escape(h, pass.c_str(), (int)pass.size());
+					std::string post = std::string("r=login2&u=") + (eu ? eu : "") + "&p=" + (ep ? ep : "");
+					if (eu) cu.freep(eu);
+					if (ep) cu.freep(ep);
+					std::string body;
+					long status = 0;
+					cu.setopt(h, URL, "https://retroachievements.org/dorequest.php");
+					cu.setopt(h, POSTFIELDS, post.c_str());
+					cu.setopt(h, USERAGENT, "BananaOS");
+					cu.setopt(h, NOSIGNAL, 1L);
+					cu.setopt(h, TIMEOUT, 20L);
+					cu.setopt(h, WRITEFUNCTION, onBody);
+					cu.setopt(h, WRITEDATA, &body);
+					if (cu.perform(h) == 0)
+					{
+						cu.getinfo(h, RESPONSE_CODE, &status);
+						if (jsonField(body, "Success") == "true")
+						{
+							kind = 1;
+							std::string name = jsonField(body, "User"), score = jsonField(body, "Score");
+							l2 = "Logged in as " + (name.empty() ? user : name) + (score.empty() || score == "0" ? "" : " \xc2\xb7 " + score + " points");
+						}
+						else
+						{
+							kind = 2;
+							std::string err = jsonField(body, "Error");
+							bool wrong = status == 401 || err.find("nvalid") != std::string::npos || err.find("assword") != std::string::npos;
+							l2 = wrong ? "Wrong account name or password" : !err.empty() ? err : "The server said no (" + std::to_string(status) + ")";
+						}
+					}
+					cu.cleanup(h);
+				}
+			std::lock_guard<std::mutex> l(c->mu);
+			c->kind = kind;
+			c->l2 = l2;
+			c->done = true;
+		}).detach();
+	}
+
+	void Settings::toast(const std::string& l1, const std::string& l2, uint32_t accent, int icon, double ms)
+	{
+		toast1 = l1; toast2 = l2; toastAccent = accent; toastIcon = icon;
+		toastUntil = now + ms;
+	}
+
+	// ROCKNIXDS's pop-up card (SuperDrastic's ui.c render_popup): across the top of the top panel, a tile in the accent
+	// colour with its pixel sign, the first line in the accent colour and the second in light text
+	void Settings::drawToast(double t)
+	{
+		if (!mOpen || toastUntil <= t) return;
+		static const char* const SIGN[3][9] = {
+			{ "...###...", "..#####..", "..##.##..", "....##...", "...##....", "...##....", ".........", "...##....", "...##...." },
+			{ ".........", "........#", ".......##", "......##.", "#....##..", "##..##...", ".####....", "..##.....", "........." },
+			{ "##.....##", ".##...##.", "..##.##..", "...###...", "...###...", "..##.##..", ".##...##.", "##.....##", "........." } };
+		const Color light = Color::hex(0xf1ede2), acc = Color::hex(toastAccent);
+		box("osd", false, 8, 4, 624, 64);
+		float bs = 48, tx = 16, ty = 12;
+		be->fill(std::round(X(tx)), std::round(X(ty)), std::round(X(bs)), std::round(X(bs)), acc);
+		int k = std::max(1, (int)std::lround(X(bs) / 14));
+		float ox = std::round(X(tx + bs / 2)) - 9 * k / 2.0f, oy = std::round(X(ty + bs / 2)) - 9 * k / 2.0f;
+		for (int r = 0; r < 9; r++)
+			for (int c = 0; c < 9; c++)
+				if (SIGN[toastIcon][r][c] == '#') be->fill(std::round(ox + c * k), std::round(oy + r * k), (float)k, (float)k, Color::hex(0x12181f));
+		text(fit(toast1, true, 17, 540), true, 17, 78, 14, acc);
+		text(fit(toast2, false, 20, 540), false, 20, 78, 37, light);
 	}
 
 	// ---- the first-time setup ----------------------------------------------------------------------------------

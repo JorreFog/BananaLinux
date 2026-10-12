@@ -12,6 +12,8 @@
 #include "input.h"
 #include "wifi.h"
 #include <map>
+#include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -36,6 +38,7 @@ namespace banana
 		bool update(double nowMs);
 		// ms until update() has something to do, -1 nothing pending
 		int nextWake(double nowMs) const;
+		int pageWake(double nowMs) const;	// (the pages' own)
 		// run commands at once instead of in the background (the headless test)
 		void setSync(bool on) { sync = on; }
 
@@ -45,6 +48,9 @@ namespace banana
 		// the volume or brightness keys' level: a small bubble near the bottom of the panel, its label, the percent and
 		// a bar (drawn like notice)
 		void level(const std::string& label, int percent);
+		// a pop-up along the top of the top panel in ROCKNIXDS's look (the RetroAchievements account check's result);
+		// the host draws it over the top panel while Settings is open
+		void drawToast(double nowMs);
 
 	private:
 		struct Item
@@ -85,6 +91,15 @@ namespace banana
 		void startEntry(Entry e, const std::string& title, const std::string& sub, Page back, const std::string& start = "");
 		Result finishEntry();
 		std::string account(const char* key);
+		// the RetroAchievements account typed in the setup, checked with the server at once (on a thread: libcurl)
+		struct RaCheck { std::mutex mu; bool done = false; int kind = 0; std::string l2; };	// kind: 1 ok, 2 refused, 3 no network
+		std::shared_ptr<RaCheck> raCheck;
+		void startRaCheck(const std::string& user, const std::string& pass);
+		std::string toast1, toast2;
+		uint32_t toastAccent = 0;
+		int toastIcon = 0;			// 0 "i", 1 a tick, 2 a cross
+		double toastUntil = 0;
+		void toast(const std::string& l1, const std::string& l2, uint32_t accent, int icon, double ms);
 		// the first-time setup: the steps (Wi-Fi, the time zone, RetroAchievements, ScreenScraper), run once after
 		// the installation (banana/setup-done is written at the end) and from Settings > System
 		bool wizard = false;
