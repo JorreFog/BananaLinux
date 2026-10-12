@@ -6,7 +6,7 @@
 sleeps when you close the lid, and gives the games every cycle.</b></p>
 
 > [!WARNING]
-> Banana is a pre-alpha (0.1.0-dev). It boots and plays on both handhelds (an RG DS and an RG DS Plus run it
+> Banana is a pre-alpha (0.2.0). It boots and plays on both handhelds (an RG DS and an RG DS Plus run it
 > day to day), but things are still missing and some are rough (see *Status*). If you try it,
 > [docs/FIRST-BOOT.md](docs/FIRST-BOOT.md) says which logs to send back when something goes wrong.
 
