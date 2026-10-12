@@ -539,7 +539,9 @@ namespace rnds
 			float fx = bx - ix, fy = by - iy;
 			int qx = (int)std::lround(fx * 8), qy = (int)std::lround(fy * 8);
 			// "txt:", the characters, then a fixed-size tail of the style and placement (raw bytes: no formatting per frame)
-			struct { const Font* f; float size, ls, lh; int qx, qy; float s; } tail = { t.f, t.size, t.ls, lh, qx, qy, s };
+			struct { const Font* f; float size, ls, lh; int qx, qy; float s; } tail;
+			memset(&tail, 0, sizeof tail);	// no stray padding bytes in the key
+			tail.f = t.f; tail.size = t.size; tail.ls = t.ls; tail.lh = lh; tail.qx = qx; tail.qy = qy; tail.s = s;
 			std::string key;
 			key.reserve(4 + l.text.size() * sizeof(char32_t) + sizeof tail);
 			key = "txt:";
