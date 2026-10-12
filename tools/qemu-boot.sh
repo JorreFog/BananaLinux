@@ -225,8 +225,9 @@ if [ $HAVE_BANANADS = 1 ] && [ -f "$ROM" ]; then
     prep_bananads() {
         rm -f "$DATA/roms/nds/"*.nds
         cp "$ROM" "$DATA/roms/nds/BananaDS Test.nds"
-        sed -i '/^nds_emulator/d' "$DATA/banana/settings.conf" 2>/dev/null || true
-        echo "nds_emulator = bananads" >> "$DATA/banana/settings.conf"
+        sed -i '/^nds_emulator/d; /^quick_resume/d' "$DATA/banana/settings.conf" 2>/dev/null || true
+        # Quick resume (off by default) on, so quitting writes the resume state checked below
+        printf 'nds_emulator = bananads\nquick_resume = on\n' >> "$DATA/banana/settings.conf"
         echo 0 > "$DATA/banana/last-system"
         echo "BANANADS_KMS_STATS=30" > "$DATA/banana/bananads.env"
     }
