@@ -10,6 +10,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <glob.h>
+#include <map>
+#include <unordered_map>
 #include "../rnds/RndsRaster.h"
 #include "../third_party/stb_image_write.h"
 
@@ -371,9 +373,16 @@ namespace banana
 		{
 			if (e->d_name[0] == '.') continue;
 			std::string name = e->d_name, full = dir + "/" + name, rel = relDir.empty() ? name : relDir + "/" + name;
-			struct stat st;
-			if (stat(full.c_str(), &st)) continue;
-			if (S_ISDIR(st.st_mode))
+			// the directory's own word for what each entry is (exFAT and vfat give it): a stat only when it doesn't
+			// say, or for a link (a thousand stats on the card at each scan before)
+			bool isDir = e->d_type == DT_DIR;
+			if (e->d_type == DT_UNKNOWN || e->d_type == DT_LNK)
+			{
+				struct stat st;
+				if (stat(full.c_str(), &st)) continue;
+				isDir = S_ISDIR(st.st_mode);
+			}
+			if (isDir)
 			{
 				// art and ES's own folders are not games
 				std::string ln = lower(name);
@@ -389,16 +398,35 @@ namespace banana
 		closedir(d);
 	}
 
-	// media/<kind>/<rom name>.png or .jpg
-	static std::string mediaFile(const std::string& sysDir, const char* kind, const std::string& stem)
+	// media/<kind>/<rom name>.png or .jpg. Each folder is listed once a scan and looked up in memory: a name that
+	// isn't there walks the whole folder on exFAT, and every game missed in box/, cart/ and label/ and as .png before
+	// .jpg (a thousand games: thousands of walks of a thousand names). Matched without case, as exFAT opens them
+	struct MediaIndex
 	{
-		for (const char* ext : { ".png", ".jpg" })
+		std::map<std::string, std::unordered_map<std::string, std::string>> dirs;	// folder -> lower-case name -> name
+		std::string find(const std::string& sysDir, const char* kind, const std::string& stem)
 		{
-			std::string p = sysDir + "/media/" + kind + "/" + stem + ext;
-			if (exists(p)) return p;
+			std::string d = sysDir + "/media/" + kind;
+			auto it = dirs.find(d);
+			if (it == dirs.end())
+			{
+				std::unordered_map<std::string, std::string> names;
+				if (DIR* dd = opendir(d.c_str()))
+				{
+					while (dirent* e = readdir(dd)) if (e->d_name[0] != '.') names.emplace(lower(e->d_name), e->d_name);
+					closedir(dd);
+				}
+				it = dirs.emplace(d, std::move(names)).first;
+			}
+			if (it->second.empty()) return "";
+			for (const char* ext : { ".png", ".jpg" })
+			{
+				auto n = it->second.find(lower(stem + ext));
+				if (n != it->second.end()) return d + "/" + n->second;
+			}
+			return "";
 		}
-		return "";
-	}
+	};
 
 	std::vector<std::string> Library::watchDirs() const
 	{
@@ -417,6 +445,7 @@ namespace banana
 	{
 		loadState();
 		shelves.clear();
+		MediaIndex media;
 		for (auto& def : defs)
 		{
 			Shelf sh;
@@ -447,9 +476,9 @@ namespace banana
 					if (exists(it->second.cart)) g.cart = it->second.cart;
 					if (exists(it->second.boxback)) g.label = it->second.boxback;
 				}
-				if (g.box.empty()) g.box = mediaFile(dir, "box", stem);
-				if (g.cart.empty()) g.cart = mediaFile(dir, "cart", stem);
-				if (g.label.empty()) g.label = mediaFile(dir, "label", stem);
+				if (g.box.empty()) g.box = media.find(dir, "box", stem);
+				if (g.cart.empty()) g.cart = media.find(dir, "cart", stem);
+				if (g.label.empty()) g.label = media.find(dir, "label", stem);
 				std::string key = def.id + "/" + rel;
 				auto st = stats.find(key);
 				if (st != stats.end()) { g.plays = st->second.plays; g.seconds = st->second.seconds; g.last = st->second.last; g.achA = st->second.achA; g.achB = st->second.achB; }
