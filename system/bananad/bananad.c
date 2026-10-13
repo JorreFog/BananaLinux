@@ -932,6 +932,12 @@ static void open_inputs(void)
 		snprintf(path, sizeof path, "/dev/input/%s", e->d_name);
 		int fd = open(path, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
 		if (fd < 0) continue;
+		/* only keys and switches reach us (handle() reads nothing else): the touchscreens' and the sticks' motion during
+		 * a game woke bananad 60-200 times a second for nothing. The kernel drops a report left empty, so no wake;
+		 * EV_SYN stays, its report is what wakes us for the rest (no EVIOCSMASK, an old kernel: everything, as before) */
+		unsigned long types = (1ul << EV_SYN) | (1ul << EV_KEY) | (1ul << EV_SW);
+		struct input_mask m = { .type = 0, .codes_size = sizeof types, .codes_ptr = (uint64_t)(uintptr_t)&types };
+		ioctl(fd, EVIOCSMASK, &m);
 		devfd[ndev++] = fd;
 	}
 	closedir(d);
