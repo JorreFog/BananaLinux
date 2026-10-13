@@ -493,6 +493,9 @@ namespace banana
 			size_t at = shelves.size();
 			if (favSystems.count("favorites"))
 				for (at = 0; at < shelves.size() && favSystems.count(shelves[at].def.id); at++) {}
+			// the systems from there on move one along: sysOf follows them (else a favourite launched with the
+			// shelf before its own system's emulator, and its plays were kept under "favorites/")
+			for (int& s : fav.sysOf) if (s >= (int)at) s++;
 			shelves.insert(shelves.begin() + (long)at, fav);
 		}
 		if (lib >= (int)shelves.size()) lib = 0;
