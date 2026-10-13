@@ -76,6 +76,13 @@ namespace banana
 				ioctl(fd, EVIOCGABS(mt ? ABS_MT_POSITION_X : ABS_X), &ax);
 				ioctl(fd, EVIOCGABS(mt ? ABS_MT_POSITION_Y : ABS_Y), &ay);
 				dv.minX = ax.minimum; dv.maxX = ax.maximum; dv.minY = ay.minimum; dv.maxY = ay.maximum;
+				// where the finger last was: a touch at the same spot again sends no position (the kernel drops a value
+				// that didn't change), and the devices are opened again after every game. ABS_X/Y hold it (a multitouch
+				// screen's pointer emulation); the ABS_MT_POSITION axes read 0 here (the kernel keeps them per slot)
+				input_absinfo px = {}, py = {};
+				if (testBit(abs, ABS_X) && testBit(abs, ABS_Y) && ioctl(fd, EVIOCGABS(ABS_X), &px) == 0 && ioctl(fd, EVIOCGABS(ABS_Y), &py) == 0)
+				{ dv.x = px.value; dv.y = py.value; }
+				else { dv.x = ax.value; dv.y = ay.value; }
 				dv.screen = sysPath(e->d_name).find(bottomTouch) != std::string::npos ? 1 : 0;
 			}
 			else
