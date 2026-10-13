@@ -329,17 +329,17 @@ namespace banana
 		}
 	}
 
-	// written beside and renamed over, so a power cut leaves the old file or the new one
+	// written beside and renamed over, so a power cut leaves the old file or the new one (and a full card, a write
+	// that fell short: the old one, not the short copy over it)
 	static void writeAtomic(const std::string& path, const std::string& body)
 	{
 		std::string tmp = path + ".new";
 		FILE* f = fopen(tmp.c_str(), "w");
 		if (!f) return;
-		fwrite(body.data(), 1, body.size(), f);
-		fflush(f);
-		fsync(fileno(f));
-		fclose(f);
-		rename(tmp.c_str(), path.c_str());
+		bool ok = fwrite(body.data(), 1, body.size(), f) == body.size();
+		ok &= fflush(f) == 0 && fsync(fileno(f)) == 0;
+		ok &= fclose(f) == 0;
+		if (!ok || rename(tmp.c_str(), path.c_str()) != 0) unlink(tmp.c_str());
 	}
 
 	void Library::saveFavs()
@@ -636,26 +636,47 @@ namespace banana
 		return b;
 	}
 
+	// (BOOTTIME: it counts the time asleep, so the first look after a wake reads /sys again)
+	static double monoSec()
+	{
+		timespec ts;
+		clock_gettime(CLOCK_BOOTTIME, &ts);
+		return ts.tv_sec + ts.tv_nsec / 1e9;
+	}
+
+	// read again at most every 2 s: the top screen asks on every frame it draws (a directory and five files a frame
+	// while the shelf scrolls)
 	Library::Power Library::power()
 	{
 		if (testPower.percent >= 0) return testPower;
+		double now = monoSec();
+		if (powerAt > 0 && now - powerAt < 2) return powerSeen;
+		powerAt = now;
 		Power r;
+		bool charger = false;
 		DIR* d = opendir("/sys/class/power_supply");
-		if (!d) return r;
+		if (!d) return powerSeen = r;
 		while (dirent* e = readdir(d))
 		{
 			if (e->d_name[0] == '.') continue;
 			std::string base = std::string("/sys/class/power_supply/") + e->d_name;
-			if (readLine(base + "/type") != "Battery") continue;
+			if (readLine(base + "/type") != "Battery")
+			{
+				// a charger plugged in (USB, Mains): the rk817's gauge says "Discharging" while it charges, so its own
+				// status alone showed no bolt and kept the low-battery notice up on the cable (as bananad's LED)
+				if (readLine(base + "/online") == "1") charger = true;
+				continue;
+			}
+			if (r.percent >= 0) continue;
 			std::string cap = readLine(base + "/capacity");
 			if (cap.empty()) continue;
 			r.percent = std::min(100, std::max(0, atoi(cap.c_str())));
 			std::string st = readLine(base + "/status");
 			r.charging = st == "Charging" || st == "Full";
-			break;
 		}
 		closedir(d);
-		return r;
+		if (charger && r.percent >= 0) r.charging = true;
+		return powerSeen = r;
 	}
 
 	float Library::battery()
@@ -666,7 +687,10 @@ namespace banana
 
 	bool Library::online()
 	{
-		return readLine("/sys/class/net/wlan0/operstate") == "up";
+		double now = monoSec();
+		if (onlineAt > 0 && now - onlineAt < 2) return onlineSeen;
+		onlineAt = now;
+		return onlineSeen = readLine("/sys/class/net/wlan0/operstate") == "up";
 	}
 
 	int Library::openLibrary(int sys)

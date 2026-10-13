@@ -49,6 +49,8 @@ namespace banana
 	void setConfValue(const std::string& path, const std::string& key, const std::string& value, const char* sep)
 	{
 		std::ifstream f(path);
+		// a file that is there but can't be read (a card error): left alone, not replaced by one with only this key
+		if (!f && access(path.c_str(), F_OK) == 0) return;
 		std::string ln, out;
 		bool done = false;
 		while (std::getline(f, ln))
@@ -64,11 +66,11 @@ namespace banana
 		std::string tmp = path + ".new";
 		FILE* w = fopen(tmp.c_str(), "w");
 		if (!w) return;
-		fwrite(out.data(), 1, out.size(), w);
-		fflush(w);
-		fsync(fileno(w));
-		fclose(w);
-		rename(tmp.c_str(), path.c_str());
+		// (a full card: the short copy is dropped and the old file kept, RetroArch's whole retroarch.cfg among them)
+		bool ok = fwrite(out.data(), 1, out.size(), w) == out.size();
+		ok &= fflush(w) == 0 && fsync(fileno(w)) == 0;
+		ok &= fclose(w) == 0;
+		if (!ok || rename(tmp.c_str(), path.c_str()) != 0) unlink(tmp.c_str());
 	}
 
 	static std::string readLine(const std::string& path)
