@@ -4,6 +4,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <thread>
 #include <vector>
 
 namespace banana
@@ -67,6 +68,10 @@ namespace banana
 			float floorZ = HZ - LDEPTH;
 			float well = std::max(wellXY + std::max(0.0f, p.z - floorZ) * 0.9f, floorZ - p.z);
 			d = std::max(d, -well);
+			// the ridges and the arrow only in a box over the front's top: wherever it is further than the card's own
+			// distance they can't be nearer, and most samples skip them (the box is generous: the arrow's field is a bound
+			// below its distance, and with this margin every picture comes out the same to the byte)
+			if (sdBox(p - V3{ -0.6f, 12.95f, HZ }, { 13.0f, 2.0f, 0.6f }) >= d) return d;
 			// three grip ridges moulded above the label
 			for (int i = 0; i < 3; i++)
 			{
@@ -133,65 +138,75 @@ namespace banana
 			// the lights, in object space: a key from the top left in front, a fill from the right, a rim from behind
 			const V3 key = unrot(norm({ -0.55f, 0.75f, 0.55f })), fill = unrot(norm({ 0.8f, 0.15f, 0.45f })), rim = unrot(norm({ 0.2f, 0.6f, -0.75f }));
 			const float bx[3] = { HX + 0.3f, HY + 0.3f, HZ + 0.4f };
-			for (int y = 0; y < g.H; y++)
-				for (int x = 0; x < g.W; x++)
-				{
-					float sx = (x + 0.5f) / scale + minx, syy = (y + 0.5f) / scale + miny;
-					V3 dir = unrot(norm({ sx / D, -syy / D, -1 }));
-					// the ray into the card's box (slabs), then sphere tracing
-					float t0 = 0, t1 = 1e9f;
-					const float o[3] = { eye.x, eye.y, eye.z }, dd[3] = { dir.x, dir.y, dir.z };
-					bool miss = false;
-					for (int a = 0; a < 3; a++)
+			// rows shared out over the cores (every pixel is its own: it runs once per pose, but for a second or more on
+			// one of the RG DS's cores, and the cartridges wait for it)
+			auto rows = [&](int y0, int y1)
+			{
+				for (int y = y0; y < y1; y++)
+					for (int x = 0; x < g.W; x++)
 					{
-						if (std::fabs(dd[a]) < 1e-7f) { if (std::fabs(o[a]) > bx[a]) miss = true; continue; }
-						float ta = (-bx[a] - o[a]) / dd[a], tb = (bx[a] - o[a]) / dd[a];
-						if (ta > tb) std::swap(ta, tb);
-						t0 = std::max(t0, ta); t1 = std::min(t1, tb);
+						float sx = (x + 0.5f) / scale + minx, syy = (y + 0.5f) / scale + miny;
+						V3 dir = unrot(norm({ sx / D, -syy / D, -1 }));
+						// the ray into the card's box (slabs), then sphere tracing
+						float t0 = 0, t1 = 1e9f;
+						const float o[3] = { eye.x, eye.y, eye.z }, dd[3] = { dir.x, dir.y, dir.z };
+						bool miss = false;
+						for (int a = 0; a < 3; a++)
+						{
+							if (std::fabs(dd[a]) < 1e-7f) { if (std::fabs(o[a]) > bx[a]) miss = true; continue; }
+							float ta = (-bx[a] - o[a]) / dd[a], tb = (bx[a] - o[a]) / dd[a];
+							if (ta > tb) std::swap(ta, tb);
+							t0 = std::max(t0, ta); t1 = std::min(t1, tb);
+						}
+						if (miss || t0 > t1) continue;
+						float t = t0;
+						bool hit = false;
+						V3 p{};
+						for (int i = 0; i < 96 && t <= t1; i++)
+						{
+							p = eye + dir * t;
+							float d = sdf(p);
+							if (d < 0.002f) { hit = true; break; }
+							t += d * 0.95f;
+						}
+						if (!hit) continue;
+						size_t at = (size_t)y * g.W + x;
+						V3 nrm = normalAt(p);
+						V3 view = norm(eye - p);
+						// ambient occlusion: how open the space is along the normal
+						float occ = 0;
+						for (int k = 1; k <= 4; k++) { float h = 0.08f * k; occ += (h - std::max(0.0f, sdf(p + nrm * h))) / h * (0.5f / k); }
+						float ao = std::min(1.0f, std::max(0.35f, 1 - occ));
+						bool label = std::fabs(p.z - (HZ - LDEPTH)) < 0.02f && sdRoundRect(p.x - LCX, p.y - LCY, LHX - 0.05f, LHY - 0.05f, LR) < 0 && nrm.z > 0.98f;
+						float shin = label ? 90.0f : 42.0f, ks = label ? 0.55f : 0.32f;
+						auto blinn = [&](V3 L, float i) { V3 h = norm(L + view); return i * ks * std::pow(std::max(0.0f, dot(nrm, h)), shin); };
+						float dif = 0.26f * ao + 0.82f * std::max(0.0f, dot(nrm, key)) + 0.28f * std::max(0.0f, dot(nrm, fill)) + 0.12f * std::max(0.0f, dot(nrm, rim));
+						float spec = blinn(key, 1.0f) + blinn(fill, 0.35f);
+						// the studio it stands in, reflected: a big softbox overhead behind it (the top edge's bright rim), a smaller one
+						// in front, a strip light on the left, a dim room;
+						// sharper on the laminated label than on the satin plastic, stronger at grazing angles (Fresnel)
+						V3 R = rot(nrm * (2 * dot(nrm, view)) - view);	// (in camera space)
+						float soft = label ? 0.03f : 0.09f;
+						auto boxLight = [&](V3 c, float size) { float a = dot(R, norm(c)); return std::min(1.0f, std::max(0.0f, (a - (1 - size)) / soft + 0.5f)); };
+						float env = 1.7f * boxLight({ -0.2f, 0.85f, -0.4f }, 0.12f) + 0.6f * boxLight({ 0.1f, 0.7f, 0.7f }, 0.06f) + 0.9f * boxLight({ -0.95f, 0.15f, 0.3f }, 0.05f) + 0.05f + 0.04f * R.y;
+						float cosv = std::max(0.0f, dot(nrm, view)), f0 = label ? 0.05f : 0.04f;
+						float fres = f0 + (1 - f0) * std::pow(1 - cosv, 5);
+						spec += env * fres * (label ? 1.0f : 0.8f) * ao;
+						g.mat[at] = label ? 2 : 1;
+						g.dif[at] = label ? std::min(1.25f, dif * 1.2f + 0.06f) : dif * ao;	// (the paper label brighter than the plastic)
+						g.spec[at] = spec;
+						if (label)
+						{
+							g.u[at] = (p.x - (LCX - LHX)) / (2 * LHX);
+							g.v[at] = ((LCY + LHY) - p.y) / (2 * LHY);
+						}
 					}
-					if (miss || t0 > t1) continue;
-					float t = t0;
-					bool hit = false;
-					V3 p{};
-					for (int i = 0; i < 96 && t <= t1; i++)
-					{
-						p = eye + dir * t;
-						float d = sdf(p);
-						if (d < 0.002f) { hit = true; break; }
-						t += d * 0.95f;
-					}
-					if (!hit) continue;
-					size_t at = (size_t)y * g.W + x;
-					V3 nrm = normalAt(p);
-					V3 view = norm(eye - p);
-					// ambient occlusion: how open the space is along the normal
-					float occ = 0;
-					for (int k = 1; k <= 4; k++) { float h = 0.08f * k; occ += (h - std::max(0.0f, sdf(p + nrm * h))) / h * (0.5f / k); }
-					float ao = std::min(1.0f, std::max(0.35f, 1 - occ));
-					bool label = std::fabs(p.z - (HZ - LDEPTH)) < 0.02f && sdRoundRect(p.x - LCX, p.y - LCY, LHX - 0.05f, LHY - 0.05f, LR) < 0 && nrm.z > 0.98f;
-					float shin = label ? 90.0f : 42.0f, ks = label ? 0.55f : 0.32f;
-					auto blinn = [&](V3 L, float i) { V3 h = norm(L + view); return i * ks * std::pow(std::max(0.0f, dot(nrm, h)), shin); };
-					float dif = 0.26f * ao + 0.82f * std::max(0.0f, dot(nrm, key)) + 0.28f * std::max(0.0f, dot(nrm, fill)) + 0.12f * std::max(0.0f, dot(nrm, rim));
-					float spec = blinn(key, 1.0f) + blinn(fill, 0.35f);
-					// the studio it stands in, reflected: a big softbox overhead behind it (the top edge's bright rim), a smaller one
-					// in front, a strip light on the left, a dim room;
-					// sharper on the laminated label than on the satin plastic, stronger at grazing angles (Fresnel)
-					V3 R = rot(nrm * (2 * dot(nrm, view)) - view);	// (in camera space)
-					float soft = label ? 0.03f : 0.09f;
-					auto boxLight = [&](V3 c, float size) { float a = dot(R, norm(c)); return std::min(1.0f, std::max(0.0f, (a - (1 - size)) / soft + 0.5f)); };
-					float env = 1.7f * boxLight({ -0.2f, 0.85f, -0.4f }, 0.12f) + 0.6f * boxLight({ 0.1f, 0.7f, 0.7f }, 0.06f) + 0.9f * boxLight({ -0.95f, 0.15f, 0.3f }, 0.05f) + 0.05f + 0.04f * R.y;
-					float cosv = std::max(0.0f, dot(nrm, view)), f0 = label ? 0.05f : 0.04f;
-					float fres = f0 + (1 - f0) * std::pow(1 - cosv, 5);
-					spec += env * fres * (label ? 1.0f : 0.8f) * ao;
-					g.mat[at] = label ? 2 : 1;
-					g.dif[at] = label ? std::min(1.25f, dif * 1.2f + 0.06f) : dif * ao;	// (the paper label brighter than the plastic)
-					g.spec[at] = spec;
-					if (label)
-					{
-						g.u[at] = (p.x - (LCX - LHX)) / (2 * LHX);
-						g.v[at] = ((LCY + LHY) - p.y) / (2 * LHY);
-					}
-				}
+			};
+			int nt = std::max(1, std::min(4, (int)std::thread::hardware_concurrency()));
+			std::vector<std::thread> ts;
+			for (int i = 1; i < nt; i++) ts.emplace_back(rows, g.H * i / nt, g.H * (i + 1) / nt);
+			rows(0, g.H / nt);
+			for (auto& t : ts) t.join();
 			return g;
 		}
 		// built once per pose and kept (a few hundred milliseconds each on the RG DS's cores)

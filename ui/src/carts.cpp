@@ -156,41 +156,74 @@ namespace banana
 			const float floorY = screen == 0 ? TOP_FLOOR : SHELF_Y, lx = screen == 0 ? 176 : 320;
 			const float wallK = screen == 0 ? 0.10f : 0.07f, poolK = screen == 0 ? 0.09f : 0.08f;
 			int dot = std::max(1, (int)std::lround(1.5f * s)), step = (int)std::lround(16 * s);
+			// the pools of light and the glow are Gaussians, so each is a column's factor times a row's: the exponentials
+			// once per column here and once per row below, not per pixel (on the main thread, a new colour's two screens)
+			std::vector<float> wallX(w), poolX(w), glowX(ga > 0 ? w : 0), vigX(w);
+			std::vector<uint8_t> dotX(w);
+			for (int xx = 0; xx < w; xx++)
+			{
+				float u = (x0 + xx + 0.5f) / s;
+				float dx = (u - lx) / 250;
+				wallX[xx] = wallK * std::exp(-dx * dx * 2.0f);
+				dx = (u - lx) / 210;
+				poolX[xx] = poolK * std::exp(-dx * dx * 1.4f);
+				float nx = u / 320 - 1;
+				vigX[xx] = nx * nx * 0.85f;
+				dotX[xx] = (x0 + xx) % step < dot;
+				if (ga > 0) { float gx = (x0 + xx + 0.5f - gcx) / grx; glowX[xx] = std::exp(-gx * gx * 3.2f); }
+			}
 			for (int yy = 0; yy < h; yy++)
 			{
 				int y = y0 + yy;
 				float v = (y + 0.5f) / s;
 				uint32_t c = mix(top, bot, std::pow((float)y / H, 0.8f));
 				float cr = ((c >> 16) & 255) / 255.0f, cg = ((c >> 8) & 255) / 255.0f, cb = (c & 255) / 255.0f;
+				const bool wall = v < floorY, dots = wall && v < floorY - 6 && (y % step) < dot;
+				const float dotWhite = screen == 0 ? 0.022f : 0.014f;
+				float rowWhite = 0, rowK;
+				const float* colK;
+				if (wall)
+				{
+					float dy = (v - (floorY - 110)) / 190;
+					rowK = std::exp(-dy * dy * 2.0f);
+					colK = wallX.data();
+				}
+				else
+				{
+					float depth = (v - floorY) / (480 - floorY);
+					rowWhite = 0.028f * (1 - depth) * (1 - depth);
+					float dy = (v - floorY - 12) / 40;
+					rowK = std::exp(-dy * dy * 1.4f);
+					colK = poolX.data();
+				}
+				// the floor's front edge catching the light (on the top screen only under the cartridge: the words
+				// to its right stand on the wall)
+				float edgeD = std::fabs(v - floorY) * s;
+				const bool edge = edgeD < 1.5f;
+				float ny = v / 240 - 1, vy = ny * ny;
+				float rowGlow = 0;
+				if (ga > 0) { float gy = (y + 0.5f - gcy) / gry; rowGlow = std::exp(-gy * gy * 3.2f); }
 				for (int xx = 0; xx < w; xx++)
 				{
 					int x = x0 + xx;
-					float u = (x + 0.5f) / s, r = cr, g = cg, bl = cb, add = 0, white = 0;
-					if (v < floorY)
+					float r = cr, g = cg, bl = cb, white = rowWhite;
+					float add = colK[xx] * rowK;
+					if (dots && dotX[xx]) white += dotWhite;
+					if (edge)
 					{
-						if ((x % step) < dot && (y % step) < dot && v < floorY - 6) white += screen == 0 ? 0.022f : 0.014f;
-						float dx = (u - lx) / 250, dy = (v - (floorY - 110)) / 190;
-						add += wallK * std::exp(-(dx * dx + dy * dy) * 2.0f);
+						float u = (x + 0.5f) / s;
+						white += 0.05f * (1 - edgeD / 1.5f) * (screen == 0 ? 1 - smooth01(250, 360, u) : 1 - smooth01(0.35f, 1.0f, std::fabs(u - 320) / 320));
 					}
-					else
-					{
-						float depth = (v - floorY) / (480 - floorY);
-						white += 0.028f * (1 - depth) * (1 - depth);
-						float dx = (u - lx) / 210, dy = (v - floorY - 12) / 40;
-						add += poolK * std::exp(-(dx * dx + dy * dy) * 1.4f);
-					}
-					// the floor's front edge catching the light (on the top screen only under the cartridge: the words
-					// to its right stand on the wall)
-					float edgeD = std::fabs(v - floorY) * s;
-					if (edgeD < 1.5f) white += 0.05f * (1 - edgeD / 1.5f) * (screen == 0 ? 1 - smooth01(250, 360, u) : 1 - smooth01(0.35f, 1.0f, std::fabs(u - 320) / 320));
 					r += add * lr + white; g += add * lg + white; bl += add * lb + white;
-					float nx = u / 320 - 1, ny = v / 240 - 1;
-					float vig = 1 - 0.40f * smooth01(0.35f, 1.3f, std::sqrt(nx * nx * 0.85f + ny * ny));
-					r *= vig; g *= vig; bl *= vig;
+					float q = vigX[xx] + vy;
+					if (q > 0.35f * 0.35f)	// (inside that the vignette is 1)
+					{
+						float vig = 1 - 0.40f * smooth01(0.35f, 1.3f, std::sqrt(q));
+						r *= vig; g *= vig; bl *= vig;
+					}
 					if (ga > 0)
 					{
-						float dx = (x + 0.5f - gcx) / grx, dy = (y + 0.5f - gcy) / gry;
-						float a = ga * std::max(0.0f, std::exp(-(dx * dx + dy * dy) * 3.2f) - 0.04f) / 0.96f;
+						float a = ga * std::max(0.0f, glowX[xx] * rowGlow - 0.04f) / 0.96f;
 						r += (gr - r) * a; g += (gg - g) * a; bl += (gb - bl) * a;
 					}
 					float n = grain(x, y + screen * 4099) * (2.4f / 255);
@@ -533,6 +566,19 @@ namespace banana
 			j = jobs.back();	// the newest first: what the cursor is on now
 			jobs.pop_back();
 		}
+		if (j.back >= 0)
+		{
+			// a screen's background in a colour not seen yet (tens of milliseconds: not on the main thread)
+			CartBmp cb;
+			int H = (int)std::lround(480 * s), W = (int)std::lround(640 * s);
+			cb.card = backgroundRect(j.back, j.accent, s, 0, 0, W, H, H);
+			{
+				std::lock_guard<std::mutex> l(jm);
+				doneBmp.push_back({ j.key, std::move(cb) });
+			}
+			if (mFinished) mFinished();
+			return true;
+		}
 		if (j.wall)
 		{
 			// a piece of the top screen's wall with the chosen art's light baked in (drawn as a plain copy)
@@ -589,6 +635,12 @@ namespace banana
 			for (auto& d : doneBmp)
 			{
 				queued.erase(d.first);
+				if (d.first.compare(0, 5, "back|") == 0)
+				{
+					if (backs.size() > 12) backs.clear();
+					backs[d.first.substr(5)] = be->upload(d.second.card, false);
+					continue;
+				}
 				if (d.first.compare(0, 5, "wall|") == 0)
 				{
 					Wall w;
@@ -717,17 +769,37 @@ namespace banana
 		be->draw(it->second, std::lround(X(cx) - W / 2.0f), std::lround(X(y) - H / 2.0f), (float)W, (float)H, rnds::Color::hex(0, alpha));
 	}
 
-	void CartMenu::background(int screen, uint32_t accent)
+	bool CartMenu::background(int screen, uint32_t accent)
 	{
 		int W = (int)std::lround(X(640)), H = (int)std::lround(X(480));
 		std::string key = std::to_string(screen) + ":" + std::to_string(accent);
 		auto it = backs.find(key);
 		if (it == backs.end())
 		{
-			if (backs.size() > 12) backs.clear();
-			it = backs.emplace(key, be->upload(backgroundRect(screen, accent, s, 0, 0, W, H, H), false)).first;
+			// the first one is made here; a new colour's on the worker, the last one shown until it is ready
+			if (lastBack[screen])
+			{
+				std::lock_guard<std::mutex> l(jm);
+				std::string bk = "back|" + key;
+				if (!queued.count(bk))
+				{
+					queued.insert(bk);
+					Job jb;
+					jb.key = bk; jb.back = screen; jb.accent = accent;
+					jobs.push_back(jb);
+					if (mQueued) mQueued();
+				}
+			}
+			else
+			{
+				if (backs.size() > 12) backs.clear();
+				it = backs.emplace(key, be->upload(backgroundRect(screen, accent, s, 0, 0, W, H, H), false)).first;
+			}
 		}
-		be->draw(it->second, 0, 0, (float)W, (float)H, rnds::Color(1, 1, 1, 1));
+		const rnds::TexPtr& t = it != backs.end() ? it->second : lastBack[screen];
+		be->draw(t, 0, 0, (float)W, (float)H, rnds::Color(1, 1, 1, 1));
+		lastBack[screen] = t;
+		return it != backs.end();
 	}
 
 	// ---- the screens --------------------------------------------------------------------------------------------------
@@ -749,7 +821,7 @@ namespace banana
 			return;
 		}
 		const Item& it = items[cursor()];
-		background(0, it.accent);
+		bool wallReady = background(0, it.accent);
 		// the status line: date, time, battery
 		text(src->dateText(), fMed, 14, 22, 16, SOFT);
 		std::string right = src->clockText();
@@ -770,8 +842,8 @@ namespace banana
 		const CartTex* hero = cart(it, (int)std::lround(X(heroH)), -28, 9);
 		if (!hero) hero = cart(it, (int)std::lround(X(PICK_H)), -12, 6);	// (the shelf's while the large one is made)
 		// the light its art throws on the wall behind it: a piece of the wall made with it (once the cartridge is, as
-		// its colour comes from the art)
-		if (hero)
+		// its colour comes from the art; not over the last colour's wall)
+		if (hero && wallReady)
 		{
 			uint32_t glow = hero->glow ? hero->glow : mix(it.accent, 0xffffff, 0.3f);
 			std::string wk = "wall|" + std::to_string(it.accent) + "|" + std::to_string(glow) + "|" + std::to_string((int)std::lround(heroH * 10));

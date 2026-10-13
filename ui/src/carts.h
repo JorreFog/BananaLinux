@@ -88,6 +88,7 @@ namespace banana
 			int height = 0;
 			float yaw = 0, pitch = 0;
 			bool wall = false;				// a piece of the top screen's wall instead, lit by glow
+			int back = -1;					// or a whole screen's background (0 top, 1 bottom) in accent
 			uint32_t accent = 0, glow = 0;
 			float heroH = 0;
 		};
@@ -110,6 +111,7 @@ namespace banana
 		struct TextTex { rnds::TexPtr tex; int padX, padY; float w; };
 		std::map<std::string, TextTex> texts;
 		std::map<std::string, rnds::TexPtr> shapes, backs;
+		rnds::TexPtr lastBack[2];					// each screen's last background (shown while a new colour's is made)
 		std::map<std::string, rnds::Bitmap> bands;	// the label bands' texts, by system name
 		// the top screen's wall behind the cartridge with the light of its art on it (a few kept: the last ones seen)
 		struct Wall { rnds::TexPtr tex; int x = 0, y = 0; };
@@ -118,7 +120,7 @@ namespace banana
 		float text(const std::string& t, const std::shared_ptr<rnds::Font>& f, float size, float x, float y, uint32_t rgb,
 			float alpha = 1, float maxW = 0, int align = 0, float spacing = 0, bool upper = false, bool measure = false);
 		void round(float x, float y, float w, float h, float r, uint32_t rgb, float alpha);
-		void background(int screen, uint32_t accent);
+		bool background(int screen, uint32_t accent);	// false: the last colour's, while this one is made
 		void shadow(float cx, float y, float w, float alpha);
 		float X(float v) const { return v * s; }
 
