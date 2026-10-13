@@ -72,6 +72,7 @@ static void audio_route(void);
 static void undim(void);
 static int headphones;
 static int fn_held, power_down, lid_closed;
+static int lid_retry_off;	/* a suspend failed with the lid shut: no retry until it opens */
 static double power_since, last_input, ignore_power_until;
 
 static volatile sig_atomic_t reload;
@@ -428,6 +429,7 @@ static void suspend_now(const char *why)
 			if (sleep_fallback < 2 && failures <= 2) { sleep_fallback++; sleep_mode(); usleep(200000); continue; }
 			woke = "failed";
 			if (lid_closed) backlights_power(0);	/* can't sleep: at least dark until the lid opens */
+			lid_retry_off = 1;	/* ...and not tried again every 5 s with the lid still shut */
 			break;
 		}
 		asleep += (b1.tv_sec - b0.tv_sec) + (b1.tv_nsec - b0.tv_nsec) / 1e9;
@@ -450,7 +452,9 @@ static void suspend_now(const char *why)
 	}
 	/* awake: the game and the menu first */
 	double t_wake = mono();
-	if (dark) backlights_power(!lid_closed);
+	/* the panels on when the lid is open: dark while charging, or dark from a lid shut with lid_sleep off before a
+	 * power-button sleep (the lid-open event that would light them is drained below) */
+	if (dark || !lid_closed) backlights_power(!lid_closed);
 	if (pg > 0) kill(-pg, SIGCONT);
 	pid_t ui = ui_pid();
 	if (ui && !game) kill(ui, SIGUSR1);	/* draws both panels again (the clock and the battery moved on) */
@@ -567,11 +571,11 @@ static void volume(int dir)
 	/* the volume script changes the control /run/banana/mixer names, the aw88166's as an attenuation (see it) */
 	char step[16];
 	snprintf(step, sizeof step, "%d", cfg.volume_step);
-	char *argv[] = { "/usr/libexec/banana/volume", dir > 0 ? "up" : "down", step, NULL };
-	run(argv);
+	char cmd[96];
+	snprintf(cmd, sizeof cmd, "/usr/libexec/banana/volume %s %s 2>/dev/null", dir > 0 ? "up" : "down", step);
 	save_volume_at = mono() + 2;
 	int pct = -1;
-	FILE *p = popen("/usr/libexec/banana/volume get 2>/dev/null", "r");
+	FILE *p = popen(cmd, "r");	/* (it prints the new level) */
 	if (p) {
 		if (fscanf(p, "%d", &pct) != 1) pct = -1;
 		pclose(p);
@@ -940,7 +944,7 @@ static void handle(const struct input_event *e)
 	if (e->type == EV_KEY) { last_input = now; undim(); }
 	if (e->type == EV_SW && e->code == SW_LID) {
 		lid_closed = e->value;
-		if (!lid_closed) undim();
+		if (!lid_closed) { undim(); lid_retry_off = 0; }
 		if (lid_closed && cfg.lid_sleep) suspend_now("lid closed");
 		else if (!lid_closed || !cfg.lid_sleep) { backlights_power(!lid_closed); if (!lid_closed) panel_off_again(); }	/* no sleep: at least the panels go dark */
 		return;
@@ -949,7 +953,14 @@ static void handle(const struct input_event *e)
 		if (headphones != e->value) { headphones = e->value; audio_route(); }
 		return;
 	}
-	if (e->type != EV_KEY || e->value == 2) return;
+	if (e->type != EV_KEY) return;
+	/* a volume key held down: the kernel's autorepeat (gpio-keys-volume's), a step every 150 ms so the level card keeps
+	 * up; every other key's repeats mean nothing here */
+	if (e->value == 2) {
+		static double last_repeat;
+		if ((e->code != KEY_VOLUMEUP && e->code != KEY_VOLUMEDOWN) || now - last_repeat < 0.15) return;
+		last_repeat = now;
+	}
 	switch (e->code) {
 	case BTN_MODE: fn_held = e->value; break;
 	case KEY_POWER:
@@ -965,6 +976,9 @@ static void handle(const struct input_event *e)
 /* percent, or -1 when there is no battery or it is charging */
 static int battery_discharging_pct(void)
 {
+	/* (the rk817's gauge says "Discharging" while a charger charges it, see charger_online: plugged in at 2% must not
+	 * shut down) */
+	if (charger_online()) return -1;
 	DIR *d = opendir("/sys/class/power_supply");
 	if (!d) return -1;
 	struct dirent *e;
@@ -1030,11 +1044,14 @@ int main(int argc, char **argv)
 		 * at again every 5 s, so the idle sleep comes once it is over */
 		int awake = pid_of("/run/banana/awake.pid") != 0;
 		if (awake && wait > 5) wait = 5;
+		/* (only deadlines still ahead: one already passed was acted on after the last poll, or is held back by what
+		 * the action checks (the charger, the lid, no backlight) and a uevent or an input event brings it back; counted
+		 * here it spun this loop every 20 ms, on the charger for as long as the menu sat idle) */
 		if (!game) {
-			if (cfg.autosleep_min > 0 && !awake) { double d = cfg.autosleep_min * 60.0 - (tnow - last_input); if (d < wait) wait = d; }
-			if (cfg.dim_min > 0 && !dimmed) { double d = cfg.dim_min * 60.0 - (tnow - last_input); if (d < wait) wait = d; }
+			if (cfg.autosleep_min > 0 && !awake) { double d = cfg.autosleep_min * 60.0 - (tnow - last_input); if (d > 0 && d < wait) wait = d; }
+			if (cfg.dim_min > 0 && !dimmed) { double d = cfg.dim_min * 60.0 - (tnow - last_input); if (d > 0 && d < wait) wait = d; }
 		}
-		if (lid_closed && cfg.lid_sleep) { double d = 5.0 - (tnow - last_input); if (d < wait) wait = d; }
+		if (lid_closed && cfg.lid_sleep && !lid_retry_off) { double d = 5.0 - (tnow - last_input); if (d > 0 && d < wait) wait = d; }
 		if ((save_volume_at > 0 || save_backlight_at > 0) && wait > 0.5) wait = 0.5;
 		if (power_down && wait > 0.1) wait = 0.1;
 		int timeout = wait <= 0 ? 20 : (int)(wait * 1000) + 20;
@@ -1077,7 +1094,7 @@ int main(int argc, char **argv)
 		    !pid_of("/run/banana/awake.pid"))
 			suspend_now("idle");
 		/* started or woken with the lid shut */
-		if (lid_closed && cfg.lid_sleep && now - last_input > 5) suspend_now("lid still closed");
+		if (lid_closed && cfg.lid_sleep && !lid_retry_off && now - last_input > 5) suspend_now("lid still closed");
 
 		if (now >= next_battery) {
 			next_battery = now + 60;
