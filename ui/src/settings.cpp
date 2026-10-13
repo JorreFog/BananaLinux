@@ -17,6 +17,7 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/statvfs.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -2228,6 +2229,7 @@ namespace banana
 		std::map<std::string, bool> badgeReady;		// badge name -> its file is in BADGES
 		int gen = 0;
 		std::string user, token;
+		time_t cfgSeen = 0;	// retroarch.cfg's mtime when the token was last looked for in it
 		long long pos = 0;
 		std::string part;
 		double since = 0;
@@ -2365,8 +2367,14 @@ namespace banana
 			if (raw->since == 0) raw->since = t;
 			raw->poll(raw, t);
 			std::lock_guard<std::mutex> l(raw->mu);
-			// a token RetroArch wrote while the game started (a first login)
-			if (raw->token.empty() && raw->state != 4) raw->token = cfgValue("/data/retroarch/retroarch.cfg", "cheevos_token");
+			// a token RetroArch wrote while the game started (a first login): looked for when the file changes, not on
+			// every pass (the whole retroarch.cfg ten times a second, beside the game, for as long as it had none)
+			struct stat st;
+			if (raw->token.empty() && raw->state != 4 && stat("/data/retroarch/retroarch.cfg", &st) == 0 && st.st_mtime != raw->cfgSeen)
+			{
+				raw->cfgSeen = st.st_mtime;
+				raw->token = cfgValue("/data/retroarch/retroarch.cfg", "cheevos_token");
+			}
 			if (raw->gen != gSeen) changed = true;
 		}
 		if (gFlash >= 0 && t >= gFlashUntil && gDown < 0) { gFlash = -1; changed = true; }

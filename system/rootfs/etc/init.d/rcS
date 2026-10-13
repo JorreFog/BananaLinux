@@ -71,7 +71,7 @@ banana-perf ui
     # Wi-Fi when there is a network to join and the settings screen didn't switch it off (Settings > Network
     # starts it to search when there is none yet)
     if [ -f /data/banana/wifi.conf ] && ! grep -q '^ *wifi *= *off' /data/banana/settings.conf 2>/dev/null; then
-        /usr/libexec/banana/wifi up
+        /usr/libexec/banana/wifi up &     # (its wait for wlan0 doesn't hold up sharing and SSH)
     fi
     # a wired network when there is one (a USB Ethernet adapter; QEMU's virtio): an address by DHCP
     for e in /sys/class/net/eth*; do

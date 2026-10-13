@@ -7,7 +7,15 @@ REPORT=/data/banana/panel-tune.txt
 [ -f $REPORT ] && exit 0
 sleep 5     # the panels lit and the menu up first
 grep -qs ' /sys/kernel/debug ' /proc/mounts || mount -t debugfs debugfs /sys/kernel/debug
-DTB=$(ls /boot/$(cat /run/banana/slot 2>/dev/null || echo a)/*.dtb 2>/dev/null | head -n 1)     # the slot that booted
+S=$(cat /run/banana/slot 2>/dev/null || echo a)     # the slot that booted
+# this handheld's DTB: U-Boot names the board (a universal card has both DTBs, and the RG DS Plus's sorts first: an
+# RG DS tuned it with its own clocks), else the slot's only one
+case $(sed -n 's/.*banana\.board=\([^ ]*\).*/\1/p' /proc/cmdline) in
+rgds-plus) DTB=/boot/$S/rk3568-anbernic-rg-ds-plus.dtb ;;
+rgds) DTB=/boot/$S/rk3568-anbernic-rg-ds.dtb ;;
+*) DTB= ;;
+esac
+[ -f "$DTB" ] || DTB=$(ls /boot/$S/*.dtb 2>/dev/null | head -n 1)
 # a card it can't tune says why, once (delete the report to try again)
 [ -f "$DTB" ] || { { date; echo "no boot DTB found (is /boot mounted?)"; } > $REPORT; exit 1; }
 mount -o remount,rw /boot || { { date; echo "/boot can't be written"; } > $REPORT; exit 1; }

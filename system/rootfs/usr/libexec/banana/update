@@ -18,7 +18,10 @@ UPDATES=/data/banana/updates
 other() { [ "$1" = a ] && echo b || echo a; }
 partition() { [ "$1" = a ] && echo ${DISK}p2 || echo ${DISK}p3; }
 status() { echo "$*" > $STATUS.new && mv -f $STATUS.new $STATUS; }
-fail() { status "failed: $*"; echo "update: $*" >&2; mount -o remount,ro /boot 2>/dev/null; exit 1; }
+fail() { status "failed: $*"; echo "update: $*" >&2; rm -rf "$UPDATES/.unpack"; mount -o remount,ro /boot 2>/dev/null; exit 1; }
+# what was just written, read back from the card and not from memory (the page cache holds what was written, so a
+# card that dropped the writes would still hash right)
+uncache() { sync; echo 3 > /proc/sys/vm/drop_caches 2>/dev/null; }
 boot_rw() { mount -o remount,rw /boot || fail "the boot partition can't be written"; }
 boot_ro() { sync; mount -o remount,ro /boot 2>/dev/null; }
 default_slot() { sed -n 's/^DEFAULT *//p' /boot/extlinux/extlinux.conf 2>/dev/null | head -n 1; }
@@ -97,7 +100,7 @@ apply)
         dd if="$DIR/rootfs.squashfs" of="$PART" bs=${CHUNK}M skip=$i seek=$i count=1 conv=fsync,notrunc 2>/dev/null || fail "writing slot $TO failed"
         i=$((i + 1))
     done
-    sync
+    uncache
     status "verifying"
     [ "$(head -c "$SIZE" "$PART" | sha256sum | cut -d' ' -f1)" = "$ROOT_HASH" ] || fail "slot $TO reads back wrong"
     # the kernel and device tree beside it, then the switch
@@ -105,6 +108,7 @@ apply)
     mkdir -p /boot/$TO
     for f in Image $(cd "$DIR" && ls *.dtb); do
         cp "$DIR/$f" "/boot/$TO/$f.new" && mv -f "/boot/$TO/$f.new" "/boot/$TO/$f" || fail "can't write /boot/$TO/$f"
+        uncache
         [ "$(hash_of "/boot/$TO/$f")" = "$(hash_of "$DIR/$f")" ] || fail "/boot/$TO/$f reads back wrong"
     done
     # device trees the package doesn't have would be old ones: they go
