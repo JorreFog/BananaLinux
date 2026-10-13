@@ -163,3 +163,5 @@ CONFIG_VIRTIO_NET=y
 # CONFIG_DEBUG_DEVRES is not set
 # CONFIG_DEBUG_BUGVERBOSE is not set
 # CONFIG_RANDOMIZE_BASE is not set
+# the name before init sets it (ROCKNIX fills its @DEVICENAME@ in at build time; Banana is "banana")
+CONFIG_DEFAULT_HOSTNAME="banana"

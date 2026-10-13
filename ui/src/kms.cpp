@@ -139,8 +139,8 @@ namespace banana
 	{
 		if (fd < 0) return;
 		drmSetMaster(fd);
-		for (auto& pn : p)
-			drmModeSetCrtc(fd, pn.crtc, pn.buf[pn.front].fb, 0, 0, &pn.conn, 1, (drmModeModeInfo*)pn.mode);
+		for (int s = 0; s < 2; s++)
+			if (s != leased) drmModeSetCrtc(fd, p[s].crtc, p[s].buf[p[s].front].fb, 0, 0, &p[s].conn, 1, (drmModeModeInfo*)p[s].mode);
 		pending = 0;
 	}
 
@@ -148,9 +148,10 @@ namespace banana
 	{
 		if (fd < 0) return;
 		for (auto& pn : p) { freeBuf(pn.buf[0]); freeBuf(pn.buf[1]); }
-		::close(fd);
+		::close(fd);	// (a lease ends with its lessor's master)
 		fd = -1;
 		pending = 0;
+		leased = -1;
 	}
 
 	bool Display::present(const uint32_t* const screens[2], const Damage dmg[2])
@@ -159,6 +160,7 @@ namespace banana
 		bool any = false;
 		for (int s = 0; s < 2; s++)
 		{
+			if (s == leased) continue;	// a game draws there
 			Panel& pn = p[s];
 			// the hidden buffer missed what changed since it was shown: this frame's part and the last frame's
 			int back = pn.front ^ 1;
@@ -197,5 +199,44 @@ namespace banana
 		ev.version = 2;
 		ev.page_flip_handler = flipDone;
 		drmHandleEvent(fd, &ev);
+	}
+
+	int Display::lease(int s)
+	{
+		if (fd < 0 || s < 0 || s > 1) return -1;
+		drmSetClientCap(fd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1);
+		drmModeRes* res = drmModeGetResources(fd);
+		drmModePlaneRes* pr = drmModeGetPlaneResources(fd);
+		int idx = -1;
+		for (int i = 0; res && i < res->count_crtcs; i++) if (res->crtcs[i] == p[s].crtc) idx = i;
+		// the CRTC's primary plane: the one its pictures are on now, else a primary one it can use
+		uint32_t plane = 0, any = 0;
+		for (uint32_t j = 0; pr && idx >= 0 && j < pr->count_planes; j++)
+		{
+			drmModePlane* pl = drmModeGetPlane(fd, pr->planes[j]);
+			if (!pl) continue;
+			bool mine = pl->possible_crtcs & (1u << idx), primary = false;
+			if (drmModeObjectProperties* pp = drmModeObjectGetProperties(fd, pl->plane_id, DRM_MODE_OBJECT_PLANE))
+			{
+				for (uint32_t k = 0; k < pp->count_props; k++)
+					if (drmModePropertyRes* q = drmModeGetProperty(fd, pp->props[k]))
+					{
+						if (!strcmp(q->name, "type") && pp->prop_values[k] == DRM_PLANE_TYPE_PRIMARY) primary = true;
+						drmModeFreeProperty(q);
+					}
+				drmModeFreeObjectProperties(pp);
+			}
+			if (mine && primary && pl->crtc_id == p[s].crtc) plane = pl->plane_id;
+			if (mine && primary && !any) any = pl->plane_id;
+			drmModeFreePlane(pl);
+		}
+		if (pr) drmModeFreePlaneResources(pr);
+		if (res) drmModeFreeResources(res);
+		if (!plane) plane = any;
+		if (!plane) return -1;
+		uint32_t objs[3] = { p[s].conn, p[s].crtc, plane }, lessee = 0;
+		int l = drmModeCreateLease(fd, objs, 3, 0, &lessee);	// (no CLOEXEC: the game's process inherits it)
+		if (l >= 0) leased = s;
+		return l;
 	}
 }

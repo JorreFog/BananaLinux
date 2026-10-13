@@ -312,7 +312,7 @@ namespace banana
 			while (std::getline(f, ln)) if (!trim(ln).empty()) favSystems.insert(trim(ln));
 		}
 		{
-			// <system>/<rel> TAB plays TAB seconds TAB last (epoch)
+			// <system>/<rel> TAB plays TAB seconds TAB last (epoch) [TAB achievements unlocked TAB total]
 			std::ifstream f(dataDir + "/playstats.tsv");
 			while (std::getline(f, ln))
 			{
@@ -323,6 +323,7 @@ namespace banana
 				if (c.size() < 4) continue;
 				Stat s;
 				s.plays = atoi(c[1].c_str()); s.seconds = atol(c[2].c_str()); s.last = (time_t)atoll(c[3].c_str());
+				if (c.size() >= 6) { s.achA = atoi(c[4].c_str()); s.achB = atoi(c[5].c_str()); }
 				stats[c[0]] = s;
 			}
 		}
@@ -354,7 +355,11 @@ namespace banana
 	{
 		std::string out;
 		for (auto& kv : stats)
-			out += kv.first + "\t" + std::to_string(kv.second.plays) + "\t" + std::to_string(kv.second.seconds) + "\t" + std::to_string((long long)kv.second.last) + "\n";
+		{
+			out += kv.first + "\t" + std::to_string(kv.second.plays) + "\t" + std::to_string(kv.second.seconds) + "\t" + std::to_string((long long)kv.second.last);
+			if (kv.second.achB > 0) out += "\t" + std::to_string(kv.second.achA) + "\t" + std::to_string(kv.second.achB);
+			out += "\n";
+		}
 		writeAtomic(dataDir + "/playstats.tsv", out);
 	}
 
@@ -447,7 +452,7 @@ namespace banana
 				if (g.label.empty()) g.label = mediaFile(dir, "label", stem);
 				std::string key = def.id + "/" + rel;
 				auto st = stats.find(key);
-				if (st != stats.end()) { g.plays = st->second.plays; g.seconds = st->second.seconds; g.last = st->second.last; }
+				if (st != stats.end()) { g.plays = st->second.plays; g.seconds = st->second.seconds; g.last = st->second.last; g.achA = st->second.achA; g.achB = st->second.achB; }
 				g.fav = favGames.count(key) > 0;
 				sh.games.push_back(g);
 			}
@@ -514,18 +519,22 @@ namespace banana
 		return sh.def;
 	}
 
-	void Library::recordPlay(int game, long seconds)
+	void Library::recordPlay(int game, long seconds, int achA, int achB)
 	{
 		int sys = lib;
 		Game* g = sourceOf(lib, game, &sys);
 		if (!g) return;
 		Stat& st = stats[shelves[sys].def.id + "/" + g->rel];
-		st.plays++;
-		st.seconds += std::max(0L, seconds);
-		st.last = time(nullptr);
+		if (seconds >= 5)	// a start that failed straight away isn't a play
+		{
+			st.plays++;
+			st.seconds += seconds;
+			st.last = time(nullptr);
+		}
+		if (achB > 0) { st.achA = achA; st.achB = achB; }
 		saveStats();
-		g->plays = st.plays; g->seconds = st.seconds; g->last = st.last;
-		if (shelves[lib].favorites) { Game& f = shelves[lib].games[game]; f.plays = st.plays; f.seconds = st.seconds; f.last = st.last; }
+		g->plays = st.plays; g->seconds = st.seconds; g->last = st.last; g->achA = st.achA; g->achB = st.achB;
+		if (shelves[lib].favorites) { Game& f = shelves[lib].games[game]; f.plays = st.plays; f.seconds = st.seconds; f.last = st.last; f.achA = st.achA; f.achB = st.achB; }
 	}
 
 	// ---- Source -----------------------------------------------------------------------------------------------------
@@ -594,7 +603,12 @@ namespace banana
 		// the DS ROM's own icon when there is no art (from inside a .zip too)
 		if (ext == "nds" || (ext == "zip" && systemOf(i).id == "nds")) r.rom = g.path;
 		r.icon = lookOf(systemOf(i).id).icon;
-		r.achLabel = "No achievements";
+		// what the emulator last said of its RetroAchievements (the block is left out until a game has said so)
+		if (g.achB > 0)
+		{
+			r.achA = std::max(0, g.achA); r.achB = g.achB;
+			r.achLabel = std::to_string(r.achA) + " / " + std::to_string(r.achB) + " achievements";
+		}
 		r.fav = g.fav;
 		return r;
 	}

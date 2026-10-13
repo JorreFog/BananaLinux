@@ -1,0 +1,60 @@
+From: BananaOS
+Subject: drm/rockchip: vop2: start a video port in step with one already running the same timing
+
+The RG DS and RG DS Plus show the DS's two screens on two DSI panels, one per video port. Each port's timing started
+whenever its enable happened to run, so the panels refreshed up to a frame apart (6.3 ms after an atomic enable of
+both, 8.5 ms after a boot on the RG DS Plus), and an emulator showing one frame on both panels showed it half a
+refresh apart on the two: one screen visibly lags the other. Wait for a frame start of a port already scanning out the
+same timing before taking this one out of standby; their pixel clocks come from the same crystal, so they stay
+together until the next modeset (resume included, which enables them again through here).
+
+--- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c	2026-10-13 09:09:23.309705201 +0200
++++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c	2026-10-13 09:09:23.317130721 +0200
+@@ -1624,6 +1624,38 @@
+ 	return us * mode->clock / mode->htotal / 1000;
+ }
+ 
++/*
++ * Start a video port's timing at a frame start of another port already running the same timing, so that their
++ * panels refresh together. The RG DS and RG DS Plus are two panels showing one picture (the DS's two screens): enabled
++ * one after the other (or in one atomic commit, or on resume), their refreshes started up to a frame apart, 6-8 ms on
++ * the RG DS Plus, and a game's two screens were shown half a refresh apart. Both ports' pixel clocks come from the
++ * same crystal, so once started together they stay together.
++ */
++static void vop2_vp_start_aligned(struct vop2 *vop2, struct vop2_video_port *vp,
++				  const struct drm_display_mode *mode)
++{
++	int i;
++
++	for (i = 0; i < vop2->data->nr_vps; i++) {
++		struct vop2_video_port *o = &vop2->vps[i];
++		const struct drm_display_mode *om;
++
++		if (o == vp || !o->crtc.state || !o->crtc.state->active)
++			continue;
++		if (vop2_vp_read(o, RK3568_VP_DSP_CTRL) & RK3568_VP_DSP_CTRL__STANDBY)
++			continue;	/* not scanning out yet (enabled later in this commit) */
++		om = &o->crtc.state->adjusted_mode;
++		if (om->crtc_clock != mode->crtc_clock || om->crtc_htotal != mode->crtc_htotal ||
++		    om->crtc_vtotal != mode->crtc_vtotal)
++			continue;
++		if (drm_crtc_vblank_get(&o->crtc))
++			continue;
++		drm_crtc_wait_one_vblank(&o->crtc);
++		drm_crtc_vblank_put(&o->crtc);
++		return;
++	}
++}
++
+ static void vop2_crtc_atomic_enable(struct drm_crtc *crtc,
+ 				    struct drm_atomic_commit *state)
+ {
+@@ -1806,6 +1838,8 @@
+ 
+ 	vop2_cfg_done(vp);
+ 
++	vop2_vp_start_aligned(vop2, vp, mode);
++
+ 	vop2_vp_write(vp, RK3568_VP_DSP_CTRL, dsp_ctrl);
+ 
+ 	vop2_crtc_atomic_try_set_gamma(vop2, vp, crtc, crtc_state);

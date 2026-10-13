@@ -5,7 +5,8 @@
 // section icon, its name and what it does. Every change is applied and saved at once:
 //   /data/banana/settings.conf     the menu's (theme, motion, sounds, clock, splash, Wi-Fi)
 //   /data/banana/bananad.conf      sleep and the LEDs (bananad reloads it on SIGHUP)
-//   /data/banana/superdrastic.conf the DS renderer and shader (run-drastic reads it)
+//   /data/banana/superdrastic.conf SuperDrastic's shader and CPU clock (run-drastic reads it)
+//   /data/bananads/bananads.conf   BananaDS's own settings (shader, 3D resolution, ...; BananaDS reads it)
 //   /data/drastic/config/drastic.cfg  the DS's 3D resolution
 //   /sys/class/backlight + /data/banana/backlight   brightness
 #include "../rnds/RndsUI.h"
@@ -23,11 +24,26 @@ namespace banana
 	{
 	public:
 		Settings(rnds::Backend* be, const std::string& assets, const std::string& dataDir, float scale, const std::string& variant);
-		void setVariant(const std::string& variant);
+		void setVariant(const std::string& variant);	// "dark", "light", or "carts" (dark, in Inter: setFontDir first)
+		void setFontDir(const std::string& dir) { fontDir = dir; }
 		void open();
 		void close() { mOpen = false; page = LIST; wizard = false; }
 		void setup() { mOpen = true; openSetup(); }	// the first-time setup, from the host
 		bool isOpen() const { return mOpen; }
+		bool animating() const;	// the highlight or the list still easing into place: frames wanted
+
+		// The game panel (settings.cpp, end): while a RetroArch game runs on one panel through a DRM lease, the other
+		// shows the game's RetroAchievements (progress and the latest unlocks with their badges) and touch tiles for
+		// RetroArch (save, load, its menu, fast forward, quit), in the in-game menu's look.
+		enum GameAction { G_NONE, G_SAVE, G_LOAD, G_MENU, G_FFWD, G_QUIT };
+		void gameOpen(const std::string& title, const std::string& system, int screen, bool touch);
+		void gameClose();
+		bool gameUpdate(double nowMs);		// true: the panel changed (a log line, a reply, a badge, a flash ending)
+		void gameRender();
+		GameAction gameTouch(float x, float y, bool down);	// device px on the panel's screen
+		bool gameProgress(int& unlocked, int& total);			// the game's achievements, once the server said
+		// box art (banana-scrape) finished since the last call: the library is read again
+		bool takeLibraryChanged() { bool r = libChanged; libChanged = false; return r; }
 
 		// what the host has to do after an input
 		enum Result { NONE, MOVED, CHANGED, CLOSED, THEME, REBOOT, POWEROFF };
@@ -152,6 +168,8 @@ namespace banana
 		std::string fit(const std::string& t, bool medium, float size, float width);
 
 		std::shared_ptr<rnds::Font> R, M;
+		std::string fontDir;		// Inter's TTFs (the Carts theme)
+		bool cleanFonts = false;
 		struct Cached { rnds::TexPtr tex; int ox = 0, oy = 0; float w = 0; };
 		std::map<std::string, Cached> cache;
 
@@ -163,6 +181,30 @@ namespace banana
 
 		// drawing, in CSS px of a 640x480 panel
 		float X(float v) const { return v * s; }
+		// motion: the list's highlight and scroll ease toward sel and top (in rows), the groups' highlight toward gsel
+		// (column and row); advanced at each render by the time since the last one
+		float aPick = -1, aTop = -1, aCol = -1, aRow = -1;
+		int aGroup = -1;
+		double aLast = 0;
+		bool aMoving = false;
+		void advance();
+		// box art: banana-scrape runs on its own and says how far it got in /run/banana/scrape.status
+		std::string scrapeLine;				// that file's line, as last read
+		double scrapeNext = 0;
+		bool libChanged = false;
+		bool scraping() const { return scrapeLine.compare(0, 8, "running ") == 0; }
+		bool pollScrape(double nowMs);		// true when the line changed
+		void startScrape();
+		std::string scrapeShort() const;	// for a row: "Not yet", "120 / 530", "410 of 530 found", "No connection"
+		void scrapeBar(float x, float y, float w);	// the progress bar and the game being fetched, while it runs
+		struct RaWatch;							// the achievements: RetroArch's log and the server (settings.cpp)
+		std::shared_ptr<RaWatch> raw;
+		std::string gTitle, gSystem;
+		int gScreen = 1, gFlash = -1, gDown = -1;
+		bool gTouch = true;
+		double gFlashUntil = 0;
+		int gSeen = -1;						// the watch's generation last drawn
+		std::map<std::string, rnds::TexPtr> gBadges;	// badge textures by file
 		void box(const std::string& kind, bool on, float x, float y, float w, float h);
 		float text(const std::string& t, bool medium, float size, float x, float top, const rnds::Color& c, bool upper = false, float ls = 0, bool measureOnly = false);
 		void wrapped(const std::string& t, float size, float x, float top, float width, int maxLines, const rnds::Color& c);

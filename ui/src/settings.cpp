@@ -5,6 +5,7 @@
 #include <thread>
 #include <cctype>
 #include <arpa/inet.h>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
@@ -183,6 +184,20 @@ namespace banana
 	{
 		bool l = v == "light";
 		light = l; cache.clear();	// (also for a new accent: the boxes are drawn again)
+		// the Carts theme writes in Inter (a clean typeface), the others in the theme's Pixelify Sans
+		bool clean = v == "carts" && !fontDir.empty();
+		if (clean != cleanFonts || !R)
+		{
+			cleanFonts = clean;
+			R = rnds::Font::load(clean ? fontDir + "/Inter-Regular.ttf" : assets + "/fonts/PixelifySans-Regular.ttf");
+			M = rnds::Font::load(clean ? fontDir + "/Inter-Medium.ttf" : assets + "/fonts/PixelifySans-Medium.ttf");
+			if (!R || !M)
+			{
+				R = rnds::Font::load(assets + "/fonts/PixelifySans-Regular.ttf");
+				M = rnds::Font::load(assets + "/fonts/PixelifySans-Medium.ttf");
+				cleanFonts = false;
+			}
+		}
 	}
 
 	// time zones as POSIX TZ rules (glibc reads them from TZ with no zoneinfo files): the offset and the summer time
@@ -233,7 +248,7 @@ namespace banana
 			items.push_back(it);
 		};
 		const char* D = "Display & sound";
-		add(D, "picture", "Theme", "ROCKNIXDS Pixel's two palettes: dark, or light for daylight.", menu, "theme", { "Dark", "Light" }, { "dark", "light" });
+		add(D, "picture", "Theme", "ROCKNIXDS Pixel's two palettes, dark or light for daylight; or Carts (experimental): your games as cartridges on a shelf, in a clean typeface.", menu, "theme", { "Dark", "Light", "Carts" }, { "dark", "light", "carts" });
 		add(D, "picture", "Accent colour", "The colour of the selection, the logo and the boot animation's banana.", menu, "accent",
 			{ "Yellow", "Blue", "Red", "Green", "Purple", "Pink" }, { "yellow", "blue", "red", "green", "purple", "pink" });
 		add(D, "picture", "Brightness", "Both panels' backlights. F + volume changes it anywhere, in games too.", "", "",
@@ -255,37 +270,56 @@ namespace banana
 			power, "fast_resume", { "Fast", "Careful" }, { "yes", "no" });
 		add(P, "moon", "LEDs", "Green, red when the battery is low, blinking red when nearly empty, amber while charging.", power, "led_brightness",
 			{ "Bright", "Dim", "Off" }, { "255", "40", "0" });
+		// Nintendo DS: the emulator and the quick resume are shared; below them only the chosen emulator's own settings,
+		// each in that emulator's files (switching the emulator builds the list again: change()). Both draw the DS's 3D
+		// with SuperDrastic's Gengis Engine, always (run-drastic, run-bananads).
 		const char* N = "Nintendo DS";
-		add(N, "nds", "Emulator", "SuperDrastic: DraStic straight onto both panels, with its own renderer and governor. BananaDS: Banana's own emulator (melonDS with the Gengis Engine), 2x like DraStic. Both have their menu on L3.",
+		const std::string emu = getConfValue(menu, "nds_emulator", getConfValue("/etc/banana/settings.conf", "nds_emulator", "superdrastic"));
+		add(N, "nds", "Emulator", "SuperDrastic: DraStic straight onto both panels, with its own governor. BananaDS: Banana's own emulator (melonDS's core). Both draw 3D with the Gengis Engine at 2x and have their menu on L3; each keeps its own settings below.",
 			menu, "nds_emulator", { "SuperDrastic", "BananaDS" }, { "superdrastic", "bananads" });
 		add(N, "nds", "Quick resume", "On: quitting keeps where you are, and the game goes on from there next time (a shutdown too). Off: quitting ends the game, which starts from its title next time.",
 			menu, "quick_resume", { "Off", "On" }, { "off", "on" });
-		add(N, "nds", "Renderer", "Gengis Engine draws the same picture as DraStic with about 12% less CPU work a frame.", sd, "DSFLIP_RAST", { "Gengis Engine", "DraStic" }, { "1", "0" });
-		add(N, "nds", "Shader", "Both emulators. Crisp: exact pixel-area scaling. Grid and LCD: the DS's screen grid. Colours: the DS's own, duller colours. CRT: a TV's scanlines. FSR: smooth edges, the heaviest. None costs no GPU work.", sd, "DSFLIP_SHADER",
-			{ "None", "Crisp", "Crisp + DS colours", "LCD grid", "LCD grid + colours", "FSR", "LCD (DS colours)", "LCD 1x", "LCD 3x", "Fast LCD",
-			  "DS colours", "Retro", "Bevel", "Sharp bilinear", "Sharp + scanlines", "Fast CRT", "FXAA", "Integer", "Integer fill",
+		const std::vector<std::string> shaderNames = { "None", "Crisp", "Crisp + DS colours", "LCD grid", "LCD grid + colours", "FSR", "LCD (DS colours)", "LCD 1x", "LCD 3x", "Fast LCD",
+			  "DS colours", "Retro", "Bevel", "Sharp bilinear", "Sharp + scanlines", "Fast CRT", "FXAA", "Integer", "Integer fill", "LCD grid 2x",
 			  "Dot (MiZai)", "Dot (MiZai, RG DS+)", "Retro tiles", "DraStic LCD", "DraStic LCD + colours", "DraStic Quilez",
-			  "DraStic sharp", "DraStic sharp + colours", "DraStic fast LCD", "DraStic fast LCD + colours" },
-			{ "none", "ds-crisp", "ds-crisp-color", "ds-grid", "ds-grid-color", "ds-fsr", "lcd1x-nds", "lcd1x", "lcd3x", "zfast-lcd",
-			  "nds-color", "retro-v2", "bevel", "sharp-bilinear", "sharp-bilinear-scanlines", "zfast-crt", "fxaa", "ds-integer", "ds-integer-fill",
+			  "DraStic sharp", "DraStic sharp + colours", "DraStic fast LCD", "DraStic fast LCD + colours" };
+		const std::vector<std::string> shaderValues = { "none", "ds-crisp", "ds-crisp-color", "ds-grid", "ds-grid-color", "ds-fsr", "lcd1x-nds", "lcd1x", "lcd3x", "zfast-lcd",
+			  "nds-color", "retro-v2", "bevel", "sharp-bilinear", "sharp-bilinear-scanlines", "zfast-crt", "fxaa", "ds-integer", "ds-integer-fill", "ds-grid-2x",
 			  "nnddss-dot-mizai", "nnddss-dot-mizai-rgds", "nnddss-retro-tiles", "drastic-lcd1x", "drastic-lcd1x-nds-color", "drastic-quilez",
-			  "drastic-sharp-bilinear", "drastic-sharp-bilinear-nds-color", "drastic-zfast-lcd", "drastic-zfast-lcd-nds-color" });
-		add(N, "nds", "3D resolution", "2x draws the DS's 3D at twice its size on these panels, at full speed with SuperDrastic.", dcfg, "hires_3d", { "2x", "1x" }, { "1", "0" });
-		const std::string bds = "/data/bananads/bananads.conf";
-		add(N, "nds", "Edge marking", "BananaDS: the outlines some games draw round their 3D models (Zelda, Kirby, many Pokémon battles). Off leaves them out.",
-			bds, "render.edge_marking", { "On", "Off" }, { "on", "off" });
-		add(N, "nds", "Fog", "BananaDS: the distance fog some games draw in 3D. Off leaves it out.", bds, "render.fog", { "On", "Off" }, { "on", "off" });
-		add(N, "nds", "Frame pacing", "BananaDS: Panels runs the DS at the panels' 60 Hz, a new frame every refresh (0.3% fast, the sound matched). DS rate keeps the DS's own 59.83 Hz, a frame shown twice every ~6 s.",
-			bds, "kms.pace", { "Panels", "DS rate" }, { "display", "ds" });
-		add(N, "nds", "CPU clock", "BananaDS: Saves battery finds the lowest clock each game runs at full speed and remembers it. Always full keeps the top clock.",
-			bds, "cpugov", { "Saves battery", "Always full" }, { "on", "off" });
-		add(N, "nds", "Timing", "BananaDS: Fast lets the two CPUs run longer between meeting (about 10% faster). Accurate is melonDS's own, for a game that misbehaves.",
-			bds, "core.slice", { "Fast", "Accurate" }, { "auto", "64" });
-		add(N, "nds", "Microphone", "BananaDS: how loud a blow or a word must be to reach the game.", bds, "mic.threshold",
-			{ "Medium", "High", "Low", "Off" }, { "0.15", "0.03", "0.3", "0" });
+			  "drastic-sharp-bilinear", "drastic-sharp-bilinear-nds-color", "drastic-zfast-lcd", "drastic-zfast-lcd-nds-color" };
+		const char* shaderHelp = "Crisp: exact pixel-area scaling. Grid and LCD: the DS's screen grid. Colours: the DS's own, duller colours. CRT: a TV's scanlines. FSR: smooth edges, the heaviest. None costs no GPU work.";
+		if (emu == "bananads")
+		{
+			const std::string bds = "/data/bananads/bananads.conf";
+			add(N, "nds", "Shader", shaderHelp, bds, "kms.shader", shaderNames, shaderValues);
+			add(N, "nds", "3D resolution", "2x draws the DS's 3D at twice its size on these panels. 1x is the DS's own, the lightest.",
+				bds, "render.scale", { "2x", "1x" }, { "2", "1" });
+			add(N, "nds", "Edge marking", "The outlines some games draw round their 3D models (Zelda, Kirby, many Pokémon battles). Off leaves them out.",
+				bds, "render.edge_marking", { "On", "Off" }, { "on", "off" });
+			add(N, "nds", "Fog", "The distance fog some games draw in 3D. Off leaves it out.", bds, "render.fog", { "On", "Off" }, { "on", "off" });
+			add(N, "nds", "Frame pacing", "Panels runs the DS at the panels' 60 Hz, a new frame every refresh (0.3% fast, the sound matched). DS rate keeps the DS's own 59.83 Hz, a frame shown twice every ~6 s.",
+				bds, "kms.pace", { "Panels", "DS rate" }, { "display", "ds" });
+			add(N, "nds", "CPU clock", "Saves battery finds the lowest clock each game runs at full speed and remembers it. Always full keeps the top clock.",
+				bds, "cpugov", { "Saves battery", "Always full" }, { "on", "off" });
+			add(N, "nds", "Timing", "Fast lets the two CPUs run longer between meeting (about 10% faster). Accurate is melonDS's own, for a game that misbehaves.",
+				bds, "core.slice", { "Fast", "Accurate" }, { "auto", "64" });
+			add(N, "nds", "Microphone", "How loud a blow or a word must be to reach the game.", bds, "mic.threshold",
+				{ "Medium", "High", "Low", "Off" }, { "0.15", "0.03", "0.3", "0" });
+		}
+		else
+		{
+			add(N, "nds", "Shader", shaderHelp, sd, "DSFLIP_SHADER", shaderNames, shaderValues);
+			add(N, "nds", "3D resolution", "2x draws the DS's 3D at twice its size on these panels, at full speed with SuperDrastic.", dcfg, "hires_3d", { "2x", "1x" }, { "1", "0" });
+			add(N, "nds", "CPU clock", "Saves battery finds the lowest clock each game runs at full speed and remembers it. Always full keeps the top clock.",
+				sd, "DSFLIP_CPUGOV", { "Saves battery", "Always full" }, { "1", "0" });
+			add(N, "nds", "Frame pacing", "Panels runs the DS at the panels' 60 Hz, a new frame every refresh (0.3% fast, the sound matched). DS rate keeps the DS's own 59.83 Hz, a frame shown twice every ~6 s.",
+				sd, "DSFLIP_PACE", { "Panels", "DS rate" }, { "panels", "ds" });
+		}
 		const char* O = "Other systems";
-		add(O, "gamepad", "Screen", "Which panel the systems other than the DS use (RetroArch). The other panel is switched off.",
+		add(O, "gamepad", "Screen", "Which panel the systems other than the DS use (RetroArch). The other one shows the game panel (Second screen), or is switched off.",
 			"/data/retroarch/retroarch.cfg", "video_monitor_index", { "Top", "Bottom" }, { "2", "1" });
+		add(O, "gamepad", "Second screen", "While a game plays on one screen, the other shows its RetroAchievements and tiles to save, load, open RetroArch's menu, fast forward and quit (by touch when they are on the bottom screen). Off: the other screen stays dark.",
+			menu, "retroarch_panel", { "Game panel", "Off" }, { "panel", "off" });
 		const char* W = "Network";
 		add(W, "phone", "Wi-Fi", "", menu, "wifi", { "On", "Off" }, { "on", "off" });
 		add(W, "phone", "Network", "The networks around: A on one joins it, with a password typed on the keyboard here (or by touch).", "", "network", {}, {}, Item::PAGE);
@@ -298,6 +332,8 @@ namespace banana
 				menu, "timezone", names, tzs);
 		}
 		add(S, "gear", "Update", "A new version of Banana from a package on the card, written to the other slot and run from the next restart; this one stays as it is until then.", "", "update", {}, {}, Item::PAGE);
+		add(S, "picture", "Box art", "Covers, title screens, genres and years for your games, from libretro's free collections (no account, Wi-Fi needed). It keeps going in the background; games that already have art are skipped, so running it again only fetches what is new.",
+			"", "scrape", {}, {}, Item::PAGE);
 		add(S, "gear", "Previous version", "Restarts into the other slot: the version that ran before the last update. Press A twice.", "", "switch", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "SSH", "", menu, "ssh", { "Off", "On" }, { "off", "on" });
 		add(S, "gear", "First-time setup", "The steps from the first boot again: Wi-Fi, the time zone and the RetroAchievements account (ScreenScraper: not available yet).", "", "setup", {}, {}, Item::PAGE);
@@ -310,8 +346,12 @@ namespace banana
 	{
 		if (it.kind == Item::BRIGHTNESS)
 		{
-			// the first backlight's level, in tenths
-			int pm = -1;
+			// the level set (bananad keeps it in banana/backlight; the live one is lower while the idle menu is dimmed,
+			// and the press that opened Settings undims it at the same moment), else the first backlight's, in tenths
+			int pm = atoi(readLine("/run/banana/dim").c_str());		// (dimmed now: the level before)
+			if (pm <= 0) pm = atoi(readLine(data + "/backlight").c_str());
+			if (pm > 0 && pm <= 1000) { it.at = std::min(9, std::max(0, (pm + 50) / 100 - 1)); return; }
+			pm = -1;
 			if (DIR* d = opendir("/sys/class/backlight"))
 			{
 				while (dirent* e = readdir(d))
@@ -350,9 +390,13 @@ namespace banana
 		if (it.key == "led_brightness") def = getConfValue("/etc/banana/bananad.conf", it.key, "128");
 		if (it.key == "video_monitor_index") def = getConfValue("/etc/banana/retroarch.cfg", it.key, "2");
 		std::string v = getConfValue(it.file, it.key, def);
-		it.at = 0;
+		it.at = -1;
 		for (size_t i = 0; i < it.values.size(); i++)
 			if (it.values[i] == v) it.at = (int)i;
+		// a value the list doesn't have (set by hand, or a shader added later): shown as it is and kept, rather than
+		// shown as the first choice and lost at the first press
+		if (it.at < 0 && !v.empty() && it.key != "led_brightness") { it.names.push_back(v); it.values.push_back(v); it.at = (int)it.values.size() - 1; }
+		if (it.at < 0) it.at = 0;
 		// a value between the choices (the LEDs at 128): the nearest one
 		if (it.key == "led_brightness")
 		{
@@ -519,6 +563,7 @@ namespace banana
 		if (it.kind == Item::PAGE)
 		{
 			if (dir <= 0) return NONE;
+			if (it.key == "scrape") { startScrape(); return MOVED; }
 			if (it.key == "update") openUpdates(); else if (it.key == "setup") openSetup(); else openNetworks();
 			return MOVED;
 		}
@@ -545,6 +590,16 @@ namespace banana
 		if (at == it.at) return NONE;
 		it.at = at;
 		save(it);
+		if (it.key == "nds_emulator")
+		{
+			// the other emulator's own settings in the list, the cursor staying on Emulator
+			items.clear();
+			build();
+			for (auto& x : items) load(x);
+			for (size_t i = 0; i < items.size(); i++) if (items[i].key == "nds_emulator") sel = (int)i;
+			armed = -1;
+			return CHANGED;
+		}
 		if (it.key == "theme") { setVariant(it.values[at]); return THEME; }
 		if (it.key == "accent") { rnds::setAccent(it.values[at]); setVariant(light ? "light" : "dark"); return THEME; }
 		return CHANGED;
@@ -734,6 +789,23 @@ namespace banana
 			}
 			else if (kind == "kbd") { st.radius = X(4); st.bg = p.kbdBg; }
 			st.ditherScale = s; st.ditherA = p.ditherA; st.ditherB = p.ditherB;
+			if (cleanFonts)
+			{
+				// the Carts theme: flat panels, a hairline edge, no dither, bands or hard shadows
+				rnds::BoxStyle c;
+				float hair = std::max(1.0f, std::round(s));
+				if (kind == "screen") { c.bg = Color::hex(0x111215); }
+				else if (kind == "pick") { c.radius = X(12); c.bg = p.pick; }
+				else if (kind == "kbd") { c.radius = X(6); c.bg = Color::hex(0xe6e7ea); }	// (a key: light, its letter dark)
+				else
+				{
+					c.radius = X(kind == "hero" ? 16 : kind == "face" ? 10 : 12);
+					c.bg = Color::hex(kind == "hero" ? 0x191a1f : 0x1f2126);
+					c.border = hair;
+					c.borderColor = on ? p.pick : Color(1, 1, 1, kind == "osd" ? 0.5f : 0.08f);
+				}
+				st = c;
+			}
 			rnds::PaintedBox pb = rnds::paintBox(st, dw, dh);
 			Cached c;
 			c.tex = be->upload(pb.bmp, true);
@@ -918,6 +990,35 @@ namespace banana
 
 	// the groups: a grid of tiles in the in-game menu's look (its main page), the group's icon, name and what is in it;
 	// the top panel says what the selected group holds
+	static double steadyMs()
+	{
+		return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now().time_since_epoch()).count();
+	}
+
+	bool Settings::animating() const
+	{
+		if (!mOpen || page != LIST) return false;
+		if (inGroups) return aCol != gsel % 3 || aRow != gsel / 3;
+		return aPick != sel || aTop != top;
+	}
+
+	void Settings::advance()
+	{
+		double t = steadyMs();
+		double dt = aMoving ? std::min(50.0, t - aLast) : 1000.0 / 60;	// (a first step from rest: one refresh)
+		aLast = t;
+		float k = 1 - (float)std::exp(-dt / 55.0);
+		auto ease = [&](float& v, float to) { if (v < -0.5f) v = to; v += (to - v) * k; if (std::fabs(to - v) < 0.01f) v = to; };
+		if (inGroups) { ease(aCol, (float)(gsel % 3)); ease(aRow, (float)(gsel / 3)); }
+		else
+		{
+			int g = groupOf(sel);
+			if (g != aGroup) { aGroup = g; aPick = (float)sel; aTop = (float)top; }	// another group: no slide across
+			ease(aPick, (float)sel); ease(aTop, (float)top);
+		}
+		aMoving = animating();
+	}
+
 	void Settings::renderGroups()
 	{
 		SPal p = pal(light);
@@ -945,11 +1046,14 @@ namespace banana
 		const char* sub = "Choose a group";
 		float sw = text(sub, true, 17, 0, 0, p.muted, false, 0, true);
 		text(sub, true, 17, 602 - sw, 31, p.muted);
+		advance();
+		aGroup = -1;	// (the list starts still when a group opens)
+		for (int g = 0; g < (int)groups.size() && g < 6; g++) box("slot", false, 18 + (g % 3) * 204, 82 + (g / 3) * 166, 196, 158);
+		box("pick", true, 18 + aCol * 204, 82 + aRow * 166, 196, 158);
 		for (int g = 0; g < (int)groups.size() && g < 6; g++)
 		{
-			bool on = g == gsel;
+			bool on = std::fabs(g % 3 - aCol) < 0.5f && std::fabs(g / 3 - aRow) < 0.5f;
 			float x = 18 + (g % 3) * 204, y = 82 + (g / 3) * 166;
-			box(on ? "pick" : "slot", on, x, y, 196, 158);
 			iconCentred(items[groupStart(g)].icon, x + 98, y + 22, 2);
 			std::string label = fit(groups[g], true, 19, 180);
 			float lw = text(label, true, 19, 0, 0, p.ink, false, 0, true);
@@ -1000,7 +1104,12 @@ namespace banana
 				"leave it off on networks you don't trust.";
 			if (ip.empty()) help += " (Not connected to Wi-Fi now.)";
 		}
-		wrapped(help, 20, 50, 196, 540, 7, p.muted);
+		if (cur.key == "scrape" && scraping())
+		{
+			wrapped("Fetching covers and title screens. The menu shows them as they come, and it carries on if you leave this screen.", 20, 50, 196, 540, 4, p.muted);
+			scrapeBar(50, 330, 540);
+		}
+		else wrapped(help, 20, 50, 196, 540, 7, p.muted);
 		be->endScreen();
 
 		// ---- bottom: the list ----
@@ -1012,13 +1121,18 @@ namespace banana
 		snprintf(count, sizeof count, "%02d / %02d", sel - gb + 1, ge - gb);
 		float cw = text(count, true, 17, 0, 0, p.muted, false, 0, true);
 		text(count, true, 17, 602 - cw, 31, p.muted);
-		for (int r = 0; r < ROWS && top + r < ge; r++)
+		// the rows, the highlight and the scroll where their easing has them; rows clipped to the list's band, so one
+		// scrolling in slides from under the header or the buttons
+		advance();
+		be->pushClip(0, X(76), X(640), X(ROWS * 64 + 4));
+		int r0 = std::max(gb, (int)std::floor(aTop)), r1 = std::min(ge, (int)std::ceil(aTop) + ROWS);
+		for (int i = r0; i < r1; i++) box("slot", false, 18, 82 + (i - aTop) * 64, 604, 56);
+		box("pick", true, 18, 82 + (aPick - aTop) * 64, 604, 56);
+		for (int i = r0; i < r1; i++)
 		{
-			int i = top + r;
 			const Item& it = items[i];
-			bool on = i == sel;
-			float y = 82 + r * 64;
-			box(on ? "pick" : "slot", on, 18, y, 604, 56);
+			bool on = std::fabs(i - aPick) < 0.5f;
+			float y = 82 + (i - aTop) * 64;
 			text(it.label, true, 20, 38, y + 16, on ? p.onPick : p.muted);
 			std::string v;
 			if (it.kind == Item::CHOICE || it.kind == Item::BRIGHTNESS || it.kind == Item::VOLUME) v = it.names[it.at];
@@ -1027,6 +1141,7 @@ namespace banana
 			// a page's row: Network the network it is on; Update the packages waiting on the card; the others nothing
 			else if (it.kind == Item::PAGE && it.key == "network") v = wstat.connected ? fit(wstat.ssid, true, 19, 300) : (wifiOn() ? "Choose" : "");
 			else if (it.kind == Item::PAGE && it.key == "update") v = updatesWaiting();
+			else if (it.kind == Item::PAGE && it.key == "scrape") v = scrapeShort();
 			if (v.empty()) continue;
 			float vw = text(v, true, 19, 0, 0, p.ink, false, 0, true);
 			Color vc = on ? (armed == i ? p.onPickAccent : p.onPick) : p.muted;
@@ -1035,9 +1150,10 @@ namespace banana
 			text(v, true, 19, 566 - vw, y + 17, vc);
 			arrow(false, 556 - vw - 2 - std::round(13 / 2.0f + 1), y + 21, vc);
 		}
+		be->popClip();
 		float bw = faceWidth("B", "Back");
 		face("B", "Back", 18, bw);
-		std::string act = cur.kind == Item::ACTION ? (armed == sel ? "Confirm" : cur.label) : cur.kind == Item::INFO ? "" : cur.kind == Item::PAGE ? "Open" : "Change";
+		std::string act = cur.kind == Item::ACTION ? (armed == sel ? "Confirm" : cur.label) : cur.kind == Item::INFO ? "" : cur.key == "scrape" ? (scraping() ? "" : "Start") : cur.kind == Item::PAGE ? "Open" : "Change";
 		if (!act.empty())
 		{
 			float aw = faceWidth("A", act);
@@ -1098,6 +1214,7 @@ namespace banana
 	{
 		now = t;
 		if (!mOpen) return false;
+		bool scrapeChanged = pollScrape(t);
 		if (raCheck)
 		{
 			std::lock_guard<std::mutex> l(raCheck->mu);
@@ -1116,7 +1233,7 @@ namespace banana
 			if (!joining.empty() && now >= nextStatus) pollStatus();
 			if (joining.empty() && now >= nextScan) startScan();
 		}
-		bool changed = false;
+		bool changed = scrapeChanged;
 		if (page == UPDATES && applying && now >= nextStatus2)
 		{
 			std::string before = ustatus;
@@ -1162,6 +1279,7 @@ namespace banana
 		// the account check's answer, and the pop-up going away
 		int mine = raCheck ? 200 : toastUntil > t ? std::max(0, (int)(toastUntil - t) + 1) : -1;
 		if (mine >= 0 && (w < 0 || mine < w)) w = mine;
+		if (scraping() && (w < 0 || w > 500)) w = std::max(0, (int)(scrapeNext - t));	// the box art's progress
 		return w;
 	}
 
@@ -1859,7 +1977,6 @@ namespace banana
 		{
 		case Key::UP: case Key::DOWN:
 			wsel = (wsel + (k == Key::UP ? -1 : 1) + 5) % 5;
-			if (wsel == 3) wsel = (wsel + (k == Key::UP ? -1 : 1) + 5) % 5;	// ScreenScraper: shown, not usable yet
 			message.clear();
 			return MOVED;
 		case Key::LEFT: case Key::RIGHT:
@@ -1876,7 +1993,7 @@ namespace banana
 			case 0: openNetworks(); return MOVED;
 			case 1: return pressSetup(Key::RIGHT);
 			case 2: startEntry(ENTRY_RA_USER, "RetroAchievements", "Account name", SETUP, account("ra_user")); return MOVED;
-			case 3: return NONE;	// ScreenScraper isn't used yet (greyed out)
+			case 3: startScrape(); return MOVED;	// box art: on its own, while the setup goes on
 			default: setupDone(); return CLOSED;
 			}
 		case Key::B: case Key::START:
@@ -1892,18 +2009,18 @@ namespace banana
 		Item* tz = nullptr;
 		for (auto& it : items) if (it.key == "timezone") tz = &it;
 		std::string ra = account("ra_user"), ss = account("ss_user");
-		static const char* names[5] = { "Wi-Fi", "Time zone", "RetroAchievements", "ScreenScraper", "Finish" };
+		static const char* names[5] = { "Wi-Fi", "Time zone", "RetroAchievements", "Box art", "Finish" };
 		std::string status[5] = {
 			wstat.connected ? "Connected to " + wstat.ssid : wifiOn() ? "Not connected" : "Off",
 			tz ? tz->names[tz->at] : "",
 			ra.empty() ? "Not signed in" : ra,
-			"Not available yet",	// ScreenScraper: no scraper uses it yet (the row is greyed out and skipped)
+			scrapeShort(),
 			"" };
 		static const char* helps[5] = {
 			"Your home network: the games' achievements, the clock and the art need it. A picks it from the networks around; the password goes in on the keyboard.",
 			"The clock on the top screen, and the games' own clocks. Left and right change it.",
 			"Your retroachievements.org account: DraStic and RetroArch unlock achievements with it. A types the name, then the password. Leave it if you have none.",
-			"Your screenscraper.fr account, for the box art and cartridge labels when they are fetched. A types the name, then the password. Leave it if you have none.",
+			"Covers, title screens, genres and years for the games on the card, from libretro's free collections: no account. A starts it (Wi-Fi first); it keeps going while you finish the setup, and the menu shows the art as it comes. Settings > System > Box art runs it again for new games.",
 			"Everything here is in the settings too (Start in the menu), and this setup is under System > First-time setup. A finishes." };
 		be->beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
@@ -1912,7 +2029,12 @@ namespace banana
 		text("First-time setup", true, 17, 170, 62, p.muted, true, 1.4f);
 		text(names[wsel], true, 30, 170, 88, p.ink);
 		if (!status[wsel].empty()) text(fit(status[wsel], true, 22, 420), true, 22, 170, 130, p.accent);
-		wrapped(message.empty() ? helps[wsel] : message, 20, 50, 196, 540, 7, p.muted);
+		if (wsel == 3 && scraping())
+		{
+			wrapped("Fetching covers and title screens. It carries on while you finish the setup.", 20, 50, 196, 540, 4, p.muted);
+			scrapeBar(50, 330, 540);
+		}
+		else wrapped(message.empty() ? helps[wsel] : message, 20, 50, 196, 540, 7, p.muted);
 		be->endScreen();
 
 		be->beginScreen(1);
@@ -1928,7 +2050,6 @@ namespace banana
 			float y = 82 + r * 64;
 			box(on ? "pick" : "slot", on, 18, y, 604, 56);
 			Color c = on ? p.onPick : p.muted;
-			if (r == 3) { c = p.muted; c.a = 0.4f; }	// ScreenScraper: greyed out
 			text(names[r], true, 20, 38, y + 16, c);
 			if (status[r].empty()) continue;
 			std::string v = fit(status[r], true, 19, 300);
@@ -1938,9 +2059,462 @@ namespace banana
 		}
 		float bw = faceWidth("B", "Skip");
 		face("B", "Skip", 18, bw);
-		const char* act = wsel == 4 ? "Finish" : wsel == 1 ? "Next zone" : "Open";
+		const char* act = wsel == 4 ? "Finish" : wsel == 1 ? "Next zone" : wsel == 3 ? (scraping() ? "Running" : "Start") : "Open";
 		float aw = faceWidth("A", act);
 		face("A", act, 622 - aw, aw);
+		be->endScreen();
+	}
+
+	// ---- box art: banana-scrape --------------------------------------------------------------------------------
+	bool Settings::pollScrape(double t)
+	{
+		if (t < scrapeNext) return false;
+		scrapeNext = t + 500;
+		std::string ln = readLine("/run/banana/scrape.status");
+		if (ln == scrapeLine) return false;
+		bool was = scraping();
+		scrapeLine = ln;
+		if (was && ln.compare(0, 5, "done ") == 0) libChanged = true;	// the art is there: the library again
+		return true;
+	}
+
+	void Settings::startScrape()
+	{
+		if (scraping()) return;
+		if (!wifiOn()) { message = "Wi-Fi is off: switch it on in Network first."; return; }
+		std::ofstream("/run/banana/scrape.status") << "running 0 0 |starting\n";
+		scrapeLine.clear();
+		scrapeNext = 0;
+		const char* prog = getenv("BANANA_SCRAPE");	// (another build of it, for testing)
+		spawn(prog && *prog ? prog : "/usr/bin/banana-scrape", nullptr);
+	}
+
+	std::string Settings::scrapeShort() const
+	{
+		std::istringstream in(scrapeLine);
+		std::string state;
+		in >> state;
+		if (state == "running") { int a = 0, b = 0; in >> a >> b; return b ? std::to_string(a) + " / " + std::to_string(b) : "Starting"; }
+		if (state == "done") { int a = 0, b = 0; in >> a >> b; return std::to_string(a) + " of " + std::to_string(b) + " found"; }
+		if (state == "error") return scrapeLine.find("connection") != std::string::npos ? "No connection" : "Didn't work";
+		return "Not yet";
+	}
+
+	void Settings::scrapeBar(float x, float y, float w)
+	{
+		SPal p = pal(light);
+		std::istringstream in(scrapeLine);
+		std::string state, rest;
+		int a = 0, b = 0;
+		in >> state >> a >> b;
+		std::getline(in, rest);
+		rest = trim(rest);
+		std::string sys = rest.substr(0, rest.find('|')), game = rest.find('|') == std::string::npos ? "" : rest.substr(rest.find('|') + 1);
+		be->fill(X(x), X(y), X(w), X(14), p.line);
+		if (b > 0) be->fill(X(x + 2), X(y + 2), X((w - 4) * a / b), X(10), p.accent);
+		text(fit(sys.empty() ? "Starting" : sys, true, 17, w), true, 17, x, y + 26, p.ink);
+		text(fit(game, false, 16, w), false, 16, x, y + 52, p.muted);
+	}
+
+	// ---- the game panel -----------------------------------------------------------------------------------------
+	// RetroArch logs (--verbose, run-retroarch's game panel mode) what its RetroAchievements client does: the hash it
+	// made, the game it identified ("Identified game: 264 "EarthBound" (hash)") and each unlock ("Awarding achievement
+	// 1234: Title"). The game's list, the account's unlocks and the badges come from the server on a thread, with
+	// the account RetroArch keeps in its retroarch.cfg (cheevos_username, cheevos_token).
+	namespace
+	{
+		struct RaAch { uint32_t id = 0; std::string title, desc, badge; unsigned points = 0; };
+		// the objects of an array in the server's JSON ("Achievements":[{...},{...}]), as text
+		std::vector<std::string> jsonObjects(const std::string& j, const std::string& key)
+		{
+			std::vector<std::string> out;
+			size_t at = j.find("\"" + key + "\"");
+			if (at == std::string::npos) return out;
+			at = j.find('[', at);
+			if (at == std::string::npos) return out;
+			int depth = 0;
+			bool str = false;
+			size_t start = 0;
+			for (size_t i = at + 1; i < j.size(); i++)
+			{
+				char c = j[i];
+				if (str) { if (c == '\\') i++; else if (c == '"') str = false; continue; }
+				if (c == '"') str = true;
+				else if (c == '{') { if (depth++ == 0) start = i; }
+				else if (c == '}') { if (--depth == 0) out.push_back(j.substr(start, i - start + 1)); }
+				else if (c == ']' && depth == 0) break;
+			}
+			return out;
+		}
+		std::string cfgValue(const std::string& path, const std::string& key)
+		{
+			std::string v = getConfValue(path, key, "");
+			return v;
+		}
+		// a POST to the server's dorequest.php; "" when it can't be reached
+		std::string raPost(const std::string& fields)
+		{
+			Curl cu;
+			if (!cu.load()) return "";
+			void* h = cu.init();
+			if (!h) return "";
+			enum { WRITEDATA = 10001, URL = 10002, POSTFIELDS = 10015, USERAGENT = 10018, WRITEFUNCTION = 20011, TIMEOUT = 13, NOSIGNAL = 99 };
+			std::string body;
+			cu.setopt(h, URL, "https://retroachievements.org/dorequest.php");
+			cu.setopt(h, POSTFIELDS, fields.c_str());
+			cu.setopt(h, USERAGENT, "BananaOS/0.2 rcheevos");
+			cu.setopt(h, NOSIGNAL, 1L);
+			cu.setopt(h, TIMEOUT, 20L);
+			cu.setopt(h, WRITEFUNCTION, onBody);
+			cu.setopt(h, WRITEDATA, &body);
+			bool ok = cu.perform(h) == 0;
+			cu.cleanup(h);
+			return ok ? body : "";
+		}
+		bool fetchFile(const std::string& url, const std::string& path)
+		{
+			Curl cu;
+			if (!cu.load()) return false;
+			void* h = cu.init();
+			if (!h) return false;
+			enum { WRITEDATA = 10001, URL = 10002, USERAGENT = 10018, WRITEFUNCTION = 20011, TIMEOUT = 13, NOSIGNAL = 99, RESPONSE_CODE = 0x200002 };
+			std::string body;
+			long status = 0;
+			cu.setopt(h, URL, url.c_str());
+			cu.setopt(h, USERAGENT, "BananaOS/0.2 rcheevos");
+			cu.setopt(h, NOSIGNAL, 1L);
+			cu.setopt(h, TIMEOUT, 20L);
+			cu.setopt(h, WRITEFUNCTION, onBody);
+			cu.setopt(h, WRITEDATA, &body);
+			bool ok = cu.perform(h) == 0;
+			if (ok) cu.getinfo(h, RESPONSE_CODE, &status);
+			cu.cleanup(h);
+			if (!ok || status != 200 || body.size() < 8) return false;
+			std::string tmp = path + ".part";
+			FILE* f = fopen(tmp.c_str(), "wb");
+			if (!f) return false;
+			fwrite(body.data(), 1, body.size(), f);
+			fclose(f);
+			return rename(tmp.c_str(), path.c_str()) == 0;
+		}
+		const char* const BADGES = "/data/banana/cache/ra-badges";
+		const char* const IC_SAVE[12] = { "##########..", "#..#####.##.", "#..#####..##", "#..#####...#", "#..........#", "#..........#",
+			"#.########.#", "#.#......#.#", "#.#......#.#", "#.#......#.#", "#.########.#", "############" };
+		const char* const IC_LOAD[12] = { "............", ".####.......", "#....#......", "#.....######", "#..........#", "#....##....#",
+			"#....##....#", "#..######..#", "#...####...#", "#....##....#", "#..........#", "############" };
+		const char* const IC_LIST[12] = { "............", "##.#########", "##.#########", "............", "............", "##.#########",
+			"##.#########", "............", "............", "##.#########", "##.#########", "............" };
+		const char* const IC_FFWD[12] = { "............", "#.....#.....", "##....##....", "###...###...", "####..####..", "#####.#####.",
+			"#####.#####.", "####..####..", "###...###...", "##....##....", "#.....#.....", "............" };
+		const char* const IC_EXIT[12] = { "######......", "#....#......", "#....#...#..", "#....#...##.", "#....#######", "#....#######",
+			"#....#...##.", "#....#...#..", "#....#......", "#....#......", "######......", "............" };
+		struct GTile { const char* label; const char* keys; const char* const* icon; };
+		const GTile GTILES[5] = { { "Save", "F + R", IC_SAVE }, { "Load", "F + L", IC_LOAD }, { "Menu", "F + X", IC_LIST },
+			{ "Fast", "F + R2", IC_FFWD }, { "Quit", "F + START", IC_EXIT } };
+	}
+
+	struct Settings::RaWatch
+	{
+		std::mutex mu;
+		// 0 waiting for RetroArch's client, 1 looking the game up, 2 ready, 3 no achievements for this game, 4 no
+		// account, 5 no connection
+		int state = 0;
+		std::string game, hash;
+		uint32_t gameId = 0;
+		std::vector<RaAch> all;
+		std::map<uint32_t, long long> unlocked;		// id -> when (unix time)
+		std::map<std::string, bool> badgeReady;		// badge name -> its file is in BADGES
+		int gen = 0;
+		std::string user, token;
+		long long pos = 0;
+		std::string part;
+		double since = 0;
+		// the badge's file, fetched on a thread when it isn't cached yet
+		void wantBadge(const std::shared_ptr<RaWatch>& self, const std::string& name)
+		{
+			if (name.empty() || badgeReady.count(name)) return;
+			std::string path = std::string(BADGES) + "/" + name + ".png";
+			if (access(path.c_str(), R_OK) == 0) { badgeReady[name] = true; return; }
+			badgeReady[name] = false;
+			std::thread([self, name, path]
+			{
+				if (system((std::string("mkdir -p ") + BADGES).c_str()) != 0) {}
+				bool ok = fetchFile("https://media.retroachievements.org/Badge/" + name + ".png", path);
+				std::lock_guard<std::mutex> l(self->mu);
+				if (ok) { self->badgeReady[name] = true; self->gen++; }
+			}).detach();
+		}
+		static void fetch(std::shared_ptr<RaWatch> w)
+		{
+			std::string user, token, hash;
+			uint32_t id;
+			{
+				std::lock_guard<std::mutex> l(w->mu);
+				user = w->user; token = w->token; hash = w->hash; id = w->gameId;
+			}
+			Curl cu;
+			std::string g = std::to_string(id);
+			std::string patch = raPost("r=patch&u=" + user + "&t=" + token + "&g=" + g);
+			fprintf(stderr, "game panel: game %s: the server sent %zu bytes (%s)\n", g.c_str(), patch.size(),
+				patch.empty() ? "no reply" : jsonField(patch, "Success") == "true" ? "ok" : jsonField(patch, "Error").c_str());
+			if (patch.empty() || jsonField(patch, "Success") != "true")
+			{
+				std::lock_guard<std::mutex> l(w->mu);
+				w->state = patch.empty() ? 5 : 3;
+				w->gen++;
+				return;
+			}
+			std::vector<RaAch> all;
+			for (auto& o : jsonObjects(patch, "Achievements"))
+			{
+				if (jsonField(o, "Flags") != "3") continue;	// core achievements only (5: unofficial)
+				RaAch a;
+				a.id = (uint32_t)strtoul(jsonField(o, "ID").c_str(), nullptr, 10);
+				if (a.id == 101000001) continue;	// the server's "Warning: Unknown Emulator", not one of the game's
+				a.title = jsonField(o, "Title");
+				a.desc = jsonField(o, "Description");
+				a.badge = jsonField(o, "BadgeName");
+				a.points = (unsigned)atoi(jsonField(o, "Points").c_str());
+				all.push_back(a);
+			}
+			// (softcore: the panel only reads; RetroArch keeps its own session, and a hardcore one from a client the
+			// server doesn't know gets its warning)
+			std::string sess = raPost("r=startsession&u=" + user + "&t=" + token + "&g=" + g + "&h=0" + (hash.empty() ? "" : "&m=" + hash));
+			std::map<uint32_t, long long> un;
+			for (const char* k : { "Unlocks", "HardcoreUnlocks" })
+				for (auto& o : jsonObjects(sess, k))
+					un[(uint32_t)strtoul(jsonField(o, "ID").c_str(), nullptr, 10)] = atoll(jsonField(o, "When").c_str());
+			std::lock_guard<std::mutex> l(w->mu);
+			w->all = all;
+			for (auto& u : un) if (!w->unlocked.count(u.first)) w->unlocked[u.first] = u.second;
+			w->state = all.empty() ? 3 : 2;
+			w->gen++;
+		}
+		// RetroArch's log since the last look
+		void poll(const std::shared_ptr<RaWatch>& self, double nowMs)
+		{
+			FILE* f = fopen("/run/banana/retroarch.log", "r");
+			if (!f) return;
+			// a new log (shorter than what was read): from its start
+			if (fseek(f, 0, SEEK_END) == 0 && ftell(f) < (long)pos) { pos = 0; part.clear(); }
+			if (fseek(f, (long)pos, SEEK_SET) != 0) { fclose(f); return; }
+			char buf[8192];
+			size_t n;
+			while ((n = fread(buf, 1, sizeof buf, f)) > 0) { part.append(buf, n); pos += (long long)n; }
+			fclose(f);
+			size_t nl;
+			while ((nl = part.find('\n')) != std::string::npos)
+			{
+				std::string ln = part.substr(0, nl);
+				part.erase(0, nl + 1);
+				if (ln.find("[RCHEEVOS]") == std::string::npos) continue;
+				std::lock_guard<std::mutex> l(mu);
+				size_t at;
+				if ((at = ln.find("Generated hash ")) != std::string::npos) hash = ln.substr(at + 15, 32);
+				else if ((at = ln.find("Identified game: ")) != std::string::npos)
+				{
+					gameId = (uint32_t)strtoul(ln.c_str() + at + 17, nullptr, 10);
+					size_t q0 = ln.find('"', at), q1 = ln.rfind('"');
+					if (q0 != std::string::npos && q1 > q0) game = ln.substr(q0 + 1, q1 - q0 - 1);
+					if (!gameId) { state = 3; gen++; continue; }
+					fprintf(stderr, "game panel: RetroArch identified game %u (%s)\n", gameId, game.c_str());
+					state = 1; gen++;
+					std::thread(fetch, self).detach();
+				}
+				else if (ln.find("Unknown game") != std::string::npos || ln.find("not recognized") != std::string::npos) { state = 3; gen++; }
+				else if (ln.find("Login failed") != std::string::npos && state < 2) { state = ln.find("No response") != std::string::npos ? 5 : 4; gen++; }
+				else if ((at = ln.find("Awarding achievement ")) != std::string::npos)
+				{
+					uint32_t id = (uint32_t)strtoul(ln.c_str() + at + 21, nullptr, 10);
+					if (id == 101000001) continue;	// (the server's warning)
+					unlocked[id] = (long long)time(nullptr);
+					gen++;
+				}
+			}
+			std::lock_guard<std::mutex> l(mu);
+			if (state == 0 && since > 0 && nowMs - since > 30000) { state = 5; gen++; fprintf(stderr, "game panel: no game from RetroArch's log in 30 s\n"); }	// RetroArch's client never got the game
+		}
+	};
+
+	void Settings::gameOpen(const std::string& title, const std::string& system, int screen, bool touch)
+	{
+		gTitle = title; gSystem = system; gScreen = screen; gTouch = touch;
+		gFlash = gDown = -1; gSeen = -1;
+		raw = std::make_shared<RaWatch>();
+		raw->since = now;
+		std::string cfg = "/data/retroarch/retroarch.cfg";
+		raw->user = cfgValue(cfg, "cheevos_username");
+		raw->token = cfgValue(cfg, "cheevos_token");
+		if (cfgValue(cfg, "cheevos_enable") != "true" || raw->user.empty()) raw->state = 4;
+	}
+
+	void Settings::gameClose()
+	{
+		raw.reset();
+		gBadges.clear();
+	}
+
+	bool Settings::gameUpdate(double t)
+	{
+		now = t;
+		bool changed = false;
+		if (raw)
+		{
+			if (raw->since == 0) raw->since = t;
+			raw->poll(raw, t);
+			std::lock_guard<std::mutex> l(raw->mu);
+			// a token RetroArch wrote while the game started (a first login)
+			if (raw->token.empty() && raw->state != 4) raw->token = cfgValue("/data/retroarch/retroarch.cfg", "cheevos_token");
+			if (raw->gen != gSeen) changed = true;
+		}
+		if (gFlash >= 0 && t >= gFlashUntil && gDown < 0) { gFlash = -1; changed = true; }
+		return changed;
+	}
+
+	bool Settings::gameProgress(int& unlocked, int& total)
+	{
+		if (!raw) return false;
+		std::lock_guard<std::mutex> l(raw->mu);
+		if (raw->state != 2 || raw->all.empty()) return false;
+		total = (int)raw->all.size();
+		unlocked = 0;
+		for (auto& a : raw->all) if (raw->unlocked.count(a.id)) unlocked++;
+		return true;
+	}
+
+	Settings::GameAction Settings::gameTouch(float x, float y, bool down)
+	{
+		float lx = x / s, ly = y / s;
+		int hit = -1;
+		for (int i = 0; i < 5; i++)
+		{
+			float tx = 18 + i * 122;
+			if (lx >= tx && lx < tx + 114 && ly >= 300 && ly < 420) hit = i;
+		}
+		if (down) { gDown = gFlash = hit; gFlashUntil = now + 10000; return G_NONE; }
+		int was = gDown;
+		gDown = -1;
+		gFlashUntil = now + 220;
+		if (hit < 0 || hit != was) { gFlash = -1; return G_NONE; }
+		static const GameAction acts[5] = { G_SAVE, G_LOAD, G_MENU, G_FFWD, G_QUIT };
+		return acts[hit];
+	}
+
+	void Settings::gameRender()
+	{
+		SPal p = pal(light);
+		int state;
+		std::string game;
+		unsigned total = 0, got = 0;
+		struct Row { std::string title, desc, badge; long long when; unsigned points; };
+		std::vector<Row> rows;
+		{
+			std::lock_guard<std::mutex> l(raw->mu);
+			gSeen = raw->gen;
+			state = raw->state;
+			game = raw->game;
+			total = (unsigned)raw->all.size();
+			for (auto& a : raw->all)
+			{
+				auto u = raw->unlocked.find(a.id);
+				if (u == raw->unlocked.end()) continue;
+				got++;
+				rows.push_back({ a.title, a.desc, a.badge, u->second, a.points });
+			}
+			std::sort(rows.begin(), rows.end(), [](const Row& a, const Row& b) { return a.when > b.when; });
+			if (rows.size() > 2) rows.resize(2);
+			for (auto& r : rows) raw->wantBadge(raw, r.badge);
+		}
+		be->beginScreen(gScreen);
+		box("screen", false, 0, 0, 640, 480);
+		// ---- the header: the game, the system
+		box("bubble", false, 18, 14, 604, 54);
+		std::string sys = fit(gSystem, true, 17, 200);
+		float sw = text(sys, true, 17, 0, 0, p.muted, false, 0, true);
+		text(sys, true, 17, 602 - sw, 31, p.muted);
+		text(fit(gTitle, true, 22, 540 - sw), true, 22, 38, 28, p.ink);
+		// ---- the achievements
+		box("slot", false, 18, 80, 604, 206);
+		text("Latest achievements", true, 15, 40, 96, p.muted, true, 1.2f);
+		if (state == 2 && total)
+		{
+			std::string v = std::to_string(got) + " / " + std::to_string(total);
+			float vw = text(v, true, 15, 0, 0, p.muted, false, 0, true);
+			text(v, true, 15, 600 - vw, 96, p.accent);
+			float bx = 40, bw = 560, by = 122;
+			be->fill(X(bx), X(by), X(bw), X(10), p.line);
+			be->fill(X(bx + 2), X(by + 2), X((bw - 4) * got / total), X(6), p.accent);
+			if (rows.empty()) text("None unlocked yet. Good luck!", false, 18, 40, 150, p.muted);
+			for (size_t i = 0; i < rows.size(); i++)
+			{
+				float y = 146 + i * 66;
+				auto& r = rows[i];
+				// the badge: its picture when cached, else a tile with a star
+				rnds::TexPtr tex;
+				auto bi = gBadges.find(r.badge);
+				if (bi != gBadges.end()) tex = bi->second;
+				else
+				{
+					bool ready = false;
+					{ std::lock_guard<std::mutex> l(raw->mu); auto b = raw->badgeReady.find(r.badge); ready = b != raw->badgeReady.end() && b->second; }
+					if (ready)
+					{
+						rnds::Bitmap b = rnds::decodeFile(std::string(BADGES) + "/" + r.badge + ".png");
+						if (!b.empty()) { tex = be->upload(b, true); gBadges[r.badge] = tex; }
+					}
+				}
+				box("bubble", false, 40, y, 56, 56);
+				if (tex) be->draw(tex, X(43), X(y + 3), X(50), X(50), Color(1, 1, 1, 1));
+				else text("*", true, 30, 58, y + 10, p.accent);
+				// when: "just now", "12 min ago", today's time, or the date
+				char w[40];
+				long long age = (long long)time(nullptr) - r.when;
+				if (age < 60) snprintf(w, sizeof w, "just now");
+				else if (age < 3600) snprintf(w, sizeof w, "%lld min ago", age / 60);
+				else
+				{
+					time_t tt = (time_t)r.when, nt = time(nullptr);
+					struct tm a, b;
+					localtime_r(&tt, &a); localtime_r(&nt, &b);
+					if (a.tm_yday == b.tm_yday && a.tm_year == b.tm_year) strftime(w, sizeof w, "today %H:%M", &a);
+					else strftime(w, sizeof w, "%d %b %Y", &a);
+				}
+				float ww = text(w, false, 15, 0, 0, p.muted, false, 0, true);
+				text(w, false, 15, 600 - ww, y + 6, p.muted);
+				text(fit(r.title, true, 19, 480 - ww), true, 19, 110, y + 4, p.ink);
+				text(fit(r.desc, false, 15, 490), false, 15, 110, y + 32, p.muted);
+			}
+		}
+		else
+		{
+			const char* msg = state == 0 ? "Waiting for RetroArch..." : state == 1 ? "Looking the game up..." :
+				state == 3 ? "This game has no achievements." :
+				state == 4 ? "RetroAchievements is off, or its login failed: check the account in Settings > System > First-time setup." :
+				"No connection to RetroAchievements: check Wi-Fi.";
+			wrapped(msg, 18, 40, 130, 560, 3, p.muted);
+		}
+		// ---- the tiles: RetroArch's commands by touch, and their buttons
+		for (int i = 0; i < 5; i++)
+		{
+			float x = 18 + i * 122, y = 300;
+			bool on = gFlash == i;
+			box(on ? "pick" : "slot", on, x, y, 114, 120);
+			Color fg = on ? p.onPick : (i == 4 ? Color::hex(0xff8a96) : p.ink);
+			int k = std::max(1, (int)std::lround(3 * s));
+			float ix = std::round(X(x + 57) - 6 * k), iy = std::round(X(y + 16));
+			for (int r = 0; r < 12; r++)
+				for (int c = 0; c < 12; c++)
+					if (GTILES[i].icon[r][c] == '#') be->fill(ix + c * k, iy + r * k, (float)k, (float)k, fg);
+			std::string lb = GTILES[i].label;
+			float lw = text(lb, true, 19, 0, 0, fg, false, 0, true);
+			text(lb, true, 19, x + 57 - lw / 2, y + 60, fg);
+			std::string kk = GTILES[i].keys;
+			float kw = text(kk, false, 14, 0, 0, p.muted, false, 0, true);
+			text(kk, false, 14, x + 57 - kw / 2, y + 90, on ? p.onPickAccent : p.muted);
+		}
+		std::string hint = gTouch ? "Tap a tile, or hold F with the button under it" : "Hold F with the button under each tile";
+		float hw = text(hint, false, 15, 0, 0, p.muted, false, 0, true);
+		text(hint, false, 15, 320 - hw / 2, 438, p.muted);
 		be->endScreen();
 	}
 }

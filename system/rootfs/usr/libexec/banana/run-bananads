@@ -17,19 +17,23 @@ export BANANADS_SAVES=/data/saves/nds BANANADS_STATES=/data/states/nds BANANADS_
 export BANANADS_FRONTEND=kms BANANADS_SAVE_DIR=/data/saves/nds BANANADS_STATE_DIR=/data/states/nds
 [ -f $L/bananads.log ] && mv -f $L/bananads.log $L/bananads.1.log
 export BANANADS_LOG_FILE=$L/bananads.log
-# Settings > Nintendo DS: the 3D resolution (drastic.cfg's hires_3d, shared with DraStic) and the renderer (Gengis
-# Engine, superdrastic.conf's DSFLIP_RAST=1, or the emulator's own: melonDS's software renderer for BananaDS)
-# (the card has no drastic.cfg until DraStic's first run or the setting's first change: then the packaged one's
-# value, which is what the settings screen shows)
-dcfg=/data/drastic/config/drastic.cfg; [ -f $dcfg ] || dcfg=/usr/share/drastic/config/drastic.cfg
-hires=$(sed -n 's/^ *hires_3d *= *//p' $dcfg 2>/dev/null | head -n 1)
-rast=$(sed -n 's/^ *DSFLIP_RAST *= *//p' /data/banana/superdrastic.conf 2>/dev/null | head -n 1)
-[ "$hires" = 1 ] && export BANANADS_RENDER_SCALE=2
-[ "$rast" = 0 ] && export BANANADS_RENDER_RENDERER=soft
-# ...and the shader (DSFLIP_SHADER, the same choice for both emulators): BananaDS runs SuperDrastic's shader pass on
-# SuperDrastic's shader files
-shader=$(sed -n 's/^ *DSFLIP_SHADER *= *//p' /data/banana/superdrastic.conf 2>/dev/null | head -n 1)
-[ -n "$shader" ] && export BANANADS_KMS_SHADER=$shader DSFLIP_SHADER_DIR=/usr/lib/superdrastic/shaders
+# Settings > Nintendo DS with BananaDS chosen: its own settings, kept in its own file (bananads.conf, which BananaDS
+# reads itself): the shader (kms.shader, SuperDrastic's shader pass on SuperDrastic's shader files), the 3D resolution
+# (render.scale) and the rest. A card from before they were BananaDS's own gets DraStic's choices copied over once.
+C=$D/bananads.conf
+has() { grep -q "^ *$1 *=" $C 2>/dev/null; }
+if ! has kms.shader; then
+    shader=$(sed -n 's/^ *DSFLIP_SHADER *= *//p' /data/banana/superdrastic.conf 2>/dev/null | head -n 1)
+    [ -n "$shader" ] && echo "kms.shader = $shader" >> $C
+fi
+if ! has render.scale; then
+    dcfg=/data/drastic/config/drastic.cfg; [ -f $dcfg ] || dcfg=/usr/share/drastic/config/drastic.cfg
+    hires=$(sed -n 's/^ *hires_3d *= *//p' $dcfg 2>/dev/null | head -n 1)
+    [ "$hires" = 0 ] && echo "render.scale = 1" >> $C || echo "render.scale = 2" >> $C
+fi
+export DSFLIP_SHADER_DIR=/usr/lib/superdrastic/shaders
+# the 3D always through the Gengis Engine (SuperDrastic's rasterizer), as SuperDrastic does
+export BANANADS_RENDER_RENDERER=gengis
 # Settings > Nintendo DS > Quick resume (settings.conf's quick_resume): off, a quit ends the game and the next start
 # is from its title (no resume state written or loaded)
 grep -q '^ *quick_resume *= *on' /data/banana/settings.conf 2>/dev/null || export BANANADS_RESUME_ON_QUIT=off BANANADS_RESUME_ON_START=off
@@ -44,6 +48,12 @@ fi
 export BANANADS_FIRMWARE_NICKNAME=${BANANADS_FIRMWARE_NICKNAME:-Banana}
 # anything else for one run: /data/banana/bananads.env (shell assignments, exported), e.g. BANANADS_KMS_STATS=600
 if [ -f /data/banana/bananads.env ]; then set -a; . /data/banana/bananads.env; set +a; fi
+# the in-game save as DraStic left it, when it played the game last (nds-saves: the two emulators share saves); a
+# quick resume state older than the save is dropped, as run-drastic does: loading it would put an older save back
+/usr/libexec/banana/nds-saves "$1"
+G=$(basename "$1"); G=${G%.*}
+[ -f "/data/states/nds/$G.resume.mst" ] && [ -f "/data/saves/nds/$G.sav" ] && [ "/data/saves/nds/$G.sav" -nt "/data/states/nds/$G.resume.mst" ] &&
+    rm -f "/data/states/nds/$G.resume.mst"
 # a zipped game (the library lists .zip for the DS, DraStic opens them): BananaDS opens .nds only, so the zip's game is
 # unpacked once into the card's cache, named after the zip (its saves and states then go by the name the menu shows),
 # and unpacked again only when the zip is newer

@@ -22,8 +22,8 @@ mark() { read up rest < /proc/uptime; printf '%-28s %6.2f s\n' "$1" "$up" >> /ru
 grep -q 'banana\.console=1' /proc/cmdline && mark() { read up rest < /proc/uptime; printf '%-28s %6.2f s\n' "$1" "$up" | tee -a /run/banana/boot-times > /dev/console; }
 mark "rcS: started"
 [ -f /etc/sysctl.d/banana.conf ] && sysctl -q -p /etc/sysctl.d/banana.conf
+hostname banana	# (before syslogd: it takes the name once, and the kernel's default is ROCKNIX's unfilled @DEVICENAME@)
 syslogd -O /run/banana/messages -s 256 -b 1
-hostname banana
 
 # the card we booted from: the system is one of its two root slots (partitions 2 and 3, banana-root-a and -b; the
 # kernel's root= says which one booted), the games and settings its fourth partition

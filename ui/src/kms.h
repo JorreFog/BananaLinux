@@ -38,11 +38,16 @@ namespace banana
 		void handleEvents();	// the flip events from pollFd()
 		// after a resume or a lost master: show the current buffers again
 		void restore();
+		// screen s's panel (its connector, CRTC and primary plane) leased to a program that draws on it itself (a
+		// RetroArch game while the menu keeps the other panel for the game panel): the lease's fd, which is that
+		// program's DRM device, or -1. present() and restore() leave the screen alone until close().
+		int lease(int s);
+		int leasedScreen() const { return leased; }
 
 	private:
 		struct Buf { uint32_t handle = 0, fb = 0, pitch = 0; uint64_t size = 0; uint8_t* map = nullptr; };
 		struct Panel { uint32_t conn = 0, crtc = 0; uint8_t mode[68]; Buf buf[2]; int front = 0; Damage missed[2]; };
-		int fd = -1, W = 0, H = 0, pending = 0;
+		int fd = -1, W = 0, H = 0, pending = 0, leased = -1;
 		Panel p[2];
 		bool makeBuf(Buf& b);
 		void freeBuf(Buf& b);

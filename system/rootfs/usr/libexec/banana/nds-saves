@@ -1,0 +1,36 @@
+#!/bin/sh
+# The DS's in-game saves shared by the two DS emulators: DraStic (SuperDrastic) keeps drastic/backup/<game>.dsv, the
+# raw save with DeSmuME's 122-byte footer when DraStic wrote it ("...|-DESMUME SAVE-|"), BananaDS (melonDS) keeps
+# saves/nds/<game>.sav, the raw save. Before either starts a game, the newer of the two is copied over the other in
+# its form (the footer left off for BananaDS; DraStic reads a raw save as well), the one replaced kept as .bak. Run by
+# run-drastic and run-bananads.
+#   nds-saves <rom>
+G=$(basename "$1"); G=${G%.*}
+DSV="/data/drastic/backup/$G.dsv"
+SAV="/data/saves/nds/$G.sav"
+mkdir -p /data/drastic/backup /data/saves/nds
+raw_of_dsv() {   # raw_of_dsv <dsv> <out>: the save without DeSmuME's footer
+    local n=$(wc -c < "$1")
+    if [ $n -gt 122 ] && [ "$(tail -c 16 "$1")" = "|-DESMUME SAVE-|" ]; then
+        head -c $((n - 122)) "$1" > "$2"
+    else
+        cat "$1" > "$2"
+    fi
+}
+if [ -f "$DSV" ] && { [ ! -f "$SAV" ] || [ "$DSV" -nt "$SAV" ]; }; then
+    raw_of_dsv "$DSV" "$SAV.new" || exit 0
+    if [ -f "$SAV" ] && cmp -s "$SAV.new" "$SAV"; then rm -f "$SAV.new"; exit 0; fi
+    [ -f "$SAV" ] && cp -p "$SAV" "$SAV.bak"
+    mv -f "$SAV.new" "$SAV" && touch -r "$DSV" "$SAV"
+    echo "nds-saves: $G: DraStic's save is newer: BananaDS takes it"
+elif [ -f "$SAV" ] && { [ ! -f "$DSV" ] || [ "$SAV" -nt "$DSV" ]; }; then
+    if [ -f "$DSV" ]; then
+        raw_of_dsv "$DSV" "/tmp/nds-saves.$$"
+        cmp -s "/tmp/nds-saves.$$" "$SAV" && { rm -f "/tmp/nds-saves.$$"; exit 0; }
+        rm -f "/tmp/nds-saves.$$"
+        cp -p "$DSV" "$DSV.bak"
+    fi
+    cat "$SAV" > "$DSV.new" && mv -f "$DSV.new" "$DSV" && touch -r "$SAV" "$DSV"
+    echo "nds-saves: $G: BananaDS's save is newer: DraStic takes it"
+fi
+exit 0

@@ -62,11 +62,12 @@ first by its launcher.
 
 ## Settings
 
-Settings > Nintendo DS holds the choices a DS emulator should honour: renderer, shader (`none`, `ds-crisp`,
-`ds-crisp-color`, `ds-grid`, `ds-grid-color`, `ds-fsr`, SuperDrastic's names), 3D resolution (1x / 2x). They are
-written to `banana/superdrastic.conf` (`DSFLIP_RAST`, `DSFLIP_SHADER`) and `drastic.cfg` (`hires_3d`); a new
-emulator reads them from its launcher's environment or gets its own file and a row in `ui/src/settings.cpp`
-(one `add(...)` line per setting: its file, key, names and values).
+Settings > Nintendo DS holds the emulator and Quick resume, then only the chosen emulator's own settings, each kept in
+that emulator's files: SuperDrastic's shader and CPU clock in `banana/superdrastic.conf` (`DSFLIP_SHADER`,
+`DSFLIP_CPUGOV`) and its 3D resolution in `drastic.cfg` (`hires_3d`); BananaDS's shader, 3D resolution and the rest in
+`/data/bananads/bananads.conf` (`kms.shader`, `render.scale`, ...). Both draw 3D with the Gengis Engine, always (no
+setting: the launchers set it). A new emulator gets its own file and its own rows in `ui/src/settings.cpp` (one
+`add(...)` line per setting: its file, key, names and values, under its `emu` branch).
 
 ## BananaDS
 
@@ -106,7 +107,7 @@ BANANADS_SAVES    /data/saves/nds                       BANANADS_STATES      /da
 BANANADS_BIOS     /data/bios                            argument 1           the ROM (.nds or .zip)
 BANANADS_FRONTEND kms                                   BANANADS_LOG_FILE    logs/bananads/bananads.log (.1: the last)
 BANANADS_SAVE_DIR /data/saves/nds                       BANANADS_STATE_DIR   /data/states/nds
-BANANADS_RENDER_SCALE 2  with 3D resolution 2x          BANANADS_RENDER_RENDERER soft  with the renderer "DraStic"
+BANANADS_RENDER_RENDERER gengis (always)                DSFLIP_SHADER_DIR    SuperDrastic's shaders
 ```
 
 `/data/banana/bananads.env` (shell assignments) adds settings for every run, e.g. `BANANADS_KMS_STATS=600` (the

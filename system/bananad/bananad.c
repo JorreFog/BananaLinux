@@ -519,12 +519,20 @@ static void audio_find_cards(void)
 static void audio_route(void)
 {
 	card_play = card_speaker >= 0 && !headphones ? card_speaker : card_codec;
+	/* The RG DS Plus's aw88166 amplifiers play 48 kHz whatever rate the I2S is set to (measured: 44.1 kHz audio is
+	 * taken at 48,150 samples a second, 9% fast and pitched up; 48 kHz at 48,080), so their stream is always opened
+	 * at 48 kHz and ALSA converts. Without it DraStic's 44.1 kHz ran its audio ring dry (stutter, crackles). */
+	char play[96];
+	if (card_play >= 0 && card_play == card_speaker)
+		snprintf(play, sizeof play, "{ type plug slave { pcm \"hw:%d\" rate 48000 } }", card_play);
+	else
+		snprintf(play, sizeof play, "\"plughw:%d\"", card_play);
 	char conf[512];
 	int n = snprintf(conf, sizeof conf,
 		"# bananad: where sound plays now (%s)\n"
-		"pcm.!default { type asym playback.pcm \"plughw:%d\" capture.pcm \"plughw:%d\" }\n"
+		"pcm.!default { type asym playback.pcm %s capture.pcm \"plughw:%d\" }\n"
 		"ctl.!default { type hw card %d }\n",
-		card_play == card_speaker ? "speakers" : headphones ? "headphones" : "the codec", card_play, card_codec, card_play);
+		card_play == card_speaker ? "speakers" : headphones ? "headphones" : "the codec", play, card_codec, card_play);
 	FILE *f = fopen("/run/banana/asound.conf.new", "w");
 	if (f) {
 		fwrite(conf, 1, n, f);
@@ -663,6 +671,13 @@ static void dim(void)
 	}
 	closedir(d);
 	dimmed = dim_count > 0;
+	/* the level before dimming, for the settings screen (opened by the press that undims) */
+	if (dimmed) {
+		char p[600];
+		snprintf(p, sizeof p, "/sys/class/backlight/%.255s/max_brightness", dim_name[0]);
+		int max = read_int(p, 0);
+		if (max > 0) { char v[16]; snprintf(v, sizeof v, "%d\n", dim_level[0] * 1000 / max); write_file("/run/banana/dim", v); }
+	}
 }
 static void undim(void)
 {
@@ -674,6 +689,7 @@ static void undim(void)
 		write_file(p, v);
 	}
 	dimmed = 0;
+	unlink("/run/banana/dim");
 }
 
 static void save_settings(double now)
@@ -696,6 +712,9 @@ static void restore_settings(void)
 {
 	int pm = read_int("/data/banana/backlight", -1);
 	if (pm > 0 && pm <= 1000) backlight_set_permille(pm);
+	/* started again while the panels were dimmed (/run/banana/dim: the level before): undimmed, as the last one would */
+	int dimmed_from = read_int("/run/banana/dim", -1);
+	if (dimmed_from > 0 && dimmed_from <= 1000) { backlight_set_permille(dimmed_from); unlink("/run/banana/dim"); }
 	if (access("/data/banana/asound.state", R_OK) == 0) {
 		char *argv[] = { "alsactl", "-f", "/data/banana/asound.state", "restore", NULL };
 		run(argv);
@@ -1007,8 +1026,12 @@ int main(int argc, char **argv)
 		 * check, a pending save, the power button's hold; nothing wakes bananad otherwise */
 		double tnow = mono(), wait = next_battery - tnow;
 		int game = pid_of("/run/banana/game.pid") != 0;
+		/* a job that must not be slept through (banana-scrape's downloads): its pid in /run/banana/awake.pid; looked
+		 * at again every 5 s, so the idle sleep comes once it is over */
+		int awake = pid_of("/run/banana/awake.pid") != 0;
+		if (awake && wait > 5) wait = 5;
 		if (!game) {
-			if (cfg.autosleep_min > 0) { double d = cfg.autosleep_min * 60.0 - (tnow - last_input); if (d < wait) wait = d; }
+			if (cfg.autosleep_min > 0 && !awake) { double d = cfg.autosleep_min * 60.0 - (tnow - last_input); if (d < wait) wait = d; }
 			if (cfg.dim_min > 0 && !dimmed) { double d = cfg.dim_min * 60.0 - (tnow - last_input); if (d < wait) wait = d; }
 		}
 		if (lid_closed && cfg.lid_sleep) { double d = 5.0 - (tnow - last_input); if (d < wait) wait = d; }
@@ -1050,7 +1073,8 @@ int main(int argc, char **argv)
 		game = pid_of("/run/banana/game.pid") != 0;
 		if (cfg.dim_min > 0 && !dimmed && !game && !lid_closed && now - last_input >= cfg.dim_min * 60.0) dim();
 		/* (not while charging: a sleep would put the charging light out; the menu stays dimmed instead) */
-		if (cfg.autosleep_min > 0 && !game && now - last_input >= cfg.autosleep_min * 60.0 && !charger_online())
+		if (cfg.autosleep_min > 0 && !game && now - last_input >= cfg.autosleep_min * 60.0 && !charger_online() &&
+		    !pid_of("/run/banana/awake.pid"))
 			suspend_now("idle");
 		/* started or woken with the lid shut */
 		if (lid_closed && cfg.lid_sleep && now - last_input > 5) suspend_now("lid still closed");

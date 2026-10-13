@@ -28,6 +28,7 @@ namespace banana
 		int plays = 0;
 		long seconds = 0;
 		time_t last = 0;
+		int achA = -1, achB = 0;	// RetroAchievements: unlocked / total, as the emulator last said (-1: never said)
 		bool fav = false;
 	};
 
@@ -59,8 +60,9 @@ namespace banana
 		// the game's own system and entry, for a game of the current shelf (favourites point into their system)
 		const SystemDef& systemOf(int game) const;
 		const Game& gameAt(int game) const { return shelves[lib].games[game]; }
-		// after a game ran: one more play, its time, now as its last play
-		void recordPlay(int game, long seconds);
+		// after a game ran: one more play, its time, now as its last play; and its RetroAchievements progress when the
+		// emulator wrote it (unlocked total in /run/banana/ra-progress, docs/EMULATORS.md), achB 0 when it didn't
+		void recordPlay(int game, long seconds, int achA = -1, int achB = 0);
 		std::function<void(const std::string&)> onCue;
 		bool twelveHour = false;
 
@@ -97,7 +99,7 @@ namespace banana
 		std::vector<Shelf> shelves;
 		std::map<std::string, Look> looks;
 		std::set<std::string> favGames, favSystems;	// "<system>/<rel>", system ids
-		struct Stat { int plays = 0; long seconds = 0; time_t last = 0; };
+		struct Stat { int plays = 0; long seconds = 0; time_t last = 0; int achA = -1, achB = 0; };
 		std::map<std::string, Stat> stats;			// "<system>/<rel>"
 		int lib = 0, home = 0, launchGame = -1;
 		bool changed = false;

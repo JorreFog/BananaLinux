@@ -1467,7 +1467,9 @@ namespace rnds
 			}
 			y += 48 + 22;
 
-			// achievements
+			// achievements (none known: no block, rather than an empty meter that reads as 0%)
+			if (!gm.achLabel.empty())
+			{
 			TStyle ta = ts(false, 16, 1.0f, true);
 			TextLine la = layoutEllipsis(utf8to32(gm.achLabel), tstyle(ta), (int)W);
 			drawLine(la, ta, L, y, 22, MUTED);
@@ -1488,6 +1490,7 @@ namespace rnds
 					if (a1 > l && a0 < r) be->fill(a0, t, a1 - a0, bt - t, w45);
 				}
 				be->popClip();
+			}
 			}
 		}
 

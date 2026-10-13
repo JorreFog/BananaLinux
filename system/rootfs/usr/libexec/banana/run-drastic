@@ -24,7 +24,7 @@ export DSFLIP_HANDOVER=none DSFLIP_DRASTIC_DIR=$D DSFLIP_TOP=${BANANA_TOP:-DSI-2
 export DSFLIP_DATA=/data/superdrastic DSFLIP_LOGDIR=/data/banana/logs/superdrastic
 # ROCKNIXDS's defaults: the Gengis Engine renderer (DraStic's picture with ~12% less CPU work a frame) and
 # SuperDrastic's own CPU governor (the lowest clock with no dropped frames, remembered per game)
-export DSFLIP_RAST=${DSFLIP_RAST:-1} DSFLIP_CPUGOV=${DSFLIP_CPUGOV:-1}
+export DSFLIP_CPUGOV=${DSFLIP_CPUGOV:-1}
 # the RetroAchievements account from the setup (banana/accounts.conf), for SuperDrastic's achievements
 A=/data/banana/accounts.conf
 if [ -f $A ]; then
@@ -33,6 +33,28 @@ if [ -f $A ]; then
 fi
 # the in-game menu (L3) in BananaOS's colours and fonts
 export DSFLIP_MENU_THEME=banana
+# Settings > Nintendo DS > Frame pacing (superdrastic.conf DSFLIP_PACE): Panels (the default) runs DraStic at the
+# panels' refresh instead of the DS's 59.83 Hz, which against a 60 Hz panel showed a frame twice every ~6 s (a
+# hitch when the picture scrolls; BananaDS's kms.pace=display): SuperDrastic takes its sound as 44100 * refresh /
+# 59.83 Hz (DSFLIP_AUDIO_LOCK), 0.3% fast. The refresh from the panels' real pixel clock and timing (59.999 Hz on the
+# RG DS Plus after banana-panel-tune). And SuperDrastic resamples to 48 kHz itself, the RG DS Plus amplifiers' rate.
+refresh() {
+    local D=/sys/kernel/debug
+    [ -f $D/dri/0/state ] || mount -t debugfs none $D 2>/dev/null
+    set -- $(sed -n 's/.*mode: "[^"]*": [0-9]* \([0-9]*\) [0-9]* [0-9]* [0-9]* \([0-9]*\) [0-9]* [0-9]* [0-9]* \([0-9]*\).*/\1 \2 \3/p' $D/dri/0/state 2>/dev/null | head -n 1)
+    [ -n "$3" ] || { echo 60; return; }
+    local clk=$(awk '$1 == "dclk_vop1" || $1 == "dclk_vop0" { print $5; exit }' $D/clk/clk_summary 2>/dev/null)
+    awk -v k=$1 -v h=$2 -v v=$3 -v c=${clk:-0} 'BEGIN { if (c < 1000000) c = k * 1000; printf "%.4f\n", c / (h * v) }'
+}
+pace=$(sed -n 's/^ *DSFLIP_PACE *= *//p' /data/banana/superdrastic.conf 2>/dev/null | tail -n 1)
+[ "$pace" = ds ] || export DSFLIP_AUDIO_LOCK=${DSFLIP_AUDIO_LOCK:-$(refresh)}
+export DSFLIP_AUDIO_DEVICE_RATE=${DSFLIP_AUDIO_DEVICE_RATE:-48000}
+# two finished frames may wait for the panels, not one: DraStic's frames come unevenly (two in one refresh, then
+# none), and with one a frame was dropped and the next refresh repeated the last (HeartGold, 65 s: 12 drops and 8
+# repeats with one, 4 and 3 with two), at one more refresh of latency, as BananaDS's kms.queue
+export DSFLIP_QUEUE=${DSFLIP_QUEUE:-2}
+# the in-game save as BananaDS left it, when it played the game last (nds-saves: the two emulators share saves)
+/usr/libexec/banana/nds-saves "$1"
 # Quit game (the menu) and a shutdown while playing save the spot to a resume state, loaded once at the next start of
 # the game. One older than the game's own save is dropped: loading it would put back an older in-game save too.
 # Only with Settings > Nintendo DS > Quick resume on (settings.conf's quick_resume); off, a quit ends the game.
@@ -48,4 +70,6 @@ if grep -q '^ *quick_resume *= *on' /data/banana/settings.conf 2>/dev/null; then
 fi
 # the settings screen's choices (KEY=value lines), exported to SuperDrastic
 if [ -f /data/banana/superdrastic.conf ]; then set -a; . /data/banana/superdrastic.conf; set +a; fi
+# the 3D always through the Gengis Engine (no longer a setting; a DSFLIP_RAST=0 left in the file from before is overruled)
+export DSFLIP_RAST=1
 exec $SD/superdrastic-run $D/drastic "$1"

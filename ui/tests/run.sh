@@ -61,14 +61,14 @@ for size in 640x480 1024x768; do
         [ -s "$OUT/$size-$s-top.png" ] && [ -s "$OUT/$size-$s-bot.png" ] || { echo "FAIL $size: no $s shot"; fail=1; }
     done
     # The first-time setup: opened as on a first boot, a RetroAchievements account typed by touch (name, then the
-    # password), Finish writes setup-done; the accounts file is what the launchers read (no login with the server
+    # password), past the Box art step (not started: no network here), Finish writes setup-done; the accounts file is what the launchers read (no login with the server
 # here: BANANA_RA_CHECK=0)
     slog=$OUT/$size-setup.log
     rm -f "$FX/data/setup-done" "$FX/data/accounts.conf"
     BANANA_RA_CHECK=0 BANANA_WIFI="$HERE/tests/fake-wifi.sh" FAKE_WIFI_CONF="$FX/data/wifi.conf" "$HERE/banana-ui" --headless "$OUT/$size-" --size $size \
         --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
         --script "home 0; setup; shot setup; press right; shot setup-tz; press down; press down; shot setup-ra; press a; shot setup-name; \
-            $(key 1,0 1,1 1,2) press start; shot setup-pass; $(key 2,0 2,1) press start; shot setup-signed; press down; press a; shot setup-done" 2> "$slog" \
+            $(key 1,0 1,1 1,2) press start; shot setup-pass; $(key 2,0 2,1) press start; shot setup-signed; press down; shot setup-boxart; press down; press a; shot setup-done" 2> "$slog" \
         || { echo "FAIL $size: banana-ui (setup) exited $?"; fail=1; }
     grep -q "setup open" "$slog" || { echo "FAIL $size: the setup didn't open"; fail=1; }
     [ -f "$FX/data/setup-done" ] || { echo "FAIL $size: Finish didn't write setup-done"; fail=1; }

@@ -97,41 +97,67 @@ namespace banana
 	void Sound::run()
 	{
 #ifdef BANANA_ALSA
+		// While the device is open the stream never stops: after a sound, silence follows, until QUIET with nothing to
+		// play. The RG DS Plus's speaker amplifiers (aw88166) are started by their driver when the stream powers up,
+		// and the first try fails because the I2S clock isn't running yet; the next try is ~0.4 s later and finds no
+		// clock either if a short click has already ended, so an amplifier gave up for the whole time the device was
+		// open (one speaker, or none). A running stream lets the retry find its clock. Writing 10 ms at a time also
+		// lets a new sound cut the one playing (a held direction scrolls fast) within the 30 ms buffer.
+		const auto QUIET = std::chrono::seconds(20);
 		snd_pcm_t* pcm = nullptr;
 		int openRate = 0, openCh = 0;
-		auto closeDev = [&] { if (pcm) { snd_pcm_drain(pcm); snd_pcm_close(pcm); pcm = nullptr; } };
+		std::vector<int16_t> silence;
+		auto closeDev = [&] { if (pcm) { snd_pcm_drop(pcm); snd_pcm_close(pcm); pcm = nullptr; } };
+		const Clip* cur = nullptr;
+		size_t at = 0;			// cur's next frame
+		auto lastSound = std::chrono::steady_clock::now();
 		for (;;)
 		{
 			std::string name;
 			{
 				std::unique_lock<std::mutex> l(m);
-				bool woke = cv.wait_for(l, std::chrono::seconds(3), [this] { return stop || closeNow || !queued.empty(); });
+				if (!pcm) cv.wait(l, [this] { return stop || closeNow || !queued.empty(); });	// closed: nothing to do
 				if (stop) break;
-				if (closeNow || !woke) { closeDev(); closeNow = false; continue; }	// asked to, or quiet for 3 s
+				if (closeNow) { closeDev(); cur = nullptr; closeNow = false; continue; }	// a game is starting
 				name = queued;
 				queued.clear();
 			}
-			const Clip& c = clips[name];
-			if (pcm && (openRate != c.rate || openCh != c.channels)) closeDev();
-			if (!pcm)
+			auto now = std::chrono::steady_clock::now();
+			if (!name.empty())
 			{
-				if (snd_pcm_open(&pcm, "default", SND_PCM_STREAM_PLAYBACK, 0) < 0) { pcm = nullptr; continue; }
-				if (snd_pcm_set_params(pcm, SND_PCM_FORMAT_S16_LE, SND_PCM_ACCESS_RW_INTERLEAVED, c.channels, c.rate, 1, 30000) < 0)
+				const Clip& c = clips[name];
+				if (pcm && (openRate != c.rate || openCh != c.channels)) closeDev();
+				if (!pcm)
 				{
-					snd_pcm_close(pcm); pcm = nullptr; continue;
+					if (snd_pcm_open(&pcm, "default", SND_PCM_STREAM_PLAYBACK, 0) < 0) { pcm = nullptr; continue; }
+					if (snd_pcm_set_params(pcm, SND_PCM_FORMAT_S16_LE, SND_PCM_ACCESS_RW_INTERLEAVED, c.channels, c.rate, 1, 30000) < 0)
+					{
+						snd_pcm_close(pcm); pcm = nullptr; continue;
+					}
+					openRate = c.rate; openCh = c.channels;
+					silence.assign((size_t)(openRate / 100) * openCh, 0);
 				}
-				openRate = c.rate; openCh = c.channels;
+				cur = &c;
+				at = 0;
+				lastSound = now;
 			}
-			// a new sound cuts the one playing (a held direction scrolls fast)
-			snd_pcm_drop(pcm);
-			snd_pcm_prepare(pcm);
-			snd_pcm_sframes_t frames = (snd_pcm_sframes_t)(c.pcm.size() / c.channels);
-			const int16_t* p = c.pcm.data();
+			else if (!cur && now - lastSound >= QUIET) { closeDev(); continue; }
+			// the next 10 ms: the sound's, or silence
+			const int16_t* p = silence.data();
+			snd_pcm_sframes_t frames = (snd_pcm_sframes_t)(silence.size() / openCh);
+			if (cur)
+			{
+				size_t total = cur->pcm.size() / openCh;
+				frames = (snd_pcm_sframes_t)std::min<size_t>((size_t)frames, total - at);
+				p = cur->pcm.data() + at * openCh;
+				at += (size_t)frames;
+				if (at >= total) { cur = nullptr; lastSound = now; }
+			}
 			while (frames > 0)
 			{
-				snd_pcm_sframes_t w = snd_pcm_writei(pcm, p, (snd_pcm_uframes_t)frames);
-				if (w < 0) { if (snd_pcm_recover(pcm, (int)w, 1) < 0) break; continue; }
-				frames -= w; p += w * c.channels;
+				snd_pcm_sframes_t w = snd_pcm_writei(pcm, p, (snd_pcm_uframes_t)frames);	// blocks while the buffer is full
+				if (w < 0) { if (snd_pcm_recover(pcm, (int)w, 1) < 0) { closeDev(); cur = nullptr; break; } continue; }
+				frames -= w; p += w * openCh;
 			}
 		}
 		closeDev();
