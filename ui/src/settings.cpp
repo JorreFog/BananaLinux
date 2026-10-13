@@ -2074,6 +2074,20 @@ namespace banana
 		if (t < scrapeNext) return false;
 		scrapeNext = t + 500;
 		std::string ln = readLine("/run/banana/scrape.status");
+		// a run that is gone (banana-scrape crashed, was killed, or never started): "running" with no word for 90 s
+		// and no scraper alive (its pid in awake.pid) is over, so the row can be started again (it said Running until
+		// a restart)
+		struct stat st;
+		if (ln.compare(0, 8, "running ") == 0 && stat("/run/banana/scrape.status", &st) == 0 && time(nullptr) - st.st_mtime > 90)
+		{
+			int pid = 0;
+			std::ifstream("/run/banana/awake.pid") >> pid;
+			if (pid <= 0 || kill(pid, 0) != 0)
+			{
+				ln = "error stopped";
+				std::ofstream("/run/banana/scrape.status") << ln << "\n";
+			}
+		}
 		if (ln == scrapeLine) return false;
 		bool was = scraping();
 		scrapeLine = ln;
