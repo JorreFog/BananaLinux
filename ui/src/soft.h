@@ -59,6 +59,7 @@ namespace banana
 		// next frame is drawn over all of it
 		uint32_t* canvas(int screen) { dmg[screen] = { 0, 0, W, H }; last[screen].clear(); full[screen] = true; return scr[screen].data(); }
 
+		// (touches nothing of the backend's but the new texture: callable from the picture workers)
 		rnds::TexPtr upload(const rnds::Bitmap& b, bool smooth) override;
 		void draw(const rnds::TexPtr& t, float x, float y, float w, float h, const rnds::Color& tint) override;
 		void fill(float x, float y, float w, float h, const rnds::Color& c) override;
