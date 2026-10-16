@@ -5,6 +5,8 @@
 <p align="center"><b>A light Linux for the Anbernic RG DS and RG DS Plus: boots straight into ROCKNIXDS Pixel's menu,
 sleeps when you close the lid, and gives the games every cycle.</b></p>
 
+https://discord.gg/FxeE7f8r
+
 > [!WARNING]
 > Banana is an alpha (0.3.0). Its image is for the RG DS Plus only for now: the RG DS stays on 0.2.0 until
 > 0.3.0 has been tested on it. Things are still missing and some are rough (see *Status*). If you try it,
