@@ -4,7 +4,8 @@
 # in dmesg.1.txt). Run by rcS 20 s after boot and by rcK at shutdown, so the file is complete either way.
 L=/data/banana/logs
 mkdir -p $L 2>/dev/null || exit 0
-[ -f /run/banana/dmesg-saved ] && mv -f $L/dmesg.txt $L/dmesg.1.txt 2>/dev/null
+# (rotated on this boot's first run: the one before kept, a boot that crashed before its shutdown among them)
+[ -f /run/banana/dmesg-saved ] || mv -f $L/dmesg.txt $L/dmesg.1.txt 2>/dev/null
 dmesg > $L/dmesg.txt 2>/dev/null
 touch /run/banana/dmesg-saved
 {

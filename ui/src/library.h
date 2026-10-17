@@ -70,6 +70,9 @@ namespace banana
 		struct Power { int percent = -1; bool charging = false; };
 		Power power();
 		Power testPower;	// headless: used instead of /sys when its percent is set
+		Power powerSeen;	// the last reading of /sys and when (power(), online(): at most every 2 s)
+		double powerAt = 0, onlineAt = 0;
+		bool onlineSeen = false;
 
 		// rnds::Source
 		int systemCount() override { return (int)shelves.size(); }

@@ -77,6 +77,16 @@ for size in 640x480 1024x768; do
         [ -s "$OUT/$size-$s-top.png" ] && [ -s "$OUT/$size-$s-bot.png" ] || { echo "FAIL $size: no $s shot"; fail=1; }
     done
     rm -f "$FX/data/setup-done" "$FX/data/accounts.conf"
+    # Favorites starred itself (first on the shelf, ahead of every system): a GBA favourite launches with GBA's
+    # emulator, not the shelf's one along (its systems' places moved when Favorites went in before them)
+    flog=$OUT/$size-favorites.log
+    cp "$FX/data/favorites.txt" "$OUT/favorites.txt.keep"
+    echo "gba/Orchard Tactics.gba" > "$FX/data/favorites.txt"; echo favorites > "$FX/data/favorite-systems.txt"
+    "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" \
+        --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
+        --script "lib 0 0; press a; wait 3000; wait 1" 2> "$flog" || { echo "FAIL $size: banana-ui (favorites) exited $?"; fail=1; }
+    grep -q "launch 0: .*Orchard Tactics.gba (system gba)" "$flog" || { echo "FAIL $size: the favourite: $(grep launch "$flog")"; fail=1; }
+    mv "$OUT/favorites.txt.keep" "$FX/data/favorites.txt"; rm -f "$FX/data/favorite-systems.txt"
     grep 'bench:' "$log" | sed "s/^banana-ui: /$size /"
 done
 [ $fail = 0 ] && echo "banana-ui: all checks passed ($OUT)"

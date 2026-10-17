@@ -435,10 +435,19 @@ int main(int argc, char** argv)
 		}
 		if (add.empty()) continue;
 		size_t end = x.rfind("</gameList>");
+		// a list that is there but has no end we know (another tool's, cut short, unreadable): left as it is, not
+		// replaced by one with only these games (the user's own entries would be lost)
+		if (end == std::string::npos && (!x.empty() || access(path.c_str(), F_OK) == 0)) continue;
 		if (end == std::string::npos) x = "<?xml version=\"1.0\"?>\n<gameList>\n" + add + "</gameList>\n";
 		else x.insert(end, add);
 		std::string tmp = path + ".new";
-		if (FILE* f = fopen(tmp.c_str(), "w")) { fwrite(x.data(), 1, x.size(), f); fclose(f); rename(tmp.c_str(), path.c_str()); }
+		if (FILE* f = fopen(tmp.c_str(), "w"))
+		{
+			bool ok = fwrite(x.data(), 1, x.size(), f) == x.size();
+			ok &= fflush(f) == 0 && fsync(fileno(f)) == 0;
+			ok &= fclose(f) == 0;
+			if (!ok || rename(tmp.c_str(), path.c_str()) != 0) unlink(tmp.c_str());
+		}
 	}
 	sync();
 	status("done " + std::to_string(found.load()) + " " + std::to_string(total));
