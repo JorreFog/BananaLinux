@@ -789,6 +789,11 @@ namespace rnds
 				xw.push_back(std::min(x1, xx + 1.0f) - std::max(x0, (float)xx));
 		}
 		xStart[w] = (int)xw.size();
+		// box art is opaque: then a plainer loop (most of a cartridge's or a cover's time was this resize)
+		static const struct ByteFloats { float v[256]; ByteFloats() { for (int i = 0; i < 256; i++) v[i] = (float)i; } } kBytes;
+		const float* kByte = kBytes.v;
+		bool opaque = ch == 4;
+		for (size_t i = 3; opaque && i < src.px.size(); i += 4) opaque = src.px[i] == 255;
 		std::vector<int> yys;
 		std::vector<float> yws;
 		for (int y = 0; y < h; y++)
@@ -800,6 +805,34 @@ namespace rnds
 				float wy = std::min(y1, yy + 1.0f) - std::max(y0, (float)yy);
 				if (wy <= 0) continue;
 				yys.push_back(yy); yws.push_back(wy);
+			}
+			if (opaque)
+			{
+				// every alpha 255: a is exactly 1, so p * a * wgt is p * wgt and the sums are the same, bit for bit
+				for (int x = 0; x < w; x++)
+				{
+					float acc0 = 0, acc1 = 0, acc2 = 0, acc3 = 0, tot = 0;
+					const int k0 = xStart[x], k1 = xStart[x + 1];
+					for (size_t j = 0; j < yys.size(); j++)
+					{
+						const float wy = yws[j];
+						const uint8_t* p = &src.px[((size_t)yys[j] * src.w + xFirst[x]) * 4];
+						for (int k = k0; k < k1; k++, p += 4)
+						{
+							const float wx = xw[k];
+							if (wx <= 0) continue;
+							const float wgt = wx * wy;
+							acc0 += kByte[p[0]] * wgt; acc1 += kByte[p[1]] * wgt; acc2 += kByte[p[2]] * wgt; acc3 += 255.0f * wgt;
+							tot += wgt;
+						}
+					}
+					if (tot <= 0) continue;
+					uint8_t* o = &out.px[((size_t)y * w + x) * 4];
+					float a = acc3 / tot / 255.0f;
+					o[3] = (uint8_t)roundi(acc3 / tot);
+					if (a > 0) { o[0] = (uint8_t)roundi(std::min(255.0f, acc0 / tot / a)); o[1] = (uint8_t)roundi(std::min(255.0f, acc1 / tot / a)); o[2] = (uint8_t)roundi(std::min(255.0f, acc2 / tot / a)); }
+				}
+				continue;
 			}
 			for (int x = 0; x < w; x++)
 			{

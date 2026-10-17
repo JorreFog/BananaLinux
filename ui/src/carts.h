@@ -80,7 +80,8 @@ namespace banana
 		void move(int to);
 		float shelfX(int i) const;	// a cartridge's x on the bottom screen
 
-		// pictures: cartridges rendered on the worker's thread, uploaded here
+		// pictures: cartridges rendered on the worker's threads, made textures there too (the software backend's
+		// upload touches nothing but the new texture), and taken into the cache here
 		struct Job
 		{
 			std::string key, system, art, icon;
@@ -97,9 +98,8 @@ namespace banana
 		std::set<std::string> queued;
 		// a cartridge: its picture, its reflection in the glossy floor (starting at row reflTop of the picture, each
 		// column mirrored where it stands) and the colour its art throws on the wall behind it
-		struct CartBmp { rnds::Bitmap card, refl; int reflTop = 0; uint32_t glow = 0; };
 		struct CartTex { rnds::TexPtr tex, refl; int reflTop = 0; uint32_t glow = 0; };
-		std::vector<std::pair<std::string, CartBmp>> doneBmp;
+		std::vector<std::pair<std::string, CartTex>> doneTex;	// (a wall: tex, and where it goes in reflTop and glow)
 		std::map<std::string, CartTex> carts;
 		std::deque<std::string> cartOrder;	// least recently wanted first (the cache is kept small)
 		const CartTex* cart(const Item& it, int height, float yaw, float pitch);
