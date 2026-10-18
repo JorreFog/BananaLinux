@@ -120,3 +120,31 @@ exactness running), sim calibrating rgds-sim v1. LEDGER L1 (render's comp_unroll
 the harness numbers (fixed against evidence/render/comp-bench.txt). Load average ~18: expected with ~10 qemu runs;
 deterministic counts are unaffected, only slower. Reminder: CLAIM before each idea, RESULT/DEAD-END after, status
 file current.
+
+### 15:54 UTC · jit · RESULT · jit.hugepages (melonDS 0021): JIT code memory on 2 MB pages, -0.6% on cpubench
+MEASURED, rgds-sim v1 UNCALIBRATED, build-a64.sh (Ubuntu -O3) build of perf/jit b0218cd: cpubench-thumb main thread
+5.592 -> 5.557 ms/frame at 1104 MHz (-0.6%): iTLB was already 0.1% of cycles (cpubench's whole JIT code is 176 KB),
+the gain is dTLB (L2 hits 37.6k -> 27.6k/frame: the stubs' literals). The kernel side works: a .bss array mprotect'ed
+RWX + madvise(MADV_HUGEPAGE) gets 32768 of 32768 kB AnonHugePages (host test, same THP=madvise mode). Exact by
+construction; suite FAILS=0. Toggle jit.hugepages=off (MELONDS_JIT_HUGEPAGE=0); default on. The log line
+"[jit] code memory at <addr>, 32768 kB, N kB on huge pages" tells on the device whether the kernel gave them.
+Device A/B is the real test (HeartGold's JIT footprint is far larger); re-measuring on the device build + tests/bigcode.
+Evidence: evidence/jit/thp-sim-cbthumb.txt, thp-mechanism.txt, exact-thp.txt
+
+### 15:54 UTC · jit · CLAIM+RESULT · jit.irqchain (melonDS 0023) and MELONDS_JIT_EXITSTATS (0022)
+READ: melonDS sets ARM::IRQ from IME/IE/IF whatever CPSR.I is (NDS.cpp UpdateIRQ), so with an IRQ pending while a
+game runs with I set (IRQ handlers, OS_DisableInterrupts sections) every block exit went back to the loop, which only
+calls TriggerIRQ (returns at once with I set) and dispatches the next block. 0023: the exit stubs go on into the next
+block in that case (Halted/IdleLoop clear, CPSR.I set). Exact: suite FAILS=0 (evidence/jit/exact-irqchain.txt); a
+sabotage build (chaining past taken IRQs too) is caught: FAILS=4 (jitloops thumb/thumb-arm7 pictures and RAM;
+evidence/jit/exact-irqchain-sabotage.txt). 0022: MELONDS_JIT_EXITSTATS=n prints per-frame counts of returns for
+IRQs taken/masked, halts/idle loops, compiles, region setups (cold paths only). MEASURED (qemu): the test ROMs barely
+have masked IRQs (jitloops 0.7/frame, others 0) and their returns are ~all slice ends (cpubench-arm7: 8,284 of 8,601
+ARM9 dispatches/frame), so no sim gain here: it is a device A/B (EXTRA="--set jit.irqchain=off" vs on) and
+MELONDS_JIT_EXITSTATS=1500 on HeartGold says how often games hit it. perf/jit @ 7315d05.
+
+### 15:54 UTC · jit · CLAIM · tests/bigcode: a game-sized code footprint ROM (for L1I/iTLB work)
+New test ROM (generated, fixed seed): 2000 distinct functions (Thumb, 1 in 8 ARM; loads/stores/branches/loops/calls,
+the divider), all called each pass in a shuffled order: 419 KB of ARM9 code, ~31k JIT blocks, ~6 MB of JIT code
+(cpubench: 176 KB). For measuring jit.hugepages and code-layout changes in rgds-sim where cpubench can't. Under qemu
+it is slow (1.3 fps): tuning N so a sim run fits. Will share the .nds path.
