@@ -95,7 +95,12 @@ All in the same commit, all default off (the toolchain's own behaviour).
 - `-fno-semantic-interposition` for the frontend: nothing to do (READ): the device build is not PIE and only
   melonDS's `core` is compiled -fPIC (it already has the flag, `BANANADS_CORE_NOINTERPOSE`).
 - `BANANADS_HOTCOLD=ON` (`-freorder-blocks-and-partition`, on top of PGO) and `BANANADS_ALIGN=32:16:16`
-  (functions/loops/jumps aligned for the A55's 16-byte fetch; GCC's cortex-a55 tuning is 16:8:4): measured below.
+  (functions/loops/jumps aligned for the A55's 16-byte fetch; GCC's cortex-a55 tuning is 16:8:4), MEASURED on the PGO
+  build (rgds-sim v1 st, `evidence/core/ab-hotcold-cpubench-thumb.txt`, `ab-align-*.txt`): hot/cold +0.3% on
+  cpubench-thumb (dead end); align -0.1% cpubench-thumb, -0.4% thumb-arm7, -3.6% dsstress-L5, -3.9% L10, -0.5%
+  membench, -1.9% ipcrom, +0.1% sndbench, with instructions +0.1..+0.5% and the gains all in L1I misses (L5 13.4k ->
+  3.7k/frame, in the jit-code bucket too, whose bytes are identical): a set-conflict pattern of this particular
+  layout, not a property of alignment; **needs the device** (PGO build with and without -DBANANADS_ALIGN=32:16:16).
 - Function ordering by the profile: GCC already does it with PGO (`-freorder-functions`: `.text.hot`,
   `.text.unlikely`, `.text.startup` subsections, grouped by the linker; the PGO builds' iTLB L2 hits fell 31-54%,
   which is that). A linker ordering file would need gold or lld (Bootlin ships GNU ld only); not tried.
