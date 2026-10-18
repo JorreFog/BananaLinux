@@ -1427,6 +1427,7 @@ namespace banana
 			return MOVED;
 		case Key::A: return keyboardKey(krow, kcol);
 		case Key::B:
+			if (pw.empty() && entry == ENTRY_SEARCH) { close(); return CLOSED; }
 			if (pw.empty()) { page = entryBack; message.clear(); return MOVED; }
 			pw.pop_back();
 			return MOVED;
@@ -1580,7 +1581,7 @@ namespace banana
 		be->beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
-		icon("phone", 50, 56, 3);
+		icon(entry == ENTRY_SEARCH ? "search" : "phone", 50, 56, 3);
 		text(entryTitle, true, 17, 170, 62, p.muted, true, 1.4f);
 		text(fit(entrySub, true, 30, 420), true, 30, 170, 88, p.ink);
 		box("slot", true, 50, 150, 540, 56);
@@ -1593,8 +1594,14 @@ namespace banana
 		else text(shown, true, 22, 70, 165, p.ink);
 		be->fill(std::round(X(72 + w)), std::round(X(166)), std::round(X(10)), std::round(X(24)), p.accent);	// the cursor
 		std::string n = std::to_string(pw.size()) + (pw.size() == 1 ? " character" : " characters");
+		if (entry == ENTRY_SEARCH && searchCount)
+		{
+			int m = pw.empty() ? -1 : searchCount(pw);
+			n = m < 0 ? "Every system's games" : m == 0 ? "No games match" : std::to_string(m) + (m == 1 ? " game matches" : " games match");
+		}
 		text(n, true, 17, 50, 216, p.muted);
 		std::string help = !message.empty() ? message
+			: entry == ENTRY_SEARCH ? "A types the key, B deletes, X capitals, Y a space, START searches: the games found open as a shelf of their own. SELECT in the menu searches again."
 			: entry == ENTRY_WIFI ? "A types the key, B deletes, X capitals, L symbols, Y a space, START joins. Or tap the keys. The password is kept in banana/wifi.conf on the card."
 			: "A types the key, B deletes, X capitals, L symbols, Y a space, START when it is typed. Or tap the keys. Accounts are kept in banana/accounts.conf on the card.";
 		wrapped(help, 20, 50, 252, 540, 6, message.empty() ? p.muted : p.accent);
@@ -1778,6 +1785,12 @@ namespace banana
 		page = KEYBOARD;
 	}
 
+	void Settings::openSearch(const std::string& start)
+	{
+		open();
+		startEntry(ENTRY_SEARCH, "Search games", "A name, or part of one. Empty shows all again.", LIST, start);
+	}
+
 	std::string Settings::account(const char* key)
 	{
 		return getConfValue(data + "/accounts.conf", key, "");
@@ -1820,6 +1833,11 @@ namespace banana
 			page = entryBack;
 			message.clear();
 			return CHANGED;
+		case ENTRY_SEARCH:
+			searchText = pw;
+			pw.clear();
+			close();
+			return SEARCH;
 		}
 		return NONE;
 	}

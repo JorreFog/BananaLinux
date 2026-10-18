@@ -15,6 +15,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -46,7 +47,12 @@ namespace banana
 		bool takeLibraryChanged() { bool r = libChanged; libChanged = false; return r; }
 
 		// what the host has to do after an input
-		enum Result { NONE, MOVED, CHANGED, CLOSED, THEME, REBOOT, POWEROFF };
+		enum Result { NONE, MOVED, CHANGED, CLOSED, THEME, REBOOT, POWEROFF, SEARCH };
+		// SELECT in the menu: the keyboard alone, for a search of the games; SEARCH when it is done, with the text in
+		// searchText (empty: the search taken away)
+		void openSearch(const std::string& start);
+		std::string searchText;
+		std::function<int(const std::string&)> searchCount;	// the games the text typed so far finds (the host's library)
 		Result press(Key k);
 		Result touch(float x, float y, bool down);	// bottom panel, device px
 		void render();
@@ -101,7 +107,7 @@ namespace banana
 		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP } page = LIST;
 		// the keyboard types a text for a purpose: a Wi-Fi password, or an account's name or password
 		// (banana/accounts.conf: RetroAchievements for DraStic and RetroArch, ScreenScraper for the scraper to come)
-		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS } entry = ENTRY_WIFI;
+		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SEARCH } entry = ENTRY_WIFI;
 		std::string entryTitle, entrySub;
 		Page entryBack = NETWORKS;
 		void startEntry(Entry e, const std::string& title, const std::string& sub, Page back, const std::string& start = "");

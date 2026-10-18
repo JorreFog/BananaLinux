@@ -938,6 +938,7 @@ int main(int argc, char** argv)
 	float scale = disp.height() / 480.0f;
 	Settings settingsView(&be, o.assets, o.data, scale, variant);
 	settingsView.setFontDir(o.banana + "/fonts");
+	settingsView.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
 	settingsView.setVariant(settings["theme"]);	// (Carts: Inter)
 	LowBattery low;
 	bool batteryDue = true;
@@ -989,6 +990,18 @@ int main(int argc, char** argv)
 			break;
 		}
 		case Settings::CLOSED: sound.play("back"); break;
+		case Settings::SEARCH:
+		{
+			// the Search collection first on the shelf, opened on its first game (an empty text takes it away)
+			lib.setSearch(settingsView.searchText);
+			ui->dataChanged();
+			int s = lib.searchShelf();
+			if (s >= 0) { lib.openLibrary(s); ui->setLibrary(s, 0); }
+			else ui->setHome(0);
+			logf("search \"%s\": %d games", settingsView.searchText.c_str(), s >= 0 ? (int)lib.shelf(s).games.size() : -1);
+			sound.play("select");
+			break;
+		}
 		case Settings::REBOOT: logf("restarting"); kill(1, SIGTERM); break;		// busybox init: SIGTERM reboots
 		case Settings::POWEROFF: logf("shutting down"); kill(1, SIGUSR2); break;	// and SIGUSR2 powers off
 		default: break;
@@ -1014,6 +1027,19 @@ int main(int argc, char** argv)
 					rep.key = ev.key; rep.since = rep.last = nowMs();
 				}
 			}
+			return;
+		}
+		if (ev.type == InputEvent::PRESS && ev.key == Key::SELECT)
+		{
+			// SELECT: the keyboard, to search the games
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			if (ui->view() == rnds::UI::LAUNCH) return;
+			ui->touchCancel();
+			settingsView.setVariant(settings["theme"] == "carts" ? "carts" : variant);
+			settingsView.openSearch(lib.searchQuery());
+			rep.key = Key::NONE;
+			sound.play("select");
+			dirty = true;
 			return;
 		}
 		if (ev.type == InputEvent::PRESS && ev.key == Key::START)
