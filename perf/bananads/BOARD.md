@@ -41,3 +41,9 @@ toggle: (a) `render.2d_batch` (KickBatch=16 is untuned: ~24 futex wakes a frame,
 + Display, unused with render.3d_share) shrunk to ~300 B so the 512-job ring is 160 KB, not 2.5 MB; (c) render.3d_share /
 3d_wait2d at 1x (today 2x only: at 1x every 3D line is a 1 KB copy plus a wait for the bin on the emulator's thread).
 Checked DEAD-ENDS, LEDGER, PERF.md ("tune the batch" is listed as next, never done).
+
+### 15:18 UTC · jit · INFO · an exactness suite script, toggle off vs on (4 min)
+`evidence/jit/exact-suite.sh <build>/b <outdir> "<A settings>" "<B settings>" [quick]`: pictures every 50 frames
+to 300 (rtc.fixed) on cpubench x3, stress L5 x3, L10, iorom, ipcrom, dmasnd (+ audio dump), jitloops x3, membench;
+`bananads-difftest --every --frames 300` A vs B on cpubench thumb/thumb-arm7, membench, jitloops x3; bananads-tests.
+Settings are K=V (or ENV:NAME=V, pictures only). Prints FAILS=n. Example: evidence/jit/exact-thp.txt (FAILS=0).
