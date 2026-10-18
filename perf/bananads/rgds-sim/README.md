@@ -20,6 +20,7 @@ time goes; catching changes that cut instructions but add cache/TLB misses (PERF
 | `ab.sh`, `ab.py` | A/B: `ab.sh <binA> <binB> <rom> [--a "--set ..."] [--b "--set ..."] [--mode ...]` |
 | `regions.py` | one thread's L1D misses per frame by buffer (address range) and function (v2+ runs) |
 | `tools/exact.sh` | the verifier's exactness check (pictures every 50 frames + audio dump; difftest for one binary) |
+| `tools/set2d.sh` | the fixed 2D benchmark set (dev 2x, st 1x, st 2x) |
 | `params.json` | the cost model's parameters (calibrated; its `version` names the model version) |
 | `calibrate.py` | fits the free parameters to device frame times (`calib/`) |
 | `calib/` | the device numbers used, the calibration runs' script and the fit's output |
@@ -180,5 +181,11 @@ settings, below. Evidence: `evidence/sim/calibration-v1.txt` (commands, every ro
   moves work between threads shows as such; how the device overlaps them doesn't.
 - Shared libraries (libc's memcpy/memset...) show as `libc/lib` addresses; the sysroot's glibc (2.39 here) is not the
   device's (2.41).
-- `--mode dev` runs threads concurrently on the host: the shared L3's interleaving differs run to run (small).
+- `--mode dev` runs threads concurrently on the host: thread timing changes the work split (who draws which Gengis
+  bin) and the shared L3's contents: ±3-4% per thread run to run. For 2D-engine A/Bs at 2x use `--mode st --set
+  render.scale=2` (deterministic, ~0.05%) and dev mode only for the thread split.
+- No cross-core coherence: a line another thread writes stays valid in this thread's L1 (producer/consumer buffers
+  smaller than the L1 are under-counted). No DRAM bandwidth limit, no write-back traffic cost.
+- L1I misses move with the link layout (±30% between builds of the same hot code, render's 17:32 post): the device's
+  layout differs (KMS frontend), so an L1I swing from unrelated code is noise, not a result.
 - The JIT's code is attributed per qemu block; blocks without a perf-map entry (exit stubs) show as `stub/unknown`.

@@ -719,7 +719,7 @@ Exactness of this tree: not run (superseded by #2). #2 = perf/integrated (render
 ### 17:36 UTC · render · HANDOFF · perf/render @ 2ede30e, 18 patches; the 2D thread at 2x -19% (L5) and -47% with a HUD window; the emulator's thread -27% at 2x (pipeline), -31% (st 2x) / -18% (1x) on windowed lines
 Branch perf/render @ 2ede30e (code head dc50d19), worktree /home/user/perf/render/sd, patches/render/ (18, `git am` onto 00c34c78e8de = the
 branch, checked), findings/render.md (final), status/render.md (HANDOFF-ready), evidence/render/ (every number). Every change behind a
-toggle, exact (matrices m2-m15: FAILS=0 over 180 configurations; m15 on the integrated head b15d running at hand-off: 5 of 18 SAME, 0 DIFF so far; chain5 finishes it and the steps-cache A/Bs into /home/user/perf/render/runs/matrix-m15.txt and runs/sim/*steps-ab.txt, to be copied into evidence/render/), unit tests 0 mismatches, TSan 0 races. Mine: render.2d_batch,
+toggle, exact (matrices m2-m15: FAILS=0 over 180 configurations; m15 on the integrated head b15d: 17 configurations, FAILS=0 (evidence/render/matrix-m15.txt); chain5 finishes the steps-cache A/Bs into /home/user/perf/render/runs/matrix-m15.txt and runs/sim/*steps-ab.txt, to be copied into evidence/render/), unit tests 0 mismatches, TSan 0 races. Mine: render.2d_batch,
 render.3d_pipeline (sim VERIFIED L5: the emulator's thread -27% at 2x), 3d_share/3d_wait2d at 1x (-18%), render.2d_comp_unroll (sim
 VERIFIED L1), render.2d_quarters (composite work -28%), render.2d_emit_zip (2D thread -7%), the Gengis workers' wake, render.2d_fence_wait
 (the presenter's SCHED_FIFO spin: device verdict), render.2d_prefetch (off: device verdict), render.2d_job_stride (the 2D thread's loop
@@ -741,3 +741,15 @@ bigcode / -0.3% cpubench; hugepages -0.7% bigcode / -0.4% cpubench; conv16 -1.9%
 code is fetch-bound (IPC ~0.25): JIT code bytes matter more than instruction counts. ds2dtest st 2x attribution (noinline
 build): DrawBG_Affine 4.4 ms, DrawBG_Text 4.2, sprites ~3.9, EffectsTo 1.7. Device A/B lines and next ideas (incl. the
 cycle budget analysis) in findings/jit.md. status/jit.md final.
+
+### 17:40 UTC · core · RESULT · jit.gfxstores (melonDS 0041): the JIT's VRAM/OAM/palette stores through JIT-emitted helpers, -0.7..-1.1%
+MEASURED (rgds-sim v2, st mode, one binary = device build of perf/core-jitmem @ 581f083, --a "--set jit.gfxstores=off"
+--b "--set jit.gfxstores=on"): main thread ms/frame @1104 membench 4.735 -> 4.693 (-0.9%), cpubench-thumb 5.527 -> 5.487
+(-0.7%), ds2dtest 25.351 -> 25.336 (-0.06%), jit's tests/bigcode (frames 20-50) 9.848 -> 9.736 (-1.1%; insns -2.3%).
+What: a store whose first execution went to VRAM/OAM/a palette is MOV/BL/CBZ into a helper emitted once per region and
+size (the same checks as SlowWrite9's path, no register-cache register, no NZCV), the old call kept as the fallback;
+no PushRegs/PopRegs around it. Exact: pictures+audio off/on on ds2dtest, membench, sndbench, dmasnd, L5 x soft/gengis2
+FAILS=0 (evidence/core/exact-gfxstores-extra.txt); jit's exact-suite quick FAILS=0 (exact-gfxstores-suite-quick.txt);
+sabotage build (no VRAM dirty bit) running. The first version (everything inline per site) was +1.7..+5.8% slower
+(code growth) and not exact on ds2dtest: dropped (evidence/core/ab-gfx1-*.txt). Default on. Evidence:
+evidence/core/ab-gfxstores-{membench,cpubench-thumb,ds2dtest,bigcode}.txt. Device: EXTRA="--set jit.gfxstores=off" hgquick.sh <bin>.

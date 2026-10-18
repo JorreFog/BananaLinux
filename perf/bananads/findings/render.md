@@ -207,7 +207,7 @@ GCC 14.3) run under `tools/qemu-dev`; "base" = /home/user/perf/build-dev/b (00c3
   ds2dtest, L5, membench at the device configuration, a reload, 1x with the 2D thread, 2x with 1 thread and without
   the 2D thread, the toggle off = base, quarters off) and **m15** on b15d (the integrated head dc50d19: the device
   configuration on 8 ROMs incl. membench-win, reloads, 1x with the 2D thread on 3, no 2D thread, 1x single-threaded,
-  every new toggle off at once): evidence/render/matrix-m13.txt, matrix-m15.txt (their FAILS lines at the end).
+  every new toggle off at once): **m13 11 configurations FAILS=0, m15 17 configurations FAILS=0** (evidence/render/matrix-m13.txt, matrix-m15.txt).
 - Unit test of render.2d_win_neon (win_test.cpp, device compiler, qemu): 5000 cases, ApplyWindow for every layer bit
   (25000) 0 mismatches, DrawBG_3D 0, the merge with the window vs DrawBG_3D + ApplyWindow + the merge (12 variants,
   60000) 0 (evidence/render/win-test.txt).

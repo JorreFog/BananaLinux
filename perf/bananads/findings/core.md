@@ -181,7 +181,7 @@ tiles, maps, OAM or palettes with CPU stores (not DMA) gain more than these ROMs
 **Exact (MEASURED):** pictures every 50 frames of 300 and the audio dump, off vs on, identical on ds2dtest,
 membench, sndbench, dmasnd and dsstress-L5 with the soft renderer and with Gengis 2x + the 2D thread (FAILS=0,
 `evidence/core/exact-gfxstores-extra.txt`); jit's exact-suite.sh (quick: pictures + difftest main RAM on cpubench
-thumb and jitloops thumb, bananads-tests): SUITE_PLACEHOLDER; a sabotage build (the VRAM dirty bit not set in the
+thumb and jitloops thumb, bananads-tests): FAILS=0 (`evidence/core/exact-gfxstores-suite-quick.txt`); a sabotage build (the VRAM dirty bit not set in the
 helper) SABOTAGE_PLACEHOLDER. Not run for lack of time: the suite's full ROM list (the local agent should run
 `QEMU=/home/user/perf/tools/qemu-dev evidence/jit/exact-suite.sh <build/b> <out> "jit.gfxstores=off" "jit.gfxstores=on"`
 on the final tree, and the device's `tools/device/quick.sh`).

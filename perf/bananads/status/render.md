@@ -26,8 +26,8 @@
   steps cache: A/Bs on b15d running at the end (runs/sim/*steps*). Head vs base on L5 2x (b10d): the 2D thread 4.765 ->
   3.855 ms/frame, the emulator's thread 4.355 -> ~3.2.
 - Exactness: matrices m3 (41 configs), m2 (8), m6 (23), m7 (18), m9 (15), m10 (10), m12 (23): FAILS=0 every time; m13
-  (win_neon, b13d) and m15 (the integrated head, b15d) running at the end: runs/matrix-m13.txt, runs/matrix-m15.txt
-  (copied to evidence/render/ when done; if a FAIL shows, it is on the board); difftest --every toggles off vs on SAME (L5,
+  (win_neon, b13d) 11 configurations FAILS=0, m15 (the integrated head, b15d) 17 configurations FAILS=0
+  (evidence/render/matrix-m13.txt, matrix-m15.txt); difftest --every toggles off vs on SAME (L5,
   ds2dtest, geomtest); bananads-tests pass; unit tests comp_bench / quarters_test (20000) / zip_test (6000) / win_test
   (5000 x 17) 0 mismatches; TSan 13 runs 0 data races.
 

@@ -1,11 +1,8 @@
-# sim: status (overwritten by sim only) — 16:41 UTC
-- Phase 0, 1 done (INFO 15:08, 16:11 + correction 16:12). rgds-sim v1 in rgds-sim/ (README, params.json v1, params-fit.json).
-- Verified (LEDGER): L1 render comp_unroll VERIFIED; L6 core HOT_OPT=-O3 VERIFIED as small (L1I eats it on 3D);
-  L7 core device PGO VERIFIED (trained-set caveat); L4 superseded by L7. Evidence: evidence/sim/verify-L{1,6,7}.txt.
-- Now: Phase 2 "where the time goes" on build-dev: /home/user/perf/sim/phase2.sh -> /home/user/perf/sim/p2/dev/<w>/report.txt,
-  table by /home/user/perf/sim/p2table.py /home/user/perf/sim/p2/dev.
-  L5 (render pipeline etc.): render's 88a772a/971eb0c/c5230ff have a truncated GPU2D_Banana.cpp and don't link; rebuilding
-  from 1c9095b into /home/user/perf/sim/vb-render (worktree /home/user/perf/sim/v-render); then dev-mode A/Bs
-  (base vs head, 3d_pipeline off/on, an A=A noise run) into /home/user/perf/sim/ver/L5-*.
-- Queue: L2/L3 (jit, waiting for its post-ASLR re-run + commit), integration check (all branches), findings/sim.md.
-- Builds: /home/user/perf/sim/vb-devO3, vb-devpgo (core f503a7a), vb-render. e67 kit binaries kept in /home/user/perf/sim/bin.
+# sim: status — 17:39 UTC (final phase; end 18:28)
+- rgds-sim final: v2 default (write streaming), v3 opt-in (prfm=1), README/params/calibration in rgds-sim/.
+- LEDGER: L1-L3, L5-L7, L10, L11 VERIFIED; L4 superseded; L8, L9, L12, L13 PENDING.
+- Integrated branch: perf/integrated in /home/user/perf/sim/v-int (repo /home/user/jorrefog/superdrastic), head 4de7beb
+  = render dc50d19 + 2ede30e (docs) + perf/jit 0021-0024 commits + core f503a7a. PGO build /home/user/perf/sim/vb-int2
+  (-DBANANADS_PGO=/home/user/perf/core/prof-dev). Combined #2 + exactness: /home/user/perf/sim/after-int2.sh ->
+  /home/user/perf/sim/comb/v2-int2, /home/user/perf/sim/ver/int2-exact*.txt.
+- Remaining: post combined #2 RESULT, findings/sim.md section 5, HANDOFF.

@@ -38,6 +38,8 @@ instructions and nothing showed on HeartGold": for big code, bytes and layout ma
 Rule of thumb from 0024: 4% less JIT code -> ~1.7% less main-thread time on bigcode.
 
 ### Exactness (all FAILS=0, toggle off vs on)
+A clean build dir applies melonDS patches 0001-0024 and gives a binary byte-identical to the one the 0024 suite and
+sim runs used (evidence/jit/clean-apply.txt).
 evidence/jit/exact-thp.txt, exact-irqchain.txt (Ubuntu build), exact-irqchain-dev.txt (device build, with
 irqmask x3), exact-x26.txt. Sabotage check: a build that also chained past *taken* IRQs was caught (FAILS=4,
 evidence/jit/exact-irqchain-sabotage.txt).
