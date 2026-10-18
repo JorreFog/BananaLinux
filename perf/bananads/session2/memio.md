@@ -38,12 +38,14 @@ slow paths 18% in all, 3D geometry 13%.
    thread at best, -1% if the profile's share has shrunk since 0010/0011** (I can't tell: the 2026-10-12 build's patch
    level isn't recorded). Instruction counts aren't A55 time, but this path is loads/stores to a few hot lines and
    calls, nothing that should run better than its count.
-2. **`render.gx_str` (0022): 0 to +1%.** Each single STR to the FIFO port (NitroSDK writes a header word before each
+2. **`render.gx_str` (0022): 0 to +1%.** A single STR to the FIFO port (NitroSDK writes a header word before each
    `GX_SendFifo*`; `MI_CpuSend32`, if NNS G3D sends display lists with it, is a word-by-word STR loop) or to a command
-   port (NitroSDK's immediate `G3_*` writes) cost ~110 instructions (`SlowWrite9` ~33, `GXWrite9Route` ~12,
-   `WriteToGXFIFO` + body ~65). QCOUNTSUMMARY How many HeartGold does per frame is unknown (the IO stats below say);
-   if it is ~1,000 a frame, that is ~40k instructions, ~0.3% of the thread; if NNS G3D sends its display lists by
-   `MI_CpuSend32`, several thousand and up to ~1%.
+   port (NitroSDK's immediate `G3_*` writes) cost ~95-130 instructions: `SlowWrite9` (~33, its region switch first),
+   `GXWrite9Route` (~8), then `WriteToGXFIFO` + `WriteToGXFIFOBody` (~65, a 4-pair frame) or `GPU3D::Write32` (~46).
+   Now the GX test comes before the region switch, the route's call is gone, and a parameter word before its
+   command's last (most words of a matrix, the first word of each VTX_16) goes into the pipe/FIFO with no call and
+   no frame. QCOUNTSUMMARY How many such STRs HeartGold does per frame is unknown (the IO stats below say); at
+   ~1,000 a frame it is ~0.1% of the thread, at ~10,000 (display lists by `MI_CpuSend32`) up to ~1%.
 
 Both are exact by construction (the same statements in the same order for the cases they take, everything else
 handed to the old code) and checked (below).
