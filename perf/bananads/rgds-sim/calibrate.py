@@ -21,6 +21,8 @@ import report as R
 
 args = sys.argv[1:]
 FIX = {}
+NOBOUNDS = '--nobounds' in args
+args = [a for a in args if a != '--nobounds']
 dev, runs = args[0], args[1]
 combine = 'max'; free = ['base_scale', 'l3_cyc', 'dram_ns', 'mispredict_cyc']; write = None; version = 'v1-calibrated'
 const = False   # --const: a fitted per-frame constant (ms) on top: the device run's thread hand-offs, kernel time
@@ -67,9 +69,20 @@ def model(row, p, alpha):
     return max(tm, to) + alpha * min(tm, to) + c
 
 
+# physically plausible ranges (A55 / RK3568 / LPDDR4); --nobounds lifts them
+BOUNDS = {'base_scale': (0.5, 1.6), 'l3_cyc': (5.0, 80.0), 'l3_ns': (0.0, 60.0), 'dram_ns': (60.0, 250.0),
+          'mispredict_cyc': (4.0, 16.0)}
+if NOBOUNDS: BOUNDS = {}
+
+
+def sig(v): return 1 / (1 + math.exp(-max(-60.0, min(60.0, v))))
+
+
 def unpack(x):
     p = dict(base)
-    for k, v in zip(free, x[:len(free)]): p[k] = math.exp(v)
+    for k, v in zip(free, x[:len(free)]):
+        if k in BOUNDS: lo, hi = BOUNDS[k]; p[k] = lo + (hi - lo) * sig(v)
+        else: p[k] = math.exp(v)
     n = len(free)
     alpha = 0.0
     if combine == 'mix': alpha = 1 / (1 + math.exp(-x[n])); n += 1
@@ -110,7 +123,12 @@ def fit(rs):
     best = None
     for s in ([1.0, 30, 120, 8], [0.7, 15, 60, 5], [1.5, 60, 200, 14], [1.0, 40, 250, 10]):
         st = dict(zip(['base_scale', 'l3_cyc', 'dram_ns', 'mispredict_cyc'], s)); st.setdefault('l3_ns', 5.0)
-        x0 = [math.log(st.get(k, base[k]) or 1.0) for k in free]
+        x0 = []
+        for k in free:
+            v = st.get(k, base[k]) or 1.0
+            if k in BOUNDS:
+                lo, hi = BOUNDS[k]; f0 = min(0.95, max(0.05, (v - lo) / (hi - lo))); x0.append(math.log(f0 / (1 - f0)))
+            else: x0.append(math.log(v))
         if combine == 'mix': x0.append(0.0)
         if combine == 'overlap': x0 += [0.0, -2.0]
         if const: x0.append(0.0)

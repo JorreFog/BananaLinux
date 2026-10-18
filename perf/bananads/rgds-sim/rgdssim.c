@@ -20,6 +20,8 @@
  * Args (all optional): out=<path> l1i=32768 l1d=32768 l1ways=4 line=64 l3=524288 l3ways=16 itlb=15 dtlb=16
  *   l2tlb=1024 l2tlbways=4 page=4096 bpbits=12 bphist=10 btb=256 ras=8 ldlat=3 mullat=3 mul64lat=4 divlat=8
  *   fplat=4 pf=1 pfdeg=2 ipf=1 l3shared=1 thp=1 hugepages=LO-HI (hex; also learnt from madvise(MADV_HUGEPAGE))
+ *   marks=N1:N2 warm=10 (one run: snapshots after frames N1 and N2 from BananaDS's headless.window=1 log; out= is
+ *   then a prefix: <out>N1.tsv, <out>N2.tsv...)
  * Build: gcc -O2 -shared -fPIC -I<qemu>/include/qemu $(pkg-config --cflags glib-2.0) rgdssim.c -o librgdssim.so
  */
 #include <glib.h>
@@ -515,10 +517,22 @@ static void add_huge(uint64_t lo, uint64_t hi)
     g_mutex_unlock(&lock);
     fprintf(stderr, "[rgdssim] 2 MB pages: 0x%" PRIx64 "-0x%" PRIx64 "\n", lo, hi);
 }
+static void frame_mark(long done);
+static unsigned m_n2;
 static void on_syscall(qemu_plugin_id_t id, unsigned v, int64_t num, uint64_t a1, uint64_t a2, uint64_t a3,
                        uint64_t a4, uint64_t a5, uint64_t a6, uint64_t a7, uint64_t a8)
 {
     if (num == 233 && a3 == 14 && p_thp) add_huge(a1, a1 + a2);   /* aarch64 madvise(MADV_HUGEPAGE) */
+    if (num == 64 && m_n2 && (a1 == 1 || a1 == 2) && a3 >= 20) {    /* write(stdout/stderr): a frame mark? */
+        GByteArray *b = g_byte_array_new();
+        if (qemu_plugin_read_memory_vaddr(a2, b, a3 < 48 ? a3 : 48)) {
+            g_byte_array_append(b, (const guint8 *)"", 1);
+            const char *t = (const char *)b->data, *m = strstr(t, "[headless] frames ");
+            const char *d = m ? strchr(m + 18, '-') : NULL;
+            if (d) frame_mark(strtol(d + 1, NULL, 10));
+        }
+        g_byte_array_free(b, TRUE);
+    }
 }
 
 static void read_name(VState *s, const char *path)
@@ -534,9 +548,9 @@ static void vcpu_exit(qemu_plugin_id_t id, unsigned v)
     if (v < MAXV && vs[v]) read_name(vs[v], "/proc/thread-self/comm");
 }
 
-static void at_exit(qemu_plugin_id_t id, void *p)
+static void dump(const char *prefix)
 {
-    char *path = g_strdup_printf("%s.tsv", outpath);
+    char *path = g_strdup_printf("%s.tsv", prefix);
     FILE *f = fopen(path, "w");
     g_free(path);
     fprintf(f, "vcpu\tkind\tkey");
@@ -558,7 +572,7 @@ static void at_exit(qemu_plugin_id_t id, void *p)
         }
     }
     fclose(f);
-    path = g_strdup_printf("%s.threads", outpath);
+    path = g_strdup_printf("%s.threads", prefix);
     f = fopen(path, "w");
     g_free(path);
     fprintf(f, "vcpu\ttid\tname");
@@ -573,7 +587,7 @@ static void at_exit(qemu_plugin_id_t id, void *p)
         fprintf(f, "\n");
     }
     fclose(f);
-    path = g_strdup_printf("%s.cfg", outpath);
+    path = g_strdup_printf("%s.cfg", prefix);
     f = fopen(path, "w");
     g_free(path);
     fprintf(f, "l1i=%u l1d=%u l1ways=%u line=%u l3=%u l3ways=%u itlb=%u dtlb=%u l2tlb=%u l2tlbways=%u page=%u "
@@ -582,6 +596,49 @@ static void at_exit(qemu_plugin_id_t id, void *p)
             p_l2tlbways, p_page, p_bpbits, p_bphist, p_btb, p_ras, p_ldlat, p_mullat, p_mul64lat, p_divlat, p_fplat,
             p_pf, p_pfdeg, p_ipf, p_l3shared, p_thp);
     fclose(f);
+    /* the address map (qemu-user: guest = host addresses here), to name shared-library code in the report */
+    path = g_strdup_printf("%s.maps", prefix);
+    FILE *in = fopen("/proc/self/maps", "r"), *o = fopen(path, "w");
+    g_free(path);
+    if (in && o) { char b[4096]; size_t n; while ((n = fread(b, 1, sizeof b, in)) > 0) fwrite(b, 1, n, o); }
+    if (in) fclose(in);
+    if (o) fclose(o);
+}
+
+/* frame marks (marks=N1:N2): BananaDS's headless frontend with headless.window=1 logs "[headless] frames A-B: ..."
+   after every frame; the plugin counts nothing (plain qemu speed) until frame N1-warm, then instruments everything
+   and writes <out>N1.* after frame N1 and <out>N2.* after frame N2: one run instead of two. */
+static unsigned m_n1, m_warm = 10, m_on, m_done;
+static qemu_plugin_id_t m_id;
+static void on_syscall(qemu_plugin_id_t id, unsigned v, int64_t num, uint64_t a1, uint64_t a2, uint64_t a3,
+                       uint64_t a4, uint64_t a5, uint64_t a6, uint64_t a7, uint64_t a8);
+static void vcpu_exit(qemu_plugin_id_t id, unsigned v);
+static void at_exit(qemu_plugin_id_t id, void *p);
+static void register_all(qemu_plugin_id_t id)
+{
+    qemu_plugin_register_vcpu_tb_trans_cb(id, tb_trans);
+    qemu_plugin_register_vcpu_exit_cb(id, vcpu_exit);
+    qemu_plugin_register_vcpu_syscall_cb(id, on_syscall);
+    qemu_plugin_register_atexit_cb(id, at_exit, NULL);
+}
+static void frame_mark(long done)
+{
+    if (!m_on && done + m_warm >= m_n1) { m_on = 1; qemu_plugin_reset(m_id, register_all); return; }
+    if (m_on && (done == m_n1 || done == m_n2)) {
+        char *pre = g_strdup_printf("%s%ld", outpath, done);
+        dump(pre);
+        g_free(pre);
+        if (done == m_n2) m_done = 1;
+    }
+}
+
+static void at_exit(qemu_plugin_id_t id, void *p)
+{
+    if (m_n2) {
+        if (!m_done) fprintf(stderr, "[rgdssim] frame %u never reached: no report\n", m_n2);
+        return;
+    }
+    dump(outpath);
 }
 
 QEMU_PLUGIN_EXPORT int qemu_plugin_install(qemu_plugin_id_t id, const qemu_info_t *info, int argc, char **argv)
@@ -595,6 +652,8 @@ QEMU_PLUGIN_EXPORT int qemu_plugin_install(qemu_plugin_id_t id, const qemu_info_
         { "pfdeg", &p_pfdeg }, { "ipf", &p_ipf }, { "l3shared", &p_l3shared }, { "thp", &p_thp } };
     for (int i = 0; i < argc; i++) {
         if (!strncmp(argv[i], "out=", 4)) { outpath = g_strdup(argv[i] + 4); continue; }
+        if (!strncmp(argv[i], "marks=", 6)) { char *e; m_n1 = strtoul(argv[i] + 6, &e, 10); m_n2 = *e == ':' ? strtoul(e + 1, 0, 10) : 0; continue; }
+        if (!strncmp(argv[i], "warm=", 5)) { m_warm = strtoul(argv[i] + 5, 0, 10); continue; }
         if (!strncmp(argv[i], "hugepages=", 10)) {
             char *e; uint64_t lo = strtoull(argv[i] + 10, &e, 16), hi = *e == '-' ? strtoull(e + 1, 0, 16) : lo;
             add_huge(lo, hi); continue;
@@ -614,9 +673,13 @@ QEMU_PLUGIN_EXPORT int qemu_plugin_install(qemu_plugin_id_t id, const qemu_info_
     symslot = g_hash_table_new(g_str_hash, g_str_equal);
     addrslot = g_hash_table_new(g_direct_hash, g_direct_equal);
     slotkey = g_new0(char *, maxslots); slotkind = g_new0(int, maxslots);
-    qemu_plugin_register_vcpu_tb_trans_cb(id, tb_trans);
-    qemu_plugin_register_vcpu_exit_cb(id, vcpu_exit);
-    qemu_plugin_register_vcpu_syscall_cb(id, on_syscall);
-    qemu_plugin_register_atexit_cb(id, at_exit, NULL);
+    m_id = id;
+    if (m_n2) {   /* frame marks: plain qemu until frame N1 - warm */
+        qemu_plugin_register_vcpu_syscall_cb(id, on_syscall);
+        qemu_plugin_register_atexit_cb(id, at_exit, NULL);
+        if (m_warm >= m_n1) { m_on = 1; register_all(id); }
+        return 0;
+    }
+    register_all(id);
     return 0;
 }

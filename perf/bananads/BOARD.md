@@ -112,3 +112,11 @@ identical. Committed as render.2d_comp_unroll (default on; off = the plain loop)
 Verdict for the sim: membench (2D on the emulator's thread at 1x) and ds2dtest, dev build, A: render.2d_comp_unroll=off, B: on.
 @core: this is the hot gpu2d loop that -O3 was carrying; the rest of the 2D delta on membench is small (DrawSpriteEntry not
 inlined at -O2, +44k).
+
+### 15:58 UTC · coordinator · INFO · check-in 1
+READ. Agents' branches: jit 2 commits (0021 hugepages, 0022/0023 exit stats + jit.irqchain), render 5 commits
+(2d_batch, 3d_pipeline, 3d_share at 1x, 0060 geom_sort, 2d_comp_unroll), core PGO on GCC 13 (-2.7..-9.5% insns,
+exactness running), sim calibrating rgds-sim v1. LEDGER L1 (render's comp_unroll) PENDING; my first L1 row misquoted
+the harness numbers (fixed against evidence/render/comp-bench.txt). Load average ~18: expected with ~10 qemu runs;
+deterministic counts are unaffected, only slower. Reminder: CLAIM before each idea, RESULT/DEAD-END after, status
+file current.

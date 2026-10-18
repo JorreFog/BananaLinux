@@ -81,6 +81,8 @@ def bucket(s):
         return '2d'
     if 'SPU' in s or 'blip' in s or 'audio' in s.lower():
         return 'audio'
+    if s.startswith('_ZZ4main'):   # GCC 14 LTO inlines RunSlicesJIT there (core's 15:35 INFO)
+        return 'scheduler/core'
     if ('RunFrame' in s or 'RunSystem' in s or 'RunTimers' in s or 'NDS' in s or 'DMA' in s or 'Schedul' in s
             or 'RTC' in s or 'Timer' in s):
         return 'scheduler/core'
@@ -116,25 +118,72 @@ def load_run(prefix):
             if len(p) >= 3:
                 blocks.append((int(p[0], 16), int(p[1], 16), p[2]))
     blocks.sort()
-    return rows, threads, blocks
+    return rows, threads, blocks, load_maps(prefix)
 
 
-def classify_addr(a, blocks, starts, lo, hi):
+_symcache = {}
+
+
+def lib_symbols(path):
+    """(sorted addresses, names) of a shared library's dynamic and static function symbols (nm)"""
+    if path in _symcache: return _symcache[path]
+    import subprocess
+    syms = {}
+    for flag in ('-D', ''):
+        try:
+            out = subprocess.run(['aarch64-linux-gnu-nm', '--defined-only'] + ([flag] if flag else []) + [path],
+                                 capture_output=True, text=True, timeout=30).stdout
+        except Exception:
+            out = ''
+        for l in out.splitlines():
+            p = l.split()
+            if len(p) >= 3 and p[1] in 'tTiWw':
+                syms.setdefault(int(p[0], 16), p[2])
+    ks = sorted(syms)
+    _symcache[path] = (ks, [syms[k] for k in ks])
+    return _symcache[path]
+
+
+def load_maps(prefix):
+    """[(start, end, base, path)] of file mappings, base = the start of the file's offset-0 mapping"""
+    maps = []
+    if not os.path.exists(prefix + '.maps'): return maps
+    first = {}
+    rows = []
+    for l in open(prefix + '.maps'):
+        p = l.split()
+        if len(p) < 6 or not p[5].startswith('/'): continue
+        a, b = (int(x, 16) for x in p[0].split('-'))
+        off = int(p[2], 16)
+        if off == 0 and p[5] not in first: first[p[5]] = a
+        rows.append((a, b, p[5]))
+    for a, b, path in rows:
+        maps.append((a, b, first.get(path, a), path))
+    return maps
+
+
+def classify_addr(a, blocks, starts, lo, hi, maps=()):
     if blocks and lo <= a < hi:
         i = bisect.bisect_right(starts, a) - 1
         name = blocks[i][2] if i >= 0 and a < blocks[i][0] + blocks[i][1] else 'stub/unknown'
         return 'jit-code', name
+    for s0, e0, base, path in maps:
+        if s0 <= a < e0:
+            ks, ns = lib_symbols(path)
+            i = bisect.bisect_right(ks, a - base) - 1
+            nm = ns[i] if i >= 0 else '?'
+            return 'libc/lib', '%s:%s' % (os.path.basename(path), nm)
     return 'libc/lib', 'lib@%x' % a
 
 
 def per_frame(A, B, frames):
     """returns {vcpu: {'thread':..., 'cls':..., 'items': {(bucket, name): counters dict}}}"""
-    rowsA, thA, blA = A
-    rowsB, thB, blB = B
+    rowsA, thA, blA, mpA = A
+    rowsB, thB, blB, mpB = B
     out = {}
     for v in sorted(set(rowsB) | set(rowsA)):
         items = collections.defaultdict(lambda: collections.Counter())
-        for sign, rows, bl in ((-1, rowsA, blA), (1, rowsB, blB)):
+        for sign, rows, bl, mp in ((-1, rowsA, blA, mpA), (1, rowsB, blB, mpB)):
             starts = [b[0] for b in bl]
             lo = min(b[0] for b in bl) - 0x100000 if bl else 0
             hi = max(b[0] + b[1] for b in bl) + 0x100000 if bl else 0
@@ -142,7 +191,7 @@ def per_frame(A, B, frames):
                 if kind == 'sym':
                     k = (bucket(key), key)
                 else:
-                    k = classify_addr(int(key, 16), bl, starts, lo, hi)
+                    k = classify_addr(int(key, 16), bl, starts, lo, hi, mp)
                 c = items[k]
                 for n, x in zip(CTR, ctr):
                     c[n] += sign * x / frames
