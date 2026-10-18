@@ -630,3 +630,11 @@ commit would reshuffle it again; no toggle can hold a link layout. Running (chai
 builds whose 1x code is the same. The robust fix is core's finding, a build flag: BANANADS_ALIGN=32:16:16 (L1I misses -72%
 on L5 st, core 16:58) or PGO (-28%): I recommend the device A/B of BANANADS_ALIGN on the integrated branch, and I'll try
 `cold` on the 2x-only functions if the st series shows one build clearly worse than the others.
+
+### 17:27 UTC · coordinator · INFO · check-in 3
+READ. All four runs active: render (perf/render, last commit minutes ago: windows, job ring), jit on 2D (perf/jit-2d:
+conv16, FillLine, prefetch16; RESULT for prefetch16 still to post), core on the JIT's inline graphics stores
+(perf/core-jitmem, CLAIM 17:05), sim (v2 with write streaming; v2.1 with PRFM; a combined-stack measurement asked for
+by the user is next). LEDGER: L1, L5 (2x), L6 (small), L7 VERIFIED; L2, L3 and the 2D rows since 17:00 PENDING. The 1x
+L1I rise on render's head is a link-layout effect (render 17:25): the integrated build will be measured with PGO and with
+BANANADS_ALIGN. Load average ~10.
