@@ -79,7 +79,10 @@ the 2D thread is now the frame's limit at 2x in every workload. Not counted: ren
 The PGO profile is from the base tree: its 1x gain mostly vanished (L1I misses back up); retrain it on the final tree
 (core's train.sh; core was doing it: /home/user/perf/core/prof-int). Exact: pictures + audio identical to the base on
 17 ROMs at 1x and 5 at 2x (rgds-sim/tools/exact.sh), plus render's matrix subset (dev2x 10 ROMs, 1x-t0).
-Evidence: evidence/sim/combined-int1.txt, combined-int2.txt.
+**#3 (17:53): the same tree with the profile retrained on it** (core's prof-int): dsstress-L5 1x st -5.8% (was -2.3%
+with the stale profile; L1I misses 10.9k -> 6.4k/frame), ds2dtest at 2x on one thread -27.4%. Ship PGO only with a
+profile trained on the final tree.
+Evidence: evidence/sim/combined-int1.txt, combined-int2.txt, combined-int3.txt.
 
 ## 6. Device test commands (for the local agent)
 

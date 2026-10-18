@@ -14,11 +14,12 @@ no handheld. The work and its proof are in this folder; this page is the summary
 ## Before vs after: everything together
 
 The start of the session is BananaDS `00c34c78e8de`, the commit BananaLinux pins. "After" is the integrated series
-`patches/integrated/` (23 commits on top of it, SuperDrastic `perf/integrated` @ 4de7beb), built with the test-ROM
-PGO profile.
+`patches/integrated/` (23 commits on top of it, SuperDrastic `perf/integrated` @ 4de7beb), built with a test-ROM PGO
+profile. Run #2 used the profile trained on the old tree, which is stale for the changed files. Run #3 used the
+profile retrained on the integrated tree, `pgo/prof-int-gcc14.3-4de7beb.tar.gz`, which is how it should ship.
 
 The table shows ms per frame of the frame's slowest thread, which is the one that sets the frame rate. Each cell is
-at 1104 MHz (at 1992 MHz). Source: `sim`, `evidence/sim/combined-int2.txt`, 17:46 UTC.
+at 1104 MHz (at 1992 MHz). Sources: `sim`, `evidence/sim/combined-int2.txt` (#2, 17:46 UTC) and `combined-int3.txt` (#3, retrained profile, 17:53 UTC).
 
 | Workload | Before | After | Change |
 |---|---|---|---|
@@ -26,7 +27,8 @@ at 1104 MHz (at 1992 MHz). Source: `sim`, `evidence/sim/combined-int2.txt`, 17:4
 | membench-win (2D windows over 3D, a game HUD) at 2x | 7.88 | 4.27 | **-46%** |
 | dsstress-L5 (3D stress) at 2x | 4.58 (main thread) | 3.96 (2D thread) | **-2% to -14%** (dev-mode noise ±4%) |
 | membench (a game frame's memory traffic) at 1x | 4.66 | 4.22 | **-10%** |
-| dsstress-L5 at 1x | 6.86 | 6.71 | -2% |
+| dsstress-L5 at 1x | 6.86 | 6.71 (#2) / **6.46 (#3, retrained profile)** | -2% / **-5.8%** |
+| ds2dtest, 2x on one thread (st, deterministic) | 26.40 (15.01) | 19.16 (11.00) (#3) | **-27%** |
 | cpubench-thumb (CPU-bound game logic) at 1x | 5.48 | 5.46 | -0.5% |
 
 Exactness of the integrated build: pictures and audio are identical to the base on 17 ROMs at 1x and 5 at 2x. render's
@@ -39,10 +41,11 @@ How to read it:
 - **The 2D thread is now the limit at 2x, and it got much faster.** On 2D-heavy and windowed scenes it is 30-46%
   faster. On the 3D stress ROM it is only a few percent faster, because there its cost is reading Gengis's 3D rows
   from memory, which only a smaller 3D format or prefetch can cut.
-- **At 1x the gain is small, from two causes.** The 2D engine runs on the emulator's thread at 1x, where the
-  compositor and window fixes give -10% on membench. PGO gave -4 to -13% on its own (LEDGER L7), but its profile is
-  from the base tree, so it is stale for the changed files and lost most of its gain here. Retrain it on the final
-  tree (`bananads/tools/perf/pgo/train.sh`) before shipping PGO.
+- **At 1x the gain is moderate.** The 2D engine runs on the emulator's thread at 1x, where the compositor and window
+  fixes give -10% on membench. PGO gave -4 to -13% on its own (LEDGER L7). With the old tree's profile it lost most
+  of that on the integrated tree: dsstress-L5 1x was -2.3%. Retrained on the integrated tree it is back: -5.8%, with
+  L1I misses at 10.9k -> 6.4k per frame. Ship PGO only with a profile from the final tree
+  (`bananads/tools/perf/pgo/train.sh`, `pgo/README.md`).
 - **One default change could be big at 1x.** Turning on the 2D thread at 1x (`render.2d_thread=on` at
   `render.scale=1`) took 36% (dsstress-L5) and 67% (ds2dtest) off the emulator's thread in the model. It is a device
   A/B, then possibly a one-line default.
@@ -129,3 +132,22 @@ Not in the integrated series, each a separate series on top:
   attribution).
 - **JIT:** a cycle budget in a register (analysed in findings/jit.md, about 6% of cpubench), and the JIT's code
   footprint. On a game-sized footprint the JIT's code is fetch-bound, at ~0.25 instructions per cycle.
+
+## How the session ran
+
+- **Start and agents (14:58 UTC).** The session started with four agents: `sim`, the simulator and verifier, and
+  `jit` on Opus 5.5; `core`, the build and C++ core, and `render`, the renderers and threads, on Fable 5.1 at the
+  user's request. One coordinator ran the board, the ledger and the integration.
+- **16:39 restart.** The first `core` run was ended by the harness after its hand-over; a second run took over from
+  its status file.
+- **16:52 re-plan.** sim found that at 2x the 2D thread is the frame's limit. At the user's request jit, render and
+  sim moved to the 2D engine (2D-PLAN.md), and core moved to the JIT's inline graphics stores.
+- **17:29 deadline.** The user set the end at 18:28 UTC. The integrated series, the combined measurements and these
+  documents were made in the last hour.
+- **What guarded against hallucination and circles:**
+  - every number has an evidence file;
+  - each result is re-measured by another agent (LEDGER);
+  - ideas were time-boxed, and DEAD-ENDS.md was read before claiming one;
+  - wrong timestamps and a misquoted number were caught and corrected on the board.
+- **Weekly usage.** The 45%-of-weekly-usage stop condition couldn't be read from inside the session; the clock was
+  the limit.

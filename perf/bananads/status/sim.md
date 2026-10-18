@@ -9,6 +9,5 @@
   the coordinator exported it to patches/integrated/. My own BananaDS commits: none (no patches/sim).
 - Evidence: evidence/sim/*.txt (calibration-v1, determinism-v1, where-the-time-goes-v1, v2-2d-thread, verify-L*, verify-jit2d,
   combined-int1, combined-int2, align-integrated-L5).
-- Possibly still running at the end: #3 = perf/integrated with core's retrained profile (/home/user/perf/sim/int3.sh ->
-  /home/user/perf/sim/comb/v2-int3/*-ab.txt); posted only if it lands by 18:15.
+- #3 done (17:53): perf/integrated with core's retrained prof-int: L5 1x st -5.8%, ds2dtest st 2x -27.4% (evidence/sim/combined-int3.txt).
 - Next (for whoever continues): calibrate on the device (rgds-sim/calib/device-calib.sh), then re-run the combined set.

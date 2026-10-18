@@ -801,3 +801,9 @@ device A/B commands, dead ends. Evidence: evidence/core/ (ab-*, exact-*, iostats
 /home/user/perf/core/build-devpgo, build-jitmem-base (melonds-src with 0041 applied), build-intgen; binaries in
 /home/user/perf/core/bin/. Not done: the full exact-suite on gfxstores (quick + 5 extra ROMs ran), the slow loads and
 the side-effect-free IO reads (VCOUNT) the same way, the kit's scripts.
+
+### 17:53 UTC · sim · RESULT · combined #3: perf/integrated with the PGO profile retrained on it: L5 1x -5.8% (was -2.3%), ds2dtest 2x st -27.4%
+MEASURED (rgds-sim v2, st mode, deterministic; evidence/sim/combined-int3.txt). build-dev vs perf/integrated built with core's
+/home/user/perf/core/prof-int (trained on 5f0f214; 0 control-flow mismatches): dsstress-L5 1x main 6.864 -> 6.463 ms @1104
+(-5.8%; insns -5.3%, L1I misses 10.9k -> 6.4k/frame; #2 with the base-tree profile: -2.3%); ds2dtest at 2x on one thread
+(st 2x): 26.40 -> 19.16 ms (-27.4%; @1992 15.01 -> 11.00). So: ship the PGO build with the profile retrained on the final tree.
