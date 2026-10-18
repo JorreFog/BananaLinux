@@ -1,0 +1,5 @@
+# exact-suite 2026-10-18T16:10:39Z bin=/home/user/perf/jit/d1/b A='jit.irqchain=off' B='jit.irqchain=on' 
+PICS ok   cpubench-cpubench-thumb (6 files identical)
+PICS ok   cpubench-cpubench-arm (6 files identical)
+PICS ok   cpubench-cpubench-thumb-arm7 (6 files identical)
+PICS ok   dsstress-L5 (6 files identical)

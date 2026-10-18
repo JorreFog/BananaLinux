@@ -49,9 +49,11 @@ esac
 echo "$0 $B $ROM $L --mode $MODE --frames $N1:$N2${DIFF:+ --diff} $*" > "$W/cmd"
 echo "SIMARGS=${SIMARGS:-} PARAMS=${PARAMS:-} SYSROOT=$SYSROOT $(env | grep -E '^(MELONDS|BANANADS)_' | tr '\n' ' ')" >> "$W/cmd"
 [ -n "$DIFF" ] || { [ $MODE = raw ] && DIFF=1 || DIFF=0; }
+# no address-space randomisation: guest mmaps land at the same host addresses each run, so cache sets are the same
+NORAND=""; setarch "$(uname -m)" -R true 2>/dev/null && NORAND="setarch $(uname -m) -R"
 t0=$(date +%s)
 if [ $DIFF = 0 ]; then
-  MELONDS_JIT_PERFMAP=1 $Q -L "$SYSROOT" -plugin "$P,out=$W/f,marks=$N1:$N2${SIMARGS:+,$(echo $SIMARGS | tr ' ' ',')}" \
+  MELONDS_JIT_PERFMAP=1 $NORAND $Q -L "$SYSROOT" -plugin "$P,out=$W/f,marks=$N1:$N2${SIMARGS:+,$(echo $SIMARGS | tr ' ' ',')}" \
     "$B" $COMMON $MS --set headless.window=1 --set headless.frames=$N2 "$@" "$ROM" > "$W/log" 2>&1 &
   pid=$!
   wait $pid || echo "run exited with $?" >> "$W/log"
@@ -61,7 +63,7 @@ if [ $DIFF = 0 ]; then
   [ -f "$W/f$N2.tsv" ] || { echo "no frame marks in the log (a build without headless.window?): use --diff"; tail -5 "$W/log"; exit 1; }
 else
 for n in $N1 $N2; do
-  MELONDS_JIT_PERFMAP=1 $Q -L "$SYSROOT" -plugin "$P,out=$W/f$n${SIMARGS:+,$(echo $SIMARGS | tr ' ' ',')}" \
+  MELONDS_JIT_PERFMAP=1 $NORAND $Q -L "$SYSROOT" -plugin "$P,out=$W/f$n${SIMARGS:+,$(echo $SIMARGS | tr ' ' ',')}" \
     "$B" $COMMON $MS --set headless.frames=$n "$@" "$ROM" > "$W/log$n" 2>&1 &
   eval "pid$n=$!"
 done

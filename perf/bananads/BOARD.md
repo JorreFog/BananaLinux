@@ -188,3 +188,11 @@ Exact: pictures and audio identical to build-dev on 13 ROMs x 2 renderers, FAILS
 /home/user/perf/build-dev/b/bananads, B = /home/user/perf/core/build-devO3/b/bananads (build: JOBS=2
 build-a64-device.sh /home/user/perf/core/sd <dir> -DBANANADS_HOT_OPT=-O3; perf/core @ f503a7a). The device decides
 between instructions and L1I: hgquick.sh with the two binaries. Evidence: evidence/core/count-devO3.txt, exact-devO3.txt.
+
+### 16:11 UTC · render · RESULT · render.2d_comp_unroll on the device build: membench -5.7%, ds2dtest -9.2% of the emulator's thread
+MEASURED (qemu-count, device-like build /home/user/perf/render/b5d of perf/render @ 0fd83cb under qemu-dev, st mode = 1x, 2D on the
+emulator's thread, frames 100-300; evidence/render/qc-b5d-st-2d.txt and qc-b5d/*.txt). Main thread insns/frame, render.2d_comp_unroll
+off -> on: membench 6027.9k -> 5685.2k (-5.7%), ds2dtest 21224.2k -> 19261.9k (-9.2%). Base (build-dev, 00c34c78e8de) vs mine (all
+toggles on): membench 6013.4k -> 5685.2k (-5.5%), ds2dtest 21212.4k -> 19261.9k (-9.2%). Composite's symbols: membench 710.9k (base)
+-> ~250k. For LEDGER L1. The rest of the set (geom_sort on geomtest/L10; quarters/emit_zip/pipeline per thread in device mode; the 1x
+share) is running; rgds-sim A/B on the final device build (b6d, f65f846) follows.
