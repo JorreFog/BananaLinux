@@ -44,6 +44,27 @@ if [ ! -f $S ]; then
     set_cfg menu_show_core_updater false
     touch $S
 fi
+# Settings > Other systems > Shader: RetroArch's global preset, a reference to one of the image's presets. Only a
+# global.glslp Banana wrote (its first line) is changed or removed: one saved from RetroArch's own menu stays.
+GP=/data/retroarch/config/global.glslp
+look=$(sed -n 's/^ra_shader *= *//p' /data/banana/settings.conf 2>/dev/null | tail -n 1)
+case $look in
+lcd) SP=handheld/zfast-lcd.glslp ;;
+crt) SP=crt/zfast-crt.glslp ;;
+sharp) SP=interpolation/sharp-bilinear-simple.glslp ;;
+*) SP= ;;
+esac
+ours() { head -n 1 $GP 2>/dev/null | grep -q '^# Banana'; }
+if [ -n "$SP" ]; then
+    if [ ! -f $GP ] || ours; then
+        mkdir -p ${GP%/*}
+        printf '# Banana: Settings > Other systems > Shader (%s)\n#reference "/usr/share/libretro/shaders/glsl/%s"\n' "$look" "$SP" > $GP
+        set_cfg video_shader_enable true
+    fi
+elif ours; then
+    rm -f $GP
+    set_cfg video_shader_enable false
+fi
 # the RetroAchievements account from the setup (banana/accounts.conf) into RetroArch's own settings
 A=/data/banana/accounts.conf
 if [ -f $A ]; then
