@@ -19,7 +19,7 @@
  * class counts, counters) and <out>.cfg (the structural parameters used).
  * Args (all optional): out=<path> l1i=32768 l1d=32768 l1ways=4 line=64 l3=524288 l3ways=16 itlb=15 dtlb=16
  *   l2tlb=1024 l2tlbways=4 page=4096 bpbits=12 bphist=10 btb=256 ras=8 ldlat=3 mullat=3 mul64lat=4 divlat=8
- *   fplat=4 pf=1 pfdeg=2 ipf=1 l3shared=1
+ *   fplat=4 pf=1 pfdeg=2 ipf=1 l3shared=1 thp=1 hugepages=LO-HI (hex; also learnt from madvise(MADV_HUGEPAGE))
  * Build: gcc -O2 -shared -fPIC -I<qemu>/include/qemu $(pkg-config --cflags glib-2.0) rgdssim.c -o librgdssim.so
  */
 #include <glib.h>
@@ -53,8 +53,20 @@ static unsigned p_l1i = 32768, p_l1d = 32768, p_l1ways = 4, p_line = 64, p_l3 = 
 static unsigned p_itlb = 15, p_dtlb = 16, p_l2tlb = 1024, p_l2tlbways = 4, p_page = 4096;
 static unsigned p_bpbits = 12, p_bphist = 10, p_btb = 256, p_ras = 8;
 static unsigned p_ldlat = 3, p_mullat = 3, p_mul64lat = 4, p_divlat = 8, p_fplat = 4;
-static unsigned p_pf = 1, p_pfdeg = 2, p_ipf = 1, p_l3shared = 1;
+static unsigned p_pf = 1, p_pfdeg = 2, p_ipf = 1, p_l3shared = 1, p_thp = 1;
 static unsigned lshift, pshift;
+/* transparent huge pages: ranges the guest madvise(MADV_HUGEPAGE)s (BananaLinux's kernel: THP=madvise) get 2 MB
+   TLB entries when thp=1 (qemu-user itself ignores madvise). Also hugepages=LO-HI (hex) by hand. */
+#define MAXHUGE 16
+static uint64_t huge_lo[MAXHUGE], huge_hi[MAXHUGE]; static volatile int nhuge;
+static inline uint64_t pagekey(uint64_t addr)
+{
+    for (int i = 0; i < nhuge; i++)
+        if (addr >= huge_lo[i] && addr < huge_hi[i]) return (addr >> 21) | (1ull << 62);
+    return addr >> pshift;
+}
+
+
 
 /* ---- set-associative cache with LRU (age stamps) ---- */
 typedef struct {
@@ -345,7 +357,7 @@ static inline void icache(VState *s, const TBInfo *tb, uint64_t *c)
 {
     uint64_t first = tb->pc >> lshift, last = (tb->end - 1) >> lshift;
     for (uint64_t ln = first; ln <= last; ln++) {
-        uint64_t pg = (ln << lshift) >> pshift;
+        uint64_t pg = pagekey(ln << lshift);
         if (pg != s->last_ipage) {
             s->last_ipage = pg;
             if (!ftlb_access(s->itlb, s->itlb_st, p_itlb, &s->tlbclock, pg)) {
@@ -434,7 +446,7 @@ static void mem_cb(unsigned vcpu, qemu_plugin_meminfo_t info, uint64_t va, void 
     for (uint64_t ln = first; ln <= last; ln++) {
         if (ln == s->last_dline) continue;
         s->last_dline = ln;
-        uint64_t pg = (ln << lshift) >> pshift;
+        uint64_t pg = pagekey(ln << lshift);
         if (pg != s->last_dpage) {
             s->last_dpage = pg;
             if (!ftlb_access(s->dtlb, s->dtlb_st, p_dtlb, &s->tlbclock, pg)) {
@@ -496,6 +508,19 @@ static void tb_trans(qemu_plugin_id_t id, struct qemu_plugin_tb *tb)
     g_free(d);
 }
 
+static void add_huge(uint64_t lo, uint64_t hi)
+{
+    g_mutex_lock(&lock);
+    if (nhuge < MAXHUGE) { huge_lo[nhuge] = lo & ~0x1FFFFFull; huge_hi[nhuge] = hi; nhuge++; }
+    g_mutex_unlock(&lock);
+    fprintf(stderr, "[rgdssim] 2 MB pages: 0x%" PRIx64 "-0x%" PRIx64 "\n", lo, hi);
+}
+static void on_syscall(qemu_plugin_id_t id, unsigned v, int64_t num, uint64_t a1, uint64_t a2, uint64_t a3,
+                       uint64_t a4, uint64_t a5, uint64_t a6, uint64_t a7, uint64_t a8)
+{
+    if (num == 233 && a3 == 14 && p_thp) add_huge(a1, a1 + a2);   /* aarch64 madvise(MADV_HUGEPAGE) */
+}
+
 static void read_name(VState *s, const char *path)
 {
     FILE *f = fopen(path, "r");
@@ -553,9 +578,9 @@ static void at_exit(qemu_plugin_id_t id, void *p)
     g_free(path);
     fprintf(f, "l1i=%u l1d=%u l1ways=%u line=%u l3=%u l3ways=%u itlb=%u dtlb=%u l2tlb=%u l2tlbways=%u page=%u "
             "bpbits=%u bphist=%u btb=%u ras=%u ldlat=%u mullat=%u mul64lat=%u divlat=%u fplat=%u pf=%u pfdeg=%u "
-            "ipf=%u l3shared=%u\n", p_l1i, p_l1d, p_l1ways, p_line, p_l3, p_l3ways, p_itlb, p_dtlb, p_l2tlb,
+            "ipf=%u l3shared=%u thp=%u\n", p_l1i, p_l1d, p_l1ways, p_line, p_l3, p_l3ways, p_itlb, p_dtlb, p_l2tlb,
             p_l2tlbways, p_page, p_bpbits, p_bphist, p_btb, p_ras, p_ldlat, p_mullat, p_mul64lat, p_divlat, p_fplat,
-            p_pf, p_pfdeg, p_ipf, p_l3shared);
+            p_pf, p_pfdeg, p_ipf, p_l3shared, p_thp);
     fclose(f);
 }
 
@@ -567,9 +592,13 @@ QEMU_PLUGIN_EXPORT int qemu_plugin_install(qemu_plugin_id_t id, const qemu_info_
         { "l2tlbways", &p_l2tlbways }, { "page", &p_page }, { "bpbits", &p_bpbits }, { "bphist", &p_bphist },
         { "btb", &p_btb }, { "ras", &p_ras }, { "ldlat", &p_ldlat }, { "mullat", &p_mullat },
         { "mul64lat", &p_mul64lat }, { "divlat", &p_divlat }, { "fplat", &p_fplat }, { "pf", &p_pf },
-        { "pfdeg", &p_pfdeg }, { "ipf", &p_ipf }, { "l3shared", &p_l3shared } };
+        { "pfdeg", &p_pfdeg }, { "ipf", &p_ipf }, { "l3shared", &p_l3shared }, { "thp", &p_thp } };
     for (int i = 0; i < argc; i++) {
         if (!strncmp(argv[i], "out=", 4)) { outpath = g_strdup(argv[i] + 4); continue; }
+        if (!strncmp(argv[i], "hugepages=", 10)) {
+            char *e; uint64_t lo = strtoull(argv[i] + 10, &e, 16), hi = *e == '-' ? strtoull(e + 1, 0, 16) : lo;
+            add_huge(lo, hi); continue;
+        }
         int ok = 0;
         for (size_t k = 0; k < G_N_ELEMENTS(P); k++) {
             size_t l = strlen(P[k].k);
@@ -587,6 +616,7 @@ QEMU_PLUGIN_EXPORT int qemu_plugin_install(qemu_plugin_id_t id, const qemu_info_
     slotkey = g_new0(char *, maxslots); slotkind = g_new0(int, maxslots);
     qemu_plugin_register_vcpu_tb_trans_cb(id, tb_trans);
     qemu_plugin_register_vcpu_exit_cb(id, vcpu_exit);
+    qemu_plugin_register_vcpu_syscall_cb(id, on_syscall);
     qemu_plugin_register_atexit_cb(id, at_exit, NULL);
     return 0;
 }
