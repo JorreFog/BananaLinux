@@ -1,0 +1,24 @@
+# Sourced by the launchers (it is on the read-only root): kv_export <file> <prefix>...
+# A settings file on the card is read as KEY=value lines and each one is exported as it is: nothing in it is run.
+# (Sourcing it as shell ran whatever it held: a card shader named "x;cmd" put into superdrastic.conf by Settings ran
+# cmd as root at the next launch, and file sharing can write the card.) Only keys with one of the prefixes count,
+# and never one ending in _CMD (superdrastic-run runs DSFLIP_START_CMD/DSFLIP_STOP_CMD); "#" lines, blank lines and
+# anything else are skipped. A value keeps everything after the first "=", without one pair of quotes around it
+# (the file's own "KEY="value"" style) or a Windows line end.
+kv_export() {
+    _kv_f=$1; shift
+    [ -f "$_kv_f" ] || return 0
+    _kv_cr=$(printf '\r')
+    while IFS= read -r _kv_l || [ -n "$_kv_l" ]; do
+        _kv_l=${_kv_l%"$_kv_cr"}
+        case $_kv_l in ''|'#'*) continue ;; *=*) ;; *) continue ;; esac
+        _kv_k=${_kv_l%%=*}; _kv_v=${_kv_l#*=}
+        case $_kv_k in ''|[0-9]*|*[!A-Za-z0-9_]*|*_CMD) continue ;; esac
+        _kv_ok=
+        for _kv_p in "$@"; do case $_kv_k in "$_kv_p"*) _kv_ok=1 ;; esac; done
+        [ -n "$_kv_ok" ] || continue
+        case $_kv_v in \"*\") _kv_v=${_kv_v#\"}; _kv_v=${_kv_v%\"} ;; \'*\') _kv_v=${_kv_v#\'}; _kv_v=${_kv_v%\'} ;; esac
+        export "$_kv_k=$_kv_v"
+    done < "$_kv_f"
+    unset _kv_f _kv_cr _kv_l _kv_k _kv_v _kv_ok _kv_p
+}

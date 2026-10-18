@@ -279,7 +279,14 @@ namespace banana
 			while (dirent* e = readdir(d))
 			{
 				std::string n = e->d_name;
-				if (n.size() > 5 && n[0] != '.' && n.compare(n.size() - 5, 5, ".frag") == 0) own.push_back(n.substr(0, n.size() - 5));
+				if (n.size() > 5 && n[0] != '.' && n.compare(n.size() - 5, 5, ".frag") == 0)
+				{
+					// only names of letters, digits and . _ + - (the README says so): the name goes into the launchers'
+					// settings files, and one with a space, a ";" or a "$" broke them (or ran what it held, before kv-env)
+					std::string base = n.substr(0, n.size() - 5);
+					if (base.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._+-") == std::string::npos)
+						own.push_back(base);
+				}
 			}
 			closedir(d);
 			std::sort(own.begin(), own.end());
@@ -340,7 +347,7 @@ namespace banana
 			menu, "quick_resume", { "Off", "On" }, { "off", "on" });
 		std::vector<std::string> shaderNames, shaderValues;
 		shaderChoices(data, shaderNames, shaderValues);
-		std::string shaderHelpS = "Sharp pixels: every DS pixel an exact square, no blur (4x4 on the RG DS Plus, 2x2 with a frame on the RG DS). None scales smoothly. Your own: .frag files in banana/shaders. Crisp: exact pixel-area scaling. Grid and LCD: the DS's screen grid. Colours: the DS's own, duller colours. CRT: a TV's scanlines. FSR: smooth edges, the heaviest. None costs no GPU work.";
+		std::string shaderHelpS = "Sharp pixels: every DS pixel an exact square, no blur (4x4 on the RG DS Plus, 2x2 with a frame on the RG DS). None scales smoothly. Your own: .frag files in banana/shaders, named with letters, digits and . _ + - only. Crisp: exact pixel-area scaling. Grid and LCD: the DS's screen grid. Colours: the DS's own, duller colours. CRT: a TV's scanlines. FSR: smooth edges, the heaviest. None costs no GPU work.";
 		if (readLine("/etc/banana/board") == "rgds-plus") shaderHelpS += PLUS_SHADER_NOTE;
 		const char* shaderHelp = shaderHelpS.c_str();
 		if (emu == "bananads")

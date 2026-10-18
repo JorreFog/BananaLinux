@@ -4,7 +4,8 @@ DS SHADERS OF YOUR OWN
 Put a shader in this folder (banana/shaders on the card, over file sharing or with the card in a computer) as
 <name>.frag, and it shows up in Settings > Nintendo DS > Shader as "<name> (card)", for SuperDrastic and BananaDS
 alike. Pick it there and start a game. Banana's own shaders are listed first; one of yours with the same name as one
-of Banana's is not listed (rename it).
+of Banana's is not listed (rename it), nor is one whose name has anything but letters, digits and . _ + -
+(no spaces: "my-crt.frag", not "my crt.frag").
 
 The format is SuperDrastic's: one OpenGL ES 2 fragment shader that draws a DS screen onto a panel. It gets:
 
