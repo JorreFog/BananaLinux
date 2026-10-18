@@ -69,7 +69,13 @@ else
     # the panel RetroArch doesn't use (video_monitor_index: 2 the top, 1 the bottom) stays dark while the game runs
     . /usr/libexec/banana/one-panel
     case ${MON:-2} in 2) one_panel_dark top ;; *) one_panel_dark bottom ;; esac
-    retroarch --config $CFG -L "$CORE" "$2" &
+    # commands on its stdin here too (bananad's AUDIO_REINIT when the headphone jack changes), through the pipe the
+    # game panel uses; held open here (fd 3) so RetroArch never reads an end
+    FIFO=/run/banana/retroarch.cmd
+    rm -f $FIFO; mkfifo -m 600 $FIFO && exec 3<>$FIFO
+    L=/run/banana/retroarch-stdin.cfg
+    printf 'stdin_cmd_enable = "true"\n' > $L
+    retroarch --config $CFG --appendconfig $L -L "$CORE" "$2" < $FIFO &
     P=$!
 fi
 trap 'kill -TERM $P 2>/dev/null' TERM INT HUP
@@ -79,6 +85,8 @@ if [ -n "$BANANA_DRM_LEASE_FD" ]; then
     set_cfg video_monitor_index ${MON:-2}
     set_cfg stdin_cmd_enable false
 else
+    exec 3>&-; rm -f $FIFO
+    set_cfg stdin_cmd_enable false
     one_panel_restore
 fi
 exit $S

@@ -907,10 +907,12 @@ static void load_drivers_present(void)
 	closedir(d);
 }
 
-/* the second SD card: mounted, and its games offered to the library, to match the slot (/usr/libexec/banana/sd2) */
+/* the second SD card: mounted, and its games offered to the library, to match the slot (/usr/libexec/banana/sd2).
+ * In the background (a slow card's mount mustn't hold up the power button or sleep), one scan at a time: a card
+ * going in sends several uevents */
 static void sd2_scan(void)
 {
-	char *argv[] = { "/usr/libexec/banana/sd2", "scan", NULL };
+	char *argv[] = { "/bin/sh", "-c", "flock /run/banana/sd2.lock /usr/libexec/banana/sd2 scan </dev/null >/dev/null 2>&1 &", NULL };
 	run(argv);
 }
 
