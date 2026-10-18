@@ -45,3 +45,19 @@
 - (core, 17:41) The JIT's VRAM/OAM/palette stores fully inline at every store site (~36 instructions each): rgds-sim
   cpubench-thumb +1.7%, membench +0.1%, jit's bigcode +5.8% (code growth: L1I misses +46% on cpubench), and not exact on
   ds2dtest; evidence/core/ab-gfx1-*.txt. The shared JIT-emitted helpers (0041, jit.gfxstores) are the version that works.
+
+## Measured on the device after the session (RG DS Plus, HeartGold overworld; GUIDE-FOR-CLOUD-AGENTS.md)
+
+- **The whole integrated series (23 patches):** +3% fps at 2x and +2% at 1x on HeartGold. The simulator said -2..-46%
+  per frame on the test ROMs. Gains on test ROMs did not carry over to a game.
+- **`render.3d_pipeline`:** 0% on HeartGold. The model's -27% of the emulator's thread doesn't show, because the
+  thread's time goes elsewhere in a game.
+- **"At 2x the 2D thread is the frame's limit" (rgds-sim, 16:47):** false on HeartGold. The emulator's thread is 99%
+  busy, the 2D thread 31%, the Gengis workers 25% each. The 2D-only phase of the session (16:52 onward) was aimed at
+  a thread that isn't the limit in a real game.
+- **Building and tuning a simulator (rgds-sim) to decide what to optimise:** it was within 2% on one single-threaded
+  number and wrong about which thread limits a game. Don't spend agent time on it again. Ask the local agent for
+  per-thread CPU times and a profile of the busiest thread on a real game instead.
+- **Still worth having from the session:** `render.2d_thread=on` at 1x (+21% base, +26% with the patches, already in
+  the base code), the toggles themselves (all frame-exact on the device), and the device-faithful build
+  (`build-a64-device.sh`).

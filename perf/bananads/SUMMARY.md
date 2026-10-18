@@ -1,5 +1,35 @@
 # BananaDS speed session, 2026-10-18: results
 
+## Device verdict (RG DS Plus, measured by the local agent after the session): read this first
+
+The local agent tested the integrated series on an RG DS Plus with BananaOS, in the HeartGold overworld (a real save,
+600 measured frames). The full write-up is [GUIDE-FOR-CLOUD-AGENTS.md](GUIDE-FOR-CLOUD-AGENTS.md).
+
+| | The simulator said | The device measured |
+|---|---|---|
+| Everything together, 2x | -2% to -46% per frame | **+3% fps** (105.5 -> 108.6 at 1992 MHz; 69.9 -> 71.4 at 1104 MHz) |
+| Everything together, 1x | -6% to -10% | **+2% fps** |
+| `render.3d_pipeline` | the emulator's thread -27% | **0%** |
+| `render.2d_thread=on` at 1x (already in the base code, off by default) | the emulator's thread -36% | **+21% fps on the base, +26% with the patches** |
+| "At 2x the 2D thread is now the limit" | yes | **No: the emulator's thread is 99% busy, the 2D thread 31%, the Gengis workers 25% each** |
+
+All patches were frame-exact on the device. The work was safe, but it was mostly aimed at the wrong thread.
+
+- **Test ROMs are not games.** The test ROMs stress the 2D engine and the renderers. HeartGold, like most real
+  games, is bound by the emulator's thread: JIT code, memory and IO slow paths, geometry, the scheduler, the SPU.
+- **rgds-sim's thread-level conclusions were wrong for a real game.** That includes the "2D thread is the critical
+  path at 2x" finding the session re-planned around at 16:52, so treat every simulated number on this page as
+  untested, not as a result.
+- **The biggest win of the day was a default nobody had flipped:** `render.2d_thread=on` at 1x.
+
+Next time: start from the device's per-thread CPU times and a profile of the busiest thread on a real game, and work
+only on the thread at ~100%. Hand over small batches as a SuperDrastic branch. The guide has the full checklist.
+
+---
+
+The original session summary follows, unchanged. Its numbers are simulator numbers on test ROMs; the device verdict
+above supersedes them.
+
 Four cloud agents worked on BananaDS's speed on the RG DS and RG DS Plus for about 3.5 hours (14:58-18:28 UTC), with
 no handheld. The work and its proof are in this folder; this page is the summary.
 

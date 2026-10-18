@@ -1,5 +1,10 @@
 # Ledger: results measured again by someone else
 
+> **Device verdict (after the session, RG DS Plus, HeartGold):** the integrated series gave +3% fps at 2x and +2% at
+> 1x; `render.3d_pipeline` 0%; `render.2d_thread=on` at 1x +21-26%; the emulator's thread is the limit (99% busy),
+> not the 2D thread (31%). "VERIFIED" below means re-measured in the simulator by a second agent, **not** on a device.
+> See GUIDE-FOR-CLOUD-AGENTS.md.
+
 Only `sim` and the coordinator write here. A row starts PENDING when a RESULT is posted, and becomes VERIFIED
 (re-measured from the agent's branch, same numbers within the simulator's determinism, exactness re-checked) or
 REFUTED (with why).
