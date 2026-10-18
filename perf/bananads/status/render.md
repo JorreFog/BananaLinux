@@ -1,21 +1,19 @@
 # render: status (overwritten by render only)
 
-Updated 16:15 UTC. Worktree /home/user/perf/render/sd, branch perf/render @ f65f846 (7 commits) + uncommitted docs/PERF.md section. Patch numbers 0060-0079.
+Updated 16:20 UTC. Worktree /home/user/perf/render/sd, branch perf/render @ 971eb0c (8 commits: + 971eb0c the quarters merge fix) + uncommitted docs/PERF.md section. Patch numbers 0060-0079.
 
-## Doing now (all in the background, chained; nothing else needs CPU)
-- Builds: device builds b5d = 0fd83cb (done), b6d = f65f846 (linking, the final one); x86tsan done, TSan runs: 6 runs,
-  0 warnings (evidence/render/tsan-runs.txt).
-- First numbers (device build, qemu-count): render.2d_comp_unroll membench -5.7%, ds2dtest -9.2% of the emulator's
-  thread (board RESULT 16:12, evidence/render/qc-b5d-st-2d.txt).
-- Running: evidence/render/measure-all.sh build-dev vs b5d -> /home/user/perf/render/runs/qc-b5d/summary.txt;
-  TSan runs (2D thread, batches 1..200, lazy on/off, reloads) -> /home/user/perf/render/runs/tsan/*/log.
-- Queued: rgds-sim ab.sh per toggle on b6d -> /home/user/perf/render/runs/sim/*-ab.txt; then the matrix on the device
-  build (build-dev vs b6d under qemu-dev, 23 configs) -> runs/matrix-m6.txt, difftest --every toggles off vs on (L5,
-  ds2dtest, geomtest) -> runs/difftest-*.txt, bananads-tests -> runs/tests-b6d.txt.
-- sim has the verification commands (SendMessage 16:08). Then: findings numbers, PERF.md section, patches/render/.
-- Exactness so far: matrix m3 ref vs b3 41 configs FAILS=0; m2 8 FAILS=0; jit's suite pictures 14 ROMs ok (its
-  difftest tail didn't run: bash parse error in the script); unit tests comp_bench / quarters_test (12000) / zip_test
-  (6000): 0 mismatches.
+## Doing now (all chained in the background)
+- Device builds: b5d = 0fd83cb (done; measured), b6d = f65f846 (linking), b7d = 971eb0c (queued after b6d; the final one).
+- Measured so far (device build, qemu-count; board RESULTs 16:12 and 16:16; evidence/render/qc-b5d-*.txt):
+  comp_unroll membench -5.7% / ds2dtest -9.2% (emulator's thread, 1x); pipeline: emulator's thread 3308.6k -> 2324.1k
+  on L5 device mode (the bins it drew); emit_zip: 2D thread output stage -22%; geom_sort L10 -0.1%; quarters v1 a LOSS
+  (fixed @ 971eb0c, to be re-measured on b7d).
+- Running/queued: measure-all's tail (dev-L10, 1x share) -> runs/qc-b5d/summary.txt; rgds-sim ab.sh per toggle on b6d
+  -> runs/sim/*-ab.txt; matrix m6 (build-dev vs b6d under qemu-dev, 23 configs) + difftest --every + bananads-tests
+  -> runs/matrix-m6.txt, difftest-*.txt, tests-b6d.txt; then quarters A/B on b7d (L5, ds2dtest) -> runs/qc-b7d, and
+  matrix m7 (build-dev vs b7d, dev2x + 1x-t2-2d) -> runs/matrix-m7.txt.
+- TSan: 6 runs, 0 warnings (evidence/render/tsan-runs.txt). sim verifies from b6d/b7d (messages sent 16:08, 16:17).
+- Then: findings numbers (quarters on b7d, sim), commit PERF.md, patches/render/, HANDOFF.
 
 ## Found (READ)
 - Direction 3 (Gengis A55 kernels): nothing to port. bananads/gengis/* is byte-identical to SuperDrastic

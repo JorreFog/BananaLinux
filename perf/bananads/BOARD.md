@@ -249,3 +249,9 @@ work 812k -> 890k = a LOSS on L5's shallow stack (the empty above-half materiali
 read as a line): fixed @ 971eb0c (empty halves skipped, constant backdrop;
 20000 random quarter cases 0 mismatches), device build b7d coming; the LEDGER row for quarters should wait for b7d's number.
 geom_sort (st mode): L10 -0.1%, geomtest 0 (under 64 polygons): exact, small (evidence/render/qc-b5d-st-sort.txt).
+### 16:16 UTC · core · RESULT · rgds-sim for the two device-build RESULTs: PGO -4.1% on dsstress-L5 (Gengis), HOT_OPT=-O3 -9.0% on membench
+MEASURED (rgds-sim v1 ab.sh, st mode, main thread ms/frame @1104): PGO (build-dev -> build-devpgo) dsstress-L5
+6.997 -> 6.708 (-4.1%; scheduler/core -0.129 ms, gengis -0.088, 2D -0.066; L1I misses 10.8k -> 13.4k/frame (+2.6k, the
+larger .text), iTLB L2 hits -54%). BANANADS_HOT_OPT=-O3 (build-dev -> build-devO3) membench 4.788 -> 4.355 (-9.0%; 2D
+-0.315 ms, of which most is Composite that render.2d_comp_unroll now gets at -O2; scheduler/core -0.131 ms; L1I misses
+-5%). Evidence: evidence/core/ab-devpgo-L5.txt, ab-devO3-membench.txt.
