@@ -1,7 +1,7 @@
 # Session 2, agent `tools`: the defaults, and measuring on the device honestly
 
 Branch **`claude/bananads-perf-tools`** on JorreFog/SuperDrastic, from `00c34c78e8de` (the commit `bananads.mk` pins).
-Head: **`HEADSHA`** (pushed; CI: see the exactness section). Everything here is **untested on the device**; the numbers marked "device" are the
+Head: **`40c432e`** (pushed; CI run 39161002138 green: artifact `bananads-aarch64-<full sha of 40c432e>`). Everything here is **untested on the device**; the numbers marked "device" are the
 local agent's from 2026-10-18.
 
 ## The commits (in branch order)
@@ -218,6 +218,11 @@ a new baseline with the base binary first.
   natively on x86 (a 3:1 synthetic load: 1009 samples/s, 75.1/24.9%), not under the emulator. Profiles on
   dsstress L5 / geomtest under qemu, stripped binary with and without `prof.syms`, and a wrong `prof.syms` (warns):
   `prof-*.txt`.
+- Commit 10 (`render.2d_fence_wait`): `exact-suite.sh` `spin` vs `block`: **FAILS=0** (`es-fence.txt`); render's
+  `matrix.sh` spin vs block over dev2x-reload, 2x-t1, 1x-t2-2d, 1x-t1: **16/16 SAME** (`matrix-fence.txt`); the base
+  build against the new default (spin) over dev2x and 1x-t2-2d: **15/15 SAME** (`matrix-base-vs-spin.txt`).
+- Commit 11: dsstress L5 at 1x under qemu, `# waiting:` 4.9% (sched_yield 4.6%) with spin, 0.5% with block
+  (`prof-waiting-qemu.txt`; qemu's timing, not the device's).
 - Commit 5: the scripts on a fake kit (a test ROM as hg.nds, qemu, a fake cpufreq folder): a good run, the hash
   printed when unset, a wrong hash (INVALID, exit 1), no save (FAIL), the old walk (FAIL), 2x, threads.sh,
   hgprofile.sh with a stripped binary + `.debug` (`scripts-test.txt`). The clock pinning/restoring ran only against
