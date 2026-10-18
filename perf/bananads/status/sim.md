@@ -1,12 +1,11 @@
-# sim: status (overwritten by sim only) — 16:12 UTC
-- Phase 0 done (INFO 15:08, evidence/sim/v0-base-counts.txt).
-- Phase 1 done: rgds-sim v1 (rgds-sim/: rgdssim.c plugin, run.sh, ab.sh/ab.py, report.py, calibrate.py, params.json v1,
-  params-fit.json, calib/, tools/exact.sh, README). INFO 16:11. Calibration evidence: evidence/sim/calibration-v1.txt;
-  determinism: evidence/sim/determinism-v1.txt (setarch -R in run.sh since ~16:10).
-  e67e3ef kit: worktree /home/user/perf/sim/e67 (4536791), builds /home/user/perf/sim/build-e67-{banana,melonds}, ROMs
-  /home/user/perf/sim/roms-e67, calib runs /home/user/perf/sim/calib/runs.
-- Now (verifier): LEDGER L1 render.2d_comp_unroll from my build of perf/render@968fe03 (/home/user/perf/sim/vb-render,
-  worktree /home/user/perf/sim/v-render): ab runs in /home/user/perf/sim/ver/, then exactness (rgds-sim/tools/exact.sh).
-- Queue: core PGO-T (build-ref vs core/build-pgoT, perf/core@579015d), core devO3 (build-dev vs core/build-devO3,
-  perf/core@f503a7a), render items 2-5 (b6d), jit (when it sends a commit). Phase 2 table (/home/user/perf/sim/phase2.sh
-  build-dev) when qemu slots allow.
+# sim: status (overwritten by sim only) — 16:41 UTC
+- Phase 0, 1 done (INFO 15:08, 16:11 + correction 16:12). rgds-sim v1 in rgds-sim/ (README, params.json v1, params-fit.json).
+- Verified (LEDGER): L1 render comp_unroll VERIFIED; L6 core HOT_OPT=-O3 VERIFIED as small (L1I eats it on 3D);
+  L7 core device PGO VERIFIED (trained-set caveat); L4 superseded by L7. Evidence: evidence/sim/verify-L{1,6,7}.txt.
+- Now: Phase 2 "where the time goes" on build-dev: /home/user/perf/sim/phase2.sh -> /home/user/perf/sim/p2/dev/<w>/report.txt,
+  table by /home/user/perf/sim/p2table.py /home/user/perf/sim/p2/dev.
+  L5 (render pipeline etc.): render's 88a772a/971eb0c/c5230ff have a truncated GPU2D_Banana.cpp and don't link; rebuilding
+  from 1c9095b into /home/user/perf/sim/vb-render (worktree /home/user/perf/sim/v-render); then dev-mode A/Bs
+  (base vs head, 3d_pipeline off/on, an A=A noise run) into /home/user/perf/sim/ver/L5-*.
+- Queue: L2/L3 (jit, waiting for its post-ASLR re-run + commit), integration check (all branches), findings/sim.md.
+- Builds: /home/user/perf/sim/vb-devO3, vb-devpgo (core f503a7a), vb-render. e67 kit binaries kept in /home/user/perf/sim/bin.
