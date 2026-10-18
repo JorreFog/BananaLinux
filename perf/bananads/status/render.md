@@ -1,23 +1,18 @@
 # render: status (overwritten by render only)
 
-Updated 15:55 UTC. Worktree /home/user/perf/render/sd, branch perf/render @ 968fe03 (7ebe4e9 render.2d_batch, ea886e8 render.3d_pipeline, dc3f96a 3d_share/3d_wait2d at 1x, f8be6b5 patch 0060 render.geom_sort, 968fe03 render.2d_comp_unroll) + uncommitted render.2d_quarters (GPU2D_Banana.*, emu.cpp, SETTINGS.md; its random-stack test /home/user/perf/render/asm/quarters_test.cpp running). Patch numbers 0060-0079.
+Updated 16:10 UTC. Worktree /home/user/perf/render/sd, branch perf/render @ f65f846 (7 commits: 7ebe4e9 render.2d_batch, ea886e8 render.3d_pipeline, dc3f96a 3d_share/3d_wait2d at 1x, f8be6b5 patch 0060 render.geom_sort, 968fe03 render.2d_comp_unroll, fd53c40 render.2d_quarters, f65f846 render.2d_emit_zip). Patch numbers 0060-0079.
 
-## Doing now
-- Builds (Ubuntu -O3, build-a64.sh): b1 = 2d_batch+pipeline, b2 = +1x share, b3 = +0060 (f8be6b5). Device builds
-  (build-a64-device.sh, -O2 Bootlin): b3d = f8be6b5 (building), b4d = HEAD (queued). x86tsan: TSan x86 build (queued).
-- Running: evidence/render/matrix.sh ref vs b3 -> /home/user/perf/render/runs/matrix-m3.txt (trimmed: 41 configs).
-  Done: m2 (ref vs b2, 1x share, 8 configs) FAILS=0; m1 partial (ref vs b1, dev2x L1/L5/L10/ramp) SAME; smoke L5
-  device mode SAME with the emulator's thread drawing 0 of 1188 bins (ref: 227).
-- In the tree, uncommitted: render.2d_quarters (the four quarters' composites at 2x share one painter's pass over the
-  2D layers: Composite is the 2D thread's biggest own cost at 2x, 599k/frame on L5 at -O3). Commit once
-  quarters_test passes; then render.2d_emit_zip (WriteLine fused into EmitA's zip: 240k + 164k on the 2D thread).
-- Next: qemu-count A/B of each toggle on the device build (b4d/b5d vs build-dev): membench/ds2dtest st mode for
-  2d_comp_unroll, geomtest/L10 for geom_sort, L5 dev mode per thread for 2d_quarters/emit_zip; jit's exact-suite.sh;
-  TSan runs; sim hand-off; findings.
-- Baseline done: evidence/render/measure-dev.sh on dsstress L5, ref build, device mode: main thread 3424k insn/frame,
-  of which ~1150k are Gengis bins it drew itself (render.gengis_help=1: 227 of 1188 bins under qemu); 2D snapshot
-  work ~230k; geometry ~830k (evidence/render/ref-L5-report.txt).
-- Build of the unmodified tree /home/user/perf/render/b0 is byte-identical to the reference binary.
+## Doing now (all in the background, chained; nothing else needs CPU)
+- Builds: device builds b5d = 0fd83cb (done), b6d = f65f846 (linking, the final one); x86tsan done.
+- Running: evidence/render/measure-all.sh build-dev vs b5d -> /home/user/perf/render/runs/qc-b5d/summary.txt;
+  TSan runs (2D thread, batches 1..200, lazy on/off, reloads) -> /home/user/perf/render/runs/tsan/*/log.
+- Queued: rgds-sim ab.sh per toggle on b6d -> /home/user/perf/render/runs/sim/*-ab.txt; then the matrix on the device
+  build (build-dev vs b6d under qemu-dev, 23 configs) -> runs/matrix-m6.txt, difftest --every toggles off vs on (L5,
+  ds2dtest, geomtest) -> runs/difftest-*.txt, bananads-tests -> runs/tests-b6d.txt.
+- sim has the verification commands (SendMessage 16:08). Then: findings numbers, PERF.md section, patches/render/.
+- Exactness so far: matrix m3 ref vs b3 41 configs FAILS=0; m2 8 FAILS=0; jit's suite pictures 14 ROMs ok (its
+  difftest tail didn't run: bash parse error in the script); unit tests comp_bench / quarters_test (12000) / zip_test
+  (6000): 0 mismatches.
 
 ## Found (READ)
 - Direction 3 (Gengis A55 kernels): nothing to port. bananads/gengis/* is byte-identical to SuperDrastic

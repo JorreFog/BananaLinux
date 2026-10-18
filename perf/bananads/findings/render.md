@@ -13,6 +13,14 @@ Status line (kept current at the end of the session): see "Status" at the bottom
 | ea886e8 | Gengis frames overlap: two frame slots; VBlank waits for the frame's conversion only, not its bins; the emulator's thread stops drawing bins at VBlank | `render.3d_pipeline` | on | yes by construction (checks below) |
 | dc3f96a | `render.3d_share` / `render.3d_wait2d` at 1x too: no 1 KB copy of the 3D line into the job, the bin wait on the 2D thread | the existing `render.3d_share`, `render.3d_wait2d` (now 1x and 2x) | on | yes (checks below) |
 | f8be6b5 | melonDS patch 0060: VBlank's polygon Y-sort as a stable counting sort (no n log n, no malloc a frame) | `render.geom_sort` / `MELONDS_GEOMSORT=0` | on | yes: the same stable order |
+| 968fe03 | the 2D compositor's step loop unrolled by a fold: at the device's -O2 the plain loop costs 2.5-3x the instructions (core's membench 2D +37% is this) | `render.2d_comp_unroll` | on | yes: the same operations in the same order (comp_bench: identical output) |
+| fd53c40 | at 2x the four quarters of a 3D line share one painter's pass over the 2D layers (the 2D thread's biggest own cost) | `render.2d_quarters` | on | yes: random-stack test, 12000 quarter cases, 0 mismatches |
+| f65f846 | at 2x the output stage (brightness, 6-to-8-bit expansion) writes straight into the rows: the quarters zipped, 2D lines doubled, no 1 KB line in between | `render.2d_emit_zip` | on | yes: random test vs WriteLineNeon + ZipLine/DoubleLine, 6000 cases, 0 mismatches |
+
+The first four act on the emulator's thread (2d_batch: its futex wakes; 3d_pipeline: its VBlank wait and the bins it
+drew there; the 1x share: a 1 KB copy and a bin wait per 3D line at 1x; geom_sort: the sort) and the last three on
+the 2D thread at 2x (comp_unroll also on the emulator's thread at 1x, where the 2D thread is off by default), which
+shares the three other A55s with the Gengis threads, the presenter and the sound thread.
 
 Dropped before coding: a bounded spin before the 2D thread sleeps (the coordinator: it steals a core from a
 runnable thread on a 4-core device, and the sim can't see that; device-only verdict). Not done: see "What's next".
@@ -76,6 +84,13 @@ EXTRA="--set render.scale=1 --set render.2d_thread=on --set render.gengis_thread
 ```
 Correctness on the device: `tools/device/quick.sh`, and the 42-frame HeartGold `rtc.fixed` compare with
 `render.3d_pipeline=off` against on (and at 1x with the 2D thread on, `render.3d_share=off` against on).
+
+Two log lines to read in every HeartGold run (the game log, at exit): `[gengis] the emulator's thread drew N of M bins
+and converted K frames` (N should be ~0 with the pipeline; a large N without it is the cost the pipeline removes) and
+`[2d] 2D thread: J jobs, L lines with unit A drawn in place (display capture), ...`: while a game captures the display
+(DISPCAPCNT), unit A's lines, at 2x their four composites, are drawn on the emulator's thread; a large L means the
+2D thread isn't taking the top screen's work in that game, which is the next lever (capture's inputs to the 2D
+thread, PERF.md's "Next" of the 2D thread section).
 
 ## Risks
 

@@ -180,3 +180,11 @@ VBlank, 1150k of its 3424k instructions/frame; evidence/render/matrix-m1-m2-smok
 the four quarters share one painter's pass, random-stack test 12000 cases 0 mismatches; render.2d_emit_zip: the output
 stage straight into the rows, 3000 lines 0 mismatches), @ 0fd83cb; the device build of it (b5d) is linking; qemu-count A/B
 on the device build (build-dev) for every toggle next.
+### 16:06 UTC · core · RESULT · BANANADS_HOT_OPT=-O3 on the device build: -1.8% (cpubench) to -7.6% (membench) instructions, L5 +0.3%; exact
+MEASURED (qemu-count, main thread insns/frame, device build -O2 vs the same with core/banana2d/gengis/frontend at -O3):
+cpubench-thumb -1.8%, cpubench-arm -2.0%, membench -7.6% (the 2D bucket -31%: Composite, which render has since fixed
+at -O2 with render.2d_comp_unroll), dsstress-L5 +0.3%, sndbench -2.9%, ipcrom -6.4%. .text 1.95 -> 2.25 MB (+15%).
+Exact: pictures and audio identical to build-dev on 13 ROMs x 2 renderers, FAILS=0. For rgds-sim: A =
+/home/user/perf/build-dev/b/bananads, B = /home/user/perf/core/build-devO3/b/bananads (build: JOBS=2
+build-a64-device.sh /home/user/perf/core/sd <dir> -DBANANADS_HOT_OPT=-O3; perf/core @ f503a7a). The device decides
+between instructions and L1I: hgquick.sh with the two binaries. Evidence: evidence/core/count-devO3.txt, exact-devO3.txt.

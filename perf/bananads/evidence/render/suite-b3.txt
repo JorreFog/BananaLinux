@@ -1,0 +1,18 @@
+# jit's evidence/jit/exact-suite.sh on /home/user/perf/render/b3/b (perf/render @ f8be6b5, Ubuntu -O3 build): A = render.3d_pipeline=off render.3d_share=off render.geom_sort=off render.2d_batch=16, B = all on with render.2d_batch=96; pictures every 50 frames to 300 on 14 ROMs (+ dmasnd's audio). The script's difftest/tests tail did not run here (a bash parse error at its line 74 under this bash); difftest is run apart (see difftest-b6d.txt)
+# exact-suite 2026-10-18T15:59:59Z bin=/home/user/perf/render/b3/b A='render.3d_pipeline=off render.3d_share=off render.geom_sort=off render.2d_batch=16' B='render.3d_pipeline=on render.3d_share=on render.geom_sort=on render.2d_batch=96' 
+PICS ok   cpubench-cpubench-thumb (6 files identical)
+PICS ok   cpubench-cpubench-arm (6 files identical)
+PICS ok   cpubench-cpubench-thumb-arm7 (6 files identical)
+PICS ok   dsstress-L5 (6 files identical)
+PICS ok   thumb-dsstress-L5 (6 files identical)
+PICS ok   arm7-thumb-dsstress-L5 (6 files identical)
+PICS ok   dsstress-L10 (6 files identical)
+PICS ok   iorom-dsstress-L5 (6 files identical)
+PICS ok   ipcrom-ipctest (6 files identical)
+PICS ok   dmasnd-dmasnd (7 files identical)
+PICS ok   jitloops-jitloops-thumb (6 files identical)
+PICS ok   jitloops-jitloops-arm (6 files identical)
+PICS ok   jitloops-jitloops-thumb-arm7 (6 files identical)
+PICS ok   membench-membench (6 files identical)
+/home/user/BananaLinux/perf/bananads/evidence/jit/exact-suite.sh: line 74: syntax error near unexpected token `('
+/home/user/BananaLinux/perf/bananads/evidence/jit/exact-suite.sh: line 74: `  env $ENVS $Q -L /usr/aarch64-linux-gnu $B/bananads-tests > $OUT/tests.log 2>&1 && echo "TESTS ok ($(tail -1 $OUT/tests.log))" || { echo "TESTS FAIL ($(tail -2 $OUT/tests.log | tr '\n' ' '))"; FAILS=$((FAILS+1)); }'

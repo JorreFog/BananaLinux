@@ -6,7 +6,7 @@
 #  1. pictures every 50 frames to 300 (rtc.fixed) identical: cpubench thumb/arm/thumb-arm7, stress L5 arm/thumb/
 #     arm7-thumb, L10, iorom L5, ipcrom, dmasnd, jitloops thumb/arm/thumb-arm7, membench (+ the audio dump of dmasnd)
 #  2. bananads-difftest --every --frames 300, main RAM A vs B: cpubench thumb, cpubench thumb-arm7 (busy ARM7),
-#     membench, jitloops thumb/arm/thumb-arm7
+#     membench, jitloops thumb/arm/thumb-arm7; both lists also tests/irqmask's thumb/arm/thumb-arm7 (from 16:05 UTC)
 #  3. bananads-tests
 # "quick" as 5th argument: pictures and difftest on cpubench thumb + jitloops thumb only.
 # Prints one line per check and "FAILS=n" at the end.
@@ -24,6 +24,8 @@ dsplit() {  # for difftest: --a/--b k=v; env vars apply to both runs of the proc
   DS=""; for kv in $2; do case $kv in ENV:*) ;; *) DS="$DS --$1 $kv";; esac; done
 }
 FAILS=0
+romp() { case $1 in /*) echo $1;; *) echo $R/$1;; esac; }   # (a ROM path: absolute, or in /home/user/perf/roms)
+IM=/home/user/perf/jit/bin   # tests/irqmask's ROMs (jit's 0023 test): CPSR.I-masked IRQs pending for long stretches
 pics() {  # pics <rom>
   local rom=$1 n=$(basename $1 .nds) side s
   for side in A B; do
@@ -32,7 +34,7 @@ pics() {  # pics <rom>
     local d=$OUT/pics/$n.$side; rm -rf $d; mkdir -p $d/save
     local extra=""; case $n in dmasnd*|sndbench*) extra="--set headless.audio_dump=$d/audio.raw";; esac
     env $ENVS $Q -L /usr/aarch64-linux-gnu $B/bananads --frontend headless $COMMON --set headless.frames=300 \
-      --set headless.dump_dir=$d --set headless.dump_every=50 --set save.dir=$d/save $extra $SETS $R/$rom > $d/log 2>&1 &
+      --set headless.dump_dir=$d --set headless.dump_every=50 --set save.dir=$d/save $extra $SETS $(romp $rom) > $d/log 2>&1 &
   done
   wait
   local a b
@@ -51,15 +53,15 @@ dtest() {  # dtest <rom>
   fi
   dsplit a "$SA"; local da=$DS; dsplit b "$SB"; local db=$DS
   mkdir -p $OUT/diff
-  env $ea $Q -L /usr/aarch64-linux-gnu $B/bananads-difftest --every --frames 300 --a jit=on --b jit=on $da $db $R/$rom > $OUT/diff/$n.log 2>&1
+  env $ea $Q -L /usr/aarch64-linux-gnu $B/bananads-difftest --every --frames 300 --a jit=on --b jit=on $da $db $(romp $rom) > $OUT/diff/$n.log 2>&1
   local rc=$?
   if [ $rc = 0 ]; then echo "DIFF ok   $n ($(tail -1 $OUT/diff/$n.log))"; else echo "DIFF FAIL $n rc=$rc ($(tail -2 $OUT/diff/$n.log | tr '\n' ' '))"; FAILS=$((FAILS+1)); fi
 }
 if [ "$QUICK" = quick ]; then
   PROMS="cpubench-cpubench-thumb.nds jitloops-jitloops-thumb.nds"; DROMS="cpubench-cpubench-thumb.nds jitloops-jitloops-thumb.nds"
 else
-  PROMS="cpubench-cpubench-thumb.nds cpubench-cpubench-arm.nds cpubench-cpubench-thumb-arm7.nds dsstress-L5.nds thumb-dsstress-L5.nds arm7-thumb-dsstress-L5.nds dsstress-L10.nds iorom-dsstress-L5.nds ipcrom-ipctest.nds dmasnd-dmasnd.nds jitloops-jitloops-thumb.nds jitloops-jitloops-arm.nds jitloops-jitloops-thumb-arm7.nds membench-membench.nds"
-  DROMS="cpubench-cpubench-thumb.nds cpubench-cpubench-thumb-arm7.nds membench-membench.nds jitloops-jitloops-thumb.nds jitloops-jitloops-arm.nds jitloops-jitloops-thumb-arm7.nds"
+  PROMS="cpubench-cpubench-thumb.nds cpubench-cpubench-arm.nds cpubench-cpubench-thumb-arm7.nds dsstress-L5.nds thumb-dsstress-L5.nds arm7-thumb-dsstress-L5.nds dsstress-L10.nds iorom-dsstress-L5.nds ipcrom-ipctest.nds dmasnd-dmasnd.nds jitloops-jitloops-thumb.nds jitloops-jitloops-arm.nds jitloops-jitloops-thumb-arm7.nds membench-membench.nds $IM/irqmask-thumb.nds $IM/irqmask-arm.nds $IM/irqmask-thumb-arm7.nds"
+  DROMS="cpubench-cpubench-thumb.nds cpubench-cpubench-thumb-arm7.nds membench-membench.nds jitloops-jitloops-thumb.nds jitloops-jitloops-arm.nds jitloops-jitloops-thumb-arm7.nds $IM/irqmask-thumb.nds $IM/irqmask-arm.nds $IM/irqmask-thumb-arm7.nds"
 fi
 echo "# exact-suite $(date -u +%FT%TZ) bin=$B A='$SA' B='$SB' $QUICK"
 for r in $PROMS; do pics $r; done

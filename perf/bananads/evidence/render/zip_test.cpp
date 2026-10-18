@@ -75,6 +75,39 @@ static void WriteZipNeon(u32* dst, const u32* even, const u32* odd, u32 factor)
         vst4q_u8((u8*)(dst + 2 * i + 16), hi);
     }
 }
+template<int mode>
+static void WriteDoubleNeon(u32* dst, const u32* src, u32 factor)
+{
+    uint8x8_t f = vdup_n_u8((u8)factor);
+    for (int i = 0; i < 256; i += 16)
+    {
+        uint8x16x4_t s = vld4q_u8((const u8*)(src + i));
+        uint8x16_t r = s.val[0], g = s.val[1], b = s.val[2];
+        if (mode) { r = Bright6<mode>(r, f); g = Bright6<mode>(g, f); b = Bright6<mode>(b, f); }
+        r = Expand6(r); g = Expand6(g); b = Expand6(b);
+        uint8x16x4_t lo, hi;
+        lo.val[0] = vzip1q_u8(b, b); hi.val[0] = vzip2q_u8(b, b);
+        lo.val[1] = vzip1q_u8(g, g); hi.val[1] = vzip2q_u8(g, g);
+        lo.val[2] = vzip1q_u8(r, r); hi.val[2] = vzip2q_u8(r, r);
+        lo.val[3] = vdupq_n_u8(0xFF);
+        hi.val[3] = vdupq_n_u8(0xFF);
+        vst4q_u8((u8*)(dst + 2 * i), lo);
+        vst4q_u8((u8*)(dst + 2 * i + 16), hi);
+        vst4q_u8((u8*)(dst + 512 + 2 * i), lo);
+        vst4q_u8((u8*)(dst + 512 + 2 * i + 16), hi);
+    }
+}
+static void DoubleLine(u32* dst, const u32* src)
+{
+    for (int i = 0; i < 256; i += 4)
+    {
+        uint32x4_t v = vld1q_u32(src + i);
+        uint32x4x2_t z = {{ v, v }};
+        vst2q_u32(dst + 2 * i, z);
+        vst2q_u32(dst + 512 + 2 * i, z);
+    }
+}
+alignas(16) static u32 dref[1024], dout[1024];
 alignas(16) static u32 even[256], odd[256], a[256], b[256], ref[512], out[512];
 static u32 seed = 7;
 static u32 rnd() { seed = seed * 1103515245u + 12345u; return seed >> 8; }
@@ -91,6 +124,13 @@ int main()
         ZipLine(ref, a, b);
         cases++;
         if (memcmp(ref, out, sizeof ref)) { bad++; if (bad < 5) printf("mismatch: it %d mode %d factor %d\n", it, mode, factor); }
+        // the doubling: WriteLineNeon + DoubleLine vs WriteDoubleNeon
+        if (mode == 0)      WriteDoubleNeon<0>(dout, even, 0);
+        else if (mode == 1) WriteDoubleNeon<1>(dout, even, factor);
+        else                WriteDoubleNeon<2>(dout, even, factor);
+        DoubleLine(dref, a);
+        cases++;
+        if (memcmp(dref, dout, sizeof dref)) { bad++; if (bad < 5) printf("double mismatch: it %d mode %d factor %d\n", it, mode, factor); }
     }
     printf("%d cases, %d mismatches\n", cases, bad);
     return bad != 0;
