@@ -1,0 +1,54 @@
+Sun Oct 18 20:15:10 UTC 2026
+# exact-suite 2026-10-18T20:15:10Z bin=/home/user/perf2/jitcode/bS/b A='jit.dyncold=off' B='jit.dyncold=on' 
+PICS FAIL cpubench-cpubench-thumb (A 6 files; diff below)
+4c4
+< 01bf6df197d044eddc17d9035deae46e  frame250.ppm
+---
+> e1c9dedd495bc55a20cc57d69602b8e5  frame250.ppm
+PICS ok   cpubench-cpubench-arm (6 files identical)
+PICS FAIL cpubench-cpubench-thumb-arm7 (A 6 files; diff below)
+4c4
+< 01bf6df197d044eddc17d9035deae46e  frame250.ppm
+---
+> e1c9dedd495bc55a20cc57d69602b8e5  frame250.ppm
+PICS ok   dsstress-L5 (6 files identical)
+PICS ok   thumb-dsstress-L5 (6 files identical)
+PICS ok   arm7-thumb-dsstress-L5 (6 files identical)
+PICS ok   dsstress-L10 (6 files identical)
+PICS ok   iorom-dsstress-L5 (6 files identical)
+PICS ok   ipcrom-ipctest (6 files identical)
+PICS ok   dmasnd-dmasnd (7 files identical)
+PICS ok   jitloops-jitloops-thumb (6 files identical)
+PICS ok   jitloops-jitloops-arm (6 files identical)
+PICS ok   jitloops-jitloops-thumb-arm7 (6 files identical)
+PICS ok   membench-membench (6 files identical)
+PICS FAIL irqmask-thumb (A 6 files; diff below)
+1,6c1,6
+< 75dcc9079833efa53f3fec8f1fec3eb0  frame100.ppm
+< 7ce53badc866ec30b2a157fce37e3137  frame150.ppm
+< 6880f8aad392bd490d1dd87386b4a381  frame200.ppm
+< b058b3e4b3f7afdea11de03dc87e5e65  frame250.ppm
+PICS FAIL irqmask-arm (A 6 files; diff below)
+1,6c1,6
+< dd80cb2cf1627f95ec501e3da8fc04fb  frame100.ppm
+< 537b81baee85f3117dd895ca2bb63327  frame150.ppm
+< dd25ff41efc5ec4da01603f710fdb345  frame200.ppm
+< 01f07f2dd3e3cf7ac98034b053e30657  frame250.ppm
+PICS FAIL irqmask-thumb-arm7 (A 6 files; diff below)
+1,6c1,6
+< 75dcc9079833efa53f3fec8f1fec3eb0  frame100.ppm
+< 7ce53badc866ec30b2a157fce37e3137  frame150.ppm
+< 6880f8aad392bd490d1dd87386b4a381  frame200.ppm
+< b058b3e4b3f7afdea11de03dc87e5e65  frame250.ppm
+DIFF FAIL cpubench-cpubench-thumb rc=1 (  ARM9 r6: 000000b2 / 0000003a   0 of 98304 pixels differ )
+DIFF FAIL cpubench-cpubench-thumb-arm7 rc=1 (  ARM9 r6: 000000b2 / 0000003a   0 of 98304 pixels differ )
+DIFF ok   membench-membench (SAME after 300 frames (all of main RAM))
+DIFF FAIL jitloops-jitloops-thumb rc=1 (  ARM9 r4: 0002c576 / 0002c575   0 of 98304 pixels differ )
+DIFF ok   jitloops-jitloops-arm (SAME after 300 frames (all of main RAM))
+DIFF FAIL jitloops-jitloops-thumb-arm7 rc=1 (  ARM9 r4: 0002c576 / 0002c575   0 of 98304 pixels differ )
+DIFF FAIL irqmask-thumb rc=1 (  ARM9 cpsr: 200000ff / 000000ff   0 of 98304 pixels differ )
+DIFF FAIL irqmask-arm rc=1 (  ARM9 lr: 0200085c / 020007f8   0 of 98304 pixels differ )
+DIFF FAIL irqmask-thumb-arm7 rc=1 (  ARM7 r6: 00000079 / 00000058   0 of 98304 pixels differ )
+TESTS ok (all BananaDS host tests passed)
+FAILS=12
+Sun Oct 18 20:19:07 UTC 2026
