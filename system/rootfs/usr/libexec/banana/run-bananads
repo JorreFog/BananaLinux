@@ -39,6 +39,9 @@ if [ ! -f $M ]; then
     touch $M
 fi
 export DSFLIP_SHADER_DIR=/usr/lib/superdrastic/shaders
+# a shader of your own (banana/shaders/<name>.frag, listed in Settings as "<name> (card)"): its folder instead
+s=$(sed -n 's/^ *kms.shader *= *//p' $C 2>/dev/null | tail -n 1)
+[ -n "$s" ] && [ -f "/data/banana/shaders/$s.frag" ] && export DSFLIP_SHADER_DIR=/data/banana/shaders
 # the 3D always through the Gengis Engine (SuperDrastic's rasterizer), as SuperDrastic does
 export BANANADS_RENDER_RENDERER=gengis
 # Settings > Nintendo DS > Quick resume (settings.conf's quick_resume): off, a quit ends the game and the next start

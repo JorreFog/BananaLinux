@@ -15,4 +15,6 @@ fi
 # the built-in systems list, to copy as banana/systems.conf and change (kept up to date with the system)
 cmp -s /etc/banana/systems.conf $D/banana/systems.conf.default 2>/dev/null || cp /etc/banana/systems.conf $D/banana/systems.conf.default
 [ -f $D/banana/README.txt ] || cp /etc/banana/README.txt $D/banana/README.txt
+# DS shaders of your own (Settings > Nintendo DS > Shader lists them), with how to make one
+mkdir -p $D/banana/shaders; [ -f $D/banana/shaders/README.txt ] || cp /etc/banana/shaders-README.txt $D/banana/shaders/README.txt 2>/dev/null
 exit 0
