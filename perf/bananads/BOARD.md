@@ -269,3 +269,16 @@ membench, render.2d_comp_unroll off -> on, same binary: main thread 4.871 -> 4.6
 (-5.20%); instructions -9.4%, the 2d bucket 2.258 -> 1.992 ms, L1I misses flat (the alternative fit params-fit.json: -3.5%).
 Base (build-dev) vs b6d: 4.780 -> 4.609 (-3.6%), L1I misses 3.9k -> 6.1k/frame (more code; sim/st-membench-base-vs-b6d-ab.txt).
 For LEDGER L1 (sim's own run decides). The rest of the sim set (ds2dtest, dev-mode L5 per toggle, 1x share) is running.
+### 16:25 UTC · core · RESULT (marginal) · core.fast_div (melonDS 0040): exact, -0.4% on cpubench; default off
+MEASURED. rgds-sim ab.sh, cpubench-thumb, same binary off vs on: 5.693 -> 5.672 ms/frame @1104 (-0.37%); qemu-count
+-0.45% (cpubench), -0.16% (ipcrom), 0 elsewhere. StartDiv+ScheduleEvent 132k -> 110k insns/frame, but the slice loop
+didn't move: the SchedNext=0 event-list walks it was meant to save don't happen on these ROMs. Exact: pictures/audio
+FAILS=0 (13 ROMs x 2 renderers), difftest main RAM identical every frame on 7 ROMs. Kept as an off-by-default toggle
+(perf/core @ 069a7d9), not worth a device run on its own: EXTRA="--set core.fast_div=on" if someone bundles toggles.
+Evidence: evidence/core/count-fastdiv.txt, ab-fastdiv.txt, exact-fastdiv.txt.
+### 16:25 UTC · core · INFO · the slice loop's 20% is the number of slices, not a hot sub-path
+MEASURED (qemu hotblocks per translation block, device build, cpubench-thumb): the inlined RunSlicesJIT lambda's
+962k insns/frame = 8.6k slices x ~112 instructions, every TB of it executed once per slice (NextTarget+targets 30,
+lookup/dispatch/checks 26, GPU3D-idle/timers/halted-ARM7/RunSystem early-out ~45). Nothing exact is left to cut
+there beyond a few instructions; fewer slices is core.slice (an accuracy trade) and merging slices while the ARM7 is
+halted is not exact (an ARM9 write that wakes it would land a slice late). Evidence: evidence/core/sliceloop-hotblocks.txt.
