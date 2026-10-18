@@ -23,7 +23,8 @@
 # test isn't exact. Settings that change the picture (renderer, scale) make it fail too: check with KNOWN=skip.
 #
 # Environment: QEMU (default /home/user/perf/tools/qemu-dev when the host isn't aarch64; QEMU= runs it natively),
-# FRAMES (default 2100), KNOWN (the expected md5 of frame1860.ppm; "skip" to skip the check).
+# FRAMES (default 2100), KNOWN (the expected md5 of frame1860.ppm; "skip" to skip the check), KNOWN_AUDIO (the
+# expected md5 of audio.raw at 2100 frames, checked only when FRAMES=2100 and KNOWN isn't skip; "skip" to skip).
 # Extra --set arguments go to bananads after the script's (they win), e.g. --set headless.measure_from=1680
 # --set headless.window=60 --set prof.hz=1000. Run time under qemu: ~1 min.
 set -u
@@ -32,6 +33,7 @@ B=$1; OUT=$2; shift 2
 ROM=${ROM:-/home/user/perf3/rom/mkds.nds}
 FRAMES=${FRAMES:-2100}
 KNOWN=${KNOWN:-58b1524b7623ffd3737a0408f8876277}
+KNOWN_AUDIO=${KNOWN_AUDIO:-0266610cddc0585a8a0c95c34e6c0d4a}
 if [ -z "${QEMU+x}" ]; then
   case $(uname -m) in aarch64) QEMU= ;; *) QEMU=/home/user/perf/tools/qemu-dev ;; esac
 fi
@@ -62,3 +64,8 @@ if [ "$KNOWN" != skip ] && [ "$got" != "$KNOWN" ]; then
   exit 2
 fi
 echo "[mk-scene] OK: frame1860 matches the known countdown frame"
+if [ "$KNOWN" != skip ] && [ "$KNOWN_AUDIO" != skip ] && [ "$FRAMES" = 2100 ]; then
+  aud=$(md5sum audio.raw 2>/dev/null | cut -d' ' -f1)
+  [ "$aud" = "$KNOWN_AUDIO" ] || { echo "[mk-scene] FAILED: audio.raw is ${aud:-missing}, not the base build's $KNOWN_AUDIO: the sound isn't exact" >&2; exit 3; }
+  echo "[mk-scene] OK: audio.raw matches the base build's"
+fi
