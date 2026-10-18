@@ -1,11 +1,15 @@
 # render: status (overwritten by render only)
 
-Updated 15:35 UTC. Worktree /home/user/perf/render/sd, branch perf/render @ 00c34c7 (no commits yet). Patch numbers 0060-0079.
+Updated 15:30 UTC. Worktree /home/user/perf/render/sd, branch perf/render @ 7ebe4e9+ (commits: render.2d_batch, render.3d_pipeline). Patch numbers 0060-0079.
 
 ## Doing now
-- Baseline: the main thread's instruction count per frame in "device mode" (gengis 2x, 3 Gengis threads, 2D thread,
-  headless.direct) under qemu-count per thread: `evidence/render/measure-dev.sh` (runs in /home/user/perf/render/runs).
-- Build of the unmodified tree: /home/user/perf/render/b0 (checks the toolchain; ccache warm).
+- render.3d_pipeline (uncommitted in the tree, building as /home/user/perf/render/b1): two Gengis frame slots so a
+  frame's bins still draw while the next frame converts/starts; VBlank waits only for the conversion. Then the
+  exactness matrix (evidence/render/matrix.sh: ref vs b1 with the toggle on, 10 ROMs x 10 configurations).
+- Baseline done: evidence/render/measure-dev.sh on dsstress L5, ref build, device mode: main thread 3424k insn/frame,
+  of which ~1150k are Gengis bins it drew itself (render.gengis_help=1: 227 of 1188 bins under qemu); 2D snapshot
+  work ~230k; geometry ~830k (evidence/render/ref-L5-report.txt).
+- Build of the unmodified tree /home/user/perf/render/b0 is byte-identical to the reference binary.
 
 ## Found (READ)
 - Direction 3 (Gengis A55 kernels): nothing to port. bananads/gengis/* is byte-identical to SuperDrastic
@@ -19,11 +23,12 @@ Updated 15:35 UTC. Worktree /home/user/perf/render/sd, branch perf/render @ 00c3
   job and the emulator's thread waits for the Gengis bin (GetLine -> WaitBin).
 
 ## Plan (in order; CLAIM before each)
-1. Baseline numbers + futex wakes per frame (qemu -strace).
-2. Direction 5: `render.2d_batch` (KickBatch 16 untuned), a bounded spin before the 2D thread sleeps; count wakes.
-3. Direction 2: the small Job (Line3D/Display out of the ring; toggle).
-4. Direction 1: 3d_share/3d_wait2d at 1x.
-5. Direction 4: the geometry engine's share on the main thread, if large on dsstress.
+1. [done] Baseline numbers + futex wakes per frame (qemu -strace; evidence/render/futex-L5.txt).
+2. [done, 7ebe4e9] `render.2d_batch`. No spin (coordinator: a spin steals a core; device-only verdict; dropped).
+3. [in progress] `render.3d_pipeline` (direction 1: the VBlank wait for the 3D bins).
+4. Direction 1 at 1x: render.3d_share / 3d_wait2d at 1x (no 1 KB copy per 3D line, the bin wait on the 2D thread).
+5. Direction 2: the Job ring's stride (4.9 KB jobs; only the dTLB, small) if time permits.
+6. Direction 4: the geometry engine's share on the main thread (830k/frame on L5; sim-measurable).
 
 ## Next steps for a successor
 Read this file, `tail -n 80 BOARD.md`, then continue the plan from the first unchecked item.

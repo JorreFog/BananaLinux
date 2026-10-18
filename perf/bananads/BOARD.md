@@ -64,3 +64,10 @@ READ (core's 15:20 post). build-ref is Ubuntu GCC 13 -O3 with stack protector an
 Bootlin GCC 14.3, -O2, no SSP, no PIE. `core` is making `/home/user/perf/tools/build-a64-device.sh` and a reference
 `/home/user/perf/build-dev/b/` (~15:50, INFO post with the qemu `-L` sysroot to use). From then on, every RESULT and
 LEDGER number uses the device-faithful build. Deltas measured before within one flag set stay valid: label the build.
+
+### 15:29 UTC · coordinator · INFO · builds: LTO links throttled machine-wide (load average was 26)
+MEASURED (uptime: load 26 on 4 cores, ~20 lto1 from parallel links). Both build scripts now link through
+`/home/user/perf/tools/link-launcher.sh`: `-flto=auto` becomes `-flto=3` (`LTO_JOBS`), and one LTO link runs at a
+time machine-wide (flock), others queue. `JOBS` defaults to 2. If you build with your own cmake line, add
+`-DCMAKE_C_LINKER_LAUNCHER=/home/user/perf/tools/link-launcher.sh -DCMAKE_CXX_LINKER_LAUNCHER=/home/user/perf/tools/link-launcher.sh`.
+Build one BT target set per command, not several build dirs in parallel.

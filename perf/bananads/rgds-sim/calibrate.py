@@ -95,7 +95,8 @@ def nelder_mead(f, x0, step=0.5, iters=3000, tol=1e-12):
 def fit(rs):
     best = None
     for s in ([1.0, 30, 120, 8], [0.7, 15, 60, 5], [1.5, 60, 200, 14], [1.0, 40, 250, 10]):
-        x0 = [math.log(dict(zip(['base_scale', 'l3_cyc', 'dram_ns', 'mispredict_cyc'], s)).get(k, base[k])) for k in free]
+        st = dict(zip(['base_scale', 'l3_cyc', 'dram_ns', 'mispredict_cyc'], s)); st.setdefault('l3_ns', 5.0)
+        x0 = [math.log(st.get(k, base[k]) or 1.0) for k in free]
         if combine == 'mix': x0.append(0.0)
         x, v = nelder_mead(lambda x: loss(x, rs), x0)
         x, v = nelder_mead(lambda x: loss(x, rs), x, step=0.1)
@@ -137,7 +138,7 @@ if tr and te:
     print('fit at 1104 MHz only, predict 1992 MHz: RMS error %.1f%%, max |error| %.1f%%' % (
         100 * math.sqrt(sum(x * x for x in ee) / len(ee)), 100 * max(abs(x) for x in ee)))
 if write:
-    out = {k: p[k] for k in ['base_scale', 'l3_cyc', 'dram_ns', 'mispredict_cyc', 'tlb_l2_cyc', 'walk_cyc', 'st_cost']}
+    out = {k: p[k] for k in ['base_scale', 'l3_cyc', 'l3_ns', 'dram_ns', 'mispredict_cyc', 'tlb_l2_cyc', 'walk_cyc', 'st_cost']}
     out['version'] = version
     out['calibration'] = {'device': os.path.basename(dev), 'combine': combine, 'rows': len(rows), 'rms_error': rms,
                           'max_error': max(abs(x) for x in e), 'alpha': a}

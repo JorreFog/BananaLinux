@@ -4,7 +4,8 @@
 report.py <dirA-prefix> <dirB-prefix> <frames> [--params params.json] [--json out.json] [--top 25]
   <prefix>.tsv / .threads / .map (JIT perf map, optional) as written by run.sh.
 The cost model (linear; calibrate.py fits it):
-  core cycles = base_scale*base + l3_cyc*(l1i_miss + ld_miss + st_cost*st_miss)
+  core cycles = base_scale*base + l3_cyc*(l1i_miss + ld_miss + st_cost*st_miss)   [+ l3_ns in ns, if the L3 is
+                                                                                  in its own clock domain]
               + tlb_l2_cyc*(itlb_l2 + dtlb_l2) + walk_cyc*(itlb_walk + dtlb_walk)
               + mispredict_cyc*(bcond_miss + bind_miss)
   time(f)     = core cycles / f + dram_ns*(l1i_l3miss + ld_l3miss + st_cost*st_l3miss)
@@ -14,8 +15,8 @@ import sys, os, json, bisect, collections
 HERE = os.path.dirname(os.path.abspath(__file__))
 CTR = None  # counter names from the tsv header
 
-DEFAULT_PARAMS = {"base_scale": 1.0, "l3_cyc": 30.0, "dram_ns": 120.0, "mispredict_cyc": 8.0, "tlb_l2_cyc": 2.0,
-                  "walk_cyc": 25.0, "st_cost": 0.2, "version": "uncalibrated defaults"}
+DEFAULT_PARAMS = {"base_scale": 1.0, "l3_cyc": 30.0, "l3_ns": 0.0, "dram_ns": 120.0, "mispredict_cyc": 8.0,
+                  "tlb_l2_cyc": 2.0, "walk_cyc": 25.0, "st_cost": 0.2, "version": "uncalibrated defaults"}
 
 
 def load_params(path):
@@ -31,7 +32,8 @@ def cost(c, p):
     core = (p["base_scale"] * g("base") + p["l3_cyc"] * (g("l1i_miss") + g("ld_miss") + p["st_cost"] * g("st_miss"))
             + p["tlb_l2_cyc"] * (g("itlb_l2") + g("dtlb_l2")) + p["walk_cyc"] * (g("itlb_walk") + g("dtlb_walk"))
             + p["mispredict_cyc"] * (g("bcond_miss") + g("bind_miss")))
-    dram = p["dram_ns"] * (g("l1i_l3miss") + g("ld_l3miss") + p["st_cost"] * g("st_l3miss"))
+    dram = (p["dram_ns"] * (g("l1i_l3miss") + g("ld_l3miss") + p["st_cost"] * g("st_l3miss"))
+            + p.get("l3_ns", 0.0) * (g("l1i_miss") + g("ld_miss") + p["st_cost"] * g("st_miss")))
     return core, dram
 
 
@@ -45,8 +47,8 @@ def components(c, p):
     g = lambda k: c.get(k, 0.0)
     return {
         "base": p["base_scale"] * g("base"),
-        "L1I": p["l3_cyc"] * g("l1i_miss") + p["dram_ns"] * 1.104 * g("l1i_l3miss"),
-        "L1D": p["l3_cyc"] * (g("ld_miss") + p["st_cost"] * g("st_miss"))
+        "L1I": (p["l3_cyc"] + p.get("l3_ns", 0.0) * 1.104) * g("l1i_miss") + p["dram_ns"] * 1.104 * g("l1i_l3miss"),
+        "L1D": (p["l3_cyc"] + p.get("l3_ns", 0.0) * 1.104) * (g("ld_miss") + p["st_cost"] * g("st_miss"))
                + p["dram_ns"] * 1.104 * (g("ld_l3miss") + p["st_cost"] * g("st_l3miss")),
         "iTLB": p["tlb_l2_cyc"] * g("itlb_l2") + p["walk_cyc"] * g("itlb_walk"),
         "dTLB": p["tlb_l2_cyc"] * g("dtlb_l2") + p["walk_cyc"] * g("dtlb_walk"),
