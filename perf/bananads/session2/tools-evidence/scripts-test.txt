@@ -1,0 +1,57 @@
+# scripts test on a fake kit (geomtest as hg.nds, a zero save, qemu-dev, a fake cpufreq folder), head c27b7d9
+## hgquick, hash unset
+bananads-t: frames 1500-2100 at 1104000 kHz: 190.9 fps [scene UNCHECKED: HG_HASH_1X unset; frame 1500 is 35a28c61e3234a51e32a80f3a7f5a942 (/tmp/claude-0/-home-user-BananaLinux/49d2c299-6c24-57e5-aa5f-3388b6a973a8/scratchpad/kit/hg-frame1500-1X.ppm): look at it, then HG_HASH_1X=35a28c61e3234a51e32a80f3a7f5a942]
+  SUSPECT: 190.9 fps outside [35, 110]
+rc=0
+## hgquick, hash set
+bananads-t: frames 1500-2100 at 1104000 kHz: 193.5 fps [scene ok]
+  SUSPECT: 193.5 fps outside [35, 110]
+rc=0
+## wrong hash
+WARNING: the clock is 1104000, not 1992000
+bananads-t: INVALID: frame 1500 is 35a28c61e3234a51e32a80f3a7f5a942, not HG_HASH_1X=0123: not the scene (save, walk, ROM, settings?) (fps line: 235.2 fps; the log: /tmp/claude-0/-home-user-BananaLinux/49d2c299-6c24-57e5-aa5f-3388b6a973a8/scratchpad/hgb/log)
+rc=1
+## the old walk.txt
+FAIL: /tmp/claude-0/-home-user-BananaLinux/49d2c299-6c24-57e5-aa5f-3388b6a973a8/scratchpad/kit/oldwalk.txt: '1500eft:90' isn't <frame>:<keys>[:<n>]
+rc=1
+## no save
+FAIL: no save at /tmp/claude-0/-home-user-BananaLinux/49d2c299-6c24-57e5-aa5f-3388b6a973a8/scratchpad/kit/none.sav (SAV=...): without it HeartGold sits in its new-game tutorial
+rc=1
+## threads.sh
+threads of bananads-t  at 1104000 kHz, 8 s of the overworld (about 212 fps) [scene ok]
+ 86.4%  qemu-aarch64     32524 (main: the emulator in headless)
+ 25.9%  bananads-2d      32534
+ 10.1%  bds-gengis       32533
+  9.5%  bds-gengis       32532
+  0.0%  qemu-aarch64     32527
+## hgprofile.sh (stripped + .debug)
+# bananads-t  at 1104000 kHz, , Sun Oct 18 19:33:59 UTC 2026 [scene ok]
+[headless] frames 1500-2700: 240.1 fps (401% of a DS)
+# BananaDS prof: the emulator's thread (tid 634), prof.hz=1000, frames 1500-2699, from a CPU-time timer (the kernel's tick caps the rate); no perf event: perf_event_open: Function not implemented
+# 1234 samples (253 a second of its CPU time; 0 dropped, 3648 timer overruns); 4.88 s CPU in 4.99 s (98% busy), 240.3 fps
+# symbols: /tmp/claude-0/-home-user-BananaLinux/49d2c299-6c24-57e5-aa5f-3388b6a973a8/scratchpad/kit/bananads-t.debug .symtab (3713 functions)
+# JIT code: 15.1% of the samples
+# pmu: none (perf_event_open: Function not implemented; the kernel needs CONFIG_PERF_EVENTS and the core's PMU)
+
+## by module
+ 78.77%     972  bananads
+ 15.07%     186  [JIT code]
+  6.08%      75  libc.so.6
+  0.08%       1  linux-vdso.so.1
+
+## top 40 symbols
+ 28.69%  28.69%     354  bananads     main::{lambda()#1}::operator()() const
+ 13.94%  42.63%     172  [JIT code]   [JIT blocks]
+  9.64%  52.27%     119  bananads     unsigned short melonDS::SlowRead9<unsigned short, 0>(unsigned int, melonDS::ARMv5*)
+  5.43%  57.70%      67  bananads     ARM_Dispatch
+  4.94%  62.64%      61  libc.so.6    pthread_cond_signal
+  4.29%  66.94%      53  bananads     melonDS::BananaRenderer2D::PrepareScanline(melonDS::Banana2DRegs&)
+  3.00%  69.94%      37  bananads     melonDS::GPU3D::Run() [clone .localalias]
+  2.76%  72.69%      34  bananads     melonDS::BananaRenderer::DrawScanline(unsigned int)
+  2.27%  74.96%      28  bananads     ARM_Ret
+  1.78%  76.74%      22  bananads     melonDS::GPU::GPU(melonDS::NDS&, std::unique_ptr<melonDS::Renderer, std::default_delete<melonDS::Renderer> >&&)::{lambda(void*, unsigned int)#1}::_FUN(void*, unsigned int)
+  1.46%  78.20%      18  bananads     line_px.lto_priv.0
+  1.46%  79.66%      18  bananads     melonDS::NDS::ScheduleEvent(unsigned int, bool, int, unsigned int, unsigned int)
+  1.22%  80.88%      15  bananads     melonDS::BananaRenderer::DrawSprites(unsigned int)
+  1.22%  82.09%      15  bananads     melonDS::SPU::SPU(melonDS::NDS&, melonDS::AudioBitDepth, melonDS::AudioInterpolation, double)::{lambda(void*, unsigned int)#1}::_FUN(void*, unsigned int)
+  1.13%  83.23%      14  bananads     melonDS::GPU::StartScanline(unsigned int) [clone .localalias]

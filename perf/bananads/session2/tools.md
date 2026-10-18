@@ -15,6 +15,8 @@ local agent's from 2026-10-18.
 | 5 | `2d1c3e4` BananaDS tools: the device benchmarks prove they measure the scene | none (scripts; Gengis workers named `bds-gengis`) | hgquick.sh, threads.sh, hgprofile.sh, hgcommon.sh, walk.txt fixed |
 | 6 | `12e39ae` CI: bananads-device | none | GCC 14.3 device build as a workflow artifact |
 | 7 | `c27b7d9` BananaDS: prof.hz from a task-clock perf event, and the A55's counters (prof.pmu) | `prof.source` (`auto`), `prof.pmu` (`on` with prof.hz) | 4x the samples; `perf stat`'s counters |
+| 8 | `0a5e999` CI: bananads-device installs llvm | none | the first CI run failed only at the smoke ROM's build (llvm-objcopy) |
+| 9 | `c901542` BananaDS: prof.hz's report sums the functions into the device profile's areas too | none | JIT code / slow paths / 3D geometry / scheduler / dispatch / SPU / Gengis bins / waits |
 
 ## Expected device gains, ranked (with the reasoning)
 
@@ -50,7 +52,7 @@ Sources: `docs/SETTINGS.md`, every `cfg.flag/num/str` in `src/`, every `getenv` 
 | `core.fast_spu` (0004) | "only by the toggle rule" | nothing today | yes, but | **dead code**: `SPU::Mix` runs `MixChannelsFast` (`core.fast_mix`, 0013, on); the FastSPU loop runs only with `core.fast_mix=off`. 0% |
 | `render.gengis_threads` | default 3; the device benchmarks use 2 | indirectly: 5 runnable threads (emulator, 2D, 3 workers) on 4 A55s now that the 2D thread is on at both scales; a worker preempting the emulator's core costs it | yes (matrix t0-t3 same pictures) | **device A/B** (2 vs 3, `threads.sh` both). 0 to +3%; flip to 2 if it wins. The shipped default (3) is not what hgquick measures (2) |
 | `power.cpu_latency_us` | battery | the wake-up latency of the threads the emulator's thread waits for (2D thread at the frame's end, Gengis bins at VBlank) | yes (no emulation effect) | **device A/B, kms only** (the setting applies with `frontend=kms`): an earlier session measured `100` at +1.5% at 2x; with the 2D thread now on at 1x there are more cross-thread waits. Battery cost: measure the cpugov clock too |
-| `render.gengis_help` (1) | `0` makes the emulator's thread wait instead of drawing a bin | bins it draws itself at VBlank/GetLine | yes (same pictures) | **low**: waiting is not cheaper than drawing when the emulator's thread is blocked anyway. Read HG's `[gengis] the emulator's thread drew N of M bins` line first; A/B `0` only if N/M is large. ±1% |
+| `render.gengis_help` (1) | `0` makes the emulator's thread wait instead of drawing a bin | bins it draws itself (VBlank's `WaitAll`, `GetLine`) | yes (same pictures) | **low, but check**: waiting is not cheaper than drawing when the emulator's thread is blocked anyway. Under qemu on dsstress L5 at 1x the emulator's thread drew 330 of 2388 bins and that was 42% of its samples (qemu's timing, not the device's). Read HG's profile area "3D rendering (Gengis on this thread)" and its `[gengis] ... drew N of M bins` line first; if large, A/B `render.gengis_threads=3` and `render.gengis_help=0`. ±1% |
 | `render.gengis_defer` | untested | no (Gengis workers) | not checked | not an emulator-thread lever |
 | `core.slice` 256/512/`auto` | not exact | the per-slice cost | **no** | DEAD-ENDS (Golden Sun: Dark Dawn) |
 | `MELONDS_JIT_LOOPREGS` | black screen in HG | JIT loops | **no** on the device | DEAD-ENDS |
@@ -62,7 +64,8 @@ One thing the audit found that matters for reading the device's "emulator thread
 thread **waits for the 2D thread by spinning on `std::this_thread::yield()`** (`BananaRenderer::WaitFence`,
 `Drain2D`, `LogReserve`) and for Gengis's conversion the same way (`gengis_renderer.cpp:279`). `/proc` counts that as
 busy. Under qemu the profiler showed `__sched_yield` at 2-5% of the emulator's thread on dsstress L5 / geomtest. The
-device profile (`hgprofile.sh`) will say how much of HeartGold's 99% is yield: if it's several %, the first session's
+device profile (`hgprofile.sh`) will say how much of HeartGold's 99% is yield (and `pthread_cond_signal`, the
+2D thread's wake-ups: 5% under qemu on geomtest, `render.2d_batch` in perf/render is that lever): if it's several %, the first session's
 `render.2d_fence_wait=block` (perf/render `8677fad`, frame-exact on the device in the integrated series) is the next
 cherry-pick, and "99%" partly means "waiting for the 2D thread".
 
@@ -173,8 +176,9 @@ a new baseline with the base binary first.
 - The profiler's signal lands in the emulator's thread: `SA_RESTART`, errno saved, no allocation; anything that
   blocks in a non-restartable call (`nanosleep`, `poll` with a timeout) on that thread returns EINTR early. The
   headless loop has none; the kms emulator thread was not tested (no libdrm here). It's off by default.
-- `HG_HASH_*` is per build output: a change that alters pictures (or a different `render.gengis_threads`? no: the
-  matrix shows the same pictures) fails the check. `SCENE_CHECK=off` exists for intentional picture changes.
+- `HG_HASH_*` holds for any exact build and setting (the render matrix shows the same pictures for any
+  `render.gengis_threads` and 2D thread on/off); a setting that changes pictures on purpose (`render.fog=off`,
+  `render.edge_marking=off`) fails the check: `SCENE_CHECK=off` is for those.
 - The CI workflow hasn't run before this push; its first run is on this branch (see its result below).
 
 ## Next, if the device confirms
