@@ -55,11 +55,14 @@ MEASURED, main-thread instructions per frame (qemu-count, frames 100-300):
   sndbench -9.6%, ipcrom -10.2%). The soft renderer shows the mechanism, though: `-fprofile-partial-training`
   only protects functions that never ran, and the soft rasterizer ran a little in that training (cpubench's 3D
   clear), so its polygon paths were profiled as cold and came out 2.4% slower. **A path a game uses heavily and
-  the training only lightly is penalised, not sped up.** The reverse split shows it without the soft-renderer
-  caveat: a profile from the *3D stress ROMs only*, on ROMs it never saw: cpubench -0.1/-0.4% (the gain is gone),
-  **membench +3.4%, sndbench +3.1% slower** (cpubench's 2D bucket 432k -> 546k: text BGs and sprites the stress
-  ROMs barely use; audio +8%), while ds2dtest/ipcrom still gain (`count-dev3donly.txt`; rgds-sim on membench:
-  `ab-dev3donly-membench.txt`). The test ROM suite exercises every engine the device uses
+  the training only lightly is penalised, not sped up.** The reverse split, a profile from the *3D stress ROMs only*,
+  on ROMs it never saw: qemu-count (soft renderer) membench +3.4% and sndbench +3.1% slower, again all of it in the
+  soft 3D renderer (membench's 2.79M -> 3.26M; the other buckets improve), cpubench -0.1/-0.4% (its 2D bucket
+  432k -> 546k, text BGs and sprites the stress ROMs barely use, against gains elsewhere), ds2dtest/ipcrom still
+  -14.6%/-8.9% (`count-dev3donly.txt`); rgds-sim with Gengis: membench 4.811 -> 4.495 ms (-6.6%,
+  `ab-dev3donly-membench.txt`), cpubench-thumb: `ab-dev3donly-cpubench-thumb.txt`. So with the device's renderer
+  neither split regressed on this suite; the soft renderer and cpubench's 2D are the measured cases of a lightly
+  trained path losing. The test ROM suite exercises every engine the device uses
   (the JIT, both 2D paths, Gengis, the geometry engine, sound, DMA, IPC), which is why the never-seen 3D ROMs still
   gain, but a game's mix is different and nobody here has one: this decides the ship scheme (below), where the
   profile comes from the handheld and real games, with the test-ROM profile merged in.

@@ -292,3 +292,13 @@ on; evidence/render/sim/dev-L5-*-ab.txt). render.3d_pipeline: thread 0 4.344 -> 
 16:16; the fix is 347784d (head 1c9095b), device build b7d linking, number to follow. Base vs b6d: thread 0 4.321 -> 2.919, the 2D
 thread's own 2d bucket 3.062 -> 2.761 ms. Also: a slip of mine caught by the link (a bad edit had cut 500 lines of GPU2D_Banana.cpp
 in the quarters-fix commit): restored, folded in, every commit's file verified, patches/render/ re-exported and git-am-checked.
+
+### 16:31 UTC · render · RESULT · rgds-sim v1, 1x with the 2D thread (b6d): render.3d_share/3d_wait2d at 1x -18% ms/frame on the emulator's thread
+MEASURED (rgds-sim v1 --mode dev with --set render.scale=1 --set render.2d_thread=on, 2 Gengis threads, dsstress L5, device build
+b6d, same binary, render.3d_share off -> on; evidence/render/sim/dev1x-L5-share-ab.txt). Thread 0: 3.382 -> 2.759 ms/frame @1104
+(-18.4%), 1.968 -> 1.608 @1992; its gengis bucket 0.567 -> 0.011 ms (the per-line bin waits/helps and the 1 KB copies gone), L1D load
+misses 4.1k -> 1.5k. The 2D thread 1.191 -> 1.900 ms (it waits for/helps with the bins now); Gengis threads -3..-5%. Thread 0 stays the
+longest, so the frame shortens by what it lost. qemu-count agrees (evidence/render/qc-b5d-summary.txt: 3116.1k -> 2297.1k insns).
+Caveat as for the pipeline: under qemu the render threads are starved, so the waits' share is an upper bound; the copies are sure.
+Note for the device: the 2D thread is OFF by default at 1x (render.2d_thread defaults to on only at 2x), so this only counts with
+--set render.2d_thread=on at 1x: the A/B lines are in findings/render.md.

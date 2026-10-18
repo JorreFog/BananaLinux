@@ -86,6 +86,11 @@ GCC 14.3) run under `tools/qemu-dev`; "base" = /home/user/perf/build-dev/b (00c3
   base (build-dev, the same settings) 3277.8k. Caveat as for the pipeline: the waits' share is an upper bound (qemu
   starves the render threads); the copies (192 KB a frame) are a sure gain. The 2D thread is off by default at 1x:
   this is a reason to A/B `render.2d_thread=on` at 1x on the device (lines below).
+  **rgds-sim v1** (dev mode at `render.scale=1 render.2d_thread=on`, 2 Gengis threads, L5, b6d, off -> on;
+  sim/dev1x-L5-share-ab.txt): the emulator's thread **3.382 -> 2.759 ms/frame @1104 (-18.4%)**, its gengis bucket
+  0.567 -> 0.011 ms, L1D load misses 4.1k -> 1.5k; the 2D thread 1.191 -> 1.900 ms (+0.7 ms: it now waits for, and
+  helps with, the bins instead); the Gengis threads -3..-5%. The emulator's thread stays the longest (2.76 vs 1.90 vs
+  1.2 ms), so the frame gets shorter by what it lost.
 - **render.2d_emit_zip** (the 2D thread at 2x; same runs; b5d had the quarters' zip only, not the 2D lines'
   doubling): the 2D thread's output stage (WriteLine/EmitA/EmitB/DoubleLine/ZipLine/WriteZip) 451k -> 352k
   instructions/frame (**-22%**), the thread's own work 1696k -> 1601k.
