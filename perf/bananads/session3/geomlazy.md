@@ -1,7 +1,8 @@
 # geomlazy: the geometry engine in Mario Kart DS's race start (session 3, 2026-10-18)
 
 Branch `claude/bananads-perf-geomlazy` on JorreFog/SuperDrastic, from `claude/bananads-perf-mkbase` (9aa478c).
-Head **`1cd2e36`**. CI (`bananads-device`): artifact **`bananads-aarch64-1cd2e3648b3b4c00397b960517935aa04163bd74`**
+Head **`12f4a5a`** (the code is `1cd2e36`'s; `12f4a5a` adds geomtest's FIFO IRQ phase). CI (`bananads-device`): artifact
+**`bananads-aarch64-12f4a5a00d78813853a63cc02bc5d4e07d32b43f`** (same binary as `bananads-aarch64-1cd2e3648b3b4c00397b960517935aa04163bd74`)
 (earlier heads built too: `...7e14fc4...` = up to 0060). **Untested on device.**
 
 It needs nothing from session 2's memio branch; it includes session 2's geom 0050 (cherry-picked, unchanged).
@@ -71,6 +72,25 @@ Binary: the CI artifact above (`bananads`). Base: the mkbase build the brief use
   MK's difftest; 0062 (a burst's first unit timed as sequential) caught **only by the savestate compare**. Not caught
   and why: a GXSTAT busy bit not set by the block (unobservable: always already set), a missing check when the FIFO
   ran empty (MK's DMA is running then and its IE lacks the GX FIFO IRQ).
+
+## Follow-ups after the coordinator's review (23:43-00:00)
+
+1. **The uncaught sabotage is now caught.** geomtest has a FIFO IRQ phase (commit 12f4a5a): GXSTAT's FIFO IRQ in
+   IE (IME on, CPU IRQs masked, IF polled), the FIFO filled with BOX_TESTs (slower than the writers, so it fills and
+   the CPU stalls) by the CPU and by a GX FIFO DMA (mode 7) of random length that ends; IF acknowledged while the
+   FIFO is full enough, then polled until "empty" / "less than half"; poll count, timer 0 and FIFO level logged to
+   RAM. 0061's sabotage "no deferred check when every refill of a run found fewer than 2 entries" (the FIFO running
+   empty): **bananads-difftest DIFFERENT after frame 1**. The real build: SAME over 100 frames (geom_fifo off/on, and
+   all three toggles off/on); its savestate at frame 60 is identical with all toggles off and on, and to 00c34c78's
+   except 4 bytes in the SPI firmware section (they differ between binaries regardless of the toggles; not geometry
+   state). The new ROM: `bananads/tests/geomtest/build.py` (copy at `/home/user/perf3/gl/geomtest-irq.nds`; the shared
+   `/home/user/perf/roms/geomtest-geomtest.nds` is still the old one). Still not caught by it: 0062's DMA timing
+   sabotage (a few cycles per burst stay inside one slice); Mario Kart's savestate compare catches that one.
+2. **No further geometry change**: by the qemu counts none is worth a toggle. SubmitPolygonBody (1.14M, ~570 per
+   call) has no TB over 11% (culling's normal, then setup spread over ~20 blocks); SubmitVertexBody (0.78M) is 40%
+   the NEON transform itself; `Run`'s per-call cost is ~50 instructions in and ~40 out, x 2,180 = ~0.2M (1.5%), and
+   only 1.5% of calls find nothing to run, so it can't be skipped without the lazy log/replay. The precomputed
+   per-command flags in the DMA writer were tried and grew it (+25k).
 
 ## Combined with mkside
 

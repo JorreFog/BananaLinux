@@ -26,7 +26,8 @@ Sabotage builds (each must be caught):
 - 0061: the deferred DMA/IRQ checks run before the FIFO level is written back (a GXFIFO DMA/IRQ one run late):
   MK difftest DIFFERENT after frame 1600. CAUGHT.
 - 0061: no deferred check when every refill of a run found <2 entries in the FIFO: MK same (its DMA is already
-  running then; IRQ_GXFIFO isn't in IE). NOT CAUGHT (would need a game using the FIFO-empty IRQ or reading IF).
+  running then; IRQ_GXFIFO isn't in IE). CAUGHT since commit 12f4a5a by geomtest's FIFO IRQ phase: difftest
+  (geom_fifo off vs on) DIFFERENT after frame 1; the real build SAME over 100 frames.
 - 0062: a DMA's first unit not starting a new burst: MK RAM, regs and GPU3D timing state at frame ends SAME, test
   ROMs SAME; MK full savestate at 1850 DIFFERS. CAUGHT (by the savestate compare only).
 - 0062: the new table not remembered at a table's end: no effect (DMA3 restarts every burst with burststart; the table is the same). Not observable.
