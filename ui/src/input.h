@@ -28,6 +28,8 @@ namespace banana
 		// a device came or went in /dev/input (watched with inotify): open() again to take it
 		bool rescanDue() { bool r = rescan; rescan = false; return r; }
 		std::vector<int> fds() const;
+		// a touchscreen on that screen (0 top, 1 bottom): the RG DS has one on each, the RG DS Plus only the bottom one
+		bool hasTouch(int screen) const;
 		// read what is waiting on fd; events go to sink
 		void read(int fd, const std::function<void(const InputEvent&)>& sink);
 

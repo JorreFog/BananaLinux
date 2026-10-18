@@ -113,6 +113,12 @@ namespace banana
 		return r;
 	}
 
+	bool Input::hasTouch(int screen) const
+	{
+		for (auto& d : devs) if (d.touch && d.screen == screen) return true;
+		return false;
+	}
+
 	void Input::read(int fd, const std::function<void(const InputEvent&)>& sink)
 	{
 		if (fd == watch)

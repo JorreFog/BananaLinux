@@ -1140,13 +1140,15 @@ int main(int argc, char** argv)
 	};
 
 	// the game panel's loop while a RetroArch game runs on the other panel: its achievements and tiles drawn when they
-	// change, touch on the bottom panel (when the panel is there) turned into RetroArch's commands through the pipe
+	// change, touch on the panel's screen (when the panel is there and that screen has a touchscreen: the RG DS's top one
+	// too, with the game on the bottom) turned into RetroArch's commands through the pipe
 	// on its stdin (stdin_cmd_enable), until the game ends
 	auto gamePanel = [&](pid_t pid, int& status, int gameScreen, int cmdFd, const std::string& title, const std::string& sysName)
 	{
+		const int panelScreen = 1 - gameScreen;
 		{
 			std::lock_guard<std::mutex> l(worker.uiLock);
-			settingsView.gameOpen(title, sysName, 1 - gameScreen, gameScreen == 0);
+			settingsView.gameOpen(title, sysName, panelScreen, input.hasTouch(panelScreen));
 		}
 		be.invalidate();
 		bool want = true;
@@ -1175,7 +1177,7 @@ int main(int argc, char** argv)
 				if (fds[i].revents & POLLIN)
 					input.read(fds[i].fd, [&](const InputEvent& ev)
 					{
-						if (gameScreen != 0 || ev.screen != 1) return;	// buttons are the game's; touch only on the panel
+						if (ev.screen != panelScreen) return;	// buttons are the game's; touch only on the panel
 						if (ev.type != InputEvent::TOUCH_DOWN && ev.type != InputEvent::TOUCH_UP) return;
 						Settings::GameAction a;
 						{
