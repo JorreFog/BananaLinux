@@ -24,11 +24,38 @@ shows as "other" on device builds.
 
 ## 1. Profile-guided optimisation (CMake `BANANADS_PGO_GENERATE`, `BANANADS_PGO=<dir>`, `BANANADS_PGO_PARTIAL`)
 
-(filled in below as measured)
+Commit `BananaDS: build options for profile-guided optimisation ...` (perf/core). `-DBANANADS_PGO_GENERATE=ON` builds
+instrumented (`-fprofile-generate` into `BANANADS_PGO_DIR`, `-fprofile-update=atomic` for the threads, profiles named
+relative to the build directory with `-fprofile-prefix-path`, the source trees mapped to fixed names with
+`-fprofile-prefix-map`); `tools/perf/pgo/train.sh <instrumented bananads> <roms> <profile dir> [<out dir>]` runs the
+test ROMs under qemu-user (each at Gengis 1x, Gengis 2x + the 2D thread, and the soft renderer, 300 frames);
+`-DBANANADS_PGO=<dir>` builds with the profiles (`-fprofile-use`, `-fprofile-partial-training` unless
+`BANANADS_PGO_PARTIAL=OFF`, missing/mismatched profiles as warnings). Default off: the build is as before.
+
+MEASURED, main-thread instructions per frame (qemu-count, frames 100-300):
+- GCC 13 -O3 (build-ref's compiler), profile from half the ROMs, tested on both halves: cpubench-thumb -3.9%,
+  cpubench-arm* -4.6%, thumb-arm7 -3.6%, membench -2.7%, dsstress-L5 -7.6%, L10* -8.4%, arm7-thumb-L5* -7.4%,
+  sndbench -8.1%, ipcrom -9.5%, ds2dtest -4.3% (* held out, but of the same kinds as trained ones;
+  `evidence/core/count-pgoT.txt`). JIT-generated code is untouched; the gain is the C++ side (RunSlicesJIT 904k ->
+  867k, 2D 461k -> 372k on cpubench). Exact: pictures and audio identical on 13 ROMs x 2 renderers, savestates
+  (19 MB, main RAM included) identical at frame 250 (`exact-pgoT.txt`).
+- The device's compiler (Bootlin GCC 14.3, Buildroot's -O2), profile from the full suite, vs `/home/user/perf/build-dev`:
+  cpubench-thumb -3.9%, cpubench-arm -4.4%, thumb-arm7 -3.6%, membench -8.2%, dsstress-L5 -8.8%, L10 -8.8%,
+  arm7-thumb-L5 -8.7%, sndbench -9.2%, ipcrom -9.5%, ds2dtest -21.0%; .text 1.95 -> 2.21 MB (`count-devpgo.txt`).
+- rgds-sim v1 (A55 time, st mode), device build -> device PGO: cpubench-thumb main thread 5.649 -> 5.406 ms/frame
+  @1104 MHz (-4.3%), L1I misses -5.7%, iTLB L2 hits -31% (`ab-devpgo-cpubench-thumb.txt`); jit's game-sized bigcode
+  ROM (6 MB of JIT code, L1I = 40% of cycles) 10.18 -> 9.85 ms (-3.2%), the C++ side's L1I misses 44.0k -> 41.4k/frame
+  (`sim-bigcode-devpgo.txt`). The JIT code's own L1I misses are the same in both: PGO can't touch them.
+- (the no-3D / 3D-only split builds: below, when measured)
 
 ## 2. The hot targets at -O3 under Buildroot's -O2 (CMake `BANANADS_HOT_OPT=-O3`)
 
-(filled in below as measured)
+Same commit. `-DBANANADS_HOT_OPT=-O3` compiles melonDS's core, the Banana 2D engine, Gengis and the frontend at -O3
+after Buildroot's -O2 (the last -O wins; teakra, slirp and the tests stay -O2). MEASURED vs `/home/user/perf/build-dev`
+(qemu-count): cpubench-thumb -1.8%, cpubench-arm -2.0%, membench -7.6% (its 2D bucket -31%: `Composite`, which render
+has since fixed at -O2 with `render.2d_comp_unroll`), dsstress-L5 +0.3%, sndbench -2.9%, ipcrom -6.4%; .text 1.95 ->
+2.25 MB (+15%) (`count-devO3.txt`). Exact: pictures and audio identical on 13 ROMs x 2 renderers (`exact-devO3.txt`).
+rgds-sim: (below, when measured). Default: off until the device says (instructions vs L1I).
 
 ## 3. Layout levers (CMake `BANANADS_NOPLT`, `BANANADS_ALIGN=F:L:J`, `BANANADS_HOTCOLD`, `BANANADS_STACK_PROTECTOR`)
 

@@ -77,7 +77,8 @@ def bucket(s):
         return '3d-geometry'
     if 'Renderer3D' in s or 'DepthTest' in s:
         return '3d-soft'
-    if 'GPU2D' in s or 'Banana' in s or 'GPU' in s or 'SoftRenderer' in s or 'ConvertRun' in s:
+    if ('GPU2D' in s or 'Banana' in s or 'GPU' in s or 'SoftRenderer' in s or 'ConvertRun' in s or 'Composite' in s
+            or 'CompStep' in s or 'gpu2d' in s):
         return '2d'
     if 'SPU' in s or 'blip' in s or 'audio' in s.lower():
         return 'audio'
