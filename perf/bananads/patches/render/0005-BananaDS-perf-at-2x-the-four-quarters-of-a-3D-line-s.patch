@@ -1,7 +1,7 @@
 From 0bab5aa245e2e5e2ed6e5da62622f0aa19e4f924 Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Sun, 18 Oct 2026 15:56:52 +0000
-Subject: [PATCH 5/8] BananaDS perf: at 2x the four quarters of a 3D line share
+Subject: [PATCH 5/9] BananaDS perf: at 2x the four quarters of a 3D line share
  one painter's pass over the 2D layers (render.2d_quarters)
 
 At render.scale=2 a line that shows the 3D layer is composited four times, once per quarter, each a full

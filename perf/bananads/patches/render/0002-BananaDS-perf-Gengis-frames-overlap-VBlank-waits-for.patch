@@ -1,7 +1,7 @@
 From ea886e871516f9e7842fb50fd989b6784632d384 Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Sun, 18 Oct 2026 15:27:30 +0000
-Subject: [PATCH 2/8] BananaDS perf: Gengis frames overlap, VBlank waits for
+Subject: [PATCH 2/9] BananaDS perf: Gengis frames overlap, VBlank waits for
  the conversion only (render.3d_pipeline)
 
 At VBlank the emulator's thread waited for every bin of the 3D frame (Finish3DRendering -> WaitAll) and drew

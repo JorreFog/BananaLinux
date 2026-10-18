@@ -171,8 +171,11 @@ def classify_addr(a, blocks, starts, lo, hi, maps=()):
     for s0, e0, base, path in maps:
         if s0 <= a < e0:
             ks, ns = lib_symbols(path)
-            i = bisect.bisect_right(ks, a - base) - 1
+            off = a if base < 0x10000000 else a - base     # a non-PIE executable's symbols are absolute
+            i = bisect.bisect_right(ks, off) - 1
             nm = ns[i] if i >= 0 else '?'
+            if '.so' not in os.path.basename(path):        # the executable itself: code qemu has no sized symbol for
+                return bucket(nm), nm
             return 'libc/lib', '%s:%s' % (os.path.basename(path), nm)
     return 'libc/lib', 'lib@%x' % a
 

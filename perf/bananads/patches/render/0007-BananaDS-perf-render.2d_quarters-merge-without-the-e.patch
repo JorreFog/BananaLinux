@@ -1,7 +1,7 @@
 From 88a772a2cff36b0d417c76febffd544caa4a6241 Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Sun, 18 Oct 2026 16:16:06 +0000
-Subject: [PATCH 7/8] BananaDS perf: render.2d_quarters' merge without the
+Subject: [PATCH 7/9] BananaDS perf: render.2d_quarters' merge without the
  empty halves, the backdrop as a constant
 
 Measured on the device build (qemu-count, dsstress L5, device configuration): the four-quarter merge cost as much as

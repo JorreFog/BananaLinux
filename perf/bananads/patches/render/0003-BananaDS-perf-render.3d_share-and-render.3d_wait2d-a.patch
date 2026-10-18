@@ -1,7 +1,7 @@
 From dc3f96a90fc4ac11c73b8809eff4dd909aea4138 Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Sun, 18 Oct 2026 15:28:35 +0000
-Subject: [PATCH 3/8] BananaDS perf: render.3d_share and render.3d_wait2d at 1x
+Subject: [PATCH 3/9] BananaDS perf: render.3d_share and render.3d_wait2d at 1x
  too
 
 At render.scale=1 every line showing the 3D layer copied Gengis's line into the 2D job (1 KB, up to 192 KB a

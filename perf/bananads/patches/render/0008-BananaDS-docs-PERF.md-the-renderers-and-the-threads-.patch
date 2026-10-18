@@ -1,7 +1,7 @@
 From c5230fff2a73aee6f7d5e1e5f7f6a4095fb2b650 Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Sun, 18 Oct 2026 16:18:44 +0000
-Subject: [PATCH 8/8] BananaDS docs: PERF.md, the renderers and the threads
+Subject: [PATCH 8/9] BananaDS docs: PERF.md, the renderers and the threads
  (2026-10-18)
 
 The six changes of the session (render.3d_pipeline, render.2d_batch, 3d_share/3d_wait2d at 1x, render.2d_comp_unroll,

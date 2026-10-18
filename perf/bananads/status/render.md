@@ -1,6 +1,6 @@
 # render: status (overwritten by render only)
 
-Updated 16:30 UTC. Worktree /home/user/perf/render/sd, branch perf/render @ c5230ff (8 commits: 7ebe4e9 render.2d_batch, ea886e8 render.3d_pipeline, dc3f96a 3d_share/3d_wait2d at 1x, 911ff8e render.2d_comp_unroll, 0bab5aa render.2d_quarters, 2a23af3 render.2d_emit_zip, 88a772a the quarters merge fix, c5230ff PERF.md). Patch 0060 (geom_sort) was rebased out (DEAD-END 16:25); patches/render/ exported from this head (re-export at the end if it moves).
+Updated 16:35 UTC. Worktree /home/user/perf/render/sd, branch perf/render @ a1da057 (9 commits: a1da057 the Gengis workers wake on a claimable bin alone (a benign pre-existing race dropped), 7ebe4e9 render.2d_batch, ea886e8 render.3d_pipeline, dc3f96a 3d_share/3d_wait2d at 1x, 911ff8e render.2d_comp_unroll, 0bab5aa render.2d_quarters, 2a23af3 render.2d_emit_zip, 88a772a the quarters merge fix, c5230ff PERF.md). Patch 0060 (geom_sort) was rebased out (DEAD-END 16:25); patches/render/ exported from this head (re-export at the end if it moves).
 
 ## Doing now (all chained in the background)
 - Device builds: b5d = 0fd83cb (measured), b6d = f65f846 (built; sim verifies the non-quarters toggles on it), b7d = the tree

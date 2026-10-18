@@ -1,7 +1,7 @@
 From 911ff8efeac69dafd775c14889faef93da036182 Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Sun, 18 Oct 2026 15:44:11 +0000
-Subject: [PATCH 4/8] BananaDS perf: the 2D compositor's step loop unrolled by
+Subject: [PATCH 4/9] BananaDS perf: the 2D compositor's step loop unrolled by
  a fold, for the device's -O2 (render.2d_comp_unroll)
 
 BananaLinux builds BananaDS at -O2 (Buildroot's flags), not the -O3 of the PC builds. CompositeLoop, the

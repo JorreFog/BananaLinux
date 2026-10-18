@@ -29,3 +29,32 @@ B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/sim/vb-r
   scheduler/core       1.480     1.487    +0.007    1120.7k    1120.7k
   gengis               0.291     0.294    +0.003     161.4k     161.4k
   audio                0.091     0.093    +0.002      76.0k      76.0k
+
+## exactness: rgds-sim/tools/exact.sh vb-render vb-render ... "render.2d_comp_unroll=off" "render.2d_comp_unroll=on" (pictures every 50 frames to 300 + audio dump, 17 ROMs; difftest --every 300 frames, 6 ROMs)
+# exact.sh 2026-10-18T16:16:38Z A=/home/user/perf/sim/vb-render/b/bananads [render.2d_comp_unroll=off] B=/home/user/perf/sim/vb-render/b/bananads [render.2d_comp_unroll=on] 
+PICS+AUDIO ok   cpubench-cpubench-thumb (7 files identical)
+PICS+AUDIO ok   cpubench-cpubench-arm (7 files identical)
+PICS+AUDIO ok   cpubench-cpubench-thumb-arm7 (7 files identical)
+PICS+AUDIO ok   dsstress-L1 (7 files identical)
+PICS+AUDIO ok   dsstress-L5 (7 files identical)
+PICS+AUDIO ok   thumb-dsstress-L5 (7 files identical)
+PICS+AUDIO ok   arm7-thumb-dsstress-L5 (7 files identical)
+PICS+AUDIO ok   dsstress-L10 (7 files identical)
+PICS+AUDIO ok   iorom-dsstress-L5 (7 files identical)
+PICS+AUDIO ok   ipcrom-ipctest (7 files identical)
+PICS+AUDIO ok   dmasnd-dmasnd (7 files identical)
+PICS+AUDIO ok   sndbench-sndbench (7 files identical)
+PICS+AUDIO ok   ds2dtest-ds2dtest (7 files identical)
+PICS+AUDIO ok   geomtest-geomtest (7 files identical)
+PICS+AUDIO ok   jitloops-jitloops-thumb (7 files identical)
+PICS+AUDIO ok   jitloops-jitloops-arm (7 files identical)
+PICS+AUDIO ok   membench-membench (7 files identical)
+DIFF ok   cpubench-cpubench-thumb (SAME after 300 frames (all of main RAM))
+DIFF ok   cpubench-cpubench-thumb-arm7 (SAME after 300 frames (all of main RAM))
+DIFF ok   membench-membench (SAME after 300 frames (all of main RAM))
+DIFF ok   jitloops-jitloops-thumb (SAME after 300 frames (all of main RAM))
+DIFF ok   jitloops-jitloops-arm (SAME after 300 frames (all of main RAM))
+DIFF ok   iorom-dsstress-L5 (SAME after 300 frames (all of main RAM))
+FAILS=0
+
+## hash: built 968fe03; after render's rebase the same commit is 911ff8e (git patch-id identical 22b3a95c72e3; tree differs from 968fe03 only by the dropped melonDS 0060 geom_sort)

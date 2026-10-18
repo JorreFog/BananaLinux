@@ -58,10 +58,13 @@ GCC 14.3) run under `tools/qemu-dev`; "base" = /home/user/perf/build-dev/b (00c3
   membench, off -> on: main thread **4.871 -> 4.604 ms/frame @1104 MHz (-5.5%)**, 2.939 -> 2.786 @1992 (-5.2%);
   instructions -9.4%, the 2d bucket 2.258 -> 1.992 ms; L1I misses unchanged (the sim's alternative fit says -3.5%).
   Base vs b6d (sim/st-membench-base-vs-b6d-ab.txt): 4.780 -> 4.609 ms (-3.6%), with L1I misses 3.9k -> 6.1k a frame
-  (the unrolled compositor is more code; small in absolute terms).
+  (the unrolled compositor is more code; small in absolute terms). ds2dtest, base vs b6d
+  (sim/st-ds2dtest-base-vs-b6d-ab.txt): **25.171 -> 23.647 ms/frame @1104 (-6.1%)**, 14.198 -> 13.345 @1992;
+  instructions -9.2%, the 2d bucket 22.387 -> 20.900 ms, conditional mispredicts 85.5k -> 74.0k, L1I misses 10.4k -> 13.6k.
 - **render.geom_sort** (dropped, see Dead ends; the emulator's thread; st mode; evidence/render/qc-b5d-st-sort.txt):
   dsstress L10, off -> on: 18451.5k -> 18433.4k (-18k, -0.1%); geomtest 4475.6k both ways (its frames have fewer
-  than 64 polygons: the std::stable_sort path either way). Exact, but below what the device can see.
+  than 64 polygons: the std::stable_sort path either way). Exact, but below what the device can see. rgds-sim
+  (sim/st-L10-sort-ab.txt, st-geomtest-sort-ab.txt): L10 6.797 -> 6.764 ms/frame @1104 (-0.5%), geomtest 0.00%.
 - **render.3d_pipeline** (device mode: gengis 2x, 3 Gengis threads, 2D thread; dsstress L5; device build b5d;
   evidence/render/qc-b5d-dev-L5.txt): the emulator's thread, off -> on: 3308.6k -> 2324.1k instructions/frame
   (**-30%**): the bins it drew at VBlank (`[gengis]` log: 193 of 1188 bins in base, 0 with it). Under qemu the render
@@ -89,9 +92,29 @@ GCC 14.3) run under `tools/qemu-dev`; "base" = /home/user/perf/build-dev/b (00c3
   Threads: Gengis 1288k/1286k/1046k, 2D thread 2481k. evidence/render/ref-L5-report.txt, ref-L5-threads.txt.
 - futex syscalls per thread (qemu -strace, same settings): evidence/render/futex-L5.txt.
 
-## Exactness checks done
+## Exactness checks done (every toggle on vs the base, unless said)
 
-(filled in: matrix.sh results, difftest, bananads-tests, TSan)
+- Pictures (every 10th frame of 300, rtc.fixed) and the audio dump identical to the reference build (build-ref,
+  00c34c78e8de), `evidence/render/matrix.sh` -> `abcheck.sh`: **m3** (b3 = 2d_batch + pipeline + 1x share + the
+  dropped sort): 41 configurations, FAILS=0: the device configuration (2x, 3 Gengis threads, 2D thread, headless.direct
+  as frontend=kms) on dsstress L1/L5/L10/ramp, Thumb L5/L10, dsswap, ds2dtest, membench, geomtest; the same with a
+  savestate reload at frame 150 (L5, L10, ds2dtest, membench, geomtest); 2x with 2/1/0 Gengis threads and without the
+  2D thread; 1x with 3/2/1/0 threads, with and without the 2D thread (evidence/render/matrix-m3.txt). **m2** (b2, the
+  1x share): 8 configurations at 1x with the 2D thread, FAILS=0. m1 (partial) and the smoke runs:
+  evidence/render/matrix-m1-m2-smoke.txt. Determinism: the reference run twice is SAME.
+- jit's exact-suite.sh on b3, toggles off vs on (with render.2d_batch=96 on the "on" side): pictures every 50 frames
+  on 14 ROMs ok (evidence/render/suite-b3.txt; its difftest tail did not run under this bash: see below).
+- Unit tests of the new code against the old on random inputs, device compiler -O2, under qemu: comp_bench (the fold
+  vs the plain loop: identical output; evidence/render/comp-bench.txt), quarters_test (the split pass vs the full pass:
+  20000 quarter cases, 0 mismatches; quarters-test.txt), zip_test (WriteZip/WriteDouble vs WriteLine + Zip/Double:
+  6000 cases, 0 mismatches; zip-test.txt).
+- ThreadSanitizer (x86-64 build; no Gengis on x86, so the 2D thread's code only: render.2d_batch 1/16/48/96/200,
+  render.2d_lazy on/off, headless.direct, savestate reloads, display capture lines in place on ds2dtest): 6 runs of 300
+  frames, 0 warnings (evidence/render/tsan-runs.txt). The Gengis pipeline has no TSan (aarch64 only): its ordering is
+  argued in the commit message and exercised by the matrix's thread-count variants.
+- On the device-like build (build-dev vs the branch under qemu-dev): the matrix again (m6 on b6d, m7/m8 on the final
+  head), `bananads-difftest --every --frames 300` toggles off vs on (L5, ds2dtest, geomtest) and `bananads-tests`:
+  results below when they finish (this section is updated at the end).
 
 ## Device A/B commands (tools/device/hgquick.sh style; both handhelds, 640x480 RG DS and 1024x768 RG DS Plus, use the
 ## same settings: the plane scales; run each line against a plain run of the same binary)
