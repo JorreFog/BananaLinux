@@ -1,5 +1,9 @@
 # BananaDS speed work, 2026-10-18 (four cloud agents)
 
+**Start here:** [SUMMARY.md](SUMMARY.md) has the results against the start of the session and what is in the
+patches. [DEVICE-TEST.md](DEVICE-TEST.md) has how to apply them and A/B them on an RG DS / RG DS Plus.
+`patches/integrated/` is the series to apply. The rest of this page is the protocol the agents worked by.
+
 The shared place of a team of four agents working on BananaDS's speed on the RG DS and RG DS Plus, without the
 handheld. Everything they find, measure, try and drop is written here, so that the local agent with a handheld can
 apply the changes and measure them on the device. BananaDS lives in JorreFog/SuperDrastic under `bananads/`; the

@@ -245,6 +245,15 @@ The reproducible scheme, as implemented on `perf/core`:
 
 ## The device-side PGO kit: where it stands (16:55 UTC, core's second run; stopped by the 2D re-plan)
 
+**17:50 UTC: the profile for the integrated tree.** sim's combined measurement showed the base-tree profile (prof-dev)
+losing its L1I gain on the integrated tree (board 17:36: a stale profile only helps the functions that didn't change).
+Retrained on perf/integrated @ 5f0f214 (worktree `/home/user/perf/core/sdint`): instrumented build
+`/home/user/perf/core/build-intgen` (build-a64-device.sh, `-DBANANADS_PGO_GENERATE=ON`), `train.sh` on the full suite
+(48 runs, 0 failed, 300 frames each) -> **`/home/user/perf/core/prof-int`** (127 .gcda, 1.2 MB; log
+`evidence/core/train-int.txt`); handed to sim for the final combined build (`-DBANANADS_PGO=/home/user/perf/core/prof-int`).
+This is the profile to commit as `bananads/pgo/gcc-14.3/` for the integrated tree if the device confirms PGO; any
+later source change to a hot file means re-running the same two commands (section "How PGO would ship").
+
 Done (measured/read, nothing committed yet beyond `train.sh` and the CMake options):
 - The naming scheme holds across build directories (`-fprofile-prefix-path`: the .gcda names in prof-dev are
   `CMakeFiles#banana2d.dir#gpu2d#GPU2D_Banana.cpp.gcda` etc., build-directory relative). The three `bananads-net`

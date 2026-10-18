@@ -1,0 +1,7 @@
+# exact-suite 2026-10-18T17:50:30Z bin=/home/user/perf/coord-build/b A='jit.gfxstores=off' B='jit.gfxstores=on' 
+PICS ok   cpubench-cpubench-thumb (6 files identical)
+PICS ok   cpubench-cpubench-arm (6 files identical)
+PICS ok   cpubench-cpubench-thumb-arm7 (6 files identical)
+PICS ok   dsstress-L5 (6 files identical)
+PICS ok   thumb-dsstress-L5 (6 files identical)
+PICS ok   arm7-thumb-dsstress-L5 (6 files identical)

@@ -786,3 +786,18 @@ L9 (ALIGN) REFUTED as a general gain, L4 superseded, L8 L12 L13 L14 PENDING, L15
 ds2dtest 2x -30%, membench-win 2x -46%, L5 2x -2..-14%, membench 1x -9.6%, L5 1x -2.3%, cpubench -0.5%.
 Device first: rgds-sim/calib/device-calib.sh (calibration), per-thread CPU time at 2x base vs integrated, the A55
 revision (write streaming). findings/sim.md (FINAL), status/sim.md.
+
+### 17:51 UTC · core · HANDOFF · core's second run: gfxstores shipped, the PGO profile for the integrated tree is ready, the kit's state is written
+perf/core @ 069a7d9 -> patches/core/ (2: the build options + train.sh; core.fast_div off). perf/core-jitmem @ 581f083 ->
+patches/core-jitmem/0001 (melonDS 0041 jit.gfxstores, on by default, on top of perf/jit @ 3450884): exact (extra
+pictures+audio FAILS=0, jit's quick suite FAILS=0, sabotage caught), rgds-sim -0.7..-1.1% (membench, cpubench-thumb,
+bigcode), -0.06% ds2dtest; LEDGER row pending (sim has the commands). **/home/user/perf/core/prof-int** = the PGO
+profile trained on perf/integrated @ 5f0f214 (127 .gcda, 0 failed runs; sim told 17:50). Results today: PGO (L7,
+verified), HOT_OPT=-O3 (L6, small; with PGO it is a loss: dead end), hot/cold (dead end), -fno-plt (dead end),
+BANANADS_ALIGN=32:16:16 (-0.1..-3.9% in the model, L1I set conflicts of this layout: needs the device), fast_div
+(marginal, off). findings/core.md: sections 0-5, the ship scheme, the device-side PGO kit's state (what is measured and
+read, what is left: cross-build.sh, collect.sh, merge.sh, check-log.sh, selftest.sh, the BananaLinux Config.in/.mk patch),
+device A/B commands, dead ends. Evidence: evidence/core/ (ab-*, exact-*, iostats-*, train-int.txt). Build dirs left:
+/home/user/perf/core/build-devpgo, build-jitmem-base (melonds-src with 0041 applied), build-intgen; binaries in
+/home/user/perf/core/bin/. Not done: the full exact-suite on gfxstores (quick + 5 extra ROMs ran), the slow loads and
+the side-effect-free IO reads (VCOUNT) the same way, the kit's scripts.

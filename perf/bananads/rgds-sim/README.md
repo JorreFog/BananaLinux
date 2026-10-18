@@ -21,7 +21,8 @@ time goes; catching changes that cut instructions but add cache/TLB misses (PERF
 | `regions.py` | one thread's L1D misses per frame by buffer (address range) and function (v2+ runs) |
 | `tools/exact.sh` | the verifier's exactness check (pictures every 50 frames + audio dump; difftest for one binary) |
 | `tools/set2d.sh` | the fixed 2D benchmark set (dev 2x, st 1x, st 2x) |
-| `params.json` | the cost model's parameters (calibrated; its `version` names the model version) |
+| `params.json` | the cost model's parameters (documented/assumed defaults, checked on one device row: see Calibration); `version` names the model version (v2) |
+| `params-fit.json` | the best fit to the threaded device rows (not adopted; ab.py prints a sensitivity line with it) |
 | `calibrate.py` | fits the free parameters to device frame times (`calib/`) |
 | `calib/` | the device numbers used, the calibration runs' script and the fit's output |
 
@@ -174,8 +175,8 @@ settings, below. Evidence: `evidence/sim/calibration-v1.txt` (commands, every ro
 ## Limitations (read before trusting a number)
 
 - In-order issue is modeled per translation block; stalls across blocks, the store buffer, write-backs, DRAM
-  bandwidth, bank conflicts, the A55's real prefetcher and predictor are not. Absolute ms are calibrated on a few
-  workloads; A/B differences are what to trust, as model differences.
+  bandwidth, bank conflicts, the A55's real prefetcher and predictor are not. Absolute ms are checked against one device
+  row only; A/B differences are what to trust, as model differences.
 - Kernel time (syscalls, futex wakes, page faults, scheduling) is not modeled: qemu-user runs syscalls on the host.
   Thread hand-offs (a thread waiting for another) are not modeled: each thread's time is its own work. A change that
   moves work between threads shows as such; how the device overlaps them doesn't.
