@@ -324,3 +324,10 @@ dsstress-L5 (Gengis) 6.974 -> 6.951 (-0.3%; insns -2.6% but L1I misses 10.9k -> 
 "v1-fit-threaded" sensitivity parameters it would be +5.8%): -O3 for the hot targets is a win on 2D/IO-bound work
 (-9% membench, -1.6% cpubench) and a wash or a loss on 3D-bound scenes, so it stays off by default and goes to the
 device as an A/B. Evidence: evidence/core/ab-devpgo-ipcrom.txt, ab-devO3-L5.txt.
+
+### 16:38 UTC · render · RESULT · exact on the device build too: 23 configurations, difftest --every, bananads-tests
+MEASURED (device-like builds under qemu-dev: build-dev vs b6d = perf/render @ f65f846 with every toggle on): pictures every 10th frame
+of 300 + audio identical on the device configuration for all 10 ROMs, with a savestate reload at frame 150 on 5, at 2x with 1 Gengis
+thread and at 1x with the 2D thread: 23 configurations, FAILS=0 (evidence/render/matrix-m6.txt). bananads-difftest --every --frames
+300, every toggle off vs on (2x, 2D thread): main RAM SAME on dsstress L5, ds2dtest, geomtest; bananads-tests all passed
+(evidence/render/difftest-b6d.txt). The final head (1c9095b, the quarters fix) gets the same matrix (m7) on b7d next.

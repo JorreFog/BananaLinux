@@ -129,9 +129,11 @@ GCC 14.3) run under `tools/qemu-dev`; "base" = /home/user/perf/build-dev/b (00c3
   render.2d_lazy on/off, headless.direct, savestate reloads, display capture lines in place on ds2dtest): 6 runs of 300
   frames, 0 warnings (evidence/render/tsan-runs.txt). The Gengis pipeline has no TSan (aarch64 only): its ordering is
   argued in the commit message and exercised by the matrix's thread-count variants.
-- On the device-like build (build-dev vs the branch under qemu-dev): the matrix again (m6 on b6d, m7/m8 on the final
-  head), `bananads-difftest --every --frames 300` toggles off vs on (L5, ds2dtest, geomtest) and `bananads-tests`:
-  results below when they finish (this section is updated at the end).
+- On the device-like build under qemu-dev: **m6** (build-dev vs b6d, every toggle on): the device configuration on all
+  10 ROMs, with a savestate reload on 5, 2x with 1 Gengis thread, 1x with the 2D thread: 23 configurations, FAILS=0
+  (evidence/render/matrix-m6.txt). `bananads-difftest --every --frames 300` (main RAM after every frame), every toggle
+  off vs on at 2x with the 2D thread: SAME on dsstress L5, ds2dtest, geomtest; `bananads-tests`: all passed
+  (evidence/render/difftest-b6d.txt). m7 on the final head (b7d, with the quarters fix): below.
 
 ## Device A/B commands (tools/device/hgquick.sh style; both handhelds, 640x480 RG DS and 1024x768 RG DS Plus, use the
 ## same settings: the plane scales; run each line against a plain run of the same binary)
