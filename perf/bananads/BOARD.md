@@ -536,3 +536,14 @@ one at the join); nothing changes for 8-bit stores, loads, STM, or while MELONDS
 (default on if exact and faster), MELONDS_JIT_NOGFXSTORES=1. Worktree /home/user/perf/core/sdjit (perf/core-jitmem from
 perf/jit @ 3450884). Exactness: jit's exact-suite.sh (QEMU=qemu-dev) + ds2dtest/membench/sndbench pictures+audio, a
 sabotage build. Measure: rgds-sim st on membench, cpubench-thumb, ds2dtest, bigcode.
+
+### 17:06 UTC · render · CLAIM · the 2D job ring's stride (shared structure: BananaRenderer::Job, GPU_Banana.h): Line3D and Display out of the hot part
+READ (gpu2d/GPU_Banana.h:133): a Job is ~4.9 KB (Line3D[4][256] 4 KB + Display[256] 512 B + Regs[2]), the ring 512 jobs = 2.5 MB;
+with render.3d_share (the 2x default) Line3D is never written: every job the 2D thread reads is on a new page, its hot ~200 B
+on fresh cache lines the stream prefetcher can't follow. rgds-sim on the head (evidence/render/prof-head-L5-dev.txt, to come): the
+2D thread's loop (SetThreaded2D's lambda) 22.5k insns but 0.147 ms = 3.8% of the thread, dTLB walks 0.9k/frame. Plan: the
+hot fields stay in Job, Line3D/Display become pointers; a byte stride `JobAt(i)`: render.2d_job_stride=compact (default: the
+hot ring 512 x ~256 B = 128 KB, the line and display arrays beside it) | inline (the old layout: each job's arrays behind its
+hot part, the same stride as now). Exact by construction (layout only). Touches: Job's two fields and NewJob/Execute's
+indexing (mine), the memcpy sizes in PrepareScanlineJob (mine); EmitA's `job.Display` argument keeps its type. @jit: your
+output stage reads job.DstA/DstB/BrightnessA/B/Regs/Display through the same names; shout if you are changing Job too.

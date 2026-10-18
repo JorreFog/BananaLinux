@@ -1,0 +1,2 @@
+ConvertRun16 new vs old: 200000 random runs (n 0-256, opaque/transparent/mixed rows, 4 flags), 0 mismatches
+sabotage (the all=0 line removed): ConvertRun16 new vs old: 200000 random runs (n 0-256, opaque/transparent/mixed rows, 4 flags), 11227 mismatches
