@@ -79,7 +79,23 @@ rgds-sim: (below, when measured). Default: off until the device says (instructio
 
 ## 3. Layout levers (CMake `BANANADS_NOPLT`, `BANANADS_ALIGN=F:L:J`, `BANANADS_HOTCOLD`, `BANANADS_STACK_PROTECTOR`)
 
-(filled in below as measured)
+All in the same commit, all default off (the toolchain's own behaviour).
+- `BANANADS_STACK_PROTECTOR=OFF` (`-fno-stack-protector -fno-stack-clash-protection`): only matters for PC builds
+  with Ubuntu's GCC, whose defaults add canaries the device never has: 0.4-2.8% of the reference build's
+  instructions (`evidence/core/count-nossp.txt`). Buildroot's build has none (BR2_SSP_NONE, and the Bootlin
+  compiler's own default is off: checked with `-Q --help=common`), so nothing to ship; it keeps PC measurements honest.
+- `BANANADS_NOPLT` (`-fno-plt`): DEAD END, measured: the PLT stubs run 1.1k instructions/frame (0.3k indirect
+  branches, none mispredicted) on the device build (`DEAD-ENDS.md`; rgds-sim per-address counts).
+- `-fno-semantic-interposition` for the frontend: nothing to do (READ): the device build is not PIE and only
+  melonDS's `core` is compiled -fPIC (it already has the flag, `BANANADS_CORE_NOINTERPOSE`).
+- `BANANADS_HOTCOLD=ON` (`-freorder-blocks-and-partition`, on top of PGO) and `BANANADS_ALIGN=32:16:16`
+  (functions/loops/jumps aligned for the A55's 16-byte fetch; GCC's cortex-a55 tuning is 16:8:4): measured below.
+- Function ordering by the profile: GCC already does it with PGO (`-freorder-functions`: `.text.hot`,
+  `.text.unlikely`, `.text.startup` subsections, grouped by the linker; the PGO builds' iTLB L2 hits fell 31-54%,
+  which is that). A linker ordering file would need gold or lld (Bootlin ships GNU ld only); not tried.
+- The binary's `.text` on 2 MB pages (jit's idea, `MADV_HUGEPAGE` on the interior of `.text` or
+  `-z max-page-size=0x200000`): not tried; rgds-sim's iTLB walks are 0.0-0.1k/frame on this suite, so it can only
+  show on a game-sized footprint (jit's bigcode: iTLB L2 hits 17.7k/frame, walks 0.0k).
 
 ## 4. The C++ hot paths (Part B): what the simulator says, and `core.fast_div` (melonDS patch 0040)
 
@@ -160,7 +176,26 @@ The reproducible scheme, as implemented on `perf/core`:
 
 ## Device A/B commands
 
-(filled in below)
+Build options need two binaries each (BananaLinux: `bananads.mk`'s `BANANADS_CONF_OPTS`, or a PC cross build with
+`/home/user/perf/tools/build-a64-device.sh <tree> <dir> -D...`, which is the device's toolchain and flags); run them
+with `tools/device/hgquick.sh <binA> <binB>` (HeartGold, 600 frames at 1992 MHz) and `hgprofile.sh` for the clock
+cpugov settles at. Everything else is one binary with `EXTRA`.
+```
+# 1. PGO (the device-compiler profile from the test ROMs, /home/user/perf/core/prof-dev, 127 .gcda, 1.2 MB):
+tools/device/hgquick.sh bananads-dev bananads-devpgo          # -DBANANADS_PGO=<prof-dev> vs plain (expected: a few % at 1x; L1I-bound games more)
+# 2. the hot targets at -O3 under Buildroot's -O2:
+tools/device/hgquick.sh bananads-dev bananads-devO3           # -DBANANADS_HOT_OPT=-O3 (expected 1.5-9%; .text +15%: watch for games whose code doesn't fit the L1I)
+# 3. both:
+tools/device/hgquick.sh bananads-dev bananads-devpgoO3        # -DBANANADS_PGO=<prof-dev> -DBANANADS_HOT_OPT=-O3
+# 4. layout levers on top of PGO (each vs bananads-devpgo):
+tools/device/hgquick.sh bananads-devpgo bananads-hotcold      # -DBANANADS_HOTCOLD=ON
+tools/device/hgquick.sh bananads-devpgo bananads-align        # -DBANANADS_ALIGN=32:16:16
+# 5. the marginal core change (one binary):
+EXTRA="--set core.fast_div=on" tools/device/hgquick.sh <bin>   # vs plain; expected ~0.4% on divide-heavy scenes, exact
+```
+Then `tools/device/quick.sh` and the 42-frame `rtc.fixed` HeartGold compare for every build (a compiler-flag change
+must not change a pixel). If PGO wins: collect a game profile on the device (section "How PGO would ship", step 4)
+and A/B that build against the test-ROM profile's.
 
 ## Dead ends
 
