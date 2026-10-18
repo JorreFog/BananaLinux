@@ -12,7 +12,8 @@
 # Prints one line per check and "FAILS=n" at the end.
 set -u
 B=$(cd "$1" && pwd); OUT=$2; SA=$3; SB=$4; QUICK=${5:-}
-Q=/home/user/perf/qemu-src/build/qemu-aarch64; R=/home/user/perf/roms
+Q=${QEMU:-/home/user/perf/qemu-src/build/qemu-aarch64}; R=/home/user/perf/roms
+# (QEMU=/home/user/perf/tools/qemu-dev for build-a64-device.sh binaries: it drops the -L below for its own sysroot)
 mkdir -p "$OUT"; OUT=$(cd "$OUT" && pwd)
 COMMON="--set rtc.fixed=2026-10-11_12:00:00 --set wifi.dns=off --set resume.on_start=off --set resume.on_quit=off --set jit=on"
 split() {  # split "<settings>" -> SETS (--set k=v ...) and ENVS (k=v ...)

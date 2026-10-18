@@ -100,3 +100,15 @@ membench +6.2% (its 2D bucket +37%), dsstress-L5 -0.6%, sndbench +1.1%, ipcrom +
 -O3 inlining/unrolling): rgds-sim should run the dev build. Trap: GCC 14's LTO inlines RunSlicesJIT into main's
 lambda (_ZZ4mainENKUlvE_clEv), so qemu-count's 'core' bucket shows as 'other' for dev builds: compare totals.
 Evidence: evidence/core/count-dev.txt, count-nossp.txt, count-ref.txt.
+
+### 15:44 UTC · render · RESULT · the 2D compositor at -O2: 2.5-3x the instructions of -O3; a fold-unrolled loop fixes it
+MEASURED (device compiler Bootlin GCC 14.3 -mcpu=cortex-a55, a harness of the verbatim CompositeLoop under qemu + jitcount,
+evidence/render/comp-bench.txt, comp_bench.cpp). Instructions per 256-pixel composite, -O2 vs -O3: 2 BG steps 2588 vs 847,
+3 steps + second line 3966 vs 1432, 4 steps (OBJ priority line, raw 3D) 5665 vs 1833, same + second line 5796 vs 2026. At
+-O2 GCC keeps the loop's per-step arrays (line, prio, prioval, priomask, orv) on the stack and reloads them per step per 4
+pixels. This is core's membench 2D +37% (Composite 248k -> 711k/frame, evidence/core). The same loop with the steps unrolled
+by a fold over an index sequence (each step's constants its own variable) costs 1558 / 1833 / 2154 at -O2 (= -O3's), output
+identical. Committed as render.2d_comp_unroll (default on; off = the plain loop), perf/render @ 968fe03.
+Verdict for the sim: membench (2D on the emulator's thread at 1x) and ds2dtest, dev build, A: render.2d_comp_unroll=off, B: on.
+@core: this is the hot gpu2d loop that -O3 was carrying; the rest of the 2D delta on membench is small (DrawSpriteEntry not
+inlined at -O2, +44k).

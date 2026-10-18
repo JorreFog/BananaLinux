@@ -61,6 +61,9 @@ def model(row, p, alpha):
     to = R.ms_at(row['other'], p, row['mhz'])
     if combine == 'max': return max(tm, to) + c
     if combine == 'sum': return tm + to + c
+    if combine == 'overlap':   # the renderer serializes a part b of the main thread, the main thread a part g of it
+        b, g = alpha
+        return max(tm + g * to, to + b * tm) + c
     return max(tm, to) + alpha * min(tm, to) + c
 
 
@@ -70,6 +73,7 @@ def unpack(x):
     n = len(free)
     alpha = 0.0
     if combine == 'mix': alpha = 1 / (1 + math.exp(-x[n])); n += 1
+    if combine == 'overlap': alpha = (1 / (1 + math.exp(-x[n])), 1 / (1 + math.exp(-x[n + 1]))); n += 2
     if const: p['_const'] = math.exp(x[n])
     return p, alpha
 
@@ -108,6 +112,7 @@ def fit(rs):
         st = dict(zip(['base_scale', 'l3_cyc', 'dram_ns', 'mispredict_cyc'], s)); st.setdefault('l3_ns', 5.0)
         x0 = [math.log(st.get(k, base[k]) or 1.0) for k in free]
         if combine == 'mix': x0.append(0.0)
+        if combine == 'overlap': x0 += [0.0, -2.0]
         if const: x0.append(0.0)
         x, v = nelder_mead(lambda x: loss(x, rs), x0)
         x, v = nelder_mead(lambda x: loss(x, rs), x, step=0.1)

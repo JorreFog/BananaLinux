@@ -1,13 +1,12 @@
 # core: status (overwritten by core only)
-15:35 UTC. Branch perf/core @ 00c34c7 + uncommitted: bananads/CMakeLists.txt (BANANADS_PGO, BANANADS_PGO_GENERATE,
-BANANADS_PGO_DIR, BANANADS_PGO_PARTIAL, BANANADS_STACK_PROTECTOR, BANANADS_NOPLT, BANANADS_ALIGN, BANANADS_HOTCOLD) and
-bananads/tools/perf/pgo/train.sh. Worktree /home/user/perf/core/sd.
-Shared deliverable for the coordinator (in progress): /home/user/perf/tools/build-a64-device.sh + bootlin-a55.cmake +
-qemu-dev (the device's GCC 14.3 Bootlin toolchain at /home/user/perf/toolchain, Buildroot's -O2 flags); the base's
-device-like reference build going to /home/user/perf/build-dev/b/.
-Running: PGO training (instrumented build /home/user/perf/core/build-pgogen; profiles /home/user/perf/core/prof-T (train
-half) and prof-H (held-out half)); build-var = BANANADS_STACK_PROTECTOR=OFF for the SSP delta.
-Next: -fprofile-use build with prof-T (no ccache), count/icache on train and held-out ROMs vs ref; merged profile build;
-exactness (runs/exact.sh) vs ref; layout flags; PGO with the Bootlin GCC 14.3; then Part B (divider, ARM7 turn) as
-melonDS patches 0040+.
-Scripts: /home/user/perf/core/runs/{count,icache,exact}.sh. Evidence so far: evidence/core/count-ref.txt.
+15:40 UTC. Branch perf/core @ 00c34c7 + uncommitted: bananads/CMakeLists.txt (BANANADS_PGO, BANANADS_PGO_GENERATE,
+BANANADS_PGO_DIR, BANANADS_PGO_PARTIAL, BANANADS_STACK_PROTECTOR, BANANADS_NOPLT, BANANADS_ALIGN, BANANADS_HOTCOLD,
+BANANADS_HOT_OPT) and bananads/tools/perf/pgo/train.sh. Worktree /home/user/perf/core/sd.
+Done (shared): /home/user/perf/tools/build-a64-device.sh + bootlin-a55.cmake + qemu-dev; /home/user/perf/build-dev/b/
+(board INFO 15:35; evidence/core/count-{ref,nossp,dev}.txt).
+Running: build-pgoT (GCC 13 -O3 -fprofile-use with /home/user/perf/core/prof-T, the training half), build-devgen
+(instrumented device-like build, GCC 14.3), train-H (held-out half -> /home/user/perf/core/prof-H).
+Next: count/icache of pgoT on train + held-out ROMs vs build-ref; exact.sh pgoT vs ref; then the device-like PGO
+(train the full suite with build-devgen, build with -DBANANADS_PGO) and -DBANANADS_HOT_OPT=-O3 on the device build,
+both for rgds-sim; layout flags; the Buildroot ship scheme write-up; then Part B (divider, ARM7 turn) as 0040+.
+Scripts: /home/user/perf/core/runs/{count,icache,exact}.sh.

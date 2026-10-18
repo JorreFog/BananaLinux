@@ -1,16 +1,15 @@
 # render: status (overwritten by render only)
 
-Updated 15:40 UTC. Worktree /home/user/perf/render/sd, branch perf/render @ dc3f96a (commits: 7ebe4e9 render.2d_batch, ea886e8 render.3d_pipeline, dc3f96a 3d_share/3d_wait2d at 1x). Patch numbers 0060-0079.
+Updated 15:50 UTC. Worktree /home/user/perf/render/sd, branch perf/render (commits: 7ebe4e9 render.2d_batch, ea886e8 render.3d_pipeline, dc3f96a 3d_share/3d_wait2d at 1x, f8be6b5 patch 0060 render.geom_sort, HEAD render.2d_comp_unroll). Patch numbers 0060-0079.
 
 ## Doing now
-- Builds: /home/user/perf/render/b1 = 7ebe4e9+ea886e8 (2d_batch + pipeline), b2 = dc3f96a (+ 1x share, building),
-  x86tsan = ThreadSanitizer x86 build of dc3f96a (building; no Gengis on x86: covers the 2D thread only).
-- Running: evidence/render/matrix.sh ref vs b1 (pipeline on) -> /home/user/perf/render/runs/matrix-m1.txt (10 ROMs x
-  10 configurations incl. savestate reload). Smoke test L5 device mode: SAME, and the emulator's thread drew 0 of
-  1188 bins (ref: 227 of 1188) -> /home/user/perf/render/runs/ab/smoke-b1-L5/b/log.
-- Next: matrix for b2 (1x share) and for the toggles off (b2 off vs ref), jit's exact-suite.sh (difftest, tests) on
-  b2, TSan runs; then a melonDS patch 0060: a stable radix sort for GPU3D::VBlank's polygon Y-sort (std::stable_sort
-  of up to 2048 pointers + a malloc each frame) if the sim/qemu-count shows it matters on polygon-heavy ROMs.
+- Builds (Ubuntu -O3, build-a64.sh): b1 = 2d_batch+pipeline, b2 = +1x share, b3 = +0060 (f8be6b5). Device builds
+  (build-a64-device.sh, -O2 Bootlin): b3d = f8be6b5 (building), b4d = HEAD (queued). x86tsan: TSan x86 build (queued).
+- Running: evidence/render/matrix.sh ref vs b3 -> /home/user/perf/render/runs/matrix-m3.txt (trimmed: 41 configs).
+  Done: m2 (ref vs b2, 1x share, 8 configs) FAILS=0; m1 partial (ref vs b1, dev2x L1/L5/L10/ramp) SAME; smoke L5
+  device mode SAME with the emulator's thread drawing 0 of 1188 bins (ref: 227).
+- Next: qemu-count A/B of each toggle on the device build (b4d vs build-dev): membench/ds2dtest st mode for
+  2d_comp_unroll, geomtest/L10 for geom_sort; jit's exact-suite.sh on b4d; TSan runs; sim hand-off; findings.
 - Baseline done: evidence/render/measure-dev.sh on dsstress L5, ref build, device mode: main thread 3424k insn/frame,
   of which ~1150k are Gengis bins it drew itself (render.gengis_help=1: 227 of 1188 bins under qemu); 2D snapshot
   work ~230k; geometry ~830k (evidence/render/ref-L5-report.txt).
