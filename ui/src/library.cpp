@@ -539,7 +539,13 @@ namespace banana
 	{
 		std::vector<std::string> words;
 		std::istringstream ws(lower(q));
-		for (std::string w; ws >> w;) words.push_back(w);
+		for (std::string w; ws >> w;)
+		{
+			// the short names people type for genres the box-art scrape spells out ("Role Playing Game", "Shooter / FPV")
+			if (w == "rpg" || w == "jrpg") { words.push_back("role"); words.push_back("playing"); }
+			else if (w == "fps" || w == "shmup") words.push_back("shoot");
+			else words.push_back(w);
+		}
 		return words;
 	}
 
