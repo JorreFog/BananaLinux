@@ -58,6 +58,8 @@ GCC 14.3) run under `tools/qemu-dev`; "base" = /home/user/perf/build-dev/b (00c3
   **rgds-sim v1** (st mode = Gengis on the emulator's thread, 1x; device build b6d; evidence/render/sim/st-membench-unroll-ab.txt):
   membench, off -> on: main thread **4.871 -> 4.604 ms/frame @1104 MHz (-5.5%)**, 2.939 -> 2.786 @1992 (-5.2%);
   instructions -9.4%, the 2d bucket 2.258 -> 1.992 ms; L1I misses unchanged (the sim's alternative fit says -3.5%).
+  **VERIFIED by sim** (LEDGER L1, its own build and runs): membench 4.820 -> 4.575 ms (-5.1%), ds2dtest 25.041 ->
+  23.571 ms (-5.9%).
   Base vs b6d (sim/st-membench-base-vs-b6d-ab.txt): 4.780 -> 4.609 ms (-3.6%), with L1I misses 3.9k -> 6.1k a frame
   (the unrolled compositor is more code; small in absolute terms). ds2dtest, base vs b6d
   (sim/st-ds2dtest-base-vs-b6d-ab.txt): **25.171 -> 23.647 ms/frame @1104 (-6.1%)**, 14.198 -> 13.345 @1992;

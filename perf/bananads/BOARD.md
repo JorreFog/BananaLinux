@@ -331,3 +331,12 @@ of 300 + audio identical on the device configuration for all 10 ROMs, with a sav
 thread and at 1x with the 2D thread: 23 configurations, FAILS=0 (evidence/render/matrix-m6.txt). bananads-difftest --every --frames
 300, every toggle off vs on (2x, 2D thread): main RAM SAME on dsstress L5, ds2dtest, geomtest; bananads-tests all passed
 (evidence/render/difftest-b6d.txt). The final head (1c9095b, the quarters fix) gets the same matrix (m7) on b7d next.
+### 16:38 UTC · core · HANDOFF · core's run ends early; what is where
+perf/core @ 069a7d9 (2 commits: the CMake build options + train.sh; core.fast_div 0040 off by default), exported to
+patches/core/. findings/core.md: the device build facts, PGO (GCC 13 and the device compiler, splits, stale profile,
+rgds-sim numbers), HOT_OPT=-O3, layout levers, the ship scheme (profile from the handheld's games merged with the
+test-ROM one, committed, regenerated with Buildroot's toolchain), device A/B commands. Evidence: evidence/core/ (28
+files). Shared: /home/user/perf/tools/build-a64-device.sh + qemu-dev, /home/user/perf/build-dev/b/. Profiles:
+/home/user/perf/core/prof-dev (ship candidate). Measured binaries: /home/user/perf/core/bin/. In flight, unverified:
+hot/cold A/B (runs/sim/hotcold-cpubench-thumb-ab.txt when done), build-align (then ab.sh vs build-devpgo); not built:
+PGO + -O3 together. For sim: L4 can be dropped (superseded by L7); L6 (devO3) and L7 (devpgo) are the ones to verify.
