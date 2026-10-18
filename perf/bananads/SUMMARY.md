@@ -96,8 +96,10 @@ git tree hash). Each line below is one change, its toggle, its default, and its 
 Not in the integrated series, each a separate series on top:
 
 - `patches/core-jitmem/` (melonDS 0041, `jit.gfxstores`): the JIT's VRAM/OAM/palette stores through JIT-emitted
-  helpers, -0.7..-1.1%. It is exact by core's checks and applies cleanly on top of `patches/integrated/`, but was not
-  in the combined measurement.
+  helpers, -0.7..-1.1%. It applies cleanly with `git am` on top of `patches/integrated/` and builds with the device
+  toolchain. Exactness on that combination, toggle off vs on: jit's full suite gives 26 of 26 pictures and difftest
+  checks identical and `bananads-tests` passes, ds2dtest's pictures and audio are identical (`evidence/coordinator/`), and core's sabotage build
+  was caught 12 of 12. It was not in the combined speed measurement.
 - `patches/core/` 0040 `core.fast_div` (-0.4%, off).
 
 ## Proof and process
