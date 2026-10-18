@@ -65,6 +65,9 @@ elif ours; then
     rm -f $GP
     set_cfg video_shader_enable false
 fi
+# Quick resume: the setting writes savestate_auto_save; loading the state at the start follows it
+q=$(sed -n 's/^savestate_auto_save = "\(.*\)"/\1/p' $CFG | tail -n 1)
+set_cfg savestate_auto_load ${q:-false}
 # the RetroAchievements account from the setup (banana/accounts.conf) into RetroArch's own settings
 A=/data/banana/accounts.conf
 if [ -f $A ]; then

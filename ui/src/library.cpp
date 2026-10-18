@@ -533,7 +533,7 @@ namespace banana
 	}
 
 	// the shelf's order and the Favorites collection, from the systems' games and the favourites as they are now
-	// a search's words, lower case; a game matches when its name or file name has each of them
+	// a search's words, lower case; a game matches when its name, file name, genre or year has each of them
 	static std::vector<std::string> searchWords(const std::string& q)
 	{
 		std::vector<std::string> words;
@@ -545,7 +545,7 @@ namespace banana
 	static bool searchMatch(const Game& g, const std::vector<std::string>& words)
 	{
 		if (words.empty()) return false;
-		std::string t = lower(g.title) + " " + lower(g.rel);
+		std::string t = lower(g.title) + " " + lower(g.rel) + " " + lower(g.genre) + " " + g.year;
 		for (auto& w : words) if (t.find(w) == std::string::npos) return false;
 		return true;
 	}
@@ -600,6 +600,26 @@ namespace banana
 			// shelf before its own system's emulator, and its plays were kept under "favorites/")
 			for (int& s : fav.sysOf) if (s >= (int)at) s++;
 			shelves.insert(shelves.begin() + (long)at, fav);
+		}
+		// Recently played: the last games played on any system, newest first, a collection at the end of the shelf (one L
+		// from the first system; at the end, so the systems' places, and the menu's saved one, don't move)
+		{
+			Shelf rec;
+			rec.favorites = rec.recent = true;
+			rec.order = 1 << 21;
+			rec.def.id = "recently-played"; rec.def.name = "Recently played"; rec.def.maker = "Collection";
+			std::vector<std::pair<time_t, std::pair<int, size_t>>> played;	// last play, (system, game)
+			for (int s = 0; s < (int)shelves.size(); s++)
+				if (!shelves[s].favorites)
+					for (size_t i = 0; i < shelves[s].games.size(); i++)
+						if (shelves[s].games[i].last > 0) played.push_back({ shelves[s].games[i].last, { s, i } });
+			std::sort(played.begin(), played.end(), [](const auto& a, const auto& b) { return a.first > b.first; });
+			for (size_t k = 0; k < played.size() && k < 12; k++)
+			{
+				rec.games.push_back(shelves[played[k].second.first].games[played[k].second.second]);
+				rec.sysOf.push_back(played[k].second.first);
+			}
+			if (!rec.games.empty()) shelves.push_back(rec);
 		}
 		// Search: first on the shelf while there is a query, the games of every system whose name (or file name) has each
 		// of its words, case aside
@@ -664,6 +684,7 @@ namespace banana
 		if (achB > 0) { st.achA = achA; st.achB = achB; }
 		saveStats();
 		g->plays = st.plays; g->seconds = st.seconds; g->last = st.last; g->achA = st.achA; g->achB = st.achB;
+		changed = true;	// Recently played is arranged again once the shelf shows
 		if (shelves[lib].favorites) { Game& f = shelves[lib].games[game]; f.plays = st.plays; f.seconds = st.seconds; f.last = st.last; f.achA = st.achA; f.achB = st.achB; }
 	}
 

@@ -36,6 +36,7 @@ namespace banana
 	{
 		SystemDef def;
 		bool favorites = false;		// the Favorites collection
+		bool recent = false;		// the Recently played collection (also favorites = true: copies, sysOf)
 		bool search = false;		// the Search collection (also favorites = true: a collection of copies, sysOf)
 		std::vector<Game> games;	// favourites: copies, with sysOf giving each one's own system
 		std::vector<int> sysOf;
