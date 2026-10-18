@@ -899,6 +899,13 @@ static void load_drivers_present(void)
 	closedir(d);
 }
 
+/* the second SD card: mounted, and its games offered to the library, to match the slot (/usr/libexec/banana/sd2) */
+static void sd2_scan(void)
+{
+	char *argv[] = { "/usr/libexec/banana/sd2", "scan", NULL };
+	run(argv);
+}
+
 /* the kernel's uevents: true when one was about the battery or the charger; a device added gets its driver */
 static int uevent_read(int fd)
 {
@@ -908,13 +915,16 @@ static int uevent_read(int fd)
 	while ((n = recv(fd, buf, sizeof buf - 1, 0)) > 0) {
 		buf[n] = 0;
 		const char *alias = NULL;
-		int add = 0;
+		int add = 0, block = 0, mmc = 0;
 		for (char *p = buf; p < buf + n; p += strlen(p) + 1) {
 			if (!strcmp(p, "SUBSYSTEM=power_supply")) hit = 1;
+			else if (!strcmp(p, "SUBSYSTEM=block")) block = 1;
+			else if (!strncmp(p, "DEVNAME=mmcblk", 14)) mmc = 1;
 			else if (!strcmp(p, "ACTION=add")) add = 1;
 			else if (!strncmp(p, "MODALIAS=", 9)) alias = p + 9;
 		}
 		if (add && alias) load_driver(alias);
+		if (block && mmc) sd2_scan();	/* a card in or out of the second slot (the script looks at what's there) */
 	}
 	return hit;
 }
@@ -1028,6 +1038,7 @@ int main(int argc, char **argv)
 	audio_setup();
 	restore_settings();
 	int uev = uevent_open();
+	sd2_scan();	/* a card already in the second slot at boot */
 	load_drivers_present();
 	leds_update();
 	last_input = mono();

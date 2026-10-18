@@ -1,0 +1,39 @@
+#!/bin/sh
+# The second SD card (the RG DS Plus's second slot): mounted at /run/sd2 while it's in, and its roms folder offered
+# to the menu's library (in /run/banana/sd2/roms) when settings.conf says sd2_roms = on (the default). bananad runs
+# "sd2 scan" at boot and on every MMC block device's uevent; it looks at what's there now, so the order of events
+# doesn't matter. The card the system runs from (the one /data is on) is never the second card.
+#   sd2 scan     mount or unmount to match the slot, and update /run/banana/sd2
+M=/run/sd2
+S=/run/banana/sd2
+mkdir -p $M $S
+data_disk=$(sed -n 's|^/dev/\(mmcblk[0-9]*\)p[0-9]* /data .*|\1|p' /proc/mounts | head -n 1)
+card=
+for d in /sys/class/block/mmcblk[0-9]; do
+    [ -e "$d" ] || continue
+    n=${d##*/}
+    [ "$n" = "$data_disk" ] && continue
+    [ "$(cat $d/device/type 2>/dev/null)" = SD ] || continue      # an SD card (not the eMMC, not Wi-Fi)
+    card=$n; break
+done
+mounted=$(sed -n "s|^/dev/\([^ ]*\) $M .*|\1|p" /proc/mounts | head -n 1)
+if [ -z "$card" ]; then
+    [ -n "$mounted" ] && { umount $M 2>/dev/null || umount -l $M; }
+    rm -f $S/roms
+    exit 0
+fi
+if [ -z "$mounted" ] || [ "${mounted%p[0-9]*}" != "$card" ]; then
+    [ -n "$mounted" ] && { umount $M 2>/dev/null || umount -l $M; }
+    part=/dev/${card}p1; [ -b $part ] || part=/dev/$card            # a card without a partition table: the whole card
+    mount -t exfat -o rw,noatime,fmask=0000,dmask=0000 $part $M 2>/dev/null ||
+        mount -t vfat -o rw,noatime,fmask=0000,dmask=0000,utf8 $part $M 2>/dev/null ||
+        { rm -f $S/roms; logger -t sd2 "the card in the second slot ($part) can't be read: exFAT or FAT32 only"; exit 1; }
+    logger -t sd2 "the second slot's card ($part) is at $M"
+fi
+on=$(sed -n 's/^sd2_roms *= *//p' /data/banana/settings.conf 2>/dev/null | tail -n 1)
+[ -n "$on" ] || on=$(sed -n 's/^sd2_roms *= *//p' /etc/banana/settings.conf 2>/dev/null | tail -n 1)
+if [ "$on" != off ] && [ -d $M/roms ]; then
+    [ "$(cat $S/roms 2>/dev/null)" = "$M/roms" ] || echo "$M/roms" > $S/roms
+else
+    rm -f $S/roms
+fi

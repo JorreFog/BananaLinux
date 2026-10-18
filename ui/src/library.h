@@ -49,6 +49,9 @@ namespace banana
 		void scan();	// (re)read everything from disk
 		// the folders whose changes change the library: the ROM root, each system's folder and its media folders
 		std::vector<std::string> watchDirs() const;
+		// the folders with system folders in them: romRoot, then the second SD card's roms folder while it's in and
+		// Settings lets it be read (bananad's sd2 script names it in /run/banana/sd2/roms); its games' rel is "@sd2/..."
+		std::vector<std::string> roots() const;
 		// a favourite was starred or unstarred since the shelf was arranged: arrange() puts the Favorites collection
 		// and the favourite systems right (from memory; the host calls it when the shelf is showing)
 		bool favouritesChanged() const { return changed; }

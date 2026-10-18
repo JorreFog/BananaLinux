@@ -428,15 +428,29 @@ namespace banana
 		}
 	};
 
-	std::vector<std::string> Library::watchDirs() const
+	std::vector<std::string> Library::roots() const
 	{
 		std::vector<std::string> r = { romRoot };
-		for (auto& d : defs)
+		std::ifstream f("/run/banana/sd2/roms");
+		std::string ln;
+		if (f && std::getline(f, ln) && !trim(ln).empty() && trim(ln) != romRoot) r.push_back(trim(ln));
+		return r;
+	}
+
+	std::vector<std::string> Library::watchDirs() const
+	{
+		std::vector<std::string> r = { "/run/banana/sd2" };	// the second card in or out: a new scan
+		for (auto& root : roots())
 		{
-			std::string dir = folderPath(romRoot, d.folder);
-			r.push_back(dir);
-			r.push_back(dir + "/media");
-			for (const char* m : { "box", "cart", "label" }) r.push_back(dir + "/media/" + m);
+			r.push_back(root);
+			for (auto& d : defs)
+			{
+				if (root != romRoot && !d.folder.empty() && d.folder[0] == '/') continue;	// an absolute folder: one place
+				std::string dir = folderPath(root, d.folder);
+				r.push_back(dir);
+				r.push_back(dir + "/media");
+				for (const char* m : { "box", "cart", "label" }) r.push_back(dir + "/media/" + m);
+			}
 		}
 		return r;
 	}
@@ -451,39 +465,44 @@ namespace banana
 			Shelf sh;
 			sh.def = def;
 			sh.order = (int)(&def - &defs[0]);
-			std::string dir = folderPath(romRoot, def.folder);
-			std::vector<std::string> rels;
-			listRoms(dir, "", def.exts, rels, 0, def.flat ? 0 : 2);
-			auto gl = readGamelist(dir);
-			for (auto& rel : rels)
+			auto rootList = roots();
+			for (size_t ri = 0; ri < rootList.size(); ri++)
 			{
-				Game g;
-				g.rel = rel; g.path = dir + "/" + rel;
-				std::string base = rel.substr(rel.rfind('/') == std::string::npos ? 0 : rel.rfind('/') + 1);
-				std::string stem = base.substr(0, base.rfind('.'));
-				if (lower(stem).size() > 3 && lower(stem).compare(stem.size() - 3, 3, ".p8") == 0) stem.resize(stem.size() - 3);	// a .p8.png cart
-				g.title = cleanTitle(stem);
-				auto it = gl.find(rel);
-				if (it != gl.end())
+				if (ri > 0 && !def.folder.empty() && def.folder[0] == '/') continue;	// an absolute folder: one place
+				std::string dir = folderPath(rootList[ri], def.folder);
+				std::vector<std::string> rels;
+				listRoms(dir, "", def.exts, rels, 0, def.flat ? 0 : 2);
+				auto gl = readGamelist(dir);
+				for (auto& rel : rels)
 				{
-					if (!it->second.name.empty()) g.title = cleanTitle(it->second.name);
-					std::string genre = it->second.genre;
-					size_t cut = genre.find_first_of(",;/|");
-					g.genre = trim(cut == std::string::npos ? genre : genre.substr(0, cut));
-					const std::string& d = it->second.date;
-					if (d.size() >= 4 && d.compare(0, 4, "0000") && std::all_of(d.begin(), d.begin() + 4, ::isdigit)) g.year = d.substr(0, 4);
-					g.box = exists(it->second.thumb) ? it->second.thumb : (exists(it->second.image) ? it->second.image : "");
-					if (exists(it->second.cart)) g.cart = it->second.cart;
-					if (exists(it->second.boxback)) g.label = it->second.boxback;
+					Game g;
+					g.rel = (ri > 0 ? "@sd2/" : "") + rel; g.path = dir + "/" + rel;
+					std::string base = rel.substr(rel.rfind('/') == std::string::npos ? 0 : rel.rfind('/') + 1);
+					std::string stem = base.substr(0, base.rfind('.'));
+					if (lower(stem).size() > 3 && lower(stem).compare(stem.size() - 3, 3, ".p8") == 0) stem.resize(stem.size() - 3);	// a .p8.png cart
+					g.title = cleanTitle(stem);
+					auto it = gl.find(rel);
+					if (it != gl.end())
+					{
+						if (!it->second.name.empty()) g.title = cleanTitle(it->second.name);
+						std::string genre = it->second.genre;
+						size_t cut = genre.find_first_of(",;/|");
+						g.genre = trim(cut == std::string::npos ? genre : genre.substr(0, cut));
+						const std::string& d = it->second.date;
+						if (d.size() >= 4 && d.compare(0, 4, "0000") && std::all_of(d.begin(), d.begin() + 4, ::isdigit)) g.year = d.substr(0, 4);
+						g.box = exists(it->second.thumb) ? it->second.thumb : (exists(it->second.image) ? it->second.image : "");
+						if (exists(it->second.cart)) g.cart = it->second.cart;
+						if (exists(it->second.boxback)) g.label = it->second.boxback;
+					}
+					if (g.box.empty()) g.box = media.find(dir, "box", stem);
+					if (g.cart.empty()) g.cart = media.find(dir, "cart", stem);
+					if (g.label.empty()) g.label = media.find(dir, "label", stem);
+					std::string key = def.id + "/" + g.rel;
+					auto st = stats.find(key);
+					if (st != stats.end()) { g.plays = st->second.plays; g.seconds = st->second.seconds; g.last = st->second.last; g.achA = st->second.achA; g.achB = st->second.achB; }
+					g.fav = favGames.count(key) > 0;
+					sh.games.push_back(g);
 				}
-				if (g.box.empty()) g.box = media.find(dir, "box", stem);
-				if (g.cart.empty()) g.cart = media.find(dir, "cart", stem);
-				if (g.label.empty()) g.label = media.find(dir, "label", stem);
-				std::string key = def.id + "/" + rel;
-				auto st = stats.find(key);
-				if (st != stats.end()) { g.plays = st->second.plays; g.seconds = st->second.seconds; g.last = st->second.last; g.achA = st->second.achA; g.achB = st->second.achB; }
-				g.fav = favGames.count(key) > 0;
-				sh.games.push_back(g);
 			}
 			std::sort(sh.games.begin(), sh.games.end(), [](const Game& a, const Game& b) { return lower(a.title) < lower(b.title); });
 			if (!sh.games.empty() || def.always) shelves.push_back(sh);
@@ -514,8 +533,15 @@ namespace banana
 		// sysOf follows the sort: find each game's system again by its path
 		for (size_t k = 0; k < fav.games.size(); k++)
 			for (int s = 0; s < (int)shelves.size(); s++)
-				if (fav.games[k].path.compare(0, folderPath(romRoot, shelves[s].def.folder).size() + 1, folderPath(romRoot, shelves[s].def.folder) + "/") == 0)
-					{ fav.sysOf[k] = s; break; }
+			{
+				bool in = false;
+				for (auto& root : roots())
+				{
+					std::string d = folderPath(root, shelves[s].def.folder) + "/";
+					if (fav.games[k].path.compare(0, d.size(), d) == 0) { in = true; break; }
+				}
+				if (in) { fav.sysOf[k] = s; break; }
+			}
 		if (!fav.games.empty())
 		{
 			// after the favourite systems when the collection is starred itself, else at the end
