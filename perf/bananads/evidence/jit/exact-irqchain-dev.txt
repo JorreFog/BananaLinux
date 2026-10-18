@@ -24,3 +24,6 @@ DIFF ok   jitloops-jitloops-arm (SAME after 300 frames (all of main RAM))
 DIFF ok   jitloops-jitloops-thumb-arm7 (SAME after 300 frames (all of main RAM))
 DIFF ok   irqmask-thumb (SAME after 300 frames (all of main RAM))
 DIFF ok   irqmask-arm (SAME after 300 frames (all of main RAM))
+DIFF ok   irqmask-thumb-arm7 (SAME after 300 frames (all of main RAM))
+TESTS ok (all BananaDS host tests passed)
+FAILS=0
