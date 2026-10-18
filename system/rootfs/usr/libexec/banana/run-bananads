@@ -38,6 +38,14 @@ if [ ! -f $M ]; then
     grep -q '^ *core.slice *= *auto' $C 2>/dev/null && sed -i 's/^ *core.slice *= *auto.*/core.slice = 64/' $C
     touch $M
 fi
+# Microphone's values moved down in 0.4.0 (Medium's 0.15 stood far above a quiet room): a card that has an old one keeps
+# its label once (Medium 0.15 -> 0.05, High 0.03 -> 0.02, Low 0.3 -> 0.15)
+M=$D/.banana-mic-v2
+if [ ! -f $M ]; then
+    sed -i -e 's/^ *mic.threshold *= *0\.15 *$/mic.threshold = 0.05/' -e 's/^ *mic.threshold *= *0\.03 *$/mic.threshold = 0.02/' \
+        -e 's/^ *mic.threshold *= *0\.3 *$/mic.threshold = 0.15/' $C 2>/dev/null
+    touch $M
+fi
 export DSFLIP_SHADER_DIR=/usr/lib/superdrastic/shaders
 # a shader of your own (banana/shaders/<name>.frag, listed in Settings as "<name> (card)"): its folder instead
 s=$(sed -n 's/^ *kms.shader *= *//p' $C 2>/dev/null | tail -n 1)

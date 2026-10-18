@@ -352,8 +352,8 @@ namespace banana
 				bds, "cpugov", { "Saves battery", "Always full" }, { "on", "off" });
 			add(N, "nds", "Timing", "Accurate is melonDS's own. Fast lets the two CPUs run longer between meeting (about 10% faster), but it can break a game: Golden Sun: Dark Dawn loses its 3D world.",
 				bds, "core.slice", { "Accurate", "Fast" }, { "64", "auto" });
-			add(N, "nds", "Microphone", "How loud a blow or a word must be to reach the game.", bds, "mic.threshold",
-				{ "Medium", "High", "Low", "Off" }, { "0.15", "0.03", "0.3", "0" });
+			add(N, "nds", "Microphone", "How loud a word or a blow must be to reach the game.", bds, "mic.threshold",
+				{ "Medium", "High", "Low", "Off" }, { "0.05", "0.02", "0.15", "0" });
 		}
 		else
 		{
