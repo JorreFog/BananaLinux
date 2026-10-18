@@ -1,6 +1,6 @@
 # geom: the 3D geometry engine on the emulator thread (session 2, 2026-10-18)
 
-Branch `claude/bananads-perf-geom`, head `402c0b8`, from the pinned `00c34c78e8de`. melonDS patches 0050 and 0051.
+Branch `claude/bananads-perf-geom`, head `74378c2`, from the pinned `00c34c78e8de`. melonDS patches 0050 and 0051.
 Both apply on top of memio's 0021-0022; checked with `git apply` in order on a pristine tree. **Untested on device.**
 
 ## Where the geometry cost is after 0011 (qemu, device build, per-TB counts inside the GPU3D functions)
@@ -22,7 +22,7 @@ Both apply on top of memio's 0021-0022; checked with `git apply` in order on a p
 | # | Commit | Toggle (default) | Expected device gain |
 |---|---|---|---|
 | 1 | bd49cb0, melonDS 0050 | `render.geom_batch` (`on`; `MELONDS_GEOMBATCH=0` turns it off) | **+0.2-0.5% fps at most** |
-| 2 | 402c0b8, melonDS 0051 | CMake `-DBANANADS_GEOMSTATS=ON`, then `MELONDS_GEOMSTATS=<frames>` (off; not in the default binary) | none: a measuring build |
+| 2 | 402c0b8 + CMake fix, melonDS 0051 | CMake `-DBANANADS_GEOMSTATS=ON`, then `MELONDS_GEOMSTATS=<frames>` (off; not in the default binary) | none: a measuring build |
 
 1. **0050:** with `render.geom_fast` and the stall queue empty, `RunFast` does the GX FIFO's DMA and IRQ checks
    once after its commands, not after every pipe refill.
@@ -59,8 +59,11 @@ Both apply on top of memio's 0021-0022; checked with `git apply` in order on a p
   - Evidence: `/home/user/perf2/geom/ev/c50/`, `/home/user/perf2/geom/ev-c50.log`.
 - **0051:**
   - the default build is byte-identical to the checked 0050 binary (`cmp`);
-  - the run-time variant, counters on against off, gave identical pictures on gxstm and geomtest.
-  - **Not checked:** the build-option variant itself, with the counters on. The same counting code, but not re-run.
+  - the stats build (`-DBANANADS_GEOMSTATS=ON`, built from a pristine tree with all 22 patches applied by CMake)
+    gave identical pictures with the counters off, with them on, and from the default build (gxstm, geomtest,
+    soft 1x, 30 frames each).
+  - The first stats build crashed at start: the define was PRIVATE to `core`, so the frontend saw another GPU3D
+    layout. Fixed in the last commit (PUBLIC).
 
 ## Tried and dropped
 

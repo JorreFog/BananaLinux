@@ -61,3 +61,6 @@
 - **Still worth having from the session:** `render.2d_thread=on` at 1x (+21% base, +26% with the patches, already in
   the base code), the toggles themselves (all frame-exact on the device), and the device-faithful build
   (`build-a64-device.sh`).
+- (session 2, geom) Taking a geometry command's middle parameters (a matrix's 2nd-15th) in a short loop in
+  `GPU3D::Run`: exact, but gxstm `Run` -0.1%: the CPU paces the stream, ~2.7-5.3 FIFO entries arrive per `Run` call,
+  so batching inside one call has little to batch.

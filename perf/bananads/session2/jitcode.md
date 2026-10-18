@@ -1,6 +1,6 @@
 # jitcode: the JIT's code footprint (second speed session, 2026-10-18, 19:40-20:38 UTC)
 
-Branch **`claude/bananads-perf-jitcode`**, head **`863d297`** (from `00c34c78e8de`), pushed. Three commits, one
+Branch **`claude/bananads-perf-jitcode`**, head **`96b339f`** (from `00c34c78e8de`), pushed. Four commits (three changes and a docs note), one
 melonDS patch and one toggle each (`bananads/patches/melonds/0040-0042`, all default `on`, `off` = the old code).
 Everything below is **untested on device**: the numbers are static code sizes, not speed.
 
@@ -48,7 +48,7 @@ device can say.
    `loop` was told (its 0030 keeps x26 valid; ARM_Dispatch's one `mov x26, x2` is the only Linkage.S change).
 2. **0042 `jit.flagstub`** (863d297): exits with pending lazy flags call new stub entries ExitCheckPCF /
    ExitCheckF that do the mrs/and/orr once, instead of 12 bytes in every such block. Same instructions run (+1 B
-   on ExitCheckF). -3.1% -> **~+0.6%**.
+   on ExitCheckF). -3.1% -> **~+0.6%**. Its exactness check is weak (sabotages not caught, below).
 3. **0041 `jit.dyncold`** (bf60358): a register return's cached exit keeps its 20-byte miss way in the far region
    (after the learn path) behind one B. -2.4% -> **~+0.5%**. Risk: a polymorphic return (misses often) runs one
    B more and fetches a far line; DynExitA's lookup after it is ~20 instructions anyway.
@@ -75,11 +75,17 @@ emulator thread is the mechanism check (expect fewer L1I misses; if not, the pre
   toggle off vs on: `jit.dyncold` FAILS=0, `jit.flagstub` FAILS=0, `jit.entry_x26` FAILS=0 (bB, all three
   patches in; jitcode-evidence/ex-*.txt).
 - A clean build dir applies 0001-0042 to pristine melonDS and builds (bB).
-- Sabotage: 0041 with one cycle added on the far miss way: **FAILS=12** (cpubench, jitloops, irqmask: caught).
-  0042 with ExitCheckF's B going to the c=0 ExitCheck (no CPSR store): the *quick* suite (cpubench-thumb,
-  jitloops-thumb) did **not** catch it (FAILS=0): ExitCheckF (exits whose R15 is already stored) is rarer, and/or
-  the skipped CPSR store is rewritten before anything reads it. A second sabotage (ExitCheckPCF without the AND)
-  was queued on the full suite at 20:25; result in jitcode-evidence/ex-sab2-flagstub.txt if it finished.
+- Sabotage: 0040 none this session (a wrong x26 faults at once; the first session's 0024 checks apply).
+  0041 with one cycle added on the far miss way: **FAILS=12** (cpubench, jitloops, irqmask: caught).
+  **0042: neither of two sabotages was caught**: ExitCheckF's B to the c=0 ExitCheck (no CPSR store; quick suite
+  FAILS=0) and ExitCheckPCF without its AND (old flags OR'd with new; full suite FAILS=0,
+  ex-sab2-flagstub.txt). The census shows the blocks do call the new entries, so the test ROMs' flags at those
+  exits are dead (rewritten before read) and the frame-end CPSR compare doesn't see them. 0042 is exact by
+  construction (the same three instructions, moved from before the BL to the BL's first instructions, with the CPSR
+  store the block already chose), but **its check is weak by the brief's rule**: treat it as the least sure of the
+  three, run the device's `exact.sh` with `--set jit.flagstub=off` against on before trusting it, or leave it off.
+  A ROM whose flags live across a block exit (a conditional after a call-free exit into a linked block) would be
+  the missing test.
 - Not done: bigcode pictures (not in the suite), `tests/jit_encodings.sh` (it tests BananaJIT's encoder; no
   emitter encoding changed here, the disassembly of the new code was read with objdump).
 
