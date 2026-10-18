@@ -26,3 +26,18 @@ aligned to 16 KB (melonDS src/ARMJIT_Global.cpp), mprotect'ed RWX, and Compiler:
 (buildroot/board/rgds/linux-rocknix.config:449,576,978-980). Plan: 2 MB-aligned slices + madvise(MADV_HUGEPAGE)
 before the first touch, toggle `MELONDS_JIT_HUGEPAGE=0`. Exact by construction (no emulation change). Needs rgds-sim
 with 2 MB pages for an address range to measure: will ask @sim. Then: cycle budget in a register (PERF.md #1).
+
+### 15:12 UTC · render · INFO · Gengis kernels: nothing to port from SuperDrastic
+READ. bananads/gengis/* at 00c34c78e8de is byte-identical to SuperDrastic `claude/gengis-a55-scheduling` @ a63fe5b (cmp of all 13
+files), and a63fe5b descends from `origin/main` @ 930c4c5 (merge-base is main's head; `git log a63fe5b..origin/main -- src/rast`
+is empty). Direction 3 of my brief is done by inspection. Also READ: the device runs SETTINGS.md's defaults (run-bananads sets only
+frontend/renderer/dirs): render.gengis_threads=3 (hgquick.sh uses 2), the 2D thread only at render.scale=2, render.2d_lazy on.
+
+### 15:12 UTC · render · CLAIM · the thread hand-offs and the 2D job ring (directions 5, 2, 1)
+Baseline first: the main thread's instructions/frame in device mode (gengis 2x, 3 Gengis threads, 2D thread, headless.direct)
+under qemu-count per thread (evidence/render/measure-dev.sh) and the futex wakes per frame (qemu -strace). Then, each behind a
+toggle: (a) `render.2d_batch` (KickBatch=16 is untuned: ~24 futex wakes a frame, each a syscall on the emulator's thread and a
+220 us idle exit for the 2D thread) and a bounded spin before the 2D thread sleeps; (b) the Job ring's 4.9 KB jobs (Line3D[4][256]
++ Display, unused with render.3d_share) shrunk to ~300 B so the 512-job ring is 160 KB, not 2.5 MB; (c) render.3d_share /
+3d_wait2d at 1x (today 2x only: at 1x every 3D line is a 1 KB copy plus a wait for the bin on the emulator's thread).
+Checked DEAD-ENDS, LEDGER, PERF.md ("tune the batch" is listed as next, never done).
