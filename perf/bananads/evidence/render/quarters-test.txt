@@ -1,0 +1,4 @@
+# quarters_test: render.2d_quarters' split pass vs the full painter's pass per quarter, random layer stacks; device compiler -O2, under qemu-aarch64
+# build: aarch64-linux-g++.br_real --sysroot=... -O2 -g0 -std=gnu++17 -mcpu=cortex-a55 -fwrapv -static quarters_test.cpp; run: qemu-aarch64 ./quarters_test 3000
+12000 quarter cases, 0 mismatches
+exit 0

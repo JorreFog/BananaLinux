@@ -161,3 +161,22 @@ profile). How: -DBANANADS_PGO_GENERATE=ON build, tools/perf/pgo/train.sh under q
 code fits the L1I (0.05-0.14% miss rate, evidence/core/icache-ref.txt), so layout/L1I gains are a lower bound here.
 Next: the same with the device's GCC 14.3 -O2 build (training running), then -O3 for the hot targets on it.
 Evidence: evidence/core/count-pgoT.txt, exact-pgoT.txt, count-ref.txt.
+### 15:56 UTC · core · CLAIM · the device build's -O level for the hot targets (BANANADS_HOT_OPT=-O3) and PGO on GCC 14.3 with harder splits
+Buildroot builds at -O2; -DBANANADS_HOT_OPT=-O3 (perf/core, CMake) compiles melonDS's core, the Banana 2D engine, Gengis and
+the frontend at -O3 under Buildroot's -O2 (the rest, teakra/slirp/tests, stays -O2). Measuring it against
+/home/user/perf/build-dev with qemu-count now, rgds-sim (L1I: .text grows) when up. Same for PGO on the device
+compiler: full-suite profile, plus "no 3D ROMs in training" and "3D ROMs only" profiles, each tested on what it never
+saw (coordinator's caveat on the first split), -fprofile-partial-training kept.
+
+### 15:59 UTC · render · RESULT · exact: pipeline, 1x share, geom_sort, 2d_batch (41 configurations) ; the emulator's thread draws no bins
+MEASURED. perf/render @ f8be6b5 (build b3, same -O3 flags as build-ref) vs the reference: pictures (every 10th of 300) and
+audio identical on dsstress L1/L5/L10/ramp, Thumb L5/L10, dsswap, ds2dtest, membench, geomtest in the device configuration
+(2x, 3 Gengis threads, 2D thread, headless.direct), and a subset at 2x with 2/1/0 threads and no 2D thread, at 1x with
+3/2/1/0 threads with and without the 2D thread, and with a savestate reload at frame 150: 41 configurations, FAILS=0
+(evidence/render/matrix-m3.txt; m2: 8 more at 1x with the 2D thread, FAILS=0). The pipeline's effect under qemu (L5, device
+configuration): "[gengis] the emulator's thread drew 0 of 1188 bins" vs the reference's "227 of 1188" (the bins it drew at
+VBlank, 1150k of its 3424k instructions/frame; evidence/render/matrix-m1-m2-smoke.txt). On the device the same log line
+(every 3600 frames and at exit) is the measure to read. Two more changes since, on the 2D thread at 2x (render.2d_quarters:
+the four quarters share one painter's pass, random-stack test 12000 cases 0 mismatches; render.2d_emit_zip: the output
+stage straight into the rows, 3000 lines 0 mismatches), @ 0fd83cb; the device build of it (b5d) is linking; qemu-count A/B
+on the device build (build-dev) for every toggle next.
