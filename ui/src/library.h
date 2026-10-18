@@ -104,6 +104,7 @@ namespace banana
 		void cue(const std::string& name) override { if (onCue) onCue(name); }
 		std::string emptyTitle() override;
 		std::string emptyHint() override;
+		std::vector<std::pair<std::string, std::string>> hints(bool library, int sys, int game) override;
 
 	private:
 		struct Look { std::string icon, maker; rnds::Color accent; bool hasAccent = false, app = false; };

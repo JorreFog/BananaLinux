@@ -12,6 +12,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace rnds
@@ -83,6 +84,9 @@ namespace rnds
 		// roms/nds"); the host knows where the games go
 		virtual std::string emptyTitle() { return "No games yet"; }
 		virtual std::string emptyHint() { return ""; }
+		// more buttons for the bottom bar, between its two (key, what it does), on the home shelf (library false: sys is
+		// the system) or in a library (game: its index there); shown as long as they fit, from the first
+		virtual std::vector<std::pair<std::string, std::string>> hints(bool /*library*/, int /*sys*/, int /*game*/) { return {}; }
 	};
 
 	// ---- drawing ------------------------------------------------------------------------------------------------------

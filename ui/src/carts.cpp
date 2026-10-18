@@ -1005,16 +1005,27 @@ namespace banana
 		text(sel.title, fSemi, 19, 320, 348, INK, 1, 580, 1);
 		text(sel.sub, fReg, 14, 320, 374, SOFT, 1, 580, 1);
 		// the buttons, as chips
-		struct Chip { const char* key; std::string label; };
+		struct Chip { std::string key, label; };
 		std::vector<Chip> chips;
 		if (home) chips = { { "A", sel.app ? "Start" : "Open" }, { "X", "Resume" }, { "Y", "Favourite" } };
 		else chips = { { "A", "Play" }, { "B", "Back" }, { "Y", sel.fav ? "Unfavourite" : "Favourite" }, { "L R", "Systems" } };
-		float total = 0;
-		std::vector<float> widths;
-		for (auto& c : chips)
+		size_t own = chips.size();
+		if (home || !items.empty())	// the host's own buttons after them (Source::hints), as many as fit the panel
+			for (auto& h : src->hints(!home, home ? cursor() : -1, home ? -1 : cursor())) chips.push_back({ h.first, h.second });
+		auto chipW = [&](const Chip& c)
 		{
 			float kw = std::max(22.0f, text(c.key, fSemi, 12, 0, 0, INK, 1, 0, 0, 0, false, true) + 12);
-			float w = kw + 8 + text(c.label, fMed, 13, 0, 0, INK, 1, 0, 0, 0, false, true) + 14;
+			return kw + 8 + text(c.label, fMed, 13, 0, 0, INK, 1, 0, 0, 0, false, true) + 14;
+		};
+		auto rowW = [&] { float t = 0; for (auto& c : chips) t += chipW(c) + 10; return t; };
+		// too many for the panel: "L R Systems" goes first (the header shows L and R by the system's name already)
+		if (rowW() > 620 && !home && own == 4) { chips.erase(chips.begin() + 3); own--; }
+		float total = 0;
+		std::vector<float> widths;
+		for (size_t i = 0; i < chips.size(); i++)
+		{
+			float w = chipW(chips[i]);
+			if (i >= own && total + w > 620) { chips.resize(i); break; }
 			widths.push_back(w);
 			total += w + 10;
 		}
