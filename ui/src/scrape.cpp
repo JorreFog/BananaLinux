@@ -45,6 +45,8 @@ namespace
 		void (*cleanup)(void*) = nullptr;
 		char* (*escape)(void*, const char*, int) = nullptr;
 		void (*freep)(void*) = nullptr;
+		void* (*slistAppend)(void*, const char*) = nullptr;
+		void (*slistFree)(void*) = nullptr;
 		bool load()
 		{
 			void* l = dlopen("libcurl.so.4", RTLD_NOW | RTLD_LOCAL);
@@ -56,19 +58,21 @@ namespace
 			cleanup = (void (*)(void*))dlsym(l, "curl_easy_cleanup");
 			escape = (char* (*)(void*, const char*, int))dlsym(l, "curl_easy_escape");
 			freep = (void (*)(void*))dlsym(l, "curl_free");
-			return init && setopt && perform && getinfo && cleanup && escape && freep;
+			slistAppend = (void* (*)(void*, const char*))dlsym(l, "curl_slist_append");
+			slistFree = (void (*)(void*))dlsym(l, "curl_slist_free_all");
+			return init && setopt && perform && getinfo && cleanup && escape && freep && slistAppend && slistFree;
 		}
 	} cu;
 	size_t onBody(char* p, size_t sz, size_t n, void* u) { ((std::string*)u)->append(p, sz * n); return sz * n; }
 	// the body of a GET, "" unless it answered 200. One handle per thread, kept: its connection is reused (the
 	// thumbnails' server is far and slow to greet; a new TLS connection for every picture took seconds each)
-	std::string get(const std::string& url)
+	std::string get(const std::string& url, const std::vector<std::string>& headers = {})
 	{
 		thread_local void* h = nullptr;
 		if (!h) h = cu.init();
 		if (!h) return "";
 		enum { WRITEDATA = 10001, URL = 10002, USERAGENT = 10018, WRITEFUNCTION = 20011, TIMEOUT = 13, NOSIGNAL = 99,
-			FOLLOWLOCATION = 52, RESPONSE_CODE = 0x200002 };
+			FOLLOWLOCATION = 52, HTTPHEADER = 10023, RESPONSE_CODE = 0x200002 };
 		std::string body;
 		long status = 0;
 		cu.setopt(h, URL, url.c_str());
@@ -78,7 +82,11 @@ namespace
 		cu.setopt(h, FOLLOWLOCATION, 1L);
 		cu.setopt(h, WRITEFUNCTION, onBody);
 		cu.setopt(h, WRITEDATA, &body);
+		void* hl = nullptr;
+		for (auto& x : headers) hl = cu.slistAppend(hl, x.c_str());
+		cu.setopt(h, HTTPHEADER, hl);	// (none: nullptr, the handle's headers cleared for the next GET)
 		bool ok = cu.perform(h) == 0;
+		if (hl) cu.slistFree(hl);
 		if (ok) cu.getinfo(h, RESPONSE_CODE, &status);
 		if (!ok) { cu.cleanup(h); h = nullptr; }	// (a fresh one next time)
 		return ok && status == 200 ? body : "";
@@ -299,6 +307,7 @@ namespace
 	// GET <base>/v2/art.png?name=<file name>&header=<base64 of its first 512 bytes>: PNG bytes, or an empty 404 when it
 	// doesn't know the game. Someone's own server, so asked politely: one request a second at most, whichever thread
 	// asks, and a game it didn't know isn't asked about again (banana/cache/twilight-miss.txt) unless --force.
+	// /v2 wants its X-Twilight-Key header (401 without it): settings.conf's boxart_twilight_key, its public client key by default.
 	std::string b64(const std::string& in)
 	{
 		static const char* T = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -312,12 +321,12 @@ namespace
 		}
 		return r;
 	}
-	std::string twilightArt(const std::string& base, const std::string& path)
+	std::string twilightArt(const std::string& base, const std::string& key, const std::string& path)
 	{
 		static std::mutex m;
 		static auto last = std::chrono::steady_clock::now() - std::chrono::seconds(1);
 		std::string fname = path.substr(path.rfind('/') + 1), ext = lower(fname.substr(fname.rfind('.') + 1));
-		std::string url = base + "/v2/art.png?name=" + esc(fname);
+		std::string url = base + "/v2/art.png?w=256&h=192&name=" + esc(fname);	// (the largest its API documents)
 		if (ext != "zip" && ext != "7z")	// (an archive's first bytes are the archive's, not the game's)
 		{
 			std::ifstream f(path, std::ios::binary);
@@ -328,7 +337,8 @@ namespace
 		std::lock_guard<std::mutex> l(m);
 		std::this_thread::sleep_until(last + std::chrono::seconds(1));
 		last = std::chrono::steady_clock::now();
-		return get(url);
+		// its key isn't a secret (its web client and repository carry it): it marks a client written against the API
+		return get(url, { "X-Twilight-Key: " + key, "X-Twilight-Client: BananaOS/banana-scrape" });
 	}
 }
 
@@ -357,6 +367,7 @@ int main(int argc, char** argv)
 		return r;
 	};
 	std::string source = setting("boxart_source", "libretro"), twilight = setting("boxart_twilight_url", "https://boxart.kirovair.com");
+	std::string twilightKey = setting("boxart_twilight_key", "tb2_9f4c1d7a3e8b5062");
 	while (!twilight.empty() && twilight.back() == '/') twilight.pop_back();
 	if (source != "both" && source != "twilight") twilight.clear();
 	// (the systems TwilightBoxart knows: Nintendo's handhelds and consoles, Sega's 8 and 16-bit)
@@ -465,9 +476,9 @@ int main(int argc, char** argv)
 					mkdir((j.dir + "/media/box").c_str(), 0755);
 					std::string d;
 					bool asked = false;
-					if (tw && source == "twilight") { d = twilightArt(twilight, j.dir + "/" + j.rel); asked = true; }
+					if (tw && source == "twilight") { d = twilightArt(twilight, twilightKey, j.dir + "/" + j.rel); asked = true; }
 					if (d.empty() && !j.box.empty()) d = get(j.box);
-					if (d.empty() && tw && !asked) { d = twilightArt(twilight, j.dir + "/" + j.rel); asked = true; }
+					if (d.empty() && tw && !asked) { d = twilightArt(twilight, twilightKey, j.dir + "/" + j.rel); asked = true; }
 					if (asked && d.empty())
 					{
 						std::lock_guard<std::mutex> l(missMu);
