@@ -396,6 +396,13 @@ namespace banana
 
 	void Settings::load(Item& it)
 	{
+		if (it.key == "theme")
+		{
+			// the themes as they are on the card now: one copied over file sharing while the menu runs is listed the
+			// next time Settings opens (the list was made once, when banana-ui started)
+			it.names = { "Dark", "Light", "Carts" }; it.values = { "dark", "light", "carts" };
+			for (auto& t : userThemes()) { it.names.push_back(t.name); it.values.push_back(t.value); }
+		}
 		if (it.key == "accent")
 		{
 			// a theme with its own accent: the row says so and has nothing to pick (it came back to life when the theme
@@ -459,7 +466,8 @@ namespace banana
 			if (it.values[i] == v) it.at = (int)i;
 		// a value the list doesn't have (set by hand, or a shader added later): shown as it is and kept, rather than
 		// shown as the first choice and lost at the first press
-		if (it.at < 0 && !v.empty() && it.key != "led_brightness") { it.names.push_back(v); it.values.push_back(v); it.at = (int)it.values.size() - 1; }
+		// (not the theme: a user theme whose file has gone shows Dark, which is what the menu draws then)
+		if (it.at < 0 && !v.empty() && it.key != "led_brightness" && it.key != "theme") { it.names.push_back(v); it.values.push_back(v); it.at = (int)it.values.size() - 1; }
 		if (it.at < 0) it.at = 0;
 		// a value between the choices (the LEDs at 128): the nearest one
 		if (it.key == "led_brightness")
