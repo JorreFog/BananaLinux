@@ -1,0 +1,133 @@
+From: JorreFog <JorreFog@users.noreply.github.com>
+Subject: [PATCH] menu: Online Updater leaves out what can't work or would flood the card
+
+On a read-only system image some download folders are on the image itself
+(joypad_autoconfig_dir, a video_shader_dir shipped there): those entries
+could only fail ("Write failed"; the shaders one silently, as shaders_glsl
+can't be made). An entry is left out when its folder, or the nearest existing
+one above it, isn't writable (Linux only). The bulk downloads (assets,
+cheats, databases, overlays) are left out too: thousands of small files each,
+gigabytes on a handheld's exFAT card (cheats: 27924 files, 3.5 GB).
+
+Upstream-Status: Inappropriate [BananaOS-specific]
+---
+--- a/menu/menu_displaylist.c
++++ b/menu/menu_displaylist.c
+@@ -132,6 +132,37 @@
+ #include "../misc/cpufreq/cpufreq.h"
+ #include "../input/input_remapping.h"
+ 
++#if defined(__linux__)
++#include <unistd.h>
++/* Online Updater: an entry whose download would go to a folder that can't be
++ * written (a read-only system image) is left out instead of failing. A folder
++ * that doesn't exist yet counts as writable when the nearest one above it
++ * that does is. */
++static bool menu_updater_dir_writable(const char *dir)
++{
++   char path[PATH_MAX_LENGTH];
++   char *slash;
++   if (string_is_empty(dir))
++      return false;
++   strlcpy(path, dir, sizeof(path));
++   for (;;)
++   {
++      if (access(path, F_OK) == 0)
++         return access(path, W_OK) == 0;
++      if (!(slash = strrchr(path, '/')) || slash == path)
++         return false;
++      *slash = '\0';
++   }
++}
++#define MENU_UPDATER_DIR_OK(dir) menu_updater_dir_writable(dir)
++#else
++#define MENU_UPDATER_DIR_OK(dir) true
++#endif
++/* The bulk downloads (assets, cheats, databases, overlays): thousands of small
++ * files each, gigabytes on a handheld's exFAT card (cheats: 27924 files, 3.5 GB)
++ * for things this build doesn't need (RGUI has no assets). Left out. */
++#define MENU_UPDATER_BULK 0
++
+ #ifdef HAVE_MICROPHONE
+ #include "../audio/microphone_driver.h"
+ #endif
+@@ -14959,7 +14990,7 @@
+ 
+ #ifdef HAVE_COMPRESSION
+ #ifdef HAVE_UPDATE_CORE_INFO
+-               if (settings->bools.menu_show_core_updater)
++               if (settings->bools.menu_show_core_updater && MENU_UPDATER_DIR_OK(settings->paths.path_libretro_info))
+                {
+                   if (menu_entries_append(info->list,
+                            msg_hash_to_str(MENU_ENUM_LABEL_VALUE_UPDATE_CORE_INFO_FILES),
+@@ -14971,7 +15002,7 @@
+ #endif
+ 
+ #ifdef HAVE_UPDATE_ASSETS
+-               if (menu_entries_append(info->list,
++               if (MENU_UPDATER_BULK && MENU_UPDATER_DIR_OK(settings->paths.directory_assets) && menu_entries_append(info->list,
+                         msg_hash_to_str(MENU_ENUM_LABEL_VALUE_UPDATE_ASSETS),
+                         msg_hash_to_str(MENU_ENUM_LABEL_UPDATE_ASSETS),
+                         MENU_ENUM_LABEL_UPDATE_ASSETS,
+@@ -14979,14 +15010,14 @@
+                   count++;
+ #endif
+ #if !defined(_3DS)
+-               if (menu_entries_append(info->list,
++               if (MENU_UPDATER_DIR_OK(settings->paths.directory_autoconfig) && menu_entries_append(info->list,
+                         msg_hash_to_str(MENU_ENUM_LABEL_VALUE_UPDATE_AUTOCONFIG_PROFILES),
+                         msg_hash_to_str(MENU_ENUM_LABEL_UPDATE_AUTOCONFIG_PROFILES),
+                         MENU_ENUM_LABEL_UPDATE_AUTOCONFIG_PROFILES,
+                         MENU_SETTING_ACTION, 0, 0, NULL))
+                   count++;
+ 
+-               if (menu_entries_append(info->list,
++               if (MENU_UPDATER_BULK && MENU_UPDATER_DIR_OK(settings->paths.path_cheat_database) && menu_entries_append(info->list,
+                         msg_hash_to_str(MENU_ENUM_LABEL_VALUE_UPDATE_CHEATS),
+                         msg_hash_to_str(MENU_ENUM_LABEL_UPDATE_CHEATS),
+                         MENU_ENUM_LABEL_UPDATE_CHEATS,
+@@ -14995,7 +15026,7 @@
+ #endif
+ #ifdef HAVE_LIBRETRODB
+ #if !defined(VITA)
+-               if (menu_entries_append(info->list,
++               if (MENU_UPDATER_BULK && MENU_UPDATER_DIR_OK(settings->paths.path_content_database) && menu_entries_append(info->list,
+                         msg_hash_to_str(MENU_ENUM_LABEL_VALUE_UPDATE_DATABASES),
+                         msg_hash_to_str(MENU_ENUM_LABEL_UPDATE_DATABASES),
+                         MENU_ENUM_LABEL_UPDATE_DATABASES,
+@@ -15004,7 +15035,7 @@
+ #endif
+ #endif /* HAVE_LIBRETRODB */
+ #if !defined(_3DS)
+-               if (menu_entries_append(info->list,
++               if (MENU_UPDATER_BULK && MENU_UPDATER_DIR_OK(settings->paths.directory_overlay) && menu_entries_append(info->list,
+                         msg_hash_to_str(MENU_ENUM_LABEL_VALUE_UPDATE_OVERLAYS),
+                         msg_hash_to_str(MENU_ENUM_LABEL_UPDATE_OVERLAYS),
+                         MENU_ENUM_LABEL_UPDATE_OVERLAYS,
+@@ -15014,7 +15045,7 @@
+ #if defined(HAVE_CG) || defined(HAVE_GLSL) || defined(HAVE_SLANG) || defined(HAVE_HLSL)
+                if (BIT32_GET(flags.flags, GFX_CTX_FLAGS_SHADERS_CG))
+                {
+-                  if (menu_entries_append(info->list,
++                  if (MENU_UPDATER_DIR_OK(settings->paths.directory_video_shader) && menu_entries_append(info->list,
+                            msg_hash_to_str(MENU_ENUM_LABEL_VALUE_UPDATE_CG_SHADERS),
+                            msg_hash_to_str(MENU_ENUM_LABEL_UPDATE_CG_SHADERS),
+                            MENU_ENUM_LABEL_UPDATE_CG_SHADERS,
+@@ -15024,7 +15055,7 @@
+ 
+                if (BIT32_GET(flags.flags, GFX_CTX_FLAGS_SHADERS_GLSL))
+                {
+-                  if (menu_entries_append(info->list,
++                  if (MENU_UPDATER_DIR_OK(settings->paths.directory_video_shader) && menu_entries_append(info->list,
+                            msg_hash_to_str(MENU_ENUM_LABEL_VALUE_UPDATE_GLSL_SHADERS),
+                            msg_hash_to_str(MENU_ENUM_LABEL_UPDATE_GLSL_SHADERS),
+                            MENU_ENUM_LABEL_UPDATE_GLSL_SHADERS,
+@@ -15034,7 +15065,7 @@
+ 
+                if (BIT32_GET(flags.flags, GFX_CTX_FLAGS_SHADERS_SLANG))
+                {
+-                  if (menu_entries_append(info->list,
++                  if (MENU_UPDATER_DIR_OK(settings->paths.directory_video_shader) && menu_entries_append(info->list,
+                            msg_hash_to_str(MENU_ENUM_LABEL_VALUE_UPDATE_SLANG_SHADERS),
+                            msg_hash_to_str(MENU_ENUM_LABEL_UPDATE_SLANG_SHADERS),
+                            MENU_ENUM_LABEL_UPDATE_SLANG_SHADERS,
