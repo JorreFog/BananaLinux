@@ -2188,6 +2188,17 @@ namespace banana
 		if (wifiOn() && !statusJob.running()) statusJob.start(wifiTool + " status", sync);
 	}
 
+	// the time on the clock now, in the time zone in effect (save() sets TZ when the zone changes)
+	static std::string clockNow()
+	{
+		time_t t = time(nullptr);
+		struct tm lt;
+		localtime_r(&t, &lt);
+		char b[8];
+		snprintf(b, sizeof b, "%02d:%02d", lt.tm_hour, lt.tm_min);
+		return b;
+	}
+
 	void Settings::setupDone()
 	{
 		std::ofstream(data + "/setup-done") << "done\n";
@@ -2212,6 +2223,7 @@ namespace banana
 				int n = (int)tz->values.size();
 				tz->at = (tz->at + (k == Key::LEFT ? -1 : 1) + n) % n;
 				save(*tz);
+				message.clear();
 			}
 			return CHANGED;
 		case Key::A:
@@ -2221,7 +2233,18 @@ namespace banana
 			case 1: return pressSetup(Key::RIGHT);
 			case 2: startEntry(ENTRY_RA_USER, "RetroAchievements", "Account name", SETUP, account("ra_user")); return MOVED;
 			case 3: startScrape(); return MOVED;	// box art: on its own, while the setup goes on
-			default: setupDone(); return CLOSED;
+			default:
+				// the clock is UTC until a zone is picked, and a setup finished with the first entry left the menu's clock
+				// hours off: the first A on Finish goes to the time zone (with the time it would show), a second finishes
+				if (tz && tz->at == 0 && !tzAsked)
+				{
+					tzAsked = true;
+					wsel = 1;
+					message = "The time zone is still UTC, so the clock shows " + clockNow() + ". Left and right pick yours; Finish again to keep UTC.";
+					return MOVED;
+				}
+				setupDone();
+				return CLOSED;
 			}
 		case Key::B: case Key::START:
 			setupDone();		// skipped: Settings > System > First-time setup brings it back
@@ -2239,7 +2262,7 @@ namespace banana
 		static const char* names[5] = { "Wi-Fi", "Time zone", "RetroAchievements", "Box art", "Finish" };
 		std::string status[5] = {
 			wstat.connected ? "Connected to " + wstat.ssid : wifiOn() ? "Not connected" : "Off",
-			tz ? tz->names[tz->at] : "",
+			tz ? tz->names[tz->at] + " (" + clockNow() + ")" : "",	// (the time it gives, so a wrong zone shows)
 			ra.empty() ? "Not signed in" : ra,
 			scrapeShort(),
 			"" };
