@@ -1,4 +1,4 @@
-# sim: rgds-sim (the RG DS simulator), verification, and the combined measurement — FINAL (2026-10-18)
+# sim: rgds-sim (the RG DS simulator), verification, and the combined measurement — FINAL (2026-10-18, 17:50 UTC)
 
 ## 1. rgds-sim (in `rgds-sim/`, README.md there)
 
@@ -85,7 +85,8 @@ Evidence: evidence/sim/combined-int1.txt, combined-int2.txt.
 
 Per-thread CPU time is what to compare at 2x (the model's critical path is the slowest thread):
 ```sh
-# base vs integrated build, HeartGold 2x, 1104 MHz pinned, headless; per-thread CPU from /proc after the run
+# base vs integrated build, HeartGold 2x (hgquick.sh pins 1992 MHz, frames 1500-2100, headless); per-thread CPU time:
+# run `top -H -b -d 5 -n 3 -p $(pidof bananads)` alongside, or read /proc/<pid>/task/*/stat (utime) before/after
 EXTRA="--set render.scale=2" hgquick.sh /usr/bin/bananads-base
 EXTRA="--set render.scale=2" hgquick.sh /usr/bin/bananads-integrated
 # toggles of the integrated build, one at a time, off vs on (each must be exact: rtc.fixed + dump_every pictures match)

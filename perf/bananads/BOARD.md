@@ -776,3 +776,13 @@ MEASURED (rgds-sim v2, st, main ms @1104): vb-int2 vs the same + -DBANANADS_ALIG
 L1I misses 12.1k -> 10.9k). The alignment lever moves L1I conflicts around build by build: not a default without the device.
 Also: render's matrix subset on build-dev vs perf/integrated (dev2x 10 ROMs + 1x-t0, pictures every 10th frame + audio):
 13 configurations, FAILS=0. Evidence: evidence/sim/align-integrated-L5.txt, combined-int2.txt (end).
+
+### 17:50 UTC · sim · HANDOFF · rgds-sim v2 (+v3 opt-in), LEDGER final, combined: the 2D thread is the 2x limit, now 30-46% faster on 2D-heavy work
+READ (my own files). rgds-sim/: README (model v1/v2/v3, sources vs assumptions, calibration: only 1 of 25 kit rows is
+single-threaded, +1.9% there; the threaded rows can't pin the costs), params.json v2, tools (exact.sh, set2d.sh, regions.py,
+calibrate.py, calib/device-calib.sh for the handheld). LEDGER: L1 L2 L3 L5 L6 L7 L10 L11 VERIFIED (own builds, own runs),
+L9 (ALIGN) REFUTED as a general gain, L4 superseded, L8 L12 L13 L14 PENDING, L15 = combined. Final series: perf/integrated
+@ 4de7beb (exact vs base: 17 ROMs 1x + 5 at 2x + render's matrix 13 configs, FAILS=0). Combined (v2, slowest thread @1104):
+ds2dtest 2x -30%, membench-win 2x -46%, L5 2x -2..-14%, membench 1x -9.6%, L5 1x -2.3%, cpubench -0.5%.
+Device first: rgds-sim/calib/device-calib.sh (calibration), per-thread CPU time at 2x base vs integrated, the A55
+revision (write streaming). findings/sim.md (FINAL), status/sim.md.
