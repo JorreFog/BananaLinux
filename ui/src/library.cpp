@@ -437,6 +437,26 @@ namespace banana
 		return r;
 	}
 
+	// the folders under a system's folder that listRoms looks into (not art's or ES's own), to watch them as well: a game
+	// copied into one of them otherwise went unseen until the next scan for another reason
+	static void gameDirs(const std::string& dir, int depth, std::vector<std::string>& out)
+	{
+		if (depth >= 2) return;
+		DIR* d = opendir(dir.c_str());
+		if (!d) return;
+		while (dirent* e = readdir(d))
+		{
+			if (e->d_name[0] == '.' || (e->d_type != DT_DIR && e->d_type != DT_UNKNOWN)) continue;
+			std::string ln = lower(e->d_name), full = dir + "/" + e->d_name;
+			if (ln == "media" || ln == "images" || ln == "videos" || ln == "manuals" || ln == "downloaded_images") continue;
+			struct stat st;
+			if (e->d_type == DT_UNKNOWN && (stat(full.c_str(), &st) || !S_ISDIR(st.st_mode))) continue;
+			out.push_back(full);
+			gameDirs(full, depth + 1, out);
+		}
+		closedir(d);
+	}
+
 	std::vector<std::string> Library::watchDirs() const
 	{
 		std::vector<std::string> r = { "/run/banana/sd2" };	// the second card in or out: a new scan
@@ -450,6 +470,7 @@ namespace banana
 				r.push_back(dir);
 				r.push_back(dir + "/media");
 				for (const char* m : { "box", "cart", "label" }) r.push_back(dir + "/media/" + m);
+				if (!d.flat) gameDirs(dir, 0, r);	// the folders games are found in too (listRoms looks 2 deep)
 			}
 		}
 		return r;

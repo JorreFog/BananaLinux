@@ -352,18 +352,37 @@ struct RomWatch
 {
 	int fd = -1;
 	double due = 0;
+	std::map<int, std::string> dirOf;	// each watch's folder
+	static constexpr uint32_t EVENTS = IN_CREATE | IN_DELETE | IN_MOVED_FROM | IN_MOVED_TO | IN_CLOSE_WRITE;
+	void add(const std::string& d)
+	{
+		int wd = inotify_add_watch(fd, d.c_str(), EVENTS);
+		if (wd >= 0) dirOf[wd] = d;
+	}
 	void watch(const std::vector<std::string>& dirs)
 	{
 		if (fd < 0) fd = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
 		if (fd < 0) return;
-		for (auto& d : dirs)	// a folder that isn't there yet is caught by its parent's watch, then added here
-			inotify_add_watch(fd, d.c_str(), IN_CREATE | IN_DELETE | IN_MOVED_FROM | IN_MOVED_TO | IN_CLOSE_WRITE);
+		for (auto& d : dirs) add(d);	// a folder that isn't there yet is caught by its parent's watch, then added here
 	}
 	void read(double now)
 	{
-		char buf[4096];
+		alignas(inotify_event) char buf[4096];
 		bool any = false;
-		while (::read(fd, buf, sizeof buf) > 0) any = true;
+		for (ssize_t n; (n = ::read(fd, buf, sizeof buf)) > 0;)
+		{
+			any = true;
+			// a folder made or moved in (a game folder copied over file sharing): watched at once, so the games
+			// copied into it afterwards are seen too (the rescan 2 s after the folder came may find it still empty)
+			for (char* p = buf; p < buf + n;)
+			{
+				auto* e = (inotify_event*)p;
+				auto it = dirOf.find(e->wd);
+				if ((e->mask & IN_ISDIR) && (e->mask & (IN_CREATE | IN_MOVED_TO)) && e->len && it != dirOf.end() && e->name[0] != '.')
+					add(it->second + "/" + e->name);
+				p += sizeof(inotify_event) + e->len;
+			}
+		}
 		if (any) due = now + 2000;
 	}
 };
