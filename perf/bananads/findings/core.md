@@ -61,14 +61,42 @@ rgds-sim: (below, when measured). Default: off until the device says (instructio
 
 (filled in below as measured)
 
+## 4. The C++ hot paths (Part B): what the simulator says, and `core.fast_div` (melonDS patch 0040)
+
+rgds-sim on the device build, cpubench-thumb (`/home/user/perf/core/runs/sim/dev-cpubench-thumb/report.txt`):
+main thread 5.64 ms/frame @1104, of which JIT code 52%, the slice loop (RunSlicesJIT, inlined into `main`'s
+lambda) 20.6%, 2D 11.4%, Gengis 4.6%, ARM_Dispatch/ARM_Ret 3.5% (jit took those), memory 3.4%, StartDiv 1.1%,
+audio 1.2%. The slice loop's 962k instructions/frame are 8.6k slices x ~112 instructions, every part of it once
+per slice (qemu hotblocks per translation block, `evidence/core/sliceloop-hotblocks.txt`): NextTarget and the
+targets 30, the block lookup/dispatch/checks 26, the post-ARM9 part (GPU3D idle test, timers, the halted ARM7,
+RunSystem's early-out) ~45. No sub-path dominates: its cost is the number of slices (`core.slice` = 64 system
+cycles, which is an accuracy trade, docs/PERF.md), and merging slices while the ARM7 is halted is not exact (an
+ARM9 write that wakes the ARM7 would be seen a slice late). So nothing exact and large is left in it; the
+per-dispatch cost (ARM_Dispatch/ARM_Ret's 12 saved registers, the RET mispredict) is jit's.
+
+**`core.fast_div`** (0040, default off): StartDiv/StartSqrt did CancelEvent + ScheduleEvent at every parameter write
+(five per 64-bit divide, ~1000 divides/frame on cpubench; 132k instructions/frame in those two plus the five IO
+thunks' 30k); `NDS::RescheduleEvent` does both in one step and keeps SchedNext known. Exact: pictures and audio
+identical off vs on on 13 ROMs x 2 renderers, `bananads-difftest --every --frames 300` main RAM identical on 7 ROMs
+(`evidence/core/count-fastdiv.txt`, `check-fastdiv`). Gain: -0.45% instructions, rgds-sim -0.4% ms on cpubench-thumb
+(`ab-fastdiv.txt`): the slice loop didn't move (the SchedNext=0 walks it was meant to save weren't happening), so it
+stays off and is listed as marginal. Device A/B: `EXTRA="--set core.fast_div=on" hgquick.sh <bin>`.
+
+The rest of the Part B list (RunTimers/GPU3D::Run next-due times, IPC, DMA, the SPU mix) has no item above ~1% of
+the main thread on the test ROMs after patches 0005-0020 (ScheduleEvent 34k, CheckDMAs 20k, RTC 25k, StartScanline
+18k, blip 20k instructions/frame on cpubench): on this evidence the build levers above (PGO -4%, -O3 hot targets
+-1.6..-9%) are where the C++ side's time went, and a game profile on the device (`tools/device/hgprofile.sh`) is
+needed before more C++ work.
+
 ## How PGO would ship (the scheme)
 
 A `.gcda` profile is tied to (a) GCC's major.minor (GCC checks the gcov version string: a 13.3 profile is ignored
 by 14.3 with a warning), (b) each function's control-flow checksum (a function whose code changed loses its
 profile: `-Wcoverage-mismatch`, a warning with `-Wno-error=coverage-mismatch`, nothing else is affected) and
-(c) the function's definition order within its file and its source line (the `funcdef_no` ident and a line/path
-checksum): an edit that shifts the functions after it in a file leaves their counts mismatched, so they are
-compiled as if unprofiled. With `-fprofile-partial-training` (kept on) an unprofiled or never-run function is
+(c) the function's definition order within its file (the `funcdef_no` ident): a new function added before others in
+a file shifts their idents, their control-flow checksums then mismatch and they are compiled as if unprofiled;
+a line shift or a moved file only warns ("source locations have changed") and the counts are still used
+(measured: 10,629 such warnings, 0 mismatches, the gain unchanged). With `-fprofile-partial-training` (kept on) an unprofiled or never-run function is
 optimised as usual, not for size; without it such functions are treated as cold (smaller, slower). So a stale
 profile degrades gracefully, file by file, down to today's build, never below it; the price of a source change is
 that the changed files lose their profile until it is regenerated.
