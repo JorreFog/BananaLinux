@@ -6,6 +6,7 @@
 CONF=/run/banana/ksmbd.conf
 case $1 in
 up)
+    /usr/libexec/banana/ra-secrets scrub    # (RetroArch's password out of retroarch.cfg before it is shared)
     modprobe ksmbd 2>/dev/null || exit 1
     pidof ksmbd.mountd >/dev/null && exit 0
     cat > $CONF <<'CONF'

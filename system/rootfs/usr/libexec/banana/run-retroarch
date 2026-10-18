@@ -78,19 +78,7 @@ set_cfg savestate_auto_load ${q:-false}
 A=/data/banana/accounts.conf
 RA=/run/banana/retroarch-account.cfg
 acct() { sed -n "s/^$1=//p" $A 2>/dev/null | head -n 1; }
-acct_set() { [ -f $A ] && sed -i "/^$1=/d" $A; printf '%s=%s\n' "$1" "$2" >> $A; }
-secrets_out() {
-    cu=$(sed -n 's/^cheevos_username = "\(.*\)"$/\1/p' $CFG | tail -n 1)
-    cp=$(sed -n 's/^cheevos_password = "\(.*\)"$/\1/p' $CFG | tail -n 1)
-    ct=$(sed -n 's/^cheevos_token = "\(.*\)"$/\1/p' $CFG | tail -n 1)
-    if [ -n "$cu" ] && { [ -n "$cp" ] || [ -n "$ct" ]; }; then
-        [ -n "$(acct ra_user)" ] || acct_set ra_user "$cu"
-        [ -n "$cp" ] && [ -z "$(acct ra_password)" ] && acct_set ra_password "$cp"
-        [ "$cu" = "$(acct ra_user)" ] && [ -n "$ct" ] && acct_set ra_retroarch_token "$ct"
-    fi
-    sed -i '/^cheevos_password = /d; /^cheevos_token = /d' $CFG
-}
-secrets_out    # (a card from before this kept them in retroarch.cfg)
+/usr/libexec/banana/ra-secrets scrub    # (a card from before this, or a game cut short, kept them in retroarch.cfg)
 u=$(acct ra_user)
 (umask 077; : > $RA)
 if [ -n "$u" ]; then
@@ -130,7 +118,7 @@ fi
 trap 'kill -TERM $P 2>/dev/null' TERM INT HUP
 wait $P; S=$?
 while kill -0 $P 2>/dev/null; do wait $P; S=$?; done	# a trap interrupted the wait: until RetroArch has quit
-secrets_out; rm -f $RA
+/usr/libexec/banana/ra-secrets scrub; rm -f $RA
 if [ -n "$BANANA_DRM_LEASE_FD" ]; then
     set_cfg video_monitor_index ${MON:-2}
     set_cfg stdin_cmd_enable false
