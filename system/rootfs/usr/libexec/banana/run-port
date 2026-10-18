@@ -11,6 +11,9 @@ fi
 export HOME=/data/home XDG_DATA_HOME=/data/home/.local/share XDG_CONFIG_HOME=/data/home/.config XDG_RUNTIME_DIR=/run
 mkdir -p $XDG_DATA_HOME $XDG_CONFIG_HOME
 export SDL_KMSDRM_FIRST=${BANANA_TOP:-DSI-2} TERM=linux
+# PortMaster's menu is Python with PySDL2, which finds SDL2 through ctypes.util.find_library: no ldconfig cache or
+# compiler here, so it found nothing and PortMaster quit a second after starting. Its own folder says where.
+export PYSDL2_DLL_PATH=/usr/lib
 . /usr/libexec/banana/one-panel
 one_panel_dark top
 cd "$(dirname "$1")"
