@@ -1,15 +1,15 @@
 # Session 2, agent `memio`: the GX FIFO's input side on the emulator thread
 
 Branch **`claude/bananads-perf-memio`** on JorreFog/SuperDrastic, from `00c34c78e8de` (the commit `bananads.mk` pins).
-Head: HEADSHA. Everything here is **untested on the device**. qemu instruction counts below only show that the path
+Head: `2bfb6bf` (3 commits on `00c34c78e8de`: 0021, 0022, and 0022's final form; squash the last two if you like). Everything here is **untested on the device**. qemu instruction counts below only show that the path
 I changed got cheaper; they are not results.
 
 ## The commits
 
 | # | Commit | Toggle (default) | melonDS patch | What |
 |---|---|---|---|---|
-| 1 | C1 | `render.gx_batch` (`on`); `MELONDS_GXBATCH=0` | 0021 | the JIT's STMs into the GX FIFO (0x04000400-0x0400043F) handed to the geometry engine in one call; the packed commands decoded and appended to the FIFO with their state in registers; DMA's GX block path (0020) uses the same loop |
-| 2 | C2 | `render.gx_str` (`on`); `MELONDS_GXSTR=0` | 0022 | the JIT's single STRs to the GX FIFO port and the command ports with fewer layers; a FIFO-port word that is a parameter before its command's last goes straight into the FIFO |
+| 1 | `73880ea` | `render.gx_batch` (`on`); `MELONDS_GXBATCH=0` | 0021 | the JIT's STMs into the GX FIFO (0x04000400-0x0400043F) handed to the geometry engine in one call; the packed commands decoded and appended to the FIFO with their state in registers; DMA's GX block path (0020) uses the same loop |
+| 2 | `28d8987` + `2bfb6bf` | `render.gx_str` (`on`); `MELONDS_GXSTR=0` | 0022 | the JIT's single STRs to the GX FIFO port and the command ports with fewer layers; a FIFO-port word that is a parameter before its command's last goes straight into the FIFO |
 
 Plus `bananads/tests/gxstm/` (new test ROM, commit 1): NNS-style packed display lists (1-4 commands per header, packed
 NOPs and all-NOP headers, matrix loads/multiplies, push/pop/store/restore, scale/translate, materials, every vertex
@@ -44,7 +44,7 @@ slow paths 18% in all, 3D geometry 13%.
    `GXWrite9Route` (~8), then `WriteToGXFIFO` + `WriteToGXFIFOBody` (~65, a 4-pair frame) or `GPU3D::Write32` (~46).
    Now the GX test comes before the region switch, the route's call is gone, and a parameter word before its
    command's last (most words of a matrix, the first word of each VTX_16) goes into the pipe/FIFO with no call and
-   no frame. QCOUNTSUMMARY How many such STRs HeartGold does per frame is unknown (the IO stats below say); at
+   no frame. qemu-count: dsstress L5's ~2,730 command-port STRs a frame 258.7k -> 216.5k instructions (-16%); gxstm's ~400 FIFO-port STRs 50.5k -> 43.5k (-14%; most of its STR words are headers or a command's last parameter, which still take the decoder). How many such STRs HeartGold does per frame is unknown (the IO stats below say); at
    ~1,000 a frame it is ~0.1% of the thread, at ~10,000 (display lists by `MI_CpuSend32`) up to ~1%.
 
 Both are exact by construction (the same statements in the same order for the cases they take, everything else
@@ -102,11 +102,13 @@ answer to the two estimates above. `GPU3D::Run` is one symbol under LTO (the who
   the final one. `bananads-difftest --every --frames 300` on gxstm: **SAME**. Sabotaged builds: all-NOP headers not
   written to the FIFO (only GXSTAT/RAM_COUNT timing would show it) -> **caught at frame 2**; one word of 7-word STMs
   dropped -> **caught at frame 1**.
-- **0022** (`render.gx_str=off` vs `on`): `exact-suite.sh` **SUITE22**; gxstm difftest `--every`: **SAME**. Sabotage
-  (ParamCount not counted for 3-parameter commands on the fast path): **SAB22**.
+- **0022** (`render.gx_str=off` vs `on`): `exact-suite.sh` **FAILS=0** (final form); gxstm difftest `--every`: **SAME**. Sabotage
+  (ParamCount not counted for 3-parameter commands on the fast path): **caught at frame 1**; BOX_TEST's parameters not counted as a test on the fast path: **caught at frame 3**.
 - **Both** (all off vs all on), every 10th frame of 300: gxstm, geomtest, membench, dsstress L10, each with the soft
   renderer at 1x, Gengis at 2x with 2 threads and the 2D thread, and a savestate save+reload at frame 150; difftest
-  `--every` on gxstm, geomtest, dsstress L5 and iorom L5: EXTRA
+  `--every` on gxstm, geomtest, dsstress L5 and iorom L5: **all identical** (12 picture sets, 4 difftests). A build
+  from pristine melonDS with 0001-0022 applied by CMake was byte-identical to the development build (checked on
+  0022's previous form; the final form changes only GPU3D.cpp/.h, which the 0022 patch carries).
 
 ## Risks
 
