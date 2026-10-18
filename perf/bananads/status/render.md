@@ -41,4 +41,12 @@ Updated 16:40 UTC. Worktree /home/user/perf/render/sd, branch perf/render @ 1c90
 6. Direction 4: the geometry engine's share on the main thread (830k/frame on L5; sim-measurable).
 
 ## Next steps for a successor
-Read this file, `tail -n 80 BOARD.md`, then continue the plan from the first unchecked item.
+Read this file, findings/render.md (the deliverable: numbers, checks, device A/B lines) and `grep "· render ·" BOARD.md`.
+The branch is complete and exported (patches/render/, 9 patches, git-am-checked). What is still open:
+1. Collect the last background results if they are not yet in findings/render.md: /home/user/perf/render/runs/matrix-m6.txt
+   (build-dev vs b6d under qemu-dev), runs/difftest-*.txt, runs/tests-b6d.txt (the m6 chain); runs/qc-b7d/* (the quarters
+   fix's A/B: expect the 2D thread's composite work below 812k on L5), runs/matrix-m7.txt, runs/tests-b7d.txt, runs/qc-1x/*
+   (1x: 2D thread off vs on + share) (the b7d chain). Copy them into evidence/render/ and add the numbers to the findings.
+2. If any matrix shows DIFF: find the ROM/config, run abcheck.sh by hand on it (evidence/render/abcheck.sh), and if it is the
+   quarters fix (347784d) bisect with render.2d_quarters=off; everything before it is proven exact (m3, m2, suite).
+3. HANDOFF post on the board (not done if this file still says so) and the findings' Status line.
