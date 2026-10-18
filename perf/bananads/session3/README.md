@@ -12,8 +12,8 @@ The brief's `rtc.fixed=on` is not parsed (it needs a date), so the script uses `
 ## Test this first: everything together
 
 **`claude/bananads-perf-mkall`**, head `8e98258`, on JorreFog/SuperDrastic. It holds every commit below on
-`claude/bananads-perf-mkbase`, cherry-picked one per original commit. The CI artifact is
-`bananads-aarch64-8e98258…` (the `bananads-device` workflow on push).
+`claude/bananads-perf-mkbase`, cherry-picked one per original commit. The CI device build passed: artifact
+`bananads-aarch64-8e98258dd82b4191e932c75572a06f0183fd460b` (run 39178134574).
 
 Exactness (checked by the coordinator after a container restart lost the agents' last runs): the Mario Kart scene's 8
 frames (1500, 1740, 1800, 1860, 1920, 1980, 2040, 2100) and its audio are identical to the base. That holds with every
