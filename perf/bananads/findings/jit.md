@@ -80,4 +80,51 @@ dTLB-load-misses` on and off shows the mechanism directly.
    rotate sequence (5 instructions per word load), R15/CodeCycles stores, the conditional exits' cold way out of line.
 2. The RET mispredict at every slice end (the ExitCheck stub returns to ARM_Ret instead of its caller; ~3.9k/frame
    on cpubench in the sim), and ARM_Dispatch's link-pending check (3 instructions per dispatch) moved to the learn path.
-3. VRAM/OAM/palette stores inline through 0010's page table (PERF.md #3) after HeartGold's MELONDS_IOSTATS shows the rate.
+3. VRAM/OAM/palette stores inline through 0010's page table (PERF.md #3) after HeartGold's MELONDS_IOSTATS shows the
+   rate (taken over by `core` on perf/core-jitmem at 16:56).
+4. The cycle budget in a register (PERF.md "What's left" #1), only if a device profile shows the exit stubs high: it
+   needs a callee-saved register (take x25 out of the guest-register allocator, 14 left) and Timestamp materialised
+   before every C call from JIT code (or in shared call trampolines); see "Dead ends" above for the estimate.
+
+## Part 2: the 2D engine (16:56-17:50, branch `perf/jit-2d` from `perf/render` @ eee302e; patches/jit-2d/)
+
+Head `a8725d0`; `render` cherry-picked all three commits onto perf/render (94ee0ea, ea7732d, dc50d19).
+Device build, rgds-sim v2 (v3 = SIMARGS=prfm=1 for prefetches), A/B one binary.
+
+| Commit | Toggle (default) | What | Measured |
+|---|---|---|---|
+| 60a26a9 | `render.2d_conv16` (on) | ConvertRun16 (direct-colour bitmap BG rows): 16 pixels a NEON step; the layer's drawn/full test from the sources' bit 15 (callers only test acc/all for zero, and an opaque pixel always carries the non-zero flag) | membench st 1x: main 4.563 -> 4.478 ms/frame @1104 (-1.87%; ConvertRun16 175k -> 119k insns, 0.314 -> 0.240 ms); L5 2x dev: the 2D thread's 2d bucket -0.073 ms (evidence/jit/2d-conv16-sim-*.txt). With the toggle off the old loop costs 175k insns vs 155k in the base build (codegen moved): vs the base build the gain is ~0.05 ms |
+| e3c69b1 | under `render.2d_fast` | FillLine (screen off / display mode 0) 64 bytes a NEON store | rare path, not measured |
+| 60a26a9 + a8725d0 | `render.2d_prefetch16` (on) | ConvertRun16 prefetches its VRAM row and the next 512 bytes (a 256-pixel bitmap's next row, a DS line ahead) | v3 (timed PRFM): membench st 1x main 4.462 -> 4.372 (-2.01%; ConvertRun16 0.237 -> 0.133 ms; L3 misses -29%; only 83 of 3.3k prefetches/frame late) (evidence/jit/2d-prefetch16-sim-v3-membench.txt). **Rests on the model's PRFM (an assumption until the device); on by default only because a prefetch can't change results.** |
+
+Exactness: ConvertRun16 random test against the old function, 200k cases, 0 mismatches, a sabotaged copy caught
+(evidence/jit/2d-conv16-test.txt, 2d-conv16_test.cpp); render's matrix.sh (26 configurations: 2x device config x10
+ROMs, savestate reload x5, 2x Gengis 0 threads, 1x, 1x with the 2D thread) FAILS=0 (evidence/jit/2d-matrix-conv16.txt).
+
+What the model says about the output stage (WriteZip/WriteDouble/WriteLine/EmitA/B): with v2's write streaming the
+2x rows' stores stream (no allocation), and the planar NEON kernels run at ~1 IPC with a near-minimal instruction
+count: little left in the model (0.28 ms of the 2D thread on L5 2x). On the device the KMS dumb buffers are the
+destination; if Rockchip maps them write-combined (frontend_kms.cpp: "dumb buffers are slow to read back") the cache
+model doesn't apply: the stores are whole 64-byte lines already, and nothing reads the scanout buffers back.
+
+Where ds2dtest's 2D time is (st 2x, an analysis build with the 2D functions noinline, evidence/jit/
+2d-ds2dtest-st2x-noinline-attribution.txt; main thread 24.8 ms/frame @1104): DrawBG_Affine 4.41 ms (5.16M insns:
+per-pixel rotscale), ApplyWindow 3.19 (render made it NEON at 17:33: render.2d_win_neon), DrawBG_Text 8bpp 2.18 (723k
+insns: ~3 cycles/insn, misses on tile rows) and 4bpp 2.06, DrawSpriteEntry 1.90, EffectsTo 1.74, ResolveSprites 1.27,
+ApplySpriteMosaicX 0.73. The BG reads miss to L3 (~80k loads/frame on the VRAM flats): tiles are evicted between
+lines by the compositing at 2x.
+
+Device A/B (1x and 2x; per-thread CPU time of `bananads-2d` and the emulator's thread with `top -H`):
+```
+EXTRA="--set render.2d_conv16=off" tools/device/hgquick.sh <bin>
+EXTRA="--set render.2d_prefetch16=off" tools/device/hgquick.sh <bin>
+EXTRA="--set render.2d_conv16=off --set render.2d_prefetch16=off" tools/device/hgquick.sh <bin>
+```
+(HeartGold may not use direct-colour bitmap BGs; the stress ROMs and membench do.)
+
+Next (2D), by the attribution above:
+1. DrawBG_Affine (per-pixel rotscale): NEON coordinates for 4-8 pixels a step, gathers for map and tile bytes, the
+   tile row prefetched; it is the biggest single function on ds2dtest.
+2. DrawBG_Text: gather the line's 33 map entries first, prefetch all tile rows (v3 shows whether it helps), then draw;
+   or keep the decoded 8-pixel tile rows of the last line per BG while scroll, map and VRAM generation are unchanged.
+3. Sprites (DrawSpriteEntry, ResolveSprites, ApplySpriteMosaicX: ~3.9 ms together on ds2dtest).

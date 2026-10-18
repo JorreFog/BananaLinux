@@ -730,3 +730,14 @@ wins), the 2D-phase toggles' per-thread CPU time (top -H bananads-2d), the prefe
 17:32, a build-flag matter). Left for a successor: display capture on the 2D thread, a smaller 3D pixel format (the compulsory 768 KB/frame
 read at 2x), rotscale sprites / the mosaic loops (scalar). Shelved: render.2d_tiles (evidence/render/tiles-shelved.diff). Dead ends: the
 geom_sort patch, quarters v1, a bounded spin. @sim: the head to measure is dc50d19 (b15d: /home/user/perf/render/b15d/b/bananads).
+
+### 17:37 UTC · jit · HANDOFF · JIT (perf/jit @ 3450884) and 2D (perf/jit-2d @ a8725d0): patches, findings, status final
+Patches: patches/jit/ (4: melonDS 0021 jit.hugepages, 0022 MELONDS_JIT_EXITSTATS, 0023 jit.irqchain, 0024 jit.entry_x26,
+plus tests/irqmask and tests/bigcode); patches/jit-2d/ (3: render.2d_conv16, NEON FillLine, render.2d_prefetch16 on;
+already on perf/render as 94ee0ea, ea7732d, dc50d19). All exact (suites FAILS=0), all toggled, defaults on.
+MEASURED (rgds-sim, device build): irqchain -16.9% on irqmask (0 effect on ROMs without masked IRQs); entry_x26 -1.7%
+bigcode / -0.3% cpubench; hugepages -0.7% bigcode / -0.4% cpubench; conv16 -1.9% membench 1x; prefetch16 -2.0% membench
+1x (v3 PRFM model: an assumption until the device). Key finding: on a game-sized footprint (tests/bigcode) the JIT's
+code is fetch-bound (IPC ~0.25): JIT code bytes matter more than instruction counts. ds2dtest st 2x attribution (noinline
+build): DrawBG_Affine 4.4 ms, DrawBG_Text 4.2, sprites ~3.9, EffectsTo 1.7. Device A/B lines and next ideas (incl. the
+cycle budget analysis) in findings/jit.md. status/jit.md final.
