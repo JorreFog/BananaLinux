@@ -510,3 +510,29 @@ L1; ~100k insns/frame = 4% of the 2D thread's). Shelved: evidence/render/tiles-s
 exposing a ranged `WriteZip(dst, even, odd, brightness, i0, i1)` (or equivalent) and a "the compositor wrote this line" skip in EmitA,
 say so and I'll finish the compositor side; otherwise it stays a note in findings. Next: the head build's per-function profile of the
 2D thread at 2x (L5/L10, dev) and of the 2D bucket at 1x (membench, ds2dtest) on rgds-sim, then a CLAIM in my functions.
+
+### 17:05 UTC · core · RESULT (needs the device) · BANANADS_ALIGN=32:16:16 on the PGO build, 7 ROMs: -0.1% to -3.9%, one +0.1%
+MEASURED (rgds-sim v1, st mode, device build; A = build-devpgo, B = + -falign-functions=32 -falign-loops=16 -falign-jumps=16),
+main thread ms/frame @1104: cpubench-thumb 5.406 -> 5.401 (-0.1%), thumb-arm7 5.810 -> 5.787 (-0.4%), dsstress-L5 6.714 ->
+6.473 (-3.6%), L10 6.478 -> 6.226 (-3.9%), membench 4.106 -> 4.085 (-0.5%), ipcrom 3.466 -> 3.401 (-1.9%), sndbench 4.876 ->
+4.882 (+0.1%). Instructions +0.1..+0.5% everywhere; the gains are L1I misses (L5 13.4k -> 3.7k, L10 13.1k -> 3.5k/frame,
+in the 2d, 3d-geometry and jit-code buckets alike; sndbench +59%). The JIT's code bytes are identical in A and B, so a
+change in ITS misses is a set-conflict pattern between the binary's hot functions and the JIT buffer that the shifted
+layout avoids: the model says the 3D stress ROMs' hot set conflicts in A, not that 32-byte alignment is good. The
+device decides (PGO build with and without -DBANANADS_ALIGN=32:16:16, HeartGold + a 3D game); until then: not a default.
+Evidence: evidence/core/ab-align-{cpubench-cpubench-thumb,cpubench-cpubench-thumb-arm7,L5,dsstress-L10,membench-membench,ipcrom-ipctest,sndbench-sndbench}.txt.
+
+### 17:05 UTC · core · CLAIM · the JIT's VRAM/OAM/palette stores inline (PERF.md "What's left" #3; melonDS patch 0041, jit.gfxstores)
+Checked DEAD-ENDS, LEDGER, PERF.md: nobody did it (jit queued it, handed to core at 16:5x). READ: Comp_MemAccess
+(ARMJIT_A64/ARMJIT_LoadStore.cpp) sends every store whose expected region isn't fastmem-mapped (VRAM, and palette/OAM
+= memregion_Other) to SlowWrite9 through PushRegs/QuickCallFunction/PopRegs; SlowWrite9's QuickWrite9 then does the
+TCM checks, the region switch and GPU::WriteVRAMQuick (0010's page entry: Mem, capture flag, dirty bit, store) or
+WritePalette/WriteOAM (POWCNT1 bit, store, dirty bit). MEASURED (MELONDS_IOSTATS, evidence/core/iostats-*.txt): ARM9
+slow 16/32-bit stores per frame: VRAM 2719 (cpubench-thumb), 1536 + OAM 384 + palette 255 (membench), 448 + 272 (ds2dtest),
+11827 (jit's bigcode). Plan: when the first execution's region (CurInstr.DataRegion / a static address) is VRAM, OAM
+or palette, emit the same checks and the store inline, with no NZCV use (CBZ/TBNZ only, so lazy flags stay pending),
+and the existing call sequence out of line as the fallback (PushRegs without unloading, so the register cache state is
+one at the join); nothing changes for 8-bit stores, loads, STM, or while MELONDS_IOSTATS counts. Toggle: jit.gfxstores
+(default on if exact and faster), MELONDS_JIT_NOGFXSTORES=1. Worktree /home/user/perf/core/sdjit (perf/core-jitmem from
+perf/jit @ 3450884). Exactness: jit's exact-suite.sh (QEMU=qemu-dev) + ds2dtest/membench/sndbench pictures+audio, a
+sabotage build. Measure: rgds-sim st on membench, cpubench-thumb, ds2dtest, bigcode.

@@ -20,7 +20,7 @@
  * Args (all optional): out=<path> l1i=32768 l1d=32768 l1ways=4 line=64 l3=524288 l3ways=16 itlb=15 dtlb=16
  *   l2tlb=1024 l2tlbways=4 page=4096 bpbits=12 bphist=10 btb=256 ras=8 ldlat=3 mullat=3 mul64lat=4 divlat=8
  *   fplat=4 pf=1 pfdeg=2 ipf=1 l3shared=1 thp=1 hugepages=LO-HI (hex; also learnt from madvise(MADV_HUGEPAGE))
- *   ws=4 wsl3=128 wsn=2 regions=1 (v2: write streaming; per-region miss table)
+ *   ws=4 wsl3=128 wsn=2 regions=1 (v2: write streaming; per-region miss table) prfm=1 (v2.1: software prefetch)
  *   marks=N1:N2 warm=10 (one run: snapshots after frames N1 and N2 from BananaDS's headless.window=1 log; out= is
  *   then a prefix: <out>N1.tsv, <out>N2.tsv...)
  * Build: gcc -O2 -shared -fPIC -I<qemu>/include/qemu $(pkg-config --cflags glib-2.0) rgdssim.c -o librgdssim.so
@@ -45,10 +45,10 @@ static const char *clname[CL_N] = { "alu", "mul", "div", "ld", "st", "ldp", "stp
 /* ---- per-slot event counters ---- */
 enum { C_INSN, C_BASE, C_L1I_MISS, C_L1I_L3MISS, C_LD, C_ST, C_LD_MISS, C_LD_L3MISS, C_ST_MISS, C_ST_L3MISS,
        C_ITLB_L2, C_ITLB_WALK, C_DTLB_L2, C_DTLB_WALK, C_BCOND, C_BCOND_MISS, C_BIND, C_BIND_MISS, C_RET_MISS,
-       C_PF, C_PF_DRAM, C_ST_WS, C_ST_WS_L3, C_N };
+       C_PF, C_PF_DRAM, C_ST_WS, C_ST_WS_L3, C_SWPF, C_SWPF_DRAM, C_N };
 static const char *cname[C_N] = { "insn", "base", "l1i_miss", "l1i_l3miss", "ld", "st", "ld_miss", "ld_l3miss",
     "st_miss", "st_l3miss", "itlb_l2", "itlb_walk", "dtlb_l2", "dtlb_walk", "bcond", "bcond_miss", "bind",
-    "bind_miss", "ret_miss", "pf", "pf_dram", "st_ws", "st_ws_l3" };
+    "bind_miss", "ret_miss", "pf", "pf_dram", "st_ws", "st_ws_l3", "swpf", "swpf_dram" };
 
 /* ---- parameters ---- */
 static const char *outpath = "rgdssim";
@@ -63,6 +63,10 @@ static unsigned p_pf = 1, p_pfdeg = 2, p_ipf = 1, p_l3shared = 1, p_thp = 1;
    partly written. ws=0 turns it off (v1's behaviour). wsn = how many write streams are tracked at once.
    The thresholds are ASSUMED (the A53 TRM's defaults for its equivalent: 4 lines for L1, more for L2). */
 static unsigned p_ws = 4, p_wsl3 = 128, p_wsn = 2, p_regions = 1;
+/* v2.1: software prefetch (PRFM/PRFUM PLD/PST): qemu runs them as no-ops, so they are decoded here and the address
+   read from the registers at run time; a PLDL1/PSTL1 fills the line into L1D (and the L3), L2/L3 targets into the L3,
+   no stall. prfm=0: ignored (v2). */
+static unsigned p_prfm = 1;
 #define MAXWS 4
 static unsigned lshift, pshift;
 /* transparent huge pages: ranges the guest madvise(MADV_HUGEPAGE)s (BananaLinux's kernel: THP=madvise) get 2 MB
@@ -449,6 +453,62 @@ static inline void prefetch_d(VState *s, uint64_t ln, uint64_t *c)
     }
 }
 
+typedef struct { uint8_t kind, rn, rm, opt, sh, op; int64_t imm; uint64_t pc; unsigned slot; } PrfInfo;
+static struct qemu_plugin_register *regh[32];   /* x0..x30, sp */
+static volatile int regh_ok;
+static uint64_t readx(int r)
+{
+    if (!regh[r]) return 0;
+    GByteArray *b = g_byte_array_new();
+    uint64_t v = 0;
+    if (qemu_plugin_read_register(regh[r], b) >= 8) memcpy(&v, b->data, 8);
+    g_byte_array_free(b, TRUE);
+    return v;
+}
+static void prfm_cb(unsigned vcpu, void *ud)
+{
+    const PrfInfo *pi = ud;
+    if (!regh_ok) {
+        g_mutex_lock(&lock);
+        if (!regh_ok) {
+            GArray *a = qemu_plugin_get_registers();
+            for (guint i = 0; a && i < a->len; i++) {
+                qemu_plugin_reg_descriptor *d = &g_array_index(a, qemu_plugin_reg_descriptor, i);
+                if (d->name[0] == 'x') { int n = atoi(d->name + 1); if (n >= 0 && n <= 30 && d->name[1]) regh[n] = d->handle; }
+                else if (!strcmp(d->name, "sp")) regh[31] = d->handle;
+            }
+            if (a) g_array_free(a, TRUE);
+            regh_ok = 1;
+        }
+        g_mutex_unlock(&lock);
+    }
+    uint64_t addr;
+    if (pi->kind == 3) addr = pi->pc + pi->imm;
+    else {
+        addr = readx(pi->rn) + pi->imm;
+        if (pi->kind == 2) {
+            uint64_t m = pi->rm == 31 ? 0 : readx(pi->rm);
+            switch (pi->opt) {            /* UXTW 010, LSL/UXTX 011, SXTW 110, SXTX 111 */
+            case 2: m = (uint32_t)m; break;
+            case 6: m = (uint64_t)(int64_t)(int32_t)m; break;
+            default: break;
+            }
+            addr += m << pi->sh;
+        }
+    }
+    VState *s = vstate(vcpu);
+    uint64_t *c = slotctr(s, pi->slot);
+    uint64_t ln = addr >> lshift;
+    unsigned type = (pi->op >> 3) & 3, target = (pi->op >> 1) & 3;
+    if (type == 1) return;                                   /* PLI: not modeled */
+    c[C_SWPF]++;
+    if (target == 0) {
+        if (cache_probe(&s->l1d, ln)) return;
+        cache_access(&s->l1d, ln);
+    }
+    if (!l3_access(&s->l3own, ln)) c[C_SWPF_DRAM]++;
+}
+
 /* write-stream tracking: returns the run length (consecutive whole lines) of the stream this store belongs to */
 static unsigned ws_track(VState *s, uint64_t va, unsigned size)
 {
@@ -564,6 +624,20 @@ static void tb_trans(qemu_plugin_id_t id, struct qemu_plugin_tb *tb)
     t->slot = slot_for(sym, va);
     g_mutex_unlock(&lock);
     qemu_plugin_register_vcpu_tb_exec_cb(tb, tb_exec, QEMU_PLUGIN_CB_NO_REGS, t);
+    for (size_t i = 0; p_prfm && i < n; i++) {
+        struct qemu_plugin_insn *in = qemu_plugin_tb_get_insn(tb, i);
+        uint32_t w = 0;
+        qemu_plugin_insn_data(in, &w, 4);
+        PrfInfo pi = { 0 };
+        if ((w & 0xFFC00000) == 0xF9800000) { pi.kind = 1; pi.imm = (int64_t)((w >> 10) & 0xFFF) * 8; }
+        else if ((w & 0xFFE00C00) == 0xF8A00800) { pi.kind = 2; pi.rm = (w >> 16) & 31; pi.opt = (w >> 13) & 7; pi.sh = ((w >> 12) & 1) ? 3 : 0; }
+        else if ((w & 0xFFE00C00) == 0xF8800000) { pi.kind = 1; pi.imm = ((int64_t)(int32_t)(w << 11)) >> 23; }
+        else if ((w & 0xFF000000) == 0xD8000000) { pi.kind = 3; pi.imm = ((int64_t)(int32_t)(w << 8)) >> 11; pi.pc = qemu_plugin_insn_vaddr(in); }
+        else continue;
+        pi.rn = (w >> 5) & 31; pi.op = w & 31; pi.slot = t->slot;
+        PrfInfo *pp = g_new(PrfInfo, 1); *pp = pi;
+        qemu_plugin_register_vcpu_insn_exec_cb(in, prfm_cb, QEMU_PLUGIN_CB_R_REGS, pp);
+    }
     for (size_t i = 0; i < n; i++) {
         unsigned c = d[i].cls;
         if (c == CL_LD || c == CL_ST || c == CL_LDP || c == CL_STP || c == CL_LDV || c == CL_STV || c == CL_ATOM)
@@ -655,9 +729,9 @@ static void dump(const char *prefix)
     g_free(path);
     fprintf(f, "l1i=%u l1d=%u l1ways=%u line=%u l3=%u l3ways=%u itlb=%u dtlb=%u l2tlb=%u l2tlbways=%u page=%u "
             "bpbits=%u bphist=%u btb=%u ras=%u ldlat=%u mullat=%u mul64lat=%u divlat=%u fplat=%u pf=%u pfdeg=%u "
-            "ipf=%u l3shared=%u thp=%u ws=%u wsl3=%u wsn=%u model=v2\n", p_l1i, p_l1d, p_l1ways, p_line, p_l3, p_l3ways, p_itlb, p_dtlb, p_l2tlb,
+            "ipf=%u l3shared=%u thp=%u ws=%u wsl3=%u wsn=%u prfm=%u model=v2.1\n", p_l1i, p_l1d, p_l1ways, p_line, p_l3, p_l3ways, p_itlb, p_dtlb, p_l2tlb,
             p_l2tlbways, p_page, p_bpbits, p_bphist, p_btb, p_ras, p_ldlat, p_mullat, p_mul64lat, p_divlat, p_fplat,
-            p_pf, p_pfdeg, p_ipf, p_l3shared, p_thp, p_ws, p_wsl3, p_wsn);
+            p_pf, p_pfdeg, p_ipf, p_l3shared, p_thp, p_ws, p_wsl3, p_wsn, p_prfm);
     fclose(f);
     /* L1D misses per thread, code location and 64 KB region (to tell the buffers apart) */
     if (p_regions) {
@@ -734,7 +808,7 @@ QEMU_PLUGIN_EXPORT int qemu_plugin_install(qemu_plugin_id_t id, const qemu_info_
         { "btb", &p_btb }, { "ras", &p_ras }, { "ldlat", &p_ldlat }, { "mullat", &p_mullat },
         { "mul64lat", &p_mul64lat }, { "divlat", &p_divlat }, { "fplat", &p_fplat }, { "pf", &p_pf },
         { "pfdeg", &p_pfdeg }, { "ipf", &p_ipf }, { "l3shared", &p_l3shared }, { "thp", &p_thp },
-        { "ws", &p_ws }, { "wsl3", &p_wsl3 }, { "wsn", &p_wsn }, { "regions", &p_regions } };
+        { "ws", &p_ws }, { "wsl3", &p_wsl3 }, { "wsn", &p_wsn }, { "regions", &p_regions }, { "prfm", &p_prfm } };
     for (int i = 0; i < argc; i++) {
         if (!strncmp(argv[i], "out=", 4)) { outpath = g_strdup(argv[i] + 4); continue; }
         if (!strncmp(argv[i], "marks=", 6)) { char *e; m_n1 = strtoul(argv[i] + 6, &e, 10); m_n2 = *e == ':' ? strtoul(e + 1, 0, 10) : 0; continue; }
