@@ -73,8 +73,12 @@ ROCKNIXDS, ES is the Source and its GL renderer the Backend. In Banana:
   screens was drawn again) an idle frame costs well under a millisecond on a PC.
 - **Display** (`src/kms.cpp`): KMS dumb buffers, two per panel, page flips on vblank. The screens are composed in
   cached memory and only the rectangle that changed is copied into the (uncached) scanout buffer.
+- **Pictures** (`src/main.cpp`'s Worker): box art is decoded and fitted off the main thread, by up to three
+  niced worker threads (one fewer than the cores) that never hold the lock the frames need, so scrolling through
+  a big library doesn't wait for a picture. A box art makes several pictures (a cartridge and a cover; Carts'
+  three sizes), so the last few decoded files are kept and each PNG is decoded once.
 - **Main loop** (`src/main.cpp`): `poll()` on the buttons, the touchscreen, the DRM device (flip events), the
-  picture worker and signals, with a timeout from the engine's next animation step or the next minute (the
+  picture workers and signals, with a timeout from the engine's next animation step or the next minute (the
   clock). Nothing runs while nothing changes.
 
 **Settings** (`src/settings.cpp`, Start): drawn with the engine's own box styles and Pixelify Sans through the

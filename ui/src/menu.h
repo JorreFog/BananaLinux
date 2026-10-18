@@ -59,6 +59,9 @@ namespace banana
 		void setNotifiers(std::function<void()> queued, std::function<void()> finished) override { ui.setNotifiers(queued, finished); }
 		bool animating() const override { return ui.animating(); }
 		void setLog(std::function<void(const std::string&)> log) override { ui.setLog(log); }
+		// the engine's jobs are self-contained (they hold copies of what they paint from) and share only its queue,
+		// under its own lock: run under the frames' lock, a picture's decode and fitting held a frame back for as long
+		bool ownLocking() const override { return true; }
 		rnds::UI& engine() { return ui; }
 	private:
 		rnds::UI ui;

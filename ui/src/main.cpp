@@ -24,6 +24,7 @@
 #include "menu.h"
 #include "carts.h"
 
+#include <algorithm>
 #include <atomic>
 #include <cerrno>
 #include <cstdarg>
@@ -34,6 +35,8 @@
 #include <cstring>
 #include <fcntl.h>
 #include <fstream>
+#include <future>
+#include <list>
 #include <sys/stat.h>
 #include <map>
 #include <memory>
@@ -41,11 +44,14 @@
 #include <poll.h>
 #include <sstream>
 #include <sys/eventfd.h>
+#include <sys/resource.h>
+#include <sys/syscall.h>
 #include <sys/inotify.h>
 #include <sys/wait.h>
 #include <thread>
 #include <time.h>
 #include <unistd.h>
+#include <vector>
 
 using namespace banana;
 
@@ -67,7 +73,7 @@ static void logf(const char* fmt, ...)
 	va_end(ap);
 }
 
-static rnds::Bitmap stbDecode(const std::string& path)
+static rnds::Bitmap stbLoad(const std::string& path)
 {
 	rnds::Bitmap b;
 	int w, h, n;
@@ -77,6 +83,62 @@ static rnds::Bitmap stbDecode(const std::string& path)
 	b.px.assign(p, p + (size_t)w * h * 4);
 	stbi_image_free(p);
 	return b;
+}
+
+// The last pictures decoded, kept a little: one box art makes several pictures, each its own job (Pixel's cartridge
+// and cover, Carts' cartridge in the row, lifted and on the top screen), and decoding the PNG was most of each job's
+// time. A file is known by its path, size and time (art scraped again is read again); a picture another worker is
+// decoding is waited for, not decoded twice
+typedef std::shared_ptr<const rnds::Bitmap> DecodedPic;
+struct Decoded { std::string key; std::shared_future<DecodedPic> pic; size_t bytes; };
+static std::mutex decodedLock;
+static std::list<Decoded> decoded;		// the newest first
+static size_t decodedBytes = 0;
+static const size_t DECODED_BUDGET = 12u << 20;	// a dozen covers or so (a 500x450 one is 0.9 MB)
+
+// (a game is starting: the memory is the game's)
+static void forgetDecoded()
+{
+	std::lock_guard<std::mutex> l(decodedLock);
+	decoded.clear();
+	decodedBytes = 0;
+}
+
+static rnds::Bitmap stbDecode(const std::string& path)
+{
+	struct stat st;
+	if (stat(path.c_str(), &st) != 0) return rnds::Bitmap();
+	std::string key = path + '\0' + std::to_string((long long)st.st_size) + ':' + std::to_string((long long)st.st_mtime) + '.' +
+		std::to_string((long)st.st_mtim.tv_nsec);
+	auto same = [&](const Decoded& e) { return e.key == key; };
+	std::shared_future<DecodedPic> pic;
+	std::promise<DecodedPic> mine;
+	bool decode = false;
+	{
+		std::lock_guard<std::mutex> l(decodedLock);
+		auto it = std::find_if(decoded.begin(), decoded.end(), same);
+		if (it != decoded.end())
+		{
+			decoded.splice(decoded.begin(), decoded, it);
+			pic = it->pic;
+		}
+		else
+		{
+			pic = mine.get_future().share();
+			decoded.push_front(Decoded{ key, pic, 0 });
+			decode = true;
+		}
+	}
+	if (decode)
+	{
+		auto b = std::make_shared<const rnds::Bitmap>(stbLoad(path));
+		mine.set_value(b);
+		std::lock_guard<std::mutex> l(decodedLock);
+		auto it = std::find_if(decoded.begin(), decoded.end(), same);
+		if (it != decoded.end()) { it->bytes = b->px.size(); decodedBytes += it->bytes; }
+		while (decodedBytes > DECODED_BUDGET && decoded.size() > 1) { decodedBytes -= decoded.back().bytes; decoded.pop_back(); }
+	}
+	return *pic.get();
 }
 
 // settings.conf: key = value lines (theme, motion, sounds, clock)
@@ -118,22 +180,26 @@ struct Host : Library
 	std::string batteryMode() override { return batteryShown; }
 };
 
-// ---- the worker that decodes and fits pictures off the main thread ----------------------------------------------
+// ---- the workers that decode and fit pictures off the main thread -----------------------------------------------
+// A few threads (one fewer than the cores, at most three), so scrolling through a big library keeps up with its
+// pictures; niced, so the frames' thread is never the one kept waiting for a core
 struct Worker
 {
 	std::shared_ptr<Menu> ui;	// (shared: a menu doing its own locking is kept alive by the job running without uiLock)
 	std::mutex uiLock, wlock;
 	std::condition_variable cv;
-	bool stop = false, work = false;
+	bool stop = false;
+	uint64_t kicks = 0;		// jobs queued: each thread works until the queue is empty once it sees a new one
 	int wakeFd = -1;		// eventfd: a job finished, the main loop has something to upload
-	std::thread th;
+	std::vector<std::thread> th;
 
 	void start(std::shared_ptr<Menu> u)
 	{
 		ui = u;
 		wakeFd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
 		ui->setNotifiers([this] { kick(); }, [this] { uint64_t one = 1; if (write(wakeFd, &one, 8) < 0) {} });
-		th = std::thread([this] { run(); });
+		int n = std::max(1, std::min(3, (int)std::thread::hardware_concurrency() - 1));
+		for (int i = 0; i < n; i++) th.emplace_back([this] { run(); });
 	}
 	// a new UI (the theme changed): called with uiLock held
 	void attach(std::shared_ptr<Menu> u)
@@ -143,18 +209,20 @@ struct Worker
 	}
 	void kick()
 	{
-		{ std::lock_guard<std::mutex> l(wlock); work = true; }
+		{ std::lock_guard<std::mutex> l(wlock); kicks++; }
 		cv.notify_all();
 	}
 	void run()
 	{
+		setpriority(PRIO_PROCESS, (id_t)syscall(SYS_gettid), 5);
+		uint64_t seen = 0;
 		for (;;)
 		{
 			{
 				std::unique_lock<std::mutex> l(wlock);
-				cv.wait(l, [this] { return stop || work; });
+				cv.wait(l, [&] { return stop || kicks != seen; });
 				if (stop) return;
-				work = false;
+				seen = kicks;
 			}
 			for (;;)
 			{
@@ -164,8 +232,8 @@ struct Worker
 				{
 					std::unique_lock<std::mutex> l(uiLock);
 					u = ui;
-					// a menu that guards its own state (the Carts theme, whose jobs render whole cartridges for tens of
-					// milliseconds) works without the lock the frames need; the rest with it
+					// a menu that guards its own state (both do: their jobs only share the queue) works without the
+					// lock the frames need; one that didn't would work with it
 					if (u->ownLocking()) l.unlock();
 					more = u->workOnce();
 				}
@@ -177,7 +245,7 @@ struct Worker
 	{
 		{ std::lock_guard<std::mutex> l(wlock); stop = true; }
 		cv.notify_all();
-		if (th.joinable()) th.join();
+		for (auto& t : th) if (t.joinable()) t.join();
 		if (wakeFd >= 0) close(wakeFd);
 	}
 };
@@ -502,13 +570,14 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		}
 		else if (op == "bench")
 		{
-			// bench N [EVERY BUTTON]: N frames 16.7 ms apart, as the panels would show them: the engine's and the backend's
-			// time per frame (with the picture worker's, done in the frame here; the drawing alone after it), pressing
+			// bench N [EVERY BUTTON]: N frames 16.7 ms apart, as the panels would show them: the main thread's time per
+			// frame (the engine's and the backend's; the drawing alone after it, then the picture worker's, done between
+			// the two here), pressing
 			// BUTTON every EVERY frames (scrolling)
 			int n = 60, every = 0; std::string bn;
 			cs >> n >> every >> bn;
 			Key bk = bn == "left" ? Key::LEFT : bn == "up" ? Key::UP : bn == "down" ? Key::DOWN : Key::RIGHT;
-			double total = 0, worst = 0, draw = 0, drawWorst = 0;
+			double total = 0, worst = 0, draw = 0, drawWorst = 0, work = 0, workWorst = 0;
 			be.skipped = 0;
 			be.redrawn = 0;
 			for (int i = 0; i < n; i++)
@@ -518,15 +587,18 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 				if (every > 0 && i % every == 0 && uiButton(bk, btn)) ui.press(btn);
 				double t0 = nowMs();
 				ui.update(now);
-				ui.finishWork();
 				double t1 = nowMs();
+				ui.finishWork();
+				double t2 = nowMs();
 				ui.render();
-				double t2 = nowMs(), dt = t2 - t0;
+				double t3 = nowMs(), dt = (t1 - t0) + (t3 - t2);
 				total += dt; worst = std::max(worst, dt);
-				draw += t2 - t1; drawWorst = std::max(drawWorst, t2 - t1);
+				draw += t3 - t2; drawWorst = std::max(drawWorst, t3 - t2);
+				work += t2 - t1; workWorst = std::max(workWorst, t2 - t1);
 			}
-			logf("bench: %d frames, %.2f ms average, %.2f ms worst (drawing %.2f / %.2f), %d of %d screens unchanged, %.1f%% of pixels drawn again", n, total / n, worst,
-				draw / n, drawWorst, be.skipped, 2 * n, 100.0 * be.redrawn / (2.0 * n * be.width() * be.height()));
+			// (the main thread's time: the worker's runs beside it on the device)
+			logf("bench: %d frames, %.2f ms average, %.2f ms worst (drawing %.2f / %.2f; the worker %.2f / %.2f), %d of %d screens unchanged, %.1f%% of pixels drawn again", n, total / n, worst,
+				draw / n, drawWorst, work / n, workWorst, be.skipped, 2 * n, 100.0 * be.redrawn / (2.0 * n * be.width() * be.height()));
 		}
 		else if (!op.empty()) { logf("unknown command %s", op.c_str()); return 2; }
 		if (settings.isOpen()) { settings.update(now); settings.update(now); }
@@ -1042,6 +1114,7 @@ int main(int argc, char** argv)
 		// (Display::lease): the menu keeps the other for the game panel (Settings::gameRender) and reads its touch
 		sound.release();
 		boost.release();
+		forgetDecoded();
 		const char* FIFO = "/run/banana/retroarch.cmd";
 		// (PICO-8 too when it plays in RetroArch's fake-08: the official PICO-8, when it is on the card, takes the panels)
 		bool ra = sd.run.find("run-retroarch") != std::string::npos ||
