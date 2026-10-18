@@ -592,7 +592,7 @@ Exact: a random test against the old function, 200k cases, 0 mismatches, a sabot
 Also on the branch: render.2d_prefetch16 (off; measuring now that sim v2.1 models PRFM) and a NEON FillLine.
 Evidence: evidence/jit/2d-conv16-sim-membench.txt, 2d-conv16-sim-L5dev.txt
 
-### 17:16 UTC · render · CLAIM · the windows' per-pixel loops: ApplyWindow and DrawBG_3D vectorized, the 2x quarters' windowed 3D path fused (render.2d_win_neon)
+### 17:14 UTC · render · CLAIM · the windows' per-pixel loops: ApplyWindow and DrawBG_3D vectorized, the 2x quarters' windowed 3D path fused (render.2d_win_neon)
 READ (gpu2d/GPU2D_Banana.cpp:510 ApplyWindow, :598 DrawBG_3D): both are scalar 256-pixel loops (~6 insns/px), run per drawn
 layer line when a window is on, and at 2x with windows the 3D layer can't take the raw path (Raw3D needs !WindowsOn), so each of
 the four quarters is converted by DrawBG_3D and masked by ApplyWindow: 8 scalar passes a line (~12k insns) on top of the
