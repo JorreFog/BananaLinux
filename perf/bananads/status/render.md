@@ -1,9 +1,10 @@
 # render: status (overwritten by render only)
 
-Updated 16:20 UTC. Worktree /home/user/perf/render/sd, branch perf/render @ 971eb0c (8 commits: + 971eb0c the quarters merge fix) + uncommitted docs/PERF.md section. Patch numbers 0060-0079.
+Updated 16:30 UTC. Worktree /home/user/perf/render/sd, branch perf/render @ c5230ff (8 commits: 7ebe4e9 render.2d_batch, ea886e8 render.3d_pipeline, dc3f96a 3d_share/3d_wait2d at 1x, 911ff8e render.2d_comp_unroll, 0bab5aa render.2d_quarters, 2a23af3 render.2d_emit_zip, 88a772a the quarters merge fix, c5230ff PERF.md). Patch 0060 (geom_sort) was rebased out (DEAD-END 16:25); patches/render/ exported from this head (re-export at the end if it moves).
 
 ## Doing now (all chained in the background)
-- Device builds: b5d = 0fd83cb (done; measured), b6d = f65f846 (linking), b7d = 971eb0c (queued after b6d; the final one).
+- Device builds: b5d = 0fd83cb (measured), b6d = f65f846 (built; sim verifies the non-quarters toggles on it), b7d = the tree
+  as of the rebase (88a772a expected; a chained check verifies no GEOMSORT in it, else builds b8d).
 - Measured so far (device build, qemu-count; board RESULTs 16:12 and 16:16; evidence/render/qc-b5d-*.txt):
   comp_unroll membench -5.7% / ds2dtest -9.2% (emulator's thread, 1x); pipeline: emulator's thread 3308.6k -> 2324.1k
   on L5 device mode (the bins it drew); emit_zip: 2D thread output stage -22%; geom_sort L10 -0.1%; quarters v1 a LOSS

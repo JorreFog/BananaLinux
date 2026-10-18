@@ -262,3 +262,10 @@ ROM here) 18451.5k -> 18433.4k insns/frame (-18k, -0.1%) with the sort on; geomt
 the std::stable_sort path either way). Below anything the device can see; dropped from perf/render (rebased out: head is now
 88a772a, 7 commits; the patch kept as evidence/render/0060-geom-sort-dropped.patch; 0060-0079 stay free). A game with ~2000
 polygons a frame would save at most ~100k instructions (<1%): not worth the review.
+
+### 16:19 UTC · render · RESULT · rgds-sim v1: render.2d_comp_unroll -5.5% ms/frame on membench (emulator's thread, device build)
+MEASURED (rgds-sim v1 with sim's setarch -R run.sh, st mode, device build b6d of perf/render; evidence/render/sim/st-membench-unroll-ab.txt).
+membench, render.2d_comp_unroll off -> on, same binary: main thread 4.871 -> 4.604 ms/frame @1104 MHz (-5.49%), 2.939 -> 2.786 @1992
+(-5.20%); instructions -9.4%, the 2d bucket 2.258 -> 1.992 ms, L1I misses flat (the alternative fit params-fit.json: -3.5%).
+Base (build-dev) vs b6d: 4.780 -> 4.609 (-3.6%), L1I misses 3.9k -> 6.1k/frame (more code; sim/st-membench-base-vs-b6d-ab.txt).
+For LEDGER L1 (sim's own run decides). The rest of the sim set (ds2dtest, dev-mode L5 per toggle, 1x share) is running.

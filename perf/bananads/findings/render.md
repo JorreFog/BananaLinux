@@ -54,14 +54,27 @@ GCC 14.3) run under `tools/qemu-dev`; "base" = /home/user/perf/build-dev/b (00c3
   21212.4k -> 19261.9k. `Composite` on membench: 710.9k (base) -> ~250k. The harness behind it
   (evidence/render/comp-bench.txt): per 256-pixel composite at -O2, 2/3/4 steps: 2588/3966/5665 (plain loop) vs
   1558/1833/2154 (fold) vs 847/1432/1833 (the plain loop at -O3).
-- **render.geom_sort** (the emulator's thread; st mode; evidence/render/qc-b5d-st-sort.txt): dsstress L10, off -> on:
-  18451.5k -> 18433.4k (**-18k, -0.1%**); geomtest 4475.6k both ways (its frames have fewer than 64 polygons: the
-  std::stable_sort path either way). Exact and cheap, but small: a frame with 2000 polygons saves at most ~100k.
+  **rgds-sim v1** (st mode = Gengis on the emulator's thread, 1x; device build b6d; evidence/render/sim/st-membench-unroll-ab.txt):
+  membench, off -> on: main thread **4.871 -> 4.604 ms/frame @1104 MHz (-5.5%)**, 2.939 -> 2.786 @1992 (-5.2%);
+  instructions -9.4%, the 2d bucket 2.258 -> 1.992 ms; L1I misses unchanged (the sim's alternative fit says -3.5%).
+  Base vs b6d (sim/st-membench-base-vs-b6d-ab.txt): 4.780 -> 4.609 ms (-3.6%), with L1I misses 3.9k -> 6.1k a frame
+  (the unrolled compositor is more code; small in absolute terms).
+- **render.geom_sort** (dropped, see Dead ends; the emulator's thread; st mode; evidence/render/qc-b5d-st-sort.txt):
+  dsstress L10, off -> on: 18451.5k -> 18433.4k (-18k, -0.1%); geomtest 4475.6k both ways (its frames have fewer
+  than 64 polygons: the std::stable_sort path either way). Exact, but below what the device can see.
 - **render.3d_pipeline** (device mode: gengis 2x, 3 Gengis threads, 2D thread; dsstress L5; device build b5d;
   evidence/render/qc-b5d-dev-L5.txt): the emulator's thread, off -> on: 3308.6k -> 2324.1k instructions/frame
   (**-30%**): the bins it drew at VBlank (`[gengis]` log: 193 of 1188 bins in base, 0 with it). Under qemu the render
   threads are starved by the host, so the share is larger than it will be on the device; the device measure is the
   same log line and the fps.
+  Same on dsstress L10 (device mode, base vs mine): the emulator's thread 3147.7k -> 2387.4k (-24%)
+  (evidence/render/qc-b5d-summary.txt).
+- **render.3d_share / 3d_wait2d at 1x** (1x with the 2D thread and 2 Gengis threads, dsstress L5, device build b5d;
+  evidence/render/qc-b5d-summary.txt, qc-b5d/dev1x-*): the emulator's thread, `render.3d_share=off` -> on: 3116.1k ->
+  2297.1k instructions/frame (**-26%**: the per-line bin waits, during which it drew bins itself, and the 1 KB copies);
+  base (build-dev, the same settings) 3277.8k. Caveat as for the pipeline: the waits' share is an upper bound (qemu
+  starves the render threads); the copies (192 KB a frame) are a sure gain. The 2D thread is off by default at 1x:
+  this is a reason to A/B `render.2d_thread=on` at 1x on the device (lines below).
 - **render.2d_emit_zip** (the 2D thread at 2x; same runs; b5d had the quarters' zip only, not the 2D lines'
   doubling): the 2D thread's output stage (WriteLine/EmitA/EmitB/DoubleLine/ZipLine/WriteZip) 451k -> 352k
   instructions/frame (**-22%**), the thread's own work 1696k -> 1601k.

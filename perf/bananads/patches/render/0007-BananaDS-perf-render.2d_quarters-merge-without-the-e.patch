@@ -1,0 +1,637 @@
+From 88a772a2cff36b0d417c76febffd544caa4a6241 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sun, 18 Oct 2026 16:16:06 +0000
+Subject: [PATCH 7/8] BananaDS perf: render.2d_quarters' merge without the
+ empty halves, the backdrop as a constant
+
+Measured on the device build (qemu-count, dsstress L5, device configuration): the four-quarter merge cost as much as
+the two-step composites it replaced (the 2D thread's composite work 812k -> 890k instructions a frame), because a
+line with no layer above the 3D one still read a zero line written for it (CompositeN<0>, 164k a frame), and the
+base was read as a line when it is the backdrop's one colour. The merge now has the halves as template cases: no
+above layer (no above lines read), the below pixel as the backdrop constant, a base line, or the below lines; the
+empty halves' passes are skipped. Random-stack test (every case, including the base read as a line): 20000 quarter
+cases, 0 mismatches.
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01PvbFhKAw3ERk5a13S651g1
+---
+ bananads/gpu2d/GPU2D_Banana.cpp | 569 +++-----------------------------
+ 1 file changed, 47 insertions(+), 522 deletions(-)
+
+diff --git a/bananads/gpu2d/GPU2D_Banana.cpp b/bananads/gpu2d/GPU2D_Banana.cpp
+index fa7ab48..caf92ba 100644
+--- a/bananads/gpu2d/GPU2D_Banana.cpp
++++ b/bananads/gpu2d/GPU2D_Banana.cpp
+@@ -2436,31 +2436,62 @@ void BananaRenderer2D::Composite(u32* outTop, u32* outSecond, bool needSecond)
+ // BelowSec, the pixel under it), the layers above it painted onto nothing (AboveTop, AboveSec: nonzero where an
+ // above layer is opaque, where two are). A quarter's top pixel is then the above one where there is one, else the
+ // 3D pixel where it is opaque, else the below one; its second pixel follows the same painter's rule (the pixel that
+-// was on top before the last opaque step). The same pixels as the four full passes, in a quarter of the work
+-template<bool needSecond, bool raw>
+-static void MergeQuarter(const u32* c3line, const u32* belowTop, const u32* belowSec, const u32* aboveTop, const u32* aboveSec, u32* outTop, u32* outSecond)
++// was on top before the last opaque step). With no layer above there is no above line to read, and with none below
++// the base itself is the below pixel (a constant when it is the backdrop). The same pixels as the four full passes.
++// belowKind: 0 the backdrop's colour, 1 a base line, 2 BelowTop/BelowSec
++template<bool needSecond, bool raw, bool hasAbove, int belowKind>
++static void MergeQuarter(const u32* c3line, const u32* base, const u32* belowTop, const u32* belowSec, const u32* aboveTop, const u32* aboveSec, u32* outTop, u32* outSecond)
+ {
+     const V4 flagbyte = VDup(0xFF000000), orv = VDup(0x40000000);
++    const V4 backdrop = VDup(base[0]);
+     for (int i = 0; i < 256; i += 4)
+     {
+         V4 c = VLoad(c3line + i);
+         V4 m3;
+         if (raw) { m3 = VNonZero(VAnd(c, flagbyte)); c = VOr(c, orv); }
+         else     m3 = VNonZero(c);
+-        V4 bt = VLoad(belowTop + i);
++        V4 bt = belowKind == 0 ? backdrop : belowKind == 1 ? VLoad(base + i) : VLoad(belowTop + i);
+         V4 L = VSel(m3, c, bt);                 // the top after the 3D step
+-        V4 at = VLoad(aboveTop + i);
+-        V4 ma = VNonZero(at);
+-        VStore(outTop + i, VSel(ma, at, L));
++        V4 top = L, ma = VZero();
++        if (hasAbove)
++        {
++            V4 at = VLoad(aboveTop + i);
++            ma = VNonZero(at);
++            top = VSel(ma, at, L);
++        }
++        VStore(outTop + i, top);
+         if (needSecond)
+         {
+-            V4 Ls = VSel(m3, bt, VLoad(belowSec + i));   // the second after the 3D step
+-            V4 as = VLoad(aboveSec + i);
+-            VStore(outSecond + i, VSel(ma, VSel(VNonZero(as), as, L), Ls));
++            V4 bs = belowKind == 2 ? VLoad(belowSec + i) : VZero();
++            V4 Ls = VSel(m3, bt, bs);           // the second after the 3D step
++            V4 sec = Ls;
++            if (hasAbove)
++            {
++                V4 as = VLoad(aboveSec + i);
++                sec = VSel(ma, VSel(VNonZero(as), as, L), Ls);
++            }
++            VStore(outSecond + i, sec);
+         }
+     }
+ }
+ 
++template<bool needSecond, bool raw>
++static void MergeQuarterN(bool hasAbove, int belowKind, const u32* c3line, const u32* base, const u32* belowTop, const u32* belowSec, const u32* aboveTop, const u32* aboveSec, u32* outTop, u32* outSecond)
++{
++    if (hasAbove)
++    {
++        if (belowKind == 0)      MergeQuarter<needSecond, raw, true, 0>(c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, outSecond);
++        else if (belowKind == 1) MergeQuarter<needSecond, raw, true, 1>(c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, outSecond);
++        else                     MergeQuarter<needSecond, raw, true, 2>(c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, outSecond);
++    }
++    else
++    {
++        if (belowKind == 0)      MergeQuarter<needSecond, raw, false, 0>(c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, outSecond);
++        else if (belowKind == 1) MergeQuarter<needSecond, raw, false, 1>(c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, outSecond);
++        else                     MergeQuarter<needSecond, raw, false, 2>(c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, outSecond);
++    }
++}
++
+ void BananaRenderer2D::CompositeHires(u32* dst, const u32* const* q3d)
+ {
+     // which colour effects can apply on this line? (CompositeTo's test)
+@@ -2484,8 +2515,10 @@ void BananaRenderer2D::CompositeHires(u32* dst, const u32* const* q3d)
+         return;
+     }
+     const bool onBackdrop = Banana2DFast && startLine == BackdropLine;
+-    CompositeRange(steps + start, bg0 - start, startLine, onBackdrop, needSecond, false, BelowTop, BelowSec);
+-    CompositeRange(steps + bg0 + 1, n - bg0 - 1, ZeroLine, false, needSecond, false, AboveTop, AboveSec);
++    const int nBelow = bg0 - start, nAbove = n - bg0 - 1;
++    if (nBelow) CompositeRange(steps + start, nBelow, startLine, onBackdrop, needSecond, false, BelowTop, BelowSec);
++    if (nAbove) CompositeRange(steps + bg0 + 1, nAbove, ZeroLine, false, needSecond, false, AboveTop, AboveSec);
++    const int belowKind = nBelow ? 2 : onBackdrop ? 0 : 1;
+     const bool raw = steps[bg0].raw3d;
+     const u32* const line3d = Line3D;
+     for (int q = 0; q < 4; q++)
+@@ -2499,521 +2532,13 @@ void BananaRenderer2D::CompositeHires(u32* dst, const u32* const* q3d)
+         }
+         const u32* c3 = raw ? q3d[q] : BGLine(0);
+         u32* top = possible ? TopLine : outs[q];
+-        if (needSecond) { if (raw) MergeQuarter<true, true>(c3, BelowTop, BelowSec, AboveTop, AboveSec, top, SecondLine); else MergeQuarter<true, false>(c3, BelowTop, BelowSec, AboveTop, AboveSec, top, SecondLine); }
+-        else            { if (raw) MergeQuarter<false, true>(c3, BelowTop, BelowSec, AboveTop, AboveSec, top, nullptr);   else MergeQuarter<false, false>(c3, BelowTop, BelowSec, AboveTop, AboveSec, top, nullptr); }
++        if (needSecond) { if (raw) MergeQuarterN<true, true>(nAbove > 0, belowKind, c3, startLine, BelowTop, BelowSec, AboveTop, AboveSec, top, SecondLine); else MergeQuarterN<true, false>(nAbove > 0, belowKind, c3, startLine, BelowTop, BelowSec, AboveTop, AboveSec, top, SecondLine); }
++        else            { if (raw) MergeQuarterN<false, true>(nAbove > 0, belowKind, c3, startLine, BelowTop, BelowSec, AboveTop, AboveSec, top, nullptr);   else MergeQuarterN<false, false>(nAbove > 0, belowKind, c3, startLine, BelowTop, BelowSec, AboveTop, AboveSec, top, nullptr); }
+         if (possible) EffectsTo(outs[q], effect, secondTargets);
+     }
+     Line3D = line3d;
+ }
+ 
+-#ifdef BANANA_NEON
+-// melonDS's colour operations (GPU_ColorOp.h) on four pixels, exactly: red and blue are computed packed in one lane
+-// (each channel's sum stays below 2^16 before the shift, so neither reaches the other)
+-static inline uint32x4_t VBlendN(uint32x4_t v1, uint32x4_t v2, uint32x4_t eva, uint32x4_t evb, int shift)
+-{
+-    const uint32x4_t mrb = vdupq_n_u32(0x3F003F), mg = vdupq_n_u32(0x3F00);
+-    uint32x4_t rb = vdupq_n_u32(shift == 4 ? 0x080008 : 0x100010);
+-    uint32x4_t g = vdupq_n_u32(shift == 4 ? 0x000800 : 0x001000);
+-    rb = vmlaq_u32(rb, vandq_u32(v1, mrb), eva);
+-    rb = vmlaq_u32(rb, vandq_u32(v2, mrb), evb);
+-    g = vmlaq_u32(g, vandq_u32(v1, mg), eva);
+-    g = vmlaq_u32(g, vandq_u32(v2, mg), evb);
+-    if (shift == 4) { rb = vshrq_n_u32(rb, 4); g = vshrq_n_u32(g, 4); }
+-    else            { rb = vshrq_n_u32(rb, 5); g = vshrq_n_u32(g, 5); }
+-    uint32x4_t r = vminq_u32(vandq_u32(rb, vdupq_n_u32(0xFF)), vdupq_n_u32(0x3F));
+-    uint32x4_t b = vminq_u32(vandq_u32(rb, vdupq_n_u32(0x7F0000)), vdupq_n_u32(0x3F0000));
+-    g = vminq_u32(vandq_u32(g, vdupq_n_u32(0x7F00)), mg);
+-    return vorrq_u32(vorrq_u32(r, g), vorrq_u32(b, vdupq_n_u32(0xFF000000)));
+-}
+-
+-template<bool up>
+-static inline uint32x4_t VBright(uint32x4_t val, uint32x4_t evy)
+-{
+-    uint32x4_t rb = vandq_u32(val, vdupq_n_u32(0x3F003F));
+-    uint32x4_t g = vandq_u32(val, vdupq_n_u32(0x3F00));
+-    if (up)
+-    {
+-        rb = vaddq_u32(rb, vandq_u32(vshrq_n_u32(vmlaq_u32(vdupq_n_u32(8 * 0x010001), vsubq_u32(vdupq_n_u32(0x3F003F), rb), evy), 4), vdupq_n_u32(0x3F003F)));
+-        g = vaddq_u32(g, vandq_u32(vshrq_n_u32(vmlaq_u32(vdupq_n_u32(8 * 0x000100), vsubq_u32(vdupq_n_u32(0x3F00), g), evy), 4), vdupq_n_u32(0x3F00)));
+-    }
+-    else
+-    {
+-        rb = vsubq_u32(rb, vandq_u32(vshrq_n_u32(vmlaq_u32(vdupq_n_u32(7 * 0x010001), rb, evy), 4), vdupq_n_u32(0x3F003F)));
+-        g = vsubq_u32(g, vandq_u32(vshrq_n_u32(vmlaq_u32(vdupq_n_u32(7 * 0x000100), g, evy), 4), vdupq_n_u32(0x3F00)));
+-    }
+-    return vorrq_u32(vorrq_u32(rb, g), vdupq_n_u32(0xFF000000));
+-}
+-
+-// a pixel's BLDCNT 1st-target bit (FirstBitTab) from its flag byte f
+-static inline uint32x4_t VFirstBit(uint32x4_t f)
+-{
+-    uint32x4_t r = vbslq_u32(vtstq_u32(f, vdupq_n_u32(0x40)), vdupq_n_u32(0x01), f);
+-    return vbslq_u32(vtstq_u32(f, vdupq_n_u32(0x80)), vdupq_n_u32(0x10), r);
+-}
+-
+-template<bool up>
+-void BananaRenderer2D::BrightnessPassNeon(u32* dst)
+-{
+-    const uint32x4_t bc = vdupq_n_u32(R.BlendCnt), evy = vdupq_n_u32(R.EVY), m20 = vdupq_n_u32(0x20);
+-    const u8* wm = WindowsOn ? WindowMask : AllOnes;
+-    for (int i = 0; i < 256; i += 4)
+-    {
+-        uint32x4_t val = vld1q_u32(&TopLine[i]);
+-        uint32x4_t hit = vtstq_u32(VFirstBit(vshrq_n_u32(val, 24)), bc);
+-        hit = vandq_u32(hit, vtstq_u32(VFromBytes4(*(const u32*)&wm[i]), m20));
+-        vst1q_u32(&dst[i], vbslq_u32(hit, VBright<up>(val, evy), val));
+-    }
+-}
+-
+-// EffectsPass four pixels at a time: every result the lanes can need, then the same choices as masks
+-template<u32 effect>
+-void BananaRenderer2D::EffectsPassNeon(u32* dst)
+-{
+-    const u32 blendCnt = R.BlendCnt;
+-    const uint32x4_t bc = vdupq_n_u32(blendCnt), evy = vdupq_n_u32(R.EVY);
+-    const uint32x4_t EVA = vdupq_n_u32(R.EVA), EVB = vdupq_n_u32(R.EVB);
+-    const uint32x4_t m1f = vdupq_n_u32(0x1F), m40 = vdupq_n_u32(0x40), m80 = vdupq_n_u32(0x80), m20 = vdupq_n_u32(0x20);
+-    const uint32x4_t sixteen = vdupq_n_u32(16), one = vdupq_n_u32(1), thirtytwo = vdupq_n_u32(32);
+-    const uint32x4_t zero = vdupq_n_u32(0);
+-    // brightness for sprite / 3D / BG pixels that aren't blended: BLDCNT bit 4 / bit 0 / the pixel's own bit
+-    const uint32x4_t sprBright = vdupq_n_u32((effect >= 2 && (blendCnt & 0x10)) ? ~0u : 0);
+-    const uint32x4_t d3Bright = vdupq_n_u32((effect >= 2 && (blendCnt & 0x01)) ? ~0u : 0);
+-    const u8* wm = WindowsOn ? WindowMask : AllOnes;
+-
+-    for (int i = 0; i < 256; i += 4)
+-    {
+-        uint32x4_t val1 = vld1q_u32(&TopLine[i]);
+-        uint32x4_t val2 = vld1q_u32(&SecondLine[i]);
+-        uint32x4_t f1 = vshrq_n_u32(val1, 24);
+-        uint32x4_t f2 = vshrq_n_u32(val2, 24);
+-        // Target2Tab
+-        uint32x4_t t2 = vbslq_u32(vtstq_u32(f2, m40), vdupq_n_u32(0x100), vshlq_n_u32(f2, 8));
+-        t2 = vbslq_u32(vtstq_u32(f2, m80), vdupq_n_u32(0x1000), t2);
+-        uint32x4_t second = vtstq_u32(t2, bc);
+-        uint32x4_t inwin = vtstq_u32(VFromBytes4(*(const u32*)&wm[i]), m20);
+-
+-        uint32x4_t spr = vtstq_u32(f1, m80);
+-        uint32x4_t d3 = vbicq_u32(vtstq_u32(f1, m40), spr);
+-        uint32x4_t bg = vmvnq_u32(vorrq_u32(spr, d3));
+-
+-        uint32x4_t out = val1;
+-        uint32x4_t useBright;   // lanes that take the brightness result
+-        uint32x4_t useB4;       // lanes that take ColorBlend4
+-
+-        // sprites: blended over a 2nd target (their own alpha for bitmap sprites), else maybe brightness
+-        useB4 = vandq_u32(spr, second);
+-        useBright = vandq_u32(vbicq_u32(spr, second), vandq_u32(sprBright, inwin));
+-        // BG pixels (and the backdrop): the effect where the pixel is a 1st target inside the effect window
+-        if (effect != 0)
+-        {
+-            uint32x4_t cond = vandq_u32(vandq_u32(bg, vtstq_u32(f1, bc)), inwin);
+-            if (effect == 1) useB4 = vorrq_u32(useB4, vandq_u32(cond, second));
+-            else             useBright = vorrq_u32(useBright, cond);
+-        }
+-        // 3D pixels: ColorBlend5 over a 2nd target, else maybe brightness
+-        uint32x4_t useB5 = vandq_u32(d3, second);
+-        useBright = vorrq_u32(useBright, vandq_u32(vbicq_u32(d3, second), vandq_u32(d3Bright, inwin)));
+-
+-        if (vmaxvq_u32(useB4))
+-        {
+-            uint32x4_t own = vandq_u32(spr, vtstq_u32(f1, m40));
+-            uint32x4_t eva = vbslq_u32(own, vandq_u32(f1, m1f), EVA);
+-            uint32x4_t evb = vbslq_u32(own, vsubq_u32(sixteen, vandq_u32(f1, m1f)), EVB);
+-            out = vbslq_u32(useB4, VBlendN(val1, val2, eva, evb, 4), out);
+-        }
+-        if (vmaxvq_u32(useB5))
+-        {
+-            // an opaque 3D pixel (alpha 31: eva 32) blends to itself, which out already is for these lanes (no other
+-            // effect touches a 3D pixel over a 2nd target): the blend only for translucent ones, and not at all when
+-            // all four are opaque, as most of a 3D scene is (Golden Sun: Dark Dawn's field: the 2D thread's busiest loop)
+-            uint32x4_t eva = vaddq_u32(vandq_u32(f1, m1f), one);
+-            useB5 = vbicq_u32(useB5, vceqq_u32(eva, thirtytwo));
+-            if (vmaxvq_u32(useB5))
+-                out = vbslq_u32(useB5, VBlendN(val1, val2, eva, vsubq_u32(thirtytwo, eva), 5), out);
+-        }
+-        if (effect >= 2 && vmaxvq_u32(useBright))
+-            out = vbslq_u32(useBright, VBright<effect == 2>(val1, evy), out);
+-        (void)zero;
+-        vst1q_u32(&dst[i], out);
+-    }
+-}
+-#endif
+-
+-// brightness up/down with no 2nd targets in BLDCNT: the only effect that can apply is on 1st-target
+-// pixels inside the effect window
+-template<bool up>
+-void BananaRenderer2D::BrightnessPass(u32* dst)
+-{
+-    u32 blendCnt = R.BlendCnt;
+-    u32 evy = R.EVY;
+-    const u8* wm = WindowsOn ? WindowMask : AllOnes;
+-
+-    for (int i = 0; i < 256; i++)
+-    {
+-        u32 val = TopLine[i];
+-        u32 f1 = val >> 24;
+-        u32 fb = (f1 & 0x40) ? 0x01 : f1;
+-        fb = (f1 & 0x80) ? 0x10 : fb;
+-        bool hit = (blendCnt & fb) && (wm[i] & 0x20);
+-        u32 e = up ? ColorBrightnessUp(val, evy, 0x8) : ColorBrightnessDown(val, evy, 0x7);
+-        dst[i] = hit ? e : val;
+-    }
+-}
+-
+-// melonDS ColorComposite with the 2nd-target bits set: sprite and 3D blending, alpha, brightness
+-template<u32 effect>
+-void BananaRenderer2D::EffectsPass(u32* dst)
+-{
+-    u32 blendCnt = R.BlendCnt;
+-    const u8* wm = WindowsOn ? WindowMask : AllOnes;
+-    u32 EVA = R.EVA, EVB = R.EVB, EVY = R.EVY;
+-
+-    for (int i = 0; i < 256; i++)
+-    {
+-        u32 val1 = TopLine[i];
+-        u32 val2 = SecondLine[i];
+-        u32 flag1 = val1 >> 24;
+-        bool second = blendCnt & Target2Tab.v[val2 >> 24];
+-
+-        u32 out;
+-        if (flag1 & 0x80)
+-        {
+-            // sprite blending (semi-transparent or bitmap sprite over a 2nd target)
+-            if (second)
+-            {
+-                u32 eva, evb;
+-                if (flag1 & 0x40)
+-                {
+-                    eva = flag1 & 0x1F;
+-                    evb = 16 - eva;
+-                }
+-                else
+-                {
+-                    eva = EVA;
+-                    evb = EVB;
+-                }
+-                out = ColorBlend4(val1, val2, eva, evb);
+-            }
+-            else if (effect >= 2 && (blendCnt & 0x10) && (wm[i] & 0x20))
+-                out = (effect == 2) ? ColorBrightnessUp(val1, EVY, 0x8) : ColorBrightnessDown(val1, EVY, 0x7);
+-            else
+-                out = val1;
+-        }
+-        else if (flag1 & 0x40)
+-        {
+-            // 3D layer over a 2nd target
+-            if (second)
+-                out = ColorBlend5(val1, val2);
+-            else if (effect >= 2 && (blendCnt & 0x01) && (wm[i] & 0x20))
+-                out = (effect == 2) ? ColorBrightnessUp(val1, EVY, 0x8) : ColorBrightnessDown(val1, EVY, 0x7);
+-            else
+-                out = val1;
+-        }
+-        else
+-        {
+-            out = val1;
+-            if (effect != 0 && (blendCnt & flag1) && (wm[i] & 0x20))
+-            {
+-                if (effect == 1)
+-                {
+-                    if (second) out = ColorBlend4(val1, val2, EVA, EVB);
+-                }
+-                else if (effect == 2)
+-                    out = ColorBrightnessUp(val1, EVY, 0x8);
+-                else
+-                    out = ColorBrightnessDown(val1, EVY, 0x7);
+-            }
+-        }
+-        dst[i] = out;
+-    }
+-}
+-
+-
+-// ---- scanline ----------------------------------------------------------------------------------
+-
+-void BananaRenderer2D::DrawScanline(u32 line)
+-{
+-    if (Banana2DFast)
+-    {
+-        // (render.2d_fast: the snapshot goes straight into R, no second copy)
+-        PrepareScanline(R);
+-        DrawScanlineFrom(line, R, Parent.Output3D);
+-        return;
+-    }
+-    Banana2DRegs regs;
+-    PrepareScanline(regs);
+-    DrawScanlineFrom(line, regs, Parent.Output3D);
+-}
+-
+-void BananaRenderer2D::DrawScanlineHires(u32 line, const u32* const* q3d)
+-{
+-    if (Banana2DFast)
+-    {
+-        PrepareScanline(R);
+-        DrawScanlineFrom(line, R, q3d[0], q3d);
+-        return;
+-    }
+-    Banana2DRegs regs;
+-    PrepareScanline(regs);
+-    DrawScanlineFrom(line, regs, q3d[0], q3d);
+-}
+-
+-void BananaRenderer2D::PrepareScanline(Banana2DRegs& regs)
+-{
+-    regs.From(GPU2D);
+-    if (NeedResync)
+-        DoResync();
+-
+-    if (!GPU2D.Enabled || GPU2D.ForcedBlank)
+-        return;
+-
+-    // the windows' horizontal state after the line, as CalcWindowMask leaves it: whatever it was before the line,
+-    // the last of the two edges wins (x2 when they are equal)
+-    u32 dispcnt = GPU2D.DispCnt;
+-    if (dispcnt & (1<<14))
+-        GPU2D.Win1Active = (GPU2D.Win1Active & 0x1) | ((GPU2D.Win1Coords[1] < GPU2D.Win1Coords[0]) ? 0x2 : 0);
+-    if (dispcnt & (1<<13))
+-        GPU2D.Win0Active = (GPU2D.Win0Active & 0x1) | ((GPU2D.Win0Coords[1] < GPU2D.Win0Coords[0]) ? 0x2 : 0);
+-
+-    if (ExtPalsResynced)
+-    {
+-        regs.BGExtChanged = regs.OBJExtChanged = true;
+-        ExtPalsResynced = false;
+-    }
+-
+-    if (GPU2D.Num == 0)
+-    {
+-        // (render.2d_fast: a set with nothing remapped or written since the last line, most lines, is skipped
+-        // without deriving it (VRAMTrackingSet::Unchanged, melonDS patch 0012), and an empty derived set has nothing
+-        // to make coherent or copy. Deriving one set never changes another's state except through the dirty bits
+-        // it clears, and the sets are still derived in the same order, so this is exact.)
+-        const bool all = !Banana2DFast;
+-        if (all || !GPU.VRAMDirty_ABG.Unchanged(GPU))
+-        {
+-            auto bgDirty = GPU.VRAMDirty_ABG.DeriveState(GPU.VRAMMap_ABG, GPU);
+-            if (all || AnyBits(bgDirty))
+-            {
+-                GPU.MakeVRAMFlat_ABGCoherent(bgDirty);
+-                if (CopyTo) CopyDirty(bgDirty, BGVRAM, GPU.VRAMFlat_ABG);
+-            }
+-        }
+-        if (all || !GPU.VRAMDirty_ABGExtPal.Unchanged(GPU))
+-        {
+-            auto bgExtPalDirty = GPU.VRAMDirty_ABGExtPal.DeriveState(GPU.VRAMMap_ABGExtPal, GPU);
+-            if (all || AnyBits(bgExtPalDirty))
+-            {
+-                regs.BGExtChanged |= GPU.MakeVRAMFlat_ABGExtPalCoherent(bgExtPalDirty);
+-                if (CopyTo) CopyDirty(bgExtPalDirty, BGExtMem, GPU.VRAMFlat_ABGExtPal);
+-            }
+-        }
+-        if (all || !GPU.VRAMDirty_AOBJExtPal.Unchanged(GPU))
+-        {
+-            auto objExtPalDirty = GPU.VRAMDirty_AOBJExtPal.DeriveState(&GPU.VRAMMap_AOBJExtPal, GPU);
+-            if (all || AnyBits(objExtPalDirty))
+-            {
+-                regs.OBJExtChanged |= GPU.MakeVRAMFlat_AOBJExtPalCoherent(objExtPalDirty);
+-                if (CopyTo) CopyDirty(objExtPalDirty, OBJExtMem, GPU.VRAMFlat_AOBJExtPal);
+-            }
+-        }
+-    }
+-    else
+-    {
+-        // (render.2d_fast: a set with nothing remapped or written since the last line, most lines, is skipped
+-        // without deriving it (VRAMTrackingSet::Unchanged, melonDS patch 0012), and an empty derived set has nothing
+-        // to make coherent or copy. Deriving one set never changes another's state except through the dirty bits
+-        // it clears, and the sets are still derived in the same order, so this is exact.)
+-        const bool all = !Banana2DFast;
+-        if (all || !GPU.VRAMDirty_BBG.Unchanged(GPU))
+-        {
+-            auto bgDirty = GPU.VRAMDirty_BBG.DeriveState(GPU.VRAMMap_BBG, GPU);
+-            if (all || AnyBits(bgDirty))
+-            {
+-                GPU.MakeVRAMFlat_BBGCoherent(bgDirty);
+-                if (CopyTo) CopyDirty(bgDirty, BGVRAM, GPU.VRAMFlat_BBG);
+-            }
+-        }
+-        if (all || !GPU.VRAMDirty_BBGExtPal.Unchanged(GPU))
+-        {
+-            auto bgExtPalDirty = GPU.VRAMDirty_BBGExtPal.DeriveState(GPU.VRAMMap_BBGExtPal, GPU);
+-            if (all || AnyBits(bgExtPalDirty))
+-            {
+-                regs.BGExtChanged |= GPU.MakeVRAMFlat_BBGExtPalCoherent(bgExtPalDirty);
+-                if (CopyTo) CopyDirty(bgExtPalDirty, BGExtMem, GPU.VRAMFlat_BBGExtPal);
+-            }
+-        }
+-        if (all || !GPU.VRAMDirty_BOBJExtPal.Unchanged(GPU))
+-        {
+-            auto objExtPalDirty = GPU.VRAMDirty_BOBJExtPal.DeriveState(&GPU.VRAMMap_BOBJExtPal, GPU);
+-            if (all || AnyBits(objExtPalDirty))
+-            {
+-                regs.OBJExtChanged |= GPU.MakeVRAMFlat_BOBJExtPalCoherent(objExtPalDirty);
+-                if (CopyTo) CopyDirty(objExtPalDirty, OBJExtMem, GPU.VRAMFlat_BOBJExtPal);
+-            }
+-        }
+-    }
+-
+-    // the palettes: converted by the drawing when changed (bgbits: the BG half and its colour 0, the backdrop)
+-    u32 shift = GPU2D.Num * 2;
+-    u32 bgbits = (0x01 | 0x10) << shift;
+-    u32 objbits = 0x02 << shift;
+-    u32 paloff = GPU2D.Num ? 0x400 : 0;
+-    if ((GPU.PaletteDirty & bgbits) || PalBGStale)
+-    {
+-        regs.PalBG = true;
+-        regs.PalBGStale = PalBGStale;
+-        if (CopyTo) CopyTo(CopyCtx, (void*)PalMem, &GPU.Palette[paloff], 0x200);
+-        GPU.PaletteDirty &= ~bgbits;
+-        PalBGStale = false;
+-    }
+-    if ((GPU.PaletteDirty & objbits) || PalOBJStale)
+-    {
+-        regs.PalOBJ = true;
+-        if (CopyTo) CopyTo(CopyCtx, (void*)(PalMem + 0x200), &GPU.Palette[paloff + 0x200], 0x200);
+-        GPU.PaletteDirty &= ~objbits;
+-        PalOBJStale = false;
+-    }
+-}
+-
+-void BananaRenderer2D::DrawScanlineFrom(u32 line, const Banana2DRegs& regs, const u32* line3d, const u32* const* q3d)
+-{
+-    if (&regs != &R) R = regs;
+-    Line3D = line3d;
+-    u32* dst = Parent.Output2D[GPU2D.Num];
+-    HiLines = 1;
+-
+-    if (!R.Enabled)
+-    {
+-        // if this 2D unit is disabled in POWCNT, the output is a fixed color
+-        // (black for unit A, white for unit B)
+-        u32 fillcolor = (GPU2D.Num == 0) ? 0xFF000000 : 0xFF3F3F3F;
+-        for (int i = 0; i < 256; i++)
+-            dst[i] = fillcolor;
+-        return;
+-    }
+-
+-    if (R.ForcedBlank)
+-    {
+-        for (int i = 0; i < 256; i++)
+-            dst[i] = 0xFF3F3F3F;
+-        return;
+-    }
+-
+-    if (R.BGExtChanged) BGExtPalValid = 0;
+-    if (R.OBJExtChanged) ObjExtValid = false;
+-    if (R.PalBG || R.PalOBJ)
+-        UpdatePalettes(R.PalBG, R.PalOBJ, R.PalBGStale);
+-
+-    u32 dispcnt = R.DispCnt;
+-    u8 enable = R.LayerEnable;
+-
+-    WindowsOn = (dispcnt & 0xE000) != 0;
+-    if (WindowsOn)
+-        CalcWindowMask();
+-
+-    LayerDrawn = 0;
+-    LayerFull = 0;
+-    Raw3D = false;
+-
+-    // BG types per mode: 0 none, 1 text, 2 affine, 3 extended, 4 large, 5 3D
+-    enum { T_None, T_Text, T_Affine, T_Ext, T_Large, T_3D };
+-    u8 type[4] = { T_None, T_None, T_None, T_None };
+-    bool bg0_3d = (!GPU2D.Num) && (dispcnt & 0x8);
+-    switch (dispcnt & 0x7)
+-    {
+-    case 0: type[0] = T_Text; type[1] = T_Text; type[2] = T_Text;   type[3] = T_Text;   break;
+-    case 1: type[0] = T_Text; type[1] = T_Text; type[2] = T_Text;   type[3] = T_Affine; break;
+-    case 2: type[0] = T_Text; type[1] = T_Text; type[2] = T_Affine; type[3] = T_Affine; break;
+-    case 3: type[0] = T_Text; type[1] = T_Text; type[2] = T_Text;   type[3] = T_Ext;    break;
+-    case 4: type[0] = T_Text; type[1] = T_Text; type[2] = T_Affine; type[3] = T_Ext;    break;
+-    case 5: type[0] = T_Text; type[1] = T_Text; type[2] = T_Ext;    type[3] = T_Ext;    break;
+-    case 6: type[0] = bg0_3d ? T_3D : T_None; type[2] = T_Large; break;
+-    case 7: type[0] = T_Text; type[1] = T_Text; break;
+-    }
+-    if (bg0_3d && type[0] == T_Text) type[0] = T_3D;
+-
+-    u32 bgmosaic = R.BGMosaicSize[0];
+-    bool drew3d = false;
+-
+-    for (u32 bg = 0; bg < 4; bg++)
+-    {
+-        if (!(enable & (1<<bg)) || type[bg] == T_None)
+-            continue;
+-
+-        u16 bgcnt = R.BGCnt[bg];
+-        u32* L = BGLine(bg);
+-
+-        switch (type[bg])
+-        {
+-        case T_3D:
+-            // with no window to apply, the compositor converts the 3D line itself (one pass less)
+-            if (Banana2DFast && !WindowsOn) Raw3D = true;
+-            else                            DrawBG_3D();
+-            LayerDrawn |= (1<<bg);
+-            drew3d = true;
+-            break;
+-        case T_Text:
+-            if (bgcnt & (1<<7)) DrawBG_Text<true>(line, bg);
+-            else                DrawBG_Text<false>(line, bg);
+-            break;
+-        case T_Affine:
+-            DrawBG_Affine(line, bg);
+-            break;
+-        case T_Ext:
+-            DrawBG_Extended(line, bg);
+-            break;
+-        case T_Large:
+-            DrawBG_Large(line);
+-            break;
+-        }
+-
+-        if (!(LayerDrawn & (1<<bg)))
+-            continue;
+-
+-        if (type[bg] != T_3D && (bgcnt & (1<<6)) && bgmosaic > 0)
+-            ApplyMosaicX(L, bgmosaic);
+-
+-        if (WindowsOn)
+-            ApplyWindow(L, 1 << bg);
+-    }
+-    if (WindowsOn)
+-        LayerFull = 0;
+-
+-    if ((enable & (1<<4)) && NumSprites)
+-    {
+-        ApplySpriteMosaicX();
+-        ResolveSprites();
+-    }
+-    else
+-        OBJPrioPresent = 0;
+-
+-    if (!q3d || !drew3d)
+-    {
+-        CompositeTo(dst);
+-        return;
+-    }
+-    // 2x: the layers above, then the compositing once for each of the 3D layer's four lines (quarter 0 into dst,
+-    // the others into HiOut), as DraStic composites its 2x frame's quarters
+-    if (Banana2DQuarters)
+-    {
+-        CompositeHires(dst, q3d);   // (the 2D layers' part of the painter's pass done once for the four)
+-        HiLines = 4;
+-        return;
+-    }
+-    CompositeTo(dst);
+-    for (int q = 1; q < 4; q++)
+-    {
+-        Line3D = q3d[q];
+-        if (!Raw3D)
+-        {
+-            DrawBG_3D();
+-            if (WindowsOn) ApplyWindow(BGLine(0), 1);
+-        }
+-        CompositeTo(HiOut[q - 1]);
+-    }
+-    Line3D = line3d;
+-    HiLines = 4;
+-}
+-
+ // the layers drawn by DrawScanlineFrom composited into dst, with the colour effects
+ void BananaRenderer2D::CompositeTo(u32* dst)
+ {
+-- 
+2.43.0
+
