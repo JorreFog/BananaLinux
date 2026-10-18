@@ -61,8 +61,25 @@ All with my own builds of the agents' commits (build-a64-device.sh = the device'
 
 ## 5. Combined measurement (base build-dev vs everything)
 
-See the board's combined RESULTs (17:36 #1; #2 on perf/integrated) and evidence/sim/combined-int*.txt.
-(#2 numbers: filled in below when measured.)
+perf/integrated @ 4de7beb (my worktree /home/user/perf/sim/v-int; = render's final dc50d19 + its PERF.md commit, jit's
+0021-0024 commits, core's f503a7a build options; no conflicts), built like the device (build-a64-device.sh) with the
+base-tree PGO profile (prof-dev), vs build-dev (the base). rgds-sim v2, the frame's slowest thread, ms/frame @1104:
+
+| workload | base | integrated | change |
+|---|---|---|---|
+| ds2dtest 2x (dev) | 2D thread 16.49 | 2D thread 11.49 | -30.3% (@1992 -29.5%) |
+| membench-win 2x (dev; render's windows-over-3D ROM) | 2D thread 7.88 | 2D thread 4.27 | -45.9% |
+| dsstress-L5 2x (dev) | main 4.3-4.6 | 2D thread 3.96-4.22 | -2..-14% (dev noise ±4%) |
+| membench 1x (st) | 4.66 | 4.22 | -9.6% |
+| dsstress-L5 1x (st) | 6.86 | 6.71 | -2.3% |
+| cpubench-thumb (st) | 5.48 | 5.46 | -0.5% |
+
+At 2x the emulator's thread drops 30-40% (render.3d_pipeline moves the Gengis bins to the workers, +23..27% there):
+the 2D thread is now the frame's limit at 2x in every workload. Not counted: render.2d_prefetch16 (a prefetch, v3).
+The PGO profile is from the base tree: its 1x gain mostly vanished (L1I misses back up); retrain it on the final tree
+(core's train.sh; core was doing it: /home/user/perf/core/prof-int). Exact: pictures + audio identical to the base on
+17 ROMs at 1x and 5 at 2x (rgds-sim/tools/exact.sh), plus render's matrix subset (dev2x 10 ROMs, 1x-t0).
+Evidence: evidence/sim/combined-int1.txt, combined-int2.txt.
 
 ## 6. Device test commands (for the local agent)
 

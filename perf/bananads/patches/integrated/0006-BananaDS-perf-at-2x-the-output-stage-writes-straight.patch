@@ -1,0 +1,217 @@
+From 2a23af3faa612b85c986d028768b38328bd04c18 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sun, 18 Oct 2026 15:58:30 +0000
+Subject: [PATCH 06/23] BananaDS perf: at 2x the output stage writes straight
+ into the rows (render.2d_emit_zip)
+
+EmitA at 2x converted each of a 3D line's four composited quarters into a 256-pixel line of its own (WriteLine:
+master brightness, 6-to-8-bit expansion; 240k instructions a frame on the 2D thread on dsstress L5) and then
+zipped the lines' even and odd pixels into the frame's two 512-pixel rows (164k); EmitB, and EmitA for a line
+without the 3D layer, converted the line and then doubled it into its two rows (DoubleLine; EmitB 130k).
+WriteZipNeon and WriteDoubleNeon do each in one pass: WriteLineNeon's planes, zipped byte by byte (output pixel
+2i is even pixel i, 2i + 1 odd pixel i) or with each byte twice, stored once; no line in between. Exact: a random
+test against WriteLineNeon + ZipLine / DoubleLine over every brightness mode and factor, 6000 cases, 0 mismatches
+(perf evidence, zip_test.cpp). Display modes 0, 2 and 3 go as before. render.2d_emit_zip=off keeps the two passes.
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01PvbFhKAw3ERk5a13S651g1
+---
+ bananads/docs/SETTINGS.md       |   1 +
+ bananads/gpu2d/GPU2D_Banana.cpp |   1 +
+ bananads/gpu2d/GPU2D_Banana.h   |   5 ++
+ bananads/gpu2d/GPU_Banana.cpp   | 105 +++++++++++++++++++++++++++++++-
+ bananads/src/emu.cpp            |   2 +
+ 5 files changed, 113 insertions(+), 1 deletion(-)
+
+diff --git a/bananads/docs/SETTINGS.md b/bananads/docs/SETTINGS.md
+index 10c3ba0..ecf34e1 100644
+--- a/bananads/docs/SETTINGS.md
++++ b/bananads/docs/SETTINGS.md
+@@ -33,6 +33,7 @@ key can also come from the environment as `BANANADS_<KEY>` (dots become undersco
+ | `render.2d_fast` | `on` | the Banana 2D engine's fast paths (`render.2d=banana`, on either thread of `render.2d_thread`): NEON (aarch64) for the output stage (master brightness, 6-to-8-bit expansion, display modes 2-3), 16-colour text BGs (palette lookups with `tbl`, 8 pixels per `st4`), 256-colour text BGs, direct-colour bitmaps, colour effects (blending, brightness) and sprite resolving; the 3D layer read by the compositor without a pass of its own; affine BGs 4 pixels per step; per-line sprite lists; partial clears of the sprite line. `off`: the portable code. The same pixels either way. Also `BANANADS_RENDER_2D_FAST=off` |
+ | `render.2d_comp_unroll` | `on` | the Banana 2D engine's compositor (the painter's pass over the layer lines, four pixels at a time) with its loop over the layers unrolled by the template (a fold over the steps), the same operations in the same order; `off`: the plain loop, which GCC compiles well only at `-O3` (BananaLinux builds at `-O2`: 2.5-3x the instructions per line). Same pixels |
+ | `render.2d_quarters` | `on` | at `render.scale=2`, a line that shows the 3D layer is composited once per quarter (four times); the four differ only in the 3D layer, so the painter's pass over the 2D layers (the ones below the 3D layer onto the backdrop, the ones above onto nothing) is done once and each quarter only merges its 3D line in, then takes the colour effects as before. `off`: four full passes. Same pixels |
++| `render.2d_emit_zip` | `on` | at `render.scale=2`, the output stage (master brightness, 6-to-8-bit expansion) writes straight into the frame's two 512-pixel rows: a 3D line's four composited quarters zipped (even and odd pixels) as it goes, and a line without the 3D layer, or of the bottom screen, with each pixel doubled (`render.2d_fast` builds, display mode 1); `off`: a converted 256-pixel line first, then the zip or the doubling. Same pixels |
+ | `render.3d_share` | `on` | with Gengis and the 2D thread, a line's job points at Gengis's rows of the 3D frame (Gengis keeps two frames' rows) instead of a copy: at `render.scale=2` the line's four quarters (4 KB), at 1x the line (1 KB). Exact: the same frames and audio |
+ | `render.2d_lazy` | `on` | with the 2D thread (`render.2d_thread`), a frame's last lines may be drawn while the emulator runs the next frame: at a frame's end the emulator waits only for the frame before's, and whoever reads a frame (the KMS presenter, `top()`/`bottom()`, a savestate's picture) waits for its own. Same pictures |
+ | `render.3d_wait2d` | `on` | with `render.3d_share` (1x and 2x), the 2D thread waits for each line's Gengis bin before compositing it, not the emulator's thread; the emulator waits for the 3D frame only at VBlank (before the geometry engine's next frame; with `render.3d_pipeline` only for its conversion). Same pictures |
+diff --git a/bananads/gpu2d/GPU2D_Banana.cpp b/bananads/gpu2d/GPU2D_Banana.cpp
+index 3305c78..fa7ab48 100644
+--- a/bananads/gpu2d/GPU2D_Banana.cpp
++++ b/bananads/gpu2d/GPU2D_Banana.cpp
+@@ -129,6 +129,7 @@ namespace melonDS
+ bool Banana2DFast = true;
+ bool Banana2DCompUnroll = true;
+ bool Banana2DQuarters = true;
++bool Banana2DEmitZip = true;
+ bool Banana3DShare = true;
+ bool Banana3DWait2D = true;
+ 
+diff --git a/bananads/gpu2d/GPU2D_Banana.h b/bananads/gpu2d/GPU2D_Banana.h
+index 9d479c0..71d2e43 100644
+--- a/bananads/gpu2d/GPU2D_Banana.h
++++ b/bananads/gpu2d/GPU2D_Banana.h
+@@ -40,6 +40,11 @@ extern bool Banana2DCompUnroll;
+ // render.2d_quarters (default on): at 2x, the four quarters of a line showing the 3D layer share one painter's pass
+ // over the 2D layers (CompositeHires); off: four full passes. The same pixels either way
+ extern bool Banana2DQuarters;
++// render.2d_emit_zip (default on): at 2x the output stage (master brightness, 6-to-8-bit expansion) writes a 3D
++// line's four quarters straight into the two interleaved framebuffer rows, and a 2D line doubled into its two rows
++// (one pass, no 1 KB line in between); off: a converted line first, then the zip or the doubling. The same pixels
++// either way (NEON builds)
++extern bool Banana2DEmitZip;
+ extern bool Banana3DShare;
+ extern bool Banana3DWait2D;  // render.3d_wait2d: the 2D thread, not the emulator's, waits for the 3D rows (BananaRenderer)  // render.3d_share: 2D jobs point at Gengis's rows of the 3D frame (BananaRenderer)
+ 
+diff --git a/bananads/gpu2d/GPU_Banana.cpp b/bananads/gpu2d/GPU_Banana.cpp
+index 606b5c1..327ec8b 100644
+--- a/bananads/gpu2d/GPU_Banana.cpp
++++ b/bananads/gpu2d/GPU_Banana.cpp
+@@ -167,6 +167,85 @@ static void WriteLineNeon(u32* dst, const u32* src, u32 factor)
+     }
+ }
+ 
++// render.2d_emit_zip: WriteLine of a 2x row's even pixels and odd pixels (256 each, 18-bit) straight into the row of
++// 512 32-bit pixels: the same planes as WriteLineNeon's, zipped byte by byte (output pixel 2i is even pixel i, 2i + 1
++// odd pixel i) before the store, so the row is written once and no converted line is kept in between
++template<int mode>
++static void WriteZipNeon(u32* dst, const u32* even, const u32* odd, u32 factor)
++{
++    uint8x8_t f = vdup_n_u8((u8)factor);
++    for (int i = 0; i < 256; i += 16)
++    {
++        uint8x16x4_t e = vld4q_u8((const u8*)(even + i));
++        uint8x16x4_t o = vld4q_u8((const u8*)(odd + i));
++        uint8x16_t er = e.val[0], eg = e.val[1], eb = e.val[2];
++        uint8x16_t od = o.val[0], og = o.val[1], ob = o.val[2];
++        if (mode)
++        {
++            er = Bright6<mode>(er, f); eg = Bright6<mode>(eg, f); eb = Bright6<mode>(eb, f);
++            od = Bright6<mode>(od, f); og = Bright6<mode>(og, f); ob = Bright6<mode>(ob, f);
++        }
++        er = Expand6(er); eg = Expand6(eg); eb = Expand6(eb);
++        od = Expand6(od); og = Expand6(og); ob = Expand6(ob);
++        uint8x16x4_t lo, hi;
++        lo.val[0] = vzip1q_u8(eb, ob); hi.val[0] = vzip2q_u8(eb, ob);
++        lo.val[1] = vzip1q_u8(eg, og); hi.val[1] = vzip2q_u8(eg, og);
++        lo.val[2] = vzip1q_u8(er, od); hi.val[2] = vzip2q_u8(er, od);
++        lo.val[3] = vdupq_n_u8(0xFF);
++        hi.val[3] = vdupq_n_u8(0xFF);
++        vst4q_u8((u8*)(dst + 2 * i), lo);
++        vst4q_u8((u8*)(dst + 2 * i + 16), hi);
++    }
++}
++
++// and a 1x line into two rows of 512 with each pixel twice (DoubleLine's layout), in one pass: the bottom screen and
++// the top screen's lines without the 3D layer
++template<int mode>
++static void WriteDoubleNeon(u32* dst, const u32* src, u32 factor)
++{
++    uint8x8_t f = vdup_n_u8((u8)factor);
++    for (int i = 0; i < 256; i += 16)
++    {
++        uint8x16x4_t s = vld4q_u8((const u8*)(src + i));
++        uint8x16_t r = s.val[0], g = s.val[1], b = s.val[2];
++        if (mode)
++        {
++            r = Bright6<mode>(r, f); g = Bright6<mode>(g, f); b = Bright6<mode>(b, f);
++        }
++        r = Expand6(r); g = Expand6(g); b = Expand6(b);
++        uint8x16x4_t lo, hi;
++        lo.val[0] = vzip1q_u8(b, b); hi.val[0] = vzip2q_u8(b, b);
++        lo.val[1] = vzip1q_u8(g, g); hi.val[1] = vzip2q_u8(g, g);
++        lo.val[2] = vzip1q_u8(r, r); hi.val[2] = vzip2q_u8(r, r);
++        lo.val[3] = vdupq_n_u8(0xFF);
++        hi.val[3] = vdupq_n_u8(0xFF);
++        vst4q_u8((u8*)(dst + 2 * i), lo);
++        vst4q_u8((u8*)(dst + 2 * i + 16), hi);
++        vst4q_u8((u8*)(dst + 512 + 2 * i), lo);
++        vst4q_u8((u8*)(dst + 512 + 2 * i + 16), hi);
++    }
++}
++
++static void WriteDouble(u32* dst, const u32* src, u16 brightness)
++{
++    u32 mode = brightness >> 14;
++    u32 factor = brightness & 0x1F;
++    if (factor > 16) factor = 16;
++    if (mode == 1 && factor)      WriteDoubleNeon<1>(dst, src, factor);
++    else if (mode == 2 && factor) WriteDoubleNeon<2>(dst, src, factor);
++    else                          WriteDoubleNeon<0>(dst, src, 0);
++}
++
++static void WriteZip(u32* dst, const u32* even, const u32* odd, u16 brightness)
++{
++    u32 mode = brightness >> 14;
++    u32 factor = brightness & 0x1F;
++    if (factor > 16) factor = 16;
++    if (mode == 1 && factor)      WriteZipNeon<1>(dst, even, odd, factor);
++    else if (mode == 2 && factor) WriteZipNeon<2>(dst, even, odd, factor);
++    else                          WriteZipNeon<0>(dst, even, odd, 0);
++}
++
+ // 16 direct-colour pixels (display modes 2 and 3) to the three 6-bit channel planes
+ static inline void Planes15(const u16* p, uint8x16_t& r, uint8x16_t& g, uint8x16_t& b)
+ {
+@@ -345,13 +424,30 @@ void BananaRenderer::EmitA(u32* dst, u32 dispcnt, u16 brightness, const u16* dis
+         return;
+     }
+     alignas(16) u32 q[4][256];
+-    OutputLineA(q[0], dispcnt, brightness, display);
+     auto& a = static_cast<BananaRenderer2D&>(*Rend2D_A);
+     if (((dispcnt >> 16) & 0x3) != 1 || a.HiLines == 1)
+     {
++#if defined(__aarch64__) && !defined(BANANA_NO_SIMD)
++        if (Banana2DFast && Banana2DEmitZip && ((dispcnt >> 16) & 0x3) == 1)
++        {
++            WriteDouble(dst, Output2D[0], brightness);   // (render.2d_emit_zip: the line doubled into the rows directly)
++            return;
++        }
++#endif
++        OutputLineA(q[0], dispcnt, brightness, display);
+         DoubleLine(dst, q[0]);
+         return;
+     }
++#if defined(__aarch64__) && !defined(BANANA_NO_SIMD)
++    if (Banana2DFast && Banana2DEmitZip)
++    {
++        // (render.2d_emit_zip: the four quarters straight into the two rows)
++        WriteZip(dst, Output2D[0], a.HiOut[0], brightness);
++        WriteZip(dst + 512, a.HiOut[1], a.HiOut[2], brightness);
++        return;
++    }
++#endif
++    OutputLineA(q[0], dispcnt, brightness, display);
+     for (int k = 1; k < 4; k++)
+         WriteLine(q[k], a.HiOut[k - 1], brightness);
+     ZipLine(dst, q[0], q[1]);
+@@ -365,6 +461,13 @@ void BananaRenderer::EmitB(u32* dst, u32 dispcnt, u16 brightness)
+         OutputLineB(dst, dispcnt, brightness);
+         return;
+     }
++#if defined(__aarch64__) && !defined(BANANA_NO_SIMD)
++    if (Banana2DFast && Banana2DEmitZip && ((dispcnt >> 16) & 0x1))
++    {
++        WriteDouble(dst, Output2D[1], brightness);   // (render.2d_emit_zip)
++        return;
++    }
++#endif
+     alignas(16) u32 t[256];
+     OutputLineB(t, dispcnt, brightness);
+     DoubleLine(dst, t);
+diff --git a/bananads/src/emu.cpp b/bananads/src/emu.cpp
+index 426e008..65e9bc4 100644
+--- a/bananads/src/emu.cpp
++++ b/bananads/src/emu.cpp
+@@ -431,6 +431,8 @@ bool Emu::load_rom(const std::string& path) {
+     melonDS::Banana2DCompUnroll = cfg_.flag("render.2d_comp_unroll", true);
+     // render.2d_quarters: at 2x the four quarters of a 3D line share one pass over the 2D layers (on; same pixels)
+     melonDS::Banana2DQuarters = cfg_.flag("render.2d_quarters", true);
++    // render.2d_emit_zip: at 2x the output stage writes a 3D line's quarters straight into the interleaved rows (on)
++    melonDS::Banana2DEmitZip = cfg_.flag("render.2d_emit_zip", true);
+     // render.3d_share: at 2x the 2D thread reads Gengis's rows of the 3D frame instead of a 4 KB copy a line (on)
+     melonDS::Banana3DShare = cfg_.flag("render.3d_share", true);
+     // render.3d_wait2d: with render.3d_share, the 2D thread waits for the 3D rows, not the emulator's thread (on)
+-- 
+2.43.0
+

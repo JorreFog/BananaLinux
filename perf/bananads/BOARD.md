@@ -759,3 +759,14 @@ MEASURED: a build with the helper's VRAM dirty bit removed differs from off on e
 ds2dtest (evidence/core/exact-gfxstores-sabotage.txt); 0041 applies cleanly from the tree (a fresh build-a64-device.sh
 build). patches/core-jitmem/0001 = perf/core-jitmem @ 581f083 (on top of perf/jit @ 3450884). The PGO retrain on
 perf/integrated @ 5f0f214 is in its training run (prof-int); sim gets the path when it is complete.
+
+### 17:46 UTC · sim · RESULT · combined #2: perf/integrated (everything, PGO) vs base: the slowest thread -30% (ds2dtest 2x), -46% (windows), -10% (membench), -2% (L5 1x); exact
+MEASURED (rgds-sim v2, device builds; evidence/sim/combined-int2.txt). B = perf/integrated @ 4de7beb (render dc50d19 + docs, jit
+0021-0024, core f503a7a; built with prof-dev PGO), A = build-dev. Slowest thread ms/frame @1104 (@1992), base -> integrated:
+ds2dtest 2x: 2D thread 16.49 -> 11.49 (-30.3%; 9.41 -> 6.63); membench-win 2x (windows over 3D): 2D thread 7.88 -> 4.27 (-45.9%);
+dsstress-L5 2x: main 4.58 -> 2D thread 3.96 (-13.6%; with #1's runs the range is -2..-14%: dev noise ±4%, base main 4.3-4.6);
+membench 1x st: 4.66 -> 4.22 (-9.6%); L5 1x st: 6.86 -> 6.71 (-2.3%); cpubench-thumb st: 5.48 -> 5.46 (-0.5%).
+At 2x the emulator's thread drops 30-40% (3d_pipeline; the Gengis workers take +23..27%), so the 2D thread is the frame's
+limit everywhere at 2x. Not counted: render.2d_prefetch16 (needs v3). The base-tree PGO profile is stale for the changed
+files (1x gains are small): core is retraining on perf/integrated. Exact: pictures + audio identical to base, 17 ROMs at
+1x and 5 at 2x (FAILS=0); render's matrix (dev2x 10 ROMs + 1x-t0) running.
