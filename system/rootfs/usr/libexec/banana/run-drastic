@@ -79,7 +79,8 @@ if grep -q '^ *quick_resume *= *on' /data/banana/settings.conf 2>/dev/null; then
     export DSFLIP_RESUME_FILE="$R" DSFLIP_RESUME_LOAD=$RLOAD
 fi
 # the settings screen's choices (KEY=value lines), exported to SuperDrastic
-if [ -f /data/banana/superdrastic.conf ]; then set -a; . /data/banana/superdrastic.conf; set +a; fi
+. /usr/libexec/banana/kv-env
+kv_export /data/banana/superdrastic.conf DSFLIP_ DSHOOK_  # (read, never run: kv-env)
 # the game's own shader (its page, X in the library: nds-game-shader), for this run only; a card shader from its folder
 gs=$(/usr/libexec/banana/nds-game-shader "$1")
 if [ -n "$gs" ]; then

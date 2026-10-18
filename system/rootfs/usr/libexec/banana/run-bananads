@@ -68,8 +68,10 @@ if [ -f $A ]; then
 fi
 # the DS's user name: the handheld's
 export BANANADS_FIRMWARE_NICKNAME=${BANANADS_FIRMWARE_NICKNAME:-Banana}
-# anything else for one run: /data/banana/bananads.env (shell assignments, exported), e.g. BANANADS_KMS_STATS=600
-if [ -f /data/banana/bananads.env ]; then set -a; . /data/banana/bananads.env; set +a; fi
+# anything else for one run: /data/banana/bananads.env (KEY=value lines, BANANADS_* and MELONDS_*, exported; read,
+# never run: kv-env), e.g. BANANADS_KMS_STATS=600
+. /usr/libexec/banana/kv-env
+kv_export /data/banana/bananads.env BANANADS_ MELONDS_
 # the in-game save as DraStic left it, when it played the game last (nds-saves: the two emulators share saves); a
 # quick resume state older than the save is dropped, as run-drastic does: loading it would put an older save back
 /usr/libexec/banana/nds-saves "$1"
