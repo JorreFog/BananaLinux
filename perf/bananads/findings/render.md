@@ -17,7 +17,9 @@ Status line (kept current at the end of the session): see "Status" at the bottom
 | 911ff8e | the 2D compositor's step loop unrolled by a fold: at the device's -O2 the plain loop costs 2.5-3x the instructions (core's membench 2D +37% is this) | `render.2d_comp_unroll` | on | yes: the same operations in the same order (comp_bench: identical output) |
 | 0bab5aa | at 2x the four quarters of a 3D line share one painter's pass over the 2D layers (the 2D thread's biggest own cost) | `render.2d_quarters` | on | yes: random-stack test, 12000 quarter cases, 0 mismatches |
 | 2a23af3 | at 2x the output stage (brightness, 6-to-8-bit expansion) writes straight into the rows: the quarters zipped, 2D lines doubled, no 1 KB line in between | `render.2d_emit_zip` | on | yes: random test vs WriteLineNeon + ZipLine/DoubleLine, 6000 cases, 0 mismatches |
-| 88a772a | the quarters merge without the empty halves (the first version lost on shallow stacks, see Measurements) | (same, `render.2d_quarters`) | on | yes: 20000 quarter cases, 0 mismatches |
+| 347784d | the quarters merge without the empty halves (the first version lost on shallow stacks, see Measurements) | (same, `render.2d_quarters`) | on | yes: 20000 quarter cases, 0 mismatches |
+| 1c9095b | the Gengis workers wake on the claim word alone (a benign pre-existing race on the frame number dropped) | (none: no behaviour) | - | yes |
+| 8677fad | the waits for the 2D thread (a frame's fence: the KMS presenter at SCHED_FIFO before it shows a slot, the emulator's thread at a frame's end and at line 215; drains; a full ring or log) block on a condition variable instead of spinning on sched_yield | `render.2d_fence_wait=block\|spin` | block | yes: only how a thread waits (checks on b9d below) |
 
 The first three act on the emulator's thread (2d_batch: its futex wakes; 3d_pipeline: its VBlank wait and the bins it
 drew there; the 1x share: a 1 KB copy and a bin wait per 3D line at 1x) and the others on the 2D thread at 2x
@@ -93,6 +95,15 @@ GCC 14.3) run under `tools/qemu-dev`; "base" = /home/user/perf/build-dev/b (00c3
   0.567 -> 0.011 ms, L1D load misses 4.1k -> 1.5k; the 2D thread 1.191 -> 1.900 ms (+0.7 ms: it now waits for, and
   helps with, the bins instead); the Gengis threads -3..-5%. The emulator's thread stays the longest (2.76 vs 1.90 vs
   1.2 ms), so the frame gets shorter by what it lost.
+- **2D at 1x without the 2D thread** (the device's 1x default; qemu-count at scale 1 with 2 Gengis threads, device
+  builds; evidence/render/qc-1x.txt): the emulator's thread on dsstress L5, 2D thread off: base 3642.6k -> mine
+  3561.4k instructions/frame (-2.2%: the compositor unroll, its 2d bucket 712.7k -> 528.0k); 2D thread on (mine):
+  **2292.6k (-36% against off)**, and with `render.3d_share=off` 3317.6k. ds2dtest (2D-heavy): 2D thread off 21136.0k
+  -> on 6990.6k (**-67%**; the 2D thread takes 12428k). What remains on the emulator's thread at 1x with the 2D thread
+  off is the 2D engine itself (528k on L5: text BGs, sprites, the composite; the 2d bucket is 15% of the thread), i.e.
+  the 2D thread is the lever at 1x, not another engine pass. Recommendation for the device: A/B `render.2d_thread=on`
+  at 1x (lines below) and, if it wins as it did at 2x (39.8 -> 49.6 fps, PERF.md), make it the 1x default too (a
+  one-line change in src/emu.cpp: `cfg_.flag("render.2d_thread", scale_ == 2)` -> `true`).
 - **render.2d_emit_zip** (the 2D thread at 2x; same runs; b5d had the quarters' zip only, not the 2D lines'
   doubling): the 2D thread's output stage (WriteLine/EmitA/EmitB/DoubleLine/ZipLine/WriteZip) 451k -> 352k
   instructions/frame (**-22%**), the thread's own work 1696k -> 1601k.
@@ -138,7 +149,9 @@ GCC 14.3) run under `tools/qemu-dev`; "base" = /home/user/perf/build-dev/b (00c3
   10 ROMs, with a savestate reload on 5, 2x with 1 Gengis thread, 1x with the 2D thread: 23 configurations, FAILS=0
   (evidence/render/matrix-m6.txt). `bananads-difftest --every --frames 300` (main RAM after every frame), every toggle
   off vs on at 2x with the 2D thread: SAME on dsstress L5, ds2dtest, geomtest; `bananads-tests`: all passed
-  (evidence/render/difftest-b6d.txt). m7 on the final head (b7d, with the quarters fix): below.
+  (evidence/render/difftest-b6d.txt). **m7** on the final head (b7d = 1c9095b, with the quarters fix): the device
+  configuration on all 10 ROMs, 2x with 1 Gengis thread, 1x with the 2D thread: 18 configurations, FAILS=0;
+  `bananads-tests` all passed (evidence/render/matrix-m7.txt).
 
 ## Device A/B commands (tools/device/hgquick.sh style; both handhelds, 640x480 RG DS and 1024x768 RG DS Plus, use the
 ## same settings: the plane scales; run each line against a plain run of the same binary)
@@ -195,6 +208,50 @@ and converted K frames` (N should be ~0 with the pipeline; a large N without it 
 2D thread isn't taking the top screen's work in that game, which is the next lever (capture's inputs to the 2D
 thread, PERF.md's "Next" of the 2D thread section).
 
+## The KMS frame path at 2x (direction 1; READ, src/frontend_kms.cpp at 00c34c78e8de)
+
+- With the plane scaling (VOP2 on both handhelds: 512x384 -> 640x480 on the RG DS, exactly 2:1 on the Plus's 1024x768)
+  and packed rows, `dp.direct` holds and the Banana 2D engine draws each line straight into the dumb buffers
+  (`Emu::draw_into`); the per-frame CPU work of the path is then: emulator's thread `dp.take()` (mutex), `draw_into`,
+  `publish` (mutex + an eventfd write), `pace.wait()`; presenter thread `wait2d(fence)` (render.2d_lazy), `overlay()`
+  (the pop-ups and the volume pill, only while one shows: that is the one read-modify-write of a dumb buffer), one
+  `drmModeAtomicCommit` for both panels. With a shader (`kms.shader`) the GPU pass and its `glFinish` on the
+  presenter, not the CPU. No per-frame read-back of a dumb buffer otherwise: the output stage only stores (NEON
+  `st4`/`st2`, sequential: the A55's write-combining merges them into full lines); the savestate picture and `F+L2`
+  screenshots read a slot (rare); `write()` (the CPU copy, 1.5 MB a frame at 2x) runs only where the plane can't
+  scale (QEMU) or with melonDS's 2D renderer.
+- What headless.direct does not exercise: the presenter's SCHED_FIFO scheduling and its waits (hence the
+  render.2d_fence_wait change: a yield spin at SCHED_FIFO keeps the core from the CFS thread it waits for), the
+  commit's timing against vblank (`kms.stats` reports repeats and drops), write-combined memory (headless.direct's
+  buffers are cached malloc memory: the same store pattern, no latency difference seen here), the sound thread.
+  The device checks: `kms.stats=600` lines (repeats/drops) with render.2d_fence_wait=spin vs block, and the fps.
+
+## The geometry engine's remaining cost (direction 2; READ + qemu-count)
+
+On the emulator's thread in the device configuration (dsstress L5, ref build: evidence/render/ref-L5-report.txt; the
+device build's numbers are within a few %: qc-b5d/dev-L5-*.txt): `GPU3D::RunFast` 399k instructions/frame (the
+command loop with the FIFO reads, cycle accounting, matrix and lighting commands inline), `SubmitPolygonBody` 200k
+(culling, the clip pre-test and clipping, the screen position by one reciprocal per vertex, zero-dot, the polygon
+record), `Write32` 101k (the GX FIFO port), `SubmitVertexBody` 67k (the NEON transform and the strip bookkeeping),
+`ClipAgainstPlane` 31k: ~800k of the thread's ~2300k with the pipeline on, i.e. a third on this 3D-bound ROM (on
+HeartGold the 3D geometry was 11.9% of the thread before 0011, so ~7% now). What 0011 left: the strip's vertex copies
+(`TempVertexBuffer` swaps, a Vertex of ~100 bytes once or twice per strip vertex: a few percent of SubmitVertexBody,
+~5k a frame here), the FIFO ring (tried and dropped before: more instructions). Nothing of size remains in the
+geometry engine short of a different data layout; not pursued this session.
+
+## Thread balance with the pipeline (direction 3; from the sim's per-thread ms, L5, dev mode = 2 Gengis threads)
+
+With render.3d_pipeline the emulator's thread stops drawing bins: on L5 (sim, b6d) it goes 4.34 -> 2.94 ms while
+the two Gengis threads go 2.82 -> 3.50 and 2.83 -> 3.39 ms and the 2D thread stays ~4.6 ms (1.1 of it helping with
+bins). So on a 3D-heavy scene the render threads become the longest per frame: that is where the device default of 3
+Gengis threads (hgquick's 2 is the measuring convention) pays, at the price of 5 busy threads on 4 cores (emulator,
+2D, 3 Gengis) plus the presenter and the sound thread. The sim cannot see the contention; the device should test:
+`render.gengis_threads=2` vs `3`, each with `render.3d_pipeline=off` vs `on`, on HeartGold (emulator-thread-bound:
+expect the pipeline to gain and 2 vs 3 to be a wash) and on a 3D-heavy game (Mario Kart DS, Metroid Prime Hunters:
+expect 3 threads to gain with the pipeline), reading `top -H` (the `bananads-2d` and Gengis threads' shares) and the
+`[gengis]` line. A hint from the sim: the 2D thread's own 2D work at 2x after this session is ~2.8 ms a frame on L5
+(composite 1.2 + output stage 0.5 + the rest), i.e. it leaves most of its core to a Gengis thread.
+
 ## Risks
 
 - `render.3d_pipeline`: new threading (two frames in flight). Exact by data-flow ordering (see the commit message);
@@ -204,6 +261,9 @@ thread, PERF.md's "Next" of the 2D thread section).
   a hang with it on and not off, turn it off and report.
 - `render.2d_batch` larger than 16: the 2D thread runs further behind within a frame; the presenter's wait for the
   frame's fence (render.2d_lazy) can grow by a batch's drawing time. 48 is a safe first step.
+- `render.2d_fence_wait=block`: a new condition variable in the hand-off (the 2D thread notifies only while a waiter
+  has set the flag; a 1 ms timed wait is the safety net, so a lost wakeup costs at most 1 ms, never a hang). If the
+  device shows more repeats in `kms.stats` with it, `spin` is the old behaviour.
 
 ## What's next
 

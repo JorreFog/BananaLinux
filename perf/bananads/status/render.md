@@ -1,10 +1,13 @@
-# render: status (overwritten by render only) — HANDOFF-ready; updated 16:42 UTC (date -u)
+# render: status (overwritten by render only) — HANDOFF-ready; updated 16:45 UTC (date -u)
 
 ## Where things are
-- Branch `perf/render` @ 1c9095b, worktree /home/user/perf/render/sd, from 00c34c78e8de. 9 commits, every change behind a
-  toggle (default on), exact: 7ebe4e9 render.2d_batch; ea886e8 render.3d_pipeline; dc3f96a 3d_share/3d_wait2d at 1x;
+- Branch `perf/render` @ HEAD = 1c9095b + 1 (render.2d_fence_wait, see `git log`), worktree /home/user/perf/render/sd, from
+  00c34c78e8de. 10 commits, every change behind a toggle (default on), exact: 7ebe4e9 render.2d_batch; ea886e8 render.3d_pipeline; dc3f96a 3d_share/3d_wait2d at 1x;
   911ff8e render.2d_comp_unroll; 0bab5aa render.2d_quarters; 2a23af3 render.2d_emit_zip; 347784d the quarters merge fix;
-  f76bfca docs/PERF.md; 1c9095b the Gengis workers' wake condition. melonDS patch 0060 (geom_sort) was written, measured
+  f76bfca docs/PERF.md; 1c9095b the Gengis workers' wake condition; HEAD render.2d_fence_wait (the waits for the 2D thread
+  block on a condvar instead of sched_yield spins: the KMS presenter at SCHED_FIFO spun; device build b9d building,
+  TSan x86 rebuild + runs running, matrix m9 + tests on b9d queued; NOT yet in patches/render/: re-export when b9d's
+  checks pass: `git format-patch 00c34c78e8de..perf/render -o patches/render/` after `rm patches/render/*.patch`). melonDS patch 0060 (geom_sort) was written, measured
   at -0.1%, rebased out (DEAD-END 16:18; evidence/render/0060-geom-sort-dropped.patch). 0060-0079 unused.
 - Deliverables: patches/render/ (9 patches, exported from 1c9095b, `git am` onto 00c34c78e8de checked identical);
   findings/render.md (what, why, numbers, checks, device A/B lines, risks, next); evidence/render/ (every number's file).
@@ -21,17 +24,15 @@
   unit tests comp_bench / quarters_test (20000) / zip_test (6000) 0 mismatches; TSan 6 runs 0 warnings.
 
 ## Running in the background (results to fold into findings/render.md when they land)
-- /home/user/perf/render/runs/matrix-m7.txt: build-dev vs b7d (dev2x all 10 ROMs, 2x-t1, 1x-t2-2d): expect FAILS=0.
-- /home/user/perf/render/runs/tests-b7d.txt: bananads-tests on b7d.
-- /home/user/perf/render/runs/qc-1x/*: 1x, 2D thread off (the device's 1x default) vs on + share, L5 and ds2dtest
-  (direction 4 below).
+- Done and recorded: m7 (18 configs FAILS=0, tests pass), the 1x question (evidence/render/qc-1x.txt: 2D thread on at 1x
+  = -36% L5 / -67% ds2dtest of the emulator's thread; recommendation in findings).
+- /home/user/perf/render/runs/tsan2/*/log: TSan of the fence wait (x86). /home/user/perf/render/runs/qc-b9d/* (L5 block vs
+  spin), runs/matrix-m9.txt (build-dev vs b9d), runs/tests-b9d.txt. If all pass: re-export patches, add to findings.
 
 ## Next directions (the coordinator's, 16:40), each with a CLAIM on the board before starting
-1. The frame path to the panels (src/frontend_kms.cpp) at 2x on the Plus: per-frame work, read-backs of dumb buffers,
-   what headless.direct doesn't exercise. Already seen: BananaRenderer::WaitFence spins with sched_yield, and the KMS
-   presenter (SCHED_FIFO 5) calls it for a slot's fence (render.2d_lazy): an RT yield-spin starves CFS threads on its
-   core while the 2D thread is late (more likely with the pipeline). Plan: a blocking fence wait (condvar, 2D thread
-   notifies when Tail passes a waited fence), toggle render.2d_fence_wait=block|spin; exact; TSan on x86.
+1. The frame path to the panels (src/frontend_kms.cpp) at 2x on the Plus: the blocking fence wait is done (HEAD,
+   CLAIM 16:42); the per-frame read-through of the presenter (what reads back dumb buffers, what headless.direct
+   doesn't exercise) goes into findings "KMS path".
 2. The geometry engine's remaining cost on the emulator's thread (0011): RunFast 399k, SubmitPolygonBody 200k, Write32
    101k, SubmitVertexBody 67k on L5 (evidence/render/ref-L5-report.txt): document per-polygon costs; the strip vertex
    copies are a few % of SubmitVertexBody.
