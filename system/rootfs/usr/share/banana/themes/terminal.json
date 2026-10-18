@@ -1,0 +1,30 @@
+{
+  // An example of how far a theme can go: green phosphor on black
+  "name": "Terminal",
+  "author": "BananaOS",
+  "base": "dark",
+  "accent": { "base": "#39ff7a", "light": "#b6ffcc", "dark": "#0d4d22", "band": "#7dffa6", "low": "#22b552" },
+  "colors": {
+    "screenBg":   "#020803",
+    "screenBand": "#06170a",
+    "screenFrame":"#000000",
+    "ditherA":    "#39ff7a14",
+    "ditherB":    "#39ff7a08",
+    "panelBand":  "#0b2a14",
+    "panelBody":  "#031107",
+    "panelLow":   "#000000",
+    "chipBand":   "#082010",
+    "chipBody":   "#020a04",
+    "bubbleBand": "#0a2612",
+    "bubbleBody": "#030f06",
+    "bubbleLow":  "#000000",
+    "sheetBase":  "#020803",
+    "ink":        "#b8ffcf",
+    "muted":      "#4fae6c",
+    "line":       "#2f7a47",
+    "edge":       "#7dffa6",
+    "rule":       "#0f3a1c",
+    "kbdBg":      "#39ff7a",
+    "kbdInk":     "#020803"
+  }
+}

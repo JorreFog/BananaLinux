@@ -1,0 +1,25 @@
+{
+  // An example theme on the light palette: soft pinks with a cherry accent
+  "name": "Sakura",
+  "author": "BananaOS",
+  "base": "light",
+  "accent": "#e8578b",
+  "colors": {
+    "screenBg":   "#fbeef2",
+    "screenBand": "#fff8fa",
+    "screenFrame":"#ebc9d4",
+    "panelBand":  "#ffffff",
+    "panelBody":  "#fdf1f5",
+    "panelLow":   "#e6c3cf",
+    "bubbleBody": "#fff6f9",
+    "bubbleLow":  "#ead0da",
+    "sheetBase":  "#fff7fa",
+    "trackBg":    "#f2dbe3",
+    "railBg":     "#f2dbe3",
+    "ink":        "#3d2530",
+    "muted":      "#8a6573",
+    "line":       "#c49aaa",
+    "edge":       "#4a2e3a",
+    "rule":       "#ecd2dc"
+  }
+}

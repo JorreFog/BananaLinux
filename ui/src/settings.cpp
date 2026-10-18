@@ -1,5 +1,6 @@
 #include <ctime>
 #include "settings.h"
+#include "theme.h"
 #include <algorithm>
 #include <dlfcn.h>
 #include <thread>
@@ -168,6 +169,17 @@ namespace banana
 		p.pick = Color::hex(rnds::accent.base); p.pickBand = Color::hex(rnds::accent.band); p.pickLow = Color::hex(rnds::accent.low);
 		p.pickEdge = light ? Color::hex(rnds::accent.dark) : Color::hex(0xffffff);
 		p.onPick = Color::hex(0x17161c); p.onPickAccent = Color::hex(0x7a3a00);
+		// a user theme's colours by the same names as the engine's palette (RndsUI.cpp), and two of this screen's own
+		struct { const char* n; Color SPal::* m; } names[] = {
+			{ "ink", &SPal::ink }, { "muted", &SPal::muted }, { "line", &SPal::line }, { "edge", &SPal::edge },
+			{ "screenBg", &SPal::screenBg }, { "screenFrame", &SPal::screenFrame }, { "screenBand", &SPal::screenBand },
+			{ "ditherA", &SPal::ditherA }, { "ditherB", &SPal::ditherB }, { "panelBand", &SPal::panelBand },
+			{ "panelBody", &SPal::panelBody }, { "panelLow", &SPal::panelLow }, { "bubbleBand", &SPal::bubbleBand },
+			{ "bubbleBody", &SPal::bubbleBody }, { "bubbleLow", &SPal::bubbleLow }, { "slotOn", &SPal::slotOn },
+			{ "kbdBg", &SPal::kbdBg }, { "kbdInk", &SPal::kbdInk }, { "blackish", &SPal::blackish }, { "shade45", &SPal::shade45 },
+			{ "onPick", &SPal::onPick }, { "onPickAccent", &SPal::onPickAccent },
+		};
+		for (auto& e : names) rnds::themeColor(e.n, p.*e.m);
 		return p;
 	}
 
@@ -183,17 +195,23 @@ namespace banana
 		build();
 	}
 
-	void Settings::setVariant(const std::string& v)
+	void Settings::setVariant(const std::string& value)
 	{
+		// the Theme setting's value (theme.cpp): its palette, a user theme's colours, files and accent set (or cleared)
+		std::string v = applyTheme(value, getConfValue(data + "/settings.conf", "accent", "yellow"));
 		bool l = v == "light";
 		light = l; cache.clear();	// (also for a new accent: the boxes are drawn again)
 		// the Carts theme writes in Inter (a clean typeface), the others in the theme's Pixelify Sans
 		bool clean = v == "carts" && !fontDir.empty();
-		if (clean != cleanFonts || !R)
+		std::string fonts = clean ? "carts" : rnds::themeFiles.fontRegular + "|" + rnds::themeFiles.fontMedium;
+		if (clean != cleanFonts || !R || fonts != fontsLoaded)
 		{
 			cleanFonts = clean;
-			R = rnds::Font::load(clean ? fontDir + "/Inter-Regular.ttf" : assets + "/fonts/PixelifySans-Regular.ttf");
-			M = rnds::Font::load(clean ? fontDir + "/Inter-Medium.ttf" : assets + "/fonts/PixelifySans-Medium.ttf");
+			fontsLoaded = fonts;
+			// a user theme's fonts (rnds::themeFiles) on its Pixel palettes; one that doesn't load: the theme's
+			const std::string& ownR = rnds::themeFiles.fontRegular, &ownM = rnds::themeFiles.fontMedium;
+			R = rnds::Font::load(clean ? fontDir + "/Inter-Regular.ttf" : !ownR.empty() ? ownR : assets + "/fonts/PixelifySans-Regular.ttf");
+			M = rnds::Font::load(clean ? fontDir + "/Inter-Medium.ttf" : !ownM.empty() ? ownM : assets + "/fonts/PixelifySans-Medium.ttf");
 			if (!R || !M)
 			{
 				R = rnds::Font::load(assets + "/fonts/PixelifySans-Regular.ttf");
@@ -251,7 +269,13 @@ namespace banana
 			items.push_back(it);
 		};
 		const char* D = "Display & sound";
-		add(D, "picture", "Theme", "ROCKNIXDS Pixel's two palettes, dark or light for daylight; or Carts (experimental): your games as cartridges on a shelf, in a clean typeface.", menu, "theme", { "Dark", "Light", "Carts" }, { "dark", "light", "carts" });
+		{
+			// Banana's three, then the themes in banana/themes on the card and the image's examples (theme.h)
+			std::vector<std::string> names = { "Dark", "Light", "Carts" }, values = { "dark", "light", "carts" };
+			for (auto& t : userThemes()) { names.push_back(t.name); values.push_back(t.value); }
+			add(D, "picture", "Theme", "ROCKNIXDS Pixel's two palettes, dark or light for daylight; Carts (experimental): your games as cartridges on a shelf, in a clean typeface; or a theme of your own: a .json in banana/themes on the card (banana/themes/README.txt says how).",
+				menu, "theme", names, values);
+		}
 		add(D, "picture", "Accent colour", "The colour of the selection, the logo and the boot animation's banana.", menu, "accent",
 			{ "Yellow", "Blue", "Red", "Green", "Purple", "Pink" }, { "yellow", "blue", "red", "green", "purple", "pink" });
 		add(D, "picture", "Brightness", "Both panels' backlights. F + volume changes it anywhere, in games too.", "", "",
@@ -616,7 +640,7 @@ namespace banana
 			return CHANGED;
 		}
 		if (it.key == "theme") { setVariant(it.values[at]); return THEME; }
-		if (it.key == "accent") { rnds::setAccent(it.values[at]); setVariant(light ? "light" : "dark"); return THEME; }
+		if (it.key == "accent") { setVariant(getConfValue(data + "/settings.conf", "theme", "dark")); return THEME; }	// (saved above)
 		return CHANGED;
 	}
 

@@ -187,6 +187,7 @@ namespace banana
 		std::shared_ptr<rnds::Font> R, M;
 		std::string fontDir;		// Inter's TTFs (the Carts theme)
 		bool cleanFonts = false;
+		std::string fontsLoaded;	// the fonts R and M are (setVariant): a user theme's, or "carts"
 		struct Cached { rnds::TexPtr tex; int ox = 0, oy = 0; float w = 0; };
 		std::map<std::string, Cached> cache;
 

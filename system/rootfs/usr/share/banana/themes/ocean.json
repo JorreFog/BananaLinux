@@ -1,0 +1,29 @@
+{
+  // An example theme: copy it to banana/themes on the card (any name ending in .json), change it, and pick it in
+  // Settings > Display & sound > Theme. README.txt next to it lists every colour you can set.
+  "name": "Ocean",
+  "author": "BananaOS",
+  "base": "dark",
+  "accent": "#3cc6e8",
+  "colors": {
+    "screenBg":   "#0b1d2a",
+    "screenBand": "#12324a",
+    "screenFrame":"#06121b",
+    "panelBand":  "#1d4560",
+    "panelBody":  "#0e2638",
+    "panelLow":   "#06121b",
+    "chipBand":   "#173a52",
+    "chipBody":   "#0a1c29",
+    "bubbleBand": "#1a4058",
+    "bubbleBody": "#0d2433",
+    "bubbleLow":  "#071520",
+    "sheetBase":  "#0a1b27",
+    "trackBg":    "#081722",
+    "railBg":     "#081722",
+    "ink":        "#e4f6ff",
+    "muted":      "#8fb6c9",
+    "line":       "#6d94a8",
+    "edge":       "#cdeefb",
+    "rule":       "#2b5670"
+  }
+}

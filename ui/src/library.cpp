@@ -1,4 +1,5 @@
 #include "library.h"
+#include "theme.h"
 #include <algorithm>
 #include <cerrno>
 #include <cmath>
@@ -712,7 +713,7 @@ namespace banana
 			auto mk = looks.find("@" + lower(r.maker));
 			if (mk != looks.end()) r.accent = mk->second.accent;
 		}
-		r.icon = look.icon;
+		r.icon = themedIcon(s.def.id, look.icon);	// a user theme's own icon for the system (theme.h)
 		r.app = look.app;
 		r.games = (int)s.games.size();
 		long secs = 0;
@@ -753,7 +754,7 @@ namespace banana
 		std::string ext = lower(g.path.substr(g.path.rfind('.') + 1));
 		// the DS ROM's own icon when there is no art (from inside a .zip too)
 		if (ext == "nds" || (ext == "zip" && systemOf(i).id == "nds")) r.rom = g.path;
-		r.icon = lookOf(systemOf(i).id).icon;
+		r.icon = themedIcon(systemOf(i).id, lookOf(systemOf(i).id).icon);
 		// what the emulator last said of its RetroAchievements (the block is left out until a game has said so)
 		if (g.achB > 0)
 		{

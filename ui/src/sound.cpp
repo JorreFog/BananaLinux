@@ -1,4 +1,5 @@
 #include "sound.h"
+#include "../rnds/RndsUI.h"
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
@@ -50,7 +51,12 @@ namespace banana
 	{
 		for (const char* n : { "scroll", "select", "back", "fav", "ready", "insert" })
 		{
+			// a user theme's own sound for it (rnds::themeFiles; "off": none), else the theme's (one that doesn't
+			// load: the theme's)
+			auto own = rnds::themeFiles.sounds.find(n);
+			if (own != rnds::themeFiles.sounds.end() && own->second == "off") continue;
 			Clip c;
+			if (own != rnds::themeFiles.sounds.end() && loadWav(own->second, c.pcm, c.rate, c.channels)) { clips[n] = std::move(c); continue; }
 			if (loadWav(dir + "/" + n + ".wav", c.pcm, c.rate, c.channels)) clips[n] = std::move(c);
 		}
 		th = std::thread([this] { run(); });

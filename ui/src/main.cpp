@@ -19,6 +19,7 @@
 #include "soft.h"
 #include "splash.h"
 #include "settings.h"
+#include "theme.h"
 #include "zip.h"
 #include "sound.h"
 #include "menu.h"
@@ -878,10 +879,16 @@ int main(int argc, char** argv)
 	rnds::setDecoder(stbDecode);
 	rnds::setZipReader(readZip);	// the icon of a DS ROM kept in a .zip
 	auto settings = readSettings(o.data + "/settings.conf");
+	// banana/themes on the card, for themes of one's own: the image's README and examples to start from (once)
+	if (access((o.data + "/themes").c_str(), F_OK) != 0 && access("/usr/share/banana/themes", F_OK) == 0)
+		if (system(("mkdir -p '" + o.data + "/themes' && cp /usr/share/banana/themes/* '" + o.data + "/themes/' 2>/dev/null").c_str()) != 0) {}
 	// the time zone, for the clock and every game started from here (a POSIX rule, see settings.cpp)
 	if (!settings["timezone"].empty()) { setenv("TZ", settings["timezone"].c_str(), 1); tzset(); }
-	std::string variant = settings["theme"] == "light" ? "light" : "dark";
-	rnds::setAccent(settings["accent"]);	// before anything is drawn: the splash and the menu in it
+	// the palette (a user theme's colours and accent set on the way) and the accent, before anything is drawn: the
+	// splash and the menu in it
+	std::string themeWhy, variant = applyTheme(settings["theme"], settings["accent"], &themeWhy);
+	if (!themeWhy.empty()) logf("theme: %s (dark instead)", themeWhy.c_str());
+	if (variant == "carts") variant = "dark";
 	// beside the logo: the release stage and the version ("0.3.0-dev" -> "Alpha 0.3.0"; /etc/banana/stage names
 	// another stage)
 	{
@@ -934,7 +941,7 @@ int main(int argc, char** argv)
 	auto makeMenu = [&](const std::string& theme, float sc) -> Menu*
 	{
 		if (theme == "carts") return new CartMenu(&lib, &be, o.banana + "/fonts", sc);
-		return new RndsMenu(&lib, &be, o.assets, sc, theme == "light" ? "light" : "dark");
+		return new RndsMenu(&lib, &be, o.assets, sc, applyTheme(theme, settings["accent"]) == "light" ? "light" : "dark");
 	};
 	std::atomic<bool> ready{ false };
 	std::thread loader([&]
@@ -1018,7 +1025,8 @@ int main(int argc, char** argv)
 		{
 			// the menu again in the other palette, on the system it was showing
 			settings = readSettings(o.data + "/settings.conf");
-			variant = settings["theme"] == "light" ? "light" : "dark";
+			variant = applyTheme(settings["theme"], settings["accent"]);
+			if (variant == "carts") variant = "dark";
 			int sys = ui->systemIndex();
 			uiPtr.reset(makeMenu(settings["theme"], scale));
 			ui = uiPtr.get();
@@ -1077,7 +1085,7 @@ int main(int argc, char** argv)
 			{
 				const std::string& path = lib.gameAt(g).path;
 				ui->touchCancel();
-				settingsView.setVariant(settings["theme"] == "carts" ? "carts" : variant);
+				settingsView.setVariant(settings["theme"]);
 				settingsView.openGame(lib.gameAt(g).title, path.substr(path.rfind('/') + 1));
 				rep.key = Key::NONE;
 				sound.play("select");
@@ -1091,7 +1099,7 @@ int main(int argc, char** argv)
 			std::lock_guard<std::mutex> l(worker.uiLock);
 			if (ui->view() == rnds::UI::LAUNCH) return;
 			ui->touchCancel();
-			settingsView.setVariant(settings["theme"] == "carts" ? "carts" : variant);
+			settingsView.setVariant(settings["theme"]);
 			settingsView.openSearch(lib.searchQuery());
 			rep.key = Key::NONE;
 			sound.play("select");
@@ -1103,7 +1111,7 @@ int main(int argc, char** argv)
 			std::lock_guard<std::mutex> l(worker.uiLock);
 			if (ui->view() == rnds::UI::LAUNCH) return;
 			ui->touchCancel();
-			settingsView.setVariant(settings["theme"] == "carts" ? "carts" : variant);
+			settingsView.setVariant(settings["theme"]);
 			settingsView.open();
 			rep.key = Key::NONE;
 			sound.play("select");
