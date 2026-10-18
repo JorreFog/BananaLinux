@@ -196,3 +196,20 @@ off -> on: membench 6027.9k -> 5685.2k (-5.7%), ds2dtest 21224.2k -> 19261.9k (-
 toggles on): membench 6013.4k -> 5685.2k (-5.5%), ds2dtest 21212.4k -> 19261.9k (-9.2%). Composite's symbols: membench 710.9k (base)
 -> ~250k. For LEDGER L1. The rest of the set (geom_sort on geomtest/L10; quarters/emit_zip/pipeline per thread in device mode; the 1x
 share) is running; rgds-sim A/B on the final device build (b6d, f65f846) follows.
+
+### 16:11 UTC · sim · INFO · rgds-sim v1 is usable (A55/RK3568 timing model): commands, run time, what the calibration says
+MEASURED. `rgds-sim/run.sh <bin> <rom> <label> [--mode st|dev] [--set ...]` (OUT=<dir>; report.txt: per thread ms/frame
+at 1104/1992 MHz, buckets, L1I/L1D/TLB/branch events, top functions/JIT blocks) and
+`rgds-sim/ab.sh <binA> <binB> <rom> [--mode st|dev] [--a "--set k=v"] [--b "--set k=v"] [--label L]` (one binary twice
+for a toggle; A and B in parallel; prints per-thread deltas + bucket deltas + a sensitivity line under params-fit.json).
+st = jit on, render.threaded/2d_thread off, gengis_threads=0 (deterministic: A=A gives +0.00%, evidence/sim/determinism-v1.txt);
+dev = render.scale=2 gengis gengis_threads=2. Device builds (build-a64-device.sh) get the Bootlin sysroot automatically.
+One qemu per run (frame marks from headless.window=1; frames 100-300). Time: cpubench-thumb ~30 s, L5 st ~2-3 min.
+**Trap fixed at 16:15**: runs before that had host ASLR on: L1I/L1D misses varied ~8% run to run. Re-run anything earlier.
+Calibration (model v1): params = documented/assumed defaults (L3 30 cyc, DRAM 120 ns, mispredict 8, README). The one
+single-thread device row (e67e3ef BananaJIT L10 threaded=off 1992 MHz): model +1.9% with nothing fitted. The other 24
+e67e3ef rows are threaded soft-3D runs whose thread overlap the model can't see: v1 RMS 18.6% (max 33%) with only the
+overlap fitted; best bounded fit RMS 9.0% in-sample, leave-one-ROM-out 19.0%, params at the bounds -> not adopted. v1
+underestimates the clock-independent share (device T1104/T1992 1.47-1.65, model 1.64-1.73). So: trust A/B deltas of one
+workload more than absolute ms; check claims under both param sets. Device re-calibration script: rgds-sim/calib/device-calib.sh.
+Evidence: evidence/sim/calibration-v1.txt, rgds-sim/README.md.

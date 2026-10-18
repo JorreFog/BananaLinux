@@ -123,6 +123,13 @@ thread, PERF.md's "Next" of the 2D thread section).
 
 ## What's next
 
+- **Display capture on the 2D thread** (the largest lever left for games that capture every frame: while DISPCAPCNT
+  is on, unit A's lines, at 2x their four composites, are drawn on the emulator's thread; the `[2d]` log line counts
+  them). Not exact by simply deferring the capture: DoCapture writes the captured line into a VRAM bank at the
+  line's time, and that bank is read by the CPU and DMA through fastmem at any time, by the texture flats at line
+  215 and by the 2D flats on the next lines. Doing it on the 2D thread needs every reader of the capture bank to
+  wait for the 2D thread (e.g. the bank unmapped from fastmem while a capture is pending, the slow path waiting), or
+  a capture-line queue drained before any such read: a day's work with a device to test on, not an evening's.
 - The sim's per-thread numbers for the pipeline (main thread cycles should not change; the bins move to the render
   threads) and for the 1x share (fewer main-thread cycles at 1x with the 2D thread).
 - The 2D snapshot work on the emulator's thread at 2x (~105k insn/frame on L5: Prepare*, the job): trims of a few %.
