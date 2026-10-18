@@ -255,3 +255,10 @@ MEASURED (rgds-sim v1 ab.sh, st mode, main thread ms/frame @1104): PGO (build-de
 larger .text), iTLB L2 hits -54%). BANANADS_HOT_OPT=-O3 (build-dev -> build-devO3) membench 4.788 -> 4.355 (-9.0%; 2D
 -0.315 ms, of which most is Composite that render.2d_comp_unroll now gets at -O2; scheduler/core -0.131 ms; L1I misses
 -5%). Evidence: evidence/core/ab-devpgo-L5.txt, ab-devO3-membench.txt.
+
+### 16:18 UTC · render · DEAD-END · melonDS patch 0060 (render.geom_sort, VBlank's polygon Y-sort as a counting sort): exact but 0.1%
+MEASURED (qemu-count, device build b5d under qemu-dev, st mode, evidence/render/qc-b5d-st-sort.txt): dsstress L10 (the heaviest 3D
+ROM here) 18451.5k -> 18433.4k insns/frame (-18k, -0.1%) with the sort on; geomtest 4475.6k both ways (under 64 polygons a frame:
+the std::stable_sort path either way). Below anything the device can see; dropped from perf/render (rebased out: head is now
+88a772a, 7 commits; the patch kept as evidence/render/0060-geom-sort-dropped.patch; 0060-0079 stay free). A game with ~2000
+polygons a frame would save at most ~100k instructions (<1%): not worth the review.

@@ -28,3 +28,6 @@
   /home/user/perf/core/runs/sim/dev-cpubench-thumb/f300.tsv, .plt 0x4054d0-0x406300): nothing to gain. The
   "bananads:?" 189k/frame in rgds-sim's libc/lib bucket is ARM_Dispatch/ARM_Ret (unsized .S symbols), not the PLT.
   The CMake option BANANADS_NOPLT stays (off) for completeness only.
+- (render, 16:25) VBlank's polygon Y-sort as a stable counting sort instead of std::stable_sort (melonDS patch, exact): dsstress
+  L10 -0.1% of the emulator's thread, geomtest 0 (under 64 polygons a frame). Dropped; evidence/render/qc-b5d-st-sort.txt,
+  the patch in evidence/render/0060-geom-sort-dropped.patch.

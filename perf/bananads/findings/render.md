@@ -1,7 +1,8 @@
 # render: findings (Gengis 3D, the Banana 2D engine, the geometry engine, the threads, the KMS frame path)
 
 Branch `perf/render` (worktree /home/user/perf/render/sd), from 00c34c78e8de. Patches: `patches/render/` (git
-format-patch series, `git am` onto SuperDrastic at 00c34c78e8de). melonDS patch numbers used: 0060.
+format-patch series, `git am` onto SuperDrastic at 00c34c78e8de). melonDS patch numbers used: none in the final set
+(0060 was written and dropped; 0060-0079 stay free).
 
 Status line (kept current at the end of the session): see "Status" at the bottom.
 
@@ -12,18 +13,20 @@ Status line (kept current at the end of the session): see "Status" at the bottom
 | 7ebe4e9 | `KickBatch` (jobs handed to the 2D thread before it is woken) is a setting | `render.2d_batch=N` (1..512) | 16 (as before) | yes: only when the thread is woken |
 | ea886e8 | Gengis frames overlap: two frame slots; VBlank waits for the frame's conversion only, not its bins; the emulator's thread stops drawing bins at VBlank | `render.3d_pipeline` | on | yes by construction (checks below) |
 | dc3f96a | `render.3d_share` / `render.3d_wait2d` at 1x too: no 1 KB copy of the 3D line into the job, the bin wait on the 2D thread | the existing `render.3d_share`, `render.3d_wait2d` (now 1x and 2x) | on | yes (checks below) |
-| f8be6b5 | melonDS patch 0060: VBlank's polygon Y-sort as a stable counting sort (no n log n, no malloc a frame) | `render.geom_sort` / `MELONDS_GEOMSORT=0` | on | yes: the same stable order |
-| 968fe03 | the 2D compositor's step loop unrolled by a fold: at the device's -O2 the plain loop costs 2.5-3x the instructions (core's membench 2D +37% is this) | `render.2d_comp_unroll` | on | yes: the same operations in the same order (comp_bench: identical output) |
-| fd53c40 | at 2x the four quarters of a 3D line share one painter's pass over the 2D layers (the 2D thread's biggest own cost) | `render.2d_quarters` | on | yes: random-stack test, 12000 quarter cases, 0 mismatches |
-| f65f846 | at 2x the output stage (brightness, 6-to-8-bit expansion) writes straight into the rows: the quarters zipped, 2D lines doubled, no 1 KB line in between | `render.2d_emit_zip` | on | yes: random test vs WriteLineNeon + ZipLine/DoubleLine, 6000 cases, 0 mismatches |
+| 911ff8e | the 2D compositor's step loop unrolled by a fold: at the device's -O2 the plain loop costs 2.5-3x the instructions (core's membench 2D +37% is this) | `render.2d_comp_unroll` | on | yes: the same operations in the same order (comp_bench: identical output) |
+| 0bab5aa | at 2x the four quarters of a 3D line share one painter's pass over the 2D layers (the 2D thread's biggest own cost) | `render.2d_quarters` | on | yes: random-stack test, 12000 quarter cases, 0 mismatches |
+| 2a23af3 | at 2x the output stage (brightness, 6-to-8-bit expansion) writes straight into the rows: the quarters zipped, 2D lines doubled, no 1 KB line in between | `render.2d_emit_zip` | on | yes: random test vs WriteLineNeon + ZipLine/DoubleLine, 6000 cases, 0 mismatches |
+| 88a772a | the quarters merge without the empty halves (the first version lost on shallow stacks, see Measurements) | (same, `render.2d_quarters`) | on | yes: 20000 quarter cases, 0 mismatches |
 
-The first four act on the emulator's thread (2d_batch: its futex wakes; 3d_pipeline: its VBlank wait and the bins it
-drew there; the 1x share: a 1 KB copy and a bin wait per 3D line at 1x; geom_sort: the sort) and the last three on
-the 2D thread at 2x (comp_unroll also on the emulator's thread at 1x, where the 2D thread is off by default), which
-shares the three other A55s with the Gengis threads, the presenter and the sound thread.
+The first three act on the emulator's thread (2d_batch: its futex wakes; 3d_pipeline: its VBlank wait and the bins it
+drew there; the 1x share: a 1 KB copy and a bin wait per 3D line at 1x) and the others on the 2D thread at 2x
+(comp_unroll also on the emulator's thread at 1x, where the 2D thread is off by default), which shares the three
+other A55s with the Gengis threads, the presenter and the sound thread.
 
-Dropped before coding: a bounded spin before the 2D thread sleeps (the coordinator: it steals a core from a
-runnable thread on a 4-core device, and the sim can't see that; device-only verdict). Not done: see "What's next".
+Dropped: a bounded spin before the 2D thread sleeps (the coordinator: it steals a core from a runnable thread on a
+4-core device, and the sim can't see that; device-only verdict); melonDS patch 0060, VBlank's polygon Y-sort as a
+counting sort (exact, written, measured at -0.1% on dsstress L10 and 0 on geomtest: rebased out, the patch kept in
+evidence/render/0060-geom-sort-dropped.patch; see Dead ends). Not done: see "What's next".
 
 ## Why (READ, with file:line in the base at 00c34c78e8de)
 
@@ -84,12 +87,18 @@ hgquick.sh sets `render.gengis_threads=2`; the device default is 3: run the pair
 `--set render.gengis_threads=3`) since the pipeline's gain depends on how the three other cores are shared.
 
 ```
-# the 3D pipeline (the main change): off vs on (on is the default)
-EXTRA="--set render.3d_pipeline=off" hgquick.sh <bin>
-hgquick.sh <bin>
-EXTRA="--set render.3d_pipeline=off --set render.gengis_threads=3" hgquick.sh <bin>
-EXTRA="--set render.gengis_threads=3" hgquick.sh <bin>
-# read the game log's "[gengis] ... the emulator's thread drew N of M bins" line in both: with the pipeline N should be ~0
+# the 3D pipeline (the main change): off vs on (on is the default). The number that decides: the emulator's thread's
+# ms/frame (hgquick's fps, and headless.window=60 for the slowest window and frame) with it off vs on, at 2x, on BOTH
+# handhelds (RG DS 640x480 and RG DS Plus 1024x768: the plane scales, the emulator's work is the same, but the Plus
+# panel's refresh and memory traffic differ), with hgquick's 2 Gengis threads and with the device default of 3
+EXTRA="--set render.3d_pipeline=off --set headless.window=60" hgquick.sh <bin>
+EXTRA="--set headless.window=60" hgquick.sh <bin>
+EXTRA="--set render.3d_pipeline=off --set render.gengis_threads=3 --set headless.window=60" hgquick.sh <bin>
+EXTRA="--set render.gengis_threads=3 --set headless.window=60" hgquick.sh <bin>
+# and the direct measure of what it removes: the game log's "[gengis] the emulator's thread drew N of M bins" line (at
+# exit, and every 3600 frames) in both runs. N with it off is the number of 2x bins (each ~0.5-1.5 ms at 1104 MHz)
+# the emulator's thread drew at VBlank per 1188 (12 a frame); with it on N is ~0. Under qemu it was 193 of 1188 on
+# dsstress L5 (the render threads starved by the host: an upper bound).
 
 # the 2D thread's batch (wakeups a frame: 16 -> ~24, 48 -> ~8, 96 -> ~4, 192 -> ~2)
 EXTRA="--set render.2d_batch=48" hgquick.sh <bin>
