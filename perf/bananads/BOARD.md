@@ -649,3 +649,25 @@ change results; the device A/B decides (EXTRA="--set render.2d_prefetch16=off" v
 next row's 512 bytes are asked a whole DS line ahead; the current row's lines have the earlier lines' conversion to
 arrive in. Evidence: evidence/jit/2d-prefetch16-sim-v3-membench.txt (v2.1 run: 2d-prefetch16-sim-membench.txt).
 Correction to 17:13: the conv16 commit is 60a26a9. @sim: commits 60a26a9 (conv16), a8725d0 (prefetch16 default on).
+
+### 17:29 UTC · render · RESULT (exact) · render.2d_job_stride (dc02f53): the 2D thread's loop -36%/-19% of its ms, its dTLB walks -62%; the thread inside dev noise
+MEASURED (rgds-sim v2, dev mode = 2x, gengis, 2 Gengis threads, 2D thread; device build b12d; inline (the old layout) -> compact):
+dsstress-L5: the thread's loop (SetThreaded2D's lambda, the job reads) 0.176 -> 0.112 ms/frame, dTLB walks 0.9k -> 0.3k/frame, L1D
+load misses 14.9k -> 14.4k, the 2D thread 3.958 -> 3.858 ms (-2.5%: inside dev mode's +-3-4%); L10: the loop 0.172 -> 0.139 ms,
+walks 0.9k -> 0.3k, the thread +5.0% with +9.4% instructions (more helper bins that run: noise). Instructions of the loop
+identical (21.5k). Job was ~4.9 KB (Line3D[4][256] + Display[256] inline), the ring 2.5 MB; now ~256 B a job, 128 KB, the arrays
+beside (compact) or behind each job (inline). Exact: m12 (build-dev vs b12d: the device configuration on all 10 ROMs, the
+savestate reload on 5, 2x with 1 Gengis thread on 3, 1x with the 2D thread on 5: 23 configurations, FAILS=0,
+evidence/render/matrix-m12.txt); TSan x86 3 runs, 0 data races (evidence/render/tsan-jobstride.txt). Evidence:
+evidence/render/jobstride-sim-dev.txt, jobstride-ab/. @sim: dev mode only (it needs the 2D thread): judge it by the loop
+function and the walks; `rgds-sim/ab.sh <b12d> <b12d> dsstress-L5.nds --mode dev --a "--set render.2d_job_stride=inline"
+--b "--set render.2d_job_stride=compact"`. Device: the 2D thread's CPU time at 2x, inline vs compact (both handhelds).
+
+### 17:29 UTC · coordinator · INFO · NEW DEADLINE from the user: everything ends at 18:28 UTC
+READ. The user gave one more hour. Times (date -u): **17:50** no new work, finish only what is in flight;
+**18:00** your commits final, patches exported (`git format-patch 00c34c78e8de..<your branch> -o patches/<branch name>/`,
+old files cleared), findings/<you>.md and status final, HANDOFF post. **render**: cherry-pick perf/jit-2d onto
+perf/render by 18:00 and re-run a quick exactness subset. **sim**: the combined measurement (base vs everything +
+PGO) now on the current heads; a final run on the 18:00 heads if it fits; LEDGER final by 18:20. **core**: if
+jit.gfxstores isn't exact and measured by 17:50, don't ship it: document where it stands in findings/core.md.
+The coordinator writes the summary and pushes at 18:20-18:28.

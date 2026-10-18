@@ -130,6 +130,28 @@ GCC 14.3) run under `tools/qemu-dev`; "base" = /home/user/perf/build-dev/b (00c3
   585k instructions/frame (-28%)**, the thread's own work 1465k -> 1230k (-16%); ds2dtest unchanged (its lines never
   show the 3D layer on BG0, so the path is not taken: 12532k both ways). The sim's verdict on b7d is sim's to give.
 
+- **render.2d_job_stride** (dc02f53; the 2D thread at 2x): a Job was ~4.9 KB (its Line3D[4][256] copy, 4 KB, and
+  Display[256], 512 B, inline), the ring of 512 jobs 2.5 MB: every job the 2D thread took was on a page of its own
+  and its ~250 hot bytes on cache lines no stream prefetcher follows; with render.3d_share (the 2x default) the 4 KB
+  copy is never even written. Now the arrays are pointers into a block beside the ring (compact, default) or behind
+  each job (inline = the old layout), with a byte stride (JobAt). **rgds-sim v2** (dev mode, b12d, inline -> compact;
+  evidence/render/jobstride-sim-dev.txt, jobstride-ab/): the thread's loop (SetThreaded2D's lambda, the job reads)
+  **0.176 -> 0.112 ms/frame on L5** (-36%), 0.172 -> 0.139 on L10; the 2D thread's **dTLB walks 0.9k -> 0.3k/frame**
+  (-62%, -70%); the thread as a whole -2.5% on L5 and +5.0% on L10 with +9.4% instructions, i.e. inside dev mode's
+  noise (the helper bins). The loop's instructions are identical (21.5k). Exact: m12 FAILS=0 (23 configurations),
+  TSan 3 runs 0 data races.
+- **render.2d_win_neon** (4d1ee7c; the 2D thread at 2x, the emulator's thread at 1x, on lines with a window):
+  ApplyWindow and DrawBG_3D were scalar 256-pixel loops, and at 2x a windowed line could not take the raw 3D path,
+  so every quarter went through both (eight scalar passes a line). Head profile of **membench-win** (membench with
+  WIN0 over the 3D scene, the HUD case no test ROM covered; evidence/render/membench-win-main9.c, prof-head/head-mwin-*):
+  at 2x the 2D thread 6.409 ms/frame with CompositeHires at 2184k instructions (dsstress L5: 423k) and DrawScanlineFrom
+  1741k; at 1x DrawScanlineFrom 1739k = 35% of the emulator's thread (membench without the window: 413k). On ds2dtest
+  (windows on both units) ApplyWindow alone is 8.4M of the frame's 19.3M instructions (the attribution build,
+  prof-head/attr-ds2dtest-st.txt). Numbers of the change: see below when the chain lands (sim st 2x / st 1x A/Bs on
+  membench-win and ds2dtest; the matrix m13).
+- **render.2d_steps_cache** (0b5346b): BuildSteps ~220 instructions a call, 83k/frame on the 2D thread at 2x (L5), 86k
+  on membench 1x, 138k on ds2dtest (2-3% of the thread's instructions) for the same list on nearly every line; kept
+  while its key holds. Numbers: see below (m14 build).
 - Baseline, reference build, device mode (gengis 2x, 3 threads, 2D thread, headless.direct), dsstress L5, frames
   100-300: main thread 3423.9k insn/frame; by bucket: other 1231k (of which rast_kern_h*/gx_polygon/f_run/gx2_render_bin
   ~1150k = bins drawn by the emulator's thread), 3d 831k, core 507k, memory 269k, 2d/gpu 230k, jit-code 206k.

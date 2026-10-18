@@ -1,4 +1,4 @@
-# render: status (overwritten by render only) — HANDOFF-ready; updated 17:12 UTC (date -u)
+# render: status (overwritten by render only) — HANDOFF-ready; updated 17:31 UTC (date -u)
 
 ## Where things are
 - Branch `perf/render` @ eee302e (HEAD), worktree /home/user/perf/render/sd, from 00c34c78e8de. 11 commits, every change
@@ -36,11 +36,15 @@
   (evidence/render/tiles-shelved.diff; board 17:01). Head profiles of b10d on rgds-sim: runs/prof/head-*/report.txt
   (the 2D thread at 2x on L5: 3.855 ms, CompositeHires 1.536 ms = 423k insns, memory-bound on the 3D rows; the thread's
   loop 0.147 ms for 22.5k insns: the job ring's stride, see below).
-- IN PROGRESS (CLAIM 17:06): render.2d_job_stride=compact|inline (GPU_Banana.h Job: Line3D/Display out of the hot part,
-  the ring 128 KB instead of 2.5 MB; a byte stride, JobAt(i)). Code in the worktree, uncommitted; device build b12d
-  building (/home/user/perf/render/b12d); then runs/chain-b12d.sh (matrix m12 base vs b12d, rgds-sim inline vs compact
-  on L5/L10 dev -> runs/matrix-m12.txt, runs/sim/dev-*-jobstride-ab.txt) and runs/tsan-b12.sh (x86 TSan, 3 runs ->
-  runs/tsan-b12.out). If all pass: commit ("render.2d_job_stride"), evidence files, findings, board RESULT, re-export.
+- DONE 17:29: render.2d_job_stride (dc02f53; RESULT on the board, m12 FAILS=0, TSan 0 races, sim dev A/B in
+  evidence/render/jobstride-*). COMMITTED, measuring: render.2d_win_neon (4d1ee7c; win_test 0 mismatches; b13d built;
+  runs/chain3.sh: the st-1x L1I series over builds, then the win_neon sim A/Bs (st 2x/1x membench-win, ds2dtest, dev)
+  -> runs/sim/*winneon*, then its exactness m13 -> runs/matrix-m13.txt). COMMITTED, unmeasured: render.2d_steps_cache
+  (0b5346b; exact by construction; b14d builds after the st1x series: runs/build-b14d.sh; then a matrix m14 + A/B).
+- The coordinator's 1x L1I question (LEDGER L5's flag): analysed on the board 17:25 (a link-layout reshuffle; per-symbol
+  diff in evidence/render/prof-head/1x-L5-l1i-diff.txt); the st-mode series over base/b10d/b12d/b13d lands in
+  runs/prof/st1x-*/report.txt (chain3); post the spread, recommend BANANADS_ALIGN / PGO (core's) as the robust fix.
+- patches/render/ is at 11 (eee302e): re-export after m13/m14 pass (14 patches).
 - Attribution build for the BG layers (jit's now): /home/user/perf/render/b11a (eee302e, no LTO,
   -fno-inline-functions-called-once); profiles runs/prof/attr-*/report.txt (board 17:10).
 - Builds now: b10d = eee302e (the head, device toolchain), b11a (attribution), b12d (job ring). Base build-dev.
