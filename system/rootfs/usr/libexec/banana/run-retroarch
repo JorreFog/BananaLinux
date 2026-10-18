@@ -10,6 +10,9 @@ if [ -n "$BANANA_SYSTEM" ]; then
     [ -n "$c" ] && [ -f /usr/lib/libretro/${c}_libretro.so ] && CORE=/usr/lib/libretro/${c}_libretro.so
 fi
 [ -f "$CORE" ] || { echo "no core $1" >&2; exit 1; }
+# the core that really runs, in banana-ui's log (its "starting" line names systems.conf's)
+c=${CORE##*/}; c=${c%_libretro.so}
+[ "$c" != "$1" ] && echo "run-retroarch: core $c (Settings > Other systems), not $1" >&2 || echo "run-retroarch: core $c" >&2
 CFG=/data/retroarch/retroarch.cfg
 [ -f $CFG ] || { mkdir -p /data/retroarch; cp /etc/banana/retroarch.cfg $CFG; }
 mkdir -p /data/saves /data/states /data/screenshots
