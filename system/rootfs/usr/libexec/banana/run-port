@@ -14,6 +14,11 @@ export SDL_KMSDRM_FIRST=${BANANA_TOP:-DSI-2} TERM=linux
 # PortMaster's menu is Python with PySDL2, which finds SDL2 through ctypes.util.find_library: no ldconfig cache or
 # compiler here, so it found nothing and PortMaster quit a second after starting. Its own folder says where.
 export PYSDL2_DLL_PATH=/usr/lib
+# PortMaster starts its splash (a LÖVE app on KMSDRM, holding DRM master) and then its menu, which stops the splash
+# only after SDL is up. SDL's KMSDRM skips a device it can't be master of (SDL_KMSDRM_REQUIRE_DRM_MASTER, on by
+# default), so the menu's SDL fell back to the offscreen driver and drew nowhere: a black screen. Master is taken when
+# the window is made, once the splash has gone.
+export SDL_KMSDRM_REQUIRE_DRM_MASTER=0
 . /usr/libexec/banana/one-panel
 one_panel_dark top
 cd "$(dirname "$1")"
