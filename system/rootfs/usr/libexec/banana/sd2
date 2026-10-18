@@ -8,6 +8,14 @@ M=/run/sd2
 S=/run/banana/sd2
 mkdir -p $M $S
 data_disk=$(sed -n 's|^/dev/\(mmcblk[0-9]*\)p[0-9]* /data .*|\1|p' /proc/mounts | head -n 1)
+# is there a second slot at all (the RG DS has one, the Plus two): a card reader with card detection (cd-gpios) that
+# isn't the one the system's card is in. $S/slot tells Settings to offer the second card.
+data_host=$(readlink -f /sys/class/block/$data_disk/device 2>/dev/null | sed -n 's|.*/\(mmc[0-9]*\)/mmc[0-9]*:[^/]*$|\1|p')
+slot=
+for h in /sys/class/mmc_host/mmc*; do
+    [ -e "$h/device/of_node/cd-gpios" ] && [ "${h##*/}" != "$data_host" ] && { slot=1; break; }
+done
+if [ -n "$slot" ]; then : > $S/slot; else rm -f $S/slot; fi
 card=
 for d in /sys/class/block/mmcblk[0-9]; do
     [ -e "$d" ] || continue
