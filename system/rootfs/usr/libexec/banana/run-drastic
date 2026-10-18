@@ -80,6 +80,14 @@ if grep -q '^ *quick_resume *= *on' /data/banana/settings.conf 2>/dev/null; then
 fi
 # the settings screen's choices (KEY=value lines), exported to SuperDrastic
 if [ -f /data/banana/superdrastic.conf ]; then set -a; . /data/banana/superdrastic.conf; set +a; fi
+# the game's own shader (its page, X in the library: nds-game-shader), for this run only; a card shader from its folder
+gs=$(/usr/libexec/banana/nds-game-shader "$1")
+if [ -n "$gs" ]; then
+    echo "run-drastic: ${1##*/} has its own shader: $gs" >&2
+    export DSFLIP_SHADER=$gs
+    unset DSFLIP_SHADER_DIR
+    [ -f "/data/banana/shaders/$gs.frag" ] && export DSFLIP_SHADER_DIR=/data/banana/shaders
+fi
 # the 3D always through the Gengis Engine (no longer a setting; a DSFLIP_RAST=0 left in the file from before is overruled)
 export DSFLIP_RAST=1
 exec $SD/superdrastic-run $D/drastic "$1"

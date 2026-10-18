@@ -87,6 +87,19 @@ for size in 640x480 1024x768; do
         --script "lib 0 0; press a; wait 3000; wait 1" 2> "$flog" || { echo "FAIL $size: banana-ui (favorites) exited $?"; fail=1; }
     grep -q "launch 0: .*Orchard Tactics.gba (system gba)" "$flog" || { echo "FAIL $size: the favourite: $(grep launch "$flog")"; fail=1; }
     mv "$OUT/favorites.txt.keep" "$FX/data/favorites.txt"; rm -f "$FX/data/favorite-systems.txt"
+    # the game page (X on a DS game): its own shader, Down to the Shader row, Right to None, A keeps it in
+    # nds-per-game-shader.conf; then Left back to "As in Settings" and the file goes (nothing chosen: no file)
+    plog=$OUT/$size-pergame.log; G="$FX/data/nds-per-game-shader.conf"; rm -f "$G"
+    run_pg() { "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" \
+        --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" --script "$1" 2>> "$plog" ||
+        { echo "FAIL $size: banana-ui (game page) exited $?"; fail=1; }; }
+    run_pg "lib 0 0; press x; wait 300; shot pergame; press down; press right; wait 300; shot pergame-shader; press a; wait 300; wait 1"
+    grep -q ' = none$' "$G" 2>/dev/null || { echo "FAIL $size: the game's shader wasn't kept: $(cat "$G" 2>&1)"; fail=1; }
+    run_pg "lib 0 0; press x; wait 300; press down; shot pergame-none; press left; press a; wait 300; wait 1"
+    [ -e "$G" ] && { echo "FAIL $size: back to As in Settings left $G"; fail=1; }
+    for s in pergame pergame-shader pergame-none; do
+        [ -s "$OUT/$size-$s-top.png" ] && [ -s "$OUT/$size-$s-bot.png" ] || { echo "FAIL $size: no $s shot"; fail=1; }
+    done
     grep 'bench:' "$log" | sed "s/^banana-ui: /$size /"
 done
 [ $fail = 0 ] && echo "banana-ui: all checks passed ($OUT)"

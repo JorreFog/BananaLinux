@@ -109,10 +109,14 @@ namespace banana
 		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME } page = LIST;
 		// the game page (X on a DS game in the library): its emulator, this game only (banana/nds-per-game.conf, read by
 		// run-nds: "<ROM file name> = superdrastic|bananads", no line = Settings > Nintendo DS > Emulator)
+		// the game page (X on a DS game): its own emulator and shader, each "As in Settings" (index 0) or a choice
 		std::string pgTitle, pgRom;
-		int pgPick = 0;
+		int pgRow = 0, pgEmu = 0, pgShader = 0;
+		std::vector<std::string> pgShaderNames, pgShaderValues;
 		std::string gameEmulator(const std::string& rom);
 		void setGameEmulator(const std::string& rom, const std::string& emu);
+		std::string perGame(const std::string& file, const std::string& rom);
+		void setPerGame(const std::string& file, const std::string& rom, const std::string& value);
 		Result pressGame(Key k);
 		Result touchGame(float cx, float cy);
 		void renderGame();

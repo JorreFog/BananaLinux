@@ -899,7 +899,7 @@ namespace banana
 	std::vector<std::pair<std::string, std::string>> Library::hints(bool library, int /*sys*/, int game)
 	{
 		std::vector<std::pair<std::string, std::string>> r;
-		if (library && game >= 0 && game < gameCount() && systemOf(game).id == "nds") r.push_back({ "X", "Emulator" });
+		if (library && game >= 0 && game < gameCount() && systemOf(game).id == "nds") r.push_back({ "X", "Options" });	// (the game page: its emulator and shader)
 		r.push_back({ "SELECT", "Search" });
 		return r;
 	}
