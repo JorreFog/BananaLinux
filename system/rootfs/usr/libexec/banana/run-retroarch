@@ -28,6 +28,17 @@ if [ ! -f $M ]; then
     grep -q '^mupen64plus-ThreadedRenderer = ' $O 2>/dev/null && sed -i 's|^mupen64plus-ThreadedRenderer = .*|mupen64plus-ThreadedRenderer = "True"|' $O || echo 'mupen64plus-ThreadedRenderer = "True"' >> $O
     touch $M
 fi
+# Shaders: the image's libretro GLSL presets (/usr/share/libretro/shaders/glsl) are copied once to the card's shader
+# folder, in the background (a few thousand small files), where Shaders > Load Preset starts and where the Online
+# Updater (shown, the core downloader not: cores come with the image) can add more
+S=/data/retroarch/.banana-shaders-1
+if [ ! -f $S ]; then
+    set_cfg video_shader_dir /data/retroarch/shaders
+    set_cfg menu_show_online_updater true
+    set_cfg menu_show_core_updater false
+    mkdir -p /data/retroarch/shaders
+    ( cp -r /usr/share/libretro/shaders/glsl/. /data/retroarch/shaders/ && touch $S ) </dev/null >/dev/null 2>&1 &
+fi
 # the RetroAchievements account from the setup (banana/accounts.conf) into RetroArch's own settings
 A=/data/banana/accounts.conf
 if [ -f $A ]; then

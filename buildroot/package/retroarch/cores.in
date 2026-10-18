@@ -54,3 +54,9 @@ config BR2_PACKAGE_LIBRETRO_FAKE08
 	default y
 	help
 	  PICO-8 carts (.p8 and .p8.png), when the official PICO-8 isn't on the card.
+
+config BR2_PACKAGE_RETROARCH_GLSL_SHADERS
+	bool "retroarch-glsl-shaders"
+	default y
+	help
+	  libretro's GLSL shader presets for RetroArch's GL driver.
