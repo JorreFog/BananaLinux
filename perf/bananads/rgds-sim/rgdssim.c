@@ -20,6 +20,7 @@
  * Args (all optional): out=<path> l1i=32768 l1d=32768 l1ways=4 line=64 l3=524288 l3ways=16 itlb=15 dtlb=16
  *   l2tlb=1024 l2tlbways=4 page=4096 bpbits=12 bphist=10 btb=256 ras=8 ldlat=3 mullat=3 mul64lat=4 divlat=8
  *   fplat=4 pf=1 pfdeg=2 ipf=1 l3shared=1 thp=1 hugepages=LO-HI (hex; also learnt from madvise(MADV_HUGEPAGE))
+ *   ws=4 wsl3=128 wsn=2 regions=1 (v2: write streaming; per-region miss table)
  *   marks=N1:N2 warm=10 (one run: snapshots after frames N1 and N2 from BananaDS's headless.window=1 log; out= is
  *   then a prefix: <out>N1.tsv, <out>N2.tsv...)
  * Build: gcc -O2 -shared -fPIC -I<qemu>/include/qemu $(pkg-config --cflags glib-2.0) rgdssim.c -o librgdssim.so
@@ -44,10 +45,10 @@ static const char *clname[CL_N] = { "alu", "mul", "div", "ld", "st", "ldp", "stp
 /* ---- per-slot event counters ---- */
 enum { C_INSN, C_BASE, C_L1I_MISS, C_L1I_L3MISS, C_LD, C_ST, C_LD_MISS, C_LD_L3MISS, C_ST_MISS, C_ST_L3MISS,
        C_ITLB_L2, C_ITLB_WALK, C_DTLB_L2, C_DTLB_WALK, C_BCOND, C_BCOND_MISS, C_BIND, C_BIND_MISS, C_RET_MISS,
-       C_PF, C_PF_DRAM, C_N };
+       C_PF, C_PF_DRAM, C_ST_WS, C_ST_WS_L3, C_N };
 static const char *cname[C_N] = { "insn", "base", "l1i_miss", "l1i_l3miss", "ld", "st", "ld_miss", "ld_l3miss",
     "st_miss", "st_l3miss", "itlb_l2", "itlb_walk", "dtlb_l2", "dtlb_walk", "bcond", "bcond_miss", "bind",
-    "bind_miss", "ret_miss", "pf", "pf_dram" };
+    "bind_miss", "ret_miss", "pf", "pf_dram", "st_ws", "st_ws_l3" };
 
 /* ---- parameters ---- */
 static const char *outpath = "rgdssim";
@@ -56,6 +57,13 @@ static unsigned p_itlb = 15, p_dtlb = 16, p_l2tlb = 1024, p_l2tlbways = 4, p_pag
 static unsigned p_bpbits = 12, p_bphist = 10, p_btb = 256, p_ras = 8;
 static unsigned p_ldlat = 3, p_mullat = 3, p_mul64lat = 4, p_divlat = 8, p_fplat = 4;
 static unsigned p_pf = 1, p_pfdeg = 2, p_ipf = 1, p_l3shared = 1, p_thp = 1;
+/* v2: L1D write streaming (the A55's no-write-allocate mode: CPUACTLR_EL1 bit 24 disables it, CPUECTLR_EL1 L1WSCTL
+   sets its threshold; TF-A cortex_a55.h). After ws=N consecutive cache lines written whole by stores, store misses
+   stop allocating (in L1D; in the L3 too after wsl3=M lines) and cost nothing but bandwidth, until a line is left
+   partly written. ws=0 turns it off (v1's behaviour). wsn = how many write streams are tracked at once.
+   The thresholds are ASSUMED (the A53 TRM's defaults for its equivalent: 4 lines for L1, more for L2). */
+static unsigned p_ws = 4, p_wsl3 = 128, p_wsn = 2, p_regions = 1;
+#define MAXWS 4
 static unsigned lshift, pshift;
 /* transparent huge pages: ranges the guest madvise(MADV_HUGEPAGE)s (BananaLinux's kernel: THP=madvise) get 2 MB
    TLB entries when thp=1 (qemu-user itself ignores madvise). Also hugepages=LO-HI (hex) by hand. */
@@ -131,6 +139,8 @@ typedef struct {
     uint64_t *btb_pc, *btb_tgt;
     uint64_t *ras; unsigned rasn, rastop;
     uint64_t missring[8]; unsigned missi;
+    uint64_t ws_line[MAXWS], ws_mask[MAXWS], ws_age[MAXWS]; unsigned ws_run[MAXWS]; uint64_t ws_clock;
+    GHashTable *regions;      /* (slot << 40 | 64 KB region) -> uint64_t[6] misses: ld, st, ld_l3, st_l3, ws, ws_l3 */
     const TBInfo *prev;
     long tid;
     char name[32];
@@ -152,6 +162,8 @@ static VState *vstate(unsigned v)
     s->ras = g_new0(uint64_t, p_ras ? p_ras : 1);
     s->last_dline = s->last_dpage = s->last_ipage = UINT64_MAX;
     s->tid = syscall(SYS_gettid);
+    s->regions = g_hash_table_new(g_int64_hash, g_int64_equal);
+    for (unsigned i = 0; i < MAXWS; i++) s->ws_line[i] = UINT64_MAX - 8;
     vs[v] = s;
     return s;
 }
@@ -437,6 +449,47 @@ static inline void prefetch_d(VState *s, uint64_t ln, uint64_t *c)
     }
 }
 
+/* write-stream tracking: returns the run length (consecutive whole lines) of the stream this store belongs to */
+static unsigned ws_track(VState *s, uint64_t va, unsigned size)
+{
+    uint64_t ln = va >> lshift;
+    unsigned off = (unsigned)(va & (p_line - 1)), best = 0;
+    int k = -1;
+    s->ws_clock++;
+    for (unsigned i = 0; i < p_wsn; i++)
+        if (s->ws_line[i] == ln) { k = (int)i; break; }
+    if (k < 0) {
+        for (unsigned i = 0; i < p_wsn; i++)            /* the stream this line continues, or the oldest */
+            if (s->ws_line[i] + 1 == ln) { k = (int)i; break; }
+        if (k < 0) {
+            uint64_t old = UINT64_MAX;
+            for (unsigned i = 0; i < p_wsn; i++) if (s->ws_age[i] < old) { old = s->ws_age[i]; k = (int)i; }
+            s->ws_run[k] = 0;
+        } else {
+            uint64_t full = p_line >= 64 ? UINT64_MAX : ((1ull << p_line) - 1);
+            s->ws_run[k] = s->ws_mask[k] == full ? s->ws_run[k] + 1 : 0;
+        }
+        s->ws_line[k] = ln; s->ws_mask[k] = 0;
+    }
+    if (off + size > p_line) size = p_line - off;
+    s->ws_mask[k] |= (size >= 64 ? UINT64_MAX : ((1ull << size) - 1)) << off;
+    s->ws_age[k] = s->ws_clock;
+    best = s->ws_run[k];
+    return best;
+}
+static inline void region_add(VState *s, unsigned slot, uint64_t ln, int idx)
+{
+    if (!p_regions) return;
+    uint64_t key = ((uint64_t)slot << 40) | ((ln << lshift) >> 16);
+    uint64_t *r = g_hash_table_lookup(s->regions, &key);
+    if (!r) {
+        uint64_t *k = g_new(uint64_t, 1); *k = key;
+        r = g_new0(uint64_t, 6);
+        g_hash_table_insert(s->regions, k, r);
+    }
+    r[idx]++;
+}
+
 static void mem_cb(unsigned vcpu, qemu_plugin_meminfo_t info, uint64_t va, void *ud)
 {
     VState *s = vstate(vcpu);
@@ -444,6 +497,8 @@ static void mem_cb(unsigned vcpu, qemu_plugin_meminfo_t info, uint64_t va, void 
     int st = qemu_plugin_mem_is_store(info);
     unsigned size = 1u << qemu_plugin_mem_size_shift(info);
     c[st ? C_ST : C_LD]++;
+    unsigned wsrun = (st && p_ws) ? ws_track(s, va, size) : 0;
+    unsigned slot = GPOINTER_TO_UINT(ud);
     uint64_t first = va >> lshift, last = (va + size - 1) >> lshift;
     for (uint64_t ln = first; ln <= last; ln++) {
         if (ln == s->last_dline) continue;
@@ -455,9 +510,17 @@ static void mem_cb(unsigned vcpu, qemu_plugin_meminfo_t info, uint64_t va, void 
                 if (cache_access(&s->l2tlb, pg)) c[C_DTLB_L2]++; else c[C_DTLB_WALK]++;
             }
         }
+        if (st && p_ws && wsrun >= p_ws) {           /* write streaming: no allocation, no stall */
+            if (cache_probe(&s->l1d, ln)) { cache_access(&s->l1d, ln); continue; }
+            c[C_ST_WS]++; region_add(s, slot, ln, 4);
+            if (wsrun < p_wsl3) l3_access(&s->l3own, ln);
+            else { c[C_ST_WS_L3]++; region_add(s, slot, ln, 5); }
+            continue;
+        }
         if (cache_access(&s->l1d, ln)) continue;
         c[st ? C_ST_MISS : C_LD_MISS]++;
-        if (!l3_access(&s->l3own, ln)) c[st ? C_ST_L3MISS : C_LD_L3MISS]++;
+        region_add(s, slot, ln, st ? 1 : 0);
+        if (!l3_access(&s->l3own, ln)) { c[st ? C_ST_L3MISS : C_LD_L3MISS]++; region_add(s, slot, ln, st ? 3 : 2); }
         if (p_pf) {   /* stream prefetcher (ASSUMED): a miss next to one of the last 8 misses prefetches ahead */
             int seq = 0;
             for (unsigned k = 0; k < 8; k++) if (s->missring[k] == ln - 1 || s->missring[k] == ln - 2) { seq = 1; break; }
@@ -592,10 +655,31 @@ static void dump(const char *prefix)
     g_free(path);
     fprintf(f, "l1i=%u l1d=%u l1ways=%u line=%u l3=%u l3ways=%u itlb=%u dtlb=%u l2tlb=%u l2tlbways=%u page=%u "
             "bpbits=%u bphist=%u btb=%u ras=%u ldlat=%u mullat=%u mul64lat=%u divlat=%u fplat=%u pf=%u pfdeg=%u "
-            "ipf=%u l3shared=%u thp=%u\n", p_l1i, p_l1d, p_l1ways, p_line, p_l3, p_l3ways, p_itlb, p_dtlb, p_l2tlb,
+            "ipf=%u l3shared=%u thp=%u ws=%u wsl3=%u wsn=%u model=v2\n", p_l1i, p_l1d, p_l1ways, p_line, p_l3, p_l3ways, p_itlb, p_dtlb, p_l2tlb,
             p_l2tlbways, p_page, p_bpbits, p_bphist, p_btb, p_ras, p_ldlat, p_mullat, p_mul64lat, p_divlat, p_fplat,
-            p_pf, p_pfdeg, p_ipf, p_l3shared, p_thp);
+            p_pf, p_pfdeg, p_ipf, p_l3shared, p_thp, p_ws, p_wsl3, p_wsn);
     fclose(f);
+    /* L1D misses per thread, code location and 64 KB region (to tell the buffers apart) */
+    if (p_regions) {
+        path = g_strdup_printf("%s.regions", prefix);
+        f = fopen(path, "w");
+        g_free(path);
+        fprintf(f, "vcpu\tkind\tkey\tregion\tld_miss\tst_miss\tld_l3miss\tst_l3miss\tst_ws\tst_ws_l3\n");
+        for (unsigned v = 0; v < MAXV; v++) {
+            VState *s = vs[v];
+            if (!s) continue;
+            GHashTableIter it; gpointer k, val;
+            g_hash_table_iter_init(&it, s->regions);
+            while (g_hash_table_iter_next(&it, &k, &val)) {
+                uint64_t key = *(uint64_t *)k, *r = val;
+                unsigned sl = (unsigned)(key >> 40);
+                if (sl >= nslots) continue;
+                fprintf(f, "%u\t%s\t%s\t%" PRIx64 "\t%" PRIu64 "\t%" PRIu64 "\t%" PRIu64 "\t%" PRIu64 "\t%" PRIu64 "\t%" PRIu64 "\n",
+                        v, slotkind[sl] ? "addr" : "sym", slotkey[sl], (uint64_t)((key & ((1ull << 40) - 1)) << 16), r[0], r[1], r[2], r[3], r[4], r[5]);
+            }
+        }
+        fclose(f);
+    }
     /* the address map (qemu-user: guest = host addresses here), to name shared-library code in the report */
     path = g_strdup_printf("%s.maps", prefix);
     FILE *in = fopen("/proc/self/maps", "r"), *o = fopen(path, "w");
@@ -649,7 +733,8 @@ QEMU_PLUGIN_EXPORT int qemu_plugin_install(qemu_plugin_id_t id, const qemu_info_
         { "l2tlbways", &p_l2tlbways }, { "page", &p_page }, { "bpbits", &p_bpbits }, { "bphist", &p_bphist },
         { "btb", &p_btb }, { "ras", &p_ras }, { "ldlat", &p_ldlat }, { "mullat", &p_mullat },
         { "mul64lat", &p_mul64lat }, { "divlat", &p_divlat }, { "fplat", &p_fplat }, { "pf", &p_pf },
-        { "pfdeg", &p_pfdeg }, { "ipf", &p_ipf }, { "l3shared", &p_l3shared }, { "thp", &p_thp } };
+        { "pfdeg", &p_pfdeg }, { "ipf", &p_ipf }, { "l3shared", &p_l3shared }, { "thp", &p_thp },
+        { "ws", &p_ws }, { "wsl3", &p_wsl3 }, { "wsn", &p_wsn }, { "regions", &p_regions } };
     for (int i = 0; i < argc; i++) {
         if (!strncmp(argv[i], "out=", 4)) { outpath = g_strdup(argv[i] + 4); continue; }
         if (!strncmp(argv[i], "marks=", 6)) { char *e; m_n1 = strtoul(argv[i] + 6, &e, 10); m_n2 = *e == ':' ? strtoul(e + 1, 0, 10) : 0; continue; }
@@ -668,6 +753,8 @@ QEMU_PLUGIN_EXPORT int qemu_plugin_install(qemu_plugin_id_t id, const qemu_info_
     if (p_itlb > 64) p_itlb = 64;
     if (p_dtlb > 64) p_dtlb = 64;
     if (p_btb == 0) p_btb = 1;
+    if (p_wsn < 1) p_wsn = 1;
+    if (p_wsn > MAXWS) p_wsn = MAXWS;
     lshift = __builtin_ctz(p_line); pshift = __builtin_ctz(p_page);
     cache_init(&l3, p_l3, p_l3ways, p_line);
     symslot = g_hash_table_new(g_str_hash, g_str_equal);

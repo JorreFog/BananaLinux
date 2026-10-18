@@ -482,3 +482,31 @@ READ. `core` moves to the JIT idea jit had queued: VRAM/OAM/palette stores emitt
 0010's per-page table (PERF.md "What's left" #3), in /home/user/perf/core/sdjit (perf/core-jitmem from perf/jit @
 3450884, so 0021-0024 are under it), melonDS patches 0041-0049. core's 2D share goes to render (layers, sprites,
 PrepareScanline*, the copy log) and jit (ConvertRun16). 2D-PLAN.md updated. @jit: core may ask you about the JIT.
+
+### 17:00 UTC · jit · CLAIM · 2D: ConvertRun16 and the output stage (WriteLine/WriteZip/WriteDouble/EmitA/B/DoubleLine/Fill*)
+On perf/jit-2d (from perf/render eee302e). MEASURED first (rgds-sim, device build of eee302e, dsstress-L5 2x dev,
+2D thread 4.17 ms/frame @1104): CompositeHires 1.54 ms (render's), ConvertRun16 0.284 ms (155k insns; 769 DRAM load
+misses/frame on its VRAM rows), WriteZip 0.163 (178k insns), WriteDouble 0.113 (105k); with sim v2's write streaming
+the output stores mostly stream (st_ws 14-15k lines/frame each, ~500-1150 store misses), so the output stage is now
+instruction-bound in the model. Plan: (1) ConvertRun16 with fewer instructions per pixel and its source row prefetched;
+(2) the output kernels' instruction count (1x WriteLine is 0.177 ms on L5 1x); (3) on the device the KMS dumb buffers
+are the destination (write-combined if Rockchip maps them so: the model can't see it), so the stores stay whole-line.
+Evidence: /home/user/perf/jit/sim3/base-L5-dev/report.txt (copy to evidence/jit/2d-base-L5-dev.txt).
+
+### 17:05 UTC · render · RESULT (exact; device verdict) · render.2d_prefetch (eee302e): the 2D thread prefetches the next line's 3D rows at 2x; off by default
+MEASURED (qemu-count, device build b10d = eee302e, device mode, dsstress L5; evidence/render/qc-b10d/): the 2D thread 2498.1k ->
+2469.5k insns/frame (dev mode is not deterministic: noise), the emulator's thread 2295.6k -> 2311.6k. qemu and the model can't see
+a prefetch's effect (the 3D rows are read once, 768 KB/frame, ~9.6k DRAM lines in sim's model), so the toggle ships OFF and the
+device decides: `--set render.2d_prefetch=on` vs off, the 2D thread's CPU time (/proc/<pid>/task/*/stat) at 2x on both handhelds.
+Exact: matrix m10 (build-dev vs b10d with prefetch on, 10 ROMs, 2x dev, pictures every 10th of 300 + audio) FAILS=0
+(evidence/render/matrix-m10.txt). patches/render/ re-exported (11 patches).
+
+### 17:05 UTC · render · INFO · the 2D plan: taking core's 2D share (layers, sprites, windows, PrepareScanline*, the copy log); render.2d_tiles shelved
+READ 2D-PLAN.md. perf/jit-2d and perf/sim-2d have no commits yet (nothing to integrate so far). I had a tile-fused pass written and
+compile-checked (render.2d_tiles: at 2x the quarters merge writes the frame's two rows itself, 64 px at a time, so the four 1 KB quarter
+lines never exist; the output kernels WriteZip/Bright6/Expand6 moved into a shared header and EmitA/Execute skip the line when the
+compositor wrote it). It changes GPU_Banana.cpp's output stage, now jit's; and its expected gain is small (the 4 KB intermediate stays in
+L1; ~100k insns/frame = 4% of the 2D thread's). Shelved: evidence/render/tiles-shelved.diff. @jit: if your output stage ends up
+exposing a ranged `WriteZip(dst, even, odd, brightness, i0, i1)` (or equivalent) and a "the compositor wrote this line" skip in EmitA,
+say so and I'll finish the compositor side; otherwise it stays a note in findings. Next: the head build's per-function profile of the
+2D thread at 2x (L5/L10, dev) and of the 2D bucket at 1x (membench, ds2dtest) on rgds-sim, then a CLAIM in my functions.
