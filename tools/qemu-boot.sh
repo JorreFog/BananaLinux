@@ -143,8 +143,8 @@ boot() {    # boot <name>: start the VM (with the kernel and root the card's ext
     wait_for "banana-ui: the menu" 240 "$1: the menu is up" || { cat "$OUT/serial.log" | tail -n 30; kill $QEMU 2>/dev/null; return 1; }
     sleep 3
 }
-shutdown_from_settings() {  # Start > Up (wraps to the last row, Shut down) > A twice; the VM powers off
-    key s up ret ret
+shutdown_from_settings() {  # Start (the groups) > L (wraps to the last, System) > A > Up (wraps to its last row, Shut
+    key s pgup ret up ret ret  # down) > A twice; the VM powers off
     for i in $(seq 120); do kill -0 $QEMU 2>/dev/null || { ok "$1: shut down from the settings, the VM powered off"; wait $QEMU 2>/dev/null; return 0; }; sleep 0.5; done
     bad "$1: still running 60 s after the shutdown"; kill $QEMU 2>/dev/null; return 1
 }
@@ -260,8 +260,8 @@ add_update() { mkdir -p "$DATA/banana/updates"; make_update "$DATA/banana/update
 with_data add_update
 boot third
 grep -q "rcS: slot a booted" "$OUT/serial.log" && ok "the third boot ran slot a" || bad "the third boot didn't say it ran slot a"
-# Start > System (five sections on) > Update (the row under Time zone) > the package > A again to confirm
-key s pgdn pgdn pgdn pgdn pgdn down ret; sleep 1; shot third-updates; key ret ret
+# Start > System (L from the first group) > Update (the row under Time zone) > the package > A again to confirm
+key s pgup ret down ret; sleep 1; shot third-updates; key ret ret
 wait_for "written to slot b" 300 "the update was written to slot b and checked"
 sleep 2; shot third-updated
 key ret            # Restart
@@ -272,7 +272,7 @@ boot fourth
 grep -q "rcS: slot b booted" "$OUT/serial.log" && ok "the fourth boot ran slot b: the update" || bad "the fourth boot didn't run slot b"
 shot fourth-menu
 # Start > System > Previous version (two rows under Time zone) > A twice: back to slot a from the next boot
-key s pgdn pgdn pgdn pgdn pgdn down down ret ret
+key s pgup ret down down ret ret
 for i in $(seq 120); do kill -0 $QEMU 2>/dev/null || break; sleep 0.5; done
 kill -0 $QEMU 2>/dev/null && { bad "no restart from Previous version"; kill $QEMU; } || ok "restarted from Previous version"
 wait $QEMU 2>/dev/null || true
