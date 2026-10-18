@@ -1,0 +1,12 @@
+rgds-sim A/B (model v2)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/build-dev/b/bananads /home/user/perf/roms/dsstress-L5.nds det2x-st-L5-A --mode st --frames 100:300 --set render.scale=2
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/build-dev/b/bananads /home/user/perf/roms/dsstress-L5.nds det2x-st-L5-B --mode st --frames 100:300 --set render.scale=2
+
+== thread 0 (main): ms/frame @1104 12.547 -> 12.542 (-0.04%)   @1992 7.505 -> 7.501 (-0.05%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 12.269 -> 12.257 (-0.09%)
+  insn 9685.8k->9685.8k (+0.0%)  base 9977.0k->9977.0k (+0.0%)  l1i_miss 12.4k->12.4k (-0.0%)  l1i_l3miss 0.7k->0.7k (-0.1%)  ld_miss 50.9k->50.9k (-0.1%)  ld_l3miss 9.0k->9.0k (+0.0%)  st_miss 11.6k->11.3k (-2.6%)  st_l3miss 3.0k->2.9k (-3.1%)  itlb_l2 14.8k->14.8k (+0.0%)  itlb_walk 0.0k->0.0k (-10.7%)  dtlb_l2 38.9k->38.9k (-0.0%)  dtlb_walk 0.5k->0.5k (-0.4%)  bcond_miss 46.7k->46.7k (-0.0%)  bind_miss 5.9k->5.9k (+0.0%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  other                0.474     0.470    -0.003     399.2k     399.2k
+  gengis               6.453     6.453    -0.001    5614.5k    5614.5k
+  2d                   3.174     3.173    -0.001    1665.4k    1665.4k
+  scheduler/core       0.734     0.733    -0.001     548.2k     548.2k

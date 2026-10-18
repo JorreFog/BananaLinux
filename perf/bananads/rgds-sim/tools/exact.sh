@@ -4,7 +4,8 @@
 # 300 (rtc.fixed) and, for the sound ROMs, the raw audio dump, md5-compared, on the test ROMs; with one binary
 # (binA = binB) also bananads-difftest --every --frames 300 (main RAM every frame) on the CPU ROMs.
 # Settings: space-separated K=V; ENV:NAME=V sets an environment variable for that side. Picks the sysroot like
-# run.sh (Buildroot builds: the device toolchain's). Prints one line per check and FAILS=n.
+# run.sh (Buildroot builds: the device toolchain's). EXTRA_ROMS="<abs paths>" adds ROMs to both lists. Prints one
+# line per check and FAILS=n.
 set -u
 BA=$1; BB=$2; OUT=$3; SA=$4; SB=$5; QUICK=${6:-}
 Q=${QEMU:-/home/user/perf/qemu-src/build/qemu-aarch64}; R=${ROMS:-/home/user/perf/roms}
@@ -21,7 +22,7 @@ pics() {
     split "$s"
     local d=$OUT/pics/$n.$side; rm -rf $d; mkdir -p $d/save
     env $ENVS $Q -L $(sysroot $b) $b $COMMON --set headless.frames=300 --set headless.dump_dir=$d \
-      --set headless.dump_every=50 --set save.dir=$d/save --set headless.audio_dump=$d/audio.raw $SETS $R/$rom > $d/log 2>&1 &
+      --set headless.dump_every=50 --set save.dir=$d/save --set headless.audio_dump=$d/audio.raw $SETS $(case $rom in /*) echo $rom;; *) echo $R/$rom;; esac) > $d/log 2>&1 &
   done
   wait
   local a b2 cnt
@@ -37,7 +38,7 @@ dtest() {
   split "$SB"; local eb=$ENVS; for kv in $SB; do case $kv in ENV:*) ;; *) db="$db --b $kv";; esac; done
   [ "$ea" = "$eb" ] || { echo "DIFF SKIP $n (A and B differ by environment only)"; return; }
   mkdir -p $OUT/diff
-  env $ea $Q -L $(sysroot $BA) $(dirname $BA)/bananads-difftest --every --frames 300 --a jit=on --b jit=on $da $db $R/$rom > $OUT/diff/$n.log 2>&1
+  env $ea $Q -L $(sysroot $BA) $(dirname $BA)/bananads-difftest --every --frames 300 --a jit=on --b jit=on $da $db $(case $rom in /*) echo $rom;; *) echo $R/$rom;; esac) > $OUT/diff/$n.log 2>&1
   if [ $? = 0 ] && grep -q "^SAME" $OUT/diff/$n.log; then echo "DIFF ok   $n ($(grep ^SAME $OUT/diff/$n.log | head -1))"
   else echo "DIFF FAIL $n ($(tail -2 $OUT/diff/$n.log | tr '\n' ' '))"; FAILS=$((FAILS+1)); fi
 }
@@ -47,7 +48,8 @@ else
   PROMS="cpubench-cpubench-thumb.nds cpubench-cpubench-arm.nds cpubench-cpubench-thumb-arm7.nds dsstress-L1.nds dsstress-L5.nds thumb-dsstress-L5.nds arm7-thumb-dsstress-L5.nds dsstress-L10.nds iorom-dsstress-L5.nds ipcrom-ipctest.nds dmasnd-dmasnd.nds sndbench-sndbench.nds ds2dtest-ds2dtest.nds geomtest-geomtest.nds jitloops-jitloops-thumb.nds jitloops-jitloops-arm.nds membench-membench.nds"
   DROMS="cpubench-cpubench-thumb.nds cpubench-cpubench-thumb-arm7.nds membench-membench.nds jitloops-jitloops-thumb.nds jitloops-jitloops-arm.nds iorom-dsstress-L5.nds"
 fi
-echo "# exact.sh $(date -u +%FT%TZ) A=$BA [$SA] B=$BB [$SB] $QUICK"
+PROMS="$PROMS ${EXTRA_ROMS:-}"; DROMS="$DROMS ${EXTRA_ROMS:-}"
+echo "# exact.sh $(date -u +%FT%TZ) A=$BA [$SA] B=$BB [$SB] $QUICK ${EXTRA_ROMS:+extra: $EXTRA_ROMS}"
 for r in $PROMS; do pics $r; done
 if [ "$BA" = "$BB" ] && [ -x "$(dirname $BA)/bananads-difftest" ]; then for r in $DROMS; do dtest $r; done
 else echo "DIFF SKIP (two binaries: difftest compares settings within one binary)"; fi

@@ -603,3 +603,30 @@ and at 2x one fused pass per quarter (the 3D quarter converted and window-masked
 render.2d_win_neon (on). Exact by construction (the same selection per pixel); a random unit test against the scalar loops
 (device compiler, qemu); for the matrix and the sim a membench variant with WIN0 on (built in my scratchpad from
 tests/membench/main9.c + three register writes, used as a workload only: A and B run the same ROM).
+
+### 17:20 UTC · sim · INFO · the fixed 2D benchmark set, and how noisy each mode is (use 2x st for 2D A/Bs)
+MEASURED. rgds-sim/tools/set2d.sh <bin> <tag> (results /home/user/perf/sim/s2d/<tag>/; base build-dev: s2d/base-v21 = v2).
+Workloads: dev 2x (gengis 2 threads + 2D thread): L5, L10, ds2dtest, membench; st 1x: ds2dtest, membench, cpubench-thumb;
+**st 2x** (`--mode st --set render.scale=2`: 2x with the 2D work on the emulator's thread, single-threaded): L5, ds2dtest, membench.
+Noise (same binary twice): st 1x and **st 2x: ~0.05%** (2x st L5: 12.547 vs 12.542 ms; insns identical); dev mode: ±3-4% per
+thread (the 2D thread's L1D misses vary ±14%: thread timing changes what it reads and which Gengis bins it draws; there is no
+cross-core coherence in the model). So: judge 2D-engine changes on st 2x (the 2D bucket of thread 0) and use dev 2x only for
+the thread split. Evidence: /home/user/perf/sim/runs/det2x-st-L5-ab.txt, det2d-L5-ab.txt, evidence/sim/verify-L5.txt.
+v3 (timed PRFM) is opt-in: SIMARGS=prfm=1 (README "Model versions"); v2 stays the default.
+
+### 17:25 UTC · render · RESULT (partial) · the 1x L1I question (LEDGER L5's flag): a code-layout reshuffle, not a commit's hot code
+MEASURED (rgds-sim v2, dsstress-L5 at render.scale=1, dev mode as sim ran it; evidence/render/prof-head/1x-L5-l1i-diff.txt):
+the emulator's thread's L1I misses per frame are base 10.7k -> perf/render @ 1c9095b 18.8k (sim, 16:55) -> @ eee302e 13.7k (my
+run; the two commits in between, the fence wait and the prefetch, add no code that runs at 1x without the 2D thread). Per
+symbol, base -> eee302e: the misses grow in functions none of my commits touch (the SPU's audio callback 0 -> 802, GPU3D
+SubmitVertexBody 369 -> 978, GPU3D::Run 1079 -> 1675, SubmitPolygonBody 462 -> 906, UpdateRegistersPreDraw 6 -> 323,
+ScheduleEvent 13 -> 313, RTC::ProcessIRQ 0 -> 289) and FALL in the 2D ones (BananaRenderer::DrawScanline 496 -> 65,
+ConvertRun16 435 -> 15, Composite 500 -> 191, PrepareScanline 540 -> 238, Banana2DRegs::From 271 -> 9) and in JIT blocks
+both ways: set conflicts in a 32 KB 4-way L1I moving with the link order, as every commit that adds code anywhere does
+under LTO (the comp_unroll fold replaced CompositeLoop's 72 instantiations in place; the 2x-only code isn't executed at
+1x, it only shifts what follows it). A bisect would name the commit that happened to land this layout, and jit's next
+commit would reshuffle it again; no toggle can hold a link layout. Running (chain3): the same measure in st mode
+(deterministic) for base, eee302e, dc02f53 (the job ring: no 1x code), 4d1ee7c (win_neon), to show the spread across
+builds whose 1x code is the same. The robust fix is core's finding, a build flag: BANANADS_ALIGN=32:16:16 (L1I misses -72%
+on L5 st, core 16:58) or PGO (-28%): I recommend the device A/B of BANANADS_ALIGN on the integrated branch, and I'll try
+`cold` on the 2x-only functions if the st series shows one build clearly worse than the others.
