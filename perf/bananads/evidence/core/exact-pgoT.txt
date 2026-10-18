@@ -1,0 +1,18 @@
+# exactness: PGO build (build-pgoT, GCC 13 -O3 -fprofile-use prof-T) vs the reference build; 15:54 UTC
+# command: sh /home/user/perf/core/runs/exact.sh /home/user/perf/build-ref/b/bananads /home/user/perf/core/build-pgoT/b/bananads exact-pgoT
+# 13 ROMs (cpubench thumb/arm/thumb-arm7, dsstress L5 arm/thumb/arm7-thumb, L10, iorom L5, ipcrom, dmasnd, sndbench, membench, ds2dtest) x {soft renderer single-thread, Gengis scale 2 with 2 threads + 2D thread}: frames 50..300 every 50 (both screens) and the 300-frame audio dump (headless.audio_dump) compared with cmp; rtc.fixed
+cpubench-cpubench-thumb: pictures (6 frames x soft, gengis2) and audio compared
+cpubench-cpubench-arm: pictures (6 frames x soft, gengis2) and audio compared
+cpubench-cpubench-thumb-arm7: pictures (6 frames x soft, gengis2) and audio compared
+dsstress-L5: pictures (6 frames x soft, gengis2) and audio compared
+thumb-dsstress-L5: pictures (6 frames x soft, gengis2) and audio compared
+arm7-thumb-dsstress-L5: pictures (6 frames x soft, gengis2) and audio compared
+dsstress-L10: pictures (6 frames x soft, gengis2) and audio compared
+iorom-dsstress-L5: pictures (6 frames x soft, gengis2) and audio compared
+ipcrom-ipctest: pictures (6 frames x soft, gengis2) and audio compared
+dmasnd-dmasnd: pictures (6 frames x soft, gengis2) and audio compared
+sndbench-sndbench: pictures (6 frames x soft, gengis2) and audio compared
+membench-membench: pictures (6 frames x soft, gengis2) and audio compared
+ds2dtest-ds2dtest: pictures (6 frames x soft, gengis2) and audio compared
+FAILS=0
+exit 0

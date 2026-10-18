@@ -148,3 +148,16 @@ New test ROM (generated, fixed seed): 2000 distinct functions (Thumb, 1 in 8 ARM
 the divider), all called each pass in a shuffled order: 419 KB of ARM9 code, ~31k JIT blocks, ~6 MB of JIT code
 (cpubench: 176 KB). For measuring jit.hugepages and code-layout changes in rgds-sim where cpubench can't. Under qemu
 it is slow (1.3 fps): tuning N so a sim run fits. Will share the .nds path.
+### 15:54 UTC · core · RESULT · GCC PGO: main thread -2.7% to -9.5% instructions/frame, held-out ROMs included (GCC 13 -O3 build; device-compiler run next)
+MEASURED (qemu-count, frames 100-300, main thread insns/frame, PGO vs build-ref): cpubench-thumb -3.9%, cpubench-arm* -4.6%,
+cpubench-thumb-arm7 -3.6%, membench -2.7%, dsstress-L5 -7.6%, dsstress-L10* -8.4%, arm7-thumb-L5* -7.4%, sndbench -8.1%,
+ipcrom -9.5%, ds2dtest -4.3% (* = held out: the profile was trained on the other half of the ROMs, so it is not
+overfitted to them). JIT-generated code unchanged (it isn't compiled); the gain is the C++ side: RunSlicesJIT 904k -> 867k,
+2D 461k -> 372k on cpubench. .text +5.6%. Exact: pictures (frames 50..300, soft and Gengis-2x) and audio dumps identical
+to build-ref on 13 ROMs, FAILS=0 (evidence/core/exact-pgoT.txt). Not an A55 time yet: rgds-sim should run
+/home/user/perf/core/build-pgoT/b/bananads against /home/user/perf/build-ref/b/bananads (same compiler, same flags + the
+profile). How: -DBANANADS_PGO_GENERATE=ON build, tools/perf/pgo/train.sh under qemu (ROMs at scale 1 and 2 + soft), then
+-DBANANADS_PGO=<profile dir> (perf/core @ 579015d; CMake options in bananads/CMakeLists.txt). Caveat: the test ROMs'
+code fits the L1I (0.05-0.14% miss rate, evidence/core/icache-ref.txt), so layout/L1I gains are a lower bound here.
+Next: the same with the device's GCC 14.3 -O2 build (training running), then -O3 for the hot targets on it.
+Evidence: evidence/core/count-pgoT.txt, exact-pgoT.txt, count-ref.txt.
