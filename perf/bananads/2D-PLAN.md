@@ -1,4 +1,4 @@
-# All four agents on the 2D engine (from 16:52 UTC, the user's call)
+# Three agents on the 2D engine (from 16:52 UTC, the user's call; `core` moved to the JIT at 16:56)
 
 Why: sim's 16:47 RESULT (evidence/sim/where-the-time-goes-v1.txt): at 2x, BananaLinux's default, the 2D thread
 (`bananads-2d`) is the busiest thread on the base (dsstress-L5 4.77 ms/frame @1104 vs the emulator's 4.36), and with
@@ -15,12 +15,12 @@ your own functions to keep conflicts away. Earlier branches (perf/jit, perf/core
 
 | Agent | Worktree, branch | Owns (bananads/gpu2d/ unless said) |
 |---|---|---|
-| `render` | /home/user/perf/render/sd, perf/render | the compositor at 2x and 1x: `Composite`, `CompositeHires`, `BuildSteps`, `EffectsPass*`, `BrightnessPass*`, `DrawBG_3D`, `CompositeTo`, `EffectsTo`, `DrawScanline*` (GPU2D_Banana.cpp); the pass structure at 2x; the final 2D integration |
-| `jit` | /home/user/perf/jit/sd2d, perf/jit-2d | the output stage (GPU_Banana.cpp): `WriteLine`, `OutputLineA/B`, `EmitA/B`, `DoubleLine`, `FillLine`, `Fill`, `LineDst`: NEON streaming stores, store patterns that suit the A55 (whole cache lines, write streaming), prefetch, fewer passes over the 2x rows |
-| `core` | /home/user/perf/core/sd2d, perf/core-2d | the layers and the emulator's-thread side (GPU2D_Banana.cpp): `DrawBG_Text/Affine/Extended/Large`, `DrawBitmap8/16`, `ConvertRun16`, `DrawTiledScroll`, sprites (`PrepareSprites`, `DrawSprite*`, `ResolveSprites*`, `RebuildSpriteTable`), windows, mosaic, palettes; `PrepareScanline`, `PrepareScanlineJob`, the copy log (`LogCopy`, `ApplyLog`, `CopyDirty`, `UseCopies`): the 1x path on the emulator's thread |
+| `render` | /home/user/perf/render/sd, perf/render | the layers and the emulator's-thread side (taken over from `core` at 16:56: `DrawBG_*`, `DrawBitmap8/16`, `DrawTiledScroll`, sprites, windows, mosaic, palettes, `PrepareScanline*`, the copy log), and the compositor at 2x and 1x: `Composite`, `CompositeHires`, `BuildSteps`, `EffectsPass*`, `BrightnessPass*`, `DrawBG_3D`, `CompositeTo`, `EffectsTo`, `DrawScanline*` (GPU2D_Banana.cpp); the pass structure at 2x; the final 2D integration |
+| `jit` | /home/user/perf/jit/sd2d, perf/jit-2d | `ConvertRun16` (GPU2D_Banana.cpp, a streaming conversion kernel in sim's top list) and the output stage (GPU_Banana.cpp): `WriteLine`, `OutputLineA/B`, `EmitA/B`, `DoubleLine`, `FillLine`, `Fill`, `LineDst`: NEON streaming stores, store patterns that suit the A55 (whole cache lines, write streaming), prefetch, fewer passes over the 2x rows |
+| `core` | /home/user/perf/core/sdjit, perf/core-jitmem (from perf/jit @ 3450884) | **not on 2D** (the user's call, 16:56): the JIT emitting VRAM/OAM/palette stores inline through patch 0010's per-page table (PERF.md "What's left" #3), melonDS patches 0041-0049 |
 | `sim` | /home/user/perf/sim/sd2d, perf/sim-2d (only if it needs instrumentation) | make the model trustworthy for streaming 2D (A55 write streaming / no-write-allocate on full-line stores, the L1D prefetcher), attribute the 2D thread's L1D misses per function and per buffer, keep a fixed 2D benchmark set, verify every 2D RESULT, measure the combined stack |
 
-melonDS patch numbers if needed: render 0060-0069, jit 0070-0074, core 0075-0079.
+melonDS patch numbers if needed: render 0060-0069, jit 0070-0079; core's JIT work 0041-0049.
 
 ## Workloads and metrics (the same for everyone, so numbers compare)
 

@@ -39,3 +39,6 @@
   (+129k insns, L1I misses +30%). evidence/jit/deadend-litedispatch-sim.txt.
 - (jit, 16:50) Storing a folded conditional exit's dirty guest registers once before the branch: only -0.4% of the
   guest register stores on tests/bigcode (the two-way duplicates are rare). Static census, /home/user/perf/jit/census.py.
+- (core, 16:58) `BANANADS_HOT_OPT=-O3` on top of PGO (`-DBANANADS_PGO=prof-dev -DBANANADS_HOT_OPT=-O3` vs PGO alone):
+  cpubench-thumb +1.4%, membench +1.5%, L5 0.0%, ipcrom -0.8% ms/frame (rgds-sim v1 st); evidence/core/ab-pgoO3-*.txt.
+  With a profile, -O3 only adds code. Use PGO at Buildroot's -O2.

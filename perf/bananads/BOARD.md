@@ -458,3 +458,27 @@ x26 prologue was a third of those: gone with 0024), flags 10%, guest reg loads 6
 ### 16:54 UTC · jit · INFO · switching to the 2D output stage (coordinator's plan change); JIT work stops here
 JIT patches on perf/jit @ 3450884: 0021 jit.hugepages, 0022 MELONDS_JIT_EXITSTATS, 0023 jit.irqchain, 0024
 jit.entry_x26 (all exact, default on). Next JIT ideas go to findings/jit.md.
+
+### 16:58 UTC · core · DEAD-END · PGO + BANANADS_HOT_OPT=-O3 together vs PGO alone: slower on 3 of 4 ROMs
+MEASURED (rgds-sim v1, st mode, device build; A = build-devpgo (prof-dev), B = the same + HOT_OPT=-O3): main thread
+ms/frame @1104: cpubench-thumb 5.407 -> 5.482 (+1.4%), dsstress-L5 6.712 -> 6.712 (0.0%), membench 4.256 -> 4.322
+(+1.5%), ipcrom 3.514 -> 3.486 (-0.8%). With a profile GCC already inlines/unrolls what the profile says is hot; -O3
+on top only adds code (L1I misses up). membench's -O3 gain (L6) was the Composite loop, which render's
+render.2d_comp_unroll (L1) fixes at -O2, so HOT_OPT=-O3 has nothing left to give: keep Buildroot's -O2, use PGO.
+(The "unroll + -O3" scratch measurement was not run: the cherry-pick of 911ff8e onto perf/core conflicts in SETTINGS.md,
+and L1+L6 already answer it.) Evidence: evidence/core/ab-pgoO3-{cpubench-cpubench-thumb,dsstress-L5,membench-membench,ipcrom-ipctest}.txt.
+
+### 16:58 UTC · core · RESULT (partial, needs the device) · BANANADS_ALIGN=32:16:16 on the PGO build: -0.1% cpubench-thumb, -3.6% dsstress-L5 (L1I misses -72%)
+MEASURED (rgds-sim v1, st mode; A = build-devpgo, B = the same + -falign-functions=32 -falign-loops=16 -falign-jumps=16):
+cpubench-thumb 5.406 -> 5.401 ms (-0.1%; insns +0.5%, L1I misses 2.7k -> 2.0k); dsstress-L5 6.714 -> 6.473 ms (-3.6%;
+params-fit -13.4%; insns +0.1%; L1I misses 13.4k -> 3.7k/frame, in the 2d, 3d-geometry AND jit-code buckets). The JIT's
+code is the same bytes in both, so this is a set-conflict pattern between the binary's hot code and the JIT buffer that
+the moved functions happen to avoid: layout luck in the model, not a property of 32-byte alignment; the device A/B decides
+(`-DBANANADS_ALIGN=32:16:16` vs plain, both on PGO). More ROMs (L10, membench, ipcrom, sndbench, thumb-arm7) running.
+Evidence: evidence/core/ab-align-L5.txt, ab-align-cpubench-thumb.txt. (Then I switch to the 2D plan.)
+
+### 16:55 UTC · coordinator · INFO · the user's call: `core` (Fable) on the JIT's inline graphics stores; jit, render, sim stay on 2D
+READ. `core` moves to the JIT idea jit had queued: VRAM/OAM/palette stores emitted inline by the JIT through patch
+0010's per-page table (PERF.md "What's left" #3), in /home/user/perf/core/sdjit (perf/core-jitmem from perf/jit @
+3450884, so 0021-0024 are under it), melonDS patches 0041-0049. core's 2D share goes to render (layers, sprites,
+PrepareScanline*, the copy log) and jit (ConvertRun16). 2D-PLAN.md updated. @jit: core may ask you about the JIT.
