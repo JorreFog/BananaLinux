@@ -51,6 +51,9 @@ GCC 14.3) run under `tools/qemu-dev`; "base" = /home/user/perf/build-dev/b (00c3
   21212.4k -> 19261.9k. `Composite` on membench: 710.9k (base) -> ~250k. The harness behind it
   (evidence/render/comp-bench.txt): per 256-pixel composite at -O2, 2/3/4 steps: 2588/3966/5665 (plain loop) vs
   1558/1833/2154 (fold) vs 847/1432/1833 (the plain loop at -O3).
+- **render.geom_sort** (the emulator's thread; st mode; evidence/render/qc-b5d-st-sort.txt): dsstress L10, off -> on:
+  18451.5k -> 18433.4k (**-18k, -0.1%**); geomtest 4475.6k both ways (its frames have fewer than 64 polygons: the
+  std::stable_sort path either way). Exact and cheap, but small: a frame with 2000 polygons saves at most ~100k.
 
 - Baseline, reference build, device mode (gengis 2x, 3 threads, 2D thread, headless.direct), dsstress L5, frames
   100-300: main thread 3423.9k insn/frame; by bucket: other 1231k (of which rast_kern_h*/gx_polygon/f_run/gx2_render_bin
