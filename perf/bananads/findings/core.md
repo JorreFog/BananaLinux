@@ -163,7 +163,30 @@ cpubench, instructions -0.7%; `evidence/core/ab-gfx1-*.txt`), and it broke ds2dt
 not found: the helper version, same checks, is exact on it). The shared helpers keep the per-site code at 3
 instructions.
 
-RESULTS_PLACEHOLDER
+**MEASURED (rgds-sim v2, st mode, one binary = the device build of perf/core-jitmem @ 581f083, `--a "--set
+jit.gfxstores=off" --b "--set jit.gfxstores=on"`, frames 100-300; bigcode 20-50), main thread ms/frame @1104:**
+membench 4.735 -> 4.693 (-0.9%; insns -0.5%), cpubench-thumb 5.527 -> 5.487 (-0.7%; insns -0.4%), ds2dtest 25.351
+-> 25.336 (-0.06%), jit's tests/bigcode 9.848 -> 9.736 (-1.1%; insns -2.3%, L1I misses +1.7%). Evidence:
+`evidence/core/ab-gfxstores-{membench,cpubench-thumb,ds2dtest,bigcode}.txt`. Small but real: what is left per
+store is the helper's own checks (the same ones the C path did) and the site's 3 instructions; the big part of the
+old cost was PushRegs/PopRegs, which only exist when caller-saved guest registers are live. Games that upload
+tiles, maps, OAM or palettes with CPU stores (not DMA) gain more than these ROMs; HeartGold's rate is unknown
+(`MELONDS_IOSTATS=600` on the device says: `tools/device/hgquick.sh` with `EXTRA="--set jit.gfxstores=off"`).
+
+**Exact (MEASURED):** pictures every 50 frames of 300 and the audio dump, off vs on, identical on ds2dtest,
+membench, sndbench, dmasnd and dsstress-L5 with the soft renderer and with Gengis 2x + the 2D thread (FAILS=0,
+`evidence/core/exact-gfxstores-extra.txt`); jit's exact-suite.sh (quick: pictures + difftest main RAM on cpubench
+thumb and jitloops thumb, bananads-tests): SUITE_PLACEHOLDER; a sabotage build (the VRAM dirty bit not set in the
+helper) SABOTAGE_PLACEHOLDER. Not run for lack of time: the suite's full ROM list (the local agent should run
+`QEMU=/home/user/perf/tools/qemu-dev evidence/jit/exact-suite.sh <build/b> <out> "jit.gfxstores=off" "jit.gfxstores=on"`
+on the final tree, and the device's `tools/device/quick.sh`).
+
+**Device A/B:** one binary: `EXTRA="--set jit.gfxstores=off" tools/device/hgquick.sh <bin>` against plain (default on).
+Risks: a game whose TCM settings change after a block is compiled is handled (the helper checks them every time);
+the helper is not emitted when `jit.vramfast=off` or `MELONDS_IOSTATS` is set (the old path then); a DSi build never
+uses it. What's next on this line: the slow *loads* the same way (ReadVRAMQuick/ReadOAM: membench 320, ds2dtest 528
+OAM reads a frame), and the static-address IO reads without side effects (VCOUNT: ds2dtest 8107, dsstress-L5 1222 a
+frame) as a plain load of the GPU's field.
 
 ## How PGO would ship (the scheme)
 

@@ -2,8 +2,8 @@
 
 Agent `jit`, 2026-10-18. Branch `perf/jit` in `/home/user/perf/jit/sd` (base `00c34c78e8de`); patches in
 `patches/jit/` (`git format-patch 00c34c78e8de..perf/jit`). melonDS patches 0021-0024 in
-`bananads/patches/melonds/`. All numbers: rgds-sim v1 (uncalibrated A55/RK3568 model, deterministic after sim's
-16:10 ASLR fix), device-faithful build (`/home/user/perf/tools/build-a64-device.sh`: Bootlin GCC 14.3, -O2), main
+`bananads/patches/melonds/`. All numbers: rgds-sim (uncalibrated A55/RK3568 model, deterministic after sim's 16:10
+ASLR fix; v1 cost model in Part 1, v2 = + write streaming and v3 = + timed PRFM in Part 2), device-faithful build (`/home/user/perf/tools/build-a64-device.sh`: Bootlin GCC 14.3, -O2), main
 thread ms/frame at 1104 MHz, A/B with one binary and the toggle. Exactness suite: `evidence/jit/exact-suite.sh`
 (pictures every 50 frames to 300 with `rtc.fixed` on 17 ROMs incl. tests/irqmask, the dmasnd audio dump,
 `bananads-difftest --every --frames 300` main RAM on 9 ROMs, `bananads-tests`), toggle off vs on.
@@ -27,7 +27,7 @@ thread ms/frame at 1104 MHz, A/B with one binary and the toggle. Exactness suite
 | jit.hugepages | cpubench-thumb | 5.719 -> 5.694 (-0.44%) | evidence/jit/thp-sim-dev-cbthumb.txt |
 | jit.hugepages | tests/bigcode-thumb (frames 20-50) | 10.258 -> 10.184 (-0.72%; iTLB L2 hits -61%, dTLB L2 hits -42%) | evidence/jit/thp-sim-dev-bigcode.txt |
 | jit.irqchain | tests/irqmask-thumb-arm7 | 9.487 -> 7.881 (-16.9%; masked-IRQ returns 25.1k+1.7k/frame -> 0) | evidence/jit/irqchain-sim-irqmask.txt, irqmask-exitstats.txt |
-| jit.irqchain | test ROMs other than irqmask | no change (they have ~0 masked IRQs: jitloops 0.7/frame) | evidence/jit/ (exitstats run in the board post 15:54) |
+| jit.irqchain | test ROMs other than irqmask | no change (they have ~0 masked IRQs: jitloops 0.7/frame) | evidence/jit/exitstats-testroms.txt |
 | jit.entry_x26 | tests/bigcode-thumb | 10.158 -> 9.987 (-1.68%; L1I misses to DRAM -4.6%) | evidence/jit/x26-sim-bigcode.txt |
 | jit.entry_x26 | cpubench-thumb | 5.694 -> 5.678 (-0.28%) | evidence/jit/x26-sim-cbthumb.txt |
 
