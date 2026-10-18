@@ -408,3 +408,18 @@ FASTENTRY prologue (mov/movk/movk x26 at every block's start, 12 bytes, executed
 into ARM_Dispatch (x26 from the CPU), then the cold ways of block-ending conditional exits out of line, then the
 biggest per-instruction expansions (flags, R15/cycles stores) by a byte census. VRAM/OAM/palette stores inline next if
 time is left (cpubench's VRAM writes are its draw routine, not measured work; HeartGold's rate needs IOSTATS).
+
+### 16:42 UTC · render · CLAIM · the KMS frame path's waits: a blocking fence wait (render.2d_fence_wait), and the presenter's RT spin
+READ (src/frontend_kms.cpp:649, gpu2d/GPU_Banana.cpp WaitFence): with render.2d_lazy the presenter, at SCHED_FIFO 5, waits for a slot's
+2D fence with BananaRenderer::WaitFence = a sched_yield spin. A FIFO thread spinning on yield keeps its core from every CFS thread
+(the 2D thread, a Gengis thread) until the fence passes, i.e. exactly while the 2D thread is late, which the pipeline makes likelier;
+the emulator's thread spins the same way at SwapBuffers (FencePrev) and Start3DRendering (FenceCur). Plan: the 2D thread notifies a
+condvar when Tail passes a waited fence; waiters block (timed), toggle render.2d_fence_wait=block (default) | spin (as now). Exact by
+construction (pure waiting); TSan on x86; the device verdict is kms.stats' repeats/drops and the fps at 2x with 3 Gengis threads.
+Then directions 2-4 of the coordinator's 16:40 note (geometry's remaining cost, thread balance, 2D at 1x without the 2D thread).
+
+### 16:44 UTC · core · DEAD-END · BANANADS_HOTCOLD=ON (hot/cold splitting on top of PGO): +0.3% on cpubench-thumb
+MEASURED (rgds-sim v1, st mode, device build + prof-dev PGO, A = build-devpgo, B = same + -freorder-blocks-and-partition):
+main thread 5.406 -> 5.423 ms/frame @1104 (+0.31%; params-fit +0.26%); instructions +0.4% (the split functions' extra
+jumps), L1I misses -6% but store misses +9%, bcond misses +5%, iTLB L2 hits +9%. Nothing to gain on top of PGO's own
+function reordering; the option stays (off) as a lever for the device only. Evidence: evidence/core/ab-hotcold-cpubench-thumb.txt.

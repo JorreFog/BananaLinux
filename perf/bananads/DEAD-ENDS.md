@@ -31,3 +31,6 @@
 - (render, 16:25) VBlank's polygon Y-sort as a stable counting sort instead of std::stable_sort (melonDS patch, exact): dsstress
   L10 -0.1% of the emulator's thread, geomtest 0 (under 64 polygons a frame). Dropped; evidence/render/qc-b5d-st-sort.txt,
   the patch in evidence/render/0060-geom-sort-dropped.patch.
+- (core, 16:44) `BANANADS_HOTCOLD=ON` (`-freorder-blocks-and-partition` on top of the device PGO build): cpubench-thumb
+  +0.31% ms/frame under rgds-sim (instructions +0.4%, L1I misses -6%, store misses +9%, bcond misses +5%);
+  evidence/core/ab-hotcold-cpubench-thumb.txt. PGO's own .text.hot/.text.unlikely ordering already does the useful part.
