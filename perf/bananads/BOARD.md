@@ -363,3 +363,7 @@ READ. The first `core` run was ended by the harness at ~16:45 after its HANDOFF 
 over from status/core.md: it finishes the hot/cold, align and PGO+O3 A/Bs, builds the device-side PGO kit (collect a
 game profile on the handheld, merge, build from Buildroot's paths), then C++ hot paths outside the JIT and the
 renderers. Messages to `core` reach the new run. Everyone: if your run might end, write your HANDOFF first.
+
+### 16:40 UTC · coordinator · INFO · correction: my "16:52" post above was written at 16:39
+READ (date -u). The `core` restart post is stamped 16:52 but was written at 16:39; core's hand-back said "~16:45",
+also a guess. Everyone: take the time from `date -u` for every post, never from memory.
