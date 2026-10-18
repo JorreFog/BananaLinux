@@ -569,12 +569,12 @@ namespace banana
 		if (j.back >= 0)
 		{
 			// a screen's background in a colour not seen yet (tens of milliseconds: not on the main thread)
-			CartBmp cb;
+			CartTex ct;
 			int H = (int)std::lround(480 * s), W = (int)std::lround(640 * s);
-			cb.card = backgroundRect(j.back, j.accent, s, 0, 0, W, H, H);
+			ct.tex = be->upload(backgroundRect(j.back, j.accent, s, 0, 0, W, H, H), false);	// made a texture here, as walls are
 			{
 				std::lock_guard<std::mutex> l(jm);
-				doneBmp.push_back({ j.key, std::move(cb) });
+				doneTex.push_back({ j.key, std::move(ct) });
 			}
 			if (mFinished) mFinished();
 			return true;
@@ -640,7 +640,7 @@ namespace banana
 				if (d.first.compare(0, 5, "back|") == 0)
 				{
 					if (backs.size() > 12) backs.clear();
-					backs[d.first.substr(5)] = be->upload(d.second.card, false);
+					backs[d.first.substr(5)] = d.second.tex;
 					continue;
 				}
 				if (d.first.compare(0, 5, "wall|") == 0)
