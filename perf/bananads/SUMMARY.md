@@ -89,7 +89,7 @@ git tree hash). Each line below is one change, its toggle, its default, and its 
 | Option | Gain in the model |
 |---|---|
 | `BANANADS_PGO=<profile>` (+ `BANANADS_PGO_GENERATE`, `bananads/tools/perf/pgo/train.sh`) | -4..-13% on the base tree (VERIFIED); stale-profile behaviour documented |
-| `BANANADS_ALIGN=32:16:16` | -0.1..-3.9% on top of PGO; device only |
+| `BANANADS_ALIGN=32:16:16` | -0.1..-3.9% on top of PGO on the base tree, but only -0.3% on the integrated tree (sim 17:49): the earlier -3.6% was layout luck; device only |
 | `BANANADS_HOT_OPT=-O3` | small; slower combined with PGO: not recommended |
 | `BANANADS_HOTCOLD`, `BANANADS_NOPLT` | dead ends, kept as options |
 
