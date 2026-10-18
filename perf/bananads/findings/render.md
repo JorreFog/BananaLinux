@@ -54,6 +54,18 @@ GCC 14.3) run under `tools/qemu-dev`; "base" = /home/user/perf/build-dev/b (00c3
 - **render.geom_sort** (the emulator's thread; st mode; evidence/render/qc-b5d-st-sort.txt): dsstress L10, off -> on:
   18451.5k -> 18433.4k (**-18k, -0.1%**); geomtest 4475.6k both ways (its frames have fewer than 64 polygons: the
   std::stable_sort path either way). Exact and cheap, but small: a frame with 2000 polygons saves at most ~100k.
+- **render.3d_pipeline** (device mode: gengis 2x, 3 Gengis threads, 2D thread; dsstress L5; device build b5d;
+  evidence/render/qc-b5d-dev-L5.txt): the emulator's thread, off -> on: 3308.6k -> 2324.1k instructions/frame
+  (**-30%**): the bins it drew at VBlank (`[gengis]` log: 193 of 1188 bins in base, 0 with it). Under qemu the render
+  threads are starved by the host, so the share is larger than it will be on the device; the device measure is the
+  same log line and the fps.
+- **render.2d_emit_zip** (the 2D thread at 2x; same runs; b5d had the quarters' zip only, not the 2D lines'
+  doubling): the 2D thread's output stage (WriteLine/EmitA/EmitB/DoubleLine/ZipLine/WriteZip) 451k -> 352k
+  instructions/frame (**-22%**), the thread's own work 1696k -> 1601k.
+- **render.2d_quarters** (the 2D thread at 2x): as first committed (fd53c40, in b5d) a loss on L5's shallow stack:
+  composite work 812k -> 890k, because the empty "above" half was materialised (a zero line per line, 164k) and the
+  backdrop read as a line. Fixed in the follow-up commit (the merge's empty-half and base cases as templates;
+  20000 random quarter cases, 0 mismatches); re-measured on b7d below.
 
 - Baseline, reference build, device mode (gengis 2x, 3 threads, 2D thread, headless.direct), dsstress L5, frames
   100-300: main thread 3423.9k insn/frame; by bucket: other 1231k (of which rast_kern_h*/gx_polygon/f_run/gx2_render_bin

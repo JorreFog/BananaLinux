@@ -65,25 +65,44 @@ static void CompositeRange(const CompStep* s, int cnt, const u32* startLine, boo
 #undef BANANA_COMP
     }
 }
-template<bool needSecond, bool raw>
-static void MergeQuarter(const u32* c3line, const u32* belowTop, const u32* belowSec, const u32* aboveTop, const u32* aboveSec, u32* outTop, u32* outSecond)
+template<bool needSecond, bool raw, bool hasAbove, int belowKind>
+static void MergeQuarter(const u32* c3line, const u32* base, const u32* belowTop, const u32* belowSec, const u32* aboveTop, const u32* aboveSec, u32* outTop, u32* outSecond)
 {
     const V4 flagbyte = VDup(0xFF000000), orv = VDup(0x40000000);
+    const V4 backdrop = VDup(base[0]);
     for (int i = 0; i < 256; i += 4)
     {
         V4 c = VLoad(c3line + i); V4 m3;
         if (raw) { m3 = VNonZero(VAnd(c, flagbyte)); c = VOr(c, orv); } else m3 = VNonZero(c);
-        V4 bt = VLoad(belowTop + i);
+        V4 bt = belowKind == 0 ? backdrop : belowKind == 1 ? VLoad(base + i) : VLoad(belowTop + i);
         V4 L = VSel(m3, c, bt);
-        V4 at = VLoad(aboveTop + i);
-        V4 ma = VNonZero(at);
-        VStore(outTop + i, VSel(ma, at, L));
+        V4 top = L, ma = VZero();
+        if (hasAbove) { V4 at = VLoad(aboveTop + i); ma = VNonZero(at); top = VSel(ma, at, L); }
+        VStore(outTop + i, top);
         if (needSecond)
         {
-            V4 Ls = VSel(m3, bt, VLoad(belowSec + i));
-            V4 as = VLoad(aboveSec + i);
-            VStore(outSecond + i, VSel(ma, VSel(VNonZero(as), as, L), Ls));
+            V4 bs = belowKind == 2 ? VLoad(belowSec + i) : VZero();
+            V4 Ls = VSel(m3, bt, bs);
+            V4 sec = Ls;
+            if (hasAbove) { V4 as = VLoad(aboveSec + i); sec = VSel(ma, VSel(VNonZero(as), as, L), Ls); }
+            VStore(outSecond + i, sec);
         }
+    }
+}
+template<bool needSecond, bool raw>
+static void MergeQuarterN(bool hasAbove, int belowKind, const u32* c3line, const u32* base, const u32* belowTop, const u32* belowSec, const u32* aboveTop, const u32* aboveSec, u32* outTop, u32* outSecond)
+{
+    if (hasAbove)
+    {
+        if (belowKind == 0)      MergeQuarter<needSecond, raw, true, 0>(c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, outSecond);
+        else if (belowKind == 1) MergeQuarter<needSecond, raw, true, 1>(c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, outSecond);
+        else                     MergeQuarter<needSecond, raw, true, 2>(c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, outSecond);
+    }
+    else
+    {
+        if (belowKind == 0)      MergeQuarter<needSecond, raw, false, 0>(c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, outSecond);
+        else if (belowKind == 1) MergeQuarter<needSecond, raw, false, 1>(c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, outSecond);
+        else                     MergeQuarter<needSecond, raw, false, 2>(c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, outSecond);
     }
 }
 
@@ -133,7 +152,7 @@ int main(int argc, char** argv)
         // start, as BuildSteps
         int start = 0, wanted = needSecond ? 2 : 1, found = 0; const u32* startLine = backdrop;
         for (int k = n - 1; k >= 0; k--) if (full[k]) { found++; if (found == wanted) { start = k + 1; startLine = steps[k].line; break; } }
-        const bool onBackdrop = startLine == backdrop;
+        const bool onBackdrop = startLine == backdrop && (rnd() & 1);   // (as Banana2DFast off: the base read as a line)
         // reference: the full pass per quarter
         for (int q = 0; q < 4; q++)
         {
@@ -150,11 +169,14 @@ int main(int argc, char** argv)
             }
             else
             {
-                CompositeRange(steps + start, bg0 - start, startLine, onBackdrop, needSecond, false, belowTop, belowSec);
-                CompositeRange(steps + bg0 + 1, n - bg0 - 1, ZeroLine, false, needSecond, false, aboveTop, aboveSec);
+                const int nBelow = bg0 - start, nAbove = n - bg0 - 1;
+                memset(belowTop, 0xBB, sizeof belowTop); memset(belowSec, 0xBB, sizeof belowSec); memset(aboveTop, 0xBB, sizeof aboveTop); memset(aboveSec, 0xBB, sizeof aboveSec);
+                if (nBelow) CompositeRange(steps + start, nBelow, startLine, onBackdrop, needSecond, false, belowTop, belowSec);
+                if (nAbove) CompositeRange(steps + bg0 + 1, nAbove, ZeroLine, false, needSecond, false, aboveTop, aboveSec);
+                const int belowKind = nBelow ? 2 : onBackdrop ? 0 : 1;
                 const u32* c3 = q3d[q];
-                if (needSecond) { if (raw) MergeQuarter<true, true>(c3, belowTop, belowSec, aboveTop, aboveSec, outTop, outSec); else MergeQuarter<true, false>(c3, belowTop, belowSec, aboveTop, aboveSec, outTop, outSec); }
-                else            { if (raw) MergeQuarter<false, true>(c3, belowTop, belowSec, aboveTop, aboveSec, outTop, nullptr); else MergeQuarter<false, false>(c3, belowTop, belowSec, aboveTop, aboveSec, outTop, nullptr); }
+                if (needSecond) { if (raw) MergeQuarterN<true, true>(nAbove > 0, belowKind, c3, startLine, belowTop, belowSec, aboveTop, aboveSec, outTop, outSec); else MergeQuarterN<true, false>(nAbove > 0, belowKind, c3, startLine, belowTop, belowSec, aboveTop, aboveSec, outTop, outSec); }
+                else            { if (raw) MergeQuarterN<false, true>(nAbove > 0, belowKind, c3, startLine, belowTop, belowSec, aboveTop, aboveSec, outTop, nullptr); else MergeQuarterN<false, false>(nAbove > 0, belowKind, c3, startLine, belowTop, belowSec, aboveTop, aboveSec, outTop, nullptr); }
             }
             cases++;
             if (memcmp(refTop, outTop, sizeof refTop) || (needSecond && memcmp(refSec, outSec, sizeof refSec)))

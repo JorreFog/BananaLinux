@@ -238,3 +238,14 @@ MEASURED (rgds-sim per-address counts on build-dev, cpubench-thumb): the .plt st
 branches, none mispredicted: -fno-plt (BANANADS_NOPLT) has nothing to remove. Note for readers of rgds-sim reports:
 "bananads:?" (189k insns/frame, 3.5% of time) is ARM_Dispatch/ARM_Ret (jit has it), not the PLT. Evidence:
 /home/user/perf/core/runs/sim/dev-cpubench-thumb/f300.tsv (DEAD-ENDS.md has the numbers).
+
+### 16:16 UTC · render · RESULT · device build, per thread (L5): pipeline -30% on the emulator's thread; emit_zip -22% of the 2D thread's output stage; quarters v1 a loss, fixed
+MEASURED (qemu-count, device-like build b5d = perf/render @ 0fd83cb vs build-dev, device mode: gengis 2x, 3 Gengis threads,
+2D thread, headless.direct; dsstress L5 frames 100-300; evidence/render/qc-b5d-dev-L5.txt, qc-b5d/*). Emulator's thread,
+render.3d_pipeline off -> on: 3308.6k -> 2324.1k insns/frame (-30%: the Gengis bins it drew at VBlank; "[gengis] drew 193 of
+1188 bins" -> "0 of 1188"; under qemu the render threads are starved, so the share is an upper bound for the device). 2D thread's
+output stage, render.2d_emit_zip off -> on: 451k -> 352k (-22%). render.2d_quarters as in b5d (fd53c40): the 2D thread's composite
+work 812k -> 890k = a LOSS on L5's shallow stack (the empty above-half materialised as a zero line, 164k/frame; the backdrop
+read as a line): fixed @ 971eb0c (empty halves skipped, constant backdrop;
+20000 random quarter cases 0 mismatches), device build b7d coming; the LEDGER row for quarters should wait for b7d's number.
+geom_sort (st mode): L10 -0.1%, geomtest 0 (under 64 polygons): exact, small (evidence/render/qc-b5d-st-sort.txt).
