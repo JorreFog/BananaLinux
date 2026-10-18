@@ -84,6 +84,10 @@ that against the test-ROM profile; commit the winner with the source it was made
 
 ## 6. Feed the numbers back
 
+First, check the A55's revision (`grep -m1 'CPU revision\|CPU variant' /proc/cpuinfo`). rgds-sim v2 assumes the L1D's
+write streaming is on, but TF-A turns it off on r0p0. If it is r0p0, the 2D thread's output stores cost more than
+the model says.
+
 `rgds-sim/calib/device-calib.sh` turns device fps/perf numbers into a refit of the simulator's cost parameters
 (`rgds-sim/README.md`), so the next cloud session's model is calibrated on this hardware. Post the device numbers
 next to the model's in `LEDGER.md` (a "device" column), and move any toggle whose device A/B loses to off.
