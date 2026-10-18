@@ -20,6 +20,12 @@ Status line (kept current at the end of the session): see "Status" at the bottom
 | 347784d | the quarters merge without the empty halves (the first version lost on shallow stacks, see Measurements) | (same, `render.2d_quarters`) | on | yes: 20000 quarter cases, 0 mismatches |
 | 1c9095b | the Gengis workers wake on the claim word alone (a benign pre-existing race on the frame number dropped) | (none: no behaviour) | - | yes |
 | 8677fad | the waits for the 2D thread (a frame's fence: the KMS presenter at SCHED_FIFO before it shows a slot, the emulator's thread at a frame's end and at line 215; drains; a full ring or log) block on a condition variable instead of spinning on sched_yield | `render.2d_fence_wait=block\|spin` | block | yes: only how a thread waits (checks on b9d below) |
+| eee302e | at 2x the 2D thread prefetches the next line's four 3D quarters (4 KB of Gengis's rows) while it merges this line's | `render.2d_prefetch` | off (device verdict) | yes: no effect on the pixels (m10) |
+| dc02f53 | the 2D job ring without the 3D-line (4 KB) and display (512 B) arrays between the jobs: the ring the 2D thread reads is 128 KB of consecutive ~256 B jobs instead of 2.5 MB with a job per page | `render.2d_job_stride=compact\|inline` | compact | yes: a layout (m12; TSan 3 runs) |
+| 4d1ee7c | the windows' per-pixel loops (ApplyWindow) and the 3D layer's conversion (DrawBG_3D) vectorized; at 2x a windowed line keeps the raw 3D path, the window applied inside the quarters' merge (no converted, masked quarter line per quarter) | `render.2d_win_neon` | on | yes: win_test 5000 cases 0 mismatches (m13) |
+
+The 2D plan (16:52, 2D-PLAN.md): the last three are from the all-hands-on-2D phase (my share: the compositor, sprites,
+windows, PrepareScanline*, the copy log, the job ring, the Gengis-help question, the integration of perf/jit-2d).
 
 The first three act on the emulator's thread (2d_batch: its futex wakes; 3d_pipeline: its VBlank wait and the bins it
 drew there; the 1x share: a 1 KB copy and a bin wait per 3D line at 1x) and the others on the 2D thread at 2x
