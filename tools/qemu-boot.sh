@@ -289,8 +289,9 @@ wait $QEMU 2>/dev/null || true
 boot fourth
 grep -q "rcS: slot b booted" "$OUT/serial.log" && ok "the fourth boot ran slot b: the update" || bad "the fourth boot didn't run slot b"
 shot fourth-menu
-# Start > System > Previous version (two rows under Time zone) > A twice: back to slot a from the next boot
-key s pgup ret down down ret ret
+# Start > System > Previous version (four rows under Time zone: Update, Box art, Box art from, Previous version;
+# checked headless) > A twice: back to slot a from the next boot
+key s pgup ret down down down down ret ret
 for i in $(seq 120); do kill -0 $QEMU 2>/dev/null || break; sleep 0.5; done
 kill -0 $QEMU 2>/dev/null && { bad "no restart from Previous version"; kill $QEMU; } || ok "restarted from Previous version"
 wait $QEMU 2>/dev/null || true
