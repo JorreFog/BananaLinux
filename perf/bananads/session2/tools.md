@@ -1,7 +1,7 @@
 # Session 2, agent `tools`: the defaults, and measuring on the device honestly
 
 Branch **`claude/bananads-perf-tools`** on JorreFog/SuperDrastic, from `00c34c78e8de` (the commit `bananads.mk` pins).
-Head: **`c901542`** (pushed; CI run 39159664159 green, artifact `bananads-aarch64-c901542...`). Everything here is **untested on the device**; the numbers marked "device" are the
+Head: **`HEADSHA`** (pushed; CI: see the exactness section). Everything here is **untested on the device**; the numbers marked "device" are the
 local agent's from 2026-10-18.
 
 ## The commits (in branch order)
@@ -17,6 +17,8 @@ local agent's from 2026-10-18.
 | 7 | `c27b7d9` BananaDS: prof.hz from a task-clock perf event, and the A55's counters (prof.pmu) | `prof.source` (`auto`), `prof.pmu` (`on` with prof.hz) | 4x the samples; `perf stat`'s counters |
 | 8 | `0a5e999` CI: bananads-device installs llvm | none | the first CI run failed only at the smoke ROM's build (llvm-objcopy) |
 | 9 | `c901542` BananaDS: prof.hz's report sums the functions into the device profile's areas too | none | JIT code / slow paths / 3D geometry / scheduler / dispatch / SPU / Gengis bins / waits |
+| 10 | `9d26e4d` BananaDS perf: render.2d_fence_wait (default: spin) | `render.2d_fence_wait` (`spin`, the old way; `block` to A/B) | the first session's perf/render `8677fad`, with the default kept at spin |
+| 11 | `40c432e` BananaDS: prof.hz's report says how much of the emulator's thread is waiting | none | a `# waiting:` line |
 
 ## Expected device gains, ranked (with the reasoning)
 
@@ -32,9 +34,15 @@ local agent's from 2026-10-18.
    with the first session's whole series against +21% on the base; this commit is the emulator-thread part of that
    5-point difference (the rest was the 2D thread's own changes), so +1..4% is an upper-bounded guess. At 2x the code
    path is the base's (the matrix's 2x configurations are identical to the base).
-3. **The profiler (commits 3, 7): 0% (off by default).** It is what the guide says work must start from. When on,
+3. **`render.2d_fence_wait=block` (commit 10, default spin): 0 to +3% fps, and a truer busy figure.** A spin waits
+   no faster than a block, so fps changes only where the spinner takes a core someone needs: the presenter at
+   `SCHED_FIFO` spinning in KMS play (it can hold the core the 2D thread wants), or 5+ runnable threads on 4 A55s
+   (emulator, 2D, 3 Gengis workers by default). Its other value is diagnostic and for the cpugov clock: with block,
+   `threads.sh` shows the emulator's thread's real work, and `hgprofile.sh`'s `# waiting:` line gives the spin
+   share directly.
+4. **The profiler (commits 3, 7): 0% (off by default).** It is what the guide says work must start from. When on,
    each sample costs a signal (a few microseconds), so a profiled run's fps is not a benchmark number.
-4. **The defaults audit (commit 4): no flips beyond 1 and 2.** See the table below; the two toggles the brief named
+5. **The defaults audit (commit 4): no flips beyond 1 and 2.** See the table below; the two toggles the brief named
    (`core.fast_gxdma`, `core.fast_spu`) turned out to be dead code with today's defaults.
 
 ## The defaults audit (every off-by-default, exact setting or variable that could take work off the emulator's thread)
@@ -66,8 +74,33 @@ thread **waits for the 2D thread by spinning on `std::this_thread::yield()`** (`
 busy. Under qemu the profiler showed `__sched_yield` at 2-5% of the emulator's thread on dsstress L5 / geomtest. The
 device profile (`hgprofile.sh`) will say how much of HeartGold's 99% is yield (and `pthread_cond_signal`, the
 2D thread's wake-ups: 5% under qemu on geomtest, `render.2d_batch` in perf/render is that lever): if it's several %, the first session's
-`render.2d_fence_wait=block` (perf/render `8677fad`, frame-exact on the device in the integrated series) is the next
-cherry-pick, and "99%" partly means "waiting for the 2D thread".
+`render.2d_fence_wait=block` (now commit 10, default spin, so it's one `--set` away) is the A/B to run, and "99%"
+partly means "waiting for the 2D thread". `hgprofile.sh`'s `# waiting:` line (commit 11) gives that share.
+
+## One-time setup on the device (do this first)
+
+1. Get the binaries: the CI artifact of the branch head, from the Actions page of JorreFog/SuperDrastic (workflow
+   `bananads-device`, branch `claude/bananads-perf-tools`), or `gh run list -R JorreFog/SuperDrastic -w bananads-device
+   -b claude/bananads-perf-tools -L 1` then `gh run download <run id> -R JorreFog/SuperDrastic`. It holds `bananads`,
+   `bananads.debug`, `bananads-difftest`, `BUILD.txt`, `SHA256SUMS` (check with `sha256sum -c SHA256SUMS`). Or build
+   the branch yourself; then keep the unstripped binary as well.
+2. Copy to the kit (exFAT: `scp -O`): `bananads` and `bananads.debug` side by side in `/data/bananads-dev/` (the
+   `.debug` file must be the same build: the profiler checks it and warns otherwise), `chmod +x bananads`, and the
+   four scripts plus `walk-lr.txt` from `bananads/tools/device/` of the same commit (they replace the kit's
+   hgquick.sh; `exact.sh` stays the kit's own).
+3. Put HeartGold there as `hg.nds` and its save as `hg.sav` (or pass `ROM=` and `SAV=`: the scripts copy the save as
+   `<ROM name>.sav`, the name BananaDS loads).
+4. Set the scene hashes: run `CLK=1104000 hgquick.sh ./bananads` and `CLK=1104000 EXTRA="--set render.scale=2"
+   hgquick.sh ./bananads`. Each prints `[scene UNCHECKED: HG_HASH_1X unset; frame 1500 is <md5> ...]` and keeps
+   `hg-frame1500-1X.ppm` / `-2X.ppm`: look at both (the overworld, the player standing, not a menu or the tutorial),
+   then write the two md5s into `HG_HASH_1X=` / `HG_HASH_2X=` at the top of `hgcommon.sh`. From then on a run that
+   isn't the scene says INVALID.
+5. Take the new baseline (the scripts now set `rtc.fixed` and walk left and right, so older fps numbers don't
+   compare): with the same binary, the old behaviour is `--set render.2d_thread=off --set render.3d_share=off` at 1x
+   (checked frame-exact against the base build) and the defaults at 2x (unchanged from the base):
+   `CLK=1104000 EXTRA="--set render.scale=1 --set render.2d_thread=off --set render.3d_share=off" hgquick.sh ./bananads ./bananads`
+   and `CLK=1104000 EXTRA="--set render.scale=2" hgquick.sh ./bananads ./bananads`.
+   Then the A/Bs below against those lines (same binary, so no compiler difference).
 
 ## The device A/B commands, most promising first
 
@@ -88,6 +121,12 @@ hgprofile.sh ./bananads --set render.scale=2               # 2x, the BananaOS de
 # 1. render.2d_thread at 1x: the new default against the old (expect +21%)
 CLK=1104000 EXTRA="--set render.scale=1" hgquick.sh ./bananads ./bananads   # then:
 CLK=1104000 EXTRA="--set render.scale=1 --set render.2d_thread=off" hgquick.sh ./bananads
+# 1b. how much of the emulator's thread spins (render.2d_fence_wait, default spin): read hgprofile's "# waiting:" line
+#     first, then (both scales; the 2D thread runs at both now)
+threads.sh ./bananads --set render.2d_fence_wait=block          # against threads.sh ./bananads (spin)
+CLK=1104000 EXTRA="--set render.2d_fence_wait=block" hgquick.sh ./bananads   # and with --set render.scale=2
+#     in play (KMS): BANANADS_RENDER_2D_FENCE_WAIT=block and BANANADS_KMS_STATS=600 in /data/banana/bananads.env:
+#     fps, the panels' repeats/drops, the cpugov clock. Flip the default to block if it doesn't lose anywhere
 # 2. render.3d_share at 1x (expect +1..4%; off = the old 1x path)
 CLK=1104000 EXTRA="--set render.scale=1 --set render.3d_share=off" hgquick.sh ./bananads
 # 3. the threads, at the shipped Gengis default (3) and the benchmarks' (2), both scales
