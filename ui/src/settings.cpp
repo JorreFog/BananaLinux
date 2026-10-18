@@ -1890,6 +1890,13 @@ namespace banana
 			}
 		}
 		if (!emu.empty()) out += rom + " = " + emu + "\n";
+		// the last game back to "As in Settings": no file rather than an empty one (the launchers and the tests look for
+		// the file; a card with nothing chosen per game has none)
+		if (out.find_first_not_of(" \t\r\n") == std::string::npos)
+		{
+			unlink(path.c_str());
+			return;
+		}
 		std::string tmp = path + ".new";
 		FILE* f = fopen(tmp.c_str(), "w");
 		if (!f) return;
