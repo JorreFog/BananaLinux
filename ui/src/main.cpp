@@ -1237,6 +1237,21 @@ int main(int argc, char** argv)
 			if (settingsView.update(now)) dirty = true;	// a Wi-Fi scan came back, a network joined
 			if (settingsView.takeLibraryChanged()) roms.due = now;	// box art fetched: the library again, at home
 		}
+		// for testing over SSH: a game's path written to /run/banana/launch starts it, as A on it in the library would
+		if (access("/run/banana/launch", F_OK) == 0)
+		{
+			std::string want;
+			{
+				std::ifstream f("/run/banana/launch");
+				std::getline(f, want);
+			}
+			unlink("/run/banana/launch");
+			bool found = false;
+			for (int s = 0; s < lib.systemCount() && !found; s++)
+				for (int i = 0; i < (int)lib.shelf(s).games.size(); i++)
+					if (lib.shelf(s).games[i].path == want && !lib.shelf(s).favorites) { lib.openLibrary(s); lib.launch(i); found = true; break; }
+			if (!found) logf("launch file: no game at %s", want.c_str());
+		}
 		int g = lib.pendingLaunch();
 		if (g >= 0)
 		{
