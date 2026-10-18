@@ -1,7 +1,7 @@
 # Session 2, agent `tools`: the defaults, and measuring on the device honestly
 
 Branch **`claude/bananads-perf-tools`** on JorreFog/SuperDrastic, from `00c34c78e8de` (the commit `bananads.mk` pins).
-Head: see the end of this file. Everything here is **untested on the device**; the numbers marked "device" are the
+Head: **`c901542`** (pushed; CI run 39159664159 green, artifact `bananads-aarch64-c901542...`). Everything here is **untested on the device**; the numbers marked "device" are the
 local agent's from 2026-10-18.
 
 ## The commits (in branch order)
@@ -108,6 +108,24 @@ CLK=1104000 EXTRA="--set render.gengis_help=0" hgquick.sh ./bananads
 Note: the scripts now set `rtc.fixed` (for the frame hash) and walk left and right (`walk-lr.txt`; `walk.txt` is
 fixed too): their fps is not comparable 1:1 with numbers taken with the old hgquick (which walked right only). Take
 a new baseline with the base binary first.
+
+## Reading the JIT-code and geometry shares (for `jitcode` and `geom`)
+
+`hgprofile.sh ./bananads [--set render.scale=2]` writes `$KIT/prof-<date>.txt`. In it:
+- **JIT-generated code**: the header line `# JIT code: N% of the samples` (every sample outside a module's code,
+  i.e. in the JIT's code memory). With `MELONDS_JIT_PERFMAP=1` (hgprofile.sh sets it), the section
+  `## JIT code by block ... and stub` splits it into blocks (`mj9_<guest address>`, `mj7_...`) and shared stubs
+  (`stub_0000ec0n` ExitCheck, `ed0n` DynExit, `e9xx`/`e7xx` JumpTo, `eb00` banked/patched memory functions); the
+  `## by area` table gives "JIT code" (blocks) and "JIT dispatch and exits" (stubs + `ARM_Dispatch`/`ARM_Ret`)
+  separately. The `# pmu:` line's `L1I-misses` and `iTLB-misses` per 1000 instructions are for the whole thread
+  (the counters can't split JIT code from the rest); compare them between builds for code-footprint changes.
+- **The geometry engine**: `## by scope` line `melonDS::GPU3D` (all its methods, e.g. `ExecuteCommand`,
+  `SubmitPolygonBody`, `Run`), and `## by area` "3D geometry" (GPU3D plus clipping and polygon sorting by name). The
+  GX FIFO stores that leave the JIT show under "memory/IO slow paths" (`SlowWrite9`, `GPU3D_Write32`,
+  `SlowBlockTransfer9`), not in "3D geometry": add them for the full geometry-command cost. "3D rendering (Gengis on
+  this thread)" is rasterizing, a separate thing.
+- Sampling: ~1000 samples a second of the thread's CPU time (task-clock event), ~17000 in the 1200-frame run, so a 5%
+  share is +-0.2% (binomial). Names need `<bin>.debug` (the CI artifact's `bananads.debug`) next to the binary.
 
 ## The tools
 
