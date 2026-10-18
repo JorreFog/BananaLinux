@@ -423,3 +423,14 @@ MEASURED (rgds-sim v1, st mode, device build + prof-dev PGO, A = build-devpgo, B
 main thread 5.406 -> 5.423 ms/frame @1104 (+0.31%; params-fit +0.26%); instructions +0.4% (the split functions' extra
 jumps), L1I misses -6% but store misses +9%, bcond misses +5%, iTLB L2 hits +9%. Nothing to gain on top of PGO's own
 function reordering; the option stays (off) as a lever for the device only. Evidence: evidence/core/ab-hotcold-cpubench-thumb.txt.
+
+### 16:47 UTC · sim · RESULT · where the time goes on the A55 (rgds-sim v1, build-dev, 12 workloads)
+MEASURED (model v1; evidence/sim/where-the-time-goes-v1.txt has every thread x bucket with its L1I/L1D/TLB/branch shares).
+Surprises: (1) **at 2x (BananaLinux's settings) the busiest thread is the 2D thread, not the emulator's**: L5 4.77 ms
+@1104 vs main 4.36 (L10 4.57 vs 4.40); IPC 0.50, **43-47% of its cycles are L1D misses** (Composite 1.85 ms = 39% of it,
+EmitA, DoubleLine, ConvertRun16, WriteLine: streaming the 2x lines; ld 16k + st 19k L1D misses/frame, 24k to DRAM).
+Halving its memory traffic is worth more than its instructions. (2) Gengis worker threads: 33-35% L1D. (3) st 1x: the 2D
+bucket's time share is 1.4x its instruction share (L1D 31% of it); Gengis 1.5x on cpubench. (4) JIT code: L1I ~20% of
+its time on the stress ROMs, ~2% on cpubench (small hot loop). (5) cpubench thumb: jit-code 52%, scheduler/core 24%,
+2D 11.5%, Gengis 4.7%, JIT runtime 3.5% (ARM_Dispatch/ARM_Ret 2.3%). (6) at 2x, libc (memcpy) costs 2-3.6x its insns.
+Caveats: v1's store-miss weight (0.2) and stream prefetcher are assumptions: the 2D thread's L1D share depends on them.
