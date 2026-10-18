@@ -164,7 +164,7 @@ GCC 14.3) run under `tools/qemu-dev`; "base" = /home/user/perf/build-dev/b (00c3
   on membench 1x, 138k on ds2dtest (2-3% of the thread's instructions) for the same list on nearly every line; kept
   while its key holds. **rgds-sim v2, b15d, st 2x (deterministic), membench, off -> on**: the emulator's thread
   **7.272 -> 7.183 ms/frame (-1.2%)**, instructions 4719k -> 4641k (-1.7%), L1I misses -3% (sim/st2x-membench-membench-steps-ab.txt;
-  the ds2dtest and 1x A/Bs follow in /home/user/perf/render/runs/sim/*steps-ab.txt). Exact: m15 FAILS=0 (the toggle off
+  ds2dtest st 2x: ms/frame @1104 22.113 -> 22.039 (-0.34%)   @1992 12.639 -> 12.598 (-0.32%); membench st 1x: ms/frame @1104 4.401 -> 4.331 (-1.59%)   @1992 2.662 -> 2.619 (-1.60%); sim/*-steps-ab.txt). Exact: m15 FAILS=0 (the toggle off
   among the "every new toggle off at once" configuration).
 - Baseline, reference build, device mode (gengis 2x, 3 threads, 2D thread, headless.direct), dsstress L5, frames
   100-300: main thread 3423.9k insn/frame; by bucket: other 1231k (of which rast_kern_h*/gx_polygon/f_run/gx2_render_bin

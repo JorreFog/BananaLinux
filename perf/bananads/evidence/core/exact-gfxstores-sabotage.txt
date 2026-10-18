@@ -1,0 +1,13 @@
+SABOTAGE CAUGHT: membench-membench frame50.ppm differs
+SABOTAGE CAUGHT: membench-membench frame100.ppm differs
+SABOTAGE CAUGHT: membench-membench frame150.ppm differs
+SABOTAGE CAUGHT: membench-membench frame200.ppm differs
+SABOTAGE CAUGHT: membench-membench frame250.ppm differs
+SABOTAGE CAUGHT: membench-membench frame300.ppm differs
+SABOTAGE CAUGHT: ds2dtest-ds2dtest frame50.ppm differs
+SABOTAGE CAUGHT: ds2dtest-ds2dtest frame100.ppm differs
+SABOTAGE CAUGHT: ds2dtest-ds2dtest frame150.ppm differs
+SABOTAGE CAUGHT: ds2dtest-ds2dtest frame200.ppm differs
+SABOTAGE CAUGHT: ds2dtest-ds2dtest frame250.ppm differs
+SABOTAGE CAUGHT: ds2dtest-ds2dtest frame300.ppm differs
+sabotage diffs=12

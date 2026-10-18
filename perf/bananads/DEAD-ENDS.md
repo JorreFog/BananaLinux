@@ -42,3 +42,6 @@
 - (core, 16:58) `BANANADS_HOT_OPT=-O3` on top of PGO (`-DBANANADS_PGO=prof-dev -DBANANADS_HOT_OPT=-O3` vs PGO alone):
   cpubench-thumb +1.4%, membench +1.5%, L5 0.0%, ipcrom -0.8% ms/frame (rgds-sim v1 st); evidence/core/ab-pgoO3-*.txt.
   With a profile, -O3 only adds code. Use PGO at Buildroot's -O2.
+- (core, 17:41) The JIT's VRAM/OAM/palette stores fully inline at every store site (~36 instructions each): rgds-sim
+  cpubench-thumb +1.7%, membench +0.1%, jit's bigcode +5.8% (code growth: L1I misses +46% on cpubench), and not exact on
+  ds2dtest; evidence/core/ab-gfx1-*.txt. The shared JIT-emitted helpers (0041, jit.gfxstores) are the version that works.

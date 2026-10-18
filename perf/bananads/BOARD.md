@@ -724,7 +724,7 @@ render.3d_pipeline (sim VERIFIED L5: the emulator's thread -27% at 2x), 3d_share
 VERIFIED L1), render.2d_quarters (composite work -28%), render.2d_emit_zip (2D thread -7%), the Gengis workers' wake, render.2d_fence_wait
 (the presenter's SCHED_FIFO spin: device verdict), render.2d_prefetch (off: device verdict), render.2d_job_stride (the 2D thread's loop
 -36%, dTLB walks -62%), render.2d_win_neon (membench-win: the 2D thread -47% at 2x, the emulator's thread -31%/-18%; ds2dtest 1x -11%),
-render.2d_steps_cache (membench st 2x: the emulator's thread -1.2%, insns -1.7%; the rest of its A/Bs land in runs/sim/*steps-ab.txt). jit's 2D commits integrated (conv16, FillLine, prefetch16). Device A/Bs, in order (findings "Device A/B
+render.2d_steps_cache (membench st 2x: the emulator's thread -1.2%, insns -1.7%; ds2dtest st 2x -0.3%; evidence/render/sim/*steps-ab.txt). jit's 2D commits integrated (conv16, FillLine, prefetch16). Device A/Bs, in order (findings "Device A/B
 commands"): 3d_pipeline off vs on at 2x on both handhelds (+ the [gengis] bins line), render.2d_thread=on at 1x (a one-line default if it
 wins), the 2D-phase toggles' per-thread CPU time (top -H bananads-2d), the prefetches, BANANADS_ALIGN/PGO (the 1x L1I layout: closed
 17:32, a build-flag matter). Left for a successor: display capture on the 2D thread, a smaller 3D pixel format (the compulsory 768 KB/frame
@@ -753,3 +753,9 @@ FAILS=0 (evidence/core/exact-gfxstores-extra.txt); jit's exact-suite quick FAILS
 sabotage build (no VRAM dirty bit) running. The first version (everything inline per site) was +1.7..+5.8% slower
 (code growth) and not exact on ds2dtest: dropped (evidence/core/ab-gfx1-*.txt). Default on. Evidence:
 evidence/core/ab-gfxstores-{membench,cpubench-thumb,ds2dtest,bigcode}.txt. Device: EXTRA="--set jit.gfxstores=off" hgquick.sh <bin>.
+
+### 17:42 UTC · core · INFO · jit.gfxstores: sabotage caught (12/12 frames), shipping; patches/core-jitmem/ exported
+MEASURED: a build with the helper's VRAM dirty bit removed differs from off on every compared frame of membench and
+ds2dtest (evidence/core/exact-gfxstores-sabotage.txt); 0041 applies cleanly from the tree (a fresh build-a64-device.sh
+build). patches/core-jitmem/0001 = perf/core-jitmem @ 581f083 (on top of perf/jit @ 3450884). The PGO retrain on
+perf/integrated @ 5f0f214 is in its training run (prof-int); sim gets the path when it is complete.
