@@ -3,3 +3,7 @@
 CONFIG_NTPD=y
 # /etc/sysctl.d/banana.conf at boot (rcS)
 CONFIG_SYSCTL=y
+# PortMaster (its menu checks for running processes with pgrep -f) and port scripts
+CONFIG_PGREP=y
+CONFIG_PKILL=y
+CONFIG_TIMEOUT=y
