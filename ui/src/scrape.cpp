@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cctype>
+#include <chrono>
 #include <cstdio>
 #include <cstring>
 #include <dirent.h>
@@ -71,7 +72,7 @@ namespace
 		std::string body;
 		long status = 0;
 		cu.setopt(h, URL, url.c_str());
-		cu.setopt(h, USERAGENT, "BananaOS banana-scrape");
+		cu.setopt(h, USERAGENT, "BananaOS banana-scrape (+https://github.com/JorreFog/BananaLinux)");
 		cu.setopt(h, NOSIGNAL, 1L);
 		cu.setopt(h, TIMEOUT, 60L);
 		cu.setopt(h, FOLLOWLOCATION, 1L);
@@ -294,11 +295,80 @@ namespace
 		std::string tmp = "/run/banana/scrape.status.new";
 		if (FILE* f = fopen(tmp.c_str(), "w")) { fprintf(f, "%s\n", s.c_str()); fclose(f); rename(tmp.c_str(), "/run/banana/scrape.status"); }
 	}
+	// ---- TwilightBoxart (KirovAir/TwilightBoxart, an open API for thin clients: a DS on Wi-Fi among them) ---------
+	// GET <base>/v2/art.png?name=<file name>&header=<base64 of its first 512 bytes>: PNG bytes, or an empty 404 when it
+	// doesn't know the game. Someone's own server, so asked politely: one request a second at most, whichever thread
+	// asks, and a game it didn't know isn't asked about again (banana/cache/twilight-miss.txt) unless --force.
+	std::string b64(const std::string& in)
+	{
+		static const char* T = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+		std::string r;
+		for (size_t i = 0; i < in.size(); i += 3)
+		{
+			unsigned v = (unsigned char)in[i] << 16 | (i + 1 < in.size() ? (unsigned char)in[i + 1] << 8 : 0) | (i + 2 < in.size() ? (unsigned char)in[i + 2] : 0);
+			r += T[v >> 18 & 63]; r += T[v >> 12 & 63];
+			r += i + 1 < in.size() ? T[v >> 6 & 63] : '=';
+			r += i + 2 < in.size() ? T[v & 63] : '=';
+		}
+		return r;
+	}
+	std::string twilightArt(const std::string& base, const std::string& path)
+	{
+		static std::mutex m;
+		static auto last = std::chrono::steady_clock::now() - std::chrono::seconds(1);
+		std::string fname = path.substr(path.rfind('/') + 1), ext = lower(fname.substr(fname.rfind('.') + 1));
+		std::string url = base + "/v2/art.png?name=" + esc(fname);
+		if (ext != "zip" && ext != "7z")	// (an archive's first bytes are the archive's, not the game's)
+		{
+			std::ifstream f(path, std::ios::binary);
+			char hdr[512];
+			f.read(hdr, sizeof hdr);
+			if (f.gcount() > 0) url += "&header=" + esc(b64(std::string(hdr, (size_t)f.gcount())));
+		}
+		std::lock_guard<std::mutex> l(m);
+		std::this_thread::sleep_until(last + std::chrono::seconds(1));
+		last = std::chrono::steady_clock::now();
+		return get(url);
+	}
 }
 
 int main(int argc, char** argv)
 {
 	bool force = argc > 1 && !strcmp(argv[1], "--force");
+	// Settings > System > Box art from (settings.conf's boxart_source): libretro (libretro-thumbnails), both
+	// (libretro, then TwilightBoxart for the covers it has none of) or twilight (TwilightBoxart first, libretro for the
+	// rest); TwilightBoxart's server in boxart_twilight_url
+	auto setting = [](const char* key, const std::string& def)
+	{
+		std::string r = def, ln;
+		for (const char* path : { "/etc/banana/settings.conf", "/data/banana/settings.conf" })
+		{
+			std::ifstream f(path);
+			while (std::getline(f, ln))
+			{
+				size_t eq = ln.find('=');
+				if (ln.empty() || ln[0] == '#' || eq == std::string::npos) continue;
+				std::string k = ln.substr(0, eq), v = ln.substr(eq + 1);
+				k.erase(k.find_last_not_of(" \t") + 1);
+				v.erase(0, v.find_first_not_of(" \t")); v.erase(v.find_last_not_of(" \t\r") + 1);
+				if (k == key) r = v;
+			}
+		}
+		return r;
+	};
+	std::string source = setting("boxart_source", "libretro"), twilight = setting("boxart_twilight_url", "https://boxart.kirovair.com");
+	while (!twilight.empty() && twilight.back() == '/') twilight.pop_back();
+	if (source != "both" && source != "twilight") twilight.clear();
+	// (the systems TwilightBoxart knows: Nintendo's handhelds and consoles, Sega's 8 and 16-bit)
+	const std::set<std::string> TWILIGHT = { "nds", "gba", "gbc", "gb", "nes", "snes", "megadrive", "n64" };
+	std::set<std::string> misses;
+	std::mutex missMu;
+	const std::string MISSES = "/data/banana/cache/twilight-miss.txt";
+	if (!twilight.empty() && !force)
+	{
+		std::ifstream f(MISSES);
+		for (std::string ln; std::getline(f, ln);) misses.insert(ln);
+	}
 	const char* roms = getenv("BANANA_ROMS") ? getenv("BANANA_ROMS") : "/data/roms";
 	std::string conf = getenv("BANANA_SYSTEMS") ? getenv("BANANA_SYSTEMS") :
 		access("/data/banana/systems.conf", R_OK) == 0 ? "/data/banana/systems.conf" : "/etc/banana/systems.conf";
@@ -384,14 +454,25 @@ int main(int argc, char** argv)
 			// (art from before, as PNG, counts as there)
 			std::string boxPng = j.dir + "/media/box/" + j.stem + ".png", labelPng = j.dir + "/media/label/" + j.stem + ".png";
 			bool got = false;
-			if (!j.box.empty())
+			bool tw = !twilight.empty() && TWILIGHT.count(j.sys.id);
+			if (tw) { std::lock_guard<std::mutex> l(missMu); tw = !misses.count(j.sys.id + "/" + j.rel); }
+			if (!j.box.empty() || tw)
 			{
 				if (!force && (access(boxPath.c_str(), F_OK) == 0 || access(boxPng.c_str(), F_OK) == 0)) got = true;
 				else
 				{
 					mkdir((j.dir + "/media").c_str(), 0755);
 					mkdir((j.dir + "/media/box").c_str(), 0755);
-					std::string d = get(j.box);
+					std::string d;
+					bool asked = false;
+					if (tw && source == "twilight") { d = twilightArt(twilight, j.dir + "/" + j.rel); asked = true; }
+					if (d.empty() && !j.box.empty()) d = get(j.box);
+					if (d.empty() && tw && !asked) { d = twilightArt(twilight, j.dir + "/" + j.rel); asked = true; }
+					if (asked && d.empty())
+					{
+						std::lock_guard<std::mutex> l(missMu);
+						misses.insert(j.sys.id + "/" + j.rel);
+					}
 					got = !d.empty() && savePicture(d, boxPath, 512);
 				}
 			}
@@ -410,6 +491,12 @@ int main(int argc, char** argv)
 	std::vector<std::thread> pool;
 	for (int t = 0; t < 8; t++) pool.emplace_back(worker);
 	for (auto& t : pool) t.join();
+	if (!twilight.empty())
+	{
+		mkdir("/data/banana/cache", 0755);
+		std::ofstream f(MISSES);
+		for (auto& m : misses) f << m << "\n";
+	}
 
 	// genres and years into each folder's gamelist.xml (new entries only)
 	std::map<std::string, std::vector<const Job*>> byDir;

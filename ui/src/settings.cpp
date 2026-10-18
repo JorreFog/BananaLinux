@@ -341,6 +341,8 @@ namespace banana
 		add(S, "gear", "Update", "A new version of Banana from a package on the card, written to the other slot and run from the next restart; this one stays as it is until then.", "", "update", {}, {}, Item::PAGE);
 		add(S, "picture", "Box art", "Covers, title screens, genres and years for your games, from libretro's free collections (no account, Wi-Fi needed). It keeps going in the background; games that already have art are skipped, so running it again only fetches what is new.",
 			"", "scrape", {}, {}, Item::PAGE);
+		add(S, "picture", "Box art from", "libretro: libretro's collections. libretro + Twilight: TwilightBoxart (boxart.kirovair.com) for the covers libretro has none of. Twilight first: TwilightBoxart's covers where it has them. TwilightBoxart is asked one game a second.",
+			menu, "boxart_source", { "libretro", "libretro + Twilight", "Twilight first" }, { "libretro", "both", "twilight" });
 		add(S, "gear", "Previous version", "Restarts into the other slot: the version that ran before the last update. Press A twice.", "", "switch", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "SSH", "", menu, "ssh", { "Off", "On" }, { "off", "on" });
 		add(S, "gear", "Second SD card", "Games on the card in the second slot (its roms folder, with the same system folders as this card) show up in the library with the others while it's in. exFAT or FAT32.", menu, "sd2_roms", { "Show its games", "Off" }, { "on", "off" });
