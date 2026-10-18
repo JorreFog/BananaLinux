@@ -302,4 +302,12 @@ and A/B that build against the test-ROM profile's.
 
 ## Dead ends
 
-(filled in below)
+- `-fno-plt` (`BANANADS_NOPLT`): the PLT costs 1.1k instructions/frame; nothing to gain (DEAD-ENDS.md, 16:20).
+- `BANANADS_HOTCOLD=ON` on the PGO build: cpubench-thumb +0.3% (`evidence/core/ab-hotcold-cpubench-thumb.txt`).
+- PGO + `BANANADS_HOT_OPT=-O3`: slower than PGO alone on 3 of 4 ROMs (+1.4% cpubench-thumb, +1.5% membench, 0.0% L5,
+  -0.8% ipcrom; `ab-pgoO3-*.txt`): with a profile, -O3 only adds code. Keep Buildroot's -O2 with PGO.
+- `core.fast_div` (0040): exact, -0.4% on cpubench; kept off, marginal.
+- The first jit.gfxstores (the whole store sequence inline at every site): +1.7% cpubench-thumb, +5.8% bigcode (code
+  growth), and not exact on ds2dtest (`ab-gfx1-*.txt`); replaced by the shared helpers (section 5).
+- `BANANADS_ALIGN=32:16:16`: not a dead end but not a result either: -0.1..-3.9% in the model, all of it L1I set
+  conflicts of the particular layout (the JIT's identical code bytes miss less too); only the device can say.
