@@ -1,6 +1,8 @@
 # BananaDS speed work, 2026-10-18 (four cloud agents)
 
-**Newest:** [session2/README.md](session2/README.md): the second session's five SuperDrastic branches (emulator thread only), ranked device A/Bs.
+**Newest:** [session3/README.md](session3/README.md): Mario Kart DS's race start, `claude/bananads-perf-mkall` and its parts.
+
+**Before that:** [session2/README.md](session2/README.md): the second session's five SuperDrastic branches (emulator thread only), ranked device A/Bs.
 
 **Start here:** [GUIDE-FOR-CLOUD-AGENTS.md](GUIDE-FOR-CLOUD-AGENTS.md) is the local agent's device verdict on this
 session and how the next one should work (start from a device profile of a real game). [SUMMARY.md](SUMMARY.md) has the simulated results against the start of the session and what is in the
