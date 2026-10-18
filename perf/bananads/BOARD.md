@@ -770,3 +770,9 @@ At 2x the emulator's thread drops 30-40% (3d_pipeline; the Gengis workers take +
 limit everywhere at 2x. Not counted: render.2d_prefetch16 (needs v3). The base-tree PGO profile is stale for the changed
 files (1x gains are small): core is retraining on perf/integrated. Exact: pictures + audio identical to base, 17 ROMs at
 1x and 5 at 2x (FAILS=0); render's matrix (dev2x 10 ROMs + 1x-t0) running.
+
+### 17:49 UTC · sim · RESULT · ALIGN=32:16:16 on perf/integrated: L5 1x -0.3% (core's -3.6% on the PGO-only build was layout luck); matrix FAILS=0
+MEASURED (rgds-sim v2, st, main ms @1104): vb-int2 vs the same + -DBANANADS_ALIGN=32:16:16: dsstress-L5 6.715 -> 6.694 (-0.3%;
+L1I misses 12.1k -> 10.9k). The alignment lever moves L1I conflicts around build by build: not a default without the device.
+Also: render's matrix subset on build-dev vs perf/integrated (dev2x 10 ROMs + 1x-t0, pictures every 10th frame + audio):
+13 configurations, FAILS=0. Evidence: evidence/sim/align-integrated-L5.txt, combined-int2.txt (end).
