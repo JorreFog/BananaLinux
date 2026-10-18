@@ -256,6 +256,34 @@ namespace banana
 		{ "Sao Paulo, Buenos Aires", "<-03>3" },
 	};
 
+	// Settings > Nintendo DS > Shader's choices: Banana's shaders, then the card's own (banana/shaders/<name>.frag,
+	// SuperDrastic's shader format: README.txt there). Made again each time Settings loads the row (load()), so a shader
+	// copied over file sharing while the menu runs is listed without a restart
+	static void shaderChoices(const std::string& data, std::vector<std::string>& shaderNames, std::vector<std::string>& shaderValues)
+	{
+		shaderNames = { "None (smooth)", "Sharp pixels (integer)", "Crisp", "Crisp + DS colours", "LCD grid", "LCD grid + colours", "FSR", "LCD (DS colours)", "LCD 1x", "LCD 3x", "Fast LCD",
+			  "DS colours", "Retro", "Bevel", "Sharp bilinear", "Sharp + scanlines", "Fast CRT", "FXAA", "Integer fill", "LCD grid 2x",
+			  "Dot (MiZai)", "Dot (MiZai, RG DS+)", "Retro tiles", "DraStic LCD", "DraStic LCD + colours", "DraStic Quilez",
+			  "DraStic sharp", "DraStic sharp + colours", "DraStic fast LCD", "DraStic fast LCD + colours" };
+		shaderValues = { "none", "ds-integer", "ds-crisp", "ds-crisp-color", "ds-grid", "ds-grid-color", "ds-fsr", "lcd1x-nds", "lcd1x", "lcd3x", "zfast-lcd",
+			  "nds-color", "retro-v2", "bevel", "sharp-bilinear", "sharp-bilinear-scanlines", "zfast-crt", "fxaa", "ds-integer-fill", "ds-grid-2x",
+			  "nnddss-dot-mizai", "nnddss-dot-mizai-rgds", "nnddss-retro-tiles", "drastic-lcd1x", "drastic-lcd1x-nds-color", "drastic-quilez",
+			  "drastic-sharp-bilinear", "drastic-sharp-bilinear-nds-color", "drastic-zfast-lcd", "drastic-zfast-lcd-nds-color" };
+		if (DIR* d = opendir((data + "/shaders").c_str()))
+		{
+			std::vector<std::string> own;
+			while (dirent* e = readdir(d))
+			{
+				std::string n = e->d_name;
+				if (n.size() > 5 && n[0] != '.' && n.compare(n.size() - 5, 5, ".frag") == 0) own.push_back(n.substr(0, n.size() - 5));
+			}
+			closedir(d);
+			std::sort(own.begin(), own.end());
+			for (auto& n : own)
+				if (std::find(shaderValues.begin(), shaderValues.end(), n) == shaderValues.end()) { shaderNames.push_back(n + " (card)"); shaderValues.push_back(n); }
+		}
+	}
+
 	void Settings::build()
 	{
 		std::string menu = data + "/settings.conf", power = data + "/bananad.conf", sd = data + "/superdrastic.conf";
@@ -306,28 +334,8 @@ namespace banana
 			menu, "nds_emulator", { "SuperDrastic", "BananaDS" }, { "superdrastic", "bananads" });
 		add(N, "nds", "Quick resume", "On: quitting keeps where you are, and the game goes on from there next time (a shutdown too). Off: quitting ends the game, which starts from its title next time.",
 			menu, "quick_resume", { "Off", "On" }, { "off", "on" });
-		std::vector<std::string> shaderNames = { "None (smooth)", "Sharp pixels (integer)", "Crisp", "Crisp + DS colours", "LCD grid", "LCD grid + colours", "FSR", "LCD (DS colours)", "LCD 1x", "LCD 3x", "Fast LCD",
-			  "DS colours", "Retro", "Bevel", "Sharp bilinear", "Sharp + scanlines", "Fast CRT", "FXAA", "Integer fill", "LCD grid 2x",
-			  "Dot (MiZai)", "Dot (MiZai, RG DS+)", "Retro tiles", "DraStic LCD", "DraStic LCD + colours", "DraStic Quilez",
-			  "DraStic sharp", "DraStic sharp + colours", "DraStic fast LCD", "DraStic fast LCD + colours" };
-		std::vector<std::string> shaderValues = { "none", "ds-integer", "ds-crisp", "ds-crisp-color", "ds-grid", "ds-grid-color", "ds-fsr", "lcd1x-nds", "lcd1x", "lcd3x", "zfast-lcd",
-			  "nds-color", "retro-v2", "bevel", "sharp-bilinear", "sharp-bilinear-scanlines", "zfast-crt", "fxaa", "ds-integer-fill", "ds-grid-2x",
-			  "nnddss-dot-mizai", "nnddss-dot-mizai-rgds", "nnddss-retro-tiles", "drastic-lcd1x", "drastic-lcd1x-nds-color", "drastic-quilez",
-			  "drastic-sharp-bilinear", "drastic-sharp-bilinear-nds-color", "drastic-zfast-lcd", "drastic-zfast-lcd-nds-color" };
-		// the card's own (banana/shaders/<name>.frag, SuperDrastic's shader format: README.txt there), after Banana's
-		if (DIR* d = opendir((data + "/shaders").c_str()))
-		{
-			std::vector<std::string> own;
-			while (dirent* e = readdir(d))
-			{
-				std::string n = e->d_name;
-				if (n.size() > 5 && n[0] != '.' && n.compare(n.size() - 5, 5, ".frag") == 0) own.push_back(n.substr(0, n.size() - 5));
-			}
-			closedir(d);
-			std::sort(own.begin(), own.end());
-			for (auto& n : own)
-				if (std::find(shaderValues.begin(), shaderValues.end(), n) == shaderValues.end()) { shaderNames.push_back(n + " (card)"); shaderValues.push_back(n); }
-		}
+		std::vector<std::string> shaderNames, shaderValues;
+		shaderChoices(data, shaderNames, shaderValues);
 		const char* shaderHelp = "Sharp pixels: every DS pixel an exact square, no blur (4x4 on the RG DS Plus, 2x2 with a frame on the RG DS). None scales smoothly. Your own: .frag files in banana/shaders. Crisp: exact pixel-area scaling. Grid and LCD: the DS's screen grid. Colours: the DS's own, duller colours. CRT: a TV's scanlines. FSR: smooth edges, the heaviest. None costs no GPU work.";
 		if (emu == "bananads")
 		{
@@ -403,6 +411,8 @@ namespace banana
 			it.names = { "Dark", "Light", "Carts" }; it.values = { "dark", "light", "carts" };
 			for (auto& t : userThemes()) { it.names.push_back(t.name); it.values.push_back(t.value); }
 		}
+		if (it.key == "DSFLIP_SHADER" || it.key == "kms.shader")
+			shaderChoices(data, it.names, it.values);	// the card's shaders as they are now (one copied in while the menu runs)
 		if (it.key == "accent")
 		{
 			// a theme with its own accent: the row says so and has nothing to pick (it came back to life when the theme
@@ -467,7 +477,9 @@ namespace banana
 		// a value the list doesn't have (set by hand, or a shader added later): shown as it is and kept, rather than
 		// shown as the first choice and lost at the first press
 		// (not the theme: a user theme whose file has gone shows Dark, which is what the menu draws then)
-		if (it.at < 0 && !v.empty() && it.key != "led_brightness" && it.key != "theme") { it.names.push_back(v); it.values.push_back(v); it.at = (int)it.values.size() - 1; }
+		// (not a DS shader that is nowhere: a card shader whose file has gone shows None, which is what the emulators draw then)
+		bool goneShader = (it.key == "DSFLIP_SHADER" || it.key == "kms.shader") && access(("/usr/lib/superdrastic/shaders/" + v + ".frag").c_str(), F_OK) != 0;
+		if (it.at < 0 && !v.empty() && it.key != "led_brightness" && it.key != "theme" && !goneShader) { it.names.push_back(v); it.values.push_back(v); it.at = (int)it.values.size() - 1; }
 		if (it.at < 0) it.at = 0;
 		// a value between the choices (the LEDs at 128): the nearest one
 		if (it.key == "led_brightness")
