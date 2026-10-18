@@ -1696,15 +1696,23 @@ namespace banana
 		// the text being typed, here too, so the keys and what they make are seen together
 		box("slot", true, 18, 12, 604, 56);
 		{
+			// at the right: the length of a password; for a search the games it finds (a bare number there read as a
+			// match count)
+			std::string n = std::to_string(pw.size());
+			if (entry == ENTRY_SEARCH && searchCount)
+			{
+				int m = pw.empty() ? -1 : searchCount(pw);
+				n = m < 0 ? "" : m == 0 ? "No games" : std::to_string(m) + (m == 1 ? " game" : " games");
+			}
+			float nw = text(n, true, 17, 0, 0, p.muted, false, 0, true);
+			const float room = std::min(500.f, 600 - nw - 16 - 40);	// the text stops short of it
 			std::string t = pw;
 			float tw = text(t, true, 24, 0, 0, p.ink, false, 0, true);
-			while (tw > 500 && t.size() > 1) { t.erase(0, 1); tw = text("..." + t, true, 24, 0, 0, p.ink, false, 0, true); }
+			while (tw > room && t.size() > 1) { t.erase(0, 1); tw = text("..." + t, true, 24, 0, 0, p.ink, false, 0, true); }
 			if (t != pw) t = "..." + t;
 			if (pw.empty()) { tw = 0; text(entrySub.empty() ? "Type here" : entrySub, true, 22, 38, 28, p.muted); }
 			else text(t, true, 24, 38, 27, p.ink);
 			be->fill(std::round(X(40 + tw)), std::round(X(26)), std::round(X(10)), std::round(X(28)), p.accent);	// the cursor
-			std::string n = std::to_string(pw.size());
-			float nw = text(n, true, 17, 0, 0, p.muted, false, 0, true);
 			text(n, true, 17, 600 - nw, 31, p.muted);
 		}
 		// the keys: the selected one in the menu's yellow, the others light on dark
