@@ -1,5 +1,6 @@
 #include "theme.h"
 #include "../rnds/RndsUI.h"
+#include "../third_party/stb_image.h"
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
@@ -149,6 +150,40 @@ namespace banana
 		return std::ifstream(p) ? p : "";
 	}
 
+	// a picture the theme names (a wallpaper, the logo, an icon): only one stb_image reads (PNG or JPEG) and at most
+	// 4096 px a side, checked from its header before anything is decoded (an 8192 x 8192 wallpaper decoded is 256 MB,
+	// and banana-ui stays in memory under the games); otherwise the default is used, and the log says why
+	static std::string themeImage(const std::string& dir, const std::string& name)
+	{
+		std::string p = themeFile(dir, name);
+		if (p.empty())
+		{
+			if (!name.empty()) fprintf(stderr, "banana-ui: theme: %s isn't there (the default instead)\n", name.c_str());
+			return "";
+		}
+		int w = 0, h = 0, n = 0;
+		if (!stbi_info(p.c_str(), &w, &h, &n))
+		{
+			fprintf(stderr, "banana-ui: theme: %s isn't a picture Banana reads (PNG or JPEG; the default instead)\n", p.c_str());
+			return "";
+		}
+		if (w > 4096 || h > 4096)
+		{
+			fprintf(stderr, "banana-ui: theme: %s is %dx%d, the largest is 4096 (the default instead)\n", p.c_str(), w, h);
+			return "";
+		}
+		return p;
+	}
+
+	bool themeSetsAccent(const std::string& value)
+	{
+		if (value.compare(0, 5, "user:") != 0) return false;
+		std::map<std::string, std::string> kv;
+		if (!readTheme(pathFor(value.substr(5)), kv, nullptr)) return false;
+		uint32_t c;
+		return parseColor(kv["accent"], c) || parseColor(kv["accent.base"], c) || !kv["accent"].empty();
+	}
+
 	std::string applyTheme(const std::string& value, const std::string& accentName, std::string* why)
 	{
 		rnds::themeColors.clear();
@@ -189,13 +224,13 @@ namespace banana
 		rnds::ThemeFiles& f = rnds::themeFiles;
 		f.fontRegular = themeFile(dir, kv["fonts.regular"]);
 		f.fontMedium = themeFile(dir, kv["fonts.medium"]);
-		f.logo = themeFile(dir, kv["logo"]);
-		f.wallTop = themeFile(dir, kv["background.top"]);
-		f.wallBottom = themeFile(dir, kv["background.bottom"]);
+		f.logo = themeImage(dir, kv["logo"]);
+		f.wallTop = themeImage(dir, kv["background.top"]);
+		f.wallBottom = themeImage(dir, kv["background.bottom"]);
 		f.dither = kv["background.dither"] != "false";
 		for (auto& e : kv)
 		{
-			if (e.first.compare(0, 6, "icons.") == 0) { std::string p = themeFile(dir, e.second); if (!p.empty()) f.icons[e.first.substr(6)] = p; }
+			if (e.first.compare(0, 6, "icons.") == 0) { std::string p = themeImage(dir, e.second); if (!p.empty()) f.icons[e.first.substr(6)] = p; }
 			if (e.first.compare(0, 7, "sounds.") == 0)
 			{
 				if (e.second == "off") f.sounds[e.first.substr(7)] = "off";

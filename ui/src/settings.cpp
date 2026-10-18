@@ -382,6 +382,18 @@ namespace banana
 
 	void Settings::load(Item& it)
 	{
+		if (it.key == "accent")
+		{
+			// a theme with its own accent: the row says so and has nothing to pick (it came back to life when the theme
+			// changes: the Theme row loads it again)
+			static const std::vector<std::string> NAMES = { "Yellow", "Blue", "Red", "Green", "Purple", "Pink" },
+				VALUES = { "yellow", "blue", "red", "green", "purple", "pink" };
+			bool own = themeSetsAccent(getConfValue(data + "/settings.conf", "theme", "dark"));
+			it.names = own ? std::vector<std::string>{ "From the theme" } : NAMES;
+			it.values = own ? std::vector<std::string>{ getConfValue(it.file, "accent", "yellow") } : VALUES;
+			it.help = own ? "This theme sets its own accent colour. Pick Dark, Light or a theme without one to choose it here."
+				: "The colour of the selection, the logo and the boot animation's banana.";
+		}
 		if (it.kind == Item::BRIGHTNESS)
 		{
 			// the level set (bananad keeps it in banana/backlight; the live one is lower while the idle menu is dimmed,
@@ -639,7 +651,12 @@ namespace banana
 			armed = -1;
 			return CHANGED;
 		}
-		if (it.key == "theme") { setVariant(it.values[at]); return THEME; }
+		if (it.key == "theme")
+		{
+			setVariant(it.values[at]);
+			for (auto& x : items) if (x.key == "accent") load(x);	// "From the theme", or the colours again
+			return THEME;
+		}
 		if (it.key == "accent") { setVariant(getConfValue(data + "/settings.conf", "theme", "dark")); return THEME; }	// (saved above)
 		return CHANGED;
 	}
