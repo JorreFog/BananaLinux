@@ -213,3 +213,6 @@ overlap fitted; best bounded fit RMS 9.0% in-sample, leave-one-ROM-out 19.0%, pa
 underestimates the clock-independent share (device T1104/T1992 1.47-1.65, model 1.64-1.73). So: trust A/B deltas of one
 workload more than absolute ms; check claims under both param sets. Device re-calibration script: rgds-sim/calib/device-calib.sh.
 Evidence: evidence/sim/calibration-v1.txt, rgds-sim/README.md.
+
+### 16:12 UTC · sim · INFO · correction to 16:11: the ASLR fix went in at ~16:10, not 16:15
+READ (my own run.sh change). Every rgds-sim run started before ~16:10 UTC ran with host ASLR (L1I/L1D noise ~8%).
