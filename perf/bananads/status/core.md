@@ -1,6 +1,5 @@
 # core: status (overwritten by core only)
 16:12 UTC. Branch perf/core @ f503a7a + uncommitted: patches/melonds/0040 (core.fast_div), src/emu.cpp, docs/SETTINGS.md. Worktree /home/user/perf/core/sd.
-in one step), src/emu.cpp (the setting), docs/SETTINGS.md. Worktree /home/user/perf/core/sd.
 RESULTs posted: PGO on GCC 13 (15:54), BANANADS_HOT_OPT=-O3 on the device build (16:07); both sent to sim.
 Running: exactness of the device PGO build vs build-dev (count done: -3.6..-21% insns, evidence/core/count-devpgo.txt; rgds-sim cpubench-thumb -4.1% ms, sim-devpgo.txt); build-b (0040 + difftest).
 Split profiles trained: /home/user/perf/core/prof-dev-no3d, prof-dev-3donly (use-builds queued).

@@ -42,7 +42,15 @@ runnable thread on a 4-core device, and the sim can't see that; device-only verd
 
 ## Measurements (qemu-count, exact instruction counts; rgds-sim numbers when verified)
 
-(filled in as they come; every number has a file in evidence/render/)
+Every number has a file in evidence/render/. "Device build" = `tools/build-a64-device.sh` (Buildroot's -O2, Bootlin
+GCC 14.3) run under `tools/qemu-dev`; "base" = /home/user/perf/build-dev/b (00c34c78e8de), "mine" = the branch.
+
+- **render.2d_comp_unroll** (the emulator's thread at 1x; st mode: one thread, soft 3D, no 2D thread; device build
+  b5d @ 0fd83cb; evidence/render/qc-b5d-st-2d.txt): main thread instructions/frame, off -> on: membench 6027.9k ->
+  5685.2k (**-5.7%**), ds2dtest 21224.2k -> 19261.9k (**-9.2%**). Base vs mine: membench 6013.4k -> 5685.2k, ds2dtest
+  21212.4k -> 19261.9k. `Composite` on membench: 710.9k (base) -> ~250k. The harness behind it
+  (evidence/render/comp-bench.txt): per 256-pixel composite at -O2, 2/3/4 steps: 2588/3966/5665 (plain loop) vs
+  1558/1833/2154 (fold) vs 847/1432/1833 (the plain loop at -O3).
 
 - Baseline, reference build, device mode (gengis 2x, 3 threads, 2D thread, headless.direct), dsstress L5, frames
   100-300: main thread 3423.9k insn/frame; by bucket: other 1231k (of which rast_kern_h*/gx_polygon/f_run/gx2_render_bin

@@ -1,9 +1,12 @@
 # render: status (overwritten by render only)
 
-Updated 16:10 UTC. Worktree /home/user/perf/render/sd, branch perf/render @ f65f846 (7 commits: 7ebe4e9 render.2d_batch, ea886e8 render.3d_pipeline, dc3f96a 3d_share/3d_wait2d at 1x, f8be6b5 patch 0060 render.geom_sort, 968fe03 render.2d_comp_unroll, fd53c40 render.2d_quarters, f65f846 render.2d_emit_zip). Patch numbers 0060-0079.
+Updated 16:15 UTC. Worktree /home/user/perf/render/sd, branch perf/render @ f65f846 (7 commits) + uncommitted docs/PERF.md section. Patch numbers 0060-0079.
 
 ## Doing now (all in the background, chained; nothing else needs CPU)
-- Builds: device builds b5d = 0fd83cb (done), b6d = f65f846 (linking, the final one); x86tsan done.
+- Builds: device builds b5d = 0fd83cb (done), b6d = f65f846 (linking, the final one); x86tsan done, TSan runs: 6 runs,
+  0 warnings (evidence/render/tsan-runs.txt).
+- First numbers (device build, qemu-count): render.2d_comp_unroll membench -5.7%, ds2dtest -9.2% of the emulator's
+  thread (board RESULT 16:12, evidence/render/qc-b5d-st-2d.txt).
 - Running: evidence/render/measure-all.sh build-dev vs b5d -> /home/user/perf/render/runs/qc-b5d/summary.txt;
   TSan runs (2D thread, batches 1..200, lazy on/off, reloads) -> /home/user/perf/render/runs/tsan/*/log.
 - Queued: rgds-sim ab.sh per toggle on b6d -> /home/user/perf/render/runs/sim/*-ab.txt; then the matrix on the device
