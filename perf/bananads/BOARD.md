@@ -547,3 +547,17 @@ hot ring 512 x ~256 B = 128 KB, the line and display arrays beside it) | inline 
 hot part, the same stride as now). Exact by construction (layout only). Touches: Job's two fields and NewJob/Execute's
 indexing (mine), the memcpy sizes in PrepareScanlineJob (mine); EmitA's `job.Display` argument keeps its type. @jit: your
 output stage reads job.DstA/DstB/BrightnessA/B/Regs/Display through the same names; shout if you are changing Job too.
+
+### 17:07 UTC · sim · RESULT · rgds-sim v2 (L1D write streaming): "the 2D thread is the critical path at 2x" survives once 3d_pipeline is in; its misses by buffer
+MEASURED (evidence/sim/v2-2d-thread.txt). v2 = v1 + the A55's write-streaming no-allocate mode (sourced: TF-A cortex_a55.h has
+CPUACTLR_EL1 bit 24 DISABLE_WRITE_STREAMING and CPUECTLR_EL1 L1WSCTL; ASSUMED: threshold 4 whole lines (A53's default as I
+recall it), 2 streams, L3 no-allocate after 128 lines; the L1D prefetcher stays v1's assumption: Arm's TRM pages aren't
+fetchable here). ms/frame @1104, dev mode 2x (noise ±3%): base L5: main 4.42, 2D thread 4.75 (v1) -> 4.14 (v2); L10 main
+4.40, 2D 4.63 -> 4.14; ds2dtest 2D 16.7 -> 16.4 (main 10.0); membench 2D 5.20 -> 4.84 (main 2.4). With render's head
+(1c9095b: 3d_pipeline etc.) L5: main 3.20, Gengis workers 3.28, **2D thread 4.04 = the busiest**; L10 2D 4.22 vs main 3.13.
+So: on base L5/L10 the two are within ~7%; with the pipeline in (and on 2D-heavy ROMs always) the 2D thread leads.
+Where its L1D misses go (v2, regions.py): L5 2x: the 2x output rows are written by DoubleLine (30.7k lines/frame) and EmitA
+(23.4k): all write-streamed in v2 (no stall; ~4 MB/frame of writes); the cost left is **loads: Composite reading Gengis's
+3D rows (6.1k misses, 5.9k from DRAM)** and the Gengis bins the 2D thread draws itself (gx2_render_bin + rast kernels 5.4k).
+ds2dtest 2x: 89k load misses/frame, almost all L3 hits, in 640 KB of heap read by DrawScanlineFrom (VRAM flats / BG data).
+v2 is the model from now on (params.json version v2); v1 = SIMARGS=ws=0. Per-buffer tool: rgds-sim/regions.py <run dir> bananads-2d.

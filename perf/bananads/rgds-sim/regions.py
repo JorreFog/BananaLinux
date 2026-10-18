@@ -7,7 +7,8 @@ file or as anon@<start>+<size>; a [heap] mapping is split into 64 KB regions. Fo
 misses (allocating), write-streamed store lines (no allocate, no stall), misses to DRAM, and the functions behind them.
 Example: rgds-sim/regions.py /tmp/rgds/L5-2x bananads-2d
 """
-import sys, os, json, bisect, collections
+import sys, os, json, bisect, collections, signal
+signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import report as R
 
@@ -111,9 +112,25 @@ print('thread %d (%s), frames %d-%d, per frame: L1D load misses, allocating stor
 tot = [sum(v[i] for v in per_buf.values()) for i in range(6)]
 print('total: ld %.1fk st %.1fk ws %.1fk | DRAM: ld %.1fk st %.1fk ws(no L3 alloc) %.1fk' % (
     tot[0] / 1e3, tot[1] / 1e3, tot[4] / 1e3, tot[2] / 1e3, tot[3] / 1e3, tot[5] / 1e3))
-print('%-34s %8s %8s %8s %8s %8s  %s' % ('buffer', 'ld miss', 'st miss', 'ws line', 'ld DRAM', 'st DRAM', 'functions (ld+st misses)'))
+# heap regions: grouped by the function that misses most there (one buffer usually spans several 64 KB regions)
+grouped = collections.defaultdict(lambda: [0.0] * 6)
+gfn = collections.defaultdict(lambda: collections.defaultdict(lambda: [0.0] * 6))
+gcount = collections.Counter()
+for bn in list(per_buf):
+    if '(64K)' not in bn: continue
+    fns = per_buf_fn[bn]
+    top = max(fns.items(), key=lambda x: x[1][0] + x[1][1] + x[1][4])[0]
+    g = 'heap regions led by %s' % short(top)[:30]
+    for i in range(6): grouped[g][i] += per_buf[bn][i]
+    for f, c in fns.items():
+        for i in range(6): gfn[g][f][i] += c[i]
+    gcount[g] += 1
+    del per_buf[bn]
+for g, v in grouped.items():
+    per_buf['%s (%dx64K)' % (g, gcount[g])] = v; per_buf_fn['%s (%dx64K)' % (g, gcount[g])] = gfn[g]
+print('%-60s %8s %8s %8s %8s %8s  %s' % ('buffer', 'ld miss', 'st miss', 'ws line', 'ld DRAM', 'st DRAM', 'functions (ld+st misses)'))
 for bn, v in sorted(per_buf.items(), key=lambda x: -(x[1][0] + x[1][1] + x[1][4])):
     if v[0] + v[1] + v[4] < 0.005 * (tot[0] + tot[1] + tot[4]): continue
     fns = sorted(per_buf_fn[bn].items(), key=lambda x: -(x[1][0] + x[1][1] + x[1][4]))[:4]
-    print('%-34s %7.1fk %7.1fk %7.1fk %7.1fk %7.1fk  %s' % (bn[:34], v[0] / 1e3, v[1] / 1e3, v[4] / 1e3, v[2] / 1e3, v[3] / 1e3,
+    print('%-60s %7.1fk %7.1fk %7.1fk %7.1fk %7.1fk  %s' % (bn[:60], v[0] / 1e3, v[1] / 1e3, v[4] / 1e3, v[2] / 1e3, v[3] / 1e3,
           '; '.join('%s %.1fk' % (short(f)[:48], (c[0] + c[1] + c[4]) / 1e3) for f, c in fns)))
