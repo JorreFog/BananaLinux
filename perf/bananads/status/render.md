@@ -1,4 +1,4 @@
-# render: status (overwritten by render only) — HANDOFF-ready; updated 17:36 UTC (date -u); the session ends 18:28 UTC
+# render: status (overwritten by render only) — HANDOFF-ready; updated 17:36 UTC (date -u); handed off while chain5 (m15, steps A/Bs) still ran; the session ends 18:28 UTC
 
 ## Where things are
 - Branch `perf/render` @ 2ede30e (HEAD; the code head is dc50d19, 2ede30e is PERF.md only), worktree /home/user/perf/render/sd,

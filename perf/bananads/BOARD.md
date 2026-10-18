@@ -716,3 +716,17 @@ membench 1x st: 4.66 -> 4.30 (-7.9%); cpubench-thumb st: 5.48 -> 5.38 (-1.9%); L
 4.31 -> 4.31 (0%). Note: PGO alone gave -4.9% on L5 1x st (L7), but here its L1I gain is gone (L1I 10.9k -> 14.0k/frame,
 insns -3.2%): the profile is from the base tree, so retrain it on the final tree (core's train.sh) before shipping PGO.
 Exactness of this tree: not run (superseded by #2). #2 = perf/integrated (render's final dc50d19 + the same) is building.
+### 17:36 UTC · render · HANDOFF · perf/render @ 2ede30e, 18 patches; the 2D thread at 2x -19% (L5) and -47% with a HUD window; the emulator's thread -27% at 2x (pipeline), -31% (st 2x) / -18% (1x) on windowed lines
+Branch perf/render @ 2ede30e (code head dc50d19), worktree /home/user/perf/render/sd, patches/render/ (18, `git am` onto 00c34c78e8de = the
+branch, checked), findings/render.md (final), status/render.md (HANDOFF-ready), evidence/render/ (every number). Every change behind a
+toggle, exact (matrices m2-m15: FAILS=0 over 180 configurations; m15 on the integrated head b15d running at hand-off: 5 of 18 SAME, 0 DIFF so far; chain5 finishes it and the steps-cache A/Bs into /home/user/perf/render/runs/matrix-m15.txt and runs/sim/*steps-ab.txt, to be copied into evidence/render/), unit tests 0 mismatches, TSan 0 races. Mine: render.2d_batch,
+render.3d_pipeline (sim VERIFIED L5: the emulator's thread -27% at 2x), 3d_share/3d_wait2d at 1x (-18%), render.2d_comp_unroll (sim
+VERIFIED L1), render.2d_quarters (composite work -28%), render.2d_emit_zip (2D thread -7%), the Gengis workers' wake, render.2d_fence_wait
+(the presenter's SCHED_FIFO spin: device verdict), render.2d_prefetch (off: device verdict), render.2d_job_stride (the 2D thread's loop
+-36%, dTLB walks -62%), render.2d_win_neon (membench-win: the 2D thread -47% at 2x, the emulator's thread -31%/-18%; ds2dtest 1x -11%),
+render.2d_steps_cache (exact by construction; its A/Bs land in runs/sim/*steps-ab.txt). jit's 2D commits integrated (conv16, FillLine, prefetch16). Device A/Bs, in order (findings "Device A/B
+commands"): 3d_pipeline off vs on at 2x on both handhelds (+ the [gengis] bins line), render.2d_thread=on at 1x (a one-line default if it
+wins), the 2D-phase toggles' per-thread CPU time (top -H bananads-2d), the prefetches, BANANADS_ALIGN/PGO (the 1x L1I layout: closed
+17:32, a build-flag matter). Left for a successor: display capture on the 2D thread, a smaller 3D pixel format (the compulsory 768 KB/frame
+read at 2x), rotscale sprites / the mosaic loops (scalar). Shelved: render.2d_tiles (evidence/render/tiles-shelved.diff). Dead ends: the
+geom_sort patch, quarters v1, a bounded spin. @sim: the head to measure is dc50d19 (b15d: /home/user/perf/render/b15d/b/bananads).
