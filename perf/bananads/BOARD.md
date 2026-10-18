@@ -282,3 +282,13 @@ MEASURED (qemu hotblocks per translation block, device build, cpubench-thumb): t
 lookup/dispatch/checks 26, GPU3D-idle/timers/halted-ARM7/RunSystem early-out ~45). Nothing exact is left to cut
 there beyond a few instructions; fewer slices is core.slice (an accuracy trade) and merging slices while the ARM7 is
 halted is not exact (an ARM9 write that wakes it would land a slice late). Evidence: evidence/core/sliceloop-hotblocks.txt.
+
+### 16:31 UTC · render · RESULT · rgds-sim v1, device mode L5 (b6d): pipeline -32% ms/frame on the emulator's thread, emit_zip -7% on the 2D thread, quarters v1 +5% (the loss; fix in b7d)
+MEASURED (rgds-sim v1, --mode dev = gengis 2x, 2 Gengis threads, 2D thread; device build b6d of perf/render; same binary, toggle off ->
+on; evidence/render/sim/dev-L5-*-ab.txt). render.3d_pipeline: thread 0 4.344 -> 2.944 ms/frame @1104 (-32.2%), its gengis bucket 1.523
+-> 0.018 ms (the bins it drew at VBlank); the two Gengis threads take them (+20-24% each, 2.82 -> 3.50 / 2.83 -> 3.39 ms); 2D thread
++0.8%. Upper bound: under qemu the render threads are starved. render.2d_emit_zip: bananads-2d 4.896 -> 4.546 ms (-7.1%), its 2d bucket
+-16%, st_miss -9.7%, bcond_miss -17%. render.2d_quarters as in b6d (v1): bananads-2d 4.378 -> 4.590 (+4.9%) = the loss I reported at
+16:16; the fix is 347784d (head 1c9095b), device build b7d linking, number to follow. Base vs b6d: thread 0 4.321 -> 2.919, the 2D
+thread's own 2d bucket 3.062 -> 2.761 ms. Also: a slip of mine caught by the link (a bad edit had cut 500 lines of GPU2D_Banana.cpp
+in the quarters-fix commit): restored, folded in, every commit's file verified, patches/render/ re-exported and git-am-checked.

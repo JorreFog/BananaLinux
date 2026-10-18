@@ -73,6 +73,13 @@ GCC 14.3) run under `tools/qemu-dev`; "base" = /home/user/perf/build-dev/b (00c3
   same log line and the fps.
   Same on dsstress L10 (device mode, base vs mine): the emulator's thread 3147.7k -> 2387.4k (-24%)
   (evidence/render/qc-b5d-summary.txt).
+  **rgds-sim v1** (dev mode = gengis 2x, 2 Gengis threads, 2D thread; device build b6d; same binary, off -> on;
+  evidence/render/sim/dev-L5-pipeline-ab.txt): the emulator's thread **4.344 -> 2.944 ms/frame @1104 (-32%)**, 2.661 ->
+  1.734 @1992; its `gengis` bucket 1.523 -> 0.018 ms (the bins it drew), its L1D load misses 8.4k -> 1.5k. The two
+  Gengis threads take those bins: 2.823 -> 3.499 and 2.829 -> 3.386 ms (+20-24%); the 2D thread +0.8%. The work moves,
+  the emulator's thread is freed; under qemu the render threads are starved, so on the device the moved share is
+  smaller (the `[gengis]` log line says how much). Base vs b6d (sim/dev-L5-base-vs-b6d-ab.txt): the emulator's thread
+  4.321 -> 2.919 ms (-32.5%), the 2D thread 4.680 -> 4.619 (its own 2d bucket 3.062 -> 2.761 ms, -10%).
 - **render.3d_share / 3d_wait2d at 1x** (1x with the 2D thread and 2 Gengis threads, dsstress L5, device build b5d;
   evidence/render/qc-b5d-summary.txt, qc-b5d/dev1x-*): the emulator's thread, `render.3d_share=off` -> on: 3116.1k ->
   2297.1k instructions/frame (**-26%**: the per-line bin waits, during which it drew bins itself, and the 1 KB copies);
@@ -82,10 +89,14 @@ GCC 14.3) run under `tools/qemu-dev`; "base" = /home/user/perf/build-dev/b (00c3
 - **render.2d_emit_zip** (the 2D thread at 2x; same runs; b5d had the quarters' zip only, not the 2D lines'
   doubling): the 2D thread's output stage (WriteLine/EmitA/EmitB/DoubleLine/ZipLine/WriteZip) 451k -> 352k
   instructions/frame (**-22%**), the thread's own work 1696k -> 1601k.
+  **rgds-sim v1** (dev mode, b6d with the zip and the doubling, off -> on; sim/dev-L5-zip-ab.txt): the 2D thread
+  **4.896 -> 4.546 ms/frame @1104 (-7.1%)**, its 2d bucket 3.326 -> 2.795 ms (-16%), instructions -9.6%, L1D store
+  misses -9.7%, conditional mispredicts -17%; the emulator's thread unchanged (+1.6% = its helper bins' noise).
 - **render.2d_quarters** (the 2D thread at 2x): as first committed (fd53c40, in b5d) a loss on L5's shallow stack:
   composite work 812k -> 890k, because the empty "above" half was materialised (a zero line per line, 164k) and the
-  backdrop read as a line. Fixed in the follow-up commit (the merge's empty-half and base cases as templates;
-  20000 random quarter cases, 0 mismatches); re-measured on b7d below.
+  backdrop read as a line. rgds-sim on b6d (= v1), off -> on (sim/dev-L5-quarters-ab.txt): the 2D thread 4.378 ->
+  4.590 ms/frame (**+4.9%**: the loss, confirmed). Fixed in the follow-up commit 347784d (the merge's empty-half and
+  base cases as templates; 20000 random quarter cases, 0 mismatches); re-measured on b7d below.
 
 - Baseline, reference build, device mode (gengis 2x, 3 threads, 2D thread, headless.direct), dsstress L5, frames
   100-300: main thread 3423.9k insn/frame; by bucket: other 1231k (of which rast_kern_h*/gx_polygon/f_run/gx2_render_bin
