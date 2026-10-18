@@ -1,0 +1,46 @@
+--- a/command.h	2026-10-18 03:48:32.105971062 +0200
++++ b/command.h	2026-10-18 03:48:32.115497357 +0200
+@@ -438,6 +438,7 @@
+ bool command_read_memory(command_t *cmd, const char *arg);
+ bool command_write_memory(command_t *cmd, const char *arg);
+ bool command_load_core(command_t *cmd, const char* arg);
++bool command_audio_reinit(command_t *cmd, const char* arg);
+ 
+ static const struct cmd_action_map action_map[] = {
+ #if defined(HAVE_CG) || defined(HAVE_GLSL) || defined(HAVE_SLANG) || defined(HAVE_HLSL)
+@@ -464,6 +465,7 @@
+    { "LOAD_FILES", command_load_savefiles, "No argument"},
+ 
+    { "LOAD_CORE", command_load_core, "<core path>"},
++   { "AUDIO_REINIT", command_audio_reinit, "No argument"},
+ };
+ 
+ static const struct cmd_map map[] = {
+--- a/command.c	2026-10-18 03:48:32.107291808 +0200
++++ b/command.c	2026-10-18 03:48:32.115639307 +0200
+@@ -730,6 +730,13 @@
+ }
+ #endif
+ 
++/* The audio driver closed and opened again: where "default" plays may have changed (BananaOS: the headphone jack) */
++bool command_audio_reinit(command_t *cmd, const char* arg)
++{
++   command_event(CMD_EVENT_AUDIO_REINIT, NULL);
++   return true;
++}
++
+ bool command_show_osd_msg(command_t *cmd, const char* arg)
+ {
+     runloop_msg_queue_push(arg, strlen(arg), 1, 180, false, NULL,
+--- a/audio/drivers/alsa.c	2026-10-18 03:48:32.108565534 +0200
++++ b/audio/drivers/alsa.c	2026-10-18 03:48:32.115703800 +0200
+@@ -325,6 +325,9 @@
+ 
+    RARCH_LOG("[ALSA] Using ALSA version %s.\n", snd_asoundlib_version());
+ 
++   /* alsa-lib reads its configuration once per process; a device opened again (AUDIO_REINIT) goes where
++    * "default" is now, so the configuration read so far is forgotten first */
++   snd_config_update_free_global();
+    if (alsa_init_pcm(&alsa->pcm, device, SND_PCM_STREAM_PLAYBACK, rate,
+             latency, 2, &alsa->stream_info, new_rate, SND_PCM_NONBLOCK) < 0)
+       goto error;

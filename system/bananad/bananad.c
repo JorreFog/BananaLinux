@@ -550,6 +550,14 @@ static void audio_route(void)
 		fclose(f);
 		rename("/run/banana/mixer.new", "/run/banana/mixer");
 	}
+	/* a running RetroArch game panel (banana-ui's command pipe to it) opens its sound again where it plays now: alsa-lib
+	 * reads its configuration once per process (Banana's RetroArch patch forgets it on AUDIO_REINIT). The other
+	 * players watch the file themselves (banana-ui's sound, SuperDrastic, BananaDS). */
+	int rc = open("/run/banana/retroarch.cmd", O_WRONLY | O_NONBLOCK | O_CLOEXEC);
+	if (rc >= 0) {
+		if (write(rc, "AUDIO_REINIT\n", 13) < 0) {}
+		close(rc);
+	}
 	say("sound: playback on card %d (%s), recording on card %d", card_play,
 	    card_play == card_speaker ? "speakers" : headphones ? "headphones" : "codec", card_codec);
 }
