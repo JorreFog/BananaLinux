@@ -64,12 +64,28 @@ Binary: the CI artifact above (`bananads`). Base: the mkbase build the brief use
   frames 1850 and 2000 identical to 00c34c78**; main RAM every frame from 1600 to 2400, toggles off vs on (and with
   CPU registers and the geometry engine's timing state), identical.
 - gxstm (session 2 memio's ROM), geomtest, dsstress L5/L10: pictures (soft, Gengis 2x, savestate reload) and
-  difftest, each toggle off vs on: identical. jit's `exact-suite.sh`, all toggles off vs on: FAILS=0.
+  difftest, each toggle off vs on: identical. jit's `exact-suite.sh`, all toggles off vs on: FAILS=0 (on the
+  0061 build and on the final one). Mario Kart with the soft renderer (1x), every 100th frame to 2100: identical.
 - Sabotage: 0060 (an entry into an empty FIFO put in the FIFO, not the pipe) caught by MK's difftest (and gxstm
   hangs); 0061 (the deferred DMA/IRQ checks see the FIFO level from before the loop: a DMA one run late) caught by
   MK's difftest; 0062 (a burst's first unit timed as sequential) caught **only by the savestate compare**. Not caught
   and why: a GXSTAT busy bit not set by the block (unobservable: always already set), a missing check when the FIFO
   ran empty (MK's DMA is running then and its IE lacks the GX FIFO IRQ).
+
+## Combined with mkside
+
+A local test merge of this head with `claude/bananads-perf-mkside` e855c82 (0030, 0031, 0070, render.2d_kick):
+no conflicts, the 27 melonDS patches apply in order (0001-0020, 0030, 0031, 0050, 0060-0062, 0070), MK's frames,
+audio and savestate at 1850 = base; qemu emu thread 15.78M (base) -> 13.25M (geomlazy) -> 13.06M (both). Neither
+branch changes what "the geometry engine is idle" means (mkside's halt_skip/slice_chain test it), so they compose.
+
+## Tried and dropped (for DEAD-ENDS.md)
+
+- Lazy geometry (batched `Run` calls): not built; see above and `observers.md`. Worth ~1.5% here at most in
+  instructions.
+- The DMA block writer with each command's push/pop/test flag computed once per command instead of per entry:
+  `DMA::Run9` +25k instructions a frame (GCC's register shuffling in the loop grew): dropped.
+- NEON lighting: MK's normals have ~1 light each; ~60k instructions a frame to gain at most: not done.
 
 ## What the next session should know
 

@@ -13,7 +13,10 @@ Mario Kart DS (USA), race start (mkside's input: fresh save, Figure-8 Circuit GP
   * all three toggles off vs on to 2400, with --regs --timing: SAME
 Test ROMs (pictures every 10th of 300: soft, Gengis 2x + 2d thread, savestate reload at 150; difftest --every 300):
 - gxstm, geomtest, dsstress L5, L10 (pics) / gxstm, geomtest, L5, iorom-L5 (difftest): 0060, 0061, 0062 off vs on: all identical
-jit's exact-suite.sh (QEMU=qemu-dev), all three toggles off vs on (0050-0061 build): FAILS=0 (27 checks, incl. bananads-tests)
+jit's exact-suite.sh (QEMU=qemu-dev), all three toggles off vs on: FAILS=0 (27 checks, incl. bananads-tests) on the 0050-0061
+  build and on the final 0050-0062 build
+MK soft renderer 1x, frames every 100 to 2100, 00c34c78 vs final: identical (21 frames)
+Merge with mkside e855c82 (local): mk-scene md5s+audio = base, savestate at 1850 = base
 
 Sabotage builds (each must be caught):
 - 0060: an entry into an empty FIFO goes to the FIFO, not the pipe: MK difftest DIFFERENT (first compared frame);

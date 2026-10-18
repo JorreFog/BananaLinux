@@ -64,3 +64,14 @@
 - (session 2, geom) Taking a geometry command's middle parameters (a matrix's 2nd-15th) in a short loop in
   `GPU3D::Run`: exact, but gxstm `Run` -0.1%: the CPU paces the stream, ~2.7-5.3 FIFO entries arrive per `Run` call,
   so batching inside one call has little to batch.
+
+## Session 3 (Mario Kart DS's race start)
+
+- (geomlazy) **Lazy geometry** (running queued GX commands only when observed): not built. In MK's race start the GX
+  FIFO is fed by DMA mode 7 every burst, the FIFO-empty IRQ's IF bit flips ~270 times a frame and `Run` is called
+  ~2,180 times a frame (13 entries each); melonDS's timing depends on when `Run` runs and a command's cost on its
+  result, so a lazy engine would have to replay every call point. At most ~1.5% of the thread (instructions).
+  `session3/geomlazy-evidence/observers.md`.
+- (geomlazy) The GX DMA block writer with each command's push/pop/test flags computed once per command: `DMA::Run9`
+  +25k instructions a frame (register shuffling): dropped.
+- (geomlazy) NEON lighting for MK: ~1 light per normal, ~60k instructions a frame to gain at most: not done.
