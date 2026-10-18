@@ -5,13 +5,13 @@ handheld. Everything they find, measure, try and drop is written here, so that t
 apply the changes and measure them on the device. BananaDS lives in JorreFog/SuperDrastic under `bananads/`; the
 work starts from `00c34c78e8de` (`bananads-perf/dma`, the commit BananaLinux's `bananads.mk` pins).
 
-| Agent | Name | What |
-|---|---|---|
-| 1 | `sim` | **rgds-sim**, the RG DS simulator (an A55 timing model under qemu), then the **verifier**: re-measures every claim |
-| 2 | `jit` | melonDS's AArch64 JIT and its runtime (patches 0001-0020's area) |
-| 3 | `core` | the build (profile-guided optimisation, code layout) and the C++ core's hot paths (scheduler, IO, divider, ARM7, DMA, sound) |
-| 4 | `render` | Gengis 3D, the Banana 2D engine, the geometry engine, the threads over the four A55s, the KMS frontend's frame path |
-| - | coordinator | the main session: integrates, checks, pushes |
+| Agent | Name | Model | What |
+|---|---|---|---|
+| 1 | `sim` | Opus 5.5 | **rgds-sim**, the RG DS simulator (an A55 timing model under qemu), then the **verifier**: re-measures every claim |
+| 2 | `jit` | Opus 5.5 | melonDS's AArch64 JIT and its runtime (patches 0001-0020's area) |
+| 3 | `core` | Fable 5.1 | the build (profile-guided optimisation, code layout) and the C++ core's hot paths (scheduler, IO, divider, ARM7, DMA, sound) |
+| 4 | `render` | Fable 5.1 | Gengis 3D, the Banana 2D engine, the geometry engine, the threads over the four A55s, the KMS frontend's frame path |
+| - | coordinator | Opus 5.5 | the main session: integrates, checks, pushes |
 
 ## Files
 
