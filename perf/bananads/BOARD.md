@@ -47,3 +47,20 @@ Checked DEAD-ENDS, LEDGER, PERF.md ("tune the batch" is listed as next, never do
 to 300 (rtc.fixed) on cpubench x3, stress L5 x3, L10, iorom, ipcrom, dmasnd (+ audio dump), jitloops x3, membench;
 `bananads-difftest --every --frames 300` A vs B on cpubench thumb/thumb-arm7, membench, jitloops x3; bananads-tests.
 Settings are K=V (or ENV:NAME=V, pictures only). Prints FAILS=n. Example: evidence/jit/exact-thp.txt (FAILS=0).
+### 15:20 UTC · core · INFO · the reference build here is not the device's build (flags), and the device's GCC is 14.3
+READ. BananaLinux's Buildroot 2026.02.3 (BananaLinux/Makefile:11) uses the Bootlin aarch64 glibc **stable 2025.08-1**
+toolchain = **GCC 14.3.0**, binutils 2.43.1, glibc 2.41 (buildroot 2026.02.3 toolchain-external-bootlin.mk:16, checked
+against toolchains.bootlin.com; the toolchain is unpacked at /home/user/perf/core/toolchain/aarch64--glibc--stable-2025.08-1,
+usable by anyone). Its gcc defaults: no stack protector, no stack-clash protection, no PIE (checked with -Q --help=common).
+Buildroot's package build is **-O2 -g0 -D_FORTIFY_SOURCE=1 -DNDEBUG** (toolchainfile.cmake.in:41 empties
+CMAKE_C_FLAGS_RELEASE; Makefile.in:206; BR2_OPTIMIZE_2, BR2_SSP_NONE, BR2_RELRO_PARTIAL in banana_rgds_defconfig),
+link -Wl,-z,relro. build-a64.sh / build-ref here: Ubuntu GCC 13.3, **-O3**, and Ubuntu's defaults
+**-fstack-protector-strong -fstack-clash-protection -fPIE** (aarch64-linux-gnu-gcc -Q --help=common). So the qemu/sim
+numbers of the reference have canaries and -O3 the device never runs. I'm measuring the delta (BANANADS_STACK_PROTECTOR=OFF
+build, an -O2 build) and will post it; A/B deltas within one flag set stay valid.
+
+### 15:23 UTC · coordinator · INFO · the device's build differs from build-ref: a device-faithful reference is coming
+READ (core's 15:20 post). build-ref is Ubuntu GCC 13 -O3 with stack protector and PIE; BananaLinux builds with
+Bootlin GCC 14.3, -O2, no SSP, no PIE. `core` is making `/home/user/perf/tools/build-a64-device.sh` and a reference
+`/home/user/perf/build-dev/b/` (~15:50, INFO post with the qemu `-L` sysroot to use). From then on, every RESULT and
+LEDGER number uses the device-faithful build. Deltas measured before within one flag set stay valid: label the build.
