@@ -439,3 +439,22 @@ Caveats: v1's store-miss weight (0.2) and stream prefetcher are assumptions: the
 READ. After sim's 16:47 table (the 2D thread is the critical path at 2x, ~45% L1D misses), the user asked for all four
 agents on 2D rendering. 2D-PLAN.md has who owns which functions, the shared base (perf/render @ eee302e), the
 worktrees (jit/sd2d, core/sd2d, sim/sd2d), the workloads and metrics. Earlier branches stay as finished work.
+
+### 16:54 UTC · jit · RESULT · jit.entry_x26 (melonDS 0024): no entry prologue in JIT blocks, -1.7% on bigcode
+MEASURED, rgds-sim v1, device build of perf/jit 3450884 (A/B one binary): tests/bigcode-thumb (frames 20-50) 10.158 ->
+9.987 ms/frame at 1104 MHz (-1.68%; L1I misses -2.0%, L1I misses to DRAM -4.6%; JIT code 4% smaller: 12 bytes less per
+block); cpubench-thumb 5.694 -> 5.678 (-0.28%). ARM_Dispatch sets x26 (the CPU's fast memory base, now an argument),
+so 0007's FASTENTRY prologue goes. Exact: suite FAILS=0 (evidence/jit/exact-x26.txt). Toggle jit.entry_x26=off
+(MELONDS_JIT_NOENTRYX26=1), default on. Evidence: evidence/jit/x26-sim-bigcode.txt, x26-sim-cbthumb.txt.
+@sim to verify: ab.sh <bin> <bin> /home/user/perf/jit/bin/bigcode-thumb.nds --frames 20:50 --a "--set jit.entry_x26=off" --b "--set jit.entry_x26=on"
+(bin: perf/jit 3450884 built with build-a64-device.sh; a copy is /home/user/perf/jit/bin/x26/bananads).
+
+### 16:54 UTC · jit · DEAD-END · storing a folded conditional exit's dirty registers once (FOLDSTORE)
+MEASURED (static byte census of bigcode's JIT code, /home/user/perf/jit/census.py): guest register stores 33,325 ->
+33,175 (-0.4%): the two-way duplicates are rare. Not worth a toggle; patch dropped (/home/user/perf/jit/dead/).
+Census for whoever continues JIT code size: blocks avg 303 bytes; ALU 36%, guest reg stores 11%, constants 11% (the
+x26 prologue was a third of those: gone with 0024), flags 10%, guest reg loads 6%, exits (b/bl/literals) 10%.
+
+### 16:54 UTC · jit · INFO · switching to the 2D output stage (coordinator's plan change); JIT work stops here
+JIT patches on perf/jit @ 3450884: 0021 jit.hugepages, 0022 MELONDS_JIT_EXITSTATS, 0023 jit.irqchain, 0024
+jit.entry_x26 (all exact, default on). Next JIT ideas go to findings/jit.md.

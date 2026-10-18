@@ -180,6 +180,45 @@ The reproducible scheme, as implemented on `perf/core`:
    the changed functions simply compile as today. GCC's gcov version check makes a wrong-compiler profile a
    warning, never a wrong build.
 
+## The device-side PGO kit: where it stands (16:55 UTC, core's second run; stopped by the 2D re-plan)
+
+Done (measured/read, nothing committed yet beyond `train.sh` and the CMake options):
+- The naming scheme holds across build directories (`-fprofile-prefix-path`: the .gcda names in prof-dev are
+  `CMakeFiles#banana2d.dir#gpu2d#GPU2D_Banana.cpp.gcda` etc., build-directory relative). The three `bananads-net`
+  objects are the exception (CMake names out-of-tree sources by absolute path): fix planned = compile them through
+  one-line `#include` wrappers generated in the build directory when PGO is on (`CMakeFiles/bananads-net.dir/net/...`).
+- MEASURED (GCC 14.3 test, scratch): neither `-fprofile-prefix-map` nor `-ffile-prefix-map` enters the function's
+  "source locations" checksum: a profile used from a different source path warns "source locations for function ...
+  have changed" once per function (benign: the counts are used, cfg-mismatched functions are the only ones dropped).
+  Only training in the same source path (Buildroot's own `output/rgds/build/bananads-<version>/`, i.e. the instrumented
+  build made by Buildroot) gives a silent build. `check-log.sh` (planned) splits the warnings into: file without a
+  profile (-Wmissing-profile "count data file not found"), function missing from its file's profile, control-flow
+  mismatch (profile dropped), source-location-only (benign). `-Wno-missing-profile` should be dropped from the CMake
+  PGO flags so the first class is countable.
+- MEASURED: ccache 4.9.1 refuses to cache compiles with `-fprofile-use=<dir>`/`-fprofile-generate=<dir>` plus
+  `-fprofile-prefix-path` (Uncacheable 100%), plain compiles cache: Buildroot's BR2_CCACHE=y (banana_rgds_defconfig)
+  cannot hand back an object built with an older profile. No `BR2_USE_CCACHE=0` needed.
+- READ (Buildroot 2026.02.3 sources: package/pkg-cmake.mk, toolchain/toolchain-wrapper.c,
+  toolchain-external/pkg-toolchain-external.mk): `BANANADS_SUPPORTS_IN_SOURCE_BUILD = NO` puts the cmake binary dir at
+  `$(@D)/bananads/buildroot-build`; `BANANADS_CONF_OPTS += ...` is the way to pass `-DBANANADS_PGO=$(@D)/bananads/pgo/gcc-<ver>`;
+  `BANANADS_PRE_CONFIGURE_HOOKS` for an "is there a profile for this compiler" check; `$(TARGET_CC) -dumpfullversion`
+  gives 14.3.0; Buildroot's wrapper execs the Bootlin toolchain's `.br_real` compilers (BR_CROSS_PATH_SUFFIX), so the
+  device's flags are exactly the wrapper's (bootlin-a55.cmake is right).
+- The KMS frontend quits cleanly on F+Start, the menu and SIGTERM (`main` returns: libgcov's exit handler writes the
+  profile); the launcher `run-bananads` ends in `exec /usr/bin/bananads "$ROM"`, so an instrumented binary can be run
+  "as from the menu" with a copy of the launcher with that path substituted; `/data/bananads` is the emulator's
+  writable directory on the handheld (`BANANADS_PGO_DIR=/data/bananads/pgo`).
+
+Left (the plan, not done): `tools/perf/pgo/cross-build.sh` (Buildroot's flags/toolchain from `CROSS=`/`SYSROOT=`
+without Buildroot; KMS/ALSA on when the staging sysroot has libdrm/alsa), `collect.sh` (device: `play <rom>` through
+the substituted launcher, `run <rom> [frames] [input]` headless with a `tools/device/walk.txt`-style input script,
+`status`), `merge.sh <out> <dir>:<weight>...` (the toolchain's `gcov-tool merge -w`, folded pairwise), `check-log.sh`,
+`selftest.sh` (instrumented build -> qemu "collection" via `GCOV_PREFIX`/`GCOV_PREFIX_STRIP` -> train.sh -> merge ->
+a `-fprofile-use` build in a Buildroot-layout directory -> warning counts), the BananaLinux patch
+(`patches/bananalinux/0001-bananads-optional-PGO-profile.patch`: a `choice` in Config.in, none / use the committed
+`bananads/pgo/gcc-<major.minor>/` / instrumented into `/data/bananads/pgo`; the .mk block above), and a committed
+test-ROM profile regenerated from the final tree. The 2D re-plan (16:52) takes precedence; this list is the hand-over.
+
 ## Device A/B commands
 
 Build options need two binaries each (BananaLinux: `bananads.mk`'s `BANANADS_CONF_OPTS`, or a PC cross build with
