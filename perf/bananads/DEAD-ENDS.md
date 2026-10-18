@@ -34,3 +34,8 @@
 - (core, 16:44) `BANANADS_HOTCOLD=ON` (`-freorder-blocks-and-partition` on top of the device PGO build): cpubench-thumb
   +0.31% ms/frame under rgds-sim (instructions +0.4%, L1I misses -6%, store misses +9%, bcond misses +5%);
   evidence/core/ab-hotcold-cpubench-thumb.txt. PGO's own .text.hot/.text.unlikely ordering already does the useful part.
+- (jit, 16:30) A lighter ARM_Dispatch (save only x29/x30; the C++ call site an asm statement declaring x19-x28
+  clobbered): +3.2% slower on cpubench-thumb in rgds-sim: GCC 14 then spills the whole inlined slice loop
+  (+129k insns, L1I misses +30%). evidence/jit/deadend-litedispatch-sim.txt.
+- (jit, 16:50) Storing a folded conditional exit's dirty guest registers once before the branch: only -0.4% of the
+  guest register stores on tests/bigcode (the two-way duplicates are rare). Static census, /home/user/perf/jit/census.py.
