@@ -1,0 +1,8 @@
+#!/bin/sh
+# The shader a DS game has of its own (the library's X on a DS game: Shader), for run-drastic and run-bananads:
+#   nds-game-shader <rom>   prints it (a shader name, or "none"), or nothing when the game follows Settings
+# /data/banana/nds-per-game-shader.conf: "<rom file name> = <shader>" per line, the name as on the card (a zipped
+# game's is the .zip's), without its folder; the last line for it counts (as nds-per-game.conf for the emulator).
+awk -v k="${1##*/}" '/^#/ { next } match($0, / *= *[A-Za-z0-9._+-]+[ \t\r]*$/) {
+	v = substr($0, RSTART); gsub(/[ =\t\r]/, "", v); if (substr($0, 1, RSTART - 1) == k) w = v } END { print w }' \
+	/data/banana/nds-per-game-shader.conf 2>/dev/null

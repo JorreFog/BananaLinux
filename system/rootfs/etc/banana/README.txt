@@ -21,4 +21,7 @@ Settings > SSH, then ssh root@<address>. Keys only, no passwords.
 
 Settings: banana/settings.conf (menu), banana/bananad.conf (sleep, power), banana/systems.conf (the systems
 list, to add or change emulators: copy banana/systems.conf.default to it and change the copy).
+A DS game's own emulator and shader (X on the game in the library): banana/nds-per-game.conf and
+banana/nds-per-game-shader.conf, one "<game's file name> = <emulator or shader>" a line (none: no shader); a game
+not in them follows Settings > Nintendo DS.
 Logs: banana/logs/.
