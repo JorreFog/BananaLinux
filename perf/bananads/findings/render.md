@@ -147,8 +147,11 @@ GCC 14.3) run under `tools/qemu-dev`; "base" = /home/user/perf/build-dev/b (00c3
   at 2x the 2D thread 6.409 ms/frame with CompositeHires at 2184k instructions (dsstress L5: 423k) and DrawScanlineFrom
   1741k; at 1x DrawScanlineFrom 1739k = 35% of the emulator's thread (membench without the window: 413k). On ds2dtest
   (windows on both units) ApplyWindow alone is 8.4M of the frame's 19.3M instructions (the attribution build,
-  prof-head/attr-ds2dtest-st.txt). Numbers of the change: see below when the chain lands (sim st 2x / st 1x A/Bs on
-  membench-win and ds2dtest; the matrix m13).
+  prof-head/attr-ds2dtest-st.txt). **rgds-sim v2, b13d, off -> on** (evidence/render/sim/*mwin-winneon-ab.txt):
+  membench-win st 2x (deterministic): the emulator's thread **11.106 -> 7.629 ms/frame (-31.3%)**, instructions 8633k ->
+  5038k (-41.6%); st 1x: **5.789 -> 4.756 (-17.8%)**, instructions -24.0%; dev mode (the thread split): **the 2D thread
+  7.377 -> 3.877 ms (-47.5%)**, instructions 5867k -> 2251k (-61.6%), store misses -32%; the emulator's thread -2.3%.
+  (ds2dtest 1x: sim/st1x-ds2d-winneon-ab.txt.) Exact: win_test 0 mismatches (win-test.txt); matrix m13 / m15.
 - **render.2d_steps_cache** (0b5346b): BuildSteps ~220 instructions a call, 83k/frame on the 2D thread at 2x (L5), 86k
   on membench 1x, 138k on ds2dtest (2-3% of the thread's instructions) for the same list on nearly every line; kept
   while its key holds. Numbers: see below (m14 build).

@@ -682,3 +682,19 @@ is back at the base's count having changed nothing the 1x path runs): no commit 
 no `cold` attribute I'd trust to do more than reroll the dice. Robust fix, a build flag for the integrated branch: core's
 BANANADS_ALIGN=32:16:16 (L1I misses -72% on L5 st) or PGO (-28%): a device A/B item, not a 2D code change. The per-symbol diff
 (prof-head/1x-L5-l1i-diff.txt): the growth is in the SPU callback, GPU3D::Run/Submit*, ScheduleEvent, RTC; the 2D functions fall.
+
+### 17:33 UTC · render · RESULT (exact by test; matrix running) · render.2d_win_neon (4d1ee7c): windows over 3D, the 2D thread -47% at 2x, the emulator's thread -31% (st 2x) / -18% (1x) on membench-win
+MEASURED (rgds-sim v2, device build b13d, off -> on, membench-win = membench + WIN0 over the 3D scene, the HUD case no test ROM
+had; evidence/render/sim/*mwin-winneon-ab.txt, the ROM's source evidence/render/membench-win-main9.c): st 2x (deterministic) the
+emulator's thread 11.106 -> 7.629 ms/frame (-31.3%; instructions 8633k -> 5038k, -41.6%); st 1x 5.789 -> 4.756 (-17.8%; insns
+-24.0%); dev mode (the thread split) the 2D thread 7.377 -> 3.877 ms (-47.5%; insns 5867k -> 2251k, -61.6%; store misses
+-32%), the emulator's thread -2.3%. What it is: ApplyWindow (per drawn layer line under a window) and DrawBG_3D were scalar
+256-pixel loops, and at 2x a windowed line could not take the raw 3D path, so each quarter got both (8 scalar passes a line,
+more than the quarters' merge); now ApplyWindow is 16 px a step, DrawBG_3D 4, and at 2x the window is applied inside the
+quarters' merge (MergeQuarter<..., win>), Raw3D kept. Exact: win_test (evidence/render/win-test.txt: ApplyWindow for every
+layer bit 25000 cases, DrawBG_3D 5000, the merge-with-window vs DrawBG_3D + ApplyWindow + merge 60000: 0 mismatches); the
+matrix m13 (base vs b13d: membench-win, ds2dtest, L5, membench at the device configuration, reload, 1x with the 2D thread,
+2x 1 thread, no 2D thread, toggle off = base, quarters off) is running, m15 on the integrated head follows. ds2dtest 1x A/B
+running (its ApplyWindow was 8.4M of 19.3M instructions on the attribution build). @sim: `ab.sh <b13d|b15d> <same>
+/home/user/perf/render/roms/membench-win.nds --mode st --a "--set render.2d_win_neon=off --set render.scale=2" --b
+"--set render.2d_win_neon=on --set render.scale=2"` (and scale=1). Device: any game with a HUD window over 3D at 2x.

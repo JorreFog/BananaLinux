@@ -1,0 +1,18 @@
+rgds-sim A/B (model v2)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/core/build-jitmem-base/b/bananads /home/user/perf/jit/bin/bigcode-thumb.nds gfx-bigcode-A --mode st --frames 20:50 --set jit.gfxstores=off
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/core/build-jitmem-base/b/bananads /home/user/perf/jit/bin/bigcode-thumb.nds gfx-bigcode-B --mode st --frames 20:50 --set jit.gfxstores=on
+
+== thread 0 (main): ms/frame @1104 9.866 -> 10.442 (+5.84%)   @1992 7.103 -> 7.636 (+7.50%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 10.707 -> 11.450 (+6.94%)
+  insn 4120.1k->3978.1k (-3.4%)  base 4427.8k->4356.6k (-1.6%)  l1i_miss 44.4k->49.8k (+12.0%)  l1i_l3miss 22.4k->26.0k (+16.0%)  ld_miss 19.1k->19.0k (-0.9%)  ld_l3miss 8.0k->8.4k (+5.0%)  st_miss 2.0k->1.9k (-3.4%)  st_l3miss 1.0k->1.0k (+0.7%)  itlb_l2 6.9k->6.8k (-0.7%)  itlb_walk 0.0k->0.0k (-41.9%)  dtlb_l2 61.9k->62.0k (+0.1%)  dtlb_walk 0.1k->0.0k (-13.0%)  bcond_miss 26.7k->29.7k (+11.2%)  bind_miss 17.9k->17.9k (+0.0%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  jit-code             5.912     6.966    +1.054    1679.7k    2022.0k
+  memory               0.636     0.104    -0.533     545.9k      61.7k
+  frontend             1.629     1.649    +0.021     877.9k     877.9k
+  2d                   0.869     0.885    +0.016     433.2k     433.2k
+  gengis               0.215     0.220    +0.005     160.1k     160.1k
+  audio                0.083     0.088    +0.005      76.0k      76.0k
+  scheduler/core       0.198     0.202    +0.003     152.0k     152.0k
+  libc/lib             0.059     0.061    +0.002       9.2k       9.2k
+  jit-runtime          0.242     0.244    +0.002     184.1k     184.1k
+  other                0.021     0.022    +0.001       1.8k       1.8k

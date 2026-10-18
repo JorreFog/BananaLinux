@@ -130,6 +130,41 @@ the main thread on the test ROMs after patches 0005-0020 (ScheduleEvent 34k, Che
 -1.6..-9%) are where the C++ side's time went, and a game profile on the device (`tools/device/hgprofile.sh`) is
 needed before more C++ work.
 
+## 5. The JIT's VRAM/OAM/palette stores through JIT-emitted helpers (melonDS patch 0041, `jit.gfxstores`; branch perf/core-jitmem)
+
+The second run's second task (PERF.md "What's left" #3, handed over from jit at 16:5x). Branch `perf/core-jitmem` from
+perf/jit @ 3450884 (jit's 0021-0024 under it), worktree `/home/user/perf/core/sdjit`; patches in `patches/core-jitmem/`
+(one commit: 0041 + `jit.gfxstores` in src/emu.cpp + docs/SETTINGS.md).
+
+**What (READ, then the design).** `Comp_MemAccess` (ARMJIT_A64/ARMJIT_LoadStore.cpp) sends every store whose
+expected region is not fast memory to `SlowWrite9` through PushRegs (the loaded caller-saved guest registers W8-W15
+stored), MOV/MOVP2R/BLR and PopRegs; VRAM is `memregion_VRAM` and OAM/the palettes are `memregion_Other`, neither
+fastmem-mapped (`OffsetsPerRegion`). SlowWrite9's inline start (0010) then does: the TCM checks, `QuickWrite9`'s
+region switch, `GPU::WriteVRAMQuick` (the 16 KB page's entry: Mem, the capture flag, the dirty bit, the store) or
+the engine's POWCNT1 bit and `WritePalette`/`WriteOAM` (store, dirty bit). MEASURED (`MELONDS_IOSTATS`,
+`evidence/core/iostats-*.txt`): ARM9 slow 16/32-bit stores per frame: cpubench-thumb 2719 (all VRAM 16-bit),
+membench 1536 VRAM + 384 OAM + 255 palette, ds2dtest 448 + 272 + 18, dsstress-L5 2682 VRAM (plus 2700 GX
+command-port writes, 0010's IO route), jit's bigcode 11,827 VRAM.
+
+The patch: the A64 compiler emits once, at construction, a helper per region (VRAM, palettes, OAM) and size (16,
+32) into the code memory (`EmitGfxStoreHelper`), with the same checks in the same order and no side effect until
+all pass; a store whose first execution (`CurInstr.DataRegion`) or static address is in one of those regions
+compiles to `MOV W1, value; BL helper; CBZ W1, done` with the old call kept out of line as the fallback (its
+PushRegs no longer unloads registers, so the register cache is in one state where the paths join). The helper
+uses W0 (the address, kept), W1, X2, X3, X5-X7 and no NZCV (CBZ/TBNZ/TBZ only): the register cache's registers
+and pending lazy flags are untouched (the emitter's BL hook flushes pending flags as it does for the old call).
+Not applied: 8-bit stores (the DS ignores them), loads, block transfers, the ARM7, a DSi, `jit.vramfast=off`, or
+while `MELONDS_IOSTATS` counts (`slow_FullPath`). `jit.gfxstores=off` (`MELONDS_JIT_NOGFXSTORES=1`) or
+`jit.codegen=old` keep the call; `MELONDS_JIT_GFXMASK=1|2|4` (VRAM, palettes, OAM) bisects.
+
+**A first version was a dead end (MEASURED):** the whole sequence inline at every store site (~36 instructions) was
+*slower* under rgds-sim: cpubench-thumb +1.7%, membench +0.1%, bigcode +5.8% (code growth: L1I misses +46% on
+cpubench, instructions -0.7%; `evidence/core/ab-gfx1-*.txt`), and it broke ds2dtest from frame 29 (the cause was
+not found: the helper version, same checks, is exact on it). The shared helpers keep the per-site code at 3
+instructions.
+
+RESULTS_PLACEHOLDER
+
 ## How PGO would ship (the scheme)
 
 A `.gcda` profile is tied to (a) GCC's major.minor (GCC checks the gcov version string: a 13.3 profile is ignored
