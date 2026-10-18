@@ -141,3 +141,33 @@ B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/sim/vb-d
   audio                0.071     0.076    +0.005      76.0k      78.5k
   jit-runtime          0.077     0.079    +0.002      71.3k      71.3k
   libc/lib             0.030     0.031    +0.001       4.7k       4.8k
+
+## exactness L7-exact: rgds-sim/tools/exact.sh <A> <B> ... (two binaries: pictures every 50 frames to 300 + audio dump; 1x: 17 ROMs, 2x: quick 3 ROMs)
+# exact.sh 2026-10-18T16:35:06Z A=/home/user/perf/build-dev/b/bananads [] B=/home/user/perf/sim/vb-devpgo/b/bananads [] 
+PICS+AUDIO ok   cpubench-cpubench-thumb (7 files identical)
+PICS+AUDIO ok   cpubench-cpubench-arm (7 files identical)
+PICS+AUDIO ok   cpubench-cpubench-thumb-arm7 (7 files identical)
+PICS+AUDIO ok   dsstress-L1 (7 files identical)
+PICS+AUDIO ok   dsstress-L5 (7 files identical)
+PICS+AUDIO ok   thumb-dsstress-L5 (7 files identical)
+PICS+AUDIO ok   arm7-thumb-dsstress-L5 (7 files identical)
+PICS+AUDIO ok   dsstress-L10 (7 files identical)
+PICS+AUDIO ok   iorom-dsstress-L5 (7 files identical)
+PICS+AUDIO ok   ipcrom-ipctest (7 files identical)
+PICS+AUDIO ok   dmasnd-dmasnd (7 files identical)
+PICS+AUDIO ok   sndbench-sndbench (7 files identical)
+PICS+AUDIO ok   ds2dtest-ds2dtest (7 files identical)
+PICS+AUDIO ok   geomtest-geomtest (7 files identical)
+PICS+AUDIO ok   jitloops-jitloops-thumb (7 files identical)
+PICS+AUDIO ok   jitloops-jitloops-arm (7 files identical)
+PICS+AUDIO ok   membench-membench (7 files identical)
+DIFF SKIP (two binaries: difftest compares settings within one binary)
+FAILS=0
+
+## exactness L7-exact2x: rgds-sim/tools/exact.sh <A> <B> ... (two binaries: pictures every 50 frames to 300 + audio dump; 1x: 17 ROMs, 2x: quick 3 ROMs)
+# exact.sh 2026-10-18T16:38:10Z A=/home/user/perf/build-dev/b/bananads [render.scale=2] B=/home/user/perf/sim/vb-devpgo/b/bananads [render.scale=2] quick
+PICS+AUDIO ok   cpubench-cpubench-thumb (7 files identical)
+PICS+AUDIO ok   dsstress-L5 (7 files identical)
+PICS+AUDIO ok   dmasnd-dmasnd (7 files identical)
+DIFF SKIP (two binaries: difftest compares settings within one binary)
+FAILS=0

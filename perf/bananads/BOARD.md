@@ -340,3 +340,26 @@ files). Shared: /home/user/perf/tools/build-a64-device.sh + qemu-dev, /home/user
 /home/user/perf/core/prof-dev (ship candidate). Measured binaries: /home/user/perf/core/bin/. In flight, unverified:
 hot/cold A/B (runs/sim/hotcold-cpubench-thumb-ab.txt when done), build-align (then ab.sh vs build-devpgo); not built:
 PGO + -O3 together. For sim: L4 can be dropped (superseded by L7); L6 (devO3) and L7 (devpgo) are the ones to verify.
+
+### 16:39 UTC · sim · INFO · verified: L1 (2d_comp_unroll), L7 (device PGO); L6 (hot -O3) verified as small, L1I eats it on 3D; L4 superseded
+MEASURED (my own builds, rgds-sim v1 st mode, main thread ms/frame @1104, exactness re-run: FAILS=0 for all three).
+L1 render.2d_comp_unroll (968fe03 = 911ff8e): membench -5.1%, ds2dtest -5.9%. L7 PGO device build (f503a7a + prof-dev):
+-4.0% cpubench-thumb, -4.8% arm, -11.4% membench, -4.9% L5, -4.7% L10, -7.0% sndbench, -12.8% ipcrom, L1I mostly down;
+gains under params-fit too; caveat: all 7 ROMs were in its training set. L6 HOT_OPT=-O3: membench -9.4% (the Composite
+loop L1 already fixes at -O2), ipcrom -3.6%, cpubench -1.6%, L5/L10 -0.1% with L1I misses +35%; under params-fit L5/L10
++6% and sndbench +4.5% slower: not worth +15% .text once L1 is in. L4 (GCC 13 pair) superseded by L7 at core's request.
+Evidence: evidence/sim/verify-L1.txt, verify-L6.txt, verify-L7.txt; LEDGER rows updated.
+
+### 16:39 UTC · render · RESULT · the quarters fix (347784d, b7d): the 2D thread's composite work -28% on L5 (was +10% with v1)
+MEASURED (qemu-count, device build b7d = perf/render @ 1c9095b under qemu-dev, device mode, dsstress L5, frames 100-300;
+evidence/render/qc-b7d-quarters.txt). render.2d_quarters off -> on: the 2D thread's composite work 812k -> 585k insns/frame (-28%),
+its own work 1465k -> 1230k (-16%); the emulator's thread unchanged. ds2dtest: identical both ways (no 3D on BG0: the path is
+not taken). @sim: verify render.2d_quarters on /home/user/perf/render/b7d/b/bananads (--mode dev, L5, --a "--set
+render.2d_quarters=off" --b on); the other toggles are the same code in b6d and b7d. The final-head matrix (m7, build-dev vs b7d)
+and bananads-tests are running; HANDOFF after them.
+
+### 16:52 UTC · coordinator · INFO · `core` restarted (second run, same name)
+READ. The first `core` run was ended by the harness at ~16:45 after its HANDOFF (16:38). A fresh `core` (Fable) takes
+over from status/core.md: it finishes the hot/cold, align and PGO+O3 A/Bs, builds the device-side PGO kit (collect a
+game profile on the handheld, merge, build from Buildroot's paths), then C++ hot paths outside the JIT and the
+renderers. Messages to `core` reach the new run. Everyone: if your run might end, write your HANDOFF first.

@@ -103,7 +103,10 @@ GCC 14.3) run under `tools/qemu-dev`; "base" = /home/user/perf/build-dev/b (00c3
   composite work 812k -> 890k, because the empty "above" half was materialised (a zero line per line, 164k) and the
   backdrop read as a line. rgds-sim on b6d (= v1), off -> on (sim/dev-L5-quarters-ab.txt): the 2D thread 4.378 ->
   4.590 ms/frame (**+4.9%**: the loss, confirmed). Fixed in the follow-up commit 347784d (the merge's empty-half and
-  base cases as templates; 20000 random quarter cases, 0 mismatches); re-measured on b7d below.
+  base cases as templates; 20000 random quarter cases, 0 mismatches). **Re-measured on b7d** (the fix; qemu-count,
+  device mode, dsstress L5; evidence/render/qc-b7d-quarters.txt): the 2D thread's composite work, off -> on: **812k ->
+  585k instructions/frame (-28%)**, the thread's own work 1465k -> 1230k (-16%); ds2dtest unchanged (its lines never
+  show the 3D layer on BG0, so the path is not taken: 12532k both ways). The sim's verdict on b7d is sim's to give.
 
 - Baseline, reference build, device mode (gengis 2x, 3 threads, 2D thread, headless.direct), dsstress L5, frames
   100-300: main thread 3423.9k insn/frame; by bucket: other 1231k (of which rast_kern_h*/gx_polygon/f_run/gx2_render_bin

@@ -1,0 +1,51 @@
+main thread: 2351.4k insns/frame
+  3d                         864.9k   36.8%
+  other                      483.2k   20.6%
+  2d/gpu                     261.2k   11.1%
+  memory                     254.1k   10.8%
+  jit-code                   207.4k    8.8%
+  libs                       124.0k    5.3%
+  core                       100.0k    4.3%
+  audio                       56.4k    2.4%
+  jit-runtime                  0.0k    0.0%
+  interpreter-fallback         0.0k    0.0%
+  JIT total (code+runtime+fallback): 207.4k/frame
+top symbols:
+      436.1k  [other] _ZZ4mainENKUlvE_clEv
+      398.9k  [3d] _ZN7melonDS5GPU3D3RunEv
+      201.1k  [3d] _ZN7melonDS5GPU3D17SubmitPolygonBodyILb1EEEvv
+      126.5k  [3d] _ZN7melonDS5GPU3D7Write32Ejj
+      110.0k  [memory] _ZN7melonDS10SlowWrite9ItLi0EEEvjPNS_5ARMv5Ej
+       92.8k  [memory] _ZN7melonDS10SlowWrite9IjLi0EEEvjPNS_5ARMv5Ej
+       72.0k  [3d] _ZN7melonDS5GPU3D16SubmitVertexBodyILb1EEEvv
+       51.3k  [memory] _ZN7melonDS9SlowRead9ItLi0EEET_jPNS_5ARMv5E
+       44.9k  [audio] _ZZN7melonDS3SPUC4ERNS_3NDSENS_13AudioBitDepthENS_18AudioInterpolationEdENUlPvjE_4_FUNES5_j
+       34.0k  [core] _ZN7melonDS3NDS13ScheduleEventEjbijj
+       33.1k  [3d] _ZN7melonDS16ClipAgainstPlaneILi1ELb1ELi0EEEiRKNS_5GPU3DEPNS_6VertexEii.isra.0
+       31.1k  [2d/gpu] _ZN7melonDS14BananaRenderer12DrawScanlineEj
+       30.7k  [2d/gpu] _ZN7melonDS16BananaRenderer2D15PrepareScanlineERNS_12Banana2DRegsE
+       24.1k  [core] _ZZN7melonDS3RTCC4ERNS_3NDSEENUlPvjE_4_FUNES3_j.lto_priv.0
+       22.8k  [2d/gpu] _ZZN7melonDS3GPUC4ERNS_3NDSEOSt10unique_ptrINS_8RendererESt14default_deleteIS4_EEENUlPvjE_4_FUNES9_j
+       22.5k  [core] _ZN7melonDSL13GXWrite9RouteERNS_3NDSEjj
+       22.1k  [2d/gpu] _ZN7melonDS5GPU2D22UpdateRegistersPreDrawEb.part.0
+       21.9k  [2d/gpu] _ZN7melonDS14BananaRenderer6NewJobEv
+       20.4k  [2d/gpu] _ZN7melonDS12Banana2DRegs4FromERKNS_5GPU2DE
+       19.6k  [other] blip_read_samples.constprop.0.isra.0
+       19.3k  [2d/gpu] _ZN7melonDS3GPU13StartScanlineEj.localalias
+       19.3k  [core] _ZN7melonDS3NDS9CheckDMAsEjj
+       18.0k  [2d/gpu] _ZN7melonDS16BananaRenderer2D14PrepareSpritesERNS_12Banana2DRegsE
+       17.9k  [3d] _ZN7melonDS16ClipAgainstPlaneILi0ELb1ELi0EEEiRKNS_5GPU3DEPNS_6VertexEii.isra.0
+       13.0k  [other] _ZSt12__move_mergeIPPN7melonDS7PolygonES3_N9__gnu_cxx5__ops15_Iter_comp_iterIPFbS2_S2_EEEET0_T_SB_SB_SB_SA_T1_
+top JIT blocks:
+       30.5k  mj9:0200085c
+       17.9k  mj9:02000768
+       17.3k  mj9:02000728
+       17.1k  stub:0000ec00
+       16.6k  mj9:020003b0
+       16.5k  mj9:02000668
+       15.6k  mj9:020005e8
+       15.5k  mj9:020006e8
+       15.3k  mj9:020006a8
+       14.3k  mj9:02000894
+       13.4k  mj9:02000628
+        2.1k  mj9:0200078c

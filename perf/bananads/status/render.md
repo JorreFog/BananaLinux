@@ -1,6 +1,6 @@
 # render: status (overwritten by render only)
 
-Updated 16:40 UTC. Worktree /home/user/perf/render/sd, branch perf/render @ 1c9095b (9 commits: 7ebe4e9 render.2d_batch, ea886e8 render.3d_pipeline, dc3f96a 3d_share/3d_wait2d at 1x, 911ff8e render.2d_comp_unroll, 0bab5aa render.2d_quarters, 2a23af3 render.2d_emit_zip, 347784d the quarters merge fix, f76bfca PERF.md, 1c9095b the Gengis workers' wake condition). Patch 0060 rebased out. patches/render/ exported from this head.
+Updated 16:45 UTC. Worktree /home/user/perf/render/sd, branch perf/render @ 1c9095b (9 commits; final unless a check fails). patches/render/ exported from it and git-am-checked.
 
 ## Doing now (all chained in the background)
 - Device builds: b5d = 0fd83cb (measured), b6d = f65f846 (built; sim verifies the non-quarters toggles on it; m6 matrix on
@@ -18,7 +18,10 @@ Updated 16:40 UTC. Worktree /home/user/perf/render/sd, branch perf/render @ 1c90
 - TSan: 6 runs, 0 warnings (evidence/render/tsan-runs.txt). sim verifies from b6d/b7d (messages sent 16:08, 16:17).
 - rgds-sim (mine, device build b6d; evidence/render/sim/*-ab.txt): comp_unroll membench -5.5% ms/frame, ds2dtest (base vs b6d)
   -6.1%; pipeline: emulator's thread 4.344 -> 2.944 ms (-32%, the Gengis threads take the bins); emit_zip: 2D thread
-  -7.1%; quarters v1 +4.9% (the loss; the fix 347784d is in b7d, number pending); 1x share running.
+  -7.1%; quarters v1 +4.9% (the loss); the fix 347784d on b7d (qemu-count): the 2D thread's composite work 812k -> 585k
+  (-28%); 1x share: emulator's thread 3.382 -> 2.759 ms (-18%). LEDGER: L1 (comp_unroll) VERIFIED by sim, L5 PENDING.
+- Running (the last chain): matrix m7 build-dev vs b7d (dev2x, 2x-t1, 1x-t2-2d), bananads-tests on b7d, then the 1x
+  question (2D thread off vs on at 1x) -> runs/matrix-m7.txt, runs/tests-b7d.txt, runs/qc-1x/*. Then HANDOFF.
 - Then: findings numbers (quarters on b7d, sim), commit PERF.md, patches/render/, HANDOFF.
 
 ## Found (READ)
