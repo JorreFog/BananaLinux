@@ -47,7 +47,9 @@ refresh() {
     awk -v k=$1 -v h=$2 -v v=$3 -v c=${clk:-0} 'BEGIN { if (c < 1000000) c = k * 1000; printf "%.4f\n", c / (h * v) }'
 }
 pace=$(sed -n 's/^ *DSFLIP_PACE *= *//p' /data/banana/superdrastic.conf 2>/dev/null | tail -n 1)
-[ "$pace" = ds ] || export DSFLIP_AUDIO_LOCK=${DSFLIP_AUDIO_LOCK:-$(refresh)}
+# (the frame queue paces DraStic at the refresh rate, where it makes 44100 samples a second: DSFLIP_AUDIO_LOCK_PER=60
+# takes its sound at that, not at the DS's rate, which drained it faster than it was made: clicks in Mario Kart DS)
+[ "$pace" = ds ] || export DSFLIP_AUDIO_LOCK=${DSFLIP_AUDIO_LOCK:-$(refresh)} DSFLIP_AUDIO_LOCK_PER=${DSFLIP_AUDIO_LOCK_PER:-60}
 export DSFLIP_AUDIO_DEVICE_RATE=${DSFLIP_AUDIO_DEVICE_RATE:-48000}
 # two finished frames may wait for the panels, not one: DraStic's frames come unevenly (two in one refresh, then
 # none), and with one a frame was dropped and the next refresh repeated the last (HeartGold, 65 s: 12 drops and 8
