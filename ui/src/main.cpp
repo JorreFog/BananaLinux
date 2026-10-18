@@ -452,6 +452,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	ui.setHome(0);
 	Settings settings(&be, o.assets, o.data, o.h / 480.0f, variant);
 	settings.setSync(true);
+	settings.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
 	LowBattery low;
 	be.overlay = [&](int screen) { if (screen == 0 && low.showing(now)) settings.notice(low.title, low.body, low.percent); };
 	while (std::getline(ss, cmd, ';'))
@@ -475,15 +476,32 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		{
 			std::string b; cs >> b;
 			static const std::map<std::string, Key> keys = { { "left", Key::LEFT }, { "right", Key::RIGHT }, { "up", Key::UP }, { "down", Key::DOWN },
-				{ "a", Key::A }, { "b", Key::B }, { "x", Key::X }, { "y", Key::Y }, { "l", Key::L }, { "r", Key::R }, { "start", Key::START } };
+				{ "a", Key::A }, { "b", Key::B }, { "x", Key::X }, { "y", Key::Y }, { "l", Key::L }, { "r", Key::R }, { "start", Key::START }, { "select", Key::SELECT } };
 			rnds::UI::Button btn;
 			auto it = keys.find(b);
 			if (it == keys.end()) { logf("unknown button %s", b.c_str()); return 2; }
 			if (low.hide(now)) logf("press %s: notice hidden", b.c_str());
+			if (!settings.isOpen() && it->second == Key::SELECT) { settings.openSearch(lib.searchQuery()); logf("press select: search open"); continue; }
+			if (!settings.isOpen() && it->second == Key::X && ui.view() == rnds::UI::LIBRARY && ui.gameIndex() >= 0 && lib.systemOf(ui.gameIndex()).id == "nds")
+			{
+				const std::string& path = lib.gameAt(ui.gameIndex()).path;
+				settings.openGame(lib.gameAt(ui.gameIndex()).title, path.substr(path.rfind('/') + 1));
+				logf("press x: game page for %s", path.c_str());
+				continue;
+			}
 			if (settings.isOpen() || it->second == Key::START)
 			{
 				if (!settings.isOpen()) { settings.open(); logf("press %s: settings open", b.c_str()); continue; }
 				int r = (int)settings.press(it->second);
+				if (r == Settings::SEARCH)
+				{
+					lib.setSearch(settings.searchText);
+					ui.dataChanged();
+					int sh = lib.searchShelf();
+					if (sh >= 0) { lib.openLibrary(sh); ui.setLibrary(sh, 0); }
+					else ui.setHome(0);
+					logf("search \"%s\": shelf %d, %d games", settings.searchText.c_str(), sh, sh >= 0 ? (int)lib.shelf(sh).games.size() : -1);
+				}
 				logf("press %s: settings %s", b.c_str(), settings.isOpen() ? ("result " + std::to_string(r)).c_str() : "closed");
 				continue;
 			}
@@ -492,6 +510,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			logf("press %s: %s, view %d sys %d game %d", b.c_str(), used ? "used" : "unused", (int)ui.view(), ui.systemIndex(), ui.gameIndex());
 		}
 		else if (op == "setup") { settings.setup(); logf("setup open"); }
+		// search <text>: the search keyboard open with that text typed (START then searches)
+		else if (op == "search") { std::string t; std::getline(cs, t); size_t b = t.find_first_not_of(' '); settings.openSearch(b == std::string::npos ? "" : t.substr(b)); logf("search open: \"%s\"", t.c_str()); }
 		else if (op == "romicon")
 		{
 			// romicon <path>: the DS ROM's own icon (from a .nds or a .zip), and a pixel from its middle
@@ -938,6 +958,7 @@ int main(int argc, char** argv)
 	float scale = disp.height() / 480.0f;
 	Settings settingsView(&be, o.assets, o.data, scale, variant);
 	settingsView.setFontDir(o.banana + "/fonts");
+	settingsView.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
 	settingsView.setVariant(settings["theme"]);	// (Carts: Inter)
 	LowBattery low;
 	bool batteryDue = true;
@@ -989,6 +1010,18 @@ int main(int argc, char** argv)
 			break;
 		}
 		case Settings::CLOSED: sound.play("back"); break;
+		case Settings::SEARCH:
+		{
+			// the Search collection first on the shelf, opened on its first game (an empty text takes it away)
+			lib.setSearch(settingsView.searchText);
+			ui->dataChanged();
+			int s = lib.searchShelf();
+			if (s >= 0) { lib.openLibrary(s); ui->setLibrary(s, 0); }
+			else ui->setHome(0);
+			logf("search \"%s\": %d games", settingsView.searchText.c_str(), s >= 0 ? (int)lib.shelf(s).games.size() : -1);
+			sound.play("select");
+			break;
+		}
 		case Settings::REBOOT: logf("restarting"); kill(1, SIGTERM); break;		// busybox init: SIGTERM reboots
 		case Settings::POWEROFF: logf("shutting down"); kill(1, SIGUSR2); break;	// and SIGUSR2 powers off
 		default: break;
@@ -1014,6 +1047,36 @@ int main(int argc, char** argv)
 					rep.key = ev.key; rep.since = rep.last = nowMs();
 				}
 			}
+			return;
+		}
+		if (ev.type == InputEvent::PRESS && ev.key == Key::X)
+		{
+			// X on a DS game in the library: the emulator for this game (Settings' game page)
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			int g = ui->gameIndex();
+			if (ui->view() == rnds::UI::LIBRARY && g >= 0 && g < lib.gameCount() && lib.systemOf(g).id == "nds")
+			{
+				const std::string& path = lib.gameAt(g).path;
+				ui->touchCancel();
+				settingsView.setVariant(settings["theme"] == "carts" ? "carts" : variant);
+				settingsView.openGame(lib.gameAt(g).title, path.substr(path.rfind('/') + 1));
+				rep.key = Key::NONE;
+				sound.play("select");
+				dirty = true;
+				return;
+			}
+		}
+		if (ev.type == InputEvent::PRESS && ev.key == Key::SELECT)
+		{
+			// SELECT: the keyboard, to search the games
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			if (ui->view() == rnds::UI::LAUNCH) return;
+			ui->touchCancel();
+			settingsView.setVariant(settings["theme"] == "carts" ? "carts" : variant);
+			settingsView.openSearch(lib.searchQuery());
+			rep.key = Key::NONE;
+			sound.play("select");
+			dirty = true;
 			return;
 		}
 		if (ev.type == InputEvent::PRESS && ev.key == Key::START)

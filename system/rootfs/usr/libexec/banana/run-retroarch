@@ -3,6 +3,12 @@
 # on the data partition.
 #   run-retroarch <core> <rom>       e.g. run-retroarch gpsp /data/roms/gba/game.gba
 CORE=/usr/lib/libretro/$1_libretro.so
+# Settings > Other systems > the system's core (settings.conf's core.<system>, BANANA_SYSTEM from banana-ui): another
+# installed core instead of systems.conf's, e.g. mGBA for the Game Boy Advance (RetroAchievements); one not installed is ignored
+if [ -n "$BANANA_SYSTEM" ]; then
+    c=$(sed -n "s/^ *core\.$BANANA_SYSTEM *= *//p" /data/banana/settings.conf 2>/dev/null | tail -n 1)
+    [ -n "$c" ] && [ -f /usr/lib/libretro/${c}_libretro.so ] && CORE=/usr/lib/libretro/${c}_libretro.so
+fi
 [ -f "$CORE" ] || { echo "no core $1" >&2; exit 1; }
 CFG=/data/retroarch/retroarch.cfg
 [ -f $CFG ] || { mkdir -p /data/retroarch; cp /etc/banana/retroarch.cfg $CFG; }
@@ -39,6 +45,10 @@ if [ ! -f $S ]; then
     mkdir -p /data/retroarch/shaders
     ( cp -r /usr/share/libretro/shaders/glsl/. /data/retroarch/shaders/ && touch $S ) </dev/null >/dev/null 2>&1 &
 fi
+# Softcore on cards that ran RetroArch before it was Banana's default (RetroArch wrote its own Hardcore default into
+# retroarch.cfg on exit), once: Settings > Other systems > RetroAchievements changes it afterwards
+M=/data/retroarch/.banana-defaults-2
+[ -f $M ] || { set_cfg cheevos_hardcore_mode_enable false; touch $M; }
 # the RetroAchievements account from the setup (banana/accounts.conf) into RetroArch's own settings
 A=/data/banana/accounts.conf
 if [ -f $A ]; then

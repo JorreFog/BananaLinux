@@ -323,6 +323,10 @@ namespace banana
 			"/data/retroarch/retroarch.cfg", "video_monitor_index", { "Top", "Bottom" }, { "2", "1" });
 		add(O, "gamepad", "Second screen", "While a game plays on one screen, the other shows its RetroAchievements and tiles to save, load, open RetroArch's menu, fast forward and quit (by touch when they are on the bottom screen). Off: the other screen stays dark.",
 			menu, "retroarch_panel", { "Game panel", "Off" }, { "panel", "off" });
+		add(O, "gamepad", "RetroAchievements", "Softcore: achievements unlock with save states, rewind and cheats still there. Hardcore: those are locked for the game, and the unlocks count as hardcore on retroachievements.org. RetroArch's own menu changes the same setting.",
+			"/data/retroarch/retroarch.cfg", "cheevos_hardcore_mode_enable", { "Softcore", "Hardcore" }, { "false", "true" });
+		if (access("/usr/lib/libretro/mgba_libretro.so", F_OK) == 0)
+			add(O, "gamepad", "Game Boy Advance", "The emulator for GBA games. gpSP: the fastest. mGBA: the most accurate, and the one RetroAchievements accepts for hardcore.", menu, "core.gba", { "gpSP", "mGBA" }, { "gpsp", "mgba" });
 		const char* W = "Network";
 		add(W, "phone", "Wi-Fi", "", menu, "wifi", { "On", "Off" }, { "on", "off" });
 		add(W, "phone", "Network", "The networks around: A on one joins it, with a password typed on the keyboard here (or by touch).", "", "network", {}, {}, Item::PAGE);
@@ -337,6 +341,8 @@ namespace banana
 		add(S, "gear", "Update", "A new version of Banana from a package on the card, written to the other slot and run from the next restart; this one stays as it is until then.", "", "update", {}, {}, Item::PAGE);
 		add(S, "picture", "Box art", "Covers, title screens, genres and years for your games, from libretro's free collections (no account, Wi-Fi needed). It keeps going in the background; games that already have art are skipped, so running it again only fetches what is new.",
 			"", "scrape", {}, {}, Item::PAGE);
+		add(S, "picture", "Box art from", "libretro: libretro's collections. libretro + Twilight: TwilightBoxart (boxart.kirovair.com) for the covers libretro has none of. Twilight first: TwilightBoxart's covers where it has them. TwilightBoxart is asked one game a second.",
+			menu, "boxart_source", { "libretro", "libretro + Twilight", "Twilight first" }, { "libretro", "both", "twilight" });
 		add(S, "gear", "Previous version", "Restarts into the other slot: the version that ran before the last update. Press A twice.", "", "switch", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "SSH", "", menu, "ssh", { "Off", "On" }, { "off", "on" });
 		add(S, "gear", "Second SD card", "Games on the card in the second slot (its roms folder, with the same system folders as this card) show up in the library with the others while it's in. exFAT or FAT32.", menu, "sd2_roms", { "Show its games", "Off" }, { "on", "off" });
@@ -392,7 +398,7 @@ namespace banana
 		if (it.file == data + "/bananad.conf") def = getConfValue("/etc/banana/bananad.conf", it.key, def);
 		if (it.file == data + "/settings.conf") def = getConfValue("/etc/banana/settings.conf", it.key, def);
 		if (it.key == "led_brightness") def = getConfValue("/etc/banana/bananad.conf", it.key, "128");
-		if (it.key == "video_monitor_index") def = getConfValue("/etc/banana/retroarch.cfg", it.key, "2");
+		if (it.file.find("retroarch.cfg") != std::string::npos) def = getConfValue("/etc/banana/retroarch.cfg", it.key, def);
 		std::string v = getConfValue(it.file, it.key, def);
 		it.at = -1;
 		for (size_t i = 0; i < it.values.size(); i++)
@@ -614,6 +620,7 @@ namespace banana
 	{
 		if (page == NETWORKS) return pressNetworks(k);
 		if (page == KEYBOARD) return pressKeyboard(k);
+		if (page == GAME) return pressGame(k);
 		if (page == UPDATES) return pressUpdates(k);
 		if (page == SETUP) return pressSetup(k);
 		if (inGroups) return pressGroups(k);
@@ -679,6 +686,7 @@ namespace banana
 		downOnRow = false;
 		if (page == NETWORKS) return touchNetworks(cx, cy);
 		if (page == KEYBOARD) return touchKeyboard(cx, cy);
+		if (page == GAME) return touchGame(cx, cy);
 		if (page == SETUP)
 		{
 			if (downY >= 418 && downY <= 466) return pressSetup(downX < 320 ? Key::B : Key::A);
@@ -1078,6 +1086,7 @@ namespace banana
 	{
 		if (page == NETWORKS) { renderNetworks(); return; }
 		if (page == KEYBOARD) { renderKeyboard(); return; }
+		if (page == GAME) { renderGame(); return; }
 		if (page == UPDATES) { renderUpdates(); return; }
 		if (page == SETUP) { renderSetup(); return; }
 		if (inGroups) { renderGroups(); return; }
@@ -1423,6 +1432,7 @@ namespace banana
 			return MOVED;
 		case Key::A: return keyboardKey(krow, kcol);
 		case Key::B:
+			if (pw.empty() && entry == ENTRY_SEARCH) { close(); return CLOSED; }
 			if (pw.empty()) { page = entryBack; message.clear(); return MOVED; }
 			pw.pop_back();
 			return MOVED;
@@ -1576,7 +1586,7 @@ namespace banana
 		be->beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
-		icon("phone", 50, 56, 3);
+		icon(entry == ENTRY_SEARCH ? "search" : "phone", 50, 56, 3);
 		text(entryTitle, true, 17, 170, 62, p.muted, true, 1.4f);
 		text(fit(entrySub, true, 30, 420), true, 30, 170, 88, p.ink);
 		box("slot", true, 50, 150, 540, 56);
@@ -1589,8 +1599,14 @@ namespace banana
 		else text(shown, true, 22, 70, 165, p.ink);
 		be->fill(std::round(X(72 + w)), std::round(X(166)), std::round(X(10)), std::round(X(24)), p.accent);	// the cursor
 		std::string n = std::to_string(pw.size()) + (pw.size() == 1 ? " character" : " characters");
+		if (entry == ENTRY_SEARCH && searchCount)
+		{
+			int m = pw.empty() ? -1 : searchCount(pw);
+			n = m < 0 ? "Every system's games" : m == 0 ? "No games match" : std::to_string(m) + (m == 1 ? " game matches" : " games match");
+		}
 		text(n, true, 17, 50, 216, p.muted);
 		std::string help = !message.empty() ? message
+			: entry == ENTRY_SEARCH ? "A types the key, B deletes, X capitals, Y a space, START searches: the games found open as a shelf of their own, first on the shelf. Part of a name is enough; an empty search takes the shelf away."
 			: entry == ENTRY_WIFI ? "A types the key, B deletes, X capitals, L symbols, Y a space, START joins. Or tap the keys. The password is kept in banana/wifi.conf on the card."
 			: "A types the key, B deletes, X capitals, L symbols, Y a space, START when it is typed. Or tap the keys. Accounts are kept in banana/accounts.conf on the card.";
 		wrapped(help, 20, 50, 252, 540, 6, message.empty() ? p.muted : p.accent);
@@ -1764,6 +1780,122 @@ namespace banana
 		be->endScreen();
 	}
 
+	// ---- the game page: a DS game's own emulator ------------------------------------------------------------------
+	static const char* GAME_EMUS[] = { "", "superdrastic", "bananads" };
+
+	std::string Settings::gameEmulator(const std::string& rom)
+	{
+		std::ifstream f(data + "/nds-per-game.conf");
+		std::string ln, r;
+		while (std::getline(f, ln))
+		{
+			size_t eq = ln.rfind(" = ");	// (the last one: a name may have " = " in it)
+			if (ln.empty() || ln[0] == '#' || eq == std::string::npos) continue;
+			if (ln.substr(0, eq) == rom) r = trim(ln.substr(eq + 3));
+		}
+		return r;
+	}
+
+	void Settings::setGameEmulator(const std::string& rom, const std::string& emu)
+	{
+		std::string path = data + "/nds-per-game.conf", out, ln;
+		{
+			std::ifstream f(path);
+			// a file that is there but can't be read (a card error): left alone
+			if (!f && access(path.c_str(), F_OK) == 0) return;
+			while (std::getline(f, ln))
+			{
+				size_t eq = ln.rfind(" = ");
+				if (!ln.empty() && ln[0] != '#' && eq != std::string::npos && ln.substr(0, eq) == rom) continue;
+				out += ln + "\n";
+			}
+		}
+		if (!emu.empty()) out += rom + " = " + emu + "\n";
+		std::string tmp = path + ".new";
+		FILE* f = fopen(tmp.c_str(), "w");
+		if (!f) return;
+		bool ok = fwrite(out.data(), 1, out.size(), f) == out.size();
+		ok = fflush(f) == 0 && fsync(fileno(f)) == 0 && ok;
+		fclose(f);
+		if (ok) rename(tmp.c_str(), path.c_str());
+		else unlink(tmp.c_str());
+	}
+
+	void Settings::openGame(const std::string& title, const std::string& romName)
+	{
+		open();
+		pgTitle = title; pgRom = romName;
+		std::string cur = gameEmulator(romName);
+		pgPick = 0;
+		for (int i = 1; i < 3; i++) if (cur == GAME_EMUS[i]) pgPick = i;
+		message.clear();
+		page = GAME;
+	}
+
+	Settings::Result Settings::pressGame(Key k)
+	{
+		switch (k)
+		{
+		case Key::UP: pgPick = (pgPick + 2) % 3; return MOVED;
+		case Key::DOWN: pgPick = (pgPick + 1) % 3; return MOVED;
+		case Key::A:
+			setGameEmulator(pgRom, GAME_EMUS[pgPick]);
+			close();
+			return CHANGED;
+		case Key::B: close(); return CLOSED;
+		default: return NONE;
+		}
+	}
+
+	Settings::Result Settings::touchGame(float cx, float cy)
+	{
+		(void)cx; (void)cy;
+		if (downY >= 418 && downY <= 466) return pressGame(downX < 320 ? Key::B : Key::A);
+		for (int r = 0; r < 3; r++)
+		{
+			float ry = 82 + r * 64;
+			if (downY < ry || downY > ry + 56) continue;
+			if (r != pgPick) { pgPick = r; return MOVED; }
+			return pressGame(Key::A);
+		}
+		return NONE;
+	}
+
+	void Settings::renderGame()
+	{
+		SPal p = pal(light);
+		std::string global = getConfValue(data + "/settings.conf", "nds_emulator", getConfValue("/etc/banana/settings.conf", "nds_emulator", "superdrastic"));
+		const char* names[] = { "", "SuperDrastic", "BananaDS" };
+		std::string def = std::string("As in Settings (") + (global == "bananads" ? "BananaDS" : "SuperDrastic") + ")";
+		be->beginScreen(0);
+		box("screen", false, 0, 0, 640, 480);
+		box("hero", false, 18, 20, 604, 436);
+		icon("nds", 50, 56, 3);
+		text("This game's emulator", true, 17, 170, 62, p.muted, true, 1.4f);
+		text(fit(pgTitle, true, 30, 420), true, 30, 170, 88, p.ink);
+		text(pgPick == 0 ? def : names[pgPick], true, 22, 170, 130, p.accent);
+		wrapped("SuperDrastic: DraStic onto both panels, the fastest. BananaDS: Banana's own emulator (melonDS's core), the most "
+			"accurate. The choice is for this game only; the others follow Settings > Nintendo DS > Emulator.", 20, 50, 196, 540, 7, p.muted);
+		be->endScreen();
+
+		be->beginScreen(1);
+		box("screen", false, 0, 0, 640, 480);
+		box("bubble", false, 18, 14, 604, 54);
+		text("Emulator for this game", true, 22, 38, 28, p.ink);
+		for (int r = 0; r < 3; r++)
+		{
+			bool on = r == pgPick;
+			float y = 82 + r * 64;
+			box(on ? "pick" : "slot", on, 18, y, 604, 56);
+			text(r == 0 ? def : names[r], true, 20, 38, y + 16, on ? p.onPick : p.muted);
+		}
+		float bw = faceWidth("B", "Back");
+		face("B", "Back", 18, bw);
+		float aw = faceWidth("A", "Choose");
+		face("A", "Choose", 622 - aw, aw);
+		be->endScreen();
+	}
+
 	// ---- the keyboard's purposes, and the accounts file -------------------------------------------------------
 	void Settings::startEntry(Entry e, const std::string& title, const std::string& sub, Page back, const std::string& start)
 	{
@@ -1772,6 +1904,12 @@ namespace banana
 		layer = 0; krow = 1; kcol = 0;
 		message.clear();
 		page = KEYBOARD;
+	}
+
+	void Settings::openSearch(const std::string& start)
+	{
+		open();
+		startEntry(ENTRY_SEARCH, "Search games", "Type a name", LIST, start);
 	}
 
 	std::string Settings::account(const char* key)
@@ -1816,6 +1954,11 @@ namespace banana
 			page = entryBack;
 			message.clear();
 			return CHANGED;
+		case ENTRY_SEARCH:
+			searchText = pw;
+			pw.clear();
+			close();
+			return SEARCH;
 		}
 		return NONE;
 	}

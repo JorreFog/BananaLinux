@@ -1,0 +1,27 @@
+From: JorreFog <JorreFog@users.noreply.github.com>
+Subject: [PATCH] gfx/drm_ctx: fast-forward with two swapchain images
+
+With video_max_swapchain_images = 2 the KMS context waited for every page
+flip, even in nonblocking mode (swap interval 0), so fast-forward could not
+run faster than the display refresh. Skip that wait when the interval is 0
+and GBM has a free buffer, as the triple-buffered path already does.
+
+Upstream-Status: Pending
+---
+--- a/gfx/drivers_context/drm_ctx.c	2026-10-18 03:56:00.835038675 +0200
++++ b/gfx/drivers_context/drm_ctx.c	2026-10-18 03:56:00.842112520 +0200
+@@ -600,6 +600,14 @@
+          && gbm_surface_has_free_buffers(drm->gbm_surface))
+       return;
+ 
++   /* Nonblocking (interval 0: fast-forward) with two images too: don't wait
++    * for the flip here, the next swap drops its frame while one is pending.
++    * Otherwise every frame waits for vblank and fast-forward never goes
++    * faster than the display. */
++   if (     !drm->interval
++         && gbm_surface_has_free_buffers(drm->gbm_surface))
++      return;
++
+    gfx_ctx_drm_wait_flip(drm, true);
+ }
+ 

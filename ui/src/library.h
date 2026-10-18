@@ -36,6 +36,7 @@ namespace banana
 	{
 		SystemDef def;
 		bool favorites = false;		// the Favorites collection
+		bool search = false;		// the Search collection (also favorites = true: a collection of copies, sysOf)
 		std::vector<Game> games;	// favourites: copies, with sysOf giving each one's own system
 		std::vector<int> sysOf;
 		int order = 0;				// its place in systems.conf
@@ -56,6 +57,12 @@ namespace banana
 		// and the favourite systems right (from memory; the host calls it when the shelf is showing)
 		bool favouritesChanged() const { return changed; }
 		void arrange();
+		// Search: the games whose name has every word of the query, as a collection first on the shelf (an empty query
+		// takes it away); the shelf's index, or -1
+		void setSearch(const std::string& q) { query = q; arrange(); }
+		const std::string& searchQuery() const { return query; }
+		int countMatches(const std::string& q) const;	// the games a search for q would find
+		int searchShelf() const { return !shelves.empty() && shelves[0].search ? 0 : -1; }
 		int pendingLaunch() const { return launchGame; }
 		void clearLaunch() { launchGame = -1; }
 		const Shelf& shelf(int i) const { return shelves[i]; }
@@ -109,6 +116,7 @@ namespace banana
 		std::map<std::string, Stat> stats;			// "<system>/<rel>"
 		int lib = 0, home = 0, launchGame = -1;
 		bool changed = false;
+		std::string query;
 
 		void loadDefs();
 		void loadLooks();

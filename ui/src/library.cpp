@@ -512,6 +512,33 @@ namespace banana
 	}
 
 	// the shelf's order and the Favorites collection, from the systems' games and the favourites as they are now
+	// a search's words, lower case; a game matches when its name or file name has each of them
+	static std::vector<std::string> searchWords(const std::string& q)
+	{
+		std::vector<std::string> words;
+		std::istringstream ws(lower(q));
+		for (std::string w; ws >> w;) words.push_back(w);
+		return words;
+	}
+
+	static bool searchMatch(const Game& g, const std::vector<std::string>& words)
+	{
+		if (words.empty()) return false;
+		std::string t = lower(g.title) + " " + lower(g.rel);
+		for (auto& w : words) if (t.find(w) == std::string::npos) return false;
+		return true;
+	}
+
+	int Library::countMatches(const std::string& q) const
+	{
+		std::vector<std::string> words = searchWords(q);
+		int n = 0;
+		for (auto& sh : shelves)
+			if (!sh.favorites)
+				for (auto& g : sh.games) n += searchMatch(g, words);
+		return n;
+	}
+
 	void Library::arrange()
 	{
 		shelves.erase(std::remove_if(shelves.begin(), shelves.end(), [](const Shelf& s) { return s.favorites; }), shelves.end());
@@ -552,6 +579,30 @@ namespace banana
 			// shelf before its own system's emulator, and its plays were kept under "favorites/")
 			for (int& s : fav.sysOf) if (s >= (int)at) s++;
 			shelves.insert(shelves.begin() + (long)at, fav);
+		}
+		// Search: first on the shelf while there is a query, the games of every system whose name (or file name) has each
+		// of its words, case aside
+		if (!query.empty())
+		{
+			std::vector<std::string> words = searchWords(query);
+			Shelf srch;
+			srch.favorites = srch.search = true;
+			srch.def.id = "search"; srch.def.name = "Search"; srch.def.maker = "\u201c" + query + "\u201d";
+			for (int s = 0; s < (int)shelves.size(); s++)
+			{
+				if (shelves[s].favorites) continue;
+				for (auto& g : shelves[s].games)
+				{
+					if (searchMatch(g, words)) { srch.games.push_back(g); srch.sysOf.push_back(s + 1); }	// (+1: the systems move one along)
+				}
+			}
+			std::vector<size_t> ix(srch.games.size());
+			for (size_t k = 0; k < ix.size(); k++) ix[k] = k;
+			std::stable_sort(ix.begin(), ix.end(), [&](size_t a, size_t b) { return lower(srch.games[a].title) < lower(srch.games[b].title); });
+			Shelf sorted = srch;
+			for (size_t k = 0; k < ix.size(); k++) { sorted.games[k] = srch.games[ix[k]]; sorted.sysOf[k] = srch.sysOf[ix[k]]; }
+			for (auto& sh : shelves) if (sh.favorites) for (int& s : sh.sysOf) s++;
+			shelves.insert(shelves.begin(), sorted);
 		}
 		if (lib >= (int)shelves.size()) lib = 0;
 		changed = false;
@@ -791,6 +842,7 @@ namespace banana
 	std::string Library::emptyTitle()
 	{
 		if (dataFailed()) return "Can't read the card's games";
+		if (lib < (int)shelves.size() && shelves[lib].search) return "No games match";
 		return lib < (int)shelves.size() && shelves[lib].favorites ? "Nothing here yet" : "No games yet";
 	}
 
@@ -799,6 +851,7 @@ namespace banana
 		if (dataFailed()) return "The BANANA partition needs exFAT";
 		if (lib >= (int)shelves.size()) return "";
 		const Shelf& s = shelves[lib];
+		if (s.search) return "SELECT searches again";
 		if (s.favorites) return "Y on a game adds it here";
 		std::string ext = s.def.exts.empty() ? "" : "." + s.def.exts[0] + " ";
 		return "Copy " + ext + "files to roms/" + s.def.folder;
