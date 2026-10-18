@@ -8,7 +8,7 @@
 #
 ################################################################################
 
-BANANADS_VERSION = a62122b265b49474e78d0b7c45c92f7161a990b5
+BANANADS_VERSION = 8dfade39bd34ff86db33eb4b8f31ba45314f4ceb
 BANANADS_SITE = https://github.com/JorreFog/SuperDrastic.git
 BANANADS_SITE_METHOD = git
 BANANADS_SUBDIR = bananads
@@ -21,11 +21,6 @@ BANANADS_DEPENDENCIES = libdrm alsa-lib zlib host-pkgconf
 
 BANANADS_MELONDS_VERSION = 906e9ebb27da8c6a715cd7abab4abfe8a8d29427
 BANANADS_EXTRA_DOWNLOADS = https://github.com/melonDS-emu/melonDS/archive/$(BANANADS_MELONDS_VERSION).tar.gz
-
-# BananaLinux's own fixes to BananaDS (this folder's *.patch, applied by Buildroot to the SuperDrastic checkout before
-# the melonDS patches), until they are in the pinned commit:
-#   0001: Gengis fills each span up to its right edge's pixel, edge marking or not, as the DS does (HeartGold's
-#         dashed black lines between map blocks)
 
 # melonDS beside BananaDS's sources, then BananaDS's patches to it, in order
 define BANANADS_MELONDS_EXTRACT
