@@ -6,6 +6,13 @@ config BR2_PACKAGE_LIBRETRO_GPSP
 	help
 	  Game Boy Advance, with its ARM64 dynamic recompiler.
 
+config BR2_PACKAGE_LIBRETRO_MGBA
+	bool "libretro-mgba"
+	default y
+	help
+	  Game Boy Advance, accurate and with RetroAchievements support
+	  (gpSP has none): chosen per system in Settings.
+
 config BR2_PACKAGE_LIBRETRO_GAMBATTE
 	bool "libretro-gambatte"
 	default y
