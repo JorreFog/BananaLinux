@@ -23,3 +23,8 @@
   suspicion.
 
 ## This session
+- (core, 16:20) `-fno-plt` for the emulator: the PLT stubs run 1.1k instructions/frame (0.3k indirect branches, 0
+  mispredicted) on the device build, cpubench-thumb (rgds-sim per-address counts,
+  /home/user/perf/core/runs/sim/dev-cpubench-thumb/f300.tsv, .plt 0x4054d0-0x406300): nothing to gain. The
+  "bananads:?" 189k/frame in rgds-sim's libc/lib bucket is ARM_Dispatch/ARM_Ret (unsized .S symbols), not the PLT.
+  The CMake option BANANADS_NOPLT stays (off) for completeness only.
