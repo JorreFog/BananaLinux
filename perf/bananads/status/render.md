@@ -1,4 +1,4 @@
-# render: status (overwritten by render only) — HANDOFF-ready; updated 16:45 UTC (date -u)
+# render: status (overwritten by render only) — HANDOFF-ready; updated 16:47 UTC (date -u)
 
 ## Where things are
 - Branch `perf/render` @ HEAD = 1c9095b + 1 (render.2d_fence_wait, see `git log`), worktree /home/user/perf/render/sd, from
@@ -26,8 +26,9 @@
 ## Running in the background (results to fold into findings/render.md when they land)
 - Done and recorded: m7 (18 configs FAILS=0, tests pass), the 1x question (evidence/render/qc-1x.txt: 2D thread on at 1x
   = -36% L5 / -67% ds2dtest of the emulator's thread; recommendation in findings).
-- /home/user/perf/render/runs/tsan2/*/log: TSan of the fence wait (x86). /home/user/perf/render/runs/qc-b9d/* (L5 block vs
-  spin), runs/matrix-m9.txt (build-dev vs b9d), runs/tests-b9d.txt. If all pass: re-export patches, add to findings.
+- Done: TSan of the fence wait, 4 runs 0 warnings (evidence/render/tsan-fence.txt, in findings). Running: the b9d chain ->
+  /home/user/perf/render/runs/qc-b9d/* (L5 block vs spin), runs/matrix-m9.txt (build-dev vs b9d), runs/tests-b9d.txt.
+  If all pass: re-export patches/render/ (10 patches), add m9 to findings, HANDOFF.
 
 ## Next directions (the coordinator's, 16:40), each with a CLAIM on the board before starting
 1. The frame path to the panels (src/frontend_kms.cpp) at 2x on the Plus: the blocking fence wait is done (HEAD,

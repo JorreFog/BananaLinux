@@ -145,6 +145,9 @@ GCC 14.3) run under `tools/qemu-dev`; "base" = /home/user/perf/build-dev/b (00c3
   render.2d_lazy on/off, headless.direct, savestate reloads, display capture lines in place on ds2dtest): 6 runs of 300
   frames, 0 warnings (evidence/render/tsan-runs.txt). The Gengis pipeline has no TSan (aarch64 only): its ordering is
   argued in the commit message and exercised by the matrix's thread-count variants.
+- ThreadSanitizer of `render.2d_fence_wait` (the same x86 setup): block with a 200-job batch (L5), block with a
+  savestate reload and display capture (ds2dtest: 27888 blocking waits), block without lazy frames (membench), spin
+  (L5): 4 runs, 0 warnings (evidence/render/tsan-fence.txt).
 - On the device-like build under qemu-dev: **m6** (build-dev vs b6d, every toggle on): the device configuration on all
   10 ROMs, with a savestate reload on 5, 2x with 1 Gengis thread, 1x with the 2D thread: 23 configurations, FAILS=0
   (evidence/render/matrix-m6.txt). `bananads-difftest --every --frames 300` (main RAM after every frame), every toggle
