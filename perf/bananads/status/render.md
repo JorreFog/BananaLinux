@@ -1,6 +1,6 @@
 # render: status (overwritten by render only)
 
-Updated 15:50 UTC. Worktree /home/user/perf/render/sd, branch perf/render (commits: 7ebe4e9 render.2d_batch, ea886e8 render.3d_pipeline, dc3f96a 3d_share/3d_wait2d at 1x, f8be6b5 patch 0060 render.geom_sort, HEAD render.2d_comp_unroll). Patch numbers 0060-0079.
+Updated 15:55 UTC. Worktree /home/user/perf/render/sd, branch perf/render @ 968fe03 (7ebe4e9 render.2d_batch, ea886e8 render.3d_pipeline, dc3f96a 3d_share/3d_wait2d at 1x, f8be6b5 patch 0060 render.geom_sort, 968fe03 render.2d_comp_unroll) + uncommitted render.2d_quarters (GPU2D_Banana.*, emu.cpp, SETTINGS.md; its random-stack test /home/user/perf/render/asm/quarters_test.cpp running). Patch numbers 0060-0079.
 
 ## Doing now
 - Builds (Ubuntu -O3, build-a64.sh): b1 = 2d_batch+pipeline, b2 = +1x share, b3 = +0060 (f8be6b5). Device builds
@@ -8,8 +8,12 @@ Updated 15:50 UTC. Worktree /home/user/perf/render/sd, branch perf/render (commi
 - Running: evidence/render/matrix.sh ref vs b3 -> /home/user/perf/render/runs/matrix-m3.txt (trimmed: 41 configs).
   Done: m2 (ref vs b2, 1x share, 8 configs) FAILS=0; m1 partial (ref vs b1, dev2x L1/L5/L10/ramp) SAME; smoke L5
   device mode SAME with the emulator's thread drawing 0 of 1188 bins (ref: 227).
-- Next: qemu-count A/B of each toggle on the device build (b4d vs build-dev): membench/ds2dtest st mode for
-  2d_comp_unroll, geomtest/L10 for geom_sort; jit's exact-suite.sh on b4d; TSan runs; sim hand-off; findings.
+- In the tree, uncommitted: render.2d_quarters (the four quarters' composites at 2x share one painter's pass over the
+  2D layers: Composite is the 2D thread's biggest own cost at 2x, 599k/frame on L5 at -O3). Commit once
+  quarters_test passes; then render.2d_emit_zip (WriteLine fused into EmitA's zip: 240k + 164k on the 2D thread).
+- Next: qemu-count A/B of each toggle on the device build (b4d/b5d vs build-dev): membench/ds2dtest st mode for
+  2d_comp_unroll, geomtest/L10 for geom_sort, L5 dev mode per thread for 2d_quarters/emit_zip; jit's exact-suite.sh;
+  TSan runs; sim hand-off; findings.
 - Baseline done: evidence/render/measure-dev.sh on dsstress L5, ref build, device mode: main thread 3424k insn/frame,
   of which ~1150k are Gengis bins it drew itself (render.gengis_help=1: 227 of 1188 bins under qemu); 2D snapshot
   work ~230k; geometry ~830k (evidence/render/ref-L5-report.txt).
