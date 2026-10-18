@@ -13,7 +13,8 @@
  *     only changes them when the power state changes (power_supply uevents, and the battery poll).
  *   - Brightness and volume are kept across reboots (/data/banana/backlight, /data/banana/asound.state).
  *   - Sound goes where it should with no sound server: the RG DS has one card (the rk817 codec, its playback mux set
- *     to HP, which drives the speaker amplifier and the jack, as ROCKNIX sets it); the RG DS Plus has two (the
+ *     to HP, which drives the speaker amplifier and the jack, as ROCKNIX sets it; the amplifier is switched off
+ *     while headphones are in, its "Internal Speakers Switch"); the RG DS Plus has two (the
  *     aw88166 speaker amplifiers, and the rk817 for the headphones and the microphone). Playback goes to the
  *     speakers, or to the rk817 while headphones are in (the jack's switch event); recording always comes from the
  *     rk817. The route is ALSA's default device, written to /run/banana/asound.conf (/etc/asound.conf points
@@ -523,6 +524,14 @@ static void audio_find_cards(void)
 static void audio_route(void)
 {
 	card_play = card_speaker >= 0 && !headphones ? card_speaker : card_codec;
+	/* the RG DS: one card, whose HP output feeds both the jack and the speaker amplifier; the amplifier is the card's
+	 * "Internal Speakers Switch" (a pin switch), off while headphones are in, or the speakers play along (#13) */
+	if (card_speaker < 0 && card_codec >= 0) {
+		char c[16];
+		snprintf(c, sizeof c, "%d", card_codec);
+		char *argv[] = { "amixer", "-q", "-c", c, "cset", "name=Internal Speakers Switch", headphones ? "off" : "on", NULL };
+		run(argv);
+	}
 	/* The RG DS Plus's aw88166 amplifiers play 48 kHz whatever rate the I2S is set to (measured: 44.1 kHz audio is
 	 * taken at 48,150 samples a second, 9% fast and pitched up; 48 kHz at 48,080), so their stream is always opened
 	 * at 48 kHz and ALSA converts. Without it DraStic's 44.1 kHz ran its audio ring dry (stutter, crackles). */
@@ -1045,8 +1054,10 @@ int main(int argc, char **argv)
 	if (ino >= 0) inotify_add_watch(ino, "/dev/input", IN_CREATE | IN_DELETE);
 	open_inputs();
 	headphones = headphones_in();
-	audio_setup();
+	/* the saved volumes first, then the route: the restore also brings back the speakers' switch as it was last
+	 * saved (off if headphones were in then), and the route sets it from the jack as it is now */
 	restore_settings();
+	audio_setup();
 	int uev = uevent_open();
 	sd2_scan();	/* a card already in the second slot at boot */
 	load_drivers_present();
