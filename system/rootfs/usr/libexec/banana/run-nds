@@ -3,7 +3,13 @@
 # superdrastic or bananads), or whichever is installed. Each emulator has its own launcher with the same contract
 # (docs/EMULATORS.md): run-drastic (DraStic through SuperDrastic) and run-bananads (BananaDS).
 #   run-nds <rom>
-want=$(sed -n 's/^ *nds_emulator *= *//p' /data/banana/settings.conf 2>/dev/null | head -n 1)
+# A game can have its own (the library's X on a DS game): /data/banana/nds-per-game.conf, "<rom file name> = <emulator>"
+# per line, the name as on the card (a zipped game's is the .zip's), without its folder; the last line for it counts.
+want=$(awk -v k="${1##*/}" '/^#/ { next } match($0, / *= *[a-z]+[ \t\r]*$/) {
+	v = substr($0, RSTART); gsub(/[ =\t\r]/, "", v); if (substr($0, 1, RSTART - 1) == k) w = v } END { print w }' \
+	/data/banana/nds-per-game.conf 2>/dev/null)
+[ -n "$want" ] && echo "run-nds: ${1##*/} has its own emulator: $want" >&2
+[ -n "$want" ] || want=$(sed -n 's/^ *nds_emulator *= *//p' /data/banana/settings.conf 2>/dev/null | head -n 1)
 have_bananads=0; [ -x /usr/bin/bananads ] && have_bananads=1
 have_drastic=0; { [ -x /data/drastic/drastic ] || [ -d /usr/share/drastic ]; } && have_drastic=1
 case $want in
