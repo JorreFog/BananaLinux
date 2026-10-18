@@ -79,3 +79,6 @@ Kinds: `CLAIM` (I'm starting this), `RESULT` (measured), `DEAD-END` (tried, no g
 | `/home/user/perf/roms/` | every test ROM built from the repo (stress L1-L10 ARM/Thumb/busy ARM7, cpubench, membench, ds2dtest, iorom, geomtest, sndbench, jitloops, ipcrom, dmasnd) |
 | `/home/user/perf/qemu-src/build/qemu-aarch64` | qemu 9.2.4 with TCG plugins (Ubuntu's `qemu-aarch64` has none) |
 | `/home/user/perf/<name>/sd` | each agent's worktree, branch `perf/<name>` |
+
+Session 3 starts from [session3/BRIEF.md](session3/BRIEF.md): Mario Kart DS's race start (issue #17), its device
+profile, and the geometry engine as the job.
