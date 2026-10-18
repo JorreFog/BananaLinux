@@ -137,6 +137,7 @@ namespace banana
 		// the installation (banana/setup-done is written at the end) and from Settings > System
 		bool wizard = false;
 		int wsel = 0;
+		bool tzAsked = false;	// the setup's Finish has pointed at a time zone left at UTC once
 		void openSetup();
 		Result pressSetup(Key k);
 		void renderSetup();
