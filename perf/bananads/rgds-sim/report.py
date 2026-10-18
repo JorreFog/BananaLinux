@@ -149,6 +149,8 @@ def per_frame(A, B, frames):
             for n, x in th.get(v, {}).get('cls', {}).items():
                 cls[n] += sign * x / frames
         name = thB.get(v, thA.get(v, {})).get('name', '?')
+        if name in ('qemu-aarch64', '?', 'bananads'):   # unnamed threads keep the process name
+            name = 'main' if v == 0 else 'thread%d' % v
         out[v] = {'name': name, 'cls': cls, 'items': items}
     return out
 
