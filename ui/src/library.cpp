@@ -867,6 +867,15 @@ namespace banana
 		return lib < (int)shelves.size() && shelves[lib].favorites ? "Nothing here yet" : "No games yet";
 	}
 
+	// the bottom bar's hints for Banana's own buttons: SELECT searches (main.cpp), X on a DS game picks its emulator
+	std::vector<std::pair<std::string, std::string>> Library::hints(bool library, int /*sys*/, int game)
+	{
+		std::vector<std::pair<std::string, std::string>> r;
+		if (library && game >= 0 && game < gameCount() && systemOf(game).id == "nds") r.push_back({ "X", "Emulator" });
+		r.push_back({ "SELECT", "Search" });
+		return r;
+	}
+
 	std::string Library::emptyHint()
 	{
 		if (dataFailed()) return "The BANANA partition needs exFAT";

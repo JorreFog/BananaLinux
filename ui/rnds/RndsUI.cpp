@@ -1069,6 +1069,8 @@ namespace rnds
 			float railW = 0;		// the rail's track: what the widest count leaves (one length for the whole list)
 			Face left, right;
 			float leftW = 0, rightW = 0;
+			std::vector<Face> mids;		// the host's hints between them (Source::hints), as many as fit
+			std::vector<float> midW;
 			float startW = 0;
 		};
 
@@ -1145,6 +1147,19 @@ namespace rnds
 			}
 			g.leftW = faceW(g.left);
 			g.rightW = faceW(g.right);
+			g.mids.clear(); g.midW.clear();
+			if (v == HOME || (v == LIBRARY && src->gameCount() > 0))
+			{
+				float room = 604 - g.leftW - g.rightW - 2 * 10;
+				for (auto& h : src->hints(v == LIBRARY, ui->mSys, ui->mGame))
+				{
+					Face f{ h.first, h.second, 0, ACT_NONE };
+					float w = faceW(f);
+					if (w + (g.mids.empty() ? 0 : 10) > room) break;
+					room -= w + (g.mids.empty() ? 0 : 10);
+					g.mids.push_back(f); g.midW.push_back(w);
+				}
+			}
 			g.startW = line("START", ts(true, 20, 2.4f)).width + 16;
 			return g;
 		}
@@ -1852,6 +1867,14 @@ namespace rnds
 			// face buttons
 			drawFace(g.left, 18, g.leftW, pressedAction && pressedSide == 0);
 			drawFace(g.right, 622 - g.rightW, g.rightW, pressedAction && pressedSide == 1 && g.right.kind != 2);
+			// the host's hints, centred between the two
+			if (!g.mids.empty())
+			{
+				float total = -10;
+				for (float w : g.midW) total += w + 10;
+				float x = 18 + g.leftW + (604 - g.leftW - g.rightW - total) / 2;
+				for (size_t i = 0; i < g.mids.size(); i++) { drawFace(g.mids[i], x, g.midW[i], false); x += g.midW[i] + 10; }
+			}
 			if (railDrag && v == LIBRARY && n > 0)
 				drawLetter(20 + thumbValue());
 			be->endScreen();
