@@ -1,0 +1,1 @@
+c16-dev2x-dsstress-L1: SAME (30 dumps + audio; dsstress-L1.nds 300/10; common: --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=3 --set render.2d_thread=on --set headless.direct=on | A: --set render.2d_conv16=off | B:--set render.2d_conv16=on)
