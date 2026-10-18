@@ -10,6 +10,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <glob.h>
+#include <map>
+#include <unordered_map>
 #include "../rnds/RndsRaster.h"
 #include "../third_party/stb_image_write.h"
 
@@ -329,17 +331,17 @@ namespace banana
 		}
 	}
 
-	// written beside and renamed over, so a power cut leaves the old file or the new one
+	// written beside and renamed over, so a power cut leaves the old file or the new one (and a full card, a write
+	// that fell short: the old one, not the short copy over it)
 	static void writeAtomic(const std::string& path, const std::string& body)
 	{
 		std::string tmp = path + ".new";
 		FILE* f = fopen(tmp.c_str(), "w");
 		if (!f) return;
-		fwrite(body.data(), 1, body.size(), f);
-		fflush(f);
-		fsync(fileno(f));
-		fclose(f);
-		rename(tmp.c_str(), path.c_str());
+		bool ok = fwrite(body.data(), 1, body.size(), f) == body.size();
+		ok &= fflush(f) == 0 && fsync(fileno(f)) == 0;
+		ok &= fclose(f) == 0;
+		if (!ok || rename(tmp.c_str(), path.c_str()) != 0) unlink(tmp.c_str());
 	}
 
 	void Library::saveFavs()
@@ -371,9 +373,16 @@ namespace banana
 		{
 			if (e->d_name[0] == '.') continue;
 			std::string name = e->d_name, full = dir + "/" + name, rel = relDir.empty() ? name : relDir + "/" + name;
-			struct stat st;
-			if (stat(full.c_str(), &st)) continue;
-			if (S_ISDIR(st.st_mode))
+			// the directory's own word for what each entry is (exFAT and vfat give it): a stat only when it doesn't
+			// say, or for a link (a thousand stats on the card at each scan before)
+			bool isDir = e->d_type == DT_DIR;
+			if (e->d_type == DT_UNKNOWN || e->d_type == DT_LNK)
+			{
+				struct stat st;
+				if (stat(full.c_str(), &st)) continue;
+				isDir = S_ISDIR(st.st_mode);
+			}
+			if (isDir)
 			{
 				// art and ES's own folders are not games
 				std::string ln = lower(name);
@@ -389,16 +398,35 @@ namespace banana
 		closedir(d);
 	}
 
-	// media/<kind>/<rom name>.png or .jpg
-	static std::string mediaFile(const std::string& sysDir, const char* kind, const std::string& stem)
+	// media/<kind>/<rom name>.png or .jpg. Each folder is listed once a scan and looked up in memory: a name that
+	// isn't there walks the whole folder on exFAT, and every game missed in box/, cart/ and label/ and as .png before
+	// .jpg (a thousand games: thousands of walks of a thousand names). Matched without case, as exFAT opens them
+	struct MediaIndex
 	{
-		for (const char* ext : { ".png", ".jpg" })
+		std::map<std::string, std::unordered_map<std::string, std::string>> dirs;	// folder -> lower-case name -> name
+		std::string find(const std::string& sysDir, const char* kind, const std::string& stem)
 		{
-			std::string p = sysDir + "/media/" + kind + "/" + stem + ext;
-			if (exists(p)) return p;
+			std::string d = sysDir + "/media/" + kind;
+			auto it = dirs.find(d);
+			if (it == dirs.end())
+			{
+				std::unordered_map<std::string, std::string> names;
+				if (DIR* dd = opendir(d.c_str()))
+				{
+					while (dirent* e = readdir(dd)) if (e->d_name[0] != '.') names.emplace(lower(e->d_name), e->d_name);
+					closedir(dd);
+				}
+				it = dirs.emplace(d, std::move(names)).first;
+			}
+			if (it->second.empty()) return "";
+			for (const char* ext : { ".png", ".jpg" })
+			{
+				auto n = it->second.find(lower(stem + ext));
+				if (n != it->second.end()) return d + "/" + n->second;
+			}
+			return "";
 		}
-		return "";
-	}
+	};
 
 	std::vector<std::string> Library::watchDirs() const
 	{
@@ -417,6 +445,7 @@ namespace banana
 	{
 		loadState();
 		shelves.clear();
+		MediaIndex media;
 		for (auto& def : defs)
 		{
 			Shelf sh;
@@ -447,9 +476,9 @@ namespace banana
 					if (exists(it->second.cart)) g.cart = it->second.cart;
 					if (exists(it->second.boxback)) g.label = it->second.boxback;
 				}
-				if (g.box.empty()) g.box = mediaFile(dir, "box", stem);
-				if (g.cart.empty()) g.cart = mediaFile(dir, "cart", stem);
-				if (g.label.empty()) g.label = mediaFile(dir, "label", stem);
+				if (g.box.empty()) g.box = media.find(dir, "box", stem);
+				if (g.cart.empty()) g.cart = media.find(dir, "cart", stem);
+				if (g.label.empty()) g.label = media.find(dir, "label", stem);
 				std::string key = def.id + "/" + rel;
 				auto st = stats.find(key);
 				if (st != stats.end()) { g.plays = st->second.plays; g.seconds = st->second.seconds; g.last = st->second.last; g.achA = st->second.achA; g.achB = st->second.achB; }
@@ -493,6 +522,9 @@ namespace banana
 			size_t at = shelves.size();
 			if (favSystems.count("favorites"))
 				for (at = 0; at < shelves.size() && favSystems.count(shelves[at].def.id); at++) {}
+			// the systems from there on move one along: sysOf follows them (else a favourite launched with the
+			// shelf before its own system's emulator, and its plays were kept under "favorites/")
+			for (int& s : fav.sysOf) if (s >= (int)at) s++;
 			shelves.insert(shelves.begin() + (long)at, fav);
 		}
 		if (lib >= (int)shelves.size()) lib = 0;
@@ -633,26 +665,47 @@ namespace banana
 		return b;
 	}
 
+	// (BOOTTIME: it counts the time asleep, so the first look after a wake reads /sys again)
+	static double monoSec()
+	{
+		timespec ts;
+		clock_gettime(CLOCK_BOOTTIME, &ts);
+		return ts.tv_sec + ts.tv_nsec / 1e9;
+	}
+
+	// read again at most every 2 s: the top screen asks on every frame it draws (a directory and five files a frame
+	// while the shelf scrolls)
 	Library::Power Library::power()
 	{
 		if (testPower.percent >= 0) return testPower;
+		double now = monoSec();
+		if (powerAt > 0 && now - powerAt < 2) return powerSeen;
+		powerAt = now;
 		Power r;
+		bool charger = false;
 		DIR* d = opendir("/sys/class/power_supply");
-		if (!d) return r;
+		if (!d) return powerSeen = r;
 		while (dirent* e = readdir(d))
 		{
 			if (e->d_name[0] == '.') continue;
 			std::string base = std::string("/sys/class/power_supply/") + e->d_name;
-			if (readLine(base + "/type") != "Battery") continue;
+			if (readLine(base + "/type") != "Battery")
+			{
+				// a charger plugged in (USB, Mains): the rk817's gauge says "Discharging" while it charges, so its own
+				// status alone showed no bolt and kept the low-battery notice up on the cable (as bananad's LED)
+				if (readLine(base + "/online") == "1") charger = true;
+				continue;
+			}
+			if (r.percent >= 0) continue;
 			std::string cap = readLine(base + "/capacity");
 			if (cap.empty()) continue;
 			r.percent = std::min(100, std::max(0, atoi(cap.c_str())));
 			std::string st = readLine(base + "/status");
 			r.charging = st == "Charging" || st == "Full";
-			break;
 		}
 		closedir(d);
-		return r;
+		if (charger && r.percent >= 0) r.charging = true;
+		return powerSeen = r;
 	}
 
 	float Library::battery()
@@ -663,7 +716,10 @@ namespace banana
 
 	bool Library::online()
 	{
-		return readLine("/sys/class/net/wlan0/operstate") == "up";
+		double now = monoSec();
+		if (onlineAt > 0 && now - onlineAt < 2) return onlineSeen;
+		onlineAt = now;
+		return onlineSeen = readLine("/sys/class/net/wlan0/operstate") == "up";
 	}
 
 	int Library::openLibrary(int sys)

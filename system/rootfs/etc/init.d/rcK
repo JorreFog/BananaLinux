@@ -1,7 +1,15 @@
 #!/bin/sh
 # Shutdown: stop what writes to the card, then unmount it cleanly
+# the game's process group first (banana-ui starts each game in its own session; a poweroff over SSH reaches
+# BananaDS, SuperDrastic and the ports too, and they write their saves), then the menu; waited for until they are
+# gone, up to 3 s, instead of a second whatever happened
+G=$(cat /run/banana/game.pid 2>/dev/null)
+[ -n "$G" ] && kill -TERM -"$G" 2>/dev/null
 killall -TERM banana-ui retroarch drastic 2>/dev/null
-sleep 1
+for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30; do
+    pidof banana-ui retroarch drastic >/dev/null || { [ -n "$G" ] && kill -0 "$G" 2>/dev/null; } || break
+    sleep 0.1
+done
 /usr/libexec/banana/share down 2>/dev/null     # a computer's open files on the card
 /usr/libexec/banana/ssh down 2>/dev/null
 /usr/libexec/banana/wifi down 2>/dev/null

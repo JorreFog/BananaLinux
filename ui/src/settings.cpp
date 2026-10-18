@@ -17,6 +17,7 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/statvfs.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -49,6 +50,8 @@ namespace banana
 	void setConfValue(const std::string& path, const std::string& key, const std::string& value, const char* sep)
 	{
 		std::ifstream f(path);
+		// a file that is there but can't be read (a card error): left alone, not replaced by one with only this key
+		if (!f && access(path.c_str(), F_OK) == 0) return;
 		std::string ln, out;
 		bool done = false;
 		while (std::getline(f, ln))
@@ -64,11 +67,11 @@ namespace banana
 		std::string tmp = path + ".new";
 		FILE* w = fopen(tmp.c_str(), "w");
 		if (!w) return;
-		fwrite(out.data(), 1, out.size(), w);
-		fflush(w);
-		fsync(fileno(w));
-		fclose(w);
-		rename(tmp.c_str(), path.c_str());
+		// (a full card: the short copy is dropped and the old file kept, RetroArch's whole retroarch.cfg among them)
+		bool ok = fwrite(out.data(), 1, out.size(), w) == out.size();
+		ok &= fflush(w) == 0 && fsync(fileno(w)) == 0;
+		ok &= fclose(w) == 0;
+		if (!ok || rename(tmp.c_str(), path.c_str()) != 0) unlink(tmp.c_str());
 	}
 
 	static std::string readLine(const std::string& path)
@@ -2071,6 +2074,20 @@ namespace banana
 		if (t < scrapeNext) return false;
 		scrapeNext = t + 500;
 		std::string ln = readLine("/run/banana/scrape.status");
+		// a run that is gone (banana-scrape crashed, was killed, or never started): "running" with no word for 90 s
+		// and no scraper alive (its pid in awake.pid) is over, so the row can be started again (it said Running until
+		// a restart)
+		struct stat st;
+		if (ln.compare(0, 8, "running ") == 0 && stat("/run/banana/scrape.status", &st) == 0 && time(nullptr) - st.st_mtime > 90)
+		{
+			int pid = 0;
+			std::ifstream("/run/banana/awake.pid") >> pid;
+			if (pid <= 0 || kill(pid, 0) != 0)
+			{
+				ln = "error stopped";
+				std::ofstream("/run/banana/scrape.status") << ln << "\n";
+			}
+		}
 		if (ln == scrapeLine) return false;
 		bool was = scraping();
 		scrapeLine = ln;
@@ -2226,6 +2243,7 @@ namespace banana
 		std::map<std::string, bool> badgeReady;		// badge name -> its file is in BADGES
 		int gen = 0;
 		std::string user, token;
+		time_t cfgSeen = 0;	// retroarch.cfg's mtime when the token was last looked for in it
 		long long pos = 0;
 		std::string part;
 		double since = 0;
@@ -2363,8 +2381,14 @@ namespace banana
 			if (raw->since == 0) raw->since = t;
 			raw->poll(raw, t);
 			std::lock_guard<std::mutex> l(raw->mu);
-			// a token RetroArch wrote while the game started (a first login)
-			if (raw->token.empty() && raw->state != 4) raw->token = cfgValue("/data/retroarch/retroarch.cfg", "cheevos_token");
+			// a token RetroArch wrote while the game started (a first login): looked for when the file changes, not on
+			// every pass (the whole retroarch.cfg ten times a second, beside the game, for as long as it had none)
+			struct stat st;
+			if (raw->token.empty() && raw->state != 4 && stat("/data/retroarch/retroarch.cfg", &st) == 0 && st.st_mtime != raw->cfgSeen)
+			{
+				raw->cfgSeen = st.st_mtime;
+				raw->token = cfgValue("/data/retroarch/retroarch.cfg", "cheevos_token");
+			}
 			if (raw->gen != gSeen) changed = true;
 		}
 		if (gFlash >= 0 && t >= gFlashUntil && gDown < 0) { gFlash = -1; changed = true; }

@@ -2,7 +2,7 @@
 # The volume of the card that plays now, in percent: the volume keys (bananad) and Settings > Volume both use this.
 #   volume get              the level, 0-100
 #   volume set <0-100>
-#   volume up|down <n>      n percent louder or quieter
+#   volume up|down <n>      n percent louder or quieter, then the new level (as get prints it)
 # bananad writes which card plays and its control to /run/banana/mixer ("<card> <control>"). The rk817's Master
 # (the RG DS's speaker, the jack) is a plain level and amixer's percent is right for it. The RG DS Plus's speakers are
 # two aw88166 amplifiers whose control is an attenuation instead: 0 the loudest, 1023 mute, 64 a 6 dB step, and
@@ -45,6 +45,7 @@ up|down)
     p=$(get); [ -n "$p" ] || exit 1
     n=${2:-5}; [ $1 = down ] && n=-$n
     set_to $((p + n))
+    get   # (bananad's level card: no second run of this script for it)
     ;;
 *) echo "volume get | set <0-100> | up <n> | down <n>" >&2; exit 2 ;;
 esac
