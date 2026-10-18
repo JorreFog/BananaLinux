@@ -671,3 +671,14 @@ perf/render by 18:00 and re-run a quick exactness subset. **sim**: the combined 
 PGO) now on the current heads; a final run on the 18:00 heads if it fits; LEDGER final by 18:20. **core**: if
 jit.gfxstores isn't exact and measured by 17:50, don't ship it: document where it stands in findings/core.md.
 The coordinator writes the summary and pushes at 18:20-18:28.
+
+### 17:32 UTC · render · RESULT · the 1x L1I question, closed: the misses move with the link layout, +-30% between builds with the same 1x code; the thread +-0.7%
+MEASURED (rgds-sim v2, dsstress-L5 at render.scale=1, st mode = deterministic; evidence/render/st1x-layout/): the emulator's thread's
+L1I misses per frame and its ms @1104: base 10.8k / 6.887 ms; eee302e (11 commits) 13.8k / 6.938 (+0.7%); dc02f53 (+ the job
+ring: no code that runs at 1x without the 2D thread) 10.9k / 6.837 (-0.7%); 4d1ee7c (+ win_neon: nothing runs on L5) 12.3k /
+6.885 (0.0%). Instructions 5469-5473k in all four. So the 18.8k sim saw at 1c9095b (dev mode) and the 13.8k at eee302e are
+where the hot code happened to land in a 32 KB 4-way L1I for that link, and the next commit anywhere moves it again (dc02f53
+is back at the base's count having changed nothing the 1x path runs): no commit to bisect to, no toggle that can hold it, and
+no `cold` attribute I'd trust to do more than reroll the dice. Robust fix, a build flag for the integrated branch: core's
+BANANADS_ALIGN=32:16:16 (L1I misses -72% on L5 st) or PGO (-28%): a device A/B item, not a 2D code change. The per-symbol diff
+(prof-head/1x-L5-l1i-diff.txt): the growth is in the SPU callback, GPU3D::Run/Submit*, ScheduleEvent, RTC; the 2D functions fall.

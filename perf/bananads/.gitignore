@@ -9,3 +9,5 @@
 *.code
 *.map
 runs/
+__pycache__/
+*.pyc
