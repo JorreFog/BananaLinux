@@ -60,7 +60,8 @@ MEASURED, main-thread instructions per frame (qemu-count, frames 100-300):
   soft 3D renderer (membench's 2.79M -> 3.26M; the other buckets improve), cpubench -0.1/-0.4% (its 2D bucket
   432k -> 546k, text BGs and sprites the stress ROMs barely use, against gains elsewhere), ds2dtest/ipcrom still
   -14.6%/-8.9% (`count-dev3donly.txt`); rgds-sim with Gengis: membench 4.811 -> 4.495 ms (-6.6%,
-  `ab-dev3donly-membench.txt`), cpubench-thumb: `ab-dev3donly-cpubench-thumb.txt`. So with the device's renderer
+  `ab-dev3donly-membench.txt`), cpubench-thumb 5.649 -> 5.541 ms (-1.9%, against -4.3% with the full profile: less gain, no loss;
+  `ab-dev3donly-cpubench-thumb.txt`). So with the device's renderer
   neither split regressed on this suite; the soft renderer and cpubench's 2D are the measured cases of a lightly
   trained path losing. The test ROM suite exercises every engine the device uses
   (the JIT, both 2D paths, Gengis, the geometry engine, sound, DMA, IPC), which is why the never-seen 3D ROMs still
@@ -112,13 +113,15 @@ needed before more C++ work.
 A `.gcda` profile is tied to (a) GCC's major.minor (GCC checks the gcov version string: a 13.3 profile is ignored
 by 14.3 with a warning), (b) each function's control-flow checksum (a function whose code changed loses its
 profile: `-Wcoverage-mismatch`, a warning with `-Wno-error=coverage-mismatch`, nothing else is affected) and
-(c) the function's definition order within its file (the `funcdef_no` ident): a new function added before others in
-a file shifts their idents, their control-flow checksums then mismatch and they are compiled as if unprofiled;
-a line shift or a moved file only warns ("source locations have changed") and the counts are still used
-(measured: 10,629 such warnings, 0 mismatches, the gain unchanged). With `-fprofile-partial-training` (kept on) an unprofiled or never-run function is
+(c) nothing else, measured: a new function inserted at the top of NDS.cpp (the hottest file, 100 functions)
+shifted every line and definition after it and caused **0** mismatches in that file; the only functions that lost
+their profile were the three whose own code had changed since the training build (StartDiv/StartSqrt from patch
+0040, Emu::load_rom from the new setting line: one `-Wcoverage-mismatch` each, `/home/user/perf/core/build-stale/build.log`).
+A moved source tree only warns ("source locations have changed", 10,629 times, the counts still used). With `-fprofile-partial-training` (kept on) an unprofiled or never-run function is
 optimised as usual, not for size; without it such functions are treated as cold (smaller, slower). So a stale
-profile degrades gracefully, file by file, down to today's build, never below it; the price of a source change is
-that the changed files lose their profile until it is regenerated.
+profile degrades gracefully, function by function, down to today's build, never below it: the price of a source
+change is that the changed functions lose their profile until it is regenerated (measured: that stale profile's build runs +0.0..+0.4%
+instructions vs the matching PGO build, still -4..-10.5% vs no PGO: `evidence/core/count-stale.txt`).
 
 The reproducible scheme, as implemented on `perf/core`:
 1. The profile set is named by object path relative to the build directory (`-fprofile-prefix-path`) with the two

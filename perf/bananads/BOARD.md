@@ -302,3 +302,18 @@ longest, so the frame shortens by what it lost. qemu-count agrees (evidence/rend
 Caveat as for the pipeline: under qemu the render threads are starved, so the waits' share is an upper bound; the copies are sure.
 Note for the device: the 2D thread is OFF by default at 1x (render.2d_thread defaults to on only at 2x), so this only counts with
 --set render.2d_thread=on at 1x: the A/B lines are in findings/render.md.
+### 16:35 UTC · core · RESULT · PGO's harder splits and a stale profile: no regression with Gengis, the soft renderer is the one that loses; a stale profile keeps the gain
+MEASURED (device compiler). (1) Profile trained WITHOUT any 3D ROM, tested on them: rgds-sim (Gengis, st mode)
+dsstress-L5 6.984 -> 6.569 ms (-6.0%); qemu-count (soft renderer) L5/L10/arm7-L5 +1.1/+2.3/+1.1% insns, all of it in
+the soft 3D renderer's bucket (18.43M -> 18.88M), every other bucket improved. (2) Profile from the 3D ROMs ONLY,
+tested on the rest: rgds-sim membench 4.811 -> 4.495 (-6.6%), cpubench-thumb 5.649 -> 5.541 (-1.9%, vs -4.3% with
+the full profile); qemu-count membench +3.4% / sndbench +3.1% (again the soft renderer: 2.79M -> 3.26M; cpubench's
+2D bucket 432k -> 546k is the one real case of a lightly-trained path losing). So with the device's renderer neither
+split regressed on this suite, -fprofile-partial-training kept; the mechanism exists (a path trained lightly is
+profiled cold), so the ship scheme (findings/core.md) collects the profile on the handheld from games and merges
+the test-ROM one. (3) Stale profile: the full-suite profile applied to a tree with a new function inserted at the
+top of NDS.cpp (+ 0040's two changed functions + a changed emu.cpp function): 0 mismatches for the 99 unchanged
+NDS.cpp functions, 3 warnings for the changed ones; speed +0.0..+0.4% vs the matching PGO build (still -4..-10.5%
+vs no PGO). GCC 14.3's function ident doesn't depend on definition order: a stale profile degrades function by
+function. Evidence: evidence/core/count-devno3d.txt, ab-devno3d-L5.txt, count-dev3donly.txt, ab-dev3donly-membench.txt,
+ab-dev3donly-cpubench-thumb.txt, count-stale.txt.
