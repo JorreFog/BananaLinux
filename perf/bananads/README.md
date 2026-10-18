@@ -1,5 +1,7 @@
 # BananaDS speed work, 2026-10-18 (four cloud agents)
 
+**Newest:** [session2/README.md](session2/README.md): the second session's five SuperDrastic branches (emulator thread only), ranked device A/Bs.
+
 **Start here:** [GUIDE-FOR-CLOUD-AGENTS.md](GUIDE-FOR-CLOUD-AGENTS.md) is the local agent's device verdict on this
 session and how the next one should work (start from a device profile of a real game). [SUMMARY.md](SUMMARY.md) has the simulated results against the start of the session and what is in the
 patches. [DEVICE-TEST.md](DEVICE-TEST.md) has how to apply them and A/B them on an RG DS / RG DS Plus.
