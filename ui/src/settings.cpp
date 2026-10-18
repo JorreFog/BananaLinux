@@ -1603,7 +1603,7 @@ namespace banana
 		}
 		text(n, true, 17, 50, 216, p.muted);
 		std::string help = !message.empty() ? message
-			: entry == ENTRY_SEARCH ? "A types the key, B deletes, X capitals, Y a space, START searches: the games found open as a shelf of their own. SELECT in the menu searches again."
+			: entry == ENTRY_SEARCH ? "A types the key, B deletes, X capitals, Y a space, START searches: the games found open as a shelf of their own, first on the shelf. Part of a name is enough; an empty search takes the shelf away."
 			: entry == ENTRY_WIFI ? "A types the key, B deletes, X capitals, L symbols, Y a space, START joins. Or tap the keys. The password is kept in banana/wifi.conf on the card."
 			: "A types the key, B deletes, X capitals, L symbols, Y a space, START when it is typed. Or tap the keys. Accounts are kept in banana/accounts.conf on the card.";
 		wrapped(help, 20, 50, 252, 540, 6, message.empty() ? p.muted : p.accent);
@@ -1790,7 +1790,7 @@ namespace banana
 	void Settings::openSearch(const std::string& start)
 	{
 		open();
-		startEntry(ENTRY_SEARCH, "Search games", "A name, or part of one. Empty shows all again.", LIST, start);
+		startEntry(ENTRY_SEARCH, "Search games", "Type a name", LIST, start);
 	}
 
 	std::string Settings::account(const char* key)
