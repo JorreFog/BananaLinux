@@ -1,27 +1,16 @@
 # jit: status (overwritten by jit only)
-Updated 16:41 UTC.
+Updated 17:27 UTC.
 
-## Branch and builds
-- Worktree /home/user/perf/jit/sd, branch perf/jit @ b178c99 (commits: b0218cd 0021 hugepages, 7315d05 0022/0023,
-  b178c99 tests/irqmask + tests/bigcode + 0023 self loops).
-- melonDS dev repo: /home/user/perf/jit/d1/melonds-src (git: pristine, "base: BananaDS patches 0001-0020", then one
-  commit per patch 0021-0023). Export: /home/user/perf/jit/export-patches.sh (default d1) -> sd/bananads/patches/melonds.
-  Build: JOBS=2 BT="bananads bananads-difftest bananads-tests" /home/user/perf/tools/build-a64-device.sh /home/user/perf/jit/sd /home/user/perf/jit/d1
-  (commit in melonds-src + export BEFORE building: CMake's patch check fails on uncommitted edits).
-- /home/user/perf/jit/b1: older Ubuntu-flag build dir (its bananads is a SABOTAGE build; don't use; delete at the end).
-- Binaries kept: /home/user/perf/jit/bin/ (bananads-d1-7315+ = d1 at b178c99; irqmask-*.nds, bigcode-*.nds; sab/).
+## Part 1 (JIT, finished 16:54): perf/jit @ 3450884, patches/jit/ exported, findings/jit.md written.
 
-## Done (all exact, suite FAILS=0)
-- 0021 jit.hugepages (default on): sim -0.44% cpubench, -0.72% bigcode (evidence/jit/thp-sim-dev-*.txt).
-- 0022 MELONDS_JIT_EXITSTATS=n (cold paths only).
-- 0023 jit.irqchain (default on): sim -16.9% on tests/irqmask; 25k masked-IRQ returns/frame -> 0; sabotage caught.
-- Dead end: lighter ARM_Dispatch (+3.2%): evidence/jit/deadend-litedispatch-sim.txt; patch kept in /home/user/perf/jit/dead/.
-- Suite: evidence/jit/exact-suite.sh (QEMU=/home/user/perf/tools/qemu-dev for device builds; includes irqmask x3).
-
-## Now
-- CLAIM 16:41: smaller JIT code for the L1I (bigcode: jit-code IPC 0.25, 45k L1I misses/frame). Step 1: FASTENTRY
-  prologue into ARM_Dispatch (x26 from the CPU), measure on bigcode + cpubench with rgds-sim ab.sh.
-
-## Next
-- Cold conditional-exit ways out of line; byte census of bigcode's JIT code; VRAM/OAM/palette inline stores.
-- Cycle budget: parked (analysis in findings: ExitCheck is ~6% of cpubench, no free callee-saved register).
+## Part 2 (2D, since 16:56): worktree /home/user/perf/jit/sd2d, branch perf/jit-2d (from perf/render eee302e)
+- Commits: 60a26a9 render.2d_conv16 (on), e3c69b1 NEON FillLine, a8725d0 render.2d_prefetch16 default on.
+- Build dirs: /home/user/perf/jit/d2 (device build of sd2d), /home/user/perf/jit/d2g (same + -g, for attribution
+  with addr2line; code ~identical). Binaries kept in /home/user/perf/jit/bin/{c16,fl}/.
+- Exactness: render's evidence/render/matrix.sh with QEMU=/home/user/perf/tools/qemu-dev (26 configs, FAILS=0 for conv16);
+  unit test evidence/jit/2d-conv16_test.cpp.
+- Scope now (coordinator 17:22): the BG layers (DrawBG_Text/Affine/Extended/Large, DrawBitmap8/16, DrawTiledScroll) +
+  ConvertRun16. Target: ds2dtest: DrawScanlineFrom 14.4 ms/frame st 2x (11.7M insns; ~150k L1D load misses/frame, mostly
+  L3 hits on the VRAM flats). Next: per-line attribution in DrawScanlineFrom (d2g + addr2line on rgds-sim's per-TB
+  counts, run /home/user/perf/jit/sim3/d2t-st2x-g), then cut instructions/misses in the hottest BG kind.
+- Judge 2D changes on st 2x (--mode st --set render.scale=2: deterministic); prefetch with SIMARGS=prfm=1 (v3).

@@ -638,3 +638,14 @@ conv16, FillLine, prefetch16; RESULT for prefetch16 still to post), core on the 
 by the user is next). LEDGER: L1, L5 (2x), L6 (small), L7 VERIFIED; L2, L3 and the 2D rows since 17:00 PENDING. The 1x
 L1I rise on render's head is a link-layout effect (render 17:25): the integrated build will be measured with PGO and with
 BANANADS_ALIGN. Load average ~10.
+
+### 17:27 UTC · jit · RESULT · render.2d_prefetch16 (default on): ConvertRun16 prefetches its VRAM rows, -2.0% membench 1x (v3)
+MEASURED, rgds-sim v3 = v2 + timed software prefetch (SIMARGS=prfm=1; fills land ~24/~120 insns later), device build
+of perf/jit-2d e3c69b1 (a8725d0 only flips the default), A/B one binary: membench st 1x main thread 4.462 -> 4.372
+ms/frame @1104 (-2.01%; ConvertRun16 0.237 -> 0.133 ms; L3 misses -29%; swpf 3.3k/frame, only 83 late to DRAM). The
+first measurement (-2.2%) was on v2.1's instant-fill PRFM; superseded by this one. The gain rests on the model's PRFM
+(an assumption until the device: ASSUMED A55 prefetch behaviour); the default is on only because a prefetch can't
+change results; the device A/B decides (EXTRA="--set render.2d_prefetch16=off" vs on, 1x). Distance by reasoning: the
+next row's 512 bytes are asked a whole DS line ahead; the current row's lines have the earlier lines' conversion to
+arrive in. Evidence: evidence/jit/2d-prefetch16-sim-v3-membench.txt (v2.1 run: 2d-prefetch16-sim-membench.txt).
+Correction to 17:13: the conv16 commit is 60a26a9. @sim: commits 60a26a9 (conv16), a8725d0 (prefetch16 default on).
