@@ -11,8 +11,8 @@
 # The test: a first boot (the data partition made, the menu on both panels, screenshots, a shutdown from the
 # settings), a game copied onto the card, a second boot (the library, the game started and ended, the menu back,
 # a shutdown), then the card's logs/boot.txt. Needs qemu-system-aarch64, qemu-img, mtools, python3, sfdisk and
-# root (or sudo) for mounting the card's exFAT partition. QEMU runs the ARM code by translation: a boot takes a
-# minute or two on a PC.
+# root (or sudo; without either, udisks: udisksctl) for mounting the card's exFAT partition. QEMU runs the ARM
+# code by translation: a boot takes a minute or two on a PC.
 set -e
 IMG=$1; OUT=${2:-qemu-out}
 [ -n "$IMG" ] && [ -f "$IMG" ] || { echo "usage: $0 <banana-*.img[.gz]> [out dir | --interactive]" >&2; exit 2; }
@@ -22,10 +22,15 @@ SSH_PORT=${SSH_PORT:-$((2200 + $$ % 800))}      # the VM's SSH, on the host: ssh
 mkdir -p "$OUT"; OUT=$(cd "$OUT" && pwd)
 CARD=$OUT/card.img
 case $IMG in *.gz) gunzip -c "$IMG" > "$CARD" ;; *) cp "$IMG" "$CARD" ;; esac
-qemu-img resize -q -f raw "$CARD" 1G          # the card is bigger than the image: the first boot takes the rest
+qemu-img resize -q -f raw "$CARD" 2G          # the card is bigger than the image: the first boot takes the rest (an
+                                              # update package, about the size of the root, must fit in it)
 SUDO=; [ "$(id -u)" = 0 ] || SUDO=sudo
+# no root and no sudo without a password (a session nobody types into): the data partition through udisks instead,
+# which lets the desktop's user map and mount it (udisksctl loop-setup/mount, as a file manager would)
+UDISKS=0; [ -n "$SUDO" ] && ! sudo -n true 2>/dev/null && command -v udisksctl >/dev/null && UDISKS=1
 # the partitions' offsets, from the image's GPT
 part_offset() { sfdisk -J "$CARD" | python3 -c "import json,sys; p=json.load(sys.stdin)['partitiontable']['partitions']; print(p[$1-1]['start']*512)"; }
+part_size() { sfdisk -J "$CARD" | python3 -c "import json,sys; p=json.load(sys.stdin)['partitiontable']['partitions']; print(p[$1-1]['size']*512)"; }
 BOOT_AT=$(part_offset 1)
 case $(basename "$IMG") in banana-rgds-plus*) BOARD=rgds-plus ;; banana-universal*) BOARD=universal ;; *) BOARD=rgds ;; esac
 # the kernel and root the card would boot, as U-Boot reads them: extlinux.conf's DEFAULT label (the slot an update
@@ -151,12 +156,25 @@ shutdown_from_settings() {  # Start (the groups) > L (wraps to the last, System)
 # whatever happens, the card is unmounted and the VM stopped on the way out
 cleanup() {
     [ -n "$QEMU" ] && { kill $QEMU 2>/dev/null || true; }
-    [ -n "$DATA" ] && { $SUDO umount "$DATA" 2>/dev/null || $SUDO fusermount -u "$DATA" 2>/dev/null || true; }
-    [ -n "$LOOP" ] && { $SUDO losetup -d "$LOOP" 2>/dev/null || true; }
+    if [ $UDISKS = 1 ]; then
+        [ -n "$LOOP" ] && { udisksctl unmount --no-user-interaction -b "$LOOP" >/dev/null 2>&1; udisksctl loop-delete --no-user-interaction -b "$LOOP" >/dev/null 2>&1 || true; }
+    else
+        [ -n "$DATA" ] && { $SUDO umount "$DATA" 2>/dev/null || $SUDO fusermount -u "$DATA" 2>/dev/null || true; }
+        [ -n "$LOOP" ] && { $SUDO losetup -d "$LOOP" 2>/dev/null || true; }
+    fi
     return 0
 }
 trap cleanup EXIT
 with_data() {   # with_data <command...>: the card's data partition (exFAT) mounted at $DATA, by the kernel or by FUSE
+    if [ $UDISKS = 1 ]; then
+        LOOP=$(udisksctl loop-setup --no-user-interaction -f "$CARD" --offset $(part_offset 4) --size $(part_size 4) 2>&1 | grep -o '/dev/loop[0-9]*')
+        [ -n "$LOOP" ] || { bad "no loop device for the card (udisks)"; return 1; }
+        DATA=$(udisksctl mount --no-user-interaction -b "$LOOP" 2>&1 | sed -n 's/^Mounted .* at \(.*\)$/\1/p' | sed 's/\.$//')
+        [ -d "$DATA" ] || { bad "the data partition can't be mounted (udisks)"; udisksctl loop-delete --no-user-interaction -b "$LOOP" >/dev/null 2>&1; LOOP=; return 1; }
+        "$@"; r=$?
+        sync; udisksctl unmount --no-user-interaction -b "$LOOP" >/dev/null; udisksctl loop-delete --no-user-interaction -b "$LOOP" >/dev/null; LOOP=; DATA=
+        return $r
+    fi
     DATA=$OUT/data; mkdir -p "$DATA"
     LOOP=$($SUDO losetup -f --show -o $(part_offset 4) "$CARD") || { bad "no loop device for the card"; return 1; }
     $SUDO modprobe exfat 2>/dev/null || true
