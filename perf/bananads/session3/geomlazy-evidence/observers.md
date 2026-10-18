@@ -44,3 +44,21 @@ Written before coding (geomlazy, session 3). "Run(T)" = GPU3D::Run/RunFast at AR
 - GXSTAT read 7 times a frame; RAM_COUNT, clip/vector matrices and tests never.
 
 So in this stream the DMA trigger and the FIFO-empty IRQ make nearly every slice end an observation point.
+
+## Decision: lazy geometry not built (what a lazy engine could save here, and why it isn't exact-able cheaply)
+- What batching Run calls could remove: Run's per-call entry/exit (~90 instructions, session 2) x ~2,180 calls =
+  ~0.2M instructions a frame (~1.5% of the thread under qemu), plus the slice loop's slower branch when the engine
+  is busy. Not the 31%: the commands' work (matrix, lighting, vertices, polygons) and the FIFO traffic stay.
+- Why not exact cheaply: (1) the emulated timing is defined by Run's call points (CycleCount credit, FinishWork when
+  the pipe runs dry, the PIPE/FIFO split depends on how writes interleave with reads), so a deferred engine must log
+  (Tk, entries written by Tk) for every slice end and replay them in order: the same per-entry work, plus the log.
+  (2) Command costs depend on the commands' results (a polygon's pipeline cost depends on culling and clipping), so
+  the FIFO level over time can't be computed without running the commands. (3) In this stream every slice end is an
+  observation point anyway: the FIFO sits under half, the GX FIFO DMA (mode 7) restarts at every 112-word burst's
+  end and at the refill that crosses 128, and GXSTAT IRQ mode 2 sets/clears IF bit 21 ~270 times a frame. Bounding
+  the level (each entry costs >= 1 cycle) gives at most 1-2 slices of slack after a burst.
+- What was built instead (exact, toggles): the per-entry and per-word costs that dominate (0050 cherry-pick, 0060,
+  0061, 0062). See qcount.txt and exactness.txt.
+- If lazy is tried later: the A55's L1I (IPC 0.49, 9.9 L1I misses per 1000 instructions) may reward running the
+  geometry in longer bursts even without fewer instructions; that can only be seen on the device. The log/replay
+  design above is the exact way; savestate byte-compares (exactness.txt) are the check that sees timing errors.
