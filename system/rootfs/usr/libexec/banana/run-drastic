@@ -33,6 +33,9 @@ if [ -f $A ]; then
 fi
 # the in-game menu (L3) in BananaOS's colours and fonts
 export DSFLIP_MENU_THEME=banana
+# a shader of your own (banana/shaders/<name>.frag, listed in Settings as "<name> (card)"): SuperDrastic looks there
+s=$(sed -n 's/^ *DSFLIP_SHADER *= *//p' /data/banana/superdrastic.conf 2>/dev/null | tail -n 1)
+[ -n "$s" ] && [ -f "/data/banana/shaders/$s.frag" ] && export DSFLIP_SHADER_DIR=/data/banana/shaders
 # Settings > Nintendo DS > Frame pacing (superdrastic.conf DSFLIP_PACE): Panels (the default) runs DraStic at the
 # panels' refresh instead of the DS's 59.83 Hz, which against a 60 Hz panel showed a frame twice every ~6 s (a
 # hitch when the picture scrolls; BananaDS's kms.pace=display): SuperDrastic takes its sound as 44100 * refresh /
