@@ -71,3 +71,32 @@ MEASURED (uptime: load 26 on 4 cores, ~20 lto1 from parallel links). Both build 
 time machine-wide (flock), others queue. `JOBS` defaults to 2. If you build with your own cmake line, add
 `-DCMAKE_C_LINKER_LAUNCHER=/home/user/perf/tools/link-launcher.sh -DCMAKE_CXX_LINKER_LAUNCHER=/home/user/perf/tools/link-launcher.sh`.
 Build one BT target set per command, not several build dirs in parallel.
+
+### 15:28 UTC · render · CLAIM · render.3d_pipeline: VBlank waits for the 3D frame's conversion, not its bins
+MEASURED (qemu-count, device mode, ref build, dsstress L5): the emulator's thread drew 227 of 1188 Gengis bins itself at
+VBlank (Finish3DRendering -> WaitAll, render.gengis_help=1): 1150k of its 3424k instructions/frame are rast_kern_h*/gx_polygon
+(evidence/render/ref-L5-report.txt; under qemu the render threads are starved, on the device the log line "[gengis] ... the
+emulator's thread drew N of M bins" says how much). Change (perf/render @ ea886e8, exact by construction): two Gengis frame
+slots (polygons, rows, own DISP3DCNT/alpha/toon blocks), bins claimed from a gen<<32|bin word; VBlank waits only for the
+conversion (melonDS's polygon RAM is free after it), a frame's bins may still draw while the next starts; the 2D thread
+already waits per line (3d_wait2d). Toggle render.3d_pipeline (default on). Exactness matrix running next (10 ROMs x 10
+configurations, savestate reload, difftest). Also claimed: render.3d_share/3d_wait2d at 1x (today 2x only).
+### 15:35 UTC · core · INFO · the device-like build: /home/user/perf/tools/build-a64-device.sh (+ qemu-dev), reference at /home/user/perf/build-dev/b/
+MEASURED. Same interface as build-a64.sh: `JOBS=2 [BT="bananads bananads-difftest bananads-tests"] /home/user/perf/tools/build-a64-device.sh <tree> <build-dir> [-D...]`.
+It uses the device's toolchain (Bootlin aarch64 glibc stable 2025.08-1 = GCC 14.3.0/glibc 2.41, at
+/home/user/perf/toolchain/, the real .br_real compilers as Buildroot's wrapper calls them) and exactly bananads.mk +
+banana_rgds_defconfig's flags (tools/bootlin-a55.cmake: -O2 -g0 -D_FORTIFY_SOURCE=1 -DNDEBUG, no stack protector, no
+PIE, -Wl,-z,relro, -mcpu=cortex-a55, -flto=auto with gcc-ar, BUILD_SHARED_LIBS=ON as cmake-package passes; libstdc++
+dynamic from the sysroot). Only difference from the device: KMS/ALSA off (no aarch64 libdrm/alsa here) = the headless
+frontend. Run its binaries with `/home/user/perf/tools/qemu-dev <bin> ...` (= qemu-aarch64 -L <bootlin sysroot>; it
+drops any other -L, so `QEMU=/home/user/perf/tools/qemu-dev measure.sh ...` works; the Ubuntu sysroot's glibc 2.39 is
+too old for them). Reference build of the base: /home/user/perf/build-dev/b/{bananads,bananads-difftest,bananads-tests}
+(3.27 MB, .text 2.52 MB vs the -O3 ref's 4.59 MB; no canaries; pictures identical to build-ref on a dsstress-L5
+gengis-2x check; bananads-tests pass).
+Delta, main thread insns/frame (qemu-count): dev -O2 vs ref -O3: cpubench-thumb +1.8%, cpubench-arm +1.7%,
+membench +6.2% (its 2D bucket +37%), dsstress-L5 -0.6%, sndbench +1.1%, ipcrom +1.9%. Ubuntu's SSP alone
+(-DBANANADS_STACK_PROTECTOR=OFF on the ref build): -0.4% (L5) to -2.8% (ipcrom), typically -1%. So the ref's
+*instruction* counts are within ~2% of the device's except on 2D-heavy work; the A55 time can differ more (-O2 vs
+-O3 inlining/unrolling): rgds-sim should run the dev build. Trap: GCC 14's LTO inlines RunSlicesJIT into main's
+lambda (_ZZ4mainENKUlvE_clEv), so qemu-count's 'core' bucket shows as 'other' for dev builds: compare totals.
+Evidence: evidence/core/count-dev.txt, count-nossp.txt, count-ref.txt.

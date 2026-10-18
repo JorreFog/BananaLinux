@@ -20,16 +20,21 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'
 import report as R
 
 args = sys.argv[1:]
+FIX = {}
 dev, runs = args[0], args[1]
 combine = 'max'; free = ['base_scale', 'l3_cyc', 'dram_ns', 'mispredict_cyc']; write = None; version = 'v1-calibrated'
+const = False   # --const: a fitted per-frame constant (ms) on top: the device run's thread hand-offs, kernel time
 i = 2
 while i < len(args):
     if args[i] == '--combine': combine = args[i + 1]; i += 2
     elif args[i] == '--free': free = args[i + 1].split(','); i += 2
     elif args[i] == '--write': write = args[i + 1]; i += 2
     elif args[i] == '--version': version = args[i + 1]; i += 2
+    elif args[i] == '--const': const = True; i += 1
+    elif args[i] == '--fix': k, v = args[i + 1].split('='); FIX[k] = float(v); i += 2
     else: sys.exit('unknown arg ' + args[i])
 
+free = [k for k in free if k not in FIX]
 rows = []
 for l in open(dev):
     if not l.strip() or l.startswith('#'): continue
@@ -46,21 +51,26 @@ for l in open(dev):
                  'other': other['totals'] if other else None, 'rom': run.split('-', 1)[1].replace('-thoff', '')})
 
 base = R.load_params(None)
+base.update(FIX)
 
 
 def model(row, p, alpha):
+    c = p.get('_const', 0.0)
     tm = R.ms_at(row['main'], p, row['mhz'])
-    if row['other'] is None or combine == 'main': return tm
+    if row['other'] is None or combine == 'main': return tm + c
     to = R.ms_at(row['other'], p, row['mhz'])
-    if combine == 'max': return max(tm, to)
-    if combine == 'sum': return tm + to
-    return max(tm, to) + alpha * min(tm, to)
+    if combine == 'max': return max(tm, to) + c
+    if combine == 'sum': return tm + to + c
+    return max(tm, to) + alpha * min(tm, to) + c
 
 
 def unpack(x):
     p = dict(base)
     for k, v in zip(free, x[:len(free)]): p[k] = math.exp(v)
-    alpha = 1 / (1 + math.exp(-x[len(free)])) if combine == 'mix' else 0.0
+    n = len(free)
+    alpha = 0.0
+    if combine == 'mix': alpha = 1 / (1 + math.exp(-x[n])); n += 1
+    if const: p['_const'] = math.exp(x[n])
     return p, alpha
 
 
@@ -98,6 +108,7 @@ def fit(rs):
         st = dict(zip(['base_scale', 'l3_cyc', 'dram_ns', 'mispredict_cyc'], s)); st.setdefault('l3_ns', 5.0)
         x0 = [math.log(st.get(k, base[k]) or 1.0) for k in free]
         if combine == 'mix': x0.append(0.0)
+        if const: x0.append(0.0)
         x, v = nelder_mead(lambda x: loss(x, rs), x0)
         x, v = nelder_mead(lambda x: loss(x, rs), x, step=0.1)
         if best is None or v < best[1]: best = (x, v)
@@ -111,7 +122,8 @@ def errs(rs, p, a):
 p, a = fit(rows)
 e = errs(rows, p, a)
 print('rgds-sim calibration: %d rows, combine=%s, free=%s' % (len(rows), combine, ','.join(free)))
-print('fitted: ' + ' '.join('%s=%.4g' % (k, p[k]) for k in free) + ('  alpha=%.3f' % a if combine == 'mix' else ''))
+print('fitted: ' + ' '.join('%s=%.4g' % (k, p[k]) for k in free) + ('  alpha=%.3f' % a if combine == 'mix' else '')
+      + ('  per-frame constant=%.3f ms' % p['_const'] if const else '') + ('  fixed: %s' % FIX if FIX else ''))
 print('%-34s %6s %9s %9s %8s   %s' % ('run', 'MHz', 'dev ms', 'model ms', 'error', 'main/other ms'))
 for r, x in zip(rows, e):
     tm = R.ms_at(r['main'], p, r['mhz']); to = R.ms_at(r['other'], p, r['mhz']) if r['other'] else 0
@@ -141,6 +153,7 @@ if write:
     out = {k: p[k] for k in ['base_scale', 'l3_cyc', 'l3_ns', 'dram_ns', 'mispredict_cyc', 'tlb_l2_cyc', 'walk_cyc', 'st_cost']}
     out['version'] = version
     out['calibration'] = {'device': os.path.basename(dev), 'combine': combine, 'rows': len(rows), 'rms_error': rms,
-                          'max_error': max(abs(x) for x in e), 'alpha': a}
+                          'max_error': max(abs(x) for x in e), 'alpha': a, 'frame_const_ms': p.get('_const', 0.0),
+                          'free': free, 'fixed': FIX}
     json.dump(out, open(write, 'w'), indent=1)
     print('wrote ' + write)

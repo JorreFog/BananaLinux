@@ -1,0 +1,20 @@
+# qemu-count, main thread insns/frame (frames 100-300): the device-like build (/home/user/perf/build-dev/b/bananads: Bootlin GCC 14.3.0, Buildroot's -O2 -g0 -D_FORTIFY_SOURCE=1 -DNDEBUG, no SSP/PIE, -Wl,-z,relro) vs the reference build (Ubuntu GCC 13.3 -O3 + -fstack-protector-strong -fstack-clash-protection -fPIE) and the reference without SSP; 15:35 UTC
+# build: JOBS=2 BT="bananads bananads-difftest bananads-tests" /home/user/perf/tools/build-a64-device.sh /home/user/perf/base /home/user/perf/build-dev
+# count: QEMU=/home/user/perf/tools/qemu-dev sh /home/user/perf/core/runs/count.sh /home/user/perf/build-dev/b/bananads dev <roms>  (raw: /home/user/perf/core/runs/dev/<rom>/report.txt)
+# NB: GCC 14.3's LTO inlined RunSlicesJIT into main's lambda (_ZZ4mainENKUlvE_clEv, 962k on cpubench-thumb), so report.py's 'core' bucket moved to 'other': compare the main-thread totals, not the buckets.
+## dev
+cpubench-cpubench-thumb          main 4896.0k insns/frame jit 2796.8k   core 152.5k    2d 432.2k    mem 181.8k    3d 89.6k    audio 56.4k    libs 192.1k
+cpubench-cpubench-arm            main 4396.3k insns/frame jit 2253.5k   core 147.5k    2d 432.2k    mem 240.4k    3d 89.6k    audio 56.4k    libs 190.4k
+membench-membench                main 6013.3k insns/frame jit 128.7k    core 100.8k    2d 1521.7k   mem 185.1k    3d 2785.6k  audio 56.4k    libs 20.5k
+dsstress-L5                      main 20746.1k insns/frame jit 207.4k    core 100.0k    2d 713.1k    mem 254.1k    3d 18432.2k audio 56.4k    libs 67.5k
+sndbench-sndbench                main 4873.8k insns/frame jit 396.0k    core 78.1k     2d 565.2k    mem 702.1k    3d 89.6k    audio 424.0k   libs 255.9k
+ipcrom-ipctest                   main 2852.9k insns/frame jit 325.7k    core 104.5k    2d 460.3k    mem 461.3k    3d 5.3k     audio 56.4k    libs 146.1k
+## main thread, ref -O3 / ref noSSP / dev -O2, dev vs ref
+cpubench-thumb 4808.0k / 4755.6k / 4896.0k  +1.83%
+cpubench-arm   4324.3k / 4267.8k / 4396.3k  +1.67%
+membench       5660.0k / 5610.4k / 6013.3k  +6.24% (2D bucket +36.6%)
+dsstress-L5   20866.3k / 20791.1k / 20746.1k  -0.58%
+sndbench       4821.9k / 4766.5k / 4873.8k  +1.08%
+ipcrom         2799.5k / 2721.9k / 2852.9k  +1.91%
+## smoke: dsstress-L5 gengis scale 2, 100 frames: frame100.ppm identical dev vs ref; bananads-tests: all passed (/home/user/perf/core/runs/devsmoke/log)
+## binary: 3.27 MB, .text 2.52 MB (ref: 6.19 MB, .text 4.59 MB); 0 __stack_chk_fail references (ref: many); NEEDED libstdc++.so.6 libm libgcc_s libc

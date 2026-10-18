@@ -1,11 +1,16 @@
 # render: status (overwritten by render only)
 
-Updated 15:30 UTC. Worktree /home/user/perf/render/sd, branch perf/render @ 7ebe4e9+ (commits: render.2d_batch, render.3d_pipeline). Patch numbers 0060-0079.
+Updated 15:40 UTC. Worktree /home/user/perf/render/sd, branch perf/render @ dc3f96a (commits: 7ebe4e9 render.2d_batch, ea886e8 render.3d_pipeline, dc3f96a 3d_share/3d_wait2d at 1x). Patch numbers 0060-0079.
 
 ## Doing now
-- render.3d_pipeline (uncommitted in the tree, building as /home/user/perf/render/b1): two Gengis frame slots so a
-  frame's bins still draw while the next frame converts/starts; VBlank waits only for the conversion. Then the
-  exactness matrix (evidence/render/matrix.sh: ref vs b1 with the toggle on, 10 ROMs x 10 configurations).
+- Builds: /home/user/perf/render/b1 = 7ebe4e9+ea886e8 (2d_batch + pipeline), b2 = dc3f96a (+ 1x share, building),
+  x86tsan = ThreadSanitizer x86 build of dc3f96a (building; no Gengis on x86: covers the 2D thread only).
+- Running: evidence/render/matrix.sh ref vs b1 (pipeline on) -> /home/user/perf/render/runs/matrix-m1.txt (10 ROMs x
+  10 configurations incl. savestate reload). Smoke test L5 device mode: SAME, and the emulator's thread drew 0 of
+  1188 bins (ref: 227 of 1188) -> /home/user/perf/render/runs/ab/smoke-b1-L5/b/log.
+- Next: matrix for b2 (1x share) and for the toggles off (b2 off vs ref), jit's exact-suite.sh (difftest, tests) on
+  b2, TSan runs; then a melonDS patch 0060: a stable radix sort for GPU3D::VBlank's polygon Y-sort (std::stable_sort
+  of up to 2048 pointers + a malloc each frame) if the sim/qemu-count shows it matters on polygon-heavy ROMs.
 - Baseline done: evidence/render/measure-dev.sh on dsstress L5, ref build, device mode: main thread 3424k insn/frame,
   of which ~1150k are Gengis bins it drew itself (render.gengis_help=1: 227 of 1188 bins under qemu); 2D snapshot
   work ~230k; geometry ~830k (evidence/render/ref-L5-report.txt).
