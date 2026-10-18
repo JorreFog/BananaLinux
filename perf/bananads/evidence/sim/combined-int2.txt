@@ -249,3 +249,19 @@ PICS+AUDIO ok   membench-membench (7 files identical)
 PICS+AUDIO ok   membench-win (7 files identical)
 DIFF SKIP (two binaries: difftest compares settings within one binary)
 FAILS=0
+
+## render's matrix subset: QEMU=/home/user/perf/tools/qemu-dev CONFIGS="dev2x 1x-t0" sh evidence/render/matrix.sh int2 build-dev vb-int2 "" ""
+int2-dev2x-dsstress-L1: SAME (30 dumps + audio; dsstress-L1.nds 300/10; common: --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=3 --set render.2d_thread=on --set headless.direct=on | A: | B:)
+int2-dev2x-dsstress-L5: SAME (30 dumps + audio; dsstress-L5.nds 300/10; common: --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=3 --set render.2d_thread=on --set headless.direct=on | A: | B:)
+int2-dev2x-dsstress-L10: SAME (30 dumps + audio; dsstress-L10.nds 300/10; common: --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=3 --set render.2d_thread=on --set headless.direct=on | A: | B:)
+int2-dev2x-dsstress-ramp: SAME (30 dumps + audio; dsstress-ramp.nds 300/10; common: --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=3 --set render.2d_thread=on --set headless.direct=on | A: | B:)
+int2-dev2x-thumb-dsstress-L5: SAME (30 dumps + audio; thumb-dsstress-L5.nds 300/10; common: --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=3 --set render.2d_thread=on --set headless.direct=on | A: | B:)
+int2-dev2x-thumb-dsstress-L10: SAME (30 dumps + audio; thumb-dsstress-L10.nds 300/10; common: --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=3 --set render.2d_thread=on --set headless.direct=on | A: | B:)
+int2-dev2x-dsswap: SAME (30 dumps + audio; dsswap.nds 300/10; common: --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=3 --set render.2d_thread=on --set headless.direct=on | A: | B:)
+int2-dev2x-ds2dtest-ds2dtest: SAME (30 dumps + audio; ds2dtest-ds2dtest.nds 300/10; common: --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=3 --set render.2d_thread=on --set headless.direct=on | A: | B:)
+int2-dev2x-membench-membench: SAME (30 dumps + audio; membench-membench.nds 300/10; common: --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=3 --set render.2d_thread=on --set headless.direct=on | A: | B:)
+int2-dev2x-geomtest-geomtest: SAME (30 dumps + audio; geomtest-geomtest.nds 300/10; common: --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=3 --set render.2d_thread=on --set headless.direct=on | A: | B:)
+int2-1x-t0-dsstress-L5: SAME (30 dumps + audio; dsstress-L5.nds 300/10; common: --set render.renderer=gengis --set render.scale=1 --set render.gengis_threads=0 --set render.2d_thread=off | A: | B:)
+int2-1x-t0-ds2dtest-ds2dtest: SAME (30 dumps + audio; ds2dtest-ds2dtest.nds 300/10; common: --set render.renderer=gengis --set render.scale=1 --set render.gengis_threads=0 --set render.2d_thread=off | A: | B:)
+int2-1x-t0-geomtest-geomtest: SAME (30 dumps + audio; geomtest-geomtest.nds 300/10; common: --set render.renderer=gengis --set render.scale=1 --set render.gengis_threads=0 --set render.2d_thread=off | A: | B:)
+int2: 13 configurations, FAILS=0
