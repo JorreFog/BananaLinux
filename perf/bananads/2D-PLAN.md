@@ -34,3 +34,10 @@ melonDS patch numbers if needed: render 0060-0069, jit 0070-0079; core's JIT wor
 - Device check to write into findings: per-thread CPU time (`top -H`, or /proc/<pid>/task/*/stat) of `bananads-2d`
   and the emulator's thread at 2x, toggle off vs on, on both handhelds; `perf stat -e L1-dcache-load-misses` per thread
   if perf is there.
+
+## 17:09 UTC change
+
+`jit` found little left in the output stage once rgds-sim v2 models A55 write streaming, so it also takes the BG
+layers from `render`: `DrawBG_Text/Affine/Extended/Large`, `DrawBitmap8/16`, `DrawTiledScroll` (ds2dtest's ~89k
+L3-hit loads/frame over the VRAM flats). `render` keeps the compositor, sprites, windows, `PrepareScanline*`, the copy
+log, the job ring and the integration. `sim` adds PRFM to the model (qemu runs it as a no-op), so prefetch toggles can be judged.

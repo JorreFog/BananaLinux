@@ -18,6 +18,8 @@ time goes; catching changes that cut instructions but add cache/TLB misses (PERF
 | `report.py` | per-frame report from two runs (N1 and N2 frames): applies the cost model (`params.json`) |
 | `run.sh` | one workload: `run.sh <bin> <rom> <label> [--mode st\|dev\|raw] [--frames N1:N2] [--set k=v ...]` |
 | `ab.sh`, `ab.py` | A/B: `ab.sh <binA> <binB> <rom> [--a "--set ..."] [--b "--set ..."] [--mode ...]` |
+| `regions.py` | one thread's L1D misses per frame by buffer (address range) and function (v2+ runs) |
+| `tools/exact.sh` | the verifier's exactness check (pictures every 50 frames + audio dump; difftest for one binary) |
 | `params.json` | the cost model's parameters (calibrated; its `version` names the model version) |
 | `calibrate.py` | fits the free parameters to device frame times (`calib/`) |
 | `calib/` | the device numbers used, the calibration runs' script and the fit's output |
@@ -83,6 +85,22 @@ the model's 1104 -> 1992 MHz ratio is checked against the device's.
 - **branches**: gshare (2-bit counters, `2^bpbits` entries, `bphist` bits of global history) for b.cond/cbz/tbz;
   a `btb`-entry direct-mapped BTB (last target) for br/blr; a `ras`-entry return stack for ret. The outcome is the next
   block actually executed (all A64 branches end a qemu translation block).
+
+### Model versions
+
+- **v1** (16:11): as described above.
+- **v2** (17:05): + L1D **write streaming**: after `ws`=4 cache lines written whole in a row (by up to `wsn`=2 interleaved
+  streams), store misses stop allocating in L1D (in the L3 too after `wsl3`=128 lines) and cost nothing but bandwidth,
+  until a line is left partly written. Source for the mechanism: Arm TF-A `include/lib/cpus/aarch64/cortex_a55.h`
+  (CPUACTLR_EL1 bit 24 DISABLE_WRITE_STREAMING; CPUECTLR_EL1 bits 25-26 L1WSCTL, the L1 threshold); TF-A's workaround for
+  erratum 778703 turns it off on r0p0 parts without L2 (check the RK3568's revision: /proc/cpuinfo). **ASSUMED**: the
+  thresholds (the A53's equivalent fields default to 4 lines for L1, as I recall the A53 TRM), the stream count, the L3
+  rule. Effect: the 2D thread's output rows at 2x (~4 MB of writes a frame) no longer cost L1D stalls. Also writes
+  `f<N>.regions` (L1D misses per thread x function x 64 KB region): `regions.py <run dir> <thread>` lists them by buffer.
+- **v2.1** (17:10): + **software prefetch**: PRFM/PRFUM (PLD/PST; L1 or L2/L3 targets) are decoded and their address read
+  from the registers at run time (qemu runs them as no-ops): the line is filled at once, no stall. Limitation: a
+  prefetch issued too late looks as good as a timely one; check the prefetch distance on the device.
+- Choose a version with SIMARGS: v1 = `ws=0 prfm=0`, v2 = `prfm=0`. ab.sh compares within one version.
 
 ### Parameters and where the defaults come from
 
