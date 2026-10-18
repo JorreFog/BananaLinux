@@ -1,0 +1,36 @@
+{
+  // An example theme with pictures: the sunset folder next to this file holds its two wallpapers (1024 x 768, drawn
+  // for BananaOS). Copy sunset.json and the sunset folder to banana/themes on the card to change them. Panels are
+  // partly see-through ("#rrggbbaa") so the wallpaper shows behind them. theme-builder.html makes files like this.
+  "name": "Sunset",
+  "author": "BananaOS",
+  "base": "dark",
+  "accent": { "base": "#ff8c42", "light": "#ffd9b8", "dark": "#6e2a00", "band": "#ffb070", "low": "#d0601e" },
+  "colors": {
+    "screenBg":   "#1a0c2e",
+    "screenBand": "#3a1650",
+    "screenFrame":"#0c0616",
+    "ink":        "#ffeedd",
+    "muted":      "#d9a3c2",
+    "line":       "#b07aa3",
+    "edge":       "#ffd2a8",
+    "rule":       "#5a2a6a",
+    "panelBand":  "#5a2470d9",
+    "panelBody":  "#1e0e36b3",
+    "panelLow":   "#0c0616d9",
+    "chipBand":   "#4a1e60",
+    "chipBody":   "#1c0c30",
+    "bubbleBand": "#5a2470",
+    "bubbleBody": "#24103ce6",
+    "bubbleLow":  "#0c0616",
+    "sheetBase":  "#1c0c30",
+    "trackBg":    "#12081f",
+    "trackHi":    "#7a3a8a",
+    "railBg":     "#12081f",
+    "brandBg":    "#2a1240",
+    "kbdBg":      "#ffd2a8",
+    "kbdInk":     "#24103c",
+    "favInk":     "#ff9ec4"
+  },
+  "background": { "top": "sunset/top.png", "bottom": "sunset/bottom.png", "dither": false }
+}

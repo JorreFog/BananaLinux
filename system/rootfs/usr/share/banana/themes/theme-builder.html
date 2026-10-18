@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Banana Theme Builder</title>
+<!-- Banana's theme builder: open this file in any browser (no network needed), pick colours, see the menu change,
+     then "Download theme.json" and put the file in banana/themes on the card. README.txt next to it explains every
+     key. Everything runs on this page: nothing is sent anywhere. -->
+<style>
+:root { --bg: #f4f1ea; --panel: #ffffff; --ink: #24211c; --muted: #6f685b; --line: #ddd6c8; --accent: #c98f12; }
+@media (prefers-color-scheme: dark) { :root { --bg: #16151a; --panel: #211f26; --ink: #ece7dc; --muted: #a39d8e; --line: #36323b; --accent: #f0b429; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
+header { padding: 14px 16px 6px; }
+h1 { margin: 0; font-size: 20px; }
+header p { margin: 4px 0 0; color: var(--muted); }
+main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 16px; padding: 10px 16px 24px; }
+@media (max-width: 900px) { main { grid-template-columns: minmax(0, 1fr); } #previewCol { order: -1; } }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 12px; }
+.card h2 { margin: 0 0 8px; font-size: 15px; }
+.row { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }
+.row label { min-width: 92px; color: var(--muted); }
+input[type=text], select { flex: 1; min-width: 120px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); font: inherit; }
+input[type=color] { width: 38px; height: 30px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; }
+button, .btn { padding: 7px 12px; border: 1px solid var(--line); border-radius: 7px; background: var(--bg); color: var(--ink); font: inherit; cursor: pointer; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #1b1404; font-weight: 600; }
+details { border-top: 1px solid var(--line); padding: 6px 0; }
+details:first-of-type { border-top: 0; }
+summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+.key { display: grid; grid-template-columns: 110px 38px minmax(60px, 1fr) 54px 24px; align-items: center; gap: 6px; margin: 4px 0; }
+.key .name { font-family: ui-monospace, Menlo, monospace; font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+.key .name.set { font-weight: 700; }
+.key input[type=range] { width: 100%; }
+.key .hex { font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: var(--muted); }
+.key button { padding: 2px 4px; font-size: 12px; }
+.help { color: var(--muted); font-size: 12px; margin: 2px 0 6px; }
+textarea { width: 100%; min-height: 160px; font: 12px ui-monospace, Menlo, monospace; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); padding: 8px; }
+#previewCol { position: sticky; top: 8px; align-self: start; }
+.screens { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.screenWrap { width: 100%; max-width: 640px; aspect-ratio: 4 / 3; position: relative; overflow: hidden; border-radius: 6px; background: #000; }
+.screen { position: absolute; left: 0; top: 0; width: 640px; height: 480px; transform-origin: 0 0; font-family: "Pixelify Sans", ui-monospace, monospace; }
+.note { color: var(--muted); font-size: 12px; text-align: center; margin-top: 6px; }
+.iconRow, .soundRow { display: grid; grid-template-columns: minmax(80px, 1fr) minmax(80px, 1fr) 24px; gap: 6px; margin: 4px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🍌 Banana Theme Builder</h1>
+  <p>Pick colours and files, watch the menu change, then download <b>theme.json</b> and copy it (with its pictures, fonts and sounds) to <b>banana/themes</b> on the card. Choose it in <b>Settings &gt; Display &amp; sound &gt; Theme</b>.</p>
+</header>
+<main>
+<div id="formCol">
+  <div class="card">
+    <h2>The theme</h2>
+    <div class="row"><label for="name">Name</label><input type="text" id="name" value="My theme"></div>
+    <div class="row"><label for="author">Author</label><input type="text" id="author" value=""></div>
+    <div class="row"><label for="base">Starts from</label>
+      <select id="base"><option value="dark">Dark</option><option value="light">Light</option></select></div>
+    <div class="row"><label for="accentMode">Accent</label>
+      <select id="accentMode">
+        <option value="yellow">Yellow</option><option value="blue">Blue</option><option value="red">Red</option>
+        <option value="green">Green</option><option value="purple">Purple</option><option value="pink">Pink</option>
+        <option value="custom">Any colour…</option><option value="five">Five shades…</option>
+      </select>
+      <input type="color" id="accentColor" value="#3cc6e8" hidden>
+    </div>
+    <div id="accentFive" hidden>
+      <p class="help">The selection's colour and its four shades: light (text on it), dark (its shadow), band (its top band), low (its bottom edge).</p>
+    </div>
+    <div class="row">
+      <button id="loadBtn">Load a theme.json…</button><input type="file" id="loadFile" accept=".json,application/json,text/plain" hidden>
+      <button id="resetBtn">Start over</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Colours</h2>
+    <p class="help">A colour you don't change keeps the base palette's (shown greyed). The slider is opacity: right is solid. ↺ puts a colour back.</p>
+    <div id="groups"></div>
+  </div>
+
+  <div class="card">
+    <h2>Pictures, fonts, logo</h2>
+    <p class="help">File names are relative to the .json's folder. Wallpapers: PNG or JPEG, 1024 × 768 for the RG DS Plus, 640 × 480 for the RG DS (others are scaled to fill). Fonts: TTF. Pick a file to see it in the preview: it stays on this page, only its name goes into the theme.</p>
+    <div class="row"><label>Top wallpaper</label><input type="text" id="bgTop" placeholder="top.png"><input type="file" accept="image/*" data-for="bgTop"></div>
+    <div class="row"><label>Bottom wallpaper</label><input type="text" id="bgBottom" placeholder="bottom.png"><input type="file" accept="image/*" data-for="bgBottom"></div>
+    <div class="row"><label for="dither">Dot pattern</label><select id="dither"><option value="">as the base</option><option value="true">on</option><option value="false">off</option></select></div>
+    <div class="row"><label>Font (regular)</label><input type="text" id="fontRegular" placeholder="font.ttf"><input type="file" accept=".ttf,.otf" data-for="fontRegular"></div>
+    <div class="row"><label>Font (medium)</label><input type="text" id="fontMedium" placeholder="font-bold.ttf"><input type="file" accept=".ttf,.otf" data-for="fontMedium"></div>
+    <div class="row"><label>Logo</label><input type="text" id="logo" placeholder="logo.png"><input type="file" accept="image/*" data-for="logo"></div>
+  </div>
+
+  <div class="card">
+    <h2>System icons</h2>
+    <p class="help">The system's id as in systems.cfg (nds, gba, gb, gbc, nes, snes, megadrive, psx, n64, ports, favorites, search, recently-played…) and a PNG of about 128 × 128.</p>
+    <div id="icons"></div>
+    <button id="addIcon">Add an icon</button>
+  </div>
+
+  <div class="card">
+    <h2>Sounds</h2>
+    <p class="help">A .wav file for a menu sound, or off. Empty keeps Banana's.</p>
+    <div id="sounds"></div>
+  </div>
+
+  <div class="card">
+    <h2>Your theme.json</h2>
+    <div class="row"><button class="primary" id="saveBtn">Download theme.json</button><button id="copyBtn">Copy</button></div>
+    <textarea id="out" readonly></textarea>
+  </div>
+</div>
+
+<div id="previewCol">
+  <div class="card">
+    <h2>Preview</h2>
+    <div class="screens">
+      <div class="screenWrap"><div class="screen" id="top"></div></div>
+      <div class="screenWrap"><div class="screen" id="bottom"></div></div>
+    </div>
+    <p class="note">The home screen, drawn here to judge colours by: close to the handheld, not pixel-exact.</p>
+  </div>
+</div>
+</main>
+
+<script>
+"use strict";
+// ---- Banana's palettes (ui/rnds/RndsUI.cpp darkPal / lightPal) and accents ---------------------------------------
+const DARK = { ink:"#f1ede2", muted:"#a39d8e", line:"#8a8374", edge:"#e8e2d3", navy:"#fff6dc", red:"#ff3b4a",
+  shade40:"#00000066", shade45:"#00000073", shade35:"#00000059", blackish:"#0b0a0d",
+  screenBg:"#17161c", screenFrame:"#0b0a0d", screenBand:"#2e2b33", ditherA:"#ffffff24", ditherB:"#ffffff12",
+  sheetBase:"#15141a", sheetHi:"#ffffff1a", sheetLo:"#00000059",
+  panelBand:"#3a3540", panelBody:"#17161c", panelLow:"#0b0a0d", chipBand:"#2e2b33", chipBody:"#121117",
+  frameBorder:"#e8e2d3", frameBg:"#17161c", meterBg:"#15141a", brandBg:"#262219", kbdBg:"#f1ede2", kbdInk:"#17161c",
+  rule:"#45403d", bubbleBand:"#38333b", bubbleBody:"#191820", bubbleLow:"#0f0e13",
+  trackBg:"#100f14", trackHi:"#353039", trackShade:"#00000073", slotOn:"#ffffff", railBg:"#100f14", faceMuted:"#45403d",
+  favBorder:"#ff3b4a", favBand:"#5a2430", favBody:"#2a1016", favInk:"#ff8a96", glint:"#ffffff47", floor:"#00000059",
+  slotDark:"#070609", slotLip:"#45403d", cartLabel:"#f1ede2", onPick:"#17161c", onPickAccent:"#7a3a00" };
+const LIGHT = { ink:"#2a2620", muted:"#7a7262", line:"#a69d8c", edge:"#3a342c", navy:"#fffaf0", red:"#e23b4a",
+  shade40:"#3a2e1438", shade45:"#3a2e1440", shade35:"#3a2e1424", blackish:"#3a2e144d",
+  screenBg:"#f3efe6", screenFrame:"#d4ccbd", screenBand:"#fdfcf9", ditherA:"#3a2e1412", ditherB:"#3a2e1409",
+  sheetBase:"#fdfbf6", sheetHi:"#ffffff8c", sheetLo:"#3a2e141f",
+  panelBand:"#ffffff", panelBody:"#f6f2ea", panelLow:"#d8d0c0", chipBand:"#ffffff", chipBody:"#f6f2ea",
+  frameBorder:"#3a342c", frameBg:"#ebe5d9", meterBg:"#e3dccd", brandBg:"#262219", kbdBg:"#3a342c", kbdInk:"#f2f6fa",
+  rule:"#d6cfc0", bubbleBand:"#ffffff", bubbleBody:"#faf7f0", bubbleLow:"#ddd5c6",
+  trackBg:"#e6dfd0", trackHi:"#ffffff", trackShade:"#3a2e142e", slotOn:"@accent", railBg:"#e6dfd0", faceMuted:"#d6cfc0",
+  favBorder:"#e23b4a", favBand:"#fff2f3", favBody:"#ffdfe3", favInk:"#c8283a", glint:"#ffffff73", floor:"#3a2e1433",
+  slotDark:"#2a2620", slotLip:"#a69d8c", cartLabel:"#ffffff", onPick:"#17161c", onPickAccent:"#7a3a00" };
+const ACCENTS = { yellow:["#f0b429","#ffe68a","#8a5a00","#ffcf5c","#c98f12"], blue:["#4a9fe0","#b7e1ff","#0f3f66","#7cc0f2","#2f7fc0"],
+  red:["#e8574d","#ffb8b0","#7a1a14","#f58a80","#c23b32"], green:["#56bf6b","#bff0c8","#1d5a2b","#86d896","#3d9a52"],
+  purple:["#a07ae6","#ddd0ff","#43266e","#bfa4f2","#7f58c4"], pink:["#ec6fa8","#ffc6e0","#7a1f4a","#f59cc4","#c9508a"] };
+const SHADES = ["base", "light", "dark", "band", "low"];
+// grouped as README.txt groups them
+const GROUPS = [
+  ["The screen", ["screenBg","screenBand","screenFrame","ditherA","ditherB","rule"]],
+  ["Text", ["ink","muted","line","edge","navy","red"]],
+  ["Panels", ["panelBand","panelBody","panelLow","chipBand","chipBody","bubbleBand","bubbleBody","bubbleLow"]],
+  ["The shelf", ["sheetBase","sheetHi","sheetLo","trackBg","trackHi","trackShade","railBg","slotOn","faceMuted","floor","glint"]],
+  ["Box art", ["frameBorder","frameBg","slotDark","slotLip","cartLabel"]],
+  ["Favourites", ["favBorder","favBand","favBody","favInk"]],
+  ["Other", ["meterBg","brandBg","kbdBg","kbdInk","blackish","shade35","shade40","shade45"]],
+  ["Settings", ["onPick","onPickAccent"]],
+];
+const SOUNDS = ["scroll", "select", "back", "fav", "ready", "insert"];
+
+// ---- state ----------------------------------------------------------------------------------------------------
+let set = {};          // the colours the theme names: key -> "#rrggbbaa"
+let accentFive = ACCENTS.yellow.slice();
+let previews = {};     // field id -> object URL of a picked file (preview only)
+const $ = (id) => document.getElementById(id);
+
+// ---- colours --------------------------------------------------------------------------------------------------
+function norm(c) {      // "#rgb" / "#rrggbb" / "#rrggbbaa" -> "#rrggbbaa", or null
+  if (typeof c !== "string") return null;
+  let h = c.trim().replace(/^#/, "");
+  if (/^[0-9a-f]{3}$/i.test(h)) h = h.split("").map((x) => x + x).join("");
+  if (/^[0-9a-f]{6}$/i.test(h)) h += "ff";
+  return /^[0-9a-f]{8}$/i.test(h) ? "#" + h.toLowerCase() : null;
+}
+function rgba(c) { const h = norm(c) || "#00000000"; const n = (i) => parseInt(h.substr(i, 2), 16);
+  return `rgba(${n(1)},${n(3)},${n(5)},${(n(7) / 255).toFixed(3)})`; }
+function accent() {
+  const m = $("accentMode").value;
+  if (m === "custom") { const b = $("accentColor").value; return [b, mix(b, "#ffffff", 0.6), mix(b, "#000000", 0.6), mix(b, "#ffffff", 0.25), mix(b, "#000000", 0.2)]; }
+  if (m === "five") return accentFive;
+  return ACCENTS[m];
+}
+function mix(a, b, t) { const p = (c, i) => parseInt(c.substr(i, 2), 16); const r = [1, 3, 5].map((i) => Math.round(p(a, i) * (1 - t) + p(b, i) * t));
+  return "#" + r.map((x) => x.toString(16).padStart(2, "0")).join(""); }
+function baseOf(k) { const v = ($("base").value === "light" ? LIGHT : DARK)[k]; return v === "@accent" ? accent()[0] + "ff" : norm(v); }
+function col(k) { return rgba(set[k] || baseOf(k)); }
+
+// ---- the colour list ------------------------------------------------------------------------------------------
+function buildGroups() {
+  const g = $("groups"); g.innerHTML = "";
+  GROUPS.forEach(([title, keys], i) => {
+    const d = document.createElement("details"); if (i < 3) d.open = true;
+    d.innerHTML = `<summary>${title}</summary>`;
+    keys.forEach((k) => {
+      const row = document.createElement("div"); row.className = "key"; row.dataset.key = k;
+      row.innerHTML = `<span class="name" title="${k}">${k}</span><input type="color"><input type="range" min="0" max="255" title="opacity"><span class="hex"></span><button title="back to the base palette">↺</button>`;
+      const [nm, pick, alpha, hex, reset] = row.children;
+      const show = () => { const v = set[k] || baseOf(k); pick.value = v.substr(0, 7); alpha.value = parseInt(v.substr(7, 2), 16);
+        hex.textContent = v.substr(7) === "ff" ? v.substr(0, 7) : v; nm.classList.toggle("set", !!set[k]); row.style.opacity = set[k] ? 1 : 0.6; };
+      const take = () => { set[k] = pick.value + Number(alpha.value).toString(16).padStart(2, "0"); show(); update(); };
+      pick.addEventListener("input", take); alpha.addEventListener("input", take);
+      reset.addEventListener("click", () => { delete set[k]; show(); update(); });
+      row.show = show; show(); d.appendChild(row);
+    });
+    g.appendChild(d);
+  });
+}
+function refreshRows() { document.querySelectorAll(".key").forEach((r) => r.show()); }
+
+function buildAccentFive() {
+  const box = $("accentFive"); box.querySelectorAll(".row").forEach((r) => r.remove());
+  SHADES.forEach((s, i) => {
+    const r = document.createElement("div"); r.className = "row";
+    r.innerHTML = `<label>${s}</label><input type="color" value="${accentFive[i]}">`;
+    r.querySelector("input").addEventListener("input", (e) => { accentFive[i] = e.target.value; update(); });
+    box.appendChild(r);
+  });
+}
+
+// ---- icons and sounds -----------------------------------------------------------------------------------------
+function addIcon(id = "", file = "") {
+  const r = document.createElement("div"); r.className = "iconRow";
+  r.innerHTML = `<input type="text" placeholder="nds" value="${esc(id)}"><input type="text" placeholder="nds.png" value="${esc(file)}"><button title="remove">✕</button>`;
+  r.querySelectorAll("input").forEach((i) => i.addEventListener("input", update));
+  r.querySelector("button").addEventListener("click", () => { r.remove(); update(); });
+  $("icons").appendChild(r);
+}
+function buildSounds() {
+  SOUNDS.forEach((s) => {
+    const r = document.createElement("div"); r.className = "soundRow"; r.dataset.sound = s;
+    r.innerHTML = `<span>${s}</span><input type="text" placeholder="(Banana's)"><button title="off">off</button>`;
+    r.querySelector("input").addEventListener("input", update);
+    r.querySelector("button").addEventListener("click", () => { r.querySelector("input").value = "off"; update(); });
+    $("sounds").appendChild(r);
+  });
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+// ---- the theme as JSON ----------------------------------------------------------------------------------------
+function theme() {
+  const t = { name: $("name").value || "My theme" };
+  if ($("author").value) t.author = $("author").value;
+  t.base = $("base").value;
+  const m = $("accentMode").value;
+  if (m === "custom") t.accent = $("accentColor").value;
+  else if (m === "five") { t.accent = {}; SHADES.forEach((s, i) => (t.accent[s] = accentFive[i])); }
+  else t.accent = m;
+  const keys = Object.keys(set);
+  if (keys.length) { t.colors = {}; GROUPS.flatMap((g) => g[1]).filter((k) => set[k]).forEach((k) => (t.colors[k] = set[k].endsWith("ff") ? set[k].substr(0, 7) : set[k])); }
+  const bg = {}; if ($("bgTop").value) bg.top = $("bgTop").value; if ($("bgBottom").value) bg.bottom = $("bgBottom").value;
+  if ($("dither").value) bg.dither = $("dither").value === "true";
+  if (Object.keys(bg).length) t.background = bg;
+  const fonts = {}; if ($("fontRegular").value) fonts.regular = $("fontRegular").value; if ($("fontMedium").value) fonts.medium = $("fontMedium").value;
+  if (Object.keys(fonts).length) t.fonts = fonts;
+  if ($("logo").value) t.logo = $("logo").value;
+  const icons = {}; document.querySelectorAll(".iconRow").forEach((r) => { const [a, b] = r.querySelectorAll("input"); if (a.value && b.value) icons[a.value] = b.value; });
+  if (Object.keys(icons).length) t.icons = icons;
+  const sounds = {}; document.querySelectorAll(".soundRow").forEach((r) => { const v = r.querySelector("input").value; if (v) sounds[r.dataset.sound] = v; });
+  if (Object.keys(sounds).length) t.sounds = sounds;
+  return t;
+}
+
+// loading: JSON with // and /* */ comments (as Banana reads it), comments outside strings only
+function stripComments(s) {
+  let o = "", i = 0, str = false;
+  while (i < s.length) {
+    const c = s[i], n = s[i + 1];
+    if (str) { o += c; if (c === "\\") { o += n || ""; i += 2; continue; } if (c === '"') str = false; i++; continue; }
+    if (c === '"') { str = true; o += c; i++; continue; }
+    if (c === "/" && n === "/") { while (i < s.length && s[i] !== "\n") i++; continue; }
+    if (c === "/" && n === "*") { i += 2; while (i < s.length && !(s[i] === "*" && s[i + 1] === "/")) i++; i += 2; continue; }
+    o += c; i++;
+  }
+  return o;
+}
+function load(t) {
+  reset(false);
+  $("name").value = t.name || ""; $("author").value = t.author || ""; $("base").value = t.base === "light" ? "light" : "dark";
+  const a = t.accent;
+  if (typeof a === "string" && ACCENTS[a]) $("accentMode").value = a;
+  else if (typeof a === "string" && norm(a)) { $("accentMode").value = "custom"; $("accentColor").value = norm(a).substr(0, 7); }
+  else if (a && typeof a === "object") { $("accentMode").value = "five"; accentFive = SHADES.map((s, i) => (norm(a[s]) || ACCENTS.yellow[i] + "ff").substr(0, 7)); }
+  Object.entries(t.colors || {}).forEach(([k, v]) => { if (norm(v) && k in DARK) set[k] = norm(v); });
+  const bg = t.background || {}; $("bgTop").value = bg.top || ""; $("bgBottom").value = bg.bottom || "";
+  $("dither").value = bg.dither === true ? "true" : bg.dither === false ? "false" : "";
+  const f = t.fonts || {}; $("fontRegular").value = f.regular || ""; $("fontMedium").value = f.medium || "";
+  $("logo").value = t.logo || "";
+  Object.entries(t.icons || {}).forEach(([k, v]) => addIcon(k, v));
+  document.querySelectorAll(".soundRow").forEach((r) => (r.querySelector("input").value = (t.sounds || {})[r.dataset.sound] || ""));
+  accentChanged();
+}
+function reset(full = true) {
+  set = {}; previews = {}; accentFive = ACCENTS.yellow.slice(); $("icons").innerHTML = "";
+  if (full) { $("name").value = "My theme"; $("author").value = ""; $("base").value = "dark"; $("accentMode").value = "yellow";
+    ["bgTop", "bgBottom", "fontRegular", "fontMedium", "logo"].forEach((id) => ($(id).value = "")); $("dither").value = "";
+    document.querySelectorAll(".soundRow input").forEach((i) => (i.value = "")); accentChanged(); }
+}
+function accentChanged() { const m = $("accentMode").value; $("accentColor").hidden = m !== "custom"; $("accentFive").hidden = m !== "five";
+  if (m === "five") buildAccentFive(); refreshRows(); update(); }
+
+// ---- the preview: the home screen in CSS px (the menu's own 640 x 480 layout) -----------------------------------
+function box(x, y, w, h, band, body, low, r = 10, extra = "") {
+  return `<div style="position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;border-radius:${r}px;background:${body};` +
+    `box-shadow:inset 0 6px 0 ${band}, inset 0 -6px 0 ${low}, 0 0 0 3px ${col("edge")}${extra}"></div>`;
+}
+function text(x, y, s, size, color, w = 0, align = "left", weight = 400) {
+  return `<div style="position:absolute;left:${x}px;top:${y}px;${w ? `width:${w}px;` : ""}text-align:${align};font-size:${size}px;font-weight:${weight};color:${color};white-space:nowrap">${s}</div>`;
+}
+function screenBg(which) {
+  const pic = previews[which === "top" ? "bgTop" : "bgBottom"];
+  let h = pic ? `<div style="position:absolute;inset:0;background:url(${pic}) center/cover"></div>`
+              : `<div style="position:absolute;inset:0;background:${col("screenBg")}"></div>`;
+  if (!pic && $("dither").value !== "false")	// the dot pattern: two dots in every 4 px square
+    h += `<div style="position:absolute;inset:0;background-image:radial-gradient(${col("ditherA")} 0.9px, transparent 1.1px),` +
+         `radial-gradient(${col("ditherB")} 0.9px, transparent 1.1px);background-size:4px 4px;background-position:0 0,2px 2px"></div>`;
+  return h + `<div style="position:absolute;left:0;top:0;right:0;height:8px;background:${col("screenBand")}"></div>` +
+    `<div style="position:absolute;inset:0;box-shadow:inset 0 0 0 4px ${col("screenFrame")}"></div>`;
+}
+function iconTile(x, y, sel, glyph) {
+  const a = accent();
+  const s = sel ? 74 : 62, ox = sel ? -6 : 0, oy = sel ? -6 : 0;
+  return `<div style="position:absolute;left:${x + ox}px;top:${y + oy}px;width:${s}px;height:${s}px;border-radius:10px;background:${col("chipBody")};` +
+    `box-shadow:inset 0 5px 0 ${col("chipBand")}, 0 0 0 3px ${sel ? col("slotOn") : col("edge")}, 4px 4px 0 ${col("shade40")};display:flex;align-items:center;justify-content:center;font-size:${sel ? 36 : 30}px">${glyph}</div>`;
+}
+function draw() {
+  const a = accent();
+  const logo = previews.logo ? `<img src="${previews.logo}" style="position:absolute;left:98px;top:15px;height:30px">` :
+    `<div style="position:absolute;left:98px;top:16px;display:flex;gap:6px;align-items:center;font-size:20px;font-weight:700">` +
+    `<span>🍌</span><span style="color:${a[0]}">BANANA</span><span style="margin-left:-6px;color:${col("ink")}">OS</span></div>`;
+  // the top screen: the status bar and the selected system's panel
+  let t = screenBg("top");
+  t += text(24, 18, "📶 100%", 17, col("ink"));
+  t += `<div style="position:absolute;left:90px;top:12px;width:150px;height:36px;border-radius:8px;background:${col("brandBg")}"></div>` + logo;
+  t += text(256, 20, "Alpha 0.4.0", 16, col("muted"));
+  t += text(470, 18, "10/18 06:52", 18, col("ink"), 150, "right");
+  t += box(28, 62, 584, 396, col("panelBand"), col("panelBody"), col("panelLow"), 16);
+  t += iconTile(283, 140, false, "🎮");
+  t += text(170, 250, "7", 34, col("ink"), 80, "center") + text(280, 250, "7", 34, col("ink"), 80, "center") + text(390, 250, "2h", 34, col("ink"), 80, "center");
+  t += text(170, 294, "GAMES", 15, col("muted"), 80, "center") + text(280, 294, "PLAYED", 15, col("muted"), 80, "center") + text(390, 294, "TIME", 15, col("muted"), 80, "center");
+  t += box(200, 334, 240, 78, col("chipBand"), col("chipBody"), col("panelLow"), 10);
+  t += `<div style="position:absolute;left:214px;top:344px;width:44px;height:58px;border-radius:4px;background:${col("frameBg")};box-shadow:0 0 0 2px ${col("frameBorder")}"></div>`;
+  t += text(272, 350, "LAST PLAYED", 14, col("muted")) + text(272, 374, "Peel Quest", 18, col("ink"), 0, "left", 600);
+  $("top").innerHTML = t;
+  // the bottom screen: the shelf
+  let b = screenBg("bottom");
+  b += `<div style="position:absolute;left:18px;top:14px;width:24px;height:24px;border-radius:5px;background:${col("chipBody")};box-shadow:0 0 0 2px ${col("edge")}"></div>` + text(24, 15, "L", 15, col("ink"));
+  b += text(50, 15, "Favorites", 16, col("ink")) + text(400, 15, "Game Boy Advance", 16, col("ink"), 186, "right");
+  b += `<div style="position:absolute;left:598px;top:14px;width:24px;height:24px;border-radius:5px;background:${col("chipBody")};box-shadow:0 0 0 2px ${col("edge")}"></div>` + text(605, 15, "R", 15, col("ink"));
+  b += `<div style="position:absolute;left:280px;top:24px;width:80px;height:4px;border-radius:2px;background:${col("rule")}"></div>`;
+  b += box(80, 58, 480, 104, col("bubbleBand"), col("bubbleBody"), col("bubbleLow"), 12);
+  b += text(80, 82, "Nintendo DS", 24, col("ink"), 480, "center", 600) + text(80, 116, "Nintendo", 17, col("muted"), 480, "center");
+  b += `<div style="position:absolute;left:310px;top:162px;width:0;height:0;border-left:12px solid transparent;border-right:12px solid transparent;border-top:12px solid ${col("edge")}"></div>`;
+  b += `<div style="position:absolute;left:30px;top:196px;width:580px;height:94px;border-radius:14px;background:${col("sheetBase")};box-shadow:inset 0 5px 0 ${col("sheetHi")}, inset 0 -6px 0 ${col("sheetLo")}"></div>`;
+  b += `<div style="position:absolute;left:270px;top:186px;width:100px;height:146px;border-radius:12px;background:${a[0]};box-shadow:inset 0 10px 0 ${a[3]}, inset 0 -30px 0 ${a[4]}, 0 0 0 3px ${col("edge")}, 4px 6px 0 ${col("floor")}"></div>`;
+  b += text(270, 306, "START", 15, a[1], 100, "center", 700);
+  [["💻", 60], ["❤️", 160], ["📟", 384], ["🎮", 484]].forEach(([g, x]) => (b += iconTile(x, 210, false, g)));
+  b += iconTile(289, 200, true, "🕹️");
+  b += `<div style="position:absolute;left:24px;top:380px;width:500px;height:14px;border-radius:7px;background:${col("trackBg")};box-shadow:inset 0 3px 0 ${col("trackShade")}, 0 0 0 2px ${col("edge")}"></div>`;
+  b += `<div style="position:absolute;left:44px;top:380px;width:44px;height:14px;border-radius:7px;background:${a[0]};box-shadow:inset 0 3px 0 ${col("trackHi")}"></div>`;
+  b += text(540, 374, `<b>02</b> <span style="color:${col("muted")}">/ 07</span>`, 20, col("ink"), 76, "right");
+  const face = (x, w, key, label) => box(x, 420, w, 40, col("chipBand"), col("chipBody"), col("panelLow"), 8) +
+    `<div style="position:absolute;left:${x}px;top:420px;width:${w}px;height:40px;display:flex;align-items:center;justify-content:center;gap:8px">` +
+    `<span style="padding:1px 6px;border-radius:4px;background:${col("kbdBg")};color:${col("kbdInk")};font-size:13px;font-weight:700">${key}</span>` +
+    `<span style="font-size:17px;color:${col("ink")}">${label}</span></div>`;
+  b += face(18, 92, "Y", "Fav") + face(240, 160, "SELECT", "Search") + face(498, 124, "X", "Resume");
+  $("bottom").innerHTML = b;
+}
+function fit() { document.querySelectorAll(".screenWrap").forEach((w) => (w.firstElementChild.style.transform = `scale(${w.clientWidth / 640})`)); }
+
+function update() { draw(); $("out").value = JSON.stringify(theme(), null, 2) + "\n"; }
+
+// ---- wiring ---------------------------------------------------------------------------------------------------
+["name", "author", "bgTop", "bgBottom", "fontRegular", "fontMedium", "logo", "dither"].forEach((id) => $(id).addEventListener("input", update));
+$("base").addEventListener("change", () => { refreshRows(); update(); });
+$("accentMode").addEventListener("change", accentChanged);
+$("accentColor").addEventListener("input", () => { refreshRows(); update(); });
+$("addIcon").addEventListener("click", () => addIcon());
+$("resetBtn").addEventListener("click", () => reset(true));
+document.querySelectorAll("input[type=file][data-for]").forEach((f) => f.addEventListener("change", () => {
+  const file = f.files[0]; if (!file) return; const id = f.dataset.for;
+  $(id).value = file.name; if (file.type.startsWith("image/")) previews[id] = URL.createObjectURL(file); update();
+}));
+$("loadBtn").addEventListener("click", () => $("loadFile").click());
+$("loadFile").addEventListener("change", () => {
+  const file = $("loadFile").files[0]; if (!file) return;
+  file.text().then((s) => { try { load(JSON.parse(stripComments(s))); } catch (e) { alert("That file isn't a theme Banana can read: " + e.message); } });
+  $("loadFile").value = "";
+});
+$("saveBtn").addEventListener("click", () => {
+  const blob = new Blob([$("out").value], { type: "application/json" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+  a.download = (($("name").value || "theme").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "theme") + ".json";
+  document.body.appendChild(a); a.click(); a.remove();
+});
+$("copyBtn").addEventListener("click", () => { $("out").select(); (navigator.clipboard ? navigator.clipboard.writeText($("out").value) : Promise.reject()).catch(() => document.execCommand("copy")); });
+window.addEventListener("resize", fit);
+
+buildGroups(); buildSounds(); accentChanged(); fit();
+</script>
+</body>
+</html>
