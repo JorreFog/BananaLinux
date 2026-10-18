@@ -1,5 +1,5 @@
 {
- "version": "v2.1",
+ "version": "v2",
  "base_scale": 1.0,
  "l3_cyc": 30.0,
  "l3_ns": 0.0,
@@ -8,5 +8,5 @@
  "tlb_l2_cyc": 2.0,
  "walk_cyc": 25.0,
  "st_cost": 0.2,
- "note": "v2.1 = v1's cost parameters (documented/assumed defaults) + the plugin's L1D write streaming (v2: ws=4, wsl3=128, wsn=2) + software prefetch (v2.1: prfm=1, PRFM/PRFUM fill the line at once, no stall: a prefetch issued too late looks as good as a timely one). v1 = SIMARGS='ws=0 prfm=0'; v2 = SIMARGS=prfm=0. Calibration: as v1 (README)."
+ "note": "v2 = v1's cost parameters (documented/assumed defaults) + the plugin's L1D write streaming (ws=4, wsl3=128, wsn=2). v3 = v2 + timed software prefetch: SIMARGS=prfm=1 (opt-in; label numbers 'v3'). v1 = SIMARGS=ws=0. Calibration: as v1 (README)."
 }

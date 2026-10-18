@@ -20,7 +20,7 @@
  * Args (all optional): out=<path> l1i=32768 l1d=32768 l1ways=4 line=64 l3=524288 l3ways=16 itlb=15 dtlb=16
  *   l2tlb=1024 l2tlbways=4 page=4096 bpbits=12 bphist=10 btb=256 ras=8 ldlat=3 mullat=3 mul64lat=4 divlat=8
  *   fplat=4 pf=1 pfdeg=2 ipf=1 l3shared=1 thp=1 hugepages=LO-HI (hex; also learnt from madvise(MADV_HUGEPAGE))
- *   ws=4 wsl3=128 wsn=2 regions=1 (v2: write streaming; per-region miss table) prfm=1 (v2.1: software prefetch)
+ *   ws=4 wsl3=128 wsn=2 regions=1 (v2: write streaming; per-region miss table) prfm=0 pfl3=24 pfdram=120 (prfm=1: v3, timed software prefetch)
  *   marks=N1:N2 warm=10 (one run: snapshots after frames N1 and N2 from BananaDS's headless.window=1 log; out= is
  *   then a prefix: <out>N1.tsv, <out>N2.tsv...)
  * Build: gcc -O2 -shared -fPIC -I<qemu>/include/qemu $(pkg-config --cflags glib-2.0) rgdssim.c -o librgdssim.so
@@ -45,10 +45,10 @@ static const char *clname[CL_N] = { "alu", "mul", "div", "ld", "st", "ldp", "stp
 /* ---- per-slot event counters ---- */
 enum { C_INSN, C_BASE, C_L1I_MISS, C_L1I_L3MISS, C_LD, C_ST, C_LD_MISS, C_LD_L3MISS, C_ST_MISS, C_ST_L3MISS,
        C_ITLB_L2, C_ITLB_WALK, C_DTLB_L2, C_DTLB_WALK, C_BCOND, C_BCOND_MISS, C_BIND, C_BIND_MISS, C_RET_MISS,
-       C_PF, C_PF_DRAM, C_ST_WS, C_ST_WS_L3, C_SWPF, C_SWPF_DRAM, C_N };
+       C_PF, C_PF_DRAM, C_ST_WS, C_ST_WS_L3, C_SWPF, C_SWPF_DRAM, C_SWPF_LATE_L3, C_SWPF_LATE_DRAM, C_N };
 static const char *cname[C_N] = { "insn", "base", "l1i_miss", "l1i_l3miss", "ld", "st", "ld_miss", "ld_l3miss",
     "st_miss", "st_l3miss", "itlb_l2", "itlb_walk", "dtlb_l2", "dtlb_walk", "bcond", "bcond_miss", "bind",
-    "bind_miss", "ret_miss", "pf", "pf_dram", "st_ws", "st_ws_l3", "swpf", "swpf_dram" };
+    "bind_miss", "ret_miss", "pf", "pf_dram", "st_ws", "st_ws_l3", "swpf", "swpf_dram", "swpf_late_l3", "swpf_late_dram" };
 
 /* ---- parameters ---- */
 static const char *outpath = "rgdssim";
@@ -63,10 +63,13 @@ static unsigned p_pf = 1, p_pfdeg = 2, p_ipf = 1, p_l3shared = 1, p_thp = 1;
    partly written. ws=0 turns it off (v1's behaviour). wsn = how many write streams are tracked at once.
    The thresholds are ASSUMED (the A53 TRM's defaults for its equivalent: 4 lines for L1, more for L2). */
 static unsigned p_ws = 4, p_wsl3 = 128, p_wsn = 2, p_regions = 1;
-/* v2.1: software prefetch (PRFM/PRFUM PLD/PST): qemu runs them as no-ops, so they are decoded here and the address
-   read from the registers at run time; a PLDL1/PSTL1 fills the line into L1D (and the L3), L2/L3 targets into the L3,
-   no stall. prfm=0: ignored (v2). */
-static unsigned p_prfm = 1;
+/* v3 (prfm=1; default 0 = v2): software prefetch (PRFM/PRFUM PLD/PST): qemu runs them as no-ops, so they are decoded
+   here and the address read from the registers at run time. A PLDL1/PSTL1 starts a fill of the line into L1D (and the
+   L3; L2/L3 targets: the L3 only). The fill takes pfl3 / pfdram *instructions* of this thread (the model's clock: its
+   instruction count; defaults ~30 cycles L3 and ~150 cycles DRAM at ~0.8 IPC): a load that reaches the line earlier
+   pays the remaining fraction of the miss (counters swpf_late_l3 / swpf_late_dram, in thousandths of a miss). */
+static unsigned p_prfm = 0, p_pfl3 = 24, p_pfdram = 120;
+#define NINFL 32
 #define MAXWS 4
 static unsigned lshift, pshift;
 /* transparent huge pages: ranges the guest madvise(MADV_HUGEPAGE)s (BananaLinux's kernel: THP=madvise) get 2 MB
@@ -144,6 +147,8 @@ typedef struct {
     uint64_t *ras; unsigned rasn, rastop;
     uint64_t missring[8]; unsigned missi;
     uint64_t ws_line[MAXWS], ws_mask[MAXWS], ws_age[MAXWS]; unsigned ws_run[MAXWS]; uint64_t ws_clock;
+    uint64_t icount;                                            /* instructions so far: the prefetch clock */
+    uint64_t infl_line[NINFL], infl_ready[NINFL]; uint8_t infl_dram[NINFL]; unsigned ninfl, infl_next;
     GHashTable *regions;      /* (slot << 40 | 64 KB region) -> uint64_t[6] misses: ld, st, ld_l3, st_l3, ws, ws_l3 */
     const TBInfo *prev;
     long tid;
@@ -436,6 +441,7 @@ static void tb_exec(unsigned vcpu, void *ud)
         }
     }
     uint64_t *c = slotctr(s, tb->slot);
+    s->icount += tb->n;
     c[C_INSN] += tb->n;
     c[C_BASE] += tb->base;
     for (unsigned k = 0; k < CL_N; k++) s->cls[k] += tb->cls[k];
@@ -506,7 +512,29 @@ static void prfm_cb(unsigned vcpu, void *ud)
         if (cache_probe(&s->l1d, ln)) return;
         cache_access(&s->l1d, ln);
     }
-    if (!l3_access(&s->l3own, ln)) c[C_SWPF_DRAM]++;
+    int dram = !l3_access(&s->l3own, ln);
+    if (dram) c[C_SWPF_DRAM]++;
+    if (target == 0 || dram) {                    /* in flight: a load before it lands pays the rest */
+        unsigned i = s->infl_next++ % NINFL;
+        if (!s->infl_line[i] || s->infl_ready[i] <= s->icount) s->ninfl++;   /* (approximate count) */
+        s->infl_line[i] = ln + 1; s->infl_dram[i] = (uint8_t)dram;
+        s->infl_ready[i] = s->icount + (dram ? p_pfdram : p_pfl3);
+        if (s->ninfl > NINFL) s->ninfl = NINFL;
+    }
+}
+static inline void infl_check(VState *s, uint64_t ln, uint64_t *c)
+{
+    for (unsigned i = 0; i < NINFL; i++) {
+        if (s->infl_line[i] != ln + 1) continue;
+        if (s->icount < s->infl_ready[i]) {
+            uint64_t lat = s->infl_dram[i] ? p_pfdram : p_pfl3;
+            uint64_t rem = (s->infl_ready[i] - s->icount) * 1000 / (lat ? lat : 1);
+            c[s->infl_dram[i] ? C_SWPF_LATE_DRAM : C_SWPF_LATE_L3] += rem;
+        }
+        s->infl_line[i] = 0;
+        if (s->ninfl) s->ninfl--;
+        return;
+    }
 }
 
 /* write-stream tracking: returns the run length (consecutive whole lines) of the stream this store belongs to */
@@ -577,7 +605,7 @@ static void mem_cb(unsigned vcpu, qemu_plugin_meminfo_t info, uint64_t va, void 
             else { c[C_ST_WS_L3]++; region_add(s, slot, ln, 5); }
             continue;
         }
-        if (cache_access(&s->l1d, ln)) continue;
+        if (cache_access(&s->l1d, ln)) { if (s->ninfl && !st) infl_check(s, ln, c); continue; }
         c[st ? C_ST_MISS : C_LD_MISS]++;
         region_add(s, slot, ln, st ? 1 : 0);
         if (!l3_access(&s->l3own, ln)) { c[st ? C_ST_L3MISS : C_LD_L3MISS]++; region_add(s, slot, ln, st ? 3 : 2); }
@@ -729,9 +757,10 @@ static void dump(const char *prefix)
     g_free(path);
     fprintf(f, "l1i=%u l1d=%u l1ways=%u line=%u l3=%u l3ways=%u itlb=%u dtlb=%u l2tlb=%u l2tlbways=%u page=%u "
             "bpbits=%u bphist=%u btb=%u ras=%u ldlat=%u mullat=%u mul64lat=%u divlat=%u fplat=%u pf=%u pfdeg=%u "
-            "ipf=%u l3shared=%u thp=%u ws=%u wsl3=%u wsn=%u prfm=%u model=v2.1\n", p_l1i, p_l1d, p_l1ways, p_line, p_l3, p_l3ways, p_itlb, p_dtlb, p_l2tlb,
+            "ipf=%u l3shared=%u thp=%u ws=%u wsl3=%u wsn=%u prfm=%u pfl3=%u pfdram=%u model=%s\n", p_l1i, p_l1d, p_l1ways, p_line, p_l3, p_l3ways, p_itlb, p_dtlb, p_l2tlb,
             p_l2tlbways, p_page, p_bpbits, p_bphist, p_btb, p_ras, p_ldlat, p_mullat, p_mul64lat, p_divlat, p_fplat,
-            p_pf, p_pfdeg, p_ipf, p_l3shared, p_thp, p_ws, p_wsl3, p_wsn, p_prfm);
+            p_pf, p_pfdeg, p_ipf, p_l3shared, p_thp, p_ws, p_wsl3, p_wsn, p_prfm, p_pfl3, p_pfdram,
+            p_prfm ? "v3" : (p_ws ? "v2" : "v1"));
     fclose(f);
     /* L1D misses per thread, code location and 64 KB region (to tell the buffers apart) */
     if (p_regions) {
@@ -808,7 +837,8 @@ QEMU_PLUGIN_EXPORT int qemu_plugin_install(qemu_plugin_id_t id, const qemu_info_
         { "btb", &p_btb }, { "ras", &p_ras }, { "ldlat", &p_ldlat }, { "mullat", &p_mullat },
         { "mul64lat", &p_mul64lat }, { "divlat", &p_divlat }, { "fplat", &p_fplat }, { "pf", &p_pf },
         { "pfdeg", &p_pfdeg }, { "ipf", &p_ipf }, { "l3shared", &p_l3shared }, { "thp", &p_thp },
-        { "ws", &p_ws }, { "wsl3", &p_wsl3 }, { "wsn", &p_wsn }, { "regions", &p_regions }, { "prfm", &p_prfm } };
+        { "ws", &p_ws }, { "wsl3", &p_wsl3 }, { "wsn", &p_wsn }, { "regions", &p_regions }, { "prfm", &p_prfm },
+        { "pfl3", &p_pfl3 }, { "pfdram", &p_pfdram } };
     for (int i = 0; i < argc; i++) {
         if (!strncmp(argv[i], "out=", 4)) { outpath = g_strdup(argv[i] + 4); continue; }
         if (!strncmp(argv[i], "marks=", 6)) { char *e; m_n1 = strtoul(argv[i] + 6, &e, 10); m_n2 = *e == ':' ? strtoul(e + 1, 0, 10) : 0; continue; }

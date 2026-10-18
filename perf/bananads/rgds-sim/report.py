@@ -31,8 +31,9 @@ def cost(c, p):
     g = lambda k: c.get(k, 0.0)
     core = (p["base_scale"] * g("base") + p["l3_cyc"] * (g("l1i_miss") + g("ld_miss") + p["st_cost"] * g("st_miss"))
             + p["tlb_l2_cyc"] * (g("itlb_l2") + g("dtlb_l2")) + p["walk_cyc"] * (g("itlb_walk") + g("dtlb_walk"))
-            + p["mispredict_cyc"] * (g("bcond_miss") + g("bind_miss")))
-    dram = (p["dram_ns"] * (g("l1i_l3miss") + g("ld_l3miss") + p["st_cost"] * g("st_l3miss"))
+            + p["mispredict_cyc"] * (g("bcond_miss") + g("bind_miss"))
+            + p["l3_cyc"] * (g("swpf_late_l3") + g("swpf_late_dram")) / 1000.0)      # v3: late software prefetches
+    dram = (p["dram_ns"] * (g("l1i_l3miss") + g("ld_l3miss") + p["st_cost"] * g("st_l3miss") + g("swpf_late_dram") / 1000.0)
             + p.get("l3_ns", 0.0) * (g("l1i_miss") + g("ld_miss") + p["st_cost"] * g("st_miss")))
     return core, dram
 
@@ -49,7 +50,8 @@ def components(c, p):
         "base": p["base_scale"] * g("base"),
         "L1I": (p["l3_cyc"] + p.get("l3_ns", 0.0) * 1.104) * g("l1i_miss") + p["dram_ns"] * 1.104 * g("l1i_l3miss"),
         "L1D": (p["l3_cyc"] + p.get("l3_ns", 0.0) * 1.104) * (g("ld_miss") + p["st_cost"] * g("st_miss"))
-               + p["dram_ns"] * 1.104 * (g("ld_l3miss") + p["st_cost"] * g("st_l3miss")),
+               + p["dram_ns"] * 1.104 * (g("ld_l3miss") + p["st_cost"] * g("st_l3miss"))
+               + p["l3_cyc"] * (g("swpf_late_l3") + g("swpf_late_dram")) / 1000.0 + p["dram_ns"] * 1.104 * g("swpf_late_dram") / 1000.0,
         "iTLB": p["tlb_l2_cyc"] * g("itlb_l2") + p["walk_cyc"] * g("itlb_walk"),
         "dTLB": p["tlb_l2_cyc"] * g("dtlb_l2") + p["walk_cyc"] * g("dtlb_walk"),
         "branch": p["mispredict_cyc"] * (g("bcond_miss") + g("bind_miss")),

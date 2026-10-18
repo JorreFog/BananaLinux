@@ -97,10 +97,13 @@ the model's 1104 -> 1992 MHz ratio is checked against the device's.
   thresholds (the A53's equivalent fields default to 4 lines for L1, as I recall the A53 TRM), the stream count, the L3
   rule. Effect: the 2D thread's output rows at 2x (~4 MB of writes a frame) no longer cost L1D stalls. Also writes
   `f<N>.regions` (L1D misses per thread x function x 64 KB region): `regions.py <run dir> <thread>` lists them by buffer.
-- **v2.1** (17:10): + **software prefetch**: PRFM/PRFUM (PLD/PST; L1 or L2/L3 targets) are decoded and their address read
-  from the registers at run time (qemu runs them as no-ops): the line is filled at once, no stall. Limitation: a
-  prefetch issued too late looks as good as a timely one; check the prefetch distance on the device.
-- Choose a version with SIMARGS: v1 = `ws=0 prfm=0`, v2 = `prfm=0`. ab.sh compares within one version.
+- **v3** (17:12, opt-in: `SIMARGS=prfm=1`; v2 stays the default): + **software prefetch**: PRFM/PRFUM (PLD/PST; L1 or
+  L2/L3 targets) are decoded and their address read from the registers at run time (qemu runs them as no-ops). The fill
+  is timed on the thread's own instruction count: it lands `pfl3`=24 (L3) or `pfdram`=120 (DRAM) instructions later
+  (~30 / ~150 cycles at ~0.8 IPC, ASSUMED); a load that reaches the line earlier pays the remaining fraction of the miss
+  (`swpf_late_*`). Check on a synthetic scan (stride 64 B, 32 MB): prefetch 4 lines ahead leaves 80% of the DRAM
+  latency, 16 lines 33%, 64 lines 0%.
+- Choose a version with SIMARGS: v1 = `ws=0`, v2 = default, v3 = `prfm=1`. ab.sh compares within one version.
 
 ### Parameters and where the defaults come from
 

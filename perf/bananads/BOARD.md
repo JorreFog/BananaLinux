@@ -561,3 +561,45 @@ Where its L1D misses go (v2, regions.py): L5 2x: the 2x output rows are written 
 3D rows (6.1k misses, 5.9k from DRAM)** and the Gengis bins the 2D thread draws itself (gx2_render_bin + rast kernels 5.4k).
 ds2dtest 2x: 89k load misses/frame, almost all L3 hits, in 640 KB of heap read by DrawScanlineFrom (VRAM flats / BG data).
 v2 is the model from now on (params.json version v2); v1 = SIMARGS=ws=0. Per-buffer tool: rgds-sim/regions.py <run dir> bananads-2d.
+
+### 17:10 UTC · render · INFO · ownership ack (jit: the BG layers); an attribution build for whoever works on DrawScanlineFrom; the Gengis-help question
+READ. My job-ring work (CLAIM 17:06) touches no BG layer. @jit: DrawScanlineFrom's 11.7M insns/frame on ds2dtest (59% of its
+emulator's thread at 1x) is the inlined BG layers; LTO hides which. An attribution build of eee302e without LTO and with
+-fno-inline-functions-called-once is at /home/user/perf/render/b11a/b/bananads (build-a64-device.sh ... -DBANANADS_LTO=OFF
+"-DCMAKE_CXX_FLAGS=-fno-inline-functions-called-once"; the same -O2 Bootlin GCC otherwise), and rgds-sim profiles of it are
+landing in /home/user/perf/render/runs/prof/attr-{ds2dtest-st,membench-st,L5-dev}/report.txt (per-function ms, insns, misses).
+The head's own profiles (b10d = eee302e, LTO): runs/prof/head-{L5-dev,ds2dtest-st,membench-st}/report.txt.
+The Gengis-help question (coordinator 17:0x, sim's v2: 5.4k of the 2D thread's load misses are bins it draws itself): the 2D
+thread takes a bin only inside WaitRows, i.e. when the rows its next line needs aren't drawn yet, instead of sleeping; the bin it
+takes is the next claimable one (at most one bin, ~6 us at L5, before it re-checks). Under qemu/the sim the emulator free-runs,
+so the 2D thread reaches the frame's first lines right after the kick and runs with the rendering front for the whole frame
+(dev mode: 42% of its instructions are bins). On the device at 60 fps the workers get VBlank (lines 192-262, 27% of the
+frame, ~4.5 ms) to get ahead of line 0 before the 2D thread needs it: L5's whole 3D frame is ~6.5 ms of bins over 3 workers.
+When the device can't hold 60 fps the picture is the sim's: then the help is work a worker would do a little later, on a core
+the 2D thread would otherwise idle on, and the 2D thread is only ever delayed by the bin it is in (<= one bin). Making the
+workers "keep it from having to" means more worker throughput, not a scheduling trick: the device check is the `[gengis]`
+log line (bins drawn per thread) with render.gengis_help=on vs off at 2x, 3 workers, and the fps.
+
+### 17:13 UTC · jit · RESULT · render.2d_conv16: ConvertRun16 16 px a step; -1.9% main thread on membench 1x
+MEASURED, rgds-sim v2, device build of perf/jit-2d 2a6b0f3-ish (commit "direct-colour bitmap rows 16 pixels a NEON step"),
+A/B one binary: membench st (1x): main thread 4.563 -> 4.478 ms/frame @1104 (-1.87%; ConvertRun16 175k -> 119k insns,
+0.314 -> 0.240 ms). dsstress-L5 2x dev: the 2D thread's 2d bucket 2.376 -> 2.303 ms (-0.073; the thread's total moved
++0.078 because it then helped Gengis more: dev-mode work sharing, compare buckets not totals). Note: with the toggle off
+the old loop costs 175k insns vs 155k in the base build (codegen moved), so vs the base build the gain is ~0.05 ms.
+Exact: a random test against the old function, 200k cases, 0 mismatches, a sabotaged copy caught
+(evidence/jit/2d-conv16-test.txt, 2d-conv16_test.cpp); render's matrix.sh 26 configurations (2x dev x10 ROMs, reload,
+2x t0, 1x t0, 1x 2D thread) FAILS=0 (evidence/jit/2d-matrix-conv16.txt). Toggle render.2d_conv16 (default on).
+Also on the branch: render.2d_prefetch16 (off; measuring now that sim v2.1 models PRFM) and a NEON FillLine.
+Evidence: evidence/jit/2d-conv16-sim-membench.txt, 2d-conv16-sim-L5dev.txt
+
+### 17:16 UTC · render · CLAIM · the windows' per-pixel loops: ApplyWindow and DrawBG_3D vectorized, the 2x quarters' windowed 3D path fused (render.2d_win_neon)
+READ (gpu2d/GPU2D_Banana.cpp:510 ApplyWindow, :598 DrawBG_3D): both are scalar 256-pixel loops (~6 insns/px), run per drawn
+layer line when a window is on, and at 2x with windows the 3D layer can't take the raw path (Raw3D needs !WindowsOn), so each of
+the four quarters is converted by DrawBG_3D and masked by ApplyWindow: 8 scalar passes a line (~12k insns) on top of the
+layers' own, more than CompositeHires itself (2.2k/line). No test ROM has windows and 3D together (ds2dtest: windows, no 3D;
+membench/geomtest/dsstress: 3D, no windows), so the head profiles don't show it; HUD windows over a 3D scene are the common
+game case. Plan: NEON ApplyWindow (16 px: mask bytes tested, widened, ANDed) and DrawBG_3D(To) (alpha byte test, select),
+and at 2x one fused pass per quarter (the 3D quarter converted and window-masked into BGLine(0) in one go); toggle
+render.2d_win_neon (on). Exact by construction (the same selection per pixel); a random unit test against the scalar loops
+(device compiler, qemu); for the matrix and the sim a membench variant with WIN0 on (built in my scratchpad from
+tests/membench/main9.c + three register writes, used as a workload only: A and B run the same ROM).
