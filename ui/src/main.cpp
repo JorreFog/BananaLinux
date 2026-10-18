@@ -881,7 +881,7 @@ int main(int argc, char** argv)
 	auto settings = readSettings(o.data + "/settings.conf");
 	// banana/themes on the card, for themes of one's own: the image's README and examples to start from (once)
 	if (access((o.data + "/themes").c_str(), F_OK) != 0 && access("/usr/share/banana/themes", F_OK) == 0)
-		if (system(("mkdir -p '" + o.data + "/themes' && cp /usr/share/banana/themes/* '" + o.data + "/themes/' 2>/dev/null").c_str()) != 0) {}
+		if (system(("mkdir -p '" + o.data + "/themes' && cp -r /usr/share/banana/themes/. '" + o.data + "/themes/' 2>/dev/null").c_str()) != 0) {}	// (-r: a theme's folder of pictures too)
 	// the time zone, for the clock and every game started from here (a POSIX rule, see settings.cpp)
 	if (!settings["timezone"].empty()) { setenv("TZ", settings["timezone"].c_str(), 1); tzset(); }
 	// the palette (a user theme's colours and accent set on the way) and the accent, before anything is drawn: the
