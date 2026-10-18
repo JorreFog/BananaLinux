@@ -1,7 +1,7 @@
 From 8677fadf98b2f21f04b440169bf4cf5703dfdde9 Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Sun, 18 Oct 2026 16:44:01 +0000
-Subject: [PATCH 10/11] BananaDS perf: the waits for the 2D thread block
+Subject: [PATCH 10/18] BananaDS perf: the waits for the 2D thread block
  instead of spinning (render.2d_fence_wait)
 
 Every wait for the 2D thread spun on sched_yield: a frame's fence (render.2d_lazy: the KMS presenter before it

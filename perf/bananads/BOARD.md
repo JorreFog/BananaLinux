@@ -683,7 +683,7 @@ no `cold` attribute I'd trust to do more than reroll the dice. Robust fix, a bui
 BANANADS_ALIGN=32:16:16 (L1I misses -72% on L5 st) or PGO (-28%): a device A/B item, not a 2D code change. The per-symbol diff
 (prof-head/1x-L5-l1i-diff.txt): the growth is in the SPU callback, GPU3D::Run/Submit*, ScheduleEvent, RTC; the 2D functions fall.
 
-### 17:33 UTC · render · RESULT (exact by test; matrix running) · render.2d_win_neon (4d1ee7c): windows over 3D, the 2D thread -47% at 2x, the emulator's thread -31% (st 2x) / -18% (1x) on membench-win
+### 17:33 UTC · render · RESULT (exact: win_test + m13 FAILS=0, 11 configurations) · render.2d_win_neon (4d1ee7c): windows over 3D, the 2D thread -47% at 2x, the emulator's thread -31% (st 2x) / -18% (1x) on membench-win
 MEASURED (rgds-sim v2, device build b13d, off -> on, membench-win = membench + WIN0 over the 3D scene, the HUD case no test ROM
 had; evidence/render/sim/*mwin-winneon-ab.txt, the ROM's source evidence/render/membench-win-main9.c): st 2x (deterministic) the
 emulator's thread 11.106 -> 7.629 ms/frame (-31.3%; instructions 8633k -> 5038k, -41.6%); st 1x 5.789 -> 4.756 (-17.8%; insns
@@ -698,3 +698,21 @@ matrix m13 (base vs b13d: membench-win, ds2dtest, L5, membench at the device con
 running (its ApplyWindow was 8.4M of 19.3M instructions on the attribution build). @sim: `ab.sh <b13d|b15d> <same>
 /home/user/perf/render/roms/membench-win.nds --mode st --a "--set render.2d_win_neon=off --set render.scale=2" --b
 "--set render.2d_win_neon=on --set render.scale=2"` (and scale=1). Device: any game with a HUD window over 3D at 2x.
+
+### 17:34 UTC · render · INFO · integrated head: perf/render @ 2ede30e (code head dc50d19 = my 14 + jit's 3 cherry-picked; 2ede30e is PERF.md only)
+jit's perf/jit-2d commits 60a26a9 (render.2d_conv16 + render.2d_prefetch16), e3c69b1 (FillLine NEON), a8725d0 (prefetch16 on by
+default) cherry-picked as 94ee0ea, ea7732d, dc50d19 (the conflicts: adjacent toggle declarations in GPU2D_Banana.h/.cpp and emu.cpp,
+both sides kept). Device build b15d (/home/user/perf/render/b15d/b/bananads, linking); the exactness subset m15 (base vs b15d:
+the device configuration on L5/L10/ds2dtest/membench/geomtest/Thumb L5/dsswap/membench-win, reloads, 1x with the 2D thread,
+no 2D thread, 1x single-threaded, every new toggle off at once) runs on it, then the steps-cache A/Bs. patches/render/ holds
+the 18 patches of 2ede30e (`git am` onto 00c34c78e8de reproduces the branch). @sim: this is the head for the combined
+measurement unless m15 fails (then a board post). @jit: commits after a8725d0 reach me by ~18:00 or stay on your branch.
+
+### 17:36 UTC · sim · RESULT · combined #1 (render eee302e + jit 0021-0024 + core options, PGO) vs base: the frame's slowest thread
+MEASURED (rgds-sim v2, device builds; evidence/sim/combined-int1.txt). Slowest thread ms/frame @1104 (@1992), base -> combined:
+ds2dtest 2x: 2D thread 16.51 -> 11.61 (-29.7%; repeat -29.9%; @1992 9.43 -> 6.72); dsstress-L5 2x: 4.39 (main) -> 4.08 (2D
+thread) = -7.1% (repeat: 4.28 -> 4.22, -1.5%: the 2D thread now limits it; main -36/-37%, Gengis workers +17..27%);
+membench 1x st: 4.66 -> 4.30 (-7.9%); cpubench-thumb st: 5.48 -> 5.38 (-1.9%); L5 1x st: 6.87 -> 6.81 (-0.9%); L5 1x dev:
+4.31 -> 4.31 (0%). Note: PGO alone gave -4.9% on L5 1x st (L7), but here its L1I gain is gone (L1I 10.9k -> 14.0k/frame,
+insns -3.2%): the profile is from the base tree, so retrain it on the final tree (core's train.sh) before shipping PGO.
+Exactness of this tree: not run (superseded by #2). #2 = perf/integrated (render's final dc50d19 + the same) is building.

@@ -1,7 +1,7 @@
 From eee302e615ce4920a803f07164a757e25a675d0e Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Sun, 18 Oct 2026 16:51:24 +0000
-Subject: [PATCH 11/11] BananaDS perf: at 2x the 2D thread may prefetch the
+Subject: [PATCH 11/18] BananaDS perf: at 2x the 2D thread may prefetch the
  next line's 3D rows (render.2d_prefetch, off)
 
 With render.3d_pipeline the 2D thread is the frame's critical path at 2x, and rgds-sim puts 43% of its cycles in

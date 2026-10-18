@@ -48,9 +48,16 @@ evidence/render/0060-geom-sort-dropped.patch; see Dead ends). Not done: see "Wha
   On the device the game log's `[gengis] ... the emulator's thread drew N of M bins` line says how much it happens.
 - Gengis's `bananads/gengis/*` is byte-identical to SuperDrastic `claude/gengis-a55-scheduling` @ a63fe5b, which
   descends from `origin/main` @ 930c4c5: nothing newer to port (direction 3 of the brief).
-- The 2D job ring is 512 x ~4.9 KB (`Job::Line3D[4][256]` + `Display`): 2.5 MB of address space, but only the ~300
-  hot bytes of each job are touched at 2x with render.3d_share, so the cache footprint is ~160 KB; the 4 KB stride
-  costs L1 dTLB misses only. Left alone (small).
+- The 2D job ring was 512 x ~4.9 KB (`Job::Line3D[4][256]` + `Display`, gpu2d/GPU_Banana.h:133): 2.5 MB of address
+  space, only the ~250 hot bytes of each job touched at 2x with render.3d_share. First left alone; then the head's
+  profile put the 2D thread's loop at 0.147 ms/frame for 22.5k instructions (every job on a new page, no prefetch
+  across the stride, 0.9k dTLB walks): render.2d_job_stride (dc02f53).
+- `ApplyWindow` (gpu2d/GPU2D_Banana.cpp:510) and `DrawBG_3D` (:598) were scalar 256-pixel loops, ~6 instructions a
+  pixel; DrawScanlineFrom (:2992) took the raw 3D path only without a window, so at 2x a windowed line ran both per
+  quarter (CompositeHires :2540). No test ROM had a window over 3D, so the profiles never showed it; the attribution
+  build showed ApplyWindow at 8.4M of ds2dtest's 19.3M instructions: render.2d_win_neon (4d1ee7c), and a membench
+  variant with WIN0 for the measurement.
+- `BuildSteps` (:2356) rebuilt the step list every line from inputs that rarely change: render.2d_steps_cache (0b5346b).
 
 ## Measurements (qemu-count, exact instruction counts; rgds-sim numbers when verified)
 
@@ -151,7 +158,8 @@ GCC 14.3) run under `tools/qemu-dev`; "base" = /home/user/perf/build-dev/b (00c3
   membench-win st 2x (deterministic): the emulator's thread **11.106 -> 7.629 ms/frame (-31.3%)**, instructions 8633k ->
   5038k (-41.6%); st 1x: **5.789 -> 4.756 (-17.8%)**, instructions -24.0%; dev mode (the thread split): **the 2D thread
   7.377 -> 3.877 ms (-47.5%)**, instructions 5867k -> 2251k (-61.6%), store misses -32%; the emulator's thread -2.3%.
-  (ds2dtest 1x: sim/st1x-ds2d-winneon-ab.txt.) Exact: win_test 0 mismatches (win-test.txt); matrix m13 / m15.
+  ds2dtest st 1x (windows on both units, no 3D): **23.741 -> 21.036 ms/frame (-11.4%)**, insn 19299.8k->16772.8k (-13.1%).
+  Exact: win_test 0 mismatches (win-test.txt); matrix m13 / m15.
 - **render.2d_steps_cache** (0b5346b): BuildSteps ~220 instructions a call, 83k/frame on the 2D thread at 2x (L5), 86k
   on membench 1x, 138k on ds2dtest (2-3% of the thread's instructions) for the same list on nearly every line; kept
   while its key holds. Numbers: see below (m14 build).
@@ -192,7 +200,20 @@ GCC 14.3) run under `tools/qemu-dev`; "base" = /home/user/perf/build-dev/b (00c3
   configuration on all 10 ROMs, 2x with 1 Gengis thread, 1x with the 2D thread: 18 configurations, FAILS=0;
   `bananads-tests` all passed (evidence/render/matrix-m7.txt). **m9** on b9d (the fence wait commit, every toggle on):
   the device configuration on all 10 ROMs and 1x with the 2D thread: 15 configurations, FAILS=0; `bananads-tests`
-  all passed (evidence/render/matrix-m9.txt).
+  all passed (evidence/render/matrix-m9.txt). **m10** on b10d (render.2d_prefetch on vs the base): the device
+  configuration on all 10 ROMs: 10 configurations, FAILS=0 (matrix-m10.txt). **m12** on b12d (render.2d_job_stride):
+  the device configuration on all 10 ROMs, the savestate reload on 5, 2x with 1 Gengis thread on 3, 1x with the 2D
+  thread on 5: 23 configurations, FAILS=0 (matrix-m12.txt). **m13** on b13d (render.2d_win_neon; membench-win,
+  ds2dtest, L5, membench at the device configuration, a reload, 1x with the 2D thread, 2x with 1 thread and without
+  the 2D thread, the toggle off = base, quarters off) and **m15** on b15d (the integrated head dc50d19: the device
+  configuration on 8 ROMs incl. membench-win, reloads, 1x with the 2D thread on 3, no 2D thread, 1x single-threaded,
+  every new toggle off at once): evidence/render/matrix-m13.txt, matrix-m15.txt (their FAILS lines at the end).
+- Unit test of render.2d_win_neon (win_test.cpp, device compiler, qemu): 5000 cases, ApplyWindow for every layer bit
+  (25000) 0 mismatches, DrawBG_3D 0, the merge with the window vs DrawBG_3D + ApplyWindow + the merge (12 variants,
+  60000) 0 (evidence/render/win-test.txt).
+- ThreadSanitizer of render.2d_job_stride (x86, 3 runs of 300 frames: L5 compact, ds2dtest compact with a reload and
+  display capture, L5 inline): 0 data races (the only warnings are melonDS's SIGSEGV handler allocating in
+  ARMJIT_Memory::FaultHandler, "signal-unsafe call", pre-existing; evidence/render/tsan-jobstride.txt).
 
 ## Device A/B commands (tools/device/hgquick.sh style; both handhelds, 640x480 RG DS and 1024x768 RG DS Plus, use the
 ## same settings: the plane scales; run each line against a plain run of the same binary)
@@ -232,7 +253,19 @@ EXTRA="--set render.2d_emit_zip=off" hgquick.sh <bin>
 EXTRA="--set render.2d_comp_unroll=off --set render.2d_quarters=off --set render.2d_emit_zip=off" hgquick.sh <bin>
 EXTRA="--set render.scale=1 --set render.2d_comp_unroll=off" hgquick.sh <bin>
 # everything off at once (= the base's behaviour) against the defaults
-EXTRA="--set render.3d_pipeline=off --set render.3d_share=off --set render.geom_sort=off --set render.2d_comp_unroll=off --set render.2d_quarters=off --set render.2d_emit_zip=off" hgquick.sh <bin>
+EXTRA="--set render.3d_pipeline=off --set render.3d_share=off --set render.2d_comp_unroll=off --set render.2d_quarters=off --set render.2d_emit_zip=off --set render.2d_fence_wait=spin --set render.2d_job_stride=inline --set render.2d_win_neon=off --set render.2d_steps_cache=off --set render.2d_conv16=off --set render.2d_prefetch16=off" hgquick.sh <bin>
+
+# the 2D phase (16:52 on): the job ring's layout, the windows' loops, the step list; each off vs the defaults. The number:
+# the 2D thread's CPU time at 2x (top -H's bananads-2d, or /proc/<pid>/task/*/stat utime per frame) and the fps; for
+# win_neon a game with a HUD window over a 3D scene (most 3D games: the status window) is the case, HeartGold's
+# battles and menus included; prefetch is the device's verdict only (the model can't see its timeliness)
+EXTRA="--set render.2d_job_stride=inline" hgquick.sh <bin>
+EXTRA="--set render.2d_win_neon=off" hgquick.sh <bin>
+EXTRA="--set render.2d_steps_cache=off" hgquick.sh <bin>
+EXTRA="--set render.2d_prefetch=on" hgquick.sh <bin>
+EXTRA="--set render.scale=1 --set render.2d_win_neon=off" hgquick.sh <bin>
+# per-thread CPU time check (2D-PLAN.md): for each run, after 60 s, cat /proc/$(pidof bananads)/task/*/stat | awk '{print $2, $14, $15}'
+# (comm, utime, stime in ticks) for bananads-2d and the emulator's thread; perf stat -e L1-dcache-load-misses -t <tid> if perf is there
 
 # at 1x (render.scale=1): the 2D thread with the 3D line shared (the 2D thread is off by default at 1x)
 EXTRA="--set render.scale=1" hgquick.sh <bin>
@@ -303,29 +336,56 @@ expect 3 threads to gain with the pipeline), reading `top -H` (the `bananads-2d`
   a hang with it on and not off, turn it off and report.
 - `render.2d_batch` larger than 16: the 2D thread runs further behind within a frame; the presenter's wait for the
   frame's fence (render.2d_lazy) can grow by a batch's drawing time. 48 is a safe first step.
+- `render.2d_job_stride`: `Job::Line3D` and `Job::Display` are pointers now; anything new that copies a Job by value or
+  takes `sizeof` of those fields would be wrong (the two memcpy sizes are explicit). `inline` restores the old layout.
+- `render.2d_win_neon`: at 2x with a window the raw 3D path is taken only when the quarters path will run
+  (`Banana2DQuarters && q3d`), because the non-quarters CompositeTo path has no window in its raw step; the condition is
+  in DrawScanlineFrom's T_3D case. 12 more MergeQuarter instantiations (~2 KB of code).
+- `render.2d_steps_cache`: the key covers every input BuildSteps reads (layers drawn/full, OBJPrioPresent, the BG
+  priorities, Raw3D, needSecond); a new input to BuildSteps must go into the key. The layer line and OBJColor
+  addresses are fixed per renderer, the raw 3D line is set on every call.
 - `render.2d_fence_wait=block`: a new condition variable in the hand-off (the 2D thread notifies only while a waiter
   has set the flag; a 1 ms timed wait is the safety net, so a lost wakeup costs at most 1 ms, never a hang). If the
   device shows more repeats in `kms.stats` with it, `spin` is the old behaviour.
 
 ## What's next
 
+- **The device A/Bs above**, in this order: `render.3d_pipeline` off vs on (the main thread at 2x), `render.2d_thread=on`
+  at 1x (a one-line default change if it wins as it did at 2x), the 2D-phase toggles' CPU-time checks (`top -H` on
+  `bananads-2d`), `render.2d_prefetch` / `render.2d_prefetch16` (the model can't judge a prefetch's timeliness),
+  `BANANADS_ALIGN=32:16:16` or PGO on the build (the 1x L1I layout question; core's finding).
 - **Display capture on the 2D thread** (the largest lever left for games that capture every frame: while DISPCAPCNT
   is on, unit A's lines, at 2x their four composites, are drawn on the emulator's thread; the `[2d]` log line counts
   them). Not exact by simply deferring the capture: DoCapture writes the captured line into a VRAM bank at the
   line's time, and that bank is read by the CPU and DMA through fastmem at any time, by the texture flats at line
-  215 and by the 2D flats on the next lines. Doing it on the 2D thread needs every reader of the capture bank to
-  wait for the 2D thread (e.g. the bank unmapped from fastmem while a capture is pending, the slow path waiting), or
-  a capture-line queue drained before any such read: a day's work with a device to test on, not an evening's.
-- The sim's per-thread numbers for the pipeline (main thread cycles should not change; the bins move to the render
-  threads) and for the 1x share (fewer main-thread cycles at 1x with the 2D thread).
-- The 2D snapshot work on the emulator's thread at 2x (~105k insn/frame on L5: Prepare*, the job): trims of a few %.
-- The job ring's stride (dTLB).
+  215 and by the 2D flats on the next lines. A day's work with a device to test on.
+- The 2D thread at 2x after this session (rgds-sim, L5): CompositeHires ~1.5 ms is reading Gengis's 3D rows (768 KB a
+  frame, compulsory with the u32 pixel format; 9.4k lines from DRAM in the model, which can't see the DSU's shared L3
+  where the Gengis threads just wrote them), then jit's output stage and ConvertRun16, then the helper bins. A smaller
+  3D pixel format (Gengis writing 16-bit colour + a separate alpha/flag byte: 3 B/px instead of 4) would cut the
+  compulsory read by a quarter; it touches Gengis's conversion and every 3D reader.
+- Sprites: DrawSpriteEntry 1.9M instructions a frame on ds2dtest (rotscale sprites per pixel), 44k on membench; the
+  mosaic loops (ApplySpriteMosaicX, ApplyMosaicX: 3M on ds2dtest) are scalar.
+- The 2D snapshot work on the emulator's thread at 2x (~118k instructions a frame on L5: Prepare*, Regs::From, the
+  job): trims of a few % of a thread that is no longer the critical one with the pipeline.
 - The geometry engine's remaining share (RunFast 399k, SubmitPolygonBody 200k, Write32 101k on L5).
 
 ## Dead ends
 
-(none yet)
+- melonDS patch 0060, VBlank's polygon Y-sort as a counting sort: -0.1% on dsstress L10, 0 on geomtest; rebased out
+  (evidence/render/0060-geom-sort-dropped.patch).
+- render.2d_quarters v1 (the empty "above" half materialised): +4.9% on L5's shallow stack; fixed in 347784d.
+- render.2d_tiles, a tile-fused merge + output pass at 2x: written and compile-checked, shelved (it edits the output
+  stage, jit's since 16:52, and the 4 KB intermediate it removes is L1-resident: ~4% of the thread's instructions at
+  most); evidence/render/tiles-shelved.diff.
+- The 1x L1I question (sim's flag on L5): not a commit's code but the link layout (evidence/render/st1x-layout/,
+  prof-head/1x-L5-l1i-diff.txt): 10.8k -> 13.8k -> 10.9k -> 12.3k misses/frame over four builds with the same 1x
+  code, the thread +-0.7%; a build-flag matter (BANANADS_ALIGN / PGO), not fixable in the renderer.
+- A bounded spin before the 2D thread sleeps: dropped before measuring (it steals a core; device-only verdict).
 
 ## Status
 
-In progress.
+Done at the session's end (18:28 UTC moved up from 21:40): perf/render @ 2ede30e, 18 patches in patches/render/, every
+change exact and toggled; VERIFIED by sim: L1 (comp_unroll), L5 (the pipeline at 2x); the rest PENDING on the board's
+RESULTs (job stride 17:29, win_neon 17:33, the integrated head 17:35; m15's result below). The device A/Bs are the
+open items. The successor's instructions: status/render.md.

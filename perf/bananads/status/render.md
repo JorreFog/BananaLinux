@@ -1,62 +1,57 @@
-# render: status (overwritten by render only) — HANDOFF-ready; updated 17:31 UTC (date -u)
+# render: status (overwritten by render only) — HANDOFF-ready; updated 17:36 UTC (date -u); the session ends 18:28 UTC
 
 ## Where things are
-- Branch `perf/render` @ eee302e (HEAD), worktree /home/user/perf/render/sd, from 00c34c78e8de. 11 commits, every change
-  behind a toggle, exact: 7ebe4e9 render.2d_batch; ea886e8 render.3d_pipeline; dc3f96a 3d_share/3d_wait2d at 1x;
-  911ff8e render.2d_comp_unroll; 0bab5aa render.2d_quarters; 2a23af3 render.2d_emit_zip; 347784d the quarters merge fix;
-  f76bfca docs/PERF.md; 1c9095b the Gengis workers' wake condition; 8677fad render.2d_fence_wait; eee302e
-  render.2d_prefetch (off). melonDS patch 0060 (geom_sort) written, measured at -0.1%, rebased out (DEAD-END 16:18;
-  evidence/render/0060-geom-sort-dropped.patch). 0060-0069 unused.
-- Deliverables: patches/render/ (11 patches from eee302e; `git am` onto 00c34c78e8de gives the branch exactly);
-  findings/render.md (what, why, numbers, checks, device A/B lines, risks, next); evidence/render/ (every number's file).
-  Re-export after every new commit: `rm patches/render/*.patch; git -C /home/user/perf/render/sd format-patch
+- Branch `perf/render` @ 2ede30e (HEAD; the code head is dc50d19, 2ede30e is PERF.md only), worktree /home/user/perf/render/sd,
+  from 00c34c78e8de. 18 commits, every change behind a toggle, exact. Mine: 7ebe4e9 render.2d_batch; ea886e8
+  render.3d_pipeline; dc3f96a 3d_share/3d_wait2d at 1x; 911ff8e render.2d_comp_unroll; 0bab5aa render.2d_quarters; 2a23af3
+  render.2d_emit_zip; 347784d the quarters merge fix; f76bfca docs/PERF.md; 1c9095b the Gengis workers' wake condition;
+  8677fad render.2d_fence_wait; eee302e render.2d_prefetch (off); dc02f53 render.2d_job_stride; 4d1ee7c render.2d_win_neon;
+  0b5346b render.2d_steps_cache; 2ede30e PERF.md. jit's (perf/jit-2d, cherry-picked 17:31): 94ee0ea render.2d_conv16 +
+  render.2d_prefetch16; ea7732d FillLine NEON; dc50d19 prefetch16 on by default. melonDS patch 0060 (geom_sort) was
+  written, measured at -0.1%, rebased out (evidence/render/0060-geom-sort-dropped.patch). 0060-0069 unused.
+- Deliverables: patches/render/ (18 patches from 2ede30e; `git am` onto 00c34c78e8de gives the branch exactly, checked);
+  findings/render.md (what, why, numbers, checks, device A/B lines, risks, next, dead ends); evidence/render/ (every
+  number's file: see its README-like headers; prof-head/ the sim profiles, st1x-layout/ the L1I series, sim/ the A/Bs).
+  Re-export after any new commit: `rm patches/render/*.patch; git -C /home/user/perf/render/sd format-patch
   00c34c78e8de..perf/render -o /home/user/BananaLinux/perf/bananads/patches/render/`.
-- Builds: /home/user/perf/render/b10d = eee302e, device toolchain (build-a64-device.sh), the one to measure; base =
-  /home/user/perf/build-dev/b. Run with /home/user/perf/tools/qemu-dev. x86tsan = TSan x86 (2D thread only, no Gengis).
-- Measured (qemu-count unless said; device builds): comp_unroll membench -5.7% / ds2dtest -9.2% of the emulator's thread
-  (rgds-sim: -5.5% / -6.1% ms/frame; LEDGER L1 VERIFIED by sim); pipeline: emulator's thread 3308.6k -> 2324.1k insns
-  (sim: 4.344 -> 2.944 ms, -32%, the Gengis threads take the bins; upper bound, qemu starves the render threads; LEDGER
-  L5 VERIFIED for 2x by sim); 1x share: 3116.1k -> 2297.1k (sim -18%); emit_zip: 2D thread output stage -22% (sim: 2D
-  thread -7.1%); quarters fix (b7d): 2D thread composite work 812k -> 585k (-28%); fence wait: the emulator's thread's
-  yield loops gone (device verdict: kms.stats); prefetch: device verdict. Head vs base on the sim (b10d, L5 dev 2x): the
-  2D thread 4.765 -> 3.855 ms/frame (-19%), the emulator's thread 4.355 -> ~3.2.
-- Exactness: matrices m3 (41 configs), m2 (8), m6 (23), m7 (18), m9 (15), m10 (10): FAILS=0 every time; difftest --every
-  toggles off vs on SAME (L5, ds2dtest, geomtest); bananads-tests pass; jit's suite pictures 14 ROMs ok; unit tests
-  comp_bench / quarters_test (20000) / zip_test (6000) 0 mismatches; TSan 10 runs 0 warnings.
+- Builds (device toolchain, build-a64-device.sh): /home/user/perf/render/b15d = dc50d19 (the integrated head: measure this
+  one), b13d = 4d1ee7c, b10d = eee302e, b11a = eee302e without LTO (attribution; binary only). Base = /home/user/perf/build-dev/b.
+  Run with /home/user/perf/tools/qemu-dev. x86tsan = TSan x86 (the 2D thread's code only, no Gengis). My ROM:
+  /home/user/perf/render/roms/membench-win.nds (membench + WIN0 over the 3D scene; source evidence/render/membench-win-main9.c).
+- Measured (rgds-sim v2 unless said; device builds): comp_unroll membench -5.1% / ds2dtest -5.9% of the emulator's thread
+  (sim VERIFIED, L1); pipeline: the emulator's thread -27% at 2x (sim VERIFIED for 2x, L5; the device verdict is the
+  wait time); 1x share -18%; emit_zip: the 2D thread -7.1%; quarters: its composite work -28%; fence wait: device
+  verdict (kms.stats); prefetch: device verdict; job stride: the 2D thread's loop -36% (L5), dTLB walks -62%, the thread
+  inside dev noise; win_neon: membench-win the 2D thread -47% (2x), the emulator's thread -31% (st 2x) / -18% (1x);
+  steps cache: A/Bs on b15d running at the end (runs/sim/*steps*). Head vs base on L5 2x (b10d): the 2D thread 4.765 ->
+  3.855 ms/frame, the emulator's thread 4.355 -> ~3.2.
+- Exactness: matrices m3 (41 configs), m2 (8), m6 (23), m7 (18), m9 (15), m10 (10), m12 (23): FAILS=0 every time; m13
+  (win_neon, b13d) and m15 (the integrated head, b15d) running at the end: runs/matrix-m13.txt, runs/matrix-m15.txt
+  (copied to evidence/render/ when done; if a FAIL shows, it is on the board); difftest --every toggles off vs on SAME (L5,
+  ds2dtest, geomtest); bananads-tests pass; unit tests comp_bench / quarters_test (20000) / zip_test (6000) / win_test
+  (5000 x 17) 0 mismatches; TSan 13 runs 0 data races.
 
-## The plan since 16:52 (2D-PLAN.md; the user's call) and where I am
-- All agents on the 2D engine. My share (17:0x): the compositor (Composite*, BuildSteps, Effects*/Brightness*, DrawBG_3D,
-  CompositeTo/EffectsTo, DrawScanline*, the 2x pass structure, render.2d_prefetch), sprites, windows, mosaic, palettes,
-  PrepareScanline*, the copy log, the job ring, the Gengis-help question, and the final integration of perf/jit-2d
-  (jit: the BG layers DrawBG_*/DrawBitmap*/DrawTiledScroll/ConvertRun16 and the output stage in GPU_Banana.cpp).
-  perf/jit-2d and perf/sim-2d had no commits at 17:00; `git log eee302e..perf/jit-2d` shows what to cherry-pick.
-- Done since 16:50: render.2d_prefetch committed (eee302e; exact: matrix m10 FAILS=0; qemu-count can't see it: board
-  17:01); patches/render/ re-exported (11 patches, git am onto 00c34c78e8de = the branch). render.2d_tiles (a tile-fused
-  merge+output pass) written, compile-checked, then SHELVED: it edits jit's output stage and its gain is small
-  (evidence/render/tiles-shelved.diff; board 17:01). Head profiles of b10d on rgds-sim: runs/prof/head-*/report.txt
-  (the 2D thread at 2x on L5: 3.855 ms, CompositeHires 1.536 ms = 423k insns, memory-bound on the 3D rows; the thread's
-  loop 0.147 ms for 22.5k insns: the job ring's stride, see below).
-- DONE 17:29: render.2d_job_stride (dc02f53; RESULT on the board, m12 FAILS=0, TSan 0 races, sim dev A/B in
-  evidence/render/jobstride-*). COMMITTED, measuring: render.2d_win_neon (4d1ee7c; win_test 0 mismatches; b13d built;
-  runs/chain3.sh: the st-1x L1I series over builds, then the win_neon sim A/Bs (st 2x/1x membench-win, ds2dtest, dev)
-  -> runs/sim/*winneon*, then its exactness m13 -> runs/matrix-m13.txt). COMMITTED, unmeasured: render.2d_steps_cache
-  (0b5346b; exact by construction; b14d builds after the st1x series: runs/build-b14d.sh; then a matrix m14 + A/B).
-- The coordinator's 1x L1I question (LEDGER L5's flag): analysed on the board 17:25 (a link-layout reshuffle; per-symbol
-  diff in evidence/render/prof-head/1x-L5-l1i-diff.txt); the st-mode series over base/b10d/b12d/b13d lands in
-  runs/prof/st1x-*/report.txt (chain3); post the spread, recommend BANANADS_ALIGN / PGO (core's) as the robust fix.
-- patches/render/ is at 11 (eee302e): re-export after m13/m14 pass (14 patches).
-- Attribution build for the BG layers (jit's now): /home/user/perf/render/b11a (eee302e, no LTO,
-  -fno-inline-functions-called-once); profiles runs/prof/attr-*/report.txt (board 17:10).
-- Builds now: b10d = eee302e (the head, device toolchain), b11a (attribution), b12d (job ring). Base build-dev.
+## The 2D plan (16:52 on) and my share
+- 2D-PLAN.md: all agents on the 2D engine. My share: the compositor (Composite*, BuildSteps, Effects*/Brightness*,
+  DrawBG_3D, CompositeTo/EffectsTo, DrawScanline*, the 2x pass structure, render.2d_prefetch), sprites, windows,
+  mosaic, palettes, PrepareScanline*, the copy log, the job ring, the Gengis-help question (answered on the board
+  17:10: the help is the 2D thread working instead of waiting; on the device at 60 fps the workers get VBlank to get
+  ahead; the check is the `[gengis]` log line with render.gengis_help on vs off), and the integration of perf/jit-2d
+  (done 17:31 for its three commits; later jit commits stay on perf/jit-2d unless cherry-picked the same way: the
+  conflicts are adjacent toggle declarations in GPU2D_Banana.h/.cpp and emu.cpp, keep both sides).
+- The coordinator's 1x L1I question: closed on the board 17:32 (a link-layout reshuffle: evidence/render/st1x-layout/,
+  prof-head/1x-L5-l1i-diff.txt; the robust fix is a build flag, BANANADS_ALIGN or PGO, core's).
+- Shelved: render.2d_tiles (evidence/render/tiles-shelved.diff; it edits jit's output stage; small gain).
 
-## Next candidates in my share (each with a CLAIM first)
-- BuildSteps per line (83k insns/frame on L5's 2D thread, 86k membench 1x, 138k ds2dtest: ~2%): cache the step list
-  keyed on (enable, priorities, LayerDrawn, LayerFull, OBJPrioPresent, needSecond).
-- Sprites: DrawSpriteEntry 1.86M insns/frame on ds2dtest (rotscale), 44k membench; ResolveSprites.
-- PrepareScanline* + Banana2DRegs::From + the job on the emulator's thread at 2x (~118k insns/frame on L5 = 4.7%).
-- The copy log's volume per frame (the [2d] log line's MB) on ds2dtest/membench.
-- The 1x default of render.2d_thread (findings: -36%/-67% of the emulator's thread; a device A/B first).
+## Running at the end (fold in if you take over)
+- runs/chain3.sh: ds2dtest 1x win_neon A/B (-> runs/sim/st1x-ds2d-winneon-ab.txt), then matrix m13 on b13d.
+- runs/chain5.sh: waits for b15d and chain3, then m15 (base vs b15d, 18 configurations incl. membench-win and every new
+  toggle off at once) -> runs/matrix-m15.txt, then the steps-cache A/Bs (st 2x membench/ds2dtest, st 1x membench) ->
+  runs/sim/*-steps-ab.txt. Copy both into evidence/render/, put the numbers into findings/render.md ("render.2d_steps_cache"
+  and "Exactness checks"), post a RESULT for the steps cache and m15 on the board.
 
 ## If you take over
-Read findings/render.md first, then `grep "· render ·" BOARD.md`. Fold the three background results in (section
-"Exactness checks done" and "Measurements"), re-export patches/render/ only if the branch moves, post the HANDOFF.
+Read findings/render.md first, then `grep "· render ·" BOARD.md`. The open items are device A/Bs (findings, "Device A/B
+commands"): the pipeline off vs on, render.2d_thread at 1x, the 2D-phase toggles' per-thread CPU time, the prefetches,
+BANANADS_ALIGN/PGO. Code ideas left, in order: display capture on the 2D thread; a smaller 3D pixel format (the 2D
+thread's compulsory 768 KB/frame read at 2x); rotscale sprites and the mosaic loops (scalar, ds2dtest-heavy).

@@ -1,7 +1,7 @@
 From 7ebe4e9cc071ab319fdf4218f24473b878bed415 Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Sun, 18 Oct 2026 15:26:04 +0000
-Subject: [PATCH 01/11] BananaDS perf: the 2D thread's batch as a setting
+Subject: [PATCH 01/18] BananaDS perf: the 2D thread's batch as a setting
  (render.2d_batch)
 
 KickBatch, the jobs the emulator's thread hands over before it wakes the 2D thread, was a constant 16: about 24
