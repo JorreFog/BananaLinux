@@ -1177,7 +1177,10 @@ namespace rnds
 			if (v == HOME)
 			{
 				g.left = Face{ "Y", "Fav", sys(ui->mSys).fav ? 1 : 0, ACT_FAV };
-				g.right = Face{ "X", sys(ui->mSys).app ? "Start" : "Resume", 0, ACT_RESUME };	// an app has nothing to resume
+				const auto& sy = sys(ui->mSys);
+				if (sy.app) g.right = Face{ "X", "Start", 0, ACT_RESUME };	// an app has nothing to resume
+				else if (!sy.hasResume) g.right = Face{ "", "No games", 2, ACT_NONE };	// (X would do nothing)
+				else g.right = Face{ "X", sy.played > 0 ? "Resume" : "Start", 0, ACT_RESUME };	// (nothing played: the first game)
 			}
 			else if (v == LIBRARY)
 			{
