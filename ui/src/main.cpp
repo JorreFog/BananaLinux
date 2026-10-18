@@ -482,6 +482,13 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			if (it == keys.end()) { logf("unknown button %s", b.c_str()); return 2; }
 			if (low.hide(now)) logf("press %s: notice hidden", b.c_str());
 			if (!settings.isOpen() && it->second == Key::SELECT) { settings.openSearch(lib.searchQuery()); logf("press select: search open"); continue; }
+			if (!settings.isOpen() && it->second == Key::X && ui.view() == rnds::UI::LIBRARY && ui.gameIndex() >= 0 && lib.systemOf(ui.gameIndex()).id == "nds")
+			{
+				const std::string& path = lib.gameAt(ui.gameIndex()).path;
+				settings.openGame(lib.gameAt(ui.gameIndex()).title, path.substr(path.rfind('/') + 1));
+				logf("press x: game page for %s", path.c_str());
+				continue;
+			}
 			if (settings.isOpen() || it->second == Key::START)
 			{
 				if (!settings.isOpen()) { settings.open(); logf("press %s: settings open", b.c_str()); continue; }
@@ -1041,6 +1048,23 @@ int main(int argc, char** argv)
 				}
 			}
 			return;
+		}
+		if (ev.type == InputEvent::PRESS && ev.key == Key::X)
+		{
+			// X on a DS game in the library: the emulator for this game (Settings' game page)
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			int g = ui->gameIndex();
+			if (ui->view() == rnds::UI::LIBRARY && g >= 0 && g < lib.gameCount() && lib.systemOf(g).id == "nds")
+			{
+				const std::string& path = lib.gameAt(g).path;
+				ui->touchCancel();
+				settingsView.setVariant(settings["theme"] == "carts" ? "carts" : variant);
+				settingsView.openGame(lib.gameAt(g).title, path.substr(path.rfind('/') + 1));
+				rep.key = Key::NONE;
+				sound.play("select");
+				dirty = true;
+				return;
+			}
 		}
 		if (ev.type == InputEvent::PRESS && ev.key == Key::SELECT)
 		{

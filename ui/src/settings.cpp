@@ -620,6 +620,7 @@ namespace banana
 	{
 		if (page == NETWORKS) return pressNetworks(k);
 		if (page == KEYBOARD) return pressKeyboard(k);
+		if (page == GAME) return pressGame(k);
 		if (page == UPDATES) return pressUpdates(k);
 		if (page == SETUP) return pressSetup(k);
 		if (inGroups) return pressGroups(k);
@@ -685,6 +686,7 @@ namespace banana
 		downOnRow = false;
 		if (page == NETWORKS) return touchNetworks(cx, cy);
 		if (page == KEYBOARD) return touchKeyboard(cx, cy);
+		if (page == GAME) return touchGame(cx, cy);
 		if (page == SETUP)
 		{
 			if (downY >= 418 && downY <= 466) return pressSetup(downX < 320 ? Key::B : Key::A);
@@ -1084,6 +1086,7 @@ namespace banana
 	{
 		if (page == NETWORKS) { renderNetworks(); return; }
 		if (page == KEYBOARD) { renderKeyboard(); return; }
+		if (page == GAME) { renderGame(); return; }
 		if (page == UPDATES) { renderUpdates(); return; }
 		if (page == SETUP) { renderSetup(); return; }
 		if (inGroups) { renderGroups(); return; }
@@ -1774,6 +1777,122 @@ namespace banana
 			float aw = faceWidth("A", act);
 			face("A", act, 622 - aw, aw);
 		}
+		be->endScreen();
+	}
+
+	// ---- the game page: a DS game's own emulator ------------------------------------------------------------------
+	static const char* GAME_EMUS[] = { "", "superdrastic", "bananads" };
+
+	std::string Settings::gameEmulator(const std::string& rom)
+	{
+		std::ifstream f(data + "/nds-per-game.conf");
+		std::string ln, r;
+		while (std::getline(f, ln))
+		{
+			size_t eq = ln.rfind(" = ");	// (the last one: a name may have " = " in it)
+			if (ln.empty() || ln[0] == '#' || eq == std::string::npos) continue;
+			if (ln.substr(0, eq) == rom) r = trim(ln.substr(eq + 3));
+		}
+		return r;
+	}
+
+	void Settings::setGameEmulator(const std::string& rom, const std::string& emu)
+	{
+		std::string path = data + "/nds-per-game.conf", out, ln;
+		{
+			std::ifstream f(path);
+			// a file that is there but can't be read (a card error): left alone
+			if (!f && access(path.c_str(), F_OK) == 0) return;
+			while (std::getline(f, ln))
+			{
+				size_t eq = ln.rfind(" = ");
+				if (!ln.empty() && ln[0] != '#' && eq != std::string::npos && ln.substr(0, eq) == rom) continue;
+				out += ln + "\n";
+			}
+		}
+		if (!emu.empty()) out += rom + " = " + emu + "\n";
+		std::string tmp = path + ".new";
+		FILE* f = fopen(tmp.c_str(), "w");
+		if (!f) return;
+		bool ok = fwrite(out.data(), 1, out.size(), f) == out.size();
+		ok = fflush(f) == 0 && fsync(fileno(f)) == 0 && ok;
+		fclose(f);
+		if (ok) rename(tmp.c_str(), path.c_str());
+		else unlink(tmp.c_str());
+	}
+
+	void Settings::openGame(const std::string& title, const std::string& romName)
+	{
+		open();
+		pgTitle = title; pgRom = romName;
+		std::string cur = gameEmulator(romName);
+		pgPick = 0;
+		for (int i = 1; i < 3; i++) if (cur == GAME_EMUS[i]) pgPick = i;
+		message.clear();
+		page = GAME;
+	}
+
+	Settings::Result Settings::pressGame(Key k)
+	{
+		switch (k)
+		{
+		case Key::UP: pgPick = (pgPick + 2) % 3; return MOVED;
+		case Key::DOWN: pgPick = (pgPick + 1) % 3; return MOVED;
+		case Key::A:
+			setGameEmulator(pgRom, GAME_EMUS[pgPick]);
+			close();
+			return CHANGED;
+		case Key::B: close(); return CLOSED;
+		default: return NONE;
+		}
+	}
+
+	Settings::Result Settings::touchGame(float cx, float cy)
+	{
+		(void)cx; (void)cy;
+		if (downY >= 418 && downY <= 466) return pressGame(downX < 320 ? Key::B : Key::A);
+		for (int r = 0; r < 3; r++)
+		{
+			float ry = 82 + r * 64;
+			if (downY < ry || downY > ry + 56) continue;
+			if (r != pgPick) { pgPick = r; return MOVED; }
+			return pressGame(Key::A);
+		}
+		return NONE;
+	}
+
+	void Settings::renderGame()
+	{
+		SPal p = pal(light);
+		std::string global = getConfValue(data + "/settings.conf", "nds_emulator", getConfValue("/etc/banana/settings.conf", "nds_emulator", "superdrastic"));
+		const char* names[] = { "", "SuperDrastic", "BananaDS" };
+		std::string def = std::string("As in Settings (") + (global == "bananads" ? "BananaDS" : "SuperDrastic") + ")";
+		be->beginScreen(0);
+		box("screen", false, 0, 0, 640, 480);
+		box("hero", false, 18, 20, 604, 436);
+		icon("nds", 50, 56, 3);
+		text("This game's emulator", true, 17, 170, 62, p.muted, true, 1.4f);
+		text(fit(pgTitle, true, 30, 420), true, 30, 170, 88, p.ink);
+		text(pgPick == 0 ? def : names[pgPick], true, 22, 170, 130, p.accent);
+		wrapped("SuperDrastic: DraStic onto both panels, the fastest. BananaDS: Banana's own emulator (melonDS's core), the most "
+			"accurate. The choice is for this game only; the others follow Settings > Nintendo DS > Emulator.", 20, 50, 196, 540, 7, p.muted);
+		be->endScreen();
+
+		be->beginScreen(1);
+		box("screen", false, 0, 0, 640, 480);
+		box("bubble", false, 18, 14, 604, 54);
+		text("Emulator for this game", true, 22, 38, 28, p.ink);
+		for (int r = 0; r < 3; r++)
+		{
+			bool on = r == pgPick;
+			float y = 82 + r * 64;
+			box(on ? "pick" : "slot", on, 18, y, 604, 56);
+			text(r == 0 ? def : names[r], true, 20, 38, y + 16, on ? p.onPick : p.muted);
+		}
+		float bw = faceWidth("B", "Back");
+		face("B", "Back", 18, bw);
+		float aw = faceWidth("A", "Choose");
+		face("A", "Choose", 622 - aw, aw);
 		be->endScreen();
 	}
 
