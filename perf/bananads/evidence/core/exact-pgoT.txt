@@ -16,3 +16,8 @@ membench-membench: pictures (6 frames x soft, gengis2) and audio compared
 ds2dtest-ds2dtest: pictures (6 frames x soft, gengis2) and audio compared
 FAILS=0
 exit 0
+
+# savestates (melonDS .mst: all emulation state incl. main RAM, 19,228,045 bytes) saved at frame 250 (headless.reload_at=250, Gengis scale 1, 2 threads, rtc.fixed) by build-ref and build-pgoT, cmp:
+# command: see /home/user/perf/core/runs/st/ (qemu-aarch64 ... --set headless.frames=260 --set headless.reload_at=250 --set state.dir=st/<a|b>/<rom> <rom>)
+SAME cpubench-cpubench-thumb cpubench-cpubench-thumb.3.mst (19228045 bytes)
+SAME dsstress-L5 dsstress-L5.3.mst (19228045 bytes)
