@@ -9,7 +9,7 @@
 # Two runs at a time. Output: <outdir>/<label>/report.txt (+ threads.txt in device mode) and <outdir>/summary.txt.
 set -u
 BASE=$1; MINE=$2; OUT=$3; mkdir -p "$OUT"
-export QEMU=/home/user/perf/tools/qemu-dev
+export QEMU=/home/user/perf/tools/qemu-dev PLUGIN=/home/user/perf/tools/libjitcount.so
 QC=/home/user/perf/base/bananads/tools/perf/qemu-count/measure.sh
 DEV=/home/user/BananaLinux/perf/bananads/evidence/render/measure-dev.sh
 R=/home/user/perf/roms

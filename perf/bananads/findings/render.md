@@ -76,6 +76,17 @@ EXTRA="--set render.2d_batch=192" hgquick.sh <bin>
 # the polygon sort
 EXTRA="--set render.geom_sort=off" hgquick.sh <bin>
 
+# the 2D engine at the device's -O2 (the compositor loop), the shared quarters and the fused output stage: these act on
+# the 2D thread at 2x (less CPU on the three other cores: read top -H's bananads-2d share, and the fps when the 3D is
+# heavy); at 1x the compositor loop is on the emulator's thread
+EXTRA="--set render.2d_comp_unroll=off" hgquick.sh <bin>
+EXTRA="--set render.2d_quarters=off" hgquick.sh <bin>
+EXTRA="--set render.2d_emit_zip=off" hgquick.sh <bin>
+EXTRA="--set render.2d_comp_unroll=off --set render.2d_quarters=off --set render.2d_emit_zip=off" hgquick.sh <bin>
+EXTRA="--set render.scale=1 --set render.2d_comp_unroll=off" hgquick.sh <bin>
+# everything off at once (= the base's behaviour) against the defaults
+EXTRA="--set render.3d_pipeline=off --set render.3d_share=off --set render.geom_sort=off --set render.2d_comp_unroll=off --set render.2d_quarters=off --set render.2d_emit_zip=off" hgquick.sh <bin>
+
 # at 1x (render.scale=1): the 2D thread with the 3D line shared (the 2D thread is off by default at 1x)
 EXTRA="--set render.scale=1" hgquick.sh <bin>
 EXTRA="--set render.scale=1 --set render.2d_thread=on --set render.3d_share=off" hgquick.sh <bin>

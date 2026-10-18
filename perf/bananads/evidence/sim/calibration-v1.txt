@@ -1,0 +1,218 @@
+# rgds-sim v1 calibration against the e67e3ef kit's device numbers (sim, 2026-10-18 ~16:10 UTC)
+# kit: e67e3ef = tree of 4536791 (CI merge into an unmoved main 930c4c5), built as its CI did: ubuntu-24.04 g++-aarch64-linux-gnu 13.3,
+# CMake Release (-O3), no LTO, no -mcpu, pristine melonDS 906e9eb; here SDL/ALSA off (headless path identical): /home/user/perf/sim/build-e67.sh
+# ROMs: stressrom of 4536791 (arm L1/L5/L10 identical to /home/user/perf/roms; arm7-thumb L5 rebuilt: main7.c differs)
+# sim runs (raw mode = device-test.sh's settings: render.threaded=on soft 3D, melonDS 2D), frames 60-180, --diff:
+  $R $BM $E/$rom.nds mj-$rom --mode raw --frames 60:180 --set jit=on > /dev/null 2>&1
+  $R $BB $E/$rom.nds bj-$rom --mode raw --frames 60:180 --set jit=on > /dev/null 2>&1
+  $R $BB $E/$rom.nds in-$rom --mode raw --frames 60:180 --set jit=off > /dev/null 2>&1
+$R $BB $E/arm-dsstress-L10.nds bj-arm-dsstress-L10-thoff --mode raw --frames 60:180 --set jit=on --set render.threaded=off > /dev/null 2>&1
+$R $BM $E/$rom.nds mj-$rom --mode raw --frames 60:180 --set jit=on > /dev/null 2>&1; echo "mj $rom done $(date -u +%H:%M)"
+$R $BB $E/$rom.nds bj-$rom --mode raw --frames 60:180 --set jit=on > /dev/null 2>&1; echo "bj $rom done $(date -u +%H:%M)"
+$R $BB $E/$rom.nds in-$rom --mode raw --frames 60:180 --set jit=off > /dev/null 2>&1; echo "in $rom done $(date -u +%H:%M)"
+$R $BB $E/arm-dsstress-L10.nds bj-arm-dsstress-L10-thoff --mode raw --frames 60:180 --set jit=on --set render.threaded=off > /dev/null 2>&1
+
+## device table (docs/results-B-rgds-20261011.md)
+in-arm-dsstress-L1	1992	81.8
+in-arm-dsstress-L1	1104	54.2
+mj-arm-dsstress-L1	1992	81.3
+mj-arm-dsstress-L1	1104	54.5
+bj-arm-dsstress-L1	1992	79.7
+bj-arm-dsstress-L1	1104	54.2
+in-arm-dsstress-L5	1992	49.5
+in-arm-dsstress-L5	1104	30.7
+mj-arm-dsstress-L5	1992	59.9
+mj-arm-dsstress-L5	1104	37.3
+bj-arm-dsstress-L5	1992	54.6
+bj-arm-dsstress-L5	1104	34.0
+in-arm-dsstress-L10	1992	45.2
+in-arm-dsstress-L10	1104	28.5
+mj-arm-dsstress-L10	1992	55.6
+mj-arm-dsstress-L10	1104	35.2
+bj-arm-dsstress-L10	1992	48.4
+bj-arm-dsstress-L10	1104	31.2
+in-arm7-thumb-dsstress-L5	1992	36.6
+in-arm7-thumb-dsstress-L5	1104	23.3
+mj-arm7-thumb-dsstress-L5	1992	58.9
+mj-arm7-thumb-dsstress-L5	1104	35.8
+bj-arm7-thumb-dsstress-L5	1992	47.5
+bj-arm7-thumb-dsstress-L5	1104	29.0
+bj-arm-dsstress-L10-thoff	1992	52.2
+
+## per-thread model output per run (v1 params = defaults; ms@1104 / ms@1992)
+bj-arm-dsstress-L1               main 13256k insns 14.41/8.20 ms  thread1 18075k insns 20.02/11.59 ms
+bj-arm-dsstress-L10-thoff        main 27524k insns 34.40/19.53 ms
+bj-arm-dsstress-L10              main 11811k insns 13.61/7.79 ms  thread1 15767k insns 21.10/11.96 ms
+bj-arm-dsstress-L5               main 11938k insns 13.69/7.82 ms  thread1 19429k insns 24.05/13.62 ms
+bj-arm7-thumb-dsstress-L5        main 15636k insns 18.97/10.87 ms  thread1 19429k insns 24.05/13.63 ms
+in-arm-dsstress-L1               main 18415k insns 19.71/11.08 ms  thread1 18065k insns 19.99/11.57 ms
+in-arm-dsstress-L10              main 18184k insns 19.98/11.28 ms  thread1 15767k insns 21.11/11.97 ms
+in-arm-dsstress-L5               main 18356k insns 20.05/11.30 ms  thread1 19428k insns 24.04/13.61 ms
+in-arm7-thumb-dsstress-L5        main 34974k insns 37.51/20.98 ms  thread1 19423k insns 24.02/13.60 ms
+mj-arm-dsstress-L1               main 11798k insns 11.36/6.44 ms  thread1 18081k insns 20.04/11.60 ms
+mj-arm-dsstress-L10              main 10845k insns 10.79/6.18 ms  thread1 15767k insns 21.04/11.91 ms
+mj-arm-dsstress-L5               main 10921k insns 10.84/6.19 ms  thread1 19448k insns 24.05/13.62 ms
+mj-arm7-thumb-dsstress-L5        main 11462k insns 11.46/6.55 ms  thread1 19448k insns 24.05/13.62 ms
+
+## A. v1 params (no free cost parameter; only the thread-overlap nuisance b,g and a per-frame constant fitted)
+python3 calibrate.py calib/device-e67e3ef.tsv /home/user/perf/sim/calib/runs --combine overlap --const --free none
+rgds-sim calibration: 25 rows, combine=overlap, free=
+fitted:   per-frame constant=1.845 ms
+run                                   MHz    dev ms  model ms    error   main/other ms
+in-arm-dsstress-L1                   1992     12.22     14.90   +21.9%   11.08 / 11.57
+in-arm-dsstress-L1                   1104     18.45     24.47   +32.7%   19.71 / 19.99
+mj-arm-dsstress-L1                   1992     12.30     14.30   +16.3%   6.44 / 11.60
+mj-arm-dsstress-L1                   1104     18.35     23.40   +27.5%   11.36 / 20.04
+bj-arm-dsstress-L1                   1992     12.55     14.53   +15.8%   8.20 / 11.59
+bj-arm-dsstress-L1                   1104     18.45     23.80   +29.0%   14.41 / 20.02
+in-arm-dsstress-L5                   1992     20.20     16.97   -16.0%   11.30 / 13.61
+in-arm-dsstress-L5                   1104     32.57     28.56   -12.3%   20.05 / 24.04
+mj-arm-dsstress-L5                   1992     16.69     16.30    -2.4%   6.19 / 13.62
+mj-arm-dsstress-L5                   1104     26.81     27.35    +2.0%   10.84 / 24.05
+bj-arm-dsstress-L5                   1992     18.32     16.52    -9.8%   7.82 / 13.62
+bj-arm-dsstress-L5                   1104     29.41     27.72    -5.7%   13.69 / 24.05
+in-arm-dsstress-L10                  1992     22.12     15.32   -30.7%   11.28 / 11.97
+in-arm-dsstress-L10                  1104     35.09     25.63   -27.0%   19.98 / 21.11
+mj-arm-dsstress-L10                  1992     17.99     14.58   -18.9%   6.18 / 11.91
+mj-arm-dsstress-L10                  1104     28.41     24.33   -14.4%   10.79 / 21.04
+bj-arm-dsstress-L10                  1992     20.66     14.84   -28.2%   7.79 / 11.96
+bj-arm-dsstress-L10                  1104     32.05     24.76   -22.7%   13.61 / 21.10
+in-arm7-thumb-dsstress-L5            1992     27.32     24.81    -9.2%   20.98 / 13.60
+in-arm7-thumb-dsstress-L5            1104     42.92     42.86    -0.1%   37.51 / 24.02
+mj-arm7-thumb-dsstress-L5            1992     16.98     16.34    -3.7%   6.55 / 13.62
+mj-arm7-thumb-dsstress-L5            1104     27.93     27.43    -1.8%   11.46 / 24.05
+bj-arm7-thumb-dsstress-L5            1992     21.05     16.93   -19.6%   10.87 / 13.63
+bj-arm7-thumb-dsstress-L5            1104     34.48     28.43   -17.5%   18.97 / 24.05
+bj-arm-dsstress-L10-thoff            1992     19.16     21.38   +11.6%   19.53 / 0.00
+fit: RMS error 18.6%, max |error| 32.7%
+clock ratio T(1104)/T(1992): device vs model
+  bj-arm-dsstress-L1                 1.470  1.637
+  bj-arm-dsstress-L10                1.551  1.668
+  bj-arm-dsstress-L5                 1.606  1.679
+  bj-arm7-thumb-dsstress-L5          1.638  1.680
+  in-arm-dsstress-L1                 1.509  1.643
+  in-arm-dsstress-L10                1.586  1.673
+  in-arm-dsstress-L5                 1.612  1.683
+  in-arm7-thumb-dsstress-L5          1.571  1.727
+  mj-arm-dsstress-L1                 1.492  1.636
+  mj-arm-dsstress-L10                1.580  1.668
+  mj-arm-dsstress-L5                 1.606  1.678
+  mj-arm7-thumb-dsstress-L5          1.645  1.678
+leave-one-ROM-out (4 folds): RMS error 29.4%, max |error| 70.3%
+fit at 1104 MHz only, predict 1992 MHz: RMS error 20.2%, max |error| 36.1%
+
+## B. best bounded fit (written as params-fit.json; parameters end at the bounds of the plausible ranges)
+python3 calibrate.py calib/device-e67e3ef.tsv /home/user/perf/sim/calib/runs --combine overlap --const --free base_scale,l3_cyc,l3_ns,dram_ns,mispredict_cyc --write params-fit.json
+rgds-sim calibration: 25 rows, combine=overlap, free=base_scale,l3_cyc,l3_ns,dram_ns,mispredict_cyc
+fitted: base_scale=0.5 l3_cyc=80 l3_ns=22.88 dram_ns=60 mispredict_cyc=16  per-frame constant=0.000 ms
+run                                   MHz    dev ms  model ms    error   main/other ms
+in-arm-dsstress-L1                   1992     12.22     13.28    +8.6%   9.20 / 9.49
+in-arm-dsstress-L1                   1104     18.45     21.95   +19.0%   15.51 / 15.56
+mj-arm-dsstress-L1                   1992     12.30     11.56    -6.1%   5.03 / 9.48
+mj-arm-dsstress-L1                   1104     18.35     19.04    +3.8%   8.42 / 15.57
+bj-arm-dsstress-L1                   1992     12.55     12.90    +2.8%   8.22 / 9.51
+bj-arm-dsstress-L1                   1104     18.45     21.10   +14.4%   13.37 / 15.59
+in-arm-dsstress-L5                   1992     20.20     19.19    -5.0%   9.83 / 15.13
+in-arm-dsstress-L5                   1104     32.57     31.34    -3.8%   16.49 / 24.54
+mj-arm-dsstress-L5                   1992     16.69     17.18    +2.9%   5.01 / 15.12
+mj-arm-dsstress-L5                   1104     26.81     27.95    +4.3%   8.31 / 24.53
+bj-arm-dsstress-L5                   1992     18.32     18.82    +2.8%   8.93 / 15.14
+bj-arm-dsstress-L5                   1104     29.41     30.46    +3.6%   14.32 / 24.55
+in-arm-dsstress-L10                  1992     22.12     18.76   -15.2%   9.92 / 14.67
+in-arm-dsstress-L10                  1104     35.09     30.47   -13.2%   16.60 / 23.63
+mj-arm-dsstress-L10                  1992     17.99     16.66    -7.4%   4.94 / 14.62
+mj-arm-dsstress-L10                  1104     28.41     26.94    -5.2%   8.20 / 23.55
+bj-arm-dsstress-L10                  1992     20.66     18.35   -11.2%   8.94 / 14.67
+bj-arm-dsstress-L10                  1104     32.05     29.53    -7.9%   14.33 / 23.62
+in-arm7-thumb-dsstress-L5            1992     27.32     24.50   -10.3%   18.24 / 15.12
+in-arm7-thumb-dsstress-L5            1104     42.92     41.02    -4.4%   30.87 / 24.53
+mj-arm7-thumb-dsstress-L5            1992     16.98     17.39    +2.4%   5.49 / 15.13
+mj-arm7-thumb-dsstress-L5            1104     27.93     28.28    +1.2%   9.08 / 24.53
+bj-arm7-thumb-dsstress-L5            1992     21.05     20.71    -1.7%   13.48 / 15.14
+bj-arm7-thumb-dsstress-L5            1104     34.48     33.41    -3.1%   21.48 / 24.55
+bj-arm-dsstress-L10-thoff            1992     19.16     23.15   +20.8%   23.15 / 0.00
+fit: RMS error 9.0%, max |error| 20.8%
+clock ratio T(1104)/T(1992): device vs model
+  bj-arm-dsstress-L1                 1.470  1.636
+  bj-arm-dsstress-L10                1.551  1.609
+  bj-arm-dsstress-L5                 1.606  1.618
+  bj-arm7-thumb-dsstress-L5          1.638  1.614
+  in-arm-dsstress-L1                 1.509  1.653
+  in-arm-dsstress-L10                1.586  1.624
+  in-arm-dsstress-L5                 1.612  1.633
+  in-arm7-thumb-dsstress-L5          1.571  1.674
+  mj-arm-dsstress-L1                 1.492  1.648
+  mj-arm-dsstress-L10                1.580  1.617
+  mj-arm-dsstress-L5                 1.606  1.627
+  mj-arm7-thumb-dsstress-L5          1.645  1.626
+leave-one-ROM-out (4 folds): RMS error 19.0%, max |error| 48.6%
+fit at 1104 MHz only, predict 1992 MHz: RMS error 18.3%, max |error| 53.9%
+wrote params-fit.json
+
+## C. other model variants (summary lines)
+== --combine max --const --free base_scale,l3_cyc,l3_ns,dram_ns,mispredict_cyc
+rgds-sim calibration: 25 rows, combine=max, free=base_scale,l3_cyc,l3_ns,dram_ns,mispredict_cyc
+fitted: base_scale=0.6599 l3_cyc=80 l3_ns=17.97 dram_ns=60 mispredict_cyc=16  per-frame constant=2.146 ms
+fit: RMS error 13.3%, max |error| 38.3%
+leave-one-ROM-out (4 folds): RMS error 20.5%, max |error| 47.6%
+fit at 1104 MHz only, predict 1992 MHz: RMS error 22.2%, max |error| 68.2%
+== --combine overlap --const --free base_scale,l3_cyc,l3_ns,dram_ns,mispredict_cyc
+rgds-sim calibration: 25 rows, combine=overlap, free=base_scale,l3_cyc,l3_ns,dram_ns,mispredict_cyc
+fitted: base_scale=0.5 l3_cyc=80 l3_ns=22.88 dram_ns=60 mispredict_cyc=16  per-frame constant=0.000 ms
+fit: RMS error 9.0%, max |error| 20.8%
+== --combine max --const
+rgds-sim calibration: 25 rows, combine=max, free=base_scale,l3_cyc,dram_ns,mispredict_cyc
+fitted: base_scale=0.6785 l3_cyc=80 dram_ns=60 mispredict_cyc=16  per-frame constant=3.813 ms
+fit: RMS error 13.9%, max |error| 27.6%
+leave-one-ROM-out (4 folds): RMS error 20.1%, max |error| 30.4%
+fit at 1104 MHz only, predict 1992 MHz: RMS error 18.1%, max |error| 32.9%
+== --combine sum --const
+rgds-sim calibration: 25 rows, combine=sum, free=base_scale,l3_cyc,dram_ns,mispredict_cyc
+fitted: base_scale=0.5 l3_cyc=75.25 dram_ns=60 mispredict_cyc=4  per-frame constant=0.000 ms
+fit: RMS error 15.1%, max |error| 42.9%
+leave-one-ROM-out (4 folds): RMS error 22.9%, max |error| 55.9%
+fit at 1104 MHz only, predict 1992 MHz: RMS error 16.9%, max |error| 25.9%
+== --combine overlap --const --nobounds
+== --combine sum --const --nobounds
+rgds-sim calibration: 25 rows, combine=sum, free=base_scale,l3_cyc,dram_ns,mispredict_cyc
+fitted: base_scale=5.109e-70 l3_cyc=92.08 dram_ns=3.598e-10 mispredict_cyc=47.53  per-frame constant=4.796 ms
+fit: RMS error 6.7%, max |error| 16.4%
+leave-one-ROM-out (4 folds): RMS error 7.9%, max |error| 21.3%
+fit at 1104 MHz only, predict 1992 MHz: RMS error 6.3%, max |error| 14.8%
+== --combine overlap --const --free none
+fitted:   per-frame constant=1.845 ms
+bj-arm-dsstress-L10-thoff            1992     19.16     21.38   +11.6%   19.53 / 0.00
+fit: RMS error 18.6%, max |error| 32.7%
+leave-one-ROM-out (4 folds): RMS error 29.4%, max |error| 70.3%
+fit at 1104 MHz only, predict 1992 MHz: RMS error 20.2%, max |error| 36.1%
+== --combine max --const --free none
+fitted:   per-frame constant=3.185 ms
+bj-arm-dsstress-L10-thoff            1992     19.16     22.72   +18.6%   19.53 / 0.00
+fit: RMS error 18.9%, max |error| 31.5%
+leave-one-ROM-out (4 folds): RMS error 25.9%, max |error| 41.4%
+fit at 1104 MHz only, predict 1992 MHz: RMS error 18.5%, max |error| 32.9%
+== --combine sum --const --free none
+fitted:   per-frame constant=0.000 ms
+bj-arm-dsstress-L10-thoff            1992     19.16     19.53    +2.0%   19.53 / 0.00
+fit: RMS error 43.8%, max |error| 115.2%
+leave-one-ROM-out (4 folds): RMS error 43.8%, max |error| 115.2%
+fit at 1104 MHz only, predict 1992 MHz: RMS error 34.4%, max |error| 85.3%
+== --combine overlap --const --free base_scale
+fitted: base_scale=0.722  per-frame constant=3.586 ms
+bj-arm-dsstress-L10-thoff            1992     19.16     19.15    -0.1%   15.56 / 0.00
+fit: RMS error 18.2%, max |error| 34.1%
+leave-one-ROM-out (4 folds): RMS error 29.3%, max |error| 63.3%
+fit at 1104 MHz only, predict 1992 MHz: RMS error 20.2%, max |error| 35.4%
+== --combine overlap --const --free base_scale,dram_ns
+fitted: base_scale=0.7327 dram_ns=60  per-frame constant=4.058 ms
+bj-arm-dsstress-L10-thoff            1992     19.16     19.25    +0.5%   15.19 / 0.00
+fit: RMS error 17.7%, max |error| 33.3%
+leave-one-ROM-out (4 folds): RMS error 28.8%, max |error| 63.0%
+fit at 1104 MHz only, predict 1992 MHz: RMS error 20.4%, max |error| 36.1%
+== --combine overlap --const --free base_scale,l3_cyc,dram_ns,mispredict_cyc
+rgds-sim calibration: 25 rows, combine=overlap, free=base_scale,l3_cyc,dram_ns,mispredict_cyc
+fitted: base_scale=0.5 l3_cyc=80 dram_ns=60 mispredict_cyc=16  per-frame constant=2.420 ms
+bj-arm-dsstress-L10-thoff            1992     19.16     20.51    +7.1%   18.09 / 0.00
+fit: RMS error 11.4%, max |error| 25.8%
+leave-one-ROM-out (4 folds): RMS error 21.0%, max |error| 51.3%
+fit at 1104 MHz only, predict 1992 MHz: RMS error 14.6%, max |error| 24.8%

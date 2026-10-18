@@ -44,12 +44,14 @@ OUT=/tmp/rgds rgds-sim/ab.sh base/bananads mine/bananads roms/cpubench-cpubench-
 - `--mode raw`: only the common settings (as device-test.sh runs BananaDS); used for calibration.
 - Always: `--frontend headless`, `rtc.fixed=2026-10-11_12:00:00`, `wifi.dns=off`, resume off, saves in the run dir,
   `MELONDS_JIT_PERFMAP=1` (JIT blocks named in the report). Your `--set`s come last and win.
-- Frames: the report is (run of N2 frames - run of N1 frames) / (N2 - N1); default frames 100-300. The two runs go in
-  parallel (2 qemu processes).
+- Frames: default 100-300. st/dev: one qemu; BananaDS's `headless.window=1` logs a line after every frame, the plugin
+  reads those writes, runs plain qemu until frame N1-10, then counts and snapshots after frames N1 and N2 (builds
+  from 00c34c7 on). `--diff` (default for raw, and needed for older builds such as e67e3ef) runs N1 and N2 frames as
+  two parallel qemu processes and subtracts. ab.sh runs A and B in parallel (one qemu each).
 - Plugin arguments (structure, not costs) via `SIMARGS="l3=1048576 pf=0 ..."`; cost parameters via `PARAMS=<json>`.
 
-Run time on this machine (4 shared cores, two qemu in parallel): cpubench-thumb ~40 s, dsstress-L5 (frames 60-180,
-two threads) ~2.5 min, frames 100-300 about 1.5x that.
+Run time on this machine (4 shared cores, loaded): cpubench-thumb ~30 s (st, frames 100-300), dsstress-L5 st ~2-3 min,
+dev mode at 2x ~3-5 min; --diff runs ~1.5-2x that. An A/B is one run's time (A and B in parallel).
 
 ## The model
 
@@ -99,9 +101,53 @@ the model's 1104 -> 1992 MHz ratio is checked against the device's.
 | base_scale, l3_cyc, dram_ns, mispredict_cyc | see params.json | **fitted** to device numbers (below) |
 | tlb_l2_cyc, walk_cyc, st_cost | 2, 25, 0.2 | **ASSUMED**, fixed during the fit |
 
-## Calibration
+## Calibration (model v1, 2026-10-18): what the device numbers can and can't pin down
 
-(see below: filled in by the calibration run)
+**Data.** The only device numbers with a ROM we have are the e67e3ef kit's (BananaDS docs/results-B-rgds-20261011.md):
+stress L1/L5/L10 and L5 with a busy ARM7, interpreter / melonDS JIT / BananaJIT, 1104 and 1992 MHz (24 rows), and
+one row with `render.threaded=off` (BananaJIT, L10, 1992 MHz). e67e3ef is the tree of 4536791 (CI's merge of PR #9 into
+an unmoved main); I built it as its CI did (`.github/workflows/bananads.yml`: ubuntu-24.04, Ubuntu's
+g++-aarch64-linux-gnu 13.3, `package-device.sh`: CMake Release = -O3, no LTO, no -mcpu, pristine melonDS; SDL/ALSA off
+here, the headless path is the same), and the kit's stress ROMs from 4536791's `stressrom/` (arm L1/L5/L10 are
+byte-identical to /home/user/perf/roms; the arm7-thumb one differs and was rebuilt). Each row was run with the kit's
+settings (`--mode raw`, frames 60-180): `calib/device-e67e3ef.tsv`, runs listed in the evidence file.
+
+**Result.** `params.json` (v1) stays at the documented/assumed defaults: base_scale 1.0, L3 30 cycles, DRAM 120 ns,
+mispredict 8 cycles, L2-TLB hit 2, walk 25, store-miss weight 0.2.
+- The one **single-thread** device row (BananaJIT, L10, `render.threaded=off`, 1992 MHz): device 19.16 ms/frame,
+  model 19.53 ms (**+1.9%**), with no parameter fitted.
+- The 24 rows ran melonDS's **threaded** soft renderer (the default then): frame time depends on how the emulator's
+  thread and the render thread overlap (scanline semaphores, the VCount-144 wait, frames that alternate heavy/light at
+  L10), which a per-thread model does not see. With v1's costs and only the overlap (two fractions) and a per-frame
+  constant fitted: **RMS error 18.6%, max 32.7%** (L1 too slow by 16-33%, L10 too fast by 14-31%).
+- Fitting the cost parameters too (bounded to plausible ranges: base_scale 0.5-1.6, L3 5-80 cycles + 0-60 ns, DRAM
+  60-250 ns, mispredict 4-16): **RMS 9.0%, max 20.8% in-sample; leave-one-ROM-out RMS 19.0% (max 48.6%); fit at
+  1104 MHz only -> 1992 MHz RMS 18.3%**. The fitted values sit at the edges of the ranges (base_scale 0.5, L3 80
+  cycles + 23 ns, DRAM 60 ns, mispredict 16) and the single-thread row gets worse (+7 to +21%): the threaded rows push
+  the costs from instructions towards misses because that is what separates L5 from L1 there, not because the A55 is
+  like that. Unbounded fits are worse still (base_scale -> 0). Written as `params-fit.json` (v1-fit-threaded) for a
+  sensitivity check only: `PARAMS=rgds-sim/params-fit.json`. A conclusion that holds under both is safer.
+- The device's T(1104)/T(1992) ratios (1.47-1.65 against 1.80 for pure core time) say 20-42% of each frame at
+  1992 MHz doesn't scale with the clock; v1's ratios are 1.64-1.73 for the same runs: **v1 underestimates the
+  clock-independent part** (DRAM, L3 if it is in its own clock domain, kernel/thread hand-offs), so its 1992 MHz
+  numbers are optimistic and memory-bound changes are undervalued against instruction cuts.
+
+So: **v1 is not calibrated in the strict sense** (one clean data point); the reason is concrete (all other device
+rows are two-thread runs whose overlap the model can't see), and the fix is a device run in rgds-sim's own st
+settings, below. Evidence: `evidence/sim/calibration-v1.txt` (commands, every row, every fit variant).
+
+### Re-calibrating with the handheld (the local agent)
+
+1. On the RG DS: `sh rgds-sim/calib/device-calib.sh /usr/bin/bananads <rom dir>` (as root, nothing else running).
+   It pins 1104 and 1992 MHz and runs cpubench thumb/arm/thumb-arm7, membench, ds2dtest, sndbench and stress
+   L1/L5/L10 in the st settings (one busy thread), headless, frames 300-1500; with `perf` present it records cycles,
+   instructions, L1I/L1D misses and branch misses per run too. Output: `st-<rom> <MHz> <fps>` lines.
+2. Here (or on any PC with this qemu): run the **same binary** (copy it off the device, or build the same commit with
+   tools/build-a64-device.sh) on the same ROMs: `OUT=<dir> rgds-sim/run.sh <bin> <rom> st-<rom> --mode st`.
+3. `python3 rgds-sim/calibrate.py <device output> <dir> --combine main --write rgds-sim/params.json --version v2-device`
+   (all four costs free; the leave-one-ROM-out and 1104 -> 1992 errors are printed). With `perf stat` numbers, compare
+   the model's L1I/L1D/branch-miss counts per frame with the device's directly (they are per frame in report.json).
+4. Version the result (`version` in params.json) and say which version every number was taken with.
 
 ## Limitations (read before trusting a number)
 

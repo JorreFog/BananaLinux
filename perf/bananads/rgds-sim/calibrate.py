@@ -29,7 +29,7 @@ const = False   # --const: a fitted per-frame constant (ms) on top: the device r
 i = 2
 while i < len(args):
     if args[i] == '--combine': combine = args[i + 1]; i += 2
-    elif args[i] == '--free': free = args[i + 1].split(','); i += 2
+    elif args[i] == '--free': free = [k for k in args[i + 1].split(',') if k and k != 'none']; i += 2
     elif args[i] == '--write': write = args[i + 1]; i += 2
     elif args[i] == '--version': version = args[i + 1]; i += 2
     elif args[i] == '--const': const = True; i += 1
@@ -82,12 +82,12 @@ def unpack(x):
     p = dict(base)
     for k, v in zip(free, x[:len(free)]):
         if k in BOUNDS: lo, hi = BOUNDS[k]; p[k] = lo + (hi - lo) * sig(v)
-        else: p[k] = math.exp(v)
+        else: p[k] = math.exp(max(-200.0, min(50.0, v)))
     n = len(free)
     alpha = 0.0
-    if combine == 'mix': alpha = 1 / (1 + math.exp(-x[n])); n += 1
-    if combine == 'overlap': alpha = (1 / (1 + math.exp(-x[n])), 1 / (1 + math.exp(-x[n + 1]))); n += 2
-    if const: p['_const'] = math.exp(x[n])
+    if combine == "mix": alpha = sig(x[n]); n += 1
+    if combine == "overlap": alpha = (sig(x[n]), sig(x[n + 1])); n += 2
+    if const: p["_const"] = math.exp(max(-200.0, min(5.0, x[n])))
     return p, alpha
 
 

@@ -1,0 +1,12 @@
+{
+ "version": "v1",
+ "base_scale": 1.0,
+ "l3_cyc": 30.0,
+ "l3_ns": 0.0,
+ "dram_ns": 120.0,
+ "mispredict_cyc": 8.0,
+ "tlb_l2_cyc": 2.0,
+ "walk_cyc": 25.0,
+ "st_cost": 0.2,
+ "note": "v1 = the documented/assumed defaults (README: Parameters). Checked against the one single-thread device row (e67e3ef BananaJIT, stress L10, render.threaded=off, 1992 MHz: device 19.16 ms/frame, model 19.53, +1.9%). The 24 threaded rows could not calibrate it (see calib/README-calibration.txt); params-fit.json is the best bounded fit to them, for sensitivity only."
+}
