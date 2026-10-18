@@ -1,41 +1,87 @@
-# sim: rgds-sim (the RG DS simulator) and the verification of the team's results (2026-10-18)
+# sim: rgds-sim (the RG DS simulator), verification, and the combined measurement — FINAL (2026-10-18)
 
-Draft, updated as the session goes; the final version is marked FINAL at the top.
+## 1. rgds-sim (in `rgds-sim/`, README.md there)
 
-## What I made: rgds-sim v1 (rgds-sim/, README.md there)
+A Cortex-A55 / RK3568 timing model as a qemu 9.2 TCG plugin (`rgdssim.c`), with `run.sh` (one workload: per-thread
+ms/frame at 1104 and 1992 MHz, buckets, L1I/L1D/TLB/branch events, top functions and JIT blocks), `ab.sh` (A/B of two
+binaries or two setting sets, A and B in parallel), `regions.py` (one thread's L1D misses by buffer and function),
+`calibrate.py` + `calib/device-calib.sh` (refit the costs to device numbers), `tools/exact.sh` (exactness check),
+`tools/set2d.sh` (the fixed 2D benchmark set).
 
-A Cortex-A55 / RK3568 timing model as a qemu 9.2 TCG plugin (`rgds-sim/rgdssim.c`) with `run.sh` (one workload, a
-per-thread report: ms/frame at 1104 and 1992 MHz, buckets, L1I/L1D/TLB/branch events, top functions and JIT blocks)
-and `ab.sh` (A/B of two binaries or two setting sets). Per thread: A64 instruction classes, a static in-order
-dual-issue schedule per block, L1I/L1D 32 KB 4-way, shared L3 512 KB 16-way, L1 iTLB/dTLB + 1024-entry L2 TLB (2 MB
-entries for madvise(MADV_HUGEPAGE) ranges), gshare + BTB + return stack. Costs are linear weights in `params.json`,
-applied by `report.py`, so the model can be refitted to device numbers without re-running (`calibrate.py`).
+Model versions (say which one a number was taken with):
+- **v1** (16:11): A64 instruction classes; static in-order dual-issue schedule per block; L1I/L1D 32 KB 4-way, shared
+  L3 512 KB 16-way; L1 iTLB/dTLB + 1024-entry L2 TLB (2 MB entries for madvise(MADV_HUGEPAGE) ranges); gshare + BTB +
+  return stack; a stream prefetcher; linear costs in `params.json` (L3 30 cycles, DRAM 120 ns, mispredict 8).
+- **v2** (17:05, the default since): + the A55's L1D write streaming (whole-line store runs stop allocating). Source:
+  TF-A's cortex_a55.h (CPUACTLR_EL1 bit 24, CPUECTLR_EL1 L1WSCTL); thresholds ASSUMED. Also per-region miss tables.
+- **v3** (17:15, opt-in `SIMARGS=prfm=1`): + software prefetch (PRFM decoded, address read from the registers), timed on
+  the thread's instruction count (a load before the fill lands pays the rest).
 
-Deterministic in st mode (A = A gives +0.00% since run.sh disables host ASLR; evidence/sim/determinism-v1.txt).
-Run time: cpubench ~30 s, dsstress-L5 st ~2-3 min (one qemu, frames 100-300 via headless.window=1 frame marks).
+Deterministic in st mode (A = A: +0.00% on 1x, ~0.05% on st 2x); dev mode (threads) is ±3-4% per thread. Run time:
+cpubench ~30 s, L5 st ~1-2 min, dev 2x ~1.5-2 min (one qemu per run; frames 100-300 from headless.window=1 marks).
 
-## Calibration: honest status
+Traps found and fixed: host ASLR made L1I/L1D differ ~8% between identical runs (run.sh uses `setarch -R` since
+~16:10); the frame-mark and two-run (--diff) methods differ ~1% (compare within one method; ab.sh does).
 
-See rgds-sim/README.md "Calibration" and evidence/sim/calibration-v1.txt. In short: the e67e3ef kit's device rows
-were reproduced (same tree, same CI toolchain and flags, same ROMs and settings). Only one of the 25 rows is
-single-threaded; v1's documented defaults predict it within +1.9% with nothing fitted. The other 24 are threaded
-soft-3D runs whose two-thread overlap the model can't see: no parameter set fits them well with plausible values
-(best bounded fit 9% RMS in-sample, 19% leave-one-ROM-out, parameters at the bounds). v1 stays at the defaults;
-`params-fit.json` is kept as a "miss-heavy" sensitivity check (ab.sh prints both). The device's 1104/1992 MHz ratios
-say v1 underestimates the clock-independent part (DRAM, L3 domain, kernel). **First thing to do with the handheld:**
-`rgds-sim/calib/device-calib.sh` (st settings, two clocks, perf stat if present), then `calibrate.py --combine main`.
+## 2. Calibration: honest status
 
-## Verification (LEDGER.md)
+The e67e3ef kit's 25 device rows were reproduced (same tree 4536791, same CI compiler and flags, same ROMs and
+settings). Only one row is single-threaded; v1's defaults predict it at +1.9% with nothing fitted. The 24 threaded
+rows (melonDS's soft renderer on its own thread) can't pin the costs: their frame time depends on how the two
+threads overlap. Best bounded fit 9% RMS in-sample, 19% leave-one-ROM-out, parameters at the edges of the plausible
+ranges: not adopted (kept as `params-fit.json`, printed by ab.sh as a sensitivity line). The device's 1104/1992 MHz
+ratios say the model underestimates the clock-independent share. **First device job:** `rgds-sim/calib/device-calib.sh`
+(st settings, 1104 and 1992 MHz, perf stat if present), then `calibrate.py --combine main --write params.json`.
+Evidence: evidence/sim/calibration-v1.txt.
 
-(see LEDGER.md for each row; evidence/sim/verify-L*.txt)
+## 3. Where the time goes (evidence/sim/where-the-time-goes-v1.txt, v2-2d-thread.txt)
 
-## Device test commands
+- At 2x (BananaLinux's setting) the 2D thread (`bananads-2d`) is as busy as the emulator's thread on base (L5: 4.1-4.3
+  vs 4.4 ms @1104, v2) and the busiest thread once `render.3d_pipeline` moves the Gengis bins off the emulator's thread
+  (L5: 2D 4.0-4.2 vs main 2.8-3.2); on 2D-heavy ROMs it leads by far (ds2dtest 2x: 16.5 vs 9.7-10.0 ms).
+- The 2D thread's L1D cost after write streaming is loads: Composite/CompositeHires reading Gengis's 3D rows (~6k
+  misses/frame, nearly all DRAM), the Gengis bins it draws itself, and on ds2dtest DrawScanlineFrom's 79k L1 misses
+  (L3 hits) on ~640 KB of VRAM flats. The 2x output rows (~4 MB of writes/frame) are write-streamed: no stall.
+- Gengis worker threads: 33-35% of their cycles are L1D. JIT code: ~20% L1I on the stress ROMs. cpubench: JIT code 52%,
+  scheduler/core 24%, 2D 11.5%.
 
-(to be filled)
+## 4. Verification (LEDGER.md L1-L13; evidence/sim/verify-*.txt)
 
-## Dead ends and traps
+All with my own builds of the agents' commits (build-a64-device.sh = the device's toolchain and flags):
+- L1 render.2d_comp_unroll: VERIFIED, membench -5.1%, ds2dtest -5.9% (st), exact (17 ROMs + difftest 6).
+- L2 jit.hugepages: VERIFIED small (-0.45% cpubench, -0.61% bigcode; the model's L2 TLB catches nearly all).
+- L3 jit.irqchain: VERIFIED -17.4% on irqmask (its stress ROM); ~0 on the standard ROMs.
+- L4 GCC 13 PGO: superseded by L7.
+- L5 render pipeline/2D thread hand-offs: VERIFIED at 2x (main -27%, the work moves to the Gengis workers).
+- L6 HOT_OPT=-O3: VERIFIED as small; L1I eats it on 3D ROMs (+35% L1I misses); not worth +15% .text with L1 in.
+- L7 device PGO: VERIFIED -4..-13% (st), exact; caveat: trained on the same ROMs; and in the combined tree the stale
+  profile loses its L1I gain: retrain on the final tree.
+- L10 render.2d_conv16 (jit): -1.5% membench 1x. L11 render.2d_prefetch16: -2.1% under v3 only (fill timing assumed).
+- L8, L9, L12, L13: PENDING (device verdicts or not re-measured separately by sim; L12/L13 are inside combined #2).
 
-- Host ASLR made L1I/L1D vary ~8% between identical qemu runs (guest mmaps land at random host addresses, so cache
-  sets differ): fixed in run.sh with `setarch -R` at ~16:10; anything measured before that is noise at that level.
-- The frame-mark method (one run) and the --diff method (two runs) differ by ~1% on the same binary: compare only
-  within one method (ab.sh does).
+## 5. Combined measurement (base build-dev vs everything)
+
+See the board's combined RESULTs (17:36 #1; #2 on perf/integrated) and evidence/sim/combined-int*.txt.
+(#2 numbers: filled in below when measured.)
+
+## 6. Device test commands (for the local agent)
+
+Per-thread CPU time is what to compare at 2x (the model's critical path is the slowest thread):
+```sh
+# base vs integrated build, HeartGold 2x, 1104 MHz pinned, headless; per-thread CPU from /proc after the run
+EXTRA="--set render.scale=2" hgquick.sh /usr/bin/bananads-base
+EXTRA="--set render.scale=2" hgquick.sh /usr/bin/bananads-integrated
+# toggles of the integrated build, one at a time, off vs on (each must be exact: rtc.fixed + dump_every pictures match)
+EXTRA="--set render.scale=2 --set render.3d_pipeline=off" hgquick.sh /usr/bin/bananads-integrated
+EXTRA="--set render.scale=2 --set render.2d_prefetch=on" hgquick.sh /usr/bin/bananads-integrated   # off by default
+EXTRA="--set jit.hugepages=off" hgquick.sh /usr/bin/bananads-integrated
+# calibration of rgds-sim (first): sh rgds-sim/calib/device-calib.sh /usr/bin/bananads <test ROM dir>
+# the A55 revision (write streaming is disabled by TF-A on r0p0 without L2): grep -i revision /proc/cpuinfo
+```
+
+## 7. Limitations to keep in mind
+
+Absolute ms are not calibrated (one clean device point); trust A/B deltas within one workload and one model version.
+No kernel time, no thread hand-off waits, no cross-core coherence, no DRAM bandwidth model; the stream prefetcher
+and write-streaming thresholds are assumptions; layout-driven L1I changes (±30% between builds of the same code)
+are real in the model but the device's layout differs (KMS frontend), so treat L1I swings from unrelated code as noise.
