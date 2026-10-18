@@ -60,3 +60,10 @@ config BR2_PACKAGE_RETROARCH_GLSL_SHADERS
 	default y
 	help
 	  libretro's GLSL shader presets for RetroArch's GL driver.
+
+config BR2_PACKAGE_LIBRETRO_CHEATS_NDS
+	bool "libretro-cheats-nds"
+	default y
+	help
+	  libretro-database's Action Replay cheats for the Nintendo DS,
+	  read by BananaDS's Cheats.
