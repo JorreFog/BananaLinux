@@ -17,10 +17,19 @@ export PYSDL2_DLL_PATH=/usr/lib
 . /usr/libexec/banana/one-panel
 one_panel_dark top
 cd "$(dirname "$1")"
-bash "$1" &
+# the port in its own session (its process group = $C): a quit from the menu, and the port's end, reach everything it
+# started. PortMaster's script runs its menu (python3 pugwash) as a child: a TERM to the script alone left that
+# running, holding the display, and the menu's next game got no panel
+setsid bash "$1" &
 C=$!
-trap 'kill -TERM $C 2>/dev/null' TERM INT HUP
+trap 'kill -TERM -$C 2>/dev/null' TERM INT HUP
 wait $C; S=$?
 while kill -0 $C 2>/dev/null; do wait $C; S=$?; done
+# whatever of it is still running (the script gone, a child left behind): asked to stop, then stopped
+if kill -0 -$C 2>/dev/null; then
+    kill -TERM -$C 2>/dev/null
+    for i in 1 2 3 4 5 6 7 8 9 10; do kill -0 -$C 2>/dev/null || break; sleep 0.2; done
+    kill -KILL -$C 2>/dev/null
+fi
 one_panel_restore
 exit $S
