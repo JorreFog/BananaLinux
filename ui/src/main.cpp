@@ -1309,6 +1309,15 @@ int main(int argc, char** argv)
 	};
 
 	if (system("banana-perf ui") != 0) {}
+	// the launch hook (below) wakes the menu when it is written: an idle menu sleeps in poll() until a press otherwise,
+	// and a launch written then started its game only at the next press, in the middle of whatever came next
+	int launchWatch = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
+	if (launchWatch >= 0 && inotify_add_watch(launchWatch, "/run/banana", IN_CLOSE_WRITE | IN_MOVED_TO) < 0)
+	{
+		logf("launch file: can't watch /run/banana: %s", strerror(errno));
+		close(launchWatch);
+		launchWatch = -1;
+	}
 	while (!quit)
 	{
 		double now = nowMs();
@@ -1461,6 +1470,7 @@ int main(int argc, char** argv)
 		fds.push_back({ sigPipe[0], POLLIN, 0 });
 		fds.push_back({ worker.wakeFd, POLLIN, 0 });
 		if (roms.fd >= 0) fds.push_back({ roms.fd, POLLIN, 0 });
+		if (launchWatch >= 0) fds.push_back({ launchWatch, POLLIN, 0 });
 		if (disp.isOpen()) fds.push_back({ disp.pollFd(), POLLIN, 0 });
 		for (int fd : input.fds()) fds.push_back({ fd, POLLIN, 0 });
 		int n = poll(fds.data(), fds.size(), timeout);
@@ -1496,6 +1506,11 @@ int main(int argc, char** argv)
 			}
 			else if (p.fd == roms.fd)
 				roms.read(nowMs());
+			else if (p.fd == launchWatch)
+			{
+				alignas(inotify_event) char buf[1024];
+				while (read(launchWatch, buf, sizeof buf) > 0) {}	// (the loop's next pass looks for the launch file)
+			}
 			else if (p.fd == worker.wakeFd)
 			{
 				uint64_t v;
