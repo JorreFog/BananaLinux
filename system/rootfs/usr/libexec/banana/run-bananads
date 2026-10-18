@@ -31,6 +31,13 @@ if ! has render.scale; then
     hires=$(sed -n 's/^ *hires_3d *= *//p' $dcfg 2>/dev/null | head -n 1)
     [ "$hires" = 0 ] && echo "render.scale = 1" >> $C || echo "render.scale = 2" >> $C
 fi
+# Timing's Fast (core.slice = auto, the 2x default before 0.4.0) broke games (Golden Sun: Dark Dawn drew no 3D world):
+# a card that has it gets Accurate once; choosing Fast again afterwards is kept
+M=$D/.banana-slice-64
+if [ ! -f $M ]; then
+    grep -q '^ *core.slice *= *auto' $C 2>/dev/null && sed -i 's/^ *core.slice *= *auto.*/core.slice = 64/' $C
+    touch $M
+fi
 export DSFLIP_SHADER_DIR=/usr/lib/superdrastic/shaders
 # the 3D always through the Gengis Engine (SuperDrastic's rasterizer), as SuperDrastic does
 export BANANADS_RENDER_RENDERER=gengis

@@ -328,8 +328,8 @@ namespace banana
 				bds, "kms.pace", { "Panels", "DS rate" }, { "display", "ds" });
 			add(N, "nds", "CPU clock", "Saves battery finds the lowest clock each game runs at full speed and remembers it. Always full keeps the top clock.",
 				bds, "cpugov", { "Saves battery", "Always full" }, { "on", "off" });
-			add(N, "nds", "Timing", "Fast lets the two CPUs run longer between meeting (about 10% faster). Accurate is melonDS's own, for a game that misbehaves.",
-				bds, "core.slice", { "Fast", "Accurate" }, { "auto", "64" });
+			add(N, "nds", "Timing", "Accurate is melonDS's own. Fast lets the two CPUs run longer between meeting (about 10% faster), but it can break a game: Golden Sun: Dark Dawn loses its 3D world.",
+				bds, "core.slice", { "Accurate", "Fast" }, { "64", "auto" });
 			add(N, "nds", "Microphone", "How loud a blow or a word must be to reach the game.", bds, "mic.threshold",
 				{ "Medium", "High", "Low", "Off" }, { "0.15", "0.03", "0.3", "0" });
 		}
