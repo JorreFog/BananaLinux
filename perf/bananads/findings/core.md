@@ -46,7 +46,23 @@ MEASURED, main-thread instructions per frame (qemu-count, frames 100-300):
   @1104 MHz (-4.3%), L1I misses -5.7%, iTLB L2 hits -31% (`ab-devpgo-cpubench-thumb.txt`); jit's game-sized bigcode
   ROM (6 MB of JIT code, L1I = 40% of cycles) 10.18 -> 9.85 ms (-3.2%), the C++ side's L1I misses 44.0k -> 41.4k/frame
   (`sim-bigcode-devpgo.txt`). The JIT code's own L1I misses are the same in both: PGO can't touch them.
-- (the no-3D / 3D-only split builds: below, when measured)
+- **The harder splits (MEASURED, device compiler).** A profile trained *without any 3D stress ROM*, tested on them:
+  under qemu-count (which runs melonDS's **soft** 3D renderer) dsstress-L5 +1.1%, L10 +2.3%, arm7-thumb-L5 +1.1%
+  instructions, all of it in the soft renderer's bucket (18.43M -> 18.88M on L5; every other bucket improved as
+  with the full profile: `evidence/core/count-devno3d.txt`); under rgds-sim with the device's renderer (Gengis,
+  st mode) dsstress-L5 6.984 -> 6.569 ms (-6.0%, insns -4.8%, L1I misses -50%; `ab-devno3d-L5.txt`), i.e. no
+  regression where it matters, and the trained ROMs gain as with the full profile (cpubench -3.9%, membench -10.5%,
+  sndbench -9.6%, ipcrom -10.2%). The soft renderer shows the mechanism, though: `-fprofile-partial-training`
+  only protects functions that never ran, and the soft rasterizer ran a little in that training (cpubench's 3D
+  clear), so its polygon paths were profiled as cold and came out 2.4% slower. **A path a game uses heavily and
+  the training only lightly is penalised, not sped up.** The reverse split shows it without the soft-renderer
+  caveat: a profile from the *3D stress ROMs only*, on ROMs it never saw: cpubench -0.1/-0.4% (the gain is gone),
+  **membench +3.4%, sndbench +3.1% slower** (cpubench's 2D bucket 432k -> 546k: text BGs and sprites the stress
+  ROMs barely use; audio +8%), while ds2dtest/ipcrom still gain (`count-dev3donly.txt`; rgds-sim on membench:
+  `ab-dev3donly-membench.txt`). The test ROM suite exercises every engine the device uses
+  (the JIT, both 2D paths, Gengis, the geometry engine, sound, DMA, IPC), which is why the never-seen 3D ROMs still
+  gain, but a game's mix is different and nobody here has one: this decides the ship scheme (below), where the
+  profile comes from the handheld and real games, with the test-ROM profile merged in.
 
 ## 2. The hot targets at -O3 under Buildroot's -O2 (CMake `BANANADS_HOT_OPT=-O3`)
 
@@ -125,6 +141,16 @@ The reproducible scheme, as implemented on `perf/core`:
      `BANANADS_PGO=<dir>`. Always fresh, never stale, but ~25 minutes more per image build and a qemu host build.
    The committed profile is the recommendation: Buildroot's offline builds stay simple, the profile is reviewed
    like code, and staleness is visible (the warning count) and harmless.
+4. **Where the profile should come from, given the split result**: the instrumented build runs natively on the
+   handheld (`bananads.mk` with `-DBANANADS_PGO_GENERATE=ON -DBANANADS_PGO_DIR=/storage/bananads-pgo`, a one-off
+   image or a second binary on the device; it runs at maybe half speed, which doesn't matter for a profile).
+   Play the heavy games for a few minutes each (HeartGold overworld and battles, Golden Sun, Mario Kart, Metroid
+   Prime Hunters), copy `/storage/bananads-pgo/*.gcda` back, merge with the test-ROM profile
+   (`aarch64-...-gcov-tool merge -w 3,1 -o pgo/gcc-14.3 device-profile test-rom-profile`, the game profile
+   weighted up) and commit. The profile is tied to the toolchain's GCC major.minor (14.3 now): a toolchain bump
+   or a change to a hot file (a new function shifts the idents of those after it) means regenerating; until then
+   the changed functions simply compile as today. GCC's gcov version check makes a wrong-compiler profile a
+   warning, never a wrong build.
 
 ## Device A/B commands
 

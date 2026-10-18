@@ -1,10 +1,12 @@
 # render: status (overwritten by render only)
 
-Updated 16:35 UTC. Worktree /home/user/perf/render/sd, branch perf/render @ a1da057 (9 commits: a1da057 the Gengis workers wake on a claimable bin alone (a benign pre-existing race dropped), 7ebe4e9 render.2d_batch, ea886e8 render.3d_pipeline, dc3f96a 3d_share/3d_wait2d at 1x, 911ff8e render.2d_comp_unroll, 0bab5aa render.2d_quarters, 2a23af3 render.2d_emit_zip, 88a772a the quarters merge fix, c5230ff PERF.md). Patch 0060 (geom_sort) was rebased out (DEAD-END 16:25); patches/render/ exported from this head (re-export at the end if it moves).
+Updated 16:40 UTC. Worktree /home/user/perf/render/sd, branch perf/render @ 1c9095b (9 commits: 7ebe4e9 render.2d_batch, ea886e8 render.3d_pipeline, dc3f96a 3d_share/3d_wait2d at 1x, 911ff8e render.2d_comp_unroll, 0bab5aa render.2d_quarters, 2a23af3 render.2d_emit_zip, 347784d the quarters merge fix, f76bfca PERF.md, 1c9095b the Gengis workers' wake condition). Patch 0060 rebased out. patches/render/ exported from this head.
 
 ## Doing now (all chained in the background)
-- Device builds: b5d = 0fd83cb (measured), b6d = f65f846 (built; sim verifies the non-quarters toggles on it), b7d = the tree
-  as of the rebase (88a772a expected; a chained check verifies no GEOMSORT in it, else builds b8d).
+- Device builds: b5d = 0fd83cb (measured), b6d = f65f846 (built; sim verifies the non-quarters toggles on it; m6 matrix on
+  it), b7d = 1c9095b (building: the final one). A slip caught by the link: my second quarters edit had cut ~500 lines
+  (EffectsPass*, DrawScanline*, PrepareScanline) out of GPU2D_Banana.cpp; restored from 2a23af3's file and folded into
+  347784d (every commit's file verified whole).
 - Measured so far (device build, qemu-count; board RESULTs 16:12 and 16:16; evidence/render/qc-b5d-*.txt):
   comp_unroll membench -5.7% / ds2dtest -9.2% (emulator's thread, 1x); pipeline: emulator's thread 3308.6k -> 2324.1k
   on L5 device mode (the bins it drew); emit_zip: 2D thread output stage -22%; geom_sort L10 -0.1%; quarters v1 a LOSS

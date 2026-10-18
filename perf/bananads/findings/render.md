@@ -1,8 +1,9 @@
 # render: findings (Gengis 3D, the Banana 2D engine, the geometry engine, the threads, the KMS frame path)
 
 Branch `perf/render` (worktree /home/user/perf/render/sd), from 00c34c78e8de. Patches: `patches/render/` (git
-format-patch series, `git am` onto SuperDrastic at 00c34c78e8de). melonDS patch numbers used: none in the final set
-(0060 was written and dropped; 0060-0079 stay free).
+format-patch series, 9 patches; checked: `git am` onto a fresh worktree of 00c34c78e8de applies cleanly and the
+result is identical to the branch's tree). melonDS patch numbers used: none in the final set (0060 was written and
+dropped; 0060-0079 stay free).
 
 Status line (kept current at the end of the session): see "Status" at the bottom.
 

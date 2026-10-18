@@ -1,4 +1,4 @@
-From c5230fff2a73aee6f7d5e1e5f7f6a4095fb2b650 Mon Sep 17 00:00:00 2001
+From f76bfca9e97cb48f6d9b17e373037706b8b1120c Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Sun, 18 Oct 2026 16:18:44 +0000
 Subject: [PATCH 8/9] BananaDS docs: PERF.md, the renderers and the threads
