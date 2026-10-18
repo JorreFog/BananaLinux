@@ -14,6 +14,8 @@ Updated 16:30 UTC. Worktree /home/user/perf/render/sd, branch perf/render @ c523
   -> runs/matrix-m6.txt, difftest-*.txt, tests-b6d.txt; then quarters A/B on b7d (L5, ds2dtest) -> runs/qc-b7d, and
   matrix m7 (build-dev vs b7d, dev2x + 1x-t2-2d) -> runs/matrix-m7.txt.
 - TSan: 6 runs, 0 warnings (evidence/render/tsan-runs.txt). sim verifies from b6d/b7d (messages sent 16:08, 16:17).
+- rgds-sim (mine, device build b6d): comp_unroll membench 4.871 -> 4.604 ms/frame @1104 (-5.5%); the rest running
+  (runs/sim/*-ab.txt; copies in evidence/render/sim/).
 - Then: findings numbers (quarters on b7d, sim), commit PERF.md, patches/render/, HANDOFF.
 
 ## Found (READ)
