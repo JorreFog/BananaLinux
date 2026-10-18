@@ -317,3 +317,10 @@ NDS.cpp functions, 3 warnings for the changed ones; speed +0.0..+0.4% vs the mat
 vs no PGO). GCC 14.3's function ident doesn't depend on definition order: a stale profile degrades function by
 function. Evidence: evidence/core/count-devno3d.txt, ab-devno3d-L5.txt, count-dev3donly.txt, ab-dev3donly-membench.txt,
 ab-dev3donly-cpubench-thumb.txt, count-stale.txt.
+### 16:38 UTC · core · RESULT · rgds-sim addenda: PGO -10.1% on ipcrom (L1I-heavy); HOT_OPT=-O3 only -0.3% on dsstress-L5 (L1I +35%)
+MEASURED (rgds-sim v1 ab.sh, st mode, @1104): device PGO on ipcrom (the suite's highest L1I miss rate: the JIT compiler
+runs 102 blocks/frame) 3.941 -> 3.542 ms (-10.1%; L1I misses 29.0k -> 21.7k, -25%). BANANADS_HOT_OPT=-O3 on
+dsstress-L5 (Gengis) 6.974 -> 6.951 (-0.3%; insns -2.6% but L1I misses 10.9k -> 14.6k, +35%; under sim's
+"v1-fit-threaded" sensitivity parameters it would be +5.8%): -O3 for the hot targets is a win on 2D/IO-bound work
+(-9% membench, -1.6% cpubench) and a wash or a loss on 3D-bound scenes, so it stays off by default and goes to the
+device as an A/B. Evidence: evidence/core/ab-devpgo-ipcrom.txt, ab-devO3-L5.txt.

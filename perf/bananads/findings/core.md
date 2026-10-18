@@ -45,7 +45,9 @@ MEASURED, main-thread instructions per frame (qemu-count, frames 100-300):
 - rgds-sim v1 (A55 time, st mode), device build -> device PGO: cpubench-thumb main thread 5.649 -> 5.406 ms/frame
   @1104 MHz (-4.3%), L1I misses -5.7%, iTLB L2 hits -31% (`ab-devpgo-cpubench-thumb.txt`); jit's game-sized bigcode
   ROM (6 MB of JIT code, L1I = 40% of cycles) 10.18 -> 9.85 ms (-3.2%), the C++ side's L1I misses 44.0k -> 41.4k/frame
-  (`sim-bigcode-devpgo.txt`). The JIT code's own L1I misses are the same in both: PGO can't touch them.
+  (`sim-bigcode-devpgo.txt`); ipcrom, the suite's most L1I-bound ROM (the JIT compiler runs 102 blocks a frame),
+  3.941 -> 3.542 ms (-10.1%, L1I misses -25%; `ab-devpgo-ipcrom.txt`); dsstress-L5 with Gengis 6.997 -> 6.708 ms
+  (-4.1%; `ab-devpgo-L5.txt`). The JIT code's own L1I misses are the same in both: PGO can't touch them.
 - **The harder splits (MEASURED, device compiler).** A profile trained *without any 3D stress ROM*, tested on them:
   under qemu-count (which runs melonDS's **soft** 3D renderer) dsstress-L5 +1.1%, L10 +2.3%, arm7-thumb-L5 +1.1%
   instructions, all of it in the soft renderer's bucket (18.43M -> 18.88M on L5; every other bucket improved as
@@ -75,7 +77,11 @@ after Buildroot's -O2 (the last -O wins; teakra, slirp and the tests stay -O2). 
 (qemu-count): cpubench-thumb -1.8%, cpubench-arm -2.0%, membench -7.6% (its 2D bucket -31%: `Composite`, which render
 has since fixed at -O2 with `render.2d_comp_unroll`), dsstress-L5 +0.3%, sndbench -2.9%, ipcrom -6.4%; .text 1.95 ->
 2.25 MB (+15%) (`count-devO3.txt`). Exact: pictures and audio identical on 13 ROMs x 2 renderers (`exact-devO3.txt`).
-rgds-sim: (below, when measured). Default: off until the device says (instructions vs L1I).
+rgds-sim (st mode, ms/frame @1104): membench 4.788 -> 4.355 (-9.0%; `ab-devO3-membench.txt`), cpubench-thumb 5.647 ->
+5.557 (-1.6%, L1I misses +26%; `ab-devO3-cpubench-thumb.txt`), dsstress-L5 with Gengis 6.974 -> 6.951 (-0.3%:
+instructions -2.6% but L1I misses +35%, and under sim's alternative "fit-threaded" parameters it would be +5.8%;
+`ab-devO3-L5.txt`). A win on 2D/IO-bound work, a wash or a loss on 3D-bound scenes: **default off**, for the device
+to A/B (HeartGold's overworld is 2D-heavy with light 3D; Golden Sun / Metroid are the other kind).
 
 ## 3. Layout levers (CMake `BANANADS_NOPLT`, `BANANADS_ALIGN=F:L:J`, `BANANADS_HOTCOLD`, `BANANADS_STACK_PROTECTOR`)
 

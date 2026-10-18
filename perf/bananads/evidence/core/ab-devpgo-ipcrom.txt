@@ -1,0 +1,20 @@
+# rgds-sim v1 A/B (ab.sh, st mode), devpgo-ipcrom: see the A/B lines; 16:37 UTC
+# command: OUT=/home/user/perf/core/runs/sim sh rgds-sim/ab.sh <A> <B> <rom> --label devpgo-ipcrom  (full: /home/user/perf/core/runs/sim/devpgo-ipcrom-ab.txt; A = /home/user/perf/build-dev/b/bananads, B = build-devpgo or build-devO3)
+rgds-sim A/B (model v1)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/build-dev/b/bananads /home/user/perf/roms/ipcrom-ipctest.nds devpgo-ipcrom-A --mode st --frames 100:300
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/core/build-devpgo/b/bananads /home/user/perf/roms/ipcrom-ipctest.nds devpgo-ipcrom-B --mode st --frames 100:300
+
+== thread 0 (main): ms/frame @1104 3.941 -> 3.542 (-10.12%)   @1992 2.184 -> 1.963 (-10.12%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 5.110 -> 4.336 (-15.14%)
+  insn 2863.0k->2587.9k (-9.6%)  base 2993.3k->2753.6k (-8.0%)  l1i_miss 29.0k->21.7k (-25.1%)  ld_miss 5.1k->5.3k (+4.6%)  st_miss 0.9k->1.3k (+53.4%)  itlb_l2 15.9k->15.3k (-3.8%)  itlb_walk 0.0k->0.1k (+2045.2%)  dtlb_l2 42.7k->47.6k (+11.6%)  dtlb_walk 0.0k->0.3k (+3013.8%)  bcond_miss 21.5k->21.4k (-0.3%)  bind_miss 5.3k->4.0k (-25.2%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  memory               0.749     0.581    -0.168     461.3k     412.9k
+  jit-runtime          0.931     0.766    -0.165     722.7k     599.3k
+  2d                   0.610     0.528    -0.082     460.3k     377.0k
+  other                0.118     0.175    +0.057      53.0k      77.4k
+  scheduler/core       0.896     0.855    -0.041     688.8k     640.4k
+  jit-code             0.387     0.394    +0.006     325.7k     325.7k
+  gengis               0.027     0.022    -0.005      13.4k       9.8k
+  interpreter          0.055     0.052    -0.003      26.2k      31.3k
+  libc/lib             0.086     0.088    +0.001      35.7k      35.7k
+  audio                0.081     0.082    +0.000      76.0k      78.5k
