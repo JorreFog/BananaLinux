@@ -8,7 +8,7 @@
 #
 ################################################################################
 
-BANANADS_VERSION = ab01920d23653a9a5fc72b568281d4c1088ae312
+BANANADS_VERSION = 08f1bd340f20315faee620f193bdddbd8fa7e27b
 BANANADS_SITE = https://github.com/JorreFog/SuperDrastic.git
 BANANADS_SITE_METHOD = git
 BANANADS_SUBDIR = bananads
