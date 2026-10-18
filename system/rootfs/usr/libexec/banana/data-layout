@@ -3,7 +3,7 @@
 D=/data
 SYSTEMS=/etc/banana/systems.conf
 [ -f $D/banana/systems.conf ] && SYSTEMS=$D/banana/systems.conf     # the user's copy replaces it
-mkdir -p $D/banana/logs $D/bios $D/saves $D/states
+mkdir -p $D/banana/logs $D/banana/updates $D/bios $D/saves $D/states  # (banana/updates: where the release notes say to put an update)
 # every system's folder (its "folder", or its id; not an app's absolute one, which ships with the system)
 awk '/^\[/{if(id!="")print (f!=""?f:id); id=substr($0,2,length($0)-2); f=""} /^folder *=/{sub(/^folder *= */,""); f=$0} END{if(id!="")print (f!=""?f:id)}' \
     "$SYSTEMS" | while read -r f; do case $f in /*) ;; *) mkdir -p "$D/roms/$f" ;; esac; done
