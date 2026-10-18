@@ -5,6 +5,7 @@
 #include <cstring>
 #ifdef BANANA_ALSA
 #include <alsa/asoundlib.h>
+#include <sys/stat.h>
 #endif
 
 namespace banana
@@ -108,6 +109,12 @@ namespace banana
 		int openRate = 0, openCh = 0;
 		std::vector<int16_t> silence;
 		auto closeDev = [&] { if (pcm) { snd_pcm_drop(pcm); snd_pcm_close(pcm); pcm = nullptr; } };
+		// Where sound plays (speakers or headphones) is bananad's /run/banana/asound.conf, which it replaces when the
+		// jack changes. alsa-lib reads its configuration once per process (a file it loaded through a hook, as
+		// /etc/asound.conf is, isn't looked at again), so a change means: close, forget the configuration, open again.
+		auto routeId = [] { struct stat st; return stat("/run/banana/asound.conf", &st) ? 0LL : (long long)st.st_ino * 1000003LL + st.st_mtim.tv_sec * 1000000000LL + st.st_mtim.tv_nsec; };
+		long long routeLoaded = routeId();
+		int routeCheck = 0;
 		const Clip* cur = nullptr;
 		size_t at = 0;			// cur's next frame
 		auto lastSound = std::chrono::steady_clock::now();
@@ -129,6 +136,7 @@ namespace banana
 				if (pcm && (openRate != c.rate || openCh != c.channels)) closeDev();
 				if (!pcm)
 				{
+					if (long long r = routeId(); r != routeLoaded) { snd_config_update_free_global(); routeLoaded = r; }
 					if (snd_pcm_open(&pcm, "default", SND_PCM_STREAM_PLAYBACK, 0) < 0) { pcm = nullptr; continue; }
 					if (snd_pcm_set_params(pcm, SND_PCM_FORMAT_S16_LE, SND_PCM_ACCESS_RW_INTERLEAVED, c.channels, c.rate, 1, 30000) < 0)
 					{
@@ -142,6 +150,8 @@ namespace banana
 				lastSound = now;
 			}
 			else if (!cur && now - lastSound >= QUIET) { closeDev(); continue; }
+			// the jack changed while the stream runs (every 250 ms): the next sound opens where sound plays now
+			if (++routeCheck >= 25) { routeCheck = 0; if (routeId() != routeLoaded) { closeDev(); cur = nullptr; continue; } }
 			// the next 10 ms: the sound's, or silence
 			const int16_t* p = silence.data();
 			snd_pcm_sframes_t frames = (snd_pcm_sframes_t)(silence.size() / openCh);
