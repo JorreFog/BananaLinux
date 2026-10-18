@@ -104,6 +104,11 @@ GCC 14.3) run under `tools/qemu-dev`; "base" = /home/user/perf/build-dev/b (00c3
   the 2D thread is the lever at 1x, not another engine pass. Recommendation for the device: A/B `render.2d_thread=on`
   at 1x (lines below) and, if it wins as it did at 2x (39.8 -> 49.6 fps, PERF.md), make it the 1x default too (a
   one-line change in src/emu.cpp: `cfg_.flag("render.2d_thread", scale_ == 2)` -> `true`).
+- **render.2d_fence_wait** (b9d, device mode, L5; evidence/render/qc-b9d-fence.txt): spin -> block, the emulator's
+  thread 2423.9k -> 2292.3k instructions/frame (the yield loops: `WaitForWorker<WaitFence>` 19.8k + libc 171k -> 107k).
+  Under qemu the waits' lengths are host-scheduling artefacts (the 2D thread is starved); what the change is for is
+  the device: the presenter at SCHED_FIFO no longer spins while the 2D thread is late. Verdict there: `kms.stats`
+  repeats/drops and the fps, spin vs block (lines below).
 - **render.2d_emit_zip** (the 2D thread at 2x; same runs; b5d had the quarters' zip only, not the 2D lines'
   doubling): the 2D thread's output stage (WriteLine/EmitA/EmitB/DoubleLine/ZipLine/WriteZip) 451k -> 352k
   instructions/frame (**-22%**), the thread's own work 1696k -> 1601k.
@@ -181,8 +186,9 @@ EXTRA="--set render.2d_batch=48" hgquick.sh <bin>
 EXTRA="--set render.2d_batch=96" hgquick.sh <bin>
 EXTRA="--set render.2d_batch=192" hgquick.sh <bin>
 
-# the polygon sort
-EXTRA="--set render.geom_sort=off" hgquick.sh <bin>
+# the waits for the 2D thread (the KMS presenter's SCHED_FIFO spin): spin (as before) vs block (the default); read
+# kms.stats' repeats and drops (BANANADS_KMS_STATS=600 in /data/banana/bananads.env on the device) and the fps
+EXTRA="--set render.2d_fence_wait=spin" hgquick.sh <bin>
 
 # the 2D engine at the device's -O2 (the compositor loop), the shared quarters and the fused output stage: these act on
 # the 2D thread at 2x (less CPU on the three other cores: read top -H's bananads-2d share, and the fps when the 3D is
