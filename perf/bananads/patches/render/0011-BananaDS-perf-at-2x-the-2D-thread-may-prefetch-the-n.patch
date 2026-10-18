@@ -1,0 +1,92 @@
+From eee302e615ce4920a803f07164a757e25a675d0e Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sun, 18 Oct 2026 16:51:24 +0000
+Subject: [PATCH 11/11] BananaDS perf: at 2x the 2D thread may prefetch the
+ next line's 3D rows (render.2d_prefetch, off)
+
+With render.3d_pipeline the 2D thread is the frame's critical path at 2x, and rgds-sim puts 43% of its cycles in
+L1D misses: reading Gengis's rows (768 KB a frame, written by the render threads on other cores, read once by the
+quarters composite) and storing the output rows. render.2d_prefetch=on prefetches the next DS line's four
+quarters (the next two 2x rows, 4 KB) at the start of a line's composite, so their lines are on the way while
+this line is merged. Off by default: a prefetch is invisible to the simulator, so only the device can say
+whether the A55's own prefetcher already covers these four streams. No effect on the pixels.
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01PvbFhKAw3ERk5a13S651g1
+---
+ bananads/docs/SETTINGS.md       |  1 +
+ bananads/gpu2d/GPU2D_Banana.cpp | 10 ++++++++++
+ bananads/gpu2d/GPU2D_Banana.h   |  3 +++
+ bananads/src/emu.cpp            |  2 ++
+ 4 files changed, 16 insertions(+)
+
+diff --git a/bananads/docs/SETTINGS.md b/bananads/docs/SETTINGS.md
+index dcbd519..976aa40 100644
+--- a/bananads/docs/SETTINGS.md
++++ b/bananads/docs/SETTINGS.md
+@@ -35,6 +35,7 @@ key can also come from the environment as `BANANADS_<KEY>` (dots become undersco
+ | `render.2d_comp_unroll` | `on` | the Banana 2D engine's compositor (the painter's pass over the layer lines, four pixels at a time) with its loop over the layers unrolled by the template (a fold over the steps), the same operations in the same order; `off`: the plain loop, which GCC compiles well only at `-O3` (BananaLinux builds at `-O2`: 2.5-3x the instructions per line). Same pixels |
+ | `render.2d_quarters` | `on` | at `render.scale=2`, a line that shows the 3D layer is composited once per quarter (four times); the four differ only in the 3D layer, so the painter's pass over the 2D layers (the ones below the 3D layer onto the backdrop, the ones above onto nothing) is done once and each quarter only merges its 3D line in, then takes the colour effects as before. `off`: four full passes. Same pixels |
+ | `render.2d_emit_zip` | `on` | at `render.scale=2`, the output stage (master brightness, 6-to-8-bit expansion) writes straight into the frame's two 512-pixel rows: a 3D line's four composited quarters zipped (even and odd pixels) as it goes, and a line without the 3D layer, or of the bottom screen, with each pixel doubled (`render.2d_fast` builds, display mode 1); `off`: a converted 256-pixel line first, then the zip or the doubling. Same pixels |
++| `render.2d_prefetch` | `off` | at `render.scale=2` with `render.3d_share` and `render.2d_quarters`, the 2D thread prefetches the next line's four 3D quarters (4 KB of Gengis's rows, written on other cores and read once here: the 2D thread's main memory cost at 2x) while it composites this line's. Same pixels; off until the device says it helps (the simulator can't see prefetches) |
+ | `render.3d_share` | `on` | with Gengis and the 2D thread, a line's job points at Gengis's rows of the 3D frame (Gengis keeps two frames' rows) instead of a copy: at `render.scale=2` the line's four quarters (4 KB), at 1x the line (1 KB). Exact: the same frames and audio |
+ | `render.2d_lazy` | `on` | with the 2D thread (`render.2d_thread`), a frame's last lines may be drawn while the emulator runs the next frame: at a frame's end the emulator waits only for the frame before's, and whoever reads a frame (the KMS presenter, `top()`/`bottom()`, a savestate's picture) waits for its own. Same pictures |
+ | `render.3d_wait2d` | `on` | with `render.3d_share` (1x and 2x), the 2D thread waits for each line's Gengis bin before compositing it, not the emulator's thread; the emulator waits for the 3D frame only at VBlank (before the geometry engine's next frame; with `render.3d_pipeline` only for its conversion). Same pictures |
+diff --git a/bananads/gpu2d/GPU2D_Banana.cpp b/bananads/gpu2d/GPU2D_Banana.cpp
+index 598ee0a..816ee93 100644
+--- a/bananads/gpu2d/GPU2D_Banana.cpp
++++ b/bananads/gpu2d/GPU2D_Banana.cpp
+@@ -130,6 +130,7 @@ bool Banana2DFast = true;
+ bool Banana2DCompUnroll = true;
+ bool Banana2DQuarters = true;
+ bool Banana2DEmitZip = true;
++bool Banana2DPrefetch = false;
+ bool Banana3DShare = true;
+ bool Banana3DWait2D = true;
+ 
+@@ -2521,6 +2522,15 @@ void BananaRenderer2D::CompositeHires(u32* dst, const u32* const* q3d)
+     const int belowKind = nBelow ? 2 : onBackdrop ? 0 : 1;
+     const bool raw = steps[bg0].raw3d;
+     const u32* const line3d = Line3D;
++    if (Banana2DPrefetch)
++    {
++        // render.2d_prefetch: the next DS line's four quarters are the next two 2x rows of the 3D frame (render.3d_share:
++        // the quarters are the frame's own rows, 512 pixels each, even then odd), written by the Gengis threads on
++        // other cores and read here once: asked for now, while this line's quarters are merged (a prefetch never faults:
++        // past the last line it points outside the frame, harmlessly)
++        for (int q = 0; q < 4; q++)
++            for (int i = 0; i < 256; i += 16) __builtin_prefetch(q3d[q] + 1024 + i, 0, 0);
++    }
+     for (int q = 0; q < 4; q++)
+     {
+         if (q && !raw)
+diff --git a/bananads/gpu2d/GPU2D_Banana.h b/bananads/gpu2d/GPU2D_Banana.h
+index 71d2e43..e0b44e8 100644
+--- a/bananads/gpu2d/GPU2D_Banana.h
++++ b/bananads/gpu2d/GPU2D_Banana.h
+@@ -45,6 +45,9 @@ extern bool Banana2DQuarters;
+ // (one pass, no 1 KB line in between); off: a converted line first, then the zip or the doubling. The same pixels
+ // either way (NEON builds)
+ extern bool Banana2DEmitZip;
++// render.2d_prefetch (default off; a device-only verdict): at 2x the quarters composite prefetches the next line's 3D
++// rows (4 KB, written by the Gengis threads) while it merges this line's. No effect on the pixels
++extern bool Banana2DPrefetch;
+ extern bool Banana3DShare;
+ extern bool Banana3DWait2D;  // render.3d_wait2d: the 2D thread, not the emulator's, waits for the 3D rows (BananaRenderer)  // render.3d_share: 2D jobs point at Gengis's rows of the 3D frame (BananaRenderer)
+ 
+diff --git a/bananads/src/emu.cpp b/bananads/src/emu.cpp
+index 3204294..64f8090 100644
+--- a/bananads/src/emu.cpp
++++ b/bananads/src/emu.cpp
+@@ -433,6 +433,8 @@ bool Emu::load_rom(const std::string& path) {
+     melonDS::Banana2DQuarters = cfg_.flag("render.2d_quarters", true);
+     // render.2d_emit_zip: at 2x the output stage writes a 3D line's quarters straight into the interleaved rows (on)
+     melonDS::Banana2DEmitZip = cfg_.flag("render.2d_emit_zip", true);
++    // render.2d_prefetch: at 2x the 2D thread prefetches the next line's 3D rows (off: unmeasured here, a device verdict)
++    melonDS::Banana2DPrefetch = cfg_.flag("render.2d_prefetch", false);
+     // render.3d_share: at 2x the 2D thread reads Gengis's rows of the 3D frame instead of a 4 KB copy a line (on)
+     melonDS::Banana3DShare = cfg_.flag("render.3d_share", true);
+     // render.3d_wait2d: with render.3d_share, the 2D thread waits for the 3D rows, not the emulator's thread (on)
+-- 
+2.43.0
+

@@ -1,7 +1,7 @@
 From 2a23af3faa612b85c986d028768b38328bd04c18 Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Sun, 18 Oct 2026 15:58:30 +0000
-Subject: [PATCH 06/10] BananaDS perf: at 2x the output stage writes straight
+Subject: [PATCH 06/11] BananaDS perf: at 2x the output stage writes straight
  into the rows (render.2d_emit_zip)
 
 EmitA at 2x converted each of a 3D line's four composited quarters into a 256-pixel line of its own (WriteLine:

@@ -493,7 +493,7 @@ instruction-bound in the model. Plan: (1) ConvertRun16 with fewer instructions p
 are the destination (write-combined if Rockchip maps them so: the model can't see it), so the stores stay whole-line.
 Evidence: /home/user/perf/jit/sim3/base-L5-dev/report.txt (copy to evidence/jit/2d-base-L5-dev.txt).
 
-### 17:05 UTC · render · RESULT (exact; device verdict) · render.2d_prefetch (eee302e): the 2D thread prefetches the next line's 3D rows at 2x; off by default
+### 17:01 UTC · render · RESULT (exact; device verdict) · render.2d_prefetch (eee302e): the 2D thread prefetches the next line's 3D rows at 2x; off by default
 MEASURED (qemu-count, device build b10d = eee302e, device mode, dsstress L5; evidence/render/qc-b10d/): the 2D thread 2498.1k ->
 2469.5k insns/frame (dev mode is not deterministic: noise), the emulator's thread 2295.6k -> 2311.6k. qemu and the model can't see
 a prefetch's effect (the 3D rows are read once, 768 KB/frame, ~9.6k DRAM lines in sim's model), so the toggle ships OFF and the
@@ -501,7 +501,7 @@ device decides: `--set render.2d_prefetch=on` vs off, the 2D thread's CPU time (
 Exact: matrix m10 (build-dev vs b10d with prefetch on, 10 ROMs, 2x dev, pictures every 10th of 300 + audio) FAILS=0
 (evidence/render/matrix-m10.txt). patches/render/ re-exported (11 patches).
 
-### 17:05 UTC · render · INFO · the 2D plan: taking core's 2D share (layers, sprites, windows, PrepareScanline*, the copy log); render.2d_tiles shelved
+### 17:01 UTC · render · INFO · the 2D plan: taking core's 2D share (layers, sprites, windows, PrepareScanline*, the copy log); render.2d_tiles shelved
 READ 2D-PLAN.md. perf/jit-2d and perf/sim-2d have no commits yet (nothing to integrate so far). I had a tile-fused pass written and
 compile-checked (render.2d_tiles: at 2x the quarters merge writes the frame's two rows itself, 64 px at a time, so the four 1 KB quarter
 lines never exist; the output kernels WriteZip/Bright6/Expand6 moved into a shared header and EmitA/Execute skip the line when the
