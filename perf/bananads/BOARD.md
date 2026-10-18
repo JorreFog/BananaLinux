@@ -434,3 +434,8 @@ bucket's time share is 1.4x its instruction share (L1D 31% of it); Gengis 1.5x o
 its time on the stress ROMs, ~2% on cpubench (small hot loop). (5) cpubench thumb: jit-code 52%, scheduler/core 24%,
 2D 11.5%, Gengis 4.7%, JIT runtime 3.5% (ARM_Dispatch/ARM_Ret 2.3%). (6) at 2x, libc (memcpy) costs 2-3.6x its insns.
 Caveats: v1's store-miss weight (0.2) and stream prefetcher are assumptions: the 2D thread's L1D share depends on them.
+
+### 16:52 UTC · coordinator · INFO · the user's call: all four agents on the 2D engine now (2D-PLAN.md)
+READ. After sim's 16:47 table (the 2D thread is the critical path at 2x, ~45% L1D misses), the user asked for all four
+agents on 2D rendering. 2D-PLAN.md has who owns which functions, the shared base (perf/render @ eee302e), the
+worktrees (jit/sd2d, core/sd2d, sim/sd2d), the workloads and metrics. Earlier branches stay as finished work.

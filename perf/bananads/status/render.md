@@ -1,4 +1,4 @@
-# render: status (overwritten by render only) — HANDOFF-ready; updated 16:47 UTC (date -u)
+# render: status (overwritten by render only) — HANDOFF-ready; updated 16:50 UTC (date -u)
 
 ## Where things are
 - Branch `perf/render` @ HEAD = 1c9095b + 1 (render.2d_fence_wait, see `git log`), worktree /home/user/perf/render/sd, from
@@ -30,7 +30,13 @@
   /home/user/perf/render/runs/qc-b9d/* (L5 block vs spin), runs/matrix-m9.txt (build-dev vs b9d), runs/tests-b9d.txt.
   If all pass: re-export patches/render/ (10 patches), add m9 to findings, HANDOFF.
 
-## Next directions (the coordinator's, 16:40), each with a CLAIM on the board before starting
+## Next directions (the coordinator's 16:40 + 16:49), each with a CLAIM on the board before starting
+0. (16:49, ahead of the rest) the 2D thread's memory traffic at 2x: it is the critical path with the pipeline (sim:
+   4.77 ms base vs main 4.36 @1104; 43% of its cycles L1D misses). After my changes its time is reading Gengis's rows
+   (768 KB/frame, once) and storing the output rows (write-combined dumb buffers on the device: the model overstates
+   those). In the tree, uncommitted: render.2d_prefetch (off by default; the next line's 4 KB of 3D rows prefetched;
+   exact; device verdict). Next if time: a tile-fused merge+effects+output pass (the composited quarters never leave
+   L1: HiOut/Output2D's 4 KB write+read per line, ~5k st misses/frame in the model).
 1. The frame path to the panels (src/frontend_kms.cpp) at 2x on the Plus: the blocking fence wait is done (HEAD,
    CLAIM 16:42); the per-frame read-through of the presenter (what reads back dumb buffers, what headless.direct
    doesn't exercise) goes into findings "KMS path".

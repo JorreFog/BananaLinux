@@ -159,7 +159,9 @@ GCC 14.3) run under `tools/qemu-dev`; "base" = /home/user/perf/build-dev/b (00c3
   off vs on at 2x with the 2D thread: SAME on dsstress L5, ds2dtest, geomtest; `bananads-tests`: all passed
   (evidence/render/difftest-b6d.txt). **m7** on the final head (b7d = 1c9095b, with the quarters fix): the device
   configuration on all 10 ROMs, 2x with 1 Gengis thread, 1x with the 2D thread: 18 configurations, FAILS=0;
-  `bananads-tests` all passed (evidence/render/matrix-m7.txt).
+  `bananads-tests` all passed (evidence/render/matrix-m7.txt). **m9** on b9d (the fence wait commit, every toggle on):
+  the device configuration on all 10 ROMs and 1x with the 2D thread: 15 configurations, FAILS=0; `bananads-tests`
+  all passed (evidence/render/matrix-m9.txt).
 
 ## Device A/B commands (tools/device/hgquick.sh style; both handhelds, 640x480 RG DS and 1024x768 RG DS Plus, use the
 ## same settings: the plane scales; run each line against a plain run of the same binary)
