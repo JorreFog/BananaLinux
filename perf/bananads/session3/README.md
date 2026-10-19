@@ -4,6 +4,10 @@
 page's `8e98258` plus six new toggled changes, about -2..-2.8% more. Where the work stopped and restarted, and how to
 test each phase on its own: [CHECKPOINT.md](CHECKPOINT.md).
 
+**Phase 3 (2026-10-19 12:05-15:10 UTC):** `claude/bananads-perf-mk3` (`ea310c8`) = mk2 plus eight more toggled
+changes, about -3..-6% more; against `mkbase` the emulator thread is at -22.7% instructions (qemu). Device prompt:
+[LOCAL-AGENT-PROMPT.md](LOCAL-AGENT-PROMPT.md).
+
 This follows [BRIEF.md](BRIEF.md) and [../GUIDE-FOR-CLOUD-AGENTS.md](../GUIDE-FOR-CLOUD-AGENTS.md). The work is on
 the emulator thread only, with one toggle per change, each exact on the game itself. Nothing here is measured on a
 device. Every gain below is an estimate with its reasoning, taken from the device profile's shares.
