@@ -66,6 +66,12 @@ Other           meterBg (the battery and progress meters), brandBg (behind the l
 Settings        onPick (text on the selected row), onPickAccent (accented text on it), and the ones above that
                 Settings uses too: ink, muted, line, edge, screen*, ditherA/B, panel*, bubble*, slotOn, kbd*
 
+Layout themes
+-------------
+A theme with "screens" in it draws the whole menu itself: every element on both screens, where it goes, how it
+looks and how it moves, from the menu's data (the systems, the games, the selection, the clock, the battery...).
+canvas.json is one; docs/THEMES.md in Banana's source (github.com/JorreFog/BananaLinux) describes the format.
+
 Themes apply to the Dark/Light style (ROCKNIXDS Pixel) and to Settings (its colours and fonts); the Carts theme
 keeps its own look for now. theme-builder.html, next to this file, makes a theme in a web browser with a live
 preview.

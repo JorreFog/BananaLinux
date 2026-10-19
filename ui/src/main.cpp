@@ -24,6 +24,7 @@
 #include "sound.h"
 #include "menu.h"
 #include "carts.h"
+#include "layout.h"
 
 #include <algorithm>
 #include <atomic>
@@ -267,6 +268,7 @@ struct Options
 	std::string systems = "/etc/banana/systems.conf", roms = "/data/roms", data = "/data/banana";
 	std::string top = "DSI-2", touch = "fe5e0000.i2c";
 	std::string headless, script;
+	std::string theme;		// --theme FILE: that theme's .json instead of the settings' (a theme being made)
 	int w = 640, h = 480;
 };
 
@@ -455,7 +457,9 @@ static int shutdownPercent(const std::string& data)
 static int runHeadless(const Options& o, Host& lib, const std::string& variant, const std::string& theme)
 {
 	SoftBackend be(o.w, o.h);
+	std::string layout = themePath(theme);
 	std::unique_ptr<Menu> uiPtr(theme == "carts" ? (Menu*)new CartMenu(&lib, &be, o.banana + "/fonts", o.h / 480.0f)
+		: isLayoutTheme(layout) ? (Menu*)new LayoutMenu(&lib, &be, layout, o.h / 480.0f, o.assets + "/fonts", o.banana + "/fonts")
 		: new RndsMenu(&lib, &be, o.assets, o.h / 480.0f, variant));
 	Menu& ui = *uiPtr;
 	double now = 100000;
@@ -872,6 +876,7 @@ int main(int argc, char** argv)
 		else if (a == "--data") o.data = next();
 		else if (a == "--headless") o.headless = next();
 		else if (a == "--script") o.script = next();
+		else if (a == "--theme") o.theme = next();
 		else if (a == "--size") { std::string s = next(); if (sscanf(s.c_str(), "%dx%d", &o.w, &o.h) != 2) { logf("bad size"); return 2; } }
 		else { logf("unknown option %s", a.c_str()); return 2; }
 	}
@@ -879,6 +884,7 @@ int main(int argc, char** argv)
 	rnds::setDecoder(stbDecode);
 	rnds::setZipReader(readZip);	// the icon of a DS ROM kept in a .zip
 	auto settings = readSettings(o.data + "/settings.conf");
+	if (!o.theme.empty()) settings["theme"] = "file:" + o.theme;
 	// banana/themes on the card, for themes of one's own: the image's README and examples to start from (once)
 	if (access((o.data + "/themes").c_str(), F_OK) != 0 && access("/usr/share/banana/themes", F_OK) == 0)
 		if (system(("mkdir -p '" + o.data + "/themes' && cp -r /usr/share/banana/themes/. '" + o.data + "/themes/' 2>/dev/null").c_str()) != 0) {}	// (-r: a theme's folder of pictures too)
@@ -941,6 +947,8 @@ int main(int argc, char** argv)
 	auto makeMenu = [&](const std::string& theme, float sc) -> Menu*
 	{
 		if (theme == "carts") return new CartMenu(&lib, &be, o.banana + "/fonts", sc);
+		std::string layout = themePath(theme);
+		if (isLayoutTheme(layout)) { applyTheme(theme, settings["accent"]); return new LayoutMenu(&lib, &be, layout, sc, o.assets + "/fonts", o.banana + "/fonts"); }
 		return new RndsMenu(&lib, &be, o.assets, sc, applyTheme(theme, settings["accent"]) == "light" ? "light" : "dark");
 	};
 	std::atomic<bool> ready{ false };
