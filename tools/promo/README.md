@@ -1,6 +1,6 @@
 # The layout themes' video and stills
 
-**The video** (video.py): the example layout themes made from mockups (Hillside, Turntable, Classic) on two screens,
+**The video** (video.py): a trailer for the layout themes (coming in 0.5.0 beta): the example themes made from mockups (Hillside, Turntable, Classic) on two screens,
 with what the theme engine does beside each one: its headline, a few points and a piece of the theme's JSON, typed
 in; music optional.
 

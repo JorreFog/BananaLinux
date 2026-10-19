@@ -28,8 +28,8 @@ def logo(k):
 LOGO_BIG, LOGO_SMALL = logo(4), logo(2)
 def paste_logo(img, lg, x, y, alpha):
     if alpha <= 0: return
-    a = lg.getchannel('A').point(lambda v: int(v * alpha))
-    img.paste(lg, (int(x), int(y)), a)
+    lg = lg.copy(); lg.putalpha(lg.getchannel('A').point(lambda v: int(v * alpha)))
+    img.alpha_composite(lg, (int(x), int(y)))
 YELLOW, INK, SOFT = (255, 214, 64), (240, 242, 248), (150, 156, 172)
 
 # ---- the story ------------------------------------------------------------------------------------------------------
@@ -54,7 +54,9 @@ SEGMENTS = [
                '{ "type": "rect", "radius": 6, "w": 34,', '  "x": "=52 + 496 * scroll / max(1, count - 1)" },',
                '{ "type": "group", "onTap": "a", ... }']),
 ]
-INTRO, SEG, OUTRO = 3.6, 7.2, 4.4
+INTRO, SEG, OUTRO = 3.8, 7.2, 5.6
+TEXT_OUT = 0.5		# a scene's words all fade out together, this long, and are gone before the next scene starts
+TEXT_GAP = 0.25
 DURATION = INTRO + SEG * len(SEGMENTS) + OUTRO
 
 def clamp01(t): return max(0.0, min(1.0, t))
@@ -159,7 +161,7 @@ def frame(t):
     d = ImageDraw.Draw(img, 'RGBA')
 
     # the handheld: slides in after the intro, out at the end
-    dev_in = ease((t - (INTRO - 0.9)) / 1.1)
+    dev_in = ease((t - INTRO) / 1.1)
     dev_out = easeio((t - (DURATION - OUTRO + 0.3)) / 1.0)
     scale = 1 - 0.2 * dev_out
     dx = DX + int((1 - dev_in) * 900) + int(dev_out * (170 - DX))
@@ -184,17 +186,25 @@ def frame(t):
         img.paste(sh, (dx - int(80 * scale), y - int(80 * scale)), sh)
         img.paste(dev, (dx, y), dev)
 
-    # the words
+    # the words: drawn on a layer of their own, each coming in at its time, the whole layer fading out at once before
+    # the scene ends
+    layer = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(layer, 'RGBA')
     L = 150
+    def gone(local, length): return 1 - clamp01((local - (length - TEXT_GAP - TEXT_OUT)) / TEXT_OUT)
     if seg < 0:
-        a = ease(t / 0.8) * (1 - ease((t - (INTRO - 0.6)) / 0.5))
-        paste_logo(img, LOGO_BIG, L, 330 - 20 * (1 - ease(t / 0.8)), a)
-        text(d, (L, 490), 'The new theme engine', F(SEMI, 54), INK, a * ease((t - 0.5) / 0.7))
-        text(d, (L, 572), 'Design any menu. Ship it as one JSON file.', F(REG, 34), SOFT, a * ease((t - 1.0) / 0.7))
+        out = gone(t, INTRO)
+        lt = ease(t / 0.8)
+        paste_logo(layer, LOGO_BIG, L, 330 - 20 * (1 - lt), lt)
+        # the lines under the logo, centred on it
+        cx = L + LOGO_BIG.width / 2
+        for line, font, col, t0, y in (('The new theme engine', F(SEMI, 54), INK, 0.5, 490),
+                                       ('Design any menu. Ship it as one JSON file.', F(REG, 34), SOFT, 1.0, 572)):
+            text(d, (cx - font.getlength(line) / 2, y), line, font, col, ease((t - t0) / 0.7))
     elif seg < len(SEGMENTS):
         S = SEGMENTS[seg]
-        out = 1 - ease((local - (SEG - 0.45)) / 0.4)
-        def at(t0): return ease((local - t0) / 0.5) * out
+        out = gone(local, SEG)
+        def at(t0): return ease((local - t0) / 0.5)
         def rise(t0): return 18 * (1 - ease((local - t0) / 0.5))
         # the tag, the theme's name, the headline
         tag = F(SEMI, 20); tw = tag.getlength(S['tag'])
@@ -216,14 +226,19 @@ def frame(t):
         if a > 0:
             total = sum(len(l) for l in S['code'])
             card = code_card(S['code'], int(total * clamp01((local - 2.0) / 1.8)), a)
-            img.paste(card, (L, int(y + 30 + rise(2.0))), card)
+            layer.alpha_composite(card, (L, int(y + 30 + rise(2.0))))
     else:
+        out = 1
         OX = 900
-        a = ease((local - 0.8) / 0.7)
-        text(d, (OX, 330), 'Make your own', F(BOLD, 84), INK, a)
-        text(d, (OX, 450), 'banana/themes/my-theme.json', ImageFont.truetype(MONO, 38), YELLOW, ease((local - 1.2) / 0.7))
-        text(d, (OX, 520), 'The format: docs/THEMES.md', F(REG, 34), SOFT, ease((local - 1.6) / 0.7))
-        paste_logo(img, LOGO_SMALL, OX, 630, ease((local - 2.0) / 0.7))
+        text(d, (OX, 300), 'Make your own themes', F(BOLD, 72), INK, ease((local - 0.8) / 0.7))
+        big = F(MED, 46)
+        text(d, (OX, 410), 'Coming soon in 0.5.0', big, YELLOW, ease((local - 1.4) / 0.7))
+        # "beta" after it, slowly, once the line is there
+        text(d, (OX + big.getlength('Coming soon in 0.5.0 '), 410), 'beta', big, INK, clamp01((local - 2.4) / 1.8) ** 1.5)
+        paste_logo(layer, LOGO_SMALL, OX, 540, ease((local - 1.9) / 0.7))
+    if out < 1:
+        layer.putalpha(layer.getchannel('A').point(lambda v: int(v * out)))
+    if out > 0: img.paste(layer, (0, 0), layer)
 
     # fades in and out
     fade = clamp01(t / 0.5) * clamp01((DURATION - t) / 0.6)
