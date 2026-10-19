@@ -154,3 +154,36 @@ region ≤170k a frame, spread out). A lighting result cache: consecutive normal
 Next, if geometry stays a target: the remaining cost only falls with structural work. Options are a NEON
 per-polygon setup (the 4 vertices' screen coordinates and Z together) or fewer `Run` calls (the slice loop). Both
 are bigger than an hour and both need device numbers first to show they would pay.
+
+## Audit (13:38-13:45 UTC): the geometry math on a worker thread (`render.geom_thread`): no-go
+
+The coordinator asked whether the emulator thread could reach 8M instructions a frame by moving the geometry math
+to a worker. **It can't, and nothing was built.** Head unchanged: `3610c71`.
+
+- **The numbers at 3610c71** (qemu, per frame): `Run` 1.82M, `WriteGXFIFOBlock` 1.14M, `Run9GX` 0.35M and
+  `WriteToGXFIFO*` 0.16M are about 3.5M of command timing, FIFO and DMA, and they must stay on the thread. The math
+  is about 2.8M: polygon setup 1.14M, vertices 0.78M, lighting 0.64M, clipping 0.21M, `NextVertexSlot` 0.11M.
+  Moving every bit of the math at no cost would still leave the thread at about 9.2M.
+- **Timing depends on the data.** `SubmitPolygon` sets `PolygonPipeline` to 8 or 26/35 and sets `VertexSlotsFree`
+  from what happens to each polygon:
+  - culling (the dot product of the transformed positions);
+  - the vertex count after clipping (the far-plane reject with attr bit 12, and the strip clipstart quirk);
+  - polygon/vertex RAM full;
+  - the zero-dot reject (screen X/Y and W, when attr bit 13 is clear).
+
+  The next vertex commands' cycles read this at once, and so does how far each `Run` call gets. From there the FIFO
+  level, GXSTAT, the DMA and the IRQ follow. So the transform, culling, clip positions, the viewport transform and
+  the strip-reuse decision must stay on the emulator thread, unless it syncs with the worker about 3,300 times a
+  frame.
+- **What doesn't depend on the data:** lighting's cycles (the number of enabled lights) and the matrix commands'
+  cycles and stack bits. GXSTAT's test result bit, the test results and the matrix reads need the matrices, which
+  stay. RAM_COUNT and RAM full are counts the thread keeps. The render list and the Y-sort need a drain at the
+  flush/VBlank; savestates need a drain before saving and the worker re-seeded after loading.
+- **What could move exactly:** lighting, the vertex colour and texcoord stores, the polygon setup after the
+  decision (Z/W, bounds, fields, the vertex RAM copy) and the clip attributes. That is about 1.3M off the thread;
+  feeding the ring adds about 0.3-0.4M back, so the net is **about -1M (12.0 -> about 11.0M)**, with the worker
+  running about 1.6M. On the device that needs a free A55, and Gengis's bin threads and the 2D thread already share
+  the four.
+- **Verdict:** no-go for the 8M target. A partial offload worth about 8% could be a later project once the device
+  shows a core to spare. To get under 9M, the command timing itself (`Run`, the FIFO writer, the DMA: about 3.5M)
+  and the JIT side would have to get cheaper.
