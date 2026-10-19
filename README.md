@@ -7,6 +7,9 @@ sleeps when you close the lid, and gives the games every cycle.</b></p>
 
 https://discord.gg/FxeE7f8r
 
+**Moving from GammaOS (or adding saves)?** The [Save Mover](https://jorrefog.github.io/BananaLinux/save-mover/)
+backs up your save files, converts them and packs them in the card's own folders, in your browser.
+
 > [!WARNING]
 > Banana is an alpha (0.3.0). Its image is for the RG DS Plus only for now: the RG DS stays on 0.2.0 until
 > 0.3.0 has been tested on it. Things are still missing and some are rough (see *Status*). If you try it,
@@ -159,6 +162,7 @@ ui/banana-ui --headless out/ --assets ui/assets/rnds --roms <roms> --data <dir> 
 | `system/rootfs/` | init, first boot, `banana-perf`, sleep hooks, the game launchers, default settings |
 | `buildroot/` | the Buildroot tree: defconfigs, Banana's packages, the RG DS board (kernel patches, device trees, drivers, U-Boot, image layout) |
 | `tools/` | `import-rnds.sh` (the menu engine from ROCKNIXDS), `sync-rocknix-hw.sh` (the hardware support from ROCKNIX), the pixel bunch, the logo and the boot animation's still layers |
+| `web/` | the website on GitHub Pages ([jorrefog.github.io/BananaLinux](https://jorrefog.github.io/BananaLinux/)): the Save Mover (`save-mover/`), one page with no build step |
 | `docs/` | [ARCHITECTURE.md](docs/ARCHITECTURE.md): boot, partitions, sleep, performance and the menu in detail; [FIRST-BOOT.md](docs/FIRST-BOOT.md): the first boot on the hardware, and the logs it leaves |
 
 ## Credits

@@ -1,0 +1,703 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Move game saves from GammaOS (or any handheld) to BananaOS: backs up the originals, converts them, and packs them in the card's folders. Runs in your browser.">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>BananaOS Save Mover</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: the handheld's two screens: a "top screen" card that says what happens, a "bottom screen" of tiles you work in. Dark first, like BananaOS. */
+:root {
+  --ground: #0b0a0d;      /* behind the screens */
+  --screen: #17161c;      /* a screen's face */
+  --tile: #1e1c23;        /* a tile on it */
+  --line: #e8e2d3;        /* the cream frame around tiles */
+  --text: #f1ede2;
+  --muted: #a39d8e;
+  --banana: #f0b429;      /* the menu's yellow */
+  --banana-hi: #ffe68a;
+  --banana-ink: #1f1405;  /* text on yellow */
+  --banana-deep: #8a5a00;
+  --ok: #8fcf6a;
+  --warn: #f2a23a;
+  --bad: #ef6f5e;
+  --rule: #38333b;
+  --display: "Pixelify Sans", "Silkscreen", ui-monospace, monospace;
+  --body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --ground: #e6dfd0; --screen: #fdfcf9; --tile: #f6f2ea; --line: #3a342c; --text: #2a2620; --muted: #7a7262;
+    --banana: #f0b429; --banana-hi: #ffe68a; --banana-ink: #1f1405; --banana-deep: #8a5a00;
+    --ok: #3f7d1f; --warn: #a35d00; --bad: #b8321f; --rule: #d6cfc0; color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --ground: #e6dfd0; --screen: #fdfcf9; --tile: #f6f2ea; --line: #3a342c; --text: #2a2620; --muted: #7a7262;
+  --banana: #f0b429; --banana-hi: #ffe68a; --banana-ink: #1f1405; --banana-deep: #8a5a00;
+  --ok: #3f7d1f; --warn: #a35d00; --bad: #b8321f; --rule: #d6cfc0; color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--ground); color: var(--text); font: 16px/1.5 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 48px;
+  background-image: radial-gradient(color-mix(in srgb, var(--text) 6%, transparent) 1px, transparent 1px);
+  background-size: 4px 4px;
+}
+.wrap { max-width: 920px; margin: 0 auto; display: grid; gap: 14px; }
+
+.screen {
+  background: var(--screen); border: 3px solid var(--line); border-radius: 14px;
+  padding: 22px clamp(16px, 4vw, 30px); box-shadow: inset 0 -4px 0 color-mix(in srgb, var(--line) 18%, transparent);
+  min-width: 0;
+}
+.hinge { height: 10px; margin: 0 18%; border-radius: 0 0 8px 8px; background: color-mix(in srgb, var(--line) 22%, var(--ground)); }
+
+/* top screen */
+.top { display: grid; grid-template-columns: auto 1fr; gap: 22px; align-items: center; }
+.mark { width: 84px; height: 84px; image-rendering: pixelated; }
+.eyebrow { font: 600 13px/1 var(--display); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+h1 { margin: 8px 0 6px; font: 700 clamp(28px, 6vw, 40px)/1.05 var(--display); text-wrap: balance; }
+h1 .b { color: var(--banana); }
+.lede { margin: 0; color: var(--muted); max-width: 62ch; }
+.lede strong { color: var(--text); font-weight: 700; }
+.count { font: 600 17px/1.3 var(--display); color: var(--banana); margin-top: 8px; }
+
+h2 { font: 600 20px/1.2 var(--display); margin: 0; display: flex; align-items: center; gap: 10px; }
+.step { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 7px; border: 2px solid var(--line); font: 700 15px/1 var(--display); flex: none; }
+.step.done { background: var(--banana); color: var(--banana-ink); border-color: var(--banana); }
+.sub { color: var(--muted); margin: 6px 0 0; font-size: 15px; max-width: 70ch; }
+
+/* tiles */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 16px; }
+.tile {
+  position: relative; display: grid; gap: 4px; align-content: start; text-align: left;
+  background: var(--tile); color: var(--text); border: 3px solid var(--line); border-radius: 12px; padding: 16px 16px 14px;
+  box-shadow: inset 0 -4px 0 color-mix(in srgb, var(--line) 16%, transparent); font: inherit; cursor: pointer;
+}
+.tile:hover, .tile.over { border-color: var(--banana); }
+.tile.over { background: color-mix(in srgb, var(--banana) 14%, var(--tile)); }
+.tile .t { font: 600 17px/1.2 var(--display); }
+.tile .d { font-size: 14px; color: var(--muted); }
+.tile input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+.tile:focus-within { outline: 3px solid var(--banana); outline-offset: 2px; }
+.drop { min-height: 132px; border-style: dashed; place-content: center; text-align: center; justify-items: center; }
+.drop .t { font-size: 19px; }
+
+/* chip buttons, like the menu's "A Open" */
+.bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 16px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 9px; padding: 9px 16px 9px 9px; min-height: 44px;
+  background: var(--tile); color: var(--text); border: 3px solid var(--line); border-radius: 10px;
+  font: 600 16px/1 var(--display); cursor: pointer; box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--line) 18%, transparent);
+}
+.btn .key { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; background: var(--line); color: var(--screen); font: 700 14px/1 var(--display); }
+.btn.primary { background: var(--banana); color: var(--banana-ink); border-color: var(--banana); }
+.btn.primary .key { background: var(--banana-ink); color: var(--banana); }
+.btn:hover:not(:disabled) { border-color: var(--banana); }
+.btn:focus-visible { outline: 3px solid var(--banana-hi); outline-offset: 2px; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.quiet { padding: 9px 14px; border-width: 2px; font-size: 14px; min-height: 38px; }
+.status { font-size: 14px; color: var(--muted); }
+.status.ok { color: var(--ok); } .status.bad { color: var(--bad); }
+
+/* the save list */
+.listhead { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: end; }
+.example { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-top: 14px; padding: 10px 14px; border-radius: 10px; border: 2px dashed var(--banana); color: var(--text); font-size: 14px; }
+.example b { font: 600 14px/1 var(--display); color: var(--banana); letter-spacing: .08em; text-transform: uppercase; }
+.rows { display: grid; gap: 8px; margin-top: 14px; }
+.row {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 6px 14px; align-items: center;
+  background: var(--tile); border: 2px solid var(--rule); border-radius: 10px; padding: 12px 14px;
+}
+.row.off { opacity: .55; }
+.row input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--banana); }
+.from { font-size: 13px; color: var(--muted); font-family: var(--mono); overflow-wrap: anywhere; }
+.to { font-family: var(--mono); font-size: 14px; overflow-wrap: anywhere; margin-top: 2px; }
+.to .arrow { color: var(--banana); font-family: var(--display); margin-right: 6px; }
+.note { font-size: 13px; margin-top: 4px; }
+.note.warn { color: var(--warn); } .note.bad { color: var(--bad); } .note.ok { color: var(--ok); }
+.side { display: grid; gap: 6px; justify-items: end; }
+.pill { font: 600 12px/1 var(--display); letter-spacing: .08em; text-transform: uppercase; padding: 5px 8px; border-radius: 6px; border: 2px solid currentColor; white-space: nowrap; }
+.pill.nds { color: var(--banana); } .pill.ra { color: var(--ok); } .pill.skip { color: var(--muted); } .pill.ask { color: var(--warn); }
+select.sys { font: 14px var(--body); background: var(--screen); color: var(--text); border: 2px solid var(--line); border-radius: 8px; padding: 5px 8px; max-width: 100%; }
+.size { font: 12px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.empty { margin-top: 14px; padding: 18px; border-radius: 10px; border: 2px dashed var(--rule); color: var(--muted); text-align: center; }
+
+/* where things go */
+.map { width: 100%; border-collapse: collapse; font-size: 14px; }
+.mapwrap { overflow-x: auto; margin-top: 14px; }
+.map th { text-align: left; font: 600 13px/1.2 var(--display); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 8px 10px; border-bottom: 2px solid var(--rule); }
+.map td { padding: 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+.map code, .guide code { font-family: var(--mono); font-size: 13px; background: color-mix(in srgb, var(--banana) 13%, transparent); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+.guide { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 14px; }
+.guide .tile { cursor: default; }
+.guide ol { margin: 6px 0 0; padding-left: 20px; font-size: 15px; display: grid; gap: 6px; }
+.foot { text-align: center; font-size: 13px; color: var(--muted); }
+
+@media (max-width: 560px) {
+  .top { grid-template-columns: 1fr; gap: 12px; }
+  .mark { width: 64px; height: 64px; }
+  .row { grid-template-columns: auto minmax(0, 1fr); }
+  .side { grid-column: 2; justify-items: start; grid-auto-flow: column; justify-content: start; align-items: center; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .tile, .btn { transition: border-color .12s, background-color .12s; }
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <section class="screen top" aria-labelledby="title">
+    <svg class="mark" id="mark" viewBox="0 0 14 14" aria-hidden="true" shape-rendering="crispEdges"></svg>
+    <div>
+      <div class="eyebrow">Tools · Saves</div>
+      <h1 id="title"><span class="b">BANANA</span>OS Save Mover</h1>
+      <p class="lede">Bring your game saves from <strong>GammaOS</strong> (or any other handheld) to <strong>BananaOS</strong>. Drop the files in, keep a backup of the originals, and get one zip laid out exactly like the BananaOS card. Nothing leaves this browser.</p>
+      <div class="count" id="count">Example loaded · add your own saves below</div>
+    </div>
+  </section>
+  <div class="hinge" aria-hidden="true"></div>
+
+  <section class="screen" aria-labelledby="s1">
+    <h2 id="s1"><span class="step" id="st1">1</span>Add your saves</h2>
+    <p class="sub">Copy the save folders off the GammaOS device first (USB, or its SD card in a computer), then drop them here. Whole folders are fine: save states, pictures and settings in them are left out.</p>
+    <div class="tiles">
+      <label class="tile drop" id="drop">
+        <span class="t">Drop save files or folders here</span>
+        <span class="d">or tap to pick files · .dsv .sav .srm .mcd</span>
+        <input type="file" id="pickFiles" multiple aria-label="Pick save files">
+      </label>
+      <label class="tile">
+        <span class="t">Pick a whole folder</span>
+        <span class="d">For example <code>DraStic/backup</code> or <code>RetroArch/saves</code> from GammaOS.</span>
+        <input type="file" id="pickFolder" webkitdirectory multiple aria-label="Pick a folder of saves">
+      </label>
+      <label class="tile">
+        <span class="t">Match names to your ROMs <span class="d">(optional)</span></span>
+        <span class="d" id="romInfo">Pick the <code>roms</code> folder from the BananaOS card. Only the file names are read, so saves get the exact name BananaOS looks for.</span>
+        <input type="file" id="pickRoms" webkitdirectory multiple aria-label="Pick your ROMs folder">
+      </label>
+    </div>
+  </section>
+
+  <section class="screen" aria-labelledby="s2">
+    <div class="listhead">
+      <h2 id="s2"><span class="step" id="st2">2</span>Check where each save goes</h2>
+      <button class="btn quiet" id="clear" type="button">Clear list</button>
+    </div>
+    <p class="sub">BananaOS finds a save by the game's file name. A save called <code>Pokemon - HeartGold Version (USA).sav</code> belongs to <code>Pokemon - HeartGold Version (USA).nds</code> (or <code>.zip</code>). Untick anything you don't want to bring.</p>
+    <div class="example" id="exampleBar">
+      <b>Example</b><span>These rows show what the tool does. They disappear when you add your own saves and never go into a download.</span>
+    </div>
+    <div class="rows" id="rows"></div>
+  </section>
+
+  <section class="screen" aria-labelledby="s3">
+    <h2 id="s3"><span class="step" id="st3">3</span>Back up the originals</h2>
+    <p class="sub">Saves the files exactly as you added them, untouched, with a checksum list. Keep this zip until you have played each game on BananaOS. The next step unlocks after this.</p>
+    <div class="bar">
+      <button class="btn primary" id="backup" type="button" disabled><span class="key">Y</span>Save backup zip</button>
+      <span class="status" id="backupStatus">Add your own saves first.</span>
+    </div>
+  </section>
+
+  <section class="screen" aria-labelledby="s4">
+    <h2 id="s4"><span class="step" id="st4">4</span>Make the BananaOS pack</h2>
+    <p class="sub">Converts the saves (DeSmuME footers cut off, RetroArch saves named <code>.srm</code>) into a zip with the card's own folders. It carries a second copy of the originals in <code>banana/save-backups</code>, so the card keeps one too.</p>
+    <div class="bar">
+      <button class="btn primary" id="pack" type="button" disabled><span class="key">A</span>Save BananaOS pack</button>
+      <span class="status" id="packStatus">Save the backup first.</span>
+    </div>
+  </section>
+
+  <section class="screen" aria-labelledby="s5">
+    <h2 id="s5"><span class="step">5</span>Put it on the handheld</h2>
+    <div class="guide">
+      <div class="tile">
+        <span class="t">Card in a computer</span>
+        <ol>
+          <li>Open the drive called <code>BANANA</code>.</li>
+          <li>Copy the <code>saves</code> folder there to your computer first, in case you had saves on BananaOS already.</li>
+          <li>Unzip the pack and copy its <code>saves</code> and <code>banana</code> folders onto the drive. Merge folders and replace files when asked.</li>
+        </ol>
+      </div>
+      <div class="tile">
+        <span class="t">Over Wi-Fi</span>
+        <ol>
+          <li>On the handheld: Settings › Network › File sharing on.</li>
+          <li>Windows: open <code>\\&lt;address&gt;\banana</code>. Mac: <code>smb://&lt;address&gt;/banana</code>. The address is shown in Settings › Network.</li>
+          <li>Copy the pack's <code>saves</code> and <code>banana</code> folders in, the same as above.</li>
+        </ol>
+      </div>
+      <div class="tile">
+        <span class="t">Then play</span>
+        <ol>
+          <li>Start the game from the menu and use <b>Continue</b> in the game.</li>
+          <li>DS saves work in both BananaDS and DraStic: BananaOS copies the newer one across when a game starts.</li>
+          <li>Save states never carry over between emulators. Save in-game on GammaOS before you move.</li>
+        </ol>
+      </div>
+    </div>
+    <div class="mapwrap">
+      <table class="map">
+        <thead><tr><th>On GammaOS</th><th>What it is</th><th>On BananaOS</th></tr></thead>
+        <tbody>
+          <tr><td><code>DraStic/backup/Game.dsv</code></td><td>DS save, DraStic</td><td><code>saves/nds/Game.sav</code> (footer cut off)</td></tr>
+          <tr><td><code>…/Game.sav</code> from melonDS</td><td>DS save, raw</td><td><code>saves/nds/Game.sav</code></td></tr>
+          <tr><td><code>RetroArch/saves/Game.srm</code></td><td>GBA, GB, SNES, NES, Mega Drive, N64, PS1 in RetroArch</td><td><code>saves/Game.srm</code></td></tr>
+          <tr><td><code>Game.sav</code> from mGBA, Pizza Boy…</td><td>GBA / GB save, raw</td><td><code>saves/Game.srm</code></td></tr>
+          <tr><td><code>Game_1.mcd</code> from DuckStation</td><td>PS1 memory card</td><td><code>saves/Game.srm</code></td></tr>
+          <tr><td><code>.dss .state .ss1 .mst</code></td><td>Save states</td><td>Left out: they don't load in another emulator</td></tr>
+          <tr><td><code>.eep .sra .fla .mpk</code></td><td>N64 saves from a standalone emulator</td><td>Left out: these need a manual conversion</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <p class="foot">Runs entirely in your browser. Your saves are never uploaded anywhere.</p>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+
+  // ---- the pixel banana (the BananaOS mark's colours) ----
+  const ART = [
+    "...........GG.",
+    "..........GGD.",
+    ".........DYYD.",
+    "........DYHYD.",
+    ".......DYHYYD.",
+    "......DYHYYD..",
+    ".....DYHYYYD..",
+    "...DDYHYYYD...",
+    ".DDYYHYYYDD...",
+    "DYYHHYYYDD....",
+    "DYYYYYDD......",
+    ".DDDDD........",
+  ];
+  const PAL = { G: "#5c7a2a", D: "#8a5a00", Y: "#f0b429", H: "#ffe68a" };
+  const svgNS = "http://www.w3.org/2000/svg";
+  ART.forEach((row, y) => [...row].forEach((c, x) => {
+    if (!PAL[c]) return;
+    const r = document.createElementNS(svgNS, "rect");
+    r.setAttribute("x", x); r.setAttribute("y", y + 1); r.setAttribute("width", 1); r.setAttribute("height", 1);
+    r.setAttribute("fill", PAL[c]); $("mark").appendChild(r);
+  }));
+
+  // ---- what BananaOS knows ----
+  const ROM_SYSTEMS = { nds: "nds", gba: "gba", gbc: "gbc", gb: "gb", nes: "nes", snes: "snes", megadrive: "megadrive", psx: "psx", n64: "n64" };
+  const ROM_EXT = { nds: "nds", gba: "gba", gbc: "gbc", gb: "gb", nes: "nes", sfc: "snes", smc: "snes", md: "megadrive", gen: "megadrive", smd: "megadrive", n64: "n64", z64: "n64", v64: "n64", chd: "psx", cue: "psx", pbp: "psx", m3u: "psx" };
+  const STATE_EXT = /^(dss|state\d*|st\d|ss\d+|mst|ml\d|dst|sgm|ds\d|ss|frz|gqs|ram|auto)$/;
+  const N64_RAW = /^(eep|sra|fla|mpk)$/;
+  const DESMUME_TAG = "|-DESMUME SAVE-|";
+  const MAX_SIZE = 64 * 1024 * 1024;
+
+  let items = [];     // {id, path, name, ext, base, size, mtime, bytes, kind, outBase, include, notes[], example}
+  let roms = [];      // {base, norm, title, system}
+  let backupDone = false;
+  let nextId = 1;
+
+  const extOf = (n) => { const i = n.lastIndexOf("."); return i > 0 ? n.slice(i + 1).toLowerCase() : ""; };
+  const baseOf = (n) => { const i = n.lastIndexOf("."); return i > 0 ? n.slice(0, i) : n; };
+  const norm = (s) => s.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "");
+  const titleOf = (s) => norm(s.replace(/\s*[\(\[].*$/, ""));
+  // exFAT can't hold these characters in a name
+  const safeName = (s) => s.replace(/[\\/:*?"<>|\u0000-\u001f]/g, "_").replace(/[ .]+$/, "").trim() || "save";
+  const fmtSize = (n) => n >= 1048576 ? (n / 1048576).toFixed(n % 1048576 ? 1 : 0) + " MB" : n >= 1024 ? Math.round(n / 1024) + " KB" : n + " B";
+
+  function hasDesmumeFooter(bytes) {
+    if (bytes.length <= 122) return false;
+    const tail = new TextDecoder("latin1").decode(bytes.subarray(bytes.length - 16));
+    return tail === DESMUME_TAG;
+  }
+
+  function romSystemFromPath(path, ext) {
+    const parts = path.toLowerCase().split("/");
+    for (let i = parts.length - 2; i >= 0; i--) if (ROM_SYSTEMS[parts[i]]) return ROM_SYSTEMS[parts[i]];
+    return ROM_EXT[ext] || null;
+  }
+
+  function findRom(base) {
+    if (!roms.length) return null;
+    const exact = roms.find((r) => r.base === base);
+    if (exact) return exact;
+    const n = norm(base);
+    const byNorm = roms.filter((r) => r.norm === n);
+    if (byNorm.length === 1) return byNorm[0];
+    const t = titleOf(base);
+    if (!t) return null;
+    const byTitle = roms.filter((r) => r.title === t);
+    return byTitle.length === 1 ? byTitle[0] : null;
+  }
+
+  // Decide what a file is and where it goes. kind: "nds" | "ra" | "ask" | "skip"
+  function classify(it) {
+    it.notes = [];
+    const p = it.path.toLowerCase();
+    const ext = it.ext;
+    let base = it.base;
+    if (it.size === 0) return skip(it, "Empty file.");
+    if (it.size > MAX_SIZE) return skip(it, "Too big to be a game save.");
+    if (STATE_EXT.test(ext)) return skip(it, "Save state: these don't load in another emulator. Use the in-game save.");
+    if (N64_RAW.test(ext)) return skip(it, "N64 save from a standalone emulator: needs a manual conversion to RetroArch's .srm.");
+
+    let kind = null;
+    if (ext === "dsv") kind = "nds";
+    else if (ext === "srm") kind = "ra";
+    else if (/^(mcd|mcr|mc)$/.test(ext)) {
+      if (it.size !== 131072) return skip(it, "Not a standard 128 KB PS1 memory card.");
+      kind = "ra"; base = base.replace(/_\d$/, "");
+      it.notes.push(["ok", "PS1 memory card: becomes a RetroArch save."]);
+    } else if (ext === "sav") {
+      if (/(^|\/)(drastic|melonds|desmume|nds|nintendo ?ds)(\/|$)/.test(p)) kind = "nds";
+      else if (/(^|\/)(gba|gbc|gb|mgba|myboy|pizza ?boy|gambatte|retroarch|snes|nes)(\/|$)/.test(p)) kind = "ra";
+    } else {
+      return skip(it, "Not a save file.");
+    }
+
+    const rom = findRom(base);
+    if (rom) {
+      if (!kind) kind = rom.system === "nds" ? "nds" : "ra";
+      if (rom.base !== base) it.notes.push(["ok", "Renamed to match your ROM “" + rom.base + "”."]);
+      base = rom.base;
+    } else if (roms.length) {
+      it.notes.push(["warn", "No ROM with this name in the folder you picked. Check the name matches your game file."]);
+    }
+
+    if (!kind) {
+      // .sav with no hint: sizes only a DS uses, or only a GBA uses
+      if (it.size >= 262144 && it.size !== 262160) kind = "nds";
+      else if ([32768, 131072, 131088, 65552, 32784].includes(it.size)) kind = "ra";
+      else { kind = "ask"; it.notes.push(["warn", "Could be a DS or a Game Boy save. Pick which."]); }
+    }
+
+    if (it.forced) { kind = it.forced; it.notes = it.notes.filter((n) => !n[1].startsWith("Could be")); }
+    if (kind === "nds" && it.bytes && hasDesmumeFooter(it.bytes)) it.notes.push(["ok", "DeSmuME footer found: cut off (122 bytes)."]);
+    if (kind === "ra" && ext === "sav") it.notes.push(["ok", "Renamed to .srm for RetroArch."]);
+    it.kind = kind; it.outBase = safeName(base);
+    return it;
+  }
+  function skip(it, why) { it.kind = "skip"; it.outBase = ""; it.notes = [["bad", why]]; it.include = false; return it; }
+
+  const outPath = (it) => it.kind === "nds" ? "saves/nds/" + it.outBase + ".sav" : it.kind === "ra" ? "saves/" + it.outBase + ".srm" : "";
+
+  function convert(it) {
+    if (it.kind === "nds" && hasDesmumeFooter(it.bytes)) return it.bytes.subarray(0, it.bytes.length - 122);
+    return it.bytes;
+  }
+
+  // The same game twice (a DraStic .dsv and a melonDS .sav): keep the newest
+  function resolveDuplicates() {
+    const groups = new Map();
+    for (const it of items) {
+      if (it.kind !== "nds" && it.kind !== "ra") continue;
+      const k = outPath(it).toLowerCase();
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(it);
+    }
+    for (const g of groups.values()) {
+      g.forEach((it) => { it.notes = it.notes.filter((n) => !n[2]); });
+      if (g.length < 2) continue;
+      g.sort((a, b) => b.mtime - a.mtime);
+      // one file per game on the card: the one ticked by hand, else the newest
+      const chosen = g.find((it) => it.userTouched && it.include) || g[0];
+      g.forEach((it) => {
+        if (it === chosen) it.notes.push(["ok", it === g[0] ? "Newest of " + g.length + " copies of this save." : "Chosen over a newer copy of this save.", 1]);
+        else { it.include = false; it.notes.push(["warn", "Another copy of the same save. Tick it to use this one instead.", 1]); }
+      });
+    }
+  }
+
+  // ---- adding files ----
+  async function addFiles(list) {
+    const real = list.filter((x) => x.file && x.file.name && !x.file.name.startsWith("."));
+    if (!real.length) return;
+    if (items.some((i) => i.example)) { items = items.filter((i) => !i.example); }
+    for (const { file, path } of real) {
+      if (items.some((i) => !i.example && i.path === path && i.size === file.size && i.mtime === file.lastModified)) continue;
+      const it = { id: nextId++, path, name: file.name, ext: extOf(file.name), base: baseOf(file.name), size: file.size, mtime: file.lastModified || 0, include: true, example: false };
+      if (file.size > 0 && file.size <= MAX_SIZE && !STATE_EXT.test(it.ext)) {
+        try { it.bytes = new Uint8Array(await file.arrayBuffer()); } catch { it.bytes = null; }
+      }
+      classify(it);
+      if (it.kind !== "skip" && !it.bytes) skip(it, "Couldn't read this file. Try adding it again.");
+      items.push(it);
+    }
+    backupDone = false;
+    refresh();
+  }
+
+  function entryFiles(entry, prefix) {
+    return new Promise((resolve) => {
+      if (entry.isFile) entry.file((f) => resolve([{ file: f, path: prefix + f.name }]), () => resolve([]));
+      else if (entry.isDirectory) {
+        const reader = entry.createReader(); const all = [];
+        const readMore = () => reader.readEntries(async (ents) => {
+          if (!ents.length) {
+            const nested = await Promise.all(all.map((e) => entryFiles(e, prefix + entry.name + "/")));
+            resolve(nested.flat());
+          } else { all.push(...ents); readMore(); }
+        }, () => resolve([]));
+        readMore();
+      } else resolve([]);
+    });
+  }
+
+  const drop = $("drop");
+  ["dragenter", "dragover"].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add("over"); }));
+  ["dragleave", "drop"].forEach((t) => drop.addEventListener(t, () => drop.classList.remove("over")));
+  drop.addEventListener("drop", async (e) => {
+    e.preventDefault();
+    const dt = e.dataTransfer; const out = [];
+    const entries = dt.items ? [...dt.items].map((i) => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean) : [];
+    if (entries.length) for (const en of entries) out.push(...await entryFiles(en, ""));
+    else for (const f of dt.files) out.push({ file: f, path: f.name });
+    addFiles(out);
+  });
+  // stop a missed drop from navigating away
+  window.addEventListener("dragover", (e) => e.preventDefault());
+  window.addEventListener("drop", (e) => e.preventDefault());
+
+  $("pickFiles").addEventListener("change", (e) => { addFiles([...e.target.files].map((f) => ({ file: f, path: f.name }))); e.target.value = ""; });
+  $("pickFolder").addEventListener("change", (e) => { addFiles([...e.target.files].map((f) => ({ file: f, path: f.webkitRelativePath || f.name }))); e.target.value = ""; });
+  $("pickRoms").addEventListener("change", (e) => {
+    const list = [...e.target.files].filter((f) => !f.name.startsWith("."));
+    const found = [];
+    for (const f of list) {
+      const ext = extOf(f.name); const path = f.webkitRelativePath || f.name;
+      if (!ROM_EXT[ext] && ext !== "zip" && ext !== "7z") continue;
+      if (/\/(media|images|videos|manuals)\//i.test(path)) continue;
+      const system = romSystemFromPath(path, ext);
+      if (!system) continue;
+      const base = baseOf(f.name);
+      found.push({ base, norm: norm(base), title: titleOf(base), system });
+    }
+    roms = found;
+    $("romInfo").textContent = found.length
+      ? found.length + " games found. Save names are matched to them."
+      : "No games found in that folder. Pick the roms folder itself (it has nds, gba, snes… inside).";
+    items.forEach((it) => { if (!it.example && it.kind !== "skip") classify(it); });
+    e.target.value = ""; refresh();
+  });
+
+  $("clear").addEventListener("click", () => { items = []; backupDone = false; refresh(); });
+
+  // ---- the list ----
+  function refresh() {
+    resolveDuplicates();
+    const rows = $("rows"); rows.textContent = "";
+    const isExample = items.length > 0 && items.every((i) => i.example);
+    $("exampleBar").hidden = !isExample;
+    if (!items.length) {
+      const e = document.createElement("div"); e.className = "empty";
+      e.textContent = "No saves yet. Add some in step 1.";
+      rows.appendChild(e);
+    }
+    for (const it of items) rows.appendChild(rowFor(it));
+
+    const real = items.filter((i) => !i.example);
+    const going = real.filter((i) => i.include && (i.kind === "nds" || i.kind === "ra"));
+    const asking = real.filter((i) => i.include && i.kind === "ask");
+    const skipped = real.filter((i) => i.kind === "skip").length;
+    $("count").textContent = isExample ? "Example loaded · add your own saves below"
+      : !real.length ? "No saves added yet"
+      : going.length + " save" + (going.length === 1 ? "" : "s") + " ready for BananaOS" + (skipped ? " · " + skipped + " left out" : "") + (asking.length ? " · " + asking.length + " need a choice" : "");
+
+    $("st1").classList.toggle("done", real.length > 0);
+    $("st2").classList.toggle("done", going.length > 0 && !asking.length);
+    $("st3").classList.toggle("done", backupDone);
+
+    const originals = real.filter((i) => i.bytes);
+    $("backup").disabled = !originals.length;
+    if (!originals.length) setStatus("backupStatus", "Add your own saves first.");
+    else if (!backupDone) setStatus("backupStatus", originals.length + " original file" + (originals.length === 1 ? "" : "s") + " will be saved as they are.");
+
+    $("pack").disabled = !(backupDone && going.length && !asking.length);
+    if (!backupDone) setStatus("packStatus", "Save the backup first.");
+    else if (asking.length) setStatus("packStatus", "Pick DS or Game Boy for the rows marked in step 2.", "bad");
+    else if (!going.length) setStatus("packStatus", "No saves ticked in step 2.");
+    else setStatus("packStatus", going.length + " save" + (going.length === 1 ? "" : "s") + " will be converted.");
+  }
+
+  function rowFor(it) {
+    const row = document.createElement("div");
+    row.className = "row" + (it.include && it.kind !== "skip" ? "" : " off");
+
+    const cb = document.createElement("input"); cb.type = "checkbox"; cb.id = "inc-" + it.id;
+    cb.checked = it.include && it.kind !== "skip"; cb.disabled = it.kind === "skip" || it.example;
+    cb.setAttribute("aria-label", "Bring " + it.name);
+    cb.addEventListener("change", () => {
+      it.include = cb.checked;
+      if (cb.checked) items.forEach((o) => { if (o !== it && outPath(o).toLowerCase() === outPath(it).toLowerCase()) o.userTouched = false; });
+      it.userTouched = true; refresh();
+    });
+
+    const mid = document.createElement("div"); mid.style.minWidth = "0";
+    const from = document.createElement("div"); from.className = "from"; from.textContent = it.path;
+    mid.appendChild(from);
+    if (it.kind === "nds" || it.kind === "ra") {
+      const to = document.createElement("div"); to.className = "to";
+      const a = document.createElement("span"); a.className = "arrow"; a.textContent = "→";
+      to.append(a, document.createTextNode(outPath(it)));
+      mid.appendChild(to);
+    }
+    for (const [cls, text] of it.notes) {
+      const n = document.createElement("div"); n.className = "note " + cls; n.textContent = text; mid.appendChild(n);
+    }
+
+    const side = document.createElement("div"); side.className = "side";
+    if (it.kind === "skip") {
+      side.appendChild(pill("skip", "Left out"));
+    } else {
+      const sel = document.createElement("select"); sel.className = "sys"; sel.id = "sys-" + it.id;
+      sel.setAttribute("aria-label", "System for " + it.name);
+      if (it.kind === "ask") sel.appendChild(new Option("Pick a system…", "ask"));
+      sel.appendChild(new Option("Nintendo DS", "nds"));
+      sel.appendChild(new Option("RetroArch system (GBA, GB, SNES…)", "ra"));
+      sel.value = it.kind; sel.disabled = it.example;
+      sel.addEventListener("change", () => { it.forced = sel.value === "ask" ? null : sel.value; classify(it); it.include = true; refresh(); });
+      side.appendChild(it.kind === "nds" ? pill("nds", "DS") : it.kind === "ra" ? pill("ra", "RetroArch") : pill("ask", "Check"));
+      side.appendChild(sel);
+    }
+    const sz = document.createElement("span"); sz.className = "size"; sz.textContent = fmtSize(it.size); side.appendChild(sz);
+
+    row.append(cb, mid, side);
+    return row;
+  }
+  function pill(cls, text) { const s = document.createElement("span"); s.className = "pill " + cls; s.textContent = text; return s; }
+  function setStatus(id, text, cls) { const el = $(id); el.textContent = text; el.className = "status" + (cls ? " " + cls : ""); }
+
+  // ---- zip (stored, no compression: saves are small and this keeps it simple) ----
+  const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  function crc32(b) { let c = 0xffffffff; for (let i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; }
+  function dosTime(d) {
+    return { time: (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1),
+             date: ((Math.max(d.getFullYear(), 1980) - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate() };
+  }
+  function makeZip(files) {   // files: [{path, data: Uint8Array, date: Date}]
+    const enc = new TextEncoder(); const parts = []; const central = []; let offset = 0;
+    for (const f of files) {
+      const name = enc.encode(f.path); const data = f.data; const crc = crc32(data); const { time, date } = dosTime(f.date || new Date());
+      const h = new DataView(new ArrayBuffer(30));
+      h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, 0, true);
+      h.setUint16(10, time, true); h.setUint16(12, date, true); h.setUint32(14, crc, true);
+      h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, name.length, true); h.setUint16(28, 0, true);
+      parts.push(h.buffer, name, data);
+      const c = new DataView(new ArrayBuffer(46));
+      c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint16(10, 0, true);
+      c.setUint16(12, time, true); c.setUint16(14, date, true); c.setUint32(16, crc, true); c.setUint32(20, data.length, true);
+      c.setUint32(24, data.length, true); c.setUint16(28, name.length, true); c.setUint32(42, offset, true);
+      central.push(c.buffer, name);
+      offset += 30 + name.length + data.length;
+    }
+    const cdSize = central.reduce((n, p) => n + p.byteLength, 0);
+    const e = new DataView(new ArrayBuffer(22));
+    e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true);
+    e.setUint32(12, cdSize, true); e.setUint32(16, offset, true);
+    return new Blob([...parts, ...central, e.buffer], { type: "application/zip" });
+  }
+
+  async function sha256(bytes) {
+    try { const h = await crypto.subtle.digest("SHA-256", bytes); return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, "0")).join(""); }
+    catch { return "(checksum unavailable in this browser)"; }
+  }
+  const stamp = () => { const d = new Date(), p = (n) => String(n).padStart(2, "0"); return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + "-" + p(d.getHours()) + p(d.getMinutes()); };
+  const text = (s) => new TextEncoder().encode(s.replace(/\n/g, "\r\n"));
+  // the same folder path in a zip must not appear twice
+  function uniquePaths(list) {
+    const seen = new Set();
+    return list.map((f) => { let p = f.path, n = 2; while (seen.has(p.toLowerCase())) { p = f.path.replace(/(\.[^./]*)?$/, " (" + n++ + ")$1"); } seen.add(p.toLowerCase()); return { ...f, path: p }; });
+  }
+
+  async function originalsFiles(prefix) {
+    const real = items.filter((i) => !i.example && i.bytes);
+    const files = uniquePaths(real.map((i) => ({ path: prefix + i.path.replace(/^\/+/, ""), data: i.bytes, date: new Date(i.mtime || Date.now()) })));
+    const lines = ["Original save files, exactly as they were added to BananaOS Save Mover on " + new Date().toLocaleString() + ".", "SHA-256 checksums:", ""];
+    for (const f of files) lines.push((await sha256(f.data)) + "  " + f.path.slice(prefix.length) + "  (" + f.data.length + " bytes)");
+    files.push({ path: prefix + "CHECKSUMS.txt", data: text(lines.join("\n") + "\n"), date: new Date() });
+    return files;
+  }
+
+  // ---- saving a file: the page's download permission inside Claude, a normal download anywhere else ----
+  const inFrame = (() => { try { return window.self !== window.top; } catch { return true; } })();
+  const downloadsP = window.claude && window.claude.use ? window.claude.use("downloads").catch(() => null) : Promise.resolve(null);
+  async function offer(filename, blob) {
+    const dl = await downloadsP;
+    if (dl) {
+      try { await dl.save({ filename, data: blob }); return [true]; }
+      catch (e) { return [false, e && e.code === "declined" ? "Not saved: the save was cancelled." : "Couldn't save the file here (" + ((e && e.code) || "error") + ")."]; }
+    }
+    if (inFrame && window.claude) return [false, "Saving files is turned off in this view. Allow downloads for this page and try again."];
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+    return [true];
+  }
+
+  $("backup").addEventListener("click", async () => {
+    const btn = $("backup"); btn.disabled = true; setStatus("backupStatus", "Making the backup…");
+    const s = stamp();
+    const zip = makeZip(await originalsFiles("save-backup-" + s + "/"));
+    const [ok, why] = await offer("save-backup-" + s + ".zip", zip);
+    btn.disabled = false;
+    if (ok) { backupDone = true; refresh(); setStatus("backupStatus", "Backup saved: save-backup-" + s + ".zip. Keep it somewhere safe.", "ok"); }
+    else setStatus("backupStatus", why, "bad");
+  });
+
+  $("pack").addEventListener("click", async () => {
+    const btn = $("pack"); btn.disabled = true; setStatus("packStatus", "Converting…");
+    const s = stamp(); const now = new Date();
+    const going = items.filter((i) => !i.example && i.include && (i.kind === "nds" || i.kind === "ra"));
+    const files = going.map((i) => ({ path: outPath(i), data: convert(i), date: now }));
+    const readme = [
+      "BananaOS save pack, made " + now.toLocaleString(),
+      "",
+      "1. Copy your BananaOS card's own 'saves' folder to your computer first, in case you had saves there already.",
+      "2. Copy the 'saves' and 'banana' folders from this zip onto the BANANA drive (the card in a computer,",
+      "   or \\\\<address>\\banana over Wi-Fi with Settings > Network > File sharing on). Merge folders, replace files.",
+      "3. Start each game and use Continue in the game. Save states do not carry over.",
+      "",
+      "What is in here:",
+      ...going.map((i) => "  " + outPath(i) + "   <-  " + i.path),
+      "",
+      "banana/save-backups/" + s + "/ holds the original files, untouched.",
+      "DS saves: BananaDS reads saves/nds/<game>.sav; when you start a game in DraStic, BananaOS makes its .dsv from it.",
+    ].join("\n") + "\n";
+    files.push({ path: "COPY-TO-BANANAOS.txt", data: text(readme), date: now });
+    files.push(...await originalsFiles("banana/save-backups/" + s + "/"));
+    const [ok, why] = await offer("bananaos-saves-" + s + ".zip", makeZip(files));
+    btn.disabled = false;
+    if (ok) { setStatus("packStatus", "Pack saved: bananaos-saves-" + s + ".zip. Step 5 says where it goes.", "ok"); $("st4").classList.add("done"); }
+    else setStatus("packStatus", why, "bad");
+  });
+
+  // ---- the example shown on first open (never downloadable) ----
+  function exampleItem(path, size, withFooter) {
+    const name = path.split("/").pop();
+    const bytes = new Uint8Array(size + (withFooter ? 122 : 0));
+    if (withFooter) bytes.set(new TextEncoder().encode(DESMUME_TAG), bytes.length - 16);
+    const it = { id: nextId++, path, name, ext: extOf(name), base: baseOf(name), size: bytes.length, mtime: Date.now() - 86400000, include: true, example: true, bytes };
+    return classify(it);
+  }
+  items = [
+    exampleItem("DraStic/backup/Pokemon - HeartGold Version (USA).dsv", 524288, true),
+    exampleItem("RetroArch/saves/Pokemon - Emerald Version (USA).srm", 131072, false),
+    exampleItem("melonDS/Mario Kart DS (USA).sav", 8192, false),
+    exampleItem("RetroArch/states/Pokemon - Emerald Version (USA).state1", 4096, false),
+  ];
+  refresh();
+})();
+</script>
+</body>
+</html>
