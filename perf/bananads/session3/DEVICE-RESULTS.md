@@ -384,3 +384,17 @@ frame). (2) **An HBlank DMA main RAM `0x021/0x022xxxxx` -> VRAM `0x062xxxxx`, 32
 path (main RAM up into a VRAM page with one bank) doesn't take it, probably the reload mode or the page's mapping.
 Together with the composite they are the flyover's ~18%; a block path for each, timing-exact like 0018/0066, is
 the next session's job (it needs the headless difftest and savestate compares; not done here).
+
+## 11. The governor's retry, verified (17:00 UTC, `k-mk4d` = BananaDS 79b6e43, the 0.4.1 pin)
+
+A full Mario Kart DS race, 170 s of A held, on each handheld (`race-retry2`, `r-race-retry2`):
+
+| Device | windows | under 59 | frames lost | repeats | cpugov log |
+|---|---|---|---|---|---|
+| Plus | 194 | 2 | 14 | 10 | `1992 -> 1800 (clean)` at the menus, `1800 -> 1992 (late: 2)` at the countdown, **`1800 MHz may be tried again: 120 s clean at 1992 MHz`**, `1992 -> 1800 (clean)`, `1800 -> 1608 (clean)`, `1608 -> 1416 (clean)`: the race at 1416 MHz |
+| RG DS | 193 | 3 | 17 | 7 | the same: `1800 -> 1992 (late: 1)`, the retry after 120 s, `1992 -> 1800 (clean)` |
+
+Before the fix the same races sat at 1992 MHz to the end (`race-long`, `r-race-long`, section 10; and the first
+version of the fix, 6ac191e, waited 4 min because the ban's own strike counted: `race-retry`, `r-race-retry`). The
+race is as clean as before (2-3 windows under 59, all at the start). SoC on the Plus: 66 °C at the end against 68
+at 1992 MHz; the step down to 1416 came late in the race, so the longer run in section 12 shows the temperature.
