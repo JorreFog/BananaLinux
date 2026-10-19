@@ -27,9 +27,13 @@ i=0; until pidof bananads >/dev/null; do sleep 0.2; i=$((i+1)); [ $i -gt 100 ] &
 K=/data/bananads-dev/padkey; E=$(awk '/^N: Name="retrogame_joypad"/{f=1} f&&/^H:/{for(i=1;i<=NF;i++) if($i ~ /^event/) {print "/dev/input/"$i; exit}}' /proc/bus/input/devices)
 tap() { $K $E $1 1; sleep 0.1; $K $E $1 0; }
 shot() { python3 $D/grab.py $W/shot-$1.png all >/dev/null 2>&1; }
-sleep 5; tap 315; sleep 0.65
-i=0; while [ $i -lt 40 ]; do tap 305; sleep 0.65; i=$((i+1)); [ $i -eq 19 ] && shot 20; done
-$K $E 305 1; sleep 1; shot 35; sleep 14; $K $E 305 0; shot 50
+if [ -n "$NOTAPS" ]; then   # NOTAPS=1: no presses at all (a title's attract loop, an intro flyover); the same 50 s
+  sleep 20; shot 20; sleep 15; shot 35; sleep 15; shot 50
+else
+  sleep 5; tap 315; sleep 0.65
+  i=0; while [ $i -lt 40 ]; do tap 305; sleep 0.65; i=$((i+1)); [ $i -eq 19 ] && shot 20; done
+  $K $E 305 1; sleep 1; shot 35; sleep 14; $K $E 305 0; shot 50
+fi
 T1=$(($(cat /sys/class/thermal/thermal_zone0/temp)/1000))
 alive=$(pidof bananads)
 kill -TERM $(pidof bananads) 2>/dev/null

@@ -312,3 +312,30 @@ the pin: nothing (14-16).
 - Nice values, a core pin, two Gengis threads, the shader: nothing on Mario Kart's race start; left off.
 
 Raw logs: `device-evidence/kms/s4-*`, `m-*`, `device-evidence/kms-rgds/r-*`.
+
+## 9. Every game on both handhelds with `k-mk4b` (the 0.4.1 candidate, 16:30 UTC)
+
+`gametest.sh` (in `device-evidence/`): the game through the menu's launch hook, a copy of its save, no resume; Start,
+then A every 0.75 s for 30 s, then A held 15 s; screenshots of both panels at 20, 35 and 50 s; the card's own
+settings (the Plus: 2x + `ds-grid-2x`; the RG DS: 2x, its per-game shader, `core.slice=64` forced). A smoke test of
+play, not a benchmark: it shows that each game starts, runs, draws and quits, and what its first 50 s of play do.
+Window 1 (the boot) is under 59 in every game; the audio servo's short chunks are all in the first 10 s (the start-up
+fill: 0 in every later 10 s window). Logs: `device-evidence/games-plus/`, `games-rgds/`.
+
+| Device | Game | windows | under 59 | frames lost | repeats | drops | cpugov steps | SoC °C | screen at 50 s |
+|---|---|---|---|---|---|---|---|---|---|
+| Plus | Dragon Quest Monsters: Joker | 52 | 1 | 11 | 3 | 4 | 1800 1608 | 51-60 | the monster scout menu |
+| Plus | Golden Sun: Dark Dawn | 52 | 3 | 33 | 40 | 18 | 1800 1608 1416 1104 1416 | 51-59 | the intro text (a new game in the copied save) |
+| Plus | Mario Kart DS | 53 | 2 | 14 | 6 | 8 | 1800 1992 | 51-64 | a race |
+| Plus | Metroid Prime Hunters | 52 | 1 | 12 | 6 | 8 | 1800 1608 | 51-59 | the intro cinematic |
+| Plus | Pokémon HeartGold | 51 | 1 | 12 | 3 | 4 | 1800 1608 1416 | 52-60 | the X menu in the overworld |
+| Plus | Pokémon Black 2 | 51 | 3 | 20 | 13 | 6 | 1800 1608 1416 | 51-62 | the Pokégear |
+| Plus | Pokémon Platinum | 51 | 1 | 11 | 3 | 4 | 1800 1608 1416 | 51-58 | the controls screen (new game) |
+| RG DS | Golden Sun: Dark Dawn | 50 | 4 | 45 | 55 | 22 | 1800 1608 1416 | 50-54 | the intro text (a new game in the copied save) |
+| RG DS | Mario Kart DS | 52 | 2 | 15 | 5 | 14 | 1800 1608 1800 | 51-60 | a race |
+| RG DS | Metroid Prime Hunters | 51 | 1 | 10 | 5 | 8 | 1800 1608 | 51-53 | the intro cinematic |
+| RG DS | Pokémon Platinum | 51 | 1 | 11 | 3 | 4 | 1800 1608 1416 1104 | 51-48 | the controls screen (new game) |
+
+Golden Sun's two windows at 51 and 37 fps on the RG DS (windows 7-8) are its title flyover, 0.4.0's known slow scene
+(~22 fps for a minute in 0.4.0's notes); the A taps leave it quickly. Black 2's three windows (a 3D town) are the
+most the other games lose. No game crashed, hung or logged an error; every screenshot shows a play screen.
