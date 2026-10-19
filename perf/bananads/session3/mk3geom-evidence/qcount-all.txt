@@ -1,0 +1,18 @@
+# qemu (jitcount), device build of 3610c71 (= b3), emulator thread, MK 1650-2150, insns/frame; qcf-off = all three new toggles off, qc3-on = defaults; qc-off = 0080's build with geom_queue off (3a743f3's paths)
+qc-off       total  12786.0k  without Gengis  12556.1k  (Gengis  229.9k)  geometry+GX DMA   6484.5k
+qcf-off      total  13002.6k  without Gengis  12586.7k  (Gengis  415.9k)  geometry+GX DMA   6474.1k
+qc3-on       total  12320.3k  without Gengis  12083.4k  (Gengis  236.9k)  geometry+GX DMA   6102.4k
+   2074.2k       0.0k  -2074.2k  _ZN7melonDS5GPU3D11RunFastFIFOEv
+    337.7k     174.5k   -163.2k  line_px
+    451.0k     352.9k    -98.1k  _ZN7melonDS3DMA6Run9GXEv
+     13.4k       5.7k     -7.6k  _ZN7melonDS14BananaRenderer6NewJobEv
+     11.4k       4.1k     -7.2k  rast_kern_h13000
+     14.9k       8.5k     -6.4k  gx_polygon
+      9.1k       3.8k     -5.3k  rast_kern_h23110
+      5.7k       0.7k     -5.0k  _ZN7melonDS14BananaRenderer16Start3DRenderingEv
+      5.0k       0.4k     -4.6k  rast_kern_h13110
+      7.3k       3.9k     -3.3k  f_run
+      0.0k       3.2k     +3.2k  _ZN7melonDS12GeomFastMath7Mult4x3EPiPKi
+     -3.6k       3.2k     +6.8k  rast_kern_h11010
+     25.1k      32.7k     +7.6k  rast_kern_h12010
+    119.8k    1822.3k  +1702.5k  _ZN7melonDS5GPU3D3RunEv
