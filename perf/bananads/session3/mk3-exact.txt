@@ -1,4 +1,4 @@
-# coordinator, 13:38 UTC: mk3 8ed1fe7 (mk2 3a743f3 + mk3geom 0080-0082 + mk3jit 0085-0087; /home/user/perf3/mk3-b/b/bananads, device toolchain) on mk-scene.sh
+# coordinator, 14:18 UTC: mk3 ea310c8 (final: mk2 3a743f3 + 0080-0083 + 0085-0088; /home/user/perf3/mk3-b/b/bananads, device toolchain) on mk-scene.sh
 ## defaults: exit=0
 0ff6f47bd15cce2850845091841ecb74  frame1500.ppm
 2e4ca72f9e51e549e8904b189ae856c6  frame1740.ppm
@@ -9,7 +9,7 @@
 b61ee9823d3c1b8e01f5bd7d2a160ac0  frame2040.ppm
 6f258e37449b0ac0e6e1f6d7c7a40bc3  frame2100.ppm
 0266610cddc0585a8a0c95c34e6c0d4a  audio.raw
-## the six new toggles off (--set render.geom_queue=off --set render.geom_switch=off --set render.gx_dmatime=off --set jit.hugepages=off --set jit.cp15nop=off --set jit.region_trio=off): exit=0
+## the eight new toggles off (--set render.geom_queue=off --set render.geom_switch=off --set render.gx_dmatime=off --set render.geom_thread=off --set jit.hugepages=off --set jit.cp15nop=off --set jit.region_trio=off --set jit.fastclz=off): exit=0
 0ff6f47bd15cce2850845091841ecb74  frame1500.ppm
 2e4ca72f9e51e549e8904b189ae856c6  frame1740.ppm
 83584df2b8764443c10554c08f090add  frame1800.ppm
@@ -19,4 +19,10 @@ b61ee9823d3c1b8e01f5bd7d2a160ac0  frame2040.ppm
 b61ee9823d3c1b8e01f5bd7d2a160ac0  frame2040.ppm
 6f258e37449b0ac0e6e1f6d7c7a40bc3  frame2100.ppm
 0266610cddc0585a8a0c95c34e6c0d4a  audio.raw
+## both identical to mkside-evidence/mk-scene-base-md5.txt (diff empty)
+
+# earlier, 13:38 UTC: mk3 8ed1fe7 (0080-0082 + 0085-0087), the same result:
+# coordinator, 13:38 UTC: mk3 8ed1fe7 (mk2 3a743f3 + mk3geom 0080-0082 + mk3jit 0085-0087; /home/user/perf3/mk3-b/b/bananads, device toolchain) on mk-scene.sh
+## defaults: exit=0
+## the six new toggles off (--set render.geom_queue=off --set render.geom_switch=off --set render.gx_dmatime=off --set jit.hugepages=off --set jit.cp15nop=off --set jit.region_trio=off): exit=0
 ## both identical to mkside-evidence/mk-scene-base-md5.txt (diff empty)

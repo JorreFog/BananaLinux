@@ -251,3 +251,48 @@ counts only). The worker would clip again with attributes on vertices whose colo
 That needs a per-vertex record in the ring (position, raw texcoords, the light/material/VecMatrix versions) and
 the worker owning `VertexColor`. It could move ~0.64M (lighting) + ~0.15M (vertex attribute stores) more, at
 ~0.2M of ring cost on the emulator thread.
+
+## Step 2 (14:16-15:10 UTC): lighting on the worker (0084, `render.geom_light`): NOT committed, not exact
+
+**Head unchanged: `649e008`** (0083, `render.geom_thread` on), CI artifact
+`bananads-aarch64-649e0087632904ca057fa42e7801696bd59adffe`. 0084 is in `mk3geom-evidence/0084-geom-light-WIP.patch`
+(it applies on 0083) with `exactness-0084-WIP.txt` and `qcount-0084-WIP.txt`.
+
+**0083's subtle sabotage, run first: no drain at a savestate save only (`MELONDS_GEOMSAB=3`, a test build).** The
+savestate compare catches it at 1850 (`7d00a6f6...` vs `a57737e0...`) but not at 2000, where the worker happened to
+be done. So whether it is caught depends on the race; the crash sabotages are the reliable ones.
+
+**The 0084 design.**
+- The normal command keeps the texcoords it makes, the transformed normal and its cycles (popcount of the enabled
+  lights, at least 1: data-independent) on the emulator thread.
+- It queues a light entry in a light ring of 4096, with state snapshots in a ring of 64 when 0x30-0x34 changed them.
+- A vertex submitted after it carries the entry's number in its colour (bit 31).
+- The emulator thread clips as before: positions, counts and texcoords stay right, and the colours are garbage it
+  never keeps.
+- The worker lights the entries in order. A stored polygon with lit inputs brings them in its job; the worker
+  relights them and redoes the same clipping passes with the attributes (`ClipAgainstPlane` now takes the polygon
+  attributes) to get the colours.
+- At a savestate (drained), `VertexColor` and the temp vertices' colours are made literal again.
+
+**Where it ended:**
+- Exact on: the MK scene, main RAM every frame with `--regs --timing` (after a fix: the worker could light ahead of
+  a polygon job and then loop forever, which hung a difftest), savestates at 1850/2000, the `Run` trace,
+  geomtest-irq, and exact-suite (FAILS=0).
+- **Not exact on `gxstm`**: check.sh's gxstm pictures (soft, Gengis 2x, reload) differ off vs on; the other 13 sets
+  and difftests are identical. Not debugged (no time). Suspects: a colour source the encoding misses (lit vertices
+  resolved from a light result that was overwritten), or the clip replay in `GeomColors` for a polygon kind MK
+  doesn't send. Start there with a per-polygon colour hash, on vs off.
+- **No gain anyway:** `CalculateLightingBody` -638.6k on the emulator thread, but `GeomLightCmd` +436k (~100 a
+  normal: the texcoord product, the normal's transform, the cycles, the entry) and `SubmitPolygonBody` +103k (the
+  inputs' and temp colours' copies). **The emulator thread: 11,876.8k -> 11,868.4k (~0); the worker 507k -> 1,421k.**
+  A first version, with the light jobs in the polygon ring, cost more than lighting itself (the ring's 1 KB slots
+  and the waits).
+
+**What it would need to pay:**
+- the emulator thread doing only the timing per normal (`AddCyclesT(popcount)` and storing the raw normal), with
+  the transform and the texcoords on the worker (texcoords then resolved like the colours);
+- no copy of the inputs (the worker keeping its own temp-vertex mirror from per-vertex entries);
+- then fixing the gxstm difference.
+
+That is a design for another session. **The 11.0M target is not reached: the head is at ~11.88M** (qemu, emulator
+thread without Gengis bins, MK 1650-2150; 12.56M at mk2's 3a743f3).

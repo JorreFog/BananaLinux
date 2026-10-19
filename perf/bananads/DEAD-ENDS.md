@@ -91,3 +91,7 @@
 - (mk3jit) A GX-only patched stub for the JIT's STRs to the GX FIFO port: after 0064 `SlowWrite9`'s GX case is first
   and direct; a special stub would save ~15-25 of ~50 instructions per STR (~2,076 a frame on MK): ~30-50k a frame,
   not worth the risk in the fault-patching code. `session3/mk3jit.md`.
+- (mk3geom) Lighting on the geometry worker (0084 `render.geom_light`, not committed): about 0 on the emulator thread
+  (lighting -639k, but handing each normal over costs ~100 instructions, +436k, and the input copies +103k), and not
+  exact on gxstm. A worker thread for geometry is limited because the polygon's timing depends on its culling and
+  clipping, which have to stay on the emulator thread (mk3geom.md's audit). WIP patch in `session3/mk3geom-evidence/`.
