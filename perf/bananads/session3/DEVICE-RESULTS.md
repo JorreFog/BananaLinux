@@ -398,3 +398,23 @@ Before the fix the same races sat at 1992 MHz to the end (`race-long`, `r-race-l
 version of the fix, 6ac191e, waited 4 min because the ban's own strike counted: `race-retry`, `r-race-retry`). The
 race is as clean as before (2-3 windows under 59, all at the start). SoC on the Plus: 66 °C at the end against 68
 at 1992 MHz; the step down to 1416 came late in the race, so the longer run in section 12 shows the temperature.
+
+## 12. The 0.4.1 candidate at length, and installed (17:00 UTC, BananaDS 79b6e43)
+
+- **A five-minute Mario Kart race on the Plus (`race5`, 300 s of A held, 2x + `ds-grid-2x`):** 324 windows, 2 under
+  59 (the boot and the track load), 9 repeats. This time the countdown passed clean at 1800 MHz and the governor
+  stepped 1992 -> 1800 -> 1608 -> 1416 -> 1104 within the first 90 s; **the race ran four minutes at 1104 MHz at
+  60 fps, the SoC flat at 61.7 °C** (`race5-temp.txt`, a sample every 10 s) against 66-68 °C at 1992 MHz in the
+  runs before the governor fix.
+- **Pokémon Black 2 on the Plus at 15-frame windows (`b2long`, from the user's save, 50 s):** apart from the boot,
+  three quarter-second hitches as the save loads and the town appears (47, 56 and 58 fps); the town itself at 60,
+  the clock down to 1416 MHz. The smoke test's "3 windows under 59" (section 9) were those.
+- **The update package installed on the RG DS** (`install-rgds-0.4.1.txt`): `banana-rgds-0.4.1.update.tar` copied
+  to `banana/updates`, `update apply` wrote it to slot a ("update 0.4.1 written to slot a; restart to run it"), the
+  handheld restarted into it (`VERSION="0.4.1"`, running a, default a; 0.4.0 stays in slot b), `/usr/bin/bananads`
+  carries the new settings and the governor's retry, and a race on the installed system with no test mount was
+  clean (83 windows, 2 under 59, the clock down to 1104 MHz). Golden Sun, Metroid Prime Hunters and Platinum
+  then ran their 50 s on the installed system too (`games-rgds/i-*`): as in section 9.
+
+The RG DS now runs 0.4.1 from slot a; the Plus still runs 0.4.0 (its tests used the candidate binaries through a
+bind mount over `/usr/bin/bananads`, removed after each run).

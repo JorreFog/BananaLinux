@@ -1,0 +1,32 @@
+== copy 16:52:17
+6d5134edb84cffb4
+/data/banana/updates/banana-rgds-0.4.1.update.tar	0.4.1	rgds
+running: b, default: b
+slot a: a system (kernel 21161992 bytes)
+slot b: a system (kernel 21161992 bytes)
+== apply 16:53:54
+update 0.4.1 written to slot a; restart to run it
+rc=0
+done 0.4.1
+running: b, default: a
+slot a: a system (kernel 21161992 bytes)
+slot b: a system (kernel 21161992 bytes)
+== reboot 16:54:18
+== back 16:55:09
+VERSION="0.4.1"
+VERSION_ID=0.4.1
+a
+running: a, default: a
+slot a: a system (kernel 21161992 bytes)
+slot b: a system (kernel 21161992 bytes)
+3
+1
+152
+== race on the installed system (no bind mount) 16:55:31
+r-installed done, temp 42-53C, 83 windows
+s3-r-installed windows 83, under 59: 2 (frames lost ~19), repeats 3, dropped 15, short audio chunks 55, clocks: 1800 1608 1416 1104
+BananaDS 0.1.0, /data/roms/nds/Mario Kart DS (USA) (En,Fr,De,Es,It).nds
+[cpugov] 1992 -> 1800 MHz (clean: 0 frames late, busiest thread 53%, 59.9 fps)
+[cpugov] 1800 -> 1608 MHz (clean: 0 frames late, busiest thread 53%, 59.9 fps)
+[cpugov] 1608 -> 1416 MHz (clean: 0 frames late, busiest thread 53%, 60.7 fps)
+== install test done 16:56:58
