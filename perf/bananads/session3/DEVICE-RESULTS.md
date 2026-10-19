@@ -374,3 +374,13 @@ FIFO DMA a block path, 0018 made the HBLANK VRAM DMA one; the capture's DMA stil
 `Run9Full` with `UnitTimings9_32` per word). A block path for that DMA kind and a cheaper composite for the
 capture (it composites a whole line the 2D thread has already drawn) are the two exact levers, worth ~15% of the
 thread in this scene; the geometry's 28% is the same work as Mario Kart's, already cut by phases 1-3.
+
+**Which DMA that is** (an instrumented build, `MELONDS_DMASTATS=1`, the flyover on the RG DS, 4.9M `Run9Full` calls;
+the counts are per call of the sliced loop, so they rank, not measure): two transfers take the generic path.
+(1) **The display capture's read-back: LCDC VRAM `0x068xxxxx` -> main RAM `0x021xxxxx`, 32-bit, source and
+destination incrementing, start mode 0 (immediate)**: by far the most units (the captured frame copied out every
+frame). (2) **An HBlank DMA main RAM `0x021/0x022xxxxx` -> VRAM `0x062xxxxx`, 32-bit, 47-128 words a line, destination
+"increment and reload" (DMACNT bits 21-22 = 3), start mode 2**: ~150k-250k calls per bucket; 0018's HBlank block
+path (main RAM up into a VRAM page with one bank) doesn't take it, probably the reload mode or the page's mapping.
+Together with the composite they are the flyover's ~18%; a block path for each, timing-exact like 0018/0066, is
+the next session's job (it needs the headless difftest and savestate compares; not done here).
