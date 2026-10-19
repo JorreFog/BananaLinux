@@ -339,3 +339,38 @@ fill: 0 in every later 10 s window). Logs: `device-evidence/games-plus/`, `games
 Golden Sun's two windows at 51 and 37 fps on the RG DS (windows 7-8) are its title flyover, 0.4.0's known slow scene
 (~22 fps for a minute in 0.4.0's notes); the A taps leave it quickly. Black 2's three windows (a 3D town) are the
 most the other games lose. No game crashed, hung or logged an error; every screenshot shows a play screen.
+
+## 10. Two findings from the longer runs (16:30-17:00 UTC)
+
+**A full race holds 60, but the governor stays at 1992 MHz.** `race-long` (the Plus, 150 s of racing with `k-mk4b`):
+174 windows, only the boot's and the track load's under 59; SoC 47 -> 66 °C. The cpugov log shows why it got hot:
+`1992 -> 1800 MHz (clean)` at the menus, `1800 -> 1992 MHz (late: 8 frames late)` at the countdown, and nothing
+after: a late frame bans the clock it was at for 30 min (doubling per strike, remembered per game), `step_down`
+won't step onto a banned clock, and a strike is forgiven only by clean time *at that clock or lower*, which can't
+accrue while the game sits above it. So one heavy moment keeps a game at the top clock for the session (and the
+next one: the user's Mario Kart memory file holds strikes at 1104, 1608 and 1800). The RG DS's full race did the
+same (`r-race-long`: 1800 -> 1992 and no step after). Fix on `bananads-perf/mk4` (the last commit): a banned clock
+just below the current one may be tried again after 2 min clean at the current clock, times one more than its
+strikes (2, 4, 6... min: a clock a game can't run at is probed less and less often); a failed try strikes and bans it
+again, a clean try forgives it as before. Verified below (section 11) if the runs after it finished.
+
+**Golden Sun: Dark Dawn's title flyover** (`r-gsintro`, the RG DS, no presses, `prof.hz` over frames 400-2089 =
+the flyover): 35 fps shown, the emulator's thread 87% busy at 38.9 emulated fps, 43.5M cycles and 26.3M
+instructions a frame (a 60 fps frame has 33.2M cycles at 1992 MHz), IPC 0.6. Profile:
+[prof-gs-flyover-rgds.txt](prof-gs-flyover-rgds.txt):
+
+| Share | What |
+|---|---|
+| 27.7% | 3D geometry (`GPU3D::Run` 8.7, `WriteGXFIFOBlock` 5.3, `SubmitPolygonBodyT` 4.3, `SubmitVertexBody` 4.1, clipping ~3) |
+| 17.4% | 2D and video: **the display capture's composite on the emulator's thread** (`BananaRenderer2D::CompositeTo` 8.0, `Composite` 2.0, `ReadVRAM_LCDC` 1.3) |
+| 11.5% | DMA, on the generic unit-by-unit path: `DMA::Run9Full` 4.7, `FastWrite9` 2.0, `UnitTimings9_32` 1.4, `Run9GX` 2.0 |
+| 10.8% + 3.7% | JIT code and its stubs |
+| 7.0% | scheduler and RunFrame (`Emu::run_frame` 5.2) |
+| 5.7% | SPU |
+
+What a next session can take from it: the flyover captures the screen every frame (the game's blur) and copies
+it by DMA; both run on the emulator's thread, on paths the sessions so far didn't touch (sessions 2-3 made the GX
+FIFO DMA a block path, 0018 made the HBLANK VRAM DMA one; the capture's DMA still goes unit by unit through
+`Run9Full` with `UnitTimings9_32` per word). A block path for that DMA kind and a cheaper composite for the
+capture (it composites a whole line the 2D thread has already drawn) are the two exact levers, worth ~15% of the
+thread in this scene; the geometry's 28% is the same work as Mario Kart's, already cut by phases 1-3.
