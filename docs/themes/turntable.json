@@ -1,0 +1,130 @@
+{
+  // Turntable: a dark launcher. The bottom screen is a grid of tiles scrolling sideways a column at a time (the
+  // systems at home, a system's games in a library) over a dock of the systems; the top screen shows the selection
+  // turning on a turntable (its picture's width follows cos(time), darker while its back is turned) above its name.
+  // Only this file: the library and launch views fall back to "home"'s screens, which switch on "view".
+  "name": "Turntable",
+  "author": "BananaOS",
+  "base": "dark",
+  "accent": "#e8e8ec",
+  "font": "inter",
+
+  "vars": {
+    "lib": "=view != 'home'",
+    "title": "=view == 'home' ? sys.name : game.title",
+    "art": "=view == 'home' ? sys.icon : either(game.art, game.romIcon)",
+    "artIcon": "=either(game.icon, sys.icon)",
+    "pixelArt": "=view == 'home' || !game.art",
+    // the turn: degrees, faster while a game starts
+    "turn": "=time * 0.09 + launch.t * launch.t * 0.0008",
+    "face": "=cosd(turn)"
+  },
+
+  "input": {
+    "home": { "up": "prev", "down": "next", "left": "prev:3", "right": "next:3", "l": "prev:3", "r": "next:3" },
+    "library": { "up": "prev", "down": "next", "left": "prev:3", "right": "next:3" }
+  },
+  "hints": { "home": [["A", "Open"], ["Y", "Favorite"]], "library": [["A", "Play"], ["B", "Back"], ["Y", "Favorite"]] },
+  "behavior": { "launchMs": 1400, "scrollMs": 80, "fps": 30, "cues": { "insert": 1200 } },
+
+  "components": {
+    // a dark pill along an edge
+    "pill": { "type": "group", "h": 30, "radius": "50%", "fill": "#1c1c20e0", "border": 1.5, "borderColor": "#6a6a72",
+      "shadow": { "y": 2, "blur": 6, "color": "#00000080" } },
+    // a round key chip
+    "key": { "type": "group", "w": 20, "h": 20, "radius": "50%", "fill": "#e8e8ec",
+      "children": [ { "type": "text", "w": 20, "y": 2, "align": "center", "text": "{k}", "font": "inter-bold", "size": 11, "color": "#1c1c20" } ] },
+    // a grid tile: rounded, a soft top light, the picture inside; the selection lifts and gets a white rim
+    "tile": {
+      "type": "group", "w": 112, "h": 112, "anchor": "center",
+      "scale": "=sel ? 1.06 : 1", "smooth": { "x": 110, "scale": 90 },
+      "children": [
+        { "type": "rect", "radius": 22, "gradient": { "angle": 180, "stops": [ "#5a5a62", "#3a3a40 45%", "#2a2a2f" ] },
+          "border": "=sel ? 3.5 : 1.5", "borderColor": "=sel ? '#f2f2f6' : '#66666e'",
+          "shadow": { "y": "=sel ? 6 : 3", "blur": "=sel ? 14 : 6", "color": "=sel ? '#000000b0' : '#00000080'" } },
+        { "type": "rect", "x": 6, "y": 5, "w": 100, "h": 40, "radius": [18, 18, 40, 40], "fill": "#ffffff10" },
+        { "type": "image", "src": "{pic}", "fallback": "{icon}", "fit": "=pix ? 'pixelContain' : 'cover'", "x": 18, "y": 18, "w": 76, "h": 76, "radius": "=pix ? 0 : 12" },
+        { "type": "rect", "x": 88, "y": 8, "w": 14, "h": 14, "radius": "50%", "fill": "#ffcf3a", "border": 1.5, "borderColor": "#1c1c20", "visible": "=fav" }
+      ]
+    }
+  },
+
+  "screens": {
+    "home": {
+      "top": [
+        { "type": "rect", "fill": "#2a2a2e" },
+        // the wall of soft tiles behind
+        { "type": "list", "source": "range", "count": 35, "direction": "grid", "columns": 7, "scrollMode": "none",
+          "x": -40, "y": -30, "w": 760, "h": 560, "itemW": 100, "itemH": 100, "gap": 12,
+          "item": { "type": "rect", "w": 100, "h": 100, "radius": 20,
+            "gradient": { "angle": 180, "stops": [ "#4c4c52", "#38383d" ] },
+            "shadow": { "y": 4, "blur": 10, "color": "#00000070" } } },
+        { "type": "rect", "gradient": { "angle": 180, "stops": [ "#00000030", "#00000000 40%", "#00000060" ] } },
+        // the name, as a logo: heavy, outlined, a coloured drop shadow
+        { "type": "text", "x": 60, "w": 520, "y": 54, "align": "center", "text": "=upper(title)", "font": "inter-bold", "size": 34,
+          "wrap": true, "maxLines": 2, "lineHeight": 36, "color": "#ffffff",
+          "outline": { "width": 2.5, "color": "#1a1a1a" }, "shadow": { "x": 0, "y": 4, "color": "=sys.color" },
+          "opacity": "=easeOut(progress(moved, 250)) * (1 - launch.progress)" },
+        // the turntable: a shadow on the floor, the picture turning above it
+        { "type": "rect", "x": 320, "y": 368, "anchor": "center", "w": "=40 + 150 * abs(face)", "h": 22, "radius": "50%",
+          "fill": "#00000070", "shadow": { "blur": 10, "color": "#00000050" } },
+        { "type": "image", "src": "{art}", "fallback": "{artIcon}", "fit": "=pixelArt ? 'pixel' : 'fill'", "anchor": "bottom",
+          "x": 320, "y": "=360 - 6 * pulse(time, 2400) - 80 * easeIn(launch.progress)",
+          "w": "=max(2, (pixelArt ? 170 : 190) * abs(face))", "h": "=pixelArt ? 170 : 172",
+          "scale": "=(0.9 + 0.1 * easeOutBack(progress(moved, 300))) * (1 + 0.5 * easeIn(launch.progress))",
+          "tint": "=face < 0 ? '#7a7a80' : '#ffffff'", "opacity": "=1 - easeIn(launch.progress)", "radius": "=pixelArt ? 0 : 8" },
+        // the next one, in a bubble on the right
+        { "type": "group", "x": 556, "y": 230, "w": 76, "h": 76, "anchor": "center", "radius": "50%", "fill": "#e8e8ecf0",
+          "border": 2, "borderColor": "#ffffff", "shadow": { "y": 3, "blur": 8, "color": "#00000090" },
+          "visible": "=cursor < count - 1",
+          "children": [
+            { "type": "list", "source": "systems", "direction": "free", "range": 1, "visible": "=!lib",
+              "item": { "type": "image", "if": "=rel == 1", "src": "{item.icon}", "fit": "pixelContain", "x": 14, "y": 14, "w": 48, "h": 48 } },
+            { "type": "list", "source": "games", "direction": "free", "range": 1, "visible": "=lib",
+              "item": { "type": "image", "if": "=rel == 1", "src": "=either(item.art, item.romIcon)", "fallback": "=either(item.icon, sys.icon)", "fit": "cover", "x": 14, "y": 14, "w": 48, "h": 48, "radius": "50%" } }
+          ] },
+        // the pills: the system and its count at the top left, the battery, Wi-Fi and the clock at the top right
+        { "use": "pill", "x": 12, "y": 10, "w": 150, "children": [
+          { "type": "rect", "x": 3, "y": 3, "w": 24, "h": 24, "radius": "50%", "fill": "=sys.color", "border": 1.5, "borderColor": "#ffffff" },
+          { "type": "image", "src": "{sys.icon}", "fit": "pixelContain", "x": 7, "y": 7, "w": 16, "h": 16 },
+          { "type": "text", "x": 34, "y": 7, "w": 110, "text": "=lib ? (cursor + 1) + ' / ' + count : plural(systems.count, 'system')", "size": 12, "color": "#e8e8ec" } ] },
+        { "use": "pill", "right": 12, "y": 10, "w": 150, "children": [
+          { "type": "rect", "x": 14, "y": 10, "w": 20, "h": 11, "radius": 2, "border": 1.5, "borderColor": "#e8e8ec", "visible": "=battery >= 0" },
+          { "type": "rect", "x": 16, "y": 12, "w": "=16 * battery / 100", "h": 7, "radius": 1, "fill": "=battery < 20 ? '#ff5a5a' : '#e8e8ec'", "visible": "=battery >= 0" },
+          { "type": "rect", "x": 42, "y": 11, "w": 9, "h": 9, "radius": "50%", "fill": "=online ? '#e8e8ec' : '#e8e8ec40'" },
+          { "type": "text", "right": 14, "y": 7, "w": 80, "align": "right", "text": "{clock}", "size": 12, "color": "#e8e8ec" } ] },
+        // the info pill at the bottom left
+        { "use": "pill", "x": 12, "bottom": 10, "w": 116, "children": [
+          { "use": "key", "x": 5, "y": 5, "with": { "k": "i" } },
+          { "type": "text", "x": 32, "y": 7, "w": 80, "text": "=lib ? either(game.plays, '0') + ' plays' : either(sys.time, '0m')", "size": 12, "color": "#e8e8ec" } ] }
+      ],
+      "bottom": [
+        { "type": "rect", "gradient": { "angle": 180, "stops": [ "#2e2e33", "#1e1e22" ] } },
+        // the tiles: three rows, a column at a time; each tile finds its own column from its index and eases there
+        { "type": "list", "source": "systems", "direction": "free", "range": 15, "visible": "=!lib", "x": 0, "y": 0, "w": 640, "h": 400,
+          "item": { "use": "tile", "x": "=320 + (floor(i / 3) - floor(cursor / 3)) * 126", "y": "=70 + mod(i, 3) * 126",
+            "with": { "pic": "{item.icon}", "icon": "{item.icon}", "pix": 1, "fav": "=item.fav" } } },
+        { "type": "list", "source": "games", "direction": "free", "range": 15, "visible": "=lib", "x": 0, "y": 0, "w": 640, "h": 400,
+          "item": { "use": "tile", "x": "=320 + (floor(i / 3) - floor(cursor / 3)) * 126", "y": "=70 + mod(i, 3) * 126",
+            "opacity": "=1 - easeIn(launch.progress) * (sel ? 0 : 1)",
+            "with": { "pic": "=either(item.art, item.romIcon)", "icon": "=either(item.icon, sys.icon)", "pix": "=!item.art", "fav": "=item.fav" } } },
+        { "type": "text", "x": 0, "w": "100%", "y": 190, "align": "center", "visible": "=empty", "text": "{empty.title}", "font": "inter-semibold", "size": 18, "color": "#e8e8ec" },
+        // the bar: a pill each side, the dock of systems in the middle
+        { "type": "rect", "x": 0, "y": 416, "w": 640, "h": 64, "gradient": { "angle": 180, "stops": [ "#00000000", "#000000a0 40%" ] } },
+        { "use": "pill", "x": 12, "y": 440, "w": 70, "children": [
+          { "use": "key", "x": 5, "y": 5, "with": { "k": "=lib ? 'B' : 'A'" } },
+          { "type": "text", "x": 30, "y": 7, "text": "=lib ? '◀' : '▶'", "font": "inter", "size": 13, "color": "#e8e8ec" } ] },
+        { "use": "pill", "right": 12, "y": 440, "w": 70, "children": [
+          { "use": "key", "x": 5, "y": 5, "with": { "k": "Y" } },
+          { "type": "rect", "x": 34, "y": 9, "w": 16, "h": 2.5, "radius": 1, "fill": "#e8e8ec" },
+          { "type": "rect", "x": 34, "y": 14, "w": 16, "h": 2.5, "radius": 1, "fill": "#e8e8ec" },
+          { "type": "rect", "x": 34, "y": 19, "w": 16, "h": 2.5, "radius": 1, "fill": "#e8e8ec" } ] },
+        { "type": "list", "source": "systems", "direction": "row", "scrollMode": "none",
+          "x": "=320 - systems.count * 20", "y": 436, "w": "=systems.count * 40", "h": 36, "itemW": 32, "gap": 8,
+          "item": { "type": "group", "w": 32, "h": 36, "children": [
+            { "type": "rect", "x": 0, "y": 0, "w": 32, "h": 32, "radius": 9, "fill": "=sel ? '#e8e8ec' : '#3a3a40'" },
+            { "type": "image", "src": "{item.icon}", "fit": "pixelContain", "x": 4, "y": 4, "w": 24, "h": 24 } ] } }
+      ]
+    }
+  }
+}
