@@ -133,3 +133,40 @@ Binary: the CI artifact above. Base: mk2's artifact `bananads-aarch64-3a743f32a9
   dump kept), `dumpblk.py` (a block's disassembly with per-TB counts), `mcrsites.py`/`callsites.py` (which guest
   instructions/blocks call a host function, weighted), `symdiff.py` (per-symbol diff, LTO suffixes normalised),
   `region-setups-mk.txt` (the instrumented setup counts).
+
+## Follow-up (14:00 UTC): the JIT compiler's own cost, and the shared stubs
+
+New head **`f1c467d`** (`f1c467dd8a43f1402d25a38a5c76a6bea34af73d`), pushed, one commit after 88008b0. CI
+`bananads-device` passed (run 39264549553): artifact **`bananads-aarch64-f1c467dd8a43f1402d25a38a5c76a6bea34af73d`**.
+Untested on device. `OFF` above gains `--set jit.fastclz=off`.
+
+| # | Commit | Patch | Toggle (default) | What | qemu (MK 1650-2150, a frame) | Expected on device |
+|---|---|---|---|---|---|---|
+| 4 | f1c467d | 0088 | `jit.fastclz` (`on`; `MELONDS_JIT_SOFTCLZ=1` off) | the AArch64 emitter's `CountLeadingZeros` (inside `IsImmLogical`) by `__builtin_clzll` instead of Dolphin's bit-by-bit loop | **-38k** (`IsImmLogical` -40k, `CountLeadingZeros` +2k) | **+0.1..0.3%**, only while new code compiles |
+
+- **Who calls `IsImmLogical` so often:** nobody. An instrumented build counted ~40 calls a frame in the window
+  (nearly all from `ANDI2R`). The 43k was the cost of each call: four `CountLeadingZeros` as a loop of up to 64
+  rounds, ~1,100 instructions a call. The count is the same with CLZ, so every encoding is too.
+- **Exactness (compile-time only):** the MK scene with `MELONDS_JIT_PERFMAP=1` under `setarch -R` (with ASLR the
+  dumps differ in heap address constants between any two runs) gives a code dump of every block and stub (5.7 MB)
+  and a perf map **byte-identical** between `jit.fastclz` on and off; pictures and audio = base both ways;
+  `exact-suite.sh` off vs on FAILS=0. **Sabotage:** CLZ one too many for one value: the code dump differs from the
+  same build's control and bananads dies on an illegal instruction (exit 132). Caught. Evidence:
+  `fastclz-codedump.txt`, `exact-suite-fastclz.txt`.
+- **The `WritesNZCV` hook** (19.5k a frame): `Write32` calls it twice per emitted instruction (the lazy-flags check,
+  then the epoch), ~1,300 instructions emitted a frame. Calling it once would save ~10k a frame. Not done: too small
+  for a commit.
+- **The shared stubs** (ExitCheck ~10.3k calls a frame, JumpTo ~7k, DynExit ~2.4k): nothing qemu can rank as a
+  worthwhile cut that removes loads or branches.
+  - JumpTo's 20 instructions are the region table lookup, the ITCM check, the mode switch and the R15/cycles
+    stores, with no slack.
+  - DynExit could take its target from w4 instead of reloading R15 (one load and two ALU instructions, ~2.4k a frame:
+    ~7k instructions).
+  - The exit check's timestamp address can't come from x29 (DEAD-ENDS).
+  - **For the device (not qemu):** ExitCheckPC (~8.1k calls a frame) loads the exit's R15 from the call site's
+    literal (`ldr w0, [x30, #4]`): a data load from code memory, which the A55 serves from L1D only if the line is
+    there, otherwise L2/L3. If the device shows the JIT code's L1D misses high, storing R15 in the block again (what
+    `MELONDS_JIT_NOEXITPC=1` does, at ~8 bytes per exit site; it also turns off the self-loop exits, which depend
+    on it) is the A/B to run. There's no setting for it: set the environment variable.
+- The compiler's remaining cost (~0.17M a frame: `RegisterCache::Prepare` 46k, `ARMJIT::CompileBlock` 36k, the emitter
+  ~35k) is real work per instruction compiled.
