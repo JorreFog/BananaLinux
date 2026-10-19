@@ -1,7 +1,0 @@
-{
-  "name": "banana-promo",
-  "private": true,
-  "type": "module",
-  "description": "The RG DS Plus model and the layout themes' video (see README.md)",
-  "dependencies": { "three": "0.169.0", "playwright-core": "1.48.2" }
-}

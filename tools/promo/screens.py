@@ -6,7 +6,6 @@ THEMES={
  'canvas':(ROOT+'/system/rootfs/usr/share/banana/themes/canvas.json',[(900,'press right'),(1700,'press right'),(2500,'press left'),(3200,'press left'),(4000,'press a'),(5000,'press down'),(5700,'press down'),(6400,'press up')]),
  'hillside':(ROOT+'/docs/themes/hillside.json',[(800,'press down'),(1500,'press down'),(2200,'press up'),(2900,'press up'),(3700,'press a'),(4800,'press right'),(5500,'press right'),(6200,'press down')]),
  'turntable':(ROOT+'/docs/themes/turntable.json',[(1600,'press down'),(2400,'press right'),(3400,'press left'),(4300,'press a'),(5600,'press down'),(6400,'press right')]),
- 'pocket':(ROOT+'/docs/themes/pocket.json',[(900,'press right'),(1800,'press right'),(2700,'press left'),(3500,'press left'),(4300,'press a'),(5300,'press right'),(6200,'press right')]),
 }
 T=7400; step=1000/30
 for name,(theme,ev) in THEMES.items():
