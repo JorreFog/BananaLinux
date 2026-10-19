@@ -190,7 +190,7 @@ to a worker. **It can't, and nothing was built.** Head unchanged: `3610c71`.
 
 ## The exact offload (14:13 UTC): patch 0083, `render.geom_thread` (default `on`)
 
-**New head: `649e008`** (CI: see below). After the audit, the user chose the exact offload. Built, exact on every
+**New head: `649e008`**. CI run 39266964359 passed: artifact **`bananads-aarch64-649e0087632904ca057fa42e7801696bd59adffe`**. After the audit, the user chose the exact offload. Built, exact on every
 check, so it is on by default. `render.geom_thread=off` gives 3610c71's polygon setup in this binary.
 
 **What came out smaller than the audit:** lighting is **not** on the worker. The emulator thread clips each polygon
