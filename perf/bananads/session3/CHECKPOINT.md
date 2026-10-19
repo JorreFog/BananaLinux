@@ -5,7 +5,7 @@ The local agent can test the work before the stop and after the restart separate
 | Phase | When (UTC) | Branch | Head | What it is |
 |---|---|---|---|---|
 | **Before the stop** | 2026-10-18 21:00 - 2026-10-19 00:00 | **`claude/bananads-perf-mk-checkpoint1`** | `8e98258` | **Frozen**: never updated again. Identical to `claude/bananads-perf-mkall` at the stop. CI artifact `bananads-aarch64-8e98258dd82b4191e932c75572a06f0183fd460b`. Contents: [README.md](README.md) |
-| **After the restart** | 2026-10-19 from 09:55 | **`claude/bananads-perf-mk2`** | **`3a743f3`** (pushed 11:32) | `8e98258` plus the new commits only (8 cherry-picks, `-x`). CI artifact `bananads-aarch64-3a743f32a9bd8726645980a61768ddf9bf2efa4e` (run 39245317154), one commit per change, each behind its own toggle. Built by integrating the two part branches below |
+| **After the restart** | 2026-10-19 from 09:55 | **`claude/bananads-perf-mk2`** | **`3a743f3`** (pushed 11:32) | `8e98258` plus the new commits only (8 cherry-picks, `-x`). CI device build passed: artifact `bananads-aarch64-3a743f32a9bd8726645980a61768ddf9bf2efa4e` (run 39245317154), one commit per change, each behind its own toggle. Built by integrating the two part branches below |
 | part | from 09:55 | `claude/bananads-perf-mk2geom` | `58aa659` | the geometry engine's remaining cost on Mario Kart's race start, and session 2's GX FIFO store changes (memio) ported and checked on the game |
 | part | from 09:55 | `claude/bananads-perf-mk2cpu` | `08d14fa` | the emulator thread's other costs on the race start: the SPU's per-event cost, the scheduler, IO slow paths from JIT code |
 
