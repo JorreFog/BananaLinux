@@ -75,3 +75,9 @@
 - (geomlazy) The GX DMA block writer with each command's push/pop/test flags computed once per command: `DMA::Run9`
   +25k instructions a frame (register shuffling): dropped.
 - (geomlazy) NEON lighting for MK: ~1 light per normal, ~60k instructions a frame to gain at most: not done.
+- (mk2cpu) MK's SPU: MixChannelsFast's work for a due PCM16/ADPCM channel in one function per format, with `RunSamples`
+  inline: exact but +112k instructions a frame (the loop -268k, the new functions +760k against `RunSamples`'s 380k);
+  a due channel not marked lazy (`core.fast_due`): -15.6k, dropped. Every channel is due every Mix in MK: the cost
+  is the per-channel state traffic. `blip_add_delta` is already NEON (GCC). `session3/mk2cpu-evidence/`.
+- (mk2cpu) The RTC's 32,768 Hz event (548 a frame) and the SPU's can't be removed or merged exactly: each ends a slice,
+  so the ARM9/ARM7 interleaving would move.

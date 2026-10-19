@@ -1,0 +1,15 @@
+# mk-scene.sh md5s (8 frames + audio), each run's md5.txt against the checkpoint 8e98258's (= session3/mkside-evidence/mk-scene-base-md5.txt)
+SAME  0072 build, jit.wram7fast=off
+SAME  0072 sabotage build, jit.wram7fast=off
+SAME  head (0072 + 2d_ring), defaults
+SAME  head, render.2d_ring=shared
+SAME  2d_ring sabotage (ring bound +128)
+SAME  0072 build, defaults (qemu-count run)
+DIFF  0072 sabotage (STM's last word a word late), defaults: frame1860 5d67fc39740ace9b75671a94caefaa30
+HANG  2d_ring sabotage (2D thread publishes Tail on the old line): no frame by 300 s
+
+# every 10th frame (210) + audio, head split vs ring-bound sabotage: 4 host cores and pinned to one core: all identical (not caught)
+all-r-split/run.log:[2d] 2D thread: 806400 jobs, 23616 lines with unit A drawn in place (display capture), 41.4 MB through the copy log, 1678 waits for the thread (capture, full ring or log)
+all-rsab/run.log:[2d] 2D thread: 806400 jobs, 23616 lines with unit A drawn in place (display capture), 41.4 MB through the copy log, 57 waits for the thread (capture, full ring or log)
+t1-r-split/run.log:[2d] 2D thread: 806400 jobs, 23616 lines with unit A drawn in place (display capture), 41.4 MB through the copy log, 41 waits for the thread (capture, full ring or log)
+t1-rsab/run.log:[2d] 2D thread: 806400 jobs, 23616 lines with unit A drawn in place (display capture), 41.4 MB through the copy log, 26 waits for the thread (capture, full ring or log)
