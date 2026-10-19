@@ -13,3 +13,4 @@ all-r-split/run.log:[2d] 2D thread: 806400 jobs, 23616 lines with unit A drawn i
 all-rsab/run.log:[2d] 2D thread: 806400 jobs, 23616 lines with unit A drawn in place (display capture), 41.4 MB through the copy log, 57 waits for the thread (capture, full ring or log)
 t1-r-split/run.log:[2d] 2D thread: 806400 jobs, 23616 lines with unit A drawn in place (display capture), 41.4 MB through the copy log, 41 waits for the thread (capture, full ring or log)
 t1-rsab/run.log:[2d] 2D thread: 806400 jobs, 23616 lines with unit A drawn in place (display capture), 41.4 MB through the copy log, 26 waits for the thread (capture, full ring or log)
+SAME  head 08d14fa (+ render.2d_test_delay, off), defaults
