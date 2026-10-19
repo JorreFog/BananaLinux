@@ -12,14 +12,24 @@ SCREENS = os.path.join(HERE, 'screens')
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, 'layout-themes.mp4')
 FRAMES = os.path.join(HERE, 'frames')
 W, H, FPS = 1920, 1080, 30
-FONTS = ROOT + '/ui/assets/banana/fonts/'
+FONTS = ROOT + '/ui/assets/rnds/fonts/'	# BananaOS's menu font: Pixelify Sans
 MONO = '/usr/share/fonts/truetype/jetbrains-mono/JetBrainsMono-Regular.ttf'
 # the music: the track from MUSIC_AT seconds in, faded in at the start and out at the end (none if not given)
 MUSIC = os.environ.get('MUSIC', '')
 MUSIC_AT = float(os.environ.get('MUSIC_AT', '20'))
 if not os.path.exists(MONO): MONO = '/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf'
 F = lambda name, size: ImageFont.truetype(FONTS + name, size)
-BOLD, SEMI, MED, REG = 'Inter-Bold.ttf', 'Inter-SemiBold.ttf', 'Inter-Medium.ttf', 'Inter-Regular.ttf'
+BOLD = SEMI = MED = 'PixelifySans-Medium.ttf'
+REG = 'PixelifySans-Regular.ttf'
+# BananaOS's logo (the bunch, BANANA and OS in pixels), grown by whole pixels
+LOGO = Image.open(ROOT + '/ui/assets/rnds/logo@1.6x.png').convert('RGBA')
+def logo(k):
+    return LOGO.resize((LOGO.width * k, LOGO.height * k), Image.NEAREST)
+LOGO_BIG, LOGO_SMALL = logo(4), logo(2)
+def paste_logo(img, lg, x, y, alpha):
+    if alpha <= 0: return
+    a = lg.getchannel('A').point(lambda v: int(v * alpha))
+    img.paste(lg, (int(x), int(y)), a)
 YELLOW, INK, SOFT = (255, 214, 64), (240, 242, 248), (150, 156, 172)
 
 # ---- the story ------------------------------------------------------------------------------------------------------
@@ -178,8 +188,7 @@ def frame(t):
     L = 150
     if seg < 0:
         a = ease(t / 0.8) * (1 - ease((t - (INTRO - 0.6)) / 0.5))
-        text(d, (L, 330 - 20 * (1 - ease(t / 0.8))), 'Banana', F(BOLD, 120), YELLOW, a)
-        text(d, (L + F(BOLD, 120).getlength('Banana'), 330 - 20 * (1 - ease(t / 0.8))), 'OS', F(BOLD, 120), INK, a)
+        paste_logo(img, LOGO_BIG, L, 330 - 20 * (1 - ease(t / 0.8)), a)
         text(d, (L, 490), 'The new theme engine', F(SEMI, 54), INK, a * ease((t - 0.5) / 0.7))
         text(d, (L, 572), 'Design any menu. Ship it as one JSON file.', F(REG, 34), SOFT, a * ease((t - 1.0) / 0.7))
     elif seg < len(SEGMENTS):
@@ -214,8 +223,7 @@ def frame(t):
         text(d, (OX, 330), 'Make your own', F(BOLD, 84), INK, a)
         text(d, (OX, 450), 'banana/themes/my-theme.json', ImageFont.truetype(MONO, 38), YELLOW, ease((local - 1.2) / 0.7))
         text(d, (OX, 520), 'The format: docs/THEMES.md', F(REG, 34), SOFT, ease((local - 1.6) / 0.7))
-        text(d, (OX, 640), 'Banana', F(BOLD, 48), YELLOW, ease((local - 2.0) / 0.7))
-        text(d, (OX + F(BOLD, 48).getlength('Banana'), 640), 'OS', F(BOLD, 48), INK, ease((local - 2.0) / 0.7))
+        paste_logo(img, LOGO_SMALL, OX, 630, ease((local - 2.0) / 0.7))
 
     # fades in and out
     fade = clamp01(t / 0.5) * clamp01((DURATION - t) / 0.6)
