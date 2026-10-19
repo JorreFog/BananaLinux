@@ -1,8 +1,7 @@
 # mk2cpu: the emulator thread's costs beside the geometry, after the restart (session 3 phase 2, 2026-10-19)
 
-Branch **`claude/bananads-perf-mk2cpu`** on JorreFog/SuperDrastic, from the checkpoint `8e98258`. Head **`2edd894`**.
-CI (`bananads-device`) passed on the head: artifact **`bananads-aarch64-2edd8944b030543083d8a00d8628e4c7b426e015`**
-(and on `97bcf49`: `bananads-aarch64-97bcf495d7baf367e9b576e877b902d7ba9ec787`, the same binary). **Untested on device.**
+Branch **`claude/bananads-perf-mk2cpu`** on JorreFog/SuperDrastic, from the checkpoint `8e98258`. Head **`08d14fa`**.
+CI (`bananads-device`) passed on the head: artifact **`bananads-aarch64-08d14fadbe164f049dc4843a0c29919abc8c4cec`**. **Untested on device.**
 
 melonDS patch: **0072** (0073-0079 unused). This branch merges with `mk2geom`'s: 0072 applies both on 0001-0071 alone
 and with mk2geom's 0063-0065 applied first (`git apply --check`). Its `SlowPathFlags` bit is 7, clear of their bits 8
@@ -50,6 +49,9 @@ Reasoning:
    fights Tail's writes. Expect about half of Submit plus a miss a job. This is the least certain number here: only
    the device can show it.
 
+The third commit (08d14fa) is a test-only setting, `render.2d_test_delay` (default 0): it slows the 2D thread so
+the checks reach the job ring's full path (below).
+
 Together: **+0.9..1.3%** of the emulator thread's cycles in the race start, on top of the checkpoint.
 
 ## Device commands (most useful first)
@@ -63,7 +65,9 @@ Binary: the CI artifact above. A/B within one binary (the same code layout):
    and `ARM7Read32` for #1; `BananaRenderer::Submit`, `DrawScanline`, `PrepareScanline` and `PrepareSprites` for #2.
 3. `kmsmk.sh` with this branch: `kms.stats=60` windows through the countdown. #2 changes when the 2D thread sees
    work, not which work, but watch repeats and drops with and without `--set render.2d_ring=shared`.
-4. **`exact.sh` on Golden Sun: Dark Dawn and HeartGold**: `exact.sh mk2cpu-on <bin>`, `exact.sh mk2cpu-off <bin> $OFF`,
+4. For the device's own check of #2's full ring, if wanted: `exact.sh` with `--set render.2d_test_delay=150`, with
+   and without `--set render.2d_ring=shared`. The md5 lists must match. It runs slower.
+5. **`exact.sh` on Golden Sun: Dark Dawn and HeartGold**: `exact.sh mk2cpu-on <bin>`, `exact.sh mk2cpu-off <bin> $OFF`,
    and the checkpoint's binary. The md5 lists must match. Both games' sound drivers run from the ARM7's WRAM, so #1
    is exercised there too.
 
@@ -85,14 +89,18 @@ Binary: the CI artifact above. A/B within one binary (the same code layout):
     `jit.wram7fast=off` matches the base, so the toggle really switches the path. This was on #1's first form; the
     final form only hoists the code-index load.
   - #2, the 2D thread publishing Tail on the old line: MK hangs before its first dump.
-  - **Not caught:** a ring bound 128 jobs too large (overwriting undrawn jobs) changed none of 210 frames, nor the
-    audio, on 4 host cores or pinned to one. Under qemu the 2D thread rarely falls a whole ring behind: 1,678-2,557
-    waits for it with the right bound against 57-103 with the sabotage, display capture's included. Where it does
-    fall behind, the overwritten lines were alike. The full-ring and full-log paths, the only places the cached
-    values matter, rest on reasoning: the values only grow, so a stale one only says "full" too early, and the
-    acquire that read it orders what it freed.
-- A clean build of the pushed head `2edd894` (pristine melonDS, patches applied by CMake) is byte-identical to the
-  binary all of the above ran.
+  - #2, a ring bound 128 jobs too large (undrawn jobs overwritten): **caught**, but only with the 2D thread slowed.
+    Under qemu the 2D thread normally keeps up, so the ring rarely fills, and without a slowed thread this sabotage
+    changed none of 210 MK frames. `render.2d_test_delay=150` (tests only, commit 08d14fa) makes the 2D thread sleep
+    150 us after each job. The MK scene then waits on a full ring ~330k times in 2100 frames. With it:
+    - `split` and `shared` give the same 210 MK frames (every 10th), the same audio, and the same 30 ds2dtest frames
+      as each other and as runs without the delay;
+    - the sabotage changes 28 of the 210 MK frames and 15 of ds2dtest's 30.
+    See `2d_ring-slow-2d-thread.txt`. The copy log's full path (the cached `LogRead`) is not shown to be reached:
+    the ring fills first.
+  - Head 08d14fa, defaults: MK scene frames and audio identical to the checkpoint again.
+- A clean build of `2edd894` (pristine melonDS, patches applied by CMake) is byte-identical to the binary most of the
+  above ran on. 08d14fa adds only the test setting: one branch per job in the 2D thread, and a settings read.
 
 ## Dead ends (also appended to DEAD-ENDS.md)
 
