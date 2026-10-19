@@ -24,7 +24,7 @@ echo "# $(date -u +%H:%M:%S) $T: $B held=${S}s temp=${T0}C env: $*" > $W/run.txt
 mount --bind $B /usr/bin/bananads
 echo "$ROM" > /run/banana/launch
 i=0; until pidof bananads >/dev/null; do sleep 0.2; i=$((i+1)); [ $i -gt 100 ] && { echo "$T: the menu didn't start the game"; exit 1; }; done
-K=/data/bananads-dev/padkey; E=/dev/input/event6
+K=/data/bananads-dev/padkey; E=$(awk '/^N: Name="retrogame_joypad"/{f=1} f&&/^H:/{for(i=1;i<=NF;i++) if($i ~ /^event/) {print "/dev/input/"$i; exit}}' /proc/bus/input/devices)
 sleep 5; i=0; while [ $i -lt 25 ]; do $K $E 305 1; sleep 0.1; $K $E 305 0; sleep 0.65; i=$((i+1)); done
 $K $E 305 1; sleep $S; $K $E 305 0
 T1=$(($(cat /sys/class/thermal/thermal_zone0/temp)/1000))

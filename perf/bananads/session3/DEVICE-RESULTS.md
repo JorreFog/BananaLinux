@@ -222,3 +222,93 @@ Against the brief's target (60 at 1992 MHz with headroom): not reached. Phase 3 
 Raw logs: `device-evidence/kms/<run>.log` (the run's header line, then the whole `bananads.log`), the scripts
 `device-evidence/kmsmk4.sh`, `kmssum3.sh`, `kmstable.py` (the tables above are its output), `build-s3.sh` (the
 builds), `device-evidence/headless-stopped/` (the five stopped headless runs).
+
+## 8. Continued after the report (16:00-17:00 UTC): `bananads-perf/mk4`, both handhelds
+
+The user's instruction: go ahead with the best setting, continue optimising. New SuperDrastic branch
+**`bananads-perf/mk4`** (pushed) = `mk3` ea310c8 + `render.geom_thread` **off by default** (09bd3d7) +
+**`render.2d_fence_wait=block` by default** (60d5e2f: session 2's tools commit 9d26e4d cherry-picked onto phase 2's
+split job ring; every wait for the 2D thread blocks on a condition variable instead of spinning on `sched_yield`) +
+`sched.emu_nice` / `sched.emu_cpu` / `sched.2d_nice` / `sched.gengis_nice` (99c4b81, A/B settings, off) + the merge
+of `claude/bananads-audio-pitch` c489375 (ba8d479) + Gengis's render threads waiting for the frame's conversion on a
+condition variable instead of spinning (the last commit). Local KMS builds as before (`k-mk4` = up to 99c4b81,
+`k-mk4b` = with the audio merge and the Gengis wait).
+
+### 8.1 Phase 3's worker with two Gengis threads, and the fence null test (the Plus, phase 3 binary, worker off unless said)
+
+| run | env | windows | under 59 | frames lost | repeats | drops | short audio chunks | worst window fps | cpugov steps (MHz) | SoC °C | huge pages | windows 17-33 (fps) |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| s4-ctl-1 | | 63 | 7 | 37 | 34 | 6 | 84 | 51.43 | 1800 1992 | 45-60 | yes | 60 51 60 60 60 59 60 60 60 60 60 56 57 59 60 55 57 |
+| s4-ctl-2 | | 63 | 4 | 32 | 28 | 5 | 78 | 49.98 | 1800 1608 1800 | 49-62 | yes | 52 60 60 60 60 50 60 60 60 60 57 60 60 60 60 60 60 |
+| s4-block-1 | RENDER_2D_FENCE_WAIT=block | 63 | 5 | 30 | 24 | 2 | 69 | 52.93 | - | 50-62 | yes | 60 61 56 60 60 60 58 60 60 60 60 59 60 60 60 60 60 |
+| s4-block-2 | RENDER_2D_FENCE_WAIT=block | 63 | 5 | 33 | 27 | 4 | 71 | 52.18 | 1800 1992 | 49-63 | yes | 60 52 60 60 60 53 60 60 60 60 57 56 60 60 60 60 60 |
+| s4-g2-1 | RENDER_GENGIS_THREADS=2 | 63 | 4 | 38 | 40 | 2 | 107 | 44.56 | 1800 1992 | 50-62 | yes | 57 60 60 60 60 51 60 60 60 60 45 60 60 60 60 60 60 |
+| s4-g2-2 | RENDER_GENGIS_THREADS=2 | 63 | 4 | 23 | 21 | 3 | 43 | 53.79 | 1800 1992 | 50-63 | yes | 57 59 60 60 60 58 60 60 60 60 54 60 60 60 60 60 60 |
+| s4-g2gt-1 | RENDER_GENGIS_THREADS=2 | 62 | 12 | 95 | 115 | 0 | 221 | 44.28 | 1800 1608 | 50-62 | yes | 60 55 60 60 60 57 48 44 48 58 55 54 58 47 60 60 60 |
+| s4-g2gt-2 | RENDER_GENGIS_THREADS=2 | 62 | 8 | 76 | 87 | 3 | 183 | 44.75 | 1800 1608 | 50-62 | yes | 52 60 60 60 60 57 48 60 46 60 45 48 59 60 60 60 60 |
+
+`s4-block`: `render.2d_fence_wait` does not exist in the phase 3 binary, so these two runs are a null test: 30 and
+33 against the controls' 37 and 32 (the spread, again). `s4-g2gt` = the worker on with two Gengis threads: 95 and 76
+frames lost, the worst of the day. The worker hurts even with a core free: it stays off.
+
+### 8.2 `mk4` on the Plus: the blocking wait, nice values, a core pin, the shader off
+
+| run | env | windows | under 59 | frames lost | repeats | drops | short audio chunks | worst window fps | cpugov steps (MHz) | SoC °C | huge pages | windows 17-33 (fps) |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| m-ctl-1 |  | 64 | 3 | 17 | 11 | 4 | 28 | 57.14 | 1800 1992 | 49-62 | yes | 57 60 60 60 60 58 60 60 60 60 60 59 60 60 60 60 60 |
+| m-ctl-2 |  | 64 | 3 | 16 | 11 | 4 | 32 | 56.24 | 1800 1992 | 49-63 | yes | 56 60 60 60 60 59 59 60 60 60 60 59 60 60 60 60 60 |
+| m-spin-1 | RENDER_2D_FENCE_WAIT=spin | 63 | 3 | 21 | 18 | 4 | 46 | 51.43 | 1800 1992 | 50-62 | yes | 51 60 60 60 60 59 60 60 60 60 60 59 60 60 60 60 60 |
+| m-spin-2 | RENDER_2D_FENCE_WAIT=spin | 63 | 4 | 28 | 20 | 5 | 55 | 52.16 | 1800 1992 | 49-63 | yes | 52 60 60 60 61 55 60 60 60 61 57 60 60 60 60 60 60 |
+| m-nice-1 | SCHED_EMU_NICE=-10 | 64 | 3 | 16 | 9 | 2 | 29 | 56.17 | 1800 1992 | 50-63 | yes | 56 60 60 60 60 59 60 60 60 60 60 60 60 60 60 60 60 |
+| m-nice-2 | SCHED_EMU_NICE=-10 | 63 | 5 | 21 | 15 | 3 | 35 | 56.23 | 1800 1608 | 49-62 | yes | 56 60 60 60 60 58 60 60 60 60 58 59 60 60 60 60 60 |
+| m-nice2d-1 | SCHED_EMU_NICE=-10 SCHED_2D_NICE=-5 | 63 | 3 | 16 | 7 | 3 | 26 | 57.13 | 1800 1992 | 50-63 | yes | 57 60 60 60 60 59 60 60 60 60 60 60 60 60 60 60 60 |
+| m-pin-1 | SCHED_EMU_CPU=3 | 63 | 3 | 16 | 8 | 2 | 24 | 57.54 | 1800 1992 | 49-63 | yes | 58 60 60 60 60 58 60 60 60 60 60 60 60 60 60 60 60 |
+| m-pin-2 | SCHED_EMU_CPU=3 | 63 | 5 | 28 | 19 | 2 | 40 | 54.87 | 1800 1992 | 50-63 | yes | 56 60 60 60 60 58 60 59 60 60 55 57 60 60 60 60 60 |
+| m-noshader-1 | KMS_SHADER=none | 63 | 3 | 15 | 8 | 3 | 22 | 57.14 | 1800 1992 | 50-58 | yes | 57 60 60 60 60 58 60 60 60 60 60 60 60 60 60 60 60 |
+| m-noshader-2 | KMS_SHADER=none | 63 | 3 | 16 | 9 | 3 | 23 | 57.15 | 1800 1992 | 50-58 | yes | 57 60 60 60 60 58 60 60 60 60 60 60 60 60 60 60 60 |
+
+- **`render.2d_fence_wait=block` (mk4's default) against `spin` on the same binary: 16-17 frames lost against 21-28,
+  repeats 11 against 18-20.** With phase 3 (worker off) at 27-33 and the base at 78-110, the race start is now ~16
+  frames, of which ~8 are the boot's first window and ~3 the track load (`m-stats15-1`, 15-frame windows: the only
+  windows under 58 fps are the boot's two, one at 47 fps as the track loads, and three single-frame 58s).
+- `sched.emu_nice=-10`, with `sched.2d_nice=-5`, `sched.emu_cpu=3`: 16-28, inside the spread. CFS doesn't need the
+  help once nothing spins. The settings stay (off).
+- `kms.shader=none`: 15-16: the LCD grid shader costs the race start nothing on the Plus (so the GPU isn't the
+  limit here, unlike Golden Sun's house area in 0.4.0's notes).
+
+### 8.3 The RG DS (non-Plus, 192.168.50.183, 640x480 panels, the card's `core.slice=auto` forced to 64 through the env, the card's per-game shader `lcd3x`)
+
+| run | env | windows | under 59 | frames lost | repeats | drops | short audio chunks | worst window fps | cpugov steps (MHz) | SoC °C | huge pages | windows 17-33 (fps) |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| r-base1 | | 62 | 6 | 59 | 60 | 17 | 177 | 41.85 | 1800 1992 | 33-47 | - | 57 60 60 60 53 57 50 60 60 59 42 60 60 60 60 60 60 |
+| r-base2 | | 63 | 7 | 49 | 47 | 3 | 143 | 47.03 | 1800 1992 | 48-56 | - | 57 60 60 60 60 55 55 57 59 60 47 52 60 60 60 60 60 |
+| r-p1-1 | | 63 | 6 | 39 | 35 | 7 | 128 | 50.02 | 1800 1608 | 44-50 | - | 52 60 60 60 60 57 60 60 57 60 50 60 60 57 60 60 60 |
+| r-p1-2 | | 63 | 4 | 24 | 15 | 6 | 90 | 51.59 | 1800 1992 | 49-57 | - | 52 60 60 60 59 59 60 60 60 60 59 60 60 60 60 60 60 |
+| r-p2-1 | | 63 | 9 | 51 | 49 | 7 | 175 | 52.97 | 1800 1992 | 47-53 | - | 60 57 60 60 60 53 60 59 60 60 59 54 60 55 60 60 60 |
+| r-p2-2 | | 63 | 6 | 39 | 33 | 9 | 132 | 50.0 | 1800 | 49-57 | - | 60 50 60 60 60 57 60 60 60 60 58 55 60 60 60 60 60 |
+| r-p3-1 | | 63 | 6 | 38 | 35 | 3 | 117 | 49.51 | 1800 1992 | 48-55 | yes | 52 60 60 60 60 56 59 60 60 60 50 57 60 60 60 60 60 |
+| r-p3-2 | | 63 | 7 | 42 | 36 | 5 | 105 | 52.13 | 1800 1992 | 49-58 | yes | 57 60 60 60 60 55 59 60 60 52 53 55 60 60 60 60 60 |
+| r-mk4-1 | | 63 | 2 | 17 | 7 | 5 | 73 | 56.2 | 1800 1992 | 49-55 | yes | 56 60 60 60 60 60 60 60 60 60 59 60 60 60 60 60 60 |
+| r-mk4-2 | | 63 | 2 | 15 | 7 | 5 | 68 | 57.13 | 1800 1608 1800 1992 | 48-57 | yes | 57 60 60 60 60 59 60 60 60 60 59 60 60 60 60 60 60 |
+| r-b-ctl-1 | | 63 | 2 | 15 | 5 | 7 | 56 | 57.13 | 1800 1992 | 45-56 | yes | 57 60 60 60 60 60 60 60 60 60 60 60 60 60 60 60 60 |
+| r-b-ctl-2 | | 63 | 2 | 16 | 5 | 8 | 55 | 57.11 | 1800 1608 | 49-58 | yes | 57 60 60 60 60 60 60 60 60 60 60 60 60 60 60 60 60 |
+| r-b-spin-1 | RENDER_2D_FENCE_WAIT=spin | 63 | 4 | 25 | 16 | 10 | 83 | 53.81 | 1800 1608 | 49-58 | yes | 57 60 60 60 60 57 60 60 60 60 60 60 60 60 60 60 60 |
+| r-b-spin-2 | RENDER_2D_FENCE_WAIT=spin | 63 | 4 | 26 | 19 | 19 | 77 | 54.41 | 1800 1992 | 49-58 | yes | 57 60 60 60 60 54 60 60 60 60 54 60 60 60 60 60 60 |
+| r-b-nice-1 | SCHED_EMU_NICE=-10 | 64 | 2 | 16 | 6 | 8 | 55 | 57.13 | 1800 1608 1800 | 49-57 | yes | 57 60 60 60 60 60 60 60 60 60 60 60 60 60 60 60 60 |
+| r-b-nice-2 | SCHED_EMU_NICE=-10 | 63 | 2 | 15 | 5 | 7 | 55 | 57.14 | 1800 1608 | 50-58 | yes | 57 60 60 60 60 60 60 60 60 60 60 60 60 60 60 60 60 |
+| r-b-pin-1 | SCHED_EMU_CPU=3 | 64 | 2 | 15 | 5 | 7 | 55 | 57.14 | 1800 | 50-57 | yes | 57 60 60 60 60 60 60 60 60 60 60 60 60 60 60 60 60 |
+| r-b-pin-2 | SCHED_EMU_CPU=3 | 64 | 2 | 14 | 3 | 5 | 60 | 58.05 | 1800 1992 | 49-58 | yes | 58 60 60 60 60 60 60 60 60 60 60 60 60 60 60 60 60 |
+
+The same picture: base 49-59 lost, phase 1 24-39, phase 2 39-51, phase 3 (worker on; this device has no shader and
+more headroom) 38-42, **mk4 15-17 with 7 repeats**, mk4b 15-16 with 5 repeats; spin 25-26 against block's 15-16 on the
+same binary. On the RG DS the only windows left under 59 are the boot's first and the track load (57 fps). Nice and
+the pin: nothing (14-16).
+
+### 8.4 Verdicts added
+- **`render.geom_thread` off** (shipped as mk4's default), **`render.2d_fence_wait=block`** (mk4's default: the one
+  change after phase 1 that the panels can see on both devices), the Gengis conversion wait blocking (exact by
+  construction: a wait, not a computation; no separate A/B: it went in with the audio merge, `k-mk4b`'s runs are not
+  worse than `k-mk4`'s).
+- Nice values, a core pin, two Gengis threads, the shader: nothing on Mario Kart's race start; left off.
+
+Raw logs: `device-evidence/kms/s4-*`, `m-*`, `device-evidence/kms-rgds/r-*`.
