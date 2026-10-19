@@ -187,3 +187,67 @@ to a worker. **It can't, and nothing was built.** Head unchanged: `3610c71`.
 - **Verdict:** no-go for the 8M target. A partial offload worth about 8% could be a later project once the device
   shows a core to spare. To get under 9M, the command timing itself (`Run`, the FIFO writer, the DMA: about 3.5M)
   and the JIT side would have to get cheaper.
+
+## The exact offload (14:13 UTC): patch 0083, `render.geom_thread` (default `on`)
+
+**New head: `649e008`** (CI: see below). After the audit, the user chose the exact offload. Built, exact on every
+check, so it is on by default. `render.geom_thread=off` gives 3610c71's polygon setup in this binary.
+
+**What came out smaller than the audit:** lighting is **not** on the worker. The emulator thread clips each polygon
+(it needs the vertex count for timing), and clipping interpolates the vertex colours that lighting produces. Moving
+lighting would mean the emulator thread clips positions only and the worker clips again with the attributes. That
+is a second, larger change, not done here. So the worker does only **the build of a stored polygon**: its fields,
+bounds, W size, Z/W, and the copy of its new vertices into vertex RAM with their final colours (`GeomBuild`, the
+same statements as before).
+
+**Design.**
+- The emulator thread clips straight into the next slot of a single-producer, single-consumer ring of 256
+  `GeomJob`s (the clipped vertices with their screen positions, the reciprocals, the polygon's and new vertices'
+  places, the shared vertices' places, the state the build reads), so a stored polygon needs no copy.
+- It counts `NumPolygons`/`NumVertices` exactly as the build would (RAM_COUNT and RAM full stay right), keeps a
+  shadow of the last strip polygon's vertices (the next polygon's sharing test, clipping and zero-dot read it), and
+  publishes the slot with a seq_cst head store.
+- The worker spins 256 times on an empty ring, then sleeps on a condition variable. It is woken every 32 jobs (only
+  if asleep), on a full ring (the emulator thread then waits for a slot), and at a drain. There is no
+  `pthread_cond_signal` per job.
+- A rejected polygon reuses its slot.
+
+**Sync points (drains):**
+- `VBlank()`, first thing (before the translucent split, the Y-sort and the RAM swap the renderer reads);
+- `DoSavestate` (save and load; after a load the shadow is seeded from the polygon RAM);
+- `Reset`, and the destructor (drain, quit, join).
+
+Nothing else on the emulator thread reads the polygon or vertex RAM. The emulator thread never reads worker results
+mid-frame: GXSTAT, RAM_COUNT and the test results don't depend on them, and the strip sharing uses the shadow.
+
+**qemu, MK 1650-2150** (`mk3geom-evidence/qcount-0083.txt`):
+- The emulator thread: `SubmitPolygonBody` 1,133.3k -> 903.8k (-229k).
+- The hand-off costs the emulator thread ~110k of the 424k moved: ~78k for the job header and the strip shadow,
+  ~33k for the slot.
+- By the totals, the thread is **12,042.9k -> 11,876.8k without the Gengis bins** (the difference from -229k is
+  qemu's thread-timing noise).
+- **The worker: ~507k a frame**: the build 424k, its loop, spin and atomics 83k.
+
+**Short of the 11.0M target:** that estimate assumed lighting moved too.
+
+**Device:** expected -1..-2% of the emulator thread's cycles **only if a core is free**. Gengis's bin threads and the
+2D thread already share the four A55s, so the worker can cost more than it saves, and **the device decides**. A/B
+with `--set render.geom_thread=off`, and watch the 2D thread's and Gengis's frame times as well as the emulator
+thread's. Untested on device.
+
+**Exactness** (`mk3geom-evidence/exactness-0083.txt`), off vs on:
+- MK's 8 frames and audio = the base hashes (also the head's binary with its default on, and off);
+- main RAM every frame 1600-2100 with `--regs --timing` SAME;
+- full savestates at 1850 and 2000 identical to the checkpoint's;
+- the `Run` per-call trace: the same hash over 1,133,371 calls;
+- check.sh 16/16, geomtest-irq SAME, exact-suite.sh FAILS=0.
+
+**Sabotage** (`MELONDS_GEOMSAB`, read at creation): (1) no full-ring check and no batch wake, so the ring
+overflows: MK's scene fails (crash). (2) No drain: the scene fails (crash). Both are caught, but both are loud.
+A subtler "drain missing only at savestates" sabotage was not run.
+
+**For the next step (lighting on the worker):** the emulator thread would clip with `attribs=false` (positions and
+counts only). The worker would clip again with attributes on vertices whose colours come from its own lighting.
+That needs a per-vertex record in the ring (position, raw texcoords, the light/material/VecMatrix versions) and
+the worker owning `VertexColor`. It could move ~0.64M (lighting) + ~0.15M (vertex attribute stores) more, at
+~0.2M of ring cost on the emulator thread.
