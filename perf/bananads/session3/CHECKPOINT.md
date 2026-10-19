@@ -8,6 +8,9 @@ The local agent can test the work before the stop and after the restart separate
 | **After the restart** | 2026-10-19 from 09:55 | **`claude/bananads-perf-mk2`** | **`3a743f3`** (pushed 11:32) | `8e98258` plus the new commits only (8 cherry-picks, `-x`). CI device build passed: artifact `bananads-aarch64-3a743f32a9bd8726645980a61768ddf9bf2efa4e` (run 39245317154), one commit per change, each behind its own toggle. Built by integrating the two part branches below |
 | part | from 09:55 | `claude/bananads-perf-mk2geom` | `58aa659` | the geometry engine's remaining cost on Mario Kart's race start, and session 2's GX FIFO store changes (memio) ported and checked on the game |
 | part | from 09:55 | `claude/bananads-perf-mk2cpu` | `08d14fa` | the emulator thread's other costs on the race start: the SPU's per-event cost, the scheduler, IO slow paths from JIT code |
+| **Phase 3** (the user's extra 4 hours) | 2026-10-19 from 12:05 | **`claude/bananads-perf-mk3`** | (filled in at the hand-over) | `3a743f3` (mk2, now **frozen**) plus the new commits only, each behind its own toggle. Built by integrating the two part branches below |
+| part | from 12:05 | `claude/bananads-perf-mk3geom` | | the geometry engine's own cost: `GPU3D::Run`, polygon setup, vertices, clipping |
+| part | from 12:05 | `claude/bananads-perf-mk3jit` | | the JIT code's cost on the race start and its slow paths (GX FIFO stores, CP15 MCRs, region lookups) |
 
 No device numbers existed for the checkpoint when the work restarted (the user's call: continue without them).
 
@@ -15,7 +18,8 @@ No device numbers existed for the checkpoint when the work restarted (the user's
 
 1. **Base vs before the stop.** Run `mkbase` (9aa478c, the profiler and no changes) against `mk-checkpoint1`: this is
    what session 3 delivered by 00:00.
-2. **Before vs after.** Run `mk-checkpoint1` against `mk2`: only the new work.
+2. **Before vs after.** Run `mk-checkpoint1` against `mk2`: only phase 2's work. Then `mk2` against `mk3`: only
+   phase 3's.
 3. **One new change at a time.** On the `mk2` binary, turn a new commit's toggle off (listed below at the hand-over),
    so one binary A/Bs every new change.
 4. **Exactness**, as in [README.md](README.md): `exact.sh` on Golden Sun and HeartGold, for `mk2` as well.
