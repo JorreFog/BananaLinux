@@ -33,3 +33,14 @@ qc-all       total  13254.1k  without Gengis  12780.3k  (Gengis  473.8k)  geomet
       0.0k      41.7k    +41.7k  _ZN7melonDSL22SlowBlockTransfer9BodyILb1ELi0EEEvjPmjPNS_5ARMv5E
       7.9k      57.3k    +49.4k  _ZN7melonDS5GPU3D13WriteToGXFIFOEj
     141.6k     345.6k   +204.0k  line_px
+
+# 0066 (58aa659): qc-66b vs qc-all (dc33057)
+qc-all       total  13254.1k  without Gengis  12780.3k  (Gengis  473.8k)  geometry+GX DMA   7052.3k
+qc-66b       total  12855.0k  without Gengis  12710.6k  (Gengis  144.5k)  geometry+GX DMA   6491.3k
+   1772.8k      76.2k  -1696.7k  _ZN7melonDS3DMA4Run9Ev
+     11.7k       5.4k     -6.3k  gx2_render_bin
+      5.4k       0.0k     -5.4k  _ZN7melonDS5ARMv513AddCycles_CDIEv
+      0.0k       5.4k     +5.4k  _ZN7melonDS5ARMv512AddCycles_CDEv
+      0.0k      57.5k    +57.5k  _ZN7melonDS3DMA8Run9FullEv
+      0.0k     439.0k   +439.0k  _ZN7melonDS3DMA6Run9GXEv
+      0.0k    1135.7k  +1135.7k  _ZN7melonDS5GPU3D16WriteGXFIFOBlockEPKhjjj

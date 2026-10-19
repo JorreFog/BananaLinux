@@ -1,5 +1,9 @@
 # Session 3 (2026-10-18, 21:00-00:10 UTC): Mario Kart DS's race start
 
+**Phase 2 (after the restart, 2026-10-19 09:55-11:32 UTC):** `claude/bananads-perf-mk2` (`3a743f3`) = this
+page's `8e98258` plus six new toggled changes, about -2..-2.8% more. Where the work stopped and restarted, and how to
+test each phase on its own: [CHECKPOINT.md](CHECKPOINT.md).
+
 This follows [BRIEF.md](BRIEF.md) and [../GUIDE-FOR-CLOUD-AGENTS.md](../GUIDE-FOR-CLOUD-AGENTS.md). The work is on
 the emulator thread only, with one toggle per change, each exact on the game itself. Nothing here is measured on a
 device. Every gain below is an estimate with its reasoning, taken from the device profile's shares.

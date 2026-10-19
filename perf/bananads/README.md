@@ -1,6 +1,8 @@
 # BananaDS speed work, 2026-10-18 (four cloud agents)
 
-**Newest:** [session3/README.md](session3/README.md): Mario Kart DS's race start, `claude/bananads-perf-mkall` and its parts.
+**Newest:** [session3/CHECKPOINT.md](session3/CHECKPOINT.md): Mario Kart DS's race start in two phases, before the stop
+(`claude/bananads-perf-mk-checkpoint1`) and after the restart (`claude/bananads-perf-mk2`). Phase 1's details:
+[session3/README.md](session3/README.md).
 
 **Before that:** [session2/README.md](session2/README.md): the second session's five SuperDrastic branches (emulator thread only), ranked device A/Bs.
 
