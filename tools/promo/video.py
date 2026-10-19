@@ -14,6 +14,9 @@ FRAMES = os.path.join(HERE, 'frames')
 W, H, FPS = 1920, 1080, 30
 FONTS = ROOT + '/ui/assets/banana/fonts/'
 MONO = '/usr/share/fonts/truetype/jetbrains-mono/JetBrainsMono-Regular.ttf'
+# the music: the track from MUSIC_AT seconds in, faded in at the start and out at the end (none if not given)
+MUSIC = os.environ.get('MUSIC', '')
+MUSIC_AT = float(os.environ.get('MUSIC_AT', '20'))
 if not os.path.exists(MONO): MONO = '/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf'
 F = lambda name, size: ImageFont.truetype(FONTS + name, size)
 BOLD, SEMI, MED, REG = 'Inter-Bold.ttf', 'Inter-SemiBold.ttf', 'Inter-Medium.ttf', 'Inter-Regular.ttf'
@@ -66,35 +69,25 @@ def background(glow):
 BACKS = {s['theme']: background(s['glow']) for s in SEGMENTS}
 BACKS['intro'] = background((255, 200, 60))
 
-# the handheld: two panels with the screens in them, a hinge between (flat, simple)
-SW, SH = 560, 420				# a screen's picture on the frame
-PAD = 26
+# the two screens: just the pictures, rounded, a thin edge, a soft shadow under them
+SW, SH = 600, 450				# a screen's picture
+GAP = 28
 def rr(d, box, r, **kw): d.rounded_rectangle(box, r, **kw)
 def handheld():
-    w, h = SW + 2 * PAD + 120, 2 * (SH + 2 * PAD) + 30
+    w, h = SW + 12, 2 * (SH + 12) + GAP
     im = Image.new('RGBA', (w, h), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
-    top = (0, 0, w, SH + 2 * PAD); bot = (0, SH + 2 * PAD + 30, w, h)
-    for box in (top, bot):
-        rr(d, box, 34, fill=(20, 20, 24), outline=(52, 53, 62), width=2)
-    for box in (top, bot):	# the screens' dark panels
-        x0, y0 = box[0] + 60 - 10, box[1] + PAD - 10
-        rr(d, (x0, y0, x0 + SW + 20, y0 + SH + 20), 12, fill=(6, 6, 8))
-    rr(d, (90, SH + 2 * PAD + 4, w - 90, SH + 2 * PAD + 26), 11, fill=(32, 33, 39))	# the hinge
-    # the controls, as simple marks
-    cx, cy = 30, bot[1] + 120
-    d.rectangle((cx - 6, cy - 18, cx + 6, cy + 18), fill=(40, 41, 48)); d.rectangle((cx - 18, cy - 6, cx + 18, cy + 6), fill=(40, 41, 48))
-    d.ellipse((cx - 18, cy + 80, cx + 18, cy + 116), fill=(32, 33, 39), outline=(48, 49, 57), width=2)
-    bx, by = w - 30, bot[1] + 120
-    for dx, dy in ((0, -18), (18, 0), (0, 18), (-18, 0)): d.ellipse((bx + dx - 7, by + dy - 7, bx + dx + 7, by + dy + 7), fill=(40, 41, 48))
-    for sx, sy in ((-26 + 60, 0), (60, 30)): pass
-    for dy in (110, 140): d.ellipse((bx - 6, by + dy - 6, bx + 6, by + dy + 6), fill=(40, 41, 48))
+    top = (0, 0, w, SH + 12); bot = (0, SH + 12 + GAP, w, h)
+    for box in (top, bot): rr(d, box, 20, fill=(14, 14, 17), outline=(44, 45, 52), width=2)
     shadow = Image.new('RGBA', (w + 160, h + 160), (0, 0, 0, 0))
-    ImageDraw.Draw(shadow).rounded_rectangle((80, 100, w + 80, h + 100), 40, fill=(0, 0, 0, 170))
-    shadow = shadow.filter(ImageFilter.GaussianBlur(30))
+    sd = ImageDraw.Draw(shadow)
+    for box in (top, bot): sd.rounded_rectangle((box[0] + 80, box[1] + 100, box[2] + 80, box[3] + 100), 24, fill=(0, 0, 0, 160))
+    shadow = shadow.filter(ImageFilter.GaussianBlur(28))
     return im, shadow, top, bot
+# the pictures' corners rounded to match
+MASK = Image.new('L', (SW, SH), 0); ImageDraw.Draw(MASK).rounded_rectangle((0, 0, SW - 1, SH - 1), 14, fill=255)
 DEVICE, SHADOW, TOPBOX, BOTBOX = handheld()
-DX, DY = W - DEVICE.width - 170, (H - DEVICE.height) // 2
+DX, DY = W - DEVICE.width - 210, (H - DEVICE.height) // 2
 
 _cache = {}
 def screen(theme, t, side):
@@ -172,7 +165,7 @@ def frame(t):
                 prev = screen(SEGMENTS[seg - 1]['theme'], SEG - 0.01, side)
                 s = Image.blend(prev, s, ease(local / 0.35))
                 s = Image.blend(s, Image.new('RGB', s.size, (255, 255, 255)), 0.5 * (1 - local / 0.35))
-            dev.paste(s, (box[0] + 60, box[1] + PAD))
+            dev.paste(s, (box[0] + 6, box[1] + 6), MASK)
         sh = SHADOW
         if scale != 1:
             dev = dev.resize((int(dev.width * scale), int(dev.height * scale)), Image.LANCZOS)
@@ -234,7 +227,11 @@ if __name__ == '__main__':
     n = int(DURATION * FPS)
     for k in range(n):
         frame(k / FPS).save(f'{FRAMES}/f{k:05d}.png', compress_level=1)
-    subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-framerate', str(FPS), '-i', f'{FRAMES}/f%05d.png',
-                    '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '18', '-movflags', '+faststart', OUT], check=True)
+    cmd = ['ffmpeg', '-y', '-loglevel', 'error', '-framerate', str(FPS), '-i', f'{FRAMES}/f%05d.png']
+    if MUSIC:
+        cmd += ['-ss', str(MUSIC_AT), '-i', MUSIC, '-filter:a', f'afade=t=in:st=0:d=2.5,afade=t=out:st={DURATION - 2.5:.2f}:d=2.5',
+                '-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '192k', '-shortest']
+    cmd += ['-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '18', '-movflags', '+faststart', OUT]
+    subprocess.run(cmd, check=True)
     shutil.rmtree(FRAMES, True)
     print(OUT, n, 'frames')
