@@ -21,25 +21,25 @@ YELLOW, INK, SOFT = (255, 214, 64), (240, 242, 248), (150, 156, 172)
 
 # ---- the story ------------------------------------------------------------------------------------------------------
 SEGMENTS = [
-    dict(theme='canvas', name='Canvas', tag='THEME 1 / 3', glow=(110, 140, 255),
-         head='Every pixel, from one JSON file',
-         points=['Rects, text, images, groups and lists', 'Hooks for systems, games, the selection,\nthe clock and the battery',
-                 'Values, {templates} and =expressions'],
-         code=['{ "type": "list", "source": "systems",', '  "direction": "row", "scrollMode": "center",',
-               '  "item": { "type": "rect", "radius": 20,', '    "scale": "=sel ? 1.08 : 0.92",',
-               '    "fill": "=sel ? mix(item.color, card, 0.35)', '                  : card" } }']),
-    dict(theme='hillside', name='Hillside', tag='THEME 2 / 3', glow=(60, 130, 230),
-         head='A mockup, rebuilt in JSON only',
+    dict(theme='hillside', name='Hillside', tag='THEME 1 / 3', glow=(60, 130, 230),
+         head='A desktop, rebuilt in JSON only',
          points=['Components with parameters', 'Grids and lists that scroll themselves',
                  'A wallpaper drawn from shapes:\nno pictures at all'],
          code=['"components": {', '  "window": { "type": "group", ... },', '  "taskbar": { "type": "group", ... }', '},',
                '{ "use": "window", "w": 560, "h": 420,', '  "with": { "title": "{sys.name}" } }']),
-    dict(theme='turntable', name='Turntable', tag='THEME 3 / 3', glow=(200, 200, 215),
+    dict(theme='turntable', name='Turntable', tag='THEME 2 / 3', glow=(200, 200, 215),
          head='Animation is just math',
          points=['An expression on any property', 'Easing, time and smoothed values',
                  'A 3D spin, faked with cos(time)'],
          code=['"vars": { "turn": "=time * 0.09" },', '{ "type": "image", "src": "{art}",',
                '  "w": "=190 * abs(cosd(turn))",', '  "tint": "=cosd(turn) < 0 ? \'#7a7a80\'', '                          : \'#ffffff\'" }']),
+    dict(theme='classic', name='Classic', tag='THEME 3 / 3', glow=(120, 200, 245),
+         head='Hooks for everything on screen',
+         points=['The clock, the date and the battery', 'Lists that scroll to the selection',
+                 'Tap anything: "onTap"'],
+         code=['{ "type": "text", "text": "{title}" },', '{ "use": "battery", "right": 16 },',
+               '{ "type": "rect", "radius": 6, "w": 34,', '  "x": "=52 + 496 * scroll / max(1, count - 1)" },',
+               '{ "type": "group", "onTap": "a", ... }']),
 ]
 INTRO, SEG, OUTRO = 3.6, 7.2, 4.4
 DURATION = INTRO + SEG * len(SEGMENTS) + OUTRO
