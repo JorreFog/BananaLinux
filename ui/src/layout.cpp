@@ -848,9 +848,18 @@ namespace banana
 		struct Placed { float dx = 0, dy = 0; bool set = false; };
 
 		// the natural size of an element (text: its lines; groups laid out in a row or column: the sum)
-		void natural(const Ctx& c, float pw, float ph, float k, float& nw, float& nh)
+		void natural(const Ctx& c0, float pw, float ph, float k, float& nw, float& nh)
 		{
 			nw = -1; nh = -1;
+			// a component's parameters are in the scope its size is worked out in, as in its drawing
+			Scope inner;
+			Ctx c = c0;
+			if (!c0.n->with.empty())
+			{
+				inner.parent = c0.sc;
+				for (auto& w : c0.n->with) inner.set(w.first, w.second.eval(*c0.sc));
+				c.sc = &inner;
+			}
 			if (c.n->type == "text")
 			{
 				float bw = (float)num(c, "w", 0, pw);
