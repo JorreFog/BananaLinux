@@ -125,3 +125,32 @@ byte-identical to a build of `3610c71`):
 - **Next candidates:** the JIT's GX port STRs (mk3jit's), the DMA's per-call cost and `MRAMBurstTable`'s copy (the
   slice loop ends the burst ~1,240 times a frame), and only on device evidence `AddCyclesT` (if the profile shows the
   pipelines' branches mispredicting, a branch-free form might pay there even with the same instruction count).
+
+## Follow-up (13:19-13:26 UTC): polygon setup, vertices, lighting: no commit, a dead end by measurement
+
+**Head unchanged: `3610c71`**, CI artifact `bananads-aarch64-3610c71a363a0fd39c70720cc6dcc83016c6f20d`. No 0083/0084.
+I stopped early on purpose: none of the three has a compact exact cut worth a toggle (the coordinator asked for a
+real one or a write-up). Numbers: `mk3geom-evidence/followup-polygon-vertex-lighting.txt`.
+
+- **Polygon setup** (`SubmitPolygonBody`, 1.14M a frame, 3,312 calls; ~2,560 pass culling and ~1,280 are stored).
+  By source region it is flat: screen coordinates 169k, the culling normal and dot product 163k, Z/W 148k, the
+  copy into vertex RAM with the final colours 145k, the outside test and clip calls 125k, bounds and W size 108k,
+  and the rest under 80k each. Every region is per-vertex arithmetic that GeomFast already trimmed (reciprocals,
+  the outside test before clipping, Z reused along strips). The largest thing one change could remove is ~30-50k
+  (0.3%). The far plane's quick reject doesn't help: `ClipAgainstPlane<2>`'s 103k is mostly the near-plane pass,
+  which is real clipping.
+- **Vertices** (`SubmitVertexBody`, 0.78M, ~95 a vertex): the NEON transform, the colour and texcoord stores, the
+  strip bookkeeping and `AddCyclesT(3)`. A colour precomputed at `VertexColor`'s writes would save ~5 a vertex
+  (~40k). Not worth a toggle.
+- **Lighting** (0.64M, ~145 a normal with ~1 light): the enabled-light loop is already tight. **A result cache is a
+  dead end, measured.** In an instrumented build, MK never sends the same normal twice in a row (0 of 2.1M). A
+  256-entry cache keyed on (normal, lighting state) hits ~20%, so it would save ~110k but cost ~80k in the lookup
+  and the state checks.
+
+For DEAD-ENDS.md: "(mk3geom) MK's polygon setup, vertex and lighting paths have no compact exact cut left (each
+region ≤170k a frame, spread out). A lighting result cache: consecutive normals never repeat; a 256-entry cache hits
+~20%, which roughly pays for its own lookup."
+
+Next, if geometry stays a target: the remaining cost only falls with structural work. Options are a NEON
+per-polygon setup (the 4 vertices' screen coordinates and Z together) or fewer `Run` calls (the slice loop). Both
+are bigger than an hour and both need device numbers first to show they would pay.

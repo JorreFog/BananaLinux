@@ -81,3 +81,7 @@
   is the per-channel state traffic. `blip_add_delta` is already NEON (GCC). `session3/mk2cpu-evidence/`.
 - (mk2cpu) The RTC's 32,768 Hz event (548 a frame) and the SPU's can't be removed or merged exactly: each ends a slice,
   so the ARM9/ARM7 interleaving would move.
+- (mk3geom) MK's polygon setup, vertex and lighting paths have no compact exact cut left (each region ≤170k a frame,
+  spread out). A lighting result cache: consecutive normals never repeat; a 256-entry cache hits ~20%, which roughly
+  pays for its own lookup. `AddCyclesT`'s bookkeeping can't stay in registers across `Run`'s loop (the out-of-line
+  calls read it). `session3/mk3geom.md`, `session3/mk3geom-evidence/followup-polygon-vertex-lighting.txt`.
