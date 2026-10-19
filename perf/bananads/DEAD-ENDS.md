@@ -85,3 +85,9 @@
   spread out). A lighting result cache: consecutive normals never repeat; a 256-entry cache hits ~20%, which roughly
   pays for its own lookup. `AddCyclesT`'s bookkeeping can't stay in registers across `Run`'s loop (the out-of-line
   calls read it). `session3/mk3geom.md`, `session3/mk3geom-evidence/followup-polygon-vertex-lighting.txt`.
+- (mk3jit) The exit check's timestamp address from x29 instead of three MOV/MOVKs (~18k checks a frame on MK):
+  `NDS::ARM9Timestamp` is ~79 MB before `NDS::ARM9` (the NDS object holds the JIT's tables), out of one ADD's reach;
+  loading the NDS pointer first is a dependent load. Not done.
+- (mk3jit) A GX-only patched stub for the JIT's STRs to the GX FIFO port: after 0064 `SlowWrite9`'s GX case is first
+  and direct; a special stub would save ~15-25 of ~50 instructions per STR (~2,076 a frame on MK): ~30-50k a frame,
+  not worth the risk in the fault-patching code. `session3/mk3jit.md`.

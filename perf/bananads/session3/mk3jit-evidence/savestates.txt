@@ -1,0 +1,7 @@
+# full savestates (gl/sst.sh: headless.reload_at), MK scene; checkpoint/mk2 reference a57737e0 (1850), f476c39e (2000)
+  a57737e0567aab4f488ed894bdec854d 1850 mk2-b/bananads 
+  f476c39ef33cd7a1166128040aa358d1 2000 perf3/bananads-0086 --set jit.cp15nop=off --set jit.hugepages=off
+  a57737e0567aab4f488ed894bdec854d 1850 perf3/bananads-0086 
+  f476c39ef33cd7a1166128040aa358d1 2000 perf3/bananads-0086 
+  a57737e0567aab4f488ed894bdec854d 1850 perf3/bananads-0087c (= head 88008b0, defaults) 
+  f476c39ef33cd7a1166128040aa358d1 2000 perf3/bananads-0087c (= head 88008b0, defaults) 

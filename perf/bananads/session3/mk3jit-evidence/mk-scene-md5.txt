@@ -1,0 +1,32 @@
+# mk-scene.sh (2100 frames, fresh save): 8 frames + audio; base = session3/mkside-evidence/mk-scene-base-md5.txt
+## s-on
+0ff6f47bd15cce2850845091841ecb74  frame1500.ppm
+2e4ca72f9e51e549e8904b189ae856c6  frame1740.ppm
+83584df2b8764443c10554c08f090add  frame1800.ppm
+58b1524b7623ffd3737a0408f8876277  frame1860.ppm
+0ec41a2e8672fd9729276203048d601a  frame1920.ppm
+901a89f9553547e0f8fb56d65ac1f895  frame1980.ppm
+b61ee9823d3c1b8e01f5bd7d2a160ac0  frame2040.ppm
+6f258e37449b0ac0e6e1f6d7c7a40bc3  frame2100.ppm
+0266610cddc0585a8a0c95c34e6c0d4a  audio.raw
+## s-off
+0ff6f47bd15cce2850845091841ecb74  frame1500.ppm
+2e4ca72f9e51e549e8904b189ae856c6  frame1740.ppm
+83584df2b8764443c10554c08f090add  frame1800.ppm
+58b1524b7623ffd3737a0408f8876277  frame1860.ppm
+0ec41a2e8672fd9729276203048d601a  frame1920.ppm
+901a89f9553547e0f8fb56d65ac1f895  frame1980.ppm
+b61ee9823d3c1b8e01f5bd7d2a160ac0  frame2040.ppm
+6f258e37449b0ac0e6e1f6d7c7a40bc3  frame2100.ppm
+0266610cddc0585a8a0c95c34e6c0d4a  audio.raw
+## s-sab1
+0ff6f47bd15cce2850845091841ecb74  frame1500.ppm
+d1fe3bd8d9a7b92faca6bb8525ed9661  frame1740.ppm
+5729fd25a79031f8275f8eae3b95b44c  frame1800.ppm
+f0b48596b50c232a5f81a3fbfe6a3c1b  frame1860.ppm
+79a53d1f0c8be697fd31366d023e8f4b  frame1920.ppm
+92611e04c58b4abe4ae690ece45fa0c5  frame1980.ppm
+2bcb4e83f64cefe6852f5e5df9e36b60  frame2040.ppm
+2b71541bcd91c2b5b99e3c705a97fa1a  frame2100.ppm
+487d58339c1c62ab04875a6811ebfaf9  audio.raw
+## s-on = defaults (0085+0086 on); s-off = --set jit.cp15nop=off; s-sab1 = sabotage build, MELONDS_JIT_SABCP15=1 (MCR's cycles CI(1) instead of CI(2)): caught: audio.raw and every picture from frame1740 differ (frame1500 matches)

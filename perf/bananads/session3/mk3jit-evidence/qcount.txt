@@ -1,0 +1,26 @@
+# qemu (jitcount), MK scene (gl/qc.sh's runs to 1650 and 2150), emulator thread (vcpu 0), instructions a frame over 1650-2150
+# 'without Gengis' drops the Gengis bins the emulator thread draws itself (they vary with thread timing under qemu)
+3a743f3      total  13271.1k  without Gengis  12590.0k  (Gengis  681.1k)  geometry+GX DMA   6491.3k
++0085+0086     total  13048.1k  without Gengis  12516.3k  (Gengis  531.8k)  geometry+GX DMA   6491.3k
+head 88008b0     total  13100.1k  without Gengis  12458.0k  (Gengis  642.1k)  geometry+GX DMA   6491.3k
+qc-base:  jit-code 1541.3k 11.6%  jit-runtime 217.9k 1.6%  interpreter-fallback 53.5k 0.4% 
+qc-0086:  jit-code 1530.1k 11.7%  jit-runtime 217.6k 1.7%  interpreter-fallback 21.5k 0.2% 
+qc-0087c:  jit-code 1530.1k 11.7%  jit-runtime 184.3k 1.4%  interpreter-fallback 21.5k 0.2% 
+## 0086 (3a743f3+0085 -> +0086), per symbol:
+   -32.0k _ZN7melonDS14ARMInterpreter5A_MCREPNS_3ARME
+   -24.0k _ZN7melonDS5ARMv59CP15WriteEjj
+    -9.0k _ZN7melonDS5ARMv512AddCycles_CIEi
+    -8.9k JIT code
+    -2.7k _ZN7melonDS14BananaRenderer6NewJobEv
+    -0.6k _ZN7melonDS6ARMJIT21SetupExecutableRegionEjjRPmRjS3_
+## 0087 (c1019bc -> 88008b0), the region functions:
+   -36.7k _ZN7melonDSL14SwapCodeRegionILj0ENS_5ARMv5EEEbRNS_3NDSERT0_j
+   -26.6k _ZN7melonDS6ARMJIT21SetupExecutableRegionEjjRPmRjS3_
+   -23.8k _ZNK7melonDS13ARMJIT_Memory17GetMirrorLocationEijjRjS1_S1_
+   -10.2k _ZN7melonDSL14SwapCodeRegionILj1ENS_5ARMv4EEEbRNS_3NDSERT0_j
+    -7.6k _ZNK7melonDS13ARMJIT_Memory16ClassifyAddress9Ej
+    -3.7k _ZN7melonDSL24SetupExecutableRegionForILj0ENS_5ARMv5EEEbRNS_3NDSERT0_j
+    -3.6k _ZNK7melonDS13ARMJIT_Memory16ClassifyAddress7Ej
+    -3.2k _ZN7melonDSL24SetupExecutableRegionForILj1ENS_5ARMv4EEEbRNS_3NDSERT0_j
+    61.0k _ZN7melonDSL15SwapCodeRegion3ILj0ENS_5ARMv5EEEbRNS_3NDSERT0_j
+    19.7k _ZN7melonDSL15SwapCodeRegion3ILj1ENS_5ARMv4EEEbRNS_3NDSERT0_j
