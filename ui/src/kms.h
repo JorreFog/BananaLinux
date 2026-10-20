@@ -3,6 +3,7 @@
 // present() copies the part that changed into the hidden one and flips to it on the next vblank.
 #include <cstdint>
 #include <string>
+#include "colors.h"
 
 namespace banana
 {
@@ -43,6 +44,9 @@ namespace banana
 		// program's DRM device, or -1. present() and restore() leave the screen alone until close().
 		int lease(int s);
 		int leasedScreen() const { return leased; }
+		// the screen colours' table (colors.h): on c.screen's CRTC (GAMMA_LUT), and none on the other (the display
+		// controller has one table); neutral values: none on either. "" when it took, else what the kernel said
+		std::string setColors(const ScreenColors& c);
 
 	private:
 		struct Buf { uint32_t handle = 0, fb = 0, pitch = 0; uint64_t size = 0; uint8_t* map = nullptr; };
