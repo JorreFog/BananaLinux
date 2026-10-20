@@ -1334,6 +1334,7 @@ int main(int argc, char** argv)
 		if (system("banana-perf ui") != 0) {}
 		logf("game ended after %ld s (status %d)", secs, status);
 		for (int tries = 0; !disp.open(o.top, err) && tries < 100; tries++) usleep(50000);
+		disp.stormCheck();	// (a storm from the game's panel, or the lease given back: ended before the menu draws)
 		// (a game's own modeset may have dropped it; the Screen colours page, still up after a game started through the
 		// launch file, draws the values itself: no table under it then)
 		if (settingsView.colorsOpen()) disp.setColors(ScreenColors());
@@ -1385,6 +1386,19 @@ int main(int argc, char** argv)
 			if (rearrange(lib, *ui)) dirty = true;
 		}
 		if (input.rescanDue()) input.open(o.touch, disp.width(), disp.height());	// a pad came or went
+		{
+			// the display controller's interrupt storm, looked at every 10 s without waiting: over 20000 a second on
+			// average since the last look, the full check (it measures again and switches the panels off and on)
+			static double stormAt = 0;
+			static long long stormIrqs = -1;
+			if (now >= stormAt)
+			{
+				long long c = Display::vopIrqCount();
+				if (stormIrqs >= 0 && c >= 0 && stormAt > 0 && (c - stormIrqs) / 10 > 20000) disp.stormCheck();
+				stormIrqs = Display::vopIrqCount();
+				stormAt = now + 10000;
+			}
+		}
 		if (settingsView.isOpen())
 		{
 			std::lock_guard<std::mutex> l(worker.uiLock);

@@ -44,6 +44,12 @@ namespace banana
 		// program's DRM device, or -1. present() and restore() leave the screen alone until close().
 		int lease(int s);
 		int leasedScreen() const { return leased; }
+		// the display controller's interrupt storm (VOP2 POST_BUF_EMPTY, a panel's scanout underflowing ~100k times a
+		// second, seen after RetroArch's leased panel was given back): measured over 200 ms, and when it storms both
+		// CRTCs are switched off and on again, the one thing that ends it. The rate after, or -1 when it was calm.
+		long stormCheck();
+		// the interrupts so far, for a cheap look every few seconds (-1: unknown)
+		static long long vopIrqCount();
 		// the screen colours' table (colors.h): on c.screen's CRTC (GAMMA_LUT), and none on the other (the display
 		// controller has one table); neutral values: none on either. "" when it took, else what the kernel said
 		std::string setColors(const ScreenColors& c);

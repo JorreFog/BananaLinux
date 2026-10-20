@@ -3,6 +3,7 @@
 #include <cerrno>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <dirent.h>
 #include <fcntl.h>
@@ -262,6 +263,47 @@ namespace banana
 		ev.version = 2;
 		ev.page_flip_handler = flipDone;
 		drmHandleEvent(fd, &ev);
+	}
+
+	// the display controller's interrupts so far (/proc/interrupts: fe040000.vop, all CPUs), -1 if not found
+	static long long vopIrqs()
+	{
+		FILE* f = fopen("/proc/interrupts", "r");
+		if (!f) return -1;
+		char line[512];
+		long long n = -1;
+		while (fgets(line, sizeof line, f))
+		{
+			if (!strstr(line, "fe040000.vop")) continue;
+			char* q = strchr(line, ':');
+			if (!q) break;
+			n = 0;
+			for (q++;;) { char* e; long long v = strtoll(q, &e, 10); if (e == q) break; n += v; q = e; }
+			break;
+		}
+		fclose(f);
+		return n;
+	}
+
+	long long Display::vopIrqCount() { return vopIrqs(); }
+
+	long Display::stormCheck()
+	{
+		if (fd < 0 || leased >= 0) return -1;
+		long long a = vopIrqs();
+		if (a < 0) return -1;
+		usleep(200000);
+		long long rate = (vopIrqs() - a) * 5;
+		static const long MIN = getenv("BANANA_STORM_MIN") ? atol(getenv("BANANA_STORM_MIN")) : 20000;	// (tests: 0 forces it)
+		if (rate < MIN) return -1;	// calm: two panels' vblanks and flips are ~120 a second
+		for (int s = 0; s < 2; s++) drmModeSetCrtc(fd, p[s].crtc, 0, 0, 0, nullptr, 0, nullptr);
+		usleep(50000);
+		restore();
+		a = vopIrqs();
+		usleep(200000);
+		long after = (long)((vopIrqs() - a) * 5);
+		fprintf(stderr, "banana-ui: display interrupt storm (%lld a second): both panels off and on, %ld a second now\n", rate, after);
+		return after;
 	}
 
 	int Display::lease(int s)
