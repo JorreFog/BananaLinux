@@ -423,6 +423,9 @@ namespace banana
 		add(W, "phone", "Wi-Fi", "", menu, "wifi", { "On", "Off" }, { "on", "off" });
 		add(W, "phone", "Network", "The networks around: A on one joins it, with a password typed on the keyboard here (or by touch).", "", "network", {}, {}, Item::PAGE);
 		add(W, "phone", "File sharing", "", menu, "share", { "Off", "On" }, { "off", "on" });
+		add(W, "phone", "Sharing login", "Name and password: the card asks for the name and password below (Windows refuses a share with no password). Guest: anyone on the network opens it with none; only on a network you trust.",
+			menu, "share_login", { "Name and password", "Guest" }, { "password", "guest" });
+		add(W, "phone", "Sharing name and password", "", "", "share_account", {}, {}, Item::PAGE);
 		add(W, "phone", "SSH", "", menu, "ssh", { "Off", "On" }, { "off", "on" });
 		const char* S = "System";
 		{
@@ -681,6 +684,7 @@ namespace banana
 		if (it.key == "wifi") spawn("/usr/libexec/banana/wifi", v == "on" ? "up" : "down");
 		if (it.key == "ssh") spawn("/usr/libexec/banana/ssh", v == "on" ? "up" : "down");
 		if (it.key == "share") spawn("/usr/libexec/banana/share", v == "on" ? "up" : "down");
+		if (it.key == "share_login") spawn("/usr/libexec/banana/share", "restart");	// (nothing when it is off)
 		if (it.key == "sd2_roms") spawn("/usr/libexec/banana/sd2", "scan");
 	}
 
@@ -692,6 +696,7 @@ namespace banana
 		{
 			if (dir <= 0) return NONE;
 			if (it.key == "scrape") { startScrape(); return MOVED; }
+			if (it.key == "share_account") { startEntry(ENTRY_SMB_USER, "File sharing", "Name", LIST, shareUser()); return MOVED; }
 			if (it.key == "update") openUpdates(); else if (it.key == "setup") openSetup(); else openNetworks();
 			return MOVED;
 		}
@@ -1260,12 +1265,15 @@ namespace banana
 			help = "For working on Banana itself: ssh root@" + (ip.empty() ? std::string("<address>") : ip) +
 				", with the public keys in banana/ssh/authorized_keys on the card (no passwords). Files: scp -O (dropbear has no SFTP), or File sharing.";
 		if ((cur.key == "switch" || cur.key == "ra_reset" || cur.key.compare(0, 10, "nds-reset-") == 0) && !message.empty()) help = message;
+		if (cur.key == "share_account")
+			help = "What a computer asks for when it opens the share: name " + shareUser() + ", password " + sharePassword() + ". A changes them (they are kept in banana/accounts.conf, which the share never shows).";
 		if (cur.key == "share")
 		{
 			std::string at = ip.empty() ? "<address>" : ip;
 			help = "The card on the network: \\\\" + at + "\\banana in Windows' File Explorer, smb://" + at +
-				"/banana on a Mac (Finder, Go, Connect to Server). Anyone on the network can open it with no password: "
-				"leave it off on networks you don't trust.";
+				"/banana on a Mac (Finder, Go, Connect to Server). " +
+				(getConfValue(data + "/settings.conf", "share_login", "password") == "guest" ? std::string("Anyone on the network can open it with no password (Sharing login): leave it off on networks you don't trust.")
+					: "Name " + shareUser() + ", password " + sharePassword() + " (Sharing name and password, below).");
 			if (ip.empty()) help += " (Not connected to Wi-Fi now.)";
 		}
 		if (cur.key == "scrape" && scraping())
@@ -1305,6 +1313,7 @@ namespace banana
 			// a page's row: Network the network it is on; Update the packages waiting on the card; the others nothing
 			else if (it.kind == Item::PAGE && it.key == "network") v = wstat.connected ? fit(wstat.ssid, true, 19, 300) : (wifiOn() ? "Choose" : "");
 			else if (it.kind == Item::PAGE && it.key == "update") v = updatesWaiting();
+			else if (it.kind == Item::PAGE && it.key == "share_account") v = fit(shareUser(), true, 19, 300);
 			else if (it.kind == Item::PAGE && it.key == "scrape") v = scrapeShort();
 			if (v.empty()) continue;
 			float vw = text(v, true, 19, 0, 0, p.ink, false, 0, true);
@@ -2140,6 +2149,18 @@ namespace banana
 		return getConfValue(data + "/accounts.conf", key, "");
 	}
 
+	// the file sharing login (the share script's defaults where accounts.conf has none)
+	std::string Settings::shareUser()
+	{
+		std::string u = account("smb_user");
+		return u.empty() ? "banana" : u;
+	}
+	std::string Settings::sharePassword()
+	{
+		std::string p = account("smb_password");
+		return p.empty() ? "linux" : p;
+	}
+
 	Settings::Result Settings::finishEntry()
 	{
 		switch (entry)
@@ -2173,6 +2194,23 @@ namespace banana
 			return CHANGED;
 		case ENTRY_SS_PASS:
 			setConfValue(data + "/accounts.conf", "ss_password", pw, "=");
+			pw.clear();
+			page = entryBack;
+			message.clear();
+			return CHANGED;
+		case ENTRY_SMB_USER:
+		{
+			bool ok = !pw.empty() && pw.size() <= 32;
+			for (unsigned char c : pw) if (!isalnum(c) && c != '.' && c != '_' && c != '-') ok = false;
+			if (!ok) { message = "A name of letters, digits, dots, dashes or underscores, at most 32."; return MOVED; }
+			setConfValue(data + "/accounts.conf", "smb_user", pw, "=");
+			startEntry(ENTRY_SMB_PASS, "File sharing password for", pw, entryBack, sharePassword());
+			return CHANGED;
+		}
+		case ENTRY_SMB_PASS:
+			if (pw.empty()) { message = "The password can't be empty: Sharing login > Guest is for a share with none."; return MOVED; }
+			setConfValue(data + "/accounts.conf", "smb_password", pw, "=");
+			spawn("/usr/libexec/banana/share", "restart");	// the new login now, if it is on
 			pw.clear();
 			page = entryBack;
 			message.clear();

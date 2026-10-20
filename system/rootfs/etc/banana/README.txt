@@ -12,9 +12,11 @@ keyboard there. Or put your network in banana/wifi.conf on a computer:
         psk="password"
     }
 
-File sharing: Settings > File sharing puts this card on the network (\\<address>\banana in Windows,
-smb://<address>/banana on a Mac), so games can be copied in over Wi-Fi. No password: leave it off on networks
-you don't trust.
+File sharing: Settings > Network > File sharing puts this card on the network (\\<address>\banana in Windows,
+smb://<address>/banana on a Mac), so games can be copied in over Wi-Fi. It asks for a name and a password:
+name banana, password linux, until you change them in Settings > Network > Sharing name and password (Sharing
+login > Guest: no password, only on a network you trust). The second SD card, while it's in, is \\<address>\sd2.
+DS saves from ROCKNIX beside the games (roms/nds/<game>.dsv) are taken the first time each game starts here.
 
 SSH (for working on Banana itself): put your public key in banana/ssh/authorized_keys, switch on
 Settings > Network > SSH, then ssh root@<address>. Keys only, no passwords.

@@ -26,7 +26,10 @@ for d in /sys/class/block/mmcblk[0-9]; do
 done
 mounted=$(sed -n "s|^/dev/\([^ ]*\) $M .*|\1|p" /proc/mounts | head -n 1)
 if [ -z "$card" ]; then
-    [ -n "$mounted" ] && { umount $M 2>/dev/null || umount -l $M; }
+    if [ -n "$mounted" ]; then
+        umount $M 2>/dev/null || umount -l $M
+        /usr/libexec/banana/share restart    # (file sharing on: without the card's share now)
+    fi
     rm -f $S/roms
     exit 0
 fi
@@ -37,6 +40,7 @@ if [ -z "$mounted" ] || [ "${mounted%p[0-9]*}" != "$card" ]; then
         mount -t vfat -o rw,noatime,fmask=0000,dmask=0000,utf8 $part $M 2>/dev/null ||
         { rm -f $S/roms; logger -t sd2 "the card in the second slot ($part) can't be read: exFAT or FAT32 only"; exit 1; }
     logger -t sd2 "the second slot's card ($part) is at $M"
+    /usr/libexec/banana/share restart        # (file sharing on: the card as \\<address>\sd2 too)
 fi
 on=$(sed -n 's/^sd2_roms *= *//p' /data/banana/settings.conf 2>/dev/null | tail -n 1)
 [ -n "$on" ] || on=$(sed -n 's/^sd2_roms *= *//p' /etc/banana/settings.conf 2>/dev/null | tail -n 1)
