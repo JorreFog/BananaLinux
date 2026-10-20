@@ -663,43 +663,41 @@ static void brightness(int dir)
 	if (pct >= 0) osd("brightness", pct);
 }
 
-/* both backlights at a fraction of their maximum */
-static void backlight_set_permille(int pm)
+/* The two panels' backlights, each its own level (N2): backlight1 lights the top panel (dsi1, DSI-2), backlight0 the
+ * bottom one (dsi0, DSI-1), as the device trees of both handhelds have it. The level kept in /data/banana/backlight is
+ * "<top> <bottom>" in thousandths of the maximum; a file with one number (before 0.4.2) is both. */
+static const char *BL[2] = { "backlight1", "backlight0" };	/* top, bottom */
+static void backlight_set_one(int i, int pm)
 {
-	DIR *d = opendir("/sys/class/backlight");
-	if (!d) return;
-	struct dirent *e;
-	while ((e = readdir(d))) {
-		if (e->d_name[0] == '.') continue;
-		char p[320], v[32];
-		snprintf(p, sizeof p, "/sys/class/backlight/%s/max_brightness", e->d_name);
-		int max = read_int(p, 0);
-		int nv = max * pm / 1000;
-		if (nv < 1) nv = 1;
-		snprintf(p, sizeof p, "/sys/class/backlight/%s/brightness", e->d_name);
-		snprintf(v, sizeof v, "%d", nv);
-		write_file(p, v);
-	}
-	closedir(d);
+	char p[96], v[32];
+	snprintf(p, sizeof p, "/sys/class/backlight/%s/max_brightness", BL[i]);
+	int max = read_int(p, 0);
+	if (max <= 0) return;
+	int nv = max * pm / 1000;
+	if (nv < 1) nv = 1;
+	snprintf(p, sizeof p, "/sys/class/backlight/%s/brightness", BL[i]);
+	snprintf(v, sizeof v, "%d", nv);
+	write_file(p, v);
 }
-
-/* the first backlight's level, in thousandths of its maximum */
-static int backlight_permille(void)
+static void backlight_set_pair(int top, int bottom) { backlight_set_one(0, top); backlight_set_one(1, bottom); }
+/* a level file ("<top> <bottom>" or one number for both): 0 when it has none */
+static int read_pair(const char *path, int *top, int *bottom)
 {
-	DIR *d = opendir("/sys/class/backlight");
-	if (!d) return -1;
-	struct dirent *e;
-	int r = -1;
-	while (r < 0 && (e = readdir(d))) {
-		if (e->d_name[0] == '.') continue;
-		char p[320];
-		snprintf(p, sizeof p, "/sys/class/backlight/%s/max_brightness", e->d_name);
-		int max = read_int(p, 0);
-		snprintf(p, sizeof p, "/sys/class/backlight/%s/brightness", e->d_name);
-		if (max > 0) r = read_int(p, 0) * 1000 / max;
-	}
-	closedir(d);
-	return r;
+	FILE *f = fopen(path, "r");
+	if (!f) return 0;
+	int n = fscanf(f, "%d %d", top, bottom);
+	fclose(f);
+	if (n == 1) *bottom = *top;
+	return n >= 1 && *top > 0 && *top <= 1000 && *bottom > 0 && *bottom <= 1000;
+}
+/* a panel's level now, in thousandths of its maximum (-1: no such backlight) */
+static int backlight_permille(int i)
+{
+	char p[96];
+	snprintf(p, sizeof p, "/sys/class/backlight/%s/max_brightness", BL[i]);
+	int max = read_int(p, 0);
+	snprintf(p, sizeof p, "/sys/class/backlight/%s/brightness", BL[i]);
+	return max > 0 ? read_int(p, 0) * 1000 / max : -1;
 }
 
 /* idle in the menu: the panels down to dim_percent of what they were, back at the first press (the levels are
@@ -730,10 +728,17 @@ static void dim(void)
 	dimmed = dim_count > 0;
 	/* the level before dimming, for the settings screen (opened by the press that undims) */
 	if (dimmed) {
-		char p[600];
-		snprintf(p, sizeof p, "/sys/class/backlight/%.255s/max_brightness", dim_name[0]);
-		int max = read_int(p, 0);
-		if (max > 0) { char v[16]; snprintf(v, sizeof v, "%d\n", dim_level[0] * 1000 / max); write_file("/run/banana/dim", v); }
+		/* (dim_level is per backlight already; the pair, top and bottom, from those levels before dimming) */
+		int lv[2] = { -1, -1 };
+		for (int k = 0; k < dim_count; k++)
+			for (int i = 0; i < 2; i++)
+				if (!strcmp(dim_name[k], BL[i])) {
+					char p[96];
+					snprintf(p, sizeof p, "/sys/class/backlight/%s/max_brightness", BL[i]);
+					int max = read_int(p, 0);
+					if (max > 0) lv[i] = dim_level[k] * 1000 / max;
+				}
+		if (lv[0] > 0) { char v[24]; snprintf(v, sizeof v, "%d %d\n", lv[0], lv[1] > 0 ? lv[1] : lv[0]); write_file("/run/banana/dim", v); }
 	}
 }
 static void undim(void)
@@ -753,10 +758,11 @@ static void save_settings(double now)
 {
 	if (save_backlight_at > 0 && now >= save_backlight_at) {
 		save_backlight_at = 0;
-		char v[16];
-		snprintf(v, sizeof v, "%d\n", backlight_permille());
-		FILE *f = fopen("/data/banana/backlight", "w");
-		if (f) { fputs(v, f); fclose(f); }
+		int t = backlight_permille(0), b = backlight_permille(1);
+		if (t > 0) {
+			FILE *f = fopen("/data/banana/backlight", "w");
+			if (f) { fprintf(f, "%d %d\n", t, b > 0 ? b : t); fclose(f); }
+		}
 	}
 	if (save_volume_at > 0 && now >= save_volume_at) {
 		save_volume_at = 0;
@@ -767,11 +773,10 @@ static void save_settings(double now)
 
 static void restore_settings(void)
 {
-	int pm = read_int("/data/banana/backlight", -1);
-	if (pm > 0 && pm <= 1000) backlight_set_permille(pm);
-	/* started again while the panels were dimmed (/run/banana/dim: the level before): undimmed, as the last one would */
-	int dimmed_from = read_int("/run/banana/dim", -1);
-	if (dimmed_from > 0 && dimmed_from <= 1000) { backlight_set_permille(dimmed_from); unlink("/run/banana/dim"); }
+	int t, b;
+	if (read_pair("/data/banana/backlight", &t, &b)) backlight_set_pair(t, b);
+	/* started again while the panels were dimmed (/run/banana/dim: the levels before): undimmed, as the last one would */
+	if (read_pair("/run/banana/dim", &t, &b)) { backlight_set_pair(t, b); unlink("/run/banana/dim"); }
 	if (access("/data/banana/asound.state", R_OK) == 0) {
 		char *argv[] = { "alsactl", "-f", "/data/banana/asound.state", "restore", NULL };
 		run(argv);

@@ -315,6 +315,22 @@ namespace banana
 		}
 	}
 
+	// the panels' backlights (N2): backlight1 lights the top panel, backlight0 the bottom one (both handhelds' device
+	// trees); a level file holds "<top> <bottom>" in thousandths, or one number for both (before 0.4.2)
+	static const char* BACKLIGHT[2] = { "backlight1", "backlight0" };
+	static int backlightPair(const std::string& path, int i)
+	{
+		int t = 0, b = 0;
+		FILE* f = fopen(path.c_str(), "r");
+		if (!f) return -1;
+		int n = fscanf(f, "%d %d", &t, &b);
+		fclose(f);
+		if (n < 1) return -1;
+		if (n == 1) b = t;
+		int v = i == 0 ? t : b;
+		return v > 0 && v <= 1000 ? v : -1;
+	}
+
 	void Settings::build()
 	{
 		std::string menu = data + "/settings.conf", power = data + "/bananad.conf", sd = data + "/superdrastic.conf";
@@ -337,7 +353,10 @@ namespace banana
 		}
 		add(D, "picture", "Accent colour", "The colour of the selection, the logo and the boot animation's banana.", menu, "accent",
 			{ "Yellow", "Blue", "Red", "Green", "Purple", "Pink" }, { "yellow", "blue", "red", "green", "purple", "pink" });
-		add(D, "picture", "Brightness", "Both panels' backlights. F + volume changes it anywhere, in games too.", "", "",
+		// each panel its own backlight (N2); F + volume steps both
+		add(D, "picture", "Top brightness", "The top screen's backlight. F + volume changes both screens anywhere, in games too.", "", "top",
+			{ "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "100", "200", "300", "400", "500", "600", "700", "800", "900", "1000" }, Item::BRIGHTNESS);
+		add(D, "picture", "Bottom brightness", "The bottom screen's backlight. F + volume changes both screens anywhere, in games too.", "", "bottom",
 			{ "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "100", "200", "300", "400", "500", "600", "700", "800", "900", "1000" }, Item::BRIGHTNESS);
 		add(D, "picture", "Motion", "The top screen's bob and shine. Off holds it still and saves a little battery.", menu, "motion", { "On", "Off" }, { "on", "off" });
 		add(D, "music", "Volume", "The speakers or the headphones, whichever is playing. The volume keys change it anywhere.", "", "",
@@ -489,24 +508,18 @@ namespace banana
 		}
 		if (it.kind == Item::BRIGHTNESS)
 		{
-			// the level set (bananad keeps it in banana/backlight; the live one is lower while the idle menu is dimmed,
-			// and the press that opened Settings undims it at the same moment), else the first backlight's, in tenths
-			int pm = atoi(readLine("/run/banana/dim").c_str());		// (dimmed now: the level before)
-			if (pm <= 0) pm = atoi(readLine(data + "/backlight").c_str());
-			if (pm > 0 && pm <= 1000) { it.at = std::min(9, std::max(0, (pm + 50) / 100 - 1)); return; }
-			pm = -1;
-			if (DIR* d = opendir("/sys/class/backlight"))
+			// this panel's level as set (bananad keeps "<top> <bottom>" in banana/backlight; the live one is lower while
+			// the idle menu is dimmed, and the press that opened Settings undims it at the same moment), else its
+			// backlight's now, in tenths
+			int i = it.key == "bottom" ? 1 : 0, pm = backlightPair("/run/banana/dim", i);	// (dimmed now: the level before)
+			if (pm <= 0) pm = backlightPair(data + "/backlight", i);
+			if (pm <= 0)
 			{
-				while (dirent* e = readdir(d))
-				{
-					if (e->d_name[0] == '.') continue;
-					std::string b = std::string("/sys/class/backlight/") + e->d_name;
-					int max = atoi(readLine(b + "/max_brightness").c_str()), cur = atoi(readLine(b + "/brightness").c_str());
-					if (max > 0) { pm = cur * 1000 / max; break; }
-				}
-				closedir(d);
+				std::string b = std::string("/sys/class/backlight/") + BACKLIGHT[i];
+				int max = atoi(readLine(b + "/max_brightness").c_str()), cur = atoi(readLine(b + "/brightness").c_str());
+				if (max > 0) pm = cur * 1000 / max;
 			}
-			it.at = pm < 0 ? 9 : std::min(9, std::max(0, (pm + 50) / 100 - 1));
+			it.at = pm <= 0 ? 9 : std::min(9, std::max(0, (pm + 50) / 100 - 1));
 			return;
 		}
 		if (it.kind == Item::VOLUME)
@@ -661,19 +674,19 @@ namespace banana
 		}
 		if (it.kind == Item::BRIGHTNESS)
 		{
-			int pm = atoi(v.c_str());
-			if (DIR* d = opendir("/sys/class/backlight"))
+			int pm = atoi(v.c_str()), i = it.key == "bottom" ? 1 : 0;
+			std::string b = std::string("/sys/class/backlight/") + BACKLIGHT[i];
+			int max = atoi(readLine(b + "/max_brightness").c_str());
+			if (max > 0) std::ofstream(b + "/brightness") << std::max(1, max * pm / 1000) << "\n";
+			// both panels' levels kept for bananad to restore at boot: this one changed, the other as it was
+			int other = backlightPair(data + "/backlight", 1 - i);
+			if (other <= 0)
 			{
-				while (dirent* e = readdir(d))
-				{
-					if (e->d_name[0] == '.') continue;
-					std::string b = std::string("/sys/class/backlight/") + e->d_name;
-					int max = atoi(readLine(b + "/max_brightness").c_str());
-					std::ofstream(b + "/brightness") << std::max(1, max * pm / 1000) << "\n";
-				}
-				closedir(d);
+				std::string o = std::string("/sys/class/backlight/") + BACKLIGHT[1 - i];
+				int omax = atoi(readLine(o + "/max_brightness").c_str());
+				other = omax > 0 ? atoi(readLine(o + "/brightness").c_str()) * 1000 / omax : pm;
 			}
-			std::ofstream(data + "/backlight") << pm << "\n";	// bananad restores it at boot
+			std::ofstream(data + "/backlight") << (i == 0 ? pm : other) << " " << (i == 0 ? other : pm) << "\n";
 			return;
 		}
 		if (it.kind == Item::VOLUME)
