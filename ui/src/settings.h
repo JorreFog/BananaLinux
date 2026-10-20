@@ -226,6 +226,7 @@ namespace banana
 		std::string gTitle, gSystem;
 		int gScreen = 1, gFlash = -1, gDown = -1;
 		bool gTouch = true;
+		bool gHotkeys = true;	// Settings > Other systems > RetroArch hotkeys: off, F + R and the like do nothing
 		double gFlashUntil = 0;
 		int gSeen = -1;						// the watch's generation last drawn
 		std::map<std::string, rnds::TexPtr> gBadges;	// badge textures by file

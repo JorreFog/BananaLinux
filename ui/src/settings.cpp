@@ -409,6 +409,10 @@ namespace banana
 			menu, "ra_shader", { "Off", "LCD", "CRT", "Sharp pixels" }, { "off", "lcd", "crt", "sharp" });
 		if (access("/usr/lib/libretro/mgba_libretro.so", F_OK) == 0)
 			add(O, "gamepad", "Game Boy Advance", "The emulator for GBA games. gpSP: the fastest. mGBA: the most accurate, and the one RetroAchievements accepts for hardcore.", menu, "core.gba", { "gpSP", "mGBA" }, { "gpsp", "mgba" });
+		add(O, "gamepad", "RetroArch hotkeys", "F + a button in a game: X the menu, Start quits, L and R load and save a state, Y the frame counter, L2 rewind, R2 fast forward. Off: only F + X and F + Start, the two needed to get out, and none bound in RetroArch's own menu either.",
+			menu, "ra_hotkeys", { "On", "Off" }, { "on", "off" });
+		add(O, "gamepad", "Reset RetroArch", "RetroArch's settings back to Banana's: for a button bound away in RetroArch's menu (an A that does something else, a hotkey on a face button). Its controls, remaps and overrides go to retroarch/backup-<date> on the card. Saves, states, the RetroAchievements account and these settings stay. Press A twice.",
+			"", "ra_reset", { "" }, { "" }, Item::ACTION);
 		const char* W = "Network";
 		add(W, "phone", "Wi-Fi", "", menu, "wifi", { "On", "Off" }, { "on", "off" });
 		add(W, "phone", "Network", "The networks around: A on one joins it, with a password typed on the keyboard here (or by touch).", "", "network", {}, {}, Item::PAGE);
@@ -697,6 +701,18 @@ namespace banana
 				std::string out;
 				if (p) { char ln[256]; while (fgets(ln, sizeof ln, p)) out += ln; if (pclose(p) == 0) return REBOOT; }
 				message = out.empty() ? "The other slot holds no system." : out;
+				return MOVED;
+			}
+			if (it.key == "ra_reset")
+			{
+				armed = -1;
+				FILE* p = popen("/usr/libexec/banana/ra-reset 2>&1", "r");
+				std::string out;
+				if (p) { char ln[256]; while (fgets(ln, sizeof ln, p)) out += ln; }
+				bool ok = p && pclose(p) == 0;
+				while (!out.empty() && out.back() == '\n') out.pop_back();
+				message = ok ? "RetroArch is back to Banana's settings. The old ones are in " + out + " on the card." : out.empty() ? "RetroArch couldn't be reset." : out;
+				for (auto& x : items) if (x.file.find("retroarch.cfg") != std::string::npos) load(x);
 				return MOVED;
 			}
 			return it.key == "reboot" ? REBOOT : POWEROFF;
@@ -1221,7 +1237,7 @@ namespace banana
 		if (cur.key == "ssh")
 			help = "For working on Banana itself: ssh root@" + (ip.empty() ? std::string("<address>") : ip) +
 				", with the public keys in banana/ssh/authorized_keys on the card (no passwords). Files: scp -O (dropbear has no SFTP), or File sharing.";
-		if (cur.key == "switch" && !message.empty()) help = message;
+		if ((cur.key == "switch" || cur.key == "ra_reset") && !message.empty()) help = message;
 		if (cur.key == "share")
 		{
 			std::string at = ip.empty() ? "<address>" : ip;
@@ -2710,6 +2726,7 @@ namespace banana
 	void Settings::gameOpen(const std::string& title, const std::string& system, int screen, bool touch)
 	{
 		gTitle = title; gSystem = system; gScreen = screen; gTouch = touch;
+		gHotkeys = getConfValue(data + "/settings.conf", "ra_hotkeys", "on") != "off";
 		gFlash = gDown = -1; gSeen = -1;
 		raw = std::make_shared<RaWatch>();
 		raw->since = now;
@@ -2885,11 +2902,12 @@ namespace banana
 			std::string lb = GTILES[i].label;
 			float lw = text(lb, true, 19, 0, 0, fg, false, 0, true);
 			text(lb, true, 19, x + 57 - lw / 2, y + 60, fg);
-			std::string kk = GTILES[i].keys;
+			std::string kk = gHotkeys || i == 2 || i == 4 ? GTILES[i].keys : "";	// (hotkeys off: the menu's and quit's alone)
 			float kw = text(kk, false, 14, 0, 0, p.muted, false, 0, true);
 			text(kk, false, 14, x + 57 - kw / 2, y + 90, on ? p.onPickAccent : p.muted);
 		}
-		std::string hint = gTouch ? "Tap a tile, or hold F with the button under it" : "Hold F with the button under each tile";
+		std::string hint = !gHotkeys ? (gTouch ? "Tap a tile; F + X opens RetroArch's menu, F + Start quits" : "F + X opens RetroArch's menu, F + Start quits")
+			: gTouch ? "Tap a tile, or hold F with the button under it" : "Hold F with the button under each tile";
 		float hw = text(hint, false, 15, 0, 0, p.muted, false, 0, true);
 		text(hint, false, 15, 320 - hw / 2, 438, p.muted);
 		be->endScreen();
