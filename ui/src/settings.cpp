@@ -1370,8 +1370,10 @@ namespace banana
 		}
 		if (!joining.empty() && now - joinStart > 30000)
 		{
-			message = wstat.connected && wstat.ssid == joining ? "Joined " + joining + ", but it gave the handheld no address."
+			bool assoc = wstat.connected && wstat.ssid == joining;
+			message = assoc ? "Joined " + joining + ", but it gave the handheld no address."
 				: "Couldn't join " + joining + ". If the password was wrong, A on it types it again.";
+			if (!assoc) failed = joining;	// the next A on it opens the keyboard, saved or not
 			joining.clear();
 			changed = true;
 		}
@@ -1401,7 +1403,10 @@ namespace banana
 	void Settings::join(const wifi::Network& n, const std::string& password)
 	{
 		page = NETWORKS;
-		if (!wifi::remember(wifiConf, n, password)) { message = "Couldn't write banana/wifi.conf on the card."; return; }
+		// a saved network with no password typed: its block in wifi.conf as it is, moved first
+		bool ok = n.secured && password.empty() ? wifi::prefer(wifiConf, n.ssid) : wifi::remember(wifiConf, n, password);
+		if (!ok) { message = "Couldn't write banana/wifi.conf on the card."; return; }
+		failed.clear();
 		if (!wifiEnabled)
 		{
 			setConfValue(data + "/settings.conf", "wifi", "on");
@@ -1435,8 +1440,8 @@ namespace banana
 				message = net.ssid + " signs in a way the menu can't (a company network, or the old WEP): it can be written in banana/wifi.conf on a computer.";
 			else if (net.current)
 				message = "Connected to " + net.ssid + (wstat.ip.empty() ? "." : " (" + wstat.ip + ").");
-			else if (!net.secured)
-				join(net, "");
+			else if (!net.secured || (net.saved && net.ssid != failed))
+				join(net, "");	// open, or saved: no password to type
 			else
 			{
 				target = net;
@@ -1663,7 +1668,7 @@ namespace banana
 		if (nets.empty() && wifiEnabled && !scanning && scannedOnce) text("No networks found. X searches again.", true, 20, 38, 98, p.muted);
 		float bw = faceWidth("B", "Back");
 		face("B", "Back", 18, bw);
-		std::string act = !cur || cur->current || cur->unsupported || !joining.empty() ? "" : cur->secured ? "Password" : "Join";
+		std::string act = !cur || cur->current || cur->unsupported || !joining.empty() ? "" : cur->secured && (!cur->saved || cur->ssid == failed) ? "Password" : "Join";
 		if (!act.empty())
 		{
 			float aw = faceWidth("A", act);
