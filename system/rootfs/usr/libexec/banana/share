@@ -7,8 +7,9 @@
 # SD card, while it's in, is a share of its own beside it (\\<address>\sd2, #25), with the same login.
 #   share up | down | restart     (restart: again with the login as it is now, if it is on)
 # one run at a time (Settings starts it on every change, sd2 when a card goes in or out): a down landing after another
-# run's up left the share off, or with the wrong login; restart's own down and up inherit the lock
-[ -z "$SHARE_LOCKED" ] && SHARE_LOCKED=1 exec flock /run/banana/share.lock "$0" "$@"
+# run's up left the share off, or with the wrong login; restart's own down and up inherit the lock. -o: the server up
+# starts doesn't get the lock's descriptor (it kept the lock for as long as it ran, and every later run waited forever)
+[ -z "$SHARE_LOCKED" ] && SHARE_LOCKED=1 exec flock -o /run/banana/share.lock "$0" "$@"
 export SHARE_LOCKED
 CONF=/run/banana/ksmbd.conf
 DB=/run/banana/ksmbdpwd.db
