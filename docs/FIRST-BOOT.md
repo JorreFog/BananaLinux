@@ -72,5 +72,5 @@ added to `extlinux/extlinux.conf`'s `APPEND` on the boot partition, rcS's milest
 too, as they do in QEMU (`tools/qemu-boot.sh`).
 
 With Wi-Fi working, SSH saves taking the card out: put your public key in `banana/ssh/authorized_keys`, switch on
-Settings > System > SSH, then `ssh root@<address>` (the address is in Settings > Wi-Fi's description). `dmesg`,
+Settings > Network > SSH, then `ssh root@<address>` (the address is in Settings > Wi-Fi's description). `dmesg`,
 `cat /run/banana/boot-times` and `tail -f /data/banana/logs/banana-ui.log` all work there.
