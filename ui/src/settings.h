@@ -115,9 +115,9 @@ namespace banana
 		// run-nds: "<ROM file name> = superdrastic|bananads", no line = Settings > Nintendo DS > Emulator)
 		// the game page (X on a DS game): its own emulator and shader, each "As in Settings" (index 0) or a choice
 		std::string pgTitle, pgRom;
-		int pgRow = 0, pgEmu = 0, pgShader = 0;
+		int pgRow = 0, pgTop = 0, pgEmu = 0, pgShader = 0, pg3d = 0, pgMic = 0;	// (pg3d, pgMic: 0 as in Settings)
 		bool pgNds = true;
-		enum PgRow { PG_EMU, PG_SHADER, PG_NAME, PG_SORT, PG_ART };
+		enum PgRow { PG_EMU, PG_SHADER, PG_3D, PG_MIC, PG_NAME, PG_SORT, PG_ART };
 		std::string pgPath;	// the game's file (Box art: banana-scrape --match)
 		bool pgArtDone = false;	// a cover fetched on the page: the library read again when it closes
 		std::vector<PgRow> pgRows;

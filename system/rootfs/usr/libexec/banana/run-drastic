@@ -16,6 +16,11 @@ if [ ! -x $D/drastic ]; then
     done
 fi
 cd $D
+# a game's own Threaded 3D (below) left in drastic.cfg by a run that never got to put Settings' back (power lost): back now
+if [ -f config/.threaded_3d.settings ]; then
+    t=$(cat config/.threaded_3d.settings)
+    sed -i "s/^threaded_3d = .*/threaded_3d = $t/" config/drastic.cfg && rm -f config/.threaded_3d.settings
+fi
 # the lid: SuperDrastic holds DraStic's Hinge control while the handheld's lid is shut (the game sees the DS close).
 # Hinge on Pause (256 + its scancode 72), a key no button sends, when neither control set has it on anything
 if grep -q '^controls_a\[CONTROL_INDEX_HINGE\] = 65535' config/drastic.cfg 2>/dev/null &&
@@ -97,4 +102,24 @@ if [ -n "$gs" ]; then
 fi
 # the 3D always through the Gengis Engine (no longer a setting; a DSFLIP_RAST=0 left in the file from before is overruled)
 export DSFLIP_RAST=1
-exec $SD/superdrastic-run $D/drastic "$1"
+# the game's own microphone (its page, #27): SuperDrastic's threshold for this run (0: off)
+m=$(/usr/libexec/banana/nds-game-option nds-per-game-mic.conf "$1")
+[ -n "$m" ] && { echo "run-drastic: ${1##*/} has its own microphone: $m" >&2; export DSHOOK_MIC_THRESH=$m; }
+# the game's own Threaded 3D (#27): DraStic reads it from drastic.cfg alone, so the game's value goes in for this run
+# and Settings' comes back after (kept beside it until then: a run cut short is put right at the next start, above)
+t=$(/usr/libexec/banana/nds-game-option nds-per-game-3d.conf "$1")
+was=$(sed -n 's/^threaded_3d = //p' config/drastic.cfg | head -n 1)
+if [ -z "$t" ] || [ -z "$was" ] || [ "$t" = "$was" ]; then
+    exec $SD/superdrastic-run $D/drastic "$1"
+fi
+echo "run-drastic: ${1##*/} has its own Threaded 3D: $t" >&2
+echo "$was" > config/.threaded_3d.settings
+sed -i "s/^threaded_3d = .*/threaded_3d = $t/" config/drastic.cfg
+$SD/superdrastic-run $D/drastic "$1" &
+P=$!
+trap 'kill -TERM $P 2>/dev/null' TERM INT HUP
+wait $P; S=$?
+while kill -0 $P 2>/dev/null; do wait $P; S=$?; done	# a trap interrupted the wait: until it has quit
+# Settings' value back (DraStic writes its settings on quitting: only this line is changed back)
+sed -i "s/^threaded_3d = .*/threaded_3d = $was/" config/drastic.cfg && rm -f config/.threaded_3d.settings
+exit $S
