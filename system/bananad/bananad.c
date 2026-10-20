@@ -391,16 +391,51 @@ static int power_pressed(int ms)
 	struct pollfd pf[MAXDEV];
 	for (int i = 0; i < ndev; i++) pf[i] = (struct pollfd){ devfd[i], POLLIN, 0 };
 	if (poll(pf, ndev, ms) <= 0) return 0;
-	int got = 0;
+	int got = 0, readable = 0;
 	for (int i = 0; i < ndev; i++) {
 		if (!(pf[i].revents & POLLIN)) continue;
+		readable = 1;
 		struct input_event ev[32];
 		ssize_t r;
 		while ((r = read(devfd[i], ev, sizeof ev)) > 0)
 			for (int k = 0; k < r / (ssize_t)sizeof ev[0]; k++)
 				if (ev[k].type == EV_KEY && ev[k].code == KEY_POWER && ev[k].value == 0) got = 1;
 	}
+	/* only a device's hang-up or error (a USB pad pulled out while dark): wait the time out anyway, not a busy loop */
+	if (!readable) usleep(ms * 1000);
 	return got;
+}
+/* dark on the charger: the buttons and touchscreens grabbed for bananad alone, so a press there reaches neither the
+ * menu nor a game (it looks asleep: A launched the game under the cursor, a tap hit RetroArch's game panel); the lid's
+ * hall sensor stays shared, as BananaDS and SuperDrastic must see the lid open to wake the game they put to sleep */
+static void inputs_grab(int on)
+{
+	for (int i = 0; i < ndev; i++) {
+		unsigned long sw[(SW_MAX + 8 * sizeof(long)) / (8 * sizeof(long))] = { 0 };
+		ioctl(devfd[i], EVIOCGBIT(EV_SW, sizeof sw), sw);
+		if (sw[SW_LID / (8 * sizeof(long))] >> (SW_LID % (8 * sizeof(long))) & 1) continue;
+		ioctl(devfd[i], EVIOCGRAB, on ? 1 : 0);
+	}
+}
+/* the battery's charge in percent whatever the charger says (-1: none): asleep dark on a charger too weak to keep up,
+ * it still goes down */
+static int battery_capacity(void)
+{
+	DIR *d = opendir("/sys/class/power_supply");
+	if (!d) return -1;
+	struct dirent *e;
+	int r = -1;
+	while (r < 0 && (e = readdir(d))) {
+		if (e->d_name[0] == '.') continue;
+		char p[320], t[32];
+		snprintf(p, sizeof p, "/sys/class/power_supply/%s/type", e->d_name);
+		read_str(p, t, sizeof t);
+		if (strcmp(t, "Battery")) continue;
+		snprintf(p, sizeof p, "/sys/class/power_supply/%s/capacity", e->d_name);
+		r = read_int(p, -1);
+	}
+	closedir(d);
+	return r;
 }
 static void suspend_now(const char *why)
 {
@@ -423,10 +458,24 @@ static void suspend_now(const char *why)
 			if (!dark) {
 				dark = 1; dark_from = mono(); dark_lid = lid_closed;
 				backlights_power(0);
+				inputs_grab(1);
 				sleep_log("%s while charging: dark and awake, so the charging light stays on%s", why, game ? ", game paused" : "");
 			}
-			if (mono() >= led_at) { leds_update(); led_at = mono() + 10; }	/* (it goes out when the battery is full) */
-			if (power_pressed(500)) { woke = "power button"; break; }
+			if (mono() >= led_at) {
+				leds_update(); led_at = mono() + 10;	/* (it goes out when the battery is full) */
+				/* a charger too weak for the handheld: shut down cleanly before the battery is empty */
+				int cap = battery_capacity();
+				if (cap >= 0 && cap <= cfg.sleep_poweroff_pct) {
+					sleep_log("dark on the charger, but the battery is down to %d%%: shutting down", cap);
+					inputs_grab(0);
+					if (pg > 0) kill(-pg, SIGCONT);	/* the game gets SIGTERM next, to write its saves */
+					shutdown_now("battery empty while charging");
+					return;
+				}
+			}
+			/* the power button wakes it, as from a sleep; with the lid shut it doesn't (a sleep goes back to
+			 * sleep then: a press in a bag mustn't run the game) */
+			if (power_pressed(500)) { read_lid(); if (!(lid_closed && cfg.lid_sleep)) { woke = "power button"; break; } }
 			read_lid();
 			if (dark_lid && !lid_closed) { woke = "lid opened"; break; }
 			if (!dark_lid && lid_closed) dark_lid = 1;	/* shut meanwhile: opening it wakes too */
@@ -478,6 +527,7 @@ static void suspend_now(const char *why)
 	double t_wake = mono();
 	/* the panels on when the lid is open: dark while charging, or dark from a lid shut with lid_sleep off before a
 	 * power-button sleep (the lid-open event that would light them is drained below) */
+	if (dark) inputs_grab(0);	/* the buttons and touchscreens shared again */
 	if (dark || !lid_closed) backlights_power(!lid_closed);
 	if (pg > 0) kill(-pg, SIGCONT);
 	pid_t ui = ui_pid();
