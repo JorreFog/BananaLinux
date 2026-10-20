@@ -1,6 +1,9 @@
 BananaOS's speed work on Panda3DS for the RG DS Plus (Cortex-A55), from branch banana3ds.
 PANDA3DS_BASELINE=1 in the environment runs upstream's code paths instead. Measured with tools/3ds-perf.
 
+  - libretro-host: check the EGL context, as the bench does
+  - libretro: let the GPU thread finish before changing the config
+  - GPU thread: change the renderer's output size and texture hashing in order on the GPU thread
   - GL DisplayTransfer: invalidate only the bytes the transfer writes
   - Proctex: upload the LUTs to texture unit 3, not the active unit
   - Proctex: use the PICA's texture coordinates, not the flipped ones
@@ -65,7 +68,7 @@ index 2f4d9df2..187b3ff4 100644
  endif()
  
 diff --git a/include/PICA/gpu.hpp b/include/PICA/gpu.hpp
-index e62f41b3..fdfb1cc8 100644
+index e62f41b3..f0af148a 100644
 --- a/include/PICA/gpu.hpp
 +++ b/include/PICA/gpu.hpp
 @@ -1,4 +1,8 @@
@@ -142,7 +145,22 @@ index e62f41b3..fdfb1cc8 100644
  
  	void initGraphicsContext(void* context) { renderer->initGraphicsContext(context); }
  
-@@ -140,6 +188,12 @@ class GPU {
+@@ -130,7 +178,13 @@ class GPU {
+ 	void writeInternalReg(u32 index, u32 value, u32 mask);
+ 
+ 	// Used for setting the size of the window we'll be outputting graphics to
+-	void setOutputSize(u32 width, u32 height) { renderer->setOutputSize(width, height); }
++	// Renderer settings the GPU thread reads while it works: changed in order with the work submitted before
++	void setOutputSize(u32 width, u32 height) {
++		runAsync([this, width, height] { renderer->setOutputSize(width, height); });
++	}
++	void setHashTextures(bool setting) {
++		runAsync([this, setting] { renderer->setHashTextures(setting); });
++	}
+ 	// Used for notifying the renderer the screen layout has changed
+ 	void reloadScreenLayout() { renderer->reloadScreenLayout(); }
+ 
+@@ -140,6 +194,12 @@ class GPU {
  
  	// TODO: Emulate the transfer engine & its registers
  	// Then this can be emulated by just writing the appropriate values there
@@ -155,7 +173,7 @@ index e62f41b3..fdfb1cc8 100644
  	void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) {
  		renderer->displayTransfer(inputAddr, outputAddr, inputSize, outputSize, flags);
  	}
-@@ -182,6 +236,8 @@ class GPU {
+@@ -182,6 +242,8 @@ class GPU {
  	Renderer* getRenderer() { return renderer.get(); }
  
    private:
@@ -2043,7 +2061,7 @@ index 37964d83..433f2f29 100644
  
  // Used when transitioning from the app to an OS applet, such as software keyboard, mii maker, mii selector, etc
 diff --git a/src/emulator.cpp b/src/emulator.cpp
-index e5ba4e27..ac06e676 100644
+index e5ba4e27..90e0b416 100644
 --- a/src/emulator.cpp
 +++ b/src/emulator.cpp
 @@ -165,8 +165,9 @@ void Emulator::pollScheduler() {
@@ -2057,8 +2075,17 @@ index e5ba4e27..ac06e676 100644
  					srv.sendGPUInterrupt(GPUInterrupt::VBlank0);
  					srv.sendGPUInterrupt(GPUInterrupt::VBlank1);
  
+@@ -465,7 +466,7 @@ void Emulator::reloadSettings() {
+ 		loadRenderdoc();
+ 	}
+ 
+-	gpu.getRenderer()->setHashTextures(config.hashTextures);
++	gpu.setHashTextures(config.hashTextures);
+ 
+ #ifdef PANDA3DS_ENABLE_DISCORD_RPC
+ 	// Reload RPC setting if we're compiling with RPC support
 diff --git a/src/libretro_core.cpp b/src/libretro_core.cpp
-index 9ad3b62a..4869c20a 100644
+index 9ad3b62a..7c166fc3 100644
 --- a/src/libretro_core.cpp
 +++ b/src/libretro_core.cpp
 @@ -1,8 +1,13 @@
@@ -2187,7 +2214,16 @@ index 9ad3b62a..4869c20a 100644
  }
  
  static bool setHWRender(retro_hw_context_type type) {
-@@ -291,6 +390,7 @@ bool retro_load_game(const retro_game_info* game) {
+@@ -221,6 +320,8 @@ static void configCheckVariables() {
+ 	envCallback(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated);
+ 
+ 	if (updated) {
++		// The GPU thread reads the config (shader settings, texture hashing...) while it works: let it finish first
++		emulator->runOnGPUThread([] {});
+ 		configUpdate();
+ 	}
+ }
+@@ -291,6 +392,7 @@ bool retro_load_game(const retro_game_info* game) {
  bool retro_load_game_special(uint type, const retro_game_info* info, usize num) { return false; }
  
  void retro_unload_game() {
@@ -2195,7 +2231,7 @@ index 9ad3b62a..4869c20a 100644
  	renderer->setFBO(0);
  	renderer = nullptr;
  }
-@@ -301,8 +401,10 @@ void retro_cheat_reset() { emulator->getCheats().reset(); }
+@@ -301,8 +403,10 @@ void retro_cheat_reset() { emulator->getCheats().reset(); }
  void retro_run() {
  	configCheckVariables();
  
@@ -2208,7 +2244,7 @@ index 9ad3b62a..4869c20a 100644
  
  	inputPollCallback();
  
-@@ -364,6 +466,9 @@ void retro_run() {
+@@ -364,6 +468,9 @@ void retro_run() {
  
  	hid.updateInputs(emulator->getTicks());
  	emulator->runFrame();
@@ -2603,10 +2639,10 @@ index 390a3fa6..bb1972fd 100644
  }
 diff --git a/tests/banana/libretro_host.cpp b/tests/banana/libretro_host.cpp
 new file mode 100644
-index 00000000..2859d0b0
+index 00000000..bff45a1a
 --- /dev/null
 +++ b/tests/banana/libretro_host.cpp
-@@ -0,0 +1,145 @@
+@@ -0,0 +1,147 @@
 +// libretro-host: the least of a libretro frontend, to run and time the Panda3DS core without RetroArch. It gives the
 +// core an OpenGL ES 3.1 context (EGL surfaceless) and an FBO as "RetroArch's framebuffer", runs N frames and writes the
 +// frames asked for as PPM images (400x480, top-down).
@@ -2679,16 +2715,18 @@ index 00000000..2859d0b0
 +	EGLDisplay display = getPlatformDisplay(EGL_PLATFORM_SURFACELESS_MESA, EGL_DEFAULT_DISPLAY, nullptr);
 +	eglInitialize(display, nullptr, nullptr);
 +	eglBindAPI(EGL_OPENGL_ES_API);
-+	const EGLint configAttribs[] = {EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT, EGL_NONE};
++	const EGLint pbufferAttribs[] = {EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT, EGL_SURFACE_TYPE, EGL_PBUFFER_BIT, EGL_NONE};
++	const EGLint anyAttribs[] = {EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT, EGL_NONE};
 +	EGLConfig config;
-+	EGLint count;
-+	eglChooseConfig(display, configAttribs, &config, 1, &count);
++	EGLint count = 0;
++	if (!eglChooseConfig(display, pbufferAttribs, &config, 1, &count) || count == 0) eglChooseConfig(display, anyAttribs, &config, 1, &count);
 +	const EGLint contextAttribs[] = {EGL_CONTEXT_MAJOR_VERSION, 3, EGL_CONTEXT_MINOR_VERSION, 1, EGL_NONE};
-+	EGLContext context = eglCreateContext(display, config, EGL_NO_CONTEXT, contextAttribs);
-+	if (!eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, context)) {
++	EGLContext context = count ? eglCreateContext(display, config, EGL_NO_CONTEXT, contextAttribs) : EGL_NO_CONTEXT;
++	if (context == EGL_NO_CONTEXT || !eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, context)) {
 +		std::fprintf(stderr, "no GLES 3.1 context\n");
 +		return 1;
 +	}
++	std::fprintf(stderr, "libretro-host: %s, %s\n", (const char*)glGetString(GL_VERSION), (const char*)glGetString(GL_RENDERER));
 +	glGenTextures(1, &fboTexture);
 +	glBindTexture(GL_TEXTURE_2D, fboTexture);
 +	glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, 400, 480);
