@@ -66,6 +66,7 @@ namespace rnds
 		virtual std::string clockText() = 0;	// "01:01 PM" / "13:01"
 		virtual std::string dateText() = 0;		// "10/02"
 		virtual float battery() = 0;			// 0..1, < 0 unknown
+		virtual bool charging() { return false; }	// a charger plugged in: a bolt on the battery icon
 		virtual std::string batteryMode() { return "icon"; }	// ES's "show battery status": "" none, "icon", "text" (icon and %)
 		virtual bool topMotion() { return true; }	// false: the top screen holds still (no rise on a move, no bob)
 		virtual bool online() = 0;

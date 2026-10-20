@@ -48,6 +48,8 @@
 #include <sys/resource.h>
 #include <sys/syscall.h>
 #include <sys/inotify.h>
+#include <sys/socket.h>
+#include <linux/netlink.h>
 #include <sys/wait.h>
 #include <thread>
 #include <time.h>
@@ -1313,6 +1315,16 @@ int main(int argc, char** argv)
 	if (system("banana-perf ui") != 0) {}
 	// the launch hook (below) wakes the menu when it is written: an idle menu sleeps in poll() until a press otherwise,
 	// and a launch written then started its game only at the next press, in the middle of whatever came next
+	// the kernel's uevents for the charger (as bananad listens to them): the bolt on the battery icon as the cable goes in
+	// or out, not at the next minute's redraw
+	int uevent = socket(AF_NETLINK, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC, NETLINK_KOBJECT_UEVENT);
+	{
+		sockaddr_nl a = {};
+		a.nl_family = AF_NETLINK;
+		a.nl_groups = 1;
+		if (uevent >= 0 && bind(uevent, (sockaddr*)&a, sizeof a) < 0) { close(uevent); uevent = -1; }
+	}
+	bool charging = lib.power().charging;
 	int launchWatch = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
 	if (launchWatch >= 0 && inotify_add_watch(launchWatch, "/run/banana", IN_CLOSE_WRITE | IN_MOVED_TO) < 0)
 	{
@@ -1473,6 +1485,7 @@ int main(int argc, char** argv)
 		fds.push_back({ worker.wakeFd, POLLIN, 0 });
 		if (roms.fd >= 0) fds.push_back({ roms.fd, POLLIN, 0 });
 		if (launchWatch >= 0) fds.push_back({ launchWatch, POLLIN, 0 });
+		if (uevent >= 0) fds.push_back({ uevent, POLLIN, 0 });
 		if (disp.isOpen()) fds.push_back({ disp.pollFd(), POLLIN, 0 });
 		for (int fd : input.fds()) fds.push_back({ fd, POLLIN, 0 });
 		int n = poll(fds.data(), fds.size(), timeout);
@@ -1512,6 +1525,23 @@ int main(int argc, char** argv)
 			{
 				alignas(inotify_event) char buf[1024];
 				while (read(launchWatch, buf, sizeof buf) > 0) {}	// (the loop's next pass looks for the launch file)
+			}
+			else if (p.fd == uevent)
+			{
+				char buf[4096];
+				ssize_t got;
+				bool power = false;
+				while ((got = recv(uevent, buf, sizeof buf - 1, 0)) > 0)
+				{
+					buf[got] = 0;
+					for (char* s = buf; s < buf + got; s += strlen(s) + 1) if (!strcmp(s, "SUBSYSTEM=power_supply")) power = true;
+				}
+				if (power)
+				{
+					lib.powerChanged();
+					bool c = lib.power().charging;
+					if (c != charging) { charging = c; dirty = true; batteryDue = true; logf("charger %s", c ? "in" : "out"); }
+				}
 			}
 			else if (p.fd == worker.wakeFd)
 			{

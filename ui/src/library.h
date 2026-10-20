@@ -93,6 +93,8 @@ namespace banana
 		std::string clockText() override;
 		std::string dateText() override;
 		float battery() override;
+		bool charging() override { return power().charging; }
+		void powerChanged() { powerAt = 0; }	// a power_supply uevent: read /sys again at the next ask
 		bool online() override;
 		void selectSystem(int i) override { home = i; }
 		void selectGame(int) override {}
