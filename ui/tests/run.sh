@@ -117,6 +117,19 @@ for size in 640x480 1024x768; do
         --roms "$FX/roms" --data "$FX/data" --script "lib 0 0; press a; wait 3000; wait 1" 2>> "$tlog" || { echo "FAIL $size: banana-ui (titles 2) exited $?"; fail=1; }
     grep -q "launch 0: .*Yellow Planet" "$tlog" || { echo "FAIL $size: the sort title didn't put it first: $(grep launch "$tlog")"; fail=1; }
     rm -f "$T"
+    # Screen colours (N3): Display & sound > Screen colours, Red down 10 steps, A: the bottom screen corrected, red 0.90
+    # in screen-colors.conf; then X (no correction) and A: "none"
+    clog=$OUT/$size-colors.log; CF="$FX/data/screen-colors.conf"; rm -f "$CF"
+    L10="press left; press left; press left; press left; press left; press left; press left; press left; press left; press left;"
+    "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press a; press down; press a; press down; $L10 shot colors; press a" 2> "$clog" \
+        || { echo "FAIL $size: banana-ui (screen colours) exited $?"; fail=1; }
+    grep -qx 'screen = bottom' "$CF" && grep -qx 'red = 0.90' "$CF" || { echo "FAIL $size: screen-colors.conf: $(tr '\n' ' ' < "$CF" 2>/dev/null)"; fail=1; }
+    "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press a; press down; press a; press x; press a" 2>> "$clog" \
+        || { echo "FAIL $size: banana-ui (screen colours 2) exited $?"; fail=1; }
+    grep -qx 'screen = none' "$CF" || { echo "FAIL $size: X then A didn't take the correction away: $(tr '\n' ' ' < "$CF")"; fail=1; }
+    rm -f "$CF"
     # a DS game's own Threaded 3D and microphone (#27): X on the first DS game, down to Threaded 3D, right (On), down to
     # Microphone, right (Low), A: both kept per game; then both back to "As in Settings": no lines (and no files) left
     plog3=$OUT/$size-pergame-opts.log; F3="$FX/data/nds-per-game-3d.conf"; FM="$FX/data/nds-per-game-mic.conf"; rm -f "$F3" "$FM"
