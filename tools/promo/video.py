@@ -34,27 +34,28 @@ YELLOW, INK, SOFT = (255, 214, 64), (240, 242, 248), (150, 156, 172)
 
 # ---- the story ------------------------------------------------------------------------------------------------------
 SEGMENTS = [
-    dict(theme='hillside', name='Hillside', tag='THEME 1 / 3', glow=(60, 130, 230),
-         head='A desktop, rebuilt in JSON only',
+    dict(theme='hillside', name='Hillside', tag='EXAMPLE THEME 1 / 3', glow=(60, 130, 230),
+         head='A 2000s desktop',
          points=['Components with parameters', 'Grids and lists that scroll themselves',
                  'A wallpaper drawn from shapes:\nno pictures at all'],
          code=['"components": {', '  "window": { "type": "group", ... },', '  "taskbar": { "type": "group", ... }', '},',
                '{ "use": "window", "w": 560, "h": 420,', '  "with": { "title": "{sys.name}" } }']),
-    dict(theme='turntable', name='Turntable', tag='THEME 2 / 3', glow=(200, 200, 215),
-         head='Animation is just math',
+    dict(theme='turntable', name='Turntable', tag='EXAMPLE THEME 2 / 3', glow=(200, 200, 215),
+         head='Motion, from math alone',
          points=['An expression on any property', 'Easing, time and smoothed values',
                  'A 3D spin, faked with cos(time)'],
          code=['"vars": { "turn": "=time * 0.09" },', '{ "type": "image", "src": "{art}",',
                '  "w": "=190 * abs(cosd(turn))",', '  "tint": "=cosd(turn) < 0 ? \'#7a7a80\'', '                          : \'#ffffff\'" }']),
-    dict(theme='classic', name='Classic', tag='THEME 3 / 3', glow=(120, 200, 245),
-         head='Hooks for everything on screen',
+    dict(theme='classic', name='Classic', tag='EXAMPLE THEME 3 / 3', glow=(120, 200, 245),
+         head='A bright handheld classic',
          points=['The clock, the date and the battery', 'Lists that scroll to the selection',
                  'Tap anything: "onTap"'],
          code=['{ "type": "text", "text": "{title}" },', '{ "use": "battery", "right": 16 },',
                '{ "type": "rect", "radius": 6, "w": 34,', '  "x": "=52 + 496 * scroll / max(1, count - 1)" },',
                '{ "type": "group", "onTap": "a", ... }']),
 ]
-INTRO, SEG, OUTRO = 3.8, 7.2, 5.6
+INTRO_A = 3.8		# the logo and what it is
+INTRO, SEG, OUTRO = 8.2, 7.2, 6.0
 TEXT_OUT = 0.5		# a scene's words all fade out together, this long, and are gone before the next scene starts
 TEXT_GAP = 0.25
 DURATION = INTRO + SEG * len(SEGMENTS) + OUTRO
@@ -192,15 +193,25 @@ def frame(t):
     d = ImageDraw.Draw(layer, 'RGBA')
     L = 150
     def gone(local, length): return 1 - clamp01((local - (length - TEXT_GAP - TEXT_OUT)) / TEXT_OUT)
-    if seg < 0:
-        out = gone(t, INTRO)
+    if seg < 0 and t < INTRO_A:
+        # the first card: the logo, then what this is
+        out = gone(t, INTRO_A)
         lt = ease(t / 0.8)
         paste_logo(layer, LOGO_BIG, L, 330 - 20 * (1 - lt), lt)
         # the lines under the logo, centred on it
         cx = L + LOGO_BIG.width / 2
-        for line, font, col, t0, y in (('The new theme engine', F(SEMI, 54), INK, 0.5, 490),
-                                       ('Design any menu. Ship it as one JSON file.', F(REG, 34), SOFT, 1.0, 572)):
+        for line, font, col, t0, y in (('Introducing the theme builder', F(SEMI, 54), INK, 0.5, 490),
+                                       ('Design every pixel of the menu in one JSON file.', F(REG, 34), SOFT, 1.0, 572)):
             text(d, (cx - font.getlength(line) / 2, y), line, font, col, ease((t - t0) / 0.7))
+    elif seg < 0:
+        # the second card: the examples are only examples
+        lc = t - INTRO_A
+        out = gone(lc, INTRO - INTRO_A)
+        for line, font, col, t0, y in (('What can you build?', F(BOLD, 84), INK, 0.2, 380),
+                                       ('Here are three examples,', F(REG, 40), SOFT, 0.9, 510),
+                                       ('each one made with nothing but a JSON file.', F(REG, 40), SOFT, 1.3, 566)):
+            a2 = ease((lc - t0) / 0.6)
+            text(d, (W / 2 - font.getlength(line) / 2, y + 16 * (1 - a2)), line, font, col, a2)
     elif seg < len(SEGMENTS):
         S = SEGMENTS[seg]
         out = gone(local, SEG)
@@ -213,8 +224,9 @@ def frame(t):
             d.rounded_rectangle((L, 150 + rise(0.2), L + tw + 32, 188 + rise(0.2)), 19, fill=YELLOW + (int(255 * a),))
             text(d, (L + 16, 158 + rise(0.2)), S['tag'], tag, (20, 20, 24), a)
         text(d, (L, 210 + rise(0.35)), S['name'], F(BOLD, 92), INK, at(0.35))
-        text(d, (L, 330 + rise(0.55)), S['head'], F(MED, 38), YELLOW, at(0.55))
-        y = 410
+        text(d, (L, 318 + rise(0.5)), 'Built with the theme builder', F(REG, 28), SOFT, at(0.5))
+        text(d, (L, 366 + rise(0.65)), S['head'], F(MED, 40), YELLOW, at(0.65))
+        y = 440
         for i, p in enumerate(S['points']):
             a = at(0.9 + i * 0.35)
             if a > 0:
@@ -226,16 +238,17 @@ def frame(t):
         if a > 0:
             total = sum(len(l) for l in S['code'])
             card = code_card(S['code'], int(total * clamp01((local - 2.0) / 1.8)), a)
-            layer.alpha_composite(card, (L, int(y + 30 + rise(2.0))))
+            layer.alpha_composite(card, (L, int(y + 20 + rise(2.0))))
     else:
         out = 1
         OX = 900
-        text(d, (OX, 300), 'Make your own themes', F(BOLD, 72), INK, ease((local - 0.8) / 0.7))
+        text(d, (OX, 250), 'Every example was one JSON file.', F(REG, 36), SOFT, ease((local - 0.7) / 0.7))
+        text(d, (OX, 310), 'Make your own themes', F(BOLD, 72), INK, ease((local - 1.2) / 0.7))
         big = F(MED, 46)
-        text(d, (OX, 410), 'Coming soon in 0.5.0', big, YELLOW, ease((local - 1.4) / 0.7))
+        text(d, (OX, 420), 'Coming soon in 0.5.0', big, YELLOW, ease((local - 1.8) / 0.7))
         # "beta" after it, slowly, once the line is there
-        text(d, (OX + big.getlength('Coming soon in 0.5.0 '), 410), 'beta', big, INK, clamp01((local - 2.4) / 1.8) ** 1.5)
-        paste_logo(layer, LOGO_SMALL, OX, 540, ease((local - 1.9) / 0.7))
+        text(d, (OX + big.getlength('Coming soon in 0.5.0 '), 420), 'beta', big, INK, clamp01((local - 2.8) / 1.8) ** 1.5)
+        paste_logo(layer, LOGO_SMALL, OX, 550, ease((local - 2.3) / 0.7))
     if out < 1:
         layer.putalpha(layer.getchannel('A').point(lambda v: int(v * out)))
     if out > 0: img.paste(layer, (0, 0), layer)
