@@ -103,8 +103,10 @@ fi
 # the 3D always through the Gengis Engine (no longer a setting; a DSFLIP_RAST=0 left in the file from before is overruled)
 export DSFLIP_RAST=1
 # the game's own microphone (its page, #27): SuperDrastic's threshold for this run (0: off)
+# (SuperDrastic's scale, its docs/INTEGRATION.md: high 0.03, medium 0.15, low 0.3)
 m=$(/usr/libexec/banana/nds-game-option nds-per-game-mic.conf "$1")
-[ -n "$m" ] && { echo "run-drastic: ${1##*/} has its own microphone: $m" >&2; export DSHOOK_MIC_THRESH=$m; }
+case $m in low) t=0.3 ;; medium) t=0.15 ;; high) t=0.03 ;; off) t=0 ;; *) t= ;; esac
+[ -n "$t" ] && { echo "run-drastic: ${1##*/} has its own microphone: $m ($t)" >&2; export DSHOOK_MIC_THRESH=$t; }
 # the game's own Threaded 3D (#27): DraStic reads it from drastic.cfg alone, so the game's value goes in for this run
 # and Settings' comes back after (kept beside it until then: a run cut short is put right at the next start, above)
 t=$(/usr/libexec/banana/nds-game-option nds-per-game-3d.conf "$1")

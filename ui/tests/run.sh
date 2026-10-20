@@ -136,12 +136,28 @@ for size in 640x480 1024x768; do
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
         --roms "$FX/roms" --data "$FX/data" --script "lib 0 0; press x; press down; press down; press right; press down; press right; shot pergame-opts; press a" 2> "$plog3" \
         || { echo "FAIL $size: banana-ui (game options) exited $?"; fail=1; }
-    [ "$(cat "$F3" 2>/dev/null)" = "Banana Kart DS.nds = 1" ] && [ "$(cat "$FM" 2>/dev/null)" = "Banana Kart DS.nds = 0.15" ] \
+    [ "$(cat "$F3" 2>/dev/null)" = "Banana Kart DS.nds = 1" ] && [ "$(cat "$FM" 2>/dev/null)" = "Banana Kart DS.nds = low" ] \
         || { echo "FAIL $size: game options: $(cat "$F3" "$FM" 2>&1 | tr '\n' ' ')"; fail=1; }
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
         --roms "$FX/roms" --data "$FX/data" --script "lib 0 0; press x; press down; press down; press left; press down; press left; press a" 2>> "$plog3" \
         || { echo "FAIL $size: banana-ui (game options 2) exited $?"; fail=1; }
     [ -e "$F3" ] || [ -e "$FM" ] && { echo "FAIL $size: back to As in Settings left $(ls "$F3" "$FM" 2>/dev/null)"; fail=1; }
+    # review fixes on the game page and the keyboard: m7 a pre-filled "Café" loses its whole é to one B (not half of it);
+    # m4 a name of its own deleted, then the scraped one typed again: no name of its own; m6 a sharing name with the
+    # password step left by B: nothing written
+    rlog=$OUT/$size-review.log; TT="$FX/data/game-titles.tsv"
+    printf 'nds/Yellow Planet [!].zip\tCafé\t\n' > "$TT"
+    run_r() { "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "$1" 2>> "$rlog" || { echo "FAIL $size: banana-ui (review) exited $?"; fail=1; }; }
+    run_r "lib 0 1; press x; press down; press down; press down; press down; press a; press b; press start"
+    [ "$(cat "$TT")" = "$(printf 'nds/Yellow Planet [!].zip\tCaf\t')" ] || { echo "FAIL $size: m7 UTF-8 delete: $(od -c "$TT" | head -2 | tr -s ' ')"; fail=1; }
+    printf 'nds/Yellow Planet [!].zip\tCustom\t\n' > "$TT"
+    run_r "lib 0 1; press x; press down; press down; press down; press down; press a; press b; press b; press b; press b; press b; press b; press start; press a; shot review-m4; press start"
+    [ -s "$TT" ] && { echo "FAIL $size: m4 the scraped name typed again kept a name: $(cat "$TT")"; fail=1; }
+    rm -f "$TT" "$FX/data/accounts.conf"
+    run_r "home 0; press start; press r; press r; press r; press r; press a; press up; press up; press a; press b; press start; press b"
+    [ -e "$FX/data/accounts.conf" ] && grep -q smb_user "$FX/data/accounts.conf" && { echo "FAIL $size: m6 the name was written without the password"; fail=1; }
+    rm -f "$FX/data/accounts.conf"
     # Box art by name (#28): X on the last DS game, up to Box art (the last row), A types (its name, as it is), START
     # looks (a stand-in banana-scrape: two names), down to the second, A fetches it: banana-scrape --match with the
     # game's system, file and that name; B closes the page and the library is read again

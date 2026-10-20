@@ -565,6 +565,7 @@ namespace banana
 					if (g.label.empty()) g.label = media.find(dir, "label", stem);
 					std::string key = def.id + "/" + g.rel;
 					if (it != gl.end()) g.sort = it->second.sortname;
+					g.scraped = g.title;
 					auto tt = titles.find(key);
 					if (tt != titles.end())
 					{
