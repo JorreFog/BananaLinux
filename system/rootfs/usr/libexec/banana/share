@@ -6,9 +6,14 @@
 # a file the share itself never shows); Sharing login > Guest opens it to anyone with no password instead. The second
 # SD card, while it's in, is a share of its own beside it (\\<address>\sd2, #25), with the same login.
 #   share up | down | restart     (restart: again with the login as it is now, if it is on)
+# one run at a time (Settings starts it on every change, sd2 when a card goes in or out): a down landing after another
+# run's up left the share off, or with the wrong login; restart's own down and up inherit the lock
+[ -z "$SHARE_LOCKED" ] && SHARE_LOCKED=1 exec flock /run/banana/share.lock "$0" "$@"
+export SHARE_LOCKED
 CONF=/run/banana/ksmbd.conf
 DB=/run/banana/ksmbdpwd.db
-acct() { sed -n "s/^$1=//p" /data/banana/accounts.conf 2>/dev/null | head -n 1; }
+# a value from accounts.conf as Settings reads it (spaces around the key and the value, quotes, the last line)
+acct() { sed -n "s/^[ \t]*$1[ \t]*=[ \t]*//p" /data/banana/accounts.conf 2>/dev/null | tail -n 1 | sed 's/[ \t\r]*$//; s/^"\(.*\)"$/\1/'; }
 case $1 in
 restart)
     pidof ksmbd.mountd >/dev/null || exit 0

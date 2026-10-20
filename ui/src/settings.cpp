@@ -714,6 +714,8 @@ namespace banana
 				if (system("mkdir -p /data/drastic/config && cp -n /usr/share/drastic/config/drastic.cfg /data/drastic/config/ 2>/dev/null") != 0) {}
 			}
 			setConfValue(it.file, it.key, v);
+			// Settings' Threaded 3D chosen now: a game's own value left from a run cut short mustn't come back over it
+			if (it.key == "threaded_3d") unlink("/data/drastic/config/.threaded_3d.settings");
 		}
 		else
 		{
@@ -2689,6 +2691,7 @@ namespace banana
 			return MOVED;
 		}
 		case ENTRY_SMB_PASS:
+			pw = trim(pw);	// (as the share and this screen read it back: spaces at either end aren't kept)
 			if (pw.empty()) { message = "The password can't be empty: Sharing login > Guest is for a share with none."; return MOVED; }
 			if (!smbNewUser.empty()) setConfValue(data + "/accounts.conf", "smb_user", smbNewUser, "=");
 			setConfValue(data + "/accounts.conf", "smb_password", pw, "=");
