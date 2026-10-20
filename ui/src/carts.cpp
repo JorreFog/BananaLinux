@@ -823,7 +823,7 @@ namespace banana
 		text(src->dateText(), fMed, 14, 22, 16, SOFT);
 		std::string right = src->clockText();
 		float bat = src->battery();
-		if (bat >= 0) right += "   " + std::to_string((int)std::lround(bat * 100)) + "%";
+		if (bat >= 0) right += std::string(src->charging() ? "   Charging " : "   ") + std::to_string((int)std::lround(bat * 100)) + "%";
 		text(right, fMed, 14, 618, 16, SOFT, 1, 0, 2);
 		// the cartridge, sliding in from the side it came from; it drops away when the game starts
 		float e = ease((float)((now - heroAt) / 280.0));

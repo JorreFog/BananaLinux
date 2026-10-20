@@ -1382,13 +1382,29 @@ namespace rnds
 			std::string bmode = src->batteryMode();
 			float lvl = src->battery();
 			bool pctText = bmode == "text" && lvl >= 0;
+			bool charging = src->charging();
 			auto battery = [&](float bx)		// the 26x14 icon, its level 3 px in
 			{
 				drawSprite(still("batt", batt, false), bx, 25 + ry, nullptr, INK);
 				float l = lvl < 0 ? 0.75f : lvl;
 				float fw = std::round(16 * std::min(1.0f, std::max(0.0f, l)) * s) / s;
+				// on the charger: the level in the accent colour (the amber of the charging LED) and a bolt over it,
+				// in ink with a dark edge left and right so it reads over the level and over the empty part alike
+				Color lc = charging ? Color::hex(accent.base) : INK;
 				if (fw > 0)
-					be->fill(std::round(X(bx + 3)), std::round(X(28 + ry)), std::round(X(fw)), std::round(X(8)), INK);
+					be->fill(std::round(X(bx + 3)), std::round(X(28 + ry)), std::round(X(fw)), std::round(X(8)), lc);
+				if (charging)
+				{
+					static const int BOLT[8][2] = { { 4, 2 }, { 3, 2 }, { 2, 2 }, { 1, 5 }, { 3, 2 }, { 2, 2 }, { 1, 2 }, { 0, 2 } };	// x, length per row
+					float x0 = bx + 3 + 5, y0 = 28 + ry;
+					auto run = [&](float x, float y, float w, Color c)
+					{
+						float a = std::round(X(x)), b = std::round(X(x + w)), t = std::round(X(y)), u = std::round(X(y + 1));
+						be->fill(a, t, b - a, u - t, c);
+					};
+					for (int r = 0; r < 8; r++) run(x0 + BOLT[r][0] - 1, y0 + r, BOLT[r][1] + 2, BLACKISH);
+					for (int r = 0; r < 8; r++) run(x0 + BOLT[r][0], y0 + r, BOLT[r][1], INK);
+				}
 			};
 			// on the left after the Wi-Fi: "icon only" the battery icon; "icon and text" the percentage and then the icon
 			// ("78% [battery]"), the percentage right-aligned in room for "100%" so nothing moves as it changes, and
