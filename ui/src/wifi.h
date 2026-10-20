@@ -38,6 +38,9 @@ namespace banana
 		// priority so wpa_supplicant tries it first; password empty for an open network
 		bool remember(const std::string& conf, const Network& n, const std::string& password);
 		bool forget(const std::string& conf, const std::string& ssid);
+		// a saved network's own block (its password and the rest as they are) moved first, with the highest priority:
+		// joining it again without typing the password; false when wifi.conf has no block for it
+		bool prefer(const std::string& conf, const std::string& ssid);
 		// a password wpa_supplicant takes: 8 to 63 printable ASCII characters
 		bool passwordOk(const std::string& p);
 

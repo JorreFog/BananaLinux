@@ -154,6 +154,7 @@ namespace banana
 		bool scanning = false, scannedOnce = false, wifiEnabled = true;
 		int nsel = 0, ntop = 0;
 		std::string joining, message;	// the network being joined; the last thing to tell
+		std::string failed;				// the last network that couldn't be joined: A on it asks for the password again
 		double joinStart = 0, nextStatus = 0, nextScan = 0, now = 0;
 		wifi::Network target;			// the network the keyboard is for
 		std::string pw;
