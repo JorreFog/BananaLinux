@@ -67,3 +67,20 @@ config BR2_PACKAGE_LIBRETRO_CHEATS_NDS
 	help
 	  libretro-database's Action Replay cheats for the Nintendo DS,
 	  read by BananaDS's Cheats.
+
+config BR2_PACKAGE_LIBRETRO_PANDA3DS
+	bool "libretro-panda3ds"
+	default y
+	help
+	  Nintendo 3DS (Panda3DS), with BananaOS's speed work for the
+	  Cortex-A55 (tools/3ds-perf measures it).
+
+config BR2_PACKAGE_LIBRETRO_PANDA3DS_BENCH
+	bool "panda3ds-bench"
+	default y
+	depends on BR2_PACKAGE_LIBRETRO_PANDA3DS
+	depends on BR2_PACKAGE_HAS_LIBEGL
+	help
+	  Panda3DS with no window and the 3DS stress-test ROM
+	  (tools/3ds-bench), to measure the emulator on the handheld:
+	  panda3ds-bench /usr/share/banana/3ds-bench/3ds-bench.3dsx --renderer gl

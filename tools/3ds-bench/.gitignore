@@ -1,0 +1,7 @@
+build/
+3ds-bench.smdh
+3ds-bench.lst
+gfx/*.png
+gfx/sprites/
+icon.png
+3ds-bench.elf

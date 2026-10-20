@@ -1,0 +1,351 @@
+BananaOS's changes to dynarmic's arm64 backend (the ARM11's JIT on the Cortex-A55).
+
+  - arm64 A32: VFP registers stored from a general register when the value is there
+  - arm64: don't gather the guest's cumulative FP exception flags from the host FPSR (no MSR/MRS FPSR per block)
+  - arm64 A32: drop NZCV writes a later NZCV write overwrites unread
+  - arm64 A32: a conditional block exit uses the host flags when they still hold cpsr_nzcv (no LDR + MSR NZCV)
+
+diff --git a/third_party/dynarmic/src/dynarmic/backend/arm64/a32_address_space.cpp b/third_party/dynarmic/src/dynarmic/backend/arm64/a32_address_space.cpp
+index bbdf925..c6b826d 100644
+--- a/third_party/dynarmic/src/dynarmic/backend/arm64/a32_address_space.cpp
++++ b/third_party/dynarmic/src/dynarmic/backend/arm64/a32_address_space.cpp
+@@ -3,9 +3,14 @@
+  * SPDX-License-Identifier: 0BSD
+  */
+ 
++#include <cstdlib>
++#include "dynarmic/ir/basic_block.h"
++#include "dynarmic/ir/microinstruction.h"
++#include "dynarmic/ir/opcodes.h"
+ #include "dynarmic/backend/arm64/a32_address_space.h"
+ 
+ #include "dynarmic/backend/arm64/a32_jitstate.h"
++#include "dynarmic/backend/arm64/banana.h"
+ #include "dynarmic/backend/arm64/abi.h"
+ #include "dynarmic/backend/arm64/devirtualize.h"
+ #include "dynarmic/backend/arm64/emit_arm64.h"
+@@ -161,6 +166,46 @@ A32AddressSpace::A32AddressSpace(const A32::UserConfig& conf)
+     EmitPrelude();
+ }
+ 
++namespace {
++
++// BananaOS: an NZCV write that a later full NZCV write overwrites, with nothing between them that could read the flags,
++// is dropped (and with it, after dead code elimination, the MRS that read them and the flag-setting form of the
++// instruction). Thumb-1 code, which sets the flags with nearly every ALU instruction, stored NZCV after each of them.
++void A32DeadNZCVElimination(IR::Block& block) {
++    bool overwritten = false;  // a later instruction writes all of NZCV before anything can read it
++    for (auto it = block.rbegin(); it != block.rend(); ++it) {
++        IR::Inst& inst = *it;
++        switch (inst.GetOpcode()) {
++        case IR::Opcode::A32SetCpsrNZCV:
++            if (overwritten) {
++                inst.Invalidate();
++            }
++            overwritten = true;
++            continue;
++        case IR::Opcode::A32SetCpsrNZCVRaw:
++        case IR::Opcode::A32SetCpsrNZCVQ:
++        case IR::Opcode::A32SetCpsr:
++            overwritten = true;
++            continue;
++        case IR::Opcode::A32GetRegister:
++        case IR::Opcode::A32SetRegister:
++        case IR::Opcode::A32GetExtendedRegister32:
++        case IR::Opcode::A32GetExtendedRegister64:
++        case IR::Opcode::A32SetExtendedRegister32:
++        case IR::Opcode::A32SetExtendedRegister64:
++        case IR::Opcode::Void:
++            continue;
++        default:
++            break;
++        }
++        if (inst.ReadsFromCPSR() || inst.WritesToCPSR() || inst.MayHaveSideEffects()) {
++            overwritten = false;
++        }
++    }
++}
++
++}  // namespace
++
+ IR::Block A32AddressSpace::GenerateIR(IR::LocationDescriptor descriptor) const {
+     IR::Block ir_block = A32::Translate(A32::LocationDescriptor{descriptor}, conf.callbacks, {conf.arch_version, conf.define_unpredictable_behaviour, conf.hook_hint_instructions});
+ 
+@@ -168,6 +213,9 @@ IR::Block A32AddressSpace::GenerateIR(IR::LocationDescriptor descriptor) const {
+     Optimization::NamingPass(ir_block);
+     if (conf.HasOptimization(OptimizationFlag::GetSetElimination)) {
+         Optimization::A32GetSetElimination(ir_block, {.convert_nzc_to_nz = true});
++        if (!BananaBaseline()) {
++            A32DeadNZCVElimination(ir_block);
++        }
+         Optimization::DeadCodeElimination(ir_block);
+     }
+     if (conf.HasOptimization(OptimizationFlag::ConstProp)) {
+diff --git a/third_party/dynarmic/src/dynarmic/backend/arm64/banana.h b/third_party/dynarmic/src/dynarmic/backend/arm64/banana.h
+new file mode 100644
+index 0000000..d6b478d
+--- /dev/null
++++ b/third_party/dynarmic/src/dynarmic/backend/arm64/banana.h
+@@ -0,0 +1,21 @@
++/* This file is part of the dynarmic project.
++ * SPDX-License-Identifier: 0BSD
++ */
++
++#pragma once
++
++#include <cstdlib>
++
++namespace Dynarmic::Backend::Arm64 {
++
++// BananaOS's changes to this backend (Panda3DS on the RG DS Plus's Cortex-A55): PANDA3DS_BASELINE=1 in the environment
++// turns them off, for A/B measurements
++inline bool BananaBaseline() {
++    static const bool baseline = [] {
++        const char* v = std::getenv("PANDA3DS_BASELINE");
++        return v && v[0] == '1';
++    }();
++    return baseline;
++}
++
++}  // namespace Dynarmic::Backend::Arm64
+diff --git a/third_party/dynarmic/src/dynarmic/backend/arm64/emit_arm64.cpp b/third_party/dynarmic/src/dynarmic/backend/arm64/emit_arm64.cpp
+index 1ecb542..89281f2 100644
+--- a/third_party/dynarmic/src/dynarmic/backend/arm64/emit_arm64.cpp
++++ b/third_party/dynarmic/src/dynarmic/backend/arm64/emit_arm64.cpp
+@@ -203,6 +203,7 @@ EmittedBlockInfo EmitArm64(oaknut::CodeGenerator& code, IR::Block block, const E
+     EmitContext ctx{block, reg_alloc, conf, ebi, fpsr_manager, fastmem_manager, {}};
+ 
+     ebi.entry_point = code.xptr<CodePtr>();
++    ctx.block_start = code.wptr<const std::uint32_t*>();
+ 
+     if (ctx.block.GetCondition() == IR::Cond::AL) {
+         ASSERT(!ctx.block.HasConditionFailedLocation());
+diff --git a/third_party/dynarmic/src/dynarmic/backend/arm64/emit_arm64_a32.cpp b/third_party/dynarmic/src/dynarmic/backend/arm64/emit_arm64_a32.cpp
+index 909dde7..f33cfa1 100644
+--- a/third_party/dynarmic/src/dynarmic/backend/arm64/emit_arm64_a32.cpp
++++ b/third_party/dynarmic/src/dynarmic/backend/arm64/emit_arm64_a32.cpp
+@@ -3,10 +3,12 @@
+  * SPDX-License-Identifier: 0BSD
+  */
+ 
++#include <cstdlib>
+ #include <mcl/bit/bit_field.hpp>
+ #include <oaknut/oaknut.hpp>
+ 
+ #include "dynarmic/backend/arm64/a32_jitstate.h"
++#include "dynarmic/backend/arm64/banana.h"
+ #include "dynarmic/backend/arm64/abi.h"
+ #include "dynarmic/backend/arm64/emit_arm64.h"
+ #include "dynarmic/backend/arm64/emit_context.h"
+@@ -22,11 +24,46 @@ namespace Dynarmic::Backend::Arm64 {
+ 
+ using namespace oaknut::util;
+ 
+-oaknut::Label EmitA32Cond(oaknut::CodeGenerator& code, EmitContext&, IR::Cond cond) {
++namespace {
++
++// Whether an emitted instruction leaves NZCV alone, from a short list of what the block's tail holds between the guest's
++// flag-setting instruction and its conditional branch: loads and stores of the JIT state (base Xstate or SP: no fastmem,
++// whose faults run a callback), and ADD/SUB/logical/move/bitfield instructions that don't set flags. Anything else
++// (a call, a branch, a guest memory access, a flag-setting instruction) and the flags aren't trusted.
++bool KeepsNZCV(std::uint32_t insn) {
++    if ((insn & 0x0A000000) == 0x08000000) {  // loads and stores
++        const std::uint32_t rn = (insn >> 5) & 31;
++        const bool unsigned_imm = (insn & 0x3B000000) == 0x39000000;
++        const bool pair = (insn & 0x3A000000) == 0x28000000;
++        return (unsigned_imm || pair) && (rn == 28 || rn == 31);
++    }
++    if ((insn & 0x1F000000) == 0x11000000) return (insn & 0x20000000) == 0;  // ADD/SUB (immediate), not ADDS/SUBS
++    if ((insn & 0x1F200000) == 0x0B000000) return (insn & 0x20000000) == 0;  // ADD/SUB (shifted register)
++    if ((insn & 0x1F800000) == 0x12000000) return (insn & 0x60000000) != 0x60000000;  // logical (immediate), not ANDS
++    if ((insn & 0x1F000000) == 0x0A000000) return (insn & 0x60000000) != 0x60000000;  // logical (shifted register)
++    if ((insn & 0x1F800000) == 0x12800000) return true;  // MOVN/MOVZ/MOVK
++    if ((insn & 0x1F800000) == 0x13000000) return true;  // SBFM/BFM/UBFM (shifts, extends)
++    if ((insn & 0xFFF00000) == 0xD5300000) return true;  // MRS
++    return false;
++}
++
++}  // namespace
++
++oaknut::Label EmitA32Cond(oaknut::CodeGenerator& code, EmitContext& ctx, IR::Cond cond) {
+     oaknut::Label pass;
+-    // TODO: Flags in host flags
+-    code.LDR(Wscratch0, Xstate, offsetof(A32JitState, cpsr_nzcv));
+-    code.MSR(oaknut::SystemReg::NZCV, Xscratch0);
++    bool flags_live = ctx.nzcv_in_host_flags_since != nullptr;
++    if (flags_live) {
++        for (const std::uint32_t* p = ctx.nzcv_in_host_flags_since; p < code.wptr<const std::uint32_t*>(); p++) {
++            if (!KeepsNZCV(*p)) {
++                flags_live = false;
++                break;
++            }
++        }
++    }
++    if (!flags_live) {
++        code.LDR(Wscratch0, Xstate, offsetof(A32JitState, cpsr_nzcv));
++        code.MSR(oaknut::SystemReg::NZCV, Xscratch0);
++    }
+     code.B(static_cast<oaknut::Cond>(cond), pass);
+     return pass;
+ }
+@@ -276,11 +313,19 @@ void EmitIR<IR::Opcode::A32SetExtendedRegister32>(oaknut::CodeGenerator& code, E
+     const size_t index = static_cast<size_t>(reg) - static_cast<size_t>(A32::ExtReg::S0);
+ 
+     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
++
++    // BananaOS: a value already in a general register (a VMOV from a core register, a VLDR, a VCVT's result) is stored from
++    // there, instead of moved to an FP register first just to be stored
++    if (!BananaBaseline() && args[1].IsInGpr()) {
++        auto Wvalue = ctx.reg_alloc.ReadW(args[1]);
++        RegAlloc::Realize(Wvalue);
++        code.STR(Wvalue, Xstate, offsetof(A32JitState, ext_regs) + sizeof(u32) * index);
++        return;
++    }
++
+     auto Svalue = ctx.reg_alloc.ReadS(args[1]);
+     RegAlloc::Realize(Svalue);
+ 
+-    // TODO: Detect if Gpr vs Fpr is more appropriate
+-
+     code.STR(Svalue, Xstate, offsetof(A32JitState, ext_regs) + sizeof(u32) * index);
+ }
+ 
+@@ -291,11 +336,17 @@ void EmitIR<IR::Opcode::A32SetExtendedRegister64>(oaknut::CodeGenerator& code, E
+     const size_t index = static_cast<size_t>(reg) - static_cast<size_t>(A32::ExtReg::D0);
+ 
+     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
++
++    if (!BananaBaseline() && args[1].IsInGpr()) {  // (as for single registers above)
++        auto Xvalue = ctx.reg_alloc.ReadX(args[1]);
++        RegAlloc::Realize(Xvalue);
++        code.STR(Xvalue, Xstate, offsetof(A32JitState, ext_regs) + 2 * sizeof(u32) * index);
++        return;
++    }
++
+     auto Dvalue = ctx.reg_alloc.ReadD(args[1]);
+     RegAlloc::Realize(Dvalue);
+ 
+-    // TODO: Detect if Gpr vs Fpr is more appropriate
+-
+     code.STR(Dvalue, Xstate, offsetof(A32JitState, ext_regs) + 2 * sizeof(u32) * index);
+ }
+ 
+@@ -348,6 +399,7 @@ void EmitIR<IR::Opcode::A32GetCpsr>(oaknut::CodeGenerator& code, EmitContext& ct
+ 
+ template<>
+ void EmitIR<IR::Opcode::A32SetCpsr>(oaknut::CodeGenerator& code, EmitContext& ctx, IR::Inst* inst) {
++    ctx.nzcv_in_host_flags_since = nullptr;  // cpsr_nzcv changes: the host flags no longer match it
+     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+     auto Wcpsr = ctx.reg_alloc.ReadW(args[0]);
+     RegAlloc::Realize(Wcpsr);
+@@ -402,11 +454,17 @@ void EmitIR<IR::Opcode::A32SetCpsrNZCV>(oaknut::CodeGenerator& code, EmitContext
+     auto Wnzcv = ctx.reg_alloc.ReadW(args[0]);
+     RegAlloc::Realize(Wnzcv);
+ 
++    // The value came out of the host flags just now (MRS Xn, NZCV is the last instruction emitted): they still hold it
++    const std::uint32_t* here = code.wptr<const std::uint32_t*>();
++    const bool from_flags = here > ctx.block_start && here[-1] == (0xD53B4200u | static_cast<std::uint32_t>(Wnzcv->index()));
++
+     code.STR(Wnzcv, Xstate, offsetof(A32JitState, cpsr_nzcv));
++    ctx.nzcv_in_host_flags_since = from_flags && !BananaBaseline() ? code.wptr<const std::uint32_t*>() : nullptr;
+ }
+ 
+ template<>
+ void EmitIR<IR::Opcode::A32SetCpsrNZCVRaw>(oaknut::CodeGenerator& code, EmitContext& ctx, IR::Inst* inst) {
++    ctx.nzcv_in_host_flags_since = nullptr;  // cpsr_nzcv changes: the host flags no longer match it
+     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+     auto Wnzcv = ctx.reg_alloc.ReadW(args[0]);
+     RegAlloc::Realize(Wnzcv);
+@@ -416,6 +474,7 @@ void EmitIR<IR::Opcode::A32SetCpsrNZCVRaw>(oaknut::CodeGenerator& code, EmitCont
+ 
+ template<>
+ void EmitIR<IR::Opcode::A32SetCpsrNZCVQ>(oaknut::CodeGenerator& code, EmitContext& ctx, IR::Inst* inst) {
++    ctx.nzcv_in_host_flags_since = nullptr;  // cpsr_nzcv changes: the host flags no longer match it
+     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+     auto Wnzcv = ctx.reg_alloc.ReadW(args[0]);
+     RegAlloc::Realize(Wnzcv);
+@@ -429,6 +488,7 @@ void EmitIR<IR::Opcode::A32SetCpsrNZCVQ>(oaknut::CodeGenerator& code, EmitContex
+ 
+ template<>
+ void EmitIR<IR::Opcode::A32SetCpsrNZ>(oaknut::CodeGenerator& code, EmitContext& ctx, IR::Inst* inst) {
++    ctx.nzcv_in_host_flags_since = nullptr;  // cpsr_nzcv changes: the host flags no longer match it
+     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+ 
+     auto Wnz = ctx.reg_alloc.ReadW(args[0]);
+@@ -444,6 +504,7 @@ void EmitIR<IR::Opcode::A32SetCpsrNZ>(oaknut::CodeGenerator& code, EmitContext&
+ 
+ template<>
+ void EmitIR<IR::Opcode::A32SetCpsrNZC>(oaknut::CodeGenerator& code, EmitContext& ctx, IR::Inst* inst) {
++    ctx.nzcv_in_host_flags_since = nullptr;  // cpsr_nzcv changes: the host flags no longer match it
+     auto args = ctx.reg_alloc.GetArgumentInfo(inst);
+ 
+     // TODO: Track latent value
+diff --git a/third_party/dynarmic/src/dynarmic/backend/arm64/emit_context.h b/third_party/dynarmic/src/dynarmic/backend/arm64/emit_context.h
+index 6bfc6f3..bb2fdd0 100644
+--- a/third_party/dynarmic/src/dynarmic/backend/arm64/emit_context.h
++++ b/third_party/dynarmic/src/dynarmic/backend/arm64/emit_context.h
+@@ -42,6 +42,12 @@ struct EmitContext {
+ 
+     std::vector<std::function<void()>> deferred_emits;
+ 
++    // Where the code stood right after A32SetCpsrNZCV stored a value that was, at that moment, also in the host's NZCV
++    // flags (it had just been read from them with MRS). EmitA32Cond uses the host flags directly when nothing emitted
++    // since could have changed them, instead of loading cpsr_nzcv and writing it back to NZCV.
++    const std::uint32_t* nzcv_in_host_flags_since = nullptr;
++    const std::uint32_t* block_start = nullptr;  // the block's first instruction
++
+     FP::FPCR FPCR(bool fpcr_controlled = true) const {
+         const FP::FPCR fpcr = conf.descriptor_to_fpcr(block.Location());
+         return fpcr_controlled ? fpcr : fpcr.ASIMDStandardValue();
+diff --git a/third_party/dynarmic/src/dynarmic/backend/arm64/fpsr_manager.cpp b/third_party/dynarmic/src/dynarmic/backend/arm64/fpsr_manager.cpp
+index 1c61474..8b34b20 100644
+--- a/third_party/dynarmic/src/dynarmic/backend/arm64/fpsr_manager.cpp
++++ b/third_party/dynarmic/src/dynarmic/backend/arm64/fpsr_manager.cpp
+@@ -8,6 +8,7 @@
+ #include <oaknut/oaknut.hpp>
+ 
+ #include "dynarmic/backend/arm64/abi.h"
++#include "dynarmic/backend/arm64/banana.h"
+ 
+ namespace Dynarmic::Backend::Arm64 {
+ 
+@@ -16,10 +17,18 @@ using namespace oaknut::util;
+ FpsrManager::FpsrManager(oaknut::CodeGenerator& code, size_t state_fpsr_offset)
+         : code{code}, state_fpsr_offset{state_fpsr_offset} {}
+ 
++// BananaOS: the guest's cumulative floating-point exception flags (FPSCR's IOC, DZC, OFC...) aren't gathered from the
++// host's FPSR: no MSR before a block's first VFP instruction and no MRS + ORR + STR after its last. Games don't read them;
++// the guest sees the flags it writes itself.
+ void FpsrManager::Spill() {
+     if (!fpsr_loaded)
+         return;
+ 
++    if (!BananaBaseline()) {
++        fpsr_loaded = false;
++        return;
++    }
++
+     code.LDR(Wscratch0, Xstate, state_fpsr_offset);
+     code.MRS(Xscratch1, oaknut::SystemReg::FPSR);
+     code.ORR(Wscratch0, Wscratch0, Wscratch1);
+@@ -32,6 +41,11 @@ void FpsrManager::Load() {
+     if (fpsr_loaded)
+         return;
+ 
++    if (!BananaBaseline()) {
++        fpsr_loaded = true;
++        return;
++    }
++
+     code.MSR(oaknut::SystemReg::FPSR, XZR);
+ 
+     fpsr_loaded = true;
+@@ -40,7 +54,7 @@ void FpsrManager::Load() {
+ void FpsrManager::GetFpsr(oaknut::WReg dest) {
+     code.LDR(dest, Xstate, state_fpsr_offset);
+ 
+-    if (fpsr_loaded) {
++    if (fpsr_loaded && BananaBaseline()) {
+         code.MRS(Xscratch1, oaknut::SystemReg::FPSR);
+         code.ORR(dest, dest, Wscratch1);
+     }

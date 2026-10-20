@@ -1,0 +1,1929 @@
+BananaOS's speed work on Panda3DS for the RG DS Plus (Cortex-A55), from branch banana3ds.
+PANDA3DS_BASELINE=1 in the environment runs upstream's code paths instead. Measured with tools/3ds-perf.
+
+  - dynarmic: VFP stores from GPRs
+  - dynarmic: no FPSR traffic per block
+  - dynarmic: dead NZCV writes dropped
+  - dynarmic: conditional block exits use the live host flags
+  - panda3ds-bench --dump-jit: the JIT's code for a disassembler
+  - GL: sample render-to-texture colour buffers directly
+  - GL: textures the CPU or the transfer engine rewrites show up again
+  - Immediate mode: one draw per run of triangles (not per triangle), vertices through the shader JIT
+  - GPU thread: the GSP's work runs on the thread with the GL context; its interrupts are sent when the CPU next idles or at VBlank, after the queue drains
+  - Idle skip: ignore wakeup ticks already passed (the idle loop spun for whole GPU waits); leave the JIT when the next event is due; GL: skip unchanged fragment uniform uploads
+  - panda3ds-bench: --dump writes each scene's last frame, --dump-frames a,b,c
+  - RendererGL: readScreen() reads the composited screens from the screen FBO
+  - JIT: constant reads from read-only code (literal pools), halt after an idle time skip so the scheduler runs at once
+  - Banana speed work: PANDA3DS_BASELINE switch, a yield with nothing else to run skips to the next event, dynarmic's code cache 32 MB, bench --maps
+  - GL textures: decode a tile at a time, per format (ETC1 a block at a time)
+  - panda3ds-bench: a headless benchmark frontend (EGL surfaceless, scene markers from svcOutputDebugString)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 2f4d9df2..9698f099 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -62,6 +62,7 @@ option(USE_SYSTEM_LUAJIT "Use the system's LuaJIT package" OFF)
+ option(ENABLE_GIT_VERSIONING "Enables querying git for the emulator version" ON)
+ option(BUILD_HYDRA_CORE "Build a Hydra core" OFF)
+ option(BUILD_LIBRETRO_CORE "Build a Libretro core" OFF)
++option(BUILD_BENCH "Build panda3ds-bench, the headless benchmark frontend (EGL)" OFF)
+ option(ENABLE_RENDERDOC_API "Build with support for Renderdoc's capture API for graphics debugging" ON)
+ option(DISABLE_SSE4 "Build with SSE4 instructions disabled, may reduce performance" OFF)
+ option(ENABLE_FASTMEM "Build with support for hardware fastmem" ON)
+@@ -755,6 +756,13 @@ else()
+     target_compile_definitions(AlberCore PUBLIC "PANDA3DS_FRONTEND_SDL=1")
+ endif()
+ 
++if(BUILD_BENCH)
++    add_executable(panda3ds-bench src/panda_bench/main.cpp)
++    target_link_libraries(panda3ds-bench PRIVATE AlberCore EGL)
++    add_executable(texture-decode-test tests/banana/texture_decode_test.cpp)
++    target_link_libraries(texture-decode-test PRIVATE AlberCore EGL)
++endif()
++
+ if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
+     add_executable(Alber)
+ 
+diff --git a/include/PICA/gpu.hpp b/include/PICA/gpu.hpp
+index e62f41b3..7ac28f98 100644
+--- a/include/PICA/gpu.hpp
++++ b/include/PICA/gpu.hpp
+@@ -1,4 +1,8 @@
+ #pragma once
++#include <functional>
++#include <vector>
++
++#include "PICA/gpu_worker.hpp"
+ #include <array>
+ 
+ #include "PICA/draw_acceleration.hpp"
+@@ -43,6 +47,9 @@ class GPU {
+ 
+ 	std::array<vec4f, 16> immediateModeAttributes;  // Vertex attributes uploaded via immediate mode submission
+ 	std::array<PICA::Vertex, 3> immediateModeVertices;
++	// Immediate-mode triangles not drawn yet (regs.cpp: drawn when anything but vertex data is written)
++	std::vector<PICA::Vertex> immediateBatch;
++	void flushImmediateBatch();
+ 
+ 	// Pointers for the output registers as arranged after GPUREG_VSH_OUTMAP_MASK is applied
+ 	std::array<Floats::f24*, 16> vsOutputRegisters;
+@@ -105,9 +112,39 @@ class GPU {
+ 	std::array<uint32_t, 128> fogLUT;
+ 
+ 	GPU(Memory& mem, EmulatorConfig& config);
+-	void display() { renderer->display(); }
+-	void screenshot(const std::string& name) { renderer->screenshot(name); }
+-	void deinitGraphicsContext() { renderer->deinitGraphicsContext(); }
++	void display() {
++		runAsync([this] { renderer->display(); });
++	}
++	void screenshot(const std::string& name) {
++		runSync([this, name] { renderer->screenshot(name); });
++	}
++	void deinitGraphicsContext() {
++		runSync([this] { renderer->deinitGraphicsContext(); });
++	}
++
++	// The GPU's own thread (gpu_worker.hpp). Without one, everything runs on the caller's thread as before.
++	void startThread(std::function<void()> onStart) {
++		if (!worker.running()) worker.start(std::move(onStart));
++	}
++	void stopThread() { worker.stop(); }
++	bool isThreaded() const { return worker.running(); }
++	// fn runs on the GPU thread after everything submitted before it (or right here, with no GPU thread)
++	void runAsync(std::function<void()> fn) {
++		if (worker.running()) {
++			worker.submit(std::move(fn));
++		} else {
++			fn();
++		}
++	}
++	// The same, and waits for it
++	void runSync(std::function<void()> fn) {
++		runAsync(std::move(fn));
++		sync();
++	}
++	// Waits until everything submitted has run (reading the GPU's registers, a DMA, a reset)
++	void sync() {
++		if (worker.running()) worker.drain();
++	}
+ 
+ 	void initGraphicsContext(void* context) { renderer->initGraphicsContext(context); }
+ 
+@@ -140,6 +177,12 @@ class GPU {
+ 
+ 	// TODO: Emulate the transfer engine & its registers
+ 	// Then this can be emulated by just writing the appropriate values there
++	// The CPU may have changed guest memory the GPU caches (GSP data cache flush/invalidate)
++	// (on the GPU thread, in order with the work the game submits after the write)
++	void cpuWroteRange(u32 paddr, u32 size) {
++		runAsync([this, paddr, size] { renderer->markRangeDirty(paddr, size); });
++	}
++
+ 	void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) {
+ 		renderer->displayTransfer(inputAddr, outputAddr, inputSize, outputSize, flags);
+ 	}
+@@ -182,6 +225,8 @@ class GPU {
+ 	Renderer* getRenderer() { return renderer.get(); }
+ 
+   private:
++	GPUWorker worker;
++
+ 	// GPU external registers
+ 	// We have them in the end of the struct for cache locality reasons. Tl;dr we want the more commonly used things to be packed in the start
+ 	// Of the struct, instead of externalRegs being in the middle
+diff --git a/include/PICA/gpu_worker.hpp b/include/PICA/gpu_worker.hpp
+new file mode 100644
+index 00000000..a0c478bb
+--- /dev/null
++++ b/include/PICA/gpu_worker.hpp
+@@ -0,0 +1,79 @@
++#pragma once
++#include <condition_variable>
++#include <deque>
++#include <functional>
++#include <mutex>
++#include <thread>
++
++// The GPU on a thread of its own (BananaOS): the GSP's work (command lists, memory fills, display transfers, texture
++// copies, the frame's display) runs here in the order it was submitted, on the thread that owns the GL context, while
++// the emulated CPU goes on. On a 3DS the PICA and the transfer engine run beside the ARM11 too; games wait for their
++// interrupts before touching what they draw, and GPUService delivers those interrupts only once this queue is empty.
++//
++// On a handheld with four slow cores this takes the renderer and the GL driver (a large part of a 3D frame) off the
++// emulated CPU's core.
++class GPUWorker {
++	std::thread thread;
++	std::mutex lock;
++	std::condition_variable workReady, workDone;
++	std::deque<std::function<void()>> queue;
++	bool working = false;  // an item is running
++	bool quit = false;
++
++	void loop(std::function<void()> onStart) {
++		if (onStart) onStart();
++		std::unique_lock guard(lock);
++		while (true) {
++			workReady.wait(guard, [this] { return quit || !queue.empty(); });
++			if (queue.empty() && quit) break;
++			auto item = std::move(queue.front());
++			queue.pop_front();
++			working = true;
++			guard.unlock();
++			item();
++			guard.lock();
++			working = false;
++			if (queue.empty()) workDone.notify_all();
++		}
++	}
++
++  public:
++	~GPUWorker() { stop(); }
++
++	bool running() const { return thread.joinable(); }
++
++	// onStart runs first on the new thread (making the GL context current there)
++	void start(std::function<void()> onStart) {
++		quit = false;
++		thread = std::thread([this, onStart = std::move(onStart)] { loop(onStart); });
++	}
++
++	void stop() {
++		if (!thread.joinable()) return;
++		{
++			std::scoped_lock guard(lock);
++			quit = true;
++		}
++		workReady.notify_all();
++		thread.join();
++	}
++
++	void submit(std::function<void()> item) {
++		{
++			std::scoped_lock guard(lock);
++			queue.push_back(std::move(item));
++		}
++		workReady.notify_one();
++	}
++
++	// Wait until everything submitted so far has run
++	void drain() {
++		std::unique_lock guard(lock);
++		workDone.wait(guard, [this] { return queue.empty() && !working; });
++	}
++
++	bool idle() {
++		std::scoped_lock guard(lock);
++		return queue.empty() && !working;
++	}
++};
+diff --git a/include/banana_opts.hpp b/include/banana_opts.hpp
+new file mode 100644
+index 00000000..2efa27a1
+--- /dev/null
++++ b/include/banana_opts.hpp
+@@ -0,0 +1,14 @@
++#pragma once
++#include <cstdlib>
++
++// BananaOS's speed work on Panda3DS can be switched off as a whole for A/B measurements: PANDA3DS_BASELINE=1 in the
++// environment runs the code paths upstream Panda3DS runs (panda3ds-bench, tools/3ds-perf in BananaOS).
++namespace Banana {
++	inline bool baseline() {
++		static const bool off = [] {
++			const char* v = std::getenv("PANDA3DS_BASELINE");
++			return v != nullptr && v[0] == '1';
++		}();
++		return off;
++	}
++}  // namespace Banana
+diff --git a/include/cpu_dynarmic.hpp b/include/cpu_dynarmic.hpp
+index 24358533..aaecba51 100644
+--- a/include/cpu_dynarmic.hpp
++++ b/include/cpu_dynarmic.hpp
+@@ -6,6 +6,7 @@
+ #include "dynarmic/interface/A32/config.h"
+ #include "dynarmic/interface/exclusive_monitor.h"
+ #include "dynarmic_cp15.hpp"
++#include "banana_opts.hpp"
+ #include "helpers.hpp"
+ #include "kernel.hpp"
+ #include "memory.hpp"
+@@ -78,6 +79,8 @@ class MyEnvironment final : public Dynarmic::A32::UserCallbacks {
+         std::terminate();
+     }
+ 
++	bool IsReadOnlyMemory(u32 vaddr) override { return !Banana::baseline() && mem.isReadOnlyCode(vaddr); }
++
+ 	void CallSVC(u32 swi) override {
+ 		kernel.serviceSVC(swi);
+ 	}
+@@ -181,6 +184,12 @@ class CPU {
+     void addTicks(u64 ticks) { env.AddTicks(ticks); }
+ 
+     void clearCache() { jit->ClearCache(); }
++    // Leave the JIT at the end of the current block, to handle a scheduler event that time skipped to
++    // (the x64 JIT checks the halt flag between blocks; the arm64 one only its cycle count, which it reads again after an SVC)
++    void haltForScheduler() {
++        env.ticksLeft = 0;
++        jit->HaltExecution(Dynarmic::HaltReason::UserDefined1);
++    }
+     void clearCacheRange(u32 start, u32 size) { jit->InvalidateCacheRange(start, size); }
+ 
+     void runFrame();
+diff --git a/include/emulator.hpp b/include/emulator.hpp
+index b1191f6e..657098c6 100644
+--- a/include/emulator.hpp
++++ b/include/emulator.hpp
+@@ -105,6 +105,11 @@ class Emulator {
+ 
+ 	// For passing the SDL Window, GL context, etc from the frontend to the renderer
+ 	void initGraphicsContext(void* context) { gpu.initGraphicsContext(context); }
++	// The GPU's work on a thread of its own (PICA/gpu_worker.hpp); onStart runs on it first (to make the GL context current)
++	void startGPUThread(std::function<void()> onStart) { gpu.startThread(std::move(onStart)); }
++	// fn on the GPU's thread (the one with the GL context), waited for
++	void runOnGPUThread(std::function<void()> fn) { gpu.runSync(std::move(fn)); }
++	void syncGPU() { gpu.sync(); }
+ 
+ 	RomFS::DumpingResult dumpRomFS(const std::filesystem::path& path);
+ 	void setOutputSize(u32 width, u32 height) { gpu.setOutputSize(width, height); }
+diff --git a/include/kernel/kernel.hpp b/include/kernel/kernel.hpp
+index c6d5044e..89a452d9 100644
+--- a/include/kernel/kernel.hpp
++++ b/include/kernel/kernel.hpp
+@@ -1,4 +1,5 @@
+ #pragma once
++#include <functional>
+ #include <array>
+ #include <span>
+ #include <string>
+@@ -144,6 +145,12 @@ class Kernel {
+ 	MAKE_LOG_FUNCTION(logFileIO, fileIOLogger)
+ 	MAKE_LOG_FUNCTION_USER(logDebugString, debugStringLogger)
+ 
++  public:
++	// Called with every svcOutputDebugString message (the benchmark frontend reads its scene markers from them)
++	std::function<void(const std::string&)> debugStringHook;
++
++  private:
++
+ 	// SVC implementations
+ 	void arbitrateAddress();
+ 	void createAddressArbiter();
+diff --git a/include/memory.hpp b/include/memory.hpp
+index d21e4be2..19880b17 100644
+--- a/include/memory.hpp
++++ b/include/memory.hpp
+@@ -295,6 +295,9 @@ class Memory {
+ 	);
+ 	void changePermissions(u32 vaddr, s32 pages, bool r, bool w, bool x);
+ 	Result::HorizonResult queryMemory(KernelMemoryTypes::MemoryInfo& out, u32 vaddr);
++	// Whether vaddr is in a code segment the game can't write (its .text or .rodata): the JIT may read it while
++	// translating and use what it read as a constant (literal pools). Permission changes clear the JIT's cache of the range.
++	bool isReadOnlyCode(u32 vaddr);
+ 	Result::HorizonResult testMemoryState(u32 vaddr, s32 pages, KernelMemoryTypes::MemoryState desiredState);
+ 
+ 	void copyToVaddr(u32 dstVaddr, const u8* srcHost, s32 size);
+diff --git a/include/renderer.hpp b/include/renderer.hpp
+index 27d6a437..1ea9585f 100644
+--- a/include/renderer.hpp
++++ b/include/renderer.hpp
+@@ -3,6 +3,7 @@
+ #include <optional>
+ #include <span>
+ #include <string>
++#include <vector>
+ 
+ #include "PICA/draw_acceleration.hpp"
+ #include "PICA/pica_vertex.hpp"
+@@ -53,6 +54,9 @@ class Renderer {
+ 	EmulatorConfig* emulatorConfig = nullptr;
+ 
+ 	void doSoftwareTextureCopy(u32 inputAddr, u32 outputAddr, u32 copySize, u32 inputWidth, u32 inputGap, u32 outputWidth, u32 outputGap);
++	// Display transfer done on the CPU, from guest memory to guest memory (tiled <-> linear, format conversion, flip,
++	// 2x downscale). Returns false for transfers it does not handle. Invalidates the destination range.
++	bool doSoftwareDisplayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags);
+ 
+   public:
+ 	Renderer(GPU& gpu, const std::array<u32, regNum>& internalRegs, const std::array<u32, extRegNum>& externalRegs);
+@@ -70,7 +74,17 @@ class Renderer {
+ 	virtual void textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32 inputSize, u32 outputSize, u32 flags) = 0;
+ 	virtual void drawVertices(PICA::PrimType primType, std::span<const PICA::Vertex> vertices) = 0;  // Draw the given vertices
+ 
++	// Guest memory in [paddr, paddr + size) was changed behind the renderer's back (CPU writes made visible with a
++	// cache flush, or a transfer done in software): drop whatever the renderer decoded from it.
++	virtual void invalidateRange(u32 paddr, u32 size) {}
++	// The CPU may have written guest memory in [paddr, paddr + size) (a GSP data cache flush): cheaper than
++	// invalidateRange, the renderer checks whether what it decoded from there really changed when it next uses it.
++	virtual void markRangeDirty(u32 paddr, u32 size) {}
++
+ 	virtual void screenshot(const std::string& name) = 0;
++	// Reads the composited 3DS screens (400x480 RGBA8, rows top to bottom: top screen over the centred bottom screen) as
++	// of the last display(). Independent of the window, so it also works on a surfaceless context. False if unsupported.
++	virtual bool readScreen(std::vector<u8>& rgba) { return false; }
+ 	// Some frontends and platforms may require that we delete our GL or misc context and obtain a new one for things like exclusive fullscreen
+ 	// This function does things like write back or cache necessary state before we delete our context
+ 	virtual void deinitGraphicsContext() = 0;
+diff --git a/include/renderer_gl/renderer_gl.hpp b/include/renderer_gl/renderer_gl.hpp
+index 2023966f..8c0a61e9 100644
+--- a/include/renderer_gl/renderer_gl.hpp
++++ b/include/renderer_gl/renderer_gl.hpp
+@@ -11,6 +11,7 @@
+ 
+ #include "PICA/float_types.hpp"
+ #include "PICA/pica_frag_config.hpp"
++#include "PICA/pica_frag_uniforms.hpp"
+ #include "PICA/pica_hash.hpp"
+ #include "PICA/pica_vert_config.hpp"
+ #include "PICA/pica_vertex.hpp"
+@@ -29,6 +30,11 @@
+ class GPU;
+ 
+ class RendererGL final : public Renderer {
++	// The fragment uniforms and vertex uniform range last bound (getSpecializedShader skips re-uploading them)
++	PICA::FragmentUniforms lastFragmentUniforms;
++	bool fragmentUniformsValid = false;
++	u32 boundVertexUniformOffset = ~0u;
++
+ 	GLStateManager gl = {};
+ 
+ 	OpenGL::Program triangleProgram;
+@@ -213,4 +219,7 @@ class RendererGL final : public Renderer {
+ 
+ 	// Take a screenshot of the screen and store it in a file
+ 	void screenshot(const std::string& name) override;
++	bool readScreen(std::vector<u8>& rgba) override;
++	void invalidateRange(u32 paddr, u32 size) override;
++	void markRangeDirty(u32 paddr, u32 size) override;
+ };
+\ No newline at end of file
+diff --git a/include/renderer_gl/surface_cache.hpp b/include/renderer_gl/surface_cache.hpp
+index 214ee7fb..70e68d67 100644
+--- a/include/renderer_gl/surface_cache.hpp
++++ b/include/renderer_gl/surface_cache.hpp
+@@ -71,6 +71,47 @@ class SurfaceCache {
+ 		return std::nullopt;
+ 	}
+ 
++	// The valid surface that starts exactly at this address, if any
++	OptionalRef findExact(u32 address) {
++		auto range = surfaceMap.equal_range(address);
++		for (auto it = range.first; it != range.second; ++it) {
++			if (it->second->valid) return *it->second;
++		}
++		return std::nullopt;
++	}
++
++	// Drops every valid surface overlapping [start, end), so that it is created again from memory on its next use.
++	// Returns how many were dropped.
++	size_t invalidateRange(u32 start, u32 end) {
++		size_t dropped = 0;
++		for (auto it = surfaceMap.begin(); it != surfaceMap.end() && it->first < end;) {
++			SurfaceType* surface = it->second;
++			if (surface->valid && u64(surface->location) + surface->sizeInBytes() > start) {
++				it = surfaceMap.erase(it);
++				surface->valid = false;
++				surface->free();
++				if (size > 0) size--;
++				dropped++;
++			} else {
++				++it;
++			}
++		}
++		return dropped;
++	}
++
++	// Flags every valid surface overlapping [start, end) as dirty (only for surface types with a dirty flag)
++	size_t markDirtyRange(u32 start, u32 end) {
++		size_t marked = 0;
++		for (auto it = surfaceMap.begin(); it != surfaceMap.end() && it->first < end; ++it) {
++			SurfaceType* surface = it->second;
++			if (surface->valid && u64(surface->location) + surface->sizeInBytes() > start) {
++				surface->dirty = true;
++				marked++;
++			}
++		}
++		return marked;
++	}
++
+ 	OptionalRef findFromAddress(u32 address) {
+ 		for (auto it = surfaceMap.begin(); it != surfaceMap.end(); ++it) {
+ 			SurfaceType* surface = it->second;
+diff --git a/include/renderer_gl/textures.hpp b/include/renderer_gl/textures.hpp
+index 9663c2b4..d29f0a8d 100644
+--- a/include/renderer_gl/textures.hpp
++++ b/include/renderer_gl/textures.hpp
+@@ -18,6 +18,10 @@ struct Texture {
+ 	u32 location;
+ 	u32 config;  // Magnification/minification filter, wrapping configs, etc
+ 	Hash hash = Hash(0);
++	// Hash of the guest memory the GL texture was decoded from, and whether that memory may have changed since (the CPU
++	// flushed a range overlapping it): a dirty texture is hashed again on its next use, and decoded again if it changed
++	Hash dataHash = Hash(0);
++	bool dirty = false;
+ 
+ 	PICA::TextureFmt format;
+ 	OpenGL::uvec2 size;
+@@ -46,6 +50,8 @@ struct Texture {
+ 	void allocate();
+ 	void setNewConfig(u32 newConfig);
+ 	void decodeTexture(std::span<const u8> data);
++	// The texture as RGBA8 rows (width * height texels), as decodeTexture uploads it
++	void decodeToRGBA8(std::span<const u8> data, u32* out);
+ 	void free();
+ 	u64 sizeInBytes();
+ 
+diff --git a/include/services/gsp_gpu.hpp b/include/services/gsp_gpu.hpp
+index 4ac8e747..f5dbc504 100644
+--- a/include/services/gsp_gpu.hpp
++++ b/include/services/gsp_gpu.hpp
+@@ -1,4 +1,5 @@
+ #pragma once
++#include <vector>
+ #include <cstring>
+ #include <optional>
+ 
+@@ -100,6 +101,10 @@ class GPUService {
+ 	void flushCacheRegions(u32* cmd);
+ 
+ 	void setBufferSwapImpl(u32 screen_id, const FramebufferInfo& info);
++	void setBufferSwapRegs(u32 screenId, const FramebufferInfo& info);
++
++	std::vector<GPUInterrupt> pendingInterrupts;
++	void interruptWhenDone(GPUInterrupt type);
+ 
+ 	// Get the framebuffer info in shared memory for a given screen
+ 	FramebufferUpdate* getFramebufferInfo(int screen) {
+@@ -115,6 +120,8 @@ class GPUService {
+ 	void reset();
+ 	void handleSyncRequest(u32 messagePointer);
+ 	void requestInterrupt(GPUInterrupt type);
++	// Sends the interrupts of work done on the GPU thread, after waiting for it (false: there were none)
++	bool deliverPendingInterrupts();
+ 	void setSharedMem(u8* ptr) {
+ 		sharedMem = ptr;
+ 		if (ptr != nullptr) {  // Zero-fill shared memory in case the process tries to read stale service data or vice versa
+diff --git a/include/services/service_manager.hpp b/include/services/service_manager.hpp
+index f51ddf2d..aeb816f7 100644
+--- a/include/services/service_manager.hpp
++++ b/include/services/service_manager.hpp
+@@ -125,6 +125,7 @@ class ServiceManager {
+ 
+ 	// Wrappers for communicating with certain services
+ 	void sendGPUInterrupt(GPUInterrupt type) { gsp_gpu.requestInterrupt(type); }
++	GPUService& getGSPGPU() { return gsp_gpu; }
+ 	void setGSPSharedMem(u8* ptr) { gsp_gpu.setSharedMem(ptr); }
+ 	void setHIDSharedMem(u8* ptr) { hid.setSharedMem(ptr); }
+ 	void setCSNDSharedMem(u8* ptr) { csnd.setSharedMemory(ptr); }
+diff --git a/src/core/CPU/cpu_dynarmic.cpp b/src/core/CPU/cpu_dynarmic.cpp
+index 124647d8..33f647d6 100644
+--- a/src/core/CPU/cpu_dynarmic.cpp
++++ b/src/core/CPU/cpu_dynarmic.cpp
+@@ -2,6 +2,7 @@
+ #include "cpu_dynarmic.hpp"
+ 
+ #include "arm_defs.hpp"
++#include "banana_opts.hpp"
+ #include "emulator.hpp"
+ 
+ CPU::CPU(Memory& mem, Kernel& kernel, Emulator& emu) : mem(mem), emu(emu), scheduler(emu.getScheduler()), env(mem, kernel, emu.getScheduler()) {
+@@ -22,6 +23,19 @@ CPU::CPU(Memory& mem, Kernel& kernel, Emulator& emu) : mem(mem), emu(emu), sched
+ 		config.fastmem_pointer = std::nullopt;
+ 	}
+ 
++	if (!Banana::baseline()) {
++		// The 3DS runs one ARM11 core for the game, so the exclusive monitor has nobody to watch: exclusive loads and stores
++		// go straight to fastmem. NaN payloads and the FPSCR's non-standard modes are ignored in the generated code (as
++		// Citra-family emulators' handheld builds do): VFP code no longer leaves the fast path for them.
++		config.unsafe_optimizations = true;
++		config.optimizations |= Dynarmic::OptimizationFlag::Unsafe_IgnoreGlobalMonitor | Dynarmic::OptimizationFlag::Unsafe_InaccurateNaN |
++								Dynarmic::OptimizationFlag::Unsafe_IgnoreStandardFPCRValue | Dynarmic::OptimizationFlag::Unsafe_ReducedErrorFP |
++								Dynarmic::OptimizationFlag::Unsafe_UnfuseFMA;
++		config.fastmem_exclusive_access = config.fastmem_pointer.has_value();
++		// A game's code fits in far less than dynarmic's default 128 MB, and the RG DS Plus has 1 GB in all
++		config.code_cache_size = 32 * 1024 * 1024;
++	}
++
+ 	jit = std::make_unique<Dynarmic::A32::Jit>(config);
+ }
+ 
+@@ -55,6 +69,9 @@ void CPU::runFrame() {
+ 			// The goto might be terrible but it does guarantee that this does not recursively call run and crash, instead getting optimized to a jump
+ 			if (Dynarmic::Has(exitReason, Dynarmic::HaltReason::CacheInvalidation)) {
+ 				goto execute;
++			} else if (Dynarmic::Has(exitReason, Dynarmic::HaltReason::UserDefined1)) {
++				// haltForScheduler: the scheduler was polled above, run on
++				continue;
+ 			} else {
+ 				Helpers::panic("Exit reason: %d\nPC: %08X", static_cast<u32>(exitReason), getReg(15));
+ 			}
+diff --git a/src/core/PICA/gpu.cpp b/src/core/PICA/gpu.cpp
+index e38f4416..ea804c2f 100644
+--- a/src/core/PICA/gpu.cpp
++++ b/src/core/PICA/gpu.cpp
+@@ -1,3 +1,4 @@
++#include "banana_opts.hpp"
+ #include "PICA/gpu.hpp"
+ 
+ #include <array>
+@@ -74,6 +75,8 @@ GPU::GPU(Memory& mem, EmulatorConfig& config) : mem(mem), config(config) {
+ }
+ 
+ void GPU::reset() {
++	sync();  // the GPU thread (if any) done with the old state first
++	immediateBatch.clear();
+ 	regs.fill(0);
+ 	shaderUnit.reset();
+ 	shaderJIT.reset();
+@@ -126,7 +129,7 @@ void GPU::reset() {
+ 	externalRegs[Framebuffer1Config] = static_cast<u32>(PICA::ColorFmt::RGB8);
+ 	externalRegs[Framebuffer1Select] = 0;
+ 
+-	renderer->reset();
++	runSync([this] { renderer->reset(); });
+ }
+ 
+ static std::array<PICA::Vertex, Renderer::vertexBufferSize> vertices;
+@@ -400,7 +403,13 @@ PICA::Vertex GPU::getImmediateModeVertex() {
+ 	}
+ 
+ 	// Run VS and return vertex data. TODO: Don't hardcode offsets for each attribute
+-	shaderUnit.vs.run();
++	if (ShaderJIT::isAvailable() && config.shaderJitEnabled && !Banana::baseline()) {
++		// The shader JIT, as for vertex arrays (it keeps what it compiled; prepare looks it up)
++		shaderJIT.prepare(shaderUnit.vs);
++		shaderJIT.run(shaderUnit.vs);
++	} else {
++		shaderUnit.vs.run();
++	}
+ 
+ 	// Map shader outputs to fixed function properties
+ 	const u32 totalShaderOutputs = regs[PICA::InternalRegs::ShaderOutputCount] & 7;
+diff --git a/src/core/PICA/regs.cpp b/src/core/PICA/regs.cpp
+index f63ee186..d9fe6317 100644
+--- a/src/core/PICA/regs.cpp
++++ b/src/core/PICA/regs.cpp
+@@ -1,3 +1,4 @@
++#include "banana_opts.hpp"
+ #include "PICA/regs.hpp"
+ 
+ #include "PICA/gpu.hpp"
+@@ -84,6 +85,12 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
+ 		return;
+ 	}
+ 
++	// Immediate-mode triangles wait in a batch while only vertex data comes in: any other register write may change what
++	// they are drawn with, so they are drawn first
++	if (!immediateBatch.empty() && (index < FixedAttribIndex || index > FixedAttribData2)) [[unlikely]] {
++		flushImmediateBatch();
++	}
++
+ 	u32 currentValue = regs[index];
+ 	u32 newValue = (currentValue & ~mask) | (value & mask);  // Only overwrite the bits specified by "mask"
+ 	regs[index] = newValue;
+@@ -249,8 +256,15 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
+ 						// If we've reached 3 verts, issue a draw call
+ 						// Handle rendering depending on the primitive type
+ 						if (immediateModeVertIndex == 3) {
+-							renderer->prepareForDraw(shaderUnit, nullptr);
+-							renderer->drawVertices(PICA::PrimType::TriangleList, immediateModeVertices);
++							if (Banana::baseline()) {
++								renderer->prepareForDraw(shaderUnit, nullptr);
++								renderer->drawVertices(PICA::PrimType::TriangleList, immediateModeVertices);
++							} else {
++								// One draw for the run of triangles instead of one per triangle (a draw costs the same set-up
++								// whatever its size)
++								if (immediateBatch.size() + 3 > Renderer::vertexBufferSize) flushImmediateBatch();
++								immediateBatch.insert(immediateBatch.end(), immediateModeVertices.begin(), immediateModeVertices.end());
++							}
+ 
+ 							switch (primType) {
+ 								// Triangle or geometry primitive. Draw a triangle and discard all vertices
+@@ -427,4 +441,13 @@ void GPU::startCommandList(u32 addr, u32 size) {
+ 			writeInternalReg(id, param, mask);
+ 		}
+ 	}
++
++	flushImmediateBatch();
++}
++
++void GPU::flushImmediateBatch() {
++	if (immediateBatch.empty()) return;
++	renderer->prepareForDraw(shaderUnit, nullptr);
++	renderer->drawVertices(PICA::PrimType::TriangleList, immediateBatch);
++	immediateBatch.clear();
+ }
+diff --git a/src/core/kernel/kernel.cpp b/src/core/kernel/kernel.cpp
+index 7a0aacc0..f912aa92 100644
+--- a/src/core/kernel/kernel.cpp
++++ b/src/core/kernel/kernel.cpp
+@@ -231,6 +231,7 @@ void Kernel::outputDebugString() {
+ 
+ 	std::string message = mem.readString(pointer, size);
+ 	logDebugString("[OutputDebugString] %s\n", message.c_str());
++	if (debugStringHook) debugStringHook(message);
+ 	regs[0] = Result::Success;
+ }
+ 
+diff --git a/src/core/kernel/memory_management.cpp b/src/core/kernel/memory_management.cpp
+index 9199a32c..cbdaf376 100644
+--- a/src/core/kernel/memory_management.cpp
++++ b/src/core/kernel/memory_management.cpp
+@@ -1,4 +1,5 @@
+ #include "kernel.hpp"
++#include "cpu.hpp"
+ 
+ namespace Operation {
+ 	enum : u32 {
+@@ -120,6 +121,8 @@ void Kernel::controlMemory() {
+ 			}
+ 
+ 			mem.changePermissions(addr0, pages, r, w, false);
++			// Code the JIT translated may have read this memory as constants (Memory::isReadOnlyCode)
++			cpu.clearCacheRange(addr0, pages * Memory::pageSize);
+ 			regs[1] = addr0;
+ 			break;
+ 
+diff --git a/src/core/kernel/threads.cpp b/src/core/kernel/threads.cpp
+index 5ada30e3..ab3618b2 100644
+--- a/src/core/kernel/threads.cpp
++++ b/src/core/kernel/threads.cpp
+@@ -5,6 +5,7 @@
+ #include <limits>
+ 
+ #include "arm_defs.hpp"
++#include "banana_opts.hpp"
+ #include "kernel.hpp"
+ // This header needs to be included because I did stupid forward decl hack so the kernel and CPU can both access each
+ // other
+@@ -384,7 +385,18 @@ void Kernel::sleepThread(s64 ns) {
+ 				switchThread(index);
+ 			}
+ 		} else {
+-			if (currentThreadIndex == idleThreadIndex) {
++			// Nothing can run: the GPU thread's work is waited for and its interrupts sent, which wakes whoever waits for them
++			// (gsp_gpu.cpp). Time moves on only when there were none.
++			if (serviceManager.getGSPGPU().deliverPendingInterrupts()) {
++				requireReschedule();
++				return;
++			}
++
++			// A game thread yielding with nothing else to run spins on a 3DS until an interrupt or a timer changes something,
++			// and here nothing can change before the scheduler's next event or a sleeping thread's wakeup: time skips to it,
++			// as it does for the idle thread, instead of the spin being emulated (a busy-wait cost the emulator as much as
++			// the game's own work)
++			if (currentThreadIndex == idleThreadIndex || !Banana::baseline()) {
+ 				const Scheduler& scheduler = cpu.getScheduler();
+ 				u64 timestamp = scheduler.nextTimestamp;
+ 
+@@ -392,13 +404,27 @@ void Kernel::sleepThread(s64 ns) {
+ 					const Thread& t = threads[i];
+ 					if (t.status == ThreadStatus::WaitSleep || t.status == ThreadStatus::WaitSync1 || t.status == ThreadStatus::WaitSyncAny ||
+ 						t.status == ThreadStatus::WaitSyncAll) {
+-						timestamp = std::min<u64>(timestamp, t.wakeupTick);
++						// A wakeup tick already behind us is a wait whose timeout the scheduler's own wakeup event handles (or a
++						// stale one from an earlier wait): it must not stop the skip, or the idle loop spins for the whole wait
++						// (over a million SVCs a second in a game waiting for the GPU)
++						if (Banana::baseline() || t.wakeupTick > scheduler.currentTimestamp) {
++							timestamp = std::min<u64>(timestamp, t.wakeupTick);
++						}
+ 					}
+ 				}
+ 
+ 				if (timestamp > scheduler.currentTimestamp) {
+ 					u64 idleCycles = timestamp - scheduler.currentTimestamp;
+ 					cpu.addTicks(idleCycles);
++					// The JIT counts its own cycles from what was left when it started running: it would go on spinning the
++					// idle loop (tens of thousands of SVCs a frame) until those ran out. It stops now, and the scheduler's
++					// event (a VBlank, a GPU interrupt, a thread's wakeup) is handled straight away.
++					if (!Banana::baseline()) {
++						cpu.haltForScheduler();
++					}
++				} else if (!Banana::baseline()) {
++					// The scheduler's next event is already due: leave the JIT so it is handled, instead of spinning until it is
++					cpu.haltForScheduler();
+ 				}
+ 			}
+ 		}
+diff --git a/src/core/memory.cpp b/src/core/memory.cpp
+index f962b8d4..fe209dea 100644
+--- a/src/core/memory.cpp
++++ b/src/core/memory.cpp
+@@ -519,6 +519,15 @@ void Memory::changePermissions(u32 vaddr, s32 pages, bool r, bool w, bool x) {
+ 	}
+ }
+ 
++bool Memory::isReadOnlyCode(u32 vaddr) {
++	for (auto& alloc : memoryInfo) {
++		if (vaddr >= alloc.baseAddr && vaddr < alloc.end()) {
++			return alloc.state == KernelMemoryTypes::MemoryState::Code && (alloc.perms & PERMISSION_R) != 0 && (alloc.perms & PERMISSION_W) == 0;
++		}
++	}
++	return false;
++}
++
+ Result::HorizonResult Memory::queryMemory(MemoryInfo& out, u32 vaddr) {
+ 	// Check each allocation
+ 	for (auto& alloc : memoryInfo) {
+diff --git a/src/core/renderer_gl/renderer_gl.cpp b/src/core/renderer_gl/renderer_gl.cpp
+index 659a1e1d..6cb21089 100644
+--- a/src/core/renderer_gl/renderer_gl.cpp
++++ b/src/core/renderer_gl/renderer_gl.cpp
+@@ -1,4 +1,5 @@
+ #include "renderer_gl/renderer_gl.hpp"
++#include "banana_opts.hpp"
+ 
+ #include <stb_image_write.h>
+ 
+@@ -26,6 +27,8 @@ using namespace PICA;
+ RendererGL::~RendererGL() {}
+ 
+ void RendererGL::reset() {
++	fragmentUniformsValid = false;
++	boundVertexUniformOffset = ~0u;
+ 	depthBufferCache.reset();
+ 	colourBufferCache.reset();
+ 	textureCache.reset();
+@@ -327,6 +330,18 @@ void RendererGL::setupUbershaderTexEnv() {
+ 	glUniform1uiv(ubershaderData.textureEnvScaleLoc, 6, textureEnvScaleRegs);
+ }
+ 
++// Filtering and wrapping of a texture unit (TEXUNITn_PARAM), as Texture::setNewConfig applies to cached textures
++static void setSamplerConfig(OpenGL::Texture& tex, u32 cfg) {
++	static constexpr std::array<OpenGL::WrappingMode, 8> wrappingModes = {
++		OpenGL::ClampToEdge, OpenGL::ClampToBorder, OpenGL::Repeat, OpenGL::RepeatMirrored,
++		OpenGL::ClampToEdge, OpenGL::ClampToBorder, OpenGL::Repeat, OpenGL::Repeat,
++	};
++	tex.setMinFilter((cfg & 0x4) != 0 ? OpenGL::Linear : OpenGL::Nearest);
++	tex.setMagFilter((cfg & 0x2) != 0 ? OpenGL::Linear : OpenGL::Nearest);
++	tex.setWrapT(wrappingModes[getBits<8, 3>(cfg)]);
++	tex.setWrapS(wrappingModes[getBits<12, 3>(cfg)]);
++}
++
+ void RendererGL::bindTexturesToSlots() {
+ 	static constexpr std::array<u32, 3> ioBases = {
+ 		PICA::InternalRegs::Tex0BorderColor,
+@@ -350,6 +365,18 @@ void RendererGL::bindTexturesToSlots() {
+ 		glActiveTexture(GL_TEXTURE0 + i);
+ 
+ 		if (addr != 0) [[likely]] {
++			// Render to texture: a colour buffer the GPU drew at this address, with the same size and format, is the
++			// texture. Its pixels only exist in its GL texture (nothing writes them back to guest memory), so sample that.
++			if (!Banana::baseline() && format <= 4) [[likely]] {
++				auto colour = colourBufferCache.findExact(addr);
++				if (colour && u32(colour->get().format) == format && colour->get().size.x() == width && colour->get().size.y() == height) {
++					OpenGL::Texture& tex = colour->get().texture;
++					tex.bind();
++					setSamplerConfig(tex, config);
++					continue;
++				}
++			}
++
+ 			Texture targetTex(addr, static_cast<PICA::TextureFmt>(format), width, height, config);
+ 
+ 			if (hashTextures) {
+@@ -673,6 +700,30 @@ void RendererGL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 co
+ 	}
+ 
+ 	log("[RendererGL::ClearBuffer] No buffer found!\n");
++	if (!Banana::baseline()) {
++		// Not a render target: fill guest memory (a texture or a CPU-side buffer) and drop textures decoded from it
++		const u32 width = getBits<8, 2>(control);  // 0: 16-bit, 1: 24-bit, 2/3: 32-bit values
++		const u32 bytes = width == 0 ? 2 : width == 1 ? 3 : 4;
++		if (endAddress > startAddress) {
++			u8* p = gpu.getPointerPhys<u8>(startAddress, endAddress - startAddress);
++			if (p != nullptr) {
++				for (u32 i = 0; i + bytes <= endAddress - startAddress; i += bytes) {
++					for (u32 b = 0; b < bytes; b++) p[i + b] = u8(value >> (8 * b));
++				}
++				invalidateRange(startAddress, endAddress - startAddress);
++			}
++		}
++	}
++}
++
++void RendererGL::invalidateRange(u32 paddr, u32 size) {
++	if (Banana::baseline()) return;
++	textureCache.invalidateRange(paddr, paddr + size);
++}
++
++void RendererGL::markRangeDirty(u32 paddr, u32 size) {
++	if (Banana::baseline()) return;
++	textureCache.markDirtyRange(paddr, paddr + size);
+ }
+ 
+ OpenGL::Framebuffer RendererGL::getColourFBO() {
+@@ -712,7 +763,21 @@ OpenGL::Texture RendererGL::getTexture(Texture& tex) {
+ 	auto buffer = textureCache.find(tex);
+ 
+ 	if (buffer.has_value()) {
+-		return buffer.value().get().texture;
++		Texture& cached = buffer.value().get();
++		if (cached.dirty) [[unlikely]] {
++			// The CPU flushed memory overlapping this texture since we decoded it: decode again only if it changed
++			cached.dirty = false;
++			const u8* startPointer = gpu.getPointerPhys<u8>(cached.location, u32(cached.sizeInBytes()));
++			if (startPointer != nullptr) {
++				const auto data = std::span{startPointer, usize(cached.sizeInBytes())};
++				const auto newHash = PICAHash::computeHash((const char*)data.data(), data.size());
++				if (newHash != cached.dataHash) {
++					cached.dataHash = newHash;
++					cached.decodeTexture(data);
++				}
++			}
++		}
++		return cached.texture;
+ 	} else {
+ 		const u8* startPointer = gpu.getPointerPhys<u8>(tex.location);
+ 		const usize sizeInBytes = tex.sizeInBytes();
+@@ -725,6 +790,8 @@ OpenGL::Texture RendererGL::getTexture(Texture& tex) {
+ 		const auto textureData = std::span{startPointer, tex.sizeInBytes()};  // Get pointer to the texture data in 3DS memory
+ 		Texture& newTex = textureCache.add(tex);
+ 		newTex.decodeTexture(textureData);
++		newTex.dirty = false;
++		if (!Banana::baseline()) newTex.dataHash = PICAHash::computeHash((const char*)textureData.data(), textureData.size());
+ 
+ 		return newTex.texture;
+ 	}
+@@ -755,6 +822,20 @@ void RendererGL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u
+ 		inputWidth, outputWidth, inputHeight, outputHeight
+ 	);
+ 
++	if (!Banana::baseline()) {
++		// A source the GPU never rendered (CPU-written pixels, e.g. a texture upload that tiles a linear image) has no
++		// colour buffer: do the transfer on guest memory instead of blitting an empty surface. Only when the
++		// destination isn't a render target either, since those are displayed from their GL texture.
++		const u32 outBytes = (outputSize & 0xffff) * (outputSize >> 16) * 4;
++		if (!colourBufferCache.findFromAddress(inputAddr) && !colourBufferCache.findFromAddress(outputAddr) &&
++			!colourBufferCache.findFromAddress(outputAddr + outBytes / 2) &&
++			doSoftwareDisplayTransfer(inputAddr, outputAddr, inputSize, outputSize, flags)) {
++			return;
++		}
++		// The destination's guest memory is stale from now on: don't sample old decodes of it
++		textureCache.invalidateRange(outputAddr, outputAddr + outBytes);
++	}
++
+ 	auto srcFramebuffer = getColourBuffer(inputAddr, inputFormat, inputWidth, outputHeight);
+ 	Math::Rect<u32> srcRect = srcFramebuffer->getSubRect(inputAddr, outputWidth, outputHeight);
+ 
+@@ -812,6 +893,13 @@ void RendererGL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32
+ 		// Helpers::warn("Strided texture copy\n");
+ 	}
+ 
++	if (inputWidth == 0 && outputWidth == 0 && !Banana::baseline()) {
++		// Width 0 (citro3d's C3D_SyncTextureCopy(src, 0, dst, 0, size, ...), as C3D_TexUpload uses for VRAM textures) is a
++		// plain contiguous copy. Render targets aren't copied this way, so copy guest memory.
++		doSoftwareTextureCopy(inputAddr, outputAddr, copySize, copySize, 0, copySize, 0);
++		return;
++	}
++
+ 	if (inputWidth != outputWidth) {
+ 		Helpers::warn("Input width does not match output width, cannot accelerate texture copy!");
+ 		return;
+@@ -857,6 +945,8 @@ void RendererGL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32
+ 
+ 	Math::Rect<u32> srcRect = srcFramebuffer->getSubRect(inputAddr, copyWidth, copyHeight);
+ 
++	if (!Banana::baseline()) textureCache.invalidateRange(outputAddr, outputAddr + copySize);
++
+ 	// Assume the destination surface has the same format. Unless the surfaces have the same block width,
+ 	// texture copy does not make sense.
+ 	auto destFramebuffer = getColourBuffer(outputAddr, srcFramebuffer->format, copyWidth, copyHeight);
+@@ -938,6 +1028,8 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
+ 
+ 	// Upload uniform data to our shader's UBO
+ 	PICA::FragmentUniforms uniforms;
++	// All of it zeroed, padding and the parts this draw doesn't use too, so two draws' uniforms compare equal byte for byte
++	std::memset(&uniforms, 0, sizeof(uniforms));
+ 	uniforms.alphaReference = Helpers::getBits<8, 8>(regs[InternalRegs::AlphaTestConfig]);
+ 
+ 	// Set up the texenv buffer color
+@@ -1018,21 +1110,30 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
+ 		}
+ 	}
+ 
+-	// Upload fragment uniforms to UBO
+-	shadergenFragmentUBO->Bind();
+-	auto uboRes = shadergenFragmentUBO->Map(driverInfo.uboAlignment, sizeof(PICA::FragmentUniforms));
+-	std::memcpy(uboRes.pointer, &uniforms, sizeof(PICA::FragmentUniforms));
+-	shadergenFragmentUBO->Unmap(sizeof(PICA::FragmentUniforms));
+-
+-	// Bind our UBOs
+-	glBindBufferRange(
+-		GL_UNIFORM_BUFFER, fsUBOBlockBinding, shadergenFragmentUBO->GetGLBufferId(), uboRes.buffer_offset, sizeof(PICA::FragmentUniforms)
+-	);
++	// Upload fragment uniforms to UBO. Draws in a row mostly share them: the last upload stays bound while they don't change
++	// (only this code writes the stream buffer, so what it last wrote is never overwritten before the next write). Mapping
++	// and unmapping a buffer is one of the dearer things a draw can do on the handhelds' GL drivers.
++	const bool sameFragmentUniforms =
++		!Banana::baseline() && fragmentUniformsValid && std::memcmp(&lastFragmentUniforms, &uniforms, sizeof(PICA::FragmentUniforms)) == 0;
++	if (!sameFragmentUniforms) {
++		shadergenFragmentUBO->Bind();
++		auto uboRes = shadergenFragmentUBO->Map(driverInfo.uboAlignment, sizeof(PICA::FragmentUniforms));
++		std::memcpy(uboRes.pointer, &uniforms, sizeof(PICA::FragmentUniforms));
++		shadergenFragmentUBO->Unmap(sizeof(PICA::FragmentUniforms));
++
++		// Bind our UBOs
++		glBindBufferRange(
++			GL_UNIFORM_BUFFER, fsUBOBlockBinding, shadergenFragmentUBO->GetGLBufferId(), uboRes.buffer_offset, sizeof(PICA::FragmentUniforms)
++		);
++		std::memcpy(&lastFragmentUniforms, &uniforms, sizeof(PICA::FragmentUniforms));
++		fragmentUniformsValid = true;
++	}
+ 
+-	if (usingAcceleratedShader) {
++	if (usingAcceleratedShader && (Banana::baseline() || boundVertexUniformOffset != hwShaderUniformUBOOffset)) {
+ 		glBindBufferRange(
+ 			GL_UNIFORM_BUFFER, vsUBOBlockBinding, hwShaderUniformUBO->GetGLBufferId(), hwShaderUniformUBOOffset, PICAShader::totalUniformSize()
+ 		);
++		boundVertexUniformOffset = hwShaderUniformUBOOffset;
+ 	}
+ 
+ 	return program;
+@@ -1138,29 +1239,36 @@ bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration*
+ 	return usingAcceleratedShader;
+ }
+ 
+-void RendererGL::screenshot(const std::string& name) {
++bool RendererGL::readScreen(std::vector<u8>& rgba) {
+ 	constexpr uint width = 400;
+ 	constexpr uint height = 2 * 240;
+ 
+-	std::vector<uint8_t> pixels, flippedPixels;
+-	pixels.resize(width * height * 4);
+-	flippedPixels.resize(pixels.size());
+-
+-	OpenGL::bindScreenFramebuffer();
+-	glReadPixels(0, 0, width, height, GL_BGRA, GL_UNSIGNED_BYTE, pixels.data());
+-
+-	// Flip the image vertically
+-	for (int y = 0; y < height; y++) {
+-		std::memcpy(&flippedPixels[y * width * 4], &pixels[(height - y - 1) * width * 4], width * 4);
+-		// Swap R and B channels
+-		for (int x = 0; x < width; x++) {
+-			std::swap(flippedPixels[y * width * 4 + x * 4 + 0], flippedPixels[y * width * 4 + x * 4 + 2]);
+-			// Set alpha to 0xFF
+-			flippedPixels[y * width * 4 + x * 4 + 3] = 0xFF;
+-		}
++	std::vector<u8> pixels(width * height * 4);
++	rgba.resize(pixels.size());
++
++	// Read from our own screen framebuffer rather than the window's: it holds both screens at native resolution, whatever
++	// the window layout, and it exists on surfaceless contexts too. RGBA/UNSIGNED_BYTE is the one combination that both
++	// desktop GL and GLES always support.
++	GLint prevRead = 0;
++	glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &prevRead);
++	screenFramebuffer.bind(OpenGL::ReadFramebuffer);
++	glPixelStorei(GL_PACK_ALIGNMENT, 4);
++	glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
++	glBindFramebuffer(GL_READ_FRAMEBUFFER, prevRead);
++
++	// GL rows are bottom to top; force alpha opaque
++	for (uint y = 0; y < height; y++) {
++		u8* dst = &rgba[y * width * 4];
++		std::memcpy(dst, &pixels[(height - y - 1) * width * 4], width * 4);
++		for (uint x = 0; x < width; x++) dst[x * 4 + 3] = 0xFF;
+ 	}
++	return true;
++}
+ 
+-	stbi_write_png(name.c_str(), width, height, 4, flippedPixels.data(), 0);
++void RendererGL::screenshot(const std::string& name) {
++	std::vector<u8> rgba;
++	readScreen(rgba);
++	stbi_write_png(name.c_str(), 400, 2 * 240, 4, rgba.data(), 0);
+ }
+ 
+ void RendererGL::deinitGraphicsContext() {
+diff --git a/src/core/renderer_gl/textures.cpp b/src/core/renderer_gl/textures.cpp
+index 7f4c31bf..94b13974 100644
+--- a/src/core/renderer_gl/textures.cpp
++++ b/src/core/renderer_gl/textures.cpp
+@@ -1,6 +1,10 @@
+ #include "renderer_gl/textures.hpp"
++#include "banana_opts.hpp"
+ #include "colour.hpp"
++#include <algorithm>
+ #include <array>
++#include <cstring>
++#include <vector>
+ 
+ using namespace Helpers;
+ 
+@@ -247,18 +251,195 @@ u32 Texture::decodeTexel(u32 u, u32 v, PICA::TextureFmt fmt, std::span<const u8>
+     }
+ }
+ 
++namespace {
++	// The PICA stores textures in 8x8 tiles, the tiles in rows, and the texels of a tile in Morton (Z) order: texel i of a
++	// tile is at x = bits 0, 2, 4 of i and y = bits 1, 3, 5. Decoding a tile at a time reads the source in order and
++	// works out each texel's place once per format instead of once per texel.
++	struct MortonTable {
++		u8 x[64], y[64];
++		constexpr MortonTable() : x(), y() {
++			for (u32 i = 0; i < 64; i++) {
++				x[i] = u8((i & 1) | ((i >> 1) & 2) | ((i >> 2) & 4));
++				y[i] = u8(((i >> 1) & 1) | ((i >> 2) & 2) | ((i >> 3) & 4));
++			}
++		}
++	};
++	constexpr MortonTable morton;
++
++	template <u32 tileBytes, typename Fn>
++	void decodeTiles(u32 width, u32 height, const u8* src, u32* out, Fn&& texel) {
++		for (u32 ty = 0; ty < height; ty += 8) {
++			for (u32 tx = 0; tx < width; tx += 8) {
++				u32* tile = out + ty * width + tx;
++				for (u32 i = 0; i < 64; i++) {
++					tile[morton.y[i] * width + morton.x[i]] = texel(src, i);
++				}
++				src += tileBytes;
++			}
++		}
++	}
++
++	u16 read16(const u8* p) { return u16(p[0]) | (u16(p[1]) << 8); }
++	u32 rgba(u32 r, u32 g, u32 b, u32 a) { return (a << 24) | (b << 16) | (g << 8) | r; }
++
++	constexpr u32 signExtend3(u32 val) { return u32(s32(val) << 29 >> 29); }
++
++	// One 4x4 ETC1 block, all 16 texels: the same arithmetic as Texture::decodeETC, with the block's two base colours
++	// and modifier tables worked out once. alphaData holds 16 4-bit alphas (ETC1A4) or is all ones (ETC1).
++	void decodeETCBlock(u64 colourData, u64 alphaData, u32* out, u32 stride) {
++		static constexpr s32 modifiers[8][2] = {{2, 8}, {5, 17}, {9, 29}, {13, 42}, {18, 60}, {24, 80}, {33, 106}, {47, 183}};
++		const u32 subindices = getBits<0, 16, u32>(colourData);
++		const u32 negationFlags = getBits<16, 16, u32>(colourData);
++		const bool flip = getBit<32>(colourData);
++		const bool diffMode = getBit<33>(colourData);
++		const u32 table[2] = {getBits<37, 3, u32>(colourData), getBits<34, 3, u32>(colourData)};
++
++		s32 base[2][3];
++		if (diffMode) {
++			const s32 r = getBits<59, 5, s32>(colourData), g = getBits<51, 5, s32>(colourData), b = getBits<43, 5, s32>(colourData);
++			const s32 r2 = r + s32(signExtend3(getBits<56, 3, u32>(colourData)));
++			const s32 g2 = g + s32(signExtend3(getBits<48, 3, u32>(colourData)));
++			const s32 b2 = b + s32(signExtend3(getBits<40, 3, u32>(colourData)));
++			base[0][0] = Colour::convert5To8Bit(r), base[0][1] = Colour::convert5To8Bit(g), base[0][2] = Colour::convert5To8Bit(b);
++			base[1][0] = Colour::convert5To8Bit(r2), base[1][1] = Colour::convert5To8Bit(g2), base[1][2] = Colour::convert5To8Bit(b2);
++		} else {
++			base[0][0] = Colour::convert4To8Bit(getBits<60, 4, s32>(colourData));
++			base[0][1] = Colour::convert4To8Bit(getBits<52, 4, s32>(colourData));
++			base[0][2] = Colour::convert4To8Bit(getBits<44, 4, s32>(colourData));
++			base[1][0] = Colour::convert4To8Bit(getBits<56, 4, s32>(colourData));
++			base[1][1] = Colour::convert4To8Bit(getBits<48, 4, s32>(colourData));
++			base[1][2] = Colour::convert4To8Bit(getBits<40, 4, s32>(colourData));
++		}
++
++		for (u32 v = 0; v < 4; v++) {
++			for (u32 u = 0; u < 4; u++) {
++				const u32 texelIndex = u * 4 + v;
++				const u32 sub = (flip ? v : u) >= 2 ? 1 : 0;
++				s32 modifier = modifiers[table[sub]][(subindices >> texelIndex) & 1];
++				if ((negationFlags >> texelIndex) & 1) modifier = -modifier;
++
++				const u32 alpha = Colour::convert4To8Bit(u8((alphaData >> (4 * texelIndex)) & 0xf));
++				out[v * stride + u] = rgba(
++					u32(std::clamp(base[sub][0] + modifier, 0, 255)), u32(std::clamp(base[sub][1] + modifier, 0, 255)),
++					u32(std::clamp(base[sub][2] + modifier, 0, 255)), alpha
++				);
++			}
++		}
++	}
++
++	template <bool hasAlpha>
++	void decodeETC(u32 width, u32 height, const u8* src, u32* out) {
++		constexpr u32 blockBytes = hasAlpha ? 16 : 8;
++		for (u32 ty = 0; ty < height; ty += 8) {
++			for (u32 tx = 0; tx < width; tx += 8) {
++				// The 4 blocks of a tile: (0, 0), (4, 0), (0, 4), (4, 4)
++				for (u32 b = 0; b < 4; b++) {
++					u64 alphaData = ~u64(0), colourData;
++					if constexpr (hasAlpha) std::memcpy(&alphaData, src, 8);
++					std::memcpy(&colourData, src + (hasAlpha ? 8 : 0), 8);
++					decodeETCBlock(colourData, alphaData, out + (ty + (b >> 1) * 4) * width + tx + (b & 1) * 4, width);
++					src += blockBytes;
++				}
++			}
++		}
++	}
++}  // namespace
++
+ void Texture::decodeTexture(std::span<const u8> data) {
+-    std::vector<u32> decoded;
+-    decoded.reserve(u64(size.u()) * u64(size.v()));
+-
+-    // Decode texels line by line
+-    for (u32 v = 0; v < size.v(); v++) {
+-        for (u32 u = 0; u < size.u(); u++) {
+-            u32 colour = decodeTexel(u, v, format, data);
+-            decoded.push_back(colour);
+-        }
+-    }
++	// One buffer for every decode on this thread: no allocation per texture
++	static thread_local std::vector<u32> decoded;
++	decoded.resize(usize(size.u()) * size.v());
++	decodeToRGBA8(data, decoded.data());
+ 
+-    texture.bind();
+-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.u(), size.v(), GL_RGBA, GL_UNSIGNED_BYTE, decoded.data());
++	texture.bind();
++	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, size.u(), size.v(), GL_RGBA, GL_UNSIGNED_BYTE, decoded.data());
++}
++
++void Texture::decodeToRGBA8(std::span<const u8> data, u32* out) {
++	const u32 width = size.u(), height = size.v();
++	const u8* src = data.data();
++	using Colour::convert4To8Bit, Colour::convert5To8Bit, Colour::convert6To8Bit;
++
++	if ((width % 8) != 0 || (height % 8) != 0 || Banana::baseline()) [[unlikely]] {
++		// Not whole tiles (the PICA's textures always are): texel by texel
++		for (u32 v = 0; v < height; v++) {
++			for (u32 u = 0; u < width; u++) {
++				out[v * width + u] = decodeTexel(u, v, format, data);
++			}
++		}
++	} else {
++		switch (format) {
++			case PICA::TextureFmt::RGBA8:
++				decodeTiles<256>(width, height, src, out, [](const u8* t, u32 i) {
++					const u8* p = t + i * 4;
++					return rgba(p[3], p[2], p[1], p[0]);
++				});
++				break;
++			case PICA::TextureFmt::RGB8:
++				decodeTiles<192>(width, height, src, out, [](const u8* t, u32 i) {
++					const u8* p = t + i * 3;
++					return rgba(p[2], p[1], p[0], 0xff);
++				});
++				break;
++			case PICA::TextureFmt::RGBA5551:
++				decodeTiles<128>(width, height, src, out, [](const u8* t, u32 i) {
++					const u16 texel = read16(t + i * 2);
++					return rgba(
++						convert5To8Bit(getBits<11, 5, u8>(texel)), convert5To8Bit(getBits<6, 5, u8>(texel)), convert5To8Bit(getBits<1, 5, u8>(texel)),
++						getBit<0>(texel) ? 0xff : 0
++					);
++				});
++				break;
++			case PICA::TextureFmt::RGB565:
++				decodeTiles<128>(width, height, src, out, [](const u8* t, u32 i) {
++					const u16 texel = read16(t + i * 2);
++					return rgba(
++						convert5To8Bit(getBits<11, 5, u8>(texel)), convert6To8Bit(getBits<5, 6, u8>(texel)), convert5To8Bit(getBits<0, 5, u8>(texel)), 0xff
++					);
++				});
++				break;
++			case PICA::TextureFmt::RGBA4:
++				decodeTiles<128>(width, height, src, out, [](const u8* t, u32 i) {
++					const u16 texel = read16(t + i * 2);
++					return rgba(
++						convert4To8Bit(getBits<12, 4, u8>(texel)), convert4To8Bit(getBits<8, 4, u8>(texel)), convert4To8Bit(getBits<4, 4, u8>(texel)),
++						convert4To8Bit(getBits<0, 4, u8>(texel))
++					);
++				});
++				break;
++			case PICA::TextureFmt::IA8:
++				decodeTiles<128>(width, height, src, out, [](const u8* t, u32 i) {
++					const u8 intensity = t[i * 2 + 1];
++					return rgba(intensity, intensity, intensity, t[i * 2]);
++				});
++				break;
++			case PICA::TextureFmt::RG8:
++				decodeTiles<128>(width, height, src, out, [](const u8* t, u32 i) { return rgba(t[i * 2 + 1], t[i * 2], 0, 0xff); });
++				break;
++			case PICA::TextureFmt::I8:
++				decodeTiles<64>(width, height, src, out, [](const u8* t, u32 i) { return rgba(t[i], t[i], t[i], 0xff); });
++				break;
++			case PICA::TextureFmt::A8:
++				decodeTiles<64>(width, height, src, out, [](const u8* t, u32 i) { return rgba(0, 0, 0, t[i]); });
++				break;
++			case PICA::TextureFmt::IA4:
++				decodeTiles<64>(width, height, src, out, [](const u8* t, u32 i) {
++					const u8 intensity = convert4To8Bit(t[i] >> 4);
++					return rgba(intensity, intensity, intensity, convert4To8Bit(t[i] & 0xf));
++				});
++				break;
++			case PICA::TextureFmt::I4:
++				decodeTiles<32>(width, height, src, out, [](const u8* t, u32 i) {
++					const u8 intensity = convert4To8Bit((t[i / 2] >> ((i & 1) * 4)) & 0xf);
++					return rgba(intensity, intensity, intensity, 0xff);
++				});
++				break;
++			case PICA::TextureFmt::A4:
++				decodeTiles<32>(width, height, src, out, [](const u8* t, u32 i) { return rgba(0, 0, 0, convert4To8Bit((t[i / 2] >> ((i & 1) * 4)) & 0xf)); });
++				break;
++			case PICA::TextureFmt::ETC1: ::decodeETC<false>(width, height, src, out); break;
++			case PICA::TextureFmt::ETC1A4: ::decodeETC<true>(width, height, src, out); break;
++			default: Helpers::panic("[Texture::decodeTexture] Unimplemented format = %d", static_cast<int>(format));
++		}
++	}
+ }
+diff --git a/src/core/services/gsp_gpu.cpp b/src/core/services/gsp_gpu.cpp
+index 37964d83..433f2f29 100644
+--- a/src/core/services/gsp_gpu.cpp
++++ b/src/core/services/gsp_gpu.cpp
+@@ -1,5 +1,9 @@
+ #include "services/gsp_gpu.hpp"
+ 
++#include <vector>
++
++#include "banana_opts.hpp"
++
+ #include "PICA/regs.hpp"
+ #include "ipc.hpp"
+ #include "kernel.hpp"
+@@ -40,6 +44,8 @@ namespace GXCommands {
+ }
+ 
+ void GPUService::reset() {
++	gpu.sync();
++	pendingInterrupts.clear();
+ 	privilegedProcess = 0xFFFFFFFF;  // Set the privileged process to an invalid handle
+ 	interruptEvent = std::nullopt;
+ 	gspThreadCount = 0;
+@@ -130,6 +136,32 @@ void GPUService::registerInterruptRelayQueue(u32 messagePointer) {
+ 	mem.write32(messagePointer + 16, KernelHandles::GSPSharedMemHandle);
+ }
+ 
++// With the GPU on its own thread, an interrupt for work the GPU thread has yet to do waits here until the emulated CPU
++// next waits (no thread can run) or a VBlank: then the GPU's queue is drained and the interrupts are sent, in order.
++// Those moments come from emulated time alone, so what a game sees doesn't depend on how fast the host's threads are.
++void GPUService::interruptWhenDone(GPUInterrupt type) {
++	if (gpu.isThreaded()) {
++		pendingInterrupts.push_back(type);
++	} else {
++		requestInterrupt(type);
++	}
++}
++
++bool GPUService::deliverPendingInterrupts() {
++	if (pendingInterrupts.empty()) {
++		return false;
++	}
++
++	gpu.sync();
++	// requestInterrupt may queue more GPU work (a VBlank's buffer swap), never more interrupts
++	auto pending = std::move(pendingInterrupts);
++	pendingInterrupts.clear();
++	for (auto type : pending) {
++		requestInterrupt(type);
++	}
++	return true;
++}
++
+ void GPUService::requestInterrupt(GPUInterrupt type) {
+ 	if (sharedMem == nullptr) [[unlikely]] {  // Shared memory hasn't been set up yet
+ 		return;
+@@ -184,6 +216,7 @@ void GPUService::readHwRegs(u32 messagePointer) {
+ 	}
+ 
+ 	ioAddr += 0x1EB00000;
++	gpu.sync();  // the registers as the work submitted so far leaves them
+ 	// Read the PICA registers and write them to the output buffer
+ 	for (u32 i = 0; i < size; i += 4) {
+ 		const u32 value = gpu.readReg(ioAddr);
+@@ -219,12 +252,16 @@ void GPUService::writeHwRegs(u32 messagePointer) {
+ 	}
+ 
+ 	ioAddr += 0x1EB00000;
++	// The values are read now; the GPU (on its own thread, after the work submitted before) writes them
++	std::vector<u32> values(size / 4);
+ 	for (u32 i = 0; i < size; i += 4) {
+-		const u32 value = mem.read32(dataPointer);
+-		gpu.writeReg(ioAddr, value);
+-		dataPointer += 4;
+-		ioAddr += 4;
++		values[i / 4] = mem.read32(dataPointer + i);
+ 	}
++	gpu.runAsync([this, ioAddr, values = std::move(values)] {
++		for (usize i = 0; i < values.size(); i++) {
++			gpu.writeReg(ioAddr + u32(i) * 4, values[i]);
++		}
++	});
+ 
+ 	mem.write32(messagePointer, IPC::responseHeader(0x1, 1, 0));
+ 	mem.write32(messagePointer + 4, Result::Success);
+@@ -256,28 +293,45 @@ void GPUService::writeHwRegsWithMask(u32 messagePointer) {
+ 	}
+ 
+ 	ioAddr += 0x1EB00000;
++	std::vector<u32> datas(size / 4), masks(size / 4);
+ 	for (u32 i = 0; i < size; i += 4) {
+-		const u32 current = gpu.readReg(ioAddr);
+-		const u32 data = mem.read32(dataPointer);
+-		const u32 mask = mem.read32(maskPointer);
+-
+-		u32 newValue = (current & ~mask) | (data & mask);
+-
+-		gpu.writeReg(ioAddr, newValue);
+-		maskPointer += 4;
+-		dataPointer += 4;
+-		ioAddr += 4;
++		datas[i / 4] = mem.read32(dataPointer + i);
++		masks[i / 4] = mem.read32(maskPointer + i);
+ 	}
++	gpu.runAsync([this, ioAddr, datas = std::move(datas), masks = std::move(masks)] {
++		for (usize i = 0; i < datas.size(); i++) {
++			const u32 addr = ioAddr + u32(i) * 4;
++			const u32 current = gpu.readReg(addr);
++			gpu.writeReg(addr, (current & ~masks[i]) | (datas[i] & masks[i]));
++		}
++	});
+ 
+ 	mem.write32(messagePointer, IPC::responseHeader(0x2, 1, 0));
+ 	mem.write32(messagePointer + 4, Result::Success);
+ }
+ 
++// For cache maintenance on CPU-written data: the physical address of a VRAM or linear-heap virtual address, or 0 for
++// memory the GPU can't use (no warning, unlike VaddrToPaddr: games flush other memory too).
++static u32 gpuVisiblePaddr(u32 addr) {
++	if (addr >= VirtualAddrs::VramStart && addr < VirtualAddrs::VramStart + VirtualAddrs::VramSize) return addr - VirtualAddrs::VramStart + PhysicalAddrs::VRAM;
++	if (addr >= VirtualAddrs::LinearHeapStartOld && addr < VirtualAddrs::LinearHeapEndOld) return addr - VirtualAddrs::LinearHeapStartOld + PhysicalAddrs::FCRAM;
++	if (addr >= VirtualAddrs::LinearHeapStartNew && addr < VirtualAddrs::LinearHeapEndNew) return addr - VirtualAddrs::LinearHeapStartNew + PhysicalAddrs::FCRAM;
++	return 0;
++}
++
++// Data the CPU wrote and flushed may be read by the GPU next (a texture uploaded with memcpy): let the renderer
++// check what it decoded from that range. citro3d flushes the whole linear heap every frame, so this must stay cheap.
++static void invalidateGpuRange(GPU& gpu, u32 addr, u32 size) {
++	if (Banana::baseline() || size == 0) return;
++	if (const u32 paddr = gpuVisiblePaddr(addr); paddr != 0) gpu.cpuWroteRange(paddr, size);
++}
++
+ void GPUService::flushDataCache(u32 messagePointer) {
+ 	u32 address = mem.read32(messagePointer + 4);
+ 	u32 size = mem.read32(messagePointer + 8);
+ 	u32 processHandle = handle = mem.read32(messagePointer + 16);
+ 	log("GSP::GPU::FlushDataCache(address = %08X, size = %X, process = %X)\n", address, size, processHandle);
++	invalidateGpuRange(gpu, address, size);
+ 
+ 	mem.write32(messagePointer, IPC::responseHeader(0x8, 1, 0));
+ 	mem.write32(messagePointer + 4, Result::Success);
+@@ -288,6 +342,7 @@ void GPUService::invalidateDataCache(u32 messagePointer) {
+ 	u32 size = mem.read32(messagePointer + 8);
+ 	u32 processHandle = handle = mem.read32(messagePointer + 16);
+ 	log("GSP::GPU::InvalidateDataCache(address = %08X, size = %X, process = %X)\n", address, size, processHandle);
++	invalidateGpuRange(gpu, address, size);
+ 
+ 	mem.write32(messagePointer, IPC::responseHeader(0x9, 1, 0));
+ 	mem.write32(messagePointer + 4, Result::Success);
+@@ -423,13 +478,15 @@ void GPUService::memoryFill(u32* cmd) {
+ 	u32 control1 = control >> 16;
+ 
+ 	if (start0 != 0) {
+-		gpu.clearBuffer(VaddrToPaddr(start0), VaddrToPaddr(end0), value0, control0);
+-		requestInterrupt(GPUInterrupt::PSC0);
++		const u32 start = VaddrToPaddr(start0), end = VaddrToPaddr(end0);
++		gpu.runAsync([this, start, end, value0, control0] { gpu.clearBuffer(start, end, value0, control0); });
++		interruptWhenDone(GPUInterrupt::PSC0);
+ 	}
+ 
+ 	if (start1 != 0) {
+-		gpu.clearBuffer(VaddrToPaddr(start1), VaddrToPaddr(end1), value1, control1);
+-		requestInterrupt(GPUInterrupt::PSC1);
++		const u32 start = VaddrToPaddr(start1), end = VaddrToPaddr(end1);
++		gpu.runAsync([this, start, end, value1, control1] { gpu.clearBuffer(start, end, value1, control1); });
++		interruptWhenDone(GPUInterrupt::PSC1);
+ 	}
+ }
+ 
+@@ -441,8 +498,8 @@ void GPUService::triggerDisplayTransfer(u32* cmd) {
+ 	const u32 flags = cmd[5];
+ 
+ 	log("GSP::GPU::TriggerDisplayTransfer (Stubbed)\n");
+-	gpu.displayTransfer(inputAddr, outputAddr, inputSize, outputSize, flags);
+-	requestInterrupt(GPUInterrupt::PPF);  // Send "Display transfer finished" interrupt
++	gpu.runAsync([=, this] { gpu.displayTransfer(inputAddr, outputAddr, inputSize, outputSize, flags); });
++	interruptWhenDone(GPUInterrupt::PPF);  // Send "Display transfer finished" interrupt
+ }
+ 
+ void GPUService::triggerDMARequest(u32* cmd) {
+@@ -452,6 +509,8 @@ void GPUService::triggerDMARequest(u32* cmd) {
+ 	const bool flush = cmd[7] == 1;
+ 
+ 	log("GSP::GPU::TriggerDMARequest (source = %08X, dest = %08X, size = %08X)\n", source, dest, size);
++	// The CPU sees a DMA's result: the GPU's earlier work first, then the copy, here
++	deliverPendingInterrupts();
+ 	gpu.fireDMA(dest, source, size);
+ 	requestInterrupt(GPUInterrupt::DMA);
+ }
+@@ -466,6 +525,18 @@ void GPUService::setBufferSwapImpl(u32 screenId, const FramebufferInfo& info) {
+ 		Framebuffer0ASecondAddr, Framebuffer0BSecondAddr, Framebuffer1ASecondAddr, Framebuffer1BSecondAddr,
+ 	};
+ 
++	// The display registers belong to the GPU (its thread reads them to display the frame)
++	gpu.runAsync([this, screenId, info] { setBufferSwapRegs(screenId, info); });
++}
++
++void GPUService::setBufferSwapRegs(u32 screenId, const FramebufferInfo& info) {
++	using namespace PICA::ExternalRegs;
++
++	static constexpr std::array<u32, 8> fbAddresses = {
++		Framebuffer0AFirstAddr,  Framebuffer0BFirstAddr,  Framebuffer1AFirstAddr,  Framebuffer1BFirstAddr,
++		Framebuffer0ASecondAddr, Framebuffer0BSecondAddr, Framebuffer1ASecondAddr, Framebuffer1BSecondAddr,
++	};
++
+ 	auto& regs = gpu.getExtRegisters();
+ 
+ 	const u32 fbIndex = info.activeFb * 4 + screenId * 2;
+@@ -490,8 +561,8 @@ void GPUService::processCommandList(u32* cmd) {
+ 	[[maybe_unused]] const bool flushBuffer = cmd[7] == 1;  // Flush buffer (0 = don't flush, 1 = flush)
+ 
+ 	log("GPU::GSP::processCommandList. Address: %08X, size in bytes: %08X\n", address, size);
+-	gpu.startCommandList(address, size);
+-	requestInterrupt(GPUInterrupt::P3D);  // Send an IRQ when command list processing is over
++	gpu.runAsync([this, address, size] { gpu.startCommandList(address, size); });
++	interruptWhenDone(GPUInterrupt::P3D);  // Send an IRQ when command list processing is over
+ }
+ 
+ // TODO: Emulate the transfer engine & its registers
+@@ -505,10 +576,10 @@ void GPUService::triggerTextureCopy(u32* cmd) {
+ 	const u32 flags = cmd[6];
+ 
+ 	log("GSP::GPU::TriggerTextureCopy (Stubbed)\n");
+-	gpu.textureCopy(inputAddr, outputAddr, totalBytes, inputSize, outputSize, flags);
++	gpu.runAsync([=, this] { gpu.textureCopy(inputAddr, outputAddr, totalBytes, inputSize, outputSize, flags); });
+ 	// This uses the transfer engine and thus needs to fire a PPF interrupt.
+ 	// NSMB2 relies on this
+-	requestInterrupt(GPUInterrupt::PPF);
++	interruptWhenDone(GPUInterrupt::PPF);
+ }
+ 
+ // Used when transitioning from the app to an OS applet, such as software keyboard, mii maker, mii selector, etc
+diff --git a/src/emulator.cpp b/src/emulator.cpp
+index e5ba4e27..ac06e676 100644
+--- a/src/emulator.cpp
++++ b/src/emulator.cpp
+@@ -165,8 +165,9 @@ void Emulator::pollScheduler() {
+ 					frameDone = true;
+ 					lua.signalEvent(LuaEvent::Frame);
+ 
+-					// Send VBlank interrupts
++					// Send VBlank interrupts, after those of the GPU thread's work (gsp_gpu.cpp)
+ 					ServiceManager& srv = kernel.getServiceManager();
++					srv.getGSPGPU().deliverPendingInterrupts();
+ 					srv.sendGPUInterrupt(GPUInterrupt::VBlank0);
+ 					srv.sendGPUInterrupt(GPUInterrupt::VBlank1);
+ 
+diff --git a/src/panda_bench/main.cpp b/src/panda_bench/main.cpp
+new file mode 100644
+index 00000000..ef9e69ac
+--- /dev/null
++++ b/src/panda_bench/main.cpp
+@@ -0,0 +1,253 @@
++// panda3ds-bench: Panda3DS with no window, for measuring it. It runs a ROM for a number of frames as fast as it can
++// and reports the time each scene took (scenes are the stress-test ROM's "BENCH scene=..." debug strings), the
++// slowest frames and the memory used.
++//
++//   panda3ds-bench <rom> [--frames N] [--renderer gl|null] [--config file.toml] [--marks] [--gpu-thread on|off] [--dump dir]
++//                  [--dump-frames a,b,c] [--maps file]
++//
++// --renderer gl draws through OpenGL ES 3.1 on an EGL surfaceless context (Mesa's llvmpipe on a PC, panfrost on the
++// handheld). --marks makes the syscall 0xBA5E at each frame and scene start, which tools/3ds-perf/a55prof.c (a QEMU
++// plugin) turns into instruction counts per frame and per function. --maps writes /proc/self/maps at the end (for
++// a55prof's code with no symbol).
++//
++// --dump dir (GL renderer only) writes <dir>/<scene>.png with the last frame shown before the next scene's marker,
++// and for the scene still running when the run ends, its last frame. --dump-frames a,b,c also writes
++// <dir>/frame<N>.png after emulator frame N (0-based, counting from the ROM's start, the same frame numbers as the
++// table's "first" column). Each PNG is 400x480: the top screen over the bottom screen, centred, at native resolution.
++// While dumping, every frame is read back from the GPU, so don't time a run that dumps.
++#include <EGL/egl.h>
++#include <EGL/eglext.h>
++#include <sys/resource.h>
++#include <sys/syscall.h>
++#include <unistd.h>
++
++#include <algorithm>
++#include <chrono>
++#include <cstdio>
++#include <cstdlib>
++#include <cstring>
++#include <filesystem>
++#include <fstream>
++#include <string>
++#include <vector>
++
++#include "banana_opts.hpp"
++#include "emulator.hpp"
++#include <stb_image_write.h>
++#include <glad/gl.h>
++
++namespace {
++	using Clock = std::chrono::steady_clock;
++
++	bool marks = false;
++	void mark(long id, long value) {
++		if (marks) syscall(0xBA5E, id, value);
++	}
++
++	struct Scene {
++		std::string name;
++		int firstFrame = 0;
++		std::vector<double> frameMs;
++	};
++
++	EGLDisplay display = EGL_NO_DISPLAY;
++	EGLContext context = EGL_NO_CONTEXT;
++
++	bool initEGL() {
++		auto getPlatformDisplay = (PFNEGLGETPLATFORMDISPLAYEXTPROC)eglGetProcAddress("eglGetPlatformDisplayEXT");
++		if (getPlatformDisplay) display = getPlatformDisplay(EGL_PLATFORM_SURFACELESS_MESA, EGL_DEFAULT_DISPLAY, nullptr);
++		if (display == EGL_NO_DISPLAY) display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
++		if (display == EGL_NO_DISPLAY || !eglInitialize(display, nullptr, nullptr)) return false;
++		eglBindAPI(EGL_OPENGL_ES_API);
++		const EGLint configAttribs[] = {EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT, EGL_SURFACE_TYPE, EGL_PBUFFER_BIT, EGL_NONE};
++		EGLConfig config;
++		EGLint count = 0;
++		if (!eglChooseConfig(display, configAttribs, &config, 1, &count) || count == 0) {
++			// surfaceless displays may have no pbuffer configs: any ES3 config, no surface
++			const EGLint anyAttribs[] = {EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT, EGL_NONE};
++			if (!eglChooseConfig(display, anyAttribs, &config, 1, &count) || count == 0) return false;
++		}
++		const EGLint contextAttribs[] = {EGL_CONTEXT_MAJOR_VERSION, 3, EGL_CONTEXT_MINOR_VERSION, 1, EGL_NONE};
++		context = eglCreateContext(display, config, EGL_NO_CONTEXT, contextAttribs);
++		if (context == EGL_NO_CONTEXT) return false;
++		if (!eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, context)) return false;
++		return gladLoadGLES2Loader(reinterpret_cast<GLADloadproc>(eglGetProcAddress)) != 0;
++	}
++
++	long peakRssKB() {
++		struct rusage usage;
++		getrusage(RUSAGE_SELF, &usage);
++		return usage.ru_maxrss;
++	}
++
++	double percentile(std::vector<double> v, double p) {
++		if (v.empty()) return 0;
++		std::sort(v.begin(), v.end());
++		return v[std::min(v.size() - 1, size_t(p * (v.size() - 1) + 0.5))];
++	}
++}  // namespace
++
++int main(int argc, char** argv) {
++	if (argc < 2) {
++		std::fprintf(stderr, "usage: %s <rom> [--frames N] [--renderer gl|null] [--config file.toml] [--marks] [--gpu-thread on|off] [--dump dir] [--dump-frames a,b,c] [--maps file]\n", argv[0]);
++		return 2;
++	}
++	std::filesystem::path rom = std::filesystem::absolute(argv[1]);
++	int frames = 1500;
++	std::string renderer = "null", configFile, dumpDir, mapsFile, jitDumpFile;
++	// The GPU on its own thread (GL only), unless asked not to or measuring upstream's behaviour
++	bool gpuThread = !Banana::baseline();
++	std::vector<int> dumpFrames;
++	for (int i = 2; i < argc; i++) {
++		std::string a = argv[i];
++		if (a == "--frames" && i + 1 < argc) frames = std::atoi(argv[++i]);
++		else if (a == "--renderer" && i + 1 < argc) renderer = argv[++i];
++		else if (a == "--config" && i + 1 < argc) configFile = std::filesystem::absolute(argv[++i]).string();
++		else if (a == "--marks") marks = true;
++		else if (a == "--gpu-thread" && i + 1 < argc) gpuThread = std::string(argv[++i]) != "off";
++		else if (a == "--dump" && i + 1 < argc) dumpDir = std::filesystem::absolute(argv[++i]).string();
++		else if (a == "--dump-frames" && i + 1 < argc) {
++			for (std::string list = argv[++i]; !list.empty();) {
++				size_t comma = list.find(',');
++				dumpFrames.push_back(std::atoi(list.substr(0, comma).c_str()));
++				list = comma == std::string::npos ? "" : list.substr(comma + 1);
++			}
++		} else if (a == "--maps" && i + 1 < argc) mapsFile = std::filesystem::absolute(argv[++i]).string();
++		else if (a == "--dump-jit" && i + 1 < argc) jitDumpFile = std::filesystem::absolute(argv[++i]).string();
++	}
++
++	// The emulator reads config.toml from the working folder: one of our own, with the renderer asked for, no audio
++	// output and nothing else read from the user's settings
++	std::filesystem::path work = std::filesystem::temp_directory_path() / ("panda3ds-bench-" + std::to_string(getpid()));
++	std::filesystem::create_directories(work);
++	std::filesystem::current_path(work);
++	{
++		std::string extra;
++		if (!configFile.empty()) {
++			std::ifstream in(configFile);
++			extra.assign(std::istreambuf_iterator<char>(in), {});
++		}
++		std::ofstream cfg("config.toml");
++		if (extra.find("[GPU]") == std::string::npos)
++			cfg << "[GPU]\nRenderer = \"" << (renderer == "gl" ? "OpenGL" : "Null") << "\"\nEnableVSync = false\n";
++		if (extra.find("[Audio]") == std::string::npos) cfg << "[Audio]\nEnableAudio = false\nMuteAudio = true\n";
++		if (extra.find("[General]") == std::string::npos) cfg << "[General]\nUsePortableBuild = true\nPrintAppVersion = false\n";
++		cfg << extra;
++	}
++
++	if (renderer == "gl" && !initEGL()) {
++		std::fprintf(stderr, "no OpenGL ES 3.1 context (EGL surfaceless)\n");
++		return 1;
++	}
++
++	mark(1, 0);
++	auto emu = std::make_unique<Emulator>();
++	if (renderer == "gl") {
++		emu->getRenderer()->setupGLES();
++		emu->initGraphicsContext(nullptr);
++		emu->setOutputSize(Emulator::width, Emulator::height);
++		if (gpuThread) {
++			// The GL context moves to the GPU's own thread (PICA/gpu_worker.hpp)
++			eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
++			emu->startGPUThread([] { eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, context); });
++		}
++	}
++
++	std::vector<Scene> scenes;
++	scenes.push_back({"boot", 0, {}});
++	int frame = 0;
++	bool looped = false;
++	emu->getKernel().debugStringHook = [&](const std::string& msg) {
++		if (msg.rfind("BENCH loop", 0) == 0) looped = true;
++		auto at = msg.find("name=");
++		if (msg.rfind("BENCH scene=", 0) != 0 || at == std::string::npos) return;
++		std::string name = msg.substr(at + 5);
++		name = name.substr(0, name.find(' '));
++		scenes.push_back({name, frame, {}});
++		mark(3, frame);
++	};
++
++	auto t0 = Clock::now();
++	if (!emu->loadROM(rom)) {
++		std::fprintf(stderr, "can't load %s\n", rom.c_str());
++		return 1;
++	}
++	double loadMs = std::chrono::duration<double, std::milli>(Clock::now() - t0).count();
++	mark(2, 0);
++
++	// Dumping: keep the previous frame's screens, since a scene's marker shows up in the frame that already belongs
++	// to the next scene
++	const bool dumping = !dumpDir.empty() && renderer == "gl";
++	if (!dumpDir.empty() && renderer != "gl") std::fprintf(stderr, "--dump needs --renderer gl, not dumping\n");
++	if (dumping) std::filesystem::create_directories(dumpDir);
++	std::vector<u8> screen, prevScreen;
++	bool havePrev = false;
++	auto writePng = [&](const std::string& name, const std::vector<u8>& rgba) {
++		const std::string path = dumpDir + "/" + name + ".png";
++		if (!stbi_write_png(path.c_str(), 400, 480, 4, rgba.data(), 400 * 4)) std::fprintf(stderr, "can't write %s\n", path.c_str());
++	};
++
++	auto start = Clock::now();
++	for (frame = 0; frame < frames; frame++) {
++		auto f0 = Clock::now();
++		mark(4, frame);
++		const size_t before = scenes.size();
++		emu->runFrame();
++		double ms = std::chrono::duration<double, std::milli>(Clock::now() - f0).count();
++		// a frame that started a scene belongs to it
++		scenes.back().frameMs.push_back(ms);
++		if (dumping) {
++			emu->runOnGPUThread([&] { emu->getRenderer()->readScreen(screen); });
++			// the scene that just ended (not "boot"): its last frame is the previous one
++			if (scenes.size() != before && havePrev && scenes.size() >= 3) writePng(scenes[scenes.size() - 2].name, prevScreen);
++			if (std::find(dumpFrames.begin(), dumpFrames.end(), frame) != dumpFrames.end())
++				writePng("frame" + std::to_string(frame), screen);
++			std::swap(screen, prevScreen);
++			havePrev = true;
++		}
++		if (looped) break;
++	}
++	// the scene still running at the end (unless the loop marker ended the run: that frame is already the next scene)
++	if (dumping && havePrev && !looped && scenes.size() >= 2) writePng(scenes.back().name, prevScreen);
++	emu->syncGPU();
++	mark(5, frame);
++	if (!mapsFile.empty()) {
++		// what each address range is (the libraries, the JIT's code), for a55prof's [nosym] regions
++		std::ifstream in("/proc/self/maps");
++		std::ofstream out(mapsFile);
++		out << in.rdbuf();
++	}
++	if (!jitDumpFile.empty()) {
++		// The JIT's code (the rwx mappings), each as "<start hex> <size hex>" then the bytes, for a disassembler
++		std::ifstream in("/proc/self/maps");
++		std::ofstream out(jitDumpFile, std::ios::binary);
++		std::string line;
++		while (std::getline(in, line)) {
++			unsigned long start, end;
++			char perms[5] = {};
++			if (std::sscanf(line.c_str(), "%lx-%lx %4s", &start, &end, perms) == 3 && std::string(perms).rfind("rwx", 0) == 0) {
++				const unsigned long size = end - start;
++				out.write(reinterpret_cast<const char*>(&start), 8);
++				out.write(reinterpret_cast<const char*>(&size), 8);
++				out.write(reinterpret_cast<const char*>(start), std::streamsize(size));
++			}
++		}
++	}
++	double totalMs = std::chrono::duration<double, std::milli>(Clock::now() - start).count();
++
++	std::printf("rom %s renderer %s frames %d load %.1f ms total %.1f ms (%.2f fps) peak RSS %ld MB\n", rom.filename().c_str(),
++				renderer.c_str(), frame, loadMs, totalMs, frame * 1000.0 / totalMs, peakRssKB() / 1024);
++	std::printf("%-8s %6s %6s %9s %9s %9s %9s\n", "scene", "first", "frames", "mean ms", "p50 ms", "p95 ms", "max ms");
++	for (auto& s : scenes) {
++		if (s.frameMs.empty()) continue;
++		double sum = 0;
++		for (double v : s.frameMs) sum += v;
++		std::printf("%-8s %6d %6zu %9.3f %9.3f %9.3f %9.3f\n", s.name.c_str(), s.firstFrame, s.frameMs.size(), sum / s.frameMs.size(),
++					percentile(s.frameMs, 0.5), percentile(s.frameMs, 0.95), percentile(s.frameMs, 1.0));
++	}
++	std::fflush(stdout);
++	std::error_code ec;
++	std::filesystem::current_path("/");
++	std::filesystem::remove_all(work, ec);
++	std::_Exit(0);  // skip the emulator's teardown: nothing to save
++}
+diff --git a/src/renderer.cpp b/src/renderer.cpp
+index 390a3fa6..bb1972fd 100644
+--- a/src/renderer.cpp
++++ b/src/renderer.cpp
+@@ -45,6 +45,7 @@ const char* Renderer::typeToString(RendererType rendererType) {
+ void Renderer::doSoftwareTextureCopy(u32 inputAddr, u32 outputAddr, u32 copySize, u32 inputWidth, u32 inputGap, u32 outputWidth, u32 outputGap) {
+ 	u8* inputPointer = gpu.getPointerPhys<u8>(inputAddr);
+ 	u8* outputPointer = gpu.getPointerPhys<u8>(outputAddr);
++	u8* const outputStart = outputPointer;
+ 
+ 	if (inputPointer == nullptr || outputPointer == nullptr) {
+ 		return;
+@@ -76,4 +77,106 @@ void Renderer::doSoftwareTextureCopy(u32 inputAddr, u32 outputAddr, u32 copySize
+ 			outputPointer += outputGap;
+ 		}
+ 	}
++
++	// The copy changed guest memory directly: drop what was decoded from it (textures uploaded through TextureCopy)
++	if (outputPointer > outputStart) invalidateRange(outputAddr, u32(outputPointer - outputStart));
++}
++
++namespace {
++	// Display transfer pixel formats (GX_TRANSFER_FMT_*), as stored in memory
++	u32 transferBpp(u32 format) {
++		switch (format) {
++			case 0: return 4;  // RGBA8
++			case 1: return 3;  // RGB8
++			default: return 2; // RGB565, RGB5A1, RGBA4
++		}
++	}
++
++	struct RGBA {
++		u32 r, g, b, a;
++	};
++
++	RGBA decodeTransferPixel(const u8* p, u32 format) {
++		switch (format) {
++			case 0: return {p[3], p[2], p[1], p[0]};
++			case 1: return {p[2], p[1], p[0], 255};
++			case 2: {
++				const u32 v = p[0] | (p[1] << 8);
++				return {((v >> 11) & 31) * 255 / 31, ((v >> 5) & 63) * 255 / 63, (v & 31) * 255 / 31, 255};
++			}
++			case 3: {
++				const u32 v = p[0] | (p[1] << 8);
++				return {((v >> 11) & 31) * 255 / 31, ((v >> 6) & 31) * 255 / 31, ((v >> 1) & 31) * 255 / 31, (v & 1) * 255};
++			}
++			default: {
++				const u32 v = p[0] | (p[1] << 8);
++				return {((v >> 12) & 15) * 17, ((v >> 8) & 15) * 17, ((v >> 4) & 15) * 17, (v & 15) * 17};
++			}
++		}
++	}
++
++	void encodeTransferPixel(u8* p, u32 format, RGBA c) {
++		u32 v;
++		switch (format) {
++			case 0: p[0] = u8(c.a); p[1] = u8(c.b); p[2] = u8(c.g); p[3] = u8(c.r); return;
++			case 1: p[0] = u8(c.b); p[1] = u8(c.g); p[2] = u8(c.r); return;
++			case 2: v = ((c.r >> 3) << 11) | ((c.g >> 2) << 5) | (c.b >> 3); break;
++			case 3: v = ((c.r >> 3) << 11) | ((c.g >> 3) << 6) | ((c.b >> 3) << 1) | (c.a >> 7); break;
++			default: v = ((c.r >> 4) << 12) | ((c.g >> 4) << 8) | ((c.b >> 4) << 4) | (c.a >> 4); break;
++		}
++		p[0] = u8(v);
++		p[1] = u8(v >> 8);
++	}
++
++	// Byte offset of pixel (x, y) in a surface made of 8x8 Morton-ordered tiles, rows of tiles one after another
++	u32 tiledOffset(u32 x, u32 y, u32 width, u32 bpp) {
++		u32 i = 0;
++		for (u32 bit = 0; bit < 3; bit++) {
++			i |= ((x >> bit) & 1) << (2 * bit);
++			i |= ((y >> bit) & 1) << (2 * bit + 1);
++		}
++		return ((y & ~7u) * width + (x & ~7u) * 8 + i) * bpp;
++	}
++}  // namespace
++
++bool Renderer::doSoftwareDisplayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) {
++	const u32 inputWidth = inputSize & 0xffff, inputHeight = inputSize >> 16;
++	const u32 inputFormat = Helpers::getBits<8, 3>(flags), outputFormat = Helpers::getBits<12, 3>(flags);
++	const bool flip = flags & 1;
++	const bool linearToTiled = (flags >> 1) & 1;
++	const bool rawCopy = (flags >> 3) & 1;
++	const u32 scaling = Helpers::getBits<24, 2>(flags);
++	if (rawCopy || inputFormat > 4 || outputFormat > 4 || scaling == 3 || (flags & (1 << 16))) return false;  // not handled
++
++	// With scaling, the output size is given unscaled
++	const u32 scaleX = scaling != 0 ? 1 : 0, scaleY = scaling == 2 ? 1 : 0;
++	const u32 outputWidth = (outputSize & 0xffff) >> scaleX, outputHeight = (outputSize >> 16) >> scaleY;
++	const u32 inBpp = transferBpp(inputFormat), outBpp = transferBpp(outputFormat);
++	if (outputWidth == 0 || outputHeight == 0 || (outputWidth << scaleX) > inputWidth || (outputHeight << scaleY) > inputHeight) return false;
++
++	const u8* in = gpu.getPointerPhys<u8>(inputAddr, inputWidth * inputHeight * inBpp);
++	u8* out = gpu.getPointerPhys<u8>(outputAddr, outputWidth * outputHeight * outBpp);
++	if (in == nullptr || out == nullptr) return false;
++
++	for (u32 y = 0; y < outputHeight; y++) {
++		const u32 outY = flip ? outputHeight - 1 - y : y;
++		for (u32 x = 0; x < outputWidth; x++) {
++			RGBA sum = {0, 0, 0, 0};
++			for (u32 sy = 0; sy <= scaleY; sy++) {
++				for (u32 sx = 0; sx <= scaleX; sx++) {
++					const u32 ix = (x << scaleX) + sx, iy = (y << scaleY) + sy;
++					const u32 offset = linearToTiled ? (iy * inputWidth + ix) * inBpp : tiledOffset(ix, iy, inputWidth, inBpp);
++					const RGBA c = decodeTransferPixel(in + offset, inputFormat);
++					sum.r += c.r, sum.g += c.g, sum.b += c.b, sum.a += c.a;
++				}
++			}
++			const u32 shift = scaleX + scaleY;
++			const RGBA c = {sum.r >> shift, sum.g >> shift, sum.b >> shift, sum.a >> shift};
++			const u32 offset = linearToTiled ? tiledOffset(x, outY, outputWidth, outBpp) : (outY * outputWidth + x) * outBpp;
++			encodeTransferPixel(out + offset, outputFormat, c);
++		}
++	}
++
++	invalidateRange(outputAddr, outputWidth * outputHeight * outBpp);
++	return true;
+ }
+diff --git a/tests/banana/texture_decode_test.cpp b/tests/banana/texture_decode_test.cpp
+new file mode 100644
+index 00000000..5978e846
+--- /dev/null
++++ b/tests/banana/texture_decode_test.cpp
+@@ -0,0 +1,38 @@
++// The tiled texture decoder (Texture::decodeToRGBA8) against the texel-by-texel one (Texture::decodeTexel), every
++// format, random data and real-looking sizes. Built with BUILD_BENCH: build/texture-decode-test
++#include <cstdio>
++#include <random>
++#include <vector>
++
++#include "renderer_gl/textures.hpp"
++
++int main() {
++	std::mt19937 rng(1234);
++	int failures = 0;
++	const PICA::TextureFmt formats[] = {
++		PICA::TextureFmt::RGBA8, PICA::TextureFmt::RGB8, PICA::TextureFmt::RGBA5551, PICA::TextureFmt::RGB565, PICA::TextureFmt::RGBA4,
++		PICA::TextureFmt::IA8,   PICA::TextureFmt::RG8,  PICA::TextureFmt::I8,       PICA::TextureFmt::A8,     PICA::TextureFmt::IA4,
++		PICA::TextureFmt::I4,    PICA::TextureFmt::A4,   PICA::TextureFmt::ETC1,     PICA::TextureFmt::ETC1A4,
++	};
++	const u32 sizes[][2] = {{8, 8}, {16, 8}, {64, 32}, {128, 128}, {256, 64}, {32, 512}};
++	for (auto fmt : formats) {
++		for (auto& sz : sizes) {
++			Texture tex(0, fmt, sz[0], sz[1], 0);
++			std::vector<u8> data(tex.sizeInBytes());
++			for (auto& b : data) b = u8(rng());
++			std::vector<u32> fast(sz[0] * sz[1]);
++			tex.decodeToRGBA8(data, fast.data());
++			for (u32 v = 0; v < sz[1]; v++) {
++				for (u32 u = 0; u < sz[0]; u++) {
++					const u32 slow = tex.decodeTexel(u, v, fmt, data);
++					if (slow != fast[v * sz[0] + u]) {
++						if (failures++ < 10)
++							std::printf("%s %ux%u (%u, %u): %08X != %08X\n", PICA::textureFormatToString(fmt), sz[0], sz[1], u, v, fast[v * sz[0] + u], slow);
++					}
++				}
++			}
++		}
++	}
++	std::printf("%s: %d mismatches\n", failures ? "FAIL" : "ok", failures);
++	return failures != 0;
++}
