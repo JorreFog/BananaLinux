@@ -55,7 +55,7 @@ namespace banana
 		// X on a game: its own page. A DS game's emulator and shader, and every game's name and sort title (#29):
 		// TITLES when one of those was typed, with them in gameName / gameSort for gameKey ("" each: as scraped)
 		void openGame(const std::string& title, const std::string& romName, bool nds = true,
-			const std::string& key = "", const std::string& name = "", const std::string& sort = "");
+			const std::string& key = "", const std::string& name = "", const std::string& sort = "", const std::string& path = "");
 		std::string gameKey, gameName, gameSort;
 		std::string searchText;
 		std::function<int(const std::string&)> searchCount;	// the games the text typed so far finds (the host's library)
@@ -110,14 +110,16 @@ namespace banana
 		std::string about, wifiInfo, ip;
 
 		// the Wi-Fi pages: the networks around, and the keyboard for a password (settings-wifi.cpp)
-		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME } page = LIST;
+		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK } page = LIST;
 		// the game page (X on a DS game in the library): its emulator, this game only (banana/nds-per-game.conf, read by
 		// run-nds: "<ROM file name> = superdrastic|bananads", no line = Settings > Nintendo DS > Emulator)
 		// the game page (X on a DS game): its own emulator and shader, each "As in Settings" (index 0) or a choice
 		std::string pgTitle, pgRom;
 		int pgRow = 0, pgEmu = 0, pgShader = 0;
 		bool pgNds = true;
-		enum PgRow { PG_EMU, PG_SHADER, PG_NAME, PG_SORT };
+		enum PgRow { PG_EMU, PG_SHADER, PG_NAME, PG_SORT, PG_ART };
+		std::string pgPath;	// the game's file (Box art: banana-scrape --match)
+		bool pgArtDone = false;	// a cover fetched on the page: the library read again when it closes
 		std::vector<PgRow> pgRows;
 		std::vector<std::string> pgShaderNames, pgShaderValues;
 		std::string gameEmulator(const std::string& rom);
@@ -129,7 +131,7 @@ namespace banana
 		void renderGame();
 		// the keyboard types a text for a purpose: a Wi-Fi password, or an account's name or password
 		// (banana/accounts.conf: RetroAchievements for DraStic and RetroArch, ScreenScraper for the scraper to come)
-		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SMB_USER, ENTRY_SMB_PASS, ENTRY_GAME_NAME, ENTRY_GAME_SORT, ENTRY_SEARCH } entry = ENTRY_WIFI;
+		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SMB_USER, ENTRY_SMB_PASS, ENTRY_GAME_NAME, ENTRY_GAME_SORT, ENTRY_ART_SEARCH, ENTRY_SEARCH } entry = ENTRY_WIFI;
 		std::string entryTitle, entrySub;
 		Page entryBack = NETWORKS;
 		void startEntry(Entry e, const std::string& title, const std::string& sub, Page back, const std::string& start = "");
@@ -158,6 +160,17 @@ namespace banana
 		std::string wifiTool, wifiConf;
 		bool sync = false;
 		wifi::Job scanJob, statusJob;
+		// the game page's Box art (#28): the names banana-scrape --search found for the words typed, one picked, and
+		// banana-scrape --match fetching its pictures
+		wifi::Job artJob;
+		std::vector<std::string> artNames;
+		int asel = 0, atop = 0;
+		bool artMatching = false;
+		std::string artWords;
+		Result pressArt(Key k);
+		Result touchArt(float cx, float cy);
+		void renderArt();
+		std::string scrapeTool() const;
 		std::vector<wifi::Network> nets;
 		wifi::Status wstat;
 		bool scanning = false, scannedOnce = false, wifiEnabled = true;

@@ -800,6 +800,7 @@ namespace banana
 		if (page == NETWORKS) return pressNetworks(k);
 		if (page == KEYBOARD) return pressKeyboard(k);
 		if (page == GAME) return pressGame(k);
+		if (page == ARTPICK) return pressArt(k);
 		if (page == UPDATES) return pressUpdates(k);
 		if (page == SETUP) return pressSetup(k);
 		if (inGroups) return pressGroups(k);
@@ -866,6 +867,7 @@ namespace banana
 		if (page == NETWORKS) return touchNetworks(cx, cy);
 		if (page == KEYBOARD) return touchKeyboard(cx, cy);
 		if (page == GAME) return touchGame(cx, cy);
+		if (page == ARTPICK) return touchArt(cx, cy);
 		if (page == SETUP)
 		{
 			if (downY >= 418 && downY <= 466) return pressSetup(downX < 320 ? Key::B : Key::A);
@@ -1266,6 +1268,7 @@ namespace banana
 		if (page == NETWORKS) { renderNetworks(); return; }
 		if (page == KEYBOARD) { renderKeyboard(); return; }
 		if (page == GAME) { renderGame(); return; }
+		if (page == ARTPICK) { renderArt(); return; }
 		if (page == UPDATES) { renderUpdates(); return; }
 		if (page == SETUP) { renderSetup(); return; }
 		if (inGroups) { renderGroups(); return; }
@@ -1446,6 +1449,32 @@ namespace banana
 			markNetworks();
 			changed = true;
 		}
+		if (artJob.take(out))
+		{
+			// the search's names, or what the fetch said
+			std::vector<std::string> names;
+			std::istringstream in(out);
+			std::string err;
+			for (std::string ln; std::getline(in, ln);)
+			{
+				if (ln.compare(0, 5, "NAME\t") == 0) names.push_back(ln.substr(5));
+				else if (ln.compare(0, 6, "ERROR ") == 0) err = ln.substr(6);
+				else if (ln.compare(0, 2, "OK") == 0) err = "ok";
+			}
+			if (artMatching)
+			{
+				artMatching = false;
+				if (err == "ok") { message.clear(); toast("Box art", artNames.empty() ? "" : artNames[asel], 0x6ad07a, 1, 4000); page = GAME; pgArtDone = true; }
+				else message = err.empty() ? "The pictures didn't come: no connection?" : "Not fetched: " + err + ".";
+			}
+			else
+			{
+				artNames = names;
+				message = !err.empty() ? (err == "no connection" ? "No connection: is Wi-Fi connected?" : err + ".") :
+					names.empty() ? "Nothing in libretro's collection for \"" + artWords + "\". Fewer words, or another spelling (B, then A to type again)." : "";
+			}
+			changed = true;
+		}
 		if (statusJob.take(out))
 		{
 			wifi::Status st = wifi::parseStatus(out);
@@ -1484,7 +1513,7 @@ namespace banana
 
 	int Settings::pageWake(double t) const
 	{
-		if (scanJob.running() || statusJob.running()) return 100;
+		if (scanJob.running() || statusJob.running() || artJob.running()) return 100;
 		if (page == UPDATES && applying) return std::max(0, (int)(nextStatus2 - t));
 		if (page != NETWORKS || !wifiEnabled) return -1;
 		double due = joining.empty() ? nextScan : std::min(nextStatus, joinStart + 30001);
@@ -1893,6 +1922,105 @@ namespace banana
 		else if (ustatus.compare(0, 6, "failed") == 0) applying = false;
 	}
 
+	// ---- the game page's Box art (#28): libretro's names for the words typed, one picked ---------------------------
+	std::string Settings::scrapeTool() const
+	{
+		const char* prog = getenv("BANANA_SCRAPE");	// (another build of it, for testing)
+		return prog && *prog ? prog : "/usr/bin/banana-scrape";
+	}
+
+	Settings::Result Settings::pressArt(Key k)
+	{
+		int n = (int)artNames.size();
+		bool busy = artJob.running();
+		switch (k)
+		{
+		case Key::UP: case Key::DOWN:
+			if (!n || busy) return NONE;
+			asel = (asel + (k == Key::UP ? -1 : 1) + n) % n;
+			if (asel < atop) atop = asel;
+			if (asel >= atop + ROWS) atop = asel - ROWS + 1;
+			return MOVED;
+		case Key::A:
+		{
+			if (!n || busy) return NONE;
+			// its cover and title screen for this game, over what it had (banana-scrape keeps the match for the
+			// scrapes after)
+			auto q = [](const std::string& s) { std::string r = "'"; for (char c : s) { if (c == '\'') r += "'\\''"; else r += c; } return r + "'"; };
+			std::string sys = gameKey.substr(0, gameKey.find('/'));
+			artMatching = true;
+			message = "Fetching the cover and the title screen...";
+			artJob.start(q(scrapeTool()) + " --match " + q(sys) + " " + q(pgPath) + " " + q(artNames[asel]) + " 2>/dev/null", sync);
+			return MOVED;
+		}
+		case Key::B: case Key::LEFT:
+			if (busy && artMatching) return NONE;	// (not while its pictures are written)
+			page = GAME; message.clear();
+			return MOVED;
+		case Key::START:
+			if (busy && artMatching) return NONE;
+			page = LIST; mOpen = false; return CLOSED;
+		default: return NONE;
+		}
+	}
+
+	Settings::Result Settings::touchArt(float cx, float cy)
+	{
+		(void)cx; (void)cy;
+		if (downY >= 418 && downY <= 466) return pressArt(downX < 320 ? Key::B : Key::A);
+		for (int r = 0; r < ROWS && atop + r < (int)artNames.size(); r++)
+		{
+			float ry = 82 + r * 64;
+			if (downY < ry || downY > ry + 56) continue;
+			if (atop + r != asel) { asel = atop + r; return MOVED; }
+			return pressArt(Key::A);
+		}
+		return NONE;
+	}
+
+	void Settings::renderArt()
+	{
+		SPal p = pal(light);
+		bool busy = artJob.running();
+		be->beginScreen(0);
+		box("screen", false, 0, 0, 640, 480);
+		box("hero", false, 18, 20, 604, 436);
+		icon("picture", 50, 56, 3);
+		text("Box art for", true, 17, 170, 62, p.muted, true, 1.4f);
+		text(fit(pgTitle, true, 30, 420), true, 30, 170, 88, p.ink);
+		text(fit(artNames.empty() ? "\"" + artWords + "\"" : artNames[asel], true, 22, 420), true, 22, 170, 130, p.accent);
+		std::string help = !message.empty() ? message
+			: "libretro's names for the words typed, the closest first. A fetches that game's cover and title screen for this one "
+			  "(over what it had), and every scrape after keeps them. B types other words.";
+		wrapped(help, 20, 50, 196, 540, 7, p.muted);
+		be->endScreen();
+
+		be->beginScreen(1);
+		box("screen", false, 0, 0, 640, 480);
+		box("bubble", false, 18, 14, 604, 54);
+		text("Box art", true, 22, 38, 28, p.ink);
+		std::string count = busy && !artMatching ? "Looking..." : std::to_string(artNames.size()) + (artNames.size() == 1 ? " name" : " names");
+		float cw = text(count, true, 17, 0, 0, p.muted, false, 0, true);
+		text(count, true, 17, 602 - cw, 31, p.muted);
+		for (int r = 0; r < ROWS && atop + r < (int)artNames.size(); r++)
+		{
+			int i = atop + r;
+			bool on = i == asel;
+			float y = 82 + r * 64;
+			box(on ? "pick" : "slot", on, 18, y, 604, 56);
+			text(fit(artNames[i], true, 18, 560), true, 18, 38, y + 18, on ? p.onPick : p.muted);
+		}
+		float bw = faceWidth("B", "Back");
+		if (!(busy && artMatching)) face("B", "Back", 18, bw);
+		const char* act = busy ? "" : artNames.empty() ? "" : "Use";
+		if (*act)
+		{
+			float aw = faceWidth("A", act);
+			face("A", act, 622 - aw, aw);
+		}
+		be->endScreen();
+	}
+
 	Settings::Result Settings::pressUpdates(Key k)
 	{
 		int n = (int)pkgs.size();
@@ -2032,14 +2160,15 @@ namespace banana
 	void Settings::setGameEmulator(const std::string& rom, const std::string& emu) { setPerGame("nds-per-game.conf", rom, emu); }
 
 	void Settings::openGame(const std::string& title, const std::string& romName, bool nds, const std::string& key,
-		const std::string& name, const std::string& sort)
+		const std::string& name, const std::string& sort, const std::string& path)
 	{
 		open();
-		pgTitle = title; pgRom = romName; pgNds = nds;
+		pgTitle = title; pgRom = romName; pgNds = nds; pgPath = path; pgArtDone = false; artWords.clear();
 		gameKey = key; gameName = name; gameSort = sort;
 		pgRows.clear();
 		if (nds) pgRows = { PG_EMU, PG_SHADER };
 		if (!key.empty()) { pgRows.push_back(PG_NAME); pgRows.push_back(PG_SORT); }
+		if (!key.empty() && !path.empty()) pgRows.push_back(PG_ART);
 		std::string cur = gameEmulator(romName);
 		pgEmu = 0;
 		for (int i = 1; i < 3; i++) if (cur == GAME_EMUS[i]) pgEmu = i;
@@ -2085,6 +2214,12 @@ namespace banana
 		}
 		case Key::A: case Key::START:
 			// on the name or the sort title: the keyboard (kept as soon as it's typed); else Done
+			if (k == Key::A && row == PG_ART)
+			{
+				if (!wifiOn()) { message = "Wi-Fi is off: switch it on in Settings > Network first."; return MOVED; }
+				startEntry(ENTRY_ART_SEARCH, "Box art: the game's name in libretro's collection", pgTitle, GAME, artWords.empty() ? pgTitle : artWords);
+				return MOVED;
+			}
 			if (k == Key::A && (row == PG_NAME || row == PG_SORT))
 			{
 				bool nm = row == PG_NAME;
@@ -2098,8 +2233,8 @@ namespace banana
 				setPerGame("nds-per-game-shader.conf", pgRom, pgShaderValues[pgShader]);
 			}
 			close();
-			return CHANGED;
-		case Key::B: close(); return CLOSED;
+			return pgArtDone ? TITLES : CHANGED;	// (a new cover: the library again)
+		case Key::B: close(); return pgArtDone ? TITLES : CLOSED;
 		default: return NONE;
 		}
 	}
@@ -2113,7 +2248,7 @@ namespace banana
 			float ry = 82 + r * 64;
 			if (downY < ry || downY > ry + 56) continue;
 			if (r != pgRow) { pgRow = r; return MOVED; }
-			if (pgRows[r] == PG_NAME || pgRows[r] == PG_SORT) return pressGame(Key::A);	// a tap again: the keyboard
+			if (pgRows[r] == PG_NAME || pgRows[r] == PG_SORT || pgRows[r] == PG_ART) return pressGame(Key::A);	// a tap again: the keyboard
 			return pressGame(downX < 320 ? Key::LEFT : Key::RIGHT);	// the value's left or right half steps it
 		}
 		return NONE;
@@ -2138,14 +2273,15 @@ namespace banana
 		const int n = (int)pgRows.size();
 		const PgRow row = n ? pgRows[std::min(pgRow, n - 1)] : PG_NAME;
 		const std::string nameValue = gameName.empty() ? "As scraped" : gameName, sortValue = gameSort.empty() ? "By its name" : gameSort;
-		auto label = [](PgRow r) { return r == PG_EMU ? "Emulator" : r == PG_SHADER ? "Shader" : r == PG_NAME ? "Name" : "Sort title"; };
-		auto value = [&](PgRow r) { return r == PG_EMU ? emuValue : r == PG_SHADER ? shValue : r == PG_NAME ? nameValue : sortValue; };
+		auto label = [](PgRow r) { return r == PG_EMU ? "Emulator" : r == PG_SHADER ? "Shader" : r == PG_NAME ? "Name" : r == PG_SORT ? "Sort title" : "Box art"; };
+		auto value = [&](PgRow r) { return r == PG_EMU ? emuValue : r == PG_SHADER ? shValue : r == PG_NAME ? nameValue : r == PG_SORT ? sortValue
+			: std::string(pgArtDone ? "Fetched" : "Find it by name"); };
 
 		be->beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon(pgNds ? "nds" : "gamepad", 50, 56, 3);
-		text(row == PG_EMU ? "This game's emulator" : row == PG_SHADER ? "This game's shader" : row == PG_NAME ? "This game's name" : "This game's sort title",
+		text(row == PG_EMU ? "This game's emulator" : row == PG_SHADER ? "This game's shader" : row == PG_NAME ? "This game's name" : row == PG_SORT ? "This game's sort title" : "This game's box art",
 			true, 17, 170, 62, p.muted, true, 1.4f);
 		text(fit(pgTitle, true, 30, 420), true, 30, 170, 88, p.ink);
 		text(fit(value(row), true, 22, 420), true, 22, 170, 130, p.accent);
@@ -2156,8 +2292,11 @@ namespace banana
 			  "None scales smoothly and costs no GPU work.") + (plus ? PLUS_SHADER_NOTE : "")
 			: row == PG_NAME ? "The name the menu shows for this game. A types it; an empty one goes back to the scraped name. Kept in "
 			  "banana/game-titles.tsv, which scraping the box art again leaves alone."
-			: "The library's order goes by this instead of the name: Dragon Quest 04, 05 and 09 keep IV, V and IX in their order. "
-			  "A types it; an empty one sorts by the name again.";
+			: row == PG_SORT ? "The library's order goes by this instead of the name: Dragon Quest 04, 05 and 09 keep IV, V and IX in their order. "
+			  "A types it; an empty one sorts by the name again."
+			: !message.empty() ? message
+			: "For a game the box art scrape got wrong or didn't find (a translation, a hack, another name): A types its name as "
+			  "libretro's collection has it, then you pick the right one from what it finds. Wi-Fi needed.";
 		wrapped(help, 20, 50, 196, 540, 7, p.muted);
 		be->endScreen();
 
@@ -2172,7 +2311,7 @@ namespace banana
 			box(on ? "pick" : "slot", on, 18, y, 604, 56);
 			Color c = on ? p.onPick : p.muted;
 			text(label(pgRows[r]), true, 20, 38, y + 16, c);
-			bool typed = pgRows[r] == PG_NAME || pgRows[r] == PG_SORT;
+			bool typed = pgRows[r] == PG_NAME || pgRows[r] == PG_SORT || pgRows[r] == PG_ART;
 			std::string v = fit(value(pgRows[r]), true, 19, typed ? 400 : 380);
 			float vw = text(v, true, 19, 0, 0, p.ink, false, 0, true);
 			if (typed) { text(v, true, 19, 586 - vw, y + 17, c); continue; }
@@ -2182,7 +2321,7 @@ namespace banana
 		}
 		float bw = faceWidth("B", "Back");
 		face("B", "Back", 18, bw);
-		const char* act = row == PG_NAME || row == PG_SORT ? "Type" : "Done";
+		const char* act = row == PG_NAME || row == PG_SORT ? "Type" : row == PG_ART ? "Find" : "Done";
 		float aw = faceWidth("A", act);
 		face("A", act, 622 - aw, aw);
 		be->endScreen();
@@ -2275,6 +2414,20 @@ namespace banana
 			page = entryBack;
 			message.clear();
 			return CHANGED;
+		case ENTRY_ART_SEARCH:
+		{
+			// the collection's names for these words, looked for in the background (the list page waits for them)
+			artWords = trim(pw);
+			pw.clear();
+			if (artWords.empty()) { page = GAME; return MOVED; }
+			auto q = [](const std::string& s) { std::string r = "'"; for (char c : s) { if (c == '\'') r += "'\\''"; else r += c; } return r + "'"; };
+			std::string sys = gameKey.substr(0, gameKey.find('/'));
+			artNames.clear(); asel = atop = 0; artMatching = false;
+			message = "Looking in libretro's collection...";
+			artJob.start(q(scrapeTool()) + " --search " + q(sys) + " " + q(artWords) + " 2>/dev/null", sync);
+			page = ARTPICK;
+			return MOVED;
+		}
 		case ENTRY_GAME_NAME: case ENTRY_GAME_SORT:
 		{
 			// the same as the scraped name: none of its own (spaces at either end don't count, as in the library)

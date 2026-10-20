@@ -509,7 +509,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 				const std::string& path = lib.gameAt(ui.gameIndex()).path;
 				std::string key = lib.gameKey(ui.gameIndex());
 				auto t = lib.gameTitles(key);
-				settings.openGame(lib.gameAt(ui.gameIndex()).title, path.substr(path.rfind('/') + 1), lib.systemOf(ui.gameIndex()).id == "nds", key, t.name, t.sort);
+				settings.openGame(lib.gameAt(ui.gameIndex()).title, path.substr(path.rfind('/') + 1), lib.systemOf(ui.gameIndex()).id == "nds", key, t.name, t.sort, path);
 				logf("press x: game page for %s", path.c_str());
 				continue;
 			}
@@ -1114,7 +1114,7 @@ int main(int argc, char** argv)
 				auto t = lib.gameTitles(key);
 				ui->touchCancel();
 				settingsView.setVariant(settings["theme"]);
-				settingsView.openGame(lib.gameAt(g).title, path.substr(path.rfind('/') + 1), lib.systemOf(g).id == "nds", key, t.name, t.sort);
+				settingsView.openGame(lib.gameAt(g).title, path.substr(path.rfind('/') + 1), lib.systemOf(g).id == "nds", key, t.name, t.sort, path);
 				rep.key = Key::NONE;
 				sound.play("select");
 				dirty = true;
