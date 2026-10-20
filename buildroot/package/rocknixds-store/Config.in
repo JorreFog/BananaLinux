@@ -1,0 +1,12 @@
+config BR2_PACKAGE_ROCKNIXDS_STORE
+	bool "rocknixds-store"
+	default y
+	select BR2_PACKAGE_LIBDRM
+	select BR2_PACKAGE_PYTHON3
+	select BR2_PACKAGE_LIBCURL
+	select BR2_PACKAGE_LIBCURL_CURL
+	select BR2_PACKAGE_CA_CERTIFICATES
+	help
+	  ROCKNIXDS's Store, on its own tile on the shelf: apps from GitHub releases (eReaderDS on the RG DS Plus for
+	  now), installed in /data/store/apps and listed on the Apps shelf. The app draws straight to the panels (KMS,
+	  Döda Kvarter's platform code); the package manager is Python, and fetches with curl.
