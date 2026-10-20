@@ -384,6 +384,24 @@ static void panel_off_again(void)
 }
 
 static int charger_online(void);
+/* dark and awake on the charger: waits up to ms for a press of the power button (on its release), the other
+ * devices' events dropped (a key while dark wakes nothing, as in a sleep) */
+static int power_pressed(int ms)
+{
+	struct pollfd pf[MAXDEV];
+	for (int i = 0; i < ndev; i++) pf[i] = (struct pollfd){ devfd[i], POLLIN, 0 };
+	if (poll(pf, ndev, ms) <= 0) return 0;
+	int got = 0;
+	for (int i = 0; i < ndev; i++) {
+		if (!(pf[i].revents & POLLIN)) continue;
+		struct input_event ev[32];
+		ssize_t r;
+		while ((r = read(devfd[i], ev, sizeof ev)) > 0)
+			for (int k = 0; k < r / (ssize_t)sizeof ev[0]; k++)
+				if (ev[k].type == EV_KEY && ev[k].code == KEY_POWER && ev[k].value == 0) got = 1;
+	}
+	return got;
+}
 static void suspend_now(const char *why)
 {
 	double t0 = mono();
@@ -393,23 +411,25 @@ static void suspend_now(const char *why)
 	hooks("pre", 0);
 	sync();
 	sleep_mode();
-	int cycles = 0, rtc_wakes = 0, failures = 0, dark = 0;
+	int cycles = 0, rtc_wakes = 0, failures = 0, dark = 0, dark_lid = 0;
 	double asleep = 0, dark_from = 0, led_at = 0;
 	const char *woke = "?";
 	for (;;) {
-		/* charging with the lid shut: no suspend, which turns the charging light off (it is a PWM LED, and the PWM
-		 * stops in suspend). Dark and awake instead, the game still paused, until the lid opens (back as from a
-		 * sleep) or the charger is pulled out (then a real sleep). */
-		if (lid_closed && charger_online()) {
+		/* charging: no suspend, which turns the charging light off (it is a PWM LED, and the PWM stops in suspend).
+		 * Dark and awake instead, the game still paused, until the lid opens or the power button is pressed (back as
+		 * from a sleep), or the charger is pulled out (then a real sleep). Since 0.4.2 a power-button sleep too, not
+		 * only the lid's (#8: the light went out when the handheld was put to sleep on the charger). */
+		if (charger_online()) {
 			if (!dark) {
-				dark = 1; dark_from = mono();
+				dark = 1; dark_from = mono(); dark_lid = lid_closed;
 				backlights_power(0);
 				sleep_log("%s while charging: dark and awake, so the charging light stays on%s", why, game ? ", game paused" : "");
 			}
 			if (mono() >= led_at) { leds_update(); led_at = mono() + 10; }	/* (it goes out when the battery is full) */
-			usleep(500000);
+			if (power_pressed(500)) { woke = "power button"; break; }
 			read_lid();
-			if (!lid_closed) { woke = "lid opened"; break; }
+			if (dark_lid && !lid_closed) { woke = "lid opened"; break; }
+			if (!dark_lid && lid_closed) dark_lid = 1;	/* shut meanwhile: opening it wakes too */
 			continue;
 		}
 		time_t alarm = rtc_alarm((int)(cfg.sleep_check_hours * 3600));
