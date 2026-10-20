@@ -1,3 +1,4 @@
+(This file comes with BananaOS and every update replaces it: keep notes of your own in another file.)
 BANANA
 ======
 Games go in roms/<system>: roms/nds for Nintendo DS (.nds or .zip), roms/gba, roms/snes, ...
