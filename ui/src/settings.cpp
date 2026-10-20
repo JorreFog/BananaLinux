@@ -2277,9 +2277,9 @@ namespace banana
 			return CHANGED;
 		case ENTRY_GAME_NAME: case ENTRY_GAME_SORT:
 		{
-			// the same as the scraped name: none of its own
-			std::string v = pw;
-			if (entry == ENTRY_GAME_NAME && v == pgTitle && gameName.empty()) v.clear();
+			// the same as the scraped name: none of its own (spaces at either end don't count, as in the library)
+			std::string v = trim(pw);
+			if (entry == ENTRY_GAME_NAME && v == trim(pgTitle) && gameName.empty()) v.clear();
 			(entry == ENTRY_GAME_NAME ? gameName : gameSort) = v;
 			if (entry == ENTRY_GAME_NAME && !v.empty()) pgTitle = v;
 			pw.clear();
