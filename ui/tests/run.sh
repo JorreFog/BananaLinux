@@ -60,6 +60,24 @@ for size in 640x480 1024x768; do
     for s in wifi-row wifi-list wifi-short wifi-keys wifi-joined wifi-end; do
         [ -s "$OUT/$size-$s-top.png" ] && [ -s "$OUT/$size-$s-bot.png" ] || { echo "FAIL $size: no $s shot"; fail=1; }
     done
+    # A saved network is joined with the password it has, no keyboard: its block, as written on a computer, moved
+    # first. One that couldn't be joined (FAKE_WIFI_FAIL) asks for its password the next time.
+    printf 'network={\n\tssid="Neighbour 5G"\n\tpsk="neighbour"\n\tkey_mgmt=SAE\n\tieee80211w=2\n\tpriority=2\n}\nnetwork={\n\tssid="Banana Home"\n\tpsk="bananas1"\n\tscan_ssid=1\n\tpriority=1\n}\n' > "$conf"
+    BANANA_WIFI="$HERE/tests/fake-wifi.sh" FAKE_WIFI_CONF="$conf" "$HERE/banana-ui" --headless "$OUT/$size-" --size $size \
+        --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
+        --script "home 0; press start; press r; press r; press r; press r; press a; press down; press a; wait 2400; shot wifi-saved; press a; wait 2500; shot wifi-rejoined" \
+        2>> "$wlog" || { echo "FAIL $size: banana-ui (Wi-Fi, saved) exited $?"; fail=1; }
+    [ "$(sed -n 's/^[[:space:]]*ssid=//p' "$conf" | tr '\n' '|')" = '"Banana Home"|"Neighbour 5G"|' ] || { echo "FAIL $size: the saved network chosen isn't first: $(grep ssid= "$conf" | tr -d '\t' | tr '\n' ' ')"; fail=1; }
+    [ "$(sed -n '1,/}/p' "$conf" | tr -d '\t' | tr '\n' ' ')" = 'network={ ssid="Banana Home" psk="bananas1" scan_ssid=1 priority=3 } ' ] || { echo "FAIL $size: the saved network's block: $(sed -n '1,/}/p' "$conf" | tr -d '\t' | tr '\n' ' ')"; fail=1; }
+    FAKE_WIFI_FAIL="Neighbour 5G" BANANA_WIFI="$HERE/tests/fake-wifi.sh" FAKE_WIFI_CONF="$conf" "$HERE/banana-ui" --headless "$OUT/$size-" --size $size \
+        --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
+        --script "home 0; press start; press r; press r; press r; press r; press a; press down; press a; wait 2400; press down; press down; press down; press down; \
+            press a; wait 2500; wait 30000; wait 100; shot wifi-failed; press a; $(key 0,0 0,1 0,2 0,3 0,4 0,5 0,6 0,7) press start; wait 500" \
+        2>> "$wlog" || { echo "FAIL $size: banana-ui (Wi-Fi, failed) exited $?"; fail=1; }
+    grep -q 'psk="12345678"' "$conf" && ! grep -q 'psk="neighbour"' "$conf" || { echo "FAIL $size: no password asked for after a failed join"; fail=1; }
+    for s in wifi-saved wifi-rejoined wifi-failed; do
+        [ -s "$OUT/$size-$s-top.png" ] && [ -s "$OUT/$size-$s-bot.png" ] || { echo "FAIL $size: no $s shot"; fail=1; }
+    done
     # The first-time setup: opened as on a first boot, a RetroAchievements account typed by touch (name, then the
     # password), past the Box art step (not started: no network here), Finish writes setup-done; the accounts file is what the launchers read (no login with the server
 # here: BANANA_RA_CHECK=0)
