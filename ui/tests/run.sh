@@ -110,13 +110,25 @@ for size in 640x480 1024x768; do
     # touch, START; up to Name, one letter deleted, START: both in game-titles.tsv, and the game first on the shelf
     tlog=$OUT/$size-titles.log; T="$FX/data/game-titles.tsv"; rm -f "$T"
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
-        --roms "$FX/roms" --data "$FX/data" --script "lib 0 4; press x; press down; press down; press down; shot titles-page; press a; $(key 2,0) press start; \
+        --roms "$FX/roms" --data "$FX/data" --script "lib 0 4; press x; press down; press down; press down; press down; press down; shot titles-page; press a; $(key 2,0) press start; \
             press up; press a; press b; press start; wait 300; shot titles-done" 2> "$tlog" || { echo "FAIL $size: banana-ui (titles) exited $?"; fail=1; }
     [ "$(cat "$T" 2>/dev/null)" = "$(printf 'nds/Yellow Planet [!].zip\tYellow Plane\ta')" ] || { echo "FAIL $size: game-titles.tsv: $(cat "$T" 2>/dev/null)"; fail=1; }
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
         --roms "$FX/roms" --data "$FX/data" --script "lib 0 0; press a; wait 3000; wait 1" 2>> "$tlog" || { echo "FAIL $size: banana-ui (titles 2) exited $?"; fail=1; }
     grep -q "launch 0: .*Yellow Planet" "$tlog" || { echo "FAIL $size: the sort title didn't put it first: $(grep launch "$tlog")"; fail=1; }
     rm -f "$T"
+    # a DS game's own Threaded 3D and microphone (#27): X on the first DS game, down to Threaded 3D, right (On), down to
+    # Microphone, right (Low), A: both kept per game; then both back to "As in Settings": no lines (and no files) left
+    plog3=$OUT/$size-pergame-opts.log; F3="$FX/data/nds-per-game-3d.conf"; FM="$FX/data/nds-per-game-mic.conf"; rm -f "$F3" "$FM"
+    "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "lib 0 0; press x; press down; press down; press right; press down; press right; shot pergame-opts; press a" 2> "$plog3" \
+        || { echo "FAIL $size: banana-ui (game options) exited $?"; fail=1; }
+    [ "$(cat "$F3" 2>/dev/null)" = "Banana Kart DS.nds = 1" ] && [ "$(cat "$FM" 2>/dev/null)" = "Banana Kart DS.nds = 0.15" ] \
+        || { echo "FAIL $size: game options: $(cat "$F3" "$FM" 2>&1 | tr '\n' ' ')"; fail=1; }
+    "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "lib 0 0; press x; press down; press down; press left; press down; press left; press a" 2>> "$plog3" \
+        || { echo "FAIL $size: banana-ui (game options 2) exited $?"; fail=1; }
+    [ -e "$F3" ] || [ -e "$FM" ] && { echo "FAIL $size: back to As in Settings left $(ls "$F3" "$FM" 2>/dev/null)"; fail=1; }
     # Box art by name (#28): X on the last DS game, up to Box art (the last row), A types (its name, as it is), START
     # looks (a stand-in banana-scrape: two names), down to the second, A fetches it: banana-scrape --match with the
     # game's system, file and that name; B closes the page and the library is read again

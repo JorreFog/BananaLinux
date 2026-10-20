@@ -2163,6 +2163,13 @@ namespace banana
 		else unlink(tmp.c_str());
 	}
 
+	// a DS game's own Threaded 3D (SuperDrastic: DraStic's drastic.cfg for its runs) and microphone (both emulators'
+	// threshold), #27: index 0 "As in Settings", then these values (nds-per-game-3d.conf, nds-per-game-mic.conf)
+	static const char* const GAME_3D_VALUES[] = { "", "1", "0" };
+	static const char* const GAME_3D_NAMES[] = { "", "On", "Off" };
+	static const char* const GAME_MIC_VALUES[] = { "", "0.15", "0.05", "0.02", "0" };	// (as Settings' Microphone)
+	static const char* const GAME_MIC_NAMES[] = { "", "Low", "Medium", "High", "Off" };
+
 	std::string Settings::gameEmulator(const std::string& rom) { return perGame("nds-per-game.conf", rom); }
 	void Settings::setGameEmulator(const std::string& rom, const std::string& emu) { setPerGame("nds-per-game.conf", rom, emu); }
 
@@ -2173,7 +2180,13 @@ namespace banana
 		pgTitle = title; pgRom = romName; pgNds = nds; pgPath = path; pgArtDone = false; artWords.clear();
 		gameKey = key; gameName = name; gameSort = sort;
 		pgRows.clear();
-		if (nds) pgRows = { PG_EMU, PG_SHADER };
+		if (nds) pgRows = { PG_EMU, PG_SHADER, PG_3D, PG_MIC };
+		pg3d = pgMic = 0;
+		{
+			std::string v = perGame("nds-per-game-3d.conf", romName), m = perGame("nds-per-game-mic.conf", romName);
+			for (int i = 1; i < 3; i++) if (v == GAME_3D_VALUES[i]) pg3d = i;
+			for (int i = 1; i < 5; i++) if (m == GAME_MIC_VALUES[i]) pgMic = i;
+		}
 		if (!key.empty()) { pgRows.push_back(PG_NAME); pgRows.push_back(PG_SORT); }
 		if (!key.empty() && !path.empty()) pgRows.push_back(PG_ART);
 		std::string cur = gameEmulator(romName);
@@ -2193,7 +2206,7 @@ namespace banana
 			pgShaderNames.push_back(sh + " (not on the card)"); pgShaderValues.push_back(sh);
 			pgShader = (int)pgShaderValues.size() - 1;
 		}
-		pgRow = 0;
+		pgRow = pgTop = 0;
 		message.clear();
 		page = GAME;
 	}
@@ -2205,12 +2218,17 @@ namespace banana
 		PgRow row = pgRows[std::min(pgRow, n - 1)];
 		switch (k)
 		{
-		case Key::UP: pgRow = (pgRow + n - 1) % n; return MOVED;
-		case Key::DOWN: pgRow = (pgRow + 1) % n; return MOVED;
+		case Key::UP: case Key::DOWN:
+			pgRow = (pgRow + (k == Key::UP ? n - 1 : 1)) % n;
+			if (pgRow < pgTop) pgTop = pgRow;
+			if (pgRow >= pgTop + ROWS) pgTop = pgRow - ROWS + 1;
+			return MOVED;
 		case Key::LEFT: case Key::RIGHT:
 		{
 			int d = k == Key::LEFT ? -1 : 1;
 			if (row == PG_EMU) pgEmu = (pgEmu + d + 3) % 3;
+			else if (row == PG_3D) pg3d = (pg3d + d + 3) % 3;
+			else if (row == PG_MIC) pgMic = (pgMic + d + 5) % 5;
 			else if (row == PG_SHADER)
 			{
 				int ns = (int)pgShaderValues.size();
@@ -2238,6 +2256,8 @@ namespace banana
 			{
 				setGameEmulator(pgRom, GAME_EMUS[pgEmu]);
 				setPerGame("nds-per-game-shader.conf", pgRom, pgShaderValues[pgShader]);
+				setPerGame("nds-per-game-3d.conf", pgRom, GAME_3D_VALUES[pg3d]);
+				setPerGame("nds-per-game-mic.conf", pgRom, GAME_MIC_VALUES[pgMic]);
 			}
 			close();
 			return pgArtDone ? TITLES : CHANGED;	// (a new cover: the library again)
@@ -2250,9 +2270,9 @@ namespace banana
 	{
 		(void)cx; (void)cy;
 		if (downY >= 418 && downY <= 466) return pressGame(downX < 320 ? Key::B : Key::A);
-		for (int r = 0; r < (int)pgRows.size(); r++)
+		for (int r = pgTop; r < (int)pgRows.size() && r < pgTop + ROWS; r++)
 		{
-			float ry = 82 + r * 64;
+			float ry = 82 + (r - pgTop) * 64;
 			if (downY < ry || downY > ry + 56) continue;
 			if (r != pgRow) { pgRow = r; return MOVED; }
 			if (pgRows[r] == PG_NAME || pgRows[r] == PG_SORT || pgRows[r] == PG_ART) return pressGame(Key::A);	// a tap again: the keyboard
@@ -2276,19 +2296,28 @@ namespace banana
 		const std::string emuValue = pgEmu ? std::string(GAME_EMU_NAMES[pgEmu]) : std::string("As in Settings (") + (global == "bananads" ? "BananaDS" : "SuperDrastic") + ")";
 		const std::string shValue = pgShader ? pgShaderNames[pgShader] : "As in Settings: " + gshName;	// (names have brackets of their own)
 		const bool plus = readLine("/etc/banana/board") == "rgds-plus";
+		// Settings' Threaded 3D (DraStic's drastic.cfg) and the microphone of the emulator this game runs in
+		const std::string g3d = getConfValue("/data/drastic/config/drastic.cfg", "threaded_3d", getConfValue("/usr/share/drastic/config/drastic.cfg", "threaded_3d", "0"));
+		const std::string gmic = emu == "bananads" ? getConfValue("/data/bananads/bananads.conf", "mic.threshold", "0.05")
+			: getConfValue(data + "/superdrastic.conf", "DSHOOK_MIC_THRESH", "0");
+		std::string gmicName = gmic;
+		for (int i = 1; i < 5; i++) if (atof(gmic.c_str()) == atof(GAME_MIC_VALUES[i])) gmicName = GAME_MIC_NAMES[i];
+		const std::string v3d = pg3d ? std::string(GAME_3D_NAMES[pg3d]) : "As in Settings (" + std::string(g3d == "1" ? "On" : "Off") + ")";
+		const std::string vmic = pgMic ? std::string(GAME_MIC_NAMES[pgMic]) : "As in Settings (" + gmicName + ")";
 
 		const int n = (int)pgRows.size();
 		const PgRow row = n ? pgRows[std::min(pgRow, n - 1)] : PG_NAME;
 		const std::string nameValue = gameName.empty() ? "As scraped" : gameName, sortValue = gameSort.empty() ? "By its name" : gameSort;
-		auto label = [](PgRow r) { return r == PG_EMU ? "Emulator" : r == PG_SHADER ? "Shader" : r == PG_NAME ? "Name" : r == PG_SORT ? "Sort title" : "Box art"; };
-		auto value = [&](PgRow r) { return r == PG_EMU ? emuValue : r == PG_SHADER ? shValue : r == PG_NAME ? nameValue : r == PG_SORT ? sortValue
-			: std::string(pgArtDone ? "Fetched" : "Find it by name"); };
+		auto label = [](PgRow r) { return r == PG_EMU ? "Emulator" : r == PG_SHADER ? "Shader" : r == PG_3D ? "Threaded 3D" : r == PG_MIC ? "Microphone"
+			: r == PG_NAME ? "Name" : r == PG_SORT ? "Sort title" : "Box art"; };
+		auto value = [&](PgRow r) { return r == PG_EMU ? emuValue : r == PG_SHADER ? shValue : r == PG_3D ? v3d : r == PG_MIC ? vmic
+			: r == PG_NAME ? nameValue : r == PG_SORT ? sortValue : std::string(pgArtDone ? "Fetched" : "Find it by name"); };
 
 		be->beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon(pgNds ? "nds" : "gamepad", 50, 56, 3);
-		text(row == PG_EMU ? "This game's emulator" : row == PG_SHADER ? "This game's shader" : row == PG_NAME ? "This game's name" : row == PG_SORT ? "This game's sort title" : "This game's box art",
+		text(row == PG_EMU ? "This game's emulator" : row == PG_SHADER ? "This game's shader" : row == PG_3D ? "This game's 3D" : row == PG_MIC ? "This game's microphone" : row == PG_NAME ? "This game's name" : row == PG_SORT ? "This game's sort title" : "This game's box art",
 			true, 17, 170, 62, p.muted, true, 1.4f);
 		text(fit(pgTitle, true, 30, 420), true, 30, 170, 88, p.ink);
 		text(fit(value(row), true, 22, 420), true, 22, 170, 130, p.accent);
@@ -2297,6 +2326,11 @@ namespace banana
 			  "accurate. The choice is for this game only; the others follow Settings > Nintendo DS > Emulator."
 			: row == PG_SHADER ? std::string("The picture's shader for this game only, in either emulator; the others follow Settings > Nintendo DS > Shader. "
 			  "None scales smoothly and costs no GPU work.") + (plus ? PLUS_SHADER_NOTE : "")
+			: row == PG_3D ? "SuperDrastic (DraStic) only. On draws the DS's 3D beside the game, the faster way; Off draws it in step with "
+			  "the game, for a game whose 3D shows on the wrong screen or a frame late (the Dragon Quest games). The others follow "
+			  "Settings > Nintendo DS > Threaded 3D."
+			: row == PG_MIC ? "How loud a word or a blow must be to reach this game, in either emulator: High hears a quiet voice, Low "
+			  "only a loud one, Off none. For a game that needs the microphone (Nintendogs) or one it bothers."
 			: row == PG_NAME ? "The name the menu shows for this game. A types it; an empty one goes back to the scraped name. Kept in "
 			  "banana/game-titles.tsv, which scraping the box art again leaves alone."
 			: row == PG_SORT ? "The library's order goes by this instead of the name: Dragon Quest 04, 05 and 09 keep IV, V and IX in their order. "
@@ -2311,10 +2345,10 @@ namespace banana
 		box("screen", false, 0, 0, 640, 480);
 		box("bubble", false, 18, 14, 604, 54);
 		text("This game", true, 22, 38, 28, p.ink);
-		for (int r = 0; r < n; r++)
+		for (int r = pgTop; r < n && r < pgTop + ROWS; r++)
 		{
 			bool on = r == pgRow;
-			float y = 82 + r * 64;
+			float y = 82 + (r - pgTop) * 64;
 			box(on ? "pick" : "slot", on, 18, y, 604, 56);
 			Color c = on ? p.onPick : p.muted;
 			text(label(pgRows[r]), true, 20, 38, y + 16, c);
