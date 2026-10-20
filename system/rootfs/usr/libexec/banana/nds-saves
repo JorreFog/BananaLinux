@@ -9,6 +9,13 @@ G=$(basename "$1"); G=${G%.*}
 DSV="/data/drastic/backup/$G.dsv"
 SAV="/data/saves/nds/$G.sav"
 mkdir -p /data/drastic/backup /data/saves/nds
+# a save from ROCKNIX, beside the game (roms/nds/<game>.dsv, on either card, #25): taken when Banana has no save for
+# the game yet, so a copy of the old file can never write over a game played here since; the file beside the game
+# stays as it is
+R="${1%.*}.dsv"
+if [ -f "$R" ] && [ ! -f "$DSV" ] && [ ! -f "$SAV" ]; then
+    cp -p "$R" "$DSV" && echo "nds-saves: $G: the save beside the game (ROCKNIX's) taken"
+fi
 raw_of_dsv() {   # raw_of_dsv <dsv> <out>: the save without DeSmuME's footer
     local n=$(wc -c < "$1")
     if [ $n -gt 122 ] && [ "$(tail -c 16 "$1")" = "|-DESMUME SAVE-|" ]; then
