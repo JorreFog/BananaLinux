@@ -1,6 +1,15 @@
 BananaOS's speed work on Panda3DS for the RG DS Plus (Cortex-A55), from branch banana3ds.
 PANDA3DS_BASELINE=1 in the environment runs upstream's code paths instead. Measured with tools/3ds-perf.
 
+  - GL DisplayTransfer: invalidate only the bytes the transfer writes
+  - Proctex: upload the LUTs to texture unit 3, not the active unit
+  - Proctex: use the PICA's texture coordinates, not the flipped ones
+  - OpenGL wrapper: forget texture and framebuffer names when freeing them
+  - libretro: PANDA3DS_GPU_THREAD=0 renders on RetroArch's thread
+  - panda3ds-bench: how busy the emulated ARM11 was, per scene
+  - libretro: the GPU on its own thread with an EGL context sharing RetroArch's; libretro-host test frontend
+  - GL shader generator: procedural textures (texture unit 3)
+  - PICA: keep the procedural texture LUTs (registers 0xAF/0xB0-0xB7)
   - dynarmic: VFP stores from GPRs
   - dynarmic: no FPSR traffic per block
   - dynarmic: dead NZCV writes dropped
@@ -19,7 +28,7 @@ PANDA3DS_BASELINE=1 in the environment runs upstream's code paths instead. Measu
   - panda3ds-bench: a headless benchmark frontend (EGL surfaceless, scene markers from svcOutputDebugString)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 2f4d9df2..9698f099 100644
+index 2f4d9df2..187b3ff4 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -62,6 +62,7 @@ option(USE_SYSTEM_LUAJIT "Use the system's LuaJIT package" OFF)
@@ -44,8 +53,19 @@ index 2f4d9df2..9698f099 100644
  if(NOT BUILD_HYDRA_CORE AND NOT BUILD_LIBRETRO_CORE)
      add_executable(Alber)
  
+@@ -882,6 +890,10 @@ elseif(BUILD_LIBRETRO_CORE)
+     include_directories(third_party/libretro/include)
+     add_library(panda3ds_libretro SHARED src/libretro_core.cpp)
+     target_link_libraries(panda3ds_libretro PUBLIC AlberCore)
++    if(OPENGL_PROFILE STREQUAL "OpenGLES")
++        # the GPU's own thread shares RetroArch's context through EGL
++        target_link_libraries(panda3ds_libretro PRIVATE EGL)
++    endif()
+     set_target_properties(panda3ds_libretro PROPERTIES PREFIX "")
+ endif()
+ 
 diff --git a/include/PICA/gpu.hpp b/include/PICA/gpu.hpp
-index e62f41b3..7ac28f98 100644
+index e62f41b3..fdfb1cc8 100644
 --- a/include/PICA/gpu.hpp
 +++ b/include/PICA/gpu.hpp
 @@ -1,4 +1,8 @@
@@ -67,9 +87,21 @@ index e62f41b3..7ac28f98 100644
  
  	// Pointers for the output registers as arranged after GPUREG_VSH_OUTMAP_MASK is applied
  	std::array<Floats::f24*, 16> vsOutputRegisters;
-@@ -105,9 +112,39 @@ class GPU {
+@@ -104,10 +111,51 @@ class GPU {
+ 	bool fogLUTDirty = false;
  	std::array<uint32_t, 128> fogLUT;
  
++	// Procedural texture LUTs, in PICA native format, written through ProcTexLUTIndex/ProcTexLUTData*:
++	// noise, RGB map and alpha map (128 entries each), colour and colour difference (256 entries each)
++	struct ProcTexLUTs {
++		std::array<u32, 128> noise;
++		std::array<u32, 128> rgbMap;
++		std::array<u32, 128> alphaMap;
++		std::array<u32, 256> colour;
++		std::array<u32, 256> colourDiff;
++	} procTexLUTs;
++	bool procTexLUTDirty = false;
++
  	GPU(Memory& mem, EmulatorConfig& config);
 -	void display() { renderer->display(); }
 -	void screenshot(const std::string& name) { renderer->screenshot(name); }
@@ -110,7 +142,7 @@ index e62f41b3..7ac28f98 100644
  
  	void initGraphicsContext(void* context) { renderer->initGraphicsContext(context); }
  
-@@ -140,6 +177,12 @@ class GPU {
+@@ -140,6 +188,12 @@ class GPU {
  
  	// TODO: Emulate the transfer engine & its registers
  	// Then this can be emulated by just writing the appropriate values there
@@ -123,7 +155,7 @@ index e62f41b3..7ac28f98 100644
  	void displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u32 outputSize, u32 flags) {
  		renderer->displayTransfer(inputAddr, outputAddr, inputSize, outputSize, flags);
  	}
-@@ -182,6 +225,8 @@ class GPU {
+@@ -182,6 +236,8 @@ class GPU {
  	Renderer* getRenderer() { return renderer.get(); }
  
    private:
@@ -217,6 +249,140 @@ index 00000000..a0c478bb
 +		return queue.empty() && !working;
 +	}
 +};
+diff --git a/include/PICA/pica_frag_config.hpp b/include/PICA/pica_frag_config.hpp
+index 7b63a7b5..fd0145b0 100644
+--- a/include/PICA/pica_frag_config.hpp
++++ b/include/PICA/pica_frag_config.hpp
+@@ -6,6 +6,7 @@
+ 
+ #include "PICA/pica_hash.hpp"
+ #include "PICA/regs.hpp"
++#include "banana_opts.hpp"
+ #include "bitfield.hpp"
+ #include "helpers.hpp"
+ 
+@@ -195,19 +196,62 @@ namespace PICA {
+ 		}
+ 	};
+ 
++	// Procedural texture (texture unit 3) state that changes the generated shader. The noise parameters, the colour LUT
++	// width/offset and the LUTs themselves are uniforms / LUT texture rows. All zero when proctex is off.
++	struct ProcTexConfig {
++		union {
++			u32 raw{};
++			BitField<0, 1, u32> enable;
++			BitField<1, 2, u32> coordSource;  // texcoord 0, 1 or 2
++			BitField<3, 3, u32> uClamp;
++			BitField<6, 3, u32> vClamp;
++			BitField<9, 4, u32> colourCombiner;
++			BitField<13, 4, u32> alphaCombiner;
++			BitField<17, 1, u32> separateAlpha;
++			BitField<18, 1, u32> noiseEnable;
++			BitField<19, 2, u32> uShift;
++			BitField<21, 2, u32> vShift;
++			BitField<23, 1, u32> linearFilter;  // colour LUT lookup: linear (interpolate with the difference LUT) or nearest
++		};
++
++		ProcTexConfig(const std::array<u32, 0x300>& regs) {
++			const u32 texUnitConfig = regs[InternalRegs::TexUnitCfg];
++			// Upstream Panda3DS has no procedural texture: keep it off for A/B measurements
++			if ((texUnitConfig & (1 << 10)) == 0 || Banana::baseline()) {  // bit 10: texture 3 (proctex) enable
++				return;
++			}
++
++			const u32 config = regs[InternalRegs::ProcTex0];
++			enable = 1;
++			coordSource = Helpers::getBits<8, 2>(texUnitConfig);
++			uClamp = Helpers::getBits<0, 3>(config);
++			vClamp = Helpers::getBits<3, 3>(config);
++			colourCombiner = Helpers::getBits<6, 4>(config);
++			alphaCombiner = Helpers::getBits<10, 4>(config);
++			separateAlpha = Helpers::getBit<14>(config);
++			noiseEnable = Helpers::getBit<15>(config);
++			uShift = Helpers::getBits<16, 2>(config);
++			vShift = Helpers::getBits<18, 2>(config);
++			// Filters 1 (linear), 3 and 5 (linear mipmap modes; no proctex mipmaps here) interpolate
++			const u32 filter = Helpers::getBits<0, 3>(regs[InternalRegs::ProcTexLUT]);
++			linearFilter = (filter == 1 || filter == 3 || filter == 5) ? 1 : 0;
++		}
++	};
++
+ 	// Config used for identifying unique fragment pipeline configurations
+ 	struct FragmentConfig {
+ 		OutputConfig outConfig;
+ 		TextureConfig texConfig;
+ 		FogConfig fogConfig;
+ 		LightingConfig lighting;
++		ProcTexConfig procTex;
+ 
+ 		bool operator==(const FragmentConfig& config) const {
+ 			// Hash function and equality operator required by std::unordered_map
+ 			return std::memcmp(this, &config, sizeof(FragmentConfig)) == 0;
+ 		}
+ 
+-		FragmentConfig(const std::array<u32, 0x300>& regs) : lighting(regs) {
++		FragmentConfig(const std::array<u32, 0x300>& regs) : lighting(regs), procTex(regs) {
+ 			auto alphaTestConfig = regs[InternalRegs::AlphaTestConfig];
+ 			auto alphaTestFunction = Helpers::getBits<4, 3>(alphaTestConfig);
+ 
+@@ -246,7 +290,8 @@ namespace PICA {
+ 
+ 	static_assert(
+ 		std::has_unique_object_representations<OutputConfig>() && std::has_unique_object_representations<TextureConfig>() &&
+-		std::has_unique_object_representations<FogConfig>() && std::has_unique_object_representations<Light>()
++		std::has_unique_object_representations<FogConfig>() && std::has_unique_object_representations<Light>() &&
++		std::has_unique_object_representations<ProcTexConfig>()
+ 	);
+ }  // namespace PICA
+ 
+diff --git a/include/PICA/pica_frag_uniforms.hpp b/include/PICA/pica_frag_uniforms.hpp
+index 781fdcd3..da809a15 100644
+--- a/include/PICA/pica_frag_uniforms.hpp
++++ b/include/PICA/pica_frag_uniforms.hpp
+@@ -38,6 +38,9 @@ namespace PICA {
+ 		// Particularly the fog colour since fog is really uncommon and it doesn't matter if we decode on GPU.
+ 		u32 globalAmbientLight;
+ 		u32 fogColor;
++		// Procedural texture: noise amplitude u, v, frequency u, v; noise phase u, v, colour LUT width, colour LUT offset
++		alignas(16) vec4 procTexNoise;
++		alignas(16) vec4 procTexParams;
+ 		// NOTE: THIS MUST BE LAST so that if lighting is disabled we can potentially omit uploading it
+ 		LightUniform lightUniforms[8];
+ 	};
+diff --git a/include/PICA/regs.hpp b/include/PICA/regs.hpp
+index 3185d350..c9a4872c 100644
+--- a/include/PICA/regs.hpp
++++ b/include/PICA/regs.hpp
+@@ -53,6 +53,17 @@ namespace PICA {
+ 
+ 			// Fog registers
+ 			FogColor = 0xE1,
++			// Procedural texture (texture unit 3)
++			ProcTex0 = 0xA8,
++			ProcTexNoiseU = 0xA9,
++			ProcTexNoiseV = 0xAA,
++			ProcTexNoiseFrequency = 0xAB,
++			ProcTexLUT = 0xAC,
++			ProcTexLUTOffset = 0xAD,
++			ProcTexLUTIndex = 0xAF,
++			ProcTexLUTData0 = 0xB0,
++			ProcTexLUTData7 = 0xB7,
++
+ 			FogLUTIndex = 0xE6,
+ 			FogLUTData0 = 0xE8,
+ 			FogLUTData1 = 0xE9,
+diff --git a/include/PICA/shader_gen.hpp b/include/PICA/shader_gen.hpp
+index b6751e05..aab6e3cb 100644
+--- a/include/PICA/shader_gen.hpp
++++ b/include/PICA/shader_gen.hpp
+@@ -26,6 +26,7 @@ namespace PICA::ShaderGen {
+ 		bool isSamplerEnabled(u32 environmentID, u32 lutID);
+ 
+ 		void compileFog(std::string& shader, const PICA::FragmentConfig& config);
++		void compileProcTexFunctions(std::string& shader, const PICA::FragmentConfig& config);
+ 		void compileLogicOps(std::string& shader, const PICA::FragmentConfig& config);
+ 
+ 	  public:
 diff --git a/include/banana_opts.hpp b/include/banana_opts.hpp
 new file mode 100644
 index 00000000..2efa27a1
@@ -272,10 +438,10 @@ index 24358533..aaecba51 100644
  
      void runFrame();
 diff --git a/include/emulator.hpp b/include/emulator.hpp
-index b1191f6e..657098c6 100644
+index b1191f6e..7d76f0d6 100644
 --- a/include/emulator.hpp
 +++ b/include/emulator.hpp
-@@ -105,6 +105,11 @@ class Emulator {
+@@ -105,6 +105,16 @@ class Emulator {
  
  	// For passing the SDL Window, GL context, etc from the frontend to the renderer
  	void initGraphicsContext(void* context) { gpu.initGraphicsContext(context); }
@@ -284,11 +450,16 @@ index b1191f6e..657098c6 100644
 +	// fn on the GPU's thread (the one with the GL context), waited for
 +	void runOnGPUThread(std::function<void()> fn) { gpu.runSync(std::move(fn)); }
 +	void syncGPU() { gpu.sync(); }
++	void stopGPUThread() {
++		gpu.sync();
++		gpu.stopThread();
++	}
++	bool isGPUThreaded() const { return gpu.isThreaded(); }
  
  	RomFS::DumpingResult dumpRomFS(const std::filesystem::path& path);
  	void setOutputSize(u32 width, u32 height) { gpu.setOutputSize(width, height); }
 diff --git a/include/kernel/kernel.hpp b/include/kernel/kernel.hpp
-index c6d5044e..89a452d9 100644
+index c6d5044e..5dfe581c 100644
 --- a/include/kernel/kernel.hpp
 +++ b/include/kernel/kernel.hpp
 @@ -1,4 +1,5 @@
@@ -297,13 +468,15 @@ index c6d5044e..89a452d9 100644
  #include <array>
  #include <span>
  #include <string>
-@@ -144,6 +145,12 @@ class Kernel {
+@@ -144,6 +145,14 @@ class Kernel {
  	MAKE_LOG_FUNCTION(logFileIO, fileIOLogger)
  	MAKE_LOG_FUNCTION_USER(logDebugString, debugStringLogger)
  
 +  public:
 +	// Called with every svcOutputDebugString message (the benchmark frontend reads its scene markers from them)
 +	std::function<void(const std::string&)> debugStringHook;
++	// ARM11 cycles skipped because no thread could run (the bench reports how busy the emulated CPU was)
++	u64 idleTicks = 0;
 +
 +  private:
 +
@@ -365,7 +538,7 @@ index 27d6a437..1ea9585f 100644
  	// This function does things like write back or cache necessary state before we delete our context
  	virtual void deinitGraphicsContext() = 0;
 diff --git a/include/renderer_gl/renderer_gl.hpp b/include/renderer_gl/renderer_gl.hpp
-index 2023966f..8c0a61e9 100644
+index 2023966f..a6a0cb8f 100644
 --- a/include/renderer_gl/renderer_gl.hpp
 +++ b/include/renderer_gl/renderer_gl.hpp
 @@ -11,6 +11,7 @@
@@ -388,7 +561,25 @@ index 2023966f..8c0a61e9 100644
  	GLStateManager gl = {};
  
  	OpenGL::Program triangleProgram;
-@@ -213,4 +219,7 @@ class RendererGL final : public Renderer {
+@@ -179,6 +185,7 @@ class RendererGL final : public Renderer {
+ 	void bindTexturesToSlots();
+ 	void updateLightingLUT();
+ 	void updateFogLUT();
++	void updateProcTexLUT();
+ 	void initGraphicsContextInternal();
+ 
+ 	void accelerateVertexUpload(ShaderUnit& shaderUnit, PICA::DrawAcceleration* accel);
+@@ -208,9 +215,17 @@ class RendererGL final : public Renderer {
+ 
+ 	// Note: The caller is responsible for deleting the currently bound FBO before calling this
+ 	void setFBO(uint handle) { screenFramebuffer.m_handle = handle; }
++	// The composited screens (400x480, the top screen above the bottom one), for a frontend that shows them itself from
++	// another GL context sharing this one's objects (the libretro core with the GPU on its own thread)
++	GLuint getScreenTexture() const { return screenTexture.handle(); }
++	// display() blits the screens to the default framebuffer (off when the frontend takes getScreenTexture() instead)
++	bool blitToDefaultFramebuffer = true;
+ 	void resetStateManager() { gl.reset(); }
+ 	void initUbershader(OpenGL::Program& program);
  
  	// Take a screenshot of the screen and store it in a file
  	void screenshot(const std::string& name) override;
@@ -558,7 +749,7 @@ index 124647d8..33f647d6 100644
  				Helpers::panic("Exit reason: %d\nPC: %08X", static_cast<u32>(exitReason), getReg(15));
  			}
 diff --git a/src/core/PICA/gpu.cpp b/src/core/PICA/gpu.cpp
-index e38f4416..ea804c2f 100644
+index e38f4416..ed34a00c 100644
 --- a/src/core/PICA/gpu.cpp
 +++ b/src/core/PICA/gpu.cpp
 @@ -1,3 +1,4 @@
@@ -575,7 +766,17 @@ index e38f4416..ea804c2f 100644
  	regs.fill(0);
  	shaderUnit.reset();
  	shaderJIT.reset();
-@@ -126,7 +129,7 @@ void GPU::reset() {
+@@ -86,6 +89,9 @@ void GPU::reset() {
+ 	fogLUT.fill(0);
+ 	fogLUTDirty = true;
+ 
++	procTexLUTs = {};
++	procTexLUTDirty = true;
++
+ 	totalAttribCount = 0;
+ 	fixedAttribMask = 0;
+ 	fixedAttribIndex = 0;
+@@ -126,7 +132,7 @@ void GPU::reset() {
  	externalRegs[Framebuffer1Config] = static_cast<u32>(PICA::ColorFmt::RGB8);
  	externalRegs[Framebuffer1Select] = 0;
  
@@ -584,7 +785,7 @@ index e38f4416..ea804c2f 100644
  }
  
  static std::array<PICA::Vertex, Renderer::vertexBufferSize> vertices;
-@@ -400,7 +403,13 @@ PICA::Vertex GPU::getImmediateModeVertex() {
+@@ -400,7 +406,13 @@ PICA::Vertex GPU::getImmediateModeVertex() {
  	}
  
  	// Run VS and return vertex data. TODO: Don't hardcode offsets for each attribute
@@ -600,7 +801,7 @@ index e38f4416..ea804c2f 100644
  	// Map shader outputs to fixed function properties
  	const u32 totalShaderOutputs = regs[PICA::InternalRegs::ShaderOutputCount] & 7;
 diff --git a/src/core/PICA/regs.cpp b/src/core/PICA/regs.cpp
-index f63ee186..d9fe6317 100644
+index f63ee186..976c39f0 100644
 --- a/src/core/PICA/regs.cpp
 +++ b/src/core/PICA/regs.cpp
 @@ -1,3 +1,4 @@
@@ -621,7 +822,37 @@ index f63ee186..d9fe6317 100644
  	u32 currentValue = regs[index];
  	u32 newValue = (currentValue & ~mask) | (value & mask);  // Only overwrite the bits specified by "mask"
  	regs[index] = newValue;
-@@ -249,8 +256,15 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
+@@ -150,6 +157,29 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
+ 			break;
+ 		}
+ 
++		case ProcTexLUTData0:
++		case ProcTexLUTData0 + 1:
++		case ProcTexLUTData0 + 2:
++		case ProcTexLUTData0 + 3:
++		case ProcTexLUTData0 + 4:
++		case ProcTexLUTData0 + 5:
++		case ProcTexLUTData0 + 6:
++		case ProcTexLUTData7: {
++			const u32 config = regs[ProcTexLUTIndex];
++			const u32 lutIndex = getBits<0, 8>(config);
++			switch (getBits<8, 4>(config)) {  // which table
++				case 0: procTexLUTs.noise[lutIndex & 127] = newValue; break;
++				case 2: procTexLUTs.rgbMap[lutIndex & 127] = newValue; break;
++				case 3: procTexLUTs.alphaMap[lutIndex & 127] = newValue; break;
++				case 4: procTexLUTs.colour[lutIndex] = newValue; break;
++				case 5: procTexLUTs.colourDiff[lutIndex] = newValue; break;
++				default: break;
++			}
++			procTexLUTDirty = true;
++			regs[ProcTexLUTIndex] = (config & ~0xff) | ((lutIndex + 1) & 0xff);
++			break;
++		}
++
+ 		case LightingLUTData0:
+ 		case LightingLUTData1:
+ 		case LightingLUTData2:
+@@ -249,8 +279,15 @@ void GPU::writeInternalReg(u32 index, u32 value, u32 mask) {
  						// If we've reached 3 verts, issue a draw call
  						// Handle rendering depending on the primitive type
  						if (immediateModeVertIndex == 3) {
@@ -639,7 +870,7 @@ index f63ee186..d9fe6317 100644
  
  							switch (primType) {
  								// Triangle or geometry primitive. Draw a triangle and discard all vertices
-@@ -427,4 +441,13 @@ void GPU::startCommandList(u32 addr, u32 size) {
+@@ -427,4 +464,13 @@ void GPU::startCommandList(u32 addr, u32 size) {
  			writeInternalReg(id, param, mask);
  		}
  	}
@@ -653,6 +884,201 @@ index f63ee186..d9fe6317 100644
 +	renderer->drawVertices(PICA::PrimType::TriangleList, immediateBatch);
 +	immediateBatch.clear();
  }
+diff --git a/src/core/PICA/shader_gen_glsl.cpp b/src/core/PICA/shader_gen_glsl.cpp
+index a9ad3a90..4e773b70 100644
+--- a/src/core/PICA/shader_gen_glsl.cpp
++++ b/src/core/PICA/shader_gen_glsl.cpp
+@@ -36,6 +36,8 @@ static constexpr const char* uniformDefinition = R"(
+ 		vec4 clipCoords;
+ 		uint globalAmbientLight;
+ 		uint inFogColor;
++		vec4 procTexNoise;   // noise amplitude u, v, frequency u, v
++		vec4 procTexParams;  // noise phase u, v, colour LUT width, colour LUT offset
+ 		LightSource lightSources[8];
+ 	};
+ )";
+@@ -181,6 +183,10 @@ std::string FragmentGenerator::generate(const FragmentConfig& config, void* driv
+ 		)";
+ 	}
+ 
++	if (config.procTex.enable) {
++		compileProcTexFunctions(ret, config);
++	}
++
+ 	// Emit main function for fragment shader
+ 	// When not initialized, source 13 is set to vec4(0.0) and 15 is set to the vertex colour
+ 	ret += R"(
+@@ -195,6 +201,10 @@ std::string FragmentGenerator::generate(const FragmentConfig& config, void* driv
+ 
+ 	compileLights(ret, config);
+ 
++	if (config.procTex.enable) {
++		ret += "vec4 procTexColor = procTex();\n";
++	}
++
+ 	ret += R"(
+ 		vec3 colorOp1 = vec3(0.0);
+ 		vec3 colorOp2 = vec3(0.0);
+@@ -406,6 +416,13 @@ void FragmentGenerator::getSource(std::string& shader, TexEnvConfig::Source sour
+ 		
+ 		// Lighting
+ 		case TexEnvConfig::Source::PrimaryFragmentColor: shader += "primaryColor"; break;
++		case TexEnvConfig::Source::Texture3:
++			if (config.procTex.enable) {
++				shader += "procTexColor";
++			} else {
++				shader += "vec4(1.0, 1.0, 1.0, 1.0)";
++			}
++			break;
+ 		case TexEnvConfig::Source::SecondaryFragmentColor: shader += "secondaryColor"; break;
+ 
+ 		default:
+@@ -687,6 +704,145 @@ void FragmentGenerator::compileLUTLookup(std::string& shader, const PICA::Fragme
+ 	}
+ }
+ 
++// PICA procedural texture (texture unit 3), following Citra's software implementation (video_core/rasterizer proctex):
++// noise, shift, clamp, the U/V combiner mapped through the RGB/alpha map LUTs, then the colour LUT. No proctex mipmaps
++// (level 0 only), like Citra's software renderer. The LUTs are rows of u_tex_luts after the lighting and fog rows:
++// 25 noise, 26 RGB map, 27 alpha map (value, difference), 28/29 colour (rg, ba), 30/31 colour difference (rg, ba).
++void FragmentGenerator::compileProcTexFunctions(std::string& shader, const PICA::FragmentConfig& config) {
++	const auto& pt = config.procTex;
++
++	if (api == API::GLES) {
++		// Noise hashes integers and the coordinates can be large: mediump is not enough
++		shader += "\nprecision highp float;\nprecision highp int;\n";
++	}
++
++	shader += R"(
++		float ptLookupLUT(int row, float coord) {
++			coord *= 128.0;
++			int i = clamp(int(coord), 0, 127);
++			vec2 e = texelFetch(u_tex_luts, ivec2(i, row), 0).rg;
++			return e.r + (coord - float(i)) * e.g;
++		}
++
++		float ptClamp(float coord, int mode) {
++			if (mode == 0) return coord > 1.0 ? 0.0 : coord;                    // to zero
++			if (mode == 1) return min(coord, 1.0);                               // to edge
++			if (mode == 2) return fract(coord);                                  // symmetrical repeat
++			if (mode == 3) {                                                     // mirrored repeat
++				int integer = int(coord);
++				float frac = coord - float(integer);
++				return (integer % 2) == 0 ? frac : 1.0 - frac;
++			}
++			return coord <= 0.5 ? 0.0 : 1.0;                                     // pulse
++		}
++
++		float ptShift(float v, int mode, int clampMode) {
++			float offset = clampMode == 3 ? 1.0 : 0.5;
++			if (mode == 1) return offset * float((int(v) / 2) % 2);
++			if (mode == 2) return offset * float(((int(v) + 1) / 2) % 2);
++			return 0.0;
++		}
++	)";
++
++	if (pt.noiseEnable) {
++		shader += R"(
++		int ptRand1D(int v) {
++			const int table[16] = int[16](0, 4, 10, 8, 4, 9, 7, 12, 5, 15, 13, 14, 11, 15, 2, 11);
++			return (((v % 9 + 2) * 3) & 0xF) ^ table[(v / 9) & 0xF];
++		}
++
++		float ptRand2D(int x, int y) {
++			const int table[16] = int[16](10, 2, 15, 8, 0, 7, 4, 5, 5, 13, 2, 6, 13, 9, 3, 14);
++			int u2 = ptRand1D(x);
++			int v2 = ptRand1D(y);
++			v2 += ((u2 & 3) == 1) ? 4 : 0;
++			v2 ^= (u2 & 1) * 6;
++			v2 += 10 + u2;
++			v2 &= 0xF;
++			v2 ^= table[u2];
++			return -1.0 + float(v2) * 2.0 / 15.0;
++		}
++
++		// Uses the U frequency and phase whichever coordinate comes first, as the hardware does (Citra's NoiseCoef)
++		float ptNoiseCoef(float u, float v) {
++			float x = 9.0 * procTexNoise.z * abs(u + procTexParams.x);
++			float y = 9.0 * procTexNoise.w * abs(v + procTexParams.y);
++			int xi = int(x);
++			int yi = int(y);
++			float xf = x - float(xi);
++			float yf = y - float(yi);
++			float g0 = ptRand2D(xi, yi) * (xf + yf);
++			float g1 = ptRand2D(xi + 1, yi) * (xf + yf - 1.0);
++			float g2 = ptRand2D(xi, yi + 1) * (xf + yf - 1.0);
++			float g3 = ptRand2D(xi + 1, yi + 1) * (xf + yf - 2.0);
++			float xn = ptLookupLUT(25, xf);
++			float yn = ptLookupLUT(25, yf);
++			return mix(mix(g0, g1, xn), mix(g2, g3, xn), yn);
++		}
++		)";
++	}
++
++	auto combiner = [](u32 mode) -> std::string {
++		switch (mode) {
++			case 0: return "u";
++			case 1: return "u * u";
++			case 2: return "v";
++			case 3: return "v * v";
++			case 4: return "(u + v) * 0.5";
++			case 5: return "(u * u + v * v) * 0.5";
++			case 6: return "min(sqrt(u * u + v * v), 1.0)";
++			case 7: return "min(u, v)";
++			case 8: return "max(u, v)";
++			case 9: return "min(((u + v) * 0.5 + sqrt(u * u + v * v)) * 0.5, 1.0)";
++			default: return "0.0";
++		}
++	};
++
++	static constexpr const char* coords[3] = {"v_texcoord0.xy", "v_texcoord1", "v_texcoord2"};
++	const std::string uClamp = std::to_string(u32(pt.uClamp)), vClamp = std::to_string(u32(pt.vClamp));
++
++	shader += "vec4 procTex() {\n";
++	// The vertex shaders hand texcoords over with t flipped (1.0 - t) for our bottom-up GL textures: proctex wants the
++	// coordinates as the PICA has them
++	shader += std::string("vec2 rawUV = ") + coords[std::min<u32>(pt.coordSource, 2)] + ";\n";
++	shader += "vec2 uv = abs(vec2(rawUV.x, 1.0 - rawUV.y));\n";
++	shader += "float u = uv.x;\nfloat v = uv.y;\n";
++	// The shift offsets come from the coordinates before noise
++	shader += "float uShift = ptShift(v, " + std::to_string(u32(pt.uShift)) + ", " + uClamp + ");\n";
++	shader += "float vShift = ptShift(u, " + std::to_string(u32(pt.vShift)) + ", " + vClamp + ");\n";
++	if (pt.noiseEnable) {
++		shader += "float noiseU = ptNoiseCoef(u, v) * procTexNoise.x;\n";
++		shader += "float noiseV = ptNoiseCoef(v, u) * procTexNoise.y;\n";
++		shader += "u = abs(u + noiseU);\nv = abs(v + noiseV);\n";
++	}
++	shader += "u = ptClamp(u + uShift, " + uClamp + ");\n";
++	shader += "v = ptClamp(v + vShift, " + vClamp + ");\n";
++	shader += "float lutCoord = ptLookupLUT(26, " + combiner(pt.colourCombiner) + ");\n";
++
++	// Colour LUT: coordinate 0 is entry [offset], 1 is entry [offset + width - 1]
++	shader += "float index = procTexParams.w + lutCoord * (procTexParams.z - 1.0);\n";
++	if (pt.linearFilter) {
++		shader += R"(
++			int i = clamp(int(index), 0, 255);
++			float frac = index - float(i);
++			vec4 colour = vec4(texelFetch(u_tex_luts, ivec2(i, 28), 0).rg, texelFetch(u_tex_luts, ivec2(i, 29), 0).rg);
++			vec4 diff = vec4(texelFetch(u_tex_luts, ivec2(i, 30), 0).rg, texelFetch(u_tex_luts, ivec2(i, 31), 0).rg);
++			colour = clamp(colour + frac * diff, 0.0, 1.0);
++		)";
++	} else {
++		shader += R"(
++			int i = clamp(int(round(index)), 0, 255);
++			vec4 colour = vec4(texelFetch(u_tex_luts, ivec2(i, 28), 0).rg, texelFetch(u_tex_luts, ivec2(i, 29), 0).rg);
++		)";
++	}
++
++	if (pt.separateAlpha) {
++		// The alpha skips the colour LUT and comes from the alpha map
++		shader += "colour.a = clamp(ptLookupLUT(27, " + combiner(pt.alphaCombiner) + "), 0.0, 1.0);\n";
++	}
++	shader += "return colour;\n}\n";
++}
++
+ void FragmentGenerator::compileFog(std::string& shader, const PICA::FragmentConfig& config) {
+ 	if (config.fogConfig.mode != FogMode::Fog) {
+ 		return;
 diff --git a/src/core/kernel/kernel.cpp b/src/core/kernel/kernel.cpp
 index 7a0aacc0..f912aa92 100644
 --- a/src/core/kernel/kernel.cpp
@@ -685,7 +1111,7 @@ index 9199a32c..cbdaf376 100644
  			break;
  
 diff --git a/src/core/kernel/threads.cpp b/src/core/kernel/threads.cpp
-index 5ada30e3..ab3618b2 100644
+index 5ada30e3..4455c40d 100644
 --- a/src/core/kernel/threads.cpp
 +++ b/src/core/kernel/threads.cpp
 @@ -5,6 +5,7 @@
@@ -716,7 +1142,7 @@ index 5ada30e3..ab3618b2 100644
  				const Scheduler& scheduler = cpu.getScheduler();
  				u64 timestamp = scheduler.nextTimestamp;
  
-@@ -392,13 +404,27 @@ void Kernel::sleepThread(s64 ns) {
+@@ -392,13 +404,28 @@ void Kernel::sleepThread(s64 ns) {
  					const Thread& t = threads[i];
  					if (t.status == ThreadStatus::WaitSleep || t.status == ThreadStatus::WaitSync1 || t.status == ThreadStatus::WaitSyncAny ||
  						t.status == ThreadStatus::WaitSyncAll) {
@@ -732,6 +1158,7 @@ index 5ada30e3..ab3618b2 100644
  
  				if (timestamp > scheduler.currentTimestamp) {
  					u64 idleCycles = timestamp - scheduler.currentTimestamp;
++					idleTicks += idleCycles;
  					cpu.addTicks(idleCycles);
 +					// The JIT counts its own cycles from what was left when it started running: it would go on spinning the
 +					// idle loop (tens of thousands of SVCs a frame) until those ran out. It stops now, and the scheduler's
@@ -766,7 +1193,7 @@ index f962b8d4..fe209dea 100644
  	// Check each allocation
  	for (auto& alloc : memoryInfo) {
 diff --git a/src/core/renderer_gl/renderer_gl.cpp b/src/core/renderer_gl/renderer_gl.cpp
-index 659a1e1d..6cb21089 100644
+index 659a1e1d..45a58815 100644
 --- a/src/core/renderer_gl/renderer_gl.cpp
 +++ b/src/core/renderer_gl/renderer_gl.cpp
 @@ -1,4 +1,5 @@
@@ -784,6 +1211,17 @@ index 659a1e1d..6cb21089 100644
  	depthBufferCache.reset();
  	colourBufferCache.reset();
  	textureCache.reset();
+@@ -122,8 +125,8 @@ void RendererGL::initGraphicsContextInternal() {
+ 	const u32 screenTextureWidth = 400;       // Top screen is 400 pixels wide, bottom is 320
+ 	const u32 screenTextureHeight = 2 * 240;  // Both screens are 240 pixels tall
+ 
+-	// 24 rows for light, 1 for fog
+-	LUTTexture.create(256, Lights::LUT_Count + 1, GL_RG32F);
++	// 24 rows for light, 1 for fog, 7 for the procedural texture (see FragmentGenerator::compileProcTexFunctions)
++	LUTTexture.create(256, Lights::LUT_Count + 1 + 7, GL_RG32F);
+ 	LUTTexture.bind();
+ 	LUTTexture.setMinFilter(OpenGL::Linear);
+ 	LUTTexture.setMagFilter(OpenGL::Linear);
 @@ -327,6 +330,18 @@ void RendererGL::setupUbershaderTexEnv() {
  	glUniform1uiv(ubershaderData.textureEnvScaleLoc, 6, textureEnvScaleRegs);
  }
@@ -822,7 +1260,95 @@ index 659a1e1d..6cb21089 100644
  			Texture targetTex(addr, static_cast<PICA::TextureFmt>(format), width, height, config);
  
  			if (hashTextures) {
-@@ -673,6 +700,30 @@ void RendererGL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 co
+@@ -394,6 +421,43 @@ void RendererGL::updateLightingLUT() {
+ 	glActiveTexture(GL_TEXTURE0);
+ }
+ 
++// Procedural texture LUTs, as rows of the LUT texture after the fog row:
++// noise / RGB map / alpha map (value, difference), colour (r, g) (b, a), colour difference (r, g) (b, a)
++void RendererGL::updateProcTexLUT() {
++	gpu.procTexLUTDirty = false;
++	const auto& luts = gpu.procTexLUTs;
++	std::array<float, 256 * 2 * 7> data{};
++
++	auto mapLUT = [&](int row, const std::array<u32, 128>& lut) {
++		for (int i = 0; i < 128; i++) {
++			const u32 entry = lut[i];
++			data[(row * 256 + i) * 2] = float(entry & 0xFFF) / 4095.0f;                    // 0.0.12 fixed point
++			data[(row * 256 + i) * 2 + 1] = float(s32(entry << 8) >> 20) / 4095.0f;       // 1.0.11 fixed point difference
++		}
++	};
++	mapLUT(0, luts.noise);
++	mapLUT(1, luts.rgbMap);
++	mapLUT(2, luts.alphaMap);
++
++	for (int i = 0; i < 256; i++) {
++		const u32 colour = luts.colour[i];
++		const u32 diff = luts.colourDiff[i];
++		for (int c = 0; c < 4; c++) {
++			const int row = 3 + c / 2;
++			data[(row * 256 + i) * 2 + (c & 1)] = float((colour >> (8 * c)) & 0xFF) / 255.0f;
++			// The difference entries hold half of the difference between two colour entries, as signed bytes
++			data[((row + 2) * 256 + i) * 2 + (c & 1)] = float(s8(diff >> (8 * c)) * 2) / 255.0f;
++		}
++	}
++
++	// The LUT texture lives in texture unit 3: binding it on the active unit (0 after bindTexturesToSlots) would replace
++	// texture 0 for this draw
++	glActiveTexture(GL_TEXTURE0 + 3);
++	LUTTexture.bind();
++	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, Lights::LUT_Count + 1, 256, 7, GL_RG, GL_FLOAT, data.data());
++	glActiveTexture(GL_TEXTURE0);
++}
++
+ void RendererGL::updateFogLUT() {
+ 	gpu.fogLUTDirty = false;
+ 
+@@ -422,6 +486,7 @@ void RendererGL::updateFogLUT() {
+ }
+ 
+ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> vertices) {
++
+ 	// The fourth type is meant to be "Geometry primitive". TODO: Find out what that is
+ 	static constexpr std::array<OpenGL::Primitives, 4> primTypes = {
+ 		OpenGL::Triangle,
+@@ -461,6 +526,7 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
+ 	};
+ 
+ 	bindTexturesToSlots();
++
+ 	if (gpu.fogLUTDirty) {
+ 		updateFogLUT();
+ 	}
+@@ -469,6 +535,10 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
+ 		updateLightingLUT();
+ 	}
+ 
++	if (gpu.procTexLUTDirty && !Banana::baseline()) {
++		updateProcTexLUT();
++	}
++
+ 	const GLsizei viewportX = regs[PICA::InternalRegs::ViewportXY] & 0x3ff;
+ 	const GLsizei viewportY = (regs[PICA::InternalRegs::ViewportXY] >> 16) & 0x3ff;
+ 	const GLsizei viewportWidth = GLsizei(f24::fromRaw(regs[PICA::InternalRegs::ViewportWidth] & 0xffffff).toFloat32() * 2.0f);
+@@ -529,6 +599,7 @@ void RendererGL::drawVertices(PICA::PrimType primType, std::span<const Vertex> v
+ 			OpenGL::draw(primitiveTopology, GLsizei(vertices.size()));
+ 		}
+ 	}
++
+ }
+ 
+ void RendererGL::display() {
+@@ -569,7 +640,7 @@ void RendererGL::display() {
+ 		OpenGL::draw(OpenGL::TriangleStrip, 4);
+ 	}
+ 
+-	if constexpr (!Helpers::isHydraCore()) {
++	if (!Helpers::isHydraCore() && blitToDefaultFramebuffer) {
+ 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+ 		OpenGL::clearColor();
+ 
+@@ -673,6 +744,30 @@ void RendererGL::clearBuffer(u32 startAddress, u32 endAddress, u32 value, u32 co
  	}
  
  	log("[RendererGL::ClearBuffer] No buffer found!\n");
@@ -853,7 +1379,7 @@ index 659a1e1d..6cb21089 100644
  }
  
  OpenGL::Framebuffer RendererGL::getColourFBO() {
-@@ -712,7 +763,21 @@ OpenGL::Texture RendererGL::getTexture(Texture& tex) {
+@@ -712,7 +807,21 @@ OpenGL::Texture RendererGL::getTexture(Texture& tex) {
  	auto buffer = textureCache.find(tex);
  
  	if (buffer.has_value()) {
@@ -876,16 +1402,17 @@ index 659a1e1d..6cb21089 100644
  	} else {
  		const u8* startPointer = gpu.getPointerPhys<u8>(tex.location);
  		const usize sizeInBytes = tex.sizeInBytes();
-@@ -725,6 +790,8 @@ OpenGL::Texture RendererGL::getTexture(Texture& tex) {
- 		const auto textureData = std::span{startPointer, tex.sizeInBytes()};  // Get pointer to the texture data in 3DS memory
+@@ -726,6 +835,9 @@ OpenGL::Texture RendererGL::getTexture(Texture& tex) {
  		Texture& newTex = textureCache.add(tex);
  		newTex.decodeTexture(textureData);
+ 
 +		newTex.dirty = false;
 +		if (!Banana::baseline()) newTex.dataHash = PICAHash::computeHash((const char*)textureData.data(), textureData.size());
- 
++
  		return newTex.texture;
  	}
-@@ -755,6 +822,20 @@ void RendererGL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u
+ }
+@@ -755,6 +867,24 @@ void RendererGL::displayTransfer(u32 inputAddr, u32 outputAddr, u32 inputSize, u
  		inputWidth, outputWidth, inputHeight, outputHeight
  	);
  
@@ -893,9 +1420,13 @@ index 659a1e1d..6cb21089 100644
 +		// A source the GPU never rendered (CPU-written pixels, e.g. a texture upload that tiles a linear image) has no
 +		// colour buffer: do the transfer on guest memory instead of blitting an empty surface. Only when the
 +		// destination isn't a render target either, since those are displayed from their GL texture.
-+		const u32 outBytes = (outputSize & 0xffff) * (outputSize >> 16) * 4;
++		// Bytes the transfer writes: the output size is given unscaled, and the format decides the pixel size
++		const u32 outW = (outputSize & 0xffff) >> ((scaling == PICA::Scaling::X || scaling == PICA::Scaling::XY) ? 1 : 0);
++		const u32 outH = (outputSize >> 16) >> (scaling == PICA::Scaling::XY ? 1 : 0);
++		const u32 outBpp = outputFormat == PICA::ColorFmt::RGBA8 ? 4 : outputFormat == PICA::ColorFmt::RGB8 ? 3 : 2;
++		const u32 outBytes = outW * outH * outBpp;
 +		if (!colourBufferCache.findFromAddress(inputAddr) && !colourBufferCache.findFromAddress(outputAddr) &&
-+			!colourBufferCache.findFromAddress(outputAddr + outBytes / 2) &&
++			!colourBufferCache.findFromAddress(outputAddr + (outBytes ? outBytes - 1 : 0)) &&
 +			doSoftwareDisplayTransfer(inputAddr, outputAddr, inputSize, outputSize, flags)) {
 +			return;
 +		}
@@ -906,7 +1437,7 @@ index 659a1e1d..6cb21089 100644
  	auto srcFramebuffer = getColourBuffer(inputAddr, inputFormat, inputWidth, outputHeight);
  	Math::Rect<u32> srcRect = srcFramebuffer->getSubRect(inputAddr, outputWidth, outputHeight);
  
-@@ -812,6 +893,13 @@ void RendererGL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32
+@@ -812,6 +942,13 @@ void RendererGL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32
  		// Helpers::warn("Strided texture copy\n");
  	}
  
@@ -920,7 +1451,7 @@ index 659a1e1d..6cb21089 100644
  	if (inputWidth != outputWidth) {
  		Helpers::warn("Input width does not match output width, cannot accelerate texture copy!");
  		return;
-@@ -857,6 +945,8 @@ void RendererGL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32
+@@ -857,6 +994,8 @@ void RendererGL::textureCopy(u32 inputAddr, u32 outputAddr, u32 totalBytes, u32
  
  	Math::Rect<u32> srcRect = srcFramebuffer->getSubRect(inputAddr, copyWidth, copyHeight);
  
@@ -929,7 +1460,7 @@ index 659a1e1d..6cb21089 100644
  	// Assume the destination surface has the same format. Unless the surfaces have the same block width,
  	// texture copy does not make sense.
  	auto destFramebuffer = getColourBuffer(outputAddr, srcFramebuffer->format, copyWidth, copyHeight);
-@@ -938,6 +1028,8 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
+@@ -938,6 +1077,8 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
  
  	// Upload uniform data to our shader's UBO
  	PICA::FragmentUniforms uniforms;
@@ -938,7 +1469,28 @@ index 659a1e1d..6cb21089 100644
  	uniforms.alphaReference = Helpers::getBits<8, 8>(regs[InternalRegs::AlphaTestConfig]);
  
  	// Set up the texenv buffer color
-@@ -1018,21 +1110,30 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
+@@ -976,6 +1117,20 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
+ 
+ 	uniforms.fogColor = regs[PICA::InternalRegs::FogColor];
+ 
++	if (fsConfig.procTex.enable) {
++		const u32 noiseU = regs[InternalRegs::ProcTexNoiseU];
++		const u32 noiseV = regs[InternalRegs::ProcTexNoiseV];
++		const u32 frequency = regs[InternalRegs::ProcTexNoiseFrequency];
++		uniforms.procTexNoise[0] = float(s16(noiseU & 0xFFFF)) / 4095.0f;  // fixed point 1.3.12 amplitudes
++		uniforms.procTexNoise[1] = float(s16(noiseV & 0xFFFF)) / 4095.0f;
++		uniforms.procTexNoise[2] = Floats::f16::fromRaw(u16(frequency)).toFloat32();
++		uniforms.procTexNoise[3] = Floats::f16::fromRaw(u16(frequency >> 16)).toFloat32();
++		uniforms.procTexParams[0] = Floats::f16::fromRaw(u16(noiseU >> 16)).toFloat32();  // phases
++		uniforms.procTexParams[1] = Floats::f16::fromRaw(u16(noiseV >> 16)).toFloat32();
++		uniforms.procTexParams[2] = float(Helpers::getBits<11, 8>(regs[InternalRegs::ProcTexLUT]));  // colour LUT width
++		uniforms.procTexParams[3] = float(regs[InternalRegs::ProcTexLUTOffset] & 0xFF);              // colour LUT offset
++	}
++
+ 	// Append lighting uniforms
+ 	if (fsConfig.lighting.enable) {
+ 		uniforms.globalAmbientLight = regs[InternalRegs::LightGlobalAmbient];
+@@ -1018,21 +1173,30 @@ OpenGL::Program& RendererGL::getSpecializedShader() {
  		}
  	}
  
@@ -980,7 +1532,7 @@ index 659a1e1d..6cb21089 100644
  	}
  
  	return program;
-@@ -1138,29 +1239,36 @@ bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration*
+@@ -1138,29 +1302,36 @@ bool RendererGL::prepareForDraw(ShaderUnit& shaderUnit, PICA::DrawAcceleration*
  	return usingAcceleratedShader;
  }
  
@@ -1505,12 +2057,173 @@ index e5ba4e27..ac06e676 100644
  					srv.sendGPUInterrupt(GPUInterrupt::VBlank0);
  					srv.sendGPUInterrupt(GPUInterrupt::VBlank1);
  
+diff --git a/src/libretro_core.cpp b/src/libretro_core.cpp
+index 9ad3b62a..4869c20a 100644
+--- a/src/libretro_core.cpp
++++ b/src/libretro_core.cpp
+@@ -1,8 +1,13 @@
+ #include <libretro.h>
++#ifdef USING_GLES
++#include <EGL/egl.h>
++#endif
+ 
+ #include <cstdio>
++#include <cstdlib>
+ #include <regex>
+ 
++#include "banana_opts.hpp"
+ #include "emulator.hpp"
+ #include "renderer_gl/renderer_gl.hpp"
+ #include "version.hpp"
+@@ -26,7 +31,95 @@ std::filesystem::path Emulator::getConfigPath() { return std::filesystem::path(s
+ std::filesystem::path Emulator::getAppDataRoot() { return std::filesystem::path(savePath / "Emulator Files"); }
+ 
+ static void* getGLProcAddress(const char* name) { return (void*)hwRender.get_proc_address(name); }
+-static void videoDestroyContext() { emulator->deinitGraphicsContext(); }
++
++// The GPU on its own thread (PICA/gpu_worker.hpp), with an EGL context of its own that shares RetroArch's objects: it
++// renders and composes the screens there while the emulated CPU runs, and retro_run copies the finished screens into
++// RetroArch's framebuffer. Only on GLES through EGL (BananaOS's RetroArch); anything else renders on RetroArch's thread.
++namespace GPUThread {
++	bool active = false;
++#ifdef USING_GLES
++	EGLDisplay display = EGL_NO_DISPLAY;
++	EGLContext context = EGL_NO_CONTEXT;
++#endif
++	GLuint readFramebuffer = 0;  // on RetroArch's context: the screen texture, to blit from
++	GLsync frameDone = nullptr;
++
++	bool start() {
++#ifdef USING_GLES
++		const char* want = std::getenv("PANDA3DS_GPU_THREAD");  // 0: render on RetroArch's thread
++		if (Banana::baseline() || !usingGLES || (want && want[0] == '0')) return false;
++		EGLDisplay d = eglGetCurrentDisplay();
++		EGLContext shared = eglGetCurrentContext();
++		if (d == EGL_NO_DISPLAY || shared == EGL_NO_CONTEXT) return false;
++
++		EGLint configID = 0;
++		eglQueryContext(d, shared, EGL_CONFIG_ID, &configID);
++		const EGLint configAttribs[] = {EGL_CONFIG_ID, configID, EGL_NONE};
++		EGLConfig config;
++		EGLint count = 0;
++		if (!eglChooseConfig(d, configAttribs, &config, 1, &count) || count == 0) return false;
++
++		const EGLint contextAttribs[] = {EGL_CONTEXT_MAJOR_VERSION, 3, EGL_CONTEXT_MINOR_VERSION, 1, EGL_NONE};
++		EGLContext c = eglCreateContext(d, config, shared, contextAttribs);
++		if (c == EGL_NO_CONTEXT) return false;
++
++		display = d;
++		context = c;
++		emulator->startGPUThread([d, c] {
++			eglBindAPI(EGL_OPENGL_ES_API);
++			eglMakeCurrent(d, EGL_NO_SURFACE, EGL_NO_SURFACE, c);
++		});
++		active = true;
++		return true;
++#else
++		return false;
++#endif
++	}
++
++	void stop() {
++		if (!active) return;
++		emulator->runOnGPUThread([] { emulator->deinitGraphicsContext(); });
++		emulator->stopGPUThread();
++#ifdef USING_GLES
++		eglDestroyContext(display, context);
++		context = EGL_NO_CONTEXT;
++#endif
++		if (readFramebuffer != 0) {
++			glDeleteFramebuffers(1, &readFramebuffer);
++			readFramebuffer = 0;
++		}
++		active = false;
++	}
++
++	// After a frame: the GPU thread's work waited for, then the screens copied into RetroArch's framebuffer
++	void present() {
++		emulator->runOnGPUThread([] {
++			frameDone = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
++			glFlush();
++		});
++		glWaitSync(frameDone, 0, GL_TIMEOUT_IGNORED);
++		glDeleteSync(frameDone);
++		frameDone = nullptr;
++
++		if (readFramebuffer == 0) {
++			glGenFramebuffers(1, &readFramebuffer);
++			glBindFramebuffer(GL_READ_FRAMEBUFFER, readFramebuffer);
++			glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, renderer->getScreenTexture(), 0);
++		}
++		glBindFramebuffer(GL_READ_FRAMEBUFFER, readFramebuffer);
++		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, GLuint(hwRender.get_current_framebuffer()));
++		glDisable(GL_SCISSOR_TEST);
++		glBlitFramebuffer(0, 0, Emulator::width, Emulator::height, 0, 0, Emulator::width, Emulator::height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
++	}
++}  // namespace GPUThread
++
++static void videoDestroyContext() {
++	if (GPUThread::active) {
++		GPUThread::stop();
++	} else {
++		emulator->deinitGraphicsContext();
++	}
++}
+ 
+ static void videoResetContext() {
+ 	if (usingGLES) {
+@@ -43,7 +136,13 @@ static void videoResetContext() {
+ 		}
+ 	}
+ 
+-	emulator->initGraphicsContext(nullptr);
++	GPUThread::stop();  // a context reset after a loss: a new GPU thread on the new context
++	if (GPUThread::start()) {
++		renderer->blitToDefaultFramebuffer = false;
++		emulator->runOnGPUThread([] { emulator->initGraphicsContext(nullptr); });
++	} else {
++		emulator->initGraphicsContext(nullptr);
++	}
+ }
+ 
+ static bool setHWRender(retro_hw_context_type type) {
+@@ -291,6 +390,7 @@ bool retro_load_game(const retro_game_info* game) {
+ bool retro_load_game_special(uint type, const retro_game_info* info, usize num) { return false; }
+ 
+ void retro_unload_game() {
++	GPUThread::stop();
+ 	renderer->setFBO(0);
+ 	renderer = nullptr;
+ }
+@@ -301,8 +401,10 @@ void retro_cheat_reset() { emulator->getCheats().reset(); }
+ void retro_run() {
+ 	configCheckVariables();
+ 
+-	renderer->setFBO(hwRender.get_current_framebuffer());
+-	renderer->resetStateManager();
++	if (!GPUThread::active) {
++		renderer->setFBO(hwRender.get_current_framebuffer());
++		renderer->resetStateManager();
++	}
+ 
+ 	inputPollCallback();
+ 
+@@ -364,6 +466,9 @@ void retro_run() {
+ 
+ 	hid.updateInputs(emulator->getTicks());
+ 	emulator->runFrame();
++	if (GPUThread::active) {
++		GPUThread::present();
++	}
+ 
+ 	videoCallback(RETRO_HW_FRAME_BUFFER_VALID, emulator->width, emulator->height, 0);
+ 	// Call audio batch callback
 diff --git a/src/panda_bench/main.cpp b/src/panda_bench/main.cpp
 new file mode 100644
-index 00000000..ef9e69ac
+index 00000000..3d94e6cd
 --- /dev/null
 +++ b/src/panda_bench/main.cpp
-@@ -0,0 +1,253 @@
+@@ -0,0 +1,258 @@
 +// panda3ds-bench: Panda3DS with no window, for measuring it. It runs a ROM for a number of frames as fast as it can
 +// and reports the time each scene took (scenes are the stress-test ROM's "BENCH scene=..." debug strings), the
 +// slowest frames and the memory used.
@@ -1561,6 +2274,7 @@ index 00000000..ef9e69ac
 +		std::string name;
 +		int firstFrame = 0;
 +		std::vector<double> frameMs;
++		u64 ticks = 0, idleTicks = 0;  // emulated ARM11 cycles, and those no thread wanted
 +	};
 +
 +	EGLDisplay display = EGL_NO_DISPLAY;
@@ -1705,10 +2419,13 @@ index 00000000..ef9e69ac
 +		auto f0 = Clock::now();
 +		mark(4, frame);
 +		const size_t before = scenes.size();
++		const u64 ticks0 = emu->getTicks(), idle0 = emu->getKernel().idleTicks;
 +		emu->runFrame();
 +		double ms = std::chrono::duration<double, std::milli>(Clock::now() - f0).count();
 +		// a frame that started a scene belongs to it
 +		scenes.back().frameMs.push_back(ms);
++		scenes.back().ticks += emu->getTicks() - ticks0;
++		scenes.back().idleTicks += emu->getKernel().idleTicks - idle0;
 +		if (dumping) {
 +			emu->runOnGPUThread([&] { emu->getRenderer()->readScreen(screen); });
 +			// the scene that just ended (not "boot"): its last frame is the previous one
@@ -1750,13 +2467,14 @@ index 00000000..ef9e69ac
 +
 +	std::printf("rom %s renderer %s frames %d load %.1f ms total %.1f ms (%.2f fps) peak RSS %ld MB\n", rom.filename().c_str(),
 +				renderer.c_str(), frame, loadMs, totalMs, frame * 1000.0 / totalMs, peakRssKB() / 1024);
-+	std::printf("%-8s %6s %6s %9s %9s %9s %9s\n", "scene", "first", "frames", "mean ms", "p50 ms", "p95 ms", "max ms");
++	std::printf("%-8s %6s %6s %9s %9s %9s %9s %9s\n", "scene", "first", "frames", "mean ms", "p50 ms", "p95 ms", "max ms", "ARM11 %");
 +	for (auto& s : scenes) {
 +		if (s.frameMs.empty()) continue;
 +		double sum = 0;
 +		for (double v : s.frameMs) sum += v;
-+		std::printf("%-8s %6d %6zu %9.3f %9.3f %9.3f %9.3f\n", s.name.c_str(), s.firstFrame, s.frameMs.size(), sum / s.frameMs.size(),
-+					percentile(s.frameMs, 0.5), percentile(s.frameMs, 0.95), percentile(s.frameMs, 1.0));
++		std::printf("%-8s %6d %6zu %9.3f %9.3f %9.3f %9.3f %8.1f%%\n", s.name.c_str(), s.firstFrame, s.frameMs.size(), sum / s.frameMs.size(),
++					percentile(s.frameMs, 0.5), percentile(s.frameMs, 0.95), percentile(s.frameMs, 1.0),
++					s.ticks ? 100.0 * double(s.ticks - s.idleTicks) / double(s.ticks) : 0.0);
 +	}
 +	std::fflush(stdout);
 +	std::error_code ec;
@@ -1883,6 +2601,157 @@ index 390a3fa6..bb1972fd 100644
 +	invalidateRange(outputAddr, outputWidth * outputHeight * outBpp);
 +	return true;
  }
+diff --git a/tests/banana/libretro_host.cpp b/tests/banana/libretro_host.cpp
+new file mode 100644
+index 00000000..2859d0b0
+--- /dev/null
++++ b/tests/banana/libretro_host.cpp
+@@ -0,0 +1,145 @@
++// libretro-host: the least of a libretro frontend, to run and time the Panda3DS core without RetroArch. It gives the
++// core an OpenGL ES 3.1 context (EGL surfaceless) and an FBO as "RetroArch's framebuffer", runs N frames and writes the
++// frames asked for as PPM images (400x480, top-down).
++//
++//   libretro-host <core.so> <rom> [frames] [dump dir] [frame,frame...]
++//
++// g++ -O2 -std=c++20 tests/banana/libretro_host.cpp -Ithird_party/libretro/include -ldl -lEGL -lGLESv2 -o libretro-host
++#include <EGL/egl.h>
++#include <EGL/eglext.h>
++#include <GLES3/gl31.h>
++#include <dlfcn.h>
++#include <libretro.h>
++
++#include <algorithm>
++#include <chrono>
++#include <cstdarg>
++#include <cstdio>
++#include <cstdlib>
++#include <cstring>
++#include <string>
++#include <vector>
++
++static retro_hw_render_callback hw;
++static GLuint fbo, fboTexture;
++static std::string saveDir = "/tmp";
++
++static uintptr_t currentFramebuffer() { return fbo; }
++static retro_proc_address_t procAddress(const char* name) { return (retro_proc_address_t)eglGetProcAddress(name); }
++
++static bool environment(unsigned cmd, void* data) {
++	switch (cmd) {
++		case RETRO_ENVIRONMENT_SET_HW_RENDER: {
++			auto* cb = static_cast<retro_hw_render_callback*>(data);
++			if (cb->context_type != RETRO_HW_CONTEXT_OPENGLES3) return false;
++			hw = *cb;
++			cb->get_current_framebuffer = currentFramebuffer;
++			cb->get_proc_address = procAddress;
++			hw.get_current_framebuffer = currentFramebuffer;
++			hw.get_proc_address = procAddress;
++			return true;
++		}
++		case RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY:
++		case RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY: *static_cast<const char**>(data) = saveDir.c_str(); return true;
++		case RETRO_ENVIRONMENT_SET_PIXEL_FORMAT: return true;
++		case RETRO_ENVIRONMENT_GET_PREFERRED_HW_RENDER: *static_cast<unsigned*>(data) = RETRO_HW_CONTEXT_OPENGLES3; return true;
++		default: return false;
++	}
++}
++
++static void videoRefresh(const void*, unsigned, unsigned, size_t) {}
++static size_t audioBatch(const int16_t*, size_t frames) { return frames; }
++static void inputPoll() {}
++static int16_t inputState(unsigned, unsigned, unsigned, unsigned) { return 0; }
++
++int main(int argc, char** argv) {
++	if (argc < 3) {
++		std::fprintf(stderr, "usage: %s <core.so> <rom> [frames] [dump dir] [frame,frame...]\n", argv[0]);
++		return 2;
++	}
++	const int frames = argc > 3 ? std::atoi(argv[3]) : 600;
++	const std::string dumpDir = argc > 4 ? argv[4] : "";
++	std::vector<int> dumpFrames;
++	for (std::string list = argc > 5 ? argv[5] : ""; !list.empty();) {
++		size_t comma = list.find(',');
++		dumpFrames.push_back(std::atoi(list.substr(0, comma).c_str()));
++		list = comma == std::string::npos ? "" : list.substr(comma + 1);
++	}
++
++	auto getPlatformDisplay = (PFNEGLGETPLATFORMDISPLAYEXTPROC)eglGetProcAddress("eglGetPlatformDisplayEXT");
++	EGLDisplay display = getPlatformDisplay(EGL_PLATFORM_SURFACELESS_MESA, EGL_DEFAULT_DISPLAY, nullptr);
++	eglInitialize(display, nullptr, nullptr);
++	eglBindAPI(EGL_OPENGL_ES_API);
++	const EGLint configAttribs[] = {EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT, EGL_NONE};
++	EGLConfig config;
++	EGLint count;
++	eglChooseConfig(display, configAttribs, &config, 1, &count);
++	const EGLint contextAttribs[] = {EGL_CONTEXT_MAJOR_VERSION, 3, EGL_CONTEXT_MINOR_VERSION, 1, EGL_NONE};
++	EGLContext context = eglCreateContext(display, config, EGL_NO_CONTEXT, contextAttribs);
++	if (!eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, context)) {
++		std::fprintf(stderr, "no GLES 3.1 context\n");
++		return 1;
++	}
++	glGenTextures(1, &fboTexture);
++	glBindTexture(GL_TEXTURE_2D, fboTexture);
++	glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, 400, 480);
++	glGenFramebuffers(1, &fbo);
++	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
++	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fboTexture, 0);
++
++	void* core = dlopen(argv[1], RTLD_NOW);
++	if (!core) {
++		std::fprintf(stderr, "%s\n", dlerror());
++		return 1;
++	}
++#define SYM(name) auto name = reinterpret_cast<decltype(&::name)>(dlsym(core, #name))
++	SYM(retro_set_environment);
++	SYM(retro_set_video_refresh);
++	SYM(retro_set_audio_sample_batch);
++	SYM(retro_set_input_poll);
++	SYM(retro_set_input_state);
++	SYM(retro_init);
++	SYM(retro_load_game);
++	SYM(retro_run);
++	SYM(retro_unload_game);
++	SYM(retro_deinit);
++	retro_set_environment(environment);
++	retro_set_video_refresh(videoRefresh);
++	retro_set_audio_sample_batch(audioBatch);
++	retro_set_input_poll(inputPoll);
++	retro_set_input_state(inputState);
++	retro_init();
++	retro_game_info game{argv[2], nullptr, 0, nullptr};
++	if (!retro_load_game(&game)) {
++		std::fprintf(stderr, "can't load %s\n", argv[2]);
++		return 1;
++	}
++	hw.context_reset();
++
++	std::vector<double> times;
++	std::vector<unsigned char> pixels(400 * 480 * 4);
++	auto start = std::chrono::steady_clock::now();
++	for (int f = 0; f < frames; f++) {
++		auto t0 = std::chrono::steady_clock::now();
++		retro_run();
++		times.push_back(std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count());
++		if (!dumpDir.empty() && std::find(dumpFrames.begin(), dumpFrames.end(), f) != dumpFrames.end()) {
++			glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo);
++			glReadPixels(0, 0, 400, 480, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
++			std::string path = dumpDir + "/frame" + std::to_string(f) + ".ppm";
++			FILE* out = std::fopen(path.c_str(), "wb");
++			std::fprintf(out, "P6\n400 480\n255\n");
++			for (int y = 479; y >= 0; y--)
++				for (int x = 0; x < 400; x++) std::fwrite(&pixels[(y * 400 + x) * 4], 1, 3, out);
++			std::fclose(out);
++		}
++	}
++	double total = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
++	std::sort(times.begin(), times.end());
++	std::printf("frames %d total %.1f ms (%.2f fps) p50 %.3f ms p95 %.3f ms\n", frames, total, frames * 1000.0 / total, times[times.size() / 2],
++				times[times.size() * 95 / 100]);
++	std::fflush(stdout);
++	hw.context_destroy();
++	retro_unload_game();
++	std::_Exit(0);
++}
 diff --git a/tests/banana/texture_decode_test.cpp b/tests/banana/texture_decode_test.cpp
 new file mode 100644
 index 00000000..5978e846
@@ -1927,3 +2796,26 @@ index 00000000..5978e846
 +	std::printf("%s: %d mismatches\n", failures ? "FAIL" : "ok", failures);
 +	return failures != 0;
 +}
+diff --git a/third_party/opengl/opengl.hpp b/third_party/opengl/opengl.hpp
+index 607815fa..424ae902 100644
+--- a/third_party/opengl/opengl.hpp
++++ b/third_party/opengl/opengl.hpp
+@@ -305,7 +305,8 @@ namespace OpenGL {
+         int width() const { return m_width; }
+         int height() const { return m_height; }
+ 
+-       void free() { glDeleteTextures(1, &m_handle); }
++       // Forget the name too: GL reuses deleted names, so freeing it again would delete someone else's texture
++       void free() { glDeleteTextures(1, &m_handle); m_handle = 0; }
+     };
+ 
+     struct Framebuffer {
+@@ -331,7 +332,7 @@ namespace OpenGL {
+         bool exists() const { return m_handle != 0; }
+         void bind(GLenum target) const { glBindFramebuffer(target, m_handle); }
+         void bind(FramebufferTypes target) const { bind(static_cast<GLenum>(target)); }
+-        void free() { glDeleteFramebuffers(1, &m_handle); }
++        void free() { glDeleteFramebuffers(1, &m_handle); m_handle = 0; }
+ 
+         void createWithTexture(Texture& tex, GLenum mode = GL_FRAMEBUFFER, GLenum attachment = GL_COLOR_ATTACHMENT0, GLenum textureType = GL_TEXTURE_2D) {
+             m_textureType = textureType;

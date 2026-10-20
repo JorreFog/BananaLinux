@@ -16,10 +16,8 @@ LIBRETRO_PANDA3DS_GIT_SUBMODULES = YES
 LIBRETRO_PANDA3DS_LICENSE = GPL-3.0
 LIBRETRO_PANDA3DS_LICENSE_FILES = LICENSE
 LIBRETRO_PANDA3DS_SUPPORTS_IN_SOURCE_BUILD = NO
-LIBRETRO_PANDA3DS_DEPENDENCIES = libgles host-pkgconf
-ifeq ($(BR2_PACKAGE_LIBRETRO_PANDA3DS_BENCH),y)
-LIBRETRO_PANDA3DS_DEPENDENCIES += libegl
-endif
+# EGL: the GPU's own thread gets a context sharing RetroArch's
+LIBRETRO_PANDA3DS_DEPENDENCIES = libegl libgles host-pkgconf
 
 # The core alone (no SDL or Qt window), GLES 3 through RetroArch's context, RetroArch's own audio, nothing the
 # handheld doesn't use (Vulkan, Lua, Discord, RenderDoc, the HTTP server), tuned for the Cortex-A55

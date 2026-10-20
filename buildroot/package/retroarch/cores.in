@@ -79,7 +79,6 @@ config BR2_PACKAGE_LIBRETRO_PANDA3DS_BENCH
 	bool "panda3ds-bench"
 	default y
 	depends on BR2_PACKAGE_LIBRETRO_PANDA3DS
-	depends on BR2_PACKAGE_HAS_LIBEGL
 	help
 	  Panda3DS with no window and the 3DS stress-test ROM
 	  (tools/3ds-bench), to measure the emulator on the handheld:
