@@ -534,10 +534,12 @@ static void audio_route(void)
 	}
 	/* The RG DS Plus's aw88166 amplifiers play 48 kHz whatever rate the I2S is set to (measured: 44.1 kHz audio is
 	 * taken at 48,150 samples a second, 9% fast and pitched up; 48 kHz at 48,080), so their stream is always opened
-	 * at 48 kHz and ALSA converts. Without it DraStic's 44.1 kHz ran its audio ring dry (stutter, crackles). */
+	 * at 48 kHz and ALSA converts. Without it DraStic's 44.1 kHz ran its audio ring dry (stutter, crackles). The
+	 * slave is pinned to S16 stereo 48 kHz so every open gets the same stream instead of renegotiating it. */
 	char play[96];
 	if (card_play >= 0 && card_play == card_speaker)
-		snprintf(play, sizeof play, "{ type plug slave { pcm \"hw:%d\" rate 48000 } }", card_play);
+		snprintf(play, sizeof play,
+			"{ type plug slave { pcm \"hw:%d\" format S16_LE channels 2 rate 48000 } }", card_play);
 	else
 		snprintf(play, sizeof play, "\"plughw:%d\"", card_play);
 	char conf[512];

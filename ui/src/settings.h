@@ -21,6 +21,19 @@
 
 namespace banana
 {
+	// The game panel's quick-menu button: a wide pill centred along the bottom of the bottom screen, tapped anywhere on
+	// the bottom touchscreen (the tap surface; the game panel is the bottom one). One definition of its box, so the
+	// drawing (Settings::gameRender) and the touch hit test (Settings::gameTouch) can never disagree; the game panel is
+	// laid out in 640x480 CSS px and X()/s scales it to the panel, so the same numbers serve the RG DS (640x480) and
+	// the RG DS Plus (1024x768).
+	namespace gamecorner
+	{
+		constexpr float W = 176, H = 34;
+		constexpr float X = (640 - W) / 2;	// centred across the panel
+		constexpr float Y = 438;			// along its bottom edge
+		inline bool inCorner(float x, float y) { return x >= X && x < X + W && y >= Y && y < Y + H; }
+	}
+
 	class Settings
 	{
 	public:
@@ -34,14 +47,18 @@ namespace banana
 		bool animating() const;	// the highlight or the list still easing into place: frames wanted
 
 		// The game panel (settings.cpp, end): while a RetroArch game runs on one panel through a DRM lease, the other
-		// shows the game's RetroAchievements (progress and the latest unlocks with their badges) and touch tiles for
-		// RetroArch (save, load, its menu, fast forward, quit), in the in-game menu's look.
+		// shows the game's RetroAchievements (progress and the latest unlocks with their badges) and, over them, the
+		// quick-menu sheet (touch tiles for RetroArch: save, load, its menu, fast forward, quit), in the in-game
+		// menu's look. A centred pill along the bottom edge opens and closes the sheet.
 		enum GameAction { G_NONE, G_SAVE, G_LOAD, G_MENU, G_FFWD, G_QUIT };
 		void gameOpen(const std::string& title, const std::string& system, int screen, bool touch);
 		void gameClose();
 		bool gameUpdate(double nowMs);		// true: the panel changed (a log line, a reply, a badge, a flash ending)
 		void gameRender();
-		GameAction gameTouch(float x, float y, bool down);	// device px on the panel's screen
+		// A touch, device px. The tiles are on the panel being drawn (screen, the bottom one); the quick-menu button
+		// is the centred pill on the bottom touchscreen (screen 1) that opens and closes the sheet. A tile returns the
+		// RetroArch command to send (G_SAVE...), which the host writes to the game's stdin.
+		GameAction gameTouch(float x, float y, bool down, int screen);
 		bool gameProgress(int& unlocked, int& total);			// the game's achievements, once the server said
 		// box art (banana-scrape) finished since the last call: the library is read again
 		bool takeLibraryChanged() { bool r = libChanged; libChanged = false; return r; }
@@ -224,6 +241,8 @@ namespace banana
 		std::shared_ptr<RaWatch> raw;
 		std::string gTitle, gSystem;
 		int gScreen = 1, gFlash = -1, gDown = -1;
+		static constexpr int FLASH_TAB = 5;	// gFlash index of the quick-menu button (0..4 are the tiles)
+		bool gSheet = false;				// the quick-menu sheet is open over the game panel
 		bool gTouch = true;
 		double gFlashUntil = 0;
 		int gSeen = -1;						// the watch's generation last drawn

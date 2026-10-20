@@ -2685,7 +2685,7 @@ namespace banana
 	void Settings::gameOpen(const std::string& title, const std::string& system, int screen, bool touch)
 	{
 		gTitle = title; gSystem = system; gScreen = screen; gTouch = touch;
-		gFlash = gDown = -1; gSeen = -1;
+		gFlash = gDown = -1; gSheet = false; gSeen = -1;
 		raw = std::make_shared<RaWatch>();
 		raw->since = now;
 		std::string cfg = "/data/retroarch/retroarch.cfg";
@@ -2734,11 +2734,27 @@ namespace banana
 		return true;
 	}
 
-	Settings::GameAction Settings::gameTouch(float x, float y, bool down)
+	Settings::GameAction Settings::gameTouch(float x, float y, bool down, int screen)
 	{
 		float lx = x / s, ly = y / s;
+		// the quick-menu button first: the centred pill along the bottom of the bottom touchscreen (screen 1). A
+		// single tap opens or closes the sheet (gameRender draws it under this same box). It is the bottom screen's
+		// own control, so it exists only when the game panel is the bottom one (screen 1). It lights while a finger
+		// is down, so it answers as the tiles do.
+		if (gScreen == 1 && screen == 1 && (gDown == FLASH_TAB || gamecorner::inCorner(lx, ly)))
+		{
+			if (down) { gDown = FLASH_TAB; gFlash = FLASH_TAB; gFlashUntil = now + 10000; return G_NONE; }
+			// the release only counts inside the box; a tap that ended there toggles the sheet
+			bool hit = gDown == FLASH_TAB && gamecorner::inCorner(lx, ly);
+			gDown = -1;
+			gFlash = -1; gFlashUntil = now + 220;
+			if (hit) { gSheet = !gSheet; return G_NONE; }
+			return G_NONE;
+		}
+		// the sheet's tiles: five, along the bottom of the panel being drawn. A tap on one sends its RetroArch command
+		// and puts the sheet away; the tiles answer only while the sheet is open.
 		int hit = -1;
-		for (int i = 0; i < 5; i++)
+		if (gSheet && screen == gScreen) for (int i = 0; i < 5; i++)
 		{
 			float tx = 18 + i * 122;
 			if (lx >= tx && lx < tx + 114 && ly >= 300 && ly < 420) hit = i;
@@ -2747,9 +2763,14 @@ namespace banana
 		int was = gDown;
 		gDown = -1;
 		gFlashUntil = now + 220;
-		if (hit < 0 || hit != was) { gFlash = -1; return G_NONE; }
-		static const GameAction acts[5] = { G_SAVE, G_LOAD, G_MENU, G_FFWD, G_QUIT };
-		return acts[hit];
+		if (hit >= 0 && hit == was)
+		{
+			gSheet = false;
+			static const GameAction acts[5] = { G_SAVE, G_LOAD, G_MENU, G_FFWD, G_QUIT };
+			return acts[hit];
+		}
+		gFlash = -1;
+		return G_NONE;
 	}
 
 	void Settings::gameRender()
@@ -2845,28 +2866,49 @@ namespace banana
 				"No connection to RetroAchievements: check Wi-Fi.";
 			wrapped(msg, 18, 40, 130, 560, 3, p.muted);
 		}
-		// ---- the tiles: RetroArch's commands by touch, and their buttons
-		for (int i = 0; i < 5; i++)
+		// ---- the quick-menu sheet: RetroArch's commands by touch, over the screen while the button (below) has it
+		// open. It is Banana's own overlay, not RetroArch's menu; closed, the game's achievements stand alone.
+		if (gSheet)
 		{
-			float x = 18 + i * 122, y = 300;
-			bool on = gFlash == i;
-			box(on ? "pick" : "slot", on, x, y, 114, 120);
-			Color fg = on ? p.onPick : (i == 4 ? Color::hex(0xff8a96) : p.ink);
-			int k = std::max(1, (int)std::lround(3 * s));
-			float ix = std::round(X(x + 57) - 6 * k), iy = std::round(X(y + 16));
-			for (int r = 0; r < 12; r++)
-				for (int c = 0; c < 12; c++)
-					if (GTILES[i].icon[r][c] == '#') be->fill(ix + c * k, iy + r * k, (float)k, (float)k, fg);
-			std::string lb = GTILES[i].label;
-			float lw = text(lb, true, 19, 0, 0, fg, false, 0, true);
-			text(lb, true, 19, x + 57 - lw / 2, y + 60, fg);
-			std::string kk = GTILES[i].keys;
-			float kw = text(kk, false, 14, 0, 0, p.muted, false, 0, true);
-			text(kk, false, 14, x + 57 - kw / 2, y + 90, on ? p.onPickAccent : p.muted);
+			box("hero", false, 30, 96, 580, 338);
+			text("Quick menu", true, 20, 52, 108, p.ink);
+			const char* sub = "RetroArch keeps running behind this";
+			float subw = text(sub, false, 15, 0, 0, p.muted, false, 0, true);
+			text(sub, false, 15, 586 - subw, 113, p.muted);
+			for (int i = 0; i < 5; i++)
+			{
+				float x = 18 + i * 122, y = 300;
+				bool on = gFlash == i;
+				box(on ? "pick" : "slot", on, x, y, 114, 120);
+				Color fg = on ? p.onPick : (i == 4 ? Color::hex(0xff8a96) : p.ink);
+				int k = std::max(1, (int)std::lround(3 * s));
+				float ix = std::round(X(x + 57) - 6 * k), iy = std::round(X(y + 16));
+				for (int r = 0; r < 12; r++)
+					for (int c = 0; c < 12; c++)
+						if (GTILES[i].icon[r][c] == '#') be->fill(ix + c * k, iy + r * k, (float)k, (float)k, fg);
+				std::string lb = GTILES[i].label;
+				float lw = text(lb, true, 19, 0, 0, fg, false, 0, true);
+				text(lb, true, 19, x + 57 - lw / 2, y + 60, fg);
+				std::string kk = GTILES[i].keys;
+				float kw = text(kk, false, 14, 0, 0, p.muted, false, 0, true);
+				text(kk, false, 14, x + 57 - kw / 2, y + 90, on ? p.onPickAccent : p.muted);
+			}
+			std::string hint = gTouch ? "Tap a tile, or hold F with the button under it" : "Hold F with the button under each tile";
+			float hw = text(hint, false, 15, 0, 0, p.muted, false, 0, true);
+			text(hint, false, 15, 320 - hw / 2, 412, p.muted);
 		}
-		std::string hint = gTouch ? "Tap a tile, or hold F with the button under it" : "Hold F with the button under each tile";
-		float hw = text(hint, false, 15, 0, 0, p.muted, false, 0, true);
-		text(hint, false, 15, 320 - hw / 2, 438, p.muted);
+		// ---- the quick-menu button: the centred pill along the bottom edge of the bottom screen, drawn in the
+		// theme's own plate ("pick" lit, "slot" at rest, as the tiles), its box gamecorner's, the same gameTouch
+		// hit-tests. It lights up (gFlash) while it is tapped and says what it does: open or close the sheet.
+		if (gScreen == 1)
+		{
+			bool on = gFlash == FLASH_TAB;
+			box(on ? "pick" : "slot", on, gamecorner::X, gamecorner::Y, gamecorner::W, gamecorner::H);
+			Color fg = on ? p.onPick : p.ink;
+			const char* label = gSheet ? "Close" : "Quick menu";
+			float lw = text(label, true, 18, 0, 0, fg, false, 0, true);
+			text(label, true, 18, gamecorner::X + (gamecorner::W - lw) / 2, gamecorner::Y + 8, fg);
+		}
 		be->endScreen();
 	}
 }

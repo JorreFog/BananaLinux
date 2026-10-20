@@ -1139,10 +1139,9 @@ int main(int argc, char** argv)
 		}
 	};
 
-	// the game panel's loop while a RetroArch game runs on the other panel: its achievements and tiles drawn when they
-	// change, touch on the panel's screen (when the panel is there and that screen has a touchscreen: the RG DS's top one
-	// too, with the game on the bottom) turned into RetroArch's commands through the pipe
-	// on its stdin (stdin_cmd_enable), until the game ends
+	// the game panel's loop while a RetroArch game runs on the other panel: its achievements and, over them, the
+	// quick-menu sheet (its five RetroArch commands by touch) drawn when they change, the touches turned into
+	// RetroArch's commands through the pipe on its stdin (stdin_cmd_enable), until the game ends
 	auto gamePanel = [&](pid_t pid, int& status, int gameScreen, int cmdFd, const std::string& title, const std::string& sysName)
 	{
 		const int panelScreen = 1 - gameScreen;
@@ -1177,16 +1176,18 @@ int main(int argc, char** argv)
 				if (fds[i].revents & POLLIN)
 					input.read(fds[i].fd, [&](const InputEvent& ev)
 					{
-						if (ev.screen != panelScreen) return;	// buttons are the game's; touch only on the panel
+						// buttons are the game's; touch: the quick-menu button and its sheet on the bottom
+						// touchscreen (screen 1), which gameTouch tells apart by screen
 						if (ev.type != InputEvent::TOUCH_DOWN && ev.type != InputEvent::TOUCH_UP) return;
 						Settings::GameAction a;
 						{
 							std::lock_guard<std::mutex> l(worker.uiLock);
-							a = settingsView.gameTouch(ev.x, ev.y, ev.type == InputEvent::TOUCH_DOWN);
+							a = settingsView.gameTouch(ev.x, ev.y, ev.type == InputEvent::TOUCH_DOWN, ev.screen);
 						}
 						want = true;
 						const char* c = a == Settings::G_SAVE ? "SAVE_STATE\n" : a == Settings::G_LOAD ? "LOAD_STATE\n" :
-							a == Settings::G_MENU ? "MENU_TOGGLE\n" : a == Settings::G_FFWD ? "FAST_FORWARD\n" : a == Settings::G_QUIT ? "QUIT\n" : nullptr;
+							a == Settings::G_MENU ? "MENU_TOGGLE\n" : a == Settings::G_FFWD ? "FAST_FORWARD\n" :
+							a == Settings::G_QUIT ? "QUIT\n" : nullptr;
 						if (c)
 						{
 							logf("game panel: %.*s", (int)strlen(c) - 1, c);
@@ -1196,6 +1197,8 @@ int main(int argc, char** argv)
 		}
 	};
 
+	// Mode B (the game panel off, or its DRM lease failed): the game takes both panels and banana-ui draws nothing,
+	// so it has no screen to put the quick-menu sheet on; the game alone owns the panels until it ends.
 	auto runGame = [&](int game)
 	{
 		const SystemDef& sd = lib.systemOf(game);
@@ -1213,8 +1216,10 @@ int main(int argc, char** argv)
 		boost.release();
 		forgetDecoded();
 		const char* FIFO = "/run/banana/retroarch.cmd";
-		// (PICO-8 too when it plays in RetroArch's fake-08: the official PICO-8, when it is on the card, takes the panels)
-		bool ra = sd.run.find("run-retroarch") != std::string::npos ||
+		// run-ps1 and run-pico8's fake-08 fallback end up in run-retroarch just the same, so they get the game panel
+		// (settings.conf retroarch_panel) and its touch tiles too; the official PICO-8, when it is on the card, takes
+		// the panels itself.
+		bool ra = sd.run.find("run-retroarch") != std::string::npos || sd.run.find("run-ps1") != std::string::npos ||
 			(sd.run.find("run-pico8") != std::string::npos && access("/data/roms/pico-8/pico8_64", F_OK) != 0);
 		bool panel = ra && settings["retroarch_panel"] != "off" && disp.isOpen();
 		int gameScreen = 0, leaseFd = -1, cmdFd = -1;
@@ -1238,6 +1243,8 @@ int main(int argc, char** argv)
 		}
 		if (!panel)
 		{
+			// Mode B: the game takes both panels and banana-ui draws nothing (no game panel, so no quick-menu sheet
+			// either). The game alone has the panels until it ends.
 			input.close();
 			disp.close();
 		}
