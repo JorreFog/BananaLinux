@@ -61,7 +61,8 @@ namespace banana
 		std::string gameKey, gameName, gameSort;
 		// the display's colour table (main: Display::setColors), for Screen colours: off while its page is up, the saved
 		// values when it closes
-		std::function<void(const ScreenColors&)> setColors;
+		std::function<std::string(const ScreenColors&)> setColors;	// "" when it took, else why not
+		bool colorsOpen() const { return mOpen && page == COLORS; }
 		std::string searchText;
 		std::function<int(const std::string&)> searchCount;	// the games the text typed so far finds (the host's library)
 		Result press(Key k);

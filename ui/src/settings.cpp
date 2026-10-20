@@ -1982,7 +1982,7 @@ namespace banana
 	void Settings::openColors()
 	{
 		colSaved = colEdit = ScreenColors::load(data + "/screen-colors.conf");
-		if (colEdit.screen < 0) colEdit.screen = 1;	// (the bottom one first: the top is the one most look at)
+		if (colEdit.screen < 0) { colEdit = ScreenColors(); colEdit.screen = 1; }	// (none kept: neutral; the bottom one first)
 		colRow = 0; colPattern = 0;
 		if (setColors) setColors(ScreenColors());	// the table off: the page draws the values itself
 		message.clear();
@@ -2025,10 +2025,17 @@ namespace banana
 		{
 			// kept: the file, and the table on the screen it corrects
 			ScreenColors keep = colEdit;
-			if (keep.neutral()) keep.screen = -1;
-			if (!keep.save(data + "/screen-colors.conf")) { message = "The card can't be written."; return MOVED; }
+			if (keep.neutral()) keep = ScreenColors();	// (None, or nothing to correct: no values kept either)
+			// the table first: one the display refuses isn't kept, and the page says why
+			std::string e = setColors ? setColors(keep) : "";
+			if (!e.empty())
+			{
+				if (setColors) setColors(ScreenColors());	// (off again under the page)
+				message = "The display refused it: " + e + ". Nothing was kept.";
+				return MOVED;
+			}
+			if (!keep.save(data + "/screen-colors.conf")) { message = "The card can't be written."; if (setColors) setColors(ScreenColors()); return MOVED; }
 			colSaved = keep;
-			if (setColors) setColors(colSaved);
 			page = LIST; message.clear();
 			toast("Screen colours", keep.screen < 0 ? "No correction" : keep.screen == 0 ? "The top screen corrected" : "The bottom screen corrected", 0x6ad07a, 1, 3000);
 			return CHANGED;
