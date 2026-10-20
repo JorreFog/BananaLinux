@@ -125,7 +125,8 @@ namespace banana
 		std::set<std::string> favGames, favSystems;	// "<system>/<rel>", system ids
 		struct Stat { int plays = 0; long seconds = 0; time_t last = 0; int achA = -1, achB = 0; };
 		std::map<std::string, Stat> stats;			// "<system>/<rel>"
-		std::map<std::string, Titles> titles;		// "<system>/<rel>": the game page's name and sort title
+		std::map<std::string, Titles> titles;
+		std::set<std::string> matched;				// "<system>/<file name without .ext>": a cover picked by name (#28)		// "<system>/<rel>": the game page's name and sort title
 		int lib = 0, home = 0, launchGame = -1;
 		bool changed = false;
 		std::string query;

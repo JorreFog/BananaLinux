@@ -333,6 +333,13 @@ namespace banana
 				stats[c[0]] = s;
 			}
 		}
+		matched.clear();
+		{
+			// the games whose cover was picked by name on their page (banana-scrape --match): that cover over a
+			// gamelist.xml's picture
+			std::ifstream f(dataDir + "/boxart-match.tsv");
+			while (std::getline(f, ln)) { size_t t = ln.find('\t'); if (t != std::string::npos) matched.insert(ln.substr(0, t)); }
+		}
 		titles.clear();
 		{
 			// <system>/<rel> TAB name TAB sort title (the game page's; either may be empty)
@@ -544,6 +551,12 @@ namespace banana
 						g.box = exists(it->second.thumb) ? it->second.thumb : (exists(it->second.image) ? it->second.image : "");
 						if (exists(it->second.cart)) g.cart = it->second.cart;
 						if (exists(it->second.boxback)) g.label = it->second.boxback;
+					}
+					if (matched.count(def.id + "/" + stem))
+					{
+						std::string b = media.find(dir, "box", stem), l = media.find(dir, "label", stem);
+						if (!b.empty()) g.box = b;
+						if (!l.empty()) g.label = l;
 					}
 					if (g.box.empty()) g.box = media.find(dir, "box", stem);
 					if (g.cart.empty()) g.cart = media.find(dir, "cart", stem);
