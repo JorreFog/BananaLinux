@@ -393,15 +393,36 @@ int main(int argc, char** argv)
 	std::vector<Job> jobs;
 	std::map<std::string, std::map<std::string, std::string>> genres, years;	// per system: norm name -> value
 	int total = 0;
+	// the card's roms folder, and the second card's while it's in (the RG DS Plus: the folder bananad's sd2 script
+	// offers in /run/banana/sd2/roms, as the library reads it); its art goes on that card, beside its games
+	std::vector<std::string> roots = { roms };
+	{
+		std::ifstream f(getenv("BANANA_SD2") ? getenv("BANANA_SD2") : "/run/banana/sd2/roms");
+		std::string ln;
+		if (std::getline(f, ln))
+		{
+			ln.erase(0, ln.find_first_not_of(" \t\r\n"));
+			ln.erase(ln.find_last_not_of(" \t\r\n") + 1);
+			if (!ln.empty() && ln != roms) roots.push_back(ln);
+		}
+	}
 	for (auto& sys : systems(conf))
 	{
 		auto lr = LIBRETRO.find(sys.id);
 		if (lr == LIBRETRO.end()) continue;
-		std::string dir = sys.folder[0] == '/' ? sys.folder : std::string(roms) + "/" + sys.folder;
-		std::vector<std::string> rels;
-		listRoms(dir, "", sys.exts, rels, 0);
-		if (rels.empty()) continue;
-		status("running 0 " + std::to_string(total + (int)rels.size()) + " " + sys.name + "|the list of covers");
+		std::vector<std::pair<std::string, std::vector<std::string>>> places;	// a folder and the games in it
+		int count = 0;
+		for (size_t ri = 0; ri < roots.size(); ri++)
+		{
+			if (ri > 0 && sys.folder[0] == '/') continue;	// an absolute folder: one place
+			std::string dir = sys.folder[0] == '/' ? sys.folder : roots[ri] + "/" + sys.folder;
+			std::vector<std::string> rels;
+			listRoms(dir, "", sys.exts, rels, 0);
+			count += (int)rels.size();
+			if (!rels.empty()) places.push_back({ dir, rels });
+		}
+		if (places.empty()) continue;
+		status("running 0 " + std::to_string(total + count) + " " + sys.name + "|the list of covers");
 		// the collection's names, to match ours against
 		std::string base = "https://thumbnails.libretro.com/" + esc(lr->second) + "/";
 		std::vector<std::string> boxes = indexNames(get(base + "Named_Boxarts/")), titles = indexNames(get(base + "Named_Titles/"));
@@ -418,6 +439,7 @@ int main(int argc, char** argv)
 			for (auto& n : c) { int s = score(n, stem); if (s > bs) { bs = s; b = n; } }
 			return b;
 		};
+		for (auto& [dir, rels] : places)
 		for (auto& rel : rels)
 		{
 			Job j;
@@ -451,7 +473,7 @@ int main(int argc, char** argv)
 			if (auto v = find(byTitle, byTitleW)) j.title = base + "Named_Titles/" + esc(best(*v, j.stem)) + ".png";
 			jobs.push_back(j);
 		}
-		total += (int)rels.size();
+		total += count;
 	}
 
 	// the pictures, eight at a time (the time goes to waiting for the server, not the CPU)
