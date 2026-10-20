@@ -365,6 +365,9 @@ namespace banana
 			menu, "nds_emulator", { "SuperDrastic", "BananaDS" }, { "superdrastic", "bananads" });
 		add(N, "nds", "Quick resume", "On: quitting keeps where you are, and the game goes on from there next time (a shutdown too). Off: quitting ends the game, which starts from its title next time.",
 			menu, "quick_resume", { "Off", "On" }, { "off", "on" });
+		// the DS's own language (its firmware's), in both emulators at once: a game that has several picks it (#22)
+		add(N, "nds", "DS language", "The language the DS itself is set to: a game that has several starts in it. Both emulators.",
+			"", "ds_language", { "English", "Japanese", "French", "German", "Italian", "Spanish" }, { "1", "0", "2", "3", "4", "5" });
 		std::vector<std::string> shaderNames, shaderValues;
 		shaderChoices(data, shaderNames, shaderValues);
 		std::string shaderHelpS = "Sharp pixels: every DS pixel an exact square, no blur (4x4 on the RG DS Plus, 2x2 with a frame on the RG DS). None scales smoothly. Your own: .frag files in banana/shaders, named with letters, digits and . _ + - only. Crisp: exact pixel-area scaling. Grid and LCD: the DS's screen grid. Colours: the DS's own, duller colours. CRT: a TV's scanlines. FSR: smooth edges, the heaviest. None costs no GPU work.";
@@ -394,6 +397,8 @@ namespace banana
 		{
 			add(N, "nds", "Shader", shaderHelp, sd, "DSFLIP_SHADER", shaderNames, shaderValues);
 			add(N, "nds", "3D resolution", "2x draws the DS's 3D at twice its size on these panels, at full speed with SuperDrastic.", dcfg, "hires_3d", { "2x", "1x" }, { "1", "0" });
+			add(N, "nds", "Threaded 3D", "On draws the DS's 3D beside the game, the faster way. Off draws it in step with the game: for a game whose 3D shows on the wrong screen or a frame late with it on (the Dragon Quest games).",
+				dcfg, "threaded_3d", { "On", "Off" }, { "1", "0" });
 			add(N, "nds", "CPU clock", "Saves battery finds the lowest clock each game runs at full speed and remembers it. Always full keeps the top clock.",
 				sd, "DSFLIP_CPUGOV", { "Saves battery", "Always full" }, { "1", "0" });
 			add(N, "nds", "Frame pacing", "Panels runs the DS at the panels' 60 Hz, a new frame every refresh (0.3% fast, the sound matched). DS rate keeps the DS's own 59.83 Hz, a frame shown twice every ~6 s.",
@@ -450,6 +455,14 @@ namespace banana
 
 	void Settings::load(Item& it)
 	{
+		if (it.key == "ds_language")
+		{
+			std::string v = getConfValue("/data/bananads/bananads.conf", "firmware.language", "");
+			if (v.empty()) v = getConfValue("/data/drastic/config/drastic.cfg", "firmware.language",
+				getConfValue("/usr/share/drastic/config/drastic.cfg", "firmware.language", "1"));
+			for (size_t i = 0; i < it.values.size(); i++) if (it.values[i] == v) it.at = (int)i;
+			return;
+		}
 		if (it.key == "theme")
 		{
 			// the themes as they are on the card now: one copied over file sharing while the menu runs is listed the
@@ -632,6 +645,17 @@ namespace banana
 	void Settings::save(const Item& it)
 	{
 		const std::string& v = it.values[it.at];
+		if (it.key == "ds_language")
+		{
+			if (access("/data/drastic/config/drastic.cfg", F_OK) != 0)
+			{
+				if (system("mkdir -p /data/drastic/config && cp -n /usr/share/drastic/config/drastic.cfg /data/drastic/config/ 2>/dev/null") != 0) {}
+			}
+			setConfValue("/data/drastic/config/drastic.cfg", "firmware.language", v);
+			if (system("mkdir -p /data/bananads") != 0) {}
+			setConfValue("/data/bananads/bananads.conf", "firmware.language", v);
+			return;
+		}
 		if (it.kind == Item::BRIGHTNESS)
 		{
 			int pm = atoi(v.c_str());
