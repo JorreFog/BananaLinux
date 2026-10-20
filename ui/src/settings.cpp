@@ -368,6 +368,9 @@ namespace banana
 		// the DS's own language (its firmware's), in both emulators at once: a game that has several picks it (#22)
 		add(N, "nds", "DS language", "The language the DS itself is set to: a game that has several starts in it. Both emulators.",
 			"", "ds_language", { "English", "Japanese", "French", "German", "Italian", "Spanish" }, { "1", "0", "2", "3", "4", "5" });
+		// the DS's own name (its firmware's user name), in both emulators at once: what a game calls you (#30)
+		add(N, "nds", "DS name", "The name the DS itself is set to, as on a real one: Mario Kart's records, Pictochat, a game's save. 10 characters at most. Both emulators; empty: Dr DraStic in SuperDrastic, BananaDS's own in BananaDS.",
+			"", "ds_name", {}, {}, Item::PAGE);
 		std::vector<std::string> shaderNames, shaderValues;
 		shaderChoices(data, shaderNames, shaderValues);
 		std::string shaderHelpS = "Sharp pixels: every DS pixel an exact square, no blur (4x4 on the RG DS Plus, 2x2 with a frame on the RG DS). None scales smoothly. Your own: .frag files in banana/shaders, named with letters, digits and . _ + - only. Crisp: exact pixel-area scaling. Grid and LCD: the DS's screen grid. Colours: the DS's own, duller colours. CRT: a TV's scanlines. FSR: smooth edges, the heaviest. None costs no GPU work.";
@@ -721,6 +724,7 @@ namespace banana
 			if (dir <= 0) return NONE;
 			if (it.key == "scrape") { startScrape(); return MOVED; }
 			if (it.key == "share_account") { startEntry(ENTRY_SMB_USER, "File sharing", "Name", LIST, shareUser()); return MOVED; }
+			if (it.key == "ds_name") { startEntry(ENTRY_DS_NAME, "The DS's name", "10 characters at most", LIST, dsName()); return MOVED; }
 			if (it.key == "update") openUpdates(); else if (it.key == "setup") openSetup(); else openNetworks();
 			return MOVED;
 		}
@@ -871,11 +875,10 @@ namespace banana
 		if (page == SETUP)
 		{
 			if (downY >= 418 && downY <= 466) return pressSetup(downX < 320 ? Key::B : Key::A);
-			for (int r = 0; r < 5; r++)
+			for (int r = 0; r < SETUP_STEPS; r++)
 			{
-				float ry = 82 + r * 64;
-				if (downY < ry || downY > ry + 56) continue;
-				if (r == 3) return NONE;	// ScreenScraper: greyed out
+				float ry = 82 + r * SETUP_PITCH;
+				if (downY < ry || downY > ry + 50) continue;
 				if (r != wsel) { wsel = r; return MOVED; }
 				return pressSetup(Key::A);
 			}
@@ -1341,6 +1344,7 @@ namespace banana
 			else if (it.kind == Item::PAGE && it.key == "network") v = wstat.connected ? fit(wstat.ssid, true, 19, 300) : (wifiOn() ? "Choose" : "");
 			else if (it.kind == Item::PAGE && it.key == "update") v = updatesWaiting();
 			else if (it.kind == Item::PAGE && it.key == "share_account") v = fit(shareUser(), true, 19, 300);
+			else if (it.kind == Item::PAGE && it.key == "ds_name") v = dsName().empty() ? "Not set" : dsName();
 			else if (it.kind == Item::PAGE && it.key == "scrape") v = scrapeShort();
 			if (v.empty()) continue;
 			float vw = text(v, true, 19, 0, 0, p.ink, false, 0, true);
@@ -1825,6 +1829,9 @@ namespace banana
 		std::string help = !message.empty() ? message
 			: entry == ENTRY_SEARCH ? "A types the key, B deletes, X capitals, Y a space, START searches: the games found open as a shelf of their own, first on the shelf. Part of a name is enough; an empty search takes the shelf away."
 			: entry == ENTRY_WIFI ? "A types the key, B deletes, X capitals, L symbols, Y a space, START joins. Or tap the keys. The password is kept in banana/wifi.conf on the card."
+			: entry == ENTRY_DS_NAME ? "A types the key, B deletes, X capitals, L symbols, Y a space, START when it is typed. Kept in both emulators' settings (DraStic's drastic.cfg, BananaDS's bananads.conf)."
+			: entry == ENTRY_GAME_NAME || entry == ENTRY_GAME_SORT ? "A types the key, B deletes, X capitals, L symbols, Y a space, START when it is typed. Kept in banana/game-titles.tsv on the card."
+			: entry == ENTRY_ART_SEARCH ? "A types the key, B deletes, X capitals, L symbols, Y a space, START looks. A few words of the name are enough: the closest names come first."
 			: "A types the key, B deletes, X capitals, L symbols, Y a space, START when it is typed. Or tap the keys. Accounts are kept in banana/accounts.conf on the card.";
 		wrapped(help, 20, 50, 252, 540, 6, message.empty() ? p.muted : p.accent);
 		be->endScreen();
@@ -2354,6 +2361,37 @@ namespace banana
 		std::string u = account("smb_user");
 		return u.empty() ? "banana" : u;
 	}
+	// the DS's name (#30): BananaDS's firmware.nickname, else DraStic's firmware.username when it isn't its default;
+	// "" for none
+	std::string Settings::dsName()
+	{
+		std::string n = getConfValue("/data/bananads/bananads.conf", "firmware.nickname", "");
+		if (n.empty()) n = getConfValue("/data/drastic/config/drastic.cfg", "firmware.username", "");
+		return n == getConfValue("/usr/share/drastic/config/drastic.cfg", "firmware.username", "Dr DraStic") ? "" : n;
+	}
+	void Settings::setDsName(const std::string& name)
+	{
+		// DraStic's own settings made first (as save() does); empty: its default name back, and BananaDS's line gone
+		if (access("/data/drastic/config/drastic.cfg", F_OK) != 0)
+		{
+			if (system("mkdir -p /data/drastic/config && cp -n /usr/share/drastic/config/drastic.cfg /data/drastic/config/ 2>/dev/null") != 0) {}
+		}
+		setConfValue("/data/drastic/config/drastic.cfg", "firmware.username",
+			name.empty() ? getConfValue("/usr/share/drastic/config/drastic.cfg", "firmware.username", "Dr DraStic") : name);
+		if (system("mkdir -p /data/bananads") != 0) {}
+		const std::string bc = "/data/bananads/bananads.conf";
+		if (!name.empty()) setConfValue(bc, "firmware.nickname", name);
+		else if (!getConfValue(bc, "firmware.nickname", "").empty())
+		{
+			std::ifstream f(bc);
+			std::string ln, out;
+			while (std::getline(f, ln)) if (trim(ln.substr(0, ln.find('='))) != "firmware.nickname") out += ln + "\n";
+			f.close();
+			std::ofstream(bc + ".new") << out;
+			rename((bc + ".new").c_str(), bc.c_str());
+		}
+	}
+
 	std::string Settings::sharePassword()
 	{
 		std::string p = account("smb_password");
@@ -2414,6 +2452,16 @@ namespace banana
 			page = entryBack;
 			message.clear();
 			return CHANGED;
+		case ENTRY_DS_NAME:
+		{
+			std::string v = trim(pw);
+			if (v.size() > 10) { message = "The DS takes 10 characters at most; this one has " + std::to_string(v.size()) + "."; return MOVED; }
+			setDsName(v);
+			pw.clear();
+			page = entryBack;
+			message.clear();
+			return CHANGED;
+		}
 		case ENTRY_ART_SEARCH:
 		{
 			// the collection's names for these words, looked for in the background (the list page waits for them)
@@ -2621,7 +2669,7 @@ namespace banana
 		switch (k)
 		{
 		case Key::UP: case Key::DOWN:
-			wsel = (wsel + (k == Key::UP ? -1 : 1) + 5) % 5;
+			wsel = (wsel + (k == Key::UP ? -1 : 1) + SETUP_STEPS) % SETUP_STEPS;
 			message.clear();
 			return MOVED;
 		case Key::LEFT: case Key::RIGHT:
@@ -2638,8 +2686,9 @@ namespace banana
 			{
 			case 0: openNetworks(); return MOVED;
 			case 1: return pressSetup(Key::RIGHT);
-			case 2: startEntry(ENTRY_RA_USER, "RetroAchievements", "Account name", SETUP, account("ra_user")); return MOVED;
-			case 3: startScrape(); return MOVED;	// box art: on its own, while the setup goes on
+			case 2: startEntry(ENTRY_DS_NAME, "The DS's name", "10 characters at most", SETUP, dsName()); return MOVED;
+			case 3: startEntry(ENTRY_RA_USER, "RetroAchievements", "Account name", SETUP, account("ra_user")); return MOVED;
+			case 4: startScrape(); return MOVED;	// box art: on its own, while the setup goes on
 			default:
 				// the clock is UTC until a zone is picked, and a setup finished with the first entry left the menu's clock
 				// hours off: the first A on Finish goes to the time zone (with the time it would show), a second finishes
@@ -2666,16 +2715,18 @@ namespace banana
 		Item* tz = nullptr;
 		for (auto& it : items) if (it.key == "timezone") tz = &it;
 		std::string ra = account("ra_user"), ss = account("ss_user");
-		static const char* names[5] = { "Wi-Fi", "Time zone", "RetroAchievements", "Box art", "Finish" };
-		std::string status[5] = {
+		static const char* names[SETUP_STEPS] = { "Wi-Fi", "Time zone", "DS name", "RetroAchievements", "Box art", "Finish" };
+		std::string status[SETUP_STEPS] = {
 			wstat.connected ? "Connected to " + wstat.ssid : wifiOn() ? "Not connected" : "Off",
 			tz ? tz->names[tz->at] + " (" + clockNow() + ")" : "",	// (the time it gives, so a wrong zone shows)
+			dsName().empty() ? "Not set" : dsName(),
 			ra.empty() ? "Not signed in" : ra,
 			scrapeShort(),
 			"" };
-		static const char* helps[5] = {
+		static const char* helps[SETUP_STEPS] = {
 			"Your home network: the games' achievements, the clock and the art need it. A picks it from the networks around; the password goes in on the keyboard.",
 			"The clock on the top screen, and the games' own clocks. Left and right change it.",
+			"Your name on the DS, as a real one asks for it the first time: Mario Kart's records, Pictochat, a game's save. A types it (10 characters at most). Leave it and the emulators use their own.",
 			"Your retroachievements.org account: DraStic and RetroArch unlock achievements with it. A types the name, then the password. Leave it if you have none.",
 			"Covers, title screens, genres and years for the games on the card, from libretro's free collections: no account. A starts it (Wi-Fi first); it keeps going while you finish the setup, and the menu shows the art as it comes. Settings > System > Box art runs it again for new games.",
 			"Everything here is in the settings too (Start in the menu), and this setup is under System > First-time setup. A finishes." };
@@ -2686,7 +2737,7 @@ namespace banana
 		text("First-time setup", true, 17, 170, 62, p.muted, true, 1.4f);
 		text(names[wsel], true, 30, 170, 88, p.ink);
 		if (!status[wsel].empty()) text(fit(status[wsel], true, 22, 420), true, 22, 170, 130, p.accent);
-		if (wsel == 3 && scraping())
+		if (wsel == 4 && scraping())
 		{
 			wrapped("Fetching covers and title screens. It carries on while you finish the setup.", 20, 50, 196, 540, 4, p.muted);
 			scrapeBar(50, 330, 540);
@@ -2698,25 +2749,25 @@ namespace banana
 		box("screen", false, 0, 0, 640, 480);
 		box("bubble", false, 18, 14, 604, 54);
 		text("Welcome to Banana", true, 22, 38, 28, p.ink);
-		std::string count = std::to_string(wsel + 1) + " / 5";
+		std::string count = std::to_string(wsel + 1) + " / " + std::to_string(SETUP_STEPS);
 		float cw = text(count, true, 17, 0, 0, p.muted, false, 0, true);
 		text(count, true, 17, 602 - cw, 31, p.muted);
-		for (int r = 0; r < 5; r++)
+		for (int r = 0; r < SETUP_STEPS; r++)
 		{
 			bool on = r == wsel;
-			float y = 82 + r * 64;
-			box(on ? "pick" : "slot", on, 18, y, 604, 56);
+			float y = 82 + r * SETUP_PITCH;	// (six rows a little closer than the lists' five)
+			box(on ? "pick" : "slot", on, 18, y, 604, 50);
 			Color c = on ? p.onPick : p.muted;
-			text(names[r], true, 20, 38, y + 16, c);
+			text(names[r], true, 20, 38, y + 13, c);
 			if (status[r].empty()) continue;
 			std::string v = fit(status[r], true, 19, 300);
 			float vw = text(v, true, 19, 0, 0, c, false, 0, true);
-			if (r == 1) { arrow(true, 576, y + 21, c); text(v, true, 19, 566 - vw, y + 17, c); arrow(false, 556 - vw - 2 - std::round(13 / 2.0f + 1), y + 21, c); }
-			else text(v, true, 19, 586 - vw, y + 17, c);
+			if (r == 1) { arrow(true, 576, y + 18, c); text(v, true, 19, 566 - vw, y + 14, c); arrow(false, 556 - vw - 2 - std::round(13 / 2.0f + 1), y + 18, c); }
+			else text(v, true, 19, 586 - vw, y + 14, c);
 		}
 		float bw = faceWidth("B", "Skip");
 		face("B", "Skip", 18, bw);
-		const char* act = wsel == 4 ? "Finish" : wsel == 1 ? "Next zone" : wsel == 3 ? (scraping() ? "Running" : "Start") : "Open";
+		const char* act = wsel == 5 ? "Finish" : wsel == 1 ? "Next zone" : wsel == 4 ? (scraping() ? "Running" : "Start") : wsel == 2 ? "Type" : "Open";
 		float aw = faceWidth("A", act);
 		face("A", act, 622 - aw, aw);
 		be->endScreen();
