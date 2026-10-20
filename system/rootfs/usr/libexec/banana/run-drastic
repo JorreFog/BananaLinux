@@ -16,6 +16,12 @@ if [ ! -x $D/drastic ]; then
     done
 fi
 cd $D
+# the lid: SuperDrastic holds DraStic's Hinge control while the handheld's lid is shut (the game sees the DS close).
+# Hinge on Pause (256 + its scancode 72), a key no button sends, when neither control set has it on anything
+if grep -q '^controls_a\[CONTROL_INDEX_HINGE\] = 65535' config/drastic.cfg 2>/dev/null &&
+   grep -q '^controls_b\[CONTROL_INDEX_HINGE\] = 65535' config/drastic.cfg; then
+    sed -i 's/^controls_a\[CONTROL_INDEX_HINGE\] = 65535/controls_a[CONTROL_INDEX_HINGE] = 328/' config/drastic.cfg
+fi
 # DraStic writes beside $HOME (SDL's cache); / is read-only
 export HOME=$D XDG_RUNTIME_DIR=/run
 # banana-ui has let go of the panels completely (it closes its display while a game runs)

@@ -27,7 +27,7 @@ define SUPERDRASTIC_BUILD_CMDS
 		-DDSFLIP_VERSION="\"$$(cat VERSION)-banana\"" -DRC_DISABLE_LUA -DRC_CLIENT_SUPPORTS_HASH \
 		-I$(STAGING_DIR)/usr/include/libdrm -I$(SUPERDRASTIC_RC)/include -I$(SUPERDRASTIC_RC)/src -Isrc/third_party/stb \
 		-o libsuperdrastic.so \
-		src/dsflip.c src/shader.c src/audio.c src/ra.c src/ui.c src/volume.c src/cpugov.c src/resume.c src/menu.c \
+		src/dsflip.c src/shader.c src/audio.c src/ra.c src/ui.c src/volume.c src/cpugov.c src/resume.c src/menu.c src/lid.c \
 		$(SUPERDRASTIC_RC)/src/rc_client.c $(SUPERDRASTIC_RC)/src/rc_compat.c $(SUPERDRASTIC_RC)/src/rc_util.c \
 		$(SUPERDRASTIC_RC)/src/rc_version.c $(SUPERDRASTIC_RC)/src/rcheevos/*.c $(SUPERDRASTIC_RC)/src/rapi/*.c \
 		$(SUPERDRASTIC_RC)/src/rhash/*.c \

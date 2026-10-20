@@ -387,6 +387,8 @@ namespace banana
 				bds, "core.slice", { "Accurate", "Fast" }, { "64", "auto" });
 			add(N, "nds", "Microphone", "How loud a word or a blow must be to reach the game.", bds, "mic.threshold",
 				{ "Medium", "High", "Low", "Off" }, { "0.05", "0.02", "0.15", "0" });
+			add(N, "nds", "Reset BananaDS", "BananaDS's settings back to Banana's. Saves, save states and each game's clock stay. Press A twice.",
+				"", "nds-reset-bananads", { "" }, { "" }, Item::ACTION);
 		}
 		else
 		{
@@ -396,6 +398,10 @@ namespace banana
 				sd, "DSFLIP_CPUGOV", { "Saves battery", "Always full" }, { "1", "0" });
 			add(N, "nds", "Frame pacing", "Panels runs the DS at the panels' 60 Hz, a new frame every refresh (0.3% fast, the sound matched). DS rate keeps the DS's own 59.83 Hz, a frame shown twice every ~6 s.",
 				sd, "DSFLIP_PACE", { "Panels", "DS rate" }, { "panels", "ds" });
+			add(N, "nds", "Reset buttons", "DraStic's buttons back to Banana's, for a button setup gone wrong in DraStic's menu: the pad as printed, F or L3 the menu, R2 save, L2 load, R3 fast forward. (HOME always opens the menu.) Press A twice.",
+				"", "nds-reset-buttons", { "" }, { "" }, Item::ACTION);
+			add(N, "nds", "Reset DraStic", "All of DraStic's and SuperDrastic's settings back to Banana's, the buttons too. Saves, save states, cheats and the DS's name and birthday stay. Press A twice.",
+				"", "nds-reset-drastic", { "" }, { "" }, Item::ACTION);
 		}
 		const char* O = "Other systems";
 		add(O, "gamepad", "Screen", "Which panel the systems other than the DS use (RetroArch). The other one shows the game panel (Second screen), or is switched off.",
@@ -698,6 +704,22 @@ namespace banana
 				if (p) { char ln[256]; while (fgets(ln, sizeof ln, p)) out += ln; if (pclose(p) == 0) return REBOOT; }
 				message = out.empty() ? "The other slot holds no system." : out;
 				return MOVED;
+			}
+			if (it.key.compare(0, 10, "nds-reset-") == 0)
+			{
+				// nds-reset; then the list again, so the rows above show the settings as they are now
+				armed = -1;
+				FILE* p = popen(("/usr/libexec/banana/nds-reset " + it.key.substr(10) + " 2>&1").c_str(), "r");
+				std::string out, key = it.key;
+				int rc = -1;
+				if (p) { char ln[256]; while (fgets(ln, sizeof ln, p)) out += ln; rc = pclose(p); }
+				items.clear();
+				build();
+				for (auto& x : items) load(x);
+				for (size_t i = 0; i < items.size(); i++) if (items[i].key == key) sel = (int)i;
+				message = rc == 0 ? (key == "nds-reset-buttons" ? "DraStic's buttons are Banana's again." : "Back to Banana's settings.")
+					: out.empty() ? "Couldn't reset: the card may be read-only." : out;
+				return CHANGED;
 			}
 			return it.key == "reboot" ? REBOOT : POWEROFF;
 		}
@@ -1221,7 +1243,7 @@ namespace banana
 		if (cur.key == "ssh")
 			help = "For working on Banana itself: ssh root@" + (ip.empty() ? std::string("<address>") : ip) +
 				", with the public keys in banana/ssh/authorized_keys on the card (no passwords). Files: scp -O (dropbear has no SFTP), or File sharing.";
-		if (cur.key == "switch" && !message.empty()) help = message;
+		if ((cur.key == "switch" || cur.key.compare(0, 10, "nds-reset-") == 0) && !message.empty()) help = message;
 		if (cur.key == "share")
 		{
 			std::string at = ip.empty() ? "<address>" : ip;
