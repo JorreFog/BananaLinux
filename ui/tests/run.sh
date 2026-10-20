@@ -127,6 +127,7 @@ for size in 640x480 1024x768; do
         || { echo "FAIL $size: banana-ui (box art) exited $?"; fail=1; }
     [ "$(cat "$SL" 2>/dev/null)" = "nds|$FX/roms/nds/Yellow Planet [!].zip|Yellow Planet - Second Orbit (Europe)" ] || { echo "FAIL $size: --match: $(cat "$SL" 2>/dev/null)"; fail=1; }
     grep -q 'titles nds/Yellow Planet' "$alog2" || { echo "FAIL $size: closing the page didn't read the library again"; fail=1; }
+    [ -e "$FX/data/game-titles.tsv" ] && { echo "FAIL $size: a cover alone wrote game-titles.tsv"; fail=1; }
     rm -f "$FX/data/game-titles.tsv"
     # the game page (X on a DS game): its own shader, Down to the Shader row, Right to None, A keeps it in
     # nds-per-game-shader.conf; then Left back to "As in Settings" and the file goes (nothing chosen: no file)

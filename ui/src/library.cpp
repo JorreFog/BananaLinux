@@ -373,8 +373,10 @@ namespace banana
 	void Library::setGameTitles(const std::string& key, const std::string& name, const std::string& sort)
 	{
 		auto clean = [](std::string s) { for (auto& ch : s) if (ch == '\t' || ch == '\n' || ch == '\r') ch = ' '; return trim(s); };
-		if (clean(name).empty() && clean(sort).empty()) titles.erase(key);
-		else titles[key] = { clean(name), clean(sort) };
+		Titles was = gameTitles(key), now = { clean(name), clean(sort) };
+		if (was.name == now.name && was.sort == now.sort) { scan(); return; }	// (only the library again: a new cover)
+		if (now.name.empty() && now.sort.empty()) titles.erase(key);
+		else titles[key] = now;
 		std::string out;
 		for (auto& kv : titles) out += kv.first + "\t" + kv.second.name + "\t" + kv.second.sort + "\n";
 		writeAtomic(dataDir + "/game-titles.tsv", out);
