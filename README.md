@@ -53,7 +53,7 @@ saves, settings) goes on an exFAT partition any computer can open.
 <p align="center">
   <img src="docs/img/menu-settings.png" width="248" alt="Settings: six groups as tiles on the bottom screen (Display & sound selected, in yellow), the group's settings listed on the top screen">
   <img src="docs/img/menu-settings-display.png" width="248" alt="A group's list: Display & sound with Theme, Accent colour, Brightness, Motion and Volume, each with its value between arrows; the selected setting described on the top screen">
-  <img src="docs/img/menu-settings-system.png" width="248" alt="The System group: the time zone, Update, Previous version, SSH, First-time setup">
+  <img src="docs/img/menu-settings-system.png" width="248" alt="The System group: the time zone, Update, Previous version, First-time setup">
 </p>
 <p align="center">
   <img src="docs/img/menu-wifi.png" width="248" alt="The keyboard for a Wi-Fi password: the text typed so far in a field above the keys, the selected key in yellow, chips for B delete, X shift, Y space and START join">

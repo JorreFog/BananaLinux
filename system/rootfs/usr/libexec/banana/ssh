@@ -1,5 +1,5 @@
 #!/bin/sh
-# SSH (dropbear), for working on Banana itself: off by default (Settings > System > SSH). Root, with the public keys
+# SSH (dropbear), for working on Banana itself: off by default (Settings > Network > SSH). Root, with the public keys
 # in banana/ssh/authorized_keys on the card and no passwords. The keys are copied to /run (dropbear wants them
 # readable by root alone, and exFAT can't say so), where /root/.ssh points; the host key is made once per card.
 #   ssh up | down

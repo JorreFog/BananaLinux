@@ -222,38 +222,58 @@ namespace banana
 	}
 
 	// time zones as POSIX TZ rules (glibc reads them from TZ with no zoneinfo files): the offset and the summer time
-	// rules as they stand, one entry per rule with the places that follow it
+	// rules as they stand, one entry per rule with the places that follow it (from tzdata 2026e's footers: tail -1 of
+	// the zoneinfo file; Casablanca is left out, its Ramadan changes are no POSIX rule)
 	static const struct { const char* name; const char* tz; } ZONES[] = {
 		{ "UTC", "UTC0" },
+		{ "Reykjavik, Accra, Dakar", "GMT0" },
 		{ "London, Dublin, Lisbon", "GMT0BST,M3.5.0/1,M10.5.0" },
-		{ "Lagos, Algiers", "WAT-1" },
+		{ "Lagos, Algiers, Kinshasa", "WAT-1" },
 		{ "Amsterdam, Berlin, Paris, Rome", "CET-1CEST,M3.5.0,M10.5.0/3" },
-		{ "Johannesburg", "SAST-2" },
+		{ "Johannesburg, Harare", "SAST-2" },
 		{ "Athens, Helsinki, Kyiv", "EET-2EEST,M3.5.0/3,M10.5.0/4" },
 		{ "Cairo", "EET-2EEST,M4.5.5/0,M10.5.4/24" },
 		{ "Istanbul, Riyadh, Nairobi", "<+03>-3" },
 		{ "Moscow", "MSK-3" },
-		{ "Dubai", "<+04>-4" },
-		{ "Karachi", "PKT-5" },
-		{ "India", "IST-5:30" },
-		{ "Bangkok, Jakarta", "<+07>-7" },
+		{ "Tehran", "<+0330>-3:30" },
+		{ "Dubai, Baku", "<+04>-4" },
+		{ "Kabul", "<+0430>-4:30" },
+		{ "Karachi, Tashkent, Almaty", "PKT-5" },
+		{ "India, Sri Lanka", "IST-5:30" },
+		{ "Kathmandu", "<+0545>-5:45" },
+		{ "Dhaka", "<+06>-6" },
+		{ "Yangon", "<+0630>-6:30" },
+		{ "Bangkok, Jakarta, Hanoi", "<+07>-7" },
 		{ "Beijing, Singapore, Perth", "CST-8" },
 		{ "Tokyo, Seoul", "JST-9" },
+		{ "Darwin", "ACST-9:30" },
 		{ "Adelaide", "ACST-9:30ACDT,M10.1.0,M4.1.0/3" },
-		{ "Brisbane", "AEST-10" },
+		{ "Brisbane, Guam", "AEST-10" },
 		{ "Sydney, Melbourne", "AEST-10AEDT,M10.1.0,M4.1.0/3" },
+		{ "Noumea, Solomon Islands", "<+11>-11" },
+		{ "Fiji", "<+12>-12" },
 		{ "Auckland", "NZST-12NZDT,M9.5.0,M4.1.0/3" },
+		{ "Tonga, Samoa", "<+13>-13" },
+		{ "Pago Pago", "SST11" },
 		{ "Honolulu", "HST10" },
 		{ "Anchorage", "AKST9AKDT,M3.2.0,M11.1.0" },
-		{ "Los Angeles, Vancouver", "PST8PDT,M3.2.0,M11.1.0" },
-		{ "Phoenix", "MST7" },
-		{ "Denver, Calgary", "MST7MDT,M3.2.0,M11.1.0" },
-		{ "Mexico City", "CST6" },
-		{ "Chicago, Winnipeg", "CST6CDT,M3.2.0,M11.1.0" },
+		{ "Los Angeles, Tijuana", "PST8PDT,M3.2.0,M11.1.0" },
+		{ "Phoenix, Vancouver, Yukon", "MST7" },
+		{ "Denver", "MST7MDT,M3.2.0,M11.1.0" },
+		{ "Mexico City, Calgary", "CST6" },
+		{ "Chicago", "CST6CDT,M3.2.0,M11.1.0" },
+		{ "Bogota, Lima, Panama, Winnipeg", "<-05>5" },
+		{ "Havana", "CST5CDT,M3.2.0/0,M11.1.0/1" },
 		{ "New York, Toronto", "EST5EDT,M3.2.0,M11.1.0" },
+		{ "Caracas, La Paz, Manaus", "<-04>4" },
+		{ "Puerto Rico, Santo Domingo", "AST4" },
 		{ "Halifax", "AST4ADT,M3.2.0,M11.1.0" },
 		{ "Santiago", "<-04>4<-03>,M9.1.6/24,M4.1.6/24" },
-		{ "Sao Paulo, Buenos Aires", "<-03>3" },
+		{ "St. John's", "NST3:30NDT,M3.2.0,M11.1.0" },
+		{ "Buenos Aires, Sao Paulo", "<-03>3" },
+		{ "Fernando de Noronha", "<-02>2" },
+		{ "Azores", "<-01>1<+00>,M3.5.0/0,M10.5.0/1" },
+		{ "Cape Verde", "<-01>1" },
 	};
 
 	// on the RG DS Plus a shader's GPU pass heats the chip enough to slow the CPU in a long session (Golden Sun: Dark
@@ -393,6 +413,7 @@ namespace banana
 		add(W, "phone", "Wi-Fi", "", menu, "wifi", { "On", "Off" }, { "on", "off" });
 		add(W, "phone", "Network", "The networks around: A on one joins it, with a password typed on the keyboard here (or by touch).", "", "network", {}, {}, Item::PAGE);
 		add(W, "phone", "File sharing", "", menu, "share", { "Off", "On" }, { "off", "on" });
+		add(W, "phone", "SSH", "", menu, "ssh", { "Off", "On" }, { "off", "on" });
 		const char* S = "System";
 		{
 			std::vector<std::string> names, tzs;
@@ -406,7 +427,6 @@ namespace banana
 		add(S, "picture", "Box art from", "libretro: libretro's collections. libretro + Twilight: TwilightBoxart (boxart.kirovair.com) for the covers libretro has none of. Twilight first: TwilightBoxart's covers where it has them. TwilightBoxart is asked one game a second.",
 			menu, "boxart_source", { "libretro", "libretro + Twilight", "Twilight first" }, { "libretro", "both", "twilight" });
 		add(S, "gear", "Previous version", "Restarts into the other slot: the version that ran before the last update. Press A twice.", "", "switch", { "" }, { "" }, Item::ACTION);
-		add(S, "gear", "SSH", "", menu, "ssh", { "Off", "On" }, { "off", "on" });
 		if (access("/run/banana/sd2/slot", F_OK) == 0)	// a second card slot (bananad's sd2 script): the RG DS Plus
 		add(S, "gear", "Second SD card", "Games on the card in the second slot (its roms folder, with the same system folders as this card) show up in the library with the others while it's in. exFAT or FAT32.", menu, "sd2_roms", { "Show its games", "Off" }, { "on", "off" });
 		add(S, "gear", "First-time setup", "The steps from the first boot again: Wi-Fi, the time zone and the RetroAchievements account (ScreenScraper: not available yet).", "", "setup", {}, {}, Item::PAGE);
