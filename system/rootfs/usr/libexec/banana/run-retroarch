@@ -87,6 +87,38 @@ if [ -n "$u" ]; then
 elif [ -f $A ]; then
     set_cfg cheevos_enable false
 fi
+# Settings > Other systems > RetroArch hotkeys, Off: no F + button shortcuts but the two needed to get out, F + X (the
+# menu) and F + Start (quit). RetroArch's hotkeys come from the joypad's autoconfig profile, and a hotkey "unbound" in
+# its menu (nul in retroarch.cfg) falls back to the profile's, which is why one can't be taken away there; so
+# RetroArch gets a copy of the profiles with the other hotkeys left out, and every hotkey in retroarch.cfg as nul
+# (one bound to a face button in its menu, the A that stopped working, goes too). What it saves of those on exit is
+# put back below.
+HOTKEYS="ai_service audio_mute cheat_index_minus cheat_index_plus cheat_toggle close_content desktop_menu_toggle
+disk_eject_toggle disk_next disk_prev fps_toggle frame_advance game_focus_toggle grab_mouse_toggle halt_replay
+hold_fast_forward hold_slowmotion load_state netplay_fade_chat_toggle netplay_game_watch netplay_host_toggle
+netplay_ping_toggle netplay_player_chat next_replay_checkpoint osk_toggle overlay_next pause_toggle play_replay
+preempt_toggle prev_replay_checkpoint record_replay recording_toggle replay_slot_decrease replay_slot_increase reset
+rewind runahead_toggle save_replay_checkpoint save_state screenshot shader_hold shader_next shader_prev shader_toggle
+state_slot_decrease state_slot_increase streaming_toggle toggle_fast_forward toggle_fullscreen toggle_slowmotion
+toggle_statistics toggle_vrr_runloop turbo_fire_toggle volume_down volume_up"
+HK=/run/banana/retroarch-hotkeys.cfg
+HKA=
+rm -f $HK /run/banana/retroarch-hotkeys.keep
+if [ "$(sed -n 's/^ra_hotkeys *= *//p' /data/banana/settings.conf 2>/dev/null | tail -n 1)" = off ]; then
+    AC=/run/banana/ra-autoconfig
+    names=$(echo $HOTKEYS | tr ' ' '|')
+    rm -rf $AC; mkdir -p $AC/udev
+    for f in /usr/share/libretro/autoconfig/udev/*.cfg; do
+        grep -vE "^input_($names)_(btn|axis) *=" "$f" > $AC/udev/${f##*/}
+    done
+    {
+        echo "joypad_autoconfig_dir = \"$AC\""
+        for h in $HOTKEYS enable_hotkey menu_toggle exit_emulator; do printf 'input_%s_btn = "nul"\ninput_%s_axis = "nul"\n' $h $h; done
+    } > $HK
+    HKKEYS="^(joypad_autoconfig_dir|input_($names|enable_hotkey|menu_toggle|exit_emulator)_(btn|axis)) = "
+    grep -E "$HKKEYS" $CFG > /run/banana/retroarch-hotkeys.keep
+    HKA="|$HK"
+fi
 # anything RetroArch keeps that retroarch.cfg doesn't place (remaps, core options, playlists...) under the card's
 # retroarch folder, not ~/.config on the read-only root
 export HOME=/data/retroarch XDG_CONFIG_HOME=/data/retroarch
@@ -99,7 +131,7 @@ if [ -n "$BANANA_DRM_LEASE_FD" ]; then
     L=/run/banana/retroarch-panel.cfg
     printf 'video_monitor_index = "1"\nstdin_cmd_enable = "true"\n' > $L
     rm -f /run/banana/retroarch.log
-    LD_PRELOAD=/usr/lib/banana/banana-leaseshim.so retroarch --config $CFG --appendconfig "$L|$RA" --verbose \
+    LD_PRELOAD=/usr/lib/banana/banana-leaseshim.so retroarch --config $CFG --appendconfig "$L|$RA$HKA" --verbose \
         --log-file /run/banana/retroarch.log -L "$CORE" "$2" < "${BANANA_RA_CMD:-/dev/null}" &
     P=$!
 else
@@ -112,13 +144,19 @@ else
     rm -f $FIFO; mkfifo -m 600 $FIFO && exec 3<>$FIFO
     L=/run/banana/retroarch-stdin.cfg
     printf 'stdin_cmd_enable = "true"\n' > $L
-    retroarch --config $CFG --appendconfig "$L|$RA" -L "$CORE" "$2" < $FIFO &
+    retroarch --config $CFG --appendconfig "$L|$RA$HKA" -L "$CORE" "$2" < $FIFO &
     P=$!
 fi
 trap 'kill -TERM $P 2>/dev/null' TERM INT HUP
 wait $P; S=$?
 while kill -0 $P 2>/dev/null; do wait $P; S=$?; done	# a trap interrupted the wait: until RetroArch has quit
 /usr/libexec/banana/ra-secrets scrub; rm -f $RA
+if [ -n "$HKA" ]; then
+    # the hotkey lines as they were before the game (RetroArch wrote the Off ones into retroarch.cfg on exit)
+    sed -i -E "/$HKKEYS/d" $CFG
+    cat /run/banana/retroarch-hotkeys.keep >> $CFG
+    rm -f $HK /run/banana/retroarch-hotkeys.keep
+fi
 if [ -n "$BANANA_DRM_LEASE_FD" ]; then
     set_cfg video_monitor_index ${MON:-2}
     set_cfg stdin_cmd_enable false
