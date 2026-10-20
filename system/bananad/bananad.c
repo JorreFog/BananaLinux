@@ -74,6 +74,7 @@ static void undim(void);
 static int headphones;
 static int fn_held, power_down, lid_closed;
 static int lid_retry_off;	/* a suspend failed with the lid shut: no retry until it opens */
+static double lid_sleep_at;	/* the lid shut in a DS game: the sleep a moment later, once the game has seen it */
 static double power_since, last_input, ignore_power_until;
 
 static volatile sig_atomic_t reload;
@@ -973,14 +974,34 @@ static void open_inputs(void)
 	read_lid();
 }
 
+/* the game running is a DS one (its command line): its emulator passes the lid on to the game */
+static int ds_game(void)
+{
+	pid_t g = pid_of("/run/banana/game.pid");
+	if (!g) return 0;
+	char p[64], cmd[512] = "";
+	snprintf(p, sizeof p, "/proc/%d/cmdline", (int)g);
+	FILE *f = fopen(p, "r");
+	if (!f) return 0;
+	size_t n = fread(cmd, 1, sizeof cmd - 1, f);
+	fclose(f);
+	for (size_t i = 0; i < n; i++) if (!cmd[i]) cmd[i] = ' ';
+	cmd[n] = 0;
+	/* (the launchers exec the emulator: /usr/bin/bananads, superdrastic-run then /data/drastic/drastic) */
+	return strstr(cmd, "bananads") || strstr(cmd, "drastic") || strstr(cmd, "run-nds");
+}
+
 static void handle(const struct input_event *e)
 {
 	double now = mono();
 	if (e->type == EV_KEY) { last_input = now; undim(); }
 	if (e->type == EV_SW && e->code == SW_LID) {
 		lid_closed = e->value;
-		if (!lid_closed) { undim(); lid_retry_off = 0; }
-		if (lid_closed && cfg.lid_sleep) suspend_now("lid closed");
+		if (!lid_closed) { if (lid_sleep_at > 0) say("lid opened again before the sleep"); undim(); lid_retry_off = 0; lid_sleep_at = 0; }
+		/* a DS game: the panels dark now, the sleep 1.5 s later, so the game sees its lid close first (BananaDS and
+		 * SuperDrastic read the hall sensor too: its sleep mode, its lid sound); opened before that, no sleep */
+		if (lid_closed && cfg.lid_sleep && ds_game()) { lid_sleep_at = now + 1.5; backlights_power(0); say("lid shut in a DS game: asleep in 1.5 s"); }
+		else if (lid_closed && cfg.lid_sleep) suspend_now("lid closed");
 		else if (!lid_closed || !cfg.lid_sleep) { backlights_power(!lid_closed); if (!lid_closed) panel_off_again(); }	/* no sleep: at least the panels go dark */
 		return;
 	}
@@ -1092,6 +1113,7 @@ int main(int argc, char **argv)
 		if (lid_closed && cfg.lid_sleep && !lid_retry_off) { double d = 5.0 - (tnow - last_input); if (d > 0 && d < wait) wait = d; }
 		if ((save_volume_at > 0 || save_backlight_at > 0) && wait > 0.5) wait = 0.5;
 		if (power_down && wait > 0.1) wait = 0.1;
+		if (lid_sleep_at > 0) { double d = lid_sleep_at - tnow; if (d < wait) wait = d > 0 ? d : 0; }
 		int timeout = wait <= 0 ? 20 : (int)(wait * 1000) + 20;
 		poll(pf, n, timeout);
 		double now = mono();
@@ -1131,8 +1153,9 @@ int main(int argc, char **argv)
 		if (cfg.autosleep_min > 0 && !game && now - last_input >= cfg.autosleep_min * 60.0 && !charger_online() &&
 		    !pid_of("/run/banana/awake.pid"))
 			suspend_now("idle");
+		if (lid_sleep_at > 0 && now >= lid_sleep_at) { lid_sleep_at = 0; if (lid_closed) suspend_now("lid closed"); }
 		/* started or woken with the lid shut */
-		if (lid_closed && cfg.lid_sleep && !lid_retry_off && now - last_input > 5) suspend_now("lid still closed");
+		if (lid_closed && cfg.lid_sleep && !lid_retry_off && lid_sleep_at == 0 && now - last_input > 5) suspend_now("lid still closed");
 
 		if (now >= next_battery) {
 			next_battery = now + 60;
