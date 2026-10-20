@@ -65,7 +65,8 @@ static struct {
 	int sleep_poweroff_pct;	/* found at or under this while asleep: shut down cleanly */
 	double dim_min;			/* idle minutes in the menu before the panels dim (0: never) */
 	int dim_pct;			/* dimmed to this percent of their brightness */
-} cfg = { "auto", 5, 8, 10, 1, 2000, 3, "deep", 128, 20, 5, 1, 4, 5, 2, 30 };
+	int mic_gain;			/* the rk817's microphone preamp, 0..15 (-1: left as it is) */
+} cfg = { "auto", 5, 8, 10, 1, 2000, 3, "deep", 128, 20, 5, 1, 4, 5, 2, 30, 12 };
 
 static int devfd[MAXDEV], ndev;
 static void leds_update(void);
@@ -120,6 +121,7 @@ static void load_conf(const char *path)
 		else if (!strcmp(k, "brightness_step")) cfg.brightness_step = atoi(v);
 		else if (!strcmp(k, "autosleep_minutes")) cfg.autosleep_min = atoi(v);
 		else if (!strcmp(k, "lid_sleep")) cfg.lid_sleep = !strcmp(v, "yes") || !strcmp(v, "1");
+		else if (!strcmp(k, "mic_gain")) cfg.mic_gain = atoi(v);
 		else if (!strcmp(k, "power_long_ms")) cfg.power_long_ms = atoi(v);
 		else if (!strcmp(k, "battery_shutdown_percent")) cfg.battery_off_pct = atoi(v);
 		else if (!strcmp(k, "mem_sleep")) snprintf(cfg.mem_sleep, sizeof cfg.mem_sleep, "%s", v);
@@ -581,6 +583,19 @@ static void audio_setup(void)
 	snprintf(c, sizeof c, "%d", card_codec);
 	char *argv[] = { "amixer", "-q", "-c", c, "sset", "Playback Mux", "HP", NULL };
 	run(argv);
+	/* the microphone (#14): the rk817's "Master" is the DAC's volume AND the ADC's, and the volume keys set both, so
+	 * with the volume down the games heard next to nothing (a card saved at volume 0 recorded at -95 dB, at 43% at
+	 * -54 dB). The ADC at 0 dB always (the volume script changes playback only now), and the preamp at mic_gain: a
+	 * word from 30 cm reached an RMS of 0.01 at the old 6, 0.08 at 12 (the room's noise 0.012), where the games' and
+	 * BananaDS's thresholds expect a voice */
+	char *cap[] = { "amixer", "-q", "-c", c, "cset", "name=Master Capture Volume", "255,255", NULL };
+	run(cap);
+	if (cfg.mic_gain >= 0 && cfg.mic_gain <= 15) {
+		char g[8];
+		snprintf(g, sizeof g, "%d", cfg.mic_gain);
+		char *gain[] = { "amixer", "-q", "-c", c, "sset", "Mic Capture Gain", g, NULL };
+		run(gain);
+	}
 	audio_route();
 }
 

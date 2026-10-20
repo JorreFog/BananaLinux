@@ -36,7 +36,8 @@ get() {
         done
         echo $best
     else
-        amixer -M -c $CARD sget "$CONTROL" 2>/dev/null | sed -n 's/.*\[\([0-9]*\)%\].*/\1/p' | head -n 1
+        # (the playback's percent: the rk817's Master has the microphone's on the same line, kept at 100%)
+        amixer -M -c $CARD sget "$CONTROL" 2>/dev/null | sed -n 's/.*Playback [0-9]* \[\([0-9]*\)%\].*/\1/p' | head -n 1
     fi
 }
 set_to() {
@@ -45,7 +46,8 @@ set_to() {
         set -- $AW_TABLE; shift $p; v=$1
         ifs=$IFS; IFS='|'; for c in $AW; do amixer -q -c $CARD sset "$c" $v || exit 1; done; IFS=$ifs	# (get splits the table after it)
     else
-        amixer -q -M -c $CARD sset "$CONTROL" $p% || exit 1
+        # playback only: the rk817's Master is the microphone's level too (bananad keeps that at 0 dB, #14)
+        amixer -q -M -c $CARD sset "$CONTROL" playback $p% || exit 1
     fi
 }
 
