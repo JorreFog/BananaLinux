@@ -8,6 +8,12 @@ P=/data/roms/ports
 if [ ! -f $P/PortMaster/PortMaster.sh ] && [ -f /usr/share/banana/portmaster/PortMaster.zip ]; then
     mkdir -p $P && unzip -q -o /usr/share/banana/portmaster/PortMaster.zip -d $P && echo "PortMaster put on the card"
 fi
+# BananaOS's hook for ports (mod_<CFW_NAME>.txt, sourced by each port's script): the pad's GUID for get_controls,
+# without which every port quit at once ("Argument list too long"). Put back each time: PortMaster updates itself.
+M=/usr/share/banana/portmaster/mod_BananaOS.txt
+if [ -d $P/PortMaster ] && ! cmp -s $M $P/PortMaster/mod_BananaOS.txt; then
+    cat $M > $P/PortMaster/mod_BananaOS.txt && echo "mod_BananaOS.txt put in PortMaster's folder"
+fi
 export HOME=/data/home XDG_DATA_HOME=/data/home/.local/share XDG_CONFIG_HOME=/data/home/.config XDG_RUNTIME_DIR=/run
 mkdir -p $XDG_DATA_HOME $XDG_CONFIG_HOME
 export SDL_KMSDRM_FIRST=${BANANA_TOP:-DSI-2} TERM=linux

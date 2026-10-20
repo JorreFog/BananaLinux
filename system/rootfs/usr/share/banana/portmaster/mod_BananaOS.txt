@@ -1,0 +1,31 @@
+#!/bin/bash
+#
+# SPDX-License-Identifier: MIT
+#
+## Modular - BananaOS
+#
+# Sourced by ports after control.txt: `[ -f "${controlfolder}/mod_${CFW_NAME}.txt" ] && source ...`
+# (CFW_NAME comes from NAME=BananaOS in /etc/os-release). BananaOS puts it in PortMaster's folder before each port.
+#
+# get_controls knows a handheld's pad only by its /dev/input/by-path link, which BananaOS has no udev to make. With
+# no GUID it read the whole gamecontrollerdb.txt (~470 KB) into sdl_controllerconfig, the port exported that as
+# SDL_GAMECONTROLLERCONFIG, and over 128 KB in one variable every program the script started failed with "Argument
+# list too long": a black screen and back to the menu. The RG DS / RG DS Plus pad is retrogame_joypad, whose line
+# is already in the database under this GUID.
+BANANA_PAD_GUID="190000004b4800000111000000010000"
+
+if declare -f get_controls >/dev/null 2>&1; then
+    eval "_banana_get_controls_orig() $(declare -f get_controls | tail -n +2)"
+
+    get_controls() {
+        _banana_get_controls_orig "${1:-$BANANA_PAD_GUID}" "${2:-rgds}"
+        # a pad the database doesn't know: SDL reads SDL_GAMECONTROLLERCONFIG_FILE instead
+        [ "${#sdl_controllerconfig}" -gt 100000 ] && sdl_controllerconfig=""
+    }
+fi
+
+# Use for Godot 2
+GODOT2_OPTS="-r ${DISPLAY_WIDTH}x${DISPLAY_HEIGHT} -f"
+
+# Use for Godot 3+
+GODOT_OPTS="--resolution ${DISPLAY_WIDTH}x${DISPLAY_HEIGHT} -f"
