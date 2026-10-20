@@ -7,6 +7,11 @@
 //   banana-scrape [--force]     --force fetches again what is already there
 // Progress in /run/banana/scrape.status, one line: "running <done> <total> <system name>|<game>", then
 // "done <found> <total>" or "error <why>". A game whose name doesn't match any of the collection's is skipped.
+// A game's own match (#28, the game page's Box art: a translation, a hack, another region's name):
+//   banana-scrape --search <system> <words>          the collection's names that fit, best first: "NAME\t<name>" lines
+//   banana-scrape --match <system> <rom> <name>      that name's cover and title screen for the game, kept in
+//                                                    banana/boxart-match.tsv ("<system>/<file name without .ext>\t<name>"),
+//                                                    which every scrape after looks in first
 // Names are matched on letters and digits only, the bracketed tags left out, preferring the file's own region.
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_ONLY_PNG
@@ -386,8 +391,88 @@ int main(int argc, char** argv)
 	// bananad doesn't put the handheld to sleep for idleness while this runs (its pid in /run/banana/awake.pid)
 	if (FILE* f = fopen("/run/banana/awake.pid", "w")) { fprintf(f, "%d\n", (int)getpid()); fclose(f); }
 	struct Unlink { ~Unlink() { unlink("/run/banana/awake.pid"); } } awake;
+	const std::string MATCHES = "/data/banana/boxart-match.tsv";
+	if (argc >= 4 && (!strcmp(argv[1], "--search") || !strcmp(argv[1], "--match")))
+	{
+		bool match = !strcmp(argv[1], "--match");
+		if (match && argc < 5) return 2;
+		if (!cu.load()) { printf("ERROR libcurl is missing\n"); return 1; }
+		std::string base;
+		for (auto& sys : systems(conf))
+			if (sys.id == argv[2])
+			{
+				auto lr = LIBRETRO.find(sys.id);
+				if (lr != LIBRETRO.end()) base = "https://thumbnails.libretro.com/" + esc(lr->second) + "/";
+			}
+		if (base.empty()) { printf("ERROR libretro has no covers for this system\n"); return 1; }
+		if (!match)
+		{
+			std::string idx = get(base + "Named_Boxarts/");
+			if (idx.empty()) { printf("ERROR no connection\n"); return 1; }
+			// the words typed, each found in a name (as a whole word: a point, as the start of one: half), the names
+			// with the most first, then as the scrape prefers them (the USA's, the world's, Europe's; demos and betas
+			// last), then the shortest (fewer words besides)
+			std::vector<std::string> want;
+			{ std::istringstream in(words(argv[3])); std::string w; while (in >> w) want.push_back(w); }
+			std::vector<std::pair<int, std::string>> hits;
+			for (auto& n : indexNames(idx))
+			{
+				std::vector<std::string> have;
+				{ std::istringstream in(words(n)); std::string w; while (in >> w) have.push_back(w); }
+				int pts = 0;
+				for (auto& w : want)
+				{
+					int best = 0;
+					for (auto& h : have) best = std::max(best, h == w ? 2 : h.compare(0, w.size(), w) == 0 ? 1 : 0);
+					pts += best;
+				}
+				// the letters typed, in a row, inside the name's ("fire red" in "FireRed Version"): as if every word fit
+				std::string q = norm(argv[3]);
+				if (q.size() >= 3 && norm(n).find(q) != std::string::npos) pts = std::max(pts, (int)want.size() * 2 + 1);
+				if (pts == 0) continue;
+				hits.push_back({ pts * 100000 + score(n, argv[3]) * 100 - (int)have.size(), n });
+			}
+			std::stable_sort(hits.begin(), hits.end(), [](const auto& a, const auto& b) { return a.first > b.first; });
+			for (size_t i = 0; i < hits.size() && i < 40; i++) printf("NAME\t%s\n", hits[i].second.c_str());
+			return 0;
+		}
+		// the game's cover and title screen from that name, over what it had
+		std::string rom = argv[3], name = argv[4];
+		size_t sl = rom.rfind('/');
+		std::string dir = sl == std::string::npos ? "." : rom.substr(0, sl), file = rom.substr(sl == std::string::npos ? 0 : sl + 1);
+		std::string stem = file.substr(0, file.rfind('.'));
+		std::string box = get(base + "Named_Boxarts/" + esc(name) + ".png");
+		if (box.empty()) { printf("ERROR no cover by that name\n"); return 1; }
+		mkdir((dir + "/media").c_str(), 0755);
+		mkdir((dir + "/media/box").c_str(), 0755);
+		if (!savePicture(box, dir + "/media/box/" + stem + ".jpg", 512)) { printf("ERROR the card can't be written\n"); return 1; }
+		unlink((dir + "/media/box/" + stem + ".png").c_str());	// (an older PNG would win over it)
+		std::string title = get(base + "Named_Titles/" + esc(name) + ".png");
+		if (!title.empty())
+		{
+			mkdir((dir + "/media/label").c_str(), 0755);
+			if (savePicture(title, dir + "/media/label/" + stem + ".jpg", 320)) unlink((dir + "/media/label/" + stem + ".png").c_str());
+		}
+		// remembered, so a scrape with --force keeps it (the game's line replaced)
+		std::string key = std::string(argv[2]) + "/" + stem, out, ln;
+		{
+			std::ifstream f(MATCHES);
+			while (std::getline(f, ln)) if (ln.compare(0, key.size() + 1, key + "\t") != 0 && !ln.empty()) out += ln + "\n";
+		}
+		out += key + "\t" + name + "\n";
+		std::string tmp = MATCHES + ".new";
+		if (FILE* f = fopen(tmp.c_str(), "w")) { fwrite(out.data(), 1, out.size(), f); fflush(f); fsync(fileno(f)); fclose(f); rename(tmp.c_str(), MATCHES.c_str()); }
+		sync();
+		printf("OK%s\n", title.empty() ? " cover" : " cover title");
+		return 0;
+	}
 	if (!cu.load()) { status("error libcurl is missing"); return 1; }
 	if (get("https://thumbnails.libretro.com/").empty()) { status("error no connection"); return 1; }
+	std::map<std::string, std::string> matches;	// the games' own matches (--match): "<system>/<stem>" -> name
+	{
+		std::ifstream f(MATCHES);
+		for (std::string ln; std::getline(f, ln);) { size_t t = ln.find('\t'); if (t != std::string::npos) matches[ln.substr(0, t)] = ln.substr(t + 1); }
+	}
 
 	struct Job { System sys; std::string dir, rel, stem, box, title; };
 	std::vector<Job> jobs;
@@ -446,6 +531,14 @@ int main(int argc, char** argv)
 			j.sys = sys; j.dir = dir; j.rel = rel;
 			std::string fname = rel.substr(rel.rfind('/') == std::string::npos ? 0 : rel.rfind('/') + 1);
 			j.stem = fname.substr(0, fname.rfind('.'));
+			auto mi = matches.find(sys.id + "/" + j.stem);
+			if (mi != matches.end())
+			{
+				j.box = base + "Named_Boxarts/" + esc(mi->second) + ".png";
+				j.title = base + "Named_Titles/" + esc(mi->second) + ".png";
+				jobs.push_back(j);
+				continue;
+			}
 			std::string k = norm(j.stem), kw = words(j.stem);
 			// the same name; the same words in another order; then, as a last try, one name the start of the other
 			// ("Aero the Acro-Bat" and "Aero the Acro-Bat - Rascal Rival Revenge", "Rayman 3 - Hoodlum Havoc" and
