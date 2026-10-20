@@ -12,6 +12,7 @@
 #include "../rnds/RndsUI.h"
 #include "input.h"
 #include "wifi.h"
+#include "colors.h"
 #include <map>
 #include <memory>
 #include <mutex>
@@ -57,6 +58,9 @@ namespace banana
 		void openGame(const std::string& title, const std::string& romName, bool nds = true,
 			const std::string& key = "", const std::string& name = "", const std::string& sort = "", const std::string& path = "");
 		std::string gameKey, gameName, gameSort;
+		// the display's colour table (main: Display::setColors), for Screen colours: off while its page is up, the saved
+		// values when it closes
+		std::function<void(const ScreenColors&)> setColors;
 		std::string searchText;
 		std::function<int(const std::string&)> searchCount;	// the games the text typed so far finds (the host's library)
 		Result press(Key k);
@@ -110,7 +114,7 @@ namespace banana
 		std::string about, wifiInfo, ip;
 
 		// the Wi-Fi pages: the networks around, and the keyboard for a password (settings-wifi.cpp)
-		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK } page = LIST;
+		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS } page = LIST;
 		// the game page (X on a DS game in the library): its emulator, this game only (banana/nds-per-game.conf, read by
 		// run-nds: "<ROM file name> = superdrastic|bananads", no line = Settings > Nintendo DS > Emulator)
 		// the game page (X on a DS game): its own emulator and shader, each "As in Settings" (index 0) or a choice
@@ -173,6 +177,15 @@ namespace banana
 		Result touchArt(float cx, float cy);
 		void renderArt();
 		std::string scrapeTool() const;
+		// Screen colours (#N3): the values being tried (drawn in software over the test pattern of the screen they
+		// correct; the hardware table is off while the page is up) and the pattern shown
+		ScreenColors colEdit, colSaved;
+		int colRow = 0, colPattern = 0;
+		void openColors();
+		Result pressColors(Key k);
+		Result touchColors(float cx, float cy);
+		void renderColors();
+		void colorsPattern(int screen, float y0, float h);
 		std::vector<wifi::Network> nets;
 		wifi::Status wstat;
 		bool scanning = false, scannedOnce = false, wifiEnabled = true;

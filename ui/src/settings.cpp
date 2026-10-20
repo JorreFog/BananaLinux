@@ -358,6 +358,7 @@ namespace banana
 			{ "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "100", "200", "300", "400", "500", "600", "700", "800", "900", "1000" }, Item::BRIGHTNESS);
 		add(D, "picture", "Bottom brightness", "The bottom screen's backlight. F + volume changes both screens anywhere, in games too.", "", "bottom",
 			{ "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "100", "200", "300", "400", "500", "600", "700", "800", "900", "1000" }, Item::BRIGHTNESS);
+		add(D, "picture", "Screen colours", "", "", "colors", {}, {}, Item::PAGE);
 		add(D, "picture", "Motion", "The top screen's bob and shine. Off holds it still and saves a little battery.", menu, "motion", { "On", "Off" }, { "on", "off" });
 		add(D, "music", "Volume", "The speakers or the headphones, whichever is playing. The volume keys change it anywhere.", "", "",
 			{ "0%", "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "0", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100" }, Item::VOLUME);
@@ -736,6 +737,7 @@ namespace banana
 		{
 			if (dir <= 0) return NONE;
 			if (it.key == "scrape") { startScrape(); return MOVED; }
+			if (it.key == "colors") { openColors(); return MOVED; }
 			if (it.key == "share_account") { startEntry(ENTRY_SMB_USER, "File sharing", "Name", LIST, shareUser()); return MOVED; }
 			if (it.key == "ds_name") { startEntry(ENTRY_DS_NAME, "The DS's name", "10 characters at most", LIST, dsName()); return MOVED; }
 			if (it.key == "update") openUpdates(); else if (it.key == "setup") openSetup(); else openNetworks();
@@ -818,6 +820,7 @@ namespace banana
 		if (page == KEYBOARD) return pressKeyboard(k);
 		if (page == GAME) return pressGame(k);
 		if (page == ARTPICK) return pressArt(k);
+		if (page == COLORS) return pressColors(k);
 		if (page == UPDATES) return pressUpdates(k);
 		if (page == SETUP) return pressSetup(k);
 		if (inGroups) return pressGroups(k);
@@ -885,6 +888,7 @@ namespace banana
 		if (page == KEYBOARD) return touchKeyboard(cx, cy);
 		if (page == GAME) return touchGame(cx, cy);
 		if (page == ARTPICK) return touchArt(cx, cy);
+		if (page == COLORS) return touchColors(cx, cy);
 		if (page == SETUP)
 		{
 			if (downY >= 418 && downY <= 466) return pressSetup(downX < 320 ? Key::B : Key::A);
@@ -1285,6 +1289,7 @@ namespace banana
 		if (page == KEYBOARD) { renderKeyboard(); return; }
 		if (page == GAME) { renderGame(); return; }
 		if (page == ARTPICK) { renderArt(); return; }
+		if (page == COLORS) { renderColors(); return; }
 		if (page == UPDATES) { renderUpdates(); return; }
 		if (page == SETUP) { renderSetup(); return; }
 		if (inGroups) { renderGroups(); return; }
@@ -1308,6 +1313,13 @@ namespace banana
 			help = "For working on Banana itself: ssh root@" + (ip.empty() ? std::string("<address>") : ip) +
 				", with the public keys in banana/ssh/authorized_keys on the card (no passwords). Files: scp -O (dropbear has no SFTP), or File sharing.";
 		if ((cur.key == "switch" || cur.key == "ra_reset" || cur.key.compare(0, 10, "nds-reset-") == 0) && !message.empty()) help = message;
+		if (cur.key == "colors")
+		{
+			ScreenColors c = ScreenColors::load(data + "/screen-colors.conf");
+			help = std::string("The two screens rarely show the same white. This corrects one of them towards the other: the same test pattern on both, "
+				"and red, green, blue, gamma, brightness and black for the one corrected (the handheld has one colour table, so one screen). Now: ") +
+				(c.neutral() ? "no correction." : c.screen == 0 ? "the top screen corrected." : "the bottom screen corrected.");
+		}
 		if (cur.key == "share_account")
 			help = "What a computer asks for when it opens the share: name " + shareUser() + ", password " + sharePassword() + ". A changes them (they are kept in banana/accounts.conf, which the share never shows).";
 		if (cur.key == "share")
@@ -1940,6 +1952,168 @@ namespace banana
 		ustatus = readLine("/run/banana/update-status");
 		if (ustatus.compare(0, 4, "done") == 0) { applying = false; updated = true; }
 		else if (ustatus.compare(0, 6, "failed") == 0) applying = false;
+	}
+
+	// ---- Screen colours (#N3) --------------------------------------------------------------------------------------
+	// The two panels rarely show the same white: one is corrected towards the other through the display's one colour
+	// table. The page shows the same test pattern on both; the screen being corrected draws it through the values
+	// tried (in software: the table off meanwhile, as changing it blanks the panel for a frame), A keeps them.
+	namespace
+	{
+		struct ColRow { const char* label; float lo, hi, step; };
+		const ColRow COL_ROWS[] = { { "Screen", 0, 0, 0 }, { "Red", 0.5f, 1, 0.01f }, { "Green", 0.5f, 1, 0.01f }, { "Blue", 0.5f, 1, 0.01f },
+			{ "Gamma", 0.6f, 1.6f, 0.02f }, { "Brightness", 0.4f, 1, 0.01f }, { "Black", 0, 0.12f, 0.005f } };
+		const int COL_N = 7;
+		const char* const COL_PATTERNS[] = { "Grey steps", "Colour bars", "White", "Mid grey" };
+		float& colField(ScreenColors& c, int row)
+		{
+			switch (row) { case 1: return c.red; case 2: return c.green; case 3: return c.blue; case 4: return c.gamma; case 5: return c.bright; default: return c.black; }
+		}
+	}
+
+	void Settings::openColors()
+	{
+		colSaved = colEdit = ScreenColors::load(data + "/screen-colors.conf");
+		if (colEdit.screen < 0) colEdit.screen = 1;	// (the bottom one first: the top is the one most look at)
+		colRow = 0; colPattern = 0;
+		if (setColors) setColors(ScreenColors());	// the table off: the page draws the values itself
+		message.clear();
+		page = COLORS;
+	}
+
+	Settings::Result Settings::pressColors(Key k)
+	{
+		switch (k)
+		{
+		case Key::UP: colRow = (colRow + COL_N - 1) % COL_N; return MOVED;
+		case Key::DOWN: colRow = (colRow + 1) % COL_N; return MOVED;
+		case Key::LEFT: case Key::RIGHT:
+		{
+			int d = k == Key::LEFT ? -1 : 1;
+			if (colRow == 0)
+			{
+				static const int order[3] = { 1, 0, -1 };	// the bottom corrected, the top, none
+				int i = colEdit.screen == 1 ? 0 : colEdit.screen == 0 ? 1 : 2;
+				colEdit.screen = order[(i + d + 3) % 3];
+			}
+			else
+			{
+				const ColRow& r = COL_ROWS[colRow];
+				float& v = colField(colEdit, colRow);
+				v = std::max(r.lo, std::min(r.hi, std::round((v + d * r.step) / r.step) * r.step));
+			}
+			return MOVED;
+		}
+		case Key::L: case Key::R: colPattern = (colPattern + (k == Key::L ? 3 : 1)) % 4; return MOVED;
+		case Key::X:
+		{
+			int sc = colEdit.screen;
+			colEdit = ScreenColors();
+			colEdit.screen = sc;
+			message = "Back to no correction: A keeps that, B goes back to what was kept.";
+			return MOVED;
+		}
+		case Key::A:
+		{
+			// kept: the file, and the table on the screen it corrects
+			ScreenColors keep = colEdit;
+			if (keep.neutral()) keep.screen = -1;
+			if (!keep.save(data + "/screen-colors.conf")) { message = "The card can't be written."; return MOVED; }
+			colSaved = keep;
+			if (setColors) setColors(colSaved);
+			page = LIST; message.clear();
+			toast("Screen colours", keep.screen < 0 ? "No correction" : keep.screen == 0 ? "The top screen corrected" : "The bottom screen corrected", 0x6ad07a, 1, 3000);
+			return CHANGED;
+		}
+		case Key::B: case Key::START:
+			if (setColors) setColors(colSaved);	// the table as it was kept
+			page = LIST; message.clear();
+			if (k == Key::START) { mOpen = false; return CLOSED; }
+			return MOVED;
+		default: return NONE;
+		}
+	}
+
+	Settings::Result Settings::touchColors(float cx, float cy)
+	{
+		(void)cx;
+		if (downY >= 422) return pressColors(downX < 320 ? Key::B : Key::A);
+		for (int r = 0; r < COL_N; r++)
+		{
+			float ry = 206 + r * 30;
+			if (downY < ry || downY > ry + 28) continue;
+			if (r != colRow) { colRow = r; return MOVED; }
+			return pressColors(downX < 320 ? Key::LEFT : Key::RIGHT);
+		}
+		(void)cy;
+		return NONE;
+	}
+
+	// the pattern on a screen, from y0 for h (640 x 480 units), through the values tried on the screen they correct
+	void Settings::colorsPattern(int screen, float y0, float h)
+	{
+		const bool through = colEdit.screen == screen && !colEdit.neutral();
+		auto fillc = [&](float x, float y, float w, float hh, uint32_t rgb)
+		{
+			uint32_t c = through ? colEdit.apply(0xff000000 | rgb) : (0xff000000 | rgb);
+			be->fill(X(x), X(y), X(x + w) - X(x), X(y + hh) - X(y), Color::hex(c & 0xffffff));
+		};
+		switch (colPattern)
+		{
+		case 0:	// sixteen grey steps, black to white
+			for (int i = 0; i < 16; i++) { uint32_t g = (uint32_t)std::lround(i * 255.0 / 15); fillc(i * 40.0f, y0, 40, h, g << 16 | g << 8 | g); }
+			break;
+		case 1:	// the colour bars, and below them their greys
+		{
+			static const uint32_t bars[8] = { 0xffffff, 0xffff00, 0x00ffff, 0x00ff00, 0xff00ff, 0xff0000, 0x0000ff, 0x000000 };
+			for (int i = 0; i < 8; i++) fillc(i * 80.0f, y0, 80, h * 0.7f, bars[i]);
+			for (int i = 0; i < 8; i++) { uint32_t g = (uint32_t)std::lround(i * 255.0 / 7); fillc(i * 80.0f, y0 + h * 0.7f, 80, h * 0.3f, g << 16 | g << 8 | g); }
+			break;
+		}
+		case 2: fillc(0, y0, 640, h, 0xffffff); break;
+		default: fillc(0, y0, 640, h, 0x808080); break;
+		}
+	}
+
+	void Settings::renderColors()
+	{
+		SPal p = pal(light);
+		// the top screen: the pattern, its name on a strip at the top
+		be->beginScreen(0);
+		colorsPattern(0, 0, 480);
+		be->fill(0, 0, X(640), X(30), Color::hex(0x101014));
+		text(std::string("Screen colours  ·  ") + COL_PATTERNS[colPattern] + "  ·  L / R: another pattern", true, 15, 12, 7, Color::hex(0xd0d0d0));
+		be->fill(0, X(450), X(640), X(30), Color::hex(0x101014));
+		std::string hint = !message.empty() ? message : "Make the screen you correct look like the other one. X: no correction.";
+		text(fit(hint, true, 14, 616), true, 14, 12, 457, Color::hex(0xd0d0d0));
+		be->endScreen();
+		// the bottom screen: the same pattern above, the values below
+		be->beginScreen(1);
+		box("screen", false, 0, 0, 640, 480);
+		colorsPattern(1, 0, 196);
+		be->fill(0, X(196), X(640), X(2), p.line);
+		for (int r = 0; r < COL_N; r++)
+		{
+			bool on = r == colRow;
+			float y = 206 + r * 30;
+			if (on) box("pick", true, 18, y, 604, 28);
+			Color c = on ? p.onPick : p.ink;
+			text(COL_ROWS[r].label, true, 17, 38, y + 5, c);
+			char v[32];
+			if (r == 0) snprintf(v, sizeof v, "%s", colEdit.screen == 0 ? "Correct the top" : colEdit.screen == 1 ? "Correct the bottom" : "None");
+			else if (r == 4) snprintf(v, sizeof v, "%.2f", colField(colEdit, r));
+			else if (r == 6) snprintf(v, sizeof v, "%.1f%%", colField(colEdit, r) * 100);
+			else snprintf(v, sizeof v, "%d%%", (int)std::lround(colField(colEdit, r) * 100));
+			float vw = text(v, true, 17, 0, 0, c, false, 0, true);
+			arrow(true, 576, y + 9, c);
+			text(v, true, 17, 566 - vw, y + 5, c);
+			arrow(false, 556 - vw - 2 - std::round(13 / 2.0f + 1), y + 9, c);
+		}
+		float bw = faceWidth("B", "Cancel");
+		face("B", "Cancel", 18, bw);
+		float aw = faceWidth("A", "Keep");
+		face("A", "Keep", 622 - aw, aw);
+		be->endScreen();
 	}
 
 	// ---- the game page's Box art (#28): libretro's names for the words typed, one picked ---------------------------

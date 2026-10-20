@@ -20,6 +20,7 @@
 #include "splash.h"
 #include "settings.h"
 #include "theme.h"
+#include "colors.h"
 #include "zip.h"
 #include "sound.h"
 #include "menu.h"
@@ -941,6 +942,15 @@ int main(int argc, char** argv)
 	SoftBackend be(disp.width(), disp.height());
 	logf("panels %dx%d", disp.width(), disp.height());
 	bootMark("banana-ui: panels open");
+	// the screen colours (Settings > Display & sound > Screen colours): the one colour table, on the screen it corrects
+	auto applyColors = [&](const char* when)
+	{
+		ScreenColors c = ScreenColors::load(o.data + "/screen-colors.conf");
+		std::string e = disp.setColors(c);
+		if (!e.empty()) logf("screen colours (%s): %s", when, e.c_str());
+		else if (!c.neutral()) logf("screen colours (%s): the %s screen corrected", when, c.screen == 0 ? "top" : "bottom");
+	};
+	applyColors("start");
 
 	Sound sound(o.assets + "/sounds");
 	FrameStats fstat;
@@ -996,6 +1006,7 @@ int main(int argc, char** argv)
 	int lastMinute = -1;
 	float scale = disp.height() / 480.0f;
 	Settings settingsView(&be, o.assets, o.data, scale, variant);
+	settingsView.setColors = [&](const ScreenColors& c) { std::string e = disp.setColors(c); if (!e.empty()) logf("screen colours: %s", e.c_str()); };
 	settingsView.setFontDir(o.banana + "/fonts");
 	settingsView.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
 	settingsView.setVariant(settings["theme"]);	// (Carts: Inter)
@@ -1323,6 +1334,7 @@ int main(int argc, char** argv)
 		if (system("banana-perf ui") != 0) {}
 		logf("game ended after %ld s (status %d)", secs, status);
 		for (int tries = 0; !disp.open(o.top, err) && tries < 100; tries++) usleep(50000);
+		applyColors("after the game");	// (a game's own modeset may have dropped it)
 		be.invalidate();
 		input.open(o.touch, disp.width(), disp.height());
 		std::lock_guard<std::mutex> l(worker.uiLock);

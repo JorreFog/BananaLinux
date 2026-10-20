@@ -1,5 +1,7 @@
 #include "kms.h"
 #include <algorithm>
+#include <cerrno>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <dirent.h>
@@ -142,6 +144,57 @@ namespace banana
 		for (int s = 0; s < 2; s++)
 			if (s != leased) drmModeSetCrtc(fd, p[s].crtc, p[s].buf[p[s].front].fb, 0, 0, &p[s].conn, 1, (drmModeModeInfo*)p[s].mode);
 		pending = 0;
+	}
+
+	// a CRTC's property by name: its id, and its value (0, 0 when there is none)
+	static uint32_t crtcProp(int fd, uint32_t crtc, const char* name, uint64_t* value = nullptr)
+	{
+		uint32_t id = 0;
+		drmModeObjectProperties* props = drmModeObjectGetProperties(fd, crtc, DRM_MODE_OBJECT_CRTC);
+		for (uint32_t i = 0; props && i < props->count_props && !id; i++)
+		{
+			drmModePropertyRes* pr = drmModeGetProperty(fd, props->props[i]);
+			if (pr && !strcmp(pr->name, name)) { id = pr->prop_id; if (value) *value = props->prop_values[i]; }
+			drmModeFreeProperty(pr);
+		}
+		drmModeFreeObjectProperties(props);
+		return id;
+	}
+
+	std::string Display::setColors(const ScreenColors& c)
+	{
+		if (fd < 0) return "no display";
+		int target = c.neutral() ? -1 : c.screen;
+		// the other screen's table off first: the kernel refuses a second one
+		for (int s = 0; s < 2; s++)
+		{
+			if (s == target) continue;
+			uint64_t cur = 0;
+			uint32_t id = crtcProp(fd, p[s].crtc, "GAMMA_LUT", &cur);
+			if (id && cur && drmModeObjectSetProperty(fd, p[s].crtc, DRM_MODE_OBJECT_CRTC, id, 0) != 0)
+				return std::string("clearing screen ") + std::to_string(s) + "'s table: " + strerror(errno);
+		}
+		if (target < 0) return "";
+		uint64_t size = 0;
+		uint32_t id = crtcProp(fd, p[target].crtc, "GAMMA_LUT", nullptr);
+		crtcProp(fd, p[target].crtc, "GAMMA_LUT_SIZE", &size);
+		if (!id || size < 2) return "the screen has no colour table";
+		std::vector<drm_color_lut> lut(size);
+		for (uint64_t i = 0; i < size; i++)
+		{
+			float in = (float)i / (float)(size - 1);
+			lut[i].red = (uint16_t)std::lround(c.apply(0, in) * 65535);
+			lut[i].green = (uint16_t)std::lround(c.apply(1, in) * 65535);
+			lut[i].blue = (uint16_t)std::lround(c.apply(2, in) * 65535);
+			lut[i].reserved = 0;
+		}
+		uint32_t blob = 0;
+		if (drmModeCreatePropertyBlob(fd, lut.data(), lut.size() * sizeof(drm_color_lut), &blob) != 0)
+			return std::string("the table: ") + strerror(errno);
+		int r = drmModeObjectSetProperty(fd, p[target].crtc, DRM_MODE_OBJECT_CRTC, id, blob);
+		int e = errno;
+		drmModeDestroyPropertyBlob(fd, blob);	// (the CRTC keeps its own reference)
+		return r == 0 ? "" : std::string("setting the table: ") + strerror(e);
 	}
 
 	void Display::close()
