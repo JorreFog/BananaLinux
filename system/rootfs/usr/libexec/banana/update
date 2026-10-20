@@ -80,11 +80,27 @@ apply)
     # a universal package fits any card (it has this handheld's device tree too; a card made for one handheld names
     # its device tree in extlinux.conf, which the package keeps the name of)
     [ -z "$BOARD" ] || [ "$PB" = "$BOARD" ] || [ "$PB" = universal ] || fail "that is a package for the $PB, this is the $BOARD"
-    # every file as the build hashed it
+    # every file as the build hashed it. A wrong one: unpacked again once (a write the card got wrong while unpacking
+    # comes out right the second time); still wrong, the package itself is damaged (#36: a download or a copy to the
+    # card cut short or changed), and its own checksum is shown to compare with the release's SHA256SUMS
+    bad=
     while read -r h f; do
         [ -f "$DIR/$f" ] || fail "the package has no $f"
-        [ "$(hash_of "$DIR/$f")" = "$h" ] || fail "$f is damaged (its hash is wrong)"
+        [ "$(hash_of "$DIR/$f")" = "$h" ] || { bad=$f; break; }
     done < "$DIR/sha256sums"
+    if [ -n "$bad" ] && [ -f "$P" ]; then
+        echo "$bad's hash is wrong: unpacking again" >&2
+        rm -rf "$X"; mkdir -p "$X"; sync
+        tar -xf "$P" -C "$X" || fail "the package can't be unpacked"
+        bad=
+        while read -r h f; do
+            [ "$(hash_of "$DIR/$f")" = "$h" ] || { bad=$f; break; }
+        done < "$DIR/sha256sums"
+    fi
+    if [ -n "$bad" ]; then
+        [ -f "$P" ] && fail "$bad is damaged in $(basename "$P"): download it again. (Its SHA-256 starts $(hash_of "$P" | cut -c1-12); the release's SHA256SUMS file lists the right one.)"
+        fail "$bad is damaged (its hash is wrong)"
+    fi
     ROOT_HASH=$(sed -n 's/ \+rootfs.squashfs$//p' "$DIR/sha256sums")
     TO=$(other $SLOT); PART=$(partition $TO)
     [ -b "$PART" ] || fail "no partition for slot $TO ($PART)"
