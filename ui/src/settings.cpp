@@ -369,7 +369,7 @@ namespace banana
 		add(N, "nds", "DS language", "The language the DS itself is set to: a game that has several starts in it. Both emulators.",
 			"", "ds_language", { "English", "Japanese", "French", "German", "Italian", "Spanish" }, { "1", "0", "2", "3", "4", "5" });
 		// the DS's own name (its firmware's user name), in both emulators at once: what a game calls you (#30)
-		add(N, "nds", "DS name", "The name the DS itself is set to, as on a real one: Mario Kart's records, Pictochat, a game's save. 10 characters at most. Both emulators; empty: Dr DraStic in SuperDrastic, BananaDS's own in BananaDS.",
+		add(N, "nds", "DS name", "The name the DS itself is set to, as on a real one: Mario Kart's records, Pictochat, a game's save. 10 characters at most. Both emulators; empty: Dr DraStic in SuperDrastic, Banana in BananaDS.",
 			"", "ds_name", {}, {}, Item::PAGE);
 		std::vector<std::string> shaderNames, shaderValues;
 		shaderChoices(data, shaderNames, shaderValues);
