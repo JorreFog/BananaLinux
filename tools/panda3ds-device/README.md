@@ -60,10 +60,12 @@ The emulator's own thread on a Cortex-A55 model (instructions counted in QEMU, 1
 | 2d (null renderer) | 17.2 | 5.8 | 3.0x |
 | mixed (null renderer) | 17.1 | 5.6 | 3.1x |
 | fill (null renderer) | 12.2 | 1.2 | 9.9x |
-| cpu (GL) | 13.3 | 7.2 | 1.9x |
-| 3d (GL) | 81.3 | 6.6 | 12x |
-| 2d (GL) | 28.5 | 5.9 | 4.9x |
+| cpu (GL) | 41.6 | 7.0 | 6.0x |
+| 3d (GL) | 78.0 | 6.4 | 12x |
+| 2d (GL) | 28.3 | 5.7 | 5.0x |
+| mixed (GL) | 33.4 | 5.1 | 6.6x |
 
 With the GL renderer, upstream's numbers include the renderer and the GL driver on the same thread; BananaOS's run
-them on the GPU thread (its own core on the handheld), whose cost with panfrost only the handheld can tell. The model's
+them on the GPU thread (its own core on the handheld), whose cost with panfrost only the handheld can tell: Panda3DS's
+own part of it measured 0.3 to 1.6 ms a frame, the rest is the GL driver. The model's
 1.25 cycles per instruction is a guess the handheld will correct.

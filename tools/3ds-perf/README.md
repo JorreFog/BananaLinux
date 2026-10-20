@@ -45,3 +45,20 @@ PANDA3DS_BASELINE=1 qemu-aarch64 -plugin ./liba55prof.so,out=base.prof panda3ds-
 
 `PANDA3DS_BASELINE=1` switches every one of BananaOS's changes off at run time (the code paths upstream Panda3DS
 runs), so one binary gives both sides of a comparison.
+
+## Results (October 2026, the stress-test ROM as committed)
+
+The emulator's own thread, Cortex-A55 milliseconds a frame (CPI 1.25), upstream Panda3DS (`PANDA3DS_BASELINE=1`)
+against BananaOS's patches, the same binary:
+
+| scene | ARM11 busy | null renderer: upstream | BananaOS | GL: upstream | BananaOS |
+|---|---:|---:|---:|---:|---:|
+| cpu | 80% | 8.2 | 7.1 | 41.6 | 7.0 |
+| 3d | 71% | 19.8 | 7.5 | 78.0 | 6.4 |
+| 2d | 72% | 17.2 | 5.8 | 28.3 | 5.7 |
+| mixed | 59% | 17.1 | 5.6 | 33.4 | 5.1 |
+| fill | 12% | 12.2 | 1.2 | | |
+
+With GL, BananaOS's renderer and GL driver run on the GPU thread: Panda3DS's part of it was 0.3 to 1.6 ms a frame;
+the GL driver's part here is llvmpipe's (it shades vertices on that thread, the Mali's work on the handheld), so
+panfrost's cost there wants measuring on the handheld (`tools/panda3ds-device`).
