@@ -96,7 +96,10 @@ namespace banana
 	}
 
 	// ---- gamelist.xml: just the fields the shelf shows -------------------------------------------------------------
-	struct GlEntry { std::string name, genre, date, image, thumb, cart, boxback; };
+	// the order a list is in: the sort title where there is one, else the title, without case
+	static std::string sortKey(const Game& g) { return lower(g.sort.empty() ? g.title : g.sort); }
+
+	struct GlEntry { std::string name, sortname, genre, date, image, thumb, cart, boxback; };
 
 	static std::string xmlText(const std::string& block, const char* tag)
 	{
@@ -145,7 +148,7 @@ namespace banana
 			if (path.compare(0, 2, "./") == 0) path = path.substr(2);
 			if (path.empty()) continue;
 			GlEntry e;
-			e.name = xmlText(b, "name"); e.genre = xmlText(b, "genre"); e.date = xmlText(b, "releasedate");
+			e.name = xmlText(b, "name"); e.sortname = xmlText(b, "sortname"); e.genre = xmlText(b, "genre"); e.date = xmlText(b, "releasedate");
 			e.image = rel(xmlText(b, "image")); e.thumb = rel(xmlText(b, "thumbnail"));
 			e.cart = rel(xmlText(b, "cartridge")); e.boxback = rel(xmlText(b, "boxback"));
 			out[path] = e;
@@ -330,7 +333,22 @@ namespace banana
 				stats[c[0]] = s;
 			}
 		}
+		titles.clear();
+		{
+			// <system>/<rel> TAB name TAB sort title (the game page's; either may be empty)
+			std::ifstream f(dataDir + "/game-titles.tsv");
+			while (std::getline(f, ln))
+			{
+				std::vector<std::string> c;
+				std::stringstream ls(ln);
+				std::string part;
+				while (std::getline(ls, part, '\t')) c.push_back(part);
+				if (c.size() < 2 || c[0].empty()) continue;
+				titles[c[0]] = { trim(c[1]), c.size() > 2 ? trim(c[2]) : "" };
+			}
+		}
 	}
+
 
 	// written beside and renamed over, so a power cut leaves the old file or the new one (and a full card, a write
 	// that fell short: the old one, not the short copy over it)
@@ -343,6 +361,17 @@ namespace banana
 		ok &= fflush(f) == 0 && fsync(fileno(f)) == 0;
 		ok &= fclose(f) == 0;
 		if (!ok || rename(tmp.c_str(), path.c_str()) != 0) unlink(tmp.c_str());
+	}
+
+	void Library::setGameTitles(const std::string& key, const std::string& name, const std::string& sort)
+	{
+		auto clean = [](std::string s) { for (auto& ch : s) if (ch == '\t' || ch == '\n' || ch == '\r') ch = ' '; return trim(s); };
+		if (clean(name).empty() && clean(sort).empty()) titles.erase(key);
+		else titles[key] = { clean(name), clean(sort) };
+		std::string out;
+		for (auto& kv : titles) out += kv.first + "\t" + kv.second.name + "\t" + kv.second.sort + "\n";
+		writeAtomic(dataDir + "/game-titles.tsv", out);
+		scan();
 	}
 
 	void Library::saveFavs()
@@ -520,13 +549,20 @@ namespace banana
 					if (g.cart.empty()) g.cart = media.find(dir, "cart", stem);
 					if (g.label.empty()) g.label = media.find(dir, "label", stem);
 					std::string key = def.id + "/" + g.rel;
+					if (it != gl.end()) g.sort = it->second.sortname;
+					auto tt = titles.find(key);
+					if (tt != titles.end())
+					{
+						if (!tt->second.name.empty()) g.title = tt->second.name;
+						if (!tt->second.sort.empty()) g.sort = tt->second.sort;
+					}
 					auto st = stats.find(key);
 					if (st != stats.end()) { g.plays = st->second.plays; g.seconds = st->second.seconds; g.last = st->second.last; g.achA = st->second.achA; g.achB = st->second.achB; }
 					g.fav = favGames.count(key) > 0;
 					sh.games.push_back(g);
 				}
 			}
-			std::sort(sh.games.begin(), sh.games.end(), [](const Game& a, const Game& b) { return lower(a.title) < lower(b.title); });
+			std::sort(sh.games.begin(), sh.games.end(), [](const Game& a, const Game& b) { return sortKey(a) < sortKey(b); });
 			if (!sh.games.empty() || def.always) shelves.push_back(sh);
 		}
 		arrange();
@@ -584,7 +620,7 @@ namespace banana
 		for (int s = 0; s < (int)shelves.size(); s++)
 			for (auto& g : shelves[s].games)
 				if (g.fav) { fav.games.push_back(g); fav.sysOf.push_back(s); }
-		std::sort(fav.games.begin(), fav.games.end(), [](const Game& a, const Game& b) { return lower(a.title) < lower(b.title); });
+		std::sort(fav.games.begin(), fav.games.end(), [](const Game& a, const Game& b) { return sortKey(a) < sortKey(b); });
 		// sysOf follows the sort: find each game's system again by its path
 		for (size_t k = 0; k < fav.games.size(); k++)
 			for (int s = 0; s < (int)shelves.size(); s++)
@@ -646,7 +682,7 @@ namespace banana
 			}
 			std::vector<size_t> ix(srch.games.size());
 			for (size_t k = 0; k < ix.size(); k++) ix[k] = k;
-			std::stable_sort(ix.begin(), ix.end(), [&](size_t a, size_t b) { return lower(srch.games[a].title) < lower(srch.games[b].title); });
+			std::stable_sort(ix.begin(), ix.end(), [&](size_t a, size_t b) { return sortKey(srch.games[a]) < sortKey(srch.games[b]); });
 			Shelf sorted = srch;
 			for (size_t k = 0; k < ix.size(); k++) { sorted.games[k] = srch.games[ix[k]]; sorted.sysOf[k] = srch.sysOf[ix[k]]; }
 			for (auto& sh : shelves) if (sh.favorites) for (int& s : sh.sysOf) s++;
@@ -667,6 +703,13 @@ namespace banana
 		for (auto& g : shelves[s].games)
 			if (g.path == sh.games[game].path) return &g;
 		return nullptr;
+	}
+
+	std::string Library::gameKey(int game)
+	{
+		int sys = -1;
+		Game* g = sourceOf(lib, game, &sys);
+		return g && sys >= 0 ? shelves[sys].def.id + "/" + g->rel : "";
 	}
 
 	const SystemDef& Library::systemOf(int game) const
@@ -899,7 +942,7 @@ namespace banana
 	std::vector<std::pair<std::string, std::string>> Library::hints(bool library, int /*sys*/, int game)
 	{
 		std::vector<std::pair<std::string, std::string>> r;
-		if (library && game >= 0 && game < gameCount() && systemOf(game).id == "nds") r.push_back({ "X", "Options" });	// (the game page: its emulator and shader)
+		if (library && game >= 0 && game < gameCount()) r.push_back({ "X", "Options" });	// (the game page: a DS game's emulator and shader, any game's name)
 		r.push_back({ "SELECT", "Search" });
 		return r;
 	}

@@ -24,6 +24,7 @@ namespace banana
 	struct Game
 	{
 		std::string path, rel, title, genre, year;	// rel: the path under the system's folder
+		std::string sort;		// the sort title, when it isn't the title (gamelist.xml's sortname, or the game page's)
 		std::string box, cart, label;
 		int plays = 0;
 		long seconds = 0;
@@ -108,6 +109,12 @@ namespace banana
 		std::string emptyTitle() override;
 		std::string emptyHint() override;
 		std::vector<std::pair<std::string, std::string>> hints(bool library, int sys, int game) override;
+		struct Titles { std::string name, sort; };
+		// a game's own name and sort title (the game page, #29): "<system>/<rel>"; empty ones mean the scraped or
+		// file name again. Kept in banana/game-titles.tsv, which a scrape never writes; the library is read again
+		std::string gameKey(int game);
+		Titles gameTitles(const std::string& key) const { auto it = titles.find(key); return it == titles.end() ? Titles() : it->second; }
+		void setGameTitles(const std::string& key, const std::string& name, const std::string& sort);
 
 	private:
 		struct Look { std::string icon, maker; rnds::Color accent; bool hasAccent = false, app = false; };
@@ -118,6 +125,7 @@ namespace banana
 		std::set<std::string> favGames, favSystems;	// "<system>/<rel>", system ids
 		struct Stat { int plays = 0; long seconds = 0; time_t last = 0; int achA = -1, achB = 0; };
 		std::map<std::string, Stat> stats;			// "<system>/<rel>"
+		std::map<std::string, Titles> titles;		// "<system>/<rel>": the game page's name and sort title
 		int lib = 0, home = 0, launchGame = -1;
 		bool changed = false;
 		std::string query;

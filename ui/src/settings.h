@@ -47,12 +47,16 @@ namespace banana
 		bool takeLibraryChanged() { bool r = libChanged; libChanged = false; return r; }
 
 		// what the host has to do after an input
-		enum Result { NONE, MOVED, CHANGED, CLOSED, THEME, REBOOT, POWEROFF, SEARCH };
+		enum Result { NONE, MOVED, CHANGED, CLOSED, THEME, REBOOT, POWEROFF, SEARCH, TITLES };
 		// SELECT in the menu: the keyboard alone, for a search of the games; SEARCH when it is done, with the text in
 		// searchText (empty: the search taken away)
 		void openSearch(const std::string& start);
 		// X on a DS game in the library: which emulator runs this one game (title shown, ROM file name as the key)
-		void openGame(const std::string& title, const std::string& romName);
+		// X on a game: its own page. A DS game's emulator and shader, and every game's name and sort title (#29):
+		// TITLES when one of those was typed, with them in gameName / gameSort for gameKey ("" each: as scraped)
+		void openGame(const std::string& title, const std::string& romName, bool nds = true,
+			const std::string& key = "", const std::string& name = "", const std::string& sort = "");
+		std::string gameKey, gameName, gameSort;
 		std::string searchText;
 		std::function<int(const std::string&)> searchCount;	// the games the text typed so far finds (the host's library)
 		Result press(Key k);
@@ -112,6 +116,9 @@ namespace banana
 		// the game page (X on a DS game): its own emulator and shader, each "As in Settings" (index 0) or a choice
 		std::string pgTitle, pgRom;
 		int pgRow = 0, pgEmu = 0, pgShader = 0;
+		bool pgNds = true;
+		enum PgRow { PG_EMU, PG_SHADER, PG_NAME, PG_SORT };
+		std::vector<PgRow> pgRows;
 		std::vector<std::string> pgShaderNames, pgShaderValues;
 		std::string gameEmulator(const std::string& rom);
 		void setGameEmulator(const std::string& rom, const std::string& emu);
@@ -122,7 +129,7 @@ namespace banana
 		void renderGame();
 		// the keyboard types a text for a purpose: a Wi-Fi password, or an account's name or password
 		// (banana/accounts.conf: RetroAchievements for DraStic and RetroArch, ScreenScraper for the scraper to come)
-		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SMB_USER, ENTRY_SMB_PASS, ENTRY_SEARCH } entry = ENTRY_WIFI;
+		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SMB_USER, ENTRY_SMB_PASS, ENTRY_GAME_NAME, ENTRY_GAME_SORT, ENTRY_SEARCH } entry = ENTRY_WIFI;
 		std::string entryTitle, entrySub;
 		Page entryBack = NETWORKS;
 		void startEntry(Entry e, const std::string& title, const std::string& sub, Page back, const std::string& start = "");

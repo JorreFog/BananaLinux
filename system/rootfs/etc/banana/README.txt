@@ -31,4 +31,7 @@ list, to add or change emulators: copy banana/systems.conf.default to it and cha
 A DS game's own emulator and shader (X on the game in the library): banana/nds-per-game.conf and
 banana/nds-per-game-shader.conf, one "<game's file name> = <emulator or shader>" a line (none: no shader); a game
 not in them follows Settings > Nintendo DS.
+A game's own name and sort title (X on any game in the library): banana/game-titles.tsv, one
+"<system>/<game's file> TAB name TAB sort title" a line; scraping box art again leaves it alone. A gamelist.xml's
+<sortname> sorts the game too.
 Logs: banana/logs/.

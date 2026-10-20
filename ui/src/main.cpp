@@ -504,10 +504,12 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			if (it == keys.end()) { logf("unknown button %s", b.c_str()); return 2; }
 			if (low.hide(now)) logf("press %s: notice hidden", b.c_str());
 			if (!settings.isOpen() && it->second == Key::SELECT) { settings.openSearch(lib.searchQuery()); logf("press select: search open"); continue; }
-			if (!settings.isOpen() && it->second == Key::X && ui.view() == rnds::UI::LIBRARY && ui.gameIndex() >= 0 && lib.systemOf(ui.gameIndex()).id == "nds")
+			if (!settings.isOpen() && it->second == Key::X && ui.view() == rnds::UI::LIBRARY && ui.gameIndex() >= 0)
 			{
 				const std::string& path = lib.gameAt(ui.gameIndex()).path;
-				settings.openGame(lib.gameAt(ui.gameIndex()).title, path.substr(path.rfind('/') + 1));
+				std::string key = lib.gameKey(ui.gameIndex());
+				auto t = lib.gameTitles(key);
+				settings.openGame(lib.gameAt(ui.gameIndex()).title, path.substr(path.rfind('/') + 1), lib.systemOf(ui.gameIndex()).id == "nds", key, t.name, t.sort);
 				logf("press x: game page for %s", path.c_str());
 				continue;
 			}
@@ -515,6 +517,15 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			{
 				if (!settings.isOpen()) { settings.open(); logf("press %s: settings open", b.c_str()); continue; }
 				int r = (int)settings.press(it->second);
+				if (r == Settings::TITLES)
+				{
+					int sys = ui.systemIndex(), g = ui.gameIndex();
+					std::string path = g >= 0 && g < lib.gameCount() ? lib.gameAt(g).path : "";
+					lib.setGameTitles(settings.gameKey, settings.gameName, settings.gameSort);
+					ui.dataChanged();
+					for (int i = 0; i < lib.gameCount(); i++) if (lib.gameAt(i).path == path) { ui.setLibrary(sys, i); break; }
+					logf("titles %s: \"%s\" / \"%s\"", settings.gameKey.c_str(), settings.gameName.c_str(), settings.gameSort.c_str());
+				}
 				if (r == Settings::SEARCH)
 				{
 					lib.setSearch(settings.searchText);
@@ -1039,6 +1050,18 @@ int main(int argc, char** argv)
 			break;
 		}
 		case Settings::CLOSED: sound.play("back"); break;
+		case Settings::TITLES:
+		{
+			// a game's own name or sort title typed on its page: the library again, the cursor on the same game
+			int sys = ui->systemIndex(), g = ui->gameIndex();
+			std::string path = g >= 0 && g < lib.gameCount() ? lib.gameAt(g).path : "";
+			lib.setGameTitles(settingsView.gameKey, settingsView.gameName, settingsView.gameSort);
+			ui->dataChanged();
+			for (int i = 0; i < lib.gameCount(); i++) if (lib.gameAt(i).path == path) { ui->setLibrary(sys, i); break; }
+			logf("titles %s: \"%s\" / \"%s\"", settingsView.gameKey.c_str(), settingsView.gameName.c_str(), settingsView.gameSort.c_str());
+			sound.play("select");
+			break;
+		}
 		case Settings::SEARCH:
 		{
 			// the Search collection first on the shelf, opened on its first game (an empty text takes it away)
@@ -1080,15 +1103,18 @@ int main(int argc, char** argv)
 		}
 		if (ev.type == InputEvent::PRESS && ev.key == Key::X)
 		{
-			// X on a DS game in the library: the emulator for this game (Settings' game page)
+			// X on a game in the library: its own page (Settings' game page): a DS game's emulator and shader, and any
+			// game's name and sort title
 			std::lock_guard<std::mutex> l(worker.uiLock);
 			int g = ui->gameIndex();
-			if (ui->view() == rnds::UI::LIBRARY && g >= 0 && g < lib.gameCount() && lib.systemOf(g).id == "nds")
+			if (ui->view() == rnds::UI::LIBRARY && g >= 0 && g < lib.gameCount())
 			{
 				const std::string& path = lib.gameAt(g).path;
+				std::string key = lib.gameKey(g);
+				auto t = lib.gameTitles(key);
 				ui->touchCancel();
 				settingsView.setVariant(settings["theme"]);
-				settingsView.openGame(lib.gameAt(g).title, path.substr(path.rfind('/') + 1));
+				settingsView.openGame(lib.gameAt(g).title, path.substr(path.rfind('/') + 1), lib.systemOf(g).id == "nds", key, t.name, t.sort);
 				rep.key = Key::NONE;
 				sound.play("select");
 				dirty = true;

@@ -2031,10 +2031,15 @@ namespace banana
 	std::string Settings::gameEmulator(const std::string& rom) { return perGame("nds-per-game.conf", rom); }
 	void Settings::setGameEmulator(const std::string& rom, const std::string& emu) { setPerGame("nds-per-game.conf", rom, emu); }
 
-	void Settings::openGame(const std::string& title, const std::string& romName)
+	void Settings::openGame(const std::string& title, const std::string& romName, bool nds, const std::string& key,
+		const std::string& name, const std::string& sort)
 	{
 		open();
-		pgTitle = title; pgRom = romName;
+		pgTitle = title; pgRom = romName; pgNds = nds;
+		gameKey = key; gameName = name; gameSort = sort;
+		pgRows.clear();
+		if (nds) pgRows = { PG_EMU, PG_SHADER };
+		if (!key.empty()) { pgRows.push_back(PG_NAME); pgRows.push_back(PG_SORT); }
 		std::string cur = gameEmulator(romName);
 		pgEmu = 0;
 		for (int i = 1; i < 3; i++) if (cur == GAME_EMUS[i]) pgEmu = i;
@@ -2059,23 +2064,39 @@ namespace banana
 
 	Settings::Result Settings::pressGame(Key k)
 	{
+		int n = (int)pgRows.size();
+		if (!n) { if (k == Key::B || k == Key::A) { close(); return CLOSED; } return NONE; }
+		PgRow row = pgRows[std::min(pgRow, n - 1)];
 		switch (k)
 		{
-		case Key::UP: case Key::DOWN: pgRow ^= 1; return MOVED;
+		case Key::UP: pgRow = (pgRow + n - 1) % n; return MOVED;
+		case Key::DOWN: pgRow = (pgRow + 1) % n; return MOVED;
 		case Key::LEFT: case Key::RIGHT:
 		{
 			int d = k == Key::LEFT ? -1 : 1;
-			if (pgRow == 0) pgEmu = (pgEmu + d + 3) % 3;
-			else
+			if (row == PG_EMU) pgEmu = (pgEmu + d + 3) % 3;
+			else if (row == PG_SHADER)
 			{
-				int n = (int)pgShaderValues.size();
-				pgShader = (pgShader + d + n) % n;
+				int ns = (int)pgShaderValues.size();
+				pgShader = (pgShader + d + ns) % ns;
 			}
+			else return NONE;
 			return MOVED;
 		}
-		case Key::A:
-			setGameEmulator(pgRom, GAME_EMUS[pgEmu]);
-			setPerGame("nds-per-game-shader.conf", pgRom, pgShaderValues[pgShader]);
+		case Key::A: case Key::START:
+			// on the name or the sort title: the keyboard (kept as soon as it's typed); else Done
+			if (k == Key::A && (row == PG_NAME || row == PG_SORT))
+			{
+				bool nm = row == PG_NAME;
+				startEntry(nm ? ENTRY_GAME_NAME : ENTRY_GAME_SORT, nm ? "This game's name" : "This game's sort title", pgTitle, GAME,
+					nm ? (gameName.empty() ? pgTitle : gameName) : gameSort);
+				return MOVED;
+			}
+			if (pgNds)
+			{
+				setGameEmulator(pgRom, GAME_EMUS[pgEmu]);
+				setPerGame("nds-per-game-shader.conf", pgRom, pgShaderValues[pgShader]);
+			}
 			close();
 			return CHANGED;
 		case Key::B: close(); return CLOSED;
@@ -2087,11 +2108,12 @@ namespace banana
 	{
 		(void)cx; (void)cy;
 		if (downY >= 418 && downY <= 466) return pressGame(downX < 320 ? Key::B : Key::A);
-		for (int r = 0; r < 2; r++)
+		for (int r = 0; r < (int)pgRows.size(); r++)
 		{
 			float ry = 82 + r * 64;
 			if (downY < ry || downY > ry + 56) continue;
 			if (r != pgRow) { pgRow = r; return MOVED; }
+			if (pgRows[r] == PG_NAME || pgRows[r] == PG_SORT) return pressGame(Key::A);	// a tap again: the keyboard
 			return pressGame(downX < 320 ? Key::LEFT : Key::RIGHT);	// the value's left or right half steps it
 		}
 		return NONE;
@@ -2113,18 +2135,29 @@ namespace banana
 		const std::string shValue = pgShader ? pgShaderNames[pgShader] : "As in Settings: " + gshName;	// (names have brackets of their own)
 		const bool plus = readLine("/etc/banana/board") == "rgds-plus";
 
+		const int n = (int)pgRows.size();
+		const PgRow row = n ? pgRows[std::min(pgRow, n - 1)] : PG_NAME;
+		const std::string nameValue = gameName.empty() ? "As scraped" : gameName, sortValue = gameSort.empty() ? "By its name" : gameSort;
+		auto label = [](PgRow r) { return r == PG_EMU ? "Emulator" : r == PG_SHADER ? "Shader" : r == PG_NAME ? "Name" : "Sort title"; };
+		auto value = [&](PgRow r) { return r == PG_EMU ? emuValue : r == PG_SHADER ? shValue : r == PG_NAME ? nameValue : sortValue; };
+
 		be->beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
-		icon("nds", 50, 56, 3);
-		text(pgRow == 0 ? "This game's emulator" : "This game's shader", true, 17, 170, 62, p.muted, true, 1.4f);
+		icon(pgNds ? "nds" : "gamepad", 50, 56, 3);
+		text(row == PG_EMU ? "This game's emulator" : row == PG_SHADER ? "This game's shader" : row == PG_NAME ? "This game's name" : "This game's sort title",
+			true, 17, 170, 62, p.muted, true, 1.4f);
 		text(fit(pgTitle, true, 30, 420), true, 30, 170, 88, p.ink);
-		text(fit(pgRow == 0 ? emuValue : shValue, true, 22, 420), true, 22, 170, 130, p.accent);
-		std::string help = pgRow == 0
+		text(fit(value(row), true, 22, 420), true, 22, 170, 130, p.accent);
+		std::string help = row == PG_EMU
 			? "SuperDrastic: DraStic onto both panels, the fastest. BananaDS: Banana's own emulator (melonDS's core), the most "
 			  "accurate. The choice is for this game only; the others follow Settings > Nintendo DS > Emulator."
-			: std::string("The picture's shader for this game only, in either emulator; the others follow Settings > Nintendo DS > Shader. "
-			  "None scales smoothly and costs no GPU work.") + (plus ? PLUS_SHADER_NOTE : "");
+			: row == PG_SHADER ? std::string("The picture's shader for this game only, in either emulator; the others follow Settings > Nintendo DS > Shader. "
+			  "None scales smoothly and costs no GPU work.") + (plus ? PLUS_SHADER_NOTE : "")
+			: row == PG_NAME ? "The name the menu shows for this game. A types it; an empty one goes back to the scraped name. Kept in "
+			  "banana/game-titles.tsv, which scraping the box art again leaves alone."
+			: "The library's order goes by this instead of the name: Dragon Quest 04, 05 and 09 keep IV, V and IX in their order. "
+			  "A types it; an empty one sorts by the name again.";
 		wrapped(help, 20, 50, 196, 540, 7, p.muted);
 		be->endScreen();
 
@@ -2132,23 +2165,26 @@ namespace banana
 		box("screen", false, 0, 0, 640, 480);
 		box("bubble", false, 18, 14, 604, 54);
 		text("This game", true, 22, 38, 28, p.ink);
-		for (int r = 0; r < 2; r++)
+		for (int r = 0; r < n; r++)
 		{
 			bool on = r == pgRow;
 			float y = 82 + r * 64;
 			box(on ? "pick" : "slot", on, 18, y, 604, 56);
 			Color c = on ? p.onPick : p.muted;
-			text(r == 0 ? "Emulator" : "Shader", true, 20, 38, y + 16, c);
-			std::string v = fit(r == 0 ? emuValue : shValue, true, 19, 380);
+			text(label(pgRows[r]), true, 20, 38, y + 16, c);
+			bool typed = pgRows[r] == PG_NAME || pgRows[r] == PG_SORT;
+			std::string v = fit(value(pgRows[r]), true, 19, typed ? 400 : 380);
 			float vw = text(v, true, 19, 0, 0, p.ink, false, 0, true);
+			if (typed) { text(v, true, 19, 586 - vw, y + 17, c); continue; }
 			arrow(true, 576, y + 21, c);
 			text(v, true, 19, 566 - vw, y + 17, c);
 			arrow(false, 556 - vw - 2 - std::round(13 / 2.0f + 1), y + 21, c);
 		}
 		float bw = faceWidth("B", "Back");
 		face("B", "Back", 18, bw);
-		float aw = faceWidth("A", "Done");
-		face("A", "Done", 622 - aw, aw);
+		const char* act = row == PG_NAME || row == PG_SORT ? "Type" : "Done";
+		float aw = faceWidth("A", act);
+		face("A", act, 622 - aw, aw);
 		be->endScreen();
 	}
 
@@ -2239,6 +2275,18 @@ namespace banana
 			page = entryBack;
 			message.clear();
 			return CHANGED;
+		case ENTRY_GAME_NAME: case ENTRY_GAME_SORT:
+		{
+			// the same as the scraped name: none of its own
+			std::string v = pw;
+			if (entry == ENTRY_GAME_NAME && v == pgTitle && gameName.empty()) v.clear();
+			(entry == ENTRY_GAME_NAME ? gameName : gameSort) = v;
+			if (entry == ENTRY_GAME_NAME && !v.empty()) pgTitle = v;
+			pw.clear();
+			page = GAME;
+			message.clear();
+			return TITLES;
+		}
 		case ENTRY_SEARCH:
 			searchText = pw;
 			pw.clear();
