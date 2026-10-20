@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <fstream>
 #include <unistd.h>
 
@@ -28,23 +29,33 @@ namespace banana
 
 	ScreenColors ScreenColors::load(const std::string& path)
 	{
+		// (a file edited by hand: keys and values trimmed on both sides, the screen's name in any case, and a value
+		// that isn't a number, or is empty, keeps the default: atof's 0 became the bottom of the range, a strong cast)
 		ScreenColors c;
 		std::ifstream f(path);
 		std::string ln;
+		auto trim = [](std::string t) { t.erase(0, t.find_first_not_of(" \t\r")); t.erase(t.find_last_not_of(" \t\r") + 1); return t; };
+		auto num = [](const std::string& v, float& out, float lo, float hi)
+		{
+			char* end = nullptr;
+			float x = strtof(v.c_str(), &end);
+			if (v.empty() || !end || *end != 0 || x != x) return;
+			out = std::max(lo, std::min(hi, x));
+		};
 		while (std::getline(f, ln))
 		{
 			size_t eq = ln.find('=');
-			if (ln.empty() || ln[0] == '#' || eq == std::string::npos) continue;
-			std::string k = ln.substr(0, eq), v = ln.substr(eq + 1);
-			k.erase(k.find_last_not_of(" \t") + 1); v.erase(0, v.find_first_not_of(" \t")); v.erase(v.find_last_not_of(" \t\r") + 1);
-			float x = (float)atof(v.c_str());
-			if (k == "screen") c.screen = v == "top" ? 0 : v == "bottom" ? 1 : -1;
-			else if (k == "red") c.red = std::max(0.5f, std::min(1.0f, x));
-			else if (k == "green") c.green = std::max(0.5f, std::min(1.0f, x));
-			else if (k == "blue") c.blue = std::max(0.5f, std::min(1.0f, x));
-			else if (k == "gamma") c.gamma = std::max(0.6f, std::min(1.6f, x));
-			else if (k == "brightness") c.bright = std::max(0.4f, std::min(1.0f, x));
-			else if (k == "black") c.black = std::max(0.0f, std::min(0.12f, x));
+			std::string k = trim(ln.substr(0, eq == std::string::npos ? 0 : eq));
+			if (k.empty() || k[0] == '#' || eq == std::string::npos) continue;
+			std::string v = trim(ln.substr(eq + 1));
+			for (auto& ch : k) ch = (char)tolower((unsigned char)ch);
+			if (k == "screen") { for (auto& ch : v) ch = (char)tolower((unsigned char)ch); c.screen = v == "top" ? 0 : v == "bottom" ? 1 : -1; }
+			else if (k == "red") num(v, c.red, 0.5f, 1);
+			else if (k == "green") num(v, c.green, 0.5f, 1);
+			else if (k == "blue") num(v, c.blue, 0.5f, 1);
+			else if (k == "gamma") num(v, c.gamma, 0.6f, 1.6f);
+			else if (k == "brightness") num(v, c.bright, 0.4f, 1);
+			else if (k == "black") num(v, c.black, 0, 0.12f);
 		}
 		return c;
 	}

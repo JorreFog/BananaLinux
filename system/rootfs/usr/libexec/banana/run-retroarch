@@ -103,10 +103,20 @@ state_slot_decrease state_slot_increase streaming_toggle toggle_fast_forward tog
 toggle_statistics toggle_vrr_runloop turbo_fire_toggle volume_down volume_up"
 HK=/run/banana/retroarch-hotkeys.cfg
 HKA=
-rm -f $HK /run/banana/retroarch-hotkeys.keep
+# the lines kept for putting back, on the card (synced) so that a run cut short (power lost, a hang after RetroArch
+# saved its settings) is put right at the next start: else retroarch.cfg kept the autoconfig folder in /run, gone
+# after a restart, and the pad had no profile and no way out but the touch tiles
+KEEP=/data/retroarch/.banana-hotkeys.keep
+names=$(echo $HOTKEYS | tr ' ' '|')
+HKKEYS="^(joypad_autoconfig_dir|input_($names|enable_hotkey|menu_toggle|exit_emulator)_(btn|axis)) = "
+if [ -f $KEEP ]; then
+    sed -i -E "/$HKKEYS/d" $CFG && cat $KEEP >> $CFG && rm -f $KEEP && sync
+    echo "run-retroarch: the hotkey lines of a run cut short put back" >&2
+fi
+grep -q '^joypad_autoconfig_dir = "/run/' $CFG && set_cfg joypad_autoconfig_dir /usr/share/libretro/autoconfig
+rm -f $HK
 if [ "$(sed -n 's/^ra_hotkeys *= *//p' /data/banana/settings.conf 2>/dev/null | tail -n 1)" = off ]; then
     AC=/run/banana/ra-autoconfig
-    names=$(echo $HOTKEYS | tr ' ' '|')
     rm -rf $AC; mkdir -p $AC/udev
     for f in /usr/share/libretro/autoconfig/udev/*.cfg; do
         grep -vE "^input_($names)_(btn|axis) *=" "$f" > $AC/udev/${f##*/}
@@ -115,8 +125,7 @@ if [ "$(sed -n 's/^ra_hotkeys *= *//p' /data/banana/settings.conf 2>/dev/null | 
         echo "joypad_autoconfig_dir = \"$AC\""
         for h in $HOTKEYS enable_hotkey menu_toggle exit_emulator; do printf 'input_%s_btn = "nul"\ninput_%s_axis = "nul"\n' $h $h; done
     } > $HK
-    HKKEYS="^(joypad_autoconfig_dir|input_($names|enable_hotkey|menu_toggle|exit_emulator)_(btn|axis)) = "
-    grep -E "$HKKEYS" $CFG > /run/banana/retroarch-hotkeys.keep
+    grep -E "$HKKEYS" $CFG > $KEEP.new && mv $KEEP.new $KEEP && sync
     HKA="|$HK"
 fi
 # anything RetroArch keeps that retroarch.cfg doesn't place (remaps, core options, playlists...) under the card's
@@ -154,8 +163,8 @@ while kill -0 $P 2>/dev/null; do wait $P; S=$?; done	# a trap interrupted the wa
 if [ -n "$HKA" ]; then
     # the hotkey lines as they were before the game (RetroArch wrote the Off ones into retroarch.cfg on exit)
     sed -i -E "/$HKKEYS/d" $CFG
-    cat /run/banana/retroarch-hotkeys.keep >> $CFG
-    rm -f $HK /run/banana/retroarch-hotkeys.keep
+    cat $KEEP >> $CFG
+    rm -f $HK $KEEP
 fi
 if [ -n "$BANANA_DRM_LEASE_FD" ]; then
     set_cfg video_monitor_index ${MON:-2}

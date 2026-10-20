@@ -10,6 +10,9 @@
 R=/data/retroarch
 CFG=$R/retroarch.cfg
 [ -e /run/banana/game.pid ] && { echo "A game is running." >&2; exit 1; }
+# the RetroAchievements password and token out of retroarch.cfg first (into banana/accounts.conf): the backup below is
+# on the card, where file sharing shows it
+/usr/libexec/banana/ra-secrets scrub
 B=$R/backup-$(date +%Y%m%d-%H%M%S)
 mkdir -p "$B" || { echo "Can't write to the card." >&2; exit 1; }
 # Banana's own settings from the old file, to write into the new one
@@ -30,6 +33,7 @@ done
 printf '%s' "$keep" >> $CFG.new
 mv $CFG.new $CFG
 [ -d $R/remaps ] && mv $R/remaps "$B/"
+[ -f $R/.banana-hotkeys.keep ] && mv $R/.banana-hotkeys.keep "$B/"	# (a hotkeys-Off run's lines: not over the new file)
 # overrides: config/<core>/<core|folder|game>.cfg (core options are .opt, shader presets .glslp: they stay)
 if [ -d $R/config ]; then
     find $R/config -type f -name '*.cfg' | while read -r f; do

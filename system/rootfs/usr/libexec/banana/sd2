@@ -27,8 +27,12 @@ done
 mounted=$(sed -n "s|^/dev/\([^ ]*\) $M .*|\1|p" /proc/mounts | head -n 1)
 if [ -z "$card" ]; then
     if [ -n "$mounted" ]; then
+        # file sharing stopped first (a computer with a file open on \\<address>\sd2 kept the card busy), then up
+        # again without the card's share
+        on=; pidof ksmbd.mountd >/dev/null && on=1
+        [ -n "$on" ] && /usr/libexec/banana/share down
         umount $M 2>/dev/null || umount -l $M
-        /usr/libexec/banana/share restart    # (file sharing on: without the card's share now)
+        [ -n "$on" ] && /usr/libexec/banana/share up
     fi
     rm -f $S/roms
     exit 0

@@ -17,9 +17,11 @@ if [ ! -x $D/drastic ]; then
 fi
 cd $D
 # a game's own Threaded 3D (below) left in drastic.cfg by a run that never got to put Settings' back (power lost): back now
+# (only a 0 or a 1: an empty marker, from a power cut while it was written, is dropped)
 if [ -f config/.threaded_3d.settings ]; then
     t=$(cat config/.threaded_3d.settings)
-    sed -i "s/^threaded_3d = .*/threaded_3d = $t/" config/drastic.cfg && rm -f config/.threaded_3d.settings
+    case $t in 0|1) sed -i "s/^threaded_3d = .*/threaded_3d = $t/" config/drastic.cfg ;; esac
+    rm -f config/.threaded_3d.settings
 fi
 # the lid: SuperDrastic holds DraStic's Hinge control while the handheld's lid is shut (the game sees the DS close).
 # Hinge on Pause (256 + its scancode 72), a key no button sends, when neither control set has it on anything
@@ -103,8 +105,10 @@ fi
 # the 3D always through the Gengis Engine (no longer a setting; a DSFLIP_RAST=0 left in the file from before is overruled)
 export DSFLIP_RAST=1
 # the game's own microphone (its page, #27): SuperDrastic's threshold for this run (0: off)
+# (SuperDrastic's scale, its docs/INTEGRATION.md: high 0.03, medium 0.15, low 0.3)
 m=$(/usr/libexec/banana/nds-game-option nds-per-game-mic.conf "$1")
-[ -n "$m" ] && { echo "run-drastic: ${1##*/} has its own microphone: $m" >&2; export DSHOOK_MIC_THRESH=$m; }
+case $m in low) t=0.3 ;; medium) t=0.15 ;; high) t=0.03 ;; off) t=0 ;; *) t= ;; esac
+[ -n "$t" ] && { echo "run-drastic: ${1##*/} has its own microphone: $m ($t)" >&2; export DSHOOK_MIC_THRESH=$t; }
 # the game's own Threaded 3D (#27): DraStic reads it from drastic.cfg alone, so the game's value goes in for this run
 # and Settings' comes back after (kept beside it until then: a run cut short is put right at the next start, above)
 t=$(/usr/libexec/banana/nds-game-option nds-per-game-3d.conf "$1")
@@ -113,11 +117,13 @@ if [ -z "$t" ] || [ -z "$was" ] || [ "$t" = "$was" ]; then
     exec $SD/superdrastic-run $D/drastic "$1"
 fi
 echo "run-drastic: ${1##*/} has its own Threaded 3D: $t" >&2
-echo "$was" > config/.threaded_3d.settings
+echo "$was" > config/.threaded_3d.settings && sync	# (on the card before drastic.cfg changes)
 sed -i "s/^threaded_3d = .*/threaded_3d = $t/" config/drastic.cfg
 $SD/superdrastic-run $D/drastic "$1" &
 P=$!
-trap 'kill -TERM $P 2>/dev/null' TERM INT HUP
+# (a quit or a shutdown signals the whole process group, SuperDrastic too, which saves the resume state then: a second
+# TERM from here could cut that short. Passed on only if it is still running 5 s later, its own stop taking at most 4.)
+trap 'sleep 5; kill -TERM $P 2>/dev/null' TERM INT HUP
 wait $P; S=$?
 while kill -0 $P 2>/dev/null; do wait $P; S=$?; done	# a trap interrupted the wait: until it has quit
 # Settings' value back (DraStic writes its settings on quitting: only this line is changed back)

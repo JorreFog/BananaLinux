@@ -24,6 +24,7 @@ namespace banana
 	struct Game
 	{
 		std::string path, rel, title, genre, year;	// rel: the path under the system's folder
+		std::string scraped;	// the title before the game page's own name (gamelist.xml's, or the file's)
 		std::string sort;		// the sort title, when it isn't the title (gamelist.xml's sortname, or the game page's)
 		std::string box, cart, label;
 		int plays = 0;

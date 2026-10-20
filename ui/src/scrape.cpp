@@ -388,21 +388,19 @@ int main(int argc, char** argv)
 	const char* roms = getenv("BANANA_ROMS") ? getenv("BANANA_ROMS") : "/data/roms";
 	std::string conf = getenv("BANANA_SYSTEMS") ? getenv("BANANA_SYSTEMS") :
 		access("/data/banana/systems.conf", R_OK) == 0 ? "/data/banana/systems.conf" : "/etc/banana/systems.conf";
-	// bananad doesn't put the handheld to sleep for idleness while this runs (its pid in /run/banana/awake.pid)
-	if (FILE* f = fopen("/run/banana/awake.pid", "w")) { fprintf(f, "%d\n", (int)getpid()); fclose(f); }
-	struct Unlink { ~Unlink() { unlink("/run/banana/awake.pid"); } } awake;
 	const std::string MATCHES = "/data/banana/boxart-match.tsv";
 	if (argc >= 4 && (!strcmp(argv[1], "--search") || !strcmp(argv[1], "--match")))
 	{
 		bool match = !strcmp(argv[1], "--match");
 		if (match && argc < 5) return 2;
 		if (!cu.load()) { printf("ERROR libcurl is missing\n"); return 1; }
-		std::string base;
+		std::string base, sysFolder;
 		for (auto& sys : systems(conf))
 			if (sys.id == argv[2])
 			{
 				auto lr = LIBRETRO.find(sys.id);
 				if (lr != LIBRETRO.end()) base = "https://thumbnails.libretro.com/" + esc(lr->second) + "/";
+				sysFolder = sys.folder;
 			}
 		if (base.empty()) { printf("ERROR libretro has no covers for this system\n"); return 1; }
 		if (!match)
@@ -440,6 +438,24 @@ int main(int argc, char** argv)
 		std::string rom = argv[3], name = argv[4];
 		size_t sl = rom.rfind('/');
 		std::string dir = sl == std::string::npos ? "." : rom.substr(0, sl), file = rom.substr(sl == std::string::npos ? 0 : sl + 1);
+		// the art goes in the system's folder (on whichever card the game is), where the library and the full scrape
+		// look, also for a game in a folder of its own (nds/Hacks/Foo.nds: nds/media/box/Foo.jpg)
+		{
+			std::vector<std::string> sysDirs;
+			if (!sysFolder.empty() && sysFolder[0] == '/') sysDirs.push_back(sysFolder);
+			else
+			{
+				sysDirs.push_back(std::string(roms) + "/" + sysFolder);
+				std::ifstream f(getenv("BANANA_SD2") ? getenv("BANANA_SD2") : "/run/banana/sd2/roms");
+				std::string ln;
+				if (std::getline(f, ln))
+				{
+					ln.erase(0, ln.find_first_not_of(" \t\r\n")); ln.erase(ln.find_last_not_of(" \t\r\n") + 1);
+					if (!ln.empty()) sysDirs.push_back(ln + "/" + sysFolder);
+				}
+			}
+			for (auto& d : sysDirs) if (!d.empty() && rom.compare(0, d.size() + 1, d + "/") == 0) dir = d;
+		}
 		std::string stem = file.substr(0, file.rfind('.'));
 		std::string box = get(base + "Named_Boxarts/" + esc(name) + ".png");
 		if (box.empty()) { printf("ERROR no cover by that name\n"); return 1; }
@@ -466,6 +482,10 @@ int main(int argc, char** argv)
 		printf("OK%s\n", title.empty() ? " cover" : " cover title");
 		return 0;
 	}
+	// bananad doesn't put the handheld to sleep for idleness while a scrape runs (its pid in /run/banana/awake.pid; not
+	// for --search and --match above, which are short and would take the file away from a scrape running beside them)
+	if (FILE* f = fopen("/run/banana/awake.pid", "w")) { fprintf(f, "%d\n", (int)getpid()); fclose(f); }
+	struct Unlink { ~Unlink() { unlink("/run/banana/awake.pid"); } } awake;
 	if (!cu.load()) { status("error libcurl is missing"); return 1; }
 	if (get("https://thumbnails.libretro.com/").empty()) { status("error no connection"); return 1; }
 	std::map<std::string, std::string> matches;	// the games' own matches (--match): "<system>/<stem>" -> name

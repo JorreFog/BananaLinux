@@ -56,11 +56,13 @@ namespace banana
 		// X on a game: its own page. A DS game's emulator and shader, and every game's name and sort title (#29):
 		// TITLES when one of those was typed, with them in gameName / gameSort for gameKey ("" each: as scraped)
 		void openGame(const std::string& title, const std::string& romName, bool nds = true,
-			const std::string& key = "", const std::string& name = "", const std::string& sort = "", const std::string& path = "");
+			const std::string& key = "", const std::string& name = "", const std::string& sort = "", const std::string& path = "",
+			const std::string& scraped = "");
 		std::string gameKey, gameName, gameSort;
 		// the display's colour table (main: Display::setColors), for Screen colours: off while its page is up, the saved
 		// values when it closes
-		std::function<void(const ScreenColors&)> setColors;
+		std::function<std::string(const ScreenColors&)> setColors;	// "" when it took, else why not
+		bool colorsOpen() const { return mOpen && page == COLORS; }
 		std::string searchText;
 		std::function<int(const std::string&)> searchCount;	// the games the text typed so far finds (the host's library)
 		Result press(Key k);
@@ -123,6 +125,7 @@ namespace banana
 		bool pgNds = true;
 		enum PgRow { PG_EMU, PG_SHADER, PG_3D, PG_MIC, PG_NAME, PG_SORT, PG_ART };
 		std::string pgPath;	// the game's file (Box art: banana-scrape --match)
+		std::string pgScraped;	// the game's title without its own name (the page's name compares with it)
 		bool pgArtDone = false;	// a cover fetched on the page: the library read again when it closes
 		std::vector<PgRow> pgRows;
 		std::vector<std::string> pgShaderNames, pgShaderValues;
@@ -142,6 +145,8 @@ namespace banana
 		Result finishEntry();
 		std::string account(const char* key);
 		std::string shareUser();
+		static void popChar(std::string& t);
+		std::string smbNewUser;	// the sharing name typed, kept with the password (both at once, or neither)
 		std::string dsName();
 		void setDsName(const std::string& name);
 		std::string sharePassword();

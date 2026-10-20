@@ -48,8 +48,10 @@ if [ ! -f $M ]; then
 fi
 export DSFLIP_SHADER_DIR=/usr/lib/superdrastic/shaders
 # the game's own microphone (its page, #27): BananaDS's threshold for this run (0: off)
+# (BananaDS's scale, as Settings' Microphone: low 0.15, medium 0.05, high 0.02)
 m=$(/usr/libexec/banana/nds-game-option nds-per-game-mic.conf "$1")
-[ -n "$m" ] && { echo "run-bananads: ${1##*/} has its own microphone: $m" >&2; export BANANADS_MIC_THRESHOLD=$m; }
+case $m in low) t=0.15 ;; medium) t=0.05 ;; high) t=0.02 ;; off) t=0 ;; *) t= ;; esac
+[ -n "$t" ] && { echo "run-bananads: ${1##*/} has its own microphone: $m ($t)" >&2; export BANANADS_MIC_THRESHOLD=$t; }
 # the game's own shader (its page, X in the library: nds-game-shader), for this run only (the environment wins over
 # bananads.conf)
 s=$(/usr/libexec/banana/nds-game-shader "$1")

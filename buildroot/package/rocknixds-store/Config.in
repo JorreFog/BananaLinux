@@ -2,7 +2,13 @@ config BR2_PACKAGE_ROCKNIXDS_STORE
 	bool "rocknixds-store"
 	default y
 	select BR2_PACKAGE_LIBDRM
+	# SDL2: its headers, for the app's window backend (loaded at run time)
+	select BR2_PACKAGE_SDL2
 	select BR2_PACKAGE_PYTHON3
+	# the package manager's zlib, xml.etree and HTTPS (without curl)
+	select BR2_PACKAGE_PYTHON3_ZLIB
+	select BR2_PACKAGE_PYTHON3_PYEXPAT
+	select BR2_PACKAGE_PYTHON3_SSL
 	select BR2_PACKAGE_LIBCURL
 	select BR2_PACKAGE_LIBCURL_CURL
 	select BR2_PACKAGE_CA_CERTIFICATES

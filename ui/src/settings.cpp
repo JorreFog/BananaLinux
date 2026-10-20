@@ -714,6 +714,8 @@ namespace banana
 				if (system("mkdir -p /data/drastic/config && cp -n /usr/share/drastic/config/drastic.cfg /data/drastic/config/ 2>/dev/null") != 0) {}
 			}
 			setConfValue(it.file, it.key, v);
+			// Settings' Threaded 3D chosen now: a game's own value left from a run cut short mustn't come back over it
+			if (it.key == "threaded_3d") unlink("/data/drastic/config/.threaded_3d.settings");
 		}
 		else
 		{
@@ -1657,11 +1659,19 @@ namespace banana
 		case 0: layer = layer == 1 ? 0 : 1; break;
 		case 1: layer = layer == 2 ? 0 : 2; break;
 		case 2: if (pw.size() < 63) pw += ' '; break;
-		case 3: if (!pw.empty()) pw.pop_back(); break;
+		case 3: popChar(pw); break;
 		case 4: return finishEntry();
 		}
 		message.clear();
 		return MOVED;
+	}
+
+	// the last character off a text, a whole UTF-8 sequence (a scraped title's é is two bytes: one alone left the rest
+	// as invalid text in game-titles.tsv and the menu)
+	void Settings::popChar(std::string& t)
+	{
+		while (!t.empty() && ((unsigned char)t.back() & 0xC0) == 0x80) t.pop_back();
+		if (!t.empty()) t.pop_back();
 	}
 
 	Settings::Result Settings::pressKeyboard(Key k)
@@ -1680,7 +1690,7 @@ namespace banana
 		case Key::B:
 			if (pw.empty() && entry == ENTRY_SEARCH) { close(); return CLOSED; }
 			if (pw.empty()) { page = entryBack; message.clear(); return MOVED; }
-			pw.pop_back();
+			popChar(pw);
 			return MOVED;
 		case Key::X: layer = layer == 1 ? 0 : 1; return MOVED;
 		case Key::L: layer = layer == 2 ? 0 : 2; return MOVED;	// the symbols
@@ -1974,7 +1984,7 @@ namespace banana
 	void Settings::openColors()
 	{
 		colSaved = colEdit = ScreenColors::load(data + "/screen-colors.conf");
-		if (colEdit.screen < 0) colEdit.screen = 1;	// (the bottom one first: the top is the one most look at)
+		if (colEdit.screen < 0) { colEdit = ScreenColors(); colEdit.screen = 1; }	// (none kept: neutral; the bottom one first)
 		colRow = 0; colPattern = 0;
 		if (setColors) setColors(ScreenColors());	// the table off: the page draws the values itself
 		message.clear();
@@ -2017,10 +2027,17 @@ namespace banana
 		{
 			// kept: the file, and the table on the screen it corrects
 			ScreenColors keep = colEdit;
-			if (keep.neutral()) keep.screen = -1;
-			if (!keep.save(data + "/screen-colors.conf")) { message = "The card can't be written."; return MOVED; }
+			if (keep.neutral()) keep = ScreenColors();	// (None, or nothing to correct: no values kept either)
+			// the table first: one the display refuses isn't kept, and the page says why
+			std::string e = setColors ? setColors(keep) : "";
+			if (!e.empty())
+			{
+				if (setColors) setColors(ScreenColors());	// (off again under the page)
+				message = "The display refused it: " + e + ". Nothing was kept.";
+				return MOVED;
+			}
+			if (!keep.save(data + "/screen-colors.conf")) { message = "The card can't be written."; if (setColors) setColors(ScreenColors()); return MOVED; }
 			colSaved = keep;
-			if (setColors) setColors(colSaved);
 			page = LIST; message.clear();
 			toast("Screen colours", keep.screen < 0 ? "No correction" : keep.screen == 0 ? "The top screen corrected" : "The bottom screen corrected", 0x6ad07a, 1, 3000);
 			return CHANGED;
@@ -2148,12 +2165,15 @@ namespace banana
 			return MOVED;
 		}
 		case Key::B: case Key::LEFT:
-			if (busy && artMatching) return NONE;	// (not while its pictures are written)
+			// not while banana-scrape runs: a search typed again would wait for this one to end (the job's thread is
+			// joined), with the whole menu still until it does
+			if (busy) return NONE;
 			page = GAME; message.clear();
 			return MOVED;
 		case Key::START:
-			if (busy && artMatching) return NONE;
-			page = LIST; mOpen = false; return CLOSED;
+			if (busy) return NONE;
+			page = LIST; mOpen = false;
+			return pgArtDone ? TITLES : CLOSED;	// (a cover fetched: the library again)
 		default: return NONE;
 		}
 	}
@@ -2183,7 +2203,7 @@ namespace banana
 		text("Box art for", true, 17, 170, 62, p.muted, true, 1.4f);
 		text(fit(pgTitle, true, 30, 420), true, 30, 170, 88, p.ink);
 		text(fit(artNames.empty() ? "\"" + artWords + "\"" : artNames[asel], true, 22, 420), true, 22, 170, 130, p.accent);
-		std::string help = !message.empty() ? message
+		std::string help = !message.empty() ? message + (busy && !artMatching ? " (B works once it has answered.)" : "")
 			: "libretro's names for the words typed, the closest first. A fetches that game's cover and title screen for this one "
 			  "(over what it had), and every scrape after keeps them. B types other words.";
 		wrapped(help, 20, 50, 196, 540, 7, p.muted);
@@ -2354,16 +2374,20 @@ namespace banana
 	// threshold), #27: index 0 "As in Settings", then these values (nds-per-game-3d.conf, nds-per-game-mic.conf)
 	static const char* const GAME_3D_VALUES[] = { "", "1", "0" };
 	static const char* const GAME_3D_NAMES[] = { "", "On", "Off" };
-	static const char* const GAME_MIC_VALUES[] = { "", "0.15", "0.05", "0.02", "0" };	// (as Settings' Microphone)
+	// (a level, which each launcher turns into its emulator's own threshold: BananaDS low 0.15, medium 0.05, high 0.02
+	// as Settings' Microphone; SuperDrastic low 0.3, medium 0.15, high 0.03, its own scale)
+	static const char* const GAME_MIC_VALUES[] = { "", "low", "medium", "high", "off" };
 	static const char* const GAME_MIC_NAMES[] = { "", "Low", "Medium", "High", "Off" };
+	static const float MIC_BANANADS[] = { 0, 0.15f, 0.05f, 0.02f, 0 }, MIC_SUPERDRASTIC[] = { 0, 0.3f, 0.15f, 0.03f, 0 };
 
 	std::string Settings::gameEmulator(const std::string& rom) { return perGame("nds-per-game.conf", rom); }
 	void Settings::setGameEmulator(const std::string& rom, const std::string& emu) { setPerGame("nds-per-game.conf", rom, emu); }
 
 	void Settings::openGame(const std::string& title, const std::string& romName, bool nds, const std::string& key,
-		const std::string& name, const std::string& sort, const std::string& path)
+		const std::string& name, const std::string& sort, const std::string& path, const std::string& scraped)
 	{
 		open();
+		pgScraped = scraped.empty() ? (name.empty() ? title : "") : scraped;
 		pgTitle = title; pgRom = romName; pgNds = nds; pgPath = path; pgArtDone = false; artWords.clear();
 		gameKey = key; gameName = name; gameSort = sort;
 		pgRows.clear();
@@ -2488,7 +2512,8 @@ namespace banana
 		const std::string gmic = emu == "bananads" ? getConfValue("/data/bananads/bananads.conf", "mic.threshold", "0.05")
 			: getConfValue(data + "/superdrastic.conf", "DSHOOK_MIC_THRESH", "0");
 		std::string gmicName = gmic;
-		for (int i = 1; i < 5; i++) if (atof(gmic.c_str()) == atof(GAME_MIC_VALUES[i])) gmicName = GAME_MIC_NAMES[i];
+		const float* scale = emu == "bananads" ? MIC_BANANADS : MIC_SUPERDRASTIC;	// (Settings' value in that emulator's scale)
+		for (int i = 1; i < 5; i++) if (std::fabs(atof(gmic.c_str()) - scale[i]) < 0.001) gmicName = GAME_MIC_NAMES[i];
 		const std::string v3d = pg3d ? std::string(GAME_3D_NAMES[pg3d]) : "As in Settings (" + std::string(g3d == "1" ? "On" : "Off") + ")";
 		const std::string vmic = pgMic ? std::string(GAME_MIC_NAMES[pgMic]) : "As in Settings (" + gmicName + ")";
 
@@ -2661,13 +2686,16 @@ namespace banana
 			bool ok = !pw.empty() && pw.size() <= 32;
 			for (unsigned char c : pw) if (!isalnum(c) && c != '.' && c != '_' && c != '-') ok = false;
 			if (!ok) { message = "A name of letters, digits, dots, dashes or underscores, at most 32."; return MOVED; }
-			setConfValue(data + "/accounts.conf", "smb_user", pw, "=");
+			smbNewUser = pw;	// (written with the password: a B out of that step leaves both as they were)
 			startEntry(ENTRY_SMB_PASS, "File sharing password for", pw, entryBack, sharePassword());
-			return CHANGED;
+			return MOVED;
 		}
 		case ENTRY_SMB_PASS:
+			pw = trim(pw);	// (as the share and this screen read it back: spaces at either end aren't kept)
 			if (pw.empty()) { message = "The password can't be empty: Sharing login > Guest is for a share with none."; return MOVED; }
+			if (!smbNewUser.empty()) setConfValue(data + "/accounts.conf", "smb_user", smbNewUser, "=");
 			setConfValue(data + "/accounts.conf", "smb_password", pw, "=");
+			smbNewUser.clear();
 			spawn("/usr/libexec/banana/share", "restart");	// the new login now, if it is on
 			pw.clear();
 			page = entryBack;
@@ -2701,9 +2729,10 @@ namespace banana
 		{
 			// the same as the scraped name: none of its own (spaces at either end don't count, as in the library)
 			std::string v = trim(pw);
-			if (entry == ENTRY_GAME_NAME && v == trim(pgTitle) && gameName.empty()) v.clear();
+			// (the scraped name typed again, or cleared: none of its own, and the page shows the scraped one)
+			if (entry == ENTRY_GAME_NAME && !pgScraped.empty() && v == trim(pgScraped)) v.clear();
 			(entry == ENTRY_GAME_NAME ? gameName : gameSort) = v;
-			if (entry == ENTRY_GAME_NAME && !v.empty()) pgTitle = v;
+			if (entry == ENTRY_GAME_NAME) pgTitle = v.empty() && !pgScraped.empty() ? pgScraped : v.empty() ? pgTitle : v;
 			pw.clear();
 			page = GAME;
 			message.clear();

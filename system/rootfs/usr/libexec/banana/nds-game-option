@@ -1,8 +1,8 @@
 #!/bin/sh
 # A DS game's own value for one of its page's settings (the library's X on a DS game), for run-drastic and run-bananads:
 #   nds-game-option <file> <rom>   prints it, or nothing when the game follows Settings
-# <file> in /data/banana: nds-per-game-3d.conf (Threaded 3D: 1 or 0), nds-per-game-mic.conf (the microphone's
-# threshold, 0 off): "<rom file name> = <value>" per line, the name as on the card without its folder; the last line
+# <file> in /data/banana: nds-per-game-3d.conf (Threaded 3D: 1 or 0), nds-per-game-mic.conf (the microphone: low,
+# medium, high or off; each launcher has its emulator's threshold for them): "<rom file name> = <value>" per line, the name as on the card without its folder; the last line
 # for it counts (as nds-per-game-shader.conf, nds-game-shader)
 awk -v k="${2##*/}" '/^#/ { next } match($0, / *= *[A-Za-z0-9._+-]+[ \t\r]*$/) {
 	v = substr($0, RSTART); gsub(/[ =\t\r]/, "", v); if (substr($0, 1, RSTART - 1) == k) w = v } END { print w }' \

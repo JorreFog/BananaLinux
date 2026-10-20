@@ -188,6 +188,16 @@ namespace banana
 			lut[i].blue = (uint16_t)std::lround(c.apply(2, in) * 65535);
 			lut[i].reserved = 0;
 		}
+		// the same table already there: left alone (setting one switches the table off for a frame: a flash on every
+		// return from a game)
+		{
+			uint64_t cur = 0;
+			crtcProp(fd, p[target].crtc, "GAMMA_LUT", &cur);
+			drmModePropertyBlobRes* b = cur ? drmModeGetPropertyBlob(fd, (uint32_t)cur) : nullptr;
+			bool same = b && b->length == lut.size() * sizeof(drm_color_lut) && !memcmp(b->data, lut.data(), b->length);
+			drmModeFreePropertyBlob(b);
+			if (same) return "";
+		}
 		uint32_t blob = 0;
 		if (drmModeCreatePropertyBlob(fd, lut.data(), lut.size() * sizeof(drm_color_lut), &blob) != 0)
 			return std::string("the table: ") + strerror(errno);
