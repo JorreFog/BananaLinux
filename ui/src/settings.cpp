@@ -2016,13 +2016,10 @@ namespace banana
 		}
 		case Key::L: case Key::R: colPattern = (colPattern + (k == Key::L ? 3 : 1)) % 4; return MOVED;
 		case Key::X:
-		{
-			int sc = colEdit.screen;
+			// no correction, the Screen row too (it said "Correct the top" over values that no longer correct anything)
 			colEdit = ScreenColors();
-			colEdit.screen = sc;
 			message = "Back to no correction: A keeps that, B goes back to what was kept.";
 			return MOVED;
-		}
 		case Key::A:
 		{
 			// kept: the file, and the table on the screen it corrects
