@@ -31,8 +31,11 @@ define ROCKNIXDS_STORE_INSTALL_TARGET_CMDS
 	$(INSTALL) -D -m 0755 $(@D)/store/device/rocknixds-store $(TARGET_DIR)/usr/share/banana/apps/store/rocknixds-store
 	$(INSTALL) -m 0644 $(@D)/store/VERSION $(TARGET_DIR)/usr/share/banana/apps/store/VERSION
 	$(INSTALL) -m 0644 $(BR2_EXTERNAL_BANANA_PATH)/../store/catalog.json $(TARGET_DIR)/usr/share/banana/apps/store/catalog.json
-	$(INSTALL) -d $(TARGET_DIR)/usr/share/banana/apps/store/apps/ereaderds $(TARGET_DIR)/usr/share/banana/apps/store/media
-	$(INSTALL) -m 0644 $(BR2_EXTERNAL_BANANA_PATH)/../store/apps/ereaderds/*.png $(TARGET_DIR)/usr/share/banana/apps/store/apps/ereaderds/
+	$(INSTALL) -d $(TARGET_DIR)/usr/share/banana/apps/store/media
+	for d in $(BR2_EXTERNAL_BANANA_PATH)/../store/apps/*/; do \
+		$(INSTALL) -d $(TARGET_DIR)/usr/share/banana/apps/store/apps/$$(basename $$d) && \
+		$(INSTALL) -m 0644 $$d*.png $(TARGET_DIR)/usr/share/banana/apps/store/apps/$$(basename $$d)/ || exit 1; \
+	done
 	$(INSTALL) -m 0644 $(ROCKNIXDS_STORE_PKGDIR)/store-image.png $(TARGET_DIR)/usr/share/banana/apps/store/media/store-image.png
 	$(INSTALL) -m 0644 $(ROCKNIXDS_STORE_PKGDIR)/gamelist.xml $(TARGET_DIR)/usr/share/banana/apps/store/gamelist.xml
 	touch "$(TARGET_DIR)/usr/share/banana/apps/store/Store.app"

@@ -124,6 +124,7 @@ namespace banana
 		std::vector<Shelf> shelves;
 		std::map<std::string, Look> looks;
 		std::set<std::string> favGames, favSystems;	// "<system>/<rel>", system ids
+		std::set<std::string> hidden;				// system ids the Store took off the menu (its built-in apps removed)
 		struct Stat { int plays = 0; long seconds = 0; time_t last = 0; int achA = -1, achB = 0; };
 		std::map<std::string, Stat> stats;			// "<system>/<rel>"
 		std::map<std::string, Titles> titles;
@@ -135,6 +136,7 @@ namespace banana
 		void loadDefs();
 		void loadLooks();
 		void loadState();
+		std::string storeDir() const;
 		void saveFavs();
 		void saveStats();
 		Look lookOf(const std::string& id) const;

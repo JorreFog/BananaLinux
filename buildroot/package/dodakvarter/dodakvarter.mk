@@ -23,10 +23,12 @@ define DODAKVARTER_BUILD_CMDS
 		-o dodakvarter $(addprefix src/,$(DODAKVARTER_SRC)) -ldrm -lm -lpthread -ldl
 endef
 
-# the program, and its tile's one entry with the pictures the menu shows for it
+# the program, and its tile's one entry with the pictures the menu shows for it; VERSION is the Store's (it lists
+# Döda Kvarter as installed with the system)
 define DODAKVARTER_INSTALL_TARGET_CMDS
 	$(INSTALL) -D -m 0755 $(@D)/dodakvarter/dodakvarter $(TARGET_DIR)/usr/bin/dodakvarter
 	$(INSTALL) -d $(TARGET_DIR)/usr/share/banana/apps/dodakvarter/media
+	$(INSTALL) -m 0644 $(@D)/dodakvarter/VERSION $(TARGET_DIR)/usr/share/banana/apps/dodakvarter/VERSION
 	$(INSTALL) -m 0644 $(@D)/dodakvarter/device/media/*.png $(TARGET_DIR)/usr/share/banana/apps/dodakvarter/media/
 	$(INSTALL) -m 0644 $(DODAKVARTER_PKGDIR)/gamelist.xml $(TARGET_DIR)/usr/share/banana/apps/dodakvarter/gamelist.xml
 	touch "$(TARGET_DIR)/usr/share/banana/apps/dodakvarter/Döda Kvarter.app"
