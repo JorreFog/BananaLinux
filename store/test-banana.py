@@ -31,6 +31,7 @@ def main(cli):
         os.makedirs(root + "/data/store/tiles")
         # Döda Kvarter's folder in the system with its VERSION; Bank & Trade's without one (the system's version then)
         os.makedirs(root + "/usr/share/banana/apps/dodakvarter")
+        os.makedirs(root + "/usr/share/banana/apps/bank")
         with open(root + "/usr/share/banana/apps/dodakvarter/VERSION", "w") as f:
             f.write("0.3.0\n")
         # the Store as the package installs it: the tool, the catalog and its pictures beside it
@@ -124,6 +125,28 @@ def main(cli):
         check(row("bank")[7:8] == ["installed"] and row("ereaderds")[7:8] == ["unsupported"],
               "the RG DS: Bank & Trade installed, eReaderDS not for it")
         env["RNDS_STORE_DEVICE"] = "rgds-plus"
+        # a line written by hand, as banana-ui reads it (case, spaces): hidden for the Store too, and install clears it
+        with open(hidden, "w") as f:
+            f.write("  # a note\n  DodaKvarter  \n")
+        check(row("dodakvarter")[7:8] == ["install"], "a hand-written '  DodaKvarter  ' line: Döda Kvarter to install")
+        o = run("install", "dodakvarter")
+        check(o.strip().splitlines()[-1] == "DONE 0.3.0" and "dodakvarter" not in open(hidden).read().lower(),
+              "install takes the hand-written line out")
+        # a system without the app's folder (a build without it): not installed, and not installable
+        os.rename(root + "/usr/share/banana/apps/bank", root + "/usr/share/banana/apps/bank.away")
+        check(row("bank")[5:8] == ["", "", "unavailable"], "Bank & Trade's folder gone: unavailable: %s" % row("bank")[5:8])
+        o = run("install", "bank")
+        check("FAIL" in o and (not os.path.exists(hidden) or "rocknixdsbank" not in open(hidden).read()),
+              "install without its folder fails: " + o.strip().splitlines()[-1])
+        os.rename(root + "/usr/share/banana/apps/bank.away", root + "/usr/share/banana/apps/bank")
+        # the Store's own tile and the Apps shelf are never taken off the menu, whatever a catalog says
+        cat = json.load(open(os.path.join(share, "catalog.json")))
+        cat["apps"].append({"id": "shelf", "name": "Apps", "builtin": {"system": "storeapps"}})
+        with open(os.path.join(share, "catalog.json"), "w") as f:
+            json.dump(cat, f)
+        run("refresh")
+        run("remove", "shelf")
+        check("storeapps" not in open(hidden).read().lower(), "a builtin entry for the Apps shelf can't hide it")
         # no network at all: OFFLINE, and what it knew is kept
         env["RNDS_STORE_API"] = "file://" + t + "/nowhere/{repo}.json"
         o = run("refresh")
