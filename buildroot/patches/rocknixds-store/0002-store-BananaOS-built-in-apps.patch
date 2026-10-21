@@ -1,0 +1,136 @@
+From 690c54867470c6e99ae572ab01cf9800fa696320 Mon Sep 17 00:00:00 2001
+From: JorreFog <JorreFog@users.noreply.github.com>
+Date: Wed, 21 Oct 2026 09:19:22 +0200
+Subject: [PATCH] store: BananaOS's built-in apps (catalog "builtin")
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Döda Kvarter and Bank & Trade come with BananaOS, so the Store never
+listed them as installed and they couldn't be removed. A catalog entry
+with "builtin": {"system", "dir"} is installed for as long as its tile is
+on the menu: remove adds its system to /data/store/hidden-systems (the
+menu leaves those out), install takes it off again. Nothing is downloaded
+or deleted; its version is the VERSION file beside its tile (else the
+system's). The toast and the done box say the tile is on the menu's home
+screen (an app from the Store is on the Apps shelf there, a built-in one
+has a tile of its own).
+---
+ store/device/rocknixds-store | 61 ++++++++++++++++++++++++++++++++++++
+ store/src/main.c             |  6 ++--
+ 2 files changed, 64 insertions(+), 3 deletions(-)
+
+diff --git a/store/device/rocknixds-store b/store/device/rocknixds-store
+index a2a14be..598651d 100755
+--- a/store/device/rocknixds-store
++++ b/store/device/rocknixds-store
+@@ -373,7 +373,54 @@ def own_version(d, lay):
+     return text.strip()
+ 
+ 
++# ---- BananaOS: the apps that come with the system (Döda Kvarter, Bank & Trade) -----------------------------------
++# A catalog entry with "builtin": {"system": <its section in systems.conf>, "dir": <its folder in the system>} is
++# installed for as long as its tile is on the menu: remove takes the tile off (banana-ui leaves out the systems
++# listed in /data/store/hidden-systems), install puts it back. Nothing is downloaded or deleted; its data stays.
++HIDDEN = P("/storage/.config/rocknixds/store/hidden-systems")
++
++
++def builtin(app):
++    b = app.get("builtin") if BANANA else None
++    return b if isinstance(b, dict) and re.match(r"^[a-z0-9-]{1,32}$", str(b.get("system", ""))) else None
++
++
++def hidden_systems():
++    try:
++        with open(HIDDEN, encoding="utf-8", errors="replace") as f:
++            return set(ln.strip() for ln in f if ln.strip() and not ln.startswith("#"))
++    except OSError:
++        return set()
++
++
++def set_hidden(system, hide):
++    s = hidden_systems()
++    s = s | {system} if hide else s - {system}
++    tmp = HIDDEN + ".tmp"
++    os.makedirs(os.path.dirname(HIDDEN), exist_ok=True)
++    with open(tmp, "w") as f:
++        f.write("# the systems the Store took off the menu (its built-in apps removed); banana-ui leaves them out\n")
++        f.writelines(x + "\n" for x in sorted(s))
++    os.replace(tmp, HIDDEN)                              # (one rename: the menu's watch sees it once)
++
++
++def builtin_version(b):
++    """the version file beside its tile, else the system's own version"""
++    if b.get("dir"):
++        try:
++            with open(os.path.join(ROOT + str(b["dir"]), "VERSION")) as f:
++                v = f.read().strip()
++            if v:
++                return v
++        except OSError:
++            pass
++    return rocknixds_version() or "0"
++
++
+ def installed_version(app):
++    b = builtin(app)
++    if b:
++        return "" if b["system"] in hidden_systems() else builtin_version(b)
+     lay = stored_layout(app)
+     d = P(lay["dest"])
+     check = os.path.join(d, safe_rel(lay["check"])) if lay["check"] else os.path.join(d, "VERSION")
+@@ -954,6 +1001,12 @@ def extract_zip(pkg, into):
+ def install(app_id, version=None):
+     app = app_by_id(app_id)
+     check_device(app)
++    b = builtin(app)
++    if b:
++        step("Putting it back on the menu")
++        set_hidden(b["system"], False)
++        out("DONE " + builtin_version(b))
++        return
+     step("Looking for it")
+     cache = {}
+     if version:
+@@ -1088,6 +1141,12 @@ def remove(app_id):
+     if not installed_version(app):
+         out("DONE")
+         return
++    b = builtin(app)
++    if b:
++        step("Taking it off the menu")
++        set_hidden(b["system"], True)
++        out("DONE")
++        return
+     lay = stored_layout(app)
+     dest = P(lay["dest"])
+     check_idle(lay)
+@@ -1185,6 +1244,8 @@ def rows():
+         except Fail:
+             continue
+         new = (latest.get(a["id"]) or {}).get("version", "")
++        if builtin(a):                                   # (the copy in the system: never an update, always there)
++            new = builtin_version(builtin(a))
+         size = (latest.get(a["id"]) or {}).get("size", 0) or (a.get("release") or {}).get("size", 0)
+         need = (a.get("requires") or {}).get(REQUIRES)
+         if a.get("devices") and dev not in a["devices"]:
+diff --git a/store/src/main.c b/store/src/main.c
+index 7762d17..483fb7c 100644
+--- a/store/src/main.c
++++ b/store/src/main.c
+@@ -20,12 +20,12 @@
+ #ifndef STORE_VERSION
+ #define STORE_VERSION "dev"
+ #endif
+-/* BananaOS (-DBANANA): the Store comes with the system, its apps are on the menu's Apps shelf, and nothing looks
+-   for updates in the background */
++/* BananaOS (-DBANANA): the Store comes with the system, its apps are on the menu's Apps shelf (the ones that come
++   with the system have tiles of their own), and nothing looks for updates in the background */
+ #ifdef BANANA
+ #define STORE_NAME "Store"
+ #define OS_NAME "BananaOS"
+-#define WHERE_TILE "on the menu's Apps shelf"
++#define WHERE_TILE "on the menu's home screen"
+ #define AUTO_CHECK "Open the Store again to look for updates: START looks now."
+ #else
+ #define STORE_NAME "ROCKNIXDS Store"

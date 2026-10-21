@@ -1,7 +1,7 @@
 {
  "schema": 1,
  "name": "Store",
- "_comment": "BananaOS's Store catalog (rocknixds-store reads it with RNDS_STORE_PLATFORM=banana). Paths are ROCKNIX's, mapped by the Store: /storage/.config/rocknixds/<id> -> /data/store/apps/<id>, the tile folder -> /data/store/tiles. Döda Kvarter and Bank come with the system, and so does the Store.",
+ "_comment": "BananaOS's Store catalog (rocknixds-store reads it with RNDS_STORE_PLATFORM=banana). Paths are ROCKNIX's, mapped by the Store: /storage/.config/rocknixds/<id> -> /data/store/apps/<id>, the tile folder -> /data/store/tiles. Döda Kvarter and Bank come with the system (\"builtin\": removing one takes its tile off the menu, installing puts it back), and so does the Store.",
  "apps": [
   {
    "id": "ereaderds",
@@ -48,6 +48,56 @@
     "media": {
      "image": "eReaderDS/icon.png"
     }
+   }
+  },
+  {
+   "id": "dodakvarter",
+   "name": "Döda Kvarter",
+   "tile": "Döda Kvarter",
+   "kind": "game",
+   "developer": "JorreFog",
+   "genre": "Shooter / Roguelike",
+   "players": "1",
+   "releasedate": "20261006T000000",
+   "accent": "#b8323a",
+   "summary": "A zombie roguelike for both screens, set in a Swedish suburb at night.",
+   "description": "Survive round after round as in Call of Duty Zombies: earn kronor, buy your way through barricades into new districts, find the power, drink Julmust and Snabbkaffe, try Lådan (beware the Dalahäst) and upgrade at Smedjan. Every town is new and the loot gets better every round. Eight bosses from Swedish folklore. The top screen is the game, the bottom screen your inventory, health, ammo and the map. It comes with BananaOS: removing it takes its tile off the menu (your saves stay in apps/dodakvarter on the card), installing it puts the tile back.",
+   "icon": "apps/dodakvarter/icon.png",
+   "screenshots": [
+    "apps/dodakvarter/screen.png"
+   ],
+   "devices": [
+    "rgds",
+    "rgds-plus"
+   ],
+   "builtin": {
+    "system": "dodakvarter",
+    "dir": "/usr/share/banana/apps/dodakvarter"
+   }
+  },
+  {
+   "id": "bank",
+   "name": "Bank & Trade",
+   "tile": "Bank & Trade",
+   "kind": "app",
+   "developer": "JorreFog",
+   "genre": "Tool",
+   "players": "1-2",
+   "releasedate": "20261006T000000",
+   "accent": "#3d6fb8",
+   "summary": "A Pokémon bank, legality checker and trading app, built on PKHeX.Core.",
+   "description": "Reads your game saves (generation 1 to 5), stores Pokémon in boxes of its own, moves them between games through the bank (they change format only when they move up a generation, as Pal Park and Poké Transfer did), checks every one with PKHeX's legality analysis, and trades with another handheld over Wi-Fi, in a lobby or a private room. Close the game before you use it. It comes with BananaOS: removing it takes its tile off the menu (your bank stays in apps/bank on the card), installing it puts the tile back.",
+   "icon": "apps/bank/icon.png",
+   "screenshots": [
+    "apps/bank/screen.png"
+   ],
+   "devices": [
+    "rgds",
+    "rgds-plus"
+   ],
+   "builtin": {
+    "system": "rocknixdsbank",
+    "dir": "/usr/share/banana/apps/bank"
    }
   }
  ]

@@ -333,6 +333,12 @@ namespace banana
 				stats[c[0]] = s;
 			}
 		}
+		hidden.clear();
+		{
+			// the built-in apps removed in the Store (Döda Kvarter, Bank & Trade): their systems, one per line, left out
+			std::ifstream f(storeDir() + "/hidden-systems");
+			while (std::getline(f, ln)) if (!trim(ln).empty() && trim(ln)[0] != '#') hidden.insert(lower(trim(ln)));
+		}
 		matched.clear();
 		{
 			// the games whose cover was picked by name on their page (banana-scrape --match): that cover over a
@@ -467,6 +473,13 @@ namespace banana
 		}
 	};
 
+	// the Store's folder beside Banana's own (/data/store next to /data/banana)
+	std::string Library::storeDir() const
+	{
+		size_t cut = dataDir.find_last_of('/');
+		return (cut == std::string::npos ? std::string(".") : dataDir.substr(0, cut)) + "/store";
+	}
+
 	std::vector<std::string> Library::roots() const
 	{
 		std::vector<std::string> r = { romRoot };
@@ -498,7 +511,8 @@ namespace banana
 
 	std::vector<std::string> Library::watchDirs() const
 	{
-		std::vector<std::string> r = { "/run/banana/sd2" };	// the second card in or out: a new scan
+		// the second card in or out, a built-in app removed or put back in the Store: a new scan
+		std::vector<std::string> r = { "/run/banana/sd2", storeDir() };
 		for (auto& root : roots())
 		{
 			r.push_back(root);
@@ -522,6 +536,7 @@ namespace banana
 		MediaIndex media;
 		for (auto& def : defs)
 		{
+			if (hidden.count(def.id)) continue;
 			Shelf sh;
 			sh.def = def;
 			sh.order = (int)(&def - &defs[0]);

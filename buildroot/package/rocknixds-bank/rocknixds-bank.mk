@@ -12,7 +12,8 @@ ROCKNIXDS_BANK_LICENSE = MIT, GPL-3.0 (PKHeX.Core), MIT (.NET)
 ROCKNIXDS_BANK_LICENSE_FILES = LICENSE THIRD_PARTY.md
 ROCKNIXDS_BANK_STRIP_COMPONENTS = 1
 
-# the app, and its tile's one entry with the pictures the menu shows for it
+# the app, and its tile's one entry with the pictures the menu shows for it; VERSION is the Store's (it lists Bank &
+# Trade as installed with the system)
 define ROCKNIXDS_BANK_INSTALL_TARGET_CMDS
 	rm -rf $(TARGET_DIR)/usr/share/banana/apps/bank
 	$(INSTALL) -d $(TARGET_DIR)/usr/share/banana/apps/bank/rocknixds-bank $(TARGET_DIR)/usr/share/banana/apps/bank/media
@@ -20,6 +21,7 @@ define ROCKNIXDS_BANK_INSTALL_TARGET_CMDS
 	rm -f $(TARGET_DIR)/usr/share/banana/apps/bank/rocknixds-bank/*.sh
 	$(INSTALL) -m 0644 $(@D)/media/*.png $(TARGET_DIR)/usr/share/banana/apps/bank/media/
 	$(INSTALL) -m 0644 $(ROCKNIXDS_BANK_PKGDIR)/gamelist.xml $(TARGET_DIR)/usr/share/banana/apps/bank/gamelist.xml
+	echo $(ROCKNIXDS_BANK_VERSION) > $(TARGET_DIR)/usr/share/banana/apps/bank/VERSION
 	touch "$(TARGET_DIR)/usr/share/banana/apps/bank/Bank & Trade.app"
 endef
 

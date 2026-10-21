@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """The Store's package manager in BananaOS mode, on the PC: a stand-in handheld under a temporary folder, GitHub's
 answers as files, eReaderDS as a made-up release. Checks where everything lands (/data/store/apps, the Apps shelf's
-/data/store/tiles), that the catalog that came with the system is used while Banana's isn't on the network, and that
-a remove leaves the shelf's folder and a port of the same name alone.
+/data/store/tiles), that the catalog that came with the system is used while Banana's isn't on the network, that
+a remove leaves the shelf's folder and a port of the same name alone, and that the apps that come with the system
+(Döda Kvarter, Bank & Trade) are listed as installed, a remove takes their tile off the menu
+(/data/store/hidden-systems) and an install puts it back.
   python3 store/test-banana.py <rocknixds-store, with BananaOS's patches>"""
 import hashlib
 import json
@@ -27,6 +29,10 @@ def main(cli):
         with open(root + "/data/roms/ports/eReaderDS.sh", "w") as f:
             f.write("the user's own port\n")
         os.makedirs(root + "/data/store/tiles")
+        # Döda Kvarter's folder in the system with its VERSION; Bank & Trade's without one (the system's version then)
+        os.makedirs(root + "/usr/share/banana/apps/dodakvarter")
+        with open(root + "/usr/share/banana/apps/dodakvarter/VERSION", "w") as f:
+            f.write("0.3.0\n")
         # the Store as the package installs it: the tool, the catalog and its pictures beside it
         share = os.path.join(t, "share")
         shutil.copytree(os.path.join(HERE, "apps"), os.path.join(share, "apps"))
@@ -91,6 +97,33 @@ def main(cli):
         check(not os.path.exists(entry) and not os.path.exists(app), "the entry and the app gone")
         check(os.path.isdir(root + "/data/store/tiles"), "the shelf's folder stays (the menu watches it)")
         check(open(root + "/data/roms/ports/eReaderDS.sh").read() == "the user's own port\n", "the user's port still there")
+        # the apps that come with the system
+        hidden = root + "/data/store/hidden-systems"
+
+        def row(i):
+            return next((ln.split("\t") for ln in run("list").splitlines() if ln.startswith("APP\t%s\t" % i)), [])
+
+        r = row("dodakvarter")
+        check(r[5:8] == ["0.3.0", "0.3.0", "installed"], "list: Döda Kvarter 0.3.0 installed (its VERSION): %s" % r[5:8])
+        r = row("bank")
+        check(r[5:8] == ["0.4.2", "0.4.2", "installed"], "list: Bank & Trade installed (the system's version): %s" % r[5:8])
+        o = run("remove", "dodakvarter")
+        check(o.strip().endswith("DONE"), "remove Döda Kvarter: " + o.strip())
+        lines = open(hidden).read().split() if os.path.exists(hidden) else []
+        check("dodakvarter" in lines and "rocknixdsbank" not in lines, "its system in hidden-systems, Bank's not")
+        check(os.path.isfile(root + "/usr/share/banana/apps/dodakvarter/VERSION"), "nothing of it deleted")
+        r = row("dodakvarter")
+        check(r[5:8] == ["", "0.3.0", "install"], "list: Döda Kvarter to install: %s" % r[5:8])
+        o = run("refresh")
+        check(o.strip().endswith("OK"), "refresh with one taken off: " + o.strip())
+        o = run("install", "dodakvarter")
+        check(o.strip().splitlines()[-1] == "DONE 0.3.0", "install Döda Kvarter: " + o.strip().splitlines()[-1])
+        check(os.path.exists(hidden) and "dodakvarter" not in open(hidden).read().split(), "its system out of hidden-systems")
+        check(row("dodakvarter")[7:8] == ["installed"], "list: Döda Kvarter installed again")
+        env["RNDS_STORE_DEVICE"] = "rgds"
+        check(row("bank")[7:8] == ["installed"] and row("ereaderds")[7:8] == ["unsupported"],
+              "the RG DS: Bank & Trade installed, eReaderDS not for it")
+        env["RNDS_STORE_DEVICE"] = "rgds-plus"
         # no network at all: OFFLINE, and what it knew is kept
         env["RNDS_STORE_API"] = "file://" + t + "/nowhere/{repo}.json"
         o = run("refresh")
