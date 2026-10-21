@@ -551,20 +551,27 @@ static void audio_route(void)
 	if (card_play >= 0)
 		snprintf(play, sizeof play, "{ type plug slave { pcm \"hw:%d\" format S16_LE channels 2 rate 48000 } }", card_play);
 	else
-		snprintf(play, sizeof play, "\"plughw:%d\"", card_play);
+		snprintf(play, sizeof play, "\"null\"");
 	if (card_codec >= 0)
 		snprintf(cap, sizeof cap, "{ type plug slave { pcm \"hw:%d\" format S16_LE channels 2 rate 48000 } }", card_codec);
 	else
-		snprintf(cap, sizeof cap, "\"plughw:%d\"", card_codec);
+		snprintf(cap, sizeof cap, "\"null\"");
 	char conf[768];
 	int n = snprintf(conf, sizeof conf,
 		"# bananad: where sound plays now (%s)\n"
-		"pcm.!default { type asym playback.pcm %s capture.pcm %s }\n"
-		"ctl.!default { type hw card %d }\n",
-		card_play == card_speaker ? "speakers" : headphones ? "headphones" : "the codec", play, cap, card_play);
+		"pcm.!default { type asym playback.pcm %s capture.pcm %s }\n",
+		card_play == card_speaker ? "speakers" : headphones ? "headphones" : "the codec", play, cap);
+	/* no card yet (the codec probed late, QEMU): "null" keeps the alias valid instead of a "plughw:-1" that would
+	 * fail every later open; the ctl defaults to one, so its line goes only with a real card */
+	if (card_play >= 0 && n > 0 && (size_t)n < sizeof conf)
+		n += snprintf(conf + n, sizeof conf - (size_t)n, "ctl.!default { type hw card %d }\n", card_play);
+	/* snprintf returns what it would have written, not what it did: clamp before the buffer goes to fwrite, or a
+	 * truncated (or negative) n would read past conf */
+	if (n < 0) n = 0;
+	if ((size_t)n >= sizeof conf) n = (int)sizeof conf - 1;
 	FILE *f = fopen("/run/banana/asound.conf.new", "w");
 	if (f) {
-		fwrite(conf, 1, n, f);
+		fwrite(conf, 1, (size_t)n, f);
 		fclose(f);
 		rename("/run/banana/asound.conf.new", "/run/banana/asound.conf");
 	}

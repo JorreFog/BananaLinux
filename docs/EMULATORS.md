@@ -124,10 +124,16 @@ BANANADS_SAVE_DIR /data/saves/nds                       BANANADS_STATE_DIR   /da
 BANANADS_RENDER_RENDERER gengis (always)                DSFLIP_SHADER_DIR    SuperDrastic's shaders
 ```
 
-A card with no microphone keys gets `mic.source = device`, `mic.device = default` and `mic.threshold = 0.05` written
-into `bananads.conf` once, so the capture side is explicit (the real microphone through ALSA's `default`); a card
-that already names them is left alone. They are written, not exported: an environment `BANANADS_MIC_*` wins over the
-file and would freeze the settings screen's choices.
+A card with no microphone keys gets `mic.source = device` and `mic.threshold = 0.05` written into `bananads.conf`
+once, so Settings owns them; a card that already names them is left alone. `mic.device` is different: it is not a
+Settings row, so the launchers force it to ALSA's `default` on every launch (SuperDrastic hardcodes the same alias in
+`src/audio.c`, and `drastic.cfg` has no device key), because only that alias reaches bananad's S16 stereo 48 kHz
+capture plug and its resampler. A raw node a card carries from another firmware or an edit over file sharing
+(`hw:0`, `plughw:0`, `hw:CARD=…`) has no resampler: it hands the rk817 44.1 kHz against the playback's 48 kHz, the
+`symmetric_rate` I2S DAI refuses the capture, the emulator's capture thread logs "no microphone" and exits, and the
+game's mic stays silent. `mic.source`/`mic.threshold` are written, not exported: an environment `BANANADS_MIC_*`
+wins over the file and would freeze the settings screen's choices. Both launchers also log if
+`/run/banana/asound.conf`'s `capture.pcm` is not that plug.
 
 `/data/banana/bananads.env` (shell assignments) adds settings for every run, e.g. `BANANADS_KMS_STATS=600` (the
 frame statistics in the log) or `BANANADS_POWER_CPU_LATENCY_US=100` (the cores kept out of deep idle while a game

@@ -1361,6 +1361,11 @@ int main(int argc, char** argv)
 		unlink(PROGRESS);
 		double start = nowMs();
 		pid_t pid = fork();
+		// The parent lets go of its copy of the lease right away, whether the fork worked or not: the child has its own
+		// through the fd table it inherited, and a fork that failed (pid < 0) would otherwise leak the lease fd, which
+		// nothing else closes on that path.
+		if (pid != 0 && leaseFd >= 0) { ::close(leaseFd); leaseFd = -1; }
+		if (pid < 0) logf("fork failed: %s", strerror(errno));
 		if (pid == 0)
 		{
 			setsid();
@@ -1384,10 +1389,7 @@ int main(int argc, char** argv)
 		{
 			std::ofstream("/run/banana/game.pid") << pid << "\n";	// bananad: the game to pause before a sleep
 			if (panel)
-			{
-				::close(leaseFd);	// (the game has its copy)
 				gamePanel(pid, status, gameScreen, cmdFd, lib.gameAt(game).title, sd.name);
-			}
 			else while (waitpid(pid, &status, 0) < 0 && errno == EINTR) {}
 			unlink("/run/banana/game.pid");
 		}
