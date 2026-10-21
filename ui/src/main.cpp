@@ -19,6 +19,7 @@
 #include "soft.h"
 #include "splash.h"
 #include "settings.h"
+#include "settings_defaults.h"
 #include "theme.h"
 #include "zip.h"
 #include "sound.h"
@@ -142,21 +143,7 @@ static rnds::Bitmap stbDecode(const std::string& path)
 	return *pic.get();
 }
 
-// settings.conf: key = value lines (theme, motion, sounds, clock)
-static std::map<std::string, std::string> readSettings(const std::string& path)
-{
-	std::map<std::string, std::string> r;
-	std::ifstream f(path);
-	std::string ln;
-	while (std::getline(f, ln))
-	{
-		size_t eq = ln.find('=');
-		if (ln.empty() || ln[0] == '#' || eq == std::string::npos) continue;
-		auto t = [](std::string s) { size_t a = s.find_first_not_of(" \t\r"), b = s.find_last_not_of(" \t\r"); return a == std::string::npos ? std::string() : s.substr(a, b - a + 1); };
-		r[t(ln.substr(0, eq))] = t(ln.substr(eq + 1));
-	}
-	return r;
-}
+// settings.conf: key = value lines, the image's defaults under the card's own (settings_defaults.cpp)
 
 static std::string shellQuote(const std::string& s)
 {
@@ -962,7 +949,9 @@ int main(int argc, char** argv)
 
 	rnds::setDecoder(stbDecode);
 	rnds::setZipReader(readZip);	// the icon of a DS ROM kept in a .zip
-	auto settings = readSettings(o.data + "/settings.conf");
+	// the card's settings.conf made whole (missing keys added, invalid values put back): first boot and after an update
+	normalizeSettings(o.data);
+	auto settings = readSettings(o.data);
 	// banana/themes on the card, for themes of one's own: the image's README and examples to start from (once)
 	if (access((o.data + "/themes").c_str(), F_OK) != 0 && access("/usr/share/banana/themes", F_OK) == 0)
 		if (system(("mkdir -p '" + o.data + "/themes' && cp -r /usr/share/banana/themes/. '" + o.data + "/themes/' 2>/dev/null").c_str()) != 0) {}	// (-r: a theme's folder of pictures too)
@@ -1108,7 +1097,7 @@ int main(int argc, char** argv)
 		case Settings::MOVED: sound.play("scroll"); break;
 		case Settings::CHANGED:
 		{
-			settings = readSettings(o.data + "/settings.conf");
+			settings = readSettings(o.data);
 			lib.motion = settings["motion"] != "off";
 			lib.twelveHour = settings["clock"] == "12h";
 			lib.batteryShown = settings["battery"] == "percent" ? "text" : "icon";
@@ -1121,7 +1110,7 @@ int main(int argc, char** argv)
 		case Settings::THEME:
 		{
 			// the menu again in the other palette, on the system it was showing
-			settings = readSettings(o.data + "/settings.conf");
+			settings = readSettings(o.data);
 			variant = applyTheme(settings["theme"], settings["accent"]);
 			if (variant == "carts") variant = "dark";
 			int sys = ui->systemIndex();

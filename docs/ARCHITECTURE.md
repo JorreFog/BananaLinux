@@ -82,7 +82,11 @@ ROCKNIXDS, ES is the Source and its GL renderer the Backend. In Banana:
   clock). Nothing runs while nothing changes.
 
 **Settings** (`src/settings.cpp`, Start): drawn with the engine's own box styles and Pixelify Sans through the
-same Backend. Each change is written at once to the file that owns it: `banana/settings.conf` (the menu; a theme
+same Backend. `src/settings_defaults.cpp` is the schema: the keys and accepted values of `banana/settings.conf`,
+including the per-system `core.<system>` selections and RetroArch's audio latency and VSync. At startup the card's
+file is made whole (missing keys added from `/etc/banana/settings.conf`, invalid values put back, comments and the
+user's own keys kept) and only rewritten when something changed. Each change is then written at once to the file that
+owns it: `banana/settings.conf` (the menu; a theme
 change rebuilds the engine in the other palette), `banana/bananad.conf` (then SIGHUP to bananad), 
 `banana/superdrastic.conf` (read by run-drastic), DraStic's `drastic.cfg`, and the backlights. The time zone is a POSIX `TZ` rule in `settings.conf` (glibc reads those with no
 zoneinfo files on the root): banana-ui sets `TZ` for itself and every game it starts, so a DS game's clock is local

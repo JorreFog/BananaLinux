@@ -1,5 +1,6 @@
 #include <ctime>
 #include "settings.h"
+#include "settings_defaults.h"
 #include "theme.h"
 #include <algorithm>
 #include <dlfcn.h>
@@ -391,6 +392,10 @@ namespace banana
 		add(O, "gamepad", "Quick resume", "On: quitting keeps where you are, and the game goes on from there next time (RetroArch's automatic save state; not in Hardcore). Off: a game starts from its title.", "/data/retroarch/retroarch.cfg", "savestate_auto_save", { "Off", "On" }, { "false", "true" });
 		add(O, "picture", "Shader", "A look for the systems RetroArch runs: a handheld's LCD grid, a CRT's scanlines, or sharp pixels at any size. RetroArch's own Shaders menu still picks any of libretro's presets.",
 			menu, "ra_shader", { "Off", "LCD", "CRT", "Sharp pixels" }, { "off", "lcd", "crt", "sharp" });
+		add(O, "music", "Audio latency", "RetroArch's audio buffer. Low is the quickest to react and can crackle on a busy game; Safe has the most margin (and the most delay).",
+			menu, "ra_audio_latency", { "Low (32 ms)", "Default (64 ms)", "Safe (128 ms)" }, { "32", "64", "128" });
+		add(O, "picture", "VSync", "On waits for the panel's refresh before drawing the next frame, so nothing tears. Off lets a core run as fast as it can; the panel can show a half-drawn frame.",
+			menu, "ra_vsync", { "On", "Off" }, { "on", "off" });
 		if (access("/usr/lib/libretro/mgba_libretro.so", F_OK) == 0)
 			add(O, "gamepad", "Game Boy Advance", "The emulator for GBA games. gpSP: the fastest. mGBA: the most accurate, and the one RetroAchievements accepts for hardcore.", menu, "core.gba", { "gpSP", "mGBA" }, { "gpsp", "mgba" });
 		const char* W = "Network";
@@ -414,6 +419,10 @@ namespace banana
 		if (access("/run/banana/sd2/slot", F_OK) == 0)	// a second card slot (bananad's sd2 script): the RG DS Plus
 		add(S, "gear", "Second SD card", "Games on the card in the second slot (its roms folder, with the same system folders as this card) show up in the library with the others while it's in. exFAT or FAT32.", menu, "sd2_roms", { "Show its games", "Off" }, { "on", "off" });
 		add(S, "gear", "First-time setup", "The steps from the first boot again: Wi-Fi, the time zone and the RetroAchievements account (ScreenScraper: not available yet).", "", "setup", {}, {}, Item::PAGE);
+		add(S, "gear", "Reset system settings", "Puts the menu, display, sound, power and network settings back to their defaults (banana/settings.conf and the sleep/LED rows; your games and card are untouched). Press A twice.",
+			"", "reset_system", { "" }, { "" }, Item::ACTION);
+		add(S, "gear", "Reset emulator settings", "Puts the emulator choices back to their defaults: the core.<system> picks and RetroArch's shader, audio latency and VSync. Your menu and card settings stay. Press A twice.",
+			"", "reset_emulator", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "About", "", "", "", {}, {}, Item::INFO);
 		add(S, "gear", "Restart", "Restarts the handheld. Press A twice.", "", "reboot", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "Shut down", "Turns the handheld off. Press A twice. (Or hold the power button.)", "", "poweroff", { "" }, { "" }, Item::ACTION);
@@ -481,7 +490,9 @@ namespace banana
 			return;
 		}
 		if (it.kind != Item::CHOICE) return;
-		std::string def = it.values[0];
+		// the schema's default (settings_defaults.cpp), else the row's first choice
+		std::string def = settingDefault(it.key);
+		if (def.empty()) def = it.values[0];
 		// the system's defaults where the data partition has none yet
 		if (it.file == data + "/bananad.conf") def = getConfValue("/etc/banana/bananad.conf", it.key, def);
 		if (it.file == data + "/settings.conf") def = getConfValue("/etc/banana/settings.conf", it.key, def);
@@ -683,6 +694,11 @@ namespace banana
 				message = out.empty() ? "The other slot holds no system." : out;
 				return MOVED;
 			}
+			if (it.key == "reset_system" || it.key == "reset_emulator")
+			{
+				armed = -1;
+				return resetApply(it.key == "reset_emulator");
+			}
 			return it.key == "reboot" ? REBOOT : POWEROFF;
 		}
 		int n = (int)it.values.size();
@@ -710,6 +726,68 @@ namespace banana
 		}
 		if (it.key == "accent") { setVariant(getConfValue(data + "/settings.conf", "theme", "dark")); return THEME; }	// (saved above)
 		return CHANGED;
+	}
+
+	Settings::Result Settings::resetApply(bool emulator)
+	{
+		const std::string menu = data + "/settings.conf";
+		std::string beforeTheme = getConfValue(menu, "theme", "dark");
+		std::string beforeAccent = getConfValue(menu, "accent", "yellow");
+
+		resetSettings(data, emulator ? ResetScope::Emulator : ResetScope::System);
+
+		if (!emulator)
+		{
+			// what the settings screen keeps outside settings.conf: bananad's sleep/LED rows (same defaults the rows
+			// show when the card has no line), the backlights and the mixer's level
+			static const struct { const char* key; const char* def; } BANANAD[] = {
+				{ "autosleep_minutes", "10" }, { "dim_minutes", "2" }, { "lid_sleep", "yes" },
+				{ "fast_resume", "yes" }, { "led_brightness", "128" } };
+			for (const auto& b : BANANAD)
+				setConfValue(data + "/bananad.conf", b.key, getConfValue("/etc/banana/bananad.conf", b.key, b.def));
+			if (DIR* d = opendir("/sys/class/backlight"))
+			{
+				while (dirent* e = readdir(d))
+				{
+					if (e->d_name[0] == '.') continue;
+					std::string b = std::string("/sys/class/backlight/") + e->d_name;
+					int max = atoi(readLine(b + "/max_brightness").c_str());
+					if (max > 0) std::ofstream(b + "/brightness") << max << "\n";
+				}
+				closedir(d);
+			}
+			std::ofstream(data + "/backlight") << "1000\n";
+			if (system("/usr/libexec/banana/volume set 50 2>/dev/null") != 0) {}
+			// the side effects save() runs for keys that live outside settings.conf
+			std::map<std::string, std::string> rs = readSettings(data);
+			if (!rs["timezone"].empty()) { setenv("TZ", rs["timezone"].c_str(), 1); tzset(); }
+			spawn("/usr/libexec/banana/wifi", rs["wifi"] == "off" ? "down" : "up");
+			spawn("/usr/libexec/banana/ssh", rs["ssh"] == "on" ? "up" : "down");
+			spawn("/usr/libexec/banana/share", rs["share"] == "on" ? "up" : "down");
+			spawn("/usr/libexec/banana/sd2", "scan");
+			poke("bananad");
+		}
+
+		// the rows again: a reset emulator or theme changes which rows exist and what they show
+		items.clear();
+		build();
+		for (auto& x : items) load(x);
+		const std::string action = emulator ? "reset_emulator" : "reset_system";
+		sel = 0;
+		for (size_t i = 0; i < items.size(); i++) if (items[i].key == action) { sel = (int)i; break; }
+		top = std::max(0, std::min(sel, std::max(0, groupEnd(groupOf(sel)) - ROWS)));
+		armed = -1;
+
+		toast(emulator ? "Emulator settings reset" : "System settings reset",
+			emulator ? "The core choices and RetroArch's options are back to their defaults."
+			         : "The menu, display, sound and power settings are back to their defaults.",
+			0x6ad07a, 1, 5000);	// the RetroAchievements success green, a tick, 5 s
+
+		std::string afterTheme = getConfValue(menu, "theme", "dark");
+		std::string afterAccent = getConfValue(menu, "accent", "yellow");
+		bool themeChanged = !emulator && (afterTheme != beforeTheme || afterAccent != beforeAccent);
+		if (themeChanged) setVariant(afterTheme);	// this screen's own palette now (the menu's is the THEME result)
+		return themeChanged ? THEME : CHANGED;
 	}
 
 	Settings::Result Settings::press(Key k)

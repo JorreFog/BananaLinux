@@ -216,6 +216,7 @@ namespace banana
 		void build();
 		void load(Item& it);
 		Result change(int dir);
+		Result resetApply(bool emulator);	// the Reset rows: schema defaults written, live bits applied, rows reloaded
 		void save(const Item& it);
 		void refreshInfo();
 
