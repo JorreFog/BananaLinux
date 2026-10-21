@@ -81,6 +81,15 @@ fi
 # the settings screen's choices (KEY=value lines), exported to SuperDrastic
 . /usr/libexec/banana/kv-env
 kv_export /data/banana/superdrastic.conf DSFLIP_ DSHOOK_  # (read, never run: kv-env)
+# The microphone: SuperDrastic records ALSA's "default" capture device (bananad points that at the rk817, the real
+# microphone, through /run/banana/asound.conf) and presses DraStic's fake-mic key while the level is above this
+# threshold. Its own default is 0 (off), so a game that asks for the mic (Phantom Hourglass's candle, a Nintendogs
+# call) would get silence whatever bananad routes; 0.15 is its "medium" (high 0.03, low 0.3), the fallback here.
+# Settings > Nintendo DS > Microphone writes DSHOOK_MIC_THRESH to banana/superdrastic.conf and wins over it (0 = off).
+# A value the emulator can't read (empty, a word, outside 0..1) would also leave it off, so those fall back to medium.
+mic=${DSHOOK_MIC_THRESH:-}
+awk -v t="$mic" 'BEGIN { exit !(t ~ /^[0-9]*\.?[0-9]+$/ && t + 0 <= 1) }' 2>/dev/null || mic=0.15
+export DSHOOK_MIC_THRESH=$mic
 # the game's own shader (its page, X in the library: nds-game-shader), for this run only; a card shader from its folder
 gs=$(/usr/libexec/banana/nds-game-shader "$1")
 if [ -n "$gs" ]; then

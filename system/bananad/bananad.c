@@ -17,7 +17,8 @@
  *     while headphones are in, its "Internal Speakers Switch"); the RG DS Plus has two (the
  *     aw88166 speaker amplifiers, and the rk817 for the headphones and the microphone). Playback goes to the
  *     speakers, or to the rk817 while headphones are in (the jack's switch event); recording always comes from the
- *     rk817. The route is ALSA's default device, written to /run/banana/asound.conf (/etc/asound.conf points
+ *     rk817, whose capture gain bananad sets for the DS's microphone (audio_setup). The route is ALSA's default
+ *     device, written to /run/banana/asound.conf (/etc/asound.conf points
  *     there), so everything opened after a change follows it; the volume keys change the card that plays.
  *
  * Settings: /etc/banana/bananad.conf, then /data/banana/bananad.conf (key = value lines, see bananad.conf); SIGHUP
@@ -579,11 +580,23 @@ static void audio_setup(void)
 {
 	audio_find_cards();
 	if (card_codec < 0) { audio_route(); return; }	/* no sound card at all (QEMU): nothing to set */
-	/* the rk817's output path: HP drives both its jack and (on the RG DS) the speaker amplifier */
 	char c[16];
 	snprintf(c, sizeof c, "%d", card_codec);
+	/* the rk817's output path: HP drives both its jack and (on the RG DS) the speaker amplifier */
 	char *argv[] = { "amixer", "-q", "-c", c, "sset", "Playback Mux", "HP", NULL };
 	run(argv);
+	/* ...and its input path, the microphone every DS emulator records from (asound.conf sends "default"'s capture
+	 * here; SuperDrastic and BananaDS both open it). Only the gains are userspace's to set: DAPM powers the ADC and
+	 * the microphone itself when a capture stream opens, and the codec has no capture mute. Set them anyway, so a
+	 * muted or turned-down state restored from another firmware's asound.state (or left by a program) can't leave a
+	 * game without a microphone. Exact hardware values, since as a percentage each reads backwards: the ADC volume's 0x00
+	 * is 0 dB (full) and 0xff is -95 dB, and the PGA "Mic Capture Gain" is -18 dB (0) to +27 dB (0xf) in 3 dB steps,
+	 * so 10 is +12 dB, a little over unity for the DS's quiet microphone. The RG DS Plus's mic is differential, which
+	 * its device tree enables in the codec (rockchip,mic-in-differential). */
+	char *mic[] = { "amixer", "-q", "-c", c, "sset", "Mic Capture Gain", "10", NULL };
+	run(mic);
+	char *cap[] = { "amixer", "-q", "-c", c, "sset", "Master Capture Volume", "0", NULL };
+	run(cap);
 	audio_route();
 }
 

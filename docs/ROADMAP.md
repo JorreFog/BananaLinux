@@ -14,8 +14,9 @@
 - [ ] Wake-up time measured (`sleep_debug = yes`), then cut: the panels' power-on delays on the RG DS, the SD card's
       re-initialisation (MMC_CAP_RUNTIME_RESUME would take it off the wake path), whether Wi-Fi can stay loaded
 - [ ] The display handover to SuperDrastic and back (`DSFLIP_HANDOVER=none`)
-- [ ] Sound on the units: the controls bananad assumes (`Playback Mux`, `Master`, the aw88166's `PCM`), the AW88166
-      amplifier's firmware, the headphone jack's switch on the RG DS Plus
+- [ ] Sound on the units: the controls bananad assumes (`Playback Mux`, `Master`, the aw88166's `PCM`, the rk817's
+      capture `Mic Capture Gain`/`Master Capture Volume` for the DS microphone), the AW88166 amplifier's firmware,
+      the headphone jack's switch on the RG DS Plus
 - [ ] The RG DS Plus's real pixel clock and banana-panel-tune's result (`banana/panel-tune.txt`)
 - [ ] Headphones plugged in during a game: move the playing stream too (now: from the next time a program opens sound)
 - [ ] Boot time, measured: U-Boot, kernel, init, first frame

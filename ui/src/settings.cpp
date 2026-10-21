@@ -365,8 +365,10 @@ namespace banana
 				bds, "cpugov", { "Saves battery", "Always full" }, { "on", "off" });
 			add(N, "nds", "Timing", "Accurate is melonDS's own. Fast lets the two CPUs run longer between meeting (about 10% faster), but it can break a game: Golden Sun: Dark Dawn loses its 3D world.",
 				bds, "core.slice", { "Accurate", "Fast" }, { "64", "auto" });
-			add(N, "nds", "Microphone", "How loud a word or a blow must be to reach the game.", bds, "mic.threshold",
-				{ "Medium", "High", "Low", "Off" }, { "0.05", "0.02", "0.15", "0" });
+			add(N, "nds", "Microphone", "On: the game hears the real microphone (a blow, a voice; the DS's own games that ask for one). Off: it hears nothing from the mic, and the in-game menu's Blow still works for a game that wants one.",
+				bds, "mic.source", { "On", "Off" }, { "device", "none" });
+			add(N, "nds", "Mic sensitivity", "How far above the room's noise a word or a blow must be to reach the game. Gate off lets the game hear everything the microphone picks up, its own sound from the speaker included.",
+				bds, "mic.threshold", { "Medium", "High", "Low", "Gate off" }, { "0.05", "0.02", "0.15", "0" });
 		}
 		else
 		{
@@ -376,6 +378,8 @@ namespace banana
 				sd, "DSFLIP_CPUGOV", { "Saves battery", "Always full" }, { "1", "0" });
 			add(N, "nds", "Frame pacing", "Panels runs the DS at the panels' 60 Hz, a new frame every refresh (0.3% fast, the sound matched). DS rate keeps the DS's own 59.83 Hz, a frame shown twice every ~6 s.",
 				sd, "DSFLIP_PACE", { "Panels", "DS rate" }, { "panels", "ds" });
+			add(N, "nds", "Microphone", "How loud a word or a blow must be to reach the game. Off: the game hears nothing from the mic, and the in-game menu's Blow still works for a game that wants one.",
+				sd, "DSHOOK_MIC_THRESH", { "Medium", "High", "Low", "Off" }, { "0.15", "0.03", "0.3", "0" });
 		}
 		const char* O = "Other systems";
 		add(O, "gamepad", "Screen", "Which panel the systems other than the DS use (RetroArch). The other one shows the game panel (Second screen), or is switched off.",

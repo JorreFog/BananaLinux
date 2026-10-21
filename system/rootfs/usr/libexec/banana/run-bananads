@@ -46,6 +46,19 @@ if [ ! -f $M ]; then
         -e 's/^ *mic.threshold *= *0\.3 *$/mic.threshold = 0.15/' $C 2>/dev/null
     touch $M
 fi
+# The microphone: BananaDS reads mic.source, mic.device and mic.threshold from bananads.conf (or the environment,
+# which wins). A card with no mic keys gets them here once, so the capture side is explicit: source=device records
+# the real microphone through ALSA's "default" (bananad points it at the rk817 in /run/banana/asound.conf), and
+# threshold=0.05 is Settings' "Medium". Written to the file, never exported: an exported BANANADS_MIC_* would win
+# over the file and freeze the settings screen's choices. A card that already names them (including source=none,
+# Settings > Nintendo DS > Microphone Off) is left as it is.
+M=$D/.banana-mic-src
+if [ ! -f $M ]; then
+    has mic.source    || echo "mic.source = device"  >> $C
+    has mic.device    || echo "mic.device = default" >> $C
+    has mic.threshold || echo "mic.threshold = 0.05" >> $C
+    touch $M
+fi
 export DSFLIP_SHADER_DIR=/usr/lib/superdrastic/shaders
 # the game's own shader (its page, X in the library: nds-game-shader), for this run only (the environment wins over
 # bananads.conf)
