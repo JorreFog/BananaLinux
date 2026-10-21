@@ -90,6 +90,10 @@ kv_export /data/banana/superdrastic.conf DSFLIP_ DSHOOK_  # (read, never run: kv
 mic=${DSHOOK_MIC_THRESH:-}
 awk -v t="$mic" 'BEGIN { exit !(t ~ /^[0-9]*\.?[0-9]+$/ && t + 0 <= 1) }' 2>/dev/null || mic=0.15
 export DSHOOK_MIC_THRESH=$mic
+# SuperDrastic records ALSA's "default" capture, which bananad points at the rk817 and pins to the playback's
+# 48 kHz: the card's one I2S DAI is symmetric_rate, so a capture at another rate while a game plays is refused.
+# bananad writes that at boot; a missing file means no sound route at all, worth a line in the log.
+[ -e /run/banana/asound.conf ] || echo "run-drastic: no /run/banana/asound.conf: bananad hasn't set the sound route" >&2
 # the game's own shader (its page, X in the library: nds-game-shader), for this run only; a card shader from its folder
 gs=$(/usr/libexec/banana/nds-game-shader "$1")
 if [ -n "$gs" ]; then

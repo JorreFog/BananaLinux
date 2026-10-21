@@ -31,7 +31,7 @@ The launcher runs in its own session (`setsid`), with signals at their defaults 
 | GPU | Panfrost (Mali-G52), EGL on GBM, OpenGL ES 3.1; loaded by rcS after the menu. Software rendering is fine: SuperDrastic's rasterizer draws the DS in software and hands the GPU only the shader. |
 | Touch | evdev; the bottom panel's touchscreen is the device whose sysfs path contains `BANANA_TOUCH` (default `fe5e0000.i2c`), multitouch protocol B, 640x480 or 1024x768. The top panel has its own, unused by the DS. |
 | Buttons | evdev, one device: the ADC joypad (`rocknix-singleadc-joypad`). A = `BTN_EAST`, B = `BTN_SOUTH`, X = `BTN_NORTH`, Y = `BTN_WEST`, d-pad = `BTN_DPAD_*`, L/R = `BTN_TL`/`BTN_TR`, Start/Select = `BTN_START`/`BTN_SELECT`, F = `BTN_MODE`. Read it, never grab it (`EVIOCGRAB`): bananad reads the same device for the lid, the power button and the volume keys. The volume keys (`KEY_VOLUMEUP/DOWN`) and F + volume (brightness) are bananad's; ignore them. |
-| Sound | ALSA, device `default` (bananad routes it to the speakers, the headphones or the RG DS Plus's amplifier through `/run/banana/asound.conf`). Open it once; a route change while playing is only taken at the next open (a known gap). 44.1 or 48 kHz, S16, stereo. The microphone: `default`'s capture side (the rk817). |
+| Sound | ALSA, device `default` (bananad routes it to the speakers, the headphones or the RG DS Plus's amplifier through `/run/banana/asound.conf`). Open it once; a route change while playing is only taken at the next open (a known gap). 44.1 or 48 kHz, S16, stereo; playback and capture of one card share an I2S DAI whose driver is `symmetric_rate`, so bananad pins both to 48 kHz and ALSA's `plug` resamples (a capture opened at 44.1 kHz against a 48 kHz playback is refused — the reason a game's mic stayed silent). The microphone: `default`'s capture side, which bananad points at the rk817 (the real microphone) and whose capture gains it sets at boot. Both emulators open it unless the card's settings turn it off (`DSHOOK_MIC_THRESH = 0`, or BananaDS's `mic.source = none`). |
 | CPU | 4x Cortex-A55; the governor and limits are set by `banana-perf` before the game starts. An emulator with its own governor (SuperDrastic) may lower `scaling_max_freq` and must put it back on exit. |
 | Clock | The kernel's; the time zone is in `TZ`. |
 
@@ -60,6 +60,14 @@ The launcher runs in its own session (`setsid`), with signals at their defaults 
 Everything under `/usr` is read-only: an emulator that writes next to itself (DraStic) is copied to `/data`
 first by its launcher.
 
+The two DS emulators share their in-game saves: `nds-saves`, run by both launchers before a game, writes the
+newer of DraStic's `drastic/backup/<game>.dsv` and BananaDS's `saves/nds/<game>.sav` over the other in its own
+form. DraStic's `.dsv` is the raw save; a `.dsv` from DeSmuME (a card scraped under another firmware) carries
+DeSmuME's footer, which `nds-saves` reads (`padded_size`, 36 bytes from the end) and leaves off for BananaDS.
+The size is kept exactly — melonDS picks the save memory from the ROM, and a file of another size is what makes a
+game report its save data as corrupted — and the file replaced is kept as `.bak`. The emulators' own save states
+(`.dss`, `.mst`) are not shared.
+
 ## Settings
 
 Settings > Nintendo DS holds the emulator and Quick resume, then only the chosen emulator's own settings, each kept in
@@ -68,6 +76,12 @@ that emulator's files: SuperDrastic's shader and CPU clock in `banana/superdrast
 `/data/bananads/bananads.conf` (`kms.shader`, `render.scale`, ...). Both draw 3D with the Gengis Engine, always (no
 setting: the launchers set it). A new emulator gets its own file and its own rows in `ui/src/settings.cpp` (one
 `add(...)` line per setting: its file, key, names and values, under its `emu` branch).
+
+The microphone has a row each. SuperDrastic's one key is both: `DSHOOK_MIC_THRESH` is its sensitivity and `0` turns
+the mic off. BananaDS separates the two, because `mic.threshold = 0` means "gate off — the game hears everything"
+rather than "off": its **Microphone** row writes `mic.source = device|none`, and **Mic sensitivity** writes
+`mic.threshold`. The launchers write the mic keys a card is missing once and never touch a card that already has
+them, so a choice made in Settings survives updates.
 
 ## BananaDS
 
@@ -109,6 +123,11 @@ BANANADS_FRONTEND kms                                   BANANADS_LOG_FILE    log
 BANANADS_SAVE_DIR /data/saves/nds                       BANANADS_STATE_DIR   /data/states/nds
 BANANADS_RENDER_RENDERER gengis (always)                DSFLIP_SHADER_DIR    SuperDrastic's shaders
 ```
+
+A card with no microphone keys gets `mic.source = device`, `mic.device = default` and `mic.threshold = 0.05` written
+into `bananads.conf` once, so the capture side is explicit (the real microphone through ALSA's `default`); a card
+that already names them is left alone. They are written, not exported: an environment `BANANADS_MIC_*` wins over the
+file and would freeze the settings screen's choices.
 
 `/data/banana/bananads.env` (shell assignments) adds settings for every run, e.g. `BANANADS_KMS_STATS=600` (the
 frame statistics in the log) or `BANANADS_POWER_CPU_LATENCY_US=100` (the cores kept out of deep idle while a game

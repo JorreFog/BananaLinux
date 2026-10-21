@@ -59,6 +59,10 @@ if [ ! -f $M ]; then
     has mic.threshold || echo "mic.threshold = 0.05" >> $C
     touch $M
 fi
+# BananaDS records ALSA's "default" capture (mic.device), which bananad points at the rk817 and pins to the
+# playback's 48 kHz: the card's one I2S DAI is symmetric_rate, so a capture at another rate while a game plays is
+# refused. bananad writes that at boot; a missing file means no sound route at all, worth a line in the log.
+[ -e /run/banana/asound.conf ] || echo "run-bananads: no /run/banana/asound.conf: bananad hasn't set the sound route" >&2
 export DSFLIP_SHADER_DIR=/usr/lib/superdrastic/shaders
 # the game's own shader (its page, X in the library: nds-game-shader), for this run only (the environment wins over
 # bananads.conf)

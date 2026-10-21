@@ -538,19 +538,30 @@ static void audio_route(void)
 	/* The RG DS Plus's aw88166 amplifiers play 48 kHz whatever rate the I2S is set to (measured: 44.1 kHz audio is
 	 * taken at 48,150 samples a second, 9% fast and pitched up; 48 kHz at 48,080), so their stream is always opened
 	 * at 48 kHz and ALSA converts. Without it DraStic's 44.1 kHz ran its audio ring dry (stutter, crackles). The
-	 * slave is pinned to S16 stereo 48 kHz so every open gets the same stream instead of renegotiating it. */
-	char play[96];
-	if (card_play >= 0 && card_play == card_speaker)
-		snprintf(play, sizeof play,
-			"{ type plug slave { pcm \"hw:%d\" format S16_LE channels 2 rate 48000 } }", card_play);
+	 * slave is pinned to S16 stereo 48 kHz so every open gets the same stream instead of renegotiating it.
+	 *
+	 * The same pin for capture, which is the microphone every DS game records through: playback and capture of one
+	 * card share its I2S DAI, and the rockchip-i2s-tdm driver marks that DAI symmetric_rate (the RG DS's single
+	 * rk817 card; the RG DS Plus's rk817 while headphones are in), so the second stream's hw_params is refused when
+	 * its rate differs from the first's. The DS emulators play at 48 kHz but open the mic at 44.1 kHz, so the
+	 * capture never started whatever bananad set the gains to (a standalone arecord, with no playback running, was
+	 * fine). Pinning the capture's slave to 48 kHz makes the emulator's 44.1 kHz capture run at the playback's
+	 * rate, ALSA's plug resampling it, and the two streams agree. */
+	char play[160], cap[160];
+	if (card_play >= 0)
+		snprintf(play, sizeof play, "{ type plug slave { pcm \"hw:%d\" format S16_LE channels 2 rate 48000 } }", card_play);
 	else
 		snprintf(play, sizeof play, "\"plughw:%d\"", card_play);
-	char conf[512];
+	if (card_codec >= 0)
+		snprintf(cap, sizeof cap, "{ type plug slave { pcm \"hw:%d\" format S16_LE channels 2 rate 48000 } }", card_codec);
+	else
+		snprintf(cap, sizeof cap, "\"plughw:%d\"", card_codec);
+	char conf[768];
 	int n = snprintf(conf, sizeof conf,
 		"# bananad: where sound plays now (%s)\n"
-		"pcm.!default { type asym playback.pcm %s capture.pcm \"plughw:%d\" }\n"
+		"pcm.!default { type asym playback.pcm %s capture.pcm %s }\n"
 		"ctl.!default { type hw card %d }\n",
-		card_play == card_speaker ? "speakers" : headphones ? "headphones" : "the codec", play, card_codec, card_play);
+		card_play == card_speaker ? "speakers" : headphones ? "headphones" : "the codec", play, cap, card_play);
 	FILE *f = fopen("/run/banana/asound.conf.new", "w");
 	if (f) {
 		fwrite(conf, 1, n, f);
@@ -572,7 +583,7 @@ static void audio_route(void)
 		if (write(rc, "AUDIO_REINIT\n", 13) < 0) {}
 		close(rc);
 	}
-	say("sound: playback on card %d (%s), recording on card %d", card_play,
+	say("sound: playback on card %d (%s), recording on card %d (both 48 kHz, the shared DAI's one rate)", card_play,
 	    card_play == card_speaker ? "speakers" : headphones ? "headphones" : "codec", card_codec);
 }
 
