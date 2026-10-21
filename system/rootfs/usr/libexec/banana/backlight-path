@@ -1,0 +1,19 @@
+#!/bin/sh
+# The sysfs backlight of one panel, on one line, or nothing when the panel isn't there (QEMU's virtio GPU has none).
+# bananad reads it once to know which backlight is the bottom one, so its menu dim leaves the bottom to banana-ui's
+# own idle timer (see ui/src/main.cpp).
+#   backlight-path <top|bottom>
+# The panel's DSI node names it (fe060000 the bottom, DSI-1; fe070000 the top, DSI-2), the same mapping one-panel's
+# one_panel_dark uses.
+case $1 in
+top) DSI=fe070000 ;;
+*)   DSI=fe060000 ;;
+esac
+DT=/proc/device-tree
+PH=$(od -An -tx1 $DT/dsi@$DSI/panel@0/backlight 2>/dev/null | tr -d ' \n')
+[ -n "$PH" ] || exit 0
+for b in $DT/backlight*; do
+    [ "$(od -An -tx1 $b/phandle 2>/dev/null | tr -d ' \n')" = "$PH" ] &&
+        { echo "/sys/class/backlight/$(basename "$b")"; exit 0; }
+done
+exit 0

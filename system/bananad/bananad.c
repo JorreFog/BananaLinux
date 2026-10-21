@@ -71,6 +71,8 @@ static int devfd[MAXDEV], ndev;
 static void leds_update(void);
 static void audio_route(void);
 static void undim(void);
+static void find_bottom_bl(void);
+static char bottom_bl[64];	/* the bottom panel's backlight name; banana-ui's idle dim owns it while it runs */
 static int headphones;
 static int fn_held, power_down, lid_closed;
 static int lid_retry_off;	/* a suspend failed with the lid shut: no retry until it opens */
@@ -668,6 +670,31 @@ static int backlight_permille(void)
 	return r;
 }
 
+/* the bottom panel's backlight, from the backlight-path script (the DSI node names it, as one-panel does). While
+ * banana-ui is managing the bottom's idle dim itself (it writes /run/banana/bottom-ui, see ui/src/main.cpp), the
+ * menu's own dim leaves that one backlight to it: it would otherwise dim the bottom twice and undo banana-ui's
+ * restore. Only the name is kept: the empty string means no bottom panel to single out (QEMU). */
+static void find_bottom_bl(void)
+{
+	FILE *p = popen("/usr/libexec/banana/backlight-path bottom 2>/dev/null", "r");
+	if (!p) return;
+	char path[256] = "";
+	if (fgets(path, sizeof path, p)) path[strcspn(path, "\n")] = 0;
+	pclose(p);
+	if (!path[0] || strncmp(path, "/sys/class/backlight/", 21)) return;
+	const char *s = strrchr(path, '/');
+	if (!s || !s[1]) return;
+	snprintf(bottom_bl, sizeof bottom_bl, "%s", s + 1);
+	/* published for banana-ui, whose idle timer dims the bottom itself (ui/src/main.cpp) */
+	FILE *f = fopen("/run/banana/backlight-bottom.new", "w");
+	if (f) {
+		fprintf(f, "%s\n", path);
+		fclose(f);
+		rename("/run/banana/backlight-bottom.new", "/run/banana/backlight-bottom");
+	}
+	say("bottom panel's backlight: %s", bottom_bl);
+}
+
 /* idle in the menu: the panels down to dim_percent of what they were, back at the first press (the levels are
  * remembered here, not saved: the user's brightness is untouched) */
 static int dimmed, dim_count;
@@ -681,6 +708,7 @@ static void dim(void)
 	dim_count = 0;
 	while ((e = readdir(d)) && dim_count < 4) {
 		if (e->d_name[0] == '.' || strlen(e->d_name) >= sizeof dim_name[0]) continue;
+		if (bottom_bl[0] && !strcmp(e->d_name, bottom_bl) && !access("/run/banana/bottom-ui", F_OK)) continue;
 		char p[600], v[32];
 		snprintf(dim_name[dim_count], sizeof dim_name[0], "%s", e->d_name);
 		snprintf(p, sizeof p, "/sys/class/backlight/%.255s/brightness", dim_name[dim_count]);
@@ -1051,6 +1079,7 @@ int main(int argc, char **argv)
 	sa.sa_handler = on_hup;		/* no SA_RESTART: poll() returns, and the loop reloads */
 	sigaction(SIGHUP, &sa, NULL);
 	mkdir("/run/banana", 0755);
+	find_bottom_bl();	/* which backlight is the bottom one: banana-ui's idle dim owns it */
 
 	int ino = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
 	if (ino >= 0) inotify_add_watch(ino, "/dev/input", IN_CREATE | IN_DELETE);
