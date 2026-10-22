@@ -1,173 +1,249 @@
 <p align="center">
-  <img src="docs/img/boot-animation.gif" width="320" alt="Banana's boot animation on both panels: a pixel-art bunch of bananas drops onto the top screen and BANANAOS types itself in under it (BANANA in yellow, OS in white), while on the bottom screen a cartridge with the bunch on its label slides into the console, which clicks and lights up green">
+  <img src="docs/img/readme/banner.png" width="100%" alt="BananaOS: a light Linux for the Anbernic RG DS and RG DS Plus. Alpha 0.4.2. Next to the title, an RG DS Plus open, its top panel showing the Nintendo DS's stats (8 games, 7 played, 8h 15m, last played Pokémon Black Version 2) and its bottom panel the system shelf with the Nintendo DS selected">
 </p>
 
-<p align="center"><b>A light Linux for the Anbernic RG DS and RG DS Plus: boots straight into ROCKNIXDS Pixel's menu,
-sleeps when you close the lid, and gives the games every cycle.</b></p>
+<p align="center">
+  <a href="https://github.com/JorreFog/BananaLinux/releases/tag/v0.4.2"><b>Download 0.4.2</b></a> ·
+  <a href="#get-it">Install</a> ·
+  <a href="#seen-on-youtube">Videos</a> ·
+  <a href="https://jorrefog.github.io/BananaLinux/save-mover/">Save Mover</a> ·
+  <a href="https://discord.gg/FxeE7f8r">Discord</a>
+</p>
 
-https://discord.gg/FxeE7f8r
+<p align="center">
+  <a href="https://github.com/JorreFog/BananaLinux/releases"><img src="https://img.shields.io/github/v/release/JorreFog/BananaLinux?include_prereleases&style=for-the-badge&label=release&color=F0B429&labelColor=17161C" alt="Latest release"></a>
+  <a href="https://github.com/JorreFog/BananaLinux/releases"><img src="https://img.shields.io/github/downloads/JorreFog/BananaLinux/total?style=for-the-badge&label=downloads&color=234346&labelColor=17161C" alt="Downloads"></a>
+  <img src="https://img.shields.io/badge/handhelds-RG%20DS%20%C2%B7%20RG%20DS%20Plus-F1EDE2?style=for-the-badge&labelColor=17161C" alt="For the RG DS and RG DS Plus">
+  <a href="https://discord.gg/FxeE7f8r"><img src="https://img.shields.io/badge/discord-join-F0B429?style=for-the-badge&logo=discord&logoColor=F1EDE2&labelColor=17161C" alt="Discord"></a>
+</p>
 
-**Moving from GammaOS (or adding saves)?** The [Save Mover](https://jorrefog.github.io/BananaLinux/save-mover/)
-backs up your save files, converts them and packs them in the card's own folders, in your browser.
+<p align="center">
+  <img src="docs/img/readme/stats.png" width="100%" alt="3.9 s from the kernel to the menu (RG DS; 5.9 s on the RG DS Plus), 0.6 s from A to a DS game, DS games at 60 FPS at 2x, 10 systems">
+</p>
 
 > [!WARNING]
-> Banana is an alpha (0.3.0). Its image is for the RG DS Plus only for now: the RG DS stays on 0.2.0 until
-> 0.3.0 has been tested on it. Things are still missing and some are rough (see *Status*). If you try it,
-> [docs/FIRST-BOOT.md](docs/FIRST-BOOT.md) says which logs to send back when something goes wrong.
+> **BananaOS is an alpha (0.4.2).** It runs on the RG DS Plus and the RG DS, every day, on the maintainer's own
+> handhelds, but things are still missing and some are rough (see [Status](#status)). If something goes wrong,
+> [docs/FIRST-BOOT.md](docs/FIRST-BOOT.md) says which logs to send back.
 
 > [!NOTE]
 > **Made with AI.** BananaOS is developed with the help of AI: much of the code, the tests and the documentation
 > was written with Claude (Anthropic) as a coding assistant, directed, reviewed and tested on real RG DS and RG DS
 > Plus hardware by the project's maintainer. Bug reports and contributions from people are just as welcome.
 
-## What it is
+> [!TIP]
+> **新功能：简体中文。** Settings > System > Language. Translated by **Majirefy**: thank you!
 
-Banana is a whole system for the RG DS, built with Buildroot: a mainline kernel with ROCKNIX's RG DS support,
-busybox init, and one program on the panels. There is no systemd, no compositor, no EmulationStation and no
-desktop: the root filesystem is a read-only squashfs of a few tens of megabytes, and everything you add (games,
-saves, settings) goes on an exFAT partition any computer can open.
+<a id="what-it-is"></a>
+<img src="docs/img/readme/h-what.png" width="100%" alt="01: What it is. A whole system for two handhelds, built with Buildroot">
 
-| | |
-|---|---|
-| **The menu** | ROCKNIXDS Pixel, the same engine (imported unchanged from ROCKNIXDS) drawn in software straight onto both panels by `banana-ui`: the system shelf, DS cartridges with their label art, box covers, play stats, the cartridge sliding into the console. Dark and light. Banana's mark is the BananaUI bunch redrawn as pixel art in the theme's icon style, and Banana's palette is over the theme's (`tools/banana-palette.sh`): warm neutrals in place of the blue-greys, banana yellow in place of the blue accents. |
-| **First boot** | A setup on the first start after the installation: Wi-Fi, the time zone, a RetroAchievements account and a ScreenScraper account (for the art, when it is fetched). The RetroAchievements account is checked with the server as soon as the password is typed, and a pop-up says whether it worked ("Logged in as ... · points", or a wrong name or password, or no connection). Skippable, and back any time from Settings > System. |
-| **Settings** | Start in the menu opens six groups as tiles, in the in-game menu's look: Display & sound, Sleep & power, Nintendo DS, Other systems, Network and System. A opens a group's own list, B goes back to the tiles, L and R go to the next group. Theme, accent colour, brightness, motion, volume, sounds, clock, the boot animation; sleep when idle, the lid, the LEDs; the DS emulator, renderer, shader, 3D resolution and BananaDS's options; Wi-Fi, the networks around, file sharing; the time zone, updates, SSH, About, restart and shut down. Applied at once. |
-| **Keyboard** | For Wi-Fi passwords, accounts and searching the games (Select in the menu: the games whose name has what is typed, a live count of them, then a shelf of their own): what is being typed sits in a field right above the keys, the selected key is the menu's yellow, and the chips at the bottom say what the buttons do (B deletes, X capitals, L symbols, Y a space, START done). Or tap the keys. |
-| **Notifications** | ROCKNIXDS's look, in the menu and in DS games: the volume and brightness keys show a pill at the top of the top screen (a speaker or a sun, a 10-segment bar, the percent); RetroAchievements cards slide in along the top during a game (logged in, the game loaded with its progress, an achievement unlocked with its badge). |
-| **Boot animation** | From banana-ui's first frame, while the library loads on another thread: the bunch drops onto the top panel and BANANAOS types itself in (BANANA in banana yellow, OS in white); on the bottom panel the BANANA cartridge goes into the console (the back of a DSi XL as pixel art, filling the panel: the card slot in its top edge, SLOT-1, the screws, the power light, the battery cover, the BANANAOS wordmark where the maker's is, the fine print) with the menu's own insert motion, clicks, and the power light turns green. Then it dissolves into the menu. |
-| **Light** | The menu draws a frame in well under a millisecond when only one screen changes, skips any screen whose content didn't change, and sleeps in `poll()` between frames. While a game runs it closes the display, the input devices and the sound device: the game has the handheld to itself. |
-| **Sleep** | Close the lid and it is asleep in a moment: the game paused where it was, the card flushed, the handheld suspended to RAM. Open it and the game carries on as the panels light up: the game and the menu are resumed first, Wi-Fi and the rest catch up behind them, and the devices resume in parallel. Woken with the lid shut (the power button in a bag) it goes straight back to sleep. While asleep it checks the battery every 4 hours and shuts down cleanly (the game saves first) before it could run flat. Two idle minutes in the menu dim the panels, ten put it to sleep; hold power to shut down. The menu warns at 20%, 10% and 5%. (`bananad`, tested in `system/bananad/tests/sleep-test.sh`) |
-| **Updates** | A new version is one file dropped in `banana/updates` on the card (over Wi-Fi, with file sharing) and Settings > System > Update: it is written to the card's second system slot, checked, and runs from the next restart; the version before stays one restart away (`Previous version`). |
-| **File sharing** | Switch it on in the settings and the card is on your network as `\\<address>\banana` (Windows) or `smb://<address>/banana` (Mac): copy games in and they show up in the menu. The kernel's own SMB3 server, loaded only while it is on. |
-| **Other systems** | RetroArch 1.22 on one panel (top by default; the other panel and its backlight go off), KMS + GLES, with its RGUI pixel menu and cores built for the RK3566's Cortex-A55 with their ARM64 recompilers: GBA (gpSP), Game Boy (Gambatte), NES (FCEUmm), SNES (Snes9x), Mega Drive (PicoDrive), PlayStation (PCSX ReARMed), N64 (Mupen64Plus-Next). |
-| **Nintendo DS** | Two emulators, chosen in Settings > Nintendo DS > Emulator (or for one game: X on it in the library) ([docs/EMULATORS.md](docs/EMULATORS.md)): [SuperDrastic](https://github.com/JorreFog/SuperDrastic) (DraStic) and BananaDS (melonDS's core with SuperDrastic's display path). Both put each DS screen straight onto its own panel at 2x with a per-game CPU governor, and both have the in-game menu on L3 (save and load with pictures, quick settings, shaders). BananaDS also has RetroAchievements (the setup's account, softcore) and online play through Nintendo WFC (Kaeru), with nothing to set up; with a shader it keeps 60 frames a second on the RG DS Plus's larger panels. |
-| **Apps** | Döda Kvarter and ROCKNIXDS Bank & Trade on tiles of their own, PICO-8 (fake-08, or the official PICO-8 when it is on the card), and PortMaster with its ports, as on ROCKNIX. |
-| **Performance** | Every system gets a clock profile (`banana-perf`); the menu runs at the lowest clocks. |
-| **Boot** | U-Boot with no delay, a kernel with the panels, buttons, touch and sound built in (no module loading before the menu), no initramfs, root mounted by the kernel, and an init script that only mounts the data partition before the menu starts. |
+BananaOS is a whole system for the RG DS and the RG DS Plus, and nothing else: a mainline kernel with
+[ROCKNIX](https://rocknix.org)'s support for the two handhelds, busybox init, and one program on the panels. There
+is no systemd, no compositor, no sound server, no EmulationStation and no desktop. The root filesystem is a
+read-only squashfs of a few tens of megabytes; everything you add (games, saves, settings) goes on an exFAT
+partition any computer can open.
+
+- **Fast to start:** from the kernel to the menu in **3.9 s** on the RG DS and **5.9 s** on the RG DS Plus. A DS game
+  is on the panels **0.6 s** after you press A, and back in the menu a quarter of a second after you quit.
+- **Light while you play:** the menu closes the panels, the buttons and the sound before a game starts, so the game
+  has the handheld to itself. Every system gets its own clock profile; the menu runs at the lowest clocks.
+- **A clamshell that sleeps like one:** close the lid and the game pauses, the card is flushed and the handheld
+  suspends. Open it and the game carries on as the panels light up. In a DS game the lid is the DS's lid too.
+- **Updates in place:** drop one file in `banana/updates` and pick it in Settings. It goes to the card's second
+  system slot, and the version you had stays one restart away.
+
+<a id="a-tour"></a>
+<img src="docs/img/readme/h-tour.png" width="100%" alt="02: A tour. Grabbed from the panels of an RG DS Plus running 0.4.2">
 
 <p align="center">
-  <img src="docs/img/menu-home.png" width="248" alt="Home: the Nintendo DS selected on the system shelf, its games, played count and time on the top screen">
-  <img src="docs/img/menu-library.png" width="248" alt="The DS library: game cartridges on the bottom screen, the selected game's stats on the top">
-  <img src="docs/img/menu-ready.png" width="248" alt="The ready screen: the cartridge going into the console">
+  <img src="docs/img/boot-animation.gif" width="300" alt="The boot animation on both panels: a pixel-art bunch of bananas drops onto the top screen and BANANAOS types itself in under it, while on the bottom screen a cartridge with the bunch on its label slides into the console, which clicks and lights up green">
 </p>
-<p align="center">
-  <img src="docs/img/menu-settings.png" width="248" alt="Settings: six groups as tiles on the bottom screen (Display & sound selected, in yellow), the group's settings listed on the top screen">
-  <img src="docs/img/menu-settings-display.png" width="248" alt="A group's list: Display & sound with Theme, Accent colour, Brightness, Motion and Volume, each with its value between arrows; the selected setting described on the top screen">
-  <img src="docs/img/menu-settings-system.png" width="248" alt="The System group: the time zone, Update, Previous version, SSH, First-time setup">
-</p>
-<p align="center">
-  <img src="docs/img/menu-wifi.png" width="248" alt="The keyboard for a Wi-Fi password: the text typed so far in a field above the keys, the selected key in yellow, chips for B delete, X shift, Y space and START join">
-  <img src="docs/img/menu-setup.png" width="248" alt="The first-time setup: Wi-Fi, Time zone, RetroAchievements, ScreenScraper and Finish">
-  <img src="docs/img/menu-battery.png" width="248" alt="The low-battery notice over the top screen: the battery icon nearly empty in red, Battery nearly empty: 4%, save your game now">
-</p>
-<p align="center"><sub>banana-ui's own frames (headless renders, <code>make test</code>), with a test library of made-up games.
-Start opens the settings, Select searches the games.</sub></p>
-<p align="center">
-  <img src="docs/img/device-volume.png" width="512" alt="On an RG DS Plus: the volume pill over the top of the top screen, a speaker, three of ten segments lit and 25%">
-</p>
-<p align="center"><sub>On an RG DS Plus: a volume key pressed in the menu (the same pill shows during DS games).</sub></p>
-<p align="center">
-  <img src="docs/img/qemu-library.png" width="248" alt="The DS library as the whole system shows it in QEMU: the game's cartridge on the bottom panel, its page on the top">
-  <img src="docs/img/qemu-update.png" width="248" alt="Settings > System > Update in QEMU after an update was written to the other slot: Written, restart to run it">
-</p>
-<p align="center"><sub>The whole image running in QEMU (<code>tools/qemu-boot.sh</code>): the kernel, init, bananad and the menu on two
-virtual panels; the second picture is the update that the next boot ran from the other slot.</sub></p>
+<p align="center"><sub>The boot animation: the bunch drops in, and the BANANA cartridge clicks into the back of a DSi XL.</sub></p>
 
-## Made for the RG DS and RG DS Plus
+<table>
+  <tr>
+    <td align="center" width="33%"><img src="docs/img/readme/shot-home.png" alt="Home: the Nintendo DS on the system shelf (bottom), its 8 games, 7 played and 8h 15m on the top panel with the last game played"><br><sub><b>Home.</b> The system shelf, with your stats per system.</sub></td>
+    <td align="center" width="33%"><img src="docs/img/readme/shot-library.png" alt="The DS library: Pokémon Black Version 2's box art, genre and year, 45 plays, 1h 47m and 6 of 187 achievements on the top panel; the games as cartridges on the bottom"><br><sub><b>The library.</b> Box art, play time and RetroAchievements progress.</sub></td>
+    <td align="center" width="33%"><img src="docs/img/readme/shot-options.png" alt="A game's options: Emulator BananaDS, Shader, Threaded 3D, Microphone and Name, with the selected row explained on the top panel"><br><sub><b>Per game.</b> X picks the emulator, shader, 3D and mic for one game.</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/img/readme/shot-game.png" alt="Mario Kart DS's title screen across both panels"><br><sub><b>In a game.</b> Each DS screen straight onto its own panel.</sub></td>
+    <td align="center"><img src="docs/img/readme/shot-game-menu.png" alt="BananaDS's in-game menu: Resume, Save, Load, Quick settings, Restart game and Quit game as tiles on the bottom panel; the game's session, last save and achievements on the top"><br><sub><b>The in-game menu.</b> F or L3: states, quick settings, quit.</sub></td>
+    <td align="center"><img src="docs/img/readme/shot-store.png" alt="The App Store: eReaderDS with an update from 1.27.3 to 1.27.4 and its notes on the top panel; the Apps tab with eReaderDS and Bank & Trade on the bottom"><br><sub><b>The App Store.</b> Apps installed and updated from the menu.</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/img/readme/shot-settings.png" alt="Settings: six groups as tiles (Display & sound, Sleep & power, Nintendo DS, Other systems, Network, System); the selected group's contents on the top panel"><br><sub><b>Settings.</b> Six groups; L and R jump between them.</sub></td>
+    <td align="center"><img src="docs/img/readme/shot-light.png" alt="The light theme: the home screen in warm paper tones"><br><sub><b>Light theme.</b> And themes of your own, from a JSON file.</sub></td>
+    <td align="center"><img src="docs/img/readme/shot-carts.png" alt="The Carts theme: the DS games as 3D cartridges on a shelf, Mario Kart DS selected, its stats on the top panel"><br><sub><b>Carts</b> (experimental): your games as cartridges on a shelf.</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/img/readme/shot-zh-home.png" alt="The home screen in Simplified Chinese"><br><sub><b>简体中文</b>, translated by Majirefy.</sub></td>
+    <td align="center"><img src="docs/img/readme/shot-zh-settings.png" alt="Settings in Simplified Chinese: 显示与声音, 睡眠与电源, Nintendo DS, 其他系统, 网络, 系统"><br><sub>Settings, the setup and both DS emulators' menus too.</sub></td>
+    <td align="center"><img src="docs/img/readme/shot-nds.png" alt="Settings > Nintendo DS: Emulator BananaDS, Quick resume, DS language, DS name, Shader LCD grid 2x"><br><sub><b>Nintendo DS settings.</b> Emulator, shader, DS language and name.</sub></td>
+  </tr>
+</table>
 
-Banana runs on these two handhelds only, and is built around them:
+<a id="seen-on-youtube"></a>
+<img src="docs/img/readme/h-videos.png" width="100%" alt="03: Seen on YouTube. Two creators took it for a spin">
 
-- **Two panels, one menu.** Both 640x480 (or 1024x768) panels are driven directly; the menu, the boot animation and
-  DS games each use them as the DS did. SuperDrastic sends each DS screen straight to its own panel.
-- **60 Hz panels.** The RG DS's panels come up at 60.10 Hz; Banana's device tree carries ROCKNIXDS's measured
-  retune to 60.0013 Hz, so DraStic's frames are paced without repeats. On the RG DS Plus (60.17 Hz as shipped),
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <a href="https://www.youtube.com/watch?v=yW6LavgyhL4&t=948s"><img src="docs/img/readme/video-yW6LavgyhL4.png" alt="Retro Game Corps: Custom Firmware on the Anbernic RG DS Plus. Watch on YouTube"></a><br>
+      <sub><b><a href="https://www.youtube.com/@RetroGameCorps">Retro Game Corps</a></b> puts BananaOS next to GammaOS on the RG DS Plus (BananaOS from 15:48).</sub>
+    </td>
+    <td align="center" width="50%">
+      <a href="https://www.youtube.com/watch?v=KPENdDlkI5M"><img src="docs/img/readme/video-KPENdDlkI5M.png" alt="forthenext: ANBERNIC RG DS Plus, BananaOS and your games tested. Watch on YouTube"></a><br>
+      <sub><b><a href="https://www.youtube.com/@forthenext">forthenext</a></b> tests your requested games on BananaOS.</sub>
+    </td>
+  </tr>
+</table>
+<p align="center"><sub>Thank you both! Made a video about BananaOS? Tell us on <a href="https://discord.gg/FxeE7f8r">Discord</a>.</sub></p>
+
+<a id="nintendo-ds"></a>
+<img src="docs/img/readme/h-emulators.png" width="100%" alt="04: Nintendo DS. Two emulators, both straight onto the panels">
+
+<p align="center">
+  <img src="docs/img/readme/emulators.png" width="100%" alt="The two DS emulators side by side. SuperDrastic, DraStic on both panels: DraStic by Exophase with each DS screen on its own panel, 2x with Gengis Engine 3D, a per-game CPU governor, an in-game menu with save states, shaders and settings; the fastest of the two. BananaDS, melonDS's core, tuned: melonDS's core on Banana's display path and menu, RetroAchievements and online play through Nintendo WFC, microphone, cheats and fast-forward, speed-ups checked frame by frame against melonDS; the most accurate of the two. Pick one in Settings > Nintendo DS, or per game with X">
+</p>
+
+Both put each DS screen straight onto its own panel at 2x, with no compositor in between, and both have the
+in-game menu on F (or L3): save and load with pictures, quick settings, shaders, quit. The Anbernic button always
+opens it, whatever the buttons are set to.
+
+| | [SuperDrastic](https://github.com/JorreFog/SuperDrastic) | BananaDS |
+|---|---|---|
+| **Core** | DraStic by Exophase | melonDS's core, in the SuperDrastic repository |
+| **Best at** | Speed: the lightest on the CPU | Accuracy, and everything melonDS can do |
+| **3D** | Gengis Engine at 2x, threaded | Gengis Engine at 2x, threaded |
+| **Clocks** | Per-game governor | Governor that only steps down when the heaviest frames still fit |
+| **RetroAchievements** | — | Softcore, with the setup's account |
+| **Online** | — | Nintendo WFC through Kaeru, nothing to set up |
+| **Microphone** | A "blow" key | The real mic (Nintendogs learns its puppy's name) |
+| **Extras** | Shaders, states with pictures | Cheats for 4,000+ games, fast-forward (R2), FPS counter, screenshots (F + L2) |
+
+More in [docs/EMULATORS.md](docs/EMULATORS.md), the contract between the menu and any emulator.
+
+<a id="and-the-rest"></a>
+<img src="docs/img/readme/h-systems.png" width="100%" alt="05: And the rest. RetroArch, PortMaster, the App Store">
+
+- **RetroArch 1.22** on one panel (the top by default), with its cores built for the RK3566's Cortex-A55: GBA (gpSP or
+  mGBA), Game Boy (Gambatte), NES (FCEUmm), SNES (Snes9x), Mega Drive (PicoDrive), PlayStation (PCSX ReARMed), N64
+  (Mupen64Plus-Next). The other panel is a **game panel** of touch tiles: save, load, menu, fast-forward, quit.
+  Shaders out of the box (Settings > Other systems > Shader: LCD grid, CRT or sharp pixels).
+- **PortMaster** with its ports, as on ROCKNIX.
+- **The App Store:** a Store tile and an Apps shelf. Döda Kvarter, Bank & Trade and eReaderDS install and update from
+  there.
+- **PICO-8** (fake-08, or the official PICO-8 when it is on the card).
+- **Search** (Select): part of a name, a genre or a year, across every system. **Recently played** and
+  **Favorites** shelves.
+- **Box art** from libretro or [TwilightBoxart](https://boxart.kirovair.com/), and **games on a second SD card** on
+  the RG DS Plus.
+- **File sharing** over Wi-Fi: the card is `\\<address>\banana` (log in as `banana` / `linux`). Copy games in and they
+  show up in the menu.
+
+<a id="made-for-it"></a>
+<img src="docs/img/readme/h-hardware.png" width="100%" alt="06: Made for it. Two panels, a lid, and no sound server">
+
+- **Two panels, one menu.** Both 640x480 (RG DS) or 1024x768 (RG DS Plus) panels are driven directly; the menu, the
+  boot animation and DS games use them as the DS did.
+- **60 Hz panels.** The RG DS's panels are retuned from 60.10 Hz to 60.0013 Hz in the device tree; on the RG DS Plus,
   `banana-panel-tune` reads the real pixel clock on the first boot and retunes both panels to 59.999 Hz.
-- **The clamshell.** Closing the lid sleeps (the hall sensor), opening it wakes the game where it was.
-- **The LEDs**, as on ROCKNIX: green, red at 20%, blinking red at 5%, amber while charging, driven by the kernel's
-  own LED triggers, with no polling script.
-- **Sound with no sound server.** The RG DS's rk817 codec is set up as ROCKNIX sets it. On the RG DS Plus, playback
-  goes to the AW88166 speaker amplifiers or to the headphones the moment they are plugged in, and the microphone
-  (the DS's mic, through SuperDrastic) always records from the rk817. The volume keys follow the output.
-- **DraStic tuned for it:** ROCKNIX's RG DS button map, 2x resolution, threaded 3D, SuperDrastic's Gengis Engine
-  renderer and its per-game CPU governor on by default.
-- **Remembered:** brightness (F + volume) and volume are restored at boot.
+- **The clamshell.** Closing the lid sleeps; opening it wakes the game where it was. Woken in a bag, it goes back to
+  sleep. While asleep it checks the battery and shuts down cleanly before it could run flat.
+- **The LEDs**, as on ROCKNIX: green, red at 20%, blinking red at 5%, amber while charging (asleep on the charger
+  too).
+- **Sound with no sound server.** The speakers, the RG DS Plus's AW88166 amplifiers or the headphones the moment
+  they're plugged in, during a game too; the microphone always records from the rk817 at full level.
 
-## Status
+<a id="get-it"></a>
+<img src="docs/img/readme/h-install.png" width="100%" alt="07: Get it. A card image, or an update over the one you have">
 
-On the hardware (an RG DS and an RG DS Plus, October 2026):
+**A new card:** download the image for your handheld from the
+[0.4.2 release](https://github.com/JorreFog/BananaLinux/releases/tag/v0.4.2), and write it (don't unzip it) to a
+microSD card with [balenaEtcher](https://etcher.balena.io/):
 
-- Both boot from the card into the menu (the RG DS Plus: the panels on at 4.4 s and the menu at 7.1 s after the
-  kernel starts), updates install from Settings > System > Update into the other slot, and the first boot's
-  setup, Wi-Fi and SSH work.
-- DS games in both emulators with the in-game menu on L3; BananaDS keeps 60 frames a second with a shader on the
-  RG DS Plus, logs in to RetroAchievements and shows its pop-ups, and has played Mario Kart DS online through
-  Nintendo WFC.
-- The RG DS Plus's speakers: the volume keys and Settings > Volume change both AW88166 amplifiers (their
-  `Left PCM` and `Right PCM` controls, which count down: `/usr/libexec/banana/volume`), and the level is kept.
-- Hundreds of games on the card (GBA, N64, SNES and DS) are listed by the menu.
+| Handheld | Image | Update package |
+|---|---|---|
+| **RG DS Plus** | [banana-rgds-plus.img.gz](https://github.com/JorreFog/BananaLinux/releases/download/v0.4.2/banana-rgds-plus.img.gz) | [banana-rgds-plus-0.4.2.update.tar](https://github.com/JorreFog/BananaLinux/releases/download/v0.4.2/banana-rgds-plus-0.4.2.update.tar) |
+| **RG DS** | [banana-rgds.img.gz](https://github.com/JorreFog/BananaLinux/releases/download/v0.4.2/banana-rgds.img.gz) | [banana-rgds-0.4.2.update.tar](https://github.com/JorreFog/BananaLinux/releases/download/v0.4.2/banana-rgds-0.4.2.update.tar) |
 
-Not done yet, or rough: the menu is drawn by the CPU and feels slow on the RG DS Plus's 1024x768 panels (both
-panels are drawn in full on one core); scraping box art (no scraper yet: the ScreenScraper account is only kept);
-Bluetooth; one card for both handhelds (each has its own image for now). See [docs/ROADMAP.md](docs/ROADMAP.md).
+On the first boot BananaOS makes the data partition from the rest of the card (a few seconds), then a setup asks
+for Wi-Fi, the time zone, your DS's name and a RetroAchievements account (all skippable). Put games in `roms/nds`,
+`roms/gba` and so on, from any computer or over file sharing (`banana/README.txt` on the card lists the folders).
 
-Off the device, in this repository's CI and by hand:
+**An update (from 0.4.0 or 0.4.1):** put the `.update.tar` in `banana/updates` on the card, then
+**Settings > System > Update**, A on the package and A again. Games, saves and settings stay.
 
-- `banana-ui` builds (x86-64 and aarch64) and renders its views at both panel sizes; `make test` checks the
-  navigation, the launch, the settings' groups, the Wi-Fi pages against a stand-in `wifi` script (the network
-  list, a password typed by touch, joining, forgetting, open and WPA3-only networks), the setup's accounts, the
-  low-battery notice, the time zone and a DS ROM's icon read out of a `.zip`.
-- `bananad`'s sleep runs against a made-up `/sys` in its own namespaces (`system/bananad/tests/sleep-test.sh`).
-- The whole image boots in QEMU on every CI image build (`tools/qemu-boot.sh`): the first boot's partitioning, the
-  menu on two virtual panels, a game started and the menu back, a shutdown from the settings.
+**Moving from GammaOS or ROCKNIX?** The [Save Mover](https://jorrefog.github.io/BananaLinux/save-mover/) backs up
+your saves, converts them and puts them in the card's own folders, in your browser. A ROCKNIX `.dsv` next to a game
+is taken as its save the first time.
 
-## Build
+<a id="status"></a>
+<img src="docs/img/readme/h-status.png" width="100%" alt="08: Status. What works, and what is still rough">
+
+Tested on an RG DS and an RG DS Plus for 0.4.2: 74 device tests passed on the Plus and 62 on the RG DS, and every
+change was code-reviewed before the build. Both handhelds run the released update packages.
+
+Still rough, or not done yet:
+
+- In Chinese, lines added since the translation still show in English (Recently played, Search and a few rows).
+- Golden Sun: Dark Dawn's opening flyover runs slow in BananaDS (the game itself holds 60).
+- On the RG DS Plus, a DS shader with heavy 3D can warm the chip enough to drop a frame now and then in long
+  sessions; a shader of None for that game (X in the library) holds 60.
+- Charging while switched off on the RG DS Plus (#34), Bluetooth, and one card image for both handhelds.
+
+What's next: [docs/ROADMAP.md](docs/ROADMAP.md). Every release's notes: [Releases](https://github.com/JorreFog/BananaLinux/releases).
+
+<a id="build"></a>
+<img src="docs/img/readme/h-build.png" width="100%" alt="09: Build. From source, on Linux">
 
 On Linux (Debian/Ubuntu: `build-essential bc bison flex libssl-dev libelf-dev unzip rsync cpio python3-dev swig
-libgnutls28-dev`):
+libgnutls28-dev`). The released 0.4.2 is the tag `v0.4.2`:
 
 ```sh
 make rgds          # output/rgds/images/banana-rgds.img.gz
 make rgds-plus     # output/rgds-plus/images/banana-rgds-plus.img.gz
 ```
 
-The first build fetches Buildroot and everything it builds, and takes an hour or more. Write the `.img.gz` to a
-microSD card with balenaEtcher. On the first boot Banana makes the data partition from the rest of the card (a few
-seconds); then put games in `roms/nds` and so on from any computer (see `banana/README.txt` on the card).
+The first build fetches Buildroot and everything it builds, and takes an hour or more. The whole image boots in
+QEMU with no handheld (`tools/qemu-boot.sh`, also the CI's `boot` job): the first boot, the menu on two virtual
+panels, a game started from the library, a shutdown from the settings.
 
-The whole image boots in QEMU, with no handheld (`tools/qemu-boot.sh`, and the CI's `boot` job after every image
-build): the card on an emulated SD host, two 640x480 panels on a virtio GPU, a keyboard for the buttons. It runs the
-first boot (the data partition made from the rest of the card), screenshots both panels, starts a game from the
-library, shuts down from the settings, and reads the card's logs:
-
-```sh
-tools/qemu-boot.sh output/rgds/images/banana-rgds.img.gz        # the test; screenshots and logs in qemu-out/
-tools/qemu-boot.sh output/rgds/images/banana-rgds.img.gz --interactive   # a window: arrows, Enter = A, Backspace = B
-```
-
-Working on the menu needs no handheld:
+Working on the menu needs no handheld either:
 
 ```sh
 make ui            # ui/banana-ui for this computer
 make test          # renders the menu from a test library into ui/tests/out
-ui/banana-ui --headless out/ --assets ui/assets/rnds --roms <roms> --data <dir> \
-    --script "home 0; wait 2400; shot home; press a; wait 2400; shot lib"
 ```
-
-## Layout
 
 | Path | What |
 |---|---|
-| `ui/` | `banana-ui`: the KMS host (`src/`), ROCKNIXDS Pixel's engine (`rnds/`, imported by `tools/import-rnds.sh`), its assets, the headless test |
+| `ui/` | `banana-ui`: the KMS host (`src/`), ROCKNIXDS Pixel's engine (`rnds/`), its assets, the headless tests |
 | `system/bananad/` | `bananad` (sleep, lid, power button, LEDs, sound routing, volume and brightness, battery guard) and `banana-panel-tune` |
 | `system/rootfs/` | init, first boot, `banana-perf`, sleep hooks, the game launchers, default settings |
-| `buildroot/` | the Buildroot tree: defconfigs, Banana's packages, the RG DS board (kernel patches, device trees, drivers, U-Boot, image layout) |
-| `tools/` | `import-rnds.sh` (the menu engine from ROCKNIXDS), `sync-rocknix-hw.sh` (the hardware support from ROCKNIX), the pixel bunch, the logo and the boot animation's still layers |
-| `web/` | the website on GitHub Pages ([jorrefog.github.io/BananaLinux](https://jorrefog.github.io/BananaLinux/)): the Save Mover (`save-mover/`), one page with no build step |
-| `docs/` | [ARCHITECTURE.md](docs/ARCHITECTURE.md): boot, partitions, sleep, performance and the menu in detail; [FIRST-BOOT.md](docs/FIRST-BOOT.md): the first boot on the hardware, and the logs it leaves |
+| `buildroot/` | defconfigs, Banana's packages, the RG DS board (kernel patches, device trees, drivers, U-Boot, image layout) |
+| `store/` | the App Store's catalogue |
+| `tools/` | the menu engine's import, ROCKNIX's hardware sync, the pixel bunch, the logo, the boot animation, this page's pictures (`make-readme-art.py`) |
+| `web/` | the website on GitHub Pages: the [Save Mover](https://jorrefog.github.io/BananaLinux/save-mover/) |
+| `docs/` | [ARCHITECTURE.md](docs/ARCHITECTURE.md), [EMULATORS.md](docs/EMULATORS.md), [FIRST-BOOT.md](docs/FIRST-BOOT.md), [ROADMAP.md](docs/ROADMAP.md) |
 
-## Credits
+<a id="credits"></a>
+<img src="docs/img/readme/h-credits.png" width="100%" alt="10: Credits. The work Banana stands on">
 
-The menu is ROCKNIXDS Pixel, from [ROCKNIXDS](https://github.com/JorreFog/ROCKNIXDS). Banana's mark is the
-banana bunch of [BananaUI](https://github.com/JorreFog/helios), redrawn as pixel art. The RG DS's kernel support,
-device trees and drivers come from [ROCKNIX](https://rocknix.org), and DS emulation is DraStic by Exophase through
-SuperDrastic. Details and licenses: [THIRD_PARTY.md](THIRD_PARTY.md). Banana contains no games, ROMs or BIOS files.
+- **Simplified Chinese (简体中文): translated by Majirefy.** The characters are drawn with
+  [Fusion Pixel Font](https://github.com/TakWolf/fusion-pixel-font) (缝合像素字体) by TakWolf. To translate BananaOS
+  into your language, ask for the translation document; `tools/lang-from-docx.py` turns a filled-in one into
+  `ui/assets/lang/<language>.tsv`.
+- **casualducko**: the zero-copy panel patch for LÖVE apps on both panels (eReaderDS).
+- The menu is ROCKNIXDS Pixel, from [ROCKNIXDS](https://github.com/JorreFog/ROCKNIXDS), where BananaOS started.
+  Banana's mark is the bunch of [BananaUI](https://github.com/JorreFog/helios), redrawn as pixel art.
+- The RG DS's kernel support, device trees and drivers come from [ROCKNIX](https://rocknix.org). DS emulation is
+  DraStic by Exophase (through [SuperDrastic](https://github.com/JorreFog/SuperDrastic)) and
+  [melonDS](https://melonds.kuribo64.net/)'s core (BananaDS).
+- [Retro Game Corps](https://www.youtube.com/@RetroGameCorps) and [forthenext](https://www.youtube.com/@forthenext)
+  for showing BananaOS to a lot of people.
+
+Details and licenses: [THIRD_PARTY.md](THIRD_PARTY.md). BananaOS contains no games, ROMs or BIOS files.
+
+<p align="center"><a href="https://discord.gg/FxeE7f8r"><b>Questions, reports, setups: join the Discord</b></a></p>

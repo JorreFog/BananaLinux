@@ -1,7 +1,7 @@
 # What Banana gives an emulator, and what it expects back
 
 This is the contract between the menu and any program that plays a game: DraStic (through SuperDrastic),
-RetroArch, and BananaDS when it is ready. Keep to it and the rest of Banana (sleep, the volume keys, the logs,
+RetroArch and BananaDS. Keep to it and the rest of Banana (sleep, the volume keys, the logs,
 the settings) works around the emulator without knowing it.
 
 ## Starting

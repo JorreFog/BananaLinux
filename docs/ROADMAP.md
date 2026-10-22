@@ -6,20 +6,20 @@
       partitioning, the menu on both panels, a game started from the library, a shutdown from the settings
 - [x] A full image build: the CI's `image` job builds both cards (`banana-rgds.img.gz`, `banana-rgds-plus.img.gz`
       and their update packages), and its `boot` job runs each real image through the five-phase QEMU test
-- [ ] The first boot on an RG DS and an RG DS Plus
-- [ ] Both panels up from banana-ui; touch on the bottom panel where the finger is
-- [ ] Buttons and their mapping (A = east, B = south: the RG DS's Nintendo layout)
+- [x] The first boot on an RG DS and an RG DS Plus
+- [x] Both panels up from banana-ui; touch on the bottom panel where the finger is
+- [x] Buttons and their mapping (A = east, B = south: the RG DS's Nintendo layout)
 - [ ] Suspend and resume on the units: the panels, sound, Wi-Fi, the lid, the power key, the RTC battery check;
       standby drain over a night
 - [ ] Wake-up time measured (`sleep_debug = yes`), then cut: the panels' power-on delays on the RG DS, the SD card's
       re-initialisation (MMC_CAP_RUNTIME_RESUME would take it off the wake path), whether Wi-Fi can stay loaded
 - [ ] The display handover to SuperDrastic and back (`DSFLIP_HANDOVER=none`)
-- [ ] Sound on the units: the controls bananad assumes (`Playback Mux`, `Master`, the aw88166's `PCM`, the rk817's
+- [x] Sound on the units: the controls bananad assumes (`Playback Mux`, `Master`, the aw88166's `PCM`, the rk817's
       capture `Mic Capture Gain`/`Master Capture Volume` for the DS microphone), the AW88166 amplifier's firmware,
       the headphone jack's switch on the RG DS Plus
-- [ ] The RG DS Plus's real pixel clock and banana-panel-tune's result (`banana/panel-tune.txt`)
-- [ ] Headphones plugged in during a game: move the playing stream too (now: from the next time a program opens sound)
-- [ ] Boot time, measured: U-Boot, kernel, init, first frame
+- [x] The RG DS Plus's real pixel clock and banana-panel-tune's result (`banana/panel-tune.txt`)
+- [x] Headphones plugged in during a game: the playing stream moves too (0.4.0: each program follows the jack)
+- [x] Boot time, measured and cut (0.4.2): kernel to menu 3.93 s on the RG DS, 5.87 s on the RG DS Plus
 - [ ] BananaDS on the units: its KMS frontend on the panels (`kms.stats`: no repeats or drops at the panels' rate),
       its governor's clocks, sound and the microphone; then `power.cpu_latency_us` A/B with the battery's cost, and
       the kernel options turned off for it (BananaDS's docs/BANANALINUX.md, B3/B4) A/B in a game
@@ -48,6 +48,22 @@
 - [x] BananaDS in the image: its package (CMake, melonDS pinned and patched by Buildroot), its KMS frontend and
       governor, the launcher passing the contract and the menu's choices as its settings, Settings > Nintendo DS >
       Emulator to switch to it; a DS homebrew ROM run from the menu in QEMU (`tools/qemu-boot.sh`, phase 2b)
+
+## 0.3 and 0.4: on both handhelds (released)
+
+- [x] 0.3.0: the first image on hardware (RG DS Plus), RetroArch's game panel on the other screen, the Carts theme
+- [x] 0.4.0: the first RG DS image; search, an emulator and shader per DS game, mGBA, cheats and fast-forward in
+      BananaDS, themes of your own, games from a second SD card
+- [x] 0.4.1: BananaDS stutters far less at heavy moments, and a slow game's sound keeps its pitch
+- [x] 0.4.2: Simplified Chinese (translated by Majirefy), a faster boot and DS game start, the App Store, the
+      microphone in games, the lid as the DS's lid, file sharing with a login
+
+## Next
+
+- [ ] The rest of the Chinese translation (lines added since it was made) and a string extractor for new languages
+- [ ] EmulationStation as an alternative frontend
+- [ ] Charging while switched off on the RG DS Plus (#34)
+- [ ] Golden Sun: Dark Dawn's opening flyover at full speed in BananaDS
 
 ## Later
 
