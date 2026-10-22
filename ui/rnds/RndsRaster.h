@@ -111,12 +111,14 @@ namespace rnds
 	private:
 		Font() {}
 		friend TextLine layoutLine(const std::u32string& text, const TextStyle& st);
+		friend TextLine lineOf(const std::u32string& text, const TextStyle& st);	// (layoutLine's, on text already prepared)
 		friend TextBitmap renderLine(const TextLine& line, const TextStyle& st, float scale, float baselineCss, float leftFrac, float topFrac);
 		std::vector<uint8_t> mData;
 		FT_Face mFace = nullptr;
 		int mUpm = 1000, mAsc = 0, mDesc = 0;
 		std::unordered_map<uint32_t, unsigned> mGlyphIndex;
 		unsigned glyphIndex(uint32_t cp);
+		Font* faceFor(uint32_t cp, unsigned& gi);	// (Banana: this font, or the fallback for a character only it has)
 		int advanceLocked(uint32_t cp, uint32_t next, float size);	// advance() with the FreeType lock held
 		// memos of the FreeType results (all under the FreeType lock): advances by (cp, next, size), rendered glyphs by
 		// (glyph, 26.6 size, load flags)
@@ -134,6 +136,12 @@ namespace rnds
 		float letterSpacing = 0;	// device pixels, after every character (CSS letter-spacing)
 		bool upper = false;			// text-transform: uppercase
 	};
+
+	// Banana: a font for the characters the styles' fonts lack (CJK: a pixel font of pixelSize px, drawn at whole
+	// multiples of it), and the host's device px per CSS px; and the menu's language: every text laid out goes through
+	// translate first (nullptr: as it is)
+	void setFallbackFont(std::shared_ptr<Font> f, float pixelSize, float deviceScale);
+	void setTranslator(std::u32string (*translate)(const std::u32string&));
 
 	std::u32string utf8to32(const std::string& s);
 	std::u32string upper(const std::u32string& s);
