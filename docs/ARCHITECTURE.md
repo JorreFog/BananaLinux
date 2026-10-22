@@ -115,7 +115,7 @@ password, so it is off by default and the settings screen says so. banana-ui wat
 games copied in are read into the library once the copying has been quiet for 2 s, while the menu shows its home
 screen.
 
-**SSH** (Settings > System, off by default): dropbear with keys only, as root. The keys are written in
+**SSH** (Settings > Network, off by default): dropbear with keys only, as root. The keys are written in
 `banana/ssh/authorized_keys` on the card and copied to `/run/banana/ssh` (mode 0600, which exFAT can't hold;
 `/root/.ssh` points there); the host key is made once per card. Logs and `sleep_debug`'s timings can be read
 on a computer without taking the card out.
