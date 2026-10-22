@@ -83,6 +83,10 @@ namespace banana::lang
 		std::mutex mu;
 		Info cur{ "en", "English", "English", "" };
 		std::unordered_map<std::string, std::string> exact, inContext;	// English -> translation; context \x1f English
+		// the English in lower case -> its translation ("" when two lines differing only in case translate apart): for
+		// a line the code writes in capitals ("START") that the document has as "Start"
+		std::unordered_map<std::string, std::string> folded;
+		std::string lower(std::string s) { for (auto& c : s) if (c >= 'A' && c <= 'Z') c += 32; return s; }
 		std::vector<Pattern> patterns;
 		std::unordered_map<std::u32string, std::u32string> memo;
 		std::string missingPath;
@@ -142,6 +146,14 @@ namespace banana::lang
 			found = true;
 			auto it = exact.find(s);
 			if (it != exact.end()) return it->second;
+			// all in capitals, with no line of its own: the line in any case, when that is one translation
+			bool upper = false, lowerSeen = false;
+			for (unsigned char c : s) { if (c >= 'A' && c <= 'Z') upper = true; if (c >= 'a' && c <= 'z') lowerSeen = true; }
+			if (upper && !lowerSeen)
+			{
+				auto f = folded.find(lower(s));
+				if (f != folded.end() && !f->second.empty()) return f->second;
+			}
 			for (auto& p : patterns)
 			{
 				std::vector<std::string> caps;
@@ -184,7 +196,7 @@ namespace banana::lang
 	bool load(const std::string& dir, const std::string& code, const std::vector<std::string>& parts)
 	{
 		std::lock_guard<std::mutex> l(mu);
-		exact.clear(); inContext.clear(); patterns.clear(); memo.clear(); missing.clear();
+		exact.clear(); inContext.clear(); folded.clear(); patterns.clear(); memo.clear(); missing.clear();
 		cur = Info{ "en", "English", "English", "" };
 		if (code.empty() || code == "en") return true;
 		std::string path = dir + "/" + code + ".tsv";
@@ -202,6 +214,11 @@ namespace banana::lang
 			if (!want.count(part) || tr.empty()) continue;
 			if (!ctx.empty()) { inContext.emplace(ctx + '\x1f' + en, tr); continue; }
 			if (!exact.emplace(en, tr).second) continue;	// (the first part's, in the order the file has them)
+			if (lower(tr) != lower(en))	// (a line kept as it is, "Nintendo DS", mustn't change a capitals one's case)
+			{
+				auto fl = folded.emplace(lower(en), tr);
+				if (!fl.second && fl.first->second != tr) fl.first->second.clear();	// (two meanings: no guess)
+			}
 			std::vector<Piece> pe = pieces(en);
 			bool slots = false;
 			for (auto& p : pe) slots = slots || p.slot;
