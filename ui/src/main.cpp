@@ -696,18 +696,15 @@ static void playSplash(Display& disp, SoftBackend& be, const Options& o, const s
 		return;
 	}
 	gSplash.onCue = [&sound](const std::string& n) { sound.play(n); };
-	// played 3x as fast as it is drawn (its 1390 ms intro in ~460 ms): the menu is ready ~110 ms after the start, and the
-	// whole animation was time spent waiting at every boot
-	constexpr double SPEED = 3;
 	double t0 = nowMs();
 	for (;;)
 	{
-		double t = (nowMs() - t0) * SPEED;
+		double t = nowMs() - t0;
 		bool r = ready;
 		if (gSplash.finished(t, r)) break;
 		gSplash.draw(be.canvas(0), be.canvas(1), t, r);
 		showFrame(disp, be, sig);
-		int wait = (int)(gSplash.nextFrame((nowMs() - t0) * SPEED, ready) / SPEED);
+		int wait = gSplash.nextFrame(nowMs() - t0, ready);
 		if (wait > 16) usleep(std::min(wait, 50) * 1000);	// waiting on the library: look again now and then
 	}
 }
@@ -721,7 +718,9 @@ struct Iris
 	int W, H, block;
 	size_t n;
 	float full;
-	static constexpr double CLOSE = 120, HOLD = 25, OPEN = 150;	// (3x as fast as 0.4.2's 360, 70, 450)
+	// the boot's (the user: the boot animation keeps its length, only the boot itself gets faster); after a game the
+	// opening is GAME_OPEN, 3x as fast
+	static constexpr double CLOSE = 360, HOLD = 70, OPEN = 450, GAME_OPEN = 150;
 	Iris(Display& d, SoftBackend& b) : disp(d), be(b), W(b.width()), H(b.height())
 	{
 		n = (size_t)W * H;
@@ -756,7 +755,7 @@ struct Iris
 	// black for a moment, then the circle opening on the menu: fast at first, settling. The menu as it will be 300 ms
 	// on (before the opening ends, so its clock never goes back), opened on as a still picture: a live menu frame
 	// (16-20 ms) each refresh made the opening miss refreshes
-	void openOn(Menu& ui, double hold)
+	void openOn(Menu& ui, double hold, double open = OPEN)
 	{
 		const double t1 = nowMs();
 		std::vector<uint32_t> menu[2] = { std::vector<uint32_t>(n), std::vector<uint32_t>(n) };
@@ -771,7 +770,7 @@ struct Iris
 		const double t2 = nowMs();
 		for (;;)
 		{
-			double p = (nowMs() - t2) / OPEN;
+			double p = (nowMs() - t2) / open;
 			if (p >= 1) break;
 			float e = (float)p; e = 1 - (1 - e) * (1 - e) * (1 - e);
 			frame(menu, full * e);
@@ -814,7 +813,7 @@ static void irisFromGame(Display& disp, SoftBackend& be, Menu& ui)
 	for (int sc = 0; sc < 2; sc++) std::fill(be.canvas(sc), be.canvas(sc) + iris.n, 0xff000000u);
 	be.invalidate();
 	showFrame(disp, be, -1);
-	iris.openOn(ui, 40);
+	iris.openOn(ui, 40, Iris::GAME_OPEN);
 }
 
 // The CPU's lowest clock raised to the menu's highest (banana-perf ui: schedutil up to 1416 MHz) from a press and while
