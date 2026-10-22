@@ -1,5 +1,6 @@
 #include <ctime>
 #include "settings.h"
+#include "lang.h"
 #include "theme.h"
 #include <algorithm>
 #include <dlfcn.h>
@@ -457,6 +458,18 @@ namespace banana
 		add(W, "phone", "SSH", "", menu, "ssh", { "Off", "On" }, { "off", "on" });
 		const char* S = "System";
 		{
+			// the languages there are files for, each in its own name; the help names who translated them
+			std::vector<std::string> names, codes;
+			std::string help = "The language of the menu and the settings. Lines not yet translated stay in English.";
+			for (auto& l : lang::available(assets + "/../lang"))
+			{
+				names.push_back(l.name); codes.push_back(l.code);
+				if (!l.by.empty()) help += " " + l.name + " (" + l.nameEn + "): translated by " + l.by + ".";
+			}
+			langHelp = help;
+			if (names.size() > 1) add(S, "gear", "Language", langHelp.c_str(), menu, "language", names, codes);
+		}
+		{
 			std::vector<std::string> names, tzs;
 			for (auto& z : ZONES) { names.push_back(z.name); tzs.push_back(z.tz); }
 			add(S, "gear", "Time zone", "The clock's time zone, summer time included, for the menu and the games (a DS game's clock too). The time itself comes from Wi-Fi or the handheld's own clock.",
@@ -636,8 +649,8 @@ namespace banana
 		int n = 0;
 		for (int i = groupStart(g); i < groupEnd(g) && n < 2; i++, n++)
 		{
-			std::string l = items[i].label;
-			for (auto& ch : l) ch = (char)std::tolower((unsigned char)ch);
+			std::string l = lang::tr(items[i].label);	// (each name translated: the joined line has no translation)
+			if (!lang::active()) for (auto& ch : l) ch = (char)std::tolower((unsigned char)ch);	// (English's style; "Wi-Fi" stays)
 			h += (n ? ", " : "") + l;
 		}
 		return h;
@@ -806,6 +819,7 @@ namespace banana
 			armed = -1;
 			return CHANGED;
 		}
+		if (it.key == "language") return LANGUAGE;	// (saved above; the menu starts again in it)
 		if (it.key == "theme")
 		{
 			setVariant(it.values[at]);
@@ -1251,7 +1265,7 @@ namespace banana
 		snprintf(n, sizeof n, "%d settings", groupEnd(g0) - groupStart(g0));
 		text(n, true, 22, 170, 130, p.accent);
 		std::string all;
-		for (int i = groupStart(g0); i < groupEnd(g0); i++) all += (all.empty() ? "" : ", ") + items[i].label;
+		for (int i = groupStart(g0); i < groupEnd(g0); i++) all += (all.empty() ? "" : ", ") + lang::tr(items[i].label);
 		wrapped(all + ".", 20, 50, 196, 540, 7, p.muted);
 		be->endScreen();
 
@@ -3482,7 +3496,8 @@ namespace banana
 			for (int r = 0; r < 12; r++)
 				for (int c = 0; c < 12; c++)
 					if (GTILES[i].icon[r][c] == '#') be->fill(ix + c * k, iy + r * k, (float)k, (float)k, fg);
-			std::string lb = GTILES[i].label;
+			// (the document's own translation for this panel: its "Fast" is fast-forward, the settings' is speed)
+			std::string lb = lang::tr("Second screen (RetroArch games)", GTILES[i].label);
 			float lw = text(lb, true, 19, 0, 0, fg, false, 0, true);
 			text(lb, true, 19, x + 57 - lw / 2, y + 60, fg);
 			std::string kk = gHotkeys || i == 2 || i == 4 ? GTILES[i].keys : "";	// (hotkeys off: the menu's and quit's alone)

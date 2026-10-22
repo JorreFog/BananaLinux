@@ -48,7 +48,7 @@ namespace banana
 		bool takeLibraryChanged() { bool r = libChanged; libChanged = false; return r; }
 
 		// what the host has to do after an input
-		enum Result { NONE, MOVED, CHANGED, CLOSED, THEME, REBOOT, POWEROFF, SEARCH, TITLES };
+		enum Result { NONE, MOVED, CHANGED, CLOSED, THEME, REBOOT, POWEROFF, SEARCH, TITLES, LANGUAGE };
 		// SELECT in the menu: the keyboard alone, for a search of the games; SEARCH when it is done, with the text in
 		// searchText (empty: the search taken away)
 		void openSearch(const std::string& start);
@@ -100,6 +100,7 @@ namespace banana
 		float s;
 		bool light = false, mOpen = false;
 		std::vector<Item> items;
+		std::string langHelp;	// (the Language row's help: who translated each)
 		int sel = 0, top = 0, armed = -1;			// armed: an action waiting for its second A
 		// the groups (the items' sections, in order): Settings opens on a grid of them, as the in-game menu's main page;
 		// A opens one's list, B goes back to the grid
