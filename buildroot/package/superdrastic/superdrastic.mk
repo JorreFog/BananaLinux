@@ -6,7 +6,7 @@
 
 # Built from source (its build.sh, with Buildroot's GCC instead of clang). It links libdrm only; EGL/GLES (shaders),
 # ALSA, libcurl and zlib are loaded at run time when present.
-SUPERDRASTIC_VERSION = cbe33dfbf67539b0b77d951bc99b9e33b01ed416
+SUPERDRASTIC_VERSION = 7e71ebe9dc5eade1682902d0ee3df74530afd313
 SUPERDRASTIC_SITE = https://github.com/JorreFog/SuperDrastic.git
 SUPERDRASTIC_SITE_METHOD = git
 SUPERDRASTIC_LICENSE = MIT
@@ -27,7 +27,7 @@ define SUPERDRASTIC_BUILD_CMDS
 		-DDSFLIP_VERSION="\"$$(cat VERSION)-banana\"" -DRC_DISABLE_LUA -DRC_CLIENT_SUPPORTS_HASH \
 		-I$(STAGING_DIR)/usr/include/libdrm -I$(SUPERDRASTIC_RC)/include -I$(SUPERDRASTIC_RC)/src -Isrc/third_party/stb \
 		-o libsuperdrastic.so \
-		src/dsflip.c src/shader.c src/audio.c src/ra.c src/ui.c src/volume.c src/cpugov.c src/resume.c src/menu.c src/lid.c \
+		src/dsflip.c src/shader.c src/audio.c src/ra.c src/ui.c src/volume.c src/cpugov.c src/resume.c src/menu.c src/lang.c src/lid.c \
 		$(SUPERDRASTIC_RC)/src/rc_client.c $(SUPERDRASTIC_RC)/src/rc_compat.c $(SUPERDRASTIC_RC)/src/rc_util.c \
 		$(SUPERDRASTIC_RC)/src/rc_version.c $(SUPERDRASTIC_RC)/src/rcheevos/*.c $(SUPERDRASTIC_RC)/src/rapi/*.c \
 		$(SUPERDRASTIC_RC)/src/rhash/*.c \
