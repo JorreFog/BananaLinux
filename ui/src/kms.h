@@ -60,6 +60,7 @@ namespace banana
 		int fd = -1, W = 0, H = 0, pending = 0, leased = -1;
 		Panel p[2];
 		bool makeBuf(Buf& b);
+		bool lightBoth();
 		void freeBuf(Buf& b);
 	};
 }

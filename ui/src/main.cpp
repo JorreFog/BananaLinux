@@ -695,15 +695,18 @@ static void playSplash(Display& disp, SoftBackend& be, const Options& o, const s
 		return;
 	}
 	gSplash.onCue = [&sound](const std::string& n) { sound.play(n); };
+	// played 3x as fast as it is drawn (its 1390 ms intro in ~460 ms): the menu is ready ~110 ms after the start, and the
+	// whole animation was time spent waiting at every boot
+	constexpr double SPEED = 3;
 	double t0 = nowMs();
 	for (;;)
 	{
-		double t = nowMs() - t0;
+		double t = (nowMs() - t0) * SPEED;
 		bool r = ready;
 		if (gSplash.finished(t, r)) break;
 		gSplash.draw(be.canvas(0), be.canvas(1), t, r);
 		showFrame(disp, be, sig);
-		int wait = gSplash.nextFrame(nowMs() - t0, ready);
+		int wait = (int)(gSplash.nextFrame((nowMs() - t0) * SPEED, ready) / SPEED);
 		if (wait > 16) usleep(std::min(wait, 50) * 1000);	// waiting on the library: look again now and then
 	}
 }
@@ -717,7 +720,7 @@ struct Iris
 	int W, H, block;
 	size_t n;
 	float full;
-	static constexpr double CLOSE = 360, HOLD = 70, OPEN = 450;
+	static constexpr double CLOSE = 120, HOLD = 25, OPEN = 150;	// (3x as fast as 0.4.2's 360, 70, 450)
 	Iris(Display& d, SoftBackend& b) : disp(d), be(b), W(b.width()), H(b.height())
 	{
 		n = (size_t)W * H;
@@ -810,7 +813,7 @@ static void irisFromGame(Display& disp, SoftBackend& be, Menu& ui)
 	for (int sc = 0; sc < 2; sc++) std::fill(be.canvas(sc), be.canvas(sc) + iris.n, 0xff000000u);
 	be.invalidate();
 	showFrame(disp, be, -1);
-	iris.openOn(ui, 120);
+	iris.openOn(ui, 40);
 }
 
 // The CPU's lowest clock raised to the menu's highest (banana-perf ui: schedutil up to 1416 MHz) from a press and while
@@ -1334,7 +1337,12 @@ int main(int argc, char** argv)
 		if (system("banana-perf ui") != 0) {}
 		logf("game ended after %ld s (status %d)", secs, status);
 		for (int tries = 0; !disp.open(o.top, err) && tries < 100; tries++) usleep(50000);
-		disp.stormCheck();	// (a storm from the game's panel, or the lease given back: ended before the menu draws)
+		// the display controller's interrupt storm (from the game's panel, or the lease given back): counted over the
+		// iris instead of a 200 ms wait before it (every game's way back waited for it); the full check only if it storms
+		const char* forceStorm = getenv("BANANA_STORM_MIN");	// (tests: the full check as before)
+		if (forceStorm) disp.stormCheck();
+		long long stormIrqs = Display::vopIrqCount();
+		double stormFrom = nowMs();
 		// (a game's own modeset may have dropped it; the Screen colours page, still up after a game started through the
 		// launch file, draws the values itself: no table under it then)
 		if (settingsView.colorsOpen()) disp.setColors(ScreenColors());
@@ -1350,6 +1358,12 @@ int main(int argc, char** argv)
 		ui->dataChanged();
 		ui->setLibrary(lib.currentShelf(), game);
 		if (disp.isOpen()) irisFromGame(disp, be, *ui);
+		if (!forceStorm && stormIrqs >= 0 && disp.isOpen())
+		{
+			long long c = Display::vopIrqCount();
+			double ms = nowMs() - stormFrom;
+			if (c >= 0 && ms > 50 && (c - stormIrqs) * 1000 / ms > 20000) disp.stormCheck();	// (calm: ~120 a second)
+		}
 		dirty = true;
 		batteryDue = true;	// a step passed during the game shows now
 	};
