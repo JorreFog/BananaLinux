@@ -20,13 +20,14 @@ stop() { [ -f "$1" ] && kill $(cat "$1") 2>/dev/null; rm -f "$1"; }
 # restart. The daemons get the lock's fd closed (9>&-), or they'd hold it for good.
 case $1 in up|down|restart|scan) exec 9>/run/banana/wifi.lock; flock 9 ;; esac
 running() { $W ping 2>/dev/null | grep -q PONG; }	# whether one answers, pid file or not
+# the wpa_cli running this script on events (also one whose pid file wasn't written yet when a down came)
+actions() { for p in $(pidof wpa_cli); do tr '\0' ' ' < /proc/$p/cmdline 2>/dev/null | grep -q " -a /usr/libexec/banana/wifi " && echo $p; done; }
 up() {
     for i in 1 2 3 4 5 6 7 8 9 10; do [ -d /sys/class/net/wlan0 ] && break; sleep 0.5; done
     [ -d /sys/class/net/wlan0 ] || return 1
     if running; then
         pidof wpa_supplicant > /run/banana/wpa.pid
-        [ -f /run/banana/wpa_cli.pid ] && kill -0 $(cat /run/banana/wpa_cli.pid) 2>/dev/null ||
-            $W -a /usr/libexec/banana/wifi -B -P /run/banana/wpa_cli.pid 9>&-
+        [ -n "$(actions)" ] || $W -a /usr/libexec/banana/wifi -B -P /run/banana/wpa_cli.pid 9>&-
         return 0
     fi
     # with no known network in reach, scans back off from every 3 s to every 5 min (the radio mostly asleep)
@@ -36,7 +37,8 @@ up() {
     $W -a /usr/libexec/banana/wifi -B -P /run/banana/wpa_cli.pid 9>&-
 }
 down() {
-    stop /run/banana/wpa_cli.pid
+    rm -f /run/banana/wpa_cli.pid
+    kill $(actions) 2>/dev/null
     stop /run/banana/udhcpc.pid
     rm -f /run/banana/wpa.pid
     # all of them (one without its pid file too), and gone before the next up: one still leaving takes the
@@ -56,10 +58,12 @@ restart)
     up || exit 1
     ;;
 scan)
-    running || up || exit 1
+    cold=; running || { up || exit 1; cold=1; }
     flock -u 9
     $W scan >/dev/null      # FAIL-BUSY while one is running: its results come all the same
     sleep 3
+    # just started: its first scan is still running after 3 s, and would read as no networks around
+    [ -n "$cold" ] && for i in 1 2 3 4 5 6; do $W scan_results | grep -q '	' && break; sleep 1; done
     $W scan_results
     ;;
 status)
