@@ -1042,11 +1042,11 @@ namespace rnds
 				startInsert();
 				render(false);
 			}
-			else if (ui->mView == LAUNCH && !launched && now - launchT0 < INS_LIFT + INS_SLIDE)
+			else if (ui->mView == LAUNCH && !launched && now - launchT0 < (INS_LIFT + INS_SLIDE) / INS_SPEED)
 			{
 				// A again: straight to the click
-				launchT0 = now - (INS_LIFT + INS_SLIDE);
-				launchAt = now + (LAUNCH_DELAY - INS_LIFT - INS_SLIDE);
+				launchT0 = now - (INS_LIFT + INS_SLIDE) / INS_SPEED;
+				launchAt = now + (LAUNCH_DELAY - (INS_LIFT + INS_SLIDE) / INS_SPEED);
 			}
 		}
 
@@ -1950,12 +1950,15 @@ namespace rnds
 
 		// ---- the ready screen: the cartridge goes into the console ----
 		static constexpr double INS_LIFT = 120, INS_SLIDE = 400, INS_CLICK = 90, INS_SETTLE = 110;
+		// Banana: played 3x as fast (the game started 920 ms after A, now ~300 ms); the times above are the drawing's,
+		// in ROCKNIXDS's speed
+		static constexpr double INS_SPEED = 3;
 		// then the game starts, once the click has been heard (ES closes its audio as it launches)
-		static constexpr double LAUNCH_DELAY = INS_LIFT + INS_SLIDE + INS_CLICK + INS_SETTLE + 200;
+		static constexpr double LAUNCH_DELAY = (INS_LIFT + INS_SLIDE + INS_CLICK + INS_SETTLE) / INS_SPEED + 120;
 
 		void drawInsert(float ry)
 		{
-			double t = now - launchT0;
+			double t = (now - launchT0) * INS_SPEED;	// (the drawing's time)
 			// the console under it: a face with the slot's mouth and a power light
 			float mouthY = ry + 170, clipY = mouthY + 9;
 			// Banana: the back of the console as pixel art, 560 wide, its slot where the box's mouth is (tools/make-console.py)
