@@ -5,12 +5,13 @@ and scaled up by a whole number; text is drawn hard-edged at its final size (a w
 pixel, so the font keeps its own spacing); the screenshots are the panels' own scanout grabs (an RG DS Plus, 1024x768
 per panel).
 
-    tools/make-readme-art.py <grabs dir> <out dir> <thumbnails dir>
+    tools/make-readme-art.py <grabs dir> <out dir> [<thumbnails dir> [<flasher screenshot>]]
 
 <thumbnails dir> holds <video id>.jpg, each video's YouTube thumbnail (i.ytimg.com/vi/<id>/maxresdefault.jpg), for the
-video cards (VIDEOS); without it they are left out. <grabs dir> holds <name>-top.png and <name>-bot.png for each screenshot pair in SHOTS, grabbed from both CRTCs on the
+video cards (VIDEOS); without it they are left out. [<flasher screenshot>] is docs/screenshot.png from
+jesussaves-ai/banana-linux-flasher, for flasher.png. <grabs dir> holds <name>-top.png and <name>-bot.png for each screenshot pair in SHOTS, grabbed from both CRTCs on the
 handheld. Writes into <out dir>: banner.png, superdrastic-logo.png, bananads-logo.png, emulators.png, stats.png,
-rocknixds-moved.png (for the ROCKNIXDS README), h-<section>.png
+rocknixds-moved.png (for the ROCKNIXDS README), flasher.png, h-<section>.png
 shot-<name>.png and video-<id>.png."""
 import os
 import sys
@@ -553,6 +554,100 @@ def moved(grabs):
     return out
 
 
+# ---- the flasher: jesussaves-ai's card writer ---------------------------------------------------------------------
+
+def sd_card():
+    """A microSD-ish card, the bunch on its yellow label: what the flasher writes."""
+    w, h = 26, 32
+    body, edge = (52, 50, 60, 255), (86, 82, 94, 255)
+    im = Image.new("RGBA", (w, h), CLEAR)
+    d = ImageDraw.Draw(im)
+    d.polygon([(0, 0), (w - 8, 0), (w - 1, 7), (w - 1, h - 1), (0, h - 1)], fill=BLACK)
+    d.polygon([(1, 1), (w - 9, 1), (w - 2, 8), (w - 2, h - 2), (1, h - 2)], fill=body)
+    d.line([(2, 2), (w - 10, 2)], fill=edge)
+    for i in range(5):                                                            # the contacts
+        d.rectangle([3 + i * 3, 3, 4 + i * 3, 8], fill=YELLOW_DARK)
+    d.rectangle([3, 12, w - 4, h - 4], fill=BLACK)                                # the label
+    d.rectangle([4, 13, w - 5, h - 5], fill=YELLOW)
+    d.line([(4, h - 6), (w - 5, h - 6)], fill=YELLOW_DARK)
+    b = banana(16)
+    b = b.crop(b.getbbox())
+    im.alpha_composite(b, ((w - b.width) // 2, 13 + (h - 18 - b.height) // 2))
+    return im
+
+
+def window(shot, sw, k):
+    """The flasher's own window, in a pixel frame with a title bar, the screenshot fitted to sw image pixels wide."""
+    sh = shot.height * sw // shot.width
+    bar = 9
+    w, h = sw // k + 4, sh // k + bar + 4
+    art = prect(w, h, 3, (34, 33, 40, 255), (70, 66, 76, 255))
+    d = ImageDraw.Draw(art)
+    d.rectangle([2, bar + 1, w - 3, h - 3], fill=BLACK)
+    for i, c in enumerate((RED_LIGHT, YELLOW, GREEN)):                            # the window's three buttons
+        d.rectangle([w - 8 - i * 5, 3, w - 6 - i * 5, 5], fill=c)
+    out = up(art, k)
+    b = banana(16)
+    out.alpha_composite(b, (3 * k, (bar * k - b.height) // 2 + 2))
+    t = text("BananaLinuxFlasher.exe", CREAM_DARK, 2)
+    out.alpha_composite(t, (3 * k + b.width + 10, (bar * k - t.height) // 2 + 2))
+    out.alpha_composite(fit(shot, sw, sh), (2 * k + (w * k - 4 * k - sw) // 2, (bar + 2) * k))
+    return out
+
+
+def flasher(shot):
+    """jesussaves-ai's BananaLinux Flasher, featured: its window, the card it writes, its three steps, and the yellow
+    plate as the download button."""
+    k = 4
+    W, H = 1280, 640
+    out = up(prect(W // k, H // k, 6, PANEL, CREAM), k)
+    out.paste(up(dot_grid(W // k - 2, H // k - 2, 3, PANEL, DOT), k), (k, k),
+              up(prect(W // k - 2, H // k - 2, 5, WHITE), k))
+    shot = shot.crop((0, 0, shot.width, 612))                                     # the header and its three steps
+    win = drop(window(shot, 540, k), 12)
+    wx, wy = 40, (H - win.height) // 2
+    out.alpha_composite(win, (wx, wy))
+    card = drop(up(sd_card(), k), 10)
+    out.alpha_composite(card, (wx + win.width - card.width + 28, wy + win.height - card.height + 30))
+
+    x = wx + win.width + 56
+    y = 44
+    out.alpha_composite(text("THE EASY WAY ONTO A CARD", YELLOW, 3), (x + 2, y))
+    y += 44
+    wm = up(word([("BANANA", BANANA_LIGHT, BANANA_DARK), ("LINUX", WHITE, CREAM_DARK)]), 5)
+    out.alpha_composite(wm, (x, y))
+    y += wm.height + 10
+    fl = up(word([("FLASHER", CREAM, CREAM_DARK)]), 5)
+    out.alpha_composite(fl, (x, y))
+    by = chip("BY JESUSSAVES-AI", CREAM, TEAL, TEAL_LIGHT, 4, 3)
+    out.alpha_composite(by, (x + fl.width + 18, y + fl.height - by.height))
+    y += fl.height + 30
+    for n, line in (("1", "Pick your handheld"), ("2", "Pick the microSD card"), ("3", "Download & Flash")):
+        num = chip(n, BLACK, YELLOW, YELLOW_DARK, 4, 3, padx=3, pady=2)
+        out.alpha_composite(num, (x, y))
+        t = text(line, CREAM, 3)
+        out.alpha_composite(t, (x + num.width + 16, y + (num.height - t.height) // 2))
+        y += num.height + 12
+    y += 10
+    for line in ("Newest release, SHA-256 checked,", "written straight to the card."):
+        out.alpha_composite(text(line, GREY, 3), (x + 2, y))
+        y += 32
+    y += 22
+    cx = x
+    for t in ("WINDOWS .EXE", "LINUX", "MACOS"):
+        c = chip(t, CREAM, CARD, LINE, 4, 3)
+        out.alpha_composite(c, (cx, y))
+        cx += c.width + 12
+    plate_t = text("GET THE FLASHER >", BLACK, 3)
+    pw, ph = plate_t.width + 48, plate_t.height + 32
+    plate = up(prect(pw // k + 1, ph // k + 1, 3, YELLOW, BLACK), k)
+    ImageDraw.Draw(plate).rectangle([k, plate.height - 3 * k, plate.width - k - 1, plate.height - k - 1],
+                                    fill=YELLOW_DARK)
+    plate.alpha_composite(plate_t, ((plate.width - plate_t.width) // 2, 14))
+    out.alpha_composite(drop(plate, 6), (x, H - plate.height - 44))
+    return out
+
+
 SHOTS = ["home", "library", "options", "settings", "nds", "zh-home", "zh-settings", "game", "game-menu", "store",
          "light", "carts"]
 HEADERS = [  # (file, title, icon, subtitle)
@@ -562,7 +657,7 @@ HEADERS = [  # (file, title, icon, subtitle)
     ("emulators", "Nintendo DS", "nds", "Two emulators, both straight onto the panels"),
     ("systems", "And the rest", "gamepad", "RetroArch, PortMaster, the App Store"),
     ("hardware", "Made for it", "handheld", "Two panels, a lid, and no sound server"),
-    ("install", "Get it", "cart", "A card image, or an update over the one you have"),
+    ("install", "Get it", "cart", "The flasher, a card image, or an update over the one you have"),
     ("status", "Status", "tools", "What works, and what is still rough"),
     ("build", "Build", "computer", "From source, on Linux"),
     ("credits", "Credits", "fav", "The work Banana stands on"),
@@ -585,3 +680,5 @@ if __name__ == "__main__":
         for vid, channel, title in VIDEOS:
             video_card(Image.open(f"{sys.argv[3]}/{vid}.jpg"), channel, title).save(f"{out}/video-{vid}.png",
                                                                                     optimize=True)
+    if len(sys.argv) > 4:
+        flasher(Image.open(sys.argv[4])).save(f"{out}/flasher.png", optimize=True)

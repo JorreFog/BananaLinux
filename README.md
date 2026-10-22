@@ -5,6 +5,7 @@
 <p align="center">
   <a href="https://github.com/JorreFog/BananaLinux/releases/tag/v0.4.2"><b>Download 0.4.2</b></a> ·
   <a href="#get-it">Install</a> ·
+  <a href="https://github.com/jesussaves-ai/banana-linux-flasher">Flasher</a> ·
   <a href="#seen-on-youtube">Videos</a> ·
   <a href="https://jorrefog.github.io/BananaLinux/save-mover/">Save Mover</a> ·
   <a href="https://discord.gg/FxeE7f8r">Discord</a>
@@ -33,6 +34,10 @@
 
 > [!TIP]
 > **新功能：简体中文。** Settings > System > Language. Translated by **Majirefy**: thank you!
+
+> [!TIP]
+> **New: the [BananaLinux Flasher](https://github.com/jesussaves-ai/banana-linux-flasher)** by **jesussaves-ai** puts BananaOS on a card in three clicks.
+> See [Get it](#get-it).
 
 <a id="what-it-is"></a>
 <img src="docs/img/readme/h-what.png" width="100%" alt="01: What it is. A whole system for two handhelds, built with Buildroot">
@@ -159,7 +164,18 @@ More in [docs/EMULATORS.md](docs/EMULATORS.md), the contract between the menu an
 <a id="get-it"></a>
 <img src="docs/img/readme/h-install.png" width="100%" alt="07: Get it. A card image, or an update over the one you have">
 
-**A new card:** download the image for your handheld from the
+<p align="center">
+  <a href="https://github.com/jesussaves-ai/banana-linux-flasher"><img src="docs/img/readme/flasher.png" width="100%" alt="BananaLinux Flasher by jesussaves-ai, the easy way onto a card: its window (choose your handheld, select the target drive, wipe and flash) next to a microSD card with the bunch on its label. 1, pick your handheld. 2, pick the microSD card. 3, Download and Flash. The newest release, SHA-256 checked, written straight to the card. Windows .exe, Linux, macOS. Get the flasher"></a>
+</p>
+
+**The easy way: the [BananaLinux Flasher](https://github.com/jesussaves-ai/banana-linux-flasher)**, made by **jesussaves-ai**. Pick your handheld and
+the card, and it downloads the newest BananaOS image, checks it against the release's SHA-256 and writes it to the
+card, refusing your computer's own disks. On Windows, download `BananaLinuxFlasher.exe` from
+[its releases](https://github.com/jesussaves-ai/banana-linux-flasher/releases/latest) and run it as administrator (it's an unsigned community
+build, so SmartScreen may ask: More info > Run anyway). On Linux and macOS, run it from source with Python 3 and
+Tkinter (`python3 flash_banana.py`).
+
+**Or by hand:** download the image for your handheld from the
 [0.4.2 release](https://github.com/JorreFog/BananaLinux/releases/tag/v0.4.2), and write it (don't unzip it) to a
 microSD card with [balenaEtcher](https://etcher.balena.io/):
 
@@ -235,6 +251,7 @@ make test          # renders the menu from a test library into ui/tests/out
   [Fusion Pixel Font](https://github.com/TakWolf/fusion-pixel-font) (缝合像素字体) by TakWolf. To translate BananaOS
   into your language, ask for the translation document; `tools/lang-from-docx.py` turns a filled-in one into
   `ui/assets/lang/<language>.tsv`.
+- **jesussaves-ai**: the [BananaLinux Flasher](https://github.com/jesussaves-ai/banana-linux-flasher), the card writer for Windows, Linux and macOS.
 - **casualducko**: the zero-copy panel patch for LÖVE apps on both panels (eReaderDS).
 - The menu is ROCKNIXDS Pixel, from [ROCKNIXDS](https://github.com/JorreFog/ROCKNIXDS), where BananaOS started.
   Banana's mark is the bunch of [BananaUI](https://github.com/JorreFog/helios), redrawn as pixel art.
