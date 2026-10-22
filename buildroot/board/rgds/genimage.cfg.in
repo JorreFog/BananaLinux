@@ -5,7 +5,7 @@
 image boot.vfat {
 	vfat {
 		label = "BANANA-BOOT"
-		file a/Image { image = "Image" }
+		file a/Image { image = "Image.lz4" }
 @DTBFILES@
 		file extlinux/extlinux.conf { image = "extlinux.conf" }
 	}

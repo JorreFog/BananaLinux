@@ -42,6 +42,8 @@ pick_kernel() {
     KERNEL=$(awk -v l="$LABEL" '$1 == "LABEL" { cur = $2 } $1 == "LINUX" && cur == l { print $2 }' "$OUT/extlinux.conf")
     ROOT=$(awk -v l="$LABEL" '$1 == "LABEL" { cur = $2 } $1 == "APPEND" && cur == l { for (i = 2; i <= NF; i++) if ($i ~ /^root=/) print $i }' "$OUT/extlinux.conf")
     mcopy -o -i "$CARD@@$BOOT_AT" "::$KERNEL" "$OUT/Image"
+    # (the card's kernel is LZ4-compressed for U-Boot since 0.4.3; QEMU's -kernel takes it plain)
+    [ "$(head -c 4 "$OUT/Image" | od -An -tx1 | tr -d ' ')" = 04224d18 ] && lz4 -d -f -q "$OUT/Image" "$OUT/Image.plain" && mv -f "$OUT/Image.plain" "$OUT/Image"
     APPEND="$ROOT rootfstype=squashfs ro rootwait quiet loglevel=3 console=ttyAMA0 video=Virtual-1:640x480e video=Virtual-2:640x480e banana.console=1 banana.top=Virtual-2 banana.touch=virtio"
     echo "booting label $LABEL: $KERNEL, $ROOT"
 }
