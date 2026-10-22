@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BananaOS</title>
+<!-- a temporary preview: kept out of search engines -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="A light Linux for the Anbernic RG DS and RG DS Plus. ">
+<link rel="icon" href="assets/banana-32.png">
+<link rel="stylesheet" href="css/style.css">
+<script>
+  // the menu's dot tile at a whole number of device pixels per dot (2 per dot where it fits), so the pattern
+  // stays even on scaled screens
+  document.documentElement.style.setProperty("--tilepx", Math.max(1, Math.round(devicePixelRatio * 2)) * 4 / devicePixelRatio + "px");
+  // the visitor's theme from last time, before the first paint
+  try { if (localStorage.getItem("theme") === "light") document.documentElement.dataset.theme = "light"; } catch (e) {}
+</script>
+<link rel="preload" href="rgds_plus.min.glb" as="fetch" crossorigin>
+<link rel="preload" href="assets/fonts/PixelifySans-Medium.ttf" as="font" type="font/ttf" crossorigin>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<canvas id="stage"></canvas>
+
+<div id="loader">
+  <img src="assets/banana-48.png" alt="" class="loader-banana">
+  <div class="loader-word"><span class="y">BANANA</span>OS</div>
+  <div class="loader-bar"><i id="loadbar"></i></div>
+</div>
+
+<nav class="top">
+  <div class="brand">
+    <!-- as in the menu's status bar: the logo in its dark chip, then the release stage and version -->
+    <a class="logo-chip" href="#hero"><img src="assets/banana-32.png" alt=""><span><span class="y">BANANA</span><span class="os">OS</span></span></a>
+    <a class="version" href="https://github.com/JorreFog/BananaLinux/releases/tag/v0.4.2">Alpha 0.4.2</a>
+  </div>
+  <div class="links">
+    <a href="#features">Features</a>
+    <a href="#emulators">Emulators</a>
+    <a href="#inside">Under the hood</a>
+    <a class="go" href="#get">Download</a>
+    <button class="theme-switch" id="theme" type="button" role="switch" aria-checked="false" aria-label="Light theme">
+      <span class="track"><span class="knob"></span></span><span id="theme-label">Dark</span>
+    </button>
+  </div>
+</nav>
+
+<main>
+  <section id="hero" class="panel-left">
+    <div class="card hero-card reveal">
+      <p class="eyebrow">For the Anbernic RG DS &amp; RG DS Plus</p>
+      <h1><span class="y">BANANA</span>OS</h1>
+      <p class="lead">A light Linux that boots straight into a pixel-art menu, sleeps when you close the lid,
+        and gives the games every cycle.</p>
+      <div class="cta">
+        <a class="btn primary" href="https://github.com/JorreFog/BananaLinux/releases">Download</a>
+        <a class="btn" href="#features">What&#39;s inside &darr;</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="features" class="panel-left">
+    <div class="card reveal">
+      <p class="eyebrow">What's inside</p>
+      <h2>Nothing between you and the game.</h2>
+      <div class="tiles">
+        <div class="tile"><img src="assets/icons/nds.png" alt=""><b>Two DS emulators</b><span>SuperDrastic and BananaDS, each DS screen straight onto its own panel at 2x.</span></div>
+        <div class="tile"><img src="assets/icons/moon.png" alt=""><b>Close the lid</b><span>Asleep in a moment, the game resumes as the panels light up.</span></div>
+        <div class="tile"><img src="assets/icons/gamepad.png" alt=""><b>Every system</b><span>GBA, Game Boy, NES, SNES, Mega Drive, PlayStation and N64 through RetroArch.</span></div>
+        <div class="tile"><img src="assets/icons/store.png" alt=""><b>One-file updates</b><span>Drop it on the card; the version before stays one restart away.</span></div>
+        <div class="tile"><img src="assets/icons/phone.png" alt=""><b>Wi-Fi &amp; sharing</b><span>Copy games over the network, RetroAchievements, online DS play.</span></div>
+        <div class="tile"><img src="assets/icons/book.png" alt=""><b>English &amp; 简体中文</b><span>Simplified Chinese translation by Majirefy.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="emulators" class="panel-wide">
+    <div class="emu-wrap reveal">
+      <div class="card emu-intro">
+        <p class="eyebrow">Nintendo DS</p>
+        <h2>Two emulators, both straight onto the panels.</h2>
+        <p>Each DS screen goes straight onto its own panel at 2x, with no compositor in between, and both have the
+          in-game menu on F (or L3): save and load with pictures, quick settings, shaders, quit.</p>
+      </div>
+      <div class="emus">
+        <article class="card emu" style="--emu: #ff5c4c">
+          <div class="emu-head"><img src="assets/superdrastic-logo.png" alt="SuperDrastic"></div>
+          <h3>DraStic on both panels</h3>
+          <ul>
+            <li>DraStic by Exophase,<span>each DS screen on its panel</span></li>
+            <li>2x, Gengis Engine 3D</li>
+            <li>A per-game CPU governor</li>
+            <li>In-game menu: states with<span>pictures, shaders, settings</span></li>
+            <li>The fastest of the two</li>
+          </ul>
+          <div class="tags"><span>Fastest</span><span>2x</span><span>60 fps</span></div>
+        </article>
+        <article class="card emu" style="--emu: #f0b429">
+          <div class="emu-head"><img src="assets/bananads-logo.png" alt="BananaDS"></div>
+          <h3>melonDS's core, tuned</h3>
+          <ul>
+            <li>melonDS's core on Banana's<span>display path and menu</span></li>
+            <li>RetroAchievements and<span>online play (Nintendo WFC)</span></li>
+            <li>Mic, cheats, fast-forward</li>
+            <li>Speed-ups checked frame by<span>frame against melonDS</span></li>
+            <li>The most accurate of the two</li>
+          </ul>
+          <div class="tags"><span>Accurate</span><span>Online</span><span>RA</span></div>
+        </article>
+      </div>
+      <p class="emu-note">Pick one in Settings &gt; Nintendo DS, or per game with X</p>
+    </div>
+  </section>
+
+  <section id="inside" class="panel-right">
+    <div class="card reveal">
+      <p class="eyebrow">Under the hood</p>
+      <h2>A whole Linux in a few tens of megabytes.</h2>
+      <ul class="facts">
+        <li><b>Built with Buildroot.</b> A mainline kernel, busybox init and one program on the panels. No systemd, no compositor, no desktop.</li>
+        <li><b>Read-only and unbreakable.</b> The system is a squashfs; your games, saves and settings live on an exFAT partition any computer can open.</li>
+        <li><b>Boots straight to the menu.</b> No module loading, no initramfs: the menu starts as soon as the data partition is mounted.</li>
+        <li><b>Out of the way.</b> The menu sleeps between frames and closes everything while a game runs: the game has the handheld to itself.</li>
+        <li><b>Two system slots.</b> Updates install beside the running version; the one before is a restart away.</li>
+      </ul>
+      <div class="stats">
+        <div><b data-count="0">0</b><span>background services</span></div>
+        <div><b data-count="2">0</b><span>system slots</span></div>
+        <div><b data-count="1">0</b><span>file to update</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="get" class="panel-center">
+    <div class="card reveal get">
+      <img src="assets/banana-48.png" alt="" class="get-banana">
+      <h2>Put it on a card.</h2>
+      <p>Flash the image for your handheld, put your games on the card's exFAT partition, and boot.</p>
+      <div class="cta">
+        <a class="btn primary" href="https://github.com/JorreFog/BananaLinux/releases">Get BananaOS</a>
+        <a class="btn" href="https://github.com/JorreFog/BananaLinux">Source on GitHub</a>
+        <a class="btn" href="https://jorrefog.github.io/BananaLinux/save-mover/">Save Mover</a>
+      </div>
+      <p class="fine">BananaOS is an alpha, MIT licensed. Made with AI: developed with Claude as a coding assistant,
+        directed and tested on real hardware. Not affiliated with Anbernic or Nintendo. The 3D model is a fan
+        recreation; the games in the demo are made up.</p>
+    </div>
+  </section>
+</main>
+
+<div class="caption" id="caption" aria-live="polite"></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
