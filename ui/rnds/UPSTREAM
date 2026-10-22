@@ -6,5 +6,8 @@ column, the flat core, toBitmap), glyph advance and glyph bitmap memos, resize's
 sources, and RndsUI.cpp's text
 cache keys; and one that changes frames: no bob (bob() is 0 and nextWake doesn't wake for it), as the RG DS Plus's
 menu spent CPU on it all the time. Carry them into ROCKNIXDS's patch before importing again, or they are lost. Also for Banana: the insert animation on the ready screen plays 3x as fast (INS_SPEED; LAUNCH_DELAY 920 -> ~300 ms).
+Also for Banana's languages (RndsRaster): a translator hook every laid-out text goes through (setTranslator; the
+layout's own pieces go through lineOf/ellipsisOf untranslated), a fallback font for characters a style's font lacks
+(setFallbackFont: a CJK pixel font at whole multiples of its pixel size), and line breaks between CJK characters.
 And one for Banana: the game page leaves the
 achievements' label and meter out when the game has none known (empty achLabel), where ROCKNIXDS always had ES's.

@@ -171,3 +171,8 @@ The menu is ROCKNIXDS Pixel, from [ROCKNIXDS](https://github.com/JorreFog/ROCKNI
 banana bunch of [BananaUI](https://github.com/JorreFog/helios), redrawn as pixel art. The RG DS's kernel support,
 device trees and drivers come from [ROCKNIX](https://rocknix.org), and DS emulation is DraStic by Exophase through
 SuperDrastic. Details and licenses: [THIRD_PARTY.md](THIRD_PARTY.md). Banana contains no games, ROMs or BIOS files.
+
+Translations: **Simplified Chinese (简体中文) by Majirefy.** The Chinese characters are drawn with
+[Fusion Pixel Font](https://github.com/TakWolf/fusion-pixel-font) (缝合像素字体) by TakWolf. To translate BananaOS into
+your language, ask for the translation document; `tools/lang-from-docx.py` turns a filled-in one into
+`ui/assets/lang/<language>.tsv`.

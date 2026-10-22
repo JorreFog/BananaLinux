@@ -18,6 +18,7 @@
 #include "library.h"
 #include "soft.h"
 #include "splash.h"
+#include "lang.h"
 #include "settings.h"
 #include "theme.h"
 #include "colors.h"
@@ -896,6 +897,24 @@ int main(int argc, char** argv)
 	rnds::setDecoder(stbDecode);
 	rnds::setZipReader(readZip);	// the icon of a DS ROM kept in a .zip
 	auto settings = readSettings(o.data + "/settings.conf");
+	// the menu's language (Settings > System > Language): every text laid out goes through its translations; the lines
+	// with none stay English and are listed in /run/banana/lang-missing.txt (for the translator's next round)
+	const std::string langDir = o.assets + "/../lang";
+	if (lang::load(langDir, settings["language"], { "menu", "settings", "systems" }) && lang::active())
+	{
+		lang::missingLog(envOr("BANANA_LANG_MISSING", "/run/banana/lang-missing.txt"));
+		rnds::setTranslator(lang::tr32);
+		logf("language: %s (%s), translated by %s", lang::current().name.c_str(), lang::current().code.c_str(), lang::current().by.c_str());
+	}
+	// the characters Pixelify Sans lacks (CJK) from Fusion Pixel 12px, a pixel font drawn at whole multiples of 12 px;
+	// only read for a language that needs it (7 MB). scale: device px per CSS px
+	auto cjkFont = [&](float scale)
+	{
+		if (!lang::active()) return;
+		auto f = rnds::Font::load(o.assets + "/fonts/fusion-pixel-12px-proportional-zh_hans.ttf");
+		if (f) rnds::setFallbackFont(f, 12, scale);
+		else logf("language: no CJK font in %s/fonts", o.assets.c_str());
+	};
 	// banana/themes on the card, for themes of one's own: the image's README and examples to start from (once)
 	if (access((o.data + "/themes").c_str(), F_OK) != 0 && access("/usr/share/banana/themes", F_OK) == 0)
 		if (system(("mkdir -p '" + o.data + "/themes' && cp -r /usr/share/banana/themes/. '" + o.data + "/themes/' 2>/dev/null").c_str()) != 0) {}	// (-r: a theme's folder of pictures too)
@@ -921,6 +940,7 @@ int main(int argc, char** argv)
 
 	if (!o.headless.empty())
 	{
+		cjkFont(o.h / 480.0f);
 		lib.scan();
 		return runHeadless(o, lib, variant, settings["theme"]);
 	}
@@ -973,6 +993,7 @@ int main(int argc, char** argv)
 	std::thread loader([&]
 	{
 		double t0 = nowMs();
+		cjkFont(disp.height() / 480.0f);	// (here, off the boot animation's thread)
 		lib.scan();
 		logf("library: %d shelves in %.0f ms", lib.systemCount(), nowMs() - t0);
 		int startSys = 0;
@@ -1037,6 +1058,12 @@ int main(int argc, char** argv)
 		switch (r)
 		{
 		case Settings::MOVED: sound.play("scroll"); break;
+		case Settings::LANGUAGE:
+			// every text cached in the menus is in the old language: banana-ui starts again (init runs it anew)
+			logf("language changed to %s: starting again", getConfValue(o.data + "/settings.conf", "language", "en").c_str());
+			sound.play("select");
+			quit = true;
+			break;
 		case Settings::CHANGED:
 		{
 			settings = readSettings(o.data + "/settings.conf");
