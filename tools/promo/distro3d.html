@@ -1,0 +1,131 @@
+<!doctype html>
+<!-- The website's RG DS Plus model (rgds_plus.min.glb) for the distro video (distro.py): the shell lit as on the site, on
+a transparent background, its screens left black. window.shot(pose) poses it and returns where the two screens'
+corners land in the picture; window.mask(on) draws the screens alone (top red, bottom green, the rest black, the
+handheld still in front of what it covers), so distro.py lays BananaOS's own frames onto them. -->
+<html><head><meta charset="utf-8"><style>html,body{margin:0;background:transparent;overflow:hidden}canvas{display:block}</style>
+<script type="importmap">{ "imports": { "three": "./three/build/three.module.js", "three/addons/": "./three/examples/jsm/" } }</script>
+</head><body><canvas id="c"></canvas>
+<script type="module">
+import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
+
+const q = new URLSearchParams(location.search);
+const W = +q.get("w") || 1280, H = +q.get("h") || 720;
+const canvas = document.getElementById("c");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1);
+renderer.setSize(W, H);
+renderer.setClearColor(0x000000, 0);
+renderer.toneMapping = THREE.NeutralToneMapping;
+renderer.toneMappingExposure = 1.15;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+// the site's studio: a dark room with softboxes, for long highlights on the shell's edges
+function studio() {
+  const room = new THREE.Scene();
+  room.add(new THREE.Mesh(new THREE.BoxGeometry(10, 10, 10), new THREE.MeshBasicMaterial({ color: 0x0b0b0e, side: THREE.BackSide })));
+  const box = (w, h, x, y, z, k, warm = false) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h),
+      new THREE.MeshBasicMaterial({ color: new THREE.Color(warm ? 1 : 0.92, warm ? 0.93 : 0.95, warm ? 0.84 : 1).multiplyScalar(k), side: THREE.DoubleSide }));
+    m.position.set(x, y, z); m.lookAt(0, 0, 0); room.add(m);
+  };
+  box(6, 3, 0, 4.8, 1.0, 6); box(1.2, 5, -4.8, 1.5, 1.5, 4); box(1.2, 5, 4.8, 1.2, -1.0, 3, true);
+  box(5, 1.0, 0, 0.8, 4.8, 2.2); box(4, 1.2, 0, 2, -4.8, 3.5);
+  return room;
+}
+const ENV = pmrem.fromScene(studio(), 0.02).texture;
+scene.environment = ENV;
+scene.environmentIntensity = 0.85;
+const camera = new THREE.PerspectiveCamera(30, W / H, 0.01, 6);
+const rig = new THREE.Group(), spin = new THREE.Group();
+rig.add(spin); scene.add(rig);
+const key = new THREE.DirectionalLight(0xffffff, 1.1); key.position.set(0.3, 0.6, 0.35); scene.add(key);
+const rim = new THREE.DirectionalLight(0xfff0d8, 1.6); rim.position.set(-0.4, 0.25, -0.5); scene.add(rim);
+// a soft contact shadow under it
+const sc = document.createElement("canvas"); sc.width = sc.height = 256;
+{ const c = sc.getContext("2d"), g = c.createRadialGradient(128, 128, 10, 128, 128, 128);
+  g.addColorStop(0, "rgba(0,0,0,0.9)"); g.addColorStop(0.45, "rgba(0,0,0,0.6)"); g.addColorStop(0.75, "rgba(0,0,0,0.2)"); g.addColorStop(1, "rgba(0,0,0,0)");
+  c.fillStyle = g; c.fillRect(0, 0, 256, 256); }
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.17), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sc), transparent: true, depthWrite: false }));
+ground.rotation.x = -Math.PI / 2; ground.position.set(0, -0.0005, 0.005); rig.add(ground);
+
+const gltf = await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).loadAsync("rgds_plus.min.glb");
+const model = gltf.scene; spin.add(model);
+const black = new THREE.MeshBasicMaterial({ color: 0x000000 });
+const red = new THREE.MeshBasicMaterial({ color: 0xff0000 }), green = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+const meshes = [], screens = {};
+model.traverse((o) => {
+  if (!o.isMesh) return;
+  const mats = Array.isArray(o.material) ? o.material : [o.material];
+  const normal = mats.map((m) => {
+    if (m.name === "Glass") return new THREE.MeshBasicMaterial({ color: 0x050507 });
+    if (m.name === "ScreenTop" || m.name === "ScreenBottom") { screens[m.name] = o; return new THREE.MeshBasicMaterial({ color: 0x000000 }); }
+    if (m.name === "Shell" || m.name === "Button") { m.roughness = 0.52; m.metalness = 0; }
+    if (m.name === "ButtonDark") m.roughness = 0.3;
+    if (m.name === "DPad" || m.name === "StickCap") m.roughness = 0.42;
+    if (m.name === "LedGreen") m.emissiveIntensity = 2.5;
+    return m;
+  });
+  const masked = mats.map((m) => m.name === "ScreenTop" ? red : m.name === "ScreenBottom" ? green : black);
+  meshes.push({ o, normal: Array.isArray(o.material) ? normal : normal[0], masked: Array.isArray(o.material) ? masked : masked[0] });
+  o.material = Array.isArray(o.material) ? normal : normal[0];
+});
+const hinge = model.getObjectByName("LidHinge");
+const buttons = [];
+model.traverse((o) => { if (o.name.startsWith("Btn_") && !o.parent.name.startsWith("Btn_")) { o.userData.rest = o.position.clone(); buttons.push(o); } });
+
+// a screen's four corners, in the picture's pixels, in the order of its picture: top left, top right, bottom right,
+// bottom left (from the mesh's texture coordinates: the site maps the menu's pictures with flipY off)
+function corners(mesh) {
+  const g = mesh.geometry, pos = g.attributes.position, uv = g.attributes.uv;
+  const want = [[0, 0], [1, 0], [1, 1], [0, 1]];
+  const out = [];
+  for (const [u0, v0] of want) {
+    let best = -1, bd = 1e9;
+    for (let i = 0; i < uv.count; i++) { const d = (uv.getX(i) - u0) ** 2 + (uv.getY(i) - v0) ** 2; if (d < bd) { bd = d; best = i; } }
+    const p = new THREE.Vector3(pos.getX(best), pos.getY(best), pos.getZ(best)).applyMatrix4(mesh.matrixWorld).project(camera);
+    out.push([(p.x + 1) / 2 * W, (1 - p.y) / 2 * H, uv.getX(best), uv.getY(best)]);
+  }
+  return out;
+}
+
+// pose: { yaw, pitch, roll, pos:[x,y,z] (the handheld), lid (degrees open), cam:[x,y,z], at:[x,y,z], fov, press:{Btn_A: 0..1} }
+window.shot = (p) => {
+  rig.position.set(...(p.pos || [0, 0, 0]));
+  rig.rotation.set(0, p.yaw || 0, 0);
+  spin.rotation.set(p.pitch || 0, 0, p.roll || 0);
+  if (hinge) hinge.rotation.set(THREE.MathUtils.degToRad(180 - (p.lid ?? 150)), 0, 0);
+  for (const b of buttons) {
+    const d = (p.press && p.press[b.name]) || 0;
+    b.position.copy(b.userData.rest);
+    if (/^Btn_[LR][12]$/.test(b.name)) b.position.z += d * 0.6; else b.position.y -= d * 0.6;
+  }
+  ground.visible = p.ground !== false;
+  camera.fov = p.fov || 30;
+  // shift: the picture moved sideways by this share of its width (the handheld off centre, beside the words)
+  if (p.shift) camera.setViewOffset(W, H, -p.shift * W, 0, W, H); else camera.clearViewOffset();
+  camera.updateProjectionMatrix();
+  camera.position.set(...p.cam); camera.lookAt(...(p.at || [0, 0.03, 0]));
+  scene.updateMatrixWorld(true);
+  renderer.render(scene, camera);
+  return { top: corners(screens.ScreenTop), bot: corners(screens.ScreenBottom) };
+};
+window.mask = (on) => {
+  for (const m of meshes) m.o.material = on ? m.masked : m.normal;
+  ground.visible = !on;
+  scene.environment = on ? null : ENV;
+  renderer.toneMapping = on ? THREE.NoToneMapping : THREE.NeutralToneMapping;
+  renderer.setClearColor(0x000000, on ? 1 : 0);
+  renderer.render(scene, camera);
+};
+// where named parts are (world bounding boxes), for framing shots
+window.where = (names) => Object.fromEntries(names.map((n) => {
+  const o = model.getObjectByName(n); if (!o) return [n, null];
+  const b = new THREE.Box3().setFromObject(o); return [n, [b.min.toArray(), b.max.toArray()]];
+}));
+window.ready = true;
+</script></body></html>
