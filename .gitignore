@@ -6,3 +6,7 @@
 /system/bananad/banana-panel-tune
 *.o
 /banana-*.bundle
+
+# Python bytecode
+__pycache__/
+*.pyc
