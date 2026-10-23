@@ -6,7 +6,8 @@ const [,, out, json] = process.argv;	// scenes: [[name, fromSelector/offset, toS
 const scenes = JSON.parse(json);
 const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', ignoreDefaultArgs: ['--headless=old'],
   args: ['--headless=new', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
-const p = await b.newPage({ viewport: { width: 1440, height: 900 } });
+// DSF: device pixels per CSS pixel; under 1 the page keeps its 1440 x 900 layout but is drawn smaller (faster WebGL)
+const p = await b.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: +(process.env.DSF || 1) });
 p.on('pageerror', e => console.log('error:', e.message));
 await p.route('https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/**', r => r.fulfill({ path: NM + 'gsap/dist/' + r.request().url().split('/').pop(), contentType: 'text/javascript' }));
 await p.route('https://cdn.jsdelivr.net/npm/three@0.170.0/**', r => r.fulfill({ path: NM + 'three/' + r.request().url().split('three@0.170.0/')[1], contentType: 'text/javascript' }));
@@ -24,12 +25,16 @@ const ease = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 for (const [name, from, to, frames, dFrom = 0, dTo = 0] of scenes) {
   fs.mkdirSync(`${out}/${name}`, { recursive: true });
   const a = await pos(from) + dFrom, z = await pos(to) + dTo;
-  await p.evaluate(y => window.scrollTo(0, y), a); await p.waitForTimeout(1500);
+  // resume: start at the first frame not captured yet (scrolled there first, so the scrubbed pose has caught up)
+  let f0 = 0;
+  while (f0 < frames && fs.existsSync(`${out}/${name}/f${String(f0).padStart(4, '0')}.jpg`)) f0++;
+  if (f0 >= frames) continue;
+  await p.evaluate(y => window.scrollTo(0, y), a + (z - a) * ease(f0 / Math.max(1, frames - 1))); await p.waitForTimeout(3000);
   const t0 = Date.now();
-  for (let f = 0; f < frames; f++) {
+  for (let f = f0; f < frames; f++) {
     await p.evaluate(y => window.scrollTo(0, y), a + (z - a) * ease(f / Math.max(1, frames - 1)));
     await p.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
-    await p.screenshot({ path: `${out}/${name}/f${String(f).padStart(4, '0')}.jpg`, quality: 92 });
+    await p.screenshot({ path: `${out}/${name}/f${String(f).padStart(4, '0')}.jpg`, quality: 92, timeout: 180000 });
   }
   console.log(name, frames, 'frames', ((Date.now() - t0) / frames).toFixed(0), 'ms/frame');
 }

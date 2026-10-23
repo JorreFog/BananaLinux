@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # The website's announcement video: the new BananaOS website scrolling in a browser window, a line of copy beside each
 # part of it, in the trailer's look (video.py): BananaOS's font and logo, a scene's words fading out together before
-# the next. site-capture.mjs captures the site first (one screenshot per step of the scroll, 15 a second).
+# the next. site-capture.mjs captures the site first (one screenshot per frame of the scroll, 30 a second; DSF=0.6667 draws it at
+# the 960 x 600 it has here).
 #
 #   SITE=<capture dir> MUSIC=song.mp3 MUSIC_AT=8 python3 tools/promo/website.py out.mp4
 import os, subprocess, shutil, sys
@@ -11,7 +12,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, '../..'))
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, 'website.mp4')
 SITE = os.environ.get('SITE', os.path.join(HERE, 'site'))
-SITE_FPS = 15
+SITE_FPS = int(os.environ.get("SITE_FPS", "30"))
 MUSIC = os.environ.get('MUSIC', '')
 MUSIC_AT = float(os.environ.get('MUSIC_AT', '8'))
 FRAMES = os.path.join(HERE, 'frames-site')
