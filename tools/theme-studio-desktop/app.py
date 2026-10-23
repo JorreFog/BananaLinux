@@ -1116,6 +1116,7 @@ class Studio(QMainWindow):
     def __init__(self, path=None):
         super().__init__()
         self.settings = QSettings('BananaOS', 'ThemeStudio')
+        self._light = str(self.settings.value('light_theme', 'false')).lower() in ('true', '1')
         repo = exact.find_repo(self.settings.value('repo', ''))
         self.renderer = E.Renderer(repo)
         self.exact = exact.Exact(self)
@@ -1293,6 +1294,10 @@ class Studio(QMainWindow):
         self.engine_a = act(m, 'Engine preview (exact)', self.toggle_engine, 'F5', True,
                             'Show what the real banana-ui draws (needs the BananaLinux checkout)')
         self.engine_a.setCheckable(True)
+        self.light_a = act(m, 'Light theme', self.toggle_light, 'Ctrl+T', True,
+                           "The BananaOS website's light palette (the web editor's switch)")
+        self.light_a.setCheckable(True)
+        self.light_a.setChecked(self._light)
         m.addSeparator()
         for d in self.docks:
             m.addAction(d.toggleViewAction())
@@ -2026,6 +2031,13 @@ class Studio(QMainWindow):
         self.canvas.outline = on
         self.canvas.update()
 
+    def toggle_light(self, on=False):
+        """The website's dark/light switch (style.py), remembered for the next run."""
+        self._light = bool(on)
+        style.set_theme(QApplication.instance(), self._light)
+        self.settings.setValue('light_theme', self._light)
+        self.canvas.update()
+
     # ---- the engine ----------------------------------------------------------------------------------------------------
     def toggle_engine(self, on):
         if on and not self.exact.ready():
@@ -2316,7 +2328,8 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName('Banana Theme Studio')
     app.setStyle('Fusion')
-    style.apply(app)			# the BananaOS website's look (style.py)
+    light = str(QSettings('BananaOS', 'ThemeStudio').value('light_theme', 'false')).lower() in ('true', '1')
+    style.apply(app, light)			# the BananaOS website's look (style.py), dark or light
     w = Studio(sys.argv[1] if len(sys.argv) > 1 else None)
     w.show()
     sys.exit(app.exec())

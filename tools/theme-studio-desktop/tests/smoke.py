@@ -31,9 +31,12 @@ def main():
     if not family:
         print('  FAIL Pixelify Sans did not load from assets/')
         return 1
-    if 'QPushButton' not in style.stylesheet(family):
-        print('  FAIL the stylesheet is empty')
-        return 1
+    for name, c in (('dark', style.DARK), ('light', style.LIGHT)):
+        if 'QPushButton' not in style.stylesheet(family, c):
+            print('  FAIL the %s stylesheet is empty' % name)
+            return 1
+    style.set_theme(app, True)					# the light/dark switch (Ctrl+T) must not throw
+    style.set_theme(app, False)
 
     import app as studio_app					# noqa: E402  (imports the window, needs a QApplication first)
     w = studio_app.Studio()
