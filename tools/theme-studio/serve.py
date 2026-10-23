@@ -38,6 +38,7 @@ FIXTURE = Path(tempfile.gettempdir()) / "banana-theme-studio-fx"
 DEFAULT_SCRIPT = ("home 0; wait 900; shot home; press right; wait 700; shot home2; "
                   "press a; wait 900; shot lib; press down; wait 600; shot lib2; press a; wait 400; shot launch")
 TEMPLATE_DIRS = [ROOT / "system" / "rootfs" / "usr" / "share" / "banana" / "themes", ROOT / "docs" / "themes"]
+THEMES_DIR = None						# --themes-dir: where "Send to handheld" writes (a mounted banana/themes)
 
 TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
          ".css": "text/css; charset=utf-8", ".json": "application/json; charset=utf-8",
@@ -91,7 +92,39 @@ def shot_names(script):
     return out
 
 
-def render(theme_text, script, size):
+def safe_rel(p):
+    """A theme-relative asset path, or None if it is absolute or escapes its folder."""
+    p = str(p or "").replace("\\", "/")
+    if p.startswith("/") or p.startswith("~"):
+        return None
+    parts = [x for x in p.split("/") if x not in ("", ".")]
+    if not parts or any(x == ".." for x in parts):
+        return None
+    return "/".join(parts)
+
+
+def write_assets(base, assets):
+    """Write the editor's attached asset files beside the theme, at their relative paths."""
+    written = []
+    for a in assets or []:
+        rel = safe_rel(a.get("path", ""))
+        if not rel:
+            continue
+        data = a.get("data", "") or ""
+        if data.strip().startswith("data:") and "," in data:
+            data = data.split(",", 1)[1]
+        try:
+            raw = base64.b64decode(data, validate=False)
+        except Exception:					# noqa: BLE001
+            continue
+        dst = Path(base) / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_bytes(raw)
+        written.append(rel)
+    return written
+
+
+def render(theme_text, script, size, assets=None):
     if not ensure_engine():
         return {"error": _ready["detail"] or "the engine isn't built"}
     ensure_fixture()
@@ -99,6 +132,7 @@ def render(theme_text, script, size):
     try:
         theme_path = work / "theme.json"
         theme_path.write_text(theme_text, encoding="utf-8")
+        write_assets(work, assets)				# the theme's own pictures/fonts/sounds, if the editor has them
         prefix = work / "out-"
         cmd = [str(ENGINE), "--headless", str(prefix), "--size", size,
                "--assets", str(UI / "assets" / "rnds"), "--banana", str(UI / "assets" / "banana"),
@@ -168,7 +202,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._file(HERE / "index.html")
         if path == "/api/health":
             return self._json(200, {"ok": ensure_engine() and True, "engine": str(ENGINE),
-                                    "fixture": str(FIXTURE), "detail": _ready["detail"]})
+                                    "fixture": str(FIXTURE), "detail": _ready["detail"],
+                                    "themesDir": str(THEMES_DIR) if THEMES_DIR else ""})
         if path == "/api/templates":
             return self._json(200, templates())
         if path == "/api/schema":
@@ -183,7 +218,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = self.path.split("?", 1)[0]
-        if path != "/api/render":
+        if path not in ("/api/render", "/api/send"):
             return self._send(404, "not found", "text/plain")
         try:
             n = int(self.headers.get("content-length", "0"))
@@ -194,8 +229,25 @@ class Handler(BaseHTTPRequestHandler):
         if theme is None:
             return self._json(400, {"error": "no theme in the request"})
         text = theme if isinstance(theme, str) else json.dumps(theme, indent=2)
-        result = render(text, req.get("script") or DEFAULT_SCRIPT, req.get("size") or "640x480")
+        if path == "/api/send":
+            return self._send_theme(req, text)
+        result = render(text, req.get("script") or DEFAULT_SCRIPT, req.get("size") or "640x480",
+                        req.get("assets"))
         return self._json(200 if "error" not in result or "shots" in result else 500, result)
+
+    def _send_theme(self, req, text):
+        if not THEMES_DIR:
+            return self._json(400, {"error": "no --themes-dir was given to serve.py, so there is nowhere to send it"})
+        name = safe_rel(req.get("name") or "theme") or "theme"
+        if not name.endswith(".json"):
+            name += ".json"
+        try:
+            THEMES_DIR.mkdir(parents=True, exist_ok=True)
+            (THEMES_DIR / name).write_text(text, encoding="utf-8")
+            written = write_assets(THEMES_DIR, req.get("assets"))
+        except OSError as e:
+            return self._json(500, {"error": "couldn't write to %s: %s" % (THEMES_DIR, e)})
+        return self._json(200, {"ok": True, "path": str(THEMES_DIR / name), "assets": written})
 
     def _file(self, p):
         try:
@@ -212,7 +264,14 @@ def main():
     ap.add_argument("--size", default="640x480", help="640x480 (RG DS) or 1024x768 (RG DS Plus)")
     ap.add_argument("--no-build", action="store_true", help="don't try to build ui/banana-ui")
     ap.add_argument("--no-browser", action="store_true")
+    ap.add_argument("--themes-dir", default=None,
+                    help="a directory to 'Send to handheld' into (a mounted banana/themes, e.g. "
+                         "/run/media/you/BANANA/banana/themes); without it the Send button is hidden")
     args = ap.parse_args()
+
+    global THEMES_DIR
+    if args.themes_dir:
+        THEMES_DIR = Path(args.themes_dir).expanduser().resolve()
 
     ensure_engine(build=not args.no_build)
     if ENGINE.exists():

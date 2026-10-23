@@ -9,13 +9,19 @@ as a theme error, not a crash.
 
 Needs ui/banana-ui (the server builds it with `make -C ui host` if it can) and ImageMagick for the fixture.
 """
+import base64
 import json
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.request
 from pathlib import Path
+
+# a 1x1 transparent PNG, to attach as a theme's own picture
+PNG_1PX = ("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9"
+           "awAAAABJRU5ErkJggg==")
 
 HERE = Path(__file__).resolve().parent
 SERVE = HERE.parent / "serve.py"
@@ -47,7 +53,9 @@ def main():
     fails = []
     port = free_port()
     url = "http://127.0.0.1:%d" % port
-    srv = subprocess.Popen([sys.executable, str(SERVE), "--port", str(port), "--no-browser"],
+    themes_dir = Path(tempfile.mkdtemp(prefix="banana-themes-"))
+    srv = subprocess.Popen([sys.executable, str(SERVE), "--port", str(port), "--no-browser",
+                            "--themes-dir", str(themes_dir)],
                            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
     try:
         for _ in range(120):
@@ -97,6 +105,19 @@ def main():
         print("bad theme errors:", res.get("errors"))
         if not res.get("errors"):
             fails.append("a broken expression wasn't reported as a theme error")
+
+        # "Send to handheld": the theme and an attached picture land in --themes-dir
+        st, res = post(url + "/api/send", {"name": "sent-theme.json", "theme": '{"name":"Sent","screens":{}}',
+                                           "assets": [{"path": "sent-theme/pix.png", "data": "data:image/png;base64," + PNG_1PX}]})
+        print("send:", res)
+        if not (themes_dir / "sent-theme.json").exists():
+            fails.append("/api/send didn't write the theme")
+        if not (themes_dir / "sent-theme" / "pix.png").exists():
+            fails.append("/api/send didn't write the attached picture")
+        # a path that escapes its folder is refused
+        st, res = post(url + "/api/send", {"name": "x.json", "theme": "{}", "assets": [{"path": "../../evil", "data": PNG_1PX}]})
+        if (themes_dir.parent / "evil").exists():
+            fails.append("/api/send wrote outside its directory")
     finally:
         srv.terminate()
         try:

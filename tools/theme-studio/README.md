@@ -41,6 +41,9 @@ Install a finished theme by putting `my-theme.json` (and any folder of pictures 
 - **Colour keys** (`colors`, `accent`, `base`, `fonts`, `logo`, `background`, `icons`, `sounds`) — the same
   keys, palettes and accents as `theme-builder.html`, still used to style Settings and the keyboard.
 - **Input**, **hints** and **behaviour** (timings, sound cues).
+- **Assets**: the pictures, fonts and sounds the theme names are detected from it; attach a file and previews
+  carry it, and **Send to handheld** writes the theme and its files into a mounted `banana/themes` (start the
+  server with `--themes-dir`).
 - **Save** writes the theme JSON with its key order and any members the editor does not know kept. `//` and
   `/* */` comments and trailing commas are read (as the engine reads them); comments are not written back.
 
@@ -69,7 +72,8 @@ exact, and it only changes when the engine does. `--size 1024x768` previews at t
 | `expr.js` | A JavaScript port of the theme expression language (`ui/src/expr.cpp`). |
 | `schema.js` | The editor's field metadata: elements, properties, hooks, palettes. |
 | `render.js` | The preview client. |
-| `serve.py` | Serves the editor and renders previews with the engine. |
+| `serve.py` | Serves the editor, renders previews with the engine, and writes a theme to `--themes-dir`. |
+| `wasm/README.md` | The design for a WebAssembly build of the engine (real-time previews with no server). |
 | `tests/` | The expression parity test, the server end-to-end test, and the schema test. |
 
 `docs/theme.schema.json` (JSON Schema for the format) is the machine-readable companion to `docs/THEMES.md`.
@@ -90,9 +94,11 @@ drift from the engine's expressions.
 
 ## Known limits
 
-- Assets (pictures, fonts, sounds) are referenced by path; the editor does not upload them, so a preview only
-  shows the pictures that already exist beside the theme on the machine running `serve.py`. Files that are not
-  there fall back to the engine's default, as on the device.
+- Assets are referenced by path; attach them in the **Assets** tab for previews, and Send to handheld writes
+  them beside the theme. A referenced file that isn't attached (or isn't beside the theme on the machine running
+  `serve.py`) falls back to the engine's default, as on the device.
+- The WebAssembly preview (no server) is designed but not built — see `wasm/README.md`; `serve.py` is the
+  working preview.
 - Comments are dropped on save (the key order and unknown members are kept).
 - The preview library is a made-up test one (`ui/tests/fixture.sh`), not your card.
 - Element reordering by dragging works within the same parent; use the ↑/↓ buttons for deeper moves.

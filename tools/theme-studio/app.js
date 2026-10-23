@@ -47,7 +47,7 @@
   };
 
   // ---- state -----------------------------------------------------------------------------------------
-  const state = { theme: clone(STARTER), sel: null, view: "home", screen: "top", tab: "elements", shots: null, drag: null, open: {}, templates: null };
+  const state = { theme: clone(STARTER), sel: null, view: "home", screen: "top", tab: "elements", shots: null, drag: null, open: {}, templates: null, assets: {} };
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
 
   // ---- tiny DOM helper -------------------------------------------------------------------------------
@@ -691,6 +691,72 @@
     pane.appendChild(h("div", { class: "ctl" }, any));
   }
 
+  // ---- assets ----------------------------------------------------------------------------------------
+  const ASSET_EXTS = ["png", "jpg", "jpeg", "webp", "ttf", "otf", "wav"];
+  function assetExt(p) { const m = /\.([a-z0-9]+)$/i.exec(p || ""); return m ? m[1].toLowerCase() : ""; }
+  // the relative paths the theme names (heuristic: a string that looks like a file the engine could load)
+  function detectAssets() {
+    const found = [], seen = {};
+    (function scan(v) {
+      if (typeof v === "string") {
+        if (v && v.charAt(0) !== "=" && v.indexOf("{") < 0 && ASSET_EXTS.indexOf(assetExt(v)) >= 0) {
+          if (!seen[v]) { seen[v] = 1; found.push(v); }
+        }
+      } else if (Array.isArray(v)) v.forEach(scan);
+      else if (v && typeof v === "object") Object.keys(v).forEach((k) => scan(v[k]));
+    })(state.theme);
+    return found;
+  }
+  function assetList() {
+    return Object.keys(state.assets).filter((p) => state.assets[p] && state.assets[p].data)
+      .map((p) => ({ path: p, data: state.assets[p].data }));
+  }
+  function attach(path, file) {
+    if (!file) return;
+    const r = new FileReader();
+    r.onload = () => { state.assets[path] = { name: file.name, data: r.result }; markDirty(); renderAssets(); };
+    r.readAsDataURL(file);
+  }
+  function renderAssets() {
+    const pane = $("#pane-assets"); pane.innerHTML = "";
+    pane.appendChild(h("p", { class: "muted" }, "Pictures, fonts and sounds the theme names, as paths relative to its .json. Attach a file here and previews and \u201cSend to handheld\u201d carry it; without it the engine uses its default."));
+    const refs = detectAssets();
+    if (!refs.length) pane.appendChild(h("div", { class: "muted" }, "this theme names no pictures, fonts or sounds yet"));
+    refs.forEach(function (p) {
+      const a = state.assets[p];
+      const row = h("div", { class: "ctl", style: "margin:3px 0" });
+      row.appendChild(h("span", { class: "mono", style: "flex:1;overflow:hidden;text-overflow:ellipsis" }, p));
+      row.appendChild(h("span", { class: "pill" }, a ? a.name : "not attached"));
+      const file = h("input", { type: "file", accept: ".png,.jpg,.jpeg,.webp,.ttf,.otf,.wav" });
+      file.addEventListener("change", function () { attach(p, this.files[0]); });
+      row.appendChild(file);
+      if (a) { const rm = h("button", { class: "ghost danger", type: "button" }, "✕"); rm.onclick = () => { delete state.assets[p]; markDirty(); renderAssets(); }; row.appendChild(rm); }
+      pane.appendChild(row);
+    });
+    const np = h("input", { type: "text", placeholder: "my-theme/extra.png" });
+    const nf = h("input", { type: "file", accept: ".png,.jpg,.jpeg,.webp,.ttf,.otf,.wav" });
+    const add = h("button", { class: "ghost", type: "button" }, "attach as…");
+    add.onclick = () => { if (np.value && nf.files[0]) attach(np.value, nf.files[0]); };
+    pane.appendChild(h("div", { class: "ctl" }, np, nf, add));
+    pane.appendChild(h("h3", { class: "sec" }, "send to handheld"));
+    if (!RENDER || !RENDER.available || !RENDER.themesDir) {
+      pane.appendChild(h("div", { class: "note", html: "Not available. Start the server with <code>--themes-dir</code> pointing at a mounted card, e.g.<br><br><code>python3 tools/theme-studio/serve.py --themes-dir /run/media/you/BANANA/banana/themes</code>" }));
+      return;
+    }
+    pane.appendChild(h("div", { class: "muted" }, "writes into " + RENDER.themesDir));
+    const nm = h("input", { type: "text", value: fileStem() });
+    const go = h("button", { class: "primary", type: "button" }, "Send");
+    go.onclick = async () => {
+      try { const r = await RENDER.send(nm.value, state.theme, assetList()); setStatus("sent to " + r.path, "ok"); }
+      catch (e) { setStatus("send failed: " + e.message, "bad"); }
+    };
+    pane.appendChild(h("div", { class: "ctl" }, nm, go));
+    pane.appendChild(h("div", { class: "muted" }, "then pick it in Settings > Display & sound > Theme (it shows under its name)"));
+  }
+  function fileStem() {
+    return (state.theme.name || "theme").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "theme";
+  }
+
   // ---- validation ------------------------------------------------------------------------------------
   function eachElement(cb) {
     const th = state.theme;
@@ -735,7 +801,7 @@
   function schedulePreview() { if (previewTimer) clearTimeout(previewTimer); previewTimer = setTimeout(function () { if (RENDER && RENDER.available) doPreview(); }, 700); }
   async function doPreview() {
     try {
-      const r = await RENDER.render(state.theme);
+      const r = await RENDER.render(state.theme, null, null, assetList());
       state.shots = r.shots || [];
       showLog(r.log, r.errors || []);
       renderPreview();
@@ -773,7 +839,7 @@
   // ---- load / save -----------------------------------------------------------------------------------
   function loadTheme(t) {
     state.theme = t || clone(STARTER);
-    state.sel = null; state.shots = null;
+    state.sel = null; state.shots = null; state.assets = {};
     normalize();
     renderAll(); rerender(); markDirty();
   }
@@ -789,12 +855,12 @@
   function switchTab(t) {
     state.tab = t;
     document.querySelectorAll("#left .tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === t)));
-    document.querySelectorAll(".pane").forEach((p) => { if (["pane-elements", "pane-components", "pane-vars", "pane-colours", "pane-input", "pane-behaviour", "pane-theme"].indexOf(p.id) >= 0) p.hidden = true; });
+    document.querySelectorAll(".pane").forEach((p) => { if (["pane-elements", "pane-components", "pane-vars", "pane-colours", "pane-assets", "pane-input", "pane-behaviour", "pane-theme"].indexOf(p.id) >= 0) p.hidden = true; });
     $("#pane-" + t).hidden = false;
   }
   function setStatus(txt, cls) { const s = $("#status"); s.textContent = txt; s.className = "status" + (cls ? " " + cls : ""); }
   function rerender() { renderInspector(); }
-  function renderAll() { renderTree(); renderColours(); renderVars(); renderComponents(); renderInput(); renderBehaviour(); renderTheme(); }
+  function renderAll() { renderTree(); renderColours(); renderVars(); renderComponents(); renderAssets(); renderInput(); renderBehaviour(); renderTheme(); }
 
   function loadTemplates() {
     fetch("api/templates", { cache: "no-store" }).then((r) => (r.ok ? r.json() : [])).then((list) => { state.templates = list; renderTheme(); }).catch(() => {});
@@ -819,7 +885,7 @@
   wire(); switchTab("elements"); normalize(); renderAll(); renderInspector(); renderPreview();
   if (RENDER) {
     RENDER.check().then(function (ok) {
-      if (ok) { setStatus("preview server ready", "ok"); loadTemplates(); } else setStatus("offline — edit & save; run serve.py for previews", "");
+      if (ok) { setStatus("preview server ready", "ok"); loadTemplates(); renderAssets(); } else setStatus("offline — edit & save; run serve.py for previews", "");
       renderPreview();
     });
   }

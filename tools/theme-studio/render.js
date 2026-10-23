@@ -14,6 +14,7 @@
     available: false,
     engine: "",
     detail: "",
+    themesDir: "",
 
     async check() {
       try {
@@ -23,16 +24,19 @@
         this.available = !!j.ok;
         this.engine = j.engine || "";
         this.detail = j.detail || "";
+        this.themesDir = j.themesDir || "";
       } catch (e) {
         this.available = false;
+        this.themesDir = "";
         this.detail = "no preview server (open the page with tools/theme-studio/serve.py for exact previews)";
       }
       return this.available;
     },
 
+    // assets: [{ path: "my-theme/wallpaper.png", data: "<base64 or data: URL>" }], written beside the theme
     // -> { shots: [{ name, top, bot }], log: string, errors: string[] }
-    async render(theme, script, size) {
-      const body = JSON.stringify({ theme: theme, script: script || DEFAULT_SCRIPT, size: size || "640x480" });
+    async render(theme, script, size, assets) {
+      const body = JSON.stringify({ theme: theme, script: script || DEFAULT_SCRIPT, size: size || "640x480", assets: assets || [] });
       const r = await fetch("api/render", { method: "POST", headers: { "content-type": "application/json" }, body: body });
       if (!r.ok) {
         let msg = "render failed (HTTP " + r.status + ")";
@@ -40,6 +44,15 @@
         throw new Error(msg);
       }
       return r.json();
+    },
+
+    // "Send to handheld": write the theme (and its files) into the server's --themes-dir (a mounted banana/themes)
+    async send(name, theme, assets) {
+      const body = JSON.stringify({ name: name, theme: theme, assets: assets || [] });
+      const r = await fetch("api/send", { method: "POST", headers: { "content-type": "application/json" }, body: body });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error((j && j.error) || ("send failed (HTTP " + r.status + ")"));
+      return j;
     },
   };
 
