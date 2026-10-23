@@ -10,6 +10,7 @@ A pixel-art menu, two DS emulators and a system built around your handheld's two
 choose an emulator and start playing.
 
 <p align="center">
+  <a href="https://bananaos-cfw.dev">Website</a> ·
   <a href="https://github.com/JorreFog/BananaLinux/releases/tag/v0.4.2">Download</a> ·
   <a href="#get-it">Install</a> ·
   <a href="#status">Known issues</a> ·
@@ -20,6 +21,7 @@ choose an emulator and start playing.
 <p align="center">
   <a href="https://github.com/JorreFog/BananaLinux/releases"><img src="https://img.shields.io/github/v/release/JorreFog/BananaLinux?include_prereleases&style=for-the-badge&label=release&color=F0B429&labelColor=17161C" alt="Latest release"></a>
   <a href="https://github.com/JorreFog/BananaLinux/releases"><img src="https://img.shields.io/github/downloads/JorreFog/BananaLinux/total?style=for-the-badge&label=downloads&color=234346&labelColor=17161C" alt="Downloads"></a>
+  <a href="https://bananaos-cfw.dev"><img src="https://img.shields.io/badge/website-bananaos--cfw.dev-F1EDE2?style=for-the-badge&labelColor=17161C" alt="Website: bananaos-cfw.dev"></a>
   <img src="https://img.shields.io/badge/handhelds-RG%20DS%20%C2%B7%20RG%20DS%20Plus-F1EDE2?style=for-the-badge&labelColor=17161C" alt="For the RG DS and RG DS Plus">
   <a href="https://discord.gg/FxeE7f8r"><img src="https://img.shields.io/badge/discord-join-F0B429?style=for-the-badge&logo=discord&logoColor=F1EDE2&labelColor=17161C" alt="Discord"></a>
 </p>
