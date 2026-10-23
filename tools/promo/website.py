@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # The website's announcement video: the new BananaOS website scrolling in a browser window, a line of copy beside each
 # part of it, in the trailer's look (video.py): BananaOS's font and logo, a scene's words fading out together before
-# the next. site-capture.mjs captures the site first (one screenshot per frame of the scroll, 30 a second; DSF=0.6667 draws it at
-# the 960 x 600 it has here).
+# the next. site-capture.mjs captures the site first: one screenshot per frame of the scroll, 30 a second, on a virtual
+# clock so the site's own motion (its slideshow, the handheld's idle movement) runs at its real pace.
 #
 #   SITE=<capture dir> MUSIC=song.mp3 MUSIC_AT=8 python3 tools/promo/website.py out.mp4
 import os, subprocess, shutil, sys
