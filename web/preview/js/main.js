@@ -114,7 +114,6 @@ SETS.dark = [
   ["shot-home", "Home: your systems, recent games and play stats", "right"],
   ["shot-library", "Library: box art, play time and achievement progress", "a"],
   ["shot-options", "Per-game options: choose an emulator and settings for each game", "x"],
-  ["shot-game", "In play: one DS screen on each display", "a"],
   ["shot-game-menu", "In-game menu: save, load and adjust quick settings", "b"],
   ["shot-store", "App Store: install and update apps from the menu", "start"],
   ["shot-settings", "Settings: six groups, with help on the top screen", "start"],
