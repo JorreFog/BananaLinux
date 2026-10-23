@@ -21,6 +21,7 @@ import exact
 import expr as X
 import jsonc
 import presets
+import style
 import widgets as Wd
 
 MIME = 'application/x-banana-element'
@@ -2315,6 +2316,7 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName('Banana Theme Studio')
     app.setStyle('Fusion')
+    style.apply(app)			# the BananaOS website's look (style.py)
     w = Studio(sys.argv[1] if len(sys.argv) > 1 else None)
     w.show()
     sys.exit(app.exec())

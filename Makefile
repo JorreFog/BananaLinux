@@ -6,6 +6,7 @@
 #   make ui            banana-ui for this computer (headless renders, no panels needed)
 #   make test          renders the menu headless from a test library and checks it (needs ImageMagick)
 #   make theme-studio  the layout-theme editor's tests (the expression port, the preview server, the schema)
+#   make theme-studio-desktop  the PySide6 designer's smoke test
 #   make menuconfig-rgds / linux-menuconfig-rgds ...   any Buildroot target, per board
 #
 # The first image build downloads Buildroot (below) and everything it builds: expect an hour or more.
@@ -39,8 +40,12 @@ test: ui
 theme-studio: ui
 	sh tools/theme-studio/tests/run.sh
 
+# the PySide6 designer's headless smoke test (needs PySide6)
+theme-studio-desktop:
+	python3 tools/theme-studio-desktop/tests/smoke.py
+
 clean:
 	rm -rf $(OUT)
 	$(MAKE) -C ui clean
 
-.PHONY: $(BOARDS) ui test theme-studio clean
+.PHONY: $(BOARDS) ui test theme-studio theme-studio-desktop clean

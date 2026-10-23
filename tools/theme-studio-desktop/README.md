@@ -51,3 +51,7 @@ banana-ui). Elsewhere, point it at a checkout with Engine > Set BananaLinux fold
 | `presets.py` | The palette's elements and the starting templates |
 | `exact.py` | Runs `ui/banana-ui --headless` over `ui/tests/fixture.sh`'s library |
 | `jsonc.py` | Reads JSON with comments, writes it in the example themes' style |
+| `style.py` | The BananaOS website's look (web/preview): charcoal, cream borders, banana yellow, Pixelify Sans |
+| `tests/smoke.py` | Builds the window offscreen and paints it, so a broken import or stylesheet is caught |
+
+The look matches the web editor (`tools/theme-studio/`), so the two feel like the same tool.
