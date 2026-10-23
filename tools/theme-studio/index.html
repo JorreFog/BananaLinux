@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Banana Theme Studio</title>
+<!-- Banana Theme Studio: makes a "layout theme" for BananaOS (a theme whose JSON has a "screens" member and draws
+     the whole menu). Open this file in a browser to edit offline; for exact previews of your theme, run
+     tools/theme-studio/serve.py and open the address it prints. The format is docs/THEMES.md. -->
+<link rel="stylesheet" href="ui.css">
+</head>
+<body>
+<header>
+  <h1>Banana Theme Studio</h1>
+  <button id="newBtn" title="Start a new theme">New</button>
+  <button id="openBtn" title="Open a theme .json">Open</button>
+  <button id="saveBtn" class="primary" title="Download the theme .json">Save</button>
+  <button id="copyBtn" title="Copy the JSON">Copy</button>
+  <button id="validateBtn" title="Check the theme">Validate</button>
+  <input id="fileInput" type="file" accept=".json,application/json" class="hidden">
+  <span class="sp"></span>
+  <span id="status" class="status">…</span>
+</header>
+
+<main>
+  <aside id="left">
+    <div class="tabs" role="tablist">
+      <button data-tab="elements" aria-selected="true">Elements</button>
+      <button data-tab="components">Components</button>
+      <button data-tab="vars">Vars</button>
+      <button data-tab="colours">Colours</button>
+      <button data-tab="input">Input</button>
+      <button data-tab="behaviour">Behaviour</button>
+      <button data-tab="theme">Theme</button>
+    </div>
+    <div class="pane" id="pane-elements"></div>
+    <div class="pane" id="pane-components" hidden></div>
+    <div class="pane" id="pane-vars" hidden></div>
+    <div class="pane" id="pane-colours" hidden></div>
+    <div class="pane" id="pane-input" hidden></div>
+    <div class="pane" id="pane-behaviour" hidden></div>
+    <div class="pane" id="pane-theme" hidden></div>
+  </aside>
+
+  <section id="center">
+    <div id="preview"></div>
+    <div id="log" class="hidden"></div>
+  </section>
+
+  <aside id="right">
+    <div class="pane" id="inspector"></div>
+  </aside>
+</main>
+
+<script src="expr.js"></script>
+<script src="schema.js"></script>
+<script src="render.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -8,6 +8,7 @@
 // % (+ joins when either side is a string), == != < <= > >=, && || !, a ? b : c, and functions (expr.cpp's list:
 // min, max, clamp, abs, floor, round, sin, ease functions, mix and alpha for colours, upper, len, ...). Names are
 // looked up in the scope: a list item's own (item.*, i, sel, ...), the theme's vars, then the menu's hooks.
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <string>

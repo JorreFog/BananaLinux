@@ -4,6 +4,11 @@ BananaOS 0.5.0 adds layout themes: one JSON file describes everything on both sc
 read and write that file and preview it. This page links the files that define the format and recommends how to build
 the editor around them. The format may still change before 0.5.0 ships; [THEMES.md](THEMES.md) is always current.
 
+> **Built:** [`tools/theme-studio/`](../tools/theme-studio/) is this editor — an offline web app with a server
+> (`serve.py`) that previews through the real engine, a JavaScript port of `expr.cpp` kept in step by a parity
+> test, and [`docs/theme.schema.json`](theme.schema.json) as the machine-readable format. Its README says what it
+> covers and which of the open questions below are settled.
+
 ## The files
 
 | File | What it is | Why the editor needs it |
