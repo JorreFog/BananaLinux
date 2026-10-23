@@ -5,7 +5,9 @@ menu themselves (`docs/THEMES.md`). It edits the theme JSON directly, evaluates 
 and can preview the theme with the device's own engine.
 
 There is no build step. Open `index.html` in a browser to edit offline, or run `serve.py` to also get exact
-previews.
+previews. The panels follow the desktop **Banana Theme Studio** (`banana studio/`); the look is the **BananaOS
+website's** (`web/preview`) — charcoal cards with a cream border, banana yellow, Pixelify Sans, and a dark/light
+switch.
 
 ## Quick start
 
@@ -67,7 +69,8 @@ exact, and it only changes when the engine does. `--size 1024x768` previews at t
 
 | File | What it is |
 | --- | --- |
-| `index.html`, `ui.css` | The page. |
+| `index.html`, `ui.css` | The page and the BananaOS-website look. |
+| `assets/` | Pixelify Sans and the menu dot patterns, copied from `web/preview/assets/`, so the page works offline. |
 | `app.js` | The editor: tree, inspector, value widgets, colour keys, save/load. |
 | `expr.js` | A JavaScript port of the theme expression language (`ui/src/expr.cpp`). |
 | `schema.js` | The editor's field metadata: elements, properties, hooks, palettes. |
@@ -85,6 +88,7 @@ make theme-studio                                 # from the repo root: everythi
 sh tools/theme-studio/tests/run.sh                 # the same, from anywhere
 node tools/theme-studio/tests/expr.test.js          # expr.js vs the real engine (needs g++)
 python3 tools/theme-studio/tests/serve.test.py      # the preview server, end to end
+sh tools/theme-studio/tests/ui.test.sh              # the page really loads in a browser (needs Chromium)
 python3 tools/theme-studio/tests/schema.test.py     # the example themes against docs/theme.schema.json
 ```
 

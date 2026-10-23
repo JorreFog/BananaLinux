@@ -6,7 +6,8 @@
 // previews drawn by the real engine (render.js).
 (function () {
   "use strict";
-  const E = global.BananaExpr, S = global.BananaSchema, RENDER = global.BananaRender;
+  const G = typeof globalThis !== "undefined" ? globalThis : window;
+  const E = G.BananaExpr, S = G.BananaSchema, RENDER = G.BananaRender;
   const $ = (s) => document.querySelector(s);
 
   // ---- a small starter theme, so "New" works offline ------------------------------------------------
@@ -47,7 +48,8 @@
   };
 
   // ---- state -----------------------------------------------------------------------------------------
-  const state = { theme: clone(STARTER), sel: null, view: "home", screen: "top", tab: "elements", shots: null, drag: null, open: {}, templates: null, assets: {} };
+  const state = { theme: clone(STARTER), sel: null, view: "home", screen: "top", addScreen: "top", size: "640x480",
+    shots: null, drag: null, open: {}, templates: null, assets: {} };
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
 
   // ---- tiny DOM helper -------------------------------------------------------------------------------
@@ -79,14 +81,15 @@
     const sc = state.theme.screens || (state.theme.screens = {});
     for (const v of S.VIEWS) { const s = sc[v]; if (!s) continue; for (const k of S.SCREENS) { const x = s[k]; if (x && !Array.isArray(x)) s[k] = [x]; } }
   }
-  function screenArr() {
+  function screenArr(screen) {
     const t = state.theme;
+    screen = screen || state.screen;
     if (!t.screens || typeof t.screens !== "object") t.screens = {};
     if (!t.screens[state.view] || typeof t.screens[state.view] !== "object") t.screens[state.view] = {};
-    let v = t.screens[state.view][state.screen];
+    let v = t.screens[state.view][screen];
     if (Array.isArray(v)) return v;
-    if (v && typeof v === "object") { v = [v]; t.screens[state.view][state.screen] = v; return v; }
-    if (v === undefined || v === null) { v = []; t.screens[state.view][state.screen] = v; return v; }
+    if (v && typeof v === "object") { v = [v]; t.screens[state.view][screen] = v; return v; }
+    if (v === undefined || v === null) { v = []; t.screens[state.view][screen] = v; return v; }
     return v;
   }
 
@@ -629,7 +632,7 @@
     if (!names.length) pane.appendChild(h("div", { class: "muted" }, "(none yet)"));
     names.forEach(function (n) {
       const row = h("div", { class: "ctl", style: "margin:3px 0" });
-      const edit = h("button", { type: "button" }, n); edit.onclick = () => { state.sel = ["components", n]; switchTab("elements"); renderTree(); rerender(); };
+      const edit = h("button", { type: "button" }, n); edit.onclick = () => { state.sel = ["components", n]; showTab("properties", "inspector"); renderTree(); rerender(); };
       const ren = h("button", { class: "ghost", type: "button" }, "rename"); ren.onclick = () => { const nn = prompt("Rename component", n); if (nn && nn !== n) { comps[nn] = comps[n]; delete comps[n]; markDirty(); renderComponents(); } };
       const del = h("button", { class: "ghost danger", type: "button" }, "✕"); del.onclick = () => { delete comps[n]; markDirty(); renderComponents(); };
       row.appendChild(edit); row.appendChild(ren); row.appendChild(del); pane.appendChild(row);
@@ -757,6 +760,92 @@
     return (state.theme.name || "theme").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "theme";
   }
 
+  // ---- the "Add elements" palette --------------------------------------------------------------------
+  const PALETTE = [
+    ["Shapes", [["rect", "Rect", "a filled box"], ["group-row", "Row", "children in a row"], ["group-column", "Column", "children in a column"]]],
+    ["Text & pictures", [["text", "Text", "a line of text"], ["image", "Image", "a picture"], ["group", "Group", "a box holding children"]]],
+    ["Lists", [["list-systems", "Systems carousel", "a row centred on the selection"], ["list-games", "Games list", "a column of games"], ["list-hints", "Button hints", "the hint chips"]]],
+    ["Status", [["clock", "Clock", "the time"], ["battery", "Battery", "its percent"], ["page-dots", "Page dots", "one per system"]]],
+  ];
+  function renderPalette() {
+    const pane = $("#palette"); pane.innerHTML = "";
+    const srow = h("div", { class: "ctl", style: "margin-bottom:6px" });
+    srow.appendChild(h("span", { class: "muted", style: "font-size:12px" }, "add to"));
+    ["top", "bottom"].forEach(function (s) {
+      const b = h("button", { type: "button", class: "ghost" }, s);
+      b.setAttribute("aria-pressed", String(state.addScreen === s));
+      if (state.addScreen === s) b.style.borderColor = "var(--accent)";
+      b.onclick = () => { state.addScreen = s; renderPalette(); };
+      srow.appendChild(b);
+    });
+    srow.appendChild(h("span", { class: "muted", style: "font-size:12px" }, state.view));
+    pane.appendChild(srow);
+    PALETTE.forEach(function (grp) {
+      const g = h("div", { class: "pal-group" }); g.appendChild(h("h3", null, grp[0]));
+      const grid = h("div", { class: "pal-grid" });
+      grp[1].forEach(function (it) {
+        const b = h("button", { type: "button", class: "pal" }, h("b", null, it[1]), h("span", null, it[2]));
+        b.title = "add to the " + state.addScreen + " screen of " + state.view;
+        b.onclick = () => addPreset(it[0]);
+        grid.appendChild(b);
+      });
+      g.appendChild(grid); pane.appendChild(g);
+    });
+  }
+  function addPreset(kind) {
+    const arr = screenArr(state.addScreen);
+    arr.push(makePreset(kind));
+    state.sel = ["screens", state.view, state.addScreen, arr.length - 1];
+    state.open[JSON.stringify(["screens", state.view, state.addScreen])] = true;
+    markDirty(); renderAll(); rerender();
+  }
+  function makePreset(kind) {
+    if (kind === "group-row") return { type: "group", x: 0, y: 0, w: 400, h: 60, layout: "row", gap: 8, padding: 8, children: [] };
+    if (kind === "group-column") return { type: "group", x: 0, y: 0, w: 300, h: 200, layout: "column", gap: 8, padding: 8, children: [] };
+    if (kind === "list-systems") return { type: "list", source: "systems", direction: "row", x: 0, y: 120, w: 640, h: 230, itemW: 150, itemH: 190, gap: 14, scrollMode: "center",
+      item: { type: "group", w: 150, h: 190, children: [{ type: "text", x: 8, w: 134, y: 150, align: "center", text: "{item.name}", size: 13, color: "#eef1ff" }] } };
+    if (kind === "list-games") return { type: "list", source: "games", direction: "column", x: 24, y: 40, w: 592, h: 400, itemW: 592, itemH: 48, gap: 8,
+      item: { type: "group", w: 592, h: 48, children: [{ type: "text", x: 16, y: 14, text: "{item.title}", size: 16, color: "#eef1ff" }] } };
+    if (kind === "list-hints") return { type: "list", source: "hints", direction: "row", x: 24, y: 440, w: 600, h: 24, gap: 18, flow: true, scrollMode: "none",
+      item: { type: "text", text: "{item.key} {item.label}", size: 13, color: "#9aa3c0" } };
+    if (kind === "page-dots") return { type: "list", source: "range", count: 7, direction: "row", x: 280, y: 452, w: 80, h: 12, gap: 6, itemW: 8, itemH: 8, scrollMode: "none",
+      item: { type: "rect", w: 8, h: 8, radius: 4, fill: "=i == cursor ? accent : '#5a5560'" } };
+    if (kind === "clock") return { type: "text", x: 20, y: 10, text: "{clock}", size: 15, color: "#eef1ff" };
+    if (kind === "battery") return { type: "text", x: 20, y: 30, text: "=battery < 0 ? '' : battery + '%'", size: 13, color: "#9aa3c0" };
+    return makeElement(kind);
+  }
+
+  // ---- the bottom dock: preview controls and the JSON tab --------------------------------------------
+  function renderPreviewControls() {
+    const pane = $("#preview-controls"); pane.innerHTML = "";
+    if (!RENDER || !RENDER.available) {
+      pane.appendChild(h("div", { class: "note", html: "Previews need the local server. In a terminal:<br><br><code>python3 tools/theme-studio/serve.py</code><br><br>then open the address it prints. Editing, the tree, expressions and colour keys all work without it." }));
+      return;
+    }
+    const srow = h("div", { class: "field" }); srow.appendChild(h("label", null, "panel size"));
+    const sel = h("select");
+    [["640x480", "RG DS  640 × 480"], ["1024x768", "RG DS Plus  1024 × 768"]].forEach(function (o) {
+      const op = h("option", { value: o[0] }, o[1]); if (state.size === o[0]) op.setAttribute("selected", ""); sel.appendChild(op);
+    });
+    sel.onchange = () => { state.size = sel.value; doPreview(); };
+    srow.appendChild(h("div", { class: "ctl" }, sel)); pane.appendChild(srow);
+    const go = h("button", { class: "primary", type: "button" }, "Render preview"); go.onclick = doPreview;
+    pane.appendChild(h("div", { class: "ctl", style: "margin-top:6px" }, go, h("span", { class: "pill" }, state.shots ? state.shots.length + " shot(s)" : "not drawn yet")));
+    pane.appendChild(h("div", { class: "muted", style: "font-size:12px;margin-top:6px" }, "Draws the theme with the real engine (ui/banana-ui --headless). Its complaints appear under Problems."));
+  }
+  function renderJson() {
+    const pane = $("#json"); pane.innerHTML = "";
+    const ta = h("textarea", { spellcheck: "false" }); ta.value = JSON.stringify(state.theme, null, 2) + "\n";
+    const apply = h("button", { class: "primary", type: "button" }, "Apply");
+    apply.onclick = () => {
+      try { state.theme = looseParse(ta.value); state.sel = null; normalize(); renderAll(); rerender(); markDirty(); setStatus("applied the JSON", "ok"); }
+      catch (e) { setStatus("JSON error: " + e.message, "bad"); }
+    };
+    const revert = h("button", { type: "button" }, "Revert"); revert.onclick = () => { ta.value = JSON.stringify(state.theme, null, 2) + "\n"; };
+    pane.appendChild(h("div", { class: "row" }, apply, revert, h("span", { class: "muted", style: "font-size:12px" }, "comments and trailing commas are allowed; saving writes plain JSON")));
+    pane.appendChild(ta);
+  }
+
   // ---- validation ------------------------------------------------------------------------------------
   function eachElement(cb) {
     const th = state.theme;
@@ -801,10 +890,10 @@
   function schedulePreview() { if (previewTimer) clearTimeout(previewTimer); previewTimer = setTimeout(function () { if (RENDER && RENDER.available) doPreview(); }, 700); }
   async function doPreview() {
     try {
-      const r = await RENDER.render(state.theme, null, null, assetList());
+      const r = await RENDER.render(state.theme, null, state.size, assetList());
       state.shots = r.shots || [];
       showLog(r.log, r.errors || []);
-      renderPreview();
+      renderPreview(); renderPreviewControls();
     } catch (e) { showLog(String(e.message || e), [String(e.message || e)]); }
   }
   function showLog(text, errors) {
@@ -816,14 +905,10 @@
   function renderPreview() {
     const p = $("#preview"); p.innerHTML = "";
     if (!RENDER || !RENDER.available) {
-      p.appendChild(h("div", { class: "note", html: "Previews need the local server. In a terminal:<br><br><code>python3 tools/theme-studio/serve.py</code><br><br>then open the address it prints. Editing, the tree, expressions and colour keys all work without it." }));
+      p.appendChild(h("div", { class: "note", html: "The Design canvas shows the theme drawn by the real engine, which needs the local server:<br><br><code>python3 tools/theme-studio/serve.py</code><br><br>Editing, the tree, expressions and colour keys all work without it." }));
       return;
     }
-    const bar = h("div", { class: "ctl", style: "margin-bottom:8px" });
-    const go = h("button", { type: "button" }, "Preview"); go.onclick = doPreview; bar.appendChild(go);
-    bar.appendChild(h("span", { class: "pill" }, state.shots ? state.shots.length + " shot(s)" : "not drawn yet"));
-    p.appendChild(bar);
-    if (!state.shots || !state.shots.length) { p.appendChild(h("div", { class: "note" }, "Press Preview to draw the theme with the real engine.")); return; }
+    if (!state.shots || !state.shots.length) { p.appendChild(h("div", { class: "note" }, "Press Render preview (bottom) to draw the theme with the real engine.")); return; }
     const shots = h("div", { class: "shots" });
     state.shots.forEach(function (s) {
       const card = h("div", { class: "shot" });
@@ -852,22 +937,35 @@
   }
 
   // ---- tabs, status, wiring --------------------------------------------------------------------------
-  function switchTab(t) {
-    state.tab = t;
-    document.querySelectorAll("#left .tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === t)));
-    document.querySelectorAll(".pane").forEach((p) => { if (["pane-elements", "pane-components", "pane-vars", "pane-colours", "pane-assets", "pane-input", "pane-behaviour", "pane-theme"].indexOf(p.id) >= 0) p.hidden = true; });
-    $("#pane-" + t).hidden = false;
+  // the desktop studio's dock tabs: each group shows one of its panels
+  const TAB_PANES = {
+    library: { components: "#pane-components", assets: "#pane-assets" },
+    center: { design: "#design", json: "#json" },
+    properties: { inspector: "#inspector", theme: "#theme" },
+    bottom: { controls: "#preview-controls", problems: "#log" },
+  };
+  function showTab(group, tab) {
+    const bar = document.querySelector('.tabs[data-group="' + group + '"]');
+    if (bar && bar.querySelectorAll) bar.querySelectorAll("button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
+    const map = TAB_PANES[group] || {};
+    Object.keys(map).forEach((k) => { const el = $(map[k]); if (el) el.hidden = (k !== tab); });
+    if (group === "center" && tab === "json") renderJson();
   }
   function setStatus(txt, cls) { const s = $("#status"); s.textContent = txt; s.className = "status" + (cls ? " " + cls : ""); }
   function rerender() { renderInspector(); }
-  function renderAll() { renderTree(); renderColours(); renderVars(); renderComponents(); renderAssets(); renderInput(); renderBehaviour(); renderTheme(); }
+  function renderAll() { renderPalette(); renderTree(); renderColours(); renderVars(); renderComponents(); renderAssets(); renderInput(); renderBehaviour(); renderTheme(); renderPreviewControls(); renderJson(); }
 
   function loadTemplates() {
     fetch("api/templates", { cache: "no-store" }).then((r) => (r.ok ? r.json() : [])).then((list) => { state.templates = list; renderTheme(); }).catch(() => {});
   }
 
   function wire() {
-    document.querySelectorAll("#left .tabs button").forEach((b) => b.addEventListener("click", () => switchTab(b.dataset.tab)));
+    document.querySelectorAll(".tabs button").forEach((b) => { b.onclick = () => showTab(b.parentElement.dataset.group, b.dataset.tab); });
+    // the dark/light switch, like the website's
+    const root = document.documentElement;
+    const setTheme = (t) => { root.setAttribute("data-theme", t); const lab = $("#themeLabel"); if (lab) lab.textContent = t === "light" ? "Light" : "Dark"; try { localStorage.setItem("banana-studio-theme", t); } catch (e) { /* ignore */ } };
+    try { const q = new URLSearchParams(location.search).get("theme"); const saved = q || localStorage.getItem("banana-studio-theme"); if (saved) setTheme(saved); } catch (e) { /* ignore */ }
+    const sw = $("#themeSwitch"); if (sw) sw.onclick = () => setTheme(root.getAttribute("data-theme") === "light" ? "dark" : "light");
     $("#newBtn").onclick = () => { if (confirm("Start a new theme? Unsaved changes are lost.")) loadTheme(clone(STARTER)); };
     $("#openBtn").onclick = () => $("#fileInput").click();
     $("#fileInput").onchange = function () {
@@ -882,11 +980,12 @@
   }
 
   // ---- go --------------------------------------------------------------------------------------------
-  wire(); switchTab("elements"); normalize(); renderAll(); renderInspector(); renderPreview();
+  wire(); normalize(); renderAll(); renderInspector(); renderPreview();
   if (RENDER) {
     RENDER.check().then(function (ok) {
       if (ok) { setStatus("preview server ready", "ok"); loadTemplates(); renderAssets(); } else setStatus("offline — edit & save; run serve.py for previews", "");
-      renderPreview();
+      renderPreview(); renderPreviewControls();
+      try { if (new URLSearchParams(location.search).get("preview")) doPreview(); } catch (e) { /* ignore */ }
     });
   }
 })();

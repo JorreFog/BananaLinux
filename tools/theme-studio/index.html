@@ -1,58 +1,96 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Banana Theme Studio</title>
 <!-- Banana Theme Studio: makes a "layout theme" for BananaOS (a theme whose JSON has a "screens" member and draws
-     the whole menu). Open this file in a browser to edit offline; for exact previews of your theme, run
-     tools/theme-studio/serve.py and open the address it prints. The format is docs/THEMES.md. -->
+     the whole menu). The panels are laid out like the desktop Banana Theme Studio (banana studio/); the look is
+     the BananaOS website's (web/preview): charcoal cards, a cream border, banana yellow, Pixelify Sans.
+     Open this file to edit offline; run tools/theme-studio/serve.py for exact previews. The format is docs/THEMES.md. -->
 <link rel="stylesheet" href="ui.css">
 </head>
 <body>
-<header>
-  <h1>Banana Theme Studio</h1>
-  <button id="newBtn" title="Start a new theme">New</button>
-  <button id="openBtn" title="Open a theme .json">Open</button>
-  <button id="saveBtn" class="primary" title="Download the theme .json">Save</button>
-  <button id="copyBtn" title="Copy the JSON">Copy</button>
-  <button id="validateBtn" title="Check the theme">Validate</button>
+<header class="top">
+  <div class="brand">
+    <span class="logo-chip"><img src="assets/banana-32.png" alt=""><span class="os">BANANA</span><span class="studio">STUDIO</span></span>
+    <span class="sub">layout themes</span>
+  </div>
+  <div class="tools">
+    <button id="newBtn" class="btn">New</button>
+    <button id="openBtn" class="btn">Open</button>
+    <button id="saveBtn" class="btn primary">Save</button>
+    <button id="copyBtn" class="btn">Copy</button>
+    <button id="validateBtn" class="btn">Validate</button>
+    <button id="themeSwitch" class="theme-switch" title="Dark / light"><span class="track"><span class="knob"></span></span><span id="themeLabel">Dark</span></button>
+  </div>
   <input id="fileInput" type="file" accept=".json,application/json" class="hidden">
-  <span class="sp"></span>
   <span id="status" class="status">…</span>
 </header>
 
-<main>
-  <aside id="left">
-    <div class="tabs" role="tablist">
-      <button data-tab="elements" aria-selected="true">Elements</button>
-      <button data-tab="components">Components</button>
-      <button data-tab="vars">Vars</button>
-      <button data-tab="colours">Colours</button>
-      <button data-tab="assets">Assets</button>
-      <button data-tab="input">Input</button>
-      <button data-tab="behaviour">Behaviour</button>
-      <button data-tab="theme">Theme</button>
-    </div>
-    <div class="pane" id="pane-elements"></div>
-    <div class="pane" id="pane-components" hidden></div>
-    <div class="pane" id="pane-vars" hidden></div>
-    <div class="pane" id="pane-colours" hidden></div>
-    <div class="pane" id="pane-assets" hidden></div>
-    <div class="pane" id="pane-input" hidden></div>
-    <div class="pane" id="pane-behaviour" hidden></div>
-    <div class="pane" id="pane-theme" hidden></div>
+<main class="app">
+  <aside class="col left">
+    <section class="dock">
+      <h2 class="dock-title">Add elements</h2>
+      <div class="dock-body" id="palette"></div>
+    </section>
+    <section class="dock grow">
+      <h2 class="dock-title">Layers</h2>
+      <div class="dock-body" id="pane-elements"></div>
+    </section>
+    <section class="dock">
+      <div class="tabs" data-group="library">
+        <button data-tab="components" aria-selected="true">Components</button>
+        <button data-tab="assets">Assets</button>
+      </div>
+      <div class="dock-body">
+        <div id="pane-components"></div>
+        <div id="pane-assets" hidden></div>
+      </div>
+    </section>
   </aside>
 
-  <section id="center">
-    <div id="preview"></div>
-    <div id="log" class="hidden"></div>
+  <section class="col center">
+    <div class="tabs" data-group="center">
+      <button data-tab="design" aria-selected="true">Design</button>
+      <button data-tab="json">JSON</button>
+    </div>
+    <div class="center-body">
+      <div id="design"><div id="preview"></div></div>
+      <div id="json" hidden></div>
+    </div>
   </section>
 
-  <aside id="right">
-    <div class="pane" id="inspector"></div>
+  <aside class="col right">
+    <section class="dock grow">
+      <div class="tabs" data-group="properties">
+        <button data-tab="inspector" aria-selected="true">Inspector</button>
+        <button data-tab="theme">Theme settings</button>
+      </div>
+      <div class="dock-body">
+        <div id="inspector"></div>
+        <div id="theme" hidden>
+          <div id="pane-theme"></div>
+          <div id="pane-vars"></div>
+          <div id="pane-colours"></div>
+          <div id="pane-input"></div>
+          <div id="pane-behaviour"></div>
+        </div>
+      </div>
+    </section>
   </aside>
 </main>
+
+<footer class="bottom">
+  <div class="tabs" data-group="bottom">
+    <button data-tab="controls" aria-selected="true">Preview</button>
+    <button data-tab="problems">Problems</button>
+  </div>
+  <div class="bottom-body">
+    <div id="preview-controls"></div>
+    <div id="log" hidden></div>
+  </div>
+</footer>
 
 <script src="expr.js"></script>
 <script src="schema.js"></script>

@@ -11,6 +11,9 @@ echo
 echo "== preview server (end to end) =="
 python3 "$D/serve.test.py"
 echo
+echo "== the page in a browser =="
+sh "$D/ui.test.sh"
+echo
 echo "== example themes vs docs/theme.schema.json =="
 python3 "$D/schema.test.py"
 echo
