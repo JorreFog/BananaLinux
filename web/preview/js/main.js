@@ -126,6 +126,7 @@ SETS.light = [
   ["light-options", "Per-game options: choose an emulator and settings for each game", "x"],
   ["light-settings", "Settings: six groups, with help on the top screen", "start"],
 ];
+let theme = document.documentElement.dataset.theme === "light" ? "light" : "dark";
 let SLIDES = SETS[theme];
 const SLIDE_TIME = 3.6, FADE = 0.3;
 const screenTop = document.createElement("canvas"), screenBottom = document.createElement("canvas");
@@ -238,7 +239,7 @@ function show(i) {
 // ------------------------------------------------------------------ load
 const loadbar = document.getElementById("loadbar");
 const [gltf] = await Promise.all([
-  new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).loadAsync("rgds_plus.min.glb", (e) => { if (e.total) loadbar.style.width = `${(e.loaded / e.total) * 90}%`; }),
+  new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).loadAsync("rgds_plus.min.glb", (e) => { if (e.total) loadbar.style.width = `${Math.min(1, e.loaded / e.total) * 90}%`; }),
   loadSlide(SLIDES[0][0]).then((img) => { slides.cur = img; }),
 ]);
 loadSet(SLIDES);   // the rest load while the first one shows
