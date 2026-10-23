@@ -5,7 +5,7 @@
 # clock so the site's own motion (its slideshow, the handheld's idle movement) runs at its real pace.
 #
 #   SITE=<capture dir> MUSIC=song.mp3 MUSIC_AT=8 python3 tools/promo/website.py out.mp4
-import os, subprocess, shutil, sys
+import math, os, subprocess, shutil, sys
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -131,7 +131,12 @@ def wrap(s, font, width):
 def paste(layer, im, x, y, alpha):
     if alpha <= 0: return
     im = im.copy(); im.putalpha(im.getchannel('A').point(lambda v: int(v * alpha)))
-    layer.alpha_composite(im, (int(x), int(y)))
+    # at a fraction of a pixel, shifted by that fraction (a big pixel-art logo stepping whole pixels as it eases in shakes)
+    ix, iy = math.floor(x), math.floor(y)
+    fx, fy = x - ix, y - iy
+    if fx > 0.01 or fy > 0.01:
+        im = im.convert('RGBa').transform((im.width + 1, im.height + 1), Image.AFFINE, (1, 0, -fx, 0, 1, -fy), Image.BILINEAR).convert('RGBA')
+    layer.alpha_composite(im, (ix, iy))
 
 # ---- a frame ----------------------------------------------------------------------------------------------------------
 def frame(t):
@@ -148,7 +153,8 @@ def frame(t):
         a = ease((t - SITE_FIRST['at']) / 1.0)
         end = SITE_LAST['at'] + SITE_LAST['len']
         b = easeio((t - (end - 0.9)) / 0.9)
-        x = WX + int((1 - a) * 900) + int(b * 900)
+        off = W - WX + 100		# far enough that the window and its shadow are off the frame
+        x = WX + int((1 - a) * off) + int(b * off)
         y = (H - WINDOW.height) // 2
         win = WINDOW.copy()
         win.paste(page(S['site'], local), (2, BAR + 2), PMASK)

@@ -27,6 +27,11 @@ await p.addInitScript(() => {
   window.cancelAnimationFrame = i => queue.delete(i);
   window.__step = ms => {
     T += ms;
+    // CSS animations and transitions (the bobbing banana, hover fades) run on the browser's own clock: held, and moved on
+    // by the same step
+    for (const a of document.getAnimations()) {
+      try { if (a.playState !== 'paused') a.pause(); a.currentTime = (a.currentTime || 0) + ms; } catch (e) {}
+    }
     const q = [...queue.values()]; queue.clear();
     for (const f of q) { try { f(T); } catch (e) { console.error(e); } }
   };
