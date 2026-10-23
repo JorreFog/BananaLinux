@@ -61,7 +61,7 @@
       <p class="lead">A light Linux that boots straight into a pixel-art menu, sleeps when you close the lid,
         and gives the games every cycle.</p>
       <div class="cta">
-        <a class="btn primary" href="https://github.com/JorreFog/BananaLinux/releases">Download</a>
+        <a class="btn primary" href="#get">Download</a>
         <a class="btn" href="#features">What&#39;s inside &darr;</a>
       </div>
     </div>
@@ -143,21 +143,44 @@
     <div class="card reveal get">
       <img src="assets/banana-48.png" alt="" class="get-banana">
       <h2>Put it on a card.</h2>
-      <p>Flash the image for your handheld, put your games on the card's exFAT partition, and boot.</p>
+      <p>Download the image for your handheld, write it to a microSD card, and boot.</p>
       <div class="cta">
-        <a class="btn primary" href="https://github.com/JorreFog/BananaLinux/releases">Get BananaOS</a>
-        <a class="btn" href="https://github.com/JorreFog/BananaLinux">Source on GitHub</a>
+        <a class="btn primary" href="https://github.com/JorreFog/BananaLinux/releases/download/v0.4.2/banana-rgds.img.gz" data-asset="banana-rgds.img.gz">Download for RG DS</a>
+        <a class="btn primary" href="https://github.com/JorreFog/BananaLinux/releases/download/v0.4.2/banana-rgds-plus.img.gz" data-asset="banana-rgds-plus.img.gz">Download for RG DS Plus</a>
+      </div>
+      <ol class="steps">
+        <li><b>Write it to a card.</b> Open the <code>.img.gz</code> in <a href="https://etcher.balena.io/">balenaEtcher</a>
+          (no need to unzip it), pick your microSD card, Flash. Or use the
+          <a href="https://github.com/jesussaves-ai/banana-linux-flasher/releases/latest">BananaLinux Flasher</a>, which downloads and writes it for you.</li>
+        <li><b>Boot.</b> Card in the handheld, power on. The first boot takes a few seconds longer; set up Wi-Fi and the time, or skip with B.</li>
+        <li><b>Add your games.</b> Put the card in a computer: copy them into the <code>BANANA</code> drive's <code>roms/nds</code>, <code>roms/gba</code> and so on, or over Wi-Fi with file sharing.</li>
+      </ol>
+      <div class="cta">
+        <a class="btn" href="https://github.com/JorreFog/BananaLinux#readme">Full install guide</a>
+        <a class="btn" href="https://github.com/JorreFog/BananaLinux/releases">All releases</a>
         <a class="btn" href="https://jorrefog.github.io/BananaLinux/save-mover/">Save Mover</a>
       </div>
       <p class="fine">BananaOS is an alpha, MIT licensed. Made with AI: developed with Claude as a coding assistant,
         directed and tested on real hardware. Not affiliated with Anbernic or Nintendo. The 3D model is a fan
-        recreation; the games in the demo are made up.</p>
+        recreation. Game titles and art belong to their owners; BananaOS comes with no games.</p>
     </div>
   </section>
 </main>
 
 <div class="caption" id="caption" aria-live="polite"></div>
 
+<script>
+// The download buttons point at the newest release (pre-releases too, which GitHub's /latest/ skips); the
+// links in the page are the fallback if the API can't be reached.
+fetch("https://api.github.com/repos/JorreFog/BananaLinux/releases?per_page=5").then((r) => r.json()).then((list) => {
+  const rel = list.find((r) => !r.draft && r.assets.some((a) => a.name.endsWith(".img.gz")));
+  if (!rel) return;
+  for (const a of document.querySelectorAll("a[data-asset]")) {
+    const asset = rel.assets.find((x) => x.name === a.dataset.asset);
+    if (asset) a.href = asset.browser_download_url;
+  }
+}).catch(() => {});
+</script>
 <script type="module" src="js/main.js"></script>
 </body>
 </html>
