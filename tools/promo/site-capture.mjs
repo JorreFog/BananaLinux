@@ -1,7 +1,8 @@
 // captures the website along one scroll path on a virtual clock: the page's time (performance.now, Date.now and
 // requestAnimationFrame) advances exactly 1/30 s per captured frame, however long software WebGL takes to draw it,
 // so its slideshow, idle motion and scrubbed poses run at their real pace in the video.
-//   node capture2.mjs OUT '<path json>' first last       path: [[name, frames, y0, y1], ...] (the whole video's path);
+//   node capture2.mjs OUT '<path json>' first last       path: [[name, frames, y0, y1, move?], ...] (the whole video's
+//   path; move: the share of the scene the scroll takes, then it holds: a slow scroll steps a pixel every few frames);
 //   captures the path's scenes first..last (indices), fast-forwarding through the ones before so the page is in the
 //   state it would have reached
 import { chromium } from 'playwright-core';
@@ -50,6 +51,7 @@ for (let k = 0; k < 600 && !(await p.evaluate(() => document.getElementById('loa
   await p.evaluate(() => window.__step(16));
   await realWait(200);
 }
+await realWait(8000);	// the slideshow's pictures, loading on real time
 // the intro (lid, cards, then the scroll timeline is made): 4 s, in 0.1 s steps
 for (let k = 0; k < 40; k++) await p.evaluate(() => window.__step(100));
 const ease = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
@@ -57,8 +59,8 @@ const ease = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 // ScrollTrigger told of it at once (its scroll event comes on the browser's own schedule)
 const scrollTo = y => p.evaluate(y => { window.scrollTo({ top: y, behavior: 'instant' }); if (window.ScrollTrigger) window.ScrollTrigger.update(); }, y);
 for (let si = 0; si <= +last; si++) {
-  const [name, frames, y0, y1] = PATH[si];
-  const yAt = f => y0 + (y1 - y0) * ease(f / Math.max(1, frames - 1));
+  const [name, frames, y0, y1, move = 1] = PATH[si];
+  const yAt = f => y0 + (y1 - y0) * ease(Math.min(1, f / Math.max(1, (frames - 1) * move)));
   if (si < +first) {
     // fast-forward through this scene: its scroll in 0.5 s steps (poses and slides follow time, not frame counts)
     const n = Math.ceil(frames / 15);
