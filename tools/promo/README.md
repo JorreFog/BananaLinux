@@ -21,3 +21,14 @@ renders the model from any angle for checking it against photos.
 
 screens.py writes to screens/ next to it; video.py and scene.html read from there. The stills render with
 Chromium's software WebGL (SwiftShader).
+
+**The distro video** (distro.py): about two minutes on BananaOS itself, following the storyboard: the website's RG DS
+Plus model (rgds_plus.min.glb from main's web/preview) rendered by distro3d.html / distro3d.mjs, with banana-ui's own
+frames (headless) and the website's screenshots laid onto its screens, the flat two-screen panels for the menus, and
+the website's capture (site-capture.mjs) on a monitor. Cut to the music's beat (128 a minute; MUSIC_AT 22.384 puts
+Limoncello's drop at 0:06).
+
+    WORK=/tmp/distro python3 tools/promo/distro.py prepare      # web/preview from main, three.js (npm)
+    WORK=/tmp/distro python3 tools/promo/distro.py screens      # banana-ui's frames (30 fps)
+    WORK=/tmp/distro python3 tools/promo/distro.py 3d           # the handheld's shots (software WebGL: slow)
+    WORK=/tmp/distro SITE=<capture> MUSIC=song.mp3 python3 tools/promo/distro.py render out.mp4
