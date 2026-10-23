@@ -1,0 +1,25 @@
+# measure-all 2026-10-18T16:16:14Z base=/home/user/perf/build-dev/b/bananads mine=/home/user/perf/render/b5d/b/bananads QEMU=/home/user/perf/tools/qemu-dev (frames 100-300, k instructions/frame)
+# mine = b5d = perf/render @ 0fd83cb (before the rebase that dropped patch 0060 and before the quarters fix 88a772a): every toggle on; X-off/sort-off/unroll-off = mine with that toggle off; st = one thread 1x soft 3D (measure.sh); dev = gengis 2x, 3 Gengis threads, 2D thread (measure-dev.sh; threads: vcpu 1-3 Gengis, 4 the 2D thread); dev1x = scale 1, 2 Gengis threads, 2D thread
+st-L10-base                  main thread: 18450.8k insns/frame
+st-L10-mine                  main thread: 18433.4k insns/frame
+st-L10-sort-off              main thread: 18451.5k insns/frame
+st-ds2dtest-base             main thread: 21212.4k insns/frame
+st-ds2dtest-mine             main thread: 19261.9k insns/frame
+st-ds2dtest-unroll-off       main thread: 21224.2k insns/frame
+st-geomtest-base             main thread: 4473.1k insns/frame
+st-geomtest-mine             main thread: 4475.6k insns/frame
+st-geomtest-sort-off         main thread: 4475.6k insns/frame
+st-membench-base             main thread: 6013.4k insns/frame
+st-membench-mine             main thread: 5685.2k insns/frame
+st-membench-unroll-off       main thread: 6027.9k insns/frame
+dev-L10-base                 main thread: 3147.7k insns/frame | threads: vcpu:kinsn/frame 1:1047.5 2:1205.4 3:1086.8 4:2400.9 
+dev-L10-mine                 main thread: 2387.4k insns/frame | threads: vcpu:kinsn/frame 1:1358.6 2:1310.9 3:1382.4 4:2490.4 
+dev-L5-alloff                main thread: 3373.1k insns/frame | threads: vcpu:kinsn/frame 1:1222.1 2:1236.0 3:1322.9 4:2623.3 
+dev-L5-base                  main thread: 3273.8k insns/frame | threads: vcpu:kinsn/frame 1:1251.7 2:1332.1 3:1238.2 4:2609.6 
+dev-L5-mine                  main thread: 2324.1k insns/frame | threads: vcpu:kinsn/frame 1:1514.5 2:1474.8 3:1508.1 4:2883.0 
+dev-L5-pipeline-off          main thread: 3308.6k insns/frame | threads: vcpu:kinsn/frame 1:1270.8 2:1281.6 3:1203.6 4:2610.0 
+dev-L5-quarters-off          main thread: 2350.2k insns/frame | threads: vcpu:kinsn/frame 1:1491.3 2:1573.5 3:1595.5 4:2647.9 
+dev-L5-zip-off               main thread: 2319.6k insns/frame | threads: vcpu:kinsn/frame 1:1503.7 2:1439.9 3:1653.4 4:2882.4 
+dev1x-L5-base                main thread: 3277.8k insns/frame | threads: vcpu:kinsn/frame 1:599.8 2:965.2 3:678.8 
+dev1x-L5-mine                main thread: 2297.1k insns/frame | threads: vcpu:kinsn/frame 1:898.3 2:856.3 3:1496.7 
+dev1x-L5-share-off           main thread: 3116.1k insns/frame | threads: vcpu:kinsn/frame 1:907.7 2:815.5 3:677.3 

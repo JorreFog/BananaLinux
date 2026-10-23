@@ -1,0 +1,14 @@
+rgds-sim A/B (model v1)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/build-dev/b/bananads /home/user/perf/roms/ds2dtest-ds2dtest.nds st-ds2dtest-base-vs-b6d-A --mode st --frames 100:300
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/render/b6d/b/bananads /home/user/perf/roms/ds2dtest-ds2dtest.nds st-ds2dtest-base-vs-b6d-B --mode st --frames 100:300
+
+== thread 0 (main): ms/frame @1104 25.171 -> 23.647 (-6.05%)   @1992 14.198 -> 13.345 (-6.01%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 26.106 -> 25.253 (-3.27%)
+  insn 21286.4k->19337.3k (-9.2%)  base 21781.3k->20192.7k (-7.3%)  l1i_miss 10.4k->13.6k (+30.2%)  l1i_l3miss 0.5k->0.5k (-6.8%)  ld_miss 134.9k->132.3k (-1.9%)  ld_l3miss 3.1k->3.0k (-4.0%)  st_miss 39.8k->38.3k (-3.6%)  st_l3miss 5.3k->5.3k (-0.1%)  itlb_l2 7.0k->9.9k (+41.3%)  itlb_walk 0.0k->0.0k (+178.0%)  dtlb_l2 41.1k->41.1k (+0.1%)  dtlb_walk 0.0k->0.0k (-11.5%)  bcond_miss 85.5k->74.0k (-13.4%)  bind_miss 1.7k->2.1k (+23.4%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  2d                  22.387    20.900    -1.488   19061.4k   17111.6k
+  scheduler/core       1.547     1.499    -0.048    1122.2k    1120.7k
+  audio                0.085     0.091    +0.006      76.0k      76.0k
+  libc/lib             0.225     0.229    +0.004     208.1k     208.2k
+  memory               0.415     0.417    +0.002     416.8k     417.7k
+  gengis               0.302     0.302    +0.001     160.1k     161.4k

@@ -1,0 +1,185 @@
+From 069a7d90a612d08c1621bf5434ab28615c365d07 Mon Sep 17 00:00:00 2001
+From: core agent <core@perf>
+Date: Sun, 18 Oct 2026 16:15:32 +0000
+Subject: [PATCH 2/2] BananaDS: core.fast_div, the divider and square root unit
+ reschedule their event in one step (melonDS patch 0040; off by default:
+ -0.4%)
+
+StartDiv and StartSqrt cancelled and rescheduled their event at every parameter write (five per 64-bit divide;
+~1000 divides a frame on cpubench), and each cancel of the earliest event set the scheduler's SchedNext to 0, a
+walk of the event list at the next slice. NDS::RescheduleEvent does both in one step with the same event, mask,
+CPU target and SchedNext as the pair, and keeps SchedNext known when the event stays the earliest. Exact
+(pictures, audio, main RAM every frame). rgds-sim, cpubench-thumb: -0.4% of the main thread, so it stays off
+(core.fast_div=on turns it on; SetFastDiv).
+---
+ bananads/docs/SETTINGS.md                     |   1 +
+ ...and-square-root-unit-reschedule-thei.patch | 129 ++++++++++++++++++
+ bananads/src/emu.cpp                          |   4 +
+ 3 files changed, 134 insertions(+)
+ create mode 100644 bananads/patches/melonds/0040-NDS-the-divider-and-square-root-unit-reschedule-thei.patch
+
+diff --git a/bananads/docs/SETTINGS.md b/bananads/docs/SETTINGS.md
+index 223568b..01e7214 100644
+--- a/bananads/docs/SETTINGS.md
++++ b/bananads/docs/SETTINGS.md
+@@ -26,6 +26,7 @@ key can also come from the environment as `BANANADS_<KEY>` (dots become undersco
+ | `core.fast_sched` | `on` | the scheduler keeps the time of its next event instead of walking its event list twice every slice (patches/melonds/0006, 0009). Exact; on since `core.fast_loop` needs it |
+ | `core.fast_timers` | `on` | a CPU's timers run only when one of them overflows, not every slice (patches/melonds/0009). Exact |
+ | `core.fast_loop` | `on` | the scheduler's slice loop for the JIT with the common cases inline: block lookup and dispatch, a halted CPU, an idle 3D engine, a slice with no event due (patches/melonds/0009). Exact; used with `core.fast_sched` |
++| `core.fast_div` | `off` | the divider and the square root unit restart their event in one step at each parameter write (five per 64-bit divide) instead of cancelling and scheduling it, and the scheduler's next event time stays known instead of being recomputed by a walk of the event list (patches/melonds/0040). Exact: the same event times, slice ends and results. Measured -0.4% of the main thread on cpubench (rgds-sim): off until the device shows more |
+ | `render.geom_fast` | `on` | the 3D geometry engine's fast paths (patches/melonds/0011): the GX command ports and the GX FIFO port reached first, with the FIFO write inline; `GPU3D::Run` with each command's FIFO read, DMA and IRQ checks and cycle accounting inline; NEON for the matrix commands, the clip matrix and the vertex transform (s32 x s32 -> s64, then >> 12, as the C code); clipping only against the planes a polygon's vertices are outside of; one division per axis for a vertex's screen position; a strip's shared vertices keep the previous polygon's Z. Exact (the same vertices, polygons, GXSTAT, FIFO timing and matrix and test results). `MELONDS_GEOMFAST=0` turns it off |
+ | `render.2d` | `banana` | the 2D renderer: `banana` (the Banana 2D engine, gpu2d/: melonDS's picture, pixel for pixel, in about a third of the time) or `melonds` (melonDS's own) |
+ | `render.2d_thread` | `off` (`on` at `render.scale=2`) | `on` draws the Banana 2D engine's lines (`render.2d=banana`) on a thread of their own (`bananads-2d`), the same pictures: the emulator's thread only snapshots each line (its registers, the 3D layer's line, and the VRAM, palette and OAM changes since the last line, through a copy log) and waits for the thread at the end of the frame. While display capture is on (a game's DISPCAPCNT), that frame's lines are drawn on the emulator's thread, as with `off`. It logs what it did when the game quits (`[2d]`) |
+diff --git a/bananads/patches/melonds/0040-NDS-the-divider-and-square-root-unit-reschedule-thei.patch b/bananads/patches/melonds/0040-NDS-the-divider-and-square-root-unit-reschedule-thei.patch
+new file mode 100644
+index 0000000..20450f4
+--- /dev/null
++++ b/bananads/patches/melonds/0040-NDS-the-divider-and-square-root-unit-reschedule-thei.patch
+@@ -0,0 +1,129 @@
++From c8f79fddb5da6816c0c0f554238eeaf1edd38e70 Mon Sep 17 00:00:00 2001
++From: core agent <core@perf>
++Date: Sun, 18 Oct 2026 16:06:28 +0000
++Subject: [PATCH] NDS: the divider and square root unit reschedule their event
++ in one step (FastDiv, core.fast_div)
++
++StartDiv and StartSqrt cancelled and rescheduled their event at every parameter write (five per 64-bit divide),
++and each cancel of the earliest event set SchedNext to 0, a walk of the event list at the next NextTarget or
++RunSystem. RescheduleEvent does both in one step with the same event fields, mask, CPU target and SchedNext as
++the pair, except that SchedNext stays known when the event was the earliest and doesn't move later (writes in
++one JIT block share the CPU's timestamp): every other pending event is at or after its old time, so the new time
++is the earliest, which the walk would have found. SetFastDiv; off, the code is as before.
++---
++ src/NDS.cpp | 52 ++++++++++++++++++++++++++++++++++++++++++++++++++++
++ src/NDS.h   |  7 +++++++
++ 2 files changed, 59 insertions(+)
++
++diff --git a/src/NDS.cpp b/src/NDS.cpp
++index 1991a5c..0ed85e6 100644
++--- a/src/NDS.cpp
+++++ b/src/NDS.cpp
++@@ -1578,6 +1578,46 @@ void NDS::CancelEvent(u32 id)
++     SCHED(sb, SchedListMask) = mask & ~(1<<id);
++ }
++ 
+++// FastDiv: CancelEvent(id) followed by ScheduleEvent(id, false, delay, 0, 0), in one step (the divider and the square
+++// root unit, at every parameter write). The same event fields, mask, CPU target and SchedNext as the pair leaves,
+++// except that SchedNext stays known where the pair sets it to 0 ("recompute", a walk of the event list at the next
+++// NextTarget or RunSystem): when the event was the earliest and its new time isn't later than its old one (writes in
+++// one JIT block share the CPU's timestamp), every other pending event is at or after the old time, so the new time
+++// is the earliest; the pair's recompute would find the same value. Later than the old time: 0, as the pair.
+++void NDS::RescheduleEvent(u32 id, s32 delay) noexcept
+++{
+++    char* const sb = PinAddress(reinterpret_cast<char*>(&SysTimestamp));
+++    const u32 mask = SCHED(sb, SchedListMask);
+++    SchedEvent& evt = SchedList[id];
+++
+++    const int curCPU = CurCPU;
+++    const u32 shift = ARM9ClockShift;
+++    u64 timestamp;
+++    if (curCPU == 0)
+++    {
+++        timestamp = (ARM9Timestamp >> shift) + delay;
+++        if (timestamp < (ARM9Target >> shift))
+++            ARM9Target = (timestamp << shift);
+++    }
+++    else
+++    {
+++        timestamp = ARM7Timestamp + delay;
+++        if (timestamp < ARM7Target)
+++            ARM7Target = timestamp;
+++    }
+++
+++    const u64 next = SCHED(sb, SchedNext);
+++    if ((mask & (1<<id)) && evt.Timestamp == next)
+++        SCHED(sb, SchedNext) = (timestamp <= next) ? timestamp : 0;
+++    else if (timestamp < next)
+++        SCHED(sb, SchedNext) = timestamp;
+++
+++    evt.Timestamp = timestamp;
+++    evt.FuncID = 0;
+++    evt.Param = 0;
+++    SCHED(sb, SchedListMask) = mask | (1<<id);
+++}
+++
++ 
++ void NDS::TouchScreen(u16 x, u16 y)
++ {
++@@ -2297,6 +2337,12 @@ void NDS::DivDone(u32 param)
++ 
++ void NDS::StartDiv()
++ {
+++    if (FastDiv)
+++    {
+++        DivCnt |= 0x8000;
+++        RescheduleEvent(Event_Div, ((DivCnt&0x3)==0) ? 18:34);
+++        return;
+++    }
++     CancelEvent(Event_Div);
++     DivCnt |= 0x8000;
++     ScheduleEvent(Event_Div, false, ((DivCnt&0x3)==0) ? 18:34, 0, 0);
++@@ -2345,6 +2391,12 @@ void NDS::SqrtDone(u32 param)
++ 
++ void NDS::StartSqrt()
++ {
+++    if (FastDiv)
+++    {
+++        SqrtCnt |= 0x8000;
+++        RescheduleEvent(Event_Sqrt, 13);
+++        return;
+++    }
++     CancelEvent(Event_Sqrt);
++     SqrtCnt |= 0x8000;
++     ScheduleEvent(Event_Sqrt, false, 13, 0, 0);
++diff --git a/src/NDS.h b/src/NDS.h
++index 0828204..a069c4a 100644
++--- a/src/NDS.h
+++++ b/src/NDS.h
++@@ -302,6 +302,11 @@ public: // TODO: Encapsulate the rest of these members
++     // FastLoop (exact, BananaDS; needs FastSched): RunFrame's loop for the JIT with NextTarget, RunSystem's
++     // early-out, GPU3D::Run's idle case, a halted CPU and Execute's block loop inline (RunSlicesJIT).
++     void SetFastLoop(bool on) noexcept { FastLoop = on; }
+++    // FastDiv (exact, BananaDS): the divider and the square root unit restart their event at every parameter write
+++    // (five per 64-bit divide) with CancelEvent + ScheduleEvent; with FastDiv they call RescheduleEvent, one step that
+++    // leaves the same event, mask, CPU target and SchedNext, and keeps SchedNext known instead of "0, recompute"
+++    // when the event stays the earliest, so the scheduler's list walk is skipped.
+++    void SetFastDiv(bool on) noexcept { FastDiv = on; }
++     // FastDMA (BananaDS, DMA.h): main RAM -> GX FIFO / main RAM transfers without the bus dispatch; exact
++     void SetFastDMA(bool on) noexcept { for (DMA& d : DMAs) d.FastDMA = on; }
++ 
++@@ -456,6 +461,7 @@ public: // TODO: Encapsulate the rest of these members
++     void UnregisterEventFuncs(u32 id);
++     void ScheduleEvent(u32 id, bool periodic, s32 delay, u32 funcid, u32 param);
++     void CancelEvent(u32 id);
+++    void RescheduleEvent(u32 id, s32 delay) noexcept; // = CancelEvent(id); ScheduleEvent(id, false, delay, 0, 0)
++ 
++     void debug(u32 p);
++ 
++@@ -737,6 +743,7 @@ protected:
++     u64 TimerNextMin = 0; // the lower of the two
++     void TimerNextUpdate(u32 cpu) noexcept;
++     bool FastLoop = false;
+++    bool FastDiv = false;
++     void RunSlicesJIT();
++     void SliceIPC(u32 cpu) noexcept
++     {
++-- 
++2.43.0
++
+diff --git a/bananads/src/emu.cpp b/bananads/src/emu.cpp
+index 6fc053c..1e3dbdf 100644
+--- a/bananads/src/emu.cpp
++++ b/bananads/src/emu.cpp
+@@ -417,6 +417,10 @@ bool Emu::load_rom(const std::string& path) {
+     // the JIT with the common cases inline, used with core.fast_sched (patch 0009; both exact, default on)
+     nds_->SetFastTimers(cfg_.flag("core.fast_timers", true));
+     nds_->SetFastLoop(cfg_.flag("core.fast_loop", true));
++    // core.fast_div: the divider and square root unit restart their event in one step per parameter write instead of
++    // cancel + schedule, keeping the scheduler's next time known (patch 0040; exact; -0.4% on cpubench under
++    // rgds-sim, so off until the device shows more)
++    nds_->SetFastDiv(cfg_.flag("core.fast_div", false));
+ 
+     RendererSettings rs{};
+     rs.ScaleFactor = 1;
+-- 
+2.43.0
+

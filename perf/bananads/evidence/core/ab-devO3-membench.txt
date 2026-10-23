@@ -1,0 +1,18 @@
+# rgds-sim v1 A/B (ab.sh, st mode), device build (A) vs device build with -DBANANADS_HOT_OPT=-O3 (B), membench; 16:16 UTC
+# command: OUT=/home/user/perf/core/runs/sim sh /home/user/BananaLinux/perf/bananads/rgds-sim/ab.sh /home/user/perf/build-dev/b/bananads /home/user/perf/core/build-devO3/b/bananads /home/user/perf/roms/membench-membench.nds --label devO3-membench   (full: /home/user/perf/core/runs/sim/devO3-membench-ab.txt)
+rgds-sim A/B (model v1)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/build-dev/b/bananads /home/user/perf/roms/membench-membench.nds devO3-membench-A --mode st --frames 100:300
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/core/build-devO3/b/bananads /home/user/perf/roms/membench-membench.nds devO3-membench-B --mode st --frames 100:300
+
+== thread 0 (main): ms/frame @1104 4.788 -> 4.355 (-9.04%)   @1992 2.888 -> 2.654 (-8.11%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 4.019 -> 3.801 (-5.42%)
+  insn 3636.8k->3134.3k (-13.8%)  base 3991.2k->3502.3k (-12.2%)  l1i_miss 3.9k->3.7k (-5.2%)  l1i_l3miss 1.1k->1.2k (+4.6%)  ld_miss 10.9k->11.2k (+3.5%)  ld_l3miss 2.2k->2.2k (+2.6%)  st_miss 11.6k->11.7k (+0.3%)  st_l3miss 5.4k->5.4k (+0.1%)  itlb_l2 5.8k->8.0k (+37.5%)  itlb_walk 0.0k->0.0k (+191.6%)  dtlb_l2 17.8k->17.5k (-1.5%)  dtlb_walk 0.0k->0.0k (+24.9%)  bcond_miss 17.0k->15.3k (-9.9%)  bind_miss 2.3k->2.3k (+0.2%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  2d                   2.176     1.862    -0.315    1677.1k    1256.3k
+  scheduler/core       1.288     1.156    -0.131    1014.4k     931.7k
+  audio                0.073     0.084    +0.011      76.0k      85.2k
+  gengis               0.621     0.627    +0.005     386.3k     385.3k
+  3d-geometry          0.130     0.127    -0.003     107.6k     106.1k
+  memory               0.206     0.204    -0.002     185.1k     180.4k
+  libc/lib             0.054     0.056    +0.002      23.8k      23.8k
+  other                0.046     0.046    -0.000      36.6k      35.6k

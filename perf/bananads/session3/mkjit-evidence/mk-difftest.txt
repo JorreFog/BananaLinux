@@ -1,0 +1,11 @@
+# bananads-difftest --every --from 1600 --frames 2100 --fresh-save, MK scene input (bin/mkdiff.sh), A=off B=on
+== entry_x26 off (A) vs on (B)
+SAME after 2100 frames (all of main RAM)
+== dyncold off (A) vs on (B)
+SAME after 2100 frames (all of main RAM)
+== flagstub off (A) vs on (B)
+SAME after 2100 frames (all of main RAM)
+CHAIN2-DONE
+## combo (mkside 0030+0031 + 0040-0042): all three off vs on
+SAME after 2100 frames (all of main RAM)
+DONE

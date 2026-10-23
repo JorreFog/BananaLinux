@@ -1,0 +1,2 @@
+/home/user/perf3/mkside-work/ks16/run.log:[mks] 2d kicks 58336, of them to a sleeping thread 27857, worker sleeps 22450
+/home/user/perf3/mkside-work/ks64/run.log:[mks] 2d kicks 22544, of them to a sleeping thread 8208, worker sleeps 8319

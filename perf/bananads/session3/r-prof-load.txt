@@ -1,0 +1,134 @@
+# BananaDS prof: the emulator's thread (tid 3936), prof.hz=1000, frames 950-1200, from the task-clock perf event
+# 2633 samples (1049 a second of its CPU time; 0 dropped, 0 timer overruns); 2.51 s CPU in 4.32 s (58% busy), 57.9 fps
+# symbols: /proc/self/exe .symtab (4236 functions)
+# waiting: 0.1% of the samples (sched_yield 0.0%, futex/condition-variable/mutex waits 0.0%, the 2D thread's wait functions 0.0%, Gengis's bin waits 0.1%): CPU time /proc counts as busy
+# JIT code: 22.0% of the samples
+# pmu: cycles 19738k/frame; instructions 10498k/frame; branch-misses 98862/frame (9.42 per 1000 instructions); L1I-misses 91299/frame (8.70 per 1000 instructions); L1D-misses 43132/frame (4.11 per 1000 instructions); iTLB-misses 37450/frame (3.57 per 1000 instructions); IPC 0.53; 1965 MHz while running
+
+## by module
+ 70.98%    1869  bananads
+ 21.95%     578  [JIT code]
+  6.91%     182  libc.so.6
+  0.08%       2  libstdc++.so.6
+  0.08%       2  linux-vdso.so.1
+
+## top 40 symbols
+ 16.90%  16.90%     445  [JIT code]   [JIT blocks]
+  7.37%  24.27%     194  bananads     bananads::Emu::run_frame()
+  3.65%  27.91%      96  bananads     melonDS::SPU::SPU(melonDS::NDS&, melonDS::AudioBitDepth, melonDS::AudioInterpolation, double)::{lambda(void*, unsigned int)#1}::_FUN(void*, unsigned int)
+  3.57%  31.48%      94  bananads     melonDS::GPU3D::Run() [clone .localalias]
+  2.77%  34.26%      73  bananads     melonDS::BananaRenderer2D::Composite(unsigned int*, unsigned int*, bool)
+  2.28%  36.54%      60  libc.so.6    libc.so.6+0x89eec
+  2.13%  38.66%      56  bananads     bool melonDS::IOFastRead9<unsigned int>(melonDS::NDS&, unsigned int, unsigned int&)
+  2.09%  40.75%      55  [JIT code]   [JIT stub_0000ec00]
+  1.63%  42.39%      43  bananads     unsigned int melonDS::SlowRead9<unsigned int, 0>(unsigned int, melonDS::ARMv5*)
+  1.63%  44.02%      43  bananads     melonDS::NDS::SliceChain9(melonDS::NDS*)
+  1.48%  45.50%      39  bananads     melonDS::GPU3D::WriteGXFIFOBlock(unsigned char const*, unsigned int, unsigned int, unsigned int)
+  1.41%  46.90%      37  bananads     void melonDS::GPU3D::SubmitPolygonBodyT<true, false>()
+  1.37%  48.27%      36  bananads     unsigned int melonDS::SlowRead9Full<unsigned int, 0>(unsigned int, melonDS::ARMv5*)
+  1.37%  49.64%      36  bananads     melonDS::NDS::ARM9IORead32(unsigned int) [clone .localalias] [clone .lto_priv.0]
+  1.29%  50.93%      34  bananads     int melonDS::RunSamples<2u>(melonDS::SPUChannel&, unsigned int)
+  1.25%  52.18%      33  bananads     melonDS::BananaRenderer::WriteLine(unsigned int*, unsigned int const*, unsigned short)
+  1.25%  53.44%      33  bananads     melonDS::NDS::ARM9Write8(unsigned int, unsigned char)
+  1.22%  54.65%      32  bananads     std::__detail::_Map_base<long, std::pair<long const, melonDS::LoadStorePatch>, std::allocator<std::pair<long const, melonDS::LoadStorePatch> >, std::__detail::_Select1st, std::equal_to<long>, std::hash<long>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Pri
+  1.14%  55.79%      30  bananads     melonDS::BananaRenderer::EmitA(unsigned int*, unsigned int, unsigned short, unsigned short const*)
+  1.10%  56.89%      29  bananads     void melonDS::GPU3D::SubmitVertexBody<true>()
+  1.10%  57.99%      29  bananads     melonDS::BananaRenderer2D::DrawScanlineFrom(unsigned int, melonDS::Banana2DRegs const&, unsigned int const*, unsigned int const* const*)
+  1.03%  59.02%      27  bananads     melonDS::ARMv5::DataWrite8(unsigned int, unsigned char)
+  1.03%  60.05%      27  libc.so.6    pthread_cond_signal
+  1.03%  61.07%      27  bananads     melonDS::ARMInterpreter::A_SWPB(melonDS::ARM*)
+  0.99%  62.06%      26  bananads     melonDS::ARMv5::DataRead8(unsigned int, unsigned int*)
+  0.99%  63.05%      26  bananads     melonDS::BananaRenderer::Submit()
+  0.95%  64.00%      25  [JIT code]   [JIT stub_0000eb00]
+  0.95%  64.94%      25  bananads     melonDS::ARMJIT::CompileBlock(melonDS::ARM*)
+  0.87%  65.82%      23  bananads     melonDS::BananaRenderer2D::PrepareScanline(melonDS::Banana2DRegs&)
+  0.84%  66.65%      22  bananads     void melonDS::SlowWrite9<unsigned int, 0>(unsigned int, melonDS::ARMv5*, unsigned int)
+  0.80%  67.45%      21  bananads     melonDS::BananaRenderer2D::PrepareSprites(melonDS::Banana2DRegs&)
+  0.80%  68.25%      21  bananads     melonDS::SoftRenderer::DoCapture(unsigned int) [clone .localalias]
+  0.68%  68.93%      18  libc.so.6    libc.so.6+0x9c4c8
+  0.65%  69.58%      17  bananads     melonDS::NDS::ARM9Read8(unsigned int) [clone .part.0]
+  0.57%  70.15%      15  [JIT code]   [JIT stub_0000e900]
+  0.57%  70.72%      15  bananads     melonDS::RTC::RTC(melonDS::NDS&)::{lambda(void*, unsigned int)#1}::_FUN(void*, unsigned int) [clone .lto_priv.0]
+  0.57%  71.29%      15  bananads     melonDS::RegisterCache<melonDS::Compiler, Arm64Gen::ARM64Reg>::Prepare(bool, int)
+  0.53%  71.82%      14  [JIT code]   [JIT stub_0000ed00]
+  0.53%  72.35%      14  bananads     melonDS::DMA::Run9GX()
+  0.53%  72.88%      14  bananads     std::__detail::_Map_base<unsigned int, std::pair<unsigned int const, melonDS::Compiler::LinkSlot>, std::allocator<std::pair<unsigned int const, melonDS::Compiler::LinkSlot> >, std::__detail::_Select1st, std::equal_to<unsigned int>, std::hash<unsigned int>, std::__detail::_Mod_range_hashing, std::__d
+
+## by area (docs/PERF.md's device profile's areas, by name: a heuristic)
+ 18.34%     483  other
+ 16.90%     445  JIT code
+ 13.71%     361  memory/IO slow paths
+ 12.38%     326  2D and video
+ 10.67%     281  scheduler, RunFrame and events
+ 10.37%     273  3D geometry
+  6.38%     168  SPU
+  6.34%     167  JIT dispatch and exits
+  1.79%      47  DMA
+  1.22%      32  JIT compiler and invalidation
+  1.03%      27  waits and wake-ups (yield, futex)
+  0.46%      12  libc memory/string
+  0.42%      11  3D rendering (Gengis on this thread)
+
+## by scope (C++ class or namespace; a C function is its own)
+ 21.95%     578  [JIT code]
+ 13.14%     346  melonDS
+  9.04%     238  melonDS::GPU3D
+  7.90%     208  melonDS::NDS
+  7.37%     194  bananads::Emu
+  6.08%     160  melonDS::BananaRenderer2D
+  4.18%     110  melonDS::BananaRenderer
+  3.68%      97  melonDS::SPU
+  2.96%      78  melonDS::ARMv5
+  2.28%      60  libc.so.6+0x89eec
+  1.52%      40  melonDS::Compiler
+  1.52%      40  melonDS::ARMInterpreter
+  1.22%      32  std::__detail::_Map_base<long, std::pair<long const, melonDS::LoadStorePatch>, std::allocator<std::pair<long const, melonDS::LoadStorePatch> >, std::__detail::_Select1st, std::equal_to<long>, std::hash<long>, std::__detail::_Mod_range_hashing, std::__detail::_Default_ranged_hash, std::__detail::_Pri
+  1.22%      32  melonDS::DMA
+  1.03%      27  pthread_cond_signal
+  0.99%      26  melonDS::ARMJIT
+  0.84%      22  melonDS::GPU
+  0.80%      21  melonDS::SoftRenderer
+  0.68%      18  melonDS::RTC
+  0.68%      18  libc.so.6+0x9c4c8
+  0.65%      17  Arm64Gen::ARM64XEmitter
+  0.57%      15  melonDS::RegisterCache<melonDS::Compiler, Arm64Gen::ARM64Reg>
+  0.53%      14  melonDS::NDSCart::NDSCartSlot::Interface
+  0.53%      14  std::__detail::_Map_base<unsigned int, std::pair<unsigned int const, melonDS::Compiler::LinkSlot>, std::allocator<std::pair<unsigned int const, melonDS::Compiler::LinkSlot> >, std::__detail::_Select1st, std::equal_to<unsigned int>, std::hash<unsigned int>, std::__detail::_Mod_range_hashing, std::__d
+  0.49%      13  blip_add_delta
+  0.46%      12  melonDS::SPUCaptureUnit
+  0.42%      11  melonDS::ARMv4
+  0.42%      11  __mprotect
+  0.42%      11  melonDS::NDSCart::CartCommon
+  0.42%      11  melonDS::ARM
+
+## JIT code by block (mj9_/mj7_<guest address>) and stub (MELONDS_JIT_PERFMAP)
+  2.09%      55  stub_0000ec00
+  0.95%      25  stub_0000eb00
+  0.84%      22  mj9_0214d4fc
+  0.68%      18  mj9_02146418
+  0.57%      15  stub_0000e900
+  0.53%      14  stub_0000ed00
+  0.49%      13  mj9_0214d4b8
+  0.38%      10  mj9_0214d528
+  0.34%       9  stub_0000ed01
+  0.34%       9  stub_0000ec01
+  0.34%       9  mj9_0214d490
+  0.34%       9  mj9_0214d514
+  0.30%       8  mj9_0214d01c
+  0.19%       5  mj9_01ff8860
+  0.15%       4  stub_0000e700
+  0.15%       4  mj9_0214d048
+  0.11%       3  mj9_0212f4c4
+  0.11%       3  mj7_037fcf58
+  0.11%       3  mj9_02146424
+  0.11%       3  mj9_0214d2ec
+  0.11%       3  mj9_01ff8648
+  0.11%       3  mj9_0200dc64
+  0.11%       3  mj9_0200ded4
+  0.11%       3  mj7_00000008
+  0.11%       3  mj7_037f8514
+  0.11%       3  mj7_037f9110
+  0.11%       3  mj7_037f90d8
+  0.11%       3  mj7_037f8560
+  0.08%       2  mj7_037ff31c
+  0.08%       2  mj9_0200c994

@@ -1,0 +1,36 @@
+# THP on a .bss code array, mprotect RWX + madvise(MADV_HUGEPAGE), same steps as patch 0021 (host x86 kernel, THP=madvise)
+$ cat /sys/kernel/mm/transparent_hugepage/enabled defrag
+always [madvise] never
+always defer defer+madvise [madvise] never
+6.18.44-fc-v139
+$ gcc -O2 -fPIE -pie t.c -o t && ./t 1 && ./t 0
+0x55755f000000 huge 32768 kB
+0x55588d164000 huge 0 kB
+
+--- t.c
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/mman.h>
+#define SL (32u<<20)
+#define HP (2u<<20)
+unsigned char CodeMemory[4*SL + HP];
+static size_t huge(const void* start, size_t size){
+  size_t total=0; FILE*f=fopen("/proc/self/smaps","r"); char line[256]; int in=0; uintptr_t lo=(uintptr_t)start, hi=lo+size;
+  while(fgets(line,sizeof line,f)){unsigned long a,b; size_t kb;
+    if(sscanf(line,"%lx-%lx ",&a,&b)==2 && strchr(line,'-')<strchr(line,' ')) in=a<hi&&b>lo;
+    else if(in&&sscanf(line,"AnonHugePages: %zu kB",&kb)==1) total+=kb*1024;}
+  fclose(f); return total;}
+int main(int argc,char**argv){ int h=atoi(argv[1]);
+  uintptr_t al = h? HP : 16384;
+  unsigned char* s=(unsigned char*)(((uintptr_t)CodeMemory+al-1)&~(al-1));
+  mprotect(s,4*SL,PROT_READ|PROT_WRITE|PROT_EXEC);
+  if(h) madvise(s,4*SL,MADV_HUGEPAGE);
+  for(size_t i=0;i<SL/4;i++) ((uint32_t*)s)[i]=0xD4200000;
+  printf("%p huge %zu kB\n",s,huge(s,SL)/1024); return 0;}
+
+# the aarch64 build under qemu (qemu ignores madvise, so 0 kB; the address shows the 2 MB alignment):
+$ MELONDS_JIT_HUGEPAGE=1|0 qemu-aarch64 ... bananads --frontend headless ... cpubench-cpubench-thumb.nds | grep '[jit]'
+[jit] code memory at 0x7f5697e00000, 32768 kB, 0 kB on huge pages   (=1)
+[jit] code memory at 0x7f33a3df4000, 32768 kB, 0 kB on huge pages   (=0)

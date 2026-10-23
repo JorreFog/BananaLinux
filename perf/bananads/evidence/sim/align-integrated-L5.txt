@@ -1,0 +1,16 @@
+rgds-sim A/B (model v2)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/sim/vb-int2/b/bananads /home/user/perf/roms/dsstress-L5.nds align-L5-1x-st-A --mode st --frames 100:300
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/sim/vb-int2a/b/bananads /home/user/perf/roms/dsstress-L5.nds align-L5-1x-st-B --mode st --frames 100:300
+
+== thread 0 (main): ms/frame @1104 6.715 -> 6.694 (-0.31%)   @1992 3.984 -> 3.972 (-0.28%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 6.481 -> 6.370 (-1.72%)
+  insn 5246.4k->5250.6k (+0.1%)  base 5396.6k->5400.5k (+0.1%)  l1i_miss 12.1k->10.9k (-9.4%)  l1i_l3miss 0.5k->0.5k (-2.9%)  ld_miss 19.7k->19.3k (-2.0%)  ld_l3miss 4.0k->4.0k (+0.5%)  st_miss 5.7k->5.7k (+0.8%)  st_l3miss 2.0k->2.0k (+0.2%)  itlb_l2 8.0k->8.2k (+2.4%)  itlb_walk 0.0k->0.0k (-35.8%)  dtlb_l2 38.7k->39.4k (+1.8%)  dtlb_walk 0.0k->0.0k (-57.8%)  bcond_miss 29.9k->31.9k (+6.7%)  bind_miss 5.9k->5.9k (-0.0%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  3d-geometry          0.950     0.926    -0.024     832.9k     832.9k
+  gengis               2.717     2.706    -0.012    2308.2k    2309.3k
+  scheduler/core       0.664     0.675    +0.011     510.5k     513.0k
+  jit-code             0.266     0.259    -0.007     200.9k     200.9k
+  2d                   1.385     1.390    +0.005     742.0k     742.4k
+  memory               0.251     0.254    +0.003     249.5k     249.5k
+  jit-runtime          0.072     0.074    +0.002      68.5k      68.5k
+  other                0.302     0.303    +0.001     249.4k     249.5k

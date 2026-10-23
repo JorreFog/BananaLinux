@@ -1,0 +1,16 @@
+rgds-sim A/B (model v1)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/jit/bin/bananads-d1-7315+ /home/user/perf/jit/bin/irqmask-thumb-arm7.nds irqchain-irqmask-A --mode st --frames 100:300 --set jit.irqchain=off
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/jit/bin/bananads-d1-7315+ /home/user/perf/jit/bin/irqmask-thumb-arm7.nds irqchain-irqmask-B --mode st --frames 100:300 --set jit.irqchain=on
+
+== thread 0 (main): ms/frame @1104 9.487 -> 7.881 (-16.93%)   @1992 5.340 -> 4.450 (-16.67%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 7.570 -> 6.601 (-12.81%)
+  insn 7976.9k->6629.0k (-16.9%)  base 8627.3k->7036.5k (-18.4%)  l1i_miss 12.6k->13.9k (+10.4%)  l1i_l3miss 0.2k->0.2k (+1.2%)  ld_miss 4.9k->5.4k (+9.3%)  ld_l3miss 0.6k->0.6k (-0.1%)  st_miss 7.3k->7.4k (+0.3%)  st_l3miss 3.3k->3.2k (-0.4%)  itlb_l2 10.7k->10.8k (+0.9%)  itlb_walk 0.0k->0.0k (+4.4%)  dtlb_l2 81.8k->81.5k (-0.3%)  dtlb_walk 0.8k->0.4k (-50.1%)  bcond_miss 48.0k->47.8k (-0.5%)  bind_miss 60.5k->32.4k (-46.4%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  scheduler/core       2.818     1.707    -1.111    2251.2k    1306.4k
+  jit-runtime          1.210     0.545    -0.665    1038.2k     421.2k
+  jit-code             2.954     3.365    +0.411    2842.4k    3271.1k
+  other                0.390     0.118    -0.272     300.2k      85.2k
+  2d                   0.748     0.776    +0.028     435.6k     435.6k
+  audio                0.080     0.082    +0.003      76.0k      76.0k
+  memory               0.946     0.947    +0.001     849.7k     849.7k
+  interpreter          0.026     0.025    -0.001      15.2k      15.2k

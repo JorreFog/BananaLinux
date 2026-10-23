@@ -1,0 +1,18 @@
+# rgds-sim v1 A/B (ab.sh, st mode: single-threaded, Gengis on the main thread, 2D thread off; frames 100-300), device build (A) vs device PGO build (B), cpubench-thumb; 16:13 UTC
+# command: OUT=/home/user/perf/core/runs/sim sh /home/user/BananaLinux/perf/bananads/rgds-sim/ab.sh /home/user/perf/build-dev/b/bananads /home/user/perf/core/build-devpgo/b/bananads /home/user/perf/roms/cpubench-cpubench-thumb.nds --label devpgo-cpubench-thumb   (full: /home/user/perf/core/runs/sim/devpgo-cpubench-thumb-ab.txt)
+rgds-sim A/B (model v1)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/build-dev/b/bananads /home/user/perf/roms/cpubench-cpubench-thumb.nds devpgo-cpubench-thumb-A --mode st --frames 100:300
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/core/build-devpgo/b/bananads /home/user/perf/roms/cpubench-cpubench-thumb.nds devpgo-cpubench-thumb-B --mode st --frames 100:300
+
+== thread 0 (main): ms/frame @1104 5.649 -> 5.406 (-4.30%)   @1992 3.228 -> 3.092 (-4.19%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 3.806 -> 3.649 (-4.14%)
+  insn 4969.8k->4739.1k (-4.6%)  base 5438.1k->5191.7k (-4.5%)  l1i_miss 2.9k->2.7k (-5.7%)  l1i_l3miss 0.3k->0.3k (-2.7%)  ld_miss 3.0k->2.9k (-1.8%)  ld_l3miss 0.8k->0.8k (-0.2%)  st_miss 6.5k->6.6k (+1.1%)  st_l3miss 3.3k->3.3k (-0.3%)  itlb_l2 5.6k->3.9k (-30.9%)  itlb_walk 0.0k->0.0k (+70.6%)  dtlb_l2 33.7k->35.4k (+5.2%)  dtlb_walk 0.0k->0.0k (+11.1%)  bcond_miss 22.9k->21.7k (-5.3%)  bind_miss 10.0k->9.4k (-5.6%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  scheduler/core       1.332     1.210    -0.122    1126.5k    1012.5k
+  2d                   0.647     0.589    -0.057     432.2k     377.4k
+  gengis               0.264     0.210    -0.055     160.1k      93.9k
+  jit-code             2.915     2.906    -0.010    2796.8k    2796.8k
+  audio                0.067     0.073    +0.005      76.0k      78.5k
+  memory               0.192     0.188    -0.004     181.8k     183.6k
+  libc/lib             0.227     0.226    -0.001     195.4k     195.3k
+  other                0.001     0.001    +0.000       0.1k       0.2k

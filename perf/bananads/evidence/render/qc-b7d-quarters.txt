@@ -1,0 +1,11 @@
+# qemu-count, device mode (measure-dev.sh: gengis 2x, 3 Gengis threads, 2D thread, headless.direct), device build b7d = perf/render @ 1c9095b (the quarters fix 347784d in it) under qemu-dev, frames 100-300; k instructions/frame; vcpu 4 = the 2D thread; quarters-off = --set render.2d_quarters=off
+== dev-L5-quarters-off: main thread: 2351.4k insns/frame | vcpu:kinsn/frame 1:1492.8 2:1532.1 3:1685.2 4:2543.8 
+== dev-L5-mine: main thread: 2310.2k insns/frame | vcpu:kinsn/frame 1:1438.3 2:1465.7 3:1778.0 4:2335.0 
+== dev-ds2d-quarters-off: main thread: 6862.9k insns/frame | vcpu:kinsn/frame 1:172.5 2:213.3 3:155.1 4:12532.1 
+== dev-ds2d-mine: main thread: 6870.2k insns/frame | vcpu:kinsn/frame 1:153.5 2:187.7 3:199.6 4:12531.9 
+dev-L5-quarters-off      2D thread    2544k/frame: Gengis bins   1079k, own   1465k (composite   812k, output stage   295k)
+dev-L5-mine              2D thread    2335k/frame: Gengis bins   1105k, own   1230k (composite   585k, output stage   295k)
+dev-ds2d-quarters-off    2D thread   12532k/frame: Gengis bins      0k, own  12532k (composite  1038k, output stage   235k)
+dev-ds2d-mine            2D thread   12532k/frame: Gengis bins      0k, own  12532k (composite  1038k, output stage   235k)
+
+# (ds2dtest never shows the 3D layer on BG0: the quarters path is not taken, as the identical numbers show)

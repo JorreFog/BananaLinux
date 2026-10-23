@@ -1,0 +1,13 @@
+# qemu-count, main thread insns/frame (frames 100-300): the device PGO build trained on 3D stress ROMs ONLY (prof-dev-3donly: dsstress L5/L10 arm/thumb/arm7-thumb, ramp, geomtest) vs the device build and the full-suite PGO build; 16:30 UTC
+# training log /home/user/perf/core/runs/train-dev-3donly.out; build: CCACHE_DISABLE=1 JOBS=2 build-a64-device.sh /home/user/perf/core/sd /home/user/perf/core/build-dev3donly -DBANANADS_PGO=/home/user/perf/core/prof-dev-3donly (binary kept as /home/user/perf/core/bin/bananads-dev3donly)
+# count: QEMU=/home/user/perf/tools/qemu-dev sh /home/user/perf/core/runs/count.sh <bin> dev3donly <roms>  (raw: /home/user/perf/core/runs/dev3donly/<rom>/report.txt)
+## main thread; only dsstress-L5 was seen by this profile
+rom                                  dev   dev3donly      devpgodev3donly/devdevpgo/dev
+cpubench-cpubench-arm            4396.3k     4391.5k     4201.1k    -0.11%    -4.44%
+cpubench-cpubench-thumb          4896.0k     4876.6k     4707.1k    -0.40%    -3.86%
+ds2dtest-ds2dtest               21212.4k    18116.1k    16766.6k   -14.60%   -20.96%
+dsstress-L5                     20746.1k    18768.5k    18917.2k    -9.53%    -8.82%
+ipcrom-ipctest                   2852.9k     2598.7k     2581.1k    -8.91%    -9.53%
+membench-membench                6013.3k     6217.7k     5520.7k    +3.40%    -8.19%
+sndbench-sndbench                4873.8k     5024.3k     4424.3k    +3.09%    -9.22%
+## never-seen ROMs: cpubench -0.1/-0.4% (the gain is gone), membench +3.4% and sndbench +3.1% (SLOWER): cpubench-thumb's 2D bucket 432k -> 546k (text BGs/sprites the stress ROMs use little, profiled cold), audio 56k -> 61k; the trained kind (L5) -9.5%, and ds2dtest/ipcrom still gain (-14.6%, -8.9%: 2D and IPC paths the stress ROMs also run)

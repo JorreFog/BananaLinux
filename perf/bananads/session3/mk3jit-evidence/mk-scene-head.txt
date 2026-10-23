@@ -1,0 +1,4 @@
+# mk-scene.sh, head 88008b0 (clean build), 8 pictures + audio vs session3/mkside-evidence/mk-scene-base-md5.txt
+defaults (s4-on, same binary bytes): identical
+jit.region_trio=off (s4-off): identical
+all three new toggles off: identical

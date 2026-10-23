@@ -1,0 +1,23 @@
+# bltargets.py on the all-on build's MK scene code dump (c-on2: 3,934,836 block bytes, 14415 blocks): BLs from the
+# blocks into the stubs, by stub and offset. stub_0000ec00 = ARM9's exit stubs (0xb4 bytes): +0x0 ExitCheckPCF,
+# +0xc ExitCheckPC[1], +0x14 ExitCheck[1], +0x5c ExitCheckPC[0], +0x64 ExitCheck[0], +0xa4 ExitCheckF.
+# stub_0000ec01 = ARM7's (+0x0 PCF, +0xa0 F). So PCF: 6398 + 873 = 7271 sites, F: 5276 + 644 = 5920.
+other +0x0: 4118
+stub_0000e700 +0x0: 1282
+stub_0000e701 +0x0: 97
+stub_0000e900 +0x0: 7782
+stub_0000e902 +0x0: 1
+stub_0000eb00 +0x0: 41
+stub_0000eb00 +0x64: 57
+stub_0000ec00 +0x0: 6398
+stub_0000ec00 +0xc: 4650
+stub_0000ec00 +0x14: 7779
+stub_0000ec00 +0x5c: 638
+stub_0000ec00 +0x64: 324
+stub_0000ec00 +0xa4: 5276
+stub_0000ec01 +0x0: 873
+stub_0000ec01 +0xc: 519
+stub_0000ec01 +0x14: 1399
+stub_0000ec01 +0x58: 10
+stub_0000ec01 +0x60: 86
+stub_0000ec01 +0xa0: 644

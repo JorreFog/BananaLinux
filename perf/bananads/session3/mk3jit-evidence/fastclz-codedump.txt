@@ -1,0 +1,5 @@
+# 0088 (jit.fastclz): MK scene with MELONDS_JIT_PERFMAP=1 under setarch -R (no ASLR), head f1c467d's build
+on vs off: code dump (5718788 bytes, every block and stub) byte-identical; perf map identical; 8 pictures + audio = base both ways
+IsImmLogical callers (instrumented build, calls in frames 1650-2150): ANDI2R (0x473570) 19371, others ~770; ~40 calls a frame
+sabotage (CLZ +1 when it is 60, MELONDS_SABCLZ=1): code dump differs from the same build's control at byte 161245; bananads exits 132 (SIGILL)
+qemu: IsImmLogical -40.1k, CountLeadingZeros +2.4k a frame (qc-0087c -> qc-0088)

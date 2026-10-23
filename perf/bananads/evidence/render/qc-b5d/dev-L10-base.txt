@@ -1,0 +1,51 @@
+main thread: 3147.7k insns/frame
+  other                     1408.9k   44.8%
+  3d                         858.7k   27.3%
+  2d/gpu                     231.7k    7.4%
+  memory                     214.5k    6.8%
+  jit-code                   207.2k    6.6%
+  core                        99.8k    3.2%
+  libs                        70.4k    2.2%
+  audio                       56.4k    1.8%
+  jit-runtime                  0.0k    0.0%
+  interpreter-fallback         0.0k    0.0%
+  JIT total (code+runtime+fallback): 207.2k/frame
+top symbols:
+      467.6k  [other] _ZZ4mainENKUlvE_clEv
+      395.4k  [3d] _ZN7melonDS5GPU3D3RunEv.localalias
+      338.1k  [other] rast_kern_h02000
+      207.6k  [3d] _ZN7melonDS5GPU3D17SubmitPolygonBodyILb1EEEvv
+      164.9k  [other] rast_kern_h02100
+      147.4k  [other] gx_polygon.lto_priv.1
+      125.6k  [3d] _ZN7melonDS5GPU3D7Write32Ejj
+      106.0k  [other] rast_kern_h02010
+       92.1k  [memory] _ZN7melonDS10SlowWrite9IjLi0EEEvjPNS_5ARMv5Ej
+       71.5k  [3d] _ZN7melonDS5GPU3D16SubmitVertexBodyILb1EEEvv
+       65.7k  [memory] _ZN7melonDS9SlowRead9ItLi0EEET_jPNS_5ARMv5E
+       56.7k  [memory] _ZN7melonDS10SlowWrite9ItLi0EEEvjPNS_5ARMv5Ej
+       46.5k  [other] f_run.constprop.0
+       44.9k  [audio] _ZZN7melonDS3SPUC4ERNS_3NDSENS_13AudioBitDepthENS_18AudioInterpolationEdENUlPvjE_4_FUNES5_j
+       44.4k  [other] rast_kern_h02110
+       34.0k  [core] _ZN7melonDS3NDS13ScheduleEventEjbijj
+       30.4k  [2d/gpu] _ZN7melonDS16BananaRenderer2D15PrepareScanlineERNS_12Banana2DRegsE
+       29.8k  [2d/gpu] _ZN7melonDS14BananaRenderer12DrawScanlineEj
+       29.2k  [3d] _ZN7melonDS16ClipAgainstPlaneILi1ELb1ELi0EEEiRKNS_5GPU3DEPNS_6VertexEii.isra.0
+       24.1k  [core] _ZZN7melonDS3RTCC4ERNS_3NDSEENUlPvjE_4_FUNES3_j.lto_priv.0
+       22.8k  [2d/gpu] _ZZN7melonDS3GPUC4ERNS_3NDSEOSt10unique_ptrINS_8RendererESt14default_deleteIS4_EEENUlPvjE_4_FUNES9_j
+       22.3k  [core] _ZN7melonDSL13GXWrite9RouteERNS_3NDSEjj
+       22.3k  [other] gx2_render_bin
+       22.1k  [2d/gpu] _ZN7melonDS5GPU2D22UpdateRegistersPreDrawEb.part.0
+       20.4k  [2d/gpu] _ZN7melonDS12Banana2DRegs4FromERKNS_5GPU2DE
+top JIT blocks:
+       29.2k  mj9:0200085c
+       17.7k  mj9:02000768
+       17.2k  mj9:02000728
+       16.9k  stub:0000ec00
+       16.5k  mj9:020003b0
+       16.4k  mj9:02000668
+       15.5k  mj9:020005e8
+       15.4k  mj9:020006e8
+       15.2k  mj9:020006a8
+       13.3k  mj9:02000628
+        9.9k  mj9:02000850
+        7.3k  mj9:02000894

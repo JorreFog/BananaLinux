@@ -1,0 +1,12 @@
+m13-dev2x-membench-win: SAME (30 dumps + audio; membench-win.nds 300/10; common: --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=3 --set render.2d_thread=on --set headless.direct=on | A: | B:)
+m13-dev2x-ds2dtest: SAME (30 dumps + audio; ds2dtest-ds2dtest.nds 300/10; common: --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=3 --set render.2d_thread=on --set headless.direct=on | A: | B:)
+m13-dev2x-dsstress-L5: SAME (30 dumps + audio; dsstress-L5.nds 300/10; common: --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=3 --set render.2d_thread=on --set headless.direct=on | A: | B:)
+m13-dev2x-membench: SAME (30 dumps + audio; membench-membench.nds 300/10; common: --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=3 --set render.2d_thread=on --set headless.direct=on | A: | B:)
+m13-dev2x-reload-membench-win: SAME (30 dumps + audio; membench-win.nds 300/10; common: --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=3 --set render.2d_thread=on --set headless.direct=on --set headless.reload_at=150 | A: | B:)
+m13-1x-t2-2d-membench-win: SAME (30 dumps + audio; membench-win.nds 300/10; common: --set render.renderer=gengis --set render.scale=1 --set render.gengis_threads=2 --set render.2d_thread=on --set headless.direct=on | A: | B:)
+m13-1x-t2-2d-ds2dtest: SAME (30 dumps + audio; ds2dtest-ds2dtest.nds 300/10; common: --set render.renderer=gengis --set render.scale=1 --set render.gengis_threads=2 --set render.2d_thread=on --set headless.direct=on | A: | B:)
+m13-2x-t1-membench-win: SAME (30 dumps + audio; membench-win.nds 300/10; common: --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=1 --set render.2d_thread=on | A: | B:)
+m13-2x-no2d-membench-win: SAME (30 dumps + audio; membench-win.nds 300/10; common: --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=3 --set render.2d_thread=off | A: | B:)
+m13-dev2x-membench-win-off: SAME (30 dumps + audio; membench-win.nds 300/10; common: --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=3 --set render.2d_thread=on --set headless.direct=on | A: | B:--set render.2d_win_neon=off)
+m13-dev2x-membench-win-noquarters: SAME (30 dumps + audio; membench-win.nds 300/10; common: --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=3 --set render.2d_thread=on --set headless.direct=on | A: | B:--set render.2d_quarters=off)
+m13: FAILS=0

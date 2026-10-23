@@ -1,0 +1,12 @@
+rgds-sim A/B (model v1)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/jit/bin/bananads-d1-7315+ /home/user/perf/roms/cpubench-cpubench-thumb.nds thp-cbthumb-A --mode st --frames 100:300 --set jit.hugepages=off
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/jit/bin/bananads-d1-7315+ /home/user/perf/roms/cpubench-cpubench-thumb.nds thp-cbthumb-B --mode st --frames 100:300 --set jit.hugepages=on
+
+== thread 0 (main): ms/frame @1104 5.719 -> 5.694 (-0.44%)   @1992 3.266 -> 3.252 (-0.43%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 3.971 -> 3.947 (-0.61%)
+  insn 4986.4k->4986.4k (+0.0%)  base 5457.4k->5457.4k (+0.0%)  l1i_miss 4.3k->4.3k (+0.0%)  l1i_l3miss 0.3k->0.3k (-0.0%)  ld_miss 2.9k->2.9k (+0.3%)  ld_l3miss 0.8k->0.8k (-0.4%)  st_miss 6.6k->6.6k (+0.0%)  st_l3miss 3.3k->3.3k (-0.1%)  itlb_l2 5.7k->5.1k (-10.5%)  itlb_walk 0.0k->0.0k (-0.7%)  dtlb_l2 35.9k->22.8k (-36.4%)  dtlb_walk 0.0k->0.0k (+8.2%)  bcond_miss 24.6k->24.6k (-0.0%)  bind_miss 10.0k->10.0k (+0.0%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  scheduler/core       1.370     1.359    -0.011    1142.5k    1142.5k
+  jit-code             2.923     2.912    -0.011    2797.4k    2797.4k
+  libc/lib             0.225     0.222    -0.002     195.3k     195.3k
+  2d                   0.666     0.665    -0.001     432.2k     432.2k

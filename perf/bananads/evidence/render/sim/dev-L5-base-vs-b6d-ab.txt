@@ -1,0 +1,43 @@
+rgds-sim A/B (model v1)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/build-dev/b/bananads /home/user/perf/roms/dsstress-L5.nds dev-L5-base-vs-b6d-A --mode dev --frames 100:300
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/render/b6d/b/bananads /home/user/perf/roms/dsstress-L5.nds dev-L5-base-vs-b6d-B --mode dev --frames 100:300
+
+== thread 0 (main): ms/frame @1104 4.321 -> 2.919 (-32.46%)   @1992 2.638 -> 1.721 (-34.77%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 3.676 -> 2.240 (-39.05%)
+  insn 3334.9k->2401.8k (-28.0%)  base 3451.2k->2547.8k (-26.2%)  l1i_miss 5.8k->4.4k (-23.9%)  l1i_l3miss 0.7k->0.8k (+16.5%)  ld_miss 8.0k->1.6k (-80.3%)  ld_l3miss 3.1k->0.6k (-79.2%)  st_miss 5.0k->2.6k (-48.4%)  st_l3miss 3.8k->2.2k (-41.0%)  itlb_l2 12.8k->9.2k (-27.9%)  itlb_walk 0.0k->0.0k (-64.5%)  dtlb_l2 22.6k->20.3k (-9.8%)  dtlb_walk 0.1k->0.1k (-48.5%)  bcond_miss 19.3k->14.7k (-23.6%)  bind_miss 5.7k->5.7k (-0.7%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  gengis               1.443     0.018    -1.425    1010.1k      15.1k
+  2d                   0.406     0.440    +0.034     236.7k     274.1k
+  libc/lib             0.043     0.074    +0.031      11.4k      55.7k
+  other                0.136     0.106    -0.030      75.7k      52.1k
+  scheduler/core       0.688     0.672    -0.016     548.2k     546.7k
+  3d-geometry          0.934     0.946    +0.012     849.9k     849.9k
+  audio                0.078     0.087    +0.009      76.0k      76.0k
+  memory               0.267     0.259    -0.008     254.1k     259.5k
+  jit-code             0.255     0.247    -0.008     207.4k     207.4k
+  jit-runtime          0.071     0.069    -0.002      65.5k      65.5k
+
+== thread 1 (thread1): ms/frame @1104 2.812 -> 3.477 (+23.64%)   @1992 1.825 -> 2.235 (+22.44%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 2.639 -> 3.279 (+24.24%)
+  insn 1988.3k->2508.9k (+26.2%)  base 1954.6k->2465.1k (+26.1%)  l1i_miss 0.1k->0.1k (+17.5%)  l1i_l3miss 0.0k->0.1k (+22.1%)  ld_miss 13.0k->16.3k (+25.2%)  ld_l3miss 4.5k->5.2k (+15.5%)  st_miss 4.9k->6.1k (+25.0%)  st_l3miss 2.3k->2.6k (+13.8%)  itlb_l2 0.0k->0.0k (+17.7%)  dtlb_l2 4.7k->6.6k (+40.4%)  dtlb_walk 0.0k->0.0k (+80.3%)  bcond_miss 7.4k->8.9k (+20.7%)  bind_miss 0.1k->0.1k (+22.4%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  gengis               2.715     3.357    +0.642    1902.1k    2400.5k
+  other                0.093     0.114    +0.021      84.8k     106.9k
+  libc/lib             0.005     0.006    +0.001       1.3k       1.6k
+
+== thread 2 (thread2): ms/frame @1104 2.731 -> 3.377 (+23.67%)   @1992 1.777 -> 2.174 (+22.30%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 2.563 -> 3.186 (+24.31%)
+  insn 1918.0k->2429.1k (+26.6%)  base 1885.3k->2385.9k (+26.6%)  l1i_miss 0.1k->0.1k (+11.9%)  l1i_l3miss 0.0k->0.1k (+20.9%)  ld_miss 12.6k->15.8k (+25.4%)  ld_l3miss 4.4k->5.1k (+14.1%)  st_miss 4.8k->6.0k (+25.0%)  st_l3miss 2.2k->2.6k (+16.6%)  itlb_l2 0.0k->0.0k (+15.5%)  dtlb_l2 4.6k->6.4k (+40.0%)  dtlb_walk 0.0k->0.0k (+8.1%)  bcond_miss 7.1k->8.6k (+20.6%)  bind_miss 0.1k->0.1k (+22.2%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  gengis               2.636     3.259    +0.623    1835.0k    2324.2k
+  other                0.090     0.112    +0.022      81.9k     103.7k
+  libc/lib             0.005     0.005    +0.001       1.1k       1.2k
+
+== thread 3 (bananads-2d): ms/frame @1104 4.680 -> 4.619 (-1.32%)   @1992 3.263 -> 3.212 (-1.57%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 4.096 -> 4.006 (-2.20%)
+  insn 2551.7k->2456.4k (-3.7%)  base 2796.7k->2794.7k (-0.1%)  l1i_miss 0.1k->0.1k (+5.2%)  l1i_l3miss 0.1k->0.1k (+8.1%)  ld_miss 15.9k->16.0k (+0.5%)  ld_l3miss 9.6k->9.3k (-3.0%)  st_miss 20.1k->16.7k (-16.7%)  st_l3miss 14.1k->13.9k (-1.3%)  itlb_l2 0.0k->0.0k (-67.9%)  itlb_walk 0.0k->0.0k (+0.9%)  dtlb_l2 5.9k->7.1k (+19.4%)  dtlb_walk 0.9k->0.9k (+1.8%)  bcond_miss 9.7k->8.6k (-11.6%)  bind_miss 0.0k->0.0k (-9.4%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  2d                   3.062     2.761    -0.302    1467.2k    1201.0k
+  other                0.356     0.653    +0.297     166.1k     325.1k
+  gengis               1.258     1.202    -0.055     916.0k     929.1k
+  libc/lib             0.004     0.003    -0.001       2.5k       1.3k

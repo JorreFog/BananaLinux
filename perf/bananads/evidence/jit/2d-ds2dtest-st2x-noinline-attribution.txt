@@ -1,0 +1,47 @@
+rgds-sim report d2t-st2x-an (model v2; frames per thread; ms at 1104 / 1992 MHz)
+params: base_scale=1.0 l3_cyc=30.0 l3_ns=0.0 dram_ns=120.0 mispredict_cyc=8.0 tlb_l2_cyc=2.0 walk_cyc=25.0 st_cost=0.2 note=v2 = v1's cost parameters (documented/assumed defaults) + the plugin's L1D write streaming (ws=4, wsl3=128, wsn=2). v3 = v2 + timed software prefetch: SIMARGS=prfm=1 (opt-in; label numbers 'v3'). v1 = SIMARGS=ws=0. Calibration: as v1 (README).
+
+vcpu thread            insns/frame  cycles@1104   ms@1104   ms@1992
+0    main                 19848.1k     27325.9k    24.752    14.099
+
+== thread 0 (main): 19848.1k insns, 24.752 ms @1104, 14.099 ms @1992, IPC@1104 0.73
+  cycle shares @1104: base 75.0%  L1I 1.8%  L1D 20.3%  iTLB 0.1%  dTLB 0.4%  branch 2.4%
+  per frame: L1I miss 13.1k (0.26% of fetch blocks; to DRAM 0.7k)  L1D ld miss 152.6k (4.12% of loads; DRAM 5.8k) st miss 22.6k (DRAM 3.0k)  pf 65.5k
+  iTLB L2 hit 9.6k walk 0.0k  dTLB L2 hit 42.7k walk 0.5k  branches: cond 2463.5k mispred 3.24%, indirect+ret 54.3k mispred 3.13%
+  classes: alu 45.9% fpneon 16.0% bcond 12.4% ld 11.7% st 6.0% ldv 3.2% stv 1.8% ldp 0.8% stp 0.8% b 0.4% mul 0.4% ret 0.2% bl 0.2%
+  bucket                insns      %    ms@1104      %     L1I%     L1D%     TLB%      br%
+  2d                 16953.5k  85.4%     21.279  86.0%     1.6%    21.1%     0.4%     2.5%
+  scheduler/core      1122.2k   5.7%      1.480   6.0%     1.2%     8.3%     0.5%     3.2%
+  gengis               598.1k   3.0%      0.743   3.0%     2.5%    36.6%     1.0%     0.5%
+  memory               365.0k   1.8%      0.374   1.5%     3.9%     5.0%     0.9%     1.1%
+  other                288.8k   1.5%      0.363   1.5%     4.7%    26.0%     2.6%     1.9%
+  jit-code             241.7k   1.2%      0.208   0.8%     5.3%     0.9%     0.3%     0.3%
+  jit-runtime          191.0k   1.0%      0.172   0.7%     0.0%     3.2%     0.4%     0.1%
+  audio                 76.0k   0.4%      0.097   0.4%     6.4%    27.9%     0.7%     2.9%
+  libc/lib              11.7k   0.1%      0.036   0.1%    45.6%    24.7%     4.0%     3.1%
+  top functions / JIT blocks by modeled time @1104:
+       4.408 ms  17.8%    5161.4k insns  [2d] _ZN7melonDS16BananaRenderer2D13DrawBG_AffineEjj.isra.0
+       3.190 ms  12.9%    2824.9k insns  [2d] _ZN7melonDS16BananaRenderer2D11ApplyWindowEPjh
+       2.178 ms   8.8%     722.8k insns  [2d] _ZN7melonDS16BananaRenderer2D11DrawBG_TextILb1EEEvjj
+       2.063 ms   8.3%    1036.5k insns  [2d] _ZN7melonDS16BananaRenderer2D11DrawBG_TextILb0EEEvjj
+       1.901 ms   7.7%    1857.0k insns  [2d] _ZN7melonDS16BananaRenderer2D15DrawSpriteEntryEjRKNS0_11SpriteEntryE
+       1.736 ms   7.0%    1389.2k insns  [2d] _ZN7melonDS16BananaRenderer2D9EffectsToEPjjb
+       1.318 ms   5.3%    1032.7k insns  [scheduler/core] _ZZ4mainENKUlvE_clEv
+       1.273 ms   5.1%     957.0k insns  [2d] _ZN7melonDS16BananaRenderer2D14ResolveSpritesEv
+       0.729 ms   2.9%     423.7k insns  [2d] _ZN7melonDS16BananaRenderer2D18ApplySpriteMosaicXEv
+       0.651 ms   2.6%     535.8k insns  [gengis] gx2_render_bin
+       0.458 ms   1.8%     305.2k insns  [2d] _ZN7melonDSL21CompositeLoopUnrolledILi7ELb1ELb0ELb1EJLm0ELm1ELm2ELm3ELm4ELm5ELm6EEEEvPKNS_8CompStepE
+       0.365 ms   1.5%     234.1k insns  [2d] _ZN7melonDSL21CompositeLoopUnrolledILi8ELb1ELb0ELb1EJLm0ELm1ELm2ELm3ELm4ELm5ELm6ELm7EEEEvPKNS_8CompS
+       0.357 ms   1.4%     242.9k insns  [2d] _ZN7melonDSL21CompositeLoopUnrolledILi6ELb1ELb0ELb1EJLm0ELm1ELm2ELm3ELm4ELm5EEEEvPKNS_8CompStepEPKjP
+       0.302 ms   1.2%     313.5k insns  [memory] _ZN7melonDS9SlowRead9ItLi0EEET_jPNS_5ARMv5E
+       0.300 ms   1.2%     413.9k insns  [2d] _ZN7melonDS16BananaRenderer2D12ApplyMosaicXEPjj
+       0.294 ms   1.2%     186.8k insns  [2d] _ZN7melonDS16BananaRenderer2D15DrawSpritesFromEjRKNS_12Banana2DRegsE
+       0.288 ms   1.2%     243.8k insns  [other] _ZN7melonDSL11WriteDoubleEPjPKjt
+       0.199 ms   0.8%     138.1k insns  [2d] _ZN7melonDS16BananaRenderer2D10BuildStepsEPNS_8CompStepEPhRibS4_RPKj
+       0.183 ms   0.7%     113.4k insns  [2d] _ZN7melonDSL21CompositeLoopUnrolledILi6ELb0ELb0ELb1EJLm0ELm1ELm2ELm3ELm4ELm5EEEEvPKNS_8CompStepEPKjP
+       0.151 ms   0.6%      95.6k insns  [2d] _ZN7melonDSL21CompositeLoopUnrolledILi7ELb0ELb0ELb1EJLm0ELm1ELm2ELm3ELm4ELm5ELm6EEEEvPKNS_8CompStepE
+       0.125 ms   0.5%     106.7k insns  [2d] _ZN7melonDS16BananaRenderer2D16DrawScanlineFromEjRKNS_12Banana2DRegsEPKjPKS5_
+       0.116 ms   0.5%      71.9k insns  [2d] _ZN7melonDSL21CompositeLoopUnrolledILi8ELb0ELb0ELb1EJLm0ELm1ELm2ELm3ELm4ELm5ELm6ELm7EEEEvPKNS_8CompS
+       0.111 ms   0.4%      85.0k insns  [2d] _ZN7melonDS12SoftRenderer9DoCaptureEj
+       0.109 ms   0.4%     112.9k insns  [jit-runtime] ARM_Dispatch
+       0.092 ms   0.4%      52.4k insns  [2d] _ZN7melonDS16BananaRenderer2D15PrepareScanlineERNS_12Banana2DRegsE
