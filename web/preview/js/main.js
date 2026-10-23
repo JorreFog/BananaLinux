@@ -111,27 +111,21 @@ composer.addPass(finish);
 // (ui/banana-ui --headless) over a library with these games' names (no box art: the library slide is left out).
 const SETS = {};
 SETS.dark = [
-  ["shot-home", "Home: the system shelf, with your stats", "right"],
-  ["shot-library", "The library: box art, play time, achievements", "a"],
-  ["shot-options", "Per game: emulator, shader, 3D, mic", "x"],
-  ["shot-game", "In a game: each DS screen on its own panel", "a"],
-  ["shot-game-menu", "The in-game menu: states, quick settings, quit", "b"],
-  ["shot-store", "The App Store", "start"],
-  ["shot-settings", "Settings: six groups", "start"],
-  ["shot-nds", "Nintendo DS settings", "a"],
-  ["shot-carts", "Carts: your games on a shelf", "right"],
-  ["shot-zh-home", "简体中文, translated by Majirefy", "right"],
-  ["shot-zh-settings", "设置: settings in Chinese", "start"],
+  ["shot-home", "Home: your systems, recent games and play stats", "right"],
+  ["shot-library", "Library: box art, play time and achievement progress", "a"],
+  ["shot-options", "Per-game options: choose an emulator and settings for each game", "x"],
+  ["shot-game", "In play: one DS screen on each display", "a"],
+  ["shot-game-menu", "In-game menu: save, load and adjust quick settings", "b"],
+  ["shot-store", "App Store: install and update apps from the menu", "start"],
+  ["shot-settings", "Settings: six groups, with help on the top screen", "start"],
+  ["shot-carts", "Carts: browse your games on a 3D shelf. Experimental", "right"],
+  ["shot-zh-home", "Simplified Chinese: translation by Majirefy", "right"],
 ];
 SETS.light = [
-  ["shot-light", "The light theme: home", "right"],
-  ["light-options", "Per game: the emulator for one game", "x"],
-  ["light-settings", "Settings: six groups", "start"],
-  ["light-display", "Display & sound: theme, accent, brightness", "a"],
-  ["light-nds", "Nintendo DS settings", "a"],
-  ["light-system", "System: time zone, updates", "a"],
+  ["shot-light", "Light theme: the same interface in a lighter palette", "right"],
+  ["light-options", "Per-game options: choose an emulator and settings for each game", "x"],
+  ["light-settings", "Settings: six groups, with help on the top screen", "start"],
 ];
-let theme = document.documentElement.dataset.theme === "light" ? "light" : "dark";
 let SLIDES = SETS[theme];
 const SLIDE_TIME = 3.6, FADE = 0.3;
 const screenTop = document.createElement("canvas"), screenBottom = document.createElement("canvas");
@@ -189,6 +183,7 @@ function setTheme(t, fromClick) {
   if (t !== "light") delete document.documentElement.dataset.theme;
   themeBtn.setAttribute("aria-checked", t === "light");
   document.getElementById("theme-label").textContent = t === "light" ? "Light" : "Dark";
+  themeBtn.setAttribute("aria-label", t === "light" ? "Switch to dark theme" : "Switch to light theme");
   try { localStorage.setItem("theme", t); } catch (e) { /* private mode: just this visit */ }
   paintDevice();
   if (!fromClick) return;

@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BananaOS</title>
+<title>BananaOS | Linux for Anbernic RG DS &amp; RG DS Plus</title>
 <!-- a temporary preview: kept out of search engines -->
 <meta name="robots" content="noindex, nofollow">
-<meta name="description" content="A light Linux for the Anbernic RG DS and RG DS Plus. ">
+<meta name="description" content="Lightweight Linux for the Anbernic RG DS and RG DS Plus, with a pixel-art menu, two DS emulators, lid sleep and simple updates.">
 <link rel="icon" href="assets/banana-32.png">
 <link rel="stylesheet" href="css/style.css">
 <script>
@@ -47,7 +47,7 @@
     <a href="#emulators">Emulators</a>
     <a href="#inside">Under the hood</a>
     <a class="go" href="#get">Download</a>
-    <button class="theme-switch" id="theme" type="button" role="switch" aria-checked="false" aria-label="Light theme">
+    <button class="theme-switch" id="theme" type="button" role="switch" aria-checked="false" aria-label="Switch to light theme">
       <span class="track"><span class="knob"></span></span><span id="theme-label">Dark</span>
     </button>
   </div>
@@ -56,28 +56,31 @@
 <main>
   <section id="hero" class="panel-left">
     <div class="card hero-card reveal">
-      <p class="eyebrow">For the Anbernic RG DS &amp; RG DS Plus</p>
+      <p class="eyebrow">For Anbernic RG DS &amp; RG DS Plus</p>
       <h1><span class="y">BANANA</span>OS</h1>
-      <p class="lead">A light Linux that boots straight into a pixel-art menu, sleeps when you close the lid,
-        and gives the games every cycle.</p>
+      <p class="headline">Two screens. Straight to play.</p>
+      <p class="lead">BananaOS is lightweight Linux built for your handheld. Boot into a pixel-art menu, pick a game
+        and close the lid when it is time for a break.</p>
       <div class="cta">
-        <a class="btn primary" href="#get">Download</a>
-        <a class="btn" href="#features">What&#39;s inside &darr;</a>
+        <a class="btn primary" href="#get">Download BananaOS</a>
+        <a class="btn" href="#features">Take a tour</a>
       </div>
+      <p class="alpha">Alpha 0.4.2 · <a href="https://github.com/JorreFog/BananaLinux#status">Check known issues</a> before installing.</p>
     </div>
   </section>
 
   <section id="features" class="panel-left">
     <div class="card reveal">
-      <p class="eyebrow">What's inside</p>
-      <h2>Nothing between you and the game.</h2>
+      <p class="eyebrow">Features</p>
+      <h2>A small bunch of thoughtful features.</h2>
+      <p>Built around two screens, a clamshell and the games you want to play.</p>
       <div class="tiles">
-        <div class="tile"><img src="assets/icons/nds.png" alt=""><b>Two DS emulators</b><span>SuperDrastic and BananaDS, each DS screen straight onto its own panel at 2x.</span></div>
-        <div class="tile"><img src="assets/icons/moon.png" alt=""><b>Close the lid</b><span>Asleep in a moment, the game resumes as the panels light up.</span></div>
-        <div class="tile"><img src="assets/icons/gamepad.png" alt=""><b>Every system</b><span>GBA, Game Boy, NES, SNES, Mega Drive, PlayStation and N64 through RetroArch.</span></div>
-        <div class="tile"><img src="assets/icons/store.png" alt=""><b>One-file updates</b><span>Drop it on the card; the version before stays one restart away.</span></div>
-        <div class="tile"><img src="assets/icons/phone.png" alt=""><b>Wi-Fi &amp; sharing</b><span>Copy games over the network, RetroAchievements, online DS play.</span></div>
-        <div class="tile"><img src="assets/icons/book.png" alt=""><b>English &amp; 简体中文</b><span>Simplified Chinese translation by Majirefy.</span></div>
+        <div class="tile"><img src="assets/icons/nds.png" alt=""><b>Two ways to play DS</b><span>Choose SuperDrastic or BananaDS, with each DS screen on its own display.</span></div>
+        <div class="tile"><img src="assets/icons/moon.png" alt=""><b>Close the lid</b><span>Take a break. Your game pauses when the handheld sleeps and resumes when you open it.</span></div>
+        <div class="tile"><img src="assets/icons/gamepad.png" alt=""><b>Beyond Nintendo DS</b><span>Play GBA, Game Boy, NES, SNES, Mega Drive, PlayStation and N64 through RetroArch.</span></div>
+        <div class="tile"><img src="assets/icons/store.png" alt=""><b>Updates in one file</b><span>Copy an update to the card and install it from Settings. The previous system version stays in the other slot.</span></div>
+        <div class="tile"><img src="assets/icons/phone.png" alt=""><b>Connected when you want</b><span>Copy games over Wi-Fi. Use BananaDS for RetroAchievements and online DS play.</span></div>
+        <div class="tile"><img src="assets/icons/book.png" alt=""><b>English and Simplified Chinese</b><span>Choose your language in Settings. Simplified Chinese translation by Majirefy; some newer text remains in English.</span></div>
       </div>
     </div>
   </section>
@@ -86,55 +89,52 @@
     <div class="emu-wrap reveal">
       <div class="card emu-intro">
         <p class="eyebrow">Nintendo DS</p>
-        <h2>Two emulators, both straight onto the panels.</h2>
-        <p>Each DS screen goes straight onto its own panel at 2x, with no compositor in between, and both have the
-          in-game menu on F (or L3): save and load with pictures, quick settings, shaders, quit.</p>
+        <h2>Two emulators. Your choice.</h2>
+        <p>Both put each DS screen on its own display and include an in-game menu for save states, shaders and
+          quick settings. Choose a default in Settings &gt; Nintendo DS, or press X in the library to choose one
+          for a game.</p>
       </div>
       <div class="emus">
         <article class="card emu" style="--emu: #ff5c4c">
           <div class="emu-head"><img src="assets/superdrastic-logo.png" alt="SuperDrastic"></div>
-          <h3>DraStic on both panels</h3>
+          <h3>DraStic, built for both screens</h3>
+          <p class="emu-sub">DraStic by Exophase, adapted for the RG DS and RG DS Plus.</p>
           <ul>
-            <li>DraStic by Exophase,<span>each DS screen on its panel</span></li>
-            <li>2x, Gengis Engine 3D</li>
-            <li>A per-game CPU governor</li>
-            <li>In-game menu: states with<span>pictures, shaders, settings</span></li>
-            <li>The fastest of the two</li>
+            <li>2x rendering with Gengis Engine 3D</li>
+            <li>Per-game CPU tuning</li>
+            <li>Save states with previews and shader settings</li>
           </ul>
-          <div class="tags"><span>Fastest</span><span>2x</span><span>60 fps</span></div>
         </article>
         <article class="card emu" style="--emu: #f0b429">
           <div class="emu-head"><img src="assets/bananads-logo.png" alt="BananaDS"></div>
-          <h3>melonDS's core, tuned</h3>
+          <h3>melonDS, with more ways to play</h3>
+          <p class="emu-sub">The melonDS core on BananaOS's display path and menu.</p>
           <ul>
-            <li>melonDS's core on Banana's<span>display path and menu</span></li>
-            <li>RetroAchievements and<span>online play (Nintendo WFC)</span></li>
-            <li>Mic, cheats, fast-forward</li>
-            <li>Speed-ups checked frame by<span>frame against melonDS</span></li>
-            <li>The most accurate of the two</li>
+            <li>RetroAchievements and Nintendo WFC online play</li>
+            <li>Real microphone support</li>
+            <li>Cheats and fast-forward</li>
           </ul>
-          <div class="tags"><span>Accurate</span><span>Online</span><span>RA</span></div>
         </article>
       </div>
-      <p class="emu-note">Pick one in Settings &gt; Nintendo DS, or per game with X</p>
     </div>
   </section>
 
   <section id="inside" class="panel-right">
     <div class="card reveal">
       <p class="eyebrow">Under the hood</p>
-      <h2>A whole Linux in a few tens of megabytes.</h2>
+      <h2>A small system, built around your handheld.</h2>
+      <p>Built with Buildroot, BananaOS combines a Linux kernel, BusyBox init and a dedicated two-screen interface.
+        No desktop or compositor required.</p>
       <ul class="facts">
-        <li>Built with Buildroot. A mainline kernel, busybox init and one program on the panels. No systemd, no compositor, no desktop.</li>
-        <li>Read-only and unbreakable. The system is a squashfs; your games, saves and settings live on an exFAT partition any computer can open.</li>
-        <li>Boots straight to the menu. No module loading, no initramfs: the menu starts as soon as the data partition is mounted.</li>
-        <li>Out of the way. The menu sleeps between frames and closes everything while a game runs: the game has the handheld to itself.</li>
-        <li>Two system slots. Updates install beside the running version; the one before is a restart away.</li>
+        <li>System and files, kept separate. The system lives in a read-only SquashFS image. Games, saves and settings live on an exFAT partition you can access from your computer.</li>
+        <li>Straight to the menu. The interface starts as soon as the data partition is mounted.</li>
+        <li>Room for the game. Before launching a game, the menu releases the screens, controls and audio for the emulator to use.</li>
+        <li>Two system slots. Updates install to the other slot, keeping the previous system version available.</li>
       </ul>
       <div class="stats">
-        <div><b data-count="0">0</b><span>background services</span></div>
-        <div><b data-count="2">0</b><span>system slots</span></div>
-        <div><b data-count="1">0</b><span>file to update</span></div>
+        <div><b data-count="2">2</b><span>system slots</span></div>
+        <div><b data-count="1">1</b><span>update file</span></div>
+        <div><b>2</b><span>handhelds: RG DS &amp; RG DS Plus</span></div>
       </div>
     </div>
   </section>
@@ -142,27 +142,30 @@
   <section id="get" class="panel-center">
     <div class="card reveal get">
       <img src="assets/banana-48.png" alt="" class="get-banana">
-      <h2>Put it on a card.</h2>
-      <p>Download the image for your handheld, write it to a microSD card, and boot.</p>
+      <h2>Your next game starts here.</h2>
+      <p>Choose the image for your handheld, flash a microSD card and boot BananaOS.</p>
       <div class="cta">
         <a class="btn primary" href="https://github.com/JorreFog/BananaLinux/releases/download/v0.4.2/banana-rgds.img.gz" data-asset="banana-rgds.img.gz">Download for RG DS</a>
         <a class="btn primary" href="https://github.com/JorreFog/BananaLinux/releases/download/v0.4.2/banana-rgds-plus.img.gz" data-asset="banana-rgds-plus.img.gz">Download for RG DS Plus</a>
       </div>
+      <p class="alpha">Alpha software. Read the <a href="https://github.com/JorreFog/BananaLinux#status">known issues</a> before installing. Flashing erases the
+        selected card, so back up anything you want to keep.</p>
       <ol class="steps">
-        <li>Write it to a card. Open the <code>.img.gz</code> in <a href="https://etcher.balena.io/">balenaEtcher</a>
-          (no need to unzip it), pick your microSD card, Flash. Or use the
-          <a href="https://github.com/jesussaves-ai/banana-linux-flasher/releases/latest">BananaLinux Flasher</a>, which downloads and writes it for you.</li>
-        <li>Boot. Card in the handheld, power on. The first boot takes a few seconds longer; set up Wi-Fi and the time, or skip with B.</li>
-        <li>Add your games. Put the card in a computer: copy them into the <code>BANANA</code> drive's <code>roms/nds</code>, <code>roms/gba</code> and so on, or over Wi-Fi with file sharing.</li>
+        <li>Flash your card. Use the <a href="https://github.com/jesussaves-ai/banana-linux-flasher/releases/latest">BananaLinux Flasher</a> by jesussaves-ai, or open the matching <code>.img.gz</code> image in <a href="https://etcher.balena.io/">balenaEtcher</a> without unzipping it. Check the selected drive before you start.</li>
+        <li>Start your handheld. Insert the card and power on. The first boot prepares your data partition, then guides you through setup. Wi-Fi and the other setup steps are optional.</li>
+        <li>Add your games. Open the <code>BANANA</code> drive on your computer and copy games into <code>roms/nds</code>, <code>roms/gba</code> and the other system folders. You can also copy them over Wi-Fi.</li>
       </ol>
       <div class="cta">
-        <a class="btn" href="https://github.com/JorreFog/BananaLinux#readme">Full install guide</a>
+        <a class="btn" href="https://github.com/JorreFog/BananaLinux#get-it">Full install guide</a>
         <a class="btn" href="https://github.com/JorreFog/BananaLinux/releases">All releases</a>
-        <a class="btn" href="https://jorrefog.github.io/BananaLinux/save-mover/">Save Mover</a>
+        <a class="btn" href="https://jorrefog.github.io/BananaLinux/save-mover/">Move your saves</a>
       </div>
-      <p class="fine">BananaOS is an alpha, MIT licensed. Made with AI: developed with Claude as a coding assistant,
-        directed and tested on real hardware. Not affiliated with Anbernic or Nintendo. The 3D model is a fan
-        recreation. Game titles and art belong to their owners; BananaOS comes with no games.</p>
+      <p>Already using BananaOS? See the <a href="https://github.com/JorreFog/BananaLinux#update">update guide</a> for compatible versions and instructions.</p>
+      <p class="fine">BananaOS is an independent alpha project for the Anbernic RG DS and RG DS Plus. Developed with
+        Claude as a coding assistant, directed, reviewed and tested on real hardware by the maintainer. Not
+        affiliated with Anbernic or Nintendo. The handheld model is a fan recreation. Game titles and artwork belong
+        to their owners. No games, ROMs or BIOS files are included. See the <a href="https://github.com/JorreFog/BananaLinux/blob/main/LICENSE">project
+        license (MIT)</a> and <a href="https://github.com/JorreFog/BananaLinux#credits">third-party credits</a>.</p>
     </div>
   </section>
 </main>
