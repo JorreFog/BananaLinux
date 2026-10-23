@@ -22,16 +22,19 @@ await p.waitForTimeout(5000);
 const pos = async s => typeof s === 'number' ? s : await p.evaluate(sel => { const e = document.querySelector(sel); return e ? e.getBoundingClientRect().top + scrollY : 0; }, s);
 const ease0 = t => t;
 const ease = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-for (const [name, from, to, frames, dFrom = 0, dTo = 0] of scenes) {
+for (const [name, from, to, frames, dFrom = 0, dTo = 0, start = 0] of scenes) {
   fs.mkdirSync(`${out}/${name}`, { recursive: true });
   const a = await pos(from) + dFrom, z = await pos(to) + dTo;
   // resume: start at the first frame not captured yet (scrolled there first, so the scrubbed pose has caught up)
-  let f0 = 0;
+  // start: a later first frame (another worker takes the scene's first part)
+  let f0 = start;
   while (f0 < frames && fs.existsSync(`${out}/${name}/f${String(f0).padStart(4, '0')}.jpg`)) f0++;
   if (f0 >= frames) continue;
   await p.evaluate(y => window.scrollTo(0, y), a + (z - a) * ease(f0 / Math.max(1, frames - 1))); await p.waitForTimeout(3000);
   const t0 = Date.now();
   for (let f = f0; f < frames; f++) {
+    // a frame already there (another worker took the rest of this scene): this worker's part is done
+    if (f > f0 && fs.existsSync(`${out}/${name}/f${String(f).padStart(4, '0')}.jpg`)) break;
     await p.evaluate(y => window.scrollTo(0, y), a + (z - a) * ease(f / Math.max(1, frames - 1)));
     await p.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
     await p.screenshot({ path: `${out}/${name}/f${String(f).padStart(4, '0')}.jpg`, quality: 92, timeout: 180000 });
