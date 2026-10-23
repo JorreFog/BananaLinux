@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/JorreFog/BananaLinux/releases/tag/v0.4.2"><b>Download 0.4.2</b></a> ·
+  <a href="https://github.com/JorreFog/BananaLinux/releases/tag/v0.4.2">Download 0.4.2</a> ·
   <a href="#get-it">Install</a> ·
   <a href="https://github.com/jesussaves-ai/banana-linux-flasher">Flasher</a> ·
   <a href="#seen-on-youtube">Videos</a> ·
@@ -23,20 +23,20 @@
 </p>
 
 > [!WARNING]
-> **BananaOS is an alpha (0.4.2).** It runs on the RG DS Plus and the RG DS, every day, on the maintainer's own
+> BananaOS is an alpha (0.4.2). It runs on the RG DS Plus and the RG DS, every day, on the maintainer's own
 > handhelds, but things are still missing and some are rough (see [Status](#status)). If something goes wrong,
 > [docs/FIRST-BOOT.md](docs/FIRST-BOOT.md) says which logs to send back.
 
 > [!NOTE]
-> **Made with AI.** BananaOS is developed with the help of AI: much of the code, the tests and the documentation
+> Made with AI. BananaOS is developed with the help of AI: much of the code, the tests and the documentation
 > was written with Claude (Anthropic) as a coding assistant, directed, reviewed and tested on real RG DS and RG DS
 > Plus hardware by the project's maintainer. Bug reports and contributions from people are just as welcome.
 
 > [!TIP]
-> **新功能：简体中文。** Settings > System > Language. Translated by **Majirefy**: thank you!
+> 新功能：简体中文。 Settings > System > Language. Translated by Majirefy: thank you!
 
 > [!TIP]
-> **New: the [BananaLinux Flasher](https://github.com/jesussaves-ai/banana-linux-flasher)** by **jesussaves-ai** puts BananaOS on a card in three clicks.
+> New: the [BananaLinux Flasher](https://github.com/jesussaves-ai/banana-linux-flasher) by jesussaves-ai puts BananaOS on a card in three clicks.
 > See [Get it](#get-it).
 
 <a id="what-it-is"></a>
@@ -48,13 +48,13 @@ is no systemd, no compositor, no sound server, no EmulationStation and no deskto
 read-only squashfs of a few tens of megabytes; everything you add (games, saves, settings) goes on an exFAT
 partition any computer can open.
 
-- **Fast to start:** from the kernel to the menu in **3.9 s** on the RG DS and **5.9 s** on the RG DS Plus. A DS game
-  is on the panels **0.6 s** after you press A, and back in the menu a quarter of a second after you quit.
-- **Light while you play:** the menu closes the panels, the buttons and the sound before a game starts, so the game
+- Fast to start: from the kernel to the menu in 3.9 s on the RG DS and 5.9 s on the RG DS Plus. A DS game
+  is on the panels 0.6 s after you press A, and back in the menu a quarter of a second after you quit.
+- Light while you play: the menu closes the panels, the buttons and the sound before a game starts, so the game
   has the handheld to itself. Every system gets its own clock profile; the menu runs at the lowest clocks.
-- **A clamshell that sleeps like one:** close the lid and the game pauses, the card is flushed and the handheld
+- A clamshell that sleeps like one: close the lid and the game pauses, the card is flushed and the handheld
   suspends. Open it and the game carries on as the panels light up. In a DS game the lid is the DS's lid too.
-- **Updates in place:** drop one file in `banana/updates` and pick it in Settings. It goes to the card's second
+- Updates in place: drop one file in `banana/updates` and pick it in Settings. It goes to the card's second
   system slot, and the version you had stays one restart away.
 
 <a id="a-tour"></a>
@@ -67,24 +67,24 @@ partition any computer can open.
 
 <table>
   <tr>
-    <td align="center" width="33%"><img src="docs/img/readme/shot-home.png" alt="Home: the Nintendo DS on the system shelf (bottom), its 8 games, 7 played and 8h 15m on the top panel with the last game played"><br><sub><b>Home.</b> The system shelf, with your stats per system.</sub></td>
-    <td align="center" width="33%"><img src="docs/img/readme/shot-library.png" alt="The DS library: Pokémon Black Version 2's box art, genre and year, 45 plays, 1h 47m and 6 of 187 achievements on the top panel; the games as cartridges on the bottom"><br><sub><b>The library.</b> Box art, play time and RetroAchievements progress.</sub></td>
-    <td align="center" width="33%"><img src="docs/img/readme/shot-options.png" alt="A game's options: Emulator BananaDS, Shader, Threaded 3D, Microphone and Name, with the selected row explained on the top panel"><br><sub><b>Per game.</b> X picks the emulator, shader, 3D and mic for one game.</sub></td>
+    <td align="center" width="33%"><img src="docs/img/readme/shot-home.png" alt="Home: the Nintendo DS on the system shelf (bottom), its 8 games, 7 played and 8h 15m on the top panel with the last game played"><br><sub>Home. The system shelf, with your stats per system.</sub></td>
+    <td align="center" width="33%"><img src="docs/img/readme/shot-library.png" alt="The DS library: Pokémon Black Version 2's box art, genre and year, 45 plays, 1h 47m and 6 of 187 achievements on the top panel; the games as cartridges on the bottom"><br><sub>The library. Box art, play time and RetroAchievements progress.</sub></td>
+    <td align="center" width="33%"><img src="docs/img/readme/shot-options.png" alt="A game's options: Emulator BananaDS, Shader, Threaded 3D, Microphone and Name, with the selected row explained on the top panel"><br><sub>Per game. X picks the emulator, shader, 3D and mic for one game.</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/img/readme/shot-game.png" alt="Mario Kart DS's title screen across both panels"><br><sub><b>In a game.</b> Each DS screen straight onto its own panel.</sub></td>
-    <td align="center"><img src="docs/img/readme/shot-game-menu.png" alt="BananaDS's in-game menu: Resume, Save, Load, Quick settings, Restart game and Quit game as tiles on the bottom panel; the game's session, last save and achievements on the top"><br><sub><b>The in-game menu.</b> F or L3: states, quick settings, quit.</sub></td>
-    <td align="center"><img src="docs/img/readme/shot-store.png" alt="The App Store: eReaderDS with an update from 1.27.3 to 1.27.4 and its notes on the top panel; the Apps tab with eReaderDS and Bank & Trade on the bottom"><br><sub><b>The App Store.</b> Apps installed and updated from the menu.</sub></td>
+    <td align="center"><img src="docs/img/readme/shot-game.png" alt="Mario Kart DS's title screen across both panels"><br><sub>In a game. Each DS screen straight onto its own panel.</sub></td>
+    <td align="center"><img src="docs/img/readme/shot-game-menu.png" alt="BananaDS's in-game menu: Resume, Save, Load, Quick settings, Restart game and Quit game as tiles on the bottom panel; the game's session, last save and achievements on the top"><br><sub>The in-game menu. F or L3: states, quick settings, quit.</sub></td>
+    <td align="center"><img src="docs/img/readme/shot-store.png" alt="The App Store: eReaderDS with an update from 1.27.3 to 1.27.4 and its notes on the top panel; the Apps tab with eReaderDS and Bank & Trade on the bottom"><br><sub>The App Store. Apps installed and updated from the menu.</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/img/readme/shot-settings.png" alt="Settings: six groups as tiles (Display & sound, Sleep & power, Nintendo DS, Other systems, Network, System); the selected group's contents on the top panel"><br><sub><b>Settings.</b> Six groups; L and R jump between them.</sub></td>
-    <td align="center"><img src="docs/img/readme/shot-light.png" alt="The light theme: the home screen in warm paper tones"><br><sub><b>Light theme.</b> And themes of your own, from a JSON file.</sub></td>
-    <td align="center"><img src="docs/img/readme/shot-carts.png" alt="The Carts theme: the DS games as 3D cartridges on a shelf, Mario Kart DS selected, its stats on the top panel"><br><sub><b>Carts</b> (experimental): your games as cartridges on a shelf.</sub></td>
+    <td align="center"><img src="docs/img/readme/shot-settings.png" alt="Settings: six groups as tiles (Display & sound, Sleep & power, Nintendo DS, Other systems, Network, System); the selected group's contents on the top panel"><br><sub>Settings. Six groups; L and R jump between them.</sub></td>
+    <td align="center"><img src="docs/img/readme/shot-light.png" alt="The light theme: the home screen in warm paper tones"><br><sub>Light theme. And themes of your own, from a JSON file.</sub></td>
+    <td align="center"><img src="docs/img/readme/shot-carts.png" alt="The Carts theme: the DS games as 3D cartridges on a shelf, Mario Kart DS selected, its stats on the top panel"><br><sub>Carts (experimental): your games as cartridges on a shelf.</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/img/readme/shot-zh-home.png" alt="The home screen in Simplified Chinese"><br><sub><b>简体中文</b>, translated by Majirefy.</sub></td>
+    <td align="center"><img src="docs/img/readme/shot-zh-home.png" alt="The home screen in Simplified Chinese"><br><sub>简体中文, translated by Majirefy.</sub></td>
     <td align="center"><img src="docs/img/readme/shot-zh-settings.png" alt="Settings in Simplified Chinese: 显示与声音, 睡眠与电源, Nintendo DS, 其他系统, 网络, 系统"><br><sub>Settings, the setup and both DS emulators' menus too.</sub></td>
-    <td align="center"><img src="docs/img/readme/shot-nds.png" alt="Settings > Nintendo DS: Emulator BananaDS, Quick resume, DS language, DS name, Shader LCD grid 2x"><br><sub><b>Nintendo DS settings.</b> Emulator, shader, DS language and name.</sub></td>
+    <td align="center"><img src="docs/img/readme/shot-nds.png" alt="Settings > Nintendo DS: Emulator BananaDS, Quick resume, DS language, DS name, Shader LCD grid 2x"><br><sub>Nintendo DS settings. Emulator, shader, DS language and name.</sub></td>
   </tr>
 </table>
 
@@ -95,11 +95,11 @@ partition any computer can open.
   <tr>
     <td align="center" width="50%">
       <a href="https://www.youtube.com/watch?v=yW6LavgyhL4&t=948s"><img src="docs/img/readme/video-yW6LavgyhL4.png" alt="Retro Game Corps: Custom Firmware on the Anbernic RG DS Plus. Watch on YouTube"></a><br>
-      <sub><b><a href="https://www.youtube.com/@RetroGameCorps">Retro Game Corps</a></b> puts BananaOS next to GammaOS on the RG DS Plus (BananaOS from 15:48).</sub>
+      <sub><a href="https://www.youtube.com/@RetroGameCorps">Retro Game Corps</a> puts BananaOS next to GammaOS on the RG DS Plus (BananaOS from 15:48).</sub>
     </td>
     <td align="center" width="50%">
       <a href="https://www.youtube.com/watch?v=KPENdDlkI5M"><img src="docs/img/readme/video-KPENdDlkI5M.png" alt="forthenext: ANBERNIC RG DS Plus, BananaOS and your games tested. Watch on YouTube"></a><br>
-      <sub><b><a href="https://www.youtube.com/@forthenext">forthenext</a></b> tests your requested games on BananaOS.</sub>
+      <sub><a href="https://www.youtube.com/@forthenext">forthenext</a> tests your requested games on BananaOS.</sub>
     </td>
   </tr>
 </table>
@@ -132,33 +132,33 @@ More in [docs/EMULATORS.md](docs/EMULATORS.md), the contract between the menu an
 <a id="and-the-rest"></a>
 <img src="docs/img/readme/h-systems.png" width="100%" alt="05: And the rest. RetroArch, PortMaster, the App Store">
 
-- **RetroArch 1.22** on one panel (the top by default), with its cores built for the RK3566's Cortex-A55: GBA (gpSP or
+- RetroArch 1.22 on one panel (the top by default), with its cores built for the RK3566's Cortex-A55: GBA (gpSP or
   mGBA), Game Boy (Gambatte), NES (FCEUmm), SNES (Snes9x), Mega Drive (PicoDrive), PlayStation (PCSX ReARMed), N64
-  (Mupen64Plus-Next). The other panel is a **game panel** of touch tiles: save, load, menu, fast-forward, quit.
+  (Mupen64Plus-Next). The other panel is a game panel of touch tiles: save, load, menu, fast-forward, quit.
   Shaders out of the box (Settings > Other systems > Shader: LCD grid, CRT or sharp pixels).
-- **PortMaster** with its ports, as on ROCKNIX.
-- **The App Store:** a Store tile and an Apps shelf. Döda Kvarter, Bank & Trade and eReaderDS install and update from
+- PortMaster with its ports, as on ROCKNIX.
+- The App Store: a Store tile and an Apps shelf. Döda Kvarter, Bank & Trade and eReaderDS install and update from
   there.
-- **PICO-8** (fake-08, or the official PICO-8 when it is on the card).
-- **Search** (Select): part of a name, a genre or a year, across every system. **Recently played** and
-  **Favorites** shelves.
-- **Box art** from libretro or [TwilightBoxart](https://boxart.kirovair.com/), and **games on a second SD card** on
+- PICO-8 (fake-08, or the official PICO-8 when it is on the card).
+- Search (Select): part of a name, a genre or a year, across every system. Recently played and
+  Favorites shelves.
+- Box art from libretro or [TwilightBoxart](https://boxart.kirovair.com/), and games on a second SD card on
   the RG DS Plus.
-- **File sharing** over Wi-Fi: the card is `\\<address>\banana` (log in as `banana` / `linux`). Copy games in and they
+- File sharing over Wi-Fi: the card is `\\<address>\banana` (log in as `banana` / `linux`). Copy games in and they
   show up in the menu.
 
 <a id="made-for-it"></a>
 <img src="docs/img/readme/h-hardware.png" width="100%" alt="06: Made for it. Two panels, a lid, and no sound server">
 
-- **Two panels, one menu.** Both 640x480 (RG DS) or 1024x768 (RG DS Plus) panels are driven directly; the menu, the
+- Two panels, one menu. Both 640x480 (RG DS) or 1024x768 (RG DS Plus) panels are driven directly; the menu, the
   boot animation and DS games use them as the DS did.
-- **60 Hz panels.** The RG DS's panels are retuned from 60.10 Hz to 60.0013 Hz in the device tree; on the RG DS Plus,
+- 60 Hz panels. The RG DS's panels are retuned from 60.10 Hz to 60.0013 Hz in the device tree; on the RG DS Plus,
   `banana-panel-tune` reads the real pixel clock on the first boot and retunes both panels to 59.999 Hz.
-- **The clamshell.** Closing the lid sleeps; opening it wakes the game where it was. Woken in a bag, it goes back to
+- The clamshell. Closing the lid sleeps; opening it wakes the game where it was. Woken in a bag, it goes back to
   sleep. While asleep it checks the battery and shuts down cleanly before it could run flat.
-- **The LEDs**, as on ROCKNIX: green, red at 20%, blinking red at 5%, amber while charging (asleep on the charger
+- The LEDs, as on ROCKNIX: green, red at 20%, blinking red at 5%, amber while charging (asleep on the charger
   too).
-- **Sound with no sound server.** The speakers, the RG DS Plus's AW88166 amplifiers or the headphones the moment
+- Sound with no sound server. The speakers, the RG DS Plus's AW88166 amplifiers or the headphones the moment
   they're plugged in, during a game too; the microphone always records from the rk817 at full level.
 
 <a id="get-it"></a>
@@ -168,14 +168,14 @@ More in [docs/EMULATORS.md](docs/EMULATORS.md), the contract between the menu an
   <a href="https://github.com/jesussaves-ai/banana-linux-flasher"><img src="docs/img/readme/flasher.png" width="100%" alt="BananaLinux Flasher by jesussaves-ai, the easy way onto a card: its window (choose your handheld, select the target drive, wipe and flash) next to a microSD card with the bunch on its label. 1, pick your handheld. 2, pick the microSD card. 3, Download and Flash. The newest release, SHA-256 checked, written straight to the card. Windows .exe, Linux, macOS. Get the flasher"></a>
 </p>
 
-**The easy way: the [BananaLinux Flasher](https://github.com/jesussaves-ai/banana-linux-flasher)**, made by **jesussaves-ai**. Pick your handheld and
+The easy way: the [BananaLinux Flasher](https://github.com/jesussaves-ai/banana-linux-flasher), made by jesussaves-ai. Pick your handheld and
 the card, and it downloads the newest BananaOS image, checks it against the release's SHA-256 and writes it to the
 card, refusing your computer's own disks. On Windows, download `BananaLinuxFlasher.exe` from
 [its releases](https://github.com/jesussaves-ai/banana-linux-flasher/releases/latest) and run it as administrator (it's an unsigned community
 build, so SmartScreen may ask: More info > Run anyway). On Linux and macOS, run it from source with Python 3 and
 Tkinter (`python3 flash_banana.py`).
 
-**Or by hand:** download the image for your handheld from the
+Or by hand: download the image for your handheld from the
 [0.4.2 release](https://github.com/JorreFog/BananaLinux/releases/tag/v0.4.2), and write it (don't unzip it) to a
 microSD card with [balenaEtcher](https://etcher.balena.io/):
 
@@ -188,10 +188,10 @@ On the first boot BananaOS makes the data partition from the rest of the card (a
 for Wi-Fi, the time zone, your DS's name and a RetroAchievements account (all skippable). Put games in `roms/nds`,
 `roms/gba` and so on, from any computer or over file sharing (`banana/README.txt` on the card lists the folders).
 
-**An update (from 0.4.0 or 0.4.1):** put the `.update.tar` in `banana/updates` on the card, then
-**Settings > System > Update**, A on the package and A again. Games, saves and settings stay.
+An update (from 0.4.0 or 0.4.1): put the `.update.tar` in `banana/updates` on the card, then
+Settings > System > Update, A on the package and A again. Games, saves and settings stay.
 
-**Moving from GammaOS or ROCKNIX?** The [Save Mover](https://jorrefog.github.io/BananaLinux/save-mover/) backs up
+Moving from GammaOS or ROCKNIX? The [Save Mover](https://jorrefog.github.io/BananaLinux/save-mover/) backs up
 your saves, converts them and puts them in the card's own folders, in your browser. A ROCKNIX `.dsv` next to a game
 is taken as its save the first time.
 
@@ -247,12 +247,12 @@ make test          # renders the menu from a test library into ui/tests/out
 <a id="credits"></a>
 <img src="docs/img/readme/h-credits.png" width="100%" alt="10: Credits. The work Banana stands on">
 
-- **Simplified Chinese (简体中文): translated by Majirefy.** The characters are drawn with
+- Simplified Chinese (简体中文): translated by Majirefy. The characters are drawn with
   [Fusion Pixel Font](https://github.com/TakWolf/fusion-pixel-font) (缝合像素字体) by TakWolf. To translate BananaOS
   into your language, ask for the translation document; `tools/lang-from-docx.py` turns a filled-in one into
   `ui/assets/lang/<language>.tsv`.
-- **jesussaves-ai**: the [BananaLinux Flasher](https://github.com/jesussaves-ai/banana-linux-flasher), the card writer for Windows, Linux and macOS.
-- **casualducko**: the zero-copy panel patch for LÖVE apps on both panels (eReaderDS).
+- jesussaves-ai: the [BananaLinux Flasher](https://github.com/jesussaves-ai/banana-linux-flasher), the card writer for Windows, Linux and macOS.
+- casualducko: the zero-copy panel patch for LÖVE apps on both panels (eReaderDS).
 - The menu is ROCKNIXDS Pixel, from [ROCKNIXDS](https://github.com/JorreFog/ROCKNIXDS), where BananaOS started.
   Banana's mark is the bunch of [BananaUI](https://github.com/JorreFog/helios), redrawn as pixel art.
 - The RG DS's kernel support, device trees and drivers come from [ROCKNIX](https://rocknix.org). DS emulation is

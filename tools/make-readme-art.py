@@ -246,10 +246,13 @@ def bananads_icon():
 
 
 def bananads_logo(k):
-    """The mark, then BANANA in banana yellow and DS in white, as BANANAOS is written."""
-    mark = up(bananads_icon(), 2)
-    w = word([("BANANA", BANANA_LIGHT, BANANA_DARK), ("DS", WHITE, CREAM_DARK)], s=4, shadow=4)
-    gap = 14
+    """The bunch, then BANANA heavy in two yellows with a black outline (as SuperDrastic's DRASTIC) and DS beside it in
+    white, the same height, so the two logos read as a pair."""
+    w = word([("BANANA", BANANA_LIGHT, BANANA_DARK), ("DS", WHITE, CREAM_DARK)], s=5, shadow=5, outline=3, heavy=True)
+    b = banana(32)
+    b = b.crop(b.getbbox())
+    mark = up(b, -(-w.height * 5 // (4 * b.height)))      # the bunch a bit taller than the word, as SuperDrastic's bolt
+    gap = 16
     im = Image.new("RGBA", (mark.width + gap + w.width, max(mark.height, w.height)), CLEAR)
     im.alpha_composite(mark, (0, (im.height - mark.height) // 2))
     im.alpha_composite(w, (mark.width + gap, (im.height - w.height) // 2))
@@ -288,13 +291,15 @@ def superdrastic_logo(k):
     plate.alpha_composite(up(prect(pw // 2, ph // 2, 2, YELLOW, BLACK), 2), (0, 0))
     ImageDraw.Draw(plate).rectangle([4, ph - 8, pw - 6, ph - 5], fill=YELLOW_DARK)
     plate.alpha_composite(plate_t, (10, 6))
+    # SUPER sits above DRASTIC, its right edge on DRASTIC's, clear of the letters (it used to cover the C)
     b = up(bolt(), 6)
+    top = ph + 2
     w = b.width + 8 + big.width
-    h = ph - 10 + big.height
+    h = top + big.height
     im = Image.new("RGBA", (w, h), CLEAR)
-    im.alpha_composite(b, (0, (h - b.height) // 2 + 4))
-    im.alpha_composite(big, (b.width + 8, ph - 10))
-    im.alpha_composite(plate, (b.width + 8 + big.width - pw - 6, 0))
+    im.alpha_composite(b, (0, top + (big.height - b.height) // 2))
+    im.alpha_composite(big, (b.width + 8, top))
+    im.alpha_composite(plate, (w - pw - 8, 0))
     return up(im, k)
 
 
