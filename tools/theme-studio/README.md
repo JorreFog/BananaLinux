@@ -77,7 +77,8 @@ exact, and it only changes when the engine does. `--size 1024x768` previews at t
 ## Testing
 
 ```sh
-sh tools/theme-studio/tests/run.sh                 # everything below
+make theme-studio                                 # from the repo root: everything below
+sh tools/theme-studio/tests/run.sh                 # the same, from anywhere
 node tools/theme-studio/tests/expr.test.js          # expr.js vs the real engine (needs g++)
 python3 tools/theme-studio/tests/serve.test.py      # the preview server, end to end
 python3 tools/theme-studio/tests/schema.test.py     # the example themes against docs/theme.schema.json
