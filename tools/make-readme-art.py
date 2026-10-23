@@ -380,7 +380,7 @@ def shot(grabs, name):
 
 def emulator_card(logo, tag, lines, chips, accent):
     k = 4
-    W, H = 620, 680
+    W, H = 620, 560
     out = up(prect(W // k, H // k, 5, CARD, CREAM), k)
     head = 196
     top = up(dot_grid(W // k - 2, head // k - 1, 3, PANEL, DOT), k)
@@ -408,25 +408,21 @@ def emulator_card(logo, tag, lines, chips, accent):
 
 
 def emulators():
-    left = emulator_card(superdrastic_logo(1), "DraStic on both panels", [
-        ("DraStic by Exophase,", "each DS screen on its panel"),
-        ("2x, Gengis Engine 3D",),
-        ("A per-game CPU governor",),
-        ("In-game menu: states with", "pictures, shaders, settings"),
-        ("The fastest of the two",),
-    ], ["FASTEST", "2X", "60 FPS"], RED_LIGHT)
-    right = emulator_card(bananads_logo(1), "melonDS's core, tuned", [
-        ("melonDS's core on Banana's", "display path and menu"),
-        ("RetroAchievements and", "online play (Nintendo WFC)"),
-        ("Mic, cheats, fast-forward",),
-        ("Speed-ups checked frame by", "frame against melonDS"),
-        ("The most accurate of the two",),
-    ], ["ACCURATE", "ONLINE", "RA"], YELLOW)
+    left = emulator_card(superdrastic_logo(1), "DraStic, built for both screens", [
+        ("2x rendering with",  "Gengis Engine 3D"),
+        ("Per-game CPU tuning",),
+        ("Save states with previews", "and shader settings"),
+    ], ["2X", "STATES", "SHADERS"], RED_LIGHT)
+    right = emulator_card(bananads_logo(1), "melonDS, more ways to play", [
+        ("RetroAchievements and", "Nintendo WFC online play"),
+        ("Real microphone support",),
+        ("Cheats and fast-forward",),
+    ], ["ACHIEVEMENTS", "ONLINE", "MIC"], YELLOW)
     W = 1280
     out = Image.new("RGBA", (W, left.height + 16 + 60), CLEAR)
     out.alpha_composite(drop(left, 12), (4, 4))
     out.alpha_composite(drop(right, 12), (W - right.width - 16, 4))
-    hint = text("Pick one in Settings > Nintendo DS, or per game with X", GREY, 3)
+    hint = text("A default in Settings > Nintendo DS, or X in the library for one game", GREY, 3)
     out.alpha_composite(hint, ((W - hint.width) // 2, out.height - hint.height - 6))
     return out
 
@@ -492,10 +488,9 @@ VIDEOS = [  # (YouTube id, channel, title)
 # ---- the numbers, as the home screen shows a system's -------------------------------------------------------------
 
 STATS = [  # (icon, number, unit, label)
-    ("gear", "3.9", "S", "KERNEL TO MENU"),
-    ("nds", "0.6", "S", "A TO DS GAME"),
-    ("recent", "60", "FPS", "DS AT 2X"),
-    ("collection", "10", "", "SYSTEMS"),
+    ("gear", "3.9", "S", "RG DS TO MENU"),
+    ("gear", "5.9", "S", "RG DS PLUS TO MENU"),
+    ("nds", "2", "", "DS EMULATORS"),
 ]
 
 
@@ -656,16 +651,16 @@ def flasher(shot):
 SHOTS = ["home", "library", "options", "settings", "nds", "zh-home", "zh-settings", "game", "game-menu", "store",
          "light", "carts"]
 HEADERS = [  # (file, title, icon, subtitle)
-    ("what", "What it is", "banana", "A whole system for two handhelds, built with Buildroot"),
-    ("tour", "A tour", "picture", "Grabbed from the panels of an RG DS Plus running 0.4.2"),
-    ("videos", "Seen on YouTube", "video", "Two creators took it for a spin"),
-    ("emulators", "Nintendo DS", "nds", "Two emulators, both straight onto the panels"),
-    ("systems", "And the rest", "gamepad", "RetroArch, PortMaster, the App Store"),
-    ("hardware", "Made for it", "handheld", "Two panels, a lid, and no sound server"),
-    ("install", "Get it", "cart", "The flasher, a card image, or an update over the one you have"),
-    ("status", "Status", "tools", "What works, and what is still rough"),
-    ("build", "Build", "computer", "From source, on Linux"),
-    ("credits", "Credits", "fav", "The work Banana stands on"),
+    ("what", "What it is", "banana", "Lightweight Linux for two handhelds"),
+    ("install", "Get it", "cart", "Install, update and move your saves"),
+    ("tour", "A tour", "picture", "Captured on an RG DS Plus running 0.4.2"),
+    ("emulators", "Nintendo DS", "nds", "Two emulators. Your choice."),
+    ("systems", "More to play", "gamepad", "More systems, apps and ports"),
+    ("hardware", "Built for it", "handheld", "Built for two screens and a lid"),
+    ("status", "Status", "tools", "Known issues and what comes next"),
+    ("build", "Build", "computer", "Build from source and work on the menu"),
+    ("videos", "Seen on YouTube", "video", "See BananaOS in action"),
+    ("credits", "Credits", "fav", "Built on community work"),
 ]
 
 if __name__ == "__main__":
