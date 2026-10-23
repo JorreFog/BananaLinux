@@ -1,0 +1,124 @@
+# Banana Theme Studio expression parity cases.
+# One expression per line (the text after "="), blank lines and #-comments ignored.
+# tests/parity.cpp evaluates each through ui/src/expr.cpp (the real engine); tests/expr.test.js evaluates
+# the same through expr.js and compares. Both use the same scope:
+#   x=3  y=0.5  zero=0  one=1  n=7  name="Banana"  msg="hello"  empty=""  col="#ff8000"
+#
+# --- operators ---
+x + y
+x - y
+x * y
+x / y
+x % y
+x == 3
+x != 3
+x < y
+x <= 3
+y >= 0
+y > 0
+x && y
+zero || x
+!zero
+!x
+-x
+-(x + 1)
+1 + 2 * 3
+(1 + 2) * 3
+2 + 3 == 5
+x > 1 ? 10 : 20
+x < 1 ? 10 : 20
+zero ? name : msg
+# --- strings and joins ---
+name
+name + msg
+'a' + 1
+1 + 'a'
+name == 'Banana'
+name == 'banana'
+len(name)
+upper(name)
+lower(name)
+substr(name, 0, 3)
+substr(name, 2)
+contains(name, 'nan')
+replace('a-b-a', 'a', 'X')
+pad(5, 3)
+pad(5, 3, '*')
+fixed(3.14159, 2)
+'x' + fixed(x / y, 3)
+str(x)
+num('12')
+num('abc')
+plural(1, 'game')
+plural(3, 'game')
+plural(2, 'match', 'matches')
+pick(1, 'a', 'b', 'c')
+pick(9, 'a', 'b', 'c')
+either(empty, empty, name)
+either(empty, msg)
+# --- maths ---
+min(3, 1, 2)
+max(3, 1, 2)
+clamp(5, 0, 4)
+clamp(-1, 0, 4)
+abs(-3)
+floor(2.7)
+ceil(2.1)
+round(2.345, 2)
+round(2.5)
+sqrt(9)
+sqrt(-1)
+pow(2, 10)
+sign(-5)
+sign(0)
+sign(9)
+mod(7, 3)
+mod(-7, 3)
+sin(0)
+cos(0)
+sind(90)
+cosd(180)
+lerp(0, 10, 0.25)
+step(1, 1)
+step(1, 1.5)
+smoothstep(0, 1, 0.5)
+# --- motion ---
+progress(100, 200)
+progress(300, 200)
+easeIn(0.5)
+easeOut(0.5)
+easeInOut(0.25)
+easeInOut(0.75)
+easeOutBack(0.5)
+easeOutElastic(0.5)
+bounce(0.3)
+pulse(0, 1000)
+pulse(500, 1000)
+# --- colours ---
+mix('#ff0000', '#0000ff', 0.5)
+alpha('#ff800080', 0.5)
+lighten('#808080', 0.5)
+darken('#808080', 0.5)
+rgb(255, 128, 0)
+rgba(10, 20, 30, 0.5)
+hsl(0, 1, 0.5)
+hsl(120, 1, 0.5)
+mix(#ff8000, #000000, 0.5)
+mix(col, '#ffffff', 0.25)
+'red' == 'red'
+# --- number formatting (EV::str) ---
+1 / 3
+2 / 3
+0.1 + 0.2
+100000 * 100000
+pow(10, 16)
+1 / 10000
+1 / 100000
+x
+-a
+0
+# --- if() ---
+if(1, 10, 20)
+if(0, 10, 20)
+if(x > 2, name, msg)
+if(x > 2, upper(name), lower(msg))

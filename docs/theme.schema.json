@@ -1,0 +1,461 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bananaos-cfw.dev/theme.schema.json",
+  "title": "BananaOS layout theme",
+  "description": "A BananaOS theme file. A theme with a \"screens\" member is a layout theme and draws the whole menu itself; a theme without one is a colour theme over the Pixel look and only uses the colour/font/icon/sound keys. Any property may be a literal, an =expression or a {template} string. // and /* */ comments and trailing commas are allowed in the file the engine reads. See docs/THEMES.md and /usr/share/banana/themes/README.txt.",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "The theme's name, shown in Settings > Display & sound > Theme. Falls back to the file name."
+    },
+    "author": {
+      "type": "string",
+      "description": "The theme's author. Shown nowhere yet."
+    },
+    "debug": {
+      "type": "boolean",
+      "description": "true: theme errors are also drawn in red on the top screen, not only logged."
+    },
+    "base": {
+      "enum": ["dark", "light"],
+      "description": "The palette the theme starts from (the Settings screen's look). Defaults to \"dark\"."
+    },
+    "accent": {
+      "description": "The selection, the logo and the boot banana colour: one of Banana's named accents, a colour (its lighter/darker/band/low shades are worked out), or all five shades.",
+      "anyOf": [
+        {
+          "enum": ["yellow", "blue", "red", "green", "purple", "pink"],
+          "description": "One of Banana's named accents."
+        },
+        {
+          "$ref": "#/$defs/color"
+        },
+        {
+          "type": "object",
+          "description": "Each of the five accent shades given explicitly.",
+          "properties": {
+            "base": { "$ref": "#/$defs/color", "description": "The main accent colour." },
+            "light": { "$ref": "#/$defs/color", "description": "The lighter shade." },
+            "dark": { "$ref": "#/$defs/color", "description": "The darker shade." },
+            "band": { "$ref": "#/$defs/color", "description": "The band shade." },
+            "low": { "$ref": "#/$defs/color", "description": "The low shade." }
+          },
+          "required": ["base"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "colors": {
+      "type": "object",
+      "description": "The palette's colours by name (screenBg, ink, muted, edge, navy, panelBody, chipBand, slotOn, onPick, ...); the ones not named keep the base palette's. See system/rootfs/usr/share/banana/themes/README.txt.",
+      "additionalProperties": { "$ref": "#/$defs/color" }
+    },
+    "font": {
+      "type": "string",
+      "description": "The default font of text elements. A built-in name (pixel, pixel-medium, inter, inter-medium, inter-semibold, inter-bold) or a name given in \"fonts\"."
+    },
+    "vars": {
+      "type": "object",
+      "description": "Named values usable in any expression (\"=bg\", \"=hi + '80'\").",
+      "additionalProperties": { "$ref": "#/$defs/value" }
+    },
+    "components": {
+      "type": "object",
+      "description": "Reusable elements, instanced with \"use\": \"<name>\" and parameterised with \"with\".",
+      "additionalProperties": { "$ref": "#/$defs/element" }
+    },
+    "input": {
+      "type": "object",
+      "description": "What the buttons do, per view. The defaults are the Carts theme's.",
+      "properties": {
+        "home": { "$ref": "#/$defs/inputMap" },
+        "library": { "$ref": "#/$defs/inputMap" }
+      },
+      "additionalProperties": { "$ref": "#/$defs/inputMap" }
+    },
+    "hints": {
+      "type": "object",
+      "description": "The buttons shown by a \"hints\" list, per view: each entry is [key, label] or { \"key\", \"label\" }.",
+      "properties": {
+        "home": { "type": "array", "items": { "$ref": "#/$defs/hintItem" } },
+        "library": { "type": "array", "items": { "$ref": "#/$defs/hintItem" } }
+      },
+      "additionalProperties": { "type": "array", "items": { "$ref": "#/$defs/hintItem" } }
+    },
+    "behavior": { "$ref": "#/$defs/behavior" },
+    "screens": {
+      "type": "object",
+      "description": "The menu's screens. Each is { \"top\": [...], \"bottom\": [...] } (an array of elements, or a single element). \"launch\" is optional: the library's screens are used if it is missing. \"all\" is drawn over every view (a status bar).",
+      "properties": {
+        "home": { "$ref": "#/$defs/screen" },
+        "library": { "$ref": "#/$defs/screen" },
+        "launch": { "$ref": "#/$defs/screen" },
+        "all": { "$ref": "#/$defs/screen" }
+      },
+      "additionalProperties": false
+    },
+    "background": { "$ref": "#/$defs/background" },
+    "fonts": {
+      "type": "object",
+      "description": "The theme's own fonts (TTF, relative to the theme's JSON). \"regular\" and \"medium\" replace the menu's text and its titles; any name is usable from a text element's \"font\".",
+      "properties": {
+        "regular": { "type": "string", "description": "The menu's regular text font." },
+        "medium": { "type": "string", "description": "The menu's medium/title font." }
+      },
+      "additionalProperties": { "type": "string" }
+    },
+    "icons": {
+      "type": "object",
+      "description": "A system's icon (PNG, about 128x128), by the system's id (nds, gba, gbc, gb, snes, nes, megadrive, n64, psx, pico-8, ports, ...).",
+      "additionalProperties": { "type": "string" }
+    },
+    "sounds": {
+      "type": "object",
+      "description": "The menu's sounds (WAV, relative to the theme's JSON), by name: scroll, select, back, fav, ready, insert. \"off\" for none.",
+      "additionalProperties": { "type": "string" }
+    },
+    "logo": {
+      "type": "string",
+      "description": "The logo at the top of the bottom screen (fitted into its box), relative to the theme's JSON."
+    }
+  },
+  "$defs": {
+    "prop": {
+      "type": ["number", "string", "boolean"],
+      "description": "A leaf property: a literal number/string/boolean, an =expression, or a {template} string (expressions and templates are just strings)."
+    },
+    "value": {
+      "description": "Any property value: a number, string or boolean (including the =expression and {template} string forms), an array (of colour stops, radii, ...), or an object.",
+      "anyOf": [
+        { "$ref": "#/$defs/prop" },
+        { "type": "array", "items": { "$ref": "#/$defs/value" } },
+        { "type": "object" }
+      ]
+    },
+    "color": {
+      "type": "string",
+      "description": "A colour: #rgb, #rgba, #rrggbb, #rrggbbaa, rgb(...), rgba(...), hsl(...), transparent or a few names, an =expression, or a {template}."
+    },
+    "anchor": {
+      "type": "string",
+      "description": "Which point of the element x/y places: \"center\", \"top right\", \"bottom\", \"left\"... (a combination of top/middle/bottom/left/center/right), or use ax/ay 0..1.",
+      "examples": ["center", "top left", "bottom", "top right"]
+    },
+    "gradient": {
+      "type": "object",
+      "description": "A linear gradient across the box (CSS angles: 180 runs top to bottom).",
+      "properties": {
+        "angle": { "$ref": "#/$defs/prop", "description": "The gradient's angle in degrees. Default 180." },
+        "stops": {
+          "type": "array",
+          "description": "The colour stops, in order: a colour, optionally with a position (\"#123 40%\").",
+          "items": { "$ref": "#/$defs/prop" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "radius": {
+      "description": "A corner radius: a number, \"50%\" for a pill/circle, or [top-left, top-right, bottom-right, bottom-left].",
+      "anyOf": [
+        { "$ref": "#/$defs/prop" },
+        {
+          "type": "array",
+          "items": { "$ref": "#/$defs/prop" },
+          "minItems": 1,
+          "maxItems": 4
+        }
+      ]
+    },
+    "border": {
+      "description": "A border width, or { \"width\", \"color\" }.",
+      "anyOf": [
+        { "$ref": "#/$defs/prop" },
+        {
+          "type": "object",
+          "properties": {
+            "width": { "$ref": "#/$defs/prop", "description": "The border's width." },
+            "color": { "$ref": "#/$defs/color", "description": "The border's colour." }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "shadow": {
+      "type": "object",
+      "description": "A drop shadow under a box or text.",
+      "properties": {
+        "x": { "$ref": "#/$defs/prop", "description": "Horizontal offset. Default 0 (boxes) / 1 (text)." },
+        "y": { "$ref": "#/$defs/prop", "description": "Vertical offset. Default 0 (boxes) / 1 (text)." },
+        "blur": { "$ref": "#/$defs/prop", "description": "Blur radius." },
+        "spread": { "$ref": "#/$defs/prop", "description": "Spread of the shadow." },
+        "color": { "$ref": "#/$defs/color", "description": "The shadow's colour; fully transparent means no shadow." }
+      },
+      "additionalProperties": false
+    },
+    "outline": {
+      "type": "object",
+      "description": "An outline stroke around text.",
+      "properties": {
+        "width": { "$ref": "#/$defs/prop", "description": "The outline's width. Default 1." },
+        "color": { "$ref": "#/$defs/color", "description": "The outline's colour." }
+      },
+      "additionalProperties": false
+    },
+    "state": {
+      "type": "object",
+      "description": "Properties that replace the element's own while \"when\" holds; the last matching state wins.",
+      "properties": {
+        "when": { "$ref": "#/$defs/prop", "description": "An expression that must be true for this state to apply." }
+      },
+      "required": ["when"],
+      "additionalProperties": true
+    },
+    "smooth": {
+      "description": "Ease values towards their targets instead of jumping: one number (for x, y, w, h, opacity, scale), or { \"x\": ms, \"scale\": ms, ... } time constants per property.",
+      "anyOf": [
+        { "type": "number" },
+        {
+          "type": "object",
+          "properties": {
+            "x": { "type": "number", "description": "Time constant for x, in ms." },
+            "y": { "type": "number", "description": "Time constant for y, in ms." },
+            "w": { "type": "number", "description": "Time constant for w, in ms." },
+            "h": { "type": "number", "description": "Time constant for h, in ms." },
+            "opacity": { "type": "number", "description": "Time constant for opacity, in ms." },
+            "scale": { "type": "number", "description": "Time constant for scale, in ms." }
+          },
+          "additionalProperties": { "type": "number" }
+        }
+      ]
+    },
+    "element": {
+      "type": "object",
+      "description": "An element: rect, text, image, group or list, chosen by \"type\" or inferred (a group if it has \"children\", text if \"text\", an image if \"src\", a list if \"source\", else a rect). An array of elements is a group of them. Unknown members are ignored, so a theme may carry newer keys.",
+      "additionalProperties": true,
+      "properties": {
+        "type": {
+          "enum": ["rect", "text", "image", "group", "list"],
+          "description": "The element's kind. Inferred from its other members when absent."
+        },
+        "id": { "type": "string", "description": "A name for the element (for the error messages)." },
+        "x": { "$ref": "#/$defs/prop", "description": "Left position in the parent, in units or \"50%\" of it." },
+        "y": { "$ref": "#/$defs/prop", "description": "Top position in the parent, in units or \"50%\" of it." },
+        "w": { "$ref": "#/$defs/prop", "description": "Width in the parent. A rect or group without w/h fills its parent; text is as big as its lines." },
+        "h": { "$ref": "#/$defs/prop", "description": "Height in the parent. A rect or group without w/h fills its parent; text is as big as its lines." },
+        "right": { "$ref": "#/$defs/prop", "description": "Distance from the parent's right edge (with x and no w: stretches)." },
+        "bottom": { "$ref": "#/$defs/prop", "description": "Distance from the parent's bottom edge (with y and no h: stretches)." },
+        "anchor": { "$ref": "#/$defs/anchor" },
+        "ax": { "$ref": "#/$defs/prop", "description": "The anchor's horizontal fraction, 0..1 (overrides \"anchor\")." },
+        "ay": { "$ref": "#/$defs/prop", "description": "The anchor's vertical fraction, 0..1 (overrides \"anchor\")." },
+        "scale": { "$ref": "#/$defs/prop", "description": "Grows or shrinks the element and its children about its anchor. Default 1." },
+        "opacity": { "$ref": "#/$defs/prop", "description": "0..1, multiplied into the element and its children. Default 1." },
+        "visible": { "$ref": "#/$defs/prop", "description": "false: not drawn, nor its children." },
+        "if": { "$ref": "#/$defs/prop", "description": "false: not drawn, nor its children." },
+        "clip": { "$ref": "#/$defs/prop", "description": "true: children are cut to the element's box." },
+        "states": {
+          "type": "array",
+          "description": "Property overrides while a condition holds.",
+          "items": { "$ref": "#/$defs/state" }
+        },
+        "smooth": { "$ref": "#/$defs/smooth" },
+        "onTap": { "$ref": "#/$defs/prop", "description": "A button the element acts as when tapped: \"a\", \"b\", \"left\", ..." },
+        "tap": { "$ref": "#/$defs/prop", "description": "Alias of \"onTap\"." },
+        "use": { "type": "string", "description": "Instantiate a component from \"components\"." },
+        "with": {
+          "type": "object",
+          "description": "Parameters for a component's expressions (\"with\": { \"label\": \"Play\" }).",
+          "additionalProperties": { "$ref": "#/$defs/value" }
+        },
+        "props": {
+          "type": "object",
+          "description": "Alias of \"with\".",
+          "additionalProperties": { "$ref": "#/$defs/value" }
+        },
+        "children": { "$ref": "#/$defs/elementList" },
+        "item": { "$ref": "#/$defs/elementList" },
+        "layout": {
+          "description": "A group's layout: place its children one after another along a row or a column.",
+          "anyOf": [
+            { "enum": ["row", "column"] },
+            { "type": "string", "pattern": "^\\s*(=|\\{)", "description": "An =expression or {template} that yields one of the values above." }
+          ]
+        },
+        "gap": { "$ref": "#/$defs/prop", "description": "The space between laid-out children or list items." },
+        "padding": { "$ref": "#/$defs/prop", "description": "A row/column's inner padding." },
+        "justify": {
+          "description": "A row/column's alignment along its direction.",
+          "anyOf": [
+            { "enum": ["start", "center", "end", "between"] },
+            { "type": "string", "pattern": "^\\s*(=|\\{)", "description": "An =expression or {template} that yields one of the values above." }
+          ]
+        },
+        "align": {
+          "description": "Text alignment within w (left/center/right), or a row/column's alignment across its direction (start/center/end).",
+          "anyOf": [
+            { "enum": ["left", "center", "right", "start", "end"] },
+            { "type": "string", "pattern": "^\\s*(=|\\{)", "description": "An =expression or {template} that yields one of the values above." }
+          ]
+        },
+        "valign": {
+          "description": "Text alignment within h.",
+          "anyOf": [
+            { "enum": ["top", "middle", "bottom"] },
+            { "type": "string", "pattern": "^\\s*(=|\\{)", "description": "An =expression or {template} that yields one of the values above." }
+          ]
+        },
+        "fill": { "$ref": "#/$defs/color", "description": "A rect or group's fill colour." },
+        "color": { "$ref": "#/$defs/color", "description": "A rect's fill or a text's colour." },
+        "gradient": { "$ref": "#/$defs/gradient" },
+        "radius": { "$ref": "#/$defs/radius" },
+        "border": { "$ref": "#/$defs/border" },
+        "borderColor": { "$ref": "#/$defs/color", "description": "The border's colour when \"border\" is a width." },
+        "shadow": { "$ref": "#/$defs/shadow" },
+        "text": { "type": "string", "description": "A text's content (literal, {template} or =expression)." },
+        "font": { "type": "string", "description": "The text's font: a built-in name or one from \"fonts\"." },
+        "size": { "$ref": "#/$defs/prop", "description": "The text's size in units." },
+        "upper": { "$ref": "#/$defs/prop", "description": "true: the text is drawn in capitals." },
+        "spacing": { "$ref": "#/$defs/prop", "description": "Letter spacing." },
+        "wrap": { "$ref": "#/$defs/prop", "description": "true: the text wraps within w." },
+        "maxLines": { "$ref": "#/$defs/prop", "description": "The most lines a wrapped text may take." },
+        "lineHeight": { "$ref": "#/$defs/prop", "description": "The distance between lines." },
+        "ellipsis": { "$ref": "#/$defs/prop", "description": "A line longer than w ends in ... (default on)." },
+        "outline": { "$ref": "#/$defs/outline" },
+        "src": { "type": "string", "description": "An image's source: a hook (\"{game.art}\"), a file next to the theme's JSON, or a full path." },
+        "fallback": { "type": "string", "description": "Another source to use when src is empty or doesn't load." },
+        "fit": {
+          "description": "How the picture fits its box.",
+          "anyOf": [
+            { "enum": ["cover", "contain", "fill", "coverTop", "pixel", "pixelContain"] },
+            { "type": "string", "pattern": "^\\s*(=|\\{)", "description": "An =expression or {template} that yields one of the values above." }
+          ]
+        },
+        "crop": {
+          "description": "A pre-fit crop of a DS picture.",
+          "anyOf": [
+            { "enum": ["cardLabel", "noStrip"] },
+            { "type": "string", "pattern": "^\\s*(=|\\{)", "description": "An =expression or {template} that yields one of the values above." }
+          ]
+        },
+        "tint": { "$ref": "#/$defs/color", "description": "A colour multiplied into the picture." },
+        "placeholder": { "$ref": "#/$defs/color", "description": "A colour shown while the picture loads or when there is nothing." },
+        "source": {
+          "description": "A list's data.",
+          "anyOf": [
+            { "enum": ["systems", "games", "hints", "range"] },
+            { "type": "string", "pattern": "^\\s*(=|\\{)", "description": "An =expression or {template} that yields one of the values above." }
+          ]
+        },
+        "direction": {
+          "description": "A list's direction.",
+          "anyOf": [
+            { "enum": ["row", "column", "grid", "free"] },
+            { "type": "string", "pattern": "^\\s*(=|\\{)", "description": "An =expression or {template} that yields one of the values above." }
+          ]
+        },
+        "columns": { "$ref": "#/$defs/prop", "description": "A grid list's number of columns." },
+        "itemW": { "$ref": "#/$defs/prop", "description": "A list item's width." },
+        "itemH": { "$ref": "#/$defs/prop", "description": "A list item's height." },
+        "stepX": { "$ref": "#/$defs/prop", "description": "The horizontal distance between list items (default itemW + gap)." },
+        "stepY": { "$ref": "#/$defs/prop", "description": "The vertical distance between list items (default itemH + gap)." },
+        "scrollMode": {
+          "description": "How a list scrolls.",
+          "anyOf": [
+            { "enum": ["center", "edge", "none"] },
+            { "type": "string", "pattern": "^\\s*(=|\\{)", "description": "An =expression or {template} that yields one of the values above." }
+          ]
+        },
+        "loop": { "$ref": "#/$defs/prop", "description": "true: the list wraps around (with behavior.wrap for the buttons)." },
+        "flow": { "$ref": "#/$defs/prop", "description": "true: each item is as wide (row) or high (column) as its own content (hint chips)." },
+        "range": { "$ref": "#/$defs/prop", "description": "A free list draws this far from the selection (default 8)." },
+        "count": { "$ref": "#/$defs/prop", "description": "The number of items of a \"range\" list." },
+        "selectedOnTop": { "$ref": "#/$defs/prop", "description": "true (default): the selected item is drawn last, over its neighbours." }
+      }
+    },
+    "elementList": {
+      "description": "One element or an array of elements (an array is a group of them).",
+      "anyOf": [
+        { "$ref": "#/$defs/element" },
+        { "type": "array", "items": { "$ref": "#/$defs/element" } }
+      ]
+    },
+    "screen": {
+      "type": "object",
+      "description": "One view's two screens: an element or an array of elements each.",
+      "properties": {
+        "top": { "$ref": "#/$defs/elementList" },
+        "bottom": { "$ref": "#/$defs/elementList" }
+      },
+      "additionalProperties": false
+    },
+    "inputMap": {
+      "type": "object",
+      "description": "What the buttons do in a view.",
+      "properties": {
+        "left": { "$ref": "#/$defs/buttonAction" },
+        "right": { "$ref": "#/$defs/buttonAction" },
+        "up": { "$ref": "#/$defs/buttonAction" },
+        "down": { "$ref": "#/$defs/buttonAction" },
+        "a": { "$ref": "#/$defs/buttonAction" },
+        "b": { "$ref": "#/$defs/buttonAction" },
+        "x": { "$ref": "#/$defs/buttonAction" },
+        "y": { "$ref": "#/$defs/buttonAction" },
+        "l": { "$ref": "#/$defs/buttonAction" },
+        "r": { "$ref": "#/$defs/buttonAction" }
+      },
+      "additionalProperties": { "$ref": "#/$defs/buttonAction" }
+    },
+    "buttonAction": {
+      "type": "string",
+      "description": "prev, next, prev:5 (move N), first, last, open, back, fav, resume, prevSystem, nextSystem, or none. START (Settings) and SELECT (search) stay Banana's.",
+      "examples": ["prev", "next", "prev:5", "first", "last", "open", "back", "fav", "resume", "prevSystem", "nextSystem", "none"]
+    },
+    "hintItem": {
+      "description": "A hint button: [key, label] or { \"key\", \"label\" }.",
+      "anyOf": [
+        {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 2
+        },
+        {
+          "type": "object",
+          "properties": {
+            "key": { "type": "string", "description": "The button's name (A, B, X, Y, ...)." },
+            "label": { "type": "string", "description": "What the button does." }
+          },
+          "additionalProperties": true
+        }
+      ]
+    },
+    "behavior": {
+      "type": "object",
+      "description": "The theme's timing and switches.",
+      "properties": {
+        "launchMs": { "type": "number", "description": "How long the launch view lasts before the game starts, in ms." },
+        "settleMs": { "type": "number", "description": "How long the menu keeps redrawing after a move or a view change, for the theme's animations." },
+        "scrollMs": { "type": "number", "description": "The list scroll's easing time constant, in ms." },
+        "fps": { "type": "number", "description": "The redraw rate for a theme that reads \"time\", 1..60." },
+        "wrap": { "type": "boolean", "description": "true: the buttons wrap the selection around the ends." },
+        "extraHints": { "type": "boolean", "description": "true: Banana's own hints (SELECT Search, ...) are added to the theme's." },
+        "cues": {
+          "type": "object",
+          "description": "The theme's sounds played during the launch view at these ms (insert, ...).",
+          "additionalProperties": { "type": "number" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "background": {
+      "type": "object",
+      "description": "Pictures behind the two screens and the screens' dot pattern.",
+      "properties": {
+        "top": { "type": "string", "description": "The top screen's background picture (PNG/JPEG, scaled to fill)." },
+        "bottom": { "type": "string", "description": "The bottom screen's background picture (PNG/JPEG, scaled to fill)." },
+        "dither": { "type": "boolean", "description": "false: the screens' dot pattern is off." }
+      },
+      "additionalProperties": false
+    }
+  }
+}

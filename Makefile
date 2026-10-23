@@ -5,6 +5,7 @@
 #   make universal     one card for both                -> output/universal/images/banana-universal.img.gz
 #   make ui            banana-ui for this computer (headless renders, no panels needed)
 #   make test          renders the menu headless from a test library and checks it (needs ImageMagick)
+#   make theme-studio  the layout-theme editor's tests (the expression port, the preview server, the schema)
 #   make menuconfig-rgds / linux-menuconfig-rgds ...   any Buildroot target, per board
 #
 # The first image build downloads Buildroot (below) and everything it builds: expect an hour or more.
@@ -34,8 +35,12 @@ ui:
 test: ui
 	ui/tests/run.sh
 
+# tools/theme-studio: the layout-theme editor's tests (expr.js vs ui/src/expr.cpp, the preview server, the schema)
+theme-studio: ui
+	sh tools/theme-studio/tests/run.sh
+
 clean:
 	rm -rf $(OUT)
 	$(MAKE) -C ui clean
 
-.PHONY: $(BOARDS) ui test clean
+.PHONY: $(BOARDS) ui test theme-studio clean
