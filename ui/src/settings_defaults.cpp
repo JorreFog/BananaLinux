@@ -61,6 +61,8 @@ namespace banana
 			{ "timezone", "UTC0", TIMEZONE, nullptr, 0, 0 },
 			{ "retroarch_panel", "panel", ENUM, PANEL, 0, 0 },
 			{ "boxart_source", "libretro", ENUM, BOXART, 0, 0 },
+			{ "update_prerelease", "on", ENUM, ON_OFF, 0, 0 },
+			{ "update_daily", "off", ENUM, ON_OFF, 0, 0 },
 			{ "boxart_twilight_url", "https://boxart.kirovair.com", TEXT, nullptr, 0, 0 },
 			{ "boxart_twilight_key", "tb2_9f4c1d7a3e8b5062", TEXT, nullptr, 0, 0 },
 			{ "core.gba", "gpsp", CORE, nullptr, 0, 0 },

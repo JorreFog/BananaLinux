@@ -233,7 +233,7 @@ settings		System	系统
 settings		Time zone	时区
 settings		The clock's time zone, summer time included, for the menu and the games (a DS game's clock too). The time itself comes from Wi-Fi or the handheld's own clock.	菜单与游戏（含 DS 游戏）时钟的时区，含夏令时。时间本身来自 Wi-Fi 或主机自身时钟。
 settings		Update	更新
-settings		A new version of Banana from a package on the card, written to the other slot and run from the next restart; this one stays as it is until then.	卡上的更新包提供的新版 Banana，写入另一插槽并从下次重启运行；当前版本在此之前保持不变。
+settings		A new version of Banana, downloaded from GitHub over Wi-Fi or from a package on the card, written to the other slot and run from the next restart; this one stays as it is until then.	新版 Banana，可通过 Wi-Fi 从 GitHub 下载，或使用卡上的更新包；写入另一插槽并从下次重启运行，当前版本在此之前保持不变。
 settings		Box art	封面
 settings		Covers, title screens, genres and years for your games, from libretro's free collections (no account, Wi-Fi needed). It keeps going in the background; games that already have art are skipped, so running it again only fetches what is new.	你游戏的封面、标题画面、类型与年份，来自 libretro 的免费图库（无需账号，需 Wi-Fi）。它在后台持续进行；已有封面的游戏会被跳过，因此再次运行只获取新增内容。
 settings		Previous version	上一版本
@@ -319,6 +319,48 @@ settings		for both handhelds	适用于两台主机
 settings		for the {handheld}	适用于 {handheld}
 settings		not for this handheld	不适用于本机
 settings		Nothing in banana/updates on the card.	卡上的 banana/updates 为空。
+settings		Test versions	测试版
+settings		Whether Update's check counts test versions (GitHub pre-releases). Every BananaOS release so far is one, so with them left out the check finds nothing until a stable version comes out.	“更新”检查时是否包括测试版（GitHub 预发布版）。目前所有 BananaOS 发布版都是测试版，因此若排除测试版，在稳定版推出之前检查不会找到任何版本。
+settings		Included	包括
+settings		Left out	排除
+settings		Update check	检查更新
+settings		When asked: GitHub is only asked when you choose Check for updates. Daily: also when Wi-Fi connects, at most once a day, so the Update row says when a new version is out. Nothing is downloaded without you.	手动：仅在选择“检查更新”时询问 GitHub。每天：Wi-Fi 连接时也会检查，每天最多一次，有新版本时“更新”一行会显示。未经你同意不会下载任何内容。
+settings		When asked	手动
+settings		Daily	每天
+settings		Downloading {n}%	正在下载 {n}%
+settings		{version} available	{version} 可用
+settings		Checking for updates...	正在检查更新…
+settings		Checking the download...	正在校验下载…
+settings		{p}% · {done} of {total} MB	{p}% · {done} / {total} MB
+settings		Downloading Banana {version}	正在下载 Banana {version}
+settings		Downloaded	已下载
+settings		Install Banana {version}	安装 Banana {version}
+settings		Install	安装
+settings		Resume: {done} of {total} MB	继续：{done} / {total} MB
+settings		Download Banana {version}	下载 Banana {version}
+settings		Download	下载
+settings		Check for updates	检查更新
+settings		Check	检查
+settings		Cancel	取消
+settings		Up to date	已是最新
+settings		None for this handheld	无适用于本机的版本
+settings		Newest for the {handheld}: {version} (a test version)	{handheld} 的最新版本：{version}（测试版）
+settings		Newest for the {handheld}: {version}	{handheld} 的最新版本：{version}
+settings		Up to date: {version} is the newest for the {handheld}	已是最新：{version} 是 {handheld} 的最新版本
+settings		No release for the {handheld} yet	{handheld} 暂无发布版
+settings		The check failed	检查失败
+settings		Asking GitHub which version is the newest for this handheld...	正在向 GitHub 查询本机的最新版本…
+settings		Checking the download against the release's SHA-256...	正在根据发布版的 SHA-256 校验下载…
+settings		Downloading to banana/updates on the card. B goes back and the download carries on (this page shows how far it is); A cancels it, and the next Download carries on from where it stopped.	正在下载到卡上的 banana/updates。按 B 返回，下载会在后台继续（本页面显示进度）；按 A 取消，下次“下载”会从中断处继续。
+settings		The download failed: {reason}.	下载失败：{reason}。
+settings		The check failed: {reason}.	检查失败：{reason}。
+settings		Downloaded and checked against the release's SHA-256. A, then A again, writes it to the other slot; this version stays as it is until the restart.	已下载并根据发布版的 SHA-256 校验。按 A 两次将其写入另一插槽；当前版本在重启前保持不变。
+settings		A downloads it ({n} MB) to banana/updates on the card and checks it; nothing is installed until you choose Install. X checks again.	按 A 将其（{n} MB）下载到卡上的 banana/updates 并校验；选择“安装”之前不会安装任何内容。按 X 重新检查。
+settings		This handheld has the newest version. A checks again.	本机已是最新版本。按 A 重新检查。
+settings		GitHub has no release for this handheld. With Settings > System > Test versions left out, only stable versions count, and there are none yet.	GitHub 上没有适用于本机的发布版。若在 设置 > 系统 > 测试版 中选择排除，则只计算稳定版，而目前还没有稳定版。
+settings		A asks GitHub (Wi-Fi needed) whether a newer version is out for this handheld. Nothing is downloaded until you choose Download.	按 A 向 GitHub 查询本机是否有新版本（需要 Wi-Fi）。选择“下载”之前不会下载任何内容。
+settings		The check didn't answer.	检查没有回应。
+settings		{n} MB	{n} MB
 settings		A Wi-Fi password has 8 to 63 characters; this one has {count}.	Wi-Fi 密码需 8 至 63 个字符；此密码为 {count} 个。
 settings		The account's name, as on retroachievements.org.	账号名称，与 retroachievements.org 上一致。
 settings		RetroAchievements password for {name}	{name} 的 RetroAchievements 密码
