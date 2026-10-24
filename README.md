@@ -15,7 +15,7 @@ choose an emulator and start playing.
   <a href="#get-it">Install</a> ·
   <a href="#status">Known issues</a> ·
   <a href="https://jorrefog.github.io/BananaLinux/save-mover/">Move your saves</a> ·
-  <a href="https://discord.gg/FxeE7f8r">Discord</a>
+  <a href="https://discord.gg/3wf73cK2Qq">Discord</a>
 </p>
 
 <p align="center">
@@ -23,7 +23,7 @@ choose an emulator and start playing.
   <a href="https://github.com/JorreFog/BananaLinux/releases"><img src="https://img.shields.io/github/downloads/JorreFog/BananaLinux/total?style=for-the-badge&label=downloads&color=234346&labelColor=17161C" alt="Downloads"></a>
   <a href="https://bananaos-cfw.dev"><img src="https://img.shields.io/badge/website-bananaos--cfw.dev-F1EDE2?style=for-the-badge&labelColor=17161C" alt="Website: bananaos-cfw.dev"></a>
   <img src="https://img.shields.io/badge/handhelds-RG%20DS%20%C2%B7%20RG%20DS%20Plus-F1EDE2?style=for-the-badge&labelColor=17161C" alt="For the RG DS and RG DS Plus">
-  <a href="https://discord.gg/FxeE7f8r"><img src="https://img.shields.io/badge/discord-join-F0B429?style=for-the-badge&logo=discord&logoColor=F1EDE2&labelColor=17161C" alt="Discord"></a>
+  <a href="https://discord.gg/3wf73cK2Qq"><img src="https://img.shields.io/badge/discord-join-F0B429?style=for-the-badge&logo=discord&logoColor=F1EDE2&labelColor=17161C" alt="Discord"></a>
 </p>
 
 > [!WARNING]
@@ -284,7 +284,7 @@ make test          # renders the menu from a test library into ui/tests/out
     </td>
   </tr>
 </table>
-<p align="center"><sub>Thank you both! Made a video about BananaOS? Tell us on <a href="https://discord.gg/FxeE7f8r">Discord</a>.</sub></p>
+<p align="center"><sub>Thank you both! Made a video about BananaOS? Tell us on <a href="https://discord.gg/3wf73cK2Qq">Discord</a>.</sub></p>
 
 <a id="credits"></a>
 <img src="docs/img/readme/h-credits.png" width="100%" alt="">
@@ -314,4 +314,4 @@ reviews and tests the work on real hardware. Bug reports and contributions are w
 BananaOS is MIT licensed ([LICENSE](LICENSE)); bundled components keep their own licenses, listed in
 [THIRD_PARTY.md](THIRD_PARTY.md). BananaOS contains no games, ROMs or BIOS files.
 
-<p align="center"><a href="https://discord.gg/FxeE7f8r"><b>Questions, reports, setups: join the Discord</b></a></p>
+<p align="center"><a href="https://discord.gg/3wf73cK2Qq"><b>Questions, reports, setups: join the Discord</b></a></p>
