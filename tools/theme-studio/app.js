@@ -49,7 +49,7 @@
 
   // ---- state -----------------------------------------------------------------------------------------
   const state = { theme: clone(STARTER), sel: null, view: "home", screen: "top", addScreen: "top", size: "640x480",
-    shots: null, drag: null, open: {}, templates: null, localThemes: [], assets: {} };
+    shots: null, drag: null, open: {}, templates: null, localThemes: [], systemIds: null, assets: {} };
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
 
   // ---- tiny DOM helper -------------------------------------------------------------------------------
@@ -209,8 +209,8 @@
   function argbCss(c) { const p = argbParts(c); return "rgba(" + p.r + "," + p.g + "," + p.b + "," + (p.a / 255).toFixed(3) + ")"; }
 
   // ---- the inspector's field widget ------------------------------------------------------------------
-  function field(parent, label, get, set, kind, options) {
-    const row = h("div", { class: "field" }); row.appendChild(h("label", null, label));
+  function field(parent, label, get, set, kind, options, labelNode) {
+    const row = h("div", { class: "field" }); row.appendChild(labelNode || h("label", null, label));
     const ctl = h("div", { class: "ctl" }); row.appendChild(ctl); parent.appendChild(row);
     const chip = h("span", { class: "res" });
     const opts = () => (typeof options === "function" ? options(Object.keys(state.theme.fonts || {})) : (options || []));
@@ -603,13 +603,33 @@
     S.SOUNDS.forEach((s) => { const f = h("div"); pane.appendChild(f); field(f, s, () => snd[s], (v) => { if (v) snd[s] = v; else delete snd[s]; markDirty(); }, "text"); });
 
     // icons
+    // the system icons: a picture per system id, which the engine uses everywhere for that system
     pane.appendChild(h("h3", { class: "sec" }, "system icons"));
+    pane.appendChild(h("div", { class: "muted", style: "font-size:12px" }, "a picture per system id replaces the menu's icon for that system (home, lists, Settings). 128×128 is plenty."));
     const icons = th.icons || (th.icons = {});
-    Object.keys(icons).forEach((k) => { const f = h("div"); pane.appendChild(f); field(f, k, () => icons[k], (v) => { if (v) icons[k] = v; else delete icons[k]; markDirty(); }, "text"); });
-    const ik = h("input", { type: "text", placeholder: "systems id (nds, gba…)" });
+    const ids = systemIds();
+    Object.keys(icons).forEach(function (k) {
+      const f = h("div"); pane.appendChild(f);
+      const sel = h("select");
+      (ids.indexOf(k) < 0 ? [k].concat(ids) : ids).forEach(function (o) {
+        const op = h("option", { value: o }, o); if (o === k) op.setAttribute("selected", ""); sel.appendChild(op);
+      });
+      sel.onchange = () => {
+        const v = sel.value; if (v === k) return;
+        const path = icons[k]; delete icons[k]; icons[v] = path; markDirty(); renderColours();
+      };
+      field(f, k, () => icons[k], (v) => { if (v) icons[k] = v; else delete icons[k]; markDirty(); }, "text", null, sel);
+    });
+    const addSel = h("select");
+    ids.forEach((o) => addSel.appendChild(h("option", { value: o }, o)));
+    addSel.appendChild(h("option", { value: "__other" }, "other…"));
     const ikb = h("button", { class: "ghost", type: "button" }, "add icon");
-    ikb.onclick = () => { if (ik.value) { icons[ik.value] = "icon.png"; markDirty(); renderColours(); } };
-    pane.appendChild(h("div", { class: "ctl" }, ik, ikb));
+    ikb.onclick = () => {
+      let id = addSel.value;
+      if (id === "__other") id = (window.prompt("System id (as in systems.conf)", "") || "").trim();
+      if (id && id !== "__other") { icons[id] = fileStem() + "/icons/" + id + ".png"; markDirty(); renderColours(); }
+    };
+    pane.appendChild(h("div", { class: "ctl" }, addSel, ikb));
   }
 
   // ---- vars ------------------------------------------------------------------------------------------
@@ -981,6 +1001,18 @@
     if (!RENDER || !RENDER.available) return;
     RENDER.localThemes_().then((list) => { state.localThemes = list || []; renderTheme(); }).catch(() => {});
   }
+  // the system ids: the editor's built-in list, plus whatever the checkout's systems.conf has
+  function systemIds() { return (state.systemIds && state.systemIds.length) ? state.systemIds : S.SYSTEM_IDS; }
+  function loadSystemIds() {
+    if (!RENDER || !RENDER.available) return;
+    fetch("api/systems", { cache: "no-store" }).then((r) => (r.ok ? r.json() : [])).then((ids) => {
+      if (Array.isArray(ids) && ids.length) {
+        const all = S.SYSTEM_IDS.slice();
+        ids.forEach((i) => { if (all.indexOf(i) < 0) all.push(i); });
+        state.systemIds = all; renderColours();
+      }
+    }).catch(() => {});
+  }
 
   function wire() {
     document.querySelectorAll(".tabs button").forEach((b) => { b.onclick = () => showTab(b.parentElement.dataset.group, b.dataset.tab); });
@@ -1011,7 +1043,7 @@
   } catch (e) { /* ignore */ }
   if (RENDER) {
     RENDER.check().then(function (ok) {
-      if (ok) { setStatus("preview server ready", "ok"); loadTemplates(); loadLocalThemes(); renderAssets(); } else setStatus("offline — edit & save; run serve.py for previews", "");
+      if (ok) { setStatus("preview server ready", "ok"); loadTemplates(); loadLocalThemes(); loadSystemIds(); renderAssets(); } else setStatus("offline — edit & save; run serve.py for previews", "");
       renderPreview(); renderPreviewControls();
       try { if (new URLSearchParams(location.search).get("preview")) doPreview(); } catch (e) { /* ignore */ }
     });

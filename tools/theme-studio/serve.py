@@ -161,6 +161,21 @@ def render(theme_text, script, size, assets=None):
         shutil.rmtree(work, ignore_errors=True)
 
 
+def system_ids():
+    """The system ids the menu ships, from systems.conf (for the editor's icon picker)."""
+    ids = []
+    try:
+        for line in SYSTEMS.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line.startswith("[") and line.endswith("]"):
+                sid = line[1:-1]
+                if sid and sid not in ids:
+                    ids.append(sid)
+    except OSError:
+        pass
+    return ids
+
+
 def local_themes():
     """The themes in --themes (your own folder, outside the repo), newest name first."""
     if not LOCAL_THEMES or not LOCAL_THEMES.exists():
@@ -225,6 +240,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, templates())
         if path == "/api/themes":
             return self._json(200, local_themes())
+        if path == "/api/systems":
+            return self._json(200, system_ids())
         if path == "/api/schema":
             p = ROOT / "docs" / "theme.schema.json"
             return self._file(p) if p.exists() else self._json(404, {"error": "no schema"})

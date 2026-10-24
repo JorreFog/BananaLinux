@@ -53,6 +53,9 @@
   ];
   const COLOR_KEYS = COLOR_GROUPS.flatMap((g) => g[1]);
   const SOUNDS = ["scroll", "select", "back", "fav", "ready", "insert"];
+  // the systems the menu ships (system/rootfs/etc/banana/systems.conf); the server can add a card's own
+  const SYSTEM_IDS = ["nds", "gba", "gbc", "gb", "nes", "snes", "megadrive", "psx", "n64",
+    "dodakvarter", "rocknixdsbank", "pico-8", "ports"];
   const BUILTIN_FONTS = ["pixel", "pixel-medium", "inter", "inter-medium", "inter-semibold", "inter-bold"];
 
   // ---- buttons and the actions a view can bind ------------------------------------------------------------
@@ -119,7 +122,7 @@
 
   const api = { VIEWS, SCREENS, DARK, LIGHT, ACCENTS, ACCENT_SHADES, COLOR_GROUPS, COLOR_KEYS, SOUNDS,
     BUILTIN_FONTS, BUTTONS, BUTTON_ACTIONS, COMMON, APPEARANCE, TYPE_PROPS, TYPE_LABELS,
-    SYS_FIELDS, GAME_FIELDS, HOOKS, HOOK_NAMES, BEHAVIOR_KEYS };
+    SYS_FIELDS, GAME_FIELDS, HOOKS, HOOK_NAMES, BEHAVIOR_KEYS, SYSTEM_IDS };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   global.BananaSchema = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

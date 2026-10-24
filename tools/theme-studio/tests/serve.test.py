@@ -90,6 +90,12 @@ def main():
         if st != 200 or b"$schema" not in body:
             fails.append("/api/schema didn't serve docs/theme.schema.json")
 
+        st, body = get(url + "/api/systems")
+        ids = json.loads(body)
+        print("systems:", ids)
+        if "nds" not in ids or "gba" not in ids:
+            fails.append("/api/systems didn't list the shipped systems")
+
         # a real render of the card's own example layout theme
         text = CANVAS.read_text()
         st, res = post(url + "/api/render", {"theme": text})

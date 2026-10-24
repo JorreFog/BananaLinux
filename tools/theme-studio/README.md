@@ -54,7 +54,9 @@ studio, `tools/theme-studio-desktop/`, starts its Open and Save dialogs in `~/Ba
 - **`vars`**, **components** (edited once, instances follow), **states**, **smooth**, gradients, shadows, radii
   and borders.
 - **Colour keys** (`colors`, `accent`, `base`, `fonts`, `logo`, `background`, `icons`, `sounds`) — the same
-  keys, palettes and accents as `theme-builder.html`, still used to style Settings and the keyboard.
+  keys, palettes and accents as `theme-builder.html`, still used to style Settings and the keyboard. **System
+  icons** picks a picture per system id from a dropdown (the ids `systems.conf` ships, plus any the running
+  server finds in a checkout).
 - **Input**, **hints** and **behaviour** (timings, sound cues).
 - **Assets**: the pictures, fonts and sounds the theme names are detected from it; attach a file and previews
   carry it, and **Send to handheld** writes the theme and its files into a mounted `banana/themes` (start the
