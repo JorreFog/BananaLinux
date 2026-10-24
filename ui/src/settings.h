@@ -3,7 +3,7 @@
 // (its box styles painted by rnds::paintBox, Pixelify Sans, the theme's pixel icons). Bottom panel: the list, one
 // row per setting in the slots' style, ◀ value ▶ on the right, and the B / A chips; top panel: the setting's
 // section icon, its name and what it does. Every change is applied and saved at once:
-//   /data/banana/settings.conf     the menu's (theme, motion, sounds, clock, splash, Wi-Fi)
+//   /data/banana/settings.conf     the menu's (theme, motion, sounds, clock, splash, Wi-Fi, Bluetooth)
 //   /data/banana/bananad.conf      sleep and the LEDs (bananad reloads it on SIGHUP)
 //   /data/banana/superdrastic.conf SuperDrastic's shader and CPU clock (run-drastic reads it)
 //   /data/bananads/bananads.conf   BananaDS's own settings (shader, 3D resolution, ...; BananaDS reads it)
@@ -12,6 +12,7 @@
 #include "../rnds/RndsUI.h"
 #include "input.h"
 #include "wifi.h"
+#include "bluetooth.h"
 #include "colors.h"
 #include <map>
 #include <memory>
@@ -117,7 +118,7 @@ namespace banana
 		std::string about, wifiInfo, ip;
 
 		// the Wi-Fi pages: the networks around, and the keyboard for a password (settings-wifi.cpp)
-		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS } page = LIST;
+		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH } page = LIST;
 		// the game page (X on a DS game in the library): its emulator, this game only (banana/nds-per-game.conf, read by
 		// run-nds: "<ROM file name> = superdrastic|bananads", no line = Settings > Nintendo DS > Emulator)
 		// the game page (X on a DS game): its own emulator and shader, each "As in Settings" (index 0) or a choice
@@ -215,6 +216,26 @@ namespace banana
 		void pollUpdate();
 		Result pressUpdates(Key k);
 		void renderUpdates();
+
+		// Bluetooth (Settings > Network > Bluetooth devices): the devices known and found, paired, connected, through
+		// the bluetooth script (BANANA_BLUETOOTH: the test's stand-in)
+		std::string btTool;
+		wifi::Job btListJob, btScanJob, btActJob;
+		std::vector<bt::Device> btDevs;
+		int bsel = 0, btop = 0;
+		bool btScanning = false, btScanned = false, btEnabled = false;
+		std::string btBusy, btBusyName, btVerb;	// the device a pair / connect / ... is running for, its name, the verb
+		double btNextList = 0;
+		bool btOn() const;
+		bool btUpdate();	// (update's part: the jobs' answers) true when something changed
+		void btSetOn(bool on);
+		void openBluetooth();
+		void btScan();
+		void btAct(const char* verb, const bt::Device& d);
+		Result pressBluetooth(Key k);
+		Result touchBluetooth(float cx, float cy);
+		void renderBluetooth();
+		std::string btRow() const;	// the Bluetooth devices row: what is connected
 
 		bool wifiOn() const;
 		void openNetworks();

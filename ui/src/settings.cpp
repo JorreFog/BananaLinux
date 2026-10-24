@@ -193,6 +193,8 @@ namespace banana
 		const char* tool = getenv("BANANA_WIFI");	// the test's stand-in
 		wifiTool = tool ? tool : "/usr/libexec/banana/wifi";
 		wifiConf = data + "/wifi.conf";
+		const char* btt = getenv("BANANA_BLUETOOTH");	// (the test's stand-in)
+		btTool = btt ? btt : "/usr/libexec/banana/bluetooth";
 		build();
 	}
 
@@ -451,6 +453,9 @@ namespace banana
 		const char* W = "Network";
 		add(W, "phone", "Wi-Fi", "", menu, "wifi", { "On", "Off" }, { "on", "off" });
 		add(W, "phone", "Network", "The networks around: A on one joins it, with a password typed on the keyboard here (or by touch).", "", "network", {}, {}, Item::PAGE);
+		add(W, "phone", "Bluetooth", "Controllers, headphones and speakers. Off (the default) leaves the radio unpowered, which saves battery; Bluetooth devices, below, pairs them. While Bluetooth headphones are connected the sound plays on them.",
+			menu, "bluetooth", { "Off", "On" }, { "off", "on" });
+		add(W, "phone", "Bluetooth devices", "The devices paired and the ones around: A pairs with one in pairing mode, connects a paired one or disconnects it.", "", "bt_devices", {}, {}, Item::PAGE);
 		add(W, "phone", "File sharing", "", menu, "share", { "Off", "On" }, { "off", "on" });
 		add(W, "phone", "Sharing login", "Name and password: the card asks for the name and password below (Windows refuses a share with no password). Guest: anyone on the network opens it with none; only on a network you trust.",
 			menu, "share_login", { "Name and password", "Guest" }, { "password", "guest" });
@@ -669,6 +674,8 @@ namespace banana
 		page = LIST;
 		message.clear();
 		if (wifiOn() && !statusJob.running()) statusJob.start(wifiTool + " status", sync);	// the network's name on its row
+		btEnabled = btOn();
+		if (btEnabled && !btListJob.running()) btListJob.start(btTool + " devices", sync);	// what is connected, on its row
 		mOpen = true;
 	}
 
@@ -738,6 +745,12 @@ namespace banana
 		if (it.file == data + "/bananad.conf") poke("bananad");
 		if (it.key == "timezone") { setenv("TZ", v.c_str(), 1); tzset(); poke("bananad"); }	// bananad's logs too
 		if (it.key == "wifi") spawn("/usr/libexec/banana/wifi", v == "on" ? "up" : "down");
+		if (it.key == "bluetooth")
+		{
+			btEnabled = v == "on";
+			if (!btEnabled) { btDevs.clear(); btScanned = false; }
+			spawn(btTool.c_str(), btEnabled ? "up" : "down");
+		}
 		if (it.key == "ssh") spawn("/usr/libexec/banana/ssh", v == "on" ? "up" : "down");
 		if (it.key == "share") spawn("/usr/libexec/banana/share", v == "on" ? "up" : "down");
 		if (it.key == "share_login") spawn("/usr/libexec/banana/share", "restart");	// (nothing when it is off)
@@ -755,6 +768,7 @@ namespace banana
 			if (it.key == "colors") { openColors(); return MOVED; }
 			if (it.key == "share_account") { startEntry(ENTRY_SMB_USER, "File sharing", "Name", LIST, shareUser()); return MOVED; }
 			if (it.key == "ds_name") { startEntry(ENTRY_DS_NAME, "The DS's name", "10 characters at most", LIST, dsName()); return MOVED; }
+			if (it.key == "bt_devices") { openBluetooth(); return MOVED; }
 			if (it.key == "update") openUpdates(); else if (it.key == "setup") openSetup(); else openNetworks();
 			return MOVED;
 		}
@@ -833,6 +847,7 @@ namespace banana
 	Settings::Result Settings::press(Key k)
 	{
 		if (page == NETWORKS) return pressNetworks(k);
+		if (page == BLUETOOTH) return pressBluetooth(k);
 		if (page == KEYBOARD) return pressKeyboard(k);
 		if (page == GAME) return pressGame(k);
 		if (page == ARTPICK) return pressArt(k);
@@ -901,6 +916,7 @@ namespace banana
 		if (!downOnRow) return NONE;
 		downOnRow = false;
 		if (page == NETWORKS) return touchNetworks(cx, cy);
+		if (page == BLUETOOTH) return touchBluetooth(cx, cy);
 		if (page == KEYBOARD) return touchKeyboard(cx, cy);
 		if (page == GAME) return touchGame(cx, cy);
 		if (page == ARTPICK) return touchArt(cx, cy);
@@ -1302,6 +1318,7 @@ namespace banana
 	void Settings::render()
 	{
 		if (page == NETWORKS) { renderNetworks(); return; }
+		if (page == BLUETOOTH) { renderBluetooth(); return; }
 		if (page == KEYBOARD) { renderKeyboard(); return; }
 		if (page == GAME) { renderGame(); return; }
 		if (page == ARTPICK) { renderArt(); return; }
@@ -1383,6 +1400,7 @@ namespace banana
 			else if (it.kind == Item::INFO) v = "";
 			// a page's row: Network the network it is on; Update the packages waiting on the card; the others nothing
 			else if (it.kind == Item::PAGE && it.key == "network") v = wstat.connected ? fit(wstat.ssid, true, 19, 300) : (wifiOn() ? "Choose" : "");
+			else if (it.kind == Item::PAGE && it.key == "bt_devices") v = btRow();
 			else if (it.kind == Item::PAGE && it.key == "update") v = updatesWaiting();
 			else if (it.kind == Item::PAGE && it.key == "share_account") v = fit(shareUser(), true, 19, 300);
 			else if (it.kind == Item::PAGE && it.key == "ds_name") v = dsName().empty() ? "Not set" : dsName();
@@ -1479,6 +1497,7 @@ namespace banana
 			if (joining.empty() && now >= nextScan) startScan();
 		}
 		bool changed = scrapeChanged;
+		changed |= btUpdate();
 		if (page == UPDATES && applying && now >= nextStatus2)
 		{
 			std::string before = ustatus;
@@ -1559,7 +1578,9 @@ namespace banana
 	int Settings::pageWake(double t) const
 	{
 		if (scanJob.running() || statusJob.running() || artJob.running()) return 100;
+		if (btListJob.running() || btScanJob.running() || btActJob.running()) return 100;
 		if (page == UPDATES && applying) return std::max(0, (int)(nextStatus2 - t));
+		if (page == BLUETOOTH && btEnabled) return std::max(0, (int)(btNextList - t));
 		if (page != NETWORKS || !wifiEnabled) return -1;
 		double due = joining.empty() ? nextScan : std::min(nextStatus, joinStart + 30001);
 		return std::max(0, (int)(due - t));
@@ -1842,6 +1863,226 @@ namespace banana
 		float bw = faceWidth("B", "Back");
 		face("B", "Back", 18, bw);
 		std::string act = !cur || cur->current || cur->unsupported || !joining.empty() ? "" : cur->secured && (!cur->saved || cur->ssid == failed) ? "Password" : "Join";
+		if (!act.empty())
+		{
+			float aw = faceWidth("A", act);
+			face("A", act, 622 - aw, aw);
+		}
+		be->endScreen();
+	}
+
+	// ---- Bluetooth: the devices, pairing and connecting (the bluetooth script) -------------------------------------
+	bool Settings::btOn() const
+	{
+		return getConfValue(data + "/settings.conf", "bluetooth", getConfValue("/etc/banana/settings.conf", "bluetooth", "off")) == "on";
+	}
+
+	// switched on from the devices page (X): kept as the Bluetooth row's would be (the scan's command brings it up)
+	void Settings::btSetOn(bool on)
+	{
+		setConfValue(data + "/settings.conf", "bluetooth", on ? "on" : "off");
+		for (auto& it : items) if (it.key == "bluetooth") load(it);
+		btEnabled = on;
+	}
+
+	std::string Settings::btRow() const
+	{
+		std::string names;
+		for (auto& d : btDevs) if (d.connected) names += (names.empty() ? "" : ", ") + d.name;
+		if (!names.empty()) return names;
+		return btEnabled ? "Choose" : "";
+	}
+
+	void Settings::openBluetooth()
+	{
+		page = BLUETOOTH;
+		bsel = btop = 0;
+		message.clear();
+		btEnabled = btOn();
+		if (!btEnabled) { btDevs.clear(); return; }
+		btScan();	// the paired ones and the ones around, as the Wi-Fi page searches at once
+	}
+
+	void Settings::btScan()
+	{
+		if (btScanJob.running()) return;
+		btScanning = true;
+		// (up first: switched on a moment ago, bluetoothd may not be running yet; up waits for it, or does nothing)
+		btScanJob.start(btTool + " up >/dev/null 2>&1; " + btTool + " scan", sync);
+		btNextList = now + 3000;
+	}
+
+	void Settings::btAct(const char* verb, const bt::Device& d)
+	{
+		if (btActJob.running()) return;
+		btBusy = d.mac;
+		btBusyName = d.name;
+		btVerb = verb;
+		const std::string v = verb;
+		message = v == "pair" ? "Pairing with " + d.name + "..." : v == "connect" ? "Connecting to " + d.name + "..."
+			: v == "disconnect" ? "Disconnecting " + d.name + "..." : "Forgetting " + d.name + "...";
+		btActJob.start(btTool + " " + v + " " + d.mac, sync);	// (the address checked by the parser: no quoting needed)
+	}
+
+	bool Settings::btUpdate()
+	{
+		bool changed = false;
+		std::string out;
+		// the cursor stays on the device it was on
+		auto take = [&](const std::string& o) {
+			std::string selMac = bsel < (int)btDevs.size() ? btDevs[bsel].mac : "";
+			btDevs = bt::parseDevices(o);
+			for (int i = 0; i < (int)btDevs.size(); i++) if (btDevs[i].mac == selMac) bsel = i;
+			bsel = std::max(0, std::min(bsel, (int)btDevs.size() - 1));
+			if (bsel < btop) btop = bsel;
+			if (bsel >= btop + ROWS) btop = bsel - ROWS + 1;
+			btop = std::max(0, std::min(btop, std::max(0, (int)btDevs.size() - ROWS)));
+			changed = true;
+		};
+		if (btScanJob.take(out))
+		{
+			std::string why;
+			if (!bt::parseResult(out, why) && !why.empty()) message = "Bluetooth didn't come on: " + why + ".";
+			else take(out);
+			btScanning = false;
+			btScanned = true;
+			changed = true;
+		}
+		if (btListJob.take(out) && btEnabled) take(out);
+		if (btActJob.take(out))
+		{
+			std::string why;
+			bool ok = bt::parseResult(out, why);
+			const std::string& n = btBusyName;
+			const std::string tail = why.empty() ? "." : ": " + why + ".";
+			if (btVerb == "pair")
+				message = ok ? "Paired with " + n + "."
+					: "Couldn't pair with " + n + tail + " Put it in pairing mode again (its manual says how), then A.";
+			else if (btVerb == "connect")
+				message = ok ? "Connected to " + n + "." : "Couldn't connect to " + n + tail + " Is it on and near the handheld?";
+			else if (btVerb == "disconnect") message = ok ? n + " disconnected." : "Couldn't disconnect " + n + tail;
+			else message = ok ? n + " forgotten: pair with it again to use it." : "Couldn't forget " + n + tail;
+			btBusy.clear();
+			if (!btListJob.running()) btListJob.start(btTool + " devices", sync);	// connected, paired, gone: the list again
+			btNextList = now + 3000;
+			changed = true;
+		}
+		// the page open: the list again every 3 s (a controller calling back, headphones switched off)
+		if (page == BLUETOOTH && btEnabled && now >= btNextList && !btListJob.running() && !btScanJob.running() && !btActJob.running())
+		{
+			btListJob.start(btTool + " devices", sync);
+			btNextList = now + 3000;
+		}
+		return changed;
+	}
+
+	Settings::Result Settings::pressBluetooth(Key k)
+	{
+		int n = (int)btDevs.size();
+		switch (k)
+		{
+		case Key::UP: case Key::DOWN:
+			if (!n) return NONE;
+			bsel = (bsel + (k == Key::UP ? -1 : 1) + n) % n;
+			if (bsel < btop) btop = bsel;
+			if (bsel >= btop + ROWS) btop = bsel - ROWS + 1;
+			return MOVED;
+		case Key::A: case Key::RIGHT:
+		{
+			if (!n || !btBusy.empty() || !btEnabled) return NONE;
+			const bt::Device& d = btDevs[bsel];
+			btAct(!d.paired ? "pair" : d.connected ? "disconnect" : "connect", d);
+			return MOVED;
+		}
+		case Key::X:
+			message.clear();
+			if (!btEnabled) btSetOn(true);
+			btScan();
+			return MOVED;
+		case Key::Y:
+			if (!n || !btBusy.empty() || !btDevs[bsel].paired) return NONE;
+			btAct("forget", btDevs[bsel]);
+			return MOVED;
+		case Key::B: case Key::LEFT: page = LIST; message.clear(); return MOVED;
+		case Key::START: page = LIST; mOpen = false; return CLOSED;
+		default: return NONE;
+		}
+	}
+
+	Settings::Result Settings::touchBluetooth(float cx, float cy)
+	{
+		if (downY >= 418 && downY <= 466) return pressBluetooth(downX < 320 ? Key::B : Key::A);
+		for (int r = 0; r < ROWS && btop + r < (int)btDevs.size(); r++)
+		{
+			float ry = 82 + r * 64;
+			if (downY < ry || downY > ry + 56) continue;
+			if (btop + r != bsel) { bsel = btop + r; return MOVED; }
+			return pressBluetooth(Key::A);
+		}
+		if (std::fabs(cy - downY) > 40 && !btDevs.empty())
+		{
+			int n = (int)btDevs.size();
+			btop = std::max(0, std::min(n - ROWS, btop + (cy < downY ? ROWS : -ROWS)));
+			bsel = std::max(btop, std::min(bsel, btop + ROWS - 1));
+			return MOVED;
+		}
+		return NONE;
+	}
+
+	void Settings::renderBluetooth()
+	{
+		SPal p = pal(light);
+		const bt::Device* cur = bsel < (int)btDevs.size() ? &btDevs[bsel] : nullptr;
+		be->beginScreen(0);
+		box("screen", false, 0, 0, 640, 480);
+		box("hero", false, 18, 20, 604, 436);
+		icon("phone", 50, 56, 3);
+		text("Network", true, 17, 170, 62, p.muted, true, 1.4f);
+		text("Bluetooth devices", true, 30, 170, 88, p.ink);
+		std::string connected;
+		for (auto& d : btDevs) if (d.connected) { connected = d.name; break; }
+		std::string st = !btEnabled ? "Bluetooth is off"
+			: !btBusy.empty() ? (btVerb == "pair" ? "Pairing with " : btVerb == "connect" ? "Connecting to " : btVerb == "disconnect" ? "Disconnecting " : "Forgetting ") + btBusyName
+			: !connected.empty() ? "Connected to " + connected : "Nothing connected";
+		text(fit(st, true, 22, 420), true, 22, 170, 130, p.accent);
+		std::string help = message;
+		if (help.empty())
+			help = !btEnabled ? "Bluetooth is switched off. X switches it on and searches."
+				: "A pairs with the device chosen (put it in pairing mode first), connects a paired one, or disconnects it. X searches again, Y forgets a paired device. Headphones play the sound while they are connected; controllers work in the games.";
+		wrapped(help, 20, 50, 196, 540, 7, p.muted);
+		be->endScreen();
+
+		be->beginScreen(1);
+		box("screen", false, 0, 0, 640, 480);
+		box("bubble", false, 18, 14, 604, 54);
+		text("Devices", true, 22, 38, 28, p.ink);
+		std::string count = btScanning ? "Searching..." : std::to_string(btDevs.size()) + (btDevs.size() == 1 ? " device" : " devices");
+		float cw = text(count, true, 17, 0, 0, p.muted, false, 0, true);
+		text(count, true, 17, 602 - cw, 31, p.muted);
+		for (int r = 0; r < ROWS && btop + r < (int)btDevs.size(); r++)
+		{
+			const bt::Device& d = btDevs[btop + r];
+			bool on = btop + r == bsel;
+			float y = 82 + r * 64;
+			box(on ? "pick" : "slot", on, 18, y, 604, 56);
+			Color c = on ? p.onPick : p.muted;
+			float right = 586;
+			std::string tag = d.mac == btBusy ? "..." : d.connected ? "Connected" : d.paired ? "Paired" : "";
+			std::string kind = bt::kindName(d.kind);
+			if (!kind.empty()) tag = tag.empty() ? kind : lang::tr(kind) + "  " + lang::tr(tag);	// (each translated: the joined line has none)
+			if (!tag.empty())
+			{
+				float tw = text(tag, true, 17, 0, 0, c, false, 0, true);
+				right -= tw;
+				text(tag, true, 17, right, y + 18, d.connected ? (on ? p.onPickAccent : p.accent) : c);
+				right -= 14;
+			}
+			text(fit(d.name, true, 20, right - 38), true, 20, 38, y + 16, c);
+		}
+		if (btDevs.empty() && btEnabled && !btScanning && btScanned) text("No devices found. X searches again.", true, 20, 38, 98, p.muted);
+		float bw = faceWidth("B", "Back");
+		face("B", "Back", 18, bw);
+		std::string act = !cur || !btBusy.empty() || !btEnabled ? "" : !cur->paired ? "Pair" : cur->connected ? "Disconnect" : "Connect";
 		if (!act.empty())
 		{
 			float aw = faceWidth("A", act);

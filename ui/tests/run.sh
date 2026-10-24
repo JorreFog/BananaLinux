@@ -70,6 +70,22 @@ for size in 640x480 1024x768; do
     [ "$(sed -n 's/^[[:space:]]*ssid=//p' "$conf" | tr '\n' '|')" = '"Banana Home"|"Cafe Free"|' ] || { echo "FAIL $size: saved network not moved first: $(grep ssid= "$conf" | tr -d '\t' | tr '\n' ' ')"; fail=1; }
     grep -q 'psk="oldpassw"' "$conf" && grep -q 'priority=3' "$conf" && [ "$(grep -c priority= "$conf")" = 2 ] || { echo "FAIL $size: the saved block: $(tr -d '\t' < "$conf" | tr '\n' ' ')"; fail=1; }
     rm -f "$conf"
+    # Bluetooth: Settings > Network > Bluetooth switched on (the script's up), Bluetooth devices: a search (a stand-in
+    # bluetooth script: headphones, a pad, an 8BitDo that refuses), the headphones paired (and connected), forgotten,
+    # the 8BitDo's refusal, the headphones paired again, then Bluetooth off (down); settings.conf keeps it off
+    blog=$OUT/$size-bt.log; BT=$OUT/$size-bt; rm -rf "$BT"
+    BANANA_BLUETOOTH="$HERE/tests/fake-bluetooth.sh" FAKE_BT="$BT" "$HERE/banana-ui" --headless "$OUT/$size-" --size $size \
+        --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
+        --script "home 0; press start; press r; press r; press r; press r; press a; press down; press down; shot bt-row; press right; wait 300; \
+            press down; shot bt-devices-row; press a; shot bt-list; press down; press a; shot bt-paired; press y; shot bt-forgot; press up; press a; shot bt-refused; \
+            press down; press a; press b; press up; press left; wait 300; shot bt-off" 2> "$blog" || { echo "FAIL $size: banana-ui (Bluetooth) exited $?"; fail=1; }
+    [ "$(grep -v '^devices$' "$BT/log" 2>/dev/null | tr '\n' '|')" = "up|up|scan|pair AA:BB:CC:DD:EE:01|forget AA:BB:CC:DD:EE:01|pair AA:BB:CC:DD:EE:03|pair AA:BB:CC:DD:EE:01|down|" ] \
+        || { echo "FAIL $size: the bluetooth script's calls: $(tr '\n' '|' < "$BT/log" 2>/dev/null)"; fail=1; }
+    [ "$(cat "$BT/paired" 2>/dev/null)" = AA:BB:CC:DD:EE:01 ] || { echo "FAIL $size: paired at the end: $(cat "$BT/paired" 2>/dev/null)"; fail=1; }
+    grep -q '^bluetooth = off$' "$FX/data/settings.conf" || { echo "FAIL $size: settings.conf: $(grep bluetooth "$FX/data/settings.conf")"; fail=1; }
+    for s in bt-row bt-devices-row bt-list bt-paired bt-forgot bt-refused bt-off; do
+        [ -s "$OUT/$size-$s-top.png" ] && [ -s "$OUT/$size-$s-bot.png" ] || { echo "FAIL $size: no $s shot"; fail=1; }
+    done
     # the file sharing login (#24): Network > Sharing name and password, the keyboard on the name (banana), START, then
     # on the password (linux), START: both in accounts.conf, where the share script reads them
     alog=$OUT/$size-smb.log
