@@ -4,6 +4,9 @@
 // Bottom: the BANANA cartridge comes down and goes into the console with the menu's own insert motion (lift,
 // accelerating slide, click, sparks, the power light turning green). Everything moves in whole pixels and in
 // steps, like ROCKNIXDS Pixel's animations. The still layers are tools/make-splash.mjs's.
+// The shutdown plays it backwards (drawOutro): the power light out, the cartridge ejected and lifted away, BANANAOS
+// typed out from its end, the bunch hopping and falling off, then both panels switching off like a CRT (the picture
+// squeezed to a line, the line to a dot, black).
 #include <cstdint>
 #include <functional>
 #include <string>
@@ -23,17 +26,19 @@ namespace banana
 		bool played() const { return W > 0; }
 		// ms until the next frame is different (16 while anything moves)
 		int nextFrame(double t, bool ready) const;
-		std::function<void(const std::string&)> onCue;	// "insert" when the cartridge clicks in
+		// the shutdown: both screens at t ms after the start (the intro's last frame at 0, black from OUTRO_END)
+		void drawOutro(uint32_t* top, uint32_t* bot, double t);
+		std::function<void(const std::string&)> onCue;	// "insert" when the cartridge clicks in, "eject" when it pops out
 
-		static constexpr double INTRO_END = 1390;
+		static constexpr double INTRO_END = 1390, OUTRO_END = 1300;
 
 	private:
 		struct Rgba { int w = 0, h = 0; std::vector<uint32_t> px; };	// premultiplied 0xAARRGGBB
 		struct Mask { int w = 0, h = 0; std::vector<uint8_t> a; std::vector<int> letters; };	// letters: first column of each
 		int W = 0, H = 0, K = 2, KW = 6, KL = 2;	// device px per sprite pixel: the bunch, the word, LOADING
 		float s = 1;
-		bool light = false, cued = false;
-		std::vector<uint32_t> bgTop, bgBot;
+		bool light = false, cued = false, ejected = false;
+		std::vector<uint32_t> bgTop, bgBot, tmp;
 		Rgba cart, lip, bunch;
 		Mask word, loading;
 		uint32_t ink = 0, muted = 0;
@@ -41,7 +46,10 @@ namespace banana
 		int X(float v) const;
 		void drawBunch(uint32_t* d, int x, int y, double shine) const;
 		void drawMask(uint32_t* d, const Mask& m, int k, int x, int y, uint32_t colour, int fromCol, int toCol, int dy) const;
-		void drawWord(uint32_t* d, double t) const;
+		void drawWord(uint32_t* d, int shown, int lastDy) const;
+		void drawLoading(uint32_t* d, double t, int dotsOn) const;
+		void drawSparks(uint32_t* bot, double ct) const;
+		void crtOff(uint32_t* d, double t);
 		void blit(uint32_t* d, const Rgba& r, int x, int y, int clipY1) const;
 		void fill(uint32_t* d, int x, int y, int w, int h, uint32_t c) const;
 	};
