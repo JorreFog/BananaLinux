@@ -989,7 +989,7 @@ struct BottomIdle
 	std::string data;			// the card's banana/ folder (/data/banana), for the brightness bananad saved
 	int max = 0, level = 0;		// its max_brightness and the level to come back to
 	double seconds = 0;			// the idle timeout; 0: off
-	int percent = 0;			// dimmed to this percent of max; 0: the backlight off
+	int percent = 0;			// dimmed to this percent of its brightness; 0: the backlight off
 	bool owned = false;			// banana-ui is managing the bottom (the marker is written, the timer armed)
 	bool dimmed = false;
 	double last = 0;
@@ -1057,7 +1057,9 @@ struct BottomIdle
 	{
 		if (!owned || dimmed || now - last < seconds * 1000.0) return;
 		level = readInt(path + "/brightness");
-		write(max * percent / 100);
+		// a percent of the brightness it has now, not of the panel's maximum (dimmed to 25% of max, a bottom panel set
+		// to 15% got brighter when it "dimmed"); at least 1, so dimmed never reads as off. 0: off
+		write(percent <= 0 ? 0 : std::max(1, level * percent / 100));
 		dimmed = true;
 	}
 };
