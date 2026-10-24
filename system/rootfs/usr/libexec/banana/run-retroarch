@@ -43,6 +43,19 @@ if [ ! -f $M ]; then
     grep -q '^mupen64plus-ThreadedRenderer = ' $O 2>/dev/null && sed -i 's|^mupen64plus-ThreadedRenderer = .*|mupen64plus-ThreadedRenderer = "True"|' $O || echo 'mupen64plus-ThreadedRenderer = "True"' >> $O
     touch $M
 fi
+# The N64 core's frame buffers at the N64's own resolution (GLideN64 "Native res. factor" 1x, the output still
+# 640x480), once (a change in RetroArch's Core Options afterwards is kept). The Plus' Mali-G52 has one shader core and
+# at 640x480 it is the limit: Banjo-Kazooie unthrottled made 64 VIs a second (68 in a cutscene), 50 with the
+# synchronous colour copy Paper Mario's GLideN64 settings force; at 1x 126 (102 in the cutscene, 89 with that copy).
+# NTSC games need 60. (Its own marker: .banana-defaults-2 is used by another branch.)
+M=/data/retroarch/.banana-defaults-n64-1
+if [ ! -f $M ]; then
+    O=/data/retroarch/config/Mupen64Plus-Next/Mupen64Plus-Next.opt
+    mkdir -p ${O%/*}
+    sed -i '/^mupen64plus-EnableNativeResFactor = /d' $O 2>/dev/null
+    echo 'mupen64plus-EnableNativeResFactor = "1"' >> $O
+    touch $M
+fi
 # Shaders: Shaders > Load Preset opens the image's libretro GLSL presets (/usr/share/libretro/shaders/glsl), read
 # where they are: copied to the card they took 238 MB (a few thousand small files in exFAT's large clusters) and a long
 # first start. The Online Updater is shown (the core downloader not: cores come with the image).
