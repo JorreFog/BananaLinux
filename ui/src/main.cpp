@@ -20,12 +20,14 @@
 #include "splash.h"
 #include "lang.h"
 #include "settings.h"
+#include "settings_defaults.h"
 #include "theme.h"
 #include "colors.h"
 #include "zip.h"
 #include "sound.h"
 #include "menu.h"
 #include "carts.h"
+#include "layout.h"
 
 #include <algorithm>
 #include <atomic>
@@ -146,21 +148,7 @@ static rnds::Bitmap stbDecode(const std::string& path)
 	return *pic.get();
 }
 
-// settings.conf: key = value lines (theme, motion, sounds, clock)
-static std::map<std::string, std::string> readSettings(const std::string& path)
-{
-	std::map<std::string, std::string> r;
-	std::ifstream f(path);
-	std::string ln;
-	while (std::getline(f, ln))
-	{
-		size_t eq = ln.find('=');
-		if (ln.empty() || ln[0] == '#' || eq == std::string::npos) continue;
-		auto t = [](std::string s) { size_t a = s.find_first_not_of(" \t\r"), b = s.find_last_not_of(" \t\r"); return a == std::string::npos ? std::string() : s.substr(a, b - a + 1); };
-		r[t(ln.substr(0, eq))] = t(ln.substr(eq + 1));
-	}
-	return r;
-}
+// settings.conf: key = value lines, the image's defaults under the card's own (settings_defaults.cpp)
 
 static std::string shellQuote(const std::string& s)
 {
@@ -271,6 +259,7 @@ struct Options
 	std::string systems = "/etc/banana/systems.conf", roms = "/data/roms", data = "/data/banana";
 	std::string top = "DSI-2", touch = "fe5e0000.i2c";
 	std::string headless, script;
+	std::string theme;		// --theme FILE: that theme's .json instead of the settings' (a theme being made)
 	int w = 640, h = 480;
 };
 
@@ -459,7 +448,9 @@ static int shutdownPercent(const std::string& data)
 static int runHeadless(const Options& o, Host& lib, const std::string& variant, const std::string& theme)
 {
 	SoftBackend be(o.w, o.h);
+	std::string layout = themePath(theme);
 	std::unique_ptr<Menu> uiPtr(theme == "carts" ? (Menu*)new CartMenu(&lib, &be, o.banana + "/fonts", o.h / 480.0f)
+		: isLayoutTheme(layout) ? (Menu*)new LayoutMenu(&lib, &be, layout, o.h / 480.0f, o.assets + "/fonts", o.banana + "/fonts")
 		: new RndsMenu(&lib, &be, o.assets, o.h / 480.0f, variant));
 	Menu& ui = *uiPtr;
 	double now = 100000;
@@ -623,6 +614,19 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			if (!save(0, o.headless + name + "-top.png") || !save(1, o.headless + name + "-bot.png")) return 1;
 			logf("splash %s at %.0f ms", name.c_str(), t);
 		}
+		else if (op == "outro")
+		{
+			// outro <name> <ms>: the shutdown animation at that time
+			std::string name; double t = 0;
+			cs >> name >> t;
+			static Splash sp;
+			static bool loaded = false;
+			if (!loaded && !(loaded = sp.load(o.splash, o.banana + "/banana-48.png", variant, o.w, o.h))) { logf("no splash assets in %s", o.splash.c_str()); return 1; }
+			sp.onCue = [](const std::string& n) { logf("outro cue %s", n.c_str()); };
+			sp.drawOutro(be.canvas(0), be.canvas(1), t);
+			if (!save(0, o.headless + name + "-top.png") || !save(1, o.headless + name + "-bot.png")) return 1;
+			logf("outro %s at %.0f ms", name.c_str(), t);
+		}
 		else if (op == "bench")
 		{
 			// bench N [EVERY BUTTON]: N frames 16.7 ms apart, as the panels would show them: the main thread's time per
@@ -752,10 +756,41 @@ struct Iris
 		be.invalidate();
 		showFrame(disp, be, -1);
 	}
-	// black for a moment, then the circle opening on the menu: fast at first, settling. The menu as it will be 300 ms
-	// on (before the opening ends, so its clock never goes back), opened on as a still picture: a live menu frame
-	// (16-20 ms) each refresh made the opening miss refreshes
-	void openOn(Menu& ui, double hold, double open = OPEN)
+	// the circle closing over a still picture to black: slow at first, faster into the point (no lingering at a small
+	// circle)
+	void close(const std::vector<uint32_t>* pic, double dur)
+	{
+		const double t0 = nowMs();
+		for (;;)
+		{
+			double p = (nowMs() - t0) / dur;
+			if (p >= 1) break;
+			frame(pic, full * (float)(1 - p * p));
+		}
+		frame(pic, 0);
+	}
+	// black until holdUntil, then the circle opening on a still picture: fast at first, settling; the picture is left on
+	// the canvas
+	void open(const std::vector<uint32_t>* pic, double holdUntil, double dur)
+	{
+		for (int sc = 0; sc < 2; sc++) std::fill(be.canvas(sc), be.canvas(sc) + n, 0xff000000u);
+		be.invalidate();
+		while (nowMs() < holdUntil) showFrame(disp, be, -1);
+		const double t2 = nowMs();
+		for (;;)
+		{
+			double p = (nowMs() - t2) / dur;
+			if (p >= 1) break;
+			float e = (float)p; e = 1 - (1 - e) * (1 - e) * (1 - e);
+			frame(pic, full * e);
+		}
+		for (int sc = 0; sc < 2; sc++) std::copy(pic[sc].begin(), pic[sc].end(), be.canvas(sc));
+		be.invalidate();	// the next frame is drawn in full
+	}
+	// black for a moment, then the circle opening on the menu. The menu as it will be 300 ms on (before the opening
+	// ends, so its clock never goes back), opened on as a still picture: a live menu frame (16-20 ms) each refresh made
+	// the opening miss refreshes
+	void openOn(Menu& ui, double hold, double dur = OPEN)
 	{
 		const double t1 = nowMs();
 		std::vector<uint32_t> menu[2] = { std::vector<uint32_t>(n), std::vector<uint32_t>(n) };
@@ -764,19 +799,7 @@ struct Iris
 		be.invalidate();
 		ui.render();
 		for (int sc = 0; sc < 2; sc++) std::copy(be.canvas(sc), be.canvas(sc) + n, menu[sc].begin());
-		for (int sc = 0; sc < 2; sc++) std::fill(be.canvas(sc), be.canvas(sc) + n, 0xff000000u);	// black again
-		be.invalidate();
-		while (nowMs() - t1 < hold) showFrame(disp, be, -1);
-		const double t2 = nowMs();
-		for (;;)
-		{
-			double p = (nowMs() - t2) / open;
-			if (p >= 1) break;
-			float e = (float)p; e = 1 - (1 - e) * (1 - e) * (1 - e);
-			frame(menu, full * e);
-		}
-		for (int sc = 0; sc < 2; sc++) std::copy(menu[sc].begin(), menu[sc].end(), be.canvas(sc));
-		be.invalidate();	// the menu's next frame is drawn in full
+		open(menu, t1 + hold, dur);
 	}
 };
 
@@ -794,15 +817,32 @@ static void irisToMenu(Display& disp, SoftBackend& be, Menu& ui)
 	be.invalidate();
 	ui.render();
 	for (int sc = 0; sc < 2; sc++) std::copy(was[sc].begin(), was[sc].end(), be.canvas(sc));
-	const double t0 = nowMs();
-	for (;;)	// closing over the splash: slow at first, faster into the point (no lingering at a small circle)
-	{
-		double p = (nowMs() - t0) / Iris::CLOSE;
-		if (p >= 1) break;
-		iris.frame(was, iris.full * (float)(1 - p * p));
-	}
-	iris.frame(was, 0);
+	iris.close(was, Iris::CLOSE);
 	iris.openOn(ui, Iris::HOLD);
+}
+
+// The shutdown: the menu (whatever is on the panels) closes through the iris, opens on the boot animation's last
+// frame, and the animation plays backwards to black (Splash::drawOutro). ~1.9 s: rcK gives the menu 3 s to go.
+static void playOutro(Display& disp, SoftBackend& be, const Options& o, const std::string& variant, Sound& sound)
+{
+	Splash sp;
+	if (!sp.load(o.splash, o.banana + "/banana-48.png", variant, be.width(), be.height())) return;
+	sp.onCue = [&sound](const std::string& n) { if (n == "eject") sound.play("back"); };
+	Iris iris(disp, be);
+	std::vector<uint32_t> was[2] = { std::vector<uint32_t>(be.pixels(0), be.pixels(0) + iris.n), std::vector<uint32_t>(be.pixels(1), be.pixels(1) + iris.n) };
+	std::vector<uint32_t> first[2] = { std::vector<uint32_t>(iris.n), std::vector<uint32_t>(iris.n) };
+	sp.drawOutro(first[0].data(), first[1].data(), 0);
+	iris.close(was, 280);
+	iris.open(first, nowMs() + Iris::HOLD, 300);
+	const double t0 = nowMs();
+	for (;;)
+	{
+		double t = nowMs() - t0;
+		sp.drawOutro(be.canvas(0), be.canvas(1), t);
+		be.invalidate();
+		showFrame(disp, be, -1);
+		if (t >= Splash::OUTRO_END) break;
+	}
 }
 
 // a game ended: the panels come back black (its pictures went with it), and the menu opens through the iris as it
@@ -842,6 +882,94 @@ struct ClockBoost
 	void idle(double now) { if (on && now - lastFrame > 300) release(); }
 	void release() { if (on) { write("scaling_min_freq", low); on = false; } }
 	int wake(double now) const { return on ? std::max(1, (int)(lastFrame + 301 - now)) : -1; }	// ms until idle() has work
+};
+
+// The bottom panel's idle dim, for a RetroArch game running on the top screen (Mode A: its game panel is the bottom
+// screen). After bottom_idle_seconds with no touch on the bottom screen (screen 1) and no button, the bottom panel's
+// backlight goes down to bottom_dim_percent of its brightness (0: right off) and comes back at the next touch or
+// button, in the same event handler, so the panel is lit again before the next frame. The menu and every non-RetroArch
+// program keep the bottom screen awake: only runGame() takes ownership, and only when a RetroArch game panel is the
+// bottom screen. Only the bottom backlight is written: the game on the top keeps running untouched, and the screen a
+// game draws on is never dimmed. The bottom's path comes from bananad (/run/banana/backlight-bottom, from the
+// backlight0); while banana-ui manages it, /run/banana/bottom-ui tells bananad's own menu dim (dim_minutes)
+// to leave the bottom alone, so the two never fight over it.
+struct BottomIdle
+{
+	std::string path;			// /sys/class/backlight/<bottom>; "" : no bottom panel (QEMU), nothing to do
+	std::string data;			// the card's banana/ folder (/data/banana), for the brightness bananad saved
+	int max = 0, level = 0;		// its max_brightness and the level to come back to
+	double seconds = 0;			// the idle timeout; 0: off
+	int percent = 0;			// dimmed to this percent of max; 0: the backlight off
+	bool owned = false;			// banana-ui is managing the bottom (the marker is written, the timer armed)
+	bool dimmed = false;
+	double last = 0;
+
+	static int readInt(const std::string& p)
+	{
+		std::ifstream f(p);
+		int v = 0;
+		f >> v;
+		return v;
+	}
+	void write(int v) { std::ofstream f(path + "/brightness"); f << v << "\n"; }
+	// the timeout and the dim level from settings.conf, and the bottom's path from bananad (once, at startup)
+	void configure(double sec, int pc, const std::string& dataDir)
+	{
+		data = dataDir;
+		seconds = sec;
+		percent = pc;
+		path.clear(); max = level = 0;
+		std::ifstream f("/run/banana/backlight-bottom");
+		std::getline(f, path);
+		while (!path.empty() && (path.back() == '\n' || path.back() == '\r' || path.back() == ' ')) path.pop_back();
+		if (path.rfind("/sys/class/backlight/", 0) != 0) { path.clear(); return; }
+		max = readInt(path + "/max_brightness");
+		level = readInt(path + "/brightness");
+		if (max <= 0) { path.clear(); return; }
+	}
+	// banana-ui has (or no longer has) the bottom panel to itself: the marker tells bananad, and losing it restores
+	void setOwned(bool on, double now)
+	{
+		if (on && (seconds <= 0 || path.empty())) on = false;
+		if (on == owned) return;
+		owned = on;
+		if (on) { std::ofstream("/run/banana/bottom-ui") << "1\n"; last = now; }
+		else { if (dimmed) { write(want()); dimmed = false; } unlink("/run/banana/bottom-ui"); }
+	}
+	// the level to come back to: the user's brightness as bananad saved it (a brightness key pressed while the bottom
+	// was dimmed changed it), else the level read when it dimmed
+	int want()
+	{
+		// banana/backlight is "<top> <bottom>" in thousandths (one number before 0.4.2: both)
+		std::ifstream f(data + "/backlight");
+		int top = 0, bottom = 0;
+		f >> top;
+		if (!(f >> bottom)) bottom = top;
+		if (bottom > 0 && bottom <= 1000 && max > 0) return std::max(1, max * bottom / 1000);
+		return level;
+	}
+	// any touch on screen 1, any button: the timer restarts, and a dimmed bottom comes back at once
+	void activity(double now)
+	{
+		last = now;
+		if (dimmed) { write(want()); dimmed = false; }
+	}
+	// bananad changed the brightness (F + volume writes every backlight): adopt the level it just set, so the next
+	// restore cannot put an older one back
+	void adopt(int pct, double now)
+	{
+		if (max > 0) level = std::max(1, max * std::max(0, std::min(100, pct)) / 100);
+		dimmed = false;
+		last = now;
+	}
+	// called from the game panel's loop while a RetroArch game runs (owned); a no-op anywhere else
+	void tick(double now)
+	{
+		if (!owned || dimmed || now - last < seconds * 1000.0) return;
+		level = readInt(path + "/brightness");
+		write(max * percent / 100);
+		dimmed = true;
+	}
 };
 
 // BANANA_FRAME_STATS=1: a log line for each second the menu presented frames: how many, the gaps between presents in
@@ -889,13 +1017,17 @@ int main(int argc, char** argv)
 		else if (a == "--data") o.data = next();
 		else if (a == "--headless") o.headless = next();
 		else if (a == "--script") o.script = next();
+		else if (a == "--theme") o.theme = next();
 		else if (a == "--size") { std::string s = next(); if (sscanf(s.c_str(), "%dx%d", &o.w, &o.h) != 2) { logf("bad size"); return 2; } }
 		else { logf("unknown option %s", a.c_str()); return 2; }
 	}
 
 	rnds::setDecoder(stbDecode);
 	rnds::setZipReader(readZip);	// the icon of a DS ROM kept in a .zip
-	auto settings = readSettings(o.data + "/settings.conf");
+	// the card's settings.conf made whole (missing keys added, invalid values put back): first boot and after an update
+	normalizeSettings(o.data);
+	auto settings = readSettings(o.data);
+	if (!o.theme.empty()) settings["theme"] = "file:" + o.theme;	// --theme: the theme being made (headless render)
 	// the menu's language (Settings > System > Language): every text laid out goes through its translations; the lines
 	// with none stay English and are listed in /run/banana/lang-missing.txt (for the translator's next round)
 	const std::string langDir = o.assets + "/../lang";
@@ -986,6 +1118,8 @@ int main(int argc, char** argv)
 	auto makeMenu = [&](const std::string& theme, float sc) -> Menu*
 	{
 		if (theme == "carts") return new CartMenu(&lib, &be, o.banana + "/fonts", sc);
+		std::string layout = themePath(theme);
+		if (isLayoutTheme(layout)) { applyTheme(theme, settings["accent"]); return new LayoutMenu(&lib, &be, layout, sc, o.assets + "/fonts", o.banana + "/fonts"); }
 		return new RndsMenu(&lib, &be, o.assets, sc, applyTheme(theme, settings["accent"]) == "light" ? "light" : "dark");
 	};
 	std::atomic<bool> ready{ false };
@@ -1023,8 +1157,22 @@ int main(int argc, char** argv)
 	Input input;
 	input.open(o.touch, disp.width(), disp.height());
 
+	// the bottom panel's idle dim (settings.conf's bottom_idle_seconds / bottom_dim_percent): the bottom backlight's
+	// path comes from bananad. It runs only for a RetroArch game whose panel is the bottom screen (Mode A): the menu
+	// and every other program keep the bottom screen awake, so ownership is never taken here, only by runGame().
+	BottomIdle bottomIdle;
+	auto bottomReload = [&]()
+	{
+		auto cv = [&](const char* k, const char* d) { return getConfValue(o.data + "/settings.conf", k, getConfValue("/etc/banana/settings.conf", k, d)); };
+		bottomIdle.setOwned(false, nowMs());	// the menu never dims the bottom screen
+		bottomIdle.configure(atof(cv("bottom_idle_seconds", "10").c_str()), atoi(cv("bottom_dim_percent", "0").c_str()), o.data);
+	};
+	bottomReload();
+
 	Repeat rep;
 	bool dirty = true, quit = false, drawn = false;	// drawn: a frame on the canvas waiting for the flips
+	bool shuttingDown = false;	// SIGTERM: rcK (a shutdown or a restart), so the shutdown animation plays
+	double gameEnded = -1e9;
 	double quietUntil = 0;	// no frame before this: the last one flipped nothing (see present below)
 	int lastMinute = -1;
 	float scale = disp.height() / 480.0f;
@@ -1065,11 +1213,12 @@ int main(int argc, char** argv)
 			break;
 		case Settings::CHANGED:
 		{
-			settings = readSettings(o.data + "/settings.conf");
+			settings = readSettings(o.data);
 			lib.motion = settings["motion"] != "off";
 			lib.twelveHour = settings["clock"] == "12h";
 			lib.batteryShown = settings["battery"] == "percent" ? "text" : "icon";
 			sound.enabled = settings["sounds"] != "off";
+			bottomReload();	// the idle dim's timeout or level may have changed
 			ui->dataChanged();
 			sound.play("select");
 			break;
@@ -1077,7 +1226,7 @@ int main(int argc, char** argv)
 		case Settings::THEME:
 		{
 			// the menu again in the other palette, on the system it was showing
-			settings = readSettings(o.data + "/settings.conf");
+			settings = readSettings(o.data);
 			variant = applyTheme(settings["theme"], settings["accent"]);
 			if (variant == "carts") variant = "dark";
 			int sys = ui->systemIndex();
@@ -1123,6 +1272,7 @@ int main(int argc, char** argv)
 
 	auto handle = [&](const InputEvent& ev)
 	{
+		// (the bottom screen's idle dim is a game-panel thing only, so its touch handling is in gamePanel's own sink)
 		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) boost.frame(nowMs());	// what it starts drawn fast
 		if ((ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) && low.hide(nowMs())) dirty = true;
 		if (settingsView.isOpen())
@@ -1225,6 +1375,7 @@ int main(int argc, char** argv)
 			pid_t w = waitpid(pid, &status, WNOHANG);
 			if (w == pid || (w < 0 && errno != EINTR)) break;
 			double t = nowMs();
+			bottomIdle.tick(t);	// the bottom game panel dims on its own idle timer too (the game is on the other)
 			{
 				std::lock_guard<std::mutex> l(worker.uiLock);
 				if (settingsView.gameUpdate(t)) want = true;
@@ -1245,6 +1396,8 @@ int main(int argc, char** argv)
 				if (fds[i].revents & POLLIN)
 					input.read(fds[i].fd, [&](const InputEvent& ev)
 					{
+						// any button or touch is interaction: it brings a dimmed bottom panel back (BottomIdle)
+						bottomIdle.activity(nowMs());
 						if (ev.screen != panelScreen) return;	// buttons are the game's; touch only on the panel
 						if (ev.type != InputEvent::TOUCH_DOWN && ev.type != InputEvent::TOUCH_UP) return;
 						Settings::GameAction a;
@@ -1254,7 +1407,8 @@ int main(int argc, char** argv)
 						}
 						want = true;
 						const char* c = a == Settings::G_SAVE ? "SAVE_STATE\n" : a == Settings::G_LOAD ? "LOAD_STATE\n" :
-							a == Settings::G_MENU ? "MENU_TOGGLE\n" : a == Settings::G_FFWD ? "FAST_FORWARD\n" : a == Settings::G_QUIT ? "QUIT\n" : nullptr;
+							a == Settings::G_MENU ? "MENU_TOGGLE\n" : a == Settings::G_FFWD ? "FAST_FORWARD\n" :
+							a == Settings::G_QUIT ? "QUIT\n" : nullptr;
 						if (c)
 						{
 							logf("game panel: %.*s", (int)strlen(c) - 1, c);
@@ -1281,8 +1435,10 @@ int main(int argc, char** argv)
 		boost.release();
 		forgetDecoded();
 		const char* FIFO = "/run/banana/retroarch.cmd";
-		// (PICO-8 too when it plays in RetroArch's fake-08: the official PICO-8, when it is on the card, takes the panels)
-		bool ra = sd.run.find("run-retroarch") != std::string::npos ||
+		// run-ps1 and run-pico8's fake-08 fallback end up in run-retroarch just the same, so they get the game panel
+		// (settings.conf retroarch_panel) and its touch tiles too; the official PICO-8, when it is on the card, takes
+		// the panels itself.
+		bool ra = sd.run.find("run-retroarch") != std::string::npos || sd.run.find("run-ps1") != std::string::npos ||
 			(sd.run.find("run-pico8") != std::string::npos && access("/data/roms/pico-8/pico8_64", F_OK) != 0);
 		bool panel = ra && settings["retroarch_panel"] != "off" && disp.isOpen();
 		int gameScreen = 0, leaseFd = -1, cmdFd = -1;
@@ -1304,6 +1460,10 @@ int main(int argc, char** argv)
 				panel = false;
 			}
 		}
+		// the idle dim is armed for a RetroArch game in Mode A with its panel on the bottom (the game on the top): the
+		// only case where the bottom screen is Banana's own while a game runs. A game drawing on the bottom, or on
+		// both, is never dimmed. Tell bananad, which leaves the bottom to us for the game's length.
+		bottomIdle.setOwned(panel && gameScreen == 0, nowMs());
 		if (!panel)
 		{
 			input.close();
@@ -1316,6 +1476,11 @@ int main(int argc, char** argv)
 		unlink(PROGRESS);
 		double start = nowMs();
 		pid_t pid = fork();
+		// The parent lets go of its copy of the lease right away, whether the fork worked or not: the child has its own
+		// through the fd table it inherited, and a fork that failed (pid < 0) would otherwise leak the lease fd, which
+		// nothing else closes on that path.
+		if (pid != 0 && leaseFd >= 0) { ::close(leaseFd); leaseFd = -1; }
+		if (pid < 0) logf("fork failed: %s", strerror(errno));
 		if (pid == 0)
 		{
 			setsid();
@@ -1339,10 +1504,7 @@ int main(int argc, char** argv)
 		{
 			std::ofstream("/run/banana/game.pid") << pid << "\n";	// bananad: the game to pause before a sleep
 			if (panel)
-			{
-				::close(leaseFd);	// (the game has its copy)
 				gamePanel(pid, status, gameScreen, cmdFd, lib.gameAt(game).title, sd.name);
-			}
 			else while (waitpid(pid, &status, 0) < 0 && errno == EINTR) {}
 			unlink("/run/banana/game.pid");
 		}
@@ -1375,6 +1537,7 @@ int main(int argc, char** argv)
 		else applyColors("after the game");
 		be.invalidate();
 		input.open(o.touch, disp.width(), disp.height());
+		bottomIdle.setOwned(false, nowMs());	// the game session is over: the menu keeps the bottom screen awake
 		std::lock_guard<std::mutex> l(worker.uiLock);
 		{
 			int achA = -1, achB = 0;
@@ -1390,6 +1553,7 @@ int main(int argc, char** argv)
 			double ms = nowMs() - stormFrom;
 			if (c >= 0 && ms > 50 && (c - stormIrqs) * 1000 / ms > 20000) disp.stormCheck();	// (calm: ~120 a second)
 		}
+		gameEnded = nowMs();
 		dirty = true;
 		batteryDue = true;	// a step passed during the game shows now
 	};
@@ -1595,9 +1759,10 @@ int main(int argc, char** argv)
 				while (read(sigPipe[0], &c, 1) == 1)
 				{
 					if (c == SIGTERM || c == SIGINT) quit = true;
+					if (c == SIGTERM) shuttingDown = true;
 					// after a wake: the kernel has the panels showing our buffers again; a redraw brings the clock and
 					// the battery up to date (no modeset: that would run the panels' power-on sequence once more)
-					if (c == SIGUSR1) { std::lock_guard<std::mutex> l(worker.uiLock); be.invalidate(); ui->dataChanged(); dirty = true; batteryDue = true; }
+					if (c == SIGUSR1) { bottomIdle.activity(nowMs()); std::lock_guard<std::mutex> l(worker.uiLock); be.invalidate(); ui->dataChanged(); dirty = true; batteryDue = true; }
 					if (c == SIGUSR2)
 					{
 						// "volume 85" / "brightness 40", written just now (an old one is from a key pressed in a game)
@@ -1609,6 +1774,7 @@ int main(int argc, char** argv)
 							osdLabel = what == "brightness" ? "Brightness" : "Volume";
 							osdPercent = pct;
 							osdUntil = nowMs() + 1500;
+							if (what == "brightness") bottomIdle.adopt(pct, nowMs());	// bananad already wrote it
 							dirty = true;
 						}
 					}
@@ -1654,6 +1820,13 @@ int main(int argc, char** argv)
 		std::ofstream f(o.data + "/last-system");
 		f << ui->systemIndex() << "\n";
 	}
+	bottomIdle.setOwned(false, nowMs());	// the backlight and the marker back as they were
 	worker.finish();
+	// not straight after a game: a shutdown from it (the power button held) gives rcK's 3 s to its saves instead
+	if (shuttingDown && disp.isOpen() && settings["splash"] != "off" && nowMs() - gameEnded > 2000)
+	{
+		logf("shutdown animation");
+		playOutro(disp, be, o, variant, sound);
+	}
 	return 0;
 }

@@ -17,7 +17,8 @@
  *     while headphones are in, its "Internal Speakers Switch"); the RG DS Plus has two (the
  *     aw88166 speaker amplifiers, and the rk817 for the headphones and the microphone). Playback goes to the
  *     speakers, or to the rk817 while headphones are in (the jack's switch event); recording always comes from the
- *     rk817. The route is ALSA's default device, written to /run/banana/asound.conf (/etc/asound.conf points
+ *     rk817, whose capture gain bananad sets for the DS's microphone (audio_setup). The route is ALSA's default
+ *     device, written to /run/banana/asound.conf (/etc/asound.conf points
  *     there), so everything opened after a change follows it; the volume keys change the card that plays.
  *
  * Settings: /etc/banana/bananad.conf, then /data/banana/bananad.conf (key = value lines, see bananad.conf); SIGHUP
@@ -72,6 +73,8 @@ static int devfd[MAXDEV], ndev;
 static void leds_update(void);
 static void audio_route(void);
 static void undim(void);
+static void find_bottom_bl(void);
+static char bottom_bl[64];	/* the bottom panel's backlight name; banana-ui's idle dim owns it while it runs */
 static int headphones;
 static int fn_held, power_down, lid_closed;
 static int lid_retry_off;	/* a suspend failed with the lid shut: no retry until it opens */
@@ -607,21 +610,41 @@ static void audio_route(void)
 	}
 	/* The RG DS Plus's aw88166 amplifiers play 48 kHz whatever rate the I2S is set to (measured: 44.1 kHz audio is
 	 * taken at 48,150 samples a second, 9% fast and pitched up; 48 kHz at 48,080), so their stream is always opened
-	 * at 48 kHz and ALSA converts. Without it DraStic's 44.1 kHz ran its audio ring dry (stutter, crackles). */
-	char play[96];
-	if (card_play >= 0 && card_play == card_speaker)
-		snprintf(play, sizeof play, "{ type plug slave { pcm \"hw:%d\" rate 48000 } }", card_play);
+	 * at 48 kHz and ALSA converts. Without it DraStic's 44.1 kHz ran its audio ring dry (stutter, crackles). The
+	 * slave is pinned to S16 stereo 48 kHz so every open gets the same stream instead of renegotiating it.
+	 *
+	 * The same pin for capture, which is the microphone every DS game records through: playback and capture of one
+	 * card share its I2S DAI, and the rockchip-i2s-tdm driver marks that DAI symmetric_rate (the RG DS's single
+	 * rk817 card; the RG DS Plus's rk817 while headphones are in), so the second stream's hw_params is refused when
+	 * its rate differs from the first's. The DS emulators play at 48 kHz but open the mic at 44.1 kHz, so the
+	 * capture never started whatever bananad set the gains to (a standalone arecord, with no playback running, was
+	 * fine). Pinning the capture's slave to 48 kHz makes the emulator's 44.1 kHz capture run at the playback's
+	 * rate, ALSA's plug resampling it, and the two streams agree. */
+	char play[160], cap[160];
+	if (card_play >= 0)
+		snprintf(play, sizeof play, "{ type plug slave { pcm \"hw:%d\" format S16_LE channels 2 rate 48000 } }", card_play);
 	else
-		snprintf(play, sizeof play, "\"plughw:%d\"", card_play);
-	char conf[512];
+		snprintf(play, sizeof play, "\"null\"");
+	if (card_codec >= 0)
+		snprintf(cap, sizeof cap, "{ type plug slave { pcm \"hw:%d\" format S16_LE channels 2 rate 48000 } }", card_codec);
+	else
+		snprintf(cap, sizeof cap, "\"null\"");
+	char conf[768];
 	int n = snprintf(conf, sizeof conf,
 		"# bananad: where sound plays now (%s)\n"
-		"pcm.!default { type asym playback.pcm %s capture.pcm \"plughw:%d\" }\n"
-		"ctl.!default { type hw card %d }\n",
-		card_play == card_speaker ? "speakers" : headphones ? "headphones" : "the codec", play, card_codec, card_play);
+		"pcm.!default { type asym playback.pcm %s capture.pcm %s }\n",
+		card_play == card_speaker ? "speakers" : headphones ? "headphones" : "the codec", play, cap);
+	/* no card yet (the codec probed late, QEMU): "null" keeps the alias valid instead of a "plughw:-1" that would
+	 * fail every later open; the ctl defaults to one, so its line goes only with a real card */
+	if (card_play >= 0 && n > 0 && (size_t)n < sizeof conf)
+		n += snprintf(conf + n, sizeof conf - (size_t)n, "ctl.!default { type hw card %d }\n", card_play);
+	/* snprintf returns what it would have written, not what it did: clamp before the buffer goes to fwrite, or a
+	 * truncated (or negative) n would read past conf */
+	if (n < 0) n = 0;
+	if ((size_t)n >= sizeof conf) n = (int)sizeof conf - 1;
 	FILE *f = fopen("/run/banana/asound.conf.new", "w");
 	if (f) {
-		fwrite(conf, 1, n, f);
+		fwrite(conf, 1, (size_t)n, f);
 		fclose(f);
 		rename("/run/banana/asound.conf.new", "/run/banana/asound.conf");
 	}
@@ -640,7 +663,7 @@ static void audio_route(void)
 		if (write(rc, "AUDIO_REINIT\n", 13) < 0) {}
 		close(rc);
 	}
-	say("sound: playback on card %d (%s), recording on card %d", card_play,
+	say("sound: playback on card %d (%s), recording on card %d (both 48 kHz, the shared DAI's one rate)", card_play,
 	    card_play == card_speaker ? "speakers" : headphones ? "headphones" : "codec", card_codec);
 }
 
@@ -648,9 +671,9 @@ static void audio_setup(void)
 {
 	audio_find_cards();
 	if (card_codec < 0) { audio_route(); return; }	/* no sound card at all (QEMU): nothing to set */
-	/* the rk817's output path: HP drives both its jack and (on the RG DS) the speaker amplifier */
 	char c[16];
 	snprintf(c, sizeof c, "%d", card_codec);
+	/* the rk817's output path: HP drives both its jack and (on the RG DS) the speaker amplifier */
 	char *argv[] = { "amixer", "-q", "-c", c, "sset", "Playback Mux", "HP", NULL };
 	run(argv);
 	/* the microphone (#14): the rk817's "Master" is the DAC's volume AND the ADC's, and the volume keys set both, so
@@ -750,6 +773,25 @@ static int backlight_permille(int i)
 	return max > 0 ? read_int(p, 0) * 1000 / max : -1;
 }
 
+/* the bottom panel's backlight (BL[1], backlight0 on both handhelds). While banana-ui is managing the bottom's idle dim
+ * itself (it writes /run/banana/bottom-ui, see ui/src/main.cpp), the menu's own dim leaves that one backlight to it:
+ * it would otherwise dim the bottom twice and undo banana-ui's restore. The empty string: no bottom panel (QEMU). */
+static void find_bottom_bl(void)
+{
+	char path[96];
+	snprintf(path, sizeof path, "/sys/class/backlight/%s", BL[1]);
+	if (access(path, F_OK)) return;
+	snprintf(bottom_bl, sizeof bottom_bl, "%s", BL[1]);
+	/* published for banana-ui, whose idle timer dims the bottom itself (ui/src/main.cpp) */
+	FILE *f = fopen("/run/banana/backlight-bottom.new", "w");
+	if (f) {
+		fprintf(f, "%s\n", path);
+		fclose(f);
+		rename("/run/banana/backlight-bottom.new", "/run/banana/backlight-bottom");
+	}
+	say("bottom panel's backlight: %s", bottom_bl);
+}
+
 /* idle in the menu: the panels down to dim_percent of what they were, back at the first press (the levels are
  * remembered here, not saved: the user's brightness is untouched) */
 static int dimmed, dim_count;
@@ -763,6 +805,7 @@ static void dim(void)
 	dim_count = 0;
 	while ((e = readdir(d)) && dim_count < 4) {
 		if (e->d_name[0] == '.' || strlen(e->d_name) >= sizeof dim_name[0]) continue;
+		if (bottom_bl[0] && !strcmp(e->d_name, bottom_bl) && !access("/run/banana/bottom-ui", F_OK)) continue;
 		char p[600], v[32];
 		snprintf(dim_name[dim_count], sizeof dim_name[0], "%s", e->d_name);
 		snprintf(p, sizeof p, "/sys/class/backlight/%.255s/brightness", dim_name[dim_count]);
@@ -1162,6 +1205,7 @@ int main(int argc, char **argv)
 	sa.sa_handler = on_hup;		/* no SA_RESTART: poll() returns, and the loop reloads */
 	sigaction(SIGHUP, &sa, NULL);
 	mkdir("/run/banana", 0755);
+	find_bottom_bl();	/* which backlight is the bottom one: banana-ui's idle dim owns it */
 
 	int ino = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
 	if (ino >= 0) inotify_add_watch(ino, "/dev/input", IN_CREATE | IN_DELETE);

@@ -1,6 +1,7 @@
 #include <ctime>
 #include "settings.h"
 #include "lang.h"
+#include "settings_defaults.h"
 #include "theme.h"
 #include <algorithm>
 #include <dlfcn.h>
@@ -366,7 +367,7 @@ namespace banana
 		add(D, "music", "Menu sounds", "The menu's clicks, and the cartridge going into the console.", menu, "sounds", { "On", "Off" }, { "on", "off" });
 		add(D, "picture", "Battery", "The battery on the top screen: its icon, or its icon and how full it is.", menu, "battery", { "Icon", "Icon and %" }, { "icon", "percent" });
 		add(D, "picture", "Clock", "How the time on the top screen is written.", menu, "clock", { "24-hour", "12-hour" }, { "24h", "12h" });
-		add(D, "picture", "Boot animation", "The bananas and the cartridge while Banana starts. Off goes straight to the menu once it is ready.", menu, "splash", { "On", "Off" }, { "on", "off" });
+		add(D, "picture", "Boot animation", "The bananas and the cartridge while Banana starts, and backwards when it shuts down. Off goes straight to the menu once it is ready, and straight to black.", menu, "splash", { "On", "Off" }, { "on", "off" });
 		const char* P = "Sleep & power";
 		add(P, "moon", "Sleep when idle", "In the menu, after this long with no button pressed. Never while a game is running.", power, "autosleep_minutes",
 			{ "Never", "5 minutes", "10 minutes", "15 minutes", "30 minutes" }, { "0", "5", "10", "15", "30" });
@@ -412,8 +413,10 @@ namespace banana
 				bds, "cpugov", { "Saves battery", "Always full" }, { "on", "off" });
 			add(N, "nds", "Timing", "Accurate is melonDS's own. Fast lets the two CPUs run longer between meeting (about 10% faster), but it can break a game: Golden Sun: Dark Dawn loses its 3D world.",
 				bds, "core.slice", { "Accurate", "Fast" }, { "64", "auto" });
-			add(N, "nds", "Microphone", "How loud a word or a blow must be to reach the game.", bds, "mic.threshold",
-				{ "Medium", "High", "Low", "Off" }, { "0.05", "0.02", "0.15", "0" });
+			add(N, "nds", "Microphone", "On: the game hears the real microphone (a blow, a voice; the DS's own games that ask for one). Off: it hears nothing from the mic, and the in-game menu's Blow still works for a game that wants one.",
+				bds, "mic.source", { "On", "Off" }, { "device", "none" });
+			add(N, "nds", "Mic sensitivity", "How far above the room's noise a word or a blow must be to reach the game. Gate off lets the game hear everything the microphone picks up, its own sound from the speaker included.",
+				bds, "mic.threshold", { "Medium", "High", "Low", "Gate off" }, { "0.05", "0.02", "0.15", "0" });
 			add(N, "nds", "Reset BananaDS", "BananaDS's settings back to Banana's. Saves, save states and each game's clock stay. Press A twice.",
 				"", "nds-reset-bananads", { "" }, { "" }, Item::ACTION);
 		}
@@ -427,6 +430,9 @@ namespace banana
 				sd, "DSFLIP_CPUGOV", { "Saves battery", "Always full" }, { "1", "0" });
 			add(N, "nds", "Frame pacing", "Panels runs the DS at the panels' 60 Hz, a new frame every refresh (0.3% fast, the sound matched). DS rate keeps the DS's own 59.83 Hz, a frame shown twice every ~6 s.",
 				sd, "DSFLIP_PACE", { "Panels", "DS rate" }, { "panels", "ds" });
+			// (Off first: SuperDrastic's own default, as in 0.4.2; its scale is not BananaDS's)
+			add(N, "nds", "Microphone", "How loud a word or a blow must be to reach the game. Off: the game hears nothing from the mic, and the in-game menu's Blow still works for a game that wants one.",
+				sd, "DSHOOK_MIC_THRESH", { "Off", "Medium", "High", "Low" }, { "0", "0.15", "0.03", "0.3" });
 			add(N, "nds", "Reset buttons", "DraStic's buttons back to Banana's, for a button setup gone wrong in DraStic's menu: the pad as printed, F or L3 the menu, R2 save, L2 load, R3 fast forward. (HOME always opens the menu.) Press A twice.",
 				"", "nds-reset-buttons", { "" }, { "" }, Item::ACTION);
 			add(N, "nds", "Reset DraStic", "All of DraStic's and SuperDrastic's settings back to Banana's, the buttons too. Saves, save states, cheats and the DS's name and birthday stay. Press A twice.",
@@ -437,11 +443,17 @@ namespace banana
 			"/data/retroarch/retroarch.cfg", "video_monitor_index", { "Top", "Bottom" }, { "2", "1" });
 		add(O, "gamepad", "Second screen", "While a game plays on one screen, the other shows its RetroAchievements and tiles to save, load, open RetroArch's menu, fast forward and quit (by touch when they are on the bottom screen). Off: the other screen stays dark.",
 			menu, "retroarch_panel", { "Game panel", "Off" }, { "panel", "off" });
+		add(O, "picture", "Game panel dims", "With a game on the top screen, the game panel on the bottom one goes dark after this long with no touch and no button, and lights again at the next.",
+			menu, "bottom_idle_seconds", { "After 10 s", "After 30 s", "After 1 minute", "Never" }, { "10", "30", "60", "0" });
 		add(O, "gamepad", "RetroAchievements", "Softcore: achievements unlock with save states, rewind and cheats still there. Hardcore: those are locked for the game, and the unlocks count as hardcore on retroachievements.org. RetroArch's own menu changes the same setting.",
 			"/data/retroarch/retroarch.cfg", "cheevos_hardcore_mode_enable", { "Softcore", "Hardcore" }, { "false", "true" });
 		add(O, "gamepad", "Quick resume", "On: quitting keeps where you are, and the game goes on from there next time (RetroArch's automatic save state; not in Hardcore). Off: a game starts from its title.", "/data/retroarch/retroarch.cfg", "savestate_auto_save", { "Off", "On" }, { "false", "true" });
 		add(O, "picture", "Shader", "A look for the systems RetroArch runs: a handheld's LCD grid, a CRT's scanlines, or sharp pixels at any size. RetroArch's own Shaders menu still picks any of libretro's presets.",
 			menu, "ra_shader", { "Off", "LCD", "CRT", "Sharp pixels" }, { "off", "lcd", "crt", "sharp" });
+		add(O, "music", "Audio latency", "RetroArch's audio buffer. Low is the quickest to react and can crackle on a busy game; Safe has the most margin (and the most delay).",
+			menu, "ra_audio_latency", { "Low (32 ms)", "Default (64 ms)", "Safe (128 ms)" }, { "32", "64", "128" });
+		add(O, "picture", "VSync", "On waits for the panel's refresh before drawing the next frame, so nothing tears. Off lets a core run as fast as it can; the panel can show a half-drawn frame.",
+			menu, "ra_vsync", { "On", "Off" }, { "on", "off" });
 		if (access("/usr/lib/libretro/mgba_libretro.so", F_OK) == 0)
 			add(O, "gamepad", "Game Boy Advance", "The emulator for GBA games. gpSP: the fastest. mGBA: the most accurate, and the one RetroAchievements accepts for hardcore.", menu, "core.gba", { "gpSP", "mGBA" }, { "gpsp", "mgba" });
 		add(O, "gamepad", "RetroArch hotkeys", "F + a button in a game: X the menu, Start quits, L and R load and save a state, Y the frame counter, L2 rewind, R2 fast forward. Off: only F + X and F + Start, the two needed to get out, and none bound in RetroArch's own menu either.",
@@ -484,6 +496,10 @@ namespace banana
 		if (access("/run/banana/sd2/slot", F_OK) == 0)	// a second card slot (bananad's sd2 script): the RG DS Plus
 		add(S, "gear", "Second SD card", "Games on the card in the second slot (its roms folder, with the same system folders as this card) show up in the library with the others while it's in. exFAT or FAT32.", menu, "sd2_roms", { "Show its games", "Off" }, { "on", "off" });
 		add(S, "gear", "First-time setup", "The steps from the first boot again: Wi-Fi, the time zone and the RetroAchievements account (ScreenScraper: not available yet).", "", "setup", {}, {}, Item::PAGE);
+		add(S, "gear", "Reset system settings", "Puts the menu, display, sound, power and network settings back to their defaults, the time zone too (the language stays). Your games, saves and the emulators' settings are untouched. Press A twice.",
+			"", "reset_system", { "" }, { "" }, Item::ACTION);
+		add(S, "gear", "Reset emulator settings", "Puts the emulator choices back to their defaults: the DS emulator, Quick resume, the Game Boy Advance's emulator, and RetroArch's shader, audio latency, VSync and hotkeys. Your menu settings, saves and games stay. Press A twice.",
+			"", "reset_emulator", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "About", "", "", "", {}, {}, Item::INFO);
 		add(S, "gear", "Restart", "Restarts the handheld. Press A twice.", "", "reboot", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "Shut down", "Turns the handheld off. Press A twice. (Or hold the power button.)", "", "poweroff", { "" }, { "" }, Item::ACTION);
@@ -553,7 +569,9 @@ namespace banana
 			return;
 		}
 		if (it.kind != Item::CHOICE) return;
-		std::string def = it.values[0];
+		// the schema's default (settings_defaults.cpp), else the row's first choice
+		std::string def = settingDefault(it.key);
+		if (def.empty()) def = it.values[0];
 		// the system's defaults where the data partition has none yet
 		if (it.file == data + "/bananad.conf") def = getConfValue("/etc/banana/bananad.conf", it.key, def);
 		if (it.file == data + "/settings.conf") def = getConfValue("/etc/banana/settings.conf", it.key, def);
@@ -800,6 +818,11 @@ namespace banana
 				for (auto& x : items) if (x.file.find("retroarch.cfg") != std::string::npos) load(x);
 				return MOVED;
 			}
+			if (it.key == "reset_system" || it.key == "reset_emulator")
+			{
+				armed = -1;
+				return resetApply(it.key == "reset_emulator");
+			}
 			return it.key == "reboot" ? REBOOT : POWEROFF;
 		}
 		int n = (int)it.values.size();
@@ -828,6 +851,68 @@ namespace banana
 		}
 		if (it.key == "accent") { setVariant(getConfValue(data + "/settings.conf", "theme", "dark")); return THEME; }	// (saved above)
 		return CHANGED;
+	}
+
+	Settings::Result Settings::resetApply(bool emulator)
+	{
+		const std::string menu = data + "/settings.conf";
+		std::string beforeTheme = getConfValue(menu, "theme", "dark");
+		std::string beforeAccent = getConfValue(menu, "accent", "yellow");
+
+		resetSettings(data, emulator ? ResetScope::Emulator : ResetScope::System);
+
+		if (!emulator)
+		{
+			// what the settings screen keeps outside settings.conf: bananad's sleep/LED rows (same defaults the rows
+			// show when the card has no line), the backlights and the mixer's level
+			static const struct { const char* key; const char* def; } BANANAD[] = {
+				{ "autosleep_minutes", "10" }, { "dim_minutes", "2" }, { "lid_sleep", "yes" },
+				{ "fast_resume", "yes" }, { "led_brightness", "128" } };
+			for (const auto& b : BANANAD)
+				setConfValue(data + "/bananad.conf", b.key, getConfValue("/etc/banana/bananad.conf", b.key, b.def));
+			if (DIR* d = opendir("/sys/class/backlight"))
+			{
+				while (dirent* e = readdir(d))
+				{
+					if (e->d_name[0] == '.') continue;
+					std::string b = std::string("/sys/class/backlight/") + e->d_name;
+					int max = atoi(readLine(b + "/max_brightness").c_str());
+					if (max > 0) std::ofstream(b + "/brightness") << max << "\n";
+				}
+				closedir(d);
+			}
+			std::ofstream(data + "/backlight") << "1000\n";
+			if (system("/usr/libexec/banana/volume set 50 2>/dev/null") != 0) {}
+			// the side effects save() runs for keys that live outside settings.conf
+			std::map<std::string, std::string> rs = readSettings(data);
+			if (!rs["timezone"].empty()) { setenv("TZ", rs["timezone"].c_str(), 1); tzset(); }
+			spawn("/usr/libexec/banana/wifi", rs["wifi"] == "off" ? "down" : "up");
+			spawn("/usr/libexec/banana/ssh", rs["ssh"] == "on" ? "up" : "down");
+			spawn("/usr/libexec/banana/share", rs["share"] == "on" ? "up" : "down");
+			spawn("/usr/libexec/banana/sd2", "scan");
+			poke("bananad");
+		}
+
+		// the rows again: a reset emulator or theme changes which rows exist and what they show
+		items.clear();
+		build();
+		for (auto& x : items) load(x);
+		const std::string action = emulator ? "reset_emulator" : "reset_system";
+		sel = 0;
+		for (size_t i = 0; i < items.size(); i++) if (items[i].key == action) { sel = (int)i; break; }
+		top = std::max(0, std::min(sel, std::max(0, groupEnd(groupOf(sel)) - ROWS)));
+		armed = -1;
+
+		toast(emulator ? "Emulator settings reset" : "System settings reset",
+			emulator ? "The core choices and RetroArch's options are back to their defaults."
+			         : "The menu, display, sound and power settings are back to their defaults.",
+			0x6ad07a, 1, 5000);	// the RetroAchievements success green, a tick, 5 s
+
+		std::string afterTheme = getConfValue(menu, "theme", "dark");
+		std::string afterAccent = getConfValue(menu, "accent", "yellow");
+		bool themeChanged = !emulator && (afterTheme != beforeTheme || afterAccent != beforeAccent);
+		if (themeChanged) setVariant(afterTheme);	// this screen's own palette now (the menu's is the THEME result)
+		return themeChanged ? THEME : CHANGED;
 	}
 
 	Settings::Result Settings::press(Key k)
@@ -2525,6 +2610,9 @@ namespace banana
 		std::string gmicName = gmic;
 		const float* scale = emu == "bananads" ? MIC_BANANADS : MIC_SUPERDRASTIC;	// (Settings' value in that emulator's scale)
 		for (int i = 1; i < 5; i++) if (std::fabs(atof(gmic.c_str()) - scale[i]) < 0.001) gmicName = GAME_MIC_NAMES[i];
+		// BananaDS: Settings' Microphone Off is mic.source = none (its threshold 0 is the gate off, every sound through)
+		if (emu == "bananads" && getConfValue("/data/bananads/bananads.conf", "mic.source", "device") == "none") gmicName = "Off";
+		else if (emu == "bananads" && atof(gmic.c_str()) == 0) gmicName = "Gate off";
 		const std::string v3d = pg3d ? std::string(GAME_3D_NAMES[pg3d]) : "As in Settings (" + std::string(g3d == "1" ? "On" : "Off") + ")";
 		const std::string vmic = pgMic ? std::string(GAME_MIC_NAMES[pgMic]) : "As in Settings (" + gmicName + ")";
 

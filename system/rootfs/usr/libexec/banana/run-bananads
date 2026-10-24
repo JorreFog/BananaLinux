@@ -46,12 +46,55 @@ if [ ! -f $M ]; then
         -e 's/^ *mic.threshold *= *0\.3 *$/mic.threshold = 0.15/' $C 2>/dev/null
     touch $M
 fi
+# The microphone: BananaDS reads mic.source, mic.device and mic.threshold from bananads.conf (or the environment,
+# which wins). A card with no mic keys gets source and threshold here once, so Settings owns them: source=device
+# records the real microphone through ALSA's "default" (bananad points it at the rk817 in /run/banana/asound.conf),
+# and threshold=0.05 is Settings' "Medium". Written to the file, never exported: an exported BANANADS_MIC_SOURCE or
+# BANANADS_MIC_THRESHOLD would win over the file and freeze the settings screen's choices. A card that already
+# names them (including source=none, Settings > Nintendo DS > Microphone Off) is left as it is. Before 0.4.3 the one
+# Microphone row's Off wrote mic.threshold = 0, which BananaDS reads as "gate off" (every sound through): such a card
+# gets source=none (what Off meant) and Medium's threshold instead.
+M=$D/.banana-mic-src
+if [ ! -f $M ]; then
+    if ! has mic.source && grep -q '^ *mic\.threshold *= *0*\.\?0* *$' $C 2>/dev/null; then
+        sed -i 's/^ *mic\.threshold *=.*/mic.threshold = 0.05/' $C
+        echo "mic.source = none" >> $C
+    fi
+    has mic.source    || echo "mic.source = device"  >> $C
+    has mic.threshold || echo "mic.threshold = 0.05" >> $C
+    touch $M
+fi
+# mic.device is not a Settings choice, so it is enforced on every launch, not written once (a card left with
+# another value kept it forever, which is how a mic stayed silent after the route was fixed). Only ALSA's "default"
+# alias reaches bananad's capture plug (S16_LE stereo 48000): the plug resamples the 44.1 kHz mono both DS
+# emulators open (BananaDS's in_thread, SuperDrastic's mic_thread), so the hardware stream runs at the playback's
+# rate. A raw node (hw:0, plughw:0, hw:CARD=rk817hp) has no resampler: ALSA hands the card 44.1 kHz and the
+# rk817's symmetric_rate I2S DAI refuses the second stream's hw_params, so in_thread finds no PCM, logs "no
+# microphone" and exits. Anything but the alias (another firmware, an edit over file sharing) is rewritten here.
+if has mic.device; then
+    grep -q '^ *mic\.device *= *default *$' $C || sed -i 's|^ *mic\.device *=.*|mic.device = default|' $C
+else
+    echo "mic.device = default" >> $C
+fi
+# The route bananad writes is what makes "default" that plug. Verify the capture side is the 48 kHz plug, not the
+# bare card: a missing file, or a capture.pcm that isn't the plug (the pre-fix "plughw:%d"), silently sends the
+# mic past ALSA's resampler, the same failure this stanza exists to prevent.
+if [ ! -e /run/banana/asound.conf ]; then
+    echo "run-bananads: no /run/banana/asound.conf: bananad hasn't set the sound route" >&2
+elif ! grep -q 'capture\.pcm *{ *type plug' /run/banana/asound.conf; then
+    echo "run-bananads: /run/banana/asound.conf has a capture.pcm without the 48 kHz plug: the mic may not start" >&2
+fi
 export DSFLIP_SHADER_DIR=/usr/lib/superdrastic/shaders
-# the game's own microphone (its page, #27): BananaDS's threshold for this run (0: off)
-# (BananaDS's scale, as Settings' Microphone: low 0.15, medium 0.05, high 0.02)
+# the game's own microphone (its page, #27), for this run: off is mic.source = none (BananaDS's threshold 0 is "gate
+# off", every sound through), the others the microphone on at that threshold
+# (BananaDS's scale, as Settings' Mic sensitivity: low 0.15, medium 0.05, high 0.02)
 m=$(/usr/libexec/banana/nds-game-option nds-per-game-mic.conf "$1")
-case $m in low) t=0.15 ;; medium) t=0.05 ;; high) t=0.02 ;; off) t=0 ;; *) t= ;; esac
-[ -n "$t" ] && { echo "run-bananads: ${1##*/} has its own microphone: $m ($t)" >&2; export BANANADS_MIC_THRESHOLD=$t; }
+case $m in low) t=0.15 ;; medium) t=0.05 ;; high) t=0.02 ;; off) t=off ;; *) t= ;; esac
+if [ "$t" = off ]; then
+    echo "run-bananads: ${1##*/} has its own microphone: off" >&2; export BANANADS_MIC_SOURCE=none
+elif [ -n "$t" ]; then
+    echo "run-bananads: ${1##*/} has its own microphone: $m ($t)" >&2; export BANANADS_MIC_SOURCE=device BANANADS_MIC_THRESHOLD=$t
+fi
 # the game's own shader (its page, X in the library: nds-game-shader), for this run only (the environment wins over
 # bananads.conf)
 s=$(/usr/libexec/banana/nds-game-shader "$1")
@@ -77,6 +120,12 @@ grep -q '^ *firmware\.nickname *= *[^ ]' $D/bananads.conf 2>/dev/null || export 
 # never run: kv-env), e.g. BANANADS_KMS_STATS=600
 . /usr/libexec/banana/kv-env
 kv_export /data/banana/bananads.env BANANADS_ MELONDS_
+# an explicit BANANADS_MIC_DEVICE (bananads.env, or the environment a test set) wins over bananads.conf, so the
+# enforced "mic.device = default" above does not reach it: a raw node here bypasses the plug the same way, made loud
+case ${BANANADS_MIC_DEVICE:-} in
+    ''|default) ;;
+    *) echo "run-bananads: BANANADS_MIC_DEVICE=$BANANADS_MIC_DEVICE bypasses ALSA's 48 kHz plug: the mic may not start" >&2 ;;
+esac
 # the in-game save as DraStic left it, when it played the game last (nds-saves: the two emulators share saves); a
 # quick resume state older than the save is dropped, as run-drastic does: loading it would put an older save back
 /usr/libexec/banana/nds-saves "$1"

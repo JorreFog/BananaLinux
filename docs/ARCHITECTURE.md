@@ -82,7 +82,11 @@ ROCKNIXDS, ES is the Source and its GL renderer the Backend. In Banana:
   clock). Nothing runs while nothing changes.
 
 **Settings** (`src/settings.cpp`, Start): drawn with the engine's own box styles and Pixelify Sans through the
-same Backend. Each change is written at once to the file that owns it: `banana/settings.conf` (the menu; a theme
+same Backend. `src/settings_defaults.cpp` is the schema: the keys and accepted values of `banana/settings.conf`,
+including the per-system `core.<system>` selections and RetroArch's audio latency and VSync. At startup the card's
+file is made whole (missing keys added from `/etc/banana/settings.conf`, invalid values put back, comments and the
+user's own keys kept) and only rewritten when something changed. Each change is then written at once to the file that
+owns it: `banana/settings.conf` (the menu; a theme
 change rebuilds the engine in the other palette), `banana/bananad.conf` (then SIGHUP to bananad), 
 `banana/superdrastic.conf` (read by run-drastic), DraStic's `drastic.cfg`, and the backlights. The time zone is a POSIX `TZ` rule in `settings.conf` (glibc reads those with no
 zoneinfo files on the root): banana-ui sets `TZ` for itself and every game it starts, so a DS game's clock is local
@@ -211,7 +215,14 @@ LED follows the charger's own LED trigger (`<battery>-charging`), the critical b
 **Sound.** No sound server: ALSA's default device is written by bananad to `/run/banana/asound.conf`. RG DS: the
 rk817 (card 0) with its `Playback Mux` on HP. RG DS Plus: playback on the aw88166 card, or on the rk817 while its
 `Headphones Jack` switch is on; capture always from the rk817 (the microphone). Volume keys: `PCM` on the aw88166,
-`Master` on the rk817. A program opened before a change keeps its device until it opens it again.
+`Master` on the rk817. A program opened before a change keeps its device until it opens it again. bananad also sets
+the rk817's capture gains at boot (`Mic Capture Gain` and `Master Capture Volume`), after `alsactl restore`, so a
+state saved by another firmware can't leave the DS's microphone muted; the emulators open `default`'s capture side
+unless Settings > Nintendo DS turns the mic off. Playback and capture of one card share its I2S DAI, and
+`rockchip-i2s-tdm` marks that DAI `symmetric_rate`: the two streams must run at one rate. bananad therefore pins
+both directions of `default` to S16 stereo 48 kHz (the rate the DS emulators already play at) and ALSA's `plug`
+resamples the emulators' 44.1 kHz capture to it; opened at 44.1 kHz against a 48 kHz playback the capture's
+`hw_params` was refused, and the microphone never started whatever the gains were.
 
 ## Clocks: banana-perf
 
