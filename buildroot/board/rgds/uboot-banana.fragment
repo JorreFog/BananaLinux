@@ -7,8 +7,3 @@ CONFIG_DISPLAY_CPUINFO=n
 # only the SD card is a boot target (the RG DS's eMMC holds Android)
 CONFIG_ENV_IS_NOWHERE=y
 CONFIG_ENV_IS_IN_MMC=n
-# the power LED on as the first thing U-Boot does (its main loop, ~1 s after the button instead of ~4.5 s when the
-# kernel's pwm-leds probe lit it): GPIO0_C4 is the green LED's pin (pwm5, both handhelds) and, before Linux muxes it
-# to the PWM, a plain GPIO; high is on. The kernel's default-state "on" and then bananad's level take over from there.
-CONFIG_USE_PREBOOT=y
-CONFIG_PREBOOT="gpio set A20"
