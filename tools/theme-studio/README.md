@@ -27,6 +27,19 @@ Install a finished theme by putting `my-theme.json` (and any folder of pictures 
 `banana/themes/` on the card — over file sharing, or with the card in a computer — then pick it in
 **Settings > Display & sound > Theme**.
 
+## Where your themes live
+
+Keep the themes you make in a folder of their own, outside the checkout, so they never appear in the repo or in
+the editor's example list:
+
+```sh
+python3 tools/theme-studio/serve.py --themes ~/BananaThemes
+```
+
+**Theme settings > Your themes** then lists that folder (click to open) and **Save here** writes back into it —
+no downloads and nothing in the repo. The shipped examples stay under **Start from a template**. (The desktop
+studio, `tools/theme-studio-desktop/`, starts its Open and Save dialogs in `~/BananaThemes` too.)
+
 ## What it does
 
 - **Layer tree** per view (`home`, `library`, `launch`, `all`) and screen (top/bottom). Children draw in array

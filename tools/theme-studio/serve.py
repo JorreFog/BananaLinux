@@ -39,6 +39,7 @@ DEFAULT_SCRIPT = ("home 0; wait 900; shot home; press right; wait 700; shot home
                   "press a; wait 900; shot lib; press down; wait 600; shot lib2; press a; wait 400; shot launch")
 TEMPLATE_DIRS = [ROOT / "system" / "rootfs" / "usr" / "share" / "banana" / "themes", ROOT / "docs" / "themes"]
 THEMES_DIR = None						# --themes-dir: where "Send to handheld" writes (a mounted banana/themes)
+LOCAL_THEMES = None						# --themes: your own themes folder, outside the repo (list and save here)
 
 TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
          ".css": "text/css; charset=utf-8", ".json": "application/json; charset=utf-8",
@@ -160,6 +161,21 @@ def render(theme_text, script, size, assets=None):
         shutil.rmtree(work, ignore_errors=True)
 
 
+def local_themes():
+    """The themes in --themes (your own folder, outside the repo), newest name first."""
+    if not LOCAL_THEMES or not LOCAL_THEMES.exists():
+        return []
+    out = []
+    for f in sorted(LOCAL_THEMES.glob("*.json")):
+        try:
+            text = f.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        m = re.search(r'"name"\s*:\s*"([^"]*)"', text)
+        out.append({"name": m.group(1) if m else f.stem, "file": str(f), "json": text})
+    return out
+
+
 def templates():
     out = []
     for d in TEMPLATE_DIRS:
@@ -203,9 +219,12 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/health":
             return self._json(200, {"ok": ensure_engine() and True, "engine": str(ENGINE),
                                     "fixture": str(FIXTURE), "detail": _ready["detail"],
-                                    "themesDir": str(THEMES_DIR) if THEMES_DIR else ""})
+                                    "themesDir": str(THEMES_DIR) if THEMES_DIR else "",
+                                    "localThemes": str(LOCAL_THEMES) if LOCAL_THEMES else ""})
         if path == "/api/templates":
             return self._json(200, templates())
+        if path == "/api/themes":
+            return self._json(200, local_themes())
         if path == "/api/schema":
             p = ROOT / "docs" / "theme.schema.json"
             return self._file(p) if p.exists() else self._json(404, {"error": "no schema"})
@@ -218,7 +237,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = self.path.split("?", 1)[0]
-        if path not in ("/api/render", "/api/send"):
+        if path not in ("/api/render", "/api/send", "/api/themes/save"):
             return self._send(404, "not found", "text/plain")
         try:
             n = int(self.headers.get("content-length", "0"))
@@ -231,6 +250,8 @@ class Handler(BaseHTTPRequestHandler):
         text = theme if isinstance(theme, str) else json.dumps(theme, indent=2)
         if path == "/api/send":
             return self._send_theme(req, text)
+        if path == "/api/themes/save":
+            return self._save_local(req, text)
         result = render(text, req.get("script") or DEFAULT_SCRIPT, req.get("size") or "640x480",
                         req.get("assets"))
         return self._json(200 if "error" not in result or "shots" in result else 500, result)
@@ -248,6 +269,20 @@ class Handler(BaseHTTPRequestHandler):
         except OSError as e:
             return self._json(500, {"error": "couldn't write to %s: %s" % (THEMES_DIR, e)})
         return self._json(200, {"ok": True, "path": str(THEMES_DIR / name), "assets": written})
+
+    def _save_local(self, req, text):
+        if not LOCAL_THEMES:
+            return self._json(400, {"error": "no --themes folder was given to serve.py"})
+        name = safe_rel(req.get("name") or "theme") or "theme"
+        if not name.endswith(".json"):
+            name += ".json"
+        try:
+            LOCAL_THEMES.mkdir(parents=True, exist_ok=True)
+            (LOCAL_THEMES / name).write_text(text, encoding="utf-8")
+            written = write_assets(LOCAL_THEMES, req.get("assets"))
+        except OSError as e:
+            return self._json(500, {"error": "couldn't write to %s: %s" % (LOCAL_THEMES, e)})
+        return self._json(200, {"ok": True, "path": str(LOCAL_THEMES / name), "assets": written})
 
     def _file(self, p):
         try:
@@ -267,11 +302,16 @@ def main():
     ap.add_argument("--themes-dir", default=None,
                     help="a directory to 'Send to handheld' into (a mounted banana/themes, e.g. "
                          "/run/media/you/BANANA/banana/themes); without it the Send button is hidden")
+    ap.add_argument("--themes", default=None,
+                    help="your own themes folder, outside the repo (e.g. ~/BananaThemes): the editor lists its "
+                         "themes and saves into it, so your themes never touch the repo or its example list")
     args = ap.parse_args()
 
-    global THEMES_DIR
+    global THEMES_DIR, LOCAL_THEMES
     if args.themes_dir:
         THEMES_DIR = Path(args.themes_dir).expanduser().resolve()
+    if args.themes:
+        LOCAL_THEMES = Path(args.themes).expanduser().resolve()
 
     ensure_engine(build=not args.no_build)
     if ENGINE.exists():

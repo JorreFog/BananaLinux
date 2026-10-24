@@ -55,3 +55,6 @@ banana-ui). Elsewhere, point it at a checkout with Engine > Set BananaLinux fold
 | `tests/smoke.py` | Builds the window offscreen and paints it, so a broken import or stylesheet is caught |
 
 The look matches the web editor (`tools/theme-studio/`), so the two feel like the same tool.
+
+The themes you make live in a folder of their own, outside the checkout (`~/BananaThemes` by default): the Open
+and Save dialogs start there, so your themes never end up in the repo or in the example list.

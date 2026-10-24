@@ -15,6 +15,7 @@
     engine: "",
     detail: "",
     themesDir: "",
+    localThemes: "",
 
     async check() {
       try {
@@ -25,9 +26,11 @@
         this.engine = j.engine || "";
         this.detail = j.detail || "";
         this.themesDir = j.themesDir || "";
+        this.localThemes = j.localThemes || "";
       } catch (e) {
         this.available = false;
         this.themesDir = "";
+        this.localThemes = "";
         this.detail = "no preview server (open the page with tools/theme-studio/serve.py for exact previews)";
       }
       return this.available;
@@ -44,6 +47,20 @@
         throw new Error(msg);
       }
       return r.json();
+    },
+
+    // the themes in the server's --themes folder (your own, outside the repo)
+    async localThemes_() {
+      try { const r = await fetch("api/themes", { cache: "no-store" }); return r.ok ? r.json() : []; } catch (e) { return []; }
+    },
+
+    // save the theme (and its files) into the server's --themes folder
+    async saveLocal(name, theme, assets) {
+      const body = JSON.stringify({ name: name, theme: theme, assets: assets || [] });
+      const r = await fetch("api/themes/save", { method: "POST", headers: { "content-type": "application/json" }, body: body });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error((j && j.error) || ("save failed (HTTP " + r.status + ")"));
+      return j;
     },
 
     // "Send to handheld": write the theme (and its files) into the server's --themes-dir (a mounted banana/themes)

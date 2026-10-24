@@ -1117,6 +1117,8 @@ class Studio(QMainWindow):
         super().__init__()
         self.settings = QSettings('BananaOS', 'ThemeStudio')
         self._light = str(self.settings.value('light_theme', 'false')).lower() in ('true', '1')
+        # your own themes live outside the repo; the Open/Save dialogs start here (File > Themes folder to change)
+        self.themes_dir = self.settings.value('themes_dir', os.path.expanduser('~/BananaThemes'))
         repo = exact.find_repo(self.settings.value('repo', ''))
         self.renderer = E.Renderer(repo)
         self.exact = exact.Exact(self)
@@ -2186,7 +2188,7 @@ class Studio(QMainWindow):
     def open(self):
         if not self.maybe_save():
             return
-        f, _ = QFileDialog.getOpenFileName(self, 'Open a theme', self.settings.value('lastdir', os.path.expanduser('~')), 'Themes (*.json)')
+        f, _ = QFileDialog.getOpenFileName(self, 'Open a theme', self.settings.value('lastdir', self.themes_dir), 'Themes (*.json)')
         if f:
             self.open_path(f)
 
@@ -2219,7 +2221,7 @@ class Studio(QMainWindow):
         return self.write(self.path)
 
     def save_as(self):
-        start = self.path or os.path.join(self.settings.value('lastdir', os.path.expanduser('~')),
+        start = self.path or os.path.join(self.settings.value('lastdir', self.themes_dir),
                                           (self.doc.get('name') or 'my-theme').lower().replace(' ', '-').replace('(', '').replace(')', '') + '.json')
         f, _ = QFileDialog.getSaveFileName(self, 'Save the theme', start, 'Themes (*.json)')
         if not f:
@@ -2284,7 +2286,7 @@ class Studio(QMainWindow):
 
     def export_zip(self):
         stem = os.path.splitext(os.path.basename(self.path))[0] if self.path else (self.doc.get('name') or 'theme').lower().replace(' ', '-')
-        f, _ = QFileDialog.getSaveFileName(self, 'Export', os.path.join(self.settings.value('lastdir', os.path.expanduser('~')), stem + '.zip'), 'Zip (*.zip)')
+        f, _ = QFileDialog.getSaveFileName(self, 'Export', os.path.join(self.settings.value('lastdir', self.themes_dir), stem + '.zip'), 'Zip (*.zip)')
         if not f:
             return
         base = self.theme_dir()

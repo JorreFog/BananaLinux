@@ -49,7 +49,7 @@
 
   // ---- state -----------------------------------------------------------------------------------------
   const state = { theme: clone(STARTER), sel: null, view: "home", screen: "top", addScreen: "top", size: "640x480",
-    shots: null, drag: null, open: {}, templates: null, assets: {} };
+    shots: null, drag: null, open: {}, templates: null, localThemes: [], assets: {} };
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
 
   // ---- tiny DOM helper -------------------------------------------------------------------------------
@@ -687,6 +687,25 @@
     field(pane, "author", () => state.theme.author, (v) => { state.theme.author = v; markDirty(); }, "text");
     field(pane, "debug", () => state.theme.debug, (v) => { if (v === "" || v === undefined) delete state.theme.debug; else state.theme.debug = v; markDirty(); }, "bool");
     field(pane, "font (default)", () => state.theme.font, (v) => { state.theme.font = v; markDirty(); }, "enum", S.BUILTIN_FONTS);
+    pane.appendChild(h("h3", { class: "sec" }, "your themes"));
+    if (!RENDER || !RENDER.available || !RENDER.localThemes) {
+      pane.appendChild(h("div", { class: "note", html: "Your own themes live in a folder of their own, outside the repo. Start the server with <code>--themes</code> to list and save them here:<br><br><code>python3 tools/theme-studio/serve.py --themes ~/BananaThemes</code>" }));
+    } else {
+      pane.appendChild(h("div", { class: "muted", style: "font-size:12px" }, "in " + RENDER.localThemes));
+      const save = h("button", { class: "primary", type: "button" }, "Save here");
+      save.onclick = async () => {
+        try { const r = await RENDER.saveLocal(fileStem(), state.theme, assetList()); setStatus("saved to " + r.path, "ok"); loadLocalThemes(); }
+        catch (e) { setStatus("save failed: " + e.message, "bad"); }
+      };
+      pane.appendChild(h("div", { class: "ctl", style: "margin:4px 0" }, save));
+      const list = state.localThemes || [];
+      if (!list.length) pane.appendChild(h("div", { class: "muted" }, "(nothing there yet — Save here puts one in)"));
+      list.forEach(function (t) {
+        const b = h("button", { type: "button" }, t.name);
+        b.onclick = () => { try { loadTheme(looseParse(t.json)); setStatus("opened " + t.name, "ok"); } catch (e) { setStatus("couldn't load " + t.name + ": " + e.message, "bad"); } };
+        pane.appendChild(h("div", { class: "ctl" }, b));
+      });
+    }
     pane.appendChild(h("h3", { class: "sec" }, "start from a template"));
     if (!state.templates || !state.templates.length) pane.appendChild(h("div", { class: "muted" }, "Run serve.py to load the shipped example themes as templates."));
     (state.templates || []).forEach(function (t) { const b = h("button", { type: "button" }, t.name); b.onclick = () => { loadTheme(looseParse(t.json)); }; pane.appendChild(h("div", { class: "ctl" }, b)); });
@@ -958,6 +977,10 @@
   function loadTemplates() {
     fetch("api/templates", { cache: "no-store" }).then((r) => (r.ok ? r.json() : [])).then((list) => { state.templates = list; renderTheme(); }).catch(() => {});
   }
+  function loadLocalThemes() {
+    if (!RENDER || !RENDER.available) return;
+    RENDER.localThemes_().then((list) => { state.localThemes = list || []; renderTheme(); }).catch(() => {});
+  }
 
   function wire() {
     document.querySelectorAll(".tabs button").forEach((b) => { b.onclick = () => showTab(b.parentElement.dataset.group, b.dataset.tab); });
@@ -981,9 +1004,14 @@
 
   // ---- go --------------------------------------------------------------------------------------------
   wire(); normalize(); renderAll(); renderInspector(); renderPreview();
+  try {						// ?tab=theme / ?tab=json opens on that dock tab
+    const t = new URLSearchParams(location.search).get("tab");
+    if (t === "theme") showTab("properties", "theme");
+    else if (t === "json") showTab("center", "json");
+  } catch (e) { /* ignore */ }
   if (RENDER) {
     RENDER.check().then(function (ok) {
-      if (ok) { setStatus("preview server ready", "ok"); loadTemplates(); renderAssets(); } else setStatus("offline — edit & save; run serve.py for previews", "");
+      if (ok) { setStatus("preview server ready", "ok"); loadTemplates(); loadLocalThemes(); renderAssets(); } else setStatus("offline — edit & save; run serve.py for previews", "");
       renderPreview(); renderPreviewControls();
       try { if (new URLSearchParams(location.search).get("preview")) doPreview(); } catch (e) { /* ignore */ }
     });
