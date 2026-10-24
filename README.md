@@ -294,8 +294,12 @@ make test          # renders the menu from a test library into ui/tests/out
   [Fusion Pixel Font](https://github.com/TakWolf/fusion-pixel-font) (缝合像素字体) by TakWolf. To translate BananaOS
   into your language, ask for the translation document; `tools/lang-from-docx.py` turns a filled-in one into
   `ui/assets/lang/<language>.tsv`.
-- jesussaves-ai: the [BananaLinux Flasher](https://github.com/jesussaves-ai/banana-linux-flasher), the card writer for Windows, Linux and macOS.
+- jesussaves-ai: the [BananaLinux Flasher](https://github.com/jesussaves-ai/banana-linux-flasher), the card writer for Windows, Linux and macOS, and in BananaOS the PS1 game panel, the game panel's idle dimming, the microphone routing and the Reset rows.
 - casualducko: the zero-copy panel patch for LÖVE apps on both panels (eReaderDS).
+- swouapiy: the shutdown animation (the boot animation backwards).
+- The Pokémon companion on RetroArch's game panel is inspired by [PokeDaisy](https://github.com/lidor30/pokedaisy)
+  by Lidor Itzhari (lidor30), the companion app for Android handhelds with two screens. BananaOS's is its own code,
+  written from the games' documented data.
 - The menu is ROCKNIXDS Pixel, from [ROCKNIXDS](https://github.com/JorreFog/ROCKNIXDS), where BananaOS started.
   Banana's mark is the bunch of [BananaUI](https://github.com/JorreFog/helios), redrawn as pixel art.
 - The RG DS's kernel support, device trees and drivers come from [ROCKNIX](https://rocknix.org). DS emulation is
