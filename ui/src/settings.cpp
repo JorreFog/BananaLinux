@@ -456,6 +456,8 @@ namespace banana
 		add(W, "phone", "Bluetooth", "Controllers, headphones and speakers. Off (the default) leaves the radio unpowered, which saves battery; Bluetooth devices, below, pairs them. While Bluetooth headphones are connected the sound plays on them.",
 			menu, "bluetooth", { "Off", "On" }, { "off", "on" });
 		add(W, "phone", "Bluetooth devices", "The devices paired and the ones around: A pairs with one in pairing mode, connects a paired one or disconnects it.", "", "bt_devices", {}, {}, Item::PAGE);
+		add(W, "phone", "Bluetooth audio", "Low latency: aptX, or SBC on headphones without it: the sound as close to the picture as Bluetooth gets, for games. Best quality: LDAC, aptX HD or a richer SBC when the headphones have them, a little later (tens of ms) and a little more battery. Headphones connected now reconnect to take the change.",
+			menu, "bt_audio", { "Low latency", "Best quality" }, { "latency", "quality" });
 		add(W, "phone", "File sharing", "", menu, "share", { "Off", "On" }, { "off", "on" });
 		add(W, "phone", "Sharing login", "Name and password: the card asks for the name and password below (Windows refuses a share with no password). Guest: anyone on the network opens it with none; only on a network you trust.",
 			menu, "share_login", { "Name and password", "Guest" }, { "password", "guest" });
@@ -751,6 +753,7 @@ namespace banana
 			if (!btEnabled) { btDevs.clear(); btScanned = false; }
 			spawn(btTool.c_str(), btEnabled ? "up" : "down");
 		}
+		if (it.key == "bt_audio") spawn(btTool.c_str(), "audio");	// (nothing while Bluetooth is off: read at its next up)
 		if (it.key == "ssh") spawn("/usr/libexec/banana/ssh", v == "on" ? "up" : "down");
 		if (it.key == "share") spawn("/usr/libexec/banana/share", v == "on" ? "up" : "down");
 		if (it.key == "share_login") spawn("/usr/libexec/banana/share", "restart");	// (nothing when it is off)
