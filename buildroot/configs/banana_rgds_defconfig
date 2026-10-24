@@ -65,7 +65,7 @@ BR2_PACKAGE_HOST_GENIMAGE=y
 BR2_PACKAGE_HOST_DOSFSTOOLS=y
 BR2_PACKAGE_HOST_MTOOLS=y
 
-# firmware: Wi-Fi (RTL8821CS) and its regulatory database
+# firmware: Wi-Fi (RTL8821CS) and its regulatory database; its Bluetooth half's two files come by external.mk
 BR2_PACKAGE_LINUX_FIRMWARE=y
 BR2_PACKAGE_LINUX_FIRMWARE_RTL_RTW88=y
 BR2_PACKAGE_WIRELESS_REGDB=y
@@ -102,6 +102,14 @@ BR2_PACKAGE_WPA_SUPPLICANT_WPA3=y
 BR2_PACKAGE_WPA_SUPPLICANT_CLI=y
 BR2_PACKAGE_WPA_SUPPLICANT_AUTOSCAN=y
 BR2_PACKAGE_KSMBD_TOOLS=y
+# Bluetooth (Settings > Network > Bluetooth, usr/libexec/banana/bluetooth): BlueZ's bluetoothd with its input plugins
+# for controllers (classic HID, and HoG for Bluetooth LE pads), bluetoothctl to drive it, and bluez-alsa for
+# headphones and speakers (A2DP, SBC) as an ALSA device, there being no sound server. D-Bus comes with them.
+BR2_PACKAGE_BLUEZ5_UTILS=y
+BR2_PACKAGE_BLUEZ5_UTILS_CLIENT=y
+BR2_PACKAGE_BLUEZ5_UTILS_PLUGINS_HID=y
+BR2_PACKAGE_BLUEZ5_UTILS_PLUGINS_HOG=y
+BR2_PACKAGE_BLUEZ_ALSA=y
 BR2_PACKAGE_DROPBEAR=y
 # BR2_PACKAGE_DROPBEAR_CLIENT is not set
 BR2_PACKAGE_DROPBEAR_DISABLE_REVERSEDNS=y
