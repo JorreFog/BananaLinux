@@ -553,6 +553,11 @@ namespace banana
 		add(S, "gear", "About", "", "", "", {}, {}, Item::INFO);
 		add(S, "gear", "Restart", "Restarts the handheld. Press A twice.", "", "reboot", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "Shut down", "Turns the handheld off. Press A twice. (Or hold the power button.)", "", "poweroff", { "" }, { "" }, Item::ACTION);
+		// Power: Y on the groups (no tile of its own: the grid is the six above), straight from the home screen's START
+		const char* PW = "Power";
+		add(PW, "moon", "Sleep", "The handheld sleeps, as with a press of the power button; a game running is paused. Press the power button to wake it.", "", "sleep", { "" }, { "" }, Item::ACTION);
+		add(PW, "gear", "Restart", "Restarts the handheld. Press A twice.", "", "reboot", { "" }, { "" }, Item::ACTION);
+		add(PW, "gear", "Shut down", "Turns the handheld off. Press A twice. (Or hold the power button.)", "", "poweroff", { "" }, { "" }, Item::ACTION);
 	}
 
 	void Settings::load(Item& it)
@@ -733,7 +738,7 @@ namespace banana
 			for (auto& it : items)
 				if (std::find(groups.begin(), groups.end(), it.section) == groups.end()) groups.push_back(it.section);
 		inGroups = true;
-		gsel = groupOf(sel);
+		gsel = std::min(groupOf(sel), gridCount() - 1);	// (Power has no tile: back on the first)
 		for (auto& it : items) load(it);
 		refreshInfo();
 		armed = -1;
@@ -844,6 +849,16 @@ namespace banana
 		if (it.kind == Item::ACTION)
 		{
 			if (dir <= 0) { armed = -1; return MOVED; }
+			if (it.key == "sleep")
+			{
+				// bananad's sleep (the power button's): asked for with a file and SIGHUP, the settings closed first
+				armed = -1;
+				const char* req = getenv("BANANA_SLEEP_REQUEST");	// (the test's stand-in for /run/banana/sleep-now)
+				std::ofstream(req ? req : "/run/banana/sleep-now") << "menu\n";
+				poke("bananad");
+				mOpen = false;
+				return CLOSED;
+			}
 			if (armed != sel) { armed = sel; return MOVED; }
 			if (it.key == "switch")
 			{
@@ -1021,15 +1036,32 @@ namespace banana
 		}
 		case Key::LEFT: return change(-1);
 		case Key::RIGHT: case Key::A: return change(1);
-		case Key::B: inGroups = true; gsel = g; armed = -1; return MOVED;	// back to the groups
+		case Key::B: inGroups = true; gsel = g < gridCount() ? g : 0; armed = -1; return MOVED;	// back to the groups
 		case Key::START: mOpen = false; return CLOSED;
 		default: return NONE;
 		}
 	}
 
+	int Settings::gridCount() const { return std::max(1, std::min(6, (int)groups.size() - (powerGroup() >= 0 ? 1 : 0))); }
+	int Settings::powerGroup() const
+	{
+		for (int g = 0; g < (int)groups.size(); g++) if (groups[g] == "Power") return g;
+		return -1;
+	}
+	void Settings::openPower()
+	{
+		if (!mOpen) open();
+		int g = powerGroup();
+		if (g < 0) return;
+		inGroups = false;
+		sel = top = groupStart(g);
+		armed = -1;
+		page = LIST;
+	}
+
 	Settings::Result Settings::pressGroups(Key k)
 	{
-		int n = (int)groups.size();
+		int n = gridCount();
 		switch (k)
 		{
 		// a grid of three columns, as the in-game menu's main page
@@ -1044,6 +1076,7 @@ namespace banana
 			armed = -1;
 			if (items[sel].kind == Item::INFO) refreshInfo();
 			return MOVED;
+		case Key::Y: openPower(); return MOVED;	// Sleep, Restart, Shut down
 		case Key::B: case Key::START: mOpen = false; return CLOSED;
 		default: return NONE;
 		}
@@ -1087,8 +1120,8 @@ namespace banana
 		}
 		if (inGroups)
 		{
-			if (downY >= 418 && downY <= 466) return pressGroups(downX < 320 ? Key::B : Key::A);
-			for (int g = 0; g < (int)groups.size(); g++)
+			if (downY >= 418 && downY <= 466) return pressGroups(downX < 220 ? Key::B : downX < 420 ? Key::Y : Key::A);
+			for (int g = 0; g < gridCount(); g++)
 			{
 				float x = 18 + (g % 3) * 204, y = 82 + (g / 3) * 166;
 				if (downX < x || downX > x + 196 || downY < y || downY > y + 158) continue;
@@ -1450,6 +1483,11 @@ namespace banana
 		}
 		float bw = faceWidth("B", "Close");
 		face("B", "Close", 18, bw);
+		if (powerGroup() >= 0)
+		{
+			float yw = faceWidth("Y", "Power");
+			face("Y", "Power", 320 - yw / 2, yw);	// Sleep, Restart, Shut down
+		}
 		float aw = faceWidth("A", "Open");
 		face("A", "Open", 622 - aw, aw);
 		be->endScreen();

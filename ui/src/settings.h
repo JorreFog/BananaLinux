@@ -32,9 +32,12 @@ namespace banana
 		void setVariant(const std::string& variant);	// "dark", "light", or "carts" (dark, in Inter: setFontDir first)
 		void setFontDir(const std::string& dir) { fontDir = dir; }
 		void open();
+		void openPower();	// the Power list (Sleep, Restart, Shut down): Y on the groups
 		void close() { mOpen = false; page = LIST; wizard = false; }
 		void setup() { mOpen = true; openSetup(); }	// the first-time setup, from the host
 		bool isOpen() const { return mOpen; }
+		int gridCount() const;	// the groups with a tile (Power has none)
+		int powerGroup() const;	// -1: none
 		bool animating() const;	// the highlight or the list still easing into place: frames wanted
 
 		// The game panel (settings.cpp, end): while a RetroArch game runs on one panel through a DRM lease, the other

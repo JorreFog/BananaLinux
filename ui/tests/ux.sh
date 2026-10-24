@@ -68,3 +68,15 @@ sed -i 's/^clock = 12h/clock = 24h/' "$UXFX/data/settings.conf"
 ux_run noise "home 0; wait 2400; shot ux-noise"
 ux_lt "$(ux_std "$OUT/$size-ux-noise-bot.png" 200 18 220 124)" 0.03 || { echo "FAIL $size: a second line under Nintendo DS"; fail=1; }
 ux_lt "$(ux_std "$OUT/$size-ux-noise-bot.png" 50 3 566 400)" 0.12 || { echo "FAIL $size: a count beside the home rail"; fail=1; }
+
+# Settings said on the home screen (START), and Power from the groups (Y): Sleep asks bananad with its file (and
+# closes the settings); Shut down needs A twice
+ux_run settings-hint "home 0; wait 2400; shot ux-home-hints"
+ux_lt 0.02 "$(ux_std "$OUT/$size-ux-home-hints-bot.png" 120 30 250 428)" || { echo "FAIL $size: no START hint on the home screen"; fail=1; }
+rm -f "$OUT/sleep-now"
+ux_run power "home 0; press start; press y; shot ux-power; press a" BANANA_SLEEP_REQUEST="$OUT/sleep-now"
+ux_check power "press a: settings closed"
+[ -s "$OUT/sleep-now" ] || { echo "FAIL $size: Sleep didn't ask bananad"; fail=1; }
+ux_run poweroff "home 0; press start; press y; press down; press down; press a; press a"
+[ "$(grep -c 'press a: settings result' "$OUT/$size-poweroff.log")" = 2 ] && grep -q 'press a: settings result 6' "$OUT/$size-poweroff.log" \
+    || { echo "FAIL $size: Shut down: $(grep 'press a' "$OUT/$size-poweroff.log" | tr '\n' ' ')"; fail=1; }

@@ -739,3 +739,6 @@ systems		PortMaster	PortMaster
 settings		Text on accent	强调色上的文字
 settings		The text on the selection's colour. Auto picks dark or light, whichever reads better on the accent.	选中项颜色上的文字。“自动”会选择在强调色上更易读的深色或浅色。
 settings		Auto	自动
+settings		Power	电源
+settings		Sleep	睡眠
+settings		The handheld sleeps, as with a press of the power button; a game running is paused. Press the power button to wake it.	掌机进入睡眠，与按一下电源键相同；正在运行的游戏会暂停。按电源键唤醒。
