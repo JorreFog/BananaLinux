@@ -218,13 +218,13 @@ for size in 640x480 1024x768; do
     run_r "home 0; press start; press r; press r; press r; press r; press a; press up; press up; press a; press b; press start; press b"
     [ -e "$FX/data/accounts.conf" ] && grep -q smb_user "$FX/data/accounts.conf" && { echo "FAIL $size: m6 the name was written without the password"; fail=1; }
     rm -f "$FX/data/accounts.conf"
-    # Box art by name (#28): X on the last DS game, up to Box art (the last row), A types (its name, as it is), START
+    # Box art by name (#28): X on the last DS game, up to Box art (the last row but Delete game), A types (its name, as it is), START
     # looks (a stand-in banana-scrape: two names), down to the second, A fetches it: banana-scrape --match with the
     # game's system, file and that name; B closes the page and the library is read again
     alog2=$OUT/$size-boxart.log; SL=$OUT/$size-fake-scrape.txt; rm -f "$SL"
     BANANA_SCRAPE="$HERE/tests/fake-scrape.sh" FAKE_SCRAPE_LOG="$SL" "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" \
         --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
-        --script "lib 0 4; press x; press up; shot boxart-row; press a; press start; shot boxart-list; press down; press a; shot boxart-done; press b" 2> "$alog2" \
+        --script "lib 0 4; press x; press up; press up; shot boxart-row; press a; press start; shot boxart-list; press down; press a; shot boxart-done; press b" 2> "$alog2" \
         || { echo "FAIL $size: banana-ui (box art) exited $?"; fail=1; }
     [ "$(cat "$SL" 2>/dev/null)" = "nds|$FX/roms/nds/Yellow Planet [!].zip|Yellow Planet - Second Orbit (Europe)" ] || { echo "FAIL $size: --match: $(cat "$SL" 2>/dev/null)"; fail=1; }
     grep -q 'titles nds/Yellow Planet' "$alog2" || { echo "FAIL $size: closing the page didn't read the library again"; fail=1; }
