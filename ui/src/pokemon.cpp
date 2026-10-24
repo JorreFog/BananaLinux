@@ -55,14 +55,14 @@ namespace banana::pkmn
 			return 2;
 		}
 
-		// the English releases (pret's symbol files: gPlayerPartyCount, gPlayerParty, gBattleMons, gBattleTypeFlags,
+		// the English releases (pret's symbol files: gPlayerPartyCount, gPlayerParty, gBattleMons, gBattleTypeFlags, gEnemyParty,
 		// and gMain's byte with inBattle in bit 1: 0x439 in Emerald and FireRed, 0x43D in Ruby)
 		const GameInfo GAMES[] = {
-			{ "AXVE", "Pokémon Ruby", 0x03004350, 0x03004360, 0x02024a80, 0x020239f8, 0x03001770 + 0x43d },
-			{ "AXPE", "Pokémon Sapphire", 0x03004350, 0x03004360, 0x02024a80, 0x020239f8, 0x03001770 + 0x43d },
-			{ "BPEE", "Pokémon Emerald", 0x020244e9, 0x020244ec, 0x02024084, 0x02022fec, 0x030022c0 + 0x439 },
-			{ "BPRE", "Pokémon FireRed", 0x02024029, 0x02024284, 0x02023be4, 0x02022b4c, 0x030030f0 + 0x439 },
-			{ "BPGE", "Pokémon LeafGreen", 0x02024029, 0x02024284, 0x02023be4, 0x02022b4c, 0x030030f0 + 0x439 },
+			{ "AXVE", "Pokémon Ruby", 0x03004350, 0x03004360, 0x02024a80, 0x020239f8, 0x03001770 + 0x43d, 0x030045c0 },
+			{ "AXPE", "Pokémon Sapphire", 0x03004350, 0x03004360, 0x02024a80, 0x020239f8, 0x03001770 + 0x43d, 0x030045c0 },
+			{ "BPEE", "Pokémon Emerald", 0x020244e9, 0x020244ec, 0x02024084, 0x02022fec, 0x030022c0 + 0x439, 0x02024744 },
+			{ "BPRE", "Pokémon FireRed", 0x02024029, 0x02024284, 0x02023be4, 0x02022b4c, 0x030030f0 + 0x439, 0x0202402c },
+			{ "BPGE", "Pokémon LeafGreen", 0x02024029, 0x02024284, 0x02023be4, 0x02022b4c, 0x030030f0 + 0x439, 0x0202402c },
 		};
 		const int PARTY = 100, BATTLER = 0x58;
 
@@ -190,6 +190,8 @@ namespace banana::pkmn
 		m.species = le16(part[0]);
 		if (m.species == 0) return false;
 		m.item = le16(part[0] + 2);
+		m.pid = pid;
+		m.exp = le32(part[0] + 4);
 		m.ppBonuses = part[0][8];
 		for (int i = 0; i < 4; i++) { m.moves[i] = le16(part[1] + i * 2); m.pp[i] = part[1][8 + i]; }
 		m.egg = (p[0x13] & 4) || (le32(part[3] + 4) >> 30 & 1);
@@ -216,6 +218,8 @@ namespace banana::pkmn
 		m.ppBonuses = p[0x3b];
 		m.status = le32(p + 0x4c);
 		m.egg = p[0x17] & 0x40;
+		m.exp = le32(p + 0x44);
+		m.pid = le32(p + 0x48);
 		return true;
 	}
 
@@ -258,7 +262,14 @@ namespace banana::pkmn
 		// base stats: 28 bytes a species, its types at 6 and 7; found by Bulbasaur's and Ivysaur's (HP, Attack, Defense,
 		// Speed, Sp. Attack, Sp. Defense, types Grass and Poison)
 		at = findRecords(rom, n, { { 45, 49, 49, 45, 65, 65, GRASS, POISON }, { 60, 62, 63, 60, 80, 80, GRASS, POISON } }, 28, 0, 1, 412);
-		if (at >= 0) for (int i = 0; i < 412; i++) t.speciesTypes.push_back({ rom[at + i * 28 + 6], rom[at + i * 28 + 7] });
+		if (at >= 0)
+			for (int i = 0; i < 412; i++)
+			{
+				const uint8_t* e = rom + at + i * 28;
+				t.speciesTypes.push_back({ e[6], e[7] });
+				t.genderRatio.push_back(e[0x10]);
+				t.growth.push_back(e[0x13]);
+			}
 		// moves: 12 bytes each (effect, power, type, accuracy, PP, ...); found by Pound's, Karate Chop's and Double Slap's
 		// power, type, accuracy and PP
 		at = findRecords(rom, n, { { 40, NORMAL, 100, 35 }, { 50, FIGHTING, 100, 25 }, { 15, NORMAL, 85, 10 } }, 12, 1, 1, 355);
@@ -268,7 +279,124 @@ namespace banana::pkmn
 				const uint8_t* e = rom + at + i * 12;
 				t.moveInfo.push_back({ e[1], e[2], e[3], e[4] });
 			}
+		// the experience tables: six growth rates of 101 levels (u32), Medium Fast's first: 0, 1, 8, 27, 64, 125, ...
+		static const uint8_t cubes[32] = { 0, 0, 0, 0, 1, 0, 0, 0, 8, 0, 0, 0, 27, 0, 0, 0, 64, 0, 0, 0, 125, 0, 0, 0, 216, 0, 0, 0, 87, 1, 0, 0 };
+		for (const uint8_t* p = rom; n >= 6 * 404 && (p = (const uint8_t*)memmem(p, n - (p - rom), cubes, sizeof cubes)); p++)
+		{
+			size_t a = p - rom;
+			if (a % 4 || a + 6 * 404 > n) continue;
+			std::vector<std::array<uint32_t, 101>> x(6);
+			bool ok = true;
+			for (int g = 0; g < 6 && ok; g++)
+				for (int l = 0; l <= 100 && ok; l++)
+				{
+					x[g][l] = le32(p + (g * 101 + l) * 4);
+					ok = l == 0 ? x[g][l] == 0 : x[g][l] > x[g][l - 1] && x[g][l] <= 2000000;	// (rising, none past 1,640,000)
+				}
+			if (ok) { t.expTable = x; break; }
+		}
+		// the menu icons: a table of ROM pointers by species, its first two the same (none and Bulbasaur share one) and
+		// the 25 placeholders after Celebi (252-276) one question mark; each 1 KB of tiles (two 32x32 frames)
+		auto ptr = [&](size_t a, size_t len) -> long
+		{
+			if (a + 4 > n) return -1;
+			uint32_t v = le32(rom + a);
+			if (v < 0x08000000u || v - 0x08000000u + len > n) return -1;
+			return (long)(v - 0x08000000u);
+		};
+		const int ICONS = 413;	// (the egg's at 412)
+		for (size_t a = 0; a + ICONS * 4 <= n; a += 4)
+		{
+			if (le32(rom + a) != le32(rom + a + 4) || ptr(a, 1024) < 0) continue;
+			uint32_t qm = le32(rom + a + 252 * 4);
+			bool ok = qm != le32(rom + a) && le32(rom + a + 8) != le32(rom + a);
+			for (int i = 253; i <= 276 && ok; i++) ok = le32(rom + a + i * 4) == qm;
+			for (int i = 0; i < ICONS && ok; i++) ok = ptr(a + i * 4, 1024) >= 0;
+			if (!ok) continue;
+			for (int i = 0; i < ICONS; i++)
+			{
+				// frame 1's 16 tiles of 8x8 (32 bytes each, two pixels a byte, the left one in the low half), four a row
+				const uint8_t* g = rom + ptr(a + i * 4, 1024);
+				std::vector<uint8_t> px(32 * 32);
+				for (int tile = 0; tile < 16; tile++)
+					for (int y = 0; y < 8; y++)
+						for (int x = 0; x < 8; x++)
+						{
+							uint8_t b = g[tile * 32 + y * 4 + x / 2];
+							px[((tile / 4) * 8 + y) * 32 + (tile % 4) * 8 + x] = x & 1 ? b >> 4 : b & 15;
+						}
+				t.icons.push_back(px);
+			}
+			// their palette numbers: a byte each, often just after; 0-2, Bulbasaur's 1, the placeholders' all one
+			auto pals = [&](size_t b)
+			{
+				if (b + ICONS > n || rom[b + 1] != 1) return false;
+				int c[3] = {};
+				for (int i = 0; i < ICONS; i++) { if (rom[b + i] > 2) return false; c[rom[b + i]]++; }
+				for (int i = 253; i <= 276; i++) if (rom[b + i] != rom[b + 252]) return false;
+				return c[0] > 40 && c[1] > 40 && c[2] > 40;
+			};
+			long pb = -1;
+			for (size_t b = a + ICONS * 4; b < a + ICONS * 4 + 256 && pb < 0; b++) if (pals(b)) pb = (long)b;
+			for (size_t b = 0; b + ICONS <= n && pb < 0; b++) if (pals(b)) pb = (long)b;
+			if (pb >= 0) t.iconPal.assign(rom + pb, rom + pb + ICONS);
+			break;
+		}
+		// the three icon palettes: sprite palettes { pointer, tag 56000 + i, 0 }, six of them (the last three unused)
+		static const uint8_t tag0[4] = { 0xc0, 0xda, 0, 0 };
+		for (const uint8_t* p = rom; n > 48 && (p = (const uint8_t*)memmem(p, n - (p - rom), tag0, 4)); p++)
+		{
+			size_t a = p - rom;
+			if (a < 4 || (a - 4) % 4 || a + 44 > n) continue;
+			bool ok = true;
+			for (int i = 0; i < 3 && ok; i++)
+				ok = le16(rom + a + i * 8) == 0xdac0 + i && le16(rom + a + i * 8 + 2) == 0 && ptr(a - 4 + i * 8, 32) >= 0;
+			if (!ok) continue;
+			for (int i = 0; i < 3; i++)
+			{
+				const uint8_t* c = rom + ptr(a - 4 + i * 8, 32);
+				std::array<uint32_t, 16> pal;
+				for (int k = 0; k < 16; k++)
+				{
+					uint16_t v = le16(c + k * 2);
+					auto f = [](int x) { return (uint32_t)((x << 3) | (x >> 2)); };
+					pal[k] = (k ? 0xff000000u : 0) | f(v & 31) | f((v >> 5) & 31) << 8 | f((v >> 10) & 31) << 16;	// (RGBA in memory)
+				}
+				t.palettes.push_back(pal);
+			}
+			break;
+		}
 		return t;
+	}
+
+	int RomTables::gender(uint16_t species, uint32_t pid) const
+	{
+		if (species >= genderRatio.size()) return 2;
+		uint8_t r = genderRatio[species];
+		if (r == 255) return 2;
+		if (r == 254) return 1;
+		if (r == 0) return 0;
+		return (pid & 0xff) < r ? 1 : 0;
+	}
+
+	long long RomTables::expFor(uint16_t species, int level) const
+	{
+		if (species >= growth.size() || growth[species] >= expTable.size() || level < 0 || level > 100) return -1;
+		return expTable[growth[species]][level];
+	}
+
+	bool RomTables::iconRGBA(uint16_t species, bool egg, std::vector<uint8_t>& rgba) const
+	{
+		if (egg) species = 412;
+		if (species >= icons.size() || species >= iconPal.size() || iconPal[species] >= palettes.size()) return false;
+		const auto& pal = palettes[iconPal[species]];
+		rgba.resize(32 * 32 * 4);
+		for (int i = 0; i < 32 * 32; i++)
+		{
+			uint32_t c = pal[icons[species][i]];
+			rgba[i * 4] = (uint8_t)c; rgba[i * 4 + 1] = (uint8_t)(c >> 8); rgba[i * 4 + 2] = (uint8_t)(c >> 16); rgba[i * 4 + 3] = (uint8_t)(c >> 24);
+		}
+		return true;
 	}
 
 	bool parseReply(const std::string& line, uint32_t& addr, std::vector<uint8_t>& bytes)
@@ -347,8 +475,9 @@ namespace banana::pkmn
 			setpriority(PRIO_PROCESS, (id_t)syscall(SYS_gettid), 10);	// (this thread only: beside the game starting)
 			std::vector<uint8_t> all = readRom(rom, 32u << 20);
 			auto t = std::make_shared<RomTables>(findTables(all.data(), all.size()));
-			fprintf(stderr, "pokemon: %zu species, %zu moves, %zu species types, %zu move records from the ROM (%zu bytes)\n",
-				t->species.size(), t->moves.size(), t->speciesTypes.size(), t->moveInfo.size(), all.size());
+			fprintf(stderr, "pokemon: %zu species, %zu moves, %zu species types, %zu move records, %zu icons (%zu palette numbers, %zu palettes), "
+				"%zu growth rates from the ROM (%zu bytes)\n", t->species.size(), t->moves.size(), t->speciesTypes.size(), t->moveInfo.size(),
+				t->icons.size(), t->iconPal.size(), t->palettes.size(), t->expTable.size(), all.size());
 			std::lock_guard<std::mutex> l(s->mu);
 			s->tables = t;
 			s->ready = true;
@@ -388,7 +517,7 @@ namespace banana::pkmn
 		if (!info) return "";
 		if (!tablesSeen && sh) { std::lock_guard<std::mutex> l(sh->mu); if (sh->ready) { tablesSeen = true; changed = true; } }
 		if (now < nextAt || (waiting > 0 && now - sentAt < 10000)) return "";
-		count.clear(); party.clear(); flags.clear(); mainB.clear(); battle.clear();
+		count.clear(); party.clear(); flags.clear(); mainB.clear(); battle.clear(); enemy.clear();
 		next = Snapshot();
 		wantBattle = snap.inBattle;
 		char b[256];
@@ -397,8 +526,9 @@ namespace banana::pkmn
 		waiting = 3;
 		if (wantBattle)
 		{
-			n += snprintf(b + n, sizeof b - n, "READ_CORE_MEMORY %x 4\nREAD_CORE_MEMORY %x %d\n", info->battleFlags, info->battleMons, 4 * BATTLER);
-			waiting += 2;
+			n += snprintf(b + n, sizeof b - n, "READ_CORE_MEMORY %x 4\nREAD_CORE_MEMORY %x %d\nREAD_CORE_MEMORY %x %d\n",
+				info->battleFlags, info->battleMons, 4 * BATTLER, info->enemyParty, 6 * PARTY);
+			waiting += 3;
 		}
 		sentAt = now;
 		nextAt = now + 250;
@@ -426,6 +556,7 @@ namespace banana::pkmn
 			else if (a == info->party) party = v;
 			else if (a == info->battleFlags) flags = v;
 			else if (a == info->battleMons) battle = v;
+			else if (a == info->enemyParty) enemy = v;
 			else continue;
 			if (waiting > 0 && --waiting == 0) finish();
 		}
@@ -464,8 +595,13 @@ namespace banana::pkmn
 					Mon m;
 					if (decodeBattler(battle.data() + b * BATTLER, m)) s.foes.push_back(m);
 				}
+				for (int i = 0; i < 6 && (size_t)(i + 1) * PARTY <= enemy.size(); i++)
+				{
+					Mon m;
+					if (decodeParty(enemy.data() + i * PARTY, m)) s.foeParty.push_back(m);
+				}
 			}
-			else if (s.inBattle) { s.lead = snap.lead; s.foes = snap.foes; s.doubles = snap.doubles; }	// (read in the next set)
+			else if (s.inBattle) { s.lead = snap.lead; s.foes = snap.foes; s.doubles = snap.doubles; s.foeParty = snap.foeParty; }	// (read in the next set)
 			s.error.clear();
 			errorSince = -1;
 		}
@@ -481,7 +617,7 @@ namespace banana::pkmn
 			std::string k = std::to_string(x.seen) + x.error + std::to_string(x.inBattle) + std::to_string(x.doubles);
 			auto one = [&](const Mon& m)
 			{
-				k += m.nick + "|" + std::to_string(m.species) + "," + std::to_string(m.level) + "," + std::to_string(m.hp) + "," +
+				k += m.nick + "|" + std::to_string(m.pid) + "," + std::to_string(m.exp) + "," + std::to_string(m.item) + "," + std::to_string(m.species) + "," + std::to_string(m.level) + "," + std::to_string(m.hp) + "," +
 					std::to_string(m.maxHp) + "," + std::to_string(m.status) + "," + std::to_string(m.types[0]) + "," + std::to_string(m.types[1]);
 				for (int i = 0; i < 4; i++) k += "," + std::to_string(m.moves[i]) + ":" + std::to_string(m.pp[i]);
 				k += ";";
@@ -489,6 +625,8 @@ namespace banana::pkmn
 			for (auto& m : x.party) one(m);
 			one(x.lead);
 			for (auto& m : x.foes) one(m);
+			k += "/";
+			for (auto& m : x.foeParty) k += std::to_string(m.species) + "," + std::to_string(m.hp) + ";";
 			return k;
 		};
 		if (key(s) != key(snap)) changed = true;

@@ -39,7 +39,7 @@ namespace banana::pkmn
 	{
 		const char* code;		// the header's four letters
 		const char* name;
-		uint32_t partyCount, party, battleMons, battleFlags, mainFlags;	// RAM addresses
+		uint32_t partyCount, party, battleMons, battleFlags, mainFlags, enemyParty;	// RAM addresses
 	};
 	const GameInfo* detectGame(const uint8_t* header, size_t n);	// the ROM's first bytes (0xB0 at least)
 
@@ -56,6 +56,7 @@ namespace banana::pkmn
 		uint8_t pp[4] = {};
 		uint8_t types[2] = { 255, 255 };	// in a battle (the battle's own copy); else from the ROM's table
 		bool egg = false;
+		uint32_t pid = 0, exp = 0;			// personality (gender, with the species' ratio), experience points
 	};
 	// a party slot (100 bytes): false when empty, or when the checksum is wrong (a slot being written, a wrong address)
 	bool decodeParty(const uint8_t* p, Mon& m);
@@ -71,8 +72,21 @@ namespace banana::pkmn
 		std::vector<std::string> moves;
 		std::vector<std::array<uint8_t, 2>> speciesTypes;
 		std::vector<MoveInfo> moveInfo;
+		std::vector<uint8_t> genderRatio, growth;		// by species, from the base stats (0x10, 0x13)
+		std::vector<std::array<uint32_t, 101>> expTable;	// the six growth rates' experience at each level
+		// the party menu icons: 32x32, 4 bits a pixel (the first of their two frames, as palette indices, 0 clear), by
+		// species (412 the egg); their palette (0-2) and the three palettes (RGBA, colour 0 clear)
+		std::vector<std::vector<uint8_t>> icons;
+		std::vector<uint8_t> iconPal;
+		std::vector<std::array<uint32_t, 16>> palettes;
 		std::string speciesName(uint16_t i) const;
 		std::string moveName(uint16_t i) const;
+		// 0 male, 1 female, 2 neither (or not known)
+		int gender(uint16_t species, uint32_t pid) const;
+		// the experience a level needs (-1: not known)
+		long long expFor(uint16_t species, int level) const;
+		// a species' icon as 32x32 RGBA (false: none in the ROM's tables); egg: the egg's
+		bool iconRGBA(uint16_t species, bool egg, std::vector<uint8_t>& rgba) const;
 	};
 	RomTables findTables(const uint8_t* rom, size_t n);
 
@@ -88,6 +102,7 @@ namespace banana::pkmn
 		bool inBattle = false, doubles = false;
 		Mon lead;					// the player's battler (battler 0)
 		std::vector<Mon> foes;		// battler 1 (and 3 in a double battle), still standing
+		std::vector<Mon> foeParty;	// the other side's party (its count and who has fainted)
 	};
 
 	class Companion
@@ -119,7 +134,7 @@ namespace banana::pkmn
 		bool wantBattle = false;	// the battle read in this set
 		std::string part;
 		Snapshot snap, next;
-		std::vector<uint8_t> count, party, flags, mainB, battle;
+		std::vector<uint8_t> count, party, flags, mainB, battle, enemy;
 		bool changed = false;
 		void finish();
 	};
