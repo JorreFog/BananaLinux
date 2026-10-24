@@ -13,6 +13,7 @@ done
 /usr/libexec/banana/share down 2>/dev/null     # a computer's open files on the card
 /usr/libexec/banana/ssh down 2>/dev/null
 /usr/libexec/banana/wifi down 2>/dev/null
+/usr/libexec/banana/bluetooth down 2>/dev/null   # (its pairings saved on the card)
 hwclock -w 2>/dev/null
 /usr/libexec/banana/boot-log off   # the boot's log, complete, whenever the handheld is turned off; the battery noted
 sync

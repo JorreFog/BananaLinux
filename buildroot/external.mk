@@ -39,3 +39,12 @@ define BANANA_LINUX_RGDS_DRIVERS
 	done
 endef
 LINUX_POST_PATCH_HOOKS += BANANA_LINUX_RGDS_DRIVERS
+
+# The RTL8821CS's Bluetooth firmware (btrtl, through hci_uart's H5): rtl_bt/rtl8821cs_fw.bin and the config it needs
+# for the UART (1.5 Mbaud, flow control), which linux-firmware ships as a link to rtl8761b_config.bin (WHENCE: Link
+# rtl_bt/rtl8821cs_config.bin -> rtl8761b_config.bin; Buildroot makes the link once its target is installed).
+# Buildroot's Realtek BT options would bring every 87xx/88xx file instead of these two.
+ifeq ($(BR2_PACKAGE_BLUEZ5_UTILS)$(BR2_PACKAGE_LINUX_FIRMWARE),yy)
+LINUX_FIRMWARE_FILES += rtl_bt/rtl8821cs_fw.bin rtl_bt/rtl8761b_config.bin
+LINUX_FIRMWARE_ALL_LICENSE_FILES += LICENCE.rtlwifi_firmware.txt
+endif

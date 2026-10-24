@@ -20,6 +20,9 @@
  *     rk817, whose capture gain bananad sets for the DS's microphone (audio_setup). The route is ALSA's default
  *     device, written to /run/banana/asound.conf (/etc/asound.conf points
  *     there), so everything opened after a change follows it; the volume keys change the card that plays.
+ *     Bluetooth headphones or speakers, while connected, come before both: the bluetooth script writes the one
+ *     playing to /run/banana/bt/audio (from bluez-alsa's events), bananad watches that folder and plays through
+ *     bluez-alsa's ALSA plugin, and back to the speakers or the jack when the file goes.
  *
  * Settings: /etc/banana/bananad.conf, then /data/banana/bananad.conf (key = value lines, see bananad.conf); SIGHUP
  * reads them again (the menu's settings screen sends it).
@@ -572,6 +575,27 @@ static double save_volume_at, save_backlight_at;	/* debounced: written a moment 
 
 /* ---- sound: which card plays ----------------------------------------------------------------------------------- */
 static int card_codec = -1, card_speaker = -1, card_play = 0;	/* rk817; aw88166 (RG DS Plus only); the one playing */
+#define BT_AUDIO_DIR "/run/banana/bt"
+static char bt_mac[18], bt_pcm[160];	/* Bluetooth headphones playing now ("" none): their address, bluez-alsa's PCM */
+
+/* the bluetooth script's /run/banana/bt/audio: "<MAC> <PCM path>" while A2DP headphones are connected */
+static int bt_audio_read(void)
+{
+	char mac[32] = "", pcm[160] = "";
+	FILE *f = fopen(BT_AUDIO_DIR "/audio", "r");
+	if (f) {
+		if (fscanf(f, "%31s %159s", mac, pcm) != 2) mac[0] = pcm[0] = 0;
+		fclose(f);
+	}
+	/* AA:BB:CC:DD:EE:FF, and a path with nothing ALSA's configuration would read as its own */
+	int ok = strlen(mac) == 17 && strncmp(pcm, "/org/bluealsa/", 14) == 0;
+	for (int i = 0; ok && i < 17; i++) ok = i % 3 == 2 ? mac[i] == ':' : isxdigit((unsigned char)mac[i]);
+	for (char *c = pcm; ok && *c; c++) ok = isalnum((unsigned char)*c) || *c == '/' || *c == '_';
+	if (!ok) mac[0] = pcm[0] = 0;
+	snprintf(bt_mac, sizeof bt_mac, "%s", mac);
+	snprintf(bt_pcm, sizeof bt_pcm, "%s", pcm);
+	return bt_mac[0] != 0;
+}
 
 /* the cards by what they are, from /proc/asound/cards (" 0 [rk817hp ]: simple-card - rk817_hp") */
 static void audio_find_cards(void)
@@ -620,8 +644,13 @@ static void audio_route(void)
 	 * capture never started whatever bananad set the gains to (a standalone arecord, with no playback running, was
 	 * fine). Pinning the capture's slave to 48 kHz makes the emulator's 44.1 kHz capture run at the playback's
 	 * rate, ALSA's plug resampling it, and the two streams agree. */
-	char play[160], cap[160];
-	if (card_play >= 0)
+	int bt = bt_audio_read();
+	char play[192], cap[160];
+	/* Bluetooth headphones first: bluez-alsa's PCM plugin (A2DP), plug converting the rest; the microphone stays the
+	 * rk817's */
+	if (bt)
+		snprintf(play, sizeof play, "{ type plug slave.pcm { type bluealsa device \"%s\" profile \"a2dp\" } }", bt_mac);
+	else if (card_play >= 0)
 		snprintf(play, sizeof play, "{ type plug slave { pcm \"hw:%d\" format S16_LE channels 2 rate 48000 } }", card_play);
 	else
 		snprintf(play, sizeof play, "\"null\"");
@@ -629,11 +658,12 @@ static void audio_route(void)
 		snprintf(cap, sizeof cap, "{ type plug slave { pcm \"hw:%d\" format S16_LE channels 2 rate 48000 } }", card_codec);
 	else
 		snprintf(cap, sizeof cap, "\"null\"");
+	const char *where = bt ? "Bluetooth headphones" : card_play == card_speaker ? "speakers" : headphones ? "headphones" : "the codec";
 	char conf[768];
 	int n = snprintf(conf, sizeof conf,
 		"# bananad: where sound plays now (%s)\n"
 		"pcm.!default { type asym playback.pcm %s capture.pcm %s }\n",
-		card_play == card_speaker ? "speakers" : headphones ? "headphones" : "the codec", play, cap);
+		where, play, cap);
 	/* no card yet (the codec probed late, QEMU): "null" keeps the alias valid instead of a "plughw:-1" that would
 	 * fail every later open; the ctl defaults to one, so its line goes only with a real card */
 	if (card_play >= 0 && n > 0 && (size_t)n < sizeof conf)
@@ -651,7 +681,8 @@ static void audio_route(void)
 	/* the control the volume keys change, for the settings screen's Volume (amixer -c <card> sset <control>) */
 	f = fopen("/run/banana/mixer.new", "w");
 	if (f) {
-		fprintf(f, "%d %s\n", card_play, strcmp(cfg.mixer, "auto") ? cfg.mixer : card_play == card_speaker ? "PCM" : "Master");
+		if (bt) fprintf(f, "bluealsa %s\n", bt_pcm);	/* (the volume script: the headphones' own volume) */
+		else fprintf(f, "%d %s\n", card_play, strcmp(cfg.mixer, "auto") ? cfg.mixer : card_play == card_speaker ? "PCM" : "Master");
 		fclose(f);
 		rename("/run/banana/mixer.new", "/run/banana/mixer");
 	}
@@ -663,8 +694,9 @@ static void audio_route(void)
 		if (write(rc, "AUDIO_REINIT\n", 13) < 0) {}
 		close(rc);
 	}
-	say("sound: playback on card %d (%s), recording on card %d (both 48 kHz, the shared DAI's one rate)", card_play,
-	    card_play == card_speaker ? "speakers" : headphones ? "headphones" : "codec", card_codec);
+	if (bt) say("sound: playback on Bluetooth %s, recording on card %d (48 kHz)", bt_mac, card_codec);
+	else say("sound: playback on card %d (%s), recording on card %d (both 48 kHz, the shared DAI's one rate)", card_play,
+	    where, card_codec);
 }
 
 static void audio_setup(void)
@@ -1021,11 +1053,12 @@ static void spawn_bg(char *const argv[])
 	if (p > 0) while (waitpid(p, NULL, 0) < 0 && errno == EINTR) {}
 }
 
-/* a USB device's driver, as udev would load it: the module its MODALIAS names (an Xbox pad's xpad, a USB serial
- * adapter's); the handheld's own hardware is built into the kernel */
+/* a USB or HID device's driver, as udev would load it: the module its MODALIAS names (an Xbox pad's xpad, a USB
+ * serial adapter's; a Bluetooth controller's HID driver, hid-nintendo for a Switch Pro controller); the handheld's own
+ * hardware is built into the kernel */
 static void load_driver(const char *alias)
 {
-	if (strncmp(alias, "usb:", 4)) return;
+	if (strncmp(alias, "usb:", 4) && strncmp(alias, "hid:", 4)) return;
 	char a[256];
 	snprintf(a, sizeof a, "%s", alias);
 	char *argv[] = { "/sbin/modprobe", "-q", a, NULL };
@@ -1206,9 +1239,15 @@ int main(int argc, char **argv)
 	sigaction(SIGHUP, &sa, NULL);
 	mkdir("/run/banana", 0755);
 	find_bottom_bl();	/* which backlight is the bottom one: banana-ui's idle dim owns it */
+	mkdir(BT_AUDIO_DIR, 0755);
 
 	int ino = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
-	if (ino >= 0) inotify_add_watch(ino, "/dev/input", IN_CREATE | IN_DELETE);
+	int wd_input = -1, wd_bt = -1;
+	if (ino >= 0) {
+		wd_input = inotify_add_watch(ino, "/dev/input", IN_CREATE | IN_DELETE);
+		/* Bluetooth headphones coming and going (its own folder: nothing else written in /run/banana wakes us) */
+		wd_bt = inotify_add_watch(ino, BT_AUDIO_DIR, IN_CLOSE_WRITE | IN_MOVED_TO | IN_DELETE);
+	}
 	open_inputs();
 	headphones = headphones_in();
 	/* the saved volumes first, then the route: the restore also brings back the speakers' switch as it was last
@@ -1274,10 +1313,20 @@ int main(int argc, char **argv)
 		if (uev_at >= 0 && (pf[uev_at].revents & POLLIN) && uevent_read(uev)) leds_update();
 		save_settings(now);
 		if (ino_at >= 0 && (pf[ino_at].revents & POLLIN)) {
-			char buf[4096];
-			while (read(ino, buf, sizeof buf) > 0) {}
-			usleep(200000);	/* udev/mdev sets the node's permissions */
-			open_inputs();
+			char buf[4096] __attribute__((aligned(__alignof__(struct inotify_event))));
+			ssize_t len;
+			int inputs = 0, bt = 0;
+			while ((len = read(ino, buf, sizeof buf)) > 0)
+				for (char *p = buf; p < buf + len; p += sizeof(struct inotify_event) + ((struct inotify_event *)p)->len) {
+					struct inotify_event *ev = (struct inotify_event *)p;
+					if (ev->wd == wd_input) inputs = 1;
+					else if (ev->wd == wd_bt && ev->len && !strcmp(ev->name, "audio")) bt = 1;
+				}
+			if (bt) audio_route();
+			if (inputs) {
+				usleep(200000);	/* udev/mdev sets the node's permissions */
+				open_inputs();
+			}
 		}
 
 		if (power_down && now - power_since >= cfg.power_long_ms / 1000.0) { power_down = 0; shutdown_now("power held"); }

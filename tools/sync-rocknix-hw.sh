@@ -51,9 +51,10 @@ git -C "$R" sparse-checkout add /projects/ROCKNIX/devices/RK3326/patches/linux/0
     /projects/ROCKNIX/packages/emulators/standalone/drastic-sa/config/RK3566/drastic.cfg.rgds
 cp "$R/projects/ROCKNIX/devices/RK3326/patches/linux/003-input-add-input-polldev-driver.patch" \
     "$B/linux-patches/6-rk3326-003-input-add-input-polldev-driver.patch"
-# patches for Mali's kbase driver, which Banana doesn't use (it runs Panfrost), and for Bluetooth, which Banana's
-# kernel leaves out (one of them needs fuzz to apply, which Buildroot's patch -F0 refuses)
-rm -f "$B"/linux-patches/*mali* "$B"/linux-patches/*i915* "$B"/linux-patches/*Bluetooth*
+# patches for Mali's kbase driver, which Banana doesn't use (it runs Panfrost). ROCKNIX's Bluetooth patch (key sizes
+# checked only with Secure Simple Pairing: older controllers pair) stays: Banana has Bluetooth now, and the
+# patches go in with fuzz allowed (external.mk)
+rm -f "$B"/linux-patches/*mali* "$B"/linux-patches/*i915*
 # patches for hardware the two handhelds haven't (the kernel's "all" builds every Rockchip device tree, so a patch
 # for another handheld's tree that assumes ROCKNIX's other patches breaks the build): device-tree patches that
 # touch nothing the RG DS's tree includes (rk3568.dtsi, rk356x-base.dtsi), Qualcomm's display, the iMON remote,

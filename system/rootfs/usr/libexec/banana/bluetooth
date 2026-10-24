@@ -1,0 +1,194 @@
+#!/bin/sh
+# Bluetooth: the RTL8821CS's Bluetooth half on uart1 (hci_uart's H5 with Realtek's setup, firmware
+# rtl_bt/rtl8821cs_fw.bin and its config), BlueZ's bluetoothd for controllers, bluez-alsa for headphones and
+# speakers. Off at first (Settings > Network > Bluetooth, settings.conf bluetooth = on|off): while it is off the
+# modules aren't loaded, so the chip's Bluetooth is unpowered (hci_uart's close drops its BT_REG_ON), and no daemon runs.
+#   bluetooth up | down              the modules, D-Bus's system bus, bluetoothd and bluealsa; down saves the pairings
+#   bluetooth down sleep             (the sleep hook) the same, but the sound stays routed to the headphones: a game
+#                                    woken goes quiet until they are back, instead of loud on the speakers
+#   bluetooth scan                   a search of 10 s, then the devices (as "devices" lists them)
+#   bluetooth devices                the devices known: MAC <tab> paired 0|1 <tab> connected 0|1 <tab> kind <tab> name,
+#                                    kind audio, gamepad, keyboard, mouse or other (BlueZ's icon), nameless ones left out
+#   bluetooth pair | connect | disconnect | forget <MAC>     "OK" or "ERROR <why>" on the last line
+#   bluetooth status                 on or off
+# The pairings: BlueZ keeps them in /var/lib/bluetooth = /run/banana/bluetooth; the card's exFAT can't hold its
+# AA:BB:CC:... names, so they are one tar there, banana/bluetooth.tar, unpacked at up and written after each change.
+# Sound: bluealsa-cli monitor's events run "bluetooth route", which writes the headphones playing now (an A2DP sink
+# PCM) to /run/banana/bt/audio ("<MAC> <PCM path>"), or takes it away; bananad watches that file and points ALSA's
+# default device at them (/run/banana/asound.conf), and back at the speakers or the jack when it goes.
+RUN=/run/banana
+STORE=/data/banana/bluetooth.tar
+LAST=/data/banana/bluetooth-audio	# the headphones played last: called back after a wake or a boot
+# (a ceiling on each call: bluetoothctl waits for bluetoothd for ever when it isn't there)
+CTL="timeout 45 bluetoothctl"
+SELF=/usr/libexec/banana/bluetooth
+# one at a time (Settings starts up, down and pair in the background); the daemons get the lock's fd closed (9>&-).
+# A down waits 3 s at most: a sleep mustn't wait out a pairing (up to a minute), which fails when the daemons go.
+case $1 in
+up|pair|connect|disconnect|forget) exec 9>$RUN/bluetooth.lock; flock 9 ;;
+down) exec 9>$RUN/bluetooth.lock; flock -w 3 9 || : ;;
+esac
+
+stop() { [ -f "$1" ] && kill $(cat "$1") 2>/dev/null; rm -f "$1"; }
+running() { [ -f $RUN/bluetoothd.pid ] && kill -0 $(cat $RUN/bluetoothd.pid) 2>/dev/null; }
+# bluetoothctl's output without its colours
+ESC=$(printf '\033')
+ctl() { $CTL "$@" 2>/dev/null | tr -d '\r' | sed "s/$ESC\[[0-9;]*m//g"; }
+mac_ok() { echo "$1" | grep -Eq '^([0-9A-F]{2}:){5}[0-9A-F]{2}$'; }
+
+save() {
+    [ -d $RUN/bluetooth ] || return 0
+    tar -C $RUN -cf $STORE.new bluetooth 2>/dev/null && mv -f $STORE.new $STORE
+    rm -f $STORE.new
+}
+
+up() {
+    running && return 0
+    modprobe -a hci_uart hidp 2>/dev/null
+    # hci0 once hci_uart has bound the serdev device (the firmware is loaded when bluetoothd powers it)
+    for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do [ -d /sys/class/bluetooth/hci0 ] && break; sleep 0.25; done
+    [ -d /sys/class/bluetooth/hci0 ] || {
+        echo "no Bluetooth controller (hci0)" >&2
+        modprobe -r hci_uart 2>/dev/null
+        rm -f $RUN/bt/audio	# (a route kept through a sleep: the speakers again)
+        return 1
+    }
+    if [ ! -d $RUN/bluetooth ]; then
+        mkdir -p $RUN/bluetooth
+        [ -f $STORE ] && tar -C $RUN -xf $STORE 2>/dev/null
+        chmod 700 $RUN/bluetooth
+    fi
+    # D-Bus's system bus: BlueZ and bluez-alsa talk over it, nothing else on Banana does, so it comes with Bluetooth
+    if ! { [ -S /run/dbus/system_bus_socket ] && [ -f /run/dbus-daemon.pid ] && kill -0 $(cat /run/dbus-daemon.pid) 2>/dev/null; }; then
+        mkdir -p /run/dbus /tmp/dbus
+        rm -f /run/dbus-daemon.pid /run/dbus/system_bus_socket
+        dbus-uuidgen --ensure 2>/dev/null
+        dbus-daemon --system 9>&- || return 1
+    fi
+    /usr/libexec/bluetooth/bluetoothd -n 9>&- </dev/null >/dev/null 2>&1 &
+    echo $! > $RUN/bluetoothd.pid
+    # the adapter on the bus (AutoEnable powers it; the firmware download takes a second or two)
+    for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do timeout 2 bluetoothctl show 2>/dev/null | grep -q 'Powered: yes' && break; sleep 0.25; done
+    ctl power on >/dev/null
+    # headphones and speakers: bluez-alsa as the A2DP source (the handheld plays, they listen)
+    bluealsa -S -p a2dp-source 9>&- </dev/null >/dev/null 2>&1 &
+    echo $! > $RUN/bluealsa.pid
+    ( bluealsa-cli monitor 2>/dev/null | while read -r ev rest; do
+        case $ev in PCMAdded|PCMRemoved|ServiceRunning|ServiceStopped) $SELF route ;; esac
+    done ) 9>&- </dev/null >/dev/null 2>&1 &
+    echo $! > $RUN/bt-watch.pid
+    # the headphones played last, called back (they don't call a handheld that left them); controllers call back
+    # themselves (a press of their home button). Meanwhile the route stays as it is (route leaves it alone).
+    last=$(cat $LAST 2>/dev/null)
+    if mac_ok "$last"; then
+        touch $RUN/bt-reconnecting
+        ( $CTL --timeout 15 connect $last >/dev/null 2>&1; rm -f $RUN/bt-reconnecting; $SELF route ) 9>&- </dev/null >/dev/null 2>&1 &
+    fi
+    return 0
+}
+
+down() {
+    save
+    stop $RUN/bt-watch.pid
+    killall bluealsa-cli 2>/dev/null
+    rm -f $RUN/bt-reconnecting
+    [ "$1" = sleep ] || rm -f $RUN/bt/audio
+    stop $RUN/bluealsa.pid
+    stop $RUN/bluetoothd.pid
+    for i in 1 2 3 4 5 6 7 8 9 10; do pidof bluetoothd bluealsa >/dev/null || break; sleep 0.1; done
+    killall -9 bluetoothd bluealsa 2>/dev/null
+    stop /run/dbus-daemon.pid
+    rm -f /run/dbus/system_bus_socket
+    # the chip's Bluetooth off (hci_uart's remove drops its enable GPIO), and the stack out of memory
+    modprobe -r hci_uart hidp 2>/dev/null
+    modprobe -r btrtl bluetooth 2>/dev/null
+    return 0
+}
+
+route() {
+    p=$(bluealsa-cli list-pcms 2>/dev/null | grep '/a2dpsrc/sink$' | tail -n 1)
+    if [ -n "$p" ]; then
+        mkdir -p $RUN/bt
+        mac=$(echo "$p" | sed -n 's#.*/dev_\([0-9A-Fa-f_]*\)/.*#\1#p' | tr _ :)
+        echo "$mac $p" > $RUN/bt/audio.new && mv -f $RUN/bt/audio.new $RUN/bt/audio
+        [ "$(cat $LAST 2>/dev/null)" = "$mac" ] || echo "$mac" > $LAST
+    elif [ ! -f $RUN/bt-reconnecting ]; then
+        rm -f $RUN/bt/audio
+    fi
+}
+
+kind() {
+    case $1 in
+    audio-*) echo audio ;;
+    input-gaming) echo gamepad ;;
+    input-keyboard) echo keyboard ;;
+    input-mouse|input-tablet) echo mouse ;;
+    *) echo other ;;
+    esac
+}
+
+devices() {
+    running || return 0
+    paired=$(ctl devices Paired | sed -n 's/^Device \([0-9A-F:]*\) .*/\1/p')
+    conn=$(ctl devices Connected | sed -n 's/^Device \([0-9A-F:]*\) .*/\1/p')
+    ctl devices | while read -r w mac name; do
+        [ "$w" = Device ] && mac_ok "$mac" || continue
+        p=0; c=0; k=other
+        echo "$paired" | grep -qx "$mac" && p=1
+        echo "$conn" | grep -qx "$mac" && c=1
+        # a device with no name of its own is its address, written with dashes: left out unless paired
+        [ "$name" = "$(echo $mac | tr : -)" ] && { [ $p = 1 ] || continue; }
+        [ $p = 1 ] && k=$(kind "$(ctl info $mac | sed -n 's/^[[:space:]]*Icon: //p' | head -n 1)")
+        printf '%s\t%s\t%s\t%s\t%s\n' "$mac" $p $c $k "$name"
+    done
+}
+
+# the last line of bluetoothctl's answer to a command that failed: "Failed to pair: org.bluez.Error.AuthenticationFailed"
+why() { sed -n 's/.*\(Failed to [a-z]*\|Device [0-9A-F:]* not available\)\(.*\)/\1\2/p' | tail -n 1 | sed 's/org\.bluez\.Error\.//'; }
+
+case $1 in
+up) up || { rm -f $RUN/bt/audio; exit 1; } ;;
+down) down "$2" ;;
+restart) down; up || exit 1 ;;
+scan)
+    running || { echo "ERROR Bluetooth is off"; exit 1; }
+    ctl --timeout 10 scan on >/dev/null
+    devices
+    ;;
+devices) devices ;;
+pair|connect|disconnect|forget)
+    mac=$2
+    mac_ok "$mac" || { echo "ERROR not an address: $mac"; exit 1; }
+    running || { echo "ERROR Bluetooth is off"; exit 1; }
+    case $1 in
+    pair)
+        # a device found more than TemporaryTimeout ago is gone from BlueZ: a short search for it first
+        ctl info $mac | grep -q 'Name\|Alias' || ctl --timeout 6 scan on >/dev/null
+        out=$($CTL --timeout 30 pair $mac 2>&1)
+        echo "$out" | grep -q 'Pairing successful\|AlreadyExists' || { echo "ERROR $(echo "$out" | why)"; exit 1; }
+        ctl trust $mac >/dev/null
+        out=$($CTL --timeout 20 connect $mac 2>&1)
+        save
+        echo "$out" | grep -q 'Connection successful' || { echo "ERROR paired, but $(echo "$out" | why)"; exit 1; }
+        ;;
+    connect)
+        out=$($CTL --timeout 20 connect $mac 2>&1)
+        echo "$out" | grep -q 'Connection successful' || { echo "ERROR $(echo "$out" | why)"; exit 1; }
+        ;;
+    disconnect)
+        $CTL --timeout 10 disconnect $mac >/dev/null 2>&1
+        [ "$(cat $LAST 2>/dev/null)" = "$mac" ] && rm -f $LAST	# (not called back next time)
+        ;;
+    forget)
+        $CTL --timeout 10 remove $mac >/dev/null 2>&1
+        [ "$(cat $LAST 2>/dev/null)" = "$mac" ] && rm -f $LAST
+        save
+        ;;
+    esac
+    echo OK
+    ;;
+route) route ;;
+status) running && echo on || echo off ;;
+*) echo "usage: bluetooth up|down|scan|devices|pair|connect|disconnect|forget <MAC>|status" >&2; exit 1 ;;
+esac
+exit 0

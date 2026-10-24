@@ -20,6 +20,10 @@ login > Guest: no password, only on a network you trust). The second SD card, wh
 DS saves from ROCKNIX beside the games (roms/nds/<game>.dsv) are taken when a game starts here and BananaOS has no save
 for it yet (so a save you delete here comes back from that file; delete or rename the .dsv too).
 
+Bluetooth: Settings > Network > Bluetooth switches it on (off at first: it costs battery), Bluetooth devices
+finds controllers, headphones and speakers in pairing mode and pairs them (A). While Bluetooth headphones are
+connected the sound plays on them and the volume keys change their volume. Pairings: banana/bluetooth.tar.
+
 SSH (for working on Banana itself): put your public key in banana/ssh/authorized_keys, switch on
 Settings > Network > SSH, then ssh root@<address>. Keys only, no passwords.
 

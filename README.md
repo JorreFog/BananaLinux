@@ -223,7 +223,7 @@ Known issues:
 Not available yet:
 
 - Charging while switched off on the RG DS Plus ([#34](https://github.com/JorreFog/BananaLinux/issues/34)).
-- Bluetooth.
+- Bluetooth is new (Settings > Network: controllers and headphones) and not yet tested on the handhelds.
 - One card image for both handhelds: each has its own image for now.
 
 What's next: [docs/ROADMAP.md](docs/ROADMAP.md). Every release's notes: [Releases](https://github.com/JorreFog/BananaLinux/releases).

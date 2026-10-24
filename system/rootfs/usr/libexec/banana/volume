@@ -11,6 +11,23 @@
 # step, and this kernel names them "Left PCM" and "Right PCM" (amixer's "PCM" isn't there, so the keys changed
 # nothing); amixer -M can't map it (no dB scale), so the same curve is a table here, 0% mute.
 read -r CARD CONTROL < /run/banana/mixer 2>/dev/null || exit 1
+# Bluetooth headphones playing (bananad writes "bluealsa <PCM path>"): their own volume, 0-127 over AVRCP (or
+# bluez-alsa's software volume when they have none), in straight steps: the headphones apply their own curve
+if [ "$CARD" = bluealsa ]; then
+    bget() { bluealsa-cli volume "$CONTROL" 2>/dev/null | sed -n 's/^Volume: L*:* *\([0-9]*\).*/\1/p' | head -n 1; }
+    bset() { p=$1; [ $p -lt 0 ] && p=0; [ $p -gt 100 ] && p=100; bluealsa-cli volume "$CONTROL" $(((p * 127 + 50) / 100)) || exit 1; }
+    bpct() { v=$(bget); [ -n "$v" ] || exit 1; echo $(((v * 100 + 63) / 127)); }
+    case $1 in
+    get) bpct ;;
+    set) bset "${2:-0}" ;;
+    up|down)
+        p=$(bpct); n=${2:-5}; [ $1 = down ] && n=-$n
+        bset $((p + n)); bpct
+        ;;
+    *) echo "volume get | set <0-100> | up <n> | down <n>" >&2; exit 2 ;;
+    esac
+    exit 0
+fi
 AW=
 if [ "$(cat /proc/asound/card$CARD/id 2>/dev/null)" = aw88166 ]; then
     AW="$CONTROL"
