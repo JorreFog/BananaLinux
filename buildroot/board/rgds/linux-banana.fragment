@@ -78,8 +78,30 @@ CONFIG_SMB_SERVER=m
 # CONFIG_RTW88_8821AU is not set
 # CONFIG_RTW88_8812AU is not set
 # CONFIG_RTW88_8814AU is not set
-# no Bluetooth stack in userspace yet: the kernel's would only take room
-# CONFIG_BT is not set
+# Bluetooth (Settings > Network > Bluetooth): the RTL8821CS's Bluetooth half on uart1, a serdev device in both device
+# trees, driven by hci_uart's H5 (3-wire) protocol with Realtek's setup (btrtl: rtl_bt/rtl8821cs_fw.bin and its
+# config). All modules, loaded only when Bluetooth is switched on (usr/libexec/banana/bluetooth), so a boot with it off
+# costs nothing; unloading hci_uart cuts the chip's BT_REG_ON. Controllers through HIDP or UHID (bluetoothd's input
+# plugin), headphones through bluez-alsa (L2CAP, no kernel audio). Out of ROCKNIX's set: the UART protocols and USB or
+# SDIO adapters these handhelds haven't, and the debugfs files.
+CONFIG_BT=m
+CONFIG_BT_BREDR=y
+CONFIG_BT_LE=y
+CONFIG_BT_HIDP=m
+CONFIG_BT_HCIUART=m
+CONFIG_BT_HCIUART_SERDEV=y
+CONFIG_BT_HCIUART_3WIRE=y
+CONFIG_BT_HCIUART_RTL=y
+# CONFIG_BT_HCIUART_H4 is not set
+# CONFIG_BT_HCIUART_ATH3K is not set
+# CONFIG_BT_HCIBTUSB is not set
+# CONFIG_BT_HCIBFUSB is not set
+# CONFIG_BT_HCIVHCI is not set
+# CONFIG_BT_MRVL is not set
+# CONFIG_BT_DEBUGFS is not set
+# Switch Pro controllers and Joy-Cons over Bluetooth (the DualShock 4 / DualSense and Xbox drivers are built in
+# already); bananad loads it by the HID device's MODALIAS, as it does USB pads' drivers
+CONFIG_HID_NINTENDO=m
 # USB serial adapters, NTFS, the video codec and 2D blocks, USB CEC adapters, serial mice
 # CONFIG_USB_SERIAL is not set
 # CONFIG_NTFS_FS is not set
