@@ -54,3 +54,11 @@ sed -i 's/^accent_text = .*//' "$UXFX/data/settings.conf"; echo "accent_text = l
 ux_run ink-light "inkon f0b429; home 0; wait 2400; shot ux-ink-light"
 ux_check ink-light "inkon f0b429: ink ffffff"
 sed -i 's/^accent_text = .*//' "$UXFX/data/settings.conf"
+
+# L/R go a page: five games in a list (the shoulders name the games they land on), five rows in a settings list
+# (Display & sound: R twice from Theme is Clock, Right sets 12-hour)
+ux_run page "lib 0 0; wait 2400; shot ux-page; press r; press l; press start; press a; press r; press r; press right; press b; press b"
+ux_check page "press r: used, view 1 sys 0 game 4"
+ux_check page "press l: used, view 1 sys 0 game 0"
+grep -q '^clock = 12h' "$UXFX/data/settings.conf" || { echo "FAIL $size: R twice in Display & sound didn't reach Clock"; fail=1; }
+sed -i 's/^clock = 12h/clock = 24h/' "$UXFX/data/settings.conf"

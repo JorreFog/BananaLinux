@@ -1047,12 +1047,19 @@ namespace rnds
 		bool page(int dir)
 		{
 			if (ui->mView != LIBRARY) return false;
-			int n = src->gameCount(), g = ui->mGame + dir * 5;
+			int n = src->gameCount();
 			if (n < 2) return true;
+			setGame(pageTarget(dir));
+			return true;
+		}
+		// where page(dir) goes from the cursor (Banana: L/R and the shoulders' names say it)
+		int pageTarget(int dir)
+		{
+			int n = src->gameCount(), g = ui->mGame + dir * 5;
+			if (n < 2) return ui->mGame;
 			if (g < 0) g = ui->mGame == 0 ? n - 1 : 0;
 			else if (g >= n) g = ui->mGame == n - 1 ? 0 : n - 1;
-			setGame(g);
-			return true;
+			return g;
 		}
 
 		void open()
@@ -1839,7 +1846,8 @@ namespace rnds
 				float kl = kbdW("L"), kr = kbdW("R");
 				std::string prev, next;
 				if (sides && v == HOME) { prev = sys((ui->mSys - 1 + n) % n).name; next = sys((ui->mSys + 1) % n).name; }
-				else if (sides) { prev = game((ui->mGame - 1 + n) % n).title; next = game((ui->mGame + 1) % n).title; }
+				// (Banana: a game list's L/R, and its arrows, go a page: the names are the games they land on)
+				else if (sides) { prev = game(pageTarget(-1)).title; next = game(pageTarget(1)).title; }
 				TStyle tsh = ts(false, 20);
 				TextLine lp = layoutEllipsis(utf8to32(prev), tstyle(tsh), 180), ln = layoutEllipsis(utf8to32(next), tstyle(tsh), 180);
 				// a game list's shoulders are its touch arrows too: ◀ and ▶ between the button and the name, a flex item
@@ -2115,8 +2123,8 @@ namespace rnds
 		{
 			switch (a)
 			{
-			case ACT_PREV: nudge(-1); break;
-			case ACT_NEXT: nudge(1); break;
+			case ACT_PREV: if (!page(-1)) nudge(-1); break;		// (a game list: a page, as L)
+			case ACT_NEXT: if (!page(1)) nudge(1); break;
 			case ACT_OPEN: open(); break;
 			case ACT_BACK: back(); break;
 			case ACT_FAV: toggleFav(); break;
@@ -2200,8 +2208,11 @@ namespace rnds
 	{
 		switch (b)
 		{
-		case LEFT: case L: d->nudge(-1); return true;
-		case RIGHT: case R: d->nudge(1); return true;
+		case LEFT: d->nudge(-1); return true;
+		case RIGHT: d->nudge(1); return true;
+		// Banana: a game list's L/R go a page (five games), the shelf's one system
+		case L: if (!d->page(-1)) d->nudge(-1); return true;
+		case R: if (!d->page(1)) d->nudge(1); return true;
 		case UP: return d->page(-1);
 		case DOWN: return d->page(1);
 		case A: d->open(); return true;

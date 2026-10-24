@@ -1008,11 +1008,14 @@ namespace banana
 		}
 		case Key::L: case Key::R:
 		{
-			// the previous / next group's list
-			int n = (int)groups.size();
-			gsel = (g + (k == Key::R ? 1 : -1) + n) % n;
-			sel = top = groupStart(gsel);
+			// a page of the group's list at a time (the rows in view), stopping at its first and last rows (the groups
+			// are B's grid; L/R went to the next group's list, one more thing the list didn't say)
+			int to = std::min(e - 1, std::max(b, sel + (k == Key::R ? ROWS : -ROWS)));
+			if (to == sel) return NONE;
+			sel = to;
 			armed = -1;
+			if (sel < top) top = sel;
+			if (sel >= top + ROWS) top = sel - ROWS + 1;
 			if (items[sel].kind == Item::INFO) refreshInfo();
 			return MOVED;
 		}
