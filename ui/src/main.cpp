@@ -26,6 +26,7 @@
 #include "menu.h"
 #include "carts.h"
 #include "layout.h"
+#include "nas.h"
 
 #include <algorithm>
 #include <atomic>
@@ -319,6 +320,11 @@ static const char* soundOf(Key k, rnds::UI::View before, rnds::UI::View after)
 	}
 }
 
+// a tile whose run is "banana:<page>" is one of the menu's own pages (systems.conf's [downloads]), not a program: A on
+// it opens the page at once, with no cartridge going in, and a launch of its entry (by touch, or the Carts theme's
+// ready screen) does the same
+static bool internalApp(const SystemDef& sd) { return sd.run.compare(0, 7, "banana:") == 0; }
+
 // a favourite starred or unstarred: once the shelf shows, the Favorites collection and the favourite systems are put
 // right, and the cursor stays on the system it was on
 template <class U> static bool rearrange(Host& lib, U& ui)
@@ -463,9 +469,15 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	ui.setHome(0);
 	Settings settings(&be, o.assets, o.data, o.h / 480.0f, variant);
 	settings.setSync(true);
+	settings.setLibraryPaths(o.systems, o.roms);
 	settings.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
 	LowBattery low;
-	be.overlay = [&](int screen) { if (screen == 0 && low.showing(now)) settings.notice(low.title, low.body, low.percent); };
+	be.overlay = [&](int screen)
+	{
+		if (screen != 0) return;
+		if (low.showing(now)) settings.notice(low.title, low.body, low.percent);
+		else settings.drawToast(now);
+	};
 	while (std::getline(ss, cmd, ';'))
 	{
 		std::stringstream cs(cmd);
@@ -473,8 +485,19 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		cs >> op;
 		ui.update(now);
 		if (op == "home") { int s = 0; cs >> s; ui.setHome(s); }
+		else if (op == "homeid")
+		{
+			// homeid <system id>: the shelf on that system's tile (one whose place depends on the card's games)
+			std::string id; cs >> id;
+			int at = -1;
+			for (int i = 0; i < lib.systemCount(); i++) if (lib.shelf(i).def.id == id) at = i;
+			if (at < 0) { logf("homeid %s: not on the shelf", id.c_str()); return 2; }
+			ui.setHome(at);
+			logf("homeid %s: tile %d", id.c_str(), at);
+		}
 		else if (op == "lib") { int s = 0, g = 0; cs >> s >> g; lib.openLibrary(s); ui.setLibrary(s, g); }
 		else if (op == "wait") { double ms = 0; cs >> ms; now += ms; }
+		else if (op == "sleep") { int ms = 0; cs >> ms; usleep(ms * 1000); }	// real time: a helper at work beside the menu
 		else if (op == "battery")
 		{
 			// battery <percent> [charging]: what /sys would say from now on
@@ -498,6 +521,13 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 				const std::string& path = lib.gameAt(ui.gameIndex()).path;
 				settings.openGame(lib.gameAt(ui.gameIndex()).title, path.substr(path.rfind('/') + 1));
 				logf("press x: game page for %s", path.c_str());
+				continue;
+			}
+			if (!settings.isOpen() && it->second == Key::A && ui.view() == rnds::UI::HOME && ui.systemIndex() >= 0 &&
+				ui.systemIndex() < lib.systemCount() && internalApp(lib.shelf(ui.systemIndex()).def))
+			{
+				settings.openDownloads();
+				logf("press a: %s open", lib.shelf(ui.systemIndex()).def.run.c_str());
 				continue;
 			}
 			if (settings.isOpen() || it->second == Key::START)
@@ -548,6 +578,11 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 				logf("mem: RSS%s; texture cache %zu entries, %.1f MB of a %.1f MB budget", rss.c_str(), cs.entries, cs.bytes / 1048576.0, cs.budget / 1048576.0);
 			}
 			else logf("mem: RSS%s", rss.c_str());
+		}
+		else if (op == "fetchdone")
+		{
+			// fetchdone: banana-fetch's runner said a job finished (fetch.finished), as the device's loop hears of it
+			if (settings.downloadsToast(now)) logf("downloads: a job finished");
 		}
 		else if (op == "touch")
 		{
@@ -638,6 +673,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			int g = lib.pendingLaunch();
 			logf("launch %d: %s (system %s)", g, lib.gameAt(g).path.c_str(), lib.systemOf(g).id.c_str());
 			lib.clearLaunch();
+			if (internalApp(lib.systemOf(g))) { ui.setHome(lib.currentShelf()); settings.openDownloads(); logf("downloads open"); }
 		}
 		ui.update(now);
 		if (rearrange(lib, ui)) logf("shelf: %d systems, cursor on %s", lib.systemCount(), lib.shelf(ui.systemIndex()).def.id.c_str());
@@ -1077,7 +1113,13 @@ int main(int argc, char** argv)
 	float scale = disp.height() / 480.0f;
 	Settings settingsView(&be, o.assets, o.data, scale, variant);
 	settingsView.setFontDir(o.banana + "/fonts");
+	settingsView.setLibraryPaths(o.systems, o.roms);
+	settingsView.downloadsToast(nowMs());	// (a job finished before the menu started isn't news)
 	settingsView.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
+	settingsView.wake = [&] { uint64_t one = 1; if (write(worker.wakeFd, &one, 8) < 0) {} };	// (Downloads' helper answered)
+	// a Downloads job the last menu stopped for a game and never let go on (it ended before the game did): on again,
+	// or it would hold the sleep (bananad) and the queue until a reboot
+	nas::pauseRunner(fetch::Paths::fromEnv(o.data), false);
 	settingsView.setVariant(settings["theme"]);	// (Carts: Inter)
 	LowBattery low;
 	bool batteryDue = true;
@@ -1094,7 +1136,7 @@ int main(int argc, char** argv)
 		double t = nowMs();
 		if (low.showing(t)) settingsView.notice(low.title, low.body, low.percent);
 		else if (osdUntil > t) settingsView.level(osdLabel, osdPercent);
-		else settingsView.drawToast(t);	// (only while Settings is open: the account check's result)
+		else settingsView.drawToast(t);	// (the account check's result, while Settings is open; a download's end, whatever shows)
 	};
 
 	// what a change on the settings screen means for the menu (called with uiLock held)
@@ -1217,6 +1259,22 @@ int main(int argc, char** argv)
 		if (ev.type == InputEvent::TOUCH_MOVE) { std::lock_guard<std::mutex> l(worker.uiLock); dirty |= ui->touchMove(ev.screen, ev.x, ev.y); return; }
 		if (ev.type == InputEvent::TOUCH_UP) { std::lock_guard<std::mutex> l(worker.uiLock); dirty |= ui->touch(ev.screen, ev.x, ev.y, false); return; }
 		if (ev.type == InputEvent::RELEASE) { if (rep.key == ev.key) rep.key = Key::NONE; return; }
+		if (ev.type == InputEvent::PRESS && ev.key == Key::A)
+		{
+			// A on the Downloads tile: its page
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			int s = ui->systemIndex();
+			if (ui->view() == rnds::UI::HOME && s >= 0 && s < lib.systemCount() && internalApp(lib.shelf(s).def))
+			{
+				ui->touchCancel();
+				settingsView.setVariant(settings["theme"]);
+				settingsView.openDownloads();
+				rep.key = Key::NONE;
+				sound.play("select");
+				dirty = true;
+				return;
+			}
+		}
 		rnds::UI::Button b;
 		if (!uiButton(ev.key, b)) return;
 		double now = nowMs();
@@ -1314,6 +1372,10 @@ int main(int argc, char** argv)
 		sound.release();
 		boost.release();
 		forgetDecoded();
+		// the Downloads tile's job stops while the game runs (the network, the card and the CPU are the game's), and
+		// goes on after it: banana-fetch's runner and its 7zz, stopped as a group
+		const fetch::Paths fetchPaths = fetch::Paths::fromEnv(o.data);
+		nas::pauseRunner(fetchPaths, true);
 		const char* FIFO = "/run/banana/retroarch.cmd";
 		// run-ps1 and run-pico8's fake-08 fallback end up in run-retroarch just the same, so they get the game panel
 		// (settings.conf retroarch_panel) and its touch tiles too; the official PICO-8, when it is on the card, takes
@@ -1404,6 +1466,7 @@ int main(int argc, char** argv)
 			disp.close();
 		}
 		long secs = (long)((nowMs() - start) / 1000);
+		nas::pauseRunner(fetchPaths, false);
 		if (system("banana-perf ui") != 0) {}
 		logf("game ended after %ld s (status %d)", secs, status);
 		for (int tries = 0; !disp.open(o.top, err) && tries < 100; tries++) usleep(50000);
@@ -1433,9 +1496,16 @@ int main(int argc, char** argv)
 		close(launchWatch);
 		launchWatch = -1;
 	}
+	bool fetchDone = false;	// /run/banana/fetch.finished written: a Downloads job finished
 	while (!quit)
 	{
 		double now = nowMs();
+		if (fetchDone)
+		{
+			fetchDone = false;
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			if (settingsView.downloadsToast(now)) { logf("downloads: a job finished"); dirty = true; }
+		}
 		{
 			std::lock_guard<std::mutex> l(worker.uiLock);
 			ui->update(now);
@@ -1470,6 +1540,17 @@ int main(int argc, char** argv)
 		if (g >= 0)
 		{
 			lib.clearLaunch();
+			if (internalApp(lib.systemOf(g)))
+			{
+				// the Downloads tile's entry launched (a touch, the Carts theme): its page, the shelf behind it on the tile
+				std::lock_guard<std::mutex> l(worker.uiLock);
+				ui->setHome(lib.currentShelf());
+				settingsView.setVariant(settings["theme"]);
+				settingsView.openDownloads();
+				rep.key = Key::NONE;
+				dirty = true;
+				continue;
+			}
 			runGame(g);
 			continue;
 		}
@@ -1580,6 +1661,11 @@ int main(int argc, char** argv)
 			int left = (int)(osdUntil - now) + 1;
 			if (timeout < 0 || left < timeout) timeout = left;
 		}
+		{
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			int left = settingsView.toastWake(now);	// (the Downloads pop-up going away)
+			if (left >= 0 && (timeout < 0 || left < timeout)) timeout = left;
+		}
 
 		std::vector<pollfd> fds;
 		fds.push_back({ sigPipe[0], POLLIN, 0 });
@@ -1624,8 +1710,16 @@ int main(int argc, char** argv)
 				roms.read(nowMs());
 			else if (p.fd == launchWatch)
 			{
+				// (the loop's next pass looks for the launch file); the Downloads runner's word that a job finished: said
+				// over the top panel, whatever the menu shows (its progress is in a folder of its own, not watched)
 				alignas(inotify_event) char buf[1024];
-				while (read(launchWatch, buf, sizeof buf) > 0) {}	// (the loop's next pass looks for the launch file)
+				for (ssize_t n; (n = read(launchWatch, buf, sizeof buf)) > 0;)
+					for (char* q = buf; q < buf + n;)
+					{
+						auto* e = (inotify_event*)q;
+						if (e->len && strcmp(e->name, "fetch.finished") == 0) fetchDone = true;
+						q += sizeof(inotify_event) + e->len;
+					}
 			}
 			else if (p.fd == worker.wakeFd)
 			{
@@ -1644,6 +1738,7 @@ int main(int argc, char** argv)
 		f << ui->systemIndex() << "\n";
 	}
 	bottomIdle.setOwned(false, nowMs());	// the backlight and the marker back as they were
+	settingsView.close();	// (Downloads' helper first: its answers wake the loop through the worker's eventfd)
 	worker.finish();
 	return 0;
 }

@@ -1,6 +1,7 @@
 #include <ctime>
 #include "settings.h"
 #include "settings_defaults.h"
+#include "settings_draw.h"
 #include "theme.h"
 #include <algorithm>
 #include <dlfcn.h>
@@ -109,16 +110,7 @@ namespace banana
 		closedir(d);
 	}
 
-	// ---- palette: ROCKNIXDS Pixel's (RndsUI.cpp darkPal / lightPal), the colours this screen uses ----------------------
-	struct SPal
-	{
-		Color ink, muted, line, edge, screenBg, screenFrame, screenBand, ditherA, ditherB;
-		Color panelBand, panelBody, panelLow, bubbleBand, bubbleBody, bubbleLow, slotOn, kbdBg, kbdInk, blackish, shade45;
-		Color accent;
-		// the selected row of a list: the yellow plate the shelf's cartridge stands on (the engine's START plate), dark
-		// text on it, and a dark amber for what the accent marks elsewhere ("Connected", "Press A again")
-		Color pick, pickBand, pickLow, pickEdge, onPick, onPickAccent;
-	};
+	// ---- palette: ROCKNIXDS Pixel's (RndsUI.cpp darkPal / lightPal), the colours this screen uses (settings_draw.h) ---
 	// Update's row: how many update packages wait in banana/updates on the card ("" for none); looked at once every
 	// 2 s at most (the list is drawn on every change)
 	static std::string updatesWaiting()
@@ -142,7 +134,7 @@ namespace banana
 		return v;
 	}
 
-	static SPal pal(bool light)
+	SPal pal(bool light)
 	{
 		SPal p;
 		if (!light)
@@ -595,6 +587,14 @@ namespace banana
 		return h;
 	}
 
+	void Settings::close()
+	{
+		mOpen = false;
+		page = LIST;
+		wizard = false;
+		closeDownloads();
+	}
+
 	void Settings::open()
 	{
 		if (groups.empty())
@@ -797,6 +797,7 @@ namespace banana
 		if (page == GAME) return pressGame(k);
 		if (page == UPDATES) return pressUpdates(k);
 		if (page == SETUP) return pressSetup(k);
+		if (page == DOWNLOADS) return pressDownloads(k);
 		if (inGroups) return pressGroups(k);
 		int g = groupOf(sel), b = groupStart(g), e = groupEnd(g);
 		switch (k)
@@ -861,6 +862,7 @@ namespace banana
 		if (page == NETWORKS) return touchNetworks(cx, cy);
 		if (page == KEYBOARD) return touchKeyboard(cx, cy);
 		if (page == GAME) return touchGame(cx, cy);
+		if (page == DOWNLOADS) return touchDownloads(cx, cy);
 		if (page == SETUP)
 		{
 			if (downY >= 418 && downY <= 466) return pressSetup(downX < 320 ? Key::B : Key::A);
@@ -1117,6 +1119,40 @@ namespace banana
 		text(label, true, 19, x + 15 + kw + 8, 431, p.ink);
 	}
 
+	// where each chip goes: the left ones from 18 on, 8 apart; the right ones from 622 back
+	std::vector<float> Settings::chipXs(const std::vector<Chip>& cs, std::vector<float>& ws)
+	{
+		std::vector<float> xs(cs.size());
+		ws.resize(cs.size());
+		float left = 18, right = 622;
+		for (size_t i = 0; i < cs.size(); i++)
+		{
+			ws[i] = faceWidth(cs[i].face, cs[i].label);
+			if (cs[i].right) { right -= ws[i]; xs[i] = right; right -= 8; }
+			else { xs[i] = left; left += ws[i] + 8; }
+		}
+		return xs;
+	}
+
+	void Settings::drawChips(const std::vector<Chip>& cs)
+	{
+		std::vector<float> ws, xs = chipXs(cs, ws);
+		for (size_t i = 0; i < cs.size(); i++) face(cs[i].face, cs[i].label, xs[i], ws[i]);
+	}
+
+	Key Settings::chipAt(const std::vector<Chip>& cs, float x)
+	{
+		std::vector<float> ws, xs = chipXs(cs, ws);
+		Key best = Key::NONE;
+		float far = 1e9f;
+		for (size_t i = 0; i < cs.size(); i++)
+		{
+			float d = x < xs[i] ? xs[i] - x : x > xs[i] + ws[i] ? x - xs[i] - ws[i] : 0;
+			if (d < far) { far = d; best = cs[i].key; }
+		}
+		return best;
+	}
+
 	void Settings::notice(const std::string& title, const std::string& body, int percent)
 	{
 		SPal p = pal(light);
@@ -1263,6 +1299,7 @@ namespace banana
 		if (page == GAME) { renderGame(); return; }
 		if (page == UPDATES) { renderUpdates(); return; }
 		if (page == SETUP) { renderSetup(); return; }
+		if (page == DOWNLOADS) { renderDownloads(); return; }
 		if (inGroups) { renderGroups(); return; }
 		SPal p = pal(light);
 		const Item& cur = items[sel];
@@ -1422,6 +1459,7 @@ namespace banana
 			if (joining.empty() && now >= nextScan) startScan();
 		}
 		bool changed = scrapeChanged;
+		if (dl && updateDownloads(t)) changed = true;	// (also under the keyboard: a login answered)
 		if (page == UPDATES && applying && now >= nextStatus2)
 		{
 			std::string before = ustatus;
@@ -1468,6 +1506,8 @@ namespace banana
 		int mine = raCheck ? 200 : toastUntil > t ? std::max(0, (int)(toastUntil - t) + 1) : -1;
 		if (mine >= 0 && (w < 0 || mine < w)) w = mine;
 		if (scraping() && (w < 0 || w > 500)) w = std::max(0, (int)(scrapeNext - t));	// the box art's progress
+		int d = dl ? downloadsWake(t) : -1;	// the session's answer, the download's progress
+		if (d >= 0 && (w < 0 || d < w)) w = d;
 		return w;
 	}
 
@@ -1576,7 +1616,7 @@ namespace banana
 	{
 		if (row < 4)
 		{
-			if (pw.size() < 63) pw += KEYS[layer][row][col];
+			if (pw.size() < entryMax) pw += KEYS[layer][row][col];
 			message.clear();
 			return MOVED;
 		}
@@ -1584,7 +1624,7 @@ namespace banana
 		{
 		case 0: layer = layer == 1 ? 0 : 1; break;
 		case 1: layer = layer == 2 ? 0 : 2; break;
-		case 2: if (pw.size() < 63) pw += ' '; break;
+		case 2: if (pw.size() < entryMax) pw += ' '; break;
 		case 3: if (!pw.empty()) pw.pop_back(); break;
 		case 4: return finishEntry();
 		}
@@ -1612,7 +1652,7 @@ namespace banana
 			return MOVED;
 		case Key::X: layer = layer == 1 ? 0 : 1; return MOVED;
 		case Key::L: layer = layer == 2 ? 0 : 2; return MOVED;	// the symbols
-		case Key::Y: if (pw.size() < 63) pw += ' '; return MOVED;
+		case Key::Y: if (pw.size() < entryMax) pw += ' '; return MOVED;
 		case Key::START: return keyboardKey(4, FKEYS[4].c0);
 		default: return NONE;
 		}
@@ -1645,11 +1685,7 @@ namespace banana
 	Settings::Result Settings::touchKeyboard(float cx, float cy)
 	{
 		(void)cx; (void)cy;
-		if (downY >= 418 && downY <= 466)
-		{
-			if (downX < 320) return pressKeyboard(Key::B);
-			return pressKeyboard(Key::START);
-		}
+		if (downY >= 418 && downY <= 466) return pressKeyboard(chipAt(keyboardChips(), downX));
 		int row = (int)std::floor((downY - KY) / KROW);
 		if (row < 0 || row > 4 || downY - KY - row * KROW > KH) return NONE;
 		int col = (int)std::floor((downX - KX) / KPITCH);
@@ -1760,7 +1796,7 @@ namespace banana
 		be->beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
-		icon(entry == ENTRY_SEARCH ? "search" : "phone", 50, 56, 3);
+		icon(entry == ENTRY_SEARCH ? "search" : entry == ENTRY_DOWNLOADS ? "downloads" : "phone", 50, 56, 3);
 		text(entryTitle, true, 17, 170, 62, p.muted, true, 1.4f);
 		text(fit(entrySub, true, 30, 420), true, 30, 170, 88, p.ink);
 		box("slot", true, 50, 150, 540, 56);
@@ -1780,6 +1816,7 @@ namespace banana
 		}
 		text(n, true, 17, 50, 216, p.muted);
 		std::string help = !message.empty() ? message
+			: !entryHelp.empty() ? entryHelp
 			: entry == ENTRY_SEARCH ? "A types the key, B deletes, X capitals, Y a space, START searches: the games found open as a shelf of their own, first on the shelf. Part of a name is enough; an empty search takes the shelf away."
 			: entry == ENTRY_WIFI ? "A types the key, B deletes, X capitals, L symbols, Y a space, START joins. Or tap the keys. The password is kept in banana/wifi.conf on the card."
 			: "A types the key, B deletes, X capitals, L symbols, Y a space, START when it is typed. Or tap the keys. Accounts are kept in banana/accounts.conf on the card.";
@@ -1833,19 +1870,15 @@ namespace banana
 			float tw = text(k, true, 21, 0, 0, p.ink, false, 0, true);
 			text(k, true, 21, x + std::round((kw - tw) / 2), y + 17, on ? p.onPick : lit ? p.accent : p.ink);
 		}
-		// the buttons that work anywhere on the keyboard
-		const std::string bl = pw.empty() ? "Back" : "Delete", done = entry == ENTRY_WIFI ? "Join" : "Done";
-		float x = 18;
-		struct { const char* key; std::string label; } chips[] = { { "B", bl }, { "X", "Shift" }, { "Y", "Space" } };
-		for (auto& c : chips)
-		{
-			float w = faceWidth(c.key, c.label);
-			face(c.key, c.label, x, w);
-			x += w + 8;
-		}
-		float aw = faceWidth("START", done);
-		face("START", done, 622 - aw, aw);
+		drawChips(keyboardChips());
 		be->endScreen();
+	}
+
+	// the buttons that work anywhere on the keyboard (a tap on one presses it)
+	std::vector<Settings::Chip> Settings::keyboardChips()
+	{
+		return { { Key::B, "B", pw.empty() ? "Back" : "Delete" }, { Key::X, "X", "Shift" }, { Key::Y, "Y", "Space" },
+			{ Key::START, "START", entry == ENTRY_WIFI ? "Join" : "Done", true } };
 	}
 
 	// ---- updates: the packages on the card, one applied by the update script ---------------------------------------
@@ -2142,6 +2175,8 @@ namespace banana
 	void Settings::startEntry(Entry e, const std::string& title, const std::string& sub, Page back, const std::string& start)
 	{
 		entry = e; entryTitle = title; entrySub = sub; entryBack = back;
+		entryHelp.clear();
+		entryMax = e == ENTRY_DOWNLOADS ? 255 : 63;
 		pw = start;
 		layer = 0; krow = 1; kcol = 0;
 		message.clear();
@@ -2201,6 +2236,8 @@ namespace banana
 			pw.clear();
 			close();
 			return SEARCH;
+		case ENTRY_DOWNLOADS:
+			return finishDownloadsEntry();
 		}
 		return NONE;
 	}
@@ -2315,13 +2352,14 @@ namespace banana
 	{
 		toast1 = l1; toast2 = l2; toastAccent = accent; toastIcon = icon;
 		toastUntil = now + ms;
+		toastClosed = false;
 	}
 
 	// ROCKNIXDS's pop-up card (SuperDrastic's ui.c render_popup): across the top of the top panel, a tile in the accent
 	// colour with its pixel sign, the first line in the accent colour and the second in light text
 	void Settings::drawToast(double t)
 	{
-		if (!mOpen || toastUntil <= t) return;
+		if ((!mOpen && !toastClosed) || toastUntil <= t) return;
 		static const char* const SIGN[3][9] = {
 			{ "...###...", "..#####..", "..##.##..", "....##...", "...##....", "...##....", ".........", "...##....", "...##...." },
 			{ ".........", "........#", ".......##", "......##.", "#....##..", "##..##...", ".####....", "..##.....", "........." },

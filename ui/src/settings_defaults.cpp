@@ -24,13 +24,14 @@ namespace banana
 			bool emulator = false;		// EMULATOR scope (also true for Type CORE below)
 		};
 
-		const char* const ON_OFF[] = { "on", "off" };
-		const char* const ACCENTS[] = { "yellow", "blue", "red", "green", "purple", "pink" };
-		const char* const SHADERS[] = { "off", "lcd", "crt", "sharp" };
-		const char* const NDS[] = { "superdrastic", "bananads" };
-		const char* const PANEL[] = { "panel", "off" };
-		const char* const BOXART[] = { "libretro", "both", "twilight" };
-		const char* const LATENCY[] = { "32", "64", "128" };
+		const char* const ON_OFF[] = { "on", "off", nullptr };
+		const char* const ACCENTS[] = { "yellow", "blue", "red", "green", "purple", "pink", nullptr };
+		const char* const SHADERS[] = { "off", "lcd", "crt", "sharp", nullptr };
+		const char* const NDS[] = { "superdrastic", "bananads", nullptr };
+		const char* const PANEL[] = { "panel", "off", nullptr };
+		const char* const BOXART[] = { "libretro", "both", "twilight", nullptr };
+		const char* const LATENCY[] = { "32", "64", "128", nullptr };
+		const char* const ASK[] = { "ask", "always", "never", nullptr };
 
 		// The values /etc/banana/settings.conf documents, and the ones a card is completed with when that file is
 		// missing (the host test, or a card whose root is older than the menu). Keep in step with the template file.
@@ -58,6 +59,10 @@ namespace banana
 			{ "boxart_source", "libretro", ENUM, BOXART, 0, 0 },
 			{ "boxart_twilight_url", "https://boxart.kirovair.com", TEXT, nullptr, 0, 0 },
 			{ "boxart_twilight_key", "tb2_9f4c1d7a3e8b5062", TEXT, nullptr, 0, 0 },
+			{ "downloads_unpack", "ask", ENUM, ASK, 0, 0 },
+			{ "downloads_delete_archive", "ask", ENUM, ASK, 0, 0 },
+			{ "downloads_unwrap", "on", ENUM, ON_OFF, 0, 0 },
+			{ "downloads_hidden", "off", ENUM, ON_OFF, 0, 0 },
 			{ "core.gba", "gpsp", CORE, nullptr, 0, 0 },
 			{ "core.gbc", "gambatte", CORE, nullptr, 0, 0 },
 			{ "core.gb", "gambatte", CORE, nullptr, 0, 0 },

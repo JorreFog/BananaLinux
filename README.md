@@ -172,6 +172,10 @@ Press F or L3 for the in-game menu. The Anbernic button also opens it. More in
   the RG DS Plus.
 - File sharing: over Wi-Fi the card is `\\<address>\banana` (log in as `banana` / `linux`). Copied games show up in
   the menu.
+- Downloads: the shelf's Downloads tile gets games from a NAS or a computer over SMB, SFTP or FTP(S), straight into
+  each system's folder. A cut download resumes where it stopped, whatever the protocol, and 7z and RAR archives are
+  unpacked, zips too for the systems that don't play them zipped (multi-volume and password-protected ones as well).
+  Close the lid and the download finishes before the handheld sleeps.
 
 | System | RetroArch core (RetroArch 1.22, built for the RK3566's Cortex-A55) |
 |---|---|

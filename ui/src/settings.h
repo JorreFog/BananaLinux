@@ -9,6 +9,7 @@
 //   /data/bananads/bananads.conf   BananaDS's own settings (shader, 3D resolution, ...; BananaDS reads it)
 //   /data/drastic/config/drastic.cfg  the DS's 3D resolution
 //   /sys/class/backlight + /data/banana/backlight   brightness
+// and the shelf's Downloads (settings_downloads.cpp): banana/nas.conf through banana-fetch, its jobs in banana/downloads
 #include "../rnds/RndsUI.h"
 #include "input.h"
 #include "wifi.h"
@@ -16,6 +17,7 @@
 #include <memory>
 #include <mutex>
 #include <functional>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -40,8 +42,12 @@ namespace banana
 		Settings(rnds::Backend* be, const std::string& assets, const std::string& dataDir, float scale, const std::string& variant);
 		void setVariant(const std::string& variant);	// "dark", "light", or "carts" (dark, in Inter: setFontDir first)
 		void setFontDir(const std::string& dir) { fontDir = dir; }
+		// the library's systems.conf and ROM folder (Downloads puts games into the systems' folders)
+		void setLibraryPaths(const std::string& systems, const std::string& roms) { systemsConf = systems; romRoot = roms; }
 		void open();
-		void close() { mOpen = false; page = LIST; wizard = false; }
+		void close();
+		// the shelf's Downloads tile: files from a NAS or a computer, archives unpacked (settings_downloads.cpp)
+		void openDownloads();
 		void setup() { mOpen = true; openSetup(); }	// the first-time setup, from the host
 		bool isOpen() const { return mOpen; }
 		bool animating() const;	// the highlight or the list still easing into place: frames wanted
@@ -72,6 +78,9 @@ namespace banana
 		void openGame(const std::string& title, const std::string& romName);
 		std::string searchText;
 		std::function<int(const std::string&)> searchCount;	// the games the text typed so far finds (the host's library)
+		// wakes the host's loop from another thread (an answer of Downloads' helper in: update() takes it); unset, the
+		// pages look for one every 50 ms instead
+		std::function<void()> wake;
 		Result press(Key k);
 		Result touch(float x, float y, bool down);	// bottom panel, device px
 		void render();
@@ -92,6 +101,11 @@ namespace banana
 		// a pop-up along the top of the top panel in ROCKNIXDS's look (the RetroAchievements account check's result);
 		// the host draws it over the top panel while Settings is open
 		void drawToast(double nowMs);
+		// the shelf's Downloads: jobs finished since the last call (banana/downloads' <time>.finished files not seen yet;
+		// the first call only looks): their pop-up, drawn by drawToast with Settings closed too. true when one came;
+		// toastWake: ms until it goes, -1 none
+		bool downloadsToast(double nowMs);
+		int toastWake(double nowMs) const { return toastUntil > nowMs ? (int)(toastUntil - nowMs) + 1 : -1; }
 
 	private:
 		struct Item
@@ -122,8 +136,8 @@ namespace banana
 		float downX = 0, downY = 0;
 		std::string about, wifiInfo, ip;
 
-		// the Wi-Fi pages: the networks around, and the keyboard for a password (settings-wifi.cpp)
-		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME } page = LIST;
+		// the Wi-Fi pages: the networks around, and the keyboard for a password (settings.cpp)
+		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, DOWNLOADS } page = LIST;
 		// the game page (X on a DS game in the library): its emulator, this game only (banana/nds-per-game.conf, read by
 		// run-nds: "<ROM file name> = superdrastic|bananads", no line = Settings > Nintendo DS > Emulator)
 		// the game page (X on a DS game): its own emulator and shader, each "As in Settings" (index 0) or a choice
@@ -139,8 +153,10 @@ namespace banana
 		void renderGame();
 		// the keyboard types a text for a purpose: a Wi-Fi password, or an account's name or password
 		// (banana/accounts.conf: RetroAchievements for DraStic and RetroArch, ScreenScraper for the scraper to come)
-		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SEARCH } entry = ENTRY_WIFI;
+		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SEARCH, ENTRY_DOWNLOADS } entry = ENTRY_WIFI;
 		std::string entryTitle, entrySub;
+		std::string entryHelp;		// what the keyboard is for, when the purpose says it itself (Downloads' fields)
+		size_t entryMax = 63;		// the longest text (Wi-Fi's 63; a path or an address is longer)
 		Page entryBack = NETWORKS;
 		void startEntry(Entry e, const std::string& title, const std::string& sub, Page back, const std::string& start = "");
 		Result finishEntry();
@@ -153,6 +169,9 @@ namespace banana
 		uint32_t toastAccent = 0;
 		int toastIcon = 0;			// 0 "i", 1 a tick, 2 a cross
 		double toastUntil = 0;
+		bool toastClosed = false;	// shown with Settings closed too (a download's end)
+		std::set<std::string> fetchSeen;	// the finished Downloads jobs told (or there before the first look)
+		bool fetchLooked = false;
 		void toast(const std::string& l1, const std::string& l2, uint32_t accent, int icon, double ms);
 		// the first-time setup: the steps (Wi-Fi, the time zone, RetroAchievements, ScreenScraper), run once after
 		// the installation (banana/setup-done is written at the end) and from Settings > System
@@ -240,6 +259,19 @@ namespace banana
 		void scrapeBar(float x, float y, float w);	// the progress bar and the game being fetched, while it runs
 		struct RaWatch;							// the achievements: RetroArch's log and the server (settings.cpp)
 		std::shared_ptr<RaWatch> raw;
+		// Downloads (settings_downloads.cpp): its pages' state, the session with banana-fetch
+		struct Downloads;
+		std::shared_ptr<Downloads> dl;
+		std::string systemsConf = "/etc/banana/systems.conf", romRoot = "/data/roms";
+		Result pressDownloads(Key k);
+		Result touchDownloads(float cx, float cy);
+		void renderDownloads();
+		bool updateDownloads(double nowMs);
+		int downloadsWake(double nowMs) const;
+		Result finishDownloadsEntry();
+		void closeDownloads();
+		void tick(float x, float y, const rnds::Color& c);	// a mark on a 2 px grid (a chosen file)
+		void meter(float x, float y, float w, double fraction);	// a progress bar
 		std::string gTitle, gSystem;
 		int gScreen = 1, gFlash = -1, gDown = -1;
 		static constexpr int FLASH_TAB = 5;	// gFlash index of the quick-menu button (0..4 are the tiles)
@@ -256,6 +288,13 @@ namespace banana
 		void arrow(bool right, float x, float y, const rnds::Color& c);
 		void face(const std::string& key, const std::string& label, float x, float w);
 		float faceWidth(const std::string& key, const std::string& label);
+		// a page's buttons along the bottom panel: B and the page's others from the left, its main one (right) at the
+		// right. Drawn and tapped from the same list, so a tap presses the chip it is on (or the nearest one).
+		struct Chip { Key key; std::string face, label; bool right = false; };
+		void drawChips(const std::vector<Chip>& cs);
+		Key chipAt(const std::vector<Chip>& cs, float x);	// Key::NONE with no chips
+		std::vector<float> chipXs(const std::vector<Chip>& cs, std::vector<float>& ws);
+		std::vector<Chip> keyboardChips();
 		static constexpr int ROWS = 5;
 	};
 

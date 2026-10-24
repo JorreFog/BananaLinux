@@ -1,0 +1,6 @@
+config BR2_PACKAGE_LIBSMB2
+	bool "libsmb2"
+	depends on BR2_TOOLCHAIN_HAS_THREADS
+	help
+	  A client library for SMB2 and SMB3 in userspace (no kernel module, no Samba): the shares of a NAS or a
+	  computer for the shelf's Downloads (banana-fetch). https://github.com/sahlberg/libsmb2

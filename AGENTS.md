@@ -7,7 +7,7 @@
 
 2. **Architecture & Minimalism:**
    - Adhere strictly to the read-only squashfs root + exFAT data partition design.
-   - Do not introduce systemd, heavyweight compositors (Wayland/X11), or sound servers (PipeWire/PulseAudio) unless explicitly approved. Keep userland strictly to `banana-ui` and `bananad`.
+   - Do not introduce systemd, heavyweight compositors (Wayland/X11), or sound servers (PipeWire/PulseAudio) unless explicitly approved. Keep userland strictly to `banana-ui` and `bananad`; the only other programs are the helpers they start for one task, which exit when it is done (`banana-scrape`, `banana-fetch` with its `7zz`), never resident daemons. A new helper needs approval like any other new program.
 
 3. **Performance & Efficiency:**
    - Keep CPU composition and rendering overhead minimal. Given RK3568/RK3566 constraints, optimize for low-latency frame presentation and efficient damage-diffing.

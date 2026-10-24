@@ -18,5 +18,5 @@ Banana's own code (ui/src, system/, buildroot/package, tools/) is under the MIT 
 RetroArch's joypad map for the RG DS (`buildroot/package/retroarch/retrogame_joypad.cfg`) is ROCKNIX's (GPL-2.0).
 
 Downloaded at build time, not kept here: RetroArch (GPL-3.0) and its cores (gpSP, Gambatte, FCEUmm, PCSX ReARMed and
-Mupen64Plus-Next: GPL-2.0; mGBA: MPL-2.0; libretro's GLSL shaders: per shader, mostly GPL/public domain; Snes9x and PicoDrive: non-commercial licences), libudev-zero (ISC), Linux, U-Boot, Buildroot and its packages, SuperDrastic (MIT) and DraStic
+Mupen64Plus-Next: GPL-2.0; mGBA: MPL-2.0; libretro's GLSL shaders: per shader, mostly GPL/public domain; Snes9x and PicoDrive: non-commercial licences), libudev-zero (ISC), for Downloads libsmb2 (LGPL-2.1+), libssh2 (BSD-3-Clause), libcurl (curl) and 7-Zip's 7zz (LGPL-2.1+ with the unRAR restriction for its RAR codecs; BSD for its LZFSE, Zstandard and xxHash parts, see its DOC/License.txt), Linux, U-Boot, Buildroot and its packages, SuperDrastic (MIT) and DraStic
 (proprietary freeware by Exophase, the build ROCKNIX packages; not redistributed by this repository).

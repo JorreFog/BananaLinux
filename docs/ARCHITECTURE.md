@@ -8,7 +8,7 @@
 | partition 1, `BANANA-BOOT` (FAT) | `a/Image` and `a/<handheld>.dtb` (and `b/` after an update), `extlinux/extlinux.conf` with a label per slot and `DEFAULT` naming the one to boot | 64 MB |
 | partition 2, `banana-root-a` (squashfs, LZ4) | the system, read-only | 256 MB (tens used) |
 | partition 3, `banana-root-b` | the other slot: empty until the first update writes the new system there | 256 MB |
-| partition 4, `BANANA` (exFAT) | made on the first boot from the rest of the card: `roms/`, `bios/`, `saves/`, `states/`, `banana/` (settings, logs, play stats, favourites, `updates/`), `drastic/`, `superdrastic/` | the rest |
+| partition 4, `BANANA` (exFAT) | made on the first boot from the rest of the card: `roms/`, `bios/`, `saves/`, `states/`, `banana/` (settings, logs, play stats, favourites, `updates/`, Downloads' `downloads/` and `nas.conf`), `drastic/`, `superdrastic/` | the rest |
 
 The image holds the first three partitions (the empty slot costs nothing compressed), so it is small and quick to
 write. `/usr/libexec/banana/firstboot`
@@ -131,6 +131,82 @@ Starting a game: banana-ui writes the game's pid to `/run/banana/game.pid`, clos
 devices and the sound device, sets the system's clock profile, and runs its `run` command. When the game exits it
 takes the panels back, records the play, and shows the game's library again.
 
+## Downloads: banana-fetch
+
+The shelf's Downloads tile (systems.conf's `[downloads]`, `run = banana:downloads`: one of the menu's own pages, not
+a program) gets games from a NAS or a computer and unpacks archives. Its pages
+are the settings' (`src/settings_downloads.cpp`, the list on the bottom panel, the row in hand explained on the
+top): the job in hand, the servers, Add a server, Archives on the card and Options. A server's folders are browsed
+(A opens, Y marks, X downloads what is marked, a folder with all in it); the Download page then chooses the card (the
+RG DS Plus's second SD card too, each with its free space), the folder (every system of systems.conf with a folder on
+the card, BIOS, roms: the one the files belong to by their extension, an archive's looked through, else by the
+server's folder names; the folder chosen for a server's folder is remembered) and whether archives are unpacked and
+deleted after (`downloads_*` in settings.conf: ask, always, never). The status page shows the job in hand: B leaves
+it working, X stops it (its parts and the job kept: A goes on from there), Y cancels it (the job deleted with what
+its unfinished downloads left; the files it finished stay).
+
+banana-ui has no network code for it: `banana-fetch` (`src/fetch/`) does it, in two shapes.
+
+- `banana-fetch serve`, while the pages are open: a line protocol on its stdin and stdout (tab-separated fields),
+  one request at a time, its answer read on a thread (which wakes the menu's loop when it is in): log in, list a
+  folder, walk the folders chosen into the files to download and where each goes, look into an archive, add or
+  change a server. A listing or a walk that finds the connection gone (an idle NAS hung up, Wi-Fi slept) connects
+  again once. It goes when the pages close, or after 10 idle minutes.
+- `banana-fetch run`, the jobs: `banana/downloads/<time>.job` on the card (the server, the files with their sizes and
+  where each goes; unpacking, the archive deleted after), done one after the other in the background while the menu
+  shows anything else. What happened to each file is a line of `<job>.done`, so a job cut short (stopped, the
+  battery, a crash) goes on from there when A resumes it, and a file half downloaded goes on from its `.part`. Its
+  pid is `/run/banana/transfer.pid`, its progress a line in `/run/banana/fetch/status` (twice a second at most, in a
+  folder of its own so that the menu's watch on `/run/banana` isn't woken by it), which the pages read. A job done
+  becomes `<time>.finished` and is told in `/run/banana/fetch.finished`: the menu then says the finished jobs it
+  hasn't seen over the top panel, whatever it shows. It runs niced, with idle I/O priority, and banana-ui stops it
+  (SIGSTOP to its process group, 7zz with it) while a game runs, and lets it go on after the game, or when the menu
+  starts again (one that went away during a game).
+
+Protocols: SMB 2 and 3 (libsmb2: a NAS's shares, Windows' and macOS's file sharing; a server's shares are its
+root; a guest logs in over SMB 3.0.2, or SMB 2 on an older server, as libsmb2 6.2 signs a 3.1.1 guest's requests with
+a key the server doesn't have), SFTP (libssh2: a password, or keyboard-interactive; the server's key trusted the
+first time and checked after), FTP and FTPS (libcurl: passive, explicit TLS, the certificate trusted the first time
+and checked in OpenSSL's own verification, before the password is sent; MLSD, or LIST where a server has no MLSD;
+names in CP1251 or CP866 for old servers). A file goes into `<file>.part` next to where it belongs and is renamed once
+its size is right; a drop (Wi-Fi coming back after a sleep, a server restarting, on any of the protocols) is tried
+again after 3, 10, 30, 60 and 60 s from where it stopped, and a connection quiet for 30 s is dropped and tried again.
+What another try won't change (the login refused, a key that changed, a file that isn't there or isn't allowed, a
+full card) fails the file at once, and the job goes on with the next. The room needed and FAT32's 4 GB a file (the
+second card may be FAT32) are checked before anything is written.
+
+Archives: zip natively (stored and deflated, zip64, CRCs checked; names in UTF-8, or in CP866 or CP437 as old Windows
+zips have them), 7z, RAR and the rest (an encrypted zip, another method) with 7-Zip's own `7zz` (built from its
+source: Buildroot's p7zip has no RAR), on one thread (several take many times the memory). A multi-volume archive
+(`.7z.001`, `.partN.rar`, `.rar` with `.r00`...) is unpacked once its last volume is in. Unpacking goes into
+`<card>/.banana-unpack/`, on the same card, and its files are moved into place when it worked; an archive with a
+path out of it (`..`, an absolute one) is refused whole, macOS's and Windows' clutter (`__MACOSX`, `.DS_Store`,
+`Thumbs.db`) and links are left out, names the cards can't take are changed (`:` to `_`; the same name twice gets
+` (2)`, and a file never takes the place of a folder of its name, nor a folder a file's), and an archive holding a
+single folder is unwrapped. An archive whose dictionary wouldn't fit in the memory free is left packed, as is one
+with a password: Archives on the card unpacks it, the password typed there. Zips for a system whose emulator plays
+them zipped (the DS, the GBA...) are kept as they are unless asked, each archive judged by itself (the job's
+`keep_zips`): the Download page's Unpack archives decides for a choice of zips alone, a row of their own when the
+choice may hold 7z or RAR archives too (a folder), which are unpacked all the same.
+
+Servers are in `banana/nas.conf` (sections of key = value, read as data, never run). A password is kept only when
+Remember password is on, sealed: AES-256-GCM under a key made (HKDF-SHA256) from `banana/nas.key` (32 random bytes)
+and the SoC's serial number (`/proc/device-tree/serial-number`), which isn't on the card, and bound to the server's
+protocol, address, port and user. The card read on a computer, or put in another handheld, doesn't give it away
+(Downloads asks for it again); someone with the handheld itself can still open it, as there is no secure store. That
+rests on the serial number, which U-Boot puts in the device tree: without one, the key is made from `nas.key` alone,
+so the card alone opens the passwords, and banana-fetch says so in `banana/logs/downloads.log` when it seals one.
+File sharing leaves both files out. A password not kept goes to the runner in a file of `/run/banana` (tmpfs, 0600)
+that it reads once and deletes, and an archive's goes to 7zz on its stdin (where 7zz asks for it), not with `-p`:
+passwords are never on a command line nor in `banana/logs/downloads.log`.
+
+`ui/tests/fetch-test.sh` checks the archives (7z and RAR test archives, and zips made by Python: CP866 names, a zip
+slip, zip64..., and a 7z of 1502 files), the session and the runner (cuts, stalls, `.part`s, a full card, passwords,
+a connection lost between listings) against a folder standing in for a server (`BANANA_FETCH_TEST=1`);
+`ui/tests/run.sh` goes through the pages headless with it (taps on their buttons too, and a runner at work beside
+the menu); and `ui/tests/fetch-servers.sh` runs against real servers in Docker (vsftpd for FTP and FTPS, pure-ftpd
+for MLSD, OpenSSH, Samba with a guest share), a download on each protocol cut in the middle by a proxy and resumed.
+
 ## Sleep: bananad
 
 `bananad` reads every input device next to the menu and the games (evdev allows several readers; it grabs
@@ -157,6 +233,11 @@ When `/sys/power/state` returns:
   redraw: the kernel's DRM resume has already put our buffers back on the panels, so no modeset), all within a
   fraction of a millisecond of the kernel returning; then the `post` hooks (Wi-Fi back) in the background, the LEDs,
   the headphone route; the press that woke it is ignored.
+
+A Downloads job (banana-fetch's runner, its pid in `/run/banana/transfer.pid`) with no game running holds the
+lid's sleep and the idle one: the lid shut makes the panels dark, the job goes on, and the handheld sleeps once it is
+done (`sleep.log` says so). The power button sleeps at once, as ever, and the job goes on from where it was after. A
+runner that is stopped (`T` in `/proc/<pid>/stat`: banana-ui went away during a game) holds nothing.
 
 If a suspend fails, bananad goes on more carefully by itself: devices one at a time, then `s2idle`; if even that
 fails with the lid shut, both backlights go off until it opens. With lid sleep switched off, closing the lid only

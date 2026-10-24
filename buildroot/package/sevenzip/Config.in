@@ -1,0 +1,9 @@
+config BR2_PACKAGE_SEVENZIP
+	bool "sevenzip"
+	depends on BR2_aarch64	# its makefile for arm64, as Banana's handhelds are
+	depends on BR2_INSTALL_LIBSTDCPP
+	depends on BR2_TOOLCHAIN_HAS_THREADS
+	help
+	  7-Zip's own command line, 7zz (Igor Pavlov's, built from its source), with the RAR codecs Buildroot's
+	  p7zip doesn't have: the 7z and RAR archives (and encrypted zips) the shelf's Downloads unpacks
+	  (banana-fetch). https://www.7-zip.org

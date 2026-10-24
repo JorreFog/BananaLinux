@@ -144,6 +144,120 @@ for size in 640x480 1024x768; do
             [ "$(convert "$f" -format '%[fx:standard_deviation>0.01]' info:)" = 1 ] || { echo "FAIL $size: $f is blank"; fail=1; }
         done
     done
+    # Downloads (the shelf's tile), with banana-fetch itself (built when this computer has its libraries; the top
+    # Makefile's test does it) and its test protocol, "dir", standing in for a server (a folder here; only with
+    # BANANA_FETCH_TEST=1). Headless, the menu runs banana-fetch's runner to the end at once. A server's folder
+    # browsed, two files marked and downloaded into the DS folder (the zip unpacked, as asked), a locked server's
+    # password typed, an archive on the card unpacked where it is (and deleted, as asked), an option changed, a server
+    # added with the keyboard; a job's runner at work beside the menu (its progress, the retry's countdown, X Stop and
+    # Y Cancel tapped), and the chips tapped on the other pages
+    if [ -x "$HERE/banana-fetch" ]; then
+        dlog=$OUT/$size-downloads.log; NAS=$OUT/nas; RUN=$OUT/run
+        dlclean() {
+            rm -rf "$NAS" "$RUN" "$FX/data/downloads" "$FX/data/nas.conf" "$FX/data/nas.conf.lock" "$FX/data/nas.key" "$FX/data/logs/downloads.log" \
+                "$FX/roms/nds/Alpha Quest.nds" "$FX/roms/nds/Beta Racer.nds" "$FX/roms/nds/Beta Racer.zip" "$FX/Delta.zip" "$FX/Delta.gba" "$FX/.banana-unpack" \
+                "$FX/roms/nds/Gamma Big.nds" "$FX/roms/nds/Gamma Big.nds.part" "$FX/roms/gba/Echo.gba" "$FX/roms/gba/Echo Pack.zip"
+            sed -i '/^downloads_/d' "$FX/data/settings.conf"
+        }
+        dlclean
+        mkdir -p "$NAS/Games/nds" "$NAS/Games/gba" "$RUN"
+        head -c 70000 /dev/urandom > "$NAS/Games/nds/Alpha Quest.nds"
+        head -c 1000 /dev/zero > "$NAS/Games/gba/Echo.gba"
+        python3 - "$NAS/Games/nds/Beta Racer.zip" "$FX/Delta.zip" "$NAS/Games/gba/Echo Pack.zip" <<'PY'
+import sys, zipfile
+with zipfile.ZipFile(sys.argv[1], 'w', zipfile.ZIP_DEFLATED) as z:
+    z.writestr('Beta Racer.nds', b'B' * 50000)
+with zipfile.ZipFile(sys.argv[2], 'w', zipfile.ZIP_DEFLATED) as z:
+    z.writestr('Delta/Delta.gba', b'D' * 30000)
+with zipfile.ZipFile(sys.argv[3], 'w', zipfile.ZIP_DEFLATED) as z:
+    z.writestr('Echo Pack.gba', b'E' * 20000)
+PY
+        printf '[locked]\nname = Locked\nprotocol = dir\nhost = %s\nuser = u\nremember = no\n\n[testnas]\nname = Test NAS\nprotocol = dir\nhost = %s\nguest = yes\nstart = /Games\n' \
+            "$NAS" "$NAS" > "$FX/data/nas.conf"
+        : > "$dlog"
+        run_dl() { BANANA_FETCH="$HERE/banana-fetch" BANANA_FETCH_TEST=1 BANANA_FETCH_TEST_FAST=1 BANANA_FETCH_TEST_PASSWORD=qwe BANANA_RUN="$RUN" \
+            "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" \
+            --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" --script "$1" 2>> "$dlog" ||
+            { echo "FAIL $size: banana-ui (downloads) exited $?"; fail=1; }; }
+        dlcheck() { grep -q "$1" "$dlog" || { echo "FAIL $size: downloads: no '$1'"; fail=1; }; }
+        # (headless, a press the menu takes isn't followed by its update: "wait 1" lets banana-fetch's answer in)
+        # home: Locked, Test NAS, Add a server, Archives on the card, Options. Test NAS opens on /Games (gba, nds); in
+        # nds Alpha Quest.nds and Beta Racer.zip, both marked, X; the Download page: Card, Folder (Nintendo DS, from the
+        # .nds), Unpack archives (No: the DS plays zips) turned to Yes, which brings Delete archives after (No); Download
+        run_dl "fetchdone; homeid downloads; shot dl-tile; press a; shot dl-home; press down; press a; wait 1; shot dl-browse; press down; press a; wait 1; \
+            press y; press down; press y; shot dl-marked; press x; shot dl-target; press down; press down; press right; shot dl-unpack; \
+            press down; press down; press a; wait 300; shot dl-status; fetchdone; shot dl-done; press b; shot dl-home-done"
+        dlcheck "press a: banana:downloads open"
+        dlcheck "downloads: connected to Test NAS (DIR), home /"
+        dlcheck "downloads: /Games/nds: 2 entries"
+        dlcheck "2 files from Test NAS into $FX/roms/nds"
+        dlcheck "downloads: a job finished"
+        cmp -s "$NAS/Games/nds/Alpha Quest.nds" "$FX/roms/nds/Alpha Quest.nds" || { echo "FAIL $size: Alpha Quest.nds wasn't downloaded"; fail=1; }
+        [ -f "$FX/roms/nds/Beta Racer.nds" ] && cmp -s "$NAS/Games/nds/Beta Racer.zip" "$FX/roms/nds/Beta Racer.zip" ||
+            { echo "FAIL $size: Beta Racer.zip wasn't downloaded and unpacked, the zip kept"; fail=1; }
+        ls "$FX/data/downloads/"*.finished > /dev/null 2>&1 || { echo "FAIL $size: no finished job in banana/downloads"; fail=1; }
+        grep -q '^target /Games/nds = data:roms/nds$' "$FX/data/nas.conf" || { echo "FAIL $size: the folder chosen wasn't remembered"; fail=1; }
+        # home: Last download, Locked (its password typed on the keyboard: qwe), ... Archives on the card: this card's
+        # data, roms and Delta.zip: Then delete it (Options' Ask) to Yes, Unpack here (its one folder unwrapped; B then
+        # comes back to the job's row, the first); Options (the last row): Unpack after a download to Always; Add a
+        # server: SFTP, its address typed (qwe), START saves it
+        run_dl "homeid downloads; press a; press down; press a; shot dl-password; $(key 1,0 1,1 1,2) press start; wait 1; shot dl-locked; press b; \
+            press down; press down; press down; press a; press a; press down; press down; press a; shot dl-local; press down; press down; press right; \
+            shot dl-local-delete; press up; press up; press a; wait 300; shot dl-unpacked; \
+            press b; press up; press a; press right; shot dl-options; press b; press up; press up; press a; press down; press right; \
+            press down; press a; $(key 1,0 1,1 1,2) press start; shot dl-edit; press start; wait 1; shot dl-saved"
+        dlcheck "downloads: connected to Locked (DIR), home /"
+        dlcheck "unpacked into $FX$"
+        dlcheck "downloads: server .* saved"
+        [ "$(cat "$FX/Delta.gba" 2>/dev/null | wc -c)" = 30000 ] || { echo "FAIL $size: Delta.zip wasn't unpacked on the card"; fail=1; }
+        [ -e "$FX/Delta.zip" ] && { echo "FAIL $size: Unpack here didn't delete Delta.zip, as Then delete it said"; fail=1; }
+        grep -q '^downloads_unpack = always$' "$FX/data/settings.conf" || { echo "FAIL $size: Options didn't keep Unpack after a download"; fail=1; }
+        grep -q '^host = qwe$' "$FX/data/nas.conf" && grep -q '^protocol = sftp$' "$FX/data/nas.conf" ||
+            { echo "FAIL $size: the server added isn't in nas.conf: $(grep -c '^\[' "$FX/data/nas.conf") sections"; fail=1; }
+        # a job's runner at work beside the menu (started here, a piece every 100 ms, the connection cut at 1 MB): the
+        # status page while it downloads (its two bars) and while it waits to try again; X Stop tapped twice stops it,
+        # its part and its job kept; then Y Cancel tapped twice deletes both. ("sleep": real time, for the runner)
+        head -c 3000000 /dev/urandom > "$NAS/Games/nds/Gamma Big.nds"
+        JOB=$FX/data/downloads/20990101-000000-1.job
+        printf 'title = Gamma Big.nds\nserver = testnas\nunpack = no\ntemp_root = %s\nget\t3000000\t/Games/nds/Gamma Big.nds\t%s\n' "$FX" "$FX/roms/nds/Gamma Big.nds" > "$JOB"
+        BANANA_DATA="$FX/data" BANANA_RUN="$RUN" BANANA_FETCH_TEST=1 BANANA_FETCH_TEST_DELAY=100 BANANA_FETCH_TEST_CUT=1000000 "$HERE/banana-fetch" run 2>> "$dlog" & rp=$!
+        upto() { i=0; until grep -q "^$1 " "$RUN/fetch/status" 2>/dev/null || [ $i -ge 100 ]; do sleep 0.1; i=$((i + 1)); done; }
+        upto get
+        run_dl "homeid downloads; press a; press a; shot dl-progress"
+        upto retry
+        run_dl "homeid downloads; press a; press a; shot dl-retry; touch 1 180 442; shot dl-stop; touch 1 180 442; sleep 1500; wait 600; shot dl-stopped"
+        wait $rp || true
+        grep -q '^stopped' "$RUN/fetch/status" && [ -f "$JOB" ] && [ -s "$FX/roms/nds/Gamma Big.nds.part" ] ||
+            { echo "FAIL $size: X Stop (tapped) didn't stop the download, its part and job kept: $(cat "$RUN/fetch/status")"; fail=1; }
+        run_dl "homeid downloads; press a; press a; touch 1 180 442; shot dl-cancel; touch 1 180 442; wait 1; shot dl-cancelled"
+        dlcheck "$JOB cancelled"
+        [ ! -e "$JOB" ] && [ ! -e "$FX/roms/nds/Gamma Big.nds.part" ] || { echo "FAIL $size: Y Cancel (tapped) left the job or its part"; fail=1; }
+        cmp -s "$OUT/$size-dl-progress-top.png" "$OUT/$size-dl-retry-top.png" && { echo "FAIL $size: the retry's countdown looks like the progress"; fail=1; }
+        # the chips tapped where they are drawn: home (Last download, Locked, qwe, Test NAS...): Y Edit on Locked, START
+        # saves it; Test NAS's /Games: X Get on gba (Options' Ask again): its Download page has a Zips row (the GBA
+        # plays them zipped: kept as they are, its job says so); Add a server: A Type on Address (ewq), START Save
+        sed -i '/^downloads_/d' "$FX/data/settings.conf"
+        run_dl "homeid downloads; press a; press down; touch 1 180 442; shot dl-tap-edit; press start; wait 1; press down; press down; press a; wait 1; \
+            touch 1 260 442; shot dl-zips; press start; wait 1; wait 300; press b; press down; press down; press down; press down; press a; \
+            press down; press down; touch 1 580 442; $(key 1,2 1,1 1,0) press start; touch 1 190 442; wait 1; shot dl-tap-saved"
+        dlcheck "downloads: server locked saved"
+        dlcheck "2 files from Test NAS into $FX/roms/gba"
+        [ -f "$FX/roms/gba/Echo.gba" ] && [ -f "$FX/roms/gba/Echo Pack.zip" ] && [ ! -e "$FX/roms/gba/Echo Pack.gba" ] &&
+            grep -l '^title = gba$' "$FX/data/downloads/"*.finished | xargs grep -q '^keep_zips = yes$' ||
+            { echo "FAIL $size: the GBA folder's zip wasn't kept as it is (keep_zips)"; fail=1; }
+        grep -q '^host = ewq$' "$FX/data/nas.conf" || { echo "FAIL $size: A Type and START Save (tapped) didn't save the server"; fail=1; }
+        for s in dl-tile dl-home dl-browse dl-marked dl-target dl-unpack dl-status dl-done dl-home-done dl-password dl-locked dl-local dl-local-delete \
+            dl-unpacked dl-options dl-edit dl-saved dl-progress dl-retry dl-stop dl-stopped dl-cancel dl-cancelled dl-tap-edit dl-zips dl-tap-saved; do
+            for p in top bot; do
+                f=$OUT/$size-$s-$p.png
+                [ -s "$f" ] || { echo "FAIL $size: no $f"; fail=1; continue; }
+                [ "$(convert "$f" -format '%[fx:standard_deviation>0.01]' info:)" = 1 ] || { echo "FAIL $size: $f is blank"; fail=1; }
+            done
+        done
+        dlclean
+    else
+        echo "SKIP $size: Downloads (no ui/banana-fetch: make -C ui banana-fetch, with libcurl, libssh2 and OpenSSL's dev packages)"
+    fi
     grep 'bench:' "$log" | sed "s/^banana-ui: /$size /"
 done
 [ $fail = 0 ] && echo "banana-ui: all checks passed ($OUT)"

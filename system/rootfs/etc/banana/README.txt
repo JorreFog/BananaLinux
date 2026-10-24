@@ -16,6 +16,12 @@ File sharing: Settings > File sharing puts this card on the network (\\<address>
 smb://<address>/banana on a Mac), so games can be copied in over Wi-Fi. No password: leave it off on networks
 you don't trust.
 
+Downloads (the tile on the shelf): games from a NAS or a computer over SMB, SFTP or FTP, into their system's
+folder, archives unpacked. Its servers are kept in banana/nas.conf (a remembered password sealed for this
+handheld: another one, or a computer, can't open it), its jobs in banana/downloads, its log in
+banana/logs/downloads.log. Options there: banana/settings.conf's downloads_* lines. A systems.conf of your own
+made before Downloads came needs its [downloads] section (from banana/systems.conf.default) for the tile.
+
 SSH (for working on Banana itself): put your public key in banana/ssh/authorized_keys, switch on
 Settings > SSH, then ssh root@<address>. Keys only, no passwords.
 

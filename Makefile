@@ -3,8 +3,10 @@
 #   make rgds          the RG DS's SD card image        -> output/rgds/images/banana-rgds.img.gz
 #   make rgds-plus     the RG DS Plus's SD card image   -> output/rgds-plus/images/banana-rgds-plus.img.gz
 #   make universal     one card for both                -> output/universal/images/banana-universal.img.gz
-#   make ui            banana-ui for this computer (headless renders, no panels needed)
-#   make test          renders the menu headless from a test library and checks it (needs ImageMagick)
+#   make ui            banana-ui for this computer (headless renders, no panels needed), and banana-fetch (Downloads)
+#                      when its libraries are there (libcurl, libssh2, OpenSSL; libsmb2 too, or it is built without SMB)
+#   make test          renders the menu headless from a test library and checks it (needs ImageMagick), then
+#                      banana-fetch's own checks (archives, the session, the runner; 7zz for the 7z and RAR ones)
 #   make theme-studio  the layout-theme editor's tests (the expression port, the preview server, the schema)
 #   make theme-studio-desktop  the PySide6 designer's smoke test
 #   make menuconfig-rgds / linux-menuconfig-rgds ...   any Buildroot target, per board
@@ -32,9 +34,13 @@ $(foreach b,$(BOARDS),$(eval $(call board,$(b))))
 
 ui:
 	$(MAKE) -C ui host
+	@if pkg-config --exists libcurl libssh2 libssl libcrypto zlib; then \
+		$(MAKE) -C ui banana-fetch SMB=$$(pkg-config --exists libsmb2 && echo 1 || echo 0); \
+	else echo "banana-fetch not built (libcurl, libssh2 and OpenSSL's dev packages): Downloads' tests are skipped"; fi
 
 test: ui
 	ui/tests/run.sh
+	@if [ -x ui/banana-fetch ]; then sh ui/tests/fetch-test.sh; fi
 
 # tools/theme-studio: the layout-theme editor's tests (expr.js vs ui/src/expr.cpp, the preview server, the schema)
 theme-studio: ui
