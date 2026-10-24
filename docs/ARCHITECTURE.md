@@ -102,7 +102,23 @@ the d-pad (A types, B deletes, X capitals, Y space, START joins) or by touch on 
 network's block first in `banana/wifi.conf` (WPA3-only networks get `key_mgmt=SAE`; a block for the same name is
 replaced), restarts wpa_supplicant and follows `wifi status` until it has an address. udhcpc is started by
 wpa_cli's action script only once wpa_supplicant is connected, so a handheld with no network in reach isn't kept
-awake asking for an address. Company (802.1X) and WEP networks are listed but go in `wifi.conf` by hand.
+awake asking for an address. Company (802.1X) and WEP networks are listed but go in `wifi.conf` by hand. The Wi-Fi
+row switches it on and off (`wifi` in settings.conf): kept across boots (rcS starts it only when it is on and
+`wifi.conf` has a network) and sleeps (the hook brings it back only when it was running).
+
+**Bluetooth** (Settings > Network > Bluetooth, `bluetooth` in settings.conf, off by default). Both handhelds' RTL8821CS
+has its Bluetooth on `uart1`, a serdev device in the device trees (`realtek,rtl8821cs-bt`, enable on gpio0 PD5):
+`hci_uart` (H5, Realtek's setup through `btrtl`, firmware `rtl_bt/rtl8821cs_fw.bin` and the mandatory
+`rtl8821cs_config.bin`, linux-firmware's link to `rtl8761b_config.bin`). Everything is a module and
+`usr/libexec/banana/bluetooth up` loads it only when Bluetooth is on, then starts D-Bus's system bus, `bluetoothd`
+(BlueZ, its input plugins for controllers) and `bluealsa` (bluez-alsa, the A2DP source); `down` unloads `hci_uart`,
+which cuts the chip's Bluetooth power. Bluetooth devices lists what is paired and what a search finds; A pairs (Just
+Works: bluetoothctl with no agent, so devices that want a PIN or a passkey, keyboards and Wii remotes, don't pair
+yet), connects or disconnects, Y forgets. BlueZ's `/var/lib/bluetooth` is `/run/banana/bluetooth`, kept on the card
+as `banana/bluetooth.tar` (exFAT can't hold its `AA:BB:...` folder names). Headphones: bluealsa-cli's events write the
+A2DP sink playing to `/run/banana/bt/audio`, and bananad plays there (below, Sound). Controllers call the handheld back
+themselves; the headphones played last (`banana/bluetooth-audio`) are called back at boot and after a wake. Its
+settings lines are new since the 0.3.0 translation document: English in 简体中文 until the translator's next round.
 
 **File sharing** (Settings > Network): the card's data partition as `\\<address>\banana` over SMB3, served by
 the kernel (`ksmbd`, a module loaded only when sharing is switched on) and ksmbd-tools' `ksmbd.mountd`, as a guest
@@ -135,7 +151,8 @@ the handheld to sleep:
 
 1. The game's process group gets `SIGSTOP` (ROCKNIX found DraStic's dynarec must not run on while the clocks drop).
 2. `/etc/banana/sleep.d/*` run with `pre` (Wi-Fi down and its driver unloaded: the RTL8821CS doesn't survive a
-   suspend otherwise; nothing at all when Wi-Fi is off).
+   suspend otherwise; nothing at all when Wi-Fi is off. Bluetooth down the same way, its modules unloaded, the sound
+   left routed to the headphones so a woken game is quiet until they are called back).
 3. `sync()`: this kernel has `SUSPEND_SKIP_SYNC`, so the flush is bananad's (with saves written within 2 s anyway,
    `vm.dirty_expire`).
 4. The RTC alarm for the battery check (`sleep_check_hours`, 4), devices set to resume in parallel
@@ -151,7 +168,7 @@ When `/sys/power/state` returns:
 - **Anything with the lid still shut** (the power button pressed in a bag): straight back to sleep.
 - **The lid opened, or the power button with the lid open**: the game gets `SIGCONT` and banana-ui `SIGUSR1` (a
   redraw: the kernel's DRM resume has already put our buffers back on the panels, so no modeset), all within a
-  fraction of a millisecond of the kernel returning; then the `post` hooks (Wi-Fi back) in the background, the LEDs,
+  fraction of a millisecond of the kernel returning; then the `post` hooks (Wi-Fi and Bluetooth back) in the background, the LEDs,
   the headphone route; the press that woke it is ignored.
 
 If a suspend fails, bananad goes on more carefully by itself: devices one at a time, then `s2idle`; if even that
@@ -180,9 +197,10 @@ headless at 640x480, 12 MB at 1024x768), bananad 1.6 MB, init, getty and the she
 idle. The menu draws only when something changes and sleeps in `poll()` otherwise; bananad wakes about once a
 minute; no sound server, no udev, no compositor, no shell waiting for input. The kernel is built for these two handhelds
 only: from ROCKNIX's RK3566 config, shared by many devices, Banana's fragment leaves out what the two device trees
-don't have (other panels, touchscreens and codecs, HDMI, cameras, USB gadget mode, packet filtering, Bluetooth,
-FUSE, swap, netsched), so the kernel in memory is smaller and boot probes fewer drivers; fourteen modules remain
-(Wi-Fi, the GPU, xpad, file sharing, virtio for QEMU). Wi-Fi's scans back off to one every five minutes when no
+don't have (other panels, touchscreens and codecs, HDMI, cameras, USB gadget mode, packet filtering, Bluetooth
+adapters other than the RTL8821CS's UART, FUSE, swap, netsched), so the kernel in memory is smaller and boot probes
+fewer drivers; the modules are Wi-Fi, the GPU, xpad, file sharing, Bluetooth (loaded only while it is on) and virtio
+for QEMU. Wi-Fi's scans back off to one every five minutes when no
 known network is in reach. Buildroot builds everything with `-O2` for the Cortex-A55, without the stack protector
 in every function and without eager symbol binding at start: a single-user game device gets the cycles instead.
 RetroArch runs with two swapchain images and nothing behind the game (no rewind buffer, no run-ahead, no shader
@@ -211,7 +229,9 @@ LED follows the charger's own LED trigger (`<battery>-charging`), the critical b
 **Sound.** No sound server: ALSA's default device is written by bananad to `/run/banana/asound.conf`. RG DS: the
 rk817 (card 0) with its `Playback Mux` on HP. RG DS Plus: playback on the aw88166 card, or on the rk817 while its
 `Headphones Jack` switch is on; capture always from the rk817 (the microphone). Volume keys: `PCM` on the aw88166,
-`Master` on the rk817. A program opened before a change keeps its device until it opens it again.
+`Master` on the rk817. Bluetooth headphones, while connected, come first: bluez-alsa's PCM plugin through `plug`
+(A2DP, SBC), and the volume keys change the headphones' own volume (`bluealsa-cli volume`, 0-127). A program opened
+before a change keeps its device until it opens it again.
 
 ## Clocks: banana-perf
 

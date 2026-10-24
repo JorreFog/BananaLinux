@@ -108,7 +108,7 @@ On the hardware (an RG DS and an RG DS Plus, October 2026):
 
 Not done yet, or rough: the menu is drawn by the CPU and feels slow on the RG DS Plus's 1024x768 panels (both
 panels are drawn in full on one core); scraping box art (no scraper yet: the ScreenScraper account is only kept);
-Bluetooth; one card for both handhelds (each has its own image for now). See [docs/ROADMAP.md](docs/ROADMAP.md).
+Bluetooth (controllers and headphones, new: not yet tested on the handhelds); one card for both handhelds (each has its own image for now). See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 Off the device, in this repository's CI and by hand:
 
