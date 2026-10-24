@@ -760,15 +760,18 @@ namespace banana
 			int pm = atoi(v.c_str()), i = it.key == "bottom" ? 1 : 0;
 			std::string b = std::string("/sys/class/backlight/") + BACKLIGHT[i];
 			int max = atoi(readLine(b + "/max_brightness").c_str());
-			if (max > 0) std::ofstream(b + "/brightness") << std::max(1, max * pm / 1000) << "\n";
+			if (max > 0) std::ofstream(b + "/brightness") << std::max(1, (max * pm + 500) / 1000) << "\n";
 			// both panels' levels kept for bananad to restore at boot: this one changed, the other as it was
 			int other = backlightPair(data + "/backlight", 1 - i);
 			if (other <= 0)
 			{
 				std::string o = std::string("/sys/class/backlight/") + BACKLIGHT[1 - i];
 				int omax = atoi(readLine(o + "/max_brightness").c_str());
-				other = omax > 0 ? atoi(readLine(o + "/brightness").c_str()) * 1000 / omax : pm;
+				other = omax > 0 ? (atoi(readLine(o + "/brightness").c_str()) * 1000 + omax / 2) / omax : pm;
 			}
+			// (never a 0: the other panel switched off or idle-dimmed to black just now made bananad throw the whole
+			// file away at the next boot, both panels back at the kernel's 50%)
+			if (other <= 0 || other > 1000) other = pm;
 			std::ofstream(data + "/backlight") << (i == 0 ? pm : other) << " " << (i == 0 ? other : pm) << "\n";
 			return;
 		}

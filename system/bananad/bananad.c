@@ -939,7 +939,8 @@ static void backlight_set_one(int i, int pm)
 	snprintf(p, sizeof p, "/sys/class/backlight/%s/max_brightness", BL[i]);
 	int max = read_int(p, 0);
 	if (max <= 0) return;
-	int nv = max * pm / 1000;
+	int nv = (max * pm + 500) / 1000;	/* (rounded both ways: the panels' 1666 steps kept in thousandths, a level
+						 * saved and restored at every shutdown no longer creeps down a step each time) */
 	if (nv < 1) nv = 1;
 	snprintf(p, sizeof p, "/sys/class/backlight/%s/brightness", BL[i]);
 	snprintf(v, sizeof v, "%d", nv);
@@ -953,8 +954,14 @@ static int read_pair(const char *path, int *top, int *bottom)
 	if (!f) return 0;
 	int n = fscanf(f, "%d %d", top, bottom);
 	fclose(f);
+	if (n < 1) return 0;
 	if (n == 1) *bottom = *top;
-	return n >= 1 && *top > 0 && *top <= 1000 && *bottom > 0 && *bottom <= 1000;
+	/* one panel's level unusable (a 0 kept while that panel was off): the other's for both, instead of the whole
+	 * file ignored and both panels left at the kernel's 50% */
+	int okt = *top > 0 && *top <= 1000, okb = *bottom > 0 && *bottom <= 1000;
+	if (!okt && okb) *top = *bottom;
+	else if (okt && !okb) *bottom = *top;
+	return okt || okb;
 }
 /* a panel's level now, in thousandths of its maximum (-1: no such backlight) */
 static int backlight_permille(int i)
@@ -963,7 +970,7 @@ static int backlight_permille(int i)
 	snprintf(p, sizeof p, "/sys/class/backlight/%s/max_brightness", BL[i]);
 	int max = read_int(p, 0);
 	snprintf(p, sizeof p, "/sys/class/backlight/%s/brightness", BL[i]);
-	return max > 0 ? read_int(p, 0) * 1000 / max : -1;
+	return max > 0 ? (read_int(p, 0) * 1000 + max / 2) / max : -1;
 }
 
 /* the bottom panel's backlight (BL[1], backlight0 on both handhelds). While banana-ui is managing the bottom's idle dim
