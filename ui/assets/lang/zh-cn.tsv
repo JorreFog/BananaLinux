@@ -463,6 +463,15 @@ settings	Pokémon types	Psychic	超能力
 settings	Pokémon types	Ice	冰
 settings	Pokémon types	Dragon	龙
 settings	Pokémon types	Dark	恶
+# (the Pokémon companion's rows below, from 0.4.3's full-panel companion, are a draft, not Majirefy's: for them to check)
+settings		Resists	抗性
+settings		Immune to	免疫
+settings		Exp	经验
+settings		Next	下一级
+settings		Pwr	威力
+settings		You	我方
+settings		Foe	对手
+settings		It's still an egg.	还是一个蛋。
 settings		the list of covers	封面列表
 settings		the boot partition can't be written	启动分区无法写入
 settings		can't write extlinux.conf	无法写入 extlinux.conf

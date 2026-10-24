@@ -3981,6 +3981,8 @@ namespace banana
 	{
 		raw.reset();
 		gBadges.clear();
+		pkIcons.clear();
+		pkTables.reset();
 	}
 
 	bool Settings::gameUpdate(double t)
@@ -4007,7 +4009,7 @@ namespace banana
 			changed = true;
 			// a battle starting shows the battle, its end the party (unless another tab was picked meanwhile)
 			bool b = companion->snapshot().inBattle;
-			if (b && !pkBattle && pkView != PK_ACH) pkView = PK_BATTLE;
+			if (b && !pkBattle && pkView != PK_GAME) pkView = PK_BATTLE;
 			if (!b && pkBattle && pkView == PK_BATTLE) pkView = PK_PARTY;
 			pkBattle = b;
 		}
@@ -4035,22 +4037,33 @@ namespace banana
 			float tx = 18 + i * 122;
 			if (lx >= tx && lx < tx + 114 && ly >= 300 && ly < 420) hit = i;
 		}
-		// the companion's box: a tab, a party member (its moves), or back to the party from them
-		if (companion && companion->active() && !down && ly >= 80 && ly < 286)
+		// the companion: the tab bar, a party member (its summary), another member or back from it; the Game tab is the
+		// panel's own (its tiles, below)
+		if (companion && companion->active())
 		{
-			if (ly < 116)
+			if (ly >= 424)
 			{
-				for (int i = 0; i < 3; i++)
-					if (pkTabW[i] > 0 && lx >= pkTabX[i] - 8 && lx < pkTabX[i] + pkTabW[i] + 8) pkView = i == 0 ? PK_PARTY : i == 1 ? PK_BATTLE : PK_ACH;
+				if (!down)
+					for (int i = 0; i < 3; i++)
+						if (pkTabW[i] > 0 && lx >= pkTabX[i] && lx < pkTabX[i] + pkTabW[i]) pkView = i == 0 ? PK_PARTY : i == 1 ? PK_BATTLE : PK_GAME;
+				gDown = gFlash = -1;
+				return G_NONE;
 			}
-			else if (pkView == PK_PARTY)
+			if (pkView != PK_GAME)
 			{
-				int c = lx < 320 ? 0 : 1, r = (int)((ly - 118) / 54);
-				int i = r * 2 + c;
-				if (r >= 0 && r < 3 && i < (int)companion->snapshot().party.size()) { pkMon = i; pkView = PK_MON; }
+				const auto& party = companion->snapshot().party;
+				if (!down && pkView == PK_PARTY && ly < 410)
+				{
+					int i = (int)((ly - 14) / 134) * 2 + (lx < 322 ? 0 : 1);
+					if (i >= 0 && i < (int)party.size()) { pkMon = i; pkView = PK_MON; }
+				}
+				else if (!down && pkView == PK_MON && ly >= 344 && ly < 418)
+				{
+					if (lx >= 526) pkView = PK_PARTY;
+					else if (lx >= 18 && (int)((lx - 18) / 80) < (int)party.size()) pkMon = (int)((lx - 18) / 80);
+				}
+				return G_NONE;
 			}
-			else if (pkView == PK_MON) pkView = PK_PARTY;
-			return G_NONE;
 		}
 		if (down) { gDown = gFlash = hit; gFlashUntil = now + 10000; return G_NONE; }
 		int was = gDown;
@@ -4088,19 +4101,23 @@ namespace banana
 		}
 		be->beginScreen(gScreen);
 		box("screen", false, 0, 0, 640, 480);
+		bool pk = companion && companion->active();
+		if (pk && pkView != PK_GAME)
+		{
+			pokeRender(p);
+			be->endScreen();
+			return;
+		}
 		// ---- the header: the game, the system
 		box("bubble", false, 18, 14, 604, 54);
 		std::string sys = fit(gSystem, true, 17, 200);
 		float sw = text(sys, true, 17, 0, 0, p.muted, false, 0, true);
 		text(sys, true, 17, 602 - sw, 31, p.muted);
 		text(fit(gTitle, true, 22, 540 - sw), true, 22, 38, 28, p.ink);
-		// ---- the achievements (or the companion's tabs, the achievements one of them)
+		// ---- the achievements
 		box("slot", false, 18, 80, 604, 206);
-		bool pk = companion && companion->active();
-		if (pk) pokeRender(p);
-		else text("Latest achievements", true, 15, 40, 96, p.muted, true, 1.2f);
-		if (pk && pkView != PK_ACH) {}
-		else if (state == 2 && total)
+		text("Latest achievements", true, 15, 40, 96, p.muted, true, 1.2f);
+		if (state == 2 && total)
 		{
 			std::string v = std::to_string(got) + " / " + std::to_string(total);
 			float vw = text(v, true, 15, 0, 0, p.muted, false, 0, true);
@@ -4177,6 +4194,7 @@ namespace banana
 			float kw = text(kk, false, 14, 0, 0, p.muted, false, 0, true);
 			text(kk, false, 14, x + 57 - kw / 2, y + 90, on ? p.onPickAccent : p.muted);
 		}
+		if (pk) { pokeTabs(p); be->endScreen(); return; }	// (the companion's tab bar where the hint was)
 		std::string hint = !gHotkeys ? (gTouch ? "Tap a tile; F + X opens RetroArch's menu, F + Start quits" : "F + X opens RetroArch's menu, F + Start quits")
 			: gTouch ? "Tap a tile, or hold F with the button under it" : "Hold F with the button under each tile";
 		float hw = text(hint, false, 15, 0, 0, p.muted, false, 0, true);
@@ -4184,7 +4202,30 @@ namespace banana
 		be->endScreen();
 	}
 
-	// ---- the Pokémon companion's box (pokemon.h): tabs, then the party, a member's moves, or the battle
+	// ---- the Pokémon companion (pokemon.h): the whole panel, the party, a member's summary, the battle, and the tab
+	// bar along the bottom. Banana's look: the game panel's boxes, Pixelify Sans, the theme's colours; the pixel
+	// pictures (balls, gender signs) drawn here, the Pokémon's own icons read from the player's ROM.
+	namespace
+	{
+		const char* const PX_BALL[12] = { "....####....", "..##RRRR##..", ".#RRRRRRRR#.", ".#RRRRRRRR#.", "#RRRR##RRRR#", "####WWWW####",
+			"####WWWW####", "#WWWW##WWWW#", ".#WWWWWWWW#.", ".#WWWWWWWW#.", "..##WWWW##..", "....####...." };
+		const char* const PX_RING[12] = { "....####....", "..##....##..", ".#........#.", ".#........#.", "#..........#", "#..........#",
+			"#..........#", "#..........#", ".#........#.", ".#........#.", "..##....##..", "....####...." };
+		const char* const PX_MALE[9] = { ".....####", "......###", ".....##.#", "..####...", ".##..##..", "##....##.", "##....##.",
+			".##..##..", "..####..." };
+		const char* const PX_FEMALE[9] = { "..###..", ".##.##.", "##...##", "##...##", ".##.##.", "..###..", "...#...", ".#####.", "...#..." };
+		const char* const PX_ITEM[7] = { "...#...", "..###..", ".##o##.", "##ooo##", ".##o##.", "..###..", "...#..." };
+		const uint32_t HP_GREEN = 0x58d068, HP_YELLOW = 0xf8c030, HP_RED = 0xf05848, EXP_BLUE = 0x58a8f8;
+		uint32_t statusColour(const std::string& st)
+		{
+			return st == "SLP" ? 0x8890a0 : st == "PSN" ? 0xa050c0 : st == "BRN" ? 0xe07040 : st == "FRZ" ? 0x58b0d8 : st == "PAR" ? 0xc8a020 : 0x707070;
+		}
+		std::string times(int q)	// a multiplier in quarters, as the games write it
+		{
+			return q == 0 ? "0×" : q == 1 ? "¼×" : q == 2 ? "½×" : q == 4 ? "1×" : q == 8 ? "2×" : "4×";
+		}
+	}
+
 	// numbers a character at a time (HP and PP change all the time: one cached texture for each digit, not each value)
 	float Settings::num(const std::string& t, float size, float x, float top, const Color& c, bool measureOnly)
 	{
@@ -4198,173 +4239,411 @@ namespace banana
 		return w;
 	}
 
+	void Settings::sprite(const char* const* rows, int h, float x, float y, int k, const std::function<Color(char)>& colour)
+	{
+		float x0 = std::round(X(x)), y0 = std::round(X(y));
+		for (int r = 0; r < h; r++)
+			for (int c = 0; rows[r][c]; c++)
+				if (rows[r][c] != '.') be->fill(x0 + c * k, y0 + r * k, (float)k, (float)k, colour(rows[r][c]));
+	}
+
+	float Settings::chip(const std::string& label, uint32_t rgb, float x, float y, bool measureOnly)
+	{
+		float w = text(label, true, 12, 0, 0, Color(1, 1, 1, 1), true, 0.5f, true) + 14;
+		if (measureOnly) return w;
+		be->fill(std::round(X(x)), std::round(X(y)), std::round(X(w)), std::round(X(20)), Color::hex(rgb));
+		be->fill(std::round(X(x)), std::round(X(y + 18)), std::round(X(w)), std::round(X(2)), Color(0, 0, 0, 0.25f));	// (its pixel shadow)
+		text(label, true, 12, x + 7, y + 4, Color(1, 1, 1, 1), true, 0.5f);
+		return w;
+	}
+
 	void Settings::typeChip(int type, float x, float y)
 	{
 		const char* n = pkmn::typeName(type);
 		if (!*n) return;
-		be->fill(X(x), X(y), X(62), X(18), Color::hex(pkmn::typeColor(type)));
-		std::string u = lang::tr("Pokémon types", n);	// (its own context: "Dark" is a theme too)
-		float w = text(u, true, 12, 0, 0, Color(1, 1, 1, 1), true, 0.5f, true);
-		text(u, true, 12, x + 31 - w / 2, y + 3, Color(1, 1, 1, 1), true, 0.5f);
+		chip(lang::tr("Pokémon types", n), pkmn::typeColor(type), x, y);	// (its own context: "Dark" is a theme too)
 	}
 
-	void Settings::hpBar(int hp, int maxHp, float x, float y, float w)
+	void Settings::hpBar(int hp, int maxHp, float x, float y, float w, uint32_t rgb)
 	{
 		SPal p = pal(light);
-		be->fill(X(x), X(y), X(w), X(8), p.line);
+		be->fill(std::round(X(x)), std::round(X(y)), std::round(X(w)), std::round(X(10)), p.line);
 		if (maxHp <= 0 || hp <= 0) return;
 		float f = std::min(1.0f, (float)hp / maxHp);
-		Color c = f > 0.5f ? Color::hex(0x58d068) : f > 0.2f ? Color::hex(0xf8c030) : Color::hex(0xf05848);
-		be->fill(X(x + 1), X(y + 1), std::max(1.0f, X((w - 2) * f)), X(6), c);
+		if (!rgb) rgb = f > 0.5f ? HP_GREEN : f > 0.2f ? HP_YELLOW : HP_RED;
+		be->fill(std::round(X(x + 2)), std::round(X(y + 2)), std::max(1.0f, std::round(X((w - 4) * f))), std::round(X(6)), Color::hex(rgb));
+	}
+
+	void Settings::monIcon(uint16_t species, bool egg, float x, float y, int k)
+	{
+		auto t = companion ? companion->tables() : nullptr;
+		if (t != pkTables) { pkIcons.clear(); pkTables = t; }	// (the tables arrived, or another game's)
+		int key = egg ? 1000 : species;
+		auto it = pkIcons.find(key);
+		if (it == pkIcons.end())
+		{
+			rnds::TexPtr tex;
+			std::vector<uint8_t> rgba;
+			if (t && t->iconRGBA(species, egg, rgba))
+			{
+				rnds::Bitmap b;
+				b.w = b.h = 32; b.px = rgba;
+				tex = be->upload(b, false);
+			}
+			it = pkIcons.emplace(key, tex).first;	// (none: not looked for again)
+		}
+		if (it->second) { be->draw(it->second, std::round(X(x)), std::round(X(y)), 32.0f * k, 32.0f * k, Color(1, 1, 1, 1)); return; }
+		// no icon in the ROM's tables: a ball in its place
+		SPal p = pal(light);
+		sprite(PX_BALL, 12, x + 16.0f * k / s - 6.0f * k / s, y + 16.0f * k / s - 6.0f * k / s, k, [&](char c)
+			{ return c == '#' ? p.muted : c == 'R' ? p.line : p.screenBand; });
+	}
+
+	float Settings::pokeName(const std::string& name, int gender, bool medium, float size, float x, float y, float width, const Color& c)
+	{
+		// (the species with a sign in its name: the sign drawn, the font has none)
+		std::string n = name;
+		for (const char* sg : { "♂", "♀" })
+		{
+			size_t l = strlen(sg);
+			if (n.size() > l && n.compare(n.size() - l, l, sg) == 0) { n.erase(n.size() - l); if (gender == 2) gender = sg[2] == '\x82' ? 0 : 1; }
+		}
+		int k = std::max(1, (int)std::lround(2 * s * size / 20));
+		float gw = gender < 2 ? 10.0f * k / s : 0;
+		n = fit(n, medium, size, width - gw);
+		float w = text(n, medium, size, x, y, c);
+		if (gender == 0) sprite(PX_MALE, 9, x + w + 4, y + size * 0.15f, k, [](char) { return Color::hex(0x58a8f8); });
+		if (gender == 1) sprite(PX_FEMALE, 9, x + w + 4, y + size * 0.15f, k, [](char) { return Color::hex(0xf07890); });
+		return w + gw;
+	}
+
+	float Settings::pokeMatchups(const SPal& p, int t1, int t2, float x, float y, float w, float bottom)
+	{
+		// what the types take from each attacking type: weak to (2x, 4x), resists (1/2x, 1/4x), immune (0x)
+		struct G { const char* label; std::vector<std::pair<int, int>> list; };
+		G g[3] = { { "Weak to", {} }, { "Resists", {} }, { "Immune to", {} } };
+		for (int a = 0; a < pkmn::NUM_TYPES; a++)
+		{
+			if (a == pkmn::MYSTERY) continue;
+			int q = pkmn::effect(a, t1, t2);
+			if (q >= 8) g[0].list.push_back({ a, q });
+			else if (q == 0) g[2].list.push_back({ a, q });
+			else if (q < 4) g[1].list.push_back({ a, q });
+		}
+		for (auto& gr : g) std::stable_sort(gr.list.begin(), gr.list.end(), [](auto& a, auto& b) { return a.second > b.second; });
+		std::stable_sort(g[1].list.begin(), g[1].list.end(), [](auto& a, auto& b) { return a.second < b.second; });
+		for (auto& gr : g)
+		{
+			if (gr.list.empty() || y + 44 > bottom) continue;
+			text(gr.label, true, 14, x, y, p.muted, true, 1.0f);
+			y += 22;
+			float cx = x;
+			for (auto& e : gr.list)
+			{
+				std::string l = lang::tr("Pokémon types", pkmn::typeName(e.first)) + " " + times(e.second);
+				float cw = chip(l, pkmn::typeColor(e.first), 0, 0, true);
+				if (cx > x && cx + cw > x + w) { cx = x; y += 24; if (y + 20 > bottom) break; }
+				chip(l, pkmn::typeColor(e.first), cx, y);
+				cx += cw + 6;
+			}
+			y += 30;
+		}
+		return y;
+	}
+
+	void Settings::pokeTabs(const SPal& p)
+	{
+		// the tab bar: Party, Battle (in a battle), Game (the panel's tiles and achievements)
+		const pkmn::Snapshot& sn = companion->snapshot();
+		box("bubble", false, 18, 424, 604, 46);
+		const char* tabs[3] = { "Party", "Battle", "Game" };
+		bool show[3] = { true, sn.inBattle, true };
+		int n = 0;
+		for (int i = 0; i < 3; i++) n += show[i];
+		float cell = 604.0f / n, cx = 18;
+		for (int i = 0; i < 3; i++)
+		{
+			pkTabW[i] = 0;
+			if (!show[i]) continue;
+			bool on = (i == 0 && (pkView == PK_PARTY || pkView == PK_MON)) || (i == 1 && pkView == PK_BATTLE) || (i == 2 && pkView == PK_GAME);
+			float w = text(tabs[i], true, 16, 0, 0, p.ink, true, 1.2f, true);
+			float tx = std::round(cx + cell / 2 - w / 2);
+			text(tabs[i], true, 16, tx, 437, on ? p.accent : p.muted, true, 1.2f);
+			if (on) be->fill(std::round(X(tx)), std::round(X(458)), std::round(X(w)), std::round(X(3)), p.accent);
+			pkTabX[i] = cx; pkTabW[i] = cell;
+			cx += cell;
+		}
 	}
 
 	void Settings::pokeRender(const SPal& p)
 	{
 		const pkmn::Snapshot& sn = companion->snapshot();
+		if (pkView == PK_BATTLE && !sn.inBattle) pkView = PK_PARTY;
+		if (pkView == PK_MON && pkMon >= (int)sn.party.size()) pkView = PK_PARTY;
+		if (!sn.seen)
+		{
+			box("bubble", false, 18, 14, 604, 398);
+			std::string why = !sn.error.empty() ? "RetroArch can't read the game's memory with this emulator: " + sn.error : "Waiting for the game...";
+			text(fit(gTitle, true, 22, 560), true, 22, 40, 34, p.ink);
+			wrapped(why, 18, 40, 80, 560, 4, p.muted);
+		}
+		else if (pkView == PK_MON) pokeSummary(p);
+		else if (pkView == PK_BATTLE) pokeBattle(p);
+		else pokeParty(p);
+		pokeTabs(p);
+	}
+
+	void Settings::pokeParty(const SPal& p)
+	{
+		const pkmn::Snapshot& sn = companion->snapshot();
 		auto tb = companion->tables();
 		pkmn::RomTables none;
 		const pkmn::RomTables& t = tb ? *tb : none;
-		if (pkView == PK_BATTLE && !sn.inBattle) pkView = PK_PARTY;
-		if (pkView == PK_MON && pkMon >= (int)sn.party.size()) pkView = PK_PARTY;
-		// the tabs: Party, Battle (in one), Achievements
-		const char* tabs[3] = { "Party", "Battle", "Achievements" };
-		float tx = 40;
-		for (int i = 0; i < 3; i++)
+		int k = std::max(1, (int)std::lround(2 * s));	// the icons' pixels: 2 (640x480), 3 (1024x768)
+		for (int i = 0; i < 6; i++)
 		{
-			pkTabW[i] = 0;
-			if (i == 1 && !sn.inBattle) continue;
-			bool on = (i == 0 && (pkView == PK_PARTY || pkView == PK_MON)) || (i == 1 && pkView == PK_BATTLE) || (i == 2 && pkView == PK_ACH);
-			float w = text(tabs[i], true, 15, tx, 96, on ? p.accent : p.muted, true, 1.2f);
-			if (on) be->fill(X(tx), X(114), X(w), X(2), p.accent);
-			pkTabX[i] = tx; pkTabW[i] = w;
-			tx += w + 28;
-		}
-		if (pkView == PK_ACH) return;
-		auto name = [&](const pkmn::Mon& m) { return m.egg ? std::string("EGG") : !m.nick.empty() ? m.nick : t.speciesName(m.species); };
-		auto lv = [&](const pkmn::Mon& m, float right, float y, float size)
-		{
-			std::string n = std::to_string(m.level);
-			float nw = num(n, size, 0, 0, p.ink, true), lw = text("Lv", false, size - 2, 0, 0, p.muted, false, 0, true);
-			text("Lv", false, size - 2, right - nw - lw - 4, y + 2, p.muted);
-			num(n, size, right - nw, y, p.ink);
-			return nw + lw + 4;
-		};
-		if (!sn.seen)
-		{
-			std::string why = !sn.error.empty() ? "RetroArch can't read the game's memory with this emulator: " + sn.error : "Waiting for the game...";
-			wrapped(why, 18, 40, 130, 560, 3, p.muted);
-			return;
-		}
-		if (pkView == PK_PARTY)
-		{
-			if (sn.party.empty()) { wrapped("No Pokémon in the party yet.", 18, 40, 130, 560, 3, p.muted); return; }
-			for (size_t i = 0; i < sn.party.size() && i < 6; i++)
+			float x = 18 + (i % 2) * 308, y = 14 + (i / 2) * 134, w = 296, h = 126;
+			if (i >= (int)sn.party.size())
 			{
-				const pkmn::Mon& m = sn.party[i];
-				float x = 32 + (i % 2) * 294, y = 120 + (i / 2) * 54;
-				box("bubble", false, x, y, 282, 50);
-				bool down = !m.egg && m.hp == 0;
-				float right = x + 270;
-				float used = m.egg ? 0 : lv(m, right, y + 5, 16);
-				const char* st = down ? "FNT" : pkmn::statusName(m.status);
-				if (*st)
-				{
-					float sw = text(st, true, 13, 0, 0, p.ink, false, 0, true);
-					float sx = right - used - 12 - sw;
-					be->fill(X(sx - 4), X(y + 5), X(sw + 8), X(18), down ? p.line : Color::hex(0xc05068));
-					text(st, true, 13, sx, y + 8, Color(1, 1, 1, 1));
-					used += sw + 20;
-				}
-				text(fit(name(m), true, 17, 250 - used), true, 17, x + 12, y + 5, down ? p.muted : p.ink);
-				if (m.egg) continue;
-				hpBar(m.hp, m.maxHp, x + 12, y + 33, 160);
-				std::string hp = std::to_string(m.hp) + "/" + std::to_string(m.maxHp);
-				float hw = num(hp, 13, 0, 0, p.muted, true);
-				num(hp, 13, right - hw, y + 29, p.muted);
+				// an empty place: a flat card, its edge only
+				float o = std::max(1.0f, std::round(X(2)));
+				be->fill(std::round(X(x + 4)), std::round(X(y + 4)), std::round(X(w - 8)), std::round(X(h - 8)), p.line);
+				be->fill(std::round(X(x + 4)) + o, std::round(X(y + 4)) + o, std::round(X(w - 8)) - 2 * o, std::round(X(h - 8)) - 2 * o, p.screenBg);
+				continue;
 			}
-			return;
-		}
-		// a member's moves, or the lead's in a battle with how each does against the foe
-		auto moves = [&](const pkmn::Mon& m, float y0, const std::vector<pkmn::Mon>* foes)
-		{
-			for (int i = 0; i < 4; i++)
+			const pkmn::Mon& m = sn.party[i];
+			box("bubble", false, x, y, w, h);
+			if (i == pkMon)	// the one whose summary was last open: outlined in the accent inside its edge
 			{
-				float x = 32 + (i % 2) * 294, y = y0 + (i / 2) * 44;
-				box("bubble", false, x, y, 282, 40);
-				uint16_t mv = m.moves[i];
-				if (!mv) { text("-", false, 16, x + 12, y + 10, p.muted); continue; }
-				bool known = mv < t.moveInfo.size();
-				float right = x + 270;
-				if (foes && known && t.moveInfo[mv].power > 0)
-				{
-					// the move against each foe: x4, x2, x1, x1/2, x1/4, x0
-					std::string e;
-					for (size_t f = 0; f < foes->size(); f++)
-					{
-						int q = pkmn::effect(t.moveInfo[mv].type, (*foes)[f].types[0], (*foes)[f].types[1]);
-						if (f) e += " ";
-						e += q == 0 ? "x0" : q == 1 ? "x1/4" : q == 2 ? "x1/2" : q == 4 ? "x1" : q == 8 ? "x2" : "x4";
-					}
-					int q0 = foes->empty() ? 4 : pkmn::effect(t.moveInfo[mv].type, (*foes)[0].types[0], (*foes)[0].types[1]);
-					Color c = q0 >= 8 ? p.accent : q0 == 0 ? Color::hex(0xff8a96) : q0 < 4 ? p.muted : p.ink;
-					float ew = num(e, 15, 0, 0, c, true);
-					num(e, 15, right - ew, y + 11, c);
-					right -= ew + 10;
-				}
-				else if (!foes)
-				{
-					int mx = known ? pkmn::maxPP(t.moveInfo[mv].pp, m.ppBonuses, i) : 0;
-					std::string pp = std::to_string(m.pp[i]) + (mx ? "/" + std::to_string(mx) : "");
-					float pw = num(pp, 14, 0, 0, p.muted, true), lw = text("PP", false, 12, 0, 0, p.muted, false, 0, true);
-					num(pp, 14, right - pw, y + 12, m.pp[i] ? p.ink : Color::hex(0xff8a96));
-					text("PP", false, 12, right - pw - lw - 4, y + 14, p.muted);
-					right -= pw + lw + 14;
-				}
-				if (known) { typeChip(t.moveInfo[mv].type, right - 62, y + 11); right -= 70; }
-				text(fit(t.moveName(mv), true, 16, right - x - 20), true, 16, x + 12, y + 11, p.ink);
+				float o = std::max(1.0f, std::round(X(2))), x0 = std::round(X(x + 6)), y0 = std::round(X(y + 6));
+				float x1 = std::round(X(x + w - 6)), y1 = std::round(X(y + h - 5));
+				be->fill(x0, y0, x1 - x0, o, p.accent); be->fill(x0, y1 - o, x1 - x0, o, p.accent);
+				be->fill(x0, y0, o, y1 - y0, p.accent); be->fill(x1 - o, y0, o, y1 - y0, p.accent);
 			}
-		};
-		auto header = [&](const pkmn::Mon& m, float x, float y, float w)
-		{
-			float right = x + w;
-			float used = lv(m, right, y, 17);
-			std::string sp = t.speciesName(m.species);
-			std::string n = name(m);
-			text(fit(n, true, 18, w - used - 150), true, 18, x, y, p.ink);
-			float nw = text(fit(n, true, 18, w - used - 150), true, 18, 0, 0, p.ink, false, 0, true);
-			if (!m.egg && sp != n && sp[0] != '#') text(fit(sp, false, 14, 140), false, 14, x + nw + 8, y + 4, p.muted);
-			float cx = x;
-			for (int k = 0; k < 2; k++)
-				if (m.types[k] < pkmn::NUM_TYPES && (k == 0 || m.types[1] != m.types[0])) { typeChip(m.types[k], cx, y + 26); cx += 68; }
-			hpBar(m.hp, m.maxHp, cx + 6, y + 31, right - cx - 6 - 80);
+			bool down = !m.egg && m.hp == 0;
+			// the ball, the icon over it, a marker for a held item
+			sprite(PX_BALL, 12, x + 10, y + 10, k, [&](char c)
+				{ return c == '#' ? Color::hex(0x2a2830) : c == 'R' ? Color::hex(down ? 0x8a8890 : 0xe8504a) : Color::hex(0xf4f0e8); });
+			monIcon(m.species, m.egg, x + 14, y + 16, k);
+			if (m.item && !m.egg) sprite(PX_ITEM, 7, x + 64, y + 66, k, [](char c) { return c == '#' ? Color::hex(0x6a4a10) : Color::hex(0xf8c030); });
+			std::string name = m.egg ? std::string("EGG") : !m.nick.empty() ? m.nick : t.speciesName(m.species);
+			pokeName(name, m.egg ? 2 : t.gender(m.species, m.pid), true, 20, x + 88, y + 16, w - 100, down ? p.muted : p.ink);
+			if (m.egg) continue;
+			// Lv, the status
+			float lw = text("Lv", false, 15, x + 88, y + 50, p.muted);
+			float nw = num(std::to_string(m.level), 19, x + 88 + lw + 4, y + 47, p.ink);
+			std::string st = down ? "FNT" : pkmn::statusName(m.status);
+			if (!st.empty()) chip(st, statusColour(st), x + 88 + lw + nw + 16, y + 48);
+			// HP
+			text("HP", true, 13, x + 16, y + 89, p.accent);
+			hpBar(m.hp, m.maxHp, x + 44, y + 90, w - 60);
 			std::string hp = std::to_string(m.hp) + "/" + std::to_string(m.maxHp);
-			float hw = num(hp, 14, 0, 0, p.muted, true);
-			num(hp, 14, right - hw, y + 26, p.muted);
-		};
-		if (pkView == PK_MON)
-		{
-			const pkmn::Mon& m = sn.party[pkMon];
-			header(m, 40, 124, 560);
-			moves(m, 186, nullptr);
-			return;
+			float hw = num(hp, 15, 0, 0, p.muted, true);
+			num(hp, 15, x + w - 16 - hw, y + 100, p.ink);
 		}
-		// the battle: the foe (two side by side in a double battle), what it is weak to, the lead's moves against it
-		if (sn.foes.empty()) { wrapped("Waiting for the battle...", 18, 40, 130, 560, 2, p.muted); return; }
-		if (sn.foes.size() == 1)
-		{
-			const pkmn::Mon& f = sn.foes[0];
-			header(f, 40, 122, 560);
-			std::string weak;
-			for (int a = 0; a < pkmn::NUM_TYPES; a++)
-			{
-				if (a == pkmn::MYSTERY) continue;
-				int q = pkmn::effect(a, f.types[0], f.types[1]);
-				if (q >= 8) weak += std::string(weak.empty() ? "" : ", ") + lang::tr("Pokémon types", pkmn::typeName(a)) + (q == 16 ? " x4" : "");
-			}
-			if (!weak.empty()) text(fit(lang::tr("Weak to") + ": " + weak, false, 14, 560), false, 14, 40, 171, p.muted);
-		}
+	}
+
+	void Settings::pokeSummary(const SPal& p)
+	{
+		const pkmn::Snapshot& sn = companion->snapshot();
+		auto tb = companion->tables();
+		pkmn::RomTables none;
+		const pkmn::RomTables& t = tb ? *tb : none;
+		const pkmn::Mon& m = sn.party[pkMon];
+		int k = std::max(1, (int)std::lround(2 * s));
+		box("bubble", false, 18, 14, 604, 322);
+		be->fill(std::round(X(318)), std::round(X(30)), std::max(1.0f, std::round(X(2))), std::round(X(290)), p.line);	// the columns' line
+		// ---- left: the name, the icon, Lv, types, HP, experience, then what it is weak to and resists
+		std::string name = m.egg ? std::string("EGG") : !m.nick.empty() ? m.nick : t.speciesName(m.species);
+		pokeName(name, m.egg ? 2 : t.gender(m.species, m.pid), true, 22, 36, 28, 270, p.ink);
+		box("slot", false, 36, 60, 76, 76);
+		monIcon(m.species, m.egg, 74 - 16.0f * k / s, 98 - 16.0f * k / s, k);
+		if (m.egg) { wrapped("It's still an egg.", 16, 126, 74, 180, 2, p.muted); }
 		else
-			for (size_t k = 0; k < 2; k++) header(sn.foes[k], 40 + k * 290, 122, 270);
-		moves(sn.lead, 192, &sn.foes);
+		{
+			float lw = text("Lv", false, 16, 126, 68, p.muted);
+			num(std::to_string(m.level), 24, 126 + lw + 6, 62, p.accent);
+			std::string sp = t.speciesName(m.species);
+			if (sp != name && sp[0] != '#') text(fit(sp, false, 14, 120), false, 14, 190, 70, p.muted);
+			float cx = 126;
+			for (int i = 0; i < 2; i++)
+				if (m.types[i] < pkmn::NUM_TYPES && (i == 0 || m.types[1] != m.types[0]))
+				{
+					typeChip(m.types[i], cx, 104);
+					cx += chip(lang::tr("Pokémon types", pkmn::typeName(m.types[i])), 0, 0, 0, true) + 6;
+				}
+			// HP, then the experience to the next level
+			text("HP", true, 14, 36, 150, p.accent);
+			hpBar(m.hp, m.maxHp, 72, 152, 150);
+			std::string hp = std::to_string(m.hp) + "/" + std::to_string(m.maxHp);
+			float hw = num(hp, 16, 0, 0, p.ink, true);
+			num(hp, 16, 304 - hw, 148, p.ink);
+			long long a = t.expFor(m.species, m.level), b = m.level < 100 ? t.expFor(m.species, m.level + 1) : -1;
+			text("Exp", true, 14, 36, 174, p.accent, true);
+			if (a >= 0 && b > a)
+			{
+				long long into = std::max(0LL, std::min<long long>(b - a, (long long)m.exp - a));
+				hpBar((int)(into * 1000 / (b - a)), 1000, 72, 176, 120, EXP_BLUE);
+				std::string nx = std::to_string(std::max(0LL, b - (long long)m.exp));
+				float xw = num(nx, 16, 0, 0, p.ink, true), lw2 = text("Next", true, 13, 0, 0, p.muted, true, 0, true);
+				num(nx, 16, 304 - xw, 172, p.ink);
+				text("Next", true, 13, 304 - xw - lw2 - 6, 175, p.muted, true);
+			}
+			else hpBar(m.level >= 100 ? 1 : 0, 1, 72, 176, 232, EXP_BLUE);
+			be->fill(std::round(X(36)), std::round(X(200)), std::round(X(268)), std::max(1.0f, std::round(X(2))), p.line);
+			pokeMatchups(p, m.types[0], m.types[1], 36, 210, 270, 328);
+		}
+		// ---- right: the four moves, each with its type, power and PP
+		for (int i = 0; i < 4; i++)
+		{
+			float y = 26 + i * 77;
+			if (i) be->fill(std::round(X(336)), std::round(X(y - 6)), std::round(X(268)), std::max(1.0f, std::round(X(2))), p.line);
+			uint16_t mv = m.moves[i];
+			if (!mv) { text("-", true, 19, 348, y + 6, p.muted); continue; }
+			bool known = mv < t.moveInfo.size();
+			uint32_t tc = known ? pkmn::typeColor(t.moveInfo[mv].type) : 0x808080;
+			be->fill(std::round(X(336)), std::round(X(y)), std::round(X(4)), std::round(X(62)), Color::hex(tc));
+			bool out = m.pp[i] == 0;
+			text(fit(t.moveName(mv), true, 19, 256), true, 19, 348, y + 2, out ? p.muted : p.ink);
+			if (known) typeChip(t.moveInfo[mv].type, 348, y + 34);
+			// PWR n  PP a/b (right-aligned)
+			int mx = known ? pkmn::maxPP(t.moveInfo[mv].pp, m.ppBonuses, i) : 0;
+			std::string pp = std::to_string(m.pp[i]) + (mx ? "/" + std::to_string(mx) : "");
+			float r = 604;
+			float pw = num(pp, 16, 0, 0, p.ink, true);
+			num(pp, 16, r - pw, y + 34, out ? Color::hex(0xff8a96) : p.ink);
+			r -= pw + 5;
+			r -= text("PP", true, 13, 0, 0, p.muted, true, 0, true);
+			text("PP", true, 13, r, y + 37, p.muted, true);
+			if (known)
+			{
+				std::string pwr = t.moveInfo[mv].power > 1 ? std::to_string(t.moveInfo[mv].power) : "-";
+				r -= 12;
+				float ww = num(pwr, 16, 0, 0, p.ink, true);
+				num(pwr, 16, r - ww, y + 34, p.accent);
+				r -= ww + 5;
+				r -= text("Pwr", true, 13, 0, 0, p.muted, true, 0, true);
+				text("Pwr", true, 13, r, y + 37, p.muted, true);
+			}
+		}
+		// ---- the members to switch to, and back to the party
+		int ks = std::max(1, (int)std::lround(1.5f * s));
+		for (int i = 0; i < (int)sn.party.size() && i < 6; i++)
+		{
+			float x = 18 + i * 80;
+			box(i == pkMon ? "pick" : "slot", i == pkMon, x, 344, 72, 72);
+			monIcon(sn.party[i].species, sn.party[i].egg, x + 36 - 16.0f * ks / s, 378 - 16.0f * ks / s, ks);
+		}
+		box("slot", false, 526, 344, 96, 72);
+		arrow(false, 548, 372, p.ink);
+		text("Back", true, 15, 564, 372, p.ink, true);
+	}
+
+	void Settings::pokeBattle(const SPal& p)
+	{
+		const pkmn::Snapshot& sn = companion->snapshot();
+		auto tb = companion->tables();
+		pkmn::RomTables none;
+		const pkmn::RomTables& t = tb ? *tb : none;
+		int k = std::max(1, (int)std::lround(2 * s)), kb = std::max(1, (int)std::lround(2 * s));
+		// ---- the balls: the party on the left, the other side's on the right (a ring for an empty place, grey: fainted)
+		auto ball = [&](float x, int state)	// 0 empty, 1 standing, 2 fainted
+		{
+			if (state == 0) { sprite(PX_RING, 12, x, 16, kb, [&](char) { return p.line; }); return; }
+			sprite(PX_BALL, 12, x, 16, kb, [&](char c)
+				{ return c == '#' ? Color::hex(0x2a2830) : c == 'R' ? Color::hex(state == 2 ? 0x8a8890 : 0xe8504a) : Color::hex(state == 2 ? 0xb8b4b0 : 0xf4f0e8); });
+		};
+		float step = 12.0f * kb / s + 6;
+		for (int i = 0; i < 6; i++)
+			ball(22 + i * step, i < (int)sn.party.size() ? (sn.party[i].hp == 0 && !sn.party[i].egg ? 2 : 1) : 0);
+		int foes = std::min<int>(6, (int)sn.foeParty.size());
+		for (int i = 0; i < foes; i++)
+			ball(618 - 12.0f * kb / s - (foes - 1 - i) * step, sn.foeParty[i].hp == 0 ? 2 : 1);
+		if (sn.foes.empty()) { box("bubble", false, 18, 48, 604, 364); wrapped("Waiting for the battle...", 18, 40, 70, 560, 2, p.muted); return; }
+		// ---- you and the foe: a card each (a double battle: the two foes in half a card each)
+		auto card = [&](const pkmn::Mon& m, const char* who, float x, float y, float w, float h, bool icon)
+		{
+			box("bubble", false, x, y, w, h);
+			float tx = x + 14;
+			if (icon)
+			{
+				text(who, true, 13, x + 14, y + 10, p.accent, true, 1.0f);
+				box("slot", false, x + 12, y + 30, 72, 72);
+				monIcon(m.species, m.egg, x + 48 - 16.0f * k / s, y + 66 - 16.0f * k / s, k);
+				tx = x + 96;
+			}
+			float lw = text("Lv", false, 14, 0, 0, p.muted, false, 0, true), nw = num(std::to_string(m.level), 17, 0, 0, p.ink, true);
+			text("Lv", false, 14, x + w - 14 - nw - lw - 4, y + 12, p.muted);
+			num(std::to_string(m.level), 17, x + w - 14 - nw, y + 9, p.ink);
+			pokeName(m.nick.empty() ? t.speciesName(m.species) : m.nick, t.gender(m.species, m.pid), true, 18, tx, y + 10, x + w - tx - nw - lw - 26, p.ink);
+			float cx = tx, cy = icon ? y + 40 : y + 34;
+			for (int i = 0; i < 2; i++)
+				if (m.types[i] < pkmn::NUM_TYPES && (i == 0 || m.types[1] != m.types[0]))
+				{
+					typeChip(m.types[i], cx, cy);
+					cx += chip(lang::tr("Pokémon types", pkmn::typeName(m.types[i])), 0, 0, 0, true) + 6;
+				}
+			std::string st = pkmn::statusName(m.status);
+			if (!st.empty() && m.hp) chip(st, statusColour(st), cx + 4, cy);
+			float by = icon ? y + 74 : cy + 4, bx = icon ? tx : cx + (st.empty() ? 6 : 50);
+			std::string hp = std::to_string(m.hp) + "/" + std::to_string(m.maxHp);
+			float hw = num(hp, 15, 0, 0, p.ink, true);
+			if (icon)
+			{
+				hpBar(m.hp, m.maxHp, bx, by, x + w - 14 - bx);
+				num(hp, 15, x + w - 14 - hw, by + 14, p.ink);
+			}
+			else
+			{
+				hpBar(m.hp, m.maxHp, bx, by, x + w - 22 - hw - bx);
+				num(hp, 15, x + w - 14 - hw, by - 4, p.ink);
+			}
+		};
+		card(sn.lead, "You", 18, 48, 298, 124, true);
+		if (sn.foes.size() == 1) card(sn.foes[0], "Foe", 326, 48, 296, 124, true);
+		else for (size_t i = 0; i < 2 && i < sn.foes.size(); i++) card(sn.foes[i], "Foe", 326, 48 + i * 64, 296, 60, false);
+		// ---- your lead's moves, rated against the foe(s)
+		box("bubble", false, 18, 180, 298, 236);
+		for (int i = 0; i < 4; i++)
+		{
+			float y = 190 + i * 56;
+			if (i) be->fill(std::round(X(30)), std::round(X(y - 5)), std::round(X(274)), std::max(1.0f, std::round(X(2))), p.line);
+			uint16_t mv = sn.lead.moves[i];
+			if (!mv) { text("-", true, 17, 32, y + 4, p.muted); continue; }
+			bool known = mv < t.moveInfo.size();
+			bool out = sn.lead.pp[i] == 0;
+			// the rating: the multiplier against each foe, coloured by the first
+			float r = 304;
+			if (known)
+			{
+				std::string e;
+				int q0 = 4;
+				if (t.moveInfo[mv].power == 0) e = "-";
+				else
+					for (size_t f = 0; f < sn.foes.size(); f++)
+					{
+						int q = pkmn::effect(t.moveInfo[mv].type, sn.foes[f].types[0], sn.foes[f].types[1]);
+						if (f == 0) q0 = q;
+						e += (f ? " / " : "") + times(q);
+					}
+				uint32_t c = out ? 0x8a8a8a : e == "-" ? 0x8a8a8a : q0 >= 8 ? 0x3c9c4c : q0 == 4 ? 0x7a7a88 : q0 == 0 ? 0x484850 : 0xc84848;
+				r -= chip(e, c, 0, 0, true);
+				chip(e, c, r, y + 2);
+				typeChip(t.moveInfo[mv].type, 32, y + 28);
+				int mx = pkmn::maxPP(t.moveInfo[mv].pp, sn.lead.ppBonuses, i);
+				std::string pp = std::to_string(sn.lead.pp[i]) + "/" + std::to_string(mx);
+				float pw = num(pp, 15, 0, 0, p.ink, true);
+				num(pp, 15, 304 - pw, y + 29, out ? Color::hex(0xff8a96) : p.ink);
+				float lw = text("PP", true, 12, 0, 0, p.muted, true, 0, true);
+				text("PP", true, 12, 304 - pw - lw - 5, y + 32, p.muted, true);
+			}
+			text(fit(t.moveName(mv), true, 17, r - 40), true, 17, 32, y + 3, out ? p.muted : p.ink);
+		}
+		// ---- the foe: what it is weak to and resists
+		box("bubble", false, 326, 180, 296, 236);
+		const pkmn::Mon& f = sn.foes[0];
+		std::string fn = f.nick.empty() ? t.speciesName(f.species) : f.nick;
+		text(fit(fn, true, 17, 268), true, 17, 342, 192, p.accent);
+		pokeMatchups(p, f.types[0], f.types[1], 342, 220, 270, 408);
 	}
 }

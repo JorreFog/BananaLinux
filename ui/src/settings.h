@@ -333,14 +333,28 @@ namespace banana
 		std::map<std::string, rnds::TexPtr> gBadges;	// badge textures by file
 		// the companion's tabs: what the middle box shows, the party member opened, the battle last seen; where the
 		// tabs were drawn (for touch)
-		enum { PK_PARTY, PK_BATTLE, PK_ACH, PK_MON };
+		// the companion's views: it has the whole panel, with a tab bar along the bottom (Party, Battle in a battle,
+		// Game: the panel as without it, achievements and tiles); the member whose summary is open; the battle last
+		// seen; where the tabs were drawn (for touch); the party icons as textures, by species (+1000 the egg)
+		enum { PK_PARTY, PK_BATTLE, PK_GAME, PK_MON };
 		int pkView = PK_PARTY, pkMon = 0;
 		bool pkBattle = false;
 		float pkTabX[3] = {}, pkTabW[3] = {};
+		std::map<int, rnds::TexPtr> pkIcons;
+		std::shared_ptr<const pkmn::RomTables> pkTables;	// (the tables the icons came from)
 		void pokeRender(const SPal& p);
+		void pokeParty(const SPal& p);
+		void pokeSummary(const SPal& p);
+		void pokeBattle(const SPal& p);
+		void pokeTabs(const SPal& p);
+		float pokeMatchups(const SPal& p, int t1, int t2, float x, float y, float w, float bottom);
 		float num(const std::string& t, float size, float x, float top, const rnds::Color& c, bool measureOnly = false);
 		void typeChip(int type, float x, float y);
-		void hpBar(int hp, int maxHp, float x, float y, float w);
+		float chip(const std::string& label, uint32_t rgb, float x, float y, bool measureOnly = false);
+		void hpBar(int hp, int maxHp, float x, float y, float w, uint32_t rgb = 0);
+		void monIcon(uint16_t species, bool egg, float x, float y, int k);	// at x, y (CSS px), k device px a pixel
+		void sprite(const char* const* rows, int h, float x, float y, int k, const std::function<rnds::Color(char)>& colour);
+		float pokeName(const std::string& name, int gender, bool medium, float size, float x, float y, float width, const rnds::Color& c);
 		void box(const std::string& kind, bool on, float x, float y, float w, float h);
 		float text(const std::string& t, bool medium, float size, float x, float top, const rnds::Color& c, bool upper = false, float ls = 0, bool measureOnly = false);
 		void wrapped(const std::string& t, float size, float x, float top, float width, int maxLines, const rnds::Color& c);

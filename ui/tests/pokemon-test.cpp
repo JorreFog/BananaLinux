@@ -49,7 +49,7 @@ static std::vector<uint8_t> partySlot(const Plain& m, bool breakSum = false)
 	p[0x12] = 2;	// English
 	p[0x13] = m.egg ? 0x06 : 0x02;
 	uint8_t g[12] = {}, a[12] = {}, e[12] = {}, x[12] = {};
-	put16(g, m.species); put16(g + 2, m.item); put32(g + 4, 12345); g[8] = m.ppBonuses; g[9] = 70;
+	put16(g, m.species); put16(g + 2, m.item); put32(g + 4, (uint32_t)(m.level * m.level * m.level + 40 * m.level)); g[8] = m.ppBonuses; g[9] = 70;
 	for (int i = 0; i < 4; i++) { put16(a + i * 2, m.moves[i]); a[8 + i] = m.pp[i]; }
 	e[0] = 4; e[6] = 10;
 	put32(x + 4, (31u) | (m.egg ? 1u << 30 : 0));
@@ -81,6 +81,69 @@ static std::vector<uint8_t> battler(uint16_t species, const std::string& nick, u
 	auto n = enc(nick);
 	for (size_t i = 0; i < 11; i++) b[0x30 + i] = i < n.size() ? n[i] : 0xff;
 	return b;
+}
+
+// the rest a made-up ROM needs for icons, genders and experience, at base: a menu icon for every species (our own
+// drawing: a round creature, its colour and eyes by species), their palette numbers just after the pointer table,
+// the three palettes behind sprite-palette records (tags 56000-56005), the six experience tables; and in the base
+// stats at st (28 bytes a species) a gender ratio and growth rate
+static uint8_t iconPixel(int species, int x, int y)
+{
+	if (species == 412)	// the egg: an oval with spots
+	{
+		float dx = (x - 15.5f) / 10, dy = (y - 17.5f) / 13, d = dx * dx + dy * dy;
+		return d > 1.15f ? 0 : d > 0.85f ? 1 : ((x / 4 + y / 5) % 3 == 0 ? 5 : 15);
+	}
+	int r = 9 + species % 4;
+	float dx = (x - 15.5f) / r, dy = (y - 18.5f) / (r - 1), d = dx * dx + dy * dy;
+	if (d > 1.2f) return (y < 9 && (x == 9 + species % 3 || x == 22 - species % 3) && y > 3) ? 1 : 0;	// ears
+	if (d > 0.88f) return 1;
+	if ((x == 12 || x == 19) && (y == 16 || y == 17)) return 1;	// eyes
+	if (x == 11 && y == 15) return 15;
+	if (y > 22 && d < 0.5f) return 14;							// a lighter belly
+	return (uint8_t)(2 + species % 6);
+}
+static void addExtras(std::vector<uint8_t>& rom, size_t st, size_t base)
+{
+	const int N = 413;
+	size_t table = base, pals = base + N * 4 + 3, recs = base + 0xa00, palData = recs + 0x40, exp = base + 0x1000, tiles = base + 0x2000;
+	for (int sp = 0; sp < N; sp++)
+	{
+		// none and Bulbasaur share an icon, the 25 placeholders after Celebi one question mark (their own made-up one)
+		int src = sp == 0 ? 1 : (sp >= 252 && sp <= 276) ? 252 : sp;
+		put32(&rom[table + sp * 4], 0x08000000u + (uint32_t)(tiles + src * 1024));
+		rom[pals + sp] = (uint8_t)(sp == 1 ? 1 : (sp >= 252 && sp <= 276) ? 0 : sp % 3);
+	}
+	for (int sp = 1; sp < N; sp++)
+	{
+		uint8_t* g = &rom[tiles + sp * 1024];
+		for (int y = 0; y < 32; y++)
+			for (int x = 0; x < 32; x++)
+			{
+				uint8_t v = iconPixel(sp, x, y);
+				uint8_t& b = g[((y / 8) * 4 + x / 8) * 32 + (y % 8) * 4 + (x % 8) / 2];
+				b = x & 1 ? (uint8_t)((b & 15) | v << 4) : (uint8_t)((b & 0xf0) | v);
+			}
+	}
+	static const uint16_t base3[3][6] = { { 0x7e94, 0x1f3f, 0x03df, 0x2a5f, 0x5ef7, 0x6318 }, { 0x26f3, 0x4b8b, 0x7f0e, 0x3e9f, 0x2bff, 0x575f },
+		{ 0x5d9f, 0x7a2e, 0x4ed3, 0x1e7d, 0x6b5a, 0x3ad6 } };
+	for (int i = 0; i < 6; i++)
+	{
+		put32(&rom[recs + i * 8], 0x08000000u + (uint32_t)(palData + (i % 3) * 32));
+		put16(&rom[recs + i * 8 + 4], (uint16_t)(56000 + i));
+		put16(&rom[recs + i * 8 + 6], 0);
+	}
+	for (int i = 0; i < 3; i++)
+		for (int k = 0; k < 16; k++)
+			put16(&rom[palData + i * 32 + k * 2], k == 0 ? 0x7c1f : k == 1 ? 0x0c63 : k == 14 ? 0x6f7b : k == 15 ? 0x7fff : base3[i][(k - 2) % 6]);
+	// Medium Fast n^3 (with level 1: 1), and five more rising curves
+	for (int g = 0; g < 6; g++)
+		for (int l = 0; l <= 100; l++)
+		{
+			uint32_t v = l == 0 ? 0 : l == 1 ? 1 : g == 0 ? (uint32_t)(l * l * l) : (uint32_t)(l * l * l * (4 + g) / 5);
+			put32(&rom[exp + (g * 101 + l) * 4], v);
+		}
+	for (int sp = 0; sp < 412; sp++) { rom[st + sp * 28 + 0x10] = (uint8_t)(sp % 4 == 0 ? 255 : sp % 4 == 1 ? 31 : sp % 4 == 2 ? 127 : 254); rom[st + sp * 28 + 0x13] = (uint8_t)(sp % 6); }
 }
 
 static std::string reply(uint32_t addr, const std::vector<uint8_t>& v)
@@ -223,6 +286,7 @@ int main(int argc, char** argv)
 		for (int i = 0; i < 355; i++) { uint8_t* e = &rom[mv + i * 12]; e[1] = (uint8_t)(i % 150); e[2] = (uint8_t)(i % 18); e[3] = 100; e[4] = (uint8_t)(5 + i % 35); }
 		uint8_t pound[5] = { 0, 40, NORMAL, 100, 35 }, chop[5] = { 43, 50, FIGHTING, 100, 25 }, slap[5] = { 29, 15, NORMAL, 85, 10 };
 		memcpy(&rom[mv + 12], pound, 5); memcpy(&rom[mv + 24], chop, 5); memcpy(&rom[mv + 36], slap, 5);
+		addExtras(rom, st, 0x300000);
 		RomTables t = findTables(rom.data(), rom.size());
 		EQ(t.species.size(), (size_t)412);
 		EQ(t.speciesName(0), std::string("??????????"));
@@ -238,6 +302,37 @@ int main(int argc, char** argv)
 		EQ(t.moveInfo.size(), (size_t)355);
 		EQ((int)t.moveInfo[1].power, 40); EQ((int)t.moveInfo[2].type, (int)FIGHTING); EQ((int)t.moveInfo[3].pp, 10);
 		EQ((int)t.moveInfo[200].pp, 5 + 200 % 35);
+		// icons, their palettes, genders, experience
+		EQ(t.icons.size(), (size_t)413);
+		EQ(t.iconPal.size(), (size_t)413);
+		EQ(t.palettes.size(), (size_t)3);
+		if (t.icons.size() == 413)
+		{
+			EQ((int)t.icons[25][0], 0);						// a corner: clear
+			EQ((int)t.icons[25][18 * 32 + 15], 2 + 25 % 6);	// the body
+			EQ((int)t.icons[25][16 * 32 + 12], 1);			// an eye
+			EQ((int)t.icons[412][17 * 32 + 15] != 0, true);	// the egg
+			CHECK(t.icons[0] == t.icons[1]);
+		}
+		std::vector<uint8_t> rgba;
+		CHECK(t.iconRGBA(25, false, rgba) && rgba.size() == 32 * 32 * 4);
+		if (rgba.size() == 4096)
+		{
+			EQ((int)rgba[3], 0);										// colour 0 clear
+			int i = (16 * 32 + 12) * 4;								// colour 1: 0x0c63 -> 3, 3, 3 (5 bits) -> 24
+			EQ((int)rgba[i], 24); EQ((int)rgba[i + 1], 24); EQ((int)rgba[i + 2], 24); EQ((int)rgba[i + 3], 255);
+		}
+		CHECK(t.iconRGBA(7, true, rgba));		// the egg's
+		CHECK(!t.iconRGBA(500, false, rgba));
+		EQ(t.gender(4, 0), 2);					// ratio 255: neither
+		EQ(t.gender(5, 30), 1); EQ(t.gender(5, 31), 0);		// 31: female below 31
+		EQ(t.gender(7, 0x12345600), 1);			// 254: always female
+		EQ(t.gender(500, 0), 2);
+		EQ(t.expFor(6, 10), 1000LL);			// growth 0: n^3
+		EQ(t.expFor(7, 10), 1000LL * 5 / 5);	// growth 1: n^3 (4+1)/5
+		EQ(t.expFor(8, 10), 1000LL * 6 / 5);
+		EQ(t.expFor(8, 1), 1LL);
+		EQ(t.expFor(500, 10), -1LL);
 		// nothing like them: nothing found (and no crash on a short ROM)
 		std::vector<uint8_t> none(1 << 16, 0x11);
 		RomTables n = findTables(none.data(), none.size());
@@ -297,12 +392,16 @@ int main(int argc, char** argv)
 		c.feed(out.data(), out.size());
 		CHECK(c.takeChanged() && c.snapshot().inBattle && c.snapshot().foes.empty());
 		r = c.requests(520);
-		CHECK(r.find("READ_CORE_MEMORY 2022fec 4\n") != std::string::npos && r.find("READ_CORE_MEMORY 2024084 352\n") != std::string::npos);
+		CHECK(r.find("READ_CORE_MEMORY 2022fec 4\n") != std::string::npos && r.find("READ_CORE_MEMORY 2024084 352\n") != std::string::npos &&
+			r.find("READ_CORE_MEMORY 2024744 600\n") != std::string::npos);
 		std::vector<uint8_t> mons;
 		for (auto& m : { battler(283, "MUDKIP", 12, 30, 35, WATER, WATER, { 33, 45, 55 }), battler(286, "POOCHYENA", 6, 18, 20, DARK, DARK, { 33 }),
 			std::vector<uint8_t>(0x58, 0), std::vector<uint8_t>(0x58, 0) })
 			mons.insert(mons.end(), m.begin(), m.end());
-		out = reply(0x30026f9, { 0x02 }) + reply(0x20244e9, { 2 }) + reply(0x20244ec, party) + reply(0x2022fec, { 0x04, 0, 0, 0 }) + reply(0x2024084, mons);
+		std::vector<uint8_t> foeParty = partySlot(Plain{ 0x99999999, 0x1234, "POOCHYENA", 286, 0, { 33, 44, 0, 0 }, { 35, 25, 0, 0 }, 0, 0, 13, 17, 36, false });
+		foeParty.resize(600, 0);
+		out = reply(0x30026f9, { 0x02 }) + reply(0x20244e9, { 2 }) + reply(0x20244ec, party) + reply(0x2022fec, { 0x04, 0, 0, 0 }) + reply(0x2024084, mons) +
+			reply(0x2024744, foeParty);
 		c.feed(out.data(), out.size());
 		CHECK(c.takeChanged());
 		const Snapshot& s2 = c.snapshot();
@@ -310,6 +409,8 @@ int main(int argc, char** argv)
 		EQ(s2.foes.size(), (size_t)1);
 		if (!s2.foes.empty()) { EQ(s2.foes[0].nick, std::string("POOCHYENA")); EQ((int)s2.foes[0].types[0], (int)DARK); }
 		EQ(s2.lead.species, (uint16_t)283);
+		EQ(s2.foeParty.size(), (size_t)1);
+		if (!s2.foeParty.empty()) { EQ(s2.foeParty[0].pid, 0x99999999u); EQ(s2.foeParty[0].level, (uint8_t)13); }
 		// the same again: nothing changed
 		c.requests(800);
 		c.feed(out.data(), out.size());
@@ -317,7 +418,8 @@ int main(int argc, char** argv)
 		// an answer with no data (no content, no memory map): an error, not a party
 		c.requests(1100);
 		out = "READ_CORE_MEMORY 30026f9 -1 no memory map defined\nREAD_CORE_MEMORY 20244e9 -1 no memory map defined\nREAD_CORE_MEMORY 20244ec -1 no memory map defined\n"
-			"READ_CORE_MEMORY 2022fec -1 no memory map defined\nREAD_CORE_MEMORY 2024084 -1 no memory map defined\n";
+			"READ_CORE_MEMORY 2022fec -1 no memory map defined\nREAD_CORE_MEMORY 2024084 -1 no memory map defined\n"
+			"READ_CORE_MEMORY 2024744 -1 no memory map defined\n";
 		c.feed(out.data(), out.size());
 		CHECK(!c.snapshot().seen && c.snapshot().error.empty());	// (not said at once: RetroArch may still be loading the game)
 		for (double t = 1400; t <= 6200; t += 300) { c.requests(t); c.feed(out.data(), out.size()); }
@@ -366,7 +468,8 @@ int main(int argc, char** argv)
 		move(1, 40, NORMAL, 100, 35); move(2, 50, FIGHTING, 100, 25); move(3, 15, NORMAL, 85, 10);
 		move(33, 35, NORMAL, 95, 35); move(45, 0, NORMAL, 100, 40); move(55, 40, WATER, 100, 25); move(189, 20, GROUND, 100, 10);
 		move(44, 60, DARK, 100, 25); move(10, 40, NORMAL, 100, 35); move(52, 40, FIRE, 100, 25); move(98, 40, NORMAL, 100, 30);
-		Plain a{ 0x11111111, 0x22222222, "MUDKIP", 283, 0, { 33, 45, 55, 189 }, { 35, 40, 21, 10 }, 0x30, 0, 14, 38, 41, false };
+		addExtras(rom, st, 0x50000);
+		Plain a{ 0x11111111, 0x22222222, "MUDKIP", 283, 13, { 33, 45, 55, 189 }, { 35, 40, 21, 10 }, 0x30, 0, 14, 38, 41, false };
 		Plain b{ 0x33333335, 0x22222222, "Ziggy", 288, 0, { 33, 45, 0, 0 }, { 35, 40, 0, 0 }, 0, 0x08, 9, 11, 30, false };
 		Plain c2{ 0x55555557, 0x22222222, "WINGULL", 309, 0, { 45, 55, 98, 0 }, { 40, 25, 30, 0 }, 0, 0, 11, 0, 29, false };
 		Plain d{ 0x77777779, 0x22222222, "TORCHIC", 280, 0, { 10, 45, 52, 0 }, { 35, 40, 25, 0 }, 0, 0x02, 8, 24, 24, false };
@@ -378,7 +481,15 @@ int main(int argc, char** argv)
 			std::vector<uint8_t>(0x58, 0), std::vector<uint8_t>(0x58, 0) })
 			mons.insert(mons.end(), m.begin(), m.end());
 		std::string outside = reply(0x30026f9, { 0x00 }) + reply(0x20244e9, { 4 }) + reply(0x20244ec, party);
-		std::string inside = reply(0x30026f9, { 0x02 }) + reply(0x20244e9, { 4 }) + reply(0x20244ec, party) + reply(0x2022fec, { 0x04, 0, 0, 0 }) + reply(0x2024084, mons);
+		// a trainer's three: the one out, one fainted, one to come
+		std::vector<uint8_t> foeParty;
+		for (auto& p : { partySlot(Plain{ 0x0bad5eed, 0x4321, "POOCHYENA", 286, 0, { 33, 44, 0, 0 }, { 35, 25, 0, 0 }, 0, 0, 13, 17, 36, false }),
+			partySlot(Plain{ 0x0bad5eef, 0x4321, "WINGULL", 309, 0, { 45, 55, 0, 0 }, { 40, 25, 0, 0 }, 0, 0, 12, 0, 31, false }),
+			partySlot(Plain{ 0x0bad5ef1, 0x4321, "TORCHIC", 280, 0, { 10, 52, 0, 0 }, { 35, 25, 0, 0 }, 0, 0, 12, 30, 30, false }) })
+			foeParty.insert(foeParty.end(), p.begin(), p.end());
+		foeParty.resize(600, 0);
+		std::string inside = reply(0x30026f9, { 0x02 }) + reply(0x20244e9, { 4 }) + reply(0x20244ec, party) + reply(0x2022fec, { 0x0c, 0, 0, 0 }) + reply(0x2024084, mons) +
+			reply(0x2024744, foeParty);
 		std::string scratch = dir.empty() ? "/tmp" : dir;
 		std::string romPath = scratch + "/poke-test-" + std::to_string(getpid()) + ".gba";
 		if (!dir.empty()) romPath = dir + "/poke.gba";
@@ -403,6 +514,8 @@ int main(int argc, char** argv)
 			EQ(tt->moveName(55), std::string("WATER GUN"));
 			EQ((int)tt->speciesTypes[309][1], (int)FLYING);
 			EQ((int)tt->moveInfo[189].type, (int)GROUND);
+			EQ(tt->icons.size(), (size_t)413);
+			EQ(tt->palettes.size(), (size_t)3);
 		}
 		// another game's header: nothing to do
 		rom[0xac] = 'X';
