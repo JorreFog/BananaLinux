@@ -22,13 +22,18 @@ LAST=/data/banana/bluetooth-audio	# the headphones played last: called back afte
 # (a ceiling on each call: bluetoothctl waits for bluetoothd for ever when it isn't there)
 CTL="timeout 45 bluetoothctl"
 SELF=/usr/libexec/banana/bluetooth
-# one at a time (Settings starts up, down and pair in the background); the daemons get the lock's fd closed (9>&-)
-case $1 in up|down|pair|connect|disconnect|forget) exec 9>$RUN/bluetooth.lock; flock 9 ;; esac
+# one at a time (Settings starts up, down and pair in the background); the daemons get the lock's fd closed (9>&-).
+# A down waits 3 s at most: a sleep mustn't wait out a pairing (up to a minute), which fails when the daemons go.
+case $1 in
+up|pair|connect|disconnect|forget) exec 9>$RUN/bluetooth.lock; flock 9 ;;
+down) exec 9>$RUN/bluetooth.lock; flock -w 3 9 || : ;;
+esac
 
 stop() { [ -f "$1" ] && kill $(cat "$1") 2>/dev/null; rm -f "$1"; }
 running() { [ -f $RUN/bluetoothd.pid ] && kill -0 $(cat $RUN/bluetoothd.pid) 2>/dev/null; }
 # bluetoothctl's output without its colours
-ctl() { $CTL "$@" 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g; s/\r//g'; }
+ESC=$(printf '\033')
+ctl() { $CTL "$@" 2>/dev/null | tr -d '\r' | sed "s/$ESC\[[0-9;]*m//g"; }
 mac_ok() { echo "$1" | grep -Eq '^([0-9A-F]{2}:){5}[0-9A-F]{2}$'; }
 
 save() {
