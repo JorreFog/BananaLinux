@@ -11,3 +11,5 @@ layout's own pieces go through lineOf/ellipsisOf untranslated), a fallback font 
 (setFallbackFont: a CJK pixel font at whole multiples of its pixel size), and line breaks between CJK characters.
 And one for Banana: the game page leaves the
 achievements' label and meter out when the game has none known (empty achLabel), where ROCKNIXDS always had ES's.
+Banana UX (ux/menu-feedback): the shelf and the game list are a row with two ends (LINEAR: nothing drawn left of the
+first item; left on the first still goes to the last).
