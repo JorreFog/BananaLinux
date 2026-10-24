@@ -3666,6 +3666,10 @@ namespace banana
 		std::string cfg = "/data/retroarch/retroarch.cfg";
 		raw->user = cfgValue(cfg, "cheevos_username");
 		raw->token = cfgValue(cfg, "cheevos_token");
+		// since 0.4.2 ra-secrets moves RetroArch's token out of retroarch.cfg (file sharing shows it) into
+		// accounts.conf, for the same account: read from there, or every request got "Invalid user/token combination"
+		// and the panel showed no achievements
+		if (raw->token.empty() && !raw->user.empty() && account("ra_user") == raw->user) raw->token = account("ra_retroarch_token");
 		if (cfgValue(cfg, "cheevos_enable") != "true" || raw->user.empty()) raw->state = 4;
 	}
 
