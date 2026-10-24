@@ -117,7 +117,27 @@ Works: bluetoothctl with no agent, so devices that want a PIN or a passkey, keyb
 yet), connects or disconnects, Y forgets. BlueZ's `/var/lib/bluetooth` is `/run/banana/bluetooth`, kept on the card
 as `banana/bluetooth.tar` (exFAT can't hold its `AA:BB:...` folder names). Headphones: bluealsa-cli's events write the
 A2DP sink playing to `/run/banana/bt/audio`, and bananad plays there (below, Sound). Controllers call the handheld back
-themselves; the headphones played last (`banana/bluetooth-audio`) are called back at boot and after a wake. Its
+themselves; the headphones played last (`banana/bluetooth-audio`) are called back at boot and after a wake, the
+sound held quiet meanwhile (`/run/banana/bt/hold`: bananad plays to the codec with no speaker on it, so the games keep
+their pace).
+
+The link: hci_uart runs H5 at 1.5 Mbaud with RTS/CTS flow control and DMA on `uart1`, what the chip's config asks for
+(`rtl8821cs_config.bin`: 0x04928002 at offset 0x0c, flow control bit set); about 1.09 Mbit/s of payload after the
+UART's 11 bits a byte, before H5's framing. Enough for every codec here but LDAC at 990 kbps, which is why LDAC runs at
+660 with its adaptive bit rate. A faster UART (3 Mbaud is in btrtl's table) would need a config of our own and
+testing on the hardware. Wi-Fi and Bluetooth share the chip's radio: rtw88's coexistence code and the Bluetooth
+firmware split the air time by themselves (nothing to configure); a Wi-Fi scan or a large transfer while headphones
+play costs Bluetooth air time.
+
+**Bluetooth audio** (Settings > Network, `bt_audio`): bluez-alsa offers its codecs in its order (LDAC, aptX HD, aptX,
+FastStream, SBC) and the headphones take the first they share. Low latency (the default) offers aptX, FastStream and
+SBC (bitpool 53); Best quality LDAC (660 kbps, adaptive), aptX HD, aptX and SBC XQ. What the handheld adds to the delay
+is the player's ALSA buffer (30 ms for banana-ui, SuperDrastic and BananaDS, 64 for RetroArch), bluez-alsa's 10 ms
+pipe and the codec's frames (a few ms for SBC and aptX, more for LDAC); the headphones' own buffer, typically 100-200
+ms, is the rest, and no codec here shortens it (aptX Low Latency and LE Audio aren't available: no encoder, and the
+chip is Bluetooth 4.2). bluealsa's I/O threads run at real-time priority 25, above the emulators' audio threads; its
+pipe is paced at the stream's rate, so SuperDrastic's and BananaDS's blocking writes pace them as a sound card does.
+No AAC: fdk-aac's licence grants no patent rights and doesn't combine with libopenaptx's GPL-3.0. Its
 settings lines are new since the 0.3.0 translation document: English in 简体中文 until the translator's next round.
 
 **File sharing** (Settings > Network): the card's data partition as `\\<address>\banana` over SMB3, served by
@@ -152,7 +172,7 @@ the handheld to sleep:
 1. The game's process group gets `SIGSTOP` (ROCKNIX found DraStic's dynarec must not run on while the clocks drop).
 2. `/etc/banana/sleep.d/*` run with `pre` (Wi-Fi down and its driver unloaded: the RTL8821CS doesn't survive a
    suspend otherwise; nothing at all when Wi-Fi is off. Bluetooth down the same way, its modules unloaded, the sound
-   left routed to the headphones so a woken game is quiet until they are called back).
+   held quiet so a woken game isn't loud on the speakers until the headphones are called back).
 3. `sync()`: this kernel has `SUSPEND_SKIP_SYNC`, so the flush is bananad's (with saves written within 2 s anyway,
    `vm.dirty_expire`).
 4. The RTC alarm for the battery check (`sleep_check_hours`, 4), devices set to resume in parallel
@@ -230,7 +250,7 @@ LED follows the charger's own LED trigger (`<battery>-charging`), the critical b
 rk817 (card 0) with its `Playback Mux` on HP. RG DS Plus: playback on the aw88166 card, or on the rk817 while its
 `Headphones Jack` switch is on; capture always from the rk817 (the microphone). Volume keys: `PCM` on the aw88166,
 `Master` on the rk817. Bluetooth headphones, while connected, come first: bluez-alsa's PCM plugin through `plug`
-(A2DP, SBC), and the volume keys change the headphones' own volume (`bluealsa-cli volume`, 0-127). A program opened
+(A2DP: aptX, SBC, LDAC... as above), and the volume keys change the headphones' volume (`bluealsa-cli volume`, 0-127). A program opened
 before a change keeps its device until it opens it again.
 
 ## Clocks: banana-perf
