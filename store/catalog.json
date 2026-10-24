@@ -80,16 +80,16 @@
   },
   {
    "id": "bank",
-   "name": "Bank & Trade",
-   "tile": "Bank & Trade",
+   "name": "Poketool",
+   "tile": "Poketool",
    "kind": "app",
    "developer": "JorreFog",
    "genre": "Tool",
    "players": "1-2",
    "releasedate": "20261006T000000",
    "accent": "#3d6fb8",
-   "summary": "A Pokémon bank, legality checker and trading app, built on PKHeX.Core.",
-   "description": "Reads your game saves (generation 1 to 5), stores Pokémon in boxes of its own, moves them between games through the bank (they change format only when they move up a generation, as Pal Park and Poké Transfer did), checks every one with PKHeX's legality analysis, and trades with another handheld over Wi-Fi, in a lobby or a private room. Close the game before you use it. It comes with BananaOS: removing it takes its tile off the menu (your bank stays in apps/bank on the card), installing it puts the tile back.",
+   "summary": "A Pokémon bank, save editor, legality checker and trading app, built on PKHeX.Core.",
+   "description": "Formerly Bank & Trade. Reads your game saves (generation 1 to 5), stores Pokémon in boxes of its own, moves them between games, boxes and parties through the bank (they change format only when they move up a generation, as Pal Park and Poké Transfer did), edits Pokémon (or makes new ones), trainers, bags and Pokédexes as PKHeX does, duplicates Pokémon, checks every one with PKHeX's legality analysis, and trades with another handheld over Wi-Fi, in a lobby or a private room. Close the game before you use it. It comes with BananaOS: removing it takes its tile off the menu (your bank stays in apps/bank on the card), installing it puts the tile back.",
    "icon": "apps/bank/icon.png",
    "screenshots": [
     "apps/bank/screen.png"

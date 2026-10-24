@@ -335,7 +335,7 @@ namespace banana
 		}
 		hidden.clear();
 		{
-			// the built-in apps removed in the Store (Döda Kvarter, Bank & Trade): their systems, one per line, left out
+			// the built-in apps removed in the Store (Döda Kvarter, Poketool): their systems, one per line, left out
 			std::ifstream f(storeDir() + "/hidden-systems");
 			while (std::getline(f, ln)) if (!trim(ln).empty() && trim(ln)[0] != '#') hidden.insert(lower(trim(ln)));
 			hidden.erase("rocknixdsstore");	// never the Store itself or its Apps shelf: they'd be gone for good

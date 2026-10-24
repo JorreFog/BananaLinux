@@ -1,5 +1,6 @@
 #!/bin/sh
-# ROCKNIXDS Bank & Trade (the shelf's app tile): a Pokémon bank, PKHeX's legality checks and Wi-Fi trading, on both
+# Poketool, formerly ROCKNIXDS Bank & Trade (the shelf's app tile): a Pokémon bank, save editor, PKHeX's legality
+# checks and Wi-Fi trading, on both
 # panels as one window, which SDL's dummy driver puts on them itself (SDL_BANANA_PANELS: Banana's SDL patch), touches
 # on the bottom panel's half. The bank, its settings and the save backups are on the card (/data/apps/bank); saves are
 # found where DraStic, BananaDS and RetroArch keep them.

@@ -166,7 +166,7 @@ Press F or L3 for the in-game menu. The Anbernic button also opens it. More in
   Shader).
 - PortMaster and PICO-8: PortMaster with its ports, as on ROCKNIX; PICO-8 through fake-08, or the official PICO-8
   when it is on the card.
-- App Store: install and update Döda Kvarter, Bank & Trade and eReaderDS from the menu.
+- App Store: install and update Döda Kvarter, Poketool (a Pokémon bank and save editor) and eReaderDS from the menu.
 - Search and artwork: search names, genres or years across every system (Select), Recently played and Favorites
   shelves, box art from libretro or [TwilightBoxart](https://boxart.kirovair.com/), and games on a second SD card on
   the RG DS Plus.

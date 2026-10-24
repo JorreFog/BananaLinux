@@ -3,7 +3,7 @@
 answers as files, eReaderDS as a made-up release. Checks where everything lands (/data/store/apps, the Apps shelf's
 /data/store/tiles), that the catalog that came with the system is used while Banana's isn't on the network, that
 a remove leaves the shelf's folder and a port of the same name alone, and that the apps that come with the system
-(Döda Kvarter, Bank & Trade) are listed as installed, a remove takes their tile off the menu
+(Döda Kvarter, Poketool) are listed as installed, a remove takes their tile off the menu
 (/data/store/hidden-systems) and an install puts it back.
   python3 store/test-banana.py <rocknixds-store, with BananaOS's patches>"""
 import hashlib
@@ -29,7 +29,7 @@ def main(cli):
         with open(root + "/data/roms/ports/eReaderDS.sh", "w") as f:
             f.write("the user's own port\n")
         os.makedirs(root + "/data/store/tiles")
-        # Döda Kvarter's folder in the system with its VERSION; Bank & Trade's without one (the system's version then)
+        # Döda Kvarter's folder in the system with its VERSION; Poketool's without one (the system's version then)
         os.makedirs(root + "/usr/share/banana/apps/dodakvarter")
         os.makedirs(root + "/usr/share/banana/apps/bank")
         with open(root + "/usr/share/banana/apps/dodakvarter/VERSION", "w") as f:
@@ -107,7 +107,7 @@ def main(cli):
         r = row("dodakvarter")
         check(r[5:8] == ["0.3.0", "0.3.0", "installed"], "list: Döda Kvarter 0.3.0 installed (its VERSION): %s" % r[5:8])
         r = row("bank")
-        check(r[5:8] == ["0.4.2", "0.4.2", "installed"], "list: Bank & Trade installed (the system's version): %s" % r[5:8])
+        check(r[5:8] == ["0.4.2", "0.4.2", "installed"], "list: Poketool installed (the system's version): %s" % r[5:8])
         o = run("remove", "dodakvarter")
         check(o.strip().endswith("DONE"), "remove Döda Kvarter: " + o.strip())
         lines = open(hidden).read().split() if os.path.exists(hidden) else []
@@ -123,7 +123,7 @@ def main(cli):
         check(row("dodakvarter")[7:8] == ["installed"], "list: Döda Kvarter installed again")
         env["RNDS_STORE_DEVICE"] = "rgds"
         check(row("bank")[7:8] == ["installed"] and row("ereaderds")[7:8] == ["unsupported"],
-              "the RG DS: Bank & Trade installed, eReaderDS not for it")
+              "the RG DS: Poketool installed, eReaderDS not for it")
         env["RNDS_STORE_DEVICE"] = "rgds-plus"
         # a line written by hand, as banana-ui reads it (case, spaces): hidden for the Store too, and install clears it
         with open(hidden, "w") as f:
@@ -134,7 +134,7 @@ def main(cli):
               "install takes the hand-written line out")
         # a system without the app's folder (a build without it): not installed, and not installable
         os.rename(root + "/usr/share/banana/apps/bank", root + "/usr/share/banana/apps/bank.away")
-        check(row("bank")[5:8] == ["", "", "unavailable"], "Bank & Trade's folder gone: unavailable: %s" % row("bank")[5:8])
+        check(row("bank")[5:8] == ["", "", "unavailable"], "Poketool's folder gone: unavailable: %s" % row("bank")[5:8])
         o = run("install", "bank")
         check("FAIL" in o and (not os.path.exists(hidden) or "rocknixdsbank" not in open(hidden).read()),
               "install without its folder fails: " + o.strip().splitlines()[-1])
