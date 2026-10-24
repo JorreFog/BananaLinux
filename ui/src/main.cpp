@@ -444,6 +444,44 @@ static int shutdownPercent(const std::string& data)
 		getConfValue("/etc/banana/bananad.conf", "battery_shutdown_percent", "3")).c_str());
 }
 
+// a game in the library by its path, launched as A on it in its own system's shelf would (false: not in the library)
+static bool launchPath(Host& lib, const std::string& want)
+{
+	for (int s = 0; s < lib.systemCount(); s++)
+		for (int i = 0; i < (int)lib.shelf(s).games.size(); i++)
+			if (lib.shelf(s).games[i].path == want && !lib.shelf(s).favorites) { lib.openLibrary(s); lib.launch(i); return true; }
+	return false;
+}
+
+// Settings > Sleep & power > Power off after sleeping: bananad saved the game's resume state and shut the handheld
+// down, naming the game in banana/resume-boot ("rom=", "emulator=" lines). It starts again once, at this boot: the
+// marker goes first (a game that fails at once isn't started at every boot), and once (/run/banana/resume-once) names
+// it for its launcher, which loads the resume state then, Quick resume on or off. (once null: the headless test.)
+static void resumeAfterPoweroff(Host& lib, const std::string& data, const char* once)
+{
+	const std::string path = data + "/resume-boot";
+	std::string rom, emu, ln;
+	{
+		std::ifstream f(path);
+		if (!f) return;
+		while (std::getline(f, ln))
+		{
+			if (ln.compare(0, 4, "rom=") == 0) rom = ln.substr(4);
+			else if (ln.compare(0, 9, "emulator=") == 0) emu = ln.substr(9);
+		}
+	}
+	unlink(path.c_str());
+	sync();
+	if (rom.empty()) return;
+	if (once) std::ofstream(once) << rom << "\n";
+	if (launchPath(lib, rom)) logf("resume after power-off: %s (%s)", rom.c_str(), emu.c_str());
+	else
+	{
+		logf("resume after power-off: no game at %s", rom.c_str());
+		if (once) unlink(once);
+	}
+}
+
 // ---- headless: the same UI rendered to PNGs, for tests and screenshots ------------------------------------------
 static int runHeadless(const Options& o, Host& lib, const std::string& variant, const std::string& theme)
 {
@@ -482,6 +520,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		// sleep <ms>: as wait, but the time really passes (a helper process working meanwhile: the update download)
 		else if (op == "sleep") { double ms = 0; cs >> ms; usleep((useconds_t)(ms * 1000)); now += ms; settings.update(now); }
 		else if (op == "upstate") { settings.update(now); logf("upstate: %s", settings.updateState().c_str()); }
+		else if (op == "resumeboot") resumeAfterPoweroff(lib, o.data, nullptr);	// as at boot after Power off after sleeping
 		else if (op == "battery")
 		{
 			// battery <percent> [charging]: what /sys would say from now on
@@ -1672,6 +1711,7 @@ int main(int argc, char** argv)
 		close(launchWatch);
 		launchWatch = -1;
 	}
+	resumeAfterPoweroff(lib, o.data, "/run/banana/resume-once");	// (its game starts at the loop's first turn)
 	while (!quit)
 	{
 		double now = nowMs();
@@ -1712,11 +1752,7 @@ int main(int argc, char** argv)
 				std::getline(f, want);
 			}
 			unlink("/run/banana/launch");
-			bool found = false;
-			for (int s = 0; s < lib.systemCount() && !found; s++)
-				for (int i = 0; i < (int)lib.shelf(s).games.size(); i++)
-					if (lib.shelf(s).games[i].path == want && !lib.shelf(s).favorites) { lib.openLibrary(s); lib.launch(i); found = true; break; }
-			if (!found) logf("launch file: no game at %s", want.c_str());
+			if (!launchPath(lib, want)) logf("launch file: no game at %s", want.c_str());
 		}
 		int g = lib.pendingLaunch();
 		if (g >= 0)

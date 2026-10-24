@@ -70,7 +70,8 @@ static struct {
 	double dim_min;			/* idle minutes in the menu before the panels dim (0: never) */
 	int dim_pct;			/* dimmed to this percent of their brightness */
 	int mic_gain;			/* the rk817's microphone preamp, 0..15 (-1: left as it is) */
-} cfg = { "auto", 5, 8, 10, 1, 2000, 3, "deep", 128, 20, 5, 1, 4, 5, 2, 30, 12 };
+	double poweroff_after_min;	/* asleep this long on the battery: the game saved, then a clean shutdown (0: never) */
+} cfg = { "auto", 5, 8, 10, 1, 2000, 3, "deep", 128, 20, 5, 1, 4, 5, 2, 30, 12, 0 };
 
 static int devfd[MAXDEV], ndev;
 static void leds_update(void);
@@ -139,6 +140,7 @@ static void load_conf(const char *path)
 		else if (!strcmp(k, "sleep_poweroff_percent")) cfg.sleep_poweroff_pct = atoi(v);
 		else if (!strcmp(k, "dim_minutes")) cfg.dim_min = atof(v);
 		else if (!strcmp(k, "dim_percent")) cfg.dim_pct = atoi(v);
+		else if (!strcmp(k, "poweroff_after_sleep_minutes")) cfg.poweroff_after_min = atof(v);
 	}
 	fclose(f);
 }
@@ -443,6 +445,150 @@ static int battery_capacity(void)
 	closedir(d);
 	return r;
 }
+/* ---- Power off after sleeping (poweroff_after_sleep_minutes) -------------------------------------------------------
+ * Asleep that long on the battery, the RTC wakes the handheld quietly (the panels stay dark, no hooks, nothing for the
+ * menu), the game saves a resume state and quits, and it shuts down cleanly; /data/banana/resume-boot then names the
+ * game, which banana-ui starts again once at the next boot with its resume state loaded (the launchers' resume-once).
+ * The lid can't switch it back on: the hall sensor is the SoC's GPIO0_C3 (gpio-keys-hall), which is unpowered once the
+ * RK817 has shut down, and the RK817 powers up only from its own PWRON key (and a charger). Power starts it again. */
+
+/* the pid of the process in process group pg named comm (/proc/<pid>/stat), 0 if none */
+static pid_t pgrp_member(pid_t pg, const char *comm)
+{
+	DIR *d = opendir("/proc");
+	if (!d) return 0;
+	struct dirent *e;
+	pid_t r = 0;
+	while (!r && (e = readdir(d))) {
+		if (!isdigit((unsigned char)e->d_name[0])) continue;
+		char path[300], st[512];
+		snprintf(path, sizeof path, "/proc/%s/stat", e->d_name);
+		read_str(path, st, sizeof st);
+		/* "pid (comm) state ppid pgrp ...": the name may hold spaces and parentheses, so from the last ')' */
+		char *open = strchr(st, '('), *close = strrchr(st, ')');
+		if (!open || !close || close < open) continue;
+		int pgrp = 0, ppid;
+		char state;
+		if (sscanf(close + 1, " %c %d %d", &state, &ppid, &pgrp) != 3 || pgrp != pg) continue;
+		*close = 0;
+		if (!strcmp(open + 1, comm)) r = atoi(e->d_name);
+	}
+	closedir(d);
+	return r;
+}
+
+/* the game's ROM, as banana-ui gave it to the launcher (BANANA_ROM in its environment); "" if none */
+static void game_rom(pid_t game, char *out, size_t n)
+{
+	out[0] = 0;
+	char path[64], env[16384];
+	snprintf(path, sizeof path, "/proc/%d/environ", (int)game);
+	int fd = open(path, O_RDONLY | O_CLOEXEC);
+	if (fd < 0) return;
+	ssize_t len = read(fd, env, sizeof env - 1);
+	close(fd);
+	if (len <= 0) return;
+	env[len] = 0;
+	for (char *p = env; p < env + len; p += strlen(p) + 1)
+		if (!strncmp(p, "BANANA_ROM=", 11)) { snprintf(out, n, "%s", p + 11); return; }
+}
+
+/* a command for RetroArch on its stdin (run-retroarch's pipe, or banana-ui's for the game panel) */
+static void ra_command(const char *c)
+{
+	int fd = open("/run/banana/retroarch.cmd", O_WRONLY | O_NONBLOCK | O_CLOEXEC);
+	if (fd < 0) return;
+	if (write(fd, c, strlen(c)) < 0) {}
+	close(fd);
+}
+
+/* waits up to secs for the game to quit, the backlights kept off meanwhile (a display handed back, or banana-ui's
+ * modeset, can switch a panel's backlight on again); 1 when it has */
+static int game_gone(pid_t game, double secs)
+{
+	for (double t0 = mono(); mono() - t0 < secs; usleep(100000)) {
+		if (kill(game, 0) != 0) return 1;
+		backlights_power(0);
+	}
+	return kill(game, 0) != 0;
+}
+
+static void sleep_poweroff(pid_t game, pid_t pg, double asleep)
+{
+	sleep_log("asleep %.0f min: the game saved, then shutting down (poweroff_after_sleep_minutes)", asleep / 60);
+	backlights_power(0);
+	if (game) {
+		/* quiet: the game runs again for a moment to save. The levels kept first (the next boot restores them), then
+		 * the volume down; not Bluetooth headphones, whose own volume would stay down */
+		char mixer[64];
+		read_str("/run/banana/mixer", mixer, sizeof mixer);
+		if (strncmp(mixer, "bluealsa", 8)) {
+			char *store[] = { "alsactl", "-f", "/data/banana/asound.state", "store", NULL };
+			run(store);
+			char *mute[] = { "/usr/libexec/banana/volume", "set", "0", NULL };
+			run(mute);
+		}
+		char rom[1024];
+		game_rom(game, rom, sizeof rom);
+		const char *emu = NULL;
+		pid_t p, grp = pg > 0 ? -pg : game;
+		double wait = 60;	/* (the emulators' own limits are shorter: never cut a save short) */
+		if (pg > 0 && (p = pgrp_member(pg, "drastic"))) {
+			/* SuperDrastic: SIGUSR1 saves the resume state (DSFLIP_RESUME_FILE, which run-drastic always sets) and
+			 * quits; sent while stopped, it is the first thing the game does on SIGCONT */
+			emu = "superdrastic";
+			kill(p, SIGUSR1);
+			kill(grp, SIGCONT);
+		} else if (pg > 0 && (p = pgrp_member(pg, "bananads"))) {
+			/* BananaDS: SIGUSR1 quits with the resume state written whatever resume.on_quit says, then the save */
+			emu = "bananads";
+			kill(p, SIGUSR1);
+			kill(grp, SIGCONT);
+		} else if (pg > 0 && (p = pgrp_member(pg, "retroarch"))) {
+			/* RetroArch: a state in its automatic slot (-1: the slot down past 0, from wherever it is; the one
+			 * savestate_auto_load reads), then QUIT, which waits for the save task to finish. run-retroarch puts
+			 * the slot back after. No state in Hardcore: then it only quits (its SRAM is written on the way). */
+			emu = "retroarch";
+			kill(grp, SIGCONT);
+			usleep(500000);	/* (the pipe is read once a frame: running first) */
+			int slot = 0;
+			FILE *f = fopen("/data/retroarch/retroarch.cfg", "r");
+			if (f) {
+				char ln[256];
+				while (fgets(ln, sizeof ln, f)) sscanf(ln, "state_slot = \"%d\"", &slot);
+				fclose(f);
+			}
+			if (slot < 0) slot = 0;
+			if (slot > 997) slot = 997;
+			for (int i = 0; i < slot + 2; i++) { ra_command("STATE_SLOT_MINUS\n"); usleep(100000); }	/* (one a frame or more: each is a press) */
+			ra_command("SAVE_STATE\n");
+			usleep(500000);
+			ra_command("QUIT\n");
+		} else {
+			/* the rest (PortMaster ports, PICO-8): SIGTERM, as a shutdown; no resume state to come back to */
+			kill(grp, SIGCONT);
+			kill(grp, SIGTERM);
+			wait = 10;
+		}
+		if (game_gone(game, wait)) {
+			if (emu && rom[0]) {
+				FILE *f = fopen("/data/banana/resume-boot.new", "w");
+				if (f) {
+					fprintf(f, "rom=%s\nemulator=%s\n", rom, emu);
+					fflush(f);
+					fsync(fileno(f));
+					fclose(f);
+					rename("/data/banana/resume-boot.new", "/data/banana/resume-boot");
+				}
+				sleep_log("%s saved %s: it starts again at the next boot", emu, rom);
+			}
+		} else sleep_log("the game hasn't quit after %.0f s: shutting down anyway", wait);
+	}
+	backlights_power(0);
+	shutdown_now("asleep too long");
+	for (;;) pause();	/* init is shutting down: nothing more to do (not a sleep again with the lid shut) */
+}
+
 static void suspend_now(const char *why)
 {
 	double t0 = mono();
@@ -455,12 +601,17 @@ static void suspend_now(const char *why)
 	int cycles = 0, rtc_wakes = 0, failures = 0, dark = 0, dark_lid = 0;
 	double asleep = 0, dark_from = 0, led_at = 0;
 	const char *woke = "?";
+	/* Power off after sleeping: the wall clock's deadline (it goes on while asleep), from the first real sleep */
+	time_t off_at = 0;
 	for (;;) {
 		/* charging: no suspend, which turns the charging light off (it is a PWM LED, and the PWM stops in suspend).
 		 * Dark and awake instead, the game still paused, until the lid opens or the power button is pressed (back as
 		 * from a sleep), or the charger is pulled out (then a real sleep). Since 0.4.2 a power-button sleep too, not
 		 * only the lid's (#8: the light went out when the handheld was put to sleep on the charger). */
 		if (charger_online()) {
+			/* (no Power off after sleeping here: nothing drains, the charging light would go out, and the handheld is
+			 * picked up charged; unplugged, the deadline starts at the real sleep) */
+			off_at = 0;
 			if (!dark) {
 				dark = 1; dark_from = mono(); dark_lid = lid_closed;
 				backlights_power(0);
@@ -487,7 +638,17 @@ static void suspend_now(const char *why)
 			if (!dark_lid && lid_closed) dark_lid = 1;	/* shut meanwhile: opening it wakes too */
 			continue;
 		}
-		time_t alarm = rtc_alarm((int)(cfg.sleep_check_hours * 3600));
+		/* the RTC alarm: the sooner of the battery check and the deadline (passed: woken for it, or anything else
+		 * after it with the lid shut, and the game is saved and the handheld shut down) */
+		if (cfg.poweroff_after_min > 0 && !off_at) off_at = time(NULL) + (time_t)(cfg.poweroff_after_min * 60 + 0.5);
+		if (off_at && time(NULL) >= off_at) {
+			if (dark) inputs_grab(0);
+			sleep_poweroff(game, pg, asleep);
+			return;
+		}
+		int secs = (int)(cfg.sleep_check_hours * 3600);
+		if (off_at && (secs <= 0 || off_at - time(NULL) < secs)) secs = (int)(off_at - time(NULL));
+		time_t alarm = rtc_alarm(secs);
 		double t_in = mono();
 		struct timespec b0, b1;
 		clock_gettime(CLOCK_BOOTTIME, &b0);	/* BOOTTIME counts the time asleep, MONOTONIC doesn't */

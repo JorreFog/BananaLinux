@@ -140,6 +140,8 @@ settings		5 minutes	5 分钟
 settings		10 minutes	10 分钟
 settings		15 minutes	15 分钟
 settings		30 minutes	30 分钟
+settings		1 hour	1 小时
+settings		2 hours	2 小时
 settings		Dim when idle	闲置时调暗
 settings		In the menu, the panels go down to a third after this long with no button pressed, and back at the first press. Never while a game is running.	在菜单中，无按键操作达此时长后屏幕降至三分之一亮度，首次按键即恢复。游戏运行时不会触发。
 settings		1 minute	1 分钟

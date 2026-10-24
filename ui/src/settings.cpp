@@ -401,6 +401,8 @@ namespace banana
 		add(P, "moon", "Dim when idle", "In the menu, the panels go down to a third after this long with no button pressed, and back at the first press. Never while a game is running.", power, "dim_minutes",
 			{ "Never", "1 minute", "2 minutes", "5 minutes" }, { "0", "1", "2", "5" });
 		add(P, "moon", "Closing the lid", "Sleep with the lid: the game pauses, opening the lid carries on where you were.", power, "lid_sleep", { "Sleeps", "Does nothing" }, { "yes", "no" });
+		add(P, "moon", "Power off after sleeping", "Asleep this long (not while charging), the game is saved where you are and the handheld turns itself off, so the battery keeps for weeks. Press power to start it again: it goes straight back into the game.",
+			power, "poweroff_after_sleep_minutes", { "Never", "15 minutes", "30 minutes", "1 hour", "2 hours" }, { "0", "15", "30", "60", "120" });
 		add(P, "moon", "Waking up", "Fast: the handheld's parts wake up together. Careful: one after the other, slower but the safest. Banana switches to Careful by itself if a sleep ever fails.",
 			power, "fast_resume", { "Fast", "Careful" }, { "yes", "no" });
 		add(P, "moon", "LEDs", "Green, red when the battery is low, blinking red when nearly empty, amber while charging.", power, "led_brightness",
@@ -917,7 +919,7 @@ namespace banana
 			// show when the card has no line), the backlights and the mixer's level
 			static const struct { const char* key; const char* def; } BANANAD[] = {
 				{ "autosleep_minutes", "10" }, { "dim_minutes", "2" }, { "lid_sleep", "yes" },
-				{ "fast_resume", "yes" }, { "led_brightness", "128" } };
+				{ "poweroff_after_sleep_minutes", "0" }, { "fast_resume", "yes" }, { "led_brightness", "128" } };
 			for (const auto& b : BANANAD)
 				setConfValue(data + "/bananad.conf", b.key, getConfValue("/etc/banana/bananad.conf", b.key, b.def));
 			if (DIR* d = opendir("/sys/class/backlight"))
