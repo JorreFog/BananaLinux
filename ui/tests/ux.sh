@@ -1,0 +1,42 @@
+# The menu's UX checks (sourced by run.sh once per panel size: $size, $OUT, $HERE and $fail are its). Each runs
+# banana-ui on the test library with a script of its own and checks the log, the files, or regions of the shots.
+ux_k=$(echo "$size" | awk -Fx '{ print $2 / 480 }')
+# a test library of its own, as the fixture makes it (the checks before changed the shared one)
+UXFX=$OUT/ux-fixture-$size
+rm -rf "$UXFX"; "$HERE/tests/fixture.sh" "$UXFX" >/dev/null
+# ux_run <name> <script> [env...]: the log in $OUT/$size-<name>.log
+ux_run() {
+    n=$1; scr=$2; shift 2
+    env "$@" "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --splash "$HERE/assets/splash" \
+        --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$UXFX/roms" --data "$UXFX/data" \
+        --script "$scr" 2> "$OUT/$size-$n.log" || { echo "FAIL $size: banana-ui ($n) exited $?"; fail=1; }
+}
+ux_check() { grep -q "$2" "$OUT/$size-$1.log" || { echo "FAIL $size ($1): no '$2'"; fail=1; }; }
+# ux_std <png> <w> <h> <x> <y>: the standard deviation of a region given in px of a 640x480 panel
+ux_std() { convert "$1" -crop "$(awk -v k=$ux_k -v w=$2 -v h=$3 -v x=$4 -v y=$5 'BEGIN { printf "%dx%d+%d+%d", w * k, h * k, x * k, y * k }')" -format '%[fx:standard_deviation]' info: 2>/dev/null; }
+# ux_diff <a.png> <b.png>: how many pixels differ
+ux_diff() { compare -metric AE "$1" "$2" null: 2>&1 | cut -d' ' -f1; }
+# ux_lt <value> <limit>: true when value < limit
+ux_lt() { awk -v a="$1" -v b="$2" 'BEGIN { exit !(a < b) }'; }
+
+# the home row has two ends (Pixel): on the first system nothing is drawn left of it (the track alone); on the last,
+# nothing right of it; left on the first still goes to the last
+ux_run row "home 0; wait 2400; shot ux-row-first; press left; wait 2400; shot ux-row-last"
+ux_check row "press left: used, view 0 sys 6"
+ux_lt "$(ux_std "$OUT/$size-ux-row-first-bot.png" 210 80 30 200)" 0.08 || { echo "FAIL $size: something drawn left of the first system"; fail=1; }
+ux_lt "$(ux_std "$OUT/$size-ux-row-last-bot.png" 210 80 400 200)" 0.08 || { echo "FAIL $size: something drawn right of the last system"; fail=1; }
+
+# the box art's frame (Pixel): one size for every game, the picture fitted in it; the frame's top edge and its shadow
+# are the same pixels for a landscape cover, a tall one and a game with none (they moved with the picture's size)
+convert -size 260x420 "gradient:#3d9e9a-black" "$UXFX/roms/nds/media/box/Peel Quest.png"
+ux_run cover "lib 0 0; wait 2400; shot ux-cover-wide; press right; wait 2400; shot ux-cover-none; press right; wait 2400; shot ux-cover-tall"
+ux_strip() { convert "$1" -crop "$(awk -v k=$ux_k -v y=$2 -v h=$3 'BEGIN { printf "%dx%d+%d+%d", 250 * k, h * k, 38 * k, y * k }')" +repage "$4"; }
+for s in wide none tall; do
+    ux_strip "$OUT/$size-ux-cover-$s-top.png" 146 9 "$OUT/$size-ux-cover-$s-edge.png"
+    ux_strip "$OUT/$size-ux-cover-$s-top.png" 380 14 "$OUT/$size-ux-cover-$s-shadow.png"
+done
+for s in none tall; do
+    for part in edge shadow; do
+        [ "$(ux_diff "$OUT/$size-ux-cover-wide-$part.png" "$OUT/$size-ux-cover-$s-$part.png")" = 0 ] || { echo "FAIL $size: the cover's $part moved ($s)"; fail=1; }
+    done
+done

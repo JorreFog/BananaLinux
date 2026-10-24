@@ -765,8 +765,9 @@ namespace rnds
 			};
 		}
 
-		// the box cover fitted into COVER_W x COVER_H CSS px (its fitted CSS size in the cache entry)
-		static constexpr float COVER_W = 214, COVER_H = 280;
+		// the box cover fitted into COVER_W x COVER_H CSS px (its fitted CSS size in the cache entry). Banana: a square,
+		// the frame drawCover always draws (was 214 x 280, the frame the picture's own size)
+		static constexpr float COVER_W = 214, COVER_H = 214;
 		CacheEntry* coverArt(const std::string& path)
 		{
 			if (path.empty()) return nullptr;
@@ -1446,19 +1447,23 @@ namespace rnds
 			CacheEntry* ce = coverArt(gm.box);
 			bool pending = ce == nullptr && !gm.box.empty();
 			if (ce && !ce->sp.valid()) ce = nullptr;
-			float w = ce ? ce->cssW : 176, h = ce ? ce->cssH : 176;
+			// Banana: one frame for every game (COVER_W x COVER_H), the picture fitted in it and centred, the shadow the
+			// frame's: covers of different shapes no longer move the frame and its shadow about while the list scrolls
+			const float FW = COVER_W, FH = COVER_H;
+			float w = ce ? ce->cssW : FW, h = ce ? ce->cssH : FH;
 			float b = bob();
-			float x = std::round(cx - w / 2), y = std::round(cy - h / 2) + ry;
+			float x = std::round(cx - FW / 2), y = std::round(cy - FH / 2) + ry;
 			// the shadow: narrower while the cover is up
-			float fw = std::round(w * 0.78f) + (b < 0 ? -10 : 0), fy = std::round(cy + h / 2 + 18) + ry;
+			float fw = std::round(FW * 0.78f) + (b < 0 ? -10 : 0), fy = std::round(cy + FH / 2 + 18) + ry;
 			Color fl = P.floor;
 			for (int r = 0; r < 3; r++)
 			{
 				float rw = fw - r * r * 10;
 				be->fill(std::round(X(cx - rw / 2)), std::round(X(fy - 1 + r * 2)), std::round(X(rw)), std::round(X(2)), fl);
 			}
-			if (pending) return;		// the picture is on its way: the frame comes with it
-			drawBox(coverBox(), x - 3, y - 3 + b, w + 6, h + 6);
+			drawBox(coverBox(), x - 3, y - 3 + b, FW + 6, FH + 6);
+			if (pending) return;		// the picture is on its way: the empty frame meanwhile
+			x += std::round((FW - w) / 2); y += std::round((FH - h) / 2);
 			if (ce)
 			{
 				drawSprite(ce->sp, x, y + b);

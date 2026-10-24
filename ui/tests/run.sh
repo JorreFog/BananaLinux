@@ -306,6 +306,8 @@ for size in 640x480 1024x768; do
         [ -s "$f" ] || { echo "FAIL $size: no $f"; fail=1; continue; }
         [ "$(convert "$f" -format '%[fx:standard_deviation>0.01]' info: 2>/dev/null)" = 1 ] || { echo "FAIL $size: $f is blank"; fail=1; }
     done
+    # the menu's UX checks (the row's ends, the box art's frame, text on the accent, ...)
+    . "$HERE/tests/ux.sh"
     # each view drew something of its own (not the same frame again)
     for pair in "pk-party pk-mon" "pk-mon pk-battle" "pk-battle pk-ach"; do
         a=${pair% *}; b=${pair#* }
