@@ -48,3 +48,14 @@ ifeq ($(BR2_PACKAGE_BLUEZ5_UTILS)$(BR2_PACKAGE_LINUX_FIRMWARE),yy)
 LINUX_FIRMWARE_FILES += rtl_bt/rtl8821cs_fw.bin rtl_bt/rtl8761b_config.bin
 LINUX_FIRMWARE_ALL_LICENSE_FILES += LICENCE.rtlwifi_firmware.txt
 endif
+
+# bluez-alsa's codecs beyond Buildroot's options (aptX and aptX HD come with BR2_PACKAGE_LIBOPENAPTX through
+# bluez-alsa.mk): LDAC (Sony's encoder, package/ldacbt) and FastStream (SBC-based, no library). Which ones a
+# connection may use is the bluetooth script's (Settings > Network > Bluetooth audio: bluealsa -c ...).
+ifeq ($(BR2_PACKAGE_BLUEZ_ALSA)$(BR2_PACKAGE_LDACBT),yy)
+BLUEZ_ALSA_DEPENDENCIES += ldacbt
+BLUEZ_ALSA_CONF_OPTS += --enable-ldac
+endif
+ifeq ($(BR2_PACKAGE_BLUEZ_ALSA),y)
+BLUEZ_ALSA_CONF_OPTS += --enable-faststream
+endif

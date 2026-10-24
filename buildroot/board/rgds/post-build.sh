@@ -21,6 +21,8 @@ rm -rf "$T/usr/share/man" "$T/usr/share/doc" "$T/usr/share/info"
 # BlueZ keeps its pairings in /var/lib/bluetooth, on the read-only root: in /run instead, where the bluetooth script
 # unpacks them from the card (banana/bluetooth.tar) when Bluetooth comes on
 if [ -x "$T/usr/libexec/bluetooth/bluetoothd" ]; then
-    rm -rf "$T/var/lib/bluetooth"
+    rm -rf "$T/var/lib/bluetooth" "$T/var/lib/bluealsa"
     ln -sfn /run/banana/bluetooth "$T/var/lib/bluetooth"
+    # (and bluez-alsa's volume per device, kept with them)
+    ln -sfn /run/banana/bluealsa "$T/var/lib/bluealsa"
 fi
