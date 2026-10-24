@@ -313,6 +313,21 @@ namespace banana::pkmn
 			for (int i = 253; i <= 276 && ok; i++) ok = le32(rom + a + i * 4) == qm;
 			for (int i = 0; i < ICONS && ok; i++) ok = ptr(a + i * 4, 1024) >= 0;
 			if (!ok) continue;
+			// their palette numbers: a byte each, just after (the same source file in all three games); 0-2,
+			// Bulbasaur's 1, the placeholders' all one. Required: Emerald's footprint table, before it, has the same
+			// shape, its pictures as far apart (each just after an icon), and no palette numbers after it
+			auto pals = [&](size_t b)
+			{
+				if (b + ICONS > n || rom[b + 1] != 1) return false;
+				int c[3] = {};
+				for (int i = 0; i < ICONS; i++) { if (rom[b + i] > 2) return false; c[rom[b + i]]++; }
+				for (int i = 253; i <= 276; i++) if (rom[b + i] != rom[b + 252]) return false;
+				return c[0] > 40 && c[1] > 40 && c[2] > 40;
+			};
+			long pb = -1;
+			for (size_t b = a + ICONS * 4; b < a + ICONS * 4 + 256 && pb < 0; b++) if (pals(b)) pb = (long)b;
+			if (pb < 0) continue;
+			t.iconPal.assign(rom + pb, rom + pb + ICONS);
 			for (int i = 0; i < ICONS; i++)
 			{
 				// frame 1's 16 tiles of 8x8 (32 bytes each, two pixels a byte, the left one in the low half), four a row
@@ -327,19 +342,6 @@ namespace banana::pkmn
 						}
 				t.icons.push_back(px);
 			}
-			// their palette numbers: a byte each, often just after; 0-2, Bulbasaur's 1, the placeholders' all one
-			auto pals = [&](size_t b)
-			{
-				if (b + ICONS > n || rom[b + 1] != 1) return false;
-				int c[3] = {};
-				for (int i = 0; i < ICONS; i++) { if (rom[b + i] > 2) return false; c[rom[b + i]]++; }
-				for (int i = 253; i <= 276; i++) if (rom[b + i] != rom[b + 252]) return false;
-				return c[0] > 40 && c[1] > 40 && c[2] > 40;
-			};
-			long pb = -1;
-			for (size_t b = a + ICONS * 4; b < a + ICONS * 4 + 256 && pb < 0; b++) if (pals(b)) pb = (long)b;
-			for (size_t b = 0; b + ICONS <= n && pb < 0; b++) if (pals(b)) pb = (long)b;
-			if (pb >= 0) t.iconPal.assign(rom + pb, rom + pb + ICONS);
 			break;
 		}
 		// the three icon palettes: sprite palettes { pointer, tag 56000 + i, 0 }, six of them (the last three unused)
