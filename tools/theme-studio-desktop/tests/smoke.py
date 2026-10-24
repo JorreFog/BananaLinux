@@ -47,7 +47,14 @@ def main():
     if pm.isNull() or pm.width() == 0:
         print('  FAIL the window did not paint')
         return 1
-    print('  ok (font "%s", painted %dx%d)' % (family, pm.width(), pm.height()))
+    # the Theme settings panel offers the icons editor
+    from PySide6.QtWidgets import QTabWidget			# noqa: E402
+    tabs = w.theme_panel.widget().findChild(QTabWidget)
+    names = [tabs.tabText(i) for i in range(tabs.count())]
+    if 'System icons' not in names:
+        print('  FAIL the Theme settings panel has no System icons tab: %s' % names)
+        return 1
+    print('  ok (font "%s", painted %dx%d, theme tabs: %s)' % (family, pm.width(), pm.height(), ', '.join(names)))
     return 0
 
 

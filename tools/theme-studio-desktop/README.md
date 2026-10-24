@@ -27,8 +27,8 @@ banana-ui). Elsewhere, point it at a checkout with Engine > Set BananaLinux fold
   press ƒ to write an `=expression`, which gets completion of the hooks, vars and functions and turns red when it
   doesn't parse. Texts take `{hooks}` in braces. States, `with` parameters, `smooth`, any property the forms don't
   know, and the element's raw JSON are there too.
-- **Theme settings**: name, author, accent, default font, variables, the colour-theme keys, fonts, the buttons'
-  actions per view, hints and timings.
+- **Theme settings**: name, author, accent, default font, variables, the colour-theme keys, fonts, **system icons**
+  (each system's own picture, by id), the buttons' actions per view, hints and timings.
 - **Components**: make one from a selection, edit it once (every `use` follows), add instances.
 - **Assets**: pictures, fonts and sounds are copied into a folder named after the theme, next to its JSON, and named
   by relative paths, as the engine expects.

@@ -7,8 +7,8 @@ import sys
 import zipfile
 
 from PySide6.QtCore import QMimeData, QPointF, QRectF, QSettings, QSize, Qt, QTimer
-from PySide6.QtGui import (QAction, QColor, QDrag, QFont, QFontDatabase, QImage, QKeySequence, QPainter, QPen,
-                           QPixmap)
+from PySide6.QtGui import (QAction, QColor, QDrag, QFont, QFontDatabase, QIcon, QImage, QKeySequence, QPainter,
+                           QPen, QPixmap)
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox, QDockWidget, QDoubleSpinBox,
                                QFileDialog, QFormLayout, QFrame, QGridLayout, QGroupBox, QHBoxLayout, QHeaderView,
                                QInputDialog, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMenu,
@@ -910,6 +910,137 @@ class DictTable(QWidget):
             self.t.setItem(r, 1, QTableWidgetItem(rel))
 
 
+class IconsTable(QWidget):
+    """The theme's own icons, by system id: the file replaces the menu's icon for that system"""
+
+    IDS = ['nds', 'gba', 'gbc', 'gb', 'nes', 'snes', 'megadrive', 'psx', 'n64',
+           'dodakvarter', 'rocknixdsbank', 'pico-8', 'ports']
+
+    def __init__(self, studio):
+        super().__init__()
+        self.s = studio
+        v = QVBoxLayout(self)
+        v.setContentsMargins(0, 0, 0, 0)
+        lab = QLabel("A system's own icon, by id (nds, gba, gbc, gb, nes, snes, megadrive, psx, n64, pico-8, ports): "
+                     'the picture replaces the menu\'s icon for that system, on the home screen, in lists and in '
+                     'Settings. A 128×128 PNG is plenty; 4096 px a side is the engine\'s limit. Keep it in the '
+                     "theme's folder (Import copies it there).")
+        lab.setWordWrap(True)
+        lab.setStyleSheet('color: #999')
+        v.addWidget(lab)
+        self.t = QTableWidget(0, 2)
+        self.t.setHorizontalHeaderLabels(['System', 'Icon'])
+        self.t.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        self.t.verticalHeader().hide()
+        self.t.cellChanged.connect(self.changed)
+        v.addWidget(self.t)
+        row = QHBoxLayout()
+        a = QPushButton('Add')
+        a.clicked.connect(self.add)
+        i = QPushButton('Import picture…')
+        i.clicked.connect(self.import_one)
+        r = QPushButton('Remove')
+        r.clicked.connect(self.remove)
+        row.addWidget(a)
+        row.addWidget(i)
+        row.addWidget(r)
+        v.addLayout(row)
+        self.loading = False
+
+    def ids(self):
+        """The standard ids, plus whatever the checkout's systems.conf lists."""
+        ids = list(self.IDS)
+        repo = getattr(self.s.exact, 'repo', '')
+        if repo:
+            path = os.path.join(repo, 'system', 'rootfs', 'etc', 'banana', 'systems.conf')
+            try:
+                with open(path, encoding='utf-8') as fh:
+                    for line in fh:
+                        line = line.strip()
+                        if line.startswith('[') and line.endswith(']'):
+                            sid = line[1:-1]
+                            if sid and sid not in ids:
+                                ids.append(sid)
+            except OSError:
+                pass
+        return ids
+
+    def load(self):
+        self.loading = True
+        d = self.s.doc.get('icons') if isinstance(self.s.doc.get('icons'), dict) else {}
+        self.t.setRowCount(0)
+        for sid, path in d.items():
+            self.row(sid, path if isinstance(path, str) else '')
+        self.loading = False
+
+    def row(self, sid, path):
+        r = self.t.rowCount()
+        self.t.insertRow(r)
+        cb = QComboBox()
+        cb.setEditable(True)				# a card may have a system of its own
+        cb.addItems(self.ids())
+        cb.setCurrentText(sid)
+        cb.currentTextChanged.connect(self.changed)
+        self.t.setCellWidget(r, 0, cb)
+        self.t.setItem(r, 1, QTableWidgetItem(path))
+        self.thumb(r, path)
+
+    def thumb(self, r, path):
+        """Show the picture if it is beside the theme."""
+        if not path:
+            return
+        p = path if os.path.isabs(path) else os.path.join(self.s.theme_dir(), path)
+        if os.path.exists(p):
+            pm = QPixmap(p)
+            if not pm.isNull():
+                self.t.item(r, 1).setIcon(QIcon(pm.scaled(20, 20, Qt.KeepAspectRatio, Qt.SmoothTransformation)))
+
+    def collect(self):
+        d = {}
+        for r in range(self.t.rowCount()):
+            cb = self.t.cellWidget(r, 0)
+            sid = cb.currentText().strip() if cb else ''
+            it = self.t.item(r, 1)
+            val = it.text().strip() if it else ''
+            if sid and val:
+                d[sid] = val
+        return d
+
+    def changed(self, *_):
+        if self.loading:
+            return
+        before = self.s.snapshot()
+        d = self.collect()
+        if d:
+            self.s.doc['icons'] = d
+        else:
+            self.s.doc.pop('icons', None)
+        self.s.commit(before=before, structure=False, inspector=True)
+        self.load()
+
+    def add(self):
+        used = set(self.collect())
+        sid = next((i for i in self.ids() if i not in used), '')
+        self.loading = True
+        self.row(sid, '')
+        self.loading = False
+
+    def import_one(self):
+        r = self.t.currentRow()
+        if r < 0:
+            QMessageBox.information(self, 'Import', 'Pick a row first (Add one if there is none).')
+            return
+        rel = self.s.import_asset('Pictures (*.png *.jpg *.jpeg)')
+        if rel:
+            self.t.item(r, 1).setText(rel)		# cellChanged commits and reloads
+
+    def remove(self):
+        r = self.t.currentRow()
+        if r >= 0:
+            self.t.removeRow(r)
+            self.changed()
+
+
 class ThemePanel(QScrollArea):
     """The theme's own settings: name, colours, fonts, vars, buttons, hints, timings"""
 
@@ -959,6 +1090,9 @@ class ThemePanel(QScrollArea):
                                file_browse=True)
         self.fonts.load()
         tabs.addTab(self.fonts, 'Fonts')
+        self.icons_table = IconsTable(self.s)
+        self.icons_table.load()
+        tabs.addTab(self.icons_table, 'System icons')
         tabs.addTab(self.input_tab(), 'Buttons')
         tabs.addTab(self.hints_tab(), 'Hints')
         tabs.addTab(self.behavior_tab(), 'Timing')
