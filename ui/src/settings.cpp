@@ -1517,10 +1517,14 @@ namespace banana
 		box("screen", false, 0, 0, 640, 480);
 		box("bubble", false, 18, 14, 604, 54);
 		text(cur.section, true, 22, 38, 28, p.ink);
-		char count[32];
-		snprintf(count, sizeof count, "%02d / %02d", sel - gb + 1, ge - gb);
-		float cw = text(count, true, 17, 0, 0, p.muted, false, 0, true);
-		text(count, true, 17, 602 - cw, 31, p.muted);
+		// the count only when the group has more rows than the five in view (it is the only sign of the others)
+		if (ge - gb > ROWS)
+		{
+			char count[32];
+			snprintf(count, sizeof count, "%02d / %02d", sel - gb + 1, ge - gb);
+			float cw = text(count, true, 17, 0, 0, p.muted, false, 0, true);
+			text(count, true, 17, 602 - cw, 31, p.muted);
+		}
 		// the rows, the highlight and the scroll where their easing has them; rows clipped to the list's band, so one
 		// scrolling in slides from under the header or the buttons
 		advance();

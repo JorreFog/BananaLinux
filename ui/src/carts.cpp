@@ -931,7 +931,7 @@ namespace banana
 			round(66 + nw, 20, 26, 22, 6, PANEL, 1);
 			text("R", fSemi, 13, 79 + nw, 24, SOFT, 1, 0, 1);
 		}
-		if (count())
+		if (count() > 5)	// (the count only on a list longer than the shelf shows: a short one said nothing new)
 		{
 			char n[32];
 			snprintf(n, sizeof n, "%d / %d", cursor() + 1, count());

@@ -1171,6 +1171,10 @@ namespace rnds
 		TStyle tFace() { return ts(true, 19); }
 
 		float kbdW(const std::string& k) { return 12 + line(k, tKbd()).width; }
+		// Banana: the count ("03 / 12") only on a game list longer than the five in view; the shelf's few systems and
+		// a short list are all on screen (the count said nothing the row didn't). Without it the rail is the whole row
+		bool countShown() { return ui->mView == LIBRARY && src->gameCount() > 5; }
+		float railCut(int n) { return countShown() ? 12 + countWidthMax(n) : 0; }
 		// the rail's count ("01 / 07"); the rail is the rest of the row
 		float countWidth(int at, int n)
 		{
@@ -1197,7 +1201,13 @@ namespace rnds
 			Geo g;
 			View v = ui->mView;
 			std::string title, sub;
-			if (v == HOME) { auto& sy = sys(ui->mSys); title = sy.name; sub = sy.maker; }
+			if (v == HOME)
+			{
+				auto& sy = sys(ui->mSys); title = sy.name; sub = sy.maker;
+				// Banana: no maker that the name already says ("Nintendo DS" / "Nintendo"); one it doesn't stays
+				// ("Mega Drive" / "Sega")
+				if (!sub.empty() && title.find(sub) != std::string::npos) sub.clear();
+			}
 			else if (v == LIBRARY && count() == 0) { title = src->emptyTitle(); sub = src->emptyHint(); }
 			else
 			{
@@ -1217,8 +1227,8 @@ namespace rnds
 
 			int n = v == LAUNCH ? 1 : count();
 			int at = v == LAUNCH ? 0 : center();
-			g.countW = countWidth(at, n);
-			g.railW = 604 - 12 - countWidthMax(n);
+			g.countW = countShown() ? countWidth(at, n) : 0;
+			g.railW = 604 - railCut(n);
 
 			if (v == HOME)
 			{
@@ -1822,7 +1832,7 @@ namespace rnds
 		{
 			int n = src->gameCount();
 			if (ui->mView != LIBRARY || n == 0) return;
-			float inner = 604 - 12 - countWidthMax(n) - 4;
+			float inner = 604 - railCut(n) - 4;
 			int at = n < 2 ? 0 : (int)std::lround((x - 20 - 21) * (n - 1) / std::max(1.0f, inner - 42));
 			at = std::min(n - 1, std::max(0, at));
 			if (at != ui->mGame) setGame(at);
@@ -1974,6 +1984,8 @@ namespace rnds
 				thumbTo = target; thumbAt = now;
 			}
 			drawBox(thumbBox(), 20 + thumbValue(), 394, 42, 14);
+			if (countShown() && v != LAUNCH)
+			{
 			char a[16], b[16];
 			snprintf(a, sizeof a, "%02d", total == 0 ? 0 : at + 1);
 			snprintf(b, sizeof b, "%02d", total);
@@ -1982,6 +1994,7 @@ namespace rnds
 			drawLine(la, ts(true, 18), cx, 390, 22, INK);
 			drawLine(lsl, ts(false, 18), cx + la.width, 390, 22, MUTED);
 			drawLine(lb, ts(false, 18), cx + la.width + lsl.width, 390, 22, MUTED);
+			}
 
 			// face buttons
 			drawFace(g.left, 18, g.leftW, pressedAction && pressedSide == 0);

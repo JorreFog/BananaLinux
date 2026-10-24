@@ -62,3 +62,9 @@ ux_check page "press r: used, view 1 sys 0 game 4"
 ux_check page "press l: used, view 1 sys 0 game 0"
 grep -q '^clock = 12h' "$UXFX/data/settings.conf" || { echo "FAIL $size: R twice in Display & sound didn't reach Clock"; fail=1; }
 sed -i 's/^clock = 12h/clock = 24h/' "$UXFX/data/settings.conf"
+
+# no noise: the home bubble has no second line repeating the name ("Nintendo DS" / "Nintendo"), and no count under a
+# shelf of a few systems (the rail runs on under where "01 / 07" was)
+ux_run noise "home 0; wait 2400; shot ux-noise"
+ux_lt "$(ux_std "$OUT/$size-ux-noise-bot.png" 200 18 220 124)" 0.03 || { echo "FAIL $size: a second line under Nintendo DS"; fail=1; }
+ux_lt "$(ux_std "$OUT/$size-ux-noise-bot.png" 50 3 566 400)" 0.12 || { echo "FAIL $size: a count beside the home rail"; fail=1; }

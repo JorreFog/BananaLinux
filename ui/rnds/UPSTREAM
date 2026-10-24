@@ -17,3 +17,4 @@ Banana UX: the game list's box art in one fixed frame (COVER_W x COVER_H, 214 sq
 in it, the shadow the frame's.
 Banana UX: inkOn/subInkOn/accentTextMode (text on the accent by contrast; Settings > Text on accent); the plate's START in it.
 Banana UX: a game list's L/R (and its ◀ ▶ taps) go a page (page()/pageTarget()), the shoulders naming the games they land on.
+Banana UX: the count only on a game list longer than five (countShown/railCut); no home sublabel that the name already contains.
