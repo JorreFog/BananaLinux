@@ -190,7 +190,9 @@ namespace banana
 		p.accent = Color::hex(rnds::tintAccent(light ? 0xffc07a00u : 0xffffd23fu) & 0xffffff);	// the accent for values being changed
 		p.pick = Color::hex(rnds::accent.base); p.pickBand = Color::hex(rnds::accent.band); p.pickLow = Color::hex(rnds::accent.low);
 		p.pickEdge = light ? Color::hex(rnds::accent.dark) : Color::hex(0xffffff);
-		p.onPick = Color::hex(0x17161c); p.onPickAccent = Color::hex(0x7a3a00);
+		// the text on the picked row (the accent): dark or light by contrast, and its second line (a hint, a value) in
+		// the accent's own hue, darker or lighter until it reads (was always a brown: right on yellow only)
+		p.onPick = Color::hex(rnds::inkOn(rnds::accent.base)); p.onPickAccent = Color::hex(rnds::subInkOn(rnds::accent.base));
 		// a user theme's colours by the same names as the engine's palette (RndsUI.cpp), and two of this screen's own
 		struct { const char* n; Color SPal::* m; } names[] = {
 			{ "ink", &SPal::ink }, { "muted", &SPal::muted }, { "line", &SPal::line }, { "edge", &SPal::edge },
@@ -382,6 +384,8 @@ namespace banana
 		}
 		add(D, "picture", "Accent colour", "The colour of the selection, the logo and the boot animation's banana.", menu, "accent",
 			{ "Yellow", "Blue", "Red", "Green", "Purple", "Pink" }, { "yellow", "blue", "red", "green", "purple", "pink" });
+		add(D, "picture", "Text on accent", "The text on the selection's colour. Auto picks dark or light, whichever reads better on the accent.", menu, "accent_text",
+			{ "Auto", "Dark", "Light" }, { "auto", "dark", "light" });
 		// each panel its own backlight (N2); F + volume steps both
 		add(D, "picture", "Top brightness", "The top screen's backlight. F + volume changes both screens anywhere, in games too.", "", "top",
 			{ "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "100", "200", "300", "400", "500", "600", "700", "800", "900", "1000" }, Item::BRIGHTNESS);
@@ -911,6 +915,7 @@ namespace banana
 			return THEME;
 		}
 		if (it.key == "accent") { setVariant(getConfValue(data + "/settings.conf", "theme", "dark")); return THEME; }	// (saved above)
+		if (it.key == "accent_text") { rnds::accentTextMode = rnds::accentTextModeOf(it.values[at]); setVariant(getConfValue(data + "/settings.conf", "theme", "dark")); return THEME; }
 		return CHANGED;
 	}
 

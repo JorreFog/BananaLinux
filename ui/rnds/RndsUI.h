@@ -149,6 +149,14 @@ namespace rnds
 	};
 	extern ThemeFiles themeFiles;
 	bool themeColor(const char* name, Color& c);	// c replaced by the theme's colour of that name: true
+	// Banana: text on an accent-coloured surface (the selected tile, the plate's START, a picked row). The ink is dark or
+	// light by contrast with that colour (accentTextMode 0, Auto), or always dark (1) or light (2); the second line
+	// (a sublabel, a value) is the surface's own hue darkened or lightened towards the ink until it reads (4.5:1)
+	extern int accentTextMode;
+	inline int accentTextModeOf(const std::string& v) { return v == "dark" ? 1 : v == "light" ? 2 : 0; }	// settings.conf's accent_text
+	uint32_t inkOn(uint32_t rgb);					// 0x17161c or 0xffffff
+	uint32_t subInkOn(uint32_t rgb);
+	float contrastRatio(uint32_t a, uint32_t b);	// WCAG, 1..21
 	void tintAccent(Bitmap& b);						// RGBA8: its yellows in the accent's hue (nothing with the yellow)
 	uint32_t tintAccent(uint32_t argb);				// one colour, 0xAARRGGBB (premultiplied is fine: hue and ratios)
 

@@ -735,3 +735,7 @@ systems		PICO-8	PICO-8
 systems		Lexaloffle	Lexaloffle
 systems		Ports	Ports
 systems		PortMaster	PortMaster
+# (the menu-feedback rows below are a draft, not Majirefy's: for them to check)
+settings		Text on accent	强调色上的文字
+settings		The text on the selection's colour. Auto picks dark or light, whichever reads better on the accent.	选中项颜色上的文字。“自动”会选择在强调色上更易读的深色或浅色。
+settings		Auto	自动

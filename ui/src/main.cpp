@@ -580,6 +580,13 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		else if (op == "setup") { settings.setup(); logf("setup open"); }
 		// search <text>: the search keyboard open with that text typed (START then searches)
 		else if (op == "search") { std::string t; std::getline(cs, t); size_t b = t.find_first_not_of(' '); settings.openSearch(b == std::string::npos ? "" : t.substr(b)); logf("search open: \"%s\"", t.c_str()); }
+		else if (op == "inkon")
+		{
+			// inkon <rrggbb>: the text on that accent (Text on accent's mode) and its second line, with their contrast
+			std::string h; cs >> h;
+			uint32_t bg = (uint32_t)strtoul(h.c_str(), nullptr, 16), ink = rnds::inkOn(bg), sub = rnds::subInkOn(bg);
+			logf("inkon %06x: ink %06x (%.1f:1), sub %06x (%.1f:1)", bg, ink, rnds::contrastRatio(ink, bg), sub, rnds::contrastRatio(sub, bg));
+		}
 		else if (op == "romicon")
 		{
 			// romicon <path>: the DS ROM's own icon (from a .nds or a .zip), and a pixel from its middle
@@ -1145,6 +1152,7 @@ int main(int argc, char** argv)
 	if (!settings["timezone"].empty()) { setenv("TZ", settings["timezone"].c_str(), 1); tzset(); }
 	// the palette (a user theme's colours and accent set on the way) and the accent, before anything is drawn: the
 	// splash and the menu in it
+	rnds::accentTextMode = rnds::accentTextModeOf(settings["accent_text"]);	// the text on the accent: auto, dark or light
 	std::string themeWhy, variant = applyTheme(settings["theme"], settings["accent"], &themeWhy);
 	if (!themeWhy.empty()) logf("theme: %s (dark instead)", themeWhy.c_str());
 	if (variant == "carts") variant = "dark";
@@ -1326,6 +1334,7 @@ int main(int argc, char** argv)
 		{
 			// the menu again in the other palette, on the system it was showing
 			settings = readSettings(o.data);
+			rnds::accentTextMode = rnds::accentTextModeOf(settings["accent_text"]);
 			variant = applyTheme(settings["theme"], settings["accent"]);
 			if (variant == "carts") variant = "dark";
 			int sys = ui->systemIndex();

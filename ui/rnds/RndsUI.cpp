@@ -22,6 +22,40 @@ namespace rnds
 	std::map<std::string, uint32_t> themeColors;
 	ThemeFiles themeFiles;
 	void setAccent(const Accent& a) { accent = a; }
+	int accentTextMode = 0;
+	static float relLum(uint32_t c)
+	{
+		auto ch = [](uint32_t v) { float x = v / 255.0f; return x <= 0.03928f ? x / 12.92f : std::pow((x + 0.055f) / 1.055f, 2.4f); };
+		return 0.2126f * ch((c >> 16) & 255) + 0.7152f * ch((c >> 8) & 255) + 0.0722f * ch(c & 255);
+	}
+	float contrastRatio(uint32_t a, uint32_t b)
+	{
+		float la = relLum(a), lb = relLum(b);
+		return (std::max(la, lb) + 0.05f) / (std::min(la, lb) + 0.05f);
+	}
+	static const uint32_t INK_DARK = 0x17161c, INK_LIGHT = 0xffffff;
+	uint32_t inkOn(uint32_t rgb)
+	{
+		rgb &= 0xffffff;
+		if (accentTextMode == 1) return INK_DARK;
+		if (accentTextMode == 2) return INK_LIGHT;
+		return contrastRatio(rgb, INK_DARK) >= contrastRatio(rgb, INK_LIGHT) ? INK_DARK : INK_LIGHT;
+	}
+	uint32_t subInkOn(uint32_t rgb)
+	{
+		rgb &= 0xffffff;
+		uint32_t ink = inkOn(rgb), out = ink;
+		auto mixc = [](uint32_t a, uint32_t b, float t)
+		{
+			auto c = [&](int sh) { return (uint32_t)std::lround(((a >> sh) & 255) * (1 - t) + ((b >> sh) & 255) * t) << sh; };
+			return c(16) | c(8) | c(0);
+		};
+		// the least step towards the ink that reads: as much of the surface's colour as can stay (yellow: the brown it
+		// always was; blue: a dark blue)
+		for (float t = 0.5f; t <= 1.0f; t += 0.05f)
+			if (contrastRatio(out = mixc(rgb, ink, t), rgb) >= 4.5f) return out;
+		return ink;
+	}
 	bool themeColor(const char* name, Color& c)
 	{
 		auto it = themeColors.find(name);
@@ -1912,7 +1946,7 @@ namespace rnds
 				{
 					TStyle tsr = ts(true, 20, 2.4f);
 					TextLine lsr = line("START", tsr);
-					drawLine(lsr, tsr, 320 - lsr.width / 2, ry + 124, 24, NAVY);
+					drawLine(lsr, tsr, 320 - lsr.width / 2, ry + 124, 24, Color::hex(inkOn(accent.base)));	// Banana: on the plate's accent
 				}
 			}
 			be->popClip();

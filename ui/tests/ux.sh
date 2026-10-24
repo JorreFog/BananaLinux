@@ -40,3 +40,17 @@ for s in none tall; do
         [ "$(ux_diff "$OUT/$size-ux-cover-wide-$part.png" "$OUT/$size-ux-cover-$s-$part.png")" = 0 ] || { echo "FAIL $size: the cover's $part moved ($s)"; fail=1; }
     done
 done
+
+# the text on the accent (Auto): dark or light by contrast, the second line in the accent's hue and readable (4.5:1);
+# blue's sublabel is a blue, not the brown that suited yellow only. Light: white text, the plate's START too
+ux_run ink "inkon f0b429; inkon 4a9fe0; inkon e8574d; inkon 1a2a6c"
+ux_check ink "inkon f0b429: ink 17161c"
+ux_check ink "inkon 1a2a6c: ink ffffff"
+grep "^banana-ui: inkon" "$OUT/$size-ink.log" | awk '{ gsub(/[(:]/, " "); for (i = 1; i <= NF; i++) if ($i ~ /^[0-9.]+$/ && $(i+1) == "1)") if ($i + 0 < 4.5) bad = 1 } END { exit bad }' \
+    || { echo "FAIL $size: a text on the accent under 4.5:1: $(grep inkon "$OUT/$size-ink.log" | tr '\n' ' ')"; fail=1; }
+sub=$(sed -n 's/.*inkon 4a9fe0: .* sub \([0-9a-f]*\).*/\1/p' "$OUT/$size-ink.log")
+[ -n "$sub" ] && [ $((0x${sub#????})) -gt $((0x${sub%????})) ] || { echo "FAIL $size: blue's sublabel isn't blue: $sub"; fail=1; }
+sed -i 's/^accent_text = .*//' "$UXFX/data/settings.conf"; echo "accent_text = light" >> "$UXFX/data/settings.conf"
+ux_run ink-light "inkon f0b429; home 0; wait 2400; shot ux-ink-light"
+ux_check ink-light "inkon f0b429: ink ffffff"
+sed -i 's/^accent_text = .*//' "$UXFX/data/settings.conf"
