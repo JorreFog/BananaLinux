@@ -175,6 +175,23 @@ When `/sys/power/state` returns:
   fraction of a millisecond of the kernel returning; then the `post` hooks (Wi-Fi and Bluetooth back) in the background, the LEDs,
   the headphone route; the press that woke it is ignored.
 
+**Power off after sleeping** (Settings > Sleep & power; `poweroff_after_sleep_minutes`, 0 = never, the default; 15,
+30, 60 or 120): the RTC alarm is then the sooner of the battery check and that deadline, counted from the first real
+sleep. When it is reached (its own alarm, or any wake with the lid still shut after it) the handheld is woken
+quietly: the panels stay dark, no `post` hooks, nothing for the menu, the volume down (the levels stored first, so
+the next boot has them). The game saves a resume state and quits, by what each emulator already does:
+SuperDrastic `SIGUSR1` to `drastic` (run-drastic always sets `DSFLIP_RESUME_FILE`; with Quick resume off,
+`DSFLIP_RESUME_ON_QUIT=0` keeps the player's own quits unsaved), BananaDS `SIGUSR1` to `bananads` (the resume state
+whatever `resume.on_quit` says), RetroArch through its command pipe (`STATE_SLOT_MINUS` down to the automatic slot,
+`SAVE_STATE`, `QUIT`, which waits for the save task; run-retroarch puts the slot back), anything else `SIGTERM`.
+bananad waits for the game to quit (60 s at most; 10 for `SIGTERM`), writes `banana/resume-boot` (the ROM and the
+emulator) for a game that saved, and shuts down cleanly. The lid can't switch it on again: the hall sensor is the
+SoC's GPIO0_C3 (`gpio-keys-hall`), unpowered once the RK817 is off, and the RK817 starts only from its own power key
+(or a charger). At the next boot (power pressed) banana-ui takes `resume-boot` (deleted before the game starts, so a
+game that fails isn't started at every boot), names the ROM in `/run/banana/resume-once` and launches it; the
+launcher loads its resume state once, Quick resume on or off. On the charger ("dark and awake") the deadline doesn't
+count: nothing drains, and the charging light would go out; unplugged, it starts at the real sleep.
+
 If a suspend fails, bananad goes on more carefully by itself: devices one at a time, then `s2idle`; if even that
 fails with the lid shut, both backlights go off until it opens. With lid sleep switched off, closing the lid only
 turns the backlights off. Every sleep is a line in `banana/logs/sleep.log` (time to suspend, time asleep, why it

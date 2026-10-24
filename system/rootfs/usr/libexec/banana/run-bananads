@@ -105,8 +105,17 @@ else s=$(sed -n 's/^ *kms.shader *= *//p' $C 2>/dev/null | tail -n 1); fi
 # the 3D always through the Gengis Engine (SuperDrastic's rasterizer), as SuperDrastic does
 export BANANADS_RENDER_RENDERER=gengis
 # Settings > Nintendo DS > Quick resume (settings.conf's quick_resume): off, a quit ends the game and the next start
-# is from its title (no resume state written or loaded)
-grep -q '^ *quick_resume *= *on' /data/banana/settings.conf 2>/dev/null || export BANANADS_RESUME_ON_QUIT=off BANANADS_RESUME_ON_START=off
+# is from its title (no resume state written or loaded); bananad's SIGUSR1 (Power off after sleeping) still writes one,
+# loaded at the boot after it
+# Settings > Sleep & power > Power off after sleeping: bananad saved this game's resume state and shut down, and
+# banana-ui started it again at the next boot (/run/banana/resume-once names it): the state loaded this once, Quick
+# resume on or off
+ONCE=0
+[ "$(cat /run/banana/resume-once 2>/dev/null)" = "${BANANA_ROM:-$1}" ] && { ONCE=1; rm -f /run/banana/resume-once; echo "run-bananads: resuming after Power off after sleeping" >&2; }
+if ! grep -q '^ *quick_resume *= *on' /data/banana/settings.conf 2>/dev/null; then
+    export BANANADS_RESUME_ON_QUIT=off
+    [ $ONCE = 1 ] || export BANANADS_RESUME_ON_START=off
+fi
 # the RetroAchievements account from the setup (banana/accounts.conf), for BananaDS's achievements (as run-drastic
 # gives SuperDrastic's)
 A=/data/banana/accounts.conf

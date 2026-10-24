@@ -80,17 +80,23 @@ export DSFLIP_QUEUE=${DSFLIP_QUEUE:-2}
 /usr/libexec/banana/nds-saves "$1"
 # Quit game (the menu) and a shutdown while playing save the spot to a resume state, loaded once at the next start of
 # the game. One older than the game's own save is dropped: loading it would put back an older in-game save too.
-# Only with Settings > Nintendo DS > Quick resume on (settings.conf's quick_resume); off, a quit ends the game.
-if grep -q '^ *quick_resume *= *on' /data/banana/settings.conf 2>/dev/null; then
-    G=$(basename "$1"); G=${G%.*}
-    R=$D/savestates/$G.resume.dss
-    mkdir -p $D/savestates
-    RLOAD=0
-    if [ -f "$R" ]; then
-        if [ -f "$D/backup/$G.dsv" ] && [ "$D/backup/$G.dsv" -nt "$R" ]; then rm -f "$R"; else RLOAD=1; fi
-    fi
-    export DSFLIP_RESUME_FILE="$R" DSFLIP_RESUME_LOAD=$RLOAD
+# Only with Settings > Nintendo DS > Quick resume on (settings.conf's quick_resume); off, a quit ends the game. The
+# file is set either way: off, DSFLIP_RESUME_ON_QUIT=0 keeps it for bananad's SIGUSR1 alone (Power off after
+# sleeping saves the game before it shuts the handheld down), and the state is loaded only at the boot after that.
+# Settings > Sleep & power > Power off after sleeping: bananad saved this game's resume state and shut down, and
+# banana-ui started it again at the next boot (/run/banana/resume-once names it): the state loaded this once, Quick
+# resume on or off
+ONCE=0
+[ "$(cat /run/banana/resume-once 2>/dev/null)" = "${BANANA_ROM:-$1}" ] && { ONCE=1; rm -f /run/banana/resume-once; echo "run-drastic: resuming after Power off after sleeping" >&2; }
+G=$(basename "$1"); G=${G%.*}
+R=$D/savestates/$G.resume.dss
+mkdir -p $D/savestates
+QR=0; grep -q '^ *quick_resume *= *on' /data/banana/settings.conf 2>/dev/null && QR=1
+RLOAD=0
+if [ -f "$R" ]; then
+    if [ -f "$D/backup/$G.dsv" ] && [ "$D/backup/$G.dsv" -nt "$R" ]; then rm -f "$R"; elif [ $QR = 1 ] || [ $ONCE = 1 ]; then RLOAD=1; fi
 fi
+export DSFLIP_RESUME_FILE="$R" DSFLIP_RESUME_LOAD=$RLOAD DSFLIP_RESUME_ON_QUIT=$QR
 # the settings screen's choices (KEY=value lines), exported to SuperDrastic
 . /usr/libexec/banana/kv-env
 kv_export /data/banana/superdrastic.conf DSFLIP_ DSHOOK_  # (read, never run: kv-env)
