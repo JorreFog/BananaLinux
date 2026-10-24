@@ -55,6 +55,10 @@ endif
 ifeq ($(BR2_PACKAGE_BLUEZ_ALSA)$(BR2_PACKAGE_LDACBT),yy)
 BLUEZ_ALSA_DEPENDENCIES += ldacbt
 BLUEZ_ALSA_CONF_OPTS += --enable-ldac
+# Buildroot reads this file after bluez-alsa.mk has been evaluated, so the line above no longer orders the build (the
+# CONF_OPTS still apply: they're read when configure runs): ldacbt's staging install made a prerequisite of
+# bluez-alsa's configure step directly, or configure didn't find ldacBT-abr.pc
+$(BLUEZ_ALSA_TARGET_CONFIGURE): | $(LDACBT_TARGET_INSTALL_STAGING)
 endif
 ifeq ($(BR2_PACKAGE_BLUEZ_ALSA),y)
 BLUEZ_ALSA_CONF_OPTS += --enable-faststream
