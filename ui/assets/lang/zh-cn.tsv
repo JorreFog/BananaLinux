@@ -225,6 +225,16 @@ settings		Bottom	下屏
 settings		Second screen	副屏
 settings		While a game plays on one screen, the other shows its RetroAchievements and tiles to save, load, open RetroArch's menu, fast forward and quit (by touch when they are on the bottom screen). Off: the other screen stays dark.	当某屏运行游戏时，另一屏显示其 RetroAchievements 及用于保存、读取、打开 RetroArch 菜单、快进和退出的磁贴（位于下屏时可触摸操作）。关闭：另一屏保持黑屏。
 settings		Game panel	游戏面板
+settings		Game panel when idle	游戏面板闲置时
+settings		With a game on the top screen, what the game panel on the bottom one does when nothing has touched it or pressed a button for a while: stays on, dims, or turns off. A touch or any button lights it again.	游戏在上屏运行时，下屏的游戏面板在一段时间无触摸、无按键后的状态：保持常亮、调暗或关闭。触摸或按任意键即可重新点亮。
+settings		Dims	调暗
+settings		Turns off	关闭屏幕
+settings		Stays on	保持常亮
+settings		Game panel idle time	游戏面板闲置时间
+settings		How long the game panel waits, with no touch and no button, before it dims or turns off (Game panel when idle).	游戏面板在无触摸、无按键多久后调暗或关闭（见“游戏面板闲置时”）。
+settings		After 10 s	10 秒后
+settings		After 30 s	30 秒后
+settings		After 1 minute	1 分钟后
 settings		Pokémon companion	宝可梦助手
 settings		Pokémon Ruby, Sapphire, Emerald, FireRed and LeafGreen (the English releases) on the second screen: the party with levels, HP and moves, and in a battle the foe, its types and how each move does against it. Read from the game as it plays; other games keep the panel as it is. Needs Second screen on. Inspired by PokeDaisy by Lidor Itzhari.	宝可梦 红宝石、蓝宝石、绿宝石、火红、叶绿（英文版）在副屏上显示：队伍的等级、HP 和招式；对战时显示对手、其属性以及每个招式对它的效果。游玩时从游戏中读取；其他游戏的面板保持不变。需要开启副屏。灵感来自 Lidor Itzhari 的 PokeDaisy。
 settings		Network	网络
@@ -670,7 +680,7 @@ systems		Sony	Sony
 systems		Nintendo 64	Nintendo 64
 systems		Döda Kvarter	Döda Kvarter
 systems		ROCKNIXDS	ROCKNIXDS
-systems		Bank & Trade	Bank & Trade
+systems		Poketool	Poketool
 systems		PICO-8	PICO-8
 systems		Lexaloffle	Lexaloffle
 systems		Ports	Ports

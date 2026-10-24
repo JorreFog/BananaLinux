@@ -1213,7 +1213,13 @@ int main(int argc, char** argv)
 	{
 		auto cv = [&](const char* k, const char* d) { return getConfValue(o.data + "/settings.conf", k, getConfValue("/etc/banana/settings.conf", k, d)); };
 		bottomIdle.setOwned(false, nowMs());	// the menu never dims the bottom screen
-		bottomIdle.configure(atof(cv("bottom_idle_seconds", "10").c_str()), atoi(cv("bottom_dim_percent", "0").c_str()), o.data);
+		// Settings > Other systems > Game panel when idle: stays on (no timer), dims (to bottom_dim_percent, 25 unless
+		// set), or turns off (the backlight at 0); a mode-less card from before the row: a dim percent of 0 is off
+		std::string mode = cv("bottom_idle_mode", "");
+		int pc = atoi(cv("bottom_dim_percent", "25").c_str());
+		if (mode.empty()) mode = pc > 0 ? "dim" : "off";
+		double sec = mode == "on" ? 0 : atof(cv("bottom_idle_seconds", "30").c_str());
+		bottomIdle.configure(sec, mode == "off" ? 0 : (pc > 0 ? pc : 25), o.data);
 	};
 	bottomReload();
 

@@ -30,6 +30,7 @@ namespace banana
 		const char* const SHADERS[] = { "off", "lcd", "crt", "sharp", nullptr };
 		const char* const NDS[] = { "superdrastic", "bananads", nullptr };
 		const char* const PANEL[] = { "panel", "off", nullptr };
+		const char* const IDLE[] = { "dim", "off", "on", nullptr };
 		const char* const BOXART[] = { "libretro", "both", "twilight", nullptr };
 		const char* const LATENCY[] = { "32", "64", "128", nullptr };
 		const char* const LOGIN[] = { "password", "guest", nullptr };
@@ -45,8 +46,9 @@ namespace banana
 			{ "battery", "icon", TEXT, nullptr, 0, 0 },
 			{ "clock", "24h", TEXT, nullptr, 0, 0 },
 			{ "splash", "on", ENUM, ON_OFF, 0, 0 },
-			{ "bottom_idle_seconds", "10", INTEGER, nullptr, 0, 3600 },
-			{ "bottom_dim_percent", "0", INTEGER, nullptr, 0, 100 },
+			{ "bottom_idle_mode", "dim", ENUM, IDLE, 0, 0 },
+			{ "bottom_idle_seconds", "30", INTEGER, nullptr, 0, 3600 },
+			{ "bottom_dim_percent", "25", INTEGER, nullptr, 0, 100 },
 			{ "wifi", "on", ENUM, ON_OFF, 0, 0 },
 			{ "bluetooth", "off", ENUM, ON_OFF, 0, 0 },
 			{ "quick_resume", "off", ENUM, ON_OFF, 0, 0, true },
