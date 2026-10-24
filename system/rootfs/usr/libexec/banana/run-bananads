@@ -46,6 +46,11 @@ if [ ! -f $M ]; then
         -e 's/^ *mic.threshold *= *0\.3 *$/mic.threshold = 0.15/' $C 2>/dev/null
     touch $M
 fi
+# Settings > Nintendo DS > Low latency (experimental): bananads.conf's kms.lowlat (off, on, runahead1, runahead2),
+# which BananaDS reads itself (its docs/SETTINGS.md): no frame queue, each frame aimed at the panels' refresh, and
+# run-ahead. Said in the log, for a report that comes with one
+ll=$(sed -n 's/^ *kms\.lowlat *= *//p' $C 2>/dev/null | tail -n 1)
+[ -n "$ll" ] && [ "$ll" != off ] && echo "run-bananads: low latency (experimental): $ll" >&2
 export DSFLIP_SHADER_DIR=/usr/lib/superdrastic/shaders
 # the game's own microphone (its page, #27): BananaDS's threshold for this run (0: off)
 # (BananaDS's scale, as Settings' Microphone: low 0.15, medium 0.05, high 0.02)

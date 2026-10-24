@@ -74,8 +74,13 @@ fi
 export DSFLIP_AUDIO_DEVICE_RATE=${DSFLIP_AUDIO_DEVICE_RATE:-48000}
 # two finished frames may wait for the panels, not one: DraStic's frames come unevenly (two in one refresh, then
 # none), and with one a frame was dropped and the next refresh repeated the last (HeartGold, 65 s: 12 drops and 8
-# repeats with one, 4 and 3 with two), at one more refresh of latency, as BananaDS's kms.queue
-export DSFLIP_QUEUE=${DSFLIP_QUEUE:-2}
+# repeats with one, 4 and 3 with two), at one more refresh of latency, as BananaDS's kms.queue.
+# Settings > Nintendo DS > Low latency (experimental; superdrastic.conf DSFLIP_LOWLAT=1, exported below): no queue at
+# all, each frame at the next refresh it can make and DraStic held to start its frames as late as that allows
+# (SuperDrastic's docs/INTEGRATION.md); it overrules the queue
+ll=$(sed -n 's/^ *DSFLIP_LOWLAT *= *//p' /data/banana/superdrastic.conf 2>/dev/null | tail -n 1)
+if [ "$ll" = 1 ]; then echo "run-drastic: low latency (experimental): no frame queue" >&2
+else export DSFLIP_QUEUE=${DSFLIP_QUEUE:-2}; fi
 # the in-game save as BananaDS left it, when it played the game last (nds-saves: the two emulators share saves)
 /usr/libexec/banana/nds-saves "$1"
 # Quit game (the menu) and a shutdown while playing save the spot to a resume state, loaded once at the next start of
