@@ -170,7 +170,10 @@ ui/banana-ui --headless out/ --assets ui/assets/rnds --roms <roms> --data <dir> 
 The menu is ROCKNIXDS Pixel, from [ROCKNIXDS](https://github.com/JorreFog/ROCKNIXDS). Banana's mark is the
 banana bunch of [BananaUI](https://github.com/JorreFog/helios), redrawn as pixel art. The RG DS's kernel support,
 device trees and drivers come from [ROCKNIX](https://rocknix.org), and DS emulation is DraStic by Exophase through
-SuperDrastic. Details and licenses: [THIRD_PARTY.md](THIRD_PARTY.md). Banana contains no games, ROMs or BIOS files.
+SuperDrastic. The Pokémon companion on RetroArch's game panel is inspired by
+[PokeDaisy](https://github.com/lidor30/pokedaisy) by Lidor Itzhari (lidor30), the companion app for Android handhelds
+with two screens; Banana's is its own code, written from the games' documented data. Details and licenses:
+[THIRD_PARTY.md](THIRD_PARTY.md). Banana contains no games, ROMs or BIOS files.
 
 Translations: **Simplified Chinese (简体中文) by Majirefy.** The Chinese characters are drawn with
 [Fusion Pixel Font](https://github.com/TakWolf/fusion-pixel-font) (缝合像素字体) by TakWolf. To translate BananaOS into

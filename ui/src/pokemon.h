@@ -3,6 +3,10 @@
 // Advance Pokémon game plays in RetroArch on one panel, the other shows the party (levels, HP, status, moves and their
 // PP) and, in a battle, the foe with its types and how each of the lead's moves does against it.
 //
+// The idea is PokeDaisy's (https://github.com/lidor30/pokedaisy, by Lidor Itzhari): a live companion for the Pokémon
+// games on a handheld's second screen. None of its code is here (it is GPL-3.0, Banana MIT): the layouts below are
+// from the games' public documentation and decompilations.
+//
 // Where it comes from:
 //  - the game: the ROM header's code (0xAC: AXVE Ruby, AXPE Sapphire, BPEE Emerald, BPRE FireRed, BPGE LeafGreen; the
 //    English releases, whose RAM addresses below are the decompilations' symbol files: pret/pokeruby, pokeemerald,
