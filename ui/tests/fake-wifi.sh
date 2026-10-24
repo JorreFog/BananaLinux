@@ -1,6 +1,7 @@
 #!/bin/sh
 # A stand-in for /usr/libexec/banana/wifi in the headless test: networks around, and "connected" to the network
-# written first in $FAKE_WIFI_CONF (the settings screen puts the one it joins there).
+# written first in $FAKE_WIFI_CONF (the settings screen puts the one it joins there), unless that is $FAKE_WIFI_FAIL
+# (a network that turns the password down).
 case $1 in
 scan)
     printf 'bssid / frequency / signal level / flags / ssid\n'
@@ -14,7 +15,7 @@ scan)
     ;;
 status)
     ssid=$(sed -n 's/^[[:space:]]*ssid="\(.*\)"$/\1/p' "$FAKE_WIFI_CONF" 2>/dev/null | head -n 1)
-    if [ -n "$ssid" ]; then
+    if [ -n "$ssid" ] && [ "$ssid" != "$FAKE_WIFI_FAIL" ]; then
         printf 'bssid=02:00:00:00:00:01\nssid=%s\nwpa_state=COMPLETED\nip_address=192.168.1.23\n' "$ssid"
     else
         printf 'wpa_state=SCANNING\n'
