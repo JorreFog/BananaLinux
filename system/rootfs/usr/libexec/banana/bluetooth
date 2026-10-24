@@ -14,7 +14,7 @@
 # The pairings: BlueZ keeps them in /var/lib/bluetooth = /run/banana/bluetooth; the card's exFAT can't hold its
 # AA:BB:CC:... names, so they are one tar there, banana/bluetooth.tar, unpacked at up and written after each change.
 # Sound: bluealsa-cli monitor's events run "bluetooth route", which writes the headphones playing now (an A2DP sink
-# PCM) to /run/banana/bt-audio ("<MAC> <PCM path>"), or takes it away; bananad watches that file and points ALSA's
+# PCM) to /run/banana/bt/audio ("<MAC> <PCM path>"), or takes it away; bananad watches that file and points ALSA's
 # default device at them (/run/banana/asound.conf), and back at the speakers or the jack when it goes.
 RUN=/run/banana
 STORE=/data/banana/bluetooth.tar
@@ -45,7 +45,7 @@ up() {
     [ -d /sys/class/bluetooth/hci0 ] || {
         echo "no Bluetooth controller (hci0)" >&2
         modprobe -r hci_uart 2>/dev/null
-        rm -f $RUN/bt-audio	# (a route kept through a sleep: the speakers again)
+        rm -f $RUN/bt/audio	# (a route kept through a sleep: the speakers again)
         return 1
     }
     if [ ! -d $RUN/bluetooth ]; then
@@ -87,7 +87,7 @@ down() {
     stop $RUN/bt-watch.pid
     killall bluealsa-cli 2>/dev/null
     rm -f $RUN/bt-reconnecting
-    [ "$1" = sleep ] || rm -f $RUN/bt-audio
+    [ "$1" = sleep ] || rm -f $RUN/bt/audio
     stop $RUN/bluealsa.pid
     stop $RUN/bluetoothd.pid
     for i in 1 2 3 4 5 6 7 8 9 10; do pidof bluetoothd bluealsa >/dev/null || break; sleep 0.1; done
@@ -103,11 +103,12 @@ down() {
 route() {
     p=$(bluealsa-cli list-pcms 2>/dev/null | grep '/a2dpsrc/sink$' | tail -n 1)
     if [ -n "$p" ]; then
+        mkdir -p $RUN/bt
         mac=$(echo "$p" | sed -n 's#.*/dev_\([0-9A-Fa-f_]*\)/.*#\1#p' | tr _ :)
-        echo "$mac $p" > $RUN/bt-audio.new && mv -f $RUN/bt-audio.new $RUN/bt-audio
+        echo "$mac $p" > $RUN/bt/audio.new && mv -f $RUN/bt/audio.new $RUN/bt/audio
         [ "$(cat $LAST 2>/dev/null)" = "$mac" ] || echo "$mac" > $LAST
     elif [ ! -f $RUN/bt-reconnecting ]; then
-        rm -f $RUN/bt-audio
+        rm -f $RUN/bt/audio
     fi
 }
 
@@ -141,7 +142,7 @@ devices() {
 why() { sed -n 's/.*\(Failed to [a-z]*\|Device [0-9A-F:]* not available\)\(.*\)/\1\2/p' | tail -n 1 | sed 's/org\.bluez\.Error\.//'; }
 
 case $1 in
-up) up || { rm -f $RUN/bt-audio; exit 1; } ;;
+up) up || { rm -f $RUN/bt/audio; exit 1; } ;;
 down) down "$2" ;;
 restart) down; up || exit 1 ;;
 scan)
