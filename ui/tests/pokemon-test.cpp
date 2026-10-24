@@ -8,6 +8,8 @@
 #include <string>
 #include <vector>
 #include <unistd.h>
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "../third_party/stb_image_write.h"
 
 using namespace banana::pkmn;
 
@@ -107,16 +109,25 @@ static void addExtras(std::vector<uint8_t>& rom, size_t st, size_t base)
 {
 	const int N = 413;
 	size_t table = base, pals = base + N * 4 + 3, recs = base + 0xa00, palData = recs + 0x40, exp = base + 0x1000, tiles = base + 0x2000;
+	// a look-alike before it, as in Emerald: the footprint table, the same shape (pointers by species, the same ones
+	// shared) and its pictures as far apart, each just after an icon (the first finder took it: noise for every
+	// icon on the device). Each icon here 2 KB apart, its "footprint" in the second KB
+	for (int sp = 0; sp < N; sp++)
+	{
+		int src = sp == 0 ? 1 : (sp >= 252 && sp <= 276) ? 252 : sp;
+		put32(&rom[base - 0x800 + sp * 4], 0x08000000u + (uint32_t)(tiles + src * 2048 + 1024));
+		for (int k = 0; k < 32; k++) rom[tiles + src * 2048 + 1024 + k] = (uint8_t)(0x9a + k * 7);
+	}
 	for (int sp = 0; sp < N; sp++)
 	{
 		// none and Bulbasaur share an icon, the 25 placeholders after Celebi one question mark (their own made-up one)
 		int src = sp == 0 ? 1 : (sp >= 252 && sp <= 276) ? 252 : sp;
-		put32(&rom[table + sp * 4], 0x08000000u + (uint32_t)(tiles + src * 1024));
+		put32(&rom[table + sp * 4], 0x08000000u + (uint32_t)(tiles + src * 2048));
 		rom[pals + sp] = (uint8_t)(sp == 1 ? 1 : (sp >= 252 && sp <= 276) ? 0 : sp % 3);
 	}
 	for (int sp = 1; sp < N; sp++)
 	{
-		uint8_t* g = &rom[tiles + sp * 1024];
+		uint8_t* g = &rom[tiles + sp * 2048];
 		for (int y = 0; y < 32; y++)
 			for (int x = 0; x < 32; x++)
 			{
@@ -144,6 +155,40 @@ static void addExtras(std::vector<uint8_t>& rom, size_t st, size_t base)
 			put32(&rom[exp + (g * 101 + l) * 4], v);
 		}
 	for (int sp = 0; sp < 412; sp++) { rom[st + sp * 28 + 0x10] = (uint8_t)(sp % 4 == 0 ? 255 : sp % 4 == 1 ? 31 : sp % 4 == 2 ? 127 : 254); rom[st + sp * 28 + 0x13] = (uint8_t)(sp % 6); }
+}
+
+// icons side by side, 4x, on a grey ground, to a PNG for a look
+static bool iconsPng(const RomTables& t, const std::vector<std::pair<int, bool>>& mons, const std::string& path)
+{
+	const int K = 4, W = (int)mons.size() * 36 * K, H = 36 * K;
+	std::vector<uint8_t> img((size_t)W * H * 3, 0x60);
+	for (size_t m = 0; m < mons.size(); m++)
+	{
+		std::vector<uint8_t> rgba;
+		if (!t.iconRGBA((uint16_t)mons[m].first, mons[m].second, rgba)) return false;
+		for (int y = 0; y < 32 * K; y++)
+			for (int x = 0; x < 32 * K; x++)
+			{
+				const uint8_t* c = &rgba[((y / K) * 32 + x / K) * 4];
+				if (!c[3]) continue;
+				uint8_t* d = &img[((size_t)(y + 2 * K) * W + m * 36 * K + 2 * K + x) * 3];
+				d[0] = c[0]; d[1] = c[1]; d[2] = c[2];
+			}
+	}
+	return stbi_write_png(path.c_str(), W, H, 3, img.data(), W * 3) != 0;
+}
+
+// a 32x32 icon decoded here on its own from 1 KB of GBA tiles (4 bits a pixel, 8x8 tiles of 32 bytes, 4x4 of them)
+static std::vector<uint8_t> tilesToPixels(const uint8_t* g)
+{
+	std::vector<uint8_t> px(32 * 32);
+	for (int y = 0; y < 32; y++)
+		for (int x = 0; x < 32; x++)
+		{
+			int tile = (y / 8) * 4 + x / 8, off = tile * 32 + (y % 8) * 4 + (x % 8) / 2;
+			px[y * 32 + x] = (x % 2) ? g[off] >> 4 : g[off] & 15;
+		}
+	return px;
 }
 
 static std::string reply(uint32_t addr, const std::vector<uint8_t>& v)
@@ -435,7 +480,7 @@ int main(int argc, char** argv)
 	// (a few names of the game, made-up ones for the rest), and RetroArch's replies out of a battle and in one
 	{
 		std::string dir = argc > 1 ? argv[1] : "";
-		std::vector<uint8_t> rom(1u << 20, 0);
+		std::vector<uint8_t> rom(2u << 20, 0);
 		memcpy(&rom[0xa0], "POKEMON EMER", 12);
 		memcpy(&rom[0xac], "BPEE", 4);
 		auto names = [&](size_t at, size_t entry, size_t count, const std::vector<uint8_t>& first, auto nameOf)
@@ -516,6 +561,7 @@ int main(int argc, char** argv)
 			EQ((int)tt->moveInfo[189].type, (int)GROUND);
 			EQ(tt->icons.size(), (size_t)413);
 			EQ(tt->palettes.size(), (size_t)3);
+			if (!dir.empty()) CHECK(iconsPng(*tt, { { 283, false }, { 288, false }, { 309, false }, { 280, false }, { 286, false }, { 0, true } }, dir + "/poke-icons.png"));
 		}
 		// another game's header: nothing to do
 		rom[0xac] = 'X';
@@ -526,6 +572,49 @@ int main(int argc, char** argv)
 		else if ((f = fopen(romPath.c_str(), "wb"))) { rom[0xac] = 'B'; fwrite(rom.data(), 1, rom.size(), f); fclose(f); }
 		CHECK(!other.open("/nonexistent/x.gba"));
 	}
+
+	// ---- the player's own Emerald, when POKE_ROM names it (a .gba or a .zip; never in the repository): Torchic's icon
+	// as the game keeps it (pret's pokeemerald.sym: gMonIcon_Torchic at 0x08ce0028, gMonIconPaletteIndices at
+	// 0x0857c388), and the icons of a made-up party to a PNG to look at
+	if (const char* rp = getenv("POKE_ROM"))
+	{
+		Companion cc;
+		CHECK(cc.open(rp) && std::string(cc.game()->code) == "BPEE");
+		std::shared_ptr<const RomTables> tt;
+		for (int i = 0; i < 1000 && !(tt = cc.tables()); i++) usleep(10000);
+		CHECK(tt != nullptr);
+		if (tt)
+		{
+			EQ(tt->speciesName(280), std::string("TORCHIC"));
+			EQ(tt->icons.size(), (size_t)413);
+			EQ(tt->palettes.size(), (size_t)3);
+			FILE* f = fopen(rp, "rb");
+			std::vector<uint8_t> rom;
+			if (f && std::string(rp).find(".zip") == std::string::npos)
+			{
+				rom.resize(16u << 20);
+				rom.resize(fread(rom.data(), 1, rom.size(), f));
+			}
+			if (f) fclose(f);
+			if (rom.size() > 0xce0028 + 1024 && tt->icons.size() == 413)
+			{
+				CHECK(tt->icons[280] == tilesToPixels(&rom[0xce0028]));
+				EQ((int)tt->iconPal[280], (int)rom[0x57c388 + 280]);
+			}
+			if (tt->icons.size() == 413)
+			{
+				// a real icon: a shape (some of it clear, a good part not), colours 1-15 on it
+				int opaque = 0;
+				for (uint8_t v : tt->icons[280]) opaque += v != 0;
+				CHECK(opaque > 150 && opaque < 800);
+			}
+			std::string out = (argc > 1 ? std::string(argv[1]) : std::string("/tmp")) + "/poke-icons-real.png";
+			// Treecko, Torchic, Mudkip, Pikachu, Zigzagoon, an egg
+			CHECK(iconsPng(*tt, { { 277, false }, { 280, false }, { 283, false }, { 25, false }, { 288, false }, { 0, true } }, out));
+			printf("pokemon-test: the real ROM's party icons in %s\n", out.c_str());
+		}
+	}
+	else printf("pokemon-test: no POKE_ROM, the real ROM's checks skipped\n");
 
 	printf("pokemon-test: %d checks, %d failed\n", checks, fails);
 	return fails ? 1 : 0;
