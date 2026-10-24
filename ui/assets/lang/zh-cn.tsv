@@ -625,6 +625,25 @@ bananads		Edge marking	边缘描绘
 bananads		Fog	雾效
 bananads		On	开启
 bananads		Off	关闭
+# (the in-game menu rows below are a draft, not Majirefy's: for them to check)
+bananads		Save and quit	保存并退出
+bananads		Quit without saving	不保存退出
+bananads		Quit without saving?	不保存直接退出？
+bananads		Saved to slot %d	已保存到槽位 %d
+bananads		Loaded slot %d	已读取槽位 %d
+bananads		Couldn't save	无法保存
+bananads		Couldn't load	无法读取
+bananads		Nothing saved in slot %d	槽位 %d 中没有存档
+bananads		Slot %d couldn't be read	无法读取槽位 %d
+bananads		Hotkeys	快捷键
+bananads		while you play	游戏中使用
+bananads		This menu	本菜单
+bananads		Save state (slot 1)	保存状态（槽位 1）
+bananads		Load state (slot 1)	读取状态（槽位 1）
+bananads		Fast-forward (held)	快进（按住）
+bananads		Fast-forward on / off	快进 开 / 关
+bananads		Screenshot	截图
+bananads		Save your spot and quit	保存进度并退出
 superdrastic		Today %s	今天 %s
 superdrastic		Yesterday %s	昨天 %s
 superdrastic		volume %d >/dev/null 2>&1	volume %d >/dev/null 2>&1
@@ -725,6 +744,20 @@ superdrastic		DraStic didn't write the savestate	DraStic 未写入存档状态
 superdrastic		DraStic didn't read the savestate	DraStic 未读取存档状态
 superdrastic		, resuming this session	，正在恢复本次会话
 superdrastic		, a resume state exists but isn't loaded	，存在恢复状态但未加载
+# (the in-game menu rows below are a draft, not Majirefy's: for them to check)
+superdrastic		Save and quit	保存并退出
+superdrastic		Quit without saving	不保存退出
+superdrastic		Quit without saving?	不保存直接退出？
+superdrastic		Hotkeys	快捷键
+superdrastic		while you play	游戏中使用
+superdrastic		This menu	本菜单
+superdrastic		Save state	保存状态
+superdrastic		Load state	读取状态
+superdrastic		Fast-forward	快进
+superdrastic		Swap screens	交换屏幕
+superdrastic		Save your spot and quit (hold)	保存进度并退出（长按）
+superdrastic		Quit (hold)	退出（长按）
+superdrastic		Not set	未设置
 systems		Nintendo DS	Nintendo DS
 systems		Nintendo	Nintendo
 systems		Game Boy Advance	Game Boy Advance
