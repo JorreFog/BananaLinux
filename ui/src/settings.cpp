@@ -20,6 +20,7 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/statvfs.h>
+#include <sys/utsname.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -640,7 +641,10 @@ namespace banana
 		std::ostringstream a;
 		a << "Banana " << (version.empty() ? "dev" : version) << (slot.empty() ? "" : " (slot " + slot + ")") << " on the " << (model.empty() ? "handheld" : model) << ". ";
 		if (battery >= 0) a << "Battery " << battery << "%. ";
-		if (space[0]) a << "Card: " << space << ".";
+		if (space[0]) a << "Card: " << space << ". ";
+		// the kernel too (#70): its version as uname gives it
+		utsname un;
+		if (uname(&un) == 0) a << "Linux " << un.release << ".";
 		about = a.str();
 	}
 
