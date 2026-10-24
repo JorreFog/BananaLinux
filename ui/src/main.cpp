@@ -614,6 +614,19 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			if (!save(0, o.headless + name + "-top.png") || !save(1, o.headless + name + "-bot.png")) return 1;
 			logf("splash %s at %.0f ms", name.c_str(), t);
 		}
+		else if (op == "outro")
+		{
+			// outro <name> <ms>: the shutdown animation at that time
+			std::string name; double t = 0;
+			cs >> name >> t;
+			static Splash sp;
+			static bool loaded = false;
+			if (!loaded && !(loaded = sp.load(o.splash, o.banana + "/banana-48.png", variant, o.w, o.h))) { logf("no splash assets in %s", o.splash.c_str()); return 1; }
+			sp.onCue = [](const std::string& n) { logf("outro cue %s", n.c_str()); };
+			sp.drawOutro(be.canvas(0), be.canvas(1), t);
+			if (!save(0, o.headless + name + "-top.png") || !save(1, o.headless + name + "-bot.png")) return 1;
+			logf("outro %s at %.0f ms", name.c_str(), t);
+		}
 		else if (op == "bench")
 		{
 			// bench N [EVERY BUTTON]: N frames 16.7 ms apart, as the panels would show them: the main thread's time per
@@ -743,10 +756,41 @@ struct Iris
 		be.invalidate();
 		showFrame(disp, be, -1);
 	}
-	// black for a moment, then the circle opening on the menu: fast at first, settling. The menu as it will be 300 ms
-	// on (before the opening ends, so its clock never goes back), opened on as a still picture: a live menu frame
-	// (16-20 ms) each refresh made the opening miss refreshes
-	void openOn(Menu& ui, double hold, double open = OPEN)
+	// the circle closing over a still picture to black: slow at first, faster into the point (no lingering at a small
+	// circle)
+	void close(const std::vector<uint32_t>* pic, double dur)
+	{
+		const double t0 = nowMs();
+		for (;;)
+		{
+			double p = (nowMs() - t0) / dur;
+			if (p >= 1) break;
+			frame(pic, full * (float)(1 - p * p));
+		}
+		frame(pic, 0);
+	}
+	// black until holdUntil, then the circle opening on a still picture: fast at first, settling; the picture is left on
+	// the canvas
+	void open(const std::vector<uint32_t>* pic, double holdUntil, double dur)
+	{
+		for (int sc = 0; sc < 2; sc++) std::fill(be.canvas(sc), be.canvas(sc) + n, 0xff000000u);
+		be.invalidate();
+		while (nowMs() < holdUntil) showFrame(disp, be, -1);
+		const double t2 = nowMs();
+		for (;;)
+		{
+			double p = (nowMs() - t2) / dur;
+			if (p >= 1) break;
+			float e = (float)p; e = 1 - (1 - e) * (1 - e) * (1 - e);
+			frame(pic, full * e);
+		}
+		for (int sc = 0; sc < 2; sc++) std::copy(pic[sc].begin(), pic[sc].end(), be.canvas(sc));
+		be.invalidate();	// the next frame is drawn in full
+	}
+	// black for a moment, then the circle opening on the menu. The menu as it will be 300 ms on (before the opening
+	// ends, so its clock never goes back), opened on as a still picture: a live menu frame (16-20 ms) each refresh made
+	// the opening miss refreshes
+	void openOn(Menu& ui, double hold, double dur = OPEN)
 	{
 		const double t1 = nowMs();
 		std::vector<uint32_t> menu[2] = { std::vector<uint32_t>(n), std::vector<uint32_t>(n) };
@@ -755,19 +799,7 @@ struct Iris
 		be.invalidate();
 		ui.render();
 		for (int sc = 0; sc < 2; sc++) std::copy(be.canvas(sc), be.canvas(sc) + n, menu[sc].begin());
-		for (int sc = 0; sc < 2; sc++) std::fill(be.canvas(sc), be.canvas(sc) + n, 0xff000000u);	// black again
-		be.invalidate();
-		while (nowMs() - t1 < hold) showFrame(disp, be, -1);
-		const double t2 = nowMs();
-		for (;;)
-		{
-			double p = (nowMs() - t2) / open;
-			if (p >= 1) break;
-			float e = (float)p; e = 1 - (1 - e) * (1 - e) * (1 - e);
-			frame(menu, full * e);
-		}
-		for (int sc = 0; sc < 2; sc++) std::copy(menu[sc].begin(), menu[sc].end(), be.canvas(sc));
-		be.invalidate();	// the menu's next frame is drawn in full
+		open(menu, t1 + hold, dur);
 	}
 };
 
@@ -785,15 +817,32 @@ static void irisToMenu(Display& disp, SoftBackend& be, Menu& ui)
 	be.invalidate();
 	ui.render();
 	for (int sc = 0; sc < 2; sc++) std::copy(was[sc].begin(), was[sc].end(), be.canvas(sc));
-	const double t0 = nowMs();
-	for (;;)	// closing over the splash: slow at first, faster into the point (no lingering at a small circle)
-	{
-		double p = (nowMs() - t0) / Iris::CLOSE;
-		if (p >= 1) break;
-		iris.frame(was, iris.full * (float)(1 - p * p));
-	}
-	iris.frame(was, 0);
+	iris.close(was, Iris::CLOSE);
 	iris.openOn(ui, Iris::HOLD);
+}
+
+// The shutdown: the menu (whatever is on the panels) closes through the iris, opens on the boot animation's last
+// frame, and the animation plays backwards to black (Splash::drawOutro). ~1.9 s: rcK gives the menu 3 s to go.
+static void playOutro(Display& disp, SoftBackend& be, const Options& o, const std::string& variant, Sound& sound)
+{
+	Splash sp;
+	if (!sp.load(o.splash, o.banana + "/banana-48.png", variant, be.width(), be.height())) return;
+	sp.onCue = [&sound](const std::string& n) { if (n == "eject") sound.play("back"); };
+	Iris iris(disp, be);
+	std::vector<uint32_t> was[2] = { std::vector<uint32_t>(be.pixels(0), be.pixels(0) + iris.n), std::vector<uint32_t>(be.pixels(1), be.pixels(1) + iris.n) };
+	std::vector<uint32_t> first[2] = { std::vector<uint32_t>(iris.n), std::vector<uint32_t>(iris.n) };
+	sp.drawOutro(first[0].data(), first[1].data(), 0);
+	iris.close(was, 280);
+	iris.open(first, nowMs() + Iris::HOLD, 300);
+	const double t0 = nowMs();
+	for (;;)
+	{
+		double t = nowMs() - t0;
+		sp.drawOutro(be.canvas(0), be.canvas(1), t);
+		be.invalidate();
+		showFrame(disp, be, -1);
+		if (t >= Splash::OUTRO_END) break;
+	}
 }
 
 // a game ended: the panels come back black (its pictures went with it), and the menu opens through the iris as it
@@ -1122,6 +1171,8 @@ int main(int argc, char** argv)
 
 	Repeat rep;
 	bool dirty = true, quit = false, drawn = false;	// drawn: a frame on the canvas waiting for the flips
+	bool shuttingDown = false;	// SIGTERM: rcK (a shutdown or a restart), so the shutdown animation plays
+	double gameEnded = -1e9;
 	double quietUntil = 0;	// no frame before this: the last one flipped nothing (see present below)
 	int lastMinute = -1;
 	float scale = disp.height() / 480.0f;
@@ -1502,6 +1553,7 @@ int main(int argc, char** argv)
 			double ms = nowMs() - stormFrom;
 			if (c >= 0 && ms > 50 && (c - stormIrqs) * 1000 / ms > 20000) disp.stormCheck();	// (calm: ~120 a second)
 		}
+		gameEnded = nowMs();
 		dirty = true;
 		batteryDue = true;	// a step passed during the game shows now
 	};
@@ -1707,6 +1759,7 @@ int main(int argc, char** argv)
 				while (read(sigPipe[0], &c, 1) == 1)
 				{
 					if (c == SIGTERM || c == SIGINT) quit = true;
+					if (c == SIGTERM) shuttingDown = true;
 					// after a wake: the kernel has the panels showing our buffers again; a redraw brings the clock and
 					// the battery up to date (no modeset: that would run the panels' power-on sequence once more)
 					if (c == SIGUSR1) { bottomIdle.activity(nowMs()); std::lock_guard<std::mutex> l(worker.uiLock); be.invalidate(); ui->dataChanged(); dirty = true; batteryDue = true; }
@@ -1769,5 +1822,11 @@ int main(int argc, char** argv)
 	}
 	bottomIdle.setOwned(false, nowMs());	// the backlight and the marker back as they were
 	worker.finish();
+	// not straight after a game: a shutdown from it (the power button held) gives rcK's 3 s to its saves instead
+	if (shuttingDown && disp.isOpen() && settings["splash"] != "off" && nowMs() - gameEnded > 2000)
+	{
+		logf("shutdown animation");
+		playOutro(disp, be, o, variant, sound);
+	}
 	return 0;
 }
