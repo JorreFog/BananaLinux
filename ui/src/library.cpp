@@ -977,6 +977,8 @@ namespace banana
 		std::vector<std::pair<std::string, std::string>> r;
 		if (library && game >= 0 && game < gameCount()) r.push_back({ "X", "Options" });	// (the game page: a DS game's emulator and shader, any game's name)
 		r.push_back({ "SELECT", "Search" });
+		// the settings (and from them Y: Sleep, Restart, Shut down) said on the home screen, where nothing showed START
+		if (!library) r.push_back({ "START", "Settings" });
 		return r;
 	}
 
