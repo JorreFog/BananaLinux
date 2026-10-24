@@ -1401,6 +1401,9 @@ int main(int argc, char **argv)
 	load_conf("/etc/banana/bananad.conf");
 	load_conf("/data/banana/bananad.conf");
 	load_timezone();
+	/* the LEDs at the user's level first: everything below (the inputs, alsactl, the mixer, the second card) takes a
+	 * while, and the power LED is the first sign the handheld is starting (U-Boot lit it, the kernel kept it on) */
+	leds_update();
 	signal(SIGCHLD, SIG_DFL);
 	struct sigaction sa = { 0 };
 	sa.sa_handler = on_hup;		/* no SA_RESTART: poll() returns, and the loop reloads */
