@@ -112,6 +112,11 @@ BR2_PACKAGE_BLUEZ5_UTILS_CLIENT=y
 BR2_PACKAGE_BLUEZ5_UTILS_PLUGINS_HID=y
 BR2_PACKAGE_BLUEZ5_UTILS_PLUGINS_HOG=y
 BR2_PACKAGE_BLUEZ_ALSA=y
+# its codecs past SBC (the bluetooth script picks among them by Settings > Network > Bluetooth audio): aptX and
+# aptX HD (libopenaptx, GPL-3.0+), LDAC (Sony's AOSP encoder, Apache-2.0; package/ldacbt) and FastStream (external.mk).
+# No AAC: fdk-aac's licence grants no patent rights and can't be combined with libopenaptx's GPL-3.0.
+BR2_PACKAGE_LIBOPENAPTX=y
+BR2_PACKAGE_LDACBT=y
 BR2_PACKAGE_DROPBEAR=y
 # BR2_PACKAGE_DROPBEAR_CLIENT is not set
 BR2_PACKAGE_DROPBEAR_DISABLE_REVERSEDNS=y

@@ -95,12 +95,13 @@ for size in 640x480 1024x768; do
         --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
         --script "home 0; press start; press r; press r; press r; press r; press a; press down; press down; shot bt-row; press right; wait 300; \
             press down; shot bt-devices-row; press a; shot bt-list; press down; press a; shot bt-paired; press y; shot bt-forgot; press up; press a; shot bt-refused; \
-            press down; press a; press b; press up; press left; wait 300; shot bt-off" 2> "$blog" || { echo "FAIL $size: banana-ui (Bluetooth) exited $?"; fail=1; }
-    [ "$(grep -v '^devices$' "$BT/log" 2>/dev/null | tr '\n' '|')" = "up|up|scan|pair AA:BB:CC:DD:EE:01|forget AA:BB:CC:DD:EE:01|pair AA:BB:CC:DD:EE:03|pair AA:BB:CC:DD:EE:01|down|" ] \
+            press down; press a; press b; press up; press left; wait 300; shot bt-off; press down; press down; press right; wait 300; shot bt-audio" 2> "$blog" || { echo "FAIL $size: banana-ui (Bluetooth) exited $?"; fail=1; }
+    [ "$(grep -v '^devices$' "$BT/log" 2>/dev/null | tr '\n' '|')" = "up|up|scan|pair AA:BB:CC:DD:EE:01|forget AA:BB:CC:DD:EE:01|pair AA:BB:CC:DD:EE:03|pair AA:BB:CC:DD:EE:01|down|audio|" ] \
         || { echo "FAIL $size: the bluetooth script's calls: $(tr '\n' '|' < "$BT/log" 2>/dev/null)"; fail=1; }
     [ "$(cat "$BT/paired" 2>/dev/null)" = AA:BB:CC:DD:EE:01 ] || { echo "FAIL $size: paired at the end: $(cat "$BT/paired" 2>/dev/null)"; fail=1; }
-    grep -q '^bluetooth = off$' "$FX/data/settings.conf" || { echo "FAIL $size: settings.conf: $(grep bluetooth "$FX/data/settings.conf")"; fail=1; }
-    for s in bt-row bt-devices-row bt-list bt-paired bt-forgot bt-refused bt-off; do
+    grep -q '^bluetooth = off$' "$FX/data/settings.conf" && grep -q '^bt_audio = quality$' "$FX/data/settings.conf" || { echo "FAIL $size: settings.conf: $(grep -E 'bluetooth|bt_audio' "$FX/data/settings.conf" | tr '\n' ' ')"; fail=1; }
+    sed -i '/^bt_audio = /d' "$FX/data/settings.conf"	# (the next size starts at the default again)
+    for s in bt-row bt-devices-row bt-list bt-paired bt-forgot bt-refused bt-off bt-audio; do
         [ -s "$OUT/$size-$s-top.png" ] && [ -s "$OUT/$size-$s-bot.png" ] || { echo "FAIL $size: no $s shot"; fail=1; }
     done
     # the file sharing login (#24): Network > Sharing name and password, the keyboard on the name (banana), START, then

@@ -4,8 +4,10 @@
 # speakers. Off at first (Settings > Network > Bluetooth, settings.conf bluetooth = on|off): while it is off the
 # modules aren't loaded, so the chip's Bluetooth is unpowered (hci_uart's close drops its BT_REG_ON), and no daemon runs.
 #   bluetooth up | down              the modules, D-Bus's system bus, bluetoothd and bluealsa; down saves the pairings
-#   bluetooth down sleep             (the sleep hook) the same, but the sound stays routed to the headphones: a game
-#                                    woken goes quiet until they are back, instead of loud on the speakers
+#   bluetooth down sleep             (the sleep hook) the same, but the sound is held quiet (bt/hold) until the
+#                                    headphones are back after the wake, instead of loud on the speakers
+#   bluetooth audio                  Settings > Network > Bluetooth audio changed: bluealsa again with its codecs,
+#                                    and the headphones connected again to take them
 #   bluetooth scan                   a search of 10 s, then the devices (as "devices" lists them)
 #   bluetooth devices                the devices known: MAC <tab> paired 0|1 <tab> connected 0|1 <tab> kind <tab> name,
 #                                    kind audio, gamepad, keyboard, mouse or other (BlueZ's icon), nameless ones left out
@@ -15,17 +17,20 @@
 # AA:BB:CC:... names, so they are one tar there, banana/bluetooth.tar, unpacked at up and written after each change.
 # Sound: bluealsa-cli monitor's events run "bluetooth route", which writes the headphones playing now (an A2DP sink
 # PCM) to /run/banana/bt/audio ("<MAC> <PCM path>"), or takes it away; bananad watches that file and points ALSA's
-# default device at them (/run/banana/asound.conf), and back at the speakers or the jack when it goes.
+# default device at them (/run/banana/asound.conf), and back at the speakers or the jack when it goes. While
+# /run/banana/bt/hold is there (headphones being called back after a wake, or a codec change) and they aren't yet,
+# bananad plays nowhere audible instead (the codec, its speaker amplifier off): a game waits quietly, at its pace.
 RUN=/run/banana
 STORE=/data/banana/bluetooth.tar
 LAST=/data/banana/bluetooth-audio	# the headphones played last: called back after a wake or a boot
+HOLD=$RUN/bt/hold
 # (a ceiling on each call: bluetoothctl waits for bluetoothd for ever when it isn't there)
 CTL="timeout 45 bluetoothctl"
 SELF=/usr/libexec/banana/bluetooth
 # one at a time (Settings starts up, down and pair in the background); the daemons get the lock's fd closed (9>&-).
 # A down waits 3 s at most: a sleep mustn't wait out a pairing (up to a minute), which fails when the daemons go.
 case $1 in
-up|pair|connect|disconnect|forget) exec 9>$RUN/bluetooth.lock; flock 9 ;;
+up|pair|connect|disconnect|forget|audio) exec 9>$RUN/bluetooth.lock; flock 9 ;;
 down) exec 9>$RUN/bluetooth.lock; flock -w 3 9 || : ;;
 esac
 
@@ -36,10 +41,49 @@ ESC=$(printf '\033')
 ctl() { $CTL "$@" 2>/dev/null | tr -d '\r' | sed "s/$ESC\[[0-9;]*m//g"; }
 mac_ok() { echo "$1" | grep -Eq '^([0-9A-F]{2}:){5}[0-9A-F]{2}$'; }
 
+# the pairings, and bluez-alsa's per-device volumes (/var/lib/bluealsa = /run/banana/bluealsa)
 save() {
     [ -d $RUN/bluetooth ] || return 0
-    tar -C $RUN -cf $STORE.new bluetooth 2>/dev/null && mv -f $STORE.new $STORE
+    mkdir -p $RUN/bluealsa
+    tar -C $RUN -cf $STORE.new bluetooth bluealsa 2>/dev/null && mv -f $STORE.new $STORE
     rm -f $STORE.new
+}
+
+# bluealsa with the codecs Settings > Network > Bluetooth audio asks for (settings.conf bt_audio). The headphones and
+# bluez-alsa agree on the first codec both have, in bluez-alsa's order: LDAC, aptX HD, aptX, FastStream, SBC.
+#  latency (the default): aptX, FastStream, SBC at its usual quality. Codecs with short frames that the A55 encodes
+#    for next to nothing; the headphones' own buffer is most of the delay whatever the codec.
+#  quality: LDAC (660 kbps, adaptive: hci_uart's 1.5 Mbaud can't carry its 990), aptX HD, aptX, SBC XQ (dual channel,
+#    ~450 kbps). LDAC adds tens of ms and a few % of a core.
+# Both: 3 s keep-alive (a game opening the device right after the menu closed it doesn't renegotiate), 50% the first
+# time a device connects (then its own level, kept), and the I/O threads real-time above the emulators' audio threads
+# (SuperDrastic 20, BananaDS 10), so a busy game can't starve the encoder.
+bluealsa_start() {
+    have=$(bluealsa --help 2>&1 | sed -n 's/^[[:space:]]*a2dp-source:[[:space:]]*//p' | tr ',' ' ')
+    codec() { for c in $have; do [ "$(echo $c | tr A-Z a-z)" = "$(echo $1 | tr A-Z a-z)" ] && echo "-c $c"; done; }
+    mode=$(sed -n 's/^[[:space:]]*bt_audio[[:space:]]*=[[:space:]]*//p' /data/banana/settings.conf 2>/dev/null | tail -n 1)
+    if [ "$mode" = quality ]; then
+        args="$(codec LDAC) $(codec aptX-HD) $(codec aptX) --sbc-quality=xq"
+        case " $have " in *" LDAC "*) args="$args --ldac-abr --ldac-quality=standard" ;; esac
+    else
+        args="$(codec aptX) $(codec FastStream) --sbc-quality=high"
+    fi
+    bluealsa -S -p a2dp-source --keep-alive=3 --initial-volume=50 --io-rt-priority=25 $args 9>&- </dev/null >/dev/null 2>&1 &
+    echo $! > $RUN/bluealsa.pid
+}
+
+# the headphones played last called back (they don't call a handheld that left them; controllers call back
+# themselves, a press of their home button), the sound held quiet meanwhile; then the route, and the hold gone
+callback() {
+    last=$(cat $LAST 2>/dev/null)
+    if mac_ok "$last"; then
+        mkdir -p $RUN/bt; touch $HOLD
+        ( $CTL --timeout 15 connect $last >/dev/null 2>&1
+          for i in 1 2 3 4 5 6 7 8 9 10; do bluealsa-cli list-pcms 2>/dev/null | grep -q '/a2dpsrc/sink$' && break; sleep 0.3; done
+          $SELF route; rm -f $HOLD ) 9>&- </dev/null >/dev/null 2>&1 &
+    else
+        rm -f $HOLD
+    fi
 }
 
 up() {
@@ -50,11 +94,11 @@ up() {
     [ -d /sys/class/bluetooth/hci0 ] || {
         echo "no Bluetooth controller (hci0)" >&2
         modprobe -r hci_uart 2>/dev/null
-        rm -f $RUN/bt/audio	# (a route kept through a sleep: the speakers again)
+        rm -f $RUN/bt/audio $HOLD	# (held through a sleep: the speakers again)
         return 1
     }
     if [ ! -d $RUN/bluetooth ]; then
-        mkdir -p $RUN/bluetooth
+        mkdir -p $RUN/bluetooth $RUN/bluealsa
         [ -f $STORE ] && tar -C $RUN -xf $STORE 2>/dev/null
         chmod 700 $RUN/bluetooth
     fi
@@ -71,19 +115,12 @@ up() {
     for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do timeout 2 bluetoothctl show 2>/dev/null | grep -q 'Powered: yes' && break; sleep 0.25; done
     ctl power on >/dev/null
     # headphones and speakers: bluez-alsa as the A2DP source (the handheld plays, they listen)
-    bluealsa -S -p a2dp-source 9>&- </dev/null >/dev/null 2>&1 &
-    echo $! > $RUN/bluealsa.pid
+    bluealsa_start
     ( bluealsa-cli monitor 2>/dev/null | while read -r ev rest; do
         case $ev in PCMAdded|PCMRemoved|ServiceRunning|ServiceStopped) $SELF route ;; esac
     done ) 9>&- </dev/null >/dev/null 2>&1 &
     echo $! > $RUN/bt-watch.pid
-    # the headphones played last, called back (they don't call a handheld that left them); controllers call back
-    # themselves (a press of their home button). Meanwhile the route stays as it is (route leaves it alone).
-    last=$(cat $LAST 2>/dev/null)
-    if mac_ok "$last"; then
-        touch $RUN/bt-reconnecting
-        ( $CTL --timeout 15 connect $last >/dev/null 2>&1; rm -f $RUN/bt-reconnecting; $SELF route ) 9>&- </dev/null >/dev/null 2>&1 &
-    fi
+    callback
     return 0
 }
 
@@ -91,8 +128,9 @@ down() {
     save
     stop $RUN/bt-watch.pid
     killall bluealsa-cli 2>/dev/null
-    rm -f $RUN/bt-reconnecting
-    [ "$1" = sleep ] || rm -f $RUN/bt/audio
+    # a sleep: quiet until the headphones are back after the wake (up calls them back); otherwise the speakers now
+    rm -f $RUN/bt/audio
+    if [ "$1" = sleep ] && mac_ok "$(cat $LAST 2>/dev/null)"; then mkdir -p $RUN/bt; touch $HOLD; else rm -f $HOLD; fi
     stop $RUN/bluealsa.pid
     stop $RUN/bluetoothd.pid
     for i in 1 2 3 4 5 6 7 8 9 10; do pidof bluetoothd bluealsa >/dev/null || break; sleep 0.1; done
@@ -112,8 +150,8 @@ route() {
         mac=$(echo "$p" | sed -n 's#.*/dev_\([0-9A-Fa-f_]*\)/.*#\1#p' | tr _ :)
         echo "$mac $p" > $RUN/bt/audio.new && mv -f $RUN/bt/audio.new $RUN/bt/audio
         [ "$(cat $LAST 2>/dev/null)" = "$mac" ] || echo "$mac" > $LAST
-    elif [ ! -f $RUN/bt-reconnecting ]; then
-        rm -f $RUN/bt/audio
+    else
+        rm -f $RUN/bt/audio	# (the hold, when there is one, keeps it quiet)
     fi
 }
 
@@ -147,7 +185,7 @@ devices() {
 why() { sed -n 's/.*\(Failed to [a-z]*\|Device [0-9A-F:]* not available\)\(.*\)/\1\2/p' | tail -n 1 | sed 's/org\.bluez\.Error\.//'; }
 
 case $1 in
-up) up || { rm -f $RUN/bt/audio; exit 1; } ;;
+up) up || { rm -f $RUN/bt/audio $HOLD; exit 1; } ;;
 down) down "$2" ;;
 restart) down; up || exit 1 ;;
 scan)
@@ -188,6 +226,18 @@ pair|connect|disconnect|forget)
     echo OK
     ;;
 route) route ;;
+audio)
+    running || exit 0
+    # bluealsa again with the new codecs, and the headphones connected again to negotiate one (held quiet meanwhile)
+    last=$(cat $LAST 2>/dev/null)
+    connected=; mac_ok "$last" && ctl info $last | grep -q 'Connected: yes' && connected=1
+    [ -n "$connected" ] && { mkdir -p $RUN/bt; touch $HOLD; $CTL --timeout 10 disconnect $last >/dev/null 2>&1; }
+    stop $RUN/bluealsa.pid
+    for i in 1 2 3 4 5 6 7 8 9 10; do pidof bluealsa >/dev/null || break; sleep 0.1; done
+    bluealsa_start
+    sleep 1
+    [ -n "$connected" ] && callback
+    ;;
 status) running && echo on || echo off ;;
 *) echo "usage: bluetooth up|down|scan|devices|pair|connect|disconnect|forget <MAC>|status" >&2; exit 1 ;;
 esac

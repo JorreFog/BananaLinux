@@ -16,7 +16,7 @@ list() {
     done
 }
 case $1 in
-up|down) ;;
+up|down|audio) ;;
 scan|devices) list ;;
 pair)
     [ "$2" = AA:BB:CC:DD:EE:03 ] && { echo "Attempting to pair"; echo "ERROR Failed to pair: AuthenticationFailed"; exit 1; }
