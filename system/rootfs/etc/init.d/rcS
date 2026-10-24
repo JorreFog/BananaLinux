@@ -16,6 +16,9 @@ ln -sfn /proc/self/fd/2 /dev/stderr
 mount -t tmpfs -o mode=0755,nosuid,nodev tmpfs /run
 mount -t tmpfs -o mode=1777,nosuid,nodev tmpfs /tmp
 mkdir -p /run/banana /var/log
+# the second SD card's folder before the menu starts: banana-ui watches it for the card's games, and bananad's first
+# "sd2 scan" runs in the background, so the menu could start first and miss the card for the whole boot (#65)
+mkdir -p /run/banana/sd2
 # boot milestones, seconds since the kernel started (logs/boot.txt)
 mark() { read up rest < /proc/uptime; printf '%-28s %6.2f s\n' "$1" "$up" >> /run/banana/boot-times; }
 # banana.console=1 on the kernel's command line: the boot's progress on the console (the UART, QEMU's serial)

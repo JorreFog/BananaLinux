@@ -1009,10 +1009,12 @@ static void load_drivers_present(void)
 
 /* the second SD card: mounted, and its games offered to the library, to match the slot (/usr/libexec/banana/sd2).
  * In the background (a slow card's mount mustn't hold up the power button or sleep), one scan at a time: a card
- * going in sends several uevents */
+ * going in sends several uevents. -o: the scan's children don't get the lock's descriptor (its "share restart"
+ * starts ksmbd.mountd, which kept the lock for as long as it ran, and every later scan waited forever: the card's
+ * games missing until Settings scanned again, #65) */
 static void sd2_scan(void)
 {
-	char *argv[] = { "/bin/sh", "-c", "flock /run/banana/sd2.lock /usr/libexec/banana/sd2 scan </dev/null >/dev/null 2>&1 &", NULL };
+	char *argv[] = { "/bin/sh", "-c", "flock -o /run/banana/sd2.lock /usr/libexec/banana/sd2 scan </dev/null >/dev/null 2>&1 &", NULL };
 	run(argv);
 }
 
