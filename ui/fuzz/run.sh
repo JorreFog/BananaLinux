@@ -128,9 +128,10 @@ for t in $TARGETS; do
     mkdir -p "$OUT/corpus-$t"
     echo "== $t ($SECONDS_EACH s)"
     case $t in json|expr|layout) D=-dict="$OUT/dict" ;; *) D= ;; esac
-    "$OUT/fuzz-$t" $D -max_total_time="$SECONDS_EACH" -timeout=10 -rss_limit_mb=2048 \
+    "$OUT/fuzz-$t" $D -max_total_time="$SECONDS_EACH" -timeout=${FUZZ_TIMEOUT:-10} -rss_limit_mb=2048 \
         -artifact_prefix="$OUT/crash-$t-" -print_final_stats=1 "$OUT/corpus-$t" "$OUT/seeds-$t" > "$OUT/$t.log" 2>&1 ||
-        { echo "FAIL $t: $(grep -m1 -E 'ERROR|runtime error|deadly signal|timeout' "$OUT/$t.log")"; ls "$OUT"/crash-$t-* 2>/dev/null; fail=1; continue; }
+        { echo "FAIL $t: $(grep -m1 -E 'ERROR|runtime error|deadly signal|timeout' "$OUT/$t.log")"; ls "$OUT"/crash-$t-* 2>/dev/null
+          sed -n '/ERROR\|runtime error\|ALARM\|deadly signal/,$p' "$OUT/$t.log" | head -40; fail=1; continue; }
     grep -E '^stat::number_of_executed_units|^#[0-9]+.*DONE' "$OUT/$t.log" | tail -1
 done
 [ $fail = 0 ] && echo "fuzz: no crashes ($OUT)"

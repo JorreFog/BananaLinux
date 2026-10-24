@@ -20,6 +20,13 @@ jobs:
         run: make test
       - name: Fuzz the readers of the card's files (themes, expressions, zips, ROM banners, Banana's own files)
         run: FUZZ_SECONDS=20 make fuzz
+      - name: The fuzzers' failing inputs (replay one with ui/fuzz/run.sh <target> <input>)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-failures
+          path: ui/fuzz/out/crash-*
+          if-no-files-found: ignore
       - name: banana-ui with ALSA
         run: make -C ui clean && make -C ui
       - name: bananad (native and aarch64)
