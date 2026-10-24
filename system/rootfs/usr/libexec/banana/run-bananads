@@ -84,6 +84,11 @@ if [ ! -e /run/banana/asound.conf ]; then
 elif ! grep -q 'capture\.pcm *{ *type plug' /run/banana/asound.conf; then
     echo "run-bananads: /run/banana/asound.conf has a capture.pcm without the 48 kHz plug: the mic may not start" >&2
 fi
+# Settings > Nintendo DS > Low latency (experimental): bananads.conf's kms.lowlat (off, on, runahead1, runahead2),
+# which BananaDS reads itself (its docs/SETTINGS.md): no frame queue, each frame aimed at the panels' refresh, and
+# run-ahead. Said in the log, for a report that comes with one
+ll=$(sed -n 's/^ *kms\.lowlat *= *//p' $C 2>/dev/null | tail -n 1)
+[ -n "$ll" ] && [ "$ll" != off ] && echo "run-bananads: low latency (experimental): $ll" >&2
 export DSFLIP_SHADER_DIR=/usr/lib/superdrastic/shaders
 # the game's own microphone (its page, #27), for this run: off is mic.source = none (BananaDS's threshold 0 is "gate
 # off", every sound through), the others the microphone on at that threshold

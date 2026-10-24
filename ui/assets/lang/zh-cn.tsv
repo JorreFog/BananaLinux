@@ -206,6 +206,12 @@ settings		Frame pacing	帧节奏
 settings		Panels runs the DS at the panels' 60 Hz, a new frame every refresh (0.3% fast, the sound matched). DS rate keeps the DS's own 59.83 Hz, a frame shown twice every ~6 s.	屏幕：以屏幕的 60 Hz 运行 DS，每次刷新输出新帧（快 0.3%，声音同步）。DS 速率：保持 DS 原生的 59.83 Hz，约每 6 秒重复显示一帧。
 settings		Panels	屏幕
 settings		DS rate	DS 速率
+# (the low latency rows below are a draft, not Majirefy's: for them to check)
+settings		Low latency (experimental)	低延迟（实验性）
+settings		Experimental. On: no frame queue, each frame ready just before the panels' next refresh: a press shows about two refreshes sooner. Run-ahead also runs 1 or 2 frames ahead and back every frame, so the game answers sooner than its own lag; it needs twice the CPU or more (light 2D games at 1x) and turns itself off where it doesn't fit.	实验性功能。开启：取消帧队列，每一帧恰好在屏幕下一次刷新前准备完毕：按键的反馈约提前两次刷新。超前运行还会每帧先多跑 1 或 2 帧再退回，使游戏的响应快于其自身的延迟；需要两倍或更多的 CPU（适合 1x 的轻量 2D 游戏），跑不动时会自动关闭。
+settings		Run-ahead 1 frame	超前 1 帧
+settings		Run-ahead 2 frames	超前 2 帧
+settings		Experimental. On: no frame queue: each frame goes to the panels at the next refresh it can make, and DraStic starts each frame as late as that allows, so a press shows about two refreshes sooner (the sound a little sooner too). Uneven frames (2x, heavy scenes) can show as small stutters the queue would hide.	实验性功能。开启：取消帧队列，每一帧在其能赶上的下一次屏幕刷新时显示，DraStic 也会尽量晚地开始每一帧，按键的反馈约提前两次刷新（声音也略微提前）。帧间隔不均时（2x、复杂场景）可能出现队列本可掩盖的轻微卡顿。
 settings		CPU clock	CPU 频率
 settings		Saves battery finds the lowest clock each game runs at full speed and remembers it. Always full keeps the top clock.	省电：为每款游戏寻找可全速运行的最低频率并记住。始终全速：保持最高频率。
 settings		Saves battery	省电
