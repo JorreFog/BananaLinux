@@ -51,6 +51,8 @@ namespace banana
 		// romRoot: where the system folders are; dataDir: Banana's own files (stats, favourites); assets: the theme's rnds/
 		Library(const std::string& confPath, const std::string& romRoot, const std::string& dataDir, const std::string& assets);
 		void scan();	// (re)read everything from disk
+		std::map<std::string, std::string> shelfModes() const;	// settings.conf's shelf.<id>: auto, hide, show
+		const std::vector<SystemDef>& systemDefs() const { return defs; }
 		// the folders whose changes change the library: the ROM root, each system's folder and its media folders
 		std::vector<std::string> watchDirs() const;
 		// the folders with system folders in them: romRoot, then the second SD card's roms folder while it's in and

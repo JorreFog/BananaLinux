@@ -483,6 +483,47 @@ static void resumeAfterPoweroff(Host& lib, const std::string& data, const char* 
 }
 
 // ---- headless: the same UI rendered to PNGs, for tests and screenshots ------------------------------------------
+// a game deleted on its page (Settings::DELETED): the card read again, back in the same system's list on the game
+// after it (the home row when that list is now empty), and what went in the log
+template <class U> static void afterDelete(Host& lib, U& ui, const std::vector<std::string>& gone)
+{
+	std::string id = lib.systemCount() ? lib.shelf(ui.systemIndex()).def.id : "";
+	int g = ui.gameIndex();
+	for (auto& f : gone) logf("deleted %s", f.c_str());
+	lib.scan();
+	ui.dataChanged();
+	for (int i = 0; i < lib.systemCount(); i++)
+		if (lib.shelf(i).def.id == id)
+		{
+			int n = lib.openLibrary(i) >= 0 ? lib.gameCount() : 0;
+			if (n > 0) { ui.setLibrary(i, std::min(std::max(0, g), n - 1)); logf("deleted: %s's list again, %d games", id.c_str(), n); return; }
+			ui.setHome(i);
+			logf("deleted: %s's last game, the home row", id.c_str());
+			return;
+		}
+	ui.setHome(0);
+}
+
+// the systems for Settings > Display & sound > Shown systems (id, name), from systems.conf
+static std::vector<std::pair<std::string, std::string>> shelfSystems(const Host& lib)
+{
+	std::vector<std::pair<std::string, std::string>> r;
+	for (auto& d : lib.systemDefs()) r.push_back({ d.id, d.name });
+	return r;
+}
+
+// a change in Shown systems (Settings::SHELVES): the home row read again, on the same system when it is still there
+template <class U> static void afterShelves(Host& lib, U& ui)
+{
+	std::string id = lib.systemCount() ? lib.shelf(ui.systemIndex()).def.id : "";
+	lib.scan();
+	ui.dataChanged();
+	int at = 0;
+	for (int i = 0; i < lib.systemCount(); i++) if (lib.shelf(i).def.id == id) at = i;
+	ui.setHome(at);
+	logf("shown systems: %d on the home row", lib.systemCount());
+}
+
 static int runHeadless(const Options& o, Host& lib, const std::string& variant, const std::string& theme)
 {
 	SoftBackend be(o.w, o.h);
@@ -504,6 +545,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	};
 	ui.setHome(0);
 	Settings settings(&be, o.assets, o.data, o.h / 480.0f, variant);
+	settings.setSystems(shelfSystems(lib));
 	settings.setSync(true);
 	settings.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
 	LowBattery low;
@@ -561,6 +603,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 					for (int i = 0; i < lib.gameCount(); i++) if (lib.gameAt(i).path == path) { ui.setLibrary(sys, i); break; }
 					logf("titles %s: \"%s\" / \"%s\"", settings.gameKey.c_str(), settings.gameName.c_str(), settings.gameSort.c_str());
 				}
+				if (r == Settings::DELETED) afterDelete(lib, ui, settings.deletedFiles);
+				if (r == Settings::SHELVES) afterShelves(lib, ui);
 				if (r == Settings::SEARCH)
 				{
 					lib.setSearch(settings.searchText);
@@ -580,6 +624,13 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		else if (op == "setup") { settings.setup(); logf("setup open"); }
 		// search <text>: the search keyboard open with that text typed (START then searches)
 		else if (op == "search") { std::string t; std::getline(cs, t); size_t b = t.find_first_not_of(' '); settings.openSearch(b == std::string::npos ? "" : t.substr(b)); logf("search open: \"%s\"", t.c_str()); }
+		else if (op == "inkon")
+		{
+			// inkon <rrggbb>: the text on that accent (Text on accent's mode) and its second line, with their contrast
+			std::string h; cs >> h;
+			uint32_t bg = (uint32_t)strtoul(h.c_str(), nullptr, 16), ink = rnds::inkOn(bg), sub = rnds::subInkOn(bg);
+			logf("inkon %06x: ink %06x (%.1f:1), sub %06x (%.1f:1)", bg, ink, rnds::contrastRatio(ink, bg), sub, rnds::contrastRatio(sub, bg));
+		}
 		else if (op == "romicon")
 		{
 			// romicon <path>: the DS ROM's own icon (from a .nds or a .zip), and a pixel from its middle
@@ -1145,6 +1196,7 @@ int main(int argc, char** argv)
 	if (!settings["timezone"].empty()) { setenv("TZ", settings["timezone"].c_str(), 1); tzset(); }
 	// the palette (a user theme's colours and accent set on the way) and the accent, before anything is drawn: the
 	// splash and the menu in it
+	rnds::accentTextMode = rnds::accentTextModeOf(settings["accent_text"]);	// the text on the accent: auto, dark or light
 	std::string themeWhy, variant = applyTheme(settings["theme"], settings["accent"], &themeWhy);
 	if (!themeWhy.empty()) logf("theme: %s (dark instead)", themeWhy.c_str());
 	if (variant == "carts") variant = "dark";
@@ -1275,6 +1327,7 @@ int main(int argc, char** argv)
 	int lastMinute = -1;
 	float scale = disp.height() / 480.0f;
 	Settings settingsView(&be, o.assets, o.data, scale, variant);
+	settingsView.setSystems(shelfSystems(lib));
 	pkmn::Companion companion;	// the game panel's Pokémon companion (pokemon.h), for the game running
 	settingsView.setColors = [&](const ScreenColors& c) { std::string e = disp.setColors(c); if (!e.empty()) logf("screen colours: %s", e.c_str()); return e; };
 	settingsView.setFontDir(o.banana + "/fonts");
@@ -1326,6 +1379,7 @@ int main(int argc, char** argv)
 		{
 			// the menu again in the other palette, on the system it was showing
 			settings = readSettings(o.data);
+			rnds::accentTextMode = rnds::accentTextModeOf(settings["accent_text"]);
 			variant = applyTheme(settings["theme"], settings["accent"]);
 			if (variant == "carts") variant = "dark";
 			int sys = ui->systemIndex();
@@ -1359,6 +1413,14 @@ int main(int argc, char** argv)
 			if (s >= 0) { lib.openLibrary(s); ui->setLibrary(s, 0); }
 			else ui->setHome(0);
 			logf("search \"%s\": %d games", settingsView.searchText.c_str(), s >= 0 ? (int)lib.shelf(s).games.size() : -1);
+			sound.play("select");
+			break;
+		}
+		case Settings::SHELVES: afterShelves(lib, *ui); roms.watch(lib.watchDirs()); break;
+		case Settings::DELETED:
+		{
+			afterDelete(lib, *ui, settingsView.deletedFiles);
+			roms.watch(lib.watchDirs());
 			sound.play("select");
 			break;
 		}

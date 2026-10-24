@@ -531,14 +531,34 @@ namespace banana
 		return r;
 	}
 
+	// Settings > Display & sound > Shown systems: settings.conf's shelf.<id> = auto (on the home row when it has
+	// something to start), hide or show (always, with nothing in it too)
+	std::map<std::string, std::string> Library::shelfModes() const
+	{
+		std::map<std::string, std::string> m;
+		std::ifstream f(dataDir + "/settings.conf");
+		std::string ln;
+		while (std::getline(f, ln))
+		{
+			size_t eq = ln.find('=');
+			if (eq == std::string::npos) continue;
+			std::string k = trim(ln.substr(0, eq)), v = trim(ln.substr(eq + 1));
+			if (k.compare(0, 6, "shelf.") == 0) m[k.substr(6)] = v;
+		}
+		return m;
+	}
+
 	void Library::scan()
 	{
 		loadState();
 		shelves.clear();
 		MediaIndex media;
+		std::map<std::string, std::string> modes = shelfModes();
 		for (auto& def : defs)
 		{
 			if (hidden.count(def.id)) continue;
+			std::string mode = modes.count(def.id) ? modes[def.id] : "auto";
+			if (mode == "hide") continue;
 			Shelf sh;
 			sh.def = def;
 			sh.order = (int)(&def - &defs[0]);
@@ -596,7 +616,11 @@ namespace banana
 				}
 			}
 			std::sort(sh.games.begin(), sh.games.end(), [](const Game& a, const Game& b) { return sortKey(a) < sortKey(b); });
-			if (!sh.games.empty() || def.always) shelves.push_back(sh);
+			// on the home row with something to start in it: PortMaster's own entry alone (put in every card's ports
+			// folder) is the tool for getting ports, not one (Shown systems' "Always" keeps the shelf for it)
+			bool launchable = false;
+			for (auto& g : sh.games) if (g.rel != "PortMaster.sh") launchable = true;
+			if (launchable || def.always || mode == "show") shelves.push_back(sh);
 		}
 		arrange();
 		if (lib >= (int)shelves.size()) lib = 0;
@@ -977,6 +1001,8 @@ namespace banana
 		std::vector<std::pair<std::string, std::string>> r;
 		if (library && game >= 0 && game < gameCount()) r.push_back({ "X", "Options" });	// (the game page: a DS game's emulator and shader, any game's name)
 		r.push_back({ "SELECT", "Search" });
+		// the settings (and from them Y: Sleep, Restart, Shut down) said on the home screen, where nothing showed START
+		if (!library) r.push_back({ "START", "Settings" });
 		return r;
 	}
 

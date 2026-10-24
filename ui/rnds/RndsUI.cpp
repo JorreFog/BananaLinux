@@ -22,6 +22,40 @@ namespace rnds
 	std::map<std::string, uint32_t> themeColors;
 	ThemeFiles themeFiles;
 	void setAccent(const Accent& a) { accent = a; }
+	int accentTextMode = 0;
+	static float relLum(uint32_t c)
+	{
+		auto ch = [](uint32_t v) { float x = v / 255.0f; return x <= 0.03928f ? x / 12.92f : std::pow((x + 0.055f) / 1.055f, 2.4f); };
+		return 0.2126f * ch((c >> 16) & 255) + 0.7152f * ch((c >> 8) & 255) + 0.0722f * ch(c & 255);
+	}
+	float contrastRatio(uint32_t a, uint32_t b)
+	{
+		float la = relLum(a), lb = relLum(b);
+		return (std::max(la, lb) + 0.05f) / (std::min(la, lb) + 0.05f);
+	}
+	static const uint32_t INK_DARK = 0x17161c, INK_LIGHT = 0xffffff;
+	uint32_t inkOn(uint32_t rgb)
+	{
+		rgb &= 0xffffff;
+		if (accentTextMode == 1) return INK_DARK;
+		if (accentTextMode == 2) return INK_LIGHT;
+		return contrastRatio(rgb, INK_DARK) >= contrastRatio(rgb, INK_LIGHT) ? INK_DARK : INK_LIGHT;
+	}
+	uint32_t subInkOn(uint32_t rgb)
+	{
+		rgb &= 0xffffff;
+		uint32_t ink = inkOn(rgb), out = ink;
+		auto mixc = [](uint32_t a, uint32_t b, float t)
+		{
+			auto c = [&](int sh) { return (uint32_t)std::lround(((a >> sh) & 255) * (1 - t) + ((b >> sh) & 255) * t) << sh; };
+			return c(16) | c(8) | c(0);
+		};
+		// the least step towards the ink that reads: as much of the surface's colour as can stay (yellow: the brown it
+		// always was; blue: a dark blue)
+		for (float t = 0.5f; t <= 1.0f; t += 0.05f)
+			if (contrastRatio(out = mixc(rgb, ink, t), rgb) >= 4.5f) return out;
+		return ink;
+	}
 	bool themeColor(const char* name, Color& c)
 	{
 		auto it = themeColors.find(name);
@@ -765,8 +799,9 @@ namespace rnds
 			};
 		}
 
-		// the box cover fitted into COVER_W x COVER_H CSS px (its fitted CSS size in the cache entry)
-		static constexpr float COVER_W = 214, COVER_H = 280;
+		// the box cover fitted into COVER_W x COVER_H CSS px (its fitted CSS size in the cache entry). Banana: a square,
+		// the frame drawCover always draws (was 214 x 280, the frame the picture's own size)
+		static constexpr float COVER_W = 214, COVER_H = 214;
 		CacheEntry* coverArt(const std::string& path)
 		{
 			if (path.empty()) return nullptr;
@@ -887,18 +922,18 @@ namespace rnds
 			int n = count();
 			if ((int)slots.size() != n) { slots.assign(n, SlotState()); prevCenter = -1; }
 			int c = center();
-			// how far the centre moved (in items, the short way round)
-			int move = prevCenter >= 0 && prevCenter < n ? delta(c, prevCenter, n) : 0;
+			// how far the centre moved (in items, the short way round; Banana: along the row, see LINEAR)
+			int move = prevCenter >= 0 && prevCenter < n ? (LINEAR ? c - prevCenter : delta(c, prevCenter, n)) : 0;
 			// half way round (two items: either way is one step) the pressed direction says which way it went, so
 			// left slides left and right slides right
-			if (lastDir && n % 2 == 0 && std::abs(move) == n / 2) move = lastDir > 0 ? n / 2 : -(n / 2);
+			if (!LINEAR && lastDir && n % 2 == 0 && std::abs(move) == n / 2) move = lastDir > 0 ? n / 2 : -(n / 2);
 			lastDir = 0;
 			if (std::abs(move) > 3) animate = false;
 			prevCenter = c;
 			for (int i = 0; i < n; i++)
 			{
 				SlotState& st = slots[i];
-				int d = delta(i, c, n);
+				int d = LINEAR ? i - c : delta(i, c, n);
 				float cx, cs, co;
 				slotValue(st, cx, cs, co);
 				float tx = d * 122.0f, tsc = d == 0 ? 1.0f : 0.84f, to = std::abs(d) > 3 ? 0.0f : 1.0f;
@@ -948,7 +983,11 @@ namespace rnds
 
 		// two to four items go round as an endless strip (copies a loop away on both sides); more fill the screen and
 		// wrap the old way (the item leaves on one side and comes in on the other)
-		static bool endless(int n) { return n >= 2 && n <= 4; }
+		static bool endless(int n) { return !LINEAR && n >= 2 && n <= 4; }
+		// Banana: the shelf and the game list are a row with two ends, as the Carts theme's: the first item is the
+		// leftmost, nothing is drawn left of it (the last one there read as the first), and the last is the rightmost.
+		// Left on the first still goes to the last and right on the last to the first: the row slides to that end.
+		static constexpr bool LINEAR = true;
 
 		float thumbLeft(int at, int n, float inner) { return n < 2 ? 0 : at * (inner - 42) / (n - 1); }
 
@@ -1008,12 +1047,19 @@ namespace rnds
 		bool page(int dir)
 		{
 			if (ui->mView != LIBRARY) return false;
-			int n = src->gameCount(), g = ui->mGame + dir * 5;
+			int n = src->gameCount();
 			if (n < 2) return true;
+			setGame(pageTarget(dir));
+			return true;
+		}
+		// where page(dir) goes from the cursor (Banana: L/R and the shoulders' names say it)
+		int pageTarget(int dir)
+		{
+			int n = src->gameCount(), g = ui->mGame + dir * 5;
+			if (n < 2) return ui->mGame;
 			if (g < 0) g = ui->mGame == 0 ? n - 1 : 0;
 			else if (g >= n) g = ui->mGame == n - 1 ? 0 : n - 1;
-			setGame(g);
-			return true;
+			return g;
 		}
 
 		void open()
@@ -1125,6 +1171,10 @@ namespace rnds
 		TStyle tFace() { return ts(true, 19); }
 
 		float kbdW(const std::string& k) { return 12 + line(k, tKbd()).width; }
+		// Banana: the count ("03 / 12") only on a game list longer than the five in view; the shelf's few systems and
+		// a short list are all on screen (the count said nothing the row didn't). Without it the rail is the whole row
+		bool countShown() { return ui->mView == LIBRARY && src->gameCount() > 5; }
+		float railCut(int n) { return countShown() ? 12 + countWidthMax(n) : 0; }
 		// the rail's count ("01 / 07"); the rail is the rest of the row
 		float countWidth(int at, int n)
 		{
@@ -1151,7 +1201,13 @@ namespace rnds
 			Geo g;
 			View v = ui->mView;
 			std::string title, sub;
-			if (v == HOME) { auto& sy = sys(ui->mSys); title = sy.name; sub = sy.maker; }
+			if (v == HOME)
+			{
+				auto& sy = sys(ui->mSys); title = sy.name; sub = sy.maker;
+				// Banana: no maker that the name already says ("Nintendo DS" / "Nintendo"); one it doesn't stays
+				// ("Mega Drive" / "Sega")
+				if (!sub.empty() && title.find(sub) != std::string::npos) sub.clear();
+			}
 			else if (v == LIBRARY && count() == 0) { title = src->emptyTitle(); sub = src->emptyHint(); }
 			else
 			{
@@ -1171,8 +1227,8 @@ namespace rnds
 
 			int n = v == LAUNCH ? 1 : count();
 			int at = v == LAUNCH ? 0 : center();
-			g.countW = countWidth(at, n);
-			g.railW = 604 - 12 - countWidthMax(n);
+			g.countW = countShown() ? countWidth(at, n) : 0;
+			g.railW = 604 - railCut(n);
 
 			if (v == HOME)
 			{
@@ -1442,19 +1498,23 @@ namespace rnds
 			CacheEntry* ce = coverArt(gm.box);
 			bool pending = ce == nullptr && !gm.box.empty();
 			if (ce && !ce->sp.valid()) ce = nullptr;
-			float w = ce ? ce->cssW : 176, h = ce ? ce->cssH : 176;
+			// Banana: one frame for every game (COVER_W x COVER_H), the picture fitted in it and centred, the shadow the
+			// frame's: covers of different shapes no longer move the frame and its shadow about while the list scrolls
+			const float FW = COVER_W, FH = COVER_H;
+			float w = ce ? ce->cssW : FW, h = ce ? ce->cssH : FH;
 			float b = bob();
-			float x = std::round(cx - w / 2), y = std::round(cy - h / 2) + ry;
+			float x = std::round(cx - FW / 2), y = std::round(cy - FH / 2) + ry;
 			// the shadow: narrower while the cover is up
-			float fw = std::round(w * 0.78f) + (b < 0 ? -10 : 0), fy = std::round(cy + h / 2 + 18) + ry;
+			float fw = std::round(FW * 0.78f) + (b < 0 ? -10 : 0), fy = std::round(cy + FH / 2 + 18) + ry;
 			Color fl = P.floor;
 			for (int r = 0; r < 3; r++)
 			{
 				float rw = fw - r * r * 10;
 				be->fill(std::round(X(cx - rw / 2)), std::round(X(fy - 1 + r * 2)), std::round(X(rw)), std::round(X(2)), fl);
 			}
-			if (pending) return;		// the picture is on its way: the frame comes with it
-			drawBox(coverBox(), x - 3, y - 3 + b, w + 6, h + 6);
+			drawBox(coverBox(), x - 3, y - 3 + b, FW + 6, FH + 6);
+			if (pending) return;		// the picture is on its way: the empty frame meanwhile
+			x += std::round((FW - w) / 2); y += std::round((FH - h) / 2);
 			if (ce)
 			{
 				drawSprite(ce->sp, x, y + b);
@@ -1772,7 +1832,7 @@ namespace rnds
 		{
 			int n = src->gameCount();
 			if (ui->mView != LIBRARY || n == 0) return;
-			float inner = 604 - 12 - countWidthMax(n) - 4;
+			float inner = 604 - railCut(n) - 4;
 			int at = n < 2 ? 0 : (int)std::lround((x - 20 - 21) * (n - 1) / std::max(1.0f, inner - 42));
 			at = std::min(n - 1, std::max(0, at));
 			if (at != ui->mGame) setGame(at);
@@ -1796,7 +1856,8 @@ namespace rnds
 				float kl = kbdW("L"), kr = kbdW("R");
 				std::string prev, next;
 				if (sides && v == HOME) { prev = sys((ui->mSys - 1 + n) % n).name; next = sys((ui->mSys + 1) % n).name; }
-				else if (sides) { prev = game((ui->mGame - 1 + n) % n).title; next = game((ui->mGame + 1) % n).title; }
+				// (Banana: a game list's L/R, and its arrows, go a page: the names are the games they land on)
+				else if (sides) { prev = game(pageTarget(-1)).title; next = game(pageTarget(1)).title; }
 				TStyle tsh = ts(false, 20);
 				TextLine lp = layoutEllipsis(utf8to32(prev), tstyle(tsh), 180), ln = layoutEllipsis(utf8to32(next), tstyle(tsh), 180);
 				// a game list's shoulders are its touch arrows too: ◀ and ▶ between the button and the name, a flex item
@@ -1903,7 +1964,7 @@ namespace rnds
 				{
 					TStyle tsr = ts(true, 20, 2.4f);
 					TextLine lsr = line("START", tsr);
-					drawLine(lsr, tsr, 320 - lsr.width / 2, ry + 124, 24, NAVY);
+					drawLine(lsr, tsr, 320 - lsr.width / 2, ry + 124, 24, Color::hex(inkOn(accent.base)));	// Banana: on the plate's accent
 				}
 			}
 			be->popClip();
@@ -1923,6 +1984,8 @@ namespace rnds
 				thumbTo = target; thumbAt = now;
 			}
 			drawBox(thumbBox(), 20 + thumbValue(), 394, 42, 14);
+			if (countShown() && v != LAUNCH)
+			{
 			char a[16], b[16];
 			snprintf(a, sizeof a, "%02d", total == 0 ? 0 : at + 1);
 			snprintf(b, sizeof b, "%02d", total);
@@ -1931,6 +1994,7 @@ namespace rnds
 			drawLine(la, ts(true, 18), cx, 390, 22, INK);
 			drawLine(lsl, ts(false, 18), cx + la.width, 390, 22, MUTED);
 			drawLine(lb, ts(false, 18), cx + la.width + lsl.width, 390, 22, MUTED);
+			}
 
 			// face buttons
 			drawFace(g.left, 18, g.leftW, pressedAction && pressedSide == 0);
@@ -2072,8 +2136,8 @@ namespace rnds
 		{
 			switch (a)
 			{
-			case ACT_PREV: nudge(-1); break;
-			case ACT_NEXT: nudge(1); break;
+			case ACT_PREV: if (!page(-1)) nudge(-1); break;		// (a game list: a page, as L)
+			case ACT_NEXT: if (!page(1)) nudge(1); break;
 			case ACT_OPEN: open(); break;
 			case ACT_BACK: back(); break;
 			case ACT_FAV: toggleFav(); break;
@@ -2157,8 +2221,11 @@ namespace rnds
 	{
 		switch (b)
 		{
-		case LEFT: case L: d->nudge(-1); return true;
-		case RIGHT: case R: d->nudge(1); return true;
+		case LEFT: d->nudge(-1); return true;
+		case RIGHT: d->nudge(1); return true;
+		// Banana: a game list's L/R go a page (five games), the shelf's one system
+		case L: if (!d->page(-1)) d->nudge(-1); return true;
+		case R: if (!d->page(1)) d->nudge(1); return true;
 		case UP: return d->page(-1);
 		case DOWN: return d->page(1);
 		case A: d->open(); return true;

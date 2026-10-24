@@ -24,6 +24,7 @@
  *     playing to /run/banana/bt/audio (from bluez-alsa's events), bananad watches that folder and plays through
  *     bluez-alsa's ALSA plugin, and back to the speakers or the jack when the file goes.
  *
+ * The menu's Sleep: banana-ui writes /run/banana/sleep-now and sends SIGHUP; the power button's sleep follows.
  * Settings: /etc/banana/bananad.conf, then /data/banana/bananad.conf (key = value lines, see bananad.conf); SIGHUP
  * reads them again (the menu's settings screen sends it).
  * It reads the input devices alongside banana-ui and the games (evdev allows many readers) and grabs nothing.
@@ -83,6 +84,8 @@ static int headphones;
 static int fn_held, power_down, lid_closed;
 static int lid_retry_off;	/* a suspend failed with the lid shut: no retry until it opens */
 static double lid_sleep_at;	/* the lid shut in a DS game: the sleep a moment later, once the game has seen it */
+static double menu_sleep_at;	/* the menu's Sleep (banana-ui wrote /run/banana/sleep-now and sent SIGHUP): a moment later,
+				 * once the button that chose it is let go */
 static double power_since, last_input, ignore_power_until;
 
 static volatile sig_atomic_t reload;
@@ -939,7 +942,8 @@ static void backlight_set_one(int i, int pm)
 	snprintf(p, sizeof p, "/sys/class/backlight/%s/max_brightness", BL[i]);
 	int max = read_int(p, 0);
 	if (max <= 0) return;
-	int nv = max * pm / 1000;
+	int nv = (max * pm + 500) / 1000;	/* (rounded both ways: the panels' 1666 steps kept in thousandths, a level
+						 * saved and restored at every shutdown no longer creeps down a step each time) */
 	if (nv < 1) nv = 1;
 	snprintf(p, sizeof p, "/sys/class/backlight/%s/brightness", BL[i]);
 	snprintf(v, sizeof v, "%d", nv);
@@ -953,8 +957,14 @@ static int read_pair(const char *path, int *top, int *bottom)
 	if (!f) return 0;
 	int n = fscanf(f, "%d %d", top, bottom);
 	fclose(f);
+	if (n < 1) return 0;
 	if (n == 1) *bottom = *top;
-	return n >= 1 && *top > 0 && *top <= 1000 && *bottom > 0 && *bottom <= 1000;
+	/* one panel's level unusable (a 0 kept while that panel was off): the other's for both, instead of the whole
+	 * file ignored and both panels left at the kernel's 50% */
+	int okt = *top > 0 && *top <= 1000, okb = *bottom > 0 && *bottom <= 1000;
+	if (!okt && okb) *top = *bottom;
+	else if (okt && !okb) *bottom = *top;
+	return okt || okb;
 }
 /* a panel's level now, in thousandths of its maximum (-1: no such backlight) */
 static int backlight_permille(int i)
@@ -963,7 +973,7 @@ static int backlight_permille(int i)
 	snprintf(p, sizeof p, "/sys/class/backlight/%s/max_brightness", BL[i]);
 	int max = read_int(p, 0);
 	snprintf(p, sizeof p, "/sys/class/backlight/%s/brightness", BL[i]);
-	return max > 0 ? read_int(p, 0) * 1000 / max : -1;
+	return max > 0 ? (read_int(p, 0) * 1000 + max / 2) / max : -1;
 }
 
 /* the bottom panel's backlight (BL[1], backlight0 on both handhelds). While banana-ui is managing the bottom's idle dim
@@ -1394,6 +1404,9 @@ int main(int argc, char **argv)
 	load_conf("/etc/banana/bananad.conf");
 	load_conf("/data/banana/bananad.conf");
 	load_timezone();
+	/* the LEDs at the user's level first: everything below (the inputs, alsactl, the mixer, the second card) takes a
+	 * while, and the power LED is the first sign the handheld is starting (U-Boot lit it, the kernel kept it on) */
+	leds_update();
 	signal(SIGCHLD, SIG_DFL);
 	struct sigaction sa = { 0 };
 	sa.sa_handler = on_hup;		/* no SA_RESTART: poll() returns, and the loop reloads */
@@ -1450,6 +1463,7 @@ int main(int argc, char **argv)
 		if ((save_volume_at > 0 || save_backlight_at > 0) && wait > 0.5) wait = 0.5;
 		if (power_down && wait > 0.1) wait = 0.1;
 		if (lid_sleep_at > 0) { double d = lid_sleep_at - tnow; if (d < wait) wait = d > 0 ? d : 0; }
+		if (menu_sleep_at > 0) { double d = menu_sleep_at - tnow; if (d < wait) wait = d > 0 ? d : 0; }
 		int timeout = wait <= 0 ? 20 : (int)(wait * 1000) + 20;
 		poll(pf, n, timeout);
 		double now = mono();
@@ -1462,6 +1476,8 @@ int main(int argc, char **argv)
 			leds_last = -2;
 			leds_update();
 			say("settings read again: lid %s, auto-sleep %d min, LEDs %d", cfg.lid_sleep ? "sleeps" : "ignored", cfg.autosleep_min, cfg.led_brightness);
+			/* the menu's Power > Sleep: the same sleep as a press of the power button, half a second on */
+			if (unlink("/run/banana/sleep-now") == 0) { menu_sleep_at = mono() + 0.5; say("the menu asked for a sleep"); }
 		}
 
 		for (int i = 0; i < ndev; i++) {
@@ -1500,6 +1516,7 @@ int main(int argc, char **argv)
 		    !pid_of("/run/banana/awake.pid"))
 			suspend_now("idle");
 		if (lid_sleep_at > 0 && now >= lid_sleep_at) { lid_sleep_at = 0; if (lid_closed) suspend_now("lid closed"); }
+		if (menu_sleep_at > 0 && now >= menu_sleep_at) { menu_sleep_at = 0; suspend_now("the menu's Sleep"); }
 		/* started or woken with the lid shut */
 		if (lid_closed && cfg.lid_sleep && !lid_retry_off && lid_sleep_at == 0 && now - last_input > 5) suspend_now("lid still closed");
 

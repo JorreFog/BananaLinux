@@ -36,6 +36,10 @@ host:
 tests/pokemon-test: tests/pokemon-test.cpp src/pokemon.cpp src/pokemon.h src/zip.cpp
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/pokemon-test.cpp src/pokemon.cpp src/zip.cpp -lz -lpthread
 
+# the left stick's deadzone and hysteresis (tests/run.sh runs it)
+tests/input-test: tests/input-test.cpp src/input.cpp src/input.h
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/input-test.cpp src/input.cpp
+
 install:
 	install -D -m 755 banana-ui $(DESTDIR)/usr/bin/banana-ui
 	install -D -m 755 banana-leaseshim.so $(DESTDIR)/usr/lib/banana/banana-leaseshim.so
@@ -51,6 +55,6 @@ install:
 	cp -r assets/lang/. $(DESTDIR)/usr/share/banana/lang/
 
 clean:
-	rm -f banana-ui banana-leaseshim.so banana-scrape tests/pokemon-test
+	rm -f banana-ui banana-leaseshim.so banana-scrape tests/pokemon-test tests/input-test
 
 .PHONY: host install clean

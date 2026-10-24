@@ -12,12 +12,14 @@ fail=0
 # the Pokémon companion's decoder (on data made from the documented layouts), and the made-up game and replies it
 # leaves in $OUT for the game panel's run below
 make -s -C "$HERE" tests/pokemon-test >/dev/null && "$HERE/tests/pokemon-test" "$OUT" 2> "$OUT/pokemon-test.log" || { echo "FAIL the Pokémon companion's decoder: $(grep FAIL "$OUT/pokemon-test.log" | head -3)"; fail=1; }
+# the left stick as a d-pad: its deadzone and hysteresis
+make -s -C "$HERE" tests/input-test >/dev/null && "$HERE/tests/input-test" 2> "$OUT/input-test.log" || { echo "FAIL the stick: $(grep FAIL "$OUT/input-test.log" | head -3)"; fail=1; }
 for size in 640x480 1024x768; do
     log=$OUT/$size.log
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" \
         --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" \
         --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
-        --script "splash boot-drop 200; splash boot-word 700; splash boot-click 1100 1; home 0; wait 2400; shot home; bench 120; press a; wait 2400; shot lib; press right; wait 2400; shot lib2; bench 120; press a; wait 3000; shot ready; press b; press b; press start; shot settings; press a; press down; shot settings-list; press r; press r; press r; press r; press r; shot settings-system; press down; press right; shot settings-tz; press b; press b; romicon $FX/roms/nds/Yellow Planet [!].zip; romicon $FX/roms/nds/Peel Quest.nds; battery 50; battery 19; shot battery-low; press left; battery 18; battery 4; wait 2400; shot battery-empty; battery 4 charging; shot battery-charging; battery 19; \
+        --script "splash boot-drop 200; splash boot-word 700; splash boot-click 1100 1; home 0; wait 2400; shot home; bench 120; press a; wait 2400; shot lib; press right; wait 2400; shot lib2; bench 120; press a; wait 3000; shot ready; press b; press b; press start; shot settings; press a; press down; shot settings-list; press r; shot settings-page; press b; press r; press r; press r; press r; press r; press a; shot settings-system; press down; press right; shot settings-tz; press b; press b; romicon $FX/roms/nds/Yellow Planet [!].zip; romicon $FX/roms/nds/Peel Quest.nds; battery 50; battery 19; shot battery-low; press left; battery 18; battery 4; wait 2400; shot battery-empty; battery 4 charging; shot battery-charging; battery 19; \
             outro bye-start 0; outro bye-eject 330; outro bye-word 520; outro bye-fall 820; outro bye-crt 1030; outro bye-end 1300" \
         2> "$log" || { echo "FAIL $size: banana-ui exited $?"; fail=1; continue; }
     check() { grep -q "$1" "$log" || { echo "FAIL $size: no '$1'"; fail=1; }; }
@@ -162,29 +164,29 @@ for size in 640x480 1024x768; do
         --roms "$FX/roms" --data "$FX/data" --script "home 0; resumeboot; wait 100" 2>> "$rlog" || { echo "FAIL $size: banana-ui (resume 2) exited $?"; fail=1; }
     grep -q "resume after power-off: no game at .*Gone.gba" "$rlog" || { echo "FAIL $size: a missing game: $(tail -n 3 "$rlog")"; fail=1; }
     rm -f "$FX/data/resume-boot"
-    # Screen colours (N3): Display & sound > Screen colours, Red down 10 steps, A: the bottom screen corrected, red 0.90
+    # Screen colours (N3): Display & sound > Screen colours (the sixth row), Red down 10 steps, A: the bottom screen corrected, red 0.90
     # in screen-colors.conf; then X (no correction) and A: "none"
     clog=$OUT/$size-colors.log; CF="$FX/data/screen-colors.conf"; rm -f "$CF"
     L10="press left; press left; press left; press left; press left; press left; press left; press left; press left; press left;"
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
-        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press a; press down; press down; press down; press down; press a; press down; $L10 shot colors; press a" 2> "$clog" \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press a; press down; press down; press down; press down; press down; press a; press down; $L10 shot colors; press a" 2> "$clog" \
         || { echo "FAIL $size: banana-ui (screen colours) exited $?"; fail=1; }
     grep -qx 'screen = bottom' "$CF" && grep -qx 'red = 0.90' "$CF" || { echo "FAIL $size: screen-colors.conf: $(tr '\n' ' ' < "$CF" 2>/dev/null)"; fail=1; }
     # X is no correction on the Screen row too: from the bottom kept, X then Right is None -> the bottom again (it
     # stayed "Correct the bottom" and Right went to the top); Red one step (0.99) and A keep that
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
-        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press a; press down; press down; press down; press down; press a; press x; press right; press down; press left; press a" 2>> "$clog" \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press a; press down; press down; press down; press down; press down; press a; press x; press right; press down; press left; press a" 2>> "$clog" \
         || { echo "FAIL $size: banana-ui (screen colours X) exited $?"; fail=1; }
     grep -qx 'screen = bottom' "$CF" && grep -qx 'red = 0.99' "$CF" || { echo "FAIL $size: X didn't set the Screen row to None: $(grep -v '^#' "$CF" | tr '\n' ' ')"; fail=1; }
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
-        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press a; press down; press down; press down; press down; press a; press x; press a" 2>> "$clog" \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press a; press down; press down; press down; press down; press down; press a; press x; press a" 2>> "$clog" \
         || { echo "FAIL $size: banana-ui (screen colours 2) exited $?"; fail=1; }
     grep -qx 'screen = none' "$CF" && grep -qx 'red = 1.00' "$CF" || { echo "FAIL $size: X then A didn't take the correction away: $(tr '\n' ' ' < "$CF")"; fail=1; }
     # a file edited by hand (review M1/L1): a capital, an empty value, a letter O for a zero, an indented key: the page
     # opens on them read as meant (empty and wrong: the default, not the bottom of the range), and A keeps that
     printf 'screen = Bottom\nred =\ngreen = O.9\n  blue = 0.8\n' > "$CF"
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
-        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press a; press down; press down; press down; press down; press a; press a" 2>> "$clog" \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press a; press down; press down; press down; press down; press down; press a; press a" 2>> "$clog" \
         || { echo "FAIL $size: banana-ui (screen colours 3) exited $?"; fail=1; }
     [ "$(grep -E '^(screen|red|green|blue) ' "$CF" | tr '\n' ' ')" = "screen = bottom red = 1.00 green = 1.00 blue = 0.80 " ] || { echo "FAIL $size: a hand-edited file: $(grep -v '^#' "$CF" | tr '\n' ' ')"; fail=1; }
     rm -f "$CF"
@@ -216,13 +218,13 @@ for size in 640x480 1024x768; do
     run_r "home 0; press start; press r; press r; press r; press r; press a; press up; press up; press a; press b; press start; press b"
     [ -e "$FX/data/accounts.conf" ] && grep -q smb_user "$FX/data/accounts.conf" && { echo "FAIL $size: m6 the name was written without the password"; fail=1; }
     rm -f "$FX/data/accounts.conf"
-    # Box art by name (#28): X on the last DS game, up to Box art (the last row), A types (its name, as it is), START
+    # Box art by name (#28): X on the last DS game, up to Box art (the last row but Delete game), A types (its name, as it is), START
     # looks (a stand-in banana-scrape: two names), down to the second, A fetches it: banana-scrape --match with the
     # game's system, file and that name; B closes the page and the library is read again
     alog2=$OUT/$size-boxart.log; SL=$OUT/$size-fake-scrape.txt; rm -f "$SL"
     BANANA_SCRAPE="$HERE/tests/fake-scrape.sh" FAKE_SCRAPE_LOG="$SL" "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" \
         --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
-        --script "lib 0 4; press x; press up; shot boxart-row; press a; press start; shot boxart-list; press down; press a; shot boxart-done; press b" 2> "$alog2" \
+        --script "lib 0 4; press x; press up; press up; shot boxart-row; press a; press start; shot boxart-list; press down; press a; shot boxart-done; press b" 2> "$alog2" \
         || { echo "FAIL $size: banana-ui (box art) exited $?"; fail=1; }
     [ "$(cat "$SL" 2>/dev/null)" = "nds|$FX/roms/nds/Yellow Planet [!].zip|Yellow Planet - Second Orbit (Europe)" ] || { echo "FAIL $size: --match: $(cat "$SL" 2>/dev/null)"; fail=1; }
     grep -q 'titles nds/Yellow Planet' "$alog2" || { echo "FAIL $size: closing the page didn't read the library again"; fail=1; }
@@ -313,6 +315,8 @@ for size in 640x480 1024x768; do
         [ -s "$f" ] || { echo "FAIL $size: no $f"; fail=1; continue; }
         [ "$(convert "$f" -format '%[fx:standard_deviation>0.01]' info: 2>/dev/null)" = 1 ] || { echo "FAIL $size: $f is blank"; fail=1; }
     done
+    # the menu's UX checks (the row's ends, the box art's frame, text on the accent, ...)
+    . "$HERE/tests/ux.sh"
     # each view drew something of its own (not the same frame again)
     for pair in "pk-party pk-mon" "pk-mon pk-mon2" "pk-mon2 pk-back" "pk-back pk-battle" "pk-battle pk-game" "pk-party zh-pk-party"; do
         a=${pair% *}; b=${pair#* }

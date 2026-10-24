@@ -26,6 +26,7 @@ namespace banana
 
 		// each list ends in nullptr: valid() walks it to the end
 		const char* const ON_OFF[] = { "on", "off", nullptr };
+		const char* const ACCENT_TEXT[] = { "auto", "dark", "light", nullptr };
 		const char* const ACCENTS[] = { "yellow", "blue", "red", "green", "purple", "pink", nullptr };
 		const char* const SHADERS[] = { "off", "lcd", "crt", "sharp", nullptr };
 		const char* const NDS[] = { "superdrastic", "bananads", nullptr };
@@ -40,6 +41,7 @@ namespace banana
 		// missing (the host test, or a card whose root is older than the menu). Keep in step with the template file.
 		const KeyDef KEYS[] = {
 			{ "accent", "yellow", ENUM, ACCENTS, 0, 0 },
+			{ "accent_text", "auto", ENUM, ACCENT_TEXT, 0, 0 },
 			{ "theme", "dark", TEXT, nullptr, 0, 0 },
 			{ "motion", "on", ENUM, ON_OFF, 0, 0 },
 			{ "sounds", "on", ENUM, ON_OFF, 0, 0 },

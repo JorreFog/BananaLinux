@@ -104,7 +104,7 @@
     { group: "The view", names: ["view", "W", "H", "screen"] },
     { group: "Time", names: ["time", "clock", "date", "moved", "entered", "dir"] },
     { group: "Status", names: ["battery", "charging", "batteryMode", "online", "motion", "brand"] },
-    { group: "Colour", names: ["accent", "accent.light", "accent.dark", "accent.band", "accent.low", "palette.<name>"] },
+    { group: "Colour", names: ["accent", "accent.light", "accent.dark", "accent.band", "accent.low", "accent.ink", "accent.inkSub", "palette.<name>"] },
     { group: "The list", names: ["cursor", "count", "scroll", "systems.count", "games.count"] },
     { group: "The launch view", names: ["launch.progress", "launch.t"] },
     { group: "An empty library", names: ["empty", "empty.title", "empty.hint"] },

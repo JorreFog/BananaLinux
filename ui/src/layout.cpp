@@ -421,6 +421,9 @@ namespace banana
 			if (n == "accent.dark") { out = EV(hex(rnds::accent.dark)); return true; }
 			if (n == "accent.band") { out = EV(hex(rnds::accent.band)); return true; }
 			if (n == "accent.low") { out = EV(hex(rnds::accent.low)); return true; }
+			// text on the accent: dark or light by contrast (Settings > Text on accent), and a second line in its hue
+			if (n == "accent.ink") { out = EV(hex(rnds::inkOn(rnds::accent.base))); return true; }
+			if (n == "accent.inkSub") { out = EV(hex(rnds::subInkOn(rnds::accent.base))); return true; }
 			if (pre("palette.", rest)) { rnds::Color c; if (rnds::themeColor(rest.c_str(), c)) { out = EV(hex(c)); return true; } out = EV(""); return true; }
 			if (n == "cursor") { out = EV((double)cursor()); return true; }
 			if (n == "scroll") { out = EV((double)scroll); return true; }

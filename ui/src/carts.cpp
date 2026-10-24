@@ -931,7 +931,7 @@ namespace banana
 			round(66 + nw, 20, 26, 22, 6, PANEL, 1);
 			text("R", fSemi, 13, 79 + nw, 24, SOFT, 1, 0, 1);
 		}
-		if (count())
+		if (count() > 5)	// (the count only on a list longer than the shelf shows: a short one said nothing new)
 		{
 			char n[32];
 			snprintf(n, sizeof n, "%d / %d", cursor() + 1, count());
@@ -1038,7 +1038,7 @@ namespace banana
 			round(cxp, 426, widths[i], 32, 16, PANEL, 1);
 			float kw = std::max(22.0f, text(chips[i].key, fSemi, 12, 0, 0, INK, 1, 0, 0, 0, false, true) + 12);
 			round(cxp + 5, 431, kw, 22, 11, mix(accent, 0xffffff, 0.15f), 1);
-			text(chips[i].key, fSemi, 12, cxp + 5 + kw / 2, 435, 0x111214, 1, 0, 1);
+			text(chips[i].key, fSemi, 12, cxp + 5 + kw / 2, 435, rnds::inkOn(mix(accent, 0xffffff, 0.15f)), 1, 0, 1);	// dark or light by contrast
 			text(chips[i].label, fMed, 13, cxp + 5 + kw + 8, 434, INK);
 			cxp += widths[i] + 10;
 		}

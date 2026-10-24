@@ -777,3 +777,64 @@ systems		PICO-8	PICO-8
 systems		Lexaloffle	Lexaloffle
 systems		Ports	Ports
 systems		PortMaster	PortMaster
+# (the menu-feedback rows below are a draft, not Majirefy's: for them to check)
+settings		Text on accent	强调色上的文字
+settings		The text on the selection's colour. Auto picks dark or light, whichever reads better on the accent.	选中项颜色上的文字。“自动”会选择在强调色上更易读的深色或浅色。
+settings		Auto	自动
+settings		Power	电源
+settings		Sleep	睡眠
+settings		The handheld sleeps, as with a press of the power button; a game running is paused. Press the power button to wake it.	掌机进入睡眠，与按一下电源键相同；正在运行的游戏会暂停。按电源键唤醒。
+settings		Delete game...	删除游戏…
+settings		Delete this game	删除此游戏
+settings		Keep its saves and art	保留存档和封面
+settings		With its saves, states and art	连同存档、即时存档和封面
+settings		A again: the game (saves kept)	再按 A：删除游戏（保留存档）
+settings		A again: the game, saves and art	再按 A：删除游戏、存档和封面
+settings		Delete...	删除…
+settings		The game couldn't be deleted: the card may be read-only.	无法删除游戏：存储卡可能为只读。
+settings		Removes this game's file from the card: %s. Left and right choose whether its saves, save states and box art go too, or stay (they come back if you copy the game again). Nothing else is touched: no other game, no BIOS. A asks first; A again deletes.	从存储卡删除此游戏的文件：%s。左右键选择是否一并删除其存档、即时存档和封面，或保留它们（再次复制该游戏时会恢复）。不会动其他任何内容：其他游戏和 BIOS 均不受影响。按 A 先确认，再按 A 删除。
+settings		Shown systems	显示的系统
+settings		Which systems are on the home row. Each one: with games (when it has something to start), hidden, or always (with nothing in it too: Ports for PortMaster).	主屏一行中显示哪些系统。每个系统可选：有游戏时（其中有可启动的内容时显示）、隐藏，或始终显示（即使为空也显示：例如用于 PortMaster 的 Ports）。
+settings		With games	有游戏时
+settings		Hidden	隐藏
+settings		Always	始终
+settings		With games: on the home row while there is something in it to start. Hidden: never. Always: with nothing in it too (Ports: for PortMaster, which gets ports).	有游戏时：其中有可启动的内容时显示在主屏。隐藏：从不显示。始终：即使为空也显示（Ports：用于获取移植游戏的 PortMaster）。
+settings		Hotkeys	快捷键
+settings		The buttons that do something everywhere, in the menu and in each emulator.	在所有地方、菜单中以及各模拟器中起作用的按键。
+settings		Volume keys	音量键
+settings		Everywhere, in games too: the speakers, or the headphones while they are in.	任何地方（游戏中也可）：扬声器，或插入耳机时的耳机。
+settings		F + volume	F + 音量
+settings		Everywhere, in games too: both screens' backlights together. Each screen's own: Settings > Display & sound.	任何地方（游戏中也可）：同时调节两块屏幕的背光。单独调节每块屏幕：设置 > 显示与声音。
+settings		Everywhere: a press sleeps (a game is paused where it is), a press wakes. Closing the lid does the same.	任何地方：按一下进入睡眠（游戏在当前位置暂停），再按一下唤醒。合上翻盖效果相同。
+settings		Hold power	按住电源键
+settings		Everywhere: held for 2 seconds. A game running saves first.	任何地方：按住 2 秒。正在运行的游戏会先保存。
+settings		Menu: START	菜单：START
+settings		In the menu: Settings. Y there: Sleep, Restart and Shut down.	菜单中：设置。在设置中按 Y：睡眠、重启和关机。
+settings		Menu: SELECT	菜单：SELECT
+settings		In the menu: search every system's games by name.	菜单中：按名称搜索所有系统的游戏。
+settings		Menu: X	菜单：X
+settings		Resume, options	继续、选项
+settings		On the home row: the system's last game. On a game: its page (name, box art, emulator, delete).	在主屏一行：该系统最近的游戏。在游戏上：其页面（名称、封面、模拟器、删除）。
+settings		Menu: L / R	菜单：L / R
+settings		A page	翻页
+settings		In a game list or a settings list: five at a time. Up and down too.	在游戏列表或设置列表中：每次五项。上下键也一样。
+settings		Its menu	其菜单
+settings		DS games in SuperDrastic: save, load, quick settings (volume, brightness), quit. L3 opens it too.	SuperDrastic 中的 DS 游戏：保存、读取、快速设置（音量、亮度）、退出。L3 也可打开。
+settings		DS games in SuperDrastic: back to the menu, the spot saved to resume from when Quick resume is on.	SuperDrastic 中的 DS 游戏：返回菜单；开启“快速继续”时会保存当前位置以便继续。
+settings		Save / load state	即时存档 / 读档
+settings		DS games in SuperDrastic: DraStic's quick save state, and loading it.	SuperDrastic 中的 DS 游戏：DraStic 的快速即时存档及读取。
+settings		Fast-forward	快进
+settings		DS games in SuperDrastic: held, the game runs as fast as it can.	SuperDrastic 中的 DS 游戏：按住时游戏以最快速度运行。
+settings		DS games in BananaDS: save, load, quick settings, achievements, quit.	BananaDS 中的 DS 游戏：保存、读取、快速设置、成就、退出。
+settings		Save to slot 1	保存到槽位 1
+settings		Load slot 1	读取槽位 1
+settings		DS games in BananaDS.	BananaDS 中的 DS 游戏。
+settings		DS games in BananaDS: your spot saved, then back to the menu.	BananaDS 中的 DS 游戏：保存当前位置，然后返回菜单。
+settings		The other systems (RetroArch). Settings > Other systems > RetroArch hotkeys Off leaves this and F + START only.	其他系统（RetroArch）。设置 > 其他系统 > RetroArch 快捷键设为关闭时，仅保留此键和 F + START。
+settings		The other systems (RetroArch): back to the menu.	其他系统（RetroArch）：返回菜单。
+settings		The other systems (RetroArch): the current state slot.	其他系统（RetroArch）：当前即时存档槽位。
+settings		The other systems (RetroArch): on, and off again.	其他系统（RetroArch）：开启，再按关闭。
+settings		Rewind	倒带
+settings		The other systems (RetroArch): held, the game runs backwards.	其他系统（RetroArch）：按住时游戏倒退运行。
+settings		Frame rate	帧率
+settings		The other systems (RetroArch): shown in a corner, or not.	其他系统（RetroArch）：在角落显示或隐藏。
