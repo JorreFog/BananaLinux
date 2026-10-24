@@ -76,6 +76,9 @@ wlan0)
         stop /run/banana/udhcpc.pid
         udhcpc -b -t 5 -i wlan0 -p /run/banana/udhcpc.pid -s /usr/share/udhcpc/default.script >/dev/null 2>&1 &&
             { ntpd -q -n -p pool.ntp.org >/dev/null 2>&1 && hwclock -w 2>/dev/null; } &
+        # Settings > System > Update check: Daily asks GitHub for a newer version, once a day at most (the update
+        # script reads the setting itself; nothing is downloaded). After the clock had its chance: TLS needs it
+        ( sleep 20; /usr/libexec/banana/update check --daily ) >/dev/null 2>&1 &
         ;;
     DISCONNECTED)
         stop /run/banana/udhcpc.pid

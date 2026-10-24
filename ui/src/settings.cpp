@@ -121,17 +121,36 @@ namespace banana
 		// text on it, and a dark amber for what the accent marks elsewhere ("Connected", "Press A again")
 		Color pick, pickBand, pickLow, pickEdge, onPick, onPickAccent;
 	};
-	// Update's row: how many update packages wait in banana/updates on the card ("" for none); looked at once every
-	// 2 s at most (the list is drawn on every change)
-	static std::string updatesWaiting()
+	// Update's row: a download going on, a newer version the last check found, or how many update packages wait in
+	// banana/updates on the card ("" for none); looked at once every 2 s at most (the list is drawn on every change)
+	static std::string updatesWaiting(const std::string& updates, const std::string& run, const std::string& running)
 	{
 		static time_t at = 0;
 		static std::string v;
 		time_t now = time(nullptr);
 		if (now - at < 2 && at) return v;
 		at = now;
+		{
+			long long a = 0, t = 0;
+			int pid = 0;
+			std::ifstream(run + "/update-download.pid") >> pid;
+			if (pid > 0 && kill(pid, 0) == 0 && sscanf(readLine(run + "/update-download").c_str(), "downloading %lld %lld", &a, &t) == 2 && t > 0)
+				return v = "Downloading " + std::to_string((int)(a * 100 / t)) + "%";
+			std::string state, last, current, latest;
+			std::ifstream f(updates + "/.check");
+			for (std::string ln; std::getline(f, ln);)
+			{
+				if (ln.compare(0, 6, "state=") == 0) state = ln.substr(6);
+				else if (ln.compare(0, 11, "last_state=") == 0) last = ln.substr(11);
+				else if (ln.compare(0, 8, "current=") == 0) current = ln.substr(8);
+				else if (ln.compare(0, 7, "latest=") == 0) latest = ln.substr(7);
+			}
+			// (a check made by the version before an update isn't this one's)
+			if ((state == "newer" || (state == "error" && last == "newer")) && !latest.empty() && (running.empty() || current == running))
+				return v = latest + " available";
+		}
 		int n = 0;
-		if (DIR* d = opendir("/data/banana/updates"))
+		if (DIR* d = opendir(updates.c_str()))
 		{
 			while (dirent* e = readdir(d))
 			{
@@ -197,6 +216,11 @@ namespace banana
 		wifiConf = data + "/wifi.conf";
 		const char* btt = getenv("BANANA_BLUETOOTH");	// (the test's stand-in)
 		btTool = btt ? btt : "/usr/libexec/banana/bluetooth";
+		const char* up = getenv("BANANA_UPDATE");	// (the test: the repo's script, pointed at a test feed)
+		updateTool = up ? up : "/usr/libexec/banana/update";
+		const char* run = getenv("BANANA_RUN");
+		runDir = run ? run : "/run/banana";
+		updatesDir = data + "/updates";
 		build();
 	}
 
@@ -497,7 +521,11 @@ namespace banana
 			add(S, "gear", "Time zone", "The clock's time zone, summer time included, for the menu and the games (a DS game's clock too). The time itself comes from Wi-Fi or the handheld's own clock.",
 				menu, "timezone", names, tzs);
 		}
-		add(S, "gear", "Update", "A new version of Banana from a package on the card, written to the other slot and run from the next restart; this one stays as it is until then.", "", "update", {}, {}, Item::PAGE);
+		add(S, "gear", "Update", "A new version of Banana, downloaded from GitHub over Wi-Fi or from a package on the card, written to the other slot and run from the next restart; this one stays as it is until then.", "", "update", {}, {}, Item::PAGE);
+		add(S, "gear", "Test versions", "Whether Update's check counts test versions (GitHub pre-releases). Every BananaOS release so far is one, so with them left out the check finds nothing until a stable version comes out.",
+			menu, "update_prerelease", { "Included", "Left out" }, { "on", "off" });
+		add(S, "gear", "Update check", "When asked: GitHub is only asked when you choose Check for updates. Daily: also when Wi-Fi connects, at most once a day, so the Update row says when a new version is out. Nothing is downloaded without you.",
+			menu, "update_daily", { "When asked", "Daily" }, { "off", "on" });
 		add(S, "picture", "Box art", "Covers, title screens, genres and years for your games, from libretro's free collections (no account, Wi-Fi needed). It keeps going in the background; games that already have art are skipped, so running it again only fetches what is new.",
 			"", "scrape", {}, {}, Item::PAGE);
 		add(S, "picture", "Box art from", "libretro: libretro's collections. libretro + Twilight: TwilightBoxart (boxart.kirovair.com) for the covers libretro has none of. Twilight first: TwilightBoxart's covers where it has them. TwilightBoxart is asked one game a second.",
@@ -1029,11 +1057,11 @@ namespace banana
 		if (page == UPDATES)
 		{
 			if (downY >= 418 && downY <= 466) return pressUpdates(downX < 320 ? Key::B : Key::A);
-			for (int r = 0; r < ROWS && r < (int)pkgs.size(); r++)
+			for (int r = 0; r < ROWS && utop + r < 1 + (int)pkgs.size(); r++)
 			{
 				float ry = 82 + r * 64;
 				if (downY < ry || downY > ry + 56) continue;
-				if (r != usel) { usel = r; armed = -1; return MOVED; }
+				if (utop + r != usel) { usel = utop + r; armed = -1; return MOVED; }
 				return pressUpdates(Key::A);
 			}
 			return NONE;
@@ -1494,7 +1522,7 @@ namespace banana
 			// a page's row: Network the network it is on; Update the packages waiting on the card; the others nothing
 			else if (it.kind == Item::PAGE && it.key == "network") v = wstat.connected ? fit(wstat.ssid, true, 19, 300) : (wifiOn() ? "Choose" : "");
 			else if (it.kind == Item::PAGE && it.key == "bt_devices") v = btRow();
-			else if (it.kind == Item::PAGE && it.key == "update") v = updatesWaiting();
+			else if (it.kind == Item::PAGE && it.key == "update") v = updatesWaiting(updatesDir, runDir, version);
 			else if (it.kind == Item::PAGE && it.key == "share_account") v = fit(shareUser(), true, 19, 300);
 			else if (it.kind == Item::PAGE && it.key == "ds_name") v = dsName().empty() ? "Not set" : dsName();
 			else if (it.kind == Item::PAGE && it.key == "scrape") v = scrapeShort();
@@ -1597,6 +1625,13 @@ namespace banana
 			pollUpdate();
 			changed |= ustatus != before;
 		}
+		if (page == UPDATES && downloading && now >= nextDl)
+		{
+			std::string before = dlLine;
+			pollDownload();
+			changed |= dlLine != before || !downloading;
+		}
+		changed |= checkDone();
 		std::string out;
 		if (scanJob.take(out))
 		{
@@ -1670,9 +1705,10 @@ namespace banana
 
 	int Settings::pageWake(double t) const
 	{
-		if (scanJob.running() || statusJob.running() || artJob.running()) return 100;
+		if (scanJob.running() || statusJob.running() || artJob.running() || checkJob.running()) return 100;
 		if (btListJob.running() || btScanJob.running() || btActJob.running()) return 100;
 		if (page == UPDATES && applying) return std::max(0, (int)(nextStatus2 - t));
+		if (page == UPDATES && downloading) return std::max(0, (int)(nextDl - t));
 		if (page == BLUETOOTH && btEnabled) return std::max(0, (int)(btNextList - t));
 		if (page != NETWORKS || !wifiEnabled) return -1;
 		double due = joining.empty() ? nextScan : std::min(nextStatus, joinStart + 30001);
@@ -2285,12 +2321,23 @@ namespace banana
 	void Settings::openUpdates()
 	{
 		page = UPDATES;
-		usel = 0; armed = -1;
+		usel = 0; utop = 0; armed = -1;
 		message.clear();
 		ustatus.clear();
 		applying = false; updated = false;
+		version = readLine("/etc/banana/version");
+		slot = readLine(runDir + "/slot");
+		board = readLine("/etc/banana/board");
+		listPkgs();
+		readOnline();
+		downloading = false;
+		pollDownload();		// a download started before (it goes on while the page is closed)
+	}
+
+	void Settings::listPkgs()
+	{
 		pkgs.clear();
-		if (FILE* p = popen("/usr/libexec/banana/update list 2>/dev/null", "r"))
+		if (FILE* p = popen(("'" + updateTool + "' list 2>/dev/null").c_str(), "r"))
 		{
 			char ln[1024];
 			while (fgets(ln, sizeof ln, p))
@@ -2307,9 +2354,204 @@ namespace banana
 	void Settings::pollUpdate()
 	{
 		nextStatus2 = now + 500;
-		ustatus = readLine("/run/banana/update-status");
+		ustatus = readLine(runDir + "/update-status");
 		if (ustatus.compare(0, 4, "done") == 0) { applying = false; updated = true; }
 		else if (ustatus.compare(0, 6, "failed") == 0) applying = false;
+	}
+
+	// ---- over the air (#69): the update script's check and download -------------------------------------------------
+	void Settings::readOnline()
+	{
+		Online o;
+		std::ifstream f(updatesDir + "/.check");
+		for (std::string ln; std::getline(f, ln);)
+		{
+			size_t eq = ln.find('=');
+			if (eq == std::string::npos) continue;
+			std::string k = ln.substr(0, eq), v = ln.substr(eq + 1);
+			if (k == "state") o.state = v;
+			else if (k == "last_state") o.lastState = v;
+			else if (k == "current") o.current = v;
+			else if (k == "latest") o.latest = v;
+			else if (k == "file") o.file = v;
+			else if (k == "notes") o.notes = v;
+			else if (k == "error") o.error = v;
+			else if (k == "board") o.board = v;
+			else if (k == "prerelease_setting") o.preSetting = v;
+			else if (k == "prerelease") o.pre = v == "1";
+			else if (k == "size") o.size = atoll(v.c_str());
+			else if (k == "checked") o.checked = atoll(v.c_str());
+		}
+		// an answer for the version before an update, another handheld's card, or with Test versions set the other
+		// way since: as if never asked
+		std::string pre = getConfValue(data + "/settings.conf", "update_prerelease", "on");
+		if (!o.state.empty() && ((!version.empty() && o.current != version) || (!board.empty() && o.board != board) || o.preSetting != pre))
+			o = Online();
+		online = o;
+	}
+
+	bool Settings::onlineNewer() const
+	{
+		return !online.latest.empty() && !online.file.empty() && (online.state == "newer" || (online.state == "error" && online.lastState == "newer"));
+	}
+
+	int Settings::onlinePkg() const
+	{
+		if (!onlineNewer()) return -1;
+		for (size_t i = 0; i < pkgs.size(); i++)
+		{
+			const std::string& p = pkgs[i].path;
+			if (p.size() >= online.file.size() && p.compare(p.size() - online.file.size(), std::string::npos, online.file) == 0 &&
+				(p.size() == online.file.size() || p[p.size() - online.file.size() - 1] == '/'))
+				return (int)i;
+		}
+		return -1;
+	}
+
+	long long Settings::partialBytes() const
+	{
+		struct stat st;
+		if (online.file.empty() || stat((updatesDir + "/.partial/" + online.file).c_str(), &st) != 0) return 0;
+		return st.st_size;
+	}
+
+	void Settings::startCheck()
+	{
+		message.clear();
+		dlLine.clear();
+		armed = -1;
+		checkJob.start("'" + updateTool + "' check 2>&1", sync);
+		if (sync) checkDone();	// (the headless test: its answer at once)
+	}
+
+	// the check's answer: the script kept it in .check (also when it failed: the error, and what it found before)
+	bool Settings::checkDone()
+	{
+		std::string out;
+		if (!checkJob.take(out)) return false;
+		readOnline();
+		if (online.state.empty()) message = trim(out).empty() ? "The check didn't answer." : trim(out);
+		usel = 0; utop = 0;
+		return true;
+	}
+
+	void Settings::startDownload()
+	{
+		message.clear();
+		unlink((runDir + "/update-download").c_str());
+		dlLine = "downloading " + std::to_string(partialBytes()) + " " + std::to_string(online.size);
+		downloading = true;
+		dlStarted = now;
+		nextDl = now + 500;
+		spawn(updateTool.c_str(), "download");
+	}
+
+	void Settings::pollDownload()
+	{
+		nextDl = now + 500;
+		std::string ln = readLine(runDir + "/update-download");
+		int pid = 0;
+		std::ifstream(runDir + "/update-download.pid") >> pid;
+		bool alive = pid > 0 && kill(pid, 0) == 0;
+		bool going = ln.compare(0, 12, "downloading ") == 0 || ln == "verifying";
+		if (!downloading)
+		{
+			// the page opened: one still running from before, or how the last one ended
+			downloading = alive && going;
+			dlLine = ln;
+			return;
+		}
+		if (ln.empty() && now - dlStarted < 5000) return;	// just started: its first line isn't there yet
+		dlLine = ln;
+		if (ln.compare(0, 6, "ready ") == 0)
+		{
+			downloading = false;
+			listPkgs();
+			usel = 0; utop = 0; armed = -1;		// the online row: Install
+		}
+		else if (ln.compare(0, 7, "failed:") == 0 || ln.compare(0, 9, "cancelled") == 0) downloading = false;
+		else if (!alive && now - dlStarted >= 5000)
+		{
+			downloading = false;	// gone without a word (killed, or it never started)
+			dlLine = "failed: the download stopped";
+		}
+	}
+
+	// the online row: its name, the tag on its right and what A does
+	std::string Settings::onlineRow(std::string& tag, std::string& act) const
+	{
+		auto mb = [](long long b) { return std::to_string((b + 524288) / 1048576); };
+		tag.clear(); act.clear();
+		if (checkJob.running()) return "Checking for updates...";
+		if (downloading)
+		{
+			if (dlLine == "verifying") return "Checking the download...";
+			long long a = 0, t = online.size;
+			sscanf(dlLine.c_str(), "downloading %lld %lld", &a, &t);
+			int pc = t > 0 ? (int)std::min<long long>(100, a * 100 / t) : 0;
+			tag = std::to_string(pc) + "% · " + mb(a) + " of " + mb(t) + " MB";
+			act = "Cancel";
+			return "Downloading Banana " + online.latest;
+		}
+		if (onlineNewer())
+		{
+			if (onlinePkg() >= 0)
+			{
+				tag = armed == 2000 ? "Press A again" : "Downloaded";
+				act = armed == 2000 ? "Confirm" : "Install";
+				return "Install Banana " + online.latest;
+			}
+			long long have = partialBytes();
+			tag = have > 0 && online.size > 0 ? "Resume: " + mb(have) + " of " + mb(online.size) + " MB" : mb(online.size) + " MB";
+			act = "Download";
+			return "Download Banana " + online.latest;
+		}
+		act = "Check";
+		if (online.state == "current") tag = "Up to date";
+		else if (online.state == "none") tag = "None for this handheld";
+		else if (online.state == "error") tag = "Failed";
+		return "Check for updates";
+	}
+
+	Settings::Result Settings::pressOnline()
+	{
+		if (checkJob.running()) return NONE;
+		if (downloading)
+		{
+			// A cancels: what came stays in .partial, and the next Download carries on from there
+			if (FILE* p = popen(("'" + updateTool + "' cancel 2>&1").c_str(), "r")) { char ln[256]; while (fgets(ln, sizeof ln, p)) {} pclose(p); }
+			nextDl = now;
+			return MOVED;
+		}
+		if (onlineNewer())
+		{
+			int k = onlinePkg();
+			if (k < 0) { startDownload(); return MOVED; }
+			if (armed != 2000) { armed = 2000; return MOVED; }	// A again to go ahead
+			armed = -1;
+			startApply(k);
+			return MOVED;
+		}
+		startCheck();
+		return MOVED;
+	}
+
+	void Settings::startApply(int i)
+	{
+		unlink((runDir + "/update-status").c_str());
+		ustatus = "starting";
+		applying = true;
+		nextStatus2 = now + 500;
+		spawn(updateTool.c_str(), "apply", pkgs[i].path.c_str());
+	}
+
+	std::string Settings::updateState() const
+	{
+		std::string tag, act;
+		std::string row = onlineRow(tag, act);
+		return "row \"" + row + "\" tag \"" + tag + "\" act \"" + act + "\" state " + (online.state.empty() ? "-" : online.state) +
+			" latest " + (online.latest.empty() ? "-" : online.latest) + " dl \"" + dlLine + "\" packages " + std::to_string(pkgs.size()) +
+			" status \"" + ustatus + "\" message \"" + message + "\"";
 	}
 
 	// ---- Screen colours (#N3) --------------------------------------------------------------------------------------
@@ -2582,27 +2824,34 @@ namespace banana
 
 	Settings::Result Settings::pressUpdates(Key k)
 	{
-		int n = (int)pkgs.size();
+		int n = 1 + (int)pkgs.size();	// the online row, then the packages on the card
 		switch (k)
 		{
 		case Key::UP: case Key::DOWN:
-			if (!n || applying) return NONE;
+			if (applying) return NONE;
 			usel = (usel + (k == Key::UP ? -1 : 1) + n) % n;
 			armed = -1;
+			if (usel < utop) utop = usel;
+			if (usel >= utop + ROWS) utop = usel - ROWS + 1;
 			return MOVED;
 		case Key::A: case Key::RIGHT:
+		{
 			if (updated) return REBOOT;			// "Restart": the new version runs from the next boot
-			if (!n || applying) return NONE;
-			if (armed != 1000 + usel) { armed = 1000 + usel; return MOVED; }	// A again to go ahead
+			if (applying) return NONE;
+			if (usel == 0) return pressOnline();
+			int i = usel - 1;
+			if (armed != 1000 + i) { armed = 1000 + i; return MOVED; }	// A again to go ahead
 			armed = -1;
-			unlink("/run/banana/update-status");
-			ustatus = "starting";
-			applying = true;
-			nextStatus2 = now + 500;
-			spawn("/usr/libexec/banana/update", "apply", pkgs[usel].path.c_str());
+			startApply(i);
+			return MOVED;
+		}
+		case Key::X:
+			// asks GitHub again (a version found, or a download that failed: is there a newer one?)
+			if (applying || downloading || checkJob.running() || usel != 0) return NONE;
+			startCheck();
 			return MOVED;
 		case Key::B: case Key::LEFT:
-			if (applying) return NONE;			// not while a slot is being written
+			if (applying) return NONE;			// not while a slot is being written (a download goes on)
 			page = LIST; armed = -1; message.clear();
 			return MOVED;
 		case Key::START:
@@ -2615,6 +2864,9 @@ namespace banana
 	void Settings::renderUpdates()
 	{
 		SPal p = pal(light);
+		const std::string& bd = board.empty() ? online.board : board;	// (/etc/banana/board, or the check's)
+		const std::string handheld = bd == "rgds-plus" ? "RG DS Plus" : bd == "rgds" ? "RG DS" : "handheld";
+		auto mb = [](long long b) { return std::to_string((b + 524288) / 1048576); };
 		be->beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
@@ -2623,13 +2875,44 @@ namespace banana
 		text("Update", true, 30, 170, 88, p.ink);
 		std::string st = applying ? "Writing the update: " + ustatus : updated ? "Written: restart to run it" : ustatus.compare(0, 6, "failed") == 0 ? "Failed" : "Running " + (version.empty() ? std::string("dev") : version) + (slot.empty() ? "" : ", slot " + slot);
 		text(fit(st, true, 22, 420), true, 22, 170, 130, p.accent);
-		std::string help;
+		// what the last check found
+		std::string found;
+		if (!applying && !updated)
+		{
+			if (onlineNewer()) found = online.pre ? "Newest for the " + handheld + ": " + online.latest + " (a test version)" : "Newest for the " + handheld + ": " + online.latest;
+			else if (online.state == "current") found = "Up to date: " + online.latest + " is the newest for the " + handheld;
+			else if (online.state == "none") found = "No release for the " + handheld + " yet";
+			else if (online.state == "error") found = "The check failed";
+		}
+		if (!found.empty()) text(fit(found, false, 20, 540), false, 20, 50, 176, p.ink);
+		std::string help, notes;
+		bool failedDl = !downloading && dlLine.compare(0, 8, "failed: ") == 0;
 		if (applying) help = "The new version is being written to the other slot and checked; this one isn't touched. Don't turn the handheld off. It takes a minute or two.";
 		else if (updated) help = "The new version is in the other slot and will run from the next restart. A restarts now. If it ever fails to start, Previous version brings this one back.";
 		else if (ustatus.compare(0, 6, "failed") == 0) help = "The update wasn't applied: " + ustatus.substr(8) + ". This version is untouched.";
+		else if (usel == 0)
+		{
+			if (checkJob.running()) help = "Asking GitHub which version is the newest for this handheld...";
+			else if (downloading && dlLine == "verifying") help = "Checking the download against the release's SHA-256...";
+			else if (downloading) help = "Downloading to banana/updates on the card. B goes back and the download carries on (this page shows how far it is); A cancels it, and the next Download carries on from where it stopped.";
+			else if (failedDl) help = "The download failed: " + dlLine.substr(8) + ".";
+			else if (!message.empty()) help = message;
+			else if (online.state == "error") help = "The check failed: " + online.error + ".";
+			else if (onlineNewer() && onlinePkg() >= 0) help = "Downloaded and checked against the release's SHA-256. A, then A again, writes it to the other slot; this version stays as it is until the restart.";
+			else if (onlineNewer())
+			{
+				help = "A downloads it (" + mb(online.size) + " MB) to banana/updates on the card and checks it; nothing is installed until you choose Install. X checks again.";
+				notes = online.notes;
+			}
+			else if (online.state == "current") help = "This handheld has the newest version. A checks again.";
+			else if (online.state == "none") help = "GitHub has no release for this handheld. With Settings > System > Test versions left out, only stable versions count, and there are none yet.";
+			else help = "A asks GitHub (Wi-Fi needed) whether a newer version is out for this handheld. Nothing is downloaded until you choose Download.";
+		}
 		else if (pkgs.empty()) help = "No update packages found. Put a banana-" + (board.empty() ? std::string("<board>") : board) + "-<version>.update.tar from a release in banana/updates on the card (File sharing can copy it over Wi-Fi), then come back here.";
 		else help = "A on a package writes it to the other slot and checks it; the running version stays until the restart. Packages are in banana/updates on the card.";
-		wrapped(help, 20, 50, 196, 540, 7, p.muted);
+		float hy = found.empty() ? 196 : 214;
+		wrapped(help, 20, 50, hy, 540, notes.empty() ? 7 : 4, p.muted);
+		if (!notes.empty()) wrapped(notes, 18, 50, hy + 4 * 28 + 6, 540, 4, p.ink);
 		be->endScreen();
 
 		be->beginScreen(1);
@@ -2639,22 +2922,33 @@ namespace banana
 		std::string count = std::to_string(pkgs.size()) + (pkgs.size() == 1 ? " package" : " packages");
 		float cw = text(count, true, 17, 0, 0, p.muted, false, 0, true);
 		text(count, true, 17, 602 - cw, 31, p.muted);
-		for (int r = 0; r < ROWS && r < (int)pkgs.size(); r++)
+		std::string otag, oact;
+		std::string orow = onlineRow(otag, oact);
+		for (int r = 0; r < ROWS && utop + r < 1 + (int)pkgs.size(); r++)
 		{
-			const Pkg& k = pkgs[r];
-			bool on = r == usel;
+			int i = utop + r;
+			bool on = i == usel;
 			float y = 82 + r * 64;
 			box(on ? "pick" : "slot", on, 18, y, 604, 56);
 			Color c = on ? p.onPick : p.muted;
-			text(fit("Banana " + k.version, true, 20, 330), true, 20, 38, y + 16, c);
-			std::string tag = armed == 1000 + r ? "Press A again" : (k.board == board || board.empty() || k.board == "universal" ? (k.board == "universal" ? std::string("for both handhelds") : "for the " + k.board) : "not for this handheld");
-			float tw = text(tag, true, 17, 0, 0, c, false, 0, true);
-			text(tag, true, 17, 586 - tw, y + 18, armed == 1000 + r ? (on ? p.onPickAccent : p.accent) : c);
+			std::string name, tag;
+			bool hot;
+			if (i == 0) { name = orow; tag = otag; hot = armed == 2000 || downloading; }
+			else
+			{
+				const Pkg& k = pkgs[i - 1];
+				name = "Banana " + k.version;
+				hot = armed == 1000 + i - 1;
+				tag = hot ? "Press A again" : (k.board == board || board.empty() || k.board == "universal" ? (k.board == "universal" ? std::string("for both handhelds") : "for the " + k.board) : "not for this handheld");
+			}
+			float tw = tag.empty() ? 0 : text(tag, true, 17, 0, 0, c, false, 0, true);
+			text(fit(name, true, 20, 560 - tw - 24), true, 20, 38, y + 16, c);
+			if (!tag.empty()) text(tag, true, 17, 586 - tw, y + 18, hot ? (on ? p.onPickAccent : p.accent) : c);
 		}
-		if (pkgs.empty()) text("Nothing in banana/updates on the card.", true, 20, 38, 98, p.muted);
+		if (pkgs.empty() && utop == 0) text("Nothing in banana/updates on the card.", true, 20, 38, 162, p.muted);
 		float bw = faceWidth("B", "Back");
 		if (!applying) face("B", "Back", 18, bw);
-		std::string act = updated ? "Restart" : applying || pkgs.empty() ? "" : armed == 1000 + usel ? "Confirm" : "Update";
+		std::string act = updated ? "Restart" : applying ? "" : usel == 0 ? oact : armed == 1000 + usel - 1 ? "Confirm" : "Update";
 		if (!act.empty())
 		{
 			float aw = faceWidth("A", act);

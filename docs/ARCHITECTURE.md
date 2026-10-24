@@ -29,6 +29,19 @@ restart away from the one before it. Each update is a line in `banana/logs/updat
 is retuned by `banana-panel-tune` on its first boot. `tools/qemu-boot.sh` applies an update in the VM and boots
 the other slot, reading `extlinux.conf` as U-Boot does.
 
+Over the air (#69): the Update page's first row asks GitHub. `update check` reads the release list
+(`api.github.com/repos/JorreFog/BananaLinux/releases`, with `curl` and the image's CA certificates), keeps the newest
+release that has this board's `banana-<board>-<version>.update.tar` and `SHA256SUMS-<board>.txt` (drafts never;
+pre-releases only with Settings > System > Test versions, on by default since every release so far is one) and
+writes the answer to `banana/updates/.check`. GitHub allows 60 unauthenticated requests an hour per address, so the
+list is fetched at most once in 5 minutes (`.feed.json`, asked for again with its ETag). `update download` runs on
+its own (the page polls `/run/banana/update-download`, B leaves it running, A cancels): it checks the card has room
+for the package twice over (apply unpacks it beside itself), fetches the SHA256SUMS first, downloads into
+`banana/updates/.partial` (`curl -C -` carries on from a cancelled or broken download), checks the SHA-256 and only
+then moves the package into `banana/updates/`, where `update apply` installs it as any copied package. With Settings >
+System > Update check on Daily, the Wi-Fi script runs `update check --daily` when it connects (once a day at most;
+nothing is downloaded). `ui/tests/ota.sh` runs all of it against a stand-in server.
+
 ## Boot
 
 1. The boot ROM loads U-Boot from sector 64. U-Boot is built with no boot delay, no environment and only the SD card

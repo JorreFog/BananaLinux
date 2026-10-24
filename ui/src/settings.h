@@ -218,9 +218,40 @@ namespace banana
 		double nextStatus2 = 0;
 		std::string slot, version, board;
 		void openUpdates();
+		void listPkgs();
 		void pollUpdate();
+		void startApply(int pkg);
 		Result pressUpdates(Key k);
 		void renderUpdates();
+		// over the air (#69): the update script's check (the newest release on GitHub for this board, its answer kept
+		// in banana/updates/.check) and its download (a process of its own, which goes on when the page is left: its
+		// line in /run/banana/update-download, polled). The page's first row is the online one, the packages follow.
+		struct Online
+		{
+			std::string state, lastState, current, latest, file, notes, error, board, preSetting;
+			bool pre = false;
+			long long size = 0, checked = 0;
+		};
+		Online online;
+		wifi::Job checkJob;
+		std::string dlLine;				// "downloading <bytes> <total>", "verifying", "ready <package>", "failed: ..."
+		bool downloading = false;
+		double dlStarted = 0, nextDl = 0;
+		int utop = 0;					// the page's first row shown
+		std::string updateTool, runDir, updatesDir;
+		void readOnline();
+		void pollDownload();
+		void startCheck();
+		bool checkDone();				// the check's answer taken (true when there was one)
+		void startDownload();
+		bool onlineNewer() const;		// the last check found a newer version for this board
+		int onlinePkg() const;			// that version's package among pkgs (downloaded), or -1
+		long long partialBytes() const;	// how much of it an unfinished download left in banana/updates/.partial
+		std::string onlineRow(std::string& tag, std::string& act) const;
+		Result pressOnline();
+	public:
+		std::string updateState() const;	// the page as text (the headless test's "upstate")
+	private:
 
 		// Bluetooth (Settings > Network > Bluetooth devices): the devices known and found, paired, connected, through
 		// the bluetooth script (BANANA_BLUETOOTH: the test's stand-in)

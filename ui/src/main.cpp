@@ -479,6 +479,9 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		if (op == "home") { int s = 0; cs >> s; ui.setHome(s); }
 		else if (op == "lib") { int s = 0, g = 0; cs >> s >> g; lib.openLibrary(s); ui.setLibrary(s, g); }
 		else if (op == "wait") { double ms = 0; cs >> ms; now += ms; }
+		// sleep <ms>: as wait, but the time really passes (a helper process working meanwhile: the update download)
+		else if (op == "sleep") { double ms = 0; cs >> ms; usleep((useconds_t)(ms * 1000)); now += ms; settings.update(now); }
+		else if (op == "upstate") { settings.update(now); logf("upstate: %s", settings.updateState().c_str()); }
 		else if (op == "battery")
 		{
 			// battery <percent> [charging]: what /sys would say from now on
