@@ -751,3 +751,9 @@ settings		A again: the game, saves and art	再按 A：删除游戏、存档和�
 settings		Delete...	删除…
 settings		The game couldn't be deleted: the card may be read-only.	无法删除游戏：存储卡可能为只读。
 settings		Removes this game's file from the card: %s. Left and right choose whether its saves, save states and box art go too, or stay (they come back if you copy the game again). Nothing else is touched: no other game, no BIOS. A asks first; A again deletes.	从存储卡删除此游戏的文件：%s。左右键选择是否一并删除其存档、即时存档和封面，或保留它们（再次复制该游戏时会恢复）。不会动其他任何内容：其他游戏和 BIOS 均不受影响。按 A 先确认，再按 A 删除。
+settings		Shown systems	显示的系统
+settings		Which systems are on the home row. Each one: with games (when it has something to start), hidden, or always (with nothing in it too: Ports for PortMaster).	主屏一行中显示哪些系统。每个系统可选：有游戏时（其中有可启动的内容时显示）、隐藏，或始终显示（即使为空也显示：例如用于 PortMaster 的 Ports）。
+settings		With games	有游戏时
+settings		Hidden	隐藏
+settings		Always	始终
+settings		With games: on the home row while there is something in it to start. Hidden: never. Always: with nothing in it too (Ports: for PortMaster, which gets ports).	有游戏时：其中有可启动的内容时显示在主屏。隐藏：从不显示。始终：即使为空也显示（Ports：用于获取移植游戏的 PortMaster）。

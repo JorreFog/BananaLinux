@@ -33,6 +33,11 @@ namespace banana
 		void setFontDir(const std::string& dir) { fontDir = dir; }
 		void open();
 		void openPower();	// the Power list (Sleep, Restart, Shut down): Y on the groups
+		void openSection(const std::string& section);	// a list with no tile (Shown systems)
+		// the systems for Shown systems (id, name): settings.conf's shelf.<id>; a change there is SHELVES
+		void setSystems(const std::vector<std::pair<std::string, std::string>>& systems);
+		std::vector<std::pair<std::string, std::string>> shelfSystems;
+		void addShelfRows();
 		void close() { mOpen = false; page = LIST; wizard = false; }
 		void setup() { mOpen = true; openSetup(); }	// the first-time setup, from the host
 		bool isOpen() const { return mOpen; }
@@ -58,7 +63,7 @@ namespace banana
 		bool takeLibraryChanged() { bool r = libChanged; libChanged = false; return r; }
 
 		// what the host has to do after an input
-		enum Result { NONE, MOVED, CHANGED, CLOSED, THEME, REBOOT, POWEROFF, SEARCH, TITLES, LANGUAGE, DELETED };
+		enum Result { NONE, MOVED, CHANGED, CLOSED, THEME, REBOOT, POWEROFF, SEARCH, TITLES, LANGUAGE, DELETED, SHELVES };
 		// DELETED: the game page's Delete game removed the ROM (deletedFiles says what went): the library read again
 		// SELECT in the menu: the keyboard alone, for a search of the games; SEARCH when it is done, with the text in
 		// searchText (empty: the search taken away)

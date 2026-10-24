@@ -504,6 +504,26 @@ template <class U> static void afterDelete(Host& lib, U& ui, const std::vector<s
 	ui.setHome(0);
 }
 
+// the systems for Settings > Display & sound > Shown systems (id, name), from systems.conf
+static std::vector<std::pair<std::string, std::string>> shelfSystems(const Host& lib)
+{
+	std::vector<std::pair<std::string, std::string>> r;
+	for (auto& d : lib.systemDefs()) r.push_back({ d.id, d.name });
+	return r;
+}
+
+// a change in Shown systems (Settings::SHELVES): the home row read again, on the same system when it is still there
+template <class U> static void afterShelves(Host& lib, U& ui)
+{
+	std::string id = lib.systemCount() ? lib.shelf(ui.systemIndex()).def.id : "";
+	lib.scan();
+	ui.dataChanged();
+	int at = 0;
+	for (int i = 0; i < lib.systemCount(); i++) if (lib.shelf(i).def.id == id) at = i;
+	ui.setHome(at);
+	logf("shown systems: %d on the home row", lib.systemCount());
+}
+
 static int runHeadless(const Options& o, Host& lib, const std::string& variant, const std::string& theme)
 {
 	SoftBackend be(o.w, o.h);
@@ -525,6 +545,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	};
 	ui.setHome(0);
 	Settings settings(&be, o.assets, o.data, o.h / 480.0f, variant);
+	settings.setSystems(shelfSystems(lib));
 	settings.setSync(true);
 	settings.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
 	LowBattery low;
@@ -583,6 +604,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 					logf("titles %s: \"%s\" / \"%s\"", settings.gameKey.c_str(), settings.gameName.c_str(), settings.gameSort.c_str());
 				}
 				if (r == Settings::DELETED) afterDelete(lib, ui, settings.deletedFiles);
+				if (r == Settings::SHELVES) afterShelves(lib, ui);
 				if (r == Settings::SEARCH)
 				{
 					lib.setSearch(settings.searchText);
@@ -1305,6 +1327,7 @@ int main(int argc, char** argv)
 	int lastMinute = -1;
 	float scale = disp.height() / 480.0f;
 	Settings settingsView(&be, o.assets, o.data, scale, variant);
+	settingsView.setSystems(shelfSystems(lib));
 	pkmn::Companion companion;	// the game panel's Pokémon companion (pokemon.h), for the game running
 	settingsView.setColors = [&](const ScreenColors& c) { std::string e = disp.setColors(c); if (!e.empty()) logf("screen colours: %s", e.c_str()); return e; };
 	settingsView.setFontDir(o.banana + "/fonts");
@@ -1393,6 +1416,7 @@ int main(int argc, char** argv)
 			sound.play("select");
 			break;
 		}
+		case Settings::SHELVES: afterShelves(lib, *ui); roms.watch(lib.watchDirs()); break;
 		case Settings::DELETED:
 		{
 			afterDelete(lib, *ui, settingsView.deletedFiles);

@@ -398,6 +398,7 @@ namespace banana
 		add(D, "music", "Menu sounds", "The menu's clicks, and the cartridge going into the console.", menu, "sounds", { "On", "Off" }, { "on", "off" });
 		add(D, "picture", "Battery", "The battery on the top screen: its icon, or its icon and how full it is.", menu, "battery", { "Icon", "Icon and %" }, { "icon", "percent" });
 		add(D, "picture", "Clock", "How the time on the top screen is written.", menu, "clock", { "24-hour", "12-hour" }, { "24h", "12h" });
+		add(D, "picture", "Shown systems", "Which systems are on the home row. Each one: with games (when it has something to start), hidden, or always (with nothing in it too: Ports for PortMaster).", "", "shelves", {}, {}, Item::PAGE);
 		add(D, "picture", "Boot animation", "The bananas and the cartridge while Banana starts, and backwards when it shuts down. Off goes straight to the menu once it is ready, and straight to black.", menu, "splash", { "On", "Off" }, { "on", "off" });
 		const char* P = "Sleep & power";
 		add(P, "moon", "Sleep when idle", "In the menu, after this long with no button pressed. Never while a game is running.", power, "autosleep_minutes",
@@ -558,6 +559,7 @@ namespace banana
 		add(PW, "moon", "Sleep", "The handheld sleeps, as with a press of the power button; a game running is paused. Press the power button to wake it.", "", "sleep", { "" }, { "" }, Item::ACTION);
 		add(PW, "gear", "Restart", "Restarts the handheld. Press A twice.", "", "reboot", { "" }, { "" }, Item::ACTION);
 		add(PW, "gear", "Shut down", "Turns the handheld off. Press A twice. (Or hold the power button.)", "", "poweroff", { "" }, { "" }, Item::ACTION);
+		addShelfRows();
 	}
 
 	void Settings::load(Item& it)
@@ -843,6 +845,7 @@ namespace banana
 			if (it.key == "share_account") { startEntry(ENTRY_SMB_USER, "File sharing", "Name", LIST, shareUser()); return MOVED; }
 			if (it.key == "ds_name") { startEntry(ENTRY_DS_NAME, "The DS's name", "10 characters at most", LIST, dsName()); return MOVED; }
 			if (it.key == "bt_devices") { openBluetooth(); return MOVED; }
+			if (it.key == "shelves") { openSection("Shown systems"); return MOVED; }
 			if (it.key == "update") openUpdates(); else if (it.key == "setup") openSetup(); else openNetworks();
 			return MOVED;
 		}
@@ -923,6 +926,7 @@ namespace banana
 			return CHANGED;
 		}
 		if (it.key == "language") return LANGUAGE;	// (saved above; the menu starts again in it)
+		if (it.key.compare(0, 6, "shelf.") == 0) return SHELVES;	// (the home row read again)
 		if (it.key == "theme")
 		{
 			setVariant(it.values[at]);
@@ -1036,13 +1040,56 @@ namespace banana
 		}
 		case Key::LEFT: return change(-1);
 		case Key::RIGHT: case Key::A: return change(1);
-		case Key::B: inGroups = true; gsel = g < gridCount() ? g : 0; armed = -1; return MOVED;	// back to the groups
+		case Key::B:
+			if (groups[g] == "Shown systems") { for (size_t i = 0; i < items.size(); i++) if (items[i].key == "shelves") sel = (int)i; top = std::max(groupStart(groupOf(sel)), sel - ROWS + 1); armed = -1; return MOVED; }
+			inGroups = true; gsel = g < gridCount() ? g : 0; armed = -1; return MOVED;	// back to the groups
 		case Key::START: mOpen = false; return CLOSED;
 		default: return NONE;
 		}
 	}
 
-	int Settings::gridCount() const { return std::max(1, std::min(6, (int)groups.size() - (powerGroup() >= 0 ? 1 : 0))); }
+	// the sections with no tile on the groups' grid (after the others): Power (Y there), Shown systems (a row's page)
+	static bool tileless(const std::string& section) { return section == "Power" || section == "Shown systems"; }
+	int Settings::gridCount() const
+	{
+		int n = 0;
+		for (auto& g : groups) if (!tileless(g)) n++;
+		return std::max(1, std::min(6, n));
+	}
+	void Settings::openSection(const std::string& section)
+	{
+		if (!mOpen) open();
+		for (int g = 0; g < (int)groups.size(); g++)
+			if (groups[g] == section)
+			{
+				inGroups = false;
+				sel = top = groupStart(g);
+				armed = -1;
+				page = LIST;
+			}
+	}
+	void Settings::setSystems(const std::vector<std::pair<std::string, std::string>>& systems)
+	{
+		shelfSystems = systems;
+		addShelfRows();
+		groups.clear();
+		for (auto& it : items) if (std::find(groups.begin(), groups.end(), it.section) == groups.end()) groups.push_back(it.section);
+		if (sel >= (int)items.size()) sel = 0;
+	}
+	void Settings::addShelfRows()
+	{
+		// one row a system, after everything else (its own section, opened from Display & sound's Shown systems)
+		items.erase(std::remove_if(items.begin(), items.end(), [](const Item& it) { return it.section == "Shown systems"; }), items.end());
+		for (auto& sy : shelfSystems)
+		{
+			Item it;
+			it.section = "Shown systems"; it.icon = "picture"; it.label = sy.second; it.file = data + "/settings.conf"; it.key = "shelf." + sy.first;
+			it.help = "With games: on the home row while there is something in it to start. Hidden: never. Always: with nothing in it too (Ports: for PortMaster, which gets ports).";
+			it.names = { "With games", "Hidden", "Always" }; it.values = { "auto", "hide", "show" };
+			items.push_back(it);
+			load(items.back());
+		}
+	}
 	int Settings::powerGroup() const
 	{
 		for (int g = 0; g < (int)groups.size(); g++) if (groups[g] == "Power") return g;
