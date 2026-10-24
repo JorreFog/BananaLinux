@@ -1,0 +1,281 @@
+{
+  // Hillside: a 2000s desktop, made only from this file's shapes and text (no pictures of its own). The bottom screen
+  // is the desktop: the systems are its icons, a taskbar along the bottom. The top screen is a window about what is
+  // selected. A system opens as a folder window of its games; a game starts behind a progress dialog.
+  "name": "Hillside",
+  "author": "BananaOS",
+  "base": "light",
+  "accent": "#316ac5",
+  "colors": { "screenBg": "#ece9d8", "ink": "#000000", "muted": "#444444" },
+  "font": "inter",
+
+  "vars": {
+    "selBlue": "#316ac5",
+    "beige": "#ece9d8",
+    "frame": "#0831d9",
+    "titleFont": "inter-bold"
+  },
+
+  "input": {
+    "home": { "up": "prev", "down": "next", "left": "prev", "right": "next" },
+    "library": { "left": "prev", "right": "next", "up": "prev:4", "down": "next:4" }
+  },
+  "hints": {
+    "home": [["A", "Open"], ["X", "Resume"], ["Y", "Favorite"]],
+    "library": [["A", "Play"], ["B", "Back"], ["Y", "Favorite"]]
+  },
+  "behavior": { "launchMs": 1600, "scrollMs": 60, "cues": { "insert": 1400 } },
+
+  "components": {
+    // a soft cloud: overlapping pills, their edges blurred by a white shadow
+    "cloud": {
+      "type": "group", "w": 160, "h": 60,
+      "children": [
+        { "type": "rect", "x": 0, "y": 26, "w": 160, "h": 30, "radius": "50%", "fill": "#ffffffd0", "shadow": { "blur": 8, "color": "#ffffff80" } },
+        { "type": "rect", "x": 28, "y": 10, "w": 60, "h": 40, "radius": "50%", "fill": "#ffffffe8", "shadow": { "blur": 8, "color": "#ffffff70" } },
+        { "type": "rect", "x": 70, "y": 2, "w": 56, "h": 46, "radius": "50%", "fill": "#ffffff", "shadow": { "blur": 10, "color": "#ffffff70" } },
+        { "type": "rect", "x": 20, "y": 40, "w": 130, "h": 16, "radius": "50%", "fill": "#c9d8f0b0" }
+      ]
+    },
+
+    // the wallpaper: a blue sky with clouds over a green hill
+    "wallpaper": {
+      "type": "group",
+      "children": [
+        { "type": "rect", "gradient": { "angle": 180, "stops": [ "#1f56d0", "#3f7ce6 45%", "#9cc3f2 72%" ] } },
+        { "use": "cloud", "x": 430, "y": 10, "scale": 1.3 },
+        { "use": "cloud", "x": 250, "y": 40, "scale": 0.7, "opacity": 0.8 },
+        { "use": "cloud", "x": 120, "y": 90, "scale": 0.5, "opacity": 0.7 },
+        { "use": "cloud", "x": 360, "y": 140, "scale": 1.1 },
+        { "use": "cloud", "x": 520, "y": 120, "scale": 0.8 },
+        { "use": "cloud", "x": 300, "y": 230, "scale": 1.6, "opacity": 0.85 },
+        { "use": "cloud", "x": 60, "y": 230, "scale": 0.6, "opacity": 0.6 },
+        // far hills on the right
+        { "type": "rect", "x": 560, "y": 268, "w": 160, "h": 40, "radius": "50%", "fill": "#6f87b0" },
+        { "type": "rect", "x": 600, "y": 262, "w": 80, "h": 30, "radius": "50%", "fill": "#7b92b8" },
+        // the hill: the top of a very large circle (an ellipse would fit better)
+        { "type": "rect", "x": -560, "y": 255, "w": 1500, "h": 1500, "radius": "50%",
+          "gradient": { "angle": 180, "stops": [ "#6ec43a", "#45a51e 12%", "#2e8a12 30%" ] } },
+        // the shade across its slope and the field in front
+        { "type": "rect", "x": 140, "y": 330, "w": 900, "h": 400, "radius": "50%", "fill": "#1f6b0c55", "shadow": { "blur": 30, "color": "#1f6b0c40" } },
+        { "type": "rect", "x": -200, "y": 385, "w": 1200, "h": 300, "radius": "50%",
+          "gradient": { "angle": 180, "stops": [ "#3f9c1c", "#5cb22c 30%", "#4a9e22" ] } }
+      ]
+    },
+
+    // the taskbar along the bottom: the start button, a task, the tray with the battery and the clock
+    "taskbar": {
+      "type": "group", "x": 0, "y": 450, "w": "100%", "h": 30,
+      "children": [
+        { "type": "rect", "gradient": { "angle": 180, "stops": [ "#3d8af7", "#245edb 12%", "#2257d6 80%", "#1941a5" ] } },
+        { "type": "group", "x": 0, "y": 0, "w": 98, "h": 30, "radius": [0, 14, 14, 0], "onTap": "b",
+          "gradient": { "angle": 180, "stops": [ "#5dbd5d", "#3c9a3c 20%", "#2f8a2f 85%", "#246d24" ] },
+          "shadow": { "x": 1, "y": 0, "blur": 2, "color": "#00000060" },
+          "children": [
+            { "type": "rect", "x": 10, "y": 7, "w": 16, "h": 16, "radius": "50%", "fill": "#ffd400", "border": 1.5, "borderColor": "#8a6d00" },
+            { "type": "text", "x": 32, "y": 4, "text": "start", "font": "inter-bold", "size": 17, "color": "#ffffff",
+              "shadow": { "x": 1, "y": 1, "color": "#00000080" } }
+          ] },
+        // the open folder's button (in a library)
+        { "type": "group", "x": 106, "y": 3, "w": 160, "h": 24, "radius": 3, "visible": "=view != 'home'",
+          "fill": "#1e4fbf", "border": 1, "borderColor": "#163f9c",
+          "children": [
+            { "type": "rect", "x": 6, "y": 6, "w": 14, "h": 11, "radius": 1, "fill": "#f6d36b", "border": 1, "borderColor": "#b99027" },
+            { "type": "text", "x": 26, "y": 4, "w": 128, "text": "{sys.name}", "size": 12, "color": "#ffffff" }
+          ] },
+        { "type": "group", "right": 0, "y": 0, "w": 132, "h": 30,
+          "gradient": { "angle": 180, "stops": [ "#16a0f5", "#0f8fea 20%", "#0c84de" ] },
+          "border": 1, "borderColor": "#0b5bbf",
+          "children": [
+            { "type": "rect", "x": 10, "y": 10, "w": 18, "h": 10, "radius": 2, "border": 1.5, "borderColor": "#ffffff", "visible": "=battery >= 0" },
+            { "type": "rect", "x": 12, "y": 12, "w": "=14 * battery / 100", "h": 6, "fill": "=battery < 20 ? '#ff5050' : '#ffffff'", "visible": "=battery >= 0" },
+            { "type": "rect", "x": 34, "y": 11, "w": 8, "h": 8, "radius": "50%", "fill": "=online ? '#7cff6b' : '#9ab7e0'" },
+            { "type": "text", "right": 10, "y": 7, "w": 80, "align": "right", "text": "{clock}", "size": 12, "color": "#ffffff" }
+          ] }
+      ]
+    },
+
+    // a window's frame: the blue title bar (its text in "title"), its three buttons, the border and a beige menu bar
+    "window": {
+      "type": "group",
+      "children": [
+        { "type": "rect", "radius": [8, 8, 0, 0], "fill": "=frame", "shadow": { "x": 3, "y": 4, "blur": 8, "color": "#00000060" } },
+        { "type": "rect", "x": 0, "y": 0, "w": "100%", "h": 28, "radius": [8, 8, 0, 0],
+          "gradient": { "angle": 180, "stops": [ "#3d95ff", "#0a5fe8 15%", "#0055e5 50%", "#0a5ae8 85%", "#0846c4" ] } },
+        { "type": "text", "x": 10, "y": 5, "w": "=w0 - 110", "text": "{title}", "font": "=titleFont", "size": 14, "color": "#ffffff",
+          "shadow": { "x": 1, "y": 1, "color": "#0a246a" } },
+        { "type": "rect", "right": 54, "y": 4, "w": 21, "h": 21, "radius": 3, "fill": "#2f6ff0", "border": 1, "borderColor": "#ffffff" },
+        { "type": "rect", "right": 60, "y": 17, "w": 8, "h": 2, "fill": "#ffffff" },
+        { "type": "rect", "right": 30, "y": 4, "w": 21, "h": 21, "radius": 3, "fill": "#2f6ff0", "border": 1, "borderColor": "#ffffff" },
+        { "type": "rect", "right": 35, "y": 9, "w": 11, "h": 10, "border": 2, "borderColor": "#ffffff" },
+        { "type": "group", "right": 6, "y": 4, "w": 21, "h": 21, "radius": 3, "fill": "#e2512f", "border": 1, "borderColor": "#ffffff", "onTap": "b",
+          "children": [ { "type": "text", "x": 0, "w": 21, "y": 1, "align": "center", "text": "×", "font": "inter-bold", "size": 16, "color": "#ffffff" } ] },
+        { "type": "rect", "x": 3, "y": 28, "right": 3, "bottom": 3, "fill": "=beige" },
+        { "type": "text", "x": 10, "y": 32, "text": "File    Edit    View    Favorites    Tools    Help", "size": 11, "color": "#000000", "visible": "=!dialog" },
+        { "type": "rect", "x": 3, "y": 49, "right": 3, "h": 1, "fill": "#c4c1b0", "visible": "=!dialog" }
+      ]
+    },
+
+    // a window's status bar: the buttons and what they do
+    "statusbar": {
+      "type": "group", "h": 22,
+      "children": [
+        { "type": "rect", "fill": "=beige" },
+        { "type": "rect", "h": 1, "fill": "#c4c1b0" },
+        { "type": "list", "source": "hints", "direction": "row", "flow": true, "gap": 16, "scrollMode": "none", "x": 8, "y": 3, "w": "100%", "h": 16,
+          "item": { "type": "group", "layout": "row", "gap": 5, "align": "center", "h": 16, "children": [
+            { "type": "group", "layout": "row", "padding": 2, "h": 16, "fill": "#ffffff", "radius": 3, "border": 1, "borderColor": "#7f9db9",
+              "children": [ { "type": "text", "y": -1, "text": "{item.key}", "font": "inter-bold", "size": 10, "color": "#000000" } ] },
+            { "type": "text", "text": "{item.label}", "size": 11, "color": "#000000" } ] } }
+      ]
+    },
+
+    // the folder pane down a window's left side
+    "tasks": {
+      "type": "group", "w": 150,
+      "gradient": { "angle": 180, "stops": [ "#7ba2e7", "#6375d6" ] },
+      "children": [
+        { "type": "group", "x": 10, "y": 10, "w": 130, "h": 110, "radius": [6, 6, 0, 0], "fill": "#d6dff7",
+          "children": [
+            { "type": "rect", "x": 0, "y": 0, "w": 130, "h": 24, "radius": [6, 6, 0, 0], "gradient": { "angle": 90, "stops": [ "#ffffff", "#c6d3f7" ] } },
+            { "type": "text", "x": 10, "y": 5, "text": "{heading}", "font": "inter-bold", "size": 11, "color": "#215dc6" },
+            { "type": "text", "x": 10, "y": 32, "w": 115, "text": "{line1}", "size": 11, "color": "#215dc6" },
+            { "type": "text", "x": 10, "y": 52, "w": 115, "text": "{line2}", "size": 11, "color": "#215dc6" },
+            { "type": "text", "x": 10, "y": 72, "w": 115, "text": "{line3}", "size": 11, "color": "#215dc6" }
+          ] }
+      ]
+    },
+
+    // one fact in a window: a grey label over its value
+    "fact": {
+      "type": "group", "layout": "column", "gap": 2, "children": [
+        { "type": "text", "text": "{label}", "size": 11, "color": "#6d6d6d" },
+        { "type": "text", "text": "{value}", "font": "inter-semibold", "size": 15, "color": "#000000" } ]
+    }
+  },
+
+  "screens": {
+    "home": {
+      "top": [
+        { "use": "wallpaper" },
+        { "use": "window", "x": 40, "y": 24, "w": 560, "h": 420, "with": { "title": "{sys.name}", "w0": 560 } },
+        { "use": "tasks", "x": 43, "y": 74, "h": 345,
+          "with": { "heading": "System Tasks", "line1": "=sys.app ? 'Start this app' : 'Open the games'", "line2": "=sys.hasResume ? 'Resume last game' : ''",
+                    "line3": "=sys.fav ? 'Remove from favorites' : 'Add to favorites'" } },
+        { "type": "rect", "x": 193, "y": 74, "w": 404, "h": 345, "fill": "#ffffff" },
+        { "type": "image", "src": "{sys.icon}", "fit": "pixelContain", "x": 213, "y": 92, "w": 96, "h": 96,
+          "scale": "=0.8 + 0.2 * easeOutBack(progress(moved, 260))", "anchor": "top left" },
+        { "type": "text", "x": 330, "y": 100, "w": 250, "text": "{sys.name}", "font": "inter-bold", "size": 22, "color": "#000000", "wrap": true, "maxLines": 2 },
+        { "type": "text", "x": 330, "y": 160, "w": 250, "text": "{sys.maker}", "size": 13, "color": "#555555" },
+        { "type": "rect", "x": 213, "y": 206, "w": 364, "h": 1, "fill": "#d8d8d8" },
+        { "type": "group", "x": 213, "y": 222, "w": 364, "h": 50, "layout": "row", "gap": 30, "children": [
+          { "use": "fact", "with": { "label": "Games", "value": "=sys.app ? 'App' : str(sys.games)" } },
+          { "use": "fact", "with": { "label": "Played", "value": "{sys.played}" } },
+          { "use": "fact", "with": { "label": "Time", "value": "=either(sys.time, '0m')" } } ] },
+        { "type": "group", "x": 213, "y": 296, "w": 364, "h": 100, "visible": "=sys.hasResume", "children": [
+          { "type": "text", "text": "{either(sys.resumeEyebrow, 'Last played')}", "size": 11, "color": "#6d6d6d" },
+          { "type": "image", "src": "{sys.resumeArt}", "fallback": "{sys.icon}", "fit": "contain", "x": 0, "y": 20, "w": 70, "h": 70, "placeholder": "#eeeeee" },
+          { "type": "text", "x": 82, "y": 30, "w": 280, "text": "{sys.resumeTitle}", "font": "inter-semibold", "size": 14, "color": "#000000" },
+          { "type": "text", "x": 82, "y": 52, "w": 280, "text": "Press X to resume", "size": 12, "color": "#215dc6" } ] },
+        { "use": "statusbar", "x": 43, "y": 419, "w": 554 }
+      ],
+      "bottom": [
+        { "use": "wallpaper" },
+        // the desktop icons: the systems, down the left side
+        { "type": "list", "source": "systems", "direction": "column", "x": 6, "y": 6, "w": 110, "h": 440,
+          "itemW": 100, "itemH": 72, "gap": 2, "scrollMode": "edge", "clip": true,
+          "item": {
+            "type": "group", "w": 100, "h": 72,
+            "children": [
+              { "type": "image", "src": "{item.icon}", "fit": "pixelContain", "x": 34, "y": 4, "w": 32, "h": 32, "tint": "=sel ? '#8fa8ff' : '#ffffff'" },
+              { "type": "group", "x": 50, "y": 40, "anchor": "top", "layout": "row", "padding": 2, "fill": "=sel ? selBlue : '#00000000'",
+                "border": "=sel ? 1 : 0", "borderColor": "#9db9eb",
+                "children": [ { "type": "text", "text": "{item.name}", "size": 11, "color": "#ffffff",
+                  "shadow": { "x": 1, "y": 1, "color": "=sel ? '#00000000' : '#000000c0'" } } ] },
+              // a favourite: the shortcut arrow on the icon's corner
+              { "type": "group", "x": 32, "y": 24, "w": 12, "h": 12, "fill": "#ffffff", "border": 1, "borderColor": "#808080", "visible": "=item.fav",
+                "children": [ { "type": "text", "x": 0, "w": 12, "y": -3, "align": "center", "text": "↗", "font": "inter-bold", "size": 11, "color": "#1c3fd0" } ] }
+            ]
+          } },
+        { "use": "taskbar" }
+      ]
+    },
+
+    "library": {
+      "top": [
+        { "use": "wallpaper" },
+        { "use": "window", "x": 40, "y": 24, "w": 560, "h": 420, "with": { "title": "{game.title}", "w0": 560 } },
+        { "use": "tasks", "x": 43, "y": 74, "h": 345,
+          "with": { "heading": "Game Tasks", "line1": "Play this game", "line2": "=game.fav ? 'Remove from favorites' : 'Add to favorites'", "line3": "Back to the desktop" } },
+        { "type": "rect", "x": 193, "y": 74, "w": 404, "h": 345, "fill": "#ffffff" },
+        { "type": "text", "x": 300, "w": 200, "y": 200, "align": "center", "visible": "=empty", "text": "{empty.title}", "font": "inter-semibold", "size": 16, "color": "#000000" },
+        { "type": "text", "x": 230, "w": 340, "y": 228, "align": "center", "visible": "=empty", "text": "{empty.hint}", "size": 12, "color": "#555555", "wrap": true },
+        { "type": "image", "src": "{game.art}", "fallback": "=either(game.romIcon, game.icon, sys.icon)", "fit": "contain", "x": 210, "y": 90, "w": 150, "h": 170,
+          "placeholder": "#eeeeee", "visible": "=!empty", "opacity": "=easeOut(progress(moved, 180))" },
+        { "type": "text", "x": 376, "y": 92, "w": 205, "text": "{game.title}", "font": "inter-bold", "size": 18, "color": "#000000", "wrap": true, "maxLines": 3 },
+        { "type": "text", "x": 376, "y": 170, "w": 205, "text": "{game.sub}", "size": 12, "color": "#555555", "wrap": true, "maxLines": 2 },
+        { "type": "rect", "x": 210, "y": 276, "w": 370, "h": 1, "fill": "#d8d8d8", "visible": "=!empty" },
+        { "type": "group", "x": 210, "y": 290, "w": 370, "h": 50, "layout": "row", "gap": 30, "visible": "=!empty", "children": [
+          { "use": "fact", "with": { "label": "Plays", "value": "=either(game.plays, '0')" } },
+          { "use": "fact", "with": { "label": "Last played", "value": "=either(game.last, 'Never')" } },
+          { "use": "fact", "with": { "label": "Time", "value": "=either(game.time, '0m')" } } ] },
+        { "type": "group", "x": 210, "y": 356, "w": 370, "h": 40, "visible": "=game.achB > 0", "children": [
+          { "type": "text", "text": "{game.achLabel}", "size": 11, "color": "#6d6d6d" },
+          { "type": "rect", "y": 20, "w": 370, "h": 14, "fill": "#ffffff", "border": 1, "borderColor": "#7f9db9", "radius": 2 },
+          { "type": "rect", "x": 2, "y": 22, "w": "=366 * game.achProgress", "h": 10, "fill": "#2fb52f" } ] },
+        { "use": "statusbar", "x": 43, "y": 419, "w": 554 }
+      ],
+      "bottom": [
+        { "use": "wallpaper" },
+        // the system's folder, open over the desktop
+        { "use": "window", "x": 8, "y": 6, "w": 624, "h": 440, "with": { "title": "{sys.name}", "w0": 624 } },
+        { "type": "group", "x": 11, "y": 56, "w": 618, "h": 22, "children": [
+          { "type": "text", "x": 6, "y": 4, "text": "Address", "size": 11, "color": "#555555" },
+          { "type": "group", "x": 58, "y": 1, "w": 552, "h": 19, "fill": "#ffffff", "border": 1, "borderColor": "#7f9db9", "children": [
+            { "type": "text", "x": 6, "y": 2, "w": 540, "text": "C:\\Games\\{sys.name}", "size": 11, "color": "#000000" } ] } ] },
+        { "type": "rect", "x": 11, "y": 80, "w": 618, "h": 342, "fill": "#ffffff" },
+        { "type": "text", "x": 11, "w": 618, "y": 220, "align": "center", "visible": "=empty", "text": "This folder is empty.", "size": 13, "color": "#555555" },
+        { "type": "list", "source": "games", "direction": "grid", "columns": 4, "x": 21, "y": 86, "w": 600, "h": 334,
+          "itemW": 148, "itemH": 108, "gap": 2, "scrollMode": "edge", "clip": true,
+          "item": {
+            "type": "group", "w": 148, "h": 108,
+            "children": [
+              { "type": "image", "src": "{item.art}", "fallback": "=either(item.romIcon, item.icon, sys.icon)", "fit": "contain", "x": 44, "y": 6, "w": 60, "h": 60,
+                "placeholder": "#f0f0f0", "tint": "=sel ? '#9fb4ff' : '#ffffff'" },
+              { "type": "group", "x": 74, "y": 72, "anchor": "top", "layout": "row", "padding": 2, "fill": "=sel ? selBlue : '#00000000'",
+                "children": [ { "type": "text", "text": "=len(item.title) > 22 ? substr(item.title, 0, 21) + '…' : item.title", "size": 11,
+                  "color": "=sel ? '#ffffff' : '#000000'" } ] },
+              { "type": "group", "x": 42, "y": 52, "w": 12, "h": 12, "fill": "#ffffff", "border": 1, "borderColor": "#808080", "visible": "=item.fav",
+                "children": [ { "type": "text", "x": 0, "w": 12, "y": -3, "align": "center", "text": "↗", "font": "inter-bold", "size": 11, "color": "#1c3fd0" } ] }
+            ]
+          } },
+        { "type": "group", "x": 11, "y": 422, "w": 618, "h": 21, "children": [
+          { "type": "rect", "fill": "=beige" },
+          { "type": "text", "x": 8, "y": 4, "text": "{count} objects", "size": 11, "color": "#000000" },
+          { "type": "text", "right": 8, "y": 4, "w": 200, "align": "right", "text": "{cursor + 1} of {count}", "size": 11, "color": "#000000", "visible": "=!empty" } ] },
+        { "use": "taskbar" }
+      ]
+    },
+
+    "launch": {
+      "bottom": [
+        { "use": "wallpaper" },
+        { "use": "taskbar" },
+        // the progress dialog
+        { "type": "group", "w": 400, "h": 150,
+          "scale": "=0.9 + 0.1 * easeOutBack(progress(launch.t, 220))", "anchor": "center", "x": 320, "y": 225,
+          "children": [
+            { "use": "window", "w": 400, "h": 150, "with": { "title": "Starting...", "w0": 400, "dialog": 1 } },
+            { "type": "text", "x": 16, "y": 50, "w": 368, "text": "Loading {game.title}...", "size": 13, "color": "#000000" },
+            { "type": "rect", "x": 16, "y": 92, "w": 368, "h": 20, "fill": "#ffffff", "border": 1, "borderColor": "#7f9db9", "radius": 3 },
+            // the green blocks
+            { "type": "list", "source": "range", "count": 30, "direction": "row", "scrollMode": "none", "x": 19, "y": 95, "w": 364, "h": 14,
+              "itemW": 10, "gap": 2,
+              "item": { "type": "rect", "w": 10, "h": 14, "visible": "=i < floor(easeInOut(launch.progress) * 31)",
+                "gradient": { "angle": 180, "stops": [ "#a6f0a0", "#2fb52f 40%", "#2fb52f 60%", "#79d872" ] } } },
+            { "type": "text", "x": 16, "y": 122, "text": "{floor(launch.progress * 100)}%", "size": 11, "color": "#555555" }
+          ] }
+      ]
+    }
+  }
+}

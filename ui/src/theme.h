@@ -9,6 +9,9 @@ namespace banana
 	// light palette ("base") and replaces any of its colours by name ("colors") and the accent ("accent"); see
 	// /usr/share/banana/themes/README.txt.
 
+	// a theme's .json: "user:<name>" from the card or the image, "file:<path>" any file (headless runs); else ""
+	std::string themePath(const std::string& value);
+
 	struct UserTheme { std::string value, name; };	// "user:ocean", the theme's own name ("Ocean")
 	std::vector<UserTheme> userThemes();				// the card's first, then the image's (a card file of the same name wins)
 

@@ -1,0 +1,7 @@
+{
+  "name": "banana-promo",
+  "private": true,
+  "type": "module",
+  "description": "The RG DS Plus model's stills (see README.md)",
+  "dependencies": { "three": "0.169.0", "playwright-core": "1.48.2" }
+}

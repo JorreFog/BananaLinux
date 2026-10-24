@@ -1,0 +1,458 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>RG DS Plus</title>
+<style>
+  html, body { margin: 0; background: #000; overflow: hidden; }
+  canvas { display: block; }
+  #title { position: absolute; left: 0; right: 0; bottom: 14%; text-align: center; color: #fff; opacity: 0;
+    font: 600 64px/1.1 "Inter", sans-serif; letter-spacing: 0.02em; text-shadow: 0 4px 30px rgba(0,0,0,.6); }
+  #title small { display: block; font-weight: 400; font-size: 26px; letter-spacing: 0.35em; color: #ffd84a; margin-top: 14px; }
+  #title b { color: #ffd84a; }
+</style>
+<script type="importmap">{ "imports": { "three": "./node_modules/three/build/three.module.js", "three/addons/": "./node_modules/three/examples/jsm/" } }</script>
+</head><body>
+<div id="title"><b>Banana</b>OS<small>LAYOUT THEMES</small></div>
+<script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+const W = +(new URLSearchParams(location.search).get('w') || 1920), H = Math.round(W * 9 / 16);
+const renderer = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true });
+renderer.setSize(W, H);
+renderer.setPixelRatio(1);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x07080c);
+scene.fog = new THREE.Fog(0x07080c, 380, 900);
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.85;
+
+const camera = new THREE.PerspectiveCamera(30, W / H, 5, 2000);
+
+// ---- textures made here -------------------------------------------------------------------------------------------
+function canvasTex(w, h, draw, srgb = true) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 8;
+  return t;
+}
+// fine grain for the plastic's bump (a metallic-flake finish)
+function noise(ctx, w, h, amp) {
+  const d = ctx.createImageData(w, h);
+  for (let i = 0; i < d.data.length; i += 4) { const v = 128 + (Math.random() - 0.5) * amp; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; }
+  ctx.putImageData(d, 0, 0);
+}
+const grain = canvasTex(512, 512, (c, w, h) => noise(c, w, h, 90), false);
+grain.wrapS = grain.wrapT = THREE.RepeatWrapping; grain.repeat.set(6, 6);
+const roughGrain = canvasTex(256, 256, (c, w, h) => noise(c, w, h, 40), false);
+roughGrain.wrapS = roughGrain.wrapT = THREE.RepeatWrapping; roughGrain.repeat.set(5, 5);
+
+// ---- materials ------------------------------------------------------------------------------------------------------
+const SHELL = new URLSearchParams(location.search).get('color') || '#17171a';
+// Matte Black: a fine-textured satin plastic
+const shell = new THREE.MeshPhysicalMaterial({ color: SHELL, metalness: 0.0, roughness: 0.48, roughnessMap: roughGrain,
+  bumpMap: grain, bumpScale: 0.012, clearcoat: 0.25, clearcoatRoughness: 0.45, sheen: 0.12, sheenRoughness: 0.7, sheenColor: new THREE.Color('#5a5f6e') });
+const seam = new THREE.MeshStandardMaterial({ color: 0x050506, roughness: 0.9 });
+const bezelMat = new THREE.MeshPhysicalMaterial({ color: 0x0b0b0d, roughness: 0.32, clearcoat: 0.6, clearcoatRoughness: 0.2 });
+const inkMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0c, roughness: 0.7 });
+// the glossy black of the buttons and the screens' frames, the lips' satin, the white print
+const glossBtn = new THREE.MeshPhysicalMaterial({ color: 0x0c0c0e, roughness: 0.16, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.06 });
+const frameMat = new THREE.MeshPhysicalMaterial({ color: 0x09090b, roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.05 });
+const whitePrint = new THREE.MeshBasicMaterial({ color: 0xd6d8de });
+const shellGloss = shell.clone(); shellGloss.roughness = 0.3; shellGloss.clearcoat = 0.5; shellGloss.roughnessMap = null;
+const shellDark = shell.clone(); shellDark.color = new THREE.Color(SHELL).multiplyScalar(0.62); shellDark.clearcoat = 0.4;
+const glass = new THREE.MeshPhysicalMaterial({ color: 0x050608, metalness: 0, roughness: 0.06, clearcoat: 1, clearcoatRoughness: 0.03, reflectivity: 0.6, envMapIntensity: 0.35 });
+const rubber = new THREE.MeshStandardMaterial({ color: 0x15161a, roughness: 0.82, metalness: 0 });
+const buttonMat = new THREE.MeshPhysicalMaterial({ color: 0x1d1e22, roughness: 0.32, metalness: 0.05, clearcoat: 0.6, clearcoatRoughness: 0.25 });
+const holeMat = new THREE.MeshStandardMaterial({ color: 0x020203, roughness: 1 });
+const metal = new THREE.MeshStandardMaterial({ color: 0xb9bcc4, metalness: 1, roughness: 0.42 });
+
+// ---- shapes ---------------------------------------------------------------------------------------------------------
+function rrShape(w, h, r) {
+  const s = new THREE.Shape(), x = -w / 2, y = -h / 2;
+  s.moveTo(x + r, y); s.lineTo(x + w - r, y); s.quadraticCurveTo(x + w, y, x + w, y + r);
+  s.lineTo(x + w, y + h - r); s.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  s.lineTo(x + r, y + h); s.quadraticCurveTo(x, y + h, x, y + h - r);
+  s.lineTo(x, y + r); s.quadraticCurveTo(x, y, x + r, y);
+  return s;
+}
+// a slab lying flat: w (x) by d (z), thick (y), its bottom at y = 0, bevelled edges
+function slab(w, d, thick, r, bevel, mat, segs = 6) {
+  const g = new THREE.ExtrudeGeometry(rrShape(w - 2 * bevel, d - 2 * bevel, Math.max(0.1, r - bevel)),
+    { depth: thick - 2 * bevel, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: segs, curveSegments: 24 });
+  g.rotateX(-Math.PI / 2); g.translate(0, bevel, 0);
+  const m = new THREE.Mesh(g, mat); m.castShadow = m.receiveShadow = true;
+  return m;
+}
+function add(parent, mesh, x, y, z) { mesh.position.set(x, y, z); parent.add(mesh); return mesh; }
+
+// ---- the console (mm; x across, z towards the player, y up), measured from Anbernic's dimensioned drawing and photos:
+// 167 wide, 96 deep, 24 thick closed, 181 tall opened flat ---------------------------------------------------------
+const device = new THREE.Group();
+scene.add(device);
+const BW = 167, BD = 96, BT = 14, LT = 9.6;	// body width, depth, base and lid thickness (24 mm closed with the gap)
+const R = 8.5;								// the corners' radius
+const SCR_W = 87.2, SCR_H = 65.4;			// a 4.3" 4:3 panel's picture
+const HZ = -BD / 2 + 6, HY = BT + 0.6;		// the hinge's axis (base coordinates): 6 mm in from the back
+const FACE = BT;
+
+// a flat ring (a lip, a frame): outer w x d, inner iw x id, its own radii
+function ring(w, d, r, iw, id, ir, thick, mat, bevel = 0.25) {
+  const s = rrShape(w, d, r); s.holes.push(rrShape(iw, id, ir));
+  const g = new THREE.ExtrudeGeometry(s, { depth: thick - 2 * bevel, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel * 0.8, bevelSegments: 3, curveSegments: 20 });
+  g.rotateX(-Math.PI / 2); g.translate(0, bevel, 0);
+  const m = new THREE.Mesh(g, mat); m.castShadow = m.receiveShadow = true; return m;
+}
+function disc(r, h, mat, seg = 48) { const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, seg), mat); m.castShadow = m.receiveShadow = true; return m; }
+// a dome: the top of a sphere of radius sr cut to a disc of radius r
+function dome(r, sr, mat) {
+  const th = Math.asin(Math.min(1, r / sr));
+  const g = new THREE.SphereGeometry(sr, 48, 16, 0, Math.PI * 2, 0, th); g.translate(0, -sr * Math.cos(th), 0);
+  const m = new THREE.Mesh(g, mat); m.castShadow = true; return m;
+}
+function label(text, size, color = 'rgba(205,208,216,0.85)', weight = 600) {
+  const t = canvasTex(256, 64, (c, w, h) => { c.clearRect(0, 0, w, h); c.fillStyle = color; c.font = `${weight} 40px Inter, Arial`; c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillText(text, 4, 34); });
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(size * 4, size), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false }));
+  m.rotation.x = -Math.PI / 2; return m;
+}
+
+// ---- the base -----------------------------------------------------------------------------------------------------
+const base = new THREE.Group(); device.add(base);
+add(base, slab(BW, BD, BT, R, 1.6, shell), 0, 0, 0);
+// the seam between the top shell and the bottom one, round the sides
+add(base, slab(BW + 0.25, BD + 0.25, 0.45, R, 0.15, seam, 2), 0, 6.2, 0);
+// the face's raised edge
+add(base, ring(BW - 1.2, BD - 1.2, R - 0.6, BW - 6.4, BD - 6.4, R - 3, 0.5, shellGloss), 0, FACE - 0.15, 0);
+// the hinge's knuckles at the back corners: short pieces of the barrel, on a foot, a pin's end showing
+for (const sx of [-1, 1]) {
+  const k = disc(5.4, 15.4, shell, 48); k.rotation.z = Math.PI / 2; add(base, k, sx * (BW / 2 - 8.6), HY + 0.6, HZ + 0.2);
+  add(base, slab(15.4, 9, 2.4, 2, 0.6, shell, 2), sx * (BW / 2 - 8.6), BT - 1.6, HZ + 0.6);
+  const pin = disc(1.7, 0.5, metal, 24); pin.rotation.z = Math.PI / 2; add(base, pin, sx * (BW / 2 - 0.95), HY + 0.6, HZ + 0.2);
+
+}
+// the bottom screen: a glossy frame, raised, almost the face's height; the glass; the picture
+add(base, slab(97, 79, 1.1, 3.5, 0.45, frameMat, 4), -0.8, FACE - 0.2, 3.6);
+add(base, slab(91.5, 70, 0.3, 1.2, 0.1, glass, 2), -0.8, FACE + 0.88, 3.6);
+const screenB = new THREE.Mesh(new THREE.PlaneGeometry(SCR_W, SCR_H), null);
+screenB.rotation.x = -Math.PI / 2; add(base, screenB, -0.8, FACE + 1.2, 3.6);
+
+// the d-pad: a glossy cross with a white tick on each arm
+const DPX = -67, DPZ = -16.4;
+{
+  const a = 6.2, L = 21.5;
+  const s = new THREE.Shape();
+  const pts = [[-a/2,-L/2],[a/2,-L/2],[a/2,-a/2],[L/2,-a/2],[L/2,a/2],[a/2,a/2],[a/2,L/2],[-a/2,L/2],[-a/2,a/2],[-L/2,a/2],[-L/2,-a/2],[-a/2,-a/2]];
+  s.moveTo(...pts[0]); for (const p of pts.slice(1)) s.lineTo(...p); s.closePath();
+  const g = new THREE.ExtrudeGeometry(s, { depth: 1.0, bevelEnabled: true, bevelThickness: 0.55, bevelSize: 0.55, bevelSegments: 5 });
+  g.rotateX(-Math.PI / 2);
+  const hole = new THREE.Mesh(new THREE.ExtrudeGeometry(s, { depth: 0.1, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 1.0, bevelSegments: 1 }), holeMat);
+  hole.geometry.rotateX(-Math.PI / 2); add(base, hole, DPX, FACE + 0.02, DPZ);
+  add(base, new THREE.Mesh(g, glossBtn), DPX, FACE + 0.15, DPZ).castShadow = true;
+  for (let k = 0; k < 4; k++) {
+    const ang = k * Math.PI / 2, horiz = k % 2 === 1;
+    const t = new THREE.Mesh(new THREE.PlaneGeometry(horiz ? 2.4 : 0.55, horiz ? 0.55 : 2.4), whitePrint);
+    t.rotation.x = -Math.PI / 2; add(base, t, DPX + Math.sin(ang) * 7.2, FACE + 1.73, DPZ - Math.cos(ang) * 7.2);
+  }
+}
+// the stick: a glossy raised collar, a domed cap
+{
+  const g = new THREE.Group(); add(base, g, -66.8, FACE, 11.7);
+  g.add(add(new THREE.Group(), disc(11.9, 0.3, holeMat, 64), 0, 0.1, 0));
+  const collar = new THREE.Mesh(new THREE.TorusGeometry(10.4, 1.6, 24, 96), glossBtn); collar.rotation.x = Math.PI / 2; collar.position.y = 0.6; collar.castShadow = true; g.add(collar);
+  g.add(add(new THREE.Group(), disc(9.2, 0.4, holeMat, 64), 0, 0.15, 0));
+  const stem = disc(3.2, 3, rubber, 24); stem.position.y = 1.3; g.add(stem);
+  const skirt = disc(7.4, 1.4, glossBtn, 64); skirt.position.y = 2.6; g.add(skirt);
+  const cap = dome(7.3, 11, glossBtn); cap.position.y = 3.3; g.add(cap);
+}
+// two round buttons under the stick, with their icons
+function flatBtn(r, icon) {
+  const t = canvasTex(128, 128, (c, w, h) => { c.fillStyle = '#121214'; c.fillRect(0, 0, w, h); c.strokeStyle = 'rgba(200,203,212,0.8)'; c.lineWidth = 6; icon(c); });
+  const b = new THREE.Mesh(new THREE.CylinderGeometry(r, r + 0.1, 1.1, 48), [glossBtn, new THREE.MeshPhysicalMaterial({ map: t, roughness: 0.25, clearcoat: 0.8, clearcoatRoughness: 0.15 }), glossBtn]);
+  b.castShadow = true; return b;
+}
+function seat(x, z, r) { add(base, disc(r, 0.12, holeMat, 48), x, FACE + 0.02, z); }
+seat(-73.3, 33.8, 4.6); add(base, flatBtn(4.0, c => { c.beginPath(); c.arc(64, 64, 26, 0.8, 5.5); c.stroke(); c.beginPath(); c.moveTo(78, 30); c.lineTo(92, 44); c.lineTo(74, 48); c.stroke(); }), -73.3, FACE + 0.55, 33.8);
+seat(-61, 33.8, 4.6); add(base, flatBtn(4.0, c => { c.beginPath(); c.arc(64, 64, 24, 0, 7); c.stroke(); c.beginPath(); c.arc(64, 64, 8, 0, 7); c.fill(); }), -61, FACE + 0.55, 33.8);
+// ABXY: glossy black domes with white letters
+const abxy = {};
+const ROT = +(new URLSearchParams(location.search).get('rot') || Math.PI / 2);
+for (const [k, dx, dz] of [['X', 0, -8.2], ['A', 8.2, 0], ['B', 0, 8.2], ['Y', -8.2, 0]]) {
+  const t = canvasTex(128, 128, (c, w, h) => { c.fillStyle = '#0d0d0f'; c.fillRect(0, 0, w, h); c.fillStyle = '#e8e9ee';
+    c.font = '600 64px Inter, Arial, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(k, 64, 68); });
+  t.center.set(0.5, 0.5); t.rotation = ROT;
+  const b = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 3.55, 1.6, 48), [glossBtn, new THREE.MeshPhysicalMaterial({ map: t, roughness: 0.18, clearcoat: 1, clearcoatRoughness: 0.08 }), glossBtn]);
+  b.castShadow = true;
+  seat(65 + dx, -8.2 + dz, 3.95);
+  abxy[k] = add(base, b, 65 + dx, FACE + 0.8, -8.2 + dz);
+}
+// Start and Select, small, with their names
+const smallBtns = {};
+for (const [k, z] of [['start', 24], ['select', 34.2]]) {
+  seat(56.9, z, 2.95);
+  const b = disc(2.5, 1.1, glossBtn, 40); smallBtns[k] = add(base, b, 56.9, FACE + 0.55, z);
+  add(base, label(k.toUpperCase(), 2.1), 69.2, FACE + 0.03, z);
+}
+// two lights at the right edge, by the hinge
+const leds = [];
+for (const z of [-23.6, -18.4]) { const l = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 1.1), new THREE.MeshBasicMaterial({ color: 0x9a9da6, toneMapped: false }));
+  l.rotation.x = -Math.PI / 2; add(base, l, 79.6, FACE + 0.38, z); leds.push(l); }
+// the back corners' shoulder buttons, side by side; the back edge's ports and its long groove
+for (const sx of [-1, 1]) for (const [x, w] of [[BW / 2 - 4.6, 7.6], [BW / 2 - 12.6, 7.6]]) {
+  const sh = new THREE.Mesh(new RoundedBoxGeometry(w, 5.2, 3, 3, 1.2), glossBtn); sh.castShadow = true; add(base, sh, sx * x, BT + 2.4, -BD / 2 + 0.6);
+}
+function slot(w, h, depth, mat = holeMat) { return new THREE.Mesh(new RoundedBoxGeometry(w, h, depth, 2, Math.min(w, h) / 2 - 0.01), mat); }
+const backZ = -BD / 2 - 0.02;
+add(base, slot(12, 1.5, 1), -42, 9.2, backZ); add(base, slot(12, 1.5, 1), 40, 9.2, backZ);
+for (const x of [-19, 9.4]) { add(base, slot(9, 3.2, 1), x, 9.2, backZ); add(base, slot(6.4, 0.8, 1.1, metal), x, 9.2, backZ - 0.05); }
+{ const j = disc(1.6, 1, holeMat, 32); j.rotation.x = Math.PI / 2; add(base, j, 24, 9.2, backZ + 0.3); const r2 = new THREE.Mesh(new THREE.TorusGeometry(2.2, 0.3, 10, 32), glossBtn); add(base, r2, 24, 9.2, backZ - 0.05); }
+add(base, slot(130, 3.4, 1.2), 0, 3.6, backZ + 0.2);
+// the front edge: the 3.5 mm jack at the left, a small slot at each end
+{ const j = disc(1.8, 1, holeMat, 32); j.rotation.x = Math.PI / 2; add(base, j, -66, 7, BD / 2 + 0.05);
+  for (const sx of [-1, 1]) add(base, slot(1.2, 3.2, 1), sx * 80, 7, BD / 2 + 0.05); }
+// the left side: the volume rocker; the right side: the power button
+{ const v = new THREE.Mesh(new RoundedBoxGeometry(1.8, 3.4, 14, 3, 0.8), glossBtn); add(base, v, -BW / 2 - 0.4, 7, 14); }
+{ const p = disc(2.6, 1.6, glossBtn, 32); p.rotation.z = Math.PI / 2; add(base, p, BW / 2 + 0.4, 7, 22); }
+// the underside: four screws, the stylus in its pocket at the left
+for (const [x, z] of [[-62, -34], [62, -34], [-78, 44], [78, 44]]) { const s = new THREE.Mesh(new THREE.CircleGeometry(1.3, 20), metal); s.rotation.x = Math.PI / 2; add(base, s, x, -0.05, z); }
+
+// ---- the lid --------------------------------------------------------------------------------------------------------
+const lidPivot = new THREE.Group(); add(device, lidPivot, 0, HY, HZ);
+const lid = new THREE.Group(); lidPivot.add(lid);
+const LZ0 = -4, LD = 91;	// the lid from just behind the axis to its front edge, 87 mm out from the hinge
+const LY = -HY + BT + 0.35;	// its inner face, closed (just above the base)
+add(lid, slab(BW, LD, LT, R, 1.6, shell), 0, LY, LZ0 + LD / 2);
+// the barrel along its back edge, between the base's blocks
+const barrel = disc(5.4, BW - 34.6, shell, 48); barrel.rotation.z = Math.PI / 2; add(lid, barrel, 0, 0.6, 0.2);
+{ const n = new THREE.Mesh(new THREE.BoxGeometry(5, 0.4, 1.2), holeMat); add(lid, n, 0, 6.0, 0.2); }
+// the inner face: a raised lip round it, the screen's glossy frame, the speakers, the small round pads
+const LCZ = 45;	// the screen's centre, from the hinge
+const lip = ring(BW - 1.2, LD - 1.2, R - 0.6, BW - 7, LD - 7, R - 3, 0.5, shellGloss); lip.rotation.x = Math.PI; add(lid, lip, 0, LY + 0.15, LZ0 + LD / 2);
+const tframe = slab(95.3, 74, 0.9, 3.5, 0.4, frameMat, 4); tframe.rotation.x = Math.PI; add(lid, tframe, 0, LY + 0.2, LCZ);
+const tglass = slab(91.5, 70, 0.3, 1.2, 0.1, glass, 2); tglass.rotation.x = Math.PI; add(lid, tglass, 0, LY - 0.68, LCZ);
+const screenT = new THREE.Mesh(new THREE.PlaneGeometry(SCR_W, SCR_H), null);
+screenT.rotation.x = Math.PI / 2; add(lid, screenT, 0, LY - 1.0, LCZ);
+{
+  const holes = new THREE.InstancedMesh(new THREE.CircleGeometry(0.42, 12), holeMat, 18);
+  let k = 0; const m = new THREE.Matrix4(), rot = new THREE.Matrix4().makeRotationX(Math.PI / 2);
+  for (const sx of [-1, 1]) for (let i = 0; i < 9; i++) {
+    const a = i / 8 * Math.PI * 2, r = i === 8 ? 0 : 3.6;
+    m.makeTranslation(sx * 63.5 + Math.cos(a) * r, LY - 0.02, 46.7 + Math.sin(a) * r).multiply(rot); holes.setMatrixAt(k++, m);
+  }
+  lid.add(holes);
+  for (const [x, z] of [[-74, 9], [74, 9], [-74, 80], [74, 80]]) { const f = disc(1.2, 0.4, glossBtn, 20); add(lid, f, x, LY - 0.15, z); }
+}
+// the side notch near the lid's front corner (each side)
+for (const sx of [-1, 1]) add(lid, slot(0.8, 2.4, 6), sx * (BW / 2 + 0.2), LY + LT / 2, 70);
+
+// ---- the screens' pictures: a canvas each, the theme's frame with the switch's effects on it ---------------------
+function screenCanvas() {
+  const c = document.createElement('canvas'); c.width = 1024; c.height = 768;
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  return { c, ctx: c.getContext('2d'), t };
+}
+const scr = [screenCanvas(), screenCanvas()];
+function screenMat(t) {
+  return new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: 0.82, envMapIntensity: 0.3, roughness: 0.08, metalness: 0 });
+}
+screenT.material = screenMat(scr[0].t);
+screenB.material = screenMat(scr[1].t);
+// ---- the set: a dark floor, a key light with soft shadows, coloured rims ---------------------------------------------
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000), new THREE.MeshStandardMaterial({ color: 0x0c0d12, roughness: 0.55, metalness: 0.15 }));
+floor.rotation.x = -Math.PI / 2; floor.position.y = -0.4; floor.receiveShadow = true; scene.add(floor);
+const key = new THREE.DirectionalLight(0xfff1dc, 2.6);
+key.position.set(-120, 260, 160); key.castShadow = true;
+key.shadow.mapSize.set(4096, 4096); key.shadow.radius = 6; key.shadow.bias = -0.0004; key.shadow.normalBias = 0.3;
+Object.assign(key.shadow.camera, { left: -160, right: 160, top: 160, bottom: -160, near: 50, far: 700 });
+scene.add(key);
+const rimA = new THREE.SpotLight(0x8a5cff, 20000, 900, 0.5, 0.7, 2); rimA.position.set(300, 45, -320); scene.add(rimA);
+const rimB = new THREE.SpotLight(0xffc640, 30000, 900, 0.5, 0.7, 2); rimB.position.set(-280, 90, -200); scene.add(rimB);
+const fill = new THREE.HemisphereLight(0x9fb4ff, 0x0b0b10, 0.35); scene.add(fill);
+// the screens' light on the set
+const screenGlow = new THREE.PointLight(0xaec8ff, 0, 260, 2); scene.add(screenGlow);
+
+// ---- post-processing: bloom, depth of field, then the film: aberration, grain, vignette, grade, bars -------------
+const rt = new THREE.WebGLRenderTarget(W, H, { type: THREE.HalfFloatType, samples: 4 });
+const composer = new EffectComposer(renderer, rt);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(W, H), 0.32, 0.55, 0.9);
+composer.addPass(bloom);
+const bokeh = new BokehPass(scene, camera, { focus: 300, aperture: 0.00006, maxblur: 0.008 });
+composer.addPass(bokeh);
+composer.addPass(new OutputPass());
+const film = new ShaderPass({
+  uniforms: { tDiffuse: { value: null }, time: { value: 0 }, ca: { value: 0.0016 }, grainAmt: { value: 0.03 }, vig: { value: 0.42 },
+    bars: { value: 0.0 }, fade: { value: 1 }, flash: { value: 0 } },
+  vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `
+    uniform sampler2D tDiffuse; uniform float time, ca, grainAmt, vig, bars, fade, flash; varying vec2 vUv;
+    float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233)) + time * 0.71) * 43758.5453); }
+    void main(){
+      vec2 d = vUv - 0.5; float r2 = dot(d, d);
+      vec2 off = d * ca * (1.0 + r2 * 4.0);
+      vec3 c = vec3(texture2D(tDiffuse, vUv + off).r, texture2D(tDiffuse, vUv).g, texture2D(tDiffuse, vUv - off).b);
+      // the grade: cool shadows, warm highlights, a little contrast
+      float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
+      c = mix(c, c * vec3(0.92, 1.0, 1.1), smoothstep(0.5, 0.0, l) * 0.35);
+      c = mix(c, c * vec3(1.06, 1.0, 0.92), smoothstep(0.45, 1.0, l) * 0.3);
+      c = (c - 0.5) * 1.06 + 0.5;
+      c *= 1.0 - vig * smoothstep(0.1, 0.75, r2 * 2.2);
+      c += (h(vUv * vec2(1920.0, 1080.0)) - 0.5) * grainAmt;
+      c += flash;
+      c *= fade;
+      if (vUv.y < bars || vUv.y > 1.0 - bars) c = vec3(0.0);
+      gl_FragColor = vec4(max(c, 0.0), 1.0);
+    }`
+});
+composer.addPass(film);
+
+// ---- the timeline ---------------------------------------------------------------------------------------------------
+const THEMES = ['canvas', 'hillside', 'turntable', 'pocket'];
+const SEG = [[3.4, 10.0], [10.0, 16.4], [16.4, 22.8], [22.8, 29.6]];	// each theme on the screens (s)
+const DURATION = 34;
+const ease = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const clamp01 = t => Math.min(1, Math.max(0, t));
+const lerp = (a, b, t) => a + (b - a) * t;
+const lerpV = (a, b, t) => a.map((v, i) => lerp(v, b[i], t));
+// the shots: from (s), camera position, where it looks, focus distance, aperture
+const SHOTS = [
+  { t: 0.0,  pos: [-150, 70, 260], at: [0, 10, 0], ap: 0.00005 },
+  { t: 3.2,  pos: [-60, 150, 230], at: [0, 30, -10], ap: 0.00005 },
+  { t: 6.5,  pos: [70, 120, 220], at: [0, 35, -15], ap: 0.00004 },
+  { t: 10.0, pos: [95, 70, 120], at: [5, 14, 8], ap: 0.0001 },
+  { t: 13.4, pos: [-80, 80, 125], at: [-5, 14, 6], ap: 0.0001 },
+  { t: 16.4, pos: [-130, 90, 170], at: [0, 50, -40], ap: 0.00008 },
+  { t: 19.8, pos: [30, 100, 200], at: [0, 50, -40], ap: 0.00008 },
+  { t: 22.8, pos: [0, 230, 120], at: [0, 20, -5], ap: 0.00005 },
+  { t: 26.4, pos: [60, 175, 110], at: [0, 25, -5], ap: 0.00006 },
+  { t: 29.6, pos: [150, 95, 230], at: [0, 30, -15], ap: 0.00004 },
+  { t: 34.0, pos: [210, 130, 330], at: [0, 30, -15], ap: 0.00003 },
+];
+// a shot moves smoothly within itself and cuts with a quick ease into the next one (a camera move, not a jump)
+function cameraAt(t) {
+  let i = 0; while (i < SHOTS.length - 2 && t >= SHOTS[i + 1].t) i++;
+  const a = SHOTS[i], b = SHOTS[i + 1];
+  const k = ease(clamp01((t - a.t) / (b.t - a.t)));
+  const pos = lerpV(a.pos, b.pos, k), at = lerpV(a.at, b.at, k);
+  // a little hand-held drift
+  pos[0] += Math.sin(t * 0.7) * 1.5; pos[1] += Math.sin(t * 0.53 + 1) * 1.2;
+  return { pos, at, ap: lerp(a.ap, b.ap, k) };
+}
+
+const imgCache = new Map();
+function loadImg(src) {
+  if (imgCache.has(src)) return imgCache.get(src);
+  const p = new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
+  imgCache.set(src, p);
+  if (imgCache.size > 64) imgCache.delete(imgCache.keys().next().value);
+  return p;
+}
+async function frameOf(theme, t, side) {
+  const n = Math.min(221, Math.max(0, Math.floor(t * 30)));
+  return loadImg(`screens/${theme}/f${String(n).padStart(4, '0')}-${side}.jpg`);
+}
+
+// draws a screen: the theme in its segment, the switch between two (slices shifted, a white flash, scanlines)
+async function drawScreen(i, t, on) {
+  const { ctx, t: tex } = scr[i];
+  const side = i === 0 ? 'top' : 'bot';
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, 1024, 768);
+  if (on > 0) {
+    let s = SEG.findIndex(([a, b]) => t >= a && t < b); if (s < 0) s = t < SEG[0][0] ? 0 : SEG.length - 1;
+    const local = t - SEG[s][0];
+    const img = await frameOf(THEMES[s], local, side);
+    const sw = clamp01(1 - Math.abs(t - SEG[s][0]) / 0.28) * (s > 0 ? 1 : 0);	// near a switch
+    ctx.globalAlpha = on;
+    if (img) {
+      if (sw > 0) {
+        const prev = await frameOf(THEMES[s - 1], SEG[s - 1][1] - SEG[s - 1][0] - 0.01, side);
+        const src = t < SEG[s][0] ? prev : img;
+        for (let y = 0; y < 768; y += 32) {
+          const dx = (Math.sin(y * 12.9 + t * 80) * 0.5 + (Math.random() - 0.5)) * 140 * sw;
+          ctx.drawImage(src || img, 0, y, 1024, 32, dx, y, 1024, 32);
+        }
+        ctx.fillStyle = `rgba(255,255,255,${0.6 * sw})`; ctx.fillRect(0, 0, 1024, 768);
+        ctx.fillStyle = `rgba(0,0,0,${0.25 * sw})`; for (let y = 0; y < 768; y += 4) ctx.fillRect(0, y, 1024, 2);
+      } else ctx.drawImage(img, 0, 0);
+    }
+    // the backlight coming on
+    if (on < 1) { ctx.globalAlpha = (1 - on) * 0.8; ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 1024, 768); }
+    ctx.globalAlpha = 1;
+  }
+  tex.needsUpdate = true;
+}
+
+window.renderAt = async function (t) {
+  // the lid opens, then the screens light up
+  const open = ease(clamp01((t - 0.8) / 2.4));
+  lidPivot.rotation.x = -open * THREE.MathUtils.degToRad(152);
+  const on = clamp01((t - 3.0) / 0.5);
+  await drawScreen(0, t, on); await drawScreen(1, t, on);
+  screenGlow.intensity = on * 260;
+  const top = new THREE.Vector3(0, 40, -30); screenGlow.position.copy(top).add(new THREE.Vector3(0, 30, 40));
+  for (const l of leds) l.material.color.set(on > 0 ? 0xc8ccd6 : 0x6a6d75);
+  // the buttons go down when the themes' scripts press them (a light touch of life)
+    // the device turns a little on the floor in the last shot
+  device.rotation.y = THREE.MathUtils.degToRad(-8 + Math.max(0, t - 29.6) * 5);
+  const c = cameraAt(t);
+  camera.position.set(...c.pos); camera.lookAt(...c.at);
+  const focusTarget = new THREE.Vector3(...c.at);
+  bokeh.uniforms.focus.value = camera.position.distanceTo(focusTarget);
+  bokeh.uniforms.aperture.value = c.ap;
+  film.uniforms.time.value = t;
+  film.uniforms.fade.value = clamp01(t / 1.0) * clamp01((DURATION - t) / 0.8);
+  film.uniforms.bars.value = 0.06;
+  film.uniforms.flash.value = 0;
+  for (const [a] of SEG.slice(1)) film.uniforms.flash.value += 0.05 * clamp01(1 - Math.abs(t - a) / 0.15);
+  document.getElementById('title').style.opacity = clamp01((t - 30.4) / 1.0);
+  composer.render();
+  return true;
+};
+// a still for checking the model: the lid at deg, the screens on, the camera at pos looking at at
+window.pose = async function (deg, pos, at, fov = 30, t = 6) {
+  const fog = scene.fog; scene.fog = null;
+  lidPivot.rotation.x = -THREE.MathUtils.degToRad(deg);
+  await drawScreen(0, t, 1); await drawScreen(1, t, 1);
+  for (const l of leds) l.material.color.set(0xc8ccd6);
+  const envI = scene.environmentIntensity; if (window.flat) scene.environmentIntensity = 0.12;
+  device.rotation.y = 0;
+  camera.fov = fov; camera.updateProjectionMatrix();
+  camera.position.set(...pos); camera.lookAt(...at);
+  film.uniforms.fade.value = 1; film.uniforms.bars.value = 0; bokeh.uniforms.aperture.value = 0;
+  composer.render(); scene.fog = fog; scene.environmentIntensity = envI;
+};
+// a still: the theme's frame at ft (s) on both screens, the lid at deg, the camera, the depth of field
+window.still = async function (theme, ft, deg, pos, at, fov, ap, rotY = 0) {
+  lidPivot.rotation.x = -THREE.MathUtils.degToRad(deg);
+  for (let i = 0; i < 2; i++) {
+    const img = await frameOf(theme, ft, i ? 'bot' : 'top');
+    scr[i].ctx.drawImage(img, 0, 0); scr[i].t.needsUpdate = true;
+  }
+  for (const l of leds) l.material.color.set(0xc8ccd6);
+  screenGlow.intensity = 160; screenGlow.position.set(0, 70, 10);
+  bloom.strength = 0.18; bloom.threshold = 0.93; rimB.intensity = 7000; rimA.intensity = 14000;
+  for (const m of [screenT.material, screenB.material]) m.emissiveIntensity = 0.72;
+  device.rotation.y = THREE.MathUtils.degToRad(rotY);
+  camera.fov = fov; camera.updateProjectionMatrix();
+  camera.position.set(...pos); camera.lookAt(...at);
+  bokeh.uniforms.focus.value = camera.position.distanceTo(new THREE.Vector3(...at));
+  bokeh.uniforms.aperture.value = ap;
+  film.uniforms.fade.value = 1; film.uniforms.bars.value = 0; film.uniforms.flash.value = 0; film.uniforms.time.value = 3.3;
+  composer.render();
+};
+window.DURATION = DURATION;
+window.ready = true;
+</script></body></html>

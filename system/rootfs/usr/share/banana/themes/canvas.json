@@ -1,0 +1,164 @@
+{
+  // Canvas: an example layout theme. Everything on both screens is drawn from the "screens" below: change anything.
+  // docs/THEMES.md describes the elements, the hooks (sys.*, game.*, item.*, clock, battery ...) and the expressions.
+  "name": "Canvas",
+  "author": "BananaOS",
+  // the Settings screen's look (the same keys as a colour theme)
+  "base": "dark",
+  "accent": "#7c9cff",
+  "colors": { "screenBg": "#10131c", "ink": "#eef1ff", "muted": "#9aa3c0" },
+  "font": "inter",
+
+  "vars": {
+    "bg": "#10131c",
+    "card": "#1b2030",
+    "ink": "#eef1ff",
+    "soft": "#9aa3c0",
+    "hi": "=accent"
+  },
+
+  // the buttons: the library is a list down the screen, so up and down move by one
+  "input": { "library": { "up": "prev", "down": "next", "left": "prev:5", "right": "next:5" } },
+
+  "behavior": { "launchMs": 700, "scrollMs": 90, "cues": { "insert": 450 } },
+
+  "components": {
+    // a status bar: the clock, the battery as a bar and its percent
+    "status": {
+      "type": "group", "x": 0, "y": 0, "w": "100%", "h": 36,
+      "children": [
+        { "type": "text", "x": 20, "y": 10, "text": "{clock}", "font": "inter-semibold", "size": 15, "color": "=ink" },
+        { "type": "text", "right": 20, "y": 10, "w": 120, "align": "right", "text": "=battery < 0 ? '' : battery + '%'",
+          "size": 13, "color": "=soft" },
+        { "type": "rect", "right": 146, "y": 13, "w": 26, "h": 12, "radius": 3, "border": 1.5, "borderColor": "=soft",
+          "visible": "=battery >= 0" },
+        { "type": "rect", "right": 148, "y": 15, "w": "=22 * battery / 100", "h": 8, "radius": 1.5,
+          "fill": "=battery < 20 ? '#ff5a5a' : hi", "visible": "=battery >= 0" }
+      ]
+    },
+    // a button hint: the key in a round chip and what it does
+    "hint": {
+      "type": "group", "layout": "row", "gap": 6, "align": "center", "h": 24,
+      "children": [
+        { "type": "group", "layout": "row", "padding": 5, "h": 22, "fill": "=ink", "radius": 11,
+          "children": [ { "type": "text", "y": -2, "text": "{item.key}", "font": "inter-bold", "size": 12, "color": "=bg" } ] },
+        { "type": "text", "text": "{item.label}", "size": 13, "color": "=soft", "y": 3 }
+      ]
+    }
+  },
+
+  "screens": {
+    // over every view: the status bar on the top screen
+    "all": { "top": { "use": "status" } },
+
+    "home": {
+      "top": [
+        { "type": "rect", "gradient": { "angle": 160, "stops": [ "=mix(sys.color, bg, 0.55)", "=bg + ' 70%'" ] } },
+        { "type": "image", "src": "{sys.icon}", "fit": "pixelContain", "x": 320, "y": 150, "w": 128, "h": 128, "anchor": "center",
+          "opacity": "=easeOut(progress(moved, 250))", "scale": "=0.85 + 0.15 * easeOutBack(progress(moved, 300))" },
+        { "type": "text", "x": 0, "w": "100%", "y": 240, "align": "center", "text": "{sys.name}", "font": "inter-bold", "size": 34, "color": "=ink" },
+        { "type": "text", "x": 0, "w": "100%", "y": 284, "align": "center", "text": "{upper(sys.maker)}", "size": 13, "spacing": 2, "color": "=soft" },
+        { "type": "group", "x": 120, "y": 340, "w": 400, "h": 70, "fill": "=alpha(card, 0.8)", "radius": 16,
+          "layout": "row", "justify": "between", "padding": 14,
+          "children": [
+            { "type": "group", "w": 110, "h": 42, "children": [
+              { "type": "text", "w": 110, "align": "center", "text": "{sys.games}", "font": "inter-bold", "size": 20, "color": "=ink" },
+              { "type": "text", "w": 110, "y": 26, "align": "center", "text": "=sys.games == 1 ? 'Game' : 'Games'", "size": 11, "color": "=soft" } ] },
+            { "type": "group", "w": 110, "h": 42, "children": [
+              { "type": "text", "w": 110, "align": "center", "text": "{sys.played}", "font": "inter-bold", "size": 20, "color": "=ink" },
+              { "type": "text", "w": 110, "y": 26, "align": "center", "text": "Played", "size": 11, "color": "=soft" } ] },
+            { "type": "group", "w": 110, "h": 42, "children": [
+              { "type": "text", "w": 110, "align": "center", "text": "=either(sys.time, '0m')", "font": "inter-bold", "size": 20, "color": "=ink" },
+              { "type": "text", "w": 110, "y": 26, "align": "center", "text": "Time", "size": 11, "color": "=soft" } ] }
+          ] },
+        { "type": "text", "x": 0, "w": "100%", "y": 430, "align": "center", "visible": "=sys.hasResume",
+          "text": "Last played: {sys.resumeTitle}  ·  X to resume", "size": 12, "color": "=soft" }
+      ],
+      "bottom": [
+        { "type": "rect", "fill": "=bg" },
+        { "type": "text", "x": 24, "y": 22, "text": "Systems", "font": "inter-bold", "size": 22, "color": "=ink" },
+        { "type": "text", "right": 24, "y": 28, "w": 200, "align": "right", "text": "{cursor + 1} / {count}", "size": 13, "color": "=soft" },
+        // the shelf: a row centred on the selection, eased as it moves
+        { "type": "list", "source": "systems", "direction": "row", "x": 0, "y": 120, "w": 640, "h": 230,
+          "itemW": 150, "itemH": 190, "gap": 14, "scrollMode": "center",
+          "item": {
+            "type": "group", "w": 150, "h": 190,
+            "children": [
+              { "type": "rect", "x": 75, "y": 95, "w": 150, "h": 190, "anchor": "center", "radius": 20,
+                "scale": "=sel ? 1.08 : 0.92", "smooth": { "scale": 90 },
+                "fill": "=sel ? mix(item.color, card, 0.35) : card",
+                "border": "=sel ? 3 : 0", "borderColor": "=hi",
+                "shadow": { "y": 8, "blur": 14, "color": "=sel ? '#00000099' : '#00000000'" } },
+              { "type": "image", "src": "{item.icon}", "fit": "pixelContain", "x": 75, "y": 80, "w": 72, "h": 72, "anchor": "center",
+                "opacity": "=sel ? 1 : 0.55" },
+              { "type": "text", "x": 8, "w": 134, "y": 140, "align": "center", "text": "{item.name}", "size": 13,
+                "font": "=sel ? 'inter-semibold' : 'inter'", "color": "=sel ? ink : soft" },
+              { "type": "text", "x": 8, "w": 134, "y": 160, "align": "center", "text": "=item.app ? 'App' : plural(item.games, 'game')",
+                "size": 11, "color": "=soft", "opacity": 0.8 },
+              { "type": "text", "x": 128, "y": 12, "text": "★", "font": "inter", "size": 14, "color": "=hi", "visible": "=item.fav" }
+            ]
+          } },
+        { "type": "list", "source": "hints", "direction": "row", "x": 24, "y": 440, "w": 600, "h": 24, "gap": 18, "flow": true, "scrollMode": "none",
+          "item": { "use": "hint" } }
+      ]
+    },
+
+    "library": {
+      "top": [
+        { "type": "rect", "fill": "=bg" },
+        // the box art, blurred-looking backdrop: the same art large and dim behind
+        { "type": "image", "src": "{game.art}", "fit": "cover", "x": 0, "y": 0, "w": 640, "h": 480, "opacity": 0.18 },
+        { "type": "rect", "gradient": { "angle": 90, "stops": [ "=alpha(bg, 0.95)", "=alpha(bg, 0.5)" ] } },
+        { "type": "image", "src": "{game.art}", "fallback": "{sys.icon}", "fit": "contain", "y": 70, "w": 250, "h": 340,
+          "radius": 10, "placeholder": "=card",
+          "x": "=40 + 30 * (1 - easeOut(progress(moved, 220))) * dir", "opacity": "=easeOut(progress(moved, 220))" },
+        { "type": "text", "x": 320, "y": 90, "w": 290, "text": "{upper(sys.name)}", "size": 12, "spacing": 2, "color": "=hi" },
+        { "type": "text", "x": 320, "y": 112, "w": 290, "text": "{game.title}", "font": "inter-bold", "size": 28, "color": "=ink",
+          "wrap": true, "maxLines": 3, "lineHeight": 34 },
+        { "type": "text", "x": 320, "y": 230, "w": 290, "text": "{game.sub}", "size": 14, "color": "=soft" },
+        { "type": "group", "x": 320, "y": 280, "w": 290, "h": 120, "layout": "column", "gap": 8,
+          "children": [
+            { "type": "text", "text": "Plays: {either(game.plays, '0')}", "size": 14, "color": "=ink" },
+            { "type": "text", "text": "Last played: {either(game.last, 'Never')}", "size": 14, "color": "=ink" },
+            { "type": "text", "text": "Time: {either(game.time, '0m')}", "size": 14, "color": "=ink" },
+            { "type": "text", "text": "{game.achLabel}", "size": 14, "color": "=hi", "visible": "=game.achB > 0" }
+          ] }
+      ],
+      "bottom": [
+        { "type": "rect", "fill": "=bg" },
+        { "type": "text", "x": 24, "y": 22, "text": "{sys.name}", "font": "inter-bold", "size": 22, "color": "=ink" },
+        { "type": "text", "right": 24, "y": 28, "w": 200, "align": "right", "text": "{cursor + 1} / {count}", "size": 13, "color": "=soft" },
+        { "type": "text", "x": 0, "w": "100%", "y": 200, "align": "center", "text": "{empty.title}", "size": 20, "color": "=ink", "visible": "=empty" },
+        { "type": "text", "x": 40, "w": 560, "y": 236, "align": "center", "text": "{empty.hint}", "size": 13, "color": "=soft", "visible": "=empty", "wrap": true },
+        // the games as a list down the screen, the selection kept in view
+        { "type": "list", "source": "games", "direction": "column", "x": 24, "y": 70, "w": 592, "h": 356,
+          "itemH": 52, "gap": 6, "scrollMode": "edge", "clip": true,
+          "item": {
+            "type": "group", "w": 592, "h": 52, "fill": "=sel ? hi : card", "radius": 12,
+            "children": [
+              { "type": "image", "src": "{item.art}", "fallback": "{item.icon}", "fit": "cover", "x": 8, "y": 6, "w": 40, "h": 40, "radius": 8, "placeholder": "#00000033" },
+              { "type": "text", "x": 60, "y": 9, "w": 470, "text": "{item.title}", "font": "inter-semibold", "size": 15, "color": "=sel ? bg : ink" },
+              { "type": "text", "x": 60, "y": 29, "w": 470, "text": "{item.sub}", "size": 11, "color": "=sel ? alpha(bg, 0.7) : soft" },
+              { "type": "text", "right": 16, "y": 16, "text": "♥", "font": "inter", "size": 16, "color": "=sel ? bg : hi", "visible": "=item.fav" }
+            ]
+          } },
+        { "type": "list", "source": "hints", "direction": "row", "x": 24, "y": 440, "w": 600, "h": 24, "gap": 18, "flow": true, "scrollMode": "none",
+          "item": { "use": "hint" } }
+      ]
+    },
+
+    "launch": {
+      "top": [
+        { "type": "rect", "fill": "=bg" },
+        { "type": "image", "src": "{game.art}", "fallback": "{sys.icon}", "fit": "contain", "x": 320, "y": 240, "w": 250, "h": 340, "anchor": "center",
+          "radius": 10, "scale": "=1 + 0.6 * easeIn(launch.progress)", "opacity": "=1 - easeIn(launch.progress)" }
+      ],
+      "bottom": [
+        { "type": "rect", "fill": "=bg" },
+        { "type": "text", "x": 0, "w": "100%", "y": 210, "align": "center", "text": "Starting {game.title}", "font": "inter-semibold", "size": 20, "color": "=ink" },
+        { "type": "rect", "x": 170, "y": 260, "w": 300, "h": 6, "radius": 3, "fill": "=card" },
+        { "type": "rect", "x": 170, "y": 260, "w": "=300 * easeInOut(launch.progress)", "h": 6, "radius": 3, "fill": "=hi" }
+      ]
+    }
+  }
+}

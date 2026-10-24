@@ -47,6 +47,29 @@ namespace banana
 		return false;
 	}
 
+#ifdef BANANA_ALSA
+	// The menu plays on the same device as the games, and the RG DS Plus's amplifier is a 48 kHz part: anything else
+	// is resampled there by alsa-lib's linear converter (the image has no speexrate). Convert each clip once, here,
+	// so the stream is always 48 kHz and no plug resampler is involved.
+	static void to48k(std::vector<int16_t>& pcm, int& rate, int channels)
+	{
+		if (rate == 48000 || channels < 1 || pcm.size() / channels < 2) return;
+		size_t frames = pcm.size() / channels, n = (size_t)((double)frames * 48000 / rate);
+		std::vector<int16_t> out(n * channels);
+		for (size_t i = 0; i < n; i++)
+		{
+			double x = (double)i * rate / 48000;
+			size_t j = (size_t)x;
+			double f = x - j;
+			if (j + 1 >= frames) { j = frames - 2; f = 1; }
+			for (int c = 0; c < channels; c++)
+				out[i * channels + c] = (int16_t)(pcm[j * channels + c] + (pcm[(j + 1) * channels + c] - pcm[j * channels + c]) * f);
+		}
+		pcm.swap(out);
+		rate = 48000;
+	}
+#endif
+
 	Sound::Sound(const std::string& dir)
 	{
 		for (const char* n : { "scroll", "select", "back", "fav", "ready", "insert" })
@@ -56,8 +79,15 @@ namespace banana
 			auto own = rnds::themeFiles.sounds.find(n);
 			if (own != rnds::themeFiles.sounds.end() && own->second == "off") continue;
 			Clip c;
-			if (own != rnds::themeFiles.sounds.end() && loadWav(own->second, c.pcm, c.rate, c.channels)) { clips[n] = std::move(c); continue; }
-			if (loadWav(dir + "/" + n + ".wav", c.pcm, c.rate, c.channels)) clips[n] = std::move(c);
+			bool got = own != rnds::themeFiles.sounds.end() && loadWav(own->second, c.pcm, c.rate, c.channels);
+			if (!got) got = loadWav(dir + "/" + n + ".wav", c.pcm, c.rate, c.channels);
+			if (got)
+			{
+#ifdef BANANA_ALSA
+				to48k(c.pcm, c.rate, c.channels);
+#endif
+				clips[n] = std::move(c);
+			}
 		}
 		th = std::thread([this] { run(); });
 	}

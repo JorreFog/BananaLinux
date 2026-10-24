@@ -75,11 +75,15 @@ int main(int argc, char **argv)
 	}
 	FILE *f = fopen(argv[1], "rb");
 	if (!f) { perror(argv[1]); return 1; }
-	fseek(f, 0, SEEK_END);
-	size_t n = ftell(f);
-	fseek(f, 0, SEEK_SET);
+	/* ftell returns -1 on failure, which as size_t wraps to SIZE_MAX: malloc(0) then a SIZE_MAX-byte fread would
+	 * run off the heap. Check each step, and close the stream on every error path. */
+	if (fseek(f, 0, SEEK_END)) { perror(argv[1]); fclose(f); return 1; }
+	long flen = ftell(f);
+	if (flen < 0) { fprintf(stderr, "can't size %s\n", argv[1]); fclose(f); return 1; }
+	size_t n = (size_t)flen;
+	if (fseek(f, 0, SEEK_SET)) { perror(argv[1]); fclose(f); return 1; }
 	char *buf = malloc(n + 1);
-	if (!buf || fread(buf, 1, n, f) != n) { fprintf(stderr, "can't read %s\n", argv[1]); return 1; }
+	if (!buf || fread(buf, 1, n, f) != n) { fprintf(stderr, "can't read %s\n", argv[1]); free(buf); fclose(f); return 1; }
 	buf[n] = 0;
 	fclose(f);
 
@@ -126,15 +130,23 @@ int main(int argc, char **argv)
 		memcpy(t.at, repl, len);
 		changed++;
 	}
-	if (!panel) { printf("no panel timing in %s\n", argv[1]); return 1; }
-	if (!changed || dry) return 0;
+	if (!panel) { printf("no panel timing in %s\n", argv[1]); free(buf); return 1; }
+	if (!changed || dry) { free(buf); return 0; }
 
 	/* beside it, then renamed over: a power cut leaves the old DTB or the new one */
 	char tmp[4096];
 	snprintf(tmp, sizeof tmp, "%s.new", argv[1]);
 	f = fopen(tmp, "wb");
-	if (!f || fwrite(buf, 1, n, f) != n || fflush(f) || fsync(fileno(f))) { perror(tmp); return 1; }
+	if (!f) { perror(tmp); free(buf); return 1; }
+	if (fwrite(buf, 1, n, f) != n || fflush(f) || fsync(fileno(f))) {
+		perror(tmp);
+		fclose(f);
+		unlink(tmp);	/* a partial .new would otherwise sit on the boot partition */
+		free(buf);
+		return 1;
+	}
 	fclose(f);
+	free(buf);
 	if (rename(tmp, argv[1])) { perror("rename"); return 1; }
 	sync();
 	printf("written: %s (from the next boot)\n", argv[1]);
