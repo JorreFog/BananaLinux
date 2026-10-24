@@ -620,19 +620,23 @@ static void audio_find_cards(void)
 
 static void audio_route(void)
 {
-	card_play = card_speaker >= 0 && !headphones ? card_speaker : card_codec;
+	int bt = bt_audio_read();
+	/* Bluetooth headphones being called back (after a wake, or a codec change: the bluetooth script's bt/hold) and
+	 * not back yet: the codec with no speaker on it (the RG DS's amplifier switched off; on the Plus the rk817 drives
+	 * only the jack), so a game plays on at its pace, through a real device's clock, and nothing comes out loud */
+	int hold = !bt && access(BT_AUDIO_DIR "/hold", F_OK) == 0;
+	card_play = card_speaker >= 0 && !headphones && !hold ? card_speaker : card_codec;
 	/* the RG DS: one card, whose HP output feeds both the jack and the speaker amplifier; the amplifier is the card's
 	 * "Internal Speakers Switch" (a pin switch), off while headphones are in, or the speakers play along (#13) */
 	if (card_speaker < 0 && card_codec >= 0) {
 		char c[16];
 		snprintf(c, sizeof c, "%d", card_codec);
-		char *argv[] = { "amixer", "-q", "-c", c, "cset", "name=Internal Speakers Switch", headphones ? "off" : "on", NULL };
+		char *argv[] = { "amixer", "-q", "-c", c, "cset", "name=Internal Speakers Switch", headphones || hold ? "off" : "on", NULL };
 		run(argv);
 	}
 	/* The RG DS Plus's aw88166 amplifiers play 48 kHz whatever rate the I2S is set to (measured: 44.1 kHz audio is
 	 * taken at 48,150 samples a second, 9% fast and pitched up; 48 kHz at 48,080), so their stream is always opened
 	 * at 48 kHz and ALSA converts. Without it DraStic's 44.1 kHz ran its audio ring dry (stutter, crackles). */
-	int bt = bt_audio_read();
 	char play[192];
 	/* Bluetooth headphones first: bluez-alsa's PCM plugin (A2DP, SBC at 44.1 or 48 kHz), plug converting the rest */
 	if (bt)
@@ -641,7 +645,8 @@ static void audio_route(void)
 		snprintf(play, sizeof play, "{ type plug slave { pcm \"hw:%d\" rate 48000 } }", card_play);
 	else
 		snprintf(play, sizeof play, "\"plughw:%d\"", card_play);
-	const char *where = bt ? "Bluetooth headphones" : card_play == card_speaker ? "speakers" : headphones ? "headphones" : "the codec";
+	const char *where = bt ? "Bluetooth headphones" : hold ? "nowhere: Bluetooth headphones being called back"
+		: card_play == card_speaker ? "speakers" : headphones ? "headphones" : "the codec";
 	char conf[640];
 	int n = snprintf(conf, sizeof conf,
 		"# bananad: where sound plays now (%s)\n"
@@ -1272,7 +1277,7 @@ int main(int argc, char **argv)
 				for (char *p = buf; p < buf + len; p += sizeof(struct inotify_event) + ((struct inotify_event *)p)->len) {
 					struct inotify_event *ev = (struct inotify_event *)p;
 					if (ev->wd == wd_input) inputs = 1;
-					else if (ev->wd == wd_bt && ev->len && !strcmp(ev->name, "audio")) bt = 1;
+					else if (ev->wd == wd_bt && ev->len && (!strcmp(ev->name, "audio") || !strcmp(ev->name, "hold"))) bt = 1;
 				}
 			if (bt) audio_route();
 			if (inputs) {
