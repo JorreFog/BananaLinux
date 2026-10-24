@@ -9,6 +9,9 @@ FX=$OUT/fixture
 rm -rf "$OUT"; mkdir -p "$OUT"
 "$HERE/tests/fixture.sh" "$FX" >/dev/null
 fail=0
+# the Pokémon companion's decoder (on data made from the documented layouts), and the made-up game and replies it
+# leaves in $OUT for the game panel's run below
+make -s -C "$HERE" tests/pokemon-test >/dev/null && "$HERE/tests/pokemon-test" "$OUT" 2> "$OUT/pokemon-test.log" || { echo "FAIL the Pokémon companion's decoder: $(grep FAIL "$OUT/pokemon-test.log" | head -3)"; fail=1; }
 for size in 640x480 1024x768; do
     log=$OUT/$size.log
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" \
@@ -195,6 +198,28 @@ for size in 640x480 1024x768; do
     [ -e "$G" ] && { echo "FAIL $size: back to As in Settings left $G"; fail=1; }
     for s in pergame pergame-shader pergame-none; do
         [ -s "$OUT/$size-$s-top.png" ] && [ -s "$OUT/$size-$s-bot.png" ] || { echo "FAIL $size: no $s shot"; fail=1; }
+    done
+    # the game panel with the Pokémon companion (a made-up Emerald, RetroArch's replies from the decoder's test): the
+    # party, a member's moves by touch, a battle (shown by itself), the achievements tab
+    klog=$OUT/$size-pokemon.log
+    "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; gamepanel 1 $OUT/poke.gba; gshot pk-wait; pokefeed $OUT/poke-party.txt; gshot pk-party; \
+            gtouch 100 140; gshot pk-mon; gtouch 300 200; wait 300; pokefeed $OUT/poke-battle.txt; wait 300; pokefeed $OUT/poke-battle.txt; gshot pk-battle; \
+            gtouch 300 98; gshot pk-ach; gamepanel 1 $FX/roms/nds/Peel Quest.nds; gshot pk-none" 2> "$klog" || { echo "FAIL $size: banana-ui (Pokémon companion) exited $?"; fail=1; }
+    kcheck() { grep -q "$1" "$klog" || { echo "FAIL $size: no '$1' (Pokémon companion)"; fail=1; }; }
+    kcheck "gamepanel .*poke.gba: companion Pokémon Emerald"
+    kcheck "pokefeed .*poke-party.txt: asked 3, party 4, battle 0"
+    kcheck "pokefeed .*poke-battle.txt: asked 5, party 4, battle 1, foes 1"
+    kcheck "gamepanel .*Peel Quest.nds: companion none"
+    for s in pk-wait pk-party pk-mon pk-battle pk-ach pk-none; do
+        f=$OUT/$size-$s-bot.png
+        [ -s "$f" ] || { echo "FAIL $size: no $f"; fail=1; continue; }
+        [ "$(convert "$f" -format '%[fx:standard_deviation>0.01]' info: 2>/dev/null)" = 1 ] || { echo "FAIL $size: $f is blank"; fail=1; }
+    done
+    # each view drew something of its own (not the same frame again)
+    for pair in "pk-party pk-mon" "pk-mon pk-battle" "pk-battle pk-ach"; do
+        a=${pair% *}; b=${pair#* }
+        cmp -s "$OUT/$size-$a-bot.png" "$OUT/$size-$b-bot.png" && { echo "FAIL $size: $a and $b are the same picture"; fail=1; }
     done
     grep 'bench:' "$log" | sed "s/^banana-ui: /$size /"
 done

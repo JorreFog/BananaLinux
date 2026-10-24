@@ -590,6 +590,54 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 				logf("touch %.0f %.0f: %s", x, y, ui.touch(scr, x * k, y * k, false) ? "used" : "unused");
 			}
 		}
+		else if (op == "gamepanel")
+		{
+			// gamepanel <screen> <rom>: the game panel for a RetroArch game on the other screen, with the Pokémon
+			// companion when the ROM is a game it knows (its tables read before going on)
+			int scr = 1; std::string rom;
+			cs >> scr;
+			std::getline(cs >> std::ws, rom);
+			static pkmn::Companion comp;
+			bool pk = comp.open(rom);
+			for (int i = 0; pk && i < 300 && !comp.tables(); i++) usleep(10000);
+			settings.companion = pk ? &comp : nullptr;
+			settings.gameOpen("Pokemon Test", "Game Boy Advance", scr, true);
+			logf("gamepanel %s: companion %s", rom.c_str(), pk ? comp.game()->name : "none");
+		}
+		else if (op == "pokefeed")
+		{
+			// pokefeed <file>: the companion's requests, then the file as RetroArch's answers to them
+			std::string path;
+			std::getline(cs >> std::ws, path);
+			if (!settings.companion) { logf("pokefeed: no companion"); return 2; }
+			std::string r = settings.companion->requests(now);
+			std::ifstream f(path);
+			std::stringstream b;
+			b << f.rdbuf();
+			std::string d = b.str();
+			settings.companion->feed(d.data(), d.size());
+			settings.gameUpdate(now);
+			const pkmn::Snapshot& sn = settings.companion->snapshot();
+			logf("pokefeed %s: asked %d, party %zu, battle %d, foes %zu", path.c_str(), (int)std::count(r.begin(), r.end(), '\n'),
+				sn.party.size(), (int)sn.inBattle, sn.foes.size());
+		}
+		else if (op == "gtouch")
+		{
+			// gtouch <x> <y>: a tap on the game panel, in px of a 640x480 panel
+			float x = 0, y = 0;
+			cs >> x >> y;
+			float k = o.h / 480.0f;
+			settings.gameTouch(x * k, y * k, true);
+			logf("gtouch %.0f %.0f: action %d", x, y, (int)settings.gameTouch(x * k, y * k, false));
+		}
+		else if (op == "gshot")
+		{
+			std::string name; cs >> name;
+			settings.gameUpdate(now);
+			settings.gameRender();
+			if (!save(0, o.headless + name + "-top.png") || !save(1, o.headless + name + "-bot.png")) { logf("can't write %s", name.c_str()); return 1; }
+			logf("gshot %s", name.c_str());
+		}
 		else if (op == "shot")
 		{
 			std::string name; cs >> name;
@@ -1029,6 +1077,7 @@ int main(int argc, char** argv)
 	int lastMinute = -1;
 	float scale = disp.height() / 480.0f;
 	Settings settingsView(&be, o.assets, o.data, scale, variant);
+	pkmn::Companion companion;	// the game panel's Pokémon companion (pokemon.h), for the game running
 	settingsView.setColors = [&](const ScreenColors& c) { std::string e = disp.setColors(c); if (!e.empty()) logf("screen colours: %s", e.c_str()); return e; };
 	settingsView.setFontDir(o.banana + "/fonts");
 	settingsView.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
@@ -1211,11 +1260,13 @@ int main(int argc, char** argv)
 	// change, touch on the panel's screen (when the panel is there and that screen has a touchscreen: the RG DS's top one
 	// too, with the game on the bottom) turned into RetroArch's commands through the pipe
 	// on its stdin (stdin_cmd_enable), until the game ends
-	auto gamePanel = [&](pid_t pid, int& status, int gameScreen, int cmdFd, const std::string& title, const std::string& sysName)
+	// (outFd: RetroArch's stdout, for the Pokémon companion's replies; -1 without one)
+	auto gamePanel = [&](pid_t pid, int& status, int gameScreen, int cmdFd, int outFd, const std::string& title, const std::string& sysName)
 	{
 		const int panelScreen = 1 - gameScreen;
 		{
 			std::lock_guard<std::mutex> l(worker.uiLock);
+			settingsView.companion = outFd >= 0 && companion.active() ? &companion : nullptr;
 			settingsView.gameOpen(title, sysName, panelScreen, input.hasTouch(panelScreen));
 		}
 		be.invalidate();
@@ -1225,6 +1276,12 @@ int main(int argc, char** argv)
 			pid_t w = waitpid(pid, &status, WNOHANG);
 			if (w == pid || (w < 0 && errno != EINTR)) break;
 			double t = nowMs();
+			if (outFd >= 0)
+			{
+				// the companion's reads of the game's memory, on RetroArch's stdin beside the tiles' commands
+				std::string r = companion.requests(t);
+				if (!r.empty() && write(cmdFd, r.data(), r.size()) < 0) {}
+			}
 			{
 				std::lock_guard<std::mutex> l(worker.uiLock);
 				if (settingsView.gameUpdate(t)) want = true;
@@ -1239,8 +1296,18 @@ int main(int argc, char** argv)
 			}
 			std::vector<pollfd> fds = { { disp.pollFd(), POLLIN, 0 } };
 			for (int fd : input.fds()) fds.push_back({ fd, POLLIN, 0 });
+			if (outFd >= 0) fds.push_back({ outFd, POLLIN, 0 });
 			if (poll(fds.data(), fds.size(), 100) <= 0) continue;
 			if (fds[0].revents & POLLIN) disp.handleEvents();
+			if (outFd >= 0 && (fds.back().revents & POLLIN))
+			{
+				// (drained every time: RetroArch would wait on a full pipe)
+				char buf[16384];
+				ssize_t n;
+				while ((n = read(outFd, buf, sizeof buf)) > 0) companion.feed(buf, (size_t)n);
+				fds.pop_back();
+			}
+			else if (outFd >= 0) fds.pop_back();
 			for (size_t i = 1; i < fds.size(); i++)
 				if (fds[i].revents & POLLIN)
 					input.read(fds[i].fd, [&](const InputEvent& ev)
@@ -1285,7 +1352,8 @@ int main(int argc, char** argv)
 		bool ra = sd.run.find("run-retroarch") != std::string::npos ||
 			(sd.run.find("run-pico8") != std::string::npos && access("/data/roms/pico-8/pico8_64", F_OK) != 0);
 		bool panel = ra && settings["retroarch_panel"] != "off" && disp.isOpen();
-		int gameScreen = 0, leaseFd = -1, cmdFd = -1;
+		int gameScreen = 0, leaseFd = -1, cmdFd = -1, outFd = -1;
+		const char* OUT = "/run/banana/retroarch.out";	// RetroArch's stdout, for the Pokémon companion
 		if (panel)
 		{
 			// the panel RetroArch is set to use (Settings > Other systems > Screen: video_monitor_index 2 the top, 1 the
@@ -1303,6 +1371,17 @@ int main(int argc, char** argv)
 				leaseFd = cmdFd = -1;
 				panel = false;
 			}
+		}
+		// Settings > Other systems > Pokémon companion, for a Pokémon game it knows (the ROM header): RetroArch's stdout
+		// through a pipe the panel reads (held open both ways here: no end seen when RetroArch quits, and RetroArch
+		// never meets a pipe with no reader)
+		companion.close();
+		if (panel && sd.id == "gba" && settings["pokemon_companion"] == "on" && companion.open(rom))
+		{
+			unlink(OUT);
+			if (mkfifo(OUT, 0600) == 0) outFd = ::open(OUT, O_RDWR | O_NONBLOCK | O_CLOEXEC);
+			if (outFd < 0) { logf("pokemon companion: no pipe for RetroArch's replies"); companion.close(); }
+			else logf("pokemon companion: %s", companion.game()->name);
 		}
 		if (!panel)
 		{
@@ -1330,6 +1409,7 @@ int main(int argc, char** argv)
 			{
 				setenv("BANANA_DRM_LEASE_FD", std::to_string(leaseFd).c_str(), 1);
 				setenv("BANANA_RA_CMD", FIFO, 1);
+				if (outFd >= 0) setenv("BANANA_RA_OUT", OUT, 1);
 			}
 			execl("/bin/sh", "sh", "-c", cmd.c_str(), (char*)nullptr);
 			_exit(127);
@@ -1341,7 +1421,7 @@ int main(int argc, char** argv)
 			if (panel)
 			{
 				::close(leaseFd);	// (the game has its copy)
-				gamePanel(pid, status, gameScreen, cmdFd, lib.gameAt(game).title, sd.name);
+				gamePanel(pid, status, gameScreen, cmdFd, outFd, lib.gameAt(game).title, sd.name);
 			}
 			else while (waitpid(pid, &status, 0) < 0 && errno == EINTR) {}
 			unlink("/run/banana/game.pid");
@@ -1353,9 +1433,12 @@ int main(int argc, char** argv)
 				int a, b;
 				if (settingsView.gameProgress(a, b)) std::ofstream(PROGRESS) << a << " " << b << "\n";	// RetroArch's, as the panel had it
 				settingsView.gameClose();
+				settingsView.companion = nullptr;
 			}
 			::close(cmdFd);
 			unlink(FIFO);
+			if (outFd >= 0) { ::close(outFd); unlink(OUT); }
+			companion.close();
 			input.close();
 			disp.close();
 		}

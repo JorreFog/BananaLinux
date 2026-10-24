@@ -140,9 +140,13 @@ if [ -n "$BANANA_DRM_LEASE_FD" ]; then
     L=/run/banana/retroarch-panel.cfg
     printf 'video_monitor_index = "1"\nstdin_cmd_enable = "true"\n' > $L
     rm -f /run/banana/retroarch.log
+    # the Pokemon companion (Settings > Other systems): RetroArch's stdout, where it answers the panel's
+    # READ_CORE_MEMORY commands, into the pipe banana-ui reads (its log goes to the file above, not there)
+    if [ -n "$BANANA_RA_OUT" ] && [ -p "$BANANA_RA_OUT" ]; then exec 4>"$BANANA_RA_OUT"; else exec 4>&1; fi
     LD_PRELOAD=/usr/lib/banana/banana-leaseshim.so retroarch --config $CFG --appendconfig "$L|$RA$HKA" --verbose \
-        --log-file /run/banana/retroarch.log -L "$CORE" "$2" < "${BANANA_RA_CMD:-/dev/null}" &
+        --log-file /run/banana/retroarch.log -L "$CORE" "$2" < "${BANANA_RA_CMD:-/dev/null}" >&4 &
     P=$!
+    exec 4>&-
 else
     # the panel RetroArch doesn't use (video_monitor_index: 2 the top, 1 the bottom) stays dark while the game runs
     . /usr/libexec/banana/one-panel

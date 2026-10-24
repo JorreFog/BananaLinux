@@ -225,6 +225,8 @@ settings		Bottom	下屏
 settings		Second screen	副屏
 settings		While a game plays on one screen, the other shows its RetroAchievements and tiles to save, load, open RetroArch's menu, fast forward and quit (by touch when they are on the bottom screen). Off: the other screen stays dark.	当某屏运行游戏时，另一屏显示其 RetroAchievements 及用于保存、读取、打开 RetroArch 菜单、快进和退出的磁贴（位于下屏时可触摸操作）。关闭：另一屏保持黑屏。
 settings		Game panel	游戏面板
+settings		Pokémon companion	宝可梦助手
+settings		Pokémon Ruby, Sapphire, Emerald, FireRed and LeafGreen (the English releases) on the second screen: the party with levels, HP and moves, and in a battle the foe, its types and how each move does against it. Read from the game as it plays; other games keep the panel as it is. Needs Second screen on.	宝可梦 红宝石、蓝宝石、绿宝石、火红、叶绿（英文版）在副屏上显示：队伍的等级、HP 和招式；对战时显示对手、其属性以及每个招式对它的效果。游玩时从游戏中读取；其他游戏的面板保持不变。需要开启副屏。
 settings		Network	网络
 settings		Wi-Fi	Wi-Fi
 settings		The networks around: A on one joins it, with a password typed on the keyboard here (or by touch).	附近的网络：在其上按 A 即可加入，密码在此处用键盘输入（或触摸）。
@@ -367,6 +369,40 @@ settings		RetroAchievements is off, or its login failed: check the account in Se
 settings		No connection to RetroAchievements: check Wi-Fi.	无法连接 RetroAchievements：请检查 Wi-Fi。
 settings		Tap a tile, or hold F with the button under it	轻点磁贴，或按住 F 并按下其下方按键
 settings		Hold F with the button under each tile	按住 F 并按下每个磁贴下方的按键
+settings		Party	队伍
+settings		Battle	对战
+settings		Achievements	成就
+settings		Waiting for the game...	正在等待游戏…
+settings		Waiting for the battle...	正在等待对战…
+settings		No Pokémon in the party yet.	队伍中还没有宝可梦。
+settings		RetroArch can't read the game's memory with this emulator: %s	RetroArch 无法用此模拟器读取游戏内存：%s
+settings		Weak to	弱点
+settings		EGG	蛋
+settings		SLP	睡眠
+settings		PSN	中毒
+settings		BRN	灼伤
+settings		FRZ	冰冻
+settings		PAR	麻痹
+settings		FNT	濒死
+settings		Lv	Lv
+settings		PP	PP
+settings	Pokémon types	Normal	一般
+settings	Pokémon types	Fighting	格斗
+settings	Pokémon types	Flying	飞行
+settings	Pokémon types	Poison	毒
+settings	Pokémon types	Ground	地面
+settings	Pokémon types	Rock	岩石
+settings	Pokémon types	Bug	虫
+settings	Pokémon types	Ghost	幽灵
+settings	Pokémon types	Steel	钢
+settings	Pokémon types	Fire	火
+settings	Pokémon types	Water	水
+settings	Pokémon types	Grass	草
+settings	Pokémon types	Electric	电
+settings	Pokémon types	Psychic	超能力
+settings	Pokémon types	Ice	冰
+settings	Pokémon types	Dragon	龙
+settings	Pokémon types	Dark	恶
 settings		the list of covers	封面列表
 settings		the boot partition can't be written	启动分区无法写入
 settings		can't write extlinux.conf	无法写入 extlinux.conf

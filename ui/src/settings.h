@@ -13,6 +13,7 @@
 #include "input.h"
 #include "wifi.h"
 #include "colors.h"
+#include "pokemon.h"
 #include <map>
 #include <memory>
 #include <mutex>
@@ -22,6 +23,7 @@
 
 namespace banana
 {
+	struct SPal;	// (settings.cpp: the palette)
 	class Settings
 	{
 	public:
@@ -44,6 +46,9 @@ namespace banana
 		void gameRender();
 		GameAction gameTouch(float x, float y, bool down);	// device px on the panel's screen
 		bool gameProgress(int& unlocked, int& total);			// the game's achievements, once the server said
+		// the Pokémon companion (pokemon.h), when the host runs one for this game: the party, the battle and the
+		// achievements as tabs in the panel's middle box (set before gameOpen, null after gameClose)
+		pkmn::Companion* companion = nullptr;
 		// box art (banana-scrape) finished since the last call: the library is read again
 		bool takeLibraryChanged() { bool r = libChanged; libChanged = false; return r; }
 
@@ -273,6 +278,16 @@ namespace banana
 		double gFlashUntil = 0;
 		int gSeen = -1;						// the watch's generation last drawn
 		std::map<std::string, rnds::TexPtr> gBadges;	// badge textures by file
+		// the companion's tabs: what the middle box shows, the party member opened, the battle last seen; where the
+		// tabs were drawn (for touch)
+		enum { PK_PARTY, PK_BATTLE, PK_ACH, PK_MON };
+		int pkView = PK_PARTY, pkMon = 0;
+		bool pkBattle = false;
+		float pkTabX[3] = {}, pkTabW[3] = {};
+		void pokeRender(const SPal& p);
+		float num(const std::string& t, float size, float x, float top, const rnds::Color& c, bool measureOnly = false);
+		void typeChip(int type, float x, float y);
+		void hpBar(int hp, int maxHp, float x, float y, float w);
 		void box(const std::string& kind, bool on, float x, float y, float w, float h);
 		float text(const std::string& t, bool medium, float size, float x, float top, const rnds::Color& c, bool upper = false, float ls = 0, bool measureOnly = false);
 		void wrapped(const std::string& t, float size, float x, float top, float width, int maxLines, const rnds::Color& c);
