@@ -24,13 +24,15 @@ namespace banana
 			bool emulator = false;		// EMULATOR scope (also true for Type CORE below)
 		};
 
-		const char* const ON_OFF[] = { "on", "off" };
-		const char* const ACCENTS[] = { "yellow", "blue", "red", "green", "purple", "pink" };
-		const char* const SHADERS[] = { "off", "lcd", "crt", "sharp" };
-		const char* const NDS[] = { "superdrastic", "bananads" };
-		const char* const PANEL[] = { "panel", "off" };
-		const char* const BOXART[] = { "libretro", "both", "twilight" };
-		const char* const LATENCY[] = { "32", "64", "128" };
+		// each list ends with nullptr: valid() walks it to that (without it, a value not in the list read on past the
+		// array, into the next one's: a crash, or "accent = on" taken as valid)
+		const char* const ON_OFF[] = { "on", "off", nullptr };
+		const char* const ACCENTS[] = { "yellow", "blue", "red", "green", "purple", "pink", nullptr };
+		const char* const SHADERS[] = { "off", "lcd", "crt", "sharp", nullptr };
+		const char* const NDS[] = { "superdrastic", "bananads", nullptr };
+		const char* const PANEL[] = { "panel", "off", nullptr };
+		const char* const BOXART[] = { "libretro", "both", "twilight", nullptr };
+		const char* const LATENCY[] = { "32", "64", "128", nullptr };
 
 		// The values /etc/banana/settings.conf documents, and the ones a card is completed with when that file is
 		// missing (the host test, or a card whose root is older than the menu). Keep in step with the template file.
