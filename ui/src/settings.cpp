@@ -3080,6 +3080,71 @@ namespace banana
 	static const char* const GAME_MIC_NAMES[] = { "", "Low", "Medium", "High", "Off" };
 	static const float MIC_BANANADS[] = { 0, 0.15f, 0.05f, 0.02f, 0 }, MIC_SUPERDRASTIC[] = { 0, 0.3f, 0.15f, 0.03f, 0 };
 
+	// ---- Delete game ----
+	// a file the game page may delete: a regular file in a roms folder (either card), never in a BIOS folder, and
+	// not PortMaster's own entry
+	static bool deletableRom(const std::string& path)
+	{
+		struct stat st;
+		if (path.empty() || stat(path.c_str(), &st) != 0 || !S_ISREG(st.st_mode)) return false;
+		std::string low = path;
+		for (auto& c : low) c = (char)tolower((unsigned char)c);
+		if (low.find("/roms/") == std::string::npos || low.find("/bios") != std::string::npos || low.find("..") != std::string::npos) return false;
+		return path.substr(path.rfind('/') + 1) != "PortMaster.sh";
+	}
+	static std::string baseOf(const std::string& name) { size_t d = name.rfind('.'); return d == std::string::npos || d == 0 ? name : name.substr(0, d); }
+
+	// the ROM, and with all its saves, states and art: in the saves and states folders (RetroArch's, the DS
+	// emulators' and DraStic's), beside the game, and in its folder's media/*; a file belongs to the game when its
+	// name is the game's name and a dot ("Peel Quest.sav", "Peel Quest.state1", "Peel Quest.resume.dss"), and not to
+	// another game in the same folder whose name goes on from there ("Peel Quest.v2.nds"'s files stay)
+	static std::vector<std::string> deleteGameFiles(const std::string& data, const std::string& rom, bool all)
+	{
+		std::vector<std::string> gone;
+		if (!deletableRom(rom)) return gone;
+		std::string dir = rom.substr(0, rom.rfind('/')), file = rom.substr(rom.rfind('/') + 1), base = baseOf(file);
+		std::string sys = dir.substr(dir.rfind('/') + 1), root = data + "/..";
+		if (unlink(rom.c_str()) != 0) return gone;
+		gone.push_back(rom);
+		if (!all) return gone;
+		std::vector<std::string> others;	// the other games' names in the folder
+		if (DIR* d = opendir(dir.c_str()))
+		{
+			while (dirent* e = readdir(d)) { std::string b = baseOf(e->d_name); if (e->d_name[0] != '.' && b != base && b.compare(0, base.size() + 1, base + ".") == 0) others.push_back(b); }
+			closedir(d);
+		}
+		std::vector<std::string> dirs = { root + "/saves", root + "/saves/" + sys, root + "/states", root + "/states/" + sys,
+			root + "/drastic/backup", root + "/drastic/savestates", dir };
+		if (DIR* d = opendir((dir + "/media").c_str()))
+		{
+			while (dirent* e = readdir(d)) if (e->d_name[0] != '.') dirs.push_back(dir + "/media/" + e->d_name);
+			closedir(d);
+		}
+		for (const std::string& dd : dirs)
+		{
+			DIR* d = opendir(dd.c_str());
+			if (!d) continue;
+			std::vector<std::string> mine;
+			while (dirent* e = readdir(d))
+			{
+				std::string n = e->d_name;
+				if (n.compare(0, base.size() + 1, base + ".") != 0) continue;
+				bool other = false;
+				for (auto& o : others) if (n.compare(0, o.size() + 1, o + ".") == 0) other = true;
+				std::string low = (dd + "/" + n);
+				for (auto& c : low) c = (char)tolower((unsigned char)c);
+				if (!other && low.find("/bios") == std::string::npos) mine.push_back(dd + "/" + n);
+			}
+			closedir(d);
+			for (auto& m : mine)
+			{
+				struct stat st;
+				if (stat(m.c_str(), &st) == 0 && S_ISREG(st.st_mode) && unlink(m.c_str()) == 0) gone.push_back(m);
+			}
+		}
+		return gone;
+	}
+
 	std::string Settings::gameEmulator(const std::string& rom) { return perGame("nds-per-game.conf", rom); }
 	void Settings::setGameEmulator(const std::string& rom, const std::string& emu) { setPerGame("nds-per-game.conf", rom, emu); }
 
@@ -3100,6 +3165,8 @@ namespace banana
 		}
 		if (!key.empty()) { pgRows.push_back(PG_NAME); pgRows.push_back(PG_SORT); }
 		if (!key.empty() && !path.empty()) pgRows.push_back(PG_ART);
+		pgDelAll = pgDelArmed = false;
+		if (deletableRom(path)) pgRows.push_back(PG_DELETE);	// (last: never the row the page opens on)
 		std::string cur = gameEmulator(romName);
 		pgEmu = 0;
 		for (int i = 1; i < 3; i++) if (cur == GAME_EMUS[i]) pgEmu = i;
@@ -3130,6 +3197,7 @@ namespace banana
 		switch (k)
 		{
 		case Key::UP: case Key::DOWN:
+			pgDelArmed = false;
 			pgRow = (pgRow + (k == Key::UP ? n - 1 : 1)) % n;
 			if (pgRow < pgTop) pgTop = pgRow;
 			if (pgRow >= pgTop + ROWS) pgTop = pgRow - ROWS + 1;
@@ -3140,6 +3208,7 @@ namespace banana
 			if (row == PG_EMU) pgEmu = (pgEmu + d + 3) % 3;
 			else if (row == PG_3D) pg3d = (pg3d + d + 3) % 3;
 			else if (row == PG_MIC) pgMic = (pgMic + d + 5) % 5;
+			else if (row == PG_DELETE) { pgDelAll = !pgDelAll; pgDelArmed = false; }
 			else if (row == PG_SHADER)
 			{
 				int ns = (int)pgShaderValues.size();
@@ -3156,6 +3225,17 @@ namespace banana
 				startEntry(ENTRY_ART_SEARCH, "Box art: the game's name in libretro's collection", pgTitle, GAME, artWords.empty() ? pgTitle : artWords);
 				return MOVED;
 			}
+			if (k == Key::A && row == PG_DELETE)
+			{
+				// two steps: the first A asks, the second deletes (any other key in between takes the question back)
+				if (!pgDelArmed) { pgDelArmed = true; return MOVED; }
+				pgDelArmed = false;
+				deletedFiles = deleteGameFiles(data, pgPath, pgDelAll);
+				if (deletedFiles.empty()) { message = "The game couldn't be deleted: the card may be read-only."; return MOVED; }
+				close();
+				return DELETED;
+			}
+			if (k == Key::START && row == PG_DELETE) return NONE;	// (START is Done, never a delete)
 			if (k == Key::A && (row == PG_NAME || row == PG_SORT))
 			{
 				bool nm = row == PG_NAME;
@@ -3172,7 +3252,7 @@ namespace banana
 			}
 			close();
 			return pgArtDone ? TITLES : CHANGED;	// (a new cover: the library again)
-		case Key::B: close(); return pgArtDone ? TITLES : CLOSED;
+		case Key::B: if (pgDelArmed) { pgDelArmed = false; return MOVED; } close(); return pgArtDone ? TITLES : CLOSED;
 		default: return NONE;
 		}
 	}
@@ -3186,7 +3266,7 @@ namespace banana
 			float ry = 82 + (r - pgTop) * 64;
 			if (downY < ry || downY > ry + 56) continue;
 			if (r != pgRow) { pgRow = r; return MOVED; }
-			if (pgRows[r] == PG_NAME || pgRows[r] == PG_SORT || pgRows[r] == PG_ART) return pressGame(Key::A);	// a tap again: the keyboard
+			if (pgRows[r] == PG_NAME || pgRows[r] == PG_SORT || pgRows[r] == PG_ART || pgRows[r] == PG_DELETE) return pressGame(Key::A);	// a tap again: the keyboard (Delete: its two steps)
 			return pressGame(downX < 320 ? Key::LEFT : Key::RIGHT);	// the value's left or right half steps it
 		}
 		return NONE;
@@ -3224,18 +3304,20 @@ namespace banana
 		const PgRow row = n ? pgRows[std::min(pgRow, n - 1)] : PG_NAME;
 		const std::string nameValue = gameName.empty() ? "As scraped" : gameName, sortValue = gameSort.empty() ? "By its name" : gameSort;
 		auto label = [](PgRow r) { return r == PG_EMU ? "Emulator" : r == PG_SHADER ? "Shader" : r == PG_3D ? "Threaded 3D" : r == PG_MIC ? "Microphone"
-			: r == PG_NAME ? "Name" : r == PG_SORT ? "Sort title" : "Box art"; };
+			: r == PG_NAME ? "Name" : r == PG_SORT ? "Sort title" : r == PG_DELETE ? "Delete game..." : "Box art"; };
 		auto value = [&](PgRow r) { return r == PG_EMU ? emuValue : r == PG_SHADER ? shValue : r == PG_3D ? v3d : r == PG_MIC ? vmic
-			: r == PG_NAME ? nameValue : r == PG_SORT ? sortValue : std::string(pgArtDone ? "Fetched" : "Find it by name"); };
+			: r == PG_NAME ? nameValue : r == PG_SORT ? sortValue
+			: r == PG_DELETE ? std::string(pgDelArmed ? (pgDelAll ? "A again: the game, saves and art" : "A again: the game (saves kept)") : pgDelAll ? "With its saves, states and art" : "Keep its saves and art")
+			: std::string(pgArtDone ? "Fetched" : "Find it by name"); };
 
 		be->beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
 		icon(pgNds ? "nds" : "gamepad", 50, 56, 3);
-		text(row == PG_EMU ? "This game's emulator" : row == PG_SHADER ? "This game's shader" : row == PG_3D ? "This game's 3D" : row == PG_MIC ? "This game's microphone" : row == PG_NAME ? "This game's name" : row == PG_SORT ? "This game's sort title" : "This game's box art",
+		text(row == PG_EMU ? "This game's emulator" : row == PG_SHADER ? "This game's shader" : row == PG_3D ? "This game's 3D" : row == PG_MIC ? "This game's microphone" : row == PG_NAME ? "This game's name" : row == PG_SORT ? "This game's sort title" : row == PG_DELETE ? "Delete this game" : "This game's box art",
 			true, 17, 170, 62, p.muted, true, 1.4f);
 		text(fit(pgTitle, true, 30, 420), true, 30, 170, 88, p.ink);
-		text(fit(value(row), true, 22, 420), true, 22, 170, 130, p.accent);
+		text(fit(value(row), true, 22, 420), true, 22, 170, 130, row == PG_DELETE && pgDelArmed ? Color::hex(0xff8a96) : p.accent);
 		std::string help = row == PG_EMU
 			? "SuperDrastic: DraStic onto both panels, the fastest. BananaDS: Banana's own emulator (melonDS's core), the most "
 			  "accurate. The choice is for this game only; the others follow Settings > Nintendo DS > Emulator."
@@ -3250,6 +3332,9 @@ namespace banana
 			  "banana/game-titles.tsv, which scraping the box art again leaves alone."
 			: row == PG_SORT ? "The library's order goes by this instead of the name: Dragon Quest 04, 05 and 09 keep IV, V and IX in their order. "
 			  "A types it; an empty one sorts by the name again."
+			: row == PG_DELETE ? (!message.empty() ? message : std::string("Removes this game's file from the card: ") + pgRom + ". Left and right choose whether its saves, save "
+			  "states and box art go too, or stay (they come back if you copy the game again). Nothing else is touched: no other "
+			  "game, no BIOS. A asks first; A again deletes.")
 			: !message.empty() ? message
 			: "For a game the box art scrape got wrong or didn't find (a translation, a hack, another name): A types its name as "
 			  "libretro's collection has it, then you pick the right one from what it finds. Wi-Fi needed.";
@@ -3267,7 +3352,7 @@ namespace banana
 			box(on ? "pick" : "slot", on, 18, y, 604, 56);
 			Color c = on ? p.onPick : p.muted;
 			text(label(pgRows[r]), true, 20, 38, y + 16, c);
-			bool typed = pgRows[r] == PG_NAME || pgRows[r] == PG_SORT || pgRows[r] == PG_ART;
+			bool typed = pgRows[r] == PG_NAME || pgRows[r] == PG_SORT || pgRows[r] == PG_ART || (pgRows[r] == PG_DELETE && pgDelArmed);
 			std::string v = fit(value(pgRows[r]), true, 19, typed ? 400 : 380);
 			float vw = text(v, true, 19, 0, 0, p.ink, false, 0, true);
 			if (typed) { text(v, true, 19, 586 - vw, y + 17, c); continue; }
@@ -3277,7 +3362,7 @@ namespace banana
 		}
 		float bw = faceWidth("B", "Back");
 		face("B", "Back", 18, bw);
-		const char* act = row == PG_NAME || row == PG_SORT ? "Type" : row == PG_ART ? "Find" : "Done";
+		const char* act = row == PG_NAME || row == PG_SORT ? "Type" : row == PG_ART ? "Find" : row == PG_DELETE ? (pgDelArmed ? "Delete" : "Delete...") : "Done";
 		float aw = faceWidth("A", act);
 		face("A", act, 622 - aw, aw);
 		be->endScreen();

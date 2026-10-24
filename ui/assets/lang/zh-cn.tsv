@@ -742,3 +742,12 @@ settings		Auto	自动
 settings		Power	电源
 settings		Sleep	睡眠
 settings		The handheld sleeps, as with a press of the power button; a game running is paused. Press the power button to wake it.	掌机进入睡眠，与按一下电源键相同；正在运行的游戏会暂停。按电源键唤醒。
+settings		Delete game...	删除游戏…
+settings		Delete this game	删除此游戏
+settings		Keep its saves and art	保留存档和封面
+settings		With its saves, states and art	连同存档、即时存档和封面
+settings		A again: the game (saves kept)	再按 A：删除游戏（保留存档）
+settings		A again: the game, saves and art	再按 A：删除游戏、存档和封面
+settings		Delete...	删除…
+settings		The game couldn't be deleted: the card may be read-only.	无法删除游戏：存储卡可能为只读。
+settings		Removes this game's file from the card: %s. Left and right choose whether its saves, save states and box art go too, or stay (they come back if you copy the game again). Nothing else is touched: no other game, no BIOS. A asks first; A again deletes.	从存储卡删除此游戏的文件：%s。左右键选择是否一并删除其存档、即时存档和封面，或保留它们（再次复制该游戏时会恢复）。不会动其他任何内容：其他游戏和 BIOS 均不受影响。按 A 先确认，再按 A 删除。

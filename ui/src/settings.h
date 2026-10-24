@@ -36,6 +36,7 @@ namespace banana
 		void close() { mOpen = false; page = LIST; wizard = false; }
 		void setup() { mOpen = true; openSetup(); }	// the first-time setup, from the host
 		bool isOpen() const { return mOpen; }
+		std::vector<std::string> deletedFiles;	// what the last Delete game removed (DELETED)
 		int gridCount() const;	// the groups with a tile (Power has none)
 		int powerGroup() const;	// -1: none
 		bool animating() const;	// the highlight or the list still easing into place: frames wanted
@@ -57,7 +58,8 @@ namespace banana
 		bool takeLibraryChanged() { bool r = libChanged; libChanged = false; return r; }
 
 		// what the host has to do after an input
-		enum Result { NONE, MOVED, CHANGED, CLOSED, THEME, REBOOT, POWEROFF, SEARCH, TITLES, LANGUAGE };
+		enum Result { NONE, MOVED, CHANGED, CLOSED, THEME, REBOOT, POWEROFF, SEARCH, TITLES, LANGUAGE, DELETED };
+		// DELETED: the game page's Delete game removed the ROM (deletedFiles says what went): the library read again
 		// SELECT in the menu: the keyboard alone, for a search of the games; SEARCH when it is done, with the text in
 		// searchText (empty: the search taken away)
 		void openSearch(const std::string& start);
@@ -133,7 +135,8 @@ namespace banana
 		std::string pgTitle, pgRom;
 		int pgRow = 0, pgTop = 0, pgEmu = 0, pgShader = 0, pg3d = 0, pgMic = 0;	// (pg3d, pgMic: 0 as in Settings)
 		bool pgNds = true;
-		enum PgRow { PG_EMU, PG_SHADER, PG_3D, PG_MIC, PG_NAME, PG_SORT, PG_ART };
+		enum PgRow { PG_EMU, PG_SHADER, PG_3D, PG_MIC, PG_NAME, PG_SORT, PG_ART, PG_DELETE };
+		bool pgDelAll = false, pgDelArmed = false;	// Delete game: its saves, states and art too; A pressed once
 		std::string pgPath;	// the game's file (Box art: banana-scrape --match)
 		std::string pgScraped;	// the game's title without its own name (the page's name compares with it)
 		bool pgArtDone = false;	// a cover fetched on the page: the library read again when it closes

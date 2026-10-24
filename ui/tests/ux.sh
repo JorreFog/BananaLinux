@@ -80,3 +80,22 @@ ux_check power "press a: settings closed"
 ux_run poweroff "home 0; press start; press y; press down; press down; press a; press a"
 [ "$(grep -c 'press a: settings result' "$OUT/$size-poweroff.log")" = 2 ] && grep -q 'press a: settings result 6' "$OUT/$size-poweroff.log" \
     || { echo "FAIL $size: Shut down: $(grep 'press a' "$OUT/$size-poweroff.log" | tr '\n' ' ')"; fail=1; }
+
+# Delete game (X on a game, the page's last row): A asks, A again deletes. The game only: its save stays. With its
+# saves, states and art (Right): those go, and nothing else (another game's save, a BIOS of the same name, the other
+# DS games); the library is read again without it
+mkdir -p "$UXFX/saves/nds" "$UXFX/states/nds" "$UXFX/drastic/backup" "$UXFX/bios"
+for f in "saves/nds/Peel Quest.sav" "states/nds/Peel Quest.ml1" "drastic/backup/Peel Quest.dsv" "saves/nds/Peel Quest 2.sav" "bios/Peel Quest.bin" "saves/nds/Split Racers (USA).sav"; do echo x > "$UXFX/$f"; done
+D7="press down; press down; press down; press down; press down; press down; press down;"
+ux_run delete-keep "lib 0 3; press x; $D7 press a; press b; press b; lib 0 3; press x; $D7 press a; shot ux-delete-ask; press a; wait 300; shot ux-delete-done"
+[ ! -e "$UXFX/roms/nds/Split Racers (USA).nds" ] && [ -e "$UXFX/saves/nds/Split Racers (USA).sav" ] && [ -e "$UXFX/roms/nds/media/box/Split Racers (USA).png" ] \
+    || { echo "FAIL $size: Delete game (the game only): $(ls "$UXFX/roms/nds" "$UXFX/saves/nds" | tr '\n' ' ')"; fail=1; }
+[ "$(grep -c '^banana-ui: deleted ' "$OUT/$size-delete-keep.log")" = 1 ] || { echo "FAIL $size: the first A deleted, or more than the ROM went"; fail=1; }
+ux_check delete-keep "deleted: nds's list again, 4 games"
+ux_run delete-all "lib 0 2; press x; $D7 press right; press a; press a; wait 300"
+for f in "roms/nds/Peel Quest.nds" "saves/nds/Peel Quest.sav" "states/nds/Peel Quest.ml1" "drastic/backup/Peel Quest.dsv" "roms/nds/media/box/Peel Quest.png"; do
+    [ -e "$UXFX/$f" ] && { echo "FAIL $size: Delete game left $f"; fail=1; }
+done
+for f in "saves/nds/Peel Quest 2.sav" "bios/Peel Quest.bin" "roms/nds/Banana Kart DS.nds" "roms/nds/media/box/Banana Kart DS.png"; do
+    [ -e "$UXFX/$f" ] || { echo "FAIL $size: Delete game took $f"; fail=1; }
+done

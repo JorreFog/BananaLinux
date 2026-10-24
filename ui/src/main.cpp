@@ -483,6 +483,27 @@ static void resumeAfterPoweroff(Host& lib, const std::string& data, const char* 
 }
 
 // ---- headless: the same UI rendered to PNGs, for tests and screenshots ------------------------------------------
+// a game deleted on its page (Settings::DELETED): the card read again, back in the same system's list on the game
+// after it (the home row when that list is now empty), and what went in the log
+template <class U> static void afterDelete(Host& lib, U& ui, const std::vector<std::string>& gone)
+{
+	std::string id = lib.systemCount() ? lib.shelf(ui.systemIndex()).def.id : "";
+	int g = ui.gameIndex();
+	for (auto& f : gone) logf("deleted %s", f.c_str());
+	lib.scan();
+	ui.dataChanged();
+	for (int i = 0; i < lib.systemCount(); i++)
+		if (lib.shelf(i).def.id == id)
+		{
+			int n = lib.openLibrary(i) >= 0 ? lib.gameCount() : 0;
+			if (n > 0) { ui.setLibrary(i, std::min(std::max(0, g), n - 1)); logf("deleted: %s's list again, %d games", id.c_str(), n); return; }
+			ui.setHome(i);
+			logf("deleted: %s's last game, the home row", id.c_str());
+			return;
+		}
+	ui.setHome(0);
+}
+
 static int runHeadless(const Options& o, Host& lib, const std::string& variant, const std::string& theme)
 {
 	SoftBackend be(o.w, o.h);
@@ -561,6 +582,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 					for (int i = 0; i < lib.gameCount(); i++) if (lib.gameAt(i).path == path) { ui.setLibrary(sys, i); break; }
 					logf("titles %s: \"%s\" / \"%s\"", settings.gameKey.c_str(), settings.gameName.c_str(), settings.gameSort.c_str());
 				}
+				if (r == Settings::DELETED) afterDelete(lib, ui, settings.deletedFiles);
 				if (r == Settings::SEARCH)
 				{
 					lib.setSearch(settings.searchText);
@@ -1368,6 +1390,13 @@ int main(int argc, char** argv)
 			if (s >= 0) { lib.openLibrary(s); ui->setLibrary(s, 0); }
 			else ui->setHome(0);
 			logf("search \"%s\": %d games", settingsView.searchText.c_str(), s >= 0 ? (int)lib.shelf(s).games.size() : -1);
+			sound.play("select");
+			break;
+		}
+		case Settings::DELETED:
+		{
+			afterDelete(lib, *ui, settingsView.deletedFiles);
+			roms.watch(lib.watchDirs());
 			sound.play("select");
 			break;
 		}
