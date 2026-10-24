@@ -1,4 +1,6 @@
 #include "input.h"
+#include <algorithm>
+#include <cstdlib>
 #include <climits>
 #include <cstring>
 #include <dirent.h>
@@ -10,6 +12,13 @@
 
 namespace banana
 {
+	int stickStep(int dir, int v, int half)
+	{
+		if (dir == 0 && std::abs(v) * 2 > half) return v < 0 ? -1 : 1;
+		if (dir != 0 && (std::abs(v) * 3 < half || (v < 0) != (dir < 0))) return std::abs(v) * 2 > half ? (v < 0 ? -1 : 1) : 0;
+		return dir;
+	}
+
 	static bool testBit(const unsigned long* bits, int n)
 	{
 		return (bits[n / (8 * sizeof(long))] >> (n % (8 * sizeof(long)))) & 1;
@@ -91,6 +100,16 @@ namespace banana
 				for (int k = KEY_ESC; k < KEY_MAX && !any; k++)
 					if (testBit(keys, k) && mapKey(k) != Key::NONE) any = true;
 				if (!any) { ::close(fd); continue; }
+				// a pad's left stick: moves the cursor as the d-pad does (its range from the driver)
+				if (testBit(abs, ABS_X) && testBit(abs, ABS_Y))
+					for (int a = 0; a < 2; a++)
+					{
+						input_absinfo ai = {};
+						if (ioctl(fd, EVIOCGABS(a ? ABS_Y : ABS_X), &ai) != 0 || ai.maximum - ai.minimum < 16) continue;
+						dv.stick = true;
+						dv.stickMid[a] = (ai.minimum + ai.maximum) / 2;
+						dv.stickHalf[a] = std::max(1, (ai.maximum - ai.minimum) / 2);
+					}
 			}
 			devs.push_back(dv);
 		}
@@ -168,6 +187,17 @@ namespace banana
 					o.type = e.value ? InputEvent::PRESS : InputEvent::RELEASE;
 					o.key = k;
 					sink(o);
+				}
+				else if (e.type == EV_ABS && dv->stick && (e.code == ABS_X || e.code == ABS_Y))
+				{
+					// past half way out the direction is pressed, back under a third it is let go (a deadzone round the
+					// centre, and no flicker at the edge); the main loop's repeat makes a held stick scroll as a held d-pad
+					int a = e.code == ABS_Y, dir = stickStep(dv->stickDir[a], e.value - dv->stickMid[a], dv->stickHalf[a]);
+					if (dir == dv->stickDir[a]) continue;
+					Key neg = a ? Key::UP : Key::LEFT, pos = a ? Key::DOWN : Key::RIGHT;
+					if (dv->stickDir[a] != 0) { InputEvent o; o.type = InputEvent::RELEASE; o.key = dv->stickDir[a] < 0 ? neg : pos; sink(o); }
+					if (dir != 0) { InputEvent o; o.type = InputEvent::PRESS; o.key = dir < 0 ? neg : pos; sink(o); }
+					dv->stickDir[a] = dir;
 				}
 				else if (e.type == EV_ABS && (e.code == ABS_HAT0X || e.code == ABS_HAT0Y))
 				{
