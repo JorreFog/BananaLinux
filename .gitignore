@@ -3,6 +3,7 @@
 /ui/banana-ui
 /ui/tests/out/
 /ui/tests/pokemon-test
+/ui/tests/gamecomp-test
 /ui/tests/input-test
 /system/bananad/bananad
 /system/bananad/banana-panel-tune
