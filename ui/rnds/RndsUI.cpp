@@ -327,6 +327,7 @@ namespace rnds
 		std::vector<Done> done;
 		std::function<void()> onQueued, onFinished;
 		bool requestedThisFrame = false;
+		bool marchDrawn = false, glintDrawn = false;	// the last frame drew the meter's stripes / a cover the shine crosses (nextWake)
 
 		double now = 0;
 		double topAt = -1e9, shellAt = -1e9, popAt = -1e9;
@@ -1518,6 +1519,7 @@ namespace rnds
 			if (ce)
 			{
 				drawSprite(ce->sp, x, y + b);
+				glintDrawn = true;
 				// the shine: every 5 s, across the cover in 8 steps
 				double t = std::fmod(std::max(0.0, now - topAt), GLINT_PERIOD);
 				if (t < GLINT_SWEEP)
@@ -1624,6 +1626,7 @@ namespace rnds
 				be->fill(l, t, r - l, bt - t, sy.accent);
 				be->pushClip(l, t, r - l, bt - t);
 				float bp = march();
+				marchDrawn = true;
 				Color w45(1, 1, 1, 0.45f);
 				for (float mx = L + 3 + bp + 6 - 16; mx < L + 3 + fillW; mx += 8)
 				{
@@ -2311,6 +2314,7 @@ namespace rnds
 		d->absorb();	// ES draws the view under its menus without updating it: what the worker finished goes in here
 		d->frame++;
 		d->requestedThisFrame = false;
+		d->marchDrawn = d->glintDrawn = false;
 		d->drawTop();
 		d->drawBottom();
 		d->evict();
@@ -2344,11 +2348,13 @@ namespace rnds
 			return limit;
 		};
 		double next = 1e9;	// Banana: no bob, so nothing to wake for on the home screen
+		// (only what the last frame drew: a game with no achievements' meter or no cover moves nothing, and waking for
+		// the stripes anyway drew ~20 frames a second that changed no pixel, ~5% of a core in a game list left alone)
 		if (mView != HOME)
 		{
-			next = std::min(next, nextPixel(&Impl::marchAt, 400));
+			if (d->marchDrawn) next = std::min(next, nextPixel(&Impl::marchAt, 400));
 			double g = std::fmod(t, Impl::GLINT_PERIOD);
-			next = std::min(next, g < Impl::GLINT_SWEEP ? 0.0 : Impl::GLINT_PERIOD - g);
+			if (d->glintDrawn) next = std::min(next, g < Impl::GLINT_SWEEP ? 0.0 : Impl::GLINT_PERIOD - g);
 		}
 		return next >= 1e9 ? -1 : (int)std::ceil(next);
 	}

@@ -16,6 +16,7 @@ namespace banana
 		Key key = Key::NONE;
 		int screen = 1;
 		float x = 0, y = 0;		// panel px
+		double t = 0;			// when the kernel had it: CLOCK_MONOTONIC ms (BANANA_FRAME_STATS's press-to-panel delay)
 	};
 
 	// one stick axis as a d-pad direction: dir held now (-1, 0, 1), v the axis from its centre, half its half range.
