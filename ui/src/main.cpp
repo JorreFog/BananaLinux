@@ -1745,9 +1745,11 @@ int main(int argc, char** argv)
 		companion.close();
 		gameComp.close();
 		// Settings > Other systems > Game companion: the same for another GBA game with a definition in
-		// /usr/share/banana/companions (gamecomp.h; the Pokémon games are the Pokémon companion's)
+		// /data/banana/companions (the card's own, written or tried out there) or /usr/share/banana/companions
+		// (gamecomp.h; the Pokémon games are the Pokémon companion's)
 		bool pkOn = panel && sd.id == "gba" && settings["pokemon_companion"] == "on" && companion.open(rom);
-		bool gcOn = !pkOn && panel && sd.id == "gba" && settings["game_companion"] == "on" && gameComp.open(rom);
+		bool gcOn = !pkOn && panel && sd.id == "gba" && settings["game_companion"] == "on" &&
+			((access("/data/banana/companions", F_OK) == 0 && gameComp.open(rom, "/data/banana/companions")) || gameComp.open(rom));	// (the card's own first)
 		if (pkOn || gcOn)
 		{
 			unlink(OUT);

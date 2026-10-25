@@ -27,8 +27,9 @@ The companion idea is PokeDaisy's (https://github.com/lidor30/pokedaisy, by Lido
 2. `python3 tools/companions/install.py <folder with defs>` copies the valid ones into
    `system/rootfs/usr/share/banana/companions/` and rewrites `index.tsv`.
 3. Host test: `make test` (ui/tests/gamecomp-test.cpp and the game panel run in tests/run.sh use tests/companions/).
-4. On a handheld: the definition in `/usr/share/banana/companions/` (or a bind mount over it), Game companion on, the
-  game started from the menu with Second screen on.
+4. On a handheld, without a new system: put the definition in `/data/banana/companions/` on the card (looked at
+   before the system's folder; no index.tsv needed there, every file is read), turn Game companion on, start the game
+   from the menu with Second screen on. banana-ui's log (`/data/banana/logs/banana-ui.log`) says which file matched.
 
 ## The definition format (schema 1)
 
