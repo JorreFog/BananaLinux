@@ -496,6 +496,22 @@ static void game_rom(pid_t game, char *out, size_t n)
 		if (!strncmp(p, "BANANA_ROM=", 11)) { snprintf(out, n, "%s", p + 11); return; }
 }
 
+/* the resume state the DS launchers name for rom (run-drastic, run-bananads): <dir>/<file name without its
+ * extension><ext>; "" for another emulator (RetroArch's QUIT waits for its own save, so it isn't checked) */
+static void resume_state_path(const char *emu, const char *rom, char *out, size_t n)
+{
+	out[0] = 0;
+	const char *dir, *ext;
+	if (!strcmp(emu, "superdrastic")) dir = "/data/drastic/savestates", ext = ".resume.dss";
+	else if (!strcmp(emu, "bananads")) dir = "/data/states/nds", ext = ".resume.mst";
+	else return;
+	const char *b = strrchr(rom, '/');
+	b = b ? b + 1 : rom;
+	const char *dot = strrchr(b, '.');
+	int len = dot && dot != b ? (int)(dot - b) : (int)strlen(b);
+	snprintf(out, n, "%s/%.*s%s", dir, len, b, ext);
+}
+
 /* a command for RetroArch on its stdin (run-retroarch's pipe, or banana-ui's for the game panel) */
 static void ra_command(const char *c)
 {
@@ -536,6 +552,9 @@ static void sleep_poweroff(pid_t game, pid_t pg, double asleep)
 		const char *emu = NULL;
 		pid_t p, grp = pg > 0 ? -pg : game;
 		double wait = 60;	/* (the emulators' own limits are shorter: never cut a save short) */
+		struct timespec asked;	/* the resume state must be newer than this to count as this save's */
+		clock_gettime(CLOCK_REALTIME, &asked);
+		asked.tv_sec -= 1;	/* (a filesystem's timestamps may be coarser than the clock) */
 		if (pg > 0 && (p = pgrp_member(pg, "drastic"))) {
 			/* SuperDrastic: SIGUSR1 saves the resume state (DSFLIP_RESUME_FILE, which run-drastic always sets) and
 			 * quits; sent while stopped, it is the first thing the game does on SIGCONT */
@@ -574,6 +593,16 @@ static void sleep_poweroff(pid_t game, pid_t pg, double asleep)
 			wait = 10;
 		}
 		if (game_gone(game, wait)) {
+			/* SuperDrastic quits after 5 s whether or not DraStic wrote the state, and BananaDS when it can't
+			 * write it: then an older resume state (or none) is all there is, and the next boot mustn't start the
+			 * game from it as if it were this one (review 0.4.3: resume-boot was written either way) */
+			char rs[1200];
+			struct stat st;
+			if (emu && rom[0]) resume_state_path(emu, rom, rs, sizeof rs); else rs[0] = 0;
+			if (rs[0] && (stat(rs, &st) || st.st_mtim.tv_sec < asked.tv_sec)) {
+				sleep_log("%s quit without a new resume state (%s): not started again at the next boot", emu, rs);
+				emu = NULL;
+			}
 			if (emu && rom[0]) {
 				FILE *f = fopen("/data/banana/resume-boot.new", "w");
 				if (f) {

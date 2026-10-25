@@ -26,6 +26,7 @@ EOF
     cc -O2 -o "$W/drastic" -x c - <<'EOF'
 #include <fcntl.h>
 #include <libgen.h>
+#include <stdlib.h>
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
@@ -41,7 +42,12 @@ int main(int argc, char **argv)
 	fcntl(0, F_SETFL, fcntl(0, F_GETFL) | O_NONBLOCK);
 	char buf[512]; size_t have = 0;
 	for (;;) {
-		if (got) { say(got == SIGUSR1 ? "USR1" : "TERM"); usleep(300000); say("saved"); return 0; }
+		if (got) {
+			say(got == SIGUSR1 ? "USR1" : "TERM"); usleep(300000);
+			const char *rf = getenv("TEST_RESUME");	/* the resume state, when the test wants one written */
+			if (got == SIGUSR1 && rf && *rf) { FILE *f = fopen(rf, "w"); if (f) { fputs("state", f); fclose(f); } }
+			say("saved"); return 0;
+		}
 		ssize_t r = read(0, buf + have, sizeof buf - 1 - have);
 		if (r > 0) {
 			have += r; buf[have] = 0;
@@ -237,6 +243,8 @@ poweroff() { for i in $(seq 50); do [ $POWEROFF = 1 ] && return 0; sleep 0.1; do
 echo 60 > /sys/class/power_supply/battery/capacity
 
 echo "9. Power off after sleeping: the deadline's alarm, the lid still shut: SuperDrastic saves and quits, a shutdown"
+mkdir -p /data/drastic/savestates /data/states/nds
+export TEST_RESUME="/data/drastic/savestates/Peel Quest.resume.dss"
 game drastic "/data/roms/nds/Peel Quest.nds"
 : > /run/test/ui-signals; rm -f /data/banana/resume-boot
 start "sleep_check_hours = 4" "poweroff_after_sleep_minutes = 0.02"    # 1.2 s
@@ -254,7 +262,22 @@ grep -qx saved /run/test/drastic.log 2>/dev/null && ! kill -0 $GAME 2>/dev/null 
 grep -q 'the game saved, then shutting down' /data/banana/logs/sleep.log && ok "logged" || bad "not logged"
 stop; POWEROFF=0; echo 0 > /run/test/lid; echo 0 > /sys/class/backlight/backlight0/bl_power
 
+echo "9b. SuperDrastic quits without writing a resume state (an older one on the card): no resume-boot"
+export TEST_RESUME=; rm -f /data/banana/resume-boot
+touch -d '2026-01-01 12:00' "/data/drastic/savestates/Peel Quest.resume.dss"
+game drastic "/data/roms/nds/Peel Quest.nds"
+start "poweroff_after_sleep_minutes = 0.02"
+echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
+asleep && ok "suspended" || bad "no suspend"
+sleep 1.3; : > /sys/class/rtc/rtc0/wakealarm; wake
+poweroff && ok "shut down" || bad "no shutdown"
+grep -qx USR1 /run/test/drastic.log 2>/dev/null && ok "drastic got SIGUSR1" || bad "drastic: $(cat /run/test/drastic.log 2>/dev/null)"
+[ ! -e /data/banana/resume-boot ] && ok "no resume-boot (the old state isn't this save)" || bad "resume-boot written: $(cat /data/banana/resume-boot)"
+grep -q 'quit without a new resume state' /data/banana/logs/sleep.log && ok "logged" || bad "not logged"
+stop; POWEROFF=0; echo 0 > /run/test/lid; echo 0 > /sys/class/backlight/backlight0/bl_power
+
 echo "10. a power-button sleep with the lid open: BananaDS saves at the deadline"
+export TEST_RESUME="/data/states/nds/Banana Kart DS.resume.mst"
 game bananads "/data/roms/nds/Banana Kart DS.nds"
 start "poweroff_after_sleep_minutes = 0.02"     # (sleep_check_hours 0: the deadline is the only alarm)
 ev $EV_KEY $KEY_POWER 1; ev $EV_KEY $KEY_POWER 0
@@ -266,6 +289,7 @@ grep -qx USR1 /run/test/bananads.log 2>/dev/null && grep -qx saved /run/test/ban
 grep -qx emulator=bananads /data/banana/resume-boot 2>/dev/null && ok "resume-boot: bananads" || bad "resume-boot: $(cat /data/banana/resume-boot 2>/dev/null)"
 stop; POWEROFF=0
 
+export TEST_RESUME=
 echo "11. RetroArch: the slot down to its automatic one, SAVE_STATE, QUIT (through its command pipe)"
 mkdir -p /data/retroarch; printf 'state_slot = "2"\n' > /data/retroarch/retroarch.cfg
 rm -f /run/banana/retroarch.cmd; mkfifo /run/banana/retroarch.cmd; exec 5<>/run/banana/retroarch.cmd
