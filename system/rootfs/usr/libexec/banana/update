@@ -47,8 +47,13 @@ boot_ro() { sync; mount -o remount,ro /boot 2>/dev/null; }
 default_slot() { sed -n 's/^DEFAULT *//p' /boot/extlinux/extlinux.conf 2>/dev/null | head -n 1; }
 set_default() {   # set_default <slot>: extlinux.conf rewritten, the small file renamed over the old one
     boot_rw
+    # The new file on the card and checked before the rename: FAT keeps no order between a file's data and a rename,
+    # so a power cut right after an unsynced rename could leave an empty extlinux.conf (no boot at all), and a .new
+    # that came out empty or without its DEFAULT line (a read that failed half way) must never replace the old one
     sed "s/^DEFAULT .*/DEFAULT $1/" /boot/extlinux/extlinux.conf > /boot/extlinux/extlinux.conf.new &&
-        mv -f /boot/extlinux/extlinux.conf.new /boot/extlinux/extlinux.conf || fail "can't write extlinux.conf"
+        sync && grep -qx "DEFAULT $1" /boot/extlinux/extlinux.conf.new && grep -q "^ *LABEL $1\$" /boot/extlinux/extlinux.conf.new &&
+        mv -f /boot/extlinux/extlinux.conf.new /boot/extlinux/extlinux.conf ||
+        { rm -f /boot/extlinux/extlinux.conf.new; fail "can't write extlinux.conf"; }
     boot_ro
 }
 hash_of() { sha256sum "$1" | cut -d' ' -f1; }
