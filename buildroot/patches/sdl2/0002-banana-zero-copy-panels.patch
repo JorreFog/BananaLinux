@@ -8,7 +8,7 @@ SDL_BANANA_READBACK=1 forces the old path, SDL_BANANA_TRACE=1 logs the steps.
 Source: https://github.com/casualducko/eReaderDS/blob/main/runtime/banana-sdl/0002-banana-zero-copy-panels.patch
 ---
 diff --git a/src/video/dummy/SDL_bananapanels.c b/src/video/dummy/SDL_bananapanels.c
-index 133ad8d..69efc47 100644
+index 133ad8d..70c8bdb 100644
 --- a/src/video/dummy/SDL_bananapanels.c
 +++ b/src/video/dummy/SDL_bananapanels.c
 @@ -176,6 +176,7 @@ fail:
@@ -39,7 +39,7 @@ index 133ad8d..69efc47 100644
          for (y = 0; y < rows; y++) {
              const Uint8 *src = (const Uint8 *)pixels + ((size_t)(h - 1 - (y0 + y)) * w + x0) * 4;
              Uint32 *dst = (Uint32 *)(pn->buf[back].map + (size_t)y * pn->buf[back].pitch);
-@@ -270,7 +277,131 @@ void BP_Quit(void)
+@@ -270,7 +277,184 @@ void BP_Quit(void)
      if (!bp_on) return;
      bp_wait_flips();
      bp_on = 0;
@@ -66,6 +66,25 @@ index 133ad8d..69efc47 100644
 +static Uint64 (*g_bo_modifier)(void *);
 +static struct { void *bo; Uint32 fb; } bp_gbm_fbs[8];
 +static int bp_gbm_nfb;
++/* a window made again (LOVE's setMode, a resize): the surface before it, its buffers' framebuffers and the two it had
++ * on the panels, kept until the new surface's first frame is up (then nothing scans out of them) */
++static void *bp_gbm_old_surf, *bp_gbm_old_shown, *bp_gbm_old_queued;
++static Uint32 bp_gbm_old_fbs[8];
++static int bp_gbm_old_nfb;
++
++static void bp_gbm_rmfb(Uint32 fb)
++{
++    if (fb) bp_ioctl(DRM_IOCTL_MODE_RMFB, &fb);
++}
++/* the old surface and its framebuffers, once the panels show the new one */
++static void bp_gbm_drop_old(void)
++{
++    int i;
++    for (i = 0; i < bp_gbm_old_nfb; i++) bp_gbm_rmfb(bp_gbm_old_fbs[i]);
++    bp_gbm_old_nfb = 0;
++    if (bp_gbm_old_surf && g_surface_destroy) g_surface_destroy(bp_gbm_old_surf);
++    bp_gbm_old_surf = bp_gbm_old_shown = bp_gbm_old_queued = NULL;
++}
 +
 +void *BP_GBM_Device(void)
 +{
@@ -93,6 +112,11 @@ index 133ad8d..69efc47 100644
 +/* give the zero-copy path up (EGL on GBM wouldn't start): the read-back path takes over */
 +void BP_GBM_Disable(void)
 +{
++    int i;
++    bp_gbm_drop_old();
++    for (i = 0; i < bp_gbm_nfb; i++) bp_gbm_rmfb(bp_gbm_fbs[i].fb);
++    bp_gbm_nfb = 0;
++    bp_gbm_bo_shown = bp_gbm_bo_queued = NULL;
 +    if (bp_gbm_surf && g_surface_destroy) g_surface_destroy(bp_gbm_surf);
 +    if (bp_gbm_dev && g_destroy_device) g_destroy_device(bp_gbm_dev);
 +    bp_gbm_dev = bp_gbm_surf = NULL;
@@ -100,7 +124,25 @@ index 133ad8d..69efc47 100644
 +
 +void *BP_GBM_CreateSurface(int w, int h)
 +{
++    int i;
 +    if (!bp_gbm_dev) return NULL;
++    if (bp_gbm_surf) {
++        /* a window made again: its framebuffers were cached by buffer and never removed, so once the cache was full
++           every frame of the new surface added one (a KMS framebuffer leaked a frame), and a new buffer at an old
++           one's address was shown with the old framebuffer. The panels may still scan out of the old surface: it
++           goes once the new one's first frame is up (BP_GBM_Present) */
++        bp_wait_flips();
++        bp_gbm_drop_old();
++        bp_gbm_old_surf = bp_gbm_surf;
++        bp_gbm_old_shown = bp_gbm_bo_shown;
++        bp_gbm_old_queued = bp_gbm_bo_queued;
++        for (i = 0; i < bp_gbm_nfb; i++) bp_gbm_old_fbs[i] = bp_gbm_fbs[i].fb;
++        bp_gbm_old_nfb = bp_gbm_nfb;
++        bp_gbm_nfb = 0;
++        bp_gbm_bo_shown = bp_gbm_bo_queued = NULL;
++        bp_gbm_surf = NULL;
++        bp_gbm_started = 0;      /* the first frame of the new one is set on the CRTCs (it may be another size) */
++    }
 +    bp_gbm_w = w; bp_gbm_h = h;
 +    bp_gbm_surf = g_surface_create(bp_gbm_dev, w, h, BP_FOURCC_XR24, 1 /* SCANOUT */ | 4 /* RENDERING */);
 +    if (bp_gbm_trace) fprintf(stderr, "[bananapanels] gbm surface %dx%d %p\n", w, h, bp_gbm_surf);
@@ -128,7 +170,17 @@ index 133ad8d..69efc47 100644
 +                                  f.handles[0], f.pitches[0], (unsigned long long)f.modifier[0]);
 +        return 0;
 +    }
-+    if (bp_gbm_nfb < 8) { bp_gbm_fbs[bp_gbm_nfb].bo = bo; bp_gbm_fbs[bp_gbm_nfb++].fb = f.fb_id; }
++    if (bp_gbm_nfb == 8) {
++        /* full (a surface with more buffers than that): the oldest entry that isn't on the panels or queued makes room,
++           its framebuffer removed (it isn't scanned out) */
++        for (i = 0; i < 8; i++)
++            if (bp_gbm_fbs[i].bo != bp_gbm_bo_shown && bp_gbm_fbs[i].bo != bp_gbm_bo_queued) break;
++        if (i == 8) i = 0;
++        bp_gbm_rmfb(bp_gbm_fbs[i].fb);
++        SDL_memmove(&bp_gbm_fbs[i], &bp_gbm_fbs[i + 1], (size_t)(7 - i) * sizeof bp_gbm_fbs[0]);
++        bp_gbm_nfb = 7;
++    }
++    bp_gbm_fbs[bp_gbm_nfb].bo = bo; bp_gbm_fbs[bp_gbm_nfb++].fb = f.fb_id;
 +    return f.fb_id;
 +}
 +
@@ -167,6 +219,7 @@ index 133ad8d..69efc47 100644
 +            else if (bp_gbm_trace) fprintf(stderr, "[bananapanels] flip %d failed: %s\n", s, strerror(errno));
 +        }
 +    }
++    if (!bp_gbm_started) bp_gbm_drop_old();      /* SETCRTC is synchronous: the old surface is off the panels now */
 +    bp_gbm_started = 1;
 +}
 +
