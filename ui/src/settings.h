@@ -173,6 +173,7 @@ namespace banana
 		std::string joining, message;	// the network being joined; the last thing to tell
 		double joinStart = 0, nextStatus = 0, nextScan = 0, now = 0;
 		wifi::Network target;			// the network the keyboard is for
+		std::string failed;				// the saved network that couldn't be joined last: A on it types its password again
 		std::string pw;
 		int kcol = 0, krow = 1, layer = 0;	// the keyboard's selection (column 0..9, row 0..4), lower / upper / symbols
 
@@ -194,7 +195,7 @@ namespace banana
 		void startScan();
 		void pollStatus();
 		void markNetworks();
-		void join(const wifi::Network& n, const std::string& password);
+		void join(const wifi::Network& n, const std::string& password);	// password empty for an open or a saved network
 		Result pressNetworks(Key k);
 		Result pressKeyboard(Key k);
 		Result touchNetworks(float cx, float cy);

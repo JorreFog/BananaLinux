@@ -187,6 +187,36 @@ namespace banana
 			return writeConf(conf, out);
 		}
 
+		bool prefer(const std::string& conf, const std::string& ssid)
+		{
+			std::string head;
+			std::vector<Block> blocks;
+			readConf(conf, head, blocks);
+			int top = 0, at = -1;
+			for (int i = 0; i < (int)blocks.size(); i++)
+			{
+				top = std::max(top, blocks[i].priority);
+				if (at < 0 && blocks[i].ssid == ssid) at = i;
+			}
+			if (at < 0) return false;
+			// the block as it was written (by the menu or on a computer), only its priority line new
+			std::istringstream in(blocks[at].text);
+			std::string ln, b;
+			while (std::getline(in, ln))
+			{
+				std::string t = trim(ln);
+				size_t eq = t.find('=');
+				if (eq != std::string::npos && trim(t.substr(0, eq)) == "priority") continue;
+				if (t == "}") b += "\tpriority=" + std::to_string(top + 1) + "\n";
+				b += ln + "\n";
+			}
+			std::string out = head;
+			if (!out.empty() && out.back() != '\n') out += "\n";
+			out += b;
+			for (int i = 0; i < (int)blocks.size(); i++) if (i != at) out += blocks[i].text;
+			return writeConf(conf, out);
+		}
+
 		bool forget(const std::string& conf, const std::string& ssid)
 		{
 			std::string head;
