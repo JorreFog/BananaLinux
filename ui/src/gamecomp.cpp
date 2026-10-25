@@ -97,12 +97,12 @@ namespace banana::gcomp
 
 		bool parseMem(const JVal& j, Mem& m, bool field, std::string* why, const std::string& where)
 		{
-			static const char* const T[] = { "u8", "u16", "u32", "s8", "s16", "s32", "bcd8", "bcd16", "bcd32", "bool", "text" };
-			static const int SZ[] = { 1, 2, 4, 1, 2, 4, 1, 2, 4, 1, 0 };
+			static const char* const T[] = { "u8", "u16", "u32", "s8", "s16", "s32", "bcd8", "bcd16", "bcd32", "bool", "text", "index" };
+			static const int SZ[] = { 1, 2, 4, 1, 2, 4, 1, 2, 4, 1, 0, 0 };
 			std::string t = j.str("type", "u8");
 			int ti = -1;
-			for (int i = 0; i < 11; i++) if (t == T[i]) ti = i;
-			if (ti < 0) { if (why) *why = where + ": type " + t; return false; }
+			for (int i = 0; i < 12; i++) if (t == T[i]) ti = i;
+			if (ti < 0 || (ti == INDEX && !field)) { if (why) *why = where + ": type " + t; return false; }
 			m.type = (VType)ti;
 			m.size = SZ[ti];
 			if (m.type == TEXT)
@@ -930,6 +930,16 @@ namespace banana::gcomp
 					for (auto& f : w.fields)
 					{
 						Val fv;
+						if (f.m.type == INDEX)
+						{
+							// the row's number, through the field's post-processing (add 1: counted from one)
+							uint8_t ix[4] = { (uint8_t)i, (uint8_t)(i >> 8), 0, 0 };
+							Mem m = f.m; m.type = U16; m.size = 2;
+							fv.ok = true; fv.v = decode(m, ix, *def);
+							rsc.vars.emplace_back(f.name, fv.v);
+							row.push_back(fv);
+							continue;
+						}
 						const uint8_t* p = at(rb + f.off, f.m.size);
 						if (p) { fv.ok = true; fv.v = decode(f.m, p, *def); any = true; rsc.vars.emplace_back(f.name, fv.v); }
 						row.push_back(fv);

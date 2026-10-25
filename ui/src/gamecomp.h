@@ -26,7 +26,7 @@
 namespace banana::gcomp
 {
 	// what a value is read as
-	enum VType { U8, U16, U32, S8, S16, S32, BCD8, BCD16, BCD32, BOOL, TEXT };
+	enum VType { U8, U16, U32, S8, S16, S32, BCD8, BCD16, BCD32, BOOL, TEXT, INDEX };	// (INDEX: a list's row number, read from nowhere)
 	struct Mem
 	{
 		VType type = U8;

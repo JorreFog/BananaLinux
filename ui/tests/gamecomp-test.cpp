@@ -219,13 +219,15 @@ int main(int argc, char** argv)
 				"boss": {"ptr": ["0x03000100", 8], "type": "u16"},
 				"fight": {"expr": "boss > 0 && bit(a, 1)"}, "sum": {"expr": "a + b"}, "loop1": {"expr": "loop2 + 1"}, "loop2": {"expr": "loop1"}
 			},
+			"enums": {"names": {"0": "Alpha", "1": "Beta", "2": "Gamma"}},
 			"pages": [
 				{"id": "status", "title": "S", "widgets": [{"type": "number", "value": "sum"}, {"type": "number", "value": "c"}, {"type": "number", "value": "far"},
 					{"type": "number", "value": "iw"}, {"type": "text", "value": "zone"}, {"type": "number", "value": "loop1"}]},
 				{"id": "detail", "title": "D", "widgets": [{"type": "static", "text": "x"}]},
 				{"id": "battle", "title": "B", "when": "fight", "widgets": [{"type": "bar", "value": "boss", "max": 100}]},
 				{"id": "map", "title": "M", "widgets": [{"type": "static", "text": "x"}]},
-				{"id": "bag", "title": "B", "widgets": [{"type": "static", "text": "x"}]},
+				{"id": "bag", "title": "B", "widgets": [{"type": "list", "base": "0x02000200", "stride": 2, "n": 3, "rowWhen": "cnt > 0",
+					"fields": [{"name": "who", "type": "index", "enum": "names"}, {"name": "cnt", "off": 1, "type": "u8"}]}]},
 				{"id": "collection", "title": "C", "widgets": [{"type": "static", "text": "x"}]},
 				{"id": "progress", "title": "P", "widgets": [{"type": "static", "text": "x"}]}]})J";
 		JPtr j = parseJson(J, &why);
@@ -274,6 +276,13 @@ int main(int argc, char** argv)
 			f.put(0x03000100, 0, 4);
 			oneSet(s, f, now); oneSet(s, f, now);
 			CHECK(num(s, "boss") == -12345 && !s.pageOn(P_BATTLE), "a null pointer: not available");
+			// a list whose rows are named by their number (an index field)
+			f.put(0x02000201, 5, 1); f.put(0x02000205, 9, 1);
+			s.want(P_BAG);
+			oneSet(s, f, now);
+			const auto& rows = s.snapshot().lists[0];
+			CHECK(rows.size() == 2 && rows[0][0].v.num() == 0 && rows[1][0].v.num() == 2 && rows[1][1].v.num() == 9 && d->enumLabel("names", 2) == "Gamma",
+				"index rows: %zu", rows.size());
 		}
 	}
 	// a reference-only game: nothing to read, seen at once

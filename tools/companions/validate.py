@@ -12,7 +12,7 @@ The companion idea is PokeDaisy's (Lidor Itzhari).
 import json, os, re, sys
 
 PAGE_IDS = ["status", "detail", "battle", "map", "bag", "collection", "progress"]
-TYPES = {"u8": 1, "u16": 2, "u32": 4, "s8": 1, "s16": 2, "s32": 4, "bcd8": 1, "bcd16": 2, "bcd32": 4, "bool": 1, "text": 0}
+TYPES = {"u8": 1, "u16": 2, "u32": 4, "s8": 1, "s16": 2, "s32": 4, "bcd8": 1, "bcd16": 2, "bcd32": 4, "bool": 1, "text": 0, "index": 0}
 QUALITY = {"live-verified", "live-unverified", "reference-only"}
 RANGES = [(0x02000000, 0x0203FFFF, "EWRAM"), (0x03000000, 0x03007FFF, "IWRAM"), (0x08000000, 0x09FFFFFF, "ROM")]
 FUNCS = {"min", "max", "clamp", "abs", "floor", "ceil", "round", "mod", "if", "band", "bor", "bxor", "shl", "shr",
@@ -109,6 +109,9 @@ def check_expr(c, where, text, known, extra=()):
 def check_mem(c, where, d, enums, text_ok=True, allow_ptr=True):
     """addr/type/post-processing of a var or a list field (fields use 'off' instead of 'addr')."""
     t = d.get("type", "u8")
+    if t == "index" and allow_ptr:  # (vars allow ptr; list fields don't)
+        c.err("%s: type index is for list fields only" % where)
+        return 0
     if t not in TYPES:
         c.err("%s: type %r (one of %s)" % (where, t, " ".join(TYPES)))
         return 0
@@ -224,6 +227,8 @@ def check_def(path, data=None):
             c.err("%s: must be an object" % w)
             continue
         kinds = [k for k in ("addr", "expr", "value") if k in v]
+        if "ptr" in v and "addr" not in v:
+            kinds.append("addr")  # (a pointer var's place is its ptr; addr optional)
         if len(kinds) != 1:
             c.err("%s: needs exactly one of addr / expr / value (has %s)" % (w, kinds or "none"))
             continue
@@ -234,7 +239,7 @@ def check_def(path, data=None):
             continue
         size = check_mem(c, w, v, enums)
         try:
-            a = parse_int(v["addr"])
+            a = parse_int(v["addr"]) if "addr" in v else 0
         except Exception as e:
             c.err("%s: addr: %s" % (w, e))
             continue
