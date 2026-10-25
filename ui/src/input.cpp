@@ -111,6 +111,18 @@ namespace banana
 						dv.stickMid[a] = (ai.minimum + ai.maximum) / 2;
 						dv.stickHalf[a] = std::max(1, (ai.maximum - ai.minimum) / 2);
 					}
+				// only what read() looks at reaches us: the buttons, the d-pad hat and the left stick. The RG DS Plus's
+				// right stick (ABS_RX/RY) jitters at rest, ~110 events a second, each a wake of the idle menu for
+				// nothing; the kernel drops a report left empty, so no wake (no EVIOCSMASK, an old kernel: all, as before)
+				unsigned long types = (1ul << EV_SYN) | (1ul << EV_KEY) | (1ul << EV_ABS);
+				input_mask tm = { 0, sizeof types, (uint64_t)(uintptr_t)&types };
+				ioctl(fd, EVIOCSMASK, &tm);
+				unsigned long want[ABS_MAX / (8 * sizeof(long)) + 1] = {};
+				auto set = [&](int c) { want[c / (8 * sizeof(long))] |= 1ul << (c % (8 * sizeof(long))); };
+				set(ABS_HAT0X); set(ABS_HAT0Y);
+				if (dv.stick) { set(ABS_X); set(ABS_Y); }
+				input_mask am = { EV_ABS, sizeof want, (uint64_t)(uintptr_t)want };
+				ioctl(fd, EVIOCSMASK, &am);
 			}
 			devs.push_back(dv);
 		}
