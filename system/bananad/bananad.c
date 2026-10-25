@@ -61,7 +61,7 @@ static struct {
 	char mem_sleep[16];		/* deep (suspend to RAM) or s2idle */
 	int led_brightness;		/* 0..255; 0: the LEDs stay off */
 	int led_low, led_critical;	/* percent: red, blinking red */
-	int led_sleep;			/* 0..255: the upper LED while asleep (0: off); deep sleep may put a PWM LED out anyway */
+	int led_sleep;			/* the upper LED lit while asleep (the device tree's retain-state-suspended keeps it) */
 	int fast_resume;		/* devices resume in parallel (/sys/power/pm_async) */
 	double sleep_check_hours;	/* asleep: wake this often to look at the battery (0: never) */
 	int sleep_poweroff_pct;	/* found at or under this while asleep: shut down cleanly */
@@ -69,12 +69,12 @@ static struct {
 	int dim_pct;			/* dimmed to this percent of their brightness */
 	double poweroff_min;	/* asleep this long (any sleep), or idle this long when it never sleeps: off (0: never) */
 	int idle_in_games;		/* the idle timers (dim, sleep, off) in games too, not only in the menu */
-} cfg = { "auto", 5, 8, 10, 1, 2000, 3, "deep", 128, 20, 5, 16, 1, 4, 5, 2, 30, 60, 0 };
+} cfg = { "auto", 5, 8, 10, 1, 2000, 3, "deep", 128, 20, 5, 1, 1, 4, 5, 2, 30, 60, 0 };
 
 static int devfd[MAXDEV], ndev;
 static void leds_update(void);
 extern int leds_last;	/* (leds_update's, below) */
-static int leds_asleep;	/* the upper LED at led_sleep_brightness (suspend_now, until the wake) */
+static int leds_asleep;	/* asleep: the upper LED as led_sleep says (suspend_now, until the wake) */
 /* the sleep test's "kernel": a write of "mem" returns once a byte comes here (BANANAD_TEST_WAKE). A FIFO at
  * /sys/power/state alone returned at once, and a sleep straight after a wake raced the test's reader. While it
  * waits, <that path>.asleep is there: the test's "asleep", the same on every kernel (a wait channel's name isn't) */
@@ -138,7 +138,7 @@ static void load_conf(const char *path)
 		else if (!strcmp(k, "led_brightness")) cfg.led_brightness = atoi(v);
 		else if (!strcmp(k, "led_low_percent")) cfg.led_low = atoi(v);
 		else if (!strcmp(k, "led_critical_percent")) cfg.led_critical = atoi(v);
-		else if (!strcmp(k, "led_sleep_brightness")) cfg.led_sleep = atoi(v);
+		else if (!strcmp(k, "led_sleep")) cfg.led_sleep = !strcmp(v, "on") || !strcmp(v, "yes") || !strcmp(v, "1");
 		else if (!strcmp(k, "fast_resume")) cfg.fast_resume = !strcmp(v, "yes") || !strcmp(v, "1");
 		else if (!strcmp(k, "sleep_check_hours")) cfg.sleep_check_hours = atof(v);
 		else if (!strcmp(k, "sleep_poweroff_percent")) cfg.sleep_poweroff_pct = atoi(v);
@@ -403,10 +403,13 @@ static void suspend_now(const char *why)
 	pid_t game = pid_of("/run/banana/game.pid");
 	pid_t pg = game ? getpgid(game) : 0;
 	if (pg > 0) kill(-pg, SIGSTOP);	/* DraStic's dynarec mustn't run on while the clocks drop (ROCKNIX's finding) */
+	/* the panels dark at once: the kernel only turns them off once its suspend is under way, after the hooks (Wi-Fi
+	 * down) and the card's sync, which left the lid shut on lit screens for a while. Back at the wake (below) */
+	backlights_power(0);
 	hooks("pre", 0);
 	sync();
 	sleep_mode();
-	leds_asleep = 1; leds_last = -2; leds_update();	/* the upper LED glows: asleep, not off */
+	leds_asleep = 1; leds_last = -2; leds_update();	/* the upper LED lit (led_sleep): asleep, not off */
 	int cycles = 0, rtc_wakes = 0, failures = 0, dark = 0;
 	double asleep = 0, dark_from = 0, led_at = 0;
 	const char *woke = "?";
@@ -436,6 +439,11 @@ static void suspend_now(const char *why)
 		struct timespec b0, b1;
 		clock_gettime(CLOCK_BOOTTIME, &b0);	/* BOOTTIME counts the time asleep, MONOTONIC doesn't */
 		if (cycles == 0) sleep_log("sleep (%s): %.0f ms to suspend%s", why, (t_in - t0) * 1000, game ? ", game paused" : "");
+		/* the RTC's wakeup count and clock now, to tell its alarm's wake from a button's, and that its clock runs */
+		int wc0 = read_int("/sys/class/rtc/rtc0/device/power/wakeup_count", -1);
+		char rt[32] = "";
+		read_str("/sys/class/rtc/rtc0/since_epoch", rt, sizeof rt);
+		long rtc0 = atol(rt);
 		int r = write_file("/sys/power/state", "mem");
 		int err = errno;
 		if (!r && test_wake >= 0) {
@@ -446,10 +454,20 @@ static void suspend_now(const char *why)
 			unlink(test_asleep);
 		}
 		clock_gettime(CLOCK_BOOTTIME, &b1);
-		/* the RTC clears wakealarm when the alarm fires: set before, empty now, is the battery check's wake */
+		/* the alarm woke it: the RTC's wakeup count went up, or it cleared wakealarm (it does when the alarm fires).
+		 * Not "the time is past the alarm's": a power press after it was taken for the alarm, and turned off a
+		 * handheld someone had just woken (when the alarm hadn't woken it) */
 		char pending[32];
 		read_str("/sys/class/rtc/rtc0/wakealarm", pending, sizeof pending);
-		int rtc_fired = alarm && (!pending[0] || time(NULL) >= alarm);
+		int wc1 = read_int("/sys/class/rtc/rtc0/device/power/wakeup_count", -1);
+		int rtc_fired = alarm && ((wc0 >= 0 && wc1 > wc0) || !pending[0]);
+		if (alarm) {
+			read_str("/sys/class/rtc/rtc0/since_epoch", rt, sizeof rt);
+			double slept = (b1.tv_sec - b0.tv_sec) + (b1.tv_nsec - b0.tv_nsec) / 1e9;
+			/* (an RTC whose clock doesn't run never reaches its alarm: "moved 0 s" over a long sleep says so) */
+			sleep_log("woke after %.0f s: %s; the RTC's clock moved %ld s", slept,
+				rtc_fired ? "the RTC's alarm" : "not the RTC's alarm (a button, the lid)", atol(rt) - rtc0);
+		}
 		rtc_alarm(0);
 		cycles++;
 		if (r) {
@@ -948,9 +966,10 @@ static void leds_update(void)
 	int plugged = charger_online();
 	if (plugged) charging = 1;	/* plugged in counts as charging (see charger_online) */
 	int level = cfg.led_brightness;
-	/* the upper LED: green, red when low, blinking red when critical (not while charging); asleep, glowing at
-	 * led_sleep_brightness (never brighter than awake, and off with the LEDs off) */
-	int upper = leds_asleep && cfg.led_sleep < level ? cfg.led_sleep : level;
+	/* the upper LED: green, red when low, blinking red when critical (not while charging). Asleep, with led_sleep on:
+	 * full (a PWM at 100% holds its pin high even if the SoC's sleep stops its clock; the LED core leaves it lit, the
+	 * kernel's retain-state-suspended), or off; off all the time with the LEDs off */
+	int upper = !leds_asleep ? level : level > 0 && cfg.led_sleep ? 255 : 0;
 	int state = upper <= 0 ? 0 : (!charging && pct >= 0 && pct <= cfg.led_critical) ? 3 : (!charging && pct >= 0 && pct <= cfg.led_low) ? 2 : 1;
 	if (state != last) {
 		leds_last = state;
@@ -1240,6 +1259,8 @@ int main(int argc, char **argv)
 	sa.sa_handler = on_hup;		/* no SA_RESTART: poll() returns, and the loop reloads */
 	sigaction(SIGHUP, &sa, NULL);
 	mkdir("/run/banana", 0755);
+	/* the RTC may wake the handheld (its alarm: the battery check, turning off when idle) */
+	write_file("/sys/class/rtc/rtc0/device/power/wakeup", "enabled");
 	find_bottom_bl();	/* which backlight is the bottom one: banana-ui's idle dim owns it */
 
 	int ino = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);

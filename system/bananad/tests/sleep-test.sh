@@ -205,6 +205,7 @@ for i in $(seq 30); do [ $POWEROFF = 1 ] && break; sleep 0.1; done
 [ $POWEROFF = 1 ] && ok "turned off (init asked to power off)" || bad "not turned off"
 kill -0 $GAME 2>/dev/null && bad "the game wasn't told to quit and save" || ok "the game was told to quit and save first"
 grep -q 'turning off' /data/banana/logs/sleep.log && ok "logged: $(grep 'turning off' /data/banana/logs/sleep.log | tail -n1 | cut -c21-)" || bad "not logged"
+grep -q "woke after .*: the RTC's alarm" /data/banana/logs/sleep.log && ok "logged the alarm's wake" || bad "the alarm's wake not logged"
 stop
 POWEROFF=0; echo 0 > /run/test/lid
 setsid sleep 600 & GAME=$!; sleep 0.1; echo $GAME > /run/banana/game.pid
@@ -263,22 +264,43 @@ stop
 kill -CONT -$GAME 2>/dev/null || true
 rm -f /run/banana/game.pid
 
-echo "14. the upper LED glows dim while asleep (led_sleep_brightness), back at its level after the wake; 0: dark"
+echo "14. the upper LED lit while asleep (led_sleep on: full, the kernel keeps it), back at its level after; off: dark"
 G=/sys/class/leds/green:power/brightness
 start
 [ "$(cat $G)" = 128 ] && ok "awake: 128" || bad "awake: $(cat $G)"
 echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
 asleep && ok "asleep" || bad "no sleep"
-[ "$(cat $G)" = 16 ] && ok "asleep: a dim glow (16)" || bad "asleep: $(cat $G)"
+[ "$(cat $G)" = 255 ] && ok "asleep: lit (255)" || bad "asleep: $(cat $G)"
 echo 0 > /run/test/lid; wake
 [ "$(cat $G)" = 128 ] && ok "back to 128 after the wake" || bad "after the wake: $(cat $G)"
 stop
-start "led_sleep_brightness = 0"
+start "led_sleep = off"
 echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
 asleep && ok "asleep" || bad "no sleep"
-[ "$(cat $G)" = 0 ] && ok "asleep with the LED set to off: dark" || bad "asleep: $(cat $G)"
+[ "$(cat $G)" = 0 ] && ok "asleep with led_sleep off: dark" || bad "asleep: $(cat $G)"
 echo 0 > /run/test/lid; wake
 stop
+
+echo "15. the panels dark as soon as it goes to sleep (not when the kernel gets round to it), lit again after"
+echo 0 > /sys/class/backlight/backlight0/bl_power
+start
+ev $EV_KEY $KEY_POWER 1; ev $EV_KEY $KEY_POWER 0
+asleep && ok "asleep" || bad "no sleep"
+[ "$(cat /sys/class/backlight/backlight0/bl_power)" = 4 ] && ok "panels dark while asleep" || bad "panels lit while asleep ($(cat /sys/class/backlight/backlight0/bl_power))"
+wake
+[ "$(cat /sys/class/backlight/backlight0/bl_power)" = 0 ] && ok "panels lit after the wake" || bad "panels dark after the wake"
+stop
+
+echo "16. a power press after the turn-off time, the alarm not having woken it: a wake, not a shutdown"
+start "poweroff_minutes = 0.02" "autosleep_minutes = 30"     # 1.2 s, the alarm +2 s (sleep set: not the awake turn-off)
+ev $EV_KEY $KEY_POWER 1; ev $EV_KEY $KEY_POWER 0
+asleep && ok "asleep (the power button)" || bad "no sleep"
+sleep 3                             # past the alarm's time; wakealarm left set: it didn't fire
+wake                                # the power button
+[ $POWEROFF = 0 ] && ok "not turned off: someone woke it" || bad "turned off on a power press"
+grep -q "not the RTC's alarm" /data/banana/logs/sleep.log && ok "logged: $(grep 'woke after' /data/banana/logs/sleep.log | tail -n1 | cut -c21-)" || bad "the wake's cause not logged"
+stop
+POWEROFF=0
 
 kill $UI $GAME 2>/dev/null || true
 echo "sleep test: $pass passed, $fail failed"

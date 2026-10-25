@@ -1,0 +1,35 @@
+From 096c9a10343ca69be52f0ebabf15f423f13b17eb Mon Sep 17 00:00:00 2001
+From: swouapiy <swouapiy@gmail.com>
+Date: Sun, 25 Oct 2026 13:53:12 -0500
+Subject: [PATCH] leds: pwm: honour retain-state-suspended
+
+leds-pwm always set LED_CORE_SUSPENDRESUME, so the LED core switched every
+PWM LED off when the system suspended, whatever the device tree said. Read
+retain-state-suspended as leds-gpio does: with it the LED keeps its state
+across suspend (BananaOS: the RG DS's power LED shows the handheld asleep,
+not off).
+---
+ drivers/leds/leds-pwm.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/leds/leds-pwm.c b/drivers/leds/leds-pwm.c
+index 6c1f2f5..712335e 100644
+--- a/drivers/leds/leds-pwm.c
++++ b/drivers/leds/leds-pwm.c
+@@ -92,7 +92,12 @@ static int led_pwm_add(struct device *dev, struct led_pwm_priv *priv,
+ 	led_data->cdev.name = led->name;
+ 	led_data->cdev.brightness = LED_OFF;
+ 	led_data->cdev.max_brightness = led->max_brightness;
+-	led_data->cdev.flags = LED_CORE_SUSPENDRESUME;
++	/*
++	 * retain-state-suspended: the LED is left as it is while the system
++	 * sleeps (as leds-gpio does), instead of the LED core switching it off
++	 */
++	if (!fwnode_property_read_bool(fwnode, "retain-state-suspended"))
++		led_data->cdev.flags = LED_CORE_SUSPENDRESUME;
+ 
+ 	led_data->pwm = devm_fwnode_pwm_get(dev, fwnode, NULL);
+ 	if (IS_ERR(led_data->pwm))
+-- 
+2.40.0
+
