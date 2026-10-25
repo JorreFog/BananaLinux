@@ -117,6 +117,7 @@ namespace banana
 		bool light = false, mOpen = false;
 		std::vector<Item> items;
 		std::string langHelp;	// (the Language row's help: who translated each)
+		std::string coreSig;	// the RetroArch cores installed when the rows were made (coreSignature)
 		int sel = 0, top = 0, armed = -1;			// armed: an action waiting for its second A
 		// the groups (the items' sections, in order): Settings opens on a grid of them, as the in-game menu's main page;
 		// A opens one's list, B goes back to the grid

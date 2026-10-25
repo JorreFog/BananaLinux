@@ -348,6 +348,40 @@ namespace banana
 
 	// the panels' backlights (N2): backlight1 lights the top panel, backlight0 the bottom one (both handhelds' device
 	// trees); a level file holds "<top> <bottom>" in thousandths, or one number for both (before 0.4.2)
+	// Settings > Other systems > each RetroArch system's emulator: the cores that can run it, the image's first (the
+	// default), shown when installed: in the image (/usr/lib/libretro) or downloaded with RetroArch's Core Downloader
+	// (/data/retroarch/cores, libretro_directory). run-retroarch looks in the same two places.
+	static const struct RaSystem { const char* id; const char* label; std::vector<std::pair<const char*, const char*>> cores; } RA_SYSTEMS[] = {
+		{ "gba", "Game Boy Advance", { { "gpsp", "gpSP" }, { "mgba", "mGBA" }, { "vba_next", "VBA Next" }, { "vbam", "VBA-M" }, { "meteor", "Meteor" } } },
+		{ "gbc", "Game Boy Color", { { "gambatte", "Gambatte" }, { "mgba", "mGBA" }, { "gearboy", "Gearboy" }, { "tgbdual", "TGB Dual" } } },
+		{ "gb", "Game Boy", { { "gambatte", "Gambatte" }, { "mgba", "mGBA" }, { "gearboy", "Gearboy" }, { "tgbdual", "TGB Dual" } } },
+		{ "nes", "NES", { { "fceumm", "FCEUmm" }, { "nestopia", "Nestopia UE" }, { "mesen", "Mesen" }, { "quicknes", "QuickNES" } } },
+		{ "snes", "Super Nintendo", { { "snes9x", "Snes9x" }, { "snes9x2010", "Snes9x 2010" }, { "snes9x2005_plus", "Snes9x 2005 Plus" },
+			{ "snes9x2005", "Snes9x 2005" }, { "snes9x2002", "Snes9x 2002" }, { "bsnes", "bsnes" }, { "bsnes_mercury_performance", "bsnes-mercury" }, { "mesen-s", "Mesen-S" } } },
+		{ "megadrive", "Mega Drive", { { "picodrive", "PicoDrive" }, { "genesis_plus_gx", "Genesis Plus GX" }, { "clownmdemu", "clownmdemu" }, { "blastem", "BlastEm" } } },
+		{ "psx", "PlayStation", { { "pcsx_rearmed", "PCSX ReARMed" }, { "swanstation", "SwanStation" }, { "mednafen_psx", "Beetle PSX" } } },
+		{ "n64", "Nintendo 64", { { "mupen64plus_next", "Mupen64Plus-Next" }, { "parallel_n64", "ParaLLEl N64" } } },
+	};
+	static bool coreInstalled(const std::string& core)
+	{
+		return access(("/usr/lib/libretro/" + core + "_libretro.so").c_str(), F_OK) == 0
+			|| access(("/data/retroarch/cores/" + core + "_libretro.so").c_str(), F_OK) == 0;
+	}
+	static void coreChoices(const RaSystem& sys, std::vector<std::string>& names, std::vector<std::string>& values)
+	{
+		names.clear(); values.clear();
+		for (const auto& c : sys.cores)
+			if (coreInstalled(c.first)) { names.push_back(c.second); values.push_back(c.first); }
+	}
+	// which cores are installed, for every system: Settings builds its rows again when a download changed it
+	static std::string coreSignature()
+	{
+		std::string sig;
+		for (const auto& sys : RA_SYSTEMS)
+			for (const auto& c : sys.cores) sig += coreInstalled(c.first) ? '1' : '0';
+		return sig;
+	}
+
 	static const char* BACKLIGHT[2] = { "backlight1", "backlight0" };
 	static int backlightPair(const std::string& path, int i)
 	{
@@ -498,8 +532,18 @@ namespace banana
 			menu, "ra_audio_latency", { "Low (32 ms)", "Default (64 ms)", "Safe (128 ms)" }, { "32", "64", "128" });
 		add(O, "picture", "VSync", "On waits for the panel's refresh before drawing the next frame, so nothing tears. Off lets a core run as fast as it can; the panel can show a half-drawn frame.",
 			menu, "ra_vsync", { "On", "Off" }, { "on", "off" });
-		if (access("/usr/lib/libretro/mgba_libretro.so", F_OK) == 0)
-			add(O, "gamepad", "Game Boy Advance", "The emulator for GBA games. gpSP: the fastest. mGBA: the most accurate, and the one RetroAchievements accepts for hardcore.", menu, "core.gba", { "gpSP", "mGBA" }, { "gpsp", "mgba" });
+		// each system's emulator, among the cores installed for it (a row once there are two to choose from)
+		coreSig = coreSignature();
+		for (const auto& sys : RA_SYSTEMS)
+		{
+			std::vector<std::string> names, values;
+			coreChoices(sys, names, values);
+			if (names.size() < 2) continue;
+			const char* help = std::string(sys.id) == "gba"
+				? "The emulator for GBA games. gpSP: the fastest. mGBA: the most accurate, and the one RetroAchievements accepts for hardcore. Cores downloaded with RetroArch's Core Downloader (its Online Updater) are listed here too."
+				: "The emulator (RetroArch core) for this system's games: the first is BananaOS's own. Cores downloaded with RetroArch's Core Downloader (its Online Updater) are listed here too.";
+			add(O, "gamepad", sys.label, help, menu, (std::string("core.") + sys.id).c_str(), names, values);
+		}
 		add(O, "gamepad", "RetroArch hotkeys", "F + a button in a game: X the menu, Start quits, L and R load and save a state, Y the frame counter, L2 rewind, R2 fast forward. Off: only F + X and F + Start, the two needed to get out, and none bound in RetroArch's own menu either.",
 			menu, "ra_hotkeys", { "On", "Off" }, { "on", "off" });
 		add(O, "gamepad", "Reset RetroArch", "RetroArch's settings back to Banana's: for a button bound away in RetroArch's menu (an A that does something else, a hotkey on a face button). Its controls, remaps and overrides go to retroarch/backup-<date> on the card. Saves, states, the RetroAchievements account and these settings stay. Press A twice.",
@@ -551,7 +595,7 @@ namespace banana
 		add(S, "gear", "First-time setup", "The steps from the first boot again: Wi-Fi, the time zone and the RetroAchievements account (ScreenScraper: not available yet).", "", "setup", {}, {}, Item::PAGE);
 		add(S, "gear", "Reset system settings", "Puts the menu, display, sound, power and network settings back to their defaults, the time zone too (the language stays). Your games, saves and the emulators' settings are untouched. Press A twice.",
 			"", "reset_system", { "" }, { "" }, Item::ACTION);
-		add(S, "gear", "Reset emulator settings", "Puts the emulator choices back to their defaults: the DS emulator, Quick resume, the Game Boy Advance's emulator, and RetroArch's shader, audio latency, VSync and hotkeys. Your menu settings, saves and games stay. Press A twice.",
+		add(S, "gear", "Reset emulator settings", "Puts the emulator choices back to their defaults: the DS emulator, Quick resume, each system's emulator (core), and RetroArch's shader, audio latency, VSync and hotkeys. Your menu settings, saves and games stay. Press A twice.",
 			"", "reset_emulator", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "About", "", "", "", {}, {}, Item::INFO);
 		add(S, "gear", "Restart", "Restarts the handheld. Press A twice.", "", "reboot", { "" }, { "" }, Item::ACTION);
@@ -613,7 +657,10 @@ namespace banana
 			for (auto& t : userThemes()) { it.names.push_back(t.name); it.values.push_back(t.value); }
 		}
 		if (it.key == "DSFLIP_SHADER" || it.key == "kms.shader")
-			shaderChoices(data, it.names, it.values);	// the card's shaders as they are now (one copied in while the menu runs)
+			shaderChoices(data, it.names, it.values);
+		if (it.key.rfind("core.", 0) == 0)
+			for (const auto& sys : RA_SYSTEMS)
+				if (it.key == std::string("core.") + sys.id) coreChoices(sys, it.names, it.values);	// the cores installed now	// the card's shaders as they are now (one copied in while the menu runs)
 		if (it.key == "accent")
 		{
 			// a theme with its own accent: the row says so and has nothing to pick (it came back to life when the theme
@@ -734,6 +781,9 @@ namespace banana
 		// the kernel too (#70): its version as uname gives it
 		utsname un;
 		if (uname(&un) == 0) a << "Linux " << un.release << ".";
+		// RetroArch's version: it comes with BananaOS's updates (its Online Updater doesn't update RetroArch itself)
+		std::string ra = readLine("/usr/share/retroarch/version");
+		if (!ra.empty()) a << " RetroArch " << ra << ", updated with BananaOS.";
 		about = a.str();
 	}
 
@@ -769,6 +819,8 @@ namespace banana
 
 	void Settings::open()
 	{
+		// a core downloaded (or deleted) in RetroArch since the rows were made: a system's emulator row comes or goes
+		if (coreSignature() != coreSig) { items.clear(); groups.clear(); build(); sel = 0; top = 0; }
 		if (groups.empty())
 			for (auto& it : items)
 				if (std::find(groups.begin(), groups.end(), it.section) == groups.end()) groups.push_back(it.section);
