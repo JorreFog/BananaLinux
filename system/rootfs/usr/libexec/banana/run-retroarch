@@ -56,6 +56,18 @@ if [ ! -f $M ]; then
     echo 'mupen64plus-EnableNativeResFactor = "1"' >> $O
     touch $M
 fi
+# The N64 core with three swapchain images (RetroArch's core override for it, once; a change saved over it from
+# RetroArch's menu is kept): with the two the other systems get (retroarch.cfg, the lowest latency), RetroArch's KMS
+# context waits for every page flip before the next frame starts, so GLideN64's ~16 ms of GPU work a frame can't
+# overlap the next one. Bomberman 64 in play on an RG DS: 42 frames a second (70% speed) with two, 59.7 (99.4%)
+# with three, the GPU busy 70% -> 100%. A frame more of latency, on a core whose threaded renderer has one already.
+M=/data/retroarch/.banana-defaults-n64-2
+if [ ! -f $M ]; then
+    OV=/data/retroarch/config/Mupen64Plus-Next/Mupen64Plus-Next.cfg
+    mkdir -p ${OV%/*}
+    grep -q '^video_max_swapchain_images = ' $OV 2>/dev/null || echo 'video_max_swapchain_images = "3"' >> $OV
+    touch $M
+fi
 # Shaders: Shaders > Load Preset opens the image's libretro GLSL presets (/usr/share/libretro/shaders/glsl), read
 # where they are: copied to the card they took 238 MB (a few thousand small files in exFAT's large clusters) and a long
 # first start. The Online Updater is shown (the core downloader not: cores come with the image).
