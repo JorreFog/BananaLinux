@@ -347,10 +347,23 @@ namespace banana
 		// the companion's views: it has the whole panel, with a tab bar along the bottom (Party, Battle in a battle,
 		// Game: the panel as without it, achievements and tiles); the member whose summary is open; the battle last
 		// seen; where the tabs were drawn (for touch); the party icons as textures, by species (+1000 the egg)
-		enum { PK_PARTY, PK_BATTLE, PK_GAME, PK_MON };
+		// Map, Bag, Dex and Guide read the save's own data (pokemon.h: Snapshot ext); the bag's pocket and page, the
+		// Pokédex's page and the entry open; the guide's look-ups (a trainer's team: a ROM search) kept by goal
+		enum { PK_PARTY, PK_BATTLE, PK_GAME, PK_MON, PK_MAP, PK_BAG, PK_DEX, PK_DEXMON, PK_GUIDE };
+		enum { PK_TABS = 7 };
 		int pkView = PK_PARTY, pkMon = 0;
 		bool pkBattle = false;
-		float pkTabX[3] = {}, pkTabW[3] = {};
+		float pkTabX[PK_TABS] = {}, pkTabW[PK_TABS] = {};
+		int pkPocket = 0, pkBagPage = 0, pkDexPage = 0, pkDexNat = 0, pkPages = 1;
+		std::vector<int> pkDexShown;	// the national numbers on the Pokédex page drawn (for touch)
+		std::string pkGoalKey;
+		std::vector<std::pair<uint16_t, uint8_t>> pkGoalTeam;
+		void pokeMap(const SPal& p);
+		void pokeBag(const SPal& p);
+		void pokeDex(const SPal& p);
+		void pokeDexMon(const SPal& p);
+		void pokeGuide(const SPal& p);
+		void pager(const SPal& p, int page, int pages, const std::string& left);
 		std::map<int, rnds::TexPtr> pkIcons;
 		std::shared_ptr<const pkmn::RomTables> pkTables;	// (the tables the icons came from)
 		void pokeRender(const SPal& p);

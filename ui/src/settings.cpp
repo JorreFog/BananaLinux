@@ -4184,7 +4184,7 @@ namespace banana
 		gTitle = title; gSystem = system; gScreen = screen; gTouch = touch;
 		gHotkeys = getConfValue(data + "/settings.conf", "ra_hotkeys", "on") != "off";
 		gFlash = gDown = -1; gSeen = -1;
-		pkView = PK_PARTY; pkMon = 0; pkBattle = false;
+		pkView = PK_PARTY; pkMon = 0; pkBattle = false; pkPocket = pkBagPage = pkDexPage = pkDexNat = 0; pkGoalKey.clear(); pkGoalTeam.clear();
 		raw = std::make_shared<RaWatch>();
 		raw->since = now;
 		std::string cfg = "/data/retroarch/retroarch.cfg";
@@ -4261,11 +4261,13 @@ namespace banana
 		// panel's own (its tiles, below)
 		if (companion && companion->active())
 		{
+			static const int TAB_VIEW[PK_TABS] = { PK_PARTY, PK_BATTLE, PK_MAP, PK_BAG, PK_DEX, PK_GUIDE, PK_GAME };
 			if (ly >= 424)
 			{
 				if (!down)
-					for (int i = 0; i < 3; i++)
-						if (pkTabW[i] > 0 && lx >= pkTabX[i] && lx < pkTabX[i] + pkTabW[i]) pkView = i == 0 ? PK_PARTY : i == 1 ? PK_BATTLE : PK_GAME;
+					for (int i = 0; i < PK_TABS; i++)
+						if (pkTabW[i] > 0 && lx >= pkTabX[i] && lx < pkTabX[i] + pkTabW[i]) pkView = TAB_VIEW[i];
+				companion->wantExt(pkView == PK_MAP || pkView == PK_BAG || pkView == PK_DEX || pkView == PK_DEXMON || pkView == PK_GUIDE);
 				gDown = gFlash = -1;
 				return G_NONE;
 			}
@@ -4282,6 +4284,25 @@ namespace banana
 					if (lx >= 526) pkView = PK_PARTY;
 					else if (lx >= 18 && (int)((lx - 18) / 80) < (int)party.size()) pkMon = (int)((lx - 18) / 80);
 				}
+				else if (!down && (pkView == PK_BAG || pkView == PK_DEX) && ly >= 372 && ly < 418)
+				{
+					// the pager: the left third back a page, the right third on
+					int& pg = pkView == PK_BAG ? pkBagPage : pkDexPage;
+					if (lx < 220) pg = std::max(0, pg - 1);
+					else if (lx >= 420) pg = std::min(pkPages - 1, pg + 1);
+				}
+				else if (!down && pkView == PK_BAG && ly >= 14 && ly < 60)
+				{
+					int i = (int)((lx - 18) / (604.0f / 5));
+					if (i >= 0 && i < 5 && i != pkPocket) { pkPocket = i; pkBagPage = 0; }
+				}
+				else if (!down && pkView == PK_DEX && ly >= 68 && ly < 368)
+				{
+					int i = (int)((ly - 68) / 60) * 3 + (int)((lx - 18) / (604.0f / 3));
+					if (i >= 0 && i < (int)pkDexShown.size()) { pkDexNat = pkDexShown[i]; pkView = PK_DEXMON; }
+				}
+				else if (!down && pkView == PK_DEXMON) pkView = PK_DEX;
+				companion->wantExt(pkView == PK_MAP || pkView == PK_BAG || pkView == PK_DEX || pkView == PK_DEXMON || pkView == PK_GUIDE);
 				return G_NONE;
 			}
 		}
@@ -4544,8 +4565,9 @@ namespace banana
 		G g[3] = { { "Weak to", {} }, { "Resists", {} }, { "Immune to", {} } };
 		for (int a = 0; a < pkmn::NUM_TYPES; a++)
 		{
-			if (a == pkmn::MYSTERY) continue;
-			int q = pkmn::effect(a, t1, t2);
+			bool modern = companion && companion->tables() && companion->tables()->cfru;
+			if (!pkmn::typeInGame(a, modern)) continue;
+			int q = pkmn::effect(a, t1, t2, modern);
 			if (q >= 8) g[0].list.push_back({ a, q });
 			else if (q == 0) g[2].list.push_back({ a, q });
 			else if (q < 4) g[1].list.push_back({ a, q });
@@ -4573,22 +4595,23 @@ namespace banana
 
 	void Settings::pokeTabs(const SPal& p)
 	{
-		// the tab bar: Party, Battle (in a battle), Game (the panel's tiles and achievements)
+		// the tab bar: Party, Battle (in a battle), Map, Bag, Dex, Guide, Game (the panel's tiles and achievements)
 		const pkmn::Snapshot& sn = companion->snapshot();
 		box("bubble", false, 18, 424, 604, 46);
-		const char* tabs[3] = { "Party", "Battle", "Game" };
-		bool show[3] = { true, sn.inBattle, true };
+		static const char* const tabs[PK_TABS] = { "Party", "Battle", "Map", "Bag", "Dex", "Guide", "Game" };
+		static const int VIEW[PK_TABS] = { PK_PARTY, PK_BATTLE, PK_MAP, PK_BAG, PK_DEX, PK_GUIDE, PK_GAME };
 		int n = 0;
-		for (int i = 0; i < 3; i++) n += show[i];
+		for (int i = 0; i < PK_TABS; i++) n += i != 1 || sn.inBattle;
 		float cell = 604.0f / n, cx = 18;
-		for (int i = 0; i < 3; i++)
+		for (int i = 0; i < PK_TABS; i++)
 		{
 			pkTabW[i] = 0;
-			if (!show[i]) continue;
-			bool on = (i == 0 && (pkView == PK_PARTY || pkView == PK_MON)) || (i == 1 && pkView == PK_BATTLE) || (i == 2 && pkView == PK_GAME);
-			float w = text(tabs[i], true, 16, 0, 0, p.ink, true, 1.2f, true);
+			if (i == 1 && !sn.inBattle) continue;
+			bool on = pkView == VIEW[i] || (VIEW[i] == PK_PARTY && pkView == PK_MON) || (VIEW[i] == PK_DEX && pkView == PK_DEXMON);
+			float size = n > 6 ? 14 : 16;
+			float w = text(tabs[i], true, size, 0, 0, p.ink, true, 1.0f, true);
 			float tx = std::round(cx + cell / 2 - w / 2);
-			text(tabs[i], true, 16, tx, 437, on ? p.accent : p.muted, true, 1.2f);
+			text(tabs[i], true, size, tx, 438, on ? p.accent : p.muted, true, 1.0f);
 			if (on) be->fill(std::round(X(tx)), std::round(X(458)), std::round(X(w)), std::round(X(3)), p.accent);
 			pkTabX[i] = cx; pkTabW[i] = cell;
 			cx += cell;
@@ -4600,6 +4623,8 @@ namespace banana
 		const pkmn::Snapshot& sn = companion->snapshot();
 		if (pkView == PK_BATTLE && !sn.inBattle) pkView = PK_PARTY;
 		if (pkView == PK_MON && pkMon >= (int)sn.party.size()) pkView = PK_PARTY;
+		// the save's data is read only while a page that shows it is open
+		companion->wantExt(pkView == PK_MAP || pkView == PK_BAG || pkView == PK_DEX || pkView == PK_DEXMON || pkView == PK_GUIDE);
 		if (!sn.seen)
 		{
 			box("bubble", false, 18, 14, 604, 398);
@@ -4609,6 +4634,19 @@ namespace banana
 		}
 		else if (pkView == PK_MON) pokeSummary(p);
 		else if (pkView == PK_BATTLE) pokeBattle(p);
+		else if (pkView == PK_MAP || pkView == PK_BAG || pkView == PK_DEX || pkView == PK_DEXMON || pkView == PK_GUIDE)
+		{
+			if (!sn.ext)
+			{
+				box("bubble", false, 18, 14, 604, 398);
+				wrapped("Reading the save...", 18, 40, 40, 560, 2, p.muted);
+			}
+			else if (pkView == PK_MAP) pokeMap(p);
+			else if (pkView == PK_BAG) pokeBag(p);
+			else if (pkView == PK_DEX) pokeDex(p);
+			else if (pkView == PK_DEXMON) pokeDexMon(p);
+			else pokeGuide(p);
+		}
 		else pokeParty(p);
 		pokeTabs(p);
 	}
@@ -4842,7 +4880,7 @@ namespace banana
 				else
 					for (size_t f = 0; f < sn.foes.size(); f++)
 					{
-						int q = pkmn::effect(t.moveInfo[mv].type, sn.foes[f].types[0], sn.foes[f].types[1]);
+						int q = pkmn::effect(t.moveInfo[mv].type, sn.foes[f].types[0], sn.foes[f].types[1], t.cfru);
 						if (f == 0) q0 = q;
 						e += (f ? " / " : "") + times(q);
 					}
@@ -4865,5 +4903,362 @@ namespace banana
 		std::string fn = f.nick.empty() ? t.speciesName(f.species) : f.nick;
 		text(fit(fn, true, 17, 268), true, 17, 342, 192, p.accent);
 		pokeMatchups(p, f.types[0], f.types[1], 342, 220, 270, 408);
+	}
+
+	// ---- the pages that read the save: Map, Bag, Dex, Guide
+
+	void Settings::pager(const SPal& p, int page, int pages, const std::string& left)
+	{
+		box("slot", false, 18, 372, 604, 40);
+		if (!left.empty()) text(fit(left, false, 15, 180), false, 15, 34, 384, p.muted);
+		if (pages <= 1) return;
+		std::string pg = std::to_string(page + 1) + " / " + std::to_string(pages);
+		float w = num(pg, 16, 0, 0, p.ink, true);
+		num(pg, 16, 320 - w / 2, 382, p.ink);
+		if (page > 0) arrow(false, 236, 392, p.accent);
+		if (page < pages - 1) arrow(true, 398, 392, p.accent);
+	}
+
+	void Settings::pokeMap(const SPal& p)
+	{
+		const pkmn::Snapshot& sn = companion->snapshot();
+		auto tb = companion->tables();
+		pkmn::RomTables none;
+		const pkmn::RomTables& t = tb ? *tb : none;
+		// ---- where: the area's name, the map and the place on it
+		box("bubble", false, 18, 14, 604, 62);
+		std::string area = t.mapName(sn.mapsec);
+		if (area.empty()) area = sn.mapsec >= 0 ? "Somewhere unnamed" : "Unknown place";
+		text(fit(area, true, 22, 400), true, 22, 36, 24, p.ink);
+		char at[64];
+		snprintf(at, sizeof at, "Map %d.%d  ·  x %d, y %d", sn.group, sn.num, sn.x, sn.y);
+		text(at, false, 14, 36, 52, p.muted);
+		if (!sn.player.empty())
+		{
+			float w = text(sn.player, true, 17, 0, 0, p.accent, false, 0, true);
+			text(sn.player, true, 17, 604 - w, 28, p.accent);
+		}
+		// ---- the region map from the ROM's own layout: a square a section, the area in the accent, the player a dot
+		box("bubble", false, 18, 84, 604, 328);
+		const pkmn::RomTables::Grid* g = nullptr;
+		int best = 0;
+		for (auto& gr : t.grids)
+		{
+			int c = 0;
+			for (uint8_t v : gr.cells) c += v == sn.mapsec;
+			if (c > best) { best = c; g = &gr; }
+		}
+		if (!g && !t.grids.empty()) g = &t.grids[0];
+		if (!g) { wrapped("This game's region map wasn't found in its ROM.", 17, 40, 104, 560, 2, p.muted); return; }
+		float cell = std::floor(std::min(576.0f / g->w, 300.0f / g->h));
+		float ox = 18 + (604 - cell * g->w) / 2, oy = 84 + (328 - cell * g->h) / 2;
+		std::map<int, int> size;
+		for (uint8_t v : g->cells) size[v]++;
+		int x0 = 99, y0 = 99, x1 = -1, y1 = -1;
+		for (int y = 0; y < g->h; y++)
+			for (int x = 0; x < g->w; x++)
+			{
+				int v = g->cells[y * g->w + x];
+				if (v == t.mapsecNone || v == 0xff) continue;
+				bool here = v == sn.mapsec;
+				if (here) { x0 = std::min(x0, x); y0 = std::min(y0, y); x1 = std::max(x1, x); y1 = std::max(y1, y); }
+				Color c = here ? p.accent : size[v] <= 2 ? p.muted : p.line;	// (a town: one or two squares)
+				be->fill(std::round(X(ox + x * cell + 1)), std::round(X(oy + y * cell + 1)), std::round(X(cell - 2)), std::round(X(cell - 2)), c);
+			}
+		if (x1 < 0)
+		{
+			text("Not on the region map here", false, 14, 36, 392, p.muted);
+			return;
+		}
+		// the player: inside the area's squares by the place on its map (a route several squares long)
+		int w = 0, h = 0;
+		float fx = 0.5f, fy = 0.5f;
+		if (t.layoutSize(sn.layout, w, h)) { fx = std::min(1.0f, std::max(0.0f, (sn.x + 0.5f) / w)); fy = std::min(1.0f, std::max(0.0f, (sn.y + 0.5f) / h)); }
+		float px = ox + (x0 + fx * (x1 - x0 + 1)) * cell, py = oy + (y0 + fy * (y1 - y0 + 1)) * cell;
+		float r = std::max(6.0f, cell * 0.35f);
+		be->fill(std::round(X(px - r - 2)), std::round(X(py - r - 2)), std::round(X(2 * r + 4)), std::round(X(2 * r + 4)), p.ink);
+		be->fill(std::round(X(px - r)), std::round(X(py - r)), std::round(X(2 * r)), std::round(X(2 * r)), Color::hex(0xe8504a));
+	}
+
+	void Settings::pokeBag(const SPal& p)
+	{
+		const pkmn::Snapshot& sn = companion->snapshot();
+		auto tb = companion->tables();
+		pkmn::RomTables none;
+		const pkmn::RomTables& t = tb ? *tb : none;
+		static const char* const POCKETS[5] = { "Items", "Key items", "Balls", "TMs & HMs", "Berries" };
+		box("bubble", false, 18, 14, 604, 46);
+		float cw = 604.0f / 5;
+		for (int i = 0; i < 5; i++)
+		{
+			bool on = i == pkPocket;
+			float w = text(POCKETS[i], true, 15, 0, 0, p.ink, false, 0, true);
+			float tx = std::round(18 + i * cw + cw / 2 - w / 2);
+			text(POCKETS[i], true, 15, tx, 27, on ? p.accent : p.muted);
+			if (on) be->fill(std::round(X(tx)), std::round(X(48)), std::round(X(w)), std::round(X(3)), p.accent);
+		}
+		box("bubble", false, 18, 68, 604, 298);
+		const auto& list = sn.pockets[pkPocket];
+		const int PER = 18;	// two columns of nine
+		pkPages = std::max(1, (int)((list.size() + PER - 1) / PER));
+		pkBagPage = std::min(pkBagPage, pkPages - 1);
+		if (list.empty()) wrapped(t.cfru ? "Nothing here. (A CFRU hack may keep its bag elsewhere: what this shows is FireRed's bag.)" : "Nothing in this pocket.",
+			17, 40, 90, 560, 3, p.muted);
+		for (int i = 0; i < PER && pkBagPage * PER + i < (int)list.size(); i++)
+		{
+			const auto& e = list[pkBagPage * PER + i];
+			float x = 36 + (i / 9) * 296, y = 80 + (i % 9) * 31;
+			std::string c = "×" + std::to_string(e.count);
+			float w = num(c, 16, 0, 0, p.ink, true);
+			bool key = pkPocket == 1;	// (key items: one each, no count)
+			if (!key) num(c, 16, x + 268 - w, y + 2, p.ink);
+			text(fit(t.itemName(e.item), false, 17, key ? 268 : 260 - w), false, 17, x, y + 2, p.ink);
+		}
+		std::string money = sn.money >= 0 ? "Money " + std::to_string(sn.money) : "";
+		pager(p, pkBagPage, pkPages, money);
+	}
+
+	namespace
+	{
+		bool dexBit(const std::vector<uint8_t>& v, int nat) { int i = nat - 1; return i >= 0 && i / 8 < (int)v.size() && (v[i / 8] >> (i % 8) & 1); }
+	}
+
+	void Settings::pokeDex(const SPal& p)
+	{
+		const pkmn::Snapshot& sn = companion->snapshot();
+		auto tb = companion->tables();
+		pkmn::RomTables none;
+		const pkmn::RomTables& t = tb ? *tb : none;
+		// the list: the national numbers the save has seen (a CFRU hack keeps its own Pokédex elsewhere: all of them)
+		bool known = !t.cfru && !sn.dexSeen.empty();
+		std::vector<int> nats;
+		int maxNat = (int)t.dexSpecies.size() - 1;
+		if (!t.cfru) maxNat = std::min(maxNat, 386);
+		int seen = 0, caught = 0;
+		for (int n = 1; n <= maxNat; n++)
+		{
+			if (!t.dexSpecies[n]) continue;
+			bool s = dexBit(sn.dexSeen, n), c = dexBit(sn.dexOwned, n);
+			seen += s || c; caught += c;
+			if (!known || s || c) nats.push_back(n);
+		}
+		box("bubble", false, 18, 14, 604, 46);
+		if (known)
+		{
+			float x = 36;
+			x += text("Seen", true, 15, x, 28, p.muted, true, 1.0f) + 8;
+			x += num(std::to_string(seen), 19, x, 25, p.ink) + 24;
+			x += text("Caught", true, 15, x, 28, p.muted, true, 1.0f) + 8;
+			num(std::to_string(caught), 19, x, 25, p.accent);
+		}
+		else text(fit(t.cfru ? "All species (this game keeps its own Pokédex)" : "Pokédex", false, 16, 560), false, 16, 36, 27, p.muted);
+		box("bubble", false, 18, 68, 604, 298);
+		const int PER = 15;	// three columns of five
+		pkPages = std::max(1, (int)((nats.size() + PER - 1) / PER));
+		pkDexPage = std::min(pkDexPage, pkPages - 1);
+		pkDexShown.clear();
+		if (nats.empty()) wrapped("Nothing seen yet.", 17, 40, 90, 560, 2, p.muted);
+		int k = std::max(1, (int)std::lround(1 * s));
+		float cw = 604.0f / 3;
+		for (int i = 0; i < PER && pkDexPage * PER + i < (int)nats.size(); i++)
+		{
+			int n = nats[pkDexPage * PER + i];
+			pkDexShown.push_back(n);
+			float x = 18 + (i % 3) * cw, y = 68 + (i / 3) * 60;
+			uint16_t sp = t.dexSpecies[n];
+			bool c = dexBit(sn.dexOwned, n);
+			monIcon(sp, false, x + 10, y + 14, k * 1);
+			char nb[16];
+			snprintf(nb, sizeof nb, "%03d", n);
+			num(nb, 14, x + 50, y + 12, c || !known ? p.accent : p.muted);
+			text(fit(t.speciesName(sp), true, 16, cw - 60), true, 16, x + 50, y + 30, c || !known ? p.ink : p.muted);
+		}
+		pager(p, pkDexPage, pkPages, known ? "Tap one for its entry" : "");
+	}
+
+	void Settings::pokeDexMon(const SPal& p)
+	{
+		const pkmn::Snapshot& sn = companion->snapshot();
+		auto tb = companion->tables();
+		pkmn::RomTables none;
+		const pkmn::RomTables& t = tb ? *tb : none;
+		int n = pkDexNat;
+		uint16_t sp = n > 0 && n < (int)t.dexSpecies.size() ? t.dexSpecies[n] : 0;
+		bool known = !t.cfru && !sn.dexSeen.empty(), caught = dexBit(sn.dexOwned, n);
+		box("bubble", false, 18, 14, 604, 398);
+		int k = std::max(1, (int)std::lround(2 * s));
+		box("slot", false, 36, 32, 76, 76);
+		monIcon(sp, false, 74 - 16.0f * k / s, 70 - 16.0f * k / s, k);
+		char nb[16];
+		snprintf(nb, sizeof nb, "%03d", n);
+		num(nb, 16, 128, 34, p.accent);
+		text(fit(t.speciesName(sp), true, 24, 300), true, 24, 128, 56, p.ink);
+		float cx = 128;
+		if (sp < t.speciesTypes.size())
+			for (int i = 0; i < 2; i++)
+			{
+				int ty = t.speciesTypes[sp][i];
+				if (i == 1 && ty == t.speciesTypes[sp][0]) break;
+				if (!pkmn::typeInGame(ty, t.cfru)) continue;
+				typeChip(ty, cx, 90);
+				cx += chip(lang::tr("Pokémon types", pkmn::typeName(ty)), 0, 0, 0, true) + 6;
+			}
+		if (known) text(caught ? "Caught" : "Seen", true, 15, 520, 40, caught ? p.accent : p.muted, true, 1.0f);
+		pkmn::RomTables::DexEntry e;
+		if (!t.dexEntry(n, e)) { wrapped("No entry in this game.", 17, 36, 130, 560, 2, p.muted); return; }
+		char size[96];
+		snprintf(size, sizeof size, "%s Pokémon  ·  %d.%d m  ·  %d.%d kg", e.category.c_str(), e.height / 10, e.height % 10, e.weight / 10, e.weight % 10);
+		text(fit(size, false, 17, 560), false, 17, 36, 130, p.ink);
+		be->fill(std::round(X(36)), std::round(X(160)), std::round(X(568)), std::max(1.0f, std::round(X(2))), p.line);
+		if (known && !caught) wrapped("Seen, not caught yet: the entry opens once one is caught.", 18, 36, 176, 568, 3, p.muted);
+		else wrapped(e.text, 18, 36, 176, 568, 8, p.ink);
+		text("Tap to go back", false, 14, 36, 386, p.muted);
+	}
+
+	void Settings::pokeGuide(const SPal& p)
+	{
+		const pkmn::Snapshot& sn = companion->snapshot();
+		auto tb = companion->tables();
+		pkmn::RomTables none;
+		const pkmn::RomTables& t = tb ? *tb : none;
+		const pkmn::GameInfo* gi = companion->game();
+		int kk = std::max(1, (int)std::lround(1 * s));
+		// ---- left: the next goal, its team, how the party does against its type
+		box("bubble", false, 18, 14, 298, 398);
+		int got = 0;
+		for (int i = 0; i < 8; i++) got += sn.badges >= 0 && (sn.badges >> i & 1);
+		int next = -1;
+		for (int i = 0; i < 8 && sn.badges >= 0; i++) if (!(sn.badges >> i & 1)) { next = i; break; }
+		std::string line, who;
+		int type = -1;
+		if (t.cfru)
+		{
+			if (next >= 0 && next < (int)t.leaders.size())
+			{
+				who = t.leaders[next];
+				type = next < (int)t.leaderTypes.size() ? t.leaderTypes[next] : -1;
+				line = "Next: " + who + ", gym " + std::to_string(next + 1) + " of 8";
+				if (pkmn::typeInGame(type, true)) line += " (" + lang::tr("Pokémon types", pkmn::typeName(type)) + ")";
+			}
+			else if (next < 0 && sn.badges >= 0) line = "All eight badges: on to the league.";
+		}
+		else if (gi)
+		{
+			int count = 0;
+			const pkmn::Goal* goals = pkmn::goalsFor(gi->gen, count);
+			int at = next >= 0 ? next : 8;
+			if (sn.champion) line = "Champion! The story is done; the post-game is yours.";
+			else if (at < count)
+			{
+				who = goals[at].rom; type = goals[at].type;
+				line = "Next: " + std::string(goals[at].who) + ", " + goals[at].where + " (" + lang::tr("Pokémon types", pkmn::typeName(type)) + ")";
+				if (at >= 8) line = "Next: the Pokémon League. First, " + std::string(goals[8].who) + " (" + lang::tr("Pokémon types", pkmn::typeName(goals[8].type)) + ")";
+			}
+		}
+		text("Badges", true, 14, 34, 28, p.muted, true, 1.0f);
+		for (int i = 0; i < 8; i++)
+		{
+			float bx = 120 + i * 22;
+			bool on = sn.badges >= 0 && (sn.badges >> i & 1);
+			be->fill(std::round(X(bx)), std::round(X(28)), std::round(X(16)), std::round(X(16)), on ? p.accent : p.line);
+		}
+		wrapped(line.empty() ? "No goal read from the save." : line, 17, 34, 54, 266, 3, p.ink);
+		// the team (a search of the ROM, kept while the goal is the same)
+		std::string key = who + "/" + std::to_string(sn.badges);
+		if (key != pkGoalKey)
+		{
+			pkGoalKey = key;
+			pkGoalTeam.clear();
+			if (!who.empty())
+			{
+				int cls = t.cfru ? 0x54 : -1;
+				for (auto& m : t.team(who, &cls)) pkGoalTeam.push_back({ m.species, m.level });
+			}
+		}
+		if (type < 0 && !pkGoalTeam.empty())	// (a hack's leader: the type most of the team has)
+		{
+			std::map<int, int> c;
+			for (auto& m : pkGoalTeam) if (m.first < t.speciesTypes.size()) { c[t.speciesTypes[m.first][0]]++; if (t.speciesTypes[m.first][1] != t.speciesTypes[m.first][0]) c[t.speciesTypes[m.first][1]]++; }
+			int bestN = 0;
+			for (auto& e : c) if (e.second > bestN) { bestN = e.second; type = e.first; }
+		}
+		float y = 130;
+		if (!pkGoalTeam.empty())
+		{
+			text("Their team", true, 14, 34, y, p.muted, true, 1.0f);
+			y += 22;
+			for (size_t i = 0; i < pkGoalTeam.size() && i < 6; i++)
+			{
+				float x = 34 + (i % 2) * 134, yy = y + (i / 2) * 38;
+				monIcon(pkGoalTeam[i].first, false, x - 4, yy - 6, kk);
+				text(fit(t.speciesName(pkGoalTeam[i].first), true, 14, 92), true, 14, x + 32, yy, p.ink);
+				std::string lv = "Lv" + std::to_string(pkGoalTeam[i].second);
+				text(lv, false, 12, x + 32, yy + 17, p.muted);
+			}
+			y += ((std::min<size_t>(pkGoalTeam.size(), 6) + 1) / 2) * 38 + 6;
+		}
+		if (type >= 0 && pkmn::typeInGame(type, t.cfru) && y < 330)
+		{
+			// the party against that type: its best move's multiplier, and what it takes from that type
+			std::string h = "Against " + lang::tr("Pokémon types", pkmn::typeName(type));
+			text(h, true, 14, 34, y, p.muted, true, 1.0f);
+			y += 22;
+			for (size_t i = 0; i < sn.party.size() && y < 392; i++)
+			{
+				const pkmn::Mon& m = sn.party[i];
+				if (m.egg) continue;
+				int bestQ = -1;
+				for (int k = 0; k < 4; k++)
+				{
+					uint16_t mv = m.moves[k];
+					if (!mv || mv >= t.moveInfo.size() || t.moveInfo[mv].power <= 1) continue;
+					bestQ = std::max(bestQ, pkmn::effect(t.moveInfo[mv].type, type, type, t.cfru));
+				}
+				int takes = pkmn::effect(type, m.types[0], m.types[1], t.cfru);
+				text(fit(!m.nick.empty() ? m.nick : t.speciesName(m.species), false, 15, 110), false, 15, 34, y, p.ink);
+				if (bestQ >= 0)
+				{
+					uint32_t c = bestQ >= 8 ? 0x3c9c4c : bestQ == 4 ? 0x7a7a88 : 0xc84848;
+					chip("hits " + times(bestQ), c, 150, y - 2);
+				}
+				uint32_t c2 = takes >= 8 ? 0xc84848 : takes == 4 ? 0x7a7a88 : 0x3c9c4c;
+				chip("takes " + times(takes), c2, 228, y - 2);
+				y += 26;
+			}
+		}
+		// ---- right: the wild Pokémon here (the ROM's encounter table), caught ones marked from the Pokédex
+		box("bubble", false, 326, 14, 296, 398);
+		static const char* const METHOD[4] = { "Grass", "Water", "Rock Smash", "Fishing" };
+		std::string area = t.mapName(sn.mapsec);
+		text(fit(area.empty() ? "Wild Pokémon here" : area, true, 17, 264), true, 17, 342, 26, p.ink);
+		float wy = 54;
+		bool any = false;
+		bool dexKnown = !t.cfru && !sn.dexSeen.empty();
+		for (int mth = 0; mth < 4 && wy < 380; mth++)
+		{
+			auto list = t.wild(sn.group, sn.num, mth);
+			if (list.empty()) continue;
+			any = true;
+			text(METHOD[mth], true, 13, 342, wy, p.accent, true, 1.0f);
+			wy += 20;
+			for (auto& w : list)
+			{
+				if (wy > 372) break;
+				monIcon(w.species, false, 338, wy - 8, kk);
+				int nat = w.species < t.natDex.size() ? t.natDex[w.species] : 0;
+				bool c = dexKnown && dexBit(sn.dexOwned, nat);
+				Color nc = !dexKnown || c ? p.ink : p.accent;	// (not caught yet: in the accent)
+				text(fit(t.speciesName(w.species), true, 15, 120), true, 15, 372, wy, nc);
+				std::string lv = w.minLv == w.maxLv ? "Lv" + std::to_string(w.minLv) : "Lv" + std::to_string(w.minLv) + "-" + std::to_string(w.maxLv);
+				text(lv, false, 13, 496, wy + 2, p.muted);
+				std::string pc = std::to_string(w.percent) + "%";
+				float pw = num(pc, 14, 0, 0, p.ink, true);
+				num(pc, 14, 606 - pw, wy, p.ink);
+				wy += 30;
+			}
+			wy += 4;
+		}
+		if (!any) wrapped("No wild Pokémon on this map.", 16, 342, 56, 264, 3, p.muted);
+		else if (dexKnown) text("Accent: not caught yet", false, 13, 342, 390, p.muted);
 	}
 }
