@@ -1544,7 +1544,9 @@ namespace rnds
 		{
 			const float L = 300, W = 296;
 			TStyle tt = ts(true, 26, 0.52f), tsb = ts(false, 20);
-			std::vector<TextLine> tl = layoutWrap(utf8to32(gm.title), tstyle(tt), (int)W, 2);
+			// the title on as many lines as it needs, up to TITLE_LINES (a long one was cut at two with room to spare)
+			const int TITLE_LINES = 4;
+			std::vector<TextLine> tl = layoutWrap(utf8to32(gm.title), tstyle(tt), (int)W, TITLE_LINES);
 			// no word left alone on the second line ("Pokemon Black Version / 2"): narrow the first line until they balance
 			for (int w = (int)W - 16; tl.size() == 2 && tl[1].width < tl[0].width * 0.35f && w > W * 0.55f; w -= 16)
 			{
@@ -1581,12 +1583,15 @@ namespace rnds
 			}
 			float gap = std::min(28.0f, (W - total) / 2);
 
-			float titleH = tl.size() * 32.5f, block = titleH + 4 + 24 + 20 + 48 + 22 + 22 + 6 + 14;
-			float top = std::round(263 - block / 2) + ry;
-			float y = top;
+			// the line under the title, the stats and the achievements stay put whatever the title's length (centring the
+			// whole block made them jump from game to game while browsing): the title sits on top of them, growing upwards
+			// (TITLE_LINES lines reach the sheet's top edge, 84)
+			const float SUB_Y = 230;
+			float titleH = tl.size() * 32.5f;
+			float y = SUB_Y - 4 - titleH + ry;
 			for (size_t i = 0; i < tl.size(); i++)
 				drawLine(tl[i], tt, L, y + 32.5f * i, 32.5f, INK);
-			y += titleH + 4;
+			y = SUB_Y + ry;
 			float sx = L;
 			if (launch)
 			{

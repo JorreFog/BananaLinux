@@ -119,3 +119,43 @@ ux_lt 1000 "$(ux_diff "$OUT/$size-ux-hotkeys-bot.png" "$OUT/$size-ux-hotkeys-bac
 # animation's mask (word.png) its top-left and bottom-left pixels are set
 [ "$(convert "$HERE/assets/splash/word.png" -format '%[fx:p{0,0}.intensity>0.5 && p{0,6}.intensity>0.5]' info: 2>/dev/null)" = 1 ] || { echo "FAIL: the wordmark's B has rounded corners again"; fail=1; }
 ux_run splash-b "splash ux-boot-word 700"
+
+# Settings' help texts fit their box on the top panel (feedback 2026-10-25: the Shader row's was cut off): every row's,
+# and a game page's, in English and in Simplified Chinese, with either DS emulator's rows and either handheld's texts
+# (the RG DS Plus adds a note to the Shader rows); "helpcheck" lays each out as the panel does
+HCFX=$OUT/ux-help-fixture-$size
+rm -rf "$HCFX"; "$HERE/tests/fixture.sh" "$HCFX" >/dev/null
+for hl in en zh-cn; do
+    for he in superdrastic bananads; do
+        for hb in rgds rgds-plus; do
+            touch "$HCFX/data/settings.conf"; sed -i '/^language\b/d; /^nds_emulator\b/d' "$HCFX/data/settings.conf"
+            printf 'language = %s\nnds_emulator = %s\n' "$hl" "$he" >> "$HCFX/data/settings.conf"
+            hn=help-$hl-$he-$hb
+            BANANA_BOARD=$hb "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --splash "$HERE/assets/splash" \
+                --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$HCFX/roms" --data "$HCFX/data" \
+                --script "home 0; helpcheck" 2> "$OUT/$size-$hn.log" || { echo "FAIL $size: banana-ui ($hn) exited $?"; fail=1; }
+            [ "$hl" = en ] || ux_check $hn "language: .*(zh-cn)"
+            hc=$(sed -n 's/.*helpcheck: \([0-9]*\) texts/\1/p' "$OUT/$size-$hn.log")
+            [ "${hc:-0}" -ge 100 ] || { echo "FAIL $size ($hn): helpcheck checked ${hc:-no} texts"; fail=1; }
+            grep 'helpcheck .*OVERFLOW' "$OUT/$size-$hn.log" | sed "s/^banana-ui: helpcheck /FAIL $size ($hn): help text too long: /" | grep . && fail=1
+        done
+    done
+done
+
+# the library's top screen (feedback 2026-10-25): a long title gets the lines it needs (not two), and the line under it,
+# the stats and the achievements stay put whatever the title's length (the block was centred: it jumped while browsing)
+LTFX=$OUT/ux-title-fixture-$size
+rm -rf "$LTFX"; "$HERE/tests/fixture.sh" "$LTFX" >/dev/null
+head -c 4096 /dev/zero > "$LTFX/roms/nds/Pokemon Mystery Dungeon - Explorers of Darkness.nds"    # three lines
+UXFX_SAVE=$UXFX; UXFX=$LTFX
+ux_run title "lib 0 1; wait 2400; shot ux-title-one; press right; press right; wait 2400; shot ux-title-three"
+UXFX=$UXFX_SAVE
+ux_check title "press right: used, view 1 sys 0 game 3"
+# the "Nintendo DS" line and the stats under it (x 300-596, y 226-330): the same pixels for a one-line title and a
+# three-line one (both games never played: the same values)
+ux_crop() { convert "$1" -crop "$(awk -v k=$ux_k 'BEGIN { printf "%dx%d+%d+%d", 296 * k, 104 * k, 300 * k, 226 * k }')" +repage "$2"; }
+ux_crop "$OUT/$size-ux-title-one-top.png" "$OUT/$size-ux-title-one-stats.png"
+ux_crop "$OUT/$size-ux-title-three-top.png" "$OUT/$size-ux-title-three-stats.png"
+[ "$(ux_diff "$OUT/$size-ux-title-one-stats.png" "$OUT/$size-ux-title-three-stats.png")" = 0 ] || { echo "FAIL $size: the game's details moved with the title's length"; fail=1; }
+# the third title line is drawn (x 300-596, y 128-158: text there, not the sheet alone)
+ux_lt 0.05 "$(ux_std "$OUT/$size-ux-title-three-top.png" 296 26 300 130)" || { echo "FAIL $size: a long title cut at two lines"; fail=1; }
