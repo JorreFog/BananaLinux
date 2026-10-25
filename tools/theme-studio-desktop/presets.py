@@ -109,13 +109,14 @@ def blank():
 
 
 def templates(repo):
-    """(label, path or None for the blank one)"""
-    r = [('Blank (a working start)', None)]
+    """(label, path or None for the blank one). The label is what the "New from a template" list shows, so it
+    says what you get rather than what the file is called."""
+    r = [('Blank — a working start', None)]
     if repo:
-        for label, rel in (('Canvas: dark cards', 'system/rootfs/usr/share/banana/themes/canvas.json'),
-                           ('Hillside: a 2000s desktop', 'docs/themes/hillside.json'),
-                           ('Turntable: spinning tiles', 'docs/themes/turntable.json'),
-                           ('Classic: bright handheld', 'docs/themes/classic.json')):
+        for label, rel in (('Canvas — the example layout theme (a good one to learn from)', 'system/rootfs/usr/share/banana/themes/canvas.json'),
+                           ('Hillside — a 2000s desktop, all shapes and no pictures', 'docs/themes/hillside.json'),
+                           ('Turntable — a dark launcher with tiles that spin', 'docs/themes/turntable.json'),
+                           ('Classic — a bright handheld menu with a status bar', 'docs/themes/classic.json')):
             p = os.path.join(repo, rel)
             if os.path.exists(p):
                 r.append((label, p))

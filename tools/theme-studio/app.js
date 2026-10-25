@@ -69,6 +69,15 @@
     return e;
   }
 
+  // ---- a plain-words complaint about broken JSON, instead of the parser's raw message -------------------
+  function badJson(what, e) {
+    alert("That isn't valid JSON, so it could not be used.\n\n" +
+      "You were editing: " + what + "\n" +
+      "What went wrong: " + e.message + "\n\n" +
+      "The usual slips: a missing comma between two items, a comma just before a } or ], " +
+      "or a word that needs \"quotes\" around it.");
+  }
+
   // ---- paths into the theme JSON ---------------------------------------------------------------------
   function getPath(path) { let o = state.theme; for (const k of path) { if (o === null || o === undefined) return undefined; o = o[k]; } return o; }
   function setPath(path, v) { const p = getPath(path.slice(0, -1)); p[path[path.length - 1]] = v; }
@@ -210,7 +219,10 @@
 
   // ---- the inspector's field widget ------------------------------------------------------------------
   function field(parent, label, get, set, kind, options, labelNode) {
-    const row = h("div", { class: "field" }); row.appendChild(labelNode || h("label", null, label));
+    const lab = labelNode || h("label", null, (S.FIELD_LABELS && S.FIELD_LABELS[label]) || label);
+    const tip = S.FIELD_TIPS && S.FIELD_TIPS[label];
+    if (!labelNode && tip) lab.title = tip;
+    const row = h("div", { class: "field" }); row.appendChild(lab);
     const ctl = h("div", { class: "ctl" }); row.appendChild(ctl); parent.appendChild(row);
     const chip = h("span", { class: "res" });
     const opts = () => (typeof options === "function" ? options(Object.keys(state.theme.fonts || {})) : (options || []));
@@ -240,13 +252,17 @@
       if (kind === "bool") { const i = h("input", { type: "checkbox" }); i.checked = !!(cur === true || cur === "true" || cur === 1); i.onchange = () => commit(i.checked); ctl.appendChild(i); return; }
       if (kind === "enum") {
         const sel = h("select"); sel.appendChild(h("option", { value: "" }, "(none)"));
-        opts().forEach((o) => { const op = h("option", { value: o }, o); if (o === cur) op.setAttribute("selected", ""); sel.appendChild(op); });
+        opts().forEach((o) => {
+          const val = Array.isArray(o) ? o[0] : o, txt = Array.isArray(o) ? o[1] : o;
+          const op = h("option", { value: val }, txt); if (val === cur) op.setAttribute("selected", ""); sel.appendChild(op);
+        });
         sel.onchange = () => commit(sel.value); ctl.appendChild(sel); return;
       }
       if (kind === "color") {
         const argb = E.parseColorText(typeof cur === "string" ? cur : "#000000"); const c = argb === null ? 0xff000000 : argb;
         const p = argbParts(c), hex = "#" + (c & 0xffffff).toString(16).padStart(6, "0");
-        const ci = h("input", { type: "color", value: hex }); const ai = h("input", { type: "range", min: 0, max: 255, value: p.a });
+        const ci = h("input", { type: "color", value: hex, title: "The colour" });
+        const ai = h("input", { type: "range", min: 0, max: 255, value: p.a, title: "Opacity: 0 is clear, 255 is solid" });
         const sw = h("span", { class: "hex" }, hex + (p.a === 255 ? "" : " a" + p.a));
         const put = () => { const a = +ai.value; const s = ci.value + (a === 255 ? "" : a.toString(16).padStart(2, "0")); sw.textContent = s; commit(s); };
         ci.oninput = put; ai.oninput = put; ctl.appendChild(ci); ctl.appendChild(ai); ctl.appendChild(sw); return;
@@ -275,7 +291,7 @@
       const ctl = h("div", { class: "ctl" }); row.appendChild(ctl); box.appendChild(row);
       keys.forEach(function (k) {
         const kv = h("div", { class: "kv" });
-        kv.appendChild(h("span", { class: "mono muted" }, k));
+        kv.appendChild(h("span", { class: "muted" }, (S.FIELD_LABELS && S.FIELD_LABELS[k]) || k));
         field(kv, "", () => (get() || {})[k], (nv) => { const o = Object.assign({}, get() || {}); o[k] = nv; set(o); }, k === "color" ? "color" : "any");
         box.appendChild(kv);
       });
@@ -319,7 +335,7 @@
         });
         const raw = h("textarea", { rows: 3 }); raw.value = JSON.stringify(rest, null, 1);
         const apply = h("button", { class: "ghost", type: "button" }, "apply overrides JSON"); apply.onclick = () => {
-          try { const o = looseParse(raw.value || "{}"); const a = arr.slice(); const n = Object.assign({ when: a[i].when }, o); a[i] = n; set(a); markDirty(); build(); } catch (e) { alert("Bad JSON: " + e.message); }
+          try { const o = looseParse(raw.value || "{}"); const a = arr.slice(); const n = Object.assign({ when: a[i].when }, o); a[i] = n; set(a); markDirty(); build(); } catch (e) { badJson("a state's overrides", e); }
         };
         d.appendChild(raw); d.appendChild(apply);
         const rm = h("button", { class: "ghost danger", type: "button" }, "remove"); rm.onclick = () => { const a = arr.slice(); a.splice(i, 1); set(a); markDirty(); build(); };
@@ -391,19 +407,24 @@
         const o = looseParse(ta.value);
         const par = getPath(parentOf(state.sel)); const key = state.sel[state.sel.length - 1];
         par[key] = o; markDirty(); renderAll(); rerender();
-      } catch (e) { alert("Bad JSON: " + e.message); }
+      } catch (e) { badJson("the element as JSON", e); }
     };
     d.appendChild(ta); d.appendChild(apply); parent.appendChild(d);
   }
 
   // ---- the element tree ------------------------------------------------------------------------------
+  function typeOf(el) {
+    return el.type || (el.text !== undefined ? "text" : el.src !== undefined ? "image"
+      : el.source !== undefined ? "list" : el.children !== undefined ? "group" : "rect");
+  }
   function labelOf(el) {
-    if (el.use) return "use: " + el.use;
-    if (el.type === "text" || el.text !== undefined) return "text " + JSON.stringify(litText(el.text)).slice(0, 34);
-    if (el.type === "list" || el.source !== undefined) return "list " + (el.source || "") + " " + (el.direction || "row");
-    if (el.type === "image" || el.src !== undefined) return "image " + (typeof el.src === "string" ? el.src.slice(0, 28) : "");
+    const t = typeOf(el);
+    if (el.use) return "component: " + el.use;
+    if (t === "text") return JSON.stringify(litText(el.text)).slice(0, 34);
+    if (t === "list") return (el.source || "") + " · " + (el.direction || "row");
+    if (t === "image") return typeof el.src === "string" ? el.src.slice(0, 28) : "";
     const n = Array.isArray(el.children) ? el.children.length : 0;
-    return (el.type || "group") + (n ? " · " + n : "");
+    return n ? n + (n === 1 ? " child" : " children") : "";
   }
   function hasKids(el) { return Array.isArray(el.children) ? el.children.length > 0 : el.item !== undefined; }
   function renderTree() {
@@ -413,12 +434,14 @@
     pane.appendChild(vsel);
     S.SCREENS.forEach(function (scr) {
       const head = h("div", { class: "screenhead" });
-      head.appendChild(h("span", { class: "name" }, scr));
-      const add = h("button", { class: "ghost", type: "button" }, "+ element"); add.onclick = () => addTo(screenArr(), ["screens", state.view, state.screen]); head.appendChild(add);
+      const nm = h("span", { class: "name" + (state.screen === scr ? " on" : ""), title: "Click a screen to work on it: elements you add go there" }, scr);
+      nm.onclick = () => { state.screen = scr; state.addScreen = scr; renderTree(); renderPalette(); };
+      head.appendChild(nm);
+      const add = h("button", { class: "ghost", type: "button" }, "+ element"); add.onclick = () => addTo(screenArr(scr), ["screens", state.view, scr]); head.appendChild(add);
       pane.appendChild(head);
-      const arr = screenArr();
+      const arr = screenArr(scr);
       if (!arr.length) pane.appendChild(h("div", { class: "muted", style: "margin:2px 0 6px" }, "(empty — add an element; a screen with no elements is black)"));
-      arr.forEach((el, i) => pane.appendChild(node(["screens", state.view, state.screen, i], el, i, arr)));
+      arr.forEach((el, i) => pane.appendChild(node(["screens", state.view, scr, i], el, i, arr)));
     });
   }
   function node(path, el, index, arr) {
@@ -429,7 +452,7 @@
     const caret = h("span", { class: "caret" + (kids ? "" : " leaf") }, state.open[openKey] === false ? "▸" : "▾");
     caret.onclick = (e) => { e.stopPropagation(); state.open[openKey] = state.open[openKey] === false; renderTree(); };
     row.appendChild(caret);
-    row.appendChild(h("span", { class: "t" }, el.type || (el.use ? "use" : "auto")));
+    row.appendChild(h("span", { class: "t" }, (S.TYPE_LABELS && S.TYPE_LABELS[typeOf(el)]) || typeOf(el)));
     const lbl = h("span", { class: "lbl" }, labelOf(el)); lbl.title = el.type || ""; row.appendChild(lbl);
     const acts = h("div", { class: "acts" });
     const mk = (t, fn, danger) => { const b = h("button", { class: "ghost" + (danger ? " danger" : ""), type: "button" }, t); b.onclick = (e) => { e.stopPropagation(); fn(); }; return b; };
@@ -495,31 +518,34 @@
     if (!state.sel) { pane.appendChild(h("div", { class: "muted", style: "padding:10px" }, "Select an element in the tree to edit it.")); return; }
     const el = getPath(state.sel);
     if (!el || typeof el !== "object") { state.sel = null; renderInspector(); return; }
-    pane.appendChild(h("div", { class: "mono muted", style: "font-size:11px;margin:2px 0 6px" }, state.sel.join(".")));
+    const crumbs = state.sel.slice(1).map((s) => (/^\d+$/.test(String(s)) ? "element " + (+s + 1) : s));
+    pane.appendChild(h("div", { class: "muted", style: "font-size:11px;margin:2px 0 6px", title: "Where it sits in the file: " + state.sel.join(".") }, crumbs.join("  ›  ")));
     // type
-    const trow = h("div", { class: "field" }); trow.appendChild(h("label", null, "type"));
+    const trow = h("div", { class: "field" }); trow.appendChild(h("label", null, "Type"));
     const tctl = h("div", { class: "ctl" });
-    const sel = h("select"); ["rect", "text", "image", "group", "list"].forEach((t) => { const o = h("option", { value: t }, t); if (el.type === t) o.setAttribute("selected", ""); sel.appendChild(o); });
-    sel.onchange = () => { el.type = sel.value; markDirty(); renderInspector(); };
+    const cur0 = typeOf(el);
+    const sel = h("select"); ["rect", "text", "image", "group", "list"].forEach((t) => { const o = h("option", { value: t }, S.TYPE_LABELS[t] || t); if (cur0 === t) o.setAttribute("selected", ""); sel.appendChild(o); });
+    sel.title = "What this element is: a rectangle, some text, a picture, a box of children, or a list of repeats";
+    sel.onchange = () => { el.type = sel.value; markDirty(); renderAll(); rerender(); };
     tctl.appendChild(sel);
     const dup = h("button", { class: "ghost", type: "button" }, "delete"); dup.onclick = () => { delPath(state.sel); state.sel = null; renderAll(); rerender(); };
     tctl.appendChild(dup); trow.appendChild(tctl); pane.appendChild(trow);
 
     // component use
     const comps = Object.keys(state.theme.components || {});
-    pane.appendChild(h("h3", { class: "sec" }, "component"));
+    pane.appendChild(h("h3", { class: "sec" }, "Reusable component"));
     field(pane, "use", () => el.use, (nv) => { if (nv) el.use = nv; else delete el.use; markDirty(); }, "enum", comps.concat([""]));
     if (el.use) { kvField(pane, "with", () => el.with, (nv) => { if (nv) el.with = nv; else delete el.with; }, []); rawWitheditor(pane, el); }
 
-    pane.appendChild(h("h3", { class: "sec" }, "common"));
+    pane.appendChild(h("h3", { class: "sec" }, "Position, size and visibility"));
     S.COMMON.forEach((p) => field(pane, p[0], () => el[p[0]], (nv) => { if (nv === "" || nv === undefined) delete el[p[0]]; else el[p[0]] = nv; markDirty(); }, p[1], p[2]));
     field(pane, "onTap", () => el.onTap, (nv) => { if (nv) el.onTap = nv; else delete el.onTap; markDirty(); }, "enum", S.BUTTONS);
 
-    pane.appendChild(h("h3", { class: "sec" }, el.type + " properties"));
-    (S.TYPE_PROPS[el.type] || []).forEach(function (p) {
+    pane.appendChild(h("h3", { class: "sec" }, (S.TYPE_LABELS[typeOf(el)] || typeOf(el)) + " settings"));
+    (S.TYPE_PROPS[typeOf(el)] || []).forEach(function (p) {
       const k = p[0], kind = p[1];
-      if (k === "children") { pane.appendChild(h("div", { class: "field" }, h("label", null, "children"), h("span", { class: "muted" }, (Array.isArray(el.children) ? el.children.length : 0) + " (edit in the tree)"))); return; }
-      if (k === "item") { pane.appendChild(h("div", { class: "field" }, h("label", null, "item"), h("span", { class: "muted" }, el.item ? "1 (edit in the tree)" : "none"))); return; }
+      if (k === "children") { pane.appendChild(h("div", { class: "field" }, h("label", null, "Children"), h("span", { class: "muted" }, (Array.isArray(el.children) ? el.children.length : 0) + " (edit in the tree)"))); return; }
+      if (k === "item") { pane.appendChild(h("div", { class: "field" }, h("label", null, "Item"), h("span", { class: "muted" }, el.item ? "1 (edit in the tree)" : "none"))); return; }
       if (kind === "object" && k === "gradient") {
         const f = h("div"); pane.appendChild(f);
         field(f, "gradient angle", () => (el.gradient || {}).angle, (nv) => { el.gradient = Object.assign({}, el.gradient || {}); el.gradient.angle = nv; markDirty(); }, "number");
@@ -539,7 +565,7 @@
   function rawWitheditor(pane, el) {
     const ta = h("textarea", { rows: 3 }); ta.value = JSON.stringify(el.with || {}, null, 1);
     const apply = h("button", { class: "ghost", type: "button" }, "set with JSON");
-    apply.onclick = () => { try { el.with = looseParse(ta.value || "{}"); markDirty(); renderInspector(); } catch (e) { alert("Bad JSON: " + e.message); } };
+    apply.onclick = () => { try { el.with = looseParse(ta.value || "{}"); markDirty(); renderInspector(); } catch (e) { badJson("the component's values", e); } };
     pane.appendChild(ta); pane.appendChild(apply);
   }
 
@@ -665,11 +691,13 @@
   // ---- input / hints / behaviour / theme --------------------------------------------------------------
   function renderInput() {
     const pane = $("#pane-input"); pane.innerHTML = "";
+    pane.appendChild(h("p", { class: "muted" }, "What each button does. \"home\" is the screen you pick a system on; \"library\" is a system's games."));
     const inp = state.theme.input || (state.theme.input = {});
+    const BTN = { left: "Left", right: "Right", up: "Up", down: "Down", a: "A", b: "B", x: "X", y: "Y", l: "L", r: "R" };
     ["home", "library"].forEach(function (v) {
       inp[v] = inp[v] || {};
       pane.appendChild(h("h3", { class: "sec" }, v));
-      S.BUTTONS.forEach((b) => { const f = h("div"); pane.appendChild(f); field(f, b, () => inp[v][b], (nv) => { if (nv) inp[v][b] = nv; else delete inp[v][b]; markDirty(); }, "enum", S.BUTTON_ACTIONS.map((x) => x[0])); });
+      S.BUTTONS.forEach((b) => { const f = h("div"); pane.appendChild(f); field(f, b, () => inp[v][b], (nv) => { if (nv) inp[v][b] = nv; else delete inp[v][b]; markDirty(); }, "enum", S.BUTTON_ACTIONS, h("label", null, BTN[b] || b)); });
     });
     pane.appendChild(h("h3", { class: "sec" }, "hints"));
     const hints = state.theme.hints || (state.theme.hints = {});
@@ -690,15 +718,25 @@
   function renderBehaviour() {
     const pane = $("#pane-behaviour"); pane.innerHTML = "";
     const b = state.theme.behavior || (state.theme.behavior = {});
-    ["launchMs", "scrollMs", "settleMs", "fps"].forEach((k) => { const f = h("div"); pane.appendChild(f); field(f, k, () => b[k], (nv) => { if (nv === "" || nv === undefined) delete b[k]; else b[k] = nv; markDirty(); }, "number"); });
-    ["wrap", "extraHints"].forEach((k) => { const f = h("div"); pane.appendChild(f); field(f, k, () => b[k], (nv) => { if (nv === "" || nv === undefined) delete b[k]; else b[k] = nv; markDirty(); }, "bool"); });
-    pane.appendChild(h("h3", { class: "sec" }, "sound cues (ms)"));
+    // the engine's names, in plain words
+    const BL = { launchMs: "Game start lasts (ms)", scrollMs: "Scrolling speed (ms)", settleMs: "Settle after a move (ms)",
+      fps: "Redraws a second", wrap: "Wrap the buttons around", extraHints: "Add Banana's own hints" };
+    const BT = { launchMs: "How long the \"Starting…\" view stays up before the game runs",
+      scrollMs: "How fast a list scrolls when you hold a direction",
+      settleMs: "How long it keeps animating after the selection moves (the theme's own move animations)",
+      fps: "Only matters if the theme reads the time hook; it redraws this often",
+      wrap: "Up from the first item goes round to the last",
+      extraHints: "Banana's own hints (SELECT Search, and X Options on a DS game) sit beside the theme's" };
+    const blab = (k) => { const l = h("label", null, BL[k] || k); l.title = BT[k] || ""; return l; };
+    ["launchMs", "scrollMs", "settleMs", "fps"].forEach((k) => { const f = h("div"); pane.appendChild(f); field(f, k, () => b[k], (nv) => { if (nv === "" || nv === undefined) delete b[k]; else b[k] = nv; markDirty(); }, "number", null, blab(k)); });
+    ["wrap", "extraHints"].forEach((k) => { const f = h("div"); pane.appendChild(f); field(f, k, () => b[k], (nv) => { if (nv === "" || nv === undefined) delete b[k]; else b[k] = nv; markDirty(); }, "bool", null, blab(k)); });
+    pane.appendChild(h("h3", { class: "sec" }, "Sound cue times (ms)"));
     b.cues = b.cues || {};
     ["insert", "scroll", "select", "back", "fav", "ready"].forEach((k) => { const f = h("div"); pane.appendChild(f); field(f, k, () => b.cues[k], (nv) => { if (nv === "" || nv === undefined) delete b.cues[k]; else b.cues[k] = nv; markDirty(); }, "number"); });
     pane.appendChild(h("h3", { class: "sec" }, "other behavior members (raw)"));
     const ta = h("textarea", { rows: 5 }); ta.value = JSON.stringify(state.theme.behavior, null, 2);
     const apply = h("button", { class: "ghost", type: "button" }, "apply behavior JSON");
-    apply.onclick = () => { try { state.theme.behavior = looseParse(ta.value || "{}"); markDirty(); renderBehaviour(); } catch (e) { alert("Bad JSON: " + e.message); } };
+    apply.onclick = () => { try { state.theme.behavior = looseParse(ta.value || "{}"); markDirty(); renderBehaviour(); } catch (e) { badJson("the behaviour settings", e); } };
     pane.appendChild(ta); pane.appendChild(apply);
   }
   function renderTheme() {
@@ -726,11 +764,12 @@
         pane.appendChild(h("div", { class: "ctl" }, b));
       });
     }
-    pane.appendChild(h("h3", { class: "sec" }, "start from a template"));
-    if (!state.templates || !state.templates.length) pane.appendChild(h("div", { class: "muted" }, "Run serve.py to load the shipped example themes as templates."));
-    (state.templates || []).forEach(function (t) { const b = h("button", { type: "button" }, t.name); b.onclick = () => { loadTheme(looseParse(t.json)); }; pane.appendChild(h("div", { class: "ctl" }, b)); });
-    const any = h("button", { class: "ghost", type: "button" }, "blank starter"); any.onclick = () => loadTheme(clone(STARTER));
+    pane.appendChild(h("h3", { class: "sec" }, "Start from a template"));
+    pane.appendChild(h("p", { class: "muted" }, "One of the example themes BananaOS ships. Pick one and change it — that is the easiest way in."));
+    (state.templates || []).forEach(function (t) { const b = h("button", { type: "button" }, t.name); b.title = t.file || ""; b.onclick = () => { loadTheme(looseParse(t.json)); setStatus("started from " + t.name, "ok"); }; pane.appendChild(h("div", { class: "ctl" }, b)); });
+    const any = h("button", { class: "ghost", type: "button" }, "Start from the simple example"); any.onclick = () => loadTheme(clone(STARTER));
     pane.appendChild(h("div", { class: "ctl" }, any));
+    pane.appendChild(h("p", { class: "muted", style: "font-size:12px" }, "New, up top, always comes back to the simple example."));
   }
 
   // ---- assets ----------------------------------------------------------------------------------------
@@ -944,7 +983,7 @@
   function renderPreview() {
     const p = $("#preview"); p.innerHTML = "";
     if (!RENDER || !RENDER.available) {
-      p.appendChild(h("div", { class: "note", html: "The Design canvas shows the theme drawn by the real engine, which needs the local server:<br><br><code>python3 tools/theme-studio/serve.py</code><br><br>Editing, the tree, expressions and colour keys all work without it." }));
+      p.appendChild(h("div", { class: "note", html: "The Design canvas shows your theme drawn by the menu's own engine, which needs the local server. In a terminal:<br><br><code>python3 tools/theme-studio/serve.py</code><br><br>then open the address it prints. Everything else — the tree, the inspector, expressions and the colours — works without it. There is a walkthrough in <code>docs/MAKE-A-THEME.md</code>, or press Guide up top." }));
       return;
     }
     if (!state.shots || !state.shots.length) { p.appendChild(h("div", { class: "note" }, "Press Render preview (bottom) to draw the theme with the real engine.")); return; }
@@ -994,8 +1033,14 @@
   function rerender() { renderInspector(); }
   function renderAll() { renderPalette(); renderTree(); renderColours(); renderVars(); renderComponents(); renderAssets(); renderInput(); renderBehaviour(); renderTheme(); renderPreviewControls(); renderJson(); }
 
+  // The example themes: serve.py's list when it is running, else the copies inlined in templates.js — the page
+  // is usually opened straight from a checkout with no server, and file:// pages cannot fetch their neighbours.
   function loadTemplates() {
-    fetch("api/templates", { cache: "no-store" }).then((r) => (r.ok ? r.json() : [])).then((list) => { state.templates = list; renderTheme(); }).catch(() => {});
+    const bundled = (typeof BananaTemplates !== "undefined" && BananaTemplates) || [];
+    if (bundled.length) { state.templates = bundled; renderTheme(); }
+    fetch("api/templates", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((list) => {
+      if (Array.isArray(list) && list.length) { state.templates = list; renderTheme(); }
+    }).catch(() => {});
   }
   function loadLocalThemes() {
     if (!RENDER || !RENDER.available) return;
@@ -1025,12 +1070,15 @@
     $("#openBtn").onclick = () => $("#fileInput").click();
     $("#fileInput").onchange = function () {
       const f = this.files[0]; if (!f) return;
-      f.text().then((s) => { try { loadTheme(looseParse(s)); setStatus("opened " + f.name, "ok"); } catch (e) { alert("That isn't a theme Banana can read: " + e.message); } });
+      f.text().then((s) => { try { loadTheme(looseParse(s)); setStatus("opened " + f.name, "ok"); } catch (e) { alert("This file is not a theme Banana can read, so it was not opened.\n\n" + e.message +
+        "\n\nThemes are JSON. If you are not sure, press New once and change that instead."); } });
       this.value = "";
     };
     $("#saveBtn").onclick = saveTheme;
     $("#copyBtn").onclick = () => { const t = JSON.stringify(state.theme, null, 2) + "\n"; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => setStatus("copied", "ok"), () => { const ta = h("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); } catch (e) {} ta.remove(); setStatus("copied", "ok"); }); };
     $("#validateBtn").onclick = doValidate;
+    $("#templatesBtn").onclick = () => { showTab("properties", "theme"); setStatus("Pick a starting point under “Start from a template”.", ""); };
+    $("#guideBtn").onclick = () => window.open("../../docs/MAKE-A-THEME.md", "_blank", "noopener");
     window.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); saveTheme(); } });
   }
 

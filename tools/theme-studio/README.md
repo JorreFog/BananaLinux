@@ -19,9 +19,11 @@ xdg-open tools/theme-studio/index.html      # or just open the file in a browser
 python3 tools/theme-studio/serve.py          # builds ui/banana-ui if it can, opens the page
 ```
 
-In the editor: **New** starts from a blank theme, **Open** loads a `.json`, **Save** downloads it, **Validate**
-lists expression and reference problems. The **Theme** tab lists the example themes that ship on the card as
-starting points (when the server is running).
+In the editor: **New** starts from a simple working theme, **Open** loads a `.json`, **Save** downloads it,
+**Validate** lists expression and reference problems, and **Templates** jumps to the example themes BananaOS
+ships — Canvas, Hillside, Turntable and Classic — which are the easiest way in. Those travel inside
+`templates.js`, so they are there whether or not the server is running. **Guide** opens the walkthrough in
+`docs/MAKE-A-THEME.md`.
 
 Install a finished theme by putting `my-theme.json` (and any folder of pictures it uses, kept beside it) into
 `banana/themes/` on the card — over file sharing, or with the card in a computer — then pick it in
@@ -88,7 +90,9 @@ exact, and it only changes when the engine does. `--size 1024x768` previews at t
 | `assets/` | Pixelify Sans and the menu dot patterns, copied from `web/preview/assets/`, so the page works offline. |
 | `app.js` | The editor: tree, inspector, value widgets, colour keys, save/load. |
 | `expr.js` | A JavaScript port of the theme expression language (`ui/src/expr.cpp`). |
-| `schema.js` | The editor's field metadata: elements, properties, hooks, palettes. |
+| `schema.js` | The editor's field metadata: elements, properties, hooks, palettes, the friendly labels and tooltips. |
+| `templates.js` | The example layout themes, inlined so "start from a template" works with no server (generated). |
+| `make-templates.py` | Rebuilds `templates.js` from the examples; `tests/run.sh` checks it is current. |
 | `render.js` | The preview client. |
 | `serve.py` | Serves the editor, renders previews with the engine, and writes a theme to `--themes-dir`. |
 | `wasm/README.md` | The design for a WebAssembly build of the engine (real-time previews with no server). |

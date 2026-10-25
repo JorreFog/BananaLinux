@@ -32,8 +32,10 @@ banana-ui). Elsewhere, point it at a checkout with Engine > Set BananaLinux fold
 - **Components**: make one from a selection, edit it once (every `use` follows), add instances.
 - **Assets**: pictures, fonts and sounds are copied into a folder named after the theme, next to its JSON, and named
   by relative paths, as the engine expects.
-- **Preview**: switch views, move the selection (◀ ▶ A B), scrub `time`, `moved`, `entered`, `launch.progress` and the
-  scroll, set the battery and Wi-Fi, and play the animations. The studio draws with its own port of the engine's
+- **Preview**: switch views, move the selection (◀ ▶ A B), and play the animations. The sliders scrub the values a
+  theme's own animations read — the clock the theme sees, time since the selection moved or the view opened, a game
+  starting, the list's scroll offset and the battery charge — labelled in those words with the hook's name on hover.
+  The studio draws with its own port of the engine's
   layout rules over a made-up library; **F5** swaps in the real banana-ui's picture (rendered headless in about
   0.1 s, refreshed after each change) and lists the engine's own theme errors under Problems.
 - **JSON** tab: the whole file, for anything else. Comments and trailing commas are read; saving writes plain JSON.

@@ -178,8 +178,8 @@ starts with `=`, and `{}` drops one into a piece of text:
 "scale": "=sel ? 1.1 : 1"                     // a little bigger when selected
 ```
 
-`sel` is "is this one selected", `game.title` is the selected game's name, and so on. The editor lists them all
-as you type, and its completion shows what each one currently is.
+`sel` is "is this one selected", `game.title` is the selected game's name, and so on. As you type, the editor
+shows what the expression comes to beside the field; the desktop editor also completes the names for you.
 
 **Names for values and reusable pieces.** `vars` gives a name to a value you use in several places
 (`"ink": "#101010"`), and `components` is a piece you design once and drop in as many times as you like — change

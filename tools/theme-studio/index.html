@@ -22,7 +22,9 @@
     <button id="saveBtn" class="btn primary">Save</button>
     <button id="copyBtn" class="btn">Copy</button>
     <button id="validateBtn" class="btn">Validate</button>
-    <button id="themeSwitch" class="theme-switch" title="Dark / light"><span class="track"><span class="knob"></span></span><span id="themeLabel">Dark</span></button>
+    <button id="templatesBtn" class="btn" title="Start from one of the example themes">Templates</button>
+    <button id="guideBtn" class="btn" title="How to make a theme, in plain words (opens docs/MAKE-A-THEME.md)">Guide</button>
+    <button id="themeSwitch" class="theme-switch" title="The editor's own dark or light look (the theme's own background is under Theme settings > base)"><span class="track"><span class="knob"></span></span><span id="themeLabel">Dark</span></button>
   </div>
   <input id="fileInput" type="file" accept=".json,application/json" class="hidden">
   <span id="status" class="status">…</span>
@@ -94,6 +96,7 @@
 
 <script src="expr.js"></script>
 <script src="schema.js"></script>
+<script src="templates.js"></script>
 <script src="render.js"></script>
 <script src="app.js"></script>
 </body>

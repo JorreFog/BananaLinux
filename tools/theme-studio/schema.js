@@ -96,7 +96,96 @@
       ["scrollMode", "enum", ["center", "edge", "none"]], ["loop", "bool"], ["flow", "bool"], ["range", "number"],
       ["selectedOnTop", "bool"], ["item", "tree"]],
   };
-  const TYPE_LABELS = { rect: "Rect", text: "Text", image: "Image", group: "Group", list: "List" };
+  const TYPE_LABELS = { rect: "Rectangle", text: "Text", image: "Picture", group: "Group", list: "List" };
+
+  // ---- what the inspector calls each property, and a plain-words explanation ---------------------------------
+  // Keyed by the JSON property name, so every field gets a readable label and a hint without the tables above
+  // carrying two more columns. The wording matches the desktop studio's field tips (widgets.py).
+  const FIELD_LABELS = {
+    x: "X", y: "Y", w: "Width", h: "Height", right: "Right", bottom: "Bottom",
+    anchor: "Anchor", ax: "Anchor X", ay: "Anchor Y", scale: "Scale",
+    opacity: "Opacity", visible: "Visible", if: "If", clip: "Clip children", onTap: "Tap acts as",
+    states: "Changes when…", smooth: "Ease smoothly",
+    fill: "Fill", color: "Colour", gradient: "Gradient", radius: "Corner radius",
+    border: "Border", borderColor: "Border colour", shadow: "Shadow",
+    text: "Text", font: "Font", size: "Size", align: "Align", valign: "Vertical align",
+    upper: "Capitals", spacing: "Letter spacing", wrap: "Wrap", maxLines: "Max lines",
+    lineHeight: "Line height", ellipsis: "Ellipsis",
+    outline: "Outline", width: "Width", blur: "Blur", spread: "Spread",
+    src: "Source", fallback: "Fallback", fit: "Fit", tint: "Tint", crop: "Crop", placeholder: "Placeholder",
+    children: "Children", layout: "Layout", gap: "Gap", padding: "Padding",
+    justify: "Justify", source: "Shows", direction: "Direction", columns: "Columns",
+    itemW: "Item width", itemH: "Item height", stepX: "Step X", stepY: "Step Y",
+    scrollMode: "Scroll", loop: "Loop", flow: "Flow", range: "Range", count: "Count",
+    selectedOnTop: "Selected on top", item: "Item",
+    name: "Name", author: "Author", debug: "Show problems on screen",
+    use: "Use a component", with: "Values to pass in",
+  };
+  const FIELD_TIPS = {
+    x: "Distance from the left of the box it sits in. The screen is 640 wide, 480 tall.",
+    y: "Distance from the top.",
+    w: "The width. Leave it empty to fill the box it sits in.",
+    h: "The height. Leave it empty to fill the box it sits in.",
+    right: "Distance from the right edge, instead of X.",
+    bottom: "Distance from the bottom edge, instead of Y.",
+    anchor: "Which point of the element X and Y place.",
+    ax: "0 = its left edge, 1 = its right edge.",
+    ay: "0 = its top edge, 1 = its bottom edge.",
+    scale: "Grows or shrinks it around its anchor.",
+    opacity: "0 to 1. Multiplied into everything it holds.",
+    visible: "Off hides it. Usually an expression, e.g. \"=sel\" or \"=battery >= 0\".",
+    if: "Same as Visible: a plain yes or no.",
+    clip: "Cut off whatever sticks out of its box.",
+    onTap: "The button this element acts as when it is touched.",
+    states: "Properties that take over while a condition holds — a selected shoe, a favourite star.",
+    smooth: "Ease towards new values instead of jumping to them (time constants in ms).",
+    fill: "A colour, or an expression like \"=sel ? navy : face\".",
+    gradient: "A colour ramp. Replaces the fill.",
+    radius: "A number, \"50%\" for a pill or a circle, or four corners [top-left, top-right, bottom-right, bottom-left].",
+    border: "How thick the outline is, drawn inside the box.",
+    borderColor: "The outline's colour.",
+    shadow: "A soft dark copy behind it. Drawn when a colour is set.",
+    text: "The words. {curly braces} drop a value in: \"{game.title}\".",
+    font: "One of the built-in fonts, or a name from the theme's fonts.",
+    size: "In screen units — the screen is 480 tall.",
+    align: "For text: within its width. For a row or column: across it.",
+    valign: "Within its height.",
+    upper: "Draw the text in CAPITALS.",
+    spacing: "Space between the letters.",
+    wrap: "Break long lines instead of letting them run off.",
+    maxLines: "Stop after this many lines.",
+    lineHeight: "Space between the lines.",
+    ellipsis: "End a line that is too long with … (on by default).",
+    src: "A picture beside the theme (\"my-theme/cover.png\"), or a hook: {sys.icon}, {game.art}.",
+    fallback: "Used when the source is empty or will not load.",
+    fit: "How the picture fills its box: cover, contain, fill, pixel…",
+    tint: "Multiplied into the picture's colours.",
+    crop: "Trim a real DS card scan's white strip.",
+    placeholder: "Shown while the picture loads, or when there is nothing to show.",
+    children: "The elements inside it. Add and reorder them in the Layers tree.",
+    layout: "Place the children one after another, in a row or a column.",
+    gap: "Space between them.",
+    padding: "Space inside the edge.",
+    justify: "Where they sit along the row or column.",
+    source: "What the list repeats: your systems, the games in a library, the on-screen button hints, or simply N items.",
+    direction: "How the repeats are laid out. \"free\" lets each one place itself from pos/rel (a wheel, a fan).",
+    columns: "How many columns a grid has.",
+    itemW: "The size of one repeat.",
+    itemH: "The size of one repeat.",
+    stepX: "Space between repeats (default: the item width + gap).",
+    stepY: "Space between repeats (default: the item height + gap).",
+    scrollMode: "\"center\" keeps the selection in the middle, \"edge\" scrolls only when it would leave, \"none\" never scrolls.",
+    loop: "Start again at the other end instead of stopping.",
+    flow: "Each item as big as its own content (the hint chips).",
+    range: "A free list draws this many items either side of the selection.",
+    count: "How many items a \"range\" list makes.",
+    selectedOnTop: "Draw the selected one last, over its neighbours.",
+    item: "The element that is repeated: write it once and the menu repeats it for every system or game.",
+    name: "What Settings shows in the theme list.",
+    author: "Your name. Kept in the file so people know who made it.",
+    debug: "Paints each problem in red on the top screen while you work. Turn it off when you are done.",
+    use: "Drop in one of the reusable components instead of writing the element again.",
+  };
 
   // ---- hooks: everything an expression can read (layout.cpp hook(), sysField(), gameField()) ---------------
   const SYS_FIELDS = ["id", "name", "maker", "color", "accent", "icon", "games", "played", "time", "fav", "app",
@@ -122,7 +211,7 @@
 
   const api = { VIEWS, SCREENS, DARK, LIGHT, ACCENTS, ACCENT_SHADES, COLOR_GROUPS, COLOR_KEYS, SOUNDS,
     BUILTIN_FONTS, BUTTONS, BUTTON_ACTIONS, COMMON, APPEARANCE, TYPE_PROPS, TYPE_LABELS,
-    SYS_FIELDS, GAME_FIELDS, HOOKS, HOOK_NAMES, BEHAVIOR_KEYS, SYSTEM_IDS };
+    FIELD_LABELS, FIELD_TIPS, SYS_FIELDS, GAME_FIELDS, HOOKS, HOOK_NAMES, BEHAVIOR_KEYS, SYSTEM_IDS };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   global.BananaSchema = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);
