@@ -42,8 +42,7 @@ handheld() {
     for c in DSI-1 DSI-2; do echo connected > "$R/sys/class/drm/card0-$c/status"; done
     echo disconnected > "$R/sys/class/drm/card0-Writeback-1/status"
     echo Battery > "$R/sys/class/power_supply/battery/type"; echo 77 > "$R/sys/class/power_supply/battery/capacity"
-    for l in green:power amber:charging; do mkdir -p "$R/sys/class/leds/$l"; done
-    [ "$1" = rgds ] && mkdir -p "$R/sys/class/leds/red:status"
+    for l in green:power red:status amber:charging; do mkdir -p "$R/sys/class/leds/$l"; done
     printf ' 0 [rk817hp        ]: simple-card - rk817_hp\n' > "$R/proc/asound/cards"
     [ "$1" = rgds-plus ] && printf ' 1 [aw88166        ]: aw88166 - aw88166\n' >> "$R/proc/asound/cards"
     : > "$R/run/banana/bananad-ready"; mkdir -p "$R/sys/class/net/wlan0"; : > "$R/dev/dri/renderD128"
@@ -84,7 +83,7 @@ run early
 line MISSING "power button" && ok "MISSING: power button" || bad "$(grep 'power button' "$R/run/banana/health")"
 grep -q "power button" "$R/run/banana/health-notice" && ok "in the notice" || bad "not in the notice"
 
-echo "5. the RG DS Plus without its speaker amplifiers: sound MISSING; the RG DS without its red LED: LEDs, log only"
+echo "5. the RG DS Plus without its speaker amplifiers: sound MISSING; a handheld without its red LED: LEDs, log only"
 handheld rgds-plus; sed -i.bak '/aw88166/d' "$R/proc/asound/cards"; run early
 line MISSING sound && grep -q sound "$R/run/banana/health-notice" && ok "sound MISSING, in the notice" || bad "$(grep sound "$R/run/banana/health")"
 handheld rgds; rm -rf "$R/sys/class/leds/red:status"; run early

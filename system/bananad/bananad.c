@@ -955,10 +955,9 @@ static void leds_update(void)
 	static char green[300], red[300], amber[300];
 	static int looked;
 	int last = leds_last;
-	/* looked for again while the power or the charging LED is missing: a LED driver that probes after bananad starts
-	 * (pwm-leds waits for its PWM) was never found, and that LED stayed as the kernel left it all session (the red
-	 * one isn't waited for: the RG DS Plus has none) */
-	if (!looked || !green[0] || !amber[0]) {
+	/* looked for again while one is missing: a LED driver that probes after bananad starts (pwm-leds waits for its
+	 * PWM) was never found, and that LED stayed as the kernel left it all session (both handhelds have all three) */
+	if (!looked || !green[0] || !red[0] || !amber[0]) {
 		looked = 1;
 		led_path("power", green, sizeof green);
 		led_path("status", red, sizeof red);

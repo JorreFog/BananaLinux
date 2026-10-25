@@ -71,7 +71,7 @@ test_part() {
     screens)     [ "$(count_connected)" -ge 2 ] ;;
     backlights)  [ "$(count "$R"/sys/class/backlight/*)" -ge 2 ] ;;
     sound)       sound rk817 && { [ $board != rgds-plus ] || sound aw88166; } ;;
-    leds)        led power && led charging && { [ $board != rgds ] || led status; } ;;
+    leds)        led power && led charging && led status ;;
     battery)     battery ;;
     storage)     [ ! -e "$RUN/data-failed" ] && touch "$R/data/banana/.health" 2>/dev/null && rm -f "$R/data/banana/.health" ;;
     bananad)     [ -e "$RUN/bananad-ready" ] ;;
