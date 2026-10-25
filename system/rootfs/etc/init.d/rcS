@@ -60,6 +60,11 @@ mark "rcS: data partition ready"
 mount -t vfat -o ro,noatime ${DISK}p1 /boot 2>/dev/null
 
 bananad &
+# the buttons and the sound up before the menu's first frame: bananad creates bananad-ready once the power and volume
+# keys are heard and the sound is set up (at most 3 s, so a card with no sound can't hold the menu back)
+i=0
+while [ ! -e /run/banana/bananad-ready ] && [ $i -lt 30 ]; do sleep 0.1; i=$((i + 1)); done
+mark "rcS: bananad ready"
 banana-perf ui
 
 # not needed for the menu's first frame
