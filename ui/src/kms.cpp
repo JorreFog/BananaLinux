@@ -223,9 +223,13 @@ namespace banana
 				ok = id && drmModeAtomicAddProperty(req[s], plane, id, values[k]) >= 0;
 			}
 		}
-		int waiting = 0, lit = 0;
+		// (the flip events' counter is a member, not a local: one that comes after the second's wait below would
+		// otherwise be written into a stack frame that is gone, review 0.4.3)
+		int& waiting = lightWaiting;
+		waiting = 0;
+		int lit = 0;
 		for (int s = 0; s < 2 && ok; s++)
-			if (drmModeAtomicCommit(fd, req[s], DRM_MODE_ATOMIC_ALLOW_MODESET | DRM_MODE_ATOMIC_NONBLOCK | DRM_MODE_PAGE_FLIP_EVENT, &waiting) == 0)
+			if (drmModeAtomicCommit(fd, req[s], DRM_MODE_ATOMIC_ALLOW_MODESET | DRM_MODE_ATOMIC_NONBLOCK | DRM_MODE_PAGE_FLIP_EVENT, &lightWaiting) == 0)
 				{ waiting++; lit++; }
 		// --panels-on: the master given up now (the menu can take the display while the panels power up), the wait
 		// longer (the RG DS Plus's panels take ~1.2 s): its fd closed on the way, the scanout's black buffers go with it

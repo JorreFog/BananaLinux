@@ -62,6 +62,7 @@ namespace banana
 		struct Buf { uint32_t handle = 0, fb = 0, pitch = 0; uint64_t size = 0; uint8_t* map = nullptr; };
 		struct Panel { uint32_t conn = 0, crtc = 0; uint8_t mode[68]; Buf buf[2]; int front = 0; Damage missed[2]; };
 		int fd = -1, W = 0, H = 0, pending = 0, leased = -1;
+		int lightWaiting = 0;	// lightBoth's flips still to come (a member: an event late past its wait lands here)
 		Panel p[2];
 		bool makeBuf(Buf& b);
 		bool lightBoth();
