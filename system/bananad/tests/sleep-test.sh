@@ -42,14 +42,16 @@ echo "s2idle [deep]" > /sys/power/mem_sleep
 echo 0 > /sys/power/pm_async
 for l in green:power red:status amber:charging; do mkdir -p /sys/class/leds/$l; : > /sys/class/leds/$l/trigger; : > /sys/class/leds/$l/brightness; done
 for b in backlight0 backlight1; do mkdir -p /sys/class/backlight/$b; echo 255 > /sys/class/backlight/$b/max_brightness; echo 200 > /sys/class/backlight/$b/brightness; echo 0 > /sys/class/backlight/$b/bl_power; done
-mkfifo /sys/power/state /dev/input/event0
+mkfifo /sys/power/state /dev/input/event0 /run/test/wake
+exec 5<>/sys/power/state        # the "kernel" takes bananad's "mem" at once (never read)...
+exec 6<>/run/test/wake          # ...and bananad waits on this until wake() sends a byte (BANANAD_TEST_WAKE)
 exec 3<>/dev/input/event0       # a writer that stays, so bananad's poll doesn't see a hang-up
 mkfifo /run/test/touch; exec 4<>/run/test/touch     # the stand-in touchscreen bananad reads unpolled (BANANAD_TEST_TOUCH)
 echo 0 > /run/test/lid
 
 pass=0 fail=0
 ok() { pass=$((pass + 1)); echo "  ok: $*"; }
-bad() { fail=$((fail + 1)); echo "  FAIL: $*"; }
+bad() { fail=$((fail + 1)); echo "  FAIL: $*"; tail -n 4 /data/banana/logs/sleep.log 2>/dev/null | sed 's/^/    sleep.log: /'; }   # (what bananad did)
 # an input event: type code value (then a SYN_REPORT)
 ev() { python3 -c "
 import struct, sys
@@ -61,16 +63,15 @@ touch() { python3 -c "
 import struct, sys, time
 t = time.clock_gettime(time.CLOCK_MONOTONIC); s = int(t); u = int((t - s) * 1e6)
 sys.stdout.buffer.write(struct.pack('llHHi', s, u, 3, 0x35, 100) + struct.pack('llHHi', s, u, 0, 0, 0))" >&4; }
-# is bananad blocked writing "mem" (asleep)? wait up to 3 s
-# (blocked opening the FIFO: its wait channel is wait_for_partner)
-asleep() { for i in $(seq 30); do [ "$(cat /proc/$BD/wchan 2>/dev/null)" = wait_for_partner ] && return 0; sleep 0.1; done; return 1; }
-# read "mem": the write returns, it is awake (bananad not asleep: a failure after 5 s, not a test that waits for ever)
-wake() { timeout 5 head -c 3 /sys/power/state > /dev/null || bad "wake: bananad wasn't asleep"; sleep 0.3; }
+# is bananad asleep (its "mem" written, waiting for the wake: blocked reading the wake FIFO)? wait up to 3 s
+asleep() { for i in $(seq 30); do [ "$(cat /proc/$BD/wchan 2>/dev/null)" = pipe_read ] && return 0; sleep 0.1; done; return 1; }
+# the wake: one byte, and only to a bananad that is asleep (a byte left over would end its next sleep at once)
+wake() { if asleep; then printf x >&6; else bad "wake: bananad wasn't asleep"; fi; sleep 0.3; }
 gstate() { awk '{print $3}' /proc/$GAME/stat; }
 start() {   # start [bananad.conf lines]
     echo "s2idle [deep]" > /sys/power/mem_sleep     # the kernel's file always lists both
     printf '%s\n' "autosleep_minutes = 0" "sleep_check_hours = 0" "$@" > /data/banana/bananad.conf
-    BANANAD_TEST_LID=/run/test/lid BANANAD_TEST_TOUCH=/run/test/touch "$W/bananad" & BD=$!
+    BANANAD_TEST_LID=/run/test/lid BANANAD_TEST_TOUCH=/run/test/touch BANANAD_TEST_WAKE=/run/test/wake "$W/bananad" & BD=$!
     sleep 0.5
 }
 stop() { kill $BD 2>/dev/null; wait $BD 2>/dev/null || true; }
@@ -146,7 +147,7 @@ grep -q 'trying the safer way' /data/banana/logs/sleep.log && ok "fell back afte
 echo 0 > /run/test/lid; ev $EV_SW $SW_LID 0; sleep 0.3
 [ "$(cat /sys/class/backlight/backlight0/bl_power)" = 0 ] && ok "panels back when the lid opens" || bad "panels still dark"
 stop
-rmdir /sys/power/state; mkfifo /sys/power/state
+rmdir /sys/power/state; mkfifo /sys/power/state; exec 5<>/sys/power/state
 
 echo "6. lid sleep off: closing the lid only turns the backlights off"
 start "lid_sleep = no"
@@ -261,6 +262,23 @@ wake
 stop
 kill -CONT -$GAME 2>/dev/null || true
 rm -f /run/banana/game.pid
+
+echo "14. the upper LED glows dim while asleep (led_sleep_brightness), back at its level after the wake; 0: dark"
+G=/sys/class/leds/green:power/brightness
+start
+[ "$(cat $G)" = 128 ] && ok "awake: 128" || bad "awake: $(cat $G)"
+echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
+asleep && ok "asleep" || bad "no sleep"
+[ "$(cat $G)" = 16 ] && ok "asleep: a dim glow (16)" || bad "asleep: $(cat $G)"
+echo 0 > /run/test/lid; wake
+[ "$(cat $G)" = 128 ] && ok "back to 128 after the wake" || bad "after the wake: $(cat $G)"
+stop
+start "led_sleep_brightness = 0"
+echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
+asleep && ok "asleep" || bad "no sleep"
+[ "$(cat $G)" = 0 ] && ok "asleep with the LED set to off: dark" || bad "asleep: $(cat $G)"
+echo 0 > /run/test/lid; wake
+stop
 
 kill $UI $GAME 2>/dev/null || true
 echo "sleep test: $pass passed, $fail failed"
