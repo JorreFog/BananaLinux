@@ -4138,6 +4138,7 @@ namespace banana
 		std::map<uint32_t, long long> unlocked;		// id -> when (unix time)
 		std::map<std::string, bool> badgeReady;		// badge name -> its file is in BADGES
 		int gen = 0;
+		int awards = 0;		// achievements unlocked while the game runs (each one wakes a dimmed bottom panel)
 		std::string user, token;
 		time_t cfgSeen = 0;	// retroarch.cfg's mtime when the token was last looked for in it
 		long long pos = 0;
@@ -4242,7 +4243,7 @@ namespace banana
 					uint32_t id = (uint32_t)strtoul(ln.c_str() + at + 21, nullptr, 10);
 					if (id == 101000001) continue;	// (the server's warning)
 					unlocked[id] = (long long)time(nullptr);
-					gen++;
+					gen++; awards++;
 				}
 			}
 			std::lock_guard<std::mutex> l(mu);
@@ -4254,7 +4255,7 @@ namespace banana
 	{
 		gTitle = title; gSystem = system; gScreen = screen; gTouch = touch;
 		gHotkeys = getConfValue(data + "/settings.conf", "ra_hotkeys", "on") != "off";
-		gFlash = gDown = -1; gSeen = -1;
+		gFlash = gDown = -1; gSeen = -1; awardsSeen = 0; wake = false;
 		pkView = PK_PARTY; pkMon = 0; pkBattle = false;
 		raw = std::make_shared<RaWatch>();
 		raw->since = now;
@@ -4294,6 +4295,7 @@ namespace banana
 				raw->token = cfgValue("/data/retroarch/retroarch.cfg", "cheevos_token");
 			}
 			if (raw->gen != gSeen) changed = true;
+			if (raw->awards != awardsSeen) { awardsSeen = raw->awards; wake = true; }
 		}
 		if (companion && companion->takeChanged())
 		{

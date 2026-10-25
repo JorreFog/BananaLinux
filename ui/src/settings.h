@@ -56,6 +56,9 @@ namespace banana
 		void gameOpen(const std::string& title, const std::string& system, int screen, bool touch);
 		void gameClose();
 		bool gameUpdate(double nowMs);		// true: the panel changed (a log line, a reply, a badge, a flash ending)
+		// true once after something the player should see came up on the panel (an achievement unlocked): it wakes a
+		// dimmed bottom panel, as a touch does (gameplay buttons don't)
+		bool gameWake() { bool w = wake; wake = false; return w; }
 		void gameRender();
 		GameAction gameTouch(float x, float y, bool down);	// device px on the panel's screen
 		bool gameProgress(int& unlocked, int& total);			// the game's achievements, once the server said
@@ -344,6 +347,7 @@ namespace banana
 		bool gHotkeys = true;	// Settings > Other systems > RetroArch hotkeys: off, F + R and the like do nothing
 		double gFlashUntil = 0;
 		int gSeen = -1;						// the watch's generation last drawn
+		int awardsSeen = 0; bool wake = false;	// (gameWake)
 		std::map<std::string, rnds::TexPtr> gBadges;	// badge textures by file
 		// the companion's tabs: what the middle box shows, the party member opened, the battle last seen; where the
 		// tabs were drawn (for touch)
