@@ -1744,7 +1744,10 @@ namespace banana
 		bool scrapeChanged = pollScrape(t);
 		if (raCheck)
 		{
-			std::lock_guard<std::mutex> l(raCheck->mu);
+			// (a reference of its own for the lock: the reset below can drop the last one, and the guard would unlock
+			// freed memory)
+			const auto check = raCheck;
+			std::lock_guard<std::mutex> l(check->mu);
 			if (raCheck->done)
 			{
 				const int kind = raCheck->kind;
@@ -3032,7 +3035,7 @@ namespace banana
 		bool failedDl = !downloading && dlLine.compare(0, 8, "failed: ") == 0;
 		if (applying) help = "The new version is being written to the other slot and checked; this one isn't touched. Don't turn the handheld off. It takes a minute or two.";
 		else if (updated) help = "The new version is in the other slot and will run from the next restart. A restarts now. If it ever fails to start, Previous version brings this one back.";
-		else if (ustatus.compare(0, 6, "failed") == 0) help = "The update wasn't applied: " + ustatus.substr(8) + ". This version is untouched.";
+		else if (ustatus.compare(0, 6, "failed") == 0) help = "The update wasn't applied: " + (ustatus.size() > 8 ? ustatus.substr(8) : std::string("no reason given")) + ". This version is untouched.";
 		else if (usel == 0)
 		{
 			if (checkJob.running()) help = "Asking GitHub which version is the newest for this handheld...";
@@ -3503,8 +3506,11 @@ namespace banana
 			std::string ln, out;
 			while (std::getline(f, ln)) if (trim(ln.substr(0, ln.find('='))) != "firmware.nickname") out += ln + "\n";
 			f.close();
-			std::ofstream(bc + ".new") << out;
-			rename((bc + ".new").c_str(), bc.c_str());
+			// (on the card whole before the rename: a full card or a power cut must not leave BananaDS's settings empty)
+			FILE* w = fopen((bc + ".new").c_str(), "w");
+			bool ok = w && fwrite(out.data(), 1, out.size(), w) == out.size() && fflush(w) == 0 && fsync(fileno(w)) == 0;
+			if (w) ok = fclose(w) == 0 && ok;
+			if (!ok || rename((bc + ".new").c_str(), bc.c_str()) != 0) unlink((bc + ".new").c_str());
 		}
 	}
 
