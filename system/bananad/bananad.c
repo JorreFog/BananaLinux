@@ -603,6 +603,7 @@ static void suspend_now(const char *why)
 	sleep_mode();
 	int cycles = 0, rtc_wakes = 0, failures = 0, dark = 0, dark_lid = 0;
 	double asleep = 0, dark_from = 0, led_at = 0;
+	int dark_cap = -1;	/* the battery when the dark state began (a charger that can't keep up: it falls from there) */
 	const char *woke = "?";
 	/* Power off after sleeping: the wall clock's deadline (it goes on while asleep), from the first real sleep */
 	time_t off_at = 0;
@@ -616,16 +617,18 @@ static void suspend_now(const char *why)
 			 * picked up charged; unplugged, the deadline starts at the real sleep) */
 			off_at = 0;
 			if (!dark) {
-				dark = 1; dark_from = mono(); dark_lid = lid_closed;
+				dark = 1; dark_from = mono(); dark_lid = lid_closed; dark_cap = battery_capacity();
 				backlights_power(0);
 				inputs_grab(1);
 				sleep_log("%s while charging: dark and awake, so the charging light stays on%s", why, game ? ", game paused" : "");
 			}
 			if (mono() >= led_at) {
 				leds_update(); led_at = mono() + 10;	/* (it goes out when the battery is full) */
-				/* a charger too weak for the handheld: shut down cleanly before the battery is empty */
+				/* a charger too weak for the handheld: shut down cleanly before the battery is empty. Only once the
+				 * level has fallen since the dark state began: a low battery on a good charger (plugged in at 4%, the
+				 * lid shut) charges, and shutting down then cut the game and the charging light for nothing */
 				int cap = battery_capacity();
-				if (cap >= 0 && cap <= cfg.sleep_poweroff_pct) {
+				if (cap >= 0 && cap <= cfg.sleep_poweroff_pct && dark_cap >= 0 && cap < dark_cap) {
 					sleep_log("dark on the charger, but the battery is down to %d%%: shutting down", cap);
 					inputs_grab(0);
 					if (pg > 0) kill(-pg, SIGCONT);	/* the game gets SIGTERM next, to write its saves */
@@ -1417,6 +1420,9 @@ int main(int argc, char **argv)
 	sa.sa_handler = on_hup;		/* no SA_RESTART: poll() returns, and the loop reloads */
 	sigaction(SIGHUP, &sa, NULL);
 	mkdir("/run/banana", 0755);
+	/* a menu Sleep asked for while bananad wasn't running would otherwise come true at the next, unrelated SIGHUP
+	 * (any settings change): dropped */
+	unlink("/run/banana/sleep-now");
 	find_bottom_bl();	/* which backlight is the bottom one: banana-ui's idle dim owns it */
 	mkdir(BT_AUDIO_DIR, 0755);
 
