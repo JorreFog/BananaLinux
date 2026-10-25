@@ -28,6 +28,9 @@ namespace banana
 	class Settings
 	{
 	public:
+		// every Settings row's help and every game page row's (as the panel would lay it out now: the language's too)
+		// that doesn't fit its box at the smallest size, one line each to log; and how many were checked (ui/tests)
+		int helpCheck(const std::function<void(const std::string&)>& log);
 		Settings(rnds::Backend* be, const std::string& assets, const std::string& dataDir, float scale, const std::string& variant);
 		void setVariant(const std::string& variant);	// "dark", "light", or "carts" (dark, in Inter: setFontDir first)
 		void setFontDir(const std::string& dir) { fontDir = dir; }
@@ -53,6 +56,9 @@ namespace banana
 		void gameOpen(const std::string& title, const std::string& system, int screen, bool touch);
 		void gameClose();
 		bool gameUpdate(double nowMs);		// true: the panel changed (a log line, a reply, a badge, a flash ending)
+		// true once after something the player should see came up on the panel (an achievement unlocked): it wakes a
+		// dimmed bottom panel, as a touch does (gameplay buttons don't)
+		bool gameWake() { bool w = wake; wake = false; return w; }
 		void gameRender();
 		GameAction gameTouch(float x, float y, bool down);	// device px on the panel's screen
 		bool gameProgress(int& unlocked, int& total);			// the game's achievements, once the server said
@@ -344,6 +350,7 @@ namespace banana
 		bool gHotkeys = true;	// Settings > Other systems > RetroArch hotkeys: off, F + R and the like do nothing
 		double gFlashUntil = 0;
 		int gSeen = -1;						// the watch's generation last drawn
+		int awardsSeen = 0; bool wake = false;	// (gameWake)
 		std::map<std::string, rnds::TexPtr> gBadges;	// badge textures by file
 		// the companion's tabs: what the middle box shows, the party member opened, the battle last seen; where the
 		// tabs were drawn (for touch)
@@ -372,6 +379,22 @@ namespace banana
 		void box(const std::string& kind, bool on, float x, float y, float w, float h);
 		float text(const std::string& t, bool medium, float size, float x, float top, const rnds::Color& c, bool upper = false, float ls = 0, bool measureOnly = false);
 		void wrapped(const std::string& t, float size, float x, float top, float width, int maxLines, const rnds::Color& c);
+		// text in a box of `width`: as it is when it fits, else cut with "...", or scrolling while picked (a marquee);
+		// right: against the box's right edge
+		float textFit(const std::string& t, bool medium, float size, float x, float top, float width, const rnds::Color& c, bool picked, bool right = false);
+		void marqueeFrame();
+		static constexpr float FACE_MAX = 196;	// a button chip's widest (the bottom bar's B / Y / A)	// (each render: the marquees drawn this frame start counting)
+		std::map<std::string, std::pair<double, long>> mqSince;	// a marquee's text -> when it was first drawn picked, the frame last drawn
+		long mqFrame = 0;
+		bool mqMoving = false;
+		double mqWake = -1;
+		// the top panel's header and help text (Settings' rows and a game's page): where they go, in 640x480 CSS px
+		static constexpr float HEAD_ICON_Y = 42, HEAD_SECTION_Y = 46, HEAD_LABEL_Y = 70, HEAD_VALUE_Y = 110;
+		static constexpr float HELP_X = 50, HELP_W = 540, HELP_TOP = 152, HELP_BOTTOM = 438;
+		bool helpFit(const std::string& t, float top, float bottom, float& size, int& lines) const;
+		void helpText(const std::string& t, float top, float bottom, const rnds::Color& c);
+		std::string helpOf(int item);
+		std::string gameHelpOf(int row);
 		void icon(const std::string& name, float x, float y, int scale);
 		void iconCentred(const std::string& name, float cx, float y, int scale);
 		void arrow(bool right, float x, float y, const rnds::Color& c);

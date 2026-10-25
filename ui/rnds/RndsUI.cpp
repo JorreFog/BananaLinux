@@ -644,6 +644,33 @@ namespace rnds
 				be->draw(e->sp.tex, (float)(ix - e->sp.ox), (float)(iy - e->sp.oy), (float)e->sp.tex->w, (float)e->sp.tex->h, tint);
 		}
 
+		// ---- a label too long for its box (a translation): "..." at its end, or, picked, a marquee (marqueeOffset) that
+		// runs from when it was first drawn picked; text that fits is drawn as it is and never moves ----
+		std::map<std::u32string, std::pair<double, uint64_t>> mqSince;	// its text -> first drawn picked, last frame drawn
+		bool mqMoving = false;
+		double mqWake = -1;
+		// centre: centred in the box when it fits (else it starts at x as a marquee or with "...")
+		void drawFit(const std::u32string& t, const TStyle& st, float x, float top, float lh, float w, const Color& c, bool picked, bool centre = false)
+		{
+			TextLine full = layoutLine(t, tstyle(st));
+			if (full.width <= w) { drawLine(full, st, centre ? x + (w - full.width) / 2 : x, top, lh, c); return; }
+			if (!picked) { drawLine(layoutEllipsis(t, tstyle(st), (int)w), st, x, top, lh, c); return; }
+			auto it = mqSince.find(t);
+			if (it == mqSince.end() || it->second.second + 1 < frame) it = mqSince.insert_or_assign(t, std::make_pair(now, frame)).first;
+			it->second.second = frame;
+			bool moving; double wake;
+			float off = marqueeOffset(now - it->second.first, full.width - w, &moving, &wake);
+			mqMoving = mqMoving || moving;
+			if (wake >= 0 && (mqWake < 0 || wake < mqWake)) mqWake = wake;
+			be->pushClip(std::round(X(x)), std::floor(X(top - lh)), std::round(X(w)), std::ceil(X(lh * 3)));
+			drawLine(full, st, x - off, top, lh, c);
+			be->popClip();
+		}
+		void drawFit(const std::string& t, const TStyle& st, float x, float top, float lh, float w, const Color& c, bool picked, bool centre = false)
+		{
+			drawFit(utf8to32(t), st, x, top, lh, w, c, picked, centre);
+		}
+
 		void drawText(const std::string& text, const TStyle& t, float x, float top, const Color& c, float lh = -1)
 		{
 			drawLine(line(text, t), t, x, top, lh < 0 ? lineHeight(t) : lh, c);
@@ -1157,6 +1184,7 @@ namespace rnds
 			float bubbleY = 60, bubbleH = 92;
 			float reelY = 160, reelH = 226;
 			std::vector<TextLine> titleLines, subLines;
+			std::u32string sub;
 			float countW = 0;		// the count's text ("03 / 07")
 			float railW = 0;		// the rail's track: what the widest count leaves (one length for the whole list)
 			Face left, right;
@@ -1195,7 +1223,9 @@ namespace rnds
 			for (char d = '0'; d <= '9'; d++) widest = std::max(widest, line(std::string(1, d), ts(true, 18)).width);
 			return strlen(b) * widest + line(" / ", ts(false, 18)).width + line(b, ts(false, 18)).width;
 		}
-		float faceW(const Face& f) { return f.kind == 2 ? 3 + 12 + line(f.label, tFace()).width + 12 + 3 : 3 + 12 + kbdW(f.kbd) + 8 + line(f.label, tFace()).width + 12 + 3; }
+		// a chip's width, at most FACE_MAX (a longer label, a translation, scrolls in it: drawFace)
+		static constexpr float FACE_MAX = 196;
+		float faceW(const Face& f) { return std::min(FACE_MAX, f.kind == 2 ? 3 + 12 + line(f.label, tFace()).width + 12 + 3 : 3 + 12 + kbdW(f.kbd) + 8 + line(f.label, tFace()).width + 12 + 3); }
 
 		Geo geometry()
 		{
@@ -1219,6 +1249,7 @@ namespace rnds
 			g.titleLines = layoutWrap(utf8to32(title), tstyle(tTitle()), 470, 2);
 			g.subLines.clear();
 			if (!sub.empty()) g.subLines.push_back(layoutEllipsis(utf8to32(sub), tstyle(tSub()), 470));
+			g.sub = utf8to32(sub);	// (drawn with drawFit: a long one scrolls)
 			// one height for every name: room for two title lines and the subtitle, so a long name doesn't move the
 			// shelf (the text is centred in it)
 			g.bubbleH = 2 * 32.5f + 3 + lineHeight(tSub()) + 18 + 6;
@@ -1546,7 +1577,9 @@ namespace rnds
 		{
 			const float L = 300, W = 296;
 			TStyle tt = ts(true, 26, 0.52f), tsb = ts(false, 20);
-			std::vector<TextLine> tl = layoutWrap(utf8to32(gm.title), tstyle(tt), (int)W, 2);
+			// the title on as many lines as it needs, up to TITLE_LINES (a long one was cut at two with room to spare)
+			const int TITLE_LINES = 4;
+			std::vector<TextLine> tl = layoutWrap(utf8to32(gm.title), tstyle(tt), (int)W, TITLE_LINES);
 			// no word left alone on the second line ("Pokemon Black Version / 2"): narrow the first line until they balance
 			for (int w = (int)W - 16; tl.size() == 2 && tl[1].width < tl[0].width * 0.35f && w > W * 0.55f; w -= 16)
 			{
@@ -1559,7 +1592,7 @@ namespace rnds
 			}
 			bool launch = ui->mView == LAUNCH;
 			std::string subText = launch ? "Starting..." : gm.sub;
-			TextLine sl = layoutEllipsis(utf8to32(subText), tstyle(tsb), (int)(W - (launch ? 16 : 0)));
+			const float subW = W - (launch ? 16 : 0);
 
 			// the stats: values over labels, the columns as wide as their text
 			std::string vals[3] = { gm.plays, gm.last, gm.time };
@@ -1583,12 +1616,15 @@ namespace rnds
 			}
 			float gap = std::min(28.0f, (W - total) / 2);
 
-			float titleH = tl.size() * 32.5f, block = titleH + 4 + 24 + 20 + 48 + 22 + 22 + 6 + 14;
-			float top = std::round(263 - block / 2) + ry;
-			float y = top;
+			// the line under the title, the stats and the achievements stay put whatever the title's length (centring the
+			// whole block made them jump from game to game while browsing): the title sits on top of them, growing upwards
+			// (TITLE_LINES lines reach the sheet's top edge, 84)
+			const float SUB_Y = 230;
+			float titleH = tl.size() * 32.5f;
+			float y = SUB_Y - 4 - titleH + ry;
 			for (size_t i = 0; i < tl.size(); i++)
 				drawLine(tl[i], tt, L, y + 32.5f * i, 32.5f, INK);
-			y += titleH + 4;
+			y = SUB_Y + ry;
 			float sx = L;
 			if (launch)
 			{
@@ -1598,7 +1634,7 @@ namespace rnds
 				be->fill(std::round(X(sx)), std::round(X(dy)), std::round(X(8)), std::round(X(8)), RED);
 				sx += 16;
 			}
-			drawLine(sl, tsb, sx, y, 24, launch ? INK : MUTED);
+			drawFit(subText, tsb, sx, y, 24, subW, launch ? INK : MUTED, true);
 			y += 24 + 20;
 			be->fill(std::round(X(L)), std::round(X(y - 10)), std::round(X(W)), std::round(X(2)), Color(LINE.r, LINE.g, LINE.b, 0.5f));
 			float x = L;
@@ -1702,7 +1738,7 @@ namespace rnds
 				{
 					TStyle te = ts(false, 17, 1.36f, true), tt = ts(true, 20);
 					TextLine le = layoutLine(utf8to32(sy.resumeEyebrow), tstyle(te));
-					TextLine lt = layoutEllipsis(utf8to32(sy.resumeTitle), tstyle(tt), 300);
+					const float ltW = 300;
 					float cw = chipWidth(sy);
 					float cx = 320 - cw / 2, cy = y0 + 168;
 					drawBox(chipBox(), cx, cy, cw, 74);
@@ -1710,7 +1746,7 @@ namespace rnds
 					drawSprite(c, cx + 11, cy + 9);
 					float tx = cx + 11 + 54 + 10, ty = cy + 13.5f;
 					drawLine(le, te, tx, ty, lineHeight(te), MUTED);
-					drawLine(lt, tt, tx, ty + 23, lineHeight(tt), INK);
+					drawFit(sy.resumeTitle, tt, tx, ty + 23, lineHeight(tt), ltW, INK, true);
 				}
 				// the systems either side: their chip's box and cartridge made on the worker now, so stepping to one
 				// draws it at once. Made when first shown, the box (12-15 ms, sized to the title) cost a frame and the
@@ -1753,7 +1789,7 @@ namespace rnds
 				drawText(f.kbd, tKbd(), lx + 6, 432.5f + dx, P.kbdInk);
 				lx += kw + 8;
 			}
-			drawText(f.label, tFace(), lx, 431 + dx, lc);
+			drawFit(f.label, tFace(), lx, 431 + dx, lineHeight(tFace()), x + dx + w - 15 - lx, lc, true);
 		}
 
 		// the game list's ◀ ▶ (its shoulders are their tap zones): a stepped triangle on the look's pixel grid, whole CSS
@@ -1893,8 +1929,7 @@ namespace rnds
 			for (size_t i = 0; i < g.titleLines.size(); i++)
 				drawLine(g.titleLines[i], tTitle(), 320 - g.titleLines[i].width / 2, cy + p + 32.5f * i, 32.5f, INK);
 			float ey = cy + g.titleLines.size() * 32.5f + 3;
-			for (size_t i = 0; i < g.subLines.size(); i++)
-				drawLine(g.subLines[i], tSub(), 320 - g.subLines[i].width / 2, ey + p + lineHeight(tSub()) * i, lineHeight(tSub()), MUTED);
+			if (!g.subLines.empty()) drawFit(g.sub, tSub(), 85, ey + p, lineHeight(tSub()), 470, MUTED, true, true);
 			// pointer: the border-coloured triangle and the inner one that opens the border into it
 			float pb = by + g.bubbleH - 3;
 			drawTriangle("ptrO", 306, pb, 334, pb, 320, pb + 16, LINE);
@@ -1966,8 +2001,8 @@ namespace rnds
 				if (n > 0)
 				{
 					TStyle tsr = ts(true, 20, 2.4f);
-					TextLine lsr = line("START", tsr);
-					drawLine(lsr, tsr, 320 - lsr.width / 2, ry + 124, 24, Color::hex(inkOn(accent.base)));	// Banana: on the plate's accent
+					// Banana: on the plate's accent, in its width (a longer translation scrolls)
+					drawFit(std::string("START"), tsr, 320 - 54, ry + 124, 24, 108, Color::hex(inkOn(accent.base)), true, true);
 				}
 			}
 			be->popClip();
@@ -2314,6 +2349,8 @@ namespace rnds
 		d->absorb();	// ES draws the view under its menus without updating it: what the worker finished goes in here
 		d->frame++;
 		d->requestedThisFrame = false;
+		d->mqMoving = false; d->mqWake = -1;
+		if (d->mqSince.size() > 64) for (auto i = d->mqSince.begin(); i != d->mqSince.end();) i = i->second.second + 2 < d->frame ? d->mqSince.erase(i) : std::next(i);
 		d->marchDrawn = d->glintDrawn = false;
 		d->drawTop();
 		d->drawBottom();
@@ -2324,6 +2361,7 @@ namespace rnds
 	{
 		double now = d->now;
 		if (now - d->topAt < 280 || now - d->shellAt < 280 || now - d->popAt < 320 || now - d->thumbAt < 350) return true;
+		if (d->mqMoving) return true;	// a marquee scrolling
 		for (auto& st : d->slots)
 			if ((st.trans && now - st.t0 < 420) || (st.otrans && now - st.o0 < 240) || (st.ghost && now - st.g0 < 420)) return true;
 		if (d->launchAt >= 0) return true;
@@ -2348,6 +2386,7 @@ namespace rnds
 			return limit;
 		};
 		double next = 1e9;	// Banana: no bob, so nothing to wake for on the home screen
+		if (d->mqWake >= 0) next = d->mqWake;	// a marquee's next move
 		// (only what the last frame drew: a game with no achievements' meter or no cover moves nothing, and waking for
 		// the stripes anyway drew ~20 frames a second that changed no pixel, ~5% of a core in a game list left alone)
 		if (mView != HOME)

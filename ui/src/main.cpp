@@ -622,6 +622,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			logf("press %s: %s, view %d sys %d game %d", b.c_str(), used ? "used" : "unused", (int)ui.view(), ui.systemIndex(), ui.gameIndex());
 		}
 		else if (op == "setup") { settings.setup(); logf("setup open"); }
+		// helpcheck: every Settings row's help (and a game page's) laid out as the top panel would: fits or OVERFLOW
+		else if (op == "helpcheck") { int n = settings.helpCheck([&](const std::string& l) { logf("%s", l.c_str()); }); logf("helpcheck: %d texts", n); }
 		// search <text>: the search keyboard open with that text typed (START then searches)
 		else if (op == "search") { std::string t; std::getline(cs, t); size_t b = t.find_first_not_of(' '); settings.openSearch(b == std::string::npos ? "" : t.substr(b)); logf("search open: \"%s\"", t.c_str()); }
 		else if (op == "inkon")
@@ -1089,7 +1091,7 @@ struct BottomIdle
 		if (bottom > 0 && bottom <= 1000 && max > 0) return std::max(1, max * bottom / 1000);
 		return level;
 	}
-	// any touch on screen 1, any button: the timer restarts, and a dimmed bottom comes back at once
+	// a touch on the panel, an achievement shown on it: the timer restarts, and a dimmed bottom comes back at once
 	void activity(double now)
 	{
 		last = now;
@@ -1583,6 +1585,7 @@ int main(int argc, char** argv)
 			{
 				std::lock_guard<std::mutex> l(worker.uiLock);
 				if (settingsView.gameUpdate(t)) want = true;
+				if (settingsView.gameWake()) bottomIdle.activity(t);	// an achievement on the panel: shown lit
 				if (want && !disp.flipPending())
 				{
 					settingsView.gameRender();
@@ -1610,10 +1613,12 @@ int main(int argc, char** argv)
 				if (fds[i].revents & POLLIN)
 					input.read(fds[i].fd, [&](const InputEvent& ev)
 					{
-						// any button or touch is interaction: it brings a dimmed bottom panel back (BottomIdle)
-						bottomIdle.activity(nowMs());
 						if (ev.screen != panelScreen) return;	// buttons are the game's; touch only on the panel
 						if (ev.type != InputEvent::TOUCH_DOWN && ev.type != InputEvent::TOUCH_UP) return;
+						// a touch on the panel brings a dimmed bottom back (BottomIdle); the game's buttons don't: the
+						// panel dims beside a game being played (a QA tester: "goes back with button input, which
+						// defeats the point")
+						bottomIdle.activity(nowMs());
 						Settings::GameAction a;
 						{
 							std::lock_guard<std::mutex> l(worker.uiLock);
