@@ -724,6 +724,33 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			settings.gameOpen("Companion Test", "Game Boy Advance", scr, true);
 			logf("gcpanel %s: companion %s", rom.c_str(), on ? gc.game()->title.c_str() : "none");
 		}
+		else if (op == "gcaudit")
+		{
+			// gcaudit <definitions folder>: every definition's pages drawn once (nothing read): what may want a look
+			std::string dir;
+			std::getline(cs >> std::ws, dir);
+			std::istringstream idx(gcomp::makeIndex(dir));
+			std::string ln;
+			int n = 0, issues = 0;
+			while (std::getline(idx, ln))
+			{
+				if (ln.empty() || ln[0] == '#') continue;
+				std::string why;
+				auto d = gcomp::loadDef(dir + "/" + ln.substr(0, ln.find('\t')), &why);
+				if (!d) { logf("gcaudit %s: %s", ln.c_str(), why.c_str()); issues++; continue; }
+				static gcomp::Engine gc;
+				gc.openDef(d);
+				gc.requests(0);
+				settings.companion = nullptr;
+				settings.gameComp = &gc;
+				settings.gameOpen(d->title, "Game Boy Advance", 1, true);
+				issues += settings.gcAudit([&](const std::string& l) { logf("gcaudit %s", l.c_str()); });
+				settings.gameClose();
+				settings.gameComp = nullptr;
+				n++;
+			}
+			logf("gcaudit: %d definitions, %d to look at", n, issues);
+		}
 		else if (op == "gcfeed")
 		{
 			// gcfeed <file>: the game companion's requests (logged), then the file as RetroArch's answers ("-": none)
@@ -1632,6 +1659,18 @@ int main(int argc, char** argv)
 					disp.present(scr, dmg);
 					want = false;
 				}
+			}
+			// for testing over SSH (as /run/banana/launch): "x y" in /run/banana/panel-tap, a tap on the game panel at
+			// that place of a 640x480 panel (the companion's tabs and pages, with no hands on the handheld)
+			if (access("/run/banana/panel-tap", F_OK) == 0)
+			{
+				float tx = -1, ty = -1;
+				{ std::ifstream f("/run/banana/panel-tap"); f >> tx >> ty; }
+				unlink("/run/banana/panel-tap");
+				float k = disp.height() / 480.0f;
+				std::lock_guard<std::mutex> l(worker.uiLock);
+				if (tx >= 0 && ty >= 0) { settingsView.gameTouch(tx * k, ty * k, true); settingsView.gameTouch(tx * k, ty * k, false); want = true; }
+				logf("panel tap %.0f %.0f", tx, ty);
 			}
 			std::vector<pollfd> fds = { { disp.pollFd(), POLLIN, 0 } };
 			for (int fd : input.fds()) fds.push_back({ fd, POLLIN, 0 });

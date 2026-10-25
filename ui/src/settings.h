@@ -69,6 +69,9 @@ namespace banana
 		// the game companion (gamecomp.h) for another GBA game with a definition: its seven pages as tabs, the same way
 		// (set before gameOpen, null after gameClose; never both)
 		gcomp::Engine* gameComp = nullptr;
+		// (tests) every page of the game companion's game drawn once, its values as read so far: a line for each page
+		// that needs more than one screen, a tab that falls back to the page's kind, a short reference page
+		int gcAudit(const std::function<void(const std::string&)>& log);
 		// box art (banana-scrape) finished since the last call: the library is read again
 		bool takeLibraryChanged() { bool r = libChanged; libChanged = false; return r; }
 

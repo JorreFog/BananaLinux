@@ -5911,6 +5911,33 @@ namespace banana
 		if (gcScreens > 1) pager(p, gcScreen, gcScreens, "");
 	}
 
+	int Settings::gcAudit(const std::function<void(const std::string&)>& log)
+	{
+		if (!gameComp || !gameComp->active()) return 0;
+		const gcomp::Def& d = *gameComp->game();
+		std::string f = d.file.substr(d.file.find_last_of('/') + 1);
+		int issues = 0;
+		SPal p = pal(light);
+		for (int i = 0; i < gcomp::NUM_PAGES; i++)
+		{
+			gcView = i; gcScreen = 0; gcList = gcRow = -1;
+			be->beginScreen(gScreen);
+			gcRender(p);
+			gcTabs(p);
+			be->endScreen();
+			const gcomp::Page& pg = d.pages[i];
+			char b[256];
+			if (gcScreens > 2) { snprintf(b, sizeof b, "%s %s: %d screens", f.c_str(), gcomp::pageIdName(i), gcScreens); log(b); issues++; }
+			if (pg.tab.empty() && text(pg.title, true, 13, 0, 0, Color(1, 1, 1, 1), true, 0.5f, true) > 604.0f / 8 - 6)
+			{ snprintf(b, sizeof b, "%s %s: the title \"%s\" is too long for its tab (give \"tab\")", f.c_str(), gcomp::pageIdName(i), pg.title.c_str()); log(b); issues++; }
+			size_t chars = 0;
+			for (auto& w : pg.widgets) { chars += w.text.size(); for (auto& r : w.rows) chars += r.second.size(); for (auto& it : w.items) chars += it.size(); }
+			if (pg.reference && chars < 60) { snprintf(b, sizeof b, "%s %s: a reference page with %zu characters", f.c_str(), gcomp::pageIdName(i), chars); log(b); issues++; }
+		}
+		gcView = gcomp::P_STATUS;
+		return issues;
+	}
+
 	void Settings::gcTabs(const SPal& p)
 	{
 		// the tab bar: the seven pages (Battle only in a fight when the game can tell), then Game (the panel's tiles)

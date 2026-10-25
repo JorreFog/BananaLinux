@@ -546,7 +546,9 @@ namespace banana::gcomp
 		for (auto& l : idx)
 		{
 			if (l.exclusive || std::find(l.codes.begin(), l.codes.end(), id.code) == l.codes.end()) continue;
-			if (!l.title12.empty() && l.title12 != id.title) continue;
+			std::string t = l.title12;
+			while (!t.empty() && t.back() == ' ') t.pop_back();	// (the header's is without its padding)
+			if (!t.empty() && t != id.title) continue;
 			byCode = &l;
 			break;
 		}

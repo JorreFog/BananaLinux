@@ -291,6 +291,36 @@ int main(int argc, char** argv)
 		CHECK(t.open(tetRom, defs), "Tetris Worlds opens");
 		CHECK(t.requests(0).empty() && t.snapshot().seen, "a reference game reads nothing and is shown at once");
 	}
+	// every definition the system ships (argv[3]: rootfs/usr/share/banana/companions) loads in the engine, and a ROM
+	// with its header finds it (no other definition takes its code)
+	if (argc > 3)
+	{
+		std::string dir = argv[3];
+		std::istringstream idx(makeIndex(dir));
+		std::string ln;
+		int n = 0;
+		while (std::getline(idx, ln))
+		{
+			if (ln.empty() || ln[0] == '#') continue;
+			std::string file = ln.substr(0, ln.find('\t'));
+			auto d = loadDef(dir + "/" + file, &why);
+			CHECK(d, "%s: %s", file.c_str(), why.c_str());
+			n++;
+			if (!d) continue;
+			// the header from the index line: codes, title12
+			std::vector<std::string> c;
+			size_t a = 0, b;
+			while ((b = ln.find('\t', a)) != std::string::npos) { c.push_back(ln.substr(a, b - a)); a = b + 1; }
+			c.push_back(ln.substr(a));
+			if (c.size() < 6 || c[1].empty() || c[4] == "1") continue;
+			std::string code = c[1].substr(0, 4);
+			if (code == "AXVE" || code == "AXPE" || code == "BPEE" || code == "BPRE" || code == "BPGE") continue;
+			writeFile(out + "/gc-any.gba", makeRom(c[2].c_str(), code.c_str()));
+			std::string got = findDef(dir, out + "/gc-any.gba");
+			CHECK(got == dir + "/" + file, "%s (%s \"%s\") is found as %s", file.c_str(), code.c_str(), c[2].c_str(), got.c_str());
+		}
+		fprintf(stderr, "gamecomp-test: %d shipped definitions\n", n);
+	}
 	if (fails) { fprintf(stderr, "%d checks failed\n", fails); return 1; }
 	fprintf(stderr, "gamecomp-test: all passed\n");
 	return 0;
