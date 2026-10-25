@@ -102,17 +102,18 @@ namespace banana
 		if (th.joinable()) th.join();
 	}
 
-	void Sound::play(const std::string& name)
+	void Sound::play(const std::string& name, bool closeAfter)
 	{
 		if (!enabled || !clips.count(name)) return;
 		{
 			std::lock_guard<std::mutex> l(m);
 			queued = name;
+			closeAfterQueued = closeAfter;
 		}
 		cv.notify_all();
 	}
 
-	void Sound::release()
+	void Sound::release(bool wait)
 	{
 		{
 			std::lock_guard<std::mutex> l(m);
@@ -120,6 +121,7 @@ namespace banana
 			queued.clear();
 		}
 		cv.notify_all();
+		if (!wait) return;
 		// wait until the device is closed
 		for (int i = 0; i < 100; i++)
 		{
@@ -153,6 +155,12 @@ namespace banana
 		int routeCheck = 0;
 		const Clip* cur = nullptr;
 		size_t at = 0;			// cur's next frame
+		bool closeAfter = false;	// cur was a launch's last cue: the device closes once it has played out
+		int tail = -1;			// then the 10 ms blocks of silence still to write before the close
+		// (150 ms: ALSA's 30 ms buffer and what the speaker amplifiers keep after it, so the chime's end is heard; the
+		// launch's own close cut it off, testers said)
+		const int TAIL = 15;
+		bool closing = false;	// release() asked while a sound played: the close once it has played out
 		auto lastSound = std::chrono::steady_clock::now();
 		for (;;)
 		{
@@ -161,9 +169,23 @@ namespace banana
 				std::unique_lock<std::mutex> l(m);
 				if (!pcm) cv.wait(l, [this] { return stop || closeNow || !queued.empty(); });	// closed: nothing to do
 				if (stop) break;
-				if (closeNow) { closeDev(); cur = nullptr; closeNow = false; continue; }	// a game is starting
+				if (closeNow)	// a game is starting: the device closed, after the sound still playing (the chime)
+				{
+					if (pcm && (cur || tail > 0)) closing = true;
+					else { closeDev(); cur = nullptr; tail = -1; closeAfter = closing = false; closeNow = false; continue; }
+				}
 				name = queued;
 				queued.clear();
+				if (!name.empty()) { closeAfter = closeAfterQueued; tail = -1; }
+			}
+			if (name.empty() && !cur && tail == 0)
+			{
+				closeDev();
+				tail = -1;
+				closeAfter = closing = false;
+				std::lock_guard<std::mutex> l(m);
+				closeNow = false;
+				continue;
 			}
 			auto now = std::chrono::steady_clock::now();
 			if (!name.empty())
@@ -197,8 +219,9 @@ namespace banana
 				frames = (snd_pcm_sframes_t)std::min<size_t>((size_t)frames, total - at);
 				p = cur->pcm.data() + at * openCh;
 				at += (size_t)frames;
-				if (at >= total) { cur = nullptr; lastSound = now; }
+				if (at >= total) { cur = nullptr; lastSound = now; if (closeAfter || closing) tail = TAIL; }
 			}
+			else if (tail > 0) tail--;
 			while (frames > 0)
 			{
 				snd_pcm_sframes_t w = snd_pcm_writei(pcm, p, (snd_pcm_uframes_t)frames);	// blocks while the buffer is full
