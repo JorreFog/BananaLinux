@@ -244,10 +244,36 @@ namespace banana
 		return lit == 2 && waiting == 0;
 	}
 
+	// Every plane upright: a plane's rotation outlives the program that set it, and the menu draws with the legacy
+	// calls, which never set it. A game that turned the panels' planes (Pocket Native leaves the RG DS Plus's at
+	// rotate-180 + reflect-x, its GL picture's way up) had the menu upside down after it. Only planes not upright are
+	// touched (a property read each otherwise).
+	static void planesUpright(int fd)
+	{
+		drmSetClientCap(fd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1);
+		drmModePlaneRes* pr = drmModeGetPlaneResources(fd);
+		for (uint32_t j = 0; pr && j < pr->count_planes; j++)
+			if (drmModeObjectProperties* pp = drmModeObjectGetProperties(fd, pr->planes[j], DRM_MODE_OBJECT_PLANE))
+			{
+				for (uint32_t i = 0; i < pp->count_props; i++)
+					if (drmModePropertyRes* p = drmModeGetProperty(fd, pp->props[i]))
+					{
+						if (!strcmp(p->name, "rotation") && pp->prop_values[i] != DRM_MODE_ROTATE_0 &&
+							drmModeObjectSetProperty(fd, pr->planes[j], DRM_MODE_OBJECT_PLANE, p->prop_id, DRM_MODE_ROTATE_0) == 0)
+							fprintf(stderr, "banana-ui: display: plane %u was turned (rotation 0x%llx): upright again\n",
+								pr->planes[j], (unsigned long long)pp->prop_values[i]);
+						drmModeFreeProperty(p);
+					}
+				drmModeFreeObjectProperties(pp);
+			}
+		drmModeFreePlaneResources(pr);
+	}
+
 	void Display::restore()
 	{
 		if (fd < 0) return;
 		drmSetMaster(fd);
+		if (leased < 0) planesUpright(fd);
 		for (int s = 0; s < 2; s++)
 			if (s != leased) drmModeSetCrtc(fd, p[s].crtc, p[s].buf[p[s].front].fb, 0, 0, &p[s].conn, 1, (drmModeModeInfo*)p[s].mode);
 		pending = 0;
