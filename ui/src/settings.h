@@ -72,6 +72,7 @@ namespace banana
 		// (tests) every page of the game companion's game drawn once, its values as read so far: a line for each page
 		// that needs more than one screen, a tab that falls back to the page's kind, a short reference page
 		int gcAudit(const std::function<void(const std::string&)>& log);
+		void gcShow(int view) { gcView = view; gcScreen = 0; gcList = gcRow = -1; if (gameComp) gameComp->want(view >= gcomp::NUM_PAGES ? -1 : view); }	// (tests)
 		// box art (banana-scrape) finished since the last call: the library is read again
 		bool takeLibraryChanged() { bool r = libChanged; libChanged = false; return r; }
 

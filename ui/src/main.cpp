@@ -1664,13 +1664,17 @@ int main(int argc, char** argv)
 			// that place of a 640x480 panel (the companion's tabs and pages, with no hands on the handheld)
 			if (access("/run/banana/panel-tap", F_OK) == 0)
 			{
+				// ("tab N": the game companion's page N, 0-6, 7 the Game tab)
 				float tx = -1, ty = -1;
-				{ std::ifstream f("/run/banana/panel-tap"); f >> tx >> ty; }
+				std::string w;
+				{ std::ifstream f("/run/banana/panel-tap"); f >> w; if (w == "tab") f >> tx; else { tx = (float)atof(w.c_str()); f >> ty; } }
 				unlink("/run/banana/panel-tap");
 				float k = disp.height() / 480.0f;
 				std::lock_guard<std::mutex> l(worker.uiLock);
-				if (tx >= 0 && ty >= 0) { settingsView.gameTouch(tx * k, ty * k, true); settingsView.gameTouch(tx * k, ty * k, false); want = true; }
-				logf("panel tap %.0f %.0f", tx, ty);
+				if (w == "tab") settingsView.gcShow((int)tx);
+				else if (tx >= 0 && ty >= 0) { settingsView.gameTouch(tx * k, ty * k, true); settingsView.gameTouch(tx * k, ty * k, false); }
+				want = true;
+				logf("panel tap %s %.0f %.0f", w.c_str(), tx, ty);
 			}
 			std::vector<pollfd> fds = { { disp.pollFd(), POLLIN, 0 } };
 			for (int fd : input.fds()) fds.push_back({ fd, POLLIN, 0 });
