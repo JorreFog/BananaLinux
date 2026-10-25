@@ -955,7 +955,10 @@ static void leds_update(void)
 	static char green[300], red[300], amber[300];
 	static int looked;
 	int last = leds_last;
-	if (!looked) {
+	/* looked for again while the power or the charging LED is missing: a LED driver that probes after bananad starts
+	 * (pwm-leds waits for its PWM) was never found, and that LED stayed as the kernel left it all session (the red
+	 * one isn't waited for: the RG DS Plus has none) */
+	if (!looked || !green[0] || !amber[0]) {
 		looked = 1;
 		led_path("power", green, sizeof green);
 		led_path("status", red, sizeof red);
@@ -1243,6 +1246,10 @@ int main(int argc, char **argv)
 			while (read(ino, buf, sizeof buf) > 0) {}
 			usleep(200000);	/* udev/mdev sets the node's permissions */
 			open_inputs();
+			/* the jack's input device comes with its sound card, which may probe after bananad starts: the headphones
+			 * as they are now, not as they read before the device was there */
+			int hp = headphones_in();
+			if (hp != headphones) { headphones = hp; if (!sound_child) audio_route(); }
 		}
 
 		if (power_down && now - power_since >= cfg.power_long_ms / 1000.0) { power_down = 0; shutdown_now("power held"); }

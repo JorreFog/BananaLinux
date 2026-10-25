@@ -381,7 +381,8 @@ int main(int argc, char** argv)
 		for (std::string ln; std::getline(f, ln);) misses.insert(ln);
 	}
 	const char* roms = getenv("BANANA_ROMS") ? getenv("BANANA_ROMS") : "/data/roms";
-	std::string conf = getenv("BANANA_SYSTEMS") ? getenv("BANANA_SYSTEMS") :
+	const char* systemsEnv = getenv("BANANA_SYSTEMS");	// (once: the analyzer's point, a second getenv needn't agree)
+	std::string conf = systemsEnv ? systemsEnv :
 		access("/data/banana/systems.conf", R_OK) == 0 ? "/data/banana/systems.conf" : "/etc/banana/systems.conf";
 	// bananad doesn't put the handheld to sleep for idleness while this runs (its pid in /run/banana/awake.pid)
 	if (FILE* f = fopen("/run/banana/awake.pid", "w")) { fprintf(f, "%d\n", (int)getpid()); fclose(f); }

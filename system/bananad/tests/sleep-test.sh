@@ -204,6 +204,19 @@ grep -q 'bananad: sound ready' /run/banana/boot-times && ok "boot-times: $(grep 
 stop
 rm -f /data/banana/asound.state
 
+echo "10. a LED that turns up after bananad started (its driver probing late) is used once it's there"
+A=/sys/class/leds/amber:charging
+rm -rf $A
+start
+mkdir -p $A; : > $A/trigger; : > $A/brightness
+mkdir -p /sys/class/power_supply/charger
+echo USB > /sys/class/power_supply/charger/type; echo 1 > /sys/class/power_supply/charger/online
+kill -HUP $BD; sleep 0.5      # (settings read again: the LEDs set again)
+a=$(cat $A/brightness)
+[ -n "$a" ] && [ "$a" != 0 ] && ok "the late charging LED lit on the charger ($a)" || bad "the late charging LED not used ('$a')"
+rm -rf /sys/class/power_supply/charger
+stop
+
 kill $UI $GAME 2>/dev/null || true
 echo "sleep test: $pass passed, $fail failed"
 [ $fail = 0 ]
