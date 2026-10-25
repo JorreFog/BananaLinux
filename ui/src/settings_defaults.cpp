@@ -35,6 +35,7 @@ namespace banana
 		const char* const BOXART[] = { "libretro", "both", "twilight", nullptr };
 		const char* const LATENCY[] = { "32", "64", "128", nullptr };
 		const char* const LOGIN[] = { "password", "guest", nullptr };
+		const char* const BT_AUDIO[] = { "latency", "quality", nullptr };
 
 		// (language is left out on purpose: a reset keeps the menu's language, and the codes are lang/'s files)
 		// The values /etc/banana/settings.conf documents, and the ones a card is completed with when that file is
@@ -53,6 +54,9 @@ namespace banana
 			{ "bottom_dim_percent", "25", INTEGER, nullptr, 0, 100 },
 			{ "wifi", "on", ENUM, ON_OFF, 0, 0 },
 			{ "bluetooth", "off", ENUM, ON_OFF, 0, 0 },
+			// (in the template since Bluetooth audio, but not here: normalizeSettings kept the card's line as an unknown
+			// key and added the template's again at every start, 36 lines of it on the Plus)
+			{ "bt_audio", "latency", ENUM, BT_AUDIO, 0, 0 },
 			{ "quick_resume", "off", ENUM, ON_OFF, 0, 0, true },
 			{ "sd2_roms", "on", ENUM, ON_OFF, 0, 0 },
 			{ "ra_shader", "off", ENUM, SHADERS, 0, 0, true },
