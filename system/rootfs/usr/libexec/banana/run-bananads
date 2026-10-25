@@ -11,6 +11,10 @@ mkdir -p $D $L /data/saves/nds /data/states/nds
 export BANANADS_TOP=${BANANA_TOP:-DSI-2}         # the top panel's connector (the other connected panel is the bottom)
 export BANANADS_TOUCH=${BANANA_TOUCH:-fe5e0000.i2c}  # the bottom panel's touchscreen (part of its sysfs path)
 export BANANADS_DATA=$D BANANADS_LOGDIR=$L
+# Mesa's shader cache on the data partition: started with HOME=/ (read-only) it had nowhere to keep it and compiled the
+# shaders again at every start (QA-1); SuperDrastic's DraStic has HOME=/data/drastic
+mkdir -p $D/shader-cache 2>/dev/null
+export MESA_SHADER_CACHE_DIR=$D/shader-cache
 export BANANADS_SAVES=/data/saves/nds BANANADS_STATES=/data/states/nds BANANADS_BIOS=/data/bios
 # ...and as BananaDS's settings: the panels (frontend=kms: both screens straight onto them, its own CPU governor
 # under banana-perf's "performance"), the saves and states, the log (the last session's kept as .1)
