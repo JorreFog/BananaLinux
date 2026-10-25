@@ -342,6 +342,8 @@ namespace banana
 			power, "fast_resume", { "Fast", "Careful" }, { "yes", "no" });
 		add(P, "moon", "LEDs", "Green, red when the battery is low, blinking red when nearly empty, amber while charging.", power, "led_brightness",
 			{ "Bright", "Dim", "Off" }, { "255", "40", "0" });
+		add(P, "moon", "LED while asleep", "Dim: the upper LED glows while it sleeps, so asleep doesn't look switched off. Off: dark. Switched off, the LEDs are always off.", power, "led_sleep_brightness",
+			{ "Dim", "Off" }, { "16", "0" });
 		// Nintendo DS: the emulator and the quick resume are shared; below them only the chosen emulator's own settings,
 		// each in that emulator's files (switching the emulator builds the list again: change()). Both draw the DS's 3D
 		// with SuperDrastic's Gengis Engine, always (run-drastic, run-bananads).
@@ -747,7 +749,7 @@ namespace banana
 			// show when the card has no line), the backlights and the mixer's level
 			static const struct { const char* key; const char* def; } BANANAD[] = {
 				{ "autosleep_minutes", "10" }, { "dim_minutes", "2" }, { "poweroff_minutes", "60" }, { "idle_in_games", "no" },
-				{ "lid_sleep", "yes" }, { "fast_resume", "yes" }, { "led_brightness", "128" } };
+				{ "lid_sleep", "yes" }, { "fast_resume", "yes" }, { "led_brightness", "128" }, { "led_sleep_brightness", "16" } };
 			for (const auto& b : BANANAD)
 				setConfValue(data + "/bananad.conf", b.key, getConfValue("/etc/banana/bananad.conf", b.key, b.def));
 			if (DIR* d = opendir("/sys/class/backlight"))

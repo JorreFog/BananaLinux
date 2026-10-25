@@ -61,6 +61,7 @@ static struct {
 	char mem_sleep[16];		/* deep (suspend to RAM) or s2idle */
 	int led_brightness;		/* 0..255; 0: the LEDs stay off */
 	int led_low, led_critical;	/* percent: red, blinking red */
+	int led_sleep;			/* 0..255: the upper LED while asleep (0: off); deep sleep may put a PWM LED out anyway */
 	int fast_resume;		/* devices resume in parallel (/sys/power/pm_async) */
 	double sleep_check_hours;	/* asleep: wake this often to look at the battery (0: never) */
 	int sleep_poweroff_pct;	/* found at or under this while asleep: shut down cleanly */
@@ -68,10 +69,15 @@ static struct {
 	int dim_pct;			/* dimmed to this percent of their brightness */
 	double poweroff_min;	/* asleep this long (any sleep), or idle this long when it never sleeps: off (0: never) */
 	int idle_in_games;		/* the idle timers (dim, sleep, off) in games too, not only in the menu */
-} cfg = { "auto", 5, 8, 10, 1, 2000, 3, "deep", 128, 20, 5, 1, 4, 5, 2, 30, 60, 0 };
+} cfg = { "auto", 5, 8, 10, 1, 2000, 3, "deep", 128, 20, 5, 16, 1, 4, 5, 2, 30, 60, 0 };
 
 static int devfd[MAXDEV], ndev;
 static void leds_update(void);
+extern int leds_last;	/* (leds_update's, below) */
+static int leds_asleep;	/* the upper LED at led_sleep_brightness (suspend_now, until the wake) */
+/* the sleep test's "kernel": a write of "mem" returns once a byte comes here (BANANAD_TEST_WAKE). A FIFO at
+ * /sys/power/state alone returned at once, and a sleep straight after a wake raced the test's reader */
+static int test_wake = -1;
 static void audio_route(void);
 static void undim(void);
 static void find_bottom_bl(void);
@@ -130,6 +136,7 @@ static void load_conf(const char *path)
 		else if (!strcmp(k, "led_brightness")) cfg.led_brightness = atoi(v);
 		else if (!strcmp(k, "led_low_percent")) cfg.led_low = atoi(v);
 		else if (!strcmp(k, "led_critical_percent")) cfg.led_critical = atoi(v);
+		else if (!strcmp(k, "led_sleep_brightness")) cfg.led_sleep = atoi(v);
 		else if (!strcmp(k, "fast_resume")) cfg.fast_resume = !strcmp(v, "yes") || !strcmp(v, "1");
 		else if (!strcmp(k, "sleep_check_hours")) cfg.sleep_check_hours = atof(v);
 		else if (!strcmp(k, "sleep_poweroff_percent")) cfg.sleep_poweroff_pct = atoi(v);
@@ -397,6 +404,7 @@ static void suspend_now(const char *why)
 	hooks("pre", 0);
 	sync();
 	sleep_mode();
+	leds_asleep = 1; leds_last = -2; leds_update();	/* the upper LED glows: asleep, not off */
 	int cycles = 0, rtc_wakes = 0, failures = 0, dark = 0;
 	double asleep = 0, dark_from = 0, led_at = 0;
 	const char *woke = "?";
@@ -428,6 +436,7 @@ static void suspend_now(const char *why)
 		if (cycles == 0) sleep_log("sleep (%s): %.0f ms to suspend%s", why, (t_in - t0) * 1000, game ? ", game paused" : "");
 		int r = write_file("/sys/power/state", "mem");
 		int err = errno;
+		if (!r && test_wake >= 0) { char c; while (read(test_wake, &c, 1) < 0 && errno == EINTR) {} }
 		clock_gettime(CLOCK_BOOTTIME, &b1);
 		/* the RTC clears wakealarm when the alarm fires: set before, empty now, is the battery check's wake */
 		char pending[32];
@@ -481,6 +490,7 @@ static void suspend_now(const char *why)
 	if (ui && !game) kill(ui, SIGUSR1);	/* draws both panels again (the clock and the battery moved on) */
 	double t_back = mono();
 	undim();
+	leds_asleep = 0; leds_last = -2;	/* (leds_update below: the upper LED back at its level) */
 	hooks("post", 1);
 	panel_off_again();
 	/* the press that woke us comes in now: it is not a new request. Draining also drops the lid-open event, so the
@@ -930,12 +940,14 @@ static void leds_update(void)
 	int plugged = charger_online();
 	if (plugged) charging = 1;	/* plugged in counts as charging (see charger_online) */
 	int level = cfg.led_brightness;
-	/* the upper LED: green, red when low, blinking red when critical (not while charging) */
-	int state = level <= 0 ? 0 : (!charging && pct >= 0 && pct <= cfg.led_critical) ? 3 : (!charging && pct >= 0 && pct <= cfg.led_low) ? 2 : 1;
+	/* the upper LED: green, red when low, blinking red when critical (not while charging); asleep, glowing at
+	 * led_sleep_brightness (never brighter than awake, and off with the LEDs off) */
+	int upper = leds_asleep && cfg.led_sleep < level ? cfg.led_sleep : level;
+	int state = upper <= 0 ? 0 : (!charging && pct >= 0 && pct <= cfg.led_critical) ? 3 : (!charging && pct >= 0 && pct <= cfg.led_low) ? 2 : 1;
 	if (state != last) {
 		leds_last = state;
-		led_set(green, state == 1 ? "on" : "off", level);
-		led_set(red, state == 3 ? "blink" : state == 2 ? "on" : "off", level);
+		led_set(green, state == 1 ? "on" : "off", upper);
+		led_set(red, state == 3 ? "blink" : state == 2 ? "on" : "off", upper);
 		say("LEDs: battery %d%%%s", pct, charging ? ", charging" : "");
 	}
 	/* the lower LED: amber, steady, the whole time the charger is plugged in and the battery isn't full */
@@ -1208,6 +1220,7 @@ int main(int argc, char **argv)
 	(void)argc; (void)argv;
 	openlog("bananad", LOG_PID, LOG_DAEMON);
 	test_lid = getenv("BANANAD_TEST_LID");
+	if (getenv("BANANAD_TEST_WAKE")) test_wake = open(getenv("BANANAD_TEST_WAKE"), O_RDWR | O_CLOEXEC);
 	load_conf("/etc/banana/bananad.conf");
 	load_conf("/data/banana/bananad.conf");
 	load_timezone();

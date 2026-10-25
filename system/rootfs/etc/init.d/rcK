@@ -18,3 +18,6 @@ hwclock -w 2>/dev/null
 sync
 umount /data 2>/dev/null || mount -o remount,ro /data
 sync
+# the LEDs off: switched off, the handheld shows nothing (bananad first, so it doesn't put them back)
+killall bananad 2>/dev/null
+for l in /sys/class/leds/*; do echo none > "$l/trigger"; echo 0 > "$l/brightness"; done 2>/dev/null
