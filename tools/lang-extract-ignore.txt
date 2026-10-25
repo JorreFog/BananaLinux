@@ -1,0 +1,79 @@
+# lang-extract.py: what it finds that isn't on screen (or isn't to be translated). One a line:
+#   an English line exactly as found ("\n" for a line break)
+#   @~<regex>            every line matching it
+#   @<file>:<function>   everything from one function (file as lang-extract prints it, sd:/bd: for the emulators)
+#
+# protocols, file formats, HTTP, process output banana-ui parses
+@~running .*\|.*
+@~done \{.*
+@~error .*
+@~(?s)READ_CORE_MEMORY.*
+RIFF
+WAVE
+�PNG
+Content-Type: %s
+X-Twilight-Key: {key}
+X-Twilight-Client: BananaOS/banana-scrape
+BananaOS banana-scrape (+https://github.com/JorreFog/BananaLinux)
+BananaDS/%s (BananaOS) %s
+COMPLETED
+OK
+bssid / frequency / signal level / flags / ssid
+{wifiTool} status
+{wifiTool} scan
+{btTool} devices
+float scan
+ACTIVE
+DraStic-SaveState
+Master
+passthrough: %s
+not in fonts
+Unlocks
+HardcoreUnlocks
+virtual console
+switch online
+Alpha
+result {value}
+failed: $*
+@~downloading .*
+@~ready .*
+@~cancelled .*
+@~row ".*
+@ui/src/theme.cpp:readTheme
+# libretro's database names (looked up, not shown)
+@~Nintendo - .*
+@~Sega - .*
+@~Sony - .*
+# game codes and the games' own names (game names aren't translated)
+AXVE
+AXPE
+BPEE
+BPRE
+BPGE
+@~Pokémon (Ruby|Sapphire|Emerald|FireRed|LeafGreen)
+# the FPS counter (numbers)
+%d.%d FPS  emu %d
+%d.%d FPS
+# English-only lines: with a language on, the emulators show the line the translators had (es_line, "Paused")
+login expired: re-enter your password in Settings
+check user/password in Settings
+no password set in Settings
+PAUSED
+# a test pop-up (DSFLIP_RA_TEST)
+RetroAchievements test
+# contexts the code asks lang::tr for (not shown themselves)
+Second screen (RetroArch games)
+Pokémon types
+# logs and internal lines that read like text
+@~texture cache at its budget.*
+modeset failed: %s
+@~(?s)running .*
+QWERTYUIOP
+# a sentence the code adds to a help text on the RG DS Plus only: the help with it can't match a line (see report)
+@~\{value\} On the RG DS Plus a shader also heats the chip.*
+running: {slot}, default: {value}
+@~banana-perf .*
+{value} (Not connected to Wi-Fi now.)
+# handheld names put into other lines
+RG DS Plus
+RG DS

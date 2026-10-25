@@ -9,13 +9,16 @@
 # same English line translated two ways, the first is the default and the others carry the document's Where column,
 # for the code to ask for that one (banana::tr(context, text)).
 #
+# With --merge=BASE.tsv (a document with only the new and changed lines): BASE with the document's lines put in.
+#
 # Only reads the document (it is a zip of XML; nothing in it is run). Run with python3 -I.
-import re, sys, zipfile
+import os, re, sys, zipfile
 import xml.etree.ElementTree as ET
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from lang_docx import PARTS, CONTEXTS  # noqa: E402	(the document's part headings, the Pokémon companion's among them)
+
 W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
-PARTS = [("BananaOS menu", "menu"), ("BananaOS settings", "settings"), ("BananaDS", "bananads"),
-         ("SuperDrastic", "superdrastic"), ("System names", "systems")]
 
 
 def text_of(p):
@@ -29,7 +32,9 @@ def text_of(p):
 
 
 def main():
-    doc, code, out = sys.argv[1], sys.argv[2], sys.argv[3]
+    args = [a for a in sys.argv[1:] if not a.startswith("--merge=")]
+    merge = next((a[8:] for a in sys.argv[1:] if a.startswith("--merge=")), None)
+    doc, code, out = args[0], args[1], args[2]
     with zipfile.ZipFile(doc) as z:
         body = ET.fromstring(z.read("word/document.xml")).find(W + "body")
     part, intro, rows = None, [], []
@@ -63,12 +68,38 @@ def main():
                 sys.exit("a tab or line break in a cell: %r" % s)
         key = (part, en)
         context = ""
-        if key in first and first[key] != tr:
+        if where in CONTEXTS:
+            context = where	# (a line the code asks for in its context: always that one, "Dark" the type is not the theme)
+            key = (part, where, en)
+        elif key in first and first[key] != tr:
             context = where
         first.setdefault(key, tr)
         if key in first and first[key] == tr and context == "" and any(l[0] == part and l[2] == en for l in lines):
             continue	# (the same line and translation once more: once is enough)
         lines.append((part, context, en, tr))
+    if merge:
+        # --merge=BASE.tsv: a document with only some lines (the new and changed ones) into the language file there is:
+        # its lines replace the same lines of BASE, the others are added at the end; BASE's header and order stay
+        base, at = [], {}
+        for l in open(merge, encoding="utf-8"):
+            l = l.rstrip("\n")
+            p = l.split("\t")
+            if not l.startswith("#") and len(p) >= 4:
+                at[(p[0], p[1], p[2])] = len(base)
+            base.append(l)
+        added = 0
+        for l in lines:
+            k = (l[0], l[1], l[2])
+            if k in at:
+                base[at[k]] = "\t".join(l)
+            else:
+                if not added:
+                    base.append("# (from %s)" % doc.rsplit("/", 1)[-1])
+                base.append("\t".join(l)); added += 1
+        with open(out, "w", encoding="utf-8") as f:
+            f.write("\n".join(base) + "\n")
+        print("%s: %s merged: %d lines replaced, %d added" % (out, merge, len(lines) - added, added))
+        return
     with open(out, "w", encoding="utf-8") as f:
         f.write("# BananaOS translation: %s\n" % language)
         if by:
