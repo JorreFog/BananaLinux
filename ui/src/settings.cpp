@@ -1429,7 +1429,8 @@ namespace banana
 
 	float Settings::faceWidth(const std::string& key, const std::string& label)
 	{
-		return 15 + 12 + text(key, true, 16, 0, 0, Color(), false, 0, true) + 8 + text(label, true, 19, 0, 0, Color(), false, 0, true) + 18;
+		// at most FACE_MAX wide (three fit in the bar): a longer label (a translation) scrolls in it (face)
+		return std::min(FACE_MAX, 15 + 12 + text(key, true, 16, 0, 0, Color(), false, 0, true) + 8 + text(label, true, 19, 0, 0, Color(), false, 0, true) + 18);
 	}
 
 	// the menu's B / A chips (RndsUI's drawFace)
@@ -1440,7 +1441,7 @@ namespace banana
 		float kw = 12 + text(key, true, 16, 0, 0, p.ink, false, 0, true);
 		box("kbd", false, x + 15, 430.5f, kw, 23);
 		text(key, true, 16, x + 21, 432.5f, p.kbdInk);
-		text(label, true, 19, x + 15 + kw + 8, 431, p.ink);
+		textFit(label, true, 19, x + 15 + kw + 8, 431, w - (15 + kw + 8) - 18, p.ink, true);
 	}
 
 	void Settings::notice(const std::string& title, const std::string& body, int percent)
@@ -1508,8 +1509,35 @@ namespace banana
 		return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now().time_since_epoch()).count();
 	}
 
+	// a label too long for its box: "..." at its end, or, while its row is the one picked, a marquee (rnds::marqueeOffset)
+	// that runs from when it was first drawn picked. Returns the width drawn (the box's or less)
+	float Settings::textFit(const std::string& t, bool medium, float size, float x, float top, float width, const Color& c, bool picked, bool right)
+	{
+		float w = text(t, medium, size, 0, 0, c, false, 0, true);
+		if (w <= width) { text(t, medium, size, right ? x + width - w : x, top, c); return w; }
+		if (!picked) { std::string f = fit(t, medium, size, width); float fw = text(f, medium, size, 0, 0, c, false, 0, true); text(f, medium, size, right ? x + width - fw : x, top, c); return fw; }
+		double now = steadyMs();
+		auto it = mqSince.find(t);
+		if (it == mqSince.end() || it->second.second + 1 < mqFrame) it = mqSince.insert_or_assign(t, std::make_pair(now, mqFrame)).first;	// (picked anew: from the start)
+		it->second.second = mqFrame;
+		bool moving; double wake;
+		float off = rnds::marqueeOffset(now - it->second.first, w - width, &moving, &wake);
+		mqMoving = mqMoving || moving;
+		if (wake >= 0 && (mqWake < 0 || wake < mqWake)) mqWake = wake;
+		be->pushClip(std::round(X(x)), std::floor(X(top - size)), std::round(X(width)), std::ceil(X(size * 3)));
+		text(t, medium, size, x - off, top, c);
+		be->popClip();
+		return width;
+	}
+	void Settings::marqueeFrame()
+	{
+		mqFrame++; mqMoving = false; mqWake = -1;
+		if (mqSince.size() > 64) for (auto i = mqSince.begin(); i != mqSince.end();) i = i->second.second + 2 < mqFrame ? mqSince.erase(i) : std::next(i);
+	}
+
 	bool Settings::animating() const
 	{
+		if (mOpen && mqMoving) return true;	// a marquee scrolling
 		if (!mOpen || page != LIST) return false;
 		if (inGroups) return aCol != gsel % 3 || aRow != gsel / 3;
 		return aPick != sel || aTop != top;
@@ -1568,12 +1596,15 @@ namespace banana
 			bool on = std::fabs(g % 3 - aCol) < 0.5f && std::fabs(g / 3 - aRow) < 0.5f;
 			float x = 18 + (g % 3) * 204, y = 82 + (g / 3) * 166;
 			iconCentred(items[groupStart(g)].icon, x + 98, y + 22, 2);
-			std::string label = fit(groups[g], true, 19, 180);
-			float lw = text(label, true, 19, 0, 0, p.ink, false, 0, true);
-			text(label, true, 19, x + 98 - lw / 2, y + 84, on ? p.onPick : p.ink);
-			std::string hint = fit(groupHint(g), false, 14, 176);
-			float hw = text(hint, false, 14, 0, 0, p.muted, false, 0, true);
-			text(hint, false, 14, x + 98 - hw / 2, y + 114, on ? p.onPickAccent : p.muted);
+			// centred when it fits; else in the tile's width, "..." or scrolling on the picked tile
+			auto centred = [&](const std::string& t, bool med, float size, float top, float w, const Color& c)
+			{
+				float tw = text(t, med, size, 0, 0, c, false, 0, true);
+				if (tw <= w) text(t, med, size, x + 98 - tw / 2, top, c);
+				else textFit(t, med, size, x + 98 - w / 2, top, w, c, on);
+			};
+			centred(groups[g], true, 19, y + 84, 180, on ? p.onPick : p.ink);
+			centred(groupHint(g), false, 14, y + 114, 176, on ? p.onPickAccent : p.muted);
 		}
 		float bw = faceWidth("B", "Close");
 		face("B", "Close", 18, bw);
@@ -1669,6 +1700,7 @@ namespace banana
 
 	void Settings::render()
 	{
+		marqueeFrame();
 		if (page == NETWORKS) { renderNetworks(); return; }
 		if (page == BLUETOOTH) { renderBluetooth(); return; }
 		if (page == KEYBOARD) { renderKeyboard(); return; }
@@ -1690,9 +1722,9 @@ namespace banana
 		// Shader row's was cut at seven)
 		icon(cur.icon, 50, HEAD_ICON_Y, 3);
 		text(cur.section, true, 17, 170, HEAD_SECTION_Y, p.muted, true, 1.4f);
-		text(cur.label, true, 30, 170, HEAD_LABEL_Y, p.ink);
+		textFit(cur.label, true, 30, 170, HEAD_LABEL_Y, 420, p.ink, true);
 		std::string value = cur.kind == Item::CHOICE || cur.kind == Item::BRIGHTNESS || cur.kind == Item::VOLUME ? cur.names[cur.at] : "";
-		if (!value.empty()) text(value, true, 22, 170, HEAD_VALUE_Y, p.accent);
+		if (!value.empty()) textFit(value, true, 22, 170, HEAD_VALUE_Y, 420, p.accent, true);
 		std::string help = helpOf(sel);
 		if (cur.key == "scrape" && scraping())
 		{
@@ -1727,7 +1759,6 @@ namespace banana
 			const Item& it = items[i];
 			bool on = std::fabs(i - aPick) < 0.5f;
 			float y = 82 + (i - aTop) * 64;
-			text(it.label, true, 20, 38, y + 16, on ? p.onPick : p.muted);
 			std::string v;
 			if (it.kind == Item::CHOICE || it.kind == Item::BRIGHTNESS || it.kind == Item::VOLUME) v = it.names[it.at];
 			else if (it.kind == Item::ACTION) v = armed == i ? "Press A again" : "";
@@ -1739,12 +1770,18 @@ namespace banana
 			else if (it.kind == Item::PAGE && it.key == "share_account") v = fit(shareUser(), true, 19, 300);
 			else if (it.kind == Item::PAGE && it.key == "ds_name") v = dsName().empty() ? "Not set" : dsName();
 			else if (it.kind == Item::PAGE && it.key == "scrape") v = scrapeShort();
+			// the name on the left and the value on the right, each in its own box: a long one (a translation) ends in
+			// "..." or, on the picked row, scrolls; the value gets up to 260 px, the name the rest
+			const bool arrows = !v.empty() && !(it.kind == Item::ACTION || it.kind == Item::PAGE || it.kind == Item::INFO);
+			const float vmax = 260, vright = arrows ? 566 : 586;
+			float vw = v.empty() ? 0 : std::min(vmax, text(v, true, 19, 0, 0, p.ink, false, 0, true));
+			float vleft = vright - vw - (arrows ? 2 + std::round(13 / 2.0f + 1) + 10 : 0);
+			textFit(it.label, true, 20, 38, y + 16, (v.empty() ? 590 : vleft - 16) - 38, on ? p.onPick : p.muted, on);
 			if (v.empty()) continue;
-			float vw = text(v, true, 19, 0, 0, p.ink, false, 0, true);
 			Color vc = on ? (armed == i ? p.onPickAccent : p.onPick) : p.muted;
-			if (it.kind == Item::ACTION || it.kind == Item::PAGE || it.kind == Item::INFO) { text(v, true, 19, 586 - vw, y + 17, vc); continue; }
+			textFit(v, true, 19, vright - vw, y + 17, vw, vc, on);
+			if (!arrows) continue;
 			arrow(true, 576, y + 21, vc);
-			text(v, true, 19, 566 - vw, y + 17, vc);
 			arrow(false, 556 - vw - 2 - std::round(13 / 2.0f + 1), y + 21, vc);
 		}
 		be->popClip();
@@ -1909,6 +1946,7 @@ namespace banana
 	{
 		if (!mOpen) return -1;
 		int w = pageWake(t);
+		if (mqWake >= 0 && (w < 0 || mqWake < w)) w = (int)std::ceil(mqWake);	// a marquee's next move
 		// the account check's answer, and the pop-up going away
 		int mine = raCheck ? 200 : toastUntil > t ? std::max(0, (int)(toastUntil - t) + 1) : -1;
 		if (mine >= 0 && (w < 0 || mine < w)) w = mine;
@@ -2122,7 +2160,8 @@ namespace banana
 	std::string Settings::fit(const std::string& t, bool medium, float size, float width)
 	{
 		if (text(t, medium, size, 0, 0, Color(), false, 0, true) <= width) return t;
-		std::string r = t;
+		// cut the text as it is shown: the translation's, not the English (a cut English line has no translation)
+		std::string r = lang::active() ? lang::tr(t) : t;
 		while (!r.empty())
 		{
 			do r.pop_back(); while (!r.empty() && ((unsigned char)r.back() & 0xc0) == 0x80);	// a whole UTF-8 character
@@ -3493,8 +3532,8 @@ namespace banana
 		icon(pgNds ? "nds" : "gamepad", 50, HEAD_ICON_Y, 3);
 		text(row == PG_EMU ? "This game's emulator" : row == PG_SHADER ? "This game's shader" : row == PG_3D ? "This game's 3D" : row == PG_MIC ? "This game's microphone" : row == PG_NAME ? "This game's name" : row == PG_SORT ? "This game's sort title" : row == PG_DELETE ? "Delete this game" : "This game's box art",
 			true, 17, 170, HEAD_SECTION_Y, p.muted, true, 1.4f);
-		text(fit(pgTitle, true, 30, 420), true, 30, 170, HEAD_LABEL_Y, p.ink);
-		text(fit(value(row), true, 22, 420), true, 22, 170, HEAD_VALUE_Y, row == PG_DELETE && pgDelArmed ? Color::hex(0xff8a96) : p.accent);
+		textFit(pgTitle, true, 30, 170, HEAD_LABEL_Y, 420, p.ink, true);
+		textFit(value(row), true, 22, 170, HEAD_VALUE_Y, 420, row == PG_DELETE && pgDelArmed ? Color::hex(0xff8a96) : p.accent, true);
 		std::string help = gameHelpOf(row);
 		helpText(help, HELP_TOP, HELP_BOTTOM, p.muted);
 		be->endScreen();

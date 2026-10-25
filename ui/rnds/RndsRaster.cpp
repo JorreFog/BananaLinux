@@ -639,6 +639,20 @@ namespace rnds
 
 	TextLine layoutEllipsis(const std::u32string& text, const TextStyle& st, int maxWidth) { return ellipsisOf(prepared(text, st), st, maxWidth); }
 
+	float marqueeOffset(double elapsed, float overflow, bool* moving, double* wake)
+	{
+		if (moving) *moving = false;
+		if (wake) *wake = -1;
+		if (overflow <= 0) return 0;
+		const double run = overflow / MARQUEE_SPEED * 1000, cycle = MARQUEE_PAUSE + run + MARQUEE_PAUSE;
+		double t = std::fmod(std::max(0.0, elapsed), cycle);
+		if (t < MARQUEE_PAUSE) { if (wake) *wake = MARQUEE_PAUSE - t; return 0; }
+		t -= MARQUEE_PAUSE;
+		if (t < run) { if (moving) *moving = true; if (wake) *wake = 0; return (float)(t / 1000 * MARQUEE_SPEED); }
+		if (wake) *wake = MARQUEE_PAUSE - (t - run);	// (still at the end, then back to the start)
+		return overflow;
+	}
+
 	// Banana: CJK text has no spaces: a line may break between any two of its characters (each its own word, joined
 	// without a space), but not before closing punctuation nor after an opening one
 	static bool cjk(char32_t c)

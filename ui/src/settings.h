@@ -376,6 +376,15 @@ namespace banana
 		void box(const std::string& kind, bool on, float x, float y, float w, float h);
 		float text(const std::string& t, bool medium, float size, float x, float top, const rnds::Color& c, bool upper = false, float ls = 0, bool measureOnly = false);
 		void wrapped(const std::string& t, float size, float x, float top, float width, int maxLines, const rnds::Color& c);
+		// text in a box of `width`: as it is when it fits, else cut with "...", or scrolling while picked (a marquee);
+		// right: against the box's right edge
+		float textFit(const std::string& t, bool medium, float size, float x, float top, float width, const rnds::Color& c, bool picked, bool right = false);
+		void marqueeFrame();
+		static constexpr float FACE_MAX = 196;	// a button chip's widest (the bottom bar's B / Y / A)	// (each render: the marquees drawn this frame start counting)
+		std::map<std::string, std::pair<double, long>> mqSince;	// a marquee's text -> when it was first drawn picked, the frame last drawn
+		long mqFrame = 0;
+		bool mqMoving = false;
+		double mqWake = -1;
 		// the top panel's header and help text (Settings' rows and a game's page): where they go, in 640x480 CSS px
 		static constexpr float HEAD_ICON_Y = 42, HEAD_SECTION_Y = 46, HEAD_LABEL_Y = 70, HEAD_VALUE_Y = 110;
 		static constexpr float HELP_X = 50, HELP_W = 540, HELP_TOP = 152, HELP_BOTTOM = 438;

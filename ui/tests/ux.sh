@@ -159,3 +159,30 @@ ux_crop "$OUT/$size-ux-title-three-top.png" "$OUT/$size-ux-title-three-stats.png
 [ "$(ux_diff "$OUT/$size-ux-title-one-stats.png" "$OUT/$size-ux-title-three-stats.png")" = 0 ] || { echo "FAIL $size: the game's details moved with the title's length"; fail=1; }
 # the third title line is drawn (x 300-596, y 128-158: text there, not the sheet alone)
 ux_lt 0.05 "$(ux_std "$OUT/$size-ux-title-three-top.png" 296 26 300 130)" || { echo "FAIL $size: a long title cut at two lines"; fail=1; }
+
+# a translation longer than the English (a translator: "some labels in Russian end up longer"): a made-up language
+# 1.6x as long in Cyrillic (pseudo-lang.py, from zh-cn.tsv's English). A label too long for its box scrolls while picked
+# (the home cart's START, the Settings tile picked), and is cut with "..." of the TRANSLATION otherwise; in English, where
+# everything fits, nothing scrolls and the menu sleeps (no wake for a marquee)
+PSA=$OUT/ux-pseudo-assets-$size
+rm -rf "$PSA"; mkdir -p "$PSA/rnds" "$PSA/lang"
+for f in "$HERE"/assets/rnds/*; do ln -s "$f" "$PSA/rnds/"; done
+python3 -I "$HERE/tests/pseudo-lang.py" "$HERE/assets/lang/zh-cn.tsv" "$PSA/lang/xx.tsv"
+PSFX=$OUT/ux-pseudo-fixture-$size
+rm -rf "$PSFX"; "$HERE/tests/fixture.sh" "$PSFX" >/dev/null; echo "language = xx" >> "$PSFX/data/settings.conf"
+"$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$PSA/rnds" --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" \
+    --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$PSFX/roms" --data "$PSFX/data" \
+    --script "home 0; wait 2400; shot ux-mq-0; wait 1700; shot ux-mq-1; press start; shot ux-mq-g0; sleep 2600; shot ux-mq-g1" 2> "$OUT/$size-mq.log" \
+    || { echo "FAIL $size: banana-ui (marquee) exited $?"; fail=1; }
+ux_check mq "language: Псевдо (xx)"
+ux_check mq "shot ux-mq-0 (frame [0-9.]* ms, wake 1[0-9][0-9][0-9])"     # the marquee's pause at its start: a wake, no frames
+ux_crop2() { convert "$1" -crop "$(awk -v k=$ux_k -v w=$2 -v h=$3 -v x=$4 -v y=$5 'BEGIN { printf "%dx%d+%d+%d", w * k, h * k, x * k, y * k }')" +repage "$6"; }
+ux_crop2 "$OUT/$size-ux-mq-0-bot.png" 108 28 266 310 "$OUT/$size-ux-mq-start0.png"
+ux_crop2 "$OUT/$size-ux-mq-1-bot.png" 108 28 266 310 "$OUT/$size-ux-mq-start1.png"
+[ "$(ux_diff "$OUT/$size-ux-mq-start0.png" "$OUT/$size-ux-mq-start1.png")" != 0 ] || { echo "FAIL $size: the cart's long START doesn't scroll"; fail=1; }
+ux_crop2 "$OUT/$size-ux-mq-g0-bot.png" 190 24 20 154 "$OUT/$size-ux-mq-tile0.png"
+ux_crop2 "$OUT/$size-ux-mq-g1-bot.png" 190 24 20 154 "$OUT/$size-ux-mq-tile1.png"
+[ "$(ux_diff "$OUT/$size-ux-mq-tile0.png" "$OUT/$size-ux-mq-tile1.png")" != 0 ] || { echo "FAIL $size: the picked Settings tile's long name doesn't scroll"; fail=1; }
+# English: nothing too long on the home screen, so no marquee wakes the menu
+ux_run mq-en "home 0; wait 2400; shot ux-mq-en"
+grep -q "shot ux-mq-en (frame [0-9.]* ms, wake -1)" "$OUT/$size-mq-en.log" || { echo "FAIL $size: the English home screen wakes for something: $(grep 'shot ux-mq-en' "$OUT/$size-mq-en.log")"; fail=1; }
