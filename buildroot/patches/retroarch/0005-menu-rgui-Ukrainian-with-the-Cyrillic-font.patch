@@ -1,0 +1,36 @@
+From: JorreFog <JorreFog@users.noreply.github.com>
+Subject: [PATCH] menu/rgui: Ukrainian with the Cyrillic font
+
+RGUI drew Russian and Belarusian with its 10x10 Cyrillic font (U+0400-045F)
+but had no case for Ukrainian, which fell back to English ("language not
+supported"). Ukrainian's letters are in that range too, except Ghe with
+upturn (U+0490/0491), which is left out of the line as other missing glyphs.
+
+Upstream-Status: Pending
+---
+--- a/menu/drivers/rgui.c
++++ b/menu/drivers/rgui.c
+@@ -1527,6 +1527,7 @@
+ 
+       case RETRO_LANGUAGE_RUSSIAN:
+       case RETRO_LANGUAGE_BELARUSIAN:
++      case RETRO_LANGUAGE_UKRAINIAN:
+       {
+          rgui->fonts.eng_10x10    = bitmapfont_10x10_load(RETRO_LANGUAGE_ENGLISH);
+          rgui->fonts.rus_10x10    = bitmapfont_10x10_load(RETRO_LANGUAGE_RUSSIAN);
+@@ -4375,6 +4376,7 @@
+             break;
+          case RETRO_LANGUAGE_RUSSIAN:
+          case RETRO_LANGUAGE_BELARUSIAN:
++         case RETRO_LANGUAGE_UKRAINIAN:
+             rgui_blit_line    = rgui_blit_line_rus_shadow;
+             break;
+          case RETRO_LANGUAGE_ESPERANTO:
+@@ -4414,6 +4416,7 @@
+             break;
+          case RETRO_LANGUAGE_RUSSIAN:
+          case RETRO_LANGUAGE_BELARUSIAN:
++         case RETRO_LANGUAGE_UKRAINIAN:
+             rgui_blit_line = rgui_blit_line_rus;
+             break;
+          case RETRO_LANGUAGE_ESPERANTO:

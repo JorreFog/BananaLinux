@@ -10,10 +10,14 @@ setting() {
     printf '%s' "$v"
 }
 # Settings > Other systems > the system's core (settings.conf's core.<system>, BANANA_SYSTEM from banana-ui): another
-# installed core instead of systems.conf's, e.g. mGBA for the Game Boy Advance (RetroAchievements); one not installed is ignored
+# installed core instead of systems.conf's, e.g. mGBA for the Game Boy Advance (RetroAchievements), or one downloaded
+# with RetroArch's Core Downloader; one not installed is ignored
 if [ -n "$BANANA_SYSTEM" ]; then
     c=$(setting "core.$BANANA_SYSTEM")
-    [ -n "$c" ] && [ -f /usr/lib/libretro/${c}_libretro.so ] && CORE=/usr/lib/libretro/${c}_libretro.so
+    # (the image's cores, then the ones RetroArch's Core Downloader put on the card)
+    for d in /usr/lib/libretro /data/retroarch/cores; do
+        [ -n "$c" ] && [ -f $d/${c}_libretro.so ] && { CORE=$d/${c}_libretro.so; break; }
+    done
 fi
 [ -f "$CORE" ] || { echo "no core $1" >&2; exit 1; }
 # the core that really runs, in banana-ui's log (its "starting" line names systems.conf's)
@@ -70,7 +74,7 @@ if [ ! -f $M ]; then
 fi
 # Shaders: Shaders > Load Preset opens the image's libretro GLSL presets (/usr/share/libretro/shaders/glsl), read
 # where they are: copied to the card they took 238 MB (a few thousand small files in exFAT's large clusters) and a long
-# first start. The Online Updater is shown (the core downloader not: cores come with the image).
+# first start. The Online Updater is shown (the core downloader since .banana-assets-1, below).
 S=/data/retroarch/.banana-shaders-1
 if [ ! -f $S ]; then
     set_cfg video_shader_dir /usr/share/libretro/shaders/glsl
@@ -78,6 +82,26 @@ if [ ! -f $S ]; then
     set_cfg menu_show_core_updater false
     touch $S
 fi
+# RetroArch's own menu in more languages, its Core Downloader, and no load-content bar, once (a change made in
+# RetroArch's menu afterwards is kept):
+# - assets: the image's (/usr/share/retroarch/assets): RGUI's fonts for Russian, Belarusian, Ukrainian, Chinese,
+#   Japanese, Korean, Polish, Czech... Without them RGUI went back to English. Only over the card's empty default.
+# - the Core Downloader (Online Updater) installs into /data/retroarch/cores (libretro_directory: the image is
+#   read-only); RetroArch lists the image's cores beside those (patch 0004), which it never touches. Settings > Other
+#   systems picks a downloaded core for a system. libretro's aarch64 Linux cores (RetroArch has no address for them).
+# - the bar RetroArch slides in for 2.6 s at a game's start: with RGUI it never finds a system icon (a white square)
+M=/data/retroarch/.banana-assets-1
+if [ ! -f $M ]; then
+    a=$(sed -n 's/^assets_directory = "\(.*\)"/\1/p' $CFG | tail -n 1)
+    case $a in ""|default|"~/retroarch/assets"|/data/retroarch/retroarch/assets) set_cfg assets_directory /usr/share/retroarch/assets ;; esac
+    l=$(sed -n 's/^libretro_directory = "\(.*\)"/\1/p' $CFG | tail -n 1)
+    case $l in ""|default|/usr/lib/libretro) set_cfg libretro_directory /data/retroarch/cores ;; esac
+    set_cfg core_updater_buildbot_cores_url https://buildbot.libretro.com/nightly/linux/aarch64/latest/
+    set_cfg menu_show_core_updater true
+    set_cfg menu_show_load_content_animation false
+    touch $M
+fi
+[ -d /data/retroarch/cores ] || mkdir -p /data/retroarch/cores
 # Settings > Other systems > Shader: RetroArch's global preset, a reference to one of the image's presets. Only a
 # global.glslp Banana wrote (its first line) is changed or removed: one saved from RetroArch's own menu stays.
 GP=/data/retroarch/config/global.glslp
