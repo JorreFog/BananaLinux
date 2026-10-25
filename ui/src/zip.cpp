@@ -52,6 +52,7 @@ namespace banana
 			rnds::ZipMember m;
 			m.name.assign((const char*)e + 46, nameLen);
 			m.size = le32(e + 24);
+			m.crc = le32(e + 16);
 			members.push_back(m);
 			entries.push_back(en);
 			p += 46 + nameLen + extraLen + commentLen;

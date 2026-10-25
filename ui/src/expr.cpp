@@ -337,6 +337,19 @@ namespace banana
 				auto b = [](double y) { return (uint32_t)std::min(255.0, std::max(0.0, y * 255 + 0.5)); };
 				return EV(colorText(b(N(3, 1)) << 24 | b(r + m) << 16 | b(g + m) << 8 | b(bb + m)));
 			}
+			// bits, for the game companion's values (gamecomp.h): on the numbers as 32-bit unsigned integers
+			if (f == "band" || f == "bor" || f == "bxor" || f == "shl" || f == "shr" || f == "bit" || f == "popcount")
+			{
+				auto U = [&](size_t k) { double d = N(k); return d < 0 ? (uint32_t)(int64_t)d : (uint32_t)(uint64_t)d; };
+				uint32_t a = U(0), b = U(1);
+				if (f == "band") return (double)(a & b);
+				if (f == "bor") return (double)(a | b);
+				if (f == "bxor") return (double)(a ^ b);
+				if (f == "shl") return b >= 32 ? 0.0 : (double)(uint32_t)(a << b);
+				if (f == "shr") return b >= 32 ? 0.0 : (double)(a >> b);
+				if (f == "bit") return b >= 32 ? 0.0 : (double)((a >> b) & 1);
+				return (double)__builtin_popcount(a);
+			}
 			if (f == "upper") { std::string s = S(0); for (auto& c : s) c = (char)toupper((unsigned char)c); return EV(s); }
 			if (f == "lower") { std::string s = S(0); for (auto& c : s) c = (char)tolower((unsigned char)c); return EV(s); }
 			if (f == "len")

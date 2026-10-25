@@ -67,6 +67,7 @@ namespace banana
 			{ "timezone", "UTC0", TIMEZONE, nullptr, 0, 0 },
 			{ "retroarch_panel", "panel", ENUM, PANEL, 0, 0 },
 			{ "pokemon_companion", "off", ENUM, ON_OFF, 0, 0, true },
+			{ "game_companion", "off", ENUM, ON_OFF, 0, 0, true },
 			{ "boxart_source", "libretro", ENUM, BOXART, 0, 0 },
 			{ "update_prerelease", "on", ENUM, ON_OFF, 0, 0 },
 			{ "update_daily", "off", ENUM, ON_OFF, 0, 0 },

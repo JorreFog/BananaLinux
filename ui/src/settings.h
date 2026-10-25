@@ -15,6 +15,7 @@
 #include "bluetooth.h"
 #include "colors.h"
 #include "pokemon.h"
+#include "gamecomp.h"
 #include <map>
 #include <memory>
 #include <mutex>
@@ -65,6 +66,9 @@ namespace banana
 		// the Pokémon companion (pokemon.h), when the host runs one for this game: the party, the battle and the
 		// achievements as tabs in the panel's middle box (set before gameOpen, null after gameClose)
 		pkmn::Companion* companion = nullptr;
+		// the game companion (gamecomp.h) for another GBA game with a definition: its seven pages as tabs, the same way
+		// (set before gameOpen, null after gameClose; never both)
+		gcomp::Engine* gameComp = nullptr;
 		// box art (banana-scrape) finished since the last call: the library is read again
 		bool takeLibraryChanged() { bool r = libChanged; libChanged = false; return r; }
 
@@ -375,6 +379,23 @@ namespace banana
 		void pokeDexMon(const SPal& p);
 		void pokeGuide(const SPal& p);
 		void pager(const SPal& p, int page, int pages, const std::string& left);
+		// the game companion's views: a page (gcomp::PageId) or GC_GAME (the panel's tiles); within a page, its screen
+		// (a page longer than the panel is paged); a list's row opened (its fields in full); where the tabs and the
+		// rows were drawn (for touch)
+		enum { GC_GAME = gcomp::NUM_PAGES, GC_TABS = gcomp::NUM_PAGES + 1 };
+		int gcView = 0, gcScreen = 0, gcScreens = 1, gcList = -1, gcRow = -1;
+		bool gcBattle = false;
+		float gcTabX[GC_TABS] = {}, gcTabW[GC_TABS] = {};
+		struct GcHit { float y0, y1; int list, row; };
+		std::vector<GcHit> gcHits;
+		struct GcBlock { const gcomp::Widget* w; int part; float h; };	// a widget, or one of its rows/paragraphs
+		void gcRender(const SPal& p);
+		void gcTabs(const SPal& p);
+		void gcRowView(const SPal& p);
+		std::vector<GcBlock> gcBlocks(const gcomp::Page& pg, float width);
+		void gcBlock(const SPal& p, const GcBlock& b, float x, float y, float w);
+		std::string gcValue(const gcomp::Val& v, const std::string& enumName, const std::string& format) const;
+		int wrapLines(const std::string& t, float size, float width);
 		std::map<int, rnds::TexPtr> pkIcons;
 		std::shared_ptr<const pkmn::RomTables> pkTables;	// (the tables the icons came from)
 		void pokeRender(const SPal& p);

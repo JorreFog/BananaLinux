@@ -209,7 +209,7 @@ namespace rnds
 	Bitmap ndsBannerIcon(const uint8_t* banner);
 	// the host's zip archives (ES: es-core's Utils::Zip::ZipFile): pick chooses a member from the list (its index, -1
 	// for none), sink takes that member's bytes in order until it returns false; false when the archive can't be read
-	struct ZipMember { std::string name; uint64_t size = 0; };
+	struct ZipMember { std::string name; uint64_t size = 0; uint32_t crc = 0; };	// (crc: the CRC-32 the central directory gives)
 	typedef bool (*ZipReader)(const std::string& zip, const std::function<int(const std::vector<ZipMember>&)>& pick,
 		const std::function<bool(const uint8_t*, size_t)>& sink);
 	void setZipReader(ZipReader reader);

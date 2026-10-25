@@ -579,6 +579,8 @@ namespace banana
 			menu, "bottom_idle_seconds", { "After 10 s", "After 30 s", "After 1 minute" }, { "10", "30", "60" });
 		add(O, "gamepad", "Pokémon companion", "Pokémon Ruby, Sapphire, Emerald, FireRed and LeafGreen (the English releases) on the second screen: the party with levels, HP and moves, and in a battle the foe, its types and how each move does against it. Read from the game as it plays; other games keep the panel as it is. Needs Second screen on. Inspired by PokeDaisy by Lidor Itzhari.",
 			menu, "pokemon_companion", { "Off", "On" }, { "off", "on" });
+		add(O, "gamepad", "Game companion", "Other Game Boy Advance games on the second screen: seven pages about the game as it plays (status, a closer look, the fight, the map, the bag, collectibles, progress), read from the game where it can be and notes where not. Pokémon games keep the Pokémon companion. Needs Second screen on. Inspired by PokeDaisy by Lidor Itzhari.",
+			menu, "game_companion", { "Off", "On" }, { "off", "on" });
 		add(O, "gamepad", "RetroAchievements", "Softcore: achievements unlock with save states, rewind and cheats still there. Hardcore: those are locked for the game, and the unlocks count as hardcore on retroachievements.org. RetroArch's own menu changes the same setting.",
 			"/data/retroarch/retroarch.cfg", "cheevos_hardcore_mode_enable", { "Softcore", "Hardcore" }, { "false", "true" });
 		add(O, "gamepad", "Quick resume", "On: quitting keeps where you are, and the game goes on from there next time (RetroArch's automatic save state; not in Hardcore). Off: a game starts from its title.", "/data/retroarch/retroarch.cfg", "savestate_auto_save", { "Off", "On" }, { "false", "true" });
@@ -4412,6 +4414,8 @@ namespace banana
 		gHotkeys = getConfValue(data + "/settings.conf", "ra_hotkeys", "on") != "off";
 		gFlash = gDown = -1; gSeen = -1; awardsSeen = 0; wake = false;
 		pkView = PK_PARTY; pkMon = 0; pkBattle = false; pkPocket = pkBagPage = pkDexPage = pkDexNat = 0; pkGoalKey.clear(); pkGoalTeam.clear();
+		gcView = gcomp::P_STATUS; gcScreen = 0; gcScreens = 1; gcList = gcRow = -1; gcBattle = false; gcHits.clear();
+		if (gameComp) gameComp->want(gcView);
 		raw = std::make_shared<RaWatch>();
 		raw->since = now;
 		std::string cfg = "/data/retroarch/retroarch.cfg";
@@ -4461,6 +4465,21 @@ namespace banana
 			if (!b && pkBattle && pkView == PK_BATTLE) pkView = PK_PARTY;
 			pkBattle = b;
 		}
+		if (gameComp && gameComp->takeChanged())
+		{
+			changed = true;
+			// a fight starting shows the Battle page, its end Status (unless another tab was picked meanwhile); a page
+			// with no "when" for Battle is just a page
+			const gcomp::Def* d = gameComp->game();
+			if (d && d->pages[gcomp::P_BATTLE].when.set)
+			{
+				bool b = gameComp->pageOn(gcomp::P_BATTLE);
+				if (b && !gcBattle && gcView != GC_GAME) { gcView = gcomp::P_BATTLE; gcScreen = 0; gcList = gcRow = -1; }
+				if (!b && gcBattle && gcView == gcomp::P_BATTLE) { gcView = gcomp::P_STATUS; gcScreen = 0; gcList = gcRow = -1; }
+				gcBattle = b;
+				gameComp->want(gcView == GC_GAME ? -1 : gcView, gcList);
+			}
+		}
 		if (gFlash >= 0 && t >= gFlashUntil && gDown < 0) { gFlash = -1; changed = true; }
 		return changed;
 	}
@@ -4484,6 +4503,37 @@ namespace banana
 		{
 			float tx = 18 + i * 122;
 			if (lx >= tx && lx < tx + 114 && ly >= 300 && ly < 420) hit = i;
+		}
+		// the game companion: the tab bar, a page's screens (the pager), a list's row opened or closed; the Game tab is
+		// the panel's own (its tiles, below)
+		if (gameComp && gameComp->active())
+		{
+			if (ly >= 424)
+			{
+				if (!down)
+					for (int i = 0; i < GC_TABS; i++)
+						if (gcTabW[i] > 0 && lx >= gcTabX[i] && lx < gcTabX[i] + gcTabW[i] && i != gcView) { gcView = i; gcScreen = 0; gcList = gcRow = -1; }
+				gameComp->want(gcView == GC_GAME ? -1 : gcView, gcList);
+				gDown = gFlash = -1;
+				return G_NONE;
+			}
+			if (gcView != GC_GAME)
+			{
+				if (!down)
+				{
+					if (gcRow >= 0) { gcList = gcRow = -1; }	// (a row's view: a tap goes back to the list)
+					else if (gcScreens > 1 && ly >= 372 && ly < 418)
+					{
+						if (lx < 220) gcScreen = std::max(0, gcScreen - 1);
+						else if (lx >= 420) gcScreen = std::min(gcScreens - 1, gcScreen + 1);
+					}
+					else
+						for (auto& h : gcHits)
+							if (ly >= h.y0 && ly < h.y1) { gcList = h.list; gcRow = h.row; break; }
+					gameComp->want(gcView, gcList);
+				}
+				return G_NONE;
+			}
 		}
 		// the companion: the tab bar, a party member (its summary), another member or back from it; the Game tab is the
 		// panel's own (its tiles, below)
@@ -4577,6 +4627,14 @@ namespace banana
 			be->endScreen();
 			return;
 		}
+		bool gc = !pk && gameComp && gameComp->active();
+		if (gc && gcView != GC_GAME)
+		{
+			gcRender(p);
+			gcTabs(p);
+			be->endScreen();
+			return;
+		}
 		// ---- the header: the game, the system
 		box("bubble", false, 18, 14, 604, 54);
 		std::string sys = fit(gSystem, true, 17, 200);
@@ -4664,6 +4722,7 @@ namespace banana
 			text(kk, false, 14, x + 57 - kw / 2, y + 90, on ? p.onPickAccent : p.muted);
 		}
 		if (pk) { pokeTabs(p); be->endScreen(); return; }	// (the companion's tab bar where the hint was)
+		if (gc) { gcTabs(p); be->endScreen(); return; }
 		std::string hint = !gHotkeys ? (gTouch ? "Tap a tile; F + X opens RetroArch's menu, F + Start quits" : "F + X opens RetroArch's menu, F + Start quits")
 			: gTouch ? "Tap a tile, or hold F with the button under it" : "Hold F with the button under each tile";
 		float hw = text(hint, false, 15, 0, 0, p.muted, false, 0, true);
@@ -5488,5 +5547,402 @@ namespace banana
 		}
 		if (!any) wrapped("No wild Pokémon on this map.", 16, 342, 56, 264, 3, p.muted);
 		else if (dexKnown) text("Accent: not caught yet", false, 13, 342, 390, p.muted);
+	}
+
+	// ---- the game companion (gamecomp.h): the Pokémon companion's look for any GBA game with a definition. The whole
+	// panel: the page's header (its title, "Reference" on a page of notes), its widgets in a box (paged when they don't
+	// fit), the tab bar along the bottom (Battle only while the game is in a fight, when its definition can tell; a page
+	// whose "when" is false greyed). The game's own colour marks what the theme's accent marks elsewhere. The companion
+	// idea is PokeDaisy's (Lidor Itzhari).
+	namespace
+	{
+		const float GC_X = 36, GC_W = 568, GC_TOP = 88;
+		std::string gcLower(std::string t) { for (auto& c : t) c = (char)tolower((unsigned char)c); return t; }
+		bool gcHpLike(const std::string& l)
+		{
+			std::string t = gcLower(l);
+			return t == "hp" || t.find("health") != std::string::npos || t.find("life") != std::string::npos || t.compare(0, 3, "hp ") == 0;
+		}
+		std::string gcNum(double v)
+		{
+			char b[48];
+			if (std::fabs(v - std::round(v)) < 1e-9 && std::fabs(v) < 1e15) snprintf(b, sizeof b, "%lld", (long long)std::llround(v));
+			else snprintf(b, sizeof b, "%.1f", v);
+			return b;
+		}
+		// the game's colour where it marks text on the panel's dark boxes: lightened when it is too dark to read there
+		uint32_t gcInk(uint32_t rgb, bool lightTheme)
+		{
+			float r = (rgb >> 16 & 255) / 255.0f, g = (rgb >> 8 & 255) / 255.0f, b = (rgb & 255) / 255.0f;
+			float l = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+			float k = lightTheme ? (l > 0.6f ? -0.45f : 0) : (l < 0.45f ? 0.45f - l : 0);
+			auto ch = [&](float c) { float v = k >= 0 ? c + (1 - c) * k : c * (1 + k); return (uint32_t)std::lround(std::min(1.0f, std::max(0.0f, v)) * 255); };
+			return ch(r) << 16 | ch(g) << 8 | ch(b);
+		}
+		std::vector<std::string> gcParas(const std::string& t)
+		{
+			std::vector<std::string> r;
+			size_t a = 0, b;
+			while ((b = t.find('\n', a)) != std::string::npos) { if (b > a) r.push_back(t.substr(a, b - a)); a = b + 1; }
+			if (a < t.size()) r.push_back(t.substr(a));
+			return r;
+		}
+	}
+
+	int Settings::wrapLines(const std::string& t, float size, float width)
+	{
+		if (!R || t.empty()) return 0;
+		rnds::TextStyle st;
+		st.font = R; st.size = size;
+		return std::max(1, (int)rnds::layoutWrap(rnds::utf8to32(t), st, (int)width).size());
+	}
+
+	std::string Settings::gcValue(const gcomp::Val& v, const std::string& enumName, const std::string& format) const
+	{
+		if (!v.ok) return "-";
+		if (v.v.isStr) return v.v.s;
+		double n = v.v.n;
+		long long i = std::llround(n);
+		const gcomp::Def* d = gameComp ? gameComp->game() : nullptr;
+		if (!enumName.empty() && d) return d->enumLabel(enumName, (long)i);
+		char b[64];
+		if (format == "time60" || format == "secs")
+		{
+			long long sec = format == "time60" ? i / 60 : i;
+			if (sec >= 3600) snprintf(b, sizeof b, "%lld:%02lld:%02lld", sec / 3600, sec / 60 % 60, sec % 60);
+			else snprintf(b, sizeof b, "%lld:%02lld", sec / 60, sec % 60);
+			return b;
+		}
+		if (format == "hex") { snprintf(b, sizeof b, "0x%llX", (unsigned long long)i); return b; }
+		if (format == "pad2" || format == "pad3" || format == "pad6") { snprintf(b, sizeof b, "%0*lld", format[3] - '0', i); return b; }
+		std::string t = gcNum(n);
+		if (format == "thousands")
+		{
+			std::string r;
+			bool neg = !t.empty() && t[0] == '-';
+			std::string digits = neg ? t.substr(1) : t;
+			for (size_t k = 0; k < digits.size(); k++) { if (k && (digits.size() - k) % 3 == 0) r += ','; r += digits[k]; }
+			return (neg ? "-" : "") + r;
+		}
+		size_t at = format.find("{}");
+		if (at != std::string::npos) return format.substr(0, at) + t + format.substr(at + 2);
+		return t;
+	}
+
+	std::vector<Settings::GcBlock> Settings::gcBlocks(const gcomp::Page& pg, float width)
+	{
+		std::vector<GcBlock> out;
+		const gcomp::Snapshot& sn = gameComp->snapshot();
+		for (auto& w : pg.widgets)
+		{
+			if (w.when.set)
+			{
+				gcomp::Val on = gameComp->eval(w.when);
+				if (!on.ok || !on.v.truthy()) continue;
+			}
+			switch (w.type)
+			{
+			case gcomp::Widget::NUMBER: case gcomp::Widget::TEXT_W: out.push_back({ &w, 0, 32 }); break;
+			case gcomp::Widget::BAR: case gcomp::Widget::COUNT: out.push_back({ &w, 0, 48 }); break;
+			case gcomp::Widget::FLAGS:
+			{
+				// chips in rows across the width
+				float cx = 0, h = 26;
+				for (auto& it : w.items)
+				{
+					if (it.empty()) continue;
+					float cw = chip(it, 0, 0, 0, true);
+					if (cx > 0 && cx + cw > width) { cx = 0; h += 26; }
+					cx += cw + 6;
+				}
+				out.push_back({ &w, 0, h + (w.label.empty() ? 6 : 28) });
+				break;
+			}
+			case gcomp::Widget::GRID:
+			{
+				int n = 0;
+				for (auto& it : w.items) n += !it.empty();
+				out.push_back({ &w, 0, (float)((n + 3) / 4) * 26 + (w.label.empty() ? 6 : 28) });
+				break;
+			}
+			case gcomp::Widget::STATIC:
+			{
+				auto paras = gcParas(w.text);
+				for (size_t i = 0; i < paras.size(); i++)
+					out.push_back({ &w, (int)i, wrapLines(paras[i], 17, width) * 24.0f + 6 + (i == 0 && !w.label.empty() ? 24 : 0) });
+				break;
+			}
+			case gcomp::Widget::KV:
+				for (size_t i = 0; i < w.rows.size(); i++)
+					out.push_back({ &w, (int)i, std::max(1, wrapLines(w.rows[i].second, 16, width * 0.6f)) * 22.0f + 8 + (i == 0 && !w.label.empty() ? 24 : 0) });
+				break;
+			case gcomp::Widget::LIST:
+			{
+				const auto& rows = w.listId < (int)sn.lists.size() ? sn.lists[w.listId] : std::vector<std::vector<gcomp::Val>>();
+				out.push_back({ &w, -1, w.label.empty() ? (rows.empty() ? 30.0f : 4.0f) : (rows.empty() ? 54.0f : 26.0f) });
+				for (size_t i = 0; i < rows.size(); i++) out.push_back({ &w, (int)i, 34 });
+				break;
+			}
+			}
+		}
+		return out;
+	}
+
+	void Settings::gcBlock(const SPal& p, const GcBlock& b, float x, float y, float w)
+	{
+		const gcomp::Widget& wd = *b.w;
+		const gcomp::Def& d = *gameComp->game();
+		const gcomp::Snapshot& sn = gameComp->snapshot();
+		Color acc = Color::hex(gcInk(d.accent, light));
+		auto heading = [&](const std::string& l) { text(fit(l, true, 14, w), true, 14, x, y + 2, p.muted, true, 1.0f); };
+		switch (wd.type)
+		{
+		case gcomp::Widget::NUMBER: case gcomp::Widget::TEXT_W:
+		{
+			gcomp::Val v = gameComp->eval(wd.value);
+			std::string t = gcValue(v, wd.enumName, wd.format);
+			bool digits = v.ok && !v.v.isStr && wd.enumName.empty();
+			float vw = digits ? num(t, 19, 0, 0, p.ink, true) : text(fit(t, true, 19, w * 0.6f), true, 19, 0, 0, p.ink, false, 0, true);
+			if (digits) num(t, 19, x + w - vw, y + 4, v.ok ? p.ink : p.muted);
+			else text(fit(t, true, 19, w * 0.6f), true, 19, x + w - vw, y + 4, v.ok ? p.ink : p.muted);
+			text(fit(wd.label, false, 17, w - vw - 16), false, 17, x, y + 6, p.muted);
+			be->fill(std::round(X(x)), std::round(X(y + 30)), std::round(X(w)), std::max(1.0f, std::round(X(1))), p.line);
+			break;
+		}
+		case gcomp::Widget::BAR: case gcomp::Widget::COUNT:
+		{
+			gcomp::Val v = gameComp->eval(wd.value);
+			gcomp::Val m = gameComp->eval(wd.type == gcomp::Widget::BAR ? wd.max : wd.total);
+			double a = v.ok ? v.v.num() : 0, z = m.ok ? m.v.num() : 0;
+			if (wd.type == gcomp::Widget::COUNT && wd.bits && v.ok) a = __builtin_popcount((uint32_t)(int64_t)a);
+			std::string t = (v.ok ? gcNum(a) : "-") + " / " + (m.ok ? gcNum(z) : "-");
+			float vw = num(t, 16, 0, 0, p.ink, true);
+			num(t, 16, x + w - vw, y + 2, v.ok ? p.ink : p.muted);
+			text(fit(wd.label, false, 17, w - vw - 16), false, 17, x, y + 2, p.muted);
+			uint32_t rgb = wd.color ? wd.color : wd.type == gcomp::Widget::BAR && gcHpLike(wd.label) ? 0 : d.accent;
+			if (wd.type == gcomp::Widget::COUNT) rgb = wd.color ? wd.color : d.accent;
+			hpBar(v.ok ? (int)std::lround(std::min(a, 1e9)) : 0, m.ok ? (int)std::lround(std::min(z, 1e9)) : 0, x, y + 28, w, rgb);
+			break;
+		}
+		case gcomp::Widget::FLAGS: case gcomp::Widget::GRID:
+		{
+			float yy = y;
+			if (!wd.label.empty()) { heading(wd.label); yy += 24; }
+			gcomp::Val v = gameComp->eval(wd.value);
+			uint32_t bits = v.ok ? (uint32_t)(int64_t)v.v.num() : 0;
+			if (wd.invert) bits = ~bits;
+			float cx = 0;
+			int k = 0;
+			int sq = std::max(1, (int)std::lround(12 * s));
+			for (size_t i = 0; i < wd.items.size() && i < 32; i++)
+			{
+				const std::string& it = wd.items[i];
+				if (it.empty()) continue;
+				bool on = v.ok && (bits >> i & 1);
+				if (wd.type == gcomp::Widget::GRID)
+				{
+					float gx = x + (k % 4) * (w / 4), gy = yy + (k / 4) * 26;
+					be->fill(std::round(X(gx)), std::round(X(gy + 4)), (float)sq, (float)sq, on ? acc : p.line);
+					text(fit(it, false, 15, w / 4 - 24), false, 15, gx + 18, gy + 2, on ? p.ink : p.muted);
+					k++;
+					continue;
+				}
+				float cw = chip(it, 0, 0, 0, true);
+				if (cx > 0 && cx + cw > w) { cx = 0; yy += 26; }
+				chip(it, on ? d.accent : 0x4a4a52, x + cx, yy);
+				cx += cw + 6;
+			}
+			break;
+		}
+		case gcomp::Widget::STATIC:
+		{
+			auto paras = gcParas(wd.text);
+			float yy = y;
+			if (b.part == 0 && !wd.label.empty()) { heading(wd.label); yy += 24; }
+			if (b.part >= 0 && b.part < (int)paras.size()) wrapped(paras[b.part], 17, x, yy, w, 0, p.ink);
+			break;
+		}
+		case gcomp::Widget::KV:
+		{
+			float yy = y;
+			if (b.part == 0 && !wd.label.empty()) { heading(wd.label); yy += 24; }
+			if (b.part >= 0 && b.part < (int)wd.rows.size())
+			{
+				text(fit(wd.rows[b.part].first, true, 16, w * 0.38f), true, 16, x, yy + 2, acc);
+				wrapped(wd.rows[b.part].second, 16, x + w * 0.4f, yy, w * 0.6f, 0, p.ink);
+			}
+			break;
+		}
+		case gcomp::Widget::LIST:
+		{
+			const auto& rows = wd.listId < (int)sn.lists.size() ? sn.lists[wd.listId] : std::vector<std::vector<gcomp::Val>>();
+			if (b.part < 0)
+			{
+				float yy = y;
+				if (!wd.label.empty()) { heading(wd.label); yy += 24; }
+				if (rows.empty()) text(sn.seen ? "None right now." : "-", false, 16, x, yy + 4, p.muted);
+				break;
+			}
+			if (b.part >= (int)rows.size()) break;
+			const auto& row = rows[b.part];
+			be->fill(std::round(X(x)), std::round(X(y + 5)), std::round(X(3)), std::round(X(20)), acc);	// (a row to open)
+			be->fill(std::round(X(x)), std::round(X(y + 31)), std::round(X(w)), std::max(1.0f, std::round(X(1))), p.line);
+			x += 12; w -= 12;
+			// the name (the first field), then up to three others at the right, each "label value"
+			float right = x + w - 4;
+			for (int f = std::min((int)wd.fields.size(), 4) - 1; f >= 1; f--)
+			{
+				const gcomp::Field& fd = wd.fields[f];
+				std::string v = gcValue(row[f], fd.enumName, fd.format);
+				bool digits = row[f].ok && !row[f].v.isStr && fd.enumName.empty();
+				float vw = digits ? num(v, 16, 0, 0, p.ink, true) : text(fit(v, true, 16, 120), true, 16, 0, 0, p.ink, false, 0, true);
+				if (digits) num(v, 16, right - vw, y + 6, p.ink); else text(fit(v, true, 16, 120), true, 16, right - vw, y + 6, p.ink);
+				std::string l = fit(fd.label, false, 14, 90);
+				float lw = text(l, false, 14, 0, 0, p.muted, false, 0, true);
+				text(l, false, 14, right - vw - 6 - lw, y + 8, p.muted);
+				right -= vw + lw + 22;
+			}
+			std::string nm = gcValue(row[0], wd.fields[0].enumName, wd.fields[0].format);
+			text(fit(nm, true, 17, std::max(40.0f, right - x - 8)), true, 17, x + 2, y + 6, p.ink);
+			gcHits.push_back({ y, y + 32, wd.listId, b.part });
+			break;
+		}
+		}
+	}
+
+	void Settings::gcRowView(const SPal& p)
+	{
+		// a list's row in full: every field, one a line
+		const gcomp::Def& d = *gameComp->game();
+		const gcomp::Snapshot& sn = gameComp->snapshot();
+		const gcomp::Widget* lw = nullptr;
+		for (auto& w : d.pages[gcView].widgets) if (w.type == gcomp::Widget::LIST && w.listId == gcList) lw = &w;
+		if (!lw || gcList >= (int)sn.lists.size() || gcRow >= (int)sn.lists[gcList].size()) { gcList = gcRow = -1; return; }
+		const auto& row = sn.lists[gcList][gcRow];
+		box("bubble", false, 18, 14, 604, 54);
+		std::string nm = gcValue(row[0], lw->fields[0].enumName, lw->fields[0].format);
+		text(fit(nm, true, 22, 420), true, 22, 36, 28, p.ink);
+		std::string back = "Tap: back";
+		float bw = text(back, false, 15, 0, 0, p.muted, false, 0, true);
+		text(back, false, 15, 604 - bw, 32, p.muted);
+		box("bubble", false, 18, 76, 604, 336);
+		float y = GC_TOP;
+		for (size_t f = lw->fields.size() > 1 ? 1 : 0; f < lw->fields.size() && y + 32 <= 404; f++)
+		{
+			const gcomp::Field& fd = lw->fields[f];
+			std::string v = gcValue(row[f], fd.enumName, fd.format);
+			bool digits = row[f].ok && !row[f].v.isStr && fd.enumName.empty();
+			float vw = digits ? num(v, 19, 0, 0, p.ink, true) : text(fit(v, true, 19, GC_W * 0.6f), true, 19, 0, 0, p.ink, false, 0, true);
+			if (digits) num(v, 19, GC_X + GC_W - vw, y + 4, p.ink); else text(fit(v, true, 19, GC_W * 0.6f), true, 19, GC_X + GC_W - vw, y + 4, p.ink);
+			text(fit(fd.label, false, 17, GC_W - vw - 16), false, 17, GC_X, y + 6, p.muted);
+			be->fill(std::round(X(GC_X)), std::round(X(y + 30)), std::round(X(GC_W)), std::max(1.0f, std::round(X(1))), p.line);
+			y += 34;
+		}
+	}
+
+	void Settings::gcRender(const SPal& p)
+	{
+		const gcomp::Def& d = *gameComp->game();
+		const gcomp::Snapshot& sn = gameComp->snapshot();
+		gcHits.clear();
+		if (gcView < 0 || gcView >= gcomp::NUM_PAGES) gcView = gcomp::P_STATUS;
+		if (gcView == gcomp::P_BATTLE && d.pages[gcView].when.set && !gameComp->pageOn(gcView)) { gcView = gcomp::P_STATUS; gcList = gcRow = -1; }
+		gameComp->want(gcView, gcList);
+		const gcomp::Page& pg = d.pages[gcView];
+		if (gcRow >= 0) { gcRowView(p); if (gcRow >= 0) return; }
+		// ---- the header: the page, the game; "Reference" on a page of notes
+		box("bubble", false, 18, 14, 604, 54);
+		float rw = 0;
+		if (pg.reference)
+		{
+			rw = chip("Reference", 0x6a6a74, 0, 0, true);
+			chip("Reference", 0x6a6a74, 604 - rw, 30);
+			rw += 12;
+		}
+		else
+		{
+			std::string g = fit(d.title, true, 15, 260);
+			rw = text(g, true, 15, 0, 0, p.muted, false, 0, true);
+			text(g, true, 15, 604 - rw, 32, Color::hex(gcInk(d.accent, light)));
+			rw += 12;
+		}
+		text(fit(pg.title, true, 22, 568 - rw), true, 22, 36, 28, p.ink);
+		// ---- the page
+		bool live = !pg.reference;
+		if (live && !sn.seen)
+		{
+			box("bubble", false, 18, 76, 604, 336);
+			std::string why = !sn.error.empty() ? "RetroArch can't read the game's memory with this emulator: " + sn.error : "Waiting for the game...";
+			wrapped(why, 18, 40, 96, 560, 4, p.muted);
+			return;
+		}
+		if (pg.when.set && !gameComp->pageOn(gcView))
+		{
+			box("bubble", false, 18, 76, 604, 336);
+			wrapped("Nothing here right now: this page fills in when the game gets to it.", 18, 40, 96, 560, 3, p.muted);
+			return;
+		}
+		std::vector<GcBlock> blocks = gcBlocks(pg, GC_W);
+		// in screens: all of it when it fits the box, else as much as fits above the pager each time
+		const float full = 404 - GC_TOP, paged = 360 - GC_TOP;
+		float total = 0;
+		for (auto& b : blocks) total += b.h + 6;
+		std::vector<int> starts = { 0 };
+		if (total > full)
+		{
+			float h = 0;
+			for (size_t i = 0; i < blocks.size(); i++)
+			{
+				if (h > 0 && h + blocks[i].h > paged) { starts.push_back((int)i); h = 0; }
+				h += blocks[i].h + 6;
+			}
+		}
+		gcScreens = (int)starts.size();
+		gcScreen = std::max(0, std::min(gcScreen, gcScreens - 1));
+		box("bubble", false, 18, 76, 604, gcScreens > 1 ? 290 : 336);
+		size_t from = starts[gcScreen], to = gcScreen + 1 < gcScreens ? starts[gcScreen + 1] : blocks.size();
+		float y = GC_TOP, bottom = (gcScreens > 1 ? 360 : 404);
+		for (size_t i = from; i < to; i++)
+		{
+			if (y + std::min(blocks[i].h, 24.0f) > bottom) break;
+			gcBlock(p, blocks[i], GC_X, y, GC_W);
+			y += blocks[i].h + 6;
+		}
+		if (gcScreens > 1) pager(p, gcScreen, gcScreens, "");
+	}
+
+	void Settings::gcTabs(const SPal& p)
+	{
+		// the tab bar: the seven pages (Battle only in a fight when the game can tell), then Game (the panel's tiles)
+		const gcomp::Def& d = *gameComp->game();
+		box("bubble", false, 18, 424, 604, 46);
+		bool show[GC_TABS];
+		int n = 0;
+		for (int i = 0; i < GC_TABS; i++)
+		{
+			show[i] = i != gcomp::P_BATTLE || !d.pages[i].when.set || gameComp->pageOn(i);
+			n += show[i];
+		}
+		float cell = 604.0f / n, cx = 18;
+		Color acc = Color::hex(gcInk(d.accent, light));
+		static const char* const GENERIC[gcomp::NUM_PAGES] = { "Status", "Detail", "Battle", "Map", "Bag", "Collect", "Progress" };
+		for (int i = 0; i < GC_TABS; i++)
+		{
+			gcTabW[i] = 0;
+			if (!show[i]) continue;
+			bool on = gcView == i;
+			bool grey = i < gcomp::NUM_PAGES && d.pages[i].when.set && !gameComp->pageOn(i);
+			float size = n > 7 ? 13 : n > 6 ? 14 : 16;
+			// the tab's own name, else the page's title when it fits, else what the page is
+			std::string l = i == GC_GAME ? "Game" : !d.pages[i].tab.empty() ? d.pages[i].tab : d.pages[i].title;
+			if (i < gcomp::NUM_PAGES && d.pages[i].tab.empty() && text(l, true, size, 0, 0, p.ink, true, 0.5f, true) > cell - 6) l = GENERIC[i];
+			l = fit(l, true, size, cell - 6);
+			float w = text(l, true, size, 0, 0, p.ink, true, 0.5f, true);
+			float tx = std::round(cx + cell / 2 - w / 2);
+			text(l, true, size, tx, 438, on ? acc : grey ? p.line : p.muted, true, 0.5f);
+			if (on) be->fill(std::round(X(tx)), std::round(X(458)), std::round(X(w)), std::round(X(3)), acc);
+			gcTabX[i] = cx; gcTabW[i] = cell;
+			cx += cell;
+		}
 	}
 }

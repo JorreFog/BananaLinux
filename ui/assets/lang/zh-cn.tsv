@@ -245,6 +245,8 @@ settings		After 30 s	30 秒后
 settings		After 1 minute	1 分钟后
 settings		Pokémon companion	宝可梦助手
 settings		Pokémon Ruby, Sapphire, Emerald, FireRed and LeafGreen (the English releases) on the second screen: the party with levels, HP and moves, and in a battle the foe, its types and how each move does against it. Read from the game as it plays; other games keep the panel as it is. Needs Second screen on. Inspired by PokeDaisy by Lidor Itzhari.	宝可梦 红宝石、蓝宝石、绿宝石、火红、叶绿（英文版）在副屏上显示：队伍的等级、HP 和招式；对战时显示对手、其属性以及每个招式对它的效果。游玩时从游戏中读取；其他游戏的面板保持不变。需要开启副屏。灵感来自 Lidor Itzhari 的 PokeDaisy。
+settings		Game companion	游戏助手
+settings		Other Game Boy Advance games on the second screen: seven pages about the game as it plays (status, a closer look, the fight, the map, the bag, collectibles, progress), read from the game where it can be and notes where not. Pokémon games keep the Pokémon companion. Needs Second screen on. Inspired by PokeDaisy by Lidor Itzhari.	其他 Game Boy Advance 游戏在副屏上显示：游玩时关于游戏的七个页面（状态、详情、战斗、地图、背包、收集、进度），能从游戏读取的就实时读取，其余为说明。宝可梦游戏仍使用宝可梦助手。需要开启副屏。灵感来自 Lidor Itzhari 的 PokeDaisy。
 settings		Network	网络
 settings		Wi-Fi	Wi-Fi
 settings		The networks around: A on one joins it, with a password typed on the keyboard here (or by touch).	附近的网络：在其上按 A 即可加入，密码在此处用键盘输入（或触摸）。

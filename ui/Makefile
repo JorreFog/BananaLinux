@@ -8,7 +8,7 @@ CXXFLAGS ?= -O2
 override CXXFLAGS += -std=c++17 -Wall -Wno-unused-function
 override LDLIBS += -lpthread
 
-SRC = src/main.cpp src/lang.cpp src/soft.cpp src/kms.cpp src/colors.cpp src/input.cpp src/library.cpp src/sound.cpp src/splash.cpp src/settings.cpp src/settings_defaults.cpp src/wifi.cpp src/bluetooth.cpp src/zip.cpp src/carts.cpp src/cart3d.cpp src/theme.cpp src/pokemon.cpp src/json.cpp src/expr.cpp src/layout.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp
+SRC = src/main.cpp src/lang.cpp src/soft.cpp src/kms.cpp src/colors.cpp src/input.cpp src/library.cpp src/sound.cpp src/splash.cpp src/settings.cpp src/settings_defaults.cpp src/wifi.cpp src/bluetooth.cpp src/zip.cpp src/carts.cpp src/cart3d.cpp src/theme.cpp src/pokemon.cpp src/gamecomp.cpp src/json.cpp src/expr.cpp src/layout.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp
 PKGS = freetype2 libdrm zlib
 ifeq ($(ALSA),1)
 PKGS += alsa
@@ -36,6 +36,10 @@ host:
 tests/pokemon-test: tests/pokemon-test.cpp src/pokemon.cpp src/pokemon.h src/zip.cpp
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/pokemon-test.cpp src/pokemon.cpp src/zip.cpp -lz -lpthread
 
+# the game companion's engine (tests/run.sh runs it)
+tests/gamecomp-test: tests/gamecomp-test.cpp src/gamecomp.cpp src/gamecomp.h src/json.cpp src/expr.cpp src/zip.cpp
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/gamecomp-test.cpp src/gamecomp.cpp src/json.cpp src/expr.cpp src/zip.cpp -lz -lpthread
+
 # the left stick's deadzone and hysteresis (tests/run.sh runs it)
 tests/input-test: tests/input-test.cpp src/input.cpp src/input.h
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/input-test.cpp src/input.cpp
@@ -55,6 +59,6 @@ install:
 	cp -r assets/lang/. $(DESTDIR)/usr/share/banana/lang/
 
 clean:
-	rm -f banana-ui banana-leaseshim.so banana-scrape tests/pokemon-test tests/input-test
+	rm -f banana-ui banana-leaseshim.so banana-scrape tests/pokemon-test tests/gamecomp-test tests/input-test
 
 .PHONY: host install clean

@@ -12,6 +12,8 @@ fail=0
 # the Pokémon companion's decoder (on data made from the documented layouts), and the made-up game and replies it
 # leaves in $OUT for the game panel's run below
 make -s -C "$HERE" tests/pokemon-test >/dev/null && "$HERE/tests/pokemon-test" "$OUT" 2> "$OUT/pokemon-test.log" || { echo "FAIL the Pokémon companion's decoder: $(grep FAIL "$OUT/pokemon-test.log" | head -3)"; fail=1; }
+# the game companion's engine (matching, reads, values), and the made-up ROMs and replies for the game panel's run below
+make -s -C "$HERE" tests/gamecomp-test >/dev/null && "$HERE/tests/gamecomp-test" "$OUT" "$HERE/tests/companions" 2> "$OUT/gamecomp-test.log" || { echo "FAIL the game companion's engine: $(grep FAIL "$OUT/gamecomp-test.log" | head -3)"; fail=1; }
 # the left stick as a d-pad: its deadzone and hysteresis
 make -s -C "$HERE" tests/input-test >/dev/null && "$HERE/tests/input-test" 2> "$OUT/input-test.log" || { echo "FAIL the stick: $(grep FAIL "$OUT/input-test.log" | head -3)"; fail=1; }
 # every icon the theme's systems.cfg names is there (Poketool's tile pointed at the old Bank & Trade logo)
@@ -320,6 +322,35 @@ for size in 640x480 1024x768; do
         f=$OUT/$size-$s-bot.png
         [ -s "$f" ] || { echo "FAIL $size: no $f"; fail=1; continue; }
         [ "$(convert "$f" -format '%[fx:standard_deviation>0.01]' info: 2>/dev/null)" = 1 ] || { echo "FAIL $size: $f is blank"; fail=1; }
+    done
+    # the game panel with the game companion (gamecomp.h; definitions from the companion data in tests/companions):
+    # Castlevania's seven pages by their tabs with RetroArch's replies for each, a list row opened and closed, the Game
+    # tab; Golden Sun's party list; Tetris Worlds (reference pages: nothing read); Emerald (the Pokémon companion's)
+    glog=$OUT/$size-gamecomp.log
+    tab() { echo "gtouch $((18 + 604 * $1 / $2 + 302 / $2)) 447"; }
+    gcs="home 0; gcpanel 1 $HERE/tests/companions $OUT/gc-castlevania.gba; gshot gc-wait; gcfeed $OUT/gc-cv-status.txt; gshot gc-status"
+    i=1; for pg in detail battle map bag collection progress; do
+        gcs="$gcs; $(tab $i 8); gcfeed $OUT/gc-cv-$pg.txt; gshot gc-$pg"; i=$((i + 1))
+    done
+    gcs="$gcs; $(tab 4 8); gcfeed $OUT/gc-cv-bag.txt; gshot gc-bag2; gtouch 200 175; gshot gc-row; gtouch 200 175; gshot gc-row-back; $(tab 7 8); gshot gc-game"
+    gcs="$gcs; gcpanel 1 $HERE/tests/companions $OUT/gc-goldensun.gba; gcfeed $OUT/gc-gs-status.txt; gshot gc-gs-status; $(tab 1 8); gcfeed $OUT/gc-gs-detail.txt; gshot gc-gs-detail"
+    gcs="$gcs; gcpanel 1 $HERE/tests/companions $OUT/gc-tetris.gba; gcfeed -; gshot gc-tetris; gcpanel 1 $HERE/tests/companions $OUT/gc-emerald.gba"
+    "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "$gcs" 2> "$glog" || { echo "FAIL $size: banana-ui (game companion) exited $?"; fail=1; }
+    gcheck() { grep -q "$1" "$glog" || { echo "FAIL $size: no '$1' (game companion)"; fail=1; }; }
+    gcheck "gcpanel .*gc-castlevania.gba: companion Castlevania"
+    gcheck "gcfeed .*gc-cv-status.txt: asked [1-6] .* seen 1"
+    gcheck "gcpanel .*gc-goldensun.gba: companion Golden Sun"
+    gcheck "gcfeed -: asked 0 () seen 1"
+    gcheck "gcpanel .*gc-emerald.gba: companion none"
+    for s in gc-wait gc-status gc-detail gc-battle gc-map gc-bag gc-collection gc-progress gc-row gc-row-back gc-game gc-gs-status gc-gs-detail gc-tetris; do
+        f=$OUT/$size-$s-bot.png
+        [ -s "$f" ] || { echo "FAIL $size: no $f"; fail=1; continue; }
+        [ "$(convert "$f" -format '%[fx:standard_deviation>0.01]' info: 2>/dev/null)" = 1 ] || { echo "FAIL $size: $f is blank"; fail=1; }
+    done
+    for pair in "gc-wait gc-status" "gc-status gc-detail" "gc-detail gc-map" "gc-map gc-bag" "gc-bag gc-row" "gc-row gc-row-back" "gc-collection gc-progress" "gc-progress gc-game" "gc-gs-status gc-gs-detail"; do
+        a=${pair% *}; b=${pair#* }
+        cmp -s "$OUT/$size-$a-bot.png" "$OUT/$size-$b-bot.png" && { echo "FAIL $size: $a and $b are the same picture (game companion)"; fail=1; }
     done
     # the menu's UX checks (the row's ends, the box art's frame, text on the accent, ...)
     . "$HERE/tests/ux.sh"

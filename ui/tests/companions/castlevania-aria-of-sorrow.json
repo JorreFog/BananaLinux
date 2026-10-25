@@ -1,0 +1,428 @@
+{
+ "schema": 1,
+ "title": "Castlevania: Aria of Sorrow",
+ "match": {
+  "code": "A2CE",
+  "title12": "CASTLEVANIA2",
+  "crc32": [
+   "35536183"
+  ],
+  "zip": "Castlevania - Aria of Sorrow.zip"
+ },
+ "accent": "#8a2236",
+ "quality": "live-verified",
+ "sources": [
+  "RetroAchievements code notes game 510",
+  "gbaverify: new game start reads HP 320/320, MP 80/80, LV 1, STR 10; area/room/IGT live"
+ ],
+ "vars": {
+  "state": {
+   "addr": "0x02000010",
+   "type": "u8"
+  },
+  "area": {
+   "addr": "0x0200009E",
+   "type": "u8"
+  },
+  "room": {
+   "addr": "0x0200009F",
+   "type": "u8"
+  },
+  "igt": {
+   "addr": "0x020000AC",
+   "type": "u32"
+  },
+  "char": {
+   "addr": "0x02013266",
+   "type": "u8"
+  },
+  "lv": {
+   "addr": "0x02013279",
+   "type": "u8"
+  },
+  "hp": {
+   "addr": "0x0201327A",
+   "type": "u16"
+  },
+  "mp": {
+   "addr": "0x0201327C",
+   "type": "u16"
+  },
+  "hpmax": {
+   "addr": "0x0201327E",
+   "type": "u16"
+  },
+  "mpmax": {
+   "addr": "0x02013280",
+   "type": "u16"
+  },
+  "str": {
+   "addr": "0x02013282",
+   "type": "u16"
+  },
+  "con": {
+   "addr": "0x02013284",
+   "type": "u16"
+  },
+  "int": {
+   "addr": "0x02013286",
+   "type": "u16"
+  },
+  "lck": {
+   "addr": "0x02013288",
+   "type": "u16"
+  },
+  "exp": {
+   "addr": "0x0201328C",
+   "type": "u32"
+  },
+  "gold": {
+   "addr": "0x02013290",
+   "type": "u32"
+  },
+  "ail": {
+   "addr": "0x02013270",
+   "type": "u8"
+  },
+  "wpn": {
+   "addr": "0x02013268",
+   "type": "u8"
+  },
+  "bullet": {
+   "addr": "0x02013269",
+   "type": "u8"
+  },
+  "guardian": {
+   "addr": "0x0201326A",
+   "type": "u8"
+  },
+  "enchant": {
+   "addr": "0x0201326B",
+   "type": "u8"
+  },
+  "body": {
+   "addr": "0x0201326C",
+   "type": "u8"
+  },
+  "acc": {
+   "addr": "0x0201326D",
+   "type": "u8"
+  },
+  "souls": {
+   "addr": "0x02000360",
+   "type": "u16"
+  },
+  "bosses": {
+   "addr": "0x0200037E",
+   "type": "u16"
+  },
+  "ability": {
+   "addr": "0x02013392",
+   "type": "u32",
+   "mask": "0x00FFFFFF"
+  },
+  "inGame": {
+   "expr": "state == 4"
+  }
+ },
+ "enums": {
+  "areas": {
+   "0": "Castle Corridor",
+   "1": "Chapel",
+   "2": "Study",
+   "3": "Dance Hall",
+   "4": "Inner Quarters",
+   "5": "Floating Garden",
+   "6": "Clock Tower",
+   "7": "Underground Reservoir",
+   "8": "The Arena",
+   "9": "Top Floor",
+   "10": "Forbidden Area",
+   "11": "Chaotic Realm"
+  },
+  "chars": {
+   "0": "Soma Cruz",
+   "1": "Julius Belmont"
+  },
+  "states": {
+   "0": "Logo",
+   "1": "Title",
+   "2": "Starting",
+   "4": "In game",
+   "5": "Game over",
+   "6": "Credits",
+   "7": "Intro",
+   "8": "Boss Rush",
+   "10": "Soul trade",
+   "11": "Sound mode"
+  }
+ },
+ "pages": [
+  {
+   "id": "status",
+   "title": "Soma",
+   "widgets": [
+    {
+     "type": "text",
+     "label": "Hero",
+     "value": "char",
+     "enum": "chars"
+    },
+    {
+     "type": "number",
+     "label": "Level",
+     "value": "lv"
+    },
+    {
+     "type": "bar",
+     "label": "HP",
+     "value": "hp",
+     "max": "hpmax",
+     "color": "#d04040"
+    },
+    {
+     "type": "bar",
+     "label": "MP",
+     "value": "mp",
+     "max": "mpmax",
+     "color": "#4060d0"
+    },
+    {
+     "type": "number",
+     "label": "EXP",
+     "value": "exp",
+     "format": "thousands"
+    },
+    {
+     "type": "number",
+     "label": "Gold",
+     "value": "gold",
+     "format": "thousands"
+    },
+    {
+     "type": "flags",
+     "label": "Ailments",
+     "value": "ail",
+     "items": [
+      "Poison",
+      "Curse",
+      "Stone"
+     ]
+    },
+    {
+     "type": "number",
+     "label": "Play time",
+     "value": "igt",
+     "format": "time60"
+    }
+   ]
+  },
+  {
+   "id": "detail",
+   "title": "Stats & gear",
+   "widgets": [
+    {
+     "type": "number",
+     "label": "STR",
+     "value": "str"
+    },
+    {
+     "type": "number",
+     "label": "CON",
+     "value": "con"
+    },
+    {
+     "type": "number",
+     "label": "INT",
+     "value": "int"
+    },
+    {
+     "type": "number",
+     "label": "LCK",
+     "value": "lck"
+    },
+    {
+     "type": "number",
+     "label": "Weapon id",
+     "value": "wpn"
+    },
+    {
+     "type": "number",
+     "label": "Bullet soul id",
+     "value": "bullet"
+    },
+    {
+     "type": "number",
+     "label": "Guardian soul id",
+     "value": "guardian"
+    },
+    {
+     "type": "number",
+     "label": "Enchant soul id",
+     "value": "enchant"
+    },
+    {
+     "type": "number",
+     "label": "Armor id",
+     "value": "body"
+    },
+    {
+     "type": "number",
+     "label": "Accessory id",
+     "value": "acc"
+    },
+    {
+     "type": "static",
+     "text": "Souls come in three equip slots: Bullet (red, uses MP per shot, fired with Up+B), Guardian (blue, toggled with R, drains MP while active) and Enchanted (yellow, always on). Ability souls (grey) are permanent movement upgrades."
+    }
+   ]
+  },
+  {
+   "id": "battle",
+   "title": "Bosses",
+   "widgets": [
+    {
+     "type": "static",
+     "text": "Creaking Skull: stay low, hit its head when it swings, then back off from the bone throw.\nFlying Armor: aim upward (axe or Skeleton soul); it only hurts on contact and with fireballs.\nBalore: crouch and hit the eyes; jump the sweeping arms. Grants the slide-breaking Balore soul.\nGolem / Great Armor: stay just out of reach and punish after each attack ends.\nManticore: kill the tail first. Death: phase one drops sickles, phase two charges; holy and Valmanway-class weapons help.\nGraham: dodge the lightning circles; the true ending needs the Flame Demon, Giant Bat and Death souls equipped together when you fight him.",
+     "title": "Tips"
+    }
+   ]
+  },
+  {
+   "id": "map",
+   "title": "Castle",
+   "widgets": [
+    {
+     "type": "text",
+     "label": "Area",
+     "value": "area",
+     "enum": "areas"
+    },
+    {
+     "type": "number",
+     "label": "Room",
+     "value": "room"
+    },
+    {
+     "type": "text",
+     "label": "Mode",
+     "value": "state",
+     "enum": "states"
+    },
+    {
+     "type": "static",
+     "text": "Rough order: Castle Corridor -> Chapel -> Study -> Dance Hall -> Inner Quarters -> Floating Garden -> Clock Tower -> Underground Reservoir -> Arena (optional) -> Top Floor -> Forbidden Area -> Chaotic Realm (only on the good-ending route)."
+    }
+   ]
+  },
+  {
+   "id": "bag",
+   "title": "Gold & items",
+   "widgets": [
+    {
+     "type": "number",
+     "label": "Gold",
+     "value": "gold",
+     "format": "thousands"
+    },
+    {
+     "type": "list",
+     "title": "Usable items (count per slot)",
+     "base": "0x02013294",
+     "stride": 1,
+     "n": 32,
+     "fields": [
+      {
+       "name": "n",
+       "label": "Count",
+       "off": 0,
+       "type": "u8"
+      }
+     ],
+     "rowWhen": "n > 0"
+    },
+    {
+     "type": "static",
+     "text": "Potions heal HP, Mind Up restores MP, Uncurse and Antidote cure the matching ailment. The shop in the Castle Corridor sells most consumables; Hammer restocks as the story goes on."
+    }
+   ]
+  },
+  {
+   "id": "collection",
+   "title": "Souls",
+   "widgets": [
+    {
+     "type": "flags",
+     "label": "Event souls",
+     "value": "souls",
+     "items": [
+      "",
+      "Grave Keeper",
+      "Flying Armor",
+      "Malphas",
+      "Skeleton Blaze",
+      "Hippogryph",
+      "",
+      "Skula",
+      "",
+      "Galamoth",
+      "Black Panther"
+     ]
+    },
+    {
+     "type": "count",
+     "label": "Ability soul flags",
+     "value": "ability",
+     "total": 24,
+     "bits": true
+    },
+    {
+     "type": "static",
+     "text": "Every enemy carries a soul with its own drop rate (LCK raises it). Ability souls: Balore (break ice blocks), Malphas (double jump), Doppelganger (gear sets), Rahab (swim), Hippogryph (high jump), Skula (walk underwater), Undine (walk on water), Black Panther (dash)."
+    }
+   ]
+  },
+  {
+   "id": "progress",
+   "title": "Bosses beaten",
+   "widgets": [
+    {
+     "type": "flags",
+     "label": "Bosses",
+     "value": "bosses",
+     "items": [
+      "Graham",
+      "Death",
+      "Julius",
+      "",
+      "Headhunter",
+      "Legion",
+      "Balore",
+      "Chaos",
+      "",
+      "",
+      "Manticore",
+      "Creaking Skull",
+      "Big Golem",
+      "",
+      "",
+      "Great Armor"
+     ]
+    },
+    {
+     "type": "count",
+     "label": "Bosses beaten",
+     "value": "band(bosses, 0x9CF7)",
+     "total": 11,
+     "bits": true
+    },
+    {
+     "type": "number",
+     "label": "Play time",
+     "value": "igt",
+     "format": "time60"
+    }
+   ]
+  }
+ ]
+}
