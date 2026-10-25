@@ -328,10 +328,15 @@ namespace banana
 		add(D, "picture", "Clock", "How the time on the top screen is written.", menu, "clock", { "24-hour", "12-hour" }, { "24h", "12h" });
 		add(D, "picture", "Boot animation", "The bananas and the cartridge while Banana starts. Off goes straight to the menu once it is ready.", menu, "splash", { "On", "Off" }, { "on", "off" });
 		const char* P = "Sleep & power";
-		add(P, "moon", "Sleep when idle", "In the menu, after this long with no button pressed. Never while a game is running.", power, "autosleep_minutes",
-			{ "Never", "5 minutes", "10 minutes", "15 minutes", "30 minutes" }, { "0", "5", "10", "15", "30" });
-		add(P, "moon", "Dim when idle", "In the menu, the panels go down to a third after this long with no button pressed, and back at the first press. Never while a game is running.", power, "dim_minutes",
+		// the idle chain: dim, sleep, off (bananad.conf); input is a button, a touch or a stick pushed
+		add(P, "moon", "Dim when idle", "The panels go down to a third after this long with no input, and back at the next button or touch.", power, "dim_minutes",
 			{ "Never", "1 minute", "2 minutes", "5 minutes" }, { "0", "1", "2", "5" });
+		add(P, "moon", "Sleep when idle", "After this long with no input. In a game too with Idle timers set to Everywhere: the game pauses, as with the lid.", power, "autosleep_minutes",
+			{ "Never", "5 minutes", "10 minutes", "15 minutes", "30 minutes" }, { "0", "5", "10", "15", "30" });
+		add(P, "moon", "Turn off when idle", "Asleep this long, however it went to sleep (idle, the lid, the power button), it turns off cleanly: the game saves first. With Sleep when idle at Never, after this long with no input. Never on the charger.", power, "poweroff_minutes",
+			{ "Never", "5 minutes", "10 minutes", "15 minutes", "30 minutes", "1 hour", "3 hours", "6 hours" }, { "0", "5", "10", "15", "30", "60", "180", "360" });
+		add(P, "moon", "Idle timers", "In the menu: dimming, sleep and turning off only count in the menu. Everywhere: in games too; a touch or a stick counts as input, a long cutscene doesn't.", power, "idle_in_games",
+			{ "In the menu", "Everywhere" }, { "no", "yes" });
 		add(P, "moon", "Closing the lid", "Sleep with the lid: the game pauses, opening the lid carries on where you were.", power, "lid_sleep", { "Sleeps", "Does nothing" }, { "yes", "no" });
 		add(P, "moon", "Waking up", "Fast: the handheld's parts wake up together. Careful: one after the other, slower but the safest. Banana switches to Careful by itself if a sleep ever fails.",
 			power, "fast_resume", { "Fast", "Careful" }, { "yes", "no" });
@@ -741,8 +746,8 @@ namespace banana
 			// what the settings screen keeps outside settings.conf: bananad's sleep/LED rows (same defaults the rows
 			// show when the card has no line), the backlights and the mixer's level
 			static const struct { const char* key; const char* def; } BANANAD[] = {
-				{ "autosleep_minutes", "10" }, { "dim_minutes", "2" }, { "lid_sleep", "yes" },
-				{ "fast_resume", "yes" }, { "led_brightness", "128" } };
+				{ "autosleep_minutes", "10" }, { "dim_minutes", "2" }, { "poweroff_minutes", "60" }, { "idle_in_games", "no" },
+				{ "lid_sleep", "yes" }, { "fast_resume", "yes" }, { "led_brightness", "128" } };
 			for (const auto& b : BANANAD)
 				setConfValue(data + "/bananad.conf", b.key, getConfValue("/etc/banana/bananad.conf", b.key, b.def));
 			if (DIR* d = opendir("/sys/class/backlight"))
