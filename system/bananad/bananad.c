@@ -54,7 +54,7 @@ static struct {
 	char mixer[64];			/* ALSA simple control the volume keys change; "auto": the playing card's own */
 	int volume_step;		/* percent */
 	int brightness_step;	/* percent of max */
-	int autosleep_min;		/* idle minutes in the menu before sleeping; 0 = never */
+	double autosleep_min;	/* idle minutes before sleeping (0: never); in the menu, or everywhere (idle_in_games) */
 	int lid_sleep;			/* closing the lid sleeps */
 	int power_long_ms;		/* holding power this long shuts down */
 	int battery_off_pct;	/* at or under this, discharging: shut down */
@@ -64,9 +64,11 @@ static struct {
 	int fast_resume;		/* devices resume in parallel (/sys/power/pm_async) */
 	double sleep_check_hours;	/* asleep: wake this often to look at the battery (0: never) */
 	int sleep_poweroff_pct;	/* found at or under this while asleep: shut down cleanly */
-	double dim_min;			/* idle minutes in the menu before the panels dim (0: never) */
+	double dim_min;			/* idle minutes before the panels dim (0: never) */
 	int dim_pct;			/* dimmed to this percent of their brightness */
-} cfg = { "auto", 5, 8, 10, 1, 2000, 3, "deep", 128, 20, 5, 1, 4, 5, 2, 30 };
+	double poweroff_min;	/* asleep this long (any sleep), or idle this long when it never sleeps: off (0: never) */
+	int idle_in_games;		/* the idle timers (dim, sleep, off) in games too, not only in the menu */
+} cfg = { "auto", 5, 8, 10, 1, 2000, 3, "deep", 128, 20, 5, 1, 4, 5, 2, 30, 60, 0 };
 
 static int devfd[MAXDEV], ndev;
 static void leds_update(void);
@@ -120,7 +122,7 @@ static void load_conf(const char *path)
 		if (!strcmp(k, "mixer")) snprintf(cfg.mixer, sizeof cfg.mixer, "%s", v);
 		else if (!strcmp(k, "volume_step")) cfg.volume_step = atoi(v);
 		else if (!strcmp(k, "brightness_step")) cfg.brightness_step = atoi(v);
-		else if (!strcmp(k, "autosleep_minutes")) cfg.autosleep_min = atoi(v);
+		else if (!strcmp(k, "autosleep_minutes")) cfg.autosleep_min = atof(v);
 		else if (!strcmp(k, "lid_sleep")) cfg.lid_sleep = !strcmp(v, "yes") || !strcmp(v, "1");
 		else if (!strcmp(k, "power_long_ms")) cfg.power_long_ms = atoi(v);
 		else if (!strcmp(k, "battery_shutdown_percent")) cfg.battery_off_pct = atoi(v);
@@ -133,6 +135,8 @@ static void load_conf(const char *path)
 		else if (!strcmp(k, "sleep_poweroff_percent")) cfg.sleep_poweroff_pct = atoi(v);
 		else if (!strcmp(k, "dim_minutes")) cfg.dim_min = atof(v);
 		else if (!strcmp(k, "dim_percent")) cfg.dim_pct = atoi(v);
+		else if (!strcmp(k, "poweroff_minutes")) cfg.poweroff_min = atof(v);
+		else if (!strcmp(k, "idle_in_games")) cfg.idle_in_games = !strcmp(v, "yes") || !strcmp(v, "1");
 	}
 	fclose(f);
 }
@@ -412,7 +416,12 @@ static void suspend_now(const char *why)
 			if (!lid_closed) { woke = "lid opened"; break; }
 			continue;
 		}
-		time_t alarm = rtc_alarm((int)(cfg.sleep_check_hours * 3600));
+		/* the RTC's alarm: the battery check, or turning off (poweroff_minutes asleep, every sleep of this one counted),
+		 * whichever comes first */
+		int secs = (int)(cfg.sleep_check_hours * 3600);
+		double off_in = cfg.poweroff_min > 0 ? cfg.poweroff_min * 60 - asleep : -1;
+		if (off_in > 0 && (secs <= 0 || off_in < secs)) secs = (int)off_in + (off_in > (int)off_in);
+		time_t alarm = rtc_alarm(secs);
 		double t_in = mono();
 		struct timespec b0, b1;
 		clock_gettime(CLOCK_BOOTTIME, &b0);	/* BOOTTIME counts the time asleep, MONOTONIC doesn't */
@@ -445,6 +454,14 @@ static void suspend_now(const char *why)
 				sleep_log("battery check: %d%% after %.1f h asleep: shutting down", pct, asleep / 3600);
 				if (pg > 0) kill(-pg, SIGCONT);	/* the game gets SIGTERM next, to write its saves */
 				shutdown_now("battery empty while asleep");
+				return;
+			}
+			/* asleep long enough: off, as a held power button does (not on the charger: off, the RG DS Plus doesn't
+			 * charge; it sleeps on, the next alarm the battery check's) */
+			if (cfg.poweroff_min > 0 && asleep >= cfg.poweroff_min * 60 - 1 && !charger_online()) {
+				sleep_log("asleep %.0f min: turning off", asleep / 60);
+				if (pg > 0) kill(-pg, SIGCONT);	/* the game gets SIGTERM next, to write its saves */
+				shutdown_now("idle, asleep");
 				return;
 			}
 			continue;	/* enough battery: back to sleep at once */
@@ -483,6 +500,8 @@ static void suspend_now(const char *why)
 
 static void shutdown_now(const char *why)
 {
+	static int once;	/* (the reasons can line up: an idle turn-off and the battery in the same pass) */
+	if (once++) return;
 	say("shutting down (%s)", why);
 	pid_t game = pid_of("/run/banana/game.pid");
 	if (game) {
@@ -1009,10 +1028,96 @@ static int uevent_read(int fd)
 	return hit;
 }
 
+/* ---- input the idle timers can't hear on devfd ------------------------------------------------------------------
+ * The timers count from the last input, and devfd carries only keys and switches: the touchscreen's and the sticks'
+ * motion woke bananad 60-200 times a second (open_inputs). But a DS game played with the stylus alone, or a stick
+ * alone, isn't idle. Each touchscreen and stick gets a second descriptor that takes only EV_ABS, stamped with the
+ * monotonic clock and never polled: quiet_scan() reads what piled up when the timers are looked at, and moves
+ * last_input to the newest touch, or the newest time a stick was pushed at least halfway out (not its jitter round
+ * the centre; a stick held out counts as now). */
+#define QUIET_AXES 4
+static const int quiet_axis[QUIET_AXES] = { ABS_X, ABS_Y, ABS_RX, ABS_RY };
+static struct quiet { int fd, touch; int lo[QUIET_AXES], hi[QUIET_AXES]; } quiet[MAXDEV];
+static int nquiet;
+
+static int test_bit(const unsigned long *bits, int n) { return (bits[n / (8 * sizeof *bits)] >> (n % (8 * sizeof *bits))) & 1; }
+
+static void quiet_add(const char *path, int touch_only)
+{
+	if (nquiet >= MAXDEV) return;
+	int fd = open(path, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
+	if (fd < 0) return;
+	struct quiet q = { fd, touch_only, { 0 }, { 0 } };
+	if (!touch_only) {
+		unsigned long abs[(ABS_CNT + 8 * sizeof(long) - 1) / (8 * sizeof(long))] = { 0 };
+		unsigned long keys[(KEY_CNT + 8 * sizeof(long) - 1) / (8 * sizeof(long))] = { 0 };
+		if (ioctl(fd, EVIOCGBIT(EV_ABS, sizeof abs), abs) < 0) { close(fd); return; }	/* (not an evdev node) */
+		ioctl(fd, EVIOCGBIT(EV_KEY, sizeof keys), keys);
+		q.touch = test_bit(abs, ABS_MT_POSITION_X) || test_bit(keys, BTN_TOUCH);
+		int any = q.touch;
+		for (int a = 0; a < QUIET_AXES && !q.touch; a++) {
+			struct input_absinfo ai;
+			if (test_bit(abs, quiet_axis[a]) && !ioctl(fd, EVIOCGABS(quiet_axis[a]), &ai) && ai.maximum > ai.minimum) {
+				q.lo[a] = ai.minimum; q.hi[a] = ai.maximum; any = 1;
+			}
+		}
+		if (!any) { close(fd); return; }	/* buttons only: devfd hears them */
+		unsigned long types = 1ul << EV_ABS;	/* (EV_SYN always comes; an empty report doesn't) */
+		struct input_mask m = { .type = 0, .codes_size = sizeof types, .codes_ptr = (uint64_t)(uintptr_t)&types };
+		ioctl(fd, EVIOCSMASK, &m);
+		int clk = CLOCK_MONOTONIC;
+		ioctl(fd, EVIOCSCLOCKID, &clk);
+	}
+	quiet[nquiet++] = q;
+}
+
+/* a stick at least halfway out */
+static int quiet_pushed(const struct quiet *q, int code, int value)
+{
+	for (int a = 0; a < QUIET_AXES; a++)
+		if (quiet_axis[a] == code && q->hi[a] > q->lo[a]) {
+			long mid = ((long)q->lo[a] + q->hi[a]) / 2, half = ((long)q->hi[a] - q->lo[a]) / 2;
+			return labs((long)value - mid) * 2 > half;
+		}
+	return 0;
+}
+
+/* 1 when it moved last_input on */
+static int quiet_scan(void)
+{
+	double newest = 0, now = mono();
+	for (int i = 0; i < nquiet; i++) {
+		struct quiet *q = &quiet[i];
+		struct input_event ev[64];
+		ssize_t r;
+		while ((r = read(q->fd, ev, sizeof ev)) > 0)
+			for (int k = 0; k < r / (ssize_t)sizeof ev[0]; k++) {
+				const struct input_event *e = &ev[k];
+				/* (SYN_DROPPED: the buffer overflowed with motion, at its time) */
+				int moved = q->touch ? (e->type == EV_ABS || (e->type == EV_SYN && e->code == SYN_DROPPED))
+					: (e->type == EV_ABS && quiet_pushed(q, e->code, e->value));
+				double t = e->input_event_sec + e->input_event_usec / 1e6;
+				if (moved && t > newest) newest = t > now ? now : t;
+			}
+		for (int a = 0; a < QUIET_AXES && !q->touch; a++) {
+			struct input_absinfo ai;
+			if (q->hi[a] > q->lo[a] && !ioctl(q->fd, EVIOCGABS(quiet_axis[a]), &ai) && quiet_pushed(q, quiet_axis[a], ai.value)) newest = now;
+		}
+	}
+	if (newest <= last_input) return 0;
+	last_input = newest;
+	return 1;
+}
+
 static void open_inputs(void)
 {
 	for (int i = 0; i < ndev; i++) close(devfd[i]);
 	ndev = 0;
+	for (int i = 0; i < nquiet; i++) close(quiet[i].fd);
+	nquiet = 0;
+	/* the sleep test's stand-in touchscreen (a FIFO of input_event records with monotonic times) */
+	const char *test_touch = getenv("BANANAD_TEST_TOUCH");
+	if (test_touch) quiet_add(test_touch, 1);
 	DIR *d = opendir("/dev/input");
 	if (!d) return;
 	struct dirent *e;
@@ -1029,6 +1134,7 @@ static void open_inputs(void)
 		struct input_mask m = { .type = 0, .codes_size = sizeof types, .codes_ptr = (uint64_t)(uintptr_t)&types };
 		ioctl(fd, EVIOCSMASK, &m);
 		devfd[ndev++] = fd;
+		quiet_add(path, 0);
 	}
 	closedir(d);
 	read_lid();
@@ -1127,7 +1233,8 @@ int main(int argc, char **argv)
 	last_input = mono();
 	double next_battery = 0;
 	int low_count = 0;
-	say("running: lid %s, auto-sleep %d min, %s", cfg.lid_sleep ? "sleeps" : "ignored", cfg.autosleep_min, cfg.mem_sleep);
+	say("running: lid %s, auto-sleep %g min, off after %g min, idle timers %s, %s", cfg.lid_sleep ? "sleeps" : "ignored",
+		cfg.autosleep_min, cfg.poweroff_min, cfg.idle_in_games ? "everywhere" : "in the menu", cfg.mem_sleep);
 
 	for (;;) {
 		struct pollfd pf[MAXDEV + 2];
@@ -1147,9 +1254,14 @@ int main(int argc, char **argv)
 		/* (only deadlines still ahead: one already passed was acted on after the last poll, or is held back by what
 		 * the action checks (the charger, the lid, no backlight) and a uevent or an input event brings it back; counted
 		 * here it spun this loop every 20 ms, on the charger for as long as the menu sat idle) */
-		if (!game) {
+		/* the idle timers: in the menu, or in games too (idle_in_games) */
+		int idle_ok = !game || cfg.idle_in_games;
+		if (idle_ok) {
 			if (cfg.autosleep_min > 0 && !awake) { double d = cfg.autosleep_min * 60.0 - (tnow - last_input); if (d > 0 && d < wait) wait = d; }
 			if (cfg.dim_min > 0 && !dimmed) { double d = cfg.dim_min * 60.0 - (tnow - last_input); if (d > 0 && d < wait) wait = d; }
+			/* never sleeping: turning off counts from the last input instead */
+			if (cfg.poweroff_min > 0 && cfg.autosleep_min <= 0 && !awake) { double d = cfg.poweroff_min * 60.0 - (tnow - last_input); if (d > 0 && d < wait) wait = d; }
+			if (dimmed && nquiet && wait > 1) wait = 1;	/* dimmed: a touch brings the panels back within a second */
 		}
 		if (lid_closed && cfg.lid_sleep && !lid_retry_off) { double d = 5.0 - (tnow - last_input); if (d > 0 && d < wait) wait = d; }
 		if ((save_volume_at > 0 || save_backlight_at > 0) && wait > 0.5) wait = 0.5;
@@ -1165,7 +1277,8 @@ int main(int argc, char **argv)
 			save_volume_at = mono() + 2;	/* the settings screen may have set the volume: keep it as the keys' is kept */
 			leds_last = -2;
 			leds_update();
-			say("settings read again: lid %s, auto-sleep %d min, LEDs %d", cfg.lid_sleep ? "sleeps" : "ignored", cfg.autosleep_min, cfg.led_brightness);
+			say("settings read again: lid %s, auto-sleep %g min, off after %g min, LEDs %d", cfg.lid_sleep ? "sleeps" : "ignored",
+				cfg.autosleep_min, cfg.poweroff_min, cfg.led_brightness);
 		}
 
 		for (int i = 0; i < ndev; i++) {
@@ -1186,13 +1299,23 @@ int main(int argc, char **argv)
 
 		if (power_down && now - power_since >= cfg.power_long_ms / 1000.0) { power_down = 0; shutdown_now("power held"); }
 
-		/* idle in the menu (no game running): the panels dim, then it sleeps */
+		/* idle (in the menu, or in a game too with idle_in_games): the panels dim, then it sleeps, then it turns off
+		 * (suspend_now counts the time asleep). A touch or a stick since the last look counts as input */
 		game = pid_of("/run/banana/game.pid") != 0;
-		if (cfg.dim_min > 0 && !dimmed && !game && !lid_closed && now - last_input >= cfg.dim_min * 60.0) dim();
+		int idle = !game || cfg.idle_in_games;
+		if (idle && quiet_scan()) undim();
+		if (cfg.dim_min > 0 && !dimmed && idle && !lid_closed && now - last_input >= cfg.dim_min * 60.0) dim();
 		/* (not while charging: a sleep would put the charging light out; the menu stays dimmed instead) */
-		if (cfg.autosleep_min > 0 && !game && now - last_input >= cfg.autosleep_min * 60.0 && !charger_online() &&
+		if (cfg.autosleep_min > 0 && idle && now - last_input >= cfg.autosleep_min * 60.0 && !charger_online() &&
 		    !pid_of("/run/banana/awake.pid"))
 			suspend_now("idle");
+		/* never sleeping (autosleep_minutes 0): off after poweroff_minutes without input, as a held power button does
+		 * (the game saves first); not on the charger */
+		if (cfg.poweroff_min > 0 && cfg.autosleep_min <= 0 && idle && now - last_input >= cfg.poweroff_min * 60.0 &&
+		    !charger_online() && !pid_of("/run/banana/awake.pid")) {
+			sleep_log("idle %.0f min: turning off", (now - last_input) / 60);
+			shutdown_now("idle");
+		}
 		/* started or woken with the lid shut */
 		if (lid_closed && cfg.lid_sleep && !lid_retry_off && now - last_input > 5) suspend_now("lid still closed");
 

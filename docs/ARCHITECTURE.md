@@ -169,9 +169,14 @@ What a wake costs is then the kernel's device resume: on the RG DS mostly the tw
 card; on the RG DS Plus the panels take about a fifth of that. `system/bananad/tests/sleep-test.sh` runs all of the
 above against a made-up `/sys` in its own namespaces (a FIFO for `/sys/power/state`, real input events for the lid).
 
-Two idle minutes in the menu dim both panels to 30% (`dim_minutes`, `dim_percent`); the first press brings them
-back, and a game is never dimmed. bananad itself sleeps in `poll()` until something is due (the battery look once a
-minute, the dim or sleep deadline, a pending save), so an idle handheld wakes it about once a minute. Hold power
+Idle, the handheld dims, sleeps, then turns off: two minutes without input dim both panels to 30% (`dim_minutes`,
+`dim_percent`), ten put it to sleep (`autosleep_minutes`), and an hour asleep, however it went to sleep, turns it off
+as a held power button does (`poweroff_minutes`: the RTC alarm that wakes it for the battery check wakes it for that
+too; with sleep set to never, an hour without input awake). Input is a button, a touch or a stick pushed: the
+touchscreen and the sticks have a second, unpolled descriptor read when the timers are due, so their motion never
+wakes bananad. The timers count in the menu, or in games too with `idle_in_games` (a game is paused by a sleep, as by
+the lid); never on the charger. bananad itself sleeps in `poll()` until something is due (the battery look once a
+minute, the dim, sleep or turn-off deadline, a pending save), so an idle handheld wakes it about once a minute. Hold power
 2 s to shut down; volume keys change the mixer, F + volume the backlights; a battery at 3% and discharging shuts
 down cleanly. Settings: `/etc/banana/bananad.conf`, overridden by `/data/banana/bananad.conf`
 (the settings screen writes it and sends SIGHUP).
