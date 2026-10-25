@@ -494,6 +494,8 @@ namespace banana
 		add(O, "gamepad", "Quick resume", "On: quitting keeps where you are, and the game goes on from there next time (RetroArch's automatic save state; not in Hardcore). Off: a game starts from its title.", "/data/retroarch/retroarch.cfg", "savestate_auto_save", { "Off", "On" }, { "false", "true" });
 		add(O, "picture", "Shader", "A look for the systems RetroArch runs: a handheld's LCD grid, a CRT's scanlines, or sharp pixels at any size. RetroArch's own Shaders menu still picks any of libretro's presets.",
 			menu, "ra_shader", { "Off", "LCD", "CRT", "Sharp pixels" }, { "off", "lcd", "crt", "sharp" });
+		add(O, "picture", "Screen border", "On: the black around a game's picture filled with a quiet border in the menu's colours (the theme's), the picture at a sharp whole-number size where that fits. The DS, and a picture that already fills the screen, have none.",
+			menu, "ra_border", { "Off", "On" }, { "off", "on" });
 		add(O, "music", "Audio latency", "RetroArch's audio buffer. Low is the quickest to react and can crackle on a busy game; Safe has the most margin (and the most delay).",
 			menu, "ra_audio_latency", { "Low (32 ms)", "Default (64 ms)", "Safe (128 ms)" }, { "32", "64", "128" });
 		add(O, "picture", "VSync", "On waits for the panel's refresh before drawing the next frame, so nothing tears. Off lets a core run as fast as it can; the panel can show a half-drawn frame.",
