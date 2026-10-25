@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <climits>
 #include <cstring>
+#include <ctime>
 #include <dirent.h>
 #include <fcntl.h>
 #include <linux/input.h>
@@ -155,6 +156,12 @@ namespace banana
 		ssize_t n;
 		while ((n = ::read(fd, ev, sizeof ev)) > 0)
 		{
+			// the events' times (CLOCK_REALTIME, evdev's default) on the menu's clock (CLOCK_MONOTONIC)
+			timespec rt, mt;
+			clock_gettime(CLOCK_REALTIME, &rt);
+			clock_gettime(CLOCK_MONOTONIC, &mt);
+			double off = (mt.tv_sec - rt.tv_sec) * 1000.0 + (mt.tv_nsec - rt.tv_nsec) / 1e6;
+			auto sink1 = [&](InputEvent& o, const input_event& e) { o.t = e.input_event_sec * 1000.0 + e.input_event_usec / 1000.0 + off; sink(o); };
 			for (int i = 0; i < n / (int)sizeof(input_event); i++)
 			{
 				const input_event& e = ev[i];
@@ -171,9 +178,9 @@ namespace banana
 						float sx = dv->maxX > dv->minX ? (float)pw / (dv->maxX - dv->minX + 1) : 1;
 						float sy = dv->maxY > dv->minY ? (float)ph / (dv->maxY - dv->minY + 1) : 1;
 						o.x = (dv->x - dv->minX) * sx; o.y = (dv->y - dv->minY) * sy;
-						if (dv->down && !dv->wasDown) { o.type = InputEvent::TOUCH_DOWN; sink(o); }
-						else if (dv->down && dv->moved) { o.type = InputEvent::TOUCH_MOVE; sink(o); }
-						else if (!dv->down && dv->wasDown) { o.type = InputEvent::TOUCH_UP; sink(o); }
+						if (dv->down && !dv->wasDown) { o.type = InputEvent::TOUCH_DOWN; sink1(o, e); }
+						else if (dv->down && dv->moved) { o.type = InputEvent::TOUCH_MOVE; sink1(o, e); }
+						else if (!dv->down && dv->wasDown) { o.type = InputEvent::TOUCH_UP; sink1(o, e); }
 						dv->wasDown = dv->down;
 						dv->moved = false;
 					}
@@ -186,7 +193,7 @@ namespace banana
 					InputEvent o;
 					o.type = e.value ? InputEvent::PRESS : InputEvent::RELEASE;
 					o.key = k;
-					sink(o);
+					sink1(o, e);
 				}
 				else if (e.type == EV_ABS && dv->stick && (e.code == ABS_X || e.code == ABS_Y))
 				{
@@ -195,16 +202,16 @@ namespace banana
 					int a = e.code == ABS_Y, dir = stickStep(dv->stickDir[a], e.value - dv->stickMid[a], dv->stickHalf[a]);
 					if (dir == dv->stickDir[a]) continue;
 					Key neg = a ? Key::UP : Key::LEFT, pos = a ? Key::DOWN : Key::RIGHT;
-					if (dv->stickDir[a] != 0) { InputEvent o; o.type = InputEvent::RELEASE; o.key = dv->stickDir[a] < 0 ? neg : pos; sink(o); }
-					if (dir != 0) { InputEvent o; o.type = InputEvent::PRESS; o.key = dir < 0 ? neg : pos; sink(o); }
+					if (dv->stickDir[a] != 0) { InputEvent o; o.type = InputEvent::RELEASE; o.key = dv->stickDir[a] < 0 ? neg : pos; sink1(o, e); }
+					if (dir != 0) { InputEvent o; o.type = InputEvent::PRESS; o.key = dir < 0 ? neg : pos; sink1(o, e); }
 					dv->stickDir[a] = dir;
 				}
 				else if (e.type == EV_ABS && (e.code == ABS_HAT0X || e.code == ABS_HAT0Y))
 				{
 					int& last = e.code == ABS_HAT0X ? dv->hatX : dv->hatY;
 					Key neg = e.code == ABS_HAT0X ? Key::LEFT : Key::UP, pos = e.code == ABS_HAT0X ? Key::RIGHT : Key::DOWN;
-					if (last != 0) { InputEvent o; o.type = InputEvent::RELEASE; o.key = last < 0 ? neg : pos; sink(o); }
-					if (e.value != 0) { InputEvent o; o.type = InputEvent::PRESS; o.key = e.value < 0 ? neg : pos; sink(o); }
+					if (last != 0) { InputEvent o; o.type = InputEvent::RELEASE; o.key = last < 0 ? neg : pos; sink1(o, e); }
+					if (e.value != 0) { InputEvent o; o.type = InputEvent::PRESS; o.key = e.value < 0 ? neg : pos; sink1(o, e); }
 					last = e.value;
 				}
 			}

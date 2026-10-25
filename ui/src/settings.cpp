@@ -36,15 +36,46 @@ namespace banana
 		return a == std::string::npos ? "" : s.substr(a, b - a + 1);
 	}
 
+	// While a ConfMemo is alive (Settings::open's reading of every row, nothing written meanwhile), each file is read
+	// once: RetroArch's ~1500-line retroarch.cfg was read twice a row, ~2.3 ms a row on the RG DS
+	static thread_local std::map<std::string, std::map<std::string, std::string>>* confMemo = nullptr;	// (this thread's only)
+	struct ConfMemo
+	{
+		std::map<std::string, std::map<std::string, std::string>> files;
+		ConfMemo() { if (!confMemo) confMemo = &files; }
+		~ConfMemo() { if (confMemo == &files) confMemo = nullptr; }
+	};
+
 	std::string getConfValue(const std::string& path, const std::string& key, const std::string& def)
 	{
-		std::ifstream f(path);
 		std::string ln, r = def;
-		while (std::getline(f, ln))
+		if (confMemo)
 		{
-			if (ln.empty() || ln[0] == '#') continue;
-			size_t eq = ln.find('=');
-			if (eq != std::string::npos && trim(ln.substr(0, eq)) == key) r = trim(ln.substr(eq + 1));
+			auto it = confMemo->find(path);
+			if (it == confMemo->end())
+			{
+				std::map<std::string, std::string> kv;	// (the last line for a key wins, as below)
+				std::ifstream f(path);
+				while (std::getline(f, ln))
+				{
+					if (ln.empty() || ln[0] == '#') continue;
+					size_t eq = ln.find('=');
+					if (eq != std::string::npos) kv[trim(ln.substr(0, eq))] = trim(ln.substr(eq + 1));
+				}
+				it = confMemo->emplace(path, std::move(kv)).first;
+			}
+			auto v = it->second.find(key);
+			if (v != it->second.end()) r = v->second;
+		}
+		else
+		{
+			std::ifstream f(path);
+			while (std::getline(f, ln))
+			{
+				if (ln.empty() || ln[0] == '#') continue;
+				size_t eq = ln.find('=');
+				if (eq != std::string::npos && trim(ln.substr(0, eq)) == key) r = trim(ln.substr(eq + 1));
+			}
 		}
 		// shell files quote their values
 		if (r.size() >= 2 && (r[0] == '"' || r[0] == '\'') && r.back() == r[0]) r = r.substr(1, r.size() - 2);
@@ -231,7 +262,22 @@ namespace banana
 		// the Theme setting's value (theme.cpp): its palette, a user theme's colours, files and accent set (or cleared)
 		std::string v = applyTheme(value, getConfValue(data + "/settings.conf", "accent", "yellow"));
 		bool l = v == "light";
-		light = l; cache.clear();	// (also for a new accent: the boxes are drawn again)
+		light = l;
+		// the boxes, texts and icons drawn again only for another look (theme, accent, a theme file changed): every
+		// Start press comes here, and drawing them all anew made each Settings open ~80 ms slower on the RG DS
+		std::string look = v + "|" + value + "|" + std::to_string(rnds::accentTextMode);
+		{
+			const rnds::Accent& a = rnds::accent;
+			for (uint32_t c : { a.base, a.light, a.dark, a.band, a.low }) look += "|" + std::to_string(c);
+			for (auto& e : rnds::themeColors) look += "|" + e.first + "=" + std::to_string(e.second);
+			const rnds::ThemeFiles& f = rnds::themeFiles;
+			look += "|" + f.fontRegular + "|" + f.fontMedium + "|" + f.wallTop + "|" + f.wallBottom + "|" + f.logo + (f.dither ? "|d" : "|-");
+			struct stat st;
+			std::string tp = themePath(value);
+			if (!tp.empty() && stat(tp.c_str(), &st) == 0) look += "|" + std::to_string((long long)st.st_mtim.tv_sec) + "." + std::to_string(st.st_mtim.tv_nsec);
+		}
+		// (and now and then anyway: texts that came and went, a clock's minutes, a scan's networks, would pile up)
+		if (look != drawnLook || cache.size() > 1000) { cache.clear(); drawnLook = look; }	// (also for a new accent: the boxes are drawn again)
 		// the Carts theme writes in Inter (a clean typeface), the others in the theme's Pixelify Sans
 		bool clean = v == "carts" && !fontDir.empty();
 		std::string fonts = clean ? "carts" : rnds::themeFiles.fontRegular + "|" + rnds::themeFiles.fontMedium;
@@ -644,18 +690,10 @@ namespace banana
 		}
 		if (it.kind == Item::VOLUME)
 		{
-			// the playing card's level, from the volume script (bananad writes which card plays)
-			int pct = -1;
-			{
-				FILE* p = popen("/usr/libexec/banana/volume get 2>/dev/null", "r");
-				if (p)
-				{
-					char ln[64];
-					if (fgets(ln, sizeof ln, p)) { int v; if (sscanf(ln, "%d", &v) == 1) pct = v; }
-					pclose(p);
-				}
-			}
-			it.at = pct < 0 ? 5 : std::min(10, std::max(0, (pct + 5) / 10));
+			// the playing card's level, from the volume script (bananad writes which card plays), in the background: the
+			// script took ~22 ms on the RG DS, a fifth of every Settings open; update() puts its answer on the row
+			if (!volJob.running()) volJob.start("/usr/libexec/banana/volume get 2>/dev/null", sync);
+			volPending = true;
 			return;
 		}
 		if (it.kind != Item::CHOICE) return;
@@ -774,7 +812,10 @@ namespace banana
 				if (std::find(groups.begin(), groups.end(), it.section) == groups.end()) groups.push_back(it.section);
 		inGroups = true;
 		gsel = std::min(groupOf(sel), gridCount() - 1);	// (Power has no tile: back on the first)
-		for (auto& it : items) load(it);
+		{
+			ConfMemo memo;	// (every row's file read once)
+			for (auto& it : items) load(it);
+		}
 		refreshInfo();
 		armed = -1;
 		page = LIST;
@@ -945,6 +986,7 @@ namespace banana
 		}
 		int n = (int)it.values.size();
 		int at = it.at + dir;
+		if (it.kind == Item::VOLUME) volPending = false;	// (the level asked for wins over the script's late answer)
 		if (it.kind == Item::BRIGHTNESS || it.kind == Item::VOLUME) at = std::min(n - 1, std::max(0, at));	// a slider stops at its ends
 		else at = (at + n) % n;
 		if (at == it.at) return NONE;
@@ -1810,6 +1852,15 @@ namespace banana
 			}
 			changed = true;
 		}
+		if (volJob.take(out))
+		{
+			int pct = -1, v;
+			if (sscanf(out.c_str(), "%d", &v) == 1) pct = v;
+			if (volPending)
+				for (auto& it : items)
+					if (it.kind == Item::VOLUME) { it.at = pct < 0 ? 5 : std::min(10, std::max(0, (pct + 5) / 10)); changed = true; }
+			volPending = false;
+		}
 		if (statusJob.take(out))
 		{
 			wifi::Status st = wifi::parseStatus(out);
@@ -1848,7 +1899,7 @@ namespace banana
 
 	int Settings::pageWake(double t) const
 	{
-		if (scanJob.running() || statusJob.running() || artJob.running() || checkJob.running()) return 100;
+		if (scanJob.running() || statusJob.running() || artJob.running() || checkJob.running() || volJob.running()) return 100;
 		if (btListJob.running() || btScanJob.running() || btActJob.running()) return 100;
 		if (page == UPDATES && applying) return std::max(0, (int)(nextStatus2 - t));
 		if (page == UPDATES && downloading) return std::max(0, (int)(nextDl - t));

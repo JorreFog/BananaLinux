@@ -189,6 +189,8 @@ namespace banana
 		std::string wifiTool, wifiConf;
 		bool sync = false;
 		wifi::Job scanJob, statusJob;
+		wifi::Job volJob;			// the Volume row's level (the volume script), read as Settings opens without waiting on it
+		bool volPending = false;	// its answer still to be shown (a press on the row first: the press's level stays)
 		// the game page's Box art (#28): the names banana-scrape --search found for the words typed, one picked, and
 		// banana-scrape --match fetching its pictures
 		wifi::Job artJob;
@@ -305,6 +307,7 @@ namespace banana
 		std::string fontDir;		// Inter's TTFs (the Carts theme)
 		bool cleanFonts = false;
 		std::string fontsLoaded;	// the fonts R and M are (setVariant): a user theme's, or "carts"
+		std::string drawnLook;	// what the cache's pictures were drawn for (setVariant): the same look again keeps them
 		struct Cached { rnds::TexPtr tex; int ox = 0, oy = 0; float w = 0; };
 		std::map<std::string, Cached> cache;
 

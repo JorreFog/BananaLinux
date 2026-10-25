@@ -1122,10 +1122,32 @@ struct FrameStats
 	bool on = getenv("BANANA_FRAME_STATS") != nullptr;
 	double start = 0, last = 0, drawSum = 0, drawMax = 0, copySum = 0, copyMax = 0;
 	int frames = 0, draws = 0, gap[4] = {};
-	void draw(double ms) { if (!on) return; draws++; drawSum += ms; drawMax = std::max(drawMax, ms); }
-	void present(double t, double copyMs)
+	// a press's way to the panels: the kernel's event, the frame it changed drawn (from, to), handed to the panels, and
+	// both panels' flips done (the vblank that shows it), one log line a press
+	double pressAt = 0, drawFrom = 0, drawTo = 0, presentAt = 0;
+	void press(double t)
 	{
 		if (!on) return;
+		if (t <= 0) t = nowMs();
+		if (pressAt > 0 && t - pressAt > 1000) pressAt = drawFrom = drawTo = presentAt = 0;	// (one that drew nothing)
+		if (pressAt == 0) pressAt = t;
+	}
+	void draw(double t0, double ms)
+	{
+		if (!on) return;
+		draws++; drawSum += ms; drawMax = std::max(drawMax, ms);
+		if (pressAt > 0 && drawFrom == 0) { drawFrom = t0; drawTo = t0 + ms; }
+	}
+	void flipped(double t)
+	{
+		if (!on || presentAt == 0) return;
+		logf("press: %.1f ms to the panels (read+wait %.1f, draw %.1f, copy+flip wait %.1f)", t - pressAt, drawFrom - pressAt, drawTo - drawFrom, t - drawTo);
+		pressAt = drawFrom = drawTo = presentAt = 0;
+	}
+	void present(double t, double copyMs, bool flipped = true)
+	{
+		if (!on) return;
+		if (drawFrom > 0 && presentAt == 0) { if (flipped) presentAt = t; else pressAt = drawFrom = drawTo = 0; }
 		if (last > 0 && t - last < 500) { int g = (int)((t - last) / 16.667 + 0.5); gap[std::min(3, std::max(0, g - 1))]++; }
 		if (start == 0) start = t;
 		last = t;
@@ -1134,7 +1156,9 @@ struct FrameStats
 		{
 			logf("frames: %d in %.0f ms, gaps 1:%d 2:%d 3:%d 4+:%d refreshes, draw %.1f/%.1f ms, copy %.1f/%.1f ms (avg/max)",
 				frames, t - start, gap[0], gap[1], gap[2], gap[3], draws ? drawSum / draws : 0, drawMax, copySum / frames, copyMax);
+			double keep[4] = { pressAt, drawFrom, drawTo, presentAt };
 			*this = FrameStats();
+			pressAt = keep[0]; drawFrom = keep[1]; drawTo = keep[2]; presentAt = keep[3];
 		}
 	}
 };
@@ -1434,7 +1458,7 @@ int main(int argc, char** argv)
 	auto handle = [&](const InputEvent& ev)
 	{
 		// (the bottom screen's idle dim is a game-panel thing only, so its touch handling is in gamePanel's own sink)
-		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) boost.frame(nowMs());	// what it starts drawn fast
+		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) { boost.frame(nowMs()); fstat.press(ev.t); }	// what it starts drawn fast
 		if ((ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) && low.hide(nowMs())) dirty = true;
 		if (settingsView.isOpen())
 		{
@@ -1512,6 +1536,7 @@ int main(int argc, char** argv)
 			dirty = true;
 			if (const char* s = soundOf(ev.key, before, ui->view())) sound.play(s);
 		}
+		if (fstat.on) logf("press %d: view %d sys %d game %d", (int)ev.key, (int)ui->view(), ui->systemIndex(), ui->gameIndex());
 		if (ev.key == Key::LEFT || ev.key == Key::RIGHT || ev.key == Key::UP || ev.key == Key::DOWN || ev.key == Key::L || ev.key == Key::R)
 		{
 			rep.key = ev.key; rep.since = rep.last = now;
@@ -1875,7 +1900,7 @@ int main(int argc, char** argv)
 				if (settingsView.isOpen()) settingsView.render();
 				else ui->render();
 			}
-			fstat.draw(nowMs() - t0);
+			fstat.draw(t0, nowMs() - t0);
 			drawn = true;
 			dirty = false;
 		}
@@ -1885,7 +1910,7 @@ int main(int argc, char** argv)
 			Damage dmg[2] = { be.takeDamage(0), be.takeDamage(1) };
 			double t0 = nowMs();
 			bool flipped = disp.present(scr, dmg);
-			fstat.present(t0, nowMs() - t0);
+			fstat.present(t0, nowMs() - t0, flipped);
 			drawn = false;
 			// a frame that changed nothing on the panels flips nothing, so no flip event paces the next one: it waits a
 			// refresh instead (an animation that draws the same pixels, a picture still loading, ran this loop at
@@ -2005,7 +2030,10 @@ int main(int argc, char** argv)
 				dirty = true;
 			}
 			else if (disp.isOpen() && p.fd == disp.pollFd())
+			{
 				disp.handleEvents();
+				if (!disp.flipPending()) fstat.flipped(nowMs());
+			}
 			else
 				input.read(p.fd, handle);
 		}
