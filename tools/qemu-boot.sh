@@ -189,6 +189,7 @@ echo "1. the first boot: the data partition made, the menu, a shutdown"
 boot first
 grep -q "rcS: data partition ready" "$OUT/serial.log" && ok "the data partition was made and mounted" || bad "no data partition"
 grep -q "panels 640x480" "$OUT/serial.log" && ok "both panels opened at 640x480" || bad "the panels didn't open"
+grep -q "health: everything found" "$OUT/serial.log" && ok "the hardware check found everything ($(grep -o 'health: .*' "$OUT/serial.log" | head -n 1))" || bad "the hardware check: $(grep -o 'health: .*' "$OUT/serial.log" | head -n 1)"
 # the first-time setup opens over the menu on a first boot; B skips it (and writes setup-done on the card)
 grep -q "banana-ui: first-time setup" "$OUT/serial.log" && ok "the first-time setup opened" || bad "no first-time setup on the first boot"
 shot first-setup

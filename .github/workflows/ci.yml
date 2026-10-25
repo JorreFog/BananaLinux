@@ -25,6 +25,8 @@ jobs:
           make -C system/bananad CFLAGS="-O2 -Werror"
           make -C system/bananad clean
           make -C system/bananad CC=aarch64-linux-gnu-gcc CFLAGS="-O2 -Werror"
+      - name: The boot's hardware check (against a made-up handheld's /proc and /sys)
+        run: sh system/tests/health-test.sh
       - name: Sleep (bananad against a made-up /sys in its own namespaces)
         run: sudo system/bananad/tests/sleep-test.sh
       - name: Shell scripts parse
