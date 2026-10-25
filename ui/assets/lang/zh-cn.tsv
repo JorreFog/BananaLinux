@@ -840,4 +840,4 @@ settings		Frame rate	帧率
 settings		The other systems (RetroArch): shown in a corner, or not.	其他系统（RetroArch）：在角落显示或隐藏。
 # (the screen border rows below are a draft, not Majirefy's: for them to check)
 settings		Screen border	屏幕边框
-settings		On: the black around a game's picture filled with a quiet border in the menu's colours (the theme's), the picture at a sharp whole-number size where that fits. The DS, and a picture that already fills the screen, have none.	开启：游戏画面周围的黑边以菜单配色（随主题）的低调边框填充，画面在合适时以清晰的整数倍尺寸显示。DS 以及已占满屏幕的画面没有边框。
+settings		On: the black around a game's picture filled with a quiet border in the menu's colours (the theme's), the picture at a sharp whole-number size where that fits. The DS, the N64 and a picture that already fills the screen have none.	开启：游戏画面周围的黑边以菜单配色（随主题）的低调边框填充，画面在合适时以清晰的整数倍尺寸显示。DS、N64 以及已占满屏幕的画面没有边框。

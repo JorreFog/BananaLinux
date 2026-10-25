@@ -14,7 +14,7 @@ custom viewport so the game is drawn exactly in the hole.
 Where the picture goes, per system: its whole-number size (k x its native height, k as large as fits) when that is at
 least 80% of the size that fills the panel, else the size that fills it (aspect kept); margins even on both sides. A
 system whose picture fills the panel either way (N64 and PS1 on the RG DS: 640x480 at 4:3) gets no border there and
-is left out of borders.conf (the setting does nothing for it). Run again after changing anything here; the output is
+is left out of borders.conf (the setting does nothing for it), as is the N64 (see SYSTEMS). Run again after changing anything here; the output is
 the same for the same input (PNG written without timestamps)."""
 import json
 import os
@@ -33,9 +33,11 @@ GRID = 1000 / 92    # Pixelify Sans: at this size one font pixel is one image pi
 # the panels by their mode (the RG DS Plus, the RG DS): width, height, banana-ui's scale
 PANELS = {"1024x768": (1024, 768, 1.6), "640x480": (640, 480, 1.0)}
 
+# (No N64: GLideN64 draws its picture where it likes, not in RetroArch's custom viewport: on the RG DS Plus the
+# border's hole and the picture didn't line up, so the N64 is left as it is until that is worked out.)
 # systems.conf ids -> (name on the border, icon in rnds/icons, shelf accent from rnds/systems.cfg, picture aspect,
-# native lines). The aspect is the one RetroArch shows with the core's own ("core provided"), measured on the
-# handhelds with Banana's core options: fceumm 8:7 PAR at 240 lines, Picodrive 320x224 at 4:3... see SYSTEMS_NOTE.
+# native lines). The aspect is the one RetroArch shows with the core's own ("core provided"), with
+# Banana's core options (fceumm 8:7 PAR at 240 lines; the picture is stretched into the hole whatever the core says).
 SYSTEMS = {
     "gb":        ("GAME BOY",          "gb.png",   "#8a9144", 10 / 9, 144),
     "gbc":       ("GAME BOY COLOR",    "gbc.png",  "#2eae62", 10 / 9, 144),
@@ -44,7 +46,6 @@ SYSTEMS = {
     "snes":      ("SUPER NINTENDO",    "snes.png", "#a07ad4", 4 / 3, 224),
     "megadrive": ("MEGA DRIVE",        "md.png",   "#2eabc8", 4 / 3, 224),
     "psx":       ("PLAYSTATION",       "psx.png",  "#5c86e0", 4 / 3, 240),
-    "n64":       ("NINTENDO 64",       "n64.png",  "#6d8a58", 4 / 3, 240),
     "pico-8":    ("PICO-8",            "fantasy.png", "#e25a5a", 1.0, 128),
 }
 

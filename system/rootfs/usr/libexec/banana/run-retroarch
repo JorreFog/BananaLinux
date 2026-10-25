@@ -169,7 +169,7 @@ fi
 # after a run cut short).
 BCFG=/run/banana/retroarch-border.cfg
 BKEEP=/data/retroarch/.banana-border.keep
-BKEYS='^(aspect_ratio_index|custom_viewport_(x|y|width|height)|video_scale_integer|input_overlay(_enable|_opacity|_hide_in_menu|_behind_menu|_auto_scale|_scale_landscape|_[xy]_offset_landscape|_aspect_adjust_landscape|_[xy]_separation_landscape|_show_inputs|_hide_when_gamepad_connected|_enable_autopreferred)?) = '
+BKEYS='^(aspect_ratio_index|custom_viewport_(x|y|width|height)|video_viewport_bias_[xy]|video_scale_integer|input_overlay(_enable|_opacity|_hide_in_menu|_behind_menu|_auto_scale|_scale_landscape|_[xy]_offset_landscape|_aspect_adjust_landscape|_[xy]_separation_landscape|_show_inputs|_hide_when_gamepad_connected|_enable_autopreferred)?) = '
 if [ -f $BKEEP ]; then
     sed -i -E "/$BKEYS/d" $CFG && cat $BKEEP >> $CFG && rm -f $BKEEP && sync
     echo "run-retroarch: the screen border lines of a run cut short put back" >&2
@@ -197,7 +197,11 @@ EOF
     OV=$BD/$MODE/$th/$BANANA_SYSTEM.cfg
     if [ -n "$BH" ] && [ -f "$OV" ]; then
         {
-            printf 'aspect_ratio_index = "23"\ncustom_viewport_x = "%s"\ncustom_viewport_y = "%s"\n' "$BX" "$BY"
+            # (RetroArch 1.22 places a custom viewport by video_viewport_bias_x/y as well as by custom_viewport_x/y:
+            # x = custom_viewport_x + (panel - width) * bias. The rectangle is centred, so 0 and 0.5 put it at BX,BY;
+            # BX,BY in x/y too drew it twice as far in, measured on the RG DS)
+            printf 'aspect_ratio_index = "23"\ncustom_viewport_x = "0"\ncustom_viewport_y = "0"\n'
+            printf 'video_viewport_bias_x = "0.500000"\nvideo_viewport_bias_y = "0.500000"\n'
             printf 'custom_viewport_width = "%s"\ncustom_viewport_height = "%s"\nvideo_scale_integer = "false"\n' "$BW" "$BH"
             printf 'input_overlay_enable = "true"\ninput_overlay = "%s"\ninput_overlay_opacity = "1.000000"\n' "$OV"
             printf 'input_overlay_hide_in_menu = "true"\ninput_overlay_behind_menu = "false"\ninput_overlay_auto_scale = "false"\n'
