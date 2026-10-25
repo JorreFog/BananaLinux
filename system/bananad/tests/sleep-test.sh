@@ -44,6 +44,7 @@ for l in green:power red:status amber:charging; do mkdir -p /sys/class/leds/$l; 
 for b in backlight0 backlight1; do mkdir -p /sys/class/backlight/$b; echo 255 > /sys/class/backlight/$b/max_brightness; echo 200 > /sys/class/backlight/$b/brightness; echo 0 > /sys/class/backlight/$b/bl_power; done
 mkfifo /sys/power/state /dev/input/event0
 exec 3<>/dev/input/event0       # a writer that stays, so bananad's poll doesn't see a hang-up
+mkfifo /run/test/touch; exec 4<>/run/test/touch     # the stand-in touchscreen bananad reads unpolled (BANANAD_TEST_TOUCH)
 echo 0 > /run/test/lid
 
 pass=0 fail=0
@@ -55,15 +56,21 @@ import struct, sys
 t, c, v = (int(x) for x in sys.argv[1:4])
 sys.stdout.buffer.write(struct.pack('llHHi', 0, 0, t, c, v) + struct.pack('llHHi', 0, 0, 0, 0, 0))" "$@" >&3; }
 EV_SW=5 SW_LID=0 EV_KEY=1 KEY_POWER=116
+# a touch on the stand-in touchscreen, stamped with the monotonic clock (as bananad asks the real one for)
+touch() { python3 -c "
+import struct, sys, time
+t = time.clock_gettime(time.CLOCK_MONOTONIC); s = int(t); u = int((t - s) * 1e6)
+sys.stdout.buffer.write(struct.pack('llHHi', s, u, 3, 0x35, 100) + struct.pack('llHHi', s, u, 0, 0, 0))" >&4; }
 # is bananad blocked writing "mem" (asleep)? wait up to 3 s
 # (blocked opening the FIFO: its wait channel is wait_for_partner)
 asleep() { for i in $(seq 30); do [ "$(cat /proc/$BD/wchan 2>/dev/null)" = wait_for_partner ] && return 0; sleep 0.1; done; return 1; }
-wake() { head -c 3 /sys/power/state > /dev/null; sleep 0.3; }       # read "mem": the write returns, it is awake
+# read "mem": the write returns, it is awake (bananad not asleep: a failure after 5 s, not a test that waits for ever)
+wake() { timeout 5 head -c 3 /sys/power/state > /dev/null || bad "wake: bananad wasn't asleep"; sleep 0.3; }
 gstate() { awk '{print $3}' /proc/$GAME/stat; }
 start() {   # start [bananad.conf lines]
     echo "s2idle [deep]" > /sys/power/mem_sleep     # the kernel's file always lists both
     printf '%s\n' "autosleep_minutes = 0" "sleep_check_hours = 0" "$@" > /data/banana/bananad.conf
-    BANANAD_TEST_LID=/run/test/lid "$W/bananad" & BD=$!
+    BANANAD_TEST_LID=/run/test/lid BANANAD_TEST_TOUCH=/run/test/touch "$W/bananad" & BD=$!
     sleep 0.5
 }
 stop() { kill $BD 2>/dev/null; wait $BD 2>/dev/null || true; }
@@ -185,6 +192,75 @@ echo 0 > /run/test/lid; wake
 rm -rf /sys/class/power_supply/charger
 rm -f /run/banana/game.pid
 stop
+
+echo "9. asleep long enough (poweroff_minutes): off cleanly, the game saving first"
+echo $GAME > /run/banana/game.pid
+start "poweroff_minutes = 0.02"     # 1.2 s asleep
+echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
+asleep && ok "asleep" || bad "no sleep"
+[ "$(cat /sys/class/rtc/rtc0/wakealarm)" = +2 ] && ok "the RTC set for turning off (+2 s), not the battery check" || bad "wakealarm $(cat /sys/class/rtc/rtc0/wakealarm)"
+sleep 1.5; : > /sys/class/rtc/rtc0/wakealarm; wake
+for i in $(seq 30); do [ $POWEROFF = 1 ] && break; sleep 0.1; done
+[ $POWEROFF = 1 ] && ok "turned off (init asked to power off)" || bad "not turned off"
+kill -0 $GAME 2>/dev/null && bad "the game wasn't told to quit and save" || ok "the game was told to quit and save first"
+grep -q 'turning off' /data/banana/logs/sleep.log && ok "logged: $(grep 'turning off' /data/banana/logs/sleep.log | tail -n1 | cut -c21-)" || bad "not logged"
+stop
+POWEROFF=0; echo 0 > /run/test/lid
+setsid sleep 600 & GAME=$!; sleep 0.1; echo $GAME > /run/banana/game.pid
+
+echo "10. on the charger at the turn-off time: it sleeps on (the RG DS Plus doesn't charge switched off)"
+start "poweroff_minutes = 0.02"
+ev $EV_KEY $KEY_POWER 1; ev $EV_KEY $KEY_POWER 0
+asleep && ok "asleep (the power button)" || bad "no sleep"
+mkdir -p /sys/class/power_supply/charger
+echo USB > /sys/class/power_supply/charger/type; echo 1 > /sys/class/power_supply/charger/online
+sleep 1.5; : > /sys/class/rtc/rtc0/wakealarm; wake
+[ $POWEROFF = 0 ] && ok "not turned off on the charger" || bad "turned off on the charger"
+asleep && ok "asleep again" || bad "awake after the alarm"
+wake      # a press: awake
+rm -rf /sys/class/power_supply/charger
+stop
+POWEROFF=0
+
+echo "11. sleep at never: off after the idle time awake; in a game only with the timers everywhere"
+rm -f /run/banana/game.pid
+start "poweroff_minutes = 0.02"     # (start's autosleep_minutes = 0)
+sleep 2.5
+[ $POWEROFF = 1 ] && ok "off after the idle time in the menu" || bad "not turned off when idle"
+grep -q 'idle .* min: turning off' /data/banana/logs/sleep.log && ok "logged" || bad "not logged"
+stop; POWEROFF=0
+echo $GAME > /run/banana/game.pid
+start "poweroff_minutes = 0.02"
+sleep 2.5
+[ $POWEROFF = 0 ] && ok "not during a game (the timers in the menu)" || bad "turned off during a game"
+stop
+start "poweroff_minutes = 0.02" "idle_in_games = yes"
+for i in $(seq 30); do [ $POWEROFF = 1 ] && break; sleep 0.1; done
+[ $POWEROFF = 1 ] && ok "off during an idle game with the timers everywhere" || bad "not turned off during a game"
+kill -0 $GAME 2>/dev/null && bad "the game wasn't told to quit and save" || ok "the game was told to quit and save first"
+stop; POWEROFF=0
+setsid sleep 600 & GAME=$!; sleep 0.1; echo $GAME > /run/banana/game.pid
+
+echo "12. the timers everywhere: a touch is input in a game (the stylus alone isn't idle)"
+echo 200 > /sys/class/backlight/backlight0/brightness; echo 200 > /sys/class/backlight/backlight1/brightness
+start "idle_in_games = yes" "dim_minutes = 0.03"     # 1.8 s
+for i in 1 2 3 4 5 6 7; do touch; sleep 0.5; done
+[ "$(cat /sys/class/backlight/backlight1/brightness)" = 200 ] && ok "touching kept the panels bright (3.5 s)" || bad "dimmed while touching: $(cat /sys/class/backlight/backlight1/brightness)"
+sleep 2.5
+[ "$(cat /sys/class/backlight/backlight1/brightness)" = 60 ] && ok "dimmed once the touching stopped" || bad "not dimmed: $(cat /sys/class/backlight/backlight1/brightness)"
+touch; sleep 1.5
+[ "$(cat /sys/class/backlight/backlight1/brightness)" = 200 ] && ok "a touch brought them back" || bad "still dim after a touch: $(cat /sys/class/backlight/backlight1/brightness)"
+stop
+
+echo "13. the timers everywhere: an idle game sleeps, paused, and carries on after the wake"
+start "idle_in_games = yes" "autosleep_minutes = 0.02"
+asleep && ok "asleep in a game" || bad "no sleep in a game"
+[ "$(gstate)" = T ] && ok "the game paused" || bad "the game ran on ($(gstate))"
+wake
+[ "$(gstate)" != T ] && ok "the game carries on after the wake" || bad "the game still paused"
+stop
+kill -CONT -$GAME 2>/dev/null || true
+rm -f /run/banana/game.pid
 
 kill $UI $GAME 2>/dev/null || true
 echo "sleep test: $pass passed, $fail failed"
