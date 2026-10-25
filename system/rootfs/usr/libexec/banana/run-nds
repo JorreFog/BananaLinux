@@ -12,6 +12,16 @@ want=$(awk -v k="${1##*/}" '/^#/ { next } match($0, / *= *[a-z]+[ \t\r]*$/) {
 [ -n "$want" ] || want=$(sed -n '/^ *nds_emulator *= */{s///p;q}' /data/banana/settings.conf 2>/dev/null)
 have_bananads=0; [ -x /usr/bin/bananads ] && have_bananads=1
 have_drastic=0; { [ -x /data/drastic/drastic ] || [ -d /usr/share/drastic ]; } && have_drastic=1
+# A DSi game (DSiWare as .dsi, or as the 3DS eShop's .cia; a DSi-only cartridge's .nds, unit code 3 at 0x12): only
+# BananaDS runs them (DraStic is a DS only), whatever the setting says
+dsi=0
+case $1 in
+*.dsi|*.DSI|*.cia|*.CIA) dsi=1 ;;
+*.nds|*.NDS) [ "$(od -An -tu1 -j18 -N1 "$1" 2>/dev/null | tr -d ' ')" = 3 ] && dsi=1 ;;
+esac
+if [ $dsi = 1 ] && [ "$want" != bananads ]; then
+    echo "run-nds: ${1##*/} is a DSi game: BananaDS" >&2; want=bananads
+fi
 case $want in
 bananads) [ $have_bananads = 1 ] || { echo "BananaDS isn't installed: DraStic instead" >&2; want=superdrastic; } ;;
 *) want=superdrastic ;;
