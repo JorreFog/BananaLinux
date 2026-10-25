@@ -1,0 +1,110 @@
+#!/bin/sh
+# A new system on trial, and the boot's breadcrumbs.
+#   boot-guard early      rcS, once /boot is mounted: after an update (or a switch of slots) /boot/trial says which
+#                         slot is on trial and which one to go back to. If this boot is that slot's first, it waits
+#                         in the background for the menu (/run/banana/boot-ok, from banana-ui): the menu up, the
+#                         trial is over and the new system stays; no menu in BOOTGUARD_WAIT seconds (120), back to
+#                         the previous slot and a restart. A trial slot booting a second time means the first never
+#                         reached the menu (someone turned it off and on again): back at once.
+#   boot-guard progress   rcS, once /data is mounted: the boot's milestones (/run/banana/boot-times: rcS's, bananad's,
+#                         banana-ui's) copied to banana/logs/boot-progress.txt every 2 s until the menu is up, so a
+#                         boot that stops somewhere leaves where on the card (the boot before: boot-progress.1.txt)
+# /boot/trial: "<slot on trial> <slot to go back to> [<starts so far>]". A rollback is noted in
+# /boot/rolled-back and banana/logs/updates.log. U-Boot boots extlinux.conf's DEFAULT; a kernel that dies before rcS
+# runs can't be helped from here.
+# BOOTGUARD_ROOT puts another tree in front of /boot, /run and /data, BOOTGUARD_REBOOT replaces the restart (the test).
+R=${BOOTGUARD_ROOT:-}
+BOOT=$R/boot
+RUN=$R/run/banana
+TRIAL=$BOOT/trial
+CONF=$BOOT/extlinux/extlinux.conf
+WAIT=${BOOTGUARD_WAIT:-120}
+
+# the restart: early (rcS still running) at once, as init only takes a reboot once rcS is done, and rcS may be what
+# hangs (only /boot was written, and synced); after the wait, a clean one first, forced if it hasn't come in 20 s
+restart() {   # restart now|clean
+    if [ -n "$BOOTGUARD_REBOOT" ]; then $BOOTGUARD_REBOOT "$1"; return; fi
+    sync
+    [ "$1" = clean ] && { reboot; sleep 20; sync; }
+    reboot -f
+}
+
+slot=$(cat "$RUN/slot" 2>/dev/null)
+say() {
+    echo "boot-guard: $*" >> "$RUN/boot-times"
+    grep -qs 'banana\.console=1' "$R/proc/cmdline" && echo "boot-guard: $*" > "$R/dev/console"
+    return 0
+}
+boot_rw() { [ -n "$R" ] || mount -o remount,rw /boot; }
+boot_ro() { sync; [ -n "$R" ] || mount -o remount,ro /boot 2>/dev/null; return 0; }
+put() {   # put <file> <text>: written whole (a FAT rename over the old one)
+    printf '%s\n' "$2" > "$1.new" && mv -f "$1.new" "$1"
+}
+
+rollback() {   # rollback <now|clean> <why>
+    how=$1; shift
+    say "slot $new didn't start ($1): back to slot $prev"
+    boot_rw
+    sed "s/^DEFAULT .*/DEFAULT $prev/" "$CONF" > "$CONF.new" && mv -f "$CONF.new" "$CONF"
+    rm -f "$TRIAL"
+    put "$BOOT/rolled-back" "$(date '+%Y-%m-%d %H:%M:%S') slot $new didn't start ($1); back to slot $prev"
+    boot_ro
+    [ -d "$R/data/banana/logs" ] &&
+        echo "$(date '+%Y-%m-%d %H:%M:%S') slot $new didn't start ($1): back to slot $prev" >> "$R/data/banana/logs/updates.log"
+    sync
+    restart $how
+    exit 0
+}
+
+case $1 in
+early)
+    [ -f "$TRIAL" ] || exit 0
+    read -r new prev starts < "$TRIAL"
+    [ -n "$new" ] && [ -n "$prev" ] || { boot_rw; rm -f "$TRIAL"; boot_ro; exit 0; }
+    if [ "$new" != "$slot" ]; then
+        # the other slot running (DEFAULT changed by hand, or the trial's own rollback): nothing on trial here
+        boot_rw; rm -f "$TRIAL"; boot_ro; exit 0
+    fi
+    [ "${starts:-0}" -ge 1 ] && rollback now "its last start didn't reach the menu"
+    boot_rw; put "$TRIAL" "$new $prev 1"; boot_ro
+    say "slot $new on trial: back to slot $prev if the menu isn't up in $WAIT s"
+    (
+        i=0
+        while [ $i -lt "$WAIT" ]; do
+            if [ -e "$RUN/boot-ok" ]; then
+                # (only this trial's: a switch of slots made since names another, and stays)
+                read -r now rest < "$TRIAL" 2>/dev/null
+                [ "$now" = "$new" ] && { boot_rw; rm -f "$TRIAL"; boot_ro; }
+                say "slot $new started: kept"
+                exit 0
+            fi
+            sleep 1; i=$((i + 1))
+        done
+        rollback clean "no menu after $WAIT s"
+    ) &
+    ;;
+progress)
+    L=$R/data/banana/logs
+    mkdir -p "$L" 2>/dev/null || exit 0
+    P=$L/boot-progress.txt
+    [ -f "$P" ] && mv -f "$P" "$L/boot-progress.1.txt"
+    (
+        head="# $(date '+%Y-%m-%d %H:%M:%S'), slot $slot: this boot's milestones so far (seconds since the kernel)"
+        i=0
+        while [ $i -lt 90 ]; do
+            # the menu's state read once a pass, so the last copy is the one that says it's up (read twice, the menu
+            # could come up between the copy and the test, and the loop end without the line)
+            up=; [ -e "$RUN/boot-ok" ] && up=1
+            { echo "$head"; cat "$RUN/boot-times" 2>/dev/null
+              if [ -n "$up" ]; then echo "boot complete: the menu is up"; fi; } > "$P.new"
+            mv -f "$P.new" "$P"
+            sync
+            [ -n "$up" ] && exit 0
+            sleep 2; i=$((i + 1))
+        done
+    ) &
+    ;;
+*)
+    echo "usage: boot-guard early|progress" >&2; exit 2 ;;
+esac
+exit 0

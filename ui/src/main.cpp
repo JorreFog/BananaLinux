@@ -1106,6 +1106,8 @@ int main(int argc, char** argv)
 	worker.start(uiPtr);
 	irisToMenu(disp, be, *ui);
 	bootMark("banana-ui: the menu");
+	// the boot reached the menu: a new system on trial is kept (boot-guard), the breadcrumbs stop
+	if (FILE* f = fopen("/run/banana/boot-ok", "w")) fclose(f);
 	// the first boot after the installation: the setup (Wi-Fi, the time zone, the accounts) before anything else
 	bool firstSetup = access((o.data + "/setup-done").c_str(), F_OK) != 0;
 

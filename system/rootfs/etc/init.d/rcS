@@ -42,6 +42,12 @@ elif grep -q '^PARTNAME=banana-new$' /sys/class/block/${DISK##*/}p4/uevent 2>/de
     # a first boot cut off before the partition was formatted (it is still named banana-new): format it now
     /usr/libexec/banana/firstboot --format "$DISK"
 fi
+# the boot partition, read-only (the panel tuner writes the DTB there once): mounted here, before anything that could
+# hang, for the trial of a new system (after the first boot's repartitioning, which a mounted partition could stall)
+mount -t vfat -o ro,noatime ${DISK}p1 /boot 2>/dev/null
+# a slot just updated to (or switched to) is on trial until its menu is up; its second start without one, or no menu
+# in 2 minutes, goes back to the slot before (/usr/libexec/banana/boot-guard)
+/usr/libexec/banana/boot-guard early
 # exFAT, so the card can be read and filled on any computer
 data() { mount -t exfat -o noatime,uid=0,gid=0,fmask=0000,dmask=0000,iocharset=utf8,errors=remount-ro ${DISK}p4 /data 2>/dev/null; }
 data || {
@@ -56,8 +62,9 @@ data || {
 }
 /usr/libexec/banana/data-layout
 mark "rcS: data partition ready"
-# the boot partition, read-only (the panel tuner writes the DTB there once)
-mount -t vfat -o ro,noatime ${DISK}p1 /boot 2>/dev/null
+# the boot's milestones on the card every 2 s until the menu is up: a boot that stops leaves where it stopped
+# (banana/logs/boot-progress.txt)
+/usr/libexec/banana/boot-guard progress
 
 bananad &
 # the buttons and the sound up before the menu's first frame: bananad creates bananad-ready once the power and volume
