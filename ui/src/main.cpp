@@ -51,6 +51,9 @@
 #include <sys/eventfd.h>
 #include <sys/resource.h>
 #include <sys/syscall.h>
+#ifndef SYS_pidfd_open
+#define SYS_pidfd_open 434	// (the toolchain's headers predate it; the handhelds' kernel has it)
+#endif
 #include <sys/inotify.h>
 #include <sys/socket.h>
 #include <linux/netlink.h>
@@ -1290,7 +1293,8 @@ int main(int argc, char** argv)
 	FrameStats fstat;
 	ClockBoost boost;
 	sound.enabled = settings["sounds"] != "off";
-	lib.onCue = [&sound](const std::string& n) { sound.play(n); };
+	// (a library's cue is a launch animation's: its sound the last before the game, so the device closes once it has played)
+	lib.onCue = [&sound](const std::string& n) { sound.play(n, true); };
 
 	// the library and the menu are made on another thread while the boot animation plays
 	std::shared_ptr<Menu> uiPtr;
@@ -1570,6 +1574,9 @@ int main(int argc, char** argv)
 		}
 		be.invalidate();
 		bool want = true;
+		// the game's end wakes the loop at once (a pidfd is readable then): the 100 ms poll alone kept the menu up to that
+		// much longer before it saw it
+		const int pidFd = (int)syscall(SYS_pidfd_open, pid, 0);
 		for (;;)
 		{
 			pid_t w = waitpid(pid, &status, WNOHANG);
@@ -1598,7 +1605,13 @@ int main(int argc, char** argv)
 			std::vector<pollfd> fds = { { disp.pollFd(), POLLIN, 0 } };
 			for (int fd : input.fds()) fds.push_back({ fd, POLLIN, 0 });
 			if (outFd >= 0) fds.push_back({ outFd, POLLIN, 0 });
+			if (pidFd >= 0) fds.push_back({ pidFd, POLLIN, 0 });
 			if (poll(fds.data(), fds.size(), 100) <= 0) continue;
+			if (pidFd >= 0)
+			{
+				if (fds.back().revents & POLLIN) continue;	// it ended: waitpid above
+				fds.pop_back();
+			}
 			if (fds[0].revents & POLLIN) disp.handleEvents();
 			if (outFd >= 0 && (fds.back().revents & POLLIN))
 			{
@@ -1635,6 +1648,7 @@ int main(int argc, char** argv)
 						}
 					});
 		}
+		if (pidFd >= 0) ::close(pidFd);
 	};
 
 	auto runGame = [&](int game)
@@ -1642,6 +1656,7 @@ int main(int argc, char** argv)
 		const SystemDef& sd = lib.systemOf(game);
 		std::string rom = lib.gameAt(game).path;
 		std::string cmd = replaceAll(replaceAll(sd.run, "%ROM%", shellQuote(rom)), "%SYSTEM%", shellQuote(sd.id));
+		const double letGo = nowMs();
 		logf("starting %s: %s", sd.id.c_str(), cmd.c_str());
 		{
 			std::ofstream f(o.data + "/last-system");
@@ -1651,6 +1666,7 @@ int main(int argc, char** argv)
 		// game with the game panel on (settings.conf retroarch_panel) gets only its own panel, through a DRM lease
 		// (Display::lease): the menu keeps the other for the game panel (Settings::gameRender) and reads its touch
 		sound.release();
+		const double soundMs = nowMs() - letGo;
 		boost.release();
 		forgetDecoded();
 		const char* FIFO = "/run/banana/retroarch.cmd";
@@ -1712,6 +1728,7 @@ int main(int argc, char** argv)
 		// nothing else closes on that path.
 		if (pid != 0 && leaseFd >= 0) { ::close(leaseFd); leaseFd = -1; }
 		if (pid < 0) logf("fork failed: %s", strerror(errno));
+		if (pid > 0) logf("game start: the menu let go in %.0f ms (the sound device %.0f ms)", start - letGo, soundMs);
 		if (pid == 0)
 		{
 			setsid();
@@ -1742,6 +1759,7 @@ int main(int argc, char** argv)
 			else while (waitpid(pid, &status, 0) < 0 && errno == EINTR) {}
 			unlink("/run/banana/game.pid");
 		}
+		const double ended = nowMs();
 		if (panel)
 		{
 			{
@@ -1759,9 +1777,10 @@ int main(int argc, char** argv)
 			disp.close();
 		}
 		long secs = (long)((nowMs() - start) / 1000);
-		if (system("banana-perf ui") != 0) {}
 		logf("game ended after %ld s (status %d)", secs, status);
-		for (int tries = 0; !disp.open(o.top, err) && tries < 100; tries++) usleep(50000);
+		int openTries = 0;
+		for (; !disp.open(o.top, err) && openTries < 100; openTries++) usleep(50000);
+		const double opened = nowMs();
 		// the display controller's interrupt storm (from the game's panel, or the lease given back): counted over the
 		// iris instead of a 200 ms wait before it (every game's way back waited for it); the full check only if it storms
 		const char* forceStorm = getenv("BANANA_STORM_MIN");	// (tests: the full check as before)
@@ -1791,6 +1810,11 @@ int main(int argc, char** argv)
 			if (c >= 0 && ms > 50 && (c - stormIrqs) * 1000 / ms > 20000) disp.stormCheck();	// (calm: ~120 a second)
 		}
 		gameEnded = nowMs();
+		// the menu's clocks only now: the panels opened again and the iris ran at the game's (~1.4 GHz at most on schedutil
+		// otherwise, from the game's end)
+		if (system("banana-perf ui") != 0) {}
+		logf("game end: the menu back in %.0f ms (its iris over; the panels open in %.0f ms, %d retries)", gameEnded - ended,
+			opened - ended, openTries);
 		dirty = true;
 		batteryDue = true;	// a step passed during the game shows now
 	};
