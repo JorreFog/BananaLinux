@@ -23,12 +23,12 @@ export BANANADS_LOG_FILE=$L/bananads.log
 C=$D/bananads.conf
 has() { grep -q "^ *$1 *=" $C 2>/dev/null; }
 if ! has kms.shader; then
-    shader=$(sed -n 's/^ *DSFLIP_SHADER *= *//p' /data/banana/superdrastic.conf 2>/dev/null | head -n 1)
+    shader=$(sed -n '/^ *DSFLIP_SHADER *= */{s///p;q}' /data/banana/superdrastic.conf 2>/dev/null)
     [ -n "$shader" ] && echo "kms.shader = $shader" >> $C
 fi
 if ! has render.scale; then
     dcfg=/data/drastic/config/drastic.cfg; [ -f $dcfg ] || dcfg=/usr/share/drastic/config/drastic.cfg
-    hires=$(sed -n 's/^ *hires_3d *= *//p' $dcfg 2>/dev/null | head -n 1)
+    hires=$(sed -n '/^ *hires_3d *= */{s///p;q}' $dcfg 2>/dev/null)
     [ "$hires" = 0 ] && echo "render.scale = 1" >> $C || echo "render.scale = 2" >> $C
 fi
 # Timing's Fast (core.slice = auto, the 2x default before 0.4.0) broke games (Golden Sun: Dark Dawn drew no 3D world):
@@ -87,9 +87,12 @@ fi
 # Settings > Nintendo DS > Low latency (experimental): bananads.conf's kms.lowlat (off, on, runahead1, runahead2),
 # which BananaDS reads itself (its docs/SETTINGS.md): no frame queue, each frame aimed at the panels' refresh, and
 # run-ahead. Said in the log, for a report that comes with one
-ll=$(sed -n 's/^ *kms\.lowlat *= *//p' $C 2>/dev/null | tail -n 1)
+ll=$(sed -n '/^ *kms\.lowlat *= */{s///;h};${x;p}' $C 2>/dev/null)
 [ -n "$ll" ] && [ "$ll" != off ] && echo "run-bananads: low latency (experimental): $ll" >&2
 export DSFLIP_SHADER_DIR=/usr/lib/superdrastic/shaders
+# Mesa's shader cache on the card (kms.shader's program, compiled once instead of at every start): BananaDS gets
+# banana-ui's HOME, /, read-only, so it had none (DraStic's and RetroArch's are under their own HOME)
+export MESA_SHADER_CACHE_DIR=$D/.cache
 # the game's own microphone (its page, #27), for this run: off is mic.source = none (BananaDS's threshold 0 is "gate
 # off", every sound through), the others the microphone on at that threshold
 # (BananaDS's scale, as Settings' Mic sensitivity: low 0.15, medium 0.05, high 0.02)
@@ -104,7 +107,7 @@ fi
 # bananads.conf)
 s=$(/usr/libexec/banana/nds-game-shader "$1")
 if [ -n "$s" ]; then echo "run-bananads: ${1##*/} has its own shader: $s" >&2; export BANANADS_KMS_SHADER=$s
-else s=$(sed -n 's/^ *kms.shader *= *//p' $C 2>/dev/null | tail -n 1); fi
+else s=$(sed -n '/^ *kms.shader *= */{s///;h};${x;p}' $C 2>/dev/null); fi
 # a shader of your own (banana/shaders/<name>.frag, listed in Settings as "<name> (card)"): its folder instead
 [ -n "$s" ] && [ -f "/data/banana/shaders/$s.frag" ] && export DSFLIP_SHADER_DIR=/data/banana/shaders
 # the 3D always through the Gengis Engine (SuperDrastic's rasterizer), as SuperDrastic does
@@ -116,7 +119,7 @@ export BANANADS_RENDER_RENDERER=gengis
 # banana-ui started it again at the next boot (/run/banana/resume-once names it): the state loaded this once, Quick
 # resume on or off
 ONCE=0
-[ "$(cat /run/banana/resume-once 2>/dev/null)" = "${BANANA_ROM:-$1}" ] && { ONCE=1; rm -f /run/banana/resume-once; echo "run-bananads: resuming after Power off after sleeping" >&2; }
+[ -f /run/banana/resume-once ] && [ "$(cat /run/banana/resume-once 2>/dev/null)" = "${BANANA_ROM:-$1}" ] && { ONCE=1; rm -f /run/banana/resume-once; echo "run-bananads: resuming after Power off after sleeping" >&2; }
 if ! grep -q '^ *quick_resume *= *on' /data/banana/settings.conf 2>/dev/null; then
     export BANANADS_RESUME_ON_QUIT=off
     [ $ONCE = 1 ] || export BANANADS_RESUME_ON_START=off
@@ -125,7 +128,7 @@ fi
 # gives SuperDrastic's)
 A=/data/banana/accounts.conf
 if [ -f $A ]; then
-    u=$(sed -n 's/^ra_user=//p' $A | head -n 1); w=$(sed -n 's/^ra_password=//p' $A | head -n 1)
+    u=$(sed -n '/^ra_user=/{s///p;q}' $A); w=$(sed -n '/^ra_password=/{s///p;q}' $A)
     [ -n "$u" ] && export BANANADS_RA_USER="$u" BANANADS_RA_PASSWORD="$w"
 fi
 # the DS's user name: Settings > Nintendo DS > DS name's (bananads.conf's firmware.nickname, #30), else the handheld's
@@ -143,7 +146,7 @@ esac
 # the in-game save as DraStic left it, when it played the game last (nds-saves: the two emulators share saves); a
 # quick resume state older than the save is dropped, as run-drastic does: loading it would put an older save back
 /usr/libexec/banana/nds-saves "$1"
-G=$(basename "$1"); G=${G%.*}
+G=${1##*/}; G=${G%.*}
 [ -f "/data/states/nds/$G.resume.mst" ] && [ -f "/data/saves/nds/$G.sav" ] && [ "/data/saves/nds/$G.sav" -nt "/data/states/nds/$G.resume.mst" ] &&
     rm -f "/data/states/nds/$G.resume.mst"
 # a zipped game (the library lists .zip for the DS, DraStic opens them): BananaDS opens .nds only, so the zip's game is
@@ -153,7 +156,7 @@ ROM=$1
 case "$ROM" in
 *.zip|*.ZIP)
     C=/data/bananads/unzipped; mkdir -p $C
-    N=$(basename "$ROM"); N=$C/${N%.*}.nds
+    N=${ROM##*/}; N=$C/${N%.*}.nds
     if [ ! -f "$N" ] || [ "$ROM" -nt "$N" ]; then
         rm -rf $C/*.nds $C/.unzip    # one game unpacked at a time: they are large
         mkdir -p $C/.unzip && unzip -q -o "$ROM" -d $C/.unzip

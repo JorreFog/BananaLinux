@@ -41,13 +41,13 @@ export DSFLIP_CPUGOV=${DSFLIP_CPUGOV:-1}
 # the RetroAchievements account from the setup (banana/accounts.conf), for SuperDrastic's achievements
 A=/data/banana/accounts.conf
 if [ -f $A ]; then
-    u=$(sed -n 's/^ra_user=//p' $A | head -n 1); w=$(sed -n 's/^ra_password=//p' $A | head -n 1)
+    u=$(sed -n '/^ra_user=/{s///p;q}' $A); w=$(sed -n '/^ra_password=/{s///p;q}' $A)
     [ -n "$u" ] && export DSFLIP_RA_USER="$u" DSFLIP_RA_PASSWORD="$w"
 fi
 # the in-game menu (L3) in BananaOS's colours and fonts
 export DSFLIP_MENU_THEME=banana
 # a shader of your own (banana/shaders/<name>.frag, listed in Settings as "<name> (card)"): SuperDrastic looks there
-s=$(sed -n 's/^ *DSFLIP_SHADER *= *//p' /data/banana/superdrastic.conf 2>/dev/null | tail -n 1)
+s=$(sed -n '/^ *DSFLIP_SHADER *= */{s///;h};${x;p}' /data/banana/superdrastic.conf 2>/dev/null)
 [ -n "$s" ] && [ -f "/data/banana/shaders/$s.frag" ] && export DSFLIP_SHADER_DIR=/data/banana/shaders
 # Settings > Nintendo DS > Frame pacing (superdrastic.conf DSFLIP_PACE): Panels (the default) runs DraStic at the
 # panels' refresh instead of the DS's 59.83 Hz, which against a 60 Hz panel showed a frame twice every ~6 s (a
@@ -57,12 +57,12 @@ s=$(sed -n 's/^ *DSFLIP_SHADER *= *//p' /data/banana/superdrastic.conf 2>/dev/nu
 refresh() {
     local D=/sys/kernel/debug
     [ -f $D/dri/0/state ] || mount -t debugfs none $D 2>/dev/null
-    set -- $(sed -n 's/.*mode: "[^"]*": [0-9]* \([0-9]*\) [0-9]* [0-9]* [0-9]* \([0-9]*\) [0-9]* [0-9]* [0-9]* \([0-9]*\).*/\1 \2 \3/p' $D/dri/0/state 2>/dev/null | head -n 1)
+    set -- $(sed -n '/.*mode: "[^"]*": [0-9]* \([0-9]*\) [0-9]* [0-9]* [0-9]* \([0-9]*\) [0-9]* [0-9]* [0-9]* \([0-9]*\).*/{s//\1 \2 \3/p;q}' $D/dri/0/state 2>/dev/null)
     [ -n "$3" ] || { echo 60; return; }
     local clk=$(awk '$1 == "dclk_vop1" || $1 == "dclk_vop0" { print $5; exit }' $D/clk/clk_summary 2>/dev/null)
     awk -v k=$1 -v h=$2 -v v=$3 -v c=${clk:-0} 'BEGIN { if (c < 1000000) c = k * 1000; printf "%.4f\n", c / (h * v) }'
 }
-pace=$(sed -n 's/^ *DSFLIP_PACE *= *//p' /data/banana/superdrastic.conf 2>/dev/null | tail -n 1)
+pace=$(sed -n '/^ *DSFLIP_PACE *= */{s///;h};${x;p}' /data/banana/superdrastic.conf 2>/dev/null)
 # DraStic makes 44100 samples a second here whatever the panels' rate (it runs its own 60 frames a second: present/s
 # 60.0 on a 60.17 Hz panel too), so its sound is taken at exactly that: DSFLIP_AUDIO_LOCK_PER = the refresh rate. Taken
 # at the DS's rate it was drained faster than it was made, and DraStic filled the gaps with zeros (Mario Kart DS: 40-66
@@ -78,7 +78,7 @@ export DSFLIP_AUDIO_DEVICE_RATE=${DSFLIP_AUDIO_DEVICE_RATE:-48000}
 # Settings > Nintendo DS > Low latency (experimental; superdrastic.conf DSFLIP_LOWLAT=1, exported below): no queue at
 # all, each frame at the next refresh it can make and DraStic held to start its frames as late as that allows
 # (SuperDrastic's docs/INTEGRATION.md); it overrules the queue
-ll=$(sed -n 's/^ *DSFLIP_LOWLAT *= *//p' /data/banana/superdrastic.conf 2>/dev/null | tail -n 1)
+ll=$(sed -n '/^ *DSFLIP_LOWLAT *= */{s///;h};${x;p}' /data/banana/superdrastic.conf 2>/dev/null)
 if [ "$ll" = 1 ]; then echo "run-drastic: low latency (experimental): no frame queue" >&2
 else export DSFLIP_QUEUE=${DSFLIP_QUEUE:-2}; fi
 # the in-game save as BananaDS left it, when it played the game last (nds-saves: the two emulators share saves)
@@ -92,8 +92,8 @@ else export DSFLIP_QUEUE=${DSFLIP_QUEUE:-2}; fi
 # banana-ui started it again at the next boot (/run/banana/resume-once names it): the state loaded this once, Quick
 # resume on or off
 ONCE=0
-[ "$(cat /run/banana/resume-once 2>/dev/null)" = "${BANANA_ROM:-$1}" ] && { ONCE=1; rm -f /run/banana/resume-once; echo "run-drastic: resuming after Power off after sleeping" >&2; }
-G=$(basename "$1"); G=${G%.*}
+[ -f /run/banana/resume-once ] && [ "$(cat /run/banana/resume-once 2>/dev/null)" = "${BANANA_ROM:-$1}" ] && { ONCE=1; rm -f /run/banana/resume-once; echo "run-drastic: resuming after Power off after sleeping" >&2; }
+G=${1##*/}; G=${G%.*}
 R=$D/savestates/$G.resume.dss
 mkdir -p $D/savestates
 QR=0; grep -q '^ *quick_resume *= *on' /data/banana/settings.conf 2>/dev/null && QR=1
@@ -144,7 +144,7 @@ case $m in low) t=0.3 ;; medium) t=0.15 ;; high) t=0.03 ;; off) t=0 ;; *) t= ;; 
 # the game's own Threaded 3D (#27): DraStic reads it from drastic.cfg alone, so the game's value goes in for this run
 # and Settings' comes back after (kept beside it until then: a run cut short is put right at the next start, above)
 t=$(/usr/libexec/banana/nds-game-option nds-per-game-3d.conf "$1")
-was=$(sed -n 's/^threaded_3d = //p' config/drastic.cfg | head -n 1)
+was=$(sed -n '/^threaded_3d = /{s///p;q}' config/drastic.cfg)
 if [ -z "$t" ] || [ -z "$was" ] || [ "$t" = "$was" ]; then
     exec $SD/superdrastic-run $D/drastic "$1"
 fi
