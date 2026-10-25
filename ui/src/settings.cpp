@@ -316,7 +316,10 @@ namespace banana
 
 	// on the RG DS Plus a shader's GPU pass heats the chip enough to slow the CPU in a long session (Golden Sun: Dark
 	// Dawn at 2x: none 0.0% missed refreshes in 6 min, the LCD grid 0.6-1%, measured 2026-10-18)
-	static const char* PLUS_SHADER_NOTE = " On the Plus a shader also heats the chip: a heavy 3D game can drop frames after a few minutes. Give such a game None on its own page (X in the library).";
+	// two texts joined, each translated on its own: the joined text has no line of its own in a translation, so a help
+	// with a note added for one handheld (the RG DS Plus's shader note) stayed English (i18n report, 2026-10-25)
+	static std::string joinTr(const std::string& a, const std::string& b) { return lang::tr(a) + " " + lang::tr(b); }
+	static const char* PLUS_SHADER_NOTE = "On the Plus a shader also heats the chip: a heavy 3D game can drop frames after a few minutes. Give such a game None on its own page (X in the library).";
 
 	// Settings > Nintendo DS > Shader's choices: Banana's shaders, then the card's own (banana/shaders/<name>.frag,
 	// SuperDrastic's shader format: README.txt there). Made again each time Settings loads the row (load()), so a shader
@@ -437,7 +440,7 @@ namespace banana
 		std::vector<std::string> shaderNames, shaderValues;
 		shaderChoices(data, shaderNames, shaderValues);
 		std::string shaderHelpS = "Sharp pixels: every DS pixel an exact square, no blur (4x4 on the RG DS Plus, 2x2 in a frame on the RG DS). Crisp: exact pixel-area scaling. Grid and LCD: the DS's screen grid. Colours: the DS's own, duller colours. CRT: a TV's scanlines. FSR: smooth edges, the heaviest. None: smooth scaling, no GPU work. Your own: .frag files in banana/shaders (letters, digits and . _ + - in the name).";
-		if (board_() == "rgds-plus") shaderHelpS += PLUS_SHADER_NOTE;
+		if (board_() == "rgds-plus") shaderHelpS = joinTr(shaderHelpS, PLUS_SHADER_NOTE);
 		const char* shaderHelp = shaderHelpS.c_str();
 		if (emu == "bananads")
 		{
@@ -3421,6 +3424,7 @@ namespace banana
 		return NONE;
 	}
 
+	static const char* GAME_SHADER_HELP = "The picture's shader for this game only, in either emulator; the others follow Settings > Nintendo DS > Shader. None scales smoothly and costs no GPU work.";
 	// a game page row's help (renderGame's top panel)
 	std::string Settings::gameHelpOf(int row)
 	{
@@ -3428,8 +3432,7 @@ namespace banana
 		return row == PG_EMU
 				? "SuperDrastic: DraStic onto both panels, the fastest. BananaDS: Banana's own emulator (melonDS's core), the most "
 				  "accurate. The choice is for this game only; the others follow Settings > Nintendo DS > Emulator."
-				: row == PG_SHADER ? std::string("The picture's shader for this game only, in either emulator; the others follow Settings > Nintendo DS > Shader. "
-				  "None scales smoothly and costs no GPU work.") + (plus ? PLUS_SHADER_NOTE : "")
+				: row == PG_SHADER ? (plus ? joinTr(GAME_SHADER_HELP, PLUS_SHADER_NOTE) : std::string(GAME_SHADER_HELP))
 				: row == PG_3D ? "SuperDrastic (DraStic) only. On draws the DS's 3D beside the game, the faster way; Off draws it in step with "
 				  "the game, for a game whose 3D shows on the wrong screen or a frame late (the Dragon Quest games). The others follow "
 				  "Settings > Nintendo DS > Threaded 3D."
