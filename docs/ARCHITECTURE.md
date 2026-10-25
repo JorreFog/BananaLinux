@@ -300,8 +300,9 @@ resamples the emulators' 44.1 kHz capture to it; opened at 44.1 kHz against a 48
 |---|---|---|---|
 | `ui` | schedutil, at most ~1.1 GHz | powersave | the menu |
 | `powersave` | schedutil, at most ~1.4 GHz | on demand | 8-bit and 16-bit systems |
-| `balanced` | schedutil, full range | on demand | GBA, SNES, PlayStation |
-| `performance` | performance | performance | N64, ports |
+| `balanced` | schedutil, full range | on demand | GBA, apps |
+| `steady` | schedutil, full range above a 1.1 GHz floor (between page flips plain schedutil dropped to 408-600 MHz and the next frame started late) | on demand | PlayStation |
+| `performance` | performance | performance | SNES, N64, ports |
 | `superdrastic` | performance (SuperDrastic's own governor takes over: the lowest clock with no dropped frames, per game) | on demand | Nintendo DS |
 
 ## Booting it without the handheld
