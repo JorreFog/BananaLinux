@@ -220,6 +220,13 @@ int main(int argc, char** argv)
 	EQ(effect(PSYCHIC, DARK, 255), 0);
 	EQ(effect(GRASS, WATER, GROUND), 16);
 	EQ(effect(ROCK, FIRE, FLYING), 16);
+	// the modern chart (CFRU hacks): Fairy, and Steel no longer resisting Ghost and Dark; the old one unchanged
+	EQ(effect(FAIRY, DRAGON, 255, true), 8);
+	EQ(effect(DRAGON, FAIRY, 255, true), 0);
+	EQ(effect(POISON, FAIRY, GRASS, true), 16);
+	EQ(effect(GHOST, STEEL, 255, true), 4);
+	EQ(effect(GHOST, STEEL, 255), 2);
+	CHECK(typeInGame(FAIRY, true) && !typeInGame(FAIRY, false) && !typeInGame(MYSTERY, true) && !typeInGame(20, true));
 	EQ(std::string(typeName(DARK)), std::string("Dark"));
 
 	// ---- the game from the header's code
