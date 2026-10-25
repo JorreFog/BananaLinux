@@ -28,6 +28,9 @@ namespace banana
 	class Settings
 	{
 	public:
+		// every Settings row's help and every game page row's (as the panel would lay it out now: the language's too)
+		// that doesn't fit its box at the smallest size, one line each to log; and how many were checked (ui/tests)
+		int helpCheck(const std::function<void(const std::string&)>& log);
 		Settings(rnds::Backend* be, const std::string& assets, const std::string& dataDir, float scale, const std::string& variant);
 		void setVariant(const std::string& variant);	// "dark", "light", or "carts" (dark, in Inter: setFontDir first)
 		void setFontDir(const std::string& dir) { fontDir = dir; }
@@ -369,6 +372,13 @@ namespace banana
 		void box(const std::string& kind, bool on, float x, float y, float w, float h);
 		float text(const std::string& t, bool medium, float size, float x, float top, const rnds::Color& c, bool upper = false, float ls = 0, bool measureOnly = false);
 		void wrapped(const std::string& t, float size, float x, float top, float width, int maxLines, const rnds::Color& c);
+		// the top panel's header and help text (Settings' rows and a game's page): where they go, in 640x480 CSS px
+		static constexpr float HEAD_ICON_Y = 42, HEAD_SECTION_Y = 46, HEAD_LABEL_Y = 70, HEAD_VALUE_Y = 110;
+		static constexpr float HELP_X = 50, HELP_W = 540, HELP_TOP = 152, HELP_BOTTOM = 438;
+		bool helpFit(const std::string& t, float top, float bottom, float& size, int& lines) const;
+		void helpText(const std::string& t, float top, float bottom, const rnds::Color& c);
+		std::string helpOf(int item);
+		std::string gameHelpOf(int row);
 		void icon(const std::string& name, float x, float y, int scale);
 		void iconCentred(const std::string& name, float cx, float y, int scale);
 		void arrow(bool right, float x, float y, const rnds::Color& c);

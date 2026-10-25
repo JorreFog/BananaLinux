@@ -86,6 +86,13 @@ namespace banana
 		return trim(s);
 	}
 
+	// the handheld (/etc/banana/board: rgds, rgds-plus); BANANA_BOARD stands in for it in the host tests
+	static std::string board_()
+	{
+		if (const char* b = getenv("BANANA_BOARD")) return b;
+		return readLine("/etc/banana/board");
+	}
+
 	// a program in the background, not waited for (Wi-Fi coming up takes seconds)
 	static void spawn(const char* path, const char* arg, const char* arg2 = nullptr)
 	{
@@ -309,7 +316,7 @@ namespace banana
 
 	// on the RG DS Plus a shader's GPU pass heats the chip enough to slow the CPU in a long session (Golden Sun: Dark
 	// Dawn at 2x: none 0.0% missed refreshes in 6 min, the LCD grid 0.6-1%, measured 2026-10-18)
-	static const char* PLUS_SHADER_NOTE = " On the RG DS Plus a shader also heats the chip: a heavy 3D game can drop frames after a few minutes with one. Set such a game to None on its own page (X in the library).";
+	static const char* PLUS_SHADER_NOTE = " On the Plus a shader also heats the chip: a heavy 3D game can drop frames after a few minutes. Give such a game None on its own page (X in the library).";
 
 	// Settings > Nintendo DS > Shader's choices: Banana's shaders, then the card's own (banana/shaders/<name>.frag,
 	// SuperDrastic's shader format: README.txt there). Made again each time Settings loads the row (load()), so a shader
@@ -429,8 +436,8 @@ namespace banana
 			"", "ds_name", {}, {}, Item::PAGE);
 		std::vector<std::string> shaderNames, shaderValues;
 		shaderChoices(data, shaderNames, shaderValues);
-		std::string shaderHelpS = "Sharp pixels: every DS pixel an exact square, no blur (4x4 on the RG DS Plus, 2x2 with a frame on the RG DS). None scales smoothly. Your own: .frag files in banana/shaders, named with letters, digits and . _ + - only. Crisp: exact pixel-area scaling. Grid and LCD: the DS's screen grid. Colours: the DS's own, duller colours. CRT: a TV's scanlines. FSR: smooth edges, the heaviest. None costs no GPU work.";
-		if (readLine("/etc/banana/board") == "rgds-plus") shaderHelpS += PLUS_SHADER_NOTE;
+		std::string shaderHelpS = "Sharp pixels: every DS pixel an exact square, no blur (4x4 on the RG DS Plus, 2x2 in a frame on the RG DS). Crisp: exact pixel-area scaling. Grid and LCD: the DS's screen grid. Colours: the DS's own, duller colours. CRT: a TV's scanlines. FSR: smooth edges, the heaviest. None: smooth scaling, no GPU work. Your own: .frag files in banana/shaders (letters, digits and . _ + - in the name).";
+		if (board_() == "rgds-plus") shaderHelpS += PLUS_SHADER_NOTE;
 		const char* shaderHelp = shaderHelpS.c_str();
 		if (emu == "bananads")
 		{
@@ -1575,30 +1582,10 @@ namespace banana
 		be->endScreen();
 	}
 
-	void Settings::render()
+	// a row's help, as the top panel shows it (some are made from the state: the address, the share's login...)
+	std::string Settings::helpOf(int i)
 	{
-		if (page == NETWORKS) { renderNetworks(); return; }
-		if (page == BLUETOOTH) { renderBluetooth(); return; }
-		if (page == KEYBOARD) { renderKeyboard(); return; }
-		if (page == GAME) { renderGame(); return; }
-		if (page == ARTPICK) { renderArt(); return; }
-		if (page == COLORS) { renderColors(); return; }
-		if (page == UPDATES) { renderUpdates(); return; }
-		if (page == SETUP) { renderSetup(); return; }
-		if (inGroups) { renderGroups(); return; }
-		SPal p = pal(light);
-		const Item& cur = items[sel];
-		int gb = groupStart(groupOf(sel)), ge = groupEnd(groupOf(sel));
-
-		// ---- top: what the selected setting is ----
-		be->beginScreen(0);
-		box("screen", false, 0, 0, 640, 480);
-		box("hero", false, 18, 20, 604, 436);
-		icon(cur.icon, 50, 56, 3);
-		text(cur.section, true, 17, 170, 62, p.muted, true, 1.4f);
-		text(cur.label, true, 30, 170, 88, p.ink);
-		std::string value = cur.kind == Item::CHOICE || cur.kind == Item::BRIGHTNESS || cur.kind == Item::VOLUME ? cur.names[cur.at] : "";
-		if (!value.empty()) text(value, true, 22, 170, 130, p.accent);
+		const Item& cur = items[i];
 		std::string help = cur.help;
 		if (cur.kind == Item::INFO && cur.key != "hk") help = about;
 		if (cur.key == "wifi") help = "Wi-Fi: " + wifiInfo + ". Network, below, joins one; networks can also be written in banana/wifi.conf on a computer (see banana/README.txt).";
@@ -1624,12 +1611,90 @@ namespace banana
 					: "Name " + shareUser() + ", password " + sharePassword() + " (Sharing name and password, below).");
 			if (ip.empty()) help += " (Not connected to Wi-Fi now.)";
 		}
+		return help;
+	}
+
+	// the help text on the top panel, under the header, in the hero box: as large as fits (20 px, then 18, then 16),
+	// never cut. Returns false when it doesn't fit even at 16 (then cut with an ellipsis: ui/tests checks every row)
+	bool Settings::helpFit(const std::string& t, float top, float bottom, float& size, int& lines) const
+	{
+		static const float SIZES[] = { 20, 18, 16 };
+		rnds::TextStyle st;
+		st.font = R;
+		lines = 0;
+		for (float z : SIZES)
+		{
+			st.size = z;
+			size = z;
+			lines = R ? (int)rnds::layoutWrap(rnds::utf8to32(t), st, (int)HELP_W, 0).size() : 0;
+			if ((lines - 1) * std::round(z * 1.4f) + z * 1.3f <= bottom - top) return true;
+		}
+		return false;
+	}
+	void Settings::helpText(const std::string& t, float top, float bottom, const Color& c)
+	{
+		float z; int n;
+		bool ok = helpFit(t, top, bottom, z, n);
+		int maxLines = ok ? n : std::max(1, (int)((bottom - top - z * 1.3f) / std::round(z * 1.4f)) + 1);
+		wrapped(t, z, HELP_X, top, HELP_W, maxLines, c);
+	}
+
+	int Settings::helpCheck(const std::function<void(const std::string&)>& log)
+	{
+		if (!mOpen) open();
+		int n = 0;
+		auto one = [&](const std::string& where, const std::string& t)
+		{
+			float z; int lines;
+			bool ok = helpFit(t, HELP_TOP, HELP_BOTTOM, z, lines);
+			char b[64];
+			snprintf(b, sizeof b, ": %s at %.0f px, %d lines", ok ? "fits" : "OVERFLOW", z, lines);
+			log("helpcheck " + where + b);
+			n++;
+		};
+		for (int i = 0; i < (int)items.size(); i++) one(items[i].section + " > " + items[i].label, helpOf(i));
+		// a game page's rows (Delete's with a long file name, as a card can have)
+		std::string rom = pgRom;
+		pgRom = "Mario & Luigi - Partners in Time (Europe) (En,Fr,De,Es,It) (Rev 1).nds";
+		static const char* const PG[] = { "Emulator", "Shader", "Threaded 3D", "Microphone", "Name", "Sort title", "Box art", "Delete" };
+		for (int r = PG_EMU; r <= PG_DELETE; r++) one(std::string("Game page > ") + PG[r], gameHelpOf(r));
+		pgRom = rom;
+		return n;
+	}
+
+	void Settings::render()
+	{
+		if (page == NETWORKS) { renderNetworks(); return; }
+		if (page == BLUETOOTH) { renderBluetooth(); return; }
+		if (page == KEYBOARD) { renderKeyboard(); return; }
+		if (page == GAME) { renderGame(); return; }
+		if (page == ARTPICK) { renderArt(); return; }
+		if (page == COLORS) { renderColors(); return; }
+		if (page == UPDATES) { renderUpdates(); return; }
+		if (page == SETUP) { renderSetup(); return; }
+		if (inGroups) { renderGroups(); return; }
+		SPal p = pal(light);
+		const Item& cur = items[sel];
+		int gb = groupStart(groupOf(sel)), ge = groupEnd(groupOf(sel));
+
+		// ---- top: what the selected setting is ----
+		be->beginScreen(0);
+		box("screen", false, 0, 0, 640, 480);
+		box("hero", false, 18, 20, 604, 436);
+		// the header (icon, section, name, value) kept tight so the help under it has ten lines (user feedback 2026-10-25: the
+		// Shader row's was cut at seven)
+		icon(cur.icon, 50, HEAD_ICON_Y, 3);
+		text(cur.section, true, 17, 170, HEAD_SECTION_Y, p.muted, true, 1.4f);
+		text(cur.label, true, 30, 170, HEAD_LABEL_Y, p.ink);
+		std::string value = cur.kind == Item::CHOICE || cur.kind == Item::BRIGHTNESS || cur.kind == Item::VOLUME ? cur.names[cur.at] : "";
+		if (!value.empty()) text(value, true, 22, 170, HEAD_VALUE_Y, p.accent);
+		std::string help = helpOf(sel);
 		if (cur.key == "scrape" && scraping())
 		{
-			wrapped("Fetching covers and title screens. The menu shows them as they come, and it carries on if you leave this screen.", 20, 50, 196, 540, 4, p.muted);
+			wrapped("Fetching covers and title screens. The menu shows them as they come, and it carries on if you leave this screen.", 20, HELP_X, HELP_TOP, HELP_W, 4, p.muted);
 			scrapeBar(50, 330, 540);
 		}
-		else wrapped(help, 20, 50, 196, 540, 7, p.muted);
+		else helpText(help, HELP_TOP, HELP_BOTTOM, p.muted);
 		be->endScreen();
 
 		// ---- bottom: the list ----
@@ -3354,6 +3419,32 @@ namespace banana
 		return NONE;
 	}
 
+	// a game page row's help (renderGame's top panel)
+	std::string Settings::gameHelpOf(int row)
+	{
+		const bool plus = board_() == "rgds-plus";
+		return row == PG_EMU
+				? "SuperDrastic: DraStic onto both panels, the fastest. BananaDS: Banana's own emulator (melonDS's core), the most "
+				  "accurate. The choice is for this game only; the others follow Settings > Nintendo DS > Emulator."
+				: row == PG_SHADER ? std::string("The picture's shader for this game only, in either emulator; the others follow Settings > Nintendo DS > Shader. "
+				  "None scales smoothly and costs no GPU work.") + (plus ? PLUS_SHADER_NOTE : "")
+				: row == PG_3D ? "SuperDrastic (DraStic) only. On draws the DS's 3D beside the game, the faster way; Off draws it in step with "
+				  "the game, for a game whose 3D shows on the wrong screen or a frame late (the Dragon Quest games). The others follow "
+				  "Settings > Nintendo DS > Threaded 3D."
+				: row == PG_MIC ? "How loud a word or a blow must be to reach this game, in either emulator: High hears a quiet voice, Low "
+				  "only a loud one, Off none. For a game that needs the microphone (Nintendogs) or one it bothers."
+				: row == PG_NAME ? "The name the menu shows for this game. A types it; an empty one goes back to the scraped name. Kept in "
+				  "banana/game-titles.tsv, which scraping the box art again leaves alone."
+				: row == PG_SORT ? "The library's order goes by this instead of the name: Dragon Quest 04, 05 and 09 keep IV, V and IX in their order. "
+				  "A types it; an empty one sorts by the name again."
+				: row == PG_DELETE ? (!message.empty() ? message : std::string("Removes this game's file from the card: ") + pgRom + ". Left and right choose whether its saves, save "
+				  "states and box art go too, or stay (they come back if you copy the game again). Nothing else is touched: no other "
+				  "game, no BIOS. A asks first; A again deletes.")
+				: !message.empty() ? message
+				: "For a game the box art scrape got wrong or didn't find (a translation, a hack, another name): A types its name as "
+				  "libretro's collection has it, then you pick the right one from what it finds. Wi-Fi needed.";
+	}
+
 	void Settings::renderGame()
 	{
 		SPal p = pal(light);
@@ -3368,7 +3459,6 @@ namespace banana
 		for (size_t i = 1; i < pgShaderValues.size(); i++) if (pgShaderValues[i] == gsh) gshName = pgShaderNames[i];
 		const std::string emuValue = pgEmu ? std::string(GAME_EMU_NAMES[pgEmu]) : std::string("As in Settings (") + (global == "bananads" ? "BananaDS" : "SuperDrastic") + ")";
 		const std::string shValue = pgShader ? pgShaderNames[pgShader] : "As in Settings: " + gshName;	// (names have brackets of their own)
-		const bool plus = readLine("/etc/banana/board") == "rgds-plus";
 		// Settings' Threaded 3D (DraStic's drastic.cfg) and the microphone of the emulator this game runs in
 		const std::string g3d = getConfValue("/data/drastic/config/drastic.cfg", "threaded_3d", getConfValue("/usr/share/drastic/config/drastic.cfg", "threaded_3d", "0"));
 		const std::string gmic = emu == "bananads" ? getConfValue("/data/bananads/bananads.conf", "mic.threshold", "0.05")
@@ -3395,32 +3485,13 @@ namespace banana
 		be->beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
-		icon(pgNds ? "nds" : "gamepad", 50, 56, 3);
+		icon(pgNds ? "nds" : "gamepad", 50, HEAD_ICON_Y, 3);
 		text(row == PG_EMU ? "This game's emulator" : row == PG_SHADER ? "This game's shader" : row == PG_3D ? "This game's 3D" : row == PG_MIC ? "This game's microphone" : row == PG_NAME ? "This game's name" : row == PG_SORT ? "This game's sort title" : row == PG_DELETE ? "Delete this game" : "This game's box art",
-			true, 17, 170, 62, p.muted, true, 1.4f);
-		text(fit(pgTitle, true, 30, 420), true, 30, 170, 88, p.ink);
-		text(fit(value(row), true, 22, 420), true, 22, 170, 130, row == PG_DELETE && pgDelArmed ? Color::hex(0xff8a96) : p.accent);
-		std::string help = row == PG_EMU
-			? "SuperDrastic: DraStic onto both panels, the fastest. BananaDS: Banana's own emulator (melonDS's core), the most "
-			  "accurate. The choice is for this game only; the others follow Settings > Nintendo DS > Emulator."
-			: row == PG_SHADER ? std::string("The picture's shader for this game only, in either emulator; the others follow Settings > Nintendo DS > Shader. "
-			  "None scales smoothly and costs no GPU work.") + (plus ? PLUS_SHADER_NOTE : "")
-			: row == PG_3D ? "SuperDrastic (DraStic) only. On draws the DS's 3D beside the game, the faster way; Off draws it in step with "
-			  "the game, for a game whose 3D shows on the wrong screen or a frame late (the Dragon Quest games). The others follow "
-			  "Settings > Nintendo DS > Threaded 3D."
-			: row == PG_MIC ? "How loud a word or a blow must be to reach this game, in either emulator: High hears a quiet voice, Low "
-			  "only a loud one, Off none. For a game that needs the microphone (Nintendogs) or one it bothers."
-			: row == PG_NAME ? "The name the menu shows for this game. A types it; an empty one goes back to the scraped name. Kept in "
-			  "banana/game-titles.tsv, which scraping the box art again leaves alone."
-			: row == PG_SORT ? "The library's order goes by this instead of the name: Dragon Quest 04, 05 and 09 keep IV, V and IX in their order. "
-			  "A types it; an empty one sorts by the name again."
-			: row == PG_DELETE ? (!message.empty() ? message : std::string("Removes this game's file from the card: ") + pgRom + ". Left and right choose whether its saves, save "
-			  "states and box art go too, or stay (they come back if you copy the game again). Nothing else is touched: no other "
-			  "game, no BIOS. A asks first; A again deletes.")
-			: !message.empty() ? message
-			: "For a game the box art scrape got wrong or didn't find (a translation, a hack, another name): A types its name as "
-			  "libretro's collection has it, then you pick the right one from what it finds. Wi-Fi needed.";
-		wrapped(help, 20, 50, 196, 540, 7, p.muted);
+			true, 17, 170, HEAD_SECTION_Y, p.muted, true, 1.4f);
+		text(fit(pgTitle, true, 30, 420), true, 30, 170, HEAD_LABEL_Y, p.ink);
+		text(fit(value(row), true, 22, 420), true, 22, 170, HEAD_VALUE_Y, row == PG_DELETE && pgDelArmed ? Color::hex(0xff8a96) : p.accent);
+		std::string help = gameHelpOf(row);
+		helpText(help, HELP_TOP, HELP_BOTTOM, p.muted);
 		be->endScreen();
 
 		be->beginScreen(1);
