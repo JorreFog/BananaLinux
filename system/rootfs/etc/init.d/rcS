@@ -67,7 +67,8 @@ while [ ! -e /run/banana/bananad-ready ] && [ $i -lt 30 ]; do sleep 0.1; i=$((i 
 mark "rcS: bananad ready"
 # the hardware check: what's built in, waited for up to 2 s; what's missing and matters is the menu's notice
 # (/usr/libexec/banana/health; the report in banana/logs/health.txt)
-/usr/libexec/banana/health early
+# (under timeout: a check that hangs mustn't hold the boot; its waits are 2 s, so 10 s is a fault)
+timeout 10 /usr/libexec/banana/health early || mark "rcS: hardware check failed or timed out"
 mark "rcS: hardware checked"
 banana-perf ui
 
@@ -95,7 +96,7 @@ banana-perf ui
 ) &
 # the hardware check's second half, while the menu runs: the touchscreen (probed asynchronously), the Wi-Fi and the
 # GPU (their modules load above) and the clock, up to 20 s
-/usr/libexec/banana/health late &
+timeout 60 /usr/libexec/banana/health late &
 # the boot, to read on a computer (logs/boot.txt, logs/dmesg.txt), once it has settled; rcK writes it again at shutdown
 ( sleep 20; /usr/libexec/banana/boot-log ) &
 exit 0

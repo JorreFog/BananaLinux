@@ -107,5 +107,16 @@ run early; run late
 grep -q "health: everything found (qemu)" "$R/dev/console" && ok "console: $(cat "$R/dev/console")" || bad "console: $(cat "$R/dev/console")"
 [ "$(grep -c '^OK' "$R/run/banana/health")" = 4 ] && ok "4 parts checked" || bad "$(cat "$R/run/banana/health")"
 
+echo "8. the kernel's own input list, not a plain file: BusyBox's read polls, and this file only polls ready when a"
+echo "   device comes or goes (a read straight from it hung the boot); the check must come back within its waits"
+if [ -e /proc/bus/input/devices ]; then
+    handheld rgds-plus
+    rm -f "$R/proc/bus/input/devices"; ln -s /proc/bus/input/devices "$R/proc/bus/input/devices"
+    if timeout 15 env HEALTH_ROOT=$R HEALTH_EARLY_WAIT=0.3 sh "$H" early; then ok "came back with the kernel's input list"
+    else bad "hung (or failed) on the kernel's /proc/bus/input/devices"; fi
+else
+    echo "  (skipped: no /proc/bus/input/devices here)"
+fi
+
 echo "health test: $pass passed, $fail failed"
 [ $fail = 0 ]

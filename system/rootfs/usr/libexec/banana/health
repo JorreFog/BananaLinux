@@ -22,23 +22,29 @@ board=$(cat "$R/etc/banana/board" 2>/dev/null || echo rgds-plus)
 # QEMU's "virt" machine (tools/qemu-boot.sh): its own short list
 grep -qs 'linux,dummy-virt' "$R/proc/device-tree/compatible" && board=qemu
 
-since_boot() { read up rest < "$R/proc/uptime"; echo "$up"; }
+since_boot() { cut -d' ' -f1 "$R/proc/uptime"; }
 
 # has <KEY|SW|ABS|...> <bit>: some input device can send it. A "B:" line's words are 64 bits in hex, the highest
 # first; the shell's arithmetic is 64-bit (BusyBox's, dash's), and a shift and a mask read the bit (an awk version
 # read nothing under BusyBox's awk: every button "missing")
+#
+# Read through cat, never with the shell's read straight from the file: BusyBox's read polls its descriptor first,
+# and the kernel's /proc/bus/input/devices only polls ready when an input device comes or goes, so a read from it
+# waited for ever, and the boot with it (dash and macOS's sh don't poll; the test's made-up file is a plain one).
 has() {
     t=$1 n=$2
-    while read -r tag rest; do
-        [ "$tag" = B: ] || continue
-        case $rest in "$t="*) ;; *) continue ;; esac
-        set -- ${rest#*=}
-        i=$(($# - n / 64))
-        [ $i -ge 1 ] || continue
-        eval "w=\${$i}"
-        [ $(((0x$w >> (n % 64)) & 1)) = 1 ] && return 0
-    done < "$R/proc/bus/input/devices"
-    return 1
+    cat "$R/proc/bus/input/devices" 2>/dev/null | {
+        while read -r tag rest; do
+            [ "$tag" = B: ] || continue
+            case $rest in "$t="*) ;; *) continue ;; esac
+            set -- ${rest#*=}
+            i=$(($# - n / 64))
+            [ $i -ge 1 ] || continue
+            eval "w=\${$i}"
+            [ $(((0x$w >> (n % 64)) & 1)) = 1 ] && exit 0
+        done
+        exit 1
+    }
 }
 count_connected() {   # the panels' connectors the kernel says are connected (not the writeback one)
     n=0
