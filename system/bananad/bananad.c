@@ -548,6 +548,10 @@ static void shutdown_now(const char *why)
 	sync();
 	/* busybox init runs /etc/init.d/rcK (unmount, sync) on SIGUSR2 = poweroff */
 	if (kill(1, SIGUSR2)) reboot(RB_POWER_OFF);
+	/* and nothing more from here until rcK stops bananad: back in the loop, with the lid still shut or the menu idle,
+	 * it slept again in the middle of the shutdown (rcK frozen half-way until the next wake: "off" only when someone
+	 * pressed power, or when the RTC woke it again; sleep.log showed "turning off" twice, a sleep between) */
+	for (;;) pause();
 }
 
 static double save_volume_at, save_backlight_at;	/* debounced: written a moment after the last key */

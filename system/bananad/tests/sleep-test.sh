@@ -206,6 +206,9 @@ for i in $(seq 30); do [ $POWEROFF = 1 ] && break; sleep 0.1; done
 kill -0 $GAME 2>/dev/null && bad "the game wasn't told to quit and save" || ok "the game was told to quit and save first"
 grep -q 'turning off' /data/banana/logs/sleep.log && ok "logged: $(grep 'turning off' /data/banana/logs/sleep.log | tail -n1 | cut -c21-)" || bad "not logged"
 grep -q "woke after .*: the RTC's alarm" /data/banana/logs/sleep.log && ok "logged the alarm's wake" || bad "the alarm's wake not logged"
+# the lid still shut: it mustn't sleep again while rcK shuts down (it did, and froze the shutdown until the next wake)
+for i in $(seq 70); do [ -e /run/test/wake.asleep ] && break; sleep 0.1; done
+[ ! -e /run/test/wake.asleep ] && ok "no sleep again during the shutdown (7 s, the lid still shut)" || bad "slept again in the middle of the shutdown"
 stop
 POWEROFF=0; echo 0 > /run/test/lid
 setsid sleep 600 & GAME=$!; sleep 0.1; echo $GAME > /run/banana/game.pid
