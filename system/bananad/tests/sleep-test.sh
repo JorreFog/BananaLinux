@@ -63,8 +63,8 @@ touch() { python3 -c "
 import struct, sys, time
 t = time.clock_gettime(time.CLOCK_MONOTONIC); s = int(t); u = int((t - s) * 1e6)
 sys.stdout.buffer.write(struct.pack('llHHi', s, u, 3, 0x35, 100) + struct.pack('llHHi', s, u, 0, 0, 0))" >&4; }
-# is bananad asleep (its "mem" written, waiting for the wake: blocked reading the wake FIFO)? wait up to 3 s
-asleep() { for i in $(seq 30); do [ "$(cat /proc/$BD/wchan 2>/dev/null)" = pipe_read ] && return 0; sleep 0.1; done; return 1; }
+# is bananad asleep (its "mem" written, waiting for the wake: it says so in wake.asleep)? wait up to 3 s
+asleep() { for i in $(seq 30); do [ -e /run/test/wake.asleep ] && return 0; sleep 0.1; done; return 1; }
 # the wake: one byte, and only to a bananad that is asleep (a byte left over would end its next sleep at once)
 wake() { if asleep; then printf x >&6; else bad "wake: bananad wasn't asleep"; fi; sleep 0.3; }
 gstate() { awk '{print $3}' /proc/$GAME/stat; }
@@ -74,7 +74,7 @@ start() {   # start [bananad.conf lines]
     BANANAD_TEST_LID=/run/test/lid BANANAD_TEST_TOUCH=/run/test/touch BANANAD_TEST_WAKE=/run/test/wake "$W/bananad" & BD=$!
     sleep 0.5
 }
-stop() { kill $BD 2>/dev/null; wait $BD 2>/dev/null || true; }
+stop() { kill $BD 2>/dev/null; wait $BD 2>/dev/null || true; rm -f /run/test/wake.asleep; }   # (killed asleep: no wake)
 
 "$W/banana-ui" & UI=$!
 setsid sleep 600 & GAME=$!

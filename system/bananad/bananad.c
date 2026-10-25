@@ -76,8 +76,10 @@ static void leds_update(void);
 extern int leds_last;	/* (leds_update's, below) */
 static int leds_asleep;	/* the upper LED at led_sleep_brightness (suspend_now, until the wake) */
 /* the sleep test's "kernel": a write of "mem" returns once a byte comes here (BANANAD_TEST_WAKE). A FIFO at
- * /sys/power/state alone returned at once, and a sleep straight after a wake raced the test's reader */
+ * /sys/power/state alone returned at once, and a sleep straight after a wake raced the test's reader. While it
+ * waits, <that path>.asleep is there: the test's "asleep", the same on every kernel (a wait channel's name isn't) */
 static int test_wake = -1;
+static char test_asleep[300];
 static void audio_route(void);
 static void undim(void);
 static void find_bottom_bl(void);
@@ -436,7 +438,13 @@ static void suspend_now(const char *why)
 		if (cycles == 0) sleep_log("sleep (%s): %.0f ms to suspend%s", why, (t_in - t0) * 1000, game ? ", game paused" : "");
 		int r = write_file("/sys/power/state", "mem");
 		int err = errno;
-		if (!r && test_wake >= 0) { char c; while (read(test_wake, &c, 1) < 0 && errno == EINTR) {} }
+		if (!r && test_wake >= 0) {
+			char c;
+			int fd = open(test_asleep, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644);	/* (write_file doesn't create) */
+			if (fd >= 0) close(fd);
+			while (read(test_wake, &c, 1) < 0 && errno == EINTR) {}
+			unlink(test_asleep);
+		}
 		clock_gettime(CLOCK_BOOTTIME, &b1);
 		/* the RTC clears wakealarm when the alarm fires: set before, empty now, is the battery check's wake */
 		char pending[32];
@@ -1220,7 +1228,10 @@ int main(int argc, char **argv)
 	(void)argc; (void)argv;
 	openlog("bananad", LOG_PID, LOG_DAEMON);
 	test_lid = getenv("BANANAD_TEST_LID");
-	if (getenv("BANANAD_TEST_WAKE")) test_wake = open(getenv("BANANAD_TEST_WAKE"), O_RDWR | O_CLOEXEC);
+	if (getenv("BANANAD_TEST_WAKE")) {
+		test_wake = open(getenv("BANANAD_TEST_WAKE"), O_RDWR | O_CLOEXEC);
+		snprintf(test_asleep, sizeof test_asleep, "%s.asleep", getenv("BANANAD_TEST_WAKE"));
+	}
 	load_conf("/etc/banana/bananad.conf");
 	load_conf("/data/banana/bananad.conf");
 	load_timezone();
