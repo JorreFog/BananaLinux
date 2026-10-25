@@ -56,6 +56,7 @@ namespace banana
 			{ "quick_resume", "off", ENUM, ON_OFF, 0, 0, true },
 			{ "sd2_roms", "on", ENUM, ON_OFF, 0, 0 },
 			{ "ra_shader", "off", ENUM, SHADERS, 0, 0, true },
+			{ "ra_border", "off", ENUM, ON_OFF, 0, 0, true },
 			{ "ra_audio_latency", "64", ENUM, LATENCY, 0, 0, true },
 			{ "ra_vsync", "on", ENUM, ON_OFF, 0, 0, true },
 			{ "ra_hotkeys", "on", ENUM, ON_OFF, 0, 0, true },

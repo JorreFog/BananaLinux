@@ -172,6 +172,62 @@ if [ "$(sed -n 's/^ra_hotkeys *= *//p' /data/banana/settings.conf 2>/dev/null | 
     grep -E "$HKKEYS" $CFG > $KEEP.new && mv $KEEP.new $KEEP && sync
     HKA="|$HK"
 fi
+# Settings > Other systems > Screen border (ra_border, default off): the black area around the picture filled with a
+# border in the menu's look (tools/make-borders.py made them: /usr/share/banana/borders/<panel mode>/<theme>/<system>),
+# as a RetroArch overlay with a clear hole, and the picture put exactly in that hole as RetroArch's custom viewport
+# (borders.conf). The theme's own border when the image has one for it (dark, light, the example themes as the image
+# has them), else its base palette's. A system with no border for this panel (its picture fills it) runs as it does
+# without. What RetroArch saves of these keys on exit is put back below, as for the hotkeys (and at the next start
+# after a run cut short).
+BCFG=/run/banana/retroarch-border.cfg
+BKEEP=/data/retroarch/.banana-border.keep
+BKEYS='^(aspect_ratio_index|custom_viewport_(x|y|width|height)|video_viewport_bias_[xy]|video_scale_integer|input_overlay(_enable|_opacity|_hide_in_menu|_behind_menu|_auto_scale|_scale_landscape|_[xy]_offset_landscape|_aspect_adjust_landscape|_[xy]_separation_landscape|_show_inputs|_hide_when_gamepad_connected|_enable_autopreferred)?) = '
+if [ -f $BKEEP ]; then
+    sed -i -E "/$BKEYS/d" $CFG && cat $BKEEP >> $CFG && rm -f $BKEEP && sync
+    echo "run-retroarch: the screen border lines of a run cut short put back" >&2
+fi
+rm -f $BCFG
+BA=
+if [ "$(setting ra_border)" = on ] && [ -n "$BANANA_SYSTEM" ]; then
+    BD=/usr/share/banana/borders
+    MODE=$(cat /sys/class/drm/card0-*/modes 2>/dev/null | head -n 1)
+    read BX BY BW BH <<EOF
+$(awk -v m="$MODE" -v s="$BANANA_SYSTEM" '$1 == m && $2 == s { print $3, $4, $5, $6; exit }' $BD/borders.conf 2>/dev/null)
+EOF
+    th=$(setting theme)
+    case $th in
+    user:*)
+        n=${th#user:}; j=/data/banana/themes/$n.json; [ -f "$j" ] || j=/usr/share/banana/themes/$n.json
+        # the image's border for an example theme only while the card's file is the image's (a copy changed on the
+        # card has colours the border doesn't know): else the base palette it starts from
+        if [ -d "$BD/$MODE/$n" ] && { [ "$j" = /usr/share/banana/themes/$n.json ] || cmp -s "$j" /usr/share/banana/themes/$n.json; }; then
+            th=$n
+        elif grep -q '"base" *: *"light"' "$j" 2>/dev/null; then th=light; else th=dark; fi ;;
+    light) ;;
+    *) th=dark ;;
+    esac
+    OV=$BD/$MODE/$th/$BANANA_SYSTEM.cfg
+    if [ -n "$BH" ] && [ -f "$OV" ]; then
+        {
+            # (RetroArch 1.22 places a custom viewport by video_viewport_bias_x/y as well as by custom_viewport_x/y:
+            # x = custom_viewport_x + (panel - width) * bias. The rectangle is centred, so 0 and 0.5 put it at BX,BY;
+            # BX,BY in x/y too drew it twice as far in, measured on the RG DS)
+            printf 'aspect_ratio_index = "23"\ncustom_viewport_x = "0"\ncustom_viewport_y = "0"\n'
+            printf 'video_viewport_bias_x = "0.500000"\nvideo_viewport_bias_y = "0.500000"\n'
+            printf 'custom_viewport_width = "%s"\ncustom_viewport_height = "%s"\nvideo_scale_integer = "false"\n' "$BW" "$BH"
+            printf 'input_overlay_enable = "true"\ninput_overlay = "%s"\ninput_overlay_opacity = "1.000000"\n' "$OV"
+            printf 'input_overlay_hide_in_menu = "true"\ninput_overlay_behind_menu = "false"\ninput_overlay_auto_scale = "false"\n'
+            printf 'input_overlay_scale_landscape = "1.000000"\ninput_overlay_aspect_adjust_landscape = "0.000000"\n'
+            printf 'input_overlay_x_offset_landscape = "0.000000"\ninput_overlay_y_offset_landscape = "0.000000"\n'
+            printf 'input_overlay_x_separation_landscape = "0.000000"\ninput_overlay_y_separation_landscape = "0.000000"\n'
+            printf 'input_overlay_show_inputs = "0"\ninput_overlay_hide_when_gamepad_connected = "false"\n'
+            printf 'input_overlay_enable_autopreferred = "false"\n'
+        } > $BCFG
+        grep -E "$BKEYS" $CFG > $BKEEP.new; mv $BKEEP.new $BKEEP && sync
+        BA="|$BCFG"
+        echo "run-retroarch: screen border $MODE/$th/$BANANA_SYSTEM, picture at $BX,$BY ${BW}x$BH" >&2
+    fi
+fi
 # anything RetroArch keeps that retroarch.cfg doesn't place (remaps, core options, playlists...) under the card's
 # retroarch folder, not ~/.config on the read-only root
 export HOME=/data/retroarch XDG_CONFIG_HOME=/data/retroarch
@@ -188,7 +244,7 @@ if [ -n "$BANANA_DRM_LEASE_FD" ]; then
     # the Pokemon companion (Settings > Other systems): RetroArch's stdout, where it answers the panel's
     # READ_CORE_MEMORY commands, into the pipe banana-ui reads (its log goes to the file above, not there)
     if [ -n "$BANANA_RA_OUT" ] && [ -p "$BANANA_RA_OUT" ]; then exec 4>"$BANANA_RA_OUT"; else exec 4>&1; fi
-    LD_PRELOAD=/usr/lib/banana/banana-leaseshim.so retroarch --config $CFG --appendconfig "$L|$RA$HKA" --verbose \
+    LD_PRELOAD=/usr/lib/banana/banana-leaseshim.so retroarch --config $CFG --appendconfig "$L|$RA$HKA$BA" --verbose \
         --log-file /run/banana/retroarch.log -L "$CORE" "$2" < "${BANANA_RA_CMD:-/dev/null}" >&4 &
     P=$!
     exec 4>&-
@@ -203,7 +259,7 @@ else
     L=/run/banana/retroarch-stdin.cfg
     printf 'stdin_cmd_enable = "true"\n' > $L
     [ $ONCE = 1 ] && echo 'savestate_auto_load = "true"' >> $L
-    retroarch --config $CFG --appendconfig "$L|$RA$HKA" -L "$CORE" "$2" < $FIFO &
+    retroarch --config $CFG --appendconfig "$L|$RA$HKA$BA" -L "$CORE" "$2" < $FIFO &
     P=$!
 fi
 trap 'kill -TERM $P 2>/dev/null' TERM INT HUP
@@ -217,6 +273,12 @@ if [ -n "$HKA" ]; then
     sed -i -E "/$HKKEYS/d" $CFG
     cat $KEEP >> $CFG
     rm -f $HK $KEEP
+fi
+if [ -n "$BA" ]; then
+    # the screen border's keys as they were before the game (RetroArch wrote the border's into retroarch.cfg on exit)
+    sed -i -E "/$BKEYS/d" $CFG
+    cat $BKEEP >> $CFG
+    rm -f $BCFG $BKEEP
 fi
 if [ -n "$BANANA_DRM_LEASE_FD" ]; then
     set_cfg video_monitor_index ${MON:-2}
