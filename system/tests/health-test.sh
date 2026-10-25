@@ -105,7 +105,7 @@ for c in Virtual-1 Virtual-2; do echo connected > "$R/sys/class/drm/card0-$c/sta
 dev "QEMU Virtio Keyboard" KEY=1,28,103,108 > "$R/proc/bus/input/devices"; : > "$R/run/banana/bananad-ready"
 run early; run late
 grep -q "health: everything found (qemu)" "$R/dev/console" && ok "console: $(cat "$R/dev/console")" || bad "console: $(cat "$R/dev/console")"
-[ "$(grep -c '^OK' "$R/run/banana/health")" = 4 ] && ok "4 parts checked" || bad "$(cat "$R/run/banana/health")"
+[ "$(grep -c '^OK' "$R/run/banana/health")" = 3 ] && ok "3 parts checked" || bad "$(cat "$R/run/banana/health")"
 
 echo "8. the kernel's own input list, not a plain file: BusyBox's read polls, and this file only polls ready when a"
 echo "   device comes or goes (a read straight from it hung the boot); the check must come back within its waits"
@@ -117,6 +117,13 @@ if [ -e /proc/bus/input/devices ]; then
 else
     echo "  (skipped: no /proc/bus/input/devices here)"
 fi
+
+echo "9. a panel reading \"unknown\" early in the boot counts; a missing log-only part isn't waited for"
+handheld rgds-plus; echo unknown > "$R/sys/class/drm/card0-DSI-2/status"; rm -rf "$R/sys/class/leds"
+t0=$(date +%s); EW=3 run early; t1=$(date +%s)
+line OK "both screens" && ok "OK: both screens (one reading unknown)" || bad "$(grep screens "$R/run/banana/health")"
+line MISSING LEDs && [ $((t1 - t0)) -lt 2 ] && ok "LEDs MISSING without waiting the 3 s" || bad "LEDs waited for ($((t1 - t0)) s): $(grep LEDs "$R/run/banana/health")"
+[ ! -e "$R/run/banana/health-notice" ] && ok "no notice for log-only parts" || bad "notice: $(cat "$R/run/banana/health-notice")"
 
 echo "health test: $pass passed, $fail failed"
 [ $fail = 0 ]

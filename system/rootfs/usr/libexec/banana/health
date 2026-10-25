@@ -46,12 +46,12 @@ has() {
         exit 1
     }
 }
-count_connected() {   # the panels' connectors the kernel says are connected (not the writeback one)
-    n=0
+count_connected() {   # the panels' connectors, but the writeback one and any the kernel says are disconnected
+    n=0                 # (early in the boot a panel can read "unknown", QEMU's second output "disconnected" until set)
     for s in "$R"/sys/class/drm/card*-*/status; do
         [ -f "$s" ] || continue
         case $s in *Writeback*) continue ;; esac
-        [ "$(cat "$s" 2>/dev/null)" = connected ] && n=$((n + 1))
+        [ "$(cat "$s" 2>/dev/null)" != disconnected ] && n=$((n + 1))
     done
     echo $n
 }
@@ -98,10 +98,12 @@ label() {
     esac
 }
 # the parts that go in the menu's notice when they're missing (the rest only in the report)
-matters() { case $1 in power|volume|gamepad|screens|backlights|sound|bananad|keys|touch|wifi|gpu) return 0 ;; esac; return 1; }
+# (not the panels or their backlights: with them missing there's nowhere to show a notice, and a panel reading
+# "unknown" this early mustn't bring a "Not found: both screens" at every boot)
+matters() { case $1 in power|volume|gamepad|sound|bananad|keys|touch|wifi|gpu) return 0 ;; esac; return 1; }
 
 case $board in
-qemu) EARLY="screens keys storage bananad"; LATE="" ;;
+qemu) EARLY="keys storage bananad"; LATE="" ;;    # (the QEMU test checks both panels opened itself)
 *)    EARLY="power volume gamepad lid screens backlights sound leds battery storage bananad"; LATE="touch wifi gpu clock" ;;
 esac
 
@@ -121,6 +123,9 @@ check() {
         done
         left=$still; first=0
         [ -z "$left" ] && break
+        # waited for only while a part that matters is missing (the boot isn't held for a LED or the lid)
+        wanted=; for p in $left; do matters $p && wanted=1; done
+        [ -z "$wanted" ] && break
         [ $tries -le 0 ] && break
         tries=$((tries - 1))
         sleep 0.1
