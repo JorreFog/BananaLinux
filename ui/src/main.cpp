@@ -1148,6 +1148,16 @@ int main(int argc, char** argv)
 	o.data = envOr("BANANA_DATA", o.data);
 	o.top = envOr("BANANA_TOP", o.top);
 	o.touch = envOr("BANANA_TOUCH", o.touch);
+	// --panels-on: rcS's first step at the boot (in the background): both panels powered up while the boot mounts the
+	// card and starts the menu (on the RG DS Plus that power-up is ~1.2 s, on the RG DS ~0.3 s, and the menu waited for
+	// it); the menu's own open then finds them lit. Nothing else read or drawn
+	if (argc == 2 && !strcmp(argv[1], "--panels-on"))
+	{
+		Display early;
+		early.handOver = true;
+		std::string err;
+		return early.open(o.top, err) ? 0 : 1;
+	}
 	for (int i = 1; i < argc; i++)
 	{
 		std::string a = argv[i];

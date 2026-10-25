@@ -28,6 +28,10 @@ namespace banana
 		// the first DRM device with two connected panels of top's connector type; top is the connector shown as the
 		// top screen ("DSI-2" on the handheld; "Virtual-2" on QEMU's virtio GPU, see tools/qemu-boot.sh)
 		bool open(const std::string& top, std::string& err);
+		// the boot's early light-up (banana-ui --panels-on, from rcS's first lines): both panels powered up while the
+		// rest of the boot runs; the master given up as soon as the modesets are queued, so the menu's own open() takes the
+		// display over at once (the panels lit, no second power-up) whenever it comes
+		bool handOver = false;
 		void close();
 		bool isOpen() const { return fd >= 0; }
 		int width() const { return W; }

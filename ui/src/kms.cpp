@@ -173,6 +173,9 @@ namespace banana
 				continue;
 			}
 			fd = f;
+			// the master: the boot's early light-up (--panels-on) may still hold it for a moment; it gives it up as soon
+			// as its modesets are queued (a second at most)
+			for (int t = 0; !handOver && drmSetMaster(fd) != 0 && t < 100; t++) usleep(10000);
 			W = found[0].mode.hdisplay; H = found[0].mode.vdisplay;
 			for (int s = 0; s < 2; s++)
 			{
@@ -182,7 +185,7 @@ namespace banana
 				if (!makeBuf(p[s].buf[0]) || !makeBuf(p[s].buf[1])) { err = "can't make scanout buffers"; close(); return false; }
 			}
 			// panels still dark (the boot): both lit at once; else (lit, or the driver won't) as always
-			if (!lightBoth()) restore();
+			if (!lightBoth() && !handOver) restore();
 			return true;
 		}
 		return false;
@@ -224,8 +227,12 @@ namespace banana
 		for (int s = 0; s < 2 && ok; s++)
 			if (drmModeAtomicCommit(fd, req[s], DRM_MODE_ATOMIC_ALLOW_MODESET | DRM_MODE_ATOMIC_NONBLOCK | DRM_MODE_PAGE_FLIP_EVENT, &waiting) == 0)
 				{ waiting++; lit++; }
-		// both done (a flip event each), a second at most
-		for (int t = 0; t < 100 && waiting > 0; t++)
+		// --panels-on: the master given up now (the menu can take the display while the panels power up), the wait
+		// longer (the RG DS Plus's panels take ~1.2 s): its fd closed on the way, the scanout's black buffers go with it
+		// and the panels stay lit for the menu
+		if (handOver) drmDropMaster(fd);
+		// both done (a flip event each), a second at most (3 for --panels-on)
+		for (int t = 0; t < (handOver ? 300 : 100) && waiting > 0; t++)
 		{
 			pollfd pf = { fd, POLLIN, 0 };
 			if (poll(&pf, 1, 10) > 0)

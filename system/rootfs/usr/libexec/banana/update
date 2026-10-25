@@ -45,15 +45,32 @@ uncache() { sync; echo 3 > /proc/sys/vm/drop_caches 2>/dev/null; }
 boot_rw() { mount -o remount,rw /boot || fail "the boot partition can't be written"; }
 boot_ro() { sync; mount -o remount,ro /boot 2>/dev/null; }
 default_slot() { sed -n 's/^DEFAULT *//p' /boot/extlinux/extlinux.conf 2>/dev/null | head -n 1; }
+# extlinux.conf with <slot> the default, on stdout. The kernel options for a faster boot (0.4.2: RCU grace periods
+# expedited, the CPU's top clock until the menu sets its own, the touchscreens probed beside the rest) added to every
+# APPEND line that lacks them: a card made before 0.4.2 never had them, as an update only changed DEFAULT
+extlinux_for() {
+    sed -e "s/^DEFAULT .*/DEFAULT $1/" \
+        -e '/^[[:space:]]*APPEND /{
+/rcupdate\.rcu_expedited=/!s/[[:space:]]*$/ rcupdate.rcu_expedited=1/
+/cpufreq\.default_governor=/!s/[[:space:]]*$/ cpufreq.default_governor=performance/
+/driver_async_probe=/!s/[[:space:]]*$/ driver_async_probe=Goodix-TS/
+}' "$2"
+}
+# the new extlinux.conf looks whole: <slot> the default, as many LABEL and APPEND lines as before, each APPEND still with
+# its root= (a short or empty file would leave the handheld unbootable)
+extlinux_ok() {   # extlinux_ok <slot> <new> <old>
+    [ -s "$2" ] && grep -q "^DEFAULT $1\$" "$2" &&
+        [ "$(grep -c '^LABEL ' "$2")" = "$(grep -c '^LABEL ' "$3")" ] &&
+        [ "$(grep -c 'APPEND .*root=' "$2")" = "$(grep -c 'APPEND .*root=' "$3")" ]
+}
 set_default() {   # set_default <slot>: extlinux.conf rewritten, the small file renamed over the old one
     boot_rw
-    # The new file on the card and checked before the rename: FAT keeps no order between a file's data and a rename,
-    # so a power cut right after an unsynced rename could leave an empty extlinux.conf (no boot at all), and a .new
-    # that came out empty or without its DEFAULT line (a read that failed half way) must never replace the old one
-    sed "s/^DEFAULT .*/DEFAULT $1/" /boot/extlinux/extlinux.conf > /boot/extlinux/extlinux.conf.new &&
-        sync && grep -qx "DEFAULT $1" /boot/extlinux/extlinux.conf.new && grep -q "^ *LABEL $1\$" /boot/extlinux/extlinux.conf.new &&
-        mv -f /boot/extlinux/extlinux.conf.new /boot/extlinux/extlinux.conf ||
-        { rm -f /boot/extlinux/extlinux.conf.new; fail "can't write extlinux.conf"; }
+    E=/boot/extlinux/extlinux.conf
+    extlinux_for "$1" $E > $E.new && sync && extlinux_ok "$1" $E.new $E || {
+        # (the options' edit is what could go wrong: DEFAULT alone as before)
+        sed "s/^DEFAULT .*/DEFAULT $1/" $E > $E.new && sync && extlinux_ok "$1" $E.new $E
+    } || { rm -f $E.new; fail "can't write extlinux.conf"; }
+    mv -f $E.new $E || fail "can't write extlinux.conf"
     boot_ro
 }
 hash_of() { sha256sum "$1" | cut -d' ' -f1; }
