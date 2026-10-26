@@ -1,8 +1,10 @@
 #!/bin/sh
 # The data partition's folders, made when missing (a fresh card, or one that was formatted on a computer)
 D=/data
+# the systems list: the built-in one with the card's banana/systems.conf merged over it (systems-merge; banana-ui-session
+# makes it again at every menu start)
 SYSTEMS=/etc/banana/systems.conf
-[ -f $D/banana/systems.conf ] && SYSTEMS=$D/banana/systems.conf     # the user's copy replaces it
+/usr/libexec/banana/systems-merge 2>/dev/null && [ -s /run/banana/systems.conf ] && SYSTEMS=/run/banana/systems.conf
 mkdir -p $D/banana/logs $D/banana/updates $D/bios $D/saves $D/states  # (banana/updates: where the release notes say to put an update)
 # the Store's cache, its apps, and their entries (the Apps shelf's folder: it must be there for the menu to watch it)
 mkdir -p $D/store/data $D/store/apps $D/store/tiles

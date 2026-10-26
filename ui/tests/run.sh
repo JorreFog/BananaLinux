@@ -9,6 +9,10 @@ FX=$OUT/fixture
 rm -rf "$OUT"; mkdir -p "$OUT"
 "$HERE/tests/fixture.sh" "$FX" >/dev/null
 fail=0
+# the systems list: the card's systems.conf merged over the image's per system (systems-merge), and the history of old
+# defaults it uses up to date with git (tools/systems-history.sh)
+sh "$HERE/tests/systems-merge.sh" || fail=1
+sh "$HERE/../tools/systems-history.sh" --check || fail=1
 # the Pokémon companion's decoder (on data made from the documented layouts), and the made-up game and replies it
 # leaves in $OUT for the game panel's run below
 make -s -C "$HERE" tests/pokemon-test >/dev/null && "$HERE/tests/pokemon-test" "$OUT" 2> "$OUT/pokemon-test.log" || { echo "FAIL the Pokémon companion's decoder: $(grep FAIL "$OUT/pokemon-test.log" | head -3)"; fail=1; }

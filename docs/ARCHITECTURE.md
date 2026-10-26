@@ -69,7 +69,7 @@ from ROCKNIXDS by `tools/import-rnds.sh`): a *Source* gives it systems, games an
 textures, and it rasterizes everything else itself (CSS-like boxes, Pixelify Sans text, fitted pictures). In
 ROCKNIXDS, ES is the Source and its GL renderer the Backend. In Banana:
 
-- **Source** (`src/library.cpp`): the systems in `/etc/banana/systems.conf` (or the copy in `/data/banana/`),
+- **Source** (`src/library.cpp`): the systems in `/run/banana/systems.conf` (`/etc/banana/systems.conf` with the card's `/data/banana/systems.conf` merged over it per system by `libexec/banana/systems-merge` at the menu's start),
   their icons and colours from the theme's `systems.cfg`, the games found in each system's folder, names and art
   from an EmulationStation `gamelist.xml` when one is there (a card scraped under ROCKNIX keeps its art) or from
   `media/box|cart|label/<rom name>.png`, and Banana's own play counts, play time and favourites.
