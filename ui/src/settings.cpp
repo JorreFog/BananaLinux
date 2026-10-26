@@ -446,7 +446,10 @@ namespace banana
 		add(S, "gear", "About", "", "", "about", {}, {}, Item::INFO);
 		add(S, "gear", "Restart", "Restarts the handheld. Press A twice.", "", "reboot", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "Shut down", "Turns the handheld off. Press A twice. (Or hold the power button.)", "", "poweroff", { "" }, { "" }, Item::ACTION);
-		// the Developer list: a 7th tile, there once unlocked (A seven times on System > About; settings.conf's developer)
+		// (last in System, and there only once unlocked: A seven times on About; settings.conf's developer. groupEnd)
+		add(S, "gear", "Developer", "Tools for finding what went wrong: a recording of everything the handheld does, and more detailed logs.",
+			"", "developer", {}, {}, Item::PAGE);
+		// the Developer list: opened from that row, not a tile (DEV; last of the items)
 		add(DEV, "gear", "Flight recorder", "Records what the handheld does: buttons, touches, the lid, the screens, sleep, the battery and Wi-Fi.", power, "recorder",
 			{ "Off", "On" }, { "off", "on" });
 		items.back().hints = { "Not recording.",
@@ -454,7 +457,7 @@ namespace banana
 		add(DEV, "gear", "Sleep timing log", "How long each part of the handheld takes to sleep and to wake.", power, "sleep_debug",
 			{ "Off", "On" }, { "no", "yes" });
 		items.back().hints = { "Not logged.", "Written to banana/logs/sleep-devices.log after each wake." };
-		add(DEV, "gear", "Hide developer options", "Takes the Developer tile away again (A seven times on System > About brings it back). Press A twice.",
+		add(DEV, "gear", "Hide developer options", "Takes the Developer row away again (A seven times on System > About brings it back). Press A twice.",
 			"", "dev_hide", { "" }, { "" }, Item::ACTION);
 	}
 
@@ -596,10 +599,15 @@ namespace banana
 	}
 
 	// the tiles: every group but the Developer list (opened from System's Developer row)
-	int Settings::tiles() const { return (int)groups.size() - (!devOn && !groups.empty() && groups.back() == DEV ? 1 : 0); }
-	// the grid: three columns of 196 for six tiles, four of 145 once the Developer tile is there (the same 604 across)
-	int Settings::cols() const { return tiles() > 6 ? 4 : 3; }
-	float Settings::tileW() const { return cols() == 3 ? 196 : 145; }
+	int Settings::tiles() const { return (int)groups.size() - (!groups.empty() && groups.back() == DEV ? 1 : 0); }
+
+	// the cursor on a row by its key, in its group's list
+	void Settings::toRow(const std::string& key)
+	{
+		for (int i = 0; i < (int)items.size(); i++) if (items[i].key == key) sel = i;
+		top = std::max(groupStart(groupOf(sel)), sel - ROWS + 1);
+		armed = -1;
+	}
 
 	int Settings::groupOf(int item) const
 	{
@@ -615,6 +623,7 @@ namespace banana
 	{
 		int i = groupStart(g);
 		while (i < (int)items.size() && items[i].section == groups[g]) i++;
+		if (!devOn && i > 0 && items[i - 1].key == "developer") i--;	// (System's last row, until unlocked)
 		return i;
 	}
 	std::string Settings::groupHint(int g) const
@@ -639,7 +648,8 @@ namespace banana
 		devOn = getConfValue(data + "/settings.conf", "developer", "off") == "on";
 		aboutTaps = 0;
 		inGroups = true;
-		gsel = std::min(groupOf(sel), tiles() - 1);	// (the Developer tile hidden since: System's)
+		if (groupOf(sel) >= tiles() || (!devOn && items[sel].key == "developer")) toRow("about");	// (left in the Developer list)
+		gsel = groupOf(sel);
 		for (auto& it : items) load(it);
 		refreshInfo();
 		armed = -1;
@@ -718,7 +728,7 @@ namespace banana
 				aboutTaps = 0;
 				devOn = true;
 				setConfValue(data + "/settings.conf", "developer", "on");
-				toast("Developer options are on", "A Developer tile is in Settings now.", 0x6ad07a, 1, 5000);
+				toast("Developer options are on", "A Developer row is at the end of System now.", 0x6ad07a, 1, 5000);
 			}
 			else if (aboutTaps >= 4) toast(std::to_string(7 - aboutTaps) + " more", "for the developer options", 0x6ad07a, 1, 1500);
 			return MOVED;
@@ -728,6 +738,12 @@ namespace banana
 		{
 			if (dir <= 0) return NONE;
 			if (it.key == "scrape") { startScrape(); return MOVED; }
+			if (it.key == "developer")
+			{
+				for (int g = 0; g < (int)groups.size(); g++) if (groups[g] == DEV) sel = top = groupStart(g);
+				armed = -1;
+				return MOVED;
+			}
 			if (it.key == "update") openUpdates(); else if (it.key == "setup") openSetup(); else openNetworks();
 			return MOVED;
 		}
@@ -740,8 +756,7 @@ namespace banana
 				armed = -1;
 				devOn = false;
 				setConfValue(data + "/settings.conf", "developer", "off");
-				inGroups = true;
-				gsel = std::min(gsel, tiles() - 1);
+				toRow("about");	// (the Developer row gone: System's About, where the seven A's are)
 				toast("Developer options hidden", "A seven times on System > About brings them back.", 0x6ad07a, 1, 4000);
 				return MOVED;
 			}
@@ -876,7 +891,8 @@ namespace banana
 		}
 		case Key::L: case Key::R:
 		{
-			// the previous / next group's list
+			// the previous / next group's list (not from the Developer list)
+			if (groups[g] == DEV) return NONE;
 			int n = tiles();
 			gsel = (g + (k == Key::R ? 1 : -1) + n) % n;
 			sel = top = groupStart(gsel);
@@ -886,7 +902,9 @@ namespace banana
 		}
 		case Key::LEFT: return change(-1);
 		case Key::RIGHT: case Key::A: return change(1);
-		case Key::B: inGroups = true; gsel = g; armed = -1; return MOVED;	// back to the groups
+		case Key::B:
+			if (groups[g] == DEV) { toRow("developer"); return MOVED; }	// the Developer list: back to its row in System
+			inGroups = true; gsel = g; armed = -1; return MOVED;	// back to the groups
 		case Key::START: mOpen = false; return CLOSED;
 		default: return NONE;
 		}
@@ -897,10 +915,10 @@ namespace banana
 		int n = tiles();
 		switch (k)
 		{
-		// a grid of three columns (four with the Developer tile), as the in-game menu's main page
+		// a grid of three columns, as the in-game menu's main page
 		case Key::LEFT: gsel = (gsel + n - 1) % n; return MOVED;
 		case Key::RIGHT: gsel = (gsel + 1) % n; return MOVED;
-		case Key::UP: case Key::DOWN: gsel = (gsel + (k == Key::UP ? n - cols() : cols())) % n; return MOVED;
+		case Key::UP: case Key::DOWN: gsel = (gsel + (k == Key::UP ? n - 3 : 3)) % n; return MOVED;
 		case Key::L: gsel = (gsel + n - 1) % n; return MOVED;
 		case Key::R: gsel = (gsel + 1) % n; return MOVED;
 		case Key::A:
@@ -953,8 +971,8 @@ namespace banana
 			if (downY >= 418 && downY <= 466) return pressGroups(downX < 320 ? Key::B : Key::A);
 			for (int g = 0; g < tiles(); g++)
 			{
-				float x = 18 + (g % cols()) * (tileW() + 8), y = 82 + (g / cols()) * 166;
-				if (downX < x || downX > x + tileW() || downY < y || downY > y + 158) continue;
+				float x = 18 + (g % 3) * 204, y = 82 + (g / 3) * 166;
+				if (downX < x || downX > x + 196 || downY < y || downY > y + 158) continue;
 				if (g != gsel) { gsel = g; return MOVED; }
 				return pressGroups(Key::A);
 			}
@@ -1253,7 +1271,7 @@ namespace banana
 	bool Settings::animating() const
 	{
 		if (!mOpen || page != LIST) return false;
-		if (inGroups) return aCol != gsel % cols() || aRow != gsel / cols();
+		if (inGroups) return aCol != gsel % 3 || aRow != gsel / 3;
 		return aPick != sel || aTop != top;
 	}
 
@@ -1264,7 +1282,7 @@ namespace banana
 		aLast = t;
 		float k = 1 - (float)std::exp(-dt / 55.0);
 		auto ease = [&](float& v, float to) { if (v < -0.5f) v = to; v += (to - v) * k; if (std::fabs(to - v) < 0.01f) v = to; };
-		if (inGroups) { ease(aCol, (float)(gsel % cols())); ease(aRow, (float)(gsel / cols())); }
+		if (inGroups) { ease(aCol, (float)(gsel % 3)); ease(aRow, (float)(gsel / 3)); }
 		else
 		{
 			int g = groupOf(sel);
@@ -1303,21 +1321,19 @@ namespace banana
 		text(sub, true, 17, 602 - sw, 31, p.muted);
 		advance();
 		aGroup = -1;	// (the list starts still when a group opens)
-		const int C = cols();
-		const float W = tileW(), step = W + 8;
-		for (int g = 0; g < tiles() && g < 8; g++) box("slot", false, 18 + (g % C) * step, 82 + (g / C) * 166, W, 158);
-		box("pick", true, 18 + aCol * step, 82 + aRow * 166, W, 158);
-		for (int g = 0; g < tiles() && g < 8; g++)
+		for (int g = 0; g < tiles() && g < 6; g++) box("slot", false, 18 + (g % 3) * 204, 82 + (g / 3) * 166, 196, 158);
+		box("pick", true, 18 + aCol * 204, 82 + aRow * 166, 196, 158);
+		for (int g = 0; g < tiles() && g < 6; g++)
 		{
-			bool on = std::fabs(g % C - aCol) < 0.5f && std::fabs(g / C - aRow) < 0.5f;
-			float x = 18 + (g % C) * step, y = 82 + (g / C) * 166;
-			iconCentred(items[groupStart(g)].icon, x + W / 2, y + 22, 2);
-			std::string label = fit(groups[g], true, 19, W - 16);
+			bool on = std::fabs(g % 3 - aCol) < 0.5f && std::fabs(g / 3 - aRow) < 0.5f;
+			float x = 18 + (g % 3) * 204, y = 82 + (g / 3) * 166;
+			iconCentred(items[groupStart(g)].icon, x + 98, y + 22, 2);
+			std::string label = fit(groups[g], true, 19, 180);
 			float lw = text(label, true, 19, 0, 0, p.ink, false, 0, true);
-			text(label, true, 19, x + W / 2 - lw / 2, y + 84, on ? p.onPick : p.ink);
-			std::string hint = fit(groupHint(g), false, 14, W - 20);
+			text(label, true, 19, x + 98 - lw / 2, y + 84, on ? p.onPick : p.ink);
+			std::string hint = fit(groupHint(g), false, 14, 176);
 			float hw = text(hint, false, 14, 0, 0, p.muted, false, 0, true);
-			text(hint, false, 14, x + W / 2 - hw / 2, y + 114, on ? p.onPickAccent : p.muted);
+			text(hint, false, 14, x + 98 - hw / 2, y + 114, on ? p.onPickAccent : p.muted);
 		}
 		float bw = faceWidth("B", "Close");
 		face("B", "Close", 18, bw);
@@ -1405,6 +1421,8 @@ namespace banana
 			// a page's row: Network the network it is on; Update the packages waiting on the card; the others nothing
 			else if (it.kind == Item::PAGE && it.key == "network") v = wstat.connected ? fit(wstat.ssid, true, 19, 300) : (wifiOn() ? "Choose" : "");
 			else if (it.kind == Item::PAGE && it.key == "update") v = updatesWaiting();
+			else if (it.kind == Item::PAGE && it.key == "developer")
+				for (const Item& r : items) if (r.key == "recorder" && r.values[r.at] == "on") v = "Recording";
 			else if (it.kind == Item::PAGE && it.key == "scrape") v = scrapeShort();
 			if (v.empty()) continue;
 			float vw = text(v, true, 19, 0, 0, p.ink, false, 0, true);

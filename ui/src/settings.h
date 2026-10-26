@@ -121,10 +121,9 @@ namespace banana
 		int groupOf(int item) const;			// the group an item is in
 		int groupStart(int g) const, groupEnd(int g) const;	// its items: [start, end)
 		std::string groupHint(int g) const;		// what is in it, for its tile
-		int tiles() const;						// the groups with a tile (the Developer one once unlocked)
-		int cols() const;						// the tiles' grid: 3 columns, 4 with the Developer tile
-		float tileW() const;
-		bool devOn = false;						// the Developer tile unlocked (settings.conf's developer)
+		int tiles() const;						// the groups with a tile (not the Developer list)
+		void toRow(const std::string& key);		// the cursor on that row, in its group's list
+		bool devOn = false;						// System's Developer row unlocked (settings.conf's developer)
 		int aboutTaps = 0;						// A's on System > About so far (seven unlock it)
 		Result pressGroups(Key k);
 		void renderGroups();
