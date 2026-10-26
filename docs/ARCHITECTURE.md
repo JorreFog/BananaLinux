@@ -137,7 +137,8 @@ The shelf's Downloads tile (systems.conf's `[downloads]`, `run = banana:download
 a program) gets games from a NAS or a computer and unpacks archives. Its pages
 are the settings' (`src/settings_downloads.cpp`, the list on the bottom panel, the row in hand explained on the
 top): the job in hand, the servers, Add a server, Archives on the card and Options. A server's folders are browsed
-(A opens, Y marks, X downloads what is marked, a folder with all in it); the Download page then chooses the card (the
+(A opens, Y marks, X downloads what is marked, a folder with all in it; B goes up, or home when the folder above
+doesn't come (the server unreachable, or B again while it is awaited); the Download page then chooses the card (the
 RG DS Plus's second SD card too, each with its free space), the folder (every system of systems.conf with a folder on
 the card, BIOS, roms: the one the files belong to by their extension, an archive's looked through, else by the
 server's folder names; the folder chosen for a server's folder is remembered) and whether archives are unpacked and
@@ -153,7 +154,8 @@ banana-ui has no network code for it: `banana-fetch` (`src/fetch/`) does it, in 
   one request at a time, its answer read on a thread (which wakes the menu's loop when it is in): log in, list a
   folder, walk the folders chosen into the files to download and where each goes, look into an archive, add or
   change a server. A listing or a walk that finds the connection gone (an idle NAS hung up, Wi-Fi slept) connects
-  again once. It goes when the pages close, or after 10 idle minutes.
+  again once; when that fails on the network too (Wi-Fi is back only a while after a sleep: unloaded before it,
+  loaded again after), the next request tries again. It goes when the pages close, or after 10 idle minutes.
 - `banana-fetch run`, the jobs: `banana/downloads/<time>.job` on the card (the server, the files with their sizes and
   where each goes; unpacking, the archive deleted after), done one after the other in the background while the menu
   shows anything else. What happened to each file is a line of `<job>.done`, so a job cut short (stopped, the

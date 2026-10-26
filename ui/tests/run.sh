@@ -147,10 +147,11 @@ for size in 640x480 1024x768; do
     # Downloads (the shelf's tile), with banana-fetch itself (built when this computer has its libraries; the top
     # Makefile's test does it) and its test protocol, "dir", standing in for a server (a folder here; only with
     # BANANA_FETCH_TEST=1). Headless, the menu runs banana-fetch's runner to the end at once. A server's folder
-    # browsed, two files marked and downloaded into the DS folder (the zip unpacked, as asked), a locked server's
-    # password typed, an archive on the card unpacked where it is (and deleted, as asked), an option changed, a server
-    # added with the keyboard; a job's runner at work beside the menu (its progress, the retry's countdown, X Stop and
-    # Y Cancel tapped), and the chips tapped on the other pages
+    # browsed, two files marked and downloaded into the DS folder (the zip unpacked, as asked), the connection lost with
+    # Wi-Fi off (the folder back once it connects, B out of it meanwhile), a locked server's password typed, an archive
+    # on the card unpacked where it is (and deleted, as asked), an option changed, a server added with the keyboard; a
+    # job's runner at work beside the menu (its progress, the retry's countdown, X Stop and Y Cancel tapped), and the
+    # chips tapped on the other pages
     if [ -x "$HERE/banana-fetch" ]; then
         dlog=$OUT/$size-downloads.log; NAS=$OUT/nas; RUN=$OUT/run
         dlclean() {
@@ -200,6 +201,21 @@ PY
             { echo "FAIL $size: Beta Racer.zip wasn't downloaded and unpacked, the zip kept"; fail=1; }
         ls "$FX/data/downloads/"*.finished > /dev/null 2>&1 || { echo "FAIL $size: no finished job in banana/downloads"; fail=1; }
         grep -q '^target /Games/nds = data:roms/nds$' "$FX/data/nas.conf" || { echo "FAIL $size: the folder chosen wasn't remembered"; fail=1; }
+        # the lid shut in a server's folder: Wi-Fi unloaded, back only a while after the lid opens. In nds the connection
+        # is gone (the 3rd listing) and connecting again fails (the 2nd connection): SELECT reads the folder in vain,
+        # then B connects again by itself and goes up to /Games. And with B first: home, not nds for good
+        export BANANA_FETCH_TEST_DROPLIST=3 BANANA_FETCH_TEST_OFFLINE=2
+        n=$(wc -l < "$dlog")
+        run_dl "homeid downloads; press a; press down; press down; press a; wait 1; press down; press a; wait 1; \
+            press select; wait 1; press b; wait 1; shot dl-reconnected"
+        tail -n +$((n + 1)) "$dlog" | grep -A 4 "downloads: list: network: " | grep -q "downloads: /Games: 2 entries" ||
+            { echo "FAIL $size: the server's folder didn't come back after connecting again failed"; fail=1; }
+        n=$(wc -l < "$dlog")
+        run_dl "homeid downloads; press a; press down; press down; press a; wait 1; press down; press a; wait 1; \
+            press b; wait 1; shot dl-unreachable; press b"
+        tail -n +$((n + 1)) "$dlog" | grep -A 2 "downloads: list: network: " | grep -q "press b: settings closed" ||
+            { echo "FAIL $size: B didn't get out of the folder of a server that can't be reached"; fail=1; }
+        unset BANANA_FETCH_TEST_DROPLIST BANANA_FETCH_TEST_OFFLINE
         # home: Last download, Locked (its password typed on the keyboard: qwe), ... Archives on the card: this card's
         # data, roms and Delta.zip: Then delete it (Options' Ask) to Yes, Unpack here (its one folder unwrapped; B then
         # comes back to the card's folder, without Delta.zip, and B twice more home, on the job's row, the first);
@@ -251,9 +267,9 @@ PY
             grep -l '^title = gba$' "$FX/data/downloads/"*.finished | xargs grep -q '^keep_zips = yes$' ||
             { echo "FAIL $size: the GBA folder's zip wasn't kept as it is (keep_zips)"; fail=1; }
         grep -q '^host = ewq$' "$FX/data/nas.conf" || { echo "FAIL $size: A Type and START Save (tapped) didn't save the server"; fail=1; }
-        for s in dl-tile dl-home dl-browse dl-marked dl-target dl-unpack dl-status dl-done dl-back dl-home-done dl-password dl-locked dl-local \
-            dl-local-delete dl-unpacked dl-local-back dl-options dl-edit dl-saved dl-progress dl-retry dl-stop dl-stopped dl-cancel dl-cancelled \
-            dl-tap-edit dl-zips dl-tap-saved; do
+        for s in dl-tile dl-home dl-browse dl-marked dl-target dl-unpack dl-status dl-done dl-back dl-home-done dl-reconnected dl-unreachable \
+            dl-password dl-locked dl-local dl-local-delete dl-unpacked dl-local-back dl-options dl-edit dl-saved dl-progress dl-retry dl-stop \
+            dl-stopped dl-cancel dl-cancelled dl-tap-edit dl-zips dl-tap-saved; do
             for p in top bot; do
                 f=$OUT/$size-$s-$p.png
                 [ -s "$f" ] || { echo "FAIL $size: no $f"; fail=1; continue; }

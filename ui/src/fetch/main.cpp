@@ -193,12 +193,14 @@ namespace
 		const Paths& p;
 		std::unique_ptr<Backend> be;
 		ServerRec cur;
+		Result lost = Result(Err::OTHER, "Not connected.");	// be empty: why (the last try's failure)
 
 		void connect(const std::vector<std::string>& f)
 		{
 			be.reset();
 			Result r = openServer(p, f[1], f.size() > 2 ? &f[2] : nullptr, cur);
 			if (r) r = connectTo(p, cur, be);
+			if (!r) lost = r;
 			if (r.err == Err::HOSTKEY) { say(hostkeyError(r, cur)); return; }
 			if (!r) { say(errLine(r)); return; }
 			if (f.size() > 2 && cur.remember && !cur.guest) keepPassword();
@@ -223,16 +225,15 @@ namespace
 			if (kept) noteUnbound(p, box, cur);
 		}
 
-		// a listing, connecting again if the connection died meanwhile (an idle NAS hangs up; Wi-Fi slept): once a
-		// request (again: whether it may still)
+		// a listing, connecting again if the connection died meanwhile (an idle NAS hangs up; Wi-Fi slept), or if the
+		// last try failed on the network (Wi-Fi not back yet after a sleep): once a request (again: whether it may still)
 		Result listing(const std::string& path, std::vector<Entry>& out, bool& again)
 		{
-			if (!be) return Result(Err::NETWORK, "Not connected.");
-			Result r = be->list(path, out);
+			Result r = be ? be->list(path, out) : lost;
 			if (r || !transient(r.err) || !again) return r;
 			again = false;
 			out.clear();
-			if (!(r = connectTo(p, cur, be))) return r;
+			if (!(r = connectTo(p, cur, be))) { lost = r; return r; }
 			return be->list(path, out);
 		}
 
@@ -252,7 +253,6 @@ namespace
 
 		void walk(const std::vector<std::string>& f)
 		{
-			if (!be) { say(errLine(Result(Err::NETWORK, "Not connected."))); return; }
 			std::string dir = cleanPath(f[1]), to = f[2];
 			std::set<std::string> merge;
 			for (size_t a = 0; a <= f[4].size();)

@@ -172,6 +172,12 @@ r2=$(ask "connect|$id" "walk|/Games|$T|0||d::NDS")
 unset BANANA_FETCH_TEST_DROPLIST
 check "a listing connects again" 'echo "$r" | grep -q "^e${tab}d${tab}0${tab}[0-9]*${tab}NDS$"'
 check "a walk connects again" 'echo "$r2" | tail -1 | grep -q "^end${tab}2${tab}"'
+# ...and connecting again failed too (Wi-Fi not back yet after a sleep): the next request connects again
+export BANANA_FETCH_TEST_DROPLIST=1 BANANA_FETCH_TEST_OFFLINE=2
+r=$(ask "connect|$id" "list|/Games" "list|/Games")
+unset BANANA_FETCH_TEST_DROPLIST BANANA_FETCH_TEST_OFFLINE
+check "after connecting again failed, the next listing connects again" \
+    'echo "$r" | sed -n 2p | grep -q "^err${tab}network" && echo "$r" | tail -1 | grep -q "^end${tab}"'
 # a password kept sealed, and asked for again on another handheld
 export BANANA_FETCH_TEST_PASSWORD=right BANANA_FETCH_TEST_SERIAL="$OUT/serial"
 echo "0123456789abcdef" > "$OUT/serial"

@@ -143,6 +143,7 @@ namespace banana
 		std::string home, keySeen;	// keySeen: the key it shows now, when that isn't the one pinned (A again trusts it)
 		// browse
 		std::string dir, listing;	// the folder shown; the one being listed
+		bool up = false;			// listing is the folder above, for B: when it doesn't come, home
 		std::vector<Item> items;
 		std::set<std::string> marked;
 		std::map<std::string, std::pair<int, int>> cursor;	// a folder's selection and scroll, to come back to
@@ -224,6 +225,7 @@ namespace banana
 			session.stop();
 			asked = queuedWhat = NOTHING;
 			queued.clear();
+			up = false;
 		}
 
 		bool ask(Ask what, const std::vector<std::string>& req)
@@ -257,6 +259,7 @@ namespace banana
 			session.stop();
 			asked = queuedWhat = NOTHING;
 			queued.clear();
+			up = false;
 			message = "Stopped.";
 		}
 
@@ -546,10 +549,13 @@ namespace banana
 				: "It isn't kept: Downloads asks for it again next time (the server's Remember password is off).");
 		}
 
-		void list(const std::string& path)
+		bool list(const std::string& path)
 		{
 			listing = fetch::cleanPath(path);
-			if (ask(LIST, { "list", listing })) message = "Listing " + listing + "...";
+			up = false;
+			if (!ask(LIST, { "list", listing })) return false;
+			message = "Listing " + listing + "...";
+			return true;
 		}
 
 		void answered(const std::vector<std::vector<std::string>>& rows, const std::vector<std::string>& last)
@@ -607,6 +613,9 @@ namespace banana
 						return;
 					}
 					message = text;
+					// the folder above (B) didn't come (the server unreachable, Wi-Fi off a while after a sleep, a folder
+					// not allowed): home, rather than this folder for good
+					if (up) { up = false; go(HOME); return; }
 					if (sub != BROWSE)
 					{
 						// the start folder didn't open: the page on it, empty, B goes up from there
@@ -618,6 +627,7 @@ namespace banana
 					}
 					return;
 				}
+				up = false;
 				{
 					bool hidden = option("downloads_hidden", "off") == "on";
 					std::string was = dir;
@@ -718,8 +728,9 @@ namespace banana
 				if (ok) return;
 				queuedWhat = NOTHING;
 				queued.clear();
-				if (word == "password" || word == "auth") { typed.erase(srv.id); askLogin(); return; }
+				if (word == "password" || word == "auth") { up = false; typed.erase(srv.id); askLogin(); return; }
 				message = text;
+				if (up) { up = false; go(HOME); }	// (the folder above, for B, can't come: home)
 				return;
 			default:
 				return;
@@ -1294,7 +1305,14 @@ namespace banana
 		Result back()
 		{
 			armed = -1;
-			if (waiting()) { giveUp(); return MOVED; }	// (a slow server: B gives up on it)
+			if (waiting())
+			{
+				// (a slow server: B gives up on it, and on the way up out of a folder goes home too)
+				bool home = up;
+				giveUp();
+				if (home) go(HOME);
+				return MOVED;
+			}
 			switch (sub)
 			{
 			case HOME:
@@ -1303,7 +1321,9 @@ namespace banana
 			case BROWSE:
 				if (dir == "/" || dir.empty()) { message.clear(); go(HOME); return MOVED; }
 				cursor[dir] = { sel[BROWSE], top[BROWSE] };
-				list(fetch::parentPath(dir));
+				// the folder above; if it can't come (the server unreachable, Wi-Fi off), home: B always gets out
+				if (list(fetch::parentPath(dir))) up = true;
+				else go(HOME);
 				return MOVED;
 			case TARGET:
 				message.clear();

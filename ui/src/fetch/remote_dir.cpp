@@ -4,6 +4,7 @@
 //   BANANA_FETCH_TEST_STALL=<bytes>   it goes quiet after that many, until the watchdog aborts it
 //   BANANA_FETCH_TEST_DELAY=<ms>      a wait between pieces (a download slow enough to watch)
 //   BANANA_FETCH_TEST_DROPLIST=<n>    the n-th listing (from 1) fails as a connection that died meanwhile does
+//   BANANA_FETCH_TEST_OFFLINE=<n>     the n-th connection (from 1) fails as one made with Wi-Fi off does
 //   BANANA_FETCH_TEST_PASSWORD=<pw>   the password it wants (another one is Err::AUTH; a guest needs none)
 #include "remote.h"
 #include <algorithm>
@@ -39,6 +40,8 @@ namespace banana
 				{
 					const char* t = getenv("BANANA_FETCH_TEST");
 					if (!t || strcmp(t, "1")) return Result(Err::UNSUPPORTED, "The dir protocol is for the tests only.");
+					static long long connects = 0;
+					if (++connects == envNum("BANANA_FETCH_TEST_OFFLINE")) return Result(Err::NETWORK, connectError(s.host, ENETUNREACH));
 					struct stat st;
 					if (stat(s.host.c_str(), &st) != 0 || !S_ISDIR(st.st_mode)) return Result(Err::NETWORK, "No server named " + s.host + " was found.");
 					const char* want = getenv("BANANA_FETCH_TEST_PASSWORD");
