@@ -84,6 +84,9 @@ namespace banana
 		Result press(Key k);
 		Result touch(float x, float y, bool down);	// bottom panel, device px
 		void render();
+		// the textures the pages keep (the headless test's mem): their entries, the bytes they hold, the byte budget
+		struct CacheStats { size_t entries = 0, bytes = 0, budget = 0; };
+		CacheStats cacheStats() const;
 		// background work (the Wi-Fi scan, joining a network): true when something changed and wants a frame
 		bool update(double nowMs);
 		// ms until update() has something to do, -1 nothing pending
@@ -229,8 +232,18 @@ namespace banana
 		std::string fontDir;		// Inter's TTFs (the Carts theme)
 		bool cleanFonts = false;
 		std::string fontsLoaded;	// the fonts R and M are (setVariant): a user theme's, or "carts"
-		struct Cached { rnds::TexPtr tex; int ox = 0, oy = 0; float w = 0; };
+		// what the pages draw, by what it is (a box's kind and size, a line's text and style, an icon): its texture, and a
+		// line's width. A line only measured (a value's width, a name too long for its row, which fit() cuts) is laid out,
+		// not drawn: its bitmap is made when something draws it. After each frame (render(), gameRender()) the least
+		// recently used go while the cache holds more than its budget (evict): Downloads lists any number of names
+		struct Cached { rnds::TexPtr tex; int ox = 0, oy = 0; float w = 0; bool drawn = false; size_t bytes = 0; uint64_t used = 0; };
 		std::map<std::string, Cached> cache;
+		uint64_t frame = 0;					// render()'s count: an entry's used is the last frame that drew or measured it
+		size_t cacheBytes = 0, budget = 0;	// what the entries hold; CACHE_1X at this scale
+		std::map<std::string, Cached>::iterator put(const std::string& key, Cached c, const rnds::Bitmap& b);
+		Cached& keep(std::map<std::string, Cached>::iterator it) { it->second.used = frame; return it->second; }
+		void evict();
+		void renderPage();	// render()'s frame: the page open
 
 		void build();
 		void load(Item& it);

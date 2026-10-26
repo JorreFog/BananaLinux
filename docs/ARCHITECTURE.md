@@ -266,7 +266,9 @@ down cleanly. Settings: `/etc/banana/bananad.conf`, overridden by `/data/banana/
 Measured in the VM (`tools/qemu-boot.sh`, a 1 GB machine, idle in the menu): 95 MB used in all, the kernel and its
 caches included; banana-ui 23.5 MB resident (its scanout buffers and the boot animation's layers in that; 8 MB
 headless at 640x480, 12 MB at 1024x768), bananad 1.6 MB, init, getty and the shells 1.3 MB each; the CPUs 99%
-idle. The menu draws only when something changes and sleeps in `poll()` otherwise; bananad wakes about once a
+idle. Its textures are kept to a budget however long the lists are: the menu's to 20 MB, the settings pages' (Downloads'
+server folders among them) to 8 MB, 2.56 times both at 1024x768, the least recently used going first. The menu draws
+only when something changes and sleeps in `poll()` otherwise; bananad wakes about once a
 minute; no sound server, no udev, no compositor, no shell waiting for input. The kernel is built for these two handhelds
 only: from ROCKNIX's RK3566 config, shared by many devices, Banana's fragment leaves out what the two device trees
 don't have (other panels, touchscreens and codecs, HDMI, cameras, USB gadget mode, packet filtering, Bluetooth,

@@ -267,9 +267,35 @@ PY
             grep -l '^title = gba$' "$FX/data/downloads/"*.finished | xargs grep -q '^keep_zips = yes$' ||
             { echo "FAIL $size: the GBA folder's zip wasn't kept as it is (keep_zips)"; fail=1; }
         grep -q '^host = ewq$' "$FX/data/nas.conf" || { echo "FAIL $size: A Type and START Save (tapped) didn't save the server"; fail=1; }
+        # a server's folder of long names scrolled through (DOWN, then a frame, as the device draws it), on a card of its
+        # own: the settings' texture cache keeps to its budget, and banana-ui's memory with it. Every name drawn stayed
+        # in it before, with each cut of it fit() measured: 9 MB a name at 640x480, the handheld's RAM gone after a few
+        # hundred. The names differ from their start, as a game list's do (names alike up to where they are cut would
+        # share their lines), and fill the cache to its budget: fewer would test nothing
+        NAMES=$OUT/names; rm -rf "$NAMES"; mkdir -p "$NAMES/nas" "$NAMES/data" "$NAMES/run"
+        i=1; while [ $i -le 200 ]; do : > "$NAMES/nas/$i - Mystery Dungeon - Explorers of the Long Name, Special Edition (Europe) (En,Fr,De,Es,It) (Rev 1).nds"; i=$((i + 1)); done
+        printf '[names]\nname = Names\nprotocol = dir\nhost = %s\nguest = yes\n' "$NAMES/nas" > "$NAMES/data/nas.conf"
+        S=""; i=1; while [ $i -lt 200 ]; do S="$S press down; frame;"; i=$((i + 1)); done
+        n=$(wc -l < "$dlog")
+        BANANA_FETCH="$HERE/banana-fetch" BANANA_FETCH_TEST=1 BANANA_RUN="$NAMES/run" "$HERE/banana-ui" --headless "$OUT/$size-" --size $size \
+            --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$NAMES/data" \
+            --script "homeid downloads; press a; press a; wait 1; frame; mem; $S mem; shot dl-names" 2>> "$dlog" ||
+            { echo "FAIL $size: banana-ui (a folder of long names) exited $?"; fail=1; }
+        dlcheck "downloads: /: 200 entries"
+        m0=$(tail -n +$((n + 1)) "$dlog" | grep 'mem: RSS' | head -n 1); m1=$(tail -n +$((n + 1)) "$dlog" | grep 'mem: RSS' | tail -n 1)
+        if [ -z "$m0" ] || [ "$m0" = "$m1" ]; then echo "FAIL $size: no mem lines from the folder of long names"; fail=1
+        else
+            kb() { echo "$1" | sed 's/.*RSS[^0-9]*\([0-9]*\) kB.*/\1/'; }
+            grown=$(( ($(kb "$m1") - $(kb "$m0")) / 1024 ))
+            [ $grown -lt 64 ] || { echo "FAIL $size: 200 long names scrolled through took $grown MB more"; fail=1; }
+            echo "$m1" | awk '{ sub(/.*settings cache /, ""); exit !($3 <= $7) }' ||
+                { echo "FAIL $size: the settings' texture cache went past its budget: ${m1##*settings cache }"; fail=1; }
+            echo "$m1" | awk '{ sub(/.*settings cache /, ""); exit !($3 >= $7 * 0.75) }' ||
+                { echo "FAIL $size: 200 long names didn't fill the settings' texture cache (more are needed): ${m1##*settings cache }"; fail=1; }
+        fi
         for s in dl-tile dl-home dl-browse dl-marked dl-target dl-unpack dl-status dl-done dl-back dl-home-done dl-reconnected dl-unreachable \
             dl-password dl-locked dl-local dl-local-delete dl-unpacked dl-local-back dl-options dl-edit dl-saved dl-progress dl-retry dl-stop \
-            dl-stopped dl-cancel dl-cancelled dl-tap-edit dl-zips dl-tap-saved; do
+            dl-stopped dl-cancel dl-cancelled dl-tap-edit dl-zips dl-tap-saved dl-names; do
             for p in top bot; do
                 f=$OUT/$size-$s-$p.png
                 [ -s "$f" ] || { echo "FAIL $size: no $f"; fail=1; continue; }
