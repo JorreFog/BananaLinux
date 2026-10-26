@@ -1339,7 +1339,7 @@ namespace banana
 		if (page == UPDATES)
 		{
 			if (downY >= 418 && downY <= 466) return pressUpdates(downX < 320 ? Key::B : Key::A);
-			for (int r = 0; r < ROWS && utop + r < 1 + (int)pkgs.size(); r++)
+			for (int r = 0; r < ROWS && utop + r < 2 + (int)pkgs.size(); r++)
 			{
 				float ry = 82 + r * 64;
 				if (downY < ry || downY > ry + 56) continue;
@@ -2051,6 +2051,7 @@ namespace banana
 			changed |= dlLine != before || !downloading;
 		}
 		changed |= checkDone();
+		changed |= betaDone();
 		std::string out;
 		if (scanJob.take(out))
 		{
@@ -2134,7 +2135,7 @@ namespace banana
 
 	int Settings::pageWake(double t) const
 	{
-		if (scanJob.running() || statusJob.running() || artJob.running() || checkJob.running() || volJob.running()) return 100;
+		if (scanJob.running() || statusJob.running() || artJob.running() || checkJob.running() || volJob.running() || betaJob.running()) return 100;
 		if (btListJob.running() || btScanJob.running() || btActJob.running()) return 100;
 		if (page == UPDATES && applying) return std::max(0, (int)(nextStatus2 - t));
 		if (page == UPDATES && downloading) return std::max(0, (int)(nextDl - t));
@@ -2679,6 +2680,7 @@ namespace banana
 			: entry == ENTRY_SEARCH ? "A types the key, B deletes, X capitals, Y a space, START searches: the games found open as a shelf of their own, first on the shelf. Part of a name is enough; an empty search takes the shelf away."
 			: entry == ENTRY_WIFI ? "A types the key, B deletes, X capitals, L symbols, Y a space, START joins. Or tap the keys. The password is kept in banana/wifi.conf on the card."
 			: entry == ENTRY_HS_ADDR ? "The home server's address: its name or IP, and :port when it isn't the usual (Romhost 8092, RomM 8080 or 80). A types the key, B deletes, L symbols (the dot and colon), START when it is typed."
+			: entry == ENTRY_BETA_PASS ? "The beta testers' password for BananaOS's test builds. A types the key, B deletes, X capitals, L symbols, Y a space, START checks it with bananaos-cfw.dev. It is kept on the card for the updater only."
 			: entry == ENTRY_HS_CODE ? "The code Homeport shows under ROMs > Pair a device (or, for RomM, a client token's pairing code). START when it is typed."
 			: entry == ENTRY_DS_NAME ? "A types the key, B deletes, X capitals, L symbols, Y a space, START when it is typed. Kept in both emulators' settings (DraStic's drastic.cfg, BananaDS's bananads.conf)."
 			: entry == ENTRY_GAME_NAME || entry == ENTRY_GAME_SORT ? "A types the key, B deletes, X capitals, L symbols, Y a space, START when it is typed. Kept in banana/game-titles.tsv on the card."
@@ -2810,6 +2812,7 @@ namespace banana
 			else if (k == "error") o.error = v;
 			else if (k == "board") o.board = v;
 			else if (k == "prerelease_setting") o.preSetting = v;
+			else if (k == "channel") o.channel = v;
 			else if (k == "prerelease") o.pre = v == "1";
 			else if (k == "size") o.size = atoll(v.c_str());
 			else if (k == "checked") o.checked = atoll(v.c_str());
@@ -2817,7 +2820,10 @@ namespace banana
 		// an answer for the version before an update, another handheld's card, or with Test versions set the other
 		// way since: as if never asked
 		std::string pre = getConfValue(data + "/settings.conf", "update_prerelease", "on");
-		if (!o.state.empty() && ((!version.empty() && o.current != version) || (!board.empty() && o.board != board) || o.preSetting != pre))
+		// (or from the other channel: GitHub's answer when the beta channel is on, or the other way)
+		std::string chan = o.channel.empty() ? "github" : o.channel;
+		if (!o.state.empty() && ((!version.empty() && o.current != version) || (!board.empty() && o.board != board) || o.preSetting != pre ||
+			chan != (betaOn() ? "beta" : "github")))
 			o = Online();
 		online = o;
 	}
@@ -2845,6 +2851,42 @@ namespace banana
 		struct stat st;
 		if (online.file.empty() || stat((updatesDir + "/.partial/" + online.file).c_str(), &st) != 0) return 0;
 		return st.st_size;
+	}
+
+	bool Settings::betaOn() const
+	{
+		struct stat st;
+		return stat((updatesDir + "/.beta").c_str(), &st) == 0 && st.st_size > 0;
+	}
+
+	// the password check's answer: kept (the channel on, the next check asks the beta server) or refused
+	bool Settings::betaDone()
+	{
+		std::string out;
+		if (!betaJob.take(out)) return false;
+		out = trim(out);
+		if (out == "ok") message = "Beta channel on: Check for updates now asks bananaos-cfw.dev for test builds.";
+		else if (out == "wrong password") message = "Wrong password: bananaos-cfw.dev refused it. The beta channel stays off.";
+		else message = "The password couldn't be checked: " + (out.empty() ? std::string("no answer") : out) + ".";
+		readOnline();		// (GitHub's answer doesn't count on the beta channel)
+		usel = 1; armed = -1;
+		return true;
+	}
+
+	Settings::Result Settings::pressBeta()
+	{
+		if (betaJob.running() || downloading || checkJob.running()) return NONE;
+		if (!betaOn())
+		{
+			startEntry(ENTRY_BETA_PASS, "Beta channel password", "bananaos-cfw.dev", UPDATES);
+			return MOVED;
+		}
+		if (armed != 3000) { armed = 3000; return MOVED; }		// A again turns it off
+		armed = -1;
+		if (FILE* p = popen(("'" + updateTool + "' beta-off 2>&1").c_str(), "r")) { char ln[256]; while (fgets(ln, sizeof ln, p)) {} pclose(p); }
+		readOnline();
+		message = "Beta channel off: Check for updates asks GitHub again.";
+		return MOVED;
 	}
 
 	void Settings::startCheck()
@@ -2983,7 +3025,7 @@ namespace banana
 		std::string row = onlineRow(tag, act);
 		return "row \"" + row + "\" tag \"" + tag + "\" act \"" + act + "\" state " + (online.state.empty() ? "-" : online.state) +
 			" latest " + (online.latest.empty() ? "-" : online.latest) + " dl \"" + dlLine + "\" packages " + std::to_string(pkgs.size()) +
-			" status \"" + ustatus + "\" message \"" + message + "\"";
+			" status \"" + ustatus + "\" message \"" + message + "\" beta " + (betaOn() ? "on" : "off");
 	}
 
 	// ---- Screen colours (#N3) --------------------------------------------------------------------------------------
@@ -3256,7 +3298,7 @@ namespace banana
 
 	Settings::Result Settings::pressUpdates(Key k)
 	{
-		int n = 1 + (int)pkgs.size();	// the online row, then the packages on the card
+		int n = 2 + (int)pkgs.size();	// the online row, the beta channel, then the packages on the card
 		switch (k)
 		{
 		case Key::UP: case Key::DOWN:
@@ -3271,7 +3313,8 @@ namespace banana
 			if (updated) return REBOOT;			// "Restart": the new version runs from the next boot
 			if (applying) return NONE;
 			if (usel == 0) return pressOnline();
-			int i = usel - 1;
+			if (usel == 1) return pressBeta();
+			int i = usel - 2;
 			if (armed != 1000 + i) { armed = 1000 + i; return MOVED; }	// A again to go ahead
 			armed = -1;
 			startApply(i);
@@ -3324,7 +3367,7 @@ namespace banana
 		else if (ustatus.compare(0, 6, "failed") == 0) help = "The update wasn't applied: " + (ustatus.size() > 8 ? ustatus.substr(8) : std::string("no reason given")) + ". This version is untouched.";
 		else if (usel == 0)
 		{
-			if (checkJob.running()) help = "Asking GitHub which version is the newest for this handheld...";
+			if (checkJob.running()) help = betaOn() ? "Asking the beta server (bananaos-cfw.dev) which test build is the newest for this handheld..." : "Asking GitHub which version is the newest for this handheld...";
 			else if (downloading && dlLine == "verifying") help = "Checking the download against the release's SHA-256...";
 			else if (downloading) help = "Downloading to banana/updates on the card. B goes back and the download carries on (this page shows how far it is); A cancels it, and the next Download carries on from where it stopped.";
 			else if (failedDl) help = "The download failed: " + dlLine.substr(8) + ".";
@@ -3337,8 +3380,17 @@ namespace banana
 				notes = online.notes;
 			}
 			else if (online.state == "current") help = "This handheld has the newest version. A checks again.";
+			else if (online.state == "none" && betaOn()) help = "The beta server has no test build for this handheld.";
 			else if (online.state == "none") help = "GitHub has no release for this handheld. With Settings > System > Test versions left out, only stable versions count, and there are none yet.";
+			else if (betaOn()) help = "A asks the beta server (bananaos-cfw.dev, Wi-Fi needed) whether a newer test build is out for this handheld. Nothing is downloaded until you choose Download.";
 			else help = "A asks GitHub (Wi-Fi needed) whether a newer version is out for this handheld. Nothing is downloaded until you choose Download.";
+		}
+		else if (usel == 1)
+		{
+			if (betaJob.running()) help = "Checking the password with bananaos-cfw.dev...";
+			else if (!message.empty()) help = message;
+			else if (betaOn()) help = "On: updates come from the beta testers' builds on bananaos-cfw.dev instead of GitHub's releases. A, then A again, turns it off (the password is forgotten), and GitHub is asked again.";
+			else help = "For beta testers: updates from the test builds on bananaos-cfw.dev instead of GitHub's releases. A asks for the beta password (once: it is checked with the site, then kept on the card for the updater only).";
 		}
 		else if (pkgs.empty()) help = "No update packages found. Put a banana-" + (board.empty() ? std::string("<board>") : board) + "-<version>.update.tar from a release in banana/updates on the card (File sharing can copy it over Wi-Fi), then come back here.";
 		else help = "A on a package writes it to the other slot and checks it; the running version stays until the restart. Packages are in banana/updates on the card.";
@@ -3356,7 +3408,7 @@ namespace banana
 		text(count, true, 17, 602 - cw, 31, p.muted);
 		std::string otag, oact;
 		std::string orow = onlineRow(otag, oact);
-		for (int r = 0; r < ROWS && utop + r < 1 + (int)pkgs.size(); r++)
+		for (int r = 0; r < ROWS && utop + r < 2 + (int)pkgs.size(); r++)
 		{
 			int i = utop + r;
 			bool on = i == usel;
@@ -3366,21 +3418,29 @@ namespace banana
 			std::string name, tag;
 			bool hot;
 			if (i == 0) { name = orow; tag = otag; hot = armed == 2000 || downloading; }
+			else if (i == 1)
+			{
+				name = "Beta channel";
+				hot = armed == 3000 || betaJob.running();
+				tag = betaJob.running() ? "Checking..." : armed == 3000 ? "Press A again" : betaOn() ? "On" : "Off";
+			}
 			else
 			{
-				const Pkg& k = pkgs[i - 1];
+				const Pkg& k = pkgs[i - 2];
 				name = "Banana " + k.version;
-				hot = armed == 1000 + i - 1;
+				hot = armed == 1000 + i - 2;
 				tag = hot ? "Press A again" : (k.board == board || board.empty() || k.board == "universal" ? (k.board == "universal" ? std::string("for both handhelds") : "for the " + k.board) : "not for this handheld");
 			}
 			float tw = tag.empty() ? 0 : text(tag, true, 17, 0, 0, c, false, 0, true);
 			text(fit(name, true, 20, 560 - tw - 24), true, 20, 38, y + 16, c);
 			if (!tag.empty()) text(tag, true, 17, 586 - tw, y + 18, hot ? (on ? p.onPickAccent : p.accent) : c);
 		}
-		if (pkgs.empty() && utop == 0) text("Nothing in banana/updates on the card.", true, 20, 38, 162, p.muted);
+		if (pkgs.empty() && utop == 0) text("Nothing in banana/updates on the card.", true, 20, 38, 226, p.muted);
 		float bw = faceWidth("B", "Back");
 		if (!applying) face("B", "Back", 18, bw);
-		std::string act = updated ? "Restart" : applying ? "" : usel == 0 ? oact : armed == 1000 + usel - 1 ? "Confirm" : "Update";
+		std::string act = updated ? "Restart" : applying ? "" : usel == 0 ? oact
+			: usel == 1 ? (betaJob.running() ? "" : !betaOn() ? "Turn on" : armed == 3000 ? "Confirm" : "Turn off")
+			: armed == 1000 + usel - 2 ? "Confirm" : "Update";
 		if (!act.empty())
 		{
 			float aw = faceWidth("A", act);
@@ -3892,6 +3952,23 @@ namespace banana
 			message = "Asking " + a + "...";
 			auto q = [](const std::string& s) { std::string r = "'"; for (char c : s) { if (c == '\'') r += "'\\''"; else r += c; } return r + "'"; };
 			hsJob.start(q(syncTool()) + " probe " + q(a) + " 2>/dev/null", sync);
+			return MOVED;
+		}
+		case ENTRY_BETA_PASS:
+		{
+			if (pw.empty()) { message = "Type the beta password, then START."; return MOVED; }
+			// to the script on its stdin, from a file only root reads in /run (memory, gone at the restart)
+			std::string f = runDir + "/update-beta.pw";
+			int fd = ::open(f.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600);
+			bool ok = fd >= 0 && write(fd, (pw + "\n").data(), pw.size() + 1) == (ssize_t)(pw.size() + 1);
+			if (fd >= 0) ::close(fd);
+			pw.clear();
+			page = entryBack;
+			if (!ok) { unlink(f.c_str()); message = "The password couldn't be passed on (" + runDir + " can't be written)."; return MOVED; }
+			message = "Checking the password with bananaos-cfw.dev...";
+			armed = -1;
+			betaJob.start("'" + updateTool + "' beta-login < '" + f + "' 2>&1; rm -f '" + f + "'", sync);
+			if (sync) betaDone();
 			return MOVED;
 		}
 		case ENTRY_HS_CODE:

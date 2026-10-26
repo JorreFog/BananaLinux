@@ -6,6 +6,8 @@
 #   v0.5.0  a pre-release with the RG DS Plus's package only (the RG DS skips it)
 #   v0.4.3  a pre-release for both; bad-sum: the RG DS's SHA256SUMS has the wrong hash for its package
 #   v0.4.2  a release for both
+# bad-sum "beta": the beta channel's list instead (the BananaOS site's): v0.5.0-beta.2 and v0.5.0, pre-releases for
+# the RG DS Plus
 # Each package is a small tar (VERSION, board, 1.5 MB of noise): a real download, not a real system.
 set -e
 D=$1; BAD=${2:-}; BASE=${3:-}
@@ -25,7 +27,11 @@ def pkg(path, board, ver, size):
     return len(b.getvalue()), hashlib.sha256(b.getvalue()).hexdigest()
 uploader = {"login": "JorreFog", "id": 1, "node_id": "U_x", "type": "User", "site_admin": False}
 releases = []
-for tag, pre, draft, boards, body in (
+BETA = (("v0.5.0-beta.2", True, False, ("rgds-plus",), "BananaOS 0.5.0 beta 2."),
+        ("v0.5.0", True, False, ("rgds-plus",), "BananaOS 0.5.0 beta 1."))
+if bad == 'beta': bad = ''
+else: BETA = None
+for tag, pre, draft, boards, body in BETA or (
         ("v9.9.9", True, True, ("rgds", "rgds-plus"), "a draft"),
         ("v0.5.0", True, False, ("rgds-plus",), "**BananaOS 0.5.0** for the RG DS Plus only."),
         ("v0.4.3", True, False, ("rgds", "rgds-plus"),

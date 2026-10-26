@@ -171,7 +171,7 @@ namespace banana
 		void renderGame();
 		// the keyboard types a text for a purpose: a Wi-Fi password, or an account's name or password
 		// (banana/accounts.conf: RetroAchievements for DraStic and RetroArch, ScreenScraper for the scraper to come)
-		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SMB_USER, ENTRY_SMB_PASS, ENTRY_GAME_NAME, ENTRY_GAME_SORT, ENTRY_ART_SEARCH, ENTRY_DS_NAME, ENTRY_SEARCH, ENTRY_HS_ADDR, ENTRY_HS_CODE } entry = ENTRY_WIFI;
+		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SMB_USER, ENTRY_SMB_PASS, ENTRY_GAME_NAME, ENTRY_GAME_SORT, ENTRY_ART_SEARCH, ENTRY_DS_NAME, ENTRY_SEARCH, ENTRY_HS_ADDR, ENTRY_HS_CODE, ENTRY_BETA_PASS } entry = ENTRY_WIFI;
 		std::string entryTitle, entrySub;
 		Page entryBack = NETWORKS;
 		void startEntry(Entry e, const std::string& title, const std::string& sub, Page back, const std::string& start = "");
@@ -256,7 +256,7 @@ namespace banana
 		// line in /run/banana/update-download, polled). The page's first row is the online one, the packages follow.
 		struct Online
 		{
-			std::string state, lastState, current, latest, file, notes, error, board, preSetting;
+			std::string state, lastState, current, latest, file, notes, error, board, preSetting, channel;
 			bool pre = false;
 			long long size = 0, checked = 0;
 		};
@@ -277,8 +277,16 @@ namespace banana
 		long long partialBytes() const;	// how much of it an unfinished download left in banana/updates/.partial
 		std::string onlineRow(std::string& tag, std::string& act) const;
 		Result pressOnline();
+		// the beta channel (the page's second row): test builds from the BananaOS site's password-protected folder
+		// instead of GitHub. The password typed once, checked with the site by the update script (beta-login, the
+		// password on its stdin: never on a command line), kept on the card for the script alone (banana/updates/.beta)
+		wifi::Job betaJob;
+		bool betaOn() const;			// the password is there: check and download ask the beta server
+		bool betaDone();				// the password check's answer taken
+		Result pressBeta();
 	public:
 		std::string updateState() const;	// the page as text (the headless test's "upstate")
+		void typeText(const std::string& t) { if (page == KEYBOARD) pw += t; }	// (the headless test: text typed at once)
 	private:
 
 		// Bluetooth (Settings > Network > Bluetooth devices): the devices known and found, paired, connected, through

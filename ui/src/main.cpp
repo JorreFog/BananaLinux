@@ -565,6 +565,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		// sleep <ms>: as wait, but the time really passes (a helper process working meanwhile: the update download)
 		else if (op == "sleep") { double ms = 0; cs >> ms; usleep((useconds_t)(ms * 1000)); now += ms; settings.update(now); }
 		else if (op == "upstate") { settings.update(now); logf("upstate: %s", settings.updateState().c_str()); }
+		// type <text>: typed on the open keyboard at once (the rest of the command, spaces too; never logged)
+		else if (op == "type") { std::string t; std::getline(cs >> std::ws, t); settings.typeText(t); }
 		else if (op == "resumeboot") resumeAfterPoweroff(lib, o.data, nullptr);	// as at boot after Power off after sleeping
 		else if (op == "battery")
 		{
