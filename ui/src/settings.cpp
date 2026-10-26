@@ -195,8 +195,12 @@ namespace banana
 		{
 			while (dirent* e = readdir(d))
 			{
+				// what `update list` lists (the page's packages): banana/updates/*.update.tar and *.update, not hidden
+				// files: a Mac copying to the card leaves "._<name>.update.tar" beside each file (QA: "2 packages" here, 1
+				// on the page)
 				size_t l = strlen(e->d_name);
-				if (l > 11 && !strcmp(e->d_name + l - 11, ".update.tar")) n++;
+				if (e->d_name[0] == '.') continue;
+				if ((l > 11 && !strcmp(e->d_name + l - 11, ".update.tar")) || (l > 7 && !strcmp(e->d_name + l - 7, ".update"))) n++;
 			}
 			closedir(d);
 		}
@@ -1339,6 +1343,7 @@ namespace banana
 		if (page == UPDATES)
 		{
 			if (downY >= 418 && downY <= 466) return pressUpdates(downX < 320 ? Key::B : Key::A);
+			if (installView) return NONE;
 			for (int r = 0; r < ROWS && utop + r < 2 + (int)pkgs.size(); r++)
 			{
 				float ry = 82 + r * 64;
@@ -2758,7 +2763,7 @@ namespace banana
 		usel = 0; utop = 0; armed = -1;
 		message.clear();
 		ustatus.clear();
-		applying = false; updated = false;
+		applying = false; updated = false; installView = false;
 		version = readLine("/etc/banana/version");
 		slot = readLine(runDir + "/slot");
 		board = readLine("/etc/banana/board");
@@ -3015,6 +3020,9 @@ namespace banana
 		unlink((runDir + "/update-status").c_str());
 		ustatus = "starting";
 		applying = true;
+		updated = false;
+		installView = true;
+		installVersion = pkgs[i].version;
 		nextStatus2 = now + 500;
 		spawn(updateTool.c_str(), "apply", pkgs[i].path.c_str());
 	}
@@ -3299,6 +3307,14 @@ namespace banana
 	Settings::Result Settings::pressUpdates(Key k)
 	{
 		int n = 2 + (int)pkgs.size();	// the online row, the beta channel, then the packages on the card
+		if (installView)
+		{
+			// the install's screen: nothing to do while it writes; then A restarts (written) and B goes back to the list
+			if (applying) return NONE;
+			if (updated && (k == Key::A || k == Key::START)) return REBOOT;
+			if (k == Key::A || k == Key::B) { installView = false; armed = -1; return MOVED; }
+			return NONE;
+		}
 		switch (k)
 		{
 		case Key::UP: case Key::DOWN:
@@ -3308,7 +3324,9 @@ namespace banana
 			if (usel < utop) utop = usel;
 			if (usel >= utop + ROWS) utop = usel - ROWS + 1;
 			return MOVED;
-		case Key::A: case Key::RIGHT:
+		case Key::RIGHT:
+			return NONE;	// (A only: right is how Settings opens this page, and it armed, then started, an install)
+		case Key::A:
 		{
 			if (updated) return REBOOT;			// "Restart": the new version runs from the next boot
 			if (applying) return NONE;
@@ -3338,6 +3356,7 @@ namespace banana
 
 	void Settings::renderUpdates()
 	{
+		if (installView) { renderInstall(); return; }
 		SPal p = pal(light);
 		const std::string& bd = board.empty() ? online.board : board;	// (/etc/banana/board, or the check's)
 		const std::string handheld = bd == "rgds-plus" ? "RG DS Plus" : bd == "rgds" ? "RG DS" : "handheld";
@@ -3445,6 +3464,63 @@ namespace banana
 		{
 			float aw = faceWidth("A", act);
 			face("A", act, 622 - aw, aw);
+		}
+		be->endScreen();
+	}
+
+	// the install on a screen of its own, on the bottom panel where the package was picked (the list and its buttons
+	// gone): what it is doing, a bar, and only what can be pressed when it is over; the top panel says the same in short
+	void Settings::renderInstall()
+	{
+		SPal p = pal(light);
+		const bool failed = !applying && !updated && ustatus.compare(0, 6, "failed") == 0;
+		// the update script's steps: checking (unpacked and hashed), writing N%, verifying, done <version>
+		int pct = 0;
+		std::string step;
+		if (updated) { pct = 100; step = "Written to the other slot"; }
+		else if (failed) step = "The update wasn't installed";
+		else if (ustatus.compare(0, 8, "writing ") == 0) { pct = 8 + atoi(ustatus.c_str() + 8) * 84 / 100; step = "Writing the new version"; }
+		else if (ustatus == "verifying") { pct = 94; step = "Checking what was written"; }
+		else { pct = 3; step = "Unpacking and checking the package"; }
+		const std::string title = updated ? "Update ready" : failed ? "Update failed" : "Installing update";
+		const std::string ver = "Banana " + (installVersion.empty() ? std::string("update") : installVersion);
+		auto centred = [&](const std::string& t, bool medium, float size, float top, const Color& c)
+		{
+			float w = text(t, medium, size, 0, 0, c, false, 0, true);
+			text(t, medium, size, std::round(320 - w / 2), top, c);
+		};
+
+		be->beginScreen(0);
+		box("screen", false, 0, 0, 640, 480);
+		centred(title, true, 30, 196, p.ink);
+		centred(applying ? "Don't turn the handheld off" : ver, true, 20, 244, p.muted);
+		be->endScreen();
+
+		be->beginScreen(1);
+		box("screen", false, 0, 0, 640, 480);
+		centred(ver, true, 30, 92, p.ink);
+		centred(step, true, 22, 142, failed ? p.accent : p.muted);
+		if (!failed)
+		{
+			// the bar: its track, then the part done in the accent colour
+			float x = 60, y = 200, w = 520, h = 24;
+			be->fill(std::round(X(x)), std::round(X(y)), std::round(X(w)), std::round(X(h)), p.line);
+			if (pct > 0) be->fill(std::round(X(x)), std::round(X(y)), std::round(X(w * pct / 100.0f)), std::round(X(h)), p.accent);
+			centred(std::to_string(pct) + "%", true, 22, 238, p.ink);
+		}
+		std::string note = applying ? "Don't turn the handheld off. Your games, saves and settings stay; the running version isn't touched until the restart. It takes a minute or two."
+			: updated ? "A restarts into the new version now. If it ever fails to start, Settings > System > Previous version brings this one back."
+			: (ustatus.size() > 8 ? ustatus.substr(8) : std::string("no reason given")) + ". This version is untouched.";
+		wrapped(note, 20, 60, failed ? 200 : 300, 520, 4, failed ? p.ink : p.muted);
+		if (!applying)
+		{
+			float bw = faceWidth("B", "Back");
+			face("B", "Back", 18, bw);
+			if (updated)
+			{
+				float aw = faceWidth("A", "Restart");
+				face("A", "Restart", 622 - aw, aw);
+			}
 		}
 		be->endScreen();
 	}

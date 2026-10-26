@@ -246,6 +246,11 @@ namespace banana
 		int usel = 0;
 		std::string ustatus;			// the updater's status line ("writing 42%", "done 0.2.0", "failed: ...")
 		bool applying = false, updated = false;
+		// the install's own screen: from A on a package (or Install) until the result is read (QA: a single line on
+		// the top panel was all that showed the install, while the package list stayed on the bottom one)
+		bool installView = false;
+		std::string installVersion;
+		void renderInstall();
 		double nextStatus2 = 0;
 		std::string slot, version, board;
 		void openUpdates();
