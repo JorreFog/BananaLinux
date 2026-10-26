@@ -33,10 +33,12 @@ Limoncello's drop at 0:06).
     WORK=/tmp/distro python3 tools/promo/distro.py 3d           # the handheld's shots (software WebGL: slow)
     WORK=/tmp/distro SITE=<capture> MUSIC=song.mp3 python3 tools/promo/distro.py render out.mp4
 
-**The 0.5.0 trailer** (release.py): what is new in 0.5.0, one feature a scene, in the theme trailer's look: the
-example themes on two screens, the Banana Theme Studio's screenshots in a window, and the menu's own pixel icons for
-the rest; "And much more", then "Coming very soon in 0.5.0 beta". COMPANIONS sets how many games have a GBA companion (left
-out when not given).
+**The 0.5.0 trailer** (release.py): what is new in the first beta, one feature a scene, cut to Wasabi's beat
+(wasabi-beats.json, from librosa's beat tracker: the drop brings the first feature, the end card lands where the
+song comes back in). BananaOS's look in 3D: the menu's pixel icons and the logo as lit voxels, the example themes'
+screens, the Banana Theme Studio and the cards on tilted panels, a floor grid and pixel dust in depth, a pixel-block
+wipe between scenes, a camera punch on the downbeat, bloom and grain. No dates anywhere: "Coming very soon in 0.5.0
+beta". COMPANIONS sets how many games have a GBA companion (left out when not given). Renders on every core.
 
     NO_DATE=1 python3 tools/promo/screens.py hillside turntable classic   # the clocks without dates
-    STUDIO=dir-with-1.webp-and-2.webp [COMPANIONS=n] MUSIC=Wasabi.mp3 MUSIC_DELAY=2 python3 tools/promo/release.py out.mp4
+    STUDIO=dir-with-1.webp-and-2.webp [COMPANIONS=n] MUSIC=Wasabi.mp3 python3 tools/promo/release.py out.mp4
