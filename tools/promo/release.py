@@ -67,7 +67,14 @@ _icons = {}
 def icon(name):
     if name not in _icons: _icons[name] = Image.open(ICONS + name + '.png').convert('RGBA')
     return _icons[name]
-LOGO1 = Image.open(ROOT + '/ui/assets/rnds/logo@1x.png').convert('RGBA')
+def straight_b(im):
+    # the logo's B with a straight left side: its stem runs up into the top corner and down into the bottom one
+    im = im.copy()
+    for y in (3, 4, 15, 16):
+        for x in (29, 30): im.putpixel((x, y), im.getpixel((31, y)))
+    for x in (30, 31): im.putpixel((x, 17), im.getpixel((32, 17)))	# its shadow under the new corner
+    return im
+LOGO1 = straight_b(Image.open(ROOT + '/ui/assets/rnds/logo@1x.png').convert('RGBA'))
 def asset(name, k):
     im = Image.open(ROOT + '/web/preview/assets/' + name).convert('RGBA')
     return im.resize((int(im.width * k), int(im.height * k)), Image.LANCZOS)
@@ -483,10 +490,8 @@ def frame(t):
             im = grow(icon(name), k)
             w2 = max(1, int(im.width * flip))
             paste(vis, im.resize((w2, im.height), Image.NEAREST), x0 + c * step + (96 - w2) / 2, y0 + r * step + 8 * math.sin(local * 2.2 + n * 0.7), clamp01(a * 2))
-        letters(d, L, 400, 'And much more.', F(MED, 96), INK, local, 0.2)
-        shine(words, (L - 10, 395, L + 820, 520), (local - 1.4) / 0.9)
-        text(d, (L, 530 + rise(0.8)), 'Check the release notes', F(REG, 42), YELLOW, at(0.8))
-        text(d, (L, 584 + rise(1.0)), 'for everything new in 0.5.0.', F(REG, 42), YELLOW, at(1.0))
+        letters(d, L, 470, 'And much more.', F(MED, 96), INK, local, 0.2)
+        shine(words, (L - 10, 465, L + 820, 590), (local - 1.4) / 0.9)
     elif kind == 'end':
         a = back(local / 1.4)
         draw_vox(vis, 'logo', LOGO1, 12, W / 2, 380 - 30 * (1 - a), 9 * math.sin(local * 0.9) + 40 * (1 - ease(local / 1.4)),
