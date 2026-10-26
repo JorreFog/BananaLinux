@@ -37,7 +37,7 @@ Limoncello's drop at 0:06).
 (wasabi-beats.json, from librosa's beat tracker: the drop brings the first feature, the end card lands where the
 song comes back in). BananaOS's look in 3D: the menu's pixel icons and the logo as lit voxels, the example themes'
 screens, the Banana Theme Studio and the cards on tilted panels, a floor grid and pixel dust in depth, a pixel-block
-wipe between scenes, a camera punch on the downbeat, bloom and grain. No dates anywhere: "Coming very soon in 0.5.0
+wipe between scenes, bloom and grain, the glow pulsing with the beat. No dates anywhere: "Coming very soon in 0.5.0
 beta". COMPANIONS sets how many games have a GBA companion (left out when not given). Renders on every core.
 
     NO_DATE=1 python3 tools/promo/screens.py hillside turntable classic   # the clocks without dates

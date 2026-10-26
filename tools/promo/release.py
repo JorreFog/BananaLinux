@@ -2,7 +2,7 @@
 # The 0.5.0 trailer: what is new in the first beta, one feature a scene, cut to the music's beat. BananaOS's look (the
 # pixel font, the logo, yellow on near-black) taken into 3D: the menu's pixel icons and the logo as lit voxels, the
 # screens and the cards on tilted panels, a floor grid and pixel dust in depth, a pixel-block wipe between scenes,
-# a camera punch, bloom and grain. screens.py renders the example themes first (banana-ui, headless).
+# bloom and grain. screens.py renders the example themes first (banana-ui, headless).
 #
 #   NO_DATE=1 python3 tools/promo/screens.py hillside turntable classic
 #   STUDIO=dir-with-1.webp-and-2.webp [COMPANIONS=n] [MUSIC=Wasabi.mp3] python3 tools/promo/release.py [out.mp4]
@@ -527,26 +527,23 @@ def frame(t):
             d.rectangle((L + 280 + k * 22, 948, L + 292 + k * 22, 960), fill=(YELLOW if k < S['n'] else (60, 62, 74)) + (int(255 * at(0.25 + 0.03 * k)),))
         draw_feature(vis, vd, S, local, beat)
 
-    # the camera: a slow push through a scene, a punch on the downbeat (the words stay crisp, on top)
+    # the camera: a slow push through a scene (the words stay crisp, on top)
     if out < 1:
         vis.putalpha(vis.getchannel('A').point(lambda v: int(v * out)))
         words.putalpha(words.getchannel('A').point(lambda v: int(v * out)))
     img.alpha_composite(vis)
-    z = 1 + 0.025 * clamp01(local / max(1, S['len'])) + 0.012 * down
+    z = 1 + 0.025 * clamp01(local / max(1, S['len']))
     if z > 1.0005:
         cw, ch = W / z, H / z
         img = img.resize((W, H), Image.BILINEAR, box=((W - cw) / 2, (H - ch) / 2, (W + cw) / 2, (H + ch) / 2))
     img.alpha_composite(words)
 
-    # bloom, a colour split on the downbeat, the vignette, grain, the fades and a flash on the drop
+    # bloom, the vignette, grain, the fades and a flash on the drop
     rgb = img.convert('RGB')
     a = np.asarray(rgb, np.float32)
     small = np.asarray(rgb.resize((W // 4, H // 4), Image.BILINEAR), np.float32)
     bl = Image.fromarray(np.clip((small - 150) * 1.6, 0, 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(7)).resize((W, H), Image.BILINEAR)
     a += np.asarray(bl, np.float32) * (0.42 + 0.25 * down)
-    k = int(round(5 * down))
-    if k >= 1:
-        a[..., 0] = np.roll(a[..., 0], k, 1); a[..., 2] = np.roll(a[..., 2], -k, 1)
     a *= VIGNETTE
     a += np.random.default_rng(int(t * FPS)).integers(-5, 6, (H, W, 1)).astype(np.float32)
     a *= clamp01(t / 0.4) * clamp01((DURATION - t) / 1.2)
