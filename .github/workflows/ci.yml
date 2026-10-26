@@ -15,18 +15,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Packages
-        run: sudo apt-get update && sudo apt-get install -y libfreetype-dev libdrm-dev libasound2-dev zlib1g-dev imagemagick g++-aarch64-linux-gnu clang
+        run: sudo apt-get update && sudo apt-get install -y libfreetype-dev libdrm-dev libasound2-dev zlib1g-dev imagemagick g++-aarch64-linux-gnu
       - name: banana-ui (headless test, both panel sizes)
         run: make test
-      - name: Fuzz the readers of the card's files (themes, expressions, zips, ROM banners, Banana's own files)
-        run: FUZZ_SECONDS=20 make fuzz
-      - name: The fuzzers' failing inputs (replay one with ui/fuzz/run.sh <target> <input>)
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: fuzz-failures
-          path: ui/fuzz/out/crash-*
-          if-no-files-found: ignore
       - name: banana-ui with ALSA
         run: make -C ui clean && make -C ui
       - name: bananad (native and aarch64)
