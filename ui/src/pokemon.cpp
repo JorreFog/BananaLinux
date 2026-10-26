@@ -431,6 +431,20 @@ namespace banana::pkmn
 			while (k < len && p[k] != 0xff) { if (!nameChar(p[k])) return -1; k++; }
 			return k == len ? -1 : (int)k;
 		}
+		// a region map section's name: as nameAt, a control code and its argument allowed in it (Ruby and Sapphire's
+		// town names have one between the name and TOWN / CITY)
+		int sectionName(const uint8_t* p, size_t len)
+		{
+			size_t k = 0;
+			int chars = 0;
+			while (k < len && p[k] != 0xff)
+			{
+				if (p[k] == 0xfc || p[k] == 0xfd) { k += 2; continue; }
+				if (!nameChar(p[k])) return -1;
+				k++; chars++;
+			}
+			return k >= len ? -1 : chars;
+		}
 		// a table of names, entry bytes each, from at: how many in a row are names (a blank one ends it unless allowed)
 		int countNames(const uint8_t* rom, size_t n, long at, size_t entry, int max)
 		{
@@ -659,7 +673,7 @@ namespace banana::pkmn
 					size_t r = a + k * 8;
 					if (r + 8 > n || rom[r] >= 28 || rom[r + 1] >= 15 || rom[r + 2] == 0 || rom[r + 3] == 0 || rom[r + 2] > 28 || rom[r + 3] > 15) break;
 					long p = romPtr(rom, n, r + 4, 2);
-					if (p < 0 || (!k && nameAt(rom + p, 22) < 2)) break;	// (a few sections have no name, or one with codes in it)
+					if (p < 0 || (!k && sectionName(rom + p, 22) < 2)) break;	// (a few sections have no name)
 				}
 				if (k > bestLen) { best = (long)a; bestLen = k; }
 			}
@@ -669,7 +683,8 @@ namespace banana::pkmn
 			{
 				const uint8_t* r = rom + best + i * 8;
 				t.mapNames.resize(bestLen);
-				t.mapNames[i] = decodeText(rom + romPtr(rom, n, best + i * 8 + 4), 22);
+				t.mapNames[i] = longText(rom, n, romPtr(rom, n, best + i * 8 + 4), 22);	// (Ruby/Sapphire's town names: "LITTLEROOT{FC 00} TOWN")
+				if (r[0] == 0 && r[1] == 0) continue;	// (sections that aren't on the map: the truck, the Battle Tower...)
 				for (int y = r[1]; y < r[1] + r[3] && y < 15; y++)
 					for (int x = r[0]; x < r[0] + r[2] && x < 28; x++) g.cells[y * 28 + x] = (uint8_t)i;
 			}
