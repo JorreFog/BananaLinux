@@ -4,6 +4,10 @@ This is the contract between the menu and any program that plays a game: DraStic
 RetroArch and BananaDS. Keep to it and the rest of Banana (sleep, the volume keys, the logs,
 the settings) works around the emulator without knowing it.
 
+The Nintendo 3DS is played differently — its code is recompiled for the handheld by a PC rather than
+emulated as it runs, and pocket-native is what plays it. It keeps the same contract as the rest, and has
+its own document: [3DS.md](3DS.md).
+
 ## Starting
 
 `systems.conf` names a `run` command per system, with `%ROM%` the game's path (quoted) and `%SYSTEM%` the system's

@@ -1,0 +1,3 @@
+# Locally calculated after checking the tarball by hand:
+#   curl -sSfL https://github.com/whovian64/pocket-native/archive/fc6a95dd0c5e4b8ada904466547c0b76948ba260.tar.gz | sha256sum
+sha256  0f7b3d8bb19f43313bee93c35713255be613a92cba5c659763948e06608b95c4  pocket-native-fc6a95dd0c5e4b8ada904466547c0b76948ba260.tar.gz

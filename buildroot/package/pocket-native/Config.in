@@ -1,0 +1,21 @@
+config BR2_PACKAGE_POCKET_NATIVE
+	bool "pocket-native"
+	depends on BR2_PACKAGE_HOST_RUSTC_TARGET_ARCH_SUPPORTS
+	select BR2_PACKAGE_HOST_RUSTC
+	help
+	  Nintendo 3DS games recompiled for the handheld, instead of emulated
+	  while you play: a PC turns each game's code into a native program
+	  ahead of time, and the handheld runs that plus the parts of an
+	  emulator the game still needs — the system services, its GPU redone
+	  in OpenGL ES, sound, and a frontend for a handheld with no desktop
+	  (KMS for the screens, evdev for the buttons, ALSA for the sound).
+
+	  A fork of Zakuro and 3dsrecomp by fearkov, which adds the OpenGL ES
+	  renderer for Mali GPUs with no Vulkan driver and the handheld
+	  frontend Banana needs. The games are not part of this or any image:
+	  each player builds their own on a PC and copies it to the card.
+
+	  https://github.com/whovian64/pocket-native
+
+comment "pocket-native needs a toolchain with Rust"
+	depends on !BR2_PACKAGE_HOST_RUSTC_TARGET_ARCH_SUPPORTS

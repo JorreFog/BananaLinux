@@ -1,0 +1,514 @@
+From 83555772ef78525f5259489ec79a04ed2a0da1de Mon Sep 17 00:00:00 2001
+From: opencode <opencode@localhost>
+Date: Mon, 26 Oct 2026 12:54:55 -0400
+Subject: [PATCH 1/7] RG DS Plus on BananaLinux: both panels, and its pad
+
+The RG DS Plus drives two 1024x768 MIPI-DSI panels. KMS took only the
+first connected connector, so one panel was dark; give Kms a panel each:
+it finds every connected connector, orders them with the top one first
+(banana-ui's BANANA_TOP, DSI-2), makes a GBM surface per panel and flips
+both CRTCs. The second surface goes to the renderer's existing second
+window, so one screen draws on each panel by itself, and one-panel
+handhelds are unchanged.
+
+Its buttons come from the rocknix-singleadc-joypad driver, whose evdev
+name is also retrogame_joypad (vendor 484b), so it was numbered as an
+RK3566 handheld and X, Y, L and R landed nowhere. Number it as itself:
+the face buttons are the standard gamepad codes and select, start, F and
+the sticks' buttons are the usual 314 to 318.
+---
+ .gitignore                    |   1 +
+ engine/gpu/src/raster/gles.rs | 298 +++++++++++++++++++++-------------
+ frontend/src/input.rs         |  62 ++++++-
+ 3 files changed, 242 insertions(+), 119 deletions(-)
+
+diff --git a/.gitignore b/.gitignore
+index cb7c641..3b643d3 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -12,3 +12,4 @@ aes_keys.txt
+ .DS_Store
+ .old/
+ .update/
++.cargo/
+diff --git a/engine/gpu/src/raster/gles.rs b/engine/gpu/src/raster/gles.rs
+index 656a145..4923897 100644
+--- a/engine/gpu/src/raster/gles.rs
++++ b/engine/gpu/src/raster/gles.rs
+@@ -1211,12 +1211,10 @@ fn monotonic_micros() -> u64 {
+ 
+ const GBM_FORMAT_XRGB8888: u32 = 0x3432_5258;
+ 
+-/// the panel, driven through KMS from a GBM surface the context draws into.
+-struct Kms {
+-    drm: libloading::Library,
+-    gbm: libloading::Library,
+-    fd: i32,
+-    device: *mut c_void,
++/// one panel driven through KMS: a connector, the CRTC that drives it, its
++/// mode and the GBM surface the context draws into. The RG DS Plus has two
++/// of these; most handhelds have one.
++struct KmsPanel {
+     surface: *mut c_void,
+     crtc: u32,
+     connector: u32,
+@@ -1224,6 +1222,21 @@ struct Kms {
+     shown: Option<(*mut c_void, u32)>,
+     pending: Option<(*mut c_void, u32)>,
+     set: bool,
++}
++
++/// the panel, driven through KMS from a GBM surface the context draws into.
++struct Kms {
++    drm: libloading::Library,
++    gbm: libloading::Library,
++    fd: i32,
++    device: *mut c_void,
++    /// the panel the screens' layout is drawn into: the top one on the RG DS
++    /// Plus, so the second window takes the bottom screen.
++    primary: KmsPanel,
++    /// a second physical panel, given to the renderer as a second window so
++    /// one screen goes to it by itself. None on a one-panel handheld, where
++    /// both screens share the primary as they always have.
++    second: Option<KmsPanel>,
+     /// how many pictures stayed up for 1, 2, 3 and 4 or more panel
+     /// refreshes, logged every few seconds: at an even frame rate they all
+     /// stay up as long.
+@@ -1267,64 +1280,94 @@ impl Kms {
+         if resources.is_null() {
+             return Err("no KMS resources".into());
+         }
+-        let res = &*resources;
+-        let mut found = None;
+-        for i in 0..res.count_connectors as usize {
+-            let connector = call!(drm, "drmModeGetConnector", fn(i32, u32) -> *mut DrmModeConnector, fd, *res.connectors.add(i));
+-            if connector.is_null() {
+-                continue;
+-            }
+-            let c = &*connector;
+-            if c.connection == 1 && c.count_modes > 0 {
+-                let modes = std::slice::from_raw_parts(c.modes, c.count_modes as usize);
+-                let mode = *modes.iter().find(|mode| mode.kind & (1 << 3) != 0).unwrap_or(&modes[0]);
+-                let mut crtc = 0;
+-                let encoder = call!(drm, "drmModeGetEncoder", fn(i32, u32) -> *mut DrmModeEncoder, fd, c.encoder_id);
+-                if !encoder.is_null() {
+-                    crtc = (*encoder).crtc_id;
+-                    call!(drm, "drmModeFreeEncoder", fn(*mut DrmModeEncoder) -> (), encoder);
++        // every connected panel with a mode, as (its DSI interface, connector,
++        // mode, crtc): one on most handhelds, two on the RG DS Plus
++        let mut found: Vec<(u32, u32, DrmModeInfo, u32)> = Vec::new();
++        {
++            let res = &*resources;
++            for i in 0..res.count_connectors as usize {
++                let connector = call!(drm, "drmModeGetConnector", fn(i32, u32) -> *mut DrmModeConnector, fd, *res.connectors.add(i));
++                if connector.is_null() {
++                    continue;
+                 }
+-                if crtc == 0 && res.count_crtcs > 0 {
+-                    crtc = *res.crtcs;
++                let c = &*connector;
++                if c.connection == 1 && c.count_modes > 0 {
++                    let modes = std::slice::from_raw_parts(c.modes, c.count_modes as usize);
++                    let mode = *modes.iter().find(|mode| mode.kind & (1 << 3) != 0).unwrap_or(&modes[0]);
++                    let mut crtc = 0;
++                    let encoder = call!(drm, "drmModeGetEncoder", fn(i32, u32) -> *mut DrmModeEncoder, fd, c.encoder_id);
++                    if !encoder.is_null() {
++                        crtc = (*encoder).crtc_id;
++                        call!(drm, "drmModeFreeEncoder", fn(*mut DrmModeEncoder) -> (), encoder);
++                    }
++                    if crtc == 0 && (found.len() as i32) < res.count_crtcs {
++                        crtc = *res.crtcs.add(found.len());
++                    }
++                    // a crtc drives one panel: a second connector asking for
++                    // the same one is left out
++                    if crtc != 0 && !found.iter().any(|panel| panel.3 == crtc) {
++                        found.push((c.connector_type_id, c.connector_id, mode, crtc));
++                    }
+                 }
+-                found = Some((c.connector_id, mode, crtc));
++                call!(drm, "drmModeFreeConnector", fn(*mut DrmModeConnector) -> (), connector);
+             }
+-            call!(drm, "drmModeFreeConnector", fn(*mut DrmModeConnector) -> (), connector);
+-            if found.is_some() {
++        }
++        call!(drm, "drmModeFreeResources", fn(*mut DrmModeRes) -> (), resources);
++        if found.is_empty() {
++            return Err("no connected display".into());
++        }
++        // the top panel first, so the layout goes on it and the second window
++        // takes the bottom screen. BANANA_TOP names the top panel's DSI
++        // interface (DSI-2 on the RG DS Plus); one panel keeps the behaviour
++        // a one-panel handheld always had.
++        let top = top_connector_id();
++        found.sort_by_key(|panel| u32::from(panel.0 != top));
++        let mut panels: Vec<KmsPanel> = Vec::new();
++        for (interface, connector, mode, crtc) in found.drain(..).take(2) {
++            let refresh = mode.clock as f64 * 1000.0 / (mode.htotal as f64 * mode.vtotal as f64);
++            log::info!("panel {connector} (DSI-{interface}) {}x{} at {refresh:.3} Hz on crtc {crtc}", mode.hdisplay, mode.vdisplay);
++            if panels.is_empty() && (50.0..70.0).contains(&refresh) {
++                PANEL_PERIOD.store((1e9 / refresh) as u64, std::sync::atomic::Ordering::Relaxed);
++            }
++            let surface = call!(
++                gbm,
++                "gbm_surface_create",
++                fn(*mut c_void, u32, u32, u32, u32) -> *mut c_void,
++                device,
++                mode.hdisplay as u32,
++                mode.vdisplay as u32,
++                GBM_FORMAT_XRGB8888,
++                1 | 4
++            );
++            if surface.is_null() {
++                if panels.is_empty() {
++                    return Err("no GBM surface".into());
++                }
+                 break;
+             }
++            panels.push(KmsPanel { surface, crtc, connector, mode, shown: None, pending: None, set: false });
+         }
+-        call!(drm, "drmModeFreeResources", fn(*mut DrmModeRes) -> (), resources);
+-        let (connector, mode, crtc) = found.ok_or("no connected display")?;
+-        let refresh = mode.clock as f64 * 1000.0 / (mode.htotal as f64 * mode.vtotal as f64);
+-        log::info!("panel {}x{} at {refresh:.3} Hz", mode.hdisplay, mode.vdisplay);
+-        if (50.0..70.0).contains(&refresh) {
+-            PANEL_PERIOD.store((1e9 / refresh) as u64, std::sync::atomic::Ordering::Relaxed);
+-        }
+-        let surface = call!(
+-            gbm,
+-            "gbm_surface_create",
+-            fn(*mut c_void, u32, u32, u32, u32) -> *mut c_void,
+-            device,
+-            mode.hdisplay as u32,
+-            mode.vdisplay as u32,
+-            GBM_FORMAT_XRGB8888,
+-            1 | 4
+-        );
+-        if surface.is_null() {
+-            return Err("no GBM surface".into());
++        if panels.len() == 2 {
++            log::info!("two panels: the top screen on the first, the bottom on the second");
+         }
+-        Ok(Kms { drm, gbm, fd, device, surface, crtc, connector, mode, shown: None, pending: None, set: false, held: [0; 4], held_since: std::time::Instant::now(), last_flip: 0, asked: 0, slack: (0, 0) })
++        let mut made = panels.into_iter();
++        let primary = made.next().ok_or("no GBM surface")?;
++        let second = made.next();
++        Ok(Kms { drm, gbm, fd, device, primary, second, held: [0; 4], held_since: std::time::Instant::now(), last_flip: 0, asked: 0, slack: (0, 0) })
+     }
+ 
+     fn size(&self) -> (i32, i32) {
+-        (self.mode.hdisplay as i32, self.mode.vdisplay as i32)
++        (self.primary.mode.hdisplay as i32, self.primary.mode.vdisplay as i32)
+     }
+ 
+-    /// waits for the flip queued last to happen, then lets go of the
+-    /// buffer it replaced.
++    /// waits for the flips queued last to happen, then lets go of the
++    /// buffers they replaced.
+     fn settle(&mut self) -> Result<(), String> {
+-        let Some(pending) = self.pending.take() else { return Ok(()) };
++        let primary = self.primary.pending.take();
++        let second = self.second.as_mut().and_then(|panel| panel.pending.take());
++        if primary.is_none() && second.is_none() {
++            return Ok(());
++        }
+         // SAFETY: as in open, on the descriptor and buffers this holds
+         unsafe {
+             let mut context = DrmEventContext { version: 2, vblank_handler: None, page_flip_handler: Some(flipped) };
+@@ -1349,19 +1392,19 @@ impl Kms {
+                     self.held_since = std::time::Instant::now();
+                 }
+             }
+-            if let Some((bo, fb)) = self.shown.replace(pending) {
+-                call!(self.drm, "drmModeRmFB", fn(i32, u32) -> i32, self.fd, fb);
+-                call!(self.gbm, "gbm_surface_release_buffer", fn(*mut c_void, *mut c_void) -> (), self.surface, bo);
++            self.primary.release(&self.drm, &self.gbm, self.fd, primary)?;
++            if let (Some(panel), Some(pending)) = (self.second.as_mut(), second) {
++                panel.release(&self.drm, &self.gbm, self.fd, Some(pending))?;
+             }
+         }
+         Ok(())
+     }
+ 
+-    /// queues what the context just swapped to for the panel's next
+-    /// vertical blank, waiting only for a flip still queued from before.
+-    /// a picture goes up no sooner than as many refreshes after the last as
+-    /// the game's frames between them, two at most, so none flashes by for
+-    /// one refresh and a game behind is never held up further.
++    /// queues what the context just swapped to for the panels' next vertical
++    /// blank, waiting only for a flip still queued from before. a picture
++    /// goes up no sooner than as many refreshes after the last as the game's
++    /// frames between them, two at most, so none flashes by for one refresh
++    /// and a game behind is never held up further.
+     fn flip(&mut self, frames: u32) -> Result<(), String> {
+         self.settle()?;
+         let period = PANEL_PERIOD.load(std::sync::atomic::Ordering::Relaxed) / 1000;
+@@ -1374,67 +1417,88 @@ impl Kms {
+                 paced = true;
+             }
+         }
+-        // SAFETY: as in open, the buffer object is the surface's front one
++        // SAFETY: as in open, the buffer objects are the surfaces' front ones
+         unsafe {
+-            let bo = call!(self.gbm, "gbm_surface_lock_front_buffer", fn(*mut c_void) -> *mut c_void, self.surface);
+-            if bo.is_null() {
+-                return Err("no front buffer".into());
+-            }
+-            let handle = call!(self.gbm, "gbm_bo_get_handle", fn(*mut c_void) -> u64, bo) as u32;
+-            let stride = call!(self.gbm, "gbm_bo_get_stride", fn(*mut c_void) -> u32, bo);
+-            let (width, height) = self.size();
+-            let mut fb = 0u32;
+-            let added = call!(
+-                self.drm,
+-                "drmModeAddFB",
+-                fn(i32, u32, u32, u8, u8, u32, u32, *mut u32) -> i32,
+-                self.fd,
+-                width as u32,
+-                height as u32,
+-                24,
+-                32,
+-                stride,
+-                handle,
+-                &mut fb
+-            );
+-            if added != 0 {
+-                call!(self.gbm, "gbm_surface_release_buffer", fn(*mut c_void, *mut c_void) -> (), self.surface, bo);
+-                return Err("could not make a framebuffer".into());
+-            }
+-            if !self.set {
+-                let mut connector = self.connector;
+-                let mut mode = self.mode;
+-                let result = call!(
+-                    self.drm,
+-                    "drmModeSetCrtc",
+-                    fn(i32, u32, u32, u32, u32, *mut u32, i32, *mut DrmModeInfo) -> i32,
+-                    self.fd,
+-                    self.crtc,
+-                    fb,
+-                    0,
+-                    0,
+-                    &mut connector,
+-                    1,
+-                    &mut mode
+-                );
+-                if result != 0 {
+-                    return Err(format!("could not set the display mode, {result}"));
+-                }
+-                self.set = true;
+-                self.shown = Some((bo, fb));
+-            } else if call!(self.drm, "drmModePageFlip", fn(i32, u32, u32, u32, *mut c_void) -> i32, self.fd, self.crtc, fb, 1, std::ptr::null_mut()) == 0 {
+-                // a held picture says nothing of how early pictures come
+-                self.asked = if paced { 0 } else { monotonic_micros() };
+-                self.pending = Some((bo, fb));
+-            } else {
+-                call!(self.drm, "drmModeRmFB", fn(i32, u32) -> i32, self.fd, fb);
+-                call!(self.gbm, "gbm_surface_release_buffer", fn(*mut c_void, *mut c_void) -> (), self.surface, bo);
++            let (drm, gbm, fd) = (&self.drm, &self.gbm, self.fd);
++            let mut queued = self.primary.hand_over(drm, gbm, fd)?;
++            if let Some(panel) = self.second.as_mut() {
++                queued |= panel.hand_over(drm, gbm, fd)?;
+             }
++            // a held picture says nothing of how early pictures come
++            self.asked = if paced || !queued { 0 } else { monotonic_micros() };
+         }
+         Ok(())
+     }
+ }
+ 
++impl KmsPanel {
++    /// hands the surface's newest front buffer to this panel's display: sets
++    /// the mode the first time, page flips after. True when a flip was
++    /// queued, which the caller times the next picture against.
++    unsafe fn hand_over(&mut self, drm: &libloading::Library, gbm: &libloading::Library, fd: i32) -> Result<bool, String> {
++        let bo = call!(gbm, "gbm_surface_lock_front_buffer", fn(*mut c_void) -> *mut c_void, self.surface);
++        if bo.is_null() {
++            return Err("no front buffer".into());
++        }
++        let handle = call!(gbm, "gbm_bo_get_handle", fn(*mut c_void) -> u64, bo) as u32;
++        let stride = call!(gbm, "gbm_bo_get_stride", fn(*mut c_void) -> u32, bo);
++        let (width, height) = (self.mode.hdisplay as u32, self.mode.vdisplay as u32);
++        let mut fb = 0u32;
++        let added = call!(drm, "drmModeAddFB", fn(i32, u32, u32, u8, u8, u32, u32, *mut u32) -> i32, fd, width, height, 24, 32, stride, handle, &mut fb);
++        if added != 0 {
++            call!(gbm, "gbm_surface_release_buffer", fn(*mut c_void, *mut c_void) -> (), self.surface, bo);
++            return Err("could not make a framebuffer".into());
++        }
++        if !self.set {
++            let mut connector = self.connector;
++            let mut mode = self.mode;
++            let result = call!(
++                drm,
++                "drmModeSetCrtc",
++                fn(i32, u32, u32, u32, u32, *mut u32, i32, *mut DrmModeInfo) -> i32,
++                fd,
++                self.crtc,
++                fb,
++                0,
++                0,
++                &mut connector,
++                1,
++                &mut mode
++            );
++            if result != 0 {
++                return Err(format!("could not set the display mode, {result}"));
++            }
++            self.set = true;
++            self.shown = Some((bo, fb));
++            Ok(false)
++        } else if call!(drm, "drmModePageFlip", fn(i32, u32, u32, u32, *mut c_void) -> i32, fd, self.crtc, fb, 1, std::ptr::null_mut()) == 0 {
++            self.pending = Some((bo, fb));
++            Ok(true)
++        } else {
++            call!(drm, "drmModeRmFB", fn(i32, u32) -> i32, fd, fb);
++            call!(gbm, "gbm_surface_release_buffer", fn(*mut c_void, *mut c_void) -> (), self.surface, bo);
++            Ok(false)
++        }
++    }
++
++    /// lets go of the buffer a flip replaced once it has happened, keeping
++    /// the one the flip put up.
++    unsafe fn release(&mut self, drm: &libloading::Library, gbm: &libloading::Library, fd: i32, pending: Option<(*mut c_void, u32)>) -> Result<(), String> {
++        if let Some((bo, fb)) = std::mem::replace(&mut self.shown, pending) {
++            call!(drm, "drmModeRmFB", fn(i32, u32) -> i32, fd, fb);
++            call!(gbm, "gbm_surface_release_buffer", fn(*mut c_void, *mut c_void) -> (), self.surface, bo);
++        }
++        Ok(())
++    }
++}
++
++/// the DSI interface number of the top panel, from banana-ui's BANANA_TOP
++/// (DSI-2 on the RG DS Plus), defaulting to 2.
++fn top_connector_id() -> u32 {
++    let name = std::env::var("BANANA_TOP").unwrap_or_else(|_| "DSI-2".to_owned());
++    name.rsplit(|c: char| !c.is_ascii_digit()).next().and_then(|digits| digits.parse().ok()).unwrap_or(2)
++}
++
+ /// the size the frontend lays the screens out in, the panel's shape with
+ /// its long side across, 480 tall or 640 wide: 640x480 on a 4:3 panel,
+ /// 853x480 on a 16:9 one, 640x640 on a square one. A window that turns
+@@ -2353,7 +2417,13 @@ impl Egl {
+                     visual as u32 == GBM_FORMAT_XRGB8888
+                 })
+                 .ok_or("no EGL config for the panel")?;
+-            let (egl, gl) = Egl::on_window((library, gles), loaded, display, config, kms.surface as glutin_egl_sys::EGLNativeWindowType, 0)?;
++            let (egl, gl) = Egl::on_window((library, gles), loaded, display, config, kms.primary.surface as glutin_egl_sys::EGLNativeWindowType, 0)?;
++            if let Some(panel) = &kms.second {
++                // the primary panel shows the top screen, so the second shows
++                // the bottom one, which its own window then takes
++                set_second_shows_top(false);
++                set_second_window(panel.surface);
++            }
+             Ok((egl, gl, kms))
+         }
+     }
+diff --git a/frontend/src/input.rs b/frontend/src/input.rs
+index 32947b6..3529bad 100644
+--- a/frontend/src/input.rs
++++ b/frontend/src/input.rs
+@@ -125,9 +125,14 @@ pub fn read_pad(path: String, name: String, pad: Arc<Mutex<Pad>>) {
+     let muos = name == "muOS-Keys" && vendor.trim() == "756d";
+     // they come in as the R36S's
+     let h700 = h700_pad(&name) || (name == "muOS-Keys" && !muos);
++    // the RG DS Plus's own pad: the rocknix-singleadc-joypad driver (vendor
++    // 484b, banana-ui's DTB) also reports its evdev name as retrogame_joypad,
++    // but its buttons are the standard gamepad numbers, A BTN_EAST and X
++    // BTN_NORTH among them, so it is not numbered as an RK3566 handheld
++    let rocknix = vendor.trim() == "484b";
+     // Anbernic's RK3566 handhelds (RG353, RG503) give select, start, the
+     // sticks' buttons and the right stick the usual numbers
+-    let rk3566 = name.starts_with("retrogame_joypad");
++    let rk3566 = name.starts_with("retrogame_joypad") && !rocknix;
+     // the RK3562 handhelds give them the usual numbers too, with the
+     // sticks on the usual axes
+     let rk3562 = rk3562_pad(&name);
+@@ -135,6 +140,8 @@ pub fn read_pad(path: String, name: String, pad: Arc<Mutex<Pad>>) {
+         "buttons from {name}{}",
+         if h700 {
+             ", numbered as on Anbernic's H700 handhelds"
++        } else if rocknix {
++            ", the RG DS Plus's own (vendor 484b)"
+         } else if rk3566 {
+             ", numbered as on Anbernic's RK3566 handhelds"
+         } else if rk3562 {
+@@ -149,12 +156,12 @@ pub fn read_pad(path: String, name: String, pad: Arc<Mutex<Pad>>) {
+     let sticks = if h700 {
+         // left stick on ABS_Z and ABS_RX, right on ABS_RY and ABS_RZ
+         Some([None, None, Some(0), Some(1), Some(3), Some(4)])
++    } else if rocknix || rk3562 || muos {
++        // the usual gamepad axes: left stick on ABS_X and ABS_Y, right on
++        // ABS_RX and ABS_RY
++        Some([Some(0), Some(1), None, Some(3), Some(4), None])
+     } else if rk3566 {
+         Some([Some(0), Some(1), Some(3), None, None, Some(4)])
+-    } else if rk3562 || muos {
+-        // left stick on ABS_X and ABS_Y, right on ABS_RX and ABS_RY, the
+-        // triggers on ABS_Z and ABS_RZ, which are buttons here
+-        Some([Some(0), Some(1), None, Some(3), Some(4), None])
+     } else {
+         None
+     };
+@@ -184,6 +191,8 @@ pub fn read_pad(path: String, name: String, pad: Arc<Mutex<Pad>>) {
+                 (1, _) => {
+                     let code = if h700 {
+                         h700_button(code)
++                    } else if rocknix {
++                        rkds_button(code)
+                     } else if rk3566 {
+                         rk3566_button(code)
+                     } else if rk3562 {
+@@ -253,6 +262,29 @@ fn rk3566_button(code: u16) -> u16 {
+     }
+ }
+ 
++/// the RG DS Plus's pad (the rocknix-singleadc-joypad driver, vendor 484b) as
++/// the R36S numbers it. its face buttons are the standard gamepad numbers
++/// (A BTN_EAST 305 and B BTN_SOUTH 304 match the R36S's own, so they are left
++/// alone), but X, Y, the shoulders and the triggers are not where the R36S
++/// keeps them, and select, start, F and the sticks' buttons are the usual
++/// 314 to 318.
++fn rkds_button(code: u16) -> u16 {
++    match code {
++        306 => X,      // BTN_NORTH
++        307 => Y,      // BTN_WEST
++        308 => L1,     // BTN_TL
++        309 => R1,     // BTN_TR
++        310 => L2,     // BTN_TL2
++        311 => R2,     // BTN_TR2
++        314 => SELECT, // BTN_SELECT
++        315 => START,  // BTN_START
++        316 => FN,     // BTN_MODE
++        317 => L3,     // BTN_THUMBL
++        318 => R3,     // BTN_THUMBR
++        other => other, // B (304), A (305) and the d-pad (544-547) already fit
++    }
++}
++
+ /// an RK3562 handheld's button as the R36S numbers it: select, start, home
+ /// and the sticks' buttons have the usual gamepad codes (314 to 318), as on
+ /// the RK3566 handhelds, and the extra FN or back button the first
+@@ -393,6 +425,26 @@ pub fn cursor_step(speed: Speed) -> f32 {
+ mod tests {
+     use super::sticks_in_order;
+ 
++    /// the RG DS Plus's pad (vendor 484b) numbers its face buttons and
++    /// shoulders where the R36S keeps them not: A and B already fit, X, Y,
++    /// the shoulders and the triggers do not, and select, start, F and the
++    /// sticks' buttons are the usual 314 to 318.
++    #[test]
++    fn the_rg_ds_plus_pad_lands_on_the_r36s_numbers() {
++        use super::{rkds_button, A, B, FN, L1, R1, SELECT, START, UP, X, Y};
++        assert_eq!(rkds_button(304), B);
++        assert_eq!(rkds_button(305), A);
++        assert_eq!(rkds_button(306), X);
++        assert_eq!(rkds_button(307), Y);
++        assert_eq!(rkds_button(308), L1);
++        assert_eq!(rkds_button(309), R1);
++        assert_eq!(rkds_button(314), SELECT);
++        assert_eq!(rkds_button(315), START);
++        assert_eq!(rkds_button(316), FN);
++        // the d-pad already carries the R36S's numbers and passes through
++        assert_eq!(rkds_button(UP), UP);
++    }
++
+     #[test]
+     fn sticks_follow_the_axes_a_pad_has() {
+         // ABS_Z to ABS_RZ, as on the H700 handhelds the usual mapping fits

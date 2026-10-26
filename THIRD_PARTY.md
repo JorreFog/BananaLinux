@@ -14,6 +14,7 @@ Banana's own code (ui/src, system/, buildroot/package, tools/) is under the MIT 
 | ROCKNIX joypad driver | buildroot/board/rgds/kernel/rocknix-* | [hackbar/rocknix-joypad](https://github.com/hackbar/rocknix-joypad) | GPL-2.0-or-later |
 | RK3568 TF-A (BL31) | buildroot/board/rgds/rkbin | [rockchip-linux/rkbin](https://github.com/rockchip-linux/rkbin) | Rockchip's binary license (rkbin/LICENSE) |
 | Nintendo DS cheat files (Action Replay codes, for BananaDS) | buildroot/package/libretro-cheats-nds (tarball) | [libretro/libretro-database](https://github.com/libretro/libretro-database) cht/Nintendo - Nintendo DS at 12c21cf | CC BY-SA 4.0 |
+| pocket-native, the Nintendo 3DS runtime (a fork of Zakuro and 3dsrecomp) | buildroot/package/pocket-native, fetched at build time with Banana's own patches beside it | [whovian64/pocket-native](https://github.com/whovian64/pocket-native), forked from [fearkov/zakuro](https://github.com/fearkov/zakuro) and [fearkov/3dsrecomp](https://github.com/fearkov/3dsrecomp) | MIT |
 
 RetroArch's joypad map for the RG DS (`buildroot/package/retroarch/retrogame_joypad.cfg`) is ROCKNIX's (GPL-2.0).
 

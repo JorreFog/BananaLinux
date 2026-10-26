@@ -128,3 +128,9 @@ BR2_PACKAGE_OPENAL=y
 BR2_PACKAGE_LIBVORBIS=y
 BR2_PACKAGE_LIBTHEORA=y
 BR2_PACKAGE_MPG123=y
+
+# Nintendo 3DS: a game's code recompiled for the handheld by a PC, played by
+# pocket-native (docs/3DS.md). Needs a Rust toolchain, which default-builds as the
+# prebuilt one.
+BR2_PACKAGE_HOST_RUSTC=y
+BR2_PACKAGE_POCKET_NATIVE=y

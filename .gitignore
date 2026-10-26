@@ -7,6 +7,14 @@
 *.o
 /banana-*.bundle
 
+# a game's card image, and game dumps: never committed — every player brings
+# their own, and the recompiled code that comes from them is theirs too
+/qemu-out/
+*.zcci
+*.cci
+*.cia
+*.3ds
+
 # Python bytecode
 __pycache__/
 *.pyc

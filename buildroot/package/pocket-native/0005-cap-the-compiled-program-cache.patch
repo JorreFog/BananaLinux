@@ -1,0 +1,140 @@
+From 053d883438ece3ffa7189777e788e8bc4b64a7a9 Mon Sep 17 00:00:00 2001
+From: opencode <opencode@localhost>
+Date: Mon, 26 Oct 2026 15:15:00 -0400
+Subject: [PATCH 5/7] cap the compiled-program cache
+
+The programs map is never emptied and each entry costs the driver far more
+than a texture: a run reached 748 MB RSS, ~600 MB of it almost certainly
+these. Past PROGRAM_CACHE_MAX the least recently used are dropped, deleted
+on the GL thread after the batch that used them, like the textures. One
+that comes back is compiled again, which the driver's own cache makes
+quick.
+---
+ engine/gpu/src/raster/gles.rs | 58 ++++++++++++++++++++++++++++++-----
+ 1 file changed, 50 insertions(+), 8 deletions(-)
+
+diff --git a/engine/gpu/src/raster/gles.rs b/engine/gpu/src/raster/gles.rs
+index 00a8a6d..7e8eda3 100644
+--- a/engine/gpu/src/raster/gles.rs
++++ b/engine/gpu/src/raster/gles.rs
+@@ -273,6 +273,11 @@ const EQUATIONS: [u32; 5] = [glow::FUNC_ADD, glow::FUNC_SUBTRACT, glow::FUNC_REV
+ /// batches a second this is a few seconds' worth.
+ const TEXTURE_KEEP_FLUSHES: u64 = 200;
+ 
++/// how many compiled programs stay cached. Past this the least recently used
++/// go, so a title that makes new ones all through a level cannot grow the
++/// driver's memory without bound.
++const PROGRAM_CACHE_MAX: usize = 320;
++
+ #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+ enum Kind {
+     Color(ColorFormat),
+@@ -2774,6 +2779,13 @@ struct Texture {
+     used: u64,
+ }
+ 
++/// a compiled program the renderer keeps, and the batch it was last used in,
++/// so the least recently used can go when there are too many.
++struct Program {
++    program: glow::Program,
++    used: u64,
++}
++
+ enum Attribute {
+     Constant([f32; 4]),
+     Array { offset: usize, ty: u32, count: u32, stride: u32 },
+@@ -3630,7 +3642,7 @@ pub struct Gles {
+     worker: Arc<Worker>,
+     presenting: Arc<std::sync::atomic::AtomicUsize>,
+     name: String,
+-    programs: rustc_hash::FxHashMap<ProgramKey, glow::Program>,
++    programs: rustc_hash::FxHashMap<ProgramKey, Program>,
+     compiler: Option<Compiler>,
+     shades: bool,
+     translated: rustc_hash::FxHashMap<(u64, u32, [u32; SEMANTICS]), Option<u64>>,
+@@ -4612,8 +4624,10 @@ impl Gles {
+     /// making it, unless wait.
+     fn program(&mut self, constants: &[u32; FRAGMENT_CONSTANTS], writes_depth: bool, lighting: &[u32], vertex: u64, wait: bool) -> Result<Option<glow::Program>, String> {
+         let key = (*constants, writes_depth, lighting.to_vec(), vertex);
+-        if let Some(&program) = self.programs.get(&key) {
+-            return Ok(Some(program));
++        let flushes = self.flushes;
++        if let Some(made) = self.programs.get_mut(&key) {
++            made.used = flushes;
++            return Ok(Some(made.program));
+         }
+         if !self.worker.here() {
+             let worker = self.worker.clone();
+@@ -4621,8 +4635,9 @@ impl Gles {
+             return worker.run(|| self.program(constants, writes_depth, lighting, vertex, wait));
+         }
+         self.take_compiled(false);
+-        if let Some(&program) = self.programs.get(&key) {
+-            return Ok(Some(program));
++        if let Some(made) = self.programs.get_mut(&key) {
++            made.used = flushes;
++            return Ok(Some(made.program));
+         }
+         if let Some(compiler) = &self.compiler {
+             if let Some(error) = compiler.failed.get(&key) {
+@@ -4635,7 +4650,7 @@ impl Gles {
+                 while self.compiler.as_ref().is_some_and(|compiler| compiler.pending.contains(&key)) {
+                     self.take_compiled(true);
+                 }
+-                return self.programs.get(&key).map(|&program| Some(program)).ok_or_else(|| "the compiler thread stopped".to_owned());
++                return self.programs.get(&key).map(|made| Some(made.program)).ok_or_else(|| "the compiler thread stopped".to_owned());
+             }
+         }
+         let mut debug_constants = *constants;
+@@ -4665,7 +4680,7 @@ impl Gles {
+         }
+         disturb();
+         let program = build_program(&self.gl, &compiled, &fragment, cached.as_deref())?;
+-        self.programs.insert(key.clone(), program);
++        self.programs.insert(key.clone(), Program { program, used: self.flushes });
+         self.note_program(&key);
+         Ok(Some(program))
+     }
+@@ -4688,7 +4703,7 @@ impl Gles {
+             compiler.pending.remove(&key);
+             match result {
+                 Ok(program) => {
+-                    self.programs.insert(key.clone(), program);
++                    self.programs.insert(key.clone(), Program { program, used: self.flushes });
+                     self.note_program(&key);
+                 }
+                 Err(error) => {
+@@ -5267,6 +5282,33 @@ impl Gles {
+                 }
+             });
+         }
++        // a program costs the driver far more than a texture, and the map is
++        // otherwise never emptied: a level's worth is fine, thousands of them
++        // are hundreds of megabytes on a handheld. Keep the most recently
++        // used; one that comes back is compiled again, the driver's own cache
++        // making that quick.
++        if self.programs.len() > PROGRAM_CACHE_MAX {
++            let mut by_age: Vec<(ProgramKey, u64)> = self.programs.iter().map(|(key, made)| (key.clone(), made.used)).collect();
++            by_age.sort_unstable_by_key(|(_, used)| *used);
++            let dropping = by_age.len() - PROGRAM_CACHE_MAX;
++            let mut gone = Vec::with_capacity(dropping);
++            for (key, _) in by_age.into_iter().take(dropping) {
++                if let Some(made) = self.programs.remove(&key) {
++                    gone.push(made.program);
++                }
++            }
++            if !gone.is_empty() {
++                let gl = self.gl;
++                log::debug!("dropped {} programs, {} left", gone.len(), self.programs.len());
++                self.worker.post_keeping(move || {
++                    disturb();
++                    for program in gone {
++                        // SAFETY: on the GL thread, after every draw that used it
++                        unsafe { gl.delete_program(program) };
++                    }
++                });
++            }
++        }
+     }
+ 
+     pub(crate) fn sync<M: GpuMemory>(&mut self, memory: &mut M, addr: u32, len: u32) -> Result<(), String> {

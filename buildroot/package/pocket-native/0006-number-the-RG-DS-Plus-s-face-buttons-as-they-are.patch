@@ -1,0 +1,98 @@
+From d063a50cf5cd12759b2712e5f9f74ceb20e4330f Mon Sep 17 00:00:00 2001
+From: opencode <opencode@localhost>
+Date: Mon, 26 Oct 2026 15:18:24 -0400
+Subject: [PATCH 6/7] number the RG DS Plus's face buttons as they are
+
+The DTB's button map already uses the R36S's numbers for A (0x131), B
+(0x130), X (0x133), Y (0x134), L (0x136) and R (0x137), so the remap
+that treated them as an RK3562-style pad only shifted X to Y and Y to L.
+Only select, start, F and the sticks' buttons (314-318) need moving. Log
+each raw button number at debug so a layout can be checked from the log.
+---
+ frontend/src/input.rs | 45 +++++++++++++++++++++----------------------
+ 1 file changed, 22 insertions(+), 23 deletions(-)
+
+diff --git a/frontend/src/input.rs b/frontend/src/input.rs
+index 4518962..f7a2a6a 100644
+--- a/frontend/src/input.rs
++++ b/frontend/src/input.rs
+@@ -199,6 +199,11 @@ pub fn read_pad(path: String, name: String, pad: Arc<Mutex<Pad>>) {
+             let mut pad = pad.lock().unwrap();
+             match (kind, sticks) {
+                 (1, _) => {
++                    // a button's raw number, so a pad's layout can be checked
++                    // against the log when one is bound wrong
++                    if value != 0 {
++                        log::debug!("key {code} down");
++                    }
+                     let code = if h700 {
+                         h700_button(code)
+                     } else if rocknix {
+@@ -338,25 +343,19 @@ fn rk3566_button(code: u16) -> u16 {
+ }
+ 
+ /// the RG DS Plus's pad (the rocknix-singleadc-joypad driver, vendor 484b) as
+-/// the R36S numbers it. its face buttons are the standard gamepad numbers
+-/// (A BTN_EAST 305 and B BTN_SOUTH 304 match the R36S's own, so they are left
+-/// alone), but X, Y, the shoulders and the triggers are not where the R36S
+-/// keeps them, and select, start, F and the sticks' buttons are the usual
+-/// 314 to 318.
++/// the R36S numbers it. The DTB's button map already uses the R36S's numbers
++/// for the face buttons, shoulders and triggers — BTN-B 0x130, BTN-A 0x131,
++/// BTN-X 0x133, BTN-Y 0x134, BTN-TL 0x136, BTN-TR 0x137, TL2/TR2 0x138/0x139
++/// — which are exactly the R36S's A, B, X, Y, L1, R1, L2 and R2, so only
++/// select, start, F and the sticks' buttons have to move.
+ fn rkds_button(code: u16) -> u16 {
+     match code {
+-        306 => X,      // BTN_NORTH
+-        307 => Y,      // BTN_WEST
+-        308 => L1,     // BTN_TL
+-        309 => R1,     // BTN_TR
+-        310 => L2,     // BTN_TL2
+-        311 => R2,     // BTN_TR2
+         314 => SELECT, // BTN_SELECT
+         315 => START,  // BTN_START
+         316 => FN,     // BTN_MODE
+         317 => L3,     // BTN_THUMBL
+         318 => R3,     // BTN_THUMBR
+-        other => other, // B (304), A (305) and the d-pad (544-547) already fit
++        other => other,
+     }
+ }
+ 
+@@ -500,24 +499,24 @@ pub fn cursor_step(speed: Speed) -> f32 {
+ mod tests {
+     use super::sticks_in_order;
+ 
+-    /// the RG DS Plus's pad (vendor 484b) numbers its face buttons and
+-    /// shoulders where the R36S keeps them not: A and B already fit, X, Y,
+-    /// the shoulders and the triggers do not, and select, start, F and the
+-    /// sticks' buttons are the usual 314 to 318.
++    /// the RG DS Plus's pad (vendor 484b) is numbered as the R36S already:
++    /// its DTB's button map uses the R36S's own numbers for A, B, X, Y, L, R
++    /// and the triggers, so only select, start, F and the sticks' buttons
++    /// move.
+     #[test]
+     fn the_rg_ds_plus_pad_lands_on_the_r36s_numbers() {
+-        use super::{rkds_button, A, B, FN, L1, R1, SELECT, START, UP, X, Y};
++        use super::{rkds_button, A, B, FN, L1, R1, SELECT, START, X, Y};
++        // the face buttons, shoulders and triggers pass through unchanged
+         assert_eq!(rkds_button(304), B);
+         assert_eq!(rkds_button(305), A);
+-        assert_eq!(rkds_button(306), X);
+-        assert_eq!(rkds_button(307), Y);
+-        assert_eq!(rkds_button(308), L1);
+-        assert_eq!(rkds_button(309), R1);
++        assert_eq!(rkds_button(307), X);
++        assert_eq!(rkds_button(308), Y);
++        assert_eq!(rkds_button(310), L1);
++        assert_eq!(rkds_button(311), R1);
++        // select, start, F and the sticks' buttons get the R36S's numbers
+         assert_eq!(rkds_button(314), SELECT);
+         assert_eq!(rkds_button(315), START);
+         assert_eq!(rkds_button(316), FN);
+-        // the d-pad already carries the R36S's numbers and passes through
+-        assert_eq!(rkds_button(UP), UP);
+     }
+ 
+     #[test]
