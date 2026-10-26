@@ -5628,7 +5628,7 @@ namespace banana
 		const int PER = 18;	// two columns of nine
 		pkPages = std::max(1, (int)((list.size() + PER - 1) / PER));
 		pkBagPage = std::min(pkBagPage, pkPages - 1);
-		if (list.empty()) wrapped(t.cfru ? "Nothing here. (A CFRU hack may keep its bag elsewhere: what this shows is FireRed's bag.)" : "Nothing in this pocket.",
+		if (list.empty()) wrapped(t.cfru && !t.plainBag ? "Nothing here. (A CFRU hack may keep its bag elsewhere: what this shows is FireRed's bag.)" : "Nothing in this pocket.",
 			17, 40, 90, 560, 3, p.muted);
 		for (int i = 0; i < PER && pkBagPage * PER + i < (int)list.size(); i++)
 		{
@@ -5655,8 +5655,9 @@ namespace banana
 		auto tb = companion->tables();
 		pkmn::RomTables none;
 		const pkmn::RomTables& t = tb ? *tb : none;
-		// the list: the national numbers the save has seen (a CFRU hack keeps its own Pokédex elsewhere: all of them)
-		bool known = !t.cfru && !sn.dexSeen.empty();
+		// the list: the national numbers the save has seen (a CFRU hack's own flags where it keeps them; a hack whose
+		// flags weren't found: all of them)
+		bool known = !sn.dexSeen.empty();
 		std::vector<int> nats;
 		int maxNat = (int)t.dexSpecies.size() - 1;
 		if (!t.cfru) maxNat = std::min(maxNat, 386);
@@ -5710,7 +5711,7 @@ namespace banana
 		const pkmn::RomTables& t = tb ? *tb : none;
 		int n = pkDexNat;
 		uint16_t sp = n > 0 && n < (int)t.dexSpecies.size() ? t.dexSpecies[n] : 0;
-		bool known = !t.cfru && !sn.dexSeen.empty(), caught = dexBit(sn.dexOwned, n);
+		bool known = !sn.dexSeen.empty(), caught = dexBit(sn.dexOwned, n);
 		box("bubble", false, 18, 14, 604, 398);
 		int k = std::max(1, (int)std::lround(2 * s));
 		box("slot", false, 36, 32, 76, 76);
@@ -5859,7 +5860,7 @@ namespace banana
 		text(fit(area.empty() ? "Wild Pokémon here" : area, true, 17, 264), true, 17, 342, 26, p.ink);
 		float wy = 54;
 		bool any = false;
-		bool dexKnown = !t.cfru && !sn.dexSeen.empty();
+		bool dexKnown = !sn.dexSeen.empty();
 		for (int mth = 0; mth < 4 && wy < 380; mth++)
 		{
 			auto list = t.wild(sn.group, sn.num, mth);

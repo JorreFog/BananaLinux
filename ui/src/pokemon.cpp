@@ -180,10 +180,12 @@ namespace banana::pkmn
 		return s;
 	}
 
-	bool decodeParty(const uint8_t* p, Mon& m)
+	bool decodeParty(const uint8_t* p, Mon& m, MonCoding coding)
 	{
+		if (coding == MonCoding::EITHER) return decodeParty(p, m, MonCoding::ENCRYPTED) || decodeParty(p, m, MonCoding::PLAIN);
 		m = Mon();
-		uint32_t pid = le32(p), otid = le32(p + 4), key = pid ^ otid;
+		bool plain = coding == MonCoding::PLAIN;
+		uint32_t pid = le32(p), otid = le32(p + 4), key = plain ? 0 : pid ^ otid;
 		uint8_t d[48];
 		uint16_t sum = 0;
 		for (int i = 0; i < 48; i += 4)
@@ -192,11 +194,14 @@ namespace banana::pkmn
 			d[i] = (uint8_t)v; d[i + 1] = (uint8_t)(v >> 8); d[i + 2] = (uint8_t)(v >> 16); d[i + 3] = (uint8_t)(v >> 24);
 			sum = (uint16_t)(sum + le16(d + i) + le16(d + i + 2));
 		}
-		if (sum != le16(p + 0x1c)) return false;
+		// (a CFRU hack: the checksum kept, or 0 when the hack no longer works it out (Pokémon Unbound); a slot then
+		// counts with the game's own "has a species" bit and not a bad egg)
+		if (plain ? (le16(p + 0x1c) != 0 && sum != le16(p + 0x1c)) || (p[0x13] & 3) != 2 : sum != le16(p + 0x1c)) return false;
 		// the four 12-byte parts (growth, attacks, EVs and condition, miscellaneous) in one of the 24 orders, by the
-		// personality value mod 24; the orders run in the lexicographic order of the parts' permutations
+		// personality value mod 24; the orders run in the lexicographic order of the parts' permutations (a CFRU hack:
+		// always the first order, not encrypted, the checksum still the sum of the parts' halfwords)
 		int order[4] = { 0, 1, 2, 3 };
-		for (uint32_t k = pid % 24; k > 0; k--) std::next_permutation(order, order + 4);
+		for (uint32_t k = plain ? 0 : pid % 24; k > 0; k--) std::next_permutation(order, order + 4);
 		const uint8_t* part[4];
 		for (int pos = 0; pos < 4; pos++) part[order[pos]] = d + pos * 12;
 		m.species = le16(part[0]);
@@ -383,6 +388,28 @@ namespace banana::pkmn
 			break;
 		}
 		findExtras(t, rom, n);
+		// CFRU's "Decryption" byte replacements (FireRed 1.0): GetSubstruct's order always the first (movs r0, #0) and
+		// the XOR in EncryptBoxMon / DecryptBoxMon gone (nops): the party is kept as it is, which the games' own
+		// decoding read as noise (an empty party in Pokémon Unbound)
+		static const uint8_t ORDER0[] = { 0x00, 0x20, 0xc0, 0x46, 0xc0, 0x46 }, NOP[] = { 0xc0, 0x46 };
+		if (n > 0x3f960 && memcmp(rom + 0xac, "BPRE", 4) == 0 && memcmp(rom + 0x3f94c, ORDER0, 6) == 0 &&
+			memcmp(rom + 0x3f906, NOP, 2) == 0 && memcmp(rom + 0x3f92a, NOP, 2) == 0)
+			t.plainMons = true;
+		// CFRU's "Expanded Pokedex RAM": the seen flags at a fixed address in the literal at 0x104b10 (gSaveBlock1's
+		// dexSeenFlags, 0x0202583c), the caught ones right after; ResetPokedex clears 0x7d bytes of each (999
+		// national numbers). The games' own (52 bytes in SaveBlock2) are no longer used
+		if (n > 0x104b20 && memcmp(rom + 0xac, "BPRE", 4) == 0 && memcmp(rom + 0x104b00, NOP, 2) == 0 &&
+			memcmp(rom + 0x104b02, NOP, 2) == 0 && rom[0x549b6] == 0x7d && rom[0x549b7] == 0x22 && rom[0x549be] == 0x7d &&
+			rom[0x549bf] == 0x30)
+		{
+			uint32_t a = le32(rom + 0x104b10);
+			if (a >> 24 == 2 && (a & 0xffffff) + 2 * 0x7d <= 0x40000 && le32(rom + 0x549d0) == a) { t.dexRam = a; t.dexBytes = 0x7d; }
+		}
+		// CFRU's "Expanded Bag": GetBagItemQuantity reads the count as it is (ldrh r0, [r0, #4] at 0x99dfc), the
+		// pockets in RAM of their own that gBagPockets (0x0203988c: pointer and size, five of them) points to
+		if (n > 0x9a000 && memcmp(rom + 0xac, "BPRE", 4) == 0 && rom[0x99dfc] == 0x80 && rom[0x99dfd] == 0x88 &&
+			memcmp(rom + 0x98984, NOP, 2) == 0)
+			t.plainBag = true;
 		return t;
 	}
 
@@ -1046,6 +1073,7 @@ namespace banana::pkmn
 		if (!tablesSeen && sh) { std::lock_guard<std::mutex> l(sh->mu); if (sh->ready) { tablesSeen = true; changed = true; } }
 		if (now < nextAt || (waiting > 0 && now - sentAt < 10000)) return "";
 		count.clear(); party.clear(); flags.clear(); mainB.clear(); battle.clear(); enemy.clear();
+		bagPtrB.clear(); for (auto& b : pocketB) b.clear();
 		sbp.clear(); sb1h.clear(); mh.clear(); bagB.clear(); moneyB.clear(); keyB.clear(); dexB.clear(); flagB.clear(); nameB.clear();
 		next = Snapshot();
 		wantBattle = snap.inBattle;
@@ -1063,6 +1091,10 @@ namespace banana::pkmn
 		// map change, behind two pointers read in the same set (the data read at last set's addresses counts only
 		// when they haven't moved)
 		wantSave = ext;
+		std::shared_ptr<const RomTables> tb = ext ? tables() : nullptr;
+		const RomTables* cdex = tb && tb->dexRam ? tb.get() : nullptr;
+		dexCfru = cdex ? cdex->dexBytes : 0;
+		bagCfru = tb && tb->plainBag && info->gen == 2;
 		if (ext)
 		{
 			bool fixed = info->gen == 0;
@@ -1075,12 +1107,22 @@ namespace banana::pkmn
 				const SaveLayout& L = LAYOUTS[info->gen];
 				wants.push_back({ s1, 12, &sb1h, false });
 				uint32_t b0 = L.pocket[0], b1 = L.pocket[4] + 4 * L.count[4];
-				wants.push_back({ s1 + b0, (int)(b1 - b0), &bagB, false });
+				if (!bagCfru) wants.push_back({ s1 + b0, (int)(b1 - b0), &bagB, false });
 				wants.push_back({ s1 + L.money, 4, &moneyB, false });
 				if (L.key) wants.push_back({ s2 + L.key, 4, &keyB, false });
-				wants.push_back({ s2 + DEX_OWNED, (int)DEX_LEN, &dexB, false });
+				if (!cdex) wants.push_back({ s2 + DEX_OWNED, (int)DEX_LEN, &dexB, false });
 				wants.push_back({ s1 + L.flags + 0x100, 16, &flagB, false });
 				wants.push_back({ s2, 8, &nameB, false });
+			}
+			// a CFRU hack's own Pokédex flags (seen, then caught), at a fixed address
+			if (cdex) wants.push_back({ cdex->dexRam, 2 * cdex->dexBytes, &dexB, false });
+			// a CFRU hack's bag: gBagPockets, and the pockets where the last read of it pointed (both in this set: the
+			// pockets count when the pointers haven't moved)
+			if (bagCfru)
+			{
+				wants.push_back({ 0x0203988c, 40, &bagPtrB, false });
+				for (int k = 0; k < 5; k++)
+					if (bagSeen[k] >> 24 == 2 && bagCap[k] > 0) wants.push_back({ bagSeen[k], 4 * bagCap[k], &pocketB[k], false });
 			}
 		}
 		std::string out;
@@ -1140,7 +1182,34 @@ namespace banana::pkmn
 		uint32_t key = keyB.size() >= 4 ? le32(keyB.data()) : 0;
 		if (moneyB.size() >= 4) s.money = (long)(le32(moneyB.data()) ^ key);
 		uint32_t b0 = L.pocket[0];
-		if (bagB.size() >= L.pocket[4] + 4 * L.count[4] - b0)
+		if (bagCfru)
+		{
+			// (the pointers and sizes read now; the pockets read in this set count when they were read where these point)
+			bool same = bagPtrB.size() >= 40;
+			if (same)
+				for (int k = 0; k < 5; k++)
+				{
+					uint32_t a = le32(bagPtrB.data() + 8 * k), c = le32(bagPtrB.data() + 8 * k + 4);
+					if (a >> 24 != 2 || c == 0 || c > 1000 || (a & 0xffffff) + 4 * c > 0x40000) { a = 0; c = 0; }
+					if (a != bagSeen[k] || (int)c != bagCap[k]) { same = false; nextAt = 0; }	// (asked again at once)
+					bagSeen[k] = a; bagCap[k] = (int)c;
+				}
+			bool all = same;
+			for (int k = 0; k < 5 && all; k++) if ((int)pocketB[k].size() < 4 * bagCap[k]) all = false;
+			if (all)
+			{
+				s.bag = true;
+				for (int k = 0; k < 5; k++)
+					for (int i = 0; i < bagCap[k]; i++)
+					{
+						const uint8_t* e = pocketB[k].data() + i * 4;
+						uint16_t id = le16(e), c = le16(e + 2);
+						if (id && c && c <= 999) s.pockets[k].push_back({ id, c });
+					}
+			}
+			else { s.bag = snap.bag; for (int k = 0; k < 5; k++) s.pockets[k] = snap.pockets[k]; }
+		}
+		else if (bagB.size() >= L.pocket[4] + 4 * L.count[4] - b0)
 		{
 			s.bag = true;
 			for (int k = 0; k < 5; k++)
@@ -1151,7 +1220,11 @@ namespace banana::pkmn
 					if (id && c && c <= 999) s.pockets[k].push_back({ id, c });
 				}
 		}
-		if (dexB.size() >= DEX_LEN) { s.dexOwned.assign(dexB.begin(), dexB.begin() + 52); s.dexSeen.assign(dexB.begin() + 0x34, dexB.begin() + 0x68); }
+		if (dexCfru > 0)
+		{
+			if (dexB.size() >= 2 * (size_t)dexCfru) { s.dexSeen.assign(dexB.begin(), dexB.begin() + dexCfru); s.dexOwned.assign(dexB.begin() + dexCfru, dexB.begin() + 2 * dexCfru); }
+		}
+		else if (dexB.size() >= DEX_LEN) { s.dexOwned.assign(dexB.begin(), dexB.begin() + 52); s.dexSeen.assign(dexB.begin() + 0x34, dexB.begin() + 0x68); }
 		if (flagB.size() >= 16)
 		{
 			auto flag = [&](int f) { int o = f / 8 - 0x100; return o >= 0 && o < 16 && (flagB[o] >> (f % 8) & 1); };
@@ -1178,11 +1251,13 @@ namespace banana::pkmn
 		if (s.seen)
 		{
 			s.inBattle = mainB[0] & 2;
+			// (the tables say how the game keeps its Pokémon; until they are read, either)
+			MonCoding coding = !t ? MonCoding::EITHER : t->plainMons ? MonCoding::PLAIN : MonCoding::ENCRYPTED;
 			int c = count.empty() ? 6 : std::min<int>(count[0], 6);
 			for (int i = 0; i < c && (size_t)(i + 1) * PARTY <= party.size(); i++)
 			{
 				Mon m;
-				if (decodeParty(party.data() + i * PARTY, m)) { typed(m); s.party.push_back(m); }
+				if (decodeParty(party.data() + i * PARTY, m, coding)) { typed(m); s.party.push_back(m); }
 			}
 			if (s.inBattle && wantBattle && flags.size() >= 4 && battle.size() >= 4 * (size_t)BATTLER)
 			{
@@ -1197,7 +1272,7 @@ namespace banana::pkmn
 				for (int i = 0; i < 6 && (size_t)(i + 1) * PARTY <= enemy.size(); i++)
 				{
 					Mon m;
-					if (decodeParty(enemy.data() + i * PARTY, m)) s.foeParty.push_back(m);
+					if (decodeParty(enemy.data() + i * PARTY, m, coding)) s.foeParty.push_back(m);
 				}
 			}
 			else if (s.inBattle) { s.lead = snap.lead; s.foes = snap.foes; s.doubles = snap.doubles; s.foeParty = snap.foeParty; }	// (read in the next set)

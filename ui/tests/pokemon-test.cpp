@@ -42,7 +42,8 @@ struct Plain { uint32_t pid, otid; std::string nick; uint16_t species, item; uin
 
 // a party slot as the game keeps it: the 48 bytes of parts in the personality's order, summed, then XORed with
 // personality ^ OT ID a word at a time
-static std::vector<uint8_t> partySlot(const Plain& m, bool breakSum = false)
+// plain: as a CFRU hack keeps it (the parts in the first order, not encrypted)
+static std::vector<uint8_t> partySlot(const Plain& m, bool breakSum = false, bool plain = false)
 {
 	std::vector<uint8_t> p(100, 0);
 	put32(&p[0], m.pid); put32(&p[4], m.otid);
@@ -56,13 +57,13 @@ static std::vector<uint8_t> partySlot(const Plain& m, bool breakSum = false)
 	e[0] = 4; e[6] = 10;
 	put32(x + 4, (31u) | (m.egg ? 1u << 30 : 0));
 	uint8_t d[48];
-	const char* ord = ORDERS[m.pid % 24];
+	const char* ord = ORDERS[plain ? 0 : m.pid % 24];
 	for (int pos = 0; pos < 4; pos++)
 		memcpy(d + pos * 12, ord[pos] == 'G' ? g : ord[pos] == 'A' ? a : ord[pos] == 'E' ? e : x, 12);
 	uint16_t sum = 0;
 	for (int i = 0; i < 48; i += 2) sum = (uint16_t)(sum + (d[i] | (d[i + 1] << 8)));
 	put16(&p[0x1c], (uint16_t)(sum + (breakSum ? 1 : 0)));
-	uint32_t key = m.pid ^ m.otid;
+	uint32_t key = plain ? 0 : m.pid ^ m.otid;
 	for (int i = 0; i < 48; i += 4)
 	{
 		uint32_t v = (d[i] | (d[i + 1] << 8) | (d[i + 2] << 16) | ((uint32_t)d[i + 3] << 24)) ^ key;
@@ -286,6 +287,38 @@ int main(int argc, char** argv)
 		CHECK(!decodeParty(partySlot(m, true).data(), d));		// a wrong checksum
 		std::vector<uint8_t> empty(100, 0);
 		CHECK(!decodeParty(empty.data(), d));					// an empty slot (all zero: its sum fits, species 0)
+	}
+	// ---- a CFRU hack's party slots (Pokémon Unbound): not encrypted, the first order, the checksum as before
+	for (uint32_t k = 0; k < 24; k++)
+	{
+		Plain m{ 0x9e3779b0u + k, 0x12345678u, "Sparky", 906, 13, { 84, 39, 86, 700 }, { 30, 28, 20, 29 }, 0x1b, 0x40, 23, 41, 52, false };
+		Mon d;
+		auto plain = partySlot(m, false, true), enc = partySlot(m);
+		CHECK(decodeParty(plain.data(), d, MonCoding::PLAIN) && d.species == 906 && d.moves[3] == 700 && d.level == 23 && d.nick == "Sparky" && !d.egg);
+		CHECK(!decodeParty(plain.data(), d, MonCoding::ENCRYPTED));	// (the games' decoding: noise, the empty party)
+		CHECK(decodeParty(plain.data(), d, MonCoding::EITHER) && d.species == 906);
+		CHECK(decodeParty(enc.data(), d, MonCoding::EITHER) && d.species == 906);
+		CHECK(!decodeParty(enc.data(), d, MonCoding::PLAIN));
+		CHECK(!decodeParty(partySlot(m, true, true).data(), d, MonCoding::PLAIN));
+		// Pokémon Unbound leaves the checksum 0: the slot counts by its "has a species" bit (0x13 bit 1)
+		auto z = plain; z[0x1c] = z[0x1d] = 0;
+		CHECK(decodeParty(z.data(), d, MonCoding::PLAIN) && d.species == 906);
+		z[0x13] = 0;
+		CHECK(!decodeParty(z.data(), d, MonCoding::PLAIN));
+		z[0x13] = 3;	// a bad egg
+		CHECK(!decodeParty(z.data(), d, MonCoding::PLAIN));
+	}
+	{
+		// the Larvitar Pokémon Unbound 2.1.1.1 gives at its start, as gpSP's EWRAM had it (gPlayerParty[0])
+		auto h = [](const char* x) { std::vector<uint8_t> v; for (; x[0] && x[1]; x += 2) v.push_back((uint8_t)strtoul(std::string(x, 2).c_str(), nullptr, 16)); return v; };
+		auto lv = h("4f5bf479a95be606c6d5e6eadde8d5e6ffef0202bbd5ffffffffff0000000000f6002c0030020000002303002b005800c9002c001e0f0a1900000000000000000000000000850a02397ecb1e00000000000000000aff20002000110012000f000f001100");
+		Mon d;
+		CHECK(lv.size() == 100 && decodeParty(lv.data(), d, MonCoding::PLAIN));
+		EQ(d.species, (uint16_t)246);
+		EQ(d.nick, std::string("Larvitar"));
+		EQ((int)d.level, 10);
+		CHECK(!decodeParty(lv.data(), d, MonCoding::ENCRYPTED));
+		CHECK(decodeParty(lv.data(), d, MonCoding::EITHER) && d.species == 246);
 	}
 	EQ(maxPP(35, 0, 0), 35);
 	EQ(maxPP(35, 0x0c, 1), 56);	// three PP Ups on the second move: 35 + 21
@@ -578,6 +611,100 @@ int main(int argc, char** argv)
 		if (dir.empty()) unlink(romPath.c_str());
 		else if ((f = fopen(romPath.c_str(), "wb"))) { rom[0xac] = 'B'; fwrite(rom.data(), 1, rom.size(), f); fclose(f); }
 		CHECK(!other.open("/nonexistent/x.gba"));
+	}
+
+	// ---- a CFRU hack told by its byte replacements: the Pokémon not encrypted, the Pokédex flags at a fixed address;
+	// the companion reads them (seen, then caught) while the Dex page is open
+	{
+		std::vector<uint8_t> rom(0x110000, 0);
+		memcpy(&rom[0xac], "BPRE", 4);
+		const uint8_t order0[] = { 0x00, 0x20, 0xc0, 0x46, 0xc0, 0x46 };
+		memcpy(&rom[0x3f94c], order0, 6);
+		rom[0x3f906] = rom[0x3f92a] = 0xc0; rom[0x3f907] = rom[0x3f92b] = 0x46;
+		RomTables plainOnly = findTables(rom.data(), rom.size());
+		CHECK(plainOnly.plainMons && plainOnly.dexRam == 0);
+		for (int a : { 0x104b00, 0x104b02 }) { rom[a] = 0xc0; rom[a + 1] = 0x46; }
+		rom[0x549b6] = 0x7d; rom[0x549b7] = 0x22; rom[0x549be] = 0x7d; rom[0x549bf] = 0x30;
+		put32(&rom[0x104b10], 0x0202583c); put32(&rom[0x549d0], 0x0202583c);
+		CHECK(!findTables(rom.data(), rom.size()).plainBag);
+		rom[0x99dfc] = 0x80; rom[0x99dfd] = 0x88; rom[0x98984] = 0xc0; rom[0x98985] = 0x46;
+		RomTables t = findTables(rom.data(), rom.size());
+		CHECK(t.plainMons && t.dexRam == 0x0202583c && t.dexBytes == 0x7d && t.plainBag);
+		memcpy(&rom[0xac], "BPEE", 4);
+		RomTables em = findTables(rom.data(), rom.size());
+		CHECK(!em.plainMons && em.dexRam == 0);		// (only FireRed's offsets)
+
+		Companion c;
+		std::vector<uint8_t> h(0xc0, 0); memcpy(&h[0xac], "BPRE", 4);
+		c.openWith(detectGame(h.data(), h.size()));
+		c.setTables(t);
+		c.wantExt(true);
+		std::string r = c.requests(1000);
+		CHECK(r.find("READ_CORE_MEMORY 202583c 250\n") != std::string::npos);
+		CHECK(r.find("READ_CORE_MEMORY 300500c") == std::string::npos);		// (no SaveBlock2 Pokédex)
+		std::vector<uint8_t> dex(250, 0);
+		dex[0] = 0x07; dex[0x7d] = 0x01; dex[100] = 0x80;	// seen 1-3 and 808, caught 1
+		Plain m{ 0x1234567u, 0x89abcdefu, "Kid", 906, 0, { 33, 0, 0, 0 }, { 35, 0, 0, 0 }, 0, 0, 5, 20, 20, false };
+		std::string feed;
+		std::vector<uint8_t> pt = partySlot(m, false, true); pt.resize(600, 0);
+		std::vector<uint8_t> main(1, 0), cnt(1, 1), sbp(8, 0), mh(0x1c, 0), bp(40, 0);
+		{ uint32_t pk[5][2] = { { 0x0203bb20, 450 }, { 0x0203c228, 75 }, { 0x0203c354, 50 }, { 0x0203c41c, 128 }, { 0x0203c61c, 75 } };
+		  for (int k = 0; k < 5; k++) { put32(&bp[8 * k], pk[k][0]); put32(&bp[8 * k + 4], pk[k][1]); } }
+		put32(&sbp[0], 0x0202552c); put32(&sbp[4], 0x02024588);
+		auto all = [&](const std::string& req)
+		{
+			std::string f;
+			size_t at = 0;
+			while ((at = req.find("READ_CORE_MEMORY ", at)) != std::string::npos)
+			{
+				unsigned a = 0; int n = 0;
+				sscanf(req.c_str() + at, "READ_CORE_MEMORY %x %d", &a, &n);
+				at += 17;
+				std::vector<uint8_t> v((size_t)n, 0);
+				if (a == 0x02024284) v = pt;
+				else if (a == 0x02024029) v = cnt;
+				else if (a == 0x03005008) v = sbp;
+				else if (a == 0x0202583c) v = dex;
+				else if (a == 0x0203988c) v = bp;
+				else if (a == 0x0203bb20) { v[0] = 13; v[2] = 2; v[4] = 14; v[6] = 1; }	// 2 Potions, an Antidote
+				else if (a == 0x0203c354) { v[0] = 4; v[2] = 5; }					// 5 Poké Balls
+				f += reply(a, v);
+			}
+			return f;
+		};
+		feed = all(r);
+		c.feed(feed.data(), feed.size());
+		const Snapshot& s = c.snapshot();
+		CHECK(s.seen && s.party.size() == 1 && s.party[0].species == 906 && s.party[0].nick == "Kid");
+		r = c.requests(2000);
+		feed = all(r);
+		c.feed(feed.data(), feed.size());
+		const Snapshot& s2 = c.snapshot();
+		CHECK(s2.ext && s2.dexSeen.size() == 0x7d && s2.dexOwned.size() == 0x7d);
+		CHECK(s2.dexSeen.size() == 0x7d && s2.dexSeen[0] == 0x07 && s2.dexSeen[100] == 0x80 && s2.dexOwned[0] == 0x01);
+		CHECK(r.find("READ_CORE_MEMORY 202583c 250\n") != std::string::npos && r.find("READ_CORE_MEMORY 2025") != std::string::npos);
+		// the bag: gBagPockets read in the second set, the pockets where it points in the third (not FireRed's own
+		// bag in the save block, where a CFRU hack keeps the Pokédex)
+		CHECK(r.find("READ_CORE_MEMORY 203988c 40\n") != std::string::npos);
+		r = c.requests(3000);
+		CHECK(r.find("READ_CORE_MEMORY 203bb20 1800\n") != std::string::npos && r.find("READ_CORE_MEMORY 203c354 200\n") != std::string::npos);
+		CHECK(r.find("READ_CORE_MEMORY 202583c 250\n") != std::string::npos);
+		CHECK(r.find(" 202583c 516") == std::string::npos);		// (no read of FireRed's bag over the Pokédex flags)
+		feed = all(r);
+		c.feed(feed.data(), feed.size());
+		const Snapshot& s3 = c.snapshot();
+		CHECK(s3.bag && s3.pockets[0].size() == 2 && s3.pockets[0][0].item == 13 && s3.pockets[0][0].count == 2 && s3.pockets[0][1].item == 14);
+		CHECK(s3.pockets[2].size() == 1 && s3.pockets[2][0].count == 5 && s3.pockets[1].empty());
+	}
+
+	// ---- Pokémon Unbound itself, when UNBOUND_ROM names it (never in the repository)
+	if (const char* up = getenv("UNBOUND_ROM"))
+	{
+		Companion cc;
+		CHECK(cc.open(up) && std::string(cc.game()->code) == "BPRE");
+		std::shared_ptr<const RomTables> tt;
+		for (int i = 0; i < 3000 && !(tt = cc.tables()); i++) usleep(10000);
+		CHECK(tt && tt->cfru && tt->plainMons && tt->dexRam == 0x0202583c && tt->dexBytes == 0x7d && tt->plainBag);
 	}
 
 	// ---- the player's own Emerald, when POKE_ROM names it (a .gba or a .zip; never in the repository): Torchic's icon

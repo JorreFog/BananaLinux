@@ -67,8 +67,11 @@ namespace banana::pkmn
 		bool egg = false;
 		uint32_t pid = 0, exp = 0;			// personality (gender, with the species' ratio), experience points
 	};
-	// a party slot (100 bytes): false when empty, or when the checksum is wrong (a slot being written, a wrong address)
-	bool decodeParty(const uint8_t* p, Mon& m);
+	// a party slot (100 bytes): false when empty, or when the checksum is wrong (a slot being written, a wrong address).
+	// coding: the games' own (encrypted with the personality and trainer ID, its four parts in one of 24 orders), or a
+	// CFRU hack's (Pokémon Unbound...: CFRU's byte replacements take the encryption and the shuffle out), or either
+	enum class MonCoding { ENCRYPTED, PLAIN, EITHER };
+	bool decodeParty(const uint8_t* p, Mon& m, MonCoding coding = MonCoding::ENCRYPTED);
 	// one battler of the battle's own copy (0x58 bytes, not encrypted); species above maxSpecies: none
 	bool decodeBattler(const uint8_t* p, Mon& m, int maxSpecies = 450);
 	const char* statusName(uint32_t status);	// "SLP", "PSN", ... or "" (none)
@@ -90,6 +93,10 @@ namespace banana::pkmn
 		std::vector<std::array<uint32_t, 16>> palettes;
 		// what the other pages need (empty: not found)
 		bool cfru = false;					// a CFRU hack: expanded tables, the modern type chart
+		bool plainMons = false;				// the Pokémon data not encrypted (CFRU's patch to GetSubstruct and co.)
+		uint32_t dexRam = 0;				// CFRU: the Pokédex's seen flags (RAM, fixed; 0 the games' own), then caught
+		int dexBytes = 0;					// each that many bytes
+		bool plainBag = false;				// CFRU's "Expanded Bag": the pockets where gBagPockets points, counts not XORed
 		int numSpecies = 412;				// the species table's length (with none at 0)
 		std::vector<std::string> abilities;
 		struct Item { std::string name; uint8_t pocket = 0; };
@@ -194,6 +201,10 @@ namespace banana::pkmn
 		Snapshot snap, next;
 		std::vector<uint8_t> count, party, flags, mainB, battle, enemy;
 		bool ext = false, wantSave = false;
+		bool bagCfru = false;		// the set's bag read through gBagPockets (a CFRU hack's own bag)
+		uint32_t bagSeen[5] = {}; int bagCap[5] = {};	// its pockets, as the last read of gBagPockets had them
+		std::vector<uint8_t> bagPtrB, pocketB[5];
+		int dexCfru = 0;			// the set's Pokédex read: a CFRU hack's own flags, each that many bytes (0 the games')
 		uint32_t sbUsed[2] = {}, sbSeen[2] = {};	// the save blocks' addresses the set's reads used, and the latest read
 		std::vector<uint8_t> sbp, sb1h, mh, bagB, moneyB, keyB, dexB, flagB, nameB;
 		struct Want { uint32_t addr; int len; std::vector<uint8_t>* into; bool done; };
