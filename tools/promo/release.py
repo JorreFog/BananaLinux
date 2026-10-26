@@ -118,7 +118,8 @@ BOLT = bitmap(['    oooo', '   oyyo ', '  oyyo  ', ' oyyyooo', 'oyyyyyo ', '   o
 
 # ---- 3D ---------------------------------------------------------------------------------------------------------------
 def rot(yaw, pitch, roll=0.0):
-    y, p, r = math.radians(yaw), math.radians(pitch), math.radians(roll)
+    # a negative yaw turns the front toward the left of the frame (toward the words)
+    y, p, r = -math.radians(yaw), math.radians(pitch), math.radians(roll)
     Ry = np.array([[math.cos(y), 0, math.sin(y)], [0, 1, 0], [-math.sin(y), 0, math.cos(y)]])
     Rx = np.array([[1, 0, 0], [0, math.cos(p), -math.sin(p)], [0, math.sin(p), math.cos(p)]])
     Rz = np.array([[math.cos(r), -math.sin(r), 0], [math.sin(r), math.cos(r), 0], [0, 0, 1]])
@@ -586,15 +587,15 @@ def draw_feature(vis, vd, S, local, beat):
             win = Image.composite(WINDOWS[-1], WINDOWS[0], wipe_mask((local - 3.4) / 0.5, 99, WINDOWS[0].size))
         win = sheen(win, clamp01(local / S['len']))
         yaw = -22 + 8 * ease(local / S['len']) + 35 * (1 - a_in)
-        pic, (x, y) = panel(win, 1390, H / 2 + lift, yaw, 6, -1, s=0.92)
+        pic, (x, y) = panel(win, 1395, H / 2 + lift, yaw, 6, -1, s=0.9)
         sh = soft_shadow(pic.width, 80, 160)
-        paste(vis, sh, 1390 - sh.width / 2, y + pic.height - 60, a_in)
+        paste(vis, sh, 1395 - sh.width / 2, y + pic.height - 60, a_in)
         paste(vis, pic, x, y, a_in)
     elif kind == 'gba':
         cy = H / 2 - 40 + lift
         draw_vox(vis, 'nds', icon('nds'), 9, VX - 270, cy, -25 + 18 * math.sin(local * 1.3), 10, alpha=a_in, glow=0.2 * beat)
         b = ease((local - 0.6) / 0.9)
-        draw_vox(vis, 'gba', icon('gba'), 9, VX + 270, cy + 120 * (1 - back((local - 0.6) / 1.1)), 25 + 18 * math.sin(local * 1.3 + 1), 10, alpha=b, glow=0.2 * beat)
+        draw_vox(vis, 'gba', icon('gba'), 9, VX + 270, cy + 120 * (1 - back((local - 0.6) / 1.1)), -25 + 18 * math.sin(local * 1.3 + 1), 10, alpha=b, glow=0.2 * beat)
         for n in range(7):
             x = VX - 120 + n * 40
             ph = (local * 2.4 - n * 0.16) % 1.0
@@ -620,7 +621,7 @@ def draw_feature(vis, vd, S, local, beat):
             vd.arc((cx + 60 - r * 0.15, cy - r, cx + 60 + r * 1.15, cy + r), -38, 38, fill=(YELLOW if n % 2 else INK) + (int(255 * a),), width=10)
         b = ease((local - 0.7) / 0.9)
         draw_vox(vis, 'music', icon('music'), 9, VX + 290, cy + 14 * math.sin(local * 3) + 120 * (1 - back((local - 0.7) / 1.1)),
-                 22 + 15 * math.sin(local * 1.4), 8, alpha=b, glow=0.3 * beat)
+                 -22 + 15 * math.sin(local * 1.4), 8, alpha=b, glow=0.3 * beat)
     elif kind == 'ota':
         cx, cy = VX, H / 2 - 60 + lift
         draw_vox(vis, 'nds', icon('nds'), 10, cx, cy + 40, -18 + 10 * math.sin(local * 0.9), 14, alpha=a_in)
@@ -656,7 +657,7 @@ def draw_feature(vis, vd, S, local, beat):
             ld = ImageDraw.Draw(lay)
             ld.polygon([tuple(q) for q in quad], fill=col + (int(40 * a),), outline=col + (int(255 * a),), width=4)
             f = F(MED, 34)
-            text(ld, (quad[3][0] + 16, quad[3][1] - 50), f'{k}x', f, col, a)
+            text(ld, (quad[2][0] - f.getlength(f'{k}x') - 16, quad[2][1] - 50), f'{k}x', f, col, a)
             if new:
                 text(ld, (quad[1][0] + 14, quad[1][1] - 4), f'{256 * k} x {192 * k}', F(REG, 22), col, a)
                 ld.rounded_rectangle((quad[1][0] - 96, quad[1][1] + 16, quad[1][0] - 20, quad[1][1] + 50), 17, fill=YELLOW + (int(255 * a),))
@@ -687,7 +688,7 @@ def draw_feature(vis, vd, S, local, beat):
         cy = H / 2 - 70 + lift
         draw_vox(vis, 'server', SERVER, 13, VX - 330, cy, -24 + 10 * math.sin(local * 0.8), 10, alpha=a_in, glow=0.15 * beat)
         b = ease((local - 0.6) / 0.9)
-        draw_vox(vis, 'nds', icon('nds'), 9, VX + 330, cy + 120 * (1 - back((local - 0.6) / 1.1)), 24 + 10 * math.sin(local * 0.8 + 1), 10, alpha=b, glow=0.15 * beat)
+        draw_vox(vis, 'nds', icon('nds'), 9, VX + 330, cy + 120 * (1 - back((local - 0.6) / 1.1)), -24 + 10 * math.sin(local * 0.8 + 1), 10, alpha=b, glow=0.15 * beat)
         f = F(REG, 30)
         text(vd, (VX - 330 - f.getlength('Your server') / 2, cy + 200), 'Your server', f, SOFT, a_in)
         text(vd, (VX + 330 - f.getlength('Your handheld') / 2, cy + 200), 'Your handheld', f, SOFT, b)
