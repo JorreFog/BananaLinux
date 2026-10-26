@@ -401,6 +401,10 @@ namespace banana
 		float pkTabX[PK_TABS] = {}, pkTabW[PK_TABS] = {};
 		int pkPocket = 0, pkBagPage = 0, pkDexPage = 0, pkDexNat = 0, pkPages = 1;
 		std::vector<int> pkDexShown;	// the national numbers on the Pokédex page drawn (for touch)
+		// the Map page's grid as drawn (for touch: a tapped square's section named under the map), the section tapped
+		float pkMapX = 0, pkMapY = 0, pkMapCell = 0;
+		int pkMapW = 0, pkMapH = 0, pkMapPick = -1;
+		std::vector<uint8_t> pkMapCells;
 		std::string pkGoalKey;
 		std::vector<std::pair<uint16_t, uint8_t>> pkGoalTeam;
 		void pokeMap(const SPal& p);

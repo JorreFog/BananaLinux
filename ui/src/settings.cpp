@@ -4919,6 +4919,15 @@ namespace banana
 					if (i >= 0 && i < (int)pkDexShown.size()) { pkDexNat = pkDexShown[i]; pkView = PK_DEXMON; }
 				}
 				else if (!down && pkView == PK_DEXMON) pkView = PK_DEX;
+				else if (!down && pkView == PK_MAP && pkMapW > 0 && pkMapCell > 0)
+				{
+					// a square of the region map: its section named under the map (tapped again, or off the map: the legend)
+					int cx = (int)std::floor((lx - pkMapX) / pkMapCell), cy = (int)std::floor((ly - pkMapY) / pkMapCell);
+					int v = cx >= 0 && cy >= 0 && cx < pkMapW && cy < pkMapH ? pkMapCells[cy * pkMapW + cx] : -1;
+					auto tb = companion->tables();
+					if (tb && v == tb->mapsecNone) v = -1;
+					pkMapPick = v < 0 || v == 0xff || v == pkMapPick ? -1 : v;
+				}
 				companion->wantExt(pkView == PK_MAP || pkView == PK_BAG || pkView == PK_DEX || pkView == PK_DEXMON || pkView == PK_GUIDE);
 				return G_NONE;
 			}
@@ -5564,8 +5573,10 @@ namespace banana
 			float w = text(sn.player, true, 17, 0, 0, p.accent, false, 0, true);
 			text(sn.player, true, 17, 604 - w, 28, p.accent);
 		}
-		// ---- the region map from the ROM's own layout: a square a section, the area in the accent, the player a dot
+		// ---- the region map from the ROM's own layout: a square a section (towns brighter), the area in the accent, the
+		// player a dot; a legend under it, and a tapped square's name there
 		box("bubble", false, 18, 84, 604, 328);
+		pkMapW = pkMapH = 0;
 		const pkmn::RomTables::Grid* g = nullptr;
 		int best = 0;
 		for (auto& gr : t.grids)
@@ -5576,8 +5587,9 @@ namespace banana
 		}
 		if (!g && !t.grids.empty()) g = &t.grids[0];
 		if (!g) { wrapped("This game's region map wasn't found in its ROM.", 17, 40, 104, 560, 2, p.muted); return; }
-		float cell = std::floor(std::min(576.0f / g->w, 300.0f / g->h));
-		float ox = 18 + (604 - cell * g->w) / 2, oy = 84 + (328 - cell * g->h) / 2;
+		float cell = std::floor(std::min(576.0f / g->w, 262.0f / g->h));
+		float ox = 18 + (604 - cell * g->w) / 2, oy = 94 + (268 - cell * g->h) / 2;
+		pkMapX = ox; pkMapY = oy; pkMapCell = cell; pkMapW = g->w; pkMapH = g->h; pkMapCells = g->cells;
 		std::map<int, int> size;
 		for (uint8_t v : g->cells) size[v]++;
 		int x0 = 99, y0 = 99, x1 = -1, y1 = -1;
@@ -5588,12 +5600,39 @@ namespace banana
 				if (v == t.mapsecNone || v == 0xff) continue;
 				bool here = v == sn.mapsec;
 				if (here) { x0 = std::min(x0, x); y0 = std::min(y0, y); x1 = std::max(x1, x); y1 = std::max(y1, y); }
-				Color c = here ? p.accent : size[v] <= 2 ? p.muted : p.line;	// (a town: one or two squares)
+				Color c = here ? p.accent : size[v] <= 2 ? p.ink : p.line;	// (a town: one or two squares)
+				if (v == pkMapPick && !here)	// (the square tapped: a frame in the accent)
+					be->fill(std::round(X(ox + x * cell - 1)), std::round(X(oy + y * cell - 1)), std::round(X(cell + 2)), std::round(X(cell + 2)), p.accent);
 				be->fill(std::round(X(ox + x * cell + 1)), std::round(X(oy + y * cell + 1)), std::round(X(cell - 2)), std::round(X(cell - 2)), c);
 			}
+		// the legend (or the name of the square tapped)
+		{
+			float ly = 376, lx = 36, sq = 12;
+			auto key = [&](Color c, const char* what)
+			{
+				be->fill(std::round(X(lx)), std::round(X(ly + 3)), std::round(X(sq)), std::round(X(sq)), c);
+				lx += sq + 6;
+				lx += text(what, false, 13, lx, ly, p.muted) + 16;
+			};
+			if (pkMapPick >= 0)
+			{
+				std::string nm = t.mapName(pkMapPick);
+				text(fit("Tapped: " + (nm.empty() ? std::string("(no name)") : nm), true, 15, 560), true, 15, 36, ly - 1, p.accent);
+			}
+			else
+			{
+				key(p.accent, "You are here");
+				key(p.ink, "Town");
+				key(p.line, "Route or area");
+				be->fill(std::round(X(lx + 1)), std::round(X(ly + 4)), std::round(X(10)), std::round(X(10)), Color::hex(0xe8504a));
+				lx += 18;
+				lx += text("You", false, 13, lx, ly, p.muted) + 16;
+				text(fit("Tap a square: its name", false, 13, 600 - lx), false, 13, lx, ly, p.muted);
+			}
+		}
 		if (x1 < 0)
 		{
-			text("Not on the region map here", false, 14, 36, 392, p.muted);
+			text("Not on the region map here", false, 14, 36, 352, p.muted);
 			return;
 		}
 		// the player: inside the area's squares by the place on its map (a route several squares long)
