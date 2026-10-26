@@ -40,6 +40,7 @@
 #include <sys/inotify.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <linux/netlink.h>
 #include <sys/reboot.h>
 #include <sys/stat.h>
@@ -1496,6 +1497,32 @@ static int battery_discharging_pct(void)
 	return r;
 }
 
+/* the recorder's events from banana-ui (ui/src/recorder.cpp): datagrams "<source>\t<what>" on
+ * /run/banana/recorder.sock, copied in as they come (banana-ui sends only while it records, and never waits) */
+static int rec_sock_open(void)
+{
+	int fd = socket(AF_UNIX, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
+	if (fd < 0) return -1;
+	struct sockaddr_un a = { .sun_family = AF_UNIX };
+	snprintf(a.sun_path, sizeof a.sun_path, "%s", "/run/banana/recorder.sock");
+	unlink(a.sun_path);
+	if (bind(fd, (struct sockaddr *)&a, sizeof a)) { close(fd); return -1; }
+	return fd;
+}
+static void rec_sock_read(int fd)
+{
+	char m[400];
+	ssize_t n;
+	while ((n = recv(fd, m, sizeof m - 1, 0)) > 0) {
+		m[n] = 0;
+		for (char *p = m; *p; p++) if ((unsigned char)*p < 32 && *p != '\t') *p = ' ';	/* (a line each, always) */
+		const char *src = "menu", *what = m;
+		char *tab = strchr(m, '\t');
+		if (tab) { *tab = 0; if (tab - m <= 8) src = m; what = tab + 1; }
+		rec(src, "%s", what);
+	}
+}
+
 /* the recorder: the charger plugged in or pulled out (a uevent, and each minute) */
 static void rec_charger(void)
 {
@@ -1581,6 +1608,7 @@ int main(int argc, char **argv)
 	audio_find_cards();	/* (the loop's own idea of the cards until the child is done; it writes the route) */
 	sound_start();		/* the volumes and the route, in a child (above) */
 	int uev = uevent_open();
+	int recsock = rec_sock_open();	/* (the recorder's events from banana-ui) */
 	sd2_scan();	/* a card already in the second slot at boot */
 	load_drivers_present();
 	leds_update();
@@ -1592,12 +1620,13 @@ int main(int argc, char **argv)
 		cfg.autosleep_min, cfg.poweroff_min, cfg.idle_in_games ? "everywhere" : "in the menu", cfg.mem_sleep);
 
 	for (;;) {
-		struct pollfd pf[MAXDEV + 2];
+		struct pollfd pf[MAXDEV + 3];
 		int n = 0;
 		for (int i = 0; i < ndev; i++) pf[n++] = (struct pollfd){ devfd[i], POLLIN, 0 };
-		int ino_at = -1, uev_at = -1;
+		int ino_at = -1, uev_at = -1, rs_at = -1;
 		if (ino >= 0) { ino_at = n; pf[n++] = (struct pollfd){ ino, POLLIN, 0 }; }
 		if (uev >= 0) { uev_at = n; pf[n++] = (struct pollfd){ uev, POLLIN, 0 }; }
+		if (recsock >= 0) { rs_at = n; pf[n++] = (struct pollfd){ recsock, POLLIN, 0 }; }
 		/* sleep until something is due: the battery look (a minute), the dim or the auto-sleep deadline, the lid
 		 * check, a pending save, the power button's hold; nothing wakes bananad otherwise */
 		double tnow = mono(), wait = next_battery - tnow;
@@ -1652,6 +1681,7 @@ int main(int argc, char **argv)
 				for (int k = 0; k < r / (ssize_t)sizeof ev[0]; k++) handle(&ev[k]);
 		}
 		if (uev_at >= 0 && (pf[uev_at].revents & POLLIN) && uevent_read(uev)) { leds_update(); rec_charger(); }
+		if (rs_at >= 0 && (pf[rs_at].revents & POLLIN)) rec_sock_read(recsock);
 		save_settings(now);
 		if (ino_at >= 0 && (pf[ino_at].revents & POLLIN)) {
 			char buf[4096];

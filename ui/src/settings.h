@@ -125,6 +125,7 @@ namespace banana
 		void toRow(const std::string& key);		// the cursor on that row, in its group's list
 		bool devOn = false;						// System's Developer row unlocked (settings.conf's developer)
 		int aboutTaps = 0;						// A's on System > About so far (seven unlock it)
+		std::map<std::string, std::string> recShown;	// each setting as shown, for the recorder's "old -> new"
 		Result pressGroups(Key k);
 		void renderGroups();
 		bool downOnRow = false;

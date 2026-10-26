@@ -19,6 +19,7 @@
 #include "soft.h"
 #include "splash.h"
 #include "settings.h"
+#include "recorder.h"
 #include "settings_defaults.h"
 #include "theme.h"
 #include "zip.h"
@@ -480,6 +481,19 @@ static int shutdownPercent(const std::string& data)
 }
 
 // ---- headless: the same UI rendered to PNGs, for tests and screenshots ------------------------------------------
+// the recorder: the menu's screen when it changes (home, a system's library, a game being started)
+template <class U> static void recordView(U& ui, Host& lib)
+{
+	static int lastView = -1, lastSys = -1;
+	int v = (int)ui.view(), sys = ui.systemIndex();
+	if (v == lastView && (v != rnds::UI::LIBRARY || sys == lastSys)) return;
+	lastView = v; lastSys = sys;
+	std::string name = sys >= 0 && sys < lib.systemCount() ? lib.shelf(sys).def.name : std::string("?");
+	if (v == rnds::UI::HOME) recordEvent("menu", "home");
+	else if (v == rnds::UI::LIBRARY) recordEvent("menu", "library: %s", name.c_str());
+	else if (ui.gameIndex() >= 0) recordEvent("menu", "starting: %s (%s)", lib.gameAt(ui.gameIndex()).title.c_str(), name.c_str());
+}
+
 static int runHeadless(const Options& o, Host& lib, const std::string& variant, const std::string& theme)
 {
 	SoftBackend be(o.w, o.h);
@@ -556,7 +570,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			}
 			if (settings.isOpen() || it->second == Key::START)
 			{
-				if (!settings.isOpen()) { settings.open(); logf("press %s: settings open", b.c_str()); continue; }
+				if (!settings.isOpen()) { settings.open(); recordEvent("settings", "open"); logf("press %s: settings open", b.c_str()); continue; }
 				int r = (int)settings.press(it->second);
 				if (r == Settings::SEARCH)
 				{
@@ -568,10 +582,12 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 					logf("search \"%s\": shelf %d, %d games", settings.searchText.c_str(), sh, sh >= 0 ? (int)lib.shelf(sh).games.size() : -1);
 				}
 				logf("press %s: settings %s", b.c_str(), settings.isOpen() ? ("result " + std::to_string(r)).c_str() : "closed");
+				if (!settings.isOpen()) recordEvent("settings", "closed");
 				continue;
 			}
 			if (!uiButton(it->second, btn)) { logf("unknown button %s", b.c_str()); return 2; }
 			bool used = ui.press(btn);
+			recordView(ui, lib);
 			logf("press %s: %s, view %d sys %d game %d", b.c_str(), used ? "used" : "unused", (int)ui.view(), ui.systemIndex(), ui.gameIndex());
 		}
 		else if (op == "setup") { settings.setup(); logf("setup open"); }
@@ -691,6 +707,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		{
 			int g = lib.pendingLaunch();
 			logf("launch %d: %s (system %s)", g, lib.gameAt(g).path.c_str(), lib.systemOf(g).id.c_str());
+			recordEvent("game", "start: %s (%s)", lib.gameAt(g).title.c_str(), lib.systemOf(g).id.c_str());
 			lib.clearLaunch();
 		}
 		ui.update(now);
@@ -1106,6 +1123,7 @@ int main(int argc, char** argv)
 	worker.start(uiPtr);
 	irisToMenu(disp, be, *ui);
 	bootMark("banana-ui: the menu");
+	recordEvent("menu", "up");
 	// the first boot after the installation: the setup (Wi-Fi, the time zone, the accounts) before anything else
 	bool firstSetup = access((o.data + "/setup-done").c_str(), F_OK) != 0;
 
@@ -1189,7 +1207,7 @@ int main(int argc, char** argv)
 			sound.play("select");
 			break;
 		}
-		case Settings::CLOSED: sound.play("back"); break;
+		case Settings::CLOSED: sound.play("back"); recordEvent("settings", "closed"); break;
 		case Settings::SEARCH:
 		{
 			// the Search collection first on the shelf, opened on its first game (an empty text takes it away)
@@ -1202,8 +1220,8 @@ int main(int argc, char** argv)
 			sound.play("select");
 			break;
 		}
-		case Settings::REBOOT: logf("restarting"); kill(1, SIGTERM); break;		// busybox init: SIGTERM reboots
-		case Settings::POWEROFF: logf("shutting down"); kill(1, SIGUSR2); break;	// and SIGUSR2 powers off
+		case Settings::REBOOT: logf("restarting"); recordEvent("menu", "restart (Settings)"); kill(1, SIGTERM); break;		// busybox init: SIGTERM reboots
+		case Settings::POWEROFF: logf("shutting down"); recordEvent("menu", "shut down (Settings)"); kill(1, SIGUSR2); break;	// and SIGUSR2 powers off
 		default: break;
 		}
 		dirty = true;
@@ -1271,6 +1289,7 @@ int main(int argc, char** argv)
 			ui->touchCancel();
 			settingsView.setVariant(settings["theme"]);
 			settingsView.open();
+			recordEvent("settings", "open");
 			rep.key = Key::NONE;
 			sound.play("select");
 			dirty = true;
@@ -1367,6 +1386,12 @@ int main(int argc, char** argv)
 		std::string rom = lib.gameAt(game).path;
 		std::string cmd = replaceAll(replaceAll(sd.run, "%ROM%", shellQuote(rom)), "%SYSTEM%", shellQuote(sd.id));
 		logf("starting %s: %s", sd.id.c_str(), cmd.c_str());
+		{
+			// the recorder: the game, its system, how it's run (the launcher's name: run-retroarch, run-nds...)
+			std::string how = sd.run.substr(0, sd.run.find(' '));
+			how = how.substr(how.rfind('/') + 1);
+			recordEvent("game", "start: %s (%s, %s)", lib.gameAt(game).title.c_str(), sd.id.c_str(), how.c_str());
+		}
 		{
 			std::ofstream f(o.data + "/last-system");
 			f << ui->systemIndex() << "\n";
@@ -1469,6 +1494,7 @@ int main(int argc, char** argv)
 		long secs = (long)((nowMs() - start) / 1000);
 		if (system("banana-perf ui") != 0) {}
 		logf("game ended after %ld s (status %d)", secs, status);
+		recordEvent("game", "ended after %ld s (status %d)", secs, status);
 		for (int tries = 0; !disp.open(o.top, err) && tries < 100; tries++) usleep(50000);
 		be.invalidate();
 		input.open(o.touch, disp.width(), disp.height());
@@ -1499,6 +1525,7 @@ int main(int argc, char** argv)
 	bool wasTyping = false;
 	while (!quit)
 	{
+		recordView(*ui, lib);	// (the recorder: the menu's screen when it changed)
 		// the keyboard up or gone: bananad's recorder reads /run/banana/keyboard (no touch positions while typing)
 		if (settingsView.typing() != wasTyping)
 		{
@@ -1575,11 +1602,15 @@ int main(int argc, char** argv)
 		if (batteryDue)
 		{
 			batteryDue = false;
-			if (low.check(lib.power(), shutdownPercent(o.data), now)) dirty = true;
+			if (low.check(lib.power(), shutdownPercent(o.data), now))
+			{
+				dirty = true;
+				if (low.showing(now)) recordEvent("notice", "%s", low.title.c_str());
+			}
 		}
 		// the hardware check's notice: new or changed (the late check writes it after the menu is up; /run/banana's
 		// watch wakes the loop when it's moved into place)
-		if (health.check(now)) { logf("health notice: %s", health.title.c_str()); dirty = true; }
+		if (health.check(now)) { logf("health notice: %s", health.title.c_str()); recordEvent("notice", "%s", health.title.c_str()); dirty = true; }
 
 		bool want;
 		{
@@ -1722,6 +1753,7 @@ int main(int argc, char** argv)
 		std::ofstream f(o.data + "/last-system");
 		f << ui->systemIndex() << "\n";
 	}
+	recordEvent("menu", "quit");
 	bottomIdle.setOwned(false, nowMs());	// the backlight and the marker back as they were
 	worker.finish();
 	return 0;

@@ -1,6 +1,7 @@
 #include <ctime>
 #include "settings.h"
 #include "settings_defaults.h"
+#include "recorder.h"
 #include "theme.h"
 #include <algorithm>
 #include <dlfcn.h>
@@ -645,6 +646,9 @@ namespace banana
 		if (groups.empty())
 			for (auto& it : items)
 				if (std::find(groups.begin(), groups.end(), it.section) == groups.end()) groups.push_back(it.section);
+		for (auto& it : items)
+			if ((it.kind == Item::CHOICE || it.kind == Item::BRIGHTNESS || it.kind == Item::VOLUME) && it.at < (int)it.names.size())
+				recShown[it.key] = it.names[it.at];
 		devOn = getConfValue(data + "/settings.conf", "developer", "off") == "on";
 		aboutTaps = 0;
 		inGroups = true;
@@ -662,6 +666,14 @@ namespace banana
 	void Settings::save(const Item& it)
 	{
 		const std::string& v = it.values[it.at];
+		// the recorder: what changed, as shown (old -> new); an account's or a password's value never
+		if (it.at < (int)it.names.size())
+		{
+			std::string was = recShown[it.key], now = it.names[it.at];
+			bool secret = it.key.find("pass") != std::string::npos || it.key.find("user") != std::string::npos || it.key.find("account") != std::string::npos;
+			recordEvent("setting", "%s: %s -> %s", it.label.c_str(), secret ? "(hidden)" : was.c_str(), secret ? "(hidden)" : now.c_str());
+			recShown[it.key] = now;
+		}
 		if (it.kind == Item::BRIGHTNESS)
 		{
 			int pm = atoi(v.c_str());
@@ -740,6 +752,7 @@ namespace banana
 			if (it.key == "scrape") { startScrape(); return MOVED; }
 			if (it.key == "developer")
 			{
+				recordEvent("settings", "Developer");
 				for (int g = 0; g < (int)groups.size(); g++) if (groups[g] == DEV) sel = top = groupStart(g);
 				armed = -1;
 				return MOVED;
@@ -923,6 +936,7 @@ namespace banana
 		case Key::R: gsel = (gsel + 1) % n; return MOVED;
 		case Key::A:
 			inGroups = false;
+			recordEvent("settings", "%s", groups[gsel].c_str());
 			sel = top = groupStart(gsel);
 			armed = -1;
 			if (items[sel].kind == Item::INFO) refreshInfo();
@@ -1422,7 +1436,9 @@ namespace banana
 			else if (it.kind == Item::PAGE && it.key == "network") v = wstat.connected ? fit(wstat.ssid, true, 19, 300) : (wifiOn() ? "Choose" : "");
 			else if (it.kind == Item::PAGE && it.key == "update") v = updatesWaiting();
 			else if (it.kind == Item::PAGE && it.key == "developer")
+			{
 				for (const Item& r : items) if (r.key == "recorder" && r.values[r.at] == "on") v = "Recording";
+			}
 			else if (it.kind == Item::PAGE && it.key == "scrape") v = scrapeShort();
 			if (v.empty()) continue;
 			float vw = text(v, true, 19, 0, 0, p.ink, false, 0, true);
@@ -2408,6 +2424,7 @@ namespace banana
 	void Settings::toast(const std::string& l1, const std::string& l2, uint32_t accent, int icon, double ms)
 	{
 		toast1 = l1; toast2 = l2; toastAccent = accent; toastIcon = icon;
+		recordEvent("notice", "%s%s%s", l1.c_str(), l2.empty() ? "" : ": ", l2.c_str());
 		toastUntil = now + ms;
 	}
 
@@ -2437,6 +2454,9 @@ namespace banana
 	void Settings::openSetup()
 	{
 		for (auto& it : items) load(it);
+		for (auto& it : items)
+			if ((it.kind == Item::CHOICE || it.kind == Item::BRIGHTNESS || it.kind == Item::VOLUME) && it.at < (int)it.names.size())
+				recShown[it.key] = it.names[it.at];
 		refreshInfo();
 		wizard = true;
 		wsel = 0; armed = -1;
