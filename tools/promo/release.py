@@ -327,13 +327,13 @@ def draw_feature(layer, d, S, local, at, rise):
         if p > 0: cw.rounded_rectangle((32, 112, 32 + max(14, int(556 * p)), 126), 7, fill=YELLOW)
         paste(layer, c, cx - 310, cy + 330, at(0.8))
     elif kind == 'res':
-        # BananaDS, then the DS's 256 x 192 picture at 1x to 4x, nested
+        # BananaDS, then the DS's 256 x 192 picture at 2x to 4x (BananaDS has no 1x), nested
         paste(layer, BANANADS, VX - BANANADS.width / 2, 150 + dy, a_in)
         base = (128, 96)	# 1x drawn at half scale
         x0, y0 = VX - 4 * base[0] / 2 * 1.0 - 40, 300 + dy
         # largest first: drawing on the layer replaces what is under it, so the smaller boxes go on top
-        for k in range(4, 0, -1):
-            a = at(0.8 + 0.5 * (k - 1), 0.5)
+        for k in range(4, 1, -1):
+            a = at(0.8 + 0.6 * (k - 2), 0.5)
             if a <= 0: continue
             w, h = base[0] * k, base[1] * k
             new = k >= 3
