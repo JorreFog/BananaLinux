@@ -716,7 +716,7 @@ if __name__ == '__main__':
     if MUSIC:
         cmd += ['-ss', str(MUSIC_AT), '-i', MUSIC, '-filter:a', f'afade=t=out:st={DURATION - 3:.2f}:d=3',
                 '-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '256k', '-ar', '44100', '-ac', '2', '-shortest']
-    cmd += ['-c:v', 'libx264', '-preset', 'slow', '-pix_fmt', 'yuv420p', '-crf', '16', '-movflags', '+faststart', OUT]
+    cmd += ['-c:v', 'libx264', '-preset', 'slow', '-pix_fmt', 'yuv420p', '-crf', '22', '-movflags', '+faststart', OUT]
     subprocess.run(cmd, check=True)
     shutil.rmtree(FRAMES, True)
     print(OUT, n, 'frames', f'{DURATION:.2f} s')
