@@ -143,7 +143,9 @@ the card, BIOS, roms: the one the files belong to by their extension, an archive
 server's folder names; the folder chosen for a server's folder is remembered) and whether archives are unpacked and
 deleted after (`downloads_*` in settings.conf: ask, always, never). The status page shows the job in hand: B leaves
 it working, X stops it (its parts and the job kept: A goes on from there), Y cancels it (the job deleted with what
-its unfinished downloads left; the files it finished stay).
+its unfinished downloads left; the files it finished stay). Leaving it (B, the job cleared or cancelled) goes back
+where it was opened: the folder the job was started in, on the server or the card, as it was (the cursor on what was
+chosen), or home from the job's row there.
 
 banana-ui has no network code for it: `banana-fetch` (`src/fetch/`) does it, in two shapes.
 

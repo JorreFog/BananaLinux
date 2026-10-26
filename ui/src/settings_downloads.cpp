@@ -176,6 +176,7 @@ namespace banana
 		double stNext = 0;
 		std::string cancelling;		// a job cancelled, deleted once its runner is gone
 		bool restartAfter = false;	// the runner was at work then: it goes on with the jobs after it
+		Sub statusFrom = HOME;		// the page it was opened from, which leaving it goes back to
 		// edit
 		fetch::ServerRec draft;
 		std::string draftPassword, putPassword;
@@ -380,8 +381,16 @@ namespace banana
 			if (restartAfter && more) nas::startRunner(prog, paths.data, sync);
 			restartAfter = false;
 			pollStatus(true);
-			if (!more && sub == STATUS) go(HOME);
+			if (!more && sub == STATUS) leaveStatus();
 			return true;
+		}
+
+		// the job's page left (B, the job cleared or cancelled): back where it was opened, the folder a job was started
+		// in, on the server or the card, as it was (the cursor on what was chosen), or home from the job's row there
+		void leaveStatus()
+		{
+			if (statusFrom == LOCAL) openLocal(ldir);	// (read again: the unpacking changes it)
+			else go(statusFrom);
 		}
 
 		// ---- the rows -----------------------------------------------------------------------------------------------
@@ -869,14 +878,16 @@ namespace banana
 			message.clear();
 			pollStatus(true);
 			sel[STATUS] = top[STATUS] = 0;
-			sel[HOME] = top[HOME] = 0;	// (B comes back to the job's row)
+			sel[HOME] = top[HOME] = 0;	// (home, once B gets there, on the job's row: a new one moves the rows under it)
+			statusFrom = BROWSE;		// (B comes back to this folder)
 			go(STATUS);
 		}
 
 		// ---- local archives ------------------------------------------------------------------------------------------
 		void openLocal(const std::string& d)
 		{
-			if (!ldir.empty()) cursor["local:" + ldir] = { sel[LOCAL], top[LOCAL] };
+			// (an archive's menu holds the menu's rows: the folder's place was kept when it opened)
+			if (!ldir.empty() && !lmenu) cursor["local:" + ldir] = { sel[LOCAL], top[LOCAL] };
 			ldir = d;
 			lmenu = false;
 			lentries = d.empty() ? std::vector<nas::LocalEntry>() : nas::localEntries(d);
@@ -885,6 +896,15 @@ namespace banana
 			sel[LOCAL] = c == cursor.end() ? 0 : std::min(c->second.first, std::max(0, n - 1));
 			top[LOCAL] = c == cursor.end() ? 0 : std::min(c->second.second, sel[LOCAL]);
 			go(LOCAL);
+		}
+
+		// the archive in hand's choices (unpacked here or into a folder, deleted), its place in the folder kept: B, and the
+		// job's page it starts, come back to it
+		void archiveMenu()
+		{
+			cursor["local:" + ldir] = { sel[LOCAL], top[LOCAL] };
+			lmenu = true;
+			sel[LOCAL] = top[LOCAL] = 0;
 		}
 
 		// the archive in hand looked at (a password asked when it has one), then unpacked here or into a folder
@@ -945,12 +965,12 @@ namespace banana
 			fprintf(stderr, "downloads: %s: %s unpacked into %s\n", path.c_str(), archive.c_str(), dest.c_str());
 			archivePassword.clear();
 			ignoreMemory = false;
-			lmenu = false;
 			if (!running()) nas::startRunner(prog, paths.data, sync);
 			message.clear();
 			pollStatus(true);
 			sel[STATUS] = top[STATUS] = 0;
-			sel[HOME] = top[HOME] = 0;	// (B comes back to the job's row)
+			sel[HOME] = top[HOME] = 0;	// (home, once B gets there, on the job's row: a new one moves the rows under it)
+			statusFrom = LOCAL;			// (B comes back to the archive's folder; its menu closes then)
 			go(STATUS);
 		}
 
@@ -1157,7 +1177,7 @@ namespace banana
 		{
 			switch (kind)
 			{
-			case K_JOB: go(STATUS); sel[STATUS] = top[STATUS] = 0; pollStatus(true); return MOVED;
+			case K_JOB: go(STATUS); statusFrom = HOME; sel[STATUS] = top[STATUS] = 0; pollStatus(true); return MOVED;
 			case K_SERVER:
 			{
 				const fetch::ServerRec& s = servers[cur->index];
@@ -1225,8 +1245,9 @@ namespace banana
 						archivePassword.clear();
 						localDel = false;
 						openLocal(fetch::parentPath(archive));
-						lmenu = true;
-						sel[LOCAL] = top[LOCAL] = 0;
+						// (the folder's cursor on it: B comes back there)
+						for (size_t i = 0; i < lentries.size(); i++) if (lentries[i].name == fetch::baseName(archive)) sel[LOCAL] = (int)i;
+						archiveMenu();
 						return MOVED;
 					}
 				}
@@ -1235,7 +1256,7 @@ namespace banana
 					unlink(jobPath.c_str());
 					unlink((jobPath + ".done").c_str());
 					pollStatus(true);
-					if (jobPath.empty() || finished) go(HOME);
+					if (jobPath.empty() || finished) leaveStatus();
 					return MOVED;
 				}
 				if (!running()) { resume(); return MOVED; }
@@ -1251,8 +1272,7 @@ namespace banana
 				ignoreMemory = false;
 				localDel = false;
 				message.clear();
-				lmenu = true;
-				sel[LOCAL] = top[LOCAL] = 0;
+				archiveMenu();
 				return MOVED;
 			}
 			case L_HERE: case L_TO:
@@ -1289,8 +1309,12 @@ namespace banana
 				message.clear();
 				go(local ? LOCAL : BROWSE);
 				return MOVED;
+			case STATUS:
+				message.clear();
+				leaveStatus();
+				return MOVED;
 			case LOCAL:
-				if (lmenu) { lmenu = false; message.clear(); openLocal(ldir); return MOVED; }
+				if (lmenu) { message.clear(); openLocal(ldir); return MOVED; }
 				if (ldir.empty()) { go(HOME); return MOVED; }
 				for (auto& c : cards) if (c.root == ldir) { openLocal(""); return MOVED; }
 				openLocal(fetch::parentPath(ldir));

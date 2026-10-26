@@ -183,15 +183,18 @@ PY
         # (headless, a press the menu takes isn't followed by its update: "wait 1" lets banana-fetch's answer in)
         # home: Locked, Test NAS, Add a server, Archives on the card, Options. Test NAS opens on /Games (gba, nds); in
         # nds Alpha Quest.nds and Beta Racer.zip, both marked, X; the Download page: Card, Folder (Nintendo DS, from the
-        # .nds), Unpack archives (No: the DS plays zips) turned to Yes, which brings Delete archives after (No); Download
+        # .nds), Unpack archives (No: the DS plays zips) turned to Yes, which brings Delete archives after (No); Download.
+        # B on the job's page comes back to nds, its marks gone; B up to /Games, to / (listed only here) and home
         run_dl "fetchdone; homeid downloads; shot dl-tile; press a; shot dl-home; press down; press a; wait 1; shot dl-browse; press down; press a; wait 1; \
             press y; press down; press y; shot dl-marked; press x; shot dl-target; press down; press down; press right; shot dl-unpack; \
-            press down; press down; press a; wait 300; shot dl-status; fetchdone; shot dl-done; press b; shot dl-home-done"
+            press down; press down; press a; wait 300; shot dl-status; fetchdone; shot dl-done; press b; shot dl-back; \
+            press b; wait 1; press b; wait 1; press b; shot dl-home-done"
         dlcheck "press a: banana:downloads open"
         dlcheck "downloads: connected to Test NAS (DIR), home /"
         dlcheck "downloads: /Games/nds: 2 entries"
         dlcheck "2 files from Test NAS into $FX/roms/nds"
         dlcheck "downloads: a job finished"
+        dlcheck "downloads: /: 1 entries"
         cmp -s "$NAS/Games/nds/Alpha Quest.nds" "$FX/roms/nds/Alpha Quest.nds" || { echo "FAIL $size: Alpha Quest.nds wasn't downloaded"; fail=1; }
         [ -f "$FX/roms/nds/Beta Racer.nds" ] && cmp -s "$NAS/Games/nds/Beta Racer.zip" "$FX/roms/nds/Beta Racer.zip" ||
             { echo "FAIL $size: Beta Racer.zip wasn't downloaded and unpacked, the zip kept"; fail=1; }
@@ -199,12 +202,13 @@ PY
         grep -q '^target /Games/nds = data:roms/nds$' "$FX/data/nas.conf" || { echo "FAIL $size: the folder chosen wasn't remembered"; fail=1; }
         # home: Last download, Locked (its password typed on the keyboard: qwe), ... Archives on the card: this card's
         # data, roms and Delta.zip: Then delete it (Options' Ask) to Yes, Unpack here (its one folder unwrapped; B then
-        # comes back to the job's row, the first); Options (the last row): Unpack after a download to Always; Add a
-        # server: SFTP, its address typed (qwe), START saves it
+        # comes back to the card's folder, without Delta.zip, and B twice more home, on the job's row, the first);
+        # Options (the last row): Unpack after a download to Always; Add a server: SFTP, its address typed (qwe), START
+        # saves it
         run_dl "homeid downloads; press a; press down; press a; shot dl-password; $(key 1,0 1,1 1,2) press start; wait 1; shot dl-locked; press b; \
             press down; press down; press down; press a; press a; press down; press down; press a; shot dl-local; press down; press down; press right; \
-            shot dl-local-delete; press up; press up; press a; wait 300; shot dl-unpacked; \
-            press b; press up; press a; press right; shot dl-options; press b; press up; press up; press a; press down; press right; \
+            shot dl-local-delete; press up; press up; press a; wait 300; shot dl-unpacked; press b; shot dl-local-back; press b; press b; \
+            press up; press a; press right; shot dl-options; press b; press up; press up; press a; press down; press right; \
             press down; press a; $(key 1,0 1,1 1,2) press start; shot dl-edit; press start; wait 1; shot dl-saved"
         dlcheck "downloads: connected to Locked (DIR), home /"
         dlcheck "unpacked into $FX$"
@@ -235,10 +239,11 @@ PY
         cmp -s "$OUT/$size-dl-progress-top.png" "$OUT/$size-dl-retry-top.png" && { echo "FAIL $size: the retry's countdown looks like the progress"; fail=1; }
         # the chips tapped where they are drawn: home (Last download, Locked, qwe, Test NAS...): Y Edit on Locked, START
         # saves it; Test NAS's /Games: X Get on gba (Options' Ask again): its Download page has a Zips row (the GBA
-        # plays them zipped: kept as they are, its job says so); Add a server: A Type on Address (ewq), START Save
+        # plays them zipped: kept as they are, its job says so; B back in /Games, then up to / and home); Add a server:
+        # A Type on Address (ewq), START Save
         sed -i '/^downloads_/d' "$FX/data/settings.conf"
         run_dl "homeid downloads; press a; press down; touch 1 180 442; shot dl-tap-edit; press start; wait 1; press down; press down; press a; wait 1; \
-            touch 1 260 442; shot dl-zips; press start; wait 1; wait 300; press b; press down; press down; press down; press down; press a; \
+            touch 1 260 442; shot dl-zips; press start; wait 1; wait 300; press b; press b; wait 1; press b; press down; press down; press down; press down; press a; \
             press down; press down; touch 1 580 442; $(key 1,2 1,1 1,0) press start; touch 1 190 442; wait 1; shot dl-tap-saved"
         dlcheck "downloads: server locked saved"
         dlcheck "2 files from Test NAS into $FX/roms/gba"
@@ -246,8 +251,9 @@ PY
             grep -l '^title = gba$' "$FX/data/downloads/"*.finished | xargs grep -q '^keep_zips = yes$' ||
             { echo "FAIL $size: the GBA folder's zip wasn't kept as it is (keep_zips)"; fail=1; }
         grep -q '^host = ewq$' "$FX/data/nas.conf" || { echo "FAIL $size: A Type and START Save (tapped) didn't save the server"; fail=1; }
-        for s in dl-tile dl-home dl-browse dl-marked dl-target dl-unpack dl-status dl-done dl-home-done dl-password dl-locked dl-local dl-local-delete \
-            dl-unpacked dl-options dl-edit dl-saved dl-progress dl-retry dl-stop dl-stopped dl-cancel dl-cancelled dl-tap-edit dl-zips dl-tap-saved; do
+        for s in dl-tile dl-home dl-browse dl-marked dl-target dl-unpack dl-status dl-done dl-back dl-home-done dl-password dl-locked dl-local \
+            dl-local-delete dl-unpacked dl-local-back dl-options dl-edit dl-saved dl-progress dl-retry dl-stop dl-stopped dl-cancel dl-cancelled \
+            dl-tap-edit dl-zips dl-tap-saved; do
             for p in top bot; do
                 f=$OUT/$size-$s-$p.png
                 [ -s "$f" ] || { echo "FAIL $size: no $f"; fail=1; continue; }
