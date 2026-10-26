@@ -11,5 +11,6 @@ source "$BR2_EXTERNAL_BANANA_PATH/package/libudev-zero/Config.in"
 source "$BR2_EXTERNAL_BANANA_PATH/package/mesa3d-panfrost/Config.in"
 source "$BR2_EXTERNAL_BANANA_PATH/package/rocknix-extra-firmware/Config.in"
 source "$BR2_EXTERNAL_BANANA_PATH/package/retroarch/Config.in"
+source "$BR2_EXTERNAL_BANANA_PATH/package/bananatube/Config.in"
 source "$BR2_EXTERNAL_BANANA_PATH/package/pocket-native/Config.in"
 endmenu
