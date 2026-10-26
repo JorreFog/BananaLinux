@@ -526,8 +526,8 @@ namespace banana
 		{
 			const std::string bds = "/data/bananads/bananads.conf";
 			add(N, "nds", "Shader", shaderHelp, bds, "kms.shader", shaderNames, shaderValues);
-			add(N, "nds", "3D resolution", "2x draws the DS's 3D at twice its size on these panels. 1x is the DS's own, the lightest. 3x (experimental): three times, the sharpest, the heaviest: a busy 3D scene can drop below full speed.",
-				bds, "render.scale", { "2x", "1x", "3x (experimental)" }, { "2", "1", "3" });
+			add(N, "nds", "3D resolution", "2x draws the DS's 3D at twice its size on these panels. 1x is the DS's own, the lightest. 3x and 4x (experimental): three or four times (4x is the RG DS Plus panels' own size), the sharpest and the heaviest: a busy 3D scene can drop below full speed.",
+				bds, "render.scale", { "2x", "1x", "3x (experimental)", "4x (experimental)" }, { "2", "1", "3", "4" });
 			add(N, "nds", "Edge marking", "The outlines some games draw round their 3D models (Zelda, Kirby, many Pokémon battles). Off leaves them out.",
 				bds, "render.edge_marking", { "On", "Off" }, { "on", "off" });
 			add(N, "nds", "Fog", "The distance fog some games draw in 3D. Off leaves it out.", bds, "render.fog", { "On", "Off" }, { "on", "off" });
@@ -3374,8 +3374,8 @@ namespace banana
 	static const char* const GAME_3D_VALUES[] = { "", "1", "0" };
 	static const char* const GAME_3D_NAMES[] = { "", "On", "Off" };
 	// a DS game's own BananaDS 3D resolution (render.scale; nds-per-game-res.conf, run-bananads)
-	static const char* const GAME_RES_VALUES[] = { "", "1", "2", "3" };
-	static const char* const GAME_RES_NAMES[] = { "", "1x", "2x", "3x (experimental)" };
+	static const char* const GAME_RES_VALUES[] = { "", "1", "2", "3", "4" };
+	static const char* const GAME_RES_NAMES[] = { "", "1x", "2x", "3x (experimental)", "4x (experimental)" };
 	// (a level, which each launcher turns into its emulator's own threshold: BananaDS low 0.15, medium 0.05, high 0.02
 	// as Settings' Microphone; SuperDrastic low 0.3, medium 0.15, high 0.03, its own scale)
 	static const char* const GAME_MIC_VALUES[] = { "", "low", "medium", "high", "off" };
@@ -3464,7 +3464,7 @@ namespace banana
 			std::string v = perGame("nds-per-game-3d.conf", romName), m = perGame("nds-per-game-mic.conf", romName);
 			std::string r = perGame("nds-per-game-res.conf", romName);
 			for (int i = 1; i < 3; i++) if (v == GAME_3D_VALUES[i]) pg3d = i;
-			for (int i = 1; i < 4; i++) if (r == GAME_RES_VALUES[i]) pgRes = i;
+			for (int i = 1; i < 5; i++) if (r == GAME_RES_VALUES[i]) pgRes = i;
 			for (int i = 1; i < 5; i++) if (m == GAME_MIC_VALUES[i]) pgMic = i;
 		}
 		if (!key.empty()) { pgRows.push_back(PG_NAME); pgRows.push_back(PG_SORT); }
@@ -3511,7 +3511,7 @@ namespace banana
 			int d = k == Key::LEFT ? -1 : 1;
 			if (row == PG_EMU) pgEmu = (pgEmu + d + 3) % 3;
 			else if (row == PG_3D) pg3d = (pg3d + d + 3) % 3;
-			else if (row == PG_RES) pgRes = (pgRes + d + 4) % 4;
+			else if (row == PG_RES) pgRes = (pgRes + d + 5) % 5;
 			else if (row == PG_MIC) pgMic = (pgMic + d + 5) % 5;
 			else if (row == PG_DELETE) { pgDelAll = !pgDelAll; pgDelArmed = false; }
 			else if (row == PG_SHADER)
@@ -3590,8 +3590,8 @@ namespace banana
 				: row == PG_3D ? "SuperDrastic (DraStic) only. On draws the DS's 3D beside the game, the faster way; Off draws it in step with "
 				  "the game, for a game whose 3D shows on the wrong screen or a frame late (the Dragon Quest games). The others follow "
 				  "Settings > Nintendo DS > Threaded 3D."
-				: row == PG_RES ? "BananaDS only. The size the DS's 3D is drawn at for this game: 1x the DS's own, 2x twice, 3x (experimental) three "
-				  "times, the sharpest and the heaviest (a busy 3D scene can drop below full speed). The others follow Settings > Nintendo DS > 3D resolution."
+				: row == PG_RES ? "BananaDS only. The size the DS's 3D is drawn at for this game: 1x the DS's own, 2x twice, 3x and 4x (experimental) three "
+				  "and four times, the sharpest and the heaviest (a busy 3D scene can drop below full speed). The others follow Settings > Nintendo DS > 3D resolution."
 				: row == PG_MIC ? "How loud a word or a blow must be to reach this game, in either emulator: High hears a quiet voice, Low "
 				  "only a loud one, Off none. For a game that needs the microphone (Nintendogs) or one it bothers."
 				: row == PG_NAME ? "The name the menu shows for this game. A types it; an empty one goes back to the scraped name. Kept in "
@@ -3632,7 +3632,7 @@ namespace banana
 		else if (emu == "bananads" && atof(gmic.c_str()) == 0) gmicName = "Gate off";
 		const std::string v3d = pg3d ? std::string(GAME_3D_NAMES[pg3d]) : "As in Settings (" + std::string(g3d == "1" ? "On" : "Off") + ")";
 		std::string gres = getConfValue("/data/bananads/bananads.conf", "render.scale", "1");
-		const std::string gresName = gres == "3" ? "3x (experimental)" : gres == "2" ? "2x" : "1x";
+		const std::string gresName = gres == "4" ? "4x (experimental)" : gres == "3" ? "3x (experimental)" : gres == "2" ? "2x" : "1x";
 		const std::string vres = pgRes ? std::string(GAME_RES_NAMES[pgRes]) : "As in Settings (" + gresName + ")";
 		const std::string vmic = pgMic ? std::string(GAME_MIC_NAMES[pgMic]) : "As in Settings (" + gmicName + ")";
 
