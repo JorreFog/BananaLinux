@@ -454,6 +454,7 @@ namespace rnds
 
 	static std::u32string (*sTranslate)(const std::u32string&) = nullptr;
 	void setTranslator(std::u32string (*translate)(const std::u32string&)) { sTranslate = translate; }
+	Translator translator() { return sTranslate; }
 
 	std::shared_ptr<Font> Font::load(const std::string& path)
 	{

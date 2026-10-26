@@ -112,6 +112,15 @@ first=$(sed -n 's/.*press left: used, view 0 sys \([0-9]*\).*/\1/p' "$OUT/$size-
     || { echo "FAIL $size: the home row after Shown systems (left at first: $first): $(grep 'shown systems' "$OUT/$size-shelves.log" | tr '\n' ' ')"; fail=1; }
 sed -i '/^shelf\./d' "$UXFX/data/settings.conf"
 
+# System > Language (its first row) asks before switching, No first: right then A keeps English; right, down, A
+# switches (the menu starts again: settings result 9, LANGUAGE)
+ux_run langask "home 0; press start; press r; press r; press r; press r; press r; press a; press right; shot ux-langask; press a"
+grep -q '^language = zh-cn' "$UXFX/data/settings.conf" && { echo "FAIL $size: the language switched without a Yes"; fail=1; }
+ux_check langask "press a: settings result 1"
+ux_run langyes "home 0; press start; press r; press r; press r; press r; press r; press a; press right; press down; press a"
+grep -q '^language = zh-cn' "$UXFX/data/settings.conf" || { echo "FAIL $size: Yes didn't switch the language"; fail=1; }
+sed -i '/^language = /d' "$UXFX/data/settings.conf"
+
 # System > Hotkeys (its last row: up from the first) opens the list of hotkeys, B back to System on its row
 ux_run hotkeys "home 0; press start; press r; press r; press r; press r; press r; press a; press up; press a; wait 400; shot ux-hotkeys; press b; wait 400; shot ux-hotkeys-back"
 ux_lt 1000 "$(ux_diff "$OUT/$size-ux-hotkeys-bot.png" "$OUT/$size-ux-hotkeys-back-bot.png")" || { echo "FAIL $size: Hotkeys didn't open"; fail=1; }

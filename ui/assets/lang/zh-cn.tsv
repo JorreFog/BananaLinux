@@ -861,3 +861,9 @@ settings		The password couldn't be checked: %s.
 settings		Asking the beta server (bananaos-cfw.dev) which test build is the newest for this handheld...	
 settings		The beta server has no test build for this handheld.	
 settings		A asks the beta server (bananaos-cfw.dev, Wi-Fi needed) whether a newer test build is out for this handheld. Nothing is downloaded until you choose Download.	
+# (the language switch's question below is a machine-translated draft, not Majirefy's: for them to check)
+settings		Change the menu's language?	要更改菜单语言吗？
+settings		No, keep it	不，保持不变
+settings		Yes, change it	是，更改语言
+settings		The menu starts again in the new language.	菜单将以新语言重新启动。
+settings		OK	确定

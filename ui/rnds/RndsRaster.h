@@ -142,6 +142,8 @@ namespace rnds
 	// translate first (nullptr: as it is)
 	void setFallbackFont(std::shared_ptr<Font> f, float pixelSize, float deviceScale);
 	void setTranslator(std::u32string (*translate)(const std::u32string&));
+	using Translator = std::u32string (*)(const std::u32string&);
+	Translator translator();	// (the one set: a text drawn as it is sets nullptr around it)
 
 	std::u32string utf8to32(const std::string& s);
 	std::u32string upper(const std::u32string& s);

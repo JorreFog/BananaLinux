@@ -21,6 +21,9 @@ namespace banana::lang
 	// the translation meant for one place, when a part has the same English line twice (the file's context column)
 	std::string tr(const std::string& context, const std::string& text);
 	std::u32string tr32(const std::u32string& text);	// (the hook)
+	// text in another language than the one loaded (its file in dir, read once): the line's translation there, else
+	// text (English: text). For a question that must be readable in the language being switched to
+	std::string trIn(const std::string& dir, const std::string& code, const std::string& text);
 
 	// the texts shown with no translation, one a line (for the translator's next round)
 	void missingLog(const std::string& path);

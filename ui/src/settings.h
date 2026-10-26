@@ -345,6 +345,14 @@ namespace banana
 		void build();
 		void load(Item& it);
 		Result change(int dir);
+		// the language switch asked first (owner: "Are you sure?"), in the language now and the one picked, No first:
+		// langAsk the picked choice's index on the Language row (-1: not asking), langYes the button on
+		int langAsk = -1;
+		bool langYes = false;
+		bool rawText = false;	// text() draws the string as it is (not through the menu's language): the other language's
+		bool cjkLoaded = false;
+		Result pressLangAsk(Key k);
+		void renderLangAsk();
 		Result resetApply(bool emulator);	// the Reset rows: schema defaults written, live bits applied, rows reloaded
 		void save(const Item& it);
 		void refreshInfo();

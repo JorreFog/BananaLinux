@@ -4,6 +4,7 @@
 #include <cstring>
 #include <dirent.h>
 #include <fstream>
+#include <map>
 #include <mutex>
 #include <set>
 #include <unordered_map>
@@ -249,6 +250,31 @@ namespace banana::lang
 			if (it != inContext.end()) return it->second;
 		}
 		return tr(text);
+	}
+
+	std::string trIn(const std::string& dir, const std::string& code, const std::string& text)
+	{
+		static std::mutex m;
+		static std::map<std::string, std::unordered_map<std::string, std::string>> files;
+		if (code.empty() || code == "en") return text;
+		std::lock_guard<std::mutex> l(m);
+		auto it = files.find(code);
+		if (it == files.end())
+		{
+			std::unordered_map<std::string, std::string> t;
+			std::ifstream f(dir + "/" + code + ".tsv");
+			std::string line;
+			while (std::getline(f, line))
+			{
+				if (line.empty() || line[0] == '#') continue;
+				size_t a = line.find('\t'), b = a == std::string::npos ? a : line.find('\t', a + 1), c = b == std::string::npos ? b : line.find('\t', b + 1);
+				if (c == std::string::npos || c + 1 >= line.size() || b != a + 1) continue;	// (no context: the plain lines)
+				t.emplace(line.substr(b + 1, c - b - 1), line.substr(c + 1));
+			}
+			it = files.emplace(code, std::move(t)).first;
+		}
+		auto x = it->second.find(text);
+		return x == it->second.end() ? text : x->second;
 	}
 
 	std::u32string tr32(const std::u32string& text)

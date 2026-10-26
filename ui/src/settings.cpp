@@ -1096,6 +1096,22 @@ namespace banana
 		}
 		int n = (int)it.values.size();
 		int at = it.at + dir;
+		if (it.key == "language" && n > 1)
+		{
+			// not switched yet: asked first, in both languages (a language picked by mistake can't be read to undo it)
+			langAsk = ((at % n) + n) % n;
+			langYes = false;
+			armed = -1;
+			if (!cjkLoaded && !lang::active())
+			{
+				// the CJK pixel font, which the menu reads only for a language that needs it (main.cpp: with another
+				// language than English it is read already, and setFallbackFont must not replace it: its old font's
+				// destructor waits on the lock setFallbackFont holds): the question shows the picked language's words
+				cjkLoaded = true;
+				if (auto f = rnds::Font::load(assets + "/fonts/fusion-pixel-12px-proportional-zh_hans.ttf")) rnds::setFallbackFont(f, 12, s);
+			}
+			return MOVED;
+		}
 		if (it.kind == Item::VOLUME) volPending = false;	// (the level asked for wins over the script's late answer)
 		if (it.kind == Item::BRIGHTNESS || it.kind == Item::VOLUME) at = std::min(n - 1, std::max(0, at));	// a slider stops at its ends
 		else at = (at + n) % n;
@@ -1197,6 +1213,7 @@ namespace banana
 		if (page == COLORS) return pressColors(k);
 		if (page == UPDATES) return pressUpdates(k);
 		if (page == SETUP) return pressSetup(k);
+		if (langAsk >= 0) return pressLangAsk(k);
 		if (inGroups) return pressGroups(k);
 		int g = groupOf(sel), b = groupStart(g), e = groupEnd(g);
 		switch (k)
@@ -1328,6 +1345,18 @@ namespace banana
 		if (page == GAME) return touchGame(cx, cy);
 		if (page == ARTPICK) return touchArt(cx, cy);
 		if (page == COLORS) return touchColors(cx, cy);
+		if (langAsk >= 0 && page == LIST)
+		{
+			// the two buttons (renderLangAsk): No, Yes
+			for (int b = 0; b < 2; b++)
+			{
+				float y = 150 + b * 96;
+				if (cy < y || cy > y + 80 || cx < 60 || cx > 580) continue;
+				if (langYes != (b == 1)) { langYes = b == 1; return MOVED; }
+				return pressLangAsk(Key::A);
+			}
+			return NONE;
+		}
 		if (page == SETUP)
 		{
 			if (downY >= 418 && downY <= 466) return pressSetup(downX < 320 ? Key::B : Key::A);
@@ -1476,11 +1505,14 @@ namespace banana
 		rnds::TextStyle st;
 		st.font = medium ? M : R; st.size = size; st.letterSpacing = ls; st.upper = upper;
 		if (!st.font) return 0;
-		std::string key = "txt:" + t + (medium ? "|m" : "|r") + std::to_string(size) + (upper ? "u" : "") + std::to_string(ls);
+		std::string key = "txt:" + t + (medium ? "|m" : "|r") + std::to_string(size) + (upper ? "u" : "") + std::to_string(ls) + (rawText ? "|raw" : "");
 		auto it = cache.find(key);
 		if (it == cache.end())
 		{
+			rnds::Translator tf = rnds::translator();
+			if (rawText) rnds::setTranslator(nullptr);
 			rnds::TextLine l = rnds::layoutLine(rnds::utf8to32(t), st);
+			rnds::setTranslator(tf);
 			float asc = st.font->ascent(size), desc = st.font->descent(size), lh = asc + desc;
 			rnds::TextBitmap tb = rnds::renderLine(l, st, s, asc + std::floor((lh - (asc + desc)) / 2));
 			Cached cc;
@@ -1872,6 +1904,7 @@ namespace banana
 		if (page == COLORS) { renderColors(); return; }
 		if (page == UPDATES) { renderUpdates(); return; }
 		if (page == SETUP) { renderSetup(); return; }
+		if (langAsk >= 0) { renderLangAsk(); return; }
 		if (inGroups) { renderGroups(); return; }
 		SPal p = pal(light);
 		const Item& cur = items[sel];
@@ -3465,6 +3498,85 @@ namespace banana
 			float aw = faceWidth("A", act);
 			face("A", act, 622 - aw, aw);
 		}
+		be->endScreen();
+	}
+
+	// ---- the language switch, asked first ------------------------------------------------------------------------
+	Settings::Result Settings::pressLangAsk(Key k)
+	{
+		Item* it = nullptr;
+		for (auto& x : items) if (x.key == "language") it = &x;
+		if (!it || langAsk >= (int)it->values.size()) { langAsk = -1; return MOVED; }
+		switch (k)
+		{
+		case Key::UP: case Key::DOWN: case Key::LEFT: case Key::RIGHT: case Key::L: case Key::R:
+			langYes = !langYes;
+			return MOVED;
+		case Key::A:
+			if (!langYes) { langAsk = -1; return MOVED; }
+			it->at = langAsk;
+			langAsk = -1;
+			save(*it);
+			return LANGUAGE;	// (the menu starts again in it)
+		case Key::B: langAsk = -1; return MOVED;
+		case Key::START: langAsk = -1; mOpen = false; return CLOSED;
+		default: return NONE;
+		}
+	}
+
+	// the question on the top panel and No / Yes on the bottom, each line in the language now and, under it, in the
+	// one picked (drawn as it is: its own words from its file, not through the menu's language)
+	void Settings::renderLangAsk()
+	{
+		SPal p = pal(light);
+		const Item* it = nullptr;
+		for (auto& x : items) if (x.key == "language") it = &x;
+		if (!it) return;
+		const std::string dir = assets + "/../lang", to = it->values[langAsk], toName = it->names[langAsk];
+		const std::string fromName = it->names[std::max(0, std::min((int)it->names.size() - 1, it->at))];
+		auto here = [&](const std::string& t) { return lang::tr(t); };
+		auto there = [&](const std::string& t) { return lang::trIn(dir, to, t); };
+		auto raw = [&](const std::string& t, bool medium, float size, float x, float top, const Color& c, bool measure = false)
+		{
+			rawText = true;
+			float w = text(t, medium, size, x, top, c, false, 0, measure);
+			rawText = false;
+			return w;
+		};
+		auto centred = [&](const std::string& t, bool medium, float size, float top, const Color& c)
+		{
+			float w = raw(t, medium, size, 0, 0, c, true);
+			raw(t, medium, size, std::round(320 - w / 2), top, c);
+		};
+		const std::string Q = "Change the menu's language?", N = "No, keep it", Y = "Yes, change it";
+
+		be->beginScreen(0);
+		box("screen", false, 0, 0, 640, 480);
+		box("hero", false, 18, 20, 604, 436);
+		centred(here(Q), true, 26, 120, p.ink);
+		centred(there(Q), true, 26, 168, p.ink);
+		centred(fromName + "  >  " + toName, true, 24, 250, p.accent);
+		centred(here("The menu starts again in the new language."), false, 18, 330, p.muted);
+		centred(there("The menu starts again in the new language."), false, 18, 360, p.muted);
+		be->endScreen();
+
+		be->beginScreen(1);
+		box("screen", false, 0, 0, 640, 480);
+		centred(toName, true, 22, 92, p.muted);
+		for (int b = 0; b < 2; b++)
+		{
+			bool on = langYes == (b == 1);
+			float y = 150 + b * 96;
+			box(on ? "pick" : "slot", on, 60, y, 520, 80);
+			const std::string& t = b ? Y : N;
+			Color c = on ? p.onPick : p.ink;
+			centred(here(t), true, 22, y + 12, c);
+			centred(there(t), true, 22, y + 44, c);
+		}
+		float bw = faceWidth("B", "Back");
+		face("B", "Back", 18, bw);
+		float aw = faceWidth("A", "OK");
+		face("A", "OK", 622 - aw, aw);
 		be->endScreen();
 	}
 
