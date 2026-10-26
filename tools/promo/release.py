@@ -298,10 +298,10 @@ gba_line = f'{COMPANIONS} games now have a GBA companion.' if COMPANIONS else 'Y
 SCENES = [
     dict(beats=None, end=beat_at(5.15) - MUSIC_AT, kind='open', glow=(255, 190, 50)),
     dict(beats=None, end=after(0), kind='whatsnew', glow=(255, 190, 50)),
-    dict(beats=16, kind='themes', glow=(60, 130, 230), n=1, tag='NEW THEME ENGINE', name='Make it yours',
+    dict(beats=14, kind='themes', glow=(60, 130, 230), n=1, tag='NEW THEME ENGINE', name='Make it yours',
          head='Change anything on both screens with one JSON file.',
          points=['Layouts, colours, fonts and animations', 'Hooks for menus and system info', 'Three example themes to start from']),
-    dict(beats=16, kind='studio', glow=(60, 200, 190), n=1, tag='BANANA THEME STUDIO', name='Banana Theme Studio',
+    dict(beats=14, kind='studio', glow=(60, 200, 190), n=1, tag='BANANA THEME STUDIO', name='Banana Theme Studio',
          head='Design your theme on your computer.',
          points=['Drag elements onto both screens', 'Layers, components and assets', 'An exact preview from the real engine']),
     dict(beats=16, kind='gba', glow=(120, 90, 240), n=2, tag='GBA COMPANIONS', name='GBA game companions', head=gba_line,
@@ -310,13 +310,16 @@ SCENES = [
          head='Play with wireless headphones and speakers.', points=[]),
     dict(beats=12, kind='ota', glow=(255, 160, 50), n=4, tag='OTA UPDATER', name='Updates over the air',
          head='Update BananaOS right from your handheld.', points=[]),
-    dict(beats=18, kind='res', glow=(255, 200, 60), n=5, tag='BANANADS', name='BananaDS, upgraded',
+    dict(beats=12, kind='res', glow=(255, 200, 60), n=5, tag='BANANADS', name='BananaDS, upgraded',
          head='Faster, and new 3x and 4x resolutions.', points=[]),
+    dict(beats=14, kind='perf', glow=(255, 180, 40), n=5, tag='BANANADS PERFORMANCE', name='Faster BananaDS',
+         head='12.6% faster on average, with a quarter less CPU.',
+         points=['Fast-forward speed at 2x in nine games', 'Full speed at 25% less CPU, about 5 °C cooler', 'RG DS Plus: 0.4.2 against the 0.5.0 beta']),
     dict(beats=12, kind='latency', glow=(255, 100, 70), n=6, tag='LOW LATENCY MODE', name='Low latency mode',
          head='For both SuperDrastic and BananaDS.', points=[]),
-    dict(beats=14, kind='sync', glow=(70, 210, 120), n=7, tag='HOME SERVER SYNC', name='Home server sync',
+    dict(beats=12, kind='sync', glow=(70, 210, 120), n=7, tag='HOME SERVER SYNC', name='Home server sync',
          head='Your ROMs and saves, synced with your own server.', points=[]),
-    dict(beats=12, kind='more', glow=(255, 190, 50)),
+    dict(beats=10, kind='more', glow=(255, 190, 50)),
     dict(beats=18, kind='end', glow=(255, 190, 50)),
 ]
 t0, nb = 0.0, 0
@@ -586,6 +589,49 @@ def frame(t):
     return Image.fromarray(np.clip(a, 0, 255).astype(np.uint8))
 
 THEMES = ['hillside', 'turntable', 'classic']
+# BananaDS 0.4.2 against the 0.5.0 beta on an RG DS Plus (docs/PERFORMANCE-0.5.0.md on release/0.5.0): fast-forward
+# at 2x, emulated frames a second; and a full-speed HeartGold: Origin run at normal settings
+SPEED = [('Nintendogs', 123.9, 154.0, 24.3), ('HeartGold: Origin (hack)', 108.8, 127.4, 17.1),
+         ('Pokémon Black 2', 81.3, 93.6, 15.1), ('Pokémon Platinum', 199.1, 228.5, 14.8), ('Mario Kart DS', 101.6, 115.0, 13.2),
+         ('Golden Sun: Dark Dawn', 93.8, 104.5, 11.4), ('Pokémon HeartGold', 207.1, 229.9, 11.0),
+         ('Metroid Prime Hunters', 118.9, 123.8, 4.1), ('DQ Monsters: Joker', 101.3, 105.3, 3.9)]
+SPEED_MEAN = 12.6
+def perf_card(local):
+    # the chart: each game's fast-forward speed, 0.4.2 (grey) under 0.5.0 (yellow), growing in one after another;
+    # the average counting up; the efficiency run's CPU and temperature
+    w, h = 900, 760
+    c = card(w, h)
+    d = ImageDraw.Draw(c)
+    d.text((36, 28), 'Fast-forward speed at 2x', font=F(MED, 32), fill=INK)
+    d.text((36, 72), 'Emulated frames a second, RG DS Plus', font=F(REG, 22), fill=SOFT)
+    d.rectangle((560, 36, 576, 52), fill=(110, 114, 130)); d.text((584, 32), '0.4.2', font=F(REG, 22), fill=SOFT)
+    d.rectangle((680, 36, 696, 52), fill=YELLOW); d.text((704, 32), '0.5.0 beta', font=F(REG, 22), fill=INK)
+    x0, bw, y = 300, 430, 122
+    for k, (name, old, new, gain) in enumerate(SPEED):
+        a = ease((local - 0.9 - 0.12 * k) / 0.7)
+        d.text((36, y + 4), name, font=F(REG, 22), fill=INK)
+        if a > 0:
+            d.rectangle((x0, y + 4, x0 + bw * old / 240 * a, y + 12), fill=(110, 114, 130))
+            d.rectangle((x0, y + 15, x0 + bw * new / 240 * a, y + 29), fill=YELLOW)
+            g = f'+{gain * a:.1f}%'
+            d.text((w - 36 - F(MED, 24).getlength(g), y + 4), g, font=F(MED, 24), fill=YELLOW if gain >= 10 else INK)
+        y += 44
+    d.line((36, y + 6, w - 36, y + 6), fill=(62, 64, 78), width=2)
+    y += 22
+    m = SPEED_MEAN * ease((local - 2.2) / 1.2)
+    d.text((36, y + 14), 'Average', font=F(REG, 26), fill=SOFT)
+    d.text((36, y + 46), f'+{m:.1f}%', font=F(MED, 64), fill=YELLOW)
+    for k, (label, before, after_) in enumerate((('CPU at full speed', '126%', '94%'), ('SoC temperature', '57 °C', '51-52 °C'))):
+        a = ease((local - 2.8 - 0.25 * k) / 0.5)
+        if a <= 0: continue
+        tx = 330 + k * 280
+        d.rounded_rectangle((tx, y + 10, tx + 260, y + 130), 16, fill=(30, 31, 40), outline=(62, 64, 78), width=2)
+        d.text((tx + 20, y + 22), label, font=F(REG, 20), fill=SOFT)
+        d.text((tx + 20, y + 56), before, font=F(REG, 26), fill=SOFT)
+        d.line((tx + 20, y + 72, tx + 20 + F(REG, 26).getlength(before), y + 72), fill=SOFT, width=2)
+        af = F(MED, 40 if len(after_) < 6 else 32)
+        d.text((tx + 30 + F(REG, 26).getlength(before), y + (50 if len(after_) < 6 else 56)), after_, font=af, fill=YELLOW)
+    return c
 def draw_feature(vis, vd, S, local, beat):
     kind = S['kind']
     a_in = ease((local - 0.25) / 0.9)
@@ -691,6 +737,11 @@ def draw_feature(vis, vd, S, local, beat):
                 ld.rounded_rectangle((quad[1][0] - 96, quad[1][1] + 16, quad[1][0] - 20, quad[1][1] + 50), 17, fill=YELLOW + (int(255 * a),))
                 text(ld, (quad[1][0] - 84, quad[1][1] + 20), 'NEW', F(MED, 22), DARK, a)
             vis.alpha_composite(lay)
+    elif kind == 'perf':
+        pic, (x, y) = panel(sheen(perf_card(local), clamp01(local / S['len'])), VX + 30, H / 2 + 10 + lift, -16 + 4 * math.sin(local * 0.6), 6, -1, s=0.98)
+        sh = soft_shadow(pic.width, 80, 160)
+        paste(vis, sh, VX + 30 - sh.width / 2, y + pic.height - 60, a_in)
+        paste(vis, pic, x, y, a_in)
     elif kind == 'latency':
         paste(vis, SUPERDRASTIC, VX - 210 - SUPERDRASTIC.width / 2, 330 - SUPERDRASTIC.height / 2 + lift * 0.5, a_in)
         paste(vis, BANANADS, VX + 210 - BANANADS.width / 2, 330 - BANANADS.height / 2 + lift * 0.5, ease((local - 0.5) / 0.8))

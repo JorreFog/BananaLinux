@@ -40,7 +40,8 @@ screens, the Banana Theme Studio and the cards on tilted panels, a floor grid an
 wipe between scenes, bloom and grain, the glow pulsing with the beat. No dates anywhere: "Coming very soon in 0.5.0
 beta". The GBA companions scene plays the RG DS Plus recordings from the media/companionvideo branch
 (COMPANION: the folder holding companionvideo.mp4 and pokemoncompanionvideo.mp4). COMPANIONS sets how many games
-have a GBA companion (left out when not given). Renders on every core.
+have a GBA companion (left out when not given). The BananaDS performance scene charts docs/PERFORMANCE-0.5.0.md
+(release/0.5.0): 0.4.2 against the 0.5.0 beta on the RG DS Plus. Renders on every core.
 
     NO_DATE=1 python3 tools/promo/screens.py hillside turntable classic   # the clocks without dates
     git show origin/media/companionvideo:media/companionvideo.mp4 > rec/companionvideo.mp4   # and pokemoncompanionvideo.mp4
