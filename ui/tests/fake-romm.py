@@ -143,7 +143,7 @@ class H(http.server.BaseHTTPRequestHandler):
         p = urllib.parse.unquote(u.path)
         raw = self.body() if method in ("POST", "PUT") else b""
         with lock:
-            S["log"].append(f"{method} {u.path}?{u.query}")
+            S["log"].append(f"{method} {u.path}?{u.query}" + (f" range={self.headers['Range']}" if self.headers.get("Range") else ""))
             try:
                 self.handle_route(method, p, q, raw)
             except BrokenPipeError:
@@ -290,4 +290,4 @@ class Server(http.server.ThreadingHTTPServer):
     daemon_threads = True
 
 
-Server(("127.0.0.1", PORT), H).serve_forever()
+Server((os.environ.get("FAKE_ROMM_BIND", "127.0.0.1"), PORT), H).serve_forever()

@@ -73,6 +73,19 @@ card rb
 CODE=$(curl -s -XPOST "$U/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
 bs rb pair "$U" "$CODE" >/dev/null 2>&1 || bad "pairing with a client token's code failed: $(st rb)"
 bs rb pair "$U" "WRONGCOD" >/dev/null 2>&1 && bad "a wrong pairing code was taken"
+# a download cut short goes on from its .part (a Range request), and is checked whole
+mkdir -p "$OUT/rb/roms/nds"; head -c 1000 "$L/nds/Peel Quest (USA).nds" > "$OUT/rb/roms/nds/Peel Quest (USA).nds.part"
+printf 'homesync.gba = off\nhomesync.psx = off\n' > "$OUT/rb/banana/settings.conf"
+bs rb sync >/dev/null 2>&1
+curl -s "$U/test/log" | grep -q 'Peel%20Quest%20%28USA%29.nds? range=bytes=1000-' || bad "no Range request for the .part"
+cmp -s "$L/nds/Peel Quest (USA).nds" "$OUT/rb/roms/nds/Peel Quest (USA).nds" || bad "the resumed download isn't the server's file"
+[ -d "$OUT/rb/roms/gba" ] && bad "a skipped system was downloaded"
+# BananaOS's nds-saves runs for each DraStic .dsv before the saves are planned (the .sav is the one that syncs)
+mkdir -p "$OUT/rb/drastic/backup"; echo dsv > "$OUT/rb/drastic/backup/Peel Quest (USA).dsv"
+printf '#!/bin/sh\necho "$1" >> "%s"\n' "$OUT/nds-saves.log" > "$OUT/nds-saves"; chmod +x "$OUT/nds-saves"
+BANANA_NDS_SAVES=$OUT/nds-saves bs rb sync --saves-only >/dev/null 2>&1
+grep -q "rb/roms/nds/Peel Quest (USA).nds$" "$OUT/nds-saves.log" 2>/dev/null || bad "nds-saves wasn't run for the .dsv"
+rm -rf "$OUT/rb/roms/nds" "$OUT/rb/drastic"; : > "$OUT/rb/banana/settings.conf"
 # saves: up from card A (RetroArch's flat saves/ and BananaDS's saves/nds), down to card B
 mkdir -p "$OUT/ra/saves/nds"; echo "ds v1" > "$OUT/ra/saves/nds/Peel Quest (USA).sav"; echo "gba v1" > "$OUT/ra/saves/Banana Run (USA).srm"
 echo bak > "$OUT/ra/saves/Banana Run (USA).srm.bak"; echo resume > "$OUT/ra/saves/nds/Peel Quest (USA).resume.sav"
