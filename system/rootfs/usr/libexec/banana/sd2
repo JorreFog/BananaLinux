@@ -39,6 +39,9 @@ if [ -z "$card" ]; then
 fi
 if [ -z "$mounted" ] || [ "${mounted%p[0-9]*}" != "$card" ]; then
     [ -n "$mounted" ] && { umount $M 2>/dev/null || umount -l $M; }
+    # the menu says the card is being read while this runs (a large card's mount, and its games coming after the
+    # menu's first list, looked like an empty library)
+    : > $S/busy; trap 'rm -f $S/busy' EXIT
     # its first partition; the disk's uevent can come before the kernel has read the partition table, so a moment
     # for it to show up. A card without a partition table: the whole card
     part=/dev/${card}p1

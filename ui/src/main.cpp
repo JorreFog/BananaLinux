@@ -552,7 +552,13 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	settings.setSync(true);
 	settings.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
 	LowBattery low;
-	be.overlay = [&](int screen) { if (screen == 0 && low.showing(now)) settings.notice(low.title, low.body, low.percent); };
+	int looking = 0;	// "looking 1|2|0": the games-being-read pop-up as the device shows it (a change waiting, the second card)
+	be.overlay = [&](int screen)
+	{
+		if (screen == 0 && low.showing(now)) settings.notice(low.title, low.body, low.percent);
+		else if (screen == 0 && looking) settings.popup(looking == 2 ? "Reading the second SD card" : "Looking for games",
+			looking == 2 ? "Its games join the list in a moment" : "The game list is updated in a moment");
+	};
 	while (std::getline(ss, cmd, ';'))
 	{
 		std::stringstream cs(cmd);
@@ -576,6 +582,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			lib.testPower.charging = ch == "charging";
 			if (low.check(lib.power(), shutdownPercent(o.data), now)) logf("battery %d%%: notice %s", lib.testPower.percent, low.showing(now) ? low.title.c_str() : "hidden");
 		}
+		else if (op == "looking") { cs >> looking; ui.update(now); ui.render(); logf("looking %d", looking); }
 		else if (op == "press")
 		{
 			std::string b; cs >> b;
@@ -1441,12 +1448,25 @@ int main(int argc, char** argv)
 	std::string osdLabel;
 	int osdPercent = 0;
 	double osdUntil = 0;
+	// the games being read again (QA: after an update the game list was empty for a while, then everything came, and
+	// nothing said the menu was at work): a pop-up while the second SD card is being mounted (sd2 marks it) and while
+	// a change on the card waits for the list to be read again (2 s after the copying went quiet; on the home screen)
+	auto looking = [&]() -> int
+	{
+		if (settingsView.isOpen()) return 0;
+		if (access("/run/banana/sd2/busy", F_OK) == 0) return 2;
+		return roms.due > 0 ? 1 : 0;
+	};
 	be.overlay = [&](int screen)
 	{
 		if (screen != 0) return;
 		double t = nowMs();
 		if (low.showing(t)) settingsView.notice(low.title, low.body, low.percent);
 		else if (osdUntil > t) settingsView.level(osdLabel, osdPercent);
+		else if (int k = looking())
+			settingsView.popup(k == 2 ? "Reading the second SD card" : "Looking for games",
+				k == 2 ? "Its games join the list in a moment" : ui->view() == rnds::UI::HOME ? "The game list is updated in a moment"
+				: "The list is updated on the home screen");
 		else settingsView.drawToast(t);	// (only while Settings is open: the account check's result)
 	};
 
@@ -2157,7 +2177,10 @@ int main(int argc, char** argv)
 				}
 			}
 			else if (p.fd == roms.fd)
+			{
 				roms.read(nowMs());
+				dirty = true;	// (the pop-up saying so)
+			}
 			else if (p.fd == launchWatch)
 			{
 				alignas(inotify_event) char buf[1024];

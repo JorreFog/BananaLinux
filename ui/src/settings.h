@@ -115,6 +115,8 @@ namespace banana
 		// a pop-up along the top of the top panel in ROCKNIXDS's look (the RetroAchievements account check's result);
 		// the host draws it over the top panel while Settings is open
 		void drawToast(double nowMs);
+		// the same pop-up for the menu (Settings closed): the host's own message ("i" sign, the accent colour)
+		void popup(const std::string& l1, const std::string& l2);
 
 	private:
 		struct Item
@@ -192,6 +194,7 @@ namespace banana
 		int toastIcon = 0;			// 0 "i", 1 a tick, 2 a cross
 		double toastUntil = 0;
 		void toast(const std::string& l1, const std::string& l2, uint32_t accent, int icon, double ms);
+		void drawPopup();
 		// the first-time setup: the steps (Wi-Fi, the time zone, RetroAchievements, ScreenScraper), run once after
 		// the installation (banana/setup-done is written at the end) and from Settings > System
 		bool wizard = false;

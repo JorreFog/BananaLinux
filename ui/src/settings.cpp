@@ -4144,9 +4144,24 @@ namespace banana
 
 	// ROCKNIXDS's pop-up card (SuperDrastic's ui.c render_popup): across the top of the top panel, a tile in the accent
 	// colour with its pixel sign, the first line in the accent colour and the second in light text
+	void Settings::popup(const std::string& l1, const std::string& l2)
+	{
+		std::string s1 = toast1, s2 = toast2;
+		uint32_t a = toastAccent;
+		int ic = toastIcon;
+		toast1 = l1; toast2 = l2; toastAccent = rnds::accent.base; toastIcon = 0;
+		drawPopup();
+		toast1 = s1; toast2 = s2; toastAccent = a; toastIcon = ic;
+	}
+
 	void Settings::drawToast(double t)
 	{
 		if (!mOpen || toastUntil <= t) return;
+		drawPopup();
+	}
+
+	void Settings::drawPopup()
+	{
 		static const char* const SIGN[3][9] = {
 			{ "...###...", "..#####..", "..##.##..", "....##...", "...##....", "...##....", ".........", "...##....", "...##...." },
 			{ ".........", "........#", ".......##", "......##.", "#....##..", "##..##...", ".####....", "..##.....", "........." },
