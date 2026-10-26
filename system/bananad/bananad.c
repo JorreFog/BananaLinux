@@ -94,8 +94,9 @@ static double power_since, last_input, ignore_power_until;
 static int sel_down, sel_marked;	/* Select held: the recorder's marker at 2 s (once a hold) */
 static double sel_since;
 
-static volatile sig_atomic_t reload;
+static volatile sig_atomic_t reload, stopping;
 static void on_hup(int sig) { (void)sig; reload = 1; }
+static void on_term(int sig) { (void)sig; stopping = 1; }	/* rcK's: the recording written out, then gone */
 
 static double mono(void)
 {
@@ -453,7 +454,7 @@ static const char *key_name(int code)
 	case KEY_POWER: return "power"; case KEY_VOLUMEUP: return "volume-up"; case KEY_VOLUMEDOWN: return "volume-down";
 	case BTN_SOUTH: return "a"; case BTN_EAST: return "b"; case BTN_NORTH: return "x"; case BTN_WEST: return "y";
 	case BTN_TL: return "l"; case BTN_TR: return "r"; case BTN_TL2: return "l2"; case BTN_TR2: return "r2";
-	case BTN_SELECT: return "select"; case BTN_START: return "start"; case BTN_MODE: return "f";
+	case BTN_SELECT: return "select"; case BTN_START: return "start"; case BTN_MODE: return "f"; case BTN_Z: return "back";
 	case BTN_THUMBL: return "l3"; case BTN_THUMBR: return "r3";
 	case BTN_DPAD_UP: return "up"; case BTN_DPAD_DOWN: return "down"; case BTN_DPAD_LEFT: return "left"; case BTN_DPAD_RIGHT: return "right";
 	}
@@ -591,7 +592,7 @@ static void suspend_now(const char *why)
 			char c;
 			int fd = open(test_asleep, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644);	/* (write_file doesn't create) */
 			if (fd >= 0) close(fd);
-			while (read(test_wake, &c, 1) < 0 && errno == EINTR) {}
+			while (read(test_wake, &c, 1) < 0 && errno == EINTR && !stopping) {}	/* (stopped asleep: rcK, the test) */
 			unlink(test_asleep);
 		}
 		clock_gettime(CLOCK_BOOTTIME, &b1);
@@ -694,7 +695,7 @@ static void shutdown_now(const char *why)
 	/* and nothing more from here until rcK stops bananad: back in the loop, with the lid still shut or the menu idle,
 	 * it slept again in the middle of the shutdown (rcK frozen half-way until the next wake: "off" only when someone
 	 * pressed power, or when the RTC woke it again; sleep.log showed "turning off" twice, a sleep between) */
-	for (;;) pause();
+	for (;;) { pause(); if (stopping) _exit(0); }	/* (the recording was written out above) */
 }
 
 static double save_volume_at, save_backlight_at;	/* debounced: written a moment after the last key */
@@ -1545,8 +1546,9 @@ static void rec_minute(void)
 		read_str(p, s, sizeof s);
 		if (strcmp(s, "Battery")) continue;
 		#define PS(f) (snprintf(p, sizeof p, "/sys/class/power_supply/%s/" f, e->d_name), p)
-		int pct = read_int(PS("capacity"), -1), mv = read_int(PS("voltage_now"), 0) / 1000;
-		int ma = read_int(PS("current_now"), 0) / 1000, t = read_int(PS("temp"), -1000);
+		/* (the rk817's gauge has only the averages) */
+		int pct = read_int(PS("capacity"), -1), mv = read_int(PS("voltage_now"), read_int(PS("voltage_avg"), 0)) / 1000;
+		int ma = read_int(PS("current_now"), read_int(PS("current_avg"), 0)) / 1000, t = read_int(PS("temp"), -1000);
 		read_str(PS("status"), st, sizeof st);
 		#undef PS
 		if (t > -1000) rec("battery", "%d%% %s, %d mV, %d mA, %d.%d C", pct, st, mv, ma, t / 10, abs(t % 10));
@@ -1594,6 +1596,8 @@ int main(int argc, char **argv)
 	struct sigaction sa = { 0 };
 	sa.sa_handler = on_hup;		/* no SA_RESTART: poll() returns, and the loop reloads */
 	sigaction(SIGHUP, &sa, NULL);
+	sa.sa_handler = on_term;
+	sigaction(SIGTERM, &sa, NULL);
 	mkdir("/run/banana", 0755);
 	/* the RTC may wake the handheld (its alarm: the battery check, turning off when idle) */
 	write_file("/sys/class/rtc/rtc0/device/power/wakeup", "enabled");
@@ -1659,6 +1663,12 @@ int main(int argc, char **argv)
 		poll(pf, n, timeout);
 		double now = mono();
 		sound_poll();
+		if (stopping) {	/* a restart or a turn-off from the menu, an update: banana-ui's last events, then the card's copy */
+			if (rs_at >= 0) rec_sock_read(recsock);
+			rec("bananad", "stopped (the handheld restarts or turns off)");
+			rec_flush();
+			exit(0);
+		}
 		if (reload) {
 			reload = 0;
 			load_conf("/etc/banana/bananad.conf");

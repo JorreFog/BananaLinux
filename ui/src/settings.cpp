@@ -260,7 +260,7 @@ namespace banana
 
 	// on the RG DS Plus a shader's GPU pass heats the chip enough to slow the CPU in a long session (Golden Sun: Dark
 	// Dawn at 2x: none 0.0% missed refreshes in 6 min, the LCD grid 0.6-1%, measured 2026-10-18)
-	static const char* DEV = "Developer";	// the Developer list's section: opened from System, not a tile
+	static const char* DEV = "Developer options";	// the Developer options list's section: opened from System, not a tile
 	static const char* PLUS_SHADER_NOTE = " On the RG DS Plus a shader also heats the chip: a heavy 3D game can drop frames after a few minutes with one. Set such a game to None on its own page (X in the library).";
 
 	// Settings > Nintendo DS > Shader's choices: Banana's shaders, then the card's own (banana/shaders/<name>.frag,
@@ -448,9 +448,9 @@ namespace banana
 		add(S, "gear", "Restart", "Restarts the handheld. Press A twice.", "", "reboot", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "Shut down", "Turns the handheld off. Press A twice. (Or hold the power button.)", "", "poweroff", { "" }, { "" }, Item::ACTION);
 		// (last in System, and there only once unlocked: A seven times on About; settings.conf's developer. groupEnd)
-		add(S, "gear", "Developer", "Tools for finding what went wrong: a recording of everything the handheld does, and more detailed logs.",
+		add(S, "gear", "Developer options", "Tools for finding what went wrong: a recording of everything the handheld does, and more detailed logs.",
 			"", "developer", {}, {}, Item::PAGE);
-		// the Developer list: opened from that row, not a tile (DEV; last of the items)
+		// the Developer options list: opened from that row, not a tile (DEV; last of the items)
 		add(DEV, "gear", "Flight recorder", "Records what the handheld does: buttons, touches, the lid, the screens, sleep, the battery and Wi-Fi.", power, "recorder",
 			{ "Off", "On" }, { "off", "on" });
 		items.back().hints = { "Not recording.",
@@ -458,7 +458,7 @@ namespace banana
 		add(DEV, "gear", "Sleep timing log", "How long each part of the handheld takes to sleep and to wake.", power, "sleep_debug",
 			{ "Off", "On" }, { "no", "yes" });
 		items.back().hints = { "Not logged.", "Written to banana/logs/sleep-devices.log after each wake." };
-		add(DEV, "gear", "Hide developer options", "Takes the Developer row away again (A seven times on System > About brings it back). Press A twice.",
+		add(DEV, "gear", "Hide developer options", "Takes the Developer options row away again (A seven times on System > About brings it back). Press A twice.",
 			"", "dev_hide", { "" }, { "" }, Item::ACTION);
 	}
 
@@ -740,7 +740,7 @@ namespace banana
 				aboutTaps = 0;
 				devOn = true;
 				setConfValue(data + "/settings.conf", "developer", "on");
-				toast("Developer options are on", "A Developer row is at the end of System now.", 0x6ad07a, 1, 5000);
+				toast("Developer options are on", "They're at the end of System now.", 0x6ad07a, 1, 5000);
 			}
 			else if (aboutTaps >= 4) toast(std::to_string(7 - aboutTaps) + " more", "for the developer options", 0x6ad07a, 1, 1500);
 			return MOVED;
@@ -752,7 +752,7 @@ namespace banana
 			if (it.key == "scrape") { startScrape(); return MOVED; }
 			if (it.key == "developer")
 			{
-				recordEvent("settings", "Developer");
+				recordEvent("settings", "Developer options");
 				for (int g = 0; g < (int)groups.size(); g++) if (groups[g] == DEV) sel = top = groupStart(g);
 				armed = -1;
 				return MOVED;

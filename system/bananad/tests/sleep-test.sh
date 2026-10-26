@@ -197,7 +197,7 @@ stop
 # more scenarios, a file per topic (tests/sleep-test.d), run here in turn with the helpers above
 for t in "$HERE"/tests/sleep-test.d/*.sh; do [ -f "$t" ] && . "$t"; done
 
-echo "27. the flight recorder: buttons, the lid, a sleep, touches (no position while typing) and a marker (Select held), on the card"
+echo "27. the flight recorder: buttons, the lid, a sleep, touches (no position while typing), a marker (Select held) and the stop, on the card"
 # tev <type> <code> <value>...: events on the stand-in touchscreen, with the monotonic time (as the real one stamps them)
 tev() { python3 -c "
 import struct, sys, time
@@ -235,7 +235,10 @@ grep -q "game     start: Peel Quest (nds, run-nds)" "$F" && ok "its newline made
 grep -q "touch .*down 100,200" "$F" && grep -q "touch .*up 100,200" "$F" && ok "the touch, where (100,200)" || bad "touch lines: $(grep touch "$F" | tr '\n' '|')"
 grep -q "keyboard open: where not recorded" "$F" && ! grep -q "300,50" "$F" && ok "the touch while typing, without where" || bad "while typing: $(grep touch "$F" | tr '\n' '|')"
 echo 0 > /run/test/lid; wake; sleep 0.3
-stop
+python3 -c "
+import socket; socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM).sendto(b'menu\trestart (Settings)', '/run/banana/recorder.sock')"
+stop    # (SIGTERM, as rcK's: before the unmount, the last lines written out at once, not at the next half-minute)
+grep -q "menu     restart (Settings)" "$F" && grep -q "bananad  stopped" "$F" && ok "stopped: banana-ui's last event and the stop, on the card" || bad "at the stop: $(tail -n 2 "$F" | tr '\n' '|')"
 sed -n '1,2p' "$F" | grep -q "flight recorder" && ok "the session's header" || bad "header: $(head -n1 "$F")"
 start
 [ ! -e /run/banana/recording ] && ok "recorder off: not recording" || bad "recording with recorder off"
