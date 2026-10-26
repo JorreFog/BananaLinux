@@ -620,7 +620,7 @@ def perf_card(local):
     y += 22
     m = SPEED_MEAN * ease((local - 2.2) / 1.2)
     d.text((36, y + 14), 'Average', font=F(REG, 26), fill=SOFT)
-    d.text((36, y + 46), f'+{m:.1f}%', font=F(MED, 64), fill=YELLOW)
+    if local >= 2.2: d.text((36, y + 46), f'+{m:.1f}%', font=F(MED, 64), fill=YELLOW)
     for k, (label, before, after_) in enumerate((('CPU at full speed', '126%', '94%'), ('SoC temperature', '57 °C', '51-52 °C'))):
         a = ease((local - 2.8 - 0.25 * k) / 0.5)
         if a <= 0: continue
