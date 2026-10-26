@@ -210,6 +210,12 @@ for size in 640x480 1024x768; do
         --roms "$FX/roms" --data "$FX/data" --script "lib 0 0; press x; press down; press down; press down; press left; press down; press left; press a" 2>> "$plog3" \
         || { echo "FAIL $size: banana-ui (game options 2) exited $?"; fail=1; }
     [ -e "$F3" ] || [ -e "$FM" ] && { echo "FAIL $size: back to As in Settings left $(ls "$F3" "$FM" 2>/dev/null)"; fail=1; }
+    # kept at once, B too (B, every page's way out, used to drop the changes without a word): right on Threaded 3D, B
+    "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "lib 0 0; press x; press down; press down; press down; press right; press b" 2>> "$plog3" \
+        || { echo "FAIL $size: banana-ui (game options 3) exited $?"; fail=1; }
+    [ "$(cat "$F3" 2>/dev/null)" = "Banana Kart DS.nds = 1" ] || { echo "FAIL $size: game options, B: $(cat "$F3" 2>&1)"; fail=1; }
+    rm -f "$F3"
     # review fixes on the game page and the keyboard: m7 a pre-filled "Café" loses its whole é to one B (not half of it);
     # m4 a name of its own deleted, then the scraped one typed again: no name of its own; m6 a sharing name with the
     # password step left by B: nothing written

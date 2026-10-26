@@ -232,6 +232,8 @@ namespace banana
 		int asel = 0, atop = 0;
 		bool artMatching = false;
 		std::string artWords;
+		void saveGameRows();
+		bool pgChanged = false;	// a DS row changed (and kept) since the game page opened
 		Result pressArt(Key k);
 		Result touchArt(float cx, float cy);
 		void renderArt();

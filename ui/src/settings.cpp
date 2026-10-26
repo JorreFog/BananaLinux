@@ -3964,7 +3964,7 @@ namespace banana
 		}
 		if (!key.empty()) { pgRows.push_back(PG_NAME); pgRows.push_back(PG_SORT); }
 		if (!key.empty() && !path.empty()) pgRows.push_back(PG_ART);
-		pgDelAll = pgDelArmed = false;
+		pgDelAll = pgDelArmed = pgChanged = false;
 		if (deletableRom(path)) pgRows.push_back(PG_DELETE);	// (last: never the row the page opens on)
 		std::string cur = gameEmulator(romName);
 		pgEmu = 0;
@@ -3986,6 +3986,19 @@ namespace banana
 		pgRow = pgTop = 0;
 		message.clear();
 		page = GAME;
+	}
+
+	// the DS rows' values into their per-game files (only a row that changed is written: setPerGame keeps the rest)
+	void Settings::saveGameRows()
+	{
+		if (!pgNds) return;
+		pgChanged = true;
+		if (gameEmulator(pgRom) != GAME_EMUS[pgEmu]) setGameEmulator(pgRom, GAME_EMUS[pgEmu]);
+		auto put = [&](const char* file, const std::string& v) { if (perGame(file, pgRom) != v) setPerGame(file, pgRom, v); };
+		put("nds-per-game-shader.conf", pgShaderValues[pgShader]);
+		put("nds-per-game-3d.conf", GAME_3D_VALUES[pg3d]);
+		put("nds-per-game-res.conf", GAME_RES_VALUES[pgRes]);
+		put("nds-per-game-mic.conf", GAME_MIC_VALUES[pgMic]);
 	}
 
 	Settings::Result Settings::pressGame(Key k)
@@ -4015,6 +4028,9 @@ namespace banana
 				pgShader = (pgShader + d + ns) % ns;
 			}
 			else return NONE;
+			// kept at once, as every other row in Settings is (QA: the values were kept only by A "Done"; B, the way
+			// out of every other page, dropped them without a word)
+			if (row != PG_DELETE) saveGameRows();
 			return MOVED;
 		}
 		case Key::A: case Key::START:
@@ -4043,17 +4059,9 @@ namespace banana
 					nm ? (gameName.empty() ? pgTitle : gameName) : gameSort);
 				return MOVED;
 			}
-			if (pgNds)
-			{
-				setGameEmulator(pgRom, GAME_EMUS[pgEmu]);
-				setPerGame("nds-per-game-shader.conf", pgRom, pgShaderValues[pgShader]);
-				setPerGame("nds-per-game-3d.conf", pgRom, GAME_3D_VALUES[pg3d]);
-				setPerGame("nds-per-game-res.conf", pgRom, GAME_RES_VALUES[pgRes]);
-				setPerGame("nds-per-game-mic.conf", pgRom, GAME_MIC_VALUES[pgMic]);
-			}
 			close();
 			return pgArtDone ? TITLES : CHANGED;	// (a new cover: the library again)
-		case Key::B: if (pgDelArmed) { pgDelArmed = false; return MOVED; } close(); return pgArtDone ? TITLES : CLOSED;
+		case Key::B: if (pgDelArmed) { pgDelArmed = false; return MOVED; } close(); return pgArtDone ? TITLES : pgChanged ? CHANGED : CLOSED;
 		default: return NONE;
 		}
 	}
