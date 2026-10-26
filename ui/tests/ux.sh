@@ -100,14 +100,15 @@ for f in "saves/nds/Peel Quest 2.sav" "bios/Peel Quest.bin" "roms/nds/Banana Kar
     [ -e "$UXFX/$f" ] || { echo "FAIL $size: Delete game took $f"; fail=1; }
 done
 
-# the home row: a system with nothing to start is left off (Ports with PortMaster's own entry alone too); Display &
-# sound > Shown systems (R twice, down) hides one (Game Boy Advance) or keeps one always (Ports, the last row)
+# the home row: a system with nothing to start is left off, Ports with PortMaster's own entry alone is on it (PortMaster
+# gets ports: deleting the last port must not take it away); Display & sound > Shown systems (R twice, down) hides one
+# (Game Boy Advance), then Ports (the last row)
 UXP=$UXFX/roms/ports; mkdir -p "$UXP"; printf '#!/bin/bash\n' > "$UXP/PortMaster.sh"
-ux_run shelves "home 0; press left; press start; press a; press r; press r; press down; press a; press down; press right; press up; press up; press right; press right; press b; press start; home 0; press left"
-grep -q '^shelf.gba = hide' "$UXFX/data/settings.conf" && grep -q '^shelf.ports = show' "$UXFX/data/settings.conf" || { echo "FAIL $size: shown systems: $(grep shelf "$UXFX/data/settings.conf" | tr '\n' ' ')"; fail=1; }
-# the row's systems: n at first (left from the first is n - 1), n - 1 without the GBA, n with Ports back
+ux_run shelves "home 0; press left; press start; press a; press r; press r; press down; press a; press down; press right; press up; press up; press right; press b; press start; home 0; press left"
+grep -q '^shelf.gba = hide' "$UXFX/data/settings.conf" && grep -q '^shelf.ports = hide' "$UXFX/data/settings.conf" || { echo "FAIL $size: shown systems: $(grep shelf "$UXFX/data/settings.conf" | tr '\n' ' ')"; fail=1; }
+# the row's systems: n at first with Ports (left from the first is n - 1), n - 1 without the GBA, n - 2 without Ports
 first=$(sed -n 's/.*press left: used, view 0 sys \([0-9]*\).*/\1/p' "$OUT/$size-shelves.log" | head -1)
-[ "$(grep -o 'shown systems: [0-9]*' "$OUT/$size-shelves.log" | cut -d' ' -f3 | tr '\n' ' ')" = "$first $first $((first + 1)) " ] \
+[ "$(grep -o 'shown systems: [0-9]*' "$OUT/$size-shelves.log" | cut -d' ' -f3 | tr '\n' ' ')" = "$first $((first - 1)) " ] \
     || { echo "FAIL $size: the home row after Shown systems (left at first: $first): $(grep 'shown systems' "$OUT/$size-shelves.log" | tr '\n' ' ')"; fail=1; }
 sed -i '/^shelf\./d' "$UXFX/data/settings.conf"
 

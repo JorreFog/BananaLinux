@@ -616,10 +616,10 @@ namespace banana
 				}
 			}
 			std::sort(sh.games.begin(), sh.games.end(), [](const Game& a, const Game& b) { return sortKey(a) < sortKey(b); });
-			// on the home row with something to start in it: PortMaster's own entry alone (put in every card's ports
-			// folder) is the tool for getting ports, not one (Shown systems' "Always" keeps the shelf for it)
-			bool launchable = false;
-			for (auto& g : sh.games) if (g.rel != "PortMaster.sh") launchable = true;
+			// on the home row with something to start in it. PortMaster's own entry counts: it is what gets ports, and
+			// with it left out, deleting the last port took PortMaster off the row too (reachable again only through
+			// Shown systems > Ports > Always; QA 2026-10-26). Shown systems > Ports > Hidden takes it off
+			bool launchable = !sh.games.empty();
 			if (launchable || def.always || mode == "show") shelves.push_back(sh);
 		}
 		arrange();
