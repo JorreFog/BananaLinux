@@ -195,7 +195,7 @@ def frame(t):
         OX = 640
         paste(layer, LOGO_BIG, (W - LOGO_BIG.width) / 2, 310 + rise(0.2, 0.8), at(0.2, 0.8))
         big = F(MED, 56)
-        line = 'Coming soon in 0.5.0'
+        line = 'Coming very soon in 0.5.0'
         full = big.getlength(line + ' beta')
         x = (W - full) / 2
         text(d, (x, 480 + rise(1.0)), line, big, YELLOW, at(1.0))

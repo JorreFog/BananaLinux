@@ -35,7 +35,7 @@ Limoncello's drop at 0:06).
 
 **The 0.5.0 trailer** (release.py): what is new in 0.5.0, one feature a scene, in the theme trailer's look: the
 example themes on two screens, the Banana Theme Studio's screenshots in a window, and the menu's own pixel icons for
-the rest; "And much more", then "Coming soon in 0.5.0 beta". COMPANIONS sets how many games have a GBA companion (left
+the rest; "And much more", then "Coming very soon in 0.5.0 beta". COMPANIONS sets how many games have a GBA companion (left
 out when not given).
 
     python3 tools/promo/screens.py hillside turntable classic
