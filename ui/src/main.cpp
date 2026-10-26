@@ -1773,6 +1773,10 @@ int main(int argc, char** argv)
 		const double soundMs = nowMs() - letGo;
 		boost.release();
 		forgetDecoded();
+		{
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			ui->trim();
+		}
 		const char* FIFO = "/run/banana/retroarch.cmd";
 		// run-ps1 and run-pico8's fake-08 fallback end up in run-retroarch just the same, so they get the game panel
 		// (settings.conf retroarch_panel) and its touch tiles too; the official PICO-8, when it is on the card, takes

@@ -100,9 +100,29 @@ namespace banana
 		std::vector<Hit> hits;
 
 		// textures
-		struct TextTex { rnds::TexPtr tex; int padX = 0, padY = 0; float w = 0; };
+		struct TextTex { rnds::TexPtr tex; int padX = 0, padY = 0; float w = 0; uint64_t used = 0; };
 		std::map<std::string, TextTex> texts;
-		std::map<std::string, rnds::TexPtr> shapes;
+		struct ShapeTex { rnds::TexPtr tex; uint64_t used = 0; size_t bytes = 0; };
+		std::map<std::string, ShapeTex> shapes;
+		size_t shapeBytes = 0;
+		uint64_t useTick = 0;	// the caches' clock: the least recently drawn go first when one is full
+		// a full cache dropped its least recently used quarter, not everything: a theme animating a size made new
+		// boxes and texts every frame, and when the cache filled, every one on the screens (full-screen gradients too)
+		// was made again in the same frame (~100 ms on a PC, most of a second on the handheld: Noir's stalls)
+		template <class M> static void evictOldest(M& m, size_t keep, size_t* bytes = nullptr)
+		{
+			std::vector<std::pair<uint64_t, typename M::iterator>> v;
+			for (auto it = m.begin(); it != m.end(); ++it) v.push_back({ it->second.used, it });
+			std::sort(v.begin(), v.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+			size_t drop = m.size() > keep ? m.size() - keep : 0;
+			for (size_t i = 0; i < drop; i++)
+			{
+				if (bytes) *bytes -= std::min(*bytes, cacheBytes(v[i].second->second));
+				m.erase(v[i].second);
+			}
+		}
+		static size_t cacheBytes(const ShapeTex& t) { return t.bytes; }
+		static size_t cacheBytes(const TextTex&) { return 0; }
 		struct ImgTex { rnds::TexPtr tex; float ox = 0, oy = 0, w = 0, h = 0; };	// placed in the box (device px)
 		std::map<std::string, ImgTex> images;	// by key (src, fit, size ...)
 		std::map<std::string, std::string> latest;	// src -> its last key made (drawn scaled while another size is made)
@@ -581,9 +601,10 @@ namespace banana
 				TextTex tt;
 				if (!tb.bmp.empty()) tt.tex = m->be->upload(tb.bmp, true);
 				tt.padX = tb.padX; tt.padY = tb.padY; tt.w = l.width;
-				if (texts.size() > 800) texts.clear();
+				if (texts.size() > 800) evictOldest(texts, 600);
 				it = texts.emplace(key, tt).first;
 			}
+			it->second.used = ++useTick;
 			const TextTex& tt = it->second;
 			if (tt.tex) m->be->draw(tt.tex, std::floor(x * s) - tt.padX, std::floor(y * s) - tt.padY, (float)tt.tex->w, (float)tt.tex->h, col);
 		}
@@ -599,7 +620,7 @@ namespace banana
 			for (auto& st : stops) { snprintf(kb, sizeof kb, "|%g:%08x", st.first, st.second); key += kb; }
 			padOut = pad;
 			auto it = shapes.find(key);
-			if (it != shapes.end()) return it->second;
+			if (it != shapes.end()) { it->second.used = ++useTick; return it->second.tex; }
 			rnds::Bitmap b;
 			b.w = w + 2 * pad; b.h = h + 2 * pad;
 			if (b.w <= 0 || b.h <= 0 || (size_t)b.w * b.h > 4096u * 4096u) return nullptr;
@@ -664,9 +685,25 @@ namespace banana
 					if (a > 0) { o[0] = (uint8_t)std::lround(r / a * 255); o[1] = (uint8_t)std::lround(g / a * 255); o[2] = (uint8_t)std::lround(bl / a * 255); }
 					o[3] = (uint8_t)std::lround(a * 255);
 				}
+			if (shadowColor == 0xffffffffu && !(fill >> 24) && stops.empty() && !(border > 0 && borderColor >> 24))
+			{
+				// a white glow drawn in its colour: kept as coverage (one byte a pixel, blended as text is)
+				rnds::Bitmap a8;
+				a8.w = b.w; a8.h = b.h; a8.alpha = true;
+				a8.px.resize((size_t)b.w * b.h);
+				for (size_t i = 0; i < a8.px.size(); i++) a8.px[i] = b.px[i * 4 + 3];
+				b = std::move(a8);
+			}
 			rnds::TexPtr t = m->be->upload(b, false);
-			if (shapes.size() > 400) shapes.clear();
-			shapes[key] = t;
+			// at most 400, and 32 screens' worth (100 MB at the Plus' 1024x768, 39 MB at 640x480: Nebula's home row
+			// keeps ~90 MB at the Plus' size, a gradient and a glow for each system; with less, moving along it made
+			// them again all the time). Dropped when a game starts (trim)
+			ShapeTex st{ t, ++useTick, (size_t)b.w * b.h * (b.alpha ? 1 : 4) };
+			const size_t budget = (size_t)(32.0 * W * s * H * s * 4);
+			if (shapes.size() >= 400 || shapeBytes + st.bytes > budget) evictOldest(shapes, shapes.size() * 3 / 4, &shapeBytes);
+			while (!shapes.empty() && shapeBytes + st.bytes > budget) evictOldest(shapes, shapes.size() - 1, &shapeBytes);
+			shapes[key] = st;
+			shapeBytes += st.bytes;
 			return t;
 		}
 
@@ -717,11 +754,20 @@ namespace banana
 				// the shadow offset: drawn on its own, under the box
 				int pad;
 				float zero[4] = { rad[0], rad[1], rad[2], rad[3] };
-				rnds::TexPtr st = shape(iw, ih, zero, 0, {}, 0, 0, 0, blur, spread, shc, pad);
-				if (st) m->be->draw(st, std::round(dx + sx) - pad, std::round(dy + sy) - pad, (float)st->w, (float)st->h, tint);
+				// (made in white and drawn in its colour: one picture for every colour it takes, as Nebula's glow
+				// takes the selected system's)
+				rnds::TexPtr st = shape(iw, ih, zero, 0, {}, 0, 0, 0, blur, spread, 0xffffffffu, pad);
+				if (st) m->be->draw(st, std::round(dx + sx) - pad, std::round(dy + sy) - pad, (float)st->w, (float)st->h, colorFrom(shc, f.opacity));
 				shc = 0;
 			}
 			int pad;
+			if (!hasFill && stops.empty() && !(border > 0 && bc >> 24) && shc >> 24)
+			{
+				// a shadow alone (a glow): in white, drawn in its colour, as above
+				rnds::TexPtr t = shape(iw, ih, rad, 0, stops, angle, 0, 0, blur, spread, 0xffffffffu, pad);
+				if (t) m->be->draw(t, std::round(dx) - pad, std::round(dy) - pad, (float)t->w, (float)t->h, colorFrom(shc, f.opacity));
+				return;
+			}
 			rnds::TexPtr t = shape(iw, ih, rad, hasFill ? fill : 0, stops, angle, border, bc, blur, spread, shc, pad);
 			if (t) m->be->draw(t, std::round(dx) - pad, std::round(dy) - pad, (float)t->w, (float)t->h, tint);
 		}
@@ -921,7 +967,12 @@ namespace banana
 			float ax0 = f.x + b.x * f.k, ay0 = f.y + b.y * f.k, aw = b.w * f.k, ah = b.h * f.k;	// absolute layout px
 			if (has(c, "onTap") || has(c, "tap"))
 				hits.push_back(Hit{ f.screen, ax0 * s, ay0 * s, (ax0 + aw) * s, (ay0 + ah) * s, "", -1, str(c, has(c, "onTap") ? "onTap" : "tap") });
-			Frame cf{ ax0, ay0, f.k * (float)num(c, "scale", 1), opacity, f.screen };
+			// its scale to 1/100: boxes and texts are drawn anew for every size they are seen at, and a scale that
+			// moves all the time (Noir's pulsing cards) made new ones each frame; to the hundredth, a pulse goes
+			// through a few sizes that stay cached (a step is ~1 px on a 100 px box)
+			double scl = num(c, "scale", 1);
+			if (scl != 1) scl = std::round(scl * 100) / 100;
+			Frame cf{ ax0, ay0, f.k * (float)scl, opacity, f.screen };
 			if (n->type == "rect") drawRect(c, ax0, ay0, aw, ah, cf);
 			else if (n->type == "text")
 			{
@@ -1303,6 +1354,13 @@ namespace banana
 		d->scroll = (float)mGame;
 		d->enteredAt = d->now;
 		d->launchAt = -1;
+	}
+
+	void LayoutMenu::trim()
+	{
+		d->shapes.clear();
+		d->shapeBytes = 0;
+		d->texts.clear();
 	}
 
 	void LayoutMenu::dataChanged()

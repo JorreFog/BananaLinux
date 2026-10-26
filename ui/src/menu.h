@@ -31,6 +31,7 @@ namespace banana
 		virtual void setNotifiers(std::function<void()> queued, std::function<void()> finished) = 0;
 		virtual bool animating() const = 0;
 		virtual void setLog(std::function<void(const std::string&)> log) = 0;
+		virtual void trim() {}	// a game is starting: drawn pictures it can make again let go (the memory is the game's)
 		// workOnce guards what it shares with the drawing itself: the worker may run it without the UI's lock
 		virtual bool ownLocking() const { return false; }
 	};
