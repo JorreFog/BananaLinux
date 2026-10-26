@@ -1147,6 +1147,9 @@ int main(int argc, char** argv)
 	{
 		if (screen != 0) return;
 		double t = nowMs();
+		// the flight recorder recording (bananad's /run/banana/recording): a small red dot in the top corner
+		if (access("/run/banana/recording", F_OK) == 0)
+			be.fill(std::round(disp.width() - 16 * scale), std::round(6 * scale), std::round(6 * scale), std::round(6 * scale), rnds::Color::hex(0xff3b30));
 		if (low.showing(t)) settingsView.notice(low.title, low.body, low.percent);
 		else if (health.showing(t)) settingsView.notice(health.title, health.body, -1);	// (-1: no battery)
 		else if (osdUntil > t) settingsView.level(osdLabel, osdPercent);
@@ -1493,8 +1496,16 @@ int main(int argc, char** argv)
 		close(launchWatch);
 		launchWatch = -1;
 	}
+	bool wasTyping = false;
 	while (!quit)
 	{
+		// the keyboard up or gone: bananad's recorder reads /run/banana/keyboard (no touch positions while typing)
+		if (settingsView.typing() != wasTyping)
+		{
+			wasTyping = !wasTyping;
+			if (wasTyping) { if (FILE* f = fopen("/run/banana/keyboard", "w")) fclose(f); }
+			else unlink("/run/banana/keyboard");
+		}
 		double now = nowMs();
 		{
 			std::lock_guard<std::mutex> l(worker.uiLock);

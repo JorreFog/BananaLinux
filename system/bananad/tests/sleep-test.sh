@@ -197,6 +197,45 @@ stop
 # more scenarios, a file per topic (tests/sleep-test.d), run here in turn with the helpers above
 for t in "$HERE"/tests/sleep-test.d/*.sh; do [ -f "$t" ] && . "$t"; done
 
+echo "27. the flight recorder: buttons, the lid, a sleep, touches (no position while typing) and a marker (Select held), on the card"
+# tev <type> <code> <value>...: events on the stand-in touchscreen, with the monotonic time (as the real one stamps them)
+tev() { python3 -c "
+import struct, sys, time
+t = time.clock_gettime(time.CLOCK_MONOTONIC); s = int(t); u = int((t - s) * 1e6)
+a = [int(x) for x in sys.argv[1:]]
+sys.stdout.buffer.write(b''.join(struct.pack('llHHi', s, u, a[i], a[i + 1], a[i + 2]) for i in range(0, len(a), 3)))" "$@" >&4; }
+rm -rf /data/banana/logs/sessions; rm -f /run/banana/keyboard
+start "recorder = on"
+[ -e /run/banana/recording ] && ok "recording (/run/banana/recording, for the menu's dot)" || bad "no /run/banana/recording"
+F=$(cat /run/banana/recording 2>/dev/null)
+ev $EV_KEY 304 1; ev $EV_KEY 304 0                          # A
+tev 3 57 1  3 53 100  3 54 200  0 0 0                      # a touch: tracking id 1 at 100,200, then the report
+tev 3 57 -1  0 0 0                                          # its lift
+sleep 0.5
+: > /run/banana/keyboard
+tev 3 57 2  3 53 300  3 54 50  0 0 0;  tev 3 57 -1  0 0 0  # a touch while typing
+sleep 0.5; rm -f /run/banana/keyboard
+ev $EV_KEY 314 1; ev $EV_KEY 314 0; sleep 0.3                  # a quick Select: no marker
+grep -q "MARK" "$F" 2>/dev/null && bad "a marker from a quick press" || ok "a quick Select: no marker"
+ev $EV_KEY 314 1; sleep 2.4; ev $EV_KEY 314 0                  # Select held 2 s: a marker (written at once)
+sleep 0.5
+grep -q "MARK .*marker 1" "$F" 2>/dev/null && ok "Select held 2 s: the marker on the card at once" || bad "no marker in $F"
+[ "$(cat /sys/class/leds/green:power/brightness)" = 128 ] && ok "the power LED back after its blinks" || bad "LED $(cat /sys/class/leds/green:power/brightness)"
+echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
+asleep && ok "asleep" || bad "no sleep"
+grep -q "button .*a down" "$F" && grep -q "lid .*closed" "$F" && ok "flushed before the sleep: the button, the lid" || bad "not flushed before the sleep: $(tail -n 3 "$F" 2>/dev/null | tr '\n' '|')"
+grep -q "touch .*down 100,200" "$F" && grep -q "touch .*up 100,200" "$F" && ok "the touch, where (100,200)" || bad "touch lines: $(grep touch "$F" | tr '\n' '|')"
+grep -q "keyboard open: where not recorded" "$F" && ! grep -q "300,50" "$F" && ok "the touch while typing, without where" || bad "while typing: $(grep touch "$F" | tr '\n' '|')"
+echo 0 > /run/test/lid; wake; sleep 0.3
+stop
+sed -n '1,2p' "$F" | grep -q "flight recorder" && ok "the session's header" || bad "header: $(head -n1 "$F")"
+start
+[ ! -e /run/banana/recording ] && ok "recorder off: not recording" || bad "recording with recorder off"
+n=$(ls /data/banana/logs/sessions | wc -l)
+ev $EV_KEY 304 1; ev $EV_KEY 304 0; sleep 0.3
+[ "$(ls /data/banana/logs/sessions | wc -l)" = "$n" ] && ok "recorder off: no new session" || bad "a session with recorder off"
+stop
+
 kill $UI $GAME 2>/dev/null || true
 echo "sleep test: $pass passed, $fail failed"
 [ $fail = 0 ]

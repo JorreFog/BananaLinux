@@ -44,6 +44,9 @@ namespace banana
 		void close() { mOpen = false; page = LIST; wizard = false; }
 		void setup() { mOpen = true; openSetup(); }	// the first-time setup, from the host
 		bool isOpen() const { return mOpen; }
+		// the on-screen keyboard is up (a password or an account being typed): the flight recorder leaves touches'
+		// positions out while it is
+		bool typing() const { return mOpen && page == KEYBOARD; }
 		bool animating() const;	// the highlight or the list still easing into place: frames wanted
 
 		// The game panel (settings.cpp, end): while a RetroArch game runs on one panel through a DRM lease, the other
@@ -118,6 +121,11 @@ namespace banana
 		int groupOf(int item) const;			// the group an item is in
 		int groupStart(int g) const, groupEnd(int g) const;	// its items: [start, end)
 		std::string groupHint(int g) const;		// what is in it, for its tile
+		int tiles() const;						// the groups with a tile (the Developer one once unlocked)
+		int cols() const;						// the tiles' grid: 3 columns, 4 with the Developer tile
+		float tileW() const;
+		bool devOn = false;						// the Developer tile unlocked (settings.conf's developer)
+		int aboutTaps = 0;						// A's on System > About so far (seven unlock it)
 		Result pressGroups(Key k);
 		void renderGroups();
 		bool downOnRow = false;

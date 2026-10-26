@@ -259,6 +259,7 @@ namespace banana
 
 	// on the RG DS Plus a shader's GPU pass heats the chip enough to slow the CPU in a long session (Golden Sun: Dark
 	// Dawn at 2x: none 0.0% missed refreshes in 6 min, the LCD grid 0.6-1%, measured 2026-10-18)
+	static const char* DEV = "Developer";	// the Developer list's section: opened from System, not a tile
 	static const char* PLUS_SHADER_NOTE = " On the RG DS Plus a shader also heats the chip: a heavy 3D game can drop frames after a few minutes with one. Set such a game to None on its own page (X in the library).";
 
 	// Settings > Nintendo DS > Shader's choices: Banana's shaders, then the card's own (banana/shaders/<name>.frag,
@@ -442,9 +443,19 @@ namespace banana
 			"", "reset_system", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "Reset emulator settings", "Puts the emulator choices back to their defaults: the core.<system> picks and RetroArch's shader, audio latency and VSync. Your menu and card settings stay. Press A twice.",
 			"", "reset_emulator", { "" }, { "" }, Item::ACTION);
-		add(S, "gear", "About", "", "", "", {}, {}, Item::INFO);
+		add(S, "gear", "About", "", "", "about", {}, {}, Item::INFO);
 		add(S, "gear", "Restart", "Restarts the handheld. Press A twice.", "", "reboot", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "Shut down", "Turns the handheld off. Press A twice. (Or hold the power button.)", "", "poweroff", { "" }, { "" }, Item::ACTION);
+		// the Developer list: a 7th tile, there once unlocked (A seven times on System > About; settings.conf's developer)
+		add(DEV, "gear", "Flight recorder", "Records what the handheld does: buttons, touches, the lid, the screens, sleep, the battery and Wi-Fi.", power, "recorder",
+			{ "Off", "On" }, { "off", "on" });
+		items.back().hints = { "Not recording.",
+			"Recording to banana/logs/sessions, even after a restart. Hold Select for 2 seconds to mark a moment (the light blinks twice)." };
+		add(DEV, "gear", "Sleep timing log", "How long each part of the handheld takes to sleep and to wake.", power, "sleep_debug",
+			{ "Off", "On" }, { "no", "yes" });
+		items.back().hints = { "Not logged.", "Written to banana/logs/sleep-devices.log after each wake." };
+		add(DEV, "gear", "Hide developer options", "Takes the Developer tile away again (A seven times on System > About brings it back). Press A twice.",
+			"", "dev_hide", { "" }, { "" }, Item::ACTION);
 	}
 
 	void Settings::load(Item& it)
@@ -584,6 +595,12 @@ namespace banana
 		about = a.str();
 	}
 
+	// the tiles: every group but the Developer list (opened from System's Developer row)
+	int Settings::tiles() const { return (int)groups.size() - (!devOn && !groups.empty() && groups.back() == DEV ? 1 : 0); }
+	// the grid: three columns of 196 for six tiles, four of 145 once the Developer tile is there (the same 604 across)
+	int Settings::cols() const { return tiles() > 6 ? 4 : 3; }
+	float Settings::tileW() const { return cols() == 3 ? 196 : 145; }
+
 	int Settings::groupOf(int item) const
 	{
 		for (int g = 0; g < (int)groups.size(); g++) if (items[item].section == groups[g]) return g;
@@ -619,8 +636,10 @@ namespace banana
 		if (groups.empty())
 			for (auto& it : items)
 				if (std::find(groups.begin(), groups.end(), it.section) == groups.end()) groups.push_back(it.section);
+		devOn = getConfValue(data + "/settings.conf", "developer", "off") == "on";
+		aboutTaps = 0;
 		inGroups = true;
-		gsel = groupOf(sel);
+		gsel = std::min(groupOf(sel), tiles() - 1);	// (the Developer tile hidden since: System's)
 		for (auto& it : items) load(it);
 		refreshInfo();
 		armed = -1;
@@ -691,6 +710,19 @@ namespace banana
 	Settings::Result Settings::change(int dir)
 	{
 		Item& it = items[sel];
+		if (it.key == "about" && dir > 0 && !devOn)
+		{
+			// A seven times on About: the Developer tile (as a phone's build number); a count from the fourth
+			if (++aboutTaps >= 7)
+			{
+				aboutTaps = 0;
+				devOn = true;
+				setConfValue(data + "/settings.conf", "developer", "on");
+				toast("Developer options are on", "A Developer tile is in Settings now.", 0x6ad07a, 1, 5000);
+			}
+			else if (aboutTaps >= 4) toast(std::to_string(7 - aboutTaps) + " more", "for the developer options", 0x6ad07a, 1, 1500);
+			return MOVED;
+		}
 		if (it.kind == Item::INFO) return NONE;
 		if (it.kind == Item::PAGE)
 		{
@@ -703,6 +735,16 @@ namespace banana
 		{
 			if (dir <= 0) { armed = -1; return MOVED; }
 			if (armed != sel) { armed = sel; return MOVED; }
+			if (it.key == "dev_hide")
+			{
+				armed = -1;
+				devOn = false;
+				setConfValue(data + "/settings.conf", "developer", "off");
+				inGroups = true;
+				gsel = std::min(gsel, tiles() - 1);
+				toast("Developer options hidden", "A seven times on System > About brings them back.", 0x6ad07a, 1, 4000);
+				return MOVED;
+			}
 			if (it.key == "switch")
 			{
 				// the other slot made the default, then a restart; the script says why not when it can't
@@ -823,6 +865,7 @@ namespace banana
 		case Key::UP: case Key::DOWN:
 		{
 			// round within the group's own list
+			aboutTaps = 0;	// (the unlock's count is for presses in a row on About)
 			int n = e - b;
 			sel = b + (sel - b + (k == Key::UP ? -1 : 1) + n) % n;
 			armed = -1;
@@ -834,7 +877,7 @@ namespace banana
 		case Key::L: case Key::R:
 		{
 			// the previous / next group's list
-			int n = (int)groups.size();
+			int n = tiles();
 			gsel = (g + (k == Key::R ? 1 : -1) + n) % n;
 			sel = top = groupStart(gsel);
 			armed = -1;
@@ -851,13 +894,13 @@ namespace banana
 
 	Settings::Result Settings::pressGroups(Key k)
 	{
-		int n = (int)groups.size();
+		int n = tiles();
 		switch (k)
 		{
-		// a grid of three columns, as the in-game menu's main page
+		// a grid of three columns (four with the Developer tile), as the in-game menu's main page
 		case Key::LEFT: gsel = (gsel + n - 1) % n; return MOVED;
 		case Key::RIGHT: gsel = (gsel + 1) % n; return MOVED;
-		case Key::UP: case Key::DOWN: gsel = (gsel + (k == Key::UP ? n - 3 : 3)) % n; return MOVED;
+		case Key::UP: case Key::DOWN: gsel = (gsel + (k == Key::UP ? n - cols() : cols())) % n; return MOVED;
 		case Key::L: gsel = (gsel + n - 1) % n; return MOVED;
 		case Key::R: gsel = (gsel + 1) % n; return MOVED;
 		case Key::A:
@@ -908,10 +951,10 @@ namespace banana
 		if (inGroups)
 		{
 			if (downY >= 418 && downY <= 466) return pressGroups(downX < 320 ? Key::B : Key::A);
-			for (int g = 0; g < (int)groups.size(); g++)
+			for (int g = 0; g < tiles(); g++)
 			{
-				float x = 18 + (g % 3) * 204, y = 82 + (g / 3) * 166;
-				if (downX < x || downX > x + 196 || downY < y || downY > y + 158) continue;
+				float x = 18 + (g % cols()) * (tileW() + 8), y = 82 + (g / cols()) * 166;
+				if (downX < x || downX > x + tileW() || downY < y || downY > y + 158) continue;
 				if (g != gsel) { gsel = g; return MOVED; }
 				return pressGroups(Key::A);
 			}
@@ -1210,7 +1253,7 @@ namespace banana
 	bool Settings::animating() const
 	{
 		if (!mOpen || page != LIST) return false;
-		if (inGroups) return aCol != gsel % 3 || aRow != gsel / 3;
+		if (inGroups) return aCol != gsel % cols() || aRow != gsel / cols();
 		return aPick != sel || aTop != top;
 	}
 
@@ -1221,7 +1264,7 @@ namespace banana
 		aLast = t;
 		float k = 1 - (float)std::exp(-dt / 55.0);
 		auto ease = [&](float& v, float to) { if (v < -0.5f) v = to; v += (to - v) * k; if (std::fabs(to - v) < 0.01f) v = to; };
-		if (inGroups) { ease(aCol, (float)(gsel % 3)); ease(aRow, (float)(gsel / 3)); }
+		if (inGroups) { ease(aCol, (float)(gsel % cols())); ease(aRow, (float)(gsel / cols())); }
 		else
 		{
 			int g = groupOf(sel);
@@ -1234,7 +1277,7 @@ namespace banana
 	void Settings::renderGroups()
 	{
 		SPal p = pal(light);
-		int g0 = std::max(0, std::min(gsel, (int)groups.size() - 1));
+		int g0 = std::max(0, std::min(gsel, tiles() - 1));
 		const Item& first = items[groupStart(g0)];
 
 		be->beginScreen(0);
@@ -1260,19 +1303,21 @@ namespace banana
 		text(sub, true, 17, 602 - sw, 31, p.muted);
 		advance();
 		aGroup = -1;	// (the list starts still when a group opens)
-		for (int g = 0; g < (int)groups.size() && g < 6; g++) box("slot", false, 18 + (g % 3) * 204, 82 + (g / 3) * 166, 196, 158);
-		box("pick", true, 18 + aCol * 204, 82 + aRow * 166, 196, 158);
-		for (int g = 0; g < (int)groups.size() && g < 6; g++)
+		const int C = cols();
+		const float W = tileW(), step = W + 8;
+		for (int g = 0; g < tiles() && g < 8; g++) box("slot", false, 18 + (g % C) * step, 82 + (g / C) * 166, W, 158);
+		box("pick", true, 18 + aCol * step, 82 + aRow * 166, W, 158);
+		for (int g = 0; g < tiles() && g < 8; g++)
 		{
-			bool on = std::fabs(g % 3 - aCol) < 0.5f && std::fabs(g / 3 - aRow) < 0.5f;
-			float x = 18 + (g % 3) * 204, y = 82 + (g / 3) * 166;
-			iconCentred(items[groupStart(g)].icon, x + 98, y + 22, 2);
-			std::string label = fit(groups[g], true, 19, 180);
+			bool on = std::fabs(g % C - aCol) < 0.5f && std::fabs(g / C - aRow) < 0.5f;
+			float x = 18 + (g % C) * step, y = 82 + (g / C) * 166;
+			iconCentred(items[groupStart(g)].icon, x + W / 2, y + 22, 2);
+			std::string label = fit(groups[g], true, 19, W - 16);
 			float lw = text(label, true, 19, 0, 0, p.ink, false, 0, true);
-			text(label, true, 19, x + 98 - lw / 2, y + 84, on ? p.onPick : p.ink);
-			std::string hint = fit(groupHint(g), false, 14, 176);
+			text(label, true, 19, x + W / 2 - lw / 2, y + 84, on ? p.onPick : p.ink);
+			std::string hint = fit(groupHint(g), false, 14, W - 20);
 			float hw = text(hint, false, 14, 0, 0, p.muted, false, 0, true);
-			text(hint, false, 14, x + 98 - hw / 2, y + 114, on ? p.onPickAccent : p.muted);
+			text(hint, false, 14, x + W / 2 - hw / 2, y + 114, on ? p.onPickAccent : p.muted);
 		}
 		float bw = faceWidth("B", "Close");
 		face("B", "Close", 18, bw);
