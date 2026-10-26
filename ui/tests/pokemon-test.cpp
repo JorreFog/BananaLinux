@@ -862,7 +862,7 @@ int main(int argc, char** argv)
 		for (size_t g = 0; g < t.grids.size(); g++)
 		{
 			std::string secs;
-			for (uint8_t v : t.grids[g].cells) if (v != t.mapsecNone && v != 0xff && secs.find(t.mapName(v)) == std::string::npos && secs.size() < 120) secs += t.mapName(v) + ",";
+			for (uint8_t v : t.grids[g].cells) if (v != t.mapsecNone && v != 0xff && secs.find(t.mapName(v)) == std::string::npos && secs.size() < 160) { char hx[8]; snprintf(hx, sizeof hx, "=%x,", v); secs += t.mapName(v) + hx; }
 			printf("  grid %zu %dx%d -> picture %d: %s\n", g, t.grids[g].w, t.grids[g].h, t.gridImage[g], secs.c_str());
 		}
 	}

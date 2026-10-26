@@ -5587,12 +5587,39 @@ namespace banana
 		}
 		if (!g && !t.grids.empty()) g = &t.grids[0];
 		if (!g) { wrapped("This game's region map wasn't found in its ROM.", 17, 40, 104, 560, 2, p.muted); return; }
-		float cell = std::floor(std::min(576.0f / g->w, 262.0f / g->h));
-		float ox = 18 + (604 - cell * g->w) / 2, oy = 94 + (268 - cell * g->h) / 2;
+		// the game's own region map picture under the sections when the ROM has one (pokemap.cpp), else squares
+		int gi = (int)(g - t.grids.data());
+		const pkmn::RomTables::MapImage* im = gi >= 0 && gi < (int)t.gridImage.size() && t.gridImage[gi] >= 0 &&
+			t.gridImage[gi] < (int)t.mapImages.size() ? &t.mapImages[t.gridImage[gi]] : nullptr;
+		float cell, ox, oy;
+		if (im)
+		{
+			// a whole number of panel pixels a picture pixel (crisp), as large as the box takes
+			if (tb != pkMapTables) { pkMapTex.clear(); pkMapTables = tb; }
+			int key = t.gridImage[gi];
+			auto it = pkMapTex.find(key);
+			if (it == pkMapTex.end())
+			{
+				rnds::Bitmap bm;
+				bm.w = im->w; bm.h = im->h; bm.px = im->rgba;
+				it = pkMapTex.emplace(key, be->upload(bm, false)).first;	// (nearest: crisp pixels)
+			}
+			int k = std::max(1, (int)std::floor(std::min(588.0f * s / im->w, 276.0f * s / im->h)));
+			float pw = (float)im->w * k, ph = (float)im->h * k;
+			float px0 = std::round(X(18 + 302) - pw / 2), py0 = std::round(X(92) + (X(276) - ph) / 2);
+			if (it->second) be->draw(it->second, px0, py0, pw, ph, Color(1, 1, 1, 1));
+			cell = 8.0f * k / s; ox = (px0 + im->cellX * k) / s; oy = (py0 + im->cellY * k) / s;
+		}
+		else
+		{
+			cell = std::floor(std::min(576.0f / g->w, 262.0f / g->h));
+			ox = 18 + (604 - cell * g->w) / 2; oy = 94 + (268 - cell * g->h) / 2;
+		}
 		pkMapX = ox; pkMapY = oy; pkMapCell = cell; pkMapW = g->w; pkMapH = g->h; pkMapCells = g->cells;
 		std::map<int, int> size;
 		for (uint8_t v : g->cells) size[v]++;
 		int x0 = 99, y0 = 99, x1 = -1, y1 = -1;
+		float th = std::max(2.0f, std::round(X(2.5f)));	// (an outline's thickness, panel pixels)
 		for (int y = 0; y < g->h; y++)
 			for (int x = 0; x < g->w; x++)
 			{
@@ -5600,17 +5627,41 @@ namespace banana
 				if (v == t.mapsecNone || v == 0xff) continue;
 				bool here = v == sn.mapsec;
 				if (here) { x0 = std::min(x0, x); y0 = std::min(y0, y); x1 = std::max(x1, x); y1 = std::max(y1, y); }
+				if (im)
+				{
+					// on the picture: the area and the section tapped outlined (their outer edges), nothing else drawn
+					if (!here && v != pkMapPick) continue;
+					// (a dark line outside, the colour inside it: seen on the map's own yellows and greens)
+					Color c = here ? p.accent : Color::hex(0xffffff), dark = Color::hex(0x101018);
+					float cx = std::round(X(ox + x * cell)), cy = std::round(X(oy + y * cell)), cw = std::round(X(ox + (x + 1) * cell)) - cx;
+					auto other = [&](int nx, int ny) { return nx < 0 || ny < 0 || nx >= g->w || ny >= g->h || g->cells[ny * g->w + nx] != v; };
+					for (int pass = 0; pass < 2; pass++)
+					{
+						float o = pass ? 0 : th, w = pass ? th : th;	// (pass 0: the dark line just outside)
+						Color cc = pass ? c : dark;
+						if (other(x, y - 1)) be->fill(cx - o, cy - o, cw + 2 * o, w, cc);
+						if (other(x, y + 1)) be->fill(cx - o, cy + cw - th + o, cw + 2 * o, w, cc);
+						if (other(x - 1, y)) be->fill(cx - o, cy - o, w, cw + 2 * o, cc);
+						if (other(x + 1, y)) be->fill(cx + cw - th + o, cy - o, w, cw + 2 * o, cc);
+					}
+					continue;
+				}
 				Color c = here ? p.accent : size[v] <= 2 ? p.ink : p.line;	// (a town: one or two squares)
 				if (v == pkMapPick && !here)	// (the square tapped: a frame in the accent)
 					be->fill(std::round(X(ox + x * cell - 1)), std::round(X(oy + y * cell - 1)), std::round(X(cell + 2)), std::round(X(cell + 2)), p.accent);
 				be->fill(std::round(X(ox + x * cell + 1)), std::round(X(oy + y * cell + 1)), std::round(X(cell - 2)), std::round(X(cell - 2)), c);
 			}
-		// the legend (or the name of the square tapped)
+		// the legend (or the name of the place tapped)
 		{
 			float ly = 376, lx = 36, sq = 12;
-			auto key = [&](Color c, const char* what)
+			auto key = [&](Color c, const char* what, bool frame)
 			{
-				be->fill(std::round(X(lx)), std::round(X(ly + 3)), std::round(X(sq)), std::round(X(sq)), c);
+				if (frame)
+				{
+					float fx = std::round(X(lx)), fy = std::round(X(ly + 3)), fw = std::round(X(sq));
+					be->fill(fx, fy, fw, th, c); be->fill(fx, fy + fw - th, fw, th, c); be->fill(fx, fy, th, fw, c); be->fill(fx + fw - th, fy, th, fw, c);
+				}
+				else be->fill(std::round(X(lx)), std::round(X(ly + 3)), std::round(X(sq)), std::round(X(sq)), c);
 				lx += sq + 6;
 				lx += text(what, false, 13, lx, ly, p.muted) + 16;
 			};
@@ -5619,11 +5670,23 @@ namespace banana
 				std::string nm = t.mapName(pkMapPick);
 				text(fit("Tapped: " + (nm.empty() ? std::string("(no name)") : nm), true, 15, 560), true, 15, 36, ly - 1, p.accent);
 			}
+			else if (im)
+			{
+				if (x1 >= 0) key(p.accent, "You are here", true);
+				else lx += text("Not on the region map here", false, 13, lx, ly, p.muted) + 16;
+				if (x1 >= 0)
+				{
+					be->fill(std::round(X(lx + 1)), std::round(X(ly + 4)), std::round(X(10)), std::round(X(10)), Color::hex(0xe8504a));
+					lx += 18;
+					lx += text("You", false, 13, lx, ly, p.muted) + 16;
+				}
+				text(fit("Tap the map: a place's name", false, 13, 600 - lx), false, 13, lx, ly, p.muted);
+			}
 			else
 			{
-				key(p.accent, "You are here");
-				key(p.ink, "Town");
-				key(p.line, "Route or area");
+				key(p.accent, "You are here", false);
+				key(p.ink, "Town", false);
+				key(p.line, "Route or area", false);
 				be->fill(std::round(X(lx + 1)), std::round(X(ly + 4)), std::round(X(10)), std::round(X(10)), Color::hex(0xe8504a));
 				lx += 18;
 				lx += text("You", false, 13, lx, ly, p.muted) + 16;
@@ -5632,7 +5695,7 @@ namespace banana
 		}
 		if (x1 < 0)
 		{
-			text("Not on the region map here", false, 14, 36, 352, p.muted);
+			if (!im) text("Not on the region map here", false, 14, 36, 352, p.muted);
 			return;
 		}
 		// the player: inside the area's squares by the place on its map (a route several squares long)
