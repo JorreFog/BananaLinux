@@ -266,7 +266,7 @@ def card(w, h, r=24):
     return im
 
 # ---- the story --------------------------------------------------------------------------------------------------------
-gba_line = f'{COMPANIONS} games now have a GBA companion.' if COMPANIONS else 'Your DS games, joined by their GBA companions.'
+gba_line = f'{COMPANIONS} games now have a GBA companion.' if COMPANIONS else 'Your GBA games, joined by their companions.'
 SCENES = [
     dict(beats=None, end=beat_at(5.15) - MUSIC_AT, kind='open', glow=(255, 190, 50)),
     dict(beats=None, end=after(0), kind='whatsnew', glow=(255, 190, 50)),
