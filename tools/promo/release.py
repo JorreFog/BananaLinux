@@ -5,7 +5,8 @@
 # bloom and grain. screens.py renders the example themes first (banana-ui, headless).
 #
 #   NO_DATE=1 python3 tools/promo/screens.py hillside turntable classic
-#   STUDIO=dir-with-1.webp-and-2.webp [COMPANIONS=n] [MUSIC=Wasabi.mp3] python3 tools/promo/release.py [out.mp4]
+#   STUDIO=dir-with-1.webp-and-2.webp COMPANION=dir-with-the-recordings [COMPANIONS=n] [MUSIC=Wasabi.mp3] \
+#     python3 tools/promo/release.py [out.mp4]
 #
 # The cuts follow wasabi-beats.json (the song's beats in seconds, from librosa's beat tracker): the drop at 10.8 s
 # brings the first feature, and the end card lands where the song comes back in, 128 beats later.
@@ -261,6 +262,32 @@ def studio_windows():
     return wins
 WINDOWS = studio_windows()
 
+# the GBA companions, recorded on an RG DS Plus (the media/companionvideo branch): 512 x 768, the top panel over the
+# bottom one, captured at 10 fps; frames extracted once into screens/
+COMPANION = os.environ.get('COMPANION', '')	# the folder holding companionvideo.mp4 and pokemoncompanionvideo.mp4
+RECORDINGS = ['companionvideo', 'pokemoncompanionvideo']
+COMPANION_AT = [4.6, 6.0]	# where each clip starts: Sonic's moves and zones pages, Pokemon's party and summary (the
+				# achievements page after 19 s shows a date)
+def extract_companions():
+    for name in RECORDINGS:
+        src, out = os.path.join(COMPANION, name + '.mp4'), os.path.join(SCREENS, name)
+        if not COMPANION or not os.path.exists(src) or os.path.exists(out + '/f0001.jpg'): continue
+        os.makedirs(out, exist_ok=True)
+        subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-i', src, '-vf', 'fps=10', '-q:v', '2', out + '/f%04d.jpg'], check=True)
+extract_companions()
+_ccache = {}
+def companion(k, t, side):
+    p = os.path.join(SCREENS, RECORDINGS[k], f'f{max(1, int(t * 10) + 1):04d}.jpg')
+    if not os.path.exists(p): return None
+    key = (p, side)
+    if key not in _ccache:
+        if len(_ccache) > 24: _ccache.clear()
+        im = Image.open(p).convert('RGB')
+        im = im.crop((0, 0, 512, 384) if side == 'top' else (0, 384, 512, 768))
+        if side == 'top': ImageDraw.Draw(im).rectangle((360, 0, 511, 11), fill=(0, 0, 0))	# the FPS counter, on the black above the game
+        _ccache[key] = im.resize((SW, SH), Image.LANCZOS)
+    return _ccache[key]
+
 def card(w, h, r=24):
     im = Image.new('RGBA', (w, h), (0, 0, 0, 0))
     ImageDraw.Draw(im).rounded_rectangle((0, 0, w - 1, h - 1), r, fill=(20, 21, 28, 240), outline=(62, 64, 78, 255), width=2)
@@ -277,18 +304,19 @@ SCENES = [
     dict(beats=16, kind='studio', glow=(60, 200, 190), n=1, tag='BANANA THEME STUDIO', name='Banana Theme Studio',
          head='Design your theme on your computer.',
          points=['Drag elements onto both screens', 'Layers, components and assets', 'An exact preview from the real engine']),
-    dict(beats=12, kind='gba', glow=(120, 90, 240), n=2, tag='GBA COMPANIONS', name='GBA game companions', head=gba_line, points=[]),
+    dict(beats=16, kind='gba', glow=(120, 90, 240), n=2, tag='GBA COMPANIONS', name='GBA game companions', head=gba_line,
+         points=['Moves, zones, items and progress', 'Pokémon: your party, summaries and battles', 'On the second screen while you play']),
     dict(beats=12, kind='bt', glow=(50, 110, 255), n=3, tag='BLUETOOTH AUDIO', name='Bluetooth audio',
          head='Play with wireless headphones and speakers.', points=[]),
     dict(beats=12, kind='ota', glow=(255, 160, 50), n=4, tag='OTA UPDATER', name='Updates over the air',
          head='Update BananaOS right from your handheld.', points=[]),
     dict(beats=18, kind='res', glow=(255, 200, 60), n=5, tag='BANANADS', name='BananaDS, upgraded',
          head='Faster, and new 3x and 4x resolutions.', points=[]),
-    dict(beats=14, kind='latency', glow=(255, 100, 70), n=6, tag='LOW LATENCY MODE', name='Low latency mode',
+    dict(beats=12, kind='latency', glow=(255, 100, 70), n=6, tag='LOW LATENCY MODE', name='Low latency mode',
          head='For both SuperDrastic and BananaDS.', points=[]),
     dict(beats=14, kind='sync', glow=(70, 210, 120), n=7, tag='HOME SERVER SYNC', name='Home server sync',
          head='Your ROMs and saves, synced with your own server.', points=[]),
-    dict(beats=14, kind='more', glow=(255, 190, 50)),
+    dict(beats=12, kind='more', glow=(255, 190, 50)),
     dict(beats=18, kind='end', glow=(255, 190, 50)),
 ]
 t0, nb = 0.0, 0
@@ -592,25 +620,25 @@ def draw_feature(vis, vd, S, local, beat):
         paste(vis, sh, 1395 - sh.width / 2, y + pic.height - 60, a_in)
         paste(vis, pic, x, y, a_in)
     elif kind == 'gba':
-        cy = H / 2 - 40 + lift
-        draw_vox(vis, 'nds', icon('nds'), 9, VX - 270, cy, -25 + 18 * math.sin(local * 1.3), 10, alpha=a_in, glow=0.2 * beat)
-        b = ease((local - 0.6) / 0.9)
-        draw_vox(vis, 'gba', icon('gba'), 9, VX + 270, cy + 120 * (1 - back((local - 0.6) / 1.1)), -25 + 18 * math.sin(local * 1.3 + 1), 10, alpha=b, glow=0.2 * beat)
-        for n in range(7):
-            x = VX - 120 + n * 40
-            ph = (local * 2.4 - n * 0.16) % 1.0
-            a = ease((local - 1.0) / 0.4) * (0.3 + 0.7 * (1 - abs(ph - 0.5) * 2))
-            s = 8 + 6 * (1 - abs(ph - 0.5) * 2)
-            vd.rectangle((x - s, cy - s, x + s, cy + s), fill=YELLOW + (int(255 * a),))
-        f = F(REG, 30)
-        if COMPANIONS:
-            n = int(round(int(COMPANIONS) * ease((local - 1.0) / 1.8)))
-            fb = F(MED, 130); s_ = str(n)
-            text(vd, (VX - fb.getlength(s_) / 2, cy + 170), s_, fb, YELLOW, ease((local - 1.0) / 0.5))
-            text(vd, (VX - f.getlength('games') / 2, cy + 320), 'games', f, SOFT, ease((local - 1.2) / 0.5))
-        else:
-            text(vd, (VX - 270 - f.getlength('Nintendo DS') / 2, cy + 190), 'Nintendo DS', f, SOFT, a_in)
-            text(vd, (VX + 270 - f.getlength('Game Boy Advance') / 2, cy + 190), 'Game Boy Advance', f, SOFT, b)
+        # the companions on the handheld's two screens: Sonic Advance, then a pixel wipe to Pokemon Emerald
+        half = (S['len'] - 0.6) / 2
+        k = 0 if local < half or not companion(1, 0, 'top') else 1
+        lt = local - k * half
+        dev = DEVICE.copy()
+        for side, box in (('top', TOPBOX), ('bot', BOTBOX)):
+            s = companion(k, COMPANION_AT[k] + lt, side)
+            if s is None: break
+            if k == 1 and lt < 0.4:
+                s = Image.composite(s, companion(0, COMPANION_AT[0] + half, side), wipe_mask(lt / 0.4, 50 + (side == 'bot'), (SW, SH)))
+            dev.paste(s, (box[0] + 6, box[1] + 6), MASK)
+        dev = sheen(dev, clamp01(lt / half))
+        yaw = -16 + 5 * math.sin(local * 0.7) + 30 * (1 - a_in)
+        pic, (x, y) = panel(dev, VX, H / 2 + lift, yaw, 5 + 2 * math.sin(local * 0.5), -1.5, s=0.98)
+        sh = soft_shadow(pic.width, 80, 160)
+        paste(vis, sh, VX - sh.width / 2, y + pic.height - 60, a_in)
+        paste(vis, pic, x, y, a_in)
+        f = F(MED, 22); s_ = ['SONIC ADVANCE', 'POKÉMON EMERALD'][k] + '   ON THE RG DS PLUS'
+        text(vd, (VX - f.getlength(s_) / 2, 1030), s_, f, SOFT, a_in)
     elif kind == 'bt':
         cy, cx = H / 2 - 40 + lift, VX - 250
         draw_vox(vis, 'chip', BT_CHIP, 12, cx, cy, -20 + 14 * math.sin(local * 1.2), 8, alpha=a_in, glow=0.25 * beat)
