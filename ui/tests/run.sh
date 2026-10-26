@@ -216,6 +216,22 @@ for size in 640x480 1024x768; do
         || { echo "FAIL $size: banana-ui (game options 3) exited $?"; fail=1; }
     [ "$(cat "$F3" 2>/dev/null)" = "Banana Kart DS.nds = 1" ] || { echo "FAIL $size: game options, B: $(cat "$F3" 2>&1)"; fail=1; }
     rm -f "$F3"
+    # 4x asked first (it runs hot): left from "As in Settings" on 3D resolution is 4x; B keeps it as it was (nothing
+    # written), Use 4x (down, A) writes it; right from 4x (leaving it) asks nothing
+    FR="$FX/data/nds-per-game-res.conf"; rm -f "$FR"
+    "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "lib 0 0; press x; press down; press down; press left; shot hot4x; press b" 2>> "$plog3" \
+        || { echo "FAIL $size: banana-ui (4x prompt) exited $?"; fail=1; }
+    [ -e "$FR" ] && { echo "FAIL $size: 4x kept without Use 4x: $(cat "$FR")"; fail=1; }
+    [ "$(convert "$OUT/$size-hot4x-top.png" -format '%[fx:standard_deviation>0.01]' info:)" = 1 ] || { echo "FAIL $size: no 4x prompt drawn"; fail=1; }
+    "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "lib 0 0; press x; press down; press down; press left; press down; press a" 2>> "$plog3" \
+        || { echo "FAIL $size: banana-ui (4x prompt 2) exited $?"; fail=1; }
+    [ "$(cat "$FR" 2>/dev/null)" = "Banana Kart DS.nds = 4" ] || { echo "FAIL $size: Use 4x: $(cat "$FR" 2>&1)"; fail=1; }
+    "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "lib 0 0; press x; press down; press down; press right" 2>> "$plog3" \
+        || { echo "FAIL $size: banana-ui (4x prompt 3) exited $?"; fail=1; }
+    [ -e "$FR" ] && { echo "FAIL $size: leaving 4x asked or kept it: $(cat "$FR")"; fail=1; }
     # review fixes on the game page and the keyboard: m7 a pre-filled "Café" loses its whole é to one B (not half of it);
     # m4 a name of its own deleted, then the scraped one typed again: no name of its own; m6 a sharing name with the
     # password step left by B: nothing written

@@ -371,6 +371,18 @@ namespace banana
 		bool cjkLoaded = false;
 		Result pressLangAsk(Key k);
 		void renderLangAsk();
+		// the same question's look for 4x (owner: it runs hot and drains the battery): asked before a DS 3D resolution
+		// is set to 4x, the Settings row (1) or a game's own (2); hotAt the value it would get, hotOld the one kept
+		int hotAsk = 0, hotAt = 0;
+		bool hotYes = false;
+		std::string hotOld;
+		Result pressHotAsk(Key k);
+		void renderHotAsk();
+		// the questions' bottom panel: a line, then No and Yes (each its words in the menu's language, and a second line
+		// under it when there is one), B Back and A OK; and a tap on it: -1 nothing, 0 the other button picked, 1 OK
+		void askButtons(const std::string& title, const std::string& no1, const std::string& no2, const std::string& yes1,
+			const std::string& yes2, bool yes);
+		int askTouch(float cx, float cy, bool& yes);
 		Result resetApply(bool emulator);	// the Reset rows: schema defaults written, live bits applied, rows reloaded
 		void save(const Item& it);
 		void refreshInfo();

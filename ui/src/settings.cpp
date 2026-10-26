@@ -1116,6 +1116,15 @@ namespace banana
 		if (it.kind == Item::BRIGHTNESS || it.kind == Item::VOLUME) at = std::min(n - 1, std::max(0, at));	// a slider stops at its ends
 		else at = (at + n) % n;
 		if (at == it.at) return NONE;
+		if (it.key == "render.scale" && it.values[at] == "4" && (it.at < 0 || it.values[it.at] != "4"))
+		{
+			// to 4x: asked first (it runs hot), nothing saved until "Use 4x"
+			hotAsk = 1; hotAt = at; hotYes = false;
+			hotOld = it.at >= 0 ? it.names[it.at] : "2x";
+			if (hotOld.find(' ') != std::string::npos) hotOld.resize(hotOld.find(' '));	// ("3x (experimental)")
+			armed = -1;
+			return MOVED;
+		}
 		it.at = at;
 		save(it);
 		if (it.key == "nds_emulator")
@@ -1205,6 +1214,7 @@ namespace banana
 
 	Settings::Result Settings::press(Key k)
 	{
+		if (hotAsk) return pressHotAsk(k);
 		if (page == NETWORKS) return pressNetworks(k);
 		if (page == BLUETOOTH) return pressBluetooth(k);
 		if (page == KEYBOARD) return pressKeyboard(k);
@@ -1341,6 +1351,12 @@ namespace banana
 		if (down) { downX = cx; downY = cy; downOnRow = true; return NONE; }
 		if (!downOnRow) return NONE;
 		downOnRow = false;
+		if (hotAsk)
+		{
+			if (downY >= 418 && downY <= 466) return pressHotAsk(downX < 320 ? Key::B : Key::A);
+			int t = askTouch(cx, cy, hotYes);
+			return t < 0 ? NONE : t == 0 ? MOVED : pressHotAsk(Key::A);
+		}
 		if (page == NETWORKS) return touchNetworks(cx, cy);
 		if (page == BLUETOOTH) return touchBluetooth(cx, cy);
 		if (page == KEYBOARD) return touchKeyboard(cx, cy);
@@ -1350,15 +1366,10 @@ namespace banana
 		if (page == THEMES) return touchThemes(cx, cy);
 		if (langAsk >= 0 && page == LIST)
 		{
-			// the two buttons (renderLangAsk): No, Yes
-			for (int b = 0; b < 2; b++)
-			{
-				float y = 150 + b * 96;
-				if (cy < y || cy > y + 80 || cx < 60 || cx > 580) continue;
-				if (langYes != (b == 1)) { langYes = b == 1; return MOVED; }
-				return pressLangAsk(Key::A);
-			}
-			return NONE;
+			// the two buttons (askButtons): No, Yes
+			if (downY >= 418 && downY <= 466) return pressLangAsk(downX < 320 ? Key::B : Key::A);
+			int t = askTouch(cx, cy, langYes);
+			return t < 0 ? NONE : t == 0 ? MOVED : pressLangAsk(Key::A);
 		}
 		if (page == SETUP)
 		{
@@ -1899,6 +1910,7 @@ namespace banana
 	void Settings::render()
 	{
 		marqueeFrame();
+		if (hotAsk) { renderHotAsk(); return; }
 		if (page == NETWORKS) { renderNetworks(); return; }
 		if (page == BLUETOOTH) { renderBluetooth(); return; }
 		if (page == KEYBOARD) { renderKeyboard(); return; }
@@ -3735,18 +3747,33 @@ namespace banana
 		centred(there("The menu starts again in the new language."), false, 18, 360, p.muted);
 		be->endScreen();
 
+		askButtons(toName, here(N), there(N), here(Y), there(Y), langYes);
+	}
+
+	void Settings::askButtons(const std::string& title, const std::string& no1, const std::string& no2, const std::string& yes1,
+		const std::string& yes2, bool yes)
+	{
+		SPal p = pal(light);
+		auto centred = [&](const std::string& t, bool medium, float size, float top, const Color& c)
+		{
+			rawText = true;
+			float w = text(t, medium, size, 0, 0, c, false, 0, true);
+			text(t, medium, size, std::round(320 - w / 2), top, c);
+			rawText = false;
+		};
 		be->beginScreen(1);
 		box("screen", false, 0, 0, 640, 480);
-		centred(toName, true, 22, 92, p.muted);
+		centred(title, true, 22, 92, p.muted);
 		for (int b = 0; b < 2; b++)
 		{
-			bool on = langYes == (b == 1);
+			bool on = yes == (b == 1);
 			float y = 150 + b * 96;
 			box(on ? "pick" : "slot", on, 60, y, 520, 80);
-			const std::string& t = b ? Y : N;
+			const std::string& t1 = b ? yes1 : no1;
+			const std::string& t2 = b ? yes2 : no2;
 			Color c = on ? p.onPick : p.ink;
-			centred(here(t), true, 22, y + 12, c);
-			centred(there(t), true, 22, y + 44, c);
+			if (t2.empty()) centred(t1, true, 22, y + 28, c);
+			else { centred(t1, true, 22, y + 12, c); centred(t2, true, 22, y + 44, c); }
 		}
 		float bw = faceWidth("B", "Back");
 		face("B", "Back", 18, bw);
@@ -3754,6 +3781,60 @@ namespace banana
 		face("A", "OK", 622 - aw, aw);
 		be->endScreen();
 	}
+
+	int Settings::askTouch(float cx, float cy, bool& yes)
+	{
+		for (int b = 0; b < 2; b++)
+		{
+			float y = 150 + b * 96;
+			if (cy < y || cy > y + 80 || cx < 60 || cx > 580) continue;
+			if (yes != (b == 1)) { yes = b == 1; return 0; }
+			return 1;
+		}
+		return -1;
+	}
+
+	// ---- 4x asked first --------------------------------------------------------------------------------------------
+	Settings::Result Settings::pressHotAsk(Key k)
+	{
+		switch (k)
+		{
+		case Key::UP: case Key::DOWN: case Key::LEFT: case Key::RIGHT: case Key::L: case Key::R:
+			hotYes = !hotYes;
+			return MOVED;
+		case Key::A:
+		{
+			int which = hotAsk;
+			hotAsk = 0;
+			if (!hotYes) return MOVED;	// (the value as it was: nothing saved)
+			if (which == 2) { pgRes = hotAt; saveGameRows(); return MOVED; }
+			for (auto& it : items)
+				if (it.key == "render.scale" && hotAt < (int)it.values.size()) { it.at = hotAt; save(it); return CHANGED; }
+			return MOVED;
+		}
+		case Key::B: hotAsk = 0; return MOVED;
+		case Key::START: hotAsk = 0; return MOVED;	// (Start closes Settings everywhere else; here it only takes the question back)
+		default: return NONE;
+		}
+	}
+
+	void Settings::renderHotAsk()
+	{
+		SPal p = pal(light);
+		be->beginScreen(0);
+		box("screen", false, 0, 0, 640, 480);
+		box("hero", false, 18, 20, 604, 436);
+		icon("nds", 50, 56, 3);
+		text(hotAsk == 2 ? "This game's 3D resolution" : "3D resolution", true, 17, 170, 62, p.muted, true, 1.4f);
+		text("4x runs hot", true, 30, 170, 88, p.ink);
+		wrapped("4x runs the handheld hot and drains the battery much faster. When it gets too hot it slows down to cool off, "
+			"and games can lag. If that happens, switch back to 2x, then restart and let the handheld cool down.", 22, 50, 176, 540, 8, p.ink);
+		be->endScreen();
+		char keep[96];
+		snprintf(keep, sizeof keep, lang::tr("Keep %s").c_str(), hotOld.c_str());
+		askButtons(lang::tr("Use 4x?"), keep, "", lang::tr("Use 4x"), "", hotYes);
+	}
+
 
 	// the install on a screen of its own, on the bottom panel where the package was picked (the list and its buttons
 	// gone): what it is doing, a bar, and only what can be pressed when it is over; the top panel says the same in short
@@ -4019,7 +4100,20 @@ namespace banana
 			int d = k == Key::LEFT ? -1 : 1;
 			if (row == PG_EMU) pgEmu = (pgEmu + d + 3) % 3;
 			else if (row == PG_3D) pg3d = (pg3d + d + 3) % 3;
-			else if (row == PG_RES) pgRes = (pgRes + d + 5) % 5;
+			else if (row == PG_RES)
+			{
+				int to = (pgRes + d + 5) % 5;
+				if (std::string(GAME_RES_VALUES[to]) == "4" && std::string(GAME_RES_VALUES[pgRes]) != "4")
+				{
+					// to 4x: asked first (it runs hot), before anything is saved; "Keep" leaves the value as it was
+					hotAsk = 2; hotAt = to; hotYes = false;
+					if (pgRes > 0) hotOld = GAME_RES_NAMES[pgRes];
+					else { std::string g = getConfValue("/data/bananads/bananads.conf", "render.scale", "1"); hotOld = g + "x"; }	// (as in Settings, as the page shows it)
+					if (hotOld.find(' ') != std::string::npos) hotOld.resize(hotOld.find(' '));
+					return MOVED;
+				}
+				pgRes = to;
+			}
 			else if (row == PG_MIC) pgMic = (pgMic + d + 5) % 5;
 			else if (row == PG_DELETE) { pgDelAll = !pgDelAll; pgDelArmed = false; }
 			else if (row == PG_SHADER)

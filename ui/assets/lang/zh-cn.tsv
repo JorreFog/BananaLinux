@@ -867,3 +867,10 @@ settings		No, keep it	不，保持不变
 settings		Yes, change it	是，更改语言
 settings		The menu starts again in the new language.	菜单将以新语言重新启动。
 settings		OK	确定
+# (the 4x warning below is a machine-translated draft, not Majirefy's: for them to check)
+settings		4x runs hot	4x 会让掌机发热
+settings		4x runs the handheld hot and drains the battery much faster. When it gets too hot it slows down to cool off, and games can lag. If that happens, switch back to 2x, then restart and let the handheld cool down.	4x 会让掌机发热，耗电也快得多。温度过高时掌机会降速散热，游戏可能卡顿。如果出现这种情况，请切换回 2x，然后重启并让掌机冷却。
+settings		Use 4x?	使用 4x？
+settings		Use 4x	使用 4x
+settings		Keep %s	保持 %s
+settings		This game's 3D resolution	本游戏的 3D 分辨率
