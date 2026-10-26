@@ -1,0 +1,91 @@
+#!/bin/sh
+# The systems list everything reads: the image's /etc/banana/systems.conf with the card's banana/systems.conf merged
+# over it per system, written to /run/banana/systems.conf (banana-ui, its box-art scraper and data-layout read that).
+#   systems-merge [image] [card] [out] [history]
+# - The image's file is the base: its systems, in its order, with every key it sets.
+# - A [system] section on the card overrides only the keys it sets for that system; the others keep the image's, so
+#   a later fix to a system (PlayStation's run-ps1 and 'steady' clocks, the DSi's .dsi/.cia) still arrives on a card
+#   that changed something else about it.
+# - A card section for a system the image doesn't have is added after the image's, in the card's order.
+# - A card value an earlier image shipped for that system and key (/etc/banana/systems.history: a card copy made from
+#   an older systems.conf.default carries all of them) is that old default, not a change: the image's value is used
+#   (or, for a key the image no longer sets, none). So a full copy of 0.4.2's list still gets 0.5.0's PlayStation.
+#   A value the user wants that happens to be an old default can't be kept that way: use another spelling of it.
+# - A key set to nothing on the card ("perf =") takes that key away: the system then has the menu's default for it
+#   (folder: its id, perf: balanced, always/flat: no, ext: none).
+# - Ids and keys are read the way banana-ui reads them, case and spaces aside ("[ PSX ]" is [psx]); "#" lines and
+#   blank lines are comments; a section seen twice in one file is one section (the later keys win).
+# - A card file that isn't a systems list (a line that is neither a [section], a key = value inside one, a comment
+#   nor blank) is not used at all: the image's list is written, and the line is named on stderr (banana-ui's log).
+# The image's file is written as it is when the card has none. Writes through a temporary file, so a reader never sees
+# half a list.
+IMG=${1:-/etc/banana/systems.conf}
+CARD=${2:-/data/banana/systems.conf}
+OUT=${3:-/run/banana/systems.conf}
+HIST=${4:-${IMG%.conf}.history}
+TMP=$OUT.tmp.$$
+mkdir -p "${OUT%/*}" 2>/dev/null
+if [ ! -f "$CARD" ]; then
+    cp "$IMG" "$TMP" && mv -f "$TMP" "$OUT"
+    exit
+fi
+if awk -v img="$IMG" -v card="$CARD" -v hist="$HIST" '
+function trim(s) { sub(/^[ \t\r]+/, "", s); sub(/[ \t\r]+$/, "", s); return s }
+# read one file into the arrays for source n (0 image, 1 card); returns 0, or the first bad line on the card
+function load(file, n,    ln, no, id, k, v, eq, cur, bad) {
+    cur = ""; no = 0; bad = 0
+    while ((getline ln < file) > 0) {
+        no++
+        ln = trim(ln)
+        if (ln == "" || substr(ln, 1, 1) == "#") continue
+        if (substr(ln, 1, 1) == "[") {
+            if (substr(ln, length(ln), 1) != "]") { if (!bad) bad = no; continue }
+            id = tolower(trim(substr(ln, 2, length(ln) - 2)))
+            if (id == "" || id !~ /^[a-z0-9_.-]+$/) { if (!bad) bad = no; cur = ""; continue }
+            cur = id
+            if (!((n, id) in seen)) { seen[n, id] = 1; ids[n, ++nid[n]] = id }
+            continue
+        }
+        eq = index(ln, "=")
+        if (eq == 0 || cur == "") { if (!bad) bad = no; continue }
+        k = tolower(trim(substr(ln, 1, eq - 1))); v = trim(substr(ln, eq + 1))
+        if (k == "") { if (!bad) bad = no; continue }
+        if (!((n, cur, k) in val)) keys[n, cur, ++nk[n, cur]] = k
+        val[n, cur, k] = v
+    }
+    close(file)
+    return bad
+}
+# whether the card sets this key to a value of its own (not one an older image shipped: systems.history)
+function cardset(id, k) { return ((1, id, k) in val) && !((id SUBSEP k SUBSEP val[1, id, k]) in old) }
+function emit(id,    i, k, v) {
+    printf "\n[%s]\n", id
+    for (i = 1; i <= nk[0, id]; i++) {
+        k = keys[0, id, i]
+        v = cardset(id, k) ? val[1, id, k] : val[0, id, k]
+        if (v != "") printf "%s = %s\n", k, v
+    }
+    for (i = 1; i <= nk[1, id]; i++) {
+        k = keys[1, id, i]
+        if (((0, id, k) in val) || !cardset(id, k)) continue
+        if (val[1, id, k] != "") printf "%s = %s\n", k, val[1, id, k]
+    }
+}
+BEGIN {
+    nid[0] = nid[1] = 0
+    while ((getline ln < hist) > 0) { if (substr(ln, 1, 1) == "#") continue; split(ln, f, "\t"); old[f[1] SUBSEP f[2] SUBSEP f[3]] = 1 }
+    close(hist)
+    load(img, 0)
+    if ((b = load(card, 1)) > 0) { printf "systems-merge: %s line %d is not a [system] or a key = value in one: the card'"'"'s systems list is not used, only the image'"'"'s\n", card, b > "/dev/stderr"; exit 3 }
+    if (nid[1] == 0) { printf "systems-merge: %s has no [system] in it: only the image'"'"'s list is used\n", card > "/dev/stderr"; exit 3 }
+    printf "# The systems list in use: %s, with %s merged over it per system (systems-merge, at the menu'"'"'s start).\n", img, card
+    printf "# Generated: change the card'"'"'s file, not this one.\n"
+    for (i = 1; i <= nid[0]; i++) emit(ids[0, i])
+    for (i = 1; i <= nid[1]; i++) if (!((0, ids[1, i]) in seen)) emit(ids[1, i])
+}' > "$TMP"; then
+    mv -f "$TMP" "$OUT"
+else
+    rm -f "$TMP"
+    cp "$IMG" "$TMP" && mv -f "$TMP" "$OUT"
+fi
+exit 0

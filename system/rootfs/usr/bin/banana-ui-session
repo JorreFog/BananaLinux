@@ -13,6 +13,8 @@ for a in $(cat /proc/cmdline); do
     esac
 done
 [ "$LOG" != /dev/console ] && [ -f $LOG ] && mv -f $LOG $LOG.1
-# a copy of the systems list on the card replaces the built-in one
-[ -f /data/banana/systems.conf ] && export BANANA_SYSTEMS=/data/banana/systems.conf
+# the systems list: the built-in one with the card's banana/systems.conf merged over it per system (systems-merge;
+# a card file it can't read is left out, and said so in this log)
+/usr/libexec/banana/systems-merge 2>> $LOG
+[ -s /run/banana/systems.conf ] && export BANANA_SYSTEMS=/run/banana/systems.conf
 exec /usr/bin/banana-ui >> $LOG 2>&1

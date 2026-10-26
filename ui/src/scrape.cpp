@@ -386,8 +386,10 @@ int main(int argc, char** argv)
 		for (std::string ln; std::getline(f, ln);) misses.insert(ln);
 	}
 	const char* roms = getenv("BANANA_ROMS") ? getenv("BANANA_ROMS") : "/data/roms";
+	// the merged list banana-ui-session made (systems-merge: the card's systems.conf over the image's), never the card's
+	// file alone
 	std::string conf = getenv("BANANA_SYSTEMS") ? getenv("BANANA_SYSTEMS") :
-		access("/data/banana/systems.conf", R_OK) == 0 ? "/data/banana/systems.conf" : "/etc/banana/systems.conf";
+		access("/run/banana/systems.conf", R_OK) == 0 ? "/run/banana/systems.conf" : "/etc/banana/systems.conf";
 	const std::string MATCHES = "/data/banana/boxart-match.tsv";
 	if (argc >= 4 && (!strcmp(argv[1], "--search") || !strcmp(argv[1], "--match")))
 	{
