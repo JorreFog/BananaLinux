@@ -332,5 +332,7 @@ for size in 640x480 1024x768; do
 done
 # updates over the air (#69): the update script against a stand-in for GitHub, and the Update page
 OUT="$OUT" "$HERE/tests/ota.sh" || fail=1
+# home server sync (banana-sync) against a stand-in RomM and, when its source is here, the real Romhost
+OUT="$OUT" "$HERE/tests/sync.sh" || fail=1
 [ $fail = 0 ] && echo "banana-ui: all checks passed ($OUT)"
 exit $fail

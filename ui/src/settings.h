@@ -163,7 +163,7 @@ namespace banana
 		void renderGame();
 		// the keyboard types a text for a purpose: a Wi-Fi password, or an account's name or password
 		// (banana/accounts.conf: RetroAchievements for DraStic and RetroArch, ScreenScraper for the scraper to come)
-		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SMB_USER, ENTRY_SMB_PASS, ENTRY_GAME_NAME, ENTRY_GAME_SORT, ENTRY_ART_SEARCH, ENTRY_DS_NAME, ENTRY_SEARCH } entry = ENTRY_WIFI;
+		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SMB_USER, ENTRY_SMB_PASS, ENTRY_GAME_NAME, ENTRY_GAME_SORT, ENTRY_ART_SEARCH, ENTRY_DS_NAME, ENTRY_SEARCH, ENTRY_HS_ADDR, ENTRY_HS_CODE } entry = ENTRY_WIFI;
 		std::string entryTitle, entrySub;
 		Page entryBack = NETWORKS;
 		void startEntry(Entry e, const std::string& title, const std::string& sub, Page back, const std::string& start = "");
@@ -342,6 +342,24 @@ namespace banana
 		bool pollScrape(double nowMs);		// true when the line changed
 		void startScrape();
 		std::string scrapeShort() const;	// for a row: "Not yet", "120 / 530", "410 of 530 found", "No connection"
+		// home server sync (Network > Home server): banana-sync runs on its own and says how far it got in
+		// /run/banana/sync.status; the pairing is in banana/romsync.json
+		std::string syncLine;				// that file's line, as last read
+		double syncNext = 0;
+		std::string hsUrl, hsName, hsKind;	// the server being paired with
+		int hsStep = 0;						// pairing: 0 not, 1 looking on the LAN, 2 asking an address, 3 banana-sync pair running
+		wifi::Job hsJob;
+		bool syncing() const { return syncLine.compare(0, 8, "running ") == 0; }
+		bool pollSync(double t);			// true when something to show changed
+		void startSync();
+		void startPairing();
+		void hsRun(const std::string& args);	// banana-sync <args> in the background
+		std::string syncShort() const;		// for the Sync now row: "Not yet", "12 / 300", "Done", "Didn't work"
+		std::string homeServer() const;		// the paired server's name, "" when none
+		mutable std::string hsPaired;
+		mutable double hsPairedAt = -1e18;
+		void syncBar(float x, float y, float w);
+		std::string syncTool() const;
 		void scrapeBar(float x, float y, float w);	// the progress bar and the game being fetched, while it runs
 		struct RaWatch;							// the achievements: RetroArch's log and the server (settings.cpp)
 		std::shared_ptr<RaWatch> raw;
