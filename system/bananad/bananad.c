@@ -81,6 +81,7 @@ static int leds_asleep;	/* asleep: the upper LED as led_sleep says (suspend_now,
 static int test_wake = -1;
 static char test_asleep[300];
 static void audio_route(void);
+static pid_t sound_child;	/* (the sound's setup at start, below) */
 static void undim(void);
 static void find_bottom_bl(void);
 static char bottom_bl[64];	/* the bottom panel's backlight name; banana-ui's idle dim owns it while it runs */
@@ -524,7 +525,7 @@ static void suspend_now(const char *why)
 	drain_inputs();
 	read_lid();
 	leds_update();
-	if (headphones_in() != headphones) { headphones = !headphones; audio_route(); }
+	if (headphones_in() != headphones) { headphones = !headphones; if (!sound_child) audio_route(); }
 	ignore_power_until = mono() + 1.0;
 	power_down = 0;
 	last_input = mono();
@@ -677,8 +678,67 @@ static void audio_setup(void)
 	audio_route();
 }
 
+/* ---- the sound at start, without holding up the buttons ------------------------------------------------------
+ * alsactl's restore and audio_setup's amixers are programs, and at boot they load from the squashfs while the menu,
+ * the library and the GPU's and Wi-Fi's modules come up too: run before the loop, they kept the power and volume
+ * keys deaf for seconds after the boot animation began. A child does them now while the loop takes the buttons;
+ * volume steps pressed meanwhile wait for it (a restore after a press would undo the press). When it's done,
+ * /run/banana/bananad-ready tells rcS (which waits for it before the menu starts) that the buttons and the sound are
+ * up. A sound card that turns up later (a late probe) is set up the same way when its uevent comes. */
+static pid_t sound_child;	/* setting the sound up, 0: not */
+static int sound_ready, sound_again, sound_hp, volume_pending;
+
+/* a boot milestone in /run/banana/boot-times, as rcS's mark() writes them (logs/boot.txt) */
+static void boot_mark(const char *what)
+{
+	char up[32] = "";
+	read_str("/proc/uptime", up, sizeof up);
+	FILE *f = fopen("/run/banana/boot-times", "a");
+	if (f) { fprintf(f, "%-28s %6.2f s\n", what, atof(up)); fclose(f); }
+}
+
+static void sound_start(void)
+{
+	if (sound_child > 0) { sound_again = 1; return; }	/* (one at a time: a card's uevents come in a burst) */
+	sound_ready = 0;
+	sound_hp = headphones;
+	pid_t p = fork();
+	if (p == 0) {
+		/* the saved volumes first, then the route: the restore also brings back the speakers' switch as it was last
+		 * saved (off if headphones were in then), and the route sets it from the jack as it is now */
+		if (access("/data/banana/asound.state", R_OK) == 0) {
+			char *argv[] = { "alsactl", "-f", "/data/banana/asound.state", "restore", NULL };
+			run(argv);
+		}
+		audio_setup();
+		_exit(0);
+	}
+	if (p < 0) { audio_setup(); sound_ready = 1; return; }	/* (no fork: as before, in line) */
+	sound_child = p;
+}
+
+static void volume(int dir);
+/* the loop's look at the child: done, the cards as it found them, what waited applied */
+static void sound_poll(void)
+{
+	if (sound_child <= 0 || waitpid(sound_child, NULL, WNOHANG) != sound_child) return;
+	sound_child = 0;
+	audio_find_cards();
+	if (headphones != sound_hp) audio_route();	/* plugged or pulled while it ran */
+	if (sound_again) { sound_again = 0; sound_start(); return; }
+	sound_ready = 1;
+	if (access("/run/banana/bananad-ready", F_OK) != 0) {
+		boot_mark("bananad: sound ready");
+		FILE *f = fopen("/run/banana/bananad-ready", "w");
+		if (f) fclose(f);
+	}
+	for (; volume_pending > 0; volume_pending--) volume(1);
+	for (; volume_pending < 0; volume_pending++) volume(-1);
+}
+
 static void volume(int dir)
 {
+	if (!sound_ready) { volume_pending += dir; return; }	/* (the sound still being set up: sound_poll) */
 	/* the volume script changes the control /run/banana/mixer names, the aw88166's as an attenuation (see it) */
 	char step[16];
 	snprintf(step, sizeof step, "%d", cfg.volume_step);
@@ -856,10 +916,6 @@ static void restore_settings(void)
 	/* started again while the panels were dimmed (/run/banana/dim: the level before): undimmed, as the last one would */
 	int dimmed_from = read_int("/run/banana/dim", -1);
 	if (dimmed_from > 0 && dimmed_from <= 1000) { backlight_set_permille(dimmed_from); unlink("/run/banana/dim"); }
-	if (access("/data/banana/asound.state", R_OK) == 0) {
-		char *argv[] = { "alsactl", "-f", "/data/banana/asound.state", "restore", NULL };
-		run(argv);
-	}
 }
 
 /* ---- the LEDs -------------------------------------------------------------------------------------------------- */
@@ -958,7 +1014,9 @@ static void leds_update(void)
 	static char green[300], red[300], amber[300];
 	static int looked;
 	int last = leds_last;
-	if (!looked) {
+	/* looked for again while one is missing: a LED driver that probes after bananad starts (pwm-leds waits for its
+	 * PWM) was never found, and that LED stayed as the kernel left it all session (both handhelds have all three) */
+	if (!looked || !green[0] || !red[0] || !amber[0]) {
 		looked = 1;
 		led_path("power", green, sizeof green);
 		led_path("status", red, sizeof red);
@@ -1057,16 +1115,18 @@ static int uevent_read(int fd)
 	while ((n = recv(fd, buf, sizeof buf - 1, 0)) > 0) {
 		buf[n] = 0;
 		const char *alias = NULL;
-		int add = 0, block = 0, mmc = 0;
+		int add = 0, block = 0, mmc = 0, sound = 0;
 		for (char *p = buf; p < buf + n; p += strlen(p) + 1) {
 			if (!strcmp(p, "SUBSYSTEM=power_supply")) hit = 1;
 			else if (!strcmp(p, "SUBSYSTEM=block")) block = 1;
+			else if (!strcmp(p, "SUBSYSTEM=sound")) sound = 1;
 			else if (!strncmp(p, "DEVNAME=mmcblk", 14)) mmc = 1;
 			else if (!strcmp(p, "ACTION=add")) add = 1;
 			else if (!strncmp(p, "MODALIAS=", 9)) alias = p + 9;
 		}
 		if (add && alias) load_driver(alias);
 		if (block && mmc) sd2_scan();	/* a card in or out of the second slot (the script looks at what's there) */
+		if (sound && add) sound_start();	/* a sound card probed late: its volumes, its route */
 	}
 	return hit;
 }
@@ -1195,7 +1255,7 @@ static void handle(const struct input_event *e)
 		return;
 	}
 	if (e->type == EV_SW && e->code == SW_HEADPHONE_INSERT) {
-		if (headphones != e->value) { headphones = e->value; audio_route(); }
+		if (headphones != e->value) { headphones = e->value; if (!sound_child) audio_route(); }	/* (else sound_poll routes) */
 		return;
 	}
 	if (e->type != EV_KEY) return;
@@ -1269,16 +1329,17 @@ int main(int argc, char **argv)
 
 	int ino = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
 	if (ino >= 0) inotify_add_watch(ino, "/dev/input", IN_CREATE | IN_DELETE);
+	unlink("/run/banana/bananad-ready");
 	open_inputs();
 	headphones = headphones_in();
-	/* the saved volumes first, then the route: the restore also brings back the speakers' switch as it was last
-	 * saved (off if headphones were in then), and the route sets it from the jack as it is now */
-	restore_settings();
-	audio_setup();
+	restore_settings();	/* the backlight */
+	audio_find_cards();	/* (the loop's own idea of the cards until the child is done; it writes the route) */
+	sound_start();		/* the volumes and the route, in a child (above) */
 	int uev = uevent_open();
 	sd2_scan();	/* a card already in the second slot at boot */
 	load_drivers_present();
 	leds_update();
+	boot_mark("bananad: buttons live");
 	last_input = mono();
 	double next_battery = 0;
 	int low_count = 0;
@@ -1315,9 +1376,11 @@ int main(int argc, char **argv)
 		if (lid_closed && cfg.lid_sleep && !lid_retry_off) { double d = 5.0 - (tnow - last_input); if (d > 0 && d < wait) wait = d; }
 		if ((save_volume_at > 0 || save_backlight_at > 0) && wait > 0.5) wait = 0.5;
 		if (power_down && wait > 0.1) wait = 0.1;
+		if (sound_child > 0 && wait > 0.05) wait = 0.05;	/* the sound's setup running: its end looked for (the first second or so) */
 		int timeout = wait <= 0 ? 20 : (int)(wait * 1000) + 20;
 		poll(pf, n, timeout);
 		double now = mono();
+		sound_poll();
 		if (reload) {
 			reload = 0;
 			load_conf("/etc/banana/bananad.conf");
@@ -1344,6 +1407,10 @@ int main(int argc, char **argv)
 			while (read(ino, buf, sizeof buf) > 0) {}
 			usleep(200000);	/* udev/mdev sets the node's permissions */
 			open_inputs();
+			/* the jack's input device comes with its sound card, which may probe after bananad starts: the headphones
+			 * as they are now, not as they read before the device was there */
+			int hp = headphones_in();
+			if (hp != headphones) { headphones = hp; if (!sound_child) audio_route(); }
 		}
 
 		if (power_down && now - power_since >= cfg.power_long_ms / 1000.0) { power_down = 0; shutdown_now("power held"); }

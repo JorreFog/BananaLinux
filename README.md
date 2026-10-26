@@ -265,7 +265,7 @@ make test          # renders the menu from a test library into ui/tests/out
 | `store/` | the App Store's catalogue |
 | `tools/` | the menu engine's import, ROCKNIX's hardware sync, the pixel bunch, the logo, the boot animation, this page's pictures (`make-readme-art.py`) |
 | `web/` | the website on GitHub Pages: the [Save Mover](https://jorrefog.github.io/BananaLinux/save-mover/) |
-| `docs/` | [ARCHITECTURE.md](docs/ARCHITECTURE.md), [EMULATORS.md](docs/EMULATORS.md), [FIRST-BOOT.md](docs/FIRST-BOOT.md), [ROADMAP.md](docs/ROADMAP.md) |
+| `docs/` | [ARCHITECTURE.md](docs/ARCHITECTURE.md), [EMULATORS.md](docs/EMULATORS.md), [FIRST-BOOT.md](docs/FIRST-BOOT.md), [MAKE-A-THEME.md](docs/MAKE-A-THEME.md), [THEMES.md](docs/THEMES.md), [ROADMAP.md](docs/ROADMAP.md) |
 
 <a id="seen-on-youtube"></a>
 <img src="docs/img/readme/h-videos.png" width="100%" alt="">

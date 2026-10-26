@@ -60,6 +60,16 @@ mark "rcS: data partition ready"
 mount -t vfat -o ro,noatime ${DISK}p1 /boot 2>/dev/null
 
 bananad &
+# the buttons and the sound up before the menu's first frame: bananad creates bananad-ready once the power and volume
+# keys are heard and the sound is set up (at most 3 s, so a card with no sound can't hold the menu back)
+i=0
+while [ ! -e /run/banana/bananad-ready ] && [ $i -lt 30 ]; do sleep 0.1; i=$((i + 1)); done
+mark "rcS: bananad ready"
+# the hardware check: what's built in, waited for up to 2 s; what's missing and matters is the menu's notice
+# (/usr/libexec/banana/health; the report in banana/logs/health.txt)
+# (under timeout: a check that hangs mustn't hold the boot; its waits are 2 s, so 10 s is a fault)
+timeout 10 /usr/libexec/banana/health early || mark "rcS: hardware check failed or timed out"
+mark "rcS: hardware checked"
 banana-perf ui
 
 # not needed for the menu's first frame
@@ -84,6 +94,9 @@ banana-perf ui
     grep -q '^ *ssh *= *on' /data/banana/settings.conf 2>/dev/null && /usr/libexec/banana/ssh up
     /usr/libexec/banana/panel-tune
 ) &
+# the hardware check's second half, while the menu runs: the touchscreen (probed asynchronously), the Wi-Fi and the
+# GPU (their modules load above) and the clock, up to 20 s
+timeout 60 /usr/libexec/banana/health late &
 # the boot, to read on a computer (logs/boot.txt, logs/dmesg.txt), once it has settled; rcK writes it again at shutdown
 ( sleep 20; /usr/libexec/banana/boot-log ) &
 exit 0

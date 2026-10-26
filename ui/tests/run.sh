@@ -125,6 +125,18 @@ for size in 640x480 1024x768; do
     for s in reset-system reset-emulator; do
         [ -s "$OUT/$size-$s-top.png" ] && [ -s "$OUT/$size-$s-bot.png" ] || { echo "FAIL $size: no $s shot"; fail=1; }
     done
+    # the boot's hardware check: its notice (/run/banana/health-notice) on the menu, drawn, and gone with A
+    hlog=$OUT/$size-health.log
+    "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --banana "$HERE/assets/banana" \
+        --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
+        --script "home 0; wait 2400; shot no-health; healthnotice touchscreen, Wi-Fi; shot health; press a" 2> "$hlog" ||
+        { echo "FAIL $size: banana-ui (health) exited $?"; fail=1; }
+    grep -q "health notice: Not found: touchscreen, Wi-Fi" "$hlog" || { echo "FAIL $size: no health notice"; fail=1; }
+    grep -q "press a: health notice hidden" "$hlog" || { echo "FAIL $size: A didn't hide the health notice"; fail=1; }
+    # drawn, not only logged: the notice's bubble (the top panel's lower part) differs from the frame without it
+    [ -s "$OUT/$size-health-top.png" ] && [ -s "$OUT/$size-no-health-top.png" ] || { echo "FAIL $size: no health shots"; fail=1; }
+    d=$(convert "$OUT/$size-health-top.png" "$OUT/$size-no-health-top.png" -gravity south -crop 100%x30%+0+0 +repage -compose difference -composite -format '%[fx:mean>0.01]' info: 2>/dev/null)
+    [ "$d" = 1 ] || { echo "FAIL $size: the health notice wasn't drawn"; fail=1; }
     # a layout theme (the image's canvas.json): every screen drawn from its JSON, home -> library -> a launch, a
     # tap on a system, and no complaint about the theme in the log
     llog=$OUT/$size-layout.log

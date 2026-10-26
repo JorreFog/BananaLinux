@@ -5,6 +5,9 @@ the clock, the battery...), the buttons and the drawing. Where things go, how th
 the theme. A theme is a layout theme when it has a `"screens"` member. Otherwise it is a colour theme over the Pixel
 look (see `/usr/share/banana/themes/README.txt`).
 
+> **New to themes?** [MAKE-A-THEME.md](MAKE-A-THEME.md) is a gentler introduction: changing colours, using the
+> theme editor, your own pictures and fonts, and putting it on the card. This page is the exact reference.
+
 `canvas.json` in `/usr/share/banana/themes` (copied to `banana/themes` on a new card) is a complete example. Copy it
 and change it.
 

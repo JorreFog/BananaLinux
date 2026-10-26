@@ -70,7 +70,8 @@ Layout themes
 -------------
 A theme with "screens" in it draws the whole menu itself: every element on both screens, where it goes, how it
 looks and how it moves, from the menu's data (the systems, the games, the selection, the clock, the battery...).
-canvas.json is one; docs/THEMES.md in Banana's source (github.com/JorreFog/BananaLinux) describes the format.
+canvas.json is one. In Banana's source (github.com/JorreFog/BananaLinux): docs/MAKE-A-THEME.md starts from the
+beginning, with the theme editor, and docs/THEMES.md describes the format exactly.
 
 Themes apply to the Dark/Light style (ROCKNIXDS Pixel) and to Settings (its colours and fonts); the Carts theme
 keeps its own look for now. theme-builder.html, next to this file, makes a theme in a web browser with a live

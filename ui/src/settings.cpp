@@ -1140,6 +1140,12 @@ namespace banana
 	{
 		SPal p = pal(light);
 		box("bubble", false, 40, 344, 560, 104);
+		if (percent < 0)	// no battery (the hardware check's notice): the text across the whole bubble
+		{
+			text(title, true, 22, 66, 360, p.ink);
+			wrapped(body, 18, 66, 392, 510, 2, p.muted);
+			return;
+		}
 		// the status bar's battery, three times its size on the same pixel grid, its level red at 10% and under
 		auto it = cache.find("battery");
 		if (it == cache.end())

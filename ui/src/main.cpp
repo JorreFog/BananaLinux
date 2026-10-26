@@ -434,6 +434,45 @@ struct LowBattery
 	}
 };
 
+// The boot's hardware check (/usr/libexec/banana/health): the parts that matter and weren't found, named in
+// /run/banana/health-notice (by the early check before the menu, and by the late one, up to 20 s on, for the
+// touchscreen, the Wi-Fi and the GPU). Shown as the battery's notice is, until a press or 12 s; again only when the
+// file changes, so a notice seen isn't shown at every wake.
+struct HealthNotice
+{
+	std::string title, body;
+	double until = 0;
+	long long seen = -1;	// the file's mtime (ns) when last read
+	bool showing(double now) const { return until > now; }
+	bool show(const std::string& parts, double now)
+	{
+		bool several = parts.find(',') != std::string::npos;
+		title = "Not found: " + parts;
+		body = std::string("Banana started without ") + (several ? "them" : "it") + ". A restart may help; banana/logs/health.txt has the details.";
+		until = now + 12000;
+		return true;
+	}
+	// true when a new notice came
+	bool check(double now)
+	{
+		struct stat st;
+		if (stat("/run/banana/health-notice", &st) != 0) return false;
+		long long m = (long long)st.st_mtim.tv_sec * 1000000000LL + st.st_mtim.tv_nsec;
+		if (m == seen) return false;
+		seen = m;
+		std::ifstream f("/run/banana/health-notice");
+		std::string parts;
+		std::getline(f, parts);
+		return !parts.empty() && show(parts, now);
+	}
+	bool hide(double now)
+	{
+		bool was = showing(now);
+		until = 0;
+		return was;
+	}
+};
+
 static int shutdownPercent(const std::string& data)
 {
 	return atoi(getConfValue(data + "/bananad.conf", "battery_shutdown_percent",
@@ -465,7 +504,13 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	settings.setSync(true);
 	settings.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
 	LowBattery low;
-	be.overlay = [&](int screen) { if (screen == 0 && low.showing(now)) settings.notice(low.title, low.body, low.percent); };
+	HealthNotice health;
+	be.overlay = [&](int screen)
+	{
+		if (screen != 0) return;
+		if (low.showing(now)) settings.notice(low.title, low.body, low.percent);
+		else if (health.showing(now)) settings.notice(health.title, health.body, -1);
+	};
 	while (std::getline(ss, cmd, ';'))
 	{
 		std::stringstream cs(cmd);
@@ -483,6 +528,14 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			lib.testPower.charging = ch == "charging";
 			if (low.check(lib.power(), shutdownPercent(o.data), now)) logf("battery %d%%: notice %s", lib.testPower.percent, low.showing(now) ? low.title.c_str() : "hidden");
 		}
+		else if (op == "healthnotice")
+		{
+			// healthnotice <parts>: the hardware check's notice, as /run/banana/health-notice would bring it
+			std::string parts;
+			std::getline(cs >> std::ws, parts);
+			health.show(parts, now);
+			logf("health notice: %s", health.title.c_str());
+		}
 		else if (op == "press")
 		{
 			std::string b; cs >> b;
@@ -492,6 +545,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			auto it = keys.find(b);
 			if (it == keys.end()) { logf("unknown button %s", b.c_str()); return 2; }
 			if (low.hide(now)) logf("press %s: notice hidden", b.c_str());
+			if (health.hide(now)) logf("press %s: health notice hidden", b.c_str());
 			if (!settings.isOpen() && it->second == Key::SELECT) { settings.openSearch(lib.searchQuery()); logf("press select: search open"); continue; }
 			if (!settings.isOpen() && it->second == Key::X && ui.view() == rnds::UI::LIBRARY && ui.gameIndex() >= 0 && lib.systemOf(ui.gameIndex()).id == "nds")
 			{
@@ -1080,6 +1134,7 @@ int main(int argc, char** argv)
 	settingsView.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
 	settingsView.setVariant(settings["theme"]);	// (Carts: Inter)
 	LowBattery low;
+	HealthNotice health;	// (the early check's notice is there before the menu: the loop's first pass shows it)
 	bool batteryDue = true;
 	if (firstSetup) { settingsView.setup(); logf("first-time setup"); }
 	RomWatch roms;
@@ -1093,6 +1148,7 @@ int main(int argc, char** argv)
 		if (screen != 0) return;
 		double t = nowMs();
 		if (low.showing(t)) settingsView.notice(low.title, low.body, low.percent);
+		else if (health.showing(t)) settingsView.notice(health.title, health.body, -1);	// (-1: no battery)
 		else if (osdUntil > t) settingsView.level(osdLabel, osdPercent);
 		else settingsView.drawToast(t);	// (only while Settings is open: the account check's result)
 	};
@@ -1154,7 +1210,11 @@ int main(int argc, char** argv)
 	{
 		// (the bottom screen's idle dim is a game-panel thing only, so its touch handling is in gamePanel's own sink)
 		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) boost.frame(nowMs());	// what it starts drawn fast
-		if ((ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) && low.hide(nowMs())) dirty = true;
+		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN)
+		{
+			bool lowWas = low.hide(nowMs()), healthWas = health.hide(nowMs());	// (both hidden, whichever showed)
+			if (lowWas || healthWas) dirty = true;
+		}
 		if (settingsView.isOpen())
 		{
 			std::lock_guard<std::mutex> l(worker.uiLock);
@@ -1506,6 +1566,9 @@ int main(int argc, char** argv)
 			batteryDue = false;
 			if (low.check(lib.power(), shutdownPercent(o.data), now)) dirty = true;
 		}
+		// the hardware check's notice: new or changed (the late check writes it after the menu is up; /run/banana's
+		// watch wakes the loop when it's moved into place)
+		if (health.check(now)) { logf("health notice: %s", health.title.c_str()); dirty = true; }
 
 		bool want;
 		{
@@ -1573,6 +1636,11 @@ int main(int argc, char** argv)
 		if (low.showing(now))
 		{
 			int left = (int)(low.until - now) + 1;
+			if (timeout < 0 || left < timeout) timeout = left;
+		}
+		if (health.showing(now))
+		{
+			int left = (int)(health.until - now) + 1;
 			if (timeout < 0 || left < timeout) timeout = left;
 		}
 		if (osdUntil > now)
