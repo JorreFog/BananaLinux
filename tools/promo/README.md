@@ -38,5 +38,5 @@ example themes on two screens, the Banana Theme Studio's screenshots in a window
 the rest; "And much more", then "Coming very soon in 0.5.0 beta". COMPANIONS sets how many games have a GBA companion (left
 out when not given).
 
-    python3 tools/promo/screens.py hillside turntable classic
-    STUDIO=dir-with-1.webp-and-2.webp [COMPANIONS=n] MUSIC=song.mp3 MUSIC_AT=31 python3 tools/promo/release.py out.mp4
+    NO_DATE=1 python3 tools/promo/screens.py hillside turntable classic   # the clocks without dates
+    STUDIO=dir-with-1.webp-and-2.webp [COMPANIONS=n] MUSIC=Wasabi.mp3 MUSIC_DELAY=2 python3 tools/promo/release.py out.mp4

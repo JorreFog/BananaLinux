@@ -3,7 +3,7 @@
 # the words on the left fading out together, the screens or the feature's pixel art on the right.
 # screens.py renders the example themes first (banana-ui, headless).
 #
-#   STUDIO=dir-with-the-Theme-Studio-screenshots [COMPANIONS=n] [MUSIC=song MUSIC_AT=s] python3 tools/promo/release.py [out.mp4]
+#   STUDIO=dir-with-the-Theme-Studio-screenshots [COMPANIONS=n] [MUSIC=song MUSIC_AT=s MUSIC_DELAY=s] python3 tools/promo/release.py [out.mp4]
 import os, subprocess, shutil, sys, math
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
@@ -14,7 +14,8 @@ OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, 'release-0.5.0.mp
 FRAMES = os.path.join(HERE, 'frames-release')
 W, H, FPS = 1920, 1080, 30
 MUSIC = os.environ.get('MUSIC', '')
-MUSIC_AT = float(os.environ.get('MUSIC_AT', '31'))
+MUSIC_AT = float(os.environ.get('MUSIC_AT', '0'))
+MUSIC_DELAY = float(os.environ.get('MUSIC_DELAY', '2'))	# silence before the song starts (Wasabi's kick then lands on the first feature)
 STUDIO = os.environ.get('STUDIO', '')		# the Theme Studio's screenshots: 1.webp, 2.webp
 COMPANIONS = os.environ.get('COMPANIONS', '')	# how many games have a GBA companion (left out when not given)
 FONTS = ROOT + '/ui/assets/rnds/fonts/'
@@ -93,12 +94,24 @@ def screen(theme, t, side):
 
 # the Theme Studio, in a window of its own
 STUDIO_W = 900
+# the dates on the screenshots' menu clocks (a viewer could take one for a release date), in the 2000 px wide
+# originals: each row painted over with the background just left of it
+DATES = {'1.webp': [(1258, 658, 1296, 672), (1218, 1036, 1259, 1049)], '2.webp': [(1140, 158, 1190, 177)]}
+def undate(im, boxes):
+    k = im.width / 2000
+    px = im.load()
+    for x0, y0, x1, y1 in boxes:
+        x0, y0, x1, y1 = int(x0 * k), int(y0 * k), int(x1 * k), int(y1 * k)
+        for y in range(y0, y1):
+            c = px[x0 - 2, y]
+            for x in range(x0, x1): px[x, y] = c
+    return im
 def studio_shots():
     shots = []
     for f in ('1.webp', '2.webp'):
         p = os.path.join(STUDIO, f)
         if os.path.exists(p):
-            im = Image.open(p).convert('RGB')
+            im = undate(Image.open(p).convert('RGB'), DATES[f])
             shots.append(im.resize((STUDIO_W, int(im.height * STUDIO_W / im.width)), Image.LANCZOS))
     return shots
 SHOTS = studio_shots()
@@ -389,7 +402,7 @@ if __name__ == '__main__':
         frame(k / FPS).save(f'{FRAMES}/f{k:05d}.png', compress_level=1)
     cmd = ['ffmpeg', '-y', '-loglevel', 'error', '-framerate', str(FPS), '-i', f'{FRAMES}/f%05d.png']
     if MUSIC:
-        cmd += ['-ss', str(MUSIC_AT), '-i', MUSIC, '-filter:a', f'afade=t=in:st=0:d=2.5,afade=t=out:st={DURATION - 2.5:.2f}:d=2.5',
+        cmd += ['-ss', str(MUSIC_AT), '-i', MUSIC, '-filter:a', f'adelay={int(MUSIC_DELAY * 1000)}:all=1,afade=t=in:st={MUSIC_DELAY}:d=1,afade=t=out:st={DURATION - 2.5:.2f}:d=2.5',
                 '-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '192k', '-ar', '44100', '-ac', '2', '-shortest']
     cmd += ['-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '18', '-movflags', '+faststart', OUT]
     subprocess.run(cmd, check=True)

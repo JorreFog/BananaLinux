@@ -12,6 +12,9 @@ T=7400; step=1000/30
 for name,(theme,ev) in THEMES.items():
     if len(sys.argv) > 1 and name not in sys.argv[1:]: continue
     out=f'{BASE}/{name}'; shutil.rmtree(out,True); os.makedirs(out)
+    if os.environ.get('NO_DATE') and '{date}' in open(theme).read():	# the clock without the date (a trailer must not show one)
+        t2=out+'.theme.json'; open(t2,'w').write(open(theme).read().replace('{date}  ','').replace('{date}',''))
+        theme=os.path.abspath(t2)
     cmds=['home 0']; t=0.0; last=0.0; i=0; n=0
     while t<=T:
         while i<len(ev) and ev[i][0]<=t: cmds.append(ev[i][1]); i+=1
