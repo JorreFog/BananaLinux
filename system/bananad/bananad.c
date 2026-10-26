@@ -319,6 +319,10 @@ static void drain_inputs(void)
 static void shutdown_now(const char *why);
 static int battery_discharging_pct(void);
 static int sleep_fallback;		/* 0 as configured; 1 devices one at a time; 2 also s2idle (a suspend failed) */
+/* (the fallback to s2idle is for the one sleep that needed it: the next sleep, and a sleep again after the battery
+ * check, try deep again. Both handhelds' xhci-hcd fails a suspend now and then ("Clearing Run/Stop bit failed",
+ * -ETIMEDOUT), with the devices one at a time too, and two of those in one boot used to leave every later sleep in
+ * s2idle until a reboot, which drains the battery more) */
 
 static void sleep_log(const char *fmt, ...)
 {
@@ -629,6 +633,7 @@ static void suspend_now(const char *why)
 	if (pg > 0) kill(-pg, SIGSTOP);	/* DraStic's dynarec mustn't run on while the clocks drop (ROCKNIX's finding) */
 	hooks("pre", 0);
 	sync();
+	if (sleep_fallback > 1) sleep_fallback = 1;	/* deep again (devices one at a time), see sleep_fallback */
 	sleep_mode();
 	int cycles = 0, rtc_wakes = 0, failures = 0, dark = 0, dark_lid = 0;
 	double asleep = 0, dark_from = 0, led_at = 0;
@@ -698,16 +703,20 @@ static void suspend_now(const char *why)
 		rtc_alarm(0);
 		cycles++;
 		if (r) {
-			/* it didn't suspend: devices one at a time, then the lighter s2idle, then give up and blank the panels */
+			/* it didn't suspend: devices one at a time, then the lighter s2idle, then give up and blank the panels.
+			 * Already one at a time (an earlier sleep failed): that once more before s2idle */
 			failures++;
-			sleep_log("suspend failed (%s)%s", strerror(err), sleep_fallback < 2 ? ": trying the safer way" : "");
-			if (sleep_fallback < 2 && failures <= 2) { sleep_fallback++; sleep_mode(); usleep(200000); continue; }
+			int again = sleep_fallback < 2 && failures <= 2, safer = sleep_fallback == 0 || failures >= 2;
+			sleep_log("suspend failed (%s)%s", strerror(err), !again ? "" : safer ? ": trying the safer way" : ": trying again");
+			if (again) { if (safer) sleep_fallback++; sleep_mode(); usleep(200000); continue; }
 			woke = "failed";
 			if (lid_closed) backlights_power(0);	/* can't sleep: at least dark until the lid opens */
 			lid_retry_off = 1;	/* ...and not tried again every 5 s with the lid still shut */
 			break;
 		}
 		asleep += (b1.tv_sec - b0.tv_sec) + (b1.tv_nsec - b0.tv_nsec) / 1e9;
+		failures = 0;	/* it slept: a sleep again (the battery check, the lid still shut) starts from deep */
+		if (sleep_fallback > 1) { sleep_fallback = 1; sleep_mode(); }
 		/* why it woke: the battery check's alarm, or someone (lid, power button) */
 		if (rtc_fired) {
 			rtc_wakes++;
