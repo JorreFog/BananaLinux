@@ -1213,6 +1213,7 @@ namespace banana
 		if (page == COLORS) return pressColors(k);
 		if (page == UPDATES) return pressUpdates(k);
 		if (page == SETUP) return pressSetup(k);
+		if (page == THEMES) return pressThemes(k);
 		if (langAsk >= 0) return pressLangAsk(k);
 		if (inGroups) return pressGroups(k);
 		int g = groupOf(sel), b = groupStart(g), e = groupEnd(g);
@@ -1243,7 +1244,8 @@ namespace banana
 			return MOVED;
 		}
 		case Key::LEFT: return change(-1);
-		case Key::RIGHT: case Key::A: return change(1);
+		case Key::A: if (items[sel].key == "theme") { openThemes(); return MOVED; } return change(1);	// (the gallery)
+		case Key::RIGHT: return change(1);
 		case Key::B:
 			if (groups[g] == "Shown systems" || groups[g] == "Hotkeys" || groups[g] == "Home server" || groups[g] == "Home server systems") { std::string from = groups[g] == "Hotkeys" ? "hotkeys" : groups[g] == "Home server" ? "homesync" : groups[g] == "Home server systems" ? "hs_systems" : "shelves"; message.clear(); for (size_t i = 0; i < items.size(); i++) if (items[i].key == from) sel = (int)i; top = std::max(groupStart(groupOf(sel)), sel - ROWS + 1); armed = -1; return MOVED; }
 			inGroups = true; gsel = g < gridCount() ? g : 0; armed = -1; return MOVED;	// back to the groups
@@ -1345,6 +1347,7 @@ namespace banana
 		if (page == GAME) return touchGame(cx, cy);
 		if (page == ARTPICK) return touchArt(cx, cy);
 		if (page == COLORS) return touchColors(cx, cy);
+		if (page == THEMES) return touchThemes(cx, cy);
 		if (langAsk >= 0 && page == LIST)
 		{
 			// the two buttons (renderLangAsk): No, Yes
@@ -1904,6 +1907,7 @@ namespace banana
 		if (page == COLORS) { renderColors(); return; }
 		if (page == UPDATES) { renderUpdates(); return; }
 		if (page == SETUP) { renderSetup(); return; }
+		if (page == THEMES) { renderThemes(); return; }
 		if (langAsk >= 0) { renderLangAsk(); return; }
 		if (inGroups) { renderGroups(); return; }
 		SPal p = pal(light);
@@ -2069,6 +2073,14 @@ namespace banana
 				return true;
 			}
 		}
+		if (page == THEMES && (thumbJob.running() || now < thumbPoll))
+		{
+			// a picture done since the last look: drawn now (the job's output is only its end)
+			std::string out;
+			thumbJob.take(out);
+			if (thumbJob.running()) thumbPoll = now + 1000;
+			return true;
+		}
 		if (page == NETWORKS && wifiEnabled)
 		{
 			if (!joining.empty() && now >= nextStatus) pollStatus();
@@ -2175,6 +2187,7 @@ namespace banana
 	{
 		if (scanJob.running() || statusJob.running() || artJob.running() || checkJob.running() || volJob.running() || betaJob.running()) return 100;
 		if (btListJob.running() || btScanJob.running() || btActJob.running()) return 100;
+		if (page == THEMES && thumbJob.running()) return 250;	// (the pictures as they come)
 		if (page == UPDATES && applying) return std::max(0, (int)(nextStatus2 - t));
 		if (page == UPDATES && downloading) return std::max(0, (int)(nextDl - t));
 		if (page == BLUETOOTH && btEnabled) return std::max(0, (int)(btNextList - t));
@@ -3498,6 +3511,168 @@ namespace banana
 			float aw = faceWidth("A", act);
 			face("A", act, 622 - aw, aw);
 		}
+		be->endScreen();
+	}
+
+	// ---- the theme gallery ----------------------------------------------------------------------------------------
+	std::string Settings::thumbFile(const std::string& value, bool bottom) const
+	{
+		std::string own = bottom ? "" : themePreview(value);
+		if (!own.empty()) return own;
+		// named by the theme and what it is now: its file's size and time, and banana-ui's version (Dark, Light and
+		// Carts change with it)
+		std::string id = value;
+		for (auto& c : id) if (!isalnum((unsigned char)c) && c != '-' && c != '_') c = '_';
+		std::string what = value + "|" + readLine("/etc/banana/version");
+		struct stat st;
+		std::string tp = themePath(value);
+		if (!tp.empty() && stat(tp.c_str(), &st) == 0) what += "|" + std::to_string((long long)st.st_size) + "|" + std::to_string((long long)st.st_mtime);
+		uint32_t h = 2166136261u;
+		for (unsigned char c : what) h = (h ^ c) * 16777619u;
+		char hx[16];
+		snprintf(hx, sizeof hx, "%08x", h);
+		return data + "/themes/.thumbs/" + id + "-" + hx + (bottom ? "-bot.png" : "-top.png");
+	}
+
+	rnds::TexPtr Settings::thumb(const std::string& value, bool bottom)
+	{
+		std::string f = thumbFile(value, bottom);
+		struct stat st;
+		if (stat(f.c_str(), &st) != 0) return nullptr;
+		std::string key = f + "|" + std::to_string((long long)st.st_mtime);
+		auto it = thumbTex.find(key);
+		if (it != thumbTex.end()) return it->second;
+		rnds::Bitmap b = rnds::decodeFile(f);
+		rnds::TexPtr t = b.empty() ? nullptr : be->upload(b, true);
+		if (thumbTex.size() > 64) thumbTex.clear();
+		thumbTex[key] = t;
+		return t;
+	}
+
+	// the pictures not made yet, one theme after the other in the background: banana-ui itself, headless, on the
+	// card's games with that theme set (in a settings.conf of its own), its home screen after the start
+	void Settings::startThumbs()
+	{
+		if (thumbJob.running()) return;
+		auto q = [](const std::string& s) { std::string r = "'"; for (char c : s) { if (c == '\'') r += "'\\''"; else r += c; } return r + "'"; };
+		char exe[4096];
+		ssize_t n = readlink("/proc/self/exe", exe, sizeof exe - 1);
+		if (n <= 0) return;
+		exe[n] = 0;
+		std::string cmd;
+		const std::string dir = data + "/themes/.thumbs";
+		for (auto& v : thValues)
+		{
+			std::string top = thumbFile(v, false), bot = thumbFile(v, true);
+			if (access(top.c_str(), F_OK) == 0 && access(bot.c_str(), F_OK) == 0) continue;
+			bool ownTop = top.compare(0, dir.size() + 1, dir + "/") != 0;	// the theme's own picture: never written over
+			std::string id = bot.substr(dir.size() + 1, bot.size() - dir.size() - 1 - 17);	// (less "-<8 hex>-bot.png")
+			cmd += "mkdir -p \"$D/x\" && printf 'theme = %s\\n' " + q(v) + " > \"$D/x/settings.conf\" && timeout 40 " + q(exe) +
+				" --headless \"$D/x/\" --size 640x480 " + thumbArgs + " --data \"$D/x\" --script 'home 0; wait 1500; shot s' >/dev/null 2>&1 && " +
+				"mkdir -p " + q(dir) + " && rm -f " + q(dir + "/" + id) + "-????????-???.png; " +
+				(ownTop ? std::string() : "mv \"$D/x/s-top.png\" " + q(top) + "; ") + "mv \"$D/x/s-bot.png\" " + q(bot) + "; rm -rf \"$D/x\"; ";
+		}
+		if (cmd.empty()) return;
+		thumbJob.start("D=$(mktemp -d) && { " + cmd + "rm -rf \"$D\"; }", sync);
+		thumbPoll = now + 1000;
+	}
+
+	void Settings::openThemes()
+	{
+		for (auto& it : items)
+			if (it.key == "theme") { load(it); thNames = it.names; thValues = it.values; thSel = std::max(0, it.at); }
+		thTop = std::max(0, thSel / 3 - 1) * 3;
+		page = THEMES;
+		message.clear();
+		startThumbs();
+	}
+
+	Settings::Result Settings::pressThemes(Key k)
+	{
+		int n = (int)thValues.size();
+		if (!n) { page = LIST; return MOVED; }
+		switch (k)
+		{
+		case Key::LEFT: case Key::RIGHT: thSel = (thSel + (k == Key::LEFT ? n - 1 : 1)) % n; break;
+		case Key::UP: if (thSel >= 3) thSel -= 3; else return NONE; break;
+		case Key::DOWN: if (thSel + 3 < n) thSel += 3; else if (thSel / 3 < (n - 1) / 3) thSel = n - 1; else return NONE; break;
+		case Key::A:
+			for (auto& it : items)
+				if (it.key == "theme")
+				{
+					if (it.at == thSel) return NONE;
+					it.at = thSel;
+					save(it);
+					setVariant(it.values[thSel]);
+					for (auto& x : items) if (x.key == "accent") load(x);
+					return THEME;
+				}
+			return NONE;
+		case Key::B: page = LIST; return MOVED;
+		case Key::START: page = LIST; mOpen = false; return CLOSED;
+		default: return NONE;
+		}
+		if (thSel < thTop) thTop = thSel / 3 * 3;
+		if (thSel >= thTop + 6) thTop = (thSel / 3 - 1) * 3;
+		return MOVED;
+	}
+
+	Settings::Result Settings::touchThemes(float cx, float cy)
+	{
+		if (downY >= 418 && downY <= 466) return pressThemes(downX < 320 ? Key::B : Key::A);
+		for (int i = thTop; i < thTop + 6 && i < (int)thValues.size(); i++)
+		{
+			float x = 18 + (i % 3) * 204, y = 82 + ((i - thTop) / 3) * 166;
+			if (cx < x || cx > x + 196 || cy < y || cy > y + 158) continue;
+			if (i != thSel) { thSel = i; return MOVED; }
+			return pressThemes(Key::A);
+		}
+		return NONE;
+	}
+
+	void Settings::renderThemes()
+	{
+		SPal p = pal(light);
+		int cur = -1;
+		for (auto& it : items) if (it.key == "theme") cur = it.at;
+		const std::string& v = thValues.empty() ? std::string() : thValues[thSel];
+		be->beginScreen(0);
+		box("screen", false, 0, 0, 640, 480);
+		box("hero", false, 18, 20, 604, 436);
+		icon("picture", 50, 56, 3);
+		text("Theme", true, 17, 170, 62, p.muted, true, 1.4f);
+		if (!thNames.empty()) text(fit(thNames[thSel], true, 30, 420), true, 30, 170, 88, p.ink);
+		text(thSel == cur ? "In use" : "A uses it", true, 20, 170, 130, p.accent);
+		// its two screens side by side, as its home looks
+		for (int b = 0; b < 2; b++)
+		{
+			float x = 44 + b * 284, y = 196, w = 268, h = 201;
+			be->fill(std::round(X(x - 2)), std::round(X(y - 2)), std::round(X(w + 4)), std::round(X(h + 4)), p.line);
+			if (rnds::TexPtr t = v.empty() ? nullptr : thumb(v, b == 1)) be->draw(t, std::round(X(x)), std::round(X(y)), std::round(X(w)), std::round(X(h)), Color(1, 1, 1, 1));
+			else text(thumbJob.running() ? "Drawing..." : "No picture", false, 18, x + 70, y + 90, p.muted);
+		}
+		be->endScreen();
+
+		be->beginScreen(1);
+		box("screen", false, 0, 0, 640, 480);
+		for (int i = thTop; i < thTop + 6 && i < (int)thValues.size(); i++)
+		{
+			bool on = i == thSel;
+			float x = 18 + (i % 3) * 204, y = 82 + ((i - thTop) / 3) * 166;
+			box(on ? "pick" : "slot", on, x, y, 196, 158);
+			float tx = x + 18, ty = y + 10, tw = 160, th = 120;
+			be->fill(std::round(X(tx - 1)), std::round(X(ty - 1)), std::round(X(tw + 2)), std::round(X(th + 2)), p.line);
+			if (rnds::TexPtr t = thumb(thValues[i], false)) be->draw(t, std::round(X(tx)), std::round(X(ty)), std::round(X(tw)), std::round(X(th)), Color(1, 1, 1, 1));
+			text(fit(thNames[i], true, 16, 176), true, 16, x + 10, y + 134, on ? p.onPick : i == cur ? p.accent : p.muted);
+		}
+		box("bubble", false, 18, 14, 604, 54);
+		text("Themes", true, 22, 38, 28, p.ink);
+		std::string count = std::to_string(thSel + 1) + " / " + std::to_string(thValues.size());
+		float cw = text(count, true, 17, 0, 0, p.muted, false, 0, true);
+		text(count, true, 17, 602 - cw, 31, p.muted);
+		float bw = faceWidth("B", "Back");
+		face("B", "Back", 18, bw);
+		if (thSel != cur) { float aw = faceWidth("A", "Use"); face("A", "Use", 622 - aw, aw); }
 		be->endScreen();
 	}
 

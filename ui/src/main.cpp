@@ -548,6 +548,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	};
 	ui.setHome(0);
 	Settings settings(&be, o.assets, o.data, o.h / 480.0f, variant);
+	settings.thumbArgs = "--assets " + shellQuote(o.assets) + " --splash " + shellQuote(o.splash) + " --banana " + shellQuote(o.banana) +
+		" --systems " + shellQuote(o.systems) + " --roms " + shellQuote(o.roms);
 	settings.setSystems(shelfSystems(lib));
 	settings.setSync(true);
 	settings.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
@@ -1432,6 +1434,8 @@ int main(int argc, char** argv)
 	int lastMinute = -1;
 	float scale = disp.height() / 480.0f;
 	Settings settingsView(&be, o.assets, o.data, scale, variant);
+	settingsView.thumbArgs = "--assets " + shellQuote(o.assets) + " --splash " + shellQuote(o.splash) + " --banana " + shellQuote(o.banana) +
+		" --systems " + shellQuote(o.systems) + " --roms " + shellQuote(o.roms);	// (the theme gallery's pictures)
 	settingsView.setSystems(shelfSystems(lib));
 	pkmn::Companion companion;	// the game panel's Pokémon companion (pokemon.h), for the game running
 	gcomp::Engine gameComp;		// or its game companion (gamecomp.h), for another GBA game with a definition

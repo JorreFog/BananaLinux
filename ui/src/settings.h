@@ -115,6 +115,8 @@ namespace banana
 		// a pop-up along the top of the top panel in ROCKNIXDS's look (the RetroAchievements account check's result);
 		// the host draws it over the top panel while Settings is open
 		void drawToast(double nowMs);
+		// banana-ui's own arguments for drawing a theme's picture headless (--assets, --banana, --systems, --roms)
+		std::string thumbArgs;
 		// the same pop-up for the menu (Settings closed): the host's own message ("i" sign, the accent colour)
 		void popup(const std::string& l1, const std::string& l2);
 
@@ -150,7 +152,21 @@ namespace banana
 		std::string about, wifiInfo, ip;
 
 		// the Wi-Fi pages: the networks around, and the keyboard for a password (settings-wifi.cpp)
-		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH } page = LIST;
+		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES } page = LIST;
+		// Display & sound > Theme, A: the themes as a gallery, each a picture of its home screen (the theme's own
+		// "preview", else drawn by banana-ui itself, headless, once per theme file, kept in banana/themes/.thumbs)
+		std::vector<std::string> thNames, thValues;
+		int thSel = 0, thTop = 0;
+		wifi::Job thumbJob;
+		std::map<std::string, rnds::TexPtr> thumbTex;	// by file (with its time: a picture made again is read again)
+		double thumbPoll = 0;
+		void openThemes();
+		Result pressThemes(Key k);
+		Result touchThemes(float cx, float cy);
+		void renderThemes();
+		std::string thumbFile(const std::string& value, bool bottom) const;
+		rnds::TexPtr thumb(const std::string& value, bool bottom);
+		void startThumbs();
 		// the game page (X on a DS game in the library): its emulator, this game only (banana/nds-per-game.conf, read by
 		// run-nds: "<ROM file name> = superdrastic|bananads", no line = Settings > Nintendo DS > Emulator)
 		// the game page (X on a DS game): its own emulator and shader, each "As in Settings" (index 0) or a choice
