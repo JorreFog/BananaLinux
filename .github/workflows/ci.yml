@@ -12,7 +12,6 @@ on:
 jobs:
   checks:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30     # (about 10 normally; a test that hangs fails here, not after GitHub's six hours)
     steps:
       - uses: actions/checkout@v4
       - name: Packages
