@@ -86,7 +86,7 @@ ux_run poweroff "home 0; press start; press y; press down; press down; press a; 
 # DS games); the library is read again without it
 mkdir -p "$UXFX/saves/nds" "$UXFX/states/nds" "$UXFX/drastic/backup" "$UXFX/bios"
 for f in "saves/nds/Peel Quest.sav" "states/nds/Peel Quest.ml1" "drastic/backup/Peel Quest.dsv" "saves/nds/Peel Quest 2.sav" "bios/Peel Quest.bin" "saves/nds/Split Racers (USA).sav"; do echo x > "$UXFX/$f"; done
-D7="press down; press down; press down; press down; press down; press down; press down;"
+D7="press down; press down; press down; press down; press down; press down; press down; press down;"  # (8 rows: + 3D resolution)
 ux_run delete-keep "lib 0 3; press x; $D7 press a; press b; press b; lib 0 3; press x; $D7 press a; shot ux-delete-ask; press a; wait 300; shot ux-delete-done"
 [ ! -e "$UXFX/roms/nds/Split Racers (USA).nds" ] && [ -e "$UXFX/saves/nds/Split Racers (USA).sav" ] && [ -e "$UXFX/roms/nds/media/box/Split Racers (USA).png" ] \
     || { echo "FAIL $size: Delete game (the game only): $(ls "$UXFX/roms/nds" "$UXFX/saves/nds" | tr '\n' ' ')"; fail=1; }
