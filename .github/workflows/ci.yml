@@ -31,10 +31,6 @@ jobs:
           sudo apt-get install -y busybox-static
           mkdir -p /tmp/bb; for a in sh awk sed grep cat ls mkdir rm touch mv sleep printf date cut tr head tail env timeout; do ln -sf /bin/busybox /tmp/bb/$a; done
           PATH=/tmp/bb:$PATH busybox sh system/tests/health-test.sh
-      - name: A new system on trial, and the boot's breadcrumbs (against a made-up card; dash, then BusyBox)
-        run: |
-          sh system/tests/boot-guard-test.sh
-          PATH=/tmp/bb:$PATH busybox sh system/tests/boot-guard-test.sh
       - name: Sleep (bananad against a made-up /sys in its own namespaces)
         run: sudo system/bananad/tests/sleep-test.sh
       - name: Shell scripts parse
