@@ -4,6 +4,8 @@
 // at once when a game starts (release()), so nothing holds the audio device while a game wants it. A launch's last cue
 // (play(name, true)) closes it as soon as that sound has played out: on the RG DS Plus the close takes ~0.6 s (the
 // aw88166 amplifiers' stop), which then runs during the launch animation's last frames instead of after them.
+// A launch's cue plays over the sound before it (the "ready" chime A starts the launch with) instead of cutting it off;
+// any other new sound cuts the one playing.
 #include <condition_variable>
 #include <cstdint>
 #include <map>
