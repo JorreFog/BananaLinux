@@ -1902,6 +1902,30 @@ int main(int argc, char** argv)
 			if (c >= 0 && ms > 50 && (c - stormIrqs) * 1000 / ms > 20000) disp.stormCheck();	// (calm: ~120 a second)
 		}
 		gameEnded = nowMs();
+		// Settings > Network > Home server > Auto sync: the saves to the server now the game has let go of them
+		// (banana-sync reads the setting too, and does nothing unpaired or while another sync runs)
+		if (settings["homesync_auto"] == "quit" || settings["homesync_auto"] == "both")
+		{
+			const char* tool = getenv("BANANA_SYNC") ? getenv("BANANA_SYNC") : "/usr/bin/banana-sync";
+			if (access(tool, X_OK) == 0)
+			{
+				pid_t p = fork();
+				if (p == 0)
+				{
+					if (fork() == 0)
+					{
+						setsid();
+						int nul = open("/dev/null", O_RDWR);
+						if (nul >= 0) { dup2(nul, 0); dup2(nul, 1); dup2(nul, 2); }
+						execl(tool, tool, "sync", "--auto", "quit", (char*)nullptr);
+						_exit(127);
+					}
+					_exit(0);
+				}
+				if (p > 0) waitpid(p, nullptr, 0);
+				logf("game end: home server sync started");
+			}
+		}
 		// the menu's clocks only now: the panels opened again and the iris ran at the game's (~1.4 GHz at most on schedutil
 		// otherwise, from the game's end)
 		if (system("banana-perf ui") != 0) {}

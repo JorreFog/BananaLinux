@@ -3,6 +3,9 @@
 #include "lang.h"
 #include "settings_defaults.h"
 #include "theme.h"
+#include "json.h"
+#include <fcntl.h>
+#include <sys/file.h>
 #include <algorithm>
 #include <dlfcn.h>
 #include <thread>
@@ -621,6 +624,8 @@ namespace banana
 			menu, "share_login", { "Name and password", "Guest" }, { "password", "guest" });
 		add(W, "phone", "Sharing name and password", "", "", "share_account", {}, {}, Item::PAGE);
 		add(W, "phone", "SSH", "", menu, "ssh", { "Off", "On" }, { "off", "on" });
+		add(W, "phone", "Home server", "Your games, their box art and your saves from a server at home: Romhost (Homeport's ROM library) or RomM. A opens its page: pairing, Sync now, and what syncs.",
+			"", "homesync", {}, {}, Item::PAGE);
 		const char* S = "System";
 		{
 			// the languages there are files for, each in its own name; the help names who translated them
@@ -698,6 +703,26 @@ namespace banana
 		add(PW, "moon", "Sleep", "The handheld sleeps, as with a press of the power button; a game running is paused. Press the power button to wake it.", "", "sleep", { "" }, { "" }, Item::ACTION);
 		add(PW, "gear", "Restart", "Restarts the handheld. Press A twice.", "", "reboot", { "" }, { "" }, Item::ACTION);
 		add(PW, "gear", "Shut down", "Turns the handheld off. Press A twice. (Or hold the power button.)", "", "poweroff", { "" }, { "" }, Item::ACTION);
+		// the Home server page (Network > Home server), a section of its own as Hotkeys is (after the
+		// sections with tiles: the grid is the groups in order)
+		const char* HS = "Home server";
+		add(HS, "phone", "Server", "", "", "hs_server", {}, {}, Item::PAGE);
+		add(HS, "phone", "Sync now", "Copies the server's games (with their covers and names) to the card and syncs the saves both ways. It carries on in the background; the handheld doesn't sleep while games download. Files of your own are never replaced or deleted: only the ones a sync put there.",
+			"", "hs_sync", {}, {}, Item::PAGE);
+		add(HS, "phone", "Games", "Download: the server's games for the systems below come to the card (and leave it when they leave the server). Saves only: the games stay as they are and only the saves sync.",
+			menu, "homesync_roms", { "Download", "Saves only" }, { "on", "off" });
+		add(HS, "phone", "Save states", "On: save states sync too, not only the games' own saves (RomM; on Romhost its Devices page decides). Quick-resume states never sync.",
+			menu, "homesync_states", { "Off", "On" }, { "off", "on" });
+		add(HS, "phone", "Auto sync", "Leaving a game: its saves go to the server as you leave it (a few seconds, in the background). And on Wi-Fi: also games and saves whenever Wi-Fi connects. Never while a game runs.",
+			menu, "homesync_auto", { "Off", "Leaving a game", "And on Wi-Fi" }, { "off", "quit", "both" });
+		add(HS, "phone", "Systems", "Which systems sync on this handheld. A skipped system's games stay as they are on the card.", "", "hs_systems", {}, {}, Item::PAGE);
+		add(HS, "phone", "Forget this server", "Unpairs the handheld: nothing syncs until it is paired again. The games and saves stay on the card. Press A twice.", "", "hs_forget", { "" }, { "" }, Item::ACTION);
+		{
+			const char* HSS = "Home server systems";
+			struct { const char* id; const char* name; } sy[] = { { "nds", "Nintendo DS" }, { "gba", "Game Boy Advance" }, { "gbc", "Game Boy Color" }, { "gb", "Game Boy" },
+				{ "nes", "NES" }, { "snes", "Super Nintendo" }, { "megadrive", "Mega Drive" }, { "psx", "PlayStation" }, { "n64", "Nintendo 64" } };
+			for (auto& s : sy) add(HSS, "phone", s.name, "Sync: its games and saves sync with the home server. Skip: they stay as they are on this handheld.", menu, (std::string("homesync.") + s.id).c_str(), { "Sync", "Skip" }, { "on", "off" });
+		}
 		addShelfRows();
 	}
 
@@ -990,6 +1015,10 @@ namespace banana
 			if (it.key == "bt_devices") { openBluetooth(); return MOVED; }
 			if (it.key == "shelves") { openSection("Shown systems"); return MOVED; }
 			if (it.key == "hotkeys") { openSection("Hotkeys"); return MOVED; }
+			if (it.key == "homesync") { message.clear(); openSection("Home server"); return MOVED; }
+			if (it.key == "hs_systems") { openSection("Home server systems"); return MOVED; }
+			if (it.key == "hs_server") { startPairing(); return MOVED; }
+			if (it.key == "hs_sync") { startSync(); return MOVED; }
 			if (it.key == "update") openUpdates(); else if (it.key == "setup") openSetup(); else openNetworks();
 			return MOVED;
 		}
@@ -1043,6 +1072,15 @@ namespace banana
 				while (!out.empty() && out.back() == '\n') out.pop_back();
 				message = ok ? "RetroArch is back to Banana's settings. The old ones are in " + out + " on the card." : out.empty() ? "RetroArch couldn't be reset." : out;
 				for (auto& x : items) if (x.file.find("retroarch.cfg") != std::string::npos) load(x);
+				return MOVED;
+			}
+			if (it.key == "hs_forget")
+			{
+				armed = -1;
+				hsRun("forget");
+				hsStep = 0;
+				hsPairedAt = -1e18;
+				message = "Unpaired. The games and saves stay on the card.";
 				return MOVED;
 			}
 			if (it.key == "reset_system" || it.key == "reset_emulator")
@@ -1186,7 +1224,7 @@ namespace banana
 		case Key::LEFT: return change(-1);
 		case Key::RIGHT: case Key::A: return change(1);
 		case Key::B:
-			if (groups[g] == "Shown systems" || groups[g] == "Hotkeys") { std::string from = groups[g] == "Hotkeys" ? "hotkeys" : "shelves"; for (size_t i = 0; i < items.size(); i++) if (items[i].key == from) sel = (int)i; top = std::max(groupStart(groupOf(sel)), sel - ROWS + 1); armed = -1; return MOVED; }
+			if (groups[g] == "Shown systems" || groups[g] == "Hotkeys" || groups[g] == "Home server" || groups[g] == "Home server systems") { std::string from = groups[g] == "Hotkeys" ? "hotkeys" : groups[g] == "Home server" ? "homesync" : groups[g] == "Home server systems" ? "hs_systems" : "shelves"; message.clear(); for (size_t i = 0; i < items.size(); i++) if (items[i].key == from) sel = (int)i; top = std::max(groupStart(groupOf(sel)), sel - ROWS + 1); armed = -1; return MOVED; }
 			inGroups = true; gsel = g < gridCount() ? g : 0; armed = -1; return MOVED;	// back to the groups
 		case Key::START: mOpen = false; return CLOSED;
 		default: return NONE;
@@ -1194,7 +1232,7 @@ namespace banana
 	}
 
 	// the sections with no tile on the groups' grid (after the others): Power (Y there), Shown systems (a row's page)
-	static bool tileless(const std::string& section) { return section == "Power" || section == "Shown systems" || section == "Hotkeys"; }
+	static bool tileless(const std::string& section) { return section == "Power" || section == "Shown systems" || section == "Hotkeys" || section == "Home server" || section == "Home server systems"; }
 	int Settings::gridCount() const
 	{
 		int n = 0;
@@ -1726,6 +1764,28 @@ namespace banana
 		if (cur.key == "ssh")
 			help = "For working on Banana itself: ssh root@" + (ip.empty() ? std::string("<address>") : ip) +
 				", with the public keys in banana/ssh/authorized_keys on the card (no passwords). Files: scp -O (dropbear has no SFTP), or File sharing.";
+		if (cur.key == "hs_server")
+		{
+			std::string n = homeServer();
+			help = n.empty() ? "Not paired. A looks for Romhost on the network (Homeport > ROMs > Pair a device shows its code); when none answers, type the address of a Romhost or a RomM server (a name or IP, and :port if it isn't the usual one). RomM then shows a code to enter on its Pair device page."
+				: "Paired with " + n + ". A pairs again (another server, or after the handheld was removed there).";
+		}
+		if (cur.key == "hs_sync" && !syncLine.empty() && !syncing())
+		{
+			std::istringstream in(syncLine.substr(syncLine.find(' ') + 1));
+			int g = 0, rm = 0, up = 0, dn = 0, cf = 0, er = 0;
+			std::string state = syncLine.substr(0, syncLine.find(' '));
+			if (state == "done")
+			{
+				in >> g >> rm >> up >> dn >> cf >> er;
+				std::string why = syncLine.find('|') == std::string::npos ? "" : syncLine.substr(syncLine.find('|') + 1);
+				help = "Last sync: " + std::to_string(g) + " files of games down, " + std::to_string(rm) + " removed; saves " + std::to_string(up) + " up, " + std::to_string(dn) + " down" +
+					(cf ? "; " + std::to_string(cf) + " in conflict (on Romhost: decide in Homeport; on RomM the newer won and the other is kept on the card as a .bak)" : "") +
+					(er ? ". " + std::to_string(er) + " didn't work: " + why + "." : why.empty() ? "." : ". " + why + ".");
+			}
+			else if (state == "error") help = "The last sync didn't work: " + syncLine.substr(6) + ".";
+		}
+		if ((cur.key == "hs_server" || cur.key == "hs_forget") && !message.empty()) help = message;
 		if ((cur.key == "switch" || cur.key == "ra_reset" || cur.key.compare(0, 10, "nds-reset-") == 0) && !message.empty()) help = message;
 		if (cur.key == "colors")
 		{
@@ -1829,6 +1889,11 @@ namespace banana
 			wrapped("Fetching covers and title screens. The menu shows them as they come, and it carries on if you leave this screen.", 20, HELP_X, HELP_TOP, HELP_W, 4, p.muted);
 			scrapeBar(50, 330, 540);
 		}
+		else if (cur.key == "hs_sync" && syncing())
+		{
+			wrapped("Syncing with " + (homeServer().empty() ? std::string("the server") : homeServer()) + ". It carries on if you leave this screen; the library shows the new games when it's done.", 20, HELP_X, HELP_TOP, HELP_W, 4, p.muted);
+			syncBar(50, 330, 540);
+		}
 		else helpText(help, HELP_TOP, HELP_BOTTOM, p.muted);
 		be->endScreen();
 
@@ -1868,6 +1933,8 @@ namespace banana
 			else if (it.kind == Item::PAGE && it.key == "share_account") v = fit(shareUser(), true, 19, 300);
 			else if (it.kind == Item::PAGE && it.key == "ds_name") v = dsName().empty() ? "Not set" : dsName();
 			else if (it.kind == Item::PAGE && it.key == "scrape") v = scrapeShort();
+			else if (it.kind == Item::PAGE && (it.key == "homesync" || it.key == "hs_server")) v = hsStep ? "Pairing" : homeServer().empty() ? "Not paired" : fit(homeServer(), true, 19, 300);
+			else if (it.kind == Item::PAGE && it.key == "hs_sync") v = syncShort();
 			// the name on the left and the value on the right, each in its own box: a long one (a translation) ends in
 			// "..." or, on the picked row, scrolls; the value gets up to 260 px, the name the rest
 			const bool arrows = !v.empty() && !(it.kind == Item::ACTION || it.kind == Item::PAGE || it.kind == Item::INFO);
@@ -1885,7 +1952,7 @@ namespace banana
 		be->popClip();
 		float bw = faceWidth("B", "Back");
 		face("B", "Back", 18, bw);
-		std::string act = cur.kind == Item::ACTION ? (armed == sel ? "Confirm" : cur.label) : cur.kind == Item::INFO ? "" : cur.key == "scrape" ? (scraping() ? "" : "Start") : cur.kind == Item::PAGE ? "Open" : "Change";
+		std::string act = cur.kind == Item::ACTION ? (armed == sel ? "Confirm" : cur.label) : cur.kind == Item::INFO ? "" : cur.key == "scrape" ? (scraping() ? "" : "Start") : cur.key == "hs_sync" ? (syncing() ? "" : "Start") : cur.key == "hs_server" ? (hsStep ? "" : "Pair") : cur.kind == Item::PAGE ? "Open" : "Change";
 		if (!act.empty())
 		{
 			float aw = faceWidth("A", act);
@@ -1947,6 +2014,7 @@ namespace banana
 		now = t;
 		if (!mOpen) return false;
 		bool scrapeChanged = pollScrape(t);
+		scrapeChanged |= pollSync(t);
 		if (raCheck)
 		{
 			// (a reference of its own for the lock: the reset below can drop the last one, and the guard would unlock
@@ -2610,6 +2678,8 @@ namespace banana
 		std::string help = !message.empty() ? message
 			: entry == ENTRY_SEARCH ? "A types the key, B deletes, X capitals, Y a space, START searches: the games found open as a shelf of their own, first on the shelf. Part of a name is enough; an empty search takes the shelf away."
 			: entry == ENTRY_WIFI ? "A types the key, B deletes, X capitals, L symbols, Y a space, START joins. Or tap the keys. The password is kept in banana/wifi.conf on the card."
+			: entry == ENTRY_HS_ADDR ? "The home server's address: its name or IP, and :port when it isn't the usual (Romhost 8092, RomM 8080 or 80). A types the key, B deletes, L symbols (the dot and colon), START when it is typed."
+			: entry == ENTRY_HS_CODE ? "The code Homeport shows under ROMs > Pair a device (or, for RomM, a client token's pairing code). START when it is typed."
 			: entry == ENTRY_DS_NAME ? "A types the key, B deletes, X capitals, L symbols, Y a space, START when it is typed. Kept in both emulators' settings (DraStic's drastic.cfg, BananaDS's bananads.conf)."
 			: entry == ENTRY_GAME_NAME || entry == ENTRY_GAME_SORT ? "A types the key, B deletes, X capitals, L symbols, Y a space, START when it is typed. Kept in banana/game-titles.tsv on the card."
 			: entry == ENTRY_ART_SEARCH ? "A types the key, B deletes, X capitals, L symbols, Y a space, START looks. A few words of the name are enough: the closest names come first."
@@ -3799,6 +3869,32 @@ namespace banana
 			page = entryBack;
 			message.clear();
 			return CHANGED;
+		case ENTRY_HS_ADDR:
+		{
+			// what answers there: Romhost (then its pairing code) or RomM (then its device code)
+			std::string a = trim(pw);
+			pw.clear();
+			page = entryBack;
+			if (a.empty()) { message.clear(); return MOVED; }
+			hsStep = 2;
+			message = "Asking " + a + "...";
+			auto q = [](const std::string& s) { std::string r = "'"; for (char c : s) { if (c == '\'') r += "'\\''"; else r += c; } return r + "'"; };
+			hsJob.start(q(syncTool()) + " probe " + q(a) + " 2>/dev/null", sync);
+			return MOVED;
+		}
+		case ENTRY_HS_CODE:
+		{
+			std::string code = trim(pw);
+			pw.clear();
+			page = entryBack;
+			if (code.empty()) { hsStep = 0; message.clear(); return MOVED; }
+			auto q = [](const std::string& s) { std::string r = "'"; for (char c : s) { if (c == '\'') r += "'\\''"; else r += c; } return r + "'"; };
+			hsStep = 3;
+			message = "Pairing with " + hsName + "...";
+			std::ofstream("/run/banana/sync.status") << "pairing\n";
+			hsRun("pair " + q(hsUrl) + " " + q(code));
+			return MOVED;
+		}
 		case ENTRY_DS_NAME:
 		{
 			std::string v = trim(pw);
@@ -4184,6 +4280,160 @@ namespace banana
 		if (b > 0) be->fill(X(x + 2), X(y + 2), X((w - 4) * a / b), X(10), p.accent);
 		text(fit(sys.empty() ? "Starting" : sys, true, 17, w), true, 17, x, y + 26, p.ink);
 		text(fit(game, false, 16, w), false, 16, x, y + 52, p.muted);
+	}
+
+	// ---- home server sync: banana-sync ------------------------------------------------------------------------------
+	std::string Settings::syncTool() const
+	{
+		const char* prog = getenv("BANANA_SYNC");	// (another build of it, or the tests' stand-in)
+		return prog && *prog ? prog : "/usr/bin/banana-sync";
+	}
+	void Settings::hsRun(const std::string& args)
+	{
+		// the card's root is the folder above banana/ (/data); the pairing and the settings are banana/'s
+		size_t s = data.rfind('/');
+		std::string root = s == std::string::npos || s == 0 ? "/" : data.substr(0, s);
+		auto q = [](const std::string& x) { std::string r = "'"; for (char c : x) { if (c == '\'') r += "'\\''"; else r += c; } return r + "'"; };
+		std::string cmd = q(syncTool()) + " --root " + q(root) + " --conf " + q(data + "/romsync.json") + " --settings " + q(data + "/settings.conf") + " " + args + " >/dev/null 2>&1";
+		pid_t p = fork();
+		if (p == 0)
+		{
+			if (fork() == 0) { setsid(); execl("/bin/sh", "sh", "-c", cmd.c_str(), (char*)nullptr); _exit(127); }
+			_exit(0);
+		}
+		if (p > 0) waitpid(p, nullptr, 0);
+	}
+	std::string Settings::homeServer() const
+	{
+		// (read again at most every 2 s: rows ask for it every frame)
+		if (now - hsPairedAt < 2000 && now >= hsPairedAt) return hsPaired;
+		hsPairedAt = now;
+		JPtr j = readJsonFile(data + "/romsync.json");
+		hsPaired = !j || !j->isObj() || j->str("token").empty() ? "" : j->str("serverName").empty() ? j->str("server") : j->str("serverName");
+		return hsPaired;
+	}
+	void Settings::startPairing()
+	{
+		if (hsStep == 3) return;	// (waiting for RomM's approval or the server's answer)
+		if (!wifiOn()) { message = "Wi-Fi is off: switch it on in Network first."; return; }
+		// Romhost answers a broadcast; nothing (or RomM, which doesn't): its address is typed
+		hsStep = 1;
+		message = "Looking for a home server on the network...";
+		hsJob.start("'" + syncTool() + "' discover 2>/dev/null", sync);
+	}
+	void Settings::startSync()
+	{
+		if (syncing()) return;
+		if (homeServer().empty()) { message = "Not paired yet: Server, above, pairs the handheld."; return; }
+		if (!wifiOn()) { message = "Wi-Fi is off: switch it on in Network first."; return; }
+		std::ofstream("/run/banana/sync.status") << "running 0 0 |starting\n";
+		syncLine.clear();
+		syncNext = 0;
+		hsRun("sync");
+	}
+	bool Settings::pollSync(double t)
+	{
+		bool changed = false;
+		std::string out;
+		if (hsJob.take(out))
+		{
+			changed = true;
+			if (hsStep == 1)
+			{
+				// discover: "ROMHOST\t<url>\t<name>" lines; the first one, else the address typed
+				std::istringstream in(out);
+				std::string ln;
+				hsUrl.clear();
+				while (std::getline(in, ln))
+					if (ln.compare(0, 8, "ROMHOST\t") == 0) { size_t a = 8, b = ln.find('\t', a); hsUrl = ln.substr(a, b - a); hsName = b == std::string::npos ? hsUrl : ln.substr(b + 1); break; }
+				if (!hsUrl.empty())
+				{
+					hsKind = "romhost";
+					message.clear();
+					startEntry(ENTRY_HS_CODE, "Pairing code for", hsName, LIST);
+				}
+				else
+				{
+					hsStep = 0;
+					message.clear();
+					startEntry(ENTRY_HS_ADDR, "No Romhost answered. Server address", "Romhost or RomM", LIST);
+				}
+			}
+			else if (hsStep == 2)
+			{
+				// probe: "romhost <url> <name>", "romm <url> RomM <version>", "none"
+				std::istringstream in(out);
+				std::string kind, url, name;
+				in >> kind >> url;
+				std::getline(in, name);
+				name = trim(name);
+				if (kind == "romhost") { hsKind = kind; hsUrl = url; hsName = name; message.clear(); startEntry(ENTRY_HS_CODE, "Pairing code for", name, LIST); }
+				else if (kind == "romm")
+				{
+					// RomM's device pairing: banana-sync shows its code in the status file and waits for the approval
+					hsKind = kind; hsUrl = url; hsName = name;
+					hsStep = 3;
+					message = "Asking " + name + " for a pairing code...";
+					std::ofstream("/run/banana/sync.status") << "pairing\n";
+					auto q = [](const std::string& x) { std::string r = "'"; for (char c : x) { if (c == '\'') r += "'\\''"; else r += c; } return r + "'"; };
+					hsRun("pair " + q(url));
+				}
+				else { hsStep = 0; message = "Nothing answers there as a Romhost or RomM server. Check the address (and :port) and that the handheld is on the same network."; }
+			}
+		}
+		if (t < syncNext && !changed) return false;
+		syncNext = t + 500;
+		std::string ln = readLine("/run/banana/sync.status");
+		// a run that is gone (crashed, killed): "running" with no word for 120 s and no sync alive (sync.lock unheld) is over
+		struct stat st;
+		if (ln.compare(0, 8, "running ") == 0 && stat("/run/banana/sync.status", &st) == 0 && time(nullptr) - st.st_mtime > 120)
+		{
+			int fd = ::open("/run/banana/sync.lock", O_RDWR | O_CLOEXEC);
+			if (fd >= 0 && flock(fd, LOCK_EX | LOCK_NB) == 0) { ln = "error stopped"; std::ofstream("/run/banana/sync.status") << ln << "\n"; flock(fd, LOCK_UN); }
+			if (fd >= 0) ::close(fd);
+		}
+		if (ln == syncLine) return changed;
+		bool was = syncing();
+		syncLine = ln;
+		if (hsStep == 3)
+		{
+			if (ln.compare(0, 5, "pair ") == 0)
+			{
+				std::istringstream in(ln.substr(5));
+				std::string code, url;
+				in >> code >> url;
+				message = "On " + hsName + ", open " + url + " (signed in) and enter " + code + ", then approve this handheld. Waiting...";
+			}
+			else if (ln.compare(0, 7, "paired ") == 0) { hsStep = 0; hsPairedAt = -1e18; message = "Paired with " + ln.substr(7) + ". Sync now, below, gets the games and saves."; }
+			else if (ln.compare(0, 6, "error ") == 0) { hsStep = 0; message = "Pairing didn't work: " + ln.substr(6) + "."; }
+		}
+		if (was && ln.compare(0, 5, "done ") == 0) libChanged = true;	// new games: the library again
+		return true;
+	}
+	std::string Settings::syncShort() const
+	{
+		std::istringstream in(syncLine);
+		std::string state;
+		in >> state;
+		if (state == "running") { int a = 0, b = 0; in >> a >> b; return b ? std::to_string(a) + " / " + std::to_string(b) : "Syncing"; }
+		if (state == "done") { int g, rm, up, dn, cf, er = 0; in >> g >> rm >> up >> dn >> cf >> er; return er ? "Didn't all work" : cf ? "Done, conflicts" : "Done"; }
+		if (state == "error") return syncLine.find("unpaired") != std::string::npos ? "Pair again" : "Didn't work";
+		return "Not yet";
+	}
+	void Settings::syncBar(float x, float y, float w)
+	{
+		SPal p = pal(light);
+		std::istringstream in(syncLine);
+		std::string state, rest;
+		int a = 0, b = 0;
+		in >> state >> a >> b;
+		std::getline(in, rest);
+		rest = trim(rest);
+		std::string what = rest.substr(0, rest.find('|')), item = rest.find('|') == std::string::npos ? "" : rest.substr(rest.find('|') + 1);
+		be->fill(X(x), X(y), X(w), X(14), p.line);
+		if (b > 0) be->fill(X(x + 2), X(y + 2), X((w - 4) * std::min(a, b) / b), X(10), p.accent);
+		text(fit(what.empty() ? "Starting" : what, true, 17, w), true, 17, x, y + 26, p.ink);
+		text(fit(item, false, 16, w), false, 16, x, y + 52, p.muted);
 	}
 
 	// ---- the game panel -----------------------------------------------------------------------------------------

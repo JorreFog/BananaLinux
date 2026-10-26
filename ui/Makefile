@@ -24,6 +24,10 @@ banana-ui: $(SRC) $(wildcard src/*.h rnds/*.h)
 banana-scrape: src/scrape.cpp
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $< -lpthread -ldl
 
+# home server sync (Settings > Network > Home server): Romhost and RomM, games, box art and saves
+banana-sync: src/sync.cpp src/sync_util.h src/json.cpp src/json.h
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ src/sync.cpp src/json.cpp -ldl
+
 # the game panel's DRM lease for RetroArch (preloaded by run-retroarch)
 CC ?= gcc
 banana-leaseshim.so: src/leaseshim.c
@@ -48,6 +52,7 @@ install:
 	install -D -m 755 banana-ui $(DESTDIR)/usr/bin/banana-ui
 	install -D -m 755 banana-leaseshim.so $(DESTDIR)/usr/lib/banana/banana-leaseshim.so
 	install -D -m 755 banana-scrape $(DESTDIR)/usr/bin/banana-scrape
+	install -D -m 755 banana-sync $(DESTDIR)/usr/bin/banana-sync
 	# (the folders' contents: "cp -r dir dst" into a dst that is there from a build before nests a copy in it, and
 	# the files in use were never replaced)
 	mkdir -p $(DESTDIR)/usr/share/banana/rnds $(DESTDIR)/usr/share/banana/splash $(DESTDIR)/usr/share/banana/banana
@@ -59,6 +64,6 @@ install:
 	cp -r assets/lang/. $(DESTDIR)/usr/share/banana/lang/
 
 clean:
-	rm -f banana-ui banana-leaseshim.so banana-scrape tests/pokemon-test tests/gamecomp-test tests/input-test
+	rm -f banana-ui banana-leaseshim.so banana-scrape banana-sync tests/pokemon-test tests/gamecomp-test tests/input-test
 
 .PHONY: host install clean
