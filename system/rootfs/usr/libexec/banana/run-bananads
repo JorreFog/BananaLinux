@@ -152,7 +152,7 @@ esac
 G=${1##*/}; G=${G%.*}
 [ -f "/data/states/nds/$G.resume.mst" ] && [ -f "/data/saves/nds/$G.sav" ] && [ "/data/saves/nds/$G.sav" -nt "/data/states/nds/$G.resume.mst" ] &&
     rm -f "/data/states/nds/$G.resume.mst"
-# a zipped game (the library lists .zip for the DS, DraStic opens them): BananaDS opens .nds only, so the zip's game is
+# a zipped game (the library lists .zip for the DS, DraStic opens them): BananaDS opens files only, so the zip's game is
 # unpacked once into the card's cache, named after the zip (its saves and states then go by the name the menu shows),
 # and unpacked again only when the zip is newer
 ROM=$1
@@ -163,9 +163,10 @@ case "$ROM" in
     if [ ! -f "$N" ] || [ "$ROM" -nt "$N" ]; then
         rm -rf $C/*.nds $C/.unzip    # one game unpacked at a time: they are large
         mkdir -p $C/.unzip && unzip -q -o "$ROM" -d $C/.unzip
-        E=$(find $C/.unzip -type f -iname '*.nds' | head -n 1)
+        # (a DSi game's .dsi or .cia too: BananaDS tells them by their contents, not their names)
+        E=$(find $C/.unzip -type f \( -iname '*.nds' -o -iname '*.dsi' -o -iname '*.cia' \) | head -n 1)
         [ -n "$E" ] && mv -f "$E" "$N"; rm -rf $C/.unzip
-        [ -f "$N" ] || { echo "no .nds in $ROM" >&2; exit 1; }
+        [ -f "$N" ] || { echo "no .nds, .dsi or .cia in $ROM" >&2; exit 1; }
     fi
     ROM=$N ;;
 esac
