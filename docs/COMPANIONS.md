@@ -32,7 +32,6 @@ The companion idea is PokeDaisy's (https://github.com/lidor30/pokedaisy, by Lido
    from the menu with Second screen on. banana-ui's log (`/data/banana/logs/banana-ui.log`) says which file matched.
 
 ## The definition format (schema 1)
-
 Schema 1 (the first one the companion data was written in). Check every def with `python3 tools/companions/validate.py`
 (no args: all of `defs/`; or give files). A def that fails validation is not installed.
 
@@ -85,7 +84,7 @@ A var is read from the game's memory (`addr`), or computed (`expr`), or a consta
 | `len` | `text` only: bytes (1-64, default 16) |
 | `enc` | `text` only: `ascii` (default), or `charmap:<enum>` (each byte looked up in that enum; missing bytes -> `?`) |
 | `term` | `text` only: terminator byte (default 0; -1 none) |
-| `ptr` | `[pointerAddr, offset]`: read the u32 at pointerAddr, add offset, read there (pointer 0 or outside the readable ranges -> the var is "not available"). Offset may be negative. |
+| `ptr` | `[pointerAddr, offset]` (then `addr` is optional, documentation only): read the u32 at pointerAddr, add offset, read there (pointer 0 or outside the readable ranges -> the var is "not available"). Offset may be negative. |
 | `mask` `shift` `add` `mul` `div` | post-processing in this order: `(raw & mask) >> shift`, then `* mul`, `/ div` (integer, toward zero), `+ add`. `mask` hex string or int. |
 | `expr` | computed from other vars, see Expressions. A var with `expr` has no `addr`. |
 | `value` | a constant (number or string) |
@@ -151,7 +150,9 @@ Every widget may have `when` (expression; false -> not drawn) and `label`.
 
 `list`: `base` is an address (or `{"ptr": [pointerAddr, offset]}`), `stride` bytes per row, `n` rows (max 64).
 `fields`: [{`name`, `label`, `off`, `type`, `len`/`enc` (text), `mask` `shift` `add` `mul` `div`, `enum`,
-`format`}]; the first field is the row's name. `rowWhen` sees each field by its `name` (and every var): e.g.
+`format`}]; the first field is the row's name (drawn large at the left: put the name or id there). A field of
+`"type": "index"` reads nothing: its value is the row's number (0 first; `add: 1` counts from one), e.g.
+`{"name": "who", "type": "index", "enum": "charaboms"}` names a fixed array's rows. `rowWhen` sees each field by its `name` (and every var): e.g.
 `"rowWhen": "hp > 0"`. The whole table (`stride * n` bytes, <= 4096) must lie in one readable range.
 
 ### Size and cost
