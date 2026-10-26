@@ -1184,11 +1184,11 @@ int main(int argc, char **argv)
 	sd2_scan();	/* a card already in the second slot at boot */
 	load_drivers_present();
 	leds_update();
+	boot_mark("bananad: buttons live");
 	last_input = mono();
 	double next_battery = 0;
 	int low_count = 0;
 	say("running: lid %s, auto-sleep %d min, %s", cfg.lid_sleep ? "sleeps" : "ignored", cfg.autosleep_min, cfg.mem_sleep);
-	boot_mark("bananad: buttons live");
 
 	for (;;) {
 		struct pollfd pf[MAXDEV + 2];

@@ -14,8 +14,7 @@ for size in 640x480 1024x768; do
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" \
         --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" \
         --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
-        --script "splash boot-drop 200; splash boot-word 700; splash boot-click 1100 1; home 0; wait 2400; shot home; bench 120; press a; wait 2400; shot lib; press right; wait 2400; shot lib2; bench 120; press a; wait 3000; shot ready; press b; press b; press start; shot settings; press a; press down; shot settings-list; press r; press r; press r; press r; press r; shot settings-system; press right; shot settings-tz; press b; press b; romicon $FX/roms/nds/Yellow Planet [!].zip; romicon $FX/roms/nds/Peel Quest.nds; battery 50; battery 19; shot battery-low; press left; battery 18; battery 4; wait 2400; shot battery-empty; battery 4 charging; battery 19; \
-            battery 60 charging; shot no-health; healthnotice touchscreen, Wi-Fi; shot health; press a" \
+        --script "splash boot-drop 200; splash boot-word 700; splash boot-click 1100 1; home 0; wait 2400; shot home; bench 120; press a; wait 2400; shot lib; press right; wait 2400; shot lib2; bench 120; press a; wait 3000; shot ready; press b; press b; press start; shot settings; press a; press down; shot settings-list; press r; press r; press r; press r; press r; shot settings-system; press right; shot settings-tz; press b; press b; romicon $FX/roms/nds/Yellow Planet [!].zip; romicon $FX/roms/nds/Peel Quest.nds; battery 50; battery 19; shot battery-low; press left; battery 18; battery 4; wait 2400; shot battery-empty; battery 4 charging; battery 19" \
         2> "$log" || { echo "FAIL $size: banana-ui exited $?"; fail=1; continue; }
     check() { grep -q "$1" "$log" || { echo "FAIL $size: no '$1'"; fail=1; }; }
     check "press a: used, view 1"          # home -> the DS library
@@ -32,12 +31,6 @@ for size in 640x480 1024x768; do
     check "press left: notice hidden"
     check "battery 4%: notice Battery nearly empty: 4%"
     check "battery 4%: notice hidden"      # the charger on
-    check "health notice: Not found: touchscreen, Wi-Fi"   # the boot's hardware check (/run/banana/health-notice)
-    check "press a: health notice hidden"
-    # drawn, not only logged: the notice's bubble (the top panel's lower part) differs from the frame without it
-    [ -s "$OUT/$size-health-top.png" ] && [ -s "$OUT/$size-no-health-top.png" ] || { echo "FAIL $size: no health shots"; fail=1; }
-    d=$(convert "$OUT/$size-health-top.png" "$OUT/$size-no-health-top.png" -gravity south -crop 100%x30%+0+0 +repage -compose difference -composite -format '%[fx:mean>0.01]' info: 2>/dev/null)
-    [ "$d" = 1 ] || { echo "FAIL $size: the health notice wasn't drawn"; fail=1; }
     [ "$(grep -c 'notice Battery low: 19%' "$log")" = 2 ] || { echo "FAIL $size: the notice didn't come back after charging"; fail=1; }
     grep -q "battery 18%" "$log" && { echo "FAIL $size: a second notice in the same step"; fail=1; }
     for s in boot-drop boot-word boot-click home lib lib2 ready settings settings-list settings-system settings-tz battery-low battery-empty; do
@@ -132,6 +125,18 @@ for size in 640x480 1024x768; do
     for s in reset-system reset-emulator; do
         [ -s "$OUT/$size-$s-top.png" ] && [ -s "$OUT/$size-$s-bot.png" ] || { echo "FAIL $size: no $s shot"; fail=1; }
     done
+    # the boot's hardware check: its notice (/run/banana/health-notice) on the menu, drawn, and gone with A
+    hlog=$OUT/$size-health.log
+    "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --banana "$HERE/assets/banana" \
+        --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
+        --script "home 0; wait 2400; shot no-health; healthnotice touchscreen, Wi-Fi; shot health; press a" 2> "$hlog" ||
+        { echo "FAIL $size: banana-ui (health) exited $?"; fail=1; }
+    grep -q "health notice: Not found: touchscreen, Wi-Fi" "$hlog" || { echo "FAIL $size: no health notice"; fail=1; }
+    grep -q "press a: health notice hidden" "$hlog" || { echo "FAIL $size: A didn't hide the health notice"; fail=1; }
+    # drawn, not only logged: the notice's bubble (the top panel's lower part) differs from the frame without it
+    [ -s "$OUT/$size-health-top.png" ] && [ -s "$OUT/$size-no-health-top.png" ] || { echo "FAIL $size: no health shots"; fail=1; }
+    d=$(convert "$OUT/$size-health-top.png" "$OUT/$size-no-health-top.png" -gravity south -crop 100%x30%+0+0 +repage -compose difference -composite -format '%[fx:mean>0.01]' info: 2>/dev/null)
+    [ "$d" = 1 ] || { echo "FAIL $size: the health notice wasn't drawn"; fail=1; }
     # a layout theme (the image's canvas.json): every screen drawn from its JSON, home -> library -> a launch, a
     # tap on a system, and no complaint about the theme in the log
     llog=$OUT/$size-layout.log
