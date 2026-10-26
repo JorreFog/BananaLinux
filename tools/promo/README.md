@@ -32,3 +32,11 @@ Limoncello's drop at 0:06).
     WORK=/tmp/distro python3 tools/promo/distro.py screens      # banana-ui's frames (30 fps)
     WORK=/tmp/distro python3 tools/promo/distro.py 3d           # the handheld's shots (software WebGL: slow)
     WORK=/tmp/distro SITE=<capture> MUSIC=song.mp3 python3 tools/promo/distro.py render out.mp4
+
+**The 0.5.0 trailer** (release.py): what is new in 0.5.0, one feature a scene, in the theme trailer's look: the
+example themes on two screens, the Banana Theme Studio's screenshots in a window, and the menu's own pixel icons for
+the rest; "And much more", then "Coming soon in 0.5.0 beta". COMPANIONS sets how many games have a GBA companion (left
+out when not given).
+
+    python3 tools/promo/screens.py hillside turntable classic
+    STUDIO=dir-with-1.webp-and-2.webp [COMPANIONS=n] MUSIC=song.mp3 MUSIC_AT=31 python3 tools/promo/release.py out.mp4
