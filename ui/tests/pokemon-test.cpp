@@ -707,6 +707,166 @@ int main(int argc, char** argv)
 		CHECK(tt && tt->cfru && tt->plainMons && tt->dexRam == 0x0202583c && tt->dexBytes == 0x7d && tt->plainBag);
 	}
 
+	// ---- the region map pictures (pokemap.cpp): the LZ77 decoder, then made-up Hoenn and Kanto maps found and drawn
+	{
+		// a block of literals, then a back-reference copying 5 bytes from 3 back (overlapping: a run), then literals
+		std::vector<uint8_t> rom = { 0x10, 12, 0, 0, 0x08, 'a', 'b', 'c', 'd', 0x20, 0x02, 'x', 'y', 'z' };
+		std::vector<uint8_t> out;
+		size_t used = 0;
+		CHECK(lz77(rom.data(), rom.size(), 0, out, 64, &used));
+		EQ(std::string(out.begin(), out.end()), std::string("abcdbcdbcxyz"));
+		EQ(used, rom.size());
+		CHECK(!lz77(rom.data(), rom.size(), 0, out, 8));			// (more than asked for)
+		CHECK(!lz77(rom.data(), rom.size() - 2, 0, out, 64));		// (cut short)
+		std::vector<uint8_t> far = { 0x10, 6, 0, 0, 0x40, 'a', 0x00, 0x05 };	// (a reference before the start)
+		CHECK(!lz77(far.data(), far.size(), 0, out, 64));
+		rom[0] = 0x11;
+		CHECK(!lz77(rom.data(), rom.size(), 0, out, 64));			// (not type 0x10)
+	}
+	{
+		// literals only, 8 a block
+		auto lzLit = [](const std::vector<uint8_t>& d)
+		{
+			std::vector<uint8_t> o = { 0x10, (uint8_t)d.size(), (uint8_t)(d.size() >> 8), (uint8_t)(d.size() >> 16) };
+			for (size_t i = 0; i < d.size(); i += 8) { o.push_back(0); for (size_t k = i; k < i + 8 && k < d.size(); k++) o.push_back(d[k]); }
+			while (o.size() % 4) o.push_back(0);
+			return o;
+		};
+		// Hoenn: a 32-colour palette, 100 tiles of 8 bpp (tile k: pixels 0x70 + k % 32), a 64 x 64 tilemap (tile x + y)
+		std::vector<uint8_t> rom(0x200, 0);
+		memcpy(&rom[0xac], "AXVE", 4);
+		size_t pal = rom.size();
+		for (int i = 0; i < 32; i++) { uint16_t c = (uint16_t)(i | (31 - i) << 10); rom.push_back((uint8_t)c); rom.push_back((uint8_t)(c >> 8)); }
+		std::vector<uint8_t> tiles(100 * 64);
+		for (int k = 0; k < 100; k++) for (int i = 0; i < 64; i++) tiles[k * 64 + i] = (uint8_t)(i == 0 ? 0 : 0x70 + k % 32);
+		auto tl = lzLit(tiles);
+		rom.insert(rom.end(), tl.begin(), tl.end());
+		std::vector<uint8_t> map(0x1000);
+		for (int y = 0; y < 64; y++) for (int x = 0; x < 64; x++) map[y * 64 + x] = (uint8_t)((x + y) % 100);
+		auto ml = lzLit(map);
+		rom.insert(rom.end(), ml.begin(), ml.end());
+		(void)pal;
+		RomTables t;
+		RomTables::Grid g; g.w = 28; g.h = 15; g.cells.assign(28 * 15, 0);
+		t.grids.push_back(g);
+		findRegionMaps(t, rom.data(), rom.size(), 0);
+		CHECK(t.mapImages.size() == 1 && t.gridImage.size() == 1 && t.gridImage[0] == 0);
+		if (t.mapImages.size() == 1)
+		{
+			const auto& im = t.mapImages[0];
+			EQ(im.w, 240); EQ(im.h, 136); EQ(im.cellX, 8); EQ(im.cellY, 8);
+			// the picture's pixel 1,1 of screen tile 3,2: tile (3 + 2) = 5, colour 5: red 5 -> 41, blue 26 -> 214
+			const uint8_t* px = &im.rgba[((size_t)((2 - 1) * 8 + 1) * im.w + 3 * 8 + 1) * 4];
+			EQ((int)px[0], (5 << 3) | (5 >> 2)); EQ((int)px[2], (26 << 3) | (26 >> 2)); EQ((int)px[3], 255);
+			// pixel 0 of a tile: the backdrop, colour 0 (blue 31)
+			const uint8_t* bd = &im.rgba[((size_t)((2 - 1) * 8) * im.w + 3 * 8) * 4];
+			EQ((int)bd[0], 0); EQ((int)bd[2], 255);
+		}
+		// a tilemap naming a tile the tiles don't have: not taken (the squares stay)
+		for (int i = 0; i < 4; i++) map[i] = 200;
+		std::vector<uint8_t> bad(rom.begin(), rom.begin() + (rom.size() - ml.size()));
+		auto ml2 = lzLit(map);
+		bad.insert(bad.end(), ml2.begin(), ml2.end());
+		RomTables t2; t2.grids.push_back(g);
+		findRegionMaps(t2, bad.data(), bad.size(), 0);
+		CHECK(t2.mapImages.empty() && t2.gridImage[0] == -1);
+	}
+	{
+		// Kanto: the literal pool (palette, top bar palette, tiles, four tilemaps) and what it points to
+		auto lzLit = [](const std::vector<uint8_t>& d)
+		{
+			std::vector<uint8_t> o = { 0x10, (uint8_t)d.size(), (uint8_t)(d.size() >> 8), (uint8_t)(d.size() >> 16) };
+			for (size_t i = 0; i < d.size(); i += 8) { o.push_back(0); for (size_t k = i; k < i + 8 && k < d.size(); k++) o.push_back(d[k]); }
+			while (o.size() % 4) o.push_back(0);
+			return o;
+		};
+		std::vector<uint8_t> rom(0x400, 0);
+		memcpy(&rom[0xac], "BPRE", 4);
+		rom[0xbc] = 7;		// (a revision with no known place: found by its pool)
+		auto put32 = [&](size_t at, uint32_t v) { for (int i = 0; i < 4; i++) rom[at + i] = (uint8_t)(v >> (8 * i)); };
+		size_t pal = rom.size();
+		for (int i = 0; i < 80; i++) { uint16_t c = (uint16_t)(i % 32); rom.push_back((uint8_t)c); rom.push_back((uint8_t)(c >> 8)); }
+		size_t tiles = rom.size();
+		std::vector<uint8_t> tl(64 * 32);
+		for (int k = 0; k < 64; k++) for (int i = 0; i < 32; i++) tl[k * 32 + i] = (uint8_t)(k % 16 | (k % 16) << 4);
+		auto tz = lzLit(tl); rom.insert(rom.end(), tz.begin(), tz.end());
+		size_t maps[4];
+		for (int m = 0; m < 4; m++)
+		{
+			std::vector<uint8_t> mp(30 * 20 * 2);
+			for (int i = 0; i < 600; i++) { uint16_t e = (uint16_t)((i + m) % 64 | (m % 5) << 12); mp[i * 2] = (uint8_t)e; mp[i * 2 + 1] = (uint8_t)(e >> 8); }
+			maps[m] = rom.size();
+			auto mz = lzLit(mp); rom.insert(rom.end(), mz.begin(), mz.end());
+		}
+		size_t pool = 0x300;
+		put32(pool, 0x08000000 + (uint32_t)pal); put32(pool + 8, 0x08000000 + (uint32_t)pal); put32(pool + 0x40, 0x08000000 + (uint32_t)tiles);
+		for (int m = 0; m < 4; m++) put32(pool + 0x50 + m * 0x10, 0x08000000 + (uint32_t)maps[m]);
+		RomTables t;
+		RomTables::Grid g; g.w = 22; g.h = 15; g.cells.assign(22 * 15, 0x58);
+		for (int i = 0; i < 8; i++) t.grids.push_back(g);
+		findRegionMaps(t, rom.data(), rom.size(), 2);
+		CHECK(t.mapImages.size() == 4 && t.gridImage.size() == 8 && t.gridImage[0] == 0 && t.gridImage[3] == 1 && t.gridImage[7] == 3);
+		if (t.mapImages.size() == 4)
+		{
+			const auto& im = t.mapImages[1];
+			EQ(im.w, 192); EQ(im.h, 136); EQ(im.cellX, 8); EQ(im.cellY, 8);
+			// picture 1's pixel 2,0 of its tile 0,0: the tilemap's tile 3,3 = entry (3 * 30 + 3 + 1) % 64 = 30, palette 1:
+			// colour index 30 % 16 = 14 -> palette entry 16 + 14 = 30 -> red 30
+			EQ((int)im.rgba[(2) * 4], (30 << 3) | (30 >> 2));
+		}
+	}
+
+	// ---- a region map picture by hand (POKE_MAPDUMP=<a .gba>, never in the repository): each picture to a PNG, the
+	// sections of the grids on it outlined (for a look: does the grid line up with the map?), and a checksum of each
+	if (const char* mp = getenv("POKE_MAPDUMP"))
+	{
+		FILE* f = fopen(mp, "rb");
+		std::vector<uint8_t> rom(32u << 20);
+		rom.resize(f ? fread(rom.data(), 1, rom.size(), f) : 0);
+		if (f) fclose(f);
+		RomTables t = findTables(rom.data(), rom.size());
+		printf("pokemon-test: %s: %zu grids, %zu map pictures\n", mp, t.grids.size(), t.mapImages.size());
+		for (size_t i = 0; i < t.mapImages.size(); i++)
+		{
+			auto im = t.mapImages[i];
+			uint32_t sum = 2166136261u;
+			for (uint8_t b : im.rgba) sum = (sum ^ b) * 16777619u;
+			for (size_t g = 0; g < t.grids.size(); g++)
+			{
+				if (t.gridImage[g] != (int)i || (getenv("POKE_MAPGRID") && atoi(getenv("POKE_MAPGRID")) != (int)g)) continue;
+				const auto& gr = t.grids[g];
+				for (int y = 0; y < gr.h; y++)
+					for (int x = 0; x < gr.w; x++)
+					{
+						int v = gr.cells[y * gr.w + x];
+						if (v == t.mapsecNone || v == 0xff) continue;
+						for (int k = 0; k < 8; k++)
+							for (int e = 0; e < 4; e++)
+							{
+								int nx = x + (e == 0) - (e == 1), ny = y + (e == 2) - (e == 3);
+								bool edge = nx < 0 || ny < 0 || nx >= gr.w || ny >= gr.h || gr.cells[ny * gr.w + nx] != v;
+								if (!edge) continue;
+								int px = im.cellX + x * 8 + (e == 0 ? 7 : e == 1 ? 0 : k), py = im.cellY + y * 8 + (e == 2 ? 7 : e == 3 ? 0 : k);
+								if (px < 0 || py < 0 || px >= im.w || py >= im.h) continue;
+								uint8_t* d = &im.rgba[((size_t)py * im.w + px) * 4];
+								d[0] = 255; d[1] = 0; d[2] = 255;
+							}
+					}
+			}
+			std::string out = (argc > 1 ? std::string(argv[1]) : std::string("/tmp")) + "/map-" + std::to_string(i) + ".png";
+			std::vector<uint8_t> rgb;
+			for (size_t p = 0; p < im.rgba.size(); p += 4) rgb.insert(rgb.end(), { im.rgba[p], im.rgba[p + 1], im.rgba[p + 2] });
+			stbi_write_png(out.c_str(), im.w, im.h, 3, rgb.data(), im.w * 3);
+			printf("pokemon-test: map %zu %dx%d cell origin %d,%d fnv %08x -> %s\n", i, im.w, im.h, im.cellX, im.cellY, sum, out.c_str());
+		}
+		for (size_t g = 0; g < t.grids.size(); g++)
+		{
+			std::string secs;
+			for (uint8_t v : t.grids[g].cells) if (v != t.mapsecNone && v != 0xff && secs.find(t.mapName(v)) == std::string::npos && secs.size() < 120) secs += t.mapName(v) + ",";
+			printf("  grid %zu %dx%d -> picture %d: %s\n", g, t.grids[g].w, t.grids[g].h, t.gridImage[g], secs.c_str());
+		}
+	}
+
 	// ---- the player's own Emerald, when POKE_ROM names it (a .gba or a .zip; never in the repository): Torchic's icon
 	// as the game keeps it (pret's pokeemerald.sym: gMonIcon_Torchic at 0x08ce0028, gMonIconPaletteIndices at
 	// 0x0857c388), and the icons of a made-up party to a PNG to look at

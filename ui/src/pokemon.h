@@ -104,6 +104,11 @@ namespace banana::pkmn
 		std::vector<std::string> mapNames;	// by region map section (MAPSEC); "" none
 		struct Grid { int w = 0, h = 0; std::vector<uint8_t> cells; };	// the region map: a MAPSEC a cell
 		std::vector<Grid> grids;
+		// the games' own region map pictures (pokemap.cpp), decoded once from the ROM: RGBA, with where the grid's cell
+		// 0,0 is on it (8 pixels a cell); by grid: the picture it lies on (-1: none, the squares are drawn)
+		struct MapImage { int w = 0, h = 0, cellX = 0, cellY = 0; std::vector<uint8_t> rgba; };
+		std::vector<MapImage> mapImages;
+		std::vector<int> gridImage;
 		uint8_t mapsecNone = 0xff;
 		std::vector<uint16_t> natDex;		// species -> national Pokédex number (0 none)
 		std::vector<uint16_t> dexSpecies;	// national number -> species
@@ -135,6 +140,12 @@ namespace banana::pkmn
 		bool layoutSize(uint32_t layoutPtr, int& w, int& h) const;	// a map layout's size (from the map header)
 	};
 	RomTables findTables(const uint8_t* rom, size_t n);
+
+	// pokemap.cpp: the GBA BIOS's LZ77 (type 0x10) at rom[at]: false when it isn't one, runs past the end or decodes to
+	// more than maxOut; used: the compressed bytes read
+	bool lz77(const uint8_t* rom, size_t n, size_t at, std::vector<uint8_t>& out, size_t maxOut, size_t* used = nullptr);
+	// the region map pictures for t.grids (gen: 0 Ruby/Sapphire, 1 Emerald, 2 FireRed/LeafGreen and their hacks)
+	void findRegionMaps(RomTables& t, const uint8_t* rom, size_t n, int gen);
 
 	// the guide's goals: the gym leaders and the league in the order they are met (who, where, their type; rom: the
 	// trainer's name in the ROM, for the team), by the game's gen

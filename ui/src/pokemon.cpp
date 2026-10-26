@@ -635,9 +635,17 @@ namespace banana::pkmn
 						else if (!seen[c]) { seen[c] = true; kinds++; }
 					}
 					if (okc != W * H || none < W * H / 3 || none == W * H || kinds < 4) continue;
-					RomTables::Grid g; g.w = W; g.h = H; g.cells.assign(rom + a, rom + a + W * H);
-					t.grids.push_back(g);
-					a += W * H - 2;
+					// the first one found (Kanto's map layer) and the layers right after it, as pokefirered keeps them
+					// (four maps, two layers each: the map, the dungeons; a layer can have few sections, Sevii's caves)
+					for (size_t b = a; b + W * H <= n && t.grids.size() < 8; b += W * H)
+					{
+						bool in = true;
+						for (int i = 0; i < W * H && in; i++) in = rom[b + i] >= 0x58 && rom[b + i] <= 0xc5;
+						if (!in) break;
+						RomTables::Grid g; g.w = W; g.h = H; g.cells.assign(rom + b, rom + b + W * H);
+						t.grids.push_back(g);
+					}
+					break;
 				}
 				return;
 			}
@@ -732,6 +740,7 @@ namespace banana::pkmn
 		int gen = n >= 0xb0 && !memcmp(rom + 0xac, "BPEE", 4) ? 1 : n >= 0xb0 && (!memcmp(rom + 0xac, "BPRE", 4) || !memcmp(rom + 0xac, "BPGE", 4)) ? 2 : 0;
 		if (gen) fromHeader(t, rom, n);
 		mapTables(t, rom, n, gen);
+		findRegionMaps(t, rom, n, gen);
 		// species -> national number: a run of u16s 1, 2, 3, ... (Bulbasaur to Celebi keep their numbers)
 		uint8_t seq[58];
 		for (int i = 0; i < 29; i++) { seq[i * 2] = (uint8_t)(i + 1); seq[i * 2 + 1] = 0; }
