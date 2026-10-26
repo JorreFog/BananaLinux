@@ -252,6 +252,36 @@ EOF
         echo "run-retroarch: screen border $MODE/$th/$BANANA_SYSTEM, picture at $BX,$BY ${BW}x$BH" >&2
     fi
 fi
+# The Game Boy Advance's saves in one folder for every GBA core, /data/saves/gba/<game>.srm (QA: "would like to be
+# able to use the same save file across both"): RetroArch otherwise keeps a folder per core (sort_savefiles_enable),
+# so a game started in mGBA didn't see its gpSP save. The cores write the same raw save (gpSP pads it to 128 KB with
+# 0xff, mGBA writes the cartridge's size: 512 bytes for a small EEPROM; RetroArch loads the part a core asks for), so
+# one file serves both. A game with no save there yet gets a copy of its newest one from a core's folder (one with
+# data in it: a core that only ever wrote a blank one doesn't win); the core folders' files stay as they were, as
+# backups. States stay per core (their formats differ). What RetroArch saves of the two keys on exit is put back below.
+GBASAVE=
+if [ "$BANANA_SYSTEM" = gba ]; then
+    GBASAVE=/data/saves/gba
+    mkdir -p $GBASAVE
+    n=${2##*/}; n=${n%.*}
+    if [ ! -f "$GBASAVE/$n.srm" ]; then
+        best=
+        for d in gpSP mGBA "VBA Next" "VBA-M" Meteor; do
+            f="/data/saves/$d/$n.srm"
+            [ -s "$f" ] || continue
+            # (blank: only 0xff or only 0x00 bytes; counted, not compared: the shell drops a NUL from $(...))
+            [ "$(tr -d '\377' < "$f" | head -c 1 | wc -c)" = 0 ] && continue
+            [ "$(tr -d '\000' < "$f" | head -c 1 | wc -c)" = 0 ] && continue
+            if [ -z "$best" ] || [ "$f" -nt "$best" ]; then best=$f; fi
+        done
+        if [ -n "$best" ]; then
+            cp -p "$best" "$GBASAVE/$n.srm.new" && mv "$GBASAVE/$n.srm.new" "$GBASAVE/$n.srm" && sync
+            echo "run-retroarch: the GBA save from $best, now $GBASAVE/$n.srm (every GBA core)" >&2
+        fi
+    fi
+    SVD=$(sed -n '/^savefile_directory = "\(.*\)"/{s//\1/;h};${x;p}' $CFG)
+    SVS=$(sed -n '/^sort_savefiles_enable = "\(.*\)"/{s//\1/;h};${x;p}' $CFG)
+fi
 # anything RetroArch keeps that retroarch.cfg doesn't place (remaps, core options, playlists...) under the card's
 # retroarch folder, not ~/.config on the read-only root
 export HOME=/data/retroarch XDG_CONFIG_HOME=/data/retroarch
@@ -264,6 +294,7 @@ if [ -n "$BANANA_DRM_LEASE_FD" ]; then
     L=/run/banana/retroarch-panel.cfg
     printf 'video_monitor_index = "1"\nstdin_cmd_enable = "true"\n' > $L
     [ $ONCE = 1 ] && echo 'savestate_auto_load = "true"' >> $L
+    [ -n "$GBASAVE" ] && printf 'savefile_directory = "%s"\nsort_savefiles_enable = "false"\n' $GBASAVE >> $L
     rm -f /run/banana/retroarch.log
     # the Pokemon companion (Settings > Other systems): RetroArch's stdout, where it answers the panel's
     # READ_CORE_MEMORY commands, into the pipe banana-ui reads (its log goes to the file above, not there)
@@ -283,6 +314,7 @@ else
     L=/run/banana/retroarch-stdin.cfg
     printf 'stdin_cmd_enable = "true"\n' > $L
     [ $ONCE = 1 ] && echo 'savestate_auto_load = "true"' >> $L
+    [ -n "$GBASAVE" ] && printf 'savefile_directory = "%s"\nsort_savefiles_enable = "false"\n' $GBASAVE >> $L
     retroarch --config $CFG --appendconfig "$L|$RA$HKA$BA" -L "$CORE" "$2" < $FIFO &
     P=$!
 fi
@@ -297,6 +329,10 @@ fix() { fix_d="$fix_d/^$1 = /d;"; fix_l="$fix_l$1 = \"$2\"
 "; }
 [ -n "$SLOT" ] && [ "$SLOT" != -1 ] && grep -qx 'state_slot = "-1"' $CFG && fix state_slot "$SLOT"
 [ $ONCE = 1 ] && fix savestate_auto_load ${q:-false}
+if [ -n "$GBASAVE" ]; then
+    fix savefile_directory "${SVD:-/data/saves}"
+    fix sort_savefiles_enable "${SVS:-true}"
+fi
 if [ -n "$HKA" ]; then
     # the hotkey lines as they were before the game (RetroArch wrote the Off ones into retroarch.cfg on exit)
     sed -i -E "/$HKKEYS/d" $CFG

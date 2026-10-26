@@ -67,6 +67,11 @@ The launcher runs in its own session (`setsid`), with signals at their defaults 
 Everything under `/usr` is read-only: an emulator that writes next to itself (DraStic) is copied to `/data`
 first by its launcher.
 
+RetroArch keeps a save folder per core (`/data/saves/gpSP`, `/data/saves/mGBA`...), except for the Game Boy
+Advance: every GBA core uses `/data/saves/gba/<game>.srm` (run-retroarch), so a game can switch between gpSP and
+mGBA (Settings > Other systems) with the same save. A game with no save there yet gets a copy of its newest
+non-blank one from a core's folder; those files stay as they were. States stay per core (their formats differ).
+
 The two DS emulators share their in-game saves: `nds-saves`, run by both launchers before a game, writes the
 newer of DraStic's `drastic/backup/<game>.dsv` and BananaDS's `saves/nds/<game>.sav` over the other in its own
 form. DraStic's `.dsv` is the raw save; a `.dsv` from DeSmuME (a card scraped under another firmware) carries
