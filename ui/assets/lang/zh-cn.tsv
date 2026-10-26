@@ -843,3 +843,21 @@ settings		The other systems (RetroArch): shown in a corner, or not.	其他系统
 # (the screen border rows below are a draft, not Majirefy's: for them to check)
 settings		Screen border	屏幕边框
 settings		On: the black around a game's picture filled with a quiet border in the menu's colours (the theme's), the picture at a sharp whole-number size where that fits. The DS, the N64 and a picture that already fills the screen have none.	开启：游戏画面周围的黑边以菜单配色（随主题）的低调边框填充，画面在合适时以清晰的整数倍尺寸显示。DS、N64 以及已占满屏幕的画面没有边框。
+# (the beta channel rows below are English only, untranslated: for Majirefy to translate)
+settings		Beta channel	
+settings		Beta channel password	
+settings		Checking...	
+settings		Turn on	
+settings		Turn off	
+settings		For beta testers: updates from the test builds on bananaos-cfw.dev instead of GitHub's releases. A asks for the beta password (once: it is checked with the site, then kept on the card for the updater only).	
+settings		On: updates come from the beta testers' builds on bananaos-cfw.dev instead of GitHub's releases. A, then A again, turns it off (the password is forgotten), and GitHub is asked again.	
+settings		The beta testers' password for BananaOS's test builds. A types the key, B deletes, X capitals, L symbols, Y a space, START checks it with bananaos-cfw.dev. It is kept on the card for the updater only.	
+settings		Type the beta password, then START.	
+settings		Checking the password with bananaos-cfw.dev...	
+settings		Beta channel on: Check for updates now asks bananaos-cfw.dev for test builds.	
+settings		Wrong password: bananaos-cfw.dev refused it. The beta channel stays off.	
+settings		Beta channel off: Check for updates asks GitHub again.	
+settings		The password couldn't be checked: %s.	
+settings		Asking the beta server (bananaos-cfw.dev) which test build is the newest for this handheld...	
+settings		The beta server has no test build for this handheld.	
+settings		A asks the beta server (bananaos-cfw.dev, Wi-Fi needed) whether a newer test build is out for this handheld. Nothing is downloaded until you choose Download.	

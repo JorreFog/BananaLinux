@@ -2,8 +2,10 @@
 # A stand-in for GitHub's servers in #69's test: fake-http.py <dir> <port-file>. Serves <dir>'s files on 127.0.0.1 (a
 # free port, written to <port-file>) with byte ranges (curl -C - resumes), slowly under /slow/ (the same files,
 # 32 KB every 0.1 s: a download there takes long enough to be cancelled), and /limited as GitHub's answer once
-# its 60 an hour are used up (403 with X-RateLimit-Reset). Each request is a line in <port-file>.log.
-import http.server, os, re, sys, time
+# its 60 an hour are used up (403 with X-RateLimit-Reset), and under /auth/ only with the beta channel's login
+# (HTTP Basic, beta:BetaTesting0.5.0; else 401, as the BananaOS site's .htaccess answers). Each request is a line in
+# <port-file>.log (never the password).
+import base64, http.server, os, re, sys, time
 
 ROOT = os.path.abspath(sys.argv[1])
 
@@ -24,6 +26,11 @@ class H(http.server.BaseHTTPRequestHandler):
             self.wfile.write(b'{}')
             return
         rel = self.path.split('?')[0]
+        if rel.startswith('/auth/'):
+            if self.headers.get('Authorization', '') != 'Basic ' + base64.b64encode(b'beta:BetaTesting0.5.0').decode():
+                self.send_response(401); self.send_header('WWW-Authenticate', 'Basic realm="BananaOS beta"')
+                self.send_header('Content-Length', '0'); self.end_headers(); return
+            rel = rel[5:]
         slow = rel.startswith('/slow/')
         rel = rel[6:] if slow else rel[1:]
         path = os.path.normpath(os.path.join(ROOT, rel))

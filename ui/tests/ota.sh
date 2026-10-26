@@ -28,6 +28,7 @@ WEB=http://127.0.0.1:$(cat "$OUT/port")
 "$HERE/tests/fake-releases.sh" "$OUT/web/good" "" "$WEB/good/"
 "$HERE/tests/fake-releases.sh" "$OUT/web/bad" bad "$WEB/bad/"
 "$HERE/tests/fake-releases.sh" "$OUT/web/slow" "" "$WEB/slow/slow/"
+"$HERE/tests/fake-releases.sh" "$OUT/web/beta" beta "$WEB/auth/beta/"
 GOOD=$WEB/good/feed.json
 
 # u <case> <command>...: the update script on a card of its own (<case>/data, <case>/run), as the board $B running $V
@@ -35,7 +36,7 @@ u() {
     c=$1; shift
     mkdir -p "$OUT/$c/data" "$OUT/$c/run"
     env PATH="$HPATH" BANANA_DATA="$OUT/$c/data" BANANA_RUN="$OUT/$c/run" BANANA_BOARD=${B:-rgds} BANANA_VERSION=${V:-0.4.2} \
-        BANANA_UPDATE_FEED=${FEED:-$GOOD} BANANA_UPDATE_REUSE=${REUSE:-0} $SH "$UPD" "$@" > "$OUT/$c.out" 2> "$OUT/$c.err"
+        BANANA_UPDATE_FEED=${FEED:-$GOOD} BANANA_UPDATE_BETA_FEED=${BFEED:-$WEB/auth/beta/feed.json} BANANA_UPDATE_REUSE=${REUSE:-0} $SH "$UPD" "$@" > "$OUT/$c.out" 2> "$OUT/$c.err"
 }
 has() { grep -qxF -- "$2" "$OUT/$1.out" || bad "$1: no '$2' in: $(tr '\n' ' ' < "$OUT/$1.out") $(cat "$OUT/$1.err")"; }
 st() { cat "$OUT/$1/run/update-download" 2>/dev/null; }
@@ -118,6 +119,50 @@ FEED=http://127.0.0.1:9/feed.json u daily check --daily || bad "daily: asked aga
 sed -i 's/^checked=.*/checked=1000/' "$OUT/daily/data/updates/.check"
 FEED=http://127.0.0.1:9/feed.json u daily check --daily && bad "daily: not asked after a day"
 
+# ---- the beta channel: the BananaOS site's password-protected list (fake-http.py's /auth/) -----------------------
+PW=BetaTesting0.5.0
+# a wrong password: refused (exit 3), nothing kept; the channel stays GitHub
+echo wrong | B=rgds-plus V=0.5.0 u beta beta-login; rc=$?
+[ $rc = 3 ] || bad "beta wrong password: exit $rc"; has beta "wrong password"
+[ -e "$OUT/beta/data/updates/.beta" ] && bad "beta wrong password: it was kept"
+ls "$OUT/beta/run"/update-beta.* >/dev/null 2>&1 && bad "beta wrong password: the temporary login stayed in run"
+# the site not answering: not "wrong password"
+echo $PW | BFEED=http://127.0.0.1:9/feed.json B=rgds-plus V=0.5.0 u beta beta-login; rc=$?
+[ $rc = 1 ] || bad "beta offline login: exit $rc"; grep -q "couldn't connect to the beta server" "$OUT/beta.out" || bad "beta offline login: $(cat "$OUT/beta.out")"
+# the right one: kept for curl only (-K: not on a command line), the owner's alone where the file system keeps modes
+echo $PW | B=rgds-plus V=0.5.0 u beta beta-login || bad "beta login: exit $? $(cat "$OUT/beta.out" "$OUT/beta.err")"
+has beta ok
+[ "$(cat "$OUT/beta/data/updates/.beta" 2>/dev/null)" = "user = \"beta:$PW\"" ] || bad "beta login: .beta holds '$(cat "$OUT/beta/data/updates/.beta")'"
+[ "$(ls -ln "$OUT/beta/data/updates/.beta" | cut -c1-10)" = "-rw-------" ] || bad "beta login: .beta is $(ls -ln "$OUT/beta/data/updates/.beta" | cut -c1-10)"
+grep -q "$PW" "$OUT/port.log" && bad "beta: the password is in the server's log"
+# (a quote and a backslash in it: escaped for curl's config, so it is sent and refused, not a broken config)
+printf '%s\n' 'a"b\c' | B=rgds-plus V=0.5.0 u betaq beta-login; rc=$?
+[ $rc = 3 ] || bad "beta quoted: exit $rc $(cat "$OUT/betaq.out" "$OUT/betaq.err")"
+# the Plus on 0.5.0 (the first beta, installed by hand) is offered 0.5.0-beta.2, downloaded with the password
+B=rgds-plus V=0.5.0 u beta check || bad "beta check: exit $? $(cat "$OUT/beta.err")"
+has beta state=newer; has beta latest=0.5.0-beta.2; has beta channel=beta; has beta file=banana-rgds-plus-0.5.0-beta.2.update.tar
+B=rgds-plus V=0.5.0 u beta download || bad "beta download: exit $? $(cat "$OUT/beta.err")"
+cmp -s "$OUT/beta/data/updates/banana-rgds-plus-0.5.0-beta.2.update.tar" "$OUT/web/beta/files/v0.5.0-beta.2/banana-rgds-plus-0.5.0-beta.2.update.tar" || bad "beta download: not the site's package"
+grep -q "^/auth/beta/files/v0.5.0-beta.2/banana-rgds-plus-0.5.0-beta.2.update.tar " "$OUT/port.log" || bad "beta download: not fetched from the site"
+# on 0.5.0-beta.2: up to date; on 0.5.0 with only 0.5.0 on the site: up to date (never 0.5.0 again)
+B=rgds-plus V=0.5.0-beta.2 u beta check; has beta state=current; has beta latest=0.5.0-beta.2
+BFEED=$WEB/auth/good/feed.json B=rgds-plus V=0.5.0 u beta check; has beta state=current; has beta latest=0.5.0
+# beta.2 < 0.5.0 on GitHub's ordering stays as it was: a 0.5.0-beta.2 handheld is offered a 0.5.0 release
+cp "$OUT/beta/data/updates/.beta" "$OUT/beta.keep"; rm "$OUT/beta/data/updates/.beta"
+B=rgds-plus V=0.5.0-beta.2 u beta check; has beta state=newer; has beta latest=0.5.0; has beta channel=github
+# Test versions left out doesn't hide the beta channel's (all test versions)
+cp "$OUT/beta.keep" "$OUT/beta/data/updates/.beta"; echo "update_prerelease = off" > "$OUT/beta/data/settings.conf"
+B=rgds-plus V=0.5.0 u beta check; has beta state=newer; has beta latest=0.5.0-beta.2; has beta prerelease_setting=off
+rm "$OUT/beta/data/settings.conf"
+# the password changed on the site since: the check says so
+echo 'user = "beta:old"' > "$OUT/beta/data/updates/.beta"
+B=rgds-plus V=0.5.0 u beta check && bad "beta refused: exit 0"
+grep -q "^error=the beta server refused the password" "$OUT/beta.out" || bad "beta refused: $(grep error= "$OUT/beta.out")"
+# off: GitHub again, the password forgotten
+B=rgds-plus V=0.5.0 u beta beta-off; has beta off
+[ -e "$OUT/beta/data/updates/.beta" ] && bad "beta off: the password stayed"
+B=rgds-plus V=0.5.0 u beta check; has beta channel=github; has beta state=current
+
 # ---- the Update page, headless --------------------------------------------------------------------------------
 FX=$OUT/fixture
 "$HERE/tests/fixture.sh" "$FX" >/dev/null
@@ -132,8 +177,8 @@ chmod +x "$OUT/update-tool.sh"
 ui() {
     n=$1; f=$2; shift 2
     mkdir -p "$OUT/ui-$n/run"
-    env PATH="$HPATH" BANANA_UPDATE="$OUT/update-tool.sh" BANANA_DATA="$FX/data" BANANA_RUN="$OUT/ui-$n/run" BANANA_BOARD=rgds BANANA_VERSION=0.4.2 \
-        BANANA_UPDATE_FEED="$f" BANANA_UPDATE_REUSE=0 BANANA_LANG_MISSING="$OUT/ui-$n/missing.txt" \
+    env PATH="$HPATH" BANANA_UPDATE="$OUT/update-tool.sh" BANANA_DATA="$FX/data" BANANA_RUN="$OUT/ui-$n/run" BANANA_BOARD=${UB:-rgds} BANANA_VERSION=${UV:-0.4.2} \
+        BANANA_UPDATE_FEED="$f" BANANA_UPDATE_BETA_FEED="$WEB/auth/beta/feed.json" BANANA_UPDATE_REUSE=0 BANANA_LANG_MISSING="$OUT/ui-$n/missing.txt" \
         "$HERE/banana-ui" --headless "$OUT/ui-$n-" --size 640x480 --assets "$HERE/assets/rnds" \
         --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
         --script "home 0; press start; press r; press r; press r; press r; press r; press a; press down; press down; press a; $*" \
@@ -172,7 +217,18 @@ for t in "Check for updates" "Download Banana" "Newest for the" "A downloads it"
     grep -q "$t" "$OUT/ui-zh/missing.txt" 2>/dev/null && bad "ui zh: not translated: $(grep "$t" "$OUT/ui-zh/missing.txt" | head -n 2)"
 done
 mv "$OUT/settings.conf.keep" "$FX/data/settings.conf"
-for s in flow-open flow-found flow-ready flow-applied cancel-downloading cancel-cancelled offline-offline zh-zh-open zh-zh-found zh-zh-system; do
+# the beta channel (the page's second row): a wrong password refused, the right one kept, then the check asks the beta
+# server (the Plus on 0.5.0 is offered 0.5.0-beta.2), and A twice turns it off
+clean
+UB=rgds-plus UV=0.5.0 ui beta "$GOOD" "press down; upstate; shot beta-row; press a; shot beta-kbd; type wrong; press start; upstate; shot beta-wrong; press a; type $PW; press start; upstate; shot beta-on; press up; press a; upstate; shot beta-found; press down; press a; upstate; press a; upstate; shot beta-off"
+upstate beta 'row "Check for updates" .* beta off'
+upstate beta 'message "Wrong password: bananaos-cfw.dev refused it. The beta channel stays off." beta off'
+upstate beta 'message "Beta channel on: .*" beta on'
+upstate beta 'row "Download Banana 0.5.0-beta.2" tag "[0-9]* MB" act "Download" state newer latest 0.5.0-beta.2 .* beta on'
+upstate beta 'message "Beta channel off: Check for updates asks GitHub again." beta off'
+grep -q "$PW" "$OUT/ui-beta.log" && bad "ui beta: the password is in the menu's log"
+ls "$OUT/ui-beta/run/"update-beta* >/dev/null 2>&1 && bad "ui beta: the password file stayed in run"
+for s in beta-beta-row beta-beta-kbd beta-beta-on beta-beta-found flow-open flow-found flow-ready flow-applied cancel-downloading cancel-cancelled offline-offline zh-zh-open zh-zh-found zh-zh-system; do
     for p in top bot; do
         f=$OUT/ui-$s-$p.png
         [ -s "$f" ] || { bad "no $f"; continue; }
