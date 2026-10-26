@@ -184,8 +184,16 @@ grep -q 'trying the safer way' /data/banana/logs/sleep.log && ok "fell back afte
 [ "$(cat /sys/class/backlight/backlight0/bl_power)" = 4 ] && ok "panels dark with the lid shut" || bad "backlight bl_power $(cat /sys/class/backlight/backlight0/bl_power)"
 echo 0 > /run/test/lid; ev $EV_SW $SW_LID 0; sleep 0.3
 [ "$(cat /sys/class/backlight/backlight0/bl_power)" = 0 ] && ok "panels back when the lid opens" || bad "panels still dark"
-stop
+# the same bananad, suspends working again: the next sleep is deep again (s2idle was for that one sleep), still with
+# the devices one at a time
 rmdir /sys/power/state; mkfifo /sys/power/state
+echo "[s2idle] deep" > /sys/power/mem_sleep
+echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
+asleep && ok "the next sleep suspends" || bad "no suspend after the failed one"
+[ "$(cat /sys/power/mem_sleep)" = deep ] && ok "deep again after the s2idle fallback" || bad "mem_sleep $(cat /sys/power/mem_sleep)"
+[ "$(cat /sys/power/pm_async)" = 0 ] && ok "devices still one at a time" || bad "pm_async $(cat /sys/power/pm_async)"
+echo 0 > /run/test/lid; wake
+stop
 
 echo "6. lid sleep off: closing the lid only turns the backlights off"
 start "lid_sleep = no"
