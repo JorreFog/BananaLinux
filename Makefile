@@ -5,6 +5,7 @@
 #   make universal     one card for both                -> output/universal/images/banana-universal.img.gz
 #   make ui            banana-ui for this computer (headless renders, no panels needed)
 #   make test          renders the menu headless from a test library and checks it (needs ImageMagick)
+#   make fuzz          the readers of the card's files fuzzed (needs clang; FUZZ_SECONDS each, 60 by default)
 #   make theme-studio  the layout-theme editor's tests (the expression port, the preview server, the schema)
 #   make theme-studio-desktop  the PySide6 designer's smoke test
 #   make menuconfig-rgds / linux-menuconfig-rgds ...   any Buildroot target, per board
@@ -36,6 +37,10 @@ ui:
 test: ui
 	ui/tests/run.sh
 
+# ui/fuzz: themes, expressions, zips, DS ROM banners and Banana's own files on the card, under libFuzzer, ASan and UBSan
+fuzz:
+	sh ui/fuzz/run.sh
+
 # tools/theme-studio: the layout-theme editor's tests (expr.js vs ui/src/expr.cpp, the preview server, the schema)
 theme-studio: ui
 	sh tools/theme-studio/tests/run.sh
@@ -48,4 +53,4 @@ clean:
 	rm -rf $(OUT)
 	$(MAKE) -C ui clean
 
-.PHONY: $(BOARDS) ui test theme-studio theme-studio-desktop clean
+.PHONY: $(BOARDS) ui test fuzz theme-studio theme-studio-desktop clean

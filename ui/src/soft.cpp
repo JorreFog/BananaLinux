@@ -115,7 +115,9 @@ namespace banana
 	}
 
 	// pixels whose centres fall in [v, v + len): GL's rasterization rule
-	static inline int edge(float v) { return (int)std::ceil(v - 0.5f); }
+	// clamped to +-2^24 px, NaN to the far left (off every screen): a layout theme can put a picture at 1e30, and a cast
+	// out of int's range is undefined
+	static inline int edge(float v) { float c = std::ceil(v - 0.5f); return c >= 16777216.0f ? 16777216 : c > -16777216.0f ? (int)c : -16777216; }
 
 	static inline bool overlaps(int ax0, int ay0, int ax1, int ay1, int bx0, int by0, int bx1, int by1)
 	{
@@ -399,7 +401,9 @@ namespace banana
 		const uint32_t* runs = t->runs.data();
 		for (int yy = y0; yy < y1; yy++)
 		{
-			uint32_t* d = &scr[cur][(size_t)yy * W + bx0];
+			// d[bx0 + i]: the texture's column i (bx0 can be left of the screen: row + bx0 alone points before the
+			// buffer, which is undefined even when only visible columns are written)
+			uint32_t* d = scr[cur].data() + (size_t)yy * W;
 			int sy = yy - by0;
 			int x = 0;
 			uint32_t r = t->rowAt[sy], rEnd = t->rowAt[sy + 1];
@@ -419,19 +423,19 @@ namespace banana
 				if (t->alpha)
 				{
 					const uint8_t* s = &t->a8[(size_t)sy * t->w];
-					if (kind == SoftTex::SOLID && solidTint) std::fill(d + a, d + e, tintWord);
-					else for (int i = a; i < e; i++) d[i] = over(mul255(tintWord, s[i]), d[i]);
+					if (kind == SoftTex::SOLID && solidTint) std::fill(d + (bx0 + a), d + (bx0 + e), tintWord);
+					else for (int i = a; i < e; i++) d[bx0 + i] = over(mul255(tintWord, s[i]), d[bx0 + i]);
 				}
 				else
 				{
 					const uint32_t* s = &t->px[(size_t)sy * t->w];
-					if (plain && kind == SoftTex::SOLID) memcpy(d + a, s + a, (size_t)(e - a) * 4);
+					if (plain && kind == SoftTex::SOLID) memcpy(d + (bx0 + a), s + a, (size_t)(e - a) * 4);
 					else if (plain)
 					{
 						// a mixed run has no clear or solid pixels: always a blend
-						for (int i = a; i < e; i++) d[i] = s[i] + mul255(d[i], 255 - (s[i] >> 24));
+						for (int i = a; i < e; i++) d[bx0 + i] = s[i] + mul255(d[bx0 + i], 255 - (s[i] >> 24));
 					}
-					else for (int i = a; i < e; i++) d[i] = over(tinted(s[i], tr, tg, tb, ta), d[i]);
+					else for (int i = a; i < e; i++) d[bx0 + i] = over(tinted(s[i], tr, tg, tb, ta), d[bx0 + i]);
 				}
 			}
 		}

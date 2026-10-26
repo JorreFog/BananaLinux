@@ -81,7 +81,7 @@ namespace banana
 	{
 		uint32_t c = 0xff000000;
 		if (v.isStr) parseColorText(v.s, c);
-		else c = 0xff000000 | (uint32_t)v.n;
+		else if (v.n >= 0 && v.n <= 0xffffffff) c = 0xff000000 | (uint32_t)v.n;	// (negative, NaN or too big: black)
 		return c;
 	}
 	static uint32_t mixColor(uint32_t a, uint32_t b, double t)
@@ -107,14 +107,24 @@ namespace banana
 			const std::string& s;
 			size_t i = 0;
 			std::string err;
+			// the parser and evalExpr recurse: brackets, calls, ?: and signs nested at most 64 deep (as json.cpp), and at
+			// most 4096 nodes (a + b + c ... is a tree as deep as it is long); a theme's thousand brackets overflowed the stack
+			int depth = 0, nodes = 0;
+			struct Deeper { int& d; explicit Deeper(int& x) : d(x) { d++; } ~Deeper() { d--; } };
 			explicit P(const std::string& t) : s(t) {}
 			void ws() { while (i < s.size() && isspace((unsigned char)s[i])) i++; }
 			bool eat(const char* t) { ws(); size_t n = strlen(t); if (s.compare(i, n, t) == 0) { i += n; return true; } return false; }
-			Expr node(ExprNode::Op op, std::vector<Expr> a) { auto n = std::make_shared<ExprNode>(); n->op = op; n->a = std::move(a); return n; }
+			Expr node(ExprNode::Op op, std::vector<Expr> a)
+			{
+				if (++nodes > 4096) return fail("too long");
+				auto n = std::make_shared<ExprNode>(); n->op = op; n->a = std::move(a); return n;
+			}
 			Expr fail(const std::string& m) { if (err.empty()) err = m + " at " + std::to_string(i); return nullptr; }
 
 			Expr ternary()
 			{
+				Deeper in(depth);
+				if (depth > 64) return fail("nested too deep");
 				Expr c = orExpr();
 				if (!c) return nullptr;
 				if (!eat("?")) return c;
@@ -189,6 +199,8 @@ namespace banana
 			}
 			Expr unary()
 			{
+				Deeper in(depth);
+				if (depth > 64) return fail("nested too deep");
 				if (eat("-")) { Expr e = unary(); return e ? node(ExprNode::NEG, { e }) : nullptr; }
 				if (eat("!")) { Expr e = unary(); return e ? node(ExprNode::NOT, { e }) : nullptr; }
 				if (eat("+")) return unary();
@@ -267,6 +279,8 @@ namespace banana
 
 		const double PI = 3.14159265358979323846;
 		double clamp01(double t) { return std::min(1.0, std::max(0.0, t)); }
+		// a number as an int in [lo, hi], NaN as lo (casting a huge or NaN double is undefined: a theme can write 1e88)
+		int clampInt(double d, int lo, int hi) { return d >= hi ? hi : d > lo ? (int)d : lo; }
 
 		EV call(const ExprNode& n, const Scope& sc)
 		{
@@ -331,7 +345,7 @@ namespace banana
 				double h = std::fmod(N(0), 360) / 60, s = clamp01(N(1)), l = clamp01(N(2)), c = (1 - std::fabs(2 * l - 1)) * s;
 				if (h < 0) h += 6;
 				double x = c * (1 - std::fabs(std::fmod(h, 2) - 1)), m = l - c / 2, r = 0, g = 0, bb = 0;
-				int k = (int)h;
+				int k = clampInt(h, 0, 5);
 				if (k == 0) { r = c; g = x; } else if (k == 1) { r = x; g = c; } else if (k == 2) { g = c; bb = x; }
 				else if (k == 3) { g = x; bb = c; } else if (k == 4) { r = x; bb = c; } else { r = c; bb = x; }
 				auto b = [](double y) { return (uint32_t)std::min(255.0, std::max(0.0, y * 255 + 0.5)); };
@@ -348,7 +362,7 @@ namespace banana
 			{
 				// by characters (UTF-8), not bytes
 				std::string s = S(0), r;
-				int from = (int)N(1), n = v.size() > 2 ? (int)N(2) : 1 << 30, k = -1;
+				long long from = clampInt(N(1), -(1 << 30), 1 << 30), n = v.size() > 2 ? clampInt(N(2), -(1 << 30), 1 << 30) : 1 << 30, k = -1;
 				for (size_t b = 0; b < s.size(); b++)
 				{
 					if (((unsigned char)s[b] & 0xc0) != 0x80) k++;
@@ -363,14 +377,21 @@ namespace banana
 				if (!a.empty()) for (size_t at = 0; (at = s.find(a, at)) != std::string::npos; at += b.size()) s.replace(at, a.size(), b);
 				return EV(s);
 			}
-			if (f == "pad") { std::string s = S(0); while ((int)s.size() < (int)N(1)) s = (v.size() > 2 ? S(2) : std::string("0")) + s; return EV(s); }
-			if (f == "fixed") { char b[64]; snprintf(b, sizeof b, "%.*f", std::max(0, std::min(10, (int)N(1))), N(0)); return EV(b); }
+			if (f == "pad")
+			{
+				// (at most 4096 long, and an empty filler adds nothing: it looped for ever)
+				std::string s = S(0), fill = v.size() > 2 ? S(2) : std::string("0");
+				int want = clampInt(N(1), 0, 4096);
+				while (!fill.empty() && (int)s.size() < want) s = fill + s;
+				return EV(s);
+			}
+			if (f == "fixed") { char b[64]; snprintf(b, sizeof b, "%.*f", clampInt(N(1), 0, 10), N(0)); return EV(b); }
 			if (f == "str") return EV(S(0));
 			if (f == "num") return N(0);
 			// plural(3, 'game') "3 games", plural(1, 'game') "1 game", plural(n, 'match', 'matches')
 			if (f == "plural") return EV(EV(N(0)).str() + " " + (N(0) == 1 ? S(1) : (v.size() > 2 ? S(2) : S(1) + "s")));
 			// pick(i, a, b, c): the i-th of the rest (clamped)
-			if (f == "pick") { if (v.size() < 2) return EV(""); int k = std::max(0, std::min((int)v.size() - 2, (int)N(0))); return v[k + 1]; }
+			if (f == "pick") { if (v.size() < 2) return EV(""); int k = clampInt(N(0), 0, (int)v.size() - 2); return v[k + 1]; }
 			// the first of its arguments that isn't empty
 			if (f == "either") { for (auto& e : v) if (e.truthy()) return e; return v.empty() ? EV("") : v.back(); }
 			return EV(0.0);

@@ -1,0 +1,1 @@
+=substr('banana', 1e88, 1e88)
