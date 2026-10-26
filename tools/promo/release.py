@@ -173,7 +173,7 @@ def frame(t):
     if kind == 'open':
         paste(layer, LOGO_BIG, (W - LOGO_BIG.width) / 2, 330 + rise(0.0, 0.8), at(0.0, 0.8))
         centred(d, W / 2, 490 + rise(0.6), 'Version 0.5.0', F(MED, 64), YELLOW, at(0.6))
-        centred(d, W / 2, 586 + rise(1.2), 'The next big update for your handheld.', F(REG, 38), SOFT, at(1.2))
+        centred(d, W / 2, 586 + rise(1.2), 'The first beta of BananaOS.', F(REG, 38), SOFT, at(1.2))
     elif kind == 'whatsnew':
         centred(d, W / 2, 400 + rise(0.2), "Here's what's new.", F(MED, 88), INK, at(0.2))
         centred(d, W / 2, 530 + rise(0.9), 'Seven new features, and plenty more.', F(REG, 40), SOFT, at(0.9))
@@ -200,7 +200,7 @@ def frame(t):
         x = (W - full) / 2
         text(d, (x, 480 + rise(1.0)), line, big, YELLOW, at(1.0))
         text(d, (x + big.getlength(line + ' '), 480), 'beta', big, INK, clamp01((local - 2.2) / 1.8) ** 1.5)
-        centred(d, W / 2, 580 + rise(1.6), 'Themes, companions, Bluetooth audio, OTA updates and more.', F(REG, 34), SOFT, at(1.6))
+        centred(d, W / 2, 580 + rise(1.6), 'The first beta: themes, companions, Bluetooth audio, OTA updates and more.', F(REG, 34), SOFT, at(1.6))
     else:
         # a feature: the tag, the name, the line under it, the points; the picture on the right
         tag = F(MED, 20); tw = tag.getlength(S['tag'])
