@@ -215,8 +215,16 @@ namespace banana::pkmn
 		findRegionMapsIn(t, rom, n, gen, how);
 		int on = 0;
 		for (int g : t.gridImage) on += g >= 0;
-		fprintf(stderr, "pokemon: %zu region map pictures (%s), %d of %zu grids on one, %.0f ms\n", t.mapImages.size(), how, on,
-			t.grids.size(), std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count());
+		// (an FNV-1a of each picture's pixels: a device test compares them with the ones recorded for its ROM)
+		std::string sums;
+		for (auto& im : t.mapImages)
+		{
+			uint32_t h = 2166136261u;
+			for (uint8_t b : im.rgba) h = (h ^ b) * 16777619u;
+			char x[16]; snprintf(x, sizeof x, " %08x", h); sums += x;
+		}
+		fprintf(stderr, "pokemon: %zu region map pictures (%s), %d of %zu grids on one, %.0f ms;%s\n", t.mapImages.size(), how, on,
+			t.grids.size(), std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count(), sums.c_str());
 	}
 
 	namespace {
