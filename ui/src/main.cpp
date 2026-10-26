@@ -1396,6 +1396,15 @@ int main(int argc, char** argv)
 	});
 	playSplash(disp, be, o, variant, settings["splash"] != "off", ready, sound, sigPipe[0]);
 	loader.join();
+	// in English (no language active) the Language row still names each language in its own script (简体中文) and its
+	// help credits the translator: the CJK font read once the menu is up, off the boot's path (7 MB, ~80 ms from the
+	// card), so those names aren't boxes
+	if (!lang::active() && lang::available(langDir).size() > 1)
+	{
+		const float sc = disp.height() / 480.0f;
+		const std::string path = o.assets + "/fonts/fusion-pixel-12px-proportional-zh_hans.ttf";
+		std::thread([path, sc] { if (auto f = rnds::Font::load(path)) rnds::setFallbackFont(f, 12, sc); }).detach();
+	}
 	Menu* ui = uiPtr.get();
 	ui->setLog([](const std::string& m) { logf("%s", m.c_str()); });
 	Worker worker;
