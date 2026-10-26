@@ -874,3 +874,11 @@ settings		Use 4x?	使用 4x？
 settings		Use 4x	使用 4x
 settings		Keep %s	保持 %s
 settings		This game's 3D resolution	本游戏的 3D 分辨率
+# (the Credits page's lines below are a machine-translated draft, not Majirefy's: for them to check; the names and titles in /etc/banana/credits.txt stay as written)
+settings		Credits	致谢
+settings		Thank you	谢谢你们
+settings		The people who made this version of BananaOS: development, translations, testing and thanks. A opens the list.	制作这一版 BananaOS 的人们：开发、翻译、测试与致谢。按 A 打开列表。
+settings		Development	开发
+settings		Translations	翻译
+settings		Testing	测试
+settings		Thanks	鸣谢

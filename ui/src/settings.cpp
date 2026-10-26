@@ -667,6 +667,8 @@ namespace banana
 		add(S, "gear", "Reset emulator settings", "Puts the emulator choices back to their defaults: the DS emulator, Quick resume, each system's emulator (core), and RetroArch's shader, audio latency, VSync and hotkeys. Your menu settings, saves and games stay. Press A twice.",
 			"", "reset_emulator", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "About", "", "", "", {}, {}, Item::INFO);
+		if (!readCredits().empty())
+			add(S, "gear", "Credits", "The people who made this version of BananaOS: development, translations, testing and thanks. A opens the list.", "", "credits", {}, {}, Item::PAGE);
 		add(S, "gear", "Restart", "Restarts the handheld. Press A twice.", "", "reboot", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "Shut down", "Turns the handheld off. Press A twice. (Or hold the power button.)", "", "poweroff", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "Hotkeys", "The buttons that do something everywhere, in the menu and in each emulator.", "", "hotkeys", {}, {}, Item::PAGE);
@@ -1023,6 +1025,7 @@ namespace banana
 			if (it.key == "hs_systems") { openSection("Home server systems"); return MOVED; }
 			if (it.key == "hs_server") { startPairing(); return MOVED; }
 			if (it.key == "hs_sync") { startSync(); return MOVED; }
+			if (it.key == "credits") { openCredits(); return MOVED; }
 			if (it.key == "update") openUpdates(); else if (it.key == "setup") openSetup(); else openNetworks();
 			return MOVED;
 		}
@@ -1224,6 +1227,7 @@ namespace banana
 		if (page == UPDATES) return pressUpdates(k);
 		if (page == SETUP) return pressSetup(k);
 		if (page == THEMES) return pressThemes(k);
+		if (page == CREDITS) return pressCredits(k);
 		if (langAsk >= 0) return pressLangAsk(k);
 		if (inGroups) return pressGroups(k);
 		int g = groupOf(sel), b = groupStart(g), e = groupEnd(g);
@@ -1364,6 +1368,7 @@ namespace banana
 		if (page == ARTPICK) return touchArt(cx, cy);
 		if (page == COLORS) return touchColors(cx, cy);
 		if (page == THEMES) return touchThemes(cx, cy);
+		if (page == CREDITS) { if (downY >= 418 && downY <= 466 && downX < 320) return pressCredits(Key::B); return NONE; }
 		if (langAsk >= 0 && page == LIST)
 		{
 			// the two buttons (askButtons): No, Yes
@@ -1920,6 +1925,7 @@ namespace banana
 		if (page == UPDATES) { renderUpdates(); return; }
 		if (page == SETUP) { renderSetup(); return; }
 		if (page == THEMES) { renderThemes(); return; }
+		if (page == CREDITS) { renderCredits(); return; }
 		if (langAsk >= 0) { renderLangAsk(); return; }
 		if (inGroups) { renderGroups(); return; }
 		SPal p = pal(light);
@@ -3523,6 +3529,123 @@ namespace banana
 			float aw = faceWidth("A", act);
 			face("A", act, 622 - aw, aw);
 		}
+		be->endScreen();
+	}
+
+	// ---- the credits ------------------------------------------------------------------------------------------------
+	std::vector<Settings::Credit> Settings::readCredits()
+	{
+		const char* env = getenv("BANANA_CREDITS");
+		std::ifstream f(env && *env ? env : "/etc/banana/credits.txt");
+		std::vector<Credit> r;
+		std::string ln, section;
+		while (std::getline(f, ln))
+		{
+			ln = trim(ln);
+			if (ln.empty() || ln[0] == '#') continue;
+			if (ln[0] == '[' && ln.back() == ']') { section = trim(ln.substr(1, ln.size() - 2)); continue; }
+			size_t eq = ln.find('=');
+			std::string name = trim(eq == std::string::npos ? ln : ln.substr(0, eq)), title = eq == std::string::npos ? "" : trim(ln.substr(eq + 1));
+			if (!name.empty()) r.push_back({ section, name, title });
+		}
+		return r;
+	}
+
+	void Settings::openCredits()
+	{
+		credits = readCredits();
+		crLines.clear();
+		std::vector<std::string> secs;
+		for (size_t i = 0; i < credits.size(); i++)
+		{
+			if (secs.empty() || credits[i].section != secs.back())
+			{
+				secs.push_back(credits[i].section);
+				if (!credits[i].section.empty()) crLines.push_back(-1 - (int)i);	// (the heading: its first entry's index)
+			}
+			crLines.push_back((int)i);
+		}
+		crSel = 0; crTop = 0;
+		if (!cjkLoaded && !lang::active())
+		{
+			// names in any script: the CJK pixel font (only when no language has it already: replacing the fallback
+			// font deadlocks, see change())
+			cjkLoaded = true;
+			if (auto f = rnds::Font::load(assets + "/fonts/fusion-pixel-12px-proportional-zh_hans.ttf")) rnds::setFallbackFont(f, 12, s);
+		}
+		page = CREDITS;
+	}
+
+	Settings::Result Settings::pressCredits(Key k)
+	{
+		const int n = (int)credits.size(), VIS = 8;
+		if (k == Key::B) { page = LIST; return MOVED; }
+		if (k == Key::START) { page = LIST; mOpen = false; return CLOSED; }
+		if (!n) return NONE;
+		int to = crSel;
+		if (k == Key::UP) to = std::max(0, crSel - 1);
+		else if (k == Key::DOWN) to = std::min(n - 1, crSel + 1);
+		else if (k == Key::L || k == Key::LEFT) to = std::max(0, crSel - (VIS - 1));
+		else if (k == Key::R || k == Key::RIGHT) to = std::min(n - 1, crSel + (VIS - 1));
+		else return NONE;
+		if (to == crSel) return NONE;
+		crSel = to;
+		// the selected entry's line in view, with its section's heading when it's the section's first
+		int line = 0;
+		for (size_t i = 0; i < crLines.size(); i++) if (crLines[i] == crSel) line = (int)i;
+		int first = line > 0 && crLines[line - 1] == -1 - crSel ? line - 1 : line;
+		if (first < crTop) crTop = first;
+		if (line >= crTop + VIS) crTop = line - VIS + 1;
+		return MOVED;
+	}
+
+	void Settings::renderCredits()
+	{
+		SPal p = pal(light);
+		const int VIS = 8;
+		const std::string ver = readLine("/etc/banana/version");
+		be->beginScreen(0);
+		box("screen", false, 0, 0, 640, 480);
+		box("hero", false, 18, 20, 604, 436);
+		icon("gear", 50, 56, 3);
+		text("Credits", true, 17, 170, 62, p.muted, true, 1.4f);
+		text(fit("BananaOS " + (ver.empty() ? std::string("dev") : ver), true, 30, 420), true, 30, 170, 88, p.ink);
+		text("Thank you", true, 22, 170, 130, p.accent);
+		if (!credits.empty())
+		{
+			const Credit& c = credits[crSel];
+			if (!c.section.empty()) text(fit(c.section, true, 18, 540), true, 18, 50, 210, p.muted, true, 1.2f);
+			text(fit(c.name, true, 30, 540), true, 30, 50, 240, p.ink);
+			wrapped(c.title, 22, 50, 290, 540, 4, p.muted);
+		}
+		be->endScreen();
+
+		be->beginScreen(1);
+		box("screen", false, 0, 0, 640, 480);
+		for (int r = 0; r < VIS && crTop + r < (int)crLines.size(); r++)
+		{
+			int v = crLines[crTop + r];
+			float y = 80 + r * 41;
+			if (v < 0)
+			{
+				// a section's heading: in the accent colour, nothing to pick
+				text(fit(credits[-1 - v].section, true, 17, 560), true, 17, 30, y + 12, p.accent, true, 1.2f);
+				continue;
+			}
+			bool on = v == crSel;
+			box(on ? "pick" : "slot", on, 18, y, 604, 37);
+			Color c = on ? p.onPick : p.ink;
+			float tw = credits[v].title.empty() ? 0 : std::min(300.f, text(credits[v].title, false, 17, 0, 0, c, false, 0, true));
+			text(fit(credits[v].name, true, 18, 560 - tw - 24), true, 18, 34, y + 9, c);
+			if (tw > 0) textFit(credits[v].title, false, 17, 606 - tw, y + 10, tw, on ? p.onPick : p.muted, on);
+		}
+		box("bubble", false, 18, 14, 604, 54);
+		text("Credits", true, 22, 38, 28, p.ink);
+		std::string count = std::to_string(credits.empty() ? 0 : crSel + 1) + " / " + std::to_string(credits.size());
+		float cw = text(count, true, 17, 0, 0, p.muted, false, 0, true);
+		text(count, true, 17, 602 - cw, 31, p.muted);
+		float bw = faceWidth("B", "Back");
+		face("B", "Back", 18, bw);
 		be->endScreen();
 	}
 

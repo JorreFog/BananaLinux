@@ -1,0 +1,39 @@
+# BananaOS credits: Settings > System > Credits shows this file, as it is in the system image.
+#
+# Format (plain text, UTF-8):
+#   [Section]          starts a section; its name is shown as a heading ("Development", "Translations", ...)
+#   Name = Title       one person a line: the name, then what they did. Any script works (简体中文, accents).
+#                      A line with no "=" is a name with no title.
+#   # ...              a comment, not shown. Empty lines are skipped.
+# The sections and the names show in the order they are written here. A credits.txt on the SD card does NOT replace
+# this one: the credits belong to the build. With no names in this file at all, the Credits row is hidden.
+#
+# PLACEHOLDER: the "Name N = Title" lines below are stand-ins until the real names and titles are filled in. The
+# other names are real and must stay.
+
+[Development]
+JorreFog = Maintainer
+Name 1 = Title
+Name 2 = Title
+
+[Translations]
+Majirefy = 简体中文 translation (Simplified Chinese)
+
+[Testing]
+Name 3 = Title
+Name 4 = Title
+Name 5 = Title
+
+[Thanks]
+# from README.md, "Built on community work" (release/0.5.0)
+jesussaves-ai = BananaLinux Flasher; the PS1 game panel, game panel idle dimming, microphone routing, Reset rows
+casualducko = Zero-copy panel patch for LÖVE apps on both panels (eReaderDS)
+swouapiy = The shutdown animation
+PokeDaisy / Lidor Itzhari = Pokémon companion (inspired by PokeDaisy, lidor30)
+TakWolf = Fusion Pixel Font (缝合像素字体): the Chinese characters
+ROCKNIX = Kernel support, device trees and drivers for the RG DS
+Exophase = DraStic (through SuperDrastic)
+melonDS = The DS emulator core behind BananaDS
+Retro Game Corps = For showing BananaOS to a lot of people
+forthenext = For showing BananaOS to a lot of people
+Name 6 = Title

@@ -152,7 +152,19 @@ namespace banana
 		std::string about, wifiInfo, ip;
 
 		// the Wi-Fi pages: the networks around, and the keyboard for a password (settings-wifi.cpp)
-		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES } page = LIST;
+		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS } page = LIST;
+		// System > Credits: the people who made this version, from the image's /etc/banana/credits.txt ("[Section]",
+		// then "Name = Title" lines; BANANA_CREDITS another file, the host's tests). Never the card's: they belong to the
+		// build. No file, or nothing in it: no row
+		struct Credit { std::string section, name, title; };
+		std::vector<Credit> credits;
+		int crSel = 0, crTop = 0;
+		static std::vector<Credit> readCredits();
+		void openCredits();
+		Result pressCredits(Key k);
+		void renderCredits();
+		// the credits list's lines: a section's heading, then its names (index into credits; -1 - section for a heading)
+		std::vector<int> crLines;
 		// Display & sound > Theme, A: the themes as a gallery, each a picture of its home screen (the theme's own
 		// "preview", else drawn by banana-ui itself, headless, once per theme file, kept in banana/themes/.thumbs)
 		std::vector<std::string> thNames, thValues;

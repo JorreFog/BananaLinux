@@ -121,6 +121,12 @@ ux_run langyes "home 0; press start; press r; press r; press r; press r; press r
 grep -q '^language = zh-cn' "$UXFX/data/settings.conf" || { echo "FAIL $size: Yes didn't switch the language"; fail=1; }
 sed -i '/^language = /d' "$UXFX/data/settings.conf"
 
+# System > Credits (after About: up four from the first row) opens the credits from credits.txt; with no names in it,
+# no row (up four is then Restart, an action: A only arms it)
+ux_run credits "home 0; press start; press r; press r; press r; press r; press r; press a; press up; press up; press up; press up; shot ux-credits-row; press a; shot ux-credits; press down; press b" BANANA_CREDITS="$HERE/../system/rootfs/etc/banana/credits.txt"
+ux_lt 1000 "$(ux_diff "$OUT/$size-ux-credits-bot.png" "$OUT/$size-ux-credits-row-bot.png")" || { echo "FAIL $size: Credits didn't open"; fail=1; }
+grep -q 'Majirefy = ' "$HERE/../system/rootfs/etc/banana/credits.txt" || { echo "FAIL: credits.txt lost Majirefy's credit"; fail=1; }
+
 # System > Hotkeys (its last row: up from the first) opens the list of hotkeys, B back to System on its row
 ux_run hotkeys "home 0; press start; press r; press r; press r; press r; press r; press a; press up; press a; wait 400; shot ux-hotkeys; press b; wait 400; shot ux-hotkeys-back"
 ux_lt 1000 "$(ux_diff "$OUT/$size-ux-hotkeys-bot.png" "$OUT/$size-ux-hotkeys-back-bot.png")" || { echo "FAIL $size: Hotkeys didn't open"; fail=1; }
