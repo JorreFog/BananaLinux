@@ -285,6 +285,13 @@ namespace banana
 		std::string slot, version, board;
 		void openUpdates();
 		void listPkgs();
+		// the owner's request (2026-10-27): old update packages can go from the card. Y on a package deletes it, X removes
+		// every package not newer than the version running now (each after a second press); only banana/updates' own
+		// .update.tar files, never while a slot is being written or a download runs
+		bool pkgOld(const Pkg& k) const;			// not newer than the running version (the same one included)
+		int oldPkgs(long long* bytes) const;		// how many of those, and their size
+		bool deletePkg(int i);
+		int deleteOldPkgs();
 		void pollUpdate();
 		void startApply(int pkg);
 		Result pressUpdates(Key k);

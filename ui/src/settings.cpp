@@ -820,9 +820,9 @@ namespace banana
 
 	void Settings::refreshInfo()
 	{
-		version = readLine("/etc/banana/version");
+		{ const char* tv = getenv("BANANA_VERSION"); version = tv ? tv : readLine("/etc/banana/version"); }	// (the tests: as the update script)
 		slot = readLine("/run/banana/slot");
-		board = readLine("/etc/banana/board");
+		{ const char* tb = getenv("BANANA_BOARD"); board = tb ? tb : readLine("/etc/banana/board"); }
 		std::string model;
 		{
 			std::ifstream f("/proc/device-tree/model");
@@ -2828,13 +2828,84 @@ namespace banana
 		message.clear();
 		ustatus.clear();
 		applying = false; updated = false; installView = false;
-		version = readLine("/etc/banana/version");
+		{ const char* tv = getenv("BANANA_VERSION"); version = tv ? tv : readLine("/etc/banana/version"); }
 		slot = readLine(runDir + "/slot");
-		board = readLine("/etc/banana/board");
+		{ const char* tb = getenv("BANANA_BOARD"); board = tb ? tb : readLine("/etc/banana/board"); }
 		listPkgs();
 		readOnline();
 		downloading = false;
 		pollDownload();		// a download started before (it goes on while the page is closed)
+	}
+
+	// "0.5.0-beta.3" -> its numbers then the pre-release's (a release ranks after all of its pre-releases)
+	static int versionCmp(const std::string& a, const std::string& b)
+	{
+		auto parts = [](const std::string& v, std::vector<long>& nums, std::vector<long>& pre, bool& isPre)
+		{
+			size_t dash = v.find('-');
+			std::string main = v.substr(0, dash), tail = dash == std::string::npos ? "" : v.substr(dash + 1);
+			isPre = dash != std::string::npos;
+			for (size_t i = 0; i < main.size();)
+			{
+				size_t j = main.find('.', i); if (j == std::string::npos) j = main.size();
+				nums.push_back(atol(main.substr(i, j - i).c_str())); i = j + 1;
+			}
+			for (size_t i = 0; i < tail.size(); i++)
+				if (isdigit((unsigned char)tail[i])) { pre.push_back(atol(tail.c_str() + i)); while (i < tail.size() && isdigit((unsigned char)tail[i])) i++; }
+		};
+		std::vector<long> na, nb, pa, pb; bool prea, preb;
+		parts(a, na, pa, prea); parts(b, nb, pb, preb);
+		for (size_t i = 0; i < std::max(na.size(), nb.size()); i++)
+		{
+			long x = i < na.size() ? na[i] : 0, y = i < nb.size() ? nb[i] : 0;
+			if (x != y) return x < y ? -1 : 1;
+		}
+		if (prea != preb) return prea ? -1 : 1;
+		for (size_t i = 0; i < std::max(pa.size(), pb.size()); i++)
+		{
+			long x = i < pa.size() ? pa[i] : 0, y = i < pb.size() ? pb[i] : 0;
+			if (x != y) return x < y ? -1 : 1;
+		}
+		return 0;
+	}
+
+	bool Settings::pkgOld(const Pkg& k) const
+	{
+		// (only this handheld's: a card shared with the other handheld keeps that one's packages)
+		return !version.empty() && !k.version.empty() && !board.empty() && (k.board == board || k.board == "universal") &&
+			versionCmp(k.version, version) <= 0;
+	}
+
+	int Settings::oldPkgs(long long* bytes) const
+	{
+		int n = 0; long long b = 0;
+		struct stat st;
+		for (const Pkg& k : pkgs)
+			if (pkgOld(k)) { n++; if (stat(k.path.c_str(), &st) == 0) b += st.st_size; }
+		if (bytes) *bytes = b;
+		return n;
+	}
+
+	bool Settings::deletePkg(int i)
+	{
+		if (i < 0 || i >= (int)pkgs.size() || applying || downloading) return false;
+		const std::string& p = pkgs[i].path;
+		// only a package of banana/updates itself (the list comes from `update list`, but a path is checked anyway)
+		const std::string dir = updatesDir + "/", ext = ".update.tar";
+		if (p.compare(0, dir.size(), dir) != 0 || p.find('/', dir.size()) != std::string::npos || p.size() <= dir.size() + ext.size() ||
+			p.compare(p.size() - ext.size(), ext.size(), ext) != 0)
+			return false;
+		bool ok = unlink(p.c_str()) == 0;
+		::sync();
+		return ok;
+	}
+
+	int Settings::deleteOldPkgs()
+	{
+		int n = 0;
+		for (int i = 0; i < (int)pkgs.size(); i++)
+			if (pkgOld(pkgs[i]) && deletePkg(i)) n++;
+		return n;
 	}
 
 	void Settings::listPkgs()
@@ -3403,10 +3474,35 @@ namespace banana
 			return MOVED;
 		}
 		case Key::X:
+			if (usel >= 2)
+			{
+				// on a package: every package not newer than this version removed from the card, after X again
+				if (applying || downloading || oldPkgs(nullptr) == 0) return NONE;
+				if (armed != 5000) { armed = 5000; return MOVED; }
+				armed = -1;
+				int n = deleteOldPkgs();
+				listPkgs();
+				message = n == 1 ? "1 old package removed from banana/updates." : std::to_string(n) + " old packages removed from banana/updates.";
+				usel = std::min(usel, 1 + (int)pkgs.size()); utop = std::min(utop, std::max(0, usel - ROWS + 1));
+				return MOVED;
+			}
 			// asks GitHub again (a version found, or a download that failed: is there a newer one?)
 			if (applying || downloading || checkJob.running() || usel != 0) return NONE;
 			startCheck();
 			return MOVED;
+		case Key::Y:
+		{
+			// on a package: that package deleted from the card, after Y again
+			if (usel < 2 || applying || downloading) return NONE;
+			int i = usel - 2;
+			if (armed != 4000 + i) { armed = 4000 + i; return MOVED; }
+			armed = -1;
+			std::string v = pkgs[i].version;
+			message = deletePkg(i) ? "Banana " + v + "'s package deleted from banana/updates." : "Banana " + v + "'s package couldn't be deleted.";
+			listPkgs();
+			usel = std::min(usel, 1 + (int)pkgs.size()); utop = std::min(utop, std::max(0, usel - ROWS + 1));
+			return MOVED;
+		}
 		case Key::B: case Key::LEFT:
 			if (applying) return NONE;			// not while a slot is being written (a download goes on)
 			page = LIST; armed = -1; message.clear();
@@ -3476,7 +3572,16 @@ namespace banana
 			else help = "For beta testers: updates from the test builds on bananaos-cfw.dev instead of GitHub's releases. A asks for the beta password (once: it is checked with the site, then kept on the card for the updater only).";
 		}
 		else if (pkgs.empty()) help = "No update packages found. Put a banana-" + (board.empty() ? std::string("<board>") : board) + "-<version>.update.tar from a release in banana/updates on the card (File sharing can copy it over Wi-Fi), then come back here.";
-		else help = "A on a package writes it to the other slot and checks it; the running version stays until the restart. Packages are in banana/updates on the card.";
+		else
+		{
+			long long ob = 0;
+			int on = oldPkgs(&ob);
+			if (armed >= 4000 && armed < 5000) help = "Y again deletes this package from banana/updates on the card (the installed versions aren't touched). Any other button keeps it.";
+			else if (armed == 5000) help = "X again removes " + (on == 1 ? std::string("1 package") : std::to_string(on) + " packages") + " (" + mb(ob) + " MB) not newer than the version running now from banana/updates. Any other button keeps them.";
+			else if (!message.empty()) help = message;
+			else help = "A on a package writes it to the other slot and checks it; the running version stays until the restart. Y deletes the package from the card" +
+				(on > 0 ? "; X removes every package not newer than this version (" + (on == 1 ? std::string("1 package, ") : std::to_string(on) + " packages, ") + mb(ob) + " MB)." : ".");
+		}
 		float hy = found.empty() ? 196 : 214;
 		wrapped(help, 20, 50, hy, 540, notes.empty() ? 7 : 4, p.muted);
 		if (!notes.empty()) wrapped(notes, 18, 50, hy + 4 * 28 + 6, 540, 4, p.ink);
@@ -3511,8 +3616,8 @@ namespace banana
 			{
 				const Pkg& k = pkgs[i - 2];
 				name = "Banana " + k.version;
-				hot = armed == 1000 + i - 2;
-				tag = hot ? "Press A again" : (k.board == board || board.empty() || k.board == "universal" ? (k.board == "universal" ? std::string("for both handhelds") : "for the " + k.board) : "not for this handheld");
+				hot = armed == 1000 + i - 2 || armed == 4000 + i - 2 || (armed == 5000 && pkgOld(k));
+				tag = armed == 1000 + i - 2 ? "Press A again" : armed == 4000 + i - 2 ? "Press Y again: delete" : armed == 5000 && pkgOld(k) ? "Press X again: remove" : (k.board == board || board.empty() || k.board == "universal" ? (k.board == "universal" ? std::string("for both handhelds") : "for the " + k.board) : "not for this handheld");
 			}
 			float tw = tag.empty() ? 0 : text(tag, true, 17, 0, 0, c, false, 0, true);
 			text(fit(name, true, 20, 560 - tw - 24), true, 20, 38, y + 16, c);
@@ -3528,6 +3633,13 @@ namespace banana
 		{
 			float aw = faceWidth("A", act);
 			face("A", act, 622 - aw, aw);
+		}
+		if (!applying && !updated && !downloading && usel >= 2 && usel - 2 < (int)pkgs.size())
+		{
+			// Y: delete this package (X, removing every old one, is in the help on the top panel)
+			const std::string ya = armed == 4000 + usel - 2 ? "Delete!" : "Delete";
+			float yw = faceWidth("Y", ya);
+			face("Y", ya, 320 - yw / 2, yw);
 		}
 		be->endScreen();
 	}

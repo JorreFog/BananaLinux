@@ -228,7 +228,18 @@ upstate beta 'row "Download Banana 0.5.0-beta.2" tag "[0-9]* MB" act "Download" 
 upstate beta 'message "Beta channel off: Check for updates asks GitHub again." beta off'
 grep -q "$PW" "$OUT/ui-beta.log" && bad "ui beta: the password is in the menu's log"
 ls "$OUT/ui-beta/run/"update-beta* >/dev/null 2>&1 && bad "ui beta: the password file stayed in run"
-for s in beta-beta-row beta-beta-kbd beta-beta-on beta-beta-found flow-open flow-found flow-ready flow-applied cancel-downloading cancel-cancelled offline-offline zh-zh-open zh-zh-found zh-zh-system; do
+# deleting packages (owner's request 2026-10-27): on 0.4.2, Y Y deletes the first package, X X every one not newer than
+# 0.4.2 for this handheld; 0.4.3 (newer) and the RG DS Plus's package (another handheld) stay
+clean; mkdir -p "$FX/data/updates"
+mkpkg() { d=$(mktemp -d); mkdir "$d/banana-$1-$2"; echo "$2" > "$d/banana-$1-$2/VERSION"; echo "$1" > "$d/banana-$1-$2/board"
+    (cd "$d" && tar -cf "$FX/data/updates/banana-$1-$2.update.tar" "banana-$1-$2"); rm -rf "$d"; }
+mkpkg rgds 0.4.0; mkpkg rgds 0.4.1; mkpkg rgds 0.4.2; mkpkg rgds 0.4.3; mkpkg rgds-plus 0.4.1
+ui del "$GOOD" "upstate; press down; press down; upstate; shot del-row; press y; upstate; shot del-armed; press y; upstate; shot del-one; press x; upstate; shot del-oldarmed; press x; upstate; shot del-old"
+left=$(cd "$FX/data/updates" && ls *.update.tar 2>/dev/null | tr '\n' ' ')
+[ "$left" = "banana-rgds-0.4.3.update.tar banana-rgds-plus-0.4.1.update.tar " ] || bad "ui del: left on the card: $left"
+grep -q 'package deleted from banana/updates' "$OUT/ui-del.log" || bad "ui del: no delete message: $(grep upstate "$OUT/ui-del.log" | tail -n 4)"
+grep -q 'old packages removed from banana/updates' "$OUT/ui-del.log" || bad "ui del: no remove-old message: $(grep upstate "$OUT/ui-del.log" | tail -n 3)"
+for s in beta-beta-row beta-beta-kbd beta-beta-on beta-beta-found flow-open flow-found flow-ready flow-applied del-del-armed del-del-oldarmed del-del-old cancel-downloading cancel-cancelled offline-offline zh-zh-open zh-zh-found zh-zh-system; do
     for p in top bot; do
         f=$OUT/ui-$s-$p.png
         [ -s "$f" ] || { bad "no $f"; continue; }
