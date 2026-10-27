@@ -858,8 +858,13 @@ namespace banana
 		r.box = g.box; r.cart = g.cart; r.label = g.label;
 		if (r.box.empty() && isDsRom(g.path, systemOf(i).id)) r.box = romIconCover(dataDir, g.path);	// its own icon
 		std::string ext = lower(g.path.substr(g.path.rfind('.') + 1));
-		// the DS ROM's own icon when there is no art (from inside a .zip too)
-		if (ext == "nds" || (ext == "zip" && systemOf(i).id == "nds")) r.rom = g.path;
+		// the DS ROM's own icon on the cartridge: when there is no art (from inside a .zip too), or on every one when the
+		// owner picked the icons (DS cartridges: Game icon)
+		if (ext == "nds" || (ext == "zip" && systemOf(i).id == "nds"))
+		{
+			if (dsCartIcons || g.box.empty()) r.rom = g.path;
+			if (dsCartIcons) r.cartArt = romIconCover(dataDir, g.path);	// ("" without an icon: the art, as before)
+		}
 		r.icon = themedIcon(systemOf(i).id, lookOf(systemOf(i).id).icon);
 		// what the emulator last said of its RetroAchievements (the block is left out until a game has said so)
 		if (g.achB > 0)

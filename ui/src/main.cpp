@@ -1316,6 +1316,7 @@ int main(int argc, char** argv)
 	}
 	Host lib(o.systems, o.roms, o.data, o.assets);
 	lib.motion = settings["motion"] != "off";
+	lib.dsCartIcons = settings["ds_cart_art"] == "icon";
 	lib.twelveHour = settings["clock"] == "12h";
 	lib.batteryShown = settings["battery"] == "percent" ? "text" : "icon";
 
@@ -1499,6 +1500,7 @@ int main(int argc, char** argv)
 		{
 			settings = readSettings(o.data);
 			lib.motion = settings["motion"] != "off";
+			lib.dsCartIcons = settings["ds_cart_art"] == "icon";
 			lib.twelveHour = settings["clock"] == "12h";
 			lib.batteryShown = settings["battery"] == "percent" ? "text" : "icon";
 			sound.enabled = settings["sounds"] != "off";

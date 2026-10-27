@@ -118,6 +118,9 @@ namespace banana
 		std::string gameKey(int game);
 		Titles gameTitles(const std::string& key) const { auto it = titles.find(key); return it == titles.end() ? Titles() : it->second; }
 		void setGameTitles(const std::string& key, const std::string& name, const std::string& sort);
+		// Settings > Display & sound > DS cartridges: "box" (the scraped box art, the game's own icon without one) or
+		// "icon" (the DS game's own icon on every cartridge, as the DSi menu shows it)
+		bool dsCartIcons = false;
 
 	private:
 		struct Look { std::string icon, maker; rnds::Color accent; bool hasAccent = false, app = false; };

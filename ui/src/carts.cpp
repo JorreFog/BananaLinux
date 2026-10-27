@@ -306,7 +306,7 @@ namespace banana
 			Item it;
 			it.system = modelOf(g.icon.empty() ? si.id : g.icon);
 			if (it.system == "other") it.system = modelOf(si.id);
-			it.art = !g.box.empty() ? g.box : !g.label.empty() ? g.label : g.cart;
+			it.art = !g.cartArt.empty() ? g.cartArt : !g.box.empty() ? g.box : !g.label.empty() ? g.label : g.cart;
 			it.icon = g.icon.empty() ? si.icon : g.icon;
 			it.band = si.name;
 			it.title = g.title;

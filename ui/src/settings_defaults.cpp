@@ -26,6 +26,7 @@ namespace banana
 
 		// each list ends in nullptr: valid() walks it to the end
 		const char* const ON_OFF[] = { "on", "off", nullptr };
+		const char* const DS_CART_ART[] = { "box", "icon", nullptr };
 		const char* const ACCENT_TEXT[] = { "auto", "dark", "light", nullptr };
 		const char* const ACCENTS[] = { "yellow", "blue", "red", "green", "purple", "pink", nullptr };
 		const char* const SHADERS[] = { "off", "lcd", "crt", "sharp", nullptr };
@@ -46,6 +47,7 @@ namespace banana
 			{ "accent_text", "auto", ENUM, ACCENT_TEXT, 0, 0 },
 			{ "theme", "dark", TEXT, nullptr, 0, 0 },
 			{ "motion", "on", ENUM, ON_OFF, 0, 0 },
+			{ "ds_cart_art", "box", ENUM, DS_CART_ART, 0, 0 },
 			{ "sounds", "on", ENUM, ON_OFF, 0, 0 },
 			{ "battery", "icon", TEXT, nullptr, 0, 0 },
 			{ "clock", "24h", TEXT, nullptr, 0, 0 },
