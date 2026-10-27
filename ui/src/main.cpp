@@ -18,6 +18,7 @@
 #include "library.h"
 #include "soft.h"
 #include "splash.h"
+#include "arrival.h"
 #include "lang.h"
 #include "settings.h"
 #include "settings_defaults.h"
@@ -629,6 +630,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 					logf("search \"%s\": shelf %d, %d games", settings.searchText.c_str(), sh, sh >= 0 ? (int)lib.shelf(sh).games.size() : -1);
 				}
 				logf("press %s: settings %s", b.c_str(), settings.isOpen() ? ("result " + std::to_string(r)).c_str() : "closed");
+				if (settings.takeSetupFinished()) logf("setup finished: the welcome");
 				continue;
 			}
 			if (!uiButton(it->second, btn)) { logf("unknown button %s", b.c_str()); return 2; }
@@ -636,6 +638,66 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			logf("press %s: %s, view %d sys %d game %d", b.c_str(), used ? "used" : "unused", (int)ui.view(), ui.systemIndex(), ui.gameIndex());
 		}
 		else if (op == "setup") { settings.setup(); logf("setup open"); }
+		// setupagain: the setup as from Settings > System; setupat <slide>: the boot's, back on a slide (setup-step)
+		else if (op == "setupstate") { settings.update(now); logf("setupstate: %s", settings.setupState().c_str()); }
+		else if (op == "setupagain") { settings.setup(false); logf("setup open (again)"); }
+		else if (op == "setupat") { std::string at; cs >> at; settings.setup(true, at); logf("setup open at %s", at.c_str()); }
+		else if (op == "card")
+		{
+			// card <name> <text...>: the Welcome card at the setup's end
+			std::string name, t; cs >> name; std::getline(cs >> std::ws, t);
+			settings.renderCard(t, settings.ownerName(), 196, 30);
+			if (!save(0, o.headless + name + "-top.png") || !save(1, o.headless + name + "-bot.png")) return 1;
+			logf("card %s", name.c_str());
+		}
+		else if (op == "arrival" || op == "arrivalbench")
+		{
+			// arrival <name> <ms>: the first boot's arrival at that time (from the boot animation's last frame);
+			// arrivalbench: every frame of it 16.7 ms apart, the drawing timed (run it on a handheld for its CPU)
+			static Arrival ar;
+			static bool loaded = false;
+			if (!loaded)
+			{
+				Splash sp;
+				if (!sp.load(o.splash, o.banana + "/banana-48.png", variant, o.w, o.h) || !ar.load(o.splash, o.w, o.h)) { logf("no splash assets in %s", o.splash.c_str()); return 1; }
+				sp.draw(be.canvas(0), be.canvas(1), Splash::INTRO_END, true);
+				ar.setStart(be.pixels(0), be.pixels(1));
+				settings.renderCard("Welcome to", "", 174, 26);
+				ar.setCaption(be.pixels(0));
+				ar.onCue = [](const std::string& c) { logf("arrival cue %s", c.c_str()); };
+				loaded = true;
+			}
+			if (op == "arrival")
+			{
+				std::string name; double t = 0;
+				cs >> name >> t;
+				ar.draw(be.canvas(0), be.canvas(1), t);
+				if (!save(0, o.headless + name + "-top.png") || !save(1, o.headless + name + "-bot.png")) return 1;
+				logf("arrival %s at %.0f ms", name.c_str(), t);
+			}
+			else
+			{
+				// per phase: the zoom and rumble, the burst, the flight, the glow, the card
+				const double ends[] = { Arrival::RUMBLE_END, Arrival::LOCK, Arrival::FOLLOW_END, Arrival::WHITE, Arrival::END };
+				const char* names[] = { "zoom", "burst", "follow", "glow", "card" };
+				double sum[5] = {}, worst[5] = {};
+				int cnt[5] = {}, over = 0;
+				for (double t = 0; t < Arrival::END; t += 1000.0 / 60)
+				{
+					int ph = 0;
+					while (ph < 4 && t >= ends[ph]) ph++;
+					if (ar.still(t)) continue;
+					double t0 = nowMs();
+					ar.draw(be.canvas(0), be.canvas(1), t);
+					double d = nowMs() - t0;
+					sum[ph] += d; worst[ph] = std::max(worst[ph], d); cnt[ph]++;
+					if (d > 12) over++;
+				}
+				for (int i = 0; i < 5; i++)
+					logf("arrivalbench %s: %d frames, %.2f ms average, %.2f worst", names[i], cnt[i], cnt[i] ? sum[i] / cnt[i] : 0, worst[i]);
+				logf("arrivalbench: %d frames over 12 ms", over);
+			}
+		}
 		// helpcheck: every Settings row's help (and a game page's) laid out as the top panel would: fits or OVERFLOW
 		else if (op == "helpcheck") { int n = settings.helpCheck([&](const std::string& l) { logf("%s", l.c_str()); }); logf("helpcheck: %d texts", n); }
 		// search <text>: the search keyboard open with that text typed (START then searches)
@@ -683,6 +745,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			{
 				settings.touch(x * k, y * k, true);
 				logf("touch %.0f %.0f: settings result %d", x, y, (int)settings.touch(x * k, y * k, false));
+				if (settings.takeSetupFinished()) logf("setup finished: the welcome");
 			}
 			else
 			{
@@ -1034,6 +1097,150 @@ static void irisToMenu(Display& disp, SoftBackend& be, Menu& ui)
 	iris.openOn(ui, Iris::HOLD);
 }
 
+// ---- the first boot: the arrival, the setup faded in, and the Welcome into the menu at its end ----------------
+static inline uint32_t mulPx(uint32_t p, uint32_t k)
+{
+	uint32_t rb = (p & 0x00ff00ffu) * k + 0x00800080u;
+	rb = ((rb + ((rb >> 8) & 0x00ff00ffu)) >> 8) & 0x00ff00ffu;
+	uint32_t g = (p & 0x0000ff00u) * k + 0x00008000u;
+	g = ((g + ((g >> 8) & 0x0000ff00u)) >> 8) & 0x0000ff00u;
+	return 0xff000000u | rb | g;
+}
+
+// a still picture on both panels faded between levels (0 black .. 4 itself), a level a step, in ms: the stepped fade of
+// the arrival's (an old console's palette fade)
+static void fadeSteps(Display& disp, SoftBackend& be, const std::vector<uint32_t>* pic, int from, int to, double ms)
+{
+	const int steps = std::abs(to - from), dir = to > from ? 1 : -1;
+	if (!steps) return;
+	const size_t n = (size_t)be.width() * be.height();
+	const double t0 = nowMs();
+	int shown = from;
+	for (;;)
+	{
+		double p = (nowMs() - t0) / ms;
+		int lvl = from + dir * std::min(steps, 1 + (int)(p * steps));
+		if (lvl != shown)
+		{
+			shown = lvl;
+			uint32_t k = (uint32_t)std::min(255, lvl * 64);
+			for (int sc = 0; sc < 2; sc++)
+			{
+				uint32_t* d = be.canvas(sc);
+				const uint32_t* sp = pic[sc].data();
+				if (k >= 255) std::copy(sp, sp + n, d);
+				else if (k == 0) std::fill(d, d + n, 0xff000000u);
+				else for (size_t i = 0; i < n; i++) d[i] = mulPx(sp[i], k);
+			}
+			showFrame(disp, be, -1);
+		}
+		else usleep(2000);
+		if (p >= 1 && shown == to) break;
+	}
+}
+
+static void grab(SoftBackend& be, std::vector<uint32_t>* pic)
+{
+	const size_t n = (size_t)be.width() * be.height();
+	for (int sc = 0; sc < 2; sc++) pic[sc].assign(be.pixels(sc), be.pixels(sc) + n);
+}
+
+// The first boot's arrival (arrival.h), from the boot animation's last frame to black. A or START skips to the setup;
+// a signal (a shutdown, a wake from sleep) ends it too. Its frame times go to the log.
+static void playArrival(Display& disp, SoftBackend& be, const Options& o, Input& input, Sound& sound, Settings& sv, int sig,
+	const std::function<void()>& frameTick)
+{
+	Arrival a;
+	if (!a.load(o.splash, be.width(), be.height())) { logf("arrival: no pictures in %s", o.splash.c_str()); return; }
+	a.setStart(be.pixels(0), be.pixels(1));
+	sv.renderCard("Welcome to", "", 174, 26);
+	a.setCaption(be.pixels(0));
+	a.onCue = [&sound](const std::string& c) { sound.play(c == "burst" ? "ready" : "fav"); };
+	const double t0 = nowMs();
+	double last = -1, drawSum = 0, drawWorst = 0, gapWorst = 0;
+	int frames = 0, moving = 0, missed = 0;
+	bool skip = false, interrupted = false;
+	for (;;)
+	{
+		double t = nowMs() - t0;
+		if (t >= Arrival::END) break;
+		std::vector<pollfd> fds = { { sig, POLLIN, 0 } };
+		for (int fd : input.fds()) fds.push_back({ fd, POLLIN, 0 });
+		if (poll(fds.data(), fds.size(), 0) > 0)
+		{
+			if (fds[0].revents & POLLIN) { interrupted = true; break; }	// (left in the pipe: the menu's loop acts on it)
+			for (size_t i = 1; i < fds.size(); i++)
+				if (fds[i].revents & POLLIN)
+					input.read(fds[i].fd, [&](const InputEvent& ev) { if (ev.type == InputEvent::PRESS && (ev.key == Key::A || ev.key == Key::START)) skip = true; });
+		}
+		if (skip) break;
+		if (a.still(t)) { usleep(4000); last = -1; continue; }
+		frameTick();	// (the CPU's clock up while it moves, as for the menu's animations)
+		double d0 = nowMs();
+		a.draw(be.canvas(0), be.canvas(1), t);
+		double dd = nowMs() - d0;
+		showFrame(disp, be, sig);
+		double now = nowMs();
+		frames++;
+		drawSum += dd; drawWorst = std::max(drawWorst, dd);
+		if (t < Arrival::WHITE && last > 0)
+		{
+			// the moving part: a frame that took more than one and a half refreshes missed one
+			double gap = now - last;
+			moving++;
+			gapWorst = std::max(gapWorst, gap);
+			if (gap > 25) missed++;
+		}
+		last = now;
+	}
+	logf("arrival: %s after %.0f ms; %d frames, drawing %.2f ms average, %.2f worst; moving part: %d frames, %d missed a refresh, worst gap %.1f ms",
+		skip ? "skipped" : interrupted ? "interrupted" : "played", nowMs() - t0, frames, frames ? drawSum / frames : 0, drawWorst, moving, missed, gapWorst);
+	if (skip || interrupted)
+	{
+		std::vector<uint32_t> pic[2];
+		grab(be, pic);
+		fadeSteps(disp, be, pic, 4, 0, 240);
+	}
+}
+
+// the setup's first picture faded in from black (the arrival ends on black; the setup again after a restart starts from
+// the boot animation, closed over by the iris first)
+static void fadeInSettings(Display& disp, SoftBackend& be, Settings& sv)
+{
+	be.invalidate();
+	sv.update(nowMs());
+	sv.render();
+	std::vector<uint32_t> pic[2];
+	grab(be, pic);
+	fadeSteps(disp, be, pic, 0, 4, 400);
+	be.invalidate();
+}
+
+// the end of the first boot's setup: its last picture fades out, "Welcome" (and the DS's name) fades in and stays a
+// moment, then the iris closes over it and opens on the menu, as after the boot animation
+static void welcomeToMenu(Display& disp, SoftBackend& be, Menu& ui, Settings& sv, Sound& sound)
+{
+	std::vector<uint32_t> pic[2], card[2];
+	grab(be, pic);
+	fadeSteps(disp, be, pic, 4, 0, 320);
+	usleep(250000);
+	sv.renderCard("Welcome", sv.ownerName(), 196, 30);
+	grab(be, card);
+	sound.play("ready");
+	fadeSteps(disp, be, card, 0, 4, 400);
+	const double hold = nowMs() + 1400;
+	// the menu's first frame drawn meanwhile (as irisToMenu does), the card put back
+	ui.update(nowMs());
+	ui.finishWork();
+	be.invalidate();
+	ui.render();
+	for (int sc = 0; sc < 2; sc++) std::copy(card[sc].begin(), card[sc].end(), be.canvas(sc));
+	while (nowMs() < hold) usleep(5000);
+	Iris iris(disp, be);
+	iris.close(card, Iris::CLOSE);
+	iris.openOn(ui, Iris::HOLD);
+}
+
 // The shutdown: the menu (whatever is on the panels) closes through the iris, opens on the boot animation's last
 // frame, and the animation plays backwards to black (Splash::drawOutro). ~1.9 s: rcK gives the menu 3 s to go.
 static void playOutro(Display& disp, SoftBackend& be, const Options& o, const std::string& variant, Sound& sound)
@@ -1322,6 +1529,9 @@ int main(int argc, char** argv)
 	if (!o.headless.empty())
 	{
 		cjkFont(o.h / 480.0f);
+		// (the language names in their own script, as on the device: the setup's Language slide, the Language row)
+		if (!lang::active() && lang::available(langDir).size() > 1)
+			if (auto f = rnds::Font::load(o.assets + "/fonts/fusion-pixel-12px-proportional-zh_hans.ttf")) rnds::setFallbackFont(f, 12, o.h / 480.0f);
 		lib.scan();
 		return runHeadless(o, lib, variant, settings["theme"]);
 	}
@@ -1403,19 +1613,53 @@ int main(int argc, char** argv)
 	{
 		const float sc = disp.height() / 480.0f;
 		const std::string path = o.assets + "/fonts/fusion-pixel-12px-proportional-zh_hans.ttf";
-		std::thread([path, sc] { if (auto f = rnds::Font::load(path)) rnds::setFallbackFont(f, 12, sc); }).detach();
+		// (the first-time setup's first slide is Language: read before it, not beside it)
+		if (access((o.data + "/setup-done").c_str(), F_OK) != 0 || access((o.data + "/setup-step").c_str(), F_OK) == 0)
+		{
+			if (auto f = rnds::Font::load(path)) rnds::setFallbackFont(f, 12, sc);
+		}
+		else std::thread([path, sc] { if (auto f = rnds::Font::load(path)) rnds::setFallbackFont(f, 12, sc); }).detach();
 	}
 	Menu* ui = uiPtr.get();
 	ui->setLog([](const std::string& m) { logf("%s", m.c_str()); });
 	Worker worker;
 	worker.start(uiPtr);
-	irisToMenu(disp, be, *ui);
-	bootMark("banana-ui: the menu");
-	// the first boot after the installation: the setup (Wi-Fi, the time zone, the accounts) before anything else
+	// the first boot after the installation: the setup (Wi-Fi, the time zone, the accounts) before anything else; or a
+	// setup a restart cut off (a language picked on its first slide, a power cut, the setup again from Settings)
 	bool firstSetup = access((o.data + "/setup-done").c_str(), F_OK) != 0;
+	bool stepBoot = true;
+	const std::string setupAt = Settings::setupStep(o.data, &stepBoot);
+	const bool setupNow = firstSetup || !setupAt.empty();
 
 	Input input;
 	input.open(o.touch, disp.width(), disp.height());
+	float scale = disp.height() / 480.0f;
+	Settings settingsView(&be, o.assets, o.data, scale, variant);
+	settingsView.thumbArgs = "--assets " + shellQuote(o.assets) + " --splash " + shellQuote(o.splash) + " --banana " + shellQuote(o.banana) +
+		" --systems " + shellQuote(o.systems) + " --roms " + shellQuote(o.roms);	// (the theme gallery's pictures)
+	settingsView.setSystems(shelfSystems(lib));
+	settingsView.setColors = [&](const ScreenColors& c) { std::string e = disp.setColors(c); if (!e.empty()) logf("screen colours: %s", e.c_str()); return e; };
+	settingsView.setFontDir(o.banana + "/fonts");
+	settingsView.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
+	settingsView.setVariant(settings["theme"]);	// (Carts: Inter)
+	if (setupNow)
+	{
+		// the very first start (no step reached yet): the arrival after the boot animation; else the animation's last
+		// frame closed over by the iris. Then the setup fades in from black
+		if (firstSetup && setupAt.empty() && gSplash.played()) playArrival(disp, be, o, input, sound, settingsView, sigPipe[0], [&] { boost.frame(nowMs()); });
+		else if (gSplash.played())
+		{
+			Iris iris(disp, be);
+			std::vector<uint32_t> was[2];
+			grab(be, was);
+			iris.close(was, Iris::CLOSE);
+		}
+		settingsView.setup(firstSetup || stepBoot, setupAt);
+		fadeInSettings(disp, be, settingsView);
+		logf("first-time setup (%s%s)", firstSetup ? "first boot" : "again", setupAt.empty() ? "" : (", back on " + setupAt).c_str());
+	}
+	else irisToMenu(disp, be, *ui);
+	bootMark("banana-ui: the menu");
 
 	// the bottom panel's idle dim (settings.conf's bottom_idle_seconds / bottom_dim_percent): the bottom backlight's
 	// path comes from bananad. It runs only for a RetroArch game whose panel is the bottom screen (Mode A): the menu
@@ -1441,20 +1685,10 @@ int main(int argc, char** argv)
 	double gameEnded = -1e9;
 	double quietUntil = 0;	// no frame before this: the last one flipped nothing (see present below)
 	int lastMinute = -1;
-	float scale = disp.height() / 480.0f;
-	Settings settingsView(&be, o.assets, o.data, scale, variant);
-	settingsView.thumbArgs = "--assets " + shellQuote(o.assets) + " --splash " + shellQuote(o.splash) + " --banana " + shellQuote(o.banana) +
-		" --systems " + shellQuote(o.systems) + " --roms " + shellQuote(o.roms);	// (the theme gallery's pictures)
-	settingsView.setSystems(shelfSystems(lib));
 	pkmn::Companion companion;	// the game panel's Pokémon companion (pokemon.h), for the game running
 	gcomp::Engine gameComp;		// or its game companion (gamecomp.h), for another GBA game with a definition
-	settingsView.setColors = [&](const ScreenColors& c) { std::string e = disp.setColors(c); if (!e.empty()) logf("screen colours: %s", e.c_str()); return e; };
-	settingsView.setFontDir(o.banana + "/fonts");
-	settingsView.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
-	settingsView.setVariant(settings["theme"]);	// (Carts: Inter)
 	LowBattery low;
 	bool batteryDue = true;
-	if (firstSetup) { settingsView.setup(); logf("first-time setup"); }
 	RomWatch roms;
 	roms.watch(lib.watchDirs());
 	// the volume and brightness keys' level card, 1.5 s from the last key (bananad changes the level and says so)
@@ -1997,6 +2231,19 @@ int main(int argc, char** argv)
 	resumeAfterPoweroff(lib, o.data, "/run/banana/resume-once");	// (its game starts at the loop's first turn)
 	while (!quit)
 	{
+		if (settingsView.takeSetupFinished() && disp.isOpen())
+		{
+			// the first boot's setup is over: the Welcome, and the iris onto the menu; presses made meanwhile dropped
+			logf("first-time setup done: the welcome");
+			{
+				std::lock_guard<std::mutex> l(worker.uiLock);
+				welcomeToMenu(disp, be, *ui, settingsView, sound);
+			}
+			for (int fd : input.fds()) input.read(fd, [](const InputEvent&) {});
+			rep.key = Key::NONE;
+			dirty = true;
+			drawn = false;
+		}
 		double now = nowMs();
 		{
 			std::lock_guard<std::mutex> l(worker.uiLock);

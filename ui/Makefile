@@ -8,7 +8,7 @@ CXXFLAGS ?= -O2
 override CXXFLAGS += -std=c++17 -Wall -Wno-unused-function
 override LDLIBS += -lpthread
 
-SRC = src/main.cpp src/lang.cpp src/soft.cpp src/kms.cpp src/colors.cpp src/input.cpp src/library.cpp src/sound.cpp src/splash.cpp src/settings.cpp src/settings_defaults.cpp src/wifi.cpp src/bluetooth.cpp src/zip.cpp src/carts.cpp src/cart3d.cpp src/theme.cpp src/pokemon.cpp src/pokemap.cpp src/gamecomp.cpp src/json.cpp src/expr.cpp src/layout.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp
+SRC = src/main.cpp src/lang.cpp src/soft.cpp src/kms.cpp src/colors.cpp src/input.cpp src/library.cpp src/sound.cpp src/splash.cpp src/arrival.cpp src/settings.cpp src/settings_defaults.cpp src/wifi.cpp src/bluetooth.cpp src/zip.cpp src/carts.cpp src/cart3d.cpp src/theme.cpp src/pokemon.cpp src/pokemap.cpp src/gamecomp.cpp src/json.cpp src/expr.cpp src/layout.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp
 PKGS = freetype2 libdrm zlib
 ifeq ($(ALSA),1)
 PKGS += alsa
