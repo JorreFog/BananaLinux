@@ -4,10 +4,10 @@
 
 # BananaOS
 
-Lightweight Linux for the Anbernic RG DS and RG DS Plus.
+Lightweight Linux for the Retroid Pocket Classic.
 
-A pixel-art menu, two DS emulators and a system built around your handheld's two screens and lid. Add your games,
-choose an emulator and start playing.
+A pixel-art menu and a system built around your handheld's single AMOLED screen. Add your games, choose an emulator
+and start playing.
 
 <p align="center">
   <a href="https://bananaos-cfw.dev">Website</a> ·

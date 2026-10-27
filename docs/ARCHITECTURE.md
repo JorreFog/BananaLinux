@@ -4,11 +4,11 @@
 
 | Where | What | Size |
 |---|---|---|
-| sector 64 (32 KiB) | U-Boot for the RK3568 (`u-boot-rockchip.bin`: Rockchip's DRAM init, U-Boot SPL, TF-A BL31, U-Boot) | ~1.5 MB |
-| partition 1, `BANANA-BOOT` (FAT) | `a/Image` and `a/<handheld>.dtb` (and `b/` after an update), `extlinux/extlinux.conf` with a label per slot and `DEFAULT` naming the one to boot | 64 MB |
+| boot chain | OpenABL (flashed to the RPC's `abl_a`/`abl_b` slots, arm-efi); there is no U-Boot image on the card | — |
+| partition 1, `BANANA-BOOT` (FAT) | `a/Image` and `a/<board>.dtb` (and `b/` after an update), `extlinux/extlinux.conf` with a label per slot and `DEFAULT` naming the one to boot | 160 MB |
 | partition 2, `banana-root-a` (squashfs, LZ4) | the system, read-only | 256 MB (tens used) |
 | partition 3, `banana-root-b` | the other slot: empty until the first update writes the new system there | 256 MB |
-| partition 4, `BANANA` (exFAT) | made on the first boot from the rest of the card: `roms/`, `bios/`, `saves/`, `states/`, `banana/` (settings, logs, play stats, favourites, `updates/`), `drastic/`, `superdrastic/` | the rest |
+| partition 4, `BANANA` (exFAT) | made on the first boot from the rest of the card: `roms/`, `bios/`, `saves/`, `states/`, `banana/` (settings, logs, play stats, favourites, `updates/`) | the rest |
 
 The image holds the first three partitions (the empty slot costs nothing compressed), so it is small and quick to
 write. `/usr/libexec/banana/firstboot`
