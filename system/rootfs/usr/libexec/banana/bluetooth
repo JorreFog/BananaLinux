@@ -29,6 +29,10 @@ CTL="timeout 45 bluetoothctl"
 SELF=/usr/libexec/banana/bluetooth
 # one at a time (Settings starts up, down and pair in the background); the daemons get the lock's fd closed (9>&-).
 # A down waits 3 s at most: a sleep mustn't wait out a pairing (up to a minute), which fails when the daemons go.
+# Settings > Bluetooth audio changed several times running: each run marks itself the latest (bt/audio-want) before
+# it waits its turn, and one that isn't the latest any more when its turn comes does nothing (QA: switching back and
+# forth queued a restart of bluealsa and a call back per change, the setting seemed to flap and the sound stayed off)
+[ "$1" = audio ] && { mkdir -p $RUN/bt; echo $$ > $RUN/bt/audio-want; }
 case $1 in
 up|pair|connect|disconnect|forget|audio) exec 9>$RUN/bluetooth.lock; flock 9 ;;
 down) exec 9>$RUN/bluetooth.lock; flock -w 3 9 || : ;;
@@ -72,15 +76,21 @@ bluealsa_start() {
     echo $! > $RUN/bluealsa.pid
 }
 
+call_back() {
+    $CTL --timeout 15 connect $1 >/dev/null 2>&1
+    for i in 1 2 3 4 5 6 7 8 9 10; do bluealsa-cli list-pcms 2>/dev/null | grep -q '/a2dpsrc/sink$' && break; sleep 0.3; done
+    $SELF route; rm -f $HOLD
+}
+
 # the headphones played last called back (they don't call a handheld that left them; controllers call back
 # themselves, a press of their home button), the sound held quiet meanwhile; then the route, and the hold gone
+# ("callback wait": in the foreground, under the lock: a codec change's own call back, which the next change waits
+# for, so it can't take that one's hold away halfway)
 callback() {
     last=$(cat $LAST 2>/dev/null)
     if mac_ok "$last"; then
         mkdir -p $RUN/bt; touch $HOLD
-        ( $CTL --timeout 15 connect $last >/dev/null 2>&1
-          for i in 1 2 3 4 5 6 7 8 9 10; do bluealsa-cli list-pcms 2>/dev/null | grep -q '/a2dpsrc/sink$' && break; sleep 0.3; done
-          $SELF route; rm -f $HOLD ) 9>&- </dev/null >/dev/null 2>&1 &
+        if [ "$1" = wait ]; then call_back $last; else ( call_back $last ) 9>&- </dev/null >/dev/null 2>&1 & fi
     else
         rm -f $HOLD
     fi
@@ -251,6 +261,7 @@ pair|connect|disconnect|forget)
     ;;
 route) route ;;
 audio)
+    [ "$(cat $RUN/bt/audio-want 2>/dev/null)" = $$ ] || exit 0	# (a newer change is waiting: that one does it)
     running || exit 0
     # bluealsa again with the new codecs, and the headphones connected again to negotiate one (held quiet meanwhile)
     last=$(cat $LAST 2>/dev/null)
@@ -260,7 +271,7 @@ audio)
     for i in 1 2 3 4 5 6 7 8 9 10; do pidof bluealsa >/dev/null || break; sleep 0.1; done
     bluealsa_start
     sleep 1
-    [ -n "$connected" ] && callback
+    [ -n "$connected" ] && callback wait
     ;;
 status) running && echo on || echo off ;;
 *) echo "usage: bluetooth up|down|scan|devices|pair|connect|disconnect|forget <MAC>|status" >&2; exit 1 ;;
