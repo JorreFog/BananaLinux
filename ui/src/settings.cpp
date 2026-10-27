@@ -2188,7 +2188,7 @@ namespace banana
 		static const char* helps[5] = {
 			"Your home network: the games' achievements, the clock and the art need it. A picks it from the networks around; the password goes in on the keyboard.",
 			"The clock on the top screen, and the games' own clocks. Left and right change it.",
-			"Your retroachievements.org account: DraStic and RetroArch unlock achievements with it. A types the name, then the password. Leave it if you have none.",
+			"Your retroachievements.org account: RetroArch unlocks achievements with it. A types the name, then the password. Leave it if you have none.",
 			"Covers, title screens, genres and years for the games on the card, from libretro's free collections: no account. A starts it (Wi-Fi first); it keeps going while you finish the setup, and the menu shows the art as it comes. Settings > System > Box art runs it again for new games.",
 			"Everything here is in the settings too (Start in the menu), and this setup is under System > First-time setup. A finishes." };
 		std::string help = message.empty() ? helps[wsel] : message;

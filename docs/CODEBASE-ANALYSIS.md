@@ -20,7 +20,7 @@
 | `system/bananad/` | **Power daemon** | Sleep/lid/power/LEDs/sound-routing/brightness/battery (`bananad.c`), panel retune (`banana-panel-tune.c`) |
 | `system/rootfs/` | **Init + rootfs overlay** | `init.d/rcS`, `inittab`, `rcK`, `banana-perf`, launchers (`usr/libexec/banana/*`), default configs/themes |
 | `buildroot/` | **Buildroot external tree** | 3 defconfigs, Banana packages (`package/*`), RG DS board support (`board/rgds/*`) |
-| `tools/` | **Dev tooling** | `import-rnds.sh`, `sync-rocknix-hw.sh`, `qemu-boot.sh`, art generators, palette script |
+| `tools/` | **Dev tooling** | `import-rnds.sh`, `qemu-boot.sh`, `qemu-headless.sh`, `qemu-e2e.sh`, art generators, palette script |
 | `web/` | **Website** | GitHub Pages (`index.html`, `save-mover/`), no build step |
 | `docs/` | **Docs** | `ARCHITECTURE.md`, `EMULATORS.md`, `FIRST-BOOT.md`, `ROADMAP.md` |
 

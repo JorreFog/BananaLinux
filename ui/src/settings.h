@@ -1,13 +1,11 @@
 #pragma once
 // banana-ui: the settings screen (Start in the menu), drawn in ROCKNIXDS Pixel's look with the engine's own pieces
-// (its box styles painted by rnds::paintBox, Pixelify Sans, the theme's pixel icons). Bottom panel: the list, one
-// row per setting in the slots' style, ◀ value ▶ on the right, and the B / A chips; top panel: the setting's
-// section icon, its name and what it does. Every change is applied and saved at once:
+// (its box styles painted by rnds::paintBox, Pixelify Sans, the theme's pixel icons). One panel: the list, one
+// row per setting in the slots' style, ◀ value ▶ on the right, and the B / A chips, with the selected setting's
+// name and description in the strip below. Every change is applied and saved at once:
 //   /data/banana/settings.conf     the menu's (theme, motion, sounds, clock, splash, Wi-Fi)
 //   /data/banana/bananad.conf      sleep and the LEDs (bananad reloads it on SIGHUP)
-//   /data/banana/superdrastic.conf SuperDrastic's shader and CPU clock (run-drastic reads it)
-//   /data/bananads/bananads.conf   BananaDS's own settings (shader, 3D resolution, ...; BananaDS reads it)
-//   /data/drastic/config/drastic.cfg  the DS's 3D resolution
+//   /data/retroarch/retroarch.cfg  RetroArch's (the panel, achievements, the cores)
 //   /sys/class/backlight + /data/banana/backlight   brightness
 #include "../rnds/RndsUI.h"
 #include "input.h"

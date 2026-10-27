@@ -25,9 +25,8 @@ screen), reads it back and compares the hash, copies the kernel and device tree 
 `a/`), checks those too, and only then rewrites `extlinux.conf`'s `DEFAULT` (a tiny file, renamed over the old one).
 The running system is never touched; a failure at any step leaves everything as it was; the new system runs from
 the restart. `Previous version` switches `DEFAULT` back to the other slot, so a version that misbehaves is one
-restart away from the one before it. Each update is a line in `banana/logs/updates.log`, and the new device tree
-is retuned by `banana-panel-tune` on its first boot. `tools/qemu-boot.sh` applies an update in the VM and boots
-the other slot, reading `extlinux.conf` as U-Boot does.
+restart away from the one before it. Each update is a line in `banana/logs/updates.log`. `tools/qemu-boot.sh`
+applies an update in the VM and boots the other slot, reading `extlinux.conf` as OpenABL does.
 
 ## Boot
 
@@ -237,22 +236,18 @@ resamples the emulators' 44.1 kHz capture to it; opened at 44.1 kHz against a 48
 ## Booting it without the handheld
 
 `tools/qemu-boot.sh` boots a card image on QEMU's `virt` machine with the same kernel and root: the card on a PCI
-SDHCI (so it is `mmcblk0`, and the first boot partitions it as on the RG DS), two 640x480 panels on a virtio GPU
-(`Virtual-1`, `Virtual-2`), a virtio keyboard and tablet for the buttons and the touchscreen. Three kernel
-parameters make the image fit a display other than the RG DS's: `banana.console=1` sends rcS's milestones and
-banana-ui's log to the console (the serial port here, the UART on the handheld), `banana.top=` names the top
-panel's connector and `banana.touch=` the bottom touchscreen's device. The test script drives the menu through
+SDHCI (so it is `mmcblk0`, and the first boot partitions it as on the handheld), one 1240x1080 panel on a virtio GPU
+(`Virtual-1`), a virtio keyboard and tablet for the buttons and the touchscreen. Kernel parameters make the image
+fit a display other than the handheld's: `banana.console=1` sends rcS's milestones and
+banana-ui's log to the console (the serial port here, the UART on the handheld), `banana.top=` names the
+panel's connector and `banana.touch=` the touchscreen's device. The test script drives the menu through
 QEMU's monitor (`sendkey`, `screendump`) and reads the card's partition afterwards. The CI's `boot` job runs it on
-every image it builds, for both boards, and keeps the screenshots and logs as an artifact. What it can't test:
-the panels' DSI timing, sleep (QEMU's `virt` has no suspend to RAM), sound, Wi-Fi, the GPU (the emulators run
-without it, so a DS game only gets as far as its launcher).
+every image it builds and keeps the screenshots and logs as an artifact. What it can't test:
+the panel's DSI timing, sleep (QEMU's `virt` has no suspend to RAM), sound, Wi-Fi, the GPU.
 
 ## Hardware support
 
-`buildroot/board/rgds` is ROCKNIX's RK3566 support at a pinned commit (`ROCKNIX`), copied by
-`tools/sync-rocknix-hw.sh`: those of its kernel patches that touch what the two handhelds have (in ROCKNIX's
-order; the ones for other handhelds' device trees, panels and drivers are left out, since the kernel builds every
-Rockchip device tree and a patch for another handheld's can assume ROCKNIX patches Banana hasn't), the RG DS and
-RG DS Plus device trees, its kernel config (Banana's changes are in `linux-banana.fragment`), the generic DSI panel
-and joypad drivers (built in via `external.mk`), the input-polldev patch the joypad driver needs, its U-Boot
-patches, and the RK3568 BL31 it boots with. A newer ROCKNIX is one command and a diff.
+`buildroot/board/retroid-pocket-classic` is ROCKNIX's SM4450 support at a pinned commit: its kernel patches that
+touch what the RPC has (in ROCKNIX's order; the ones for other devices' device trees, panels and drivers are left
+out), the Retroid Pocket Classic device trees, its kernel config (Banana's changes are in `linux-banana.fragment`),
+the audio topology and firmware, and the OpenABL boot chain. A newer ROCKNIX is a diff.

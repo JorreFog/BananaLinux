@@ -3,8 +3,8 @@
 //
 // The image's /etc/banana/settings.conf is the template (values and comments); this module knows the same keys so a
 // card from an older Banana, or one edited by hand with a line taken out, still gets a value for every setting. It is
-// deliberately the key = value format the launchers read with sed, not JSON: run-retroarch, run-nds, rcS, sd2,
-// run-drastic and run-bananads all read this file, and a JSON file would need every one of them changed.
+// deliberately the key = value format the launchers read with sed, not JSON: run-retroarch, rcS and sd2 all read
+// this file, and a JSON file would need every one of them changed.
 #include <map>
 #include <string>
 
@@ -25,8 +25,7 @@ namespace banana
 	// Emulator: the emulators' keys (ra_shader, ra_audio_latency, ra_vsync, nds_emulator, quick_resume, core.<system>).
 	enum class ResetScope { System, Emulator };
 
-	// True when settings.conf's key belongs to an emulator. The DS emulators' own files (superdrastic.conf,
-	// bananads.conf, drastic.cfg) are not settings.conf keys, so they are out of this scope by design.
+	// True when settings.conf's key belongs to an emulator (the RetroArch cores and the emulator's own settings).
 	bool settingIsEmulator(const std::string& key);
 
 	// Put every key of the scope back to the image's template default, in place: the card's other keys, comments and

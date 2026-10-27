@@ -239,13 +239,12 @@ On Linux (Debian/Ubuntu: `build-essential bc bison flex libssl-dev libelf-dev un
 libgnutls28-dev`). The released 0.4.2 is the tag `v0.4.2`:
 
 ```sh
-make rgds          # output/rgds/images/banana-rgds.img.gz
-make rgds-plus     # output/rgds-plus/images/banana-rgds-plus.img.gz
+make retroid-pocket-classic   # output/retroid-pocket-classic/images/banana-retroid-pocket-classic.img.gz
 ```
 
 The first build fetches Buildroot and everything it builds, and takes an hour or more. The whole image boots in
-QEMU with no handheld (`tools/qemu-boot.sh`, also the CI's `boot` job): the first boot, the menu on two virtual
-panels, a game started from the library, a shutdown from the settings.
+QEMU with no handheld (`tools/qemu-boot.sh`, also the CI's `boot` job): the first boot, the menu on the virtual
+panel, a game started from the library, a shutdown from the settings, an A/B update.
 
 ### Work on the menu
 

@@ -1,6 +1,6 @@
 // banana-ui: Banana's frontend. ROCKNIXDS Pixel's engine (ui/rnds, imported unchanged) drawn in software straight
-// onto the RG DS's two panels: no EmulationStation, no compositor, no GPU. It sleeps in poll() until a button, a
-// finished picture or an animation step needs a frame, and gives the panels, the input devices and the sound device
+// onto the panel: no EmulationStation, no compositor, no GPU. It sleeps in poll() until a button, a
+// finished picture or an animation step needs a frame, and gives the panel, the input devices and the sound device
 // away completely while a game runs.
 //
 //   banana-ui [--assets DIR] [--systems FILE] [--roms DIR] [--data DIR]
