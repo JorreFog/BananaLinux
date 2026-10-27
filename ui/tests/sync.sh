@@ -73,6 +73,15 @@ card rb
 CODE=$(curl -s -XPOST "$U/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
 bs rb pair "$U" "$CODE" >/dev/null 2>&1 || bad "pairing with a client token's code failed: $(st rb)"
 bs rb pair "$U" "WRONGCOD" >/dev/null 2>&1 && bad "a wrong pairing code was taken"
+# a sync killed while it runs (Stop, a shutdown): the status says "error stopped" at once, not "running" for 120 s
+bs rb sync > "$OUT/romm-kill.log" 2>&1 & KP=$!
+for i in $(seq 300); do case "$(st rb)" in running*) break;; esac; sleep 0.01; done
+if case "$(st rb)" in running*) true;; *) false;; esac; then
+    kill -TERM $KP; wait $KP 2>/dev/null
+    [ "$(st rb)" = "error stopped" ] || bad "a killed sync left the status: $(st rb)"
+else
+    wait $KP; echo "note: the sync ended before it could be killed ($(st rb)): the kill case not checked this run"
+fi
 # a download cut short goes on from its .part (a Range request), and is checked whole
 mkdir -p "$OUT/rb/roms/nds"; head -c 1000 "$L/nds/Peel Quest (USA).nds" > "$OUT/rb/roms/nds/Peel Quest (USA).nds.part"
 printf 'homesync.gba = off\nhomesync.psx = off\n' > "$OUT/rb/banana/settings.conf"

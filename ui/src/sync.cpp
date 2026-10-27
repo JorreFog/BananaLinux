@@ -59,6 +59,26 @@ namespace
 		std::string tmp = STATUS + ".new";
 		if (FILE* f = fopen(tmp.c_str(), "w")) { fprintf(f, "%s\n", s.c_str()); fclose(f); rename(tmp.c_str(), STATUS.c_str()); }
 	}
+	// killed (a quit, the menu's Stop, a shutdown): the status says so at once ("error stopped", what the menu shows for
+	// a run that is gone) instead of "running" until the menu's 120 s check notices. Async-signal-safe: open, write,
+	// rename and _exit only, on paths set before the handler is installed.
+	char sigStatus[512], sigStatusTmp[520];
+	void onKill(int sig)
+	{
+		static const char msg[] = "error stopped\n";
+		int fd = open(sigStatusTmp, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644);
+		if (fd >= 0) { ssize_t w = write(fd, msg, sizeof msg - 1); (void)w; close(fd); rename(sigStatusTmp, sigStatus); }
+		_exit(128 + sig);
+	}
+	void catchKill()
+	{
+		snprintf(sigStatus, sizeof sigStatus, "%s", STATUS.c_str());
+		snprintf(sigStatusTmp, sizeof sigStatusTmp, "%s.new", STATUS.c_str());
+		struct sigaction sa = {};
+		sa.sa_handler = onKill;
+		sigemptyset(&sa.sa_mask);
+		for (int sig : { SIGTERM, SIGINT, SIGHUP }) sigaction(sig, &sa, nullptr);
+	}
 	void say(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
 	void say(const char* fmt, ...)
 	{
@@ -1463,7 +1483,7 @@ int main(int argc, char** argv)
 	int lk = open((RUN + "/sync.lock").c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0644);
 	if (lk >= 0 && flock(lk, LOCK_EX | LOCK_NB) != 0) { if (autoWhy.empty()) fprintf(stderr, "banana-sync: already running\n"); return 3; }
 	if (cmd == "pair" && args.size() > 1) return pair(args[1], args.size() > 2 ? args[2] : "");
-	if (cmd == "sync") return doSync(savesOnly, autoWhy);
+	if (cmd == "sync") { catchKill(); return doSync(savesOnly, autoWhy); }
 	fprintf(stderr, "banana-sync: unknown command %s\n", cmd.c_str());
 	return 2;
 }
