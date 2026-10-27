@@ -23,9 +23,10 @@ hwclock -w 2>/dev/null
 bl_pm() {
     local b=/sys/class/backlight/$1 m v
     m=$(cat $b/max_brightness 2>/dev/null); v=$(cat $b/brightness 2>/dev/null)
-    [ "${m:-0}" -gt 0 ] && [ "${v:-0}" -gt 0 ] && echo $(( (v * 1000 + m / 2) / m ))
+    # (under 5%: not a level anyone chose, e.g. a dim the menu never undid: the saved one stays, see bananad's BL_FLOOR_PM)
+    [ "${m:-0}" -gt 0 ] && [ "${v:-0}" -gt 0 ] && [ $(( (v * 1000 + m / 2) / m )) -ge 50 ] && echo $(( (v * 1000 + m / 2) / m ))
 }
-if [ -f /run/banana/dim ]; then
+if [ -f /run/banana/dim ] && read dt db < /run/banana/dim && [ "${dt:-0}" -ge 50 ] && [ "${db:-0}" -ge 50 ]; then
     cp /run/banana/dim /data/banana/backlight 2>/dev/null
 else
     read old_t old_b 2>/dev/null < /data/banana/backlight

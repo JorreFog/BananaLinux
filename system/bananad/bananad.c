@@ -1096,12 +1096,17 @@ static void undim(void)
 	unlink("/run/banana/dim");
 }
 
+/* A saved level under 5% (in thousandths) is never one a person chose: the Settings rows go down to 10% and F + volume
+ * to one brightness step; under it the panels look black, as if dead. Such a level (a dim saved as the user's, 0.5.0
+ * beta.3's black screens after a reboot) comes back as 50%. */
+#define BL_FLOOR_PM 50
+static int bl_sane(int pm) { return pm < BL_FLOOR_PM || pm > 1000 ? 500 : pm; }
 static void save_settings(double now)
 {
 	if (save_backlight_at > 0 && now >= save_backlight_at) {
 		save_backlight_at = 0;
 		int t = backlight_permille(0), b = backlight_permille(1);
-		if (t > 0) {
+		if (t >= BL_FLOOR_PM && (b <= 0 || b >= BL_FLOOR_PM)) {
 			FILE *f = fopen("/data/banana/backlight", "w");
 			if (f) { fprintf(f, "%d %d\n", t, b > 0 ? b : t); fclose(f); }
 		}
@@ -1116,9 +1121,9 @@ static void save_settings(double now)
 static void restore_settings(void)
 {
 	int t, b;
-	if (read_pair("/data/banana/backlight", &t, &b)) backlight_set_pair(t, b);
+	if (read_pair("/data/banana/backlight", &t, &b)) backlight_set_pair(bl_sane(t), bl_sane(b));
 	/* started again while the panels were dimmed (/run/banana/dim: the levels before): undimmed, as the last one would */
-	if (read_pair("/run/banana/dim", &t, &b)) { backlight_set_pair(t, b); unlink("/run/banana/dim"); }
+	if (read_pair("/run/banana/dim", &t, &b)) { backlight_set_pair(bl_sane(t), bl_sane(b)); unlink("/run/banana/dim"); }
 	if (access("/data/banana/asound.state", R_OK) == 0) {
 		char *argv[] = { "alsactl", "-f", "/data/banana/asound.state", "restore", NULL };
 		run(argv);

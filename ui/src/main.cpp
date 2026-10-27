@@ -1158,7 +1158,7 @@ struct BottomIdle
 		int top = 0, bottom = 0;
 		f >> top;
 		if (!(f >> bottom)) bottom = top;
-		if (bottom > 0 && bottom <= 1000 && max > 0) return std::max(1, max * bottom / 1000);
+		if (bottom >= 50 && bottom <= 1000 && max > 0) return std::max(1, max * bottom / 1000);	// (under 5%: bananad's floor)
 		return level;
 	}
 	// a touch on the panel, an achievement shown on it: the timer restarts, and a dimmed bottom comes back at once
