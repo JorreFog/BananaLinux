@@ -927,6 +927,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			double total = 0, worst = 0, draw = 0, drawWorst = 0, work = 0, workWorst = 0;
 			be.skipped = 0;
 			be.redrawn = 0;
+			std::vector<double> dts;
 			for (int i = 0; i < n; i++)
 			{
 				now += 1000.0 / 60;
@@ -940,10 +941,16 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 				ui.render();
 				double t3 = nowMs(), dt = (t1 - t0) + (t3 - t2);
 				total += dt; worst = std::max(worst, dt);
+				dts.push_back(dt);
 				draw += t3 - t2; drawWorst = std::max(drawWorst, t3 - t2);
 				work += t2 - t1; workWorst = std::max(workWorst, t2 - t1);
 			}
 			// (the main thread's time: the worker's runs beside it on the device)
+			std::sort(dts.begin(), dts.end());
+			double p95 = dts.empty() ? 0 : dts[std::min(dts.size() - 1, (size_t)(dts.size() * 0.95))];
+			int over = 0;
+			for (double d : dts) over += d > 16.7;
+			logf("bench: %d frames, %.2f ms average, %.2f ms p95, %d over 16.7 ms", n, n ? total / n : 0, p95, over);
 			logf("bench: %d frames, %.2f ms average, %.2f ms worst (drawing %.2f / %.2f; the worker %.2f / %.2f), %d of %d screens unchanged, %.1f%% of pixels drawn again", n, total / n, worst,
 				draw / n, drawWorst, work / n, workWorst, be.skipped, 2 * n, 100.0 * be.redrawn / (2.0 * n * be.width() * be.height()));
 		}
