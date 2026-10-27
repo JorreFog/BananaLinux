@@ -22,11 +22,14 @@ GUIDE = HERE / "guide.js"
 GUIDES = [("make", "Make a theme", ROOT / "docs" / "MAKE-A-THEME.md"), ("ref", "Reference", ROOT / "docs" / "THEMES.md"),
           ("colours", "Colour keys", ROOT / "system" / "rootfs" / "usr" / "share" / "banana" / "themes" / "README.txt")]
 DIRS = [ROOT / "system" / "rootfs" / "usr" / "share" / "banana" / "themes", ROOT / "docs" / "themes"]
+# themes made with the editor itself (and the thumbnails of every starting point, made from their home screens)
+PREMADE = HERE / "premade"
 
 
 def entries():
     out = []
-    for d in DIRS:
+    desc = json.loads((PREMADE / "descriptions.json").read_text(encoding="utf-8")) if (PREMADE / "descriptions.json").exists() else {}
+    for d in [PREMADE] + DIRS:
         if not d.exists():
             continue
         for f in sorted(d.glob("*.json")):
@@ -34,8 +37,16 @@ def entries():
             if not re.search(r'"screens"\s*:', text):		# layout themes only: the editor edits those
                 continue
             m = re.search(r'"name"\s*:\s*"([^"]*)"', text)
-            out.append({"name": m.group(1) if m else f.stem,
-                        "file": str(f.relative_to(ROOT)), "json": text})
+            if f.name == "descriptions.json":
+                continue
+            e = {"name": m.group(1) if m else f.stem, "file": str(f.relative_to(ROOT)), "json": text,
+                 "group": "premade" if d == PREMADE else "example"}
+            if f.stem in desc:
+                e["description"] = desc[f.stem]
+            thumb = PREMADE / "thumbs" / (f.stem + ".jpg")
+            if thumb.exists():
+                e["thumb"] = str(thumb.relative_to(HERE))
+            out.append(e)
     return out
 
 

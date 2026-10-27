@@ -1,0 +1,1966 @@
+{
+  "name": "Comic Panel",
+  "author": "Banana Theme Studio",
+  "base": "light",
+  "font": "inter-bold",
+  "screens": {
+    "home": {
+      "top": [
+        {
+          "use": "page"
+        },
+        {
+          "type": "group",
+          "x": 16,
+          "y": 54,
+          "w": 380,
+          "h": 408,
+          "children": [
+            {
+              "type": "group",
+              "x": 0,
+              "y": 0,
+              "w": 380,
+              "h": 408,
+              "children": [],
+              "use": "panel",
+              "fill": "=mix(sys.color, '#ffffff', 0.55)"
+            },
+            {
+              "type": "group",
+              "x": 0,
+              "y": 0,
+              "w": 380,
+              "h": 408,
+              "children": [
+                {
+                  "type": "list",
+                  "source": "range",
+                  "direction": "free",
+                  "x": 0,
+                  "y": 0,
+                  "w": 380,
+                  "h": 408,
+                  "itemW": 150,
+                  "itemH": 190,
+                  "gap": 14,
+                  "scrollMode": "none",
+                  "item": {
+                    "type": "group",
+                    "w": "=120 + mod(i * 97, 120)",
+                    "h": 4,
+                    "children": [
+                      {
+                        "type": "rect",
+                        "x": 0,
+                        "y": 0,
+                        "w": "100%",
+                        "h": 4,
+                        "fill": "=alpha(ink, 0.16)"
+                      }
+                    ],
+                    "x": "=mod(i * 53, 140) + 200 - pop * 30",
+                    "y": "=14 + i * 27"
+                  },
+                  "count": 15,
+                  "range": 20
+                },
+                {
+                  "type": "image",
+                  "x": 190,
+                  "y": 250,
+                  "w": 210,
+                  "h": 210,
+                  "src": "{sys.icon}",
+                  "fit": "contain",
+                  "anchor": "center",
+                  "scale": "=0.7 + 0.3 * pop"
+                },
+                {
+                  "type": "rect",
+                  "x": 150,
+                  "y": 104,
+                  "w": 22,
+                  "h": 22,
+                  "fill": "=white",
+                  "border": 4,
+                  "borderColor": "=ink"
+                },
+                {
+                  "type": "rect",
+                  "x": 172,
+                  "y": 122,
+                  "w": 16,
+                  "h": 16,
+                  "fill": "=white",
+                  "border": 4,
+                  "borderColor": "=ink"
+                },
+                {
+                  "type": "rect",
+                  "x": 190,
+                  "y": 136,
+                  "w": 11,
+                  "h": 11,
+                  "fill": "=white",
+                  "border": 4,
+                  "borderColor": "=ink"
+                },
+                {
+                  "type": "group",
+                  "x": 170,
+                  "y": 66,
+                  "w": 300,
+                  "h": 78,
+                  "children": [
+                    {
+                      "type": "group",
+                      "x": 0,
+                      "y": 0,
+                      "w": 300,
+                      "h": 78,
+                      "children": [],
+                      "use": "bubble"
+                    },
+                    {
+                      "type": "group",
+                      "x": 0,
+                      "y": 0,
+                      "w": 300,
+                      "h": 78,
+                      "children": [
+                        {
+                          "type": "text",
+                          "x": 12,
+                          "y": 14,
+                          "text": "{upper(sys.name)}!",
+                          "size": 24,
+                          "color": "=ink",
+                          "w": 276,
+                          "h": 50,
+                          "align": "center",
+                          "valign": "middle",
+                          "font": "inter-bold",
+                          "wrap": true,
+                          "maxLines": 2
+                        }
+                      ]
+                    }
+                  ],
+                  "anchor": "center",
+                  "scale": "=0.6 + 0.4 * pop"
+                }
+              ],
+              "clip": true
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "x": 410,
+          "y": 54,
+          "w": 214,
+          "h": 194,
+          "children": [
+            {
+              "type": "group",
+              "x": 0,
+              "y": 0,
+              "w": 214,
+              "h": 194,
+              "children": [],
+              "use": "panel",
+              "fill": "=yellow"
+            },
+            {
+              "type": "group",
+              "x": 0,
+              "y": 0,
+              "w": 214,
+              "h": 194,
+              "children": [
+                {
+                  "type": "text",
+                  "x": 14,
+                  "y": 12,
+                  "text": "ISSUE #{sys.index + 1}",
+                  "size": 12,
+                  "color": "=ink",
+                  "font": "inter-bold",
+                  "spacing": 2
+                },
+                {
+                  "type": "text",
+                  "x": 0,
+                  "y": 34,
+                  "text": "{sys.games}",
+                  "size": 72,
+                  "color": "=red",
+                  "w": 214,
+                  "align": "center",
+                  "font": "inter-bold",
+                  "shadow": {
+                    "x": 4,
+                    "y": 4,
+                    "color": "=ink"
+                  }
+                },
+                {
+                  "type": "text",
+                  "x": 0,
+                  "y": 124,
+                  "text": "=sys.games == 1 ? 'GAME INSIDE!' : 'GAMES INSIDE!'",
+                  "size": 15,
+                  "color": "=ink",
+                  "w": 214,
+                  "align": "center",
+                  "font": "inter-bold"
+                },
+                {
+                  "type": "text",
+                  "x": 10,
+                  "y": 152,
+                  "text": "=upper(either(sys.maker, 'banana'))",
+                  "size": 11,
+                  "color": "=alpha(ink, 0.7)",
+                  "w": 194,
+                  "align": "center",
+                  "font": "inter-semibold"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "x": 410,
+          "y": 262,
+          "w": 214,
+          "h": 200,
+          "children": [
+            {
+              "type": "group",
+              "x": 0,
+              "y": 0,
+              "w": 214,
+              "h": 200,
+              "children": [],
+              "use": "panel",
+              "fill": "=cyan"
+            },
+            {
+              "type": "group",
+              "x": 0,
+              "y": 0,
+              "w": 214,
+              "h": 200,
+              "children": [
+                {
+                  "type": "image",
+                  "x": 12,
+                  "y": 46,
+                  "w": 190,
+                  "h": 110,
+                  "src": "{sys.resumeArt}",
+                  "fit": "cover",
+                  "placeholder": "#2f8fc0",
+                  "visible": "=sys.hasResume"
+                },
+                {
+                  "type": "group",
+                  "x": 10,
+                  "y": 10,
+                  "w": 150,
+                  "h": 28,
+                  "children": [
+                    {
+                      "type": "group",
+                      "x": 0,
+                      "y": 0,
+                      "w": 150,
+                      "h": 28,
+                      "children": [],
+                      "use": "caption"
+                    },
+                    {
+                      "type": "group",
+                      "x": 0,
+                      "y": 0,
+                      "w": 150,
+                      "h": 28,
+                      "children": [
+                        {
+                          "type": "text",
+                          "x": 8,
+                          "y": 6,
+                          "text": "=sys.hasResume ? 'PREVIOUSLY…' : 'A NEW STORY!'",
+                          "size": 12,
+                          "color": "=ink",
+                          "font": "inter-bold"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "x": 12,
+                  "y": 164,
+                  "text": "=sys.hasResume ? upper(sys.resumeTitle) : 'NO GAME PLAYED YET'",
+                  "size": 13,
+                  "color": "=ink",
+                  "w": 190,
+                  "font": "inter-bold",
+                  "maxLines": 1
+                },
+                {
+                  "type": "text",
+                  "x": 12,
+                  "y": 90,
+                  "text": "=sys.hasResume ? '' : '?!'",
+                  "size": 48,
+                  "color": "=white",
+                  "w": 190,
+                  "align": "center",
+                  "font": "inter-bold",
+                  "shadow": {
+                    "x": 3,
+                    "y": 3,
+                    "color": "=ink"
+                  }
+                }
+              ],
+              "clip": true
+            }
+          ]
+        }
+      ],
+      "bottom": [
+        {
+          "use": "page"
+        },
+        {
+          "type": "group",
+          "x": 16,
+          "y": 14,
+          "w": 260,
+          "h": 32,
+          "children": [
+            {
+              "type": "group",
+              "x": 0,
+              "y": 0,
+              "w": 260,
+              "h": 32,
+              "children": [],
+              "use": "caption"
+            },
+            {
+              "type": "group",
+              "x": 0,
+              "y": 0,
+              "w": 260,
+              "h": 32,
+              "children": [
+                {
+                  "type": "text",
+                  "x": 10,
+                  "y": 8,
+                  "text": "CHAPTER {cursor + 1} OF {count}",
+                  "size": 13,
+                  "color": "=ink",
+                  "font": "inter-bold",
+                  "spacing": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list",
+          "source": "systems",
+          "direction": "row",
+          "x": 0,
+          "y": 74,
+          "w": 640,
+          "h": 320,
+          "itemW": 176,
+          "itemH": 300,
+          "gap": 18,
+          "scrollMode": "center",
+          "item": {
+            "type": "group",
+            "w": 176,
+            "h": 300,
+            "children": [
+              {
+                "type": "group",
+                "x": 6,
+                "y": "=sel ? 50 : 66",
+                "w": 164,
+                "h": 226,
+                "children": [
+                  {
+                    "type": "group",
+                    "x": 0,
+                    "y": 0,
+                    "w": 164,
+                    "h": 226,
+                    "children": [],
+                    "use": "panel",
+                    "states": [
+                      {
+                        "when": "=sel",
+                        "fill": "=yellow",
+                        "borderColor": "=red"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "group",
+                    "x": 0,
+                    "y": 0,
+                    "w": 164,
+                    "h": 226,
+                    "children": [
+                      {
+                        "type": "image",
+                        "x": 22,
+                        "y": 22,
+                        "w": 120,
+                        "h": 120,
+                        "src": "{item.icon}",
+                        "fit": "contain"
+                      },
+                      {
+                        "type": "rect",
+                        "x": 0,
+                        "y": 160,
+                        "w": 164,
+                        "h": 66,
+                        "fill": "=ink",
+                        "states": [
+                          {
+                            "when": "=sel",
+                            "fill": "=red"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "text",
+                        "x": 8,
+                        "y": 168,
+                        "text": "{upper(item.name)}",
+                        "size": 14,
+                        "color": "=white",
+                        "w": 148,
+                        "h": 50,
+                        "align": "center",
+                        "valign": "middle",
+                        "font": "inter-bold",
+                        "wrap": true,
+                        "maxLines": 2
+                      },
+                      {
+                        "type": "text",
+                        "x": 12,
+                        "y": 10,
+                        "text": "#{i + 1}",
+                        "size": 11,
+                        "color": "=alpha(ink, 0.6)",
+                        "font": "inter-bold"
+                      }
+                    ],
+                    "clip": true
+                  }
+                ]
+              },
+              {
+                "x": 88,
+                "y": 46,
+                "use": "pow",
+                "visible": "=sel",
+                "scale": "=0.3 + 0.7 * pop"
+              }
+            ],
+            "onTap": "a"
+          },
+          "loop": true
+        },
+        {
+          "type": "group",
+          "x": 110,
+          "y": 386,
+          "w": 420,
+          "h": 32,
+          "children": [
+            {
+              "type": "group",
+              "x": 0,
+              "y": 0,
+              "w": 420,
+              "h": 32,
+              "children": [],
+              "use": "caption",
+              "fill": "=white"
+            },
+            {
+              "type": "group",
+              "x": 0,
+              "y": 0,
+              "w": 420,
+              "h": 32,
+              "children": [
+                {
+                  "type": "text",
+                  "x": 0,
+                  "y": 8,
+                  "text": "=sys.hasResume ? 'MEANWHILE… ' + upper(sys.resumeTitle) : 'MEANWHILE… ' + sys.games + ' GAMES WAIT!'",
+                  "size": 12,
+                  "color": "=ink",
+                  "w": 420,
+                  "align": "center",
+                  "font": "inter-bold",
+                  "spacing": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list",
+          "source": "hints",
+          "direction": "row",
+          "x": 20,
+          "y": 438,
+          "w": 600,
+          "h": 28,
+          "itemW": 150,
+          "itemH": 28,
+          "gap": 16,
+          "scrollMode": "none",
+          "item": {
+            "type": "group",
+            "w": "=len(item.key) * 9 + 18 + len(item.label) * 9",
+            "h": 28,
+            "children": [
+              {
+                "type": "rect",
+                "x": 0,
+                "y": 2,
+                "w": "=len(item.key) * 9 + 10",
+                "h": 24,
+                "fill": "=ink",
+                "shadow": {
+                  "x": 2,
+                  "y": 2,
+                  "blur": 0,
+                  "color": "=red"
+                }
+              },
+              {
+                "type": "text",
+                "x": 0,
+                "y": 7,
+                "text": "{item.key}",
+                "size": 12,
+                "color": "=yellow",
+                "w": "=len(item.key) * 9 + 10",
+                "align": "center",
+                "font": "inter-bold"
+              },
+              {
+                "type": "text",
+                "x": "=len(item.key) * 9 + 16",
+                "y": 7,
+                "text": "{upper(item.label)}",
+                "size": 12,
+                "color": "=ink",
+                "font": "inter-bold"
+              }
+            ]
+          },
+          "flow": true
+        }
+      ]
+    },
+    "library": {
+      "top": [
+        {
+          "use": "page"
+        },
+        {
+          "type": "group",
+          "x": 16,
+          "y": 54,
+          "w": 300,
+          "h": 408,
+          "children": [
+            {
+              "type": "group",
+              "x": 0,
+              "y": 0,
+              "w": 300,
+              "h": 408,
+              "children": [],
+              "use": "panel",
+              "fill": "=mix(sys.color, '#ffffff', 0.6)"
+            },
+            {
+              "type": "group",
+              "x": 0,
+              "y": 0,
+              "w": 300,
+              "h": 408,
+              "children": [
+                {
+                  "type": "list",
+                  "source": "range",
+                  "direction": "free",
+                  "x": 0,
+                  "y": 0,
+                  "w": 300,
+                  "h": 408,
+                  "itemW": 150,
+                  "itemH": 190,
+                  "gap": 14,
+                  "scrollMode": "none",
+                  "item": {
+                    "type": "group",
+                    "w": "=120 + mod(i * 97, 140)",
+                    "h": 4,
+                    "children": [
+                      {
+                        "type": "rect",
+                        "x": 0,
+                        "y": 0,
+                        "w": "100%",
+                        "h": 4,
+                        "fill": "=alpha(ink, 0.16)"
+                      }
+                    ],
+                    "x": "=mod(i * 41, 100) - 60 + pop * 30",
+                    "y": "=10 + i * 27"
+                  },
+                  "count": 15,
+                  "range": 20
+                },
+                {
+                  "type": "image",
+                  "x": 150,
+                  "y": 180,
+                  "w": 260,
+                  "h": 300,
+                  "src": "{game.art}",
+                  "fit": "contain",
+                  "anchor": "center",
+                  "fallback": "{sys.icon}",
+                  "scale": "=0.8 + 0.2 * pop"
+                },
+                {
+                  "type": "rect",
+                  "x": 0,
+                  "y": 352,
+                  "w": 300,
+                  "h": 56,
+                  "fill": "=ink"
+                },
+                {
+                  "type": "text",
+                  "x": 12,
+                  "y": 364,
+                  "text": "{upper(sys.name)} · #{game.index + 1}",
+                  "size": 14,
+                  "color": "=yellow",
+                  "w": 276,
+                  "font": "inter-bold",
+                  "spacing": 1
+                },
+                {
+                  "type": "text",
+                  "x": 12,
+                  "y": 384,
+                  "text": "=upper(either(game.sub, 'a banana comic'))",
+                  "size": 10,
+                  "color": "=white",
+                  "w": 276,
+                  "font": "inter-semibold",
+                  "maxLines": 1
+                }
+              ],
+              "clip": true
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "x": 332,
+          "y": 58,
+          "w": 290,
+          "h": 96,
+          "children": [
+            {
+              "type": "group",
+              "x": 0,
+              "y": 0,
+              "w": 290,
+              "h": 96,
+              "children": [],
+              "use": "caption"
+            },
+            {
+              "type": "group",
+              "x": 0,
+              "y": 0,
+              "w": 290,
+              "h": 96,
+              "children": [
+                {
+                  "type": "text",
+                  "x": 12,
+                  "y": 10,
+                  "text": "{upper(game.title)}",
+                  "size": 21,
+                  "color": "=ink",
+                  "w": 266,
+                  "h": 76,
+                  "valign": "middle",
+                  "font": "inter-bold",
+                  "wrap": true,
+                  "maxLines": 3
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "rect",
+          "x": 380,
+          "y": 252,
+          "w": 22,
+          "h": 22,
+          "fill": "=white",
+          "border": 4,
+          "borderColor": "=ink"
+        },
+        {
+          "type": "rect",
+          "x": 366,
+          "y": 270,
+          "w": 16,
+          "h": 16,
+          "fill": "=white",
+          "border": 4,
+          "borderColor": "=ink"
+        },
+        {
+          "type": "rect",
+          "x": 356,
+          "y": 284,
+          "w": 11,
+          "h": 11,
+          "fill": "=white",
+          "border": 4,
+          "borderColor": "=ink"
+        },
+        {
+          "type": "group",
+          "x": 478,
+          "y": 214,
+          "w": 280,
+          "h": 80,
+          "children": [
+            {
+              "type": "group",
+              "x": 0,
+              "y": 0,
+              "w": 280,
+              "h": 80,
+              "children": [],
+              "use": "bubble"
+            },
+            {
+              "type": "group",
+              "x": 0,
+              "y": 0,
+              "w": 280,
+              "h": 80,
+              "children": [
+                {
+                  "type": "text",
+                  "x": 10,
+                  "y": 12,
+                  "text": "=game.plays > 1 ? 'PLAYED ' + game.plays + ' TIMES!' : (game.plays == 1 ? 'PLAYED ONCE!' : 'NEVER PLAYED?!')",
+                  "size": 19,
+                  "color": "=ink",
+                  "w": 260,
+                  "h": 56,
+                  "align": "center",
+                  "valign": "middle",
+                  "font": "inter-bold",
+                  "wrap": true,
+                  "maxLines": 2
+                }
+              ]
+            }
+          ],
+          "anchor": "center",
+          "scale": "=0.6 + 0.4 * pop"
+        },
+        {
+          "type": "group",
+          "x": 332,
+          "y": 300,
+          "w": 290,
+          "h": 162,
+          "children": [
+            {
+              "type": "group",
+              "x": 0,
+              "y": 0,
+              "w": 290,
+              "h": 162,
+              "children": [],
+              "use": "panel",
+              "fill": "=cyan"
+            },
+            {
+              "type": "group",
+              "x": 0,
+              "y": 0,
+              "w": 290,
+              "h": 162,
+              "children": [
+                {
+                  "type": "rect",
+                  "x": 12,
+                  "y": 14,
+                  "w": 70,
+                  "h": 28,
+                  "fill": "=ink"
+                },
+                {
+                  "type": "text",
+                  "x": 12,
+                  "y": 20,
+                  "text": "TIME",
+                  "size": 11,
+                  "color": "=yellow",
+                  "w": 70,
+                  "align": "center",
+                  "font": "inter-bold",
+                  "spacing": 1
+                },
+                {
+                  "type": "text",
+                  "x": 94,
+                  "y": 17,
+                  "text": "=either(game.time, '0m')",
+                  "size": 18,
+                  "color": "=ink",
+                  "w": 180,
+                  "font": "inter-bold"
+                },
+                {
+                  "type": "rect",
+                  "x": 12,
+                  "y": 54,
+                  "w": 70,
+                  "h": 28,
+                  "fill": "=ink"
+                },
+                {
+                  "type": "text",
+                  "x": 12,
+                  "y": 60,
+                  "text": "LAST",
+                  "size": 11,
+                  "color": "=yellow",
+                  "w": 70,
+                  "align": "center",
+                  "font": "inter-bold",
+                  "spacing": 1
+                },
+                {
+                  "type": "text",
+                  "x": 94,
+                  "y": 57,
+                  "text": "=upper(either(game.last, 'never'))",
+                  "size": 18,
+                  "color": "=ink",
+                  "w": 180,
+                  "font": "inter-bold"
+                },
+                {
+                  "type": "rect",
+                  "x": 12,
+                  "y": 94,
+                  "w": 70,
+                  "h": 28,
+                  "fill": "=ink"
+                },
+                {
+                  "type": "text",
+                  "x": 12,
+                  "y": 100,
+                  "text": "PLAYS",
+                  "size": 11,
+                  "color": "=yellow",
+                  "w": 70,
+                  "align": "center",
+                  "font": "inter-bold",
+                  "spacing": 1
+                },
+                {
+                  "type": "text",
+                  "x": 94,
+                  "y": 97,
+                  "text": "{game.plays}",
+                  "size": 18,
+                  "color": "=ink",
+                  "w": 180,
+                  "font": "inter-bold"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "x": 500,
+          "y": 278,
+          "w": 110,
+          "h": 26,
+          "children": [
+            {
+              "type": "group",
+              "x": 0,
+              "y": 0,
+              "w": 110,
+              "h": 26,
+              "children": [],
+              "use": "caption",
+              "fill": "=red"
+            },
+            {
+              "type": "group",
+              "x": 0,
+              "y": 0,
+              "w": 110,
+              "h": 26,
+              "children": [
+                {
+                  "type": "text",
+                  "x": 0,
+                  "y": 6,
+                  "text": "♥ FAVE!",
+                  "size": 11,
+                  "color": "=white",
+                  "w": 110,
+                  "align": "center",
+                  "font": "inter-bold"
+                }
+              ]
+            }
+          ],
+          "visible": "=game.fav"
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 220,
+          "text": "=empty ? upper(empty.title) : ''",
+          "size": 24,
+          "color": "=ink",
+          "w": 640,
+          "align": "center",
+          "font": "inter-bold"
+        }
+      ],
+      "bottom": [
+        {
+          "use": "page"
+        },
+        {
+          "type": "group",
+          "x": 16,
+          "y": 14,
+          "w": 330,
+          "h": 32,
+          "children": [
+            {
+              "type": "group",
+              "x": 0,
+              "y": 0,
+              "w": 330,
+              "h": 32,
+              "children": [],
+              "use": "caption"
+            },
+            {
+              "type": "group",
+              "x": 0,
+              "y": 0,
+              "w": 330,
+              "h": 32,
+              "children": [
+                {
+                  "type": "text",
+                  "x": 10,
+                  "y": 8,
+                  "text": "{upper(sys.name)} · {count} ISSUES",
+                  "size": 13,
+                  "color": "=ink",
+                  "w": 310,
+                  "font": "inter-bold",
+                  "spacing": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list",
+          "source": "games",
+          "direction": "grid",
+          "x": 16,
+          "y": 60,
+          "w": 616,
+          "h": 364,
+          "itemW": 192,
+          "itemH": 172,
+          "gap": 12,
+          "scrollMode": "edge",
+          "item": {
+            "type": "group",
+            "w": 192,
+            "h": 172,
+            "children": [
+              {
+                "type": "group",
+                "x": 4,
+                "y": 8,
+                "w": 180,
+                "h": 154,
+                "children": [
+                  {
+                    "type": "group",
+                    "x": 0,
+                    "y": 0,
+                    "w": 180,
+                    "h": 154,
+                    "children": [],
+                    "use": "panel",
+                    "states": [
+                      {
+                        "when": "=sel",
+                        "fill": "=yellow",
+                        "borderColor": "=red"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "group",
+                    "x": 0,
+                    "y": 0,
+                    "w": 180,
+                    "h": 154,
+                    "children": [
+                      {
+                        "type": "image",
+                        "x": 10,
+                        "y": 10,
+                        "w": 160,
+                        "h": 92,
+                        "src": "{item.art}",
+                        "fit": "contain",
+                        "fallback": "{sys.icon}"
+                      },
+                      {
+                        "type": "rect",
+                        "x": 0,
+                        "y": 108,
+                        "w": 180,
+                        "h": 46,
+                        "fill": "=ink",
+                        "states": [
+                          {
+                            "when": "=sel",
+                            "fill": "=red"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "text",
+                        "x": 8,
+                        "y": 112,
+                        "text": "{upper(item.title)}",
+                        "size": 12,
+                        "color": "=white",
+                        "w": 164,
+                        "h": 38,
+                        "align": "center",
+                        "valign": "middle",
+                        "font": "inter-bold",
+                        "wrap": true,
+                        "maxLines": 2
+                      }
+                    ],
+                    "clip": true
+                  }
+                ]
+              },
+              {
+                "x": 150,
+                "y": 26,
+                "use": "pow",
+                "visible": "=sel",
+                "scale": "=(0.3 + 0.7 * pop) * 0.62"
+              }
+            ],
+            "onTap": "a"
+          },
+          "columns": 3,
+          "clip": true
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 200,
+          "text": "=empty ? upper(empty.hint) : ''",
+          "size": 14,
+          "color": "=ink",
+          "w": 640,
+          "align": "center",
+          "font": "inter-bold"
+        },
+        {
+          "type": "list",
+          "source": "hints",
+          "direction": "row",
+          "x": 20,
+          "y": 440,
+          "w": 600,
+          "h": 28,
+          "itemW": 150,
+          "itemH": 28,
+          "gap": 16,
+          "scrollMode": "none",
+          "item": {
+            "type": "group",
+            "w": "=len(item.key) * 9 + 18 + len(item.label) * 9",
+            "h": 28,
+            "children": [
+              {
+                "type": "rect",
+                "x": 0,
+                "y": 2,
+                "w": "=len(item.key) * 9 + 10",
+                "h": 24,
+                "fill": "=ink",
+                "shadow": {
+                  "x": 2,
+                  "y": 2,
+                  "blur": 0,
+                  "color": "=red"
+                }
+              },
+              {
+                "type": "text",
+                "x": 0,
+                "y": 7,
+                "text": "{item.key}",
+                "size": 12,
+                "color": "=yellow",
+                "w": "=len(item.key) * 9 + 10",
+                "align": "center",
+                "font": "inter-bold"
+              },
+              {
+                "type": "text",
+                "x": "=len(item.key) * 9 + 16",
+                "y": 7,
+                "text": "{upper(item.label)}",
+                "size": 12,
+                "color": "=ink",
+                "font": "inter-bold"
+              }
+            ]
+          },
+          "flow": true
+        }
+      ]
+    },
+    "launch": {
+      "top": [
+        {
+          "use": "page"
+        },
+        {
+          "type": "list",
+          "source": "range",
+          "direction": "free",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "itemW": 150,
+          "itemH": 190,
+          "gap": 14,
+          "scrollMode": "none",
+          "item": {
+            "type": "group",
+            "w": "=80 + mod(i * 61, 140)",
+            "h": 6,
+            "children": [
+              {
+                "type": "rect",
+                "x": 0,
+                "y": 0,
+                "w": "100%",
+                "h": 6,
+                "fill": "=alpha(ink, 0.8)"
+              }
+            ],
+            "y": "=36 + floor(i / 2) * 56",
+            "x": "=mod(i, 2) == 0 ? 120 - mod(i * 61, 140) - lp * 160 : 440 + lp * 160"
+          },
+          "count": 16,
+          "range": 20
+        },
+        {
+          "type": "group",
+          "x": 320,
+          "y": 246,
+          "w": 600,
+          "h": 360,
+          "children": [
+            {
+              "type": "rect",
+              "x": -7,
+              "y": 73,
+              "w": 614,
+              "h": 214,
+              "fill": "=ink"
+            },
+            {
+              "type": "rect",
+              "x": 53,
+              "y": 28,
+              "w": 494,
+              "h": 304,
+              "fill": "=ink"
+            },
+            {
+              "type": "rect",
+              "x": 113,
+              "y": -2,
+              "w": 374,
+              "h": 364,
+              "fill": "=ink"
+            },
+            {
+              "type": "rect",
+              "x": 23,
+              "y": 48,
+              "w": 554,
+              "h": 264,
+              "fill": "=ink"
+            },
+            {
+              "type": "rect",
+              "x": 83,
+              "y": 8,
+              "w": 434,
+              "h": 344,
+              "fill": "=ink"
+            },
+            {
+              "type": "rect",
+              "x": 0,
+              "y": 80,
+              "w": 600,
+              "h": 200,
+              "fill": "=red"
+            },
+            {
+              "type": "rect",
+              "x": 60,
+              "y": 35,
+              "w": 480,
+              "h": 290,
+              "fill": "=red"
+            },
+            {
+              "type": "rect",
+              "x": 120,
+              "y": 5,
+              "w": 360,
+              "h": 350,
+              "fill": "=red"
+            },
+            {
+              "type": "rect",
+              "x": 30,
+              "y": 55,
+              "w": 540,
+              "h": 250,
+              "fill": "=red"
+            },
+            {
+              "type": "rect",
+              "x": 90,
+              "y": 15,
+              "w": 420,
+              "h": 330,
+              "fill": "=red"
+            },
+            {
+              "type": "rect",
+              "x": 70,
+              "y": 118,
+              "w": 460,
+              "h": 124,
+              "fill": "=yellow",
+              "border": 5,
+              "borderColor": "=ink",
+              "shadow": {
+                "x": 7,
+                "y": 7,
+                "blur": 0,
+                "color": "=ink"
+              }
+            },
+            {
+              "type": "text",
+              "x": 70,
+              "y": 136,
+              "text": "TO BE",
+              "size": 24,
+              "color": "=ink",
+              "w": 460,
+              "align": "center",
+              "font": "inter-bold",
+              "spacing": 6
+            },
+            {
+              "type": "text",
+              "x": 70,
+              "y": 166,
+              "text": "CONTINUED…",
+              "size": 46,
+              "color": "=red",
+              "w": 460,
+              "align": "center",
+              "font": "inter-bold",
+              "shadow": {
+                "x": 3,
+                "y": 3,
+                "color": "=ink"
+              }
+            }
+          ],
+          "anchor": "center",
+          "scale": "=0.15 + 0.75 * zoom"
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "=white",
+          "opacity": "=clamp((lp - 0.86) / 0.14, 0, 1)"
+        }
+      ],
+      "bottom": [
+        {
+          "use": "page"
+        },
+        {
+          "type": "group",
+          "x": 40,
+          "y": "=50 + (1 - easeOut(clamp(lp / 0.4, 0, 1))) * 440",
+          "w": 560,
+          "h": 320,
+          "children": [
+            {
+              "type": "group",
+              "x": 0,
+              "y": 0,
+              "w": 560,
+              "h": 320,
+              "children": [],
+              "use": "panel",
+              "fill": "=cyan"
+            },
+            {
+              "type": "group",
+              "x": 0,
+              "y": 0,
+              "w": 560,
+              "h": 320,
+              "children": [
+                {
+                  "type": "image",
+                  "x": 20,
+                  "y": 62,
+                  "w": 200,
+                  "h": 230,
+                  "src": "{game.art}",
+                  "fit": "contain",
+                  "fallback": "{sys.icon}"
+                },
+                {
+                  "type": "text",
+                  "x": 240,
+                  "y": 66,
+                  "text": "{upper(game.title)}",
+                  "size": 26,
+                  "color": "=ink",
+                  "w": 300,
+                  "font": "inter-bold",
+                  "wrap": true,
+                  "maxLines": 3
+                },
+                {
+                  "type": "group",
+                  "x": 246,
+                  "y": 196,
+                  "w": 280,
+                  "h": 72,
+                  "children": [
+                    {
+                      "type": "group",
+                      "x": 0,
+                      "y": 0,
+                      "w": 280,
+                      "h": 72,
+                      "children": [],
+                      "use": "bubble"
+                    },
+                    {
+                      "type": "group",
+                      "x": 0,
+                      "y": 0,
+                      "w": 280,
+                      "h": 72,
+                      "children": [
+                        {
+                          "type": "text",
+                          "x": 10,
+                          "y": 20,
+                          "text": "HERE WE GO!",
+                          "size": 24,
+                          "color": "=ink",
+                          "w": 260,
+                          "align": "center",
+                          "font": "inter-bold"
+                        }
+                      ]
+                    }
+                  ],
+                  "opacity": "=step(0.45, lp)"
+                },
+                {
+                  "type": "group",
+                  "x": 16,
+                  "y": 14,
+                  "w": 190,
+                  "h": 32,
+                  "children": [
+                    {
+                      "type": "group",
+                      "x": 0,
+                      "y": 0,
+                      "w": 190,
+                      "h": 32,
+                      "children": [],
+                      "use": "caption"
+                    },
+                    {
+                      "type": "group",
+                      "x": 0,
+                      "y": 0,
+                      "w": 190,
+                      "h": 32,
+                      "children": [
+                        {
+                          "type": "text",
+                          "x": 10,
+                          "y": 8,
+                          "text": "IN THIS ISSUE:",
+                          "size": 13,
+                          "color": "=ink",
+                          "font": "inter-bold",
+                          "spacing": 1
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "clip": true
+            }
+          ]
+        },
+        {
+          "type": "rect",
+          "x": 40,
+          "y": 396,
+          "w": 560,
+          "h": 24,
+          "fill": "=white",
+          "border": 4,
+          "borderColor": "=ink"
+        },
+        {
+          "type": "rect",
+          "x": 44,
+          "y": 400,
+          "w": "=552 * lp",
+          "h": 16,
+          "fill": "=red"
+        }
+      ]
+    },
+    "all": {
+      "top": [
+        {
+          "type": "group",
+          "x": 16,
+          "y": 10,
+          "w": 196,
+          "h": 32,
+          "children": [
+            {
+              "type": "text",
+              "x": 0,
+              "y": 7,
+              "text": "BANANA COMICS",
+              "size": 14,
+              "color": "=yellow",
+              "w": 196,
+              "align": "center",
+              "font": "inter-bold",
+              "spacing": 2,
+              "shadow": {
+                "x": 2,
+                "y": 2,
+                "color": "=ink"
+              }
+            }
+          ],
+          "fill": "=red",
+          "border": 3,
+          "borderColor": "=ink",
+          "shadow": {
+            "x": 4,
+            "y": 4,
+            "blur": 0,
+            "color": "=ink"
+          }
+        },
+        {
+          "type": "group",
+          "x": 440,
+          "y": 10,
+          "w": 78,
+          "h": 30,
+          "children": [
+            {
+              "type": "group",
+              "x": 0,
+              "y": 0,
+              "w": 78,
+              "h": 30,
+              "children": [],
+              "use": "caption"
+            },
+            {
+              "type": "group",
+              "x": 0,
+              "y": 0,
+              "w": 78,
+              "h": 30,
+              "children": [
+                {
+                  "type": "text",
+                  "x": 0,
+                  "y": 6,
+                  "text": "{clock}",
+                  "size": 14,
+                  "color": "=ink",
+                  "w": 78,
+                  "align": "center",
+                  "font": "inter-bold"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "x": 530,
+          "y": 10,
+          "w": 94,
+          "h": 30,
+          "children": [
+            {
+              "type": "group",
+              "x": 0,
+              "y": 0,
+              "w": 94,
+              "h": 30,
+              "children": [],
+              "use": "caption",
+              "fill": "=white"
+            },
+            {
+              "type": "group",
+              "x": 0,
+              "y": 0,
+              "w": 94,
+              "h": 30,
+              "children": [
+                {
+                  "type": "rect",
+                  "x": 10,
+                  "y": 18,
+                  "w": 4,
+                  "h": 5,
+                  "fill": "=online ? ink : alpha(ink, 0.2)"
+                },
+                {
+                  "type": "rect",
+                  "x": 16,
+                  "y": 13,
+                  "w": 4,
+                  "h": 10,
+                  "fill": "=online ? ink : alpha(ink, 0.2)"
+                },
+                {
+                  "type": "rect",
+                  "x": 22,
+                  "y": 8,
+                  "w": 4,
+                  "h": 15,
+                  "fill": "=online ? ink : alpha(ink, 0.2)"
+                },
+                {
+                  "type": "group",
+                  "x": 36,
+                  "y": 7,
+                  "w": 50,
+                  "h": 16,
+                  "children": [
+                    {
+                      "type": "rect",
+                      "x": 0,
+                      "y": 0,
+                      "w": 46,
+                      "h": 16,
+                      "fill": "=white",
+                      "border": 2.5,
+                      "borderColor": "=ink"
+                    },
+                    {
+                      "type": "rect",
+                      "x": 46,
+                      "y": 5,
+                      "w": 3,
+                      "h": 6,
+                      "fill": "=ink"
+                    },
+                    {
+                      "type": "rect",
+                      "x": 4,
+                      "y": 4,
+                      "w": "=38 * clamp(battery, 0, 100) / 100",
+                      "h": 8,
+                      "fill": "=charging ? blue : (battery < 20 ? red : ink)"
+                    }
+                  ],
+                  "visible": "=battery >= 0"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "colors": {
+    "screenBg": "#f6efdc",
+    "ink": "#111111",
+    "muted": "#555555"
+  },
+  "vars": {
+    "paper": "#f6efdc",
+    "ink": "#111111",
+    "red": "#e8322b",
+    "yellow": "#ffd21f",
+    "blue": "#1d5fd6",
+    "cyan": "#5cc4ee",
+    "white": "#ffffff",
+    "pop": "=easeOutBack(progress(moved, 340))",
+    "lp": "=launch.progress",
+    "zoom": "=easeOutBack(clamp(launch.progress / 0.45, 0, 1))"
+  },
+  "components": {
+    "page": {
+      "type": "group",
+      "children": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "=paper"
+        },
+        {
+          "type": "list",
+          "source": "range",
+          "direction": "grid",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "itemW": 40,
+          "itemH": 40,
+          "gap": 0,
+          "scrollMode": "none",
+          "item": {
+            "type": "group",
+            "w": 40,
+            "h": 40,
+            "children": [
+              {
+                "type": "rect",
+                "x": 20,
+                "y": 20,
+                "w": "=max(0, 18 * (mod(i, 16) + floor(i / 16) * 1.3) / 34 - 2)",
+                "h": "=max(0, 18 * (mod(i, 16) + floor(i / 16) * 1.3) / 34 - 2)",
+                "fill": "=alpha(cyan, 0.38)",
+                "anchor": "center",
+                "radius": "50%"
+              }
+            ]
+          },
+          "count": 192,
+          "columns": 16
+        }
+      ]
+    },
+    "panel": {
+      "type": "group",
+      "children": [],
+      "fill": "=white",
+      "border": 5,
+      "borderColor": "=ink",
+      "shadow": {
+        "x": 6,
+        "y": 6,
+        "blur": 0,
+        "color": "=ink"
+      }
+    },
+    "caption": {
+      "type": "group",
+      "children": [],
+      "fill": "=yellow",
+      "border": 3,
+      "borderColor": "=ink",
+      "shadow": {
+        "x": 4,
+        "y": 4,
+        "blur": 0,
+        "color": "=ink"
+      }
+    },
+    "bubble": {
+      "type": "group",
+      "children": [],
+      "fill": "=white",
+      "radius": 36,
+      "border": 4,
+      "borderColor": "=ink"
+    },
+    "pow": {
+      "type": "group",
+      "children": [
+        {
+          "type": "rect",
+          "x": -4,
+          "y": 18,
+          "w": 158,
+          "h": 54,
+          "fill": "=ink"
+        },
+        {
+          "type": "rect",
+          "x": 15,
+          "y": 3,
+          "w": 120,
+          "h": 84,
+          "fill": "=ink"
+        },
+        {
+          "type": "rect",
+          "x": 35,
+          "y": -4,
+          "w": 80,
+          "h": 98,
+          "fill": "=ink"
+        },
+        {
+          "type": "rect",
+          "x": 5,
+          "y": 10,
+          "w": 140,
+          "h": 70,
+          "fill": "=ink"
+        },
+        {
+          "type": "rect",
+          "x": 25,
+          "y": -1,
+          "w": 100,
+          "h": 92,
+          "fill": "=ink"
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 22,
+          "w": 150,
+          "h": 46,
+          "fill": "=red"
+        },
+        {
+          "type": "rect",
+          "x": 19,
+          "y": 7,
+          "w": 112,
+          "h": 76,
+          "fill": "=red"
+        },
+        {
+          "type": "rect",
+          "x": 39,
+          "y": 0,
+          "w": 72,
+          "h": 90,
+          "fill": "=red"
+        },
+        {
+          "type": "rect",
+          "x": 9,
+          "y": 14,
+          "w": 132,
+          "h": 62,
+          "fill": "=red"
+        },
+        {
+          "type": "rect",
+          "x": 29,
+          "y": 3,
+          "w": 92,
+          "h": 84,
+          "fill": "=red"
+        },
+        {
+          "type": "rect",
+          "x": 27,
+          "y": 27,
+          "w": 96,
+          "h": 36,
+          "fill": "=yellow",
+          "border": 3,
+          "borderColor": "=ink"
+        },
+        {
+          "type": "text",
+          "x": 27,
+          "y": 30,
+          "text": "=pick(mod(i, 4), 'POW!', 'ZAP!', 'BAM!', 'WHAM!')",
+          "size": 22,
+          "color": "=ink",
+          "w": 96,
+          "align": "center",
+          "font": "inter-bold"
+        }
+      ],
+      "w": 150,
+      "h": 90,
+      "anchor": "center"
+    }
+  },
+  "input": {
+    "home": {
+      "left": "prev",
+      "right": "next",
+      "up": "none",
+      "down": "none",
+      "l": "first",
+      "r": "last",
+      "a": "open",
+      "x": "resume",
+      "y": "fav"
+    },
+    "library": {
+      "left": "prev",
+      "right": "next",
+      "up": "prev:3",
+      "down": "next:3",
+      "l": "prevSystem",
+      "r": "nextSystem",
+      "a": "open",
+      "b": "back",
+      "y": "fav"
+    }
+  },
+  "hints": {
+    "home": [
+      [
+        "A",
+        "Read it"
+      ],
+      [
+        "X",
+        "Previously"
+      ],
+      [
+        "Y",
+        "Fave"
+      ]
+    ],
+    "library": [
+      [
+        "A",
+        "Play"
+      ],
+      [
+        "B",
+        "Back"
+      ],
+      [
+        "Y",
+        "Fave"
+      ]
+    ]
+  },
+  "behavior": {
+    "cues": {
+      "insert": 1100
+    },
+    "launchMs": 1600,
+    "scrollMs": 80,
+    "settleMs": 440,
+    "fps": 30,
+    "wrap": true,
+    "extraHints": true
+  },
+  "accent": "#e8322b"
+}

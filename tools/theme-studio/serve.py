@@ -192,20 +192,12 @@ def local_themes():
 
 
 def templates():
-    out = []
-    for d in TEMPLATE_DIRS:
-        if not d.exists():
-            continue
-        for f in sorted(d.glob("*.json")):
-            try:
-                text = f.read_text(encoding="utf-8")
-            except OSError:
-                continue
-            if not re.search(r'"screens"\s*:', text):		# layout themes only: the editor edits those
-                continue
-            m = re.search(r'"name"\s*:\s*"([^"]*)"', text)
-            out.append({"name": m.group(1) if m else f.stem, "file": str(f), "json": text})
-    return out
+    """The starting points: make-templates.py's (the editor's own themes and the examples, with their thumbnails)"""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("make_templates", str(HERE / "make-templates.py"))
+    mt = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mt)
+    return mt.entries()
 
 
 class Handler(BaseHTTPRequestHandler):

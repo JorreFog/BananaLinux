@@ -1000,16 +1000,27 @@
   }
 
   // ---- New: a gallery of starting points ------------------------------------------------------------
-  function openTemplates() {
+  function openTemplates(draft) {
     closePop();
     let box = $("#templates");
     if (!box) { box = h("div", { id: "templates", class: "modal", role: "dialog", "aria-label": "Start a theme" }); box.addEventListener("click", (e) => { if (e.target === box) box.remove(); }); document.body.appendChild(box); }
     box.innerHTML = "";
     const card = h("div", { class: "card" });
     const close = h("button", { type: "button", class: "icon-btn", title: "Close (Esc)", "aria-label": "Close" }, icon("x")); close.onclick = () => box.remove();
-    card.appendChild(h("div", { class: "modal-head" }, h("div", null, h("b", null, "Start a theme"), h("div", { class: "muted", style: "font-size:12.5px" }, "Pick a starting point and make it yours. The examples are the themes BananaOS ships.")), h("span", { class: "grow" }), close));
+    card.appendChild(h("div", { class: "modal-head" }, h("div", null, h("b", null, "Start a theme"), h("div", { class: "muted", style: "font-size:12.5px" }, "Pick one of the ready-made themes and make it yours, or start from scratch.")), h("span", { class: "grow" }), close));
+    if (draft) {
+      // the theme kept in this browser last time: first, so going on with it is one click
+      card.appendChild(h("div", { class: "tpl-head" }, h("b", null, "Continue where you left off")));
+      const cg = h("div", { class: "tpl-grid" }); card.appendChild(cg);
+      const when = new Date(draft.when);
+      let dd = {}; try { dd = JSON.parse(draft.text); } catch (e) { /* ignore */ }
+      const b = h("button", { type: "button", class: "tpl" }, thumb(dd), h("b", null, draft.name || "Untitled"),
+        h("span", null, "Kept in this browser · " + when.toLocaleDateString() + " " + when.toLocaleTimeString().slice(0, 5) + (draft.unsaved ? " · not exported yet" : "")));
+      b.onclick = () => { box.remove(); restoreDraft(draft); };
+      cg.appendChild(b);
+    }
     const grid = h("div", { class: "tpl-grid" });
-    const thumb = (t) => {
+    function thumb(t) {
       const v = (t && t.vars) || {}, c = (t && t.colors) || {};
       const pick = (x) => (typeof x === "string" && x.charAt(0) === "#" ? x : null);
       const bg = pick(v.bg) || pick(c.screenBg) || "#1b1f27", ink = pick(v.ink) || pick(c.ink) || "#ffffff";
@@ -1018,18 +1029,35 @@
       d.style.background = "linear-gradient(160deg, " + bg + " 55%, " + (ac || bg) + ")";
       d.appendChild(h("span", { style: "font-weight:700;font-size:20px;color:" + ink }, (t && t.name) || "Theme"));
       return d;
+    }
+    let into = grid;
+    const section = (title, note) => {
+      card.appendChild(h("div", { class: "tpl-head" }, h("b", null, title), note ? h("span", { class: "muted" }, note) : null));
+      into = h("div", { class: "tpl-grid" }); card.appendChild(into);
     };
-    const add = (name, desc, t, fn) => { const b = h("button", { type: "button", class: "tpl" }, thumb(t), h("b", null, name), h("span", null, desc)); b.onclick = fn; grid.appendChild(b); };
+    const add = (name, desc, t, fn, pic) => {
+      const th = pic ? h("div", { class: "thumb" }, h("img", { src: pic, alt: "", loading: "lazy" })) : thumb(t);
+      const b = h("button", { type: "button", class: "tpl" }, th, h("b", null, name), h("span", null, desc)); b.onclick = fn; into.appendChild(b);
+    };
+    const open = (t) => () => {
+      if (!guardUnsaved("Start from " + t.name)) return;
+      box.remove(); loadTheme(looseParse(t.json), null, "started from " + t.name + ": make it yours, then Export");
+    };
+    const all = state.templates || [];
+    const premade = all.filter((t) => t.group === "premade"), examples = all.filter((t) => t.group !== "premade");
     const BLANK = { name: "My theme", author: "you", base: "dark", font: "inter", screens: { home: { top: [], bottom: [] }, library: { top: [], bottom: [] } } };
     add("Blank", "Nothing on the screens: build it all yourself from the Add tab.", { name: "Blank" }, () => { if (guardUnsaved("Start a new theme")) { box.remove(); loadTheme(clone(BLANK), null, "a blank theme: add elements from the Add tab"); } });
     add("Simple", "A plain starting point: a carousel of systems and a list of games.", STARTER, () => { if (guardUnsaved("Start a new theme")) { box.remove(); loadTheme(clone(STARTER), null, "a new theme: give it a name on the Theme tab"); } });
-    (state.templates || []).forEach(function (t) {
-      let doc = null; try { doc = looseParse(t.json); } catch (e) { /* listed anyway */ }
-      add(t.name, (doc && doc.author ? "by " + doc.author + " · " : "") + "an example BananaOS ships", doc || {}, () => {
-        if (!guardUnsaved("Start from " + t.name)) return;
-        box.remove(); loadTheme(looseParse(t.json), null, "started from " + t.name + ": change its name on the Theme tab, then Export");
-      });
-    });
+    const doc = (t) => { try { return looseParse(t.json); } catch (e) { return {}; } };
+    if (premade.length) {
+      section("Ready-made themes", "Made with this editor. Pick one to use as it is, or to change.");
+      premade.forEach((t) => add(t.name, t.description || "", doc(t), open(t), t.thumb));
+    }
+    if (examples.length) {
+      section("BananaOS examples", "The themes BananaOS ships.");
+      examples.forEach((t) => { const d = doc(t); add(t.name, t.description || (d.author ? "by " + d.author : "an example BananaOS ships"), d, open(t), t.thumb); });
+    }
+    card.appendChild(h("div", { class: "tpl-head" }, h("b", null, "Start from scratch")));
     card.appendChild(grid);
     box.appendChild(card);
   }
@@ -1951,25 +1979,17 @@
     try { d = await DRAFT.get(); } catch (e) { /* no IndexedDB here (a private window): nothing kept */ }
     draftReady = true;
     if (!d || !d.text || d.text === JSON.stringify(STARTER) || state.unsaved) {
-      // the very first visit: the starting points, rather than a theme nobody chose
-      let seen = true; try { seen = !!localStorage.getItem("banana-studio-seen"); localStorage.setItem("banana-studio-seen", "1"); } catch (e) { /* ignore */ }
-      if (!seen && !d && !state.unsaved) openTemplates();
+      // arriving: the starting points (the ready-made themes among them), rather than a theme nobody chose
+      if (!state.unsaved && !$(".modal")) openTemplates();
       return;
     }
-    const bar = $("#banner"); if (!bar) return;
-    bar.innerHTML = ""; bar.hidden = false;
-    const when = new Date(d.when);
-    bar.appendChild(h("span", null, "Your last theme here, " + (d.name || "untitled") + " (" + when.toLocaleDateString() + " " + when.toLocaleTimeString().slice(0, 5) + (d.unsaved ? ", not saved" : "") + ")" + (d.assets && d.assets.length ? " with " + d.assets.length + " file(s)" : "") + ", is kept in this browser."));
-    const yes = h("button", { type: "button", class: "primary" }, "Open it"), no = h("button", { type: "button", class: "ghost" }, "No thanks");
-    yes.onclick = () => {
-      bar.hidden = true;
-      const assets = {}; (d.assets || []).forEach((a) => { assets[a.path] = { name: a.name, bytes: a.bytes }; });
-      loadTheme(JSON.parse(d.text), assets, "opened your last theme");
-      if (d.orig) state.orig = d.orig;
-      state.unsaved = !!d.unsaved; titleNow();
-    };
-    no.onclick = () => { bar.hidden = true; };
-    bar.appendChild(yes); bar.appendChild(no);
+    if (!$(".modal")) openTemplates(d);
+  }
+  function restoreDraft(d) {
+    const assets = {}; (d.assets || []).forEach((a) => { assets[a.path] = { name: a.name, bytes: a.bytes }; });
+    loadTheme(JSON.parse(d.text), assets, "opened your last theme");
+    if (d.orig) state.orig = d.orig;
+    state.unsaved = !!d.unsaved; titleNow();
   }
 
   // ---- tabs, status, wiring --------------------------------------------------------------------------

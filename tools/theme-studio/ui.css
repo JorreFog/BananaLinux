@@ -370,7 +370,13 @@ label.chk { display: inline-flex; align-items: center; gap: 6px; margin-right: 1
 .md blockquote { margin: 8px 0; padding: 4px 12px; border-left: 3px solid var(--accent); color: var(--text-2); }
 
 /* templates gallery */
-.tpl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; padding: 20px; overflow: auto; }
+.modal .card:has(.tpl-grid) { overflow: auto; width: min(1100px, 100%); }
+.tpl-head { display: flex; align-items: baseline; gap: 10px; padding: 18px 20px 0; }
+.tpl-head b { font-size: 13.5px; }
+.tpl-head .muted { font-size: 12.5px; }
+.tpl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; padding: 12px 20px 6px; }
+.tpl-grid:last-child { padding-bottom: 20px; }
+.tpl .thumb img { object-fit: cover; }
 .tpl {
   display: flex; flex-direction: column; align-items: stretch; gap: 6px; padding: 0; overflow: hidden; text-align: left; white-space: normal;
   border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel); min-height: 0;

@@ -281,10 +281,14 @@ def main():
         ff.go(PAGE)
         ff.js(HOOKS)
         ff.wait("return BananaEngine.state === 'ready'", 60)
-        banner = ff.wait("const b = document.querySelector('#banner'); return b && !b.hidden && b.textContent", 10)
-        check(banner and "Kept" in banner, "after a reload, the last theme is offered again", banner)
+        banner = ff.wait("const g = document.querySelector('#templates'); const c = g && g.querySelector('.tpl'); return c && c.textContent", 10)
+        check(banner and "Kept" in banner, "after a reload, the gallery offers the last theme first", banner)
+        names = ff.js("return Array.from(document.querySelectorAll('#templates .tpl b')).map((b) => b.textContent)")
+        check(all(n in names for n in ("Neon Arcade", "Paper Notebook", "Swiss Poster", "Canvas")) and
+              ff.js("return Array.from(document.querySelectorAll('#templates .tpl img')).every((i) => i.complete && i.naturalWidth > 0)"),
+              "...with the ready-made themes and their pictures", names)
         if banner:
-            ff.js("document.querySelector('#banner button.primary').click()")
+            ff.js("document.querySelector('#templates .tpl').click()")
             settle(ff, 800)
             check(ff.js("return BananaStudio.state.theme.name") == "Kept" and ff.js(PIXEL, 0, 5, 5) == [0, 255, 0], "...and opens with its preview")
 
