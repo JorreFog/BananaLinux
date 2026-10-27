@@ -210,6 +210,26 @@ def main():
         n = ff.js("return (BananaStudio.state.shots || []).length")
         check(n == 5 and ff.js("return BananaStudio.state.shots[0].top.startsWith('data:image/png')"), "Take stills draws the script's shots", n)
 
+        # the preview shows the view being edited: Layers' Library moves it there and an edit to a library element is
+        # drawn; editing the Launch view plays the game start (for all of launchMs); the preview's A moves Layers along
+        ff.js("BananaStudio.loadTheme(null); document.querySelectorAll('#pane-elements .viewsel button')[1].click();")
+        settle(ff, 300)
+        sig = "const c = document.querySelectorAll('canvas.scr')[0]; const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let h = 0; for (let i = 0; i < d.length; i += 61) h = (h * 31 + d[i]) | 0; return h;"
+        a = ff.js(sig)
+        ff.js("BananaStudio.state.theme.screens.library.top[1].y = 300; BananaStudio.markDirty();")
+        settle(ff, 600)
+        check(ff.js("return BananaEngine.where().view") == "library" and ff.js(sig) != a, "an edit in Layers' Library view shows in the preview")
+        ff.js("document.querySelectorAll('#pane-elements .viewsel button')[2].click();"
+              "BananaStudio.state.theme.screens.launch = { top: [ { type: 'rect', fill: '#ff0000' } ] }; BananaStudio.markDirty();")
+        settle(ff, 450)
+        red = ff.js("const c = document.querySelectorAll('canvas.scr')[0]; return Array.from(c.getContext('2d').getImageData(320, 240, 1, 1).data).slice(0, 3);")
+        check(ff.js("return BananaEngine.where().view") == "launch" and red == [255, 0, 0], "...an edit to the Launch view plays the game start with it", red)
+        ff.js("BananaStudio.loadTheme(null); document.querySelectorAll('#pane-elements .viewsel button')[0].click();")
+        settle(ff, 300)
+        ff.js("BananaStudio.press('a')")
+        settle(ff, 400)
+        check(ff.js("return BananaStudio.state.view") == "library", "...and A in the preview moves Layers to the Library view")
+
         # the guide
         ff.js("document.querySelector('#guideBtn').click()")
         g = ff.js("return document.querySelector('#guide .md') ? document.querySelector('#guide .md').innerText.slice(0, 40) : ''")

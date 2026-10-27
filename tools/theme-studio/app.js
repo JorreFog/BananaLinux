@@ -512,7 +512,7 @@
   function renderTree() {
     const pane = $("#pane-elements"); pane.innerHTML = "";
     const vsel = h("div", { class: "viewsel seg", title: "Which part of the menu you are editing" });
-    S.VIEWS.forEach((v) => { const b = h("button", { type: "button", title: VIEW_TIPS[v] || "" }, VIEW_LABELS[v] || v); b.setAttribute("aria-pressed", String(state.view === v)); b.onclick = () => { state.view = v; renderTree(); renderPalette(); }; vsel.appendChild(b); });
+    S.VIEWS.forEach((v) => { const b = h("button", { type: "button", title: VIEW_TIPS[v] || "" }, VIEW_LABELS[v] || v); b.setAttribute("aria-pressed", String(state.view === v)); b.onclick = () => { state.view = v; renderTree(); renderPalette(); previewView(v); }; vsel.appendChild(b); });
     pane.appendChild(vsel);
     S.SCREENS.forEach(function (scr) {
       const head = h("div", { class: "screenhead" });
@@ -1147,7 +1147,7 @@
     state.sel = ["screens", state.view, state.addScreen, arr.length - 1];
     state.open[JSON.stringify(["screens", state.view, state.addScreen])] = true;
     markDirty(); renderAll(); rerender();
-    showTab("library", "layers"); showTab("properties", "inspector");
+    showTab("library", "layers"); showTab("properties", "inspector"); previewView(state.view);
   }
   function makePreset(kind) {
     if (kind === "group-row") return { type: "group", x: 0, y: 0, w: 400, h: 60, layout: "row", gap: 8, padding: 8, children: [] };
@@ -1399,6 +1399,7 @@
     if (key === live.pushed) return;
     live.pushed = key;
     ENGINE.setTheme(text, assetFiles(), keep);
+    if (keep && state.view === "launch") previewView("launch");
     live.force = true;
     showProblems();
   }
@@ -1413,6 +1414,7 @@
     live.top.getContext("2d").putImageData(ENGINE.pixels(0, live.imgTop), 0, 0);
     live.bot.getContext("2d").putImageData(ENGINE.pixels(1, live.imgBot), 0, 0);
     const w = ENGINE.where(), el = $("#where");
+    followPreview(w);
     if (w && el) {
       const ids = state.shelf || (state.shelf = ENGINE.shelf());
       el.textContent = w.view + " · system " + (w.system + 1) + " of " + w.systems + (ids[w.system] ? " (" + ids[w.system] + ")" : "") + (w.view !== "home" ? " · game " + (w.game + 1) : "");
@@ -1425,7 +1427,28 @@
     live.force = false;
     if (t - live.errAt > 1000) { live.errAt = t; showProblems(); }
   }
-  function press(b) { if (!liveOk()) return; ENGINE.press(b); kick(); }
+  // (the engine's clock moves only when it draws: brought up to now first, or a press after a quiet moment is timed
+  // from the last frame, and the game start, which lasts behavior.launchMs from it, is over at once)
+  function now() { if (liveOk()) ENGINE.frame(performance.now(), false); }
+  function press(b) { if (!liveOk()) return; now(); ENGINE.press(b); kick(); }
+  // the preview shows the view being edited: Layers' Home / Library / Launch move it there (Launch plays the game
+  // start, as A does), and moving about in the preview switches Layers to the view it shows
+  function previewView(v) {
+    if (!liveOk()) return;
+    const w = ENGINE.where(); if (!w) return;
+    if (v === "home" && w.view !== "home") ENGINE.home(w.system);
+    else if (v === "library" && w.view !== "library") ENGINE.library(w.system, w.view === "home" ? 0 : w.game);
+    else if (v === "launch") { if (w.view !== "library") ENGINE.library(w.system, w.view === "home" ? 0 : w.game); now(); ENGINE.press("a"); }
+    live.shown = v === "launch" ? "library" : v;
+    kick();
+  }
+  function followPreview(w) {
+    if (!w || w.view === live.shown) return;
+    live.shown = w.view;
+    // (the game start comes and goes by itself: Layers stays where it is for it)
+    if (w.view === "launch" || state.view === "all" || state.view === "launch" || state.view === w.view) return;
+    state.view = w.view; renderTree(); renderPalette();
+  }
   function renderPreview() {
     const p = $("#preview"); p.innerHTML = "";
     if (liveOk()) {
@@ -1657,7 +1680,7 @@
   function selectFinding(f) {
     const p = elementPath(f.path);
     if (!p) return;
-    if (p[0] === "screens" && S.VIEWS.indexOf(p[1]) >= 0) { state.view = p[1]; state.screen = p[2]; }
+    if (p[0] === "screens" && S.VIEWS.indexOf(p[1]) >= 0) { state.view = p[1]; state.screen = p[2]; previewView(p[1]); }
     state.sel = p;
     for (let n = 3; n < p.length; n++) state.open[JSON.stringify(p.slice(0, n))] = true;
     showTab("properties", "inspector"); renderTree(); rerender();
