@@ -1238,11 +1238,28 @@
 	status = "okay";
 };
 
+/*
+ * The OTG port as Anbernic's own firmware has it: dual-role, the USB2 PHY's ID and VBUS detection picking the role.
+ * With nothing plugged in the controller sits idle as a device; its xHCI only runs while a host cable is in, so it
+ * is not there to fail a suspend ("Clearing Run/Stop bit failed -110") as a host forced on with no gadget support did.
+ * The quirks are the stock firmware's for this controller and PHY.
+ */
 &usb_host0_xhci {
-	dr_mode = "peripheral";
+	dr_mode = "otg";
+	extcon = <&usb2phy0>;
 	phy-names = "usb2-phy";
 	phys = <&usb2phy0_otg>;
 	maximum-speed = "high-speed";
+	snps,dis_enblslpm_quirk;
+	snps,dis-u1-entry-quirk;
+	snps,dis-u2-entry-quirk;
+	snps,dis-u2-freeclk-exists-quirk;
+	snps,dis-del-phy-power-chg-quirk;
+	snps,dis-tx-ipgap-linecheck-quirk;
+	snps,dis_rxdet_inp3_quirk;
+	snps,parkmode-disable-hs-quirk;
+	snps,parkmode-disable-ss-quirk;
+	snps,usb2-lpm-disable;
 	status = "okay";
 };
 

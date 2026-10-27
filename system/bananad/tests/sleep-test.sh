@@ -138,8 +138,15 @@ grep -q 'trying the safer way' /data/banana/logs/sleep.log && ok "fell back afte
 [ "$(cat /sys/class/backlight/backlight0/bl_power)" = 4 ] && ok "panels dark with the lid shut" || bad "backlight bl_power $(cat /sys/class/backlight/backlight0/bl_power)"
 echo 0 > /run/test/lid; ev $EV_SW $SW_LID 0; sleep 0.3
 [ "$(cat /sys/class/backlight/backlight0/bl_power)" = 0 ] && ok "panels back when the lid opens" || bad "panels still dark"
-stop
+# the next sleep works again: deep and pm_async as configured, not the s2idle the failure fell back to
 rmdir /sys/power/state; mkfifo /sys/power/state
+echo "[s2idle] deep" > /sys/power/mem_sleep     # the kernel's file after the fallback
+echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
+asleep && ok "suspended the next time" || bad "no suspend the next time"
+[ "$(cat /sys/power/mem_sleep)" = deep ] && ok "deep again after the failed sleep" || bad "mem_sleep $(cat /sys/power/mem_sleep)"
+[ "$(cat /sys/power/pm_async)" = 1 ] && ok "pm_async 1 again" || bad "pm_async $(cat /sys/power/pm_async)"
+echo 0 > /run/test/lid; wake
+stop
 
 echo "6. lid sleep off: closing the lid only turns the backlights off"
 start "lid_sleep = no"

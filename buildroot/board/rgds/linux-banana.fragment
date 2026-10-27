@@ -137,7 +137,6 @@ CONFIG_VIRTIO_NET=y
 # CONFIG_SND_TEST_COMPONENT is not set
 # CONFIG_SND_AUDIO_GRAPH_CARD2_CUSTOM_SAMPLE is not set
 # CONFIG_MEDIA_SUPPORT is not set
-# CONFIG_USB_GADGET is not set
 # CONFIG_FUSE_FS is not set
 # CONFIG_OVERLAY_FS is not set
 # CONFIG_MTD is not set
@@ -163,5 +162,17 @@ CONFIG_VIRTIO_NET=y
 # CONFIG_DEBUG_DEVRES is not set
 # CONFIG_DEBUG_BUGVERBOSE is not set
 # CONFIG_RANDOMIZE_BASE is not set
+# The OTG port dual-role, as on Anbernic's firmware (the device trees' usb_host0_xhci): DWC3_DUAL_ROLE needs the
+# gadget stack, and without it the controller falls back to a host forced on, whose xHCI fails a suspend now and then
+# and leaves bananad on s2idle. Idle as a device with nothing plugged in; a host while an OTG cable is in.
+CONFIG_USB_GADGET=y
+CONFIG_USB_DWC3_DUAL_ROLE=y
+CONFIG_USB_ROLE_SWITCH=y
+CONFIG_EXTCON=y
+# the gadget stack only for that: no gadget functions (ROCKNIX's USB networking, mass storage, FunctionFS through
+# configfs), no debug files, and no DWC2 (the RK3326's controller; the RK3566/RK3568 has none)
+# CONFIG_USB_CONFIGFS is not set
+# CONFIG_USB_GADGET_DEBUG_FILES is not set
+# CONFIG_USB_DWC2 is not set
 # the name before init sets it (ROCKNIX fills its @DEVICENAME@ in at build time; Banana is "banana")
 CONFIG_DEFAULT_HOSTNAME="banana"
