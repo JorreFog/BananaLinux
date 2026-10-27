@@ -60,8 +60,8 @@
 
   // ---- buttons and the actions a view can bind ------------------------------------------------------------
   const BUTTONS = ["left", "right", "up", "down", "a", "b", "x", "y", "l", "r"];
-  const BUTTON_ACTIONS = [["prev", "the previous item"], ["next", "the next item"], ["prev:N", "back N items"],
-    ["next:N", "forward N items"], ["first", "the first item"], ["last", "the last item"], ["open", "open the system / play the game"],
+  const BUTTON_ACTIONS = [["prev", "the previous item"], ["next", "the next item"], ["prev:3", "back 3 items (a grid's row)"],
+    ["next:3", "forward 3 items"], ["prev:5", "back 5 items"], ["next:5", "forward 5 items"], ["prev:10", "back 10 items"], ["next:10", "forward 10 items"], ["first", "the first item"], ["last", "the last item"], ["open", "open the system / play the game"],
     ["back", "leave the library"], ["fav", "star the selection"], ["resume", "the system's last game"],
     ["prevSystem", "the previous system"], ["nextSystem", "the next system"], ["none", "nothing"]];
 

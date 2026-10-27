@@ -133,6 +133,22 @@ class Studio:
         if not ok:
             raise StudioError("button %s/%s: %s" % (view, button, action))
 
+    def hint(self, view, key, label):
+        """Theme > Buttons and hints: + hint under a view (home / library), then its key and label"""
+        self.tab("properties", "theme")
+        ok = self.js("""const p = document.querySelector('#pane-input'); let on = false, add = null;
+            for (const el of p.children) {
+                if (el.classList.contains('mono')) on = el.textContent === arguments[0];
+                else if (on && el.tagName === 'BUTTON' && el.textContent === '+ hint') { add = el; break; }
+            }
+            if (!add) return false; add.click(); return true;""", view)
+        if not ok:
+            raise StudioError("no + hint for " + view)
+        self.wait(40)
+        self.js("""const p = document.querySelector('#pane-input'); let on = false, last = null;
+            for (const el of p.children) { if (el.classList.contains('mono')) on = el.textContent === arguments[0]; else if (on && el.classList.contains('kv')) last = el; else if (on && el.tagName === 'BUTTON') break; }
+            const i = last.querySelectorAll('input'); i[0].value = arguments[1]; i[0].dispatchEvent(new Event('input')); i[1].value = arguments[2]; i[1].dispatchEvent(new Event('input'));""", view, key, label)
+
     def component(self, name):
         """Components tab: a new component (a group); returns its path"""
         self.tab("library", "components")
@@ -208,7 +224,7 @@ class Studio:
             elif k == "smooth":
                 self._smooth(path, v)
             elif k == "with":
-                self._raw(path, {k: v})
+                self._with(path, v)
             elif not self._field("#inspector", k, v):
                 self._raw(path, {k: v})
             # a field that rebuilt the inspector (type, use...) leaves the element still selected
@@ -218,8 +234,18 @@ class Studio:
             raise StudioError("set %s: the theme has %s" % (path, bad))
 
     # ---- the controls ------------------------------------------------------------------------------------------
+    @staticmethod
+    def _color(v):
+        """#rgb / #rgba as #rrggbb(aa), and the words the picker can't show"""
+        if isinstance(v, str) and v in ("transparent", "none"):
+            return "#00000000"
+        if isinstance(v, str) and len(v) in (4, 5) and v[0] == "#" and all(c in "0123456789abcdefABCDEF" for c in v[1:]):
+            return "#" + "".join(c * 2 for c in v[1:])
+        return v
+
     def _field(self, scope, key, value):
         """One field (.field[data-key=key]) inside scope: a plain value with its control, or ƒx and an expression"""
+        value = self._color(value)
         r = self.js(r"""
             const scope = document.querySelector(arguments[0]); const key = arguments[1]; const v = arguments[2];
             let f = Array.from(scope.querySelectorAll('.field')).find((x) => x.dataset.key === key);
@@ -263,7 +289,7 @@ class Studio:
         """shadow / outline: the inspector's sub-fields (x, y, blur, spread, color / width, color)"""
         for k, v in obj.items():
             r = self.js(r"""
-                const lab = Array.from(document.querySelectorAll('#inspector .field > label')).find((l) => l.textContent === arguments[0] || l.textContent === arguments[3]);
+                const lab = Array.from(document.querySelectorAll('#inspector .field > label')).find((l) => l.textContent === arguments[0] || l.textContent === arguments[3] || (arguments[0] === 'with' && l.textContent === 'Component values'));
                 if (!lab) return 'nogroup';
                 let n = lab.parentElement.nextElementSibling;
                 while (n && n.classList.contains('kv')) {
@@ -287,6 +313,14 @@ class Studio:
                 o = dict(cur.get(key) or {})
                 o[k] = v
                 self._raw(self.js("return BananaStudio.state.sel"), {key: o}, count=False)
+
+    def _with(self, path, params):
+        """A component's parameters: Add parameter for each, then its field"""
+        for k, v in params.items():
+            self.js("const i = Array.from(document.querySelectorAll('#inspector input[type=text]')).find((x) => x.placeholder === 'parameter name'); i.value = arguments[0];"
+                    "Array.from(document.querySelectorAll('#inspector button')).find((b) => b.textContent.trim() === 'Add parameter').click();", k)
+            self.wait(40)
+            self._kv("with", {k: v})
 
     def _gradient(self, path, g):
         if "angle" in g:
@@ -414,12 +448,16 @@ class Studio:
         before = set(os.listdir(dl)) if os.path.isdir(dl) else set()
         self.js("document.querySelector('#fileMenuBtn').click(); document.querySelector('#saveBtn').click();")
         self.js("document.querySelector('#exportQuickBtn').click()")
-        got = []
-        for _ in range(100):
+        got, sizes = [], None
+        for _ in range(150):
             now = set(os.listdir(dl)) if os.path.isdir(dl) else set()
             got = [f for f in now - before if not f.endswith(".part")]
-            if len(got) >= 2:
-                break
+            if len(got) >= 2 and not any(f + ".part" in now for f in got):
+                # (a download is done when its size stops changing and isn't 0)
+                cur = [os.path.getsize(os.path.join(dl, f)) for f in got]
+                if all(cur) and cur == sizes:
+                    break
+                sizes = cur
             time.sleep(0.1)
         os.makedirs(folder, exist_ok=True)
         for f in got:

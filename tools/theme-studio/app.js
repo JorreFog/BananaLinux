@@ -346,12 +346,13 @@
         const put = () => { const a = +ai.value; const s = ci.value + (a === 255 ? "" : a.toString(16).padStart(2, "0")); sw.textContent = s; commit(s); };
         ci.oninput = put; ai.oninput = put; ctl.appendChild(ci); ctl.appendChild(ai); ctl.appendChild(sw); return;
       }
-      if (kind === "number") { const i = h("input", { type: "number", value: typeof cur === "number" ? cur : "" }); i.oninput = () => commit(i.value === "" ? 0 : +i.value); ctl.appendChild(i); return; }
+      // (emptied, the property goes: the element is back to its default, as if it had never been set)
+      if (kind === "number") { const i = h("input", { type: "number", value: typeof cur === "number" ? cur : "", placeholder: "default" }); i.oninput = () => commit(i.value === "" ? "" : +i.value); ctl.appendChild(i); return; }
       if (kind === "length") {
         const pct = typeof cur === "string" && cur.slice(-1) === "%";
-        const i = h("input", { type: "number", value: pct ? parseFloat(cur) : (typeof cur === "number" ? cur : "") });
+        const i = h("input", { type: "number", value: pct ? parseFloat(cur) : (typeof cur === "number" ? cur : ""), placeholder: "default" });
         const p = h("button", { type: "button" }, "%"); p.setAttribute("aria-pressed", String(pct));
-        i.oninput = () => commit(pct ? (parseFloat(i.value) || 0) + "%" : (isNaN(parseFloat(i.value)) ? 0 : +i.value));
+        i.oninput = () => commit(i.value === "" ? "" : pct ? (parseFloat(i.value) || 0) + "%" : (isNaN(parseFloat(i.value)) ? 0 : +i.value));
         p.onclick = () => { const n = parseFloat(i.value) || 0; commit(pct ? n : n + "%"); build(); };
         ctl.appendChild(i); ctl.appendChild(p); return;
       }
@@ -457,7 +458,7 @@
       box.innerHTML = "";
       const cur = get();
       if (Array.isArray(cur)) {
-        ["tl", "tr", "br", "bl"].forEach(function (n, i) { const f = h("div"); box.appendChild(f); field(f, "radius " + n, () => cur[i], (nv) => { const a = cur.slice(); a[i] = nv; set(a); markDirty(); }, "length"); });
+        ["tl", "tr", "br", "bl"].forEach(function (n, i) { const f = h("div"); box.appendChild(f); field(f, "radius " + n, () => (Array.isArray(get()) ? get() : cur)[i], (nv) => { const a = (Array.isArray(get()) ? get() : cur).slice(); a[i] = nv; set(a); markDirty(); }, "length"); });
         const one = h("button", { class: "ghost", type: "button" }, "single"); one.onclick = () => { set(12); markDirty(); build(); }; box.appendChild(one);
       } else {
         const f = h("div"); box.appendChild(f); field(f, "radius", () => (typeof get() === "number" || typeof get() === "string" ? get() : ""), (nv) => set(nv), "length");
@@ -623,6 +624,14 @@
     state.sel = parPath.concat(idx); state.open[JSON.stringify(parPath)] = true;
     markDirty(); renderAll(); rerender();
   }
+  // an element made with Add, then turned into a component's use: what Add gave it besides its place (its type,
+  // empty children, the default size and colours) would cover the component's own, so it goes
+  function dropDefaults(el) {
+    const t = typeOf(el), d = makeElement(t);
+    delete el.type;
+    if (Array.isArray(el.children) && !el.children.length) delete el.children;
+    Object.keys(d).forEach((k) => { if (k !== "x" && k !== "y" && k !== "type" && JSON.stringify(el[k]) === JSON.stringify(d[k])) delete el[k]; });
+  }
   function makeElement(type) {
     if (type === "text") return { type: "text", x: 20, y: 20, text: "Text", size: 20, color: "#ffffff" };
     if (type === "image") return { type: "image", x: 20, y: 20, w: 200, h: 200, src: "", fit: "contain" };
@@ -653,7 +662,14 @@
     const cur0 = typeOf(el);
     const sel = h("select"); ["rect", "text", "image", "group", "list"].forEach((t) => { const o = h("option", { value: t }, S.TYPE_LABELS[t] || t); if (cur0 === t) o.setAttribute("selected", ""); sel.appendChild(o); });
     sel.title = "What this element is: a rectangle, some text, a picture, a box of children, or a list of repeats";
-    sel.onchange = () => { el.type = sel.value; markDirty(); renderAll(); rerender(); };
+    sel.onchange = () => {
+      // the old type's leftovers that mean nothing to the new one (a group's empty children, a list's defaults) go
+      const old = typeOf(el), keep = {}; (S.TYPE_PROPS[sel.value] || []).forEach((p) => { keep[p[0]] = true; });
+      const d = makeElement(old);
+      Object.keys(d).forEach((k) => { if (!keep[k] && k !== "type" && k !== "x" && k !== "y" && JSON.stringify(el[k]) === JSON.stringify(d[k])) delete el[k]; });
+      if (Array.isArray(el.children) && !el.children.length && !keep.children) delete el.children;
+      el.type = sel.value; markDirty(); renderAll(); rerender();
+    };
     tctl.appendChild(sel);
     const dup = h("button", { class: "ghost danger", type: "button", title: "Delete this element" }, icon("trash"), "Delete"); dup.onclick = () => { delPath(state.sel); state.sel = null; markDirty(); renderAll(); rerender(); };
     tctl.appendChild(dup); trow.appendChild(tctl); pane.appendChild(trow);
@@ -693,8 +709,19 @@
     // component use
     const comps = Object.keys(state.theme.components || {});
     pane.appendChild(h("h3", { class: "sec" }, "Reusable component"));
-    field(pane, "use", () => el.use, (nv) => { if (nv) el.use = nv; else delete el.use; markDirty(); }, "enum", comps.concat([""]));
-    if (el.use) { kvField(pane, "with", () => el.with, (nv) => { if (nv) el.with = nv; else delete el.with; }, []); rawWitheditor(pane, el); }
+    field(pane, "use", () => el.use, (nv) => {
+      if (nv) { if (!el.use) dropDefaults(el); el.use = nv; } else delete el.use;
+      markDirty(); renderTree(); setTimeout(rerender, 0);
+    }, "enum", comps.concat([""]));
+    if (el.use) {
+      // its parameters (with): a field each, and a row to add one (the component reads it by that name)
+      kvField(pane, "with", () => el.with, (nv) => { if (nv && Object.keys(nv).length) el.with = nv; else delete el.with; }, Object.keys(el.with || {}));
+      const pn = h("input", { type: "text", placeholder: "parameter name" });
+      const pa = h("button", { type: "button", class: "ghost" }, icon("plus"), "Add parameter");
+      pa.onclick = () => { const n = pn.value.trim(); if (!n) return; el.with = Object.assign({}, el.with || {}); if (!(n in el.with)) el.with[n] = ""; markDirty(); rerender(); };
+      pane.appendChild(h("div", { class: "ctl", style: "margin:4px 0 8px" }, pn, pa));
+      rawWitheditor(pane, el);
+    }
     rawField(pane, () => getPath(state.sel));
   }
   function rawWitheditor(pane, el) {
