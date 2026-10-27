@@ -93,7 +93,7 @@
       ["fill", "color"], ["gradient", "object"], ["radius", "length"], ["border", "any"], ["borderColor", "color"], ["shadow", "object"]],
     list: [["source", "enum", ["systems", "games", "hints", "range"]], ["direction", "enum", ["row", "column", "grid", "free"]],
       ["columns", "number"], ["itemW", "number"], ["itemH", "number"], ["gap", "number"], ["stepX", "number"], ["stepY", "number"],
-      ["scrollMode", "enum", ["center", "edge", "none"]], ["loop", "bool"], ["flow", "bool"], ["range", "number"],
+      ["scrollMode", "enum", ["center", "edge", "none"]], ["loop", "bool"], ["flow", "bool"], ["range", "number"], ["count", "number"],
       ["selectedOnTop", "bool"], ["item", "tree"]],
   };
   const TYPE_LABELS = { rect: "Rectangle", text: "Text", image: "Picture", group: "Group", list: "List" };

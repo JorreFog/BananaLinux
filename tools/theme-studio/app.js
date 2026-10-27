@@ -280,7 +280,7 @@
     const lab = labelNode || h("label", null, (S.FIELD_LABELS && S.FIELD_LABELS[label]) || label);
     const tip = S.FIELD_TIPS && S.FIELD_TIPS[label];
     if (!labelNode && tip) lab.title = tip;
-    const row = h("div", { class: "field" }); row.appendChild(lab);
+    const row = h("div", { class: "field" }); row.appendChild(lab); row.dataset.key = label;
     const ctl = h("div", { class: "ctl" }); row.appendChild(ctl); parent.appendChild(row);
     const chip = h("span", { class: "res" });
     const opts = () => (typeof options === "function" ? options(Object.keys(state.theme.fonts || {})) : (options || []));
@@ -355,7 +355,9 @@
         p.onclick = () => { const n = parseFloat(i.value) || 0; commit(pct ? n : n + "%"); build(); };
         ctl.appendChild(i); ctl.appendChild(p); return;
       }
-      const i = h("input", { type: "text", spellcheck: "false", value: litText(cur) }); i.oninput = () => commit(i.value); ctl.appendChild(i);
+      // (a field that takes anything: a number typed is a number, not the text "8")
+      const i = h("input", { type: "text", spellcheck: "false", value: litText(cur) });
+      i.oninput = () => commit(kind === "any" && /^-?(\d+\.?\d*|\.\d+)$/.test(i.value.trim()) ? +i.value.trim() : i.value); ctl.appendChild(i);
     }
     build();
     return { refresh: build };
@@ -387,8 +389,10 @@
       const arr = Array.isArray(get()) ? get() : [];
       arr.forEach(function (s, i) {
         const r = h("div", { class: "kv" });
-        const i2 = h("input", { type: "text", spellcheck: "false", value: s }); i2.oninput = () => { const a = arr.slice(); a[i] = i2.value; set(a); markDirty(); };
-        const rm = h("button", { class: "ghost danger", type: "button" }, "✕"); rm.onclick = () => { const a = arr.slice(); a.splice(i, 1); set(a); markDirty(); build(); };
+        // (each edit starts from the stops as they are now: another stop may have changed since this was drawn)
+        const now = () => (Array.isArray(get()) ? get().slice() : []);
+        const i2 = h("input", { type: "text", spellcheck: "false", value: s }); i2.oninput = () => { const a = now(); a[i] = i2.value; set(a); markDirty(); };
+        const rm = h("button", { class: "ghost danger", type: "button", title: "Remove this stop" }, "✕"); rm.onclick = () => { const a = now(); a.splice(i, 1); set(a); markDirty(); build(); };
         r.appendChild(i2); r.appendChild(h("span")); r.appendChild(rm); box.appendChild(r);
       });
       const add = h("button", { class: "ghost", type: "button" }, "+ stop"); add.onclick = () => { set((Array.isArray(get()) ? get() : []).concat(["#000000"])); markDirty(); build(); };
@@ -397,7 +401,7 @@
     build(); return { refresh: build };
   }
   function statesField(parent, get, set) {
-    const box = h("div"); parent.appendChild(box);
+    const box = h("div", { class: "states-box" }); parent.appendChild(box);
     function build() {
       box.innerHTML = "";
       const arr = Array.isArray(get()) ? get() : [];
@@ -427,7 +431,7 @@
     build(); return { refresh: build };
   }
   function smoothField(parent, get, set) {
-    const box = h("div"); parent.appendChild(box);
+    const box = h("div", { class: "smooth-box" }); parent.appendChild(box);
     function build() {
       box.innerHTML = "";
       const cur = get();
@@ -526,6 +530,13 @@
       if (!arr.length) pane.appendChild(h("div", { class: "tree-empty" }, emptyNote(state.view, scr)));
       arr.forEach((el, i) => pane.appendChild(node(["screens", state.view, scr, i], el, i, arr)));
     });
+    // the components, so their insides can be edited like any element's (every use follows)
+    const comps = state.theme.components && typeof state.theme.components === "object" ? Object.keys(state.theme.components) : [];
+    if (comps.length) {
+      const head = h("div", { class: "screenhead" }, h("span", { class: "name", title: "Reusable elements: change one here and every use of it follows" }, "Components"));
+      pane.appendChild(head);
+      comps.forEach((n) => { const c = state.theme.components[n]; if (c && typeof c === "object" && !Array.isArray(c)) pane.appendChild(node(["components", n], c, 0, null)); });
+    }
   }
   // what the engine draws on a screen with no elements: the next view's (launch -> library -> home), else nothing
   function emptyNote(view, scr) {
@@ -538,7 +549,7 @@
   }
   function node(path, el, index, arr) {
     const wrap = h("div", { class: "node" });
-    const row = h("div", { class: "row" + (samePath(state.sel, path) ? " sel" : "") });
+    const row = h("div", { class: "row" + (samePath(state.sel, path) ? " sel" : "") }); row.dataset.path = JSON.stringify(path);
     const kids = hasKids(el);
     const openKey = JSON.stringify(path);
     const caret = h("span", { class: "caret" + (kids ? "" : " leaf") }, icon(state.open[openKey] === false ? "chevron" : "chevronDown"));
@@ -546,7 +557,7 @@
     row.appendChild(caret);
     const tname = el.use ? "component" : typeOf(el);
     row.appendChild(h("span", { class: "t" }, icon(tname === "group" && el.layout === "row" ? "row" : tname === "group" && el.layout === "column" ? "column" : tname),
-      el.use ? el.use : (el.id ? String(el.id) : (S.TYPE_LABELS && S.TYPE_LABELS[typeOf(el)]) || typeOf(el))));
+      path[0] === "components" && path.length === 2 ? String(path[1]) : el.use ? el.use : (el.id ? String(el.id) : (S.TYPE_LABELS && S.TYPE_LABELS[typeOf(el)]) || typeOf(el))));
     const lbl = h("span", { class: "lbl" }, el.use ? "component" : labelOf(el)); lbl.title = labelOf(el); row.appendChild(lbl);
     const acts = h("div", { class: "acts" });
     const mk = (ic, tip, fn, danger) => { const b = h("button", { class: "ghost" + (danger ? " danger" : ""), type: "button", title: tip, "aria-label": tip }, icon(ic)); b.onclick = (e) => { e.stopPropagation(); fn(b); }; return b; };
@@ -587,8 +598,10 @@
         kidsBox.appendChild(addc);
       }
     }
-    if (!kids && el.type === "group" && !Array.isArray(el.children)) {
-      const addc = h("button", { class: "ghost add-child", type: "button" }, icon("plus"), "Add inside"); addc.onclick = () => { el.children = []; markDirty(); renderAll(); rerender(); };
+    if (!kids && (typeOf(el) === "group" || Array.isArray(el.children)) && !el.use) {
+      // an empty group (a new list's item too): something to put in it
+      const addc = h("button", { class: "ghost add-child", type: "button", title: "Add an element inside this group" }, icon("plus"), "Add inside");
+      addc.onclick = (e) => { e.stopPropagation(); if (!Array.isArray(el.children)) el.children = []; addTo(el.children, path.concat("children"), undefined, addc); };
       kidsBox.appendChild(addc);
     }
     if (kidsBox.childNodes.length) wrap.appendChild(kidsBox);
@@ -644,6 +657,8 @@
     tctl.appendChild(sel);
     const dup = h("button", { class: "ghost danger", type: "button", title: "Delete this element" }, icon("trash"), "Delete"); dup.onclick = () => { delPath(state.sel); state.sel = null; markDirty(); renderAll(); rerender(); };
     tctl.appendChild(dup); trow.appendChild(tctl); pane.appendChild(trow);
+    field(pane, "id", () => el.id, (nv) => { if (nv === "" || nv === undefined) delete el.id; else el.id = nv; markDirty(); renderTree(); }, "text", null,
+      h("label", { title: "A name of your own for it, shown in Layers (the menu ignores it)" }, "Name"));
 
     pane.appendChild(h("h3", { class: "sec" }, "Position, size and visibility"));
     S.COMMON.forEach((p) => field(pane, p[0], () => el[p[0]], (nv) => { if (nv === "" || nv === undefined) delete el[p[0]]; else el[p[0]] = nv; markDirty(); }, p[1], p[2]));
@@ -668,6 +683,13 @@
       if (kind === "tree" || kind === "object") return;
       field(pane, k, () => el[k], (nv) => { if (nv === "" || nv === undefined) delete el[k]; else el[k] = nv; markDirty(); }, kind, p[2]);
     });
+    // how it changes (states) and eases (smooth): every type has them
+    pane.appendChild(h("h3", { class: "sec" }, "Changes when…"));
+    pane.appendChild(h("p", { class: "muted", style: "font-size:12px" }, "Other values while a condition holds, e.g. when =sel (the selected item of a list) it is bigger and brighter."));
+    statesField(pane, () => el.states, (a) => { if (a && a.length) el.states = a; else delete el.states; markDirty(); });
+    pane.appendChild(h("h3", { class: "sec" }, "Ease smoothly"));
+    smoothField(pane, () => el.smooth, (o) => { if (o === undefined || o === "") delete el.smooth; else el.smooth = o; markDirty(); });
+
     // component use
     const comps = Object.keys(state.theme.components || {});
     pane.appendChild(h("h3", { class: "sec" }, "Reusable component"));
@@ -971,6 +993,8 @@
       return d;
     };
     const add = (name, desc, t, fn) => { const b = h("button", { type: "button", class: "tpl" }, thumb(t), h("b", null, name), h("span", null, desc)); b.onclick = fn; grid.appendChild(b); };
+    const BLANK = { name: "My theme", author: "you", base: "dark", font: "inter", screens: { home: { top: [], bottom: [] }, library: { top: [], bottom: [] } } };
+    add("Blank", "Nothing on the screens: build it all yourself from the Add tab.", { name: "Blank" }, () => { if (guardUnsaved("Start a new theme")) { box.remove(); loadTheme(clone(BLANK), null, "a blank theme: add elements from the Add tab"); } });
     add("Simple", "A plain starting point: a carousel of systems and a list of games.", STARTER, () => { if (guardUnsaved("Start a new theme")) { box.remove(); loadTheme(clone(STARTER), null, "a new theme: give it a name on the Theme tab"); } });
     (state.templates || []).forEach(function (t) {
       let doc = null; try { doc = looseParse(t.json); } catch (e) { /* listed anyway */ }
