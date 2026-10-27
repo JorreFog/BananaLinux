@@ -15,3 +15,8 @@ CONFIG_SQUASHFS_LZ4=y
 # CONFIG_FRAMEBUFFER_CONSOLE is not set
 # CONFIG_LOGO is not set
 CONFIG_INPUT_EVDEV=y
+# File sharing (Settings > Network > File sharing): the kernel's own SMB3 server (ksmbd), loaded only when sharing
+# is switched on (usr/libexec/banana/share). The ROCKNIX base config this image imports has it off -- ROCKNIX uses
+# userspace Samba -- so without this the setting turns "on" and the share silently never starts (modprobe ksmbd
+# fails). The crypto and NLS pieces it selects are already on in linux-rocknix.config.
+CONFIG_SMB_SERVER=m

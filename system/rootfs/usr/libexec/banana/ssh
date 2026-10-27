@@ -2,6 +2,8 @@
 # SSH (dropbear), for working on Banana itself: off by default (Settings > System > SSH). Root, with the public keys
 # in banana/ssh/authorized_keys on the card and no passwords. The keys are copied to /run (dropbear wants them
 # readable by root alone, and exFAT can't say so), where /root/.ssh points; the host key is made once per card.
+# A key baked into the image at /etc/banana/ssh/authorized_keys (a deploy/CI key, kept out of git) is added too, so
+# a freshly flashed card can be reached over the network before the card has a key of its own.
 #   ssh up | down
 D=/data/banana/ssh
 R=/run/banana/ssh
@@ -11,7 +13,8 @@ up)
     mkdir -p $D $R
     chmod 700 $R
     [ -f $D/authorized_keys ] || printf '# public keys (one per line) that may log in as root over SSH\n' > $D/authorized_keys
-    cp $D/authorized_keys $R/authorized_keys
+    cat $D/authorized_keys > $R/authorized_keys
+    [ -s /etc/banana/ssh/authorized_keys ] && cat /etc/banana/ssh/authorized_keys >> $R/authorized_keys
     chmod 600 $R/authorized_keys
     [ -s $D/host_key_ed25519 ] || dropbearkey -t ed25519 -f $D/host_key_ed25519 >/dev/null 2>&1 || exit 1
     dropbear -s -r $D/host_key_ed25519 -P /run/banana/dropbear.pid
