@@ -461,7 +461,24 @@ static bool launchPath(Host& lib, const std::string& want)
 // down, naming the game in banana/resume-boot ("rom=", "emulator=" lines). It starts again once, at this boot: the
 // marker goes first (a game that fails at once isn't started at every boot), and once (/run/banana/resume-once) names
 // it for its launcher, which loads the resume state then, Quick resume on or off. (once null: the headless test.)
-static void resumeAfterPoweroff(Host& lib, const std::string& data, const char* once)
+// A game on the second SD card isn't in the library yet at boot (bananad's sd2 mounts it beside the menu's start: QA
+// #8, back on the home row): it is kept in later and tried again after each new read of the games, for 30 s or until
+// a press (the menu is someone's by then).
+struct ResumeLater
+{
+	std::string rom, emu;
+	double until = 0;	// (0: nothing waiting)
+};
+
+static bool resumeLaunch(Host& lib, const std::string& rom, const std::string& emu, const char* once)
+{
+	if (once) std::ofstream(once) << rom << "\n";
+	if (launchPath(lib, rom)) { logf("resume after power-off: %s (%s)", rom.c_str(), emu.c_str()); return true; }
+	if (once) unlink(once);
+	return false;
+}
+
+static void resumeAfterPoweroff(Host& lib, const std::string& data, const char* once, ResumeLater* later = nullptr, double now = 0)
 {
 	const std::string path = data + "/resume-boot";
 	std::string rom, emu, ln;
@@ -476,14 +493,13 @@ static void resumeAfterPoweroff(Host& lib, const std::string& data, const char* 
 	}
 	unlink(path.c_str());
 	sync();
-	if (rom.empty()) return;
-	if (once) std::ofstream(once) << rom << "\n";
-	if (launchPath(lib, rom)) logf("resume after power-off: %s (%s)", rom.c_str(), emu.c_str());
-	else
+	if (rom.empty() || resumeLaunch(lib, rom, emu, once)) return;
+	if (later && rom.compare(0, 9, "/run/sd2/") == 0)
 	{
-		logf("resume after power-off: no game at %s", rom.c_str());
-		if (once) unlink(once);
+		*later = { rom, emu, now + 30000 };
+		logf("resume after power-off: %s is on the second SD card, waiting for its games", rom.c_str());
 	}
+	else logf("resume after power-off: no game at %s", rom.c_str());
 }
 
 // ---- headless: the same UI rendered to PNGs, for tests and screenshots ------------------------------------------
@@ -587,7 +603,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		else if (op == "upstate") { settings.update(now); logf("upstate: %s", settings.updateState().c_str()); }
 		// type <text>: typed on the open keyboard at once (the rest of the command, spaces too; never logged)
 		else if (op == "type") { std::string t; std::getline(cs >> std::ws, t); settings.typeText(t); }
-		else if (op == "resumeboot") resumeAfterPoweroff(lib, o.data, nullptr);	// as at boot after Power off after sleeping
+		else if (op == "resumeboot") { ResumeLater later; resumeAfterPoweroff(lib, o.data, nullptr, &later, now); }	// as at boot after Power off after sleeping
 		else if (op == "battery")
 		{
 			// battery <percent> [charging]: what /sys would say from now on
@@ -1843,11 +1859,17 @@ int main(int argc, char** argv)
 		dirty = true;
 	};
 
+	ResumeLater resumeLater;	// (Power off after sleeping's game on the second card: resumeAfterPoweroff)
 	auto handle = [&](const InputEvent& ev)
 	{
 		// (the bottom screen's idle dim is a game-panel thing only, so its touch handling is in gamePanel's own sink)
 		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) { boost.frame(nowMs()); fstat.press(ev.t); }	// what it starts drawn fast
 		if ((ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) && low.hide(nowMs())) dirty = true;
+		if ((ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) && resumeLater.until > 0)
+		{
+			logf("resume after power-off: a press, %s not waited for any more", resumeLater.rom.c_str());
+			resumeLater.until = 0;
+		}
 		if (settingsView.isOpen())
 		{
 			std::lock_guard<std::mutex> l(worker.uiLock);
@@ -2274,7 +2296,7 @@ int main(int argc, char** argv)
 		close(launchWatch);
 		launchWatch = -1;
 	}
-	resumeAfterPoweroff(lib, o.data, "/run/banana/resume-once");	// (its game starts at the loop's first turn)
+	resumeAfterPoweroff(lib, o.data, "/run/banana/resume-once", &resumeLater, nowMs());	// (its game starts at the loop's first turn)
 	while (!quit)
 	{
 		if (settingsView.takeSetupFinished() && disp.isOpen())
@@ -2363,7 +2385,14 @@ int main(int argc, char** argv)
 				roms.watch(lib.watchDirs());
 				logf("the games on the card changed: %d systems", lib.systemCount());
 				dirty = true;
+				if (resumeLater.until > 0 && resumeLaunch(lib, resumeLater.rom, resumeLater.emu, "/run/banana/resume-once"))
+					resumeLater.until = 0;
 			}
+		}
+		if (resumeLater.until > 0 && now >= resumeLater.until)
+		{
+			logf("resume after power-off: %s didn't come in 30 s", resumeLater.rom.c_str());
+			resumeLater.until = 0;
 		}
 		if (batteryDue)
 		{
