@@ -259,6 +259,7 @@
 		compatible = "pwm-leds";
 
 		green_led: led-0 {
+			retain-state-suspended;	/* lit while asleep (2-linux-0029; bananad sets it) */
 			color = <LED_COLOR_ID_GREEN>;
 			default-state = "on";
 			function = LED_FUNCTION_POWER;
@@ -280,6 +281,7 @@
 		pinctrl-names = "default";
 
 		red_led: led-2 {
+			retain-state-suspended;	/* lit while asleep (2-linux-0029; bananad sets it) */
 			color = <LED_COLOR_ID_RED>;
 			default-state = "off";
 			function = LED_FUNCTION_STATUS;

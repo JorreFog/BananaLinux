@@ -1,0 +1,170 @@
+#!/bin/sh
+# The boot's hardware check: each part the handheld needs, found or not, and when (seconds since the kernel started).
+#   health early   rcS, before the menu: what's built into the kernel (the buttons, the panels and their backlights,
+#                  the sound, the LEDs, the battery), waited for up to 2 s; bananad is ready by then (rcS waited)
+#   health late    in the background: what comes later (the touchscreen's driver probes asynchronously, the Wi-Fi's
+#                  and the GPU's modules load after the menu's first frame, the clock), up to 20 s; then the report
+#                  goes to the card (banana/logs/health.txt)
+# /run/banana/health has a line per part: OK (there at the first look), LATE (it came while waited for) or MISSING.
+# The parts without which the handheld can't be used as it should (a panel, the buttons, the touchscreen, the sound,
+# the Wi-Fi, the GPU) and that are missing go in /run/banana/health-notice, which the menu shows. Nothing here holds
+# the boot back for longer than the waits: a broken part shouldn't keep the rest from working.
+#
+# Input devices are found by what they can send, not by name: /proc/bus/input/devices' bitmaps (KEY 116, the power
+# key; SW 0, the lid; ABS 53, a multitouch position). HEALTH_ROOT puts another tree in front of /proc, /sys, /dev
+# and /run (the test's made-up one); HEALTH_EARLY_WAIT and HEALTH_LATE_WAIT shorten the waits (seconds).
+R=${HEALTH_ROOT:-}
+RUN=$R/run/banana
+OUT=$RUN/health
+NOTICE=$RUN/health-notice
+
+board=$(cat "$R/etc/banana/board" 2>/dev/null || echo rgds-plus)
+# QEMU's "virt" machine (tools/qemu-boot.sh): its own short list
+grep -qs 'linux,dummy-virt' "$R/proc/device-tree/compatible" && board=qemu
+
+since_boot() { cut -d' ' -f1 "$R/proc/uptime"; }
+
+# has <KEY|SW|ABS|...> <bit>: some input device can send it. A "B:" line's words are 64 bits in hex, the highest
+# first; the shell's arithmetic is 64-bit (BusyBox's, dash's), and a shift and a mask read the bit (an awk version
+# read nothing under BusyBox's awk: every button "missing")
+#
+# Read through cat, never with the shell's read straight from the file: BusyBox's read polls its descriptor first,
+# and the kernel's /proc/bus/input/devices only polls ready when an input device comes or goes, so a read from it
+# waited for ever, and the boot with it (dash and macOS's sh don't poll; the test's made-up file is a plain one).
+has() {
+    t=$1 n=$2
+    cat "$R/proc/bus/input/devices" 2>/dev/null | {
+        while read -r tag rest; do
+            [ "$tag" = B: ] || continue
+            case $rest in "$t="*) ;; *) continue ;; esac
+            set -- ${rest#*=}
+            i=$(($# - n / 64))
+            [ $i -ge 1 ] || continue
+            eval "w=\${$i}"
+            [ $(((0x$w >> (n % 64)) & 1)) = 1 ] && exit 0
+        done
+        exit 1
+    }
+}
+count_connected() {   # the panels' connectors, but the writeback one and any the kernel says are disconnected
+    n=0                 # (early in the boot a panel can read "unknown", QEMU's second output "disconnected" until set)
+    for s in "$R"/sys/class/drm/card*-*/status; do
+        [ -f "$s" ] || continue
+        case $s in *Writeback*) continue ;; esac
+        [ "$(cat "$s" 2>/dev/null)" != disconnected ] && n=$((n + 1))
+    done
+    echo $n
+}
+count() { n=0; for f in "$@"; do [ -e "$f" ] && n=$((n + 1)); done; echo $n; }
+led() { [ -n "$(ls -d "$R"/sys/class/leds/*:"$1" 2>/dev/null)" ]; }
+sound() { grep -qs "$1" "$R/proc/asound/cards"; }
+battery() {
+    for t in "$R"/sys/class/power_supply/*/type; do
+        [ "$(cat "$t" 2>/dev/null)" = Battery ] || continue
+        c=$(cat "${t%/type}/capacity" 2>/dev/null)
+        [ -n "$c" ] && [ "$c" -ge 0 ] 2>/dev/null && return 0
+    done
+    return 1
+}
+
+# test <id>: is the part there now (the checks, by board)
+test_part() {
+    case $1 in
+    power)       has KEY 116 ;;
+    volume)      has KEY 115 && has KEY 114 ;;
+    gamepad)     has KEY 304 ;;                  # BTN_SOUTH (A)
+    lid)         has SW 0 ;;
+    screens)     [ "$(count_connected)" -ge 2 ] ;;
+    backlights)  [ "$(count "$R"/sys/class/backlight/*)" -ge 2 ] ;;
+    sound)       sound rk817 && { [ $board != rgds-plus ] || sound aw88166; } ;;
+    leds)        led power && led charging && led status ;;
+    battery)     battery ;;
+    storage)     [ ! -e "$RUN/data-failed" ] && touch "$R/data/banana/.health" 2>/dev/null && rm -f "$R/data/banana/.health" ;;
+    bananad)     [ -e "$RUN/bananad-ready" ] ;;
+    keys)        has KEY 28 ;;                    # QEMU's keyboard (Enter is A)
+    touch)       has ABS 53 ;;                    # ABS_MT_POSITION_X
+    wifi)        [ -e "$R/sys/class/net/wlan0" ] ;;
+    gpu)         [ -e "$R/dev/dri/renderD128" ] ;;
+    clock)       [ "$(date +%Y)" -ge 2025 ] ;;
+    esac
+}
+label() {
+    case $1 in
+    power) echo "power button" ;; volume) echo "volume buttons" ;; gamepad) echo "gamepad buttons" ;;
+    lid) echo "lid switch" ;; screens) echo "both screens" ;; backlights) echo "screen backlights" ;;
+    sound) echo "sound" ;; leds) echo "LEDs" ;; battery) echo "battery gauge" ;; storage) echo "data partition" ;;
+    bananad) echo "buttons and sound service" ;; keys) echo "keyboard" ;; touch) echo "touchscreen" ;;
+    wifi) echo "Wi-Fi" ;; gpu) echo "GPU (games' 3D)" ;; clock) echo "clock" ;;
+    esac
+}
+# the parts that go in the menu's notice when they're missing (the rest only in the report)
+# (not the panels or their backlights: with them missing there's nowhere to show a notice, and a panel reading
+# "unknown" this early mustn't bring a "Not found: both screens" at every boot)
+matters() { case $1 in power|volume|gamepad|sound|bananad|keys|touch|wifi|gpu) return 0 ;; esac; return 1; }
+
+case $board in
+qemu) EARLY="keys storage bananad"; LATE="" ;;    # (the QEMU test checks both panels opened itself)
+*)    EARLY="power volume gamepad lid screens backlights sound leds battery storage bananad"; LATE="touch wifi gpu clock" ;;
+esac
+
+# check <seconds> <parts...>: each one's line in the report, waiting up to that long for the missing ones
+check() {
+    tries=$(awk -v w="$1" 'BEGIN { print int(w * 10 + 0.5) }'); shift    # (0.1 s steps: no clock to trust under HEALTH_ROOT)
+    left=$*; first=1
+    while :; do
+        still=
+        for p in $left; do
+            if test_part $p; then
+                [ $first = 1 ] && s=OK || s=LATE
+                printf '%-8s %-26s %6.2f s\n' $s "$(label $p)" "$(since_boot)" >> "$OUT"
+            else
+                still="$still $p"
+            fi
+        done
+        left=$still; first=0
+        [ -z "$left" ] && break
+        # waited for only while a part that matters is missing (the boot isn't held for a LED or the lid)
+        wanted=; for p in $left; do matters $p && wanted=1; done
+        [ -z "$wanted" ] && break
+        [ $tries -le 0 ] && break
+        tries=$((tries - 1))
+        sleep 0.1
+    done
+    for p in $left; do
+        printf '%-8s %-26s %6s\n' MISSING "$(label $p)" "-" >> "$OUT"
+        matters $p && echo "$(label $p)" >> "$NOTICE.list"
+    done
+}
+
+# the notice the menu shows: the missing parts that matter, on one line (written whole: the menu watches the folder)
+notice() {
+    [ -s "$NOTICE.list" ] || return 0
+    awk 'NR > 1 { printf ", " } { printf "%s", $0 } END { print "" }' "$NOTICE.list" > "$NOTICE.new" && mv -f "$NOTICE.new" "$NOTICE"
+}
+
+say() { grep -qs 'banana\.console=1' "$R/proc/cmdline" && echo "health: $*" > "$R/dev/console"; return 0; }
+# the end: a line on the console (the QEMU test reads it) and the report on the card
+report() {
+    missing=$(awk '$1 == "MISSING" { $1 = ""; $NF = ""; sub(/^ +/, ""); sub(/ +$/, ""); printf "%s%s", (n++ ? ", " : ""), $0 }' "$OUT")
+    [ -n "$missing" ] && say "missing $missing ($board)" || say "everything found ($board)"
+    { date '+%Y-%m-%d %H:%M:%S'; cat "$OUT"; } > "$R/data/banana/logs/health.txt" 2>/dev/null
+}
+
+case $1 in
+early)
+    mkdir -p "$RUN"; rm -f "$OUT" "$NOTICE" "$NOTICE.list"
+    echo "# hardware check ($board): OK there at the first look, LATE came while waited for; seconds since the kernel" > "$OUT"
+    check ${HEALTH_EARLY_WAIT:-2} $EARLY
+    notice
+    [ -z "$LATE" ] && report     # (nothing comes later on this board)
+    ;;
+late)
+    [ -n "$LATE" ] || exit 0
+    check ${HEALTH_LATE_WAIT:-20} $LATE
+    notice
+    report
+    ;;
+*)
+    echo "usage: health early|late" >&2; exit 2 ;;
+esac
+exit 0

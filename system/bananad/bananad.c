@@ -40,6 +40,7 @@
 #include <sys/inotify.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <linux/netlink.h>
 #include <sys/reboot.h>
 #include <sys/stat.h>
@@ -54,23 +55,35 @@ static struct {
 	char mixer[64];			/* ALSA simple control the volume keys change; "auto": the playing card's own */
 	int volume_step;		/* percent */
 	int brightness_step;	/* percent of max */
-	int autosleep_min;		/* idle minutes in the menu before sleeping; 0 = never */
+	double autosleep_min;	/* idle minutes before sleeping (0: never); in the menu, or everywhere (idle_in_games) */
 	int lid_sleep;			/* closing the lid sleeps */
 	int power_long_ms;		/* holding power this long shuts down */
 	int battery_off_pct;	/* at or under this, discharging: shut down */
 	char mem_sleep[16];		/* deep (suspend to RAM) or s2idle */
 	int led_brightness;		/* 0..255; 0: the LEDs stay off */
 	int led_low, led_critical;	/* percent: red, blinking red */
+	int led_sleep;			/* the upper LED lit while asleep (the device tree's retain-state-suspended keeps it) */
 	int fast_resume;		/* devices resume in parallel (/sys/power/pm_async) */
 	double sleep_check_hours;	/* asleep: wake this often to look at the battery (0: never) */
 	int sleep_poweroff_pct;	/* found at or under this while asleep: shut down cleanly */
-	double dim_min;			/* idle minutes in the menu before the panels dim (0: never) */
+	double dim_min;			/* idle minutes before the panels dim (0: never) */
 	int dim_pct;			/* dimmed to this percent of their brightness */
-} cfg = { "auto", 5, 8, 10, 1, 2000, 3, "deep", 128, 20, 5, 1, 4, 5, 2, 30 };
+	double poweroff_min;	/* asleep this long (any sleep), or idle this long when it never sleeps: off (0: never) */
+	int idle_in_games;		/* the idle timers (dim, sleep, off) in games too, not only in the menu */
+	int recorder;			/* the flight recorder (below): everything bananad sees, written to banana/logs/sessions */
+} cfg = { "auto", 5, 8, 10, 1, 2000, 3, "deep", 128, 20, 5, 1, 1, 4, 5, 2, 30, 60, 0, 0 };
 
 static int devfd[MAXDEV], ndev;
 static void leds_update(void);
+extern int leds_last;	/* (leds_update's, below) */
+static int leds_asleep;	/* asleep: the upper LED as led_sleep says (suspend_now, until the wake) */
+/* the sleep test's "kernel": a write of "mem" returns once a byte comes here (BANANAD_TEST_WAKE). A FIFO at
+ * /sys/power/state alone returned at once, and a sleep straight after a wake raced the test's reader. While it
+ * waits, <that path>.asleep is there: the test's "asleep", the same on every kernel (a wait channel's name isn't) */
+static int test_wake = -1;
+static char test_asleep[300];
 static void audio_route(void);
+static pid_t sound_child;	/* (the sound's setup at start, below) */
 static void undim(void);
 static void find_bottom_bl(void);
 static char bottom_bl[64];	/* the bottom panel's backlight name; banana-ui's idle dim owns it while it runs */
@@ -78,9 +91,12 @@ static int headphones;
 static int fn_held, power_down, lid_closed;
 static int lid_retry_off;	/* a suspend failed with the lid shut: no retry until it opens */
 static double power_since, last_input, ignore_power_until;
+static int sel_down, sel_marked;	/* Select held: the recorder's marker at 2 s (once a hold) */
+static double sel_since;
 
-static volatile sig_atomic_t reload;
+static volatile sig_atomic_t reload, stopping;
 static void on_hup(int sig) { (void)sig; reload = 1; }
+static void on_term(int sig) { (void)sig; stopping = 1; }	/* rcK's: the recording written out, then gone */
 
 static double mono(void)
 {
@@ -120,7 +136,7 @@ static void load_conf(const char *path)
 		if (!strcmp(k, "mixer")) snprintf(cfg.mixer, sizeof cfg.mixer, "%s", v);
 		else if (!strcmp(k, "volume_step")) cfg.volume_step = atoi(v);
 		else if (!strcmp(k, "brightness_step")) cfg.brightness_step = atoi(v);
-		else if (!strcmp(k, "autosleep_minutes")) cfg.autosleep_min = atoi(v);
+		else if (!strcmp(k, "autosleep_minutes")) cfg.autosleep_min = atof(v);
 		else if (!strcmp(k, "lid_sleep")) cfg.lid_sleep = !strcmp(v, "yes") || !strcmp(v, "1");
 		else if (!strcmp(k, "power_long_ms")) cfg.power_long_ms = atoi(v);
 		else if (!strcmp(k, "battery_shutdown_percent")) cfg.battery_off_pct = atoi(v);
@@ -128,11 +144,15 @@ static void load_conf(const char *path)
 		else if (!strcmp(k, "led_brightness")) cfg.led_brightness = atoi(v);
 		else if (!strcmp(k, "led_low_percent")) cfg.led_low = atoi(v);
 		else if (!strcmp(k, "led_critical_percent")) cfg.led_critical = atoi(v);
+		else if (!strcmp(k, "led_sleep")) cfg.led_sleep = !strcmp(v, "on") || !strcmp(v, "yes") || !strcmp(v, "1");
 		else if (!strcmp(k, "fast_resume")) cfg.fast_resume = !strcmp(v, "yes") || !strcmp(v, "1");
 		else if (!strcmp(k, "sleep_check_hours")) cfg.sleep_check_hours = atof(v);
 		else if (!strcmp(k, "sleep_poweroff_percent")) cfg.sleep_poweroff_pct = atoi(v);
 		else if (!strcmp(k, "dim_minutes")) cfg.dim_min = atof(v);
 		else if (!strcmp(k, "dim_percent")) cfg.dim_pct = atoi(v);
+		else if (!strcmp(k, "poweroff_minutes")) cfg.poweroff_min = atof(v);
+		else if (!strcmp(k, "idle_in_games")) cfg.idle_in_games = !strcmp(v, "yes") || !strcmp(v, "1");
+		else if (!strcmp(k, "recorder")) cfg.recorder = !strcmp(v, "on") || !strcmp(v, "yes") || !strcmp(v, "1");
 	}
 	fclose(f);
 }
@@ -309,6 +329,138 @@ static void shutdown_now(const char *why);
 static int battery_discharging_pct(void);
 static int sleep_fallback;		/* 0 as configured; 1 devices one at a time; 2 also s2idle (a suspend failed) */
 
+/* ---- the flight recorder (Settings > System > Developer: recorder = on) -------------------------------------------
+ * What bananad sees, a line each, to find later what happened: buttons and touches, the lid and the jack, the
+ * backlights and the LEDs, volume and brightness, sleep and wake, shutdown, the battery and the charger, Wi-Fi.
+ *   HH:MM:SS.mmm  <seconds since boot, sleep counted: a gap is a sleep>  <source>  <what>
+ * Lines wait in memory and go to the card every 30 s, before a sleep or a shutdown, and when the buffer fills: a file
+ * a session (banana/logs/sessions/session-<date>-<time>.txt), a new one past 8 MB, the newest 10 kept. While it
+ * records /run/banana/recording is there (banana-ui's dot). Select held 2 s puts a marker in (rec_mark, below). */
+#define REC_DIR "/data/banana/logs/sessions"
+#define REC_KEEP 10
+static struct { int on; char path[192]; char buf[32768]; size_t len; double flush_at; long long written; } recst;	/* (the recorder's state; rec() writes a line) */
+
+static void rec_start(void);
+static void rec_flush(void)
+{
+	if (!recst.len) return;
+	FILE *f = fopen(recst.path, "a");
+	if (f) {
+		fwrite(recst.buf, 1, recst.len, f);
+		fflush(f);
+		fsync(fileno(f));
+		fclose(f);
+		recst.written += (long long)recst.len;
+	}
+	recst.len = 0;
+	if (recst.written > 8LL * 1024 * 1024) rec_start();	/* (a new file past 8 MB) */
+}
+
+/* a line, at monotonic time t (a touch's own time; now for the rest) */
+static void rec_vat(double t, const char *src, const char *fmt, va_list ap)
+{
+	if (!recst.on) return;
+	char what[256], line[320];
+	vsnprintf(what, sizeof what, fmt, ap);
+	struct timespec wall, boot;
+	clock_gettime(CLOCK_REALTIME, &wall);
+	clock_gettime(CLOCK_BOOTTIME, &boot);
+	double ago = mono() - t;
+	if (ago < 0) ago = 0;
+	double w = wall.tv_sec + wall.tv_nsec / 1e9 - ago, b = boot.tv_sec + boot.tv_nsec / 1e9 - ago;
+	time_t ws = (time_t)w;
+	struct tm tm;
+	localtime_r(&ws, &tm);
+	int n = snprintf(line, sizeof line, "%02d:%02d:%02d.%03d %10.3f  %-8s %s\n", tm.tm_hour, tm.tm_min, tm.tm_sec,
+		(int)((w - (double)ws) * 1000), b, src, what);
+	if (n < 0) return;
+	if ((size_t)n >= sizeof line) n = (int)sizeof line - 1;
+	if (recst.len + (size_t)n > sizeof recst.buf) rec_flush();
+	memcpy(recst.buf + recst.len, line, (size_t)n);
+	recst.len += (size_t)n;
+}
+static void rec(const char *src, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
+static void rec(const char *src, const char *fmt, ...)
+{
+	va_list ap;
+	va_start(ap, fmt);
+	rec_vat(mono(), src, fmt, ap);
+	va_end(ap);
+}
+static void rec_at(double t, const char *src, const char *fmt, ...) __attribute__((format(printf, 3, 4)));
+static void rec_at(double t, const char *src, const char *fmt, ...)
+{
+	va_list ap;
+	va_start(ap, fmt);
+	rec_vat(t, src, fmt, ap);
+	va_end(ap);
+}
+
+static int rec_session_file(const struct dirent *e) { return !strncmp(e->d_name, "session-", 8); }
+/* a new session file (the newest REC_KEEP kept), and its header */
+static void rec_start(void)
+{
+	recst.len = 0; recst.written = 0;
+	mkdir("/data/banana/logs", 0755);
+	mkdir(REC_DIR, 0755);
+	time_t now = time(NULL);
+	struct tm tm;
+	localtime_r(&now, &tm);
+	char name[64];
+	strftime(name, sizeof name, "session-%Y-%m-%d-%H%M%S.txt", &tm);
+	snprintf(recst.path, sizeof recst.path, REC_DIR "/%s", name);
+	struct dirent **list;
+	int n = scandir(REC_DIR, &list, rec_session_file, alphasort);	/* (names sort by date) */
+	for (int i = 0; i < n; i++) {
+		if (i < n - (REC_KEEP - 1)) {
+			char old[320];
+			snprintf(old, sizeof old, REC_DIR "/%s", list[i]->d_name);
+			unlink(old);
+		}
+		free(list[i]);
+	}
+	if (n >= 0) free(list);
+	char board[32] = "", slot[8] = "";
+	read_str("/etc/banana/board", board, sizeof board);
+	read_str("/run/banana/slot", slot, sizeof slot);
+	char head[256];
+	int k = snprintf(head, sizeof head, "# BananaOS flight recorder: %s, slot %s, %04d-%02d-%02d\n"
+		"# time of day, seconds since boot (sleep counted), source, what\n", board, slot,
+		tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
+	if (k > 0 && (size_t)k < sizeof recst.buf) { memcpy(recst.buf, head, (size_t)k); recst.len = (size_t)k; }
+	int fd = open("/run/banana/recording", O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644);	/* (write_file doesn't create) */
+	if (fd >= 0) { if (write(fd, recst.path, strlen(recst.path)) < 0) {} close(fd); }
+}
+/* recorder on or off, as bananad.conf says now */
+static void rec_apply(void)
+{
+	if (cfg.recorder && !recst.on) {
+		recst.on = 1;
+		rec_start();
+		recst.flush_at = mono() + 30;
+		rec("recorder", "on");
+	} else if (!cfg.recorder && recst.on) {
+		rec("recorder", "off");
+		rec_flush();
+		recst.on = 0;
+		unlink("/run/banana/recording");
+	}
+}
+
+/* a button's name, as the RG DS's buttons are */
+static const char *key_name(int code)
+{
+	switch (code) {
+	case KEY_POWER: return "power"; case KEY_VOLUMEUP: return "volume-up"; case KEY_VOLUMEDOWN: return "volume-down";
+	case BTN_SOUTH: return "a"; case BTN_EAST: return "b"; case BTN_NORTH: return "x"; case BTN_WEST: return "y";
+	case BTN_TL: return "l"; case BTN_TR: return "r"; case BTN_TL2: return "l2"; case BTN_TR2: return "r2";
+	case BTN_SELECT: return "select"; case BTN_START: return "start"; case BTN_MODE: return "f"; case BTN_Z: return "back";
+	case BTN_THUMBL: return "l3"; case BTN_THUMBR: return "r3";
+	case BTN_DPAD_UP: return "up"; case BTN_DPAD_DOWN: return "down"; case BTN_DPAD_LEFT: return "left"; case BTN_DPAD_RIGHT: return "right";
+	}
+	return NULL;
+}
+
 static void sleep_log(const char *fmt, ...)
 {
 	char line[256];
@@ -327,6 +479,7 @@ static void sleep_log(const char *fmt, ...)
 	strftime(when, sizeof when, "%Y-%m-%d %H:%M:%S", localtime(&now));
 	fprintf(f, "%s %s\n", when, line);
 	fclose(f);
+	rec("sleep", "%s", line);
 }
 
 /* the RTC alarm that wakes the handheld for the battery check; 0 clears it. Returns the alarm's time (0: none) */
@@ -365,6 +518,7 @@ static void backlights_power(int on)
 		write_file(p, on ? "0" : "4");
 	}
 	closedir(d);
+	rec("screen", on ? "backlights on" : "backlights off");
 }
 
 /* a game on one panel (RetroArch) keeps the other one's backlight off: run-retroarch names it in this file, and a
@@ -390,9 +544,13 @@ static void suspend_now(const char *why)
 	pid_t game = pid_of("/run/banana/game.pid");
 	pid_t pg = game ? getpgid(game) : 0;
 	if (pg > 0) kill(-pg, SIGSTOP);	/* DraStic's dynarec mustn't run on while the clocks drop (ROCKNIX's finding) */
+	/* the panels dark at once: the kernel only turns them off once its suspend is under way, after the hooks (Wi-Fi
+	 * down) and the card's sync, which left the lid shut on lit screens for a while. Back at the wake (below) */
+	backlights_power(0);
 	hooks("pre", 0);
 	sync();
 	sleep_mode();
+	leds_asleep = 1; leds_last = -2; leds_update();	/* the upper LED lit (led_sleep): asleep, not off */
 	int cycles = 0, rtc_wakes = 0, failures = 0, dark = 0;
 	double asleep = 0, dark_from = 0, led_at = 0;
 	const char *woke = "?";
@@ -412,18 +570,46 @@ static void suspend_now(const char *why)
 			if (!lid_closed) { woke = "lid opened"; break; }
 			continue;
 		}
-		time_t alarm = rtc_alarm((int)(cfg.sleep_check_hours * 3600));
+		/* the RTC's alarm: the battery check, or turning off (poweroff_minutes asleep, every sleep of this one counted),
+		 * whichever comes first */
+		int secs = (int)(cfg.sleep_check_hours * 3600);
+		double off_in = cfg.poweroff_min > 0 ? cfg.poweroff_min * 60 - asleep : -1;
+		if (off_in > 0 && (secs <= 0 || off_in < secs)) secs = (int)off_in + (off_in > (int)off_in);
+		time_t alarm = rtc_alarm(secs);
 		double t_in = mono();
 		struct timespec b0, b1;
 		clock_gettime(CLOCK_BOOTTIME, &b0);	/* BOOTTIME counts the time asleep, MONOTONIC doesn't */
 		if (cycles == 0) sleep_log("sleep (%s): %.0f ms to suspend%s", why, (t_in - t0) * 1000, game ? ", game paused" : "");
+		/* the RTC's wakeup count and clock now, to tell its alarm's wake from a button's, and that its clock runs */
+		rec_flush();	/* (the recording on the card before the sleep) */
+		int wc0 = read_int("/sys/class/rtc/rtc0/device/power/wakeup_count", -1);
+		char rt[32] = "";
+		read_str("/sys/class/rtc/rtc0/since_epoch", rt, sizeof rt);
+		long rtc0 = atol(rt);
 		int r = write_file("/sys/power/state", "mem");
 		int err = errno;
+		if (!r && test_wake >= 0) {
+			char c;
+			int fd = open(test_asleep, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644);	/* (write_file doesn't create) */
+			if (fd >= 0) close(fd);
+			while (read(test_wake, &c, 1) < 0 && errno == EINTR && !stopping) {}	/* (stopped asleep: rcK, the test) */
+			unlink(test_asleep);
+		}
 		clock_gettime(CLOCK_BOOTTIME, &b1);
-		/* the RTC clears wakealarm when the alarm fires: set before, empty now, is the battery check's wake */
+		/* the alarm woke it: the RTC's wakeup count went up, or it cleared wakealarm (it does when the alarm fires).
+		 * Not "the time is past the alarm's": a power press after it was taken for the alarm, and turned off a
+		 * handheld someone had just woken (when the alarm hadn't woken it) */
 		char pending[32];
 		read_str("/sys/class/rtc/rtc0/wakealarm", pending, sizeof pending);
-		int rtc_fired = alarm && (!pending[0] || time(NULL) >= alarm);
+		int wc1 = read_int("/sys/class/rtc/rtc0/device/power/wakeup_count", -1);
+		int rtc_fired = alarm && ((wc0 >= 0 && wc1 > wc0) || !pending[0]);
+		if (alarm) {
+			read_str("/sys/class/rtc/rtc0/since_epoch", rt, sizeof rt);
+			double slept = (b1.tv_sec - b0.tv_sec) + (b1.tv_nsec - b0.tv_nsec) / 1e9;
+			/* (an RTC whose clock doesn't run never reaches its alarm: "moved 0 s" over a long sleep says so) */
+			sleep_log("woke after %.0f s: %s; the RTC's clock moved %ld s", slept,
+				rtc_fired ? "the RTC's alarm" : "not the RTC's alarm (a button, the lid)", atol(rt) - rtc0);
+		}
 		rtc_alarm(0);
 		cycles++;
 		if (r) {
@@ -447,6 +633,14 @@ static void suspend_now(const char *why)
 				shutdown_now("battery empty while asleep");
 				return;
 			}
+			/* asleep long enough: off, as a held power button does (not on the charger: off, the RG DS Plus doesn't
+			 * charge; it sleeps on, the next alarm the battery check's) */
+			if (cfg.poweroff_min > 0 && asleep >= cfg.poweroff_min * 60 - 1 && !charger_online()) {
+				sleep_log("asleep %.0f min: turning off", asleep / 60);
+				if (pg > 0) kill(-pg, SIGCONT);	/* the game gets SIGTERM next, to write its saves */
+				shutdown_now("idle, asleep");
+				return;
+			}
 			continue;	/* enough battery: back to sleep at once */
 		}
 		read_lid();
@@ -464,6 +658,7 @@ static void suspend_now(const char *why)
 	if (ui && !game) kill(ui, SIGUSR1);	/* draws both panels again (the clock and the battery moved on) */
 	double t_back = mono();
 	undim();
+	leds_asleep = 0; leds_last = -2;	/* (leds_update below: the upper LED back at its level) */
 	hooks("post", 1);
 	panel_off_again();
 	/* the press that woke us comes in now: it is not a new request. Draining also drops the lid-open event, so the
@@ -471,7 +666,7 @@ static void suspend_now(const char *why)
 	drain_inputs();
 	read_lid();
 	leds_update();
-	if (headphones_in() != headphones) { headphones = !headphones; audio_route(); }
+	if (headphones_in() != headphones) { headphones = !headphones; if (!sound_child) audio_route(); }
 	ignore_power_until = mono() + 1.0;
 	power_down = 0;
 	last_input = mono();
@@ -483,7 +678,11 @@ static void suspend_now(const char *why)
 
 static void shutdown_now(const char *why)
 {
+	static int once;	/* (the reasons can line up: an idle turn-off and the battery in the same pass) */
+	if (once++) return;
 	say("shutting down (%s)", why);
+	rec("power", "shutting down (%s)", why);
+	rec_flush();
 	pid_t game = pid_of("/run/banana/game.pid");
 	if (game) {
 		pid_t pg = getpgid(game);
@@ -493,6 +692,10 @@ static void shutdown_now(const char *why)
 	sync();
 	/* busybox init runs /etc/init.d/rcK (unmount, sync) on SIGUSR2 = poweroff */
 	if (kill(1, SIGUSR2)) reboot(RB_POWER_OFF);
+	/* and nothing more from here until rcK stops bananad: back in the loop, with the lid still shut or the menu idle,
+	 * it slept again in the middle of the shutdown (rcK frozen half-way until the next wake: "off" only when someone
+	 * pressed power, or when the RTC woke it again; sleep.log showed "turning off" twice, a sleep between) */
+	for (;;) { pause(); if (stopping) _exit(0); }	/* (the recording was written out above) */
 }
 
 static double save_volume_at, save_backlight_at;	/* debounced: written a moment after the last key */
@@ -527,6 +730,7 @@ static void audio_find_cards(void)
 static void audio_route(void)
 {
 	card_play = card_speaker >= 0 && !headphones ? card_speaker : card_codec;
+	rec("audio", "sound to the %s", card_play < 0 ? "null device (no card)" : card_play == card_speaker ? "speakers" : headphones ? "headphones" : "codec");
 	/* the RG DS: one card, whose HP output feeds both the jack and the speaker amplifier; the amplifier is the card's
 	 * "Internal Speakers Switch" (a pin switch), off while headphones are in, or the speakers play along (#13) */
 	if (card_speaker < 0 && card_codec >= 0) {
@@ -618,8 +822,67 @@ static void audio_setup(void)
 	audio_route();
 }
 
+/* ---- the sound at start, without holding up the buttons ------------------------------------------------------
+ * alsactl's restore and audio_setup's amixers are programs, and at boot they load from the squashfs while the menu,
+ * the library and the GPU's and Wi-Fi's modules come up too: run before the loop, they kept the power and volume
+ * keys deaf for seconds after the boot animation began. A child does them now while the loop takes the buttons;
+ * volume steps pressed meanwhile wait for it (a restore after a press would undo the press). When it's done,
+ * /run/banana/bananad-ready tells rcS (which waits for it before the menu starts) that the buttons and the sound are
+ * up. A sound card that turns up later (a late probe) is set up the same way when its uevent comes. */
+static pid_t sound_child;	/* setting the sound up, 0: not */
+static int sound_ready, sound_again, sound_hp, volume_pending;
+
+/* a boot milestone in /run/banana/boot-times, as rcS's mark() writes them (logs/boot.txt) */
+static void boot_mark(const char *what)
+{
+	char up[32] = "";
+	read_str("/proc/uptime", up, sizeof up);
+	FILE *f = fopen("/run/banana/boot-times", "a");
+	if (f) { fprintf(f, "%-28s %6.2f s\n", what, atof(up)); fclose(f); }
+}
+
+static void sound_start(void)
+{
+	if (sound_child > 0) { sound_again = 1; return; }	/* (one at a time: a card's uevents come in a burst) */
+	sound_ready = 0;
+	sound_hp = headphones;
+	pid_t p = fork();
+	if (p == 0) {
+		/* the saved volumes first, then the route: the restore also brings back the speakers' switch as it was last
+		 * saved (off if headphones were in then), and the route sets it from the jack as it is now */
+		if (access("/data/banana/asound.state", R_OK) == 0) {
+			char *argv[] = { "alsactl", "-f", "/data/banana/asound.state", "restore", NULL };
+			run(argv);
+		}
+		audio_setup();
+		_exit(0);
+	}
+	if (p < 0) { audio_setup(); sound_ready = 1; return; }	/* (no fork: as before, in line) */
+	sound_child = p;
+}
+
+static void volume(int dir);
+/* the loop's look at the child: done, the cards as it found them, what waited applied */
+static void sound_poll(void)
+{
+	if (sound_child <= 0 || waitpid(sound_child, NULL, WNOHANG) != sound_child) return;
+	sound_child = 0;
+	audio_find_cards();
+	if (headphones != sound_hp) audio_route();	/* plugged or pulled while it ran */
+	if (sound_again) { sound_again = 0; sound_start(); return; }
+	sound_ready = 1;
+	if (access("/run/banana/bananad-ready", F_OK) != 0) {
+		boot_mark("bananad: sound ready");
+		FILE *f = fopen("/run/banana/bananad-ready", "w");
+		if (f) fclose(f);
+	}
+	for (; volume_pending > 0; volume_pending--) volume(1);
+	for (; volume_pending < 0; volume_pending++) volume(-1);
+}
+
 static void volume(int dir)
 {
+	if (!sound_ready) { volume_pending += dir; return; }	/* (the sound still being set up: sound_poll) */
 	/* the volume script changes the control /run/banana/mixer names, the aw88166's as an attenuation (see it) */
 	char step[16];
 	snprintf(step, sizeof step, "%d", cfg.volume_step);
@@ -632,7 +895,7 @@ static void volume(int dir)
 		if (fscanf(p, "%d", &pct) != 1) pct = -1;
 		pclose(p);
 	}
-	if (pct >= 0) osd("volume", pct);
+	if (pct >= 0) { osd("volume", pct); rec("audio", "volume %d%%", pct); }
 }
 
 static void brightness(int dir)
@@ -659,7 +922,7 @@ static void brightness(int dir)
 	}
 	closedir(d);
 	save_backlight_at = mono() + 2;
-	if (pct >= 0) osd("brightness", pct);
+	if (pct >= 0) { osd("brightness", pct); rec("screen", "brightness %d%%", pct); }
 }
 
 /* both backlights at a fraction of their maximum */
@@ -753,6 +1016,7 @@ static void dim(void)
 	}
 	closedir(d);
 	dimmed = dim_count > 0;
+	if (dimmed) rec("screen", "dimmed to %d%%", cfg.dim_pct);
 	/* the level before dimming, for the settings screen (opened by the press that undims) */
 	if (dimmed) {
 		char p[600];
@@ -772,6 +1036,7 @@ static void undim(void)
 	}
 	dimmed = 0;
 	unlink("/run/banana/dim");
+	rec("screen", "undimmed");
 }
 
 static void save_settings(double now)
@@ -797,10 +1062,6 @@ static void restore_settings(void)
 	/* started again while the panels were dimmed (/run/banana/dim: the level before): undimmed, as the last one would */
 	int dimmed_from = read_int("/run/banana/dim", -1);
 	if (dimmed_from > 0 && dimmed_from <= 1000) { backlight_set_permille(dimmed_from); unlink("/run/banana/dim"); }
-	if (access("/data/banana/asound.state", R_OK) == 0) {
-		char *argv[] = { "alsactl", "-f", "/data/banana/asound.state", "restore", NULL };
-		run(argv);
-	}
 }
 
 /* ---- the LEDs -------------------------------------------------------------------------------------------------- */
@@ -899,7 +1160,9 @@ static void leds_update(void)
 	static char green[300], red[300], amber[300];
 	static int looked;
 	int last = leds_last;
-	if (!looked) {
+	/* looked for again while one is missing: a LED driver that probes after bananad starts (pwm-leds waits for its
+	 * PWM) was never found, and that LED stayed as the kernel left it all session (both handhelds have all three) */
+	if (!looked || !green[0] || !red[0] || !amber[0]) {
 		looked = 1;
 		led_path("power", green, sizeof green);
 		led_path("status", red, sizeof red);
@@ -911,19 +1174,25 @@ static void leds_update(void)
 	int plugged = charger_online();
 	if (plugged) charging = 1;	/* plugged in counts as charging (see charger_online) */
 	int level = cfg.led_brightness;
-	/* the upper LED: green, red when low, blinking red when critical (not while charging) */
-	int state = level <= 0 ? 0 : (!charging && pct >= 0 && pct <= cfg.led_critical) ? 3 : (!charging && pct >= 0 && pct <= cfg.led_low) ? 2 : 1;
+	/* the upper LED: green, red when low, blinking red when critical (not while charging). Asleep, with led_sleep on:
+	 * full (a PWM at 100% holds its pin high even if the SoC's sleep stops its clock; the LED core leaves it lit, the
+	 * kernel's retain-state-suspended), or off; off all the time with the LEDs off */
+	int upper = !leds_asleep ? level : level > 0 && cfg.led_sleep ? 255 : 0;
+	int state = upper <= 0 ? 0 : (!charging && pct >= 0 && pct <= cfg.led_critical) ? 3 : (!charging && pct >= 0 && pct <= cfg.led_low) ? 2 : 1;
 	if (state != last) {
 		leds_last = state;
-		led_set(green, state == 1 ? "on" : "off", level);
-		led_set(red, state == 3 ? "blink" : state == 2 ? "on" : "off", level);
+		led_set(green, state == 1 ? "on" : "off", upper);
+		led_set(red, state == 3 ? "blink" : state == 2 ? "on" : "off", upper);
 		say("LEDs: battery %d%%%s", pct, charging ? ", charging" : "");
+		static const char *const looks[] = { "off", "green", "red", "red blinking" };
+		rec("led", "upper %s%s (battery %d%%%s)", looks[state], leds_asleep ? ", asleep" : "", pct, charging ? ", charging" : "");
 	}
 	/* the lower LED: amber, steady, the whole time the charger is plugged in and the battery isn't full */
 	int amber_on = level > 0 && plugged && (pct < 0 || pct < 100);
 	if (amber_on != amber_last || last == -2) {
 		amber_last = amber_on;
 		led_set(amber, amber_on ? "on" : "off", level);
+		rec("led", "charging light %s", amber_on ? "on" : "off");
 	}
 }
 
@@ -995,24 +1264,130 @@ static int uevent_read(int fd)
 	while ((n = recv(fd, buf, sizeof buf - 1, 0)) > 0) {
 		buf[n] = 0;
 		const char *alias = NULL;
-		int add = 0, block = 0, mmc = 0;
+		int add = 0, block = 0, mmc = 0, sound = 0;
 		for (char *p = buf; p < buf + n; p += strlen(p) + 1) {
 			if (!strcmp(p, "SUBSYSTEM=power_supply")) hit = 1;
 			else if (!strcmp(p, "SUBSYSTEM=block")) block = 1;
+			else if (!strcmp(p, "SUBSYSTEM=sound")) sound = 1;
 			else if (!strncmp(p, "DEVNAME=mmcblk", 14)) mmc = 1;
 			else if (!strcmp(p, "ACTION=add")) add = 1;
 			else if (!strncmp(p, "MODALIAS=", 9)) alias = p + 9;
 		}
 		if (add && alias) load_driver(alias);
 		if (block && mmc) sd2_scan();	/* a card in or out of the second slot (the script looks at what's there) */
+		if (sound && add) sound_start();	/* a sound card probed late: its volumes, its route */
 	}
 	return hit;
+}
+
+/* ---- input the idle timers can't hear on devfd ------------------------------------------------------------------
+ * The timers count from the last input, and devfd carries only keys and switches: the touchscreen's and the sticks'
+ * motion woke bananad 60-200 times a second (open_inputs). But a DS game played with the stylus alone, or a stick
+ * alone, isn't idle. Each touchscreen and stick gets a second descriptor that takes only EV_ABS, stamped with the
+ * monotonic clock and never polled: quiet_scan() reads what piled up when the timers are looked at, and moves
+ * last_input to the newest touch, or the newest time a stick was pushed at least halfway out (not its jitter round
+ * the centre; a stick held out counts as now). */
+#define QUIET_AXES 4
+static const int quiet_axis[QUIET_AXES] = { ABS_X, ABS_Y, ABS_RX, ABS_RY };
+static struct quiet { int fd, touch; int lo[QUIET_AXES], hi[QUIET_AXES]; int x, y, down, pend; } quiet[MAXDEV];
+static int nquiet;
+
+static int test_bit(const unsigned long *bits, int n) { return (bits[n / (8 * sizeof *bits)] >> (n % (8 * sizeof *bits))) & 1; }
+
+static void quiet_add(const char *path, int touch_only)
+{
+	if (nquiet >= MAXDEV) return;
+	int fd = open(path, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
+	if (fd < 0) return;
+	struct quiet q = { .fd = fd, .touch = touch_only };
+	if (!touch_only) {
+		unsigned long abs[(ABS_CNT + 8 * sizeof(long) - 1) / (8 * sizeof(long))] = { 0 };
+		unsigned long keys[(KEY_CNT + 8 * sizeof(long) - 1) / (8 * sizeof(long))] = { 0 };
+		if (ioctl(fd, EVIOCGBIT(EV_ABS, sizeof abs), abs) < 0) { close(fd); return; }	/* (not an evdev node) */
+		ioctl(fd, EVIOCGBIT(EV_KEY, sizeof keys), keys);
+		q.touch = test_bit(abs, ABS_MT_POSITION_X) || test_bit(keys, BTN_TOUCH);
+		int any = q.touch;
+		for (int a = 0; a < QUIET_AXES && !q.touch; a++) {
+			struct input_absinfo ai;
+			if (test_bit(abs, quiet_axis[a]) && !ioctl(fd, EVIOCGABS(quiet_axis[a]), &ai) && ai.maximum > ai.minimum) {
+				q.lo[a] = ai.minimum; q.hi[a] = ai.maximum; any = 1;
+			}
+		}
+		if (!any) { close(fd); return; }	/* buttons only: devfd hears them */
+		unsigned long types = 1ul << EV_ABS;	/* (EV_SYN always comes; an empty report doesn't) */
+		struct input_mask m = { .type = 0, .codes_size = sizeof types, .codes_ptr = (uint64_t)(uintptr_t)&types };
+		ioctl(fd, EVIOCSMASK, &m);
+		int clk = CLOCK_MONOTONIC;
+		ioctl(fd, EVIOCSCLOCKID, &clk);
+	}
+	quiet[nquiet++] = q;
+}
+
+/* a stick at least halfway out */
+static int quiet_pushed(const struct quiet *q, int code, int value)
+{
+	for (int a = 0; a < QUIET_AXES; a++)
+		if (quiet_axis[a] == code && q->hi[a] > q->lo[a]) {
+			long mid = ((long)q->lo[a] + q->hi[a]) / 2, half = ((long)q->hi[a] - q->lo[a]) / 2;
+			return labs((long)value - mid) * 2 > half;
+		}
+	return 0;
+}
+
+/* 1 when it moved last_input on */
+static int quiet_scan(void)
+{
+	double newest = 0, now = mono();
+	for (int i = 0; i < nquiet; i++) {
+		struct quiet *q = &quiet[i];
+		struct input_event ev[64];
+		ssize_t r;
+		while ((r = read(q->fd, ev, sizeof ev)) > 0)
+			for (int k = 0; k < r / (ssize_t)sizeof ev[0]; k++) {
+				const struct input_event *e = &ev[k];
+				/* (SYN_DROPPED: the buffer overflowed with motion, at its time) */
+				int moved = q->touch ? (e->type == EV_ABS || (e->type == EV_SYN && e->code == SYN_DROPPED))
+					: (e->type == EV_ABS && quiet_pushed(q, e->code, e->value));
+				double t = e->input_event_sec + e->input_event_usec / 1e6;
+				if (moved && t > newest) newest = t > now ? now : t;
+				/* the recorder: a touch down and its lift, where (the first finger; no position while the on-screen
+				 * keyboard is open, /run/banana/keyboard from banana-ui: a password mustn't be read back) */
+				if (recst.on && q->touch) {
+					if (e->type == EV_ABS && (e->code == ABS_MT_POSITION_X || e->code == ABS_X)) q->x = e->value;
+					else if (e->type == EV_ABS && (e->code == ABS_MT_POSITION_Y || e->code == ABS_Y)) q->y = e->value;
+					else if (e->type == EV_ABS && e->code == ABS_MT_TRACKING_ID) {
+						if (e->value >= 0 && !q->down) { q->down = 1; q->pend |= 1; }
+						else if (e->value < 0 && q->down) { q->down = 0; q->pend |= 2; }
+					} else if (e->type == EV_SYN && e->code == SYN_REPORT && q->pend) {
+						int typing = access("/run/banana/keyboard", F_OK) == 0;
+						for (int b = 1; b <= 2; b <<= 1) {
+							if (!(q->pend & b)) continue;
+							if (typing) rec_at(t, "touch", "%s (keyboard open: where not recorded)", b == 1 ? "down" : "up");
+							else rec_at(t, "touch", "%s %d,%d", b == 1 ? "down" : "up", q->x, q->y);
+						}
+						q->pend = 0;
+					}
+				}
+			}
+		for (int a = 0; a < QUIET_AXES && !q->touch; a++) {
+			struct input_absinfo ai;
+			if (q->hi[a] > q->lo[a] && !ioctl(q->fd, EVIOCGABS(quiet_axis[a]), &ai) && quiet_pushed(q, quiet_axis[a], ai.value)) newest = now;
+		}
+	}
+	if (newest <= last_input) return 0;
+	last_input = newest;
+	return 1;
 }
 
 static void open_inputs(void)
 {
 	for (int i = 0; i < ndev; i++) close(devfd[i]);
 	ndev = 0;
+	for (int i = 0; i < nquiet; i++) close(quiet[i].fd);
+	nquiet = 0;
+	/* the sleep test's stand-in touchscreen (a FIFO of input_event records with monotonic times) */
+	const char *test_touch = getenv("BANANAD_TEST_TOUCH");
+	if (test_touch) quiet_add(test_touch, 1);
 	DIR *d = opendir("/dev/input");
 	if (!d) return;
 	struct dirent *e;
@@ -1029,14 +1404,40 @@ static void open_inputs(void)
 		struct input_mask m = { .type = 0, .codes_size = sizeof types, .codes_ptr = (uint64_t)(uintptr_t)&types };
 		ioctl(fd, EVIOCSMASK, &m);
 		devfd[ndev++] = fd;
+		quiet_add(path, 0);
 	}
 	closedir(d);
 	read_lid();
 }
 
+/* Select held 2 s: a marker in the recording, and the power LED blinked twice to say so (in a game too) */
+static void rec_mark(void)
+{
+	static int marks;
+	rec("MARK", "*** marker %d ***", ++marks);
+	rec_flush();
+	char green[300] = "";
+	led_path("power", green, sizeof green);
+	if (green[0]) {
+		char p[340];
+		snprintf(p, sizeof p, "%s/brightness", green);
+		for (int i = 0; i < 2; i++) { write_file(p, "0"); usleep(120000); write_file(p, "255"); usleep(120000); }
+		leds_last = -2;
+		leds_update();
+	}
+}
+
 static void handle(const struct input_event *e)
 {
 	double now = mono();
+	if (e->type == EV_KEY && (e->value != 2 || e->code == KEY_VOLUMEUP || e->code == KEY_VOLUMEDOWN)) {
+		const char *k = key_name(e->code);
+		if (k) rec("button", "%s %s", k, e->value == 1 ? "down" : e->value == 2 ? "held" : "up");
+		else rec("button", "key %d %s", e->code, e->value == 1 ? "down" : e->value == 2 ? "held" : "up");
+		if (e->code == BTN_SELECT && e->value != 2) { sel_down = e->value; sel_since = now; sel_marked = 0; }	/* (the loop times the hold) */
+	}
+	if (e->type == EV_SW && e->code == SW_LID) rec("lid", e->value ? "closed" : "opened");
+	if (e->type == EV_SW && e->code == SW_HEADPHONE_INSERT) rec("audio", e->value ? "headphones in" : "headphones out");
 	if (e->type == EV_KEY) { last_input = now; undim(); }
 	if (e->type == EV_SW && e->code == SW_LID) {
 		lid_closed = e->value;
@@ -1046,7 +1447,7 @@ static void handle(const struct input_event *e)
 		return;
 	}
 	if (e->type == EV_SW && e->code == SW_HEADPHONE_INSERT) {
-		if (headphones != e->value) { headphones = e->value; audio_route(); }
+		if (headphones != e->value) { headphones = e->value; if (!sound_child) audio_route(); }	/* (else sound_poll routes) */
 		return;
 	}
 	if (e->type != EV_KEY) return;
@@ -1097,45 +1498,139 @@ static int battery_discharging_pct(void)
 	return r;
 }
 
+/* the recorder's events from banana-ui (ui/src/recorder.cpp): datagrams "<source>\t<what>" on
+ * /run/banana/recorder.sock, copied in as they come (banana-ui sends only while it records, and never waits) */
+static int rec_sock_open(void)
+{
+	int fd = socket(AF_UNIX, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
+	if (fd < 0) return -1;
+	struct sockaddr_un a = { .sun_family = AF_UNIX };
+	snprintf(a.sun_path, sizeof a.sun_path, "%s", "/run/banana/recorder.sock");
+	unlink(a.sun_path);
+	if (bind(fd, (struct sockaddr *)&a, sizeof a)) { close(fd); return -1; }
+	return fd;
+}
+static void rec_sock_read(int fd)
+{
+	char m[400];
+	ssize_t n;
+	while ((n = recv(fd, m, sizeof m - 1, 0)) > 0) {
+		m[n] = 0;
+		for (char *p = m; *p; p++) if ((unsigned char)*p < 32 && *p != '\t') *p = ' ';	/* (a line each, always) */
+		const char *src = "menu", *what = m;
+		char *tab = strchr(m, '\t');
+		if (tab) { *tab = 0; if (tab - m <= 8) src = m; what = tab + 1; }
+		rec(src, "%s", what);
+	}
+}
+
+/* the recorder: the charger plugged in or pulled out (a uevent, and each minute) */
+static void rec_charger(void)
+{
+	static int last = -1;
+	if (!recst.on) return;
+	int on = charger_online();
+	if (on != last) { if (last >= 0 || on) rec("power", on ? "charger in" : "charger out"); last = on; }
+}
+/* the recorder's look each minute: the battery as its gauge says, Wi-Fi when its state or signal changed */
+static void rec_minute(void)
+{
+	if (!recst.on) return;
+	rec_charger();
+	DIR *d = opendir("/sys/class/power_supply");
+	struct dirent *e;
+	while (d && (e = readdir(d))) {
+		if (e->d_name[0] == '.') continue;
+		char p[320], s[32] = "", st[32] = "";
+		snprintf(p, sizeof p, "/sys/class/power_supply/%s/type", e->d_name);
+		read_str(p, s, sizeof s);
+		if (strcmp(s, "Battery")) continue;
+		#define PS(f) (snprintf(p, sizeof p, "/sys/class/power_supply/%s/" f, e->d_name), p)
+		/* (the rk817's gauge has only the averages) */
+		int pct = read_int(PS("capacity"), -1), mv = read_int(PS("voltage_now"), read_int(PS("voltage_avg"), 0)) / 1000;
+		int ma = read_int(PS("current_now"), read_int(PS("current_avg"), 0)) / 1000, t = read_int(PS("temp"), -1000);
+		read_str(PS("status"), st, sizeof st);
+		#undef PS
+		if (t > -1000) rec("battery", "%d%% %s, %d mV, %d mA, %d.%d C", pct, st, mv, ma, t / 10, abs(t % 10));
+		else rec("battery", "%d%% %s, %d mV, %d mA", pct, st, mv, ma);
+		break;
+	}
+	if (d) closedir(d);
+	char op[16] = "";
+	read_str("/sys/class/net/wlan0/operstate", op, sizeof op);
+	int level = 0;
+	FILE *f = fopen("/proc/net/wireless", "r");
+	char ln[256];
+	while (f && fgets(ln, sizeof ln, f)) {
+		char ifc[32]; int status; float link, lvl;
+		if (sscanf(ln, " %31[^:]: %x %f %f", ifc, &status, &link, &lvl) == 4 && !strcmp(ifc, "wlan0")) level = (int)lvl;
+	}
+	if (f) fclose(f);
+	static char last_op[16] = "?";
+	static int last_level = 1000;
+	if (strcmp(op, last_op) || abs(level - last_level) >= 5) {
+		if (!op[0]) rec("wifi", "no Wi-Fi");
+		else if (level) rec("wifi", "%s, signal %d dBm", op, level);
+		else rec("wifi", "%s", op);
+		snprintf(last_op, sizeof last_op, "%s", op);
+		last_level = level;
+	}
+}
+
 int main(int argc, char **argv)
 {
 	(void)argc; (void)argv;
 	openlog("bananad", LOG_PID, LOG_DAEMON);
 	test_lid = getenv("BANANAD_TEST_LID");
+	if (getenv("BANANAD_TEST_WAKE")) {
+		test_wake = open(getenv("BANANAD_TEST_WAKE"), O_RDWR | O_CLOEXEC);
+		snprintf(test_asleep, sizeof test_asleep, "%s.asleep", getenv("BANANAD_TEST_WAKE"));
+	}
 	load_conf("/etc/banana/bananad.conf");
 	load_conf("/data/banana/bananad.conf");
 	load_timezone();
+	unlink("/run/banana/recording");	/* (left by a bananad stopped before: as bananad.conf says now) */
+	rec_apply();
+	rec("bananad", "started");
 	signal(SIGCHLD, SIG_DFL);
 	struct sigaction sa = { 0 };
 	sa.sa_handler = on_hup;		/* no SA_RESTART: poll() returns, and the loop reloads */
 	sigaction(SIGHUP, &sa, NULL);
+	sa.sa_handler = on_term;
+	sigaction(SIGTERM, &sa, NULL);
 	mkdir("/run/banana", 0755);
+	/* the RTC may wake the handheld (its alarm: the battery check, turning off when idle) */
+	write_file("/sys/class/rtc/rtc0/device/power/wakeup", "enabled");
 	find_bottom_bl();	/* which backlight is the bottom one: banana-ui's idle dim owns it */
 
 	int ino = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
 	if (ino >= 0) inotify_add_watch(ino, "/dev/input", IN_CREATE | IN_DELETE);
+	unlink("/run/banana/bananad-ready");
 	open_inputs();
 	headphones = headphones_in();
-	/* the saved volumes first, then the route: the restore also brings back the speakers' switch as it was last
-	 * saved (off if headphones were in then), and the route sets it from the jack as it is now */
-	restore_settings();
-	audio_setup();
+	restore_settings();	/* the backlight */
+	audio_find_cards();	/* (the loop's own idea of the cards until the child is done; it writes the route) */
+	sound_start();		/* the volumes and the route, in a child (above) */
 	int uev = uevent_open();
+	int recsock = rec_sock_open();	/* (the recorder's events from banana-ui) */
 	sd2_scan();	/* a card already in the second slot at boot */
 	load_drivers_present();
 	leds_update();
+	boot_mark("bananad: buttons live");
 	last_input = mono();
 	double next_battery = 0;
 	int low_count = 0;
-	say("running: lid %s, auto-sleep %d min, %s", cfg.lid_sleep ? "sleeps" : "ignored", cfg.autosleep_min, cfg.mem_sleep);
+	say("running: lid %s, auto-sleep %g min, off after %g min, idle timers %s, %s", cfg.lid_sleep ? "sleeps" : "ignored",
+		cfg.autosleep_min, cfg.poweroff_min, cfg.idle_in_games ? "everywhere" : "in the menu", cfg.mem_sleep);
 
 	for (;;) {
-		struct pollfd pf[MAXDEV + 2];
+		struct pollfd pf[MAXDEV + 3];
 		int n = 0;
 		for (int i = 0; i < ndev; i++) pf[n++] = (struct pollfd){ devfd[i], POLLIN, 0 };
-		int ino_at = -1, uev_at = -1;
+		int ino_at = -1, uev_at = -1, rs_at = -1;
 		if (ino >= 0) { ino_at = n; pf[n++] = (struct pollfd){ ino, POLLIN, 0 }; }
 		if (uev >= 0) { uev_at = n; pf[n++] = (struct pollfd){ uev, POLLIN, 0 }; }
+		if (recsock >= 0) { rs_at = n; pf[n++] = (struct pollfd){ recsock, POLLIN, 0 }; }
 		/* sleep until something is due: the battery look (a minute), the dim or the auto-sleep deadline, the lid
 		 * check, a pending save, the power button's hold; nothing wakes bananad otherwise */
 		double tnow = mono(), wait = next_battery - tnow;
@@ -1147,25 +1642,45 @@ int main(int argc, char **argv)
 		/* (only deadlines still ahead: one already passed was acted on after the last poll, or is held back by what
 		 * the action checks (the charger, the lid, no backlight) and a uevent or an input event brings it back; counted
 		 * here it spun this loop every 20 ms, on the charger for as long as the menu sat idle) */
-		if (!game) {
+		/* the idle timers: in the menu, or in games too (idle_in_games) */
+		int idle_ok = !game || cfg.idle_in_games;
+		if (idle_ok) {
 			if (cfg.autosleep_min > 0 && !awake) { double d = cfg.autosleep_min * 60.0 - (tnow - last_input); if (d > 0 && d < wait) wait = d; }
 			if (cfg.dim_min > 0 && !dimmed) { double d = cfg.dim_min * 60.0 - (tnow - last_input); if (d > 0 && d < wait) wait = d; }
+			/* never sleeping: turning off counts from the last input instead */
+			if (cfg.poweroff_min > 0 && cfg.autosleep_min <= 0 && !awake) { double d = cfg.poweroff_min * 60.0 - (tnow - last_input); if (d > 0 && d < wait) wait = d; }
+			if (dimmed && nquiet && wait > 1) wait = 1;	/* dimmed: a touch brings the panels back within a second */
 		}
+		/* recording: the touchscreen read every 0.2 s, before its buffer of motion can overflow (a touch's own time is
+		 * in its event, so it's recorded when it happened) */
+		if (recst.on && nquiet && wait > 0.2) wait = 0.2;
 		if (lid_closed && cfg.lid_sleep && !lid_retry_off) { double d = 5.0 - (tnow - last_input); if (d > 0 && d < wait) wait = d; }
 		if ((save_volume_at > 0 || save_backlight_at > 0) && wait > 0.5) wait = 0.5;
 		if (power_down && wait > 0.1) wait = 0.1;
+		if (recst.on && sel_down && !sel_marked && wait > 0.1) wait = 0.1;	/* (Select held: the marker at 2 s) */
+		if (sound_child > 0 && wait > 0.05) wait = 0.05;	/* the sound's setup running: its end looked for (the first second or so) */
 		int timeout = wait <= 0 ? 20 : (int)(wait * 1000) + 20;
 		poll(pf, n, timeout);
 		double now = mono();
+		sound_poll();
+		if (stopping) {	/* a restart or a turn-off from the menu, an update: banana-ui's last events, then the card's copy */
+			if (rs_at >= 0) rec_sock_read(recsock);
+			rec("bananad", "stopped (the handheld restarts or turns off)");
+			rec_flush();
+			exit(0);
+		}
 		if (reload) {
 			reload = 0;
 			load_conf("/etc/banana/bananad.conf");
 			load_conf("/data/banana/bananad.conf");
 			load_timezone();
+			rec_apply();
+			rec("bananad", "settings read again");
 			save_volume_at = mono() + 2;	/* the settings screen may have set the volume: keep it as the keys' is kept */
 			leds_last = -2;
 			leds_update();
-			say("settings read again: lid %s, auto-sleep %d min, LEDs %d", cfg.lid_sleep ? "sleeps" : "ignored", cfg.autosleep_min, cfg.led_brightness);
+			say("settings read again: lid %s, auto-sleep %g min, off after %g min, LEDs %d", cfg.lid_sleep ? "sleeps" : "ignored",
+				cfg.autosleep_min, cfg.poweroff_min, cfg.led_brightness);
 		}
 
 		for (int i = 0; i < ndev; i++) {
@@ -1175,30 +1690,48 @@ int main(int argc, char **argv)
 			while ((r = read(devfd[i], ev, sizeof ev)) > 0)
 				for (int k = 0; k < r / (ssize_t)sizeof ev[0]; k++) handle(&ev[k]);
 		}
-		if (uev_at >= 0 && (pf[uev_at].revents & POLLIN) && uevent_read(uev)) leds_update();
+		if (uev_at >= 0 && (pf[uev_at].revents & POLLIN) && uevent_read(uev)) { leds_update(); rec_charger(); }
+		if (rs_at >= 0 && (pf[rs_at].revents & POLLIN)) rec_sock_read(recsock);
 		save_settings(now);
 		if (ino_at >= 0 && (pf[ino_at].revents & POLLIN)) {
 			char buf[4096];
 			while (read(ino, buf, sizeof buf) > 0) {}
 			usleep(200000);	/* udev/mdev sets the node's permissions */
 			open_inputs();
+			/* the jack's input device comes with its sound card, which may probe after bananad starts: the headphones
+			 * as they are now, not as they read before the device was there */
+			int hp = headphones_in();
+			if (hp != headphones) { headphones = hp; if (!sound_child) audio_route(); }
 		}
 
 		if (power_down && now - power_since >= cfg.power_long_ms / 1000.0) { power_down = 0; shutdown_now("power held"); }
+		if (recst.on && sel_down && !sel_marked && now - sel_since >= 2.0) { sel_marked = 1; rec_mark(); }
 
-		/* idle in the menu (no game running): the panels dim, then it sleeps */
+		/* idle (in the menu, or in a game too with idle_in_games): the panels dim, then it sleeps, then it turns off
+		 * (suspend_now counts the time asleep). A touch or a stick since the last look counts as input */
 		game = pid_of("/run/banana/game.pid") != 0;
-		if (cfg.dim_min > 0 && !dimmed && !game && !lid_closed && now - last_input >= cfg.dim_min * 60.0) dim();
+		int idle = !game || cfg.idle_in_games;
+		if ((idle || recst.on) && quiet_scan() && idle) undim();	/* (recording: the touches read in games too) */
+		if (recst.on && now >= recst.flush_at) { rec_flush(); recst.flush_at = now + 30; }
+		if (cfg.dim_min > 0 && !dimmed && idle && !lid_closed && now - last_input >= cfg.dim_min * 60.0) dim();
 		/* (not while charging: a sleep would put the charging light out; the menu stays dimmed instead) */
-		if (cfg.autosleep_min > 0 && !game && now - last_input >= cfg.autosleep_min * 60.0 && !charger_online() &&
+		if (cfg.autosleep_min > 0 && idle && now - last_input >= cfg.autosleep_min * 60.0 && !charger_online() &&
 		    !pid_of("/run/banana/awake.pid"))
 			suspend_now("idle");
+		/* never sleeping (autosleep_minutes 0): off after poweroff_minutes without input, as a held power button does
+		 * (the game saves first); not on the charger */
+		if (cfg.poweroff_min > 0 && cfg.autosleep_min <= 0 && idle && now - last_input >= cfg.poweroff_min * 60.0 &&
+		    !charger_online() && !pid_of("/run/banana/awake.pid")) {
+			sleep_log("idle %.0f min: turning off", (now - last_input) / 60);
+			shutdown_now("idle");
+		}
 		/* started or woken with the lid shut */
 		if (lid_closed && cfg.lid_sleep && !lid_retry_off && now - last_input > 5) suspend_now("lid still closed");
 
 		if (now >= next_battery) {
 			next_battery = now + 60;
 			leds_update();	/* a capacity change has no uevent on every gauge */
+			rec_minute();
 			int pct = battery_discharging_pct();
 			low_count = pct >= 0 && pct <= cfg.battery_off_pct ? low_count + 1 : 0;
 			if (low_count >= 2) shutdown_now("battery empty");	/* two readings in a row: not a load spike */

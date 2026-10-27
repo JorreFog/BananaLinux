@@ -44,6 +44,9 @@ namespace banana
 		void close() { mOpen = false; page = LIST; wizard = false; }
 		void setup() { mOpen = true; openSetup(); }	// the first-time setup, from the host
 		bool isOpen() const { return mOpen; }
+		// the on-screen keyboard is up (a password or an account being typed): the flight recorder leaves touches'
+		// positions out while it is
+		bool typing() const { return mOpen && page == KEYBOARD; }
 		bool animating() const;	// the highlight or the list still easing into place: frames wanted
 
 		// The game panel (settings.cpp, end): while a RetroArch game runs on one panel through a DRM lease, the other
@@ -84,7 +87,8 @@ namespace banana
 		void setSync(bool on) { sync = on; }
 
 		// a notice over the screen being drawn (between the backend's beginScreen and endScreen): the battery icon at
-		// percent, a title and a line or two, in the bubble style near the bottom of the panel
+		// percent (below 0: no battery, the text across the bubble), a title and a line or two, in the bubble style near
+		// the bottom of the panel
 		void notice(const std::string& title, const std::string& body, int percent);
 		// the volume or brightness keys' level: a small bubble near the bottom of the panel, its label, the percent and
 		// a bar (drawn like notice)
@@ -99,6 +103,7 @@ namespace banana
 			std::string section, icon, label, help;
 			std::string file, key;					// where it is kept ("" for the special ones)
 			std::vector<std::string> names, values;	// shown, stored
+			std::vector<std::string> hints;			// what each option does, a short line (optional; the top screen)
 			int at = 0;
 			enum Kind { CHOICE, BRIGHTNESS, VOLUME, INFO, ACTION, PAGE } kind = CHOICE;
 		};
@@ -116,6 +121,11 @@ namespace banana
 		int groupOf(int item) const;			// the group an item is in
 		int groupStart(int g) const, groupEnd(int g) const;	// its items: [start, end)
 		std::string groupHint(int g) const;		// what is in it, for its tile
+		int tiles() const;						// the groups with a tile (not the Developer list)
+		void toRow(const std::string& key);		// the cursor on that row, in its group's list
+		bool devOn = false;						// System's Developer row unlocked (settings.conf's developer)
+		int aboutTaps = 0;						// A's on System > About so far (seven unlock it)
+		std::map<std::string, std::string> recShown;	// each setting as shown, for the recorder's "old -> new"
 		Result pressGroups(Key k);
 		void renderGroups();
 		bool downOnRow = false;

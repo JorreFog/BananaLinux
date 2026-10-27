@@ -1,6 +1,7 @@
 #include <ctime>
 #include "settings.h"
 #include "settings_defaults.h"
+#include "recorder.h"
 #include "theme.h"
 #include <algorithm>
 #include <dlfcn.h>
@@ -259,6 +260,7 @@ namespace banana
 
 	// on the RG DS Plus a shader's GPU pass heats the chip enough to slow the CPU in a long session (Golden Sun: Dark
 	// Dawn at 2x: none 0.0% missed refreshes in 6 min, the LCD grid 0.6-1%, measured 2026-10-18)
+	static const char* DEV = "Developer options";	// the Developer options list's section: opened from System, not a tile
 	static const char* PLUS_SHADER_NOTE = " On the RG DS Plus a shader also heats the chip: a heavy 3D game can drop frames after a few minutes with one. Set such a game to None on its own page (X in the library).";
 
 	// Settings > Nintendo DS > Shader's choices: Banana's shaders, then the card's own (banana/shaders/<name>.frag,
@@ -328,15 +330,34 @@ namespace banana
 		add(D, "picture", "Clock", "How the time on the top screen is written.", menu, "clock", { "24-hour", "12-hour" }, { "24h", "12h" });
 		add(D, "picture", "Boot animation", "The bananas and the cartridge while Banana starts. Off goes straight to the menu once it is ready.", menu, "splash", { "On", "Off" }, { "on", "off" });
 		const char* P = "Sleep & power";
-		add(P, "moon", "Sleep when idle", "In the menu, after this long with no button pressed. Never while a game is running.", power, "autosleep_minutes",
-			{ "Never", "5 minutes", "10 minutes", "15 minutes", "30 minutes" }, { "0", "5", "10", "15", "30" });
-		add(P, "moon", "Dim when idle", "In the menu, the panels go down to a third after this long with no button pressed, and back at the first press. Never while a game is running.", power, "dim_minutes",
+		// the idle chain: dim, sleep, off (bananad.conf). The top screen says what the row is for, then what the chosen
+		// option does: short and plain (hint, after each row)
+		auto hint = [&](std::vector<std::string> h) { items.back().hints = h; };
+		add(P, "moon", "Dim when idle", "Lowers the screens when you leave the handheld alone.", power, "dim_minutes",
 			{ "Never", "1 minute", "2 minutes", "5 minutes" }, { "0", "1", "2", "5" });
-		add(P, "moon", "Closing the lid", "Sleep with the lid: the game pauses, opening the lid carries on where you were.", power, "lid_sleep", { "Sleeps", "Does nothing" }, { "yes", "no" });
-		add(P, "moon", "Waking up", "Fast: the handheld's parts wake up together. Careful: one after the other, slower but the safest. Banana switches to Careful by itself if a sleep ever fails.",
-			power, "fast_resume", { "Fast", "Careful" }, { "yes", "no" });
-		add(P, "moon", "LEDs", "Green, red when the battery is low, blinking red when nearly empty, amber while charging.", power, "led_brightness",
+		hint({ "The screens never dim.", "Screens dim after 1 minute without use.", "Screens dim after 2 minutes without use.",
+			"Screens dim after 5 minutes without use." });
+		add(P, "moon", "Sleep when idle", "Puts the handheld to sleep when you leave it alone. Your game pauses.", power, "autosleep_minutes",
+			{ "Never", "5 minutes", "10 minutes", "15 minutes", "30 minutes" }, { "0", "5", "10", "15", "30" });
+		hint({ "It never falls asleep by itself.", "Sleeps after 5 minutes without use.", "Sleeps after 10 minutes without use.",
+			"Sleeps after 15 minutes without use.", "Sleeps after 30 minutes without use." });
+		add(P, "moon", "Turn off when idle", "Turns the handheld off after it has slept for a while. Your game saves first.", power, "poweroff_minutes",
+			{ "Never", "5 minutes", "10 minutes", "15 minutes", "30 minutes", "1 hour", "3 hours", "6 hours" }, { "0", "5", "10", "15", "30", "60", "180", "360" });
+		hint({ "It stays asleep until you wake it.", "Turns off after 5 minutes asleep.", "Turns off after 10 minutes asleep.",
+			"Turns off after 15 minutes asleep.", "Turns off after 30 minutes asleep.", "Turns off after 1 hour asleep.",
+			"Turns off after 3 hours asleep.", "Turns off after 6 hours asleep." });
+		add(P, "moon", "Idle timers", "Where dimming, sleep and turning off can happen.", power, "idle_in_games",
+			{ "In the menu", "Everywhere" }, { "no", "yes" });
+		hint({ "Only in the menu. A game is never interrupted.", "In the menu and in games. Touching the screen counts as use." });
+		add(P, "moon", "Closing the lid", "What happens when you close the lid.", power, "lid_sleep", { "Sleeps", "Does nothing" }, { "yes", "no" });
+		hint({ "It sleeps. Open the lid to carry on where you were.", "The screens go dark, but the game keeps running." });
+		add(P, "moon", "Waking up", "How the handheld wakes from sleep.", power, "fast_resume", { "Fast", "Careful" }, { "yes", "no" });
+		hint({ "Wakes up quickly.", "Wakes up a little slower, the safest way. Chosen by itself if waking ever goes wrong." });
+		add(P, "moon", "LEDs", "The lights on the handheld: green, red when the battery is low, amber while charging.", power, "led_brightness",
 			{ "Bright", "Dim", "Off" }, { "255", "40", "0" });
+		hint({ "Full brightness.", "Softer lights.", "No lights." });
+		add(P, "moon", "LED while asleep", "The power light while the handheld sleeps.", power, "led_sleep", { "On", "Off" }, { "on", "off" });
+		hint({ "The light stays on, so you can tell it's asleep, not off.", "The light goes out while it sleeps." });
 		// Nintendo DS: the emulator and the quick resume are shared; below them only the chosen emulator's own settings,
 		// each in that emulator's files (switching the emulator builds the list again: change()). Both draw the DS's 3D
 		// with SuperDrastic's Gengis Engine, always (run-drastic, run-bananads).
@@ -423,9 +444,22 @@ namespace banana
 			"", "reset_system", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "Reset emulator settings", "Puts the emulator choices back to their defaults: the core.<system> picks and RetroArch's shader, audio latency and VSync. Your menu and card settings stay. Press A twice.",
 			"", "reset_emulator", { "" }, { "" }, Item::ACTION);
-		add(S, "gear", "About", "", "", "", {}, {}, Item::INFO);
+		add(S, "gear", "About", "", "", "about", {}, {}, Item::INFO);
 		add(S, "gear", "Restart", "Restarts the handheld. Press A twice.", "", "reboot", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "Shut down", "Turns the handheld off. Press A twice. (Or hold the power button.)", "", "poweroff", { "" }, { "" }, Item::ACTION);
+		// (last in System, and there only once unlocked: A seven times on About; settings.conf's developer. groupEnd)
+		add(S, "gear", "Developer options", "Tools for finding what went wrong: a recording of everything the handheld does, and more detailed logs.",
+			"", "developer", {}, {}, Item::PAGE);
+		// the Developer options list: opened from that row, not a tile (DEV; last of the items)
+		add(DEV, "gear", "Flight recorder", "Records what the handheld does: buttons, touches, the lid, the screens, sleep, the battery and Wi-Fi.", power, "recorder",
+			{ "Off", "On" }, { "off", "on" });
+		items.back().hints = { "Not recording.",
+			"Recording to banana/logs/sessions, even after a restart. Hold Select for 2 seconds to mark a moment (the light blinks twice)." };
+		add(DEV, "gear", "Sleep timing log", "How long each part of the handheld takes to sleep and to wake.", power, "sleep_debug",
+			{ "Off", "On" }, { "no", "yes" });
+		items.back().hints = { "Not logged.", "Written to banana/logs/sleep-devices.log after each wake." };
+		add(DEV, "gear", "Hide developer options", "Takes the Developer options row away again (A seven times on System > About brings it back). Press A twice.",
+			"", "dev_hide", { "" }, { "" }, Item::ACTION);
 	}
 
 	void Settings::load(Item& it)
@@ -565,6 +599,17 @@ namespace banana
 		about = a.str();
 	}
 
+	// the tiles: every group but the Developer list (opened from System's Developer row)
+	int Settings::tiles() const { return (int)groups.size() - (!groups.empty() && groups.back() == DEV ? 1 : 0); }
+
+	// the cursor on a row by its key, in its group's list
+	void Settings::toRow(const std::string& key)
+	{
+		for (int i = 0; i < (int)items.size(); i++) if (items[i].key == key) sel = i;
+		top = std::max(groupStart(groupOf(sel)), sel - ROWS + 1);
+		armed = -1;
+	}
+
 	int Settings::groupOf(int item) const
 	{
 		for (int g = 0; g < (int)groups.size(); g++) if (items[item].section == groups[g]) return g;
@@ -579,6 +624,7 @@ namespace banana
 	{
 		int i = groupStart(g);
 		while (i < (int)items.size() && items[i].section == groups[g]) i++;
+		if (!devOn && i > 0 && items[i - 1].key == "developer") i--;	// (System's last row, until unlocked)
 		return i;
 	}
 	std::string Settings::groupHint(int g) const
@@ -600,7 +646,13 @@ namespace banana
 		if (groups.empty())
 			for (auto& it : items)
 				if (std::find(groups.begin(), groups.end(), it.section) == groups.end()) groups.push_back(it.section);
+		for (auto& it : items)
+			if ((it.kind == Item::CHOICE || it.kind == Item::BRIGHTNESS || it.kind == Item::VOLUME) && it.at < (int)it.names.size())
+				recShown[it.key] = it.names[it.at];
+		devOn = getConfValue(data + "/settings.conf", "developer", "off") == "on";
+		aboutTaps = 0;
 		inGroups = true;
+		if (groupOf(sel) >= tiles() || (!devOn && items[sel].key == "developer")) toRow("about");	// (left in the Developer list)
 		gsel = groupOf(sel);
 		for (auto& it : items) load(it);
 		refreshInfo();
@@ -614,6 +666,14 @@ namespace banana
 	void Settings::save(const Item& it)
 	{
 		const std::string& v = it.values[it.at];
+		// the recorder: what changed, as shown (old -> new); an account's or a password's value never
+		if (it.at < (int)it.names.size())
+		{
+			std::string was = recShown[it.key], now = it.names[it.at];
+			bool secret = it.key.find("pass") != std::string::npos || it.key.find("user") != std::string::npos || it.key.find("account") != std::string::npos;
+			recordEvent("setting", "%s: %s -> %s", it.label.c_str(), secret ? "(hidden)" : was.c_str(), secret ? "(hidden)" : now.c_str());
+			recShown[it.key] = now;
+		}
 		if (it.kind == Item::BRIGHTNESS)
 		{
 			int pm = atoi(v.c_str());
@@ -672,11 +732,31 @@ namespace banana
 	Settings::Result Settings::change(int dir)
 	{
 		Item& it = items[sel];
+		if (it.key == "about" && dir > 0 && !devOn)
+		{
+			// A seven times on About: the Developer tile (as a phone's build number); a count from the fourth
+			if (++aboutTaps >= 7)
+			{
+				aboutTaps = 0;
+				devOn = true;
+				setConfValue(data + "/settings.conf", "developer", "on");
+				toast("Developer options are on", "They're at the end of System now.", 0x6ad07a, 1, 5000);
+			}
+			else if (aboutTaps >= 4) toast(std::to_string(7 - aboutTaps) + " more", "for the developer options", 0x6ad07a, 1, 1500);
+			return MOVED;
+		}
 		if (it.kind == Item::INFO) return NONE;
 		if (it.kind == Item::PAGE)
 		{
 			if (dir <= 0) return NONE;
 			if (it.key == "scrape") { startScrape(); return MOVED; }
+			if (it.key == "developer")
+			{
+				recordEvent("settings", "Developer options");
+				for (int g = 0; g < (int)groups.size(); g++) if (groups[g] == DEV) sel = top = groupStart(g);
+				armed = -1;
+				return MOVED;
+			}
 			if (it.key == "update") openUpdates(); else if (it.key == "setup") openSetup(); else openNetworks();
 			return MOVED;
 		}
@@ -684,6 +764,15 @@ namespace banana
 		{
 			if (dir <= 0) { armed = -1; return MOVED; }
 			if (armed != sel) { armed = sel; return MOVED; }
+			if (it.key == "dev_hide")
+			{
+				armed = -1;
+				devOn = false;
+				setConfValue(data + "/settings.conf", "developer", "off");
+				toRow("about");	// (the Developer row gone: System's About, where the seven A's are)
+				toast("Developer options hidden", "A seven times on System > About brings them back.", 0x6ad07a, 1, 4000);
+				return MOVED;
+			}
 			if (it.key == "switch")
 			{
 				// the other slot made the default, then a restart; the script says why not when it can't
@@ -741,8 +830,8 @@ namespace banana
 			// what the settings screen keeps outside settings.conf: bananad's sleep/LED rows (same defaults the rows
 			// show when the card has no line), the backlights and the mixer's level
 			static const struct { const char* key; const char* def; } BANANAD[] = {
-				{ "autosleep_minutes", "10" }, { "dim_minutes", "2" }, { "lid_sleep", "yes" },
-				{ "fast_resume", "yes" }, { "led_brightness", "128" } };
+				{ "autosleep_minutes", "10" }, { "dim_minutes", "2" }, { "poweroff_minutes", "60" }, { "idle_in_games", "no" },
+				{ "lid_sleep", "yes" }, { "fast_resume", "yes" }, { "led_brightness", "128" }, { "led_sleep", "on" } };
 			for (const auto& b : BANANAD)
 				setConfValue(data + "/bananad.conf", b.key, getConfValue("/etc/banana/bananad.conf", b.key, b.def));
 			if (DIR* d = opendir("/sys/class/backlight"))
@@ -804,6 +893,7 @@ namespace banana
 		case Key::UP: case Key::DOWN:
 		{
 			// round within the group's own list
+			aboutTaps = 0;	// (the unlock's count is for presses in a row on About)
 			int n = e - b;
 			sel = b + (sel - b + (k == Key::UP ? -1 : 1) + n) % n;
 			armed = -1;
@@ -814,8 +904,9 @@ namespace banana
 		}
 		case Key::L: case Key::R:
 		{
-			// the previous / next group's list
-			int n = (int)groups.size();
+			// the previous / next group's list (not from the Developer list)
+			if (groups[g] == DEV) return NONE;
+			int n = tiles();
 			gsel = (g + (k == Key::R ? 1 : -1) + n) % n;
 			sel = top = groupStart(gsel);
 			armed = -1;
@@ -824,7 +915,9 @@ namespace banana
 		}
 		case Key::LEFT: return change(-1);
 		case Key::RIGHT: case Key::A: return change(1);
-		case Key::B: inGroups = true; gsel = g; armed = -1; return MOVED;	// back to the groups
+		case Key::B:
+			if (groups[g] == DEV) { toRow("developer"); return MOVED; }	// the Developer list: back to its row in System
+			inGroups = true; gsel = g; armed = -1; return MOVED;	// back to the groups
 		case Key::START: mOpen = false; return CLOSED;
 		default: return NONE;
 		}
@@ -832,7 +925,7 @@ namespace banana
 
 	Settings::Result Settings::pressGroups(Key k)
 	{
-		int n = (int)groups.size();
+		int n = tiles();
 		switch (k)
 		{
 		// a grid of three columns, as the in-game menu's main page
@@ -843,6 +936,7 @@ namespace banana
 		case Key::R: gsel = (gsel + 1) % n; return MOVED;
 		case Key::A:
 			inGroups = false;
+			recordEvent("settings", "%s", groups[gsel].c_str());
 			sel = top = groupStart(gsel);
 			armed = -1;
 			if (items[sel].kind == Item::INFO) refreshInfo();
@@ -889,7 +983,7 @@ namespace banana
 		if (inGroups)
 		{
 			if (downY >= 418 && downY <= 466) return pressGroups(downX < 320 ? Key::B : Key::A);
-			for (int g = 0; g < (int)groups.size(); g++)
+			for (int g = 0; g < tiles(); g++)
 			{
 				float x = 18 + (g % 3) * 204, y = 82 + (g / 3) * 166;
 				if (downX < x || downX > x + 196 || downY < y || downY > y + 158) continue;
@@ -1121,6 +1215,12 @@ namespace banana
 	{
 		SPal p = pal(light);
 		box("bubble", false, 40, 344, 560, 104);
+		if (percent < 0)	// no battery (the hardware check's notice): the text across the whole bubble
+		{
+			text(title, true, 22, 66, 360, p.ink);
+			wrapped(body, 18, 66, 392, 510, 2, p.muted);
+			return;
+		}
 		// the status bar's battery, three times its size on the same pixel grid, its level red at 10% and under
 		auto it = cache.find("battery");
 		if (it == cache.end())
@@ -1209,7 +1309,7 @@ namespace banana
 	void Settings::renderGroups()
 	{
 		SPal p = pal(light);
-		int g0 = std::max(0, std::min(gsel, (int)groups.size() - 1));
+		int g0 = std::max(0, std::min(gsel, tiles() - 1));
 		const Item& first = items[groupStart(g0)];
 
 		be->beginScreen(0);
@@ -1235,9 +1335,9 @@ namespace banana
 		text(sub, true, 17, 602 - sw, 31, p.muted);
 		advance();
 		aGroup = -1;	// (the list starts still when a group opens)
-		for (int g = 0; g < (int)groups.size() && g < 6; g++) box("slot", false, 18 + (g % 3) * 204, 82 + (g / 3) * 166, 196, 158);
+		for (int g = 0; g < tiles() && g < 6; g++) box("slot", false, 18 + (g % 3) * 204, 82 + (g / 3) * 166, 196, 158);
 		box("pick", true, 18 + aCol * 204, 82 + aRow * 166, 196, 158);
-		for (int g = 0; g < (int)groups.size() && g < 6; g++)
+		for (int g = 0; g < tiles() && g < 6; g++)
 		{
 			bool on = std::fabs(g % 3 - aCol) < 0.5f && std::fabs(g / 3 - aRow) < 0.5f;
 			float x = 18 + (g % 3) * 204, y = 82 + (g / 3) * 166;
@@ -1297,6 +1397,12 @@ namespace banana
 			wrapped("Fetching covers and title screens. The menu shows them as they come, and it carries on if you leave this screen.", 20, 50, 196, 540, 4, p.muted);
 			scrapeBar(50, 330, 540);
 		}
+		else if (cur.kind == Item::CHOICE && cur.at < (int)cur.hints.size() && !cur.hints[cur.at].empty())
+		{
+			// the row in a line, then what the chosen option does, brighter (it changes as the option does)
+			wrapped(help, 20, 50, 196, 540, 3, p.muted);
+			wrapped(cur.hints[cur.at], 22, 50, 300, 540, 3, p.ink);
+		}
 		else wrapped(help, 20, 50, 196, 540, 7, p.muted);
 		be->endScreen();
 
@@ -1329,6 +1435,10 @@ namespace banana
 			// a page's row: Network the network it is on; Update the packages waiting on the card; the others nothing
 			else if (it.kind == Item::PAGE && it.key == "network") v = wstat.connected ? fit(wstat.ssid, true, 19, 300) : (wifiOn() ? "Choose" : "");
 			else if (it.kind == Item::PAGE && it.key == "update") v = updatesWaiting();
+			else if (it.kind == Item::PAGE && it.key == "developer")
+			{
+				for (const Item& r : items) if (r.key == "recorder" && r.values[r.at] == "on") v = "Recording";
+			}
 			else if (it.kind == Item::PAGE && it.key == "scrape") v = scrapeShort();
 			if (v.empty()) continue;
 			float vw = text(v, true, 19, 0, 0, p.ink, false, 0, true);
@@ -2314,6 +2424,7 @@ namespace banana
 	void Settings::toast(const std::string& l1, const std::string& l2, uint32_t accent, int icon, double ms)
 	{
 		toast1 = l1; toast2 = l2; toastAccent = accent; toastIcon = icon;
+		recordEvent("notice", "%s%s%s", l1.c_str(), l2.empty() ? "" : ": ", l2.c_str());
 		toastUntil = now + ms;
 	}
 
@@ -2343,6 +2454,9 @@ namespace banana
 	void Settings::openSetup()
 	{
 		for (auto& it : items) load(it);
+		for (auto& it : items)
+			if ((it.kind == Item::CHOICE || it.kind == Item::BRIGHTNESS || it.kind == Item::VOLUME) && it.at < (int)it.names.size())
+				recShown[it.key] = it.names[it.at];
 		refreshInfo();
 		wizard = true;
 		wsel = 0; armed = -1;

@@ -25,6 +25,12 @@ jobs:
           make -C system/bananad CFLAGS="-O2 -Werror"
           make -C system/bananad clean
           make -C system/bananad CC=aarch64-linux-gnu-gcc CFLAGS="-O2 -Werror"
+      - name: The boot's hardware check (against a made-up handheld's /proc and /sys; dash, then BusyBox as on the handheld)
+        run: |
+          sh system/tests/health-test.sh
+          sudo apt-get install -y busybox-static
+          mkdir -p /tmp/bb; for a in sh awk sed grep cat ls mkdir rm touch mv sleep printf date cut tr head tail env timeout; do ln -sf /bin/busybox /tmp/bb/$a; done
+          PATH=/tmp/bb:$PATH busybox sh system/tests/health-test.sh
       - name: Sleep (bananad against a made-up /sys in its own namespaces)
         run: sudo system/bananad/tests/sleep-test.sh
       - name: Shell scripts parse
