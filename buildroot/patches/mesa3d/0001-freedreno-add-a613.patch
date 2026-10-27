@@ -1,0 +1,16 @@
+freedreno: accept the Adreno 613 (the Retroid Pocket Classic's GPU)
+
+The kernel's a613 catalog entry reports gpu id 613, which freedreno_devices.py in
+26.0.1 has no entry for, so fd_pipe_new2() refuses the GPU. Mesa 26.2.0 carries
+the same GPUId in the a6xx gen1 low block; add it here.
+
+--- a/src/freedreno/common/freedreno_devices.py
++++ b/src/freedreno/common/freedreno_devices.py
+@@ -451,6 +451,7 @@
+         GPUId(608), # TODO: Test it, based only on libwrapfake dumps
+         GPUId(610),
+         GPUId(612), # TODO: Test it, based only on libwrapfake dumps
++        GPUId(613), # Adreno 613 (Retroid Pocket Classic): a6xx gen1, as the kernel's catalog has it
+     ], A6xxGPUInfo(
+         CHIP.A6XX,
+         [a6xx_base, a6xx_gen1_low],

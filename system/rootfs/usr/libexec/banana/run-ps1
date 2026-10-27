@@ -14,11 +14,13 @@ M=$R/.banana-psx-1
 if [ ! -f "$M" ]; then
     # Scaling: a 320x240 PS1 frame is exactly 2x on the RG DS (640x480) and 3.2x on the RG DS Plus (1024x768), where
     # nearest-neighbour would shimmer. Integer keeps the pixels square (3x on the Plus, with small borders). The mode's
-    # height decides; a card that reports nothing is treated as the RG DS.
-    H=$(cat /sys/class/drm/card0-*/modes 2>/dev/null | sed -n '1s/^[0-9]*x\([0-9]*\).*/\1/p')
+    # height decides; a card that reports nothing is treated as the RG DS. The connector is asked by name, not by card
+    # number: the RG DS's panels hang off card0 (vop) and the Retroid Pocket Classic's off card1 (msm), so a card0-only
+    # glob silently finds nothing there and the choice gets made by the fallback rather than by the panel.
+    H=$(cat /sys/class/drm/card*-*/modes 2>/dev/null | sed -n '1s/^[0-9]*x\([0-9]*\).*/\1/p' | tr -d ' \r')
     case ${H:-480} in
-    7[0-9][0-9]) INT=false ;;   # 768p: fill the panel (3.2x)
-    *)           INT=true  ;;   # 480p: a clean 2x
+    7[0-9][0-9]) INT=false ;;      # 768p (the RG DS Plus): fill the panel, 3.2x
+    *)             INT=true  ;;   # 480p: a clean 2x. 1240 (the RPC's turned panel): a clean 3x, 960x720
     esac
     printf 'video_scale_integer = "%s"\n' "$INT" > "$R/config/$C/$C.cfg"
 
@@ -36,6 +38,9 @@ if [ ! -f "$M" ]; then
         printf 'pcsx_rearmed_gpu_thread_rendering = "enabled"\n'
         printf 'pcsx_rearmed_spu_thread = "disabled"\n'
         printf 'pcsx_rearmed_spu_interpolation = "simple"\n'
+        # CD-DA and XA decoding: the PS1's only audio sources. Both must stay enabled or every game is silent.
+        printf 'pcsx_rearmed_nocdaudio = "disabled"\n'
+        printf 'pcsx_rearmed_noxadecoding = "disabled"\n'
         printf 'pcsx_rearmed_scale_hires = "enabled"\n'
         printf 'pcsx_rearmed_neon_enhancement_enable = "disabled"\n'
         printf 'pcsx_rearmed_dithering = "enabled"\n'

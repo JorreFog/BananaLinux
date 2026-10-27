@@ -1,0 +1,17 @@
+# Retroid Pocket Classic (SM4450) — board fragment.
+# The base options live in linux-rocknix.config (imported from ROCKNIX 7.2).
+# EFI stub + squashfs + fbcon + evdev are already enabled there.
+CONFIG_DEVTMPFS=y
+CONFIG_DEVTMPFS_MOUNT=y
+CONFIG_EFI_STUB=y
+CONFIG_SQUASHFS=y
+CONFIG_SQUASHFS_LZ4=y
+# the menu draws on KMS directly: no fbdev, no console on the panel, no logo, no VTs to switch (as Banana's own
+# handhelds). Without this the kernel's framebuffer console repaints over the screen whenever banana-ui lets go of the
+# DRM master for a game -- the boot logo flashing on a game's start and staying if it fails.
+# CONFIG_VT is not set
+# CONFIG_DRM_FBDEV_EMULATION is not set
+# CONFIG_DRM_MSM_KMS_FBDEV is not set
+# CONFIG_FRAMEBUFFER_CONSOLE is not set
+# CONFIG_LOGO is not set
+CONFIG_INPUT_EVDEV=y

@@ -59,15 +59,67 @@ mark "rcS: data partition ready"
 # the boot partition, read-only (the panel tuner writes the DTB there once)
 mount -t vfat -o ro,noatime ${DISK}p1 /boot 2>/dev/null
 
+# The sound, before the menu opens it. The RPC's audio is all modules and nothing loads them without udev, and the
+# order matters, because each step needs the one before it to have probed:
+#   1. the ADSP's remoteproc (qcom_q6v5_pas). Its GPR services take a second or two to answer: a q6apm loaded
+#      before that logs "CMD timeout for [10001021]" (APM_CMD_GET_SPF_STATE) and never retries, so wait for it.
+#   2. the LPASS macros: the SoundWire controllers take their "iface" clock from the RX macro.
+#   3. the SoundWire bus: it enumerates the WCD937x (two SDW slaves) that the machine driver wants as "WCD Playback".
+#   4. the q6 DSP's services, q6prm's LPASS clocks, the codecs.
+#   5. the machine driver (sc8280xp -- the card is "qcom,sm4450-sndcard", "qcom,sm8450-sndcard"), which also loads
+#      the audioreach topology the DSP runs the graph from (firmware qcom/sm8450/RetroidPocketClassic-tplg.bin).
+modprobe -a qcom_q6v5_pas qcom_q6v5 qcom_sysmon qcom_common 2>/dev/null
+# the remoteproc says "running" before the DSP is answering, so give it a couple of seconds before the stack loads
+i=0
+while [ $i -lt 40 ] && ! grep -q running /sys/class/remoteproc/remoteproc*/state 2>/dev/null; do sleep 0.2; i=$((i+1)); done
+sleep 2
+modprobe -a snd-soc-lpass-macro-common snd-soc-lpass-rx-macro snd-soc-lpass-tx-macro snd-soc-lpass-va-macro soundwire-qcom 2>/dev/null
+modprobe -a snd-soc-wcd-common snd-soc-wcd-mbhc snd-soc-wcd-classh snd-soc-wcd937x snd-soc-aw88261 2>/dev/null
+modprobe -a snd-soc-qcom-common snd-q6dsp-common snd-q6apm q6apm-dai q6apm-lpass-dais q6prm q6prm-clocks 2>/dev/null
+modprobe snd-soc-sc8280xp 2>/dev/null
+# the card's probe loads the DSP graph, which takes a moment after modprobe returns; bananad reads
+# /proc/asound/cards once, at startup, and writes the "default" PCM from what it finds, so wait for the card here
+# (up to 4 s) or the menu's sounds go to a null device
+i=0
+while [ $i -lt 40 ] && ! grep -q '\[' /proc/asound/cards 2>/dev/null; do sleep 0.1; i=$((i+1)); done
+# the board's own modules: the cooling fan (pwm-fan) and the charger/battery gauge (qcom_battmgr, which bananad reads
+# the level and the charging state from)
+modprobe -a pwm-fan qcom_battmgr 2>/dev/null
+mark "rcS: sound"
+
 bananad &
+
+# The RPC's DSP graph has to be routed from a frontend to the speaker I2S before that frontend is opened -- once a
+# stream is open, its mixer is the DSP's and a change to it doesn't take. So the routes go in here, before the menu
+# starts (it keeps its playback stream open for its cues) and before any game. Both frontends are routed to the same
+# speakers (MultiMedia1 and MultiMedia2, whichever an app ends up on), and they do not fight over the amps: banana-ui
+# releases its stream when a game starts (Sound::release(), called by runGame() for every launch) and run-retroarch puts the
+# route back before RetroArch opens its own. No UCM profile does any of this on this image.
+# read the route back, not just trust the write: the card is there before its mixer is, and a stream opened with
+# the route off stays unrouted for its life
+i=0
+while [ $i -lt 60 ]; do
+    amixer -q -c 0 cset "name=SENARY_MI2S_RX Audio Mixer MultiMedia1" on,on 2>/dev/null
+    amixer -c 0 sget "SENARY_MI2S_RX Audio Mixer MultiMedia1" 2>/dev/null | grep -q '\[on\]' && break
+    sleep 0.1; i=$((i+1))
+done
+amixer -q -c 0 cset "name=SENARY_MI2S_RX Audio Mixer MultiMedia2" on,on 2>/dev/null
+amixer -q -c 0 sset "Left PCM" 90% 2>/dev/null
+amixer -q -c 0 sset "Right PCM" 90% 2>/dev/null
+amixer -q -c 0 sset "Left PCM Playback Volume" 460 2>/dev/null
+amixer -q -c 0 sset "Right PCM Playback Volume" 460 2>/dev/null
+mark "rcS: sound routed ($i tries)"
+
 banana-perf ui
 
 # not needed for the menu's first frame
 (
     hwclock -s 2>/dev/null
     # the GPU (SuperDrastic's shaders, RetroArch's GLES) and the Wi-Fi: modules, and with no udev nothing loads a
-    # module by itself (bananad loads USB devices' drivers as they come)
-    modprobe -a panfrost rtw88_8821cs 2>/dev/null
+    # module by itself (bananad loads USB devices' drivers as they come). The Adreno and the RG DS's Panfrost are
+    # built in / absent respectively; the WLAN driver is rtw88_8821cs on the RG DS and ath10k_snoc on the RPC's
+    # WCN3950 (a qcom,wcn3990-wifi node), whose firmware is in ath10k/WCN3990/hw1.0 with the wpss one.
+    modprobe -a panfrost rtw88_8821cs ath10k_snoc 2>/dev/null
     # Wi-Fi when there is a network to join and the settings screen didn't switch it off (Settings > Network
     # starts it to search when there is none yet)
     if [ -f /data/banana/wifi.conf ] && ! grep -q '^ *wifi *= *off' /data/banana/settings.conf 2>/dev/null; then

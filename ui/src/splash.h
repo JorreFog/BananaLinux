@@ -31,6 +31,7 @@ namespace banana
 		struct Rgba { int w = 0, h = 0; std::vector<uint32_t> px; };	// premultiplied 0xAARRGGBB
 		struct Mask { int w = 0, h = 0; std::vector<uint8_t> a; std::vector<int> letters; };	// letters: first column of each
 		int W = 0, H = 0, K = 2, KW = 6, KL = 2;	// device px per sprite pixel: the bunch, the word, LOADING
+		int oy = 0;						// the composition is centred on a panel taller than 480 CSS px
 		float s = 1;
 		bool light = false, cued = false;
 		std::vector<uint32_t> bgTop, bgBot;

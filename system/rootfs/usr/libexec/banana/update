@@ -39,8 +39,9 @@ list)
     for p in $UPDATES/*.update.tar $UPDATES/*.update; do
         [ -e "$p" ] || continue
         n=$(basename "$p" .tar); n=${n%.update}; n=${n#banana-}
-        # banana-<board>-<version>: the board is the part up to the first "-" (rgds, rgds-plus comes with "-")
+        # banana-<board>-<version>: this handheld's own name first, then the RG DS's (which this tree still builds)
         case $n in
+        "$BOARD"-*) b=$BOARD; v=${n#$BOARD-} ;;
         rgds-plus-*) b=rgds-plus; v=${n#rgds-plus-} ;;
         universal-*) b=universal; v=${n#universal-} ;;
         rgds-*) b=rgds; v=${n#rgds-} ;;

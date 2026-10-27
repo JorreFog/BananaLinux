@@ -72,15 +72,31 @@ namespace banana
 
 	bool Splash::load(const std::string& dir, const std::string& banana, const std::string& variant, int w, int h)
 	{
-		W = w; H = h; s = h / 480.0f;
+		// the composition is laid out in CSS px of a 640x480 panel, so it is the width that fixes its scale (1.6 on the
+		// RG DS Plus's 1024x768, 1.9375 on the RPC's 1240x1080); a panel taller than 480*s keeps the background's
+		// dots below the console, which is what the artwork is behind the console anyway
+		W = w; H = h; s = w / 640.0f;
+		oy = std::max(0, (H - (int)std::lround(480 * s)) / 2);
 		light = variant == "light";
 		K = std::max(1, (int)std::lround(3 * s));
 		KW = std::max(1, (int)std::lround(6 * s));
 		KL = std::max(1, (int)std::lround(2 * s));
 		std::string size = w > 640 ? "1024" : "640", pal = light ? "light" : "dark";
 		int bw, bh;
-		if (!loadRgba(dir + "/" + pal + "-" + size + "-top.png", bgTop, bw, bh) || bw != W || bh != H) return false;
-		if (!loadRgba(dir + "/" + pal + "-" + size + "-bot.png", bgBot, bw, bh) || bw != W || bh != H) return false;
+		if (!loadRgba(dir + "/" + pal + "-" + size + "-top.png", bgTop, bw, bh) || !bgTop.size()) return false;
+		if (!loadRgba(dir + "/" + pal + "-" + size + "-bot.png", bgBot, bw, bh) || !bgBot.size()) return false;
+		// a panel the assets weren't made for (the RPC's 1240x1080): the background is stretched to it, dots and all
+		if (bw != W || bh != H)
+		{
+			for (auto* bg : { &bgTop, &bgBot })
+			{
+				std::vector<uint32_t> o((size_t)W * H);
+				for (int y = 0; y < H; y++)
+					for (int x = 0; x < W; x++)
+						o[(size_t)y * W + x] = (*bg)[(size_t)((int64_t)y * bh / H) * bw + (int64_t)x * bw / W];
+				bg->swap(o);
+			}
+		}
 		if (!loadRgba(dir + "/" + pal + "-" + size + "-lip.png", lip.px, lip.w, lip.h)) return false;
 		if (!loadRgba(dir + "/cart-" + size + ".png", cart.px, cart.w, cart.h)) return false;
 		if (!loadRgba(banana, bunch.px, bunch.w, bunch.h)) return false;
@@ -155,7 +171,7 @@ namespace banana
 		int n = (int)word.letters.size();
 		const int white = 2;		// the last two letters, OS
 		int shown = t < WORD_AT ? 0 : std::min(n, 1 + (int)((t - WORD_AT) / LETTER));
-		int x = (W - word.w * KW) / 2, y = X(WORD_Y);
+		int x = (W - word.w * KW) / 2, y = X(WORD_Y) + oy;
 		int sh = std::max(1, KW / 3);
 		for (int i = 0; i < shown; i++)
 		{
@@ -189,19 +205,19 @@ namespace banana
 		else if (t >= SHINE_AT + SHINE && !ready)
 			by = BUNCH_Y - 3 * (((int)((t - SHINE_AT - SHINE) / BOB)) % 2);	// still loading: the menu's bob
 		double shine = t >= SHINE_AT && t < SHINE_AT + SHINE ? (t - SHINE_AT) / SHINE : -1;
-		drawBunch(top, bx, X(by), shine);
+		drawBunch(top, bx, X(by) + oy, shine);
 		drawWord(top, t);
 		if (t >= LOAD_AT)
 		{
 			int lx = (W - loading.w * KL) / 2;
-			drawMask(top, loading, KL, lx, X(LOAD_Y), muted, 0, loading.w, 0);
+			drawMask(top, loading, KL, lx, X(LOAD_Y) + oy, muted, 0, loading.w, 0);
 			// three dots, the lit one moving along
 			int lit = (int)((t - LOAD_AT) / DOT) % 3, dw = X(10), gap = X(10);
 			int dx = (W - 3 * dw - 2 * gap) / 2;
 			for (int i = 0; i < 3; i++)
 			{
 				uint32_t c = i == lit ? ink : mul255(ink, i == (lit + 2) % 3 ? 0x99 : 0x4d);	// the last lit one fading
-				fill(top, dx + i * (dw + gap), X(DOTS_Y), dw, dw, c);
+				fill(top, dx + i * (dw + gap), X(DOTS_Y) + oy, dw, dw, c);
 			}
 		}
 

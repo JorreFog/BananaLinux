@@ -10,7 +10,7 @@
 BUILDROOT_VERSION = 2026.02.3
 BUILDROOT_DIR ?= $(CURDIR)/.buildroot
 OUT ?= $(CURDIR)/output
-BOARDS = rgds rgds-plus
+BOARDS = rgds rgds-plus retroid-pocket-classic
 
 $(BUILDROOT_DIR)/Makefile:
 	git clone --depth 1 --branch $(BUILDROOT_VERSION) https://github.com/buildroot/buildroot $(BUILDROOT_DIR)

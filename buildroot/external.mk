@@ -21,6 +21,8 @@ define BANANA_LINUX_ROCKNIX_PATCHES
 		patch -p1 -N --no-backup-if-mismatch -d $(LINUX_DIR) < $$p || exit 1; \
 	done
 endef
+# RG DS / RG DS Plus only: these RK3566 patches and drivers do not apply to SM4450.
+ifneq ($(findstring rk3568-anbernic-rg,$(BR2_LINUX_KERNEL_INTREE_DTS_NAME)),)
 LINUX_POST_PATCH_HOOKS += BANANA_LINUX_ROCKNIX_PATCHES
 define BANANA_LINUX_RGDS_DRIVERS
 	cp $(BANANA_RGDS)/kernel/panel-generic-dsi.c $(LINUX_DIR)/drivers/gpu/drm/panel/
@@ -39,3 +41,4 @@ define BANANA_LINUX_RGDS_DRIVERS
 	done
 endef
 LINUX_POST_PATCH_HOOKS += BANANA_LINUX_RGDS_DRIVERS
+endif

@@ -36,6 +36,7 @@
 #include <csignal>
 #include <cstdio>
 #include <cstring>
+#include <dirent.h>
 #include <fcntl.h>
 #include <fstream>
 #include <future>
@@ -256,6 +257,7 @@ struct Options
 	std::string top = "DSI-2", touch = "fe5e0000.i2c";
 	std::string headless, script;
 	std::string theme;		// --theme FILE: that theme's .json instead of the settings' (a theme being made)
+	bool single = false;	// --single: one panel (the RPC's 1240x1080), for headless renders of that layout
 	int w = 640, h = 480;
 };
 
@@ -445,9 +447,12 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 {
 	SoftBackend be(o.w, o.h);
 	std::string layout = themePath(theme);
-	std::unique_ptr<Menu> uiPtr(theme == "carts" ? (Menu*)new CartMenu(&lib, &be, o.banana + "/fonts", o.h / 480.0f)
-		: isLayoutTheme(layout) ? (Menu*)new LayoutMenu(&lib, &be, layout, o.h / 480.0f, o.assets + "/fonts", o.banana + "/fonts")
-		: new RndsMenu(&lib, &be, o.assets, o.h / 480.0f, variant));
+	// one panel as on the RPC: the DS's 640-wide layout, the rest of the panel's height below it
+	float sc = o.single ? o.w / 640.0f : o.h / 480.0f;
+	float canvasW = o.w / sc, canvasH = o.h / sc;
+	std::unique_ptr<Menu> uiPtr(theme == "carts" ? (Menu*)new CartMenu(&lib, &be, o.banana + "/fonts", sc)
+		: isLayoutTheme(layout) ? (Menu*)new LayoutMenu(&lib, &be, layout, sc, o.assets + "/fonts", o.banana + "/fonts", canvasW, canvasH)
+		: new RndsMenu(&lib, &be, o.assets, sc, variant));
 	Menu& ui = *uiPtr;
 	double now = 100000;
 	std::stringstream ss(o.script);
@@ -461,7 +466,9 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		return stbi_write_png(path.c_str(), o.w, o.h, 3, rgb.data(), o.w * 3) != 0;
 	};
 	ui.setHome(0);
-	Settings settings(&be, o.assets, o.data, o.h / 480.0f, variant);
+	// whether this handheld has the DS shelf decides which pages exist at all: build() runs in the constructor
+	Settings settings(&be, o.assets, o.data, sc, variant, lib.hasSystem("nds"));
+	settings.setSingle(o.single, canvasH);
 	settings.setSync(true);
 	settings.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
 	LowBattery low;
@@ -796,25 +803,47 @@ static void irisFromGame(Display& disp, SoftBackend& be, Menu& ui)
 // scroll showed ~10-15% of its frames late). Starting a game puts it back as well (banana-perf sets the lowest clock).
 struct ClockBoost
 {
-	const char* dir = "/sys/devices/system/cpu/cpufreq/policy0";
+	// one entry per cluster the SoC has: the RG DS is a single policy0, the Retroid Pocket Classic has policy0 (its
+	// six Cortex-A55) and policy6 (its two Cortex-A78). Boosting only policy0 leaves the cores that actually draw
+	// the frames on the ramping cluster idle, so a scroll on the RPC was still late.
+	struct Cluster { std::string dir, low; };
+	std::vector<Cluster> clusters;
 	bool on = false;
 	double lastFrame = 0;
-	std::string low;
-	void write(const char* file, const std::string& v) { std::ofstream(std::string(dir) + "/" + file) << v << "\n"; }
-	std::string read(const char* file) { std::ifstream f(std::string(dir) + "/" + file); std::string v; f >> v; return v; }
+	void write(const std::string& dir, const char* file, const std::string& v) { std::ofstream(dir + "/" + file) << v << "\n"; }
+	std::string read(const std::string& dir, const char* file) { std::ifstream f(dir + "/" + file); std::string v; f >> v; return v; }
+	void list()
+	{
+		if (!clusters.empty()) return;
+		DIR* d = opendir("/sys/devices/system/cpu/cpufreq");
+		if (!d) return;
+		struct dirent* e;
+		while ((e = readdir(d)))
+			if (!strncmp(e->d_name, "policy", 6))
+				clusters.push_back({ std::string("/sys/devices/system/cpu/cpufreq/") + e->d_name, std::string() });
+		closedir(d);
+	}
 	void frame(double now)
 	{
 		lastFrame = now;
 		if (on) return;
-		if (read("scaling_governor") != "schedutil") return;	// a game's profile, or no cpufreq: leave it
-		low = read("scaling_min_freq");
-		std::string high = read("scaling_max_freq");
-		if (low.empty() || high.empty()) return;
-		write("scaling_min_freq", high);
+		list();
+		std::vector<Cluster> raised;
+		for (auto& c : clusters)
+		{
+			if (read(c.dir, "scaling_governor") != "schedutil") continue;	// a game's profile, or no cpufreq: leave it
+			c.low = read(c.dir, "scaling_min_freq");
+			std::string high = read(c.dir, "scaling_max_freq");
+			if (c.low.empty() || high.empty()) continue;
+			write(c.dir, "scaling_min_freq", high);
+			raised.push_back(c);
+		}
+		if (raised.empty()) return;
+		clusters = raised;	// only what was raised is the thing to put back
 		on = true;
 	}
 	void idle(double now) { if (on && now - lastFrame > 300) release(); }
-	void release() { if (on) { write("scaling_min_freq", low); on = false; } }
+	void release() { if (!on) return; for (auto& c : clusters) write(c.dir, "scaling_min_freq", c.low); on = false; }
 	int wake(double now) const { return on ? std::max(1, (int)(lastFrame + 301 - now)) : -1; }	// ms until idle() has work
 };
 
@@ -948,6 +977,7 @@ int main(int argc, char** argv)
 		else if (a == "--headless") o.headless = next();
 		else if (a == "--script") o.script = next();
 		else if (a == "--theme") o.theme = next();
+		else if (a == "--single") o.single = true;
 		else if (a == "--size") { std::string s = next(); if (sscanf(s.c_str(), "%dx%d", &o.w, &o.h) != 2) { logf("bad size"); return 2; } }
 		else { logf("unknown option %s", a.c_str()); return 2; }
 	}
@@ -998,14 +1028,15 @@ int main(int argc, char** argv)
 
 	Display disp;
 	std::string err;
-	// the panels' drivers may still be probing when init starts us
-	for (int tries = 0; !disp.open(o.top, err); tries++)
+	// the panels' drivers may still be probing when init starts us. Two panels as on the RG DS, else the one screen
+	// of a handheld like the Retroid Pocket Classic (or QEMU's virtio GPU with a single output)
+	for (int tries = 0; !disp.open(o.top, err) && !disp.openSingle(o.top, err); tries++)
 	{
 		if (tries >= 100) { logf("%s", err.c_str()); return 1; }
 		usleep(50000);
 	}
 	SoftBackend be(disp.width(), disp.height());
-	logf("panels %dx%d", disp.width(), disp.height());
+	logf("panels %dx%d (%d)", disp.width(), disp.height(), disp.panels());
 	bootMark("banana-ui: panels open");
 
 	Sound sound(o.assets + "/sounds");
@@ -1016,13 +1047,25 @@ int main(int argc, char** argv)
 
 	// the library and the menu are made on another thread while the boot animation plays
 	std::shared_ptr<Menu> uiPtr;
+	// one panel (the Retroid Pocket Classic): its screens are wider than the RG DS's 640x480 pairs, so the canvas
+	// is what the panel gives at the DS's scale, and the built-in themes (Carts, Pixel's dark/light) drawn for two
+	// panels give way to the single-screen layout theme
+	const bool single = disp.panels() == 1;
+	// a single panel (the RPC's 1240x1080): the DS's 640-wide layout, and the extra height of the panel below it
+	const float sc = single ? disp.width() / 640.0f : disp.height() / 480.0f;
+	const float canvasW = disp.width() / sc, canvasH = disp.height() / sc;
 	// the theme's menu: Carts (Banana's own), else ROCKNIXDS Pixel's engine in the dark or light palette
-	auto makeMenu = [&](const std::string& theme, float sc) -> Menu*
+	auto makeMenu = [&](const std::string& themeIn, float scv) -> Menu*
 	{
-		if (theme == "carts") return new CartMenu(&lib, &be, o.banana + "/fonts", sc);
-		std::string layout = themePath(theme);
-		if (isLayoutTheme(layout)) { applyTheme(theme, settings["accent"]); return new LayoutMenu(&lib, &be, layout, sc, o.assets + "/fonts", o.banana + "/fonts"); }
-		return new RndsMenu(&lib, &be, o.assets, sc, applyTheme(theme, settings["accent"]) == "light" ? "light" : "dark");
+		std::string theme = themeIn, layout = themePath(themeIn);
+		if (single && theme != "carts" && !isLayoutTheme(layout))
+		{
+			theme = "file:/usr/share/banana/themes/pocket.json";	// (the single-screen layout the panel is made for)
+			layout = "/usr/share/banana/themes/pocket.json";
+		}
+		if (theme == "carts") return new CartMenu(&lib, &be, o.banana + "/fonts", scv);
+		if (isLayoutTheme(layout)) { applyTheme(theme, settings["accent"]); return new LayoutMenu(&lib, &be, layout, scv, o.assets + "/fonts", o.banana + "/fonts", canvasW, canvasH); }
+		return new RndsMenu(&lib, &be, o.assets, scv, applyTheme(theme, settings["accent"]) == "light" ? "light" : "dark");
 	};
 	std::atomic<bool> ready{ false };
 	std::thread loader([&]
@@ -1036,7 +1079,7 @@ int main(int argc, char** argv)
 			f >> startSys;
 			if (startSys < 0 || startSys >= lib.systemCount()) startSys = 0;
 		}
-		uiPtr.reset(makeMenu(settings["theme"], disp.height() / 480.0f));
+		uiPtr.reset(makeMenu(settings["theme"], sc));
 		uiPtr->setHome(startSys);
 		// the menu's pictures decoded here too, while the animation plays (on the main thread at the hand-over they
 		// stopped the screens for ~200 ms)
@@ -1056,7 +1099,7 @@ int main(int argc, char** argv)
 	bool firstSetup = access((o.data + "/setup-done").c_str(), F_OK) != 0;
 
 	Input input;
-	input.open(o.touch, disp.width(), disp.height());
+	input.open(o.touch, disp.width(), disp.height(), disp.rotation(), disp.panelWidth(), disp.panelHeight());
 
 	// the bottom panel's idle dim (settings.conf's bottom_idle_seconds / bottom_dim_percent): the bottom backlight's
 	// path comes from bananad. It runs only for a RetroArch game whose panel is the bottom screen (Mode A): the menu
@@ -1074,9 +1117,10 @@ int main(int argc, char** argv)
 	bool dirty = true, quit = false, drawn = false;	// drawn: a frame on the canvas waiting for the flips
 	double quietUntil = 0;	// no frame before this: the last one flipped nothing (see present below)
 	int lastMinute = -1;
-	float scale = disp.height() / 480.0f;
-	Settings settingsView(&be, o.assets, o.data, scale, variant);
+	float scale = single ? disp.width() / 640.0f : disp.height() / 480.0f;
+	Settings settingsView(&be, o.assets, o.data, scale, variant, lib.hasSystem("nds"));
 	settingsView.setFontDir(o.banana + "/fonts");
+	settingsView.setSingle(single, canvasH);
 	settingsView.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
 	settingsView.setVariant(settings["theme"]);	// (Carts: Inter)
 	LowBattery low;
@@ -1158,8 +1202,10 @@ int main(int argc, char** argv)
 		if (settingsView.isOpen())
 		{
 			std::lock_guard<std::mutex> l(worker.uiLock);
-			if (ev.type == InputEvent::TOUCH_DOWN && ev.screen == 1) settingsView.touch(ev.x, ev.y, true);
-			else if (ev.type == InputEvent::TOUCH_UP && ev.screen == 1) applySettings(settingsView.touch(ev.x, ev.y, false));
+			// the page's list is on the DS's bottom screen, and on the only screen when there is one
+			const int listScreen = single ? 0 : 1;
+			if (ev.type == InputEvent::TOUCH_DOWN && ev.screen == listScreen) settingsView.touch(ev.x, ev.y, true);
+			else if (ev.type == InputEvent::TOUCH_UP && ev.screen == listScreen) applySettings(settingsView.touch(ev.x, ev.y, false));
 			else if (ev.type == InputEvent::RELEASE) { if (rep.key == ev.key) rep.key = Key::NONE; }
 			else if (ev.type == InputEvent::PRESS)
 			{
@@ -1320,7 +1366,7 @@ int main(int argc, char** argv)
 		// the panels itself.
 		bool ra = sd.run.find("run-retroarch") != std::string::npos || sd.run.find("run-ps1") != std::string::npos ||
 			(sd.run.find("run-pico8") != std::string::npos && access("/data/roms/pico-8/pico8_64", F_OK) != 0);
-		bool panel = ra && settings["retroarch_panel"] != "off" && disp.isOpen();
+		bool panel = ra && settings["retroarch_panel"] != "off" && disp.isOpen() && disp.panels() == 2;
 		int gameScreen = 0, leaseFd = -1, cmdFd = -1;
 		if (panel)
 		{
@@ -1406,9 +1452,9 @@ int main(int argc, char** argv)
 		long secs = (long)((nowMs() - start) / 1000);
 		if (system("banana-perf ui") != 0) {}
 		logf("game ended after %ld s (status %d)", secs, status);
-		for (int tries = 0; !disp.open(o.top, err) && tries < 100; tries++) usleep(50000);
+		for (int tries = 0; !disp.open(o.top, err) && !disp.openSingle(o.top, err) && tries < 100; tries++) usleep(50000);
 		be.invalidate();
-		input.open(o.touch, disp.width(), disp.height());
+		input.open(o.touch, disp.width(), disp.height(), disp.rotation(), disp.panelWidth(), disp.panelHeight());
 		bottomIdle.setOwned(false, nowMs());	// the game session is over: the menu keeps the bottom screen awake
 		std::lock_guard<std::mutex> l(worker.uiLock);
 		{
@@ -1444,7 +1490,7 @@ int main(int argc, char** argv)
 			std::lock_guard<std::mutex> l(worker.uiLock);
 			if (rearrange(lib, *ui)) dirty = true;
 		}
-		if (input.rescanDue()) input.open(o.touch, disp.width(), disp.height());	// a pad came or went
+		if (input.rescanDue()) input.open(o.touch, disp.width(), disp.height(), disp.rotation(), disp.panelWidth(), disp.panelHeight());	// a pad came or went
 		if (settingsView.isOpen())
 		{
 			std::lock_guard<std::mutex> l(worker.uiLock);

@@ -1,0 +1,11 @@
+--- a/drivers/clk/qcom/gpucc-sm4450.c
++++ b/drivers/clk/qcom/gpucc-sm4450.c
+@@ -702,7 +702,7 @@
+ 		.name = "gpu_gx_gdsc",
+ 	},
+ 	.pwrsts = PWRSTS_OFF_ON,
+-	.flags = CLAMP_IO | AON_RESET | SW_RESET | POLL_CFG_GDSCR,
++	.flags = CLAMP_IO | AON_RESET | SW_RESET | POLL_CFG_GDSCR | RETAIN_FF_ENABLE,
+ };
+ 
+ static struct clk_regmap *gpu_cc_sm4450_clocks[] = {

@@ -3,9 +3,20 @@
 # bananad turns it off again after a wake-up or the lid opening (/run/banana/panel-off).
 #   one_panel_dark top|bottom     the panel the program draws on
 #   one_panel_restore
+# A machine with a single panel has no "other" panel to dark: leaving this to the missing DSI nodes would work by
+# accident, and the accident is a game drawing on a panel someone switched off.
+panels_here() {
+	n=0
+	for s in /sys/class/drm/card*-*/status; do
+		[ -f "$s" ] || continue
+		[ "$(cat "$s" 2>/dev/null)" = connected ] && n=$((n + 1))
+	done
+	echo $n
+}
 ONE_PANEL_BL=
 one_panel_dark() {
     local DT=/proc/device-tree DSI PH b
+    [ "$(panels_here)" -gt 1 ] || { ONE_PANEL_BL=; return 0; }
     case $1 in top) DSI=fe060000 ;; *) DSI=fe070000 ;; esac
     PH=$(od -An -tx1 $DT/dsi@$DSI/panel@0/backlight 2>/dev/null | tr -d ' \n')
     ONE_PANEL_BL=

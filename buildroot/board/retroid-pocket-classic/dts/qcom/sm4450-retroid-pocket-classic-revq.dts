@@ -1,0 +1,270 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * Retroid Pocket Classic Rev Q (SM4450 "parrot")
+ */
+
+/dts-v1/;
+
+#include "sm4450-retroid-pocket-classic-common.dtsi"
+
+/ {
+	model = "Retroid Pocket Classic Rev Q";
+	compatible = "retroid,pocket-classic", "qcom,sm4450";
+	qcom,board-id = <0x1000b 0>;
+
+	mcu_vdd: regulator-mcu-vdd {
+		compatible = "regulator-fixed";
+		regulator-name = "mcu_vdd";
+		gpio = <&tlmm 2 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-boot-on;
+	};
+
+	fan_pwr: regulator-fan-pwr {
+		compatible = "regulator-fixed";
+		regulator-name = "fan_pwr";
+		gpio = <&tlmm 8 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+	};
+
+	fan: pwm-fan {
+		compatible = "pwm-fan";
+		pwms = <&pm6450_pwm 0 50000>;
+		fan-supply = <&fan_pwr>;
+		interrupts-extended = <&tlmm 33 IRQ_TYPE_EDGE_FALLING>;
+		pulses-per-revolution = <2>;
+		#cooling-cells = <2>;
+		// off until the SoC is warm, then 60%, 70%, 80% and full: the thermal zones below ask for these by index
+		// (the driver on its own sets the highest level at probe and nothing ever lowers it -- a fan that runs in
+		// the menu)
+		cooling-levels = <0 60 120 180 255>;
+	};
+
+	vreg_panel_1p8: regulator-panel-1p8 {
+		compatible = "regulator-fixed";
+		regulator-name = "vreg_panel_1p8";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		gpio = <&tlmm 30 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-boot-on;
+		startup-delay-us = <1000>;
+		pinctrl-0 = <&panel_1p8_en_default>;
+		pinctrl-names = "default";
+	};
+
+	vreg_panel_2p8: regulator-panel-2p8 {
+		compatible = "regulator-fixed";
+		regulator-name = "vreg_panel_2p8";
+		regulator-min-microvolt = <3000000>;
+		regulator-max-microvolt = <3000000>;
+		gpio = <&tlmm 3 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-boot-on;
+		startup-delay-us = <1000>;
+		pinctrl-0 = <&panel_2p8_en_default>;
+		pinctrl-names = "default";
+	};
+
+	vreg_panel_avdd: regulator-panel-avdd {
+		compatible = "regulator-fixed";
+		regulator-name = "vreg_panel_avdd";
+		regulator-min-microvolt = <5500000>;
+		regulator-max-microvolt = <5500000>;
+		gpio = <&tlmm 127 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-boot-on;
+		regulator-always-on;
+		startup-delay-us = <1000>;
+		pinctrl-0 = <&panel_avdd_en_default>;
+		pinctrl-names = "default";
+	};
+
+	vreg_panel_vddio: regulator-panel-vddio {
+		compatible = "regulator-fixed";
+		regulator-name = "vreg_panel_vddio";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		gpio = <&pm7250b_gpios 11 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-boot-on;
+		regulator-always-on;
+		startup-delay-us = <1000>;
+		pinctrl-0 = <&panel_vddio_en_default>;
+		pinctrl-names = "default";
+	};
+
+	vreg_panel_extdvdd: regulator-panel-extdvdd {
+		compatible = "regulator-fixed";
+		regulator-name = "vreg_panel_extdvdd";
+		regulator-min-microvolt = <1300000>;
+		regulator-max-microvolt = <1300000>;
+		gpio = <&pm7250b_gpios 12 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-boot-on;
+		startup-delay-us = <1000>;
+		pinctrl-0 = <&panel_extdvdd_en_default>;
+		pinctrl-names = "default";
+	};
+};
+
+&mdss_dsi0 {
+	panel@0 {
+		compatible = "retroid,pocket-classic-panel", "chipwealth,ch13726a";
+		reg = <0>;
+
+		vdd-supply = <&vreg_l4e_3p0>;
+		vddio-supply = <&vreg_panel_1p8>;
+		vdd1v2-supply = <&vreg_panel_extdvdd>;
+		avdd-supply = <&vreg_panel_2p8>;
+
+		reset-gpios = <&tlmm 92 GPIO_ACTIVE_LOW>;
+
+		pinctrl-0 = <&panel_reset_default>;
+		pinctrl-names = "default";
+
+		rotation = <90>;
+
+		port {
+			panel_in: endpoint {
+				remote-endpoint = <&mdss_dsi0_out>;
+			};
+		};
+	};
+};
+
+&i2c1 {
+	touchscreen@38 {
+		iovcc-supply = <&vreg_panel_1p8>;
+	};
+};
+
+&uart3 {
+	gamepad: gamepad {
+		compatible = "gamepad,rsinput";
+
+		gamepad-name = "Retroid Pocket Classic Gamepad";
+		gamepad-bus = <0x0003>;
+		gamepad-vid = <0x2f24>;
+		gamepad-pid = <0x0001>;
+		gamepad-rev = <0x0001>;
+		digital-triggers;
+
+		vdd-supply = <&mcu_vdd>;
+		enable-gpios = <&tlmm 7 GPIO_ACTIVE_HIGH>;
+		boot-gpios = <&tlmm 6 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&tlmm 9 GPIO_ACTIVE_HIGH>;
+	};
+};
+
+&speaker_amp_l {
+	reset-gpios = <&tlmm 26 GPIO_ACTIVE_LOW>;
+};
+
+&speaker_amp_r {
+	reset-gpios = <&tlmm 28 GPIO_ACTIVE_LOW>;
+};
+
+&wifi {
+	vdd-0.8-cx-mx-supply = <&vreg_l11b_0p348>;
+};
+
+&pm6450_gpios {
+	fan_pwm_default: fan-pwm-state {
+		pins = "gpio7";
+		function = "func1";
+		power-source = <1>;
+		qcom,drive-strength = <PMIC_GPIO_STRENGTH_MED>;
+		bias-disable;
+	};
+};
+
+&pm6450_pwm {
+	pinctrl-0 = <&fan_pwm_default>;
+	pinctrl-names = "default";
+};
+
+&pm7250b_gpios {
+	panel_vddio_en_default: panel-vddio-en-default-state {
+		pins = "gpio11";
+		function = "normal";
+		bias-disable;
+		qcom,drive-strength = <PMIC_GPIO_STRENGTH_MED>;
+		input-disable;
+		output-enable;
+		power-source = <0>;
+	};
+
+	panel_extdvdd_en_default: panel-extdvdd-en-default-state {
+		pins = "gpio12";
+		function = "normal";
+		bias-disable;
+		qcom,drive-strength = <PMIC_GPIO_STRENGTH_MED>;
+		input-disable;
+		output-enable;
+		power-source = <0>;
+	};
+};
+
+&tlmm {
+	panel_1p8_en_default: panel-1p8-en-default-state {
+		pins = "gpio30";
+		function = "gpio";
+		drive-strength = <2>;
+		bias-disable;
+	};
+
+	panel_2p8_en_default: panel-2p8-en-default-state {
+		pins = "gpio3";
+		function = "gpio";
+		drive-strength = <2>;
+		bias-disable;
+	};
+
+	panel_avdd_en_default: panel-avdd-en-default-state {
+		pins = "gpio127";
+		function = "gpio";
+		drive-strength = <8>;
+		bias-disable;
+		output-high;
+	};
+};
+
+// The fan's curve, on the CPU cluster and the GPU: below 60 C it is off (the driver's own default is full speed),
+// then a step every 10 C, with the last step near the throttle point. The zones poll once a second so the level
+// follows the temperature; the governor is step_wise, so it climbs and falls one level at a time.
+&cpuss0_thermal {
+	polling-delay = <1000>;
+
+	trips {
+		fan_cpuss0_1: fan-cpuss0-trip1 { temperature = <60000>; hysteresis = <3000>; type = "active"; };
+		fan_cpuss0_2: fan-cpuss0-trip2 { temperature = <70000>; hysteresis = <3000>; type = "active"; };
+		fan_cpuss0_3: fan-cpuss0-trip3 { temperature = <80000>; hysteresis = <3000>; type = "active"; };
+		fan_cpuss0_4: fan-cpuss0-trip4 { temperature = <88000>; hysteresis = <3000>; type = "active"; };
+	};
+
+	cooling-maps {
+		fan_cpuss0_map1 { trip = <&fan_cpuss0_1>; cooling-device = <&fan 1 1>; };
+		fan_cpuss0_map2 { trip = <&fan_cpuss0_2>; cooling-device = <&fan 2 2>; };
+		fan_cpuss0_map3 { trip = <&fan_cpuss0_3>; cooling-device = <&fan 3 3>; };
+		fan_cpuss0_map4 { trip = <&fan_cpuss0_4>; cooling-device = <&fan 4 4>; };
+	};
+};
+
+&gpu_thermal {
+	polling-delay = <1000>;
+
+	trips {
+		fan_gpu_1: fan-gpu-trip1 { temperature = <60000>; hysteresis = <3000>; type = "active"; };
+		fan_gpu_2: fan-gpu-trip2 { temperature = <70000>; hysteresis = <3000>; type = "active"; };
+		fan_gpu_3: fan-gpu-trip3 { temperature = <80000>; hysteresis = <3000>; type = "active"; };
+		fan_gpu_4: fan-gpu-trip4 { temperature = <88000>; hysteresis = <3000>; type = "active"; };
+	};
+
+	cooling-maps {
+		fan_gpu_map1 { trip = <&fan_gpu_1>; cooling-device = <&fan 1 1>; };
+		fan_gpu_map2 { trip = <&fan_gpu_2>; cooling-device = <&fan 2 2>; };
+		fan_gpu_map3 { trip = <&fan_gpu_3>; cooling-device = <&fan 3 3>; };
+		fan_gpu_map4 { trip = <&fan_gpu_4>; cooling-device = <&fan 4 4>; };
+	};
+};

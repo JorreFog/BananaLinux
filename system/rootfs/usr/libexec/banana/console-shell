@@ -1,0 +1,26 @@
+#!/bin/sh
+# A login on the board's UART, when the kernel was told to use one on its command line (console=ttyAMA0 on QEMU's
+# virt machine, console=ttyS2,1500000 on the RG DS, console=ttyMSM0 on a Qualcomm geni console). Without one -- the
+# RPC's extlinux.conf names no console -- there is no getty at all: the kernel's own default console (ttyMSM0 here) is
+# not a port anything is wired to, and a getty on it exits at once, so init would respawn it every few seconds.
+#
+# A framebuffer console (tty0) is never taken: the menu draws the screen. With no UART this waits instead of returning
+# (init would respawn it in a loop).
+uart_ok() {
+    case $1 in ttyS*|ttyMSM*|ttyAMA*|ttymxc*) return 0 ;; esac
+    return 1
+}
+for a in $(cat /proc/cmdline 2>/dev/null); do
+    case $a in
+    console=*)
+        c=${a#console=}
+        c=${c%%,*}
+        uart_ok "$c" || continue
+        [ -c /dev/$c ] || continue
+        b=115200
+        [ "$c" = ttyS2 ] && b=1500000
+        exec /sbin/getty -L $c $b vt100
+        ;;
+    esac
+done
+sleep 3600

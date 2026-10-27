@@ -1,0 +1,130 @@
+{
+  // Pocket: the Retroid Pocket Classic's menu, for its one 1240x1080 screen. The panel at the DS panels' scale is
+  // 640x557 layout px (640 wide, and taller than a DS screen), so this theme keeps the DS themes' 640-wide
+  // coordinates and uses the extra height at the bottom. A single screen shows one view at a time: the shelf of
+  // systems at home, the game list in the library, a launch card while a game starts.
+  "name": "Pocket",
+  "author": "BananaOS",
+  "base": "dark",
+  "accent": "#7c9cff",
+  "colors": { "screenBg": "#0d1017", "ink": "#eef1ff", "muted": "#9aa3c0" },
+  "font": "inter",
+
+  "vars": {
+    "bg": "#0d1017",
+    "card": "#1b2030",
+    "ink": "#eef1ff",
+    "soft": "#9aa3c0",
+    "hi": "=accent"
+  },
+
+  // one list on screen: up and down by one, left and right by a page of the shelf
+  "input": { "library": { "up": "prev", "down": "next", "left": "prev:5", "right": "next:5" } },
+
+  "behavior": { "launchMs": 700, "scrollMs": 90, "cues": { "insert": 450 } },
+
+  "components": {
+    // the status bar: the clock, the battery as a bar and its percent
+    "status": {
+      "type": "group", "x": 0, "y": 0, "w": "100%", "h": 36,
+      "children": [
+        { "type": "text", "x": 20, "y": 10, "text": "{clock}", "font": "inter-semibold", "size": 15, "color": "=ink" },
+        { "type": "text", "right": 20, "y": 10, "w": 120, "align": "right", "text": "=battery < 0 ? '' : battery + '%'",
+          "size": 13, "color": "=soft" },
+        { "type": "rect", "right": 146, "y": 13, "w": 26, "h": 12, "radius": 3, "border": 1.5, "borderColor": "=soft",
+          "visible": "=battery >= 0" },
+        { "type": "rect", "right": 148, "y": 15, "w": "=22 * battery / 100", "h": 8, "radius": 1.5,
+          "fill": "=battery < 20 ? '#ff5a5a' : hi", "visible": "=battery >= 0" }
+      ]
+    },
+    // a button hint: the key in a round chip and what it does
+    "hint": {
+      "type": "group", "layout": "row", "gap": 6, "align": "center", "h": 24,
+      "children": [
+        { "type": "group", "layout": "row", "padding": 5, "h": 22, "fill": "=ink", "radius": 11,
+          "children": [ { "type": "text", "y": -2, "text": "{item.key}", "font": "inter-bold", "size": 12, "color": "=bg" } ] },
+        { "type": "text", "text": "{item.label}", "size": 13, "color": "=soft", "y": 3 }
+      ]
+    },
+    // a game in the library: its art, its title and what the shelf knows about it
+    "row": {
+      "type": "group", "w": 604, "h": 54, "fill": "=sel ? hi : card", "radius": 12,
+      "children": [
+        { "type": "image", "src": "{item.art}", "fallback": "{item.icon}", "fit": "cover", "x": 8, "y": 7, "w": 40, "h": 40, "radius": 8, "placeholder": "#00000033" },
+        { "type": "text", "x": 60, "y": 10, "w": 470, "text": "{item.title}", "font": "inter-semibold", "size": 15, "color": "=sel ? bg : ink" },
+        { "type": "text", "x": 60, "y": 31, "w": 470, "text": "{item.sub}", "size": 11, "color": "=sel ? alpha(bg, 0.7) : soft" },
+        { "type": "text", "right": 14, "y": 17, "text": "♥", "font": "inter", "size": 16, "color": "=sel ? bg : hi", "visible": "=item.fav" }
+      ]
+    }
+  },
+
+  "screens": {
+    // over every view: the status bar
+    "all": { "top": { "use": "status" } },
+
+    "home": {
+      "top": [
+        { "type": "rect", "gradient": { "angle": 160, "stops": [ "=mix(sys.color, bg, 0.55)", "=bg + ' 70%'" ] } },
+        { "type": "image", "src": "{sys.icon}", "fit": "pixelContain", "x": 320, "y": 130, "w": 104, "h": 104, "anchor": "center",
+          "opacity": "=easeOut(progress(moved, 250))", "scale": "=0.85 + 0.15 * easeOutBack(progress(moved, 300))" },
+        { "type": "text", "x": 0, "w": "100%", "y": 190, "align": "center", "text": "{sys.name}", "font": "inter-bold", "size": 32, "color": "=ink" },
+        { "type": "text", "x": 0, "w": "100%", "y": 230, "align": "center", "text": "{upper(sys.maker)}  ·  {plural(sys.games, 'game')}", "size": 12, "spacing": 1, "color": "=soft" },
+        // the shelf: a row centred on the selection, eased as it moves
+        { "type": "list", "source": "systems", "direction": "row", "x": 0, "y": 266, "w": 640, "h": 176,
+          "itemW": 112, "itemH": 152, "gap": 12, "scrollMode": "center",
+          "item": {
+            "type": "group", "w": 112, "h": 152,
+            "children": [
+              { "type": "rect", "x": 56, "y": 76, "w": 112, "h": 152, "anchor": "center", "radius": 16,
+                "scale": "=sel ? 1.06 : 0.94", "smooth": { "scale": 90 },
+                "fill": "=sel ? mix(item.color, card, 0.35) : card",
+                "border": "=sel ? 3 : 0", "borderColor": "=hi",
+                "shadow": { "y": 6, "blur": 10, "color": "=sel ? '#00000099' : '#00000000'" } },
+              { "type": "image", "src": "{item.icon}", "fit": "pixelContain", "x": 56, "y": 62, "w": 56, "h": 56, "anchor": "center",
+                "opacity": "=sel ? 1 : 0.55" },
+              { "type": "text", "x": 4, "w": 104, "y": 108, "align": "center", "text": "{item.name}", "size": 11,
+                "font": "=sel ? 'inter-semibold' : 'inter'", "color": "=sel ? ink : soft" },
+              { "type": "text", "x": 4, "w": 104, "y": 126, "align": "center", "text": "=item.app ? 'App' : plural(item.games, 'game')",
+                "size": 10, "color": "=soft", "opacity": 0.8 },
+              { "type": "text", "x": 92, "y": 8, "text": "★", "font": "inter", "size": 13, "color": "=hi", "visible": "=item.fav" }
+            ]
+          } },
+        { "type": "text", "x": 0, "w": "100%", "y": 458, "align": "center", "visible": "=sys.hasResume",
+          "text": "Last played: {sys.resumeTitle}  ·  X to resume", "size": 12, "color": "=soft" },
+        { "type": "list", "source": "hints", "direction": "row", "x": 20, "y": 514, "w": 600, "h": 24, "gap": 18, "flow": true, "scrollMode": "none",
+          "item": { "use": "hint" } }
+      ]
+    },
+
+    "library": {
+      "top": [
+        { "type": "rect", "fill": "=bg" },
+        // the box art, blurred-looking backdrop behind the list
+        { "type": "image", "src": "{game.art}", "fit": "cover", "x": 0, "y": 0, "w": 640, "h": 557, "opacity": 0.14 },
+        { "type": "rect", "gradient": { "angle": 90, "stops": [ "=alpha(bg, 0.97)", "=alpha(bg, 0.72)" ] } },
+        { "type": "image", "src": "{sys.icon}", "fit": "pixelContain", "x": 20, "y": 50, "w": 30, "h": 30 },
+        { "type": "text", "x": 58, "y": 50, "text": "{sys.name}", "font": "inter-bold", "size": 21, "color": "=ink" },
+        { "type": "text", "right": 20, "y": 57, "w": 180, "align": "right", "text": "{cursor + 1} / {count}", "size": 12, "color": "=soft" },
+        { "type": "text", "x": 0, "w": "100%", "y": 220, "align": "center", "text": "{empty.title}", "size": 20, "color": "=ink", "visible": "=empty" },
+        { "type": "text", "x": 40, "w": 560, "y": 256, "align": "center", "text": "{empty.hint}", "size": 13, "color": "=soft", "visible": "=empty", "wrap": true },
+        // the games as a list down the screen, the selection kept in view
+        { "type": "list", "source": "games", "direction": "column", "x": 18, "y": 92, "w": 604, "h": 410,
+          "itemH": 54, "gap": 6, "scrollMode": "edge", "clip": true,
+          "item": { "use": "row" } },
+        { "type": "list", "source": "hints", "direction": "row", "x": 18, "y": 514, "w": 604, "h": 24, "gap": 18, "flow": true, "scrollMode": "none",
+          "item": { "use": "hint" } }
+      ]
+    },
+
+    "launch": {
+      "top": [
+        { "type": "rect", "fill": "=bg" },
+        { "type": "image", "src": "{game.art}", "fallback": "{sys.icon}", "fit": "contain", "x": 320, "y": 210, "w": 220, "h": 300, "anchor": "center",
+          "radius": 10, "scale": "=1 + 0.6 * easeIn(launch.progress)", "opacity": "=1 - easeIn(launch.progress)" },
+        { "type": "text", "x": 0, "w": "100%", "y": 400, "align": "center", "text": "Starting {game.title}", "font": "inter-semibold", "size": 21, "color": "=ink" },
+        { "type": "rect", "x": 170, "y": 444, "w": 300, "h": 6, "radius": 3, "fill": "=card" },
+        { "type": "rect", "x": 170, "y": 444, "w": "=300 * easeInOut(launch.progress)", "h": 6, "radius": 3, "fill": "=hi" }
+      ]
+    }
+  }
+}

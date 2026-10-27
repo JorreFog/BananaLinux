@@ -19,6 +19,41 @@ fi
 # the core that really runs, in banana-ui's log (its "starting" line names systems.conf's)
 c=${CORE##*/}; c=${c%_libretro.so}
 [ "$c" != "$1" ] && echo "run-retroarch: core $c (Settings > Other systems), not $1" >&2 || echo "run-retroarch: core $c" >&2
+# The RPC's DSP: the frontend RetroArch opens has to be routed to the speaker I2S before the open, and the menu has
+# just let go of that frontend (banana-ui closes its stream when a game starts). Setting it here as well as in rcS
+# covers a library that was built without the rcS step, and a route the DSP dropped when the menu's stream closed.
+if [ -d /proc/asound/card0 ]; then
+    # the menu closed its stream a moment ago (its click sounds); the DSP tears that frontend's graph down
+    # asynchronously, and an open in the middle of it leaves RetroArch with no device (its ALSA driver then aborts in
+    # snd_pcm_avail, exit 134). Wait for the frontends to say they are free rather than guess a delay: how long the
+    # DSP takes depends on what the menu was playing. Up to 1.2 s, then take the device anyway (the 134 retry below
+    # still covers a graph that outlasts the wait).
+    i=0
+    while [ $i -lt 12 ]; do
+        busy=
+        for st in /proc/asound/card0/pcm*p/sub0/status; do
+            [ -r "$st" ] || continue
+            case "$(cat $st 2>/dev/null)" in
+                RUNNING|SETUP|PREPARING|PREPARED|DRAINING|PAUSED) busy=1 ;;
+            esac
+        done
+        [ -n "$busy" ] || break
+        slept=1
+        sleep 0.1; i=$((i + 1))
+    done
+    # A substream says "closed" long before the DSP has torn its graph down, and a frontend opened into a teardown
+    # comes up half connected: the speaker amplifiers then answer every start attempt with "start failure (-1)" and
+    # the game runs silently -- measured, not guessed: with nothing recently holding the frontend the same game
+    # opens with no failure at all, while right after the menu let go of it both amps fail. So if anything had to be
+    # waited for here, give the graph the beat it needs before writing the route and opening.
+    [ -n "$slept" ] && sleep 0.6; slept=
+    for i in 0 1; do
+        amixer -q -c 0 cset "name=SENARY_MI2S_RX Audio Mixer MultiMedia1" on,on 2>/dev/null && break
+        sleep 0.1
+    done
+    amixer -q -c 0 sset "Left PCM" 90% 2>/dev/null
+    amixer -q -c 0 sset "Right PCM" 90% 2>/dev/null
+fi
 CFG=/data/retroarch/retroarch.cfg
 [ -f $CFG ] || { mkdir -p /data/retroarch; cp /etc/banana/retroarch.cfg $CFG; }
 mkdir -p /data/saves /data/states /data/screenshots
@@ -30,6 +65,30 @@ set_cfg() {
     sed -i "/^$1 = /d" $CFG
     printf '%s = "%s"\n' "$1" "$2" >> $CFG
 }
+# The keys a game needs to be seen and heard at all, forced every start (not once): RetroArch writes this file back
+# when it quits, so one trip through its own menus -- Video > Output > Video Driver, Audio > Output Device -- leaves a
+# value the handheld cannot use, and the game then runs with no picture: a black panel over sound, with the menu gone
+# behind it and nothing on screen to fix it with. A card written by another build drifts the same way. None of these
+# are settings Banana shows (the screen, the shader, the latency and VSync come from settings.conf below); they are
+# the frame the whole product is built on.
+set_cfg video_driver gl
+set_cfg video_context_driver kms
+set_cfg video_fullscreen true
+set_cfg input_driver udev
+set_cfg audio_driver alsa
+set_cfg audio_device default
+# the ALSA sequencer: no /dev/snd/seq on this image (no sequencer built), and RetroArch's MIDI driver failing is two
+# error lines in the log on every start and one more driver to go wrong
+set_cfg midi_driver null
+# A handheld with one panel has exactly one connector, and RetroArch numbers it 1 -- a card that still says 2 (from a
+# DS pair, or from the Screen row this build doesn't show) sends RetroArch looking for a connector that isn't there,
+# which is the black panel with the game running under it all over again.
+n=0
+for s in /sys/class/drm/card*-*/status; do
+    [ -f "$s" ] || continue
+    [ "$(cat $s 2>/dev/null)" = connected ] && n=$((n + 1))
+done
+[ "$n" -le 1 ] && set_cfg video_monitor_index 1
 # Banana's choices over what RetroArch wrote on a card before they were in retroarch.cfg, once (a change made in
 # RetroArch's menu afterwards is kept): A confirms and B goes back in its menu, F + Start quits with one press, and
 # the N64 core's GLideN64 on its own thread (Super Mario 64 on an RG DS Plus: 40-50 frames a second, 55-60 with it,
@@ -124,12 +183,25 @@ else
     rm -f $FIFO; mkfifo -m 600 $FIFO && exec 3<>$FIFO
     L=/run/banana/retroarch-stdin.cfg
     printf 'stdin_cmd_enable = "true"\n' > $L
-    retroarch --config $CFG --appendconfig "$L|$RA" -L "$CORE" "$2" < $FIFO &
-    P=$!
+    # RetroArch's ALSA driver aborts (SIGABRT, 134) when the DSP hasn't finished letting go of the frontend the menu
+    # had; a second start half a second later takes it. Two extra tries cover a slow teardown, and nothing else.
+    # Its own log goes on the card, not in RAM: the game panel is not here to read /run in this mode, and the one
+    # thing worth having after a game that would not start is what RetroArch said last (RPC-TEST.md asks for logs/).
+    RL=/data/banana/logs/retroarch.log
+    mkdir -p /data/banana/logs 2>/dev/null; rm -f $RL
+    tries=0
+    while :; do
+        retroarch --config $CFG --appendconfig "$L|$RA" -L "$CORE" "$2" < $FIFO --log-file $RL &
+        P=$!
+        trap 'kill -TERM $P 2>/dev/null' TERM INT HUP
+        wait $P; S=$?
+        while kill -0 $P 2>/dev/null; do wait $P; S=$?; done	# a trap interrupted the wait: until RetroArch has quit
+        tries=$((tries + 1))
+        [ $S -eq 134 ] && [ $tries -lt 3 ] || break
+        echo "run-retroarch: RetroArch could not take the audio device, starting it again ($tries)" >&2
+        sleep 0.5
+    done
 fi
-trap 'kill -TERM $P 2>/dev/null' TERM INT HUP
-wait $P; S=$?
-while kill -0 $P 2>/dev/null; do wait $P; S=$?; done	# a trap interrupted the wait: until RetroArch has quit
 /usr/libexec/banana/ra-secrets scrub; rm -f $RA
 if [ -n "$BANANA_DRM_LEASE_FD" ]; then
     set_cfg video_monitor_index ${MON:-2}

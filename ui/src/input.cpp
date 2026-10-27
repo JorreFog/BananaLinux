@@ -45,7 +45,7 @@ namespace banana
 		return real;
 	}
 
-	void Input::open(const std::string& bottomTouch, int panelW, int panelH)
+	void Input::open(const std::string& bottomTouch, int panelW, int panelH, int turn, int scanoutW, int scanoutH)
 	{
 		close();
 		pw = panelW; ph = panelH;
@@ -149,9 +149,19 @@ namespace banana
 					{
 						InputEvent o;
 						o.screen = dv->screen;
-						float sx = dv->maxX > dv->minX ? (float)pw / (dv->maxX - dv->minX + 1) : 1;
-						float sy = dv->maxY > dv->minY ? (float)ph / (dv->maxY - dv->minY + 1) : 1;
-						o.x = (dv->x - dv->minX) * sx; o.y = (dv->y - dv->minY) * sy;
+						// the touchscreen reports the panel's own axes: map to those, then turn them the way the menu
+						// was turned for the panel
+						const int w = sw ? sw : pw, h = sh ? sh : ph;
+						float sx = dv->maxX > dv->minX ? (float)w / (dv->maxX - dv->minX + 1) : 1;
+						float sy = dv->maxY > dv->minY ? (float)h / (dv->maxY - dv->minY + 1) : 1;
+						float px = (dv->x - dv->minX) * sx, py = (dv->y - dv->minY) * sy;
+						switch (rot)
+						{
+						case 90:  o.x = py; o.y = w - 1 - px; break;	// screen x <- panel row, screen y <- panel column
+						case 270: o.x = h - 1 - py; o.y = px; break;
+						case 180: o.x = w - 1 - px; o.y = h - 1 - py; break;
+						default:  o.x = px; o.y = py; break;
+						}
 						if (dv->down && !dv->wasDown) { o.type = InputEvent::TOUCH_DOWN; sink(o); }
 						else if (dv->down && dv->moved) { o.type = InputEvent::TOUCH_MOVE; sink(o); }
 						else if (!dv->down && dv->wasDown) { o.type = InputEvent::TOUCH_UP; sink(o); }

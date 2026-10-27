@@ -15,9 +15,17 @@ rgds-plus) DTB=/boot/$S/rk3568-anbernic-rg-ds-plus.dtb ;;
 rgds) DTB=/boot/$S/rk3568-anbernic-rg-ds.dtb ;;
 *) DTB= ;;
 esac
-[ -f "$DTB" ] || DTB=$(ls /boot/$S/*.dtb 2>/dev/null | head -n 1)
-# a card it can't tune says why, once (delete the report to try again)
-[ -f "$DTB" ] || { { date; echo "no boot DTB found (is /boot mounted?)"; } > $REPORT; exit 1; }
+[ -f "$DTB" ] || DTB=$(ls /boot/$S/rk3568-anbernic-*.dtb 2>/dev/null | head -n 1)
+# Only the Rockchip boards have a panel this can tune: their DTBs carry the generic DSI driver's timing as text
+# ("M clock=... horizontal=..."), which is what banana-panel-tune rewrites in place. The Retroid Pocket Classic's
+# panel is a DRM driver with the timings in dtb properties (chipwealth,ch13726a), so there is nothing here for it
+# to find -- and /boot has no business being remounted read-write for a board that cannot be tuned. Say so once (the
+# report is also the marker: delete it to try again) and leave the card alone.
+if [ ! -f "$DTB" ]; then
+	{ date; echo "nothing to tune on this board: no rk3568-anbernic DTB in /boot/$S"; } > $REPORT
+	rm -f $REPORT.new
+	exit 0
+fi
 mount -o remount,rw /boot || { { date; echo "/boot can't be written"; } > $REPORT; exit 1; }
 { date; banana-panel-tune "$DTB"; } > $REPORT.new 2>&1 && mv $REPORT.new $REPORT
 sync

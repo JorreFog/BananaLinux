@@ -2,6 +2,7 @@
 // banana-ui: the theme's menu sounds (rnds/sounds/*.wav) through ALSA. The device is opened on the first sound, kept
 // playing (silence between sounds, so the RG DS Plus's amplifiers stay started) and closed after 20 quiet seconds, and
 // at once when a game starts (release()), so nothing holds the audio device while a game wants it.
+#include <atomic>
 #include <condition_variable>
 #include <cstdint>
 #include <map>
@@ -18,7 +19,7 @@ namespace banana
 		explicit Sound(const std::string& dir);
 		~Sound();
 		void play(const std::string& name);
-		void release();		// close the device now (a game is starting)
+		void release();		// close the device now, and wait for it: a game opens the same frontend next
 		bool enabled = true;
 
 	private:
@@ -29,6 +30,7 @@ namespace banana
 		std::condition_variable cv;
 		std::string queued;
 		bool stop = false, closeNow = false;
+		std::atomic<bool> devOpen{false};	// the playback device is open (see release())
 		void run();
 	};
 }

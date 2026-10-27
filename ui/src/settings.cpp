@@ -185,8 +185,8 @@ namespace banana
 	}
 
 	// ---- the settings ------------------------------------------------------------------------------------------------
-	Settings::Settings(rnds::Backend* b, const std::string& a, const std::string& d, float scale, const std::string& variant)
-		: be(b), assets(a), data(d), s(scale), light(variant == "light")
+	Settings::Settings(rnds::Backend* b, const std::string& a, const std::string& d, float scale, const std::string& variant, bool hds)
+		: be(b), assets(a), data(d), s(scale), light(variant == "light"), hasDs(hds)
 	{
 		R = rnds::Font::load(assets + "/fonts/PixelifySans-Regular.ttf");
 		M = rnds::Font::load(assets + "/fonts/PixelifySans-Medium.ttf");
@@ -337,56 +337,69 @@ namespace banana
 			power, "fast_resume", { "Fast", "Careful" }, { "yes", "no" });
 		add(P, "moon", "LEDs", "Green, red when the battery is low, blinking red when nearly empty, amber while charging.", power, "led_brightness",
 			{ "Bright", "Dim", "Off" }, { "255", "40", "0" });
-		// Nintendo DS: the emulator and the quick resume are shared; below them only the chosen emulator's own settings,
-		// each in that emulator's files (switching the emulator builds the list again: change()). Both draw the DS's 3D
-		// with SuperDrastic's Gengis Engine, always (run-drastic, run-bananads).
-		const char* N = "Nintendo DS";
-		const std::string emu = getConfValue(menu, "nds_emulator", getConfValue("/etc/banana/settings.conf", "nds_emulator", "superdrastic"));
-		add(N, "nds", "Emulator", "SuperDrastic: DraStic straight onto both panels, with its own governor. BananaDS: Banana's own emulator (melonDS's core). Both draw 3D with the Gengis Engine at 2x and have their menu on L3; each keeps its own settings below. X on a game in the library picks one for that game alone.",
-			menu, "nds_emulator", { "SuperDrastic", "BananaDS" }, { "superdrastic", "bananads" });
-		add(N, "nds", "Quick resume", "On: quitting keeps where you are, and the game goes on from there next time (a shutdown too). Off: quitting ends the game, which starts from its title next time.",
-			menu, "quick_resume", { "Off", "On" }, { "off", "on" });
-		std::vector<std::string> shaderNames, shaderValues;
-		shaderChoices(data, shaderNames, shaderValues);
-		std::string shaderHelpS = "Sharp pixels: every DS pixel an exact square, no blur (4x4 on the RG DS Plus, 2x2 with a frame on the RG DS). None scales smoothly. Your own: .frag files in banana/shaders, named with letters, digits and . _ + - only. Crisp: exact pixel-area scaling. Grid and LCD: the DS's screen grid. Colours: the DS's own, duller colours. CRT: a TV's scanlines. FSR: smooth edges, the heaviest. None costs no GPU work.";
-		if (readLine("/etc/banana/board") == "rgds-plus") shaderHelpS += PLUS_SHADER_NOTE;
-		const char* shaderHelp = shaderHelpS.c_str();
-		if (emu == "bananads")
+		// The Nintendo DS page only exists on a handheld that has the DS shelf: its rows write the settings of the
+		// DS launchers, and a handheld shipped without them (the Retroid Pocket Classic: one screen, and a chip that
+		// needs none of the RG DS Plus's performance work) would be offered a page of settings that do nothing.
+		if (hasDs)
 		{
-			const std::string bds = "/data/bananads/bananads.conf";
-			add(N, "nds", "Shader", shaderHelp, bds, "kms.shader", shaderNames, shaderValues);
-			add(N, "nds", "3D resolution", "2x draws the DS's 3D at twice its size on these panels. 1x is the DS's own, the lightest.",
-				bds, "render.scale", { "2x", "1x" }, { "2", "1" });
-			add(N, "nds", "Edge marking", "The outlines some games draw round their 3D models (Zelda, Kirby, many Pokémon battles). Off leaves them out.",
-				bds, "render.edge_marking", { "On", "Off" }, { "on", "off" });
-			add(N, "nds", "Fog", "The distance fog some games draw in 3D. Off leaves it out.", bds, "render.fog", { "On", "Off" }, { "on", "off" });
-			add(N, "nds", "Frame pacing", "Panels runs the DS at the panels' 60 Hz, a new frame every refresh (0.3% fast, the sound matched). DS rate keeps the DS's own 59.83 Hz, a frame shown twice every ~6 s.",
-				bds, "kms.pace", { "Panels", "DS rate" }, { "display", "ds" });
-			add(N, "nds", "CPU clock", "Saves battery finds the lowest clock each game runs at full speed and remembers it. Always full keeps the top clock.",
-				bds, "cpugov", { "Saves battery", "Always full" }, { "on", "off" });
-			add(N, "nds", "Timing", "Accurate is melonDS's own. Fast lets the two CPUs run longer between meeting (about 10% faster), but it can break a game: Golden Sun: Dark Dawn loses its 3D world.",
-				bds, "core.slice", { "Accurate", "Fast" }, { "64", "auto" });
-			add(N, "nds", "Microphone", "On: the game hears the real microphone (a blow, a voice; the DS's own games that ask for one). Off: it hears nothing from the mic, and the in-game menu's Blow still works for a game that wants one.",
-				bds, "mic.source", { "On", "Off" }, { "device", "none" });
-			add(N, "nds", "Mic sensitivity", "How far above the room's noise a word or a blow must be to reach the game. Gate off lets the game hear everything the microphone picks up, its own sound from the speaker included.",
-				bds, "mic.threshold", { "Medium", "High", "Low", "Gate off" }, { "0.05", "0.02", "0.15", "0" });
-		}
-		else
-		{
-			add(N, "nds", "Shader", shaderHelp, sd, "DSFLIP_SHADER", shaderNames, shaderValues);
-			add(N, "nds", "3D resolution", "2x draws the DS's 3D at twice its size on these panels, at full speed with SuperDrastic.", dcfg, "hires_3d", { "2x", "1x" }, { "1", "0" });
-			add(N, "nds", "CPU clock", "Saves battery finds the lowest clock each game runs at full speed and remembers it. Always full keeps the top clock.",
-				sd, "DSFLIP_CPUGOV", { "Saves battery", "Always full" }, { "1", "0" });
-			add(N, "nds", "Frame pacing", "Panels runs the DS at the panels' 60 Hz, a new frame every refresh (0.3% fast, the sound matched). DS rate keeps the DS's own 59.83 Hz, a frame shown twice every ~6 s.",
-				sd, "DSFLIP_PACE", { "Panels", "DS rate" }, { "panels", "ds" });
-			add(N, "nds", "Microphone", "How loud a word or a blow must be to reach the game. Off: the game hears nothing from the mic, and the in-game menu's Blow still works for a game that wants one.",
-				sd, "DSHOOK_MIC_THRESH", { "Medium", "High", "Low", "Off" }, { "0.15", "0.03", "0.3", "0" });
+			// Nintendo DS: the emulator and the quick resume are shared; below them only the chosen emulator's own settings,
+			// each in that emulator's files (switching the emulator builds the list again: change()). Both draw the DS's 3D
+			// with SuperDrastic's Gengis Engine, always (run-drastic, run-bananads).
+			const char* N = "Nintendo DS";
+			const std::string emu = getConfValue(menu, "nds_emulator", getConfValue("/etc/banana/settings.conf", "nds_emulator", "superdrastic"));
+			add(N, "nds", "Emulator", "SuperDrastic: DraStic straight onto both panels, with its own governor. BananaDS: Banana's own emulator (melonDS's core). Both draw 3D with the Gengis Engine at 2x and have their menu on L3; each keeps its own settings below. X on a game in the library picks one for that game alone.",
+				menu, "nds_emulator", { "SuperDrastic", "BananaDS" }, { "superdrastic", "bananads" });
+			add(N, "nds", "Quick resume", "On: quitting keeps where you are, and the game goes on from there next time (a shutdown too). Off: quitting ends the game, which starts from its title next time.",
+				menu, "quick_resume", { "Off", "On" }, { "off", "on" });
+			std::vector<std::string> shaderNames, shaderValues;
+			shaderChoices(data, shaderNames, shaderValues);
+			std::string shaderHelpS = "Sharp pixels: every DS pixel an exact square, no blur (4x4 on the RG DS Plus, 2x2 with a frame on the RG DS). None scales smoothly. Your own: .frag files in banana/shaders, named with letters, digits and . _ + - only. Crisp: exact pixel-area scaling. Grid and LCD: the DS's screen grid. Colours: the DS's own, duller colours. CRT: a TV's scanlines. FSR: smooth edges, the heaviest. None costs no GPU work.";
+			if (readLine("/etc/banana/board") == "rgds-plus") shaderHelpS += PLUS_SHADER_NOTE;
+			const char* shaderHelp = shaderHelpS.c_str();
+			if (emu == "bananads")
+			{
+				const std::string bds = "/data/bananads/bananads.conf";
+				add(N, "nds", "Shader", shaderHelp, bds, "kms.shader", shaderNames, shaderValues);
+				add(N, "nds", "3D resolution", "2x draws the DS's 3D at twice its size on these panels. 1x is the DS's own, the lightest.",
+					bds, "render.scale", { "2x", "1x" }, { "2", "1" });
+				add(N, "nds", "Edge marking", "The outlines some games draw round their 3D models (Zelda, Kirby, many Pokémon battles). Off leaves them out.",
+					bds, "render.edge_marking", { "On", "Off" }, { "on", "off" });
+				add(N, "nds", "Fog", "The distance fog some games draw in 3D. Off leaves it out.", bds, "render.fog", { "On", "Off" }, { "on", "off" });
+				add(N, "nds", "Frame pacing", "Panels runs the DS at the panels' 60 Hz, a new frame every refresh (0.3% fast, the sound matched). DS rate keeps the DS's own 59.83 Hz, a frame shown twice every ~6 s.",
+					bds, "kms.pace", { "Panels", "DS rate" }, { "display", "ds" });
+				add(N, "nds", "CPU clock", "Saves battery finds the lowest clock each game runs at full speed and remembers it. Always full keeps the top clock.",
+					bds, "cpugov", { "Saves battery", "Always full" }, { "on", "off" });
+				add(N, "nds", "Timing", "Accurate is melonDS's own. Fast lets the two CPUs run longer between meeting (about 10% faster), but it can break a game: Golden Sun: Dark Dawn loses its 3D world.",
+					bds, "core.slice", { "Accurate", "Fast" }, { "64", "auto" });
+				add(N, "nds", "Microphone", "On: the game hears the real microphone (a blow, a voice; the DS's own games that ask for one). Off: it hears nothing from the mic, and the in-game menu's Blow still works for a game that wants one.",
+					bds, "mic.source", { "On", "Off" }, { "device", "none" });
+				add(N, "nds", "Mic sensitivity", "How far above the room's noise a word or a blow must be to reach the game. Gate off lets the game hear everything the microphone picks up, its own sound from the speaker included.",
+					bds, "mic.threshold", { "Medium", "High", "Low", "Gate off" }, { "0.05", "0.02", "0.15", "0" });
+			}
+			else
+			{
+				add(N, "nds", "Shader", shaderHelp, sd, "DSFLIP_SHADER", shaderNames, shaderValues);
+				add(N, "nds", "3D resolution", "2x draws the DS's 3D at twice its size on these panels, at full speed with SuperDrastic.", dcfg, "hires_3d", { "2x", "1x" }, { "1", "0" });
+				add(N, "nds", "CPU clock", "Saves battery finds the lowest clock each game runs at full speed and remembers it. Always full keeps the top clock.",
+					sd, "DSFLIP_CPUGOV", { "Saves battery", "Always full" }, { "1", "0" });
+				add(N, "nds", "Frame pacing", "Panels runs the DS at the panels' 60 Hz, a new frame every refresh (0.3% fast, the sound matched). DS rate keeps the DS's own 59.83 Hz, a frame shown twice every ~6 s.",
+					sd, "DSFLIP_PACE", { "Panels", "DS rate" }, { "panels", "ds" });
+				add(N, "nds", "Microphone", "How loud a word or a blow must be to reach the game. Off: the game hears nothing from the mic, and the in-game menu's Blow still works for a game that wants one.",
+					sd, "DSHOOK_MIC_THRESH", { "Medium", "High", "Low", "Off" }, { "0.15", "0.03", "0.3", "0" });
+			}
 		}
 		const char* O = "Other systems";
-		add(O, "gamepad", "Screen", "Which panel the systems other than the DS use (RetroArch). The other one shows the game panel (Second screen), or is switched off.",
-			"/data/retroarch/retroarch.cfg", "video_monitor_index", { "Top", "Bottom" }, { "2", "1" });
-		add(O, "gamepad", "Second screen", "While a game plays on one screen, the other shows its RetroAchievements and tiles to save, load, open RetroArch's menu, fast forward and quit (by touch when they are on the bottom screen). Off: the other screen stays dark.",
-			menu, "retroarch_panel", { "Game panel", "Off" }, { "panel", "off" });
+		// Which panel RetroArch draws on, and what the other one does: both are questions a single-panel handheld
+		// cannot be asked. Offered here, "Top" would set video_monitor_index to a connector that isn't there and
+		// RetroArch would start with no picture at all -- the failure this launcher now guards against anyway -- so on
+		// one panel neither row is shown (and run-retroarch pins the monitor to 1, whatever an old card has in it).
+		if (!single)
+		{
+			add(O, "gamepad", "Screen", "Which panel the systems other than the DS use (RetroArch). The other one shows the game panel (Second screen), or is switched off.",
+				"/data/retroarch/retroarch.cfg", "video_monitor_index", { "Top", "Bottom" }, { "2", "1" });
+			add(O, "gamepad", "Second screen", "While a game plays on one screen, the other shows its RetroAchievements and tiles to save, load, open RetroArch's menu, fast forward and quit (by touch when they are on the bottom screen). Off: the other screen stays dark.",
+				menu, "retroarch_panel", { "Game panel", "Off" }, { "panel", "off" });
+		}
 		add(O, "gamepad", "RetroAchievements", "Softcore: achievements unlock with save states, rewind and cheats still there. Hardcore: those are locked for the game, and the unlocks count as hardcore on retroachievements.org. RetroArch's own menu changes the same setting.",
 			"/data/retroarch/retroarch.cfg", "cheevos_hardcore_mode_enable", { "Softcore", "Hardcore" }, { "false", "true" });
 		add(O, "gamepad", "Quick resume", "On: quitting keeps where you are, and the game goes on from there next time (RetroArch's automatic save state; not in Hardcore). Off: a game starts from its title.", "/data/retroarch/retroarch.cfg", "savestate_auto_save", { "Off", "On" }, { "false", "true" });
@@ -600,6 +613,12 @@ namespace banana
 		if (groups.empty())
 			for (auto& it : items)
 				if (std::find(groups.begin(), groups.end(), it.section) == groups.end()) groups.push_back(it.section);
+		{	// The pages this handheld actually offers, in its log: the first thing to look at when a setting that
+			// should not be here is (an emulator whose launcher isn't installed) or one that should is missing.
+			std::string gs;
+			for (auto& g : groups) { if (!gs.empty()) gs += ", "; gs += g; }
+			fprintf(stderr, "banana-ui: settings: %u groups: %s\n", (unsigned)groups.size(), gs.c_str());
+		}
 		inGroups = true;
 		gsel = groupOf(sel);
 		for (auto& it : items) load(it);
@@ -1212,21 +1231,26 @@ namespace banana
 		int g0 = std::max(0, std::min(gsel, (int)groups.size() - 1));
 		const Item& first = items[groupStart(g0)];
 
-		be->beginScreen(0);
-		box("screen", false, 0, 0, 640, 480);
-		box("hero", false, 18, 20, 604, 436);
-		icon(first.icon, 50, 56, 3);
-		text("Settings", true, 17, 170, 62, p.muted, true, 1.4f);
-		text(groups[g0], true, 30, 170, 88, p.ink);
-		char n[32];
-		snprintf(n, sizeof n, "%d settings", groupEnd(g0) - groupStart(g0));
-		text(n, true, 22, 170, 130, p.accent);
 		std::string all;
 		for (int i = groupStart(g0); i < groupEnd(g0); i++) all += (all.empty() ? "" : ", ") + items[i].label;
-		wrapped(all + ".", 20, 50, 196, 540, 7, p.muted);
-		be->endScreen();
 
-		be->beginScreen(1);
+		// the DS's top screen: the group being chosen; one panel has the strip instead
+		if (!single)
+		{
+			be->beginScreen(0);
+			box("screen", false, 0, 0, 640, 480);
+			box("hero", false, 18, 20, 604, 436);
+			icon(first.icon, 50, 56, 3);
+			text("Settings", true, 17, 170, 62, p.muted, true, 1.4f);
+			text(groups[g0], true, 30, 170, 88, p.ink);
+			char n[32];
+			snprintf(n, sizeof n, "%d settings", groupEnd(g0) - groupStart(g0));
+			text(n, true, 22, 170, 130, p.accent);
+			wrapped(all + ".", 20, 50, 196, 540, 7, p.muted);
+			be->endScreen();
+		}
+
+		be->beginScreen(single ? 0 : 1);
 		box("screen", false, 0, 0, 640, 480);
 		box("bubble", false, 18, 14, 604, 54);
 		text("Settings", true, 22, 38, 28, p.ink);
@@ -1253,6 +1277,7 @@ namespace banana
 		face("B", "Close", 18, bw);
 		float aw = faceWidth("A", "Open");
 		face("A", "Open", 622 - aw, aw);
+		if (single) footer(groups[g0] + ": " + all + ".", p.muted);
 		be->endScreen();
 	}
 
@@ -1268,15 +1293,8 @@ namespace banana
 		const Item& cur = items[sel];
 		int gb = groupStart(groupOf(sel)), ge = groupEnd(groupOf(sel));
 
-		// ---- top: what the selected setting is ----
-		be->beginScreen(0);
-		box("screen", false, 0, 0, 640, 480);
-		box("hero", false, 18, 20, 604, 436);
-		icon(cur.icon, 50, 56, 3);
-		text(cur.section, true, 17, 170, 62, p.muted, true, 1.4f);
-		text(cur.label, true, 30, 170, 88, p.ink);
+		// what the selected setting is and does: on the DS's top screen, and on one panel in the strip under the list
 		std::string value = cur.kind == Item::CHOICE || cur.kind == Item::BRIGHTNESS || cur.kind == Item::VOLUME ? cur.names[cur.at] : "";
-		if (!value.empty()) text(value, true, 22, 170, 130, p.accent);
 		std::string help = cur.help;
 		if (cur.kind == Item::INFO) help = about;
 		if (cur.key == "wifi") help = "Wi-Fi: " + wifiInfo + ". Network, below, joins one; networks can also be written in banana/wifi.conf on a computer (see banana/README.txt).";
@@ -1292,16 +1310,29 @@ namespace banana
 				"leave it off on networks you don't trust.";
 			if (ip.empty()) help += " (Not connected to Wi-Fi now.)";
 		}
-		if (cur.key == "scrape" && scraping())
-		{
-			wrapped("Fetching covers and title screens. The menu shows them as they come, and it carries on if you leave this screen.", 20, 50, 196, 540, 4, p.muted);
-			scrapeBar(50, 330, 540);
-		}
-		else wrapped(help, 20, 50, 196, 540, 7, p.muted);
-		be->endScreen();
+		if (cur.key == "scrape" && scraping()) help = "Fetching covers and title screens. The menu shows them as they come, and it carries on if you leave this screen.";
 
-		// ---- bottom: the list ----
-		be->beginScreen(1);
+		// ---- top: what the selected setting is (the DS's second screen; one panel has the strip instead) ----
+		if (!single)
+		{
+			be->beginScreen(0);
+			box("screen", false, 0, 0, 640, 480);
+			box("hero", false, 18, 20, 604, 436);
+			icon(cur.icon, 50, 56, 3);
+			text(cur.section, true, 17, 170, 62, p.muted, true, 1.4f);
+			text(cur.label, true, 30, 170, 88, p.ink);
+			if (!value.empty()) text(value, true, 22, 170, 130, p.accent);
+			if (cur.key == "scrape" && scraping())
+			{
+				wrapped(help, 20, 50, 196, 540, 4, p.muted);
+				scrapeBar(50, 330, 540);
+			}
+			else wrapped(help, 20, 50, 196, 540, 7, p.muted);
+			be->endScreen();
+		}
+
+		// ---- the list ----
+		be->beginScreen(single ? 0 : 1);
 		box("screen", false, 0, 0, 640, 480);
 		box("bubble", false, 18, 14, 604, 54);
 		text(cur.section, true, 22, 38, 28, p.ink);
@@ -1347,7 +1378,21 @@ namespace banana
 			float aw = faceWidth("A", act);
 			face("A", act, 622 - aw, aw);
 		}
+		if (single) footer(help, p.muted);
 		be->endScreen();
+	}
+
+	// one panel: what the second screen said, in the strip under the list (the panel is taller than a DS screen)
+	void Settings::footer(const std::string& t, const rnds::Color& c)
+	{
+		SPal p = pal(light);
+		float h = std::max(0.0f, canvasH - 480);
+		be->fill(0, X(480), X(640), X(h), p.screenBg);
+		if (!t.empty() && h > 26)
+		{
+			int lines = std::max(1, (int)((h - 6) / 22));	// (17px text: a line is 24 high)
+			wrapped(t, 16, 22, 486, 596, lines, c);
+		}
 	}
 
 	// ---- Wi-Fi: the networks around, and a keyboard for the password ----------------------------------------------
@@ -1697,23 +1742,29 @@ namespace banana
 	{
 		SPal p = pal(light);
 		const wifi::Network* cur = nsel < (int)nets.size() ? &nets[nsel] : nullptr;
-		be->beginScreen(0);
-		box("screen", false, 0, 0, 640, 480);
-		box("hero", false, 18, 20, 604, 436);
-		icon("phone", 50, 56, 3);
-		text("Network", true, 17, 170, 62, p.muted, true, 1.4f);
-		text("Wi-Fi networks", true, 30, 170, 88, p.ink);
 		std::string st = !wifiEnabled ? "Wi-Fi is off" : !joining.empty() ? "Joining " + joining
 			: wstat.connected ? "Connected to " + wstat.ssid : "Not connected";
-		text(fit(st, true, 22, 420), true, 22, 170, 130, p.accent);
 		std::string help = message;
 		if (help.empty())
 			help = !wifiEnabled ? "Wi-Fi is switched off. X switches it on and searches."
 				: "A joins the network chosen, with its password typed on the keyboard (or by touch). X searches again, Y forgets a saved network. Passwords are kept in banana/wifi.conf on the card.";
-		wrapped(help, 20, 50, 196, 540, 7, p.muted);
-		be->endScreen();
+		if (single) help = st + ". " + help;
 
-		be->beginScreen(1);
+		// the DS's top screen: the state and what the buttons do; one panel has the strip instead
+		if (!single)
+		{
+			be->beginScreen(0);
+			box("screen", false, 0, 0, 640, 480);
+			box("hero", false, 18, 20, 604, 436);
+			icon("phone", 50, 56, 3);
+			text("Network", true, 17, 170, 62, p.muted, true, 1.4f);
+			text("Wi-Fi networks", true, 30, 170, 88, p.ink);
+			text(fit(st, true, 22, 420), true, 22, 170, 130, p.accent);
+			wrapped(help, 20, 50, 196, 540, 7, p.muted);
+			be->endScreen();
+		}
+
+		be->beginScreen(single ? 0 : 1);
 		box("screen", false, 0, 0, 640, 480);
 		box("bubble", false, 18, 14, 604, 54);
 		text("Networks", true, 22, 38, 28, p.ink);
@@ -1751,42 +1802,47 @@ namespace banana
 			float aw = faceWidth("A", act);
 			face("A", act, 622 - aw, aw);
 		}
+		if (single) footer(help, message.empty() ? p.muted : p.accent);
 		be->endScreen();
 	}
 
 	void Settings::renderKeyboard()
 	{
 		SPal p = pal(light);
-		be->beginScreen(0);
-		box("screen", false, 0, 0, 640, 480);
-		box("hero", false, 18, 20, 604, 436);
-		icon(entry == ENTRY_SEARCH ? "search" : "phone", 50, 56, 3);
-		text(entryTitle, true, 17, 170, 62, p.muted, true, 1.4f);
-		text(fit(entrySub, true, 30, 420), true, 30, 170, 88, p.ink);
-		box("slot", true, 50, 150, 540, 56);
-		// the end of the password when it is longer than the field
-		std::string shown = pw;
-		float w = text(shown, true, 22, 0, 0, p.ink, false, 0, true);
-		while (w > 480 && shown.size() > 1) { shown.erase(0, 1); w = text("..." + shown, true, 22, 0, 0, p.ink, false, 0, true); }
-		if (shown != pw) shown = "..." + shown;
-		if (pw.empty()) w = 0;
-		else text(shown, true, 22, 70, 165, p.ink);
-		be->fill(std::round(X(72 + w)), std::round(X(166)), std::round(X(10)), std::round(X(24)), p.accent);	// the cursor
-		std::string n = std::to_string(pw.size()) + (pw.size() == 1 ? " character" : " characters");
-		if (entry == ENTRY_SEARCH && searchCount)
-		{
-			int m = pw.empty() ? -1 : searchCount(pw);
-			n = m < 0 ? "Every system's games" : m == 0 ? "No games match" : std::to_string(m) + (m == 1 ? " game matches" : " games match");
-		}
-		text(n, true, 17, 50, 216, p.muted);
 		std::string help = !message.empty() ? message
 			: entry == ENTRY_SEARCH ? "A types the key, B deletes, X capitals, Y a space, START searches: the games found open as a shelf of their own, first on the shelf. Part of a name is enough; an empty search takes the shelf away."
 			: entry == ENTRY_WIFI ? "A types the key, B deletes, X capitals, L symbols, Y a space, START joins. Or tap the keys. The password is kept in banana/wifi.conf on the card."
 			: "A types the key, B deletes, X capitals, L symbols, Y a space, START when it is typed. Or tap the keys. Accounts are kept in banana/accounts.conf on the card.";
-		wrapped(help, 20, 50, 252, 540, 6, message.empty() ? p.muted : p.accent);
-		be->endScreen();
+		// the DS's top screen: the field and the help; one panel has the field on the keys' screen and the help below
+		if (!single)
+		{
+			be->beginScreen(0);
+			box("screen", false, 0, 0, 640, 480);
+			box("hero", false, 18, 20, 604, 436);
+			icon(entry == ENTRY_SEARCH ? "search" : "phone", 50, 56, 3);
+			text(entryTitle, true, 17, 170, 62, p.muted, true, 1.4f);
+			text(fit(entrySub, true, 30, 420), true, 30, 170, 88, p.ink);
+			box("slot", true, 50, 150, 540, 56);
+			// the end of the password when it is longer than the field
+			std::string shown = pw;
+			float w = text(shown, true, 22, 0, 0, p.ink, false, 0, true);
+			while (w > 480 && shown.size() > 1) { shown.erase(0, 1); w = text("..." + shown, true, 22, 0, 0, p.ink, false, 0, true); }
+			if (shown != pw) shown = "..." + shown;
+			if (pw.empty()) w = 0;
+			else text(shown, true, 22, 70, 165, p.ink);
+			be->fill(std::round(X(72 + w)), std::round(X(166)), std::round(X(10)), std::round(X(24)), p.accent);	// the cursor
+			std::string n = std::to_string(pw.size()) + (pw.size() == 1 ? " character" : " characters");
+			if (entry == ENTRY_SEARCH && searchCount)
+			{
+				int m = pw.empty() ? -1 : searchCount(pw);
+				n = m < 0 ? "Every system's games" : m == 0 ? "No games match" : std::to_string(m) + (m == 1 ? " game matches" : " games match");
+			}
+			text(n, true, 17, 50, 216, p.muted);
+			wrapped(help, 20, 50, 252, 540, 6, message.empty() ? p.muted : p.accent);
+			be->endScreen();
+		}
 
-		be->beginScreen(1);
+		be->beginScreen(single ? 0 : 1);
 		box("screen", false, 0, 0, 640, 480);
 		// the text being typed, here too, so the keys and what they make are seen together
 		box("slot", true, 18, 12, 604, 56);
@@ -1845,6 +1901,7 @@ namespace banana
 		}
 		float aw = faceWidth("START", done);
 		face("START", done, 622 - aw, aw);
+		if (single) footer(help, message.empty() ? p.muted : p.accent);
 		be->endScreen();
 	}
 
@@ -1914,24 +1971,30 @@ namespace banana
 	void Settings::renderUpdates()
 	{
 		SPal p = pal(light);
-		be->beginScreen(0);
-		box("screen", false, 0, 0, 640, 480);
-		box("hero", false, 18, 20, 604, 436);
-		icon("gear", 50, 56, 3);
-		text("System", true, 17, 170, 62, p.muted, true, 1.4f);
-		text("Update", true, 30, 170, 88, p.ink);
 		std::string st = applying ? "Writing the update: " + ustatus : updated ? "Written: restart to run it" : ustatus.compare(0, 6, "failed") == 0 ? "Failed" : "Running " + (version.empty() ? std::string("dev") : version) + (slot.empty() ? "" : ", slot " + slot);
-		text(fit(st, true, 22, 420), true, 22, 170, 130, p.accent);
 		std::string help;
 		if (applying) help = "The new version is being written to the other slot and checked; this one isn't touched. Don't turn the handheld off. It takes a minute or two.";
 		else if (updated) help = "The new version is in the other slot and will run from the next restart. A restarts now. If it ever fails to start, Previous version brings this one back.";
 		else if (ustatus.compare(0, 6, "failed") == 0) help = "The update wasn't applied: " + ustatus.substr(8) + ". This version is untouched.";
 		else if (pkgs.empty()) help = "No update packages found. Put a banana-" + (board.empty() ? std::string("<board>") : board) + "-<version>.update.tar from a release in banana/updates on the card (File sharing can copy it over Wi-Fi), then come back here.";
 		else help = "A on a package writes it to the other slot and checks it; the running version stays until the restart. Packages are in banana/updates on the card.";
-		wrapped(help, 20, 50, 196, 540, 7, p.muted);
-		be->endScreen();
+		if (single) help = st + ". " + help;
 
-		be->beginScreen(1);
+		// the DS's top screen: the state and what an update does; one panel has the strip instead
+		if (!single)
+		{
+			be->beginScreen(0);
+			box("screen", false, 0, 0, 640, 480);
+			box("hero", false, 18, 20, 604, 436);
+			icon("gear", 50, 56, 3);
+			text("System", true, 17, 170, 62, p.muted, true, 1.4f);
+			text("Update", true, 30, 170, 88, p.ink);
+			text(fit(st, true, 22, 420), true, 22, 170, 130, p.accent);
+			wrapped(help, 20, 50, 196, 540, 7, p.muted);
+			be->endScreen();
+		}
+
+		be->beginScreen(single ? 0 : 1);
 		box("screen", false, 0, 0, 640, 480);
 		box("bubble", false, 18, 14, 604, 54);
 		text("Update packages", true, 22, 38, 28, p.ink);
@@ -1959,6 +2022,7 @@ namespace banana
 			float aw = faceWidth("A", act);
 			face("A", act, 622 - aw, aw);
 		}
+		if (single) footer(help, p.muted);
 		be->endScreen();
 	}
 
@@ -2435,22 +2499,29 @@ namespace banana
 			"Your retroachievements.org account: DraStic and RetroArch unlock achievements with it. A types the name, then the password. Leave it if you have none.",
 			"Covers, title screens, genres and years for the games on the card, from libretro's free collections: no account. A starts it (Wi-Fi first); it keeps going while you finish the setup, and the menu shows the art as it comes. Settings > System > Box art runs it again for new games.",
 			"Everything here is in the settings too (Start in the menu), and this setup is under System > First-time setup. A finishes." };
-		be->beginScreen(0);
-		box("screen", false, 0, 0, 640, 480);
-		box("hero", false, 18, 20, 604, 436);
-		icon("gear", 50, 56, 3);
-		text("First-time setup", true, 17, 170, 62, p.muted, true, 1.4f);
-		text(names[wsel], true, 30, 170, 88, p.ink);
-		if (!status[wsel].empty()) text(fit(status[wsel], true, 22, 420), true, 22, 170, 130, p.accent);
-		if (wsel == 3 && scraping())
-		{
-			wrapped("Fetching covers and title screens. It carries on while you finish the setup.", 20, 50, 196, 540, 4, p.muted);
-			scrapeBar(50, 330, 540);
-		}
-		else wrapped(message.empty() ? helps[wsel] : message, 20, 50, 196, 540, 7, p.muted);
-		be->endScreen();
+		std::string help = message.empty() ? helps[wsel] : message;
+		if (single) help = (status[wsel].empty() ? "" : status[wsel] + ". ") + help;
 
-		be->beginScreen(1);
+		// the DS's top screen: the step and what it is for; one panel has the strip instead
+		if (!single)
+		{
+			be->beginScreen(0);
+			box("screen", false, 0, 0, 640, 480);
+			box("hero", false, 18, 20, 604, 436);
+			icon("gear", 50, 56, 3);
+			text("First-time setup", true, 17, 170, 62, p.muted, true, 1.4f);
+			text(names[wsel], true, 30, 170, 88, p.ink);
+			if (!status[wsel].empty()) text(fit(status[wsel], true, 22, 420), true, 22, 170, 130, p.accent);
+			if (wsel == 3 && scraping())
+			{
+				wrapped("Fetching covers and title screens. It carries on while you finish the setup.", 20, 50, 196, 540, 4, p.muted);
+				scrapeBar(50, 330, 540);
+			}
+			else wrapped(help, 20, 50, 196, 540, 7, p.muted);
+			be->endScreen();
+		}
+
+		be->beginScreen(single ? 0 : 1);
 		box("screen", false, 0, 0, 640, 480);
 		box("bubble", false, 18, 14, 604, 54);
 		text("Welcome to Banana", true, 22, 38, 28, p.ink);
@@ -2475,6 +2546,7 @@ namespace banana
 		const char* act = wsel == 4 ? "Finish" : wsel == 1 ? "Next zone" : wsel == 3 ? (scraping() ? "Running" : "Start") : "Open";
 		float aw = faceWidth("A", act);
 		face("A", act, 622 - aw, aw);
+		if (single) footer(help, p.muted);
 		be->endScreen();
 	}
 

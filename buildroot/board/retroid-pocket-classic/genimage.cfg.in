@@ -1,0 +1,33 @@
+# Banana's SD card on the Retroid Pocket Classic (SM4450).
+# OpenABL (flashed to abl_a/abl_b) reads extlinux.conf from the FAT partition;
+# there is no U-Boot image. Slot b is empty until the first update writes it.
+# Two kernels (slot a and the empty slot b the first update fills): the Image is ~38 MB, so the FAT partition holds a
+# pair with room for a bigger one and the device trees.
+image boot.vfat {
+	vfat {
+		label = "BANANA-BOOT"
+@DTBFILES@
+	}
+	size = 160M
+}
+
+image banana-@BOARD@.img {
+	hdimage {
+		partition-table-type = "gpt"
+	}
+	partition boot {
+		partition-type-uuid = "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7"
+		bootable = true
+		image = "boot.vfat"
+		offset = 16M
+	}
+	partition banana-root-a {
+		partition-type-uuid = "0FC63DAF-8483-4772-8E79-3D69D8477DE4"
+		image = "rootfs.squashfs"
+		size = 256M
+	}
+	partition banana-root-b {
+		partition-type-uuid = "0FC63DAF-8483-4772-8E79-3D69D8477DE4"
+		size = 256M
+	}
+}

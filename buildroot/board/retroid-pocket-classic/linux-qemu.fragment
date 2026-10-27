@@ -1,0 +1,17 @@
+# QEMU support for the Retroid Pocket Classic image (tools/qemu-boot.sh).
+#
+# The arm64 "virt" machine boots the same kernel as the handheld, so the whole system
+# (rootfs, first boot, menu, RetroArch) can be exercised with no device attached.
+# Matches what Banana's RG DS kernel carries for its own QEMU boot job.
+#
+# The console: QEMU's PL011, which qemu-boot.sh puts on the serial line (console=ttyAMA0).
+CONFIG_SERIAL_AMBA_PL011=y
+CONFIG_SERIAL_AMBA_PL011_CONSOLE=y
+# the panels: a virtio GPU, and the keyboard/tablet qemu-boot.sh sends the buttons on
+CONFIG_DRM_VIRTIO_GPU=y
+CONFIG_VIRTIO_INPUT=y
+# the SD card comes in on a PCI SDHCI, so it is mmcblk0 as on the handheld
+CONFIG_MMC_SDHCI_PCI=y
+CONFIG_RTC_DRV_PL031=y
+# already on in linux-rocknix.config and needed by the above: PCI, PCI_HOST_GENERIC,
+# PCI_MSI, VIRTIO, VIRTIO_PCI, VIRTIO_NET, VIRTIO_CONSOLE, ARM_AMBA.

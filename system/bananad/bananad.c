@@ -66,11 +66,13 @@ static struct {
 	int sleep_poweroff_pct;	/* found at or under this while asleep: shut down cleanly */
 	double dim_min;			/* idle minutes in the menu before the panels dim (0: never) */
 	int dim_pct;			/* dimmed to this percent of their brightness */
-} cfg = { "auto", 5, 8, 10, 1, 2000, 3, "deep", 128, 20, 5, 1, 4, 5, 2, 30 };
+	int autosleep_set;		/* autosleep_minutes was written down somewhere: it is asked for, not defaulted */
+} cfg = { "auto", 5, 8, 10, 1, 2000, 3, "deep", 128, 20, 5, 1, 4, 5, 2, 30, 0 };
 
 static int devfd[MAXDEV], ndev;
 static void leds_update(void);
 static void audio_route(void);
+static int headphones_in_settled(void);
 static void undim(void);
 static void find_bottom_bl(void);
 static char bottom_bl[64];	/* the bottom panel's backlight name; banana-ui's idle dim owns it while it runs */
@@ -106,7 +108,10 @@ static void trim(char *s)
 	memmove(s, b, strlen(b) + 1);
 }
 
-static void load_conf(const char *path)
+/* load_conf <file> <asked>: read the settings. <asked> is 1 for the file on the data partition -- the one a person
+ * or the settings screen wrote -- and 0 for the image's own defaults, which are only the starting point. It decides
+ * which numbers count as a wish (see the no-lid rule in main()). */
+static void load_conf(const char *path, int asked)
 {
 	FILE *f = fopen(path, "r");
 	if (!f) return;
@@ -120,7 +125,7 @@ static void load_conf(const char *path)
 		if (!strcmp(k, "mixer")) snprintf(cfg.mixer, sizeof cfg.mixer, "%s", v);
 		else if (!strcmp(k, "volume_step")) cfg.volume_step = atoi(v);
 		else if (!strcmp(k, "brightness_step")) cfg.brightness_step = atoi(v);
-		else if (!strcmp(k, "autosleep_minutes")) cfg.autosleep_min = atoi(v);
+		else if (!strcmp(k, "autosleep_minutes")) { cfg.autosleep_min = atoi(v); if (asked) cfg.autosleep_set = 1; }
 		else if (!strcmp(k, "lid_sleep")) cfg.lid_sleep = !strcmp(v, "yes") || !strcmp(v, "1");
 		else if (!strcmp(k, "power_long_ms")) cfg.power_long_ms = atoi(v);
 		else if (!strcmp(k, "battery_shutdown_percent")) cfg.battery_off_pct = atoi(v);
@@ -270,6 +275,21 @@ static void osd(const char *what, int percent)
 
 /* the lid's state as the kernel has it now (EVIOCGSW), not from events: closed means closed on any device */
 static const char *test_lid;	/* tests (tests/sleep-test.sh): the lid's state from this file, not the kernel */
+
+/* is there a lid switch on this machine? EVIOCGBIT(EV_SW) is the *list of switches a device has*; EVIOCGSW, which
+ * read_lid uses, is their *state*, and a slate's state is (and must be) all zeros. Asking for the list is what tells
+ * a clam-shell (the RG DS, whose hall sensor reports SW_LID) from a slate (the Retroid Pocket Classic: a power key,
+ * a volume key pair, and the codec's jack, whose switches are insert/mic/lineout/charging -- never SW_LID). */
+static int has_lid(void)
+{
+	for (int i = 0; i < ndev; i++) {
+		unsigned long bits[(SW_MAX + 8 * sizeof(long)) / (8 * sizeof(long))] = { 0 };
+		if (ioctl(devfd[i], EVIOCGBIT(EV_SW, sizeof bits), bits) >= 0 &&
+		    (bits[SW_LID / (8 * sizeof(long))] >> (SW_LID % (8 * sizeof(long))) & 1))
+			return 1;
+	}
+	return 0;
+}
 static void read_lid(void)
 {
 	if (test_lid) { lid_closed = read_int(test_lid, 0); return; }
@@ -471,7 +491,8 @@ static void suspend_now(const char *why)
 	drain_inputs();
 	read_lid();
 	leds_update();
-	if (headphones_in() != headphones) { headphones = !headphones; audio_route(); }
+	int jack = headphones_in_settled();
+	if (jack != headphones) { headphones = jack; audio_route(); }
 	ignore_power_until = mono() + 1.0;
 	power_down = 0;
 	last_input = mono();
@@ -499,6 +520,7 @@ static double save_volume_at, save_backlight_at;	/* debounced: written a moment 
 
 /* ---- sound: which card plays ----------------------------------------------------------------------------------- */
 static int card_codec = -1, card_speaker = -1, card_play = 0;	/* rk817; aw88166 (RG DS Plus only); the one playing */
+static int card_ar = -1;	/* the audioreach card (the RPC): its DSP graph is routed by mixer controls, no UCM */
 
 /* the cards by what they are, from /proc/asound/cards (" 0 [rk817hp ]: simple-card - rk817_hp") */
 static void audio_find_cards(void)
@@ -522,11 +544,109 @@ static void audio_find_cards(void)
 		while (g && fgets(ln, sizeof ln, g)) if (sscanf(ln, " %d [", &n) == 1) { card_codec = n; break; }
 		if (g) fclose(g);
 	}
+	/* the RPC's card: audioreach, with the frontends (MultiMedia1/2) mixed into the speaker I2S and the codec by
+	 * mixer controls whose names say so -- what alsa-ucm-conf's profile would set. Nothing does it on this image,
+	 * so without this the DSP says "no backend DAIs enabled" and plays nothing. */
+	if (card_codec >= 0) {
+		char cmd[128];
+		snprintf(cmd, sizeof cmd, "amixer -c %d scontrols 2>/dev/null", card_codec);
+		FILE *p = popen(cmd, "r");
+		char ln[256];
+		while (p && fgets(ln, sizeof ln, p)) if (strstr(ln, "SENARY_MI2S_RX Audio Mixer")) { card_ar = card_codec; break; }
+		if (p) pclose(p);
+		/* nothing more: banana-ui hands the frontend to the game with its own Sound::release() when a game starts,
+		 * so the card needs no marker file telling anybody to close the device between cues */
+	}
+}
+
+static void cset(int card, const char *name, const char *val)
+{
+	char c[8], spec[128];
+	snprintf(c, sizeof c, "%d", card);
+	snprintf(spec, sizeof spec, "name=%s", name);
+	char *argv[] = { "amixer", "-c", c, "cset", spec, (char *)val, NULL };
+	int st = run(argv);
+	if (st) say("sound: amixer cset %s %s -> %d", name, val, st);
+}
+
+/* amixer_get <card> <control> <out> <size>: the values the control holds, "" when there is no such control. Asked
+ * with `cset` and no value (the only way to name a control with spaces in it), amixer answers with a line that ends
+ * in ": values=on,on" -- the label before the colon is empty on the DSP's mixers, so the colon is the anchor, not
+ * the word "value:" the Rockchip codecs print. */
+static int amixer_get(int card, const char *name, char *out, size_t n)
+{
+	char c[8], cmd[256];
+	snprintf(c, sizeof c, "%d", card);
+	snprintf(cmd, sizeof cmd,
+		"amixer -c %s cset name='%s' 2>/dev/null | sed -n 's/.*: *values=//p' | head -n 1", c, name);
+	FILE *p = popen(cmd, "r");
+	if (!p) { out[0] = 0; return 0; }
+	int got = fgets(out, (int)n, p) ? (int)strlen(out) : 0;
+	pclose(p);
+	while (got && (out[got - 1] == '\n' || out[got - 1] == '\r')) out[--got] = 0;
+	return got;
+}
+
+/* The audioreach card (the RPC): the frontends (MultiMedia1, MultiMedia2 -- the menu and RetroArch each open one)
+ * have to be mixed into the speaker I2S (the AW88266 amps) or into the WCD937x codec (headphones) by hand. A UCM
+ * profile would do this; this image has none, and without it the DSP refuses every open with "no backend DAIs
+ * enabled for MultiMedia1 Playback". */
+static void audio_route_ar(void)
+{
+	if (card_ar < 0) return;
+	const char *spk = headphones ? "off" : "on", *hp = headphones ? "on" : "off";
+	for (int i = 1; i <= 2; i++) {
+		char n[64];
+		snprintf(n, sizeof n, "SENARY_MI2S_RX Audio Mixer MultiMedia%d", i);
+		cset(card_ar, n, spk);
+		snprintf(n, sizeof n, "RX_CODEC_DMA_RX_0 Audio Mixer MultiMedia%d", i);
+		cset(card_ar, n, hp);
+	}
+	/* Say what was chosen, for whoever opens a stream next. The DSP latches these switches when the frontend's
+	 * graph is instantiated -- at *that* program's open, not at ours -- and the graph is torn down again when its
+	 * last stream closes, so the route has to be written every time by whoever is about to play: banana-ui before
+	 * its first cue after a game, run-retroarch before RetroArch opens the device. They read the jack's decision
+	 * here rather than guessing "speakers", so plugging in does not end up un-muting the amps. */
+	FILE *f = fopen("/run/banana/audio-route.new", "w");
+	if (f) {
+		fprintf(f, "SENARY_MI2S_RX Audio Mixer MultiMedia1=%s,%s\n", spk, spk);
+		fprintf(f, "RX_CODEC_DMA_RX_0 Audio Mixer MultiMedia1=%s,%s\n", hp, hp);
+		fclose(f);
+		rename("/run/banana/audio-route.new", "/run/banana/audio-route");
+	}
+}
+
+/* The jack's answer, taken twice in a row before it is believed. The WCD937x's MBHC answers before it has measured
+ * the socket: on the Retroid Pocket Classic the very first read of a boot (and, worse, a first read after a wake)
+ * can say "headphones in" with nothing plugged in, and acting on that routes the sound to a codec feeding an empty
+ * jack -- a silent handheld, until something else writes the speaker route back (which is what made the menu come
+ * back to life after a game had run). Two answers agreeing is the cheapest proof the codec has finished measuring;
+ * a real plug-in still takes effect within a few hundred milliseconds, and its own event drives the same variable
+ * afterwards. */
+static int headphones_in_settled(void)
+{
+	int a = headphones_in();
+	for (int i = 0; i < 6; i++) {
+		usleep(200000);
+		int b = headphones_in();
+		if (a == b) return b;
+		a = b;
+	}
+	return a;	/* never agreed: the codec is still moving; take the answer we just had */
 }
 
 static void audio_route(void)
 {
+	static int last = -1;
+	int now = headphones;
 	card_play = card_speaker >= 0 && !headphones ? card_speaker : card_codec;
+	// say it when the answer moves: on the RPC this is the switch between the speaker I2S and the codec, and a
+	// jack that changes its mind with nothing plugged in is exactly what silences the handheld
+	if (card_ar >= 0 && last != now)
+		say("sound: routing to the %s (jack read %s)", now ? "headphones" : "speakers",
+		    headphones_in() ? "in" : "out");
+	last = now;
+	audio_route_ar();
 	/* the RG DS: one card, whose HP output feeds both the jack and the speaker amplifier; the amplifier is the card's
 	 * "Internal Speakers Switch" (a pin switch), off while headphones are in, or the speakers play along (#13) */
 	if (card_speaker < 0 && card_codec >= 0) {
@@ -556,11 +676,12 @@ static void audio_route(void)
 		snprintf(cap, sizeof cap, "{ type plug slave { pcm \"hw:%d\" format S16_LE channels 2 rate 48000 } }", card_codec);
 	else
 		snprintf(cap, sizeof cap, "\"null\"");
-	char conf[768];
-	int n = snprintf(conf, sizeof conf,
-		"# bananad: where sound plays now (%s)\n"
-		"pcm.!default { type asym playback.pcm %s capture.pcm %s }\n",
-		card_play == card_speaker ? "speakers" : headphones ? "headphones" : "the codec", play, cap);
+	char conf[1600];
+	int n;
+	n = snprintf(conf, sizeof conf,
+			"# bananad: where sound plays now (%s)\n"
+			"pcm.!default { type asym playback.pcm %s capture.pcm %s }\n",
+			card_play == card_speaker ? "speakers" : headphones ? "headphones" : "the codec", play, cap);
 	/* no card yet (the codec probed late, QEMU): "null" keeps the alias valid instead of a "plughw:-1" that would
 	 * fail every later open; the ctl defaults to one, so its line goes only with a real card */
 	if (card_play >= 0 && n > 0 && (size_t)n < sizeof conf)
@@ -578,7 +699,11 @@ static void audio_route(void)
 	/* the control the volume keys change, for the settings screen's Volume (amixer -c <card> sset <control>) */
 	f = fopen("/run/banana/mixer.new", "w");
 	if (f) {
-		fprintf(f, "%d %s\n", card_play, strcmp(cfg.mixer, "auto") ? cfg.mixer : card_play == card_speaker ? "PCM" : "Master");
+		const char *mix = cfg.mixer;
+		if (!strcmp(mix, "auto"))
+			mix = card_ar >= 0 ? "stream0.vol_ctrl0 MultiMedia1 Playback Volu"
+			    : card_play == card_speaker ? "PCM" : "Master";
+		fprintf(f, "%d %s\n", card_play, mix);
 		fclose(f);
 		rename("/run/banana/mixer.new", "/run/banana/mixer");
 	}
@@ -616,6 +741,34 @@ static void audio_setup(void)
 	char *cap[] = { "amixer", "-q", "-c", c, "sset", "Master Capture Volume", "0", NULL };
 	run(cap);
 	audio_route();
+	/* The RPC's DSP reads the routes when a stream is instantiated, which is why rcS puts them in before the menu
+	 * opens its own. rcS runs its own wait but gives up after 6 s, and a card that enumerated later than that leaves
+	 * the handheld silent for the whole session with nothing in the log to say so. Look again here, briefly, and
+	 * only when the jack says nothing is plugged in: with headphones in, the speaker route *should* read off, and
+	 * waiting for it to read on is waiting for something wrong. Then the amps' level -- not the frontend's
+	 * `stream0.vol_ctrl0 ...`, which is the user's volume (the volume keys and the saved setting own it). */
+	if (card_ar >= 0) {
+		/* One line every boot, because this codec's jack is what decides where sound goes and it is known to answer
+		 * before it has measured anything: "headphones in" here with nothing plugged in is the whole story of a
+		 * silent menu -- a game re-asserts the speaker route itself, which is why games do have sound. */
+		say("sound: the jack says %s at start", headphones ? "headphones in" : "nothing in");
+	}
+	if (card_ar >= 0 && !headphones) {
+		char route[64], val[64];
+		snprintf(route, sizeof route, "SENARY_MI2S_RX Audio Mixer MultiMedia1");
+		int tries = 0;
+		while (tries < 30) {
+			audio_route_ar();
+			amixer_get(card_ar, route, val, sizeof val);
+			if (strstr(val, "on")) break;
+			usleep(100000);
+			tries++;
+		}
+		if (tries == 30)
+			say("sound: %s still reads '%s' 3 s after rcS gave up", route, val[0] ? val : "nothing");
+		cset(card_ar, "Left PCM Playback Volume", "460");
+		cset(card_ar, "Right PCM Playback Volume", "460");
+	}
 }
 
 static void volume(int dir)
@@ -1097,13 +1250,28 @@ static int battery_discharging_pct(void)
 	return r;
 }
 
+/* The idle timer of a machine with no lid. A clam-shell can be *closed*, which is why the RG DS may sleep on a
+ * timer: opening it wakes it and nothing is lost. A slate (the Retroid Pocket Classic) has nothing to close, so an
+ * idle suspend has no meaning -- and on this SoC it still costs the picture: the DSI panel and its backlight resume
+ * is the gap ROCKNIX has not closed either. So a machine with no lid switch dims and stays awake, which is the
+ * battery saving you can see coming. The power button still sleeps it, and writing autosleep_minutes in
+ * /data/banana/bananad.conf (Settings > Power) asks for the timer back: the image's own default is not an ask. */
+static void slate_sleep_default(void)
+{
+	if (test_lid || cfg.autosleep_set || cfg.autosleep_min <= 0 || has_lid())
+		return;
+	say("sleep: no lid switch, so the idle timer dims (%g min) but never suspends; autosleep_minutes asks for it",
+	    cfg.dim_min);
+	cfg.autosleep_min = 0;
+}
+
 int main(int argc, char **argv)
 {
 	(void)argc; (void)argv;
 	openlog("bananad", LOG_PID, LOG_DAEMON);
 	test_lid = getenv("BANANAD_TEST_LID");
-	load_conf("/etc/banana/bananad.conf");
-	load_conf("/data/banana/bananad.conf");
+	load_conf("/etc/banana/bananad.conf", 0);
+	load_conf("/data/banana/bananad.conf", 1);
 	load_timezone();
 	signal(SIGCHLD, SIG_DFL);
 	struct sigaction sa = { 0 };
@@ -1115,7 +1283,8 @@ int main(int argc, char **argv)
 	int ino = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
 	if (ino >= 0) inotify_add_watch(ino, "/dev/input", IN_CREATE | IN_DELETE);
 	open_inputs();
-	headphones = headphones_in();
+	headphones = headphones_in_settled();
+	slate_sleep_default();	/* the idle timer of a machine with no lid */
 	/* the saved volumes first, then the route: the restore also brings back the speakers' switch as it was last
 	 * saved (off if headphones were in then), and the route sets it from the jack as it is now */
 	restore_settings();
@@ -1159,8 +1328,10 @@ int main(int argc, char **argv)
 		double now = mono();
 		if (reload) {
 			reload = 0;
-			load_conf("/etc/banana/bananad.conf");
-			load_conf("/data/banana/bananad.conf");
+			cfg.autosleep_set = 0;
+			load_conf("/etc/banana/bananad.conf", 0);
+			load_conf("/data/banana/bananad.conf", 1);
+			slate_sleep_default();	/* the settings screen may have just written a timer, or taken it away */
 			load_timezone();
 			save_volume_at = mono() + 2;	/* the settings screen may have set the volume: keep it as the keys' is kept */
 			leds_last = -2;

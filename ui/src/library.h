@@ -70,6 +70,14 @@ namespace banana
 		int currentShelf() const { return lib; }
 		// the game's own system and entry, for a game of the current shelf (favourites point into their system)
 		const SystemDef& systemOf(int game) const;
+		// is this system in systems.conf at all? Settings asks, so it never offers a page for an emulator this
+		// handheld cannot run (the Retroid Pocket Classic ships without the DS: one screen, and the DS launchers'
+		// two-panel work has no meaning there)
+		bool hasSystem(const std::string& id) const
+		{
+			for (auto& d : defs) if (d.id == id) return true;
+			return false;
+		}
 		const Game& gameAt(int game) const { return shelves[lib].games[game]; }
 		// after a game ran: one more play, its time, now as its last play; and its RetroAchievements progress when the
 		// emulator wrote it (unlocked total in /run/banana/ra-progress, docs/EMULATORS.md), achB 0 when it didn't

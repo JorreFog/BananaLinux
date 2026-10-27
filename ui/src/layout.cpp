@@ -1264,11 +1264,13 @@ namespace banana
 
 	// ---- the menu ----------------------------------------------------------------------------------------------------
 	LayoutMenu::LayoutMenu(rnds::Source* src_, rnds::Backend* be_, const std::string& path, float scale,
-		const std::string& pixelFonts, const std::string& interFonts)
+		const std::string& pixelFonts, const std::string& interFonts, float canvasW, float canvasH)
 		: d(new Impl), src(src_), be(be_)
 	{
 		d->m = this;
 		d->s = scale;
+		d->W = canvasW;
+		d->H = canvasH;
 		d->path = path;
 		d->dir = path.substr(0, path.rfind('/'));
 		d->load(pixelFonts, interFonts);

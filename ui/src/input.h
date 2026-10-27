@@ -22,8 +22,10 @@ namespace banana
 	{
 	public:
 		~Input() { close(); }
-		// bottomTouch: a fragment of the bottom touchscreen's device path ("fe5e0000.i2c")
-		void open(const std::string& bottomTouch, int panelW, int panelH);
+		// bottomTouch: a fragment of the bottom touchscreen's device path ("fe5e0000.i2c").
+		// rot: the panel is mounted turned (the RPC's 90); panelW/panelH: its own size (1080x1240 there), which the
+		// touchscreen reports, while the menu draws in another size (1240x1080) -- taps are turned to match
+		void open(const std::string& bottomTouch, int panelW, int panelH, int rot = 0, int scanoutW = 0, int scanoutH = 0);
 		void close();
 		// a device came or went in /dev/input (watched with inotify): open() again to take it
 		bool rescanDue() { bool r = rescan; rescan = false; return r; }
@@ -45,7 +47,8 @@ namespace banana
 			int hatX = 0, hatY = 0;
 		};
 		std::vector<Dev> devs;
-		int pw = 640, ph = 480;
+		int pw = 640, ph = 480;		// what the menu draws in
+		int rot = 0, sw = 0, sh = 0;	// the panel's turn and its own size (0: the same as the menu's)
 		int watch = -1;
 		bool rescan = false;
 	};

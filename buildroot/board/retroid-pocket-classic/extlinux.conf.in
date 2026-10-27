@@ -1,0 +1,11 @@
+DEFAULT a
+TIMEOUT 0
+PROMPT 0
+LABEL a
+  LINUX /a/Image
+  FDT /a/@DTB@.dtb
+  APPEND root=PARTLABEL=banana-root-a rootfstype=squashfs ro rootwait quiet loglevel=3 init=/sbin/init
+LABEL b
+  LINUX /b/Image
+  FDT /b/@DTB@.dtb
+  APPEND root=PARTLABEL=banana-root-b rootfstype=squashfs ro rootwait quiet loglevel=3 init=/sbin/init

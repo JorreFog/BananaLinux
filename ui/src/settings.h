@@ -37,8 +37,13 @@ namespace banana
 	class Settings
 	{
 	public:
-		Settings(rnds::Backend* be, const std::string& assets, const std::string& dataDir, float scale, const std::string& variant);
+		Settings(rnds::Backend* be, const std::string& assets, const std::string& dataDir, float scale, const std::string& variant,
+			bool hasDs = true);
 		void setVariant(const std::string& variant);	// "dark", "light", or "carts" (dark, in Inter: setFontDir first)
+		// one panel (the RPC): the pages' list is drawn on the only screen, and what the second screen carried (the
+		// selected setting's description and help) goes in the strip of panel below it. canvasH: the panel's height
+		// in the same CSS px (the DS screen is 480; a 1240x1080 panel is 557)
+		void setSingle(bool v, float canvasHeight) { single = v; canvasH = canvasHeight; }
 		void setFontDir(const std::string& dir) { fontDir = dir; }
 		void open();
 		void close() { mOpen = false; page = LIST; wizard = false; }
@@ -209,6 +214,12 @@ namespace banana
 		std::shared_ptr<rnds::Font> R, M;
 		std::string fontDir;		// Inter's TTFs (the Carts theme)
 		bool cleanFonts = false;
+		bool single = false;		// one panel: no second screen for the page's description
+	bool hasDs;			// systems.conf has an [nds] shelf: the Nintendo DS page, and X on a game, exist with it.
+					// Given to the constructor: build() runs there, so a setter afterwards would be too late
+		float canvasH = 480;		// the panel's height in CSS px (the DS screen is 480)
+		// what the second screen said, under the list on one panel: its lines start where the DS screen ends
+		void footer(const std::string& text, const rnds::Color& c);
 		std::string fontsLoaded;	// the fonts R and M are (setVariant): a user theme's, or "carts"
 		struct Cached { rnds::TexPtr tex; int ox = 0, oy = 0; float w = 0; };
 		std::map<std::string, Cached> cache;

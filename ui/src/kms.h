@@ -27,8 +27,19 @@ namespace banana
 		// the first DRM device with two connected panels of top's connector type; top is the connector shown as the
 		// top screen ("DSI-2" on the handheld; "Virtual-2" on QEMU's virtio GPU, see tools/qemu-boot.sh)
 		bool open(const std::string& top, std::string& err);
+		// one panel: the Retroid Pocket Classic's single 1240x1080 screen. The connector named like top is used when
+		// it is connected, else any connected connector with a mode (the type is only a preference here).
+		bool openSingle(const std::string& top, std::string& err);
 		void close();
 		bool isOpen() const { return fd >= 0; }
+		// how many panels present() drives: 2 as on the RG DS, 1 on a handheld with one screen
+		int panels() const { return count; }
+		// how the panel is mounted, in degrees (the connector's "panel orientation": the RPC's panel is 1080x1240
+		// portrait, its 90 in the device tree): present() turns the composed screens by it into the scanout buffers
+		int rotation() const { return rot; }
+		// the panel's own size (its scanout buffers'): 1080x1240 on the RPC while the menu draws 1240x1080
+		int panelWidth() const { return SW; }
+		int panelHeight() const { return SH; }
 		int width() const { return W; }
 		int height() const { return H; }
 		int pollFd() const { return fd; }
@@ -47,8 +58,11 @@ namespace banana
 	private:
 		struct Buf { uint32_t handle = 0, fb = 0, pitch = 0; uint64_t size = 0; uint8_t* map = nullptr; };
 		struct Panel { uint32_t conn = 0, crtc = 0; uint8_t mode[68]; Buf buf[2]; int front = 0; Damage missed[2]; };
-		int fd = -1, W = 0, H = 0, pending = 0, leased = -1;
+		int fd = -1, W = 0, H = 0, pending = 0, leased = -1, count = 2;
+		int rot = 0, SW = 0, SH = 0;	// the panel's rotation, and its size in its own rows (the scanout buffers')
 		Panel p[2];
+		bool openWith(const std::string& top, int need, std::string& err);
+		void turn(const uint32_t* src, Buf& bf, const Damage& d);
 		bool makeBuf(Buf& b);
 		void freeBuf(Buf& b);
 	};
