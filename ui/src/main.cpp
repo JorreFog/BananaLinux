@@ -378,11 +378,19 @@ struct RomWatch
 				auto it = dirOf.find(e->wd);
 				if ((e->mask & IN_ISDIR) && (e->mask & (IN_CREATE | IN_MOVED_TO)) && e->len && it != dirOf.end() && e->name[0] != '.')
 					add(it->second + "/" + e->name);
+				// what started a new wait, in the log (the owner saw "Looking for games" after every game and
+				// nothing here showed why)
+				if (due == 0 && !logged && it != dirOf.end())
+				{
+					logf("games folder changed: %s/%s (mask 0x%x)", it->second.c_str(), e->len ? e->name : "", e->mask);
+					logged = true;
+				}
 				p += sizeof(inotify_event) + e->len;
 			}
 		}
 		if (any) due = now + 2000;
 	}
+	bool logged = false;	// this wait's first change logged
 };
 
 // ---- boot timing: seconds since the kernel started, for logs/boot.txt (rcS gathers /run/banana/boot-times) ------
@@ -468,6 +476,7 @@ struct ResumeLater
 {
 	std::string rom, emu;
 	double until = 0;	// (0: nothing waiting)
+	double next = 0;	// the next look for its file
 };
 
 static bool resumeLaunch(Host& lib, const std::string& rom, const std::string& emu, const char* once)
@@ -1763,7 +1772,9 @@ int main(int argc, char** argv)
 	{
 		if (settingsView.isOpen()) return 0;
 		if (access("/run/banana/sd2/busy", F_OK) == 0) return 2;
-		return roms.due > 0 ? 1 : 0;
+		// only where the list is read again (the home screen): in a game list it waited there until B, after every
+		// game quit back to the list (owner, beta.7)
+		return roms.due > 0 && ui->view() == rnds::UI::HOME ? 1 : 0;
 	};
 	be.overlay = [&](int screen)
 	{
@@ -2376,6 +2387,7 @@ int main(int argc, char** argv)
 			if (ui->view() == rnds::UI::HOME)
 			{
 				roms.due = 0;
+				roms.logged = false;
 				std::string id = lib.systemCount() ? lib.shelf(ui->systemIndex()).def.id : "";
 				lib.scan();
 				int at = 0;
@@ -2385,14 +2397,30 @@ int main(int argc, char** argv)
 				roms.watch(lib.watchDirs());
 				logf("the games on the card changed: %d systems", lib.systemCount());
 				dirty = true;
-				if (resumeLater.until > 0 && resumeLaunch(lib, resumeLater.rom, resumeLater.emu, "/run/banana/resume-once"))
-					resumeLater.until = 0;
 			}
 		}
+		// Power off after sleeping's game on the second card: looked for every half second (the card can be mounted
+		// before this menu watches for it), and once its file is there, the games read again and it is started
 		if (resumeLater.until > 0 && now >= resumeLater.until)
 		{
 			logf("resume after power-off: %s didn't come in 30 s", resumeLater.rom.c_str());
 			resumeLater.until = 0;
+		}
+		else if (resumeLater.until > 0 && now >= resumeLater.next && !settingsView.isOpen())
+		{
+			resumeLater.next = now + 500;
+			struct stat st;
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			if (stat(resumeLater.rom.c_str(), &st) == 0 && ui->view() == rnds::UI::HOME)
+			{
+				int at = ui->systemIndex();
+				lib.scan();
+				ui->dataChanged();
+				ui->setHome(std::min(at, std::max(0, lib.systemCount() - 1)));
+				roms.watch(lib.watchDirs());
+				dirty = true;
+				if (resumeLaunch(lib, resumeLater.rom, resumeLater.emu, "/run/banana/resume-once")) resumeLater.until = 0;
+			}
 		}
 		if (batteryDue)
 		{
@@ -2463,6 +2491,7 @@ int main(int argc, char** argv)
 			int left = std::max(0, (int)(roms.due - now)) + 1;
 			if (timeout < 0 || left < timeout) timeout = left;
 		}
+		if (resumeLater.until > 0 && (timeout < 0 || timeout > 500)) timeout = 500;
 		if (low.showing(now))
 		{
 			int left = (int)(low.until - now) + 1;
