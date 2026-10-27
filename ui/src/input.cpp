@@ -83,7 +83,9 @@ namespace banana
 				if (testBit(abs, ABS_X) && testBit(abs, ABS_Y) && ioctl(fd, EVIOCGABS(ABS_X), &px) == 0 && ioctl(fd, EVIOCGABS(ABS_Y), &py) == 0)
 				{ dv.x = px.value; dv.y = py.value; }
 				else { dv.x = ax.value; dv.y = ay.value; }
-				dv.screen = sysPath(e->d_name).find(bottomTouch) != std::string::npos ? 1 : 0;
+				// the panel the touchscreen belongs to: the device named by bottomTouch is the second screen; a machine
+				// with a single touchscreen (the RPC, QEMU) has no second, and the pass below forces screen 0 anyway
+				dv.screen = !bottomTouch.empty() && sysPath(e->d_name).find(bottomTouch) != std::string::npos ? 1 : 0;
 			}
 			else
 			{
@@ -95,6 +97,10 @@ namespace banana
 			devs.push_back(dv);
 		}
 		closedir(d);
+		// a machine with one touchscreen (the RPC's single panel, QEMU's tablet): it belongs to the only screen
+		int touchDevs = 0;
+		for (auto& dv : devs) if (dv.touch) touchDevs++;
+		if (touchDevs == 1) for (auto& dv : devs) if (dv.touch) dv.screen = 0;
 	}
 
 	void Input::close()

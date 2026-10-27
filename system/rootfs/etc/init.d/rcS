@@ -108,6 +108,15 @@ amixer -q -c 0 sset "Left PCM" 90% 2>/dev/null
 amixer -q -c 0 sset "Right PCM" 90% 2>/dev/null
 amixer -q -c 0 sset "Left PCM Playback Volume" 460 2>/dev/null
 amixer -q -c 0 sset "Right PCM Playback Volume" 460 2>/dev/null
+# The rest of ROCKNIX's UCM2 BootSequence for this card (alsa-ucm-conf,
+# Retroid/PocketClassic): the codec's and the RX macro's own levels. Without UCM on this image
+# the routing above is not enough -- the headphone and speaker output and the mic capture come
+# up at their reset levels (silent or very quiet) unless they are set here too.
+amixer -q -c 0 cset "name=RX_RX0 Digital Volume" 84 2>/dev/null
+amixer -q -c 0 cset "name=RX_RX1 Digital Volume" 84 2>/dev/null
+amixer -q -c 0 cset "name=HPHL Volume" 20 2>/dev/null
+amixer -q -c 0 cset "name=HPHR Volume" 20 2>/dev/null
+amixer -q -c 0 cset "name=ADC2 Volume" 10 2>/dev/null
 mark "rcS: sound routed ($i tries)"
 
 banana-perf ui

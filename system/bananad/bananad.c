@@ -621,6 +621,16 @@ static void audio_setup(void)
 		 * before it has measured anything: "headphones in" here with nothing plugged in is the whole story of a
 		 * silent menu -- a game re-asserts the speaker route itself, which is why games do have sound. */
 		say("sound: the jack says %s at start", headphones ? "headphones in" : "nothing in");
+		/* ROCKNIX's UCM2 BootSequence levels for this card (there is no UCM on this image): the codec's and the RX
+		 * macro's output volumes and the mic's. Set here as well as in rcS, because a card that enumerated after
+		 * rcS's wait would otherwise run at the reset levels -- silent or very quiet -- all session. */
+		cset(card_ar, "RX_RX0 Digital Volume", "84");
+		cset(card_ar, "RX_RX1 Digital Volume", "84");
+		cset(card_ar, "HPHL Volume", "20");
+		cset(card_ar, "HPHR Volume", "20");
+		cset(card_ar, "ADC2 Volume", "10");
+		cset(card_ar, "Left PCM Playback Volume", "460");
+		cset(card_ar, "Right PCM Playback Volume", "460");
 	}
 	if (card_ar >= 0 && !headphones) {
 		char route[64], val[64];
@@ -635,8 +645,6 @@ static void audio_setup(void)
 		}
 		if (tries == 30)
 			say("sound: %s still reads '%s' 3 s after rcS gave up", route, val[0] ? val : "nothing");
-		cset(card_ar, "Left PCM Playback Volume", "460");
-		cset(card_ar, "Right PCM Playback Volume", "460");
 	}
 }
 

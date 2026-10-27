@@ -254,7 +254,7 @@ struct Options
 {
 	std::string assets = "/usr/share/banana/rnds", splash = "/usr/share/banana/splash", banana = "/usr/share/banana/banana";
 	std::string systems = "/etc/banana/systems.conf", roms = "/data/roms", data = "/data/banana";
-	std::string top = "DSI-2", touch = "fe5e0000.i2c";
+	std::string top = "DSI-1", touch = "";
 	std::string headless, script;
 	std::string theme;		// --theme FILE: that theme's .json instead of the settings' (a theme being made)
 	bool single = false;	// --single: one panel (the RPC's 1240x1080), for headless renders of that layout
