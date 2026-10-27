@@ -43,7 +43,18 @@ namespace banana
 		std::vector<std::pair<std::string, std::string>> shelfSystems;
 		void addShelfRows();
 		void close() { mOpen = false; page = LIST; wizard = false; }
-		void setup() { mOpen = true; openSetup(); }	// the first-time setup, from the host
+		// the first-time setup, from the host: boot = the first boot's (it ends in the host's Welcome and the menu:
+		// takeSetupFinished), else as from Settings > System (it ends back in Settings); at: the slide to start on (a
+		// setup cut off by a restart or a language change: banana/setup-step)
+		void setup(bool boot = true, const std::string& at = "") { mOpen = true; openSetup(boot, at); }
+		bool takeSetupFinished() { bool r = setupEnded; setupEnded = false; return r; }
+		std::string ownerName() { return dsName(); }
+		std::string setupState();	// (the tests) the slide, its choices and the checks' results, as a line	// the DS's name ("" none): the Welcome says it
+		// banana/setup-step: the slide a setup was on ("" none) and whether it was the boot's
+		static std::string setupStep(const std::string& dataDir, bool* boot = nullptr);
+		// a title card on black (the host's arrival and Welcome): l1 on the top panel at y (CSS px), l2 under it in the
+		// muted colour; the bottom panel black
+		void renderCard(const std::string& l1, const std::string& l2, float y, float size);
 		bool isOpen() const { return mOpen; }
 		std::vector<std::string> deletedFiles;	// what the last Delete game removed (DELETED)
 		int gridCount() const;	// the groups with a tile (Power has none)
@@ -223,15 +234,37 @@ namespace banana
 		double toastUntil = 0;
 		void toast(const std::string& l1, const std::string& l2, uint32_t accent, int icon, double ms);
 		void drawPopup();
-		// the first-time setup: the steps (Wi-Fi, the time zone, RetroAchievements, ScreenScraper), run once after
-		// the installation (banana/setup-done is written at the end) and from Settings > System
-		bool wizard = false;
-		int wsel = 0;
-		bool tzAsked = false;	// the setup's Finish has pointed at a time zone left at UTC once
-		void openSetup();
+		// the first-time setup (owner, 2026-10-27: "one thing at a time"): a slide per step, each a title, what it is
+		// for, the result so far and its choices (bottom panel), B back and A on a choice, START past it. Run once after
+		// the installation (banana/setup-done written at the end) and from Settings > System > First-time setup
+		enum Slide { SL_LANG, SL_WIFI, SL_TZ, SL_NAME, SL_RA, SL_ART, SL_DONE };
+		enum SetupAct { SA_NEXT, SA_SKIP, SA_LANG, SA_NETWORKS, SA_TEST, SA_TZ, SA_NAME, SA_RA, SA_RACHECK, SA_ART, SA_FINISH, SA_WAIT };
+		struct Choice { std::string label, value; SetupAct act; };
+		std::vector<Slide> slides;
+		std::vector<bool> wskipped;		// the slides passed with Skip (the summary says so)
+		bool wizard = false, wizardBoot = false, setupEnded = false;
+		int wsel = 0, wpick = 0;		// the slide, the choice picked on it
+		int langAt = -1;				// the Language slide's choice (saved with Next: a change restarts the menu)
+		// Wi-Fi's test (wifi test: connected with an address, the internet, the clock), its lines as they come in
+		// runDir/wifi-test; -1 not known yet, 0 failed, 1 fine
+		wifi::Job testJob;
+		int tLink = -1, tNet = -1, tTime = -1;
+		std::string tIp, tSsid;
+		bool testing = false, testAfterJoin = false, autoTested = false;
+		double testPoll = 0;
+		void startTest();
+		bool pollTest();				// true when something to show changed
+		// the RetroAchievements check as the slide shows it: 0 not checked, 1 logged in, 2 refused, 3 no answer
+		int raKind = 0;
+		std::string raLine;
+		void openSetup(bool boot, const std::string& at);
+		void setupGo(int slide);
+		std::vector<Choice> setupChoices();
+		Result setupAct(SetupAct a);
 		Result pressSetup(Key k);
 		void renderSetup();
 		void setupDone();
+		static const char* slideKey(Slide s);
 		std::string wifiTool, wifiConf;
 		bool sync = false;
 		wifi::Job scanJob, statusJob;
@@ -537,7 +570,7 @@ namespace banana
 		void face(const std::string& key, const std::string& label, float x, float w);
 		float faceWidth(const std::string& key, const std::string& label);
 		static constexpr int ROWS = 5;
-		static constexpr int SETUP_STEPS = 6, SETUP_PITCH = 55;	// the first-time setup's steps (Wi-Fi .. Finish)
+		static constexpr float SETUP_Y = 82, SETUP_PITCH = 66, SETUP_H = 58;	// the setup's choices on the bottom panel
 	};
 
 	// key = value files: the line for key changed (or added), the rest kept; written beside and renamed over

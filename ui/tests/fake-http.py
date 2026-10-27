@@ -13,6 +13,22 @@ class H(http.server.BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
 
+    # the RetroAchievements login (r=login2) for the first-time setup's check: user "good" with password "right" logs
+    # in, anything else is refused as the site refuses it (401)
+    def do_POST(self):
+        import urllib.parse
+        n = int(self.headers.get('Content-Length', '0'))
+        q = urllib.parse.parse_qs(self.rfile.read(n).decode())
+        with open(sys.argv[2] + '.log', 'a') as f:
+            f.write('POST %s %s\n' % (self.path, q.get('u', [''])[0]))     # (never the password)
+        ok = q.get('r') == ['login2'] and q.get('u') == ['good'] and q.get('p') == ['right']
+        body = b'{"Success":true,"User":"good","Token":"x","Score":1234}' if ok else \
+            b'{"Success":false,"Status":401,"Code":"invalid_credentials","Error":"Invalid user/password combination. Please try again."}'
+        self.send_response(200 if ok else 401)
+        self.send_header('Content-Length', str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     def do_GET(self):
         with open(sys.argv[2] + '.log', 'a') as f:      # what was asked for (the test looks for a resumed range)
             f.write('%s %s\n' % (self.path, self.headers.get('Range', '-')))

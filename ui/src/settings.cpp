@@ -661,7 +661,7 @@ namespace banana
 		add(S, "gear", "Previous version", "Restarts into the other slot: the version that ran before the last update. Press A twice.", "", "switch", { "" }, { "" }, Item::ACTION);
 		if (access("/run/banana/sd2/slot", F_OK) == 0)	// a second card slot (bananad's sd2 script): the RG DS Plus
 		add(S, "gear", "Second SD card", "Games on the card in the second slot (its roms folder, with the same system folders as this card) show up in the library with the others while it's in. exFAT or FAT32.", menu, "sd2_roms", { "Show its games", "Off" }, { "on", "off" });
-		add(S, "gear", "First-time setup", "The steps from the first boot again: Wi-Fi, the time zone and the RetroAchievements account (ScreenScraper: not available yet).", "", "setup", {}, {}, Item::PAGE);
+		add(S, "gear", "First-time setup", "The first boot's setup again, a step at a time: Wi-Fi (with a test of the connection), the time zone, the DS's name, the RetroAchievements login and box art. B on its first step comes back here.", "", "setup", {}, {}, Item::PAGE);
 		add(S, "gear", "Reset system settings", "Puts the menu, display, sound, power and network settings back to their defaults, the time zone too (the language stays). Your games, saves and the emulators' settings are untouched. Press A twice.",
 			"", "reset_system", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "Reset emulator settings", "Puts the emulator choices back to their defaults: the DS emulator, Quick resume, each system's emulator (core), and RetroArch's shader, audio latency, VSync and hotkeys. Your menu settings, saves and games stay. Press A twice.",
@@ -1026,7 +1026,7 @@ namespace banana
 			if (it.key == "hs_server") { startPairing(); return MOVED; }
 			if (it.key == "hs_sync") { startSync(); return MOVED; }
 			if (it.key == "credits") { openCredits(); return MOVED; }
-			if (it.key == "update") openUpdates(); else if (it.key == "setup") openSetup(); else openNetworks();
+			if (it.key == "update") openUpdates(); else if (it.key == "setup") openSetup(false, ""); else openNetworks();
 			return MOVED;
 		}
 		if (it.kind == Item::ACTION)
@@ -1378,12 +1378,15 @@ namespace banana
 		}
 		if (page == SETUP)
 		{
-			if (downY >= 418 && downY <= 466) return pressSetup(downX < 320 ? Key::B : Key::A);
-			for (int r = 0; r < SETUP_STEPS; r++)
+			// the chips (B Back, START Skip, A OK), and a choice: one tap does it (a value row: its left or right half)
+			if (downY >= 418 && downY <= 466) return pressSetup(downX < 220 ? Key::B : downX < 420 ? Key::START : Key::A);
+			auto ch = setupChoices();
+			for (int r = 0; r < (int)ch.size(); r++)
 			{
-				float ry = 82 + r * SETUP_PITCH;
-				if (downY < ry || downY > ry + 50) continue;
-				if (r != wsel) { wsel = r; return MOVED; }
+				float ry = SETUP_Y + r * SETUP_PITCH;
+				if (downY < ry || downY > ry + SETUP_H) continue;
+				wpick = r;
+				if (ch[r].act == SA_TZ || ch[r].act == SA_LANG) return pressSetup(downX < 320 ? Key::LEFT : Key::RIGHT);
 				return pressSetup(Key::A);
 			}
 			return NONE;
@@ -2075,6 +2078,7 @@ namespace banana
 		if (!mOpen) return false;
 		bool scrapeChanged = pollScrape(t);
 		scrapeChanged |= pollSync(t);
+		bool changed0 = false;
 		if (raCheck)
 		{
 			// (a reference of its own for the lock: the reset below can drop the last one, and the guard would unlock
@@ -2084,9 +2088,14 @@ namespace banana
 			if (raCheck->done)
 			{
 				const int kind = raCheck->kind;
-				toast(kind == 1 ? "RetroAchievements" : "RetroAchievements login failed", raCheck->l2,
-					kind == 1 ? 0x6ad07a : 0xff7a4a, kind == 1 ? 1 : 2, kind == 1 ? 5000 : 7000);
-				message = kind == 1 ? "" : raCheck->l2;
+				// (the setup's slide shows it itself: the pop-up would cover its header)
+				if (!(wizard && page == SETUP))
+					toast(kind == 1 ? "RetroAchievements" : "RetroAchievements login failed", raCheck->l2,
+						kind == 1 ? 0x6ad07a : 0xff7a4a, kind == 1 ? 1 : 2, kind == 1 ? 5000 : 7000);
+				else toastUntil = 0;
+				message = kind == 1 || page == SETUP ? "" : raCheck->l2;
+				raKind = kind; raLine = raCheck->l2;	// (the setup's RetroAchievements slide shows it)
+				if (wizard && page == SETUP) wpick = 0;
 				raCheck.reset();
 				return true;
 			}
@@ -2099,12 +2108,26 @@ namespace banana
 			if (thumbJob.running()) thumbPoll = now + 1000;
 			return true;
 		}
+		// the setup's Wi-Fi slide: the network joined from it followed until it has an address, then tested
+		if (page == SETUP && wizard)
+		{
+			if ((!joining.empty() || testAfterJoin) && now >= nextStatus) pollStatus();
+			if (testAfterJoin && joining.empty() && wstat.connected && !wstat.ip.empty() && !testing) startTest();
+			// connected already when the slide came (a saved network, the setup again): tested once by itself
+			if (!slides.empty() && slides[wsel] == SL_WIFI && wstat.connected && tLink < 0 && !testing && !testAfterJoin && !autoTested)
+			{
+				autoTested = true;
+				startTest();
+				changed0 = true;
+			}
+			if (pollTest()) changed0 = true;
+		}
 		if (page == NETWORKS && wifiEnabled)
 		{
 			if (!joining.empty() && now >= nextStatus) pollStatus();
 			if (joining.empty() && now >= nextScan) startScan();
 		}
-		bool changed = scrapeChanged;
+		bool changed = scrapeChanged || changed0;
 		changed |= btUpdate();
 		if (page == UPDATES && applying && now >= nextStatus2)
 		{
@@ -2171,7 +2194,7 @@ namespace banana
 			wstat = st;
 			if (!joining.empty() && st.connected && st.ssid == joining && !st.ip.empty())
 			{
-				message = "Connected to " + joining + " (" + st.ip + ").";
+				message = wizard && page == SETUP ? "" : "Connected to " + joining + " (" + st.ip + ").";
 				joining.clear();
 				changed = true;
 			}
@@ -2209,6 +2232,9 @@ namespace banana
 		if (page == UPDATES && applying) return std::max(0, (int)(nextStatus2 - t));
 		if (page == UPDATES && downloading) return std::max(0, (int)(nextDl - t));
 		if (page == BLUETOOTH && btEnabled) return std::max(0, (int)(btNextList - t));
+		if (testing) return 300;	// (the setup's Wi-Fi test: its lines as they come)
+		if (page == SETUP && wizard && (!joining.empty() || testAfterJoin)) return std::max(0, (int)(nextStatus - t));
+		if (page == SETUP && wizard && raCheck) return 250;	// (the dots going round)
 		if (page != NETWORKS || !wifiEnabled) return -1;
 		double due = joining.empty() ? nextScan : std::min(nextStatus, joinStart + 30001);
 		return std::max(0, (int)(due - t));
@@ -2252,10 +2278,14 @@ namespace banana
 			const wifi::Network& net = nets[nsel];
 			if (net.unsupported)
 				message = net.ssid + " signs in a way the menu can't (a company network, or the old WEP): it can be written in banana/wifi.conf on a computer.";
+			else if (net.current && wizard) { page = SETUP; message.clear(); startTest(); }	// (the setup: tested)
 			else if (net.current)
 				message = "Connected to " + net.ssid + (wstat.ip.empty() ? "." : " (" + wstat.ip + ").");
 			else if (!net.secured || (net.saved && net.ssid != failed))
+			{
 				join(net, "");	// open, or saved: no password to type
+				if (wizard) { page = SETUP; message.clear(); }	// (the setup: back on its slide, which follows the join)
+			}
 			else
 			{
 				target = net;
@@ -4546,23 +4576,29 @@ namespace banana
 	}
 	// the DS's name (#30): BananaDS's firmware.nickname, else DraStic's firmware.username when it isn't its default;
 	// "" for none
+	// where the emulators keep their settings (/data; BANANA_DS_ROOT: the tests' and a scratch setup's own)
+	static std::string dsRoot()
+	{
+		const char* r = getenv("BANANA_DS_ROOT");
+		return r && *r ? r : "/data";
+	}
 	std::string Settings::dsName()
 	{
-		std::string n = getConfValue("/data/bananads/bananads.conf", "firmware.nickname", "");
-		if (n.empty()) n = getConfValue("/data/drastic/config/drastic.cfg", "firmware.username", "");
+		std::string n = getConfValue(dsRoot() + "/bananads/bananads.conf", "firmware.nickname", "");
+		if (n.empty()) n = getConfValue(dsRoot() + "/drastic/config/drastic.cfg", "firmware.username", "");
 		return n == getConfValue("/usr/share/drastic/config/drastic.cfg", "firmware.username", "Dr DraStic") ? "" : n;
 	}
 	void Settings::setDsName(const std::string& name)
 	{
 		// DraStic's own settings made first (as save() does); empty: its default name back, and BananaDS's line gone
-		if (access("/data/drastic/config/drastic.cfg", F_OK) != 0)
+		if (access((dsRoot() + "/drastic/config/drastic.cfg").c_str(), F_OK) != 0)
 		{
-			if (system("mkdir -p /data/drastic/config && cp -n /usr/share/drastic/config/drastic.cfg /data/drastic/config/ 2>/dev/null") != 0) {}
+			if (system(("mkdir -p '" + dsRoot() + "/drastic/config' && cp -n /usr/share/drastic/config/drastic.cfg '" + dsRoot() + "/drastic/config/' 2>/dev/null").c_str()) != 0) {}
 		}
-		setConfValue("/data/drastic/config/drastic.cfg", "firmware.username",
+		setConfValue(dsRoot() + "/drastic/config/drastic.cfg", "firmware.username",
 			name.empty() ? getConfValue("/usr/share/drastic/config/drastic.cfg", "firmware.username", "Dr DraStic") : name);
-		if (system("mkdir -p /data/bananads") != 0) {}
-		const std::string bc = "/data/bananads/bananads.conf";
+		if (system(("mkdir -p '" + dsRoot() + "/bananads'").c_str()) != 0) {}
+		const std::string bc = dsRoot() + "/bananads/bananads.conf";
 		if (!name.empty()) setConfValue(bc, "firmware.nickname", name);
 		else if (!getConfValue(bc, "firmware.nickname", "").empty())
 		{
@@ -4596,7 +4632,7 @@ namespace banana
 			}
 			join(target, pw);
 			pw.clear();
-			if (wizard) page = SETUP;
+			if (wizard) { page = SETUP; message.clear(); }
 			return CHANGED;
 		case ENTRY_RA_USER:
 			if (pw.empty()) { message = "The account's name, as on retroachievements.org."; return MOVED; }
@@ -4785,7 +4821,7 @@ namespace banana
 		if (const char* e = getenv("BANANA_RA_CHECK"); e && !strcmp(e, "0")) return;	// (the headless test: no server)
 		auto c = std::make_shared<RaCheck>();
 		raCheck = c;
-		toast("RetroAchievements", "Checking the account " + user + "...", 0x6ab0ff, 0, 30000);
+		if (!wizard) toast("RetroAchievements", "Checking the account " + user + "...", 0x6ab0ff, 0, 30000);	// (the setup: on its slide)
 		std::thread([c, user, pass]
 		{
 			int kind = 3;
@@ -4803,7 +4839,8 @@ namespace banana
 					if (ep) cu.freep(ep);
 					std::string body;
 					long status = 0;
-					cu.setopt(h, URL, "https://retroachievements.org/dorequest.php");
+					const char* url = getenv("BANANA_RA_URL");	// (the tests' stand-in for the site)
+					cu.setopt(h, URL, url && *url ? url : "https://retroachievements.org/dorequest.php");
 					cu.setopt(h, POSTFIELDS, post.c_str());
 					cu.setopt(h, USERAGENT, "BananaOS");
 					cu.setopt(h, NOSIGNAL, 1L);
@@ -4880,15 +4917,61 @@ namespace banana
 	}
 
 	// ---- the first-time setup ----------------------------------------------------------------------------------
-	void Settings::openSetup()
+	// A slide per step (the owner, 2026-10-27: "one thing at a time"): Language (when the card has more than English:
+	// first, so every slide after it is in the language picked; a change restarts the menu, which comes back on the
+	// next slide), Wi-Fi (a network picked and joined on the Networks page, then a real test: connected, the
+	// internet, the clock), Time zone, DS name, RetroAchievements (the login checked with the site), Box art (the
+	// fetch started; it goes on in the background) and a summary. Each can be skipped (a Skip choice, or START).
+	// banana/setup-step keeps the slide reached, so a restart (a language change, a power cut, a reboot) comes back to
+	// it; setup-done is written at the end, as before.
+	const char* Settings::slideKey(Slide sl)
+	{
+		static const char* k[] = { "language", "wifi", "timezone", "name", "retroachievements", "boxart", "done" };
+		return k[sl];
+	}
+
+	std::string Settings::setupStep(const std::string& dataDir, bool* boot)
+	{
+		std::ifstream f(dataDir + "/setup-step");
+		std::string slide, mode;
+		f >> slide >> mode;
+		if (boot) *boot = mode != "settings";
+		return slide;
+	}
+
+	void Settings::openSetup(bool boot, const std::string& at)
 	{
 		for (auto& it : items) load(it);
 		refreshInfo();
 		wizard = true;
-		wsel = 0; armed = -1;
+		wizardBoot = boot;
+		setupEnded = false;
+		armed = -1;
 		message.clear();
 		page = SETUP;
+		slides.clear();
+		for (auto& it : items) if (it.key == "language") { slides.push_back(SL_LANG); langAt = it.at; }
+		for (Slide sl : { SL_WIFI, SL_TZ, SL_NAME, SL_RA, SL_ART, SL_DONE }) slides.push_back(sl);
+		wskipped.assign(slides.size(), false);
+		tLink = tNet = tTime = -1;
+		testing = testAfterJoin = autoTested = false;
+		raKind = 0; raLine.clear();
+		int start = 0;
+		for (int i = 0; i < (int)slides.size(); i++) if (at == slideKey(slides[i])) start = i;
 		if (wifiOn() && !statusJob.running()) statusJob.start(wifiTool + " status", sync);
+		setupGo(start);
+	}
+
+	void Settings::setupGo(int slide)
+	{
+		wsel = std::max(0, std::min((int)slides.size() - 1, slide));
+		wpick = 0;
+		message.clear();
+		// (the boot's setup only, and each slide as it is reached: a restart finds the setup again there)
+		if (wizardBoot || slides[wsel] == SL_LANG)
+			std::ofstream(data + "/setup-step") << slideKey(slides[wsel]) << " " << (wizardBoot ? "boot" : "settings") << "\n";
+		// Wi-Fi already connected (a saved network, or the setup again): tested at once
+		if (slides[wsel] == SL_WIFI && wstat.connected && tLink < 0 && !testing) { autoTested = true; startTest(); }
 	}
 
 	// the time on the clock now, in the time zone in effect (save() sets TZ when the zone changes)
@@ -4905,119 +4988,459 @@ namespace banana
 	void Settings::setupDone()
 	{
 		std::ofstream(data + "/setup-done") << "done\n";
+		unlink((data + "/setup-step").c_str());
 		wizard = false;
 		page = LIST;
-		mOpen = false;
+		if (wizardBoot) { mOpen = false; setupEnded = true; return; }
+		// from Settings: back on its row in System's list
+		for (int i = 0; i < (int)items.size(); i++) if (items[i].key == "setup") { sel = i; inGroups = false; }
+		top = std::max(0, sel - ROWS + 1);
+		top = std::max(groupStart(groupOf(sel)), top);
+	}
+
+	// the Wi-Fi test: wifi test's lines into a file as they come (link, internet, time), read every 300 ms
+	void Settings::startTest()
+	{
+		if (testJob.running()) return;
+		tLink = tNet = tTime = -1;
+		tIp.clear();
+		tSsid = wstat.ssid;
+		testing = true;
+		testAfterJoin = false;
+		std::string out = runDir + "/wifi-test";
+		unlink(out.c_str());
+		testJob.start("'" + wifiTool + "' test > '" + out + "' 2>/dev/null", sync);
+		testPoll = 0;
+		if (sync) pollTest();
+	}
+
+	bool Settings::pollTest()
+	{
+		if (!testing || now < testPoll) return false;
+		testPoll = now + 300;
+		int a = tLink, b = tNet, c = tTime;
+		std::ifstream f(runDir + "/wifi-test");
+		for (std::string ln; std::getline(f, ln);)
+		{
+			std::istringstream in(ln);
+			std::string what, res;
+			in >> what >> res;
+			int v = res == "ok" ? 1 : 0;
+			if (what == "link") { tLink = v; in >> tIp; }
+			else if (what == "internet") tNet = v;
+			else if (what == "time") tTime = v;
+		}
+		std::string out;
+		bool ended = testJob.take(out) || !testJob.running();
+		if (ended)
+		{
+			testing = false;
+			// a step it never got to failed with the one before it
+			if (tLink < 0) tLink = 0;
+			if (tNet < 0) tNet = 0;
+			if (tTime < 0) tTime = 0;
+			wpick = 0;	// the first choice: Next when it all worked, Test again when not
+			if (tTime == 1) for (auto& it : items) if (it.key == "timezone") load(it);
+		}
+		return ended || a != tLink || b != tNet || c != tTime;
+	}
+
+	std::vector<Settings::Choice> Settings::setupChoices()
+	{
+		std::vector<Choice> r;
+		Item* tz = nullptr; Item* lg = nullptr;
+		for (auto& it : items) { if (it.key == "timezone") tz = &it; if (it.key == "language") lg = &it; }
+		switch (slides[wsel])
+		{
+		case SL_LANG:
+			if (lg) r.push_back({ "Language", lg->names[std::max(0, std::min((int)lg->names.size() - 1, langAt))], SA_LANG });
+			r.push_back({ "Next", "", SA_NEXT });
+			break;
+		case SL_WIFI:
+			if (testing) { r.push_back({ "Testing the connection", "", SA_WAIT }); r.push_back({ "Skip for now", "", SA_SKIP }); break; }
+			if (!joining.empty()) { r.push_back({ "Choose another network", "", SA_NETWORKS }); r.push_back({ "Skip for now", "", SA_SKIP }); break; }
+			if (tLink == 1 && tNet == 1)
+			{
+				r.push_back({ "Next", "", SA_NEXT });
+				r.push_back({ "Test again", "", SA_TEST });
+				r.push_back({ "Choose another network", "", SA_NETWORKS });
+				break;
+			}
+			if (wstat.connected)
+			{
+				r.push_back({ tLink < 0 ? "Test the connection" : "Test again", "", SA_TEST });
+				r.push_back({ "Choose another network", "", SA_NETWORKS });
+				r.push_back({ "Skip for now", "", SA_SKIP });
+				break;
+			}
+			r.push_back({ "Choose a network", "", SA_NETWORKS });
+			r.push_back({ "Skip for now", "", SA_SKIP });
+			break;
+		case SL_TZ:
+			if (tz) r.push_back({ "Time zone", tz->names[tz->at] + " (" + clockNow() + ")", SA_TZ });
+			r.push_back({ "Next", "", SA_NEXT });
+			break;
+		case SL_NAME:
+			if (!dsName().empty()) { r.push_back({ "Next", "", SA_NEXT }); r.push_back({ "Change the name", dsName(), SA_NAME }); }
+			else { r.push_back({ "Type a name", "", SA_NAME }); r.push_back({ "Skip for now", "", SA_SKIP }); }
+			break;
+		case SL_RA:
+		{
+			std::string user = account("ra_user");
+			if (raCheck) { r.push_back({ "Checking the login", "", SA_WAIT }); r.push_back({ "Skip for now", "", SA_SKIP }); break; }
+			if (raKind == 1) { r.push_back({ "Next", "", SA_NEXT }); r.push_back({ "Log in with another account", "", SA_RA }); break; }
+			if (raKind == 2) { r.push_back({ "Try again", "", SA_RA }); r.push_back({ "Skip for now", "", SA_SKIP }); break; }
+			if (raKind == 4) { r.push_back({ "Next", "", SA_NEXT }); r.push_back({ "Log in with another account", "", SA_RA }); break; }
+			if (raKind == 3) { r.push_back({ "Check again", "", SA_RACHECK }); r.push_back({ "Log in with another account", "", SA_RA }); r.push_back({ "Skip for now", "", SA_SKIP }); break; }
+			if (!user.empty() && !account("ra_password").empty())
+			{
+				// an account from before (the setup again): checked on a press, the password not typed again
+				r.push_back({ "Check the login", user, SA_RACHECK });
+				r.push_back({ "Log in with another account", "", SA_RA });
+				r.push_back({ "Next", "", SA_NEXT });
+				break;
+			}
+			r.push_back({ "Log in", "", SA_RA });
+			r.push_back({ "Skip for now", "", SA_SKIP });
+			break;
+		}
+		case SL_ART:
+			if (scraping()) { r.push_back({ "Next", "", SA_NEXT }); break; }
+			if (scrapeLine.compare(0, 4, "done") == 0) { r.push_back({ "Next", "", SA_NEXT }); r.push_back({ "Fetch again", "", SA_ART }); break; }
+			r.push_back({ scrapeLine.compare(0, 5, "error") == 0 ? "Try again" : "Start fetching box art", "", SA_ART });
+			r.push_back({ "Skip for now", "", SA_SKIP });
+			break;
+		case SL_DONE:
+			r.push_back({ "Finish", "", SA_FINISH });
+			break;
+		}
+		return r;
+	}
+
+	std::string Settings::setupState()
+	{
+		if (!wizard || page != SETUP) return std::string("closed page=") + std::to_string((int)page) + " open=" + (mOpen ? "1" : "0");
+		std::string r = std::string("slide=") + slideKey(slides[wsel]) + " pick=" + std::to_string(wpick) + " choices=";
+		auto ch = setupChoices();
+		for (size_t i = 0; i < ch.size(); i++) r += (i ? "|" : "") + ch[i].label;
+		r += " link=" + std::to_string(tLink) + " net=" + std::to_string(tNet) + " time=" + std::to_string(tTime) + " ra=" + std::to_string(raKind);
+		return r;
+	}
+
+	Settings::Result Settings::setupAct(SetupAct a)
+	{
+		Item* tz = nullptr; Item* lg = nullptr;
+		for (auto& it : items) { if (it.key == "timezone") tz = &it; if (it.key == "language") lg = &it; }
+		const Slide sl = slides[wsel];
+		switch (a)
+		{
+		case SA_WAIT: return NONE;
+		case SA_SKIP: case SA_NEXT:
+			if (sl == SL_LANG && lg && langAt != lg->at)
+			{
+				// the language picked: saved, and the menu starts again in it on the next slide
+				lg->at = langAt;
+				save(*lg);
+				std::ofstream(data + "/setup-step") << slideKey(slides[wsel + 1]) << " " << (wizardBoot ? "boot" : "settings") << "\n";
+				return LANGUAGE;
+			}
+			wskipped[wsel] = a == SA_SKIP;
+			if (sl == SL_DONE) return setupAct(SA_FINISH);
+			setupGo(wsel + 1);
+			return MOVED;
+		case SA_FINISH: setupDone(); return wizardBoot ? CLOSED : CHANGED;
+		case SA_LANG:
+			if (lg) langAt = (langAt + 1) % (int)lg->values.size();
+			return MOVED;
+		case SA_TZ:
+			if (tz) { tz->at = (tz->at + 1) % (int)tz->values.size(); save(*tz); }
+			return CHANGED;
+		case SA_NETWORKS:
+			if (!wifiOn())
+			{
+				setConfValue(data + "/settings.conf", "wifi", "on");
+				for (auto& it : items) if (it.key == "wifi") load(it);
+				spawn(wifiTool.c_str(), "up");
+			}
+			tLink = tNet = tTime = -1;
+			testAfterJoin = true;	// the network joined there is tested as soon as it has an address
+			openNetworks();
+			return MOVED;
+		case SA_TEST: startTest(); return MOVED;
+		case SA_NAME: startEntry(ENTRY_DS_NAME, "The DS's name", "10 characters at most", SETUP, dsName()); return MOVED;
+		case SA_RA:
+			raKind = 0; raLine.clear();
+			startEntry(ENTRY_RA_USER, "RetroAchievements", "Account name", SETUP, account("ra_user"));
+			return MOVED;
+		case SA_RACHECK:
+			raKind = 0; raLine.clear();
+			startRaCheck(account("ra_user"), account("ra_password"));
+			if (!raCheck) { raKind = 4; raLine = "Saved (not checked here)"; }	// (the test's BANANA_RA_CHECK=0)
+			return MOVED;
+		case SA_ART: startScrape(); return MOVED;
+		}
+		return NONE;
 	}
 
 	Settings::Result Settings::pressSetup(Key k)
 	{
-		Item* tz = nullptr;
-		for (auto& it : items) if (it.key == "timezone") tz = &it;
+		auto ch = setupChoices();
+		int n = (int)ch.size();
+		wpick = std::max(0, std::min(n - 1, wpick));
+		Item* tz = nullptr; Item* lg = nullptr;
+		for (auto& it : items) { if (it.key == "timezone") tz = &it; if (it.key == "language") lg = &it; }
 		switch (k)
 		{
 		case Key::UP: case Key::DOWN:
-			wsel = (wsel + (k == Key::UP ? -1 : 1) + SETUP_STEPS) % SETUP_STEPS;
-			message.clear();
+			if (n < 2) return NONE;
+			wpick = (wpick + (k == Key::UP ? -1 : 1) + n) % n;
 			return MOVED;
-		case Key::LEFT: case Key::RIGHT:
-			if (wsel != 1 || !tz) return NONE;
+		case Key::LEFT: case Key::RIGHT: case Key::L: case Key::R:
+		{
+			// the value rows: the time zone and the language, either way
+			int d = k == Key::LEFT || k == Key::L ? -1 : 1;
+			if (n && ch[wpick].act == SA_TZ && tz)
 			{
-				int n = (int)tz->values.size();
-				tz->at = (tz->at + (k == Key::LEFT ? -1 : 1) + n) % n;
+				int m = (int)tz->values.size();
+				tz->at = (tz->at + d + m) % m;
 				save(*tz);
-				message.clear();
+				return CHANGED;
 			}
-			return CHANGED;
-		case Key::A:
-			switch (wsel)
+			if (n && ch[wpick].act == SA_LANG && lg)
 			{
-			case 0: openNetworks(); return MOVED;
-			case 1: return pressSetup(Key::RIGHT);
-			case 2: startEntry(ENTRY_DS_NAME, "The DS's name", "10 characters at most", SETUP, dsName()); return MOVED;
-			case 3: startEntry(ENTRY_RA_USER, "RetroAchievements", "Account name", SETUP, account("ra_user")); return MOVED;
-			case 4: startScrape(); return MOVED;	// box art: on its own, while the setup goes on
-			default:
-				// the clock is UTC until a zone is picked, and a setup finished with the first entry left the menu's clock
-				// hours off: the first A on Finish goes to the time zone (with the time it would show), a second finishes
-				if (tz && tz->at == 0 && !tzAsked)
-				{
-					tzAsked = true;
-					wsel = 1;
-					message = "The time zone is still UTC, so the clock shows " + clockNow() + ". Left and right pick yours; Finish again to keep UTC.";
-					return MOVED;
-				}
-				setupDone();
-				return CLOSED;
+				int m = (int)lg->values.size();
+				langAt = (langAt + d + m) % m;
+				return MOVED;
 			}
-		case Key::B: case Key::START:
-			setupDone();		// skipped: Settings > System > First-time setup brings it back
-			return CLOSED;
+			return NONE;
+		}
+		case Key::A: return n ? setupAct(ch[wpick].act) : NONE;
+		case Key::START:
+			// past this slide (Skip, or Next when it is done; Finish on the last)
+			if (slides[wsel] == SL_DONE) return setupAct(SA_FINISH);
+			for (auto& c : ch) if (c.act == SA_NEXT || c.act == SA_SKIP) return setupAct(c.act);
+			return setupAct(SA_SKIP);
+		case Key::B:
+			if (wsel > 0) { setupGo(wsel - 1); return MOVED; }
+			if (!wizardBoot) { wizard = false; page = LIST; unlink((data + "/setup-step").c_str()); return MOVED; }	// out, back to Settings
+			return NONE;
 		default: return NONE;
 		}
 	}
 
+	// a 9x9 sign (the pop-up's): 0 "i", 1 a tick, 2 a cross; at x, y (CSS px), k device px a pixel
+	static const char* const SETUP_SIGN[3][9] = {
+		{ "...###...", "..#####..", "..##.##..", "....##...", "...##....", "...##....", ".........", "...##....", "...##...." },
+		{ ".........", "........#", ".......##", "......##.", "#....##..", "##..##...", ".####....", "..##.....", "........." },
+		{ "##.....##", ".##...##.", "..##.##..", "...###...", "...###...", "..##.##..", ".##...##.", "##.....##", "........." } };
+
 	void Settings::renderSetup()
 	{
 		SPal p = pal(light);
+		const Slide sl = slides[wsel];
 		Item* tz = nullptr;
 		for (auto& it : items) if (it.key == "timezone") tz = &it;
-		std::string ra = account("ra_user"), ss = account("ss_user");
-		static const char* names[SETUP_STEPS] = { "Wi-Fi", "Time zone", "DS name", "RetroAchievements", "Box art", "Finish" };
-		std::string status[SETUP_STEPS] = {
-			wstat.connected ? "Connected to " + wstat.ssid : wifiOn() ? "Not connected" : "Off",
-			tz ? tz->names[tz->at] + " (" + clockNow() + ")" : "",	// (the time it gives, so a wrong zone shows)
-			dsName().empty() ? "Not set" : dsName(),
-			ra.empty() ? "Not signed in" : ra,
-			scrapeShort(),
-			"" };
-		static const char* helps[SETUP_STEPS] = {
-			"Your home network: the games' achievements, the clock and the art need it. A picks it from the networks around; the password goes in on the keyboard.",
-			"The clock on the top screen, and the games' own clocks. Left and right change it.",
-			"Your name on the DS, as a real one asks for it the first time: Mario Kart's records, Pictochat, a game's save. A types it (10 characters at most). Leave it and the emulators use their own.",
-			"Your retroachievements.org account: DraStic and RetroArch unlock achievements with it. A types the name, then the password. Leave it if you have none.",
-			"Covers, title screens, genres and years for the games on the card, from libretro's free collections: no account. A starts it (Wi-Fi first); it keeps going while you finish the setup, and the menu shows the art as it comes. Settings > System > Box art runs it again for new games.",
-			"Everything here is in the settings too (Start in the menu), and this setup is under System > First-time setup. A finishes." };
+		const std::string ra = account("ra_user");
+		const int nSteps = (int)slides.size();
+		auto sign = [&](int which, float x, float y, const Color& c)
+		{
+			int k = std::max(1, (int)std::lround(2 * s));
+			float ox = std::round(X(x)), oy = std::round(X(y));
+			for (int r = 0; r < 9; r++)
+				for (int cc = 0; cc < 9; cc++)
+					if (SETUP_SIGN[which][r][cc] == '#') be->fill(ox + cc * k, oy + r * k, (float)k, (float)k, c);
+		};
+		const Color good = Color::hex(0x6ad07a), bad = Color::hex(0xff7a4a);
+		// a line of the result: a sign (tick, cross, or three dots going round while it runs) and its words
+		auto check = [&](int state, const std::string& t, float y)
+		{
+			if (state == 1) sign(1, 50, y + 3, good);
+			else if (state == 0) sign(2, 50, y + 3, bad);
+			else if (state == -2) sign(0, 50, y + 3, p.muted);
+			else
+			{
+				int lit = (int)(now / 250) % 3;
+				for (int i = 0; i < 3; i++) be->fill(std::round(X(50 + i * 7)), std::round(X(y + 9)), std::round(X(4)), std::round(X(4)), i == lit ? p.ink : p.muted);
+			}
+			text(fit(t, false, 20, 500), false, 20, 80, y, state == 0 ? p.ink : state == 1 ? p.ink : p.muted);
+		};
+
+		static const char* icons[] = { "book", "phone", "recent", "nds", "gamepad", "picture", "fav" };
+		static const char* titles[] = { "Language", "Wi-Fi", "Time zone", "DS name", "RetroAchievements", "Box art", "All set" };
+		std::string status, help;
+		switch (sl)
+		{
+		case SL_LANG:
+			help = "The menu's language, and the settings' and the emulators' menus. The rest of the setup is in the language picked.";
+			break;
+		case SL_WIFI:
+			status = testing ? "Testing " + tSsid + "..." : !joining.empty() ? "Joining " + joining + "..." :
+				wstat.connected ? "Connected to " + wstat.ssid : wifiOn() ? "Not connected" : "Off";
+			help = "Your home network: achievements, the clock, box art and updates need it. Pick it from the networks around, type its password, and the connection is tested.";
+			break;
+		case SL_TZ:
+			status = tz ? clockNow() : "";
+			help = "For the clock on the top screen and the games' own clocks. Left and right change it" +
+				std::string(tTime == 1 ? "; the time itself came from the internet." : ".");
+			break;
+		case SL_NAME:
+			status = dsName().empty() ? "Not set" : dsName();
+			help = "Your name on the DS, as a real one asks for it the first time: Mario Kart's records, Pictochat, a game's save. 10 characters at most. Leave it and the emulators use their own.";
+			break;
+		case SL_RA:
+			status = raCheck ? "Checking..." : raKind == 1 ? "Logged in" : raKind == 2 ? "Not logged in" : raKind == 3 ? "No answer" : ra.empty() ? "Not logged in" : ra;
+			help = "Your retroachievements.org account: DraStic and RetroArch unlock achievements with it. The login is checked with the site. No account? Skip this: it can be added later.";
+			break;
+		case SL_ART:
+			status = scrapeShort();
+			help = scraping() ? "Fetching covers and title screens. It carries on in the background while you finish the setup; the menu shows the art as it comes."
+				: "Covers, title screens, genres and years for the games on the card, from libretro's free collections: no account needed. Settings > System > Box art runs it again for new games.";
+			break;
+		case SL_DONE:
+			help = "Everything here is in Settings too (START in the menu), and this setup is under System > First-time setup.";
+			break;
+		}
+
+		// ---- top panel: the step, its title and state, what it is for, the result ----
 		be->beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
-		icon("gear", 50, 56, 3);
-		text("First-time setup", true, 17, 170, 62, p.muted, true, 1.4f);
-		text(names[wsel], true, 30, 170, 88, p.ink);
-		if (!status[wsel].empty()) text(fit(status[wsel], true, 22, 420), true, 22, 170, 130, p.accent);
-		if (wsel == 4 && scraping())
+		icon(icons[sl], 50, 52, 3);
+		std::string stepLine = lang::tr("First-time setup") + "  \xc2\xb7  " + lang::tr("Step {n} of {m}");
+		for (auto [k, v] : { std::pair<std::string, std::string>{ "{n}", std::to_string(wsel + 1) }, { "{m}", std::to_string(nSteps) } })
+			if (size_t at = stepLine.find(k); at != std::string::npos) stepLine.replace(at, k.size(), v);
+		rawText = true;	// (translated piece by piece above)
+		text(stepLine, true, 17, 170, 58, p.muted, true, 1.4f);
+		rawText = false;
+		text(titles[sl], true, 30, 170, 84, p.ink);
+		if (!status.empty()) text(fit(status, true, 22, 420), true, 22, 170, 126, p.accent);
+		float y = 186;
+		if (sl == SL_DONE)
 		{
-			wrapped("Fetching covers and title screens. It carries on while you finish the setup.", 20, 50, 196, 540, 4, p.muted);
-			scrapeBar(50, 330, 540);
+			// the summary: each step's outcome
+			auto row = [&](const std::string& label, const std::string& value, int st)
+			{
+				sign(st == 1 ? 1 : st == 0 ? 2 : 0, 50, y + 3, st == 1 ? good : st == 0 ? bad : p.muted);
+				float lw = text(label, true, 19, 80, y, p.ink);
+				text(fit(value, false, 19, 540 - lw - 16), false, 19, 80 + lw + 14, y, p.muted);
+				y += 34;
+			};
+			auto skipped = [&](Slide x) { for (int i = 0; i < nSteps; i++) if (slides[i] == x) return (bool)wskipped[i]; return false; };
+			row("Wi-Fi", wstat.connected ? wstat.ssid + (tNet == 0 ? " (no internet)" : "") : skipped(SL_WIFI) ? "Skipped" : "Not connected", wstat.connected && tNet != 0 ? 1 : -1);
+			row("Time zone", tz ? tz->names[tz->at] : "", 1);
+			row("DS name", dsName().empty() ? "Not set" : dsName(), dsName().empty() ? -1 : 1);
+			row("RetroAchievements", raKind == 1 ? ra : raKind == 2 ? "Login failed" : !ra.empty() ? ra : skipped(SL_RA) ? "Skipped" : "Not logged in",
+				raKind == 1 ? 1 : raKind == 2 ? 0 : -1);
+			row("Box art", scraping() ? "Fetching in the background" : scrapeLine.compare(0, 4, "done") == 0 ? scrapeShort() : skipped(SL_ART) ? "Skipped" : "Not fetched", scraping() || scrapeLine.compare(0, 4, "done") == 0 ? 1 : -1);
+			wrapped(help, 18, 50, y + 10, 540, 2, p.muted);
 		}
-		else wrapped(message.empty() ? helps[wsel] : message, 20, 50, 196, 540, 7, p.muted);
+		else
+		{
+			wrapped(message.empty() ? help : message, 20, 50, y, 540, 4, p.muted);
+			y = 312;
+			if (sl == SL_WIFI && (testing || tLink >= 0))
+			{
+				check(tLink, tLink == 1 ? "Connected, address " + tIp : tLink == 0 ? "No connection: no address from the network" : "Connected", y);
+				if (tLink != 0) check(testing && tNet < 0 ? -1 : tNet, tNet == 0 ? "No internet: the network doesn't reach it" : "Internet", y + 36);
+				if (tLink != 0 && tNet != 0) check(testing && tTime < 0 ? -1 : tTime, tTime == 1 ? "Clock set from the internet" : tTime == 0 ? "The clock couldn't be set (time server)" : "Clock", y + 72);
+			}
+			else if (sl == SL_WIFI && !joining.empty())
+				check(-1, "Joining " + joining, y);
+			else if (sl == SL_RA && (raCheck || raKind))
+				check(raCheck ? -1 : raKind == 1 ? 1 : raKind == 4 ? -2 : 0, raCheck ? "Asking retroachievements.org..." : raLine, y);
+			else if (sl == SL_ART && scraping())
+				scrapeBar(50, y + 6, 540);
+			else if (sl == SL_LANG)
+			{
+				// who translated each language (the translators' credit, as on the Language row)
+				float ly = 300;
+				for (auto& l : lang::available(assets + "/../lang"))
+				{
+					if (l.by.empty()) continue;
+					rawText = true;
+					float w = text(l.name, true, 19, 50, ly, p.ink);
+					rawText = false;
+					text(fit(lang::tr("translated by") + " " + l.by, false, 19, 520 - w), false, 19, 50 + w + 10, ly, p.muted);
+					ly += 32;
+					if (ly > 400) break;
+				}
+			}
+		}
 		be->endScreen();
 
+		// ---- bottom panel: the step's progress, the choices, B and A ----
 		be->beginScreen(1);
 		box("screen", false, 0, 0, 640, 480);
 		box("bubble", false, 18, 14, 604, 54);
-		text("Welcome to Banana", true, 22, 38, 28, p.ink);
-		std::string count = std::to_string(wsel + 1) + " / " + std::to_string(SETUP_STEPS);
-		float cw = text(count, true, 17, 0, 0, p.muted, false, 0, true);
-		text(count, true, 17, 602 - cw, 31, p.muted);
-		for (int r = 0; r < SETUP_STEPS; r++)
+		text(titles[sl], true, 22, 38, 28, p.ink);
+		// the progress: a square a step, the one now wider, in the accent; done ones light, the rest dim
 		{
-			bool on = r == wsel;
-			float y = 82 + r * SETUP_PITCH;	// (six rows a little closer than the lists' five)
-			box(on ? "pick" : "slot", on, 18, y, 604, 50);
-			Color c = on ? p.onPick : p.muted;
-			text(names[r], true, 20, 38, y + 13, c);
-			if (status[r].empty()) continue;
-			std::string v = fit(status[r], true, 19, 300);
-			float vw = text(v, true, 19, 0, 0, c, false, 0, true);
-			if (r == 1) { arrow(true, 576, y + 18, c); text(v, true, 19, 566 - vw, y + 14, c); arrow(false, 556 - vw - 2 - std::round(13 / 2.0f + 1), y + 18, c); }
-			else text(v, true, 19, 586 - vw, y + 14, c);
+			float dw = 12, gap = 8, wide = 28, w = (nSteps - 1) * (dw + gap) + wide;
+			float x = 602 - w;
+			for (int i = 0; i < nSteps; i++)
+			{
+				float ww = i == wsel ? wide : dw;
+				be->fill(std::round(X(x)), std::round(X(35)), std::round(X(ww)), std::round(X(12)), i == wsel ? p.accent : i < wsel ? p.ink : p.line);
+				x += ww + gap;
+			}
 		}
-		float bw = faceWidth("B", "Skip");
-		face("B", "Skip", 18, bw);
-		const char* act = wsel == 5 ? "Finish" : wsel == 1 ? "Next zone" : wsel == 4 ? (scraping() ? "Running" : "Start") : wsel == 2 ? "Type" : "Open";
-		float aw = faceWidth("A", act);
-		face("A", act, 622 - aw, aw);
+		auto ch = setupChoices();
+		wpick = std::max(0, std::min((int)ch.size() - 1, wpick));
+		for (int r = 0; r < (int)ch.size(); r++)
+		{
+			bool on = r == wpick;
+			float ry = SETUP_Y + r * SETUP_PITCH;
+			box(on ? "pick" : "slot", on, 18, ry, 604, SETUP_H);
+			Color c = ch[r].act == SA_WAIT ? (on ? p.onPick : p.muted) : on ? p.onPick : p.ink;
+			bool valueRow = ch[r].act == SA_TZ || ch[r].act == SA_LANG;
+			float lw = text(ch[r].label, true, 20, 40, ry + 17, c);
+			if (ch[r].value.empty()) continue;
+			float room = 560 - lw - 30 - (valueRow ? 44 : 0);
+			if (ch[r].act == SA_LANG) rawText = true;	// (each language in its own words)
+			std::string v = fit(ch[r].value, true, 19, room);
+			float vw = text(v, true, 19, 0, 0, c, false, 0, true);
+			if (valueRow)
+			{
+				arrow(true, 578, ry + 22, c);
+				text(v, true, 19, 568 - vw, ry + 18, c);
+				arrow(false, 558 - vw - 2 - std::round(13 / 2.0f + 1), ry + 22, c);
+			}
+			else text(v, true, 19, 588 - vw, ry + 18, on ? p.onPick : p.muted);
+			rawText = false;
+		}
+		// what is waiting: the Wi-Fi test or the login, said under the choices too
+		if (wsel > 0 || !wizardBoot)
+		{
+			float bw = faceWidth("B", "Back");
+			face("B", "Back", 18, bw);
+		}
+		if (sl != SL_DONE)
+		{
+			float sw = faceWidth("START", "Skip");
+			face("START", "Skip", 320 - sw / 2, sw);
+		}
+		float aw = faceWidth("A", "OK");
+		face("A", "OK", 622 - aw, aw);
+		be->endScreen();
+	}
+
+	// a title card on black: the host's arrival ("Welcome to", over the BANANAOS word it draws itself) and the Welcome
+	// at the end of the setup
+	void Settings::renderCard(const std::string& l1, const std::string& l2, float y, float size)
+	{
+		SPal p = pal(light);
+		be->beginScreen(0);
+		be->fill(0, 0, X(640), X(480), Color::hex(0x000000));
+		float w = text(l1, true, size, 0, 0, p.ink, false, 0, true);
+		text(l1, true, size, std::round(320 - w / 2), y, Color::hex(0xf1ede2));
+		if (!l2.empty())
+		{
+			float w2 = text(l2, false, 20, 0, 0, p.muted, false, 0, true);
+			text(l2, false, 20, std::round(320 - w2 / 2), y + size * 1.6f, Color::hex(0xa39d8e));
+		}
+		be->endScreen();
+		be->beginScreen(1);
+		be->fill(0, 0, X(640), X(480), Color::hex(0x000000));
 		be->endScreen();
 	}
 
