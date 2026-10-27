@@ -17,6 +17,7 @@
 #include "../../../ui/third_party/stb_image_write.h"
 
 #include "../../../ui/rnds/RndsUI.h"
+#include "../../../ui/src/expr.h"
 #include "../../../ui/src/layout.h"
 #include "../../../ui/src/library.h"
 #include "../../../ui/src/soft.h"
@@ -310,6 +311,24 @@ extern "C"
 		}
 		be->invalidate();
 		drawn = false;
+		return out.c_str();
+	}
+
+	// one expression through expr.cpp, in tests/parity.cpp's scope, printed as parity.cpp prints it ("s|text",
+	// "n|number" or "ERR"): tests/expr.test.js checks expr.js against this build too, whose float-to-int
+	// conversions saturate as the handhelds' (aarch64) do, where the PC's g++ build gives x86's results
+	EMSCRIPTEN_KEEPALIVE const char* bt_eval(const char* text)
+	{
+		static std::string out;
+		Scope sc;
+		sc.set("x", EV(3.0)); sc.set("y", EV(0.5)); sc.set("zero", EV(0.0)); sc.set("one", EV(1.0)); sc.set("n", EV(7.0));
+		sc.set("name", EV(std::string("Banana"))); sc.set("msg", EV(std::string("hello"))); sc.set("empty", EV(std::string("")));
+		sc.set("col", EV(std::string("#ff8000")));
+		std::string why;
+		Expr e = compileExpr(text, &why);
+		if (!e) return (out = "ERR").c_str();
+		EV v = evalExpr(e, sc);
+		out = v.isStr ? "s|" + v.s : "n|" + v.str();
 		return out.c_str();
 	}
 
