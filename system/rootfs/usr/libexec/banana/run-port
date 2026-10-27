@@ -1,8 +1,7 @@
 #!/bin/sh
 # Ports: a port's script (PortMaster's, or any .sh in roms/ports) with bash, as ROCKNIX runs them. PortMaster itself
 # is the "PortMaster" entry: its release (kept in the image) is put on the card the first time, and it updates itself
-# there. Ports draw on the top panel (SDL's KMSDRM display 0: SDL_KMSDRM_FIRST, Banana's SDL patch); the bottom one
-# stays dark. Their files and settings go under /data/home, not the read-only root.
+# there. Ports draw on the KMS/DRM display; their files and settings go under /data/home, not the read-only root.
 #   run-port <script>
 P=/data/roms/ports
 if [ ! -f $P/PortMaster/PortMaster.sh ] && [ -f /usr/share/banana/portmaster/PortMaster.zip ]; then
@@ -10,17 +9,15 @@ if [ ! -f $P/PortMaster/PortMaster.sh ] && [ -f /usr/share/banana/portmaster/Por
 fi
 export HOME=/data/home XDG_DATA_HOME=/data/home/.local/share XDG_CONFIG_HOME=/data/home/.config XDG_RUNTIME_DIR=/run
 mkdir -p $XDG_DATA_HOME $XDG_CONFIG_HOME
-export SDL_KMSDRM_FIRST=${BANANA_TOP:-DSI-2} TERM=linux
+export TERM=linux
 # PortMaster's menu is Python with PySDL2, which finds SDL2 through ctypes.util.find_library: no ldconfig cache or
 # compiler here, so it found nothing and PortMaster quit a second after starting. Its own folder says where.
 export PYSDL2_DLL_PATH=/usr/lib
 # PortMaster starts its splash (a LÖVE app on KMSDRM, holding DRM master) and then its menu, which stops the splash
 # only after SDL is up. SDL's KMSDRM skips a device it can't be master of (SDL_KMSDRM_REQUIRE_DRM_MASTER, on by
-# default), so the menu's SDL fell back to the offscreen driver and drew nowhere: a black screen. Master is taken when
-# the window is made, once the splash has gone.
+# default), so the menu's SDL fell back to a black screen. Master is taken when the window is made, once the splash
+# has gone.
 export SDL_KMSDRM_REQUIRE_DRM_MASTER=0
-. /usr/libexec/banana/one-panel
-one_panel_dark top
 cd "$(dirname "$1")"
 # the port in its own session (its process group = $C): a quit from the menu, and the port's end, reach everything it
 # started. PortMaster's script runs its menu (python3 pugwash) as a child: a TERM to the script alone left that
@@ -36,5 +33,4 @@ if kill -0 -$C 2>/dev/null; then
     for i in 1 2 3 4 5 6 7 8 9 10; do kill -0 -$C 2>/dev/null || break; sleep 0.2; done
     kill -KILL -$C 2>/dev/null
 fi
-one_panel_restore
 exit $S

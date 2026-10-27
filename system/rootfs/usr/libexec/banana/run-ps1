@@ -1,7 +1,7 @@
 #!/bin/sh
 # PlayStation: PCSX-ReArmed (libretro), the aarch64 ari64 dynarec with its NEON software rasterizer. RetroArch gives it
-# the GLES/KMSDRM output on one panel (run-retroarch owns the panel, the shader, the saves and RetroAchievements); this
-# launcher only sets what the core needs on the RK3566/68 and hands over.
+# the GLES/KMSDRM output on the panel (run-retroarch owns the panel, the shader, the saves and RetroAchievements); this
+# launcher only sets what the core needs on the RPC's Snapdragon and hands over.
 #   run-ps1 <rom>
 [ -f /usr/lib/libretro/pcsx_rearmed_libretro.so ] || { echo "PCSX-ReArmed isn't installed" >&2; exit 1; }
 R=/data/retroarch
@@ -12,15 +12,12 @@ mkdir -p "$R/config/$C"
 # (as run-retroarch's .banana-defaults-1 does). Delete the marker to have the defaults written again.
 M=$R/.banana-psx-1
 if [ ! -f "$M" ]; then
-    # Scaling: a 320x240 PS1 frame is exactly 2x on the RG DS (640x480) and 3.2x on the RG DS Plus (1024x768), where
-    # nearest-neighbour would shimmer. Integer keeps the pixels square (3x on the Plus, with small borders). The mode's
-    # height decides; a card that reports nothing is treated as the RG DS. The connector is asked by name, not by card
-    # number: the RG DS's panels hang off card0 (vop) and the Retroid Pocket Classic's off card1 (msm), so a card0-only
-    # glob silently finds nothing there and the choice gets made by the fallback rather than by the panel.
+    # Scaling: a 320x240 PS1 frame is an exact 3x on the RPC's 720-tall drawing area (integer keeps the pixels square);
+    # a card that reports nothing falls back to integer scaling.
     H=$(cat /sys/class/drm/card*-*/modes 2>/dev/null | sed -n '1s/^[0-9]*x\([0-9]*\).*/\1/p' | tr -d ' \r')
     case ${H:-480} in
-    7[0-9][0-9]) INT=false ;;      # 768p (the RG DS Plus): fill the panel, 3.2x
-    *)             INT=true  ;;   # 480p: a clean 2x. 1240 (the RPC's turned panel): a clean 3x, 960x720
+    7[0-9][0-9]) INT=false ;;      # 768p: fill the panel
+    *)             INT=true  ;;   # 480p / 1240 (the RPC's turned panel): a clean integer scale
     esac
     printf 'video_scale_integer = "%s"\n' "$INT" > "$R/config/$C/$C.cfg"
 
@@ -30,7 +27,7 @@ if [ ! -f "$M" ]; then
     # the core lists, not the labels.
     O=$R/config/$C/$C.opt
     {
-        printf '%s\n' '# Banana: the RK3566/68 defaults (run-ps1, written once)'
+        printf '%s\n' '# Banana: the RPC defaults (run-ps1, written once)'
         printf 'pcsx_rearmed_drc = "enabled"\n'
         printf 'pcsx_rearmed_region = "auto"\n'
         printf 'pcsx_rearmed_psxclock = "auto"\n'
@@ -49,12 +46,9 @@ if [ ! -f "$M" ]; then
     touch "$M"
 fi
 
-# run-retroarch owns the panel. When banana-ui made a DRM lease for the game (Settings > Other systems > Second screen,
-# banana/settings.conf retroarch_panel), BANANA_DRM_LEASE_FD is in the environment: run-retroarch gives RetroArch that
-# one panel and keeps the other for Banana's game panel (Mode A). RetroArch loads this core's own config after its
-# --appendconfig, so a video_monitor_index or a stdin_cmd_enable saved into it (RetroArch's "Save Core Override") would
-# have the last word and send the game onto both panels: those keys are dropped here, so run-retroarch's panel settings
-# always win. Banana's own keys (video_scale_integer) stay.
+# run-retroarch owns the panel. RetroArch loads this core's own config after its --appendconfig, so a video_monitor_index
+# or a stdin_cmd_enable saved into it (RetroArch's "Save Core Override") would have the last word: those keys are
+# dropped here, so run-retroarch's panel settings always win. Banana's own keys (video_scale_integer) stay.
 CF=$R/config/$C/$C.cfg
 if grep -q -e '^ *video_monitor_index *=' -e '^ *stdin_cmd_enable *=' "$CF" 2>/dev/null; then
     sed -i -e '/^ *video_monitor_index *=/d' -e '/^ *stdin_cmd_enable *=/d' "$CF"

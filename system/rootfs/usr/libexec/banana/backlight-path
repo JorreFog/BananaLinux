@@ -1,29 +1,8 @@
 #!/bin/sh
-# The sysfs backlight of one panel, on one line, or nothing when the panel isn't there (QEMU's virtio GPU has none).
-# bananad reads it once to know which backlight is the bottom one, so its menu dim leaves the bottom to banana-ui's
-# own idle timer (see ui/src/main.cpp).
+# The sysfs backlight of the panel, on one line, or nothing when there is none (QEMU's virtio GPU has none).
+# bananad reads it once to know which backlight to dim.
 #   backlight-path <top|bottom>
-# The panel's DSI node names it (fe060000 the bottom, DSI-1; fe070000 the top, DSI-2), the same mapping one-panel's
-# one_panel_dark uses. Those nodes are the RG DS's Rockchip SoC; a handheld whose panel hangs off another controller
-# (the Retroid Pocket Classic: ae94000.dsi) has exactly one panel and one backlight, and that is the answer --
-# without it bananad finds no backlight and the idle dim never dims anything.
-DT=/proc/device-tree
-one_bl() {   # the machine's only backlight, or nothing when there is more than one to choose between
-	n=$(ls -d /sys/class/backlight/* 2>/dev/null | wc -l)
-	[ "$n" = 1 ] && ls -d /sys/class/backlight/*
-}
-case $1 in
-top) DSI=fe070000 ;;
-*)   DSI=fe060000 ;;
-esac
-PH=$(od -An -tx1 $DT/dsi@$DSI/panel@0/backlight 2>/dev/null | tr -d ' \n')
-if [ -n "$PH" ]; then
-	for b in $DT/backlight*; do
-		[ "$(od -An -tx1 $b/phandle 2>/dev/null | tr -d ' \n')" = "$PH" ] &&
-			{ echo "/sys/class/backlight/$(basename "$b")"; exit 0; }
-	done
-	exit 0
-fi
-b=$(one_bl)
-[ -n "$b" ] && { echo "$b"; exit 0; }
+# The RPC has one panel and one backlight, so the answer is that backlight whatever name it is asked for.
+n=$(ls -d /sys/class/backlight/* 2>/dev/null | wc -l)
+[ "$n" = 1 ] && ls -d /sys/class/backlight/*
 exit 0

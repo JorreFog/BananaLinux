@@ -27,8 +27,6 @@ namespace banana
 		const char* const ON_OFF[] = { "on", "off" };
 		const char* const ACCENTS[] = { "yellow", "blue", "red", "green", "purple", "pink" };
 		const char* const SHADERS[] = { "off", "lcd", "crt", "sharp" };
-		const char* const NDS[] = { "superdrastic", "bananads" };
-		const char* const PANEL[] = { "panel", "off" };
 		const char* const BOXART[] = { "libretro", "both", "twilight" };
 		const char* const LATENCY[] = { "32", "64", "128" };
 
@@ -42,19 +40,15 @@ namespace banana
 			{ "battery", "icon", TEXT, nullptr, 0, 0 },
 			{ "clock", "24h", TEXT, nullptr, 0, 0 },
 			{ "splash", "on", ENUM, ON_OFF, 0, 0 },
-			{ "bottom_idle_seconds", "10", INTEGER, nullptr, 0, 3600 },
-			{ "bottom_dim_percent", "0", INTEGER, nullptr, 0, 100 },
 			{ "wifi", "on", ENUM, ON_OFF, 0, 0 },
 			{ "quick_resume", "off", ENUM, ON_OFF, 0, 0, true },
 			{ "sd2_roms", "on", ENUM, ON_OFF, 0, 0 },
 			{ "ra_shader", "off", ENUM, SHADERS, 0, 0, true },
 			{ "ra_audio_latency", "64", ENUM, LATENCY, 0, 0, true },
 			{ "ra_vsync", "on", ENUM, ON_OFF, 0, 0, true },
-			{ "nds_emulator", "superdrastic", ENUM, NDS, 0, 0, true },
 			{ "share", "off", ENUM, ON_OFF, 0, 0 },
 			{ "ssh", "off", ENUM, ON_OFF, 0, 0 },
 			{ "timezone", "UTC0", TIMEZONE, nullptr, 0, 0 },
-			{ "retroarch_panel", "panel", ENUM, PANEL, 0, 0 },
 			{ "boxart_source", "libretro", ENUM, BOXART, 0, 0 },
 			{ "boxart_twilight_url", "https://boxart.kirovair.com", TEXT, nullptr, 0, 0 },
 			{ "boxart_twilight_key", "tb2_9f4c1d7a3e8b5062", TEXT, nullptr, 0, 0 },

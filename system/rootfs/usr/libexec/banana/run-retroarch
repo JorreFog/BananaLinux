@@ -161,54 +161,31 @@ fi
 # anything RetroArch keeps that retroarch.cfg doesn't place (remaps, core options, playlists...) under the card's
 # retroarch folder, not ~/.config on the read-only root
 export HOME=/data/retroarch XDG_CONFIG_HOME=/data/retroarch
-MON=$(sed -n 's/^video_monitor_index = "\([0-9]\)"/\1/p' $CFG | tail -n 1)
-if [ -n "$BANANA_DRM_LEASE_FD" ]; then
-    # the game panel (banana-ui keeps the other panel): RetroArch draws on the panel it was lent (a DRM lease, its
-    # only connector, so monitor 1, through banana-leaseshim.so), takes banana-ui's tiles as commands on its stdin,
-    # and logs what its RetroAchievements client does for the panel to show. What RetroArch saves of these on exit is
-    # put back below.
-    L=/run/banana/retroarch-panel.cfg
-    printf 'video_monitor_index = "1"\nstdin_cmd_enable = "true"\n' > $L
-    rm -f /run/banana/retroarch.log
-    LD_PRELOAD=/usr/lib/banana/banana-leaseshim.so retroarch --config $CFG --appendconfig "$L|$RA" --verbose \
-        --log-file /run/banana/retroarch.log -L "$CORE" "$2" < "${BANANA_RA_CMD:-/dev/null}" &
+# commands on its stdin (bananad's AUDIO_REINIT when the headphone jack changes), through a pipe held open here
+# (fd 3) so RetroArch never reads an end
+FIFO=/run/banana/retroarch.cmd
+rm -f $FIFO; mkfifo -m 600 $FIFO && exec 3<>$FIFO
+L=/run/banana/retroarch-stdin.cfg
+printf 'stdin_cmd_enable = "true"\n' > $L
+# RetroArch's ALSA driver aborts (SIGABRT, 134) when the DSP hasn't finished letting go of the frontend the menu
+# had; a second start half a second later takes it. Two extra tries cover a slow teardown, and nothing else.
+# Its own log goes on the card: the one thing worth having after a game that would not start is what RetroArch said
+# last (RPC-TEST.md asks for logs/).
+RL=/data/banana/logs/retroarch.log
+mkdir -p /data/banana/logs 2>/dev/null; rm -f $RL
+tries=0
+while :; do
+    retroarch --config $CFG --appendconfig "$L|$RA" -L "$CORE" "$2" < $FIFO --log-file $RL &
     P=$!
-else
-    # the panel RetroArch doesn't use (video_monitor_index: 2 the top, 1 the bottom) stays dark while the game runs
-    . /usr/libexec/banana/one-panel
-    case ${MON:-2} in 2) one_panel_dark top ;; *) one_panel_dark bottom ;; esac
-    # commands on its stdin here too (bananad's AUDIO_REINIT when the headphone jack changes), through the pipe the
-    # game panel uses; held open here (fd 3) so RetroArch never reads an end
-    FIFO=/run/banana/retroarch.cmd
-    rm -f $FIFO; mkfifo -m 600 $FIFO && exec 3<>$FIFO
-    L=/run/banana/retroarch-stdin.cfg
-    printf 'stdin_cmd_enable = "true"\n' > $L
-    # RetroArch's ALSA driver aborts (SIGABRT, 134) when the DSP hasn't finished letting go of the frontend the menu
-    # had; a second start half a second later takes it. Two extra tries cover a slow teardown, and nothing else.
-    # Its own log goes on the card, not in RAM: the game panel is not here to read /run in this mode, and the one
-    # thing worth having after a game that would not start is what RetroArch said last (RPC-TEST.md asks for logs/).
-    RL=/data/banana/logs/retroarch.log
-    mkdir -p /data/banana/logs 2>/dev/null; rm -f $RL
-    tries=0
-    while :; do
-        retroarch --config $CFG --appendconfig "$L|$RA" -L "$CORE" "$2" < $FIFO --log-file $RL &
-        P=$!
-        trap 'kill -TERM $P 2>/dev/null' TERM INT HUP
-        wait $P; S=$?
-        while kill -0 $P 2>/dev/null; do wait $P; S=$?; done	# a trap interrupted the wait: until RetroArch has quit
-        tries=$((tries + 1))
-        [ $S -eq 134 ] && [ $tries -lt 3 ] || break
-        echo "run-retroarch: RetroArch could not take the audio device, starting it again ($tries)" >&2
-        sleep 0.5
-    done
-fi
+    trap 'kill -TERM $P 2>/dev/null' TERM INT HUP
+    wait $P; S=$?
+    while kill -0 $P 2>/dev/null; do wait $P; S=$?; done	# a trap interrupted the wait: until RetroArch has quit
+    tries=$((tries + 1))
+    [ $S -eq 134 ] && [ $tries -lt 3 ] || break
+    echo "run-retroarch: RetroArch could not take the audio device, starting it again ($tries)" >&2
+    sleep 0.5
+done
 /usr/libexec/banana/ra-secrets scrub; rm -f $RA
-if [ -n "$BANANA_DRM_LEASE_FD" ]; then
-    set_cfg video_monitor_index ${MON:-2}
-    set_cfg stdin_cmd_enable false
-else
-    exec 3>&-; rm -f $FIFO
-    set_cfg stdin_cmd_enable false
-    one_panel_restore
-fi
+exec 3>&-; rm -f $FIFO
+set_cfg stdin_cmd_enable false
 exit $S

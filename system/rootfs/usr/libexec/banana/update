@@ -116,7 +116,6 @@ apply)
     for f in /boot/$TO/*.dtb; do [ -f "$DIR/$(basename "$f")" ] || rm -f "$f"; done
     boot_ro
     set_default $TO
-    rm -f /data/banana/panel-tune.txt      # the new device tree is tuned on its first boot
     [ -d "$UPDATES/.unpack" ] && rm -rf "$UPDATES/.unpack"
     mkdir -p /data/banana/logs; echo "$(date '+%Y-%m-%d %H:%M:%S') $PV to slot $TO from $(basename "$P")" >> /data/banana/logs/updates.log
     status "done $PV"

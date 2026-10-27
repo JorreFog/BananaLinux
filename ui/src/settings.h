@@ -21,24 +21,10 @@
 
 namespace banana
 {
-	// The game panel's quick-menu button: a wide pill centred along the bottom of the bottom screen, tapped anywhere on
-	// the bottom touchscreen (the tap surface; the game panel is the bottom one). One definition of its box, so the
-	// drawing (Settings::gameRender) and the touch hit test (Settings::gameTouch) can never disagree; the game panel is
-	// laid out in 640x480 CSS px and X()/s scales it to the panel, so the same numbers serve the RG DS (640x480) and
-	// the RG DS Plus (1024x768).
-	namespace gamecorner
-	{
-		constexpr float W = 176, H = 34;
-		constexpr float X = (640 - W) / 2;	// centred across the panel
-		constexpr float Y = 438;			// along its bottom edge
-		inline bool inCorner(float x, float y) { return x >= X && x < X + W && y >= Y && y < Y + H; }
-	}
-
 	class Settings
 	{
 	public:
-		Settings(rnds::Backend* be, const std::string& assets, const std::string& dataDir, float scale, const std::string& variant,
-			bool hasDs = true);
+		Settings(rnds::Backend* be, const std::string& assets, const std::string& dataDir, float scale, const std::string& variant);
 		void setVariant(const std::string& variant);	// "dark", "light", or "carts" (dark, in Inter: setFontDir first)
 		// one panel (the RPC): the pages' list is drawn on the only screen, and what the second screen carried (the
 		// selected setting's description and help) goes in the strip of panel below it. canvasH: the panel's height
@@ -51,20 +37,6 @@ namespace banana
 		bool isOpen() const { return mOpen; }
 		bool animating() const;	// the highlight or the list still easing into place: frames wanted
 
-		// The game panel (settings.cpp, end): while a RetroArch game runs on one panel through a DRM lease, the other
-		// shows the game's RetroAchievements (progress and the latest unlocks with their badges) and, over them, the
-		// quick-menu sheet (touch tiles for RetroArch: save, load, its menu, fast forward, quit), in the in-game
-		// menu's look. A centred pill along the bottom edge opens and closes the sheet.
-		enum GameAction { G_NONE, G_SAVE, G_LOAD, G_MENU, G_FFWD, G_QUIT };
-		void gameOpen(const std::string& title, const std::string& system, int screen, bool touch);
-		void gameClose();
-		bool gameUpdate(double nowMs);		// true: the panel changed (a log line, a reply, a badge, a flash ending)
-		void gameRender();
-		// A touch, device px. The tiles are on the panel being drawn (screen, the bottom one); the quick-menu button
-		// is the centred pill on the bottom touchscreen (screen 1) that opens and closes the sheet. A tile returns the
-		// RetroArch command to send (G_SAVE...), which the host writes to the game's stdin.
-		GameAction gameTouch(float x, float y, bool down, int screen);
-		bool gameProgress(int& unlocked, int& total);			// the game's achievements, once the server said
 		// box art (banana-scrape) finished since the last call: the library is read again
 		bool takeLibraryChanged() { bool r = libChanged; libChanged = false; return r; }
 
@@ -215,7 +187,6 @@ namespace banana
 		std::string fontDir;		// Inter's TTFs (the Carts theme)
 		bool cleanFonts = false;
 		bool single = false;		// one panel: no second screen for the page's description
-	bool hasDs;			// systems.conf has an [nds] shelf: the Nintendo DS page, and X on a game, exist with it.
 					// Given to the constructor: build() runs there, so a setter afterwards would be too late
 		float canvasH = 480;		// the panel's height in CSS px (the DS screen is 480)
 		// what the second screen said, under the list on one panel: its lines start where the DS screen ends
@@ -249,16 +220,6 @@ namespace banana
 		void startScrape();
 		std::string scrapeShort() const;	// for a row: "Not yet", "120 / 530", "410 of 530 found", "No connection"
 		void scrapeBar(float x, float y, float w);	// the progress bar and the game being fetched, while it runs
-		struct RaWatch;							// the achievements: RetroArch's log and the server (settings.cpp)
-		std::shared_ptr<RaWatch> raw;
-		std::string gTitle, gSystem;
-		int gScreen = 1, gFlash = -1, gDown = -1;
-		static constexpr int FLASH_TAB = 5;	// gFlash index of the quick-menu button (0..4 are the tiles)
-		bool gSheet = false;				// the quick-menu sheet is open over the game panel
-		bool gTouch = true;
-		double gFlashUntil = 0;
-		int gSeen = -1;						// the watch's generation last drawn
-		std::map<std::string, rnds::TexPtr> gBadges;	// badge textures by file
 		void box(const std::string& kind, bool on, float x, float y, float w, float h);
 		float text(const std::string& t, bool medium, float size, float x, float top, const rnds::Color& c, bool upper = false, float ls = 0, bool measureOnly = false);
 		void wrapped(const std::string& t, float size, float x, float top, float width, int maxLines, const rnds::Color& c);

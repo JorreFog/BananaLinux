@@ -1,5 +1,5 @@
 #!/bin/sh
-# Banana's whole boot. Everything the menu needs is built into the kernel (panels, buttons, touch, sound), so
+# Banana's whole boot. Everything the menu needs is built into the kernel (panel, buttons, touch, sound), so
 # there is nothing to wait for here but the data partition; Wi-Fi and the clock come up in the background.
 export PATH=/usr/sbin:/usr/bin:/sbin:/bin
 mount -t proc proc /proc
@@ -56,7 +56,7 @@ data || {
 }
 /usr/libexec/banana/data-layout
 mark "rcS: data partition ready"
-# the boot partition, read-only (the panel tuner writes the DTB there once)
+# the boot partition, read-only
 mount -t vfat -o ro,noatime ${DISK}p1 /boot 2>/dev/null
 
 # The sound, before the menu opens it. The RPC's audio is all modules and nothing loads them without udev, and the
@@ -115,11 +115,10 @@ banana-perf ui
 # not needed for the menu's first frame
 (
     hwclock -s 2>/dev/null
-    # the GPU (SuperDrastic's shaders, RetroArch's GLES) and the Wi-Fi: modules, and with no udev nothing loads a
-    # module by itself (bananad loads USB devices' drivers as they come). The Adreno and the RG DS's Panfrost are
-    # built in / absent respectively; the WLAN driver is rtw88_8821cs on the RG DS and ath10k_snoc on the RPC's
-    # WCN3950 (a qcom,wcn3990-wifi node), whose firmware is in ath10k/WCN3990/hw1.0 with the wpss one.
-    modprobe -a panfrost rtw88_8821cs ath10k_snoc 2>/dev/null
+    # the GPU (RetroArch's GLES, Turnip/Freedreno on the Adreno) and the Wi-Fi: modules, and with no udev nothing
+    # loads a module by itself (bananad loads USB devices' drivers as they come). The WLAN driver is ath10k_snoc on
+    # the RPC's WCN3950 (a qcom,wcn3990-wifi node), whose firmware is in ath10k/WCN3990/hw1.0 with the wpss one.
+    modprobe -a ath10k_snoc 2>/dev/null
     # Wi-Fi when there is a network to join and the settings screen didn't switch it off (Settings > Network
     # starts it to search when there is none yet)
     if [ -f /data/banana/wifi.conf ] && ! grep -q '^ *wifi *= *off' /data/banana/settings.conf 2>/dev/null; then
@@ -134,7 +133,6 @@ banana-perf ui
     # file sharing, when switched on in the settings
     grep -q '^ *share *= *on' /data/banana/settings.conf 2>/dev/null && /usr/libexec/banana/share up
     grep -q '^ *ssh *= *on' /data/banana/settings.conf 2>/dev/null && /usr/libexec/banana/ssh up
-    /usr/libexec/banana/panel-tune
 ) &
 # the boot, to read on a computer (logs/boot.txt, logs/dmesg.txt), once it has settled; rcK writes it again at shutdown
 ( sleep 20; /usr/libexec/banana/boot-log ) &

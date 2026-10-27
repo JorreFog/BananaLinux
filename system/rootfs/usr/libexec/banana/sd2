@@ -1,5 +1,6 @@
 #!/bin/sh
-# The second SD card (the RG DS Plus's second slot): mounted at /run/sd2 while it's in, and its roms folder offered
+# A second SD card (a card in a reader other than the one the system runs from, in a handheld that has one): mounted
+# at /run/sd2 while it's in, and its roms folder offered
 # to the menu's library (in /run/banana/sd2/roms) when settings.conf says sd2_roms = on (the default). bananad runs
 # "sd2 scan" at boot and on every MMC block device's uevent; it looks at what's there now, so the order of events
 # doesn't matter. The card the system runs from (the one /data is on) is never the second card.
@@ -8,7 +9,7 @@ M=/run/sd2
 S=/run/banana/sd2
 mkdir -p $M $S
 data_disk=$(sed -n 's|^/dev/\(mmcblk[0-9]*\)p[0-9]* /data .*|\1|p' /proc/mounts | head -n 1)
-# is there a second slot at all (the RG DS has one, the Plus two): a card reader with card detection (cd-gpios) that
+# is there a second slot at all: a card reader with card detection (cd-gpios) that
 # isn't the one the system's card is in. $S/slot tells Settings to offer the second card.
 data_host=$(readlink -f /sys/class/block/$data_disk/device 2>/dev/null | sed -n 's|.*/\(mmc[0-9]*\)/mmc[0-9]*:[^/]*$|\1|p')
 slot=

@@ -16,7 +16,7 @@ BR2_CCACHE_INITIAL_SETUP="--max-size=3G"
 BR2_TARGET_GENERIC_HOSTNAME="banana"
 BR2_TARGET_GENERIC_ISSUE="Banana"
 BR2_INIT_BUSYBOX=y
-BR2_PACKAGE_BUSYBOX_CONFIG_FRAGMENT_FILES="$(BR2_EXTERNAL_BANANA_PATH)/board/rgds/busybox.fragment"
+BR2_PACKAGE_BUSYBOX_CONFIG_FRAGMENT_FILES="$(BR2_EXTERNAL_BANANA_PATH)/board/retroid-pocket-classic/busybox.fragment"
 BR2_ROOTFS_DEVICE_CREATION_DYNAMIC_DEVTMPFS=y
 # BR2_TARGET_GENERIC_GETTY is not set
 # BR2_TARGET_GENERIC_REMOUNT_ROOTFS_RW is not set
@@ -25,7 +25,7 @@ BR2_ROOTFS_OVERLAY="$(BR2_EXTERNAL_BANANA_PATH)/../system/rootfs"
 BR2_ROOTFS_POST_BUILD_SCRIPT="$(BR2_EXTERNAL_BANANA_PATH)/board/retroid-pocket-classic/post-build.sh"
 BR2_ROOTFS_POST_IMAGE_SCRIPT="$(BR2_EXTERNAL_BANANA_PATH)/board/retroid-pocket-classic/post-image.sh"
 BR2_ROOTFS_POST_SCRIPT_ARGS="retroid-pocket-classic"
-# kernel: mainline with ROCKNIX's RK3566 patches (board/rgds/ROCKNIX), from GitHub's stable mirror
+# kernel: mainline Linux 7.2 with ROCKNIX's SM4450 patches (board/retroid-pocket-classic/linux-patches)
 BR2_LINUX_KERNEL=y
 BR2_LINUX_KERNEL_CUSTOM_TARBALL=y
 BR2_LINUX_KERNEL_CUSTOM_TARBALL_LOCATION="https://cdn.kernel.org/pub/linux/kernel/v7.x/linux-7.2.tar.xz"
@@ -38,7 +38,7 @@ BR2_LINUX_KERNEL_DTS_SUPPORT=y
 BR2_LINUX_KERNEL_INTREE_DTS_NAME="qcom/sm4450-retroid-pocket-classic-revq"
 BR2_LINUX_KERNEL_NEEDS_HOST_OPENSSL=y
 BR2_LINUX_KERNEL_NEEDS_HOST_LIBELF=y
-# U-Boot 2026.01, ROCKNIX's Quartz64-based build for the RK3566/RK3568 handhelds
+# no U-Boot on the RPC: OpenABL (arm-efi) loads the kernel from the EFI stub
 # BR2_TARGET_UBOOT_FORMAT_BIN is not set
 # the root filesystem: squashfs, LZ4
 BR2_TARGET_ROOTFS_SQUASHFS=y
@@ -108,13 +108,6 @@ BR2_PACKAGE_OPENAL=y
 BR2_PACKAGE_LIBVORBIS=y
 BR2_PACKAGE_LIBTHEORA=y
 BR2_PACKAGE_MPG123=y
-# Nintendo 3DS: a game's code recompiled for the handheld by a PC, played by
-# pocket-native (docs/3DS.md). Needs a Rust toolchain, which default-builds as the
-# prebuilt one.
-
-# RetroArch-only build: no custom ROCKNIXDS games
-# BR2_PACKAGE_DODAKVARTER is not set
-# BR2_PACKAGE_ROCKNIXDS_BANK is not set
 
 # RetroArch-only: no PICO-8
 # BR2_PACKAGE_LIBRETRO_FAKE08 is not set

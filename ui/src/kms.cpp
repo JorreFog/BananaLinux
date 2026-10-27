@@ -47,7 +47,7 @@ namespace banana
 	}
 
 	// how the panel is mounted, from the connector's "panel orientation" (the device tree's rotation): the degrees
-	// present() turns the menus by. banana.rotate=0|90|180|270 on the kernel command line overrides it, for a panel
+	// present() turns the menu by. banana.rotate=0|90|180|270 on the kernel command line overrides it, for a panel
 	// that reports the wrong one.
 	static int panelRotation(int fd, uint32_t conn)
 	{
@@ -83,8 +83,8 @@ namespace banana
 		return rot;
 	}
 
-	// the part of a composed screen that changed, into a scanout buffer the panel turns by rot: a turned rectangle
-	// is written a panel row at a time (contiguous writes, strided reads of the cached screens)
+	// the part of the composed screen that changed, into a scanout buffer the panel turns by rot: a turned rectangle
+	// is written a panel row at a time (contiguous writes, strided reads of the cached screen)
 	void Display::turn(const uint32_t* src, Buf& bf, const Damage& d)
 	{
 		if (rot == 90)
@@ -119,18 +119,9 @@ namespace banana
 		}
 	}
 
-	bool Display::open(const std::string& top, std::string& err)
-	{
-		return openWith(top, 2, err);
-	}
-
+	// one panel: the connector named like top when it is connected, else any connected connector with a mode (the
+	// type is only a preference here)
 	bool Display::openSingle(const std::string& top, std::string& err)
-	{
-		return openWith(top, 1, err);
-	}
-
-	// need panels of the type in top's name; for one panel, any connected connector when none of that type is there
-	bool Display::openWith(const std::string& top, int need, std::string& err)
 	{
 		close();
 		std::vector<std::string> cards;
@@ -141,30 +132,27 @@ namespace banana
 			closedir(d);
 		}
 		std::sort(cards.begin(), cards.end());
-		// the panels' connector type from the top one's name ("DSI-2"; "Virtual-2" on QEMU's virtio GPU)
+		// the panel's connector type from the name ("DSI-1"; "Virtual-1" on QEMU's virtio GPU)
 		std::string type = top.substr(0, top.find('-'));
-		err = need > 1 ? "no DRM device with two connected " + type + " panels"
-		               : "no DRM device with a connected " + type + " panel";
+		err = "no DRM device with a connected " + type + " panel";
 		for (auto& path : cards)
 		{
 			int f = ::open(path.c_str(), O_RDWR | O_CLOEXEC);
 			if (f < 0) continue;
 			drmModeRes* res = drmModeGetResources(f);
 			if (!res) { ::close(f); continue; }
-			struct Found { uint32_t conn, crtc; drmModeModeInfo mode; bool top; bool named; std::vector<drmModeModeInfo> modes; };
+			struct Found { uint32_t conn, crtc; drmModeModeInfo mode; bool top; };
 			std::vector<Found> found;
-			std::vector<uint32_t> used;
-			// the connectors to take: those of the wanted type, else (one panel only) any connected one
-			for (int pass = 0; pass < (need == 1 ? 2 : 1) && found.empty(); pass++)
+			// the connector to take: the named type first, else any connected one
+			for (int pass = 0; pass < 2 && found.empty(); pass++)
 			{
-				used.clear();
-				for (int i = 0; i < res->count_connectors && (int)found.size() < need; i++)
+				for (int i = 0; i < res->count_connectors; i++)
 				{
 					drmModeConnector* c = drmModeGetConnector(f, res->connectors[i]);
 					if (!c) continue;
 					const char* tn = drmModeGetConnectorTypeName(c->connector_type);
 					bool take = tn && c->connection == DRM_MODE_CONNECTED && c->count_modes > 0;
-					if (take && type != tn) take = need == 1 && pass == 1;
+					if (take && type != tn) take = pass == 1;
 					if (take)
 					{
 						// the mode: the kernel command line's (video=<connector>:<mode>) first, then the panel's preferred one
@@ -173,77 +161,40 @@ namespace banana
 							if (c->modes[m].type & DRM_MODE_TYPE_PREFERRED) { mode = c->modes[m]; break; }
 						for (int m = 0; m < c->count_modes; m++)
 							if (c->modes[m].type & DRM_MODE_TYPE_USERDEF) { mode = c->modes[m]; break; }
-						std::vector<drmModeModeInfo> modes(c->modes, c->modes + c->count_modes);
-						// a CRTC this connector's encoders can drive and the other panel doesn't have
+						// a CRTC one of this connector's encoders can drive
 						uint32_t crtc = 0;
 						for (int e = 0; e < c->count_encoders && !crtc; e++)
 						{
 							drmModeEncoder* enc = drmModeGetEncoder(f, c->encoders[e]);
 							if (!enc) continue;
 							for (int k = 0; k < res->count_crtcs && !crtc; k++)
-								if ((enc->possible_crtcs & (1u << k)) && std::find(used.begin(), used.end(), res->crtcs[k]) == used.end())
-									crtc = res->crtcs[k];
+								if (enc->possible_crtcs & (1u << k)) crtc = res->crtcs[k];
 							drmModeFreeEncoder(enc);
 						}
 						if (crtc)
 						{
 							char name[32];
 							snprintf(name, sizeof name, "%s-%u", tn, c->connector_type_id);
-							used.push_back(crtc);
-							found.push_back({ c->connector_id, crtc, mode, top == name, type == tn, modes });
+							found.push_back({ c->connector_id, crtc, mode, top == name });
 						}
 					}
 					drmModeFreeConnector(c);
+					if (!found.empty()) break;
 				}
 			}
 			drmModeFreeResources(res);
-			if ((int)found.size() < need) { ::close(f); continue; }
-			if (need == 1)
-			{
-				// the connector top names when it is one of them: the others are only the fallback
-				size_t pick = 0;
-				for (size_t i = 0; i < found.size(); i++) if (found[i].top) { pick = i; break; }
-				fd = f;
-				count = 1;
-				rot = panelRotation(f, found[pick].conn);
-				SW = found[pick].mode.hdisplay; SH = found[pick].mode.vdisplay;
-				// a panel mounted turned: the menu draws the other way round (1240x1080 on a 1080x1240 panel)
-				W = rot == 90 || rot == 270 ? SH : SW;
-				H = rot == 90 || rot == 270 ? SW : SH;
-				p[0] = Panel();
-				p[0].conn = found[pick].conn; p[0].crtc = found[pick].crtc;
-				memcpy(p[0].mode, &found[pick].mode, sizeof p[0].mode);
-				if (!makeBuf(p[0].buf[0]) || !makeBuf(p[0].buf[1])) { err = "can't make scanout buffers"; close(); return false; }
-				restore();
-				return true;
-			}
-			// screen 0 is the top panel: the named connector, else the second one
-			if (!found[0].top && !found[1].top) std::swap(found[0], found[1]);
-			if (found[1].top) std::swap(found[0], found[1]);
-			// the panels' preferred modes differ (a display that isn't the RG DS's pair): the bottom one takes the top's
-			// size when it has it
-			if (found[0].mode.hdisplay != found[1].mode.hdisplay || found[0].mode.vdisplay != found[1].mode.vdisplay)
-				for (auto& m : found[1].modes)
-					if (m.hdisplay == found[0].mode.hdisplay && m.vdisplay == found[0].mode.vdisplay) { found[1].mode = m; break; }
-			if (found[0].mode.hdisplay != found[1].mode.hdisplay || found[0].mode.vdisplay != found[1].mode.vdisplay)
-			{
-				err = "the two panels have different modes";
-				::close(f);
-				continue;
-			}
+			if (found.empty()) { ::close(f); continue; }
 			fd = f;
-			count = 2;
+			count = 1;
 			rot = panelRotation(f, found[0].conn);
 			SW = found[0].mode.hdisplay; SH = found[0].mode.vdisplay;
+			// a panel mounted turned: the menu draws the other way round (1240x1080 on a 1080x1240 panel)
 			W = rot == 90 || rot == 270 ? SH : SW;
 			H = rot == 90 || rot == 270 ? SW : SH;
-			for (int s = 0; s < 2; s++)
-			{
-				p[s] = Panel();
-				p[s].conn = found[s].conn; p[s].crtc = found[s].crtc;
-				memcpy(p[s].mode, &found[s].mode, sizeof p[s].mode);
-				if (!makeBuf(p[s].buf[0]) || !makeBuf(p[s].buf[1])) { err = "can't make scanout buffers"; close(); return false; }
-			}
+			p[0] = Panel();
+			p[0].conn = found[0].conn; p[0].crtc = found[0].crtc;
+			memcpy(p[0].mode, &found[0].mode, sizeof p[0].mode);
+			if (!makeBuf(p[0].buf[0]) || !makeBuf(p[0].buf[1])) { err = "can't make scanout buffers"; close(); return false; }
 			restore();
 			return true;
 		}
@@ -255,7 +206,7 @@ namespace banana
 		if (fd < 0) return;
 		drmSetMaster(fd);
 		for (int s = 0; s < count; s++)
-			if (s != leased) drmModeSetCrtc(fd, p[s].crtc, p[s].buf[p[s].front].fb, 0, 0, &p[s].conn, 1, (drmModeModeInfo*)p[s].mode);
+			drmModeSetCrtc(fd, p[s].crtc, p[s].buf[p[s].front].fb, 0, 0, &p[s].conn, 1, (drmModeModeInfo*)p[s].mode);
 		pending = 0;
 	}
 
@@ -263,10 +214,9 @@ namespace banana
 	{
 		if (fd < 0) return;
 		for (auto& pn : p) { freeBuf(pn.buf[0]); freeBuf(pn.buf[1]); }
-		::close(fd);	// (a lease ends with its lessor's master)
+		::close(fd);
 		fd = -1;
 		pending = 0;
-		leased = -1;
 		rot = 0; SW = SH = 0;
 	}
 
@@ -276,7 +226,6 @@ namespace banana
 		bool any = false;
 		for (int s = 0; s < count; s++)
 		{
-			if (s == leased) continue;	// a game draws there
 			Panel& pn = p[s];
 			// the hidden buffer missed what changed since it was shown: this frame's part and the last frame's
 			int back = pn.front ^ 1;
@@ -320,44 +269,5 @@ namespace banana
 		ev.version = 2;
 		ev.page_flip_handler = flipDone;
 		drmHandleEvent(fd, &ev);
-	}
-
-	int Display::lease(int s)
-	{
-		if (fd < 0 || s < 0 || s >= count) return -1;
-		drmSetClientCap(fd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1);
-		drmModeRes* res = drmModeGetResources(fd);
-		drmModePlaneRes* pr = drmModeGetPlaneResources(fd);
-		int idx = -1;
-		for (int i = 0; res && i < res->count_crtcs; i++) if (res->crtcs[i] == p[s].crtc) idx = i;
-		// the CRTC's primary plane: the one its pictures are on now, else a primary one it can use
-		uint32_t plane = 0, any = 0;
-		for (uint32_t j = 0; pr && idx >= 0 && j < pr->count_planes; j++)
-		{
-			drmModePlane* pl = drmModeGetPlane(fd, pr->planes[j]);
-			if (!pl) continue;
-			bool mine = pl->possible_crtcs & (1u << idx), primary = false;
-			if (drmModeObjectProperties* pp = drmModeObjectGetProperties(fd, pl->plane_id, DRM_MODE_OBJECT_PLANE))
-			{
-				for (uint32_t k = 0; k < pp->count_props; k++)
-					if (drmModePropertyRes* q = drmModeGetProperty(fd, pp->props[k]))
-					{
-						if (!strcmp(q->name, "type") && pp->prop_values[k] == DRM_PLANE_TYPE_PRIMARY) primary = true;
-						drmModeFreeProperty(q);
-					}
-				drmModeFreeObjectProperties(pp);
-			}
-			if (mine && primary && pl->crtc_id == p[s].crtc) plane = pl->plane_id;
-			if (mine && primary && !any) any = pl->plane_id;
-			drmModeFreePlane(pl);
-		}
-		if (pr) drmModeFreePlaneResources(pr);
-		if (res) drmModeFreeResources(res);
-		if (!plane) plane = any;
-		if (!plane) return -1;
-		uint32_t objs[3] = { p[s].conn, p[s].crtc, plane }, lessee = 0;
-		int l = drmModeCreateLease(fd, objs, 3, 0, &lessee);	// (no CLOEXEC: the game's process inherits it)
-		if (l >= 0) leased = s;
-		return l;
 	}
 }
