@@ -7,7 +7,9 @@
 <!-- Banana Theme Studio: makes a "layout theme" for BananaOS (a theme whose JSON has a "screens" member and draws
      the whole menu). The panels are laid out like the desktop Banana Theme Studio (banana studio/); the look is
      the BananaOS website's (web/preview): charcoal cards, a cream border, banana yellow, Pixelify Sans.
-     Open this file to edit offline; run tools/theme-studio/serve.py for exact previews. The format is docs/THEMES.md. -->
+     Open this file straight from the disk (or put the folder on any web host): everything works, including the
+     live preview, which is the menu's own engine compiled to WebAssembly (wasm/banana-engine.js). Nothing is
+     uploaded. serve.py adds your themes folder and Send to handheld. The format is docs/THEMES.md. -->
 <link rel="stylesheet" href="ui.css">
 </head>
 <body>
@@ -18,17 +20,23 @@
   </div>
   <div class="tools">
     <button id="newBtn" class="btn">New</button>
-    <button id="openBtn" class="btn">Open</button>
-    <button id="saveBtn" class="btn primary">Save</button>
-    <button id="copyBtn" class="btn">Copy</button>
+    <button id="openBtn" class="btn" title="Open a theme's .json, a .zip with its files, or the .json and its pictures together (Ctrl+O). You can also drop them on the page">Open</button>
+    <button id="openDirBtn" class="btn" title="Open a folder: the theme's .json and the pictures, fonts and sounds beside it">Open folder</button>
+    <button id="saveBtn" class="btn primary" title="Download the theme's .json (Ctrl+S)">Save</button>
+    <button id="exportBtn" class="btn" title="Download a .zip with the theme and every file it names, ready to unzip into banana/themes/ (Ctrl+Shift+S)">Export (.zip)</button>
+    <button id="undoBtn" class="btn" title="Undo (Ctrl+Z)" disabled>↶</button>
+    <button id="redoBtn" class="btn" title="Redo (Ctrl+Shift+Z)" disabled>↷</button>
+    <button id="copyBtn" class="btn" title="Copy the theme's JSON">Copy</button>
     <button id="validateBtn" class="btn">Validate</button>
     <button id="templatesBtn" class="btn" title="Start from one of the example themes">Templates</button>
-    <button id="guideBtn" class="btn" title="How to make a theme, in plain words (opens docs/MAKE-A-THEME.md)">Guide</button>
+    <button id="guideBtn" class="btn" title="How to make a theme, in plain words, and the full reference">Guide</button>
     <button id="themeSwitch" class="theme-switch" title="The editor's own dark or light look (the theme's own background is under Theme settings > base)"><span class="track"><span class="knob"></span></span><span id="themeLabel">Dark</span></button>
   </div>
-  <input id="fileInput" type="file" accept=".json,application/json" class="hidden">
+  <input id="fileInput" type="file" accept=".json,.zip,application/json,application/zip,.png,.jpg,.jpeg,.ttf,.otf,.wav" multiple class="hidden">
+  <input id="dirInput" type="file" webkitdirectory directory multiple class="hidden">
   <span id="status" class="status">…</span>
 </header>
+<div id="banner" class="banner" hidden></div>
 
 <main class="app">
   <aside class="col left">
@@ -75,6 +83,7 @@
           <div id="pane-theme"></div>
           <div id="pane-vars"></div>
           <div id="pane-colours"></div>
+          <div id="pane-icons"></div>
           <div id="pane-input"></div>
           <div id="pane-behaviour"></div>
         </div>
@@ -94,9 +103,14 @@
   </div>
 </footer>
 
+<!-- classic scripts only, so the page works from file:// (wasm/banana-engine.js is loaded by engine.js when the page
+     is up: 3.6 MB, the engine with its fonts and test library inlined) -->
 <script src="expr.js"></script>
 <script src="schema.js"></script>
 <script src="templates.js"></script>
+<script src="guide.js"></script>
+<script src="zip.js"></script>
+<script src="engine.js"></script>
 <script src="render.js"></script>
 <script src="app.js"></script>
 </body>
