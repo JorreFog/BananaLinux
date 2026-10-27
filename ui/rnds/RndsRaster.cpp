@@ -441,8 +441,15 @@ namespace rnds
 	static float sFallbackPx = 12, sDeviceScale = 1;
 	void setFallbackFont(std::shared_ptr<Font> f, float pixelSize, float deviceScale)
 	{
-		std::lock_guard<std::mutex> lock(sFtLock);
-		sFallback = f; sFallbackPx = pixelSize; sDeviceScale = deviceScale > 0 ? deviceScale : 1;
+		// the font it replaces is released after the lock: its destructor takes sFtLock (FT_Done_Face), so dropping it
+		// under the lock deadlocked the caller (0.5.0-beta.3: Settings > Credits froze the menu in English, where the
+		// menu had read the CJK font already)
+		std::shared_ptr<Font> old;
+		{
+			std::lock_guard<std::mutex> lock(sFtLock);
+			old = std::move(sFallback);
+			sFallback = std::move(f); sFallbackPx = pixelSize; sDeviceScale = deviceScale > 0 ? deviceScale : 1;
+		}
 	}
 	// the fallback's device size for text of `device` px: the whole multiple of its pixel size nearest the text's em (as
 	// a CJK typeface is set at the same size as the Latin beside it), never under one pixel per pixel
