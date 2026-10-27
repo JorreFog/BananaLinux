@@ -12,10 +12,11 @@ theme stays quick, the guide opens, and the last theme is offered again after a 
 Skips (exit 0) when Firefox isn't installed.
 """
 import base64
-import json
 import os
+import re
 import shutil
 import struct
+import subprocess
 import sys
 import time
 import zlib
@@ -234,6 +235,22 @@ def main():
         check(not errs, "no script errors", errs)
         if shots:
             ff.screenshot(os.path.join(shots, "last.png"))
+
+        # the same folder on a plain static web host (no serve.py): the page works the same
+        srv = subprocess.Popen([sys.executable, "-u", "-m", "http.server", "--bind", "127.0.0.1", "0", "--directory", str(HERE.parent)],
+                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        try:
+            line = srv.stdout.readline()
+            port = int(re.search(r"port (\d+)", line).group(1))
+            ff.go("http://127.0.0.1:%d/index.html" % port)
+            ff.js(HOOKS)
+            ok = ff.wait("return BananaEngine.state !== 'loading' && BananaEngine.state", 60)
+            ff.wait("return BananaStudio.live.pushed !== ''", 20)
+            settle(ff, 800)
+            check(ok == "ready" and ff.js("return (BananaStudio.state.templates || []).length") >= 4 and not ff.js("return window.__errs"),
+                  "the same folder works from a static web host (no serve.py)", ff.js("return [BananaEngine.detail, window.__errs]"))
+        finally:
+            srv.terminate()
     print("  %d problem(s)" % len(fails) if fails else "  the page works from file://")
     return 1 if fails else 0
 

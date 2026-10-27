@@ -244,18 +244,35 @@
     }
     const fid = "field" + (++fieldSeq);		// (typing in one field is one step of undo)
     function commit(nv) { set(nv); markDirty(fid); chipFor(); }
+    // the form picked with the buttons, while the value can't show it yet: an empty expression (a lone "=" is an
+    // error to the engine, so nothing is written until there is something after it), or a template with no braces
+    // yet (text without {} is a literal to the engine, which is the same thing)
+    let picked = "";
+    const empty = (v) => v === undefined || v === null || v === "";
+    function formOf(cur) {
+      const c = classify(cur);
+      if (picked === "expr" && (empty(cur) || c === "expr")) return "expr";
+      if (picked === "tmpl" && c !== "expr" && (empty(cur) || typeof cur === "string")) return "tmpl";
+      return c;
+    }
     function build() {
       ctl.innerHTML = "";
-      const cur = get(), form = classify(cur);
+      const cur = get(), form = formOf(cur);
       const seg = h("div", { class: "seg" });
       [["lit", "Lit"], ["expr", "Expr"], ["tmpl", "Tmpl"]].forEach(function (fp) {
         const b = h("button", { type: "button" }, fp[1]); b.setAttribute("aria-pressed", String(form === fp[0]));
-        b.onclick = () => { if (form === fp[0]) return; commit(convertForm(cur, fp[0], kind)); build(); };
+        b.onclick = () => {
+          if (form === fp[0]) return;
+          picked = fp[0];
+          if (!empty(cur) && !(fp[0] === "tmpl" && form === "lit" && typeof cur === "string")) commit(convertForm(cur, fp[0], kind));
+          build();
+          const i = ctl.querySelector("input[type=text]"); if (i && fp[0] !== "lit") i.focus();
+        };
         seg.appendChild(b);
       });
       ctl.appendChild(seg);
-      if (form === "expr") { ctl.appendChild(document.createTextNode("=")); const i = h("input", { type: "text", spellcheck: "false", value: cur.slice(1) }); i.oninput = () => commit("=" + i.value); ctl.appendChild(i); }
-      else if (form === "tmpl") { const i = h("input", { type: "text", spellcheck: "false", value: cur }); i.oninput = () => commit(i.value); ctl.appendChild(i); }
+      if (form === "expr") { ctl.appendChild(document.createTextNode("=")); const i = h("input", { type: "text", spellcheck: "false", value: empty(cur) ? "" : cur.slice(1), placeholder: "an expression" }); i.oninput = () => commit(i.value === "" ? "" : "=" + i.value); ctl.appendChild(i); }
+      else if (form === "tmpl") { const i = h("input", { type: "text", spellcheck: "false", value: empty(cur) ? "" : String(cur), placeholder: "text with {expressions}" }); i.oninput = () => commit(i.value); ctl.appendChild(i); }
       else buildLiteral(cur);
       ctl.appendChild(chip); chipFor();
     }
@@ -1298,7 +1315,7 @@
   }
   function tick(t) {
     live.raf = requestAnimationFrame(tick);
-    if (!liveOk() || document.hidden || !live.top || !live.top.isConnected) return;
+    if (!liveOk() || document.hidden || !live.top || !live.top.isConnected || $("#design").hidden) return;
     if (ENGINE.frame(t, live.force)) blit();
     live.force = false;
     if (t - live.errAt > 1000) { live.errAt = t; showProblems(); }

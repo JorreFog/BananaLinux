@@ -47,9 +47,12 @@ fi
 grep -q 'class="pal' "$DOM" || { echo "  FAIL the Add-elements palette didn't render"; fail=1; }
 grep -q 'class="node' "$DOM" || { echo "  FAIL the Layers tree didn't render"; fail=1; }
 grep -q 'id="inspector"' "$DOM" || { echo "  FAIL the inspector is missing"; fail=1; }
-if [ -n "$PREVIEW" ]; then
+if grep -q 'class="scr"' "$DOM"; then
+    PREVIEW=" (the live WebAssembly preview)"
+elif [ -n "$PREVIEW" ]; then
+    # no wasm/banana-engine.js: serve.py's stills instead
     grep -q 'class="shot' "$DOM" || { echo "  FAIL no preview shot was drawn (engine or render failed)"; fail=1; }
     grep -q 'data:image/png;base64' "$DOM" || { echo "  FAIL a preview shot has no image"; fail=1; }
 fi
-[ $fail = 0 ] && echo "  the page loads cleanly in $CHROME$([ -n "$PREVIEW" ] && echo ' (with a preview)')"
+[ $fail = 0 ] && echo "  the page loads cleanly in $CHROME$([ -n "$PREVIEW" ] && echo "${PREVIEW# }" | sed 's/^?preview=1$/ (with a preview)/')"
 exit $fail
