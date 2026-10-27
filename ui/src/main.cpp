@@ -951,17 +951,31 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 
 // ---- the boot animation and the hand-over to the menu --------------------------------------------------------
 // one frame to the panels, then wait for its flip (or a signal)
-static void showFrame(Display& disp, SoftBackend& be, int sig)
+static int gUnsent = 0;	// frames present() refused because a flip was still pending (never shown)
+// The wait for the flips. A signal (bananad's after a wake, a volume key's) interrupts poll() (EINTR): it used to end the
+// wait with the flips still pending, and nothing read their event after that: present() refused every later frame
+// ("a flip still pending") and the panels kept one picture until the menu's loop took over (the first boot's arrival
+// "froze", 2026-10-27). Now the wait goes on after EINTR, and a frame still waits for an earlier flip before it goes.
+static void waitFlips(Display& disp, int sig)
 {
-	const uint32_t* scr[2] = { be.pixels(0), be.pixels(1) };
-	Damage dmg[2] = { be.takeDamage(0), be.takeDamage(1) };
-	if (!disp.present(scr, dmg)) return;
-	while (disp.flipPending())
+	const double until = nowMs() + 250;	// (a flip event never comes: not waited on for good)
+	while (disp.flipPending() && nowMs() < until)
 	{
 		pollfd p[2] = { { disp.pollFd(), POLLIN, 0 }, { sig, POLLIN, 0 } };
-		if (poll(p, sig >= 0 ? 2 : 1, 100) <= 0 || (sig >= 0 && (p[1].revents & POLLIN))) return;
-		disp.handleEvents();
+		int r = poll(p, sig >= 0 ? 2 : 1, 100);
+		if (r < 0 && errno == EINTR) continue;
+		if (r <= 0 || (sig >= 0 && (p[1].revents & POLLIN))) return;
+		if (p[0].revents & POLLIN) disp.handleEvents();
 	}
+}
+static void showFrame(Display& disp, SoftBackend& be, int sig)
+{
+	if (disp.flipPending()) waitFlips(disp, sig);
+	const uint32_t* scr[2] = { be.pixels(0), be.pixels(1) };
+	Damage dmg[2] = { be.takeDamage(0), be.takeDamage(1) };
+	if (disp.flipPending()) gUnsent++;
+	if (!disp.present(scr, dmg)) return;
+	waitFlips(disp, sig);
 }
 
 static Splash gSplash;
@@ -1157,9 +1171,11 @@ static void playArrival(Display& disp, SoftBackend& be, const Options& o, Input&
 	a.setCaption(be.pixels(0));
 	a.onCue = [&sound](const std::string& c) { sound.play(c == "burst" ? "ready" : "fav"); };
 	const double t0 = nowMs();
+	const int flips0 = disp.failedFlips, sets0 = disp.failedSets, unsent0 = gUnsent;
 	double last = -1, drawSum = 0, drawWorst = 0, gapWorst = 0;
 	int frames = 0, moving = 0, missed = 0;
 	bool skip = false, interrupted = false;
+	std::string held;	// the signals that came meanwhile
 	for (;;)
 	{
 		double t = nowMs() - t0;
@@ -1168,7 +1184,19 @@ static void playArrival(Display& disp, SoftBackend& be, const Options& o, Input&
 		for (int fd : input.fds()) fds.push_back({ fd, POLLIN, 0 });
 		if (poll(fds.data(), fds.size(), 0) > 0)
 		{
-			if (fds[0].revents & POLLIN) { interrupted = true; break; }	// (left in the pipe: the menu's loop acts on it)
+			if (fds[0].revents & POLLIN)
+			{
+				// a shutdown (SIGTERM, SIGINT) ends it; a wake (SIGUSR1: the lid opened, the power button) or a volume key
+				// (SIGUSR2) doesn't: the next frame is drawn in full anyway. Each goes back in the pipe for the menu's loop
+				char c;
+				while (read(sig, &c, 1) == 1)
+				{
+					held.push_back(c);
+					if (c == SIGTERM || c == SIGINT) interrupted = true;
+				}
+				if (interrupted) break;
+				be.invalidate();
+			}
 			for (size_t i = 1; i < fds.size(); i++)
 				if (fds[i].revents & POLLIN)
 					input.read(fds[i].fd, [&](const InputEvent& ev) { if (ev.type == InputEvent::PRESS && (ev.key == Key::A || ev.key == Key::START)) skip = true; });
@@ -1179,7 +1207,7 @@ static void playArrival(Display& disp, SoftBackend& be, const Options& o, Input&
 		double d0 = nowMs();
 		a.draw(be.canvas(0), be.canvas(1), t);
 		double dd = nowMs() - d0;
-		showFrame(disp, be, sig);
+		showFrame(disp, be, -1);
 		double now = nowMs();
 		frames++;
 		drawSum += dd; drawWorst = std::max(drawWorst, dd);
@@ -1193,8 +1221,10 @@ static void playArrival(Display& disp, SoftBackend& be, const Options& o, Input&
 		}
 		last = now;
 	}
-	logf("arrival: %s after %.0f ms; %d frames, drawing %.2f ms average, %.2f worst; moving part: %d frames, %d missed a refresh, worst gap %.1f ms",
-		skip ? "skipped" : interrupted ? "interrupted" : "played", nowMs() - t0, frames, frames ? drawSum / frames : 0, drawWorst, moving, missed, gapWorst);
+	if (!held.empty() && write(sigPipe[1], held.data(), held.size()) < 0) {}
+	logf("arrival: %s after %.0f ms; %d frames, drawing %.2f ms average, %.2f worst; moving part: %d frames, %d missed a refresh, worst gap %.1f ms; flips refused %d (not shown at all %d), frames not sent (a flip still pending) %d",
+		skip ? "skipped" : interrupted ? "interrupted" : "played", nowMs() - t0, frames, frames ? drawSum / frames : 0, drawWorst, moving, missed, gapWorst,
+		disp.failedFlips - flips0, disp.failedSets - sets0, gUnsent - unsent0);
 	if (skip || interrupted)
 	{
 		std::vector<uint32_t> pic[2];
@@ -1554,7 +1584,7 @@ int main(int argc, char** argv)
 		usleep(50000);
 	}
 	SoftBackend be(disp.width(), disp.height());
-	logf("panels %dx%d", disp.width(), disp.height());
+	logf("panels %dx%d%s", disp.width(), disp.height(), disp.masterAtOpen ? "" : " (the display's master still held by another program: taken at the first frame)");
 	bootMark("banana-ui: panels open");
 	// the screen colours (Settings > Display & sound > Screen colours): the one colour table, on the screen it corrects
 	auto applyColors = [&](const char* when)
