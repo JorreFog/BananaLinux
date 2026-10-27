@@ -62,18 +62,20 @@ namespace
 	// killed (a quit, the menu's Stop, a shutdown): the status says so at once ("error stopped", what the menu shows for
 	// a run that is gone) instead of "running" until the menu's 120 s check notices. Async-signal-safe: open, write,
 	// rename and _exit only, on paths set before the handler is installed.
-	char sigStatus[512], sigStatusTmp[520];
+	char sigStatus[512], sigStatusTmp[520], sigPid[512];
 	void onKill(int sig)
 	{
 		static const char msg[] = "error stopped\n";
 		int fd = open(sigStatusTmp, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644);
 		if (fd >= 0) { ssize_t w = write(fd, msg, sizeof msg - 1); (void)w; close(fd); rename(sigStatusTmp, sigStatus); }
+		unlink(sigPid);
 		_exit(128 + sig);
 	}
 	void catchKill()
 	{
 		snprintf(sigStatus, sizeof sigStatus, "%s", STATUS.c_str());
 		snprintf(sigStatusTmp, sizeof sigStatusTmp, "%s.new", STATUS.c_str());
+		snprintf(sigPid, sizeof sigPid, "%s/sync.pid", RUN.c_str());
 		struct sigaction sa = {};
 		sa.sa_handler = onKill;
 		sigemptyset(&sa.sa_mask);
@@ -1068,11 +1070,35 @@ namespace
 
 	// ---- the ROMs: the card made to match the server's list (PROTOCOL.md "What a device sync must do") ----------------
 	struct RomResult { int downloaded = 0, removed = 0; std::vector<std::string> conflicts, errors; bool changed = false; };
-	RomResult syncRoms(Backend& b, Conf& c, const Manifest& m, const std::set<std::string>& skipFolders)
+	// Choosing games (owner, 0.5.0): settings homesync_games = all | chosen; the chosen ones in banana/homesync-games.txt,
+	// a line each: the game's key, its first ROM file's roms-relative path ("gba/Name.gba"), as `banana-sync games` lists
+	std::string gameKey(const MGame& g)
+	{
+		for (auto& f : g.files) if (!f.media) return f.path;
+		return g.files.empty() ? std::string() : g.files[0].path;
+	}
+	std::string choiceFile() { return ROOT + "/banana/homesync-games.txt"; }
+	std::set<std::string> readChoice()
+	{
+		std::set<std::string> out;
+		std::ifstream f(choiceFile());
+		std::string l;
+		while (std::getline(f, l)) { while (!l.empty() && (l.back() == '\r' || l.back() == ' ')) l.pop_back(); if (!l.empty() && l[0] != '#') out.insert(l); }
+		return out;
+	}
+
+	// chosen: null = every game; else only those games come to the card, and the others' files already on it stay (an
+	// unticked game isn't removed: un-choosing never deletes, as a skipped system's games stay)
+	RomResult syncRoms(Backend& b, Conf& c, const Manifest& m, const std::set<std::string>& skipFolders, const std::set<std::string>* chosen = nullptr)
 	{
 		RomResult res;
 		std::map<std::string, const MFile*> want;
-		for (auto& s : m.systems) for (auto& g : s.games) for (auto& f : g.files) want[f.path] = &f;
+		std::set<std::string> keep;
+		for (auto& s : m.systems) for (auto& g : s.games)
+		{
+			bool on = !chosen || chosen->count(gameKey(g));
+			for (auto& f : g.files) { if (on) want[f.path] = &f; else keep.insert(f.path); }
+		}
 		std::vector<const MFile*> todo;
 		for (auto& kv : want)
 		{
@@ -1104,6 +1130,7 @@ namespace
 			if (want.count(kv.first)) continue;
 			std::string folder = kv.first.substr(0, kv.first.find('/'));
 			if (skipFolders.count(folder)) continue;	// (a system skipped on this handheld: its games stay as they are)
+			if (keep.count(kv.first)) continue;			// (a game not chosen: left as it is on the card)
 			gone.push_back(kv.first);
 		}
 		if (emptyList) gone.clear();	// a server listing nothing at all while the card has its games: nothing removed
@@ -1388,6 +1415,9 @@ namespace
 		for (auto& kv : set) if (kv.first.compare(0, 9, "homesync.") == 0 && kv.second == "off") skip.insert(kv.first.substr(9));
 		auto b = backendFor(c);
 		b->skip = skip;
+		bool pick = get("homesync_games", "all") == "chosen";
+		std::set<std::string> chosen;
+		if (pick) { chosen = readChoice(); c.etag.clear(); }	// (the list in full: the choice may have changed since)
 		Awake awake;
 		if (roms) awake.take();
 		status("running 0 0 |" + (c.serverName.empty() ? c.server : c.serverName));
@@ -1406,7 +1436,7 @@ namespace
 			else if (m.unchanged) say("roms: up to date");
 			else
 			{
-				RomResult r = syncRoms(*b, c, m, skip);
+				RomResult r = syncRoms(*b, c, m, skip, pick ? &chosen : nullptr);
 				downloaded = r.downloaded; removed = r.removed; conflicts = r.conflicts;
 				for (auto& e : r.errors) errors.push_back(e);
 			}
@@ -1450,7 +1480,7 @@ int main(int argc, char** argv)
 	if (ROMS.empty()) ROMS = ROOT + "/roms";
 	if (CONF.empty()) CONF = ROOT + "/banana/romsync.json";
 	if (SETTINGS.empty()) SETTINGS = ROOT + "/banana/settings.conf";
-	if (args.empty()) { fprintf(stderr, "usage: banana-sync discover | probe <address> | pair <address> [code] | forget | sync [--saves-only] [--auto quit|wifi] [--dry-run] | status\n"); return 2; }
+	if (args.empty()) { fprintf(stderr, "usage: banana-sync discover | probe <address> | pair <address> [code] | forget | sync [--saves-only] [--auto quit|wifi] [--dry-run] | status | games\n"); return 2; }
 	std::string cmd = args[0];
 	if (!cu.load()) { status("error libcurl is missing"); fprintf(stderr, "banana-sync: libcurl is missing\n"); return 1; }
 	if (cmd == "discover")
@@ -1473,6 +1503,32 @@ int main(int argc, char** argv)
 			c.files.size(), c.saves.size() + c.states.size(), c.last.c_str());
 		return 0;
 	}
+	// banana-sync games: the server's games for the menu's chooser, a line each: system folder TAB key TAB title TAB
+	// bytes TAB chosen (1/0) TAB on the card (1/0); "error <why>" on failure
+	if (cmd == "games")
+	{
+		Conf c = loadConf();
+		if (!c.paired()) { printf("error not paired\n"); return 2; }
+		auto b = backendFor(c);
+		c.etag.clear();
+		b->c.etag.clear();
+		Manifest m;
+		std::string err;
+		if (!b->manifest(m, {}, err)) { printf("error %s\n", err.c_str()); return 1; }
+		std::set<std::string> chosen = readChoice();
+		for (auto& s : m.systems)
+			for (auto& g : s.games)
+			{
+				std::string k = gameKey(g);
+				if (k.empty()) continue;
+				long long bytes = 0; bool there = true;
+				for (auto& f : g.files) if (!f.media) { bytes += std::max(0LL, f.size); if (!exists(ROMS + "/" + f.path)) there = false; }
+				std::string t = g.title.empty() ? baseOf(k) : g.title;
+				for (char& ch : t) if (ch == '\t' || ch == '\n') ch = ' ';
+				printf("%s\t%s\t%s\t%lld\t%d\t%d\n", s.folder.c_str(), k.c_str(), t.c_str(), bytes, chosen.count(k) ? 1 : 0, there ? 1 : 0);
+			}
+		return 0;
+	}
 	if (cmd == "forget")
 	{
 		if (unlink(CONF.c_str()) != 0 && errno != ENOENT) return 1;
@@ -1483,7 +1539,15 @@ int main(int argc, char** argv)
 	int lk = open((RUN + "/sync.lock").c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0644);
 	if (lk >= 0 && flock(lk, LOCK_EX | LOCK_NB) != 0) { if (autoWhy.empty()) fprintf(stderr, "banana-sync: already running\n"); return 3; }
 	if (cmd == "pair" && args.size() > 1) return pair(args[1], args.size() > 2 ? args[2] : "");
-	if (cmd == "sync") { catchKill(); return doSync(savesOnly, autoWhy); }
+	if (cmd == "sync")
+	{
+		// the pid for the menu's Stop (Settings > Network > Home server > Sync now while it runs)
+		catchKill();
+		std::ofstream(RUN + "/sync.pid") << getpid() << "\n";
+		int rc = doSync(savesOnly, autoWhy);
+		unlink((RUN + "/sync.pid").c_str());
+		return rc;
+	}
 	fprintf(stderr, "banana-sync: unknown command %s\n", cmd.c_str());
 	return 2;
 }

@@ -723,6 +723,9 @@ namespace banana
 		add(HS, "phone", "Auto sync", "Leaving a game: its saves go to the server as you leave it (a few seconds, in the background). And on Wi-Fi: also games and saves whenever Wi-Fi connects. Never while a game runs.",
 			menu, "homesync_auto", { "Off", "Leaving a game", "And on Wi-Fi" }, { "off", "quit", "both" });
 		add(HS, "phone", "Systems", "Which systems sync on this handheld. A skipped system's games stay as they are on the card.", "", "hs_systems", {}, {}, Item::PAGE);
+		add(HS, "phone", "Games to sync", "All: every game of the systems above comes to the card. Chosen: only the games ticked in Choose games (a game unticked later stays on the card until you delete it).",
+			menu, "homesync_games", { "All", "Chosen" }, { "all", "chosen" });
+		add(HS, "phone", "Choose games", "The server's games, a system at a time: A ticks a game to sync, X ticks or unticks all of the system's. With Games to sync on Chosen, only the ticked ones come to the card.", "", "hs_pick", {}, {}, Item::PAGE);
 		add(HS, "phone", "Forget this server", "Unpairs the handheld: nothing syncs until it is paired again. The games and saves stay on the card. Press A twice.", "", "hs_forget", { "" }, { "" }, Item::ACTION);
 		{
 			const char* HSS = "Home server systems";
@@ -1025,7 +1028,8 @@ namespace banana
 			if (it.key == "homesync") { message.clear(); openSection("Home server"); return MOVED; }
 			if (it.key == "hs_systems") { openSection("Home server systems"); return MOVED; }
 			if (it.key == "hs_server") { startPairing(); return MOVED; }
-			if (it.key == "hs_sync") { startSync(); return MOVED; }
+			if (it.key == "hs_sync") { if (syncing()) stopSync(); else startSync(); return MOVED; }
+			if (it.key == "hs_pick") { openPickGames(); return MOVED; }
 			if (it.key == "credits") { openCredits(); return MOVED; }
 			if (it.key == "update") openUpdates(); else if (it.key == "setup") openSetup(false, ""); else openNetworks();
 			return MOVED;
@@ -1229,6 +1233,7 @@ namespace banana
 		if (page == SETUP) return pressSetup(k);
 		if (page == THEMES) return pressThemes(k);
 		if (page == CREDITS) return pressCredits(k);
+		if (page == PICKGAMES) return pressPickGames(k);
 		if (langAsk >= 0) return pressLangAsk(k);
 		if (inGroups) return pressGroups(k);
 		int g = groupOf(sel), b = groupStart(g), e = groupEnd(g);
@@ -1370,6 +1375,7 @@ namespace banana
 		if (page == COLORS) return touchColors(cx, cy);
 		if (page == THEMES) return touchThemes(cx, cy);
 		if (page == CREDITS) { if (downY >= 418 && downY <= 466 && downX < 320) return pressCredits(Key::B); return NONE; }
+		if (page == PICKGAMES) { if (downY >= 418 && downY <= 466 && downX < 320) return pressPickGames(Key::B); return NONE; }
 		if (langAsk >= 0 && page == LIST)
 		{
 			// the two buttons (askButtons): No, Yes
@@ -1930,6 +1936,7 @@ namespace banana
 		if (page == SETUP) { renderSetup(); return; }
 		if (page == THEMES) { renderThemes(); return; }
 		if (page == CREDITS) { renderCredits(); return; }
+		if (page == PICKGAMES) { renderPickGames(); return; }
 		if (langAsk >= 0) { renderLangAsk(); return; }
 		if (inGroups) { renderGroups(); return; }
 		SPal p = pal(light);
@@ -2016,7 +2023,7 @@ namespace banana
 		be->popClip();
 		float bw = faceWidth("B", "Back");
 		face("B", "Back", 18, bw);
-		std::string act = cur.kind == Item::ACTION ? (armed == sel ? "Confirm" : cur.label) : cur.kind == Item::INFO ? "" : cur.key == "scrape" ? (scraping() ? "" : "Start") : cur.key == "hs_sync" ? (syncing() ? "" : "Start") : cur.key == "hs_server" ? (hsStep ? "" : "Pair") : cur.kind == Item::PAGE ? "Open" : "Change";
+		std::string act = cur.kind == Item::ACTION ? (armed == sel ? "Confirm" : cur.label) : cur.kind == Item::INFO ? "" : cur.key == "scrape" ? (scraping() ? "" : "Start") : cur.key == "hs_sync" ? (syncing() ? "Stop" : "Start") : cur.key == "hs_server" ? (hsStep ? "" : "Pair") : cur.kind == Item::PAGE ? "Open" : "Change";
 		if (!act.empty())
 		{
 			float aw = faceWidth("A", act);
@@ -2079,6 +2086,7 @@ namespace banana
 		if (!mOpen) return false;
 		bool scrapeChanged = pollScrape(t);
 		scrapeChanged |= pollSync(t);
+		scrapeChanged |= pollPickGames();
 		bool changed0 = false;
 		if (raCheck)
 		{
@@ -2230,6 +2238,7 @@ namespace banana
 	{
 		if (scanJob.running() || statusJob.running() || artJob.running() || checkJob.running() || volJob.running() || betaJob.running()) return 100;
 		if (btListJob.running() || btScanJob.running() || btActJob.running()) return 100;
+		if (pickLoading) return 150;	// (Choose games: the server's list as it comes)
 		if (page == THEMES && thumbJob.running()) return 250;	// (the pictures as they come)
 		if (page == UPDATES && applying) return std::max(0, (int)(nextStatus2 - t));
 		if (page == UPDATES && downloading) return std::max(0, (int)(nextDl - t));
@@ -3790,6 +3799,214 @@ namespace banana
 		text(count, true, 17, 602 - cw, 31, p.muted);
 		float bw = faceWidth("B", "Back");
 		face("B", "Back", 18, bw);
+		be->endScreen();
+	}
+
+	// ---- Home server > Choose games ---------------------------------------------------------------------------------
+	void Settings::stopSync()
+	{
+		// banana-sync's pid (it writes it while a sync runs); it writes "error stopped" itself as it ends
+		int pid = atoi(readLine("/run/banana/sync.pid").c_str());
+		std::string comm = pid > 0 ? readLine("/proc/" + std::to_string(pid) + "/comm") : "";
+		if (pid > 0 && comm == "banana-sync" && kill(pid, SIGTERM) == 0) message = "Stopping the sync. What came already stays on the card; Sync now carries on from there.";
+		else message = "The sync couldn't be stopped (it may be ending by itself).";
+	}
+
+	void Settings::openPickGames()
+	{
+		if (homeServer().empty()) { message = "Not paired yet: Server, above, pairs the handheld."; return; }
+		page = PICKGAMES;
+		pickLevel = 0; pickSysSel = 0; pickSel = 0; pickTop = 0; pickDirty = false;
+		pickGames.clear(); pickSys.clear(); pickError.clear();
+		if (!wifiOn()) { pickError = "Wi-Fi is off: switch it on in Network first."; return; }
+		size_t s = data.rfind('/');
+		std::string root = s == std::string::npos || s == 0 ? "/" : data.substr(0, s);
+		auto q = [](const std::string& x) { std::string r = "'"; for (char c : x) { if (c == '\'') r += "'\\''"; else r += c; } return r + "'"; };
+		pickLoading = true;
+		pickJob.start(q(syncTool()) + " --root " + q(root) + " --conf " + q(data + "/romsync.json") + " --settings " + q(data + "/settings.conf") + " games 2>/dev/null", sync);
+	}
+
+	bool Settings::pollPickGames()
+	{
+		std::string out;
+		if (!pickLoading || !pickJob.take(out)) return false;
+		pickLoading = false;
+		std::istringstream in(out);
+		std::string ln;
+		while (std::getline(in, ln))
+		{
+			if (ln.compare(0, 6, "error ") == 0) { pickError = ln.substr(6) == "unpaired" ? "The server doesn't know this handheld any more: pair it again." : "The server's list can't be read: " + ln.substr(6) + "."; break; }
+			std::vector<std::string> f;
+			size_t a = 0;
+			for (size_t b; (b = ln.find('\t', a)) != std::string::npos; a = b + 1) f.push_back(ln.substr(a, b - a));
+			f.push_back(ln.substr(a));
+			if (f.size() < 6) continue;
+			PickGame g; g.sys = f[0]; g.key = f[1]; g.title = f[2]; g.bytes = atoll(f[3].c_str()); g.on = f[4] == "1"; g.there = f[5] == "1";
+			if (std::find(pickSys.begin(), pickSys.end(), g.sys) == pickSys.end()) pickSys.push_back(g.sys);
+			pickGames.push_back(g);
+		}
+		if (pickError.empty() && pickGames.empty()) pickError = "The server has no games for this handheld's systems.";
+		return true;
+	}
+
+	std::vector<int> Settings::pickList() const
+	{
+		std::vector<int> v;
+		if (pickSysSel < 0 || pickSysSel >= (int)pickSys.size()) return v;
+		for (size_t i = 0; i < pickGames.size(); i++) if (pickGames[i].sys == pickSys[pickSysSel]) v.push_back((int)i);
+		return v;
+	}
+
+	void Settings::savePickGames()
+	{
+		if (!pickDirty) return;
+		std::string tmp = data + "/homesync-games.txt.new";
+		{
+			std::ofstream f(tmp);
+			f << "# Home server > Choose games: the games to sync (Games to sync: Chosen), their first file on the server\n";
+			for (auto& g : pickGames) if (g.on) f << g.key << "\n";
+		}
+		rename(tmp.c_str(), (data + "/homesync-games.txt").c_str());
+		::sync();
+		pickDirty = false;
+	}
+
+	Settings::Result Settings::pressPickGames(Key k)
+	{
+		const int VIS = 8;
+		if (k == Key::START) { savePickGames(); page = LIST; mOpen = false; return CLOSED; }
+		if (k == Key::B)
+		{
+			if (pickLevel == 1) { pickLevel = 0; return MOVED; }
+			savePickGames();
+			if (pickDirty) return MOVED;
+			page = LIST;
+			int on = 0; for (auto& g : pickGames) on += g.on;
+			if (!pickGames.empty()) message = std::to_string(on) + (on == 1 ? " game" : " games") + " chosen. With Games to sync on Chosen, Sync now brings only those.";
+			return MOVED;
+		}
+		if (pickLoading || pickGames.empty()) return NONE;
+		int n = pickLevel == 0 ? (int)pickSys.size() : (int)pickList().size();
+		int& sel = pickLevel == 0 ? pickSysSel : pickSel;
+		int to = sel;
+		if (k == Key::UP) to = std::max(0, sel - 1);
+		else if (k == Key::DOWN) to = std::min(n - 1, sel + 1);
+		else if (k == Key::L || k == Key::LEFT) to = std::max(0, sel - (VIS - 1));
+		else if (k == Key::R || k == Key::RIGHT) to = std::min(n - 1, sel + (VIS - 1));
+		else if (k == Key::A)
+		{
+			if (pickLevel == 0) { pickLevel = 1; pickSel = 0; pickTop = 0; return MOVED; }
+			auto v = pickList();
+			if (pickSel < (int)v.size()) { pickGames[v[pickSel]].on = !pickGames[v[pickSel]].on; pickDirty = true; }
+			return MOVED;
+		}
+		else if (k == Key::X)
+		{
+			// all of the system's games ticked, or (all ticked already) none
+			if (pickLevel == 0) { pickSel = 0; pickTop = 0; }
+			int keep = pickLevel; pickLevel = 1;
+			auto v = pickList();
+			pickLevel = keep;
+			bool all = true;
+			for (int i : v) all = all && pickGames[i].on;
+			for (int i : v) pickGames[i].on = !all;
+			pickDirty = pickDirty || !v.empty();
+			return MOVED;
+		}
+		else return NONE;
+		if (to == sel) return NONE;
+		sel = to;
+		if (pickLevel == 1) { if (sel < pickTop) pickTop = sel; if (sel >= pickTop + VIS) pickTop = sel - VIS + 1; }
+		return MOVED;
+	}
+
+	void Settings::renderPickGames()
+	{
+		SPal p = pal(light);
+		const int VIS = 8;
+		auto size = [](long long b) { char t[32]; if (b >= (1LL << 30)) snprintf(t, sizeof t, "%.1f GB", b / 1073741824.0); else snprintf(t, sizeof t, "%lld MB", (b + 524288) >> 20); return std::string(t); };
+		auto sysName = [](const std::string& f) -> std::string {
+			static const std::map<std::string, std::string> N = { { "nds", "Nintendo DS" }, { "gba", "Game Boy Advance" }, { "gbc", "Game Boy Color" }, { "gb", "Game Boy" },
+				{ "nes", "NES" }, { "snes", "Super Nintendo" }, { "megadrive", "Mega Drive" }, { "psx", "PlayStation" }, { "n64", "Nintendo 64" } };
+			auto it = N.find(f); return it == N.end() ? f : it->second; };
+		long long chosenBytes = 0; int chosenN = 0;
+		for (auto& g : pickGames) if (g.on) { chosenBytes += g.bytes; chosenN++; }
+		be->beginScreen(0);
+		box("screen", false, 0, 0, 640, 480);
+		box("hero", false, 18, 20, 604, 436);
+		icon("phone", 50, 56, 3);
+		text("Home server", true, 17, 170, 62, p.muted, true, 1.4f);
+		text("Choose games", true, 30, 170, 88, p.ink);
+		text(fit(std::to_string(chosenN) + (chosenN == 1 ? " game" : " games") + " chosen, " + size(chosenBytes), true, 22, 420), true, 22, 170, 130, p.accent);
+		std::string help = pickLoading ? "Asking the server for its games..." : !pickError.empty() ? pickError
+			: pickLevel == 0 ? "A opens a system. X ticks all of its games, or unticks them when all are ticked. B saves and goes back."
+			: "A ticks or unticks a game. X: all of this system's, or none. L and R jump a page. Games already on the card say so. B goes back to the systems.";
+		wrapped(help, 20, 50, 196, 540, 6, p.muted);
+		if (pickLevel == 1 && !pickGames.empty())
+		{
+			auto v = pickList();
+			if (pickSel < (int)v.size())
+			{
+				const PickGame& g = pickGames[v[pickSel]];
+				text(fit(g.title, true, 24, 540), true, 24, 50, 340, p.ink);
+				text(fit(size(g.bytes) + (g.there ? " · on the card" : "") + (g.on ? " · chosen" : ""), false, 20, 540), false, 20, 50, 378, p.muted);
+			}
+		}
+		be->endScreen();
+
+		be->beginScreen(1);
+		box("screen", false, 0, 0, 640, 480);
+		box("bubble", false, 18, 14, 604, 54);
+		std::string head = pickLevel == 0 ? std::string("Systems") : sysName(pickSys[pickSysSel]);
+		text(fit(head, true, 22, 420), true, 22, 38, 28, p.ink);
+		if (pickLoading) text("Loading...", true, 20, 38, 226, p.muted);
+		else if (pickLevel == 0)
+		{
+			int top = std::max(0, std::min(pickSysSel - VIS + 1, (int)pickSys.size() - VIS));
+			top = std::max(0, std::min(top, pickSysSel));
+			for (int r = 0; r < VIS && top + r < (int)pickSys.size(); r++)
+			{
+				int i = top + r; bool on = i == pickSysSel;
+				int all = 0, ch = 0; long long b = 0;
+				for (auto& g : pickGames) if (g.sys == pickSys[i]) { all++; if (g.on) { ch++; b += g.bytes; } }
+				float y = 80 + r * 41;
+				box(on ? "pick" : "slot", on, 18, y, 604, 37);
+				Color c = on ? p.onPick : p.ink;
+				std::string tag = std::to_string(ch) + " of " + std::to_string(all) + (ch ? ", " + size(b) : std::string());
+				float tw = text(tag, true, 17, 0, 0, c, false, 0, true);
+				text(fit(sysName(pickSys[i]), true, 18, 560 - tw - 24), true, 18, 34, y + 9, c);
+				text(tag, true, 17, 606 - tw, y + 10, on ? p.onPick : p.muted);
+			}
+		}
+		else
+		{
+			auto v = pickList();
+			for (int r = 0; r < VIS && pickTop + r < (int)v.size(); r++)
+			{
+				const PickGame& g = pickGames[v[pickTop + r]];
+				bool on = pickTop + r == pickSel;
+				float y = 80 + r * 41;
+				box(on ? "pick" : "slot", on, 18, y, 604, 37);
+				Color c = on ? p.onPick : p.ink;
+				std::string tag = g.on ? (g.there ? "Sync · on card" : "Sync") : (g.there ? "On card" : "");
+				float tw = tag.empty() ? 0 : text(tag, true, 17, 0, 0, c, false, 0, true);
+				text(g.on ? "[x]" : "[ ]", true, 18, 34, y + 9, g.on ? (on ? p.onPickAccent : p.accent) : c);
+				text(fit(g.title, true, 18, 520 - tw - 24), true, 18, 74, y + 9, c);
+				if (tw > 0) text(tag, true, 17, 606 - tw, y + 10, on ? p.onPick : p.muted);
+			}
+			std::string count = std::to_string(v.empty() ? 0 : pickSel + 1) + " / " + std::to_string(v.size());
+			float cw = text(count, true, 17, 0, 0, p.muted, false, 0, true);
+			text(count, true, 17, 602 - cw, 31, p.muted);
+		}
+		float bw = faceWidth("B", "Back");
+		face("B", "Back", 18, bw);
+		if (!pickLoading && !pickGames.empty())
+		{
+			const std::string xa = "All / none", aa = pickLevel == 0 ? "Open" : "Tick";
+			float xw = faceWidth("X", xa), aw = faceWidth("A", aa);
+			face("X", xa, 320 - xw / 2, xw);
+			face("A", aa, 622 - aw, aw);
+		}
 		be->endScreen();
 	}
 

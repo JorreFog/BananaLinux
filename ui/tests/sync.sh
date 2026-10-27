@@ -73,6 +73,22 @@ card rb
 CODE=$(curl -s -XPOST "$U/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
 bs rb pair "$U" "$CODE" >/dev/null 2>&1 || bad "pairing with a client token's code failed: $(st rb)"
 bs rb pair "$U" "WRONGCOD" >/dev/null 2>&1 && bad "a wrong pairing code was taken"
+# choosing games (homesync_games = chosen): only the chosen game comes, the list says which are chosen and on the card,
+# and un-choosing a game already on the card leaves it there
+card rc
+CODE=$(curl -s -XPOST "$U/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
+bs rc pair "$U" "$CODE" >/dev/null 2>&1 || bad "rc: pairing failed: $(st rc)"
+printf 'homesync_games = chosen\n' > "$OUT/rc/banana/settings.conf"
+printf 'gba/Banana Run (USA).gba\n' > "$OUT/rc/banana/homesync-games.txt"
+bs rc sync > "$OUT/pick-sync1.log" 2>&1 || bad "pick sync: $(tail -3 "$OUT/pick-sync1.log")"
+has "rc/roms/gba/Banana Run (USA).gba"
+[ -e "$OUT/rc/roms/nds/Peel Quest (USA).nds" ] && bad "pick: a game that wasn't chosen came to the card"
+bs rc games > "$OUT/pick-games.tsv" 2>&1 || bad "games: $(head -2 "$OUT/pick-games.tsv")"
+grep -q "^gba	gba/Banana Run (USA).gba	.*	1	1$" "$OUT/pick-games.tsv" || bad "games: the chosen game not listed as chosen + on the card: $(cat "$OUT/pick-games.tsv")"
+grep -q "^nds	nds/Peel Quest (USA).nds	.*	0	0$" "$OUT/pick-games.tsv" || bad "games: the other game not listed as not chosen + not on the card: $(cat "$OUT/pick-games.tsv")"
+: > "$OUT/rc/banana/homesync-games.txt"
+bs rc sync > "$OUT/pick-sync2.log" 2>&1 || bad "pick sync 2: $(tail -3 "$OUT/pick-sync2.log")"
+has "rc/roms/gba/Banana Run (USA).gba"
 # a sync killed while it runs (Stop, a shutdown): the status says "error stopped" at once, not "running" for 120 s
 bs rb sync > "$OUT/romm-kill.log" 2>&1 & KP=$!
 for i in $(seq 300); do case "$(st rb)" in running*) break;; esac; sleep 0.01; done

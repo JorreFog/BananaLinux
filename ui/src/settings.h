@@ -167,7 +167,22 @@ namespace banana
 		std::string about, wifiInfo, ip;
 
 		// the Wi-Fi pages: the networks around, and the keyboard for a password (settings-wifi.cpp)
-		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS } page = LIST;
+		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS, PICKGAMES } page = LIST;
+		// Home server > Choose games: the server's games (banana-sync games), a system at a time, ticked to sync
+		struct PickGame { std::string sys, key, title; long long bytes = 0; bool on = false, there = false; };
+		std::vector<PickGame> pickGames;
+		std::vector<std::string> pickSys;		// the systems' folders, in the server's order
+		int pickLevel = 0, pickSysSel = 0, pickSel = 0, pickTop = 0;	// level 0: the systems, 1: a system's games
+		bool pickLoading = false, pickDirty = false;
+		std::string pickError;
+		wifi::Job pickJob;
+		void openPickGames();
+		bool pollPickGames();
+		Result pressPickGames(Key k);
+		void renderPickGames();
+		void savePickGames();
+		std::vector<int> pickList() const;		// the games of the system open (indices into pickGames)
+		void stopSync();
 		// System > Credits: the people who made this version, from the image's /etc/banana/credits.txt ("[Section]",
 		// then "Name = Title" lines; BANANA_CREDITS another file, the host's tests). Never the card's: they belong to the
 		// build. No file, or nothing in it: no row
