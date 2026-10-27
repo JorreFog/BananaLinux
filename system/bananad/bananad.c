@@ -1080,7 +1080,14 @@ static void dim(void)
 					int max = read_int(p, 0);
 					if (max > 0) lv[i] = dim_level[k] * 1000 / max;
 				}
-		if (lv[0] > 0) { char v[24]; snprintf(v, sizeof v, "%d %d\n", lv[0], lv[1] > 0 ? lv[1] : lv[0]); write_file("/run/banana/dim", v); }
+		/* (fopen, not write_file: that one opens without O_CREAT, for sysfs, and this file is new each time: never
+		 * written, rcK saved the dimmed level as the user's at every shutdown during a dim, 30% less each time: the
+		 * black screens of 0.5.0-beta.3) */
+		if (lv[0] > 0) {
+			FILE *f = fopen("/run/banana/dim", "w");
+			if (f) { fprintf(f, "%d %d\n", lv[0], lv[1] > 0 ? lv[1] : lv[0]); fclose(f); }
+			else say("dim: /run/banana/dim not written: %s", strerror(errno));
+		}
 	}
 }
 static void undim(void)
