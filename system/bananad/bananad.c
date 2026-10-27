@@ -480,6 +480,17 @@ static void cset(int card, const char *name, const char *val)
 	if (st) say("sound: amixer cset %s %s -> %d", name, val, st);
 }
 
+/* the switch controls (HPHL, HPHL_RDAC, ...) are simple-mixer elements: cset name= doesn't reach them on this
+ * codec, sset does */
+static void sset(int card, const char *name, const char *val)
+{
+	char c[8];
+	snprintf(c, sizeof c, "%d", card);
+	char *argv[] = { "amixer", "-c", c, "sset", (char *)name, (char *)val, NULL };
+	int st = run(argv);
+	if (st) say("sound: amixer sset %s %s -> %d", name, val, st);
+}
+
 /* amixer_get <card> <control> <out> <size>: the values the control holds, "" when there is no such control. Asked
  * with `cset` and no value (the only way to name a control with spaces in it), amixer answers with a line that ends
  * in ": values=on,on" -- the label before the colon is empty on the DSP's mixers, so the colon is the anchor, not
@@ -631,6 +642,24 @@ static void audio_setup(void)
 		cset(card_ar, "ADC2 Volume", "10");
 		cset(card_ar, "Left PCM Playback Volume", "460");
 		cset(card_ar, "Right PCM Playback Volume", "460");
+		/* The headphone path, set here rather than only in rcS: bananad's restore_settings() replays the card's
+		 * asound.state (saved by alsactl store when the volume changed) after rcS has run, which puts these back to
+		 * their reset state, so rcS's own copy is not enough. The speaker path (SENARY MI2S -> AW88166) is separate
+		 * and does not need them. */
+		sset(card_ar, "HPHL", "on");
+		sset(card_ar, "HPHR", "on");
+		sset(card_ar, "HPHL_RDAC", "on");
+		sset(card_ar, "HPHR_RDAC", "on");
+		sset(card_ar, "HPHL_COMP", "on");
+		sset(card_ar, "HPHR_COMP", "on");
+		cset(card_ar, "RX HPH Mode", "CLS_H_LOHIFI");
+		cset(card_ar, "RX_HPH PWR Mode", "LOHIFI");
+		cset(card_ar, "RX_MACRO RX0 MUX", "AIF1_PB");
+		cset(card_ar, "RX_MACRO RX1 MUX", "AIF1_PB");
+		cset(card_ar, "RX INT0_1 MIX1 INP0", "RX0");
+		cset(card_ar, "RX INT1_1 MIX1 INP0", "RX1");
+		cset(card_ar, "RX INT0 DEM MUX", "CLSH_DSM_OUT");
+		cset(card_ar, "RX INT1 DEM MUX", "CLSH_DSM_OUT");
 	}
 	if (card_ar >= 0 && !headphones) {
 		char route[64], val[64];

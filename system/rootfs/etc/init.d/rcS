@@ -117,6 +117,23 @@ amixer -q -c 0 cset "name=RX_RX1 Digital Volume" 84 2>/dev/null
 amixer -q -c 0 cset "name=HPHL Volume" 20 2>/dev/null
 amixer -q -c 0 cset "name=HPHR Volume" 20 2>/dev/null
 amixer -q -c 0 cset "name=ADC2 Volume" 10 2>/dev/null
+# The headphone path (ROCKNIX's wcd937x / rx-macro HeadphoneEnableSeq, using this kernel's own control names --
+# 'HPHL', not 'HPHL Switch'): the HP output switches and the LPASS RX macro's muxes to AIF1. Without them the jack
+# has no signal; the speaker path (SENARY MI2S -> AW88166) is separate and does not need them.
+amixer -q -c 0 sset "HPHL" on 2>/dev/null
+amixer -q -c 0 sset "HPHR" on 2>/dev/null
+amixer -q -c 0 sset "HPHL_RDAC" on 2>/dev/null
+amixer -q -c 0 sset "HPHR_RDAC" on 2>/dev/null
+amixer -q -c 0 sset "HPHL_COMP" on 2>/dev/null
+amixer -q -c 0 sset "HPHR_COMP" on 2>/dev/null
+amixer -q -c 0 cset "name=RX HPH Mode" CLS_H_LOHIFI 2>/dev/null
+amixer -q -c 0 cset "name=RX_HPH PWR Mode" LOHIFI 2>/dev/null
+amixer -q -c 0 cset "name=RX_MACRO RX0 MUX" AIF1_PB 2>/dev/null
+amixer -q -c 0 cset "name=RX_MACRO RX1 MUX" AIF1_PB 2>/dev/null
+amixer -q -c 0 cset "name=RX INT0_1 MIX1 INP0" RX0 2>/dev/null
+amixer -q -c 0 cset "name=RX INT1_1 MIX1 INP0" RX1 2>/dev/null
+amixer -q -c 0 cset "name=RX INT0 DEM MUX" CLSH_DSM_OUT 2>/dev/null
+amixer -q -c 0 cset "name=RX INT1 DEM MUX" CLSH_DSM_OUT 2>/dev/null
 # the capture frontend (RFC's UCM SectionVerb: MultiMedia3 -> TX_CODEC_DMA_TX_3): the mic the WCD937x
 # records through. Without it capture is unrouted however the gains are set.
 amixer -q -c 0 cset "name=MultiMedia3 Mixer TX_CODEC_DMA_TX_3" 1 2>/dev/null

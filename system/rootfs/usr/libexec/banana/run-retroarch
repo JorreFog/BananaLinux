@@ -41,12 +41,11 @@ if [ -d /proc/asound/card0 ]; then
         slept=1
         sleep 0.1; i=$((i + 1))
     done
-    # A substream says "closed" long before the DSP has torn its graph down, and a frontend opened into a teardown
-    # comes up half connected: the speaker amplifiers then answer every start attempt with "start failure (-1)" and
-    # the game runs silently -- measured, not guessed: with nothing recently holding the frontend the same game
-    # opens with no failure at all, while right after the menu let go of it both amps fail. So if anything had to be
-    # waited for here, give the graph the beat it needs before writing the route and opening.
-    [ -n "$slept" ] && sleep 0.6; slept=
+    # A substream reads "closed" the moment banana-ui lets go of the frontend (its Sound::release() when a game
+    # starts), but the DSP finishes tearing the graph down a beat later; an open inside that beat leaves the speaker
+    # amplifiers answering "start failure (-1)" and the game silent -- measured on the RPC, and the reason it is not
+    # enough to wait only while a substream still reads busy. So wait out the teardown every time.
+    sleep 0.8
     for i in 0 1; do
         amixer -q -c 0 cset "name=SENARY_MI2S_RX Audio Mixer MultiMedia1" on,on 2>/dev/null && break
         sleep 0.1

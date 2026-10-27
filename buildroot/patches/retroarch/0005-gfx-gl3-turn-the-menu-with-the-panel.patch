@@ -1,6 +1,6 @@
 From: Banana <bananalinux@proton.me>
 Date: Tue, 27 Oct 2026 14:10:00 +0000
-Subject: [PATCH] gfx/gl3, menu/rgui: turn the menu with the panel on KMS/GBM
+Subject: [PATCH] gfx/gl3, menu/rgui: turn the RGUI menu with the panel on KMS/GBM
 
 On a handheld whose panel is mounted turned in the shell -- the Retroid Pocket
 Classic's 1080x1240 in a landscape body -- the game is rotated by video_rotation
@@ -8,27 +8,36 @@ but the menu stays in the framebuffer's portrait orientation because everywhere
 else the window system owns the output's orientation.  On KMS/GBM there is
 nothing above RetroArch, so the menu ends up sideways.
 
-Turn the menu texture at blit time from the user's video_rotation (never from
-the core's: a vertical arcade game must not spin the interface).  And compose
-RGUI in the landscape shape the user is looking at, because the final blit
-fills the window with whatever shape the canvas was composed in -- turning a
+The RGUI menu is not a gfx_display widget: it is composed into a framebuffer and
+blitted by gl3_draw_menu_texture, which used mvp_no_rot (unrotated) while the
+game's own blit uses gl->mvp (rotated).  So the menu must be turned *there*, at
+that blit, and by the same angle the game gets: gl3_set_rotation turns by 270
+degrees a step (90 for a hw context whose GL origin is bottom-left), not 90, so
+the menu projection uses that same convention from the user's video_rotation
+(never the core's: a vertical arcade game must not spin the interface).  Both the
+plain and the y-flipped form are built, because the menu texture's own convention
+is y-flipped (mvp_no_rot_yflip).
+
+RGUI is composed in the landscape shape the user is looking at, because the final
+blit fills the window with whatever shape the canvas was composed in -- turning a
 portrait canvas by 90 degrees would stretch it by the square of the panel's
-aspect, while a landscape canvas turned 1:1 is square.  180 degrees swaps no
-axes and is left alone.
+aspect, while a landscape canvas turned 1:1 is square.  180 degrees swaps no axes
+and is left alone.
 
 Upstream-Status: Pending
 ---
 --- a/gfx/drivers/gl3.c
 +++ b/gfx/drivers/gl3.c
-@@ -176,6 +176,7 @@
+@@ -176,6 +176,8 @@
     math_matrix_4x4 mvp_yflip;
     math_matrix_4x4 mvp_no_rot;
     math_matrix_4x4 mvp_no_rot_yflip;
-+   math_matrix_4x4 mvp_menu;
++   math_matrix_4x4 mvp_menu;           /* the menu, turned with the panel */
++   math_matrix_4x4 mvp_menu_yflip;
  
     uint16_t flags;
  
-@@ -442,7 +443,7 @@
+@@ -442,7 +444,7 @@
     gl3_t *gl3 = (gl3_t*)data;
     if (!gl3)
        return NULL;
@@ -37,7 +46,7 @@ Upstream-Status: Pending
  }
  
  static const float *gfx_display_gl3_get_default_vertices(void)
-@@ -974,7 +975,7 @@
+@@ -974,7 +976,7 @@
        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_RED);
  
        gl->chain.shader->set_coords(gl->chain.shader_data, coords);
@@ -46,22 +55,29 @@ Upstream-Status: Pending
  
        glDrawArrays(GL_TRIANGLES, 0, coords->vertices);
     }
-@@ -1881,6 +1882,32 @@
+@@ -1881,6 +1883,40 @@
     return false;
  }
  
 +/*
-+ * Turn the menu with the *panel*, never with the core.  A rotated panel mounted
-+ * in the shell must turn the menu as well, and a game that asks to be rotated
-+ * (a vertical arcade board) must not spin the interface with it.  The angle is
-+ * the user's video_rotation, and the ortho is the unit square so a quarter turn
-+ * exchanges the axes 1:1 -- no stretching, no per-frame copy.
++ * Turn the menu with the panel, never with the core.  On a handheld whose panel
++ * is mounted turned in the shell (the Retroid Pocket Classic's 1080x1240 in a
++ * landscape body) the game is rotated by video_rotation but, with no window
++ * system above RetroArch, the menu would stay in the framebuffer's portrait
++ * orientation and read sideways.  The angle is the user's video_rotation (a
++ * vertical arcade game must not spin the interface), taken through the same
++ * 270/90 degrees-a-step gl3_set_rotation uses so the menu lands exactly where the
++ * game does.  mvp_menu_yflip is the same turn for the menu texture, whose own
++ * convention is y-flipped (see gl3_draw_menu_texture).
 + */
 +static void gl3_set_menu_projection(gl3_t *gl)
 +{
 +   settings_t *settings   = config_get_ptr();
 +   unsigned user_rotation = settings ? (settings->uints.video_rotation % 4) : 0;
-+   float radians          = M_PI * (user_rotation * 90u) / 180.0f;
++   unsigned degrees       = (video_driver_is_hw_context()
++         && (gl->flags & GL3_FLAG_HW_RENDER_BOTTOM_LEFT))
++         ? 90u * user_rotation : 270u * user_rotation;
++   float radians          = M_PI * degrees / 180.0f;
 +   float cosine           = cosf(radians);
 +   float sine             = sinf(radians);
 +   math_matrix_4x4 rot;
@@ -74,20 +90,63 @@ Upstream-Status: Pending
 +   MAT_ELEM_4X4(rot, 2, 2) = 1.0f;
 +   MAT_ELEM_4X4(rot, 3, 3) = 1.0f;
 +   matrix_4x4_multiply(gl->mvp_menu, rot, gl->mvp_no_rot);
++   matrix_4x4_multiply(gl->mvp_menu_yflip, rot, gl->mvp_no_rot_yflip);
 +}
 +
  static void gl3_set_projection(gl3_t *gl,
        const struct video_ortho *ortho, bool allow_rotate)
  {
-@@ -1896,6 +1923,8 @@
+@@ -1896,9 +1932,18 @@
     matrix_4x4_ortho(gl->mvp_no_rot, ortho->left, ortho->right,
                      ortho->bottom, ortho->top, ortho->znear, ortho->zfar);
  
++   memcpy(gl->mvp_no_rot_yflip.data, gl->mvp_no_rot.data, sizeof(gl->mvp_no_rot.data));
++   MAT_ELEM_4X4(gl->mvp_no_rot_yflip, 1, 0) *= -1.0f;
++   MAT_ELEM_4X4(gl->mvp_no_rot_yflip, 1, 1) *= -1.0f;
++   MAT_ELEM_4X4(gl->mvp_no_rot_yflip, 1, 2) *= -1.0f;
++   MAT_ELEM_4X4(gl->mvp_no_rot_yflip, 1, 3) *= -1.0f;
++
 +   gl3_set_menu_projection(gl);
 +
     if (!allow_rotate)
     {
-       gl->mvp = gl->mvp_no_rot;
+-      gl->mvp = gl->mvp_no_rot;
++      gl->mvp       = gl->mvp_no_rot;
++      gl->mvp_yflip = gl->mvp_no_rot_yflip;
+       return;
+    }
+ 
+@@ -1911,12 +1956,6 @@
+    MAT_ELEM_4X4(rot, 1, 1) = cosine;
+    matrix_4x4_multiply(gl->mvp, rot, gl->mvp_no_rot);
+ 
+-   memcpy(gl->mvp_no_rot_yflip.data, gl->mvp_no_rot.data, sizeof(gl->mvp_no_rot.data));
+-   MAT_ELEM_4X4(gl->mvp_no_rot_yflip, 1, 0) *= -1.0f;
+-   MAT_ELEM_4X4(gl->mvp_no_rot_yflip, 1, 1) *= -1.0f;
+-   MAT_ELEM_4X4(gl->mvp_no_rot_yflip, 1, 2) *= -1.0f;
+-   MAT_ELEM_4X4(gl->mvp_no_rot_yflip, 1, 3) *= -1.0f;
+-
+    memcpy(gl->mvp_yflip.data, gl->mvp.data, sizeof(gl->mvp.data));
+    MAT_ELEM_4X4(gl->mvp_yflip, 1, 0) *= -1.0f;
+    MAT_ELEM_4X4(gl->mvp_yflip, 1, 1) *= -1.0f;
+@@ -3512,7 +3551,7 @@
+       gl->chain.coords.vertices    = 4;
+ 
+       gl->chain.shader->set_coords(gl->chain.shader_data, &gl->chain.coords);
+-      gl->chain.shader->set_mvp(gl->chain.shader_data, &gl->mvp_no_rot);
++      gl->chain.shader->set_mvp(gl->chain.shader_data, &gl->mvp_menu);
+ 
+       glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    }
+@@ -3521,7 +3560,7 @@
+    {
+       glUseProgram(gl->pipelines.alpha_blend);
+       if (gl->pipelines.alpha_blend_loc.flat_ubo_vertex >= 0)
+-         glUniform4fv(gl->pipelines.alpha_blend_loc.flat_ubo_vertex, 4, gl->mvp_no_rot_yflip.data);
++         glUniform4fv(gl->pipelines.alpha_blend_loc.flat_ubo_vertex, 4, gl->mvp_menu_yflip.data);
+ 
+       glEnableVertexAttribArray(0);
+       glEnableVertexAttribArray(1);
 --- a/menu/drivers/rgui.c
 +++ b/menu/drivers/rgui.c
 @@ -7658,6 +7658,17 @@
