@@ -190,14 +190,19 @@ def main():
     sec_of_part = {}
     for si, sec in enumerate(sections):
         sec_of_part.setdefault(sec["part"], si)
+    # the Pokémon companion's own part: the last document's, when it has one (0.4.3 on), else a new part after settings
+    poke_si = next((si for si, sec in enumerate(sections) if sec["heading"].startswith("Pokémon companion")), None)
     order = []
     for si, sec in enumerate(sections):
         order.append(("old", si))
-        if sec["part"] == "settings":
+        if sec["part"] == "settings" and poke_si is None:
             order.append(("poke", si))
     new_by = collections.defaultdict(list)
     for n in new:
-        key = ("poke", sec_of_part["settings"]) if n["where"].startswith("Pokémon") else ("old", sec_of_part.get(n["part"], 0))
+        if n["where"].startswith("Pokémon"):
+            key = ("old", poke_si) if poke_si is not None else ("poke", sec_of_part["settings"])
+        else:
+            key = ("old", sec_of_part.get(n["part"], 0))
         new_by[key].append(n)
     # order new rows by Where (the last document's order first), then as found
     where_rank = {}
@@ -312,7 +317,7 @@ def main():
     tot = collections.Counter()
     for st in counts.values():
         tot.update(st)
-    n_parts = len([1 for k, si in order if k == "old" and sections[si]["part"] != "systems"]) + (1 if new_by.get(("poke", sec_of_part["settings"])) else 0)
+    n_parts = len([1 for k, si in order if k == "old" and sections[si]["part"] != "systems"]) + (1 if poke_si is None and new_by.get(("poke", sec_of_part["settings"])) else 0)
     sys_st = counts.get(next((s["heading"] for s in sections if s["part"] == "systems"), ""), collections.Counter())
     shown = tot["kept"] + tot["changed"] + tot["new"] - sys_st["kept"] - sys_st["changed"] - sys_st["new"]
     title = "BananaOS %s: text to translate" % a.version
