@@ -176,7 +176,12 @@ devices() {
         echo "$conn" | grep -qx "$mac" && c=1
         # a device with no name of its own is its address, written with dashes: left out unless paired
         [ "$name" = "$(echo $mac | tr : -)" ] && { [ $p = 1 ] || continue; }
-        [ $p = 1 ] && k=$(kind "$(ctl info $mac | sed -n 's/^[[:space:]]*Icon: //p' | head -n 1)")
+        if [ $p = 1 ]; then
+            i=$(ctl info $mac)
+            k=$(kind "$(echo "$i" | sed -n 's/^[[:space:]]*Icon: //p' | head -n 1)")
+            # (found over LE, headphones may have no audio icon: their Audio Sink service says it)
+            [ $k = other ] && echo "$i" | grep -q 'Audio Sink' && k=audio
+        fi
         printf '%s\t%s\t%s\t%s\t%s\n' "$mac" $p $c $k "$name"
     done
 }
@@ -202,11 +207,30 @@ pair|connect|disconnect|forget)
     pair)
         # a device found more than TemporaryTimeout ago is gone from BlueZ: a short search for it first
         ctl info $mac | grep -q 'Name\|Alias' || ctl --timeout 6 scan on >/dev/null
-        out=$($CTL --timeout 30 pair $mac 2>&1)
-        echo "$out" | grep -q 'Pairing successful\|AlreadyExists' || { echo "ERROR $(echo "$out" | why)"; exit 1; }
+        info=$(ctl info $mac)
+        if echo "$info" | grep -q 'Icon: audio-\|Audio Sink'; then
+            # headphones and speakers: over classic Bluetooth, whatever BlueZ found them on. In pairing mode some
+            # advertise only over LE (SteelSeries Arctis, AirPods), and bluetoothctl's pair then made an LE pairing
+            # that "succeeded" with no key for the sound (A2DP refused: Permission denied), and the ones that ask for
+            # no bonding got a key BlueZ didn't keep (AuthenticationRejected after a restart). bt-pair-bredr stores the
+            # key itself. They refuse the first tries while they get ready: tried again for 40 s.
+            t0=$(cut -d. -f1 /proc/uptime); last=
+            while :; do
+                last=$(/usr/libexec/banana/bt-pair-bredr $mac 25 $RUN/bluetooth 2>&1 | tail -n 1)
+                [ "$last" = OK ] && break
+                [ $(( $(cut -d. -f1 /proc/uptime) - t0 )) -ge 40 ] && { echo "ERROR Failed to pair: $(echo "$last" | sed 's/^ERROR //')"; exit 1; }
+                sleep 2
+            done
+        else
+            out=$($CTL --timeout 30 pair $mac 2>&1)
+            echo "$out" | grep -q 'Pairing successful\|AlreadyExists' || { echo "ERROR $(echo "$out" | why)"; exit 1; }
+        fi
         ctl trust $mac >/dev/null
         out=$($CTL --timeout 20 connect $mac 2>&1)
         save
+        # paired only with a key kept: one without would work until the next start, then be refused
+        grep -q '^\[LinkKey\]\|^\[LongTermKey\]' $RUN/bluetooth/*/$mac/info 2>/dev/null ||
+            { echo "ERROR Failed to pair: no key was kept (put it in pairing mode again, then A)"; exit 1; }
         echo "$out" | grep -q 'Connection successful' || { echo "ERROR paired, but $(echo "$out" | why)"; exit 1; }
         ;;
     connect)
