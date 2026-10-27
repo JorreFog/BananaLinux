@@ -882,3 +882,58 @@ settings		Development	开发
 settings		Translations	翻译
 settings		Testing	测试
 settings		Thanks	鸣谢
+# (the first-time setup's slides and the first boot's welcome below are a machine-translated draft, not Majirefy's: for them to check)
+settings		Step {n} of {m}	第 {n} 步，共 {m} 步
+settings		Welcome to	欢迎使用
+settings		Welcome	欢迎
+settings		All set	设置完成
+settings		Wi-Fi	Wi-Fi
+settings		RetroAchievements	RetroAchievements
+settings		Choose a network	选择网络
+settings		Choose another network	选择其他网络
+settings		Skip for now	暂时跳过
+settings		Test the connection	测试连接
+settings		Test again	再次测试
+settings		Testing the connection	正在测试连接
+settings		Testing {network}...	正在测试 {network}…
+settings		Off	关闭
+settings		Type a name	输入名称
+settings		Change the name	更改名称
+settings		Log in	登录
+settings		Log in with another account	使用其他账号登录
+settings		Check the login	检查登录
+settings		Check again	再次检查
+settings		Checking the login	正在检查登录
+settings		Checking...	正在检查…
+settings		Try again	重试
+settings		Logged in	已登录
+settings		Not logged in	未登录
+settings		No answer	无响应
+settings		Start fetching box art	开始获取封面
+settings		Fetch again	重新获取
+settings		Finish	完成
+settings		translated by	翻译：
+settings		Connected, address {address}	已连接，地址 {address}
+settings		No connection: no address from the network	无连接：网络未分配地址
+settings		Internet	互联网
+settings		No internet: the network doesn't reach it	无法访问互联网：该网络无法连到外网
+settings		Clock	时钟
+settings		Clock set from the internet	时钟已通过互联网设置
+settings		The clock couldn't be set (time server)	无法设置时钟（时间服务器）
+settings		Asking retroachievements.org...	正在询问 retroachievements.org…
+settings		Saved (not checked here)	已保存（此处未检查）
+settings		Skipped	已跳过
+settings		Not fetched	未获取
+settings		Login failed	登录失败
+settings		Fetching in the background	正在后台获取
+settings		{network} (no internet)	{network}（无互联网）
+settings		The menu's language, and the settings' and the emulators' menus. The rest of the setup is in the language picked.	菜单的语言，以及设置和模拟器菜单的语言。之后的设置步骤将使用所选语言。
+settings		Your home network: achievements, the clock, box art and updates need it. Pick it from the networks around, type its password, and the connection is tested.	你的家庭网络：成就、时钟、封面和更新都需要它。从附近的网络中选择，输入密码，然后会测试连接。
+settings		For the clock on the top screen and the games' own clocks. Left and right change it.	用于上屏的时钟和游戏自身的时钟。左右键可更改。
+settings		For the clock on the top screen and the games' own clocks. Left and right change it; the time itself came from the internet.	用于上屏的时钟和游戏自身的时钟。左右键可更改；时间本身已从互联网获取。
+settings		Your name on the DS, as a real one asks for it the first time: Mario Kart's records, Pictochat, a game's save. 10 characters at most. Leave it and the emulators use their own.	你在 DS 上的名字，就像真机首次启动时询问的那样：用于马力欧赛车的记录、PictoChat、游戏存档。最多 10 个字符。不填则模拟器使用其默认名称。
+settings		Your retroachievements.org account: DraStic and RetroArch unlock achievements with it. The login is checked with the site. No account? Skip this: it can be added later.	你的 retroachievements.org 账号：DraStic 和 RetroArch 用它解锁成就。登录信息会与网站核对。没有账号？跳过即可，之后可以再添加。
+settings		Fetching covers and title screens. It carries on in the background while you finish the setup; the menu shows the art as it comes.	正在获取封面和标题画面。完成设置期间它会在后台继续进行；菜单会随时显示已获取的图片。
+settings		Covers, title screens, genres and years for the games on the card, from libretro's free collections: no account needed. Settings > System > Box art runs it again for new games.	从 libretro 的免费图库获取卡上游戏的封面、标题画面、类型和年份：无需账号。设置 > 系统 > 封面 可为新游戏再次运行。
+settings		Everything here is in Settings too (START in the menu), and this setup is under System > First-time setup.	这里的所有内容也都在设置中（菜单中按 START），本设置位于 系统 > 首次设置。
+settings		The first boot's setup again, a step at a time: Wi-Fi (with a test of the connection), the time zone, the DS's name, the RetroAchievements login and box art. B on its first step comes back here.	再次进行首次启动的设置，一次一步：Wi-Fi（并测试连接）、时区、DS 名称、RetroAchievements 登录和封面。在第一步按 B 返回此处。
