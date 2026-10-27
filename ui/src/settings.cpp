@@ -257,44 +257,6 @@ namespace banana
 		{ "Sao Paulo, Buenos Aires", "<-03>3" },
 	};
 
-	// on the RG DS Plus a shader's GPU pass heats the chip enough to slow the CPU in a long session (Golden Sun: Dark
-	// Dawn at 2x: none 0.0% missed refreshes in 6 min, the LCD grid 0.6-1%, measured 2026-10-18)
-	static const char* PLUS_SHADER_NOTE = " On the RG DS Plus a shader also heats the chip: a heavy 3D game can drop frames after a few minutes with one. Set such a game to None on its own page (X in the library).";
-
-	// Settings > Nintendo DS > Shader's choices: Banana's shaders, then the card's own (banana/shaders/<name>.frag,
-	// SuperDrastic's shader format: README.txt there). Made again each time Settings loads the row (load()), so a shader
-	// copied over file sharing while the menu runs is listed without a restart
-	static void shaderChoices(const std::string& data, std::vector<std::string>& shaderNames, std::vector<std::string>& shaderValues)
-	{
-		shaderNames = { "None (smooth)", "Sharp pixels (integer)", "Crisp", "Crisp + DS colours", "LCD grid", "LCD grid + colours", "FSR", "LCD (DS colours)", "LCD 1x", "LCD 3x", "Fast LCD",
-			  "DS colours", "Retro", "Bevel", "Sharp bilinear", "Sharp + scanlines", "Fast CRT", "FXAA", "Integer fill", "LCD grid 2x",
-			  "Dot (MiZai)", "Dot (MiZai, RG DS+)", "Retro tiles", "DraStic LCD", "DraStic LCD + colours", "DraStic Quilez",
-			  "DraStic sharp", "DraStic sharp + colours", "DraStic fast LCD", "DraStic fast LCD + colours" };
-		shaderValues = { "none", "ds-integer", "ds-crisp", "ds-crisp-color", "ds-grid", "ds-grid-color", "ds-fsr", "lcd1x-nds", "lcd1x", "lcd3x", "zfast-lcd",
-			  "nds-color", "retro-v2", "bevel", "sharp-bilinear", "sharp-bilinear-scanlines", "zfast-crt", "fxaa", "ds-integer-fill", "ds-grid-2x",
-			  "nnddss-dot-mizai", "nnddss-dot-mizai-rgds", "nnddss-retro-tiles", "drastic-lcd1x", "drastic-lcd1x-nds-color", "drastic-quilez",
-			  "drastic-sharp-bilinear", "drastic-sharp-bilinear-nds-color", "drastic-zfast-lcd", "drastic-zfast-lcd-nds-color" };
-		if (DIR* d = opendir((data + "/shaders").c_str()))
-		{
-			std::vector<std::string> own;
-			while (dirent* e = readdir(d))
-			{
-				std::string n = e->d_name;
-				if (n.size() > 5 && n[0] != '.' && n.compare(n.size() - 5, 5, ".frag") == 0)
-				{
-					// only names of letters, digits and . _ + - (the README says so): the name goes into the launchers'
-					// settings files, and one with a space, a ";" or a "$" broke them (or ran what it held, before kv-env)
-					std::string base = n.substr(0, n.size() - 5);
-					if (base.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._+-") == std::string::npos)
-						own.push_back(base);
-				}
-			}
-			closedir(d);
-			std::sort(own.begin(), own.end());
-			for (auto& n : own)
-				if (std::find(shaderValues.begin(), shaderValues.end(), n) == shaderValues.end()) { shaderNames.push_back(n + " (card)"); shaderValues.push_back(n); }
-		}
-	}
 
 	void Settings::build()
 	{
@@ -387,8 +349,6 @@ namespace banana
 			it.names = { "Dark", "Light", "Carts" }; it.values = { "dark", "light", "carts" };
 			for (auto& t : userThemes()) { it.names.push_back(t.name); it.values.push_back(t.value); }
 		}
-		if (it.key == "DSFLIP_SHADER" || it.key == "kms.shader")
-			shaderChoices(data, it.names, it.values);	// the card's shaders as they are now (one copied in while the menu runs)
 		if (it.key == "accent")
 		{
 			// a theme with its own accent: the row says so and has nothing to pick (it came back to life when the theme
@@ -455,9 +415,7 @@ namespace banana
 		// a value the list doesn't have (set by hand, or a shader added later): shown as it is and kept, rather than
 		// shown as the first choice and lost at the first press
 		// (not the theme: a user theme whose file has gone shows Dark, which is what the menu draws then)
-		// (not a DS shader that is nowhere: a card shader whose file has gone shows None, which is what the emulators draw then)
-		bool goneShader = (it.key == "DSFLIP_SHADER" || it.key == "kms.shader") && access(("/usr/lib/superdrastic/shaders/" + v + ".frag").c_str(), F_OK) != 0;
-		if (it.at < 0 && !v.empty() && it.key != "led_brightness" && it.key != "theme" && !goneShader) { it.names.push_back(v); it.values.push_back(v); it.at = (int)it.values.size() - 1; }
+		if (it.at < 0 && !v.empty() && it.key != "led_brightness" && it.key != "theme") { it.names.push_back(v); it.values.push_back(v); it.at = (int)it.values.size() - 1; }
 		if (it.at < 0) it.at = 0;
 		// a value between the choices (the LEDs at 128): the nearest one
 		if (it.key == "led_brightness")
@@ -651,16 +609,6 @@ namespace banana
 		if (at == it.at) return NONE;
 		it.at = at;
 		save(it);
-		if (it.key == "nds_emulator")
-		{
-			// the other emulator's own settings in the list, the cursor staying on Emulator
-			items.clear();
-			build();
-			for (auto& x : items) load(x);
-			for (size_t i = 0; i < items.size(); i++) if (items[i].key == "nds_emulator") sel = (int)i;
-			armed = -1;
-			return CHANGED;
-		}
 		if (it.key == "theme")
 		{
 			setVariant(it.values[at]);
@@ -737,7 +685,6 @@ namespace banana
 	{
 		if (page == NETWORKS) return pressNetworks(k);
 		if (page == KEYBOARD) return pressKeyboard(k);
-		if (page == GAME) return pressGame(k);
 		if (page == UPDATES) return pressUpdates(k);
 		if (page == SETUP) return pressSetup(k);
 		if (inGroups) return pressGroups(k);
@@ -803,7 +750,6 @@ namespace banana
 		downOnRow = false;
 		if (page == NETWORKS) return touchNetworks(cx, cy);
 		if (page == KEYBOARD) return touchKeyboard(cx, cy);
-		if (page == GAME) return touchGame(cx, cy);
 		if (page == SETUP)
 		{
 			if (downY >= 418 && downY <= 466) return pressSetup(downX < 320 ? Key::B : Key::A);
@@ -1209,7 +1155,6 @@ namespace banana
 	{
 		if (page == NETWORKS) { renderNetworks(); return; }
 		if (page == KEYBOARD) { renderKeyboard(); return; }
-		if (page == GAME) { renderGame(); return; }
 		if (page == UPDATES) { renderUpdates(); return; }
 		if (page == SETUP) { renderSetup(); return; }
 		if (inGroups) { renderGroups(); return; }
@@ -1949,183 +1894,6 @@ namespace banana
 		if (single) footer(help, p.muted);
 		be->endScreen();
 	}
-
-	// ---- the game page: a DS game's own emulator and shader ------------------------------------------------------
-	static const char* GAME_EMUS[] = { "", "superdrastic", "bananads" };
-	static const char* GAME_EMU_NAMES[] = { "", "SuperDrastic", "BananaDS" };
-
-	// a game's own choice in banana/<file> ("<rom file name> = <value>" a line, the name as on the card without its
-	// folder; the last line for a game counts): nds-per-game.conf its emulator (run-nds), nds-per-game-shader.conf its
-	// shader (run-drastic, run-bananads, through nds-game-shader)
-	std::string Settings::perGame(const std::string& file, const std::string& rom)
-	{
-		std::ifstream f(data + "/" + file);
-		std::string ln, r;
-		while (std::getline(f, ln))
-		{
-			size_t eq = ln.rfind(" = ");	// (the last one: a name may have " = " in it)
-			if (ln.empty() || ln[0] == '#' || eq == std::string::npos) continue;
-			if (ln.substr(0, eq) == rom) r = trim(ln.substr(eq + 3));
-		}
-		return r;
-	}
-
-	void Settings::setPerGame(const std::string& file, const std::string& rom, const std::string& value)
-	{
-		std::string path = data + "/" + file, out, ln;
-		{
-			std::ifstream f(path);
-			// a file that is there but can't be read (a card error): left alone
-			if (!f && access(path.c_str(), F_OK) == 0) return;
-			while (std::getline(f, ln))
-			{
-				size_t eq = ln.rfind(" = ");
-				if (!ln.empty() && ln[0] != '#' && eq != std::string::npos && ln.substr(0, eq) == rom) continue;
-				out += ln + "\n";
-			}
-		}
-		if (!value.empty()) out += rom + " = " + value + "\n";
-		// the last game back to "As in Settings": no file rather than an empty one (the launchers and the tests look for
-		// the file; a card with nothing chosen per game has none)
-		if (out.find_first_not_of(" \t\r\n") == std::string::npos)
-		{
-			unlink(path.c_str());
-			return;
-		}
-		std::string tmp = path + ".new";
-		FILE* f = fopen(tmp.c_str(), "w");
-		if (!f) return;
-		bool ok = fwrite(out.data(), 1, out.size(), f) == out.size();
-		ok = fflush(f) == 0 && fsync(fileno(f)) == 0 && ok;
-		fclose(f);
-		if (ok) rename(tmp.c_str(), path.c_str());
-		else unlink(tmp.c_str());
-	}
-
-	std::string Settings::gameEmulator(const std::string& rom) { return perGame("nds-per-game.conf", rom); }
-	void Settings::setGameEmulator(const std::string& rom, const std::string& emu) { setPerGame("nds-per-game.conf", rom, emu); }
-
-	void Settings::openGame(const std::string& title, const std::string& romName)
-	{
-		open();
-		pgTitle = title; pgRom = romName;
-		std::string cur = gameEmulator(romName);
-		pgEmu = 0;
-		for (int i = 1; i < 3; i++) if (cur == GAME_EMUS[i]) pgEmu = i;
-		// the shaders as Settings lists them (the card's included, as they are now), after "As in Settings"
-		std::vector<std::string> names, values;
-		shaderChoices(data, names, values);
-		pgShaderNames = { "" }; pgShaderValues = { "" };
-		pgShaderNames.insert(pgShaderNames.end(), names.begin(), names.end());
-		pgShaderValues.insert(pgShaderValues.end(), values.begin(), values.end());
-		std::string sh = perGame("nds-per-game-shader.conf", romName);
-		pgShader = 0;
-		for (size_t i = 1; i < pgShaderValues.size(); i++) if (pgShaderValues[i] == sh) pgShader = (int)i;
-		if (!sh.empty() && pgShader == 0)	// a card shader that has gone: shown (and kept) as it is
-		{
-			pgShaderNames.push_back(sh + " (not on the card)"); pgShaderValues.push_back(sh);
-			pgShader = (int)pgShaderValues.size() - 1;
-		}
-		pgRow = 0;
-		message.clear();
-		page = GAME;
-	}
-
-	Settings::Result Settings::pressGame(Key k)
-	{
-		switch (k)
-		{
-		case Key::UP: case Key::DOWN: pgRow ^= 1; return MOVED;
-		case Key::LEFT: case Key::RIGHT:
-		{
-			int d = k == Key::LEFT ? -1 : 1;
-			if (pgRow == 0) pgEmu = (pgEmu + d + 3) % 3;
-			else
-			{
-				int n = (int)pgShaderValues.size();
-				pgShader = (pgShader + d + n) % n;
-			}
-			return MOVED;
-		}
-		case Key::A:
-			setGameEmulator(pgRom, GAME_EMUS[pgEmu]);
-			setPerGame("nds-per-game-shader.conf", pgRom, pgShaderValues[pgShader]);
-			close();
-			return CHANGED;
-		case Key::B: close(); return CLOSED;
-		default: return NONE;
-		}
-	}
-
-	Settings::Result Settings::touchGame(float cx, float cy)
-	{
-		(void)cx; (void)cy;
-		if (downY >= 418 && downY <= 466) return pressGame(downX < 320 ? Key::B : Key::A);
-		for (int r = 0; r < 2; r++)
-		{
-			float ry = 82 + r * 64;
-			if (downY < ry || downY > ry + 56) continue;
-			if (r != pgRow) { pgRow = r; return MOVED; }
-			return pressGame(downX < 320 ? Key::LEFT : Key::RIGHT);	// the value's left or right half steps it
-		}
-		return NONE;
-	}
-
-	void Settings::renderGame()
-	{
-		SPal p = pal(light);
-		const std::string menu = data + "/settings.conf";
-		std::string global = getConfValue(menu, "nds_emulator", getConfValue("/etc/banana/settings.conf", "nds_emulator", "superdrastic"));
-		if (global != "bananads") global = "superdrastic";
-		// the emulator this game runs in, and Settings' shader for that emulator (each keeps its own)
-		const std::string emu = pgEmu ? GAME_EMUS[pgEmu] : global;
-		std::string gsh = emu == "bananads" ? getConfValue("/data/bananads/bananads.conf", "kms.shader", "") : "";
-		if (gsh.empty()) gsh = getConfValue(data + "/superdrastic.conf", "DSFLIP_SHADER", "none");
-		std::string gshName = gsh;
-		for (size_t i = 1; i < pgShaderValues.size(); i++) if (pgShaderValues[i] == gsh) gshName = pgShaderNames[i];
-		const std::string emuValue = pgEmu ? std::string(GAME_EMU_NAMES[pgEmu]) : std::string("As in Settings (") + (global == "bananads" ? "BananaDS" : "SuperDrastic") + ")";
-		const std::string shValue = pgShader ? pgShaderNames[pgShader] : "As in Settings: " + gshName;	// (names have brackets of their own)
-		const bool plus = readLine("/etc/banana/board") == "rgds-plus";
-
-		be->beginScreen(0);
-		box("screen", false, 0, 0, 640, 480);
-		box("hero", false, 18, 20, 604, 436);
-		icon("nds", 50, 56, 3);
-		text(pgRow == 0 ? "This game's emulator" : "This game's shader", true, 17, 170, 62, p.muted, true, 1.4f);
-		text(fit(pgTitle, true, 30, 420), true, 30, 170, 88, p.ink);
-		text(fit(pgRow == 0 ? emuValue : shValue, true, 22, 420), true, 22, 170, 130, p.accent);
-		std::string help = pgRow == 0
-			? "SuperDrastic: DraStic onto both panels, the fastest. BananaDS: Banana's own emulator (melonDS's core), the most "
-			  "accurate. The choice is for this game only; the others follow Settings > Nintendo DS > Emulator."
-			: std::string("The picture's shader for this game only, in either emulator; the others follow Settings > Nintendo DS > Shader. "
-			  "None scales smoothly and costs no GPU work.") + (plus ? PLUS_SHADER_NOTE : "");
-		wrapped(help, 20, 50, 196, 540, 7, p.muted);
-		be->endScreen();
-
-		be->beginScreen(1);
-		box("screen", false, 0, 0, 640, 480);
-		box("bubble", false, 18, 14, 604, 54);
-		text("This game", true, 22, 38, 28, p.ink);
-		for (int r = 0; r < 2; r++)
-		{
-			bool on = r == pgRow;
-			float y = 82 + r * 64;
-			box(on ? "pick" : "slot", on, 18, y, 604, 56);
-			Color c = on ? p.onPick : p.muted;
-			text(r == 0 ? "Emulator" : "Shader", true, 20, 38, y + 16, c);
-			std::string v = fit(r == 0 ? emuValue : shValue, true, 19, 380);
-			float vw = text(v, true, 19, 0, 0, p.ink, false, 0, true);
-			arrow(true, 576, y + 21, c);
-			text(v, true, 19, 566 - vw, y + 17, c);
-			arrow(false, 556 - vw - 2 - std::round(13 / 2.0f + 1), y + 21, c);
-		}
-		float bw = faceWidth("B", "Back");
-		face("B", "Back", 18, bw);
-		float aw = faceWidth("A", "Done");
-		face("A", "Done", 622 - aw, aw);
-		be->endScreen();
-	}
-
 	// ---- the keyboard's purposes, and the accounts file -------------------------------------------------------
 	void Settings::startEntry(Entry e, const std::string& title, const std::string& sub, Page back, const std::string& start)
 	{
