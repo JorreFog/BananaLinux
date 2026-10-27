@@ -28,11 +28,11 @@ jobs:
       - name: Sleep (bananad against a made-up /sys in its own namespaces)
         run: sudo system/bananad/tests/sleep-test.sh
       - name: Shell scripts parse
-        run: for f in system/rootfs/etc/init.d/* system/rootfs/usr/bin/* system/rootfs/usr/libexec/banana/* system/rootfs/etc/banana/sleep.d/* buildroot/board/rgds/*.sh tools/*.sh; do sh -n "$f" || exit 1; done
+        run: for f in system/rootfs/etc/init.d/* system/rootfs/usr/bin/* system/rootfs/usr/libexec/banana/* system/rootfs/etc/banana/sleep.d/* buildroot/board/retroid-pocket-classic/*.sh tools/*.sh; do sh -n "$f" || exit 1; done
       - name: Buildroot defconfigs keep every option
         run: |
           git clone --depth 1 --branch 2026.02.3 https://github.com/buildroot/buildroot /tmp/br
-          for d in banana_rgds_defconfig banana_rgds_plus_defconfig banana_universal_defconfig; do
+          for d in banana_retroid_pocket_classic_defconfig; do
             make -s -C /tmp/br BR2_EXTERNAL=$PWD/buildroot O=/tmp/out-$d $d
             grep -E '^BR2_|^# BR2_.* is not set' buildroot/configs/$d | while IFS= read -r l; do
               grep -qxF "$l" /tmp/out-$d/.config || { echo "$d drops: $l"; exit 1; }
@@ -46,7 +46,7 @@ jobs:
     timeout-minutes: 360
     strategy:
       matrix:
-        board: [rgds, rgds-plus]
+        board: [retroid-pocket-classic]
     env:
       BR2_DL_DIR: ${{ github.workspace }}/dl
     steps:
@@ -94,9 +94,9 @@ jobs:
             output/${{ matrix.board }}/images/banana-${{ matrix.board }}.img.gz
             output/${{ matrix.board }}/images/banana-${{ matrix.board }}-*.update.tar
 
-  # the whole image booted in QEMU: the first boot makes the data partition, the menu comes up on both panels, a
-  # game is started from the library and the menu comes back, a shutdown from the settings powers the VM off; the
-  # screenshots and the card's logs are kept as an artifact
+  # the whole image booted in QEMU: the first boot makes the data partition, the menu comes up, a game is started
+  # from the library and the menu comes back, a shutdown from the settings powers the VM off, an A/B update is
+  # applied and the other slot booted; the screenshots and the card's logs are kept as an artifact
   boot:
     if: github.event_name == 'workflow_dispatch' && inputs.image
     needs: image
@@ -104,7 +104,7 @@ jobs:
     timeout-minutes: 45
     strategy:
       matrix:
-        board: [rgds, rgds-plus]
+        board: [retroid-pocket-classic]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4

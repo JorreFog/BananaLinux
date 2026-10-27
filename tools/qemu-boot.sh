@@ -1,18 +1,19 @@
 #!/bin/sh
 # A Banana card image booted in QEMU: the whole system from the kernel to the menu, with no handheld. The VM is
-# QEMU's "virt" machine with the card on a PCI SDHCI (so it is mmcblk0, as on the RG DS: the first boot makes the
-# data partition on it), two 640x480 panels on a virtio GPU, a virtio keyboard and tablet for the buttons and the
-# touchscreen, and the serial console carrying the boot's progress and the menu's log (banana.console=1).
+# QEMU's "virt" machine with the card on a PCI SDHCI (so it is mmcblk0, as on the handheld: the first boot makes
+# the data partition on it), one panel on a virtio GPU (the Retroid Pocket Classic's single 1240x1080 screen), a
+# virtio keyboard and tablet for the buttons and the touchscreen, and the serial console carrying the boot's
+# progress and the menu's log (banana.console=1).
 #
 #   tools/qemu-boot.sh <banana-*.img[.gz]> [out dir]       the boot test (below); exit 0 when everything passed
-#   tools/qemu-boot.sh <banana-*.img[.gz]> --interactive   a window with the two panels: arrows, Enter = A,
+#   tools/qemu-boot.sh <banana-*.img[.gz]> --interactive   a window with the panel: arrows, Enter = A,
 #                                                          Backspace = B, X, Y, PgUp/PgDn = L/R, S = Start, Tab = Select
 #
-# The test: a first boot (the data partition made, the menu on both panels, screenshots, a shutdown from the
-# settings), a game copied onto the card, a second boot (the library, the game started and ended, the menu back,
-# a shutdown), then the card's logs/boot.txt. Needs qemu-system-aarch64, qemu-img, mtools, python3, sfdisk and
-# root (or sudo; without either, udisks: udisksctl) for mounting the card's exFAT partition. QEMU runs the ARM
-# code by translation: a boot takes a minute or two on a PC.
+# The test: a first boot (the data partition made, the menu, screenshots, a shutdown from the settings), a game
+# copied onto the card, a second boot (the library, the game started and ended, the menu back, a shutdown), then
+# the card's logs/boot.txt. Needs qemu-system-aarch64, qemu-img, mtools, python3, sfdisk and root (or sudo; without
+# either, udisks: udisksctl) for mounting the card's exFAT partition. QEMU runs the ARM code by translation: a boot
+# takes a minute or two on a PC.
 set -e
 IMG=$1; OUT=${2:-qemu-out}
 [ -n "$IMG" ] && [ -f "$IMG" ] || { echo "usage: $0 <banana-*.img[.gz]> [out dir | --interactive]" >&2; exit 2; }
@@ -32,24 +33,26 @@ UDISKS=0; [ -n "$SUDO" ] && ! sudo -n true 2>/dev/null && command -v udisksctl >
 part_offset() { sfdisk -J "$CARD" | python3 -c "import json,sys; p=json.load(sys.stdin)['partitiontable']['partitions']; print(p[$1-1]['start']*512)"; }
 part_size() { sfdisk -J "$CARD" | python3 -c "import json,sys; p=json.load(sys.stdin)['partitiontable']['partitions']; print(p[$1-1]['size']*512)"; }
 BOOT_AT=$(part_offset 1)
-case $(basename "$IMG") in banana-rgds-plus*) BOARD=rgds-plus ;; banana-universal*) BOARD=universal ;; *) BOARD=rgds ;; esac
-# the kernel and root the card would boot, as U-Boot reads them: extlinux.conf's DEFAULT label (the slot an update
-# switched to), its LINUX file and its root=. video=: QEMU reports only the output a window is attached to as
-# connected; the kernel is told both are, at 640x480
+case $(basename "$IMG") in
+banana-retroid-pocket-classic*) BOARD=retroid-pocket-classic ;;
+*) echo "unexpected image name $(basename "$IMG"): this harness is for the Retroid Pocket Classic" >&2; exit 2 ;;
+esac
+# the kernel and root the card would boot, as OpenABL reads them: extlinux.conf's DEFAULT label (the slot an update
+# switched to), its LINUX file and its root=. video=: the panel is a 1240x1080 virtio output (Virtual-1)
 pick_kernel() {
     mcopy -o -i "$CARD@@$BOOT_AT" ::/extlinux/extlinux.conf "$OUT/extlinux.conf"
     LABEL=$(sed -n 's/^DEFAULT *//p' "$OUT/extlinux.conf" | head -n 1)
     KERNEL=$(awk -v l="$LABEL" '$1 == "LABEL" { cur = $2 } $1 == "LINUX" && cur == l { print $2 }' "$OUT/extlinux.conf")
     ROOT=$(awk -v l="$LABEL" '$1 == "LABEL" { cur = $2 } $1 == "APPEND" && cur == l { for (i = 2; i <= NF; i++) if ($i ~ /^root=/) print $i }' "$OUT/extlinux.conf")
     mcopy -o -i "$CARD@@$BOOT_AT" "::$KERNEL" "$OUT/Image"
-    APPEND="$ROOT rootfstype=squashfs ro rootwait quiet loglevel=3 console=ttyAMA0 video=Virtual-1:640x480e video=Virtual-2:640x480e banana.console=1 banana.top=Virtual-2 banana.touch=virtio"
+    APPEND="$ROOT rootfstype=squashfs ro rootwait quiet loglevel=3 console=ttyAMA0 video=Virtual-1:1240x1080 banana.console=1 banana.top=Virtual-1 banana.touch=virtio"
     echo "booting label $LABEL: $KERNEL, $ROOT"
 }
 pick_kernel
 run_qemu() {    # run_qemu <display and serial arguments>
     qemu-system-aarch64 -M virt -cpu cortex-a55 -smp 4 -m 1024 -kernel "$OUT/Image" -append "$APPEND" \
         -device sdhci-pci -drive if=none,id=sd,file="$CARD",format=raw -device sd-card,drive=sd \
-        -device virtio-gpu-pci,id=gpu,max_outputs=2,xres=640,yres=480 -device virtio-keyboard-pci -device virtio-tablet-pci \
+        -device virtio-gpu-pci,id=gpu,max_outputs=1,xres=1240,yres=1080 -device virtio-keyboard-pci -device virtio-tablet-pci \
         -device virtio-net-pci,netdev=n0 -netdev user,id=n0,hostfwd=tcp:127.0.0.1:$SSH_PORT-:22 \
         -no-reboot -rtc base=utc "$@"
 }
@@ -129,10 +132,9 @@ sys.stdout.write(drain().decode(errors="replace"))
 PY
 }
 key() { for k in "$@"; do mon "sendkey $k" > /dev/null; sleep 0.6; done; }
-shot() {    # shot <name>: both panels, top and bottom
-    mon "screendump $OUT/$1-top.png -f png gpu 1" > /dev/null
-    mon "screendump $OUT/$1-bot.png -f png gpu 0" > /dev/null
-    [ -s "$OUT/$1-top.png" ] && [ -s "$OUT/$1-bot.png" ] && ok "screenshots $1" || bad "no screenshots for $1"
+shot() {    # shot <name>: the panel
+    mon "screendump $OUT/$1.png -f png gpu 0" > /dev/null
+    [ -s "$OUT/$1.png" ] && ok "screenshot $1" || bad "no screenshot for $1"
 }
 wait_for() {    # wait_for <pattern> <seconds> <what>: in the serial log
     for i in $(seq $(($2 * 2))); do grep -q "$1" "$OUT/serial.log" 2>/dev/null && { ok "$3 ($(grep -o "at [0-9.]* s" "$OUT/serial.log" | tail -n 1 | sed 's/at //'))"; return 0; }; sleep 0.5; done
@@ -188,7 +190,7 @@ with_data() {   # with_data <command...>: the card's data partition (exFAT) moun
 echo "1. the first boot: the data partition made, the menu, a shutdown"
 boot first
 grep -q "rcS: data partition ready" "$OUT/serial.log" && ok "the data partition was made and mounted" || bad "no data partition"
-grep -q "panels 640x480" "$OUT/serial.log" && ok "both panels opened at 640x480" || bad "the panels didn't open"
+grep -q "panel 1240x1080 (1)" "$OUT/serial.log" && ok "the panel opened at 1240x1080" || bad "the panel didn't open"
 # the first-time setup opens over the menu on a first boot; B skips it (and writes setup-done on the card)
 grep -q "banana-ui: first-time setup" "$OUT/serial.log" && ok "the first-time setup opened" || bad "no first-time setup on the first boot"
 shot first-setup
@@ -196,10 +198,9 @@ key backspace; sleep 1
 shot first-menu
 key s; sleep 1; shot first-settings; key backspace; sleep 0.5
 shutdown_from_settings first
-add_game() {    # a DS game and a GBA one, so both launchers run (DraStic's and RetroArch's); SSH for measuring
+add_game() {    # a GBA game, so RetroArch's launcher runs; SSH for measuring
     enable_ssh
-    mkdir -p "$DATA/roms/nds" "$DATA/roms/gba"
-    head -c 65536 /dev/zero > "$DATA/roms/nds/Boot Test.nds"
+    mkdir -p "$DATA/roms/gba"
     head -c 65536 /dev/zero > "$DATA/roms/gba/Boot Test Advance.gba"
     ls "$DATA/banana/" | tr '\n' ' '; echo
     [ -f "$DATA/banana/README.txt" ] && ok "the card has its folders and README" || bad "no README on the card"
@@ -207,71 +208,20 @@ add_game() {    # a DS game and a GBA one, so both launchers run (DraStic's and 
 }
 with_data add_game
 
-echo "2. the second boot: the library, a DS game and a GBA game started and ended, the menu back, a shutdown"
+echo "2. the second boot: the library, a GBA game started and ended, the menu back, a shutdown"
 boot second
 grep -q "rcS: data partition ready" "$OUT/serial.log" && ok "the data partition mounted again" || bad "no data partition the second time"
 grep -q "banana-ui: first-time setup" "$OUT/serial.log" && bad "the first-time setup opened again" || ok "no setup the second time"
 sleep 5; measure second-menu
-HAVE_BANANADS=0; vm test -x /usr/bin/bananads 2>/dev/null && HAVE_BANANADS=1
 key ret; sleep 1; shot second-library
 grep -q "Boot Test" "$OUT/serial.log" || true
 key ret            # the ready screen: the cartridge goes in and the game starts
-wait_for "starting nds" 30 "the game was started (run-nds)"
-# DraStic keeps running even on the empty test ROM (it used to exit only because it was never copied onto the card).
-# The VM's keyboard isn't the pad SuperDrastic's F + Start reads, so the game is stopped as a shutdown stops it: a TERM
-# to it (SuperDrastic's runner saves a resume state first, within 5 s)
+wait_for "starting gba" 30 "the GBA game was started (run-retroarch)"
 sleep 10; shot second-game
 vm 'kill -TERM $(cat /run/banana/game.pid)' || true
-wait_for "game ended" 60 "a TERM ended the DS game and the menu took the panels back"
+wait_for "game ended" 60 "a TERM ended the GBA game and the menu took the panel back"
 sleep 2; shot second-after-game
-# the GBA shelf (RetroArch's launcher): home, the next system, its library, its game
-key backspace right ret; sleep 1; shot second-gba
-key ret
-wait_for "starting gba" 30 "the GBA game was started (run-retroarch)"
-for i in $(seq 120); do [ "$(grep -c 'game ended' "$OUT/serial.log")" -ge 2 ] && break; sleep 0.5; done
-[ "$(grep -c 'game ended' "$OUT/serial.log")" -ge 2 ] && ok "the GBA game ended and the menu came back" || bad "the GBA game didn't end within 60 s"
-sleep 2
 shutdown_from_settings second
-
-# BananaDS, when the image has it: a DS homebrew ROM (tools/test-roms/ds2dtest.nds, the 2D engines' test from
-# BananaDS's tests/ds2dtest) as the only DS game, the emulator chosen in the settings, started from the menu: both
-# screens on both panels through its KMS frontend, then F + Start quits it (with its resume state) and the menu comes
-# back. In QEMU the virtio GPU's planes can't scale, so the frames are scaled by the CPU (logged as such).
-ROM=$HERE/tools/test-roms/ds2dtest.nds
-if [ $HAVE_BANANADS = 1 ] && [ -f "$ROM" ]; then
-    echo "2b. BananaDS: a DS game from the menu on both panels by KMS, F + Start to quit"
-    prep_bananads() {
-        rm -f "$DATA/roms/nds/"*.nds
-        cp "$ROM" "$DATA/roms/nds/BananaDS Test.nds"
-        sed -i '/^nds_emulator/d; /^quick_resume/d' "$DATA/banana/settings.conf" 2>/dev/null || true
-        # Quick resume (off by default) on, so quitting writes the resume state checked below
-        printf 'nds_emulator = bananads\nquick_resume = on\n' >> "$DATA/banana/settings.conf"
-        echo 0 > "$DATA/banana/last-system"
-        echo "BANANADS_KMS_STATS=30" > "$DATA/banana/bananads.env"
-    }
-    with_data prep_bananads
-    boot bananads
-    key ret; sleep 1
-    key ret
-    wait_for "starting nds" 30 "the DS game was started (run-nds, BananaDS chosen)"
-    sleep 20; shot bananads-game
-    measure bananads-game
-    grep -q " bananads$" "$OUT/resources-bananads-game.txt" && ok "BananaDS is running" || bad "no bananads process during the game"
-    key f1-s
-    wait_for "game ended" 60 "F + Start quit BananaDS and the menu took the panels back"
-    sleep 2; shot bananads-after
-    shutdown_from_settings bananads
-    check_bananads() {
-        L=$DATA/banana/logs/bananads/bananads.log
-        echo "--- logs/bananads/bananads.log"; grep "^\[kms\]\|^\[cpugov\]\|BananaDS" "$L" 2>/dev/null | head -n 12 | sed 's/^/    /'
-        grep -q "\[kms\] .* top, .* bottom" "$L" 2>/dev/null && ok "BananaDS opened both panels" || bad "BananaDS didn't open the panels"
-        grep -q "\[kms\] .* frames shown in" "$L" 2>/dev/null && ok "BananaDS put frames on the panels" || bad "no frames shown by BananaDS"
-        ls "$DATA/states/nds/"*resume* > /dev/null 2>&1 && ok "BananaDS wrote its resume state on quitting" || bad "no resume state after quitting"
-    }
-    with_data check_bananads
-else
-    echo "2b. BananaDS: not in this image (or no test ROM): skipped"
-fi
 
 echo "3. an update: the package applied from the settings, the next boot runs the other slot"
 add_update() { mkdir -p "$DATA/banana/updates"; make_update "$DATA/banana/updates"; }
