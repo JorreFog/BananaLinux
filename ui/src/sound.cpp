@@ -72,7 +72,7 @@ static bool dspFrontendsFree()
 	}
 
 #ifdef BANANA_ALSA
-	// The menu plays on the same device as the games, and the RG DS Plus's amplifier is a 48 kHz part: anything else
+	// The menu plays on the same device as the games, and the card's output is a 48 kHz part: anything else
 	// is resampled there by alsa-lib's linear converter (the image has no speexrate). Convert each clip once, here,
 	// so the stream is always 48 kHz and no plug resampler is involved.
 	static void to48k(std::vector<int16_t>& pcm, int& rate, int channels)
@@ -163,8 +163,8 @@ static bool dspFrontendsFree()
 	{
 #ifdef BANANA_ALSA
 		// While the device is open the stream never stops: after a sound, silence follows, until QUIET with nothing to
-		// play. The RG DS Plus's speaker amplifiers (aw88166) are started by their driver when the stream powers up,
-		// and the first try fails because the I2S clock isn't running yet; the next try is ~0.4 s later and finds no
+		// play. The DSP's output is started when the stream powers up, and the first try fails because the I2S clock
+		// isn't running yet; the next try is ~0.4 s later and finds no
 		// clock either if a short click has already ended, so an amplifier gave up for the whole time the device was
 		// open (one speaker, or none). A running stream lets the retry find its clock. Writing 10 ms at a time also
 		// lets a new sound cut the one playing (a held direction scrolls fast) within the 30 ms buffer.
