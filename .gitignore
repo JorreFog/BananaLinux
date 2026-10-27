@@ -19,5 +19,8 @@
 __pycache__/
 *.pyc
 
+# a player's own background-music loop dropped in the tree to copy to the card (never committed, like a game dump)
+/bgm.wav
+
 # the deploy key baked into the image for network installs (never commit it)
 /system/rootfs/etc/banana/ssh/authorized_keys
