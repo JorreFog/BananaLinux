@@ -37,6 +37,7 @@ namespace banana
 			{ "theme", "dark", TEXT, nullptr, 0, 0 },
 			{ "motion", "on", ENUM, ON_OFF, 0, 0 },
 			{ "sounds", "on", ENUM, ON_OFF, 0, 0 },
+			{ "bgm", "on", ENUM, ON_OFF, 0, 0 },
 			{ "battery", "icon", TEXT, nullptr, 0, 0 },
 			{ "clock", "24h", TEXT, nullptr, 0, 0 },
 			{ "splash", "on", ENUM, ON_OFF, 0, 0 },

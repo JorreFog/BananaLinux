@@ -23,6 +23,7 @@
 #include "theme.h"
 #include "zip.h"
 #include "sound.h"
+#include "idle.h"
 #include "menu.h"
 #include "carts.h"
 #include "layout.h"
@@ -472,6 +473,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	settings.setSync(true);
 	settings.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
 	LowBattery low;
+	IdleGuard guard;	// the burn-in guard's logic, driven by the `guard`/`idle` script commands (test only)
 	be.overlay = [&](int screen) { if (screen == 0 && low.showing(now)) settings.notice(low.title, low.body, low.percent); };
 	while (std::getline(ss, cmd, ';'))
 	{
@@ -482,6 +484,22 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		if (op == "home") { int s = 0; cs >> s; ui.setHome(s); }
 		else if (op == "lib") { int s = 0, g = 0; cs >> s >> g; lib.openLibrary(s); ui.setLibrary(s, g); }
 		else if (op == "wait") { double ms = 0; cs >> ms; now += ms; }
+		else if (op == "guard")
+		{
+			// guard <brightness file> <max file>: attach the burn-in guard to files instead of /sys (test only)
+			std::string bl, mx; cs >> bl >> mx;
+			guard.attach(bl, mx);
+			guard.input(now);
+			logf("guard: attached %s", bl.c_str());
+		}
+		else if (op == "idle")
+		{
+			// idle <ms>: let that much idle time pass and apply the guard's step
+			double ms = 0; cs >> ms;
+			now += ms;
+			bool ch = guard.tick(now, nullptr);
+			logf("guard: idle +%.0f ms -> stage %d, level %d%s", ms, guard.stage(), guard.level(), ch ? " (changed)" : "");
+		}
 		else if (op == "battery")
 		{
 			// battery <percent> [charging]: what /sys would say from now on
@@ -493,6 +511,9 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		else if (op == "press")
 		{
 			std::string b; cs >> b;
+			// the first press while the burn-in guard has the panel dimmed/off wakes it and is swallowed
+			if (guard.wake(now, nullptr)) { logf("press %s: swallowed by the burn-in guard", b.c_str()); continue; }
+			guard.input(now);
 			static const std::map<std::string, Key> keys = { { "left", Key::LEFT }, { "right", Key::RIGHT }, { "up", Key::UP }, { "down", Key::DOWN },
 				{ "a", Key::A }, { "b", Key::B }, { "x", Key::X }, { "y", Key::Y }, { "l", Key::L }, { "r", Key::R }, { "start", Key::START }, { "select", Key::SELECT } };
 			rnds::UI::Button btn;
@@ -554,6 +575,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			// touch <screen> <x> <y>: a tap, in px of a 640x480 panel
 			int scr = 1; float x = 0, y = 0;
 			cs >> scr >> x >> y;
+			if (guard.wake(now, nullptr)) { logf("touch %.0f %.0f: swallowed by the burn-in guard", x, y); continue; }
+			guard.input(now);
 			float k = o.h / 480.0f;
 			if (settings.isOpen() && scr == 1)
 			{
@@ -932,6 +955,7 @@ int main(int argc, char** argv)
 	sigaction(SIGINT, &sa, nullptr);
 	sigaction(SIGUSR1, &sa, nullptr);	// bananad after a resume: draw everything again
 	sigaction(SIGUSR2, &sa, nullptr);	// bananad after a volume or brightness key: the level card (/run/banana/osd)
+	sigaction(SIGHUP, &sa, nullptr);	// bananad before a sleep: hand the sound device over, stop the ambient loop
 	signal(SIGPIPE, SIG_IGN);
 
 	Display disp;
@@ -950,6 +974,7 @@ int main(int argc, char** argv)
 	FrameStats fstat;
 	ClockBoost boost;
 	sound.enabled = settings["sounds"] != "off";
+	sound.setBgm(settings["bgm"] != "off");		// the ambient loop, if the card or the image has one
 	lib.onCue = [&sound](const std::string& n) { sound.play(n); };
 
 	// the library and the menu are made on another thread while the boot animation plays
@@ -1010,6 +1035,11 @@ int main(int argc, char** argv)
 	Repeat rep;
 	bool dirty = true, quit = false, drawn = false;	// drawn: a frame on the canvas waiting for the flips
 	double quietUntil = 0;	// no frame before this: the last one flipped nothing (see present below)
+	// the AMOLED burn-in guard: the panel's backlight, owned here while the menu runs (bananad's own idle dim leaves
+	// it to us while /run/banana/bottom-ui is there). IdleGuard does the dim/blank/wake; attached just below.
+	IdleGuard guard;
+	std::string panelBl, panelBlMax;
+	bool swallowTouch = false;	// the press that woke the panel: its touch-up must not land either
 	int lastMinute = -1;
 	float scale = single ? disp.width() / 640.0f : disp.height() / 480.0f;
 	Settings settingsView(&be, o.assets, o.data, scale, variant);
@@ -1035,6 +1065,26 @@ int main(int argc, char** argv)
 		else settingsView.drawToast(t);	// (only while Settings is open: the account check's result)
 	};
 
+	// ---- AMOLED burn-in guard: the panel's backlight goes to a night level after 90 s idle and off after 180 s, and
+	// the first press or touch restores it and is swallowed (so it can't launch a game or change a setting) ----
+	{
+		std::string path;
+		{ std::ifstream f("/run/banana/backlight-bottom"); std::getline(f, path); }
+		if (path.empty() || access(path.c_str(), F_OK) != 0)
+		{
+			if (DIR* d = opendir("/sys/class/backlight"))
+			{
+				while (dirent* e = readdir(d)) if (e->d_name[0] != '.') { path = std::string("/sys/class/backlight/") + e->d_name; break; }
+				closedir(d);
+			}
+		}
+		if (!path.empty()) { panelBl = path + "/brightness"; panelBlMax = path + "/max_brightness"; }
+		// tell bananad the menu owns the panel's idle dim; its own dim then leaves this backlight to us
+		if (!panelBl.empty()) { std::ofstream o("/run/banana/bottom-ui"); o << "\n"; }
+	}
+	guard.attach(panelBl, panelBlMax);
+	guard.input(nowMs());
+
 	// what a change on the settings screen means for the menu (called with uiLock held)
 	auto applySettings = [&](Settings::Result r)
 	{
@@ -1048,6 +1098,7 @@ int main(int argc, char** argv)
 			lib.twelveHour = settings["clock"] == "12h";
 			lib.batteryShown = settings["battery"] == "percent" ? "text" : "icon";
 			sound.enabled = settings["sounds"] != "off";
+			sound.setBgm(settings["bgm"] != "off");
 			ui->dataChanged();
 			sound.play("select");
 			break;
@@ -1089,7 +1140,21 @@ int main(int argc, char** argv)
 
 	auto handle = [&](const InputEvent& ev)
 	{
-		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) boost.frame(nowMs());	// what it starts drawn fast
+		// the AMOLED guard: the first press or touch wakes the panel and is swallowed -- and, for a touch, its later
+		// up too, so waking the screen can't launch a game or change a setting
+		if (swallowTouch && (ev.type == InputEvent::TOUCH_MOVE || ev.type == InputEvent::TOUCH_UP))
+		{
+			if (ev.type == InputEvent::TOUCH_UP) swallowTouch = false;
+			return;
+		}
+		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN || ev.type == InputEvent::TOUCH_MOVE)
+		{
+			double t = nowMs();
+			if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) boost.frame(t);	// what it starts drawn fast
+			// the AMOLED guard: the first press or touch while dimmed/blanked wakes the panel and is swallowed
+			if (guard.wake(t, &sound)) { swallowTouch = ev.type == InputEvent::TOUCH_DOWN; sound.setBgm(settings["bgm"] != "off"); dirty = true; return; }
+			guard.input(t);
+		}
 		if ((ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) && low.hide(nowMs())) dirty = true;
 		if (settingsView.isOpen())
 		{
@@ -1217,6 +1282,8 @@ int main(int argc, char** argv)
 		ui->dataChanged();
 		ui->setLibrary(lib.currentShelf(), game);
 		if (disp.isOpen()) irisFromGame(disp, be, *ui);
+		sound.setBgm(settings["bgm"] != "off");	// the ambient loop comes back with the menu
+		guard.input(nowMs());			// the game's own time doesn't count as menu idle
 		dirty = true;
 		batteryDue = true;	// a step passed during the game shows now
 	};
@@ -1234,6 +1301,8 @@ int main(int argc, char** argv)
 	while (!quit)
 	{
 		double now = nowMs();
+		// the burn-in guard: dim the panel to a night level after 90 s idle, turn it off after 180 s
+		if (guard.tick(now, &sound) && guard.stage() == 2) sound.setBgm(false);	// blanked: let the sound device go too
 		{
 			std::lock_guard<std::mutex> l(worker.uiLock);
 			ui->update(now);
@@ -1378,6 +1447,11 @@ int main(int argc, char** argv)
 			int left = (int)(osdUntil - now) + 1;
 			if (timeout < 0 || left < timeout) timeout = left;
 		}
+		{
+			// ms until the burn-in guard's next step (dim at 90 s, blank at 180 s)
+			int g = guard.nextMs(now);
+			if (g >= 0 && (timeout < 0 || g < timeout)) timeout = g;
+		}
 
 		std::vector<pollfd> fds;
 		fds.push_back({ sigPipe[0], POLLIN, 0 });
@@ -1398,9 +1472,10 @@ int main(int argc, char** argv)
 				while (read(sigPipe[0], &c, 1) == 1)
 				{
 					if (c == SIGTERM || c == SIGINT) quit = true;
+					if (c == SIGHUP) sound.release();	// bananad is about to sleep: hand the sound device over
 					// after a wake: the kernel has the panels showing our buffers again; a redraw brings the clock and
 					// the battery up to date (no modeset: that would run the panels' power-on sequence once more)
-					if (c == SIGUSR1) { std::lock_guard<std::mutex> l(worker.uiLock); be.invalidate(); ui->dataChanged(); dirty = true; batteryDue = true; }
+					if (c == SIGUSR1) { std::lock_guard<std::mutex> l(worker.uiLock); be.invalidate(); ui->dataChanged(); dirty = true; batteryDue = true; guard.wake(nowMs(), &sound); sound.setBgm(settings["bgm"] != "off"); }
 					if (c == SIGUSR2)
 					{
 						// "volume 85" / "brightness 40", written just now (an old one is from a key pressed in a game)

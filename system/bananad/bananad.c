@@ -72,8 +72,10 @@ static void undim(void);
 static void find_bottom_bl(void);
 static char bottom_bl[64];	/* the panel's backlight name; banana-ui's idle dim owns it while it runs */
 static int headphones;
-static int fn_held, power_down;
+static int fn_held, select_held, power_down;
 static double power_since, last_input, ignore_power_until;
+static void sleep_quiet_begin(void);	/* the panel dark and the codec muted, before the DSP sleeps */
+static void sleep_quiet_end(void);	/* and back, on the way out of it */
 
 static volatile sig_atomic_t reload;
 static void on_hup(int sig) { (void)sig; reload = 1; }
@@ -359,6 +361,10 @@ static void suspend_now(const char *why)
 	pid_t game = pid_of("/run/banana/game.pid");
 	pid_t pg = game ? getpgid(game) : 0;
 	if (pg > 0) kill(-pg, SIGSTOP);	/* an emulator's dynarec mustn't run on while the clocks drop */
+	/* the menu's ambient loop, if any: stop it and have it release the DSP before the ADSP sleeps (SIGHUP), and give
+	 * it a moment to close the device; then darken the panel and mute the codec so nothing flashes or pops */
+	if (!game) { pid_t u = ui_pid(); if (u > 0) { kill(u, SIGHUP); usleep(200000); } }
+	sleep_quiet_begin();
 	hooks("pre", 0);
 	sync();
 	sleep_mode();
@@ -408,6 +414,7 @@ static void suspend_now(const char *why)
 	/* awake: the game and the menu first */
 	double t_wake = mono();
 	backlights_power(1);
+	sleep_quiet_end();
 	if (pg > 0) kill(-pg, SIGCONT);
 	pid_t ui = ui_pid();
 	if (ui && !game) kill(ui, SIGUSR1);	/* draws the panel again (the clock and the battery moved on) */
@@ -507,6 +514,51 @@ static int amixer_get(int card, const char *name, char *out, size_t n)
 	pclose(p);
 	while (got && (out[got - 1] == '\n' || out[got - 1] == '\r')) out[--got] = 0;
 	return got;
+}
+
+/* A sleep: the panel dark and the codec's playback volumes muted before the ADSP's clock stops, so the AMOLED does not
+ * flash and the amplifiers do not pop; both put back on the way out. The brightness levels are held here and not saved
+ * to the card: the user's own level is untouched. */
+static char sleep_bl_name[4][128];
+static int sleep_bl_val[4], sleep_bl_n;
+static char sleep_rx0[32], sleep_rx1[32];
+static void sleep_quiet_begin(void)
+{
+	sleep_bl_n = 0;
+	DIR *d = opendir("/sys/class/backlight");
+	struct dirent *e;
+	while (d && (e = readdir(d)) && sleep_bl_n < 4) {
+		if (e->d_name[0] == '.' || strlen(e->d_name) >= sizeof sleep_bl_name[0]) continue;
+		char p[600];
+		snprintf(p, sizeof p, "/sys/class/backlight/%.255s/brightness", e->d_name);
+		int cur = read_int(p, -1);
+		if (cur < 0) continue;
+		snprintf(sleep_bl_name[sleep_bl_n], sizeof sleep_bl_name[0], "%s", e->d_name);
+		sleep_bl_val[sleep_bl_n++] = cur;
+		write_file(p, "0");
+	}
+	if (d) closedir(d);
+	if (card_ar >= 0) {
+		amixer_get(card_ar, "RX_RX0 Digital Volume", sleep_rx0, sizeof sleep_rx0);
+		amixer_get(card_ar, "RX_RX1 Digital Volume", sleep_rx1, sizeof sleep_rx1);
+		cset(card_ar, "RX_RX0 Digital Volume", "0");
+		cset(card_ar, "RX_RX1 Digital Volume", "0");
+	}
+}
+static void sleep_quiet_end(void)
+{
+	for (int i = 0; i < sleep_bl_n; i++) {
+		char p[600], v[32];
+		snprintf(p, sizeof p, "/sys/class/backlight/%.255s/brightness", sleep_bl_name[i]);
+		snprintf(v, sizeof v, "%d", sleep_bl_val[i]);
+		write_file(p, v);
+	}
+	sleep_bl_n = 0;
+	if (card_ar >= 0) {
+		if (sleep_rx0[0]) cset(card_ar, "RX_RX0 Digital Volume", sleep_rx0);
+		if (sleep_rx1[0]) cset(card_ar, "RX_RX1 Digital Volume", sleep_rx1);
+	}
+	sleep_rx0[0] = sleep_rx1[0] = 0;
 }
 
 /* The audioreach card (the RPC): the frontends (MultiMedia1, MultiMedia2 -- the menu and RetroArch each open one)
@@ -694,7 +746,7 @@ static void volume(int dir)
 	if (pct >= 0) osd("volume", pct);
 }
 
-static void brightness(int dir)
+static void brightness(int dir, int step_pct)
 {
 	DIR *d = opendir("/sys/class/backlight");
 	if (!d) return;
@@ -707,10 +759,12 @@ static void brightness(int dir)
 		int max = read_int(p, 0);
 		snprintf(p, sizeof p, "/sys/class/backlight/%s/brightness", e->d_name);
 		int cur = read_int(p, 0);
-		int step = max * cfg.brightness_step / 100;
+		int step = max * step_pct / 100;
 		if (step < 1) step = 1;
+		int floor = max * 2 / 100;	/* a night-mode floor: 2%, dim but never a dead-looking panel */
+		if (floor < 1) floor = 1;
 		int nv = cur + dir * step;
-		if (nv < step) nv = step;	/* never fully dark: a black panel looks like a dead one */
+		if (nv < floor) nv = floor;
 		if (nv > max) nv = max;
 		snprintf(v, sizeof v, "%d", nv);
 		write_file(p, v);
@@ -1109,13 +1163,20 @@ static void handle(const struct input_event *e)
 	}
 	switch (e->code) {
 	case BTN_MODE: fn_held = e->value; break;
+	case BTN_SELECT: select_held = e->value; break;
 	case KEY_POWER:
 		if (now < ignore_power_until) break;
 		if (e->value) { power_down = 1; power_since = now; }
 		else if (power_down) { power_down = 0; suspend_now("power button"); }
 		break;
-	case KEY_VOLUMEUP: if (e->value) { if (fn_held) brightness(1); else volume(1); } break;
-	case KEY_VOLUMEDOWN: if (e->value) { if (fn_held) brightness(-1); else volume(-1); } break;
+	/* F + volume: the backlight, in games too. Select + volume: the same in a game (in the menu Select is the
+	 * search key), in 10% steps down to a 2% night-mode floor. */
+	case KEY_VOLUMEUP:
+		if (e->value) { int bright = fn_held || (select_held && pid_of("/run/banana/game.pid") > 0); if (bright) brightness(1, select_held && !fn_held ? 10 : cfg.brightness_step); else volume(1); }
+		break;
+	case KEY_VOLUMEDOWN:
+		if (e->value) { int bright = fn_held || (select_held && pid_of("/run/banana/game.pid") > 0); if (bright) brightness(-1, select_held && !fn_held ? 10 : cfg.brightness_step); else volume(-1); }
+		break;
 	}
 }
 

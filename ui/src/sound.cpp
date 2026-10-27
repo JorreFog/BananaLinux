@@ -74,10 +74,12 @@ static bool dspFrontendsFree()
 #ifdef BANANA_ALSA
 	// The menu plays on the same device as the games, and the card's output is a 48 kHz part: anything else
 	// is resampled there by alsa-lib's linear converter (the image has no speexrate). Convert each clip once, here,
-	// so the stream is always 48 kHz and no plug resampler is involved.
-	static void to48k(std::vector<int16_t>& pcm, int& rate, int channels)
+	// so the stream is always 48 kHz stereo and no plug resampler is involved. Mono (and >2-channel) clips are made
+	// stereo too, so a cue and the ambient loop can always share one stream.
+	static void to48k(std::vector<int16_t>& pcm, int& rate, int& channels)
 	{
-		if (rate == 48000 || channels < 1 || pcm.size() / channels < 2) return;
+		if (rate == 48000) return;	// (channels are fixed up by loadWav below)
+		if (channels < 1 || pcm.size() / channels < 2) return;
 		size_t frames = pcm.size() / channels, n = (size_t)((double)frames * 48000 / rate);
 		std::vector<int16_t> out(n * channels);
 		for (size_t i = 0; i < n; i++)
@@ -91,6 +93,19 @@ static bool dspFrontendsFree()
 		}
 		pcm.swap(out);
 		rate = 48000;
+	}
+
+	// every clip the menu plays is stereo (the mixer below writes one stream for the device)
+	static void toStereo(std::vector<int16_t>& pcm, int& channels)
+	{
+		if (channels == 2 || channels < 1 || pcm.size() / channels < 1) return;
+		size_t frames = pcm.size() / channels;
+		std::vector<int16_t> out(frames * 2);
+		for (size_t i = 0; i < frames; i++)
+			for (int c = 0; c < 2; c++)
+				out[i * 2 + c] = pcm[i * channels + (c < channels ? c : 0)];
+		pcm.swap(out);
+		channels = 2;
 	}
 #endif
 
@@ -108,11 +123,19 @@ static bool dspFrontendsFree()
 			if (got)
 			{
 #ifdef BANANA_ALSA
+				toStereo(c.pcm, c.channels);
 				to48k(c.pcm, c.rate, c.channels);
 #endif
 				clips[n] = std::move(c);
 			}
 		}
+		// the ambient background loop: a WAV on the card (bgm.wav, or music/bgm.wav), else the image's own default.
+		// Written by the user; the settings screen shows "Background Music" only when one is found.
+		for (const char* p : { "/data/bgm.wav", "/data/music/bgm.wav", "/usr/share/banana/bgm.wav" })
+			if (loadWav(p, bgm.pcm, bgm.rate, bgm.channels)) { bgmLoaded = true; break; }
+#ifdef BANANA_ALSA
+		if (bgmLoaded) { toStereo(bgm.pcm, bgm.channels); to48k(bgm.pcm, bgm.rate, bgm.channels); }
+#endif
 		th = std::thread([this] { run(); });
 	}
 
@@ -136,12 +159,26 @@ static bool dspFrontendsFree()
 		cv.notify_all();
 	}
 
+	void Sound::setBgm(bool on)
+	{
+		bgmOn = on && bgmLoaded;
+		cv.notify_all();	// a closed device has to know there is a loop to open for
+	}
+
+	void Sound::setBgmGain(int permille)
+	{
+		if (permille < 0) permille = 0;
+		if (permille > 1000) permille = 1000;
+		bgmGain = permille;
+	}
+
 	void Sound::release()
 	{
 		{
 			std::lock_guard<std::mutex> l(m);
 			closeNow = true;
 			queued.clear();
+			bgmOn = false;	// the game takes the device; main.cpp calls setBgm(true) again when it comes back
 		}
 		/* the DSP gives one stream per frontend: the game that is about to start opens the same one, so wait for the
 		 * thread to close it (it does within a frame or two) instead of racing it -- RetroArch's ALSA driver asserts
@@ -171,7 +208,7 @@ static bool dspFrontendsFree()
 		const auto QUIET = std::chrono::seconds(20);
 		snd_pcm_t* pcm = nullptr;
 		int openRate = 0, openCh = 0;
-		std::vector<int16_t> silence;
+		std::vector<int16_t> silence, mix;
 		auto closeDev = [&] { if (pcm) { snd_pcm_drop(pcm); snd_pcm_close(pcm); pcm = nullptr; devOpen = false; } };
 		// Where sound plays (speakers or headphones) is bananad's /run/banana/asound.conf, which it replaces when the
 		// jack changes. alsa-lib reads its configuration once per process (a file it loaded through a hook, as
@@ -235,21 +272,80 @@ static bool dspFrontendsFree()
 			n = 0; while (n < want.size() && isspace((unsigned char)want[n])) n++;	/* trim its front too */
 			return strcmp(want.c_str() + n, v) == 0;
 		};
+		/* The RPC's DSP (audioreach): a frontend's graph is instantiated at the open and takes the mixer values it
+		 * finds at that moment, and closing a stream tears that graph down -- asynchronously, which is the part that
+		 * matters here. So the order that works is: make sure nothing holds the frontend, write the route, open.
+		 * Written while a teardown is still running, the value is dropped with the graph it was meant for, and the
+		 * stream that opens next takes the topology's own "off" and stays silent for its whole life. run-retroarch
+		 * waits exactly this way; the menu now does the same. */
+		auto openDev = [&](const Clip& c) -> bool
+		{
+			if (long long r = routeId(); r != routeLoaded) { snd_config_update_free_global(); routeLoaded = r; }
+			if (access("/proc/asound/card0", F_OK) == 0)
+			{
+				snd_pcm_t* d = nullptr;
+				if (snd_pcm_open(&d, "default", SND_PCM_STREAM_PLAYBACK, 0) == 0) snd_pcm_close(d);
+				bool wasHeld = false;
+				for (int t = 0; t < 12 && !dspFrontendsFree(); t++)
+				{
+					wasHeld = true;
+					std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				}
+				/* A substream reads "closed" while the DSP is still tearing the graph down, and a frontend opened
+				 * into that window comes up half connected -- the speaker amplifiers answer every start attempt with
+				 * "start failure (-1)" and the sound is simply not there (measured on the RPC with a game and a menu
+				 * cue overlapping by a few hundred milliseconds). run-retroarch waits the same beat. */
+				if (wasHeld)
+					std::this_thread::sleep_for(std::chrono::milliseconds(600));
+				applyRoute();
+				if (first)	// one line, so a silent menu says what the DSP was told and what it answered
+				{
+					FILE* r = popen("amixer -c 0 cset name='SENARY_MI2S_RX Audio Mixer MultiMedia1' 2>/dev/null | sed -n 's/.*: *values=//p'", "r");
+					char v[64] = "";
+					if (r) { if (!fgets(v, sizeof v, r)) strcpy(v, "?"); pclose(r); }
+					size_t n = strlen(v); while (n && (v[n - 1] == '\n' || v[n - 1] == '\r')) v[--n] = 0;
+					fprintf(stderr, "banana-ui: sound: the speaker route reads '%s' before the first cue\n", v);
+					first = false;
+				}
+			}
+			if (snd_pcm_open(&pcm, "default", SND_PCM_STREAM_PLAYBACK, 0) < 0) { pcm = nullptr; return false; }
+			if (snd_pcm_set_params(pcm, SND_PCM_FORMAT_S16_LE, SND_PCM_ACCESS_RW_INTERLEAVED, c.channels, c.rate, 1, 30000) < 0)
+			{
+				snd_pcm_close(pcm); pcm = nullptr; return false;
+			}
+			openRate = c.rate; openCh = c.channels;
+			devOpen = true;
+			silence.assign((size_t)(openRate / 100) * openCh, 0);
+			return true;
+		};
+		auto writeFrames = [&](const int16_t* p, size_t frames) -> bool
+		{
+			while (frames > 0)
+			{
+				snd_pcm_sframes_t w = snd_pcm_writei(pcm, p, (snd_pcm_uframes_t)frames);	// blocks while the buffer is full
+				if (w < 0) { if (snd_pcm_recover(pcm, (int)w, 1) < 0) return false; continue; }
+				frames -= (size_t)w; p += (size_t)w * openCh;
+			}
+			return true;
+		};
 		const Clip* cur = nullptr;
 		size_t at = 0;			// cur's next frame
+		size_t bgmAt = 0;		// the loop's next frame
 		auto lastSound = std::chrono::steady_clock::now();
 		for (;;)
 		{
 			std::string name;
 			{
 				std::unique_lock<std::mutex> l(m);
-				if (!pcm) cv.wait(l, [this] { return stop || closeNow || !queued.empty(); });	// closed: nothing to do
+				// closed: nothing to do until a cue, a game's release, or the loop wanting the device again
+				if (!pcm) cv.wait(l, [this] { return stop || closeNow || !queued.empty() || bgmOn.load(); });
 				if (stop) break;
 				if (closeNow) { closeDev(); cur = nullptr; closeNow = false; continue; }	// a game is starting
 				name = queued;
 				queued.clear();
 			}
 			auto now = std::chrono::steady_clock::now();
+			const bool wantBgm = bgmOn.load();
 			if (!name.empty())
 			{
 				const Clip& c = clips[name];
@@ -261,77 +357,58 @@ static bool dspFrontendsFree()
 					if (!routeIsAsPublished()) closeDev();
 				}
 				if (pcm && (openRate != c.rate || openCh != c.channels)) closeDev();
-				if (!pcm)
-				{
-					if (long long r = routeId(); r != routeLoaded) { snd_config_update_free_global(); routeLoaded = r; }
-					/* The RPC's DSP (audioreach): a frontend's graph is instantiated at the open and takes the mixer
-					 * values it finds at that moment, and closing a stream tears that graph down -- asynchronously,
-					 * which is the part that matters here. So the order that works is: make sure nothing holds the
-					 * frontend, write the route, open. Written while a teardown is still running, the value is dropped
-					 * with the graph it was meant for, and the stream that opens next takes the topology's own "off"
-					 * and stays silent for its whole life. run-retroarch waits exactly this way; the menu now does
-					 * the same: open and close the frontend to bring the graph down to a known state, wait for it to
-					 * be free, write the route bananad chose for the jack (speakers or headphones), then open. */
-					if (access("/proc/asound/card0", F_OK) == 0)
-					{
-						snd_pcm_t* d = nullptr;
-						if (snd_pcm_open(&d, "default", SND_PCM_STREAM_PLAYBACK, 0) == 0) snd_pcm_close(d);
-						bool wasHeld = false;
-						for (int t = 0; t < 12 && !dspFrontendsFree(); t++)
-						{
-							wasHeld = true;
-							std::this_thread::sleep_for(std::chrono::milliseconds(100));
-						}
-						/* A substream reads "closed" while the DSP is still tearing the graph down, and a frontend
-						   opened into that window comes up half connected -- the speaker amplifiers answer every start
-						   attempt with "start failure (-1)" and the sound is simply not there (measured on the RPC with
-						   a game and a menu cue overlapping by a few hundred milliseconds). run-retroarch waits the
-						   same beat; the menu has to, coming back from a game, as well. */
-						if (wasHeld)
-							std::this_thread::sleep_for(std::chrono::milliseconds(600));
-						applyRoute();
-						if (first)	// one line, so a silent menu says what the DSP was told and what it answered
-						{
-							FILE* r = popen("amixer -c 0 cset name='SENARY_MI2S_RX Audio Mixer MultiMedia1' 2>/dev/null | sed -n 's/.*: *values=//p'", "r");
-							char v[64] = "";
-							if (r) { if (!fgets(v, sizeof v, r)) strcpy(v, "?"); pclose(r); }
-							size_t n = strlen(v); while (n && (v[n - 1] == '\n' || v[n - 1] == '\r')) v[--n] = 0;
-							fprintf(stderr, "banana-ui: sound: the speaker route reads '%s' before the first cue\n", v);
-							first = false;
-						}
-					}
-					if (snd_pcm_open(&pcm, "default", SND_PCM_STREAM_PLAYBACK, 0) < 0) { pcm = nullptr; continue; }
-					if (snd_pcm_set_params(pcm, SND_PCM_FORMAT_S16_LE, SND_PCM_ACCESS_RW_INTERLEAVED, c.channels, c.rate, 1, 30000) < 0)
-					{
-						snd_pcm_close(pcm); pcm = nullptr; continue;
-					}
-					openRate = c.rate; openCh = c.channels;
-					devOpen = true;
-					silence.assign((size_t)(openRate / 100) * openCh, 0);
-				}
+				if (!pcm && !openDev(c)) continue;
 				cur = &c;
 				at = 0;
 				lastSound = now;
 			}
-			else if (!cur && now - lastSound >= quiet) { closeDev(); continue; }
+			else if (!cur)
+			{
+				// nothing to play: keep the stream open for the loop, else let it go after a quiet spell
+				if (!wantBgm && now - lastSound >= quiet) { closeDev(); continue; }
+				if (!pcm && wantBgm && bgmLoaded && !openDev(bgm)) continue;
+			}
+			if (!pcm) continue;
 			// the jack changed while the stream runs (every 250 ms): the next sound opens where sound plays now
 			if (++routeCheck >= 25) { routeCheck = 0; if (routeId() != routeLoaded) { closeDev(); cur = nullptr; continue; } }
-			// the next 10 ms: the sound's, or silence
-			const int16_t* p = silence.data();
-			snd_pcm_sframes_t frames = (snd_pcm_sframes_t)(silence.size() / openCh);
-			if (cur)
+
+			const bool haveBgm = wantBgm && bgmLoaded && bgmGain.load() > 0;
+			size_t nframes = (size_t)(openRate / 100);	// the next 10 ms: the cue, the loop, or silence
+			if (!cur && !haveBgm)
 			{
-				size_t total = cur->pcm.size() / openCh;
-				frames = (snd_pcm_sframes_t)std::min<size_t>((size_t)frames, total - at);
-				p = cur->pcm.data() + at * openCh;
-				at += (size_t)frames;
-				if (at >= total) { cur = nullptr; lastSound = now; }
+				if (!writeFrames(silence.data(), silence.size() / openCh)) { closeDev(); continue; }
 			}
-			while (frames > 0)
+			else
 			{
-				snd_pcm_sframes_t w = snd_pcm_writei(pcm, p, (snd_pcm_uframes_t)frames);	// blocks while the buffer is full
-				if (w < 0) { if (snd_pcm_recover(pcm, (int)w, 1) < 0) { closeDev(); cur = nullptr; break; } continue; }
-				frames -= w; p += w * openCh;
+				// the cue at full level, the ambient loop (a few percent) under it: one stream, mixed here
+				if (mix.size() < nframes * openCh) mix.resize(nframes * openCh);
+				std::fill(mix.begin(), mix.begin() + nframes * openCh, 0);
+				if (cur)
+				{
+					size_t total = cur->pcm.size() / openCh;
+					size_t take = std::min(nframes, total - at);
+					const int16_t* s = cur->pcm.data() + at * openCh;
+					std::copy(s, s + take * openCh, mix.begin());
+					at += take;
+					if (at >= total) { cur = nullptr; lastSound = now; }
+				}
+				if (haveBgm && !bgm.pcm.empty())
+				{
+					size_t total = bgm.pcm.size() / openCh;
+					int g = bgmGain.load();
+					for (size_t i = 0; i < nframes; i++)
+					{
+						size_t j = bgmAt + i; if (j >= total) j -= total;	// (bgmAt < total, nframes short)
+						for (int c = 0; c < openCh; c++)
+						{
+							int v = mix[i * openCh + c] + (int)bgm.pcm[j * openCh + c] * g / 1000;
+							if (v > 32767) v = 32767; else if (v < -32768) v = -32768;
+							mix[i * openCh + c] = (int16_t)v;
+						}
+					}
+					bgmAt = (bgmAt + nframes) % total;
+				}
+				if (!writeFrames(mix.data(), nframes)) { closeDev(); cur = nullptr; continue; }
 			}
 		}
 		closeDev();

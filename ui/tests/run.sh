@@ -95,6 +95,30 @@ for size in 640x480 1024x768; do
         { echo "FAIL $size: banana-ui (x on a game) exited $?"; fail=1; }
     grep -q "settings open" "$xlog" && { echo "FAIL $size: X opened a settings page"; fail=1; }
     [ -s "$OUT/$size-xgame-top.png" ] && [ -s "$OUT/$size-xgame-bot.png" ] || { echo "FAIL $size: no xgame shot"; fail=1; }
+    # Background Music: the Display & sound row (the seventh) toggles settings.conf's bgm, off then back on
+    grep -q '^bgm = ' "$FX/data/settings.conf" && sed -i 's/^bgm = .*/bgm = on/' "$FX/data/settings.conf" || printf 'bgm = on\n' >> "$FX/data/settings.conf"
+    blog=$OUT/$size-bgm.log
+    run_bgm() { "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" \
+        --systems "$HERE/tests/systems.conf" --roms "$FX/roms" --data "$FX/data" --script "$1" 2>> "$blog" ||
+        { echo "FAIL $size: banana-ui (bgm) exited $?"; fail=1; }; }
+    run_bgm "home 0; press start; press a; press down; press down; press down; press down; press down; press down; press right; shot bgm-off"
+    grep -q '^bgm = off' "$FX/data/settings.conf" || { echo "FAIL $size: Background Music Off didn't save: $(grep '^bgm' "$FX/data/settings.conf")"; fail=1; }
+    run_bgm "home 0; press start; press a; press down; press down; press down; press down; press down; press down; press right; shot bgm-on"
+    grep -q '^bgm = on' "$FX/data/settings.conf" || { echo "FAIL $size: Background Music On didn't save: $(grep '^bgm' "$FX/data/settings.conf")"; fail=1; }
+    for s in bgm-off bgm-on; do [ -s "$OUT/$size-$s-top.png" ] || { echo "FAIL $size: no $s shot"; fail=1; }; done
+    # the AMOLED burn-in guard: 90 s idle dims the panel to 5%, 180 s blanks it, and the first press restores it and
+    # is swallowed (it must not act on the menu)
+    glog=$OUT/$size-guard.log
+    printf '200\n' > "$FX/bl"; printf '255\n' > "$FX/blmax"
+    "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" \
+        --systems "$HERE/tests/systems.conf" --roms "$FX/roms" --data "$FX/data" \
+        --script "home 0; guard $FX/bl $FX/blmax; idle 90000; wait 1; shot guard-dim; idle 90000; wait 1; shot guard-blank; press a; wait 1; shot guard-wake" 2> "$glog" ||
+        { echo "FAIL $size: banana-ui (guard) exited $?"; fail=1; }
+    grep -q "guard: idle +90000 ms -> stage 1, level 12" "$glog" || { echo "FAIL $size: the guard didn't dim to 5%: $(grep 'guard: idle' "$glog" | tr '\n' '|')"; fail=1; }
+    grep -q "guard: idle +90000 ms -> stage 2, level 0" "$glog" || { echo "FAIL $size: the guard didn't blank the panel"; fail=1; }
+    grep -q "press a: swallowed by the burn-in guard" "$glog" || { echo "FAIL $size: waking the panel wasn't swallowed"; fail=1; }
+    [ "$(cat "$FX/bl")" = 200 ] || { echo "FAIL $size: the guard didn't restore the brightness: $(cat "$FX/bl")"; fail=1; }
+    for s in guard-dim guard-blank guard-wake; do [ -s "$OUT/$size-$s-top.png" ] || { echo "FAIL $size: no $s shot"; fail=1; }; done
     # Settings > System's two resets: the system one puts the menu's own keys back (theme, sounds, ...) and leaves
     # the emulator's (core.gba, ra_shader) alone; then the emulator one puts those back and leaves the menu's alone
     rlog=$OUT/$size-reset.log
