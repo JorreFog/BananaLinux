@@ -27,16 +27,18 @@ if [ "$CORE" = swanstation ]; then
     mkdir -p "$R/config/$C"
     # Written once: a card from before gets Banana's choices, and a change made in RetroArch's own menu afterwards is
     # kept (as run-retroarch's .banana-defaults-1 does). Delete the marker to have the defaults written again.
-    M=$R/.banana-swans-1
+    M=$R/.banana-swans-3
     if [ ! -f "$M" ]; then
-        printf 'video_scale_integer = "%s"\n' "$INT" > "$R/config/$C/$C.cfg"
+        # SwanStation draws its own output; RetroArch's integer scaler is off so the core fills the viewport with its
+        # own (4:3) aspect.
+        printf 'video_scale_integer = "false"\n' > "$R/config/$C/$C.cfg"
         {
             printf '%s\n' '# Banana: the RPC defaults (run-ps1, written once)'
-            # Hardware rendering on the GPU through the frontend's GLES context (the RPC has no Vulkan driver, so
-            # SwanStation's OpenGL backend is the hardware one). 1x internal resolution is the safe speed on the A55;
-            # a game that wants sharper pixels can be raised in RetroArch's own core options.
-            printf 'swanstation_GPU_Renderer = "OpenGL"\n'
-            printf 'swanstation_GPU_ResolutionScale = "1"\n'
+            # DuckStation's software GPU renderer: it draws on the CPU (multithreaded), which on this handheld is
+            # faster than the freedreno OpenGL path for now, and glitch-free. (The RPC has no Vulkan driver, so
+            # SwanStation's Vulkan backend is unavailable.) A faster GPU path can be chosen in RetroArch's core options.
+            printf 'swanstation_GPU_Renderer = "Software"\n'
+            printf 'swanstation_GPU_UseThread = "true"\n'
             # RetroArch's on-screen-message widget layer is not turned with the panel (only the menu texture and the
             # game are), so core OSD lines would read sideways; keep them off.
             printf 'swanstation_Display_ShowOSDMessages = "false"\n'
