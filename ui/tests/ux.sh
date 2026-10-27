@@ -26,8 +26,8 @@ ux_check row "press left: used, view 0 sys 5"     # (six systems: Ports with Por
 ux_lt "$(ux_std "$OUT/$size-ux-row-first-bot.png" 210 80 30 200)" 0.08 || { echo "FAIL $size: something drawn left of the first system"; fail=1; }
 ux_lt "$(ux_std "$OUT/$size-ux-row-last-bot.png" 210 80 400 200)" 0.08 || { echo "FAIL $size: something drawn right of the last system"; fail=1; }
 
-# the box art's frame (Pixel): one size for every game, the picture fitted in it; the frame's top edge and its shadow
-# are the same pixels for a landscape cover, a tall one and a game with none (they moved with the picture's size)
+# the box art's frame (Pixel): it fits the picture (owner, 0.5.0: a square frame stood taller than a DS box): a tall
+# cover's frame top is elsewhere than a wide one's, and a game without one keeps the square
 convert -size 260x420 "gradient:#3d9e9a-black" "$UXFX/roms/nds/media/box/Peel Quest.png"
 ux_run cover "lib 0 0; wait 2400; shot ux-cover-wide; press right; wait 2400; shot ux-cover-none; press right; wait 2400; shot ux-cover-tall"
 ux_strip() { convert "$1" -crop "$(awk -v k=$ux_k -v y=$2 -v h=$3 'BEGIN { printf "%dx%d+%d+%d", 250 * k, h * k, 38 * k, y * k }')" +repage "$4"; }
@@ -35,11 +35,7 @@ for s in wide none tall; do
     ux_strip "$OUT/$size-ux-cover-$s-top.png" 146 9 "$OUT/$size-ux-cover-$s-edge.png"
     ux_strip "$OUT/$size-ux-cover-$s-top.png" 380 14 "$OUT/$size-ux-cover-$s-shadow.png"
 done
-for s in none tall; do
-    for part in edge shadow; do
-        [ "$(ux_diff "$OUT/$size-ux-cover-wide-$part.png" "$OUT/$size-ux-cover-$s-$part.png")" = 0 ] || { echo "FAIL $size: the cover's $part moved ($s)"; fail=1; }
-    done
-done
+[ "$(ux_diff "$OUT/$size-ux-cover-wide-edge.png" "$OUT/$size-ux-cover-tall-edge.png")" = 0 ] && { echo "FAIL $size: the frame didn't follow the cover's shape"; fail=1; }
 
 # the text on the accent (Auto): dark or light by contrast, the second line in the accent's hue and readable (4.5:1);
 # blue's sublabel is a blue, not the brown that suited yellow only. Light: white text, the plate's START too

@@ -1550,10 +1550,11 @@ namespace rnds
 			CacheEntry* ce = coverArt(gm.box);
 			bool pending = ce == nullptr && !gm.box.empty();
 			if (ce && !ce->sp.valid()) ce = nullptr;
-			// Banana: one frame for every game (COVER_W x COVER_H), the picture fitted in it and centred, the shadow the
-			// frame's: covers of different shapes no longer move the frame and its shadow about while the list scrolls
-			const float FW = COVER_W, FH = COVER_H;
-			float w = ce ? ce->cssW : FW, h = ce ? ce->cssH : FH;
+			// Banana: the frame fits the picture (fitted into COVER_W x COVER_H, centred on the same spot): a DS box's
+			// frame no longer stands taller than the box (owner, 0.5.0). The square frame only while the picture loads
+			// or for a game without one (the system's icon in it); the shadow follows the frame's width
+			float w = ce ? ce->cssW : COVER_W, h = ce ? ce->cssH : COVER_H;
+			const float FW = w, FH = h;
 			float b = bob();
 			float x = std::round(cx - FW / 2), y = std::round(cy - FH / 2) + ry;
 			// the shadow: narrower while the cover is up
