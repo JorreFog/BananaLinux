@@ -117,6 +117,9 @@ amixer -q -c 0 cset "name=RX_RX1 Digital Volume" 84 2>/dev/null
 amixer -q -c 0 cset "name=HPHL Volume" 20 2>/dev/null
 amixer -q -c 0 cset "name=HPHR Volume" 20 2>/dev/null
 amixer -q -c 0 cset "name=ADC2 Volume" 10 2>/dev/null
+# the capture frontend (RFC's UCM SectionVerb: MultiMedia3 -> TX_CODEC_DMA_TX_3): the mic the WCD937x
+# records through. Without it capture is unrouted however the gains are set.
+amixer -q -c 0 cset "name=MultiMedia3 Mixer TX_CODEC_DMA_TX_3" 1 2>/dev/null
 mark "rcS: sound routed ($i tries)"
 
 banana-perf ui
