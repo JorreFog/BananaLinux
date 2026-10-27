@@ -307,7 +307,7 @@ static void drain_inputs(void)
  * button pressed in a bag, the battery check): straight back to sleep, without running anything again. */
 static void shutdown_now(const char *why);
 static int battery_discharging_pct(void);
-static int sleep_fallback;		/* 0 as configured; 1 devices one at a time; 2 also s2idle (a suspend failed) */
+static int sleep_fallback;		/* 0 as configured; 1 devices one at a time; 2 also s2idle (a suspend failed, this sleep) */
 
 static void sleep_log(const char *fmt, ...)
 {
@@ -392,6 +392,9 @@ static void suspend_now(const char *why)
 	if (pg > 0) kill(-pg, SIGSTOP);	/* DraStic's dynarec mustn't run on while the clocks drop (ROCKNIX's finding) */
 	hooks("pre", 0);
 	sync();
+	/* every sleep starts the configured way: a failed suspend is one device's, that time, and s2idle kept for good
+	 * after it would cost every night after (it barely saves anything over awake with the panels off) */
+	sleep_fallback = 0;
 	sleep_mode();
 	int cycles = 0, rtc_wakes = 0, failures = 0, dark = 0;
 	double asleep = 0, dark_from = 0, led_at = 0;
@@ -416,7 +419,7 @@ static void suspend_now(const char *why)
 		double t_in = mono();
 		struct timespec b0, b1;
 		clock_gettime(CLOCK_BOOTTIME, &b0);	/* BOOTTIME counts the time asleep, MONOTONIC doesn't */
-		if (cycles == 0) sleep_log("sleep (%s): %.0f ms to suspend%s", why, (t_in - t0) * 1000, game ? ", game paused" : "");
+		if (cycles == 0 && failures == 0) sleep_log("sleep (%s): %.0f ms to suspend%s", why, (t_in - t0) * 1000, game ? ", game paused" : "");
 		int r = write_file("/sys/power/state", "mem");
 		int err = errno;
 		clock_gettime(CLOCK_BOOTTIME, &b1);
@@ -425,7 +428,6 @@ static void suspend_now(const char *why)
 		read_str("/sys/class/rtc/rtc0/wakealarm", pending, sizeof pending);
 		int rtc_fired = alarm && (!pending[0] || time(NULL) >= alarm);
 		rtc_alarm(0);
-		cycles++;
 		if (r) {
 			/* it didn't suspend: devices one at a time, then the lighter s2idle, then give up and blank the panels */
 			failures++;
@@ -436,6 +438,7 @@ static void suspend_now(const char *why)
 			lid_retry_off = 1;	/* ...and not tried again every 5 s with the lid still shut */
 			break;
 		}
+		cycles++;	/* the suspends that happened: a failed one doesn't count as "slept again" */
 		asleep += (b1.tv_sec - b0.tv_sec) + (b1.tv_nsec - b0.tv_nsec) / 1e9;
 		/* why it woke: the battery check's alarm, or someone (lid, power button) */
 		if (rtc_fired) {

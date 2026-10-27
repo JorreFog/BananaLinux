@@ -159,7 +159,8 @@ When `/sys/power/state` returns:
   the headphone route; the press that woke it is ignored.
 
 If a suspend fails, bananad goes on more carefully by itself: devices one at a time, then `s2idle`; if even that
-fails with the lid shut, both backlights go off until it opens. With lid sleep switched off, closing the lid only
+fails with the lid shut, both backlights go off until it opens. That is for the one sleep: the next one starts the
+configured way again (`deep`), as `s2idle` kept for good would cost every night after. With lid sleep switched off, closing the lid only
 turns the backlights off. Every sleep is a line in `banana/logs/sleep.log` (time to suspend, time asleep, why it
 woke, how long the game and the menu took to come back); with `sleep_debug = yes` the kernel's per-device times go
 to `banana/logs/sleep-devices.log`, slowest first.
