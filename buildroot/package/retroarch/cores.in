@@ -19,11 +19,25 @@ config BR2_PACKAGE_LIBRETRO_GAMBATTE
 	help
 	  Game Boy and Game Boy Color.
 
+config BR2_PACKAGE_LIBRETRO_SAMEBOY
+	bool "libretro-sameboy"
+	default y
+	help
+	  Game Boy and Game Boy Color, with SameBoy: the most accurate, the
+	  alternative core for the system in Settings.
+
 config BR2_PACKAGE_LIBRETRO_FCEUMM
 	bool "libretro-fceumm"
 	default y
 	help
 	  NES and Famicom.
+
+config BR2_PACKAGE_LIBRETRO_NESTOPIA
+	bool "libretro-nestopia"
+	default y
+	help
+	  NES and Famicom, with NEStopia: more accurate than FCEUmm, the
+	  alternative core for the system in Settings.
 
 config BR2_PACKAGE_LIBRETRO_SNES9X
 	bool "libretro-snes9x"
@@ -31,11 +45,26 @@ config BR2_PACKAGE_LIBRETRO_SNES9X
 	help
 	  Super Nintendo.
 
+config BR2_PACKAGE_LIBRETRO_BSNES
+	bool "libretro-bsnes"
+	default y
+	help
+	  Super Nintendo, with bsnes: cycle-accurate, the alternative core
+	  for the system in Settings (heavier than snes9x).
+
 config BR2_PACKAGE_LIBRETRO_PICODRIVE
 	bool "libretro-picodrive"
 	default y
 	help
 	  Mega Drive, Master System, Mega CD and 32X.
+
+config BR2_PACKAGE_LIBRETRO_GENESIS_PLUS_GX
+	bool "libretro-genesis-plus-gx"
+	default y
+	help
+	  Mega Drive, Master System, Game Gear and Mega CD, with Genesis
+	  Plus GX: more accurate than PicoDrive, the alternative core for
+	  the system in Settings.
 
 config BR2_PACKAGE_LIBRETRO_PCSX_REARMED
 	bool "libretro-pcsx-rearmed"
@@ -56,6 +85,13 @@ config BR2_PACKAGE_LIBRETRO_MUPEN64PLUS_NEXT
 	default y
 	help
 	  Nintendo 64, with GLES3 and its ARM64 dynamic recompiler.
+
+config BR2_PACKAGE_LIBRETRO_PARALLEL_N64
+	bool "libretro-parallel-n64"
+	default y
+	help
+	  Nintendo 64, with ParaLLEl N64: the alternative core for the
+	  system in Settings (Mupen64Plus-Next is the default).
 
 config BR2_PACKAGE_LIBRETRO_FAKE08
 	bool "libretro-fake08"

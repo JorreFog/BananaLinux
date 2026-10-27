@@ -1,0 +1,19 @@
+From: ROCKNIX <https://github.com/ROCKNIX>
+Subject: [PATCH] parallel-n64: build with GCC 14 (declare `stop` after the dynarec guard)
+
+Ported from ROCKNIX's projects/ROCKNIX/packages/emulators/libretro/parallel-n64-lr/
+patches/001-gcc-13.patch (the arm64 path needs `stop` declared after the
+NEW_DYNAREC_ARM guard to build with a modern GCC).
+
+--- a/mupen64plus-core/src/r4300/r4300.c
++++ b/mupen64plus-core/src/r4300/r4300.c
+@@ -50,8 +50,8 @@
+ unsigned int r4300emu = 0;
+ unsigned int count_per_op = COUNT_PER_OP_DEFAULT;
+ unsigned int llbit;
+-int stop;
+ #if NEW_DYNAREC < NEW_DYNAREC_ARM
++int stop;
+ int64_t reg[32], hi, lo;
+ uint32_t next_interrupt;
+ struct precomp_instr *PC;

@@ -46,6 +46,7 @@ namespace banana
 			{ "ra_shader", "off", ENUM, SHADERS, 0, 0, true },
 			{ "ra_audio_latency", "64", ENUM, LATENCY, 0, 0, true },
 			{ "ra_vsync", "on", ENUM, ON_OFF, 0, 0, true },
+			{ "ra_scale", "on", ENUM, ON_OFF, 0, 0, true },
 			{ "share", "off", ENUM, ON_OFF, 0, 0 },
 			{ "ssh", "off", ENUM, ON_OFF, 0, 0 },
 			{ "timezone", "UTC0", TIMEZONE, nullptr, 0, 0 },

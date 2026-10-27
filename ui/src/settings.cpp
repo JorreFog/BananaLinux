@@ -308,10 +308,24 @@ namespace banana
 			menu, "ra_audio_latency", { "Low (32 ms)", "Default (64 ms)", "Safe (128 ms)" }, { "32", "64", "128" });
 		add(O, "picture", "VSync", "On waits for the panel's refresh before drawing the next frame, so nothing tears. Off lets a core run as fast as it can; the panel can show a half-drawn frame.",
 			menu, "ra_vsync", { "On", "Off" }, { "on", "off" });
+		add(O, "picture", "Integer scaling", "On packs the game into whole-pixel multiples with black borders (crisp, square pixels). Off fills the screen with the core's own aspect ratio.",
+			menu, "ra_scale", { "On", "Off" }, { "on", "off" });
 		if (access("/usr/lib/libretro/mgba_libretro.so", F_OK) == 0)
 			add(O, "gamepad", "Game Boy Advance", "The emulator for GBA games. gpSP: the fastest. mGBA: the most accurate, and the one RetroAchievements accepts for hardcore.", menu, "core.gba", { "gpSP", "mGBA" }, { "gpsp", "mgba" });
 		if (access("/usr/lib/libretro/swanstation_libretro.so", F_OK) == 0)
 			add(O, "gamepad", "PlayStation", "The emulator for PlayStation games. SwanStation (DuckStation): hardware rendering and much greater accuracy, heavier. PCSX-ReARMed: lightest, and the one to fall back to when a game is slow.", menu, "core.psx", { "SwanStation", "PCSX-ReARMed" }, { "swanstation", "pcsx_rearmed" });
+		if (access("/usr/lib/libretro/nestopia_libretro.so", F_OK) == 0)
+			add(O, "gamepad", "Nintendo Entertainment System", "The emulator for NES games. FCEUmm: the lightest. NEStopia: more accurate, a little heavier.", menu, "core.nes", { "FCEUmm", "NEStopia" }, { "fceumm", "nestopia" });
+		if (access("/usr/lib/libretro/bsnes_libretro.so", F_OK) == 0)
+			add(O, "gamepad", "Super Nintendo", "The emulator for SNES games. Snes9x: fast, and the usual choice. bsnes: cycle-accurate, much heavier.", menu, "core.snes", { "Snes9x", "bsnes" }, { "snes9x", "bsnes" });
+		if (access("/usr/lib/libretro/sameboy_libretro.so", F_OK) == 0)
+			add(O, "gamepad", "Game Boy", "The emulator for Game Boy games. Gambatte: fast and accurate. SameBoy: the most accurate, and the one that renders the original LCD best.", menu, "core.gb", { "Gambatte", "SameBoy" }, { "gambatte", "sameboy" });
+		if (access("/usr/lib/libretro/sameboy_libretro.so", F_OK) == 0)
+			add(O, "gamepad", "Game Boy Color", "The emulator for Game Boy Color games. Gambatte: fast and accurate. SameBoy: the most accurate.", menu, "core.gbc", { "Gambatte", "SameBoy" }, { "gambatte", "sameboy" });
+		if (access("/usr/lib/libretro/genesis_plus_gx_libretro.so", F_OK) == 0)
+			add(O, "gamepad", "Mega Drive", "The emulator for Mega Drive games. PicoDrive: the lightest (32X too). Genesis Plus GX: more accurate for Mega CD.", menu, "core.megadrive", { "PicoDrive", "Genesis Plus GX" }, { "picodrive", "genesis_plus_gx" });
+		if (access("/usr/lib/libretro/parallel_n64_libretro.so", F_OK) == 0)
+			add(O, "gamepad", "Nintendo 64", "The emulator for N64 games. Mupen64Plus-Next: the usual choice, with its own GLideN64. ParaLLEl N64: the alternative.", menu, "core.n64", { "Mupen64Plus-Next", "ParaLLEl N64" }, { "mupen64plus_next", "parallel_n64" });
 		const char* W = "Network";
 		add(W, "phone", "Wi-Fi", "", menu, "wifi", { "On", "Off" }, { "on", "off" });
 		add(W, "phone", "Network", "The networks around: A on one joins it, with a password typed on the keyboard here (or by touch).", "", "network", {}, {}, Item::PAGE);
