@@ -218,6 +218,43 @@ def main():
         check(g.startswith("Make your own theme") and ref == "Layout themes", "Guide opens the guides, and their links work", (g, ref))
         ff.js("document.querySelector('#guide').remove()")
 
+        # Optimize for the handheld: the findings in their groups, a click selects the element, Apply is one undo step
+        ff.js("BananaStudio.state.unsaved = false; document.querySelector('[data-tab=theme]').click();"
+              "Array.from(document.querySelectorAll('#pane-theme button')).find((b) => b.textContent === 'Turntable').click();")
+        settle(ff, 500)
+        before = ff.js("return JSON.stringify(BananaStudio.themeOut())")
+        ff.js("document.querySelector('#optimizeBtn').click()")
+        groups = ff.js("return Array.from(document.querySelectorAll('#optimize .opt-group h3')).map((h) => h.textContent.trim())")
+        check(len(groups) >= 2 and groups[0].startswith("Safe") and any(g.startswith("Changes the look") for g in groups), "Optimize lists the findings in their groups", groups)
+        ticked = ff.js("return Array.from(document.querySelectorAll('#optimize .opt-group.look input.one')).some((c) => c.checked)")
+        check(ticked is False, "...the look fixes start unticked")
+        sel = ff.js("const r = document.querySelector('#optimize .opt-group.look .opt-row'); r.click(); return [document.querySelector('#optimize .opt-detail h3').textContent, JSON.stringify(BananaStudio.state.sel)]")
+        check(sel[0] and sel[1] != "null", "...a click shows the detail and selects its element", sel)
+        ff.js("document.querySelectorAll('#optimize .opt-group.look input.one').forEach((c) => { c.checked = true; c.dispatchEvent(new Event('change')); });"
+              "document.querySelector('#optimize .opt-foot button.primary').click();")
+        settle(ff, 800)
+        after = ff.js("return JSON.stringify(BananaStudio.themeOut())")
+        left = ff.js("return BananaOptimize.analyze(BananaStudio.themeOut(), {}).filter((f) => f.category !== 'advice').map((f) => f.id)")
+        check(after != before and "time" not in after.replace("launch.t", "").replace("sys.time", "").replace("game.time", ""), "Apply holds the turntable still", left)
+        ff.js("BananaStudio.undo()")
+        settle(ff, 300)
+        check(ff.js("return JSON.stringify(BananaStudio.themeOut())") == before, "...and one Undo takes all of it back")
+
+        # a picture far bigger than it is drawn: a smaller copy, attached beside it, named by the theme
+        big = base64.b64encode(png(1600, 1200, (200, 60, 20))).decode()
+        ff.js_async("const j = JSON.stringify({ name: 'Pic', screens: { home: { top: [ { type: 'image', src: 'pic/wall.png', w: 200, h: 150, fit: 'cover' } ] } } });"
+                    "const p = (function () { " + FILE + " })(arguments[0], 'wall.png', 'image/png');"
+                    "BananaStudio.state.unsaved = false; BananaStudio.openFiles([new File([j], 'pic.json'), p]).then(() => arguments[arguments.length - 1](1));", big)
+        settle(ff, 500)
+        ff.js("document.querySelector('#optimizeBtn').click(); document.querySelectorAll('#optimize input.one').forEach((c) => { c.checked = true; c.dispatchEvent(new Event('change')); });"
+              "document.querySelector('#optimize .opt-foot button.primary').click();")
+        ff.wait("return !document.querySelector('#optimize')", 20)
+        settle(ff, 500)
+        pic = ff.js("const a = BananaStudio.state.assets; return [BananaStudio.state.theme.screens.home.top[0].src, Object.keys(a).sort(), a['pic/wall.400x300.png'] && a['pic/wall.400x300.png'].info]")
+        check(pic[0] == "pic/wall.400x300.png" and pic[1] == ["pic/wall.400x300.png", "pic/wall.png"] and pic[2] and pic[2]["w"] == 400 and pic[2]["h"] == 300,
+              "Optimize shrinks a too-big picture into a new attached copy (the original kept)", pic)
+        check(ff.js(PIXEL, 0, 100, 75) == [200, 60, 20], "...which the preview draws")
+
         # the last theme is offered again after a reload
         ff.js("BananaStudio.loadTheme({ name: 'Kept', screens: { home: { top: [ { type: 'rect', fill: '#00ff00' } ] } } }); BananaStudio.markDirty();")
         settle(ff, 1500)

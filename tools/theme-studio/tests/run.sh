@@ -22,6 +22,9 @@ echo
 echo "== expressions (port vs the real engine) =="
 node "$D/expr.test.js"
 echo
+echo "== Optimize for the handheld (optimize.js) =="
+node "$D/optimize.test.js"
+echo
 echo "== the browser's engine (wasm) vs banana-ui =="
 node "$D/engine.test.js"
 echo

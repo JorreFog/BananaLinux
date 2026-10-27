@@ -1521,6 +1521,152 @@
       (missing.length ? " — not found beside it: " + missing.join(", ") + " (open the theme's folder or .zip to bring them)" : ""), missing.length ? "" : "ok");
   }
 
+  // ---- Optimize for the handheld (optimize.js, the desktop studio's rules) ------------------------------------------
+  // The findings in three groups: Safe (the screens look exactly the same; ticked), Look (changes the look a little or
+  // trades motion for speed; not ticked) and Advice (by hand). A finding's detail, and its element selected in the
+  // tree, on a click. Apply is one step of undo. A shrunk picture is a new file beside the original (attached, and in
+  // Export), which the theme then names; the original is not touched.
+  const OPT = G.BananaOptimize;
+  function pictureSizes() {
+    const o = {};
+    Object.keys(state.assets).forEach((p) => { const i = state.assets[p].info; if (i && i.w && i.h) o[p] = { w: i.w, h: i.h }; });
+    return o;
+  }
+  // the element a finding's path is in: screens.<view>.<side>[i] or components.<name>, then children[i] / item
+  // steps (a property's path ends in its key, a state's in states[i]...)
+  function elementPath(path) {
+    let n;
+    if (path[0] === "screens" && path.length >= 3) n = typeof path[3] === "number" ? 4 : 3;
+    else if (path[0] === "components" && path.length >= 2) n = 2;
+    else return null;
+    for (;;) {
+      if (path[n] === "children" && typeof path[n + 1] === "number") n += 2;
+      else if (path[n] === "item" || (path[n] === "children" && n + 1 >= path.length)) n += 1;
+      else break;
+    }
+    const p = path.slice(0, n), v = getPath(p);
+    return v && typeof v === "object" && !Array.isArray(v) ? p : null;
+  }
+  function selectFinding(f) {
+    const p = elementPath(f.path);
+    if (!p) return;
+    if (p[0] === "screens" && S.VIEWS.indexOf(p[1]) >= 0) { state.view = p[1]; state.screen = p[2]; }
+    state.sel = p;
+    for (let n = 3; n < p.length; n++) state.open[JSON.stringify(p.slice(0, n))] = true;
+    showTab("properties", "inspector"); renderTree(); rerender();
+  }
+  function openOptimize() {
+    let box = $("#optimize");
+    if (!box) {
+      box = h("div", { id: "optimize", class: "modal", role: "dialog", "aria-label": "Optimize for the handheld" });
+      box.addEventListener("click", (e) => { if (e.target === box) box.remove(); });
+      document.body.appendChild(box);
+    }
+    box.innerHTML = "";
+    const doc = themeOut(), files = pictureSizes();
+    const found = OPT.analyze(doc, files);
+    const ticked = {};
+    found.forEach((f) => { ticked[f.id] = f.category === OPT.SAFE && f.fixable; });
+    const card = h("div", { class: "card opt" });
+    const head = h("div", { class: "tabs" }, h("b", { style: "padding:4px 6px" }, "Optimize for the handheld"));
+    const close = h("button", { type: "button", class: "ghost", title: "Close (Esc)" }, "✕"); close.onclick = () => box.remove();
+    head.appendChild(h("span", { style: "flex:1" })); head.appendChild(close);
+    card.appendChild(head);
+    if (!found.length) {
+      card.appendChild(h("div", { class: "md" }, h("p", null, isObj(doc.screens) ? "Nothing to do: nothing in this theme makes the handheld work harder than it has to." : "This is a colour theme (no screens): there is nothing to optimize.")));
+      box.appendChild(card); return;
+    }
+    const body = h("div", { class: "opt-body" });
+    const list = h("div", { class: "opt-list" }), detail = h("div", { class: "opt-detail md" });
+    detail.appendChild(h("p", { class: "muted" }, "What makes a theme slow on the handhelds is mostly something that keeps a screen redrawing when nothing happens: anything reading \"time\", easing that never settles, long settle times. Click a finding to read about it and see its element."));
+    const apply = h("button", { type: "button", class: "primary" });
+    const countTicked = () => { const n = found.filter((f) => ticked[f.id]).length; apply.textContent = n ? "Apply " + n + " fix" + (n === 1 ? "" : "es") : "Apply"; apply.disabled = !n; };
+    [OPT.SAFE, OPT.LOOK, OPT.ADVICE].forEach(function (cat) {
+      const fs = found.filter((f) => f.category === cat);
+      if (!fs.length) return;
+      const grp = h("div", { class: "opt-group " + cat });
+      const all = h("input", { type: "checkbox", title: "tick all of these" });
+      if (cat !== OPT.ADVICE) { all.checked = fs.every((f) => ticked[f.id]); all.onchange = () => { fs.forEach((f) => { ticked[f.id] = all.checked; }); grp.querySelectorAll("input.one").forEach((c) => { c.checked = all.checked; }); countTicked(); }; }
+      grp.appendChild(h("h3", { class: "sec" }, cat !== OPT.ADVICE ? all : null, " " + OPT.CATEGORIES[cat] + " (" + fs.length + ")"));
+      fs.forEach(function (f) {
+        const row = h("div", { class: "opt-row w" + f.weight, title: f.saving || "" });
+        if (f.fixable && cat !== OPT.ADVICE) {
+          const c = h("input", { type: "checkbox", class: "one" }); c.checked = !!ticked[f.id];
+          c.onchange = () => { ticked[f.id] = c.checked; countTicked(); };
+          row.appendChild(c);
+        } else row.appendChild(h("span", { class: "dot" }, "•"));
+        const t = h("span", { class: "t" }, f.title);
+        row.appendChild(t);
+        row.onclick = (e) => {
+          if (e.target.tagName === "INPUT") return;
+          list.querySelectorAll(".opt-row.on").forEach((r) => r.classList.remove("on")); row.classList.add("on");
+          detail.innerHTML = "";
+          detail.appendChild(h("h3", null, f.title));
+          detail.appendChild(h("p", null, f.detail));
+          if (f.saving) detail.appendChild(h("p", null, h("b", null, "Gain: "), f.saving));
+          detail.appendChild(h("p", { class: "muted mono", style: "font-size:11px" }, OPT.pathStr(f.path) + "  ·  " + ["tidying", "small", "heavy work while moving", "keeps a screen redrawing"][f.weight]));
+          selectFinding(f);
+        };
+        grp.appendChild(row);
+      });
+      list.appendChild(grp);
+    });
+    body.appendChild(list); body.appendChild(detail);
+    card.appendChild(body);
+    apply.onclick = async () => {
+      const chosen = found.filter((f) => ticked[f.id]);
+      const pics = chosen.filter((f) => f.rule === "image-cap");
+      if (pics.length && !confirm("Make smaller copies of " + pics.length + " picture" + (pics.length === 1 ? "" : "s") + "?\n\n" +
+        pics.map((f) => f.data.ref + ": " + f.data.old.join("x") + " -> " + f.data.new.join("x")).join("\n") +
+        "\n\nThe theme will name the copies (they are attached and go into Export); the originals stay as they are.")) return;
+      const r = OPT.apply(doc, chosen, files);
+      const made = [];
+      for (const c of r.changes) {
+        try { putAsset(c.dst, c.dst.split("/").pop(), await shrinkPicture(state.assets[c.src], c.newSize[0], c.newSize[1])); made.push(c.dst); }
+        catch (e) { alert("Couldn't make " + c.dst + ": " + e.message + ". The theme keeps naming " + c.ref + "."); restoreRef(r.doc, c); }
+      }
+      // as one step of undo: the theme as the optimizer left it (with the members the editor shows kept)
+      state.theme = r.doc; normalize();
+      if (state.sel && getPath(state.sel) === undefined) state.sel = null;
+      markDirty(); renderAll(); rerender();
+      const left = OPT.analyze(themeOut(), pictureSizes());
+      setStatus("optimized: " + (chosen.length) + " fix" + (chosen.length === 1 ? "" : "es") + (made.length ? ", " + made.length + " smaller picture(s)" : "") + "; " +
+        left.filter((f) => f.category !== OPT.ADVICE).length + " finding(s) left (Undo takes it all back)", "ok");
+      box.remove();
+    };
+    countTicked();
+    const foot = h("div", { class: "ctl opt-foot" }, apply, h("span", { class: "muted", style: "font-size:12px" }, "Safe fixes keep every pixel the same (checked with the engine). Look fixes change the motion or a picture a little: tick them one by one and watch the preview. Apply is one step of Undo."));
+    card.appendChild(foot);
+    box.appendChild(card);
+  }
+  function restoreRef(doc, c) {
+    (function scan(v, par, key) {
+      if (typeof v === "string") { if (v === c.dst && par) par[key] = c.ref; }
+      else if (Array.isArray(v)) v.forEach((x, i) => scan(x, v, i));
+      else if (v && typeof v === "object") Object.keys(v).forEach((k) => scan(v[k], v, k));
+    })(doc, null, null);
+  }
+  const isObj = (v) => v && typeof v === "object" && !Array.isArray(v);
+  // a picture at w x h (smooth, as Qt's SmoothTransformation in the desktop studio): PNG stays PNG, JPEG is JPEG 92
+  async function shrinkPicture(a, w, hh) {
+    if (!a) throw new Error("the original isn't attached");
+    const jpeg = a.info && a.info.type === "jpeg";
+    const bmp = await createImageBitmap(new Blob([a.bytes], { type: jpeg ? "image/jpeg" : "image/png" }));
+    const cv = document.createElement("canvas"); cv.width = w; cv.height = hh;
+    const ctx = cv.getContext("2d"); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
+    // halving steps first, then the last step: closer to an area average than one bilinear jump
+    let src = bmp, sw = bmp.width, sh = bmp.height;
+    while (sw / 2 >= w && sh / 2 >= hh) {
+      const t = document.createElement("canvas"); t.width = Math.round(sw / 2); t.height = Math.round(sh / 2);
+      const tc = t.getContext("2d"); tc.imageSmoothingQuality = "high"; tc.drawImage(src, 0, 0, t.width, t.height);
+      src = t; sw = t.width; sh = t.height;
+    }
+    ctx.drawImage(src, 0, 0, w, hh);
+    const blob = await new Promise((res) => cv.toBlob(res, jpeg ? "image/jpeg" : "image/png", 0.92));
+    if (!blob) throw new Error("the browser couldn't encode it");
+    return new Uint8Array(await blob.arrayBuffer());
+  }
+
   // ---- the guides (docs/MAKE-A-THEME.md, docs/THEMES.md, the colour keys), inlined by make-templates.py ----
   function slug(t) { return t.toLowerCase().replace(/<[^>]+>/g, "").replace(/[^\w\- ]+/g, "").trim().replace(/ /g, "-"); }
   function inline(t) {
@@ -1707,11 +1853,12 @@
     $("#redoBtn").onclick = redo;
     $("#copyBtn").onclick = () => { const t = themeText(); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => setStatus("copied", "ok"), () => { const ta = h("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); } catch (e) {} ta.remove(); setStatus("copied", "ok"); }); };
     $("#validateBtn").onclick = doValidate;
+    $("#optimizeBtn").onclick = openOptimize;
     $("#templatesBtn").onclick = () => { showTab("properties", "theme"); const t = $("#pane-theme .templates"); if (t) t.scrollIntoView(); setStatus("Pick a starting point under “Start from a template”.", ""); };
     $("#guideBtn").onclick = () => openGuide("make");
     window.addEventListener("keydown", (e) => {
       const mod = e.ctrlKey || e.metaKey;
-      if (e.key === "Escape" && $("#guide")) { $("#guide").remove(); return; }
+      if (e.key === "Escape" && $(".modal")) { $(".modal").remove(); return; }
       if (!mod) return;
       const k = e.key.toLowerCase();
       if (k === "s") { e.preventDefault(); if (e.shiftKey) exportZip(); else saveTheme(); }
@@ -1765,5 +1912,5 @@
   // for tests (tests/browser.test.py) and the console
   G.BananaStudio = { state: state, themeOut: themeOut, themeText: themeText, loadTheme: loadTheme, openFiles: openFiles, zipBytes: zipBytes,
     undo: undo, redo: redo, validate: validate, pushTheme: pushTheme, markDirty: markDirty, renderAll: renderAll, openGuide: openGuide, setIcon: setIcon, resetIcon: resetIcon,
-    stills: doStills, setLibrary: setLibrary, press: press, live: live };
+    stills: doStills, setLibrary: setLibrary, press: press, live: live, openOptimize: openOptimize, elementPath: elementPath };
 })();

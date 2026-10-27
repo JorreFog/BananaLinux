@@ -28,6 +28,7 @@
 }
 
 * { box-sizing: border-box; }
+body, button, input, select, textarea { font-variant-ligatures: none; }	/* (Pixelify Sans draws "fi" like an "A") */
 html, body { height: 100%; }
 body {
   margin: 0; color: var(--ink); background: var(--page) var(--pattern) repeat; background-size: 8px 8px;
@@ -263,3 +264,18 @@ body.dropping .app { outline: 3px dashed var(--accent); outline-offset: -6px; }
 .md td, .md th { border: 1px solid var(--tile-line); padding: 3px 8px; vertical-align: top; text-align: left; }
 .md a { color: var(--accent); }
 .md blockquote { border-left: 4px solid var(--accent); margin: 8px 0; padding: 2px 10px; color: var(--soft); }
+
+/* ---- Optimize for the handheld ---- */
+.modal .card.opt { width: min(1100px, 100%); height: min(720px, 100%); }
+.opt-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
+.opt-list { overflow: auto; padding: 6px 12px; border-right: 2px solid var(--tile-line); }
+.opt-detail { overflow: auto; }
+.opt-group h3 { display: flex; align-items: center; gap: 6px; }
+.opt-row { display: flex; gap: 6px; align-items: flex-start; padding: 3px 6px; border-radius: 6px; cursor: pointer; font-size: 13px; color: var(--text); font-family: system-ui, sans-serif; }
+.opt-row:hover { background: var(--tile); }
+.opt-row.on { background: var(--accent); color: #191820; }
+.opt-row input { margin-top: 2px; flex: none; }
+.opt-row .dot { width: 16px; text-align: center; color: var(--soft); flex: none; }
+.opt-row.w3 .t::after { content: "  ●●●"; color: var(--bad); font-size: 9px; }
+.opt-row.w2 .t::after { content: "  ●●"; color: var(--warn); font-size: 9px; }
+.opt-foot { padding: 8px 12px; border-top: 2px solid var(--tile-line); flex-wrap: nowrap; }
