@@ -4826,7 +4826,7 @@ namespace banana
 		std::thread([c, user, pass, token]
 		{
 			int kind = 3;
-			std::string l2 = "No connection: check Wi-Fi, then try again from the setup";
+			std::string l2 = "No answer from the site: no connection, or it is down";
 			Curl cu;
 			if (cu.load())
 				if (void* h = cu.init())

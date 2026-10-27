@@ -944,3 +944,4 @@ settings		Fetch art for new games	为新游戏获取封面
 settings		{have} of {all} games have art	{all} 个游戏中有 {have} 个已有封面
 settings		Logged in as {name}	已登录为 {name}
 settings		Checking {name}...	正在检查 {name}…
+settings		No answer from the site: no connection, or it is down	网站无响应：没有网络连接，或网站已关闭
