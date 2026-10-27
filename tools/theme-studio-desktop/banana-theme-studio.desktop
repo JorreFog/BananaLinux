@@ -1,9 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=Banana Theme Studio
-Comment=Design BananaOS layout themes
-# for a menu entry, point Exec at an absolute path to theme_studio.py (or symlink it into ~/.local/bin)
-Exec=python3 tools/theme-studio-desktop/theme_studio.py %f
-Icon=applications-graphics
-Terminal=false
-Categories=Graphics;Development;

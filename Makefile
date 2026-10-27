@@ -2,18 +2,15 @@
 #
 #   make rgds          the RG DS's SD card image        -> output/rgds/images/banana-rgds.img.gz
 #   make rgds-plus     the RG DS Plus's SD card image   -> output/rgds-plus/images/banana-rgds-plus.img.gz
-#   make universal     one card for both                -> output/universal/images/banana-universal.img.gz
 #   make ui            banana-ui for this computer (headless renders, no panels needed)
 #   make test          renders the menu headless from a test library and checks it (needs ImageMagick)
-#   make theme-studio  the layout-theme editor's tests (the expression port, the preview server, the schema)
-#   make theme-studio-desktop  the PySide6 designer's smoke test
 #   make menuconfig-rgds / linux-menuconfig-rgds ...   any Buildroot target, per board
 #
 # The first image build downloads Buildroot (below) and everything it builds: expect an hour or more.
 BUILDROOT_VERSION = 2026.02.3
 BUILDROOT_DIR ?= $(CURDIR)/.buildroot
 OUT ?= $(CURDIR)/output
-BOARDS = rgds rgds-plus universal
+BOARDS = rgds rgds-plus
 
 $(BUILDROOT_DIR)/Makefile:
 	git clone --depth 1 --branch $(BUILDROOT_VERSION) https://github.com/buildroot/buildroot $(BUILDROOT_DIR)
@@ -36,16 +33,8 @@ ui:
 test: ui
 	ui/tests/run.sh
 
-# tools/theme-studio: the layout-theme editor's tests (expr.js vs ui/src/expr.cpp, the preview server, the schema)
-theme-studio: ui
-	sh tools/theme-studio/tests/run.sh
-
-# the PySide6 designer's headless smoke test (needs PySide6)
-theme-studio-desktop:
-	python3 tools/theme-studio-desktop/tests/smoke.py
-
 clean:
 	rm -rf $(OUT)
 	$(MAKE) -C ui clean
 
-.PHONY: $(BOARDS) ui test theme-studio theme-studio-desktop clean
+.PHONY: $(BOARDS) ui test clean

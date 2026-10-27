@@ -99,55 +99,9 @@ Everything so far changes colours and files. A theme that *also* has a `screens`
 itself: what is on each screen, where it is, how big, what colour, and how it moves. `canvas.json` is one, and it
 is the best thing to read while you learn.
 
-You do not have to hand-write it. **Use the editor.**
+You do not have to hand-write it — the format is documented below for reference.
 
-## 3. The theme editor
-
-There are two versions, and they look and work the same. Take whichever suits you.
-
-**In a browser, offline**
-
-```sh
-xdg-open tools/theme-studio/index.html      # or just double-click the file
-```
-
-Everything works with no server, except the preview. For a **live preview drawn by the menu's own engine**, start
-the little server instead:
-
-```sh
-python3 tools/theme-studio/serve.py         # builds banana-ui if it can, then opens the page
-```
-
-**As a desktop app**
-
-```sh
-python3 tools/theme-studio-desktop/theme_studio.py
-```
-
-It needs Python 3 and PySide6 (`pip install PySide6`).
-
-### What you do in it
-
-- **Pick a screen.** The menu has a *home* view (your systems), a *library* view (the games in one system), a
-  *launch* view (the moment a game starts) and *all* (a bar drawn over every view). Each has a top and a bottom
-  screen. The buttons at the top move between them.
-- **Click something to change it.** The panel at the side shows everything about whatever is selected: its
-  position and size, its colour, its text, its font. Change one and the preview updates. The desktop editor draws
-  both screens on a canvas, so you can also drag things about and resize them with the mouse; they snap to the
-  screen's edges and centre, to each other and to a grid.
-- **Add new things** from the palette: shapes, text, pictures, groups, ready-made lists (a games grid, a system
-  carousel, the button hints) and status pieces (the clock, the battery, the Wi-Fi signal).
-- **Reorder** in the layer list: later in the list is drawn on top.
-- **Save** writes the theme's `.json`. Then copy it — and its folder, if it has one — into `banana/themes/`.
-
-The exact preview is the menu's own engine drawing your theme — not the editor's redrawing of it — so what you see
-is what the handheld shows.
-
-**Keep your themes out of the repository.** Both editors start their Open and Save dialogs in `~/BananaThemes`,
-which is where your themes should live on your computer, so they never turn up in a commit. The web editor can be
-pointed elsewhere with `python3 tools/theme-studio/serve.py --themes ~/BananaThemes`.
-
-## 4. How a theme is put together
+## 3. How a theme is put together
 
 In plain words, since it helps to know what you are looking at.
 
@@ -185,7 +139,7 @@ shows what the expression comes to beside the field; the desktop editor also com
 (`"ink": "#101010"`), and `components` is a piece you design once and drop in as many times as you like — change
 the component and every copy follows.
 
-## 5. Trying it on the handheld
+## 4. Trying it on the handheld
 
 Copy your `.json` (and its folder, if it has one) into `banana/themes/` on the card, then pick it in
 **Settings ▸ Display & sound ▸ Theme**. If you changed a file the menu is already showing, pick the theme again.
@@ -194,7 +148,7 @@ To work on a theme without unplugging anything, turn on **Settings ▸ Network �
 your Wi-Fi as a network folder, so you can copy your files straight in — or let the editor's **Send to handheld**
 write them for you.
 
-## 6. Sharing your theme
+## 5. Sharing your theme
 
 A theme is its `.json` plus its folder, if it has one. Zip those together and post the zip — that is what the
 themes in [banana-themes](https://github.com/jesussaves-ai/banana-themes) are.
@@ -202,7 +156,7 @@ themes in [banana-themes](https://github.com/jesussaves-ai/banana-themes) are.
 Worth doing: put a `name` and an `author` in the file, and say which BananaOS it was made for. Pictures and fonts
 are your own or openly licensed — a lot of the old console and computer fonts are not.
 
-## 7. When something looks wrong
+## 6. When something looks wrong
 
 **The theme is not in the list.** The file has to be named `something.json` and sit directly in `banana/themes/`,
 not in a folder inside it.
@@ -218,7 +172,7 @@ on a grey) and the position you typed (280 is fine, 680 is off the 640-wide scre
 
 **A list looks empty.** An empty library is not a bug: that system has no games in `roms/` on the card.
 
-## 8. Where to go next
+## 7. Where to go next
 
 - **[THEMES.md](THEMES.md)** — every element, every property, every expression function. The full reference.
 - **[canvas.json](../system/rootfs/usr/share/banana/themes/canvas.json)** — a complete example layout theme, and
