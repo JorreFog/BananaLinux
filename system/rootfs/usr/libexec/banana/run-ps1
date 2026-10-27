@@ -1,49 +1,79 @@
 #!/bin/sh
-# PlayStation: PCSX-ReArmed (libretro), the aarch64 ari64 dynarec with its NEON software rasterizer. RetroArch gives it
-# the GLES/KMSDRM output on the panel (run-retroarch owns the panel, the shader, the saves and RetroAchievements); this
-# launcher only sets what the core needs on the RPC's Snapdragon and hands over.
+# PlayStation: the core picked in Settings > Other systems > PlayStation (settings.conf's core.psx). SwanStation is
+# the libretro core of DuckStation: hardware rendering on the GPU and much greater accuracy, heavier on the Cortex-A55.
+# PCSX-ReArmed is the ari64 dynarec with its NEON software rasterizer, the lightest. run-retroarch owns the panel, the
+# shader, the saves and RetroAchievements; this launcher only sets what the core needs on the RPC and hands over.
 #   run-ps1 <rom>
-[ -f /usr/lib/libretro/pcsx_rearmed_libretro.so ] || { echo "PCSX-ReArmed isn't installed" >&2; exit 1; }
+setting() {
+    v=$(sed -n "s/^ *$1 *= *//p" /data/banana/settings.conf 2>/dev/null | tail -n 1)
+    [ -n "$v" ] || v=$(sed -n "s/^ *$1 *= *//p" /etc/banana/settings.conf 2>/dev/null | tail -n 1)
+    printf '%s' "$v"
+}
 R=/data/retroarch
-C=PCSX-ReARMed
-mkdir -p "$R/config/$C"
+CORE=$(setting core.psx); [ -n "$CORE" ] || CORE=swanstation
+[ -f "/usr/lib/libretro/${CORE}_libretro.so" ] || CORE=pcsx_rearmed
+[ -f "/usr/lib/libretro/${CORE}_libretro.so" ] || { echo "no PlayStation core installed" >&2; exit 1; }
 
-# Written once: a card from before gets Banana's choices, and a change made in RetroArch's own menu afterwards is kept
-# (as run-retroarch's .banana-defaults-1 does). Delete the marker to have the defaults written again.
-M=$R/.banana-psx-1
-if [ ! -f "$M" ]; then
-    # Scaling: a 320x240 PS1 frame is an exact 3x on the RPC's 720-tall drawing area (integer keeps the pixels square);
-    # a card that reports nothing falls back to integer scaling.
-    H=$(cat /sys/class/drm/card*-*/modes 2>/dev/null | sed -n '1s/^[0-9]*x\([0-9]*\).*/\1/p' | tr -d ' \r')
-    case ${H:-480} in
-    7[0-9][0-9]) INT=false ;;      # 768p: fill the panel
-    *)             INT=true  ;;   # 480p / 1240 (the RPC's turned panel): a clean integer scale
-    esac
-    printf 'video_scale_integer = "%s"\n' "$INT" > "$R/config/$C/$C.cfg"
+# Scaling: a 320x240 PS1 frame is an exact 3x on the RPC's 720-tall drawing area (integer keeps the pixels square); a
+# card that reports nothing falls back to integer scaling.
+H=$(cat /sys/class/drm/card*-*/modes 2>/dev/null | sed -n '1s/^[0-9]*x\([0-9]*\).*/\1/p' | tr -d ' \r')
+case ${H:-480} in
+7[0-9][0-9]) INT=false ;;      # 768p: fill the panel
+*)             INT=true  ;;   # 480p / 1240 (the RPC's turned panel): a clean integer scale
+esac
 
-    # Core options (config/<core>/<core>.opt, RetroArch's per-core override): the ari64 dynarec runs at full speed, so
-    # frameskip is 'auto' only as an audio safety net (a late frame is dropped rather than crackling); GPU commands run
-    # on a second core, the SPU on the main one (the threaded SPU glitches in some games). The values are the strings
-    # the core lists, not the labels.
-    O=$R/config/$C/$C.opt
-    {
-        printf '%s\n' '# Banana: the RPC defaults (run-ps1, written once)'
-        printf 'pcsx_rearmed_drc = "enabled"\n'
-        printf 'pcsx_rearmed_region = "auto"\n'
-        printf 'pcsx_rearmed_psxclock = "auto"\n'
-        printf 'pcsx_rearmed_frameskip_type = "auto"\n'
-        printf 'pcsx_rearmed_gpu_thread_rendering = "enabled"\n'
-        printf 'pcsx_rearmed_spu_thread = "disabled"\n'
-        printf 'pcsx_rearmed_spu_interpolation = "simple"\n'
-        # CD-DA and XA decoding: the PS1's only audio sources. Both must stay enabled or every game is silent.
-        printf 'pcsx_rearmed_nocdaudio = "disabled"\n'
-        printf 'pcsx_rearmed_noxadecoding = "disabled"\n'
-        printf 'pcsx_rearmed_scale_hires = "enabled"\n'
-        printf 'pcsx_rearmed_neon_enhancement_enable = "disabled"\n'
-        printf 'pcsx_rearmed_dithering = "enabled"\n'
-        printf 'pcsx_rearmed_vibration = "enabled"\n'
-    } > "$O"
-    touch "$M"
+if [ "$CORE" = swanstation ]; then
+    C=SwanStation
+    mkdir -p "$R/config/$C"
+    # Written once: a card from before gets Banana's choices, and a change made in RetroArch's own menu afterwards is
+    # kept (as run-retroarch's .banana-defaults-1 does). Delete the marker to have the defaults written again.
+    M=$R/.banana-swans-1
+    if [ ! -f "$M" ]; then
+        printf 'video_scale_integer = "%s"\n' "$INT" > "$R/config/$C/$C.cfg"
+        {
+            printf '%s\n' '# Banana: the RPC defaults (run-ps1, written once)'
+            # Hardware rendering on the GPU through the frontend's GLES context (the RPC has no Vulkan driver, so
+            # SwanStation's OpenGL backend is the hardware one). 1x internal resolution is the safe speed on the A55;
+            # a game that wants sharper pixels can be raised in RetroArch's own core options.
+            printf 'swanstation_GPU_Renderer = "OpenGL"\n'
+            printf 'swanstation_GPU_ResolutionScale = "1"\n'
+            # RetroArch's on-screen-message widget layer is not turned with the panel (only the menu texture and the
+            # game are), so core OSD lines would read sideways; keep them off.
+            printf 'swanstation_Display_ShowOSDMessages = "false"\n'
+        } > "$R/config/$C/$C.opt"
+        touch "$M"
+    fi
+else
+    CORE=pcsx_rearmed
+    C=PCSX-ReARMed
+    mkdir -p "$R/config/$C"
+    M=$R/.banana-psx-1
+    if [ ! -f "$M" ]; then
+        printf 'video_scale_integer = "%s"\n' "$INT" > "$R/config/$C/$C.cfg"
+        # Core options (config/<core>/<core>.opt, RetroArch's per-core override): the ari64 dynarec runs at full
+        # speed, so frameskip is 'auto' only as an audio safety net (a late frame is dropped rather than crackling);
+        # GPU commands run on a second core, the SPU on the main one (the threaded SPU glitches in some games). The
+        # values are the strings the core lists, not the labels.
+        O=$R/config/$C/$C.opt
+        {
+            printf '%s\n' '# Banana: the RPC defaults (run-ps1, written once)'
+            printf 'pcsx_rearmed_drc = "enabled"\n'
+            printf 'pcsx_rearmed_region = "auto"\n'
+            printf 'pcsx_rearmed_psxclock = "auto"\n'
+            printf 'pcsx_rearmed_frameskip_type = "auto"\n'
+            printf 'pcsx_rearmed_gpu_thread_rendering = "enabled"\n'
+            printf 'pcsx_rearmed_spu_thread = "disabled"\n'
+            printf 'pcsx_rearmed_spu_interpolation = "simple"\n'
+            # CD-DA and XA decoding: the PS1's only audio sources. Both must stay enabled or every game is silent.
+            printf 'pcsx_rearmed_nocdaudio = "disabled"\n'
+            printf 'pcsx_rearmed_noxadecoding = "disabled"\n'
+            printf 'pcsx_rearmed_scale_hires = "enabled"\n'
+            printf 'pcsx_rearmed_neon_enhancement_enable = "disabled"\n'
+            printf 'pcsx_rearmed_dithering = "enabled"\n'
+            printf 'pcsx_rearmed_vibration = "enabled"\n'
+        } > "$O"
+        touch "$M"
+    fi
 fi
 
 # run-retroarch owns the panel. RetroArch loads this core's own config after its --appendconfig, so a video_monitor_index
@@ -54,4 +84,4 @@ if grep -q -e '^ *video_monitor_index *=' -e '^ *stdin_cmd_enable *=' "$CF" 2>/d
     sed -i -e '/^ *video_monitor_index *=/d' -e '/^ *stdin_cmd_enable *=/d' "$CF"
 fi
 
-exec /usr/libexec/banana/run-retroarch pcsx_rearmed "$1"
+exec /usr/libexec/banana/run-retroarch "$CORE" "$1"

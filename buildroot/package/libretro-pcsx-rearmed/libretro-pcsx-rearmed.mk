@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-LIBRETRO_PCSX_REARMED_VERSION = c8816799b50388e61cfe237fe2cdbb7d8175f20a
+LIBRETRO_PCSX_REARMED_VERSION = da2cb8ecd17fd0932ab6d94774c0522beebce6e3
 LIBRETRO_PCSX_REARMED_SITE = https://github.com/libretro/pcsx_rearmed.git
 LIBRETRO_PCSX_REARMED_SITE_METHOD = git
 LIBRETRO_PCSX_REARMED_GIT_SUBMODULES = YES

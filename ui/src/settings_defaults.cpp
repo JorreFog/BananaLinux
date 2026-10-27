@@ -58,7 +58,7 @@ namespace banana
 			{ "core.nes", "fceumm", CORE, nullptr, 0, 0 },
 			{ "core.snes", "snes9x", CORE, nullptr, 0, 0 },
 			{ "core.megadrive", "picodrive", CORE, nullptr, 0, 0 },
-			{ "core.psx", "pcsx_rearmed", CORE, nullptr, 0, 0 },
+			{ "core.psx", "swanstation", CORE, nullptr, 0, 0 },
 			{ "core.n64", "mupen64plus_next", CORE, nullptr, 0, 0 },
 		};
 

@@ -43,6 +43,14 @@ config BR2_PACKAGE_LIBRETRO_PCSX_REARMED
 	help
 	  PlayStation, with its ARM64 dynamic recompiler (ari64) and NEON GPU.
 
+config BR2_PACKAGE_LIBRETRO_SWANSTATION
+	bool "libretro-swanstation"
+	default y
+	help
+	  PlayStation, with SwanStation (libretro DuckStation): hardware
+	  rendering and much greater accuracy than pcsx_rearmed, at a higher
+	  cost. Chosen per system in Settings.
+
 config BR2_PACKAGE_LIBRETRO_MUPEN64PLUS_NEXT
 	bool "libretro-mupen64plus-next"
 	default y

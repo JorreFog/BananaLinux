@@ -1,0 +1,9 @@
+config BR2_PACKAGE_LIBRETRO_SWANSTATION
+	bool "libretro-swanstation"
+	default y
+	depends on BR2_INSTALL_LIBSTDCPP
+	help
+	  PlayStation, with SwanStation (the libretro core of DuckStation):
+	  hardware rendering on the GPU and much greater accuracy than
+	  pcsx_rearmed, at a higher cost on the Cortex-A55. Chosen per
+	  system in Settings > Other systems > PlayStation.
