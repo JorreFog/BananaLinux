@@ -200,6 +200,14 @@ extern "C"
 	EMSCRIPTEN_KEEPALIVE int bt_system() { return ui ? ui->systemIndex() : 0; }
 	EMSCRIPTEN_KEEPALIVE int bt_game() { return ui ? ui->gameIndex() : 0; }
 	EMSCRIPTEN_KEEPALIVE int bt_systemCount() { return lib ? lib->systemCount() : 0; }
+	// the shelf's systems in order, one id a line (the collections' too: favorites, recently-played)
+	EMSCRIPTEN_KEEPALIVE const char* bt_systemIds()
+	{
+		static std::string out;
+		out.clear();
+		if (lib) for (int i = 0; i < lib->systemCount(); i++) out += lib->system(i).id + "\n";
+		return out.c_str();
+	}
 
 	EMSCRIPTEN_KEEPALIVE void bt_home(int sys)
 	{
