@@ -11,6 +11,9 @@ Nothing is uploaded anywhere. `serve.py` is optional: it adds your themes folder
 plain editor's: Layers, Add, Files and Components on the left, both screens in the middle, the selected element and
 the theme's settings on the right, in light or dark (the system's, or the switch up top).
 
+**Online:** <https://jorrefog.github.io/BananaLinux/theme-studio/> (published from `main` by
+`.github/workflows/pages.yml`, next to the Save Mover).
+
 ## Quick start
 
 ```sh

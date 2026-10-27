@@ -105,7 +105,10 @@ You do not have to hand-write it. **Use the editor.**
 
 There are two versions, and they look and work the same. Take whichever suits you.
 
-**In a browser, offline**
+**In a browser**
+
+Open **<https://jorrefog.github.io/BananaLinux/theme-studio/>**: nothing to install, and nothing you make leaves
+your computer (the page runs on its own once loaded). Or offline, from a checkout:
 
 ```sh
 xdg-open tools/theme-studio/index.html      # or just double-click the file
