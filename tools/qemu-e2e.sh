@@ -4,8 +4,6 @@
 #
 #   tools/qemu-e2e.sh <banana-*.img[.gz]> [out dir]
 #
-# SINGLE=1 does it as the Retroid Pocket Classic: one 1240x1080 panel (the image's single-screen UI).
-#
 # Needs what tools/qemu-headless.sh needs (qemu-system-aarch64, qemu-img, mtools, sfdisk, python3) and nothing else:
 # the file copy is the guest's own wget from a server this script runs, and the commands go in on the serial console
 # (the image's getty). So no root, no SSH keys, no mounting of the card's exFAT partition.
@@ -19,7 +17,6 @@ set -e
 IMG=$1
 [ -n "$IMG" ] && [ -f "$IMG" ] || { echo "usage: $0 <banana-*.img[.gz]> [out dir]" >&2; exit 2; }
 OUT=${2:-qemu-e2e}
-SINGLE=${SINGLE:-1}
 HERE=$(cd "$(dirname "$0")/.." && pwd)
 mkdir -p "$OUT"; OUT=$(cd "$OUT" && pwd)
 PORT=$((8900 + $$ % 90))
@@ -43,7 +40,7 @@ trap 'kill $HTTP 2>/dev/null || true' EXIT INT TERM
 
 # ---- boot 1: the first boot, the menu, setup skipped -------------------------------------------------------
 note "booting slot a ($IMG)"
-SINGLE=$SINGLE KEEP=1 "$HERE/tools/qemu-headless.sh" "$IMG" "$OUT/boot-a" 180 >/dev/null
+KEEP=1 "$HERE/tools/qemu-headless.sh" "$IMG" "$OUT/boot-a" 180 >/dev/null
 MON=$OUT/boot-a/monitor.sock
 CON=$OUT/boot-a/console.sock
 # the boot is left running as soon as the panels are open; give the menu itself a moment
@@ -78,7 +75,7 @@ for p in $(ps -eo pid,comm | awk '$2 ~ /^qemu-system-a/ {print $1}'); do kill $p
 sleep 2
 note "booting slot b"
 cp "$OUT/boot-a/card.img" "$OUT/card-b.img"
-SINGLE=$SINGLE KEEP=1 "$HERE/tools/qemu-headless.sh" "$OUT/card-b.img" "$OUT/boot-b" 180 >/dev/null
+KEEP=1 "$HERE/tools/qemu-headless.sh" "$OUT/card-b.img" "$OUT/boot-b" 180 >/dev/null
 grep -aq 'rcS: slot b booted' "$OUT/boot-b/serial.log" || fail "the second boot didn't run slot b"
 "$HERE/tools/qemu-monitor.py" "$OUT/boot-b/monitor.sock" 'sendkey backspace' >/dev/null
 sleep 2

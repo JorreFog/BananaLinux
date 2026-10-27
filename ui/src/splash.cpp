@@ -72,8 +72,8 @@ namespace banana
 
 	bool Splash::load(const std::string& dir, const std::string& banana, const std::string& variant, int w, int h)
 	{
-		// the composition is laid out in CSS px of a 640x480 panel, so it is the width that fixes its scale (1.6 on the
-		// RG DS Plus's 1024x768, 1.9375 on the RPC's 1240x1080); a panel taller than 480*s keeps the background's
+		// the composition is laid out in CSS px of a 640x480 panel, so it is the width that fixes its scale (1.9375 on
+		// the RPC's 1240x1080); a panel taller than 480*s keeps the background's
 		// dots below the console, which is what the artwork is behind the console anyway
 		W = w; H = h; s = w / 640.0f;
 		oy = std::max(0, (H - (int)std::lround(480 * s)) / 2);

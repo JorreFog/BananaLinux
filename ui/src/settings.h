@@ -98,7 +98,7 @@ namespace banana
 		// the Wi-Fi pages: the networks around, and the keyboard for a password (settings-wifi.cpp)
 		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP } page = LIST;
 		// the keyboard types a text for a purpose: a Wi-Fi password, or an account's name or password
-		// (banana/accounts.conf: RetroAchievements for DraStic and RetroArch, ScreenScraper for the scraper to come)
+		// (banana/accounts.conf: RetroAchievements for RetroArch, ScreenScraper for the scraper to come)
 		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SEARCH } entry = ENTRY_WIFI;
 		std::string entryTitle, entrySub;
 		Page entryBack = NETWORKS;

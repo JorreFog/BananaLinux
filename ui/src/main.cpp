@@ -954,9 +954,8 @@ int main(int argc, char** argv)
 
 	// the library and the menu are made on another thread while the boot animation plays
 	std::shared_ptr<Menu> uiPtr;
-	// one panel (the Retroid Pocket Classic): its screens are wider than the RG DS's 640x480 pairs, so the canvas
-	// is what the panel gives at the DS's scale, and the built-in themes (Carts, Pixel's dark/light) drawn for two
-	// panels give way to the single-screen layout theme
+	// one panel (the Retroid Pocket Classic): its screen is wider than the 640x480 canvas, so the canvas
+	// is what the panel gives at the 640-wide scale, and the menu is drawn for a single screen
 	const bool single = disp.panels() == 1;
 	// a single panel (the RPC's 1240x1080): the DS's 640-wide layout, and the extra height of the panel below it
 	const float sc = single ? disp.width() / 640.0f : disp.height() / 480.0f;
@@ -1312,8 +1311,8 @@ int main(int argc, char** argv)
 			want = dirty || (settingsView.isOpen() ? settingsView.animating() : (ui->animating() || ui->nextWake() == 0));
 		}
 		// the next frame is drawn while the last one's flips are still pending (present copies it out, so the canvas is
-		// free again at once), and handed over when both panels have flipped: drawing (~10 ms on the RG DS) and the wait
-		// for the two panels' unaligned vblanks overlap instead of adding up to two refreshes a frame
+		// free again at once), and handed over when the panel has flipped: drawing and the wait
+		// for the panel's vblank overlap instead of adding up to two refreshes a frame
 		if (want && disp.isOpen() && !drawn && nowMs() >= quietUntil)
 		{
 			double t0 = nowMs();

@@ -23,7 +23,7 @@ namespace banana
 		case BTN_DPAD_RIGHT: case KEY_RIGHT: return Key::RIGHT;
 		case BTN_DPAD_UP: case KEY_UP: return Key::UP;
 		case BTN_DPAD_DOWN: case KEY_DOWN: return Key::DOWN;
-		case BTN_EAST: case KEY_ENTER: return Key::A;		// the RG DS's A is east (Nintendo layout)
+		case BTN_EAST: case KEY_ENTER: return Key::A;		// the RPC's A is east (Nintendo layout)
 		case BTN_SOUTH: case KEY_BACKSPACE: case KEY_ESC: return Key::B;
 		case BTN_NORTH: case KEY_X: return Key::X;
 		case BTN_WEST: case KEY_Y: return Key::Y;

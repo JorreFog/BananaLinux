@@ -279,7 +279,7 @@ namespace banana
 		}
 		add(D, "picture", "Accent colour", "The colour of the selection, the logo and the boot animation's banana.", menu, "accent",
 			{ "Yellow", "Blue", "Red", "Green", "Purple", "Pink" }, { "yellow", "blue", "red", "green", "purple", "pink" });
-		add(D, "picture", "Brightness", "Both panels' backlights. F + volume changes it anywhere, in games too.", "", "",
+		add(D, "picture", "Brightness", "The panel's backlight. F + volume changes it anywhere, in games too.", "", "",
 			{ "10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%" }, { "100", "200", "300", "400", "500", "600", "700", "800", "900", "1000" }, Item::BRIGHTNESS);
 		add(D, "picture", "Motion", "The top screen's bob and shine. Off holds it still and saves a little battery.", menu, "motion", { "On", "Off" }, { "on", "off" });
 		add(D, "music", "Volume", "The speakers or the headphones, whichever is playing. The volume keys change it anywhere.", "", "",
@@ -328,7 +328,7 @@ namespace banana
 			menu, "boxart_source", { "libretro", "libretro + Twilight", "Twilight first" }, { "libretro", "both", "twilight" });
 		add(S, "gear", "Previous version", "Restarts into the other slot: the version that ran before the last update. Press A twice.", "", "switch", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "SSH", "", menu, "ssh", { "Off", "On" }, { "off", "on" });
-		if (access("/run/banana/sd2/slot", F_OK) == 0)	// a second card slot (bananad's sd2 script): the RG DS Plus
+		if (access("/run/banana/sd2/slot", F_OK) == 0)	// a second card slot (bananad's sd2 script)
 		add(S, "gear", "Second SD card", "Games on the card in the second slot (its roms folder, with the same system folders as this card) show up in the library with the others while it's in. exFAT or FAT32.", menu, "sd2_roms", { "Show its games", "Off" }, { "on", "off" });
 		add(S, "gear", "First-time setup", "The steps from the first boot again: Wi-Fi, the time zone and the RetroAchievements account (ScreenScraper: not available yet).", "", "setup", {}, {}, Item::PAGE);
 		add(S, "gear", "Reset system settings", "Puts the menu, display, sound, power and network settings back to their defaults (banana/settings.conf and the sleep/LED rows; your games and card are untouched). Press A twice.",

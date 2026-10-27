@@ -1,19 +1,18 @@
 #!/bin/sh
-# Boot a BananaOS card image on QEMU's arm64 "virt" machine with no window, and take a picture of both panels:
+# Boot a BananaOS card image on QEMU's arm64 "virt" machine with no window, and take a picture of the panel:
 # the same boot tools/qemu-boot.sh does, for a machine with nobody at the screen (or for checking the menu from a
 # script). The card is read exactly as the handheld's bootloader reads it: extlinux.conf's DEFAULT label, its
 # LINUX file and its root=.
 #
-#   tools/qemu-headless.sh <banana-*.img[.gz]> [out dir] [seconds before the screenshots]
+#   tools/qemu-headless.sh <banana-*.img[.gz]> [out dir] [seconds before the screenshot]
 #
-# SINGLE=1 boots it the way the Retroid Pocket Classic is: one 1240x1080 panel (banana-ui's single-screen mode,
-# the menu at the DS's 640-wide scale) instead of the RG DS's two 640x480 ones.
+# One 1240x1080 panel, the Retroid Pocket Classic's screen (banana-ui's single-screen mode).
 #
 # KEEP=1 leaves the VM running afterwards, with its serial console on <out>/console.sock and its monitor on
 # <out>/monitor.sock, so tools/qemu-console.py and tools/qemu-monitor.py can drive it (the pid is in <out>/qemu.pid).
 #
-# Writes, in <out dir> (qemu-headless by default): card.img, Image, serial.log, and top.png/bottom.png (the two
-# panels) or panel.png (SINGLE=1). Exit 0 when the boot reached the menu, 1 otherwise.
+# Writes, in <out dir> (qemu-headless by default): card.img, Image, serial.log, panel.png. Exit 0 when the boot
+# reached the menu, 1 otherwise.
 #
 # No root needed: nothing is mounted; the boot partition is read with mtools (mcopy), which reads the FAT inside the
 # image as a file. Needs qemu-system-aarch64, qemu-img, mtools, sfdisk, python3.
@@ -22,7 +21,6 @@ IMG=$1
 [ -n "$IMG" ] && [ -f "$IMG" ] || { echo "usage: $0 <banana-*.img[.gz]> [out dir] [seconds]" >&2; exit 2; }
 OUT=${2:-qemu-headless}
 WAIT=${3:-170}
-SINGLE=${SINGLE:-0}
 KEEP=${KEEP:-0}
 APPEND_EXTRA=${APPEND_EXTRA:-}	# more of the kernel command line, e.g. banana.rotate=90 to try the panel's rotation
 mkdir -p "$OUT"; OUT=$(cd "$OUT" && pwd)
@@ -38,14 +36,9 @@ KERNEL=$(awk -v l="$LABEL" '$1 == "LABEL" { cur = $2 } $1 == "LINUX" && cur == l
 ROOT=$(awk -v l="$LABEL" '$1 == "LABEL" { cur = $2 } $1 == "APPEND" && cur == l { for (i = 2; i <= NF; i++) if ($i ~ /^root=/) print $i }' "$OUT/extlinux.conf")
 [ -n "$KERNEL" ] && [ -n "$ROOT" ] || { echo "can't read the card's extlinux.conf" >&2; exit 1; }
 mcopy -o -i "$CARD@@$BOOT_AT" "::$KERNEL" "$OUT/Image"
-# the same command line, for the virtual panels QEMU reports (one wide one for a single-screen handheld)
-if [ "$SINGLE" = 1 ]; then
-    GPU="virtio-gpu-pci,id=gpu,max_outputs=1,xres=1240,yres=1080"
-    APPEND="$ROOT rootfstype=squashfs ro rootwait quiet loglevel=3 console=ttyAMA0 video=Virtual-1:1240x1080 banana.console=1 banana.top=Virtual-1 banana.touch=virtio $APPEND_EXTRA"
-else
-    GPU="virtio-gpu-pci,id=gpu,max_outputs=2,xres=640,yres=480"
-    APPEND="$ROOT rootfstype=squashfs ro rootwait quiet loglevel=3 console=ttyAMA0 video=Virtual-1:640x480e video=Virtual-2:640x480e banana.console=1 banana.top=Virtual-2 banana.touch=virtio $APPEND_EXTRA"
-fi
+# the command line, for the virtual panel QEMU reports (the RPC's single 1240x1080 output)
+GPU="virtio-gpu-pci,id=gpu,max_outputs=1,xres=1240,yres=1080"
+APPEND="$ROOT rootfstype=squashfs ro rootwait quiet loglevel=3 console=ttyAMA0 video=Virtual-1:1240x1080 banana.console=1 banana.top=Virtual-1 banana.touch=virtio $APPEND_EXTRA"
 echo "booting label $LABEL: $KERNEL, $ROOT"
 
 SOCK=$OUT/monitor.sock
@@ -82,17 +75,17 @@ if [ "$KEEP" = 1 ]; then
     exit 0
 fi
 
-# the two panels' heads, as pictures
-python3 - "$SOCK" "$OUT" "$SINGLE" <<'EOF'
+# the panel's head, as a picture
+python3 - "$SOCK" "$OUT" <<'EOF'
 import socket, sys, time
-sock, out, single = sys.argv[1], sys.argv[2], sys.argv[3] == "1"
+sock, out = sys.argv[1], sys.argv[2]
 s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 for _ in range(50):
     try: s.connect(sock); break
     except OSError: time.sleep(0.2)
 else: sys.exit("the monitor socket never came up")
 s.settimeout(20)
-for head, name in (((0, "panel"),) if single else ((0, "top"), (1, "bottom"))):
+for head, name in ((0, "panel"),):
     s.sendall(f"screendump {out}/{name}.png -f png gpu {head}\n".encode())
     time.sleep(1.0)
     s.sendall(b"info status\n")
