@@ -791,14 +791,13 @@ static void irisFromGame(Display& disp, SoftBackend& be, Menu& ui)
 }
 
 // The CPU's lowest clock raised to the menu's highest (banana-perf ui: schedutil up to 1416 MHz) from a press and while
-// frames change the panels, and back 300 ms after the last one. schedutil only ramps up after an animation has started, so its first
-// frames were drawn at 408 MHz, three times slower than the refresh allows on the RG DS Plus's 1024x768 panels (a
-// scroll showed ~10-15% of its frames late). Starting a game puts it back as well (banana-perf sets the lowest clock).
+// frames change the panel, and back 300 ms after the last one. schedutil only ramps up after an animation has started, so its first
+// frames were drawn at the lowest clock, slower than the refresh allows (a
+// scroll showed frames late). Starting a game puts it back as well (banana-perf sets the lowest clock).
 struct ClockBoost
 {
-	// one entry per cluster the SoC has: the RG DS is a single policy0, the Retroid Pocket Classic has policy0 (its
-	// six Cortex-A55) and policy6 (its two Cortex-A78). Boosting only policy0 leaves the cores that actually draw
-	// the frames on the ramping cluster idle, so a scroll on the RPC was still late.
+	// one entry per cluster the SoC has: policy0 (the six Cortex-A55) and policy6 (the two Cortex-A78). Boosting
+	// only policy0 leaves the cores that actually draw the frames on the ramping cluster idle, so a scroll was still late.
 	struct Cluster { std::string dir, low; };
 	std::vector<Cluster> clusters;
 	bool on = false;

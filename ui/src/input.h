@@ -1,7 +1,7 @@
 #pragma once
 // banana-ui: buttons and touch from evdev. Every input device that has buttons or a touchscreen is opened; the
-// buttons are mapped to the UI's (Nintendo layout, as the RG DS's joypad driver reports them), and the touchscreen
-// on the bottom panel's I2C bus becomes taps and drags on screen 1.
+// buttons are mapped to the UI's (Nintendo layout, as the RPC's MCU gamepad reports them), and the touchscreen
+// becomes taps and drags on the screen.
 #include <functional>
 #include <string>
 #include <vector>
@@ -30,7 +30,7 @@ namespace banana
 		// a device came or went in /dev/input (watched with inotify): open() again to take it
 		bool rescanDue() { bool r = rescan; rescan = false; return r; }
 		std::vector<int> fds() const;
-		// a touchscreen on that screen (0 top, 1 bottom): the RG DS has one on each, the RG DS Plus only the bottom one
+		// a touchscreen on that screen (0 the only one)
 		bool hasTouch(int screen) const;
 		// read what is waiting on fd; events go to sink
 		void read(int fd, const std::function<void(const InputEvent&)>& sink);

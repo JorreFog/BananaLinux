@@ -1,7 +1,7 @@
 #pragma once
-// banana-ui: the boot animation, on both panels from the first frame while the library is read on another thread.
-// Top: the pixel bunch drops in and bounces, BANANA types itself in, a shine runs over the bananas, LOADING ticks.
-// Bottom: the BANANA cartridge comes down and goes into the console with the menu's own insert motion (lift,
+// banana-ui: the boot animation, from the first frame while the library is read on another thread.
+// The pixel bunch drops in and bounces, BANANA types itself in, a shine runs over the bananas, LOADING ticks,
+// and the BANANA cartridge comes down and goes into the console with the menu's own insert motion (lift,
 // accelerating slide, click, sparks, the power light turning green). Everything moves in whole pixels and in
 // steps, like ROCKNIXDS Pixel's animations. The still layers are tools/make-splash.mjs's.
 #include <cstdint>
