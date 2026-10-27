@@ -4,29 +4,42 @@ A theme builder for **BananaOS layout themes** — the themes whose JSON has a `
 menu themselves (`docs/THEMES.md`). It edits the theme JSON directly, evaluates expressions live as you type,
 and can preview the theme with the device's own engine.
 
-There is no build step. Open `index.html` in a browser to edit offline, or run `serve.py` to also get exact
-previews. The panels follow the desktop **Banana Theme Studio** (`banana studio/`); the look is the **BananaOS
-website's** (`web/preview`) — charcoal cards with a cream border, banana yellow, Pixelify Sans, and a dark/light
-switch.
+It works on its own: open `index.html` straight from the disk (or put this folder on any static web host) and
+everything works, the live preview included. The preview is the menu's own engine (`ui/src/layout.cpp` and the rest)
+compiled to WebAssembly in `wasm/banana-engine.js`, so it draws exactly what the handheld draws, pixel for pixel.
+Nothing is uploaded anywhere. `serve.py` is optional: it adds your themes folder and **Send to handheld**. The panels
+follow the desktop **Banana Theme Studio**; the look is the **BananaOS website's** (`web/preview`): charcoal cards
+with a cream border, banana yellow, Pixelify Sans, and a dark/light switch.
 
 ## Quick start
 
 ```sh
-# edit offline — the tree, inspector, live expressions and colour keys all work with no server
-xdg-open tools/theme-studio/index.html      # or just open the file in a browser
+xdg-open tools/theme-studio/index.html      # or double-click it: the editor and its live preview
 
-# edit with exact previews drawn by the real engine
-python3 tools/theme-studio/serve.py          # builds ui/banana-ui if it can, opens the page
+python3 tools/theme-studio/serve.py          # optional: + your themes folder (--themes), Send to handheld (--themes-dir)
 ```
 
-In the editor: **New** starts from a simple working theme, **Open** loads a `.json`, **Save** downloads it,
-**Validate** lists expression and reference problems, and **Templates** jumps to the example themes BananaOS
-ships — Canvas, Hillside, Turntable and Classic — which are the easiest way in. Those travel inside
-`templates.js`, so they are there whether or not the server is running. **Guide** opens the walkthrough in
-`docs/MAKE-A-THEME.md`.
+In the editor:
 
-Install a finished theme by putting `my-theme.json` (and any folder of pictures it uses, kept beside it) into
-`banana/themes/` on the card — over file sharing, or with the card in a computer — then pick it in
+- **New** starts from a simple working theme; **Templates** jumps to the examples BananaOS ships (Canvas, Hillside,
+  Turntable, Classic: the easiest way in).
+- **Open** takes a theme's `.json`, a `.zip` with its files, or the `.json` and its pictures picked together;
+  **Open folder** opens a theme's folder; you can also drop any of these on the page.
+- **Save** downloads the `.json`; **Export (.zip)** downloads the theme with every file it names, at their paths:
+  unzip it into `banana/themes/` on the card.
+- **↶ ↷** undo and redo (Ctrl+Z, Ctrl+Shift+Z); the last theme is kept in the browser and offered again next time.
+- **Validate** lists expression, reference and file problems; **Optimize** finds what makes the theme slow or
+  battery-hungry on the handheld and fixes it (below); **Guide** shows `docs/MAKE-A-THEME.md`, `docs/THEMES.md` and
+  the colour keys inside the page.
+
+The **Design** tab is the live preview: both screens, as the handheld draws them. Click it and use the keys (arrows;
+X or Enter is A, Z or Backspace is B, S is X, A is Y, Q/W are L/R) or the buttons beside it, and tap the screens.
+Every edit shows at once. Under **Preview** (bottom): the RG DS's or the RG DS Plus's panel size, the test library or
+one with a game for every system, the battery, Wi-Fi, clock and motion settings, and **Take stills** (the screens
+`banana-ui --headless` draws for a script). The engine's complaints are under **Problems**.
+
+Install a finished theme by putting `my-theme.json` (and its folder of pictures, kept beside it) into
+`banana/themes/` on the card, over file sharing or with the card in a computer, then pick it in
 **Settings > Display & sound > Theme**.
 
 ## Where your themes live
@@ -38,8 +51,8 @@ the editor's example list:
 python3 tools/theme-studio/serve.py --themes ~/BananaThemes
 ```
 
-**Theme settings > Your themes** then lists that folder (click to open) and **Save here** writes back into it —
-no downloads and nothing in the repo. The shipped examples stay under **Start from a template**. (The desktop
+**Theme settings > Your themes** then lists that folder (click to open) and **Save here** writes back into it,
+with no downloads and nothing in the repo. With no server, **Open folder** and **Export (.zip)** do the same job. The shipped examples stay under **Start from a template**. (The desktop
 studio, `tools/theme-studio-desktop/`, starts its Open and Save dialogs in `~/BananaThemes` too.)
 
 ## What it does
@@ -55,32 +68,52 @@ studio, `tools/theme-studio-desktop/`, starts its Open and Save dialogs in `~/Ba
   sample systems, games, the clock, the battery and your `vars`.
 - **`vars`**, **components** (edited once, instances follow), **states**, **smooth**, gradients, shadows, radii
   and borders.
+- **System icons**: every system in `systems.conf` and the collections (favorites, recently played, search), the
+  menu's own icon beside the theme's. Choose a PNG or JPEG (at most 4096 px a side) and it is attached as
+  `<theme>/icons/<id>.png` and shown in the preview at once; **Reset** puts the menu's icon back. "Show every system
+  in the preview" switches to the library with a game for every system, so each icon is on the shelf.
+- **Optimize for the handheld**: the desktop studio's rules (`optimize.js`, a port of its `optimize.py`). Findings
+  are grouped **Safe** (ticked: the screens look exactly the same; checked with the engine), **Look** (unticked:
+  holds animations still, lowers the frame rate, shrinks pictures) and **Advice**. Click one for the details and its
+  element; **Apply** is one step of undo. A too-big picture gets a smaller copy beside it, which the theme then names
+  and Export carries; the original is left alone.
 - **Colour keys** (`colors`, `accent`, `base`, `fonts`, `logo`, `background`, `icons`, `sounds`) — the same
   keys, palettes and accents as `theme-builder.html`, still used to style Settings and the keyboard. **System
   icons** picks a picture per system id from a dropdown (the ids `systems.conf` ships, plus any the running
   server finds in a checkout).
 - **Input**, **hints** and **behaviour** (timings, sound cues).
-- **Assets**: the pictures, fonts and sounds the theme names are detected from it; attach a file and previews
-  carry it, and **Send to handheld** writes the theme and its files into a mounted `banana/themes` (start the
-  server with `--themes-dir`).
+- **Assets**: the pictures, fonts and sounds the theme names are detected from it, with thumbnails and sizes. A web
+  page can't read files off the disk by a path, so they are attached: picked here, dropped on the page, or opened
+  with the theme as a folder or a `.zip`. Attached files go to the preview, into Export and to **Send to handheld**
+  (which writes into a mounted `banana/themes`; start the server with `--themes-dir`).
 - **Save** writes the theme JSON with its key order and any members the editor does not know kept. `//` and
   `/* */` comments and trailing commas are read (as the engine reads them); comments are not written back.
 
 ## Previews
 
-A preview is not a re-implementation: `render.js` posts the theme to `serve.py`, which writes it to a file and
-runs
+A preview is not a re-implementation: it is the engine itself. `wasm/build.sh` compiles `ui/src/layout.cpp`,
+`expr.cpp`, `json.cpp`, `library.cpp`, `theme.cpp`, `soft.cpp`, `zip.cpp` and the rnds rasterizer with Emscripten,
+with `wasm/theme-wasm.cpp` driving them the way `banana-ui --headless` does, into one script with the wasm, the
+built-in fonts and icons and `ui/tests/fixture.sh`'s made-up library inlined (a page opened from file:// can't fetch
+a `.wasm`). `engine.js` writes the theme and its attached files into the engine's memory and copies its two screens
+onto canvases every frame something moves. `tests/engine.test.js` draws every example theme with it and with the
+native `ui/banana-ui`, at both sizes, and compares the screens: they are identical.
+
+When `wasm/banana-engine.js` isn't there, the page falls back to `serve.py`'s stills, drawn by running
 
 ```
-ui/banana-ui --headless OUT --size 640x480 \
-    --assets ui/assets/rnds --banana ui/assets/banana \
-    --systems system/rootfs/etc/banana/systems.conf \
-    --roms <fixture>/roms --data <fixture>/data \
+ui/banana-ui --headless OUT --size 640x480 --assets ui/assets/rnds --banana ui/assets/banana \
+    --systems system/rootfs/etc/banana/systems.conf --roms <fixture>/roms --data <fixture>/data \
     --theme <theme.json> --script "home 0; wait 900; shot home; press a; wait 900; shot lib; ..."
 ```
 
-and returns the top and bottom PNGs of every `shot`, plus any `banana-ui: theme: ...` lines. So the preview is
-exact, and it only changes when the engine does. `--size 1024x768` previews at the RG DS Plus's size.
+Rebuild the engine after changing it (needs [emsdk](https://github.com/emscripten-core/emsdk) and ImageMagick):
+
+```sh
+source ~/emsdk/emsdk_env.sh && sh tools/theme-studio/wasm/build.sh
+```
+
+`tests/engine.test.js` says when `banana-engine.js` is older than the sources (`wasm/sources.sh`).
 
 ## Files
 
@@ -88,40 +121,48 @@ exact, and it only changes when the engine does. `--size 1024x768` previews at t
 | --- | --- |
 | `index.html`, `ui.css` | The page and the BananaOS-website look. |
 | `assets/` | Pixelify Sans and the menu dot patterns, copied from `web/preview/assets/`, so the page works offline. |
-| `app.js` | The editor: tree, inspector, value widgets, colour keys, save/load. |
+| `app.js` | The editor: tree, inspector, value widgets, colour keys, icons, assets, undo, open/save/export, the preview. |
+| `engine.js` | The live preview's client for the WebAssembly engine. |
+| `wasm/` | `theme-wasm.cpp` (the engine's binding), `build.sh`, `sources.sh`, and the built `banana-engine.js` (generated). |
+| `optimize.js` | Optimize for the handheld (a port of the desktop studio's `optimize.py`). |
+| `zip.js` | Reading and writing `.zip` files (Open, Export). |
+| `guide.js` | The guides, inlined for the Guide button (generated by `make-templates.py`). |
 | `expr.js` | A JavaScript port of the theme expression language (`ui/src/expr.cpp`). |
 | `schema.js` | The editor's field metadata: elements, properties, hooks, palettes, the friendly labels and tooltips. |
 | `templates.js` | The example layout themes, inlined so "start from a template" works with no server (generated). |
-| `make-templates.py` | Rebuilds `templates.js` from the examples; `tests/run.sh` checks it is current. |
-| `render.js` | The preview client. |
-| `serve.py` | Serves the editor, renders previews with the engine, and writes a theme to `--themes-dir`. |
-| `wasm/README.md` | The design for a WebAssembly build of the engine (real-time previews with no server). |
-| `tests/` | The expression parity test, the server end-to-end test, and the schema test. |
+| `make-templates.py` | Rebuilds `templates.js` and `guide.js`; `tests/run.sh` checks they are current. |
+| `render.js` | The client for `serve.py`. |
+| `serve.py` | Optional: serves the editor, lists `--themes`, writes to `--themes-dir`, stills when there is no wasm. |
+| `tests/` | Below. |
 
 `docs/theme.schema.json` (JSON Schema for the format) is the machine-readable companion to `docs/THEMES.md`.
 
 ## Testing
 
 ```sh
-make theme-studio                                 # from the repo root: everything below
-sh tools/theme-studio/tests/run.sh                 # the same, from anywhere
-node tools/theme-studio/tests/expr.test.js          # expr.js vs the real engine (needs g++)
-python3 tools/theme-studio/tests/serve.test.py      # the preview server, end to end
-sh tools/theme-studio/tests/ui.test.sh              # the page really loads in a browser (needs Chromium)
+sh tools/theme-studio/tests/run.sh                 # everything below (or make theme-studio from the repo root)
+node tools/theme-studio/tests/expr.test.js          # expr.js vs ui/src/expr.cpp, natively and in WebAssembly
+node tools/theme-studio/tests/optimize.test.js      # the optimizer's rules, and its safe fixes drawn by the engine
+node tools/theme-studio/tests/engine.test.js        # the WebAssembly engine vs ui/banana-ui, pixel for pixel
+python3 tools/theme-studio/tests/browser.test.py    # the page from file:// (and a static host) in headless Firefox
+python3 tools/theme-studio/tests/serve.test.py      # the server, end to end
+sh tools/theme-studio/tests/ui.test.sh              # the page from serve.py in Chromium (skipped without it)
 python3 tools/theme-studio/tests/schema.test.py     # the example themes against docs/theme.schema.json
 ```
 
-`expr.test.js` is the important one: `tests/expr-cases.txt` is evaluated both by `expr.js` and by a tiny C++
-harness over `ui/src/expr.cpp` (`tests/parity.cpp`), and the two are compared, so the JavaScript port cannot
-drift from the engine's expressions.
+`expr.test.js` evaluates `tests/expr-cases.txt` with `expr.js` and with `ui/src/expr.cpp` (`tests/parity.cpp`, and
+`bt_eval` in the WebAssembly build), so the port can't drift from the engine. A double that doesn't fit an int is
+undefined in C: the handhelds (aarch64) and WebAssembly saturate, x86 gives INT_MIN, so `expr.js` follows the
+handhelds and the test lists the few cases where the PC's build answers differently. `browser.test.py` drives
+Firefox through its built-in remote control (`tests/marionette.py`), so it needs nothing but Firefox.
 
 ## Known limits
 
-- Assets are referenced by path; attach them in the **Assets** tab for previews, and Send to handheld writes
-  them beside the theme. A referenced file that isn't attached (or isn't beside the theme on the machine running
-  `serve.py`) falls back to the engine's default, as on the device.
-- The WebAssembly preview (no server) is designed but not built — see `wasm/README.md`; `serve.py` is the
-  working preview.
+- Files are referenced by path and the page only has the ones it is given: open the theme's folder or `.zip`, or
+  attach them. One that isn't attached falls back to the engine's default in the preview, as on the device.
+- The preview plays no sounds, and START (Settings) and SELECT (search) aren't in it: they are Banana's, not the
+  theme's.
+- `wasm/banana-engine.js` is 3.6 MB (the fonts are most of it) and has to be rebuilt when the engine changes.
 - Comments are dropped on save (the key order and unknown members are kept).
 - The preview library is a made-up test one (`ui/tests/fixture.sh`), not your card.
 - Element reordering by dragging works within the same parent; use the ↑/↓ buttons for deeper moves.
