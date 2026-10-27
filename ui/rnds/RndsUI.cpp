@@ -1512,7 +1512,27 @@ namespace rnds
 			else if (!batt.empty() && !bmode.empty())
 				battery(44);
 			drawBox(brandBox(), brandX, 19 + ry, 148.23f, 26);
-			if (!brandNote.empty()) drawText(brandNote, ts(false, 18), brandX + 148.23f + 10, 22 + ry, MUTED);	// what this build is
+			if (!brandNote.empty())
+			{
+				// what this build is: the release stage as a badge in the accent (the START plate's bands, the menu's
+				// shadow), its word in capitals in the ink that reads on the accent, then the version ("BETA 0.5.0")
+				float nx = brandX + 148.23f + 10;
+				size_t sp = brandNote.find(' ');
+				std::string stage = sp == std::string::npos ? "" : brandNote.substr(0, sp);
+				std::string ver = sp == std::string::npos ? brandNote : brandNote.substr(sp + 1);
+				if (!stage.empty())
+				{
+					TStyle bt = ts(true, 15, 1.5f, true);
+					float bw = std::round(line(stage, bt).width + 16);
+					BoxCss b; b.key = "stagebadge"; b.radius = 5; b.bg = Color::hex(accent.base);
+					b.bands = { Band{ 0, 4, Color::hex(accent.light) }, Band{ 18, -1, Color::hex(accent.dark) } };
+					b.shadows = { outer(2, 2, BLACKISH) };
+					drawBox(b, nx, 21 + ry, bw, 22);
+					drawText(stage, bt, nx + 8, 23 + ry, Color::hex(inkOn(accent.base)));
+					nx += bw + 8;
+				}
+				drawText(ver, ts(true, 18), nx, 22 + ry, INK);
+			}
 			if (!logo.empty())
 				drawSprite(still("logo", logo, true), brandX + 7, 22 + ry);
 
