@@ -1,0 +1,28 @@
+From: Banana <bananalinux@proton.me>
+Date: Tue, 27 Oct 2026 16:10:00 +0000
+Subject: [PATCH] gfx/widgets: leave out the load-content animation
+
+RetroArch's loading animation is drawn by the widget layer, which (unlike the
+menu texture and the game) is not turned with the panel on KMS/GBM. On a handheld
+whose panel is mounted turned in the shell it therefore reads sideways for the
+moment a game starts. Leave it out: banana-ui already owns the boot animation,
+and a sideways splash is worse than none.
+
+Upstream-Status: Not applicable
+---
+--- a/gfx/gfx_widgets.c
++++ b/gfx/gfx_widgets.c
+@@ -63,8 +63,11 @@
+ #endif
+    &gfx_widget_generic_message,
+    &gfx_widget_libretro_message,
+-   &gfx_widget_progress_message,
+-   &gfx_widget_load_content_animation
++   &gfx_widget_progress_message
++   /* &gfx_widget_load_content_animation: banana-ui's boot animation is the one
++    * the user sees; RetroArch's loading animation is drawn by its widget layer,
++    * which is not turned with the panel on KMS/GBM, so it reads sideways for the
++    * moment a game starts. Left out rather than shown wrong. */
+ };
+ 
+ #if defined(HAVE_MENU) && defined(HAVE_XMB)

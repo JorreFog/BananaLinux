@@ -1,25 +1,22 @@
 From: Banana <bananalinux@proton.me>
 Date: Tue, 27 Oct 2026 13:40:00 +0000
-Subject: [PATCH] audio/common/alsa: fall back to the configured latency, not to a crash
+Subject: [PATCH] audio/common/alsa: fall back to a working buffer when a core asks for too much
 
 A core may ask for more latency than the device's frontend can hold at all: the
 PlayStation cores request 192 ms unconditionally through
 RETRO_ENVIRONMENT_SET_MINIMUM_AUDIO_LATENCY, and the audioreach frontend on the
-Retroid Pocket Classic refuses it. RetroArch treated that as fatal and carried on
-with a handle it had never finished configuring, so audio_common's
-snd_pcm_avail() asserted a few frames later -- SIGABRT, and a game that never
-appears ("PlayStation does not work", for what is an audio negotiation failure).
+Retroid Pocket Classic refuses it -- and, following it, the periods request and
+then snd_pcm_hw_params() itself, so RetroArch tore the driver down and carried on
+without audio: PSX games were silent while every other core (which asks for
+nothing) played.
 
-Falling back to the device's *largest* buffer is worse than it sounds: measured on
-the handheld it left the stream at a 30 ms buffer of three periods, and the speaker
-amplifiers answered every start attempt with "start failure (-1)" -- the game ran,
-the DSP consumed the data, and nothing was heard. The size every working stream
-here has always used is the one the user configured (64 ms), so ask for that, and
-if even that is refused, ask for nothing and let snd_pcm_hw_params() refine to what
-the device supports.
-
-The failure message also stops reporting "Success" where it meant an error: it
-printed a stale errnum instead of the call's own result.
+When the requested buffer is refused, ask again for Banana's own 64 ms (the shape
+every working stream on this handheld uses; or the user's setting if it is even
+smaller -- the core has already overwritten audio_latency with its own request, so
+that value cannot be trusted), and treat a refused period count as a warning
+rather than fatal: snd_pcm_hw_params() then picks one the frontend supports. The
+failure message also stops reporting a stale errnum where it meant the call's own
+result.
 
 Upstream-Status: Pending
 ---
@@ -33,7 +30,7 @@ Upstream-Status: Pending
  
  int alsa_init_pcm(snd_pcm_t **pcm,
     const char* device,
-@@ -141,16 +142,43 @@
+@@ -141,27 +142,49 @@
     if (new_rate)
        *new_rate = rate;
  
@@ -48,38 +45,35 @@ Upstream-Status: Pending
 -      goto error;
 -
 +   /*
-+    * A core can ask for more latency than the device's frontend can hold at all:
-+    * the PlayStation cores ask for 192 ms unconditionally (see
-+    * RETRO_ENVIRONMENT_SET_MINIMUM_AUDIO_LATENCY), and an audioreach frontend on
-+    * a Qualcomm SoC refuses it. Failing here is not graceful: the caller carries on
-+    * with a handle it never finished configuring and the driver asserts on
-+    * snd_pcm_avail(NULL) a few frames later -- a crash, and a game that never
-+    * appears. Falling back to the device's *largest* buffer is worse than it
-+    * sounds: measured on the Retroid Pocket Classic it left the stream at a
-+    * 30 ms buffer of 3 periods, and the speaker amplifiers then answer every
-+    * start attempt with "start failure (-1)" -- the game runs in silence. So ask
-+    * for what the user themselves configured (64 ms, the size every working
-+    * stream here has been using all along) and, if that is refused too, ask for
-+    * nothing and let the device refine to its own default.
++    * A core can ask for more latency than the device's frontend can hold at all: the PlayStation cores ask
++    * for 192 ms unconditionally through RETRO_ENVIRONMENT_SET_MINIMUM_AUDIO_LATENCY, and the audioreach
++    * frontend on the Retroid Pocket Classic refuses it -- and, following it, the periods request too, so
++    * the whole audio driver comes up dead and the game runs in silence. Failing here is not graceful
++    * either: the caller carries on with a handle it never finished configuring and asserts on
++    * snd_pcm_avail() a few frames later (a crash, and a game that never appears). So when the requested
++    * buffer is refused, ask for the size every working stream on this handheld uses -- the user's own
++    * configured latency if it is smaller, otherwise 64 ms.
 +    */
 +   if ((errnum = snd_pcm_hw_params_set_buffer_time_near(*pcm, params, &latency_usec, NULL)) < 0)
 +   {
 +      settings_t *settings     = config_get_ptr();
-+      unsigned user_latency_us = settings ? settings->uints.audio_latency * 1000u : 0;
++      unsigned fallback_us     = 64000u;
++      /* The core has already raised audio_latency to its own request, so the setting can be the very value
++       * the device just refused: ask for Banana's own 64 ms instead (every working stream on this handheld
++       * uses it), unless the user asked for even less. */
++      if (settings && settings->uints.audio_latency > 0
++            && settings->uints.audio_latency < 64)
++         fallback_us = settings->uints.audio_latency * 1000u;
 +
-+      RARCH_WARN("[ALSA] %s device \"%s\" will not take a %us buffer (%s).\n",
++      RARCH_WARN("[ALSA] %s device \"%s\" will not take a %ums buffer (%s).\n",
 +            snd_pcm_stream_name(stream), snd_pcm_name(*pcm), latency_usec / 1000u,
 +            snd_strerror(errnum));
 +
-+      if (user_latency_us > 0 && user_latency_us / 1000u != latency_usec / 1000u)
-+      {
-+         latency_usec = user_latency_us;
-+         errnum       = snd_pcm_hw_params_set_buffer_time_near(*pcm, params, &latency_usec, NULL);
-+         if (errnum == 0)
-+            RARCH_WARN("[ALSA] Using the configured %ums buffer instead.\n", latency_usec / 1000u);
-+      }
-+
-+      if (errnum < 0)
++      latency_usec = fallback_us;
++      errnum       = snd_pcm_hw_params_set_buffer_time_near(*pcm, params, &latency_usec, NULL);
++      if (errnum == 0)
++         RARCH_WARN("[ALSA] Using a %ums buffer instead.\n", latency_usec / 1000u);
++      else
 +      {
 +         RARCH_WARN("[ALSA] Leaving the buffer size to the device.\n");
 +         errnum = 0;	/* no buffer asked for at all: snd_pcm_hw_params() picks what it supports */
@@ -87,3 +81,19 @@ Upstream-Status: Pending
     }
  
     if ((errnum = snd_pcm_hw_params_set_periods_near(*pcm, params, &periods, NULL)) < 0)
+    {
+-      RARCH_ERR("[ALSA] Failed to request %u periods per buffer for %s device \"%s\": %s.\n",
+-            periods,
+-            snd_pcm_stream_name(stream),
+-            snd_pcm_name(*pcm),
+-            snd_strerror(errnum));
+-
+-      goto error;
++      /* A period count the frontend refuses does not make the stream unusable: the buffer time above is
++       * what the amplifiers care about, and snd_pcm_hw_params() below picks a period count it supports. */
++      RARCH_WARN("[ALSA] %s device \"%s\" will not take %u periods (%s); letting it choose.\n",
++            snd_pcm_stream_name(stream), snd_pcm_name(*pcm), periods, snd_strerror(errnum));
++      errnum = 0;
+    }
+ 
+    if ((errnum = snd_pcm_hw_params(*pcm, params)) < 0)

@@ -1,0 +1,32 @@
+From: Banana <bananalinux@proton.me>
+Date: Tue, 27 Oct 2026 15:30:00 +0000
+Subject: [PATCH] runloop: a core's minimum audio latency must not kill the audio driver
+
+RETRO_ENVIRONMENT_SET_MINIMUM_AUDIO_LATENCY reinitialises the audio driver so the
+new buffer size takes effect. On the Retroid Pocket Classic's audioreach frontend
+the PlayStation cores' unconditional 192 ms request cannot be honoured: the reopen
+refuses the buffer, then the periods, then snd_pcm_hw_params(), so the driver comes
+back dead and RetroArch runs the whole session with no audio -- PSX silent, while
+every core that asks for nothing (GBA, the menu) is fine. Keep the buffer the
+driver already opened with (the configured 64 ms) and only remember the request.
+
+Upstream-Status: Pending
+---
+--- a/runloop.c
++++ b/runloop.c
+@@ -2465,8 +2465,13 @@
+ 
+             RARCH_LOG("[Environ] Setting audio latency to %u ms.\n", audio_latency_new);
+ 
+-            command_event(CMD_EVENT_REINIT, &reinit_flags);
+-            video_driver_set_aspect_ratio();
++            /* Banana: never tear the audio driver down for a core's latency wish. On the Retroid Pocket
++             * Classic's audioreach frontend the PlayStation cores' 192 ms request cannot be honoured, and
++             * reopening the device for it (which the audioreach frontend refuses, periods and all) leaves
++             * RetroArch with no audio at all -- the game (and, afterwards, the menu) runs silent. The
++             * driver keeps the buffer it opened with (the configured 64 ms, the shape every working stream
++             * here uses); the core's wish is only remembered. */
++            (void)reinit_flags;
+ 
+             /* Cannot continue recording with different
+              * parameters.

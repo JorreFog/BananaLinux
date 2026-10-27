@@ -1,0 +1,70 @@
+From: Banana <bananalinux@proton.me>
+Date: Tue, 27 Oct 2026 16:00:00 +0000
+Subject: [PATCH] gfx/gl2: turn the menu with the panel on KMS/GBM
+
+video_driver = "gl" loads gl2 (ident "gl"), not gl3 ("glcore"), so this is the
+driver the RPC actually uses for its software cores. Its menu blit
+(gl2_draw_menu_texture) used mvp_no_rot: where a window system owns the output's
+orientation that is fine, but on KMS/GBM there is nothing above RetroArch, so on
+a panel mounted turned in the shell the game comes out rotated by video_rotation
+and the menu stays in the framebuffer's portrait orientation, reading sideways.
+
+Add mvp_menu to the driver and blit the menu texture with it: the user's
+video_rotation (never the core's -- a vertical arcade game must not spin the
+interface), in the same 90-degrees-a-step convention gl2_set_rotation uses.
+
+Upstream-Status: Pending
+---
+--- a/gfx/common/gl2_common.h
++++ b/gfx/common/gl2_common.h
+@@ -247,7 +247,7 @@
+ 
+    struct scaler_ctx pbo_readback_scaler;
+    struct video_viewport vp;                          /* int alignment */
+-   math_matrix_4x4 mvp, mvp_no_rot;
++   math_matrix_4x4 mvp, mvp_no_rot, mvp_menu;
+    struct video_coords coords;                        /* ptr alignment */
+    struct scaler_ctx scaler;
+    video_info_t video_info;
+--- a/gfx/drivers/gl2.c
++++ b/gfx/drivers/gl2.c
+@@ -1255,6 +1255,30 @@
+    matrix_4x4_ortho(gl->mvp_no_rot, ortho->left, ortho->right,
+          ortho->bottom, ortho->top, ortho->znear, ortho->zfar);
+ 
++   /* The menu is composed into a texture and blitted by gl2_draw_menu_texture, which used to leave it
++    * unrotated -- fine where a window system owns the output's orientation, but on KMS/GBM there is
++    * nothing above RetroArch, so on a panel mounted turned in the shell (the Retroid Pocket Classic's
++    * 1080x1240 in a landscape body) the game came out rotated by video_rotation and the menu stayed
++    * sideways. Turn the menu with the user's video_rotation -- never the core's, so a vertical arcade
++    * game cannot spin the interface -- using the same 90 degrees a step gl2_set_rotation uses. */
++   {
++      settings_t *settings   = config_get_ptr();
++      unsigned user_rotation = settings ? (settings->uints.video_rotation % 4) : 0;
++      float menu_radians     = M_PI * (90.0f * user_rotation) / 180.0f;
++      float menu_cosine      = cosf(menu_radians);
++      float menu_sine        = sinf(menu_radians);
++      math_matrix_4x4 menu_rot;
++
++      memset(&menu_rot, 0, sizeof(menu_rot));
++      MAT_ELEM_4X4(menu_rot, 0, 0) = menu_cosine;
++      MAT_ELEM_4X4(menu_rot, 0, 1) = -menu_sine;
++      MAT_ELEM_4X4(menu_rot, 1, 0) = menu_sine;
++      MAT_ELEM_4X4(menu_rot, 1, 1) = menu_cosine;
++      MAT_ELEM_4X4(menu_rot, 2, 2) = 1.0f;
++      MAT_ELEM_4X4(menu_rot, 3, 3) = 1.0f;
++      matrix_4x4_multiply(gl->mvp_menu, menu_rot, gl->mvp_no_rot);
++   }
++
+    if (!allow_rotate)
+    {
+       gl->mvp = gl->mvp_no_rot;
+@@ -3326,7 +3350,7 @@
+    gl->coords.vertices    = 4;
+ 
+    gl->shader->set_coords(gl->shader_data, &gl->coords);
+-   gl->shader->set_mvp(gl->shader_data, &gl->mvp_no_rot);
++   gl->shader->set_mvp(gl->shader_data, &gl->mvp_menu);
+ 
+    glEnable(GL_BLEND);
+ 
