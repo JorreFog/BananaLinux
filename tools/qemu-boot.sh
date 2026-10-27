@@ -189,6 +189,7 @@ echo "1. the first boot: the data partition made, the menu, a shutdown"
 boot first
 grep -q "rcS: data partition ready" "$OUT/serial.log" && ok "the data partition was made and mounted" || bad "no data partition"
 grep -q "panels 640x480" "$OUT/serial.log" && ok "both panels opened at 640x480" || bad "the panels didn't open"
+grep -q "health: everything found" "$OUT/serial.log" && ok "the hardware check found everything ($(grep -o 'health: .*' "$OUT/serial.log" | head -n 1))" || bad "the hardware check: $(grep -o 'health: .*' "$OUT/serial.log" | head -n 1)"
 # the first-time setup opens over the menu on a first boot; B skips it (and writes setup-done on the card)
 grep -q "banana-ui: first-time setup" "$OUT/serial.log" && ok "the first-time setup opened" || bad "no first-time setup on the first boot"
 shot first-setup
@@ -288,6 +289,9 @@ kill -0 $QEMU 2>/dev/null && { bad "no restart after the update"; kill $QEMU; } 
 wait $QEMU 2>/dev/null || true
 boot fourth
 grep -q "rcS: slot b booted" "$OUT/serial.log" && ok "the fourth boot ran slot b: the update" || bad "the fourth boot didn't run slot b"
+# the update's slot on trial, kept once its menu is up (boot-guard)
+grep -q "boot-guard: slot b on trial" "$OUT/serial.log" && ok "the update's slot on trial" || bad "the update's slot wasn't on trial"
+wait_for "boot-guard: slot b started: kept" 30 "the update kept once its menu was up"
 shot fourth-menu
 # Start > System > Previous version (four rows under Time zone: Update, Box art, Box art from, Previous version;
 # checked headless) > A twice: back to slot a from the next boot
@@ -297,6 +301,7 @@ kill -0 $QEMU 2>/dev/null && { bad "no restart from Previous version"; kill $QEM
 wait $QEMU 2>/dev/null || true
 boot fifth
 grep -q "rcS: slot a booted" "$OUT/serial.log" && ok "the fifth boot ran slot a again: the version before the update" || bad "the fifth boot didn't run slot a"
+wait_for "boot-guard: slot a started: kept" 30 "the switched-to slot kept once its menu was up"
 shutdown_from_settings fifth
 show_logs() {
     echo "--- the card's logs/boot.txt"; cat "$DATA/banana/logs/boot.txt" 2>/dev/null || true

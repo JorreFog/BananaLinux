@@ -29,6 +29,12 @@ set_default() {   # set_default <slot>: extlinux.conf rewritten, the small file 
     boot_rw
     sed "s/^DEFAULT .*/DEFAULT $1/" /boot/extlinux/extlinux.conf > /boot/extlinux/extlinux.conf.new &&
         mv -f /boot/extlinux/extlinux.conf.new /boot/extlinux/extlinux.conf || fail "can't write extlinux.conf"
+    # another slot than the running one is on trial until its menu is up (boot-guard: back to this one otherwise)
+    if [ "$1" != "$SLOT" ]; then
+        echo "$1 $SLOT" > /boot/trial.new && mv -f /boot/trial.new /boot/trial || fail "can't write the trial"
+    else
+        rm -f /boot/trial
+    fi
     boot_ro
 }
 hash_of() { sha256sum "$1" | cut -d' ' -f1; }
