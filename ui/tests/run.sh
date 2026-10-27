@@ -124,23 +124,6 @@ for size in 640x480 1024x768; do
             press b; press start; shot smb-pass; press start; wait 300; shot smb-done" 2> "$alog" || { echo "FAIL $size: banana-ui (sharing login) exited $?"; fail=1; }
     grep -qx 'smb_user=banan' "$FX/data/accounts.conf" && grep -qx 'smb_password=linux' "$FX/data/accounts.conf" || { echo "FAIL $size: accounts.conf: $(tr '\n' ' ' < "$FX/data/accounts.conf" 2>/dev/null)"; fail=1; }
     rm -f "$FX/data/accounts.conf"
-    # The first-time setup: opened as on a first boot, a RetroAchievements account typed by touch (name, then the
-    # password), past the Box art step (not started: no network here), Finish writes setup-done; the accounts file is what the launchers read (no login with the server
-# here: BANANA_RA_CHECK=0)
-    slog=$OUT/$size-setup.log
-    rm -f "$FX/data/setup-done" "$FX/data/accounts.conf"
-    BANANA_RA_CHECK=0 BANANA_WIFI="$HERE/tests/fake-wifi.sh" FAKE_WIFI_CONF="$FX/data/wifi.conf" "$HERE/banana-ui" --headless "$OUT/$size-" --size $size \
-        --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
-        --script "home 0; setup; shot setup; press right; shot setup-tz; press down; press down; press down; shot setup-ra; press a; shot setup-name; \
-            $(key 1,0 1,1 1,2) press start; shot setup-pass; $(key 2,0 2,1) press start; shot setup-signed; press down; shot setup-boxart; press down; press a; shot setup-done" 2> "$slog" \
-        || { echo "FAIL $size: banana-ui (setup) exited $?"; fail=1; }
-    grep -q "setup open" "$slog" || { echo "FAIL $size: the setup didn't open"; fail=1; }
-    [ -f "$FX/data/setup-done" ] || { echo "FAIL $size: Finish didn't write setup-done"; fail=1; }
-    grep -q '^ra_user=qwe$' "$FX/data/accounts.conf" && grep -q '^ra_password=as$' "$FX/data/accounts.conf" || { echo "FAIL $size: accounts.conf: $(cat "$FX/data/accounts.conf" 2>/dev/null | tr '\n' ' ')"; fail=1; }
-    for s in setup setup-tz setup-ra setup-name setup-pass setup-signed; do
-        [ -s "$OUT/$size-$s-top.png" ] && [ -s "$OUT/$size-$s-bot.png" ] || { echo "FAIL $size: no $s shot"; fail=1; }
-    done
-    rm -f "$FX/data/setup-done" "$FX/data/accounts.conf"
     # Favorites starred itself (first on the shelf, ahead of every system): a GBA favourite launches with GBA's
     # emulator, not the shelf's one along (its systems' places moved when Favorites went in before them)
     flog=$OUT/$size-favorites.log
@@ -380,6 +363,8 @@ for size in 640x480 1024x768; do
     done
     # the menu's UX checks (the row's ends, the box art's frame, text on the accent, ...)
     . "$HERE/tests/ux.sh"
+    # the first-time setup's slides and the first boot's arrival
+    . "$HERE/tests/setup.sh"
     # each view drew something of its own (not the same frame again)
     for pair in "pk-party pk-mon" "pk-mon pk-mon2" "pk-mon2 pk-back" "pk-back pk-battle" "pk-battle pk-game" "pk-party zh-pk-party"; do
         a=${pair% *}; b=${pair#* }

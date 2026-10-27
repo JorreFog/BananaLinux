@@ -105,12 +105,18 @@ change rebuilds the engine in the other palette), `banana/bananad.conf` (then SI
 zoneinfo files on the root): banana-ui sets `TZ` for itself and every game it starts, so a DS game's clock is local
 too, and bananad takes it for its logs on SIGHUP.
 
-**First-time setup**: with no `banana/setup-done` on the card, the menu opens the setup after the boot animation:
-five steps on the settings' own pages (Wi-Fi through the network chooser, the time zone, RetroAchievements and
-ScreenScraper through the keyboard, Finish). The accounts go to `banana/accounts.conf` (`ra_user`, `ra_password`,
-`ss_user`, `ss_password`); run-drastic hands the RetroAchievements one to SuperDrastic (`DSFLIP_RA_*`) and
-run-retroarch writes it into RetroArch's `cheevos_*`. Skipping writes `setup-done` too; Settings > System >
-First-time setup runs it again.
+**First-time setup** (0.5.0): when `banana/setup-done` is missing or isn't `setup 2` (a fresh card, or an update from
+0.4.x whose file says `done`), the boot animation goes on into the arrival (ui/src/arrival.cpp: the camera zooms into
+the cartridge, bananas burst out, one is followed until both panels are white, then "Welcome to BANANAOS"; A or START
+skips it) and the setup fades in: a slide per step (Language when the card has more than English, Wi-Fi with a real
+test (`wifi test`: an address, the internet, the clock), Time zone, DS name, RetroAchievements (the login checked with
+the site), Box art, a summary). Each slide starts from what the card has (a network from before is tested at once, an
+account's login checked at once, art already fetched counted), so A straight through keeps everything; Skip (or
+START) leaves a step. `banana/setup-step` keeps the slide reached: a restart (a language picked, a power cut) comes
+back to it without the arrival. The accounts go to `banana/accounts.conf` (`ra_user`, `ra_password`); run-drastic
+hands the RetroAchievements one to SuperDrastic (`DSFLIP_RA_*`) and run-retroarch writes it into RetroArch's
+`cheevos_*`. The end writes `setup 2` into setup-done, shows "Welcome" and opens the menu through the iris; Settings >
+System > First-time setup runs the same slides (no arrival) and ends back in Settings.
 
 **Wi-Fi** (Settings > Network): the networks around from `wifi scan` (wpa_cli's scan results, one row per name,
 strongest first, with its signal, a lock, *Saved* or *Connected*), run on a thread so the menu never waits. A on a

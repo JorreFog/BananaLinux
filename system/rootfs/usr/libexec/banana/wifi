@@ -8,6 +8,8 @@
 #   wifi up | down | restart     wpa_supplicant on wlan0 (also with no networks yet)
 #   wifi scan                    the networks around (wpa_cli scan_results), starting wpa_supplicant if needed
 #   wifi status                  the connection (wpa_cli status)
+#   wifi test                    the first-time setup's check, a line per step as it ends: "link ok <address>" (or
+#                                "link fail"), "internet ok|fail", "time ok|fail" (the clock set over the network)
 # An address is asked for (udhcpc) only once wpa_supplicant is connected: wpa_cli runs this script as its action
 # script, "wifi wlan0 CONNECTED|DISCONNECTED", so nothing wakes the handheld while there is no network.
 CONF=/data/banana/wifi.conf
@@ -69,13 +71,41 @@ scan)
 status)
     [ -f /run/banana/wpa.pid ] && $W status
     ;;
+test)
+    # connected with an address (one just joined gets its address a few seconds after: up to 15 s for it)
+    ip=
+    for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+        st=$([ -f /run/banana/wpa.pid ] && $W status 2>/dev/null)
+        echo "$st" | grep -qx 'wpa_state=COMPLETED' && ip=$(echo "$st" | sed -n 's/^ip_address=//p')
+        [ -n "$ip" ] && break
+        sleep 1
+    done
+    [ -n "$ip" ] || { echo "link fail"; exit 0; }
+    echo "link ok $ip"
+    # the internet: any answer from the project's site, else GitHub (plain HTTP: no certificate, so a clock not set
+    # yet doesn't make it fail)
+    net=fail
+    for u in http://bananaos-cfw.dev/ http://github.com/; do
+        c=$(curl -s -o /dev/null -m 8 -w '%{http_code}' "$u" 2>/dev/null)
+        [ -n "$c" ] && [ "$c" != 000 ] && { net=ok; break; }
+    done
+    echo "internet $net"
+    # the clock: the connect's ntpd (above) marks time-synced; one still asking is waited for, else asked once more
+    if [ ! -f /run/banana/time-synced ] && [ $net = ok ]; then
+        for i in 1 2 3 4 5 6 7 8 9 10; do pidof ntpd >/dev/null || break; sleep 1; done
+        [ -f /run/banana/time-synced ] ||
+            { timeout 12 ntpd -q -n -p pool.ntp.org >/dev/null 2>&1 && { hwclock -w 2>/dev/null; date +%s > /run/banana/time-synced; }; }
+    fi
+    [ -f /run/banana/time-synced ] && echo "time ok" || echo "time fail"
+    ;;
 wlan0)
     # wpa_cli's events
     case $2 in
     CONNECTED)
         stop /run/banana/udhcpc.pid
+        # (time-synced: the clock came from the network this boot, for wifi test)
         udhcpc -b -t 5 -i wlan0 -p /run/banana/udhcpc.pid -s /usr/share/udhcpc/default.script >/dev/null 2>&1 &&
-            { ntpd -q -n -p pool.ntp.org >/dev/null 2>&1 && hwclock -w 2>/dev/null; } &
+            { ntpd -q -n -p pool.ntp.org >/dev/null 2>&1 && { hwclock -w 2>/dev/null; date +%s > /run/banana/time-synced; }; } &
         # Settings > System > Update check: Daily asks GitHub for a newer version, once a day at most (the update
         # script reads the setting itself; nothing is downloaded). After the clock had its chance: TLS needs it
         ( sleep 20; /usr/libexec/banana/update check --daily ) >/dev/null 2>&1 &
@@ -88,6 +118,6 @@ wlan0)
         ;;
     esac
     ;;
-*) echo "usage: wifi up|down|restart|scan|status" >&2; exit 1 ;;
+*) echo "usage: wifi up|down|restart|scan|status|test" >&2; exit 1 ;;
 esac
 exit 0

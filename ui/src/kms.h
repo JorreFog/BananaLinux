@@ -38,6 +38,8 @@ namespace banana
 		int height() const { return H; }
 		int pollFd() const { return fd; }
 		bool flipPending() const { return pending > 0; }
+		bool masterAtOpen = false;	// the master was had at open() (else another program still held it after the wait)
+		int failedFlips = 0, failedSets = 0;	// page flips refused, and of those not put up by a modeset either (no master)
 		// the composed screens (rows of width() words) and what changed on each since the last present
 		bool present(const uint32_t* const screens[2], const Damage dmg[2]);
 		void handleEvents();	// the flip events from pollFd()

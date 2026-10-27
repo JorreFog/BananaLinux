@@ -175,7 +175,8 @@ namespace banana
 			fd = f;
 			// the master: the boot's early light-up (--panels-on) may still hold it for a moment; it gives it up as soon
 			// as its modesets are queued (a second at most)
-			for (int t = 0; !handOver && drmSetMaster(fd) != 0 && t < 100; t++) usleep(10000);
+			masterAtOpen = handOver;
+			for (int t = 0; !handOver && t < 100; t++) { if (drmSetMaster(fd) == 0) { masterAtOpen = true; break; } usleep(10000); }
 			W = found[0].mode.hdisplay; H = found[0].mode.vdisplay;
 			for (int s = 0; s < 2; s++)
 			{
@@ -391,8 +392,13 @@ namespace banana
 			}
 			else
 			{
-				// no flip (lost master, a modeset in the way): put the buffer up directly
-				drmModeSetCrtc(fd, pn.crtc, bf.fb, 0, 0, &pn.conn, 1, (drmModeModeInfo*)pn.mode);
+				// no flip (lost master, a modeset in the way): put the buffer up directly. The master taken again first:
+				// opened while the menu before it still played its shutdown animation (a restart), the wait in open()
+				// (1 s) ran out, and without the master every flip and every modeset failed: the panels kept the old
+				// picture while frames were drawn for nobody (the first-boot arrival "froze", 2026-10-27)
+				failedFlips++;
+				drmSetMaster(fd);
+				if (drmModeSetCrtc(fd, pn.crtc, bf.fb, 0, 0, &pn.conn, 1, (drmModeModeInfo*)pn.mode) != 0) failedSets++;
 				pn.front = back;
 			}
 		}

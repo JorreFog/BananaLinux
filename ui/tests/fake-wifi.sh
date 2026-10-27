@@ -20,5 +20,13 @@ status)
         printf 'wpa_state=SCANNING\n'
     fi
     ;;
+test)
+    # the setup's check: FAKE_WIFI_NET / FAKE_WIFI_TIME = fail for a network with no internet / no time server
+    ssid=$(sed -n 's/^[[:space:]]*ssid="\(.*\)"$/\1/p' "$FAKE_WIFI_CONF" 2>/dev/null | head -n 1)
+    [ -n "$ssid" ] || { echo "link fail"; exit 0; }
+    echo "link ok 192.168.1.23"
+    echo "internet ${FAKE_WIFI_NET:-ok}"
+    echo "time ${FAKE_WIFI_TIME:-ok}"
+    ;;
 restart|up|down) ;;
 esac
