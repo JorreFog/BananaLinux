@@ -52,6 +52,10 @@ namespace banana
 		std::string setupState();	// (the tests) the slide, its choices and the checks' results, as a line	// the DS's name ("" none): the Welcome says it
 		// banana/setup-step: the slide a setup was on ("" none) and whether it was the boot's
 		static std::string setupStep(const std::string& dataDir, bool* boot = nullptr);
+		static bool setupNeeded(const std::string& dataDir);	// no setup-done, or one from before 0.5.0's setup
+		static constexpr const char* SETUP_MARK = "setup 2";
+		// (the host's library) how many games have a cover, of how many: the Box art slide says so for art fetched before
+		std::function<std::pair<int, int>()> artCount;
 		// a title card on black (the host's arrival and Welcome): l1 on the top panel at y (CSS px), l2 under it in the
 		// muted colour; the bottom panel black
 		void renderCard(const std::string& l1, const std::string& l2, float y, float size);
@@ -227,7 +231,7 @@ namespace banana
 		// the RetroAchievements account typed in the setup, checked with the server at once (on a thread: libcurl)
 		struct RaCheck { std::mutex mu; bool done = false; int kind = 0; std::string l2; };	// kind: 1 ok, 2 refused, 3 no network
 		std::shared_ptr<RaCheck> raCheck;
-		void startRaCheck(const std::string& user, const std::string& pass);
+		void startRaCheck(const std::string& user, const std::string& pass, const std::string& token = "");
 		std::string toast1, toast2;
 		uint32_t toastAccent = 0;
 		int toastIcon = 0;			// 0 "i", 1 a tick, 2 a cross
@@ -250,7 +254,8 @@ namespace banana
 		wifi::Job testJob;
 		int tLink = -1, tNet = -1, tTime = -1;
 		std::string tIp, tSsid;
-		bool testing = false, testAfterJoin = false, autoTested = false;
+		bool testing = false, testAfterJoin = false, autoTested = false, raAuto = false;
+		bool statusKnown = false;		// the Wi-Fi status has come in since the setup opened
 		double testPoll = 0;
 		void startTest();
 		bool pollTest();				// true when something to show changed

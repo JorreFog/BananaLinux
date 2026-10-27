@@ -508,6 +508,16 @@ template <class U> static void afterDelete(Host& lib, U& ui, const std::vector<s
 	ui.setHome(0);
 }
 
+// the games with a cover, of all the games on the shelves (each once: a favourite is in its system too), for the setup's
+// Box art slide
+static std::pair<int, int> artCount(Host& lib)
+{
+	std::set<std::string> all, have;
+	for (int i = 0; i < lib.systemCount(); i++)
+		for (auto& g : lib.shelf(i).games) { all.insert(g.path); if (!g.box.empty()) have.insert(g.path); }
+	return { (int)have.size(), (int)all.size() };
+}
+
 // the systems for Settings > Display & sound > Shown systems (id, name), from systems.conf
 static std::vector<std::pair<std::string, std::string>> shelfSystems(const Host& lib)
 {
@@ -554,6 +564,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	settings.setSystems(shelfSystems(lib));
 	settings.setSync(true);
 	settings.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
+	settings.artCount = [&] { return artCount(lib); };
 	LowBattery low;
 	int looking = 0;	// "looking 1|2|0": the games-being-read pop-up as the device shows it (a change waiting, the second card)
 	be.overlay = [&](int screen)
@@ -639,6 +650,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		}
 		else if (op == "setup") { settings.setup(); logf("setup open"); }
 		// setupagain: the setup as from Settings > System; setupat <slide>: the boot's, back on a slide (setup-step)
+		else if (op == "setupneeded") logf("setupneeded: %d", Settings::setupNeeded(o.data) ? 1 : 0);
 		else if (op == "setupstate") { settings.update(now); logf("setupstate: %s", settings.setupState().c_str()); }
 		else if (op == "setupagain") { settings.setup(false); logf("setup open (again)"); }
 		else if (op == "setupat") { std::string at; cs >> at; settings.setup(true, at); logf("setup open at %s", at.c_str()); }
@@ -1644,7 +1656,7 @@ int main(int argc, char** argv)
 		const float sc = disp.height() / 480.0f;
 		const std::string path = o.assets + "/fonts/fusion-pixel-12px-proportional-zh_hans.ttf";
 		// (the first-time setup's first slide is Language: read before it, not beside it)
-		if (access((o.data + "/setup-done").c_str(), F_OK) != 0 || access((o.data + "/setup-step").c_str(), F_OK) == 0)
+		if (Settings::setupNeeded(o.data) || access((o.data + "/setup-step").c_str(), F_OK) == 0)
 		{
 			if (auto f = rnds::Font::load(path)) rnds::setFallbackFont(f, 12, sc);
 		}
@@ -1656,7 +1668,8 @@ int main(int argc, char** argv)
 	worker.start(uiPtr);
 	// the first boot after the installation: the setup (Wi-Fi, the time zone, the accounts) before anything else; or a
 	// setup a restart cut off (a language picked on its first slide, a power cut, the setup again from Settings)
-	bool firstSetup = access((o.data + "/setup-done").c_str(), F_OK) != 0;
+	// (an update from 0.4.x too: its setup-done is the old setup's, and 0.5.0's runs once, from what the card has)
+	bool firstSetup = Settings::setupNeeded(o.data);
 	bool stepBoot = true;
 	const std::string setupAt = Settings::setupStep(o.data, &stepBoot);
 	const bool setupNow = firstSetup || !setupAt.empty();
@@ -1671,6 +1684,7 @@ int main(int argc, char** argv)
 	settingsView.setColors = [&](const ScreenColors& c) { std::string e = disp.setColors(c); if (!e.empty()) logf("screen colours: %s", e.c_str()); return e; };
 	settingsView.setFontDir(o.banana + "/fonts");
 	settingsView.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
+	settingsView.artCount = [&] { return artCount(lib); };
 	settingsView.setVariant(settings["theme"]);	// (Carts: Inter)
 	if (setupNow)
 	{

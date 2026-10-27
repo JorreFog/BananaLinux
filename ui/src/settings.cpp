@@ -2189,6 +2189,7 @@ namespace banana
 		}
 		if (statusJob.take(out))
 		{
+			statusKnown = true;
 			wifi::Status st = wifi::parseStatus(out);
 			changed |= st.connected != wstat.connected || st.ssid != wstat.ssid || st.ip != wstat.ip;
 			wstat = st;
@@ -4816,13 +4817,13 @@ namespace banana
 		}
 	}
 
-	void Settings::startRaCheck(const std::string& user, const std::string& pass)
+	void Settings::startRaCheck(const std::string& user, const std::string& pass, const std::string& token)
 	{
 		if (const char* e = getenv("BANANA_RA_CHECK"); e && !strcmp(e, "0")) return;	// (the headless test: no server)
 		auto c = std::make_shared<RaCheck>();
 		raCheck = c;
 		if (!wizard) toast("RetroAchievements", "Checking the account " + user + "...", 0x6ab0ff, 0, 30000);	// (the setup: on its slide)
-		std::thread([c, user, pass]
+		std::thread([c, user, pass, token]
 		{
 			int kind = 3;
 			std::string l2 = "No connection: check Wi-Fi, then try again from the setup";
@@ -4834,7 +4835,10 @@ namespace banana
 						NOSIGNAL = 99, RESPONSE_CODE = 0x200002 };
 					char* eu = cu.escape(h, user.c_str(), (int)user.size());
 					char* ep = cu.escape(h, pass.c_str(), (int)pass.size());
-					std::string post = std::string("r=login2&u=") + (eu ? eu : "") + "&p=" + (ep ? ep : "");
+					// (no password kept, only RetroArch's login token: the token, as rcheevos logs in with it)
+					char* et = pass.empty() && !token.empty() ? cu.escape(h, token.c_str(), (int)token.size()) : nullptr;
+					std::string post = std::string("r=login2&u=") + (eu ? eu : "") + (et ? std::string("&t=") + et : "&p=" + std::string(ep ? ep : ""));
+					if (et) cu.freep(et);
 					if (eu) cu.freep(eu);
 					if (ep) cu.freep(ep);
 					std::string body;
@@ -4930,6 +4934,17 @@ namespace banana
 		return k[sl];
 	}
 
+	// banana/setup-done says which setup the card went through: "setup 2" this one (0.5.0's slides). An older card's
+	// ("done", from 0.4.x) or none runs it once more: the owner, 2026-10-27: everyone gets 0.5.0's setup once, an update
+	// too, each slide starting from what the card has
+	bool Settings::setupNeeded(const std::string& dataDir)
+	{
+		std::ifstream f(dataDir + "/setup-done");
+		std::string ln;
+		std::getline(f, ln);
+		return trim(ln) != SETUP_MARK;
+	}
+
 	std::string Settings::setupStep(const std::string& dataDir, bool* boot)
 	{
 		std::ifstream f(dataDir + "/setup-step");
@@ -4954,7 +4969,8 @@ namespace banana
 		for (Slide sl : { SL_WIFI, SL_TZ, SL_NAME, SL_RA, SL_ART, SL_DONE }) slides.push_back(sl);
 		wskipped.assign(slides.size(), false);
 		tLink = tNet = tTime = -1;
-		testing = testAfterJoin = autoTested = false;
+		testing = testAfterJoin = autoTested = raAuto = false;
+		statusKnown = !wifiOn();	// (off: nothing to wait for)
 		raKind = 0; raLine.clear();
 		int start = 0;
 		for (int i = 0; i < (int)slides.size(); i++) if (at == slideKey(slides[i])) start = i;
@@ -4972,6 +4988,14 @@ namespace banana
 			std::ofstream(data + "/setup-step") << slideKey(slides[wsel]) << " " << (wizardBoot ? "boot" : "settings") << "\n";
 		// Wi-Fi already connected (a saved network, or the setup again): tested at once
 		if (slides[wsel] == SL_WIFI && wstat.connected && tLink < 0 && !testing) { autoTested = true; startTest(); }
+		// an account from before: its login checked with the site straight away (the password is never shown)
+		if (slides[wsel] == SL_RA && !raAuto && raKind == 0 && !raCheck && !account("ra_user").empty() &&
+			(!account("ra_password").empty() || !account("ra_retroarch_token").empty()))
+		{
+			raAuto = true;
+			startRaCheck(account("ra_user"), account("ra_password"), account("ra_retroarch_token"));
+			if (!raCheck) { raKind = 4; raLine = "Saved (not checked here)"; }
+		}
 	}
 
 	// the time on the clock now, in the time zone in effect (save() sets TZ when the zone changes)
@@ -4987,7 +5011,7 @@ namespace banana
 
 	void Settings::setupDone()
 	{
-		std::ofstream(data + "/setup-done") << "done\n";
+		std::ofstream(data + "/setup-done") << SETUP_MARK << "\n";
 		unlink((data + "/setup-step").c_str());
 		wizard = false;
 		page = LIST;
@@ -5053,11 +5077,15 @@ namespace banana
 		switch (slides[wsel])
 		{
 		case SL_LANG:
-			if (lg) r.push_back({ "Language", lg->names[std::max(0, std::min((int)lg->names.size() - 1, langAt))], SA_LANG });
+			// (Next first: A through the setup keeps what the card has; left and right change the value from either row)
 			r.push_back({ "Next", "", SA_NEXT });
+			if (lg) r.push_back({ "Language", lg->names[std::max(0, std::min((int)lg->names.size() - 1, langAt))], SA_LANG });
 			break;
 		case SL_WIFI:
+			// connected (a network from before, or one just joined): A keeps it and goes on, the test or not
+			if (testing && wstat.connected) { r.push_back({ "Next", "", SA_NEXT }); r.push_back({ "Choose another network", "", SA_NETWORKS }); break; }
 			if (testing) { r.push_back({ "Testing the connection", "", SA_WAIT }); r.push_back({ "Skip for now", "", SA_SKIP }); break; }
+			if (!statusKnown && joining.empty()) { r.push_back({ "Looking at the connection", "", SA_WAIT }); r.push_back({ "Choose a network", "", SA_NETWORKS }); r.push_back({ "Skip for now", "", SA_SKIP }); break; }
 			if (!joining.empty()) { r.push_back({ "Choose another network", "", SA_NETWORKS }); r.push_back({ "Skip for now", "", SA_SKIP }); break; }
 			if (tLink == 1 && tNet == 1)
 			{
@@ -5077,8 +5105,8 @@ namespace banana
 			r.push_back({ "Skip for now", "", SA_SKIP });
 			break;
 		case SL_TZ:
-			if (tz) r.push_back({ "Time zone", tz->names[tz->at] + " (" + clockNow() + ")", SA_TZ });
 			r.push_back({ "Next", "", SA_NEXT });
+			if (tz) r.push_back({ "Time zone", tz->names[tz->at] + " (" + clockNow() + ")", SA_TZ });
 			break;
 		case SL_NAME:
 			if (!dsName().empty()) { r.push_back({ "Next", "", SA_NEXT }); r.push_back({ "Change the name", dsName(), SA_NAME }); }
@@ -5087,17 +5115,19 @@ namespace banana
 		case SL_RA:
 		{
 			std::string user = account("ra_user");
+			const bool saved = !user.empty() && (!account("ra_password").empty() || !account("ra_retroarch_token").empty());
+			// an account from before (an update, the setup again): checked as the slide comes, kept with A
+			if (raCheck && saved) { r.push_back({ "Next", "", SA_NEXT }); r.push_back({ "Log in with another account", "", SA_RA }); break; }
 			if (raCheck) { r.push_back({ "Checking the login", "", SA_WAIT }); r.push_back({ "Skip for now", "", SA_SKIP }); break; }
-			if (raKind == 1) { r.push_back({ "Next", "", SA_NEXT }); r.push_back({ "Log in with another account", "", SA_RA }); break; }
+			if (raKind == 1 || raKind == 4) { r.push_back({ "Next", "", SA_NEXT }); r.push_back({ "Log in with another account", "", SA_RA }); break; }
 			if (raKind == 2) { r.push_back({ "Try again", "", SA_RA }); r.push_back({ "Skip for now", "", SA_SKIP }); break; }
-			if (raKind == 4) { r.push_back({ "Next", "", SA_NEXT }); r.push_back({ "Log in with another account", "", SA_RA }); break; }
+			if (raKind == 3 && saved) { r.push_back({ "Keep it and go on", "", SA_NEXT }); r.push_back({ "Check again", "", SA_RACHECK }); r.push_back({ "Log in with another account", "", SA_RA }); break; }
 			if (raKind == 3) { r.push_back({ "Check again", "", SA_RACHECK }); r.push_back({ "Log in with another account", "", SA_RA }); r.push_back({ "Skip for now", "", SA_SKIP }); break; }
-			if (!user.empty() && !account("ra_password").empty())
+			if (saved)
 			{
-				// an account from before (the setup again): checked on a press, the password not typed again
+				r.push_back({ "Next", "", SA_NEXT });
 				r.push_back({ "Check the login", user, SA_RACHECK });
 				r.push_back({ "Log in with another account", "", SA_RA });
-				r.push_back({ "Next", "", SA_NEXT });
 				break;
 			}
 			r.push_back({ "Log in", "", SA_RA });
@@ -5106,6 +5136,13 @@ namespace banana
 		}
 		case SL_ART:
 			if (scraping()) { r.push_back({ "Next", "", SA_NEXT }); break; }
+			if (scrapeLine.empty() && artCount && artCount().first > 0)
+			{
+				// fetched before (an update, the setup again): kept; new games' art on a press
+				r.push_back({ "Next", "", SA_NEXT });
+				r.push_back({ "Fetch art for new games", "", SA_ART });
+				break;
+			}
 			if (scrapeLine.compare(0, 4, "done") == 0) { r.push_back({ "Next", "", SA_NEXT }); r.push_back({ "Fetch again", "", SA_ART }); break; }
 			r.push_back({ scrapeLine.compare(0, 5, "error") == 0 ? "Try again" : "Start fetching box art", "", SA_ART });
 			r.push_back({ "Skip for now", "", SA_SKIP });
@@ -5174,7 +5211,7 @@ namespace banana
 			return MOVED;
 		case SA_RACHECK:
 			raKind = 0; raLine.clear();
-			startRaCheck(account("ra_user"), account("ra_password"));
+			startRaCheck(account("ra_user"), account("ra_password"), account("ra_retroarch_token"));
 			if (!raCheck) { raKind = 4; raLine = "Saved (not checked here)"; }	// (the test's BANANA_RA_CHECK=0)
 			return MOVED;
 		case SA_ART: startScrape(); return MOVED;
@@ -5199,6 +5236,7 @@ namespace banana
 		{
 			// the value rows: the time zone and the language, either way
 			int d = k == Key::LEFT || k == Key::L ? -1 : 1;
+			for (int i = 0; i < n; i++) if (ch[i].act == SA_TZ || ch[i].act == SA_LANG) wpick = i;	// (onto the value's row)
 			if (n && ch[wpick].act == SA_TZ && tz)
 			{
 				int m = (int)tz->values.size();
@@ -5274,7 +5312,8 @@ namespace banana
 			help = "The menu's language, and the settings' and the emulators' menus. The rest of the setup is in the language picked.";
 			break;
 		case SL_WIFI:
-			status = testing ? "Testing " + tSsid + "..." : !joining.empty() ? "Joining " + joining + "..." :
+			status = testing && wstat.connected ? "Connected to " + wstat.ssid : testing ? "Testing " + tSsid + "..." : !joining.empty() ? "Joining " + joining + "..." :
+				!statusKnown ? "Looking at the connection..." :
 				wstat.connected ? "Connected to " + wstat.ssid : wifiOn() ? "Not connected" : "Off";
 			help = "Your home network: achievements, the clock, box art and updates need it. Pick it from the networks around, type its password, and the connection is tested.";
 			break;
@@ -5288,11 +5327,16 @@ namespace banana
 			help = "Your name on the DS, as a real one asks for it the first time: Mario Kart's records, Pictochat, a game's save. 10 characters at most. Leave it and the emulators use their own.";
 			break;
 		case SL_RA:
-			status = raCheck ? "Checking..." : raKind == 1 ? "Logged in" : raKind == 2 ? "Not logged in" : raKind == 3 ? "No answer" : ra.empty() ? "Not logged in" : ra;
+			status = raCheck ? "Checking " + ra + "..." : raKind == 1 ? "Logged in as " + ra : raKind == 2 ? "Not logged in" : raKind == 3 ? "No answer" : ra.empty() ? "Not logged in" : ra;
 			help = "Your retroachievements.org account: DraStic and RetroArch unlock achievements with it. The login is checked with the site. No account? Skip this: it can be added later.";
 			break;
 		case SL_ART:
 			status = scrapeShort();
+			if (scrapeLine.empty() && artCount)
+			{
+				auto [have, all] = artCount();
+				if (have > 0) status = std::to_string(have) + " of " + std::to_string(all) + " games have art";
+			}
 			help = scraping() ? "Fetching covers and title screens. It carries on in the background while you finish the setup; the menu shows the art as it comes."
 				: "Covers, title screens, genres and years for the games on the card, from libretro's free collections: no account needed. Settings > System > Box art runs it again for new games.";
 			break;
@@ -5331,7 +5375,11 @@ namespace banana
 			row("DS name", dsName().empty() ? "Not set" : dsName(), dsName().empty() ? -1 : 1);
 			row("RetroAchievements", raKind == 1 ? ra : raKind == 2 ? "Login failed" : !ra.empty() ? ra : skipped(SL_RA) ? "Skipped" : "Not logged in",
 				raKind == 1 ? 1 : raKind == 2 ? 0 : -1);
-			row("Box art", scraping() ? "Fetching in the background" : scrapeLine.compare(0, 4, "done") == 0 ? scrapeShort() : skipped(SL_ART) ? "Skipped" : "Not fetched", scraping() || scrapeLine.compare(0, 4, "done") == 0 ? 1 : -1);
+			auto art = artCount ? artCount() : std::pair<int, int>(0, 0);
+			bool artBefore = scrapeLine.empty() && art.first > 0;	// (fetched before: an update, the setup again)
+			row("Box art", scraping() ? "Fetching in the background" : scrapeLine.compare(0, 4, "done") == 0 ? scrapeShort() :
+				artBefore ? std::to_string(art.first) + " of " + std::to_string(art.second) + " games have art" : skipped(SL_ART) ? "Skipped" : "Not fetched",
+				scraping() || scrapeLine.compare(0, 4, "done") == 0 || artBefore ? 1 : -1);
 			wrapped(help, 18, 50, y + 10, 540, 2, p.muted);
 		}
 		else

@@ -937,3 +937,10 @@ settings		Fetching covers and title screens. It carries on in the background whi
 settings		Covers, title screens, genres and years for the games on the card, from libretro's free collections: no account needed. Settings > System > Box art runs it again for new games.	从 libretro 的免费图库获取卡上游戏的封面、标题画面、类型和年份：无需账号。设置 > 系统 > 封面 可为新游戏再次运行。
 settings		Everything here is in Settings too (START in the menu), and this setup is under System > First-time setup.	这里的所有内容也都在设置中（菜单中按 START），本设置位于 系统 > 首次设置。
 settings		The first boot's setup again, a step at a time: Wi-Fi (with a test of the connection), the time zone, the DS's name, the RetroAchievements login and box art. B on its first step comes back here.	再次进行首次启动的设置，一次一步：Wi-Fi（并测试连接）、时区、DS 名称、RetroAchievements 登录和封面。在第一步按 B 返回此处。
+settings		Looking at the connection	正在查看连接
+settings		Looking at the connection...	正在查看连接…
+settings		Keep it and go on	保留并继续
+settings		Fetch art for new games	为新游戏获取封面
+settings		{have} of {all} games have art	{all} 个游戏中有 {have} 个已有封面
+settings		Logged in as {name}	已登录为 {name}
+settings		Checking {name}...	正在检查 {name}…
