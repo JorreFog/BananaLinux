@@ -116,8 +116,8 @@ def main():
 
         # every example theme loads with no complaints from the engine
         for name in ff.js("return BananaStudio.state.templates.map((t) => t.name)"):
-            ff.js("document.querySelector('[data-tab=theme]').click();"
-                  "Array.from(document.querySelectorAll('#pane-theme button')).find((b) => b.textContent === arguments[0]).click();", name)
+            ff.js("BananaStudio.openTemplates();"
+                  "Array.from(document.querySelectorAll('#templates .tpl')).find((b) => b.querySelector('b').textContent === arguments[0]).click();", name)
             settle(ff, 700)
             errs = ff.js("return BananaEngine.errors()")
             check(ff.js("return BananaStudio.state.theme.name") == name and not errs, "the " + name + " template opens and draws cleanly", errs)
@@ -131,10 +131,10 @@ def main():
         check(tab.startswith("Problems (") and "theme:" in ff.js("return document.querySelector('#log').innerText"), "the engine's complaints show under Problems", tab)
 
         # system icons: every system listed with the menu's own icon; a picked file shows on the shelf
-        ff.js("BananaStudio.state.unsaved = false; document.querySelector('[data-tab=theme]').click();"
-              "Array.from(document.querySelectorAll('#pane-theme button')).find((b) => b.textContent === 'Canvas').click();")
+        ff.js("BananaStudio.state.unsaved = false; document.querySelector('[data-tab=theme]').click(); BananaStudio.openTemplates();"
+              "Array.from(document.querySelectorAll('#templates .tpl')).find((b) => b.querySelector('b').textContent === 'Canvas').click();")
         settle(ff, 500)
-        rows = ff.js("return Array.from(document.querySelectorAll('#pane-icons .icon-row')).map((r) => [r.querySelector('b').textContent, !!r.querySelector('.ic img')])")
+        rows = ff.js("return Array.from(document.querySelectorAll('#pane-icons .icon-row')).map((r) => [r.dataset.id, !!r.querySelector('.ic img')])")
         ids = [r[0] for r in rows]
         conf = [ln.strip()[1:-1] for ln in (HERE.parents[2] / "system/rootfs/etc/banana/systems.conf").read_text().splitlines() if ln.strip().startswith("[")]
         check(all(i in ids for i in conf + ["favorites", "recently-played"]), "the icons panel lists every system in systems.conf and the collections", ids)
@@ -219,8 +219,8 @@ def main():
         ff.js("document.querySelector('#guide').remove()")
 
         # Optimize for the handheld: the findings in their groups, a click selects the element, Apply is one undo step
-        ff.js("BananaStudio.state.unsaved = false; document.querySelector('[data-tab=theme]').click();"
-              "Array.from(document.querySelectorAll('#pane-theme button')).find((b) => b.textContent === 'Turntable').click();")
+        ff.js("BananaStudio.state.unsaved = false; document.querySelector('[data-tab=theme]').click(); BananaStudio.openTemplates();"
+              "Array.from(document.querySelectorAll('#templates .tpl')).find((b) => b.querySelector('b').textContent === 'Turntable').click();")
         settle(ff, 500)
         before = ff.js("return JSON.stringify(BananaStudio.themeOut())")
         ff.js("document.querySelector('#optimizeBtn').click()")

@@ -74,6 +74,54 @@
     return e;
   }
 
+  // ---- small line icons (24 x 24, stroked) ----------------------------------------------------------
+  const ICONS = {
+    rect: '<rect x="4" y="6" width="16" height="12" rx="2"/>',
+    text: '<path d="M5 6V4h14v2M12 4v16M9 20h6"/>',
+    image: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/>',
+    group: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 8h6M7 12h10M7 16h4"/>',
+    list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+    row: '<rect x="2" y="7" width="6" height="10" rx="1"/><rect x="9" y="7" width="6" height="10" rx="1"/><rect x="16" y="7" width="6" height="10" rx="1"/>',
+    column: '<rect x="6" y="2" width="12" height="6" rx="1"/><rect x="6" y="9" width="12" height="6" rx="1"/><rect x="6" y="16" width="12" height="6" rx="1"/>',
+    carousel: '<rect x="8" y="5" width="8" height="14" rx="2"/><path d="M4 8v8M20 8v8"/>',
+    hints: '<circle cx="6" cy="12" r="3"/><path d="M11 12h3"/><circle cx="18" cy="12" r="3"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    battery: '<rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 11v2M6 10v4M10 10v4"/>',
+    dots: '<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>',
+    component: '<path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/>',
+    up: '<path d="m18 15-6-6-6 6"/>', down: '<path d="m6 9 6 6 6-6"/>', plus: '<path d="M12 5v14M5 12h14"/>',
+    copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
+    trash: '<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/>',
+    chevron: '<path d="m9 18 6-6-6-6"/>', chevronDown: '<path d="m6 9 6 6 6-6"/>',
+    home: '<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+    grid: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>',
+    reload: '<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>',
+    x: '<path d="M18 6 6 18M6 6l12 12"/>',
+  };
+  function icon(name) {
+    const s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    s.setAttribute("viewBox", "0 0 24 24"); s.setAttribute("aria-hidden", "true");
+    s.innerHTML = ICONS[name] || ICONS.rect;
+    return s;
+  }
+  // a small pop-up menu under a button: items are [label, fn, iconName?]
+  function popMenu(anchor, items) {
+    closePop();
+    const m = h("div", { class: "menu pop", role: "menu" });
+    items.forEach((it) => {
+      if (!it) { m.appendChild(h("div", { class: "menu-sep" })); return; }
+      const b = h("button", { type: "button", class: "menu-item" }, it[2] ? icon(it[2]) : null, it[0]);
+      b.onclick = (e) => { e.stopPropagation(); closePop(); it[1](); };
+      m.appendChild(b);
+    });
+    const r = anchor.getBoundingClientRect();
+    m.style.position = "fixed"; m.style.top = (r.bottom + 4) + "px";
+    m.style.left = Math.max(8, Math.min(window.innerWidth - 270, r.left)) + "px";
+    document.body.appendChild(m);
+    setTimeout(() => document.addEventListener("click", closePop, { once: true }), 0);
+  }
+  function closePop() { document.querySelectorAll(".menu.pop").forEach((m) => m.remove()); }
+
   // ---- a plain-words complaint about broken JSON, instead of the parser's raw message -------------------
   function badJson(what, e) {
     alert("That isn't valid JSON, so it could not be used.\n\n" +
@@ -244,6 +292,7 @@
     }
     const fid = "field" + (++fieldSeq);		// (typing in one field is one step of undo)
     function commit(nv) { set(nv); markDirty(fid); chipFor(); }
+    row.classList.toggle("is-code", false);
     // the form picked with the buttons, while the value can't show it yet: an empty expression (a lone "=" is an
     // error to the engine, so nothing is written until there is something after it), or a template with no braces
     // yet (text without {} is a literal to the engine, which is the same thing)
@@ -258,23 +307,23 @@
     function build() {
       ctl.innerHTML = "";
       const cur = get(), form = formOf(cur);
-      const seg = h("div", { class: "seg" });
-      [["lit", "Lit"], ["expr", "Expr"], ["tmpl", "Tmpl"]].forEach(function (fp) {
-        const b = h("button", { type: "button" }, fp[1]); b.setAttribute("aria-pressed", String(form === fp[0]));
-        b.onclick = () => {
-          if (form === fp[0]) return;
-          picked = fp[0];
-          if (!empty(cur) && !(fp[0] === "tmpl" && form === "lit" && typeof cur === "string")) commit(convertForm(cur, fp[0], kind));
-          build();
-          const i = ctl.querySelector("input[type=text]"); if (i && fp[0] !== "lit") i.focus();
-        };
-        seg.appendChild(b);
-      });
-      ctl.appendChild(seg);
+      // one small switch: a plain value, or an =expression worked out live (text with {braces} is a template by itself)
+      const seg = h("button", { type: "button", class: "fx", title: form === "expr" ? "Back to a plain value" : "Use an expression instead: =sel ? accent : '#202430'" }, "ƒx");
+      seg.setAttribute("aria-pressed", String(form === "expr"));
+      seg.onclick = () => {
+        const to = form === "expr" ? "lit" : "expr";
+        picked = to;
+        if (!empty(cur)) commit(convertForm(cur, to, kind));
+        build();
+        const i = ctl.querySelector("input[type=text]"); if (i && to === "expr") i.focus();
+      };
+      seg.classList.toggle("on", form === "expr");
       if (form === "expr") { ctl.appendChild(document.createTextNode("=")); const i = h("input", { type: "text", spellcheck: "false", value: empty(cur) ? "" : cur.slice(1), placeholder: "an expression" }); i.oninput = () => commit(i.value === "" ? "" : "=" + i.value); ctl.appendChild(i); }
       else if (form === "tmpl") { const i = h("input", { type: "text", spellcheck: "false", value: empty(cur) ? "" : String(cur), placeholder: "text with {expressions}" }); i.oninput = () => commit(i.value); ctl.appendChild(i); }
       else buildLiteral(cur);
-      ctl.appendChild(chip); chipFor();
+      ctl.appendChild(seg);
+      // what an expression or a template works out to now (a plain value shows itself)
+      ctl.appendChild(chip); chipFor(); chip.hidden = form === "lit";
     }
     function buildLiteral(cur) {
       if (kind === "bool") { const i = h("input", { type: "checkbox" }); i.checked = !!(cur === true || cur === "true" || cur === 1); i.onchange = () => commit(i.checked); ctl.appendChild(i); return; }
@@ -457,20 +506,24 @@
     return n ? n + (n === 1 ? " child" : " children") : "";
   }
   function hasKids(el) { return Array.isArray(el.children) ? el.children.length > 0 : el.item !== undefined; }
+  const VIEW_LABELS = { home: "Home", library: "Library", launch: "Launch", all: "Every view" };
+  const VIEW_TIPS = { home: "The screen you pick a system on", library: "A system's games", launch: "While a game starts",
+    all: "Drawn over every view (a status bar, a clock...)" };
   function renderTree() {
     const pane = $("#pane-elements"); pane.innerHTML = "";
-    const vsel = h("div", { class: "viewsel" });
-    S.VIEWS.forEach((v) => { const b = h("button", { type: "button" }, v); b.setAttribute("aria-pressed", String(state.view === v)); b.onclick = () => { state.view = v; renderTree(); }; vsel.appendChild(b); });
+    const vsel = h("div", { class: "viewsel seg", title: "Which part of the menu you are editing" });
+    S.VIEWS.forEach((v) => { const b = h("button", { type: "button", title: VIEW_TIPS[v] || "" }, VIEW_LABELS[v] || v); b.setAttribute("aria-pressed", String(state.view === v)); b.onclick = () => { state.view = v; renderTree(); renderPalette(); }; vsel.appendChild(b); });
     pane.appendChild(vsel);
     S.SCREENS.forEach(function (scr) {
       const head = h("div", { class: "screenhead" });
-      const nm = h("span", { class: "name" + (state.screen === scr ? " on" : ""), title: "Click a screen to work on it: elements you add go there" }, scr);
+      const nm = h("span", { class: "name" + (state.screen === scr ? " on" : ""), title: "Click to work on this screen: elements you add go here" }, scr === "top" ? "Top screen" : "Bottom screen");
       nm.onclick = () => { state.screen = scr; state.addScreen = scr; renderTree(); renderPalette(); };
       head.appendChild(nm);
-      const add = h("button", { class: "ghost", type: "button" }, "+ element"); add.onclick = () => addTo(screenArr(scr), ["screens", state.view, scr]); head.appendChild(add);
+      const add = h("button", { class: "ghost small", type: "button", title: "Add an element to the " + scr + " screen" }, icon("plus"), "Add");
+      add.onclick = (e) => { e.stopPropagation(); addTo(screenArr(scr), ["screens", state.view, scr], undefined, add); }; head.appendChild(add);
       pane.appendChild(head);
       const arr = screenArr(scr);
-      if (!arr.length) pane.appendChild(h("div", { class: "muted", style: "margin:2px 0 6px" }, emptyNote(state.view, scr)));
+      if (!arr.length) pane.appendChild(h("div", { class: "tree-empty" }, emptyNote(state.view, scr)));
       arr.forEach((el, i) => pane.appendChild(node(["screens", state.view, scr, i], el, i, arr)));
     });
   }
@@ -478,30 +531,32 @@
   function emptyNote(view, scr) {
     const sc = state.theme.screens || {};
     const has = (v) => Array.isArray(sc[v] && sc[v][scr]) ? sc[v][scr].length > 0 : !!(sc[v] && sc[v][scr]);
-    if (view === "all") return "(empty: nothing is drawn over the views)";
+    if (view === "all") return "Nothing is drawn over the views.";
     const next = view === "launch" ? ["library", "home"] : view === "library" ? ["home"] : [];
-    for (const v of next) if (has(v)) return "(empty: the menu shows the " + v + " " + scr + " screen here — add an element to give this view its own)";
-    return "(empty: this screen is black — add an element)";
+    for (const v of next) if (has(v)) return "Empty: the menu shows the " + (VIEW_LABELS[v] || v) + " " + scr + " screen here. Add an element to give this view its own.";
+    return "Empty: this screen is black. Add an element, or pick one from the Add tab.";
   }
   function node(path, el, index, arr) {
     const wrap = h("div", { class: "node" });
     const row = h("div", { class: "row" + (samePath(state.sel, path) ? " sel" : "") });
     const kids = hasKids(el);
     const openKey = JSON.stringify(path);
-    const caret = h("span", { class: "caret" + (kids ? "" : " leaf") }, state.open[openKey] === false ? "▸" : "▾");
+    const caret = h("span", { class: "caret" + (kids ? "" : " leaf") }, icon(state.open[openKey] === false ? "chevron" : "chevronDown"));
     caret.onclick = (e) => { e.stopPropagation(); state.open[openKey] = state.open[openKey] === false; renderTree(); };
     row.appendChild(caret);
-    row.appendChild(h("span", { class: "t" }, (S.TYPE_LABELS && S.TYPE_LABELS[typeOf(el)]) || typeOf(el)));
-    const lbl = h("span", { class: "lbl" }, labelOf(el)); lbl.title = el.type || ""; row.appendChild(lbl);
+    const tname = el.use ? "component" : typeOf(el);
+    row.appendChild(h("span", { class: "t" }, icon(tname === "group" && el.layout === "row" ? "row" : tname === "group" && el.layout === "column" ? "column" : tname),
+      el.use ? el.use : (el.id ? String(el.id) : (S.TYPE_LABELS && S.TYPE_LABELS[typeOf(el)]) || typeOf(el))));
+    const lbl = h("span", { class: "lbl" }, el.use ? "component" : labelOf(el)); lbl.title = labelOf(el); row.appendChild(lbl);
     const acts = h("div", { class: "acts" });
-    const mk = (t, fn, danger) => { const b = h("button", { class: "ghost" + (danger ? " danger" : ""), type: "button" }, t); b.onclick = (e) => { e.stopPropagation(); fn(); }; return b; };
+    const mk = (ic, tip, fn, danger) => { const b = h("button", { class: "ghost" + (danger ? " danger" : ""), type: "button", title: tip, "aria-label": tip }, icon(ic)); b.onclick = (e) => { e.stopPropagation(); fn(b); }; return b; };
     if (Array.isArray(arr)) {
-      acts.appendChild(mk("↑", () => { if (index > 0) { const x = arr.splice(index, 1)[0]; arr.splice(index - 1, 0, x); state.sel = parentOf(path).concat(index - 1); markDirty(); renderAll(); rerender(); } }));
-      acts.appendChild(mk("↓", () => { if (index < arr.length - 1) { const x = arr.splice(index, 1)[0]; arr.splice(index + 1, 0, x); state.sel = parentOf(path).concat(index + 1); markDirty(); renderAll(); rerender(); } }));
-      acts.appendChild(mk("+", () => addTo(arr, parentOf(path), index)));
-      acts.appendChild(mk("⧉", () => { arr.splice(index + 1, 0, clone(el)); state.sel = parentOf(path).concat(index + 1); markDirty(); renderAll(); rerender(); }));
+      acts.appendChild(mk("up", "Move up (drawn earlier, further back)", () => { if (index > 0) { const x = arr.splice(index, 1)[0]; arr.splice(index - 1, 0, x); state.sel = parentOf(path).concat(index - 1); markDirty(); renderAll(); rerender(); } }));
+      acts.appendChild(mk("down", "Move down (drawn later, in front)", () => { if (index < arr.length - 1) { const x = arr.splice(index, 1)[0]; arr.splice(index + 1, 0, x); state.sel = parentOf(path).concat(index + 1); markDirty(); renderAll(); rerender(); } }));
+      acts.appendChild(mk("plus", "Add an element after this one", (b) => addTo(arr, parentOf(path), index, b)));
+      acts.appendChild(mk("copy", "Duplicate", () => { arr.splice(index + 1, 0, clone(el)); state.sel = parentOf(path).concat(index + 1); markDirty(); renderAll(); rerender(); }));
     }
-    acts.appendChild(mk("✕", () => { delPath(path); state.sel = null; markDirty(); renderAll(); rerender(); }, true));
+    acts.appendChild(mk("trash", "Delete", () => { delPath(path); state.sel = null; markDirty(); renderAll(); rerender(); }, true));
     row.appendChild(acts);
     row.onclick = () => { state.sel = path; renderTree(); rerender(); };
     row.setAttribute("draggable", "true");
@@ -518,27 +573,37 @@
       const x = arr.splice(from, 1)[0]; arr.splice(to, 0, x); state.drag = null; state.sel = parentOf(path).concat(to); markDirty(); renderAll(); rerender();
     });
     wrap.appendChild(row);
+    const kidsBox = h("div", { class: "kids" });
     if (kids && state.open[openKey] !== false) {
-      if (Array.isArray(el.children)) el.children.forEach((c, i) => wrap.appendChild(node(path.concat("children", i), c, i, el.children)));
+      if (Array.isArray(el.children)) el.children.forEach((c, i) => kidsBox.appendChild(node(path.concat("children", i), c, i, el.children)));
       else if (el.item !== undefined) {
-        const child = h("div"); child.appendChild(node(path.concat("item"), el.item, 0, null));
-        const rm = h("button", { class: "ghost danger", type: "button" }, "remove item"); rm.onclick = () => { delete el.item; markDirty(); renderAll(); rerender(); };
-        child.appendChild(rm); wrap.appendChild(child);
+        const it = node(path.concat("item"), el.item, 0, null);
+        const t = it.querySelector(".lbl"); if (t) t.textContent = "drawn for each item";
+        kidsBox.appendChild(it);
       }
       if (el.type === "group" || el.children !== undefined) {
-        const addc = h("button", { class: "ghost", type: "button" }, "+ child"); addc.onclick = () => { if (!Array.isArray(el.children)) el.children = []; addTo(el.children, path.concat("children")); };
-        wrap.appendChild(addc);
+        const addc = h("button", { class: "ghost add-child", type: "button", title: "Add an element inside this group" }, icon("plus"), "Add inside");
+        addc.onclick = (e) => { e.stopPropagation(); if (!Array.isArray(el.children)) el.children = []; addTo(el.children, path.concat("children"), undefined, addc); };
+        kidsBox.appendChild(addc);
       }
     }
     if (!kids && el.type === "group" && !Array.isArray(el.children)) {
-      const addc = h("button", { class: "ghost", type: "button" }, "+ child"); addc.onclick = () => { el.children = []; markDirty(); renderAll(); rerender(); };
-      wrap.appendChild(addc);
+      const addc = h("button", { class: "ghost add-child", type: "button" }, icon("plus"), "Add inside"); addc.onclick = () => { el.children = []; markDirty(); renderAll(); rerender(); };
+      kidsBox.appendChild(addc);
     }
+    if (kidsBox.childNodes.length) wrap.appendChild(kidsBox);
     return wrap;
   }
-  function addTo(arr, parPath, at) {
-    const type = (window.prompt("Element type — rect, text, image, group or list", "rect") || "").trim().toLowerCase();
-    if (["rect", "text", "image", "group", "list"].indexOf(type) < 0) return;
+  function addTo(arr, parPath, at, anchor) {
+    if (anchor) {
+      popMenu(anchor, [["Rectangle", () => addTo2("rect"), "rect"], ["Text", () => addTo2("text"), "text"], ["Picture", () => addTo2("image"), "image"],
+        ["Group (holds others)", () => addTo2("group"), "group"], ["List (repeats for each system or game)", () => addTo2("list"), "list"]]);
+      return;
+    }
+    addTo2("rect");
+    function addTo2(type) { addElementAt(arr, parPath, at, type); }
+  }
+  function addElementAt(arr, parPath, at, type) {
     const el = makeElement(type);
     const idx = at === undefined ? arr.length : at + 1;
     arr.splice(idx, 0, el);
@@ -557,11 +622,18 @@
   // ---- the inspector ---------------------------------------------------------------------------------
   function renderInspector() {
     const pane = $("#inspector"); pane.innerHTML = "";
-    if (!state.sel) { pane.appendChild(h("div", { class: "muted", style: "padding:10px" }, "Select an element in the tree to edit it.")); return; }
+    if (!state.sel) {
+      pane.appendChild(h("div", { class: "empty" }, h("p", null, h("b", null, "Nothing selected")),
+        h("p", null, "Pick an element in Layers on the left to change it here."),
+        h("p", null, "Settings for the whole theme (name, colours, system icons, buttons) are on the Theme tab.")));
+      return;
+    }
     const el = getPath(state.sel);
     if (!el || typeof el !== "object") { state.sel = null; renderInspector(); return; }
-    const crumbs = state.sel.slice(1).map((s) => (/^\d+$/.test(String(s)) ? "element " + (+s + 1) : s));
-    pane.appendChild(h("div", { class: "muted", style: "font-size:11px;margin:2px 0 6px", title: "Where it sits in the file: " + state.sel.join(".") }, crumbs.join("  ›  ")));
+    const crumbs = state.sel.slice(1).map((s) => (/^\d+$/.test(String(s)) ? "#" + (+s + 1) : VIEW_LABELS[s] || s));
+    const tn = el.use ? "component" : typeOf(el);
+    pane.appendChild(h("div", { class: "insp-head" }, h("span", { class: "type-badge" }, icon(tn), el.use ? "Component: " + el.use : ((S.TYPE_LABELS && S.TYPE_LABELS[typeOf(el)]) || typeOf(el)))));
+    pane.appendChild(h("div", { class: "crumbs", title: "Where it sits in the file: " + state.sel.join(".") }, crumbs.join("  ›  ")));
     // type
     const trow = h("div", { class: "field" }); trow.appendChild(h("label", null, "Type"));
     const tctl = h("div", { class: "ctl" });
@@ -570,14 +642,8 @@
     sel.title = "What this element is: a rectangle, some text, a picture, a box of children, or a list of repeats";
     sel.onchange = () => { el.type = sel.value; markDirty(); renderAll(); rerender(); };
     tctl.appendChild(sel);
-    const dup = h("button", { class: "ghost", type: "button" }, "delete"); dup.onclick = () => { delPath(state.sel); state.sel = null; markDirty(); renderAll(); rerender(); };
+    const dup = h("button", { class: "ghost danger", type: "button", title: "Delete this element" }, icon("trash"), "Delete"); dup.onclick = () => { delPath(state.sel); state.sel = null; markDirty(); renderAll(); rerender(); };
     tctl.appendChild(dup); trow.appendChild(tctl); pane.appendChild(trow);
-
-    // component use
-    const comps = Object.keys(state.theme.components || {});
-    pane.appendChild(h("h3", { class: "sec" }, "Reusable component"));
-    field(pane, "use", () => el.use, (nv) => { if (nv) el.use = nv; else delete el.use; markDirty(); }, "enum", comps.concat([""]));
-    if (el.use) { kvField(pane, "with", () => el.with, (nv) => { if (nv) el.with = nv; else delete el.with; }, []); rawWitheditor(pane, el); }
 
     pane.appendChild(h("h3", { class: "sec" }, "Position, size and visibility"));
     S.COMMON.forEach((p) => field(pane, p[0], () => el[p[0]], (nv) => { if (nv === "" || nv === undefined) delete el[p[0]]; else el[p[0]] = nv; markDirty(); }, p[1], p[2]));
@@ -602,6 +668,11 @@
       if (kind === "tree" || kind === "object") return;
       field(pane, k, () => el[k], (nv) => { if (nv === "" || nv === undefined) delete el[k]; else el[k] = nv; markDirty(); }, kind, p[2]);
     });
+    // component use
+    const comps = Object.keys(state.theme.components || {});
+    pane.appendChild(h("h3", { class: "sec" }, "Reusable component"));
+    field(pane, "use", () => el.use, (nv) => { if (nv) el.use = nv; else delete el.use; markDirty(); }, "enum", comps.concat([""]));
+    if (el.use) { kvField(pane, "with", () => el.with, (nv) => { if (nv) el.with = nv; else delete el.with; }, []); rawWitheditor(pane, el); }
     rawField(pane, () => getPath(state.sel));
   }
   function rawWitheditor(pane, el) {
@@ -615,18 +686,18 @@
   function renderColours() {
     const pane = $("#pane-colours"); pane.innerHTML = "";
     const th = state.theme;
-    const baseRow = h("div", { class: "field" }); baseRow.appendChild(h("label", null, "base"));
+    const baseRow = h("div", { class: "field" }); baseRow.appendChild(h("label", { title: "The light or dark palette Settings and the keyboard start from" }, "Settings look"));
     const bsel = h("select"); ["dark", "light"].forEach((b) => { const o = h("option", { value: b }, b); if (th.base === b) o.setAttribute("selected", ""); bsel.appendChild(o); });
     bsel.onchange = () => { th.base = bsel.value; markDirty(); renderColours(); }; baseRow.appendChild(h("div", { class: "ctl" }, bsel)); pane.appendChild(baseRow);
 
     // accent
     const a = th.accent;
     const amode = typeof a === "object" ? "five" : (S.ACCENTS[a] ? a : "custom");
-    const arow = h("div", { class: "field" }); arow.appendChild(h("label", null, "accent"));
+    const arow = h("div", { class: "field" }); arow.appendChild(h("label", { title: "The selection colour; also the accent hook in expressions" }, "Accent"));
     const actl = h("div", { class: "ctl" });
     const asel = h("select");
-    Object.keys(S.ACCENTS).forEach((n) => { const o = h("option", { value: n }, n); if (amode === n) o.setAttribute("selected", ""); asel.appendChild(o); });
-    asel.appendChild(h("option", { value: "custom" }, "custom colour")); asel.appendChild(h("option", { value: "five" }, "five shades"));
+    Object.keys(S.ACCENTS).forEach((n) => { const o = h("option", { value: n }, n.charAt(0).toUpperCase() + n.slice(1)); if (amode === n) o.setAttribute("selected", ""); asel.appendChild(o); });
+    asel.appendChild(h("option", { value: "custom" }, "My own colour")); asel.appendChild(h("option", { value: "five" }, "Five shades of my own"));
     if (amode === "custom") asel.value = "custom"; if (amode === "five") asel.value = "five";
     actl.appendChild(asel);
     if (amode === "custom") { const c = h("input", { type: "color", value: (E.parseColorText(typeof a === "string" ? a : "#7c9cff") === null ? "#7c9cff" : (typeof a === "string" ? a.slice(0, 7) : "#7c9cff")) }); c.oninput = () => { th.accent = c.value; markDirty(); }; actl.appendChild(c); }
@@ -635,6 +706,8 @@
     if (amode === "five") S.ACCENT_SHADES.forEach((s) => field(pane, "accent." + s, () => (th.accent || {})[s], (v) => { th.accent[s] = v; markDirty(); }, "color"));
 
     // colour keys
+    pane.appendChild(h("h3", { class: "sec" }, "Settings colours"));
+    pane.appendChild(h("p", { class: "muted", style: "font-size:12px" }, "The colours of Banana's Settings screens and keyboard. In your own elements they are palette.<name>."));
     const cols = th.colors || (th.colors = {});
     S.COLOR_GROUPS.forEach((g) => {
       const d = h("details", { class: "adv" }); d.appendChild(h("summary", null, g[0]));
@@ -655,18 +728,18 @@
     });
 
     // fonts, logo, background
-    pane.appendChild(h("h3", { class: "sec" }, "fonts & pictures"));
+    pane.appendChild(h("h3", { class: "sec" }, "Fonts and pictures"));
     const fonts = th.fonts || (th.fonts = {});
-    field(pane, "font regular", () => fonts.regular, (v) => { if (v) fonts.regular = v; else delete fonts.regular; markDirty(); }, "text");
-    field(pane, "font medium", () => fonts.medium, (v) => { if (v) fonts.medium = v; else delete fonts.medium; markDirty(); }, "text");
-    field(pane, "logo", () => th.logo, (v) => { if (v) th.logo = v; else delete th.logo; markDirty(); }, "text");
+    field(pane, "font regular", () => fonts.regular, (v) => { if (v) fonts.regular = v; else delete fonts.regular; markDirty(); }, "text", null, h("label", { title: "A .ttf file beside the theme: the text of Settings" }, "Regular font"));
+    field(pane, "font medium", () => fonts.medium, (v) => { if (v) fonts.medium = v; else delete fonts.medium; markDirty(); }, "text", null, h("label", { title: "A .ttf file beside the theme: titles in Settings" }, "Medium font"));
+    field(pane, "logo", () => th.logo, (v) => { if (v) th.logo = v; else delete th.logo; markDirty(); }, "text", null, h("label", null, "Logo"));
     const bg = th.background || (th.background = {});
-    field(pane, "background top", () => bg.top, (v) => { if (v) bg.top = v; else delete bg.top; markDirty(); }, "text");
-    field(pane, "background bottom", () => bg.bottom, (v) => { if (v) bg.bottom = v; else delete bg.bottom; markDirty(); }, "text");
-    field(pane, "dither", () => bg.dither, (v) => { if (v === "" || v === undefined) delete bg.dither; else bg.dither = v; markDirty(); }, "bool");
+    field(pane, "background top", () => bg.top, (v) => { if (v) bg.top = v; else delete bg.top; markDirty(); }, "text", null, h("label", null, "Top picture"));
+    field(pane, "background bottom", () => bg.bottom, (v) => { if (v) bg.bottom = v; else delete bg.bottom; markDirty(); }, "text", null, h("label", null, "Bottom picture"));
+    field(pane, "dither", () => bg.dither, (v) => { if (v === "" || v === undefined) delete bg.dither; else bg.dither = v; markDirty(); }, "bool", null, h("label", { title: "The dot pattern over the background pictures" }, "Dot pattern"));
 
     // sounds
-    pane.appendChild(h("h3", { class: "sec" }, "sounds"));
+    pane.appendChild(h("h3", { class: "sec" }, "Sounds (WAV files)"));
     const snd = th.sounds || (th.sounds = {});
     S.SOUNDS.forEach((s) => { const f = h("div"); pane.appendChild(f); field(f, s, () => snd[s], (v) => { if (v) snd[s] = v; else delete snd[s]; markDirty(); }, "text"); });
 
@@ -692,37 +765,41 @@
   function renderIcons() {
     const pane = $("#pane-icons"); if (!pane) return; pane.innerHTML = "";
     const th = state.theme;
-    pane.appendChild(h("h3", { class: "sec" }, "system icons"));
-    pane.appendChild(h("div", { class: "muted", style: "font-size:12px" }, "A picture per system replaces the menu's icon for it everywhere (home, lists, Settings). PNG or JPEG, at most 4096 px a side; the built-in ones are 32 × 32 pixel art, drawn sharp. Pick a file and it is attached to the theme."));
+    pane.appendChild(h("p", { class: "muted", style: "font-size:12.5px" }, "Give any system (Game Boy Advance, Nintendo DS…) a picture of your own. It replaces Banana's icon everywhere in the menu. PNG or JPEG, up to 4096 px; Banana's own are 32 × 32 pixel art."));
+    const q = h("input", { type: "search", class: "icon-filter", placeholder: "Find a system…", value: state.iconQuery || "" });
+    q.oninput = () => { state.iconQuery = q.value; const v = q.value.trim().toLowerCase(); list.querySelectorAll(".icon-row").forEach((r) => { r.hidden = !!v && r.dataset.k.indexOf(v) < 0; }); };
+    pane.appendChild(q);
     const list = h("div", { class: "icons" });
     iconSystems().forEach(function (sys) {
       const path = th.icons && typeof th.icons[sys.id] === "string" ? th.icons[sys.id] : "";
       const a = path ? state.assets[path] : null;
       const row = h("div", { class: "icon-row" + (path ? " set" : "") });
+      row.dataset.k = (sys.id + " " + sys.name).toLowerCase(); row.dataset.id = sys.id;
+      if (state.iconQuery && row.dataset.k.indexOf(state.iconQuery.trim().toLowerCase()) < 0) row.hidden = true;
       const def = h("span", { class: "ic", title: "the menu's own" + (sys.icon ? ": " + sys.icon.replace(/^\/rnds\//, "ui/assets/rnds/") : "") });
       const du = builtinIcon(sys.icon); if (du) def.appendChild(h("img", { src: du, alt: "" }));
       row.appendChild(def);
       const mine = h("span", { class: "ic mine", title: path || "no picture of the theme's" });
       if (a) mine.appendChild(h("img", { src: assetUrl(a), alt: "" })); else if (path) mine.appendChild(h("span", { class: "bad" }, "?"));
       row.appendChild(mine);
-      const nm = h("div", { class: "nm" }, h("b", null, sys.id), h("span", { class: "muted" }, " " + sys.name));
-      nm.appendChild(h("div", { class: "muted mono", style: "font-size:11px" }, path ? path + (a ? "" : "  — not attached: the handheld shows its own unless this file is beside the theme") : "the menu's own"));
+      const nm = h("div", { class: "nm" }, h("div", null, h("b", null, sys.name !== sys.id ? sys.name : sys.id), h("span", { class: "muted" }, sys.name !== sys.id ? "  " + sys.id : "")));
+      nm.appendChild(h("div", { class: "muted", style: "font-size:11.5px" }, path ? (a ? "Yours: " + path : path + " — file missing, Banana's is shown") : "Banana's icon"));
       row.appendChild(nm);
       const pick = h("input", { type: "file", accept: ".png,.jpg,.jpeg,image/png,image/jpeg", class: "hidden" });
       pick.addEventListener("change", function () { const f = this.files[0]; this.value = ""; if (f) setIcon(sys.id, f); });
-      const choose = h("button", { class: "ghost", type: "button" }, path ? "Replace…" : "Choose…"); choose.onclick = () => pick.click();
+      const choose = h("button", { type: "button" }, path ? "Replace…" : "Choose…"); choose.onclick = () => pick.click();
       row.appendChild(h("div", { class: "ctl" }, choose, pick));
-      if (path) { const rs = h("button", { class: "ghost danger", type: "button", title: "back to the menu's own icon" }, "Reset"); rs.onclick = () => resetIcon(sys.id); row.lastChild.appendChild(rs); }
+      if (path) { const rs = h("button", { class: "ghost", type: "button", title: "Back to Banana's icon" }, "Reset"); rs.onclick = () => resetIcon(sys.id); row.lastChild.appendChild(rs); }
       list.appendChild(row);
     });
     pane.appendChild(list);
-    const other = h("input", { type: "text", placeholder: "another system id" });
-    const add = h("button", { class: "ghost", type: "button" }, "add"); add.onclick = () => {
+    const other = h("input", { type: "text", placeholder: "Another system id" });
+    const add = h("button", { class: "ghost", type: "button" }, "Add"); add.onclick = () => {
       const id = other.value.trim(); if (!id) return;
       th.icons = th.icons || {}; if (!th.icons[id]) th.icons[id] = fileStem() + "/icons/" + id + ".png"; markDirty(); renderIcons();
     };
     pane.appendChild(h("div", { class: "ctl", style: "margin-top:6px" }, other, add));
-    const show = h("button", { class: "ghost", type: "button", title: "the preview's library with a game for every system, so each icon is on the shelf" }, "Show every system in the preview");
+    const show = h("button", { class: "ghost", type: "button", title: "The preview's library with a game for every system, so each icon is on the shelf" }, icon("grid"), "Show every system in the preview");
     show.onclick = () => { setLibrary(true); showTab("center", "design"); };
     pane.appendChild(h("div", { class: "ctl", style: "margin-top:4px" }, show));
   }
@@ -764,14 +841,14 @@
   // ---- components ------------------------------------------------------------------------------------
   function renderComponents() {
     const pane = $("#pane-components"); pane.innerHTML = "";
-    pane.appendChild(h("p", { class: "muted" }, "Reusable elements. An instance is {\"use\": \"name\", …overrides}. Editing the component changes every instance."));
+    pane.appendChild(h("p", { class: "muted" }, "A component is an element you design once and use in many places. Change it here and every use follows. To use one, add an element and pick it under \"Reusable component\"."));
     const comps = state.theme.components || (state.theme.components = {});
     const names = Object.keys(comps);
-    if (!names.length) pane.appendChild(h("div", { class: "muted" }, "(none yet)"));
+    if (!names.length) pane.appendChild(h("div", { class: "empty" }, "No components yet."));
     names.forEach(function (n) {
-      const row = h("div", { class: "ctl", style: "margin:3px 0" });
-      const edit = h("button", { type: "button" }, n); edit.onclick = () => { state.sel = ["components", n]; showTab("properties", "inspector"); renderTree(); rerender(); };
-      const ren = h("button", { class: "ghost", type: "button" }, "rename"); ren.onclick = () => {
+      const row = h("div", { class: "comp-row" });
+      const edit = h("button", { type: "button", class: "ghost", title: "Edit " + n }, icon("component"), n); edit.onclick = () => { state.sel = ["components", n]; showTab("properties", "inspector"); renderTree(); rerender(); };
+      const ren = h("button", { class: "ghost small", type: "button" }, "Rename"); ren.onclick = () => {
         const nn = (prompt("Rename component", n) || "").trim();
         if (!nn || nn === n) return;
         if (comps[nn]) { alert("There is already a component called " + nn + "."); return; }
@@ -782,15 +859,15 @@
         if (state.sel && state.sel[0] === "components" && state.sel[1] === n) state.sel = ["components", nn];
         markDirty(); renderAll(); rerender();
       };
-      const del = h("button", { class: "ghost danger", type: "button" }, "✕"); del.onclick = () => {
+      const del = h("button", { class: "ghost danger icon-btn", type: "button", title: "Delete " + n, "aria-label": "Delete " + n }, icon("trash")); del.onclick = () => {
         let used = 0; eachElement((el) => { if (el.use === n) used++; });
         if (used && !confirm(n + " is used " + used + (used === 1 ? " time" : " times") + ". Delete it anyway? Those elements will draw nothing.")) return;
         delete comps[n]; if (state.sel && state.sel[0] === "components" && state.sel[1] === n) state.sel = null; markDirty(); renderAll(); rerender();
       };
       row.appendChild(edit); row.appendChild(ren); row.appendChild(del); pane.appendChild(row);
     });
-    const nn = h("input", { type: "text", placeholder: "new component name" });
-    const add = h("button", { class: "ghost", type: "button" }, "add"); add.onclick = () => { if (nn.value) { comps[nn.value] = { type: "group", children: [] }; markDirty(); renderComponents(); } };
+    const nn = h("input", { type: "text", placeholder: "New component name" });
+    const add = h("button", { type: "button" }, icon("plus"), "Create"); add.onclick = () => { if (nn.value) { comps[nn.value] = { type: "group", children: [] }; markDirty(); renderComponents(); } };
     pane.appendChild(h("div", { class: "ctl" }, nn, add));
   }
 
@@ -847,14 +924,13 @@
   }
   function renderTheme() {
     const pane = $("#pane-theme"); pane.innerHTML = "";
-    field(pane, "name", () => state.theme.name, (v) => { state.theme.name = v; markDirty(); }, "text");
-    field(pane, "author", () => state.theme.author, (v) => { state.theme.author = v; markDirty(); }, "text");
-    field(pane, "debug", () => state.theme.debug, (v) => { if (v === "" || v === undefined) delete state.theme.debug; else state.theme.debug = v; markDirty(); }, "bool");
-    field(pane, "font (default)", () => state.theme.font, (v) => { state.theme.font = v; markDirty(); }, "enum", S.BUILTIN_FONTS);
-    pane.appendChild(h("h3", { class: "sec" }, "your themes"));
-    if (!RENDER || !RENDER.available || !RENDER.localThemes) {
-      pane.appendChild(h("div", { class: "note", html: "Keep your themes in a folder of their own (say <code>~/BananaThemes</code>), outside the repo: <b>Open folder</b> opens one with its pictures, <b>Export (.zip)</b> saves it with them. With the local server started as <code>python3 tools/theme-studio/serve.py --themes ~/BananaThemes</code> they are also listed here, with Save here." }));
-    } else {
+    const L = (t, tip) => { const l = h("label", { title: tip || "" }, t); return l; };
+    field(pane, "name", () => state.theme.name, (v) => { state.theme.name = v; markDirty(); titleNow(); }, "text", null, L("Name", "Shown in Settings › Display & sound › Theme"));
+    field(pane, "author", () => state.theme.author, (v) => { state.theme.author = v; markDirty(); }, "text", null, L("Author"));
+    field(pane, "font (default)", () => state.theme.font, (v) => { state.theme.font = v; markDirty(); }, "enum", S.BUILTIN_FONTS, L("Font", "The font text uses unless it says otherwise"));
+    field(pane, "debug", () => state.theme.debug, (v) => { if (v === "" || v === undefined) delete state.theme.debug; else state.theme.debug = v; markDirty(); }, "bool", null, L("Show errors", "Draw the theme's problems on the handheld's top screen (for testing)"));
+    if (RENDER && RENDER.available && RENDER.localThemes) {
+      pane.appendChild(h("h3", { class: "sec" }, "Your themes folder"));
       pane.appendChild(h("div", { class: "muted", style: "font-size:12px" }, "in " + RENDER.localThemes));
       const save = h("button", { class: "primary", type: "button" }, "Save here");
       save.onclick = async () => {
@@ -870,16 +946,41 @@
         pane.appendChild(h("div", { class: "ctl" }, b));
       });
     }
-    pane.appendChild(h("h3", { class: "sec templates" }, "Start from a template"));
-    pane.appendChild(h("p", { class: "muted" }, "One of the example themes BananaOS ships. Pick one and change it — that is the easiest way in."));
+    const t = h("button", { type: "button", class: "ghost" }, icon("grid"), "Start from a template…"); t.onclick = () => openTemplates();
+    pane.appendChild(h("div", { class: "ctl", style: "margin-top:10px" }, t));
+  }
+
+  // ---- New: a gallery of starting points ------------------------------------------------------------
+  function openTemplates() {
+    closePop();
+    let box = $("#templates");
+    if (!box) { box = h("div", { id: "templates", class: "modal", role: "dialog", "aria-label": "Start a theme" }); box.addEventListener("click", (e) => { if (e.target === box) box.remove(); }); document.body.appendChild(box); }
+    box.innerHTML = "";
+    const card = h("div", { class: "card" });
+    const close = h("button", { type: "button", class: "icon-btn", title: "Close (Esc)", "aria-label": "Close" }, icon("x")); close.onclick = () => box.remove();
+    card.appendChild(h("div", { class: "modal-head" }, h("div", null, h("b", null, "Start a theme"), h("div", { class: "muted", style: "font-size:12.5px" }, "Pick a starting point and make it yours. The examples are the themes BananaOS ships.")), h("span", { class: "grow" }), close));
+    const grid = h("div", { class: "tpl-grid" });
+    const thumb = (t) => {
+      const v = (t && t.vars) || {}, c = (t && t.colors) || {};
+      const pick = (x) => (typeof x === "string" && x.charAt(0) === "#" ? x : null);
+      const bg = pick(v.bg) || pick(c.screenBg) || "#1b1f27", ink = pick(v.ink) || pick(c.ink) || "#ffffff";
+      const ac = typeof t.accent === "string" ? (S.ACCENTS[t.accent] ? null : pick(t.accent)) : null;
+      const d = h("div", { class: "thumb" });
+      d.style.background = "linear-gradient(160deg, " + bg + " 55%, " + (ac || bg) + ")";
+      d.appendChild(h("span", { style: "font-weight:700;font-size:20px;color:" + ink }, (t && t.name) || "Theme"));
+      return d;
+    };
+    const add = (name, desc, t, fn) => { const b = h("button", { type: "button", class: "tpl" }, thumb(t), h("b", null, name), h("span", null, desc)); b.onclick = fn; grid.appendChild(b); };
+    add("Simple", "A plain starting point: a carousel of systems and a list of games.", STARTER, () => { if (guardUnsaved("Start a new theme")) { box.remove(); loadTheme(clone(STARTER), null, "a new theme: give it a name on the Theme tab"); } });
     (state.templates || []).forEach(function (t) {
-      const b = h("button", { type: "button" }, t.name); b.title = t.file || "";
-      b.onclick = () => { if (!guardUnsaved("Start from " + t.name)) return; loadTheme(looseParse(t.json), null, "started from " + t.name + " (Save or Export gives it your own name: change name first)"); };
-      pane.appendChild(h("div", { class: "ctl" }, b, h("span", { class: "muted", style: "font-size:12px" }, t.file || "")));
+      let doc = null; try { doc = looseParse(t.json); } catch (e) { /* listed anyway */ }
+      add(t.name, (doc && doc.author ? "by " + doc.author + " · " : "") + "an example BananaOS ships", doc || {}, () => {
+        if (!guardUnsaved("Start from " + t.name)) return;
+        box.remove(); loadTheme(looseParse(t.json), null, "started from " + t.name + ": change its name on the Theme tab, then Export");
+      });
     });
-    const any = h("button", { class: "ghost", type: "button" }, "Start from the simple example"); any.onclick = () => { if (guardUnsaved("Start a new theme")) loadTheme(clone(STARTER), null, "a new theme"); };
-    pane.appendChild(h("div", { class: "ctl" }, any));
-    pane.appendChild(h("p", { class: "muted", style: "font-size:12px" }, "New, up top, always comes back to the simple example."));
+    card.appendChild(grid);
+    box.appendChild(card);
   }
 
   // ---- assets ----------------------------------------------------------------------------------------
@@ -957,9 +1058,9 @@
   function fmtSize(n) { return n < 1024 ? n + " B" : n < 1048576 ? (n / 1024).toFixed(0) + " KB" : (n / 1048576).toFixed(1) + " MB"; }
   function renderAssets() {
     const pane = $("#pane-assets"); pane.innerHTML = "";
-    pane.appendChild(h("p", { class: "muted" }, "Pictures, fonts and sounds the theme names, as paths relative to its .json. Attach each one (or drop files on the page) and the preview, Export (.zip) and Send to handheld carry it; a file that isn't there is replaced by the menu's default, as on the handheld."));
+    pane.appendChild(h("p", { class: "muted" }, "The pictures, fonts and sounds your theme uses. Attach each file (or drop files on the page); they go into the preview and the exported .zip. A missing file shows Banana's default instead, as on the handheld."));
     const refs = detectAssets(), where = detectAssets.where || {};
-    if (!refs.length) pane.appendChild(h("div", { class: "muted" }, "this theme names no pictures, fonts or sounds yet"));
+    if (!refs.length) pane.appendChild(h("div", { class: "empty" }, "This theme uses no files of its own yet."));
     refs.forEach(function (p) {
       const a = state.assets[p];
       const row = h("div", { class: "asset" + (a ? "" : " missing") });
@@ -972,7 +1073,7 @@
       row.appendChild(info);
       const file = h("input", { type: "file", accept: ".png,.jpg,.jpeg,.webp,.ttf,.otf,.wav", class: "hidden" });
       file.addEventListener("change", function () { const f = this.files[0]; this.value = ""; attach(p, f); });
-      const pick = h("button", { class: "ghost", type: "button" }, a ? "Replace…" : "Attach…"); pick.onclick = () => file.click();
+      const pick = h("button", { class: a ? "ghost" : "", type: "button" }, a ? "Replace…" : "Attach…"); pick.onclick = () => file.click();
       const ctl = h("div", { class: "ctl" }, pick, file);
       if (a) { const rm = h("button", { class: "ghost danger", type: "button", title: "detach the file (the theme still names it)" }, "✕"); rm.onclick = () => { if (a.url) URL.revokeObjectURL(a.url); delete state.assets[p]; markDirty(); renderAssets(); renderIcons(); }; ctl.appendChild(rm); }
       row.appendChild(ctl);
@@ -991,12 +1092,9 @@
     const add = h("button", { class: "ghost", type: "button" }, "attach as…");
     add.onclick = () => { if (np.value && nf.files[0]) attach(np.value, nf.files[0]); };
     pane.appendChild(h("div", { class: "ctl" }, np, nf, add));
-    pane.appendChild(h("h3", { class: "sec" }, "take it to the handheld"));
-    pane.appendChild(h("div", { class: "muted", style: "font-size:12px" }, "Export (.zip), up top, packs " + fileStem() + ".json with these files at their paths: unzip it into banana/themes/ on the card and pick it in Settings > Display & sound > Theme."));
-    if (!RENDER || !RENDER.available || !RENDER.themesDir) {
-      pane.appendChild(h("div", { class: "note", html: "<b>Send to handheld</b> writes straight into a mounted card; it needs the local server started with <code>--themes-dir</code>, e.g.<br><br><code>python3 tools/theme-studio/serve.py --themes-dir /run/media/you/BANANA/banana/themes</code>" }));
-      return;
-    }
+    pane.appendChild(h("h3", { class: "sec" }, "Put it on the handheld"));
+    pane.appendChild(h("div", { class: "note" }, h("b", null, "Export"), " (top right) downloads " + fileStem() + ".zip with these files. Unzip it into banana/themes/ on the card, then pick the theme in Settings › Display & sound › Theme."));
+    if (!RENDER || !RENDER.available || !RENDER.themesDir) return;
     pane.appendChild(h("div", { class: "muted" }, "Send to handheld writes into " + RENDER.themesDir));
     const nm = h("input", { type: "text", value: fileStem() });
     const go = h("button", { class: "primary", type: "button" }, "Send");
@@ -1013,30 +1111,30 @@
 
   // ---- the "Add elements" palette --------------------------------------------------------------------
   const PALETTE = [
-    ["Shapes", [["rect", "Rect", "a filled box"], ["group-row", "Row", "children in a row"], ["group-column", "Column", "children in a column"]]],
-    ["Text & pictures", [["text", "Text", "a line of text"], ["image", "Image", "a picture"], ["group", "Group", "a box holding children"]]],
-    ["Lists", [["list-systems", "Systems carousel", "a row centred on the selection"], ["list-games", "Games list", "a column of games"], ["list-hints", "Button hints", "the hint chips"]]],
-    ["Status", [["clock", "Clock", "the time"], ["battery", "Battery", "its percent"], ["page-dots", "Page dots", "one per system"]]],
+    ["Basics", [["rect", "Rectangle", "A box with a colour, gradient or border", "rect"], ["text", "Text", "Words, or a hook like {sys.name}", "text"],
+      ["image", "Picture", "A file of yours, or {sys.icon}, {game.art}", "image"], ["group", "Group", "A box that holds other elements", "group"]]],
+    ["Layout", [["group-row", "Row", "Places its children side by side", "row"], ["group-column", "Column", "Places its children one below another", "column"]]],
+    ["Lists", [["list-systems", "Systems carousel", "The systems in a row, the selected one in the middle", "carousel"], ["list-games", "Games list", "A system's games, down the screen", "list"],
+      ["list-hints", "Button hints", "What each button does, as chips", "hints"], ["page-dots", "Page dots", "One dot per system", "dots"]]],
+    ["Status", [["clock", "Clock", "The time", "clock"], ["battery", "Battery", "Its percent", "battery"]]],
   ];
   function renderPalette() {
     const pane = $("#palette"); pane.innerHTML = "";
-    const srow = h("div", { class: "ctl", style: "margin-bottom:6px" });
-    srow.appendChild(h("span", { class: "muted", style: "font-size:12px" }, "add to"));
+    const seg = h("div", { class: "seg" });
     ["top", "bottom"].forEach(function (s) {
-      const b = h("button", { type: "button", class: "ghost" }, s);
+      const b = h("button", { type: "button" }, s === "top" ? "Top screen" : "Bottom screen");
       b.setAttribute("aria-pressed", String(state.addScreen === s));
-      if (state.addScreen === s) b.style.borderColor = "var(--accent)";
       b.onclick = () => { state.addScreen = s; renderPalette(); };
-      srow.appendChild(b);
+      seg.appendChild(b);
     });
-    srow.appendChild(h("span", { class: "muted", style: "font-size:12px" }, state.view));
-    pane.appendChild(srow);
+    pane.appendChild(h("div", { class: "pal-target" }, "Add to", seg));
+    pane.appendChild(h("div", { class: "muted", style: "font-size:12px" }, "of the " + (VIEW_LABELS[state.view] || state.view) + " view. Click an element to add it, then change it on the Element tab."));
     PALETTE.forEach(function (grp) {
       const g = h("div", { class: "pal-group" }); g.appendChild(h("h3", null, grp[0]));
       const grid = h("div", { class: "pal-grid" });
       grp[1].forEach(function (it) {
-        const b = h("button", { type: "button", class: "pal" }, h("b", null, it[1]), h("span", null, it[2]));
-        b.title = "add to the " + state.addScreen + " screen of " + state.view;
+        const b = h("button", { type: "button", class: "pal" }, icon(it[3]), h("b", null, it[1]), h("span", null, it[2]));
+        b.title = "Add to the " + state.addScreen + " screen of the " + (VIEW_LABELS[state.view] || state.view) + " view";
         b.onclick = () => addPreset(it[0]);
         grid.appendChild(b);
       });
@@ -1049,6 +1147,7 @@
     state.sel = ["screens", state.view, state.addScreen, arr.length - 1];
     state.open[JSON.stringify(["screens", state.view, state.addScreen])] = true;
     markDirty(); renderAll(); rerender();
+    showTab("library", "layers"); showTab("properties", "inspector");
   }
   function makePreset(kind) {
     if (kind === "group-row") return { type: "group", x: 0, y: 0, w: 400, h: 60, layout: "row", gap: 8, padding: 8, children: [] };
@@ -1139,7 +1238,12 @@
     setStatus("edited", "");
     schedulePreview(); scheduleDraft();
   }
-  function titleNow() { document.title = (state.unsaved ? "• " : "") + (state.theme.name || "Untitled") + " — Banana Theme Studio"; }
+  function titleNow() {
+    document.title = (state.unsaved ? "• " : "") + (state.theme.name || "Untitled") + " — Banana Theme Studio";
+    const n = $("#docName"), d = $("#dirtyDot");
+    if (n) n.textContent = state.theme.name || "Untitled";
+    if (d) d.hidden = !state.unsaved;
+  }
 
   // ---- the bottom dock: preview settings, and the JSON tab --------------------------------------------
   const DEFAULT_SCRIPT = "home 0; wait 900; shot home; press right; wait 700; shot home2; press a; wait 900; shot lib; press down; wait 600; shot lib2; press a; wait 400; shot launch";
@@ -1152,42 +1256,43 @@
     }
     const grid = h("div", { class: "pgrid" });
     const sel = h("select");
-    [["640x480", "RG DS  640 × 480"], ["1024x768", "RG DS Plus  1024 × 768"]].forEach(function (o) {
+    [["640x480", "RG DS (640 × 480)"], ["1024x768", "RG DS Plus (1024 × 768)"]].forEach(function (o) {
       const op = h("option", { value: o[0] }, o[1]); if (state.size === o[0]) op.setAttribute("selected", ""); sel.appendChild(op);
     });
     sel.onchange = () => { state.size = sel.value; if (liveOk()) restartLive(); else doServerPreview(); };
-    grid.appendChild(h("label", null, "panels")); grid.appendChild(sel);
+    grid.appendChild(h("label", null, "Device")); grid.appendChild(sel);
     if (liveOk()) {
       const lib = h("select");
-      [["0", "the test library (fixture.sh's)"], ["1", "every system (one game each)"]].forEach(function (o) {
+      [["0", "A few test games"], ["1", "Every system (one game each)"]].forEach(function (o) {
         const op = h("option", { value: o[0] }, o[1]); if (String(state.every ? 1 : 0) === o[0]) op.setAttribute("selected", ""); lib.appendChild(op);
       });
       lib.onchange = () => setLibrary(lib.value === "1");
-      grid.appendChild(h("label", { title: "the made-up games the preview shows (ui/tests/fixture.sh's, as serve.py's)" }, "library")); grid.appendChild(lib);
+      grid.appendChild(h("label", { title: "The made-up games the preview shows" }, "Games")); grid.appendChild(lib);
       const o = ENGINE.hostOpts;
       const bat = h("input", { type: "range", min: -1, max: 100, value: o.battery, title: "-1: no battery reading" });
       const batT = h("span", { class: "muted" }, o.battery < 0 ? "none" : o.battery + "%");
       bat.oninput = () => { batT.textContent = +bat.value < 0 ? "none" : bat.value + "%"; ENGINE.setHost({ battery: +bat.value }); kick(); };
-      grid.appendChild(h("label", null, "battery")); grid.appendChild(h("div", { class: "ctl" }, bat, batT));
+      grid.appendChild(h("label", null, "Battery")); grid.appendChild(h("div", { class: "ctl" }, bat, batT));
       const flag = (label, key, tip) => {
         const c = h("input", { type: "checkbox" }); c.checked = !!o[key];
         c.onchange = () => { const x = {}; x[key] = c.checked; ENGINE.setHost(x); kick(); };
         return h("label", { class: "chk", title: tip || "" }, c, " " + label);
       };
-      grid.appendChild(h("label", null, "settings"));
-      grid.appendChild(h("div", { class: "ctl wrap" }, flag("charging", "charging"), flag("Wi-Fi", "online", "the online hook"), flag("12-hour clock", "twelveHour"),
-        flag("motion", "motion", "Settings' motion (the motion hook)"), flag("battery %", "batteryText", "batteryMode: text")));
+      grid.appendChild(h("label", null, "Handheld"));
+      grid.appendChild(h("div", { class: "ctl wrap" }, flag("Charging", "charging"), flag("Wi-Fi on", "online", "the online hook"), flag("12-hour clock", "twelveHour"),
+        flag("Motion", "motion", "Settings' motion (the motion hook)"), flag("Battery as %", "batteryText", "batteryMode: text")));
     }
     pane.appendChild(grid);
-    const go = h("button", { class: "primary", type: "button", title: "Run banana-ui's headless script and keep the screens it draws (the same pictures serve.py's previews are)" }, "Take stills");
+    const go = h("button", { type: "button", title: "Run a script of button presses and keep the screens it draws" }, "Take stills");
     go.onclick = () => (liveOk() ? doStills() : doServerPreview());
-    const scr = h("input", { type: "text", spellcheck: "false", value: state.script || DEFAULT_SCRIPT, title: "banana-ui --headless's script: home N, lib S G, wait MS, press BUTTON, touch SCREEN X Y, shot NAME" });
+    const scr = h("input", { type: "text", spellcheck: "false", value: state.script || DEFAULT_SCRIPT, title: "The script: home N, lib S G, wait MS, press BUTTON, touch SCREEN X Y, shot NAME" });
     scr.onchange = () => { state.script = scr.value; };
-    pane.appendChild(h("div", { class: "ctl", style: "margin-top:6px" }, go, h("span", { class: "pill" }, state.shots ? state.shots.length + " still(s)" : "none yet"), scr));
+    pane.appendChild(h("div", { class: "stills" }, h("b", null, "Stills"), h("div", { class: "muted", style: "font-size:12px" }, "Pictures of the screens after a script of button presses, shown under the preview."),
+      h("div", { class: "ctl" }, scr, go, h("span", { class: "pill" }, state.shots ? state.shots.length + " still(s)" : "none yet"))));
     const b = ENGINE && ENGINE.build;
-    pane.appendChild(h("div", { class: "muted", style: "font-size:12px;margin-top:6px" }, liveOk()
-      ? "The preview is the menu's own engine (banana-ui's layout.cpp, compiled to WebAssembly" + (b ? ", built " + b.built + " from " + b.commit : "") + "), the same pixels as on the handheld. Its complaints are under Problems."
-      : "Drawn by serve.py with the real engine (ui/banana-ui --headless). Its complaints appear under Problems."));
+    pane.appendChild(h("div", { class: "about" }, liveOk()
+      ? "The preview runs the handheld's own menu engine in this page" + (b ? " (built " + b.built + ")" : "") + ": what you see is what the handheld shows."
+      : "Drawn by serve.py with the real engine."));
   }
   function renderJson() {
     const pane = $("#json"); pane.innerHTML = "";
@@ -1263,11 +1368,11 @@
     const r = validate(), eng = liveOk() ? ENGINE.errors() : [];
     const log = $("#log"); log.innerHTML = "";
     const n = r.errs.length + eng.length;
-    log.appendChild(h("div", { class: "i" }, "validate: " + (n ? n + " problem(s)" : "no problems") + (r.warns.length ? ", " + r.warns.length + " note(s)" : "")));
+    log.appendChild(h("div", { class: "i" }, "Check: " + (n ? n + " problem(s)" : "no problems") + (r.warns.length ? ", " + r.warns.length + " note(s)" : "")));
     eng.forEach((e) => log.appendChild(h("div", { class: "e" }, "engine: " + e)));
     r.errs.forEach((e) => log.appendChild(h("div", { class: "e" }, e)));
     r.warns.forEach((e) => log.appendChild(h("div", { class: "w" }, e)));
-    showTab("bottom", "problems");
+    showTab.forceOpen = true; showTab("bottom", "problems");
   }
 
   // ---- the live preview: the menu's engine in the page ------------------------------------------------
@@ -1325,11 +1430,12 @@
     const p = $("#preview"); p.innerHTML = "";
     if (liveOk()) {
       state.shelf = ENGINE.shelf();
-      const ds = h("div", { class: "ds", tabindex: "0", title: "Click here, then: arrows, X/Enter = A, Z/Backspace = B, S = X, A = Y, Q/W = L/R. Tap the screens." });
+      const ds = h("div", { class: "ds", tabindex: "0", title: "Click the screens, then use the keyboard: arrows, X or Enter = A, Z or Backspace = B, S = X, A = Y, Q and W = L and R. Tap the screens to touch them." });
       live.top = h("canvas", { class: "scr", "aria-label": "top screen" });
       live.bot = h("canvas", { class: "scr", "aria-label": "bottom screen" });
       live.imgTop = null;
-      ds.appendChild(live.top); ds.appendChild(live.bot);
+      ds.appendChild(h("div", { class: "screen-wrap" }, h("div", { class: "screen-label" }, "Top screen"), live.top));
+      ds.appendChild(h("div", { class: "screen-wrap" }, h("div", { class: "screen-label" }, "Bottom screen · touch"), live.bot));
       ds.addEventListener("keydown", (e) => {
         if (e.ctrlKey || e.metaKey || e.altKey) return;
         const b = KEYMAP[e.key] || KEYMAP[e.key.toLowerCase && e.key.toLowerCase()];
@@ -1346,20 +1452,21 @@
         h("div", { class: "dpad" }, btn("▲", "up", "pu"), btn("◀", "left", "pl"), btn("▶", "right", "pr"), btn("▼", "down", "pd")),
         h("div", { class: "abxy" }, btn("X", "x", "pu"), btn("Y", "y", "pl"), btn("A", "a", "pr"), btn("B", "b", "pd")),
         h("div", { class: "lr" }, btn("L", "l"), btn("R", "r")));
-      const jump = h("div", { class: "ctl wrap" });
-      const go = (label, fn, tip) => { const b = h("button", { type: "button", class: "ghost", title: tip }, label); b.onclick = () => { fn(); kick(); ds.focus(); }; return b; };
-      jump.appendChild(go("Home", () => ENGINE.home(0), "the home view, on the first system"));
-      jump.appendChild(go("Library", () => { const w = ENGINE.where(); ENGINE.library(w && w.view === "home" ? w.system : 0, 0); }, "the selected system's games"));
-      jump.appendChild(go("Reload", () => { live.pushed = ""; pushTheme(false); }, "load the theme again from the start"));
-      p.appendChild(h("div", { class: "live" }, ds, h("div", { class: "side" }, pad, jump, h("div", { id: "where", class: "muted mono" }))));
+      const jump = h("div", { class: "jump" });
+      const go = (label, ic, fn, tip) => { const b = h("button", { type: "button", class: "ghost small", title: tip }, icon(ic), label); b.onclick = () => { fn(); kick(); ds.focus(); }; return b; };
+      jump.appendChild(go("Home", "home", () => ENGINE.home(0), "Go to the Home view, on the first system"));
+      jump.appendChild(go("Games", "list", () => { const w = ENGINE.where(); ENGINE.library(w && w.view === "home" ? w.system : 0, 0); }, "Open the selected system's games"));
+      jump.appendChild(go("Restart", "reload", () => { live.pushed = ""; pushTheme(false); }, "Load the theme again from the start"));
+      p.appendChild(h("div", { class: "live" }, ds, h("div", { class: "side" }, h("div", { class: "ctlbar" }, pad, h("span", { class: "vsep" }), jump)),
+        h("div", { id: "where" }), h("div", { class: "keys-hint" }, "Keyboard: arrows · X = A · Z = B · S = X · A = Y · Q / W = L / R")));
       live.force = true;
       if (!live.raf) live.raf = requestAnimationFrame(tick);
     } else if (ENGINE && ENGINE.state === "loading") {
-      p.appendChild(h("div", { class: "note" }, "Starting the menu's engine…"));
+      p.appendChild(h("div", { class: "note stage-msg" }, "Starting the preview…"));
     } else if (!RENDER || !RENDER.available) {
-      p.appendChild(h("div", { class: "note", html: "No preview here: " + esc(ENGINE ? ENGINE.detail : "engine.js isn't loaded") +
+      p.appendChild(h("div", { class: "note stage-msg", html: "No preview here: " + esc(ENGINE ? ENGINE.detail : "engine.js isn't loaded") +
         ".<br><br>The preview is the menu's own engine, compiled to WebAssembly in <code>wasm/banana-engine.js</code> (build it with <code>sh tools/theme-studio/wasm/build.sh</code>), or drawn by <code>python3 tools/theme-studio/serve.py</code>. Everything else — the tree, the inspector, expressions, colours, Export — works without it." }));
-    } else if (!state.shots) p.appendChild(h("div", { class: "note" }, "Press Take stills (bottom) to draw the theme with the real engine."));
+    } else if (!state.shots) p.appendChild(h("div", { class: "note stage-msg" }, "Press Take stills (Preview settings) to draw the theme with the real engine."));
     if (state.shots && state.shots.length) {
       const shots = h("div", { class: "shots" });
       state.shots.forEach(function (s) {
@@ -1370,7 +1477,7 @@
         if (s.bot) pair.appendChild(h("img", { src: s.bot, alt: s.name + " bottom" }));
         card.appendChild(pair); shots.appendChild(card);
       });
-      if (liveOk()) { const clr = h("button", { class: "ghost", type: "button" }, "clear the stills"); clr.onclick = () => { state.shots = null; renderPreview(); renderPreviewControls(); }; p.appendChild(clr); }
+      if (liveOk()) { const clr = h("button", { class: "ghost small", type: "button" }, icon("x"), "Clear the stills"); clr.onclick = () => { state.shots = null; renderPreview(); renderPreviewControls(); }; shots.appendChild(clr); }
       p.appendChild(shots);
     }
   }
@@ -1413,11 +1520,11 @@
   }
   function showLog(text, errors) {
     const log = $("#log"); log.innerHTML = "";
-    if (errors && errors.length) { log.appendChild(h("div", { class: "e" }, errors.length + " theme problem(s), as the engine reports them:")); errors.forEach((e) => log.appendChild(h("div", { class: "e" }, e))); }
-    else log.appendChild(h("div", { class: "i" }, "the engine doesn't complain about the theme"));
+    if (errors && errors.length) { log.appendChild(h("div", { class: "i" }, errors.length + " problem(s) the engine reports:")); errors.forEach((e) => log.appendChild(h("div", { class: "e" }, e))); }
+    else log.appendChild(h("div", { class: "i" }, "No problems: the engine is happy with the theme."));
     if (text) log.appendChild(h("div", { class: "i" }, text.slice(0, 4000)));
     const tab = document.querySelector('.tabs[data-group="bottom"] button[data-tab="problems"]');
-    if (tab) { tab.textContent = errors && errors.length ? "Problems (" + errors.length + ")" : "Problems"; tab.classList.toggle("bad", !!(errors && errors.length)); }
+    if (tab) { tab.textContent = errors && errors.length ? "Problems (" + errors.length + ")" : "No problems"; tab.classList.toggle("bad", !!(errors && errors.length)); }
   }
 
   // ---- open / save / export --------------------------------------------------------------------------
@@ -1568,17 +1675,16 @@
     const ticked = {};
     found.forEach((f) => { ticked[f.id] = f.category === OPT.SAFE && f.fixable; });
     const card = h("div", { class: "card opt" });
-    const head = h("div", { class: "tabs" }, h("b", { style: "padding:4px 6px" }, "Optimize for the handheld"));
-    const close = h("button", { type: "button", class: "ghost", title: "Close (Esc)" }, "✕"); close.onclick = () => box.remove();
-    head.appendChild(h("span", { style: "flex:1" })); head.appendChild(close);
-    card.appendChild(head);
+    const close = h("button", { type: "button", class: "icon-btn", title: "Close (Esc)", "aria-label": "Close" }, icon("x")); close.onclick = () => box.remove();
+    card.appendChild(h("div", { class: "modal-head" }, h("b", null, "Optimize for the handheld"), h("span", { class: "grow" }), close));
     if (!found.length) {
       card.appendChild(h("div", { class: "md" }, h("p", null, isObj(doc.screens) ? "Nothing to do: nothing in this theme makes the handheld work harder than it has to." : "This is a colour theme (no screens): there is nothing to optimize.")));
       box.appendChild(card); return;
     }
     const body = h("div", { class: "opt-body" });
     const list = h("div", { class: "opt-list" }), detail = h("div", { class: "opt-detail md" });
-    detail.appendChild(h("p", { class: "muted" }, "What makes a theme slow on the handhelds is mostly something that keeps a screen redrawing when nothing happens: anything reading \"time\", easing that never settles, long settle times. Click a finding to read about it and see its element."));
+    card.appendChild(h("div", { class: "opt-intro" }, "The handheld only redraws the menu while something on it moves; every redraw costs battery and can slow a game running in the background. Safe fixes keep every pixel the same and are ticked. The others change the look a little: tick them one by one and watch the preview."));
+    detail.appendChild(h("p", { class: "muted" }, "Click a finding to read what it means and see its element."));
     const apply = h("button", { type: "button", class: "primary" });
     const countTicked = () => { const n = found.filter((f) => ticked[f.id]).length; apply.textContent = n ? "Apply " + n + " fix" + (n === 1 ? "" : "es") : "Apply"; apply.disabled = !n; };
     [OPT.SAFE, OPT.LOOK, OPT.ADVICE].forEach(function (cat) {
@@ -1635,7 +1741,7 @@
       box.remove();
     };
     countTicked();
-    const foot = h("div", { class: "ctl opt-foot" }, apply, h("span", { class: "muted", style: "font-size:12px" }, "Safe fixes keep every pixel the same (checked with the engine). Look fixes change the motion or a picture a little: tick them one by one and watch the preview. Apply is one step of Undo."));
+    const foot = h("div", { class: "ctl opt-foot" }, h("span", { class: "muted grow" }, "Undo takes the fixes back in one step."), apply);
     card.appendChild(foot);
     box.appendChild(card);
   }
@@ -1720,7 +1826,7 @@
     const card = h("div", { class: "card" });
     const bar = h("div", { class: "tabs" });
     guides.forEach((x) => { const b = h("button", { type: "button" }, x.title); b.setAttribute("aria-selected", String(x === g)); b.onclick = () => openGuide(x.id); bar.appendChild(b); });
-    const close = h("button", { type: "button", class: "ghost", title: "Close (Esc)" }, "✕"); close.onclick = () => box.remove();
+    const close = h("button", { type: "button", class: "icon-btn", title: "Close (Esc)", "aria-label": "Close" }, icon("x")); close.onclick = () => box.remove();
     bar.appendChild(h("span", { style: "flex:1" })); bar.appendChild(close);
     card.appendChild(bar);
     const body = h("div", { class: "md" });
@@ -1770,7 +1876,12 @@
     let d = null;
     try { d = await DRAFT.get(); } catch (e) { /* no IndexedDB here (a private window): nothing kept */ }
     draftReady = true;
-    if (!d || !d.text || d.text === JSON.stringify(STARTER) || state.unsaved) return;
+    if (!d || !d.text || d.text === JSON.stringify(STARTER) || state.unsaved) {
+      // the very first visit: the starting points, rather than a theme nobody chose
+      let seen = true; try { seen = !!localStorage.getItem("banana-studio-seen"); localStorage.setItem("banana-studio-seen", "1"); } catch (e) { /* ignore */ }
+      if (!seen && !d && !state.unsaved) openTemplates();
+      return;
+    }
     const bar = $("#banner"); if (!bar) return;
     bar.innerHTML = ""; bar.hidden = false;
     const when = new Date(d.when);
@@ -1790,12 +1901,13 @@
   // ---- tabs, status, wiring --------------------------------------------------------------------------
   // the desktop studio's dock tabs: each group shows one of its panels
   const TAB_PANES = {
-    library: { components: "#pane-components", assets: "#pane-assets" },
+    library: { layers: "#pane-elements", add: "#palette", assets: "#pane-assets", components: "#pane-components" },
     center: { design: "#design", json: "#json" },
     properties: { inspector: "#inspector", theme: "#theme" },
-    bottom: { controls: "#preview-controls", problems: "#log" },
   };
   function showTab(group, tab) {
+    // the problems drawer above the status bar: open (or shut, clicked again)
+    if (group === "bottom") { const d = $("#drawer"); if (tab === "problems") d.hidden = !d.hidden || !!showTab.forceOpen; else d.hidden = true; showTab.forceOpen = false; return; }
     const bar = document.querySelector('.tabs[data-group="' + group + '"]');
     if (bar && bar.querySelectorAll) bar.querySelectorAll("button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
     const map = TAB_PANES[group] || {};
@@ -1803,7 +1915,7 @@
     if (group === "center" && tab === "json") renderJson();
     if (group === "center" && tab === "design") kick();
   }
-  function setStatus(txt, cls) { const s = $("#status"); s.textContent = txt; s.title = txt; s.className = "status" + (cls ? " " + cls : ""); }
+  function setStatus(txt, cls) { const s = $("#status"); s.textContent = txt ? txt.charAt(0).toUpperCase() + txt.slice(1) : ""; s.title = txt; s.className = "status" + (cls ? " " + cls : ""); }
   function rerender() { renderInspector(); }
   function renderAll() { renderPalette(); renderTree(); renderColours(); renderIcons(); renderVars(); renderComponents(); renderAssets(); renderInput(); renderBehaviour(); renderTheme(); renderPreviewControls(); if (!$("#json").hidden) renderJson(); }
 
@@ -1838,11 +1950,27 @@
   function wire() {
     document.querySelectorAll(".tabs button").forEach((b) => { b.onclick = () => showTab(b.parentElement.dataset.group, b.dataset.tab); });
     // the dark/light switch, like the website's
+    // the editor's own light or dark look: the system's, until the switch is used
     const root = document.documentElement;
-    const setTheme = (t) => { root.setAttribute("data-theme", t); const lab = $("#themeLabel"); if (lab) lab.textContent = t === "light" ? "Light" : "Dark"; try { localStorage.setItem("banana-studio-theme", t); } catch (e) { /* ignore */ } };
-    try { const q = new URLSearchParams(location.search).get("theme"); const saved = q || localStorage.getItem("banana-studio-theme"); if (saved) setTheme(saved); } catch (e) { /* ignore */ }
-    const sw = $("#themeSwitch"); if (sw) sw.onclick = () => setTheme(root.getAttribute("data-theme") === "light" ? "dark" : "light");
-    $("#newBtn").onclick = () => { if (guardUnsaved("Start a new theme")) loadTheme(clone(STARTER), null, "a new theme"); };
+    const isDark = () => root.getAttribute("data-theme") === "dark" || (root.getAttribute("data-theme") !== "light" && window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches);
+    const showMode = () => { const d = isDark(); const sw = $("#themeSwitch"); if (sw) { sw.querySelector(".sun").style.display = d ? "" : "none"; sw.querySelector(".moon").style.display = d ? "none" : ""; sw.title = d ? "Light editor" : "Dark editor"; } const lab = $("#themeLabel"); if (lab) lab.textContent = d ? "Dark" : "Light"; };
+    const setTheme = (t) => { root.setAttribute("data-theme", t); showMode(); try { localStorage.setItem("banana-studio-theme", t); } catch (e) { /* ignore */ } };
+    try { const q = new URLSearchParams(location.search).get("theme"); const saved = q || localStorage.getItem("banana-studio-theme"); if (saved) root.setAttribute("data-theme", saved); } catch (e) { /* ignore */ }
+    showMode();
+    const sw = $("#themeSwitch"); if (sw) sw.onclick = () => setTheme(isDark() ? "light" : "dark");
+    // the File and Preview settings menus: open on a click, shut on a click elsewhere or Esc
+    const menus = [["#fileMenuBtn", "#fileMenu"], ["#previewMenuBtn", "#previewMenu"]];
+    const shut = () => menus.forEach((m) => { $(m[1]).hidden = true; $(m[0]).setAttribute("aria-expanded", "false"); });
+    menus.forEach(function (m) {
+      $(m[0]).onclick = (e) => { e.stopPropagation(); const open = $(m[1]).hidden; shut(); closePop(); $(m[1]).hidden = !open; $(m[0]).setAttribute("aria-expanded", String(open)); };
+      $(m[1]).addEventListener("click", (e) => { if (m[0] === "#fileMenuBtn" || e.target.closest("button.primary")) shut(); e.stopPropagation(); });
+    });
+    document.addEventListener("click", shut);
+    $("#exportQuickBtn").onclick = exportZip;
+    $("#drawerClose").onclick = () => { $("#drawer").hidden = true; };
+    $("#docName").title = "The theme's name: change it on the Theme tab";
+    $("#docName").onclick = () => { showTab("properties", "theme"); const i = $("#pane-theme input[type=text]"); if (i) { i.focus(); i.select(); } };
+    $("#newBtn").onclick = () => openTemplates();
     $("#openBtn").onclick = () => $("#fileInput").click();
     $("#openDirBtn").onclick = () => $("#dirInput").click();
     $("#fileInput").onchange = function () { const f = Array.from(this.files); this.value = ""; openFiles(f); };
@@ -1854,11 +1982,11 @@
     $("#copyBtn").onclick = () => { const t = themeText(); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => setStatus("copied", "ok"), () => { const ta = h("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); } catch (e) {} ta.remove(); setStatus("copied", "ok"); }); };
     $("#validateBtn").onclick = doValidate;
     $("#optimizeBtn").onclick = openOptimize;
-    $("#templatesBtn").onclick = () => { showTab("properties", "theme"); const t = $("#pane-theme .templates"); if (t) t.scrollIntoView(); setStatus("Pick a starting point under “Start from a template”.", ""); };
+    $("#templatesBtn").onclick = () => openTemplates();
     $("#guideBtn").onclick = () => openGuide("make");
     window.addEventListener("keydown", (e) => {
       const mod = e.ctrlKey || e.metaKey;
-      if (e.key === "Escape" && $(".modal")) { $(".modal").remove(); return; }
+      if (e.key === "Escape") { if ($(".modal")) { $(".modal").remove(); return; } closePop(); shut(); if (!$("#drawer").hidden) { $("#drawer").hidden = true; return; } }
       if (!mod) return;
       const k = e.key.toLowerCase();
       if (k === "s") { e.preventDefault(); if (e.shiftKey) exportZip(); else saveTheme(); }
@@ -1912,5 +2040,5 @@
   // for tests (tests/browser.test.py) and the console
   G.BananaStudio = { state: state, themeOut: themeOut, themeText: themeText, loadTheme: loadTheme, openFiles: openFiles, zipBytes: zipBytes,
     undo: undo, redo: redo, validate: validate, pushTheme: pushTheme, markDirty: markDirty, renderAll: renderAll, openGuide: openGuide, setIcon: setIcon, resetIcon: resetIcon,
-    stills: doStills, setLibrary: setLibrary, press: press, live: live, openOptimize: openOptimize, elementPath: elementPath };
+    stills: doStills, setLibrary: setLibrary, press: press, live: live, openOptimize: openOptimize, elementPath: elementPath, openTemplates: openTemplates };
 })();

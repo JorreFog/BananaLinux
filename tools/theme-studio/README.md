@@ -7,9 +7,9 @@ and can preview the theme with the device's own engine.
 It works on its own: open `index.html` straight from the disk (or put this folder on any static web host) and
 everything works, the live preview included. The preview is the menu's own engine (`ui/src/layout.cpp` and the rest)
 compiled to WebAssembly in `wasm/banana-engine.js`, so it draws exactly what the handheld draws, pixel for pixel.
-Nothing is uploaded anywhere. `serve.py` is optional: it adds your themes folder and **Send to handheld**. The panels
-follow the desktop **Banana Theme Studio**; the look is the **BananaOS website's** (`web/preview`): charcoal cards
-with a cream border, banana yellow, Pixelify Sans, and a dark/light switch.
+Nothing is uploaded anywhere. `serve.py` is optional: it adds your themes folder and **Send to handheld**. The look is a
+plain editor's: Layers, Add, Files and Components on the left, both screens in the middle, the selected element and
+the theme's settings on the right, in light or dark (the system's, or the switch up top).
 
 ## Quick start
 
@@ -21,22 +21,28 @@ python3 tools/theme-studio/serve.py          # optional: + your themes folder (-
 
 In the editor:
 
-- **New** starts from a simple working theme; **Templates** jumps to the examples BananaOS ships (Canvas, Hillside,
-  Turntable, Classic: the easiest way in).
-- **Open** takes a theme's `.json`, a `.zip` with its files, or the `.json` and its pictures picked together;
-  **Open folder** opens a theme's folder; you can also drop any of these on the page.
-- **Save** downloads the `.json`; **Export (.zip)** downloads the theme with every file it names, at their paths:
-  unzip it into `banana/themes/` on the card.
-- **↶ ↷** undo and redo (Ctrl+Z, Ctrl+Shift+Z); the last theme is kept in the browser and offered again next time.
-- **Validate** lists expression, reference and file problems; **Optimize** finds what makes the theme slow or
+- **File > New theme** (and the first visit) shows the starting points: a simple theme and the examples BananaOS
+  ships (Canvas, Hillside, Turntable, Classic), the easiest way in.
+- **File > Open file / Open folder** takes a theme's `.json`, a `.zip` with its files, or the `.json` and its pictures
+  together; you can also drop any of these on the page.
+- **Export** (top right) downloads the theme with every file it uses, ready to unzip into `banana/themes/` on the card;
+  **File > Save .json** downloads the theme alone.
+- Undo and redo are beside the File menu (Ctrl+Z, Ctrl+Shift+Z); the last theme is kept in the browser and offered
+  again next time.
+- **Check** lists expression, reference and file problems; **Optimize** finds what makes the theme slow or
   battery-hungry on the handheld and fixes it (below); **Guide** shows `docs/MAKE-A-THEME.md`, `docs/THEMES.md` and
   the colour keys inside the page.
 
-The **Design** tab is the live preview: both screens, as the handheld draws them. Click it and use the keys (arrows;
-X or Enter is A, Z or Backspace is B, S is X, A is Y, Q/W are L/R) or the buttons beside it, and tap the screens.
-Every edit shows at once. Under **Preview** (bottom): the RG DS's or the RG DS Plus's panel size, the test library or
-one with a game for every system, the battery, Wi-Fi, clock and motion settings, and **Take stills** (the screens
-`banana-ui --headless` draws for a script). The engine's complaints are under **Problems**.
+The left side has **Layers** (the elements of the view you pick: Home, Library, Launch or Every view), **Add** (ready
+elements), **Files** (the pictures, fonts and sounds the theme uses) and **Components**. The right side edits the
+selected **Element**, or the whole **Theme** (name, colours, system icons, buttons, timing). Any field takes a plain
+value, or an expression with the small **ƒx** switch beside it; text with `{braces}` in it is filled in live.
+
+The middle is the live preview: both screens, as the handheld draws them. Click it and use the keys (arrows; X or
+Enter is A, Z or Backspace is B, S is X, A is Y, Q/W are L/R) or the buttons under it, and tap the screens. Every edit
+shows at once. **Preview settings** picks the RG DS's or the RG DS Plus's panel size, the test games or one game for
+every system, the battery, Wi-Fi, clock and motion, and takes **stills** (the screens `banana-ui --headless` draws for a
+script). The engine's complaints are under **Problems**, in the status bar.
 
 Install a finished theme by putting `my-theme.json` (and its folder of pictures, kept beside it) into
 `banana/themes/` on the card, over file sharing or with the card in a computer, then pick it in
@@ -119,8 +125,8 @@ source ~/emsdk/emsdk_env.sh && sh tools/theme-studio/wasm/build.sh
 
 | File | What it is |
 | --- | --- |
-| `index.html`, `ui.css` | The page and the BananaOS-website look. |
-| `assets/` | Pixelify Sans and the menu dot patterns, copied from `web/preview/assets/`, so the page works offline. |
+| `index.html`, `ui.css` | The page and its look (system fonts, neutral greys, one blue accent; light and dark). |
+| `assets/` | The banana icon in the top bar. |
 | `app.js` | The editor: tree, inspector, value widgets, colour keys, icons, assets, undo, open/save/export, the preview. |
 | `engine.js` | The live preview's client for the WebAssembly engine. |
 | `wasm/` | `theme-wasm.cpp` (the engine's binding), `build.sh`, `sources.sh`, and the built `banana-engine.js` (generated). |
