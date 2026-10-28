@@ -7,6 +7,7 @@
 #include <cstring>
 #include <fstream>
 #include <time.h>
+#include <mutex>
 #include <type_traits>
 #include <unordered_map>
 #include <string_view>
@@ -106,18 +107,50 @@ namespace banana
 
 	typedef std::map<std::string, Prop, std::less<>> PropMap;	// (found by a string_view: no string made to look one up)
 
+	// property names by number: an element's properties are found by the number of the name, an index into a table
+	// made when the element is compiled, not looked up by the name each time (dozens for each element, each frame)
+	static int keyId(std::string_view name)
+	{
+		static std::mutex lock;
+		static std::unordered_map<std::string, int> ids;
+		std::lock_guard<std::mutex> l(lock);
+		auto it = ids.find(std::string(name));
+		if (it != ids.end()) return it->second;
+		int id = (int)ids.size();
+		ids.emplace(std::string(name), id);
+		return id;
+	}
+	struct Key
+	{
+		int id;
+		std::string_view name;
+		Key(int i, std::string_view n) : id(i), name(n) {}
+		Key(const char* n) : id(keyId(n)), name(n) {}
+		Key(const std::string& n) : id(keyId(n)), name(n) {}
+	};
+	// a name written in the code: its number worked out once, where it's written
+#define K(lit) (Key([] { static const int i = keyId(lit); return i; }(), lit))
+	// a property map's entries by name number (made when its element is compiled)
+	struct PropIndex
+	{
+		std::vector<const Prop*> byId;
+		void build(const PropMap& m) { byId.clear(); for (auto& e : m) { int id = keyId(e.first); if ((int)byId.size() <= id) byId.resize(id + 1, nullptr); byId[id] = &e.second; } }
+		const Prop* get(int id) const { return id < (int)byId.size() ? byId[id] : nullptr; }
+	};
+
 	struct LayoutMenu::Node
 	{
 		std::string type;					// rect, text, image, group, list
 		PropMap props;	// flattened: "shadow.blur", "gradient.stops.0", "radius.2"
 		std::vector<std::shared_ptr<Node>> children;
 		std::shared_ptr<Node> item;			// a list's template
-		struct State { Prop when; PropMap props; };
+		struct State { Prop when; PropMap props; PropIndex idx; };
 		std::vector<State> states;			// overrides while their condition holds (the last one wins)
 		std::vector<std::pair<std::string, Prop>> with;	// a component's parameters, set in its children's scope
 		std::map<std::string, double, std::less<>> smooth;	// property -> time constant (ms): the value eases towards its target
 		int serial = 0;
-		const Prop* prop(std::string_view k) const { auto it = props.find(k); return it == props.end() ? nullptr : &it->second; }
+		PropIndex idx;	// (props and the states' made once they're complete: index()
+		void index() { idx.build(props); for (auto& st : states) st.idx.build(st.props); }
 	};
 	typedef std::shared_ptr<LayoutMenu::Node> NodePtr;
 
@@ -274,6 +307,7 @@ namespace banana
 				g->serial = ++serials;
 				for (size_t k = 0; k < v.arr.size(); k++)
 					if (NodePtr c = compile(*v.arr[k], where + "[" + std::to_string(k) + "]", depth + 1)) g->children.push_back(c);
+				g->index();
 				return g;
 			}
 			if (!v.isObj()) { err(where + ": an element is an object"); return nullptr; }
@@ -327,6 +361,7 @@ namespace banana
 				}
 				flatten(k, *e.second, n->props, here);
 			}
+			n->index();
 			return n;
 		}
 
@@ -547,35 +582,35 @@ namespace banana
 		{
 			const Node* n;
 			const Scope* sc;
-			std::vector<const PropMap*> on;	// the states that hold, the last first
+			std::vector<const Node::State*> on;	// the states that hold, the last first
 			const std::string* key;	// the element's identity (its node and list indices): its eased values (held by the caller)
 		};
 		static const std::string& noKey() { static const std::string k; return k; }
 		Ctx ctx(const Node* n, const Scope* sc, const std::string& key) const
 		{
 			Ctx c{ n, sc, {}, &key };
-			for (auto it = n->states.rbegin(); it != n->states.rend(); ++it) if (it->when.eval(*sc).truthy()) c.on.push_back(&it->props);
+			for (auto it = n->states.rbegin(); it != n->states.rend(); ++it) if (it->when.eval(*sc).truthy()) c.on.push_back(&*it);
 			return c;
 		}
-		const Prop* find(const Ctx& c, std::string_view k) const
+		const Prop* find(const Ctx& c, const Key& k) const
 		{
-			for (auto* st : c.on) { auto it = st->find(k); if (it != st->end()) return &it->second; }
-			return c.n->prop(k);
+			for (auto* st : c.on) if (const Prop* p = st->idx.get(k.id)) return p;
+			return c.n->idx.get(k.id);
 		}
-		bool has(const Ctx& c, std::string_view k) const { return find(c, k) != nullptr; }
-		EV val(const Ctx& c, std::string_view k, const EV& def = EV("")) const
+		bool has(const Ctx& c, const Key& k) const { return find(c, k) != nullptr; }
+		EV val(const Ctx& c, const Key& k, const EV& def = EV("")) const
 		{
 			const Prop* p = find(c, k);
 			return p ? p->eval(*c.sc) : def;
 		}
-		std::string str(const Ctx& c, std::string_view k, const std::string& def = "") const
+		std::string str(const Ctx& c, const Key& k, const std::string& def = "") const
 		{
 			const Prop* p = find(c, k);
 			if (!p) return def;
 			return p->kind == Prop::LITERAL ? p->lit.str() : p->eval(*c.sc).str();
 		}
 		// a length: a number, or "50%" of the parent's (rel)
-		double num(const Ctx& c, std::string_view k, double def, double rel = 0)
+		double num(const Ctx& c, const Key& k, double def, double rel = 0)
 		{
 			const Prop* p = find(c, k);
 			if (!p) return smoothOf(c, k, def);
@@ -592,11 +627,11 @@ namespace banana
 			else r = v.n;
 			return smoothOf(c, k, r);
 		}
-		double smoothOf(const Ctx& c, std::string_view k, double target)
+		double smoothOf(const Ctx& c, const Key& k, double target)
 		{
-			auto sm = c.n->smooth.find(k);
+			auto sm = c.n->smooth.find(k.name);
 			if (sm == c.n->smooth.end() || sm->second <= 0) return target;
-			Smoothed& st = smoothed[*c.key + "." + std::string(k)];
+			Smoothed& st = smoothed[*c.key + "." + std::string(k.name)];
 			if (!st.set) { st.set = true; st.v = target; st.target = target; st.at = now; return target; }
 			st.target = target;
 			double dt = std::max(0.0, now - st.at);
@@ -606,7 +641,7 @@ namespace banana
 			else smoothMoving = true;
 			return st.v;
 		}
-		bool color(const Ctx& c, std::string_view k, uint32_t& out) const
+		bool color(const Ctx& c, const Key& k, uint32_t& out) const
 		{
 			const Prop* p = find(c, k);
 			if (!p) return false;
@@ -622,7 +657,7 @@ namespace banana
 			if (!v.isStr) { out = 0xff000000 | (uint32_t)v.n; return true; }
 			return parseColorText(v.s, out);
 		}
-		bool flag(const Ctx& c, std::string_view k, bool def = false) const { const Prop* p = find(c, k); return p ? (p->kind == Prop::LITERAL ? p->lit.truthy() : p->eval(*c.sc).truthy()) : def; }
+		bool flag(const Ctx& c, const Key& k, bool def = false) const { const Prop* p = find(c, k); return p ? (p->kind == Prop::LITERAL ? p->lit.truthy() : p->eval(*c.sc).truthy()) : def; }
 
 		// ---- drawing ---------------------------------------------------------------------------------------------
 		struct Frame { float x, y, k; float opacity; int screen; };	// the parent's origin (layout px), scale, opacity
@@ -645,17 +680,17 @@ namespace banana
 		TextLayout layoutText(const Ctx& c, float k, float boxW)
 		{
 			TextLayout L;
-			std::string t = str(c, "text");
-			L.st.font = font(str(c, "font", defaultFont));
+			std::string t = str(c, K("text"));
+			L.st.font = font(str(c, K("font"), defaultFont));
 			if (!L.st.font) return L;
-			L.st.size = (float)num(c, "size", 16) * k;
-			L.st.letterSpacing = (float)num(c, "spacing", 0) * k;
-			L.st.upper = flag(c, "upper");
+			L.st.size = (float)num(c, K("size"), 16) * k;
+			L.st.letterSpacing = (float)num(c, K("spacing"), 0) * k;
+			L.st.upper = flag(c, K("upper"));
 			L.asc = L.st.font->ascent(L.st.size);
-			L.lineH = has(c, "lineHeight") ? (float)num(c, "lineHeight", 0) * k : L.st.font->normalLineHeight(L.st.size);
+			L.lineH = has(c, K("lineHeight")) ? (float)num(c, K("lineHeight"), 0) * k : L.st.font->normalLineHeight(L.st.size);
 			if (t.empty()) { L.h = 0; return L; }
 			std::u32string u = rnds::utf8to32(t);
-			int maxLines = (int)num(c, "maxLines", flag(c, "wrap") ? 0 : 1);
+			int maxLines = (int)num(c, K("maxLines"), flag(c, K("wrap")) ? 0 : 1);
 			// lines the text itself breaks, each wrapped or cut to the box
 			std::vector<std::u32string> paras;
 			std::u32string cur;
@@ -664,12 +699,12 @@ namespace banana
 			for (auto& p : paras)
 			{
 				if (maxLines > 0 && (int)L.lines.size() >= maxLines) break;
-				if (boxW > 0 && (flag(c, "wrap") || maxLines != 1))
+				if (boxW > 0 && (flag(c, K("wrap")) || maxLines != 1))
 				{
 					int left = maxLines > 0 ? maxLines - (int)L.lines.size() : 0;
 					for (auto& l : rnds::layoutWrap(p, L.st, (int)boxW, left)) L.lines.push_back(l);
 				}
-				else if (boxW > 0 && flag(c, "ellipsis", true)) L.lines.push_back(rnds::layoutEllipsis(p, L.st, (int)boxW));
+				else if (boxW > 0 && flag(c, K("ellipsis"), true)) L.lines.push_back(rnds::layoutEllipsis(p, L.st, (int)boxW));
 				else L.lines.push_back(rnds::layoutLine(p, L.st));
 			}
 			for (auto& l : L.lines) L.w = std::max(L.w, l.width);
@@ -889,14 +924,15 @@ namespace banana
 		{
 			float k = f.k;
 			uint32_t fill = 0;
-			bool hasFill = color(c, "fill", fill) || color(c, "color", fill);
+			bool hasFill = color(c, K("fill"), fill) || color(c, K("color"), fill);
 			std::vector<std::pair<float, uint32_t>> stops;
 			for (int i = 0; i < 16; i++)
 			{
 				// (the keys made once)
-				static const std::vector<std::string> stopKeys = [] { std::vector<std::string> v; for (int j = 0; j < 16; j++) v.push_back("gradient.stops." + std::to_string(j)); return v; }();
-				static const std::vector<std::string> shortKeys = [] { std::vector<std::string> v; for (int j = 0; j < 16; j++) v.push_back("gradient." + std::to_string(j)); return v; }();
-				const std::string* key = &stopKeys[i];
+				static const std::vector<std::string> stopNames = [] { std::vector<std::string> v; for (int j = 0; j < 16; j++) v.push_back("gradient.stops." + std::to_string(j)); return v; }();
+				static const std::vector<std::string> shortNames = [] { std::vector<std::string> v; for (int j = 0; j < 16; j++) v.push_back("gradient." + std::to_string(j)); return v; }();
+				static const std::vector<Key> stopKeys(stopNames.begin(), stopNames.end()), shortKeys(shortNames.begin(), shortNames.end());
+				const Key* key = &stopKeys[i];
 				if (!has(c, *key)) { key = &shortKeys[i]; if (!has(c, *key)) break; }
 				std::string t = str(c, *key);
 				// "#rrggbb" or "#rrggbb 40%"
@@ -911,19 +947,19 @@ namespace banana
 				for (size_t i = 0; i < stops.size(); i++) if (stops[i].first < 0) stops[i].first = stops.size() == 1 ? 0 : (float)i / (stops.size() - 1);
 				if (stops.size() == 1) { fill = stops[0].second; hasFill = true; stops.clear(); }
 			}
-			float angle = (float)num(c, "gradient.angle", 180);
+			float angle = (float)num(c, K("gradient.angle"), 180);
 			float rad[4];
-			double r0 = num(c, "radius", 0, std::min(w, h));
-			static const char* const radKeys[4] = { "radius.0", "radius.1", "radius.2", "radius.3" };
+			double r0 = num(c, K("radius"), 0, std::min(w, h));
+			static const Key radKeys[4] = { Key("radius.0"), Key("radius.1"), Key("radius.2"), Key("radius.3") };
 			for (int i = 0; i < 4; i++) rad[i] = (float)(has(c, radKeys[i]) ? num(c, radKeys[i], 0) : r0) * k * s;
-			float border = (float)num(c, "border", 0) * k * s;
-			if (has(c, "border.width")) border = (float)num(c, "border.width", 0) * k * s;
+			float border = (float)num(c, K("border"), 0) * k * s;
+			if (has(c, K("border.width"))) border = (float)num(c, K("border.width"), 0) * k * s;
 			uint32_t bc = 0;
-			if (!color(c, "borderColor", bc)) color(c, "border.color", bc);
+			if (!color(c, K("borderColor"), bc)) color(c, K("border.color"), bc);
 			uint32_t shc = 0;
-			color(c, "shadow.color", shc);
-			float blur = (float)num(c, "shadow.blur", 0) * k * s, spread = (float)num(c, "shadow.spread", 0) * k * s;
-			float sx = (float)num(c, "shadow.x", 0) * k * s, sy = (float)num(c, "shadow.y", 0) * k * s;
+			color(c, K("shadow.color"), shc);
+			float blur = (float)num(c, K("shadow.blur"), 0) * k * s, spread = (float)num(c, K("shadow.spread"), 0) * k * s;
+			float sx = (float)num(c, K("shadow.x"), 0) * k * s, sy = (float)num(c, K("shadow.y"), 0) * k * s;
 			if (!hasFill && stops.empty() && !(border > 0 && bc >> 24) && !(shc >> 24)) return;
 			float dx = x * s, dy = y * s, dw = w * s, dh = h * s;
 			bool plain = stops.empty() && !(border > 0 && bc >> 24) && !(shc >> 24) && rad[0] <= 0 && rad[1] <= 0 && rad[2] <= 0 && rad[3] <= 0;
@@ -958,17 +994,17 @@ namespace banana
 		{
 			if (L.lines.empty() || !L.st.font) return;
 			uint32_t col = 0xffffffff;
-			color(c, "color", col);
-			std::string align = str(c, "align", "left"), valign = str(c, "valign", "top");
+			color(c, K("color"), col);
+			std::string align = str(c, K("align"), "left"), valign = str(c, K("valign"), "top");
 			float top = y;
 			if (h > 0 && valign == "middle") top = y + (h - L.h) / 2;
 			else if (h > 0 && valign == "bottom") top = y + h - L.h;
 			uint32_t shc = 0;
-			bool shadow = color(c, "shadow.color", shc) && shc >> 24;
-			float sx = (float)num(c, "shadow.x", 1) * f.k, sy = (float)num(c, "shadow.y", 1) * f.k;
+			bool shadow = color(c, K("shadow.color"), shc) && shc >> 24;
+			float sx = (float)num(c, K("shadow.x"), 1) * f.k, sy = (float)num(c, K("shadow.y"), 1) * f.k;
 			uint32_t olc = 0;
-			bool outline = color(c, "outline.color", olc) && olc >> 24;
-			float ow = (float)num(c, "outline.width", 1) * f.k;
+			bool outline = color(c, K("outline.color"), olc) && olc >> 24;
+			float ow = (float)num(c, K("outline.width"), 1) * f.k;
 			for (size_t i = 0; i < L.lines.size(); i++)
 			{
 				const rnds::TextLine& l = L.lines[i];
@@ -987,7 +1023,7 @@ namespace banana
 			}
 		}
 
-		std::string imageSrc(const Ctx& c, std::string_view k)
+		std::string imageSrc(const Ctx& c, const Key& k)
 		{
 			std::string v = str(c, k);
 			if (v.empty() || v.compare(0, 8, "romicon:") == 0 || v[0] == '/') return v;
@@ -998,18 +1034,18 @@ namespace banana
 
 		void drawImage(const Ctx& c, float x, float y, float w, float h, const Frame& f)
 		{
-			std::string src = imageSrc(c, "src");
-			if ((src.empty() || failed.count(src)) && has(c, "fallback")) src = imageSrc(c, "fallback");
+			std::string src = imageSrc(c, K("src"));
+			if ((src.empty() || failed.count(src)) && has(c, K("fallback"))) src = imageSrc(c, K("fallback"));
 			if (src.empty() || failed.count(src)) { drawPlaceholder(c, x, y, w, h, f); return; }
-			std::string fit = str(c, "fit", "cover"), crop = str(c, "crop");
+			std::string fit = str(c, K("fit"), "cover"), crop = str(c, K("crop"));
 			int iw = (int)std::lround(w * s), ih = (int)std::lround(h * s);
 			if (iw <= 0 || ih <= 0) return;
-			float radius = (float)num(c, "radius", 0, std::min(w, h)) * f.k * s;
+			float radius = (float)num(c, K("radius"), 0, std::min(w, h)) * f.k * s;
 			char kb[64];
 			snprintf(kb, sizeof kb, "|%d|%d|%g", iw, ih, radius);
 			std::string key = src + "|" + fit + "|" + crop + kb;
 			uint32_t tc = 0xffffffff;
-			color(c, "tint", tc);
+			color(c, K("tint"), tc);
 			rnds::Color tint = colorFrom(tc, f.opacity);
 			auto it = images.find(key);
 			if (it == images.end())
@@ -1039,25 +1075,25 @@ namespace banana
 		void drawPlaceholder(const Ctx& c, float x, float y, float w, float h, const Frame& f)
 		{
 			uint32_t pc;
-			if (color(c, "placeholder", pc) && pc >> 24) m->be->fill(std::round(x * s), std::round(y * s), std::round(w * s), std::round(h * s), colorFrom(pc, f.opacity));
+			if (color(c, K("placeholder"), pc) && pc >> 24) m->be->fill(std::round(x * s), std::round(y * s), std::round(w * s), std::round(h * s), colorFrom(pc, f.opacity));
 		}
 
 		// an element's box in its parent (layout px, before the frame's scale): x, y, w, h
 		struct Box { float x, y, w, h; };
 		Box boxOf(const Ctx& c, float pw, float ph, float natW, float natH)
 		{
-			float w = (float)num(c, "w", -1, pw), h = (float)num(c, "h", -1, ph);
-			bool hasX = has(c, "x"), hasR = has(c, "right"), hasY = has(c, "y"), hasB = has(c, "bottom");
-			float x = (float)num(c, "x", 0, pw), y = (float)num(c, "y", 0, ph);
-			if (w < 0 && hasX && hasR) w = pw - x - (float)num(c, "right", 0, pw);
-			if (h < 0 && hasY && hasB) h = ph - y - (float)num(c, "bottom", 0, ph);
+			float w = (float)num(c, K("w"), -1, pw), h = (float)num(c, K("h"), -1, ph);
+			bool hasX = has(c, K("x")), hasR = has(c, K("right")), hasY = has(c, K("y")), hasB = has(c, K("bottom"));
+			float x = (float)num(c, K("x"), 0, pw), y = (float)num(c, K("y"), 0, ph);
+			if (w < 0 && hasX && hasR) w = pw - x - (float)num(c, K("right"), 0, pw);
+			if (h < 0 && hasY && hasB) h = ph - y - (float)num(c, K("bottom"), 0, ph);
 			if (w < 0) w = natW >= 0 ? natW : (c.n->type == "text" || c.n->type == "image" ? 0 : pw);
 			if (h < 0) h = natH >= 0 ? natH : (c.n->type == "text" || c.n->type == "image" ? 0 : ph);
-			if (!hasX && hasR) x = pw - (float)num(c, "right", 0, pw) - w;
-			if (!hasY && hasB) y = ph - (float)num(c, "bottom", 0, ph) - h;
+			if (!hasX && hasR) x = pw - (float)num(c, K("right"), 0, pw) - w;
+			if (!hasY && hasB) y = ph - (float)num(c, K("bottom"), 0, ph) - h;
 			// the anchor: where on the element its x, y are ("center", "bottom", "top right", or ax, ay 0..1)
 			float ax = 0, ay = 0;
-			std::string an = str(c, "anchor");
+			std::string an = str(c, K("anchor"));
 			if (!an.empty())
 			{
 				if (an.find("center") != std::string::npos || an.find("middle") != std::string::npos) { ax = 0.5f; ay = 0.5f; }
@@ -1068,9 +1104,9 @@ namespace banana
 				if (an == "top" || an == "bottom") ax = 0.5f;
 				if (an == "left" || an == "right") ay = 0.5f;
 			}
-			ax = (float)num(c, "ax", ax); ay = (float)num(c, "ay", ay);
+			ax = (float)num(c, K("ax"), ax); ay = (float)num(c, K("ay"), ay);
 			// "scale": the element grown or shrunk about its anchor point
-			float sc = (float)num(c, "scale", 1);
+			float sc = (float)num(c, K("scale"), 1);
 			x -= ax * w * sc; y -= ay * h * sc;
 			return { x, y, w * sc, h * sc };
 		}
@@ -1093,24 +1129,24 @@ namespace banana
 			}
 			if (c.n->type == "text")
 			{
-				float bw = (float)num(c, "w", 0, pw);
+				float bw = (float)num(c, K("w"), 0, pw);
 				TextLayout L = layoutText(c, k, bw * k);
 				nw = bw > 0 ? bw : L.w / k; nh = L.h / k;
 				return;
 			}
 			// a row or a column: its children's sizes, the gaps and the padding (a pill as wide as its text)
-			std::string lay = str(c, "layout");
+			std::string lay = str(c, K("layout"));
 			if (c.n->type != "group" || (lay != "row" && lay != "column")) return;
 			bool row = lay == "row";
-			float gap = (float)num(c, "gap", 0), pad = (float)num(c, "padding", 0), along = 0, across = 0;
+			float gap = (float)num(c, K("gap"), 0), pad = (float)num(c, K("padding"), 0), along = 0, across = 0;
 			int kids = 0;
 			for (auto& ch : c.n->children)
 			{
 				Ctx cc = ctx(ch.get(), c.sc, noKey());
-				if ((has(cc, "visible") && !flag(cc, "visible")) || (has(cc, "if") && !flag(cc, "if"))) continue;
+				if ((has(cc, K("visible")) && !flag(cc, K("visible"))) || (has(cc, K("if")) && !flag(cc, K("if")))) continue;
 				float kw, kh;
 				natural(cc, pw, ph, k, kw, kh);
-				kw = (float)num(cc, "w", kw >= 0 ? kw : 0, pw); kh = (float)num(cc, "h", kh >= 0 ? kh : 0, ph);
+				kw = (float)num(cc, K("w"), kw >= 0 ? kw : 0, pw); kh = (float)num(cc, K("h"), kh >= 0 ? kh : 0, ph);
 				along += row ? kw : kh;
 				across = std::max(across, row ? kh : kw);
 				kids++;
@@ -1124,9 +1160,9 @@ namespace banana
 		void renderNode(const Node* n, const Scope& sc, const Frame& f, float pw, float ph, const std::string& key)
 		{
 			Ctx c = ctx(n, &sc, key);
-			if (has(c, "visible") && !flag(c, "visible")) return;
-			if (has(c, "if") && !flag(c, "if")) return;
-			float opacity = f.opacity * (float)std::min(1.0, std::max(0.0, num(c, "opacity", 1)));
+			if (has(c, K("visible")) && !flag(c, K("visible"))) return;
+			if (has(c, K("if")) && !flag(c, K("if"))) return;
+			float opacity = f.opacity * (float)std::min(1.0, std::max(0.0, num(c, K("opacity"), 1)));
 			if (opacity <= 0.002f) return;
 			// the scope of the children: a component's parameters
 			Scope inner;
@@ -1138,41 +1174,41 @@ namespace banana
 			TextLayout L;
 			if (n->type == "text")
 			{
-				float bw = (float)num(c, "w", 0, pw);
-				float sc0 = (float)num(c, "scale", 1);
+				float bw = (float)num(c, K("w"), 0, pw);
+				float sc0 = (float)num(c, K("scale"), 1);
 				L = layoutText(c, f.k * sc0, bw * f.k * sc0);
 				nw = L.w / (f.k * sc0); nh = L.h / (f.k * sc0);
 				if (bw > 0) nw = bw;
 			}
-			else if (n->type == "group" && (!has(c, "w") || !has(c, "h"))) natural(c, pw, ph, f.k, nw, nh);
+			else if (n->type == "group" && (!has(c, K("w")) || !has(c, K("h")))) natural(c, pw, ph, f.k, nw, nh);
 			Box b = boxOf(c, pw, ph, nw, nh);
 			float ax0 = f.x + b.x * f.k, ay0 = f.y + b.y * f.k, aw = b.w * f.k, ah = b.h * f.k;	// absolute layout px
-			if (has(c, "onTap") || has(c, "tap"))
-				hits.push_back(Hit{ f.screen, ax0 * s, ay0 * s, (ax0 + aw) * s, (ay0 + ah) * s, "", -1, str(c, has(c, "onTap") ? "onTap" : "tap") });
+			if (has(c, K("onTap")) || has(c, K("tap")))
+				hits.push_back(Hit{ f.screen, ax0 * s, ay0 * s, (ax0 + aw) * s, (ay0 + ah) * s, "", -1, str(c, has(c, K("onTap")) ? "onTap" : "tap") });
 			// its scale to 1/100: boxes and texts are drawn anew for every size they are seen at, and a scale that
 			// moves all the time (Noir's pulsing cards) made new ones each frame; to the hundredth, a pulse goes
 			// through a few sizes that stay cached (a step is ~1 px on a 100 px box)
-			double scl = num(c, "scale", 1);
+			double scl = num(c, K("scale"), 1);
 			if (scl != 1) scl = std::round(scl * 100) / 100;
 			Frame cf{ ax0, ay0, f.k * (float)scl, opacity, f.screen };
 			if (n->type == "rect") drawRect(c, ax0, ay0, aw, ah, cf);
 			else if (n->type == "text")
 			{
 				// scaled text is laid out at its scaled size (sharp, not a stretched bitmap)
-				drawText(c, ax0, ay0, has(c, "w") ? aw : 0, has(c, "h") ? ah : 0, cf, L);
+				drawText(c, ax0, ay0, has(c, K("w")) ? aw : 0, has(c, K("h")) ? ah : 0, cf, L);
 			}
 			else if (n->type == "image") drawImage(c, ax0, ay0, aw, ah, cf);
 			else if (n->type == "group")
 			{
 				// a group can paint a box behind its children too
-				if (has(c, "fill") || has(c, "gradient.stops.0") || has(c, "gradient.0") || has(c, "border") || has(c, "border.width") || has(c, "shadow.color")) drawRect(c, ax0, ay0, aw, ah, cf);
+				if (has(c, K("fill")) || has(c, K("gradient.stops.0")) || has(c, K("gradient.0")) || has(c, K("border")) || has(c, K("border.width")) || has(c, K("shadow.color"))) drawRect(c, ax0, ay0, aw, ah, cf);
 			}
-			bool clip = flag(c, "clip");
+			bool clip = flag(c, K("clip"));
 			if (clip) m->be->pushClip(std::round(ax0 * s), std::round(ay0 * s), std::round(aw * s), std::round(ah * s));
 			if (n->type == "list") renderList(c, csc, cf, b.w, b.h, key);
 			else if (!n->children.empty())
 			{
-				std::string lay = str(c, "layout");
+				std::string lay = str(c, K("layout"));
 				if (lay == "row" || lay == "column") renderFlow(c, csc, cf, b.w, b.h, key, lay == "row");
 				else for (size_t i = 0; i < n->children.size(); i++) renderNode(n->children[i].get(), csc, cf, b.w, b.h, key + "/" + std::to_string(i));
 			}
@@ -1183,18 +1219,18 @@ namespace banana
 		// align across the group
 		void renderFlow(const Ctx& c, const Scope& sc, const Frame& f, float w, float h, const std::string& key, bool row)
 		{
-			float gap = (float)num(c, "gap", 0), pad = (float)num(c, "padding", 0);
-			std::string justify = str(c, "justify", "start"), align = str(c, "align", "start");
+			float gap = (float)num(c, K("gap"), 0), pad = (float)num(c, K("padding"), 0);
+			std::string justify = str(c, K("justify"), "start"), align = str(c, K("align"), "start");
 			struct Kid { const Node* n; float w, h; };
 			std::vector<Kid> kids;
 			float total = 0;
 			for (auto& ch : c.n->children)
 			{
 				Ctx cc = ctx(ch.get(), &sc, noKey());
-				if ((has(cc, "visible") && !flag(cc, "visible")) || (has(cc, "if") && !flag(cc, "if"))) continue;
+				if ((has(cc, K("visible")) && !flag(cc, K("visible"))) || (has(cc, K("if")) && !flag(cc, K("if")))) continue;
 				float nw, nh;
 				natural(cc, w, h, f.k, nw, nh);
-				float kw = (float)num(cc, "w", nw >= 0 ? nw : 0, w), kh = (float)num(cc, "h", nh >= 0 ? nh : 0, h);
+				float kw = (float)num(cc, K("w"), nw >= 0 ? nw : 0, w), kh = (float)num(cc, K("h"), nh >= 0 ? nh : 0, h);
 				kids.push_back({ ch.get(), kw, kh });
 				total += row ? kw : kh;
 			}
@@ -1222,21 +1258,21 @@ namespace banana
 		{
 			const Node* tpl = c.n->item.get();
 			if (!tpl) { if (c.n->children.empty()) return; tpl = c.n->children[0].get(); }
-			std::string source = str(c, "source", "systems");
+			std::string source = str(c, K("source"), "systems");
 			int n = 0, cur = -1;
 			std::vector<std::pair<std::string, std::string>> hl;
 			if (source == "systems") { n = (int)systems.size(); cur = m->mSys; }
 			else if (source == "games") { n = (int)games.size(); cur = m->mView == rnds::UI::HOME ? -1 : m->mGame; }
 			else if (source == "hints") { hl = hintsNow(); n = (int)hl.size(); }
-			else if (source == "range") n = (int)num(c, "count", 0);
+			else if (source == "range") n = (int)num(c, K("count"), 0);
 			else { err("list source \"" + source + "\": systems, games, hints or range"); return; }
-			std::string dirn = str(c, "direction", "free");
-			float itemW = (float)num(c, "itemW", dirn == "column" ? w : 100), itemH = (float)num(c, "itemH", dirn == "row" ? h : 40);
-			float gap = (float)num(c, "gap", 0);
-			int cols = std::max(1, (int)num(c, "columns", 1));
-			float stepX = (float)num(c, "stepX", itemW + gap), stepY = (float)num(c, "stepY", itemH + gap);
-			std::string mode = str(c, "scrollMode", "center");
-			bool loop = flag(c, "loop") && n > 0;
+			std::string dirn = str(c, K("direction"), "free");
+			float itemW = (float)num(c, K("itemW"), dirn == "column" ? w : 100), itemH = (float)num(c, K("itemH"), dirn == "row" ? h : 40);
+			float gap = (float)num(c, K("gap"), 0);
+			int cols = std::max(1, (int)num(c, K("columns"), 1));
+			float stepX = (float)num(c, K("stepX"), itemW + gap), stepY = (float)num(c, K("stepY"), itemH + gap);
+			std::string mode = str(c, K("scrollMode"), "center");
+			bool loop = flag(c, K("loop")) && n > 0;
 			// the list the cursor is on scrolls with its eased position; another one stands at its selection
 			bool active = (source == "systems" && m->mView == rnds::UI::HOME) || (source == "games" && m->mView != rnds::UI::HOME);
 			float pos0 = active ? scroll : (float)std::max(0, cur);
@@ -1265,7 +1301,7 @@ namespace banana
 			int lines = dirn == "grid" ? (n + cols - 1) / cols : n;
 			// the items in view (and one more each side); a free list draws those within "range" of the cursor
 			int lo = 0, hi = n - 1;
-			if (dirn == "free") { int r = (int)num(c, "range", 8); int cc = std::max(0, cur); lo = cc - r; hi = cc + r; if (!loop) { lo = std::max(0, lo); hi = std::min(n - 1, hi); } }
+			if (dirn == "free") { int r = (int)num(c, K("range"), 8); int cc = std::max(0, cur); lo = cc - r; hi = cc + r; if (!loop) { lo = std::max(0, lo); hi = std::min(n - 1, hi); } }
 			else
 			{
 				int l0 = (int)std::floor(first) - 1, l1 = (int)std::ceil(first + along / std::max(1.0f, step)) + 1;
@@ -1278,7 +1314,7 @@ namespace banana
 			std::vector<int> order;
 			for (int i = lo; i <= hi; i++) order.push_back(i);
 			// the selected one drawn last (over its neighbours) unless the theme says otherwise
-			if (flag(c, "selectedOnTop", true) && cur >= 0) std::stable_sort(order.begin(), order.end(), [&](int a, int b) { auto idx = [&](int v) { return ((v % n) + n) % n; }; return (idx(a) == cur) < (idx(b) == cur); });
+			if (flag(c, K("selectedOnTop"), true) && cur >= 0) std::stable_sort(order.begin(), order.end(), [&](int a, int b) { auto idx = [&](int v) { return ((v % n) + n) % n; }; return (idx(a) == cur) < (idx(b) == cur); });
 			// an item's scope: its index, whether it's the selection, where it is from the cursor, its own fields
 			auto fill = [&](Scope& is, int v, int i)
 			{
@@ -1307,7 +1343,7 @@ namespace banana
 			};
 			// "flow": each item as wide (row) or high (column) as it is, one after another (hints of different lengths)
 			std::vector<float> flowAt;
-			if (flag(c, "flow") && (dirn == "row" || dirn == "column"))
+			if (flag(c, K("flow")) && (dirn == "row" || dirn == "column"))
 			{
 				float at = 0;
 				for (int i = 0; i < n; i++)
@@ -1318,7 +1354,7 @@ namespace banana
 					Ctx tc = ctx(tpl, &is, noKey());
 					float nw, nh;
 					natural(tc, itemW, itemH, f.k, nw, nh);
-					at += (float)(dirn == "row" ? num(tc, "w", nw >= 0 ? nw : itemW, itemW) : num(tc, "h", nh >= 0 ? nh : itemH, itemH)) + gap;
+					at += (float)(dirn == "row" ? num(tc, K("w"), nw >= 0 ? nw : itemW, itemW) : num(tc, K("h"), nh >= 0 ? nh : itemH, itemH)) + gap;
 				}
 			}
 			for (int v : order)
