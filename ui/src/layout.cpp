@@ -7,6 +7,7 @@
 #include <cstring>
 #include <fstream>
 #include <time.h>
+#include <type_traits>
 #include <unordered_map>
 #include <string_view>
 
@@ -45,6 +46,64 @@ namespace banana
 	}
 
 	// ---- the compiled theme ------------------------------------------------------------------------------------------
+	// hook's names by number
+	static constexpr const char* const hookNames[] = { "time", "view", "W", "H", "clock", "date", "battery", "charging", "batteryMode", "online", "motion", "brand", "accent", "accent.base", "accent.light", "accent.dark", "accent.band", "accent.low", "accent.ink", "accent.inkSub", "cursor", "scroll", "count", "moved", "entered", "dir", "systems.count", "systemCount", "games.count", "gameCount", "launch.t", "launch.progress", "empty", "empty.title", "empty.hint" };
+	static int hookIndex(const std::string& v)
+	{
+		static const std::unordered_map<std::string, int> ids = [] { std::unordered_map<std::string, int> m; for (int i = 0; i < (int)(sizeof hookNames / sizeof hookNames[0]); i++) m.emplace(hookNames[i], i); return m; }();
+		auto it = ids.find(v);
+		return it == ids.end() ? -1 : it->second;
+	}
+	static constexpr int hookConst(const char* v)
+	{
+		for (int i = 0; i < (int)(sizeof hookNames / sizeof hookNames[0]); i++)
+		{
+			const char *a = hookNames[i], *b = v;
+			while (*a && *a == *b) { a++; b++; }
+			if (*a == *b) return i;
+		}
+		return -1;
+	}
+#define HOOK(name) (std::integral_constant<int, hookConst(name)>::value)
+	// sysField's names by number
+	static constexpr const char* const sysFieldNames[] = { "id", "name", "maker", "color", "accent", "icon", "games", "played", "time", "fav", "app", "hasResume", "resumeTitle", "resumeEyebrow", "resumeBox", "resumeCart", "resumeLabel", "resumeArt", "index" };
+	static int sysFieldIndex(const std::string& v)
+	{
+		static const std::unordered_map<std::string, int> ids = [] { std::unordered_map<std::string, int> m; for (int i = 0; i < (int)(sizeof sysFieldNames / sizeof sysFieldNames[0]); i++) m.emplace(sysFieldNames[i], i); return m; }();
+		auto it = ids.find(v);
+		return it == ids.end() ? -1 : it->second;
+	}
+	static constexpr int sysFieldConst(const char* v)
+	{
+		for (int i = 0; i < (int)(sizeof sysFieldNames / sizeof sysFieldNames[0]); i++)
+		{
+			const char *a = sysFieldNames[i], *b = v;
+			while (*a && *a == *b) { a++; b++; }
+			if (*a == *b) return i;
+		}
+		return -1;
+	}
+#define SYSF(name) (std::integral_constant<int, sysFieldConst(name)>::value)
+	// gameField's names by number
+	static constexpr const char* const gameFieldNames[] = { "title", "sub", "plays", "last", "time", "box", "cart", "label", "art", "rom", "romIcon", "icon", "achA", "achievements", "achB", "achievementsTotal", "achLabel", "achProgress", "fav", "index", "system", "systemName", "systemId" };
+	static int gameFieldIndex(const std::string& v)
+	{
+		static const std::unordered_map<std::string, int> ids = [] { std::unordered_map<std::string, int> m; for (int i = 0; i < (int)(sizeof gameFieldNames / sizeof gameFieldNames[0]); i++) m.emplace(gameFieldNames[i], i); return m; }();
+		auto it = ids.find(v);
+		return it == ids.end() ? -1 : it->second;
+	}
+	static constexpr int gameFieldConst(const char* v)
+	{
+		for (int i = 0; i < (int)(sizeof gameFieldNames / sizeof gameFieldNames[0]); i++)
+		{
+			const char *a = gameFieldNames[i], *b = v;
+			while (*a && *a == *b) { a++; b++; }
+			if (*a == *b) return i;
+		}
+		return -1;
+	}
+#define GAMEF(name) (std::integral_constant<int, gameFieldConst(name)>::value)
+
 	typedef std::map<std::string, Prop, std::less<>> PropMap;	// (found by a string_view: no string made to look one up)
 
 	struct LayoutMenu::Node
@@ -375,52 +434,54 @@ namespace banana
 
 		bool sysField(const rnds::SysInfo& si, int index, const std::string& f, EV& out) const
 		{
-			if (f == "id") out = EV(si.id);
-			else if (f == "name") out = EV(si.name);
-			else if (f == "maker") out = EV(si.maker);
-			else if (f == "color" || f == "accent") out = EV(hex(si.accent));
-			else if (f == "icon") out = EV(si.icon);
-			else if (f == "games") out = EV((double)si.games);
-			else if (f == "played") out = EV((double)si.played);
-			else if (f == "time") out = EV(si.time);
-			else if (f == "fav") out = EV(si.fav ? 1.0 : 0.0);
-			else if (f == "app") out = EV(si.app ? 1.0 : 0.0);
-			else if (f == "hasResume") out = EV(si.hasResume ? 1.0 : 0.0);
-			else if (f == "resumeTitle") out = EV(si.resumeTitle);
-			else if (f == "resumeEyebrow") out = EV(si.resumeEyebrow);
-			else if (f == "resumeBox") out = EV(si.resumeBox);
-			else if (f == "resumeCart") out = EV(si.resumeCart);
-			else if (f == "resumeLabel") out = EV(si.resumeLabel);
-			else if (f == "resumeArt") out = EV(!si.resumeBox.empty() ? si.resumeBox : !si.resumeLabel.empty() ? si.resumeLabel : si.resumeCart);
-			else if (f == "index") out = EV((double)index);
+			const int fId = sysFieldIndex(f);	// (the name looked up once, not compared with each)
+			if (fId == SYSF("id")) out = EV(si.id);
+			else if (fId == SYSF("name")) out = EV(si.name);
+			else if (fId == SYSF("maker")) out = EV(si.maker);
+			else if (fId == SYSF("color") || fId == SYSF("accent")) out = EV(hex(si.accent));
+			else if (fId == SYSF("icon")) out = EV(si.icon);
+			else if (fId == SYSF("games")) out = EV((double)si.games);
+			else if (fId == SYSF("played")) out = EV((double)si.played);
+			else if (fId == SYSF("time")) out = EV(si.time);
+			else if (fId == SYSF("fav")) out = EV(si.fav ? 1.0 : 0.0);
+			else if (fId == SYSF("app")) out = EV(si.app ? 1.0 : 0.0);
+			else if (fId == SYSF("hasResume")) out = EV(si.hasResume ? 1.0 : 0.0);
+			else if (fId == SYSF("resumeTitle")) out = EV(si.resumeTitle);
+			else if (fId == SYSF("resumeEyebrow")) out = EV(si.resumeEyebrow);
+			else if (fId == SYSF("resumeBox")) out = EV(si.resumeBox);
+			else if (fId == SYSF("resumeCart")) out = EV(si.resumeCart);
+			else if (fId == SYSF("resumeLabel")) out = EV(si.resumeLabel);
+			else if (fId == SYSF("resumeArt")) out = EV(!si.resumeBox.empty() ? si.resumeBox : !si.resumeLabel.empty() ? si.resumeLabel : si.resumeCart);
+			else if (fId == SYSF("index")) out = EV((double)index);
 			else return false;
 			return true;
 		}
 		bool gameField(const rnds::GameInfo& g, int index, const std::string& f, EV& out) const
 		{
-			if (f == "title") out = EV(g.title);
-			else if (f == "sub") out = EV(g.sub);
-			else if (f == "plays") out = EV(g.plays);
-			else if (f == "last") out = EV(g.last);
-			else if (f == "time") out = EV(g.time);
-			else if (f == "box") out = EV(g.box);
-			else if (f == "cart") out = EV(g.cart);
-			else if (f == "label") out = EV(g.label);
-			else if (f == "art") out = EV(!g.box.empty() ? g.box : !g.label.empty() ? g.label : g.cart);
-			else if (f == "rom") out = EV(g.rom);
-			else if (f == "romIcon") out = EV(g.rom.empty() ? std::string() : "romicon:" + g.rom);
-			else if (f == "icon") out = EV(g.icon);
-			else if (f == "achA" || f == "achievements") out = EV((double)g.achA);
-			else if (f == "achB" || f == "achievementsTotal") out = EV((double)g.achB);
-			else if (f == "achLabel") out = EV(g.achLabel);
-			else if (f == "achProgress") out = EV(g.achB > 0 ? (double)g.achA / g.achB : 0.0);
-			else if (f == "fav") out = EV(g.fav ? 1.0 : 0.0);
-			else if (f == "index") out = EV((double)index);
-			else if (f == "system" || f == "systemName" || f == "systemId")
+			const int fId = gameFieldIndex(f);	// (the name looked up once, not compared with each)
+			if (fId == GAMEF("title")) out = EV(g.title);
+			else if (fId == GAMEF("sub")) out = EV(g.sub);
+			else if (fId == GAMEF("plays")) out = EV(g.plays);
+			else if (fId == GAMEF("last")) out = EV(g.last);
+			else if (fId == GAMEF("time")) out = EV(g.time);
+			else if (fId == GAMEF("box")) out = EV(g.box);
+			else if (fId == GAMEF("cart")) out = EV(g.cart);
+			else if (fId == GAMEF("label")) out = EV(g.label);
+			else if (fId == GAMEF("art")) out = EV(!g.box.empty() ? g.box : !g.label.empty() ? g.label : g.cart);
+			else if (fId == GAMEF("rom")) out = EV(g.rom);
+			else if (fId == GAMEF("romIcon")) out = EV(g.rom.empty() ? std::string() : "romicon:" + g.rom);
+			else if (fId == GAMEF("icon")) out = EV(g.icon);
+			else if (fId == GAMEF("achA") || fId == GAMEF("achievements")) out = EV((double)g.achA);
+			else if (fId == GAMEF("achB") || fId == GAMEF("achievementsTotal")) out = EV((double)g.achB);
+			else if (fId == GAMEF("achLabel")) out = EV(g.achLabel);
+			else if (fId == GAMEF("achProgress")) out = EV(g.achB > 0 ? (double)g.achA / g.achB : 0.0);
+			else if (fId == GAMEF("fav")) out = EV(g.fav ? 1.0 : 0.0);
+			else if (fId == GAMEF("index")) out = EV((double)index);
+			else if (fId == GAMEF("system") || fId == GAMEF("systemName") || fId == GAMEF("systemId"))
 			{
 				Library* lib = dynamic_cast<Library*>(m->src);
-				if (lib && index >= 0 && index < m->src->gameCount()) out = EV(f == "systemName" ? lib->systemOf(index).name : lib->systemOf(index).id);
-				else out = EV(m->mSys < (int)systems.size() ? (f == "systemName" ? systems[m->mSys].name : systems[m->mSys].id) : std::string());
+				if (lib && index >= 0 && index < m->src->gameCount()) out = EV(fId == GAMEF("systemName") ? lib->systemOf(index).name : lib->systemOf(index).id);
+				else out = EV(m->mSys < (int)systems.size() ? (fId == GAMEF("systemName") ? systems[m->mSys].name : systems[m->mSys].id) : std::string());
 			}
 			else return false;
 			return true;
@@ -429,47 +490,48 @@ namespace banana
 		// the menu's hooks: everything a theme's expressions can read
 		bool hook(const std::string& n, EV& out) const
 		{
+			const int nId = hookIndex(n);	// (the name looked up once, not compared with each)
 			auto pre = [&](const char* p, std::string& rest) { size_t l = strlen(p); if (n.compare(0, l, p) != 0) return false; rest = n.substr(l); return true; };
 			std::string rest;
-			if (n == "time") { usedTime = true; out = EV(now - start); return true; }
-			if (n == "view") { out = EV(viewName()); return true; }
-			if (n == "W") { out = EV((double)W); return true; }
-			if (n == "H") { out = EV((double)H); return true; }
-			if (n == "clock") { out = EV(clock); return true; }
-			if (n == "date") { out = EV(date); return true; }
-			if (n == "battery")
+			if (nId == HOOK("time")) { usedTime = true; out = EV(now - start); return true; }
+			if (nId == HOOK("view")) { out = EV(viewName()); return true; }
+			if (nId == HOOK("W")) { out = EV((double)W); return true; }
+			if (nId == HOOK("H")) { out = EV((double)H); return true; }
+			if (nId == HOOK("clock")) { out = EV(clock); return true; }
+			if (nId == HOOK("date")) { out = EV(date); return true; }
+			if (nId == HOOK("battery"))
 			{
 				float b = m->src->battery();
 				out = EV(b < 0 ? -1.0 : std::round(b * 100));
 				return true;
 			}
-			if (n == "charging") { Library* lib = dynamic_cast<Library*>(m->src); out = EV(lib && lib->power().charging ? 1.0 : 0.0); return true; }
-			if (n == "batteryMode") { out = EV(m->src->batteryMode()); return true; }
-			if (n == "online") { out = EV(m->src->online() ? 1.0 : 0.0); return true; }
-			if (n == "motion") { out = EV(m->src->topMotion() ? 1.0 : 0.0); return true; }
-			if (n == "brand") { out = EV(rnds::brandNote); return true; }
-			if (n == "accent" || n == "accent.base") { out = EV(hex(rnds::accent.base)); return true; }
-			if (n == "accent.light") { out = EV(hex(rnds::accent.light)); return true; }
-			if (n == "accent.dark") { out = EV(hex(rnds::accent.dark)); return true; }
-			if (n == "accent.band") { out = EV(hex(rnds::accent.band)); return true; }
-			if (n == "accent.low") { out = EV(hex(rnds::accent.low)); return true; }
+			if (nId == HOOK("charging")) { Library* lib = dynamic_cast<Library*>(m->src); out = EV(lib && lib->power().charging ? 1.0 : 0.0); return true; }
+			if (nId == HOOK("batteryMode")) { out = EV(m->src->batteryMode()); return true; }
+			if (nId == HOOK("online")) { out = EV(m->src->online() ? 1.0 : 0.0); return true; }
+			if (nId == HOOK("motion")) { out = EV(m->src->topMotion() ? 1.0 : 0.0); return true; }
+			if (nId == HOOK("brand")) { out = EV(rnds::brandNote); return true; }
+			if (nId == HOOK("accent") || nId == HOOK("accent.base")) { out = EV(hex(rnds::accent.base)); return true; }
+			if (nId == HOOK("accent.light")) { out = EV(hex(rnds::accent.light)); return true; }
+			if (nId == HOOK("accent.dark")) { out = EV(hex(rnds::accent.dark)); return true; }
+			if (nId == HOOK("accent.band")) { out = EV(hex(rnds::accent.band)); return true; }
+			if (nId == HOOK("accent.low")) { out = EV(hex(rnds::accent.low)); return true; }
 			// text on the accent: dark or light by contrast (Settings > Text on accent), and a second line in its hue
-			if (n == "accent.ink") { out = EV(hex(rnds::inkOn(rnds::accent.base))); return true; }
-			if (n == "accent.inkSub") { out = EV(hex(rnds::subInkOn(rnds::accent.base))); return true; }
+			if (nId == HOOK("accent.ink")) { out = EV(hex(rnds::inkOn(rnds::accent.base))); return true; }
+			if (nId == HOOK("accent.inkSub")) { out = EV(hex(rnds::subInkOn(rnds::accent.base))); return true; }
 			if (pre("palette.", rest)) { rnds::Color c; if (rnds::themeColor(rest.c_str(), c)) { out = EV(hex(c)); return true; } out = EV(""); return true; }
-			if (n == "cursor") { out = EV((double)cursor()); return true; }
-			if (n == "scroll") { out = EV((double)scroll); return true; }
-			if (n == "count") { out = EV((double)count()); return true; }
-			if (n == "moved") { out = EV(now - movedAt); return true; }
-			if (n == "entered") { out = EV(now - enteredAt); return true; }
-			if (n == "dir") { out = EV((double)moveDir); return true; }
-			if (n == "systems.count" || n == "systemCount") { out = EV((double)systems.size()); return true; }
-			if (n == "games.count" || n == "gameCount") { out = EV((double)games.size()); return true; }
-			if (n == "launch.t") { out = EV(launchAt < 0 ? 0.0 : now - launchAt); return true; }
-			if (n == "launch.progress") { out = EV(launchAt < 0 ? 0.0 : std::min(1.0, (now - launchAt) / std::max(1.0, launchMs))); return true; }
-			if (n == "empty") { out = EV(m->mView != rnds::UI::HOME && games.empty() ? 1.0 : 0.0); return true; }
-			if (n == "empty.title") { out = EV(m->src->emptyTitle()); return true; }
-			if (n == "empty.hint") { out = EV(m->src->emptyHint()); return true; }
+			if (nId == HOOK("cursor")) { out = EV((double)cursor()); return true; }
+			if (nId == HOOK("scroll")) { out = EV((double)scroll); return true; }
+			if (nId == HOOK("count")) { out = EV((double)count()); return true; }
+			if (nId == HOOK("moved")) { out = EV(now - movedAt); return true; }
+			if (nId == HOOK("entered")) { out = EV(now - enteredAt); return true; }
+			if (nId == HOOK("dir")) { out = EV((double)moveDir); return true; }
+			if (nId == HOOK("systems.count") || nId == HOOK("systemCount")) { out = EV((double)systems.size()); return true; }
+			if (nId == HOOK("games.count") || nId == HOOK("gameCount")) { out = EV((double)games.size()); return true; }
+			if (nId == HOOK("launch.t")) { out = EV(launchAt < 0 ? 0.0 : now - launchAt); return true; }
+			if (nId == HOOK("launch.progress")) { out = EV(launchAt < 0 ? 0.0 : std::min(1.0, (now - launchAt) / std::max(1.0, launchMs))); return true; }
+			if (nId == HOOK("empty")) { out = EV(m->mView != rnds::UI::HOME && games.empty() ? 1.0 : 0.0); return true; }
+			if (nId == HOOK("empty.title")) { out = EV(m->src->emptyTitle()); return true; }
+			if (nId == HOOK("empty.hint")) { out = EV(m->src->emptyHint()); return true; }
 			if (pre("sys.", rest)) { if (m->mSys < (int)systems.size()) { if (sysField(systems[m->mSys], m->mSys, rest, out)) return true; } out = EV(""); return true; }
 			if (pre("game.", rest))
 			{
@@ -486,11 +548,12 @@ namespace banana
 			const Node* n;
 			const Scope* sc;
 			std::vector<const PropMap*> on;	// the states that hold, the last first
-			std::string key;	// the element's identity (its node and list indices): its eased values
+			const std::string* key;	// the element's identity (its node and list indices): its eased values (held by the caller)
 		};
+		static const std::string& noKey() { static const std::string k; return k; }
 		Ctx ctx(const Node* n, const Scope* sc, const std::string& key) const
 		{
-			Ctx c{ n, sc, {}, key };
+			Ctx c{ n, sc, {}, &key };
 			for (auto it = n->states.rbegin(); it != n->states.rend(); ++it) if (it->when.eval(*sc).truthy()) c.on.push_back(&it->props);
 			return c;
 		}
@@ -505,13 +568,20 @@ namespace banana
 			const Prop* p = find(c, k);
 			return p ? p->eval(*c.sc) : def;
 		}
-		std::string str(const Ctx& c, std::string_view k, const std::string& def = "") const { const Prop* p = find(c, k); return p ? p->eval(*c.sc).str() : def; }
+		std::string str(const Ctx& c, std::string_view k, const std::string& def = "") const
+		{
+			const Prop* p = find(c, k);
+			if (!p) return def;
+			return p->kind == Prop::LITERAL ? p->lit.str() : p->eval(*c.sc).str();
+		}
 		// a length: a number, or "50%" of the parent's (rel)
 		double num(const Ctx& c, std::string_view k, double def, double rel = 0)
 		{
 			const Prop* p = find(c, k);
 			if (!p) return smoothOf(c, k, def);
-			EV v = p->eval(*c.sc);
+			// (a value written as it is: read in place, not copied)
+			EV ev;
+			const EV& v = p->kind == Prop::LITERAL ? p->lit : (ev = p->eval(*c.sc));
 			double r = def;
 			if (v.isStr)
 			{
@@ -526,7 +596,7 @@ namespace banana
 		{
 			auto sm = c.n->smooth.find(k);
 			if (sm == c.n->smooth.end() || sm->second <= 0) return target;
-			Smoothed& st = smoothed[c.key + "." + std::string(k)];
+			Smoothed& st = smoothed[*c.key + "." + std::string(k)];
 			if (!st.set) { st.set = true; st.v = target; st.target = target; st.at = now; return target; }
 			st.target = target;
 			double dt = std::max(0.0, now - st.at);
@@ -540,11 +610,19 @@ namespace banana
 		{
 			const Prop* p = find(c, k);
 			if (!p) return false;
+			if (p->kind == Prop::LITERAL)
+			{
+				// a colour written as it is: read once
+				if (!p->lit.isStr) { out = 0xff000000 | (uint32_t)p->lit.n; return true; }
+				if (p->litColor < 0) p->litColor = parseColorText(p->lit.s, p->litColorV) ? 1 : 0;
+				if (p->litColor) out = p->litColorV;
+				return p->litColor == 1;
+			}
 			EV v = p->eval(*c.sc);
 			if (!v.isStr) { out = 0xff000000 | (uint32_t)v.n; return true; }
 			return parseColorText(v.s, out);
 		}
-		bool flag(const Ctx& c, std::string_view k, bool def = false) const { const Prop* p = find(c, k); return p ? p->eval(*c.sc).truthy() : def; }
+		bool flag(const Ctx& c, std::string_view k, bool def = false) const { const Prop* p = find(c, k); return p ? (p->kind == Prop::LITERAL ? p->lit.truthy() : p->eval(*c.sc).truthy()) : def; }
 
 		// ---- drawing ---------------------------------------------------------------------------------------------
 		struct Frame { float x, y, k; float opacity; int screen; };	// the parent's origin (layout px), scale, opacity
@@ -1028,7 +1106,7 @@ namespace banana
 			int kids = 0;
 			for (auto& ch : c.n->children)
 			{
-				Ctx cc = ctx(ch.get(), c.sc, "");
+				Ctx cc = ctx(ch.get(), c.sc, noKey());
 				if ((has(cc, "visible") && !flag(cc, "visible")) || (has(cc, "if") && !flag(cc, "if"))) continue;
 				float kw, kh;
 				natural(cc, pw, ph, k, kw, kh);
@@ -1112,7 +1190,7 @@ namespace banana
 			float total = 0;
 			for (auto& ch : c.n->children)
 			{
-				Ctx cc = ctx(ch.get(), &sc, "");
+				Ctx cc = ctx(ch.get(), &sc, noKey());
 				if ((has(cc, "visible") && !flag(cc, "visible")) || (has(cc, "if") && !flag(cc, "if"))) continue;
 				float nw, nh;
 				natural(cc, w, h, f.k, nw, nh);
@@ -1237,7 +1315,7 @@ namespace banana
 					flowAt.push_back(at);
 					Scope is;
 					fill(is, i, i);
-					Ctx tc = ctx(tpl, &is, "");
+					Ctx tc = ctx(tpl, &is, noKey());
 					float nw, nh;
 					natural(tc, itemW, itemH, f.k, nw, nh);
 					at += (float)(dirn == "row" ? num(tc, "w", nw >= 0 ? nw : itemW, itemW) : num(tc, "h", nh >= 0 ? nh : itemH, itemH)) + gap;
