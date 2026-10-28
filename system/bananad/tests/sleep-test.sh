@@ -149,6 +149,19 @@ asleep 2>/dev/null && bad "it suspended while charging" || ok "no idle suspend w
 stop
 rm -rf /sys/class/power_supply/charger
 
+echo "7. no game: the RTC alarm is set for the battery check, and the wake tells banana-ui to draw again"
+rm -f /run/banana/game.pid
+rm -f /run/test/ui-signals
+start "sleep_check_hours = 4"
+power
+asleep && ok "suspended" || bad "no suspend"
+[ -n "$(cat /sys/class/rtc/rtc0/wakealarm)" ] && ok "an RTC alarm for the battery check set ($(cat /sys/class/rtc/rtc0/wakealarm))" || bad "no RTC alarm set"
+wake
+sleep 0.4
+grep -q SIGUSR1 /run/test/ui-signals 2>/dev/null && ok "banana-ui was told to draw again (SIGUSR1)" || bad "banana-ui was not signalled after the wake"
+grep -q 'awake' /data/banana/logs/sleep.log && ok "the wake was logged" || bad "no wake logged"
+stop
+
 kill $UI $GAME 2>/dev/null || true
 echo "sleep test: $pass passed, $fail failed"
 [ $fail = 0 ]
