@@ -577,9 +577,11 @@ device is what makes that sink's control the amplifiers: `LibraryConfig.remap.Co
 `Speaker Volume` spanning `Left PCM Playback Volume` (vindex 0) and `Right PCM Playback Volume` (vindex 1), and its
 `BootSequence` sets both to 511. Banana has no PipeWire and no UCM, so `/usr/libexec/banana/volume` drives the two
 controls directly -- the same effect -- and the keys reach them from the menu *and* from a game. ROCKNIX shows the
-level with `mako-notify` (a Wayland notification the compositor paints over the game); Banana's equivalent is
-RetroArch's `SHOW_MSG` on the command FIFO, since `cage` owns the panel while a game runs. RetroArch's own software
-volume is pinned to 1.0 every launch, so it can neither boost nor "go back" to a level of its own.
+level with `mako-notify` (a Wayland notification the compositor paints over the game); Banana tried the equivalent,
+RetroArch's `SHOW_MSG` on the command FIFO, but that is a plain grey text box -- a jarring look over a game -- so the
+only indicator is the menu's own pill. A game changes the volume with no on-screen indication, which was judged
+better than a mismatched one. RetroArch's own software volume is pinned to 1.0 every launch, so it can neither boost
+nor "go back" to a level of its own.
 
 ## Every core but SwanStation crashed under cage (2026-10-28)
 

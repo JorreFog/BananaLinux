@@ -777,23 +777,13 @@ static void volume(int dir)
 		pclose(p);
 	}
 	if (pct < 0) return;
-	/* Over a game, banana-ui is not drawing (cage and RetroArch own the panel), so the line has to be RetroArch's:
-	 * run-retroarch keeps a FIFO open on its stdin, and SHOW_MSG pushes this onto its OSD -- which the panel turn
-	 * in Banana's RetroArch patch already moves upright. This is the ROCKNIX notification, drawn by the game's own
-	 * compositor because nothing else can draw over it. In the menu it is bananad's own OSD instead (banana-ui
-	 * draws /run/banana/osd): writing that one during a game would only surface, stale, when the menu came back. */
-	if (pid_of("/run/banana/game.pid") > 0)
-	{
-		char msg[64];
-		snprintf(msg, sizeof msg, "SHOW_MSG Volume: %d%%\n", pct);
-		int fd = open("/run/banana/retroarch.cmd", O_WRONLY | O_NONBLOCK | O_CLOEXEC);
-		if (fd >= 0)
-		{
-			if (write(fd, msg, strlen(msg)) < 0) {}
-			close(fd);
-		}
-	}
-	else
+	/* The level is shown where the menu can draw it, and nowhere else: banana-ui's own OSD -- the pill at the top of
+	 * the panel -- in the menu, and nothing over a game. banana-ui is not drawing while cage and RetroArch own the
+	 * panel, and the only thing that could draw over a game is RetroArch's own message box ("Volume: N%"), a
+	 * different look entirely, so a game gets no indicator rather than a jarring one. (Writing /run/banana/osd during
+	 * a game would only surface, stale, when the menu came back.) The volume itself still works in a game: this is
+	 * the same amplifier level the menu's pill shows. */
+	if (pid_of("/run/banana/game.pid") <= 0)
 		osd("volume", pct);
 }
 

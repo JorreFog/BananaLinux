@@ -192,8 +192,9 @@ Two idle minutes in the menu dim the panel (`dim_minutes`, `dim_percent`); the f
 game is never dimmed. bananad itself sleeps in `poll()` until something is due (the battery
 look once a minute, the dim or sleep deadline, a pending save), so an idle handheld wakes it about once a minute.
 Hold power 2 s to shut down; the volume keys change the two amplifiers' level -- the system's volume -- wherever they
-are pressed: the menu draws the level itself and a game has RetroArch draw it (`SHOW_MSG` over the command FIFO,
-since nothing else can paint over `cage`), and Settings > Volume sets the same control, saved on the card; F +
+are pressed, with the menu's own indicator (the pill at the top of the panel) and deliberately none over a game
+(banana-ui is not drawing while `cage` owns the panel, and RetroArch's message box is a different look); Settings >
+Volume sets the same control, saved on the card; F +
 volume the backlight; a battery at 3% and
 discharging shuts down cleanly. The fan is the kernel's own (`pwm_fan` off the PMIC's PWM, following the
 temperature; bananad does not touch it). Settings:
@@ -250,9 +251,9 @@ mixers when it is instantiated, so the stream volume cannot be changed under a r
 takes effect at once. ROCKNIX's kernel patch gives the codec's `PCM Playback Volume` a real dB scale and this kernel
 exposes the two amps as `Left PCM` / `Right PCM` (`0` mute … `511` 0 dB, the loudest). `/usr/libexec/banana/volume`
 drives both in amixer's own percent, and bananad publishes them (as `PCM`) in `/run/banana/mixer` for the volume keys
-and Settings > Volume. The keys drive that one control wherever they are pressed -- in the menu, whose OSD draws the
-level, and over a game, where bananad sends RetroArch `SHOW_MSG` on the FIFO so the level shows on RetroArch's own
-(turned) OSD. RetroArch's software gain is pinned to unity. The level lives in `/data/banana/asound.state` (alsactl),
+and Settings > Volume. The keys drive that one control wherever they are pressed -- the menu's OSD draws the level,
+and a game shows none (banana-ui is not drawing while `cage` owns the panel, and RetroArch's own message box is a
+different look). RetroArch's software gain is pinned to unity. The level lives in `/data/banana/asound.state` (alsactl),
 replays at boot, and is not pinned again by rcS, bananad or `run-retroarch` once the card has one.
 
 **Clocks: banana-perf.** The RPC is two clusters — `policy0` (six Cortex-A55) and `policy6` (two Cortex-A78) — so
