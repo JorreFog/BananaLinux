@@ -92,15 +92,19 @@ set_cfg() {
 # RetroArch taking the panel itself: the khr_display/kms pair, and the RPC's 270 degrees, the turn the menu
 # rotation patches (buildroot/patches/retroarch) are there to cover.
 if [ -x /usr/bin/cage ]; then
-	vk_ctx=vk_wayland; gl_ctx=wayland; rot=0
+	# glcore (GL3), not gl (GL2): under a Wayland compositor the GL2 driver dies with SIGSEGV and a corrupted
+	# stack the moment it comes up (measured on the unit, every non-SwanStation core; the endpoint of the log is
+	# the Wayland interface list, so it never gets as far as a frame). GL3 is the pairing the wayland context
+	# driver is written for, and it comes up with GLES 3.2 on the Adreno through Mesa.
+	vk_ctx=vk_wayland; gl_ctx=wayland; gl_drv=glcore; rot=0
 else
-	vk_ctx=khr_display; gl_ctx=kms; rot=3
+	vk_ctx=khr_display; gl_ctx=kms; gl_drv=gl; rot=3
 fi
 if [ "$1" = swanstation ] && grep -q '^swanstation_GPU_Renderer = "Vulkan"' /data/retroarch/config/SwanStation/SwanStation.opt 2>/dev/null; then
 	set_cfg video_driver vulkan
 	set_cfg video_context_driver $vk_ctx
 else
-	set_cfg video_driver gl
+	set_cfg video_driver $gl_drv
 	set_cfg video_context_driver $gl_ctx
 fi
 set_cfg video_rotation $rot
@@ -217,7 +221,14 @@ printf 'stdin_cmd_enable = "true"\n' > $L
 # Its own log goes on the card: the one thing worth having after a game that would not start is what RetroArch said
 # last (RPC-TEST.md asks for logs/).
 RL=/data/banana/logs/retroarch.log
-mkdir -p /data/banana/logs 2>/dev/null; rm -f $RL
+mkdir -p /data/banana/logs 2>/dev/null
+# The one before this launch stays, as $RL.1: a core that crashes takes its log with it (the file is reopened and
+# truncated by the next launch), and the previous run's is what says what the last thing before the fault was.
+[ -s $RL ] && mv -f $RL $RL.1
+rm -f $RL
+# A core that dies by signal is worth a core dump: the log stops where the log stops, while a dump says where. The
+# kernel's pattern is "core", so this is RetroArch's own directory on the card (the root is read-only).
+ulimit -c unlimited 2>/dev/null; cd /data 2>/dev/null
 tries=0
 while :; do
     # cage is a kiosk compositor: one application, fullscreen, and it turns the output with the panel (the

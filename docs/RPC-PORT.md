@@ -512,6 +512,32 @@ sleep) and bananad's own `sync()`; the log now says when a suspend did not take 
 so the next instrumented sleep says which of them it is. Until then a "sleep" on this handheld is a dark panel and
 2 s, not a night's standby.
 
+## Every core but SwanStation crashed under cage (2026-10-28)
+
+The games other than the PlayStation died about a second after starting, with no log file written at all (which is
+what made it hard to see): `game ended after 1 s (status 35584)` in banana-ui's log, and the kernel, asked to say so
+(`print-fatal-signals`), showed `retroarch: potentially unexpected fatal signal 11` with a **stack pointer in
+hyp-space** (`sp = 0xffffff0a4070`) -- a corrupted stack, not a null dereference.
+
+The cause is the video driver pairing. `run-retroarch` gave every core that is not SwanStation `video_driver = gl`,
+and `gl` is GL2: **the GL2 driver and the Wayland context driver do not survive being paired**, and the endpoint in
+the log is the Wayland interface list, so it dies as the context comes up. GL3 (`glcore`) is the pairing the wayland
+context driver is written for, and on the unit it comes up with `[GLCore] Found GL context: "wayland"`, `OpenGL ES
+3.2 Mesa 26.0.1`, `Using resolution 1080x1240` and plays. (Vulkan + `vk_wayland` was always the SwanStation path and
+was never affected.) The KMS fallback keeps `gl` + `kms`, which is what it was tested with.
+
+Found on the way, both worth keeping: **RetroArch's log is now rotated** (`retroarch.log.1` holds the run before the
+current one) -- a core that crashes takes its own log with it, since the next launch truncates the file -- and
+`run-retroarch` raises `ulimit -c` and runs from the card, so a fatal signal leaves a core dump in `/data` for gdb.
+
+## The PlayStation's CD reads (2026-10-28)
+
+The BIOS intro and the CD-XA voices in a cutscene are the two busiest stretches of CD reading a PS1 game has, and
+the image is a CHD compressed with CDZL/FLAC: every sector read inflates a block, on the card, while the emulation
+waits. The handheld has 5 GB free and the image is ~700 MB uncompressed, so `run-ps1` now writes
+`CDROM_LoadImageToRAM = "true"` (and `PreCacheCHD`): the whole disc is read once at startup and nothing touches the
+card again.
+
 ## PipeWire: built, tried, not shipped (2026-10-28)
 
 ROCKNIX's RetroArch runs on PipeWire, and its absence is the difference heard on this card: the DSP's single frontend
