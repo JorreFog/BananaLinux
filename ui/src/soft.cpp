@@ -1,4 +1,5 @@
 #include "soft.h"
+#include "pool.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -292,18 +293,11 @@ namespace banana
 	// every draw that touches it clipped to it, from the last draw that covers all of it with solid colour (what is
 	// under that can't show). Drawn tile by tile, a tile's pixels stay in the cache from draw to draw; each pixel sees
 	// the same draws in the same order as drawn in one go, the same result
-	void SoftBackend::redrawTile(const Clip& t)
-	{
-		touch(t);
-		redrawn += (uint64_t)(t.x1 - t.x0) * (t.y1 - t.y0);
-		composeTile(t, scr[cur].data(), items.size(), base[cur].n);
-	}
 
 	// the first n draws over a tile of the pixels px (rows of W), from black, or from the background kept if those
 	// draws start with its draws (from = their count)
 	void SoftBackend::composeTile(const Clip& t, uint32_t* px, size_t n, size_t fromBase)
 	{
-		tgt = px;
 		size_t from = n;
 		while (from > 0)
 		{
@@ -351,8 +345,9 @@ namespace banana
 		if (now < screen * 2 || now < area(b.n) + screen / 2) return;
 		b.px.resize((size_t)W * H);
 		b.n = 0;
-		for (int ty = 0; ty < H; ty += TH)
-			for (int tx = 0; tx < W; tx += TW) composeTile({ tx, ty, std::min(W, tx + TW), std::min(H, ty + TH) }, b.px.data(), stable, 0);
+		tgt = b.px.data();
+		int tx = (W + TW - 1) / TW, ty = (H + TH - 1) / TH;
+		Pool::get().run(tx * ty, [&](int i) { int x = i % tx * TW, y = i / tx * TH; composeTile({ x, y, std::min(W, x + TW), std::min(H, y + TH) }, b.px.data(), stable, 0); });
 		b.items.assign(items.begin(), items.begin() + stable);
 		b.n = stable;
 		b.built = frameNo;
@@ -396,9 +391,21 @@ namespace banana
 			for (uint8_t d : dirty) any |= d;
 			if (!any) { skipped++; std::swap(items, old); return; }
 		}
+		// the tiles shared out among the cores (each tile's pixels are its own; a scaled draw's samples, kept on its
+		// texture, are made by one thread at a time)
+		tiles.clear();
 		for (int ty = 0; ty < tilesY; ty++)
 			for (int tx = 0; tx < tilesX; tx++)
-				if (dirty[(size_t)ty * tilesX + tx]) redrawTile({ tx * TW, ty * TH, std::min(W, (tx + 1) * TW), std::min(H, (ty + 1) * TH) });
+				if (dirty[(size_t)ty * tilesX + tx])
+				{
+					Clip t = { tx * TW, ty * TH, std::min(W, (tx + 1) * TW), std::min(H, (ty + 1) * TH) };
+					touch(t);
+					redrawn += (uint64_t)(t.x1 - t.x0) * (t.y1 - t.y0);
+					tiles.push_back(t);
+				}
+		tgt = scr[cur].data();
+		size_t fromBase = base[cur].n;
+		Pool::get().run((int)tiles.size(), [&](int i) { composeTile(tiles[i], scr[cur].data(), items.size(), fromBase); });
 		std::swap(items, old);
 	}
 
@@ -608,6 +615,7 @@ namespace banana
 		uint32_t tr = q(tint.r), tg = q(tint.g), tb = q(tint.b), ta = q(tint.a);
 		uint32_t tintWord = premul(tint);	// what an alpha texture's coverage scales
 		if (exact) { blitRuns(t, bx0, by0, x0, y0, x1, y1, tr, tg, tb, ta, tintWord); return; }
+		std::lock_guard<std::mutex> scaledHeld(scaledLock);
 
 		// scaled at a size and phase it was scaled at before: the samples kept from then (the tint is applied as
 		// they are drawn, as below)

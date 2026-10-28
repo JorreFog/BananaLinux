@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <cstring>
 #include <functional>
+#include <mutex>
 #include <vector>
 
 namespace banana
@@ -115,7 +116,8 @@ namespace banana
 		void resolve();
 		Clip bounds(const Cmd& c, const Clip& clip) const;
 		void addDirty(const Clip& r);
-		void redrawTile(const Clip& t);
+		std::vector<Clip> tiles;	// the tiles to draw this frame
+		std::mutex scaledLock;		// (a scaled draw keeps its samples on its texture, and uses colA ... below)
 		void composeTile(const Clip& t, uint32_t* px, size_t n, size_t fromBase);
 		// a screen's first n draws composed (the background under what moves), kept while its list starts with them
 		struct Base { std::vector<uint32_t> px; std::vector<Item> items; size_t n = 0; uint64_t built = 0; size_t hist[8] = {}; unsigned histAt = 0; };
