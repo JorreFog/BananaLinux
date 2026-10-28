@@ -377,26 +377,22 @@ static bool dspFrontendsFree()
 					 * here. Closing the device on one tears the DSP's graph down and rebuilds it, which is the
 					 * choppy sound: the graph is gone for as long as the amp is failing. Prepare the stream in
 					 * place and keep feeding it silence until it takes; the write succeeds once the PLL locks. */
-					if (++giveUp > 60) { slog("write failed repeatedly (%s); giving up", snd_strerror((int)w)); return false; }
+					if (++giveUp > 20) { slog("write failed repeatedly (%s); giving up", snd_strerror((int)w)); return false; }
 					slog("write failed (%s)", snd_strerror((int)w));
 					int r = snd_pcm_recover(pcm, (int)w, 1);
 					if (r < 0)
 					{
-						/* At boot the AudioReach graph is not instantiated yet: writes get -EIO and prepare -EBUSY
-						 * for several seconds (the first instantiation is the slow part) and there is no dmesg to
-						 * go with it. Do NOT close the device -- closing destroys the graph and the next open
-						 * starts the instantiation again, so a budget that ends a little early never reaches the
-						 * end of it. Sleep and retry prepare in place for a long while (up to ~20 s) instead; the
-						 * cue queued behind this silence write is served the moment the stream takes. */
-						auto t0 = std::chrono::steady_clock::now();
-						int last = 0;
-						for (int retry = 0; retry < 200 && r < 0; retry++)
+						/* During boot, the Qualcomm AudioReach DSP and AW88166 amp hardware take ~1-2 seconds
+						 * to finish DAPM power-up. An initial write during this window receives -EIO and
+						 * recover/prepare returns -EBUSY. Do NOT close the device (which destroys the DSP graph
+						 * and forces another multi-second teardown/rebuild cycle); sleep in short increments
+						 * and retry snd_pcm_prepare() until the hardware finishes powering up. */
+						for (int retry = 0; retry < 25 && r < 0; retry++)
 						{
 							std::this_thread::sleep_for(std::chrono::milliseconds(100));
 							r = snd_pcm_prepare(pcm);
-							if (r < 0 && retry - last >= 20) { last = retry; slog("prepare retry %d/200 (%s)", retry + 1, snd_strerror(r)); }
+							if (r < 0) slog("prepare retry %d/25 (%s)", retry + 1, snd_strerror(r));
 						}
-						if (r == 0) slog("prepare took %.1f s", std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count());
 					}
 					if (r < 0) { slog("recover/prepare failed (%s); giving up", snd_strerror(r)); return false; }
 					for (int t = 0; t < 80 && snd_pcm_writei(pcm, silence.data(), (snd_pcm_uframes_t)(silence.size() / openCh)) < 0; t++)
