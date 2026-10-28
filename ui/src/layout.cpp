@@ -6,6 +6,8 @@
 #include <cstring>
 #include <fstream>
 #include <time.h>
+#include <unordered_map>
+#include <string_view>
 
 namespace banana
 {
@@ -38,18 +40,20 @@ namespace banana
 	}
 
 	// ---- the compiled theme ------------------------------------------------------------------------------------------
+	typedef std::map<std::string, Prop, std::less<>> PropMap;	// (found by a string_view: no string made to look one up)
+
 	struct LayoutMenu::Node
 	{
 		std::string type;					// rect, text, image, group, list
-		std::map<std::string, Prop> props;	// flattened: "shadow.blur", "gradient.stops.0", "radius.2"
+		PropMap props;	// flattened: "shadow.blur", "gradient.stops.0", "radius.2"
 		std::vector<std::shared_ptr<Node>> children;
 		std::shared_ptr<Node> item;			// a list's template
-		struct State { Prop when; std::map<std::string, Prop> props; };
+		struct State { Prop when; PropMap props; };
 		std::vector<State> states;			// overrides while their condition holds (the last one wins)
 		std::vector<std::pair<std::string, Prop>> with;	// a component's parameters, set in its children's scope
-		std::map<std::string, double> smooth;	// property -> time constant (ms): the value eases towards its target
+		std::map<std::string, double, std::less<>> smooth;	// property -> time constant (ms): the value eases towards its target
 		int serial = 0;
-		const Prop* prop(const std::string& k) const { auto it = props.find(k); return it == props.end() ? nullptr : &it->second; }
+		const Prop* prop(std::string_view k) const { auto it = props.find(k); return it == props.end() ? nullptr : &it->second; }
 	};
 	typedef std::shared_ptr<LayoutMenu::Node> NodePtr;
 
@@ -104,6 +108,9 @@ namespace banana
 		std::map<std::string, TextTex> texts;
 		struct ShapeTex { rnds::TexPtr tex; uint64_t used = 0; size_t bytes = 0; };
 		std::map<std::string, ShapeTex> shapes;
+		// a box's parameters as they are (bytes) -> its key in shapes (made with printf: the key is worked out once
+		// for parameters seen before)
+		std::unordered_map<std::string, std::string> shapeKeys, textKeys;	// (texts: the same for its lines)
 		size_t shapeBytes = 0;
 		uint64_t useTick = 0;	// the caches' clock: the least recently drawn go first when one is full
 		// a full cache dropped its least recently used quarter, not everything: a theme animating a size made new
@@ -140,7 +147,7 @@ namespace banana
 		}
 
 		// ---- loading ---------------------------------------------------------------------------------------------
-		void flatten(const std::string& prefix, const JVal& v, std::map<std::string, Prop>& out, const std::string& where)
+		void flatten(const std::string& prefix, const JVal& v, PropMap& out, const std::string& where)
 		{
 			switch (v.kind)
 			{
@@ -242,7 +249,7 @@ namespace banana
 					if (!e.second->isObj()) continue;
 					for (auto& pe : e.second->obj)
 					{
-						std::map<std::string, Prop> one;
+						PropMap one;
 						flatten(pe.first, *pe.second, one, here + ".with");
 						for (auto& o : one) n->with.emplace_back(o.first, o.second);
 					}
@@ -293,7 +300,7 @@ namespace banana
 			if (const JVal* vv = doc->get("vars"))
 				for (auto& e : vv->obj)
 				{
-					std::map<std::string, Prop> one;
+					PropMap one;
 					flatten(e.first, *e.second, one, "vars");
 					for (auto& o : one) vars.emplace_back(o.first, o.second);
 				}
@@ -473,7 +480,7 @@ namespace banana
 		{
 			const Node* n;
 			const Scope* sc;
-			std::vector<const std::map<std::string, Prop>*> on;	// the states that hold, the last first
+			std::vector<const PropMap*> on;	// the states that hold, the last first
 			std::string key;	// the element's identity (its node and list indices): its eased values
 		};
 		Ctx ctx(const Node* n, const Scope* sc, const std::string& key) const
@@ -482,20 +489,20 @@ namespace banana
 			for (auto it = n->states.rbegin(); it != n->states.rend(); ++it) if (it->when.eval(*sc).truthy()) c.on.push_back(&it->props);
 			return c;
 		}
-		const Prop* find(const Ctx& c, const std::string& k) const
+		const Prop* find(const Ctx& c, std::string_view k) const
 		{
 			for (auto* st : c.on) { auto it = st->find(k); if (it != st->end()) return &it->second; }
 			return c.n->prop(k);
 		}
-		bool has(const Ctx& c, const std::string& k) const { return find(c, k) != nullptr; }
-		EV val(const Ctx& c, const std::string& k, const EV& def = EV("")) const
+		bool has(const Ctx& c, std::string_view k) const { return find(c, k) != nullptr; }
+		EV val(const Ctx& c, std::string_view k, const EV& def = EV("")) const
 		{
 			const Prop* p = find(c, k);
 			return p ? p->eval(*c.sc) : def;
 		}
-		std::string str(const Ctx& c, const std::string& k, const std::string& def = "") const { const Prop* p = find(c, k); return p ? p->eval(*c.sc).str() : def; }
+		std::string str(const Ctx& c, std::string_view k, const std::string& def = "") const { const Prop* p = find(c, k); return p ? p->eval(*c.sc).str() : def; }
 		// a length: a number, or "50%" of the parent's (rel)
-		double num(const Ctx& c, const std::string& k, double def, double rel = 0)
+		double num(const Ctx& c, std::string_view k, double def, double rel = 0)
 		{
 			const Prop* p = find(c, k);
 			if (!p) return smoothOf(c, k, def);
@@ -510,11 +517,11 @@ namespace banana
 			else r = v.n;
 			return smoothOf(c, k, r);
 		}
-		double smoothOf(const Ctx& c, const std::string& k, double target)
+		double smoothOf(const Ctx& c, std::string_view k, double target)
 		{
 			auto sm = c.n->smooth.find(k);
 			if (sm == c.n->smooth.end() || sm->second <= 0) return target;
-			Smoothed& st = smoothed[c.key + "." + k];
+			Smoothed& st = smoothed[c.key + "." + std::string(k)];
 			if (!st.set) { st.set = true; st.v = target; st.target = target; st.at = now; return target; }
 			st.target = target;
 			double dt = std::max(0.0, now - st.at);
@@ -524,7 +531,7 @@ namespace banana
 			else smoothMoving = true;
 			return st.v;
 		}
-		bool color(const Ctx& c, const std::string& k, uint32_t& out) const
+		bool color(const Ctx& c, std::string_view k, uint32_t& out) const
 		{
 			const Prop* p = find(c, k);
 			if (!p) return false;
@@ -532,7 +539,7 @@ namespace banana
 			if (!v.isStr) { out = 0xff000000 | (uint32_t)v.n; return true; }
 			return parseColorText(v.s, out);
 		}
-		bool flag(const Ctx& c, const std::string& k, bool def = false) const { const Prop* p = find(c, k); return p ? p->eval(*c.sc).truthy() : def; }
+		bool flag(const Ctx& c, std::string_view k, bool def = false) const { const Prop* p = find(c, k); return p ? p->eval(*c.sc).truthy() : def; }
 
 		// ---- drawing ---------------------------------------------------------------------------------------------
 		struct Frame { float x, y, k; float opacity; int screen; };	// the parent's origin (layout px), scale, opacity
@@ -590,9 +597,22 @@ namespace banana
 		void drawLine(const rnds::TextLine& l, const rnds::TextStyle& st, float asc, float x, float y, const rnds::Color& col)
 		{
 			if (l.text.empty()) return;
-			std::string key = std::to_string((uintptr_t)st.font.get()) + "|" + std::to_string(st.size) + "|" + std::to_string(st.letterSpacing) +
-				(st.upper ? "U|" : "|") + std::to_string(l.width) + "|";
-			for (char32_t ch : l.text) { key += (char)(ch & 0xff); if (ch > 0xff) { key += (char)(ch >> 8); key += (char)(ch >> 16); } }
+			// the cache's key (printf'd numbers) worked out once for the same values as they are (bytes)
+			struct Raw { const void* font; float size, spacing, width; bool upper; } raw;
+			memset(&raw, 0, sizeof raw);
+			raw.font = st.font.get(); raw.size = st.size; raw.spacing = st.letterSpacing; raw.width = l.width; raw.upper = st.upper;
+			std::string rawKey((const char*)&raw, sizeof raw);
+			rawKey.append((const char*)l.text.data(), l.text.size() * sizeof(char32_t));
+			auto known = textKeys.find(rawKey);
+			if (known == textKeys.end())
+			{
+				std::string k = std::to_string((uintptr_t)st.font.get()) + "|" + std::to_string(st.size) + "|" + std::to_string(st.letterSpacing) +
+					(st.upper ? "U|" : "|") + std::to_string(l.width) + "|";
+				for (char32_t ch : l.text) { k += (char)(ch & 0xff); if (ch > 0xff) { k += (char)(ch >> 8); k += (char)(ch >> 16); } }
+				if (textKeys.size() >= 4096) textKeys.clear();
+				known = textKeys.emplace(std::move(rawKey), std::move(k)).first;
+			}
+			const std::string& key = known->second;
 			auto it = texts.find(key);
 			if (it == texts.end())
 			{
@@ -614,10 +634,23 @@ namespace banana
 			float border, uint32_t borderColor, float blur, float spread, uint32_t shadowColor, int& padOut)
 		{
 			int pad = shadowColor >> 24 ? (int)std::ceil(blur + std::max(0.0f, spread)) + 1 : 0;
-			char kb[256];
-			snprintf(kb, sizeof kb, "%d|%d|%g,%g,%g,%g|%08x|%g|%g|%08x|%g|%g|%08x", w, h, rad[0], rad[1], rad[2], rad[3], fill, angle, border, borderColor, blur, spread, shadowColor);
-			std::string key = kb;
-			for (auto& st : stops) { snprintf(kb, sizeof kb, "|%g:%08x", st.first, st.second); key += kb; }
+			struct Raw { int w, h; float rad[4]; uint32_t fill; float angle, border; uint32_t borderColor; float blur, spread; uint32_t shadowColor; } raw;
+			memset(&raw, 0, sizeof raw);
+			raw.w = w; raw.h = h; memcpy(raw.rad, rad, sizeof raw.rad); raw.fill = fill; raw.angle = angle; raw.border = border;
+			raw.borderColor = borderColor; raw.blur = blur; raw.spread = spread; raw.shadowColor = shadowColor;
+			std::string rawKey((const char*)&raw, sizeof raw);
+			for (auto& st : stops) { rawKey.append((const char*)&st.first, sizeof st.first); rawKey.append((const char*)&st.second, sizeof st.second); }
+			auto known = shapeKeys.find(rawKey);
+			if (known == shapeKeys.end())
+			{
+				char kb[256];
+				snprintf(kb, sizeof kb, "%d|%d|%g,%g,%g,%g|%08x|%g|%g|%08x|%g|%g|%08x", w, h, rad[0], rad[1], rad[2], rad[3], fill, angle, border, borderColor, blur, spread, shadowColor);
+				std::string k = kb;
+				for (auto& st : stops) { snprintf(kb, sizeof kb, "|%g:%08x", st.first, st.second); k += kb; }
+				if (shapeKeys.size() >= 4096) shapeKeys.clear();
+				known = shapeKeys.emplace(std::move(rawKey), std::move(k)).first;
+			}
+			const std::string& key = known->second;
 			padOut = pad;
 			auto it = shapes.find(key);
 			if (it != shapes.end()) { it->second.used = ++useTick; return it->second.tex; }
@@ -639,17 +672,26 @@ namespace banana
 				return std::sqrt(ox * ox + oy * oy) + std::min(std::max(qx, qy), 0.0f) - r;
 			};
 			auto ch = [](uint32_t c, int sh) { return ((c >> sh) & 255) / 255.0f; };
+			// inside, where the fill covers all of a pixel and is solid with no border on it, the pixel is the fill's
+			// colour whatever the shadow under it: the shadow isn't worked out there, and with a plain fill the
+			// pixel is the same one each time (made once)
+			bool solidFill = stops.empty() ? (fill >> 24) == 255 : std::all_of(stops.begin(), stops.end(), [](const std::pair<float, uint32_t>& st) { return (st.second >> 24) == 255; });
+			bool borderOn = border > 0 && borderColor >> 24;
+			uint8_t inner[4];
+			bool innerMade = false;
 			for (int y = 0; y < b.h; y++)
 				for (int x = 0; x < b.w; x++)
 				{
 					float px = x - pad + 0.5f - hw, py = y - pad + 0.5f - hh;
 					float d = sdf(px, py, 0);
+					bool covered = solidFill && std::min(1.0f, std::max(0.0f, 0.5f - d)) == 1.0f && !(borderOn && std::min(1.0f, std::max(0.0f, 0.5f + d + border)) > 0);
+					if (covered && innerMade && stops.empty()) { memcpy(&b.px[((size_t)y * b.w + x) * 4], inner, 4); continue; }
 					float r = 0, g = 0, bl = 0, a = 0;	// premultiplied while it's built
 					auto over = [&](float cr, float cg, float cb, float ca)
 					{
 						r = cr * ca + r * (1 - ca); g = cg * ca + g * (1 - ca); bl = cb * ca + bl * (1 - ca); a = ca + a * (1 - ca);
 					};
-					if (pad)
+					if (pad && !covered)
 					{
 						float ds = sdf(px, py, spread);
 						float sa = blur > 0 ? 1 - std::min(1.0f, std::max(0.0f, (ds + blur) / (2 * blur))) : std::min(1.0f, std::max(0.0f, 0.5f - ds));
@@ -684,6 +726,7 @@ namespace banana
 					uint8_t* o = &b.px[((size_t)y * b.w + x) * 4];
 					if (a > 0) { o[0] = (uint8_t)std::lround(r / a * 255); o[1] = (uint8_t)std::lround(g / a * 255); o[2] = (uint8_t)std::lround(bl / a * 255); }
 					o[3] = (uint8_t)std::lround(a * 255);
+					if (covered && !innerMade) { memcpy(inner, o, 4); innerMade = true; }
 				}
 			if (shadowColor == 0xffffffffu && !(fill >> 24) && stops.empty() && !(border > 0 && borderColor >> 24))
 			{
@@ -715,9 +758,12 @@ namespace banana
 			std::vector<std::pair<float, uint32_t>> stops;
 			for (int i = 0; i < 16; i++)
 			{
-				std::string key = "gradient.stops." + std::to_string(i);
-				if (!has(c, key)) { key = "gradient." + std::to_string(i); if (!has(c, key)) break; }
-				std::string t = str(c, key);
+				// (the keys made once)
+				static const std::vector<std::string> stopKeys = [] { std::vector<std::string> v; for (int j = 0; j < 16; j++) v.push_back("gradient.stops." + std::to_string(j)); return v; }();
+				static const std::vector<std::string> shortKeys = [] { std::vector<std::string> v; for (int j = 0; j < 16; j++) v.push_back("gradient." + std::to_string(j)); return v; }();
+				const std::string* key = &stopKeys[i];
+				if (!has(c, *key)) { key = &shortKeys[i]; if (!has(c, *key)) break; }
+				std::string t = str(c, *key);
 				// "#rrggbb" or "#rrggbb 40%"
 				size_t sp = t.find(' ');
 				uint32_t col = 0;
@@ -733,7 +779,8 @@ namespace banana
 			float angle = (float)num(c, "gradient.angle", 180);
 			float rad[4];
 			double r0 = num(c, "radius", 0, std::min(w, h));
-			for (int i = 0; i < 4; i++) rad[i] = (float)(has(c, "radius." + std::to_string(i)) ? num(c, "radius." + std::to_string(i), 0) : r0) * k * s;
+			static const char* const radKeys[4] = { "radius.0", "radius.1", "radius.2", "radius.3" };
+			for (int i = 0; i < 4; i++) rad[i] = (float)(has(c, radKeys[i]) ? num(c, radKeys[i], 0) : r0) * k * s;
 			float border = (float)num(c, "border", 0) * k * s;
 			if (has(c, "border.width")) border = (float)num(c, "border.width", 0) * k * s;
 			uint32_t bc = 0;
@@ -805,7 +852,7 @@ namespace banana
 			}
 		}
 
-		std::string imageSrc(const Ctx& c, const std::string& k)
+		std::string imageSrc(const Ctx& c, std::string_view k)
 		{
 			std::string v = str(c, k);
 			if (v.empty() || v.compare(0, 8, "romicon:") == 0 || v[0] == '/') return v;
@@ -1360,6 +1407,8 @@ namespace banana
 	{
 		d->shapes.clear();
 		d->shapeBytes = 0;
+		d->shapeKeys.clear();
+		d->textKeys.clear();
 		d->texts.clear();
 	}
 
