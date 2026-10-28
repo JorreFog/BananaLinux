@@ -27,7 +27,7 @@ if [ "$CORE" = swanstation ]; then
     mkdir -p "$R/config/$C"
     # Written once: a card from before gets Banana's choices, and a change made in RetroArch's own menu afterwards is
     # kept (as run-retroarch's .banana-defaults-1 does). Delete the marker to have the defaults written again.
-    M=$R/.banana-swans-6
+    M=$R/.banana-swans-7
     if [ ! -f "$M" ]; then
         # SwanStation draws its own output; RetroArch's integer scaler is off so the core fills the viewport with its
         # own (4:3) aspect.
@@ -46,12 +46,10 @@ if [ "$CORE" = swanstation ]; then
             # RetroArch's on-screen-message widget layer is not turned with the panel (only the menu texture and the
             # game are), so core OSD lines would read sideways; keep them off.
             printf 'swanstation_Display_ShowOSDMessages = "false"\n'
-            # The CD image (a CHD: CDZL/FLAC-compressed) read on demand means inflating a block for every CD
-            # sector the game asks for -- the BIOS's own reads and the CD-XA audio in cutscenes are the busiest
-            # stretches there are. There is 5 GB of RAM free and the image is ~700 MB uncompressed, so keep it
-            # all in RAM instead: no card I/O and no decompression while a game runs.
-            printf 'swanstation_CDROM_LoadImageToRAM = "true"\n'
-            printf 'swanstation_CDROM_PreCacheCHD = "true"\n'
+            # (CDROM_LoadImageToRAM was tried here and is deliberately not: it reads the whole disc into RAM at
+            # startup -- 15 s of black screen for a 464 MB CHD -- and the stutter it was meant to cure turned out
+            # to be frame pacing, not CD reads. The core's own reader thread (ReadaheadSectors, ReadThread) keeps
+            # the decompression off the emulation thread.)
         } > "$R/config/$C/$C.opt"
         touch "$M"
     fi

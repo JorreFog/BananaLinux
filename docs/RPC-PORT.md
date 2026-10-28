@@ -512,6 +512,75 @@ sleep) and bananad's own `sync()`; the log now says when a suspend did not take 
 so the next instrumented sleep says which of them it is. Until then a "sleep" on this handheld is a dark panel and
 2 s, not a night's standby.
 
+## The stutter in the PS1 intro and FMV: two pacing masters (2026-10-28)
+
+The BIOS intro and the FMV cutscenes juddered, and the audio in cutscenes sounded choppy. The profiles taken on the
+unit (220 samples a second of the emulator's own CPU and the DSP's buffer) say what it is not:
+
+- **not the amplifiers or the DSP warming up** -- the chug is there minutes in;
+- **not an audio underrun** -- zero XRUNs in dmesg and nothing in RetroArch's log, in every run;
+- **not the CPU or GPU clocks** -- both CPU policies sit on `performance` and the GPU's devfreq governor is
+  `performance` at its top step (1.01 GHz) throughout;
+- **not CD I/O or CHD decompression** -- with `CDROM_LoadImageToRAM` on (the whole disc read into RAM first, 15 s of
+  black screen before the game starts) the stutter is unchanged.
+
+What it *is*: the emulation thread spends long stretches blocked. Counting 100 ms windows in which the process used
+no CPU at all -- impossible for something rendering six frames a window -- while a game plays:
+
+| configuration | windows with no CPU (of 150) |
+|---|---|
+| `audio_sync = true`, `video_vsync = true` (the shipped pair) | **94** |
+| `audio_sync = false`, `video_vsync = true` | **22** |
+| that plus `video_threaded = true` | 107 |
+| that plus `swanstation_GPU_UseThread = false` | 72 |
+
+Both syncs on is RetroArch being told to pace to the *audio* and to the *vblank* at once: with the DSP's buffer
+filling to 2880 of its ~3072 frames (measured: average delay 1444) the emulation is parked in the audio write, and
+the panel's 60.00 Hz against the PS1's 59.94 gives the two clocks something to disagree about forever. Dropping one
+master -- `audio_sync = false`, the video/compositor pacing, the audio rate-matched to the device by
+`audio_rate_control` -- cuts the blocked windows by four. `video_threaded` measured *worse* here (107): SwanStation's
+Vulkan renderer already runs on its own thread, so RetroArch's video thread only adds jitter, and the same goes for
+turning the core's thread off (72). The shipped `retroarch.cfg` therefore keeps `video_threaded = false` and
+`run-retroarch` forces `audio_sync = false` (and `video_vsync = true`, so exactly one thing paces the emulation).
+
+**`CDROM_LoadImageToRAM` was tried and is not shipped.** It costs 15 s of black screen (464 MB off the card) and
+buys nothing measurable here: the stutter is the pacing, not the reads. `run-ps1` leaves it off; the core's own
+reader thread with `ReadaheadSectors = 8` was already keeping the reads off the emulation thread. (Its "loading the
+CD into memory" OSD line goes with it.)
+
+## The volume rocker, and what the volume actually is (2026-10-28)
+
+The volume keys did nothing audible and a game started at its own loud level however quiet the menu had been left.
+Two separate faults, both in what the volume *points at*:
+
+- **The rocker drove the wrong control.** bananad publishes which mixer the keys (and Settings > Volume) own in
+  `/run/banana/mixer`; on the AudioReach card it published the DSP's per-stream gain
+  (`stream0.vol_ctrl0 MultiMedia1 Playback Volu`). That gain is latched when a frontend's graph is instantiated, so
+  changing it under a running stream does nothing -- "the rocker isn't working". What is heard on the RPC is the two
+  AW88166 amplifiers' own gain, which takes effect at once: bananad now publishes those (`Left PCM` / `Right PCM`,
+  named `PCM` for the script).
+- **The `volume` script's scale was inverted and the wrong width.** It modelled the amplifier as an *attenuation*
+  (`0` loudest … `1023` mute, 50 dB), which is the raw codec register before ROCKNIX's
+  `0034-ASoC-codecs-aw88166-make-volume-control-usable.patch`. The patch exposes it as a *gain*: `0` is mute,
+  `511` is 0 dB (the loudest), and amixer's own percent is exactly the 0-100 the settings screen shows. The script
+  now just uses amixer's percent on both channels, so "up" is louder and "100%" is full -- no private mapping to get
+  backwards.
+- **The level was pinned back on every boot and every launch.** `rcS` set the amplifiers to 90% at boot and
+  `run-retroarch` set them to 90% at the start of *every game*, throwing away whatever the menu had. The level is the
+  user's: it lives in `/data/banana/asound.state` (bananad's `alsactl store`, replayed by its `alsactl restore`), and
+  a card that already has one is left alone by rcS, bananad and `run-retroarch`.
+
+What a key press means now, anywhere: 5% of the amplifiers' 127.75 dB range (~6.4 dB). This is ROCKNIX's model. Its
+`volume` script (`packages/rocknix/sources/scripts/volume`) steps `audio.volume` by 5 and calls
+`pactl -- set-sink-volume @DEFAULT_SINK@ N%` -- one *system* sink, not the app's own volume -- and its UCM for this
+device is what makes that sink's control the amplifiers: `LibraryConfig.remap.Config` presents a single virtual
+`Speaker Volume` spanning `Left PCM Playback Volume` (vindex 0) and `Right PCM Playback Volume` (vindex 1), and its
+`BootSequence` sets both to 511. Banana has no PipeWire and no UCM, so `/usr/libexec/banana/volume` drives the two
+controls directly -- the same effect -- and the keys reach them from the menu *and* from a game. ROCKNIX shows the
+level with `mako-notify` (a Wayland notification the compositor paints over the game); Banana's equivalent is
+RetroArch's `SHOW_MSG` on the command FIFO, since `cage` owns the panel while a game runs. RetroArch's own software
+volume is pinned to 1.0 every launch, so it can neither boost nor "go back" to a level of its own.
+
 ## Every core but SwanStation crashed under cage (2026-10-28)
 
 The games other than the PlayStation died about a second after starting, with no log file written at all (which is

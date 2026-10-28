@@ -671,7 +671,12 @@ static void audio_route(void)
 	if (f) {
 		const char *mix = cfg.mixer;
 		if (!strcmp(mix, "auto"))
-			mix = card_ar >= 0 ? "stream0.vol_ctrl0 MultiMedia1 Playback Volu" : "Master";
+			/* On the RPC the volume that is *heard* is the two AW88166 amplifiers' own gain -- the kernel
+			 * exposes them as "Left PCM"/"Right PCM", where 0 is mute and 511 is 0 dB, the loudest -- not the
+			 * DSP's per-stream volume, which the graph latches when it is instantiated, so changing it
+			 * mid-stream does nothing. "PCM" is the name the volume script expands to those two controls; it
+			 * drives both. */
+			mix = card_ar >= 0 ? "PCM" : "Master";
 		fprintf(f, "%d %s\n", card_play, mix);
 		fclose(f);
 		rename("/run/banana/mixer.new", "/run/banana/mixer");
@@ -710,8 +715,14 @@ static void audio_setup(void)
 		cset(card_ar, "HPHL Volume", "20");
 		cset(card_ar, "HPHR Volume", "20");
 		cset(card_ar, "ADC2 Volume", "10");
-		cset(card_ar, "Left PCM Playback Volume", "460");
-		cset(card_ar, "Right PCM Playback Volume", "460");
+		/* The amplifiers' level is the user's volume (the volume keys and Settings > Volume own it, and
+		 * bananad's own restore_settings() has just put the card's saved state back). Only a card that has no
+		 * saved level -- a fresh one -- gets Banana's starting point; setting it here every boot was what made
+		 * the volume jump back to it. */
+		if (access("/data/banana/asound.state", R_OK) != 0) {
+			cset(card_ar, "Left PCM Playback Volume", "460");
+			cset(card_ar, "Right PCM Playback Volume", "460");
+		}
 		/* The headphone path, set here rather than only in rcS: bananad's restore_settings() replays the card's
 		 * asound.state (saved by alsactl store when the volume changed) after rcS has run, which puts these back to
 		 * their reset state, so rcS's own copy is not enough. The speaker path (SENARY MI2S -> AW88166) is separate
@@ -749,27 +760,11 @@ static void audio_setup(void)
 
 static void volume(int dir)
 {
-	/* In a game the volume keys are RetroArch's: it changes its own volume live and shows its OSD. The card's
-	 * mixer is the *menu's* level, and a game's frontend volume is only latched when its graph is instantiated
-	 * (at the menu's next open), so editing it during a game reads as "nothing happened, then it applied when I
-	 * quit" -- and all the way down it is a silent handheld with nothing on screen to say why. Hand the press to
-	 * RetroArch instead, through the FIFO run-retroarch already keeps open (the AUDIO_REINIT path). */
-	if (pid_of("/run/banana/game.pid") > 0)
-	{
-		int fd = open("/run/banana/retroarch.cmd", O_WRONLY | O_NONBLOCK | O_CLOEXEC);
-		if (fd >= 0)
-		{
-			/* RetroArch's volume commands are 0.5 dB a step (command_event_set_volume), far finer than the
-			 * menu's 5% (2.5 dB), so send five: a press is then the same step in a game as in the menu. */
-			const char *c = dir > 0 ? "VOLUME_UP\n" : "VOLUME_DOWN\n";
-			for (int i = 0; i < 5; i++)
-				if (write(fd, c, strlen(c)) < 0) break;
-			close(fd);
-			return;
-		}
-		/* (no FIFO: a game that is not Banana's RetroArch -- leave the mixer to the script below) */
-	}
-	/* the menu's own volume: the script changes the control /run/banana/mixer names (see it) */
+	/* One volume, and it is the amplifiers' -- the system's, the way ROCKNIX's keys drive the default sink. The
+	 * keys change the same control whether the menu or a game is on top, and a game plays through it, so there is
+	 * nothing for "in a game" to mean differently. The DSP's per-stream gain cannot be this (a frontend's graph
+	 * latches it at the open), and RetroArch's own volume is not the system's either: a game left at 150% would
+	 * come back there however quiet the menu had been. */
 	char step[16];
 	snprintf(step, sizeof step, "%d", cfg.volume_step);
 	char cmd[96];
@@ -781,7 +776,25 @@ static void volume(int dir)
 		if (fscanf(p, "%d", &pct) != 1) pct = -1;
 		pclose(p);
 	}
-	if (pct >= 0) osd("volume", pct);
+	if (pct < 0) return;
+	/* Over a game, banana-ui is not drawing (cage and RetroArch own the panel), so the line has to be RetroArch's:
+	 * run-retroarch keeps a FIFO open on its stdin, and SHOW_MSG pushes this onto its OSD -- which the panel turn
+	 * in Banana's RetroArch patch already moves upright. This is the ROCKNIX notification, drawn by the game's own
+	 * compositor because nothing else can draw over it. In the menu it is bananad's own OSD instead (banana-ui
+	 * draws /run/banana/osd): writing that one during a game would only surface, stale, when the menu came back. */
+	if (pid_of("/run/banana/game.pid") > 0)
+	{
+		char msg[64];
+		snprintf(msg, sizeof msg, "SHOW_MSG Volume: %d%%\n", pct);
+		int fd = open("/run/banana/retroarch.cmd", O_WRONLY | O_NONBLOCK | O_CLOEXEC);
+		if (fd >= 0)
+		{
+			if (write(fd, msg, strlen(msg)) < 0) {}
+			close(fd);
+		}
+	}
+	else
+		osd("volume", pct);
 }
 
 static void brightness(int dir, int step_pct)

@@ -104,10 +104,13 @@ while [ $i -lt 60 ]; do
     sleep 0.1; i=$((i+1))
 done
 amixer -q -c 0 cset "name=SENARY_MI2S_RX Audio Mixer MultiMedia2" on,on 2>/dev/null
-amixer -q -c 0 sset "Left PCM" 90% 2>/dev/null
-amixer -q -c 0 sset "Right PCM" 90% 2>/dev/null
-amixer -q -c 0 sset "Left PCM Playback Volume" 460 2>/dev/null
-amixer -q -c 0 sset "Right PCM Playback Volume" 460 2>/dev/null
+# The amplifiers' level is the user's volume. bananad replays the saved state (/data/banana/asound.state) a moment
+# from now, so a card that already has a level is left alone here -- setting it every boot was half of what made the
+# volume jump back. Only a fresh card gets Banana's starting point (90%: -12.75 dB, a comfortable, not-quiet default).
+if [ ! -r /data/banana/asound.state ]; then
+    amixer -q -c 0 sset "Left PCM" 90% 2>/dev/null
+    amixer -q -c 0 sset "Right PCM" 90% 2>/dev/null
+fi
 # The rest of ROCKNIX's UCM2 BootSequence for this card (alsa-ucm-conf,
 # Retroid/PocketClassic): the codec's and the RX macro's own levels. Without UCM on this image
 # the routing above is not enough -- the headphone and speaker output and the mic capture come

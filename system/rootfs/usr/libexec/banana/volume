@@ -4,35 +4,41 @@
 #   volume set <0-100>
 #   volume up|down <n>      n percent louder or quieter, then the new level (as get prints it)
 # bananad writes which card plays and its control to /run/banana/mixer ("<card> <control>"). The RPC's speakers are
-# two aw88166 amplifiers whose control is an attenuation instead of a level: 0 the loudest, 1023 mute, 64 a 6 dB step,
-# and this kernel names them "Left PCM" and "Right PCM" (amixer's "PCM" isn't there, so the keys changed nothing).
-# Their percent is 50 dB of range, 2.5 dB a 5% step, and 0% is mute. A control that is a plain level uses amixer's
-# own percent.
+# the two AW88166 amplifiers, whose controls the kernel exposes as "Left PCM" and "Right PCM" (a *gain*: 0 is mute,
+# 511 is 0 dB, the loudest) rather than as one control named "PCM". bananad publishes them as "PCM"; a card that is
+# the amplifier itself (id aw88166) answers to a single "PCM". Either way the level is amixer's own percent, so the
+# same 0-100 the settings screen shows is what the keys set -- no private scale to get inverted.
 read -r CARD CONTROL < /run/banana/mixer 2>/dev/null || exit 1
-AW=
-if [ "$(cat /proc/asound/card$CARD/id 2>/dev/null)" = aw88166 ]; then
-    AW="$CONTROL"
-    amixer -c $CARD sget "$CONTROL" >/dev/null 2>&1 || AW="Left $CONTROL|Right $CONTROL"
-fi
-
-raw() {   # raw <control>: the amplifier's attenuation now
-    amixer -c $CARD sget "$1" 2>/dev/null | sed -n 's/.*Playback \([0-9]*\) \[.*/\1/p' | head -n 1
-}
-get() {
-    if [ -n "$AW" ]; then
-        v=$(raw "${AW%%|*}"); [ -n "$v" ] || exit 1
-        [ $v -ge 1023 ] && echo 0 && return
-        p=$((100 - (v * 3 + 8) / 16)); [ $p -lt 1 ] && p=1
-        echo $p
-    else
-        amixer -c $CARD sget "$CONTROL" 2>/dev/null | sed -n 's/.*\[\([0-9]*\)%\].*/\1/p' | head -n 1
+# the controls to drive, one per channel, separated by "|" (a control's name has spaces of its own)
+CH=
+case "$CONTROL" in
+PCM)
+    CH="Left PCM|Right PCM"
+    ;;
+*)
+    if [ "$(cat /proc/asound/card$CARD/id 2>/dev/null)" = aw88166 ]; then
+        if amixer -c $CARD sget "$CONTROL" >/dev/null 2>&1; then CH="$CONTROL"; else CH="Left PCM|Right PCM"; fi
     fi
+    ;;
+esac
+
+# the level amixer reports for a control, in percent
+percent() {
+    amixer -c $CARD sget "$1" 2>/dev/null | sed -n 's/.*\[\([0-9]*\)%\].*/\1/p' | head -n 1
+}
+
+get() {
+    if [ -n "$CH" ]; then
+        IFS='|'; for c in $CH; do p=$(percent "$c"); [ -n "$p" ] && { echo "$p"; unset IFS; return; }; done
+        unset IFS; exit 1
+    fi
+    percent "$CONTROL"
 }
 set_to() {
     p=$1; [ $p -lt 0 ] && p=0; [ $p -gt 100 ] && p=100
-    if [ -n "$AW" ]; then
-        if [ $p = 0 ]; then v=1023; else v=$(((100 - p) * 16 / 3)); fi
-        IFS='|'; for c in $AW; do amixer -q -c $CARD sset "$c" $v || exit 1; done
+    if [ -n "$CH" ]; then
+        IFS='|'; for c in $CH; do amixer -q -c $CARD sset "$c" $p% || { unset IFS; exit 1; }; done
+        unset IFS
     else
         amixer -q -c $CARD sset "$CONTROL" $p% || exit 1
     fi

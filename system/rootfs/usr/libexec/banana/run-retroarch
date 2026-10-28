@@ -64,8 +64,10 @@ if [ -d /proc/asound/card0 ]; then
         [ "$cur" = "$(printf '%s' "$want" | cut -d, -f1)" ] && break
         sleep 0.2; i=$((i + 1))
     done
-    amixer -q -c 0 sset "Left PCM" 90% 2>/dev/null
-    amixer -q -c 0 sset "Right PCM" 90% 2>/dev/null
+    # The amplifiers' level is the *user's* volume -- the volume keys and Settings > Volume own it, and bananad
+    # has it saved in asound.state. Setting it here as well (it used to be pinned to 90% on every launch) was what
+    # made a game start loud again however quiet the menu had been left: the menu's level was thrown away the moment
+    # a game started. The route is what this script has to fix up; the level it leaves alone.
 fi
 CFG=/data/retroarch/retroarch.cfg
 [ -f $CFG ] || { mkdir -p /data/retroarch; cp /etc/banana/retroarch.cfg $CFG; }
@@ -175,6 +177,18 @@ fi
 lat=$(setting ra_audio_latency)
 case $lat in 32|64) set_cfg audio_latency $lat ;; *) set_cfg audio_latency 64 ;; esac
 vs=$(setting ra_vsync)
+# One clock paces the emulation, and with VSync on it is the panel's: `audio_sync` makes RetroArch throttle the
+# emulation to the *audio device* instead, and those two clocks disagree by design (the panel is 60.00 Hz, the PS1
+# 59.94), which measured as long stretches of the emulation making no progress at all while a game played
+# (docs/RPC-PORT.md has the numbers). The audio is still right: audio_rate_control resamples it to the device's own
+# rate rather than letting the buffer fill. With VSync off the audio has to be the pacer, or nothing would pace it
+# at all.
+case $vs in off) set_cfg audio_sync true ;; *) set_cfg audio_sync false ;; esac
+set_cfg audio_rate_control true
+# RetroArch's own volume is a *software* gain on top of the amplifiers' level, and the only volume this handheld
+# has is the amplifiers' (bananad's volume keys and Settings > Volume, as on ROCKNIX, where the keys drive the
+# default sink). Left alone, a game that had been turned up would come back up -- and a boost clips. Unity, always.
+set_cfg audio_volume 1.0
 case $vs in on) set_cfg video_vsync true ;; off) set_cfg video_vsync false ;; esac
 sc=$(setting ra_scale)
 case $sc in on) set_cfg video_scale_integer true ;; off) set_cfg video_scale_integer false ;; esac
