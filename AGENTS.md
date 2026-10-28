@@ -1,5 +1,5 @@
 ```markdown
-# BananaLinux Agent Rules & Constraints
+# Banana Pocket Agent Rules & Constraints
 
 1. **Hardware Scope (Strict):**
    - All code, scripts, UI components, and driver hooks must target **ONLY** the Retroid Pocket Classic (Qualcomm Snapdragon G1 Gen 2 / SM4450, single 1240x1080 AMOLED panel, MCU gamepad, DRM/KMS + Freedreno).

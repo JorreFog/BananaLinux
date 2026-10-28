@@ -14,7 +14,7 @@ cp "$HERE/../../../VERSION" "$T/etc/banana/version"
 echo "$BOARD" > "$T/etc/banana/board"
 
 V=$(cat "$HERE/../../../VERSION")
-printf 'NAME=BananaOS\nID=bananaos\nID_LIKE=buildroot\nVERSION="%s"\nVERSION_ID=%s\nPRETTY_NAME="BananaOS %s"\nHOME_URL="https://github.com/JorreFog/BananaLinux"\n' \
+printf 'NAME=BananaOS\nID=bananaos\nID_LIKE=buildroot\nVERSION="%s"\nVERSION_ID=%s\nPRETTY_NAME="BananaOS %s"\nHOME_URL="https://github.com/jesussaves-ai/Banana-Pocket"\n' \
     "$V" "$V" "$V" > "$T/usr/lib/os-release"
 ln -sf ../usr/lib/os-release "$T/etc/os-release"
 ln -sfn data/roms "$T/roms"

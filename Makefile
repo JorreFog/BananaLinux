@@ -73,10 +73,10 @@ local-rebuild:
 # the image's banana-ui must match a fresh host build. The CI's `checks` job asserts this hash; on a tree where the
 # image was never built it asks you to run `make retroid-pocket-classic` first.
 check-local-build: ui
-	@out=$$(cd $(OUT)/retroid-pocket-classic && find target/usr/bin/banana-ui -type f 2>/dev/null); \
-	if [ -z "$$out" ]; then echo "no image built yet: run make retroid-pocket-classic first"; exit 1; fi; \
-	host=$$(sha256sum $(CURDIR)/banana-ui | cut -d' ' -f1); \
-	target=$$(sha256sum $$out | cut -d' ' -f1); \
+	@img=$(OUT)/retroid-pocket-classic/target/usr/bin/banana-ui; \
+	if [ ! -f "$$img" ]; then echo "no image built yet: run make retroid-pocket-classic first"; exit 1; fi; \
+	host=$$(sha256sum $(CURDIR)/ui/banana-ui | cut -d' ' -f1); \
+	target=$$(sha256sum "$$img" | cut -d' ' -f1); \
 	if [ "$$host" != "$$target" ]; then echo "stale image: host banana-ui $$host != image $$target"; exit 1; fi; \
 	echo "local build matches the image ($$host)"
 

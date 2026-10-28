@@ -76,7 +76,7 @@ namespace
 		std::string body;
 		long status = 0;
 		cu.setopt(h, URL, url.c_str());
-		cu.setopt(h, USERAGENT, "BananaOS banana-scrape (+https://github.com/JorreFog/BananaLinux)");
+		cu.setopt(h, USERAGENT, "BananaOS banana-scrape (+https://github.com/jesussaves-ai/Banana-Pocket)");
 		cu.setopt(h, NOSIGNAL, 1L);
 		cu.setopt(h, TIMEOUT, 60L);
 		cu.setopt(h, FOLLOWLOCATION, 1L);
