@@ -705,7 +705,7 @@ HEADERS = [  # (file, title, icon, subtitle)
     ("tour", "A tour", "picture", "Captured on an RG DS Plus running 0.4.2"),
     ("emulators", "Nintendo DS", "nds", "Two emulators. Your choice."),
     ("systems", "More to play", "gamepad", "More systems, apps and ports"),
-    ("themes", "Themes", "collection", "Ten layout themes, made with the Banana Theme Studio"),
+    ("themes", "Themes", "collection", "Ten layout themes, built in"),
     ("hardware", "Built for it", "handheld", "Built for two screens and a lid"),
     ("status", "Status", "tools", "Known issues and what comes next"),
     ("build", "Build", "computer", "Build from source and work on the menu"),

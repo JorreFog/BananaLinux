@@ -41,7 +41,7 @@ It starts directly in the menu, releases display, input and audio resources when
 <p align="center">
   <img src="docs/img/readme/stats.png" width="100%" alt="9.8 s from the power button to the menu, 360 ms from A to the game, BananaDS 12.6% faster, 2 DS emulators">
 </p>
-<p align="center"><sub>Measured on 0.5.0: 9.8 s from the power button to the menu (12.0 s in 0.4.2); about 360 ms from A to the game (about 920 ms in 0.4.2); BananaDS's fast-forward throughput at 2x on an RG DS Plus, average of 9 games, against 0.4.2. From the kernel starting to the menu, 0.4.2 measured 3.9 s on the RG DS and 5.9 s on the RG DS Plus.</sub></p>
+<p align="center"><sub>9.8 s from the power button to the menu (12.0 s in 0.4.2), timed with a stopwatch by a QA tester (which handheld was not recorded); about 360 ms from A to the game (about 920 ms in 0.4.2); BananaDS's fast-forward throughput at 2x on an RG DS Plus, average of 9 games, against 0.4.2. From the kernel starting to the menu, 0.4.2 measured 3.9 s on the RG DS and 5.9 s on the RG DS Plus.</sub></p>
 
 <a id="new-in-0-5-0"></a>
 <img src="docs/img/readme/h-new.png" width="100%" alt="">
@@ -75,14 +75,14 @@ The full list, with every fix: the [0.5.0 release notes](https://github.com/Jorr
 
 **Look and feel**
 
-- **Layout themes:** a theme file can now draw the whole menu. [Ten were made with the Banana Theme Studio](#themes). The theme engine got 2–4x faster on the RG DS without changing a pixel.
+- **Ten layout themes, built in:** a theme file can now draw the whole menu, and [ten come with the system](#themes), made with the Banana Theme Studio. Pick one in Settings › Display & sound › Theme. The theme engine got 2–4x faster on the RG DS without changing a pixel.
 - **A new first boot:** an arrival animation, then a step-by-step setup (language, Wi-Fi with a connection test, time zone, the DS's name, RetroAchievements, box art). Run it again from Settings › System › First-time setup.
 - **Credits** (Settings › System › Credits), and the UX team's review: brightness kept across restarts, box art in a fixed frame, accent colours, L/R page jumps, stick navigation, a Power menu, Shown systems and a Hotkeys page.
 
 **Other systems and speed**
 
 - **N64, much faster** (Super Mario 64 on the RG DS Plus: 40–50 → 55–60 fps), **PlayStation** without stutter and crackle, and **GBA** games with RetroAchievements start in a quarter of a second instead of up to 26 s. An emulator choice per system and a screen border.
-- **Boot** 12.0 s → 9.8 s from the power button to the menu; **starting a game** ~920 ms → ~360 ms; **deep sleep** works again where it got stuck in a lighter sleep.
+- **Boot** 12.0 s → 9.8 s from the power button to the menu (a QA tester's stopwatch; handheld not recorded); **starting a game** ~920 ms → ~360 ms; **deep sleep** works again where it got stuck in a lighter sleep.
 - **Simplified Chinese (简体中文):** Majirefy's 0.5.0 translation, 610 new lines and 344 revised ones. Thank you, Majirefy! RetroArch's own menu and messages now follow the language too.
 
 <a id="get-it"></a>
@@ -154,18 +154,6 @@ A look around BananaOS, captured on an RG DS Plus running 0.4.2. For 0.5.0's lay
     <td align="center"><img src="docs/img/readme/shot-nds.png" alt="Settings > Nintendo DS: Emulator BananaDS, Quick resume, DS language, DS name, Shader LCD grid 2x"><br><sub>Nintendo DS settings: emulator, shader, DS language and name.</sub></td>
   </tr>
 </table>
-<table>
-  <tr>
-    <td align="center" width="50%">
-      <a href="https://www.youtube.com/watch?v=yW6LavgyhL4&t=948s"><img src="docs/img/readme/video-yW6LavgyhL4.png" alt="Retro Game Corps: Custom Firmware on the Anbernic RG DS Plus. Watch on YouTube"></a><br>
-      <sub><a href="https://www.youtube.com/@RetroGameCorps">Retro Game Corps</a>: Custom Firmware on the Anbernic RG DS Plus. BananaOS from 15:48.</sub>
-    </td>
-    <td align="center" width="50%">
-      <a href="https://www.youtube.com/watch?v=KPENdDlkI5M"><img src="docs/img/readme/video-KPENdDlkI5M.png" alt="forthenext: ANBERNIC RG DS Plus, BananaOS and your games tested. Watch on YouTube"></a><br>
-      <sub><a href="https://www.youtube.com/@forthenext">forthenext</a>: ANBERNIC RG DS Plus, BananaOS and your games tested.</sub>
-    </td>
-  </tr>
-</table>
 
 <p align="center">
   <img src="docs/img/boot-animation.gif" width="300" alt="The boot animation: a pixel-art bunch of bananas drops onto the top screen while a BANANA cartridge slides into the console on the bottom screen">
@@ -224,15 +212,15 @@ Press F or L3 for the in-game menu. The Anbernic button also opens it. F + SELEC
 
 ## Themes
 
-In 0.5.0 a theme file can draw the whole menu: where everything is, how it looks and how it moves. Pick a theme in **Settings › Display & sound › Theme**; A opens a gallery with previews. These ten were made with the **Banana Theme Studio**, the theme editor that runs in your browser.
+In 0.5.0 a theme file can draw the whole menu: where everything is, how it looks and how it moves. Ten layout themes come built in: pick one in **Settings › Display & sound › Theme** (A opens a gallery with previews). They were made with the **Banana Theme Studio**, the theme editor that runs in your browser.
 
 <p align="center">
   <img src="docs/img/readme/themes.png" width="100%" alt="The ten layout themes on the home screen: Comic Panel, Coral Reef, Felt Table, Neon Arcade, Oak Bookshelf, Orbital HUD, Paper Notebook, Phosphor Terminal, Swiss Poster and Vinyl Lounge">
 </p>
 <p align="center"><sub>Each theme's home screen, top over bottom, as the Banana Theme Studio draws it.</sub></p>
 
-- Make your own, or change one of these: open the [Banana Theme Studio](https://jorrefog.github.io/BananaLinux/theme-studio/). Nothing to install, and nothing you make leaves your computer.
-- Put a theme in `banana/themes/` on the card (over file sharing, or with the card in a computer), then pick it in Settings. Pick **Dark** to go straight back to the normal look.
+- Make your own, or edit one of these: open the [Banana Theme Studio](https://jorrefog.github.io/BananaLinux/theme-studio/). Nothing to install, and nothing you make leaves your computer.
+- Put your theme in `banana/themes/` on the card (over file sharing, or with the card in a computer), then pick it in Settings. A file there with the same name as a built-in theme replaces it. Pick **Dark** to go straight back to the normal look.
 - The guide: [docs/MAKE-A-THEME.md](docs/MAKE-A-THEME.md). The file format: [docs/THEMES.md](docs/THEMES.md).
 
 <a id="made-for-it"></a>
