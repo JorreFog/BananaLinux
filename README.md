@@ -330,7 +330,7 @@ The people who made 0.5.0 (also in Settings › System › Credits):
 
 - **Development:** JorreFog (maintainer) · jesussaves-ai · marlupatrocinio
 - **Translation:** Majirefy (简体中文, Simplified Chinese)
-- **QA:** Duncan · Majirefy · Smizzle · nigel777
+- **QA:** Duncan · Majirefy · Smizzle · nigel777 · v (QA and mod)
 - **UI/UX:** Numberjerry
 
 Thanks to:

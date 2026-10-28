@@ -23,6 +23,7 @@ Duncan = QA
 Majirefy = QA
 Smizzle = QA
 nigel777 = QA
+v = QA and mod
 
 [UI/UX]
 Numberjerry = UX/UI Lead
