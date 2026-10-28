@@ -512,6 +512,60 @@ sleep) and bananad's own `sync()`; the log now says when a suspend did not take 
 so the next instrumented sleep says which of them it is. Until then a "sleep" on this handheld is a dark panel and
 2 s, not a night's standby.
 
+## PipeWire: the sound server (2026-10-28)
+
+ROCKNIX's RetroArch runs on PipeWire, and its absence is the difference heard on this card: the DSP's single frontend
+belongs to whichever app opened it first (so the menu and a game handed it over, and a game's first seconds were the
+amplifiers coming up), and there is nothing between RetroArch's buffer and the DSP. So the image has it too:
+`pipewire` + `wireplumber` (+ lua), started by `rcS`.
+
+What it needed:
+
+- **Buildroot builds PipeWire's ALSA support only with a udev provider** (`BR2_PACKAGE_HAS_UDEV`, else
+  `-Dalsa=disabled`, i.e. no ALSA device at all, only the ALSA-lib plugin). The `libudev-zero` work done for cage
+  is what makes it possible -- and it exposed a kconfig cycle (a package *depending on* the udev virtual while
+  another *selected* a provider), so `libudev-zero` is now chosen by the defconfig and the packages only depend on
+  the virtual, which is how Buildroot's other virtuals work.
+- **The order is the DSP's rule, not PipeWire's**: `rcS` writes the route and the codec's levels *before* starting
+  the server, because the DSP takes the mixer values it finds when a frontend's graph is instantiated -- and the
+  frontend is PipeWire's now. WirePlumber closes the card as soon as the last stream goes (`session.suspend-timeout
+  = 1 s`, `/etc/wireplumber/wireplumber.conf.d/50-banana.conf`), so a headphone jack change is seen at the next
+  open rather than never.
+- **ALSA's default PCM is PipeWire's plugin** (`/etc/asound.conf`, which used to be a link to bananad's
+  `/run/banana/asound.conf`). bananad still publishes the route there for anything that opens the hardware
+  directly.
+- One runtime dir for both: `/run/banana/rt` holds PipeWire's socket and, when a game runs, cage's Wayland socket,
+  so the menu, the game and the server find each other (`XDG_RUNTIME_DIR` in `banana-ui-session` and
+  `run-retroarch`).
+
+**Why PipeWire saw no sound card at all** (two gaps, both about having no udev daemon):
+
+- PipeWire's ALSA monitor drops any card whose udev device has no **`SOUND_INITIALIZED`** property
+  (`spa/plugins/alsa/alsa-udev.c`, `get_card_nr()`), and it is udev's own rules that add it once a card is ready.
+  Nothing here runs rules, so every card was discarded: `wpctl status` showed no devices, no sinks, and the menu's
+  cues streamed into nothing. `buildroot/patches/pipewire/0001-...`: a card that is there is ready, and only a card
+  that says it is not is skipped.
+- **libudev-zero's `udev_enumerate_scan_devices()` only walked `/sys/dev/char` and `/sys/dev/block`** -- the devices
+  that have a device node. A sound *card* has none (its PCMs and control do), so the card was never in the
+  enumeration and PipeWire never saw the subsystem it looks at, whatever the property said.
+  `buildroot/patches/libudev-zero/0001-...` walks `/sys/class/*` as well, which is what udev reports; a device in
+  both places has the same syspath, so the list does not double up. (libudev-zero itself was fine otherwise: it
+  reads the subsystem from the sysfs link and enumerates the card's PCMs.)
+
+- **The card has no UCM profile, so nothing selects a profile for it.** ACP (PipeWire's own card handling) offers
+  the UCM-less fallback "pro-audio" -- which is what exposes the card's PCMs as nodes -- but WirePlumber's monitor
+  asks for `api.acp.auto-profile = false` and leaves the choice to its policy, and its policy picked *nothing*:
+  the device came up with no profiles, so no sink, so the menu's stream had nowhere to go. ROCKNIX sets the profile
+  in a WirePlumber rule for its own UCM-less cards (`device.profile = "pro-audio"`), and Banana now does the same in
+  `/etc/wireplumber/wireplumber.conf.d/50-banana.conf`, with the card's first playback PCM (MultiMedia1 -- the one
+  bananad's volume keys change) raised in priority so it is the default sink.
+
+**A 15-second black screen before every game, found on the way.** `run-retroarch`'s route check read the mixer back
+with `sed -n 's/.*values=//p'`, which matches *two* lines of `amixer`'s output -- `; type=BOOLEAN,...,values=2` and
+`: values=on,off` -- so the string compared to "on" was "2\non", never equal, and the loop always ran its whole
+budget: 75 x 200 ms before cage was even started (~17.7 s measured from the launch to `cage` in `ps`; the same check
+in `ui/src/sound.cpp` uses `.*: *values=` and was right). Fixed, and the budget cut to 5 s.
+
 ## RetroArch's black panel (2026-10-27)
 
 A game started from the menu went to a black screen seconds in and would not answer: the picture path was the first

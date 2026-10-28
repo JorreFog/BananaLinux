@@ -74,10 +74,23 @@ BR2_PACKAGE_VULKAN_TOOLS=y
 BR2_PACKAGE_MESA3D_OPENGL_EGL=y
 BR2_PACKAGE_MESA3D_OPENGL_ES=y
 BR2_PACKAGE_SDL2=y
+# libudev-zero: the udev virtual's provider on this image. It is libudev's API (devices read from sysfs) and no
+# udev daemon at all, which is what RetroArch's udev input driver, Cage and PipeWire's ALSA support ask for. The
+# board picks the provider; the packages only say they need the virtual (BR2_PACKAGE_HAS_UDEV).
+BR2_PACKAGE_LIBUDEV_ZERO=y
 # cage: a kiosk Wayland compositor for the games, so the panel's turn (its "panel orientation" property, which
 # wlroots reads) is applied once to everything -- RetroArch's menu, its OSD and any other app -- instead of a
 # per-driver rotation patch.
 BR2_PACKAGE_CAGE=y
+
+# The sound server (ROCKNIX has one too, and its absence is the difference heard on the RPC: a buffer above the
+# DSP, one mixer for the menu and the games, and one owner of the card's only frontend). Buildroot builds
+# PipeWire's ALSA support only when a udev provider is there (BR2_PACKAGE_HAS_UDEV, which libudev-zero provides
+# above) -- without it there is no ALSA device at all, only the ALSA-lib plugin. WirePlumber is the session
+# manager: it discovers the card and decides the sink. lua is WirePlumber's.
+BR2_PACKAGE_PIPEWIRE=y
+BR2_PACKAGE_WIREPLUMBER=y
+BR2_PACKAGE_LUA=y
 BR2_PACKAGE_SDL2_KMSDRM=y
 BR2_PACKAGE_SDL2_OPENGLES=y
 BR2_PACKAGE_LIBCURL=y

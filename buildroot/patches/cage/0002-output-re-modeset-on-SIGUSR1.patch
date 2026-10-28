@@ -46,8 +46,8 @@ Upstream-Status: Pending
 + * not a page flip. A panel whose driver disabled it on the way into a suspend can come back dark, with the
 + * compositor's frames going nowhere -- the kernel's own resume re-does its part, but a hold in the display
 + * pipeline is only cleared by a modeset, and nothing above the kernel tells the compositor the system slept.
-+ * Banana's bananad sends SIGUSR1 for exactly this on the way out of a sleep (Banana has no session manager to
-+ * hear about a resume: its seat is not VT-bound, deliberately).
++ * Banana's bananad sends SIGUSR1 for exactly this on the way out of a sleep (Banana has no session manager to hear
++ * about a resume: its seat is not VT-bound, deliberately).
 + */
 +void
 +output_remodeset_all(struct cg_server *server)
@@ -111,24 +111,24 @@ Upstream-Status: Pending
  #endif
 --- a/cage.c
 +++ b/cage.c
-@@ -205,6 +205,17 @@
+@@ -204,6 +204,17 @@
+ 	return true;
  }
  
- static int
 +/* Banana: bananad sends this on the way out of a sleep -- see output_remodeset_all. */
-+static void
++static int
 +handle_remodeset(int signal, void *data)
 +{
 +	struct cg_server *server = data;
 +
 +	wlr_log(WLR_DEBUG, "Re-modesetting the outputs");
 +	output_remodeset_all(server);
++	return 0;
 +}
 +
-+static void
+ static int
  handle_signal(int signal, void *data)
  {
- 	struct cg_server *server = data;
 @@ -311,6 +322,8 @@
  	struct wl_event_loop *event_loop = wl_display_get_event_loop(server.wl_display);
  	struct wl_event_source *sigint_source = wl_event_loop_add_signal(event_loop, SIGINT, handle_signal, &server);

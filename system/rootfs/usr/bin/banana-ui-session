@@ -13,6 +13,9 @@ for a in $(cat /proc/cmdline); do
     esac
 done
 [ "$LOG" != /dev/console ] && [ -f $LOG ] && mv -f $LOG $LOG.1
+# the runtime dir the sound server listens in (PipeWire's socket, and cage's when a game runs): the menu's cues go
+# through PipeWire, so it has to look there
+export XDG_RUNTIME_DIR=/run/banana/rt
 # a copy of the systems list on the card replaces the built-in one
 [ -f /data/banana/systems.conf ] && export BANANA_SYSTEMS=/data/banana/systems.conf
 exec /usr/bin/banana-ui >> $LOG 2>&1

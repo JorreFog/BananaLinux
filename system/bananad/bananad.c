@@ -12,10 +12,12 @@
  *     says "Charging" only for a moment). The kernel blinks the red one (its timer trigger): bananad only changes
  *     them when the power state changes (power_supply uevents, and the battery poll).
  *   - Brightness and volume are kept across reboots (/data/banana/backlight, /data/banana/asound.state).
- *   - Sound goes where it should with no sound server: the RPC's audioreach card, whose DSP frontends (MultiMedia1/2)
- *     bananad mixes into the speaker I2S or the WCD937x codec by hand (no UCM profile does it on this image). The
- *     route is ALSA's default device, written to /run/banana/asound.conf (/etc/asound.conf points there), so
- *     everything opened after a change follows it; the volume keys change the card that plays.
+ *   - Sound goes where it should: PipeWire (started by rcS) owns the RPC's audioreach card, and bananad mixes the
+ *     DSP's frontends into the speaker I2S or the WCD937x codec by hand (no UCM profile does it on this image),
+ *     because the DSP takes the mixer values it finds when a frontend's graph is instantiated. The route it chose is
+ *     published in /run/banana/audio-route and spelled out in /run/banana/asound.conf for anything that opens the
+ *     hardware directly (ALSA's *default* is PipeWire's plugin now, not that file); the volume keys change the card
+ *     that plays.
  *
  * Settings: /etc/banana/bananad.conf, then /data/banana/bananad.conf (key = value lines, see bananad.conf); SIGHUP
  * reads them again (the menu's settings screen sends it).
@@ -601,8 +603,12 @@ static void audio_route_ar(void)
 	 * here rather than guessing "speakers", so plugging in does not end up un-muting the amps. */
 	FILE *f = fopen("/run/banana/audio-route.new", "w");
 	if (f) {
-		fprintf(f, "SENARY_MI2S_RX Audio Mixer MultiMedia1=%s,%s\n", spk, spk);
-		fprintf(f, "RX_CODEC_DMA_RX_0 Audio Mixer MultiMedia1=%s,%s\n", hp, hp);
+		/* both frontends: the card has two (MultiMedia1/2) and they are interchangeable, and which one a
+		 * sound server ends up on is not ours to choose any more (PipeWire's sink is the second) */
+		for (int i = 1; i <= 2; i++) {
+			fprintf(f, "SENARY_MI2S_RX Audio Mixer MultiMedia%d=%s,%s\n", i, spk, spk);
+			fprintf(f, "RX_CODEC_DMA_RX_0 Audio Mixer MultiMedia%d=%s,%s\n", i, hp, hp);
+		}
 		fclose(f);
 		rename("/run/banana/audio-route.new", "/run/banana/audio-route");
 	}
@@ -671,7 +677,10 @@ static void audio_route(void)
 	if (f) {
 		const char *mix = cfg.mixer;
 		if (!strcmp(mix, "auto"))
-			mix = card_ar >= 0 ? "stream0.vol_ctrl0 MultiMedia1 Playback Volu" : "Master";
+			/* PipeWire's sink is the card's *second* frontend (hw:0,1, "MultiMedia2"): the DSP allows one
+			 * frontend at a time and the first (hw:0,0) refuses to open on this card at all, so that is where
+			 * anything the menu or a game plays goes -- and its volume control is the one the keys own. */
+			mix = card_ar >= 0 ? "stream1.vol_ctrl1 MultiMedia2 Playback Volu" : "Master";
 		fprintf(f, "%d %s\n", card_play, mix);
 		fclose(f);
 		rename("/run/banana/mixer.new", "/run/banana/mixer");
