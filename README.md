@@ -74,6 +74,12 @@ Updates land in `Settings > System > Update` when a `banana-<board>-<version>.up
 checked hash by hash, written to the slot not in use, and the running system is never touched:
 `Previous version` switches back.
 
+Over SSH, `scp -O` (the legacy protocol — dropbear has no SFTP server) moves a package in; the same 156 MB
+squashfs is what makes an update the slow loop. To iterate on the menu's look on the real panel instead, there is
+`tools/push-ui.sh`: it cross-builds `banana-ui` with the image's own toolchain, pushes the ~1.5 MB binary to
+`/data`, and runs it in the menu's place through a bind-mounted shim (`--revert`, or a reboot, puts the shipped
+one back). About a minute instead of a full image and a 193 MB transfer.
+
 ## Layout
 
 ```
