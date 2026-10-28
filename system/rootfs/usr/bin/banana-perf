@@ -1,6 +1,9 @@
 #!/bin/sh
 # Clock profiles. The menu draws a frame in a few milliseconds and sleeps in between, so it runs on the lowest
-# clocks (up to 1416 MHz while it animates: at 1104 its transitions missed refreshes); a game gets the profile its system asks for (systems.conf's perf).
+# clocks while it sits still; schedutil raises them only while an animation draws, up to the top clock (1992 MHz: the
+# layout themes' home rows on the RG DS, frames over 16.7 ms of 300, Neon 51 -> 15, Comic 24 -> 0, Vinyl 26 -> 12;
+# capped at 1416 before 0.5.0-beta.11, and at 1104 the transitions missed refreshes); a game gets the profile its
+# system asks for (systems.conf's perf).
 #   banana-perf ui | powersave | balanced | steady | performance | superdrastic
 # steady: balanced's schedutil with a 1104 MHz floor, for an emulator that sleeps on every page flip (RetroArch with
 # two swapchain images): between flips schedutil let the cores fall to 408-600 MHz and the next frame started slow;
@@ -25,7 +28,7 @@ cpu() {   # cpu <governor> <max kHz> [min kHz]
 }
 gpu() { [ -n "$GPU" ] && echo $1 > $GPU/governor 2>/dev/null; }
 case $1 in
-ui)           cap 1416000; cpu schedutil $best; gpu powersave ;;   # (schedutil: only while an animation draws; 1104 missed frames)
+ui)           cpu schedutil $hi; gpu powersave ;;   # (schedutil: the top clock only while an animation draws)
 powersave)    cap 1416000; cpu schedutil $best; gpu simple_ondemand ;;
 balanced)     cpu schedutil $hi; gpu simple_ondemand ;;
 steady)       cap 1104000; cpu schedutil $hi $best; gpu simple_ondemand ;;
