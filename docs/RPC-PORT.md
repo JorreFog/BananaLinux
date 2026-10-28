@@ -548,6 +548,60 @@ buys nothing measurable here: the stutter is the pacing, not the reads. `run-ps1
 reader thread with `ReadaheadSectors = 8` was already keeping the reads off the emulation thread. (Its "loading the
 CD into memory" OSD line goes with it.)
 
+## What ROCKNIX does on this SoC, and what we took from it (2026-10-28)
+
+The PS1 stutter was chased against the ROCKNIX tree at `~/androidexpert/rocknix` (the SM4450/RP Classic port:
+`projects/ROCKNIX/devices/SM4450`, `packages/emulators/standalone/duckstation-sa/config/SM4450/settings.ini`,
+`packages/emulators/libretro/retroarch/sources/SM4450/retroarch.cfg`, `packages/rocknix/sources/scripts/runemu.sh`,
+`packages/hardware/quirks/platforms/SM4450/*`). What it says, and what Banana does:
+
+| | ROCKNIX (SM4450) | Banana (before) |
+|---|---|---|
+| RetroArch audio driver | `alsathread` | `alsa` |
+| RetroArch `audio_sync` / `video_vsync` | both on | audio off, video on |
+| RetroArch `video_threaded` | true | false |
+| `video_waitable_swapchains` / `video_max_swapchain_images` | true / 3 | (unset) / 2 |
+| Turnip | `TU_DEBUG=noconform` | none |
+| PS1 renderer | **Software at 1x**; the display plane scales it (`DEVICE_SCANOUT_SCALING=true`) | Vulkan at **5x** |
+| Panel turn | **hardware plane rotation** (`DEVICE_PLANE_ROTATION=1200`), compositor does not rotate | cage/wlroots GPU rotate |
+| Compositor | sway | cage |
+| CPU/GPU governor for a game | `performance` (default is `ondemand`) | `performance` (already) |
+| CDROM | `ReadaheadSectors = 8`, **`LoadImageToRAM = false`** | Readahead 8, LoadImageToRAM off (agreed) |
+| DuckStation audio | SDL, `Sync = true`, `BufferMS = 100` | RetroArch ALSA, latency 64 |
+| 'Cores' pinning | opt-in per system (`big` = `taskset -c 6-7`) | none |
+
+The decisive one, measured on the unit through the BIOS intro (the heaviest scene: Gouraud polygons + the 24-voice
+SPU reverb) by asking the kernel where the emulation thread is blocked
+(`/proc/<pid>/task/<pid>/wchan`, 500 samples of 20 ms):
+
+| SwanStation resolution scale | samples the emulation thread spent on the GPU fence (`drm_syncobj_array_wait_timeout`) |
+|---|---|
+| **5x (shipped)** | **59 (~12%)** |
+| 4x | 2 |
+| 3x | 2 |
+| 2x | 0 |
+| 1x (ROCKNIX's scale) | 0 |
+
+At 5x the emulation thread is waiting on the Adreno's fence about a fifth of the frames' time -- the GPU is the
+critical path, and a late frame is the judder in the intro and in the FMV. It is also wasted work: the game is shown
+4:3 at ~1240x930 on the 1240x1080 panel, so 4x (1280x960) is already past what is displayed and **5x (1600x1200)
+only adds a downscale**. ROCKNIX under-renders far more (1x, software) on this SoC for the same reason. `run-ps1`
+now writes 4x (marker 8 rewrites it on a card that has 5x); the emulation thread no longer waits on the GPU in the
+intro.
+
+The audio/waitable choices were taken from ROCKNIX as well: `audio_driver = alsathread` (the device is written from
+the driver's own thread, so the DSP accepting a period cannot stall the emulation thread), `video_waitable_swapchains
+= true` (the present waits for a free image instead of racing the previous frame), and `TU_DEBUG=noconform` (Turnip
+implements Vulkan 1.3 on the a6xx but does not advertise it as conformant; SwanStation's Vulkan renderer asks for
+it). `audio_sync` stays off and `video_threaded` false, which is what the unit measured best here (the tables in the
+pacing section): ROCKNIX runs both syncs on *because* its audio and video are both threaded, which is a different
+arrangement of the same two clocks.
+
+Not adopted (they are ROCKNIX's own plumbing, not settings): sway in place of cage, the display plane's hardware
+rotation (Banana turns the output in cage and in the menu's own `Display::turn()`), the display-plane scanout
+scaling, and pinning a game to the two big cores. `audio_latency` already matches (64 ms), and the CPU and GPU
+governors are already pinned to `performance` for a game, which is stricter than ROCKNIX's own default.
+
 ## The volume rocker, and what the volume actually is (2026-10-28)
 
 The volume keys did nothing audible and a game started at its own loud level however quiet the menu had been left.

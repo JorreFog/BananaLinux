@@ -27,7 +27,7 @@ if [ "$CORE" = swanstation ]; then
     mkdir -p "$R/config/$C"
     # Written once: a card from before gets Banana's choices, and a change made in RetroArch's own menu afterwards is
     # kept (as run-retroarch's .banana-defaults-1 does). Delete the marker to have the defaults written again.
-    M=$R/.banana-swans-7
+    M=$R/.banana-swans-8
     if [ ! -f "$M" ]; then
         # SwanStation draws its own output; RetroArch's integer scaler is off so the core fills the viewport with its
         # own (4:3) aspect.
@@ -36,9 +36,14 @@ if [ "$CORE" = swanstation ]; then
             printf '%s\n' '# Banana: the RPC defaults (run-ps1, written once)'
             # Vulkan on the a613 through Mesa's Turnip (the ICD ships in the image): full speed at 60 fps where the
             # freedreno OpenGL path dropped frames, and the renderer to upscale with. run-retroarch hands the core a
-            # Vulkan video driver to match. 5x is the panel's own 1080p (the core's own option labels).
+            # Vulkan video driver to match. 4x is the right scale for this panel, not 5x: the game is shown 4:3 at
+            # ~1240x930 on the 1240x1080 panel, and 4x (1280x960) is already past that, so 5x (1600x1200) only adds
+            # a downscale pass. Measured on the unit through the BIOS intro (Gouraud polygons, the heaviest scene):
+            # at 5x the emulation thread waits on the GPU's fence 59 of 500 samples (~12%, the GPU is the critical
+            # path and the choppiness), at 4x 2 of 500, at 3x 2, at 2x 0. ROCKNIX renders the PS1 at *1x* on this SoC
+            # (software, the display plane scaling it up) for the same reason.
             printf 'swanstation_GPU_Renderer = "Vulkan"\n'
-            printf 'swanstation_GPU_ResolutionScale = "5"\n'
+            printf 'swanstation_GPU_ResolutionScale = "4"\n'
             # Compile the renderer's shaders up front: on a background thread (the default) they compile during
             # the first seconds of play, which is the hitching the BIOS intro showed.
             printf 'swanstation_GPU_ShaderPrecompile = "Enabled"\n'

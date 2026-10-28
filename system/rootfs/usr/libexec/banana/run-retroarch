@@ -3,6 +3,10 @@
 # application, fullscreen, and it turns the output with the panel's "panel orientation"), configuration and saves
 # on the data partition.
 #   run-retroarch <core> <rom>       e.g. run-retroarch gpsp /data/roms/gba/game.gba
+# Turnip (the a613's Vulkan driver): ROCKNIX exports TU_DEBUG=noconform on this SoC to expose the Vulkan 1.3 the
+# Adreno a6xx driver implements but does not advertise as conformant; SwanStation's Vulkan renderer asks for it.
+TU_DEBUG=noconform
+export TU_DEBUG
 CORE=/usr/lib/libretro/$1_libretro.so
 # setting <key>: the card's value, else the image's template (a card from an older Banana, or a line taken out)
 setting() {
@@ -114,7 +118,10 @@ set_cfg video_rotation $rot
 set_cfg screen_orientation $rot
 set_cfg video_fullscreen true
 set_cfg input_driver udev
-set_cfg audio_driver alsa
+# alsathread, not alsa (ROCKNIX's driver on this SoC): the ALSA device is written from the driver's own thread, so a
+# moment the DSP takes to accept a period cannot stall the emulation thread. The device is still "default" (bananad's
+# /run/banana/asound.conf), which is what the route is written for.
+set_cfg audio_driver alsathread
 set_cfg audio_device default
 # the ALSA sequencer: no /dev/snd/seq on this image (no sequencer built), and RetroArch's MIDI driver failing is two
 # error lines in the log on every start and one more driver to go wrong
