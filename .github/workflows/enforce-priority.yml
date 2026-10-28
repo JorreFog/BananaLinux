@@ -1,0 +1,48 @@
+name: Enforce priority permissions
+
+# GitHub has no per-label permissions, so this workflow reverts any priority
+# label (P0-P3) added by someone who is not a repository administrator.
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  issues: write
+
+jobs:
+  check:
+    if: >-
+      startsWith(github.event.label.name, 'P0-') ||
+      startsWith(github.event.label.name, 'P1-') ||
+      startsWith(github.event.label.name, 'P2-') ||
+      startsWith(github.event.label.name, 'P3-')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const sender = context.payload.sender;
+            const label = context.payload.label.name;
+
+            // Allow automation.
+            if (sender.type === "Bot") return;
+
+            const { data } = await github.rest.repos.getCollaboratorPermissionLevel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              username: sender.login,
+            });
+            if (data.permission === "admin") return;
+
+            await github.rest.issues.removeLabel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              name: label,
+            });
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `@${sender.login} priority labels can only be set by repository administrators, so \`${label}\` was removed.`,
+            });

@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BananaLinux Issues</title>
+<style>
+  :root {
+    --bg: #fffdf5; --surface: #ffffff; --text: #2b2416; --muted: #7a7260; --line: #efe9d2;
+    --banana: #f7d23e; --banana-soft: #fff3b0; --leaf: #7a9a2e; --danger: #d64545;
+    box-sizing: border-box; padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #17140c; --surface: #1f1b10; --text: #f6f0da; --muted: #a39b80; --line: #2f2a18;
+      --banana-soft: #3a3210; --leaf: #a5c95a;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #17140c; --surface: #1f1b10; --text: #f6f0da; --muted: #a39b80; --line: #2f2a18;
+    --banana-soft: #3a3210; --leaf: #a5c95a;
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 20px; }
+  .top { border-top: 4px solid var(--banana); padding-top: env(safe-area-inset-top, 0px); }
+  header { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; justify-content: space-between; padding: 28px 0 20px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-size: 1.35rem; font-weight: 700; letter-spacing: -.02em; }
+  .brand span { color: var(--muted); font-weight: 500; }
+  .meta { color: var(--muted); font-size: .85rem; }
+  a { color: inherit; text-decoration: none; border-bottom: 2px solid var(--banana); }
+  a:hover { background: var(--banana-soft); }
+  .banner { background: var(--banana-soft); text-align: center; font-size: .85rem; padding: 8px 16px; }
+  h2 { margin: 0 0 14px; font-size: .8rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .panel, .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; }
+  .stat .value { font-size: 2rem; font-weight: 700; letter-spacing: -.03em; line-height: 1.1; }
+  .stat .label { color: var(--muted); font-size: .82rem; margin-top: 2px; }
+  .stat.alert .value { color: var(--danger); }
+  .panel { margin-bottom: 16px; }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+  .cols .panel { margin-bottom: 0; }
+  .legend { display: flex; gap: 16px; font-size: .8rem; color: var(--muted); margin: -4px 0 8px; }
+  .legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; }
+  svg { width: 100%; height: auto; display: block; }
+  svg text { fill: var(--muted); font-size: 11px; }
+  svg .gl { stroke: var(--line); }
+  .row { display: grid; grid-template-columns: 100px 1fr 28px; gap: 10px; align-items: center; padding: 5px 0; cursor: pointer; font-size: .9rem; }
+  .row:hover .name { border-bottom: 2px solid var(--banana); }
+  .track { background: var(--line); border-radius: 99px; height: 8px; overflow: hidden; }
+  .fill { height: 100%; border-radius: 99px; }
+  .count { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .empty { color: var(--muted); font-size: .9rem; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+  .controls input, .controls select, button { background: var(--bg); color: var(--text); border: 1px solid var(--line);
+    border-radius: 10px; padding: 8px 12px; font: inherit; font-size: .9rem; }
+  .controls input { flex: 1 1 200px; }
+  input:focus, select:focus, button:focus-visible { outline: 2px solid var(--banana); outline-offset: 1px; }
+  button { cursor: pointer; }
+  button:hover { background: var(--banana-soft); }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+  th { text-align: left; color: var(--muted); font-weight: 500; font-size: .8rem; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 12px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  td.num, td.muted { color: var(--muted); white-space: nowrap; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; background: var(--bg); border: 1px solid var(--line);
+    border-radius: 99px; padding: 0 8px; margin: 6px 4px 0 0; font-size: .73rem; white-space: nowrap; }
+  .chip i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+  .closed { color: var(--leaf); font-size: .8rem; margin-left: 6px; }
+  #more { margin-top: 12px; }
+  #error { display: none; border: 1px solid var(--danger); border-radius: 16px; padding: 16px; }
+  footer { color: var(--muted); font-size: .8rem; padding: 8px 0 40px; }
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="wrap">
+    <header>
+      <div class="brand"><span style="font-size:1.4rem">🍌</span>BananaLinux <span>Issues</span></div>
+      <div class="meta" id="meta"></div>
+    </header>
+  </div>
+</div>
+<!--BANNER-->
+<main class="wrap">
+  <div id="error"></div>
+  <div id="content" hidden>
+    <section class="stats" id="stats"></section>
+
+    <section class="panel">
+      <h2>Opened and closed per week</h2>
+      <div class="legend">
+        <span><i style="background:var(--banana)"></i>Opened</span>
+        <span><i style="background:var(--leaf)"></i>Closed</span>
+      </div>
+      <div id="activity"></div>
+    </section>
+
+    <section class="cols" style="margin-bottom:16px">
+      <div class="panel"><h2>Open by priority</h2><div id="by-priority"></div></div>
+      <div class="panel"><h2>Open by build version</h2><div id="by-build"></div></div>
+    </section>
+
+    <section class="panel" id="issues">
+      <h2>Issues</h2>
+      <div class="controls">
+        <input id="search" type="search" placeholder="Search title or number">
+        <select id="state">
+          <option value="open">Open</option><option value="closed">Closed</option><option value="all">All</option>
+        </select>
+        <select id="label"><option value="">All labels</option></select>
+        <select id="build"><option value="">All builds</option></select>
+        <select id="sort">
+          <option value="updated">Recently updated</option><option value="newest">Newest</option>
+          <option value="oldest">Oldest</option><option value="comments">Most commented</option>
+        </select>
+        <button id="reset" type="button">Reset</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Issue</th><th>Build</th><th>Updated</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <div id="count" class="empty" style="margin-top:10px"></div>
+      <button id="more" type="button" hidden>Show more</button>
+    </section>
+  </div>
+  <footer>Priority is set by repository administrators.</footer>
+</main>
+
+<script>
+"use strict";
+
+const PRIORITIES = ["P0-critical", "P1-high", "P2-normal", "P3-low"];
+const PRIORITY_COLORS = { "P0-critical": "#d64545", "P1-high": "#f08c2e", "P2-normal": "#f7d23e", "P3-low": "#a8c256" };
+const PAGE_SIZE = 25;
+const DAY = 864e5;
+const UNKNOWN = "__unknown";
+
+const $ = (s) => document.querySelector(s);
+
+// Builds DOM through textContent only, so issue titles can never inject HTML.
+function el(tag, props = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "class") node.className = v;
+    else if (k === "text") node.textContent = v;
+    else if (k.startsWith("on")) node.addEventListener(k.slice(2), v);
+    else node.setAttribute(k, v);
+  }
+  for (const c of children.flat()) {
+    if (c == null) continue;
+    node.append(c.nodeType ? c : document.createTextNode(String(c)));
+  }
+  return node;
+}
+function svgEl(tag, attrs = {}, text) {
+  const n = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+  if (text != null) n.textContent = text;
+  return n;
+}
+
+const hasLabel = (i, name) => i.labels.some((l) => l.name === name);
+const isOpen = (i) => i.state === "open";
+const safeUrl = (u) => (typeof u === "string" && u.startsWith("https://") ? u : "#");
+
+function timeAgo(iso) {
+  const d = Math.floor((Date.now() - new Date(iso).getTime()) / DAY);
+  if (d < 1) return "today";
+  if (d === 1) return "1 day ago";
+  if (d < 60) return `${d} days ago`;
+  return `${Math.floor(d / 30)} months ago`;
+}
+
+// DATA-SOURCE-START
+async function loadData() {
+  const res = await fetch("data.json", { cache: "no-store" });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+// DATA-SOURCE-END
+
+function renderStats(issues) {
+  const open = issues.filter(isOpen);
+  const since = Date.now() - 30 * DAY;
+  const stats = [
+    ["Open issues", open.length],
+    ["Open bugs", open.filter((i) => hasLabel(i, "bug")).length],
+    ["Awaiting triage", open.filter((i) => hasLabel(i, "needs-triage")).length],
+    ["Critical or high", open.filter((i) => hasLabel(i, "P0-critical") || hasLabel(i, "P1-high")).length, true],
+    ["Needs info", open.filter((i) => hasLabel(i, "needs-info")).length],
+    ["Closed in 30 days", issues.filter((i) => i.closed_at && new Date(i.closed_at).getTime() >= since).length],
+  ];
+  $("#stats").replaceChildren(...stats.map(([label, value, alert]) =>
+    el("div", { class: "stat" + (alert && value > 0 ? " alert" : "") },
+      el("div", { class: "value", text: value }), el("div", { class: "label", text: label }))));
+}
+
+function weekStart(date) {
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+  return d.getTime();
+}
+
+function renderActivity(issues) {
+  const WEEKS = 12, WEEK = 7 * DAY;
+  const first = weekStart(new Date()) - (WEEKS - 1) * WEEK;
+  const opened = new Array(WEEKS).fill(0), closed = new Array(WEEKS).fill(0);
+  const bucket = (iso) => Math.round((weekStart(new Date(iso)) - first) / WEEK);
+  for (const i of issues) {
+    const o = bucket(i.created_at);
+    if (o >= 0 && o < WEEKS) opened[o]++;
+    if (i.closed_at) { const c = bucket(i.closed_at); if (c >= 0 && c < WEEKS) closed[c]++; }
+  }
+  const W = 640, H = 200, L = 28, R = 4, T = 8, B = 26, plotW = W - L - R, plotH = H - T - B;
+  const step = Math.max(1, Math.ceil(Math.max(...opened, ...closed, 1) / 4)), max = step * 4;
+  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Issues opened and closed per week" });
+  for (let i = 0; i <= 4; i++) {
+    const y = T + plotH - (plotH * i) / 4;
+    svg.append(svgEl("line", { x1: L, x2: W - R, y1: y, y2: y, class: "gl" }));
+    svg.append(svgEl("text", { x: L - 6, y: y + 4, "text-anchor": "end" }, i * step));
+  }
+  const group = plotW / WEEKS, barW = group * 0.34;
+  for (let i = 0; i < WEEKS; i++) {
+    const x0 = L + i * group + group * 0.14;
+    const label = new Date(first + i * WEEK).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+    [[opened[i], "var(--banana)", "opened"], [closed[i], "var(--leaf)", "closed"]].forEach(([n, fill, name], k) => {
+      const h = (plotH * n) / max;
+      const r = svgEl("rect", { x: x0 + k * (barW + 2), y: T + plotH - h, width: barW, height: h, rx: 3, fill });
+      r.append(svgEl("title", {}, `Week of ${label}: ${n} ${name}`));
+      svg.append(r);
+    });
+    if (i % 2 === 0) svg.append(svgEl("text", { x: x0 + barW, y: H - 8, "text-anchor": "middle" }, label));
+  }
+  $("#activity").replaceChildren(svg);
+}
+
+function barRows(target, rows, color, onPick) {
+  const peak = Math.max(...rows.map((r) => r.count), 1);
+  $(target).replaceChildren(...rows.map((r) =>
+    el("div", { class: "row", onclick: () => onPick(r.value) },
+      el("span", { class: "name", text: r.name }),
+      el("div", { class: "track" }, el("div", { class: "fill", style: `width:${(r.count / peak) * 100}%;background:${color(r)}` })),
+      el("span", { class: "count", text: r.count }))));
+}
+
+function renderBreakdowns(issues) {
+  const open = issues.filter(isOpen);
+  barRows("#by-priority",
+    PRIORITIES.map((p) => ({ name: p, value: p, count: open.filter((i) => hasLabel(i, p)).length })),
+    (r) => PRIORITY_COLORS[r.value], (v) => applyFilter({ label: v }));
+
+  const counts = new Map();
+  for (const i of open) counts.set(i.build_version || UNKNOWN, (counts.get(i.build_version || UNKNOWN) || 0) + 1);
+  const rows = [...counts.entries()]
+    .sort((a, b) => (a[0] === UNKNOWN) - (b[0] === UNKNOWN) || b[0].localeCompare(a[0], undefined, { numeric: true }))
+    .slice(0, 8).map(([v, count]) => ({ name: v === UNKNOWN ? "Unknown" : v, value: v, count }));
+  if (!rows.length) $("#by-build").replaceChildren(el("div", { class: "empty", text: "No open issues." }));
+  else barRows("#by-build", rows, () => "var(--banana)", (v) => applyFilter({ build: v }));
+}
+
+let allIssues = [], visible = PAGE_SIZE;
+
+function chip(label) {
+  const color = /^[0-9a-f]{6}$/i.test(label.color) ? label.color : "999999";
+  return el("span", { class: "chip" }, el("i", { style: `background:#${color}` }), label.name);
+}
+
+function filtered() {
+  const q = $("#search").value.trim().toLowerCase(), state = $("#state").value;
+  const label = $("#label").value, build = $("#build").value;
+  const list = allIssues.filter((i) =>
+    (state === "all" || i.state === state) && (!label || hasLabel(i, label)) &&
+    (!build || (build === UNKNOWN ? !i.build_version : i.build_version === build)) &&
+    (!q || i.title.toLowerCase().includes(q) || String(i.number) === q.replace("#", "")));
+  const by = {
+    updated: (a, b) => new Date(b.updated_at) - new Date(a.updated_at),
+    newest: (a, b) => new Date(b.created_at) - new Date(a.created_at),
+    oldest: (a, b) => new Date(a.created_at) - new Date(b.created_at),
+    comments: (a, b) => b.comments - a.comments,
+  };
+  return list.sort(by[$("#sort").value]);
+}
+
+function renderTable() {
+  const list = filtered(), shown = list.slice(0, visible);
+  $("#rows").replaceChildren(...(shown.length ? shown.map((i) =>
+    el("tr", {},
+      el("td", { class: "num", text: `#${i.number}` }),
+      el("td", {},
+        el("a", { href: safeUrl(i.url), target: "_blank", rel: "noopener", text: i.title }),
+        i.state === "closed" ? el("span", { class: "closed", text: "closed" }) : null,
+        el("div", {}, i.labels.map(chip))),
+      el("td", { class: "muted", text: i.build_version || "\u2014" }),
+      el("td", { class: "muted", text: timeAgo(i.updated_at) }))) :
+    [el("tr", {}, el("td", { colspan: 4, class: "empty", text: "No issues match these filters." }))]));
+  $("#count").textContent = `Showing ${shown.length} of ${list.length}`;
+  $("#more").hidden = shown.length >= list.length;
+}
+
+function applyFilter({ label = "", build = "" }) {
+  $("#state").value = "open"; $("#label").value = label; $("#build").value = build;
+  visible = PAGE_SIZE; renderTable();
+  $("#issues").scrollIntoView({ behavior: "smooth" });
+}
+
+function setupControls() {
+  const labels = [...new Set(allIssues.flatMap((i) => i.labels.map((l) => l.name)))].sort();
+  $("#label").append(...labels.map((n) => el("option", { value: n, text: n })));
+  const builds = [...new Set(allIssues.map((i) => i.build_version).filter(Boolean))]
+    .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+  $("#build").append(...builds.map((n) => el("option", { value: n, text: n })), el("option", { value: UNKNOWN, text: "Unknown" }));
+  for (const id of ["#search", "#state", "#label", "#build", "#sort"]) {
+    $(id).addEventListener("input", () => { visible = PAGE_SIZE; renderTable(); });
+  }
+  $("#more").addEventListener("click", () => { visible += PAGE_SIZE; renderTable(); });
+  $("#reset").addEventListener("click", () => {
+    $("#search").value = ""; $("#state").value = "open"; $("#label").value = "";
+    $("#build").value = ""; $("#sort").value = "updated"; visible = PAGE_SIZE; renderTable();
+  });
+}
+
+async function main() {
+  let data;
+  try { data = await loadData(); }
+  catch (err) {
+    const box = $("#error");
+    box.style.display = "block";
+    box.textContent = `Could not load data.json (${err.message}). Run the "Deploy dashboard" workflow first.`;
+    return;
+  }
+  allIssues = data.issues;
+  $("#meta").replaceChildren(
+    el("a", { href: `https://github.com/${data.repo}`, target: "_blank", rel: "noopener", text: data.repo }),
+    ` \u00b7 updated ${new Date(data.generated_at).toLocaleString()}`);
+  renderStats(allIssues); renderActivity(allIssues); renderBreakdowns(allIssues);
+  setupControls(); renderTable();
+  $("#content").hidden = false;
+}
+main();
+</script>
+</body>
+</html>

@@ -13,3 +13,4 @@
 # Python bytecode
 __pycache__/
 *.pyc
+site/data.json

@@ -1,0 +1,68 @@
+name: Bug report
+description: Report something that is not working in BananaLinux
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug.
+        Please fill in every required field. Reports without this information cannot be reproduced and may be closed.
+  - type: input
+    id: version
+    attributes:
+      label: BananaLinux version
+      description: The release or ISO version number. Add the branch if you built it yourself.
+      placeholder: "0.5.0"
+    validations:
+      required: true
+  - type: textarea
+    id: device
+    attributes:
+      label: Device / hardware
+      description: Tell us what you are running BananaLinux on.
+      placeholder: |
+        - Machine or model:
+        - CPU:
+        - GPU:
+        - RAM:
+        - Boot mode (UEFI or BIOS):
+        - Virtual machine? If yes, which hypervisor (VirtualBox, QEMU, VMware...):
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What is the bug?
+      description: Describe what happens, including what you expected to happen instead.
+      placeholder: "When I do X, Y happens, but I expected Z."
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: List the exact steps so we can reproduce the problem.
+      placeholder: |
+        1. Boot the ISO
+        2. Open the installer
+        3. Click on ...
+        4. See the error
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and screenshots
+      description: |
+        Optional but very helpful. For example the output of `journalctl -b` or `dmesg`, or a screenshot.
+      render: shell
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched the existing issues and this bug has not been reported yet.
+          required: true

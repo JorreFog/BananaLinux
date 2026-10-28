@@ -1,0 +1,18 @@
+name: Add to project
+
+on:
+  issues:
+    types: [opened, reopened]
+  pull_request:
+    types: [opened, reopened]
+
+jobs:
+  add-to-project:
+    runs-on: ubuntu-latest
+    steps:
+      # PROJECT_URL example: https://github.com/users/JorreFog/projects/1
+      # PROJECT_TOKEN is a personal access token with the "project" scope.
+      - uses: actions/add-to-project@v1.0.2
+        with:
+          project-url: ${{ vars.PROJECT_URL }}
+          github-token: ${{ secrets.PROJECT_TOKEN }}
