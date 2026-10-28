@@ -26,6 +26,10 @@ namespace banana
 			return b;
 		}
 		std::string hex(uint32_t rgb) { char b[16]; snprintf(b, sizeof b, "#%06x", rgb & 0xffffff); return b; }
+		// std::lround of a float, inline (its library call was a good part of making a box): for x >= 0, x + 0.5 is
+		// exact in a double and the integer part is the rounding half away from zero, as lround's
+		inline long roundHalfUp(float x) { return x >= 0 ? (long)((double)x + 0.5) : std::lround(x); }
+
 		rnds::Color colorFrom(uint32_t argb, float opacity)
 		{
 			return rnds::Color(((argb >> 16) & 255) / 255.0f, ((argb >> 8) & 255) / 255.0f, (argb & 255) / 255.0f, ((argb >> 24) & 255) / 255.0f * opacity);
@@ -672,20 +676,68 @@ namespace banana
 				return std::sqrt(ox * ox + oy * oy) + std::min(std::max(qx, qy), 0.0f) - r;
 			};
 			auto ch = [](uint32_t c, int sh) { return ((c >> sh) & 255) / 255.0f; };
-			// inside, where the fill covers all of a pixel and is solid with no border on it, the pixel is the fill's
-			// colour whatever the shadow under it: the shadow isn't worked out there, and with a plain fill the
-			// pixel is the same one each time (made once)
+			// inside, where the fill covers all of a pixel with no border on it, the pixel depends on the fill's
+			// colour alone when the fill is solid (whatever the shadow under it: the shadow isn't worked out there) or
+			// there is no shadow: with a plain fill it is the same one each time (made once), with a gradient the
+			// same as the last one when its colour is
 			bool solidFill = stops.empty() ? (fill >> 24) == 255 : std::all_of(stops.begin(), stops.end(), [](const std::pair<float, uint32_t>& st) { return (st.second >> 24) == 255; });
 			bool borderOn = border > 0 && borderColor >> 24;
 			uint8_t inner[4];
 			bool innerMade = false;
+			// the colours' channels (0..1) worked out once, not for every pixel (a division each)
+			const float shC[4] = { ch(shadowColor, 16), ch(shadowColor, 8), ch(shadowColor, 0), ch(shadowColor, 24) };
+			const float bdC[4] = { ch(borderColor, 16), ch(borderColor, 8), ch(borderColor, 0), ch(borderColor, 24) };
+			float fillC[4] = { 0, 0, 0, 0 };
+			uint32_t fillFor = 0;	// (no colour has its alpha 0 here)
+			// a gradient's colour by where the pixel is along it (the last one: along a row it's mostly the same), and
+			// a covered pixel by its colour (the last one)
+			float lastT = std::nanf("");
+			uint32_t lastFc = 0, lastCoveredFc = 0;
+			uint8_t lastCovered[4];
+			bool coveredMade = false;
+			size_t lastK = 0;
+			float lastF = 0;
+			uint32_t lastMixed = 0;
+			auto gradient = [&](float px, float py)
+			{
+				float t = span > 0 ? ((px * dx + py * dy) / span + 0.5f) : 0;
+				if (t == lastT) return lastFc;
+				// the colour between the last two stops it is past (the ones before that were worked out and replaced)
+				size_t k = 0;
+				while (k + 1 < stops.size() && !(t <= stops[k].first)) k++;
+				uint32_t fc = stops.front().second;
+				if (k > 0)
+				{
+					float t0 = stops[k - 1].first, t1 = stops[k].first;
+					float f = t1 > t0 ? std::min(1.0f, (t - t0) / (t1 - t0)) : 1;
+					if (k == lastK && f == lastF) fc = lastMixed;
+					else
+					{
+						uint32_t c0 = stops[k - 1].second, c1 = stops[k].second;
+						auto lp = [&](int sh) { return (uint32_t)roundHalfUp(((c0 >> sh) & 255) + ((float)((c1 >> sh) & 255) - ((c0 >> sh) & 255)) * f) << sh; };
+						fc = lp(24) | lp(16) | lp(8) | lp(0);
+						lastK = k; lastF = f; lastMixed = fc;
+					}
+				}
+				lastT = t; lastFc = fc;
+				return fc;
+			};
+			// with no gradient, a box whose corners match side to side (top to bottom) is the same mirrored: pixel
+			// centres are whole numbers and a half from its middle, exactly, so the mirrored pixel's sums are the
+			// same ones and only half of it (a quarter) is worked out
+			bool xSym = stops.empty() && rad[0] == rad[1] && rad[3] == rad[2], ySym = stops.empty() && rad[0] == rad[3] && rad[1] == rad[2];
 			for (int y = 0; y < b.h; y++)
-				for (int x = 0; x < b.w; x++)
+			{
+				if (ySym && y >= (b.h + 1) / 2) { memcpy(&b.px[(size_t)y * b.w * 4], &b.px[(size_t)(b.h - 1 - y) * b.w * 4], (size_t)b.w * 4); continue; }
+				int xEnd = xSym ? (b.w + 1) / 2 : b.w;
+				for (int x = 0; x < xEnd; x++)
 				{
 					float px = x - pad + 0.5f - hw, py = y - pad + 0.5f - hh;
 					float d = sdf(px, py, 0);
-					bool covered = solidFill && std::min(1.0f, std::max(0.0f, 0.5f - d)) == 1.0f && !(borderOn && std::min(1.0f, std::max(0.0f, 0.5f + d + border)) > 0);
+					bool covered = (solidFill || !pad) && std::min(1.0f, std::max(0.0f, 0.5f - d)) == 1.0f && !(borderOn && std::min(1.0f, std::max(0.0f, 0.5f + d + border)) > 0);
 					if (covered && innerMade && stops.empty()) { memcpy(&b.px[((size_t)y * b.w + x) * 4], inner, 4); continue; }
+					uint32_t gfc = stops.empty() || !(0.5f - d > 0) ? 0 : gradient(px, py);
+					if (covered && !stops.empty() && coveredMade && gfc == lastCoveredFc) { memcpy(&b.px[((size_t)y * b.w + x) * 4], lastCovered, 4); continue; }
 					float r = 0, g = 0, bl = 0, a = 0;	// premultiplied while it's built
 					auto over = [&](float cr, float cg, float cb, float ca)
 					{
@@ -696,38 +748,33 @@ namespace banana
 						float ds = sdf(px, py, spread);
 						float sa = blur > 0 ? 1 - std::min(1.0f, std::max(0.0f, (ds + blur) / (2 * blur))) : std::min(1.0f, std::max(0.0f, 0.5f - ds));
 						sa = sa * sa * (3 - 2 * sa);
-						if (sa > 0) over(ch(shadowColor, 16), ch(shadowColor, 8), ch(shadowColor, 0), sa * ch(shadowColor, 24));
+						if (sa > 0) over(shC[0], shC[1], shC[2], sa * shC[3]);
 					}
 					float cov = std::min(1.0f, std::max(0.0f, 0.5f - d));
 					if (cov > 0)
 					{
 						uint32_t fc = fill;
-						if (!stops.empty())
+						if (!stops.empty()) fc = gfc;
+						if (fc >> 24)
 						{
-							float t = span > 0 ? ((px * dx + py * dy) / span + 0.5f) : 0;
-							fc = stops.front().second;
-							for (size_t k = 1; k < stops.size(); k++)
-							{
-								if (t <= stops[k - 1].first) break;
-								float t0 = stops[k - 1].first, t1 = stops[k].first;
-								float f = t1 > t0 ? std::min(1.0f, (t - t0) / (t1 - t0)) : 1;
-								uint32_t c0 = stops[k - 1].second, c1 = stops[k].second;
-								auto lp = [&](int sh) { return (uint32_t)std::lround(((c0 >> sh) & 255) + ((float)((c1 >> sh) & 255) - ((c0 >> sh) & 255)) * f) << sh; };
-								fc = lp(24) | lp(16) | lp(8) | lp(0);
-							}
+							if (fc != fillFor) { fillFor = fc; fillC[0] = ch(fc, 16); fillC[1] = ch(fc, 8); fillC[2] = ch(fc, 0); fillC[3] = ch(fc, 24); }
+							over(fillC[0], fillC[1], fillC[2], cov * fillC[3]);
 						}
-						if (fc >> 24) over(ch(fc, 16), ch(fc, 8), ch(fc, 0), cov * ch(fc, 24));
 						if (border > 0 && borderColor >> 24)
 						{
 							float bc = cov * std::min(1.0f, std::max(0.0f, 0.5f + d + border));
-							if (bc > 0) over(ch(borderColor, 16), ch(borderColor, 8), ch(borderColor, 0), bc * ch(borderColor, 24));
+							if (bc > 0) over(bdC[0], bdC[1], bdC[2], bc * bdC[3]);
 						}
 					}
 					uint8_t* o = &b.px[((size_t)y * b.w + x) * 4];
-					if (a > 0) { o[0] = (uint8_t)std::lround(r / a * 255); o[1] = (uint8_t)std::lround(g / a * 255); o[2] = (uint8_t)std::lround(bl / a * 255); }
-					o[3] = (uint8_t)std::lround(a * 255);
+					if (a == 1.0f) { o[0] = (uint8_t)roundHalfUp(r * 255); o[1] = (uint8_t)roundHalfUp(g * 255); o[2] = (uint8_t)roundHalfUp(bl * 255); }	// (x / 1 is x)
+					else if (a > 0) { o[0] = (uint8_t)roundHalfUp(r / a * 255); o[1] = (uint8_t)roundHalfUp(g / a * 255); o[2] = (uint8_t)roundHalfUp(bl / a * 255); }
+					o[3] = (uint8_t)roundHalfUp(a * 255);
 					if (covered && !innerMade) { memcpy(inner, o, 4); innerMade = true; }
+					if (covered && !stops.empty()) { memcpy(lastCovered, o, 4); lastCoveredFc = gfc; coveredMade = true; }
 				}
+				for (int x = xEnd; x < b.w; x++) memcpy(&b.px[((size_t)y * b.w + x) * 4], &b.px[((size_t)y * b.w + (b.w - 1 - x)) * 4], 4);
+			}
 			if (shadowColor == 0xffffffffu && !(fill >> 24) && stops.empty() && !(border > 0 && borderColor >> 24))
 			{
 				// a white glow drawn in its colour: kept as coverage (one byte a pixel, blended as text is)
