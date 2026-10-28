@@ -416,7 +416,12 @@ static bool dspFrontendsFree()
 				static bool loggedCue = false;
 				if (!loggedCue || name == "insert") { slog("cue %s", name.c_str()); loggedCue = true; }
 				const Clip& c = clips[name];
-				if (pcm && !routeIsAsPublished())
+				/* bananad republishes the route (it writes /run/banana/audio-route and rewrites /run/banana/asound.conf
+				   together) only on a jack change, so while asound.conf is the one this stream was opened with the DSP
+				   still holds the route applyRoute wrote then: there is nothing to check, and the amixer fork the
+				   check makes has no business on every cue (it is the cue's own start that is delayed). When the route
+				   did move, the check runs as before. */
+				if (pcm && routeId() != routeLoaded && !routeIsAsPublished())
 				{
 					/* write it back, and only if the DSP will not take it that way (a graph keeps the route it was
 					   instantiated with) rebuild the stream -- one extra mixer read, on the one cue that was wrong */

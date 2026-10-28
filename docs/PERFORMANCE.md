@@ -73,3 +73,22 @@ device, not here.
 Re-run `make bench` after a change that touches `soft.cpp`, `kms.cpp` or `library.cpp`, and update this table when
 the numbers move on purpose (a faster path) rather than by accident (a regression). CI does not assert these
 numbers (a shared runner is too noisy); they are for a person to read.
+
+## A very large library (2026-10)
+
+The scan's cost was measured again with a synthetic card of **57,000 games and a 30,000-entry `gamelist.xml`**
+(`make bench` covers only 600):
+
+| library | scan |
+|---|---|
+| 600 games | ~2 ms |
+| 57,000 games, no `gamelist.xml` | ~200 ms |
+| 57,000 games + a 30,000-entry `gamelist.xml` | ~390 ms |
+
+So the scan is a one-time cost that stays in the low milliseconds for any ordinary card and only reaches a few
+hundred ms on the host (a second or more on the handheld's slower CPU and SD card) for tens of thousands of games
+with a scraped `gamelist.xml`. It runs on the loader thread while the boot animation plays, so it is normally
+hidden. **It was not worth a cache**: the cost is bounded, one-time, and only large for a library size the handheld
+is unlikely to see, while a cached library adds a staleness bug (a copied ROM not showing up) that is worse than
+the wait. The file's cost is the per-game work (a dozen `stat`s for art and the `gamelist.xml` parse), which is
+what a cache would have to key on.
