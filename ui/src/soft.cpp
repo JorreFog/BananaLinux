@@ -24,6 +24,61 @@ namespace banana
 		return s + mul255(d, 255 - sa);
 	}
 
+	// the same arithmetic four pixels at a time (each channel in a 16-bit lane: x * k / 255 rounded, as mul255): the
+	// rows' blends below give the same words as the loops of single pixels
+	typedef uint8_t V8 __attribute__((vector_size(16)));
+	typedef uint16_t V16 __attribute__((vector_size(32)));
+	static inline V16 wide(V8 v) { return __builtin_convertvector(v, V16); }
+	static inline V8 narrow(V16 v) { return __builtin_convertvector(v, V8); }
+	static inline V16 div255(V16 t) { t += 128; return (t + (t >> 8)) >> 8; }
+	static inline V8 load4(const uint32_t* p) { V8 v; memcpy(&v, p, 16); return v; }
+	static inline void store4(uint32_t* p, V8 v) { memcpy(p, &v, 16); }
+	static inline V8 alphas(V8 v) { return __builtin_shufflevector(v, v, 3, 3, 3, 3, 7, 7, 7, 7, 11, 11, 11, 11, 15, 15, 15, 15); }
+	// source-over of premultiplied words, s + d * (255 - s's alpha) (as over(): its two shortcuts give the same)
+	static inline V8 over4(V8 s, V8 d) { return s + narrow(div255(wide(d) * wide((V8)(255 - alphas(s))))); }
+
+	// a row of premultiplied words over a row
+	static void overRow(uint32_t* d, const uint32_t* s, int n)
+	{
+		int i = 0;
+		for (; i + 4 <= n; i += 4) store4(d + i, over4(load4(s + i), load4(d + i)));
+		for (; i < n; i++) d[i] = s[i] + mul255(d[i], 255 - (s[i] >> 24));
+	}
+
+	// a row of coverage times a premultiplied colour over a row
+	static void coverRow(uint32_t* d, const uint8_t* c, uint32_t col, int n)
+	{
+		int i = 0;
+		V8 colv = (V8)(uint32_t __attribute__((vector_size(16)))){ col, col, col, col };
+		V16 colw = wide(colv);
+		for (; i + 4 <= n; i += 4)
+		{
+			uint32_t c4; memcpy(&c4, c + i, 4);
+			V8 cv = (V8)(uint32_t __attribute__((vector_size(16)))){ c4, c4, c4, c4 };
+			cv = __builtin_shufflevector(cv, cv, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3);
+			V8 sv = narrow(div255(colw * wide(cv)));
+			store4(d + i, over4(sv, load4(d + i)));
+		}
+		for (; i < n; i++) d[i] = over(mul255(col, c[i]), d[i]);
+	}
+
+	static inline uint32_t tinted(uint32_t p, uint32_t tr, uint32_t tg, uint32_t tb, uint32_t ta);
+
+	// a row of premultiplied words, tinted (tinted()), over a row
+	static void tintRow(uint32_t* d, const uint32_t* s, uint32_t tr, uint32_t tg, uint32_t tb, uint32_t ta, int n)
+	{
+		int i = 0;
+		V16 k = { (uint16_t)tb, (uint16_t)tg, (uint16_t)tr, 255, (uint16_t)tb, (uint16_t)tg, (uint16_t)tr, 255,
+			(uint16_t)tb, (uint16_t)tg, (uint16_t)tr, 255, (uint16_t)tb, (uint16_t)tg, (uint16_t)tr, 255 };
+		V16 a = (V16){} + (uint16_t)ta;
+		for (; i + 4 <= n; i += 4)
+		{
+			V16 sw = div255(div255(wide(load4(s + i)) * k) * a);
+			store4(d + i, over4(narrow(sw), load4(d + i)));
+		}
+		for (; i < n; i++) d[i] = over(tinted(s[i], tr, tg, tb, ta), d[i]);
+	}
+
 	static inline uint32_t premul(const rnds::Color& c)
 	{
 		float a = std::min(1.0f, std::max(0.0f, c.a));
@@ -500,18 +555,14 @@ namespace banana
 				{
 					const uint8_t* s = &t->a8[(size_t)sy * t->w];
 					if (kind == SoftTex::SOLID && solidTint) std::fill(d + a, d + e, tintWord);
-					else for (int i = a; i < e; i++) d[i] = over(mul255(tintWord, s[i]), d[i]);
+					else coverRow(d + a, s + a, tintWord, e - a);
 				}
 				else
 				{
 					const uint32_t* s = &t->px[(size_t)sy * t->w];
 					if (plain && kind == SoftTex::SOLID) memcpy(d + a, s + a, (size_t)(e - a) * 4);
-					else if (plain)
-					{
-						// a mixed run has no clear or solid pixels: always a blend
-						for (int i = a; i < e; i++) d[i] = s[i] + mul255(d[i], 255 - (s[i] >> 24));
-					}
-					else for (int i = a; i < e; i++) d[i] = over(tinted(s[i], tr, tg, tb, ta), d[i]);
+					else if (plain) overRow(d + a, s + a, e - a);	// a mixed run: always a blend
+					else tintRow(d + a, s + a, tr, tg, tb, ta, e - a);
 				}
 			}
 		}
