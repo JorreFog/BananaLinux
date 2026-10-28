@@ -8,24 +8,26 @@
 # The sections and the names show in the order they are written here. A credits.txt on the SD card does NOT replace
 # this one: the credits belong to the build. With no names in this file at all, the Credits row is hidden.
 #
-# PLACEHOLDER: the "Name N = Title" lines below are stand-ins until the real names and titles are filled in. The
-# other names are real and must stay.
+# Made by tools/credits-from-md.py from the owner's credits document: edit that and convert again.
 
 [Development]
-JorreFog = Maintainer
-Name 1 = Title
-Name 2 = Title
+JorreFog = Maintainer/Dev
+Jesussaves-ai = Dev
+marlupatrocinio = Dev
 
 [Translations]
 Majirefy = 简体中文 translation (Simplified Chinese)
 
 [Testing]
-Name 3 = Title
-Name 4 = Title
-Name 5 = Title
+Duncan = QA
+Majirefy = QA
+Smizzle = QA
+nigel777 = QA
+
+[UI/UX]
+Numberjerry = UX/UI Lead
 
 [Thanks]
-# from README.md, "Built on community work" (release/0.5.0)
 jesussaves-ai = BananaLinux Flasher; the PS1 game panel, game panel idle dimming, microphone routing, Reset rows
 casualducko = Zero-copy panel patch for LÖVE apps on both panels (eReaderDS)
 swouapiy = The shutdown animation
@@ -36,4 +38,4 @@ Exophase = DraStic (through SuperDrastic)
 melonDS = The DS emulator core behind BananaDS
 Retro Game Corps = For showing BananaOS to a lot of people
 forthenext = For showing BananaOS to a lot of people
-Name 6 = Title
+GammaOS = for all the inspiration

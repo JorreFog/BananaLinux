@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # credits-from-md.py <credits.md> [out]: the owner's credits document (Markdown: "## Section" headings, "- **Name** —
-# title" lines; anything else is notes and skipped) as system/rootfs/etc/banana/credits.txt, which Settings > System >
+# title" lines, or "- Name - title" without the bold; anything else is notes and skipped) as system/rootfs/etc/banana/credits.txt, which Settings > System >
 # Credits shows. Lines still reading "Name" / "Title" (the template's placeholders) are left out and listed on stderr.
 # Writes to stdout without [out]. Run with python3 -I.
 import re, sys
@@ -19,6 +19,8 @@ HEADER = """# BananaOS credits: Settings > System > Credits shows this file, as 
 """
 
 person = re.compile(r"^\s*[-*+]\s+\*\*(.+?)\*\*\s*(?:[—–:-]+\s*(.*))?$")
+# a list line without the bold name ("* Numberjerry - UX/UI Lead"): the name up to the first " - ", " – " or " — "
+plain = re.compile(r"^\s*[-*+]\s+(.+?)(?:\s+[—–-]\s+(.*))?$")
 out, skipped, section, count = [HEADER], [], None, 0
 for ln in open(sys.argv[1], encoding="utf-8"):
     ln = ln.rstrip("\n")
@@ -28,7 +30,7 @@ for ln in open(sys.argv[1], encoding="utf-8"):
         if section.lower() == "how to write it": section = None; continue
         out.append("\n[%s]\n" % section)
         continue
-    m = person.match(ln)
+    m = person.match(ln) or plain.match(ln)
     if not m or section is None: continue
     name, title = m.group(1).strip(), (m.group(2) or "").strip()
     if name == "Name" or title == "Title":
