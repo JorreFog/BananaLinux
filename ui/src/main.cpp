@@ -1472,7 +1472,7 @@ int main(int argc, char** argv)
 				while (read(sigPipe[0], &c, 1) == 1)
 				{
 					if (c == SIGTERM || c == SIGINT) quit = true;
-					if (c == SIGHUP) sound.release();	// bananad is about to sleep: hand the sound device over
+					if (c == SIGHUP) { logf("SIGHUP: handing the sound device over"); sound.release(); }	// bananad is about to sleep
 					// after a wake: the kernel has the panels showing our buffers again; a redraw brings the clock and
 					// the battery up to date (no modeset: that would run the panels' power-on sequence once more)
 					if (c == SIGUSR1) { std::lock_guard<std::mutex> l(worker.uiLock); be.invalidate(); ui->dataChanged(); dirty = true; batteryDue = true; guard.wake(nowMs(), &sound); sound.setBgm(settings["bgm"] != "off"); }
