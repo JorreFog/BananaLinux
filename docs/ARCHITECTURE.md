@@ -192,6 +192,10 @@ RetroArch runs with two swapchain images and nothing behind the game (no rewind 
 pass, no save-state thumbnails). `tools/qemu-boot.sh` measures all of this from inside the VM over SSH
 (`resources-*.txt`: memory, each program's own, the CPUs' idle share).
 
+The menu's own CPU cost, headless on a PC, is in `docs/PERFORMANCE.md`: `make bench` builds a 600-game library and
+prints the library scan, the menu's start-up and the first frame's render at both canvas sizes, plus the idle and
+scrolling frame cost. It is the host baseline to compare a change against (the VM's is the memory above).
+
 ## The rest of the hardware
 
 **Panels.** Each panel's timing is text in the device tree (the generic DSI driver's `panel_description`). The RG

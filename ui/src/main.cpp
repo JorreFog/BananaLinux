@@ -444,6 +444,8 @@ static int shutdownPercent(const std::string& data)
 }
 
 // ---- headless: the same UI rendered to PNGs, for tests and screenshots ------------------------------------------
+// the library scan's time (set by main before runHeadless, which the `boot` command reports)
+static double gScanMs = 0;
 static int runHeadless(const Options& o, Host& lib, const std::string& variant, const std::string& theme)
 {
 	SoftBackend be(o.w, o.h);
@@ -451,6 +453,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	// one panel as on the RPC: the DS's 640-wide layout, the rest of the panel's height below it
 	float sc = o.single ? o.w / 640.0f : o.h / 480.0f;
 	float canvasW = o.w / sc, canvasH = o.h / sc;
+	double tMenu = nowMs();	// the menu's start-up: its constructor (the theme's build) below, then the first settle
 	std::unique_ptr<Menu> uiPtr(theme == "carts" ? (Menu*)new CartMenu(&lib, &be, o.banana + "/fonts", sc)
 		: isLayoutTheme(layout) ? (Menu*)new LayoutMenu(&lib, &be, layout, sc, o.assets + "/fonts", o.banana + "/fonts", canvasW, canvasH)
 		: new RndsMenu(&lib, &be, o.assets, sc, variant));
@@ -458,6 +461,9 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	double now = 100000;
 	std::stringstream ss(o.script);
 	std::string cmd;
+	// the menu's start-up, in three parts, at this canvas size (the scan ran before runHeadless).
+	// `boot` prints them as one line; see docs/PERFORMANCE.md.
+	double bootScan = gScanMs, bootMenu = 0, bootFrame = 0;
 	auto settle = [&] { ui.update(now); ui.finishWork(); ui.update(now); };
 	auto save = [&](int s, const std::string& path)
 	{
@@ -475,6 +481,15 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	LowBattery low;
 	IdleGuard guard;	// the burn-in guard's logic, driven by the `guard`/`idle` script commands (test only)
 	be.overlay = [&](int screen) { if (screen == 0 && low.showing(now)) settings.notice(low.title, low.body, low.percent); };
+	// the menu's start-up, timed before any script command: its constructor (the theme's build) ran above, the first
+	// update lays out the home shelf, finishWork decodes its pictures, the first render draws the first frame
+	{
+		ui.update(now); ui.finishWork(); ui.update(now);
+		bootMenu = nowMs() - tMenu;
+		double f0 = nowMs();
+		ui.render();
+		bootFrame = nowMs() - f0;
+	}
 	while (std::getline(ss, cmd, ';'))
 	{
 		std::stringstream cs(cmd);
@@ -621,6 +636,10 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			sp.draw(be.canvas(0), be.canvas(1), t, ready != 0);
 			if (!save(0, o.headless + name + "-top.png") || !save(1, o.headless + name + "-bot.png")) return 1;
 			logf("splash %s at %.0f ms", name.c_str(), t);
+		}
+		else if (op == "boot")
+		{
+			logf("boot-metrics: scan %.1f ms, menu %.1f ms, first-frame %.1f ms (canvas %dx%d)", bootScan, bootMenu, bootFrame, o.w, o.h);
 		}
 		else if (op == "bench")
 		{
@@ -944,7 +963,9 @@ int main(int argc, char** argv)
 
 	if (!o.headless.empty())
 	{
+		double t0 = nowMs();
 		lib.scan();
+		gScanMs = nowMs() - t0;
 		return runHeadless(o, lib, variant, settings["theme"]);
 	}
 
