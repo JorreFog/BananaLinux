@@ -27,7 +27,7 @@ if [ "$CORE" = swanstation ]; then
     mkdir -p "$R/config/$C"
     # Written once: a card from before gets Banana's choices, and a change made in RetroArch's own menu afterwards is
     # kept (as run-retroarch's .banana-defaults-1 does). Delete the marker to have the defaults written again.
-    M=$R/.banana-swans-8
+    M=$R/.banana-swans-9
     if [ ! -f "$M" ]; then
         # SwanStation draws its own output; RetroArch's integer scaler is off so the core fills the viewport with its
         # own (4:3) aspect.
@@ -51,6 +51,10 @@ if [ "$CORE" = swanstation ]; then
             # RetroArch's on-screen-message widget layer is not turned with the panel (only the menu texture and the
             # game are), so core OSD lines would read sideways; keep them off.
             printf 'swanstation_Display_ShowOSDMessages = "false"\n'
+            # Straight into the game: the BIOS shell's intro (the Sony logo and the boot sequence) is skipped, as
+            # ROCKNIX sets PatchFastBoot for this device. A couple of games need the real boot, and RetroArch's own
+            # core options can put it back (this file is written once).
+            printf 'swanstation_BIOS_PatchFastBoot = "true"\n'
             # (CDROM_LoadImageToRAM was tried here and is deliberately not: it reads the whole disc into RAM at
             # startup -- 15 s of black screen for a 464 MB CHD -- and the stutter it was meant to cure turned out
             # to be frame pacing, not CD reads. The core's own reader thread (ReadaheadSectors, ReadThread) keeps

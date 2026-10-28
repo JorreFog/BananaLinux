@@ -126,6 +126,19 @@ set_cfg audio_device default
 # the ALSA sequencer: no /dev/snd/seq on this image (no sequencer built), and RetroArch's MIDI driver failing is two
 # error lines in the log on every start and one more driver to go wrong
 set_cfg midi_driver null
+# RetroArch's own pop-ups, off where they are noise (ROCKNIX turns these off on this SoC too): the per-core
+# override Banana keeps makes RetroArch say "Configuration override loaded" on every launch, the pad is configured
+# by Banana so "No autoconfig profiles found" never means anything, and the remap/screenshot lines are the same.
+# Forced here rather than only in the template: the template is copied to a card once, and a card that already has
+# its own retroarch.cfg would never see them.
+set_cfg notification_show_config_override_load false
+set_cfg notification_show_autoconfig false
+set_cfg notification_show_autoconfig_fails false
+set_cfg notification_show_remap_load false
+set_cfg notification_show_screenshot false
+set_cfg notification_show_screenshot_flash 0
+set_cfg notification_show_netplay_extra false
+set_cfg notification_show_when_menu_is_alive false
 # A handheld with one panel has exactly one connector, and RetroArch numbers it 1 -- a card that still says 2 (a
 # two-panel handheld's number, or from the Screen row this build doesn't show) sends RetroArch looking for a
 # connector that isn't there,
