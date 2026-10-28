@@ -1,4 +1,5 @@
 #include "kms.h"
+#include "turn.h"
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
@@ -84,39 +85,11 @@ namespace banana
 	}
 
 	// the part of the composed screen that changed, into a scanout buffer the panel turns by rot: a turned rectangle
-	// is written a panel row at a time (contiguous writes, strided reads of the cached screen)
+	// is written a panel row at a time (contiguous writes, strided reads of the cached screen). The quarter turns are
+	// a transpose, done four pixels at a time -- see src/turn.h (and its unit test, tests/turn-test.cpp).
 	void Display::turn(const uint32_t* src, Buf& bf, const Damage& d)
 	{
-		if (rot == 90)
-		{
-			// a quarter turn clockwise: the screen's top row becomes the panel's right column
-			for (int x = d.x0; x < d.x1; x++)
-			{
-				uint32_t* row = (uint32_t*)(bf.map + (size_t)x * bf.pitch);
-				for (int y = d.y0; y < d.y1; y++)
-					row[H - 1 - y] = src[(size_t)y * W + x];
-			}
-		}
-		else if (rot == 270)
-		{
-			// the other way: the screen's top row becomes the panel's left column, and the screen's left column the
-			// panel's bottom row (a mirror would be row = x, col = y -- the text would read backwards)
-			for (int x = d.x0; x < d.x1; x++)
-			{
-				uint32_t* row = (uint32_t*)(bf.map + (size_t)(W - 1 - x) * bf.pitch);
-				for (int y = d.y0; y < d.y1; y++)
-					row[y] = src[(size_t)y * W + x];
-			}
-		}
-		else
-		{
-			for (int y = d.y0; y < d.y1; y++)
-			{
-				uint32_t* row = (uint32_t*)(bf.map + (size_t)(H - 1 - y) * bf.pitch);
-				for (int x = d.x0; x < d.x1; x++)
-					row[W - 1 - x] = src[(size_t)y * W + x];
-			}
-		}
+		turnRect(src, bf.map, bf.pitch, W, H, rot, d.x0, d.y0, d.x1, d.y1);
 	}
 
 	// one panel: the connector named like top when it is connected, else any connected connector with a mode (the

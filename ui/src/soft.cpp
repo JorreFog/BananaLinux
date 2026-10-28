@@ -24,6 +24,46 @@ namespace banana
 		return s + mul255(d, 255 - sa);
 	}
 
+	// four premultiplied words a step: d[i] = s[i] + mul255(d[i], 255 - (s[i] >> 24)), the mixed run's blend (a run
+	// with no clear or solid pixel, so every source alpha is in [1, 254] and `over`'s branches never fire). Byte for
+	// byte the scalar loop below, in 16-bit lanes: the mul255's multiply, its +0x80 rounding and its (t + (t>>8))>>8
+	// all fit 16 bits (a channel times k is at most 255*255), and the source-over sum can't carry between bytes
+	// (the premultiplied source's channel is at most its alpha, which is at most 255 - k).
+#if defined(__SSE2__) || defined(__ARM_NEON) || defined(__aarch64__)
+	typedef uint32_t V4u32 __attribute__((vector_size(16)));
+	typedef uint16_t V8u16 __attribute__((vector_size(16)));
+	static void blendOver(const uint32_t* s, uint32_t* d, int n)
+	{
+		const V4u32 v255 = { 255, 255, 255, 255 }, ff00ff = { 0x00ff00ffu, 0x00ff00ffu, 0x00ff00ffu, 0x00ff00ffu };
+		const V8u16 v80 = { 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80 };
+		const V8u16 v0ff = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+		const V8u16 vf00 = { 0xff00, 0xff00, 0xff00, 0xff00, 0xff00, 0xff00, 0xff00, 0xff00 };
+		int i = 0;
+		for (; i + 4 <= n; i += 4)
+		{
+			V4u32 sv, dv;
+			memcpy(&sv, s + i, sizeof sv);
+			memcpy(&dv, d + i, sizeof dv);
+			V4u32 k = v255 - (sv >> 24);	// 255 - alpha, in each word's low 16 bits
+			V8u16 k16 = (V8u16)(k | (k << 16));	// ... and its high 16, so both of a word's lanes have it
+			V8u16 rb = (V8u16)(dv & ff00ff);	// blue in lane 0, red in lane 1
+			rb = rb * k16 + v80;
+			rb = ((rb + ((rb >> 8) & v0ff)) >> 8) & v0ff;
+			V8u16 ag = (V8u16)((dv >> 8) & ff00ff);	// green in lane 0, alpha in lane 1
+			ag = ag * k16 + v80;
+			ag = (ag + ((ag >> 8) & v0ff)) & vf00;
+			V4u32 out = sv + (V4u32)(rb | ag);
+			memcpy(d + i, &out, sizeof out);
+		}
+		for (; i < n; i++) { uint32_t v = s[i]; d[i] = v + mul255(d[i], 255 - (v >> 24)); }
+	}
+#else
+	static void blendOver(const uint32_t* s, uint32_t* d, int n)
+	{
+		for (int i = 0; i < n; i++) { uint32_t v = s[i]; d[i] = v + mul255(d[i], 255 - (v >> 24)); }
+	}
+#endif
+
 	static inline uint32_t premul(const rnds::Color& c)
 	{
 		float a = std::min(1.0f, std::max(0.0f, c.a));
@@ -429,7 +469,7 @@ namespace banana
 					else if (plain)
 					{
 						// a mixed run has no clear or solid pixels: always a blend
-						for (int i = a; i < e; i++) d[i] = s[i] + mul255(d[i], 255 - (s[i] >> 24));
+						blendOver(s + a, d + a, e - a);
 					}
 					else for (int i = a; i < e; i++) d[i] = over(tinted(s[i], tr, tg, tb, ta), d[i]);
 				}

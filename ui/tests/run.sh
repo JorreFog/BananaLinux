@@ -9,6 +9,11 @@ FX=$OUT/fixture
 rm -rf "$OUT"; mkdir -p "$OUT"
 "$HERE/tests/fixture.sh" "$FX" >/dev/null
 fail=0
+# the panel rotation's transpose (src/turn.h): the tiled path must match the scalar loop for any rectangle. QEMU's
+# panel reports no orientation, so this is what covers the handheld's 90-degree panel.
+${CXX:-c++} -O2 -std=c++17 -Wno-unused-function -o "$OUT/turn-test" "$HERE/tests/turn-test.cpp" 2> "$OUT/turn-build.log" ||
+    { echo "FAIL: can't build turn-test (see $OUT/turn-build.log)"; fail=1; }
+[ "$fail" = 1 ] || "$OUT/turn-test" > "$OUT/turn.log" 2>&1 || { echo "FAIL: turn-test"; cat "$OUT/turn.log"; fail=1; }
 for size in 640x480 1024x768; do
     log=$OUT/$size.log
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" \

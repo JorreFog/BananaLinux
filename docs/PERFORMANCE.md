@@ -44,6 +44,30 @@ What the numbers say:
 - **Scrolling is 1–3 ms**: ~41–49% of pixels redrawn — the list tiles and the shelf that moved, not the whole
   screen. This is the number to watch for I-1 (SIMD `soft.cpp`) and I-4 (`kms.cpp` rotation).
 
+## What a change moved (why this doc exists)
+
+The compositor's cost is **opaque blits through `memcpy`**, which is already SIMD and bandwidth-bound; the two
+compute loops that were *not* vectorized are the mixed-run blend in `soft.cpp` and the rotated present in
+`kms.cpp`. Profiling a 1024×768 scroll (gprof, the `bench` workload) put `blitRuns` at 46% of the menu's own time,
+and within it:
+
+| loop | share of a scrolling frame | after |
+|---|---|---|
+| mixed-run blend (`soft.cpp`, `s + mul255(d, 255-sa)`) | ~11% | 1.54× faster (a 16-bit-lane SIMD `blendOver`) |
+| rotated present (`kms.cpp` `turn`, the device's path) | not measurable on the host | 1.58× faster (a 4×4 register transpose) |
+
+The mixed blend and `turnRect` are **byte-exact** with the scalar loops: `turnRect` is checked by
+`ui/tests/turn-test.cpp` (run by `make test`) for every rectangle of the panel's own size and odd ones, and the
+blend against 16M random inputs. The end-to-end scrolling frame moved from ~2.8 ms to ~2.5 ms at 1024×768 (~10%);
+the rotation is only exercised on the handheld (QEMU's panel reports no orientation), so its win shows on the
+device, not here.
+
+> **Verifying pixel-exactness across a rebuild:** the renderer is *not* byte-reproducible between two binaries of
+> different layout — GCC contracts some of RndsRaster's float math into FMA at `-O2`, and the pattern of contraction
+> shifts a glyph by a pixel. Two builds of the *same* source can render differently for that reason. To compare a
+> build against another, build both with `CXXFLAGS="-O2 -ffp-contract=off"`; then the same screens come out
+> identical. (`make test` does not compare against golden images, so this only matters when verifying a change.)
+
 ## Re-baselining
 
 Re-run `make bench` after a change that touches `soft.cpp`, `kms.cpp` or `library.cpp`, and update this table when
