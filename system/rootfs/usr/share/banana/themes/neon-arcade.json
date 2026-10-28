@@ -1,0 +1,1898 @@
+{
+  "name": "Neon Arcade",
+  "author": "Banana Theme Studio",
+  "base": "dark",
+  "font": "pixel",
+  "screens": {
+    "home": {
+      "top": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "#202430",
+          "gradient": {
+            "angle": 180,
+            "stops": [
+              "#04000b",
+              "#160431 40%",
+              "#4b0b66 62%",
+              "#4b0b66"
+            ]
+          }
+        },
+        {
+          "type": "list",
+          "source": "range",
+          "direction": "free",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 300,
+          "itemW": 150,
+          "itemH": 190,
+          "gap": 14,
+          "scrollMode": "center",
+          "item": {
+            "type": "rect",
+            "w": "=1 + mod(i, 3) * 0.6",
+            "h": "=1 + mod(i, 3) * 0.6",
+            "children": [],
+            "x": "=mod(i * 137 + 23, 640)",
+            "y": "=30 + mod(i * 89, 210)",
+            "fill": "#ffffff",
+            "opacity": "=0.25 + mod(i * 7, 5) * 0.15"
+          },
+          "count": 46,
+          "range": 60
+        },
+        {
+          "type": "rect",
+          "x": 320,
+          "y": 300,
+          "w": 230,
+          "h": 230,
+          "fill": "#202430",
+          "ax": 0.5,
+          "ay": 0.5,
+          "radius": "50%",
+          "gradient": {
+            "angle": 180,
+            "stops": [
+              "#fff7a8",
+              "#ffb347 38%",
+              "#ff2bd6 72%",
+              "#9d17ff"
+            ]
+          },
+          "shadow": {
+            "x": 0,
+            "y": 0,
+            "blur": 46,
+            "spread": 2,
+            "color": "#ff2bd680"
+          }
+        },
+        {
+          "type": "list",
+          "source": "range",
+          "direction": "free",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 300,
+          "itemW": 150,
+          "itemH": 190,
+          "gap": 14,
+          "scrollMode": "center",
+          "item": {
+            "type": "rect",
+            "w": "=2 * sqrt(max(0, (230) * (230) / 4 - (300 - (300 - (230) * 0.33 + i * (230) * 0.055) - (2 + i * (230) * 0.009) / 2) * (300 - (300 - (230) * 0.33 + i * (230) * 0.055) - (2 + i * (230) * 0.009) / 2))) + 2",
+            "h": "=(2 + i * (230) * 0.009)",
+            "children": [],
+            "x": "=320 - sqrt(max(0, (230) * (230) / 4 - (300 - (300 - (230) * 0.33 + i * (230) * 0.055) - (2 + i * (230) * 0.009) / 2) * (300 - (300 - (230) * 0.33 + i * (230) * 0.055) - (2 + i * (230) * 0.009) / 2))) - 1",
+            "y": "=(300 - (230) * 0.33 + i * (230) * 0.055)",
+            "fill": "=mix('#160431', '#4b0b66', 0.55 + i * 0.07)"
+          },
+          "count": 6,
+          "range": 10
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 300,
+          "w": 640,
+          "h": 180,
+          "fill": "#202430",
+          "gradient": {
+            "angle": 180,
+            "stops": [
+              "#14002e",
+              "#05000d"
+            ]
+          }
+        },
+        {
+          "type": "list",
+          "source": "range",
+          "direction": "free",
+          "x": 0,
+          "y": 300,
+          "w": 640,
+          "h": 180,
+          "itemW": 150,
+          "itemH": 190,
+          "gap": 14,
+          "scrollMode": "center",
+          "item": {
+            "type": "rect",
+            "w": 640,
+            "h": "=1 + 2 * pow((i + easeOut(progress(moved, 650))) / 10, 2)",
+            "children": [],
+            "x": 0,
+            "y": "=180 * pow((i + easeOut(progress(moved, 650))) / 10, 2)",
+            "fill": "=alpha(pink, 0.3 + 0.07 * i)"
+          },
+          "count": 10,
+          "range": 20
+        },
+        {
+          "type": "list",
+          "source": "range",
+          "direction": "free",
+          "x": 0,
+          "y": 300,
+          "w": 640,
+          "h": 180,
+          "itemW": 150,
+          "itemH": 190,
+          "gap": 14,
+          "scrollMode": "center",
+          "item": {
+            "type": "rect",
+            "w": "=max(2, abs((floor(i / 24) - 6)) * 7.875 + 1.5)",
+            "h": 8.5,
+            "children": [],
+            "x": "=320 + (floor(i / 24) - 6) * (14 + (mod(i, 24) * 7.5) * 1.05) - ((floor(i / 24) - 6) < 0 ? abs((floor(i / 24) - 6)) * 7.875 : 0)",
+            "y": "=(mod(i, 24) * 7.5)",
+            "fill": "=alpha(pink, 0.25 + 0.75 * mod(i, 24) / 24)"
+          },
+          "count": 312,
+          "range": 400
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 300,
+          "w": 640,
+          "h": 36,
+          "fill": "#202430",
+          "gradient": {
+            "angle": 180,
+            "stops": [
+              "#14002ef0",
+              "#14002e00"
+            ]
+          }
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 299,
+          "w": 640,
+          "h": 2,
+          "fill": "#ff7be0",
+          "shadow": {
+            "x": 0,
+            "y": 0,
+            "blur": 14,
+            "spread": 1,
+            "color": "#ff2bd6"
+          }
+        },
+        {
+          "type": "text",
+          "x": 320,
+          "y": 58,
+          "size": 40,
+          "use": "marquee",
+          "ax": 0.5,
+          "w": 600,
+          "lineHeight": 42,
+          "text": "=upper(sys.name)",
+          "outline": {
+            "width": 2,
+            "color": "#ff2bd6"
+          },
+          "scale": "=0.82 + 0.18 * easeOutBack(progress(moved, 420))",
+          "opacity": "=easeOut(progress(moved, 260))"
+        },
+        {
+          "type": "text",
+          "x": 20,
+          "y": 158,
+          "text": "=sys.games + ' GAMES  /  ' + upper(either(sys.time, '0m')) + ' PLAYED'",
+          "size": 14,
+          "color": "=cyan",
+          "w": 600,
+          "align": "center",
+          "spacing": 2,
+          "opacity": "=easeOut(progress(moved, 500))"
+        },
+        {
+          "type": "text",
+          "x": 40,
+          "y": 436,
+          "text": "=sys.hasResume ? 'CONTINUE? ' + upper(sys.resumeTitle) : 'PRESS A TO START'",
+          "size": 16,
+          "color": "=gold",
+          "w": 560,
+          "align": "center",
+          "spacing": 2,
+          "outline": {
+            "width": 2,
+            "color": "#14002e"
+          },
+          "opacity": "=0.35 + 0.65 * abs(cos(easeOut(progress(moved, 1400)) * 9.4248))"
+        }
+      ],
+      "bottom": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "#202430",
+          "gradient": {
+            "angle": 180,
+            "stops": [
+              "#1a032e",
+              "#07000f 70%"
+            ]
+          }
+        },
+        {
+          "type": "list",
+          "source": "range",
+          "direction": "free",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 440,
+          "itemW": 150,
+          "itemH": 190,
+          "gap": 14,
+          "scrollMode": "center",
+          "item": {
+            "type": "rect",
+            "w": 640,
+            "h": 1,
+            "children": [],
+            "x": 0,
+            "y": "=i * 4",
+            "fill": "#ffffff07"
+          },
+          "count": 110,
+          "range": 200
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 16,
+          "text": "- CHOOSE YOUR CABINET -",
+          "size": 14,
+          "color": "=cyan",
+          "w": 640,
+          "align": "center",
+          "spacing": 4
+        },
+        {
+          "type": "text",
+          "x": 520,
+          "y": 17,
+          "text": "=pad(cursor + 1, 2, '0') + '/' + pad(count, 2, '0')",
+          "size": 12,
+          "color": "=pink",
+          "w": 100,
+          "align": "right"
+        },
+        {
+          "type": "list",
+          "source": "systems",
+          "direction": "free",
+          "x": 0,
+          "y": 44,
+          "w": 640,
+          "h": 320,
+          "itemW": 150,
+          "itemH": 190,
+          "gap": 14,
+          "scrollMode": "center",
+          "item": {
+            "type": "group",
+            "w": 190,
+            "h": 250,
+            "children": [
+              {
+                "type": "rect",
+                "x": 0,
+                "y": 0,
+                "w": 190,
+                "h": 250,
+                "use": "neonFrame",
+                "with": {
+                  "col": "=sel ? pink : violet",
+                  "glow": "=sel ? 26 : 0"
+                }
+              },
+              {
+                "type": "rect",
+                "x": 12,
+                "y": 12,
+                "w": 166,
+                "h": 52,
+                "fill": "#202430",
+                "radius": 6,
+                "gradient": {
+                  "angle": 180,
+                  "stops": [
+                    "=lighten(item.color, 0.3)",
+                    "=item.color",
+                    "=darken(item.color, 0.4)"
+                  ]
+                },
+                "shadow": {
+                  "x": 0,
+                  "y": 0,
+                  "blur": "=sel ? 18 : 0",
+                  "spread": 0,
+                  "color": "=alpha(lighten(item.color, 0.2), 0.9)"
+                }
+              },
+              {
+                "type": "text",
+                "x": 14,
+                "y": 12,
+                "size": 14,
+                "use": "marquee",
+                "w": 162,
+                "h": 52,
+                "lineHeight": 16,
+                "text": "=upper(item.name)",
+                "shadow": {
+                  "x": 0,
+                  "y": 2,
+                  "color": "#00000090"
+                }
+              },
+              {
+                "type": "rect",
+                "x": 18,
+                "y": 74,
+                "w": 154,
+                "h": 112,
+                "fill": "#04000a",
+                "radius": 12,
+                "border": 3,
+                "borderColor": "#000000",
+                "shadow": {
+                  "x": 0,
+                  "y": 0,
+                  "blur": "=sel ? 14 : 0",
+                  "spread": 0,
+                  "color": "#21f6ff70"
+                }
+              },
+              {
+                "type": "image",
+                "x": 37,
+                "y": 84,
+                "w": 116,
+                "h": 92,
+                "src": "{item.icon}",
+                "fit": "pixelContain",
+                "opacity": "=sel ? 1 : 0.55"
+              },
+              {
+                "type": "rect",
+                "x": 8,
+                "y": 196,
+                "w": 174,
+                "h": 44,
+                "fill": "#202430",
+                "radius": 6,
+                "gradient": {
+                  "angle": 180,
+                  "stops": [
+                    "#3b1166",
+                    "#1b0533"
+                  ]
+                },
+                "border": 1,
+                "borderColor": "#ffffff22"
+              },
+              {
+                "type": "rect",
+                "x": 30,
+                "y": 226,
+                "w": 28,
+                "h": 8,
+                "fill": "#000000",
+                "radius": 4
+              },
+              {
+                "type": "rect",
+                "x": 42,
+                "y": 212,
+                "w": 4,
+                "h": 16,
+                "fill": "#c8c8d0"
+              },
+              {
+                "type": "rect",
+                "x": 36,
+                "y": 202,
+                "w": 16,
+                "h": 16,
+                "fill": "#ff3860",
+                "radius": "50%"
+              },
+              {
+                "type": "rect",
+                "x": 94,
+                "y": 209,
+                "w": 18,
+                "h": 18,
+                "fill": "=cyan",
+                "radius": "50%",
+                "border": 2,
+                "borderColor": "#00000066"
+              },
+              {
+                "type": "rect",
+                "x": 120,
+                "y": 209,
+                "w": 18,
+                "h": 18,
+                "fill": "=pink",
+                "radius": "50%",
+                "border": 2,
+                "borderColor": "#00000066"
+              },
+              {
+                "type": "rect",
+                "x": 146,
+                "y": 209,
+                "w": 18,
+                "h": 18,
+                "fill": "=gold",
+                "radius": "50%",
+                "border": 2,
+                "borderColor": "#00000066"
+              },
+              {
+                "type": "rect",
+                "x": 134,
+                "y": -9,
+                "w": 48,
+                "h": 18,
+                "fill": "=gold",
+                "radius": 4,
+                "visible": "=item.fav"
+              },
+              {
+                "type": "text",
+                "x": 134,
+                "y": -7,
+                "text": "FAV",
+                "size": 12,
+                "color": "#1a0024",
+                "w": 48,
+                "align": "center",
+                "visible": "=item.fav"
+              }
+            ],
+            "x": "=320 + pos * 212",
+            "y": 160,
+            "ax": 0.5,
+            "ay": 0.5,
+            "scale": "=1 - min(abs(pos), 2) * 0.19",
+            "opacity": "=1 - min(abs(pos), 2) * 0.32"
+          },
+          "loop": true,
+          "range": 4
+        },
+        {
+          "type": "list",
+          "source": "systems",
+          "direction": "row",
+          "x": "=320 - systems.count * 9",
+          "y": 384,
+          "w": "=systems.count * 18",
+          "h": 8,
+          "itemW": 12,
+          "itemH": 6,
+          "gap": 6,
+          "scrollMode": "none",
+          "item": {
+            "type": "rect",
+            "w": 12,
+            "h": 6,
+            "children": [],
+            "radius": 1,
+            "fill": "=sel ? cyan : '#3d2066'",
+            "shadow": {
+              "x": 0,
+              "y": 0,
+              "blur": "=sel ? 8 : 0",
+              "spread": 0,
+              "color": "#21f6ff"
+            }
+          }
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 404,
+          "text": "=upper(either(sys.maker, ''))",
+          "size": 12,
+          "color": "=violet",
+          "w": 640,
+          "align": "center",
+          "spacing": 3
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 440,
+          "w": 640,
+          "h": 40,
+          "fill": "#07000fe8"
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 440,
+          "w": 640,
+          "h": 1,
+          "fill": "#ff2bd6",
+          "shadow": {
+            "x": 0,
+            "y": 0,
+            "blur": 8,
+            "color": "#ff2bd6"
+          }
+        },
+        {
+          "type": "list",
+          "source": "hints",
+          "direction": "row",
+          "x": 18,
+          "y": 450,
+          "w": 604,
+          "h": 22,
+          "itemW": 150,
+          "itemH": 190,
+          "gap": 22,
+          "scrollMode": "none",
+          "item": {
+            "type": "group",
+            "children": [
+              {
+                "type": "group",
+                "x": 0,
+                "y": 0,
+                "children": [
+                  {
+                    "type": "text",
+                    "text": "{item.key}",
+                    "size": 12,
+                    "color": "#1a0024",
+                    "font": "pixel"
+                  }
+                ],
+                "layout": "row",
+                "padding": 3,
+                "radius": 3,
+                "fill": "=pink"
+              },
+              {
+                "type": "text",
+                "text": "=upper(item.label)",
+                "size": 12,
+                "color": "=cyan",
+                "font": "pixel"
+              }
+            ],
+            "layout": "row",
+            "gap": 7,
+            "align": "center"
+          },
+          "flow": true
+        }
+      ]
+    },
+    "library": {
+      "top": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "#202430",
+          "gradient": {
+            "angle": 180,
+            "stops": [
+              "#04000b",
+              "#1d0438 62%",
+              "#3a0a55"
+            ]
+          }
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 380,
+          "w": 640,
+          "h": 100,
+          "fill": "#202430",
+          "gradient": {
+            "angle": 180,
+            "stops": [
+              "#14002e",
+              "#05000d"
+            ]
+          }
+        },
+        {
+          "type": "list",
+          "source": "range",
+          "direction": "free",
+          "x": 0,
+          "y": 380,
+          "w": 640,
+          "h": 100,
+          "itemW": 150,
+          "itemH": 190,
+          "gap": 14,
+          "scrollMode": "center",
+          "item": {
+            "type": "rect",
+            "w": 640,
+            "h": "=1 + 2 * pow((i + easeOut(progress(moved, 650))) / 10, 2)",
+            "children": [],
+            "x": 0,
+            "y": "=100 * pow((i + easeOut(progress(moved, 650))) / 10, 2)",
+            "fill": "=alpha(pink, 0.3 + 0.07 * i)"
+          },
+          "count": 10,
+          "range": 20
+        },
+        {
+          "type": "list",
+          "source": "range",
+          "direction": "free",
+          "x": 0,
+          "y": 380,
+          "w": 640,
+          "h": 100,
+          "itemW": 150,
+          "itemH": 190,
+          "gap": 14,
+          "scrollMode": "center",
+          "item": {
+            "type": "rect",
+            "w": "=max(2, abs((floor(i / 24) - 6)) * 4.375 + 1.5)",
+            "h": 5.166666666666667,
+            "children": [],
+            "x": "=320 + (floor(i / 24) - 6) * (14 + (mod(i, 24) * 4.16667) * 1.05) - ((floor(i / 24) - 6) < 0 ? abs((floor(i / 24) - 6)) * 4.375 : 0)",
+            "y": "=(mod(i, 24) * 4.16667)",
+            "fill": "=alpha(pink, 0.25 + 0.75 * mod(i, 24) / 24)"
+          },
+          "count": 312,
+          "range": 400
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 380,
+          "w": 640,
+          "h": 36,
+          "fill": "#202430",
+          "gradient": {
+            "angle": 180,
+            "stops": [
+              "#14002ef0",
+              "#14002e00"
+            ]
+          }
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 379,
+          "w": 640,
+          "h": 2,
+          "fill": "#ff7be0",
+          "shadow": {
+            "x": 0,
+            "y": 0,
+            "blur": 14,
+            "spread": 1,
+            "color": "#ff2bd6"
+          }
+        },
+        {
+          "type": "rect",
+          "x": 36,
+          "y": 54,
+          "w": 258,
+          "h": 258,
+          "use": "neonFrame",
+          "with": {
+            "col": "=cyan",
+            "glow": 22
+          }
+        },
+        {
+          "type": "rect",
+          "x": 50,
+          "y": 68,
+          "w": 230,
+          "h": 230,
+          "fill": "#000000",
+          "radius": 6
+        },
+        {
+          "type": "image",
+          "x": 50,
+          "y": "=68 + 115 * (1 - easeOut(progress(moved, 320)))",
+          "w": 230,
+          "h": "=max(2, 230 * easeOut(progress(moved, 320)))",
+          "src": "=either(game.art, game.box, game.romIcon, game.icon)",
+          "fit": "=game.art || game.box ? 'cover' : 'pixelContain'",
+          "fallback": "{sys.icon}",
+          "radius": 6
+        },
+        {
+          "type": "list",
+          "source": "range",
+          "direction": "free",
+          "x": 50,
+          "y": 68,
+          "w": 230,
+          "h": 230,
+          "itemW": 150,
+          "itemH": 190,
+          "gap": 14,
+          "scrollMode": "center",
+          "item": {
+            "type": "rect",
+            "w": 230,
+            "h": 1.5,
+            "children": [],
+            "x": 0,
+            "y": "=i * 4 + 2",
+            "fill": "#00000050"
+          },
+          "count": 57,
+          "range": 80
+        },
+        {
+          "type": "rect",
+          "x": 50,
+          "y": 68,
+          "w": 230,
+          "h": 230,
+          "fill": "#202430",
+          "radius": 6,
+          "gradient": {
+            "angle": 180,
+            "stops": [
+              "#ffffff1c",
+              "#ffffff00 35%",
+              "#00000000 70%",
+              "#00000070"
+            ]
+          }
+        },
+        {
+          "type": "rect",
+          "x": 50,
+          "y": 182,
+          "w": 230,
+          "h": 3,
+          "fill": "#e8ffff",
+          "opacity": "=1 - easeOut(progress(moved, 400))",
+          "shadow": {
+            "x": 0,
+            "y": 0,
+            "blur": 12,
+            "spread": 1,
+            "color": "#21f6ff"
+          }
+        },
+        {
+          "type": "text",
+          "x": 316,
+          "y": 58,
+          "text": "PLAYER 1",
+          "size": 12,
+          "color": "=pink",
+          "spacing": 3
+        },
+        {
+          "type": "text",
+          "x": "=316 + 26 * (1 - easeOut(progress(moved, 300)))",
+          "y": 78,
+          "size": 24,
+          "use": "marquee",
+          "align": "left",
+          "valign": "top",
+          "w": 300,
+          "lineHeight": 27,
+          "maxLines": 3,
+          "text": "=upper(game.title)",
+          "outline": {
+            "width": 2,
+            "color": "#ff2bd6"
+          },
+          "opacity": "=easeOut(progress(moved, 300))"
+        },
+        {
+          "type": "text",
+          "x": 316,
+          "y": 150,
+          "text": "=upper(game.sub)",
+          "size": 12,
+          "color": "=violet",
+          "w": 300,
+          "spacing": 1
+        },
+        {
+          "type": "text",
+          "x": 316,
+          "y": 178,
+          "text": "PLAYS",
+          "size": 12,
+          "color": "=pink",
+          "spacing": 2
+        },
+        {
+          "type": "text",
+          "x": 316,
+          "y": 194,
+          "text": "=pad(num(game.plays), 6, '0')",
+          "size": 28,
+          "color": "=gold",
+          "shadow": {
+            "x": 0,
+            "y": 3,
+            "color": "#ff2bd6aa"
+          }
+        },
+        {
+          "type": "text",
+          "x": 316,
+          "y": 236,
+          "text": "TIME",
+          "size": 12,
+          "color": "=pink",
+          "spacing": 2
+        },
+        {
+          "type": "text",
+          "x": 316,
+          "y": 252,
+          "text": "=upper(either(game.time, '--'))",
+          "size": 16,
+          "color": "=cyan",
+          "w": 140
+        },
+        {
+          "type": "text",
+          "x": 466,
+          "y": 236,
+          "text": "LAST",
+          "size": 12,
+          "color": "=pink",
+          "spacing": 2
+        },
+        {
+          "type": "text",
+          "x": 466,
+          "y": 252,
+          "text": "=upper(either(game.last, 'never'))",
+          "size": 16,
+          "color": "=cyan",
+          "w": 160
+        },
+        {
+          "type": "rect",
+          "x": 316,
+          "y": 284,
+          "w": 110,
+          "h": 22,
+          "fill": "=gold",
+          "radius": 4,
+          "visible": "=game.fav",
+          "shadow": {
+            "x": 0,
+            "y": 0,
+            "blur": 10,
+            "spread": 0,
+            "color": "#ffe66d99"
+          }
+        },
+        {
+          "type": "text",
+          "x": 316,
+          "y": 287,
+          "text": "FAVORITE",
+          "size": 13,
+          "color": "#1a0024",
+          "w": 110,
+          "align": "center",
+          "visible": "=game.fav"
+        }
+      ],
+      "bottom": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "=night"
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 8,
+          "text": "HIGH SCORES",
+          "size": 26,
+          "color": "=gold",
+          "w": 640,
+          "align": "center",
+          "spacing": 3,
+          "outline": {
+            "width": 2,
+            "color": "#3a0a00"
+          },
+          "shadow": {
+            "x": 0,
+            "y": 3,
+            "color": "=pink"
+          }
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 42,
+          "text": "=upper(sys.name)",
+          "size": 12,
+          "color": "=cyan",
+          "w": 640,
+          "align": "center",
+          "spacing": 3
+        },
+        {
+          "type": "text",
+          "x": 30,
+          "y": 64,
+          "text": "RANK",
+          "size": 11,
+          "color": "=pink",
+          "w": 110,
+          "align": "left",
+          "spacing": 2
+        },
+        {
+          "type": "text",
+          "x": 110,
+          "y": 64,
+          "text": "NAME",
+          "size": 11,
+          "color": "=pink",
+          "w": 110,
+          "align": "left",
+          "spacing": 2
+        },
+        {
+          "type": "text",
+          "x": 494,
+          "y": 64,
+          "text": "PLAYS",
+          "size": 11,
+          "color": "=pink",
+          "w": 110,
+          "align": "right",
+          "spacing": 2
+        },
+        {
+          "type": "rect",
+          "x": 16,
+          "y": 80,
+          "w": 608,
+          "h": 1,
+          "fill": "#ff2bd660"
+        },
+        {
+          "type": "list",
+          "source": "games",
+          "direction": "column",
+          "x": 16,
+          "y": 84,
+          "w": 608,
+          "h": 350,
+          "itemW": 608,
+          "itemH": 35,
+          "gap": 0,
+          "scrollMode": "edge",
+          "item": {
+            "type": "group",
+            "w": 608,
+            "h": 35,
+            "children": [
+              {
+                "type": "rect",
+                "x": 0,
+                "y": 1,
+                "w": 608,
+                "h": 33,
+                "fill": "#00000000",
+                "radius": 4,
+                "states": [
+                  {
+                    "when": "=sel",
+                    "fill": "#2a0834",
+                    "border": 2,
+                    "borderColor": "#ff2bd6",
+                    "shadow": {
+                      "x": 0,
+                      "y": 0,
+                      "blur": 12,
+                      "spread": 0,
+                      "color": "#ff2bd6aa"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "x": "=2 + 6 * (1 - easeOutBack(progress(moved, 260)))",
+                "y": 8,
+                "text": "=sel ? '>' : ''",
+                "size": 16,
+                "color": "=cyan"
+              },
+              {
+                "type": "text",
+                "x": 16,
+                "y": 8,
+                "text": "=(i + 1) + ((mod(i + 1, 100) >= 11 && mod(i + 1, 100) <= 13) ? 'TH' : pick(mod(i + 1, 10), 'TH', 'ST', 'ND', 'RD', 'TH', 'TH', 'TH', 'TH', 'TH', 'TH'))",
+                "size": 16,
+                "color": "=pick(mod(i, 5), cyan, pink, gold, '#7dff8a', '#ff9f43')"
+              },
+              {
+                "type": "rect",
+                "x": 78,
+                "y": 13,
+                "w": 8,
+                "h": 8,
+                "fill": "=gold",
+                "visible": "=item.fav",
+                "shadow": {
+                  "x": 0,
+                  "y": 0,
+                  "blur": 6,
+                  "spread": 0,
+                  "color": "=gold"
+                }
+              },
+              {
+                "type": "text",
+                "x": 100,
+                "y": 8,
+                "text": ". . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . ",
+                "size": 16,
+                "color": "=alpha(pick(mod(i, 5), cyan, pink, gold, '#7dff8a', '#ff9f43'), 0.45)",
+                "w": 490
+              },
+              {
+                "type": "group",
+                "x": 92,
+                "y": 4,
+                "children": [
+                  {
+                    "type": "text",
+                    "text": "=len(item.title) > 30 ? upper(substr(item.title, 0, 29)) + '..' : upper(item.title)",
+                    "size": 16,
+                    "color": "=sel ? '#ffffff' : pick(mod(i, 5), cyan, pink, gold, '#7dff8a', '#ff9f43')"
+                  }
+                ],
+                "layout": "row",
+                "padding": 4,
+                "fill": "=sel ? '#2a0834' : night"
+              },
+              {
+                "type": "group",
+                "x": 600,
+                "y": 4,
+                "children": [
+                  {
+                    "type": "text",
+                    "text": "=pad(num(item.plays), 6, '0')",
+                    "size": 16,
+                    "color": "=sel ? gold : pick(mod(i, 5), cyan, pink, gold, '#7dff8a', '#ff9f43')"
+                  }
+                ],
+                "layout": "row",
+                "padding": 4,
+                "ax": 1,
+                "fill": "=sel ? '#2a0834' : night"
+              }
+            ]
+          }
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 200,
+          "text": "{empty.title}",
+          "size": 18,
+          "color": "=pink",
+          "visible": "=empty",
+          "w": 640,
+          "align": "center"
+        },
+        {
+          "type": "text",
+          "x": 40,
+          "y": 232,
+          "text": "{empty.hint}",
+          "size": 12,
+          "color": "=cyan",
+          "visible": "=empty",
+          "w": 560,
+          "align": "center",
+          "wrap": true
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 440,
+          "w": 640,
+          "h": 40,
+          "fill": "#07000fe8"
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 440,
+          "w": 640,
+          "h": 1,
+          "fill": "#ff2bd6",
+          "shadow": {
+            "x": 0,
+            "y": 0,
+            "blur": 8,
+            "color": "#ff2bd6"
+          }
+        },
+        {
+          "type": "list",
+          "source": "hints",
+          "direction": "row",
+          "x": 18,
+          "y": 450,
+          "w": 604,
+          "h": 22,
+          "itemW": 150,
+          "itemH": 190,
+          "gap": 22,
+          "scrollMode": "none",
+          "item": {
+            "type": "group",
+            "children": [
+              {
+                "type": "group",
+                "x": 0,
+                "y": 0,
+                "children": [
+                  {
+                    "type": "text",
+                    "text": "{item.key}",
+                    "size": 12,
+                    "color": "#1a0024",
+                    "font": "pixel"
+                  }
+                ],
+                "layout": "row",
+                "padding": 3,
+                "radius": 3,
+                "fill": "=pink"
+              },
+              {
+                "type": "text",
+                "text": "=upper(item.label)",
+                "size": 12,
+                "color": "=cyan",
+                "font": "pixel"
+              }
+            ],
+            "layout": "row",
+            "gap": 7,
+            "align": "center"
+          },
+          "flow": true
+        }
+      ]
+    },
+    "all": {
+      "top": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 28,
+          "fill": "#202430",
+          "gradient": {
+            "angle": 180,
+            "stops": [
+              "#07000fee",
+              "#07000f99"
+            ]
+          }
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 28,
+          "w": 640,
+          "h": 1,
+          "fill": "#ff2bd680"
+        },
+        {
+          "type": "text",
+          "x": 14,
+          "y": 6,
+          "text": "1UP",
+          "size": 14,
+          "color": "=pink",
+          "spacing": 2
+        },
+        {
+          "type": "text",
+          "x": 64,
+          "y": 7,
+          "text": "=lib ? upper(game.systemName) : 'CREDIT ' + pad(systems.count, 2, '0')",
+          "size": 12,
+          "color": "=violet",
+          "w": 200,
+          "spacing": 1
+        },
+        {
+          "type": "text",
+          "x": 220,
+          "y": 5,
+          "text": "{clock}",
+          "size": 16,
+          "color": "=cyan",
+          "w": 200,
+          "align": "center"
+        },
+        {
+          "type": "text",
+          "x": 440,
+          "y": 7,
+          "text": "=battery < 0 ? '' : battery + '%'",
+          "size": 12,
+          "color": "=cyan",
+          "w": 88,
+          "align": "right"
+        },
+        {
+          "type": "rect",
+          "x": 538,
+          "y": 16,
+          "w": 4,
+          "h": 4,
+          "fill": "=online ? cyan : '#ffffff30'"
+        },
+        {
+          "type": "rect",
+          "x": 544,
+          "y": 13,
+          "w": 4,
+          "h": 7,
+          "fill": "=online ? cyan : '#ffffff30'"
+        },
+        {
+          "type": "rect",
+          "x": 550,
+          "y": 10,
+          "w": 4,
+          "h": 10,
+          "fill": "=online ? cyan : '#ffffff30'"
+        },
+        {
+          "type": "rect",
+          "x": 566,
+          "y": 8,
+          "w": 30,
+          "h": 13,
+          "fill": "#00000000",
+          "use": "neonFrame",
+          "radius": 2,
+          "gradient": {
+            "angle": 180,
+            "stops": [
+              "#00000000",
+              "#00000000"
+            ]
+          },
+          "with": {
+            "col": "=cyan",
+            "glow": 6
+          }
+        },
+        {
+          "type": "rect",
+          "x": 596,
+          "y": 12,
+          "w": 3,
+          "h": 5,
+          "fill": "=cyan"
+        },
+        {
+          "type": "rect",
+          "x": 569,
+          "y": 11,
+          "w": "=24 * clamp(battery, 0, 100) / 100",
+          "h": 7,
+          "fill": "=charging ? gold : battery < 20 ? '#ff3860' : cyan",
+          "visible": "=battery >= 0"
+        },
+        {
+          "type": "text",
+          "x": 606,
+          "y": 5,
+          "text": "=charging ? '+' : ''",
+          "size": 14,
+          "color": "=gold"
+        }
+      ]
+    },
+    "launch": {
+      "top": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "#202430",
+          "gradient": {
+            "angle": 180,
+            "stops": [
+              "#04000b",
+              "#160431 40%",
+              "#4b0b66 62%",
+              "#4b0b66"
+            ]
+          }
+        },
+        {
+          "type": "list",
+          "source": "range",
+          "direction": "free",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 300,
+          "itemW": 150,
+          "itemH": 190,
+          "gap": 14,
+          "scrollMode": "center",
+          "item": {
+            "type": "rect",
+            "w": "=1 + mod(i, 3) * 0.6",
+            "h": "=1 + mod(i, 3) * 0.6",
+            "children": [],
+            "x": "=mod(i * 137 + 23, 640)",
+            "y": "=30 + mod(i * 89, 210)",
+            "fill": "#ffffff",
+            "opacity": "=0.25 + mod(i * 7, 5) * 0.15"
+          },
+          "count": 46,
+          "range": 60
+        },
+        {
+          "type": "rect",
+          "x": 320,
+          "y": 300,
+          "w": "=(230 + 300 * easeIn(launch.progress))",
+          "h": "=(230 + 300 * easeIn(launch.progress))",
+          "fill": "#202430",
+          "ax": 0.5,
+          "ay": 0.5,
+          "radius": "50%",
+          "gradient": {
+            "angle": 180,
+            "stops": [
+              "#fff7a8",
+              "#ffb347 38%",
+              "#ff2bd6 72%",
+              "#9d17ff"
+            ]
+          },
+          "shadow": {
+            "x": 0,
+            "y": 0,
+            "blur": 46,
+            "spread": 2,
+            "color": "#ff2bd680"
+          }
+        },
+        {
+          "type": "list",
+          "source": "range",
+          "direction": "free",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 300,
+          "itemW": 150,
+          "itemH": 190,
+          "gap": 14,
+          "scrollMode": "center",
+          "item": {
+            "type": "rect",
+            "w": "=2 * sqrt(max(0, (230 + 300 * easeIn(launch.progress)) * (230 + 300 * easeIn(launch.progress)) / 4 - (300 - (300 - (230 + 300 * easeIn(launch.progress)) * 0.33 + i * (230 + 300 * easeIn(launch.progress)) * 0.055) - (2 + i * (230 + 300 * easeIn(launch.progress)) * 0.009) / 2) * (300 - (300 - (230 + 300 * easeIn(launch.progress)) * 0.33 + i * (230 + 300 * easeIn(launch.progress)) * 0.055) - (2 + i * (230 + 300 * easeIn(launch.progress)) * 0.009) / 2))) + 2",
+            "h": "=(2 + i * (230 + 300 * easeIn(launch.progress)) * 0.009)",
+            "children": [],
+            "x": "=320 - sqrt(max(0, (230 + 300 * easeIn(launch.progress)) * (230 + 300 * easeIn(launch.progress)) / 4 - (300 - (300 - (230 + 300 * easeIn(launch.progress)) * 0.33 + i * (230 + 300 * easeIn(launch.progress)) * 0.055) - (2 + i * (230 + 300 * easeIn(launch.progress)) * 0.009) / 2) * (300 - (300 - (230 + 300 * easeIn(launch.progress)) * 0.33 + i * (230 + 300 * easeIn(launch.progress)) * 0.055) - (2 + i * (230 + 300 * easeIn(launch.progress)) * 0.009) / 2))) - 1",
+            "y": "=(300 - (230 + 300 * easeIn(launch.progress)) * 0.33 + i * (230 + 300 * easeIn(launch.progress)) * 0.055)",
+            "fill": "=mix('#160431', '#4b0b66', 0.55 + i * 0.07)"
+          },
+          "count": 6,
+          "range": 10
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 300,
+          "w": 640,
+          "h": 180,
+          "fill": "#202430",
+          "gradient": {
+            "angle": 180,
+            "stops": [
+              "#14002e",
+              "#05000d"
+            ]
+          }
+        },
+        {
+          "type": "list",
+          "source": "range",
+          "direction": "free",
+          "x": 0,
+          "y": 300,
+          "w": 640,
+          "h": 180,
+          "itemW": 150,
+          "itemH": 190,
+          "gap": 14,
+          "scrollMode": "center",
+          "item": {
+            "type": "rect",
+            "w": 640,
+            "h": "=1 + 2 * pow((i + mod(launch.t / 110, 1)) / 10, 2)",
+            "children": [],
+            "x": 0,
+            "y": "=180 * pow((i + mod(launch.t / 110, 1)) / 10, 2)",
+            "fill": "=alpha(pink, 0.3 + 0.07 * i)"
+          },
+          "count": 10,
+          "range": 20
+        },
+        {
+          "type": "list",
+          "source": "range",
+          "direction": "free",
+          "x": 0,
+          "y": 300,
+          "w": 640,
+          "h": 180,
+          "itemW": 150,
+          "itemH": 190,
+          "gap": 14,
+          "scrollMode": "center",
+          "item": {
+            "type": "rect",
+            "w": "=max(2, abs((floor(i / 24) - 6)) * 7.875 + 1.5)",
+            "h": 8.5,
+            "children": [],
+            "x": "=320 + (floor(i / 24) - 6) * (14 + (mod(i, 24) * 7.5) * 1.05) - ((floor(i / 24) - 6) < 0 ? abs((floor(i / 24) - 6)) * 7.875 : 0)",
+            "y": "=(mod(i, 24) * 7.5)",
+            "fill": "=alpha(pink, 0.25 + 0.75 * mod(i, 24) / 24)"
+          },
+          "count": 312,
+          "range": 400
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 300,
+          "w": 640,
+          "h": 36,
+          "fill": "#202430",
+          "gradient": {
+            "angle": 180,
+            "stops": [
+              "#14002ef0",
+              "#14002e00"
+            ]
+          }
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 299,
+          "w": 640,
+          "h": 2,
+          "fill": "#ff7be0",
+          "shadow": {
+            "x": 0,
+            "y": 0,
+            "blur": 14,
+            "spread": 1,
+            "color": "#ff2bd6"
+          }
+        },
+        {
+          "type": "text",
+          "x": 320,
+          "y": 78,
+          "size": 50,
+          "use": "marquee",
+          "ax": 0.5,
+          "w": 600,
+          "lineHeight": 52,
+          "text": "GET READY",
+          "color": "=gold",
+          "outline": {
+            "width": 3,
+            "color": "#ff2bd6"
+          },
+          "scale": "=easeOutBack(clamp(launch.t / 450, 0, 1))"
+        },
+        {
+          "type": "text",
+          "x": 30,
+          "y": 160,
+          "text": "=upper(game.title)",
+          "size": 18,
+          "color": "=cyan",
+          "w": 580,
+          "align": "center",
+          "spacing": 2,
+          "outline": {
+            "width": 3,
+            "color": "#14002e"
+          },
+          "opacity": "=clamp((launch.t - 250) / 300, 0, 1)"
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "#ffffff",
+          "opacity": "=smoothstep(0.86, 1, launch.progress)"
+        }
+      ],
+      "bottom": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "#202430",
+          "gradient": {
+            "angle": 180,
+            "stops": [
+              "#1a032e",
+              "#07000f"
+            ]
+          }
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 44,
+          "text": "INSERT COIN",
+          "size": 26,
+          "color": "#ff3860",
+          "w": 640,
+          "align": "center",
+          "spacing": 4,
+          "opacity": "=launch.progress < 0.5 ? step(0.5, mod(launch.t / 260, 1)) : 0"
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 44,
+          "text": "1 COIN  1 PLAY",
+          "size": 26,
+          "color": "=gold",
+          "w": 640,
+          "align": "center",
+          "spacing": 4,
+          "opacity": "=launch.progress < 0.5 ? 0 : 1"
+        },
+        {
+          "type": "rect",
+          "x": 245,
+          "y": 110,
+          "w": 150,
+          "h": 200,
+          "fill": "#202430",
+          "radius": 14,
+          "gradient": {
+            "angle": 180,
+            "stops": [
+              "#55556a",
+              "#24242f"
+            ]
+          },
+          "border": 2,
+          "borderColor": "#00000080",
+          "shadow": {
+            "x": 0,
+            "y": 6,
+            "blur": 18,
+            "spread": 0,
+            "color": "#00000099"
+          }
+        },
+        {
+          "type": "rect",
+          "x": 309,
+          "y": 150,
+          "w": 22,
+          "h": 76,
+          "fill": "#050008",
+          "radius": 4,
+          "border": 2,
+          "borderColor": "#ff3860",
+          "shadow": {
+            "x": 0,
+            "y": 0,
+            "blur": "=launch.progress < 0.5 ? 8 : 22",
+            "spread": 0,
+            "color": "#ff3860"
+          }
+        },
+        {
+          "type": "text",
+          "x": 245,
+          "y": 250,
+          "text": "25c",
+          "size": 16,
+          "color": "#ff3860",
+          "w": 150,
+          "align": "center"
+        },
+        {
+          "type": "rect",
+          "x": 320,
+          "y": "=lerp(-40, 188, easeIn(clamp(launch.progress / 0.45, 0, 1)))",
+          "w": "=max(6, 56 * abs(cos(launch.t / 70)))",
+          "h": 56,
+          "fill": "#202430",
+          "ax": 0.5,
+          "ay": 0.5,
+          "radius": "50%",
+          "gradient": {
+            "angle": 180,
+            "stops": [
+              "#fff3a0",
+              "#ffc531 50%",
+              "#c98a00"
+            ]
+          },
+          "border": 3,
+          "borderColor": "#8a5a00",
+          "visible": "=launch.progress < 0.47"
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 330,
+          "text": "=launch.progress < 0.5 ? 'CREDIT 00' : 'CREDIT 01'",
+          "size": 20,
+          "color": "=cyan",
+          "w": 640,
+          "align": "center",
+          "spacing": 2
+        },
+        {
+          "type": "list",
+          "source": "range",
+          "direction": "row",
+          "x": 120,
+          "y": 380,
+          "w": 400,
+          "h": 18,
+          "itemW": 18,
+          "itemH": 18,
+          "gap": 2,
+          "scrollMode": "none",
+          "item": {
+            "type": "rect",
+            "w": 18,
+            "h": 18,
+            "children": [],
+            "radius": 2,
+            "fill": "=i < launch.progress * 20 ? cyan : '#21f6ff22'"
+          },
+          "count": 20
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 408,
+          "text": "LOADING",
+          "size": 12,
+          "color": "=violet",
+          "w": 640,
+          "align": "center",
+          "spacing": 4
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "#ffffff",
+          "opacity": "=smoothstep(0.86, 1, launch.progress)"
+        }
+      ]
+    }
+  },
+  "colors": {
+    "screenBg": "#0b0118",
+    "ink": "#f4e9ff"
+  },
+  "vars": {
+    "pink": "#ff2bd6",
+    "cyan": "#21f6ff",
+    "gold": "#ffe66d",
+    "night": "#07000f",
+    "violet": "#7b3fb0",
+    "lib": "=view != 'home'"
+  },
+  "components": {
+    "neonFrame": {
+      "type": "rect",
+      "children": [],
+      "radius": 10,
+      "gradient": {
+        "angle": 180,
+        "stops": [
+          "#2a0a4a",
+          "#110320"
+        ]
+      },
+      "border": 2,
+      "borderColor": "=col",
+      "shadow": {
+        "x": 0,
+        "y": 0,
+        "blur": "=glow",
+        "spread": 0,
+        "color": "=alpha(col, 0.75)"
+      }
+    },
+    "marquee": {
+      "type": "text",
+      "children": [],
+      "font": "pixel",
+      "color": "#ffffff",
+      "align": "center",
+      "valign": "middle",
+      "wrap": true,
+      "maxLines": 2,
+      "outline": {
+        "width": 2,
+        "color": "#1a0024"
+      },
+      "shadow": {
+        "x": 0,
+        "y": 3,
+        "color": "=alpha(cyan, 0.8)"
+      }
+    }
+  },
+  "input": {
+    "home": {
+      "left": "prev",
+      "right": "next",
+      "up": "first",
+      "down": "last",
+      "a": "open",
+      "x": "resume",
+      "y": "fav",
+      "l": "prev",
+      "r": "next"
+    },
+    "library": {
+      "up": "prev",
+      "down": "next",
+      "left": "prevSystem",
+      "right": "nextSystem",
+      "a": "open",
+      "b": "back",
+      "y": "fav",
+      "l": "first",
+      "r": "last"
+    }
+  },
+  "hints": {
+    "home": [
+      [
+        "A",
+        "Start"
+      ],
+      [
+        "X",
+        "Continue"
+      ],
+      [
+        "Y",
+        "Fav"
+      ]
+    ],
+    "library": [
+      [
+        "A",
+        "Play"
+      ],
+      [
+        "B",
+        "Back"
+      ],
+      [
+        "Y",
+        "Fav"
+      ],
+      [
+        "L/R",
+        "Top/End"
+      ]
+    ]
+  },
+  "behavior": {
+    "cues": {
+      "insert": 1150
+    },
+    "launchMs": 1700,
+    "scrollMs": 75,
+    "settleMs": 700,
+    "fps": 30,
+    "wrap": true,
+    "extraHints": true
+  },
+  "accent": "#ff2bd6"
+}
