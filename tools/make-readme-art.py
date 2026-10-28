@@ -6,6 +6,11 @@ pixel, so the font keeps its own spacing); the screenshots are the panels' own s
 per panel).
 
     tools/make-readme-art.py <grabs dir> <out dir> [<thumbnails dir> [<flasher screenshot>]]
+    tools/make-readme-art.py --art <out dir> [<themes dir>]
+    tools/make-readme-art.py --banner <grabs dir> <out dir>
+
+--art draws only what needs no grabs: stats.png, the section headers and, from <themes dir> (the Theme Studio's
+<theme>/preview-home-{top,bottom}.png), themes.png, the layout themes' gallery.
 
 <thumbnails dir> holds <video id>.jpg, each video's YouTube thumbnail (i.ytimg.com/vi/<id>/maxresdefault.jpg), for the
 video cards (VIDEOS); without it they are left out. [<flasher screenshot>] is docs/screenshot.png from
@@ -305,6 +310,9 @@ def superdrastic_logo(k):
 
 # ---- the banner ---------------------------------------------------------------------------------------------------
 
+RELEASE = "BETA 0.5.0"     # the banner's yellow chip
+
+
 def banner(grabs):
     k = 4
     W, H = 1280, 840
@@ -329,7 +337,7 @@ def banner(grabs):
     d.rectangle([x + 2, y + 6, x + 130, y + 13], fill=YELLOW)
     y += 40
     cx = x + 2
-    for t, fg, bg, br in (("ALPHA 0.4.2", BLACK, YELLOW, YELLOW_DARK), ("RG DS", CREAM, CARD, LINE),
+    for t, fg, bg, br in ((RELEASE, BLACK, YELLOW, YELLOW_DARK), ("RG DS", CREAM, CARD, LINE),
                           ("RG DS PLUS", CREAM, CARD, LINE)):
         c = chip(t, fg, bg, br, 4, 3)
         out.alpha_composite(c, (cx, y))
@@ -487,10 +495,11 @@ VIDEOS = [  # (YouTube id, channel, title)
 
 # ---- the numbers, as the home screen shows a system's -------------------------------------------------------------
 
-STATS = [  # (icon, number, unit, label)
-    ("gear", "3.9", "S", "RG DS TO MENU"),
-    ("gear", "5.9", "S", "RG DS PLUS TO MENU"),
-    ("nds", "2", "", "DS EMULATORS"),
+STATS = [  # (icon, number, unit, label): 0.5.0's release notes
+    ("gear", "9.8", "S", "POWER TO MENU"),
+    ("cart", "360", "MS", "A TO GAME"),
+    ("nds", "+12.6", "%", "BANANADS SPEED"),
+    ("gamepad", "2", "", "DS EMULATORS"),
 ]
 
 
@@ -519,6 +528,45 @@ def stats():
         lb = text(label, CREAM_DARK, 3)
         t.alpha_composite(lb, ((t.width - lb.width) // 2, y + nm.height + 14))
         out.alpha_composite(drop(t, 10), (i * (tw + gap), 0))
+    return out
+
+
+# ---- the layout themes ------------------------------------------------------------------------------------------
+
+THEMES = [  # (folder, name): the ten made with the Banana Theme Studio, in 0.5.0's gallery order
+    ("comic-panel", "Comic Panel"), ("coral-reef", "Coral Reef"), ("felt-table", "Felt Table"),
+    ("neon-arcade", "Neon Arcade"), ("oak-bookshelf", "Oak Bookshelf"), ("orbital-hud", "Orbital HUD"),
+    ("paper-notebook", "Paper Notebook"), ("phosphor-terminal", "Phosphor Terminal"),
+    ("swiss-poster", "Swiss Poster"), ("vinyl-lounge", "Vinyl Lounge"),
+]
+
+
+def themes(previews):
+    """The ten layout themes, each on a small clamshell (its home screen, top over bottom) over its name: five a row.
+    `previews` holds <folder>/preview-home-top.png and preview-home-bottom.png, the Theme Studio's own renders."""
+    k, sw, sh, cols, gap = 3, 66, 49, 5, 20
+    cells = []
+    for folder, name in THEMES:
+        top = Image.open(f"{previews}/{folder}/preview-home-top.png")
+        bot = Image.open(f"{previews}/{folder}/preview-home-bottom.png")
+        c = drop(clamshell(top, bot, sw, sh, k), 6)
+        lb = text(name.upper(), CREAM, 2)
+        cells.append((c, lb))
+    cw, ch = cells[0][0].size
+    lh = mask("H", 2).height
+    rows = -(-len(cells) // cols)
+    W, k2, top = 1280, 4, 28
+    x0 = (W - (cols * cw + (cols - 1) * gap)) // 2
+    rh = ch + 14 + lh + 26
+    H = -(-(top + rows * rh) // k2) * k2
+    # on an opaque panel, as the section headers, so the names read on GitHub's light pages too
+    out = up(prect(W // k2, H // k2, 5, PANEL, LINE), k2)
+    grid = up(dot_grid(W // k2 - 2, H // k2 - 2, 3, PANEL, DOT), k2)
+    out.paste(grid, (k2, k2), up(prect(W // k2 - 2, H // k2 - 2, 4, WHITE), k2))
+    for i, (c, lb) in enumerate(cells):
+        x, y = x0 + (i % cols) * (cw + gap), top + (i // cols) * rh
+        out.alpha_composite(c, (x, y))
+        out.alpha_composite(lb, (x + (cw - 6 - lb.width) // 2, y + ch + 10))
     return out
 
 
@@ -652,10 +700,12 @@ SHOTS = ["home", "library", "options", "settings", "nds", "zh-home", "zh-setting
          "light", "carts"]
 HEADERS = [  # (file, title, icon, subtitle)
     ("what", "What it is", "banana", "Lightweight Linux for two handhelds"),
+    ("new", "New in 0.5.0", "store", "Faster, cooler, Bluetooth and updates over Wi-Fi"),
     ("install", "Get it", "cart", "Install, update and move your saves"),
     ("tour", "A tour", "picture", "Captured on an RG DS Plus running 0.4.2"),
     ("emulators", "Nintendo DS", "nds", "Two emulators. Your choice."),
     ("systems", "More to play", "gamepad", "More systems, apps and ports"),
+    ("themes", "Themes", "collection", "Ten layout themes, made with the Banana Theme Studio"),
     ("hardware", "Built for it", "handheld", "Built for two screens and a lid"),
     ("status", "Status", "tools", "Known issues and what comes next"),
     ("build", "Build", "computer", "Build from source and work on the menu"),
@@ -663,7 +713,21 @@ HEADERS = [  # (file, title, icon, subtitle)
     ("credits", "Credits", "fav", "Built on community work"),
 ]
 
-if __name__ == "__main__":
+if __name__ == "__main__" and sys.argv[1] == "--banner":
+    # tools/make-readme-art.py --banner <grabs dir> <out dir>: only banner.png, from <grabs dir>/home-{top,bot}.png
+    os.makedirs(sys.argv[3], exist_ok=True)
+    banner(sys.argv[2]).save(f"{sys.argv[3]}/banner.png", optimize=True)
+elif __name__ == "__main__" and sys.argv[1] == "--art":
+    # tools/make-readme-art.py --art <out dir> [<themes dir>]: only the pictures drawn from the art and the numbers,
+    # no grabs needed: stats.png, h-<section>.png and, from <themes dir>, themes.png
+    out = sys.argv[2]
+    os.makedirs(out, exist_ok=True)
+    stats().save(f"{out}/stats.png", optimize=True)
+    for i, (f, t, ic, sub) in enumerate(HEADERS):
+        header(t, ic, i + 1, len(HEADERS), sub).save(f"{out}/h-{f}.png", optimize=True)
+    if len(sys.argv) > 3:
+        themes(sys.argv[3]).save(f"{out}/themes.png", optimize=True)
+elif __name__ == "__main__":
     grabs, out = sys.argv[1], sys.argv[2]
     os.makedirs(out, exist_ok=True)
     banner(grabs).save(f"{out}/banner.png", optimize=True)
