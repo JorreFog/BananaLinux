@@ -329,6 +329,17 @@ static bool dspFrontendsFree()
 				 * open, which came up half connected: the first write returned -EIO and prepare -EBUSY, and the
 				 * stream was silent until it closed and reopened. run-retroarch writes its route the same way. */
 				applyRoute();
+				/* The DSP does not take a mixer write until it is ready, and rcS's and bananad's own retries can be
+				 * over by then (their logs read "still reads 'off,off' 3 s after rcS gave up"); the menu would open
+				 * an unrouted graph, which is instantiated with the topology's own 'off' and stays silent for the
+				 * whole session. Make sure the route this stream is about to latch reads back as published before
+				 * opening, retrying the write rather than opening on hope. routeIsAsPublished answers true when
+				 * nothing is published (not this card), so this is a no-op elsewhere. */
+				for (int t = 0; t < 75 && !routeIsAsPublished(); t++)
+				{
+					applyRoute();
+					std::this_thread::sleep_for(std::chrono::milliseconds(200));
+				}
 				bool wasHeld = false;
 				for (int t = 0; t < 12 && !dspFrontendsFree(); t++)
 				{

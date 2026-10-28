@@ -26,9 +26,12 @@ and `docs/RPC-TEST.md` the list to check on the handheld.
 
 - [x] Hardware bring-up, then the list in `docs/RPC-TEST.md`: the panel upright and sharp, brightness and sleep,
       sound and headphones, the buttons, the fan and heat, the card, an update. **In progress** on the units.
-- [ ] The RetroArch menu is sideways while the game is not: `video_rotation` turns the content only, and there is no
-      compositor to turn its own menu. The fix is a Banana patch to `gl2.c` (lay the RGUI at 1240×1080 and rotate
-      the final blit), judged by eye on the handheld
+- [x] Everything RetroArch draws comes out upright: the games run under **cage** (a kiosk Wayland compositor: one
+      application, fullscreen, MIT), which turns the output with the connector's "panel orientation" once for the
+      game, RetroArch's own menu, its OSD and its widgets. `run-retroarch` starts it with `video_rotation = 0` and
+      the Wayland context driver; the per-driver rotation patches are inert under it. The compositor also cost a
+      suspend: libseat's VT-bound seat and bananad's `SIGSTOP` of the game deadlocked the kernel's VT switch, fixed
+      with `SEATD_VTBOUND=0`
 - [ ] Sleep on the unit: measure the wake (`sleep_debug = yes`) and cut it — the panel's power-on sequence, the SD
       card's re-initialisation (MMC_CAP_RUNTIME_RESUME would take it off the wake path), whether Wi-Fi can stay
       loaded; and standby drain over a night
@@ -40,4 +43,5 @@ and `docs/RPC-TEST.md` the list to check on the handheld.
 - [ ] The rest of the Chinese translation (lines added since it was made) and a string extractor for new languages
 - [ ] EmulationStation as an alternative frontend
 - [ ] RetroAchievements progress on the shelf
-- [ ] Turnip (the Vulkan driver) beside freedreno, when a Vulkan game wants it
+- [x] Turnip (the Vulkan driver) beside freedreno: Mesa's freedreno Vulkan, chosen by SwanStation's own renderer
+      option; 60 fps at 5x on the a613 (see `docs/RPC-PORT.md`)

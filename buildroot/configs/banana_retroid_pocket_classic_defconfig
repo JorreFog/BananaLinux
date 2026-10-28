@@ -66,9 +66,18 @@ BR2_PACKAGE_FREETYPE=y
 BR2_PACKAGE_LIBDRM=y
 BR2_PACKAGE_MESA3D=y
 BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_FREEDRENO=y
+# Turnip (freedreno Vulkan) and the Vulkan loader: SwanStation's Vulkan renderer runs at 5x on the a613 (see
+# run-retroarch's video-driver choice). The Buildroot option itself comes from buildroot/buildroot-patches/.
+BR2_PACKAGE_MESA3D_VULKAN_DRIVER_FREEDRENO=y
+BR2_PACKAGE_VULKAN_LOADER=y
+BR2_PACKAGE_VULKAN_TOOLS=y
 BR2_PACKAGE_MESA3D_OPENGL_EGL=y
 BR2_PACKAGE_MESA3D_OPENGL_ES=y
 BR2_PACKAGE_SDL2=y
+# cage: a kiosk Wayland compositor for the games, so the panel's turn (its "panel orientation" property, which
+# wlroots reads) is applied once to everything -- RetroArch's menu, its OSD and any other app -- instead of a
+# per-driver rotation patch.
+BR2_PACKAGE_CAGE=y
 BR2_PACKAGE_SDL2_KMSDRM=y
 BR2_PACKAGE_SDL2_OPENGLES=y
 BR2_PACKAGE_LIBCURL=y

@@ -14,7 +14,7 @@ A/B squashfs, exFAT data) and replace the RK3568/U-Boot hardware layer with
 | Devicetree | ROCKNIX `sm4450-retroid-pocket-classic-revq.dts` (+ common) |
 | Bootloader | **OpenABL** already flashed; reads extlinux from FAT |
 | Firmware | ROCKNIX extra-firmware: ADSP, WPSS, AW88166 ACF, QCA BT |
-| GPU | Mesa freedreno (gallium); Turnip later |
+| GPU | Mesa freedreno (gallium) + **Turnip** (freedreno Vulkan) |
 | Input | kernel `rsinput` (ROCKNIX patch 0016) → evdev |
 | Fan | PM6450 PWM + `pwm_fan` (kernel) |
 
@@ -69,7 +69,7 @@ buildroot/configs/banana_retroid_pocket_classic_defconfig
 ### M3 — Audio, input, GPU
 - AW88166 left/right (channel fix already in DTS), WCD937x headphones.
 - rsinput gamepad mapping (13 keys + L2/R2), no sticks/C/Z.
-- Mesa freedreno; Turnip package later.
+- Mesa freedreno; **Turnip** (freedreno Vulkan) built too, see the Turnip section below.
 
 ### M4 — Updates and flasher
 - A/B update script writes slot b + extlinux DEFAULT (already designed).
@@ -415,22 +415,92 @@ What the branch does instead:
   pointing it at the RPC's trimmed list tested a UI with half its screens missing and failed on 5 checks. `make test`
   is green again.
 
-## Still open: RetroArch's own menu is sideways (the game is not)
+## Turnip: SwanStation's Vulkan renderer (2026-10-28)
 
-`video_rotation = "3"` turns the **content**: RetroArch applies it in the video driver's rotation (`gl2_set_rotation`,
-`gl->rotation`, used for `gl->mvp` and the content blit), which is why the game is upright. RetroArch's own menu is a
-different path: `gfx_display` draws the menu with `dispctx->get_default_mvp()`, and gl2 answers with **`mvp_no_rot`**
--- the menu is deliberately kept in the framebuffer's own orientation, because on every platform where RA rotates
-content (Android, iOS, a rotated core) the *system* is responsible for turning the whole output. ROCKNIX never sees
-this because sway turns the output (`transform` on the output, RA running windowed under Wayland); Banana has no
-compositor here, so the panel's turn is applied to the game only and the menu comes out sideways.
+The a613 is an `a6xx gen1 low` part: it has no hardware multiview, so Turnip reports Vulkan **1.0** (Mesa's
+`tu_device.cc`: `tu_has_multiview ? 1.3 : 1.0`). That is enough -- RetroArch creates its instance at `1.0`, and
+SwanStation's core asks for `VK_API_VERSION_1_0` too.
 
-No setting fixes it. The real fix is a Banana patch to `gfx/drivers/gl2.c` (in the style of the three RA patches
-already in `buildroot/patches/retroarch/`): hand the menu the *swapped* canvas -- lay RGUI out at 1240x1080, the
-panel's landscape shape -- and rotate the final menu blit by `video_rotation`, so a 1240x1080 image turns into the
-1080x1240 framebuffer exactly the way a compositor does. That is a couple of build-and-look cycles on the handheld
-(it has to be judged by eye), which is why it is a decision and not something done silently on top of a working
-game picture.
+How it is built and wired:
+
+- **Mesa**: Buildroot 2026.02.3 predates upstream's `BR2_PACKAGE_MESA3D_VULKAN_DRIVER_FREEDRENO` (added 2026-03), so
+  `buildroot/buildroot-patches/0001-mesa3d-add-freedreno-vulkan-driver.patch` adds it and the Makefile applies that
+  to the downloaded Buildroot (idempotent: a patch already in place is left alone). `freedreno` joins
+  `-Dvulkan-drivers`.
+- **Loader**: `vulkan-loader` and `vulkan-tools` (for `vulkaninfo`) in the defconfig.
+- **RetroArch**: built `--enable-vulkan --enable-vulkan_display` (it was `--disable-vulkan`, and it even logged that
+  it was not compiled against Vulkan).
+- **`run-retroarch`**: sets `video_driver = vulkan` + `video_context_driver = vk_wayland` when SwanStation's
+  renderer is Vulkan, `gl` + `wayland` otherwise -- a libretro core's hardware context comes from the video driver --
+  and starts RetroArch under cage, the kiosk compositor that turns the output (see the section below).
+- **`run-ps1`**: writes `swanstation_GPU_Renderer = "Vulkan"` and `ResolutionScale = "5"`.
+
+On the device `vulkaninfo` reports `Turnip Adreno (TM) 613`, `DRIVER_ID_MESA_TURNIP`, Mesa 26.0.1, apiVersion
+1.0.335. Crash Bandicoot runs a steady 60 fps at 5x for ~11-13% of one core, where the software renderer and the
+freedreno OpenGL path both fell short.
+
+Two things it does not fix: the first seconds of a game still crackle while the amplifiers warm up (the same rise
+the boot log shows), and RetroArch's own menu stayed sideways until the games moved under cage (see below). One trap
+to avoid: the menu's "Safe (128 ms)" audio latency produced *no sound at all* -- the DSP will not take a 128 ms
+buffer and RetroArch gives up on the audio driver entirely -- so that option is gone and `run-retroarch` clamps
+anything unexpected to 64.
+
+The menu is a software texture the drivers blit with `mvp_menu`; the notifications, the FPS counter and the
+widgets are drawn through `gfx_display`, which asks the driver's `get_default_mvp`. Patches 0005/0008 answered that
+for gl3/gl2 and 0010 for the menu here; 0011 answers `mvp_menu` for the Vulkan driver too, or those stay in the
+framebuffer's portrait orientation while the menu is upright. ROCKNIX needs none of it -- RetroArch runs windowed
+under sway, which turns the output. Under cage (below) they no longer matter -- with `video_rotation` at 0 they are
+inert, and they are kept for a card that runs RetroArch on KMS itself.
+
+Two audio traps turned up on the way, both of which read as "the sound broke":
+
+- **The volume keys.** They are bananad's and change the card's mixer, which the DSP latches when a frontend's graph
+  is instantiated -- so a press during a game was inaudible until the menu's next open, and all the way down it was a
+  silent handheld with nothing on screen to say why. In a game bananad now writes `VOLUME_UP`/`VOLUME_DOWN` to
+  `/run/banana/retroarch.cmd` and RetroArch changes its own volume live, with its OSD; only the menu edits the mixer.
+- **The menu's open racing the route.** The DSP refuses a mixer write until it is ready, so rcS's and bananad's own
+  retries ("still reads 'off,off' 3 s after rcS gave up") can be over before it takes, and the menu then opens and
+  latches an unrouted graph that is silent for the whole session. banana-ui now reads the route back and retries the
+  write before it opens.
+
+## Solved: the whole picture upright -- the games run under cage (2026-10-28)
+
+`video_rotation = "3"` turns the **content** only: RetroArch applies it in the video driver's rotation
+(`gl2_set_rotation`, `gl->rotation`, used for `gl->mvp` and the content blit), which is why the game is upright and
+the rest of RetroArch is not. RetroArch's own menu is a different path (`gfx_display`'s `get_default_mvp`, which
+answers with `mvp_no_rot`), and so are the settings rows, the notifications, the FPS counter and the volume widget --
+three drivers, four patches, and the game and the interface never turn together. ROCKNIX never sees any of it because
+sway turns the output and RetroArch runs windowed under Wayland.
+
+So Banana does the same: a game now runs under **cage**, the kiosk compositor (one application, fullscreen, MIT, in
+the image). cage takes DRM master on the panel, and wlroots' DRM backend reads the connector's "panel orientation" --
+the same property banana-ui reads for its own `Display::turn()`. Everything above it is composed once, in the shape
+the user is looking at, and turned by the compositor on the way to the panel: the game, RetroArch's menu, the OSD and
+the widgets. `video_rotation` is 0 (`run-retroarch`), and the per-driver rotation patches are left for the no-cage
+fallback only.
+
+Three things this needed, each of which first looked like something else:
+
+| symptom | cause | fix |
+|---|---|---|
+| RetroArch exits at once under cage (`Failed to create KHR_display surface`) | Buildroot does not rebuild a package when only its `.mk` changes, so `--enable-wayland` had never reached the build: `HAVE_WAYLAND = 0`, and RetroArch's Vulkan driver fell through to `khr_display`, which cage blocks | force the reconfigure, and use the Wayland *context* drivers (there is no `wayland` video driver: `vk_wayland` for Vulkan, `wayland` for GL) |
+| `[Vulkan] Instance does not support required extensions` | the same trap twice more: `vulkan-loader` had `BUILD_WSI_WAYLAND_SUPPORT=OFF` and Mesa was built without the `wayland` platform, both from before `BR2_PACKAGE_WAYLAND` existed | rebuild both; `VK_KHR_wayland_surface` then reaches the app |
+| the panel was still sideways under cage | wlroots reads the panel orientation but leaves the choice to the compositor; sway calls `wlr_drm_connector_get_panel_orientation()`, cage never did | `buildroot/patches/cage/0001-...`, applied where cage builds the new output's state |
+
+**A suspend that could never come back.** With cage running, a short power press put the handheld to sleep and it
+never woke. bananad was stuck in `vt_move_to_console`, the kernel's own VT switch on suspend, waiting for a VT that
+can never be released: libseat's embedded seatd makes the seat **VT-bound**, which opens a VT, sets it to
+`VT_PROCESS` and activates it -- and bananad has the game's whole process group (cage included) `SIGSTOP`ped by then,
+so nothing can answer the kernel's `kill_pid(..., relsig)` and the switch waits forever. The panel's backlight is
+off by then, so it reads as "asleep and dead to the power key" rather than "wedged". `SEATD_VTBOUND=0` in
+`run-retroarch` makes it a plain seat: the devices are opened, nothing is done to a VT this kernel does not have.
+Verified on the unit: a short press sleeps and a second one wakes it, the game and the menu back 49 ms after the
+kernel returns.
+
+**Nothing on the RPC can wake it on a timer.** Its PMIC RTC has no alarm (`qcom,no-alarm`: the ADSP owns the alarm
+interrupt), so there is no `wakealarm` attribute to write and `sleep_check_hours` -- bananad's four-hourly battery
+check, and the safety net that brings a sleeping handheld back by itself -- can never fire here. Waking is the power
+key or the charger, and nothing else. A handheld left asleep with no one to press it drains flat.
 
 ## RetroArch's black panel (2026-10-27)
 

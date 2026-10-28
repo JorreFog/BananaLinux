@@ -1,5 +1,6 @@
 #!/bin/sh
-# The other systems: RetroArch with one libretro core, on its KMS driver (no compositor), configuration and saves
+# The other systems: RetroArch with one libretro core, as a Wayland client in cage (a kiosk compositor: one
+# application, fullscreen, and it turns the output with the panel's "panel orientation"), configuration and saves
 # on the data partition.
 #   run-retroarch <core> <rom>       e.g. run-retroarch gpsp /data/roms/gba/game.gba
 CORE=/usr/lib/libretro/$1_libretro.so
@@ -46,9 +47,19 @@ if [ -d /proc/asound/card0 ]; then
     # amplifiers answering "start failure (-1)" and the game silent -- measured on the RPC, and the reason it is not
     # enough to wait only while a substream still reads busy. So wait out the teardown every time.
     sleep 0.8
-    for i in 0 1; do
-        amixer -q -c 0 cset "name=SENARY_MI2S_RX Audio Mixer MultiMedia1" on,on 2>/dev/null && break
-        sleep 0.1
+    # Write the route and, more to the point, make sure it *took*: the DSP refuses a mixer write until it is
+    # ready, so amixer returning 0 is not proof, and an open while the mixer still reads off latches an unrouted
+    # graph ("no backend DAIs enabled for MultiMedia1 Playback") that is silent for the game's whole life. The
+    # value is bananad's published route, so headphones still route to the codec.
+    routectl="SENARY_MI2S_RX Audio Mixer MultiMedia1"
+    want=$(sed -n "s/^${routectl}=//p" /run/banana/audio-route 2>/dev/null | tail -n 1)
+    [ -n "$want" ] || want=on,on
+    i=0
+    while [ $i -lt 75 ]; do
+        amixer -q -c 0 cset "name=${routectl}" "$want" 2>/dev/null
+        cur=$(amixer -c 0 cset "name=${routectl}" 2>/dev/null | sed -n 's/.*values=//p' | cut -d, -f1)
+        [ "$cur" = "$(printf '%s' "$want" | cut -d, -f1)" ] && break
+        sleep 0.2; i=$((i + 1))
     done
     amixer -q -c 0 sset "Left PCM" 90% 2>/dev/null
     amixer -q -c 0 sset "Right PCM" 90% 2>/dev/null
@@ -70,8 +81,28 @@ set_cfg() {
 # behind it and nothing on screen to fix it with. A card written by another build drifts the same way. None of these
 # are settings Banana shows (the screen, the shader, the latency and VSync come from settings.conf below); they are
 # the frame the whole product is built on.
-set_cfg video_driver gl
-set_cfg video_context_driver kms
+# The video driver follows the core: a libretro core's hardware context comes from RetroArch's video driver, so
+# SwanStation's Vulkan renderer needs the Vulkan driver. Every other core keeps GL. The *context* driver and
+# video_rotation follow the compositor: the game runs under cage (below), so RetroArch is a Wayland client
+# (vk_wayland -- the Wayland surface, Turnip's VK_KHR_wayland_surface -- or wayland) and cage turns the output
+# with the panel's "panel orientation", which leaves video_rotation at 0. A card with no cage falls back to
+# RetroArch taking the panel itself: the khr_display/kms pair, and the RPC's 270 degrees, the turn the menu
+# rotation patches (buildroot/patches/retroarch) are there to cover.
+if [ -x /usr/bin/cage ]; then
+	vk_ctx=vk_wayland; gl_ctx=wayland; rot=0
+else
+	vk_ctx=khr_display; gl_ctx=kms; rot=3
+fi
+if [ "$1" = swanstation ] && grep -q '^swanstation_GPU_Renderer = "Vulkan"' /data/retroarch/config/SwanStation/SwanStation.opt 2>/dev/null; then
+	set_cfg video_driver vulkan
+	set_cfg video_context_driver $vk_ctx
+else
+	set_cfg video_driver gl
+	set_cfg video_context_driver $gl_ctx
+fi
+set_cfg video_rotation $rot
+# the display server's own turn (Android, KMS): the same value, so a card left on the other path is consistent
+set_cfg screen_orientation $rot
 set_cfg video_fullscreen true
 set_cfg input_driver udev
 set_cfg audio_driver alsa
@@ -135,7 +166,7 @@ fi
 # Settings > Other systems > Audio latency and VSync: Banana's values written into RetroArch's config before it starts
 # (a change made in RetroArch's own menu afterwards is kept until the setting is changed here again)
 lat=$(setting ra_audio_latency)
-case $lat in 32|64|128) set_cfg audio_latency $lat ;; esac
+case $lat in 32|64) set_cfg audio_latency $lat ;; *) set_cfg audio_latency 64 ;; esac
 vs=$(setting ra_vsync)
 case $vs in on) set_cfg video_vsync true ;; off) set_cfg video_vsync false ;; esac
 sc=$(setting ra_scale)
@@ -162,6 +193,16 @@ fi
 # anything RetroArch keeps that retroarch.cfg doesn't place (remaps, core options, playlists...) under the card's
 # retroarch folder, not ~/.config on the read-only root
 export HOME=/data/retroarch XDG_CONFIG_HOME=/data/retroarch
+# cage (the kiosk compositor the game runs in) puts its socket here: a private, 0700 runtime dir on tmpfs.
+export XDG_RUNTIME_DIR=/run/banana/wayland
+mkdir -p "$XDG_RUNTIME_DIR" 2>/dev/null; chmod 700 "$XDG_RUNTIME_DIR" 2>/dev/null
+# cage's seat (libseat's builtin backend: seatd, in this process) must not be VT-bound. This kernel has no virtual
+# terminals at all (no fbcon, no /dev/tty1...), and a VT-bound seat opens one, puts it in VT_PROCESS mode and
+# activates it. The kernel's own VT switch on suspend then waits for the VT's owner -- cage -- to release it, and
+# bananad has the game's whole process group (cage included) SIGSTOPped by then, so nothing can answer and the
+# suspend never returns. SEATD_VTBOUND=0 makes it a plain seat: the devices are opened, nothing is done to a VT
+# that does not exist.
+export SEATD_VTBOUND=0
 # commands on its stdin (bananad's AUDIO_REINIT when the headphone jack changes), through a pipe held open here
 # (fd 3) so RetroArch never reads an end
 FIFO=/run/banana/retroarch.cmd
@@ -176,7 +217,15 @@ RL=/data/banana/logs/retroarch.log
 mkdir -p /data/banana/logs 2>/dev/null; rm -f $RL
 tries=0
 while :; do
-    retroarch --config $CFG --appendconfig "$L|$RA" -L "$CORE" "$2" < $FIFO --log-file $RL &
+    # cage is a kiosk compositor: one application, fullscreen, and it turns the output with the panel (the
+    # connector's "panel orientation" property, which wlroots reads) so RetroArch's menu, its OSD and the game
+    # are all upright -- the per-driver rotation patches are not needed under it. Fall back to RetroArch on KMS
+    # if cage is not there, so a card without it still runs.
+    if [ -x /usr/bin/cage ]; then
+        cage -- retroarch -v --config $CFG --appendconfig "$L|$RA" -L "$CORE" "$2" < $FIFO --log-file $RL &
+    else
+        retroarch -v --config $CFG --appendconfig "$L|$RA" -L "$CORE" "$2" < $FIFO --log-file $RL &
+    fi
     P=$!
     trap 'kill -TERM $P 2>/dev/null' TERM INT HUP
     wait $P; S=$?

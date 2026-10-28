@@ -28,7 +28,7 @@ namespace banana
 		const char* const ACCENTS[] = { "yellow", "blue", "red", "green", "purple", "pink" };
 		const char* const SHADERS[] = { "off", "lcd", "crt", "sharp" };
 		const char* const BOXART[] = { "libretro", "both", "twilight" };
-		const char* const LATENCY[] = { "32", "64", "128" };
+		const char* const LATENCY[] = { "32", "64" };   // no 128: the RPC's DSP will not take that buffer
 
 		// The values /etc/banana/settings.conf documents, and the ones a card is completed with when that file is
 		// missing (the host test, or a card whose root is older than the menu). Keep in step with the template file.

@@ -27,17 +27,21 @@ if [ "$CORE" = swanstation ]; then
     mkdir -p "$R/config/$C"
     # Written once: a card from before gets Banana's choices, and a change made in RetroArch's own menu afterwards is
     # kept (as run-retroarch's .banana-defaults-1 does). Delete the marker to have the defaults written again.
-    M=$R/.banana-swans-3
+    M=$R/.banana-swans-5
     if [ ! -f "$M" ]; then
         # SwanStation draws its own output; RetroArch's integer scaler is off so the core fills the viewport with its
         # own (4:3) aspect.
         printf 'video_scale_integer = "false"\n' > "$R/config/$C/$C.cfg"
         {
             printf '%s\n' '# Banana: the RPC defaults (run-ps1, written once)'
-            # DuckStation's software GPU renderer: it draws on the CPU (multithreaded), which on this handheld is
-            # faster than the freedreno OpenGL path for now, and glitch-free. (The RPC has no Vulkan driver, so
-            # SwanStation's Vulkan backend is unavailable.) A faster GPU path can be chosen in RetroArch's core options.
-            printf 'swanstation_GPU_Renderer = "Software"\n'
+            # Vulkan on the a613 through Mesa's Turnip (the ICD ships in the image): full speed at 60 fps where the
+            # freedreno OpenGL path dropped frames, and the renderer to upscale with. run-retroarch hands the core a
+            # Vulkan video driver to match. 5x is the panel's own 1080p (the core's own option labels).
+            printf 'swanstation_GPU_Renderer = "Vulkan"\n'
+            printf 'swanstation_GPU_ResolutionScale = "5"\n'
+            # Compile the renderer's shaders up front: on a background thread (the default) they compile during
+            # the first seconds of play, which is the hitching the BIOS intro showed.
+            printf 'swanstation_GPU_ShaderPrecompile = "Enabled"\n'
             printf 'swanstation_GPU_UseThread = "true"\n'
             # RetroArch's on-screen-message widget layer is not turned with the panel (only the menu texture and the
             # game are), so core OSD lines would read sideways; keep them off.

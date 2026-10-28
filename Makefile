@@ -25,8 +25,23 @@ LOCAL_SRC = $(shell find ui/src ui/rnds system/bananad -type f \( -name '*.cpp' 
 $(BUILDROOT_DIR)/Makefile:
 	git clone --depth 1 --branch $(BUILDROOT_VERSION) https://github.com/buildroot/buildroot $(BUILDROOT_DIR)
 
+# Buildroot itself is downloaded, not vendored, so the few changes Banana makes to Buildroot (rather than to a
+# package's sources -- those live in buildroot/patches/) sit in buildroot/buildroot-patches/ and are applied here.
+# Idempotent: a patch already in place is left alone, so editing a base file and re-running is safe.
+BUILDROOT_PATCHES = $(wildcard $(CURDIR)/buildroot/buildroot-patches/*.patch)
+$(BUILDROOT_DIR)/.banana-patched: $(BUILDROOT_DIR)/Makefile $(BUILDROOT_PATCHES)
+	@for p in $(BUILDROOT_PATCHES); do \
+		if git -C $(BUILDROOT_DIR) apply --reverse --check "$$p" 2>/dev/null; then \
+			echo "buildroot patch already applied: $$(basename $$p)"; \
+		else \
+			echo "applying buildroot patch: $$(basename $$p)"; \
+			git -C $(BUILDROOT_DIR) apply "$$p" || exit 1; \
+		fi; \
+	done
+	@touch $@
+
 define board
-$(OUT)/$(1)/.config: $(BUILDROOT_DIR)/Makefile buildroot/configs/banana_$(subst -,_,$(1))_defconfig
+$(OUT)/$(1)/.config: $(BUILDROOT_DIR)/.banana-patched buildroot/configs/banana_$(subst -,_,$(1))_defconfig
 	$(MAKE) -C $(BUILDROOT_DIR) O=$(OUT)/$(1) BR2_EXTERNAL=$(CURDIR)/buildroot banana_$(subst -,_,$(1))_defconfig
 
 # a stamp that is only rebuilt when an in-tree source changes. Its recipe rebuilds the packages (banana-ui,

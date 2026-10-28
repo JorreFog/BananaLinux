@@ -1,0 +1,58 @@
+From: Banana <bananalinux@proton.me>
+Date: Tue, 28 Oct 2026 18:30:00 +0000
+Subject: [PATCH] gfx/vulkan: turn the menu with the panel on KMS/GBM
+
+SwanStation's Vulkan renderer runs on the RPC through Turnip (video_driver =
+"vulkan" + khr_display), and vulkan_draw_blit_menu blits with mvp_menu, which
+vulkan_set_projection left as trn x mvp_no_rot -- unrotated. Where a window system
+owns the output's orientation that is fine (ROCKNIX runs RetroArch windowed under
+sway, which turns the output, and carries no rotation patch), but on KMS/GBM there
+is nothing above RetroArch, so on a panel mounted turned in the shell the game
+comes out rotated by video_rotation and the menu stays in the framebuffer's
+portrait orientation, reading sideways. The gl2 and gl3 drivers already turn their
+menu (patches 0005/0008); this is the same for the Vulkan driver.
+
+Build mvp_menu the way the driver builds the content's mvp -- trn x menu_rot x
+mvp_no_rot -- with the menu rotation taken from the *user's* video_rotation (never
+the core's, so a vertical arcade game cannot spin the interface), at this driver's
+own 270-per-step angle (Vulkan's flipped Y), i.e. the same value vulkan_set_rotation
+hands the content.
+
+Upstream-Status: Pending
+---
+--- a/gfx/drivers/vulkan.c
++++ b/gfx/drivers/vulkan.c
+@@ -4023,8 +4023,31 @@
+    }
+    matrix_4x4_multiply(vk->mvp, trn, tmp);
+ 
+-   /* Required for translate_x+y / negative offsets to also work in RGUI */
+-   matrix_4x4_multiply(vk->mvp_menu, trn, vk->mvp_no_rot);
++   /* Required for translate_x+y / negative offsets to also work in RGUI. The menu is blitted with
++    * mvp_menu; where a window system owns the output's orientation leaving it unrotated is fine, but on
++    * KMS/GBM there is nothing above RetroArch, so on a panel mounted turned in the shell (the Retroid
++    * Pocket Classic's 1080x1240 in a landscape body) the game comes out rotated by video_rotation and
++    * the menu stays in the framebuffer's portrait orientation, reading sideways. Turn it with the user's
++    * video_rotation -- never the core's, so a vertical arcade game cannot spin the interface -- the same
++    * the gl2 and gl3 drivers already do, at this driver's own 270-per-step angle (Vulkan's flipped Y). */
++   {
++      settings_t *settings   = config_get_ptr();
++      unsigned user_rotation = settings ? (settings->uints.video_rotation % 4) : 0;
++      float menu_radians     = M_PI * (270.0f * user_rotation) / 180.0f;
++      float menu_cosine      = cosf(menu_radians);
++      float menu_sine        = sinf(menu_radians);
++      math_matrix_4x4 menu_rot, menu_tmp;
++
++      memset(&menu_rot, 0, sizeof(menu_rot));
++      MAT_ELEM_4X4(menu_rot, 0, 0) = menu_cosine;
++      MAT_ELEM_4X4(menu_rot, 0, 1) = -menu_sine;
++      MAT_ELEM_4X4(menu_rot, 1, 0) = menu_sine;
++      MAT_ELEM_4X4(menu_rot, 1, 1) = menu_cosine;
++      MAT_ELEM_4X4(menu_rot, 2, 2) = 1.0f;
++      MAT_ELEM_4X4(menu_rot, 3, 3) = 1.0f;
++      matrix_4x4_multiply(menu_tmp, menu_rot, vk->mvp_no_rot);
++      matrix_4x4_multiply(vk->mvp_menu, trn, menu_tmp);
++   }
+ }
+ 
+ static void vulkan_set_rotation(void *data, unsigned rotation)

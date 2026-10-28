@@ -137,8 +137,13 @@ shutting down. The notice is drawn by the backend at the end of the screen's dra
 settings too and costs nothing while it doesn't change.
 
 Starting a game: banana-ui writes the game's pid to `/run/banana/game.pid`, closes the display, the input
-devices and the sound device, sets the system's clock profile, and runs its `run` command. When the game exits it
-takes the panel back, records the play, and shows the game's library again.
+devices and the sound device, sets the system's clock profile, and runs its `run` command. The game then runs under
+**cage**, a small kiosk Wayland compositor (`cage`, MIT): one application, fullscreen, DRM master on the panel. It
+turns the output with the panel's "panel orientation" (wlroots reads the same connector property banana-ui reads),
+so the game, RetroArch's own menu, its OSD and its widgets all come out upright from one place, instead of a
+rotation patch per RetroArch video driver. The menu keeps drawing straight on KMS -- cage is started for a game and
+let go when it exits -- so the menu still costs no compositor. When the game exits banana-ui takes the panel back,
+records the play, and shows the game's library again.
 
 ## Sleep: bananad
 
@@ -158,8 +163,13 @@ the menu's idle minutes put it to sleep:
    (`/sys/power/pm_async`, `fast_resume`), `deep` in `/sys/power/mem_sleep`, and `mem` to `/sys/power/state`: the
    SoC powers down, DRAM self-refreshes.
 
-The device tree makes the power key's PMIC (the power key, the RTC alarm) a wakeup source. When
-`/sys/power/state` returns:
+**There is no RTC alarm on the RPC to wake it with.** Its PMIC's RTC is marked `qcom,no-alarm` in the device tree --
+the alarm interrupt belongs to the ADSP, not the application processor -- so the RTC has no `wakealarm` attribute at
+all, `rtc_alarm()` cannot arm anything, and the "battery checked" wake in `banana/logs/sleep.log` never happens: on
+this handheld `sleep_check_hours` does nothing, and the power key (or a charger on the USB-C port) is the only way
+out of `deep`. Everything else about a sleep is as described.
+
+The device tree makes the power key's PMIC a wakeup source. When `/sys/power/state` returns:
 
 - **The battery check's alarm** (the RTC clears `wakealarm` when it fires): at `sleep_poweroff_percent` (5%) or
   under, the game gets `SIGCONT` and then `SIGTERM` to write its saves, and the handheld shuts down; otherwise
@@ -181,7 +191,9 @@ FIFO for `/sys/power/state`, real input events for the power key).
 Two idle minutes in the menu dim the panel (`dim_minutes`, `dim_percent`); the first press brings it back, and a
 game is never dimmed. bananad itself sleeps in `poll()` until something is due (the battery
 look once a minute, the dim or sleep deadline, a pending save), so an idle handheld wakes it about once a minute.
-Hold power 2 s to shut down; volume keys change the mixer, F + volume the backlight; a battery at 3% and
+Hold power 2 s to shut down; the volume keys change the card's mixer in the menu and RetroArch's own volume in a
+game (it shows its OSD -- a game only latches the mixer when its frontend opens, so the menu owns that), F +
+volume the backlight; a battery at 3% and
 discharging shuts down cleanly. The fan is the kernel's own (`pwm_fan` off the PMIC's PWM, following the
 temperature; bananad does not touch it). Settings:
 `/etc/banana/bananad.conf`, overridden by `/data/banana/bananad.conf` (the settings screen writes it and sends
@@ -191,7 +203,8 @@ SIGHUP).
 
 Measured in the VM (`tools/qemu-boot.sh`, a 1 GB machine, idle in the menu): the menu draws only when something
 changes and sleeps in `poll()` otherwise; bananad wakes about once a minute; no sound server, no udev, no
-compositor, no shell waiting for input. `tools/qemu-boot.sh` measures all of this from inside the VM over SSH
+compositor (the menu is drawn straight on KMS -- cage exists only while a game runs), no shell waiting for input.
+`tools/qemu-boot.sh` measures all of this from inside the VM over SSH
 (`resources-*.txt`: memory, each program's own, the CPUs' idle share).
 
 The menu's own CPU cost, headless on a PC, is in `docs/PERFORMANCE.md`: `make bench` builds a 600-game library and

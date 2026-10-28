@@ -1,0 +1,38 @@
+From: Banana <bananalinux@proton.me>
+Date: Tue, 28 Oct 2026 18:45:00 +0000
+Subject: [PATCH] gfx/vulkan: draw the OSD and widgets with the panel's turn
+
+The menu is a software texture blitted with mvp_menu (patch 0010), but everything
+else the driver draws for the interface -- the notifications, the FPS counter, the
+volume widget -- comes out sideways. It reaches vulkan_draw's `draw` entry two
+ways: gfx_display_draw_quad passes no matrix at all (the driver fell back to
+mvp_no_rot), and gfx_widgets' icon helper passes rot(get_default_mvp). On KMS/GBM
+nothing above RetroArch turns the output, so both answers have to be the turned
+matrix -- mvp_menu, the one the menu texture is blitted with. (ROCKNIX never needs
+this: RetroArch runs windowed under sway, which turns the output.)
+
+Upstream-Status: Pending
+---
+--- a/gfx/drivers/vulkan.c
++++ b/gfx/drivers/vulkan.c
+@@ -1269,7 +1269,10 @@
+    vk_t *vk = (vk_t*)data;
+    if (!vk)
+       return NULL;
+-   return &vk->mvp_no_rot;
++   /* The widgets' icons are drawn as rot(get_default_mvp); hand it the turned matrix or they stay in
++    * the framebuffer's portrait orientation while the menu is upright (see mvp_menu in
++    * vulkan_set_projection). */
++   return &vk->mvp_menu;
+ }
+ 
+ static const float *gfx_display_vk_get_default_vertices(void)
+@@ -1477,7 +1480,7 @@
+                ? vk->samplers.linear
+                : vk->samplers.nearest);
+             call.uniform      = draw->matrix_data
+-               ? draw->matrix_data : &vk->mvp_no_rot;
++               ? draw->matrix_data : &vk->mvp_menu;
+             call.uniform_size = sizeof(math_matrix_4x4);
+             call.vbo          = &range;
+             call.vertices     = draw->coords->vertices;

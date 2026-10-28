@@ -1,0 +1,31 @@
+diff --git a/package/mesa3d/Config.in b/package/mesa3d/Config.in
+index 8a7811b6..90a8e223 100644
+--- a/package/mesa3d/Config.in
++++ b/package/mesa3d/Config.in
+@@ -339,6 +339,14 @@ config BR2_PACKAGE_MESA3D_VULKAN_DRIVER_BROADCOM
+ 	help
+ 	  Vulkan broadcom driver.
+ 
++config BR2_PACKAGE_MESA3D_VULKAN_DRIVER_FREEDRENO
++	bool "Vulkan freedreno driver (turnip)"
++	depends on BR2_arm || BR2_aarch64 || BR2_aarch64_be
++	select BR2_PACKAGE_LIBDRM_FREEDRENO
++	select BR2_PACKAGE_MESA3D_VULKAN_DRIVER
++	help
++	  Vulkan freedreno driver (turnip), for Adreno 6xx GPUs.
++
+ config BR2_PACKAGE_MESA3D_VULKAN_DRIVER_IMAGINATION
+ 	bool "Vulkan imagination driver"
+ 	depends on BR2_arm || BR2_aarch64
+diff --git a/package/mesa3d/mesa3d.mk b/package/mesa3d/mesa3d.mk
+index f082d3c4..37d83449 100644
+--- a/package/mesa3d/mesa3d.mk
++++ b/package/mesa3d/mesa3d.mk
+@@ -129,6 +129,7 @@ MESA3D_GALLIUM_DRIVERS-$(BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_VIRGL)    += virgl
+ MESA3D_GALLIUM_DRIVERS-$(BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_ZINK)     += zink
+ # Vulkan Drivers
+ MESA3D_VULKAN_DRIVERS-$(BR2_PACKAGE_MESA3D_VULKAN_DRIVER_BROADCOM) += broadcom
++MESA3D_VULKAN_DRIVERS-$(BR2_PACKAGE_MESA3D_VULKAN_DRIVER_FREEDRENO) += freedreno
+ MESA3D_VULKAN_DRIVERS-$(BR2_PACKAGE_MESA3D_VULKAN_DRIVER_IMAGINATION) += imagination
+ MESA3D_VULKAN_DRIVERS-$(BR2_PACKAGE_MESA3D_VULKAN_DRIVER_INTEL)   += intel
+ MESA3D_VULKAN_DRIVERS-$(BR2_PACKAGE_MESA3D_VULKAN_DRIVER_SWRAST) += swrast

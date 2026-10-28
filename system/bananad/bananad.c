@@ -731,7 +731,27 @@ static void audio_setup(void)
 
 static void volume(int dir)
 {
-	/* the volume script changes the control /run/banana/mixer names (see it) */
+	/* In a game the volume keys are RetroArch's: it changes its own volume live and shows its OSD. The card's
+	 * mixer is the *menu's* level, and a game's frontend volume is only latched when its graph is instantiated
+	 * (at the menu's next open), so editing it during a game reads as "nothing happened, then it applied when I
+	 * quit" -- and all the way down it is a silent handheld with nothing on screen to say why. Hand the press to
+	 * RetroArch instead, through the FIFO run-retroarch already keeps open (the AUDIO_REINIT path). */
+	if (pid_of("/run/banana/game.pid") > 0)
+	{
+		int fd = open("/run/banana/retroarch.cmd", O_WRONLY | O_NONBLOCK | O_CLOEXEC);
+		if (fd >= 0)
+		{
+			/* RetroArch's volume commands are 0.5 dB a step (command_event_set_volume), far finer than the
+			 * menu's 5% (2.5 dB), so send five: a press is then the same step in a game as in the menu. */
+			const char *c = dir > 0 ? "VOLUME_UP\n" : "VOLUME_DOWN\n";
+			for (int i = 0; i < 5; i++)
+				if (write(fd, c, strlen(c)) < 0) break;
+			close(fd);
+			return;
+		}
+		/* (no FIFO: a game that is not Banana's RetroArch -- leave the mixer to the script below) */
+	}
+	/* the menu's own volume: the script changes the control /run/banana/mixer names (see it) */
 	char step[16];
 	snprintf(step, sizeof step, "%d", cfg.volume_step);
 	char cmd[96];
