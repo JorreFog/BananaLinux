@@ -17,7 +17,7 @@ amplifiers, a fan, and no lid. **Version:** 0.4.2. No submodules; the hardware l
 | `docs/` | **Docs** | `ARCHITECTURE.md`, `RPC-PORT.md`, `RPC-TEST.md`, `ROADMAP.md`, `PERFORMANCE.md` |
 
 Runtime architecture (from `docs/ARCHITECTURE.md`): **no systemd, no EmulationStation, no desktop, no initramfs, no
-udev** (PipeWire is the sound server now, and a game runs under cage, a kiosk compositor) (the menu draws straight on KMS, and a game runs under cage, a
+udev, no sound server; no compositor for the menu** (the menu draws straight on KMS, and a game runs under cage, a
 kiosk Wayland compositor, so the panel's turn is applied once to everything). A read-only squashfs root + an exFAT
 data partition; busybox init; two always-resident userland processes (`banana-ui`, `bananad`).
 

@@ -139,21 +139,6 @@ amixer -q -c 0 cset "name=RX INT1 DEM MUX" CLSH_DSM_OUT 2>/dev/null
 amixer -q -c 0 cset "name=MultiMedia3 Mixer TX_CODEC_DMA_TX_3" 1 2>/dev/null
 mark "rcS: sound routed ($i tries)"
 
-# The sound server: PipeWire, with WirePlumber as its session manager (ROCKNIX has the same, and it is the
-# difference heard on this card: a buffer above the DSP, and one owner of the card's single frontend, where before
-# the menu and a game took turns at it). It starts *after* the route and the levels above, because the DSP takes the
-# mixer values it finds when a frontend's graph is instantiated -- and the frontend is PipeWire's now, not the
-# menu's. The Wayland runtime dir is the same one (cage, the games' compositor, puts its socket there too).
-mkdir -p /run/banana/rt && chmod 700 /run/banana/rt
-if [ -x /usr/bin/pipewire ]; then
-    XDG_RUNTIME_DIR=/run/banana/rt PIPEWIRE_RUNTIME_DIR=/run/banana/rt pipewire >/run/banana/pipewire.log 2>&1 &
-    i=0
-    while [ $i -lt 50 ] && [ ! -S /run/banana/rt/pipewire-0 ]; do sleep 0.1; i=$((i+1)); done
-    # HOME on tmpfs: the root is read-only and WirePlumber keeps its state in $HOME/.local/state
-    [ -x /usr/bin/wireplumber ] && HOME=/run/banana XDG_RUNTIME_DIR=/run/banana/rt wireplumber >/run/banana/wireplumber.log 2>&1 &
-    mark "rcS: sound server"
-fi
-
 banana-perf ui
 
 # not needed for the menu's first frame

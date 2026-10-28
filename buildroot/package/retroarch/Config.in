@@ -8,11 +8,10 @@ config BR2_PACKAGE_RETROARCH
 	select BR2_PACKAGE_FREETYPE
 	select BR2_PACKAGE_ZLIB
 	select BR2_PACKAGE_XZ
-	depends on BR2_PACKAGE_HAS_UDEV # libudev, for its udev input driver
+	select BR2_PACKAGE_LIBUDEV_ZERO
 	help
 	  RetroArch, for the systems other than the DS: on one panel through KMS and GLES (no compositor), ALSA,
-	  udev input (libudev -- on this image libudev-zero, which advertises the udev virtual), and its RGUI menu,
-	  whose pixel look fits the menu's.
+	  udev input (libudev-zero), and its RGUI menu, whose pixel look fits the menu's.
 
 if BR2_PACKAGE_RETROARCH
 source "$BR2_EXTERNAL_BANANA_PATH/package/retroarch/cores.in"

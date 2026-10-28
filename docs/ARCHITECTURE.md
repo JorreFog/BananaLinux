@@ -234,19 +234,15 @@ frame.
 kernel announces as power_supply uevents (a netlink socket; there is no udev): the charging LED follows the
 charger's own LED trigger, the critical blink is the kernel's timer trigger.
 
-**Sound.** PipeWire, with WirePlumber as its session manager (`rcS` starts both, after the route and the levels are
-set). ALSA's default PCM is PipeWire's plugin (`/etc/asound.conf`), so the menu, a game and anything else mix in one
-place, and the card's **one** frontend belongs to PipeWire rather than to whichever app was first. The card is the
-WCD937x codec with the two AW88166 amplifiers on I2S, driven by the Qualcomm **AudioReach** DSP (the
-`sc8280xp`/q6apm machine stack). Two things still decide whether audio is heard: the route must be written *before*
-the device is opened (the DSP instantiates the graph at the open and takes the mixer values it finds then), and
-there is no UCM profile (so routing is by `amixer`, not the `hooks` plugin). bananad publishes the route it chose
-(speakers or headphones) to `/run/banana/audio-route` and writes it to the card; `rcS` writes the same route and the
-codec's own levels before PipeWire starts, and `run-retroarch` and banana-ui re-assert and read it back before their
-own opens (a card that came up with the route off is silent for that stream's whole life). WirePlumber is told to
-close the card when nothing plays, so a headphone jack change reaches the DSP at the next open. The handover the
-menu and a game used to need (`Sound::release()`) is now only about the DSP's frontends, not about who owns the
-card.
+**Sound.** No sound server: ALSA's default device is written by bananad to `/run/banana/asound.conf`. The card is
+the WCD937x codec with the two AW88166 amplifiers on I2S, driven by the Qualcomm **AudioReach** DSP (the
+`sc8280xp`/q6apm machine stack). Three things decide whether audio is heard: the route must be written *before* a
+frontend is opened (the DSP instantiates the graph at the open and takes the mixer values it finds then), only the
+first frontend produces sound (so the menu and a game hand it over), and there is no UCM profile (so routing is by
+`amixer`, not the `hooks` plugin). bananad publishes the route it chose (speakers or headphones) to
+`/run/banana/audio-route`; banana-ui and `run-retroarch` both write those values and fall back to "speakers on".
+The menu holds its stream open between cues and gives it up only for a game (`Sound::release()`), and both sides
+wait one beat after a handover.
 
 **Clocks: banana-perf.** The RPC is two clusters — `policy0` (six Cortex-A55) and `policy6` (two Cortex-A78) — so
 every profile sets *every* `policy*`, not just the first:

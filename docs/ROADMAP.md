@@ -32,9 +32,9 @@ and `docs/RPC-TEST.md` the list to check on the handheld.
       the Wayland context driver; the per-driver rotation patches are inert under it. The compositor also cost a
       suspend: libseat's VT-bound seat and bananad's `SIGSTOP` of the game deadlocked the kernel's VT switch, fixed
       with `SEATD_VTBOUND=0`
-- [x] PipeWire (with WirePlumber) as the sound server, as ROCKNIX has: one owner of the card's single frontend, a
-      buffer above the DSP, and no handover between the menu and a game. `rcS` routes the card and sets its levels
-      first, and WirePlumber closes it when idle so the headphone jack is seen
+- [ ] PipeWire as the sound server (built and tried once, see `docs/RPC-PORT.md`): the card needs a UCM2 profile for
+      this SoC's machine driver before it can own the route, and the image needs the libudev-zero/udev-virtual work
+      the attempt made
 - [ ] Sleep on the unit: measure the wake (`sleep_debug = yes`) and cut it — the panel's power-on sequence, the SD
       card's re-initialisation (MMC_CAP_RUNTIME_RESUME would take it off the wake path), whether Wi-Fi can stay
       loaded; and standby drain over a night

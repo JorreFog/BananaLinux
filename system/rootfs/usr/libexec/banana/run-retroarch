@@ -23,11 +23,7 @@ c=${CORE##*/}; c=${c%_libretro.so}
 # The RPC's DSP: the frontend RetroArch opens has to be routed to the speaker I2S before the open, and the menu has
 # just let go of that frontend (banana-ui closes its stream when a game starts). Setting it here as well as in rcS
 # covers a library that was built without the rcS step, and a route the DSP dropped when the menu's stream closed.
-# PipeWire owns the card when it is running: RetroArch opens *it*, not the DSP, so there is nothing to wait
-# for and no route of ours to assert here -- the server's own device was opened with the route rcS and
-# bananad set (and rcS starts the server after both). This is the block that used to spend two seconds
-# waiting for the menu's frontend to be released before every game.
-if [ -d /proc/asound/card0 ] && [ ! -S /run/banana/rt/pipewire-0 ]; then
+if [ -d /proc/asound/card0 ]; then
     # the menu closed its stream a moment ago (its click sounds); the DSP tears that frontend's graph down
     # asynchronously, and an open in the middle of it leaves RetroArch with no device (its ALSA driver then aborts in
     # snd_pcm_avail, exit 134). Wait for the frontends to say they are free rather than guess a delay: how long the
@@ -61,9 +57,9 @@ if [ -d /proc/asound/card0 ] && [ ! -S /run/banana/rt/pipewire-0 ]; then
     i=0
     while [ $i -lt 25 ]; do
         amixer -q -c 0 cset "name=${routectl}" "$want" 2>/dev/null
-        # The values are on the line that starts with a ": " -- the one above it says ",values=2" (how many there
-        # are). A pattern of "values=" alone takes both lines, so the read-back was "2 on" and never equal to "on":
-        # every launch then waited out the whole loop (15 s of black screen) before the game was even started.
+        # The values are on the line starting with ": " -- the one above says ",values=2" (how many there are). A
+        # pattern of "values=" alone takes both, so the read-back is "2 on" and never equals "on": every launch then
+        # waits out the whole loop (15 s of black screen) before the game is even started.
         cur=$(amixer -c 0 cset "name=${routectl}" 2>/dev/null | sed -n 's/.*: *values=//p' | cut -d, -f1)
         [ "$cur" = "$(printf '%s' "$want" | cut -d, -f1)" ] && break
         sleep 0.2; i=$((i + 1))
@@ -200,9 +196,8 @@ fi
 # anything RetroArch keeps that retroarch.cfg doesn't place (remaps, core options, playlists...) under the card's
 # retroarch folder, not ~/.config on the read-only root
 export HOME=/data/retroarch XDG_CONFIG_HOME=/data/retroarch
-# cage (the kiosk compositor the game runs in) and PipeWire (the sound) put their sockets here: a private,
-# 0700 runtime dir on tmpfs, the same one banana-ui and the sound server use.
-export XDG_RUNTIME_DIR=/run/banana/rt
+# cage (the kiosk compositor the game runs in) puts its socket here: a private, 0700 runtime dir on tmpfs.
+export XDG_RUNTIME_DIR=/run/banana/wayland
 mkdir -p "$XDG_RUNTIME_DIR" 2>/dev/null; chmod 700 "$XDG_RUNTIME_DIR" 2>/dev/null
 # cage's seat (libseat's builtin backend: seatd, in this process) must not be VT-bound. This kernel has no virtual
 # terminals at all (no fbcon, no /dev/tty1...), and a VT-bound seat opens one, puts it in VT_PROCESS mode and
