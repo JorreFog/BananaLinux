@@ -125,7 +125,18 @@ SETS.light = [
   ["light-options", "Per-game options: choose an emulator and settings for each game", "x"],
   ["light-settings", "Settings: six groups, with help on the top screen", "start"],
 ];
+// The layout themes (0.5.0): while the Themes card is on screen the handheld shows the ten themes made with the
+// Banana Theme Studio, each one's home screen as the studio draws it (its preview-home-top/bottom.png, 640x480,
+// scaled to 512x384). The same set in both page themes: a layout theme brings its own colours.
+SETS.themes = [
+  ["theme-comic-panel", "Comic Panel", "right"], ["theme-coral-reef", "Coral Reef", "right"],
+  ["theme-felt-table", "Felt Table", "right"], ["theme-neon-arcade", "Neon Arcade", "right"],
+  ["theme-oak-bookshelf", "Oak Bookshelf", "right"], ["theme-orbital-hud", "Orbital HUD", "right"],
+  ["theme-paper-notebook", "Paper Notebook", "right"], ["theme-phosphor-terminal", "Phosphor Terminal", "right"],
+  ["theme-swiss-poster", "Swiss Poster", "right"], ["theme-vinyl-lounge", "Vinyl Lounge", "right"],
+];
 let theme = document.documentElement.dataset.theme === "light" ? "light" : "dark";
+let inThemes = false;   // the Themes card is on screen
 let SLIDES = SETS[theme];
 const SLIDE_TIME = 3.6, FADE = 0.3;
 const screenTop = document.createElement("canvas"), screenBottom = document.createElement("canvas");
@@ -186,8 +197,33 @@ function setTheme(t, fromClick) {
   themeBtn.setAttribute("aria-label", t === "light" ? "Switch to dark theme" : "Switch to light theme");
   try { localStorage.setItem("theme", t); } catch (e) { /* private mode: just this visit */ }
   paintDevice();
-  if (!fromClick) return;
+  if (!fromClick || inThemes) return;
   SLIDES = SETS[t];
+  loadSet(SLIDES);
+  loadSlide(SLIDES[0][0]).then(() => { slides.started = true; show(0); });
+}
+
+// the Themes card: its chips, and the handheld switching to the themes' set while the card is in view
+const chips = document.getElementById("theme-chips");
+const themeNow = document.getElementById("theme-now");
+if (chips) SETS.themes.forEach(([, name], i) => {
+  const b = document.createElement("button");
+  b.type = "button"; b.textContent = name; b.setAttribute("aria-pressed", "false");
+  b.addEventListener("click", () => {
+    if (!inThemes) return;
+    loadSlide(SETS.themes[i][0]).then(() => { slides.started = true; show(i); });
+  });
+  chips.appendChild(b);
+});
+function markChip() {
+  if (!chips) return;
+  [...chips.children].forEach((b, i) => b.setAttribute("aria-pressed", inThemes && i === slides.i ? "true" : "false"));
+  if (inThemes) themeNow.textContent = `On the screens: ${SETS.themes[slides.i][1]}, made with the Banana Theme Studio.`;
+}
+function themesInView(on) {
+  if (on === inThemes) return;
+  inThemes = on;
+  SLIDES = on ? SETS.themes : SETS[theme];
   loadSet(SLIDES);
   loadSlide(SLIDES[0][0]).then(() => { slides.started = true; show(0); });
 }
@@ -233,6 +269,7 @@ function show(i) {
   screensDirty = true;
   pressFor(SLIDES[i][2]);
   caption.textContent = SLIDES[i][1];
+  markChip();
 }
 
 // ------------------------------------------------------------------ load
@@ -285,8 +322,10 @@ model.traverse((o) => {
 const POSES = {
   intro:    { x: 0.0, y: 0.0, yaw: -2.6, pitch: 0.0, lid: 0, dist: 0.75 },
   hero:     { x: 0.045, y: 0.0, yaw: -0.32, pitch: 0.0, lid: 150, dist: 0.43 },
+  new:      { x: -0.055, y: 0.0, yaw: 0.55, pitch: 0.05, lid: 135, dist: 0.42 },
   features: { x: 0.055, y: 0.0, yaw: -0.85, pitch: 0.05, lid: 115, dist: 0.42 },
   emulators: { x: 0.0, y: 0.075, yaw: 0.35, pitch: 0.0, lid: 150, dist: 0.85 },
+  themes:   { x: 0.05, y: 0.0, yaw: -0.2, pitch: 0.0, lid: 150, dist: 0.40 },
   inside:   { x: -0.06, y: 0.0, yaw: 0.75, pitch: 0.1, lid: 150, dist: 0.38 },
   get:      { x: 0.0, y: 0.055, yaw: 6.28 - 0.25, pitch: 0.0, lid: 150, dist: 0.62 },
 };
@@ -310,7 +349,9 @@ function sectionsTimeline() {
     scrollTrigger: { trigger: "main", start: "top top", end: "bottom bottom", scrub: 1.2 },
     defaults: { ease: "power2.inOut", duration: 1 },
   });
-  tl.to(pose, POSES.features).to(pose, POSES.emulators).to(pose, POSES.inside).to(pose, POSES.get);
+  tl.to(pose, POSES.new).to(pose, POSES.features).to(pose, POSES.emulators).to(pose, POSES.themes)
+    .to(pose, POSES.inside).to(pose, POSES.get);
+  if (document.getElementById("themes")) ScrollTrigger.create({ trigger: "#themes", start: "top 60%", end: "bottom 40%", onToggle: (st) => themesInView(st.isActive) });
   return tl;
 }
 
