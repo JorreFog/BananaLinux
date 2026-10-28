@@ -1,0 +1,140 @@
+From: Banana <bananalinux@proton.me>
+Date: Wed, 28 Oct 2026 21:00:00 +0000
+Subject: [PATCH] output: re-modeset the outputs on SIGUSR1
+
+A panel whose driver disabled it on the way into a suspend can come back dark,
+with the compositor's frames going nowhere: the kernel's own resume re-does its
+part of the display, but a hold in the pipeline (a DPU encoder that timed out
+going down, on the Retroid Pocket Classic) is only cleared by a modeset, and
+nothing above the kernel tells the compositor the system slept -- Banana has no
+session manager, and its seat is deliberately not VT-bound.
+
+Banana's bananad sends SIGUSR1 out of a sleep for exactly this. Put every output
+back on screen with a fresh modeset there: the preferred mode enabled, and the
+panel's turn applied, which is now shared with handle_new_output.
+
+Upstream-Status: Pending
+---
+--- a/output.c
++++ b/output.c
+@@ -234,6 +234,59 @@
+ 	output_destroy(output);
+ }
+ 
++/*
++ * The output's turn comes from its connector: a panel mounted turned inside the shell advertises the turn as its
++ * "panel orientation" (a handheld's device tree rotation, a monitor's EDID). wlroots reads the property but leaves
++ * the choice to the compositor -- wlr_drm_connector_get_panel_orientation() is public API for exactly this, and
++ * sway calls it when it configures an output. Without it, everything on such a panel is composed the wrong way up.
++ */
++static void
++output_apply_panel_orientation(struct wlr_output *wlr_output, struct wlr_output_state *state)
++{
++#if WLR_HAS_DRM_BACKEND
++	if (wlr_output_is_drm(wlr_output)) {
++		enum wl_output_transform transform =
++			wlr_drm_connector_get_panel_orientation(wlr_output);
++		if (transform != WL_OUTPUT_TRANSFORM_NORMAL) {
++			wlr_output_state_set_transform(state, transform);
++		}
++	}
++#endif
++}
++
++/*
++ * Put every output back on screen with a fresh modeset: the preferred mode enabled and the panel's turn applied,
++ * not a page flip. A panel whose driver disabled it on the way into a suspend can come back dark, with the
++ * compositor's frames going nowhere -- the kernel's own resume re-does its part, but a hold in the display
++ * pipeline is only cleared by a modeset, and nothing above the kernel tells the compositor the system slept.
++ * Banana's bananad sends SIGUSR1 for exactly this on the way out of a sleep (Banana has no session manager to
++ * hear about a resume: its seat is not VT-bound, deliberately).
++ */
++void
++output_remodeset_all(struct cg_server *server)
++{
++	struct cg_output *output;
++
++	wl_list_for_each (output, &server->outputs, link) {
++		struct wlr_output *wlr_output = output->wlr_output;
++		struct wlr_output_state state;
++
++		wlr_output_state_init(&state);
++		wlr_output_state_set_enabled(&state, true);
++		if (!wl_list_empty(&wlr_output->modes)) {
++			struct wlr_output_mode *mode = wlr_output_preferred_mode(wlr_output);
++			if (mode) {
++				wlr_output_state_set_mode(&state, mode);
++			}
++		}
++		output_apply_panel_orientation(wlr_output, &state);
++		if (!wlr_output_commit_state(wlr_output, &state)) {
++			wlr_log(WLR_ERROR, "Could not re-modeset output %s", wlr_output->name);
++		}
++		wlr_output_state_finish(&state);
++	}
++}
++
+ void
+ handle_new_output(struct wl_listener *listener, void *data)
+ {
+@@ -304,21 +357,7 @@
+ 			wlr_output->scale);
+ 	}
+ 
+-#if WLR_HAS_DRM_BACKEND
+-	/*
+-	 * A panel mounted turned in the shell advertises the turn on its connector (a handheld's device
+-	 * tree rotation, a monitor's EDID). wlroots reads it but leaves the choice to the compositor;
+-	 * without this, everything on such a panel -- the application and the cursor -- is composed the
+-	 * wrong way up. Sway does the same when it configures an output.
+-	 */
+-	if (wlr_output_is_drm(wlr_output)) {
+-		enum wl_output_transform transform =
+-			wlr_drm_connector_get_panel_orientation(wlr_output);
+-		if (transform != WL_OUTPUT_TRANSFORM_NORMAL) {
+-			wlr_output_state_set_transform(&state, transform);
+-		}
+-	}
+-#endif
++	output_apply_panel_orientation(wlr_output, &state);
+ 
+ 	wlr_log(WLR_DEBUG, "Enabling new output %s", wlr_output->name);
+ 	if (wlr_output_commit_state(wlr_output, &state)) {
+--- a/output.h
++++ b/output.h
+@@ -25,5 +25,6 @@
+ void handle_output_layout_change(struct wl_listener *listener, void *data);
+ void handle_new_output(struct wl_listener *listener, void *data);
+ void output_set_window_title(struct cg_output *output, const char *title);
++void output_remodeset_all(struct cg_server *server);
+ 
+ #endif
+--- a/cage.c
++++ b/cage.c
+@@ -205,6 +205,17 @@
+ }
+ 
+ static int
++/* Banana: bananad sends this on the way out of a sleep -- see output_remodeset_all. */
++static void
++handle_remodeset(int signal, void *data)
++{
++	struct cg_server *server = data;
++
++	wlr_log(WLR_DEBUG, "Re-modesetting the outputs");
++	output_remodeset_all(server);
++}
++
++static void
+ handle_signal(int signal, void *data)
+ {
+ 	struct cg_server *server = data;
+@@ -311,6 +322,8 @@
+ 	struct wl_event_loop *event_loop = wl_display_get_event_loop(server.wl_display);
+ 	struct wl_event_source *sigint_source = wl_event_loop_add_signal(event_loop, SIGINT, handle_signal, &server);
+ 	struct wl_event_source *sigterm_source = wl_event_loop_add_signal(event_loop, SIGTERM, handle_signal, &server);
++	struct wl_event_source *sigusr1_source = wl_event_loop_add_signal(event_loop, SIGUSR1, handle_remodeset, &server);
++	(void)sigusr1_source;
+ 
+ 	server.backend = wlr_backend_autocreate(event_loop, &server.session);
+ 	if (!server.backend) {

@@ -1499,7 +1499,17 @@ int main(int argc, char** argv)
 					if (c == SIGHUP) { logf("SIGHUP: handing the sound device over"); sound.release(); }	// bananad is about to sleep
 					// after a wake: the kernel has the panels showing our buffers again; a redraw brings the clock and
 					// the battery up to date (no modeset: that would run the panels' power-on sequence once more)
-					if (c == SIGUSR1) { std::lock_guard<std::mutex> l(worker.uiLock); be.invalidate(); ui->dataChanged(); dirty = true; batteryDue = true; guard.wake(nowMs(), &sound); sound.setBgm(settings["bgm"] != "off"); }
+					if (c == SIGUSR1)
+					{
+						// bananad after a resume: the panel's driver disabled it on the way down, and it can come
+						// back dark -- the kernel re-does its own part of the display, but a hold in the pipeline
+						// (a DPU encoder that timed out going down) is only cleared by a modeset, so take the
+						// panel again rather than redraw into a dead one
+						disp.close();
+						for (int tries = 0; !disp.openSingle(o.top, err) && tries < 50; tries++) usleep(20000);
+						std::lock_guard<std::mutex> l(worker.uiLock);
+						be.invalidate(); ui->dataChanged(); dirty = true; batteryDue = true; guard.wake(nowMs(), &sound); sound.setBgm(settings["bgm"] != "off");
+					}
 					if (c == SIGUSR2)
 					{
 						// "volume 85" / "brightness 40", written just now (an old one is from a key pressed in a game)

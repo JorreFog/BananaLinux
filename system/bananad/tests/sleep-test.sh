@@ -17,7 +17,7 @@ if [ "$1" != --inside ]; then
 #include <stdio.h>
 #include <unistd.h>
 static void on(int s) { FILE *f = fopen("/run/test/ui-signals", "a"); if (f) { fprintf(f, "SIGUSR1\n"); fclose(f); } }
-int main(void) { signal(SIGUSR1, on); for (;;) pause(); }
+int main(void) { signal(SIGUSR1, on); signal(SIGHUP, SIG_IGN); for (;;) pause(); }
 EOF
     mkdir -p /data 2>/dev/null || true
     exec unshare -m -p -f --mount-proc sh "$0" --inside "$W" "$ROOTFS"

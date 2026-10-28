@@ -73,6 +73,7 @@ static void find_bottom_bl(void);
 static char bottom_bl[64];	/* the panel's backlight name; banana-ui's idle dim owns it while it runs */
 static int headphones;
 static int fn_held, select_held, power_down;
+static int panel_blanked;	/* bananad blanked the panel (a suspend it could not do): the next key brings it back */
 static double power_since, last_input, ignore_power_until;
 static void sleep_quiet_begin(void);	/* the panel dark and the codec muted, before the DSP sleeps */
 static void sleep_quiet_end(void);	/* and back, on the way out of it */
@@ -392,8 +393,17 @@ static void suspend_now(const char *why)
 			sleep_log("suspend failed (%s)%s", strerror(err), sleep_fallback < 2 ? ": trying the safer way" : "");
 			if (sleep_fallback < 2 && failures <= 2) { sleep_fallback++; sleep_mode(); usleep(200000); continue; }
 			woke = "failed";
-			backlights_power(0);	/* can't sleep: at least dark */
-			break;
+			/* It never slept: leave the panel dark -- that is what a sleep would have looked like, and the
+			 * next press brings it back (see panel_blanked in handle()) -- and let the game run again, because
+			 * a frozen emulator behind a dark screen is worse. Nothing here is a wake, so the wake bookkeeping
+			 * below is skipped. */
+			if (pg > 0) kill(-pg, SIGCONT);
+			sleep_quiet_end();
+			backlights_power(0);
+			panel_blanked = 1;
+			sleep_log("could not suspend after %d tries: the panel is dark until the next press", failures);
+			last_input = mono();
+			return;
 		}
 		asleep += (b1.tv_sec - b0.tv_sec) + (b1.tv_nsec - b0.tv_nsec) / 1e9;
 		/* why it woke: the battery check's alarm, or the power button */
@@ -416,6 +426,14 @@ static void suspend_now(const char *why)
 	backlights_power(1);
 	sleep_quiet_end();
 	if (pg > 0) kill(-pg, SIGCONT);
+	/* The compositor's output too: a panel its driver disabled on the way down can come back dark, with cage's
+	 * frames going nowhere, and only a modeset clears it. cage has no session manager to hear that the system
+	 * slept (Banana's seat is deliberately not VT-bound), so it re-modesets on SIGUSR1 -- the pid run-retroarch
+	 * wrote when it started it. */
+	{
+		pid_t cg = pid_of("/run/banana/cage.pid");
+		if (cg > 0) kill(cg, SIGUSR1);
+	}
 	pid_t ui = ui_pid();
 	if (ui && !game) kill(ui, SIGUSR1);	/* draws the panel again (the clock and the battery moved on) */
 	double t_back = mono();
@@ -429,8 +447,8 @@ static void suspend_now(const char *why)
 	ignore_power_until = mono() + 1.0;
 	power_down = 0;
 	last_input = mono();
-	sleep_log("awake (%s) after %.0f s asleep%s, game and menu back %.1f ms after the kernel", woke, asleep,
-		rtc_wakes ? ", battery checked" : "", (t_back - t_wake) * 1000);
+	sleep_log("awake (%s) after %.0f s asleep%s%s, game and menu back %.1f ms after the kernel", woke, asleep,
+		rtc_wakes ? ", battery checked" : "", asleep < 5.0 ? " (it did not take)" : "", (t_back - t_wake) * 1000);
 }
 
 static void shutdown_now(const char *why)
@@ -1168,7 +1186,7 @@ static void open_inputs(void)
 static void handle(const struct input_event *e)
 {
 	double now = mono();
-	if (e->type == EV_KEY) { last_input = now; undim(); }
+	if (e->type == EV_KEY) { last_input = now; undim(); if (panel_blanked) { panel_blanked = 0; backlights_power(1); } }
 	if (e->type == EV_SW && e->code == SW_HEADPHONE_INSERT) {
 		if (headphones != e->value) { headphones = e->value; audio_route(); }
 		return;

@@ -502,6 +502,16 @@ interrupt), so there is no `wakealarm` attribute to write and `sleep_check_hours
 check, and the safety net that brings a sleeping handheld back by itself -- can never fire here. Waking is the power
 key or the charger, and nothing else. A handheld left asleep with no one to press it drains flat.
 
+**Still open: a sleep from the power key comes back after ~2 s.** Every entry in `sleep.log` says "after 2 s
+asleep" (and the two before this work, 3 s and 4 s), while a bare `printf mem > /sys/power/state` from a shell --
+nothing else done first -- holds for minutes (`CLOCK_BOOTTIME` advanced 158 s; the kernel's own monotonic
+timestamps, which exclude the sleep, moved 1.6 s). So the SoC does go down, and something that only happens on the
+power-key path brings it straight back. The candidates that path adds are the `SIGSTOP` of the game's process
+group, the codec mute through the AudioReach DSP (`amixer` on RX_RX0/RX_RX1, moments before the ADSP is asked to
+sleep) and bananad's own `sync()`; the log now says when a suspend did not take (`asleep < 5.0` with no RTC wake),
+so the next instrumented sleep says which of them it is. Until then a "sleep" on this handheld is a dark panel and
+2 s, not a night's standby.
+
 ## RetroArch's black panel (2026-10-27)
 
 A game started from the menu went to a black screen seconds in and would not answer: the picture path was the first

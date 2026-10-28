@@ -227,6 +227,10 @@ while :; do
         retroarch -v --config $CFG --appendconfig "$L|$RA" -L "$CORE" "$2" < $FIFO --log-file $RL &
     fi
     P=$!
+    # bananad's SIGUSR1 on the way out of a sleep goes here: cage re-modesets its output, because a panel its
+    # driver turned off on the way down comes back dark and only a modeset clears it (Banana has no session
+    # manager to hear about a resume). With no cage there is nothing to re-modeset, and the file goes away.
+    if [ -x /usr/bin/cage ]; then echo $P > /run/banana/cage.pid; else rm -f /run/banana/cage.pid; fi
     trap 'kill -TERM $P 2>/dev/null' TERM INT HUP
     wait $P; S=$?
     while kill -0 $P 2>/dev/null; do wait $P; S=$?; done	# a trap interrupted the wait: until RetroArch has quit
