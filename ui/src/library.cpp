@@ -154,9 +154,9 @@ namespace banana
 	}
 
 	// ---- setup ------------------------------------------------------------------------------------------------------
-	// A DS game with no box art: its own icon (the banner's 32x32, as the bottom screen's cartridge shows it) drawn up
-	// with hard pixel edges to the cover's size on this panel (the cover frame is 214 CSS px wide, 1.6x on the RG DS
-	// Plus's 1024x768), written once to <data>/cache/icons, so the top screen's cover and the home screen's
+	// A game with no box art: a DS ROM's own banner icon (the 32x32 it carries) drawn up
+	// with hard pixel edges to the cover's size on this panel (the cover frame is 214 units wide, 1.9375x on the
+	// RPC's 1240x1080), written once to <data>/cache/icons, so the cover and the home screen's
 	// last-played cartridge show the game instead of the system's console. "" when the ROM has no icon.
 	static std::string romIconCover(const std::string& dataDir, const std::string& rom)
 	{
@@ -817,8 +817,8 @@ namespace banana
 			std::string base = std::string("/sys/class/power_supply/") + e->d_name;
 			if (readLine(base + "/type") != "Battery")
 			{
-				// a charger plugged in (USB, Mains): the rk817's gauge says "Discharging" while it charges, so its own
-				// status alone showed no bolt and kept the low-battery notice up on the cable (as bananad's LED)
+				// a charger plugged in (USB, Mains): the battery's own status can say "Discharging" while it charges, so
+				// its status alone showed no bolt and kept the low-battery notice up on the cable (as bananad's LED)
 				if (readLine(base + "/online") == "1") charger = true;
 				continue;
 			}

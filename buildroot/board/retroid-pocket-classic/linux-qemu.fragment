@@ -2,7 +2,7 @@
 #
 # The arm64 "virt" machine boots the same kernel as the handheld, so the whole system
 # (rootfs, first boot, menu, RetroArch) can be exercised with no device attached.
-# Matches what Banana's RG DS kernel carries for its own QEMU boot job.
+# Matches what the RPC kernel carries for its own QEMU boot job.
 #
 # The console: QEMU's PL011, which qemu-boot.sh puts on the serial line (console=ttyAMA0).
 CONFIG_SERIAL_AMBA_PL011=y

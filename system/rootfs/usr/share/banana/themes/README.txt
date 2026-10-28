@@ -19,8 +19,8 @@ example's file name replaces that example.
         "screenBg": "#0b1d2a",
         "ink": "#e4f6ff"
       },
-      "background": {              pictures behind the two screens (PNG or JPEG, scaled to fill: 1024 x 768 on
-        "top": "mine/top.png",     the RG DS Plus, 640 x 480 on the RG DS), and the screens' dot pattern
+      "background": {              pictures behind the screen (PNG or JPEG, scaled to fill: 1240 x 1080 on the
+        "top": "mine/top.png",     Retroid Pocket Classic's panel), and the screen's dot pattern
         "bottom": "mine/bottom.png",
         "dither": false
       },
@@ -68,7 +68,7 @@ Settings        onPick (text on the selected row), onPickAccent (accented text o
 
 Layout themes
 -------------
-A theme with "screens" in it draws the whole menu itself: every element on both screens, where it goes, how it
+A theme with "screens" in it draws the whole menu itself: every element on the screen, where it goes, how it
 looks and how it moves, from the menu's data (the systems, the games, the selection, the clock, the battery...).
 canvas.json is one. In Banana's source (github.com/JorreFog/BananaLinux): docs/MAKE-A-THEME.md starts from the
 beginning, with the theme editor, and docs/THEMES.md describes the format exactly.

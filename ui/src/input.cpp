@@ -36,7 +36,7 @@ namespace banana
 		}
 	}
 
-	// the device's path in sysfs (to tell the bottom panel's touchscreen from the top one)
+	// the device's path in sysfs (to match a touchscreen's device)
 	static std::string sysPath(const char* node)
 	{
 		char link[512], real[PATH_MAX];
@@ -83,8 +83,8 @@ namespace banana
 				if (testBit(abs, ABS_X) && testBit(abs, ABS_Y) && ioctl(fd, EVIOCGABS(ABS_X), &px) == 0 && ioctl(fd, EVIOCGABS(ABS_Y), &py) == 0)
 				{ dv.x = px.value; dv.y = py.value; }
 				else { dv.x = ax.value; dv.y = ay.value; }
-				// the panel the touchscreen belongs to: the device named by bottomTouch is the second screen; a machine
-				// with a single touchscreen (the RPC, QEMU) has no second, and the pass below forces screen 0 anyway
+				// the panel the touchscreen belongs to: the device named by banana.touch is the screen's touchscreen; a
+				// machine with a single touchscreen (the RPC, QEMU) has no second, and the pass below forces screen 0 anyway
 				dv.screen = !bottomTouch.empty() && sysPath(e->d_name).find(bottomTouch) != std::string::npos ? 1 : 0;
 			}
 			else

@@ -1,10 +1,9 @@
 # Sourced by the launchers (it is on the read-only root): kv_export <file> <prefix>...
 # A settings file on the card is read as KEY=value lines and each one is exported as it is: nothing in it is run.
-# (Sourcing it as shell ran whatever it held: a card shader named "x;cmd" put into superdrastic.conf by Settings ran
+# (Sourcing it as shell ran whatever it held: a card shader named "x;cmd" put into a settings file by Settings ran
 # cmd as root at the next launch, and file sharing can write the card.) Only keys with one of the prefixes count,
-# and never one ending in _CMD (superdrastic-run runs DSFLIP_START_CMD/DSFLIP_STOP_CMD); "#" lines, blank lines and
-# anything else are skipped. A value keeps everything after the first "=", without one pair of quotes around it
-# (the file's own "KEY="value"" style) or a Windows line end.
+# and never one ending in _CMD; "#" lines, blank lines and anything else are skipped. A value keeps everything after
+# the first "=", without one pair of quotes around it (the file's own "KEY="value"" style) or a Windows line end.
 kv_export() {
     _kv_f=$1; shift
     [ -f "$_kv_f" ] || return 0

@@ -1,5 +1,5 @@
 {
-  // Canvas: an example layout theme. Everything on both screens is drawn from the "screens" below: change anything.
+  // Canvas: an example layout theme. Everything on the screen is drawn from the "screens" below: change anything.
   // docs/THEMES.md describes the elements, the hooks (sys.*, game.*, item.*, clock, battery ...) and the expressions.
   "name": "Canvas",
   "author": "BananaOS",

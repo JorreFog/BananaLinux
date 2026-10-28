@@ -2,8 +2,8 @@
 # for as long as the handheld is on (started again if it ever stops).
 ::sysinit:/etc/init.d/rcS
 ::respawn:/usr/bin/banana-ui-session
-# a shell on the board's UART when it has one (the RG DS: ttyS2 at 1500000; QEMU's virt: ttyAMA0; a Qualcomm geni
-# console: ttyMSM0), else a wait: the script picks the one that exists (inittab can't hold the colons it would need)
+# a shell on the board's UART when it has one (a Qualcomm geni console: ttyMSM0; QEMU's virt: ttyAMA0), else a
+# wait: the script picks the one that exists (inittab can't hold the colons it would need)
 ::respawn:/usr/libexec/banana/console-shell
 ::shutdown:/etc/init.d/rcK
 ::ctrlaltdel:/sbin/reboot

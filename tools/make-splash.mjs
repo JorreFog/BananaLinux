@@ -4,9 +4,10 @@
 //
 //   node tools/make-splash.mjs <rnds assets dir> <pixel banana dir> <out dir>
 //
-// Writes, for each palette (dark, light) and panel size (640 = RG DS, 1024 = RG DS Plus):
-//   <palette>-<size>-top.png   the top panel's background (the dotted screen)
-//   <palette>-<size>-bot.png   the bottom panel: the console with its slot, the power light off
+// Writes, for each palette (dark, light) and asset size (640 and 1024: a panel wider than 640 takes the 1024 set and
+// scales it, so a big panel reuses the sharper art):
+//   <palette>-<size>-top.png   the panel background (the dotted screen)
+//   <palette>-<size>-bot.png   the console layer: the console with its slot, the power light off
 //   <palette>-<size>-lip.png   the slot's front lip, drawn over the cartridge as it goes in
 // and for each size: cart-<size>.png, the cartridge (transparent around it) with the bunch on a label in the navy
 // and violet of the BananaUI / Helios marks.

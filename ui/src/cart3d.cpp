@@ -139,7 +139,7 @@ namespace banana
 			const V3 key = unrot(norm({ -0.55f, 0.75f, 0.55f })), fill = unrot(norm({ 0.8f, 0.15f, 0.45f })), rim = unrot(norm({ 0.2f, 0.6f, -0.75f }));
 			const float bx[3] = { HX + 0.3f, HY + 0.3f, HZ + 0.4f };
 			// rows shared out over the cores (every pixel is its own: it runs once per pose, but for a second or more on
-			// one of the RG DS's cores, and the cartridges wait for it)
+			// one of the little cores, and the cartridges wait for it)
 			auto rows = [&](int y0, int y1)
 			{
 				for (int y = y0; y < y1; y++)
@@ -209,7 +209,7 @@ namespace banana
 			for (auto& t : ts) t.join();
 			return g;
 		}
-		// built once per pose and kept (a few hundred milliseconds each on the RG DS's cores)
+		// built once per pose and kept (a few hundred milliseconds each on the little cores)
 		std::mutex gm;
 		std::map<std::string, std::shared_ptr<GBuf>> gbufs;
 		std::shared_ptr<GBuf> gbufFor(const CartPose& pose, int SS)

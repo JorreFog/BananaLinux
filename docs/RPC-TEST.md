@@ -39,8 +39,8 @@ internal Android is there.
 ## Settings
 
 - [ ] The pages are Display & sound, Sleep & power, Other systems, Network, System -- **no Nintendo DS page**: this
-      handheld ships without the DS (one screen; the DS launchers are the RG DS Plus's two-panel, performance-tuned
-      ones). If a DS page appears, the shelf list on the card has an `[nds]` section in it
+      handheld ships without the DS (one screen; there is no two-panel DS emulator here). If a DS page appears, the
+      shelf list on the card has an `[nds]` section in it
 - [ ] Sleep when idle is off by default here (a slate has no lid to close): the screen dims after two idle minutes and
       stays awake; the power button still sleeps it, and Settings > Sleep & power or `autosleep_minutes` in
       `banana/bananad.conf` asks for the timer back

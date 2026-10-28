@@ -292,9 +292,8 @@ namespace banana
 		const char* P = "Sleep & power";
 		add(P, "moon", "Sleep when idle", "In the menu, after this long with no button pressed. Never while a game is running.", power, "autosleep_minutes",
 			{ "Never", "5 minutes", "10 minutes", "15 minutes", "30 minutes" }, { "0", "5", "10", "15", "30" });
-		add(P, "moon", "Dim when idle", "In the menu, the panels go down to a third after this long with no button pressed, and back at the first press. Never while a game is running.", power, "dim_minutes",
+		add(P, "moon", "Dim when idle", "In the menu, the panel goes down to a third after this long with no button pressed, and back at the first press. Never while a game is running.", power, "dim_minutes",
 			{ "Never", "1 minute", "2 minutes", "5 minutes" }, { "0", "1", "2", "5" });
-		add(P, "moon", "Closing the lid", "Sleep with the lid: the game pauses, opening the lid carries on where you were.", power, "lid_sleep", { "Sleeps", "Does nothing" }, { "yes", "no" });
 		add(P, "moon", "Waking up", "Fast: the handheld's parts wake up together. Careful: one after the other, slower but the safest. Banana switches to Careful by itself if a sleep ever fails.",
 			power, "fast_resume", { "Fast", "Careful" }, { "yes", "no" });
 		add(P, "moon", "LEDs", "Green, red when the battery is low, blinking red when nearly empty, amber while charging.", power, "led_brightness",
@@ -649,7 +648,7 @@ namespace banana
 			// what the settings screen keeps outside settings.conf: bananad's sleep/LED rows (same defaults the rows
 			// show when the card has no line), the backlights and the mixer's level
 			static const struct { const char* key; const char* def; } BANANAD[] = {
-				{ "autosleep_minutes", "10" }, { "dim_minutes", "2" }, { "lid_sleep", "yes" },
+				{ "autosleep_minutes", "10" }, { "dim_minutes", "2" },
 				{ "fast_resume", "yes" }, { "led_brightness", "128" } };
 			for (const auto& b : BANANAD)
 				setConfValue(data + "/bananad.conf", b.key, getConfValue("/etc/banana/bananad.conf", b.key, b.def));
@@ -874,7 +873,7 @@ namespace banana
 				st.bands = { rnds::Band{ 0, X(8), p.bubbleBand }, rnds::Band{ X(8), -1, p.panelBody } };
 				st.shadows = { inset(0, -X(4), 0, p.panelLow), outer(X(3), X(3), p.blackish) };
 			}
-			else if (kind == "osd")	// ROCKNIXDS's pop-up card (SuperDrastic's ui.c): a light border, dark and dotted inside
+			else if (kind == "osd")	// ROCKNIXDS's pop-up card (BN's in-game menu): a light border, dark and dotted inside
 			{
 				st.radius = X(10); st.border = std::max(2.0f, std::round(2 * s)); st.borderColor = Color::hex(0xf1ede2);
 				st.bg = Color::hex(0x211f26); st.dither = true;
@@ -1049,8 +1048,8 @@ namespace banana
 
 	void Settings::level(const std::string& label, int percent)
 	{
-		// ROCKNIXDS's volume indicator (SuperDrastic's ui.c render_volume), in the same place: a pill at the top of the
-		// top panel, a speaker (crossed out at 0) or a sun, the in-game menu's 10-segment bar and the percent
+		// ROCKNIXDS's volume indicator (BN's in-game menu), in the same place: a pill at the top of the
+		// panel, a speaker (crossed out at 0) or a sun, the in-game menu's 10-segment bar and the percent
 		static const char* const VOL[12] = { "............", ".....#......", "....##...#..", "...###....#.", "####.#..#..#", "#..#.#...#.#",
 			"#..#.#...#.#", "####.#..#..#", "...###....#.", "....##...#..", ".....#......", "............" };
 		static const char* const MUTE[12] = { "............", ".....#......", "....##......", "...###.#...#", "####.#..#.#.", "#..#.#...#..",
@@ -1082,7 +1081,7 @@ namespace banana
 	}
 
 	// the groups: a grid of tiles in the in-game menu's look (its main page), the group's icon, name and what is in it;
-	// the top panel says what the selected group holds
+	// the header says what the selected group holds
 	static double steadyMs()
 	{
 		return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now().time_since_epoch()).count();
@@ -1500,7 +1499,7 @@ namespace banana
 		for (int i = 0; i < 5; i++) if (col >= FKEYS[i].c0 && col < FKEYS[i].c0 + FKEYS[i].span) return i;
 		return 0;
 	}
-	// the bottom panel: the text being typed in a field at the top, the keys under it, the button chips at the bottom
+	// the keyboard: the text being typed in a field at the top, the keys under it, the button chips at the bottom
 	static const float KX = 18, KPITCH = 60.4f, KY = 80, KROW = 66, KH = 58;
 
 	Settings::Result Settings::keyboardKey(int row, int col)
@@ -2090,7 +2089,7 @@ namespace banana
 		toastUntil = now + ms;
 	}
 
-	// ROCKNIXDS's pop-up card (SuperDrastic's ui.c render_popup): across the top of the top panel, a tile in the accent
+	// ROCKNIXDS's pop-up card (BN's in-game menu): across the top of the panel, a tile in the accent
 	// colour with its pixel sign, the first line in the accent colour and the second in light text
 	void Settings::drawToast(double t)
 	{

@@ -1,81 +1,43 @@
 # Roadmap
 
-## 0.1: first boot on the hardware
+Banana for the **Retroid Pocket Classic** (Qualcomm Snapdragon G1 Gen 2 / SM4450): one 1240×1080 panel, no lid,
+OpenABL in place of U-Boot. What follows is this build's own plan; `docs/RPC-PORT.md` is the port's running log
+and `docs/RPC-TEST.md` the list to check on the handheld.
 
-- [x] The whole system booted end to end in QEMU (`tools/qemu-boot.sh`, the CI's `boot` job): the first boot's
-      partitioning, the menu on both panels, a game started from the library, a shutdown from the settings
-- [x] A full image build: the CI's `image` job builds both cards (`banana-rgds.img.gz`, `banana-rgds-plus.img.gz`
-      and their update packages), and its `boot` job runs each real image through the five-phase QEMU test
-- [x] The first boot on an RG DS and an RG DS Plus
-- [x] Both panels up from banana-ui; touch on the bottom panel where the finger is
-- [x] Buttons and their mapping (A = east, B = south: the RG DS's Nintendo layout)
-- [ ] Suspend and resume on the units: the panels, sound, Wi-Fi, the lid, the power key, the RTC battery check;
-      standby drain over a night
-- [ ] Wake-up time measured (`sleep_debug = yes`), then cut: the panels' power-on delays on the RG DS, the SD card's
-      re-initialisation (MMC_CAP_RUNTIME_RESUME would take it off the wake path), whether Wi-Fi can stay loaded
-- [ ] The display handover to SuperDrastic and back (`DSFLIP_HANDOVER=none`)
-- [x] Sound on the units: the controls bananad assumes (`Playback Mux`, `Master`, the aw88166's `PCM`, the rk817's
-      capture `Mic Capture Gain`/`Master Capture Volume` for the DS microphone), the AW88166 amplifier's firmware,
-      the headphone jack's switch on the RG DS Plus
-- [x] The RG DS Plus's real pixel clock and banana-panel-tune's result (`banana/panel-tune.txt`)
-- [x] Headphones plugged in during a game: the playing stream moves too (0.4.0: each program follows the jack)
-- [x] Boot time, measured and cut (0.4.2): kernel to menu 3.93 s on the RG DS, 5.87 s on the RG DS Plus
-- [ ] BananaDS on the units: its KMS frontend on the panels (`kms.stats`: no repeats or drops at the panels' rate),
-      its governor's clocks, sound and the microphone; then `power.cpu_latency_us` A/B with the battery's cost, and
-      the kernel options turned off for it (BananaDS's docs/BANANALINUX.md, B3/B4) A/B in a game
+## 0.4.2: the first Retroid Pocket Classic build (this branch)
 
-## 0.2: a handheld you can use every day
-
-- [x] A settings screen in the menu (Start): theme, brightness, motion, sounds, clock, boot animation, sleep, lid,
-      LEDs, DS renderer / shader / 3D resolution, Wi-Fi on/off, About, restart, shut down
-- [x] The time zone (POSIX rules for 30 regions, summer time included; the menu, the games and bananad's logs)
-- [x] Choosing a Wi-Fi network: the networks around (signal, lock, saved), the password on an on-screen keyboard
-      (buttons or touch), WPA2 and WPA3; forgetting one
-- [x] Volume in the settings
-- [x] RetroArch and the libretro cores for the other systems (Buildroot packages), on one panel (settings: top or bottom)
-- [x] The Favorites shelf and the favourite systems' order updated as soon as the shelf shows again
-- [x] Input hotplug in banana-ui (USB and Bluetooth pads, watched with inotify)
-- [x] A low-battery warning before the shutdown (a notice over the top panel at 20%, 10% and 5%)
-- [x] Updates: two root slots, a package per build, written to the slot not in use from Settings > System > Update,
-      checked, the switch at the end, `Previous version` to go back; proven in QEMU
-
-- [x] The first-time setup after the install: Wi-Fi, the time zone, a RetroAchievements account, a ScreenScraper
-      account (`banana/accounts.conf`, read by the launchers); B skips it, Settings > System > First-time setup
-      brings it back
-- [x] Resource use: the kernel trimmed to the two handhelds' hardware, the menu's memory measured, bananad idle
-      about once a minute, the panels dimmed when idle, Wi-Fi scans backed off, no hardening overhead
-
-- [x] BananaDS in the image: its package (CMake, melonDS pinned and patched by Buildroot), its KMS frontend and
-      governor, the launcher passing the contract and the menu's choices as its settings, Settings > Nintendo DS >
-      Emulator to switch to it; a DS homebrew ROM run from the menu in QEMU (`tools/qemu-boot.sh`, phase 2b)
-
-## 0.3 and 0.4: on both handhelds (released)
-
-- [x] 0.3.0: the first image on hardware (RG DS Plus), RetroArch's game panel on the other screen, the Carts theme
-- [x] 0.4.0: the first RG DS image; search, an emulator and shader per DS game, mGBA, cheats and fast-forward in
-      BananaDS, themes of your own, games from a second SD card
-- [x] 0.4.1: BananaDS stutters far less at heavy moments, and a slow game's sound keeps its pitch
-- [x] 0.4.2: Simplified Chinese (translated by Majirefy), a faster boot and DS game start, the App Store, the
-      microphone in games, the lid as the DS's lid, file sharing with a login
+- [x] The whole system boots end to end in QEMU (`tools/qemu-boot.sh`, the CI's `boot` job): the first boot's
+      partitioning, the menu, a game started from the library, an A/B update, a shutdown
+- [x] A full image build: the CI's `image` job builds `banana-retroid-pocket-classic.img.gz` and its update package,
+      and its `boot` job runs the real image through the QEMU test
+- [x] The single 1240×1080 panel up from banana-ui, turned 90° (the device tree's `rotation`, `Display::turn()`)
+- [x] Buttons and their mapping through the MCU's `rsinput` (A = east, B = south: a Nintendo layout)
+- [x] Sound: the WCD937x codec and the two AW88166 amplifiers through the AudioReach DSP, the route published by
+      bananad and re-asserted before every open, headphones following the jack
+- [x] The GPU: the Adreno a613 through Mesa's freedreno (the kernel catalog and Mesa both told it is a 613)
+- [x] Updates: two root slots, a package per build, written to the slot not in use, checked, `Previous version`
+- [x] The first-time setup after the install (Wi-Fi, the time zone, a RetroAchievements account, a ScreenScraper
+      account); the menu's settings, the burn-in guard and the low-battery notice
+- [x] Wi-Fi (`ath10k_snoc`), file sharing (ksmbd, off by default) and SSH (dropbear, keys only)
+- [x] No Nintendo DS or 3DS: one panel, and the DS launchers were another handheld's two-panel, performance-tuned
+      work; the RetroArch shelves are the whole library
 
 ## Next
 
-- [ ] The rest of the Chinese translation (lines added since it was made) and a string extractor for new languages
-- [ ] EmulationStation as an alternative frontend
-- [ ] Charging while switched off on the RG DS Plus (#34)
-- [ ] Golden Sun: Dark Dawn's opening flyover at full speed in BananaDS
+- [x] Hardware bring-up, then the list in `docs/RPC-TEST.md`: the panel upright and sharp, brightness and sleep,
+      sound and headphones, the buttons, the fan and heat, the card, an update. **In progress** on the units.
+- [ ] The RetroArch menu is sideways while the game is not: `video_rotation` turns the content only, and there is no
+      compositor to turn its own menu. The fix is a Banana patch to `gl2.c` (lay the RGUI at 1240×1080 and rotate
+      the final blit), judged by eye on the handheld
+- [ ] Sleep on the unit: measure the wake (`sleep_debug = yes`) and cut it — the panel's power-on sequence, the SD
+      card's re-initialisation (MMC_CAP_RUNTIME_RESUME would take it off the wake path), whether Wi-Fi can stay
+      loaded; and standby drain over a night
+- [ ] Wi-Fi firmware: the WCN3950's `ath10k` board/firmware files, if any are still missing
+- [ ] The fan curve under a long game, and the thermals after ten minutes of N64/PSX
 
 ## Later
 
-- [x] Kernel trimming: the modules cut to what the handhelds use, then the drivers to what their device trees have
-      (initcall_debug on the device may find more)
-- [x] The ROM's own icon on cartridges inside `.zip` files (banana-ui's streaming zip reader, zlib)
-- [ ] One card for both handhelds (`make universal`, built but not in CI): U-Boot reads the SARADC's channel 5
-      (about 1.06 V on the RG DS, 1.77 V on the Plus, measured in Linux) and loads the matching device tree
-      (extlinux.conf's FDTDIR); one update package for both. Open: a test U-Boot with it, built with clang, didn't
-      boot the RG DS. Next: a GCC build with and without the detection, to tell the compiler from the reading
-      (uboot-patches-universal/, uboot-universal.fragment)
+- [ ] The rest of the Chinese translation (lines added since it was made) and a string extractor for new languages
+- [ ] EmulationStation as an alternative frontend
 - [ ] RetroAchievements progress on the shelf
-- [x] File sharing over Wi-Fi, off by default: the card's data partition over SMB3 (the kernel's ksmbd, loaded only
-      when switched on), games copied in show up in the menu by themselves
-- [x] SSH for working on Banana, off by default (dropbear, keys only, from banana/ssh/authorized_keys)
+- [ ] Turnip (the Vulkan driver) beside freedreno, when a Vulkan game wants it

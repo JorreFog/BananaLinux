@@ -84,9 +84,9 @@ name them like `"cherry/top.png"`.
 
 | | |
 |---|---|
-| **background** | pictures behind the two screens, scaled to fill |
-| **logo** | the picture at the top of the bottom screen |
-| **icons** | one picture per system, by its id (`nds`, `gba`, `gb`, `snes`, `ports`, ...) |
+| **background** | pictures behind the screen, scaled to fill |
+| **logo** | the picture at the top of the screen |
+| **icons** | one picture per system, by its id (`gba`, `gb`, `snes`, `ports`, ...) |
 | **fonts** | TTF files: the menu's text and its titles |
 | **sounds** | WAV files for scrolling, selecting and so on; `"off"` for none |
 
@@ -105,9 +105,11 @@ You do not have to hand-write it — the format is documented below for referenc
 
 In plain words, since it helps to know what you are looking at.
 
-**Screens.** Two of them, called *top* and *bottom*. Think of each as a sheet 640 wide and 480 tall. Every
-position and size in a theme is in those units, so `"x": 320, "y": 240` is the middle of a screen. (The RG DS
-Plus's bigger panels are just this sheet scaled up; nothing in the theme changes.)
+**Screens.** The engine was built for two, called *top* and *bottom*; the Retroid Pocket Classic has one, and a
+theme draws everything on `top`. Think of it as a sheet 640 wide and as tall as the panel allows (about 557 units;
+the second `bottom` block is unused here). Every position and size in a theme is in those units, so
+`"x": 320, "y": 240` is the middle of the sheet's upper part. The panel's own pixels are just this sheet scaled up;
+nothing in the theme changes.
 
 **Elements.** A screen holds a list of them, drawn in order — the first is at the back, the last on top:
 

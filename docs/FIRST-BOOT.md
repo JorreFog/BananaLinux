@@ -1,45 +1,54 @@
-# The first boot on an RG DS
+# The first boot on a Retroid Pocket Classic
 
 Banana hasn't booted on the hardware before yours. This page is what to flash, what should happen, what to try,
 and which files tell what went wrong.
 
 ## Flash
 
-| Handheld | Image (from the CI run's Artifacts, or `make rgds` / `make rgds-plus`) |
-|---|---|
-| RG DS | `banana-rgds.img.gz` |
-| RG DS Plus | `banana-rgds-plus.img.gz` |
+Write the image from the CI run's Artifacts (or `make retroid-pocket-classic`) to a microSD card with balenaEtcher
+(it takes the `.gz` as it is), or with `dd`:
 
-Write it to a microSD card with balenaEtcher (it takes the `.gz` as it is), put the card in the slot, power on.
+```sh
+zcat banana-retroid-pocket-classic.img.gz | sudo dd of=/dev/mmcblk0 bs=4M status=progress
+```
+
+Put the card in the handheld and power on. Nothing has to be replaced first: **OpenABL** is already in the
+handheld's `abl_a`/`abl_b` slots and reads `extlinux/extlinux.conf` from the card, so Banana boots whether or not
+the internal Android is still there.
 
 ## What should happen
 
-1. A second or two after power-on, the boot animation on both panels: the bananas drop onto the top screen, the
-   cartridge goes into the console on the bottom one. The very first boot spends a few more seconds before it,
-   making the data partition from the rest of the card.
-2. The first-time setup, on both panels: Wi-Fi (the networks around, the password on the keyboard), the time
-   zone, a RetroAchievements account, a ScreenScraper account; B skips it (Settings > System > First-time setup
-   brings it back), A on Finish ends it.
-3. The menu, on the Nintendo DS with no games: "Copy .nds files to roms/nds".
+1. A second or two after power-on, the boot animation on the panel: the bananas drop, BANANAOS types, the cartridge
+   goes in. The very first boot spends a few more seconds before it, making the data partition from the rest of the
+   card.
+2. The first-time setup, on the panel: Wi-Fi (the networks around, the password on the keyboard), the time zone, a
+   RetroAchievements account, a ScreenScraper account; B skips it (Settings > System > First-time setup brings it
+   back), A on Finish ends it.
+3. The menu, on the shelf of systems with no games: "Copy .gba files to roms/gba" and so on. There is **no Nintendo
+   DS** page — this handheld has one screen and ships with the RetroArch systems only.
 4. Power off (Start > System > Shut down, or hold power 2 s), put the card in a computer: a `BANANA` drive with
-   `roms/`, `bios/`, `banana/` and so on. Games go in `roms/nds`, `roms/gba`... (`banana/README.txt`).
+   `roms/`, `bios/`, `banana/` and so on. Games go in `roms/gba`, `roms/snes`, `roms/psx`... (`banana/README.txt`).
 
 ## Things to try
 
-- **Buttons**: A, B, X, Y, the d-pad, L, R, Start in the menu; A should be the right-hand button (the DS's).
-- **Touch**: tap a cartridge on the bottom screen; the keyboard in Settings > Network.
-- **Sound**: the menu's clicks; the volume keys; headphones (on the RG DS Plus the speakers should go quiet).
-- **Sleep**: close the lid in a game, wait, open it. The game should carry on where it was within a moment.
-  Close it in the menu; leave it closed overnight and see what the battery says in the morning.
+- **The picture**: the menu should be **upright** and sharp and fill the panel. If it is turned, add
+  `banana.rotate=0`, `90`, `180` or `270` to the `APPEND` lines in `extlinux/extlinux.conf` on the card's FAT
+  partition and reboot — no rebuild needed.
+- **Buttons**: A, B, X, Y, the d-pad, L, R, Start in the menu; A should be the right-hand button.
+- **Touch**: tap a game or a system; the keyboard in Settings > Network.
+- **Sound**: the menu's clicks; the volume keys; headphones (the speaker should go quiet).
+- **Sleep**: the power button in a game, wait, press it again. The game should carry on where it was within a
+  moment. (This handheld has no lid.) Leave it asleep over a night and see what the battery says in the morning.
 - **Wi-Fi**: Settings > Network, choose your network, type the password.
-- **A DS game**, and a game for another system (GBA, SNES...).
+- **A game** for a system or two (GBA, SNES, PlayStation).
 
 ## Updating later
 
-A build's `banana-<handheld>-<version>.update.tar` goes in `banana/updates/` on the card (from a computer, or over
-Wi-Fi with Settings > File sharing on); Settings > System > Update lists it, A twice writes it to the card's other
-system slot and checks it, A restarts into it. The version before stays on the card: Settings > System >
-Previous version restarts into it. Nothing on the data partition (games, saves, settings) is touched by either.
+A build's `banana-retroid-pocket-classic-<version>.update.tar` goes in `banana/updates/` on the card (from a
+computer, or over Wi-Fi with Settings > File sharing on); Settings > System > Update lists it, A twice writes it to
+the card's other system slot and checks it, A restarts into it. The version before stays on the card: Settings >
+System > Previous version restarts into it. Nothing on the data partition (games, saves, settings) is touched by
+either.
 
 ## When something is wrong
 
@@ -47,29 +56,26 @@ Everything Banana knows about a boot is in `banana/logs/` on the card (put it in
 
 | File | What |
 |---|---|
-| `boot.txt` | the milestones, in seconds since the kernel started: init, rcS, the data partition, the panels, the menu |
+| `boot.txt` | the milestones, in seconds since the kernel started: init, rcS, the data partition, the panel, the menu |
 | `dmesg.txt` | the kernel's log (`dmesg.1.txt`: the boot before) |
 | `banana-ui.log` | the menu's log (`.1`: the run before) |
 | `sleep.log` | one line per sleep: how long it took to fall asleep, how long it slept, why it woke, how long the way back took |
 | `sleep-devices.log` | with `sleep_debug = yes` in `banana/bananad.conf`: every device's suspend and resume time, slowest first |
-| `superdrastic/` | SuperDrastic's logs |
-
-`banana/panel-tune.txt` says what the panel tuner did to the refresh rate on the first boot.
+| `retroarch.log` | the last game's RetroArch log (a game that would not show anything) |
 
 Send those files back and say what you saw. Some cases:
 
-- **Black screens, and no `BANANA` drive on the computer afterwards**: the kernel or init never got far enough to
-  make the data partition. Only a serial console tells more (the RG DS's UART at 1500000 baud, `ttyS2`).
-- **Black screens, but the `BANANA` drive is there**: `banana/logs/banana-ui.log` and `dmesg.txt` say why the menu
-  couldn't open the panels.
+- **A black panel, and no `BANANA` drive on the computer afterwards**: the kernel or init never got far enough to
+  make the data partition. Only a serial console tells more (the RPC's UART, `ttyMSM0`; add `banana.console=1` to
+  `extlinux/extlinux.conf`'s `APPEND` to have rcS's milestones and the menu's log go there too, as they do in QEMU).
+- **A black panel, but the `BANANA` drive is there**: `banana/logs/banana-ui.log` and `dmesg.txt` say why the menu
+  couldn't open the panel.
+- **A black panel a second after a game starts**: run the probes in `docs/RPC-TEST.md` before touching the kernel —
+  the three causes look identical on the panel.
 - **The menu, but "Can't read the card's games"**: the `BANANA` partition couldn't be mounted (formatted as
   something other than exFAT?).
 - **Slow wake from sleep**: set `sleep_debug = yes` in `banana/bananad.conf`, sleep and wake a few times, and send
   `sleep.log` and `sleep-devices.log`: they show which part of the handheld takes the time.
-
-A serial cable on the RG DS's UART (`ttyS2`, 1500000 baud) shows everything as it happens; with `banana.console=1`
-added to `extlinux/extlinux.conf`'s `APPEND` on the boot partition, rcS's milestones and the menu's log go there
-too, as they do in QEMU (`tools/qemu-boot.sh`).
 
 With Wi-Fi working, SSH saves taking the card out: put your public key in `banana/ssh/authorized_keys`, switch on
 Settings > Network > SSH, then `ssh root@<address>` (the address is in Settings > Wi-Fi's description). `dmesg`,

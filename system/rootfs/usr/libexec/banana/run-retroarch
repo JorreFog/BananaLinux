@@ -79,8 +79,9 @@ set_cfg audio_device default
 # the ALSA sequencer: no /dev/snd/seq on this image (no sequencer built), and RetroArch's MIDI driver failing is two
 # error lines in the log on every start and one more driver to go wrong
 set_cfg midi_driver null
-# A handheld with one panel has exactly one connector, and RetroArch numbers it 1 -- a card that still says 2 (from a
-# DS pair, or from the Screen row this build doesn't show) sends RetroArch looking for a connector that isn't there,
+# A handheld with one panel has exactly one connector, and RetroArch numbers it 1 -- a card that still says 2 (a
+# two-panel handheld's number, or from the Screen row this build doesn't show) sends RetroArch looking for a
+# connector that isn't there,
 # which is the black panel with the game running under it all over again.
 n=0
 for s in /sys/class/drm/card*-*/status; do
@@ -90,8 +91,7 @@ done
 [ "$n" -le 1 ] && set_cfg video_monitor_index 1
 # Banana's choices over what RetroArch wrote on a card before they were in retroarch.cfg, once (a change made in
 # RetroArch's menu afterwards is kept): A confirms and B goes back in its menu, F + Start quits with one press, and
-# the N64 core's GLideN64 on its own thread (Super Mario 64 on an RG DS Plus: 40-50 frames a second, 55-60 with it,
-# frame-buffer copies kept)
+# the N64 core's GLideN64 on its own thread (a few frames a second on a heavy N64 title, frame-buffer copies kept)
 M=/data/retroarch/.banana-defaults-1
 if [ ! -f $M ]; then
     set_cfg menu_swap_ok_cancel_buttons false

@@ -49,8 +49,9 @@ Each `shot` writes `<prefix><name>-top.png` and `-bot.png`. Theme errors are pri
 
 `//` and `/* */` comments and trailing commas are allowed.
 
-Each screen is 480 units high and 640 wide on both handhelds. The RG DS Plus's 1024 x 768 panels scale it by 1.6,
-and text and shapes are drawn sharp at that size.
+The Retroid Pocket Classic has **one** screen: the canvas is 640 units wide and as tall as the panel allows
+(about 557), and a theme draws every view on `top`. The engine keeps the two-screen `top`/`bottom` schema it was
+imported with, so a theme may carry a `bottom` block; it is unused on this handheld.
 
 ## Values: literals, expressions, templates
 
@@ -78,7 +79,7 @@ Colours are `#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`, `rgb(...)`, `rgba(...)`, `t
 | name | |
 |---|---|
 | `view` | `"home"`, `"library"` or `"launch"` |
-| `W`, `H`, `screen` | the screen's size in units (640 x 480), 0 for the top screen and 1 for the bottom one |
+| `W`, `H`, `screen` | the screen's size in units (640 wide, as tall as the panel allows), and its index: 0 for the screen (the engine's `top`); 1 is the second `bottom` screen, unused on this handheld |
 | `time` | ms since the menu started. Using it redraws continuously at `behavior.fps`, so use it only for things that really move all the time |
 | `clock`, `date` | `"13:01"` / `"01:01 PM"` (Settings' clock), `"10/02"` |
 | `battery`, `charging`, `batteryMode` | percent (-1 unknown), 1 on the charger, `"icon"` / `"text"` (Settings) |
@@ -96,7 +97,7 @@ Colours are `#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`, `rgb(...)`, `rgba(...)`, `t
 | your `vars`, a component's `with` | |
 
 Pictures from hooks (`sys.icon`, `game.art`...) are full paths. A theme's own files are relative to its JSON file.
-`game.romIcon` is a DS game's own icon from its ROM.
+`game.romIcon` is a game ROM's own icon (the engine can read one from a DS ROM; nothing here ships DS).
 
 ## Elements
 

@@ -3,11 +3,11 @@
 #   volume get              the level, 0-100
 #   volume set <0-100>
 #   volume up|down <n>      n percent louder or quieter, then the new level (as get prints it)
-# bananad writes which card plays and its control to /run/banana/mixer ("<card> <control>"). The rk817's Master
-# (the RG DS's speaker, the jack) is a plain level and amixer's percent is right for it. The RG DS Plus's speakers are
-# two aw88166 amplifiers whose control is an attenuation instead: 0 the loudest, 1023 mute, 64 a 6 dB step, and
-# this kernel names them "Left PCM" and "Right PCM" (amixer's "PCM" isn't there, so the keys changed nothing). Their
-# percent is 50 dB of range, 2.5 dB a 5% step, and 0% is mute.
+# bananad writes which card plays and its control to /run/banana/mixer ("<card> <control>"). The RPC's speakers are
+# two aw88166 amplifiers whose control is an attenuation instead of a level: 0 the loudest, 1023 mute, 64 a 6 dB step,
+# and this kernel names them "Left PCM" and "Right PCM" (amixer's "PCM" isn't there, so the keys changed nothing).
+# Their percent is 50 dB of range, 2.5 dB a 5% step, and 0% is mute. A control that is a plain level uses amixer's
+# own percent.
 read -r CARD CONTROL < /run/banana/mixer 2>/dev/null || exit 1
 AW=
 if [ "$(cat /proc/asound/card$CARD/id 2>/dev/null)" = aw88166 ]; then

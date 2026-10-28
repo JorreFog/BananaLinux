@@ -7,19 +7,18 @@ Banana's own code (ui/src, system/, buildroot/package, tools/) is under the MIT 
 | ROCKNIXDS Pixel's engine (RndsRaster, RndsUI) and its theme assets (icons, sounds, Pixelify Sans) | ui/rnds, ui/assets/rnds | [ROCKNIXDS](https://github.com/JorreFog/ROCKNIXDS), imported by tools/import-rnds.sh | MIT; Pixelify Sans: SIL OFL 1.1 (fonts/OFL.txt); console icons: BenJelter's Console Icon Pack (see systems.cfg) |
 | Inter (the Carts theme's typeface) | ui/assets/banana/fonts | [rsms/inter](https://github.com/rsms/inter) v4.1 | SIL OFL 1.1 (fonts/Inter-LICENSE.txt) |
 | The BananaUI banana mark (redrawn as pixel art by tools/make-pixel-banana.py) | ui/assets/banana, the logo and boot animation | [JorreFog/helios](https://github.com/JorreFog/helios) app/src/main/res/drawable-nodpi/banana_mark.png | the same author's |
-| DraStic settings and button map for the RG DS | buildroot/board/rgds/drastic.cfg | ROCKNIX drastic-sa (config/RK3566/drastic.cfg.rgds) | GPL-2.0 (ROCKNIX) |
 | stb_image, stb_image_write | ui/third_party | [nothings/stb](https://github.com/nothings/stb) | public domain / MIT |
-| Kernel patches, RG DS and RG DS Plus device trees, kernel config, U-Boot patches | buildroot/board/rgds | [ROCKNIX](https://github.com/ROCKNIX/distribution), pinned in board/rgds/ROCKNIX | GPL-2.0 |
-| Generic DSI panel driver | buildroot/board/rgds/kernel/panel-generic-dsi.c | ROCKNIX (stolen/overlay_server) | GPL-2.0 |
-| ROCKNIX joypad driver | buildroot/board/rgds/kernel/rocknix-* | [hackbar/rocknix-joypad](https://github.com/hackbar/rocknix-joypad) | GPL-2.0-or-later |
-| RK3568 TF-A (BL31) | buildroot/board/rgds/rkbin | [rockchip-linux/rkbin](https://github.com/rockchip-linux/rkbin) | Rockchip's binary license (rkbin/LICENSE) |
-| Nintendo DS cheat files (Action Replay codes, for BananaDS) | buildroot/package/libretro-cheats-nds (tarball) | [libretro/libretro-database](https://github.com/libretro/libretro-database) cht/Nintendo - Nintendo DS at 12c21cf | CC BY-SA 4.0 |
-| pocket-native, the Nintendo 3DS runtime (a fork of Zakuro and 3dsrecomp) | buildroot/package/pocket-native, fetched at build time with Banana's own patches beside it | [whovian64/pocket-native](https://github.com/whovian64/pocket-native), forked from [fearkov/zakuro](https://github.com/fearkov/zakuro) and [fearkov/3dsrecomp](https://github.com/fearkov/3dsrecomp) | MIT |
+| The SM4450 hardware layer: kernel patches, the Retroid Pocket Classic device trees, the kernel config, the ADSP/WPSS/ACF/QCA firmware and the audio topology | buildroot/board/retroid-pocket-classic | [ROCKNIX](https://github.com/ROCKNIX/distribution) `next`, imported 2026-10-27 | GPL-2.0 |
+| Mesa's freedreno driver, with the Adreno 613 entries Banana adds | the image's Mesa; buildroot/patches/mesa3d | [Mesa](https://gitlab.freedesktop.org/mesa/mesa) | MIT |
+| The RPC joypad's RetroArch autoconfig | system/rootfs/usr/share/libretro/autoconfig/udev/Retroid Pocket Classic Gamepad.cfg | Banana's own, from the rsinput driver's mapping | MIT |
+| RetroArch's joypad autoconfigs for the pads people plug in (8BitDo, Xbox, PlayStation) | fetched at build time | [libretro/retroarch-joypad-autoconfig](https://github.com/libretro/retroarch-joypad-autoconfig) | per file, mostly GPL-2.0 |
 
-RetroArch's joypad map for the RG DS (`buildroot/package/retroarch/retrogame_joypad.cfg`) is ROCKNIX's (GPL-2.0).
+**OpenABL**, the arm-efi bootloader already in the handheld's `abl_a`/`abl_b` slots, is not built from or
+redistributed by this repository; the card only carries the kernel, the device tree and `extlinux/extlinux.conf`
+it reads.
 
 Downloaded at build time, not kept here: RetroArch (GPL-3.0) and its cores (gpSP, Gambatte, FCEUmm, PCSX ReARMed,
-Mupen64Plus-Next and NEStopia: GPL-2.0; bsnes and SwanStation, the libretro core of DuckStation: GPL-3.0-or-later;
-SameBoy: MIT; mGBA: MPL-2.0; libretro's GLSL shaders: per shader, mostly GPL/public domain; Snes9x, PicoDrive and
-Genesis Plus GX: non-commercial licences), libudev-zero (ISC), Linux, U-Boot, Buildroot and its packages, SuperDrastic (MIT) and DraStic
-(proprietary freeware by Exophase, the build ROCKNIX packages; not redistributed by this repository).
+Mupen64Plus-Next, NEStopia, Snes9x, PicoDrive, Genesis Plus GX, bsnes, mGBA, SameBoy, Parallel N64, fake-08,
+SwanStation — the libretro core of DuckStation: GPL-3.0-or-later; per core, see each package), libretro's GLSL
+shaders (per shader, mostly GPL/public domain), PortMaster (MIT), libudev-zero (ISC), Linux, Buildroot and its
+packages.

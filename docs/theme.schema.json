@@ -382,7 +382,7 @@
     },
     "screen": {
       "type": "object",
-      "description": "One view's two screens: an element or an array of elements each.",
+      "description": "One view's screens: an element or an array of elements each (top is the screen; bottom is unused on the one-panel Retroid Pocket Classic).",
       "properties": {
         "top": { "$ref": "#/$defs/elementList" },
         "bottom": { "$ref": "#/$defs/elementList" }
@@ -449,7 +449,7 @@
     },
     "background": {
       "type": "object",
-      "description": "Pictures behind the two screens and the screens' dot pattern.",
+      "description": "Pictures behind the screen and its dot pattern.",
       "properties": {
         "top": { "type": "string", "description": "The top screen's background picture (PNG/JPEG, scaled to fill)." },
         "bottom": { "type": "string", "description": "The bottom screen's background picture (PNG/JPEG, scaled to fill)." },

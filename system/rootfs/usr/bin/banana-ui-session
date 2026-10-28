@@ -1,8 +1,8 @@
 #!/bin/sh
 # The menu, with its log on the data partition (the last two runs) so a problem can be read on a computer.
 # Kernel parameters (extlinux.conf's APPEND, or tools/qemu-boot.sh): banana.console=1 sends the log to the console
-# (the RG DS's UART, QEMU's serial) instead; banana.top=<connector> names the top panel's connector (DSI-2) and
-# banana.touch=<device> the bottom panel's touchscreen (part of its sysfs path), for a display other than the RG DS's.
+# (the handheld's UART, QEMU's serial) instead; banana.top=<connector> names the panel's connector (Virtual-1 in
+# QEMU, the msm DSI connector on the handheld) and banana.touch=<device> the touchscreen (part of its sysfs path).
 LOG=/data/banana/logs/banana-ui.log
 mkdir -p /data/banana/logs 2>/dev/null && touch $LOG.w 2>/dev/null && rm -f $LOG.w || LOG=/run/banana/banana-ui.log
 for a in $(cat /proc/cmdline); do

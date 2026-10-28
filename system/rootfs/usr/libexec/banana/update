@@ -39,12 +39,9 @@ list)
     for p in $UPDATES/*.update.tar $UPDATES/*.update; do
         [ -e "$p" ] || continue
         n=$(basename "$p" .tar); n=${n%.update}; n=${n#banana-}
-        # banana-<board>-<version>: this handheld's own name first, then the RG DS's (which this tree still builds)
+        # banana-<board>-<version>: this handheld's own name
         case $n in
         "$BOARD"-*) b=$BOARD; v=${n#$BOARD-} ;;
-        rgds-plus-*) b=rgds-plus; v=${n#rgds-plus-} ;;
-        universal-*) b=universal; v=${n#universal-} ;;
-        rgds-*) b=rgds; v=${n#rgds-} ;;
         *) b=?; v=$n ;;
         esac
         printf '%s\t%s\t%s\n' "$p" "$v" "$b"
@@ -78,9 +75,8 @@ apply)
     for f in Image rootfs.squashfs VERSION board sha256sums; do [ -f "$DIR/$f" ] || fail "the package has no $f"; done
     DTB=$(ls "$DIR"/*.dtb 2>/dev/null | head -n 1); [ -n "$DTB" ] || fail "the package has no device tree"
     PB=$(cat "$DIR/board"); PV=$(cat "$DIR/VERSION")
-    # a universal package fits any card (it has this handheld's device tree too; a card made for one handheld names
-    # its device tree in extlinux.conf, which the package keeps the name of)
-    [ -z "$BOARD" ] || [ "$PB" = "$BOARD" ] || [ "$PB" = universal ] || fail "that is a package for the $PB, this is the $BOARD"
+    # the package has to be this handheld's own
+    [ -z "$BOARD" ] || [ "$PB" = "$BOARD" ] || fail "that is a package for the $PB, this is the $BOARD"
     # every file as the build hashed it
     while read -r h f; do
         [ -f "$DIR/$f" ] || fail "the package has no $f"

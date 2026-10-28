@@ -7,7 +7,7 @@ the power light to the right; screws in the top corners, the battery cover on th
 notch on the left edge, the BANANAOS wordmark where the maker's is and the fine print under it. The panel's bottom edge cuts the slab off
 there.
 
-Drawn per scale (1x for the RG DS, 1.6x for the RG DS Plus) on a 560 x 172 grid of CSS px, every coordinate scaled
+Drawn per scale (1x and 1.6x, the two sizes the UI picks between) on a 560 x 172 grid of CSS px, every coordinate scaled
 and rounded, so both are crisp (no stretched pixels). The slab's top-left is at (40, 322) of the panel; the UI and
 the splash place it there (the mouth at 260, 316; the power light's bezel at 409, 336).
 

@@ -16,7 +16,7 @@ namespace banana
 	public:
 		// dir: the splash assets; banana: the pixel bunch (assets/banana/banana-48.png); variant: dark or light
 		bool load(const std::string& dir, const std::string& banana, const std::string& variant, int w, int h);
-		// both screens at t ms after the start; ready: the menu is ready to take over (stops the waiting loop)
+		// the screen at t ms after the start; ready: the menu is ready to take over (stops the waiting loop)
 		void draw(uint32_t* top, uint32_t* bot, double t, bool ready);
 		// the intro has played to its end and the menu is ready: time to hand over
 		bool finished(double t, bool ready) const { return ready && t >= INTRO_END; }

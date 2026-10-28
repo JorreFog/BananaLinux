@@ -157,7 +157,7 @@ namespace banana
 			const float wallK = screen == 0 ? 0.10f : 0.07f, poolK = screen == 0 ? 0.09f : 0.08f;
 			int dot = std::max(1, (int)std::lround(1.5f * s)), step = (int)std::lround(16 * s);
 			// the pools of light and the glow are Gaussians, so each is a column's factor times a row's: the exponentials
-			// once per column here and once per row below, not per pixel (on the main thread, a new colour's two screens)
+			// once per column here and once per row below, not per pixel (on the main thread)
 			std::vector<float> wallX(w), poolX(w), glowX(ga > 0 ? w : 0), vigX(w);
 			std::vector<uint8_t> dotX(w);
 			for (int xx = 0; xx < w; xx++)

@@ -2,14 +2,11 @@
 # Clock profiles. The menu draws a frame in a few milliseconds and sleeps in between, so it runs on the lowest
 # clocks (up to 1416 MHz while it animates: at 1104 its transitions missed refreshes); a game gets the profile its
 # system asks for (systems.conf's perf).
-#   banana-perf ui | powersave | balanced | performance | superdrastic
-# superdrastic: the "performance" governor, which the DS emulator's own governor takes over (SuperDrastic's, and
-# BananaDS's port of it: the lowest clock at which the game drops no frames, per game, through scaling_max_freq,
-# put back when the game ends); the GPU stays on demand.
+#   banana-perf ui | powersave | balanced | performance
 #
-# Every cpufreq policy of the SoC is set, not just the first: the RG DS is four Cortex-A55 in one policy, but the
-# Retroid Pocket Classic has two (policy0 its six A55, policy6 its two Cortex-A78) -- tuning only policy0 left the
-# big cores of the handheld out of every profile, the menu running them flat out and a game's "powersave" not saving.
+# Every cpufreq policy of the SoC is set, not just the first: the Retroid Pocket Classic has two (policy0 its six
+# A55, policy6 its two Cortex-A78) -- tuning only policy0 left the big cores of the handheld out of every profile,
+# the menu running them flat out and a game's "powersave" not saving.
 GPU=$(ls -d /sys/class/devfreq/*.gpu 2>/dev/null | head -n1)
 [ -d /sys/devices/system/cpu/cpufreq ] || exit 0
 
@@ -36,7 +33,6 @@ ui)           cpu schedutil 1416000; gpu powersave ;;   # (schedutil: only while
 powersave)    cpu schedutil 1416000; gpu simple_ondemand ;;
 balanced)     cpu schedutil max; gpu simple_ondemand ;;
 performance)  cpu performance max; gpu performance ;;
-superdrastic) cpu performance max; gpu simple_ondemand ;;
-*) echo "usage: banana-perf ui|powersave|balanced|performance|superdrastic" >&2; exit 1 ;;
+*) echo "usage: banana-perf ui|powersave|balanced|performance" >&2; exit 1 ;;
 esac
 exit 0

@@ -1,6 +1,6 @@
 #!/bin/sh
-# A login on the board's UART, when the kernel was told to use one on its command line (console=ttyAMA0 on QEMU's
-# virt machine, console=ttyS2,1500000 on the RG DS, console=ttyMSM0 on a Qualcomm geni console). Without one -- the
+# A login on the board's UART, when the kernel was told to use one on its command line (console=ttyMSM0 on a
+# Qualcomm geni console, console=ttyAMA0 on QEMU's virt machine). Without one -- the
 # RPC's extlinux.conf names no console -- there is no getty at all: the kernel's own default console (ttyMSM0 here) is
 # not a port anything is wired to, and a getty on it exits at once, so init would respawn it every few seconds.
 #

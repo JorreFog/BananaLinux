@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Banana's status-bar logo for ROCKNIXDS Pixel's brand chip: the pixel-art bunch (tools/make-pixel-banana.py) and
 BANANAOS in the theme's Pixelify Sans, drawn hard-edged (no anti-aliasing): BANANA with a two-tone banana fill, OS
-in white, and a 1 px drop shadow, at 1x (134x20, the RG DS) and 1.6x (214x32, the RG DS Plus). The chip's slot is fixed (RndsUI draws it at
+in white, and a 1 px drop shadow, at 1x (134x20) and 1.6x (214x32), the two scales the UI picks between. The chip's slot is fixed (RndsUI draws it at
 148.23 x 26 CSS px); the logo is centred in it.
 
     tools/make-logo.py <PixelifySans-Medium.ttf> <pixel banana dir> <out dir> [splash dir]"""
