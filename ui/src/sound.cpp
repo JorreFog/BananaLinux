@@ -391,7 +391,9 @@ static bool dspFrontendsFree()
 						{
 							std::this_thread::sleep_for(std::chrono::milliseconds(100));
 							r = snd_pcm_prepare(pcm);
-							if (r < 0) slog("prepare retry %d/25 (%s)", retry + 1, snd_strerror(r));
+							// every 5th only: at boot the amps are not up for ~10 s and this retries the whole time,
+							// which was a wall of one line per 100 ms in the log (25 lines per attempt)
+							if (r < 0 && retry % 5 == 4) slog("prepare retry %d/25 (%s)", retry + 1, snd_strerror(r));
 						}
 					}
 					if (r < 0) { slog("recover/prepare failed (%s); giving up", snd_strerror(r)); return false; }
