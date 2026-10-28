@@ -497,8 +497,8 @@ VIDEOS = [  # (YouTube id, channel, title)
 
 STATS = [  # (icon, number, unit, label): 0.5.0's release notes
     ("gear", "9.8", "S", "POWER TO MENU"),
-    ("cart", "360", "MS", "A TO GAME"),
     ("nds", "+12.6", "%", "BANANADS SPEED"),
+    ("collection", "10", "", "BUILT-IN THEMES"),
     ("gamepad", "2", "", "DS EMULATORS"),
 ]
 

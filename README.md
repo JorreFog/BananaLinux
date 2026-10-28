@@ -39,9 +39,9 @@ BananaOS is a complete Linux system built specifically for the RG DS and RG DS P
 It starts directly in the menu, releases display, input and audio resources when launching a game, and pauses play when you close the lid. Updates come over Wi-Fi and install to a second system slot, so the previous version remains one restart away. The menu speaks English and Simplified Chinese (简体中文, translated by Majirefy).
 
 <p align="center">
-  <img src="docs/img/readme/stats.png" width="100%" alt="9.8 s from the power button to the menu, 360 ms from A to the game, BananaDS 12.6% faster, 2 DS emulators">
+  <img src="docs/img/readme/stats.png" width="100%" alt="9.8 s from the power button to the menu, BananaDS 12.6% faster, 10 built-in layout themes, 2 DS emulators">
 </p>
-<p align="center"><sub>9.8 s from the power button to the menu (12.0 s in 0.4.2), timed with a stopwatch by a QA tester (which handheld was not recorded); about 360 ms from A to the game (about 920 ms in 0.4.2); BananaDS's fast-forward throughput at 2x on an RG DS Plus, average of 9 games, against 0.4.2. From the kernel starting to the menu, 0.4.2 measured 3.9 s on the RG DS and 5.9 s on the RG DS Plus.</sub></p>
+<p align="center"><sub>9.8 s from the power button to the menu (12.0 s in 0.4.2), timed with a stopwatch by a QA tester (which handheld was not recorded); BananaDS's fast-forward throughput at 2x on an RG DS Plus, average of 9 games, against 0.4.2. From the kernel starting to the menu, 0.4.2 measured 3.9 s on the RG DS and 5.9 s on the RG DS Plus.</sub></p>
 
 <a id="new-in-0-5-0"></a>
 <img src="docs/img/readme/h-new.png" width="100%" alt="">
@@ -81,8 +81,8 @@ The full list, with every fix: the [0.5.0 release notes](https://github.com/Jorr
 
 **Other systems and speed**
 
-- **N64, much faster** (Super Mario 64 on the RG DS Plus: 40–50 → 55–60 fps), **PlayStation** without stutter and crackle, and **GBA** games with RetroAchievements start in a quarter of a second instead of up to 26 s. An emulator choice per system and a screen border.
-- **Boot** 12.0 s → 9.8 s from the power button to the menu (a QA tester's stopwatch; handheld not recorded); **starting a game** ~920 ms → ~360 ms; **deep sleep** works again where it got stuck in a lighter sleep.
+- **N64, much faster:** rendered at the N64's native resolution, Banjo-Kazooie run unthrottled went from 64 to 126 frames a second on the RG DS Plus, and Bomberman 64 from 70% to 99% speed on the RG DS. **PlayStation:** no more stutter or crackle (Silent Hill on the RG DS Plus: 20–41 late frames and 3–6 sound dropouts per 30 s → 0). **GBA** games with RetroAchievements start in a quarter of a second instead of up to 26 s. An emulator choice per system and a screen border.
+- **Boot** 12.0 s → 9.8 s from the power button to the menu (a QA tester's stopwatch; handheld not recorded); **deep sleep** works again where it got stuck in a lighter sleep.
 - **Simplified Chinese (简体中文):** Majirefy's 0.5.0 translation, 610 new lines and 344 revised ones. Thank you, Majirefy! RetroArch's own menu and messages now follow the language too.
 
 <a id="get-it"></a>
