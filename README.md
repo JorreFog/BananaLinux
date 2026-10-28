@@ -250,7 +250,7 @@ In 0.5.0 a theme file can draw the whole menu: where everything is, how it looks
 
 Known issues:
 
-- **DSi games and DSiWare** (.dsi, .cia) need a BIOS dumped from your own console and still stop at a white screen with the BIOS files tested so far: not supported yet. DSi-enhanced DS games (Pokémon Black 2 / White 2) run as DS games.
+- **DSi games and DSiWare** (.dsi, .cia; unpack a .7z first) run on BananaDS with the BIOS dumped from your own DSi: put `dsi_bios9.bin` and `dsi_bios7.bin` (64 KB each; a dump's `DSI_bios9.bin` names and a `DSi BIOS` folder inside it work too) in `bios/` on the card. Your DSi's NAND (`dsi_nand.bin`, optional) goes there too; without it BananaDS keeps DSiWare saves on a NAND of its own. Without the BIOS they stop at a white screen. DSi-enhanced DS games (Pokémon Black 2 / White 2) run as DS games.
 - **SuperDrastic's low latency on the RG DS Plus** is a little rougher than with it off: DraStic runs at 60.0 fps and the Plus's panels at 60.17 Hz. BananaDS's low latency is smooth on both.
 - **The heaviest themes** (Neon Arcade, Vinyl Lounge, Oak Bookshelf) can still drop frames while scrolling the home row.
 - **Chinese:** lines added after Majirefy's 0.5.0 translation (the first-time setup's slides, the new low-latency help texts, a few Credits lines) still show in English or as a draft, for the next round.
