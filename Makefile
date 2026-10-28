@@ -72,13 +72,16 @@ local-rebuild:
 
 # the image's banana-ui must match a fresh host build. The CI's `checks` job asserts this hash; on a tree where the
 # image was never built it asks you to run `make retroid-pocket-classic` first.
-check-local-build: ui
+# the image's banana-ui must be newer than every in-tree source: a source edited after the image was built is the
+# stale-image footgun the stamp guard in the board target prevents, but this catches a tree where that step was
+# skipped or a build was interrupted. (The host binary is x86-64 and the image's is aarch64, so hashing them, as an
+# earlier version of this did, can never match.)
+check-local-build:
 	@img=$(OUT)/retroid-pocket-classic/target/usr/bin/banana-ui; \
 	if [ ! -f "$$img" ]; then echo "no image built yet: run make retroid-pocket-classic first"; exit 1; fi; \
-	host=$$(sha256sum $(CURDIR)/ui/banana-ui | cut -d' ' -f1); \
-	target=$$(sha256sum "$$img" | cut -d' ' -f1); \
-	if [ "$$host" != "$$target" ]; then echo "stale image: host banana-ui $$host != image $$target"; exit 1; fi; \
-	echo "local build matches the image ($$host)"
+	newer=$$(find ui/src ui/rnds system/bananad -type f \( -name '*.cpp' -o -name '*.c' -o -name '*.h' -o -name '*.hpp' \) -newer "$$img" 2>/dev/null | head -n 1); \
+	if [ -n "$$newer" ]; then echo "stale image: $$newer is newer than the image's banana-ui -- run make retroid-pocket-classic"; exit 1; fi; \
+	echo "the image's banana-ui is newer than every source"
 
 clean:
 	rm -rf $(OUT)
