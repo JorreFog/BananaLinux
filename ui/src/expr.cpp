@@ -1,5 +1,6 @@
 #include "expr.h"
 #include <algorithm>
+#include <charconv>
 #include <cctype>
 #include <cmath>
 #include <cstdio>
@@ -7,6 +8,7 @@
 #include <cstring>
 #include <map>
 #include <mutex>
+#include <type_traits>
 
 namespace banana
 {
@@ -22,7 +24,7 @@ namespace banana
 		if (isStr) return s;
 		if (std::isnan(n)) return "";
 		char b[32];
-		if (n == std::floor(n) && std::fabs(n) < 1e15) snprintf(b, sizeof b, "%lld", (long long)n);
+		if (n == std::floor(n) && std::fabs(n) < 1e15) { auto r = std::to_chars(b, b + sizeof b, (long long)n); return std::string(b, r.ptr); }
 		else snprintf(b, sizeof b, "%g", n);
 		return b;
 	}
@@ -40,6 +42,26 @@ namespace banana
 	// ---- colours ----------------------------------------------------------------------------------------------------
 	bool parseColorText(const std::string& v0, uint32_t& out)
 	{
+		// "#rrggbb" and "#rrggbbaa" as they are (the usual case, and what colorText makes): read directly, the same
+		// result as below
+		if ((v0.size() == 7 || v0.size() == 9) && v0[0] == '#')
+		{
+			uint32_t x = 0;
+			bool hex = true;
+			for (size_t i = 1; i < v0.size() && hex; i++)
+			{
+				char ch = v0[i];
+				int d = ch >= '0' && ch <= '9' ? ch - '0' : ch >= 'a' && ch <= 'f' ? ch - 'a' + 10 : ch >= 'A' && ch <= 'F' ? ch - 'A' + 10 : -1;
+				if (d < 0) hex = false;
+				else x = x << 4 | (uint32_t)d;
+			}
+			if (hex)
+			{
+				if (v0.size() == 7) x = x << 8 | 0xff;
+				out = (x >> 8) | (x & 0xff) << 24;
+				return true;
+			}
+		}
 		std::string v = v0;
 		while (!v.empty() && isspace((unsigned char)v.back())) v.pop_back();
 		while (!v.empty() && isspace((unsigned char)v[0])) v.erase(0, 1);
@@ -73,9 +95,14 @@ namespace banana
 	}
 	std::string colorText(uint32_t c)
 	{
-		char b[16];
-		snprintf(b, sizeof b, "#%06x%02x", c & 0xffffff, c >> 24);
-		return b;
+		// (as printf's "#%06x%02x", without printf: themes mix colours in expressions for every element, every frame)
+		static const char hx[] = "0123456789abcdef";
+		char b[10];
+		b[0] = '#';
+		uint32_t rgba = (c << 8) | (c >> 24);
+		for (int i = 0; i < 8; i++) b[1 + i] = hx[(rgba >> (28 - 4 * i)) & 15];
+		b[9] = 0;
+		return std::string(b, 9);
 	}
 	static uint32_t colorOf(const EV& v)
 	{
@@ -92,11 +119,22 @@ namespace banana
 	}
 
 	// ---- the tree ---------------------------------------------------------------------------------------------------
+	// the functions by number (a call's name looked up once, when it is compiled)
+	static constexpr const char* const fnNames[] = { "abs", "alpha", "band", "bit", "bor", "bounce", "bxor", "ceil", "clamp", "contains", "cos", "cosd", "darken", "easeIn", "easeInOut", "easeOut", "easeOutBack", "easeOutElastic", "either", "fixed", "floor", "hsl", "if", "len", "lerp", "lighten", "lower", "max", "min", "mix", "mod", "num", "pad", "pick", "plural", "popcount", "pow", "progress", "pulse", "replace", "rgb", "rgba", "round", "shl", "shr", "sign", "sin", "sind", "smoothstep", "sqrt", "step", "str", "substr", "upper" };
+	static constexpr bool sameName(const char* a, const char* b) { while (*a && *a == *b) { a++; b++; } return *a == *b; }
+	static constexpr int fnIndex(const char* name)
+	{
+		for (int i = 0; i < (int)(sizeof fnNames / sizeof fnNames[0]); i++) if (sameName(fnNames[i], name)) return i;
+		return -1;
+	}
+#define FN(name) (std::integral_constant<int, fnIndex(name)>::value)
+
 	struct ExprNode
 	{
 		enum Op { LIT, VAR, NEG, NOT, ADD, SUB, MUL, DIV, MOD, EQ, NE, LT, LE, GT, GE, AND, OR, TERN, CALL } op = LIT;
 		EV lit;
 		std::string name;	// VAR, CALL
+		int fn = -1;		// CALL: its index in fnNames (-1: none, worth 0)
 		std::vector<Expr> a;
 	};
 
@@ -245,7 +283,7 @@ namespace banana
 					if (eat("("))
 					{
 						auto n = std::make_shared<ExprNode>();
-						n->op = ExprNode::CALL; n->name = id;
+						n->op = ExprNode::CALL; n->name = id; n->fn = fnIndex(id.c_str());
 						if (!eat(")"))
 							for (;;)
 							{
@@ -272,42 +310,42 @@ namespace banana
 		{
 			std::vector<EV> v;
 			v.reserve(n.a.size());
-			const std::string& f = n.name;
+			const int fn = n.fn;
 			// if() only works out the side it takes
-			if (f == "if") return n.a.size() >= 2 ? (evalExpr(n.a[0], sc).truthy() ? evalExpr(n.a[1], sc) : n.a.size() > 2 ? evalExpr(n.a[2], sc) : EV(0.0)) : EV(0.0);
+			if (fn == FN("if")) return n.a.size() >= 2 ? (evalExpr(n.a[0], sc).truthy() ? evalExpr(n.a[1], sc) : n.a.size() > 2 ? evalExpr(n.a[2], sc) : EV(0.0)) : EV(0.0);
 			for (auto& a : n.a) v.push_back(evalExpr(a, sc));
 			auto N = [&](size_t k, double def = 0) { return k < v.size() ? v[k].num() : def; };
 			auto S = [&](size_t k) { return k < v.size() ? v[k].str() : std::string(); };
-			if (f == "min") { double r = N(0); for (size_t k = 1; k < v.size(); k++) r = std::min(r, N(k)); return r; }
-			if (f == "max") { double r = N(0); for (size_t k = 1; k < v.size(); k++) r = std::max(r, N(k)); return r; }
-			if (f == "clamp") return std::min(N(2, 1), std::max(N(1), N(0)));
-			if (f == "abs") return std::fabs(N(0));
-			if (f == "floor") return std::floor(N(0));
-			if (f == "ceil") return std::ceil(N(0));
-			if (f == "round") { double m = std::pow(10.0, N(1)); return std::round(N(0) * m) / m; }
-			if (f == "sqrt") return std::sqrt(std::max(0.0, N(0)));
-			if (f == "pow") return std::pow(N(0), N(1));
-			if (f == "sign") return (double)((N(0) > 0) - (N(0) < 0));
-			if (f == "mod") { double b = N(1, 1); if (b == 0) return 0.0; double r = std::fmod(N(0), b); return r < 0 ? r + b : r; }
-			if (f == "sin") return std::sin(N(0));
-			if (f == "cos") return std::cos(N(0));
-			if (f == "sind") return std::sin(N(0) * PI / 180);
-			if (f == "cosd") return std::cos(N(0) * PI / 180);
-			if (f == "lerp") return N(0) + (N(1) - N(0)) * N(2);
-			if (f == "step") return N(1) >= N(0) ? 1.0 : 0.0;
-			if (f == "smoothstep") { double t = clamp01((N(2) - N(0)) / (N(1) - N(0) == 0 ? 1 : N(1) - N(0))); return t * t * (3 - 2 * t); }
+			if (fn == FN("min")) { double r = N(0); for (size_t k = 1; k < v.size(); k++) r = std::min(r, N(k)); return r; }
+			if (fn == FN("max")) { double r = N(0); for (size_t k = 1; k < v.size(); k++) r = std::max(r, N(k)); return r; }
+			if (fn == FN("clamp")) return std::min(N(2, 1), std::max(N(1), N(0)));
+			if (fn == FN("abs")) return std::fabs(N(0));
+			if (fn == FN("floor")) return std::floor(N(0));
+			if (fn == FN("ceil")) return std::ceil(N(0));
+			if (fn == FN("round")) { double m = std::pow(10.0, N(1)); return std::round(N(0) * m) / m; }
+			if (fn == FN("sqrt")) return std::sqrt(std::max(0.0, N(0)));
+			if (fn == FN("pow")) return std::pow(N(0), N(1));
+			if (fn == FN("sign")) return (double)((N(0) > 0) - (N(0) < 0));
+			if (fn == FN("mod")) { double b = N(1, 1); if (b == 0) return 0.0; double r = std::fmod(N(0), b); return r < 0 ? r + b : r; }
+			if (fn == FN("sin")) return std::sin(N(0));
+			if (fn == FN("cos")) return std::cos(N(0));
+			if (fn == FN("sind")) return std::sin(N(0) * PI / 180);
+			if (fn == FN("cosd")) return std::cos(N(0) * PI / 180);
+			if (fn == FN("lerp")) return N(0) + (N(1) - N(0)) * N(2);
+			if (fn == FN("step")) return N(1) >= N(0) ? 1.0 : 0.0;
+			if (fn == FN("smoothstep")) { double t = clamp01((N(2) - N(0)) / (N(1) - N(0) == 0 ? 1 : N(1) - N(0))); return t * t * (3 - 2 * t); }
 			// progress 0..1 of something that started `ago` ms ago and takes `ms`: progress(moved, 200)
-			if (f == "progress") return clamp01(N(0) / std::max(1.0, N(1, 1)));
-			if (f == "easeIn") { double t = clamp01(N(0)); return t * t * t; }
-			if (f == "easeOut") { double t = 1 - clamp01(N(0)); return 1 - t * t * t; }
-			if (f == "easeInOut") { double t = clamp01(N(0)); return t < 0.5 ? 4 * t * t * t : 1 - std::pow(-2 * t + 2, 3) / 2; }
-			if (f == "easeOutBack") { double t = clamp01(N(0)) - 1, c = N(1, 1.70158); return 1 + (c + 1) * t * t * t + c * t * t; }
-			if (f == "easeOutElastic")
+			if (fn == FN("progress")) return clamp01(N(0) / std::max(1.0, N(1, 1)));
+			if (fn == FN("easeIn")) { double t = clamp01(N(0)); return t * t * t; }
+			if (fn == FN("easeOut")) { double t = 1 - clamp01(N(0)); return 1 - t * t * t; }
+			if (fn == FN("easeInOut")) { double t = clamp01(N(0)); return t < 0.5 ? 4 * t * t * t : 1 - std::pow(-2 * t + 2, 3) / 2; }
+			if (fn == FN("easeOutBack")) { double t = clamp01(N(0)) - 1, c = N(1, 1.70158); return 1 + (c + 1) * t * t * t + c * t * t; }
+			if (fn == FN("easeOutElastic"))
 			{
 				double t = clamp01(N(0));
 				return t == 0 || t == 1 ? t : std::pow(2, -10 * t) * std::sin((t * 10 - 0.75) * (2 * PI / 3)) + 1;
 			}
-			if (f == "bounce")
+			if (fn == FN("bounce"))
 			{
 				double t = clamp01(N(0)), k = 7.5625, d = 2.75;
 				if (t < 1 / d) return k * t * t;
@@ -316,17 +354,17 @@ namespace banana
 				t -= 2.625 / d; return k * t * t + 0.984375;
 			}
 			// a wave between 0 and 1 with a period of `ms` (from the time hook): pulse(time, 1200)
-			if (f == "pulse") return 0.5 - 0.5 * std::cos(N(0) * 2 * PI / std::max(1.0, N(1, 1000)));
-			if (f == "mix") return EV(colorText(mixColor(colorOf(v.size() > 0 ? v[0] : EV()), colorOf(v.size() > 1 ? v[1] : EV()), N(2, 0.5))));
-			if (f == "alpha") { uint32_t c = colorOf(v.size() > 0 ? v[0] : EV()); return EV(colorText((c & 0xffffff) | (uint32_t)std::lround(clamp01(N(1, 1)) * ((c >> 24) & 255)) << 24)); }
-			if (f == "lighten") { uint32_t c = colorOf(v.size() > 0 ? v[0] : EV()); return EV(colorText(mixColor(c, (c & 0xff000000) | 0xffffff, N(1, 0.2)))); }
-			if (f == "darken") { uint32_t c = colorOf(v.size() > 0 ? v[0] : EV()); return EV(colorText(mixColor(c, c & 0xff000000, N(1, 0.2)))); }
-			if (f == "rgb" || f == "rgba")
+			if (fn == FN("pulse")) return 0.5 - 0.5 * std::cos(N(0) * 2 * PI / std::max(1.0, N(1, 1000)));
+			if (fn == FN("mix")) return EV(colorText(mixColor(colorOf(v.size() > 0 ? v[0] : EV()), colorOf(v.size() > 1 ? v[1] : EV()), N(2, 0.5))));
+			if (fn == FN("alpha")) { uint32_t c = colorOf(v.size() > 0 ? v[0] : EV()); return EV(colorText((c & 0xffffff) | (uint32_t)std::lround(clamp01(N(1, 1)) * ((c >> 24) & 255)) << 24)); }
+			if (fn == FN("lighten")) { uint32_t c = colorOf(v.size() > 0 ? v[0] : EV()); return EV(colorText(mixColor(c, (c & 0xff000000) | 0xffffff, N(1, 0.2)))); }
+			if (fn == FN("darken")) { uint32_t c = colorOf(v.size() > 0 ? v[0] : EV()); return EV(colorText(mixColor(c, c & 0xff000000, N(1, 0.2)))); }
+			if (fn == FN("rgb") || fn == FN("rgba"))
 			{
 				auto b = [](double x) { return (uint32_t)std::min(255.0, std::max(0.0, x + 0.5)); };
 				return EV(colorText(b(N(3, 1) * 255) << 24 | b(N(0)) << 16 | b(N(1)) << 8 | b(N(2))));
 			}
-			if (f == "hsl")
+			if (fn == FN("hsl"))
 			{
 				double h = std::fmod(N(0), 360) / 60, s = clamp01(N(1)), l = clamp01(N(2)), c = (1 - std::fabs(2 * l - 1)) * s;
 				if (h < 0) h += 6;
@@ -338,26 +376,26 @@ namespace banana
 				return EV(colorText(b(N(3, 1)) << 24 | b(r + m) << 16 | b(g + m) << 8 | b(bb + m)));
 			}
 			// bits, for the game companion's values (gamecomp.h): on the numbers as 32-bit unsigned integers
-			if (f == "band" || f == "bor" || f == "bxor" || f == "shl" || f == "shr" || f == "bit" || f == "popcount")
+			if (fn == FN("band") || fn == FN("bor") || fn == FN("bxor") || fn == FN("shl") || fn == FN("shr") || fn == FN("bit") || fn == FN("popcount"))
 			{
 				auto U = [&](size_t k) { double d = N(k); return d < 0 ? (uint32_t)(int64_t)d : (uint32_t)(uint64_t)d; };
 				uint32_t a = U(0), b = U(1);
-				if (f == "band") return (double)(a & b);
-				if (f == "bor") return (double)(a | b);
-				if (f == "bxor") return (double)(a ^ b);
-				if (f == "shl") return b >= 32 ? 0.0 : (double)(uint32_t)(a << b);
-				if (f == "shr") return b >= 32 ? 0.0 : (double)(a >> b);
-				if (f == "bit") return b >= 32 ? 0.0 : (double)((a >> b) & 1);
+				if (fn == FN("band")) return (double)(a & b);
+				if (fn == FN("bor")) return (double)(a | b);
+				if (fn == FN("bxor")) return (double)(a ^ b);
+				if (fn == FN("shl")) return b >= 32 ? 0.0 : (double)(uint32_t)(a << b);
+				if (fn == FN("shr")) return b >= 32 ? 0.0 : (double)(a >> b);
+				if (fn == FN("bit")) return b >= 32 ? 0.0 : (double)((a >> b) & 1);
 				return (double)__builtin_popcount(a);
 			}
-			if (f == "upper") { std::string s = S(0); for (auto& c : s) c = (char)toupper((unsigned char)c); return EV(s); }
-			if (f == "lower") { std::string s = S(0); for (auto& c : s) c = (char)tolower((unsigned char)c); return EV(s); }
-			if (f == "len")
+			if (fn == FN("upper")) { std::string s = S(0); for (auto& c : s) c = (char)toupper((unsigned char)c); return EV(s); }
+			if (fn == FN("lower")) { std::string s = S(0); for (auto& c : s) c = (char)tolower((unsigned char)c); return EV(s); }
+			if (fn == FN("len"))
 			{
 				std::string s = S(0);
 				return (double)std::count_if(s.begin(), s.end(), [](char c) { return ((unsigned char)c & 0xc0) != 0x80; });
 			}
-			if (f == "substr")
+			if (fn == FN("substr"))
 			{
 				// by characters (UTF-8), not bytes
 				std::string s = S(0), r;
@@ -369,23 +407,23 @@ namespace banana
 				}
 				return EV(r);
 			}
-			if (f == "contains") return S(0).find(S(1)) != std::string::npos ? 1.0 : 0.0;
-			if (f == "replace")
+			if (fn == FN("contains")) return S(0).find(S(1)) != std::string::npos ? 1.0 : 0.0;
+			if (fn == FN("replace"))
 			{
 				std::string s = S(0), a = S(1), b = S(2);
 				if (!a.empty()) for (size_t at = 0; (at = s.find(a, at)) != std::string::npos; at += b.size()) s.replace(at, a.size(), b);
 				return EV(s);
 			}
-			if (f == "pad") { std::string s = S(0); while ((int)s.size() < (int)N(1)) s = (v.size() > 2 ? S(2) : std::string("0")) + s; return EV(s); }
-			if (f == "fixed") { char b[64]; snprintf(b, sizeof b, "%.*f", std::max(0, std::min(10, (int)N(1))), N(0)); return EV(b); }
-			if (f == "str") return EV(S(0));
-			if (f == "num") return N(0);
+			if (fn == FN("pad")) { std::string s = S(0); while ((int)s.size() < (int)N(1)) s = (v.size() > 2 ? S(2) : std::string("0")) + s; return EV(s); }
+			if (fn == FN("fixed")) { char b[64]; snprintf(b, sizeof b, "%.*f", std::max(0, std::min(10, (int)N(1))), N(0)); return EV(b); }
+			if (fn == FN("str")) return EV(S(0));
+			if (fn == FN("num")) return N(0);
 			// plural(3, 'game') "3 games", plural(1, 'game') "1 game", plural(n, 'match', 'matches')
-			if (f == "plural") return EV(EV(N(0)).str() + " " + (N(0) == 1 ? S(1) : (v.size() > 2 ? S(2) : S(1) + "s")));
+			if (fn == FN("plural")) return EV(EV(N(0)).str() + " " + (N(0) == 1 ? S(1) : (v.size() > 2 ? S(2) : S(1) + "s")));
 			// pick(i, a, b, c): the i-th of the rest (clamped)
-			if (f == "pick") { if (v.size() < 2) return EV(""); int k = std::max(0, std::min((int)v.size() - 2, (int)N(0))); return v[k + 1]; }
+			if (fn == FN("pick")) { if (v.size() < 2) return EV(""); int k = std::max(0, std::min((int)v.size() - 2, (int)N(0))); return v[k + 1]; }
 			// the first of its arguments that isn't empty
-			if (f == "either") { for (auto& e : v) if (e.truthy()) return e; return v.empty() ? EV("") : v.back(); }
+			if (fn == FN("either")) { for (auto& e : v) if (e.truthy()) return e; return v.empty() ? EV("") : v.back(); }
 			return EV(0.0);
 		}
 	}

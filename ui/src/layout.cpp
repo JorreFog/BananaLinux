@@ -1,11 +1,16 @@
 #include "layout.h"
 #include "library.h"
+#include "pool.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
 #include <time.h>
+#include <mutex>
+#include <type_traits>
+#include <unordered_map>
+#include <string_view>
 
 namespace banana
 {
@@ -24,6 +29,10 @@ namespace banana
 			return b;
 		}
 		std::string hex(uint32_t rgb) { char b[16]; snprintf(b, sizeof b, "#%06x", rgb & 0xffffff); return b; }
+		// std::lround of a float, inline (its library call was a good part of making a box): for x >= 0, x + 0.5 is
+		// exact in a double and the integer part is the rounding half away from zero, as lround's
+		inline long roundHalfUp(float x) { return x >= 0 ? (long)((double)x + 0.5) : std::lround(x); }
+
 		rnds::Color colorFrom(uint32_t argb, float opacity)
 		{
 			return rnds::Color(((argb >> 16) & 255) / 255.0f, ((argb >> 8) & 255) / 255.0f, (argb & 255) / 255.0f, ((argb >> 24) & 255) / 255.0f * opacity);
@@ -38,18 +47,110 @@ namespace banana
 	}
 
 	// ---- the compiled theme ------------------------------------------------------------------------------------------
+	// hook's names by number
+	static constexpr const char* const hookNames[] = { "time", "view", "W", "H", "clock", "date", "battery", "charging", "batteryMode", "online", "motion", "brand", "accent", "accent.base", "accent.light", "accent.dark", "accent.band", "accent.low", "accent.ink", "accent.inkSub", "cursor", "scroll", "count", "moved", "entered", "dir", "systems.count", "systemCount", "games.count", "gameCount", "launch.t", "launch.progress", "empty", "empty.title", "empty.hint" };
+	static int hookIndex(const std::string& v)
+	{
+		static const std::unordered_map<std::string, int> ids = [] { std::unordered_map<std::string, int> m; for (int i = 0; i < (int)(sizeof hookNames / sizeof hookNames[0]); i++) m.emplace(hookNames[i], i); return m; }();
+		auto it = ids.find(v);
+		return it == ids.end() ? -1 : it->second;
+	}
+	static constexpr int hookConst(const char* v)
+	{
+		for (int i = 0; i < (int)(sizeof hookNames / sizeof hookNames[0]); i++)
+		{
+			const char *a = hookNames[i], *b = v;
+			while (*a && *a == *b) { a++; b++; }
+			if (*a == *b) return i;
+		}
+		return -1;
+	}
+#define HOOK(name) (std::integral_constant<int, hookConst(name)>::value)
+	// sysField's names by number
+	static constexpr const char* const sysFieldNames[] = { "id", "name", "maker", "color", "accent", "icon", "games", "played", "time", "fav", "app", "hasResume", "resumeTitle", "resumeEyebrow", "resumeBox", "resumeCart", "resumeLabel", "resumeArt", "index" };
+	static int sysFieldIndex(const std::string& v)
+	{
+		static const std::unordered_map<std::string, int> ids = [] { std::unordered_map<std::string, int> m; for (int i = 0; i < (int)(sizeof sysFieldNames / sizeof sysFieldNames[0]); i++) m.emplace(sysFieldNames[i], i); return m; }();
+		auto it = ids.find(v);
+		return it == ids.end() ? -1 : it->second;
+	}
+	static constexpr int sysFieldConst(const char* v)
+	{
+		for (int i = 0; i < (int)(sizeof sysFieldNames / sizeof sysFieldNames[0]); i++)
+		{
+			const char *a = sysFieldNames[i], *b = v;
+			while (*a && *a == *b) { a++; b++; }
+			if (*a == *b) return i;
+		}
+		return -1;
+	}
+#define SYSF(name) (std::integral_constant<int, sysFieldConst(name)>::value)
+	// gameField's names by number
+	static constexpr const char* const gameFieldNames[] = { "title", "sub", "plays", "last", "time", "box", "cart", "label", "art", "rom", "romIcon", "icon", "achA", "achievements", "achB", "achievementsTotal", "achLabel", "achProgress", "fav", "index", "system", "systemName", "systemId" };
+	static int gameFieldIndex(const std::string& v)
+	{
+		static const std::unordered_map<std::string, int> ids = [] { std::unordered_map<std::string, int> m; for (int i = 0; i < (int)(sizeof gameFieldNames / sizeof gameFieldNames[0]); i++) m.emplace(gameFieldNames[i], i); return m; }();
+		auto it = ids.find(v);
+		return it == ids.end() ? -1 : it->second;
+	}
+	static constexpr int gameFieldConst(const char* v)
+	{
+		for (int i = 0; i < (int)(sizeof gameFieldNames / sizeof gameFieldNames[0]); i++)
+		{
+			const char *a = gameFieldNames[i], *b = v;
+			while (*a && *a == *b) { a++; b++; }
+			if (*a == *b) return i;
+		}
+		return -1;
+	}
+#define GAMEF(name) (std::integral_constant<int, gameFieldConst(name)>::value)
+
+	typedef std::map<std::string, Prop, std::less<>> PropMap;	// (found by a string_view: no string made to look one up)
+
+	// property names by number: an element's properties are found by the number of the name, an index into a table
+	// made when the element is compiled, not looked up by the name each time (dozens for each element, each frame)
+	static int keyId(std::string_view name)
+	{
+		static std::mutex lock;
+		static std::unordered_map<std::string, int> ids;
+		std::lock_guard<std::mutex> l(lock);
+		auto it = ids.find(std::string(name));
+		if (it != ids.end()) return it->second;
+		int id = (int)ids.size();
+		ids.emplace(std::string(name), id);
+		return id;
+	}
+	struct Key
+	{
+		int id;
+		std::string_view name;
+		Key(int i, std::string_view n) : id(i), name(n) {}
+		Key(const char* n) : id(keyId(n)), name(n) {}
+		Key(const std::string& n) : id(keyId(n)), name(n) {}
+	};
+	// a name written in the code: its number worked out once, where it's written
+#define K(lit) (Key([] { static const int i = keyId(lit); return i; }(), lit))
+	// a property map's entries by name number (made when its element is compiled)
+	struct PropIndex
+	{
+		std::vector<const Prop*> byId;
+		void build(const PropMap& m) { byId.clear(); for (auto& e : m) { int id = keyId(e.first); if ((int)byId.size() <= id) byId.resize(id + 1, nullptr); byId[id] = &e.second; } }
+		const Prop* get(int id) const { return id < (int)byId.size() ? byId[id] : nullptr; }
+	};
+
 	struct LayoutMenu::Node
 	{
 		std::string type;					// rect, text, image, group, list
-		std::map<std::string, Prop> props;	// flattened: "shadow.blur", "gradient.stops.0", "radius.2"
+		PropMap props;	// flattened: "shadow.blur", "gradient.stops.0", "radius.2"
 		std::vector<std::shared_ptr<Node>> children;
 		std::shared_ptr<Node> item;			// a list's template
-		struct State { Prop when; std::map<std::string, Prop> props; };
+		struct State { Prop when; PropMap props; PropIndex idx; };
 		std::vector<State> states;			// overrides while their condition holds (the last one wins)
 		std::vector<std::pair<std::string, Prop>> with;	// a component's parameters, set in its children's scope
-		std::map<std::string, double> smooth;	// property -> time constant (ms): the value eases towards its target
+		std::map<std::string, double, std::less<>> smooth;	// property -> time constant (ms): the value eases towards its target
 		int serial = 0;
-		const Prop* prop(const std::string& k) const { auto it = props.find(k); return it == props.end() ? nullptr : &it->second; }
+		PropIndex idx;	// (props and the states' made once they're complete: index()
+		void index() { idx.build(props); for (auto& st : states) st.idx.build(st.props); }
 	};
 	typedef std::shared_ptr<LayoutMenu::Node> NodePtr;
 
@@ -104,6 +205,9 @@ namespace banana
 		std::map<std::string, TextTex> texts;
 		struct ShapeTex { rnds::TexPtr tex; uint64_t used = 0; size_t bytes = 0; };
 		std::map<std::string, ShapeTex> shapes;
+		// a box's parameters as they are (bytes) -> its key in shapes (made with printf: the key is worked out once
+		// for parameters seen before)
+		std::unordered_map<std::string, std::string> shapeKeys, textKeys;	// (texts: the same for its lines)
 		size_t shapeBytes = 0;
 		uint64_t useTick = 0;	// the caches' clock: the least recently drawn go first when one is full
 		// a full cache dropped its least recently used quarter, not everything: a theme animating a size made new
@@ -140,7 +244,7 @@ namespace banana
 		}
 
 		// ---- loading ---------------------------------------------------------------------------------------------
-		void flatten(const std::string& prefix, const JVal& v, std::map<std::string, Prop>& out, const std::string& where)
+		void flatten(const std::string& prefix, const JVal& v, PropMap& out, const std::string& where)
 		{
 			switch (v.kind)
 			{
@@ -203,6 +307,7 @@ namespace banana
 				g->serial = ++serials;
 				for (size_t k = 0; k < v.arr.size(); k++)
 					if (NodePtr c = compile(*v.arr[k], where + "[" + std::to_string(k) + "]", depth + 1)) g->children.push_back(c);
+				g->index();
 				return g;
 			}
 			if (!v.isObj()) { err(where + ": an element is an object"); return nullptr; }
@@ -242,7 +347,7 @@ namespace banana
 					if (!e.second->isObj()) continue;
 					for (auto& pe : e.second->obj)
 					{
-						std::map<std::string, Prop> one;
+						PropMap one;
 						flatten(pe.first, *pe.second, one, here + ".with");
 						for (auto& o : one) n->with.emplace_back(o.first, o.second);
 					}
@@ -256,6 +361,7 @@ namespace banana
 				}
 				flatten(k, *e.second, n->props, here);
 			}
+			n->index();
 			return n;
 		}
 
@@ -293,7 +399,7 @@ namespace banana
 			if (const JVal* vv = doc->get("vars"))
 				for (auto& e : vv->obj)
 				{
-					std::map<std::string, Prop> one;
+					PropMap one;
 					flatten(e.first, *e.second, one, "vars");
 					for (auto& o : one) vars.emplace_back(o.first, o.second);
 				}
@@ -363,52 +469,54 @@ namespace banana
 
 		bool sysField(const rnds::SysInfo& si, int index, const std::string& f, EV& out) const
 		{
-			if (f == "id") out = EV(si.id);
-			else if (f == "name") out = EV(si.name);
-			else if (f == "maker") out = EV(si.maker);
-			else if (f == "color" || f == "accent") out = EV(hex(si.accent));
-			else if (f == "icon") out = EV(si.icon);
-			else if (f == "games") out = EV((double)si.games);
-			else if (f == "played") out = EV((double)si.played);
-			else if (f == "time") out = EV(si.time);
-			else if (f == "fav") out = EV(si.fav ? 1.0 : 0.0);
-			else if (f == "app") out = EV(si.app ? 1.0 : 0.0);
-			else if (f == "hasResume") out = EV(si.hasResume ? 1.0 : 0.0);
-			else if (f == "resumeTitle") out = EV(si.resumeTitle);
-			else if (f == "resumeEyebrow") out = EV(si.resumeEyebrow);
-			else if (f == "resumeBox") out = EV(si.resumeBox);
-			else if (f == "resumeCart") out = EV(si.resumeCart);
-			else if (f == "resumeLabel") out = EV(si.resumeLabel);
-			else if (f == "resumeArt") out = EV(!si.resumeBox.empty() ? si.resumeBox : !si.resumeLabel.empty() ? si.resumeLabel : si.resumeCart);
-			else if (f == "index") out = EV((double)index);
+			const int fId = sysFieldIndex(f);	// (the name looked up once, not compared with each)
+			if (fId == SYSF("id")) out = EV(si.id);
+			else if (fId == SYSF("name")) out = EV(si.name);
+			else if (fId == SYSF("maker")) out = EV(si.maker);
+			else if (fId == SYSF("color") || fId == SYSF("accent")) out = EV(hex(si.accent));
+			else if (fId == SYSF("icon")) out = EV(si.icon);
+			else if (fId == SYSF("games")) out = EV((double)si.games);
+			else if (fId == SYSF("played")) out = EV((double)si.played);
+			else if (fId == SYSF("time")) out = EV(si.time);
+			else if (fId == SYSF("fav")) out = EV(si.fav ? 1.0 : 0.0);
+			else if (fId == SYSF("app")) out = EV(si.app ? 1.0 : 0.0);
+			else if (fId == SYSF("hasResume")) out = EV(si.hasResume ? 1.0 : 0.0);
+			else if (fId == SYSF("resumeTitle")) out = EV(si.resumeTitle);
+			else if (fId == SYSF("resumeEyebrow")) out = EV(si.resumeEyebrow);
+			else if (fId == SYSF("resumeBox")) out = EV(si.resumeBox);
+			else if (fId == SYSF("resumeCart")) out = EV(si.resumeCart);
+			else if (fId == SYSF("resumeLabel")) out = EV(si.resumeLabel);
+			else if (fId == SYSF("resumeArt")) out = EV(!si.resumeBox.empty() ? si.resumeBox : !si.resumeLabel.empty() ? si.resumeLabel : si.resumeCart);
+			else if (fId == SYSF("index")) out = EV((double)index);
 			else return false;
 			return true;
 		}
 		bool gameField(const rnds::GameInfo& g, int index, const std::string& f, EV& out) const
 		{
-			if (f == "title") out = EV(g.title);
-			else if (f == "sub") out = EV(g.sub);
-			else if (f == "plays") out = EV(g.plays);
-			else if (f == "last") out = EV(g.last);
-			else if (f == "time") out = EV(g.time);
-			else if (f == "box") out = EV(g.box);
-			else if (f == "cart") out = EV(g.cart);
-			else if (f == "label") out = EV(g.label);
-			else if (f == "art") out = EV(!g.box.empty() ? g.box : !g.label.empty() ? g.label : g.cart);
-			else if (f == "rom") out = EV(g.rom);
-			else if (f == "romIcon") out = EV(g.rom.empty() ? std::string() : "romicon:" + g.rom);
-			else if (f == "icon") out = EV(g.icon);
-			else if (f == "achA" || f == "achievements") out = EV((double)g.achA);
-			else if (f == "achB" || f == "achievementsTotal") out = EV((double)g.achB);
-			else if (f == "achLabel") out = EV(g.achLabel);
-			else if (f == "achProgress") out = EV(g.achB > 0 ? (double)g.achA / g.achB : 0.0);
-			else if (f == "fav") out = EV(g.fav ? 1.0 : 0.0);
-			else if (f == "index") out = EV((double)index);
-			else if (f == "system" || f == "systemName" || f == "systemId")
+			const int fId = gameFieldIndex(f);	// (the name looked up once, not compared with each)
+			if (fId == GAMEF("title")) out = EV(g.title);
+			else if (fId == GAMEF("sub")) out = EV(g.sub);
+			else if (fId == GAMEF("plays")) out = EV(g.plays);
+			else if (fId == GAMEF("last")) out = EV(g.last);
+			else if (fId == GAMEF("time")) out = EV(g.time);
+			else if (fId == GAMEF("box")) out = EV(g.box);
+			else if (fId == GAMEF("cart")) out = EV(g.cart);
+			else if (fId == GAMEF("label")) out = EV(g.label);
+			else if (fId == GAMEF("art")) out = EV(!g.box.empty() ? g.box : !g.label.empty() ? g.label : g.cart);
+			else if (fId == GAMEF("rom")) out = EV(g.rom);
+			else if (fId == GAMEF("romIcon")) out = EV(g.rom.empty() ? std::string() : "romicon:" + g.rom);
+			else if (fId == GAMEF("icon")) out = EV(g.icon);
+			else if (fId == GAMEF("achA") || fId == GAMEF("achievements")) out = EV((double)g.achA);
+			else if (fId == GAMEF("achB") || fId == GAMEF("achievementsTotal")) out = EV((double)g.achB);
+			else if (fId == GAMEF("achLabel")) out = EV(g.achLabel);
+			else if (fId == GAMEF("achProgress")) out = EV(g.achB > 0 ? (double)g.achA / g.achB : 0.0);
+			else if (fId == GAMEF("fav")) out = EV(g.fav ? 1.0 : 0.0);
+			else if (fId == GAMEF("index")) out = EV((double)index);
+			else if (fId == GAMEF("system") || fId == GAMEF("systemName") || fId == GAMEF("systemId"))
 			{
 				Library* lib = dynamic_cast<Library*>(m->src);
-				if (lib && index >= 0 && index < m->src->gameCount()) out = EV(f == "systemName" ? lib->systemOf(index).name : lib->systemOf(index).id);
-				else out = EV(m->mSys < (int)systems.size() ? (f == "systemName" ? systems[m->mSys].name : systems[m->mSys].id) : std::string());
+				if (lib && index >= 0 && index < m->src->gameCount()) out = EV(fId == GAMEF("systemName") ? lib->systemOf(index).name : lib->systemOf(index).id);
+				else out = EV(m->mSys < (int)systems.size() ? (fId == GAMEF("systemName") ? systems[m->mSys].name : systems[m->mSys].id) : std::string());
 			}
 			else return false;
 			return true;
@@ -417,47 +525,48 @@ namespace banana
 		// the menu's hooks: everything a theme's expressions can read
 		bool hook(const std::string& n, EV& out) const
 		{
+			const int nId = hookIndex(n);	// (the name looked up once, not compared with each)
 			auto pre = [&](const char* p, std::string& rest) { size_t l = strlen(p); if (n.compare(0, l, p) != 0) return false; rest = n.substr(l); return true; };
 			std::string rest;
-			if (n == "time") { usedTime = true; out = EV(now - start); return true; }
-			if (n == "view") { out = EV(viewName()); return true; }
-			if (n == "W") { out = EV((double)W); return true; }
-			if (n == "H") { out = EV((double)H); return true; }
-			if (n == "clock") { out = EV(clock); return true; }
-			if (n == "date") { out = EV(date); return true; }
-			if (n == "battery")
+			if (nId == HOOK("time")) { usedTime = true; out = EV(now - start); return true; }
+			if (nId == HOOK("view")) { out = EV(viewName()); return true; }
+			if (nId == HOOK("W")) { out = EV((double)W); return true; }
+			if (nId == HOOK("H")) { out = EV((double)H); return true; }
+			if (nId == HOOK("clock")) { out = EV(clock); return true; }
+			if (nId == HOOK("date")) { out = EV(date); return true; }
+			if (nId == HOOK("battery"))
 			{
 				float b = m->src->battery();
 				out = EV(b < 0 ? -1.0 : std::round(b * 100));
 				return true;
 			}
-			if (n == "charging") { Library* lib = dynamic_cast<Library*>(m->src); out = EV(lib && lib->power().charging ? 1.0 : 0.0); return true; }
-			if (n == "batteryMode") { out = EV(m->src->batteryMode()); return true; }
-			if (n == "online") { out = EV(m->src->online() ? 1.0 : 0.0); return true; }
-			if (n == "motion") { out = EV(m->src->topMotion() ? 1.0 : 0.0); return true; }
-			if (n == "brand") { out = EV(rnds::brandNote); return true; }
-			if (n == "accent" || n == "accent.base") { out = EV(hex(rnds::accent.base)); return true; }
-			if (n == "accent.light") { out = EV(hex(rnds::accent.light)); return true; }
-			if (n == "accent.dark") { out = EV(hex(rnds::accent.dark)); return true; }
-			if (n == "accent.band") { out = EV(hex(rnds::accent.band)); return true; }
-			if (n == "accent.low") { out = EV(hex(rnds::accent.low)); return true; }
+			if (nId == HOOK("charging")) { Library* lib = dynamic_cast<Library*>(m->src); out = EV(lib && lib->power().charging ? 1.0 : 0.0); return true; }
+			if (nId == HOOK("batteryMode")) { out = EV(m->src->batteryMode()); return true; }
+			if (nId == HOOK("online")) { out = EV(m->src->online() ? 1.0 : 0.0); return true; }
+			if (nId == HOOK("motion")) { out = EV(m->src->topMotion() ? 1.0 : 0.0); return true; }
+			if (nId == HOOK("brand")) { out = EV(rnds::brandNote); return true; }
+			if (nId == HOOK("accent") || nId == HOOK("accent.base")) { out = EV(hex(rnds::accent.base)); return true; }
+			if (nId == HOOK("accent.light")) { out = EV(hex(rnds::accent.light)); return true; }
+			if (nId == HOOK("accent.dark")) { out = EV(hex(rnds::accent.dark)); return true; }
+			if (nId == HOOK("accent.band")) { out = EV(hex(rnds::accent.band)); return true; }
+			if (nId == HOOK("accent.low")) { out = EV(hex(rnds::accent.low)); return true; }
 			// text on the accent: dark or light by contrast (Settings > Text on accent), and a second line in its hue
-			if (n == "accent.ink") { out = EV(hex(rnds::inkOn(rnds::accent.base))); return true; }
-			if (n == "accent.inkSub") { out = EV(hex(rnds::subInkOn(rnds::accent.base))); return true; }
+			if (nId == HOOK("accent.ink")) { out = EV(hex(rnds::inkOn(rnds::accent.base))); return true; }
+			if (nId == HOOK("accent.inkSub")) { out = EV(hex(rnds::subInkOn(rnds::accent.base))); return true; }
 			if (pre("palette.", rest)) { rnds::Color c; if (rnds::themeColor(rest.c_str(), c)) { out = EV(hex(c)); return true; } out = EV(""); return true; }
-			if (n == "cursor") { out = EV((double)cursor()); return true; }
-			if (n == "scroll") { out = EV((double)scroll); return true; }
-			if (n == "count") { out = EV((double)count()); return true; }
-			if (n == "moved") { out = EV(now - movedAt); return true; }
-			if (n == "entered") { out = EV(now - enteredAt); return true; }
-			if (n == "dir") { out = EV((double)moveDir); return true; }
-			if (n == "systems.count" || n == "systemCount") { out = EV((double)systems.size()); return true; }
-			if (n == "games.count" || n == "gameCount") { out = EV((double)games.size()); return true; }
-			if (n == "launch.t") { out = EV(launchAt < 0 ? 0.0 : now - launchAt); return true; }
-			if (n == "launch.progress") { out = EV(launchAt < 0 ? 0.0 : std::min(1.0, (now - launchAt) / std::max(1.0, launchMs))); return true; }
-			if (n == "empty") { out = EV(m->mView != rnds::UI::HOME && games.empty() ? 1.0 : 0.0); return true; }
-			if (n == "empty.title") { out = EV(m->src->emptyTitle()); return true; }
-			if (n == "empty.hint") { out = EV(m->src->emptyHint()); return true; }
+			if (nId == HOOK("cursor")) { out = EV((double)cursor()); return true; }
+			if (nId == HOOK("scroll")) { out = EV((double)scroll); return true; }
+			if (nId == HOOK("count")) { out = EV((double)count()); return true; }
+			if (nId == HOOK("moved")) { out = EV(now - movedAt); return true; }
+			if (nId == HOOK("entered")) { out = EV(now - enteredAt); return true; }
+			if (nId == HOOK("dir")) { out = EV((double)moveDir); return true; }
+			if (nId == HOOK("systems.count") || nId == HOOK("systemCount")) { out = EV((double)systems.size()); return true; }
+			if (nId == HOOK("games.count") || nId == HOOK("gameCount")) { out = EV((double)games.size()); return true; }
+			if (nId == HOOK("launch.t")) { out = EV(launchAt < 0 ? 0.0 : now - launchAt); return true; }
+			if (nId == HOOK("launch.progress")) { out = EV(launchAt < 0 ? 0.0 : std::min(1.0, (now - launchAt) / std::max(1.0, launchMs))); return true; }
+			if (nId == HOOK("empty")) { out = EV(m->mView != rnds::UI::HOME && games.empty() ? 1.0 : 0.0); return true; }
+			if (nId == HOOK("empty.title")) { out = EV(m->src->emptyTitle()); return true; }
+			if (nId == HOOK("empty.hint")) { out = EV(m->src->emptyHint()); return true; }
 			if (pre("sys.", rest)) { if (m->mSys < (int)systems.size()) { if (sysField(systems[m->mSys], m->mSys, rest, out)) return true; } out = EV(""); return true; }
 			if (pre("game.", rest))
 			{
@@ -473,33 +582,41 @@ namespace banana
 		{
 			const Node* n;
 			const Scope* sc;
-			std::vector<const std::map<std::string, Prop>*> on;	// the states that hold, the last first
-			std::string key;	// the element's identity (its node and list indices): its eased values
+			std::vector<const Node::State*> on;	// the states that hold, the last first
+			const std::string* key;	// the element's identity (its node and list indices): its eased values (held by the caller)
 		};
+		static const std::string& noKey() { static const std::string k; return k; }
 		Ctx ctx(const Node* n, const Scope* sc, const std::string& key) const
 		{
-			Ctx c{ n, sc, {}, key };
-			for (auto it = n->states.rbegin(); it != n->states.rend(); ++it) if (it->when.eval(*sc).truthy()) c.on.push_back(&it->props);
+			Ctx c{ n, sc, {}, &key };
+			for (auto it = n->states.rbegin(); it != n->states.rend(); ++it) if (it->when.eval(*sc).truthy()) c.on.push_back(&*it);
 			return c;
 		}
-		const Prop* find(const Ctx& c, const std::string& k) const
+		const Prop* find(const Ctx& c, const Key& k) const
 		{
-			for (auto* st : c.on) { auto it = st->find(k); if (it != st->end()) return &it->second; }
-			return c.n->prop(k);
+			for (auto* st : c.on) if (const Prop* p = st->idx.get(k.id)) return p;
+			return c.n->idx.get(k.id);
 		}
-		bool has(const Ctx& c, const std::string& k) const { return find(c, k) != nullptr; }
-		EV val(const Ctx& c, const std::string& k, const EV& def = EV("")) const
+		bool has(const Ctx& c, const Key& k) const { return find(c, k) != nullptr; }
+		EV val(const Ctx& c, const Key& k, const EV& def = EV("")) const
 		{
 			const Prop* p = find(c, k);
 			return p ? p->eval(*c.sc) : def;
 		}
-		std::string str(const Ctx& c, const std::string& k, const std::string& def = "") const { const Prop* p = find(c, k); return p ? p->eval(*c.sc).str() : def; }
+		std::string str(const Ctx& c, const Key& k, const std::string& def = "") const
+		{
+			const Prop* p = find(c, k);
+			if (!p) return def;
+			return p->kind == Prop::LITERAL ? p->lit.str() : p->eval(*c.sc).str();
+		}
 		// a length: a number, or "50%" of the parent's (rel)
-		double num(const Ctx& c, const std::string& k, double def, double rel = 0)
+		double num(const Ctx& c, const Key& k, double def, double rel = 0)
 		{
 			const Prop* p = find(c, k);
 			if (!p) return smoothOf(c, k, def);
-			EV v = p->eval(*c.sc);
+			// (a value written as it is: read in place, not copied)
+			EV ev;
+			const EV& v = p->kind == Prop::LITERAL ? p->lit : (ev = p->eval(*c.sc));
 			double r = def;
 			if (v.isStr)
 			{
@@ -510,11 +627,11 @@ namespace banana
 			else r = v.n;
 			return smoothOf(c, k, r);
 		}
-		double smoothOf(const Ctx& c, const std::string& k, double target)
+		double smoothOf(const Ctx& c, const Key& k, double target)
 		{
-			auto sm = c.n->smooth.find(k);
+			auto sm = c.n->smooth.find(k.name);
 			if (sm == c.n->smooth.end() || sm->second <= 0) return target;
-			Smoothed& st = smoothed[c.key + "." + k];
+			Smoothed& st = smoothed[*c.key + "." + std::string(k.name)];
 			if (!st.set) { st.set = true; st.v = target; st.target = target; st.at = now; return target; }
 			st.target = target;
 			double dt = std::max(0.0, now - st.at);
@@ -524,15 +641,23 @@ namespace banana
 			else smoothMoving = true;
 			return st.v;
 		}
-		bool color(const Ctx& c, const std::string& k, uint32_t& out) const
+		bool color(const Ctx& c, const Key& k, uint32_t& out) const
 		{
 			const Prop* p = find(c, k);
 			if (!p) return false;
+			if (p->kind == Prop::LITERAL)
+			{
+				// a colour written as it is: read once
+				if (!p->lit.isStr) { out = 0xff000000 | (uint32_t)p->lit.n; return true; }
+				if (p->litColor < 0) p->litColor = parseColorText(p->lit.s, p->litColorV) ? 1 : 0;
+				if (p->litColor) out = p->litColorV;
+				return p->litColor == 1;
+			}
 			EV v = p->eval(*c.sc);
 			if (!v.isStr) { out = 0xff000000 | (uint32_t)v.n; return true; }
 			return parseColorText(v.s, out);
 		}
-		bool flag(const Ctx& c, const std::string& k, bool def = false) const { const Prop* p = find(c, k); return p ? p->eval(*c.sc).truthy() : def; }
+		bool flag(const Ctx& c, const Key& k, bool def = false) const { const Prop* p = find(c, k); return p ? (p->kind == Prop::LITERAL ? p->lit.truthy() : p->eval(*c.sc).truthy()) : def; }
 
 		// ---- drawing ---------------------------------------------------------------------------------------------
 		struct Frame { float x, y, k; float opacity; int screen; };	// the parent's origin (layout px), scale, opacity
@@ -555,17 +680,17 @@ namespace banana
 		TextLayout layoutText(const Ctx& c, float k, float boxW)
 		{
 			TextLayout L;
-			std::string t = str(c, "text");
-			L.st.font = font(str(c, "font", defaultFont));
+			std::string t = str(c, K("text"));
+			L.st.font = font(str(c, K("font"), defaultFont));
 			if (!L.st.font) return L;
-			L.st.size = (float)num(c, "size", 16) * k;
-			L.st.letterSpacing = (float)num(c, "spacing", 0) * k;
-			L.st.upper = flag(c, "upper");
+			L.st.size = (float)num(c, K("size"), 16) * k;
+			L.st.letterSpacing = (float)num(c, K("spacing"), 0) * k;
+			L.st.upper = flag(c, K("upper"));
 			L.asc = L.st.font->ascent(L.st.size);
-			L.lineH = has(c, "lineHeight") ? (float)num(c, "lineHeight", 0) * k : L.st.font->normalLineHeight(L.st.size);
+			L.lineH = has(c, K("lineHeight")) ? (float)num(c, K("lineHeight"), 0) * k : L.st.font->normalLineHeight(L.st.size);
 			if (t.empty()) { L.h = 0; return L; }
 			std::u32string u = rnds::utf8to32(t);
-			int maxLines = (int)num(c, "maxLines", flag(c, "wrap") ? 0 : 1);
+			int maxLines = (int)num(c, K("maxLines"), flag(c, K("wrap")) ? 0 : 1);
 			// lines the text itself breaks, each wrapped or cut to the box
 			std::vector<std::u32string> paras;
 			std::u32string cur;
@@ -574,12 +699,12 @@ namespace banana
 			for (auto& p : paras)
 			{
 				if (maxLines > 0 && (int)L.lines.size() >= maxLines) break;
-				if (boxW > 0 && (flag(c, "wrap") || maxLines != 1))
+				if (boxW > 0 && (flag(c, K("wrap")) || maxLines != 1))
 				{
 					int left = maxLines > 0 ? maxLines - (int)L.lines.size() : 0;
 					for (auto& l : rnds::layoutWrap(p, L.st, (int)boxW, left)) L.lines.push_back(l);
 				}
-				else if (boxW > 0 && flag(c, "ellipsis", true)) L.lines.push_back(rnds::layoutEllipsis(p, L.st, (int)boxW));
+				else if (boxW > 0 && flag(c, K("ellipsis"), true)) L.lines.push_back(rnds::layoutEllipsis(p, L.st, (int)boxW));
 				else L.lines.push_back(rnds::layoutLine(p, L.st));
 			}
 			for (auto& l : L.lines) L.w = std::max(L.w, l.width);
@@ -590,9 +715,22 @@ namespace banana
 		void drawLine(const rnds::TextLine& l, const rnds::TextStyle& st, float asc, float x, float y, const rnds::Color& col)
 		{
 			if (l.text.empty()) return;
-			std::string key = std::to_string((uintptr_t)st.font.get()) + "|" + std::to_string(st.size) + "|" + std::to_string(st.letterSpacing) +
-				(st.upper ? "U|" : "|") + std::to_string(l.width) + "|";
-			for (char32_t ch : l.text) { key += (char)(ch & 0xff); if (ch > 0xff) { key += (char)(ch >> 8); key += (char)(ch >> 16); } }
+			// the cache's key (printf'd numbers) worked out once for the same values as they are (bytes)
+			struct Raw { const void* font; float size, spacing, width; bool upper; } raw;
+			memset(&raw, 0, sizeof raw);
+			raw.font = st.font.get(); raw.size = st.size; raw.spacing = st.letterSpacing; raw.width = l.width; raw.upper = st.upper;
+			std::string rawKey((const char*)&raw, sizeof raw);
+			rawKey.append((const char*)l.text.data(), l.text.size() * sizeof(char32_t));
+			auto known = textKeys.find(rawKey);
+			if (known == textKeys.end())
+			{
+				std::string k = std::to_string((uintptr_t)st.font.get()) + "|" + std::to_string(st.size) + "|" + std::to_string(st.letterSpacing) +
+					(st.upper ? "U|" : "|") + std::to_string(l.width) + "|";
+				for (char32_t ch : l.text) { k += (char)(ch & 0xff); if (ch > 0xff) { k += (char)(ch >> 8); k += (char)(ch >> 16); } }
+				if (textKeys.size() >= 4096) textKeys.clear();
+				known = textKeys.emplace(std::move(rawKey), std::move(k)).first;
+			}
+			const std::string& key = known->second;
 			auto it = texts.find(key);
 			if (it == texts.end())
 			{
@@ -614,10 +752,23 @@ namespace banana
 			float border, uint32_t borderColor, float blur, float spread, uint32_t shadowColor, int& padOut)
 		{
 			int pad = shadowColor >> 24 ? (int)std::ceil(blur + std::max(0.0f, spread)) + 1 : 0;
-			char kb[256];
-			snprintf(kb, sizeof kb, "%d|%d|%g,%g,%g,%g|%08x|%g|%g|%08x|%g|%g|%08x", w, h, rad[0], rad[1], rad[2], rad[3], fill, angle, border, borderColor, blur, spread, shadowColor);
-			std::string key = kb;
-			for (auto& st : stops) { snprintf(kb, sizeof kb, "|%g:%08x", st.first, st.second); key += kb; }
+			struct Raw { int w, h; float rad[4]; uint32_t fill; float angle, border; uint32_t borderColor; float blur, spread; uint32_t shadowColor; } raw;
+			memset(&raw, 0, sizeof raw);
+			raw.w = w; raw.h = h; memcpy(raw.rad, rad, sizeof raw.rad); raw.fill = fill; raw.angle = angle; raw.border = border;
+			raw.borderColor = borderColor; raw.blur = blur; raw.spread = spread; raw.shadowColor = shadowColor;
+			std::string rawKey((const char*)&raw, sizeof raw);
+			for (auto& st : stops) { rawKey.append((const char*)&st.first, sizeof st.first); rawKey.append((const char*)&st.second, sizeof st.second); }
+			auto known = shapeKeys.find(rawKey);
+			if (known == shapeKeys.end())
+			{
+				char kb[256];
+				snprintf(kb, sizeof kb, "%d|%d|%g,%g,%g,%g|%08x|%g|%g|%08x|%g|%g|%08x", w, h, rad[0], rad[1], rad[2], rad[3], fill, angle, border, borderColor, blur, spread, shadowColor);
+				std::string k = kb;
+				for (auto& st : stops) { snprintf(kb, sizeof kb, "|%g:%08x", st.first, st.second); k += kb; }
+				if (shapeKeys.size() >= 4096) shapeKeys.clear();
+				known = shapeKeys.emplace(std::move(rawKey), std::move(k)).first;
+			}
+			const std::string& key = known->second;
 			padOut = pad;
 			auto it = shapes.find(key);
 			if (it != shapes.end()) { it->second.used = ++useTick; return it->second.tex; }
@@ -639,52 +790,114 @@ namespace banana
 				return std::sqrt(ox * ox + oy * oy) + std::min(std::max(qx, qy), 0.0f) - r;
 			};
 			auto ch = [](uint32_t c, int sh) { return ((c >> sh) & 255) / 255.0f; };
-			for (int y = 0; y < b.h; y++)
-				for (int x = 0; x < b.w; x++)
+			// inside, where the fill covers all of a pixel with no border on it, the pixel depends on the fill's
+			// colour alone when the fill is solid (whatever the shadow under it: the shadow isn't worked out there) or
+			// there is no shadow: with a plain fill it is the same one each time (made once), with a gradient the
+			// same as the last one when its colour is
+			bool solidFill = stops.empty() ? (fill >> 24) == 255 : std::all_of(stops.begin(), stops.end(), [](const std::pair<float, uint32_t>& st) { return (st.second >> 24) == 255; });
+			bool borderOn = border > 0 && borderColor >> 24;
+			// with no gradient, a box whose corners match side to side (top to bottom) is the same mirrored: pixel
+			// centres are whole numbers and a half from its middle, exactly, so the mirrored pixel's sums are the
+			// same ones and only half of it (a quarter) is worked out
+			bool xSym = stops.empty() && rad[0] == rad[1] && rad[3] == rad[2], ySym = stops.empty() && rad[0] == rad[3] && rad[1] == rad[2];
+			// the colours' channels (0..1) worked out once, not for every pixel (a division each)
+			const float shC[4] = { ch(shadowColor, 16), ch(shadowColor, 8), ch(shadowColor, 0), ch(shadowColor, 24) };
+			const float bdC[4] = { ch(borderColor, 16), ch(borderColor, 8), ch(borderColor, 0), ch(borderColor, 24) };
+			// rows [ya, yb), with their own remembered colours (the same pixels whichever rows go together)
+			auto rows = [&](int ya, int yb)
+			{
+				uint8_t inner[4];
+				bool innerMade = false;
+				float fillC[4] = { 0, 0, 0, 0 };
+				uint32_t fillFor = 0;	// (no colour has its alpha 0 here)
+				// a gradient's colour by where the pixel is along it (the last one: along a row it's mostly the same), and
+				// a covered pixel by its colour (the last one)
+				float lastT = std::nanf("");
+				uint32_t lastFc = 0, lastCoveredFc = 0;
+				uint8_t lastCovered[4];
+				bool coveredMade = false;
+				size_t lastK = 0;
+				float lastF = 0;
+				uint32_t lastMixed = 0;
+				auto gradient = [&](float px, float py)
 				{
-					float px = x - pad + 0.5f - hw, py = y - pad + 0.5f - hh;
-					float d = sdf(px, py, 0);
-					float r = 0, g = 0, bl = 0, a = 0;	// premultiplied while it's built
-					auto over = [&](float cr, float cg, float cb, float ca)
+					float t = span > 0 ? ((px * dx + py * dy) / span + 0.5f) : 0;
+					if (t == lastT) return lastFc;
+					// the colour between the last two stops it is past (the ones before that were worked out and replaced)
+					size_t k = 0;
+					while (k + 1 < stops.size() && !(t <= stops[k].first)) k++;
+					uint32_t fc = stops.front().second;
+					if (k > 0)
 					{
-						r = cr * ca + r * (1 - ca); g = cg * ca + g * (1 - ca); bl = cb * ca + bl * (1 - ca); a = ca + a * (1 - ca);
-					};
-					if (pad)
-					{
-						float ds = sdf(px, py, spread);
-						float sa = blur > 0 ? 1 - std::min(1.0f, std::max(0.0f, (ds + blur) / (2 * blur))) : std::min(1.0f, std::max(0.0f, 0.5f - ds));
-						sa = sa * sa * (3 - 2 * sa);
-						if (sa > 0) over(ch(shadowColor, 16), ch(shadowColor, 8), ch(shadowColor, 0), sa * ch(shadowColor, 24));
-					}
-					float cov = std::min(1.0f, std::max(0.0f, 0.5f - d));
-					if (cov > 0)
-					{
-						uint32_t fc = fill;
-						if (!stops.empty())
+						float t0 = stops[k - 1].first, t1 = stops[k].first;
+						float f = t1 > t0 ? std::min(1.0f, (t - t0) / (t1 - t0)) : 1;
+						if (k == lastK && f == lastF) fc = lastMixed;
+						else
 						{
-							float t = span > 0 ? ((px * dx + py * dy) / span + 0.5f) : 0;
-							fc = stops.front().second;
-							for (size_t k = 1; k < stops.size(); k++)
+							uint32_t c0 = stops[k - 1].second, c1 = stops[k].second;
+							auto lp = [&](int sh) { return (uint32_t)roundHalfUp(((c0 >> sh) & 255) + ((float)((c1 >> sh) & 255) - ((c0 >> sh) & 255)) * f) << sh; };
+							fc = lp(24) | lp(16) | lp(8) | lp(0);
+							lastK = k; lastF = f; lastMixed = fc;
+						}
+					}
+					lastT = t; lastFc = fc;
+					return fc;
+				};
+				for (int y = ya; y < yb; y++)
+				{
+					int xEnd = xSym ? (b.w + 1) / 2 : b.w;
+					for (int x = 0; x < xEnd; x++)
+					{
+						float px = x - pad + 0.5f - hw, py = y - pad + 0.5f - hh;
+						float d = sdf(px, py, 0);
+						bool covered = (solidFill || !pad) && std::min(1.0f, std::max(0.0f, 0.5f - d)) == 1.0f && !(borderOn && std::min(1.0f, std::max(0.0f, 0.5f + d + border)) > 0);
+						if (covered && innerMade && stops.empty()) { memcpy(&b.px[((size_t)y * b.w + x) * 4], inner, 4); continue; }
+						uint32_t gfc = stops.empty() || !(0.5f - d > 0) ? 0 : gradient(px, py);
+						if (covered && !stops.empty() && coveredMade && gfc == lastCoveredFc) { memcpy(&b.px[((size_t)y * b.w + x) * 4], lastCovered, 4); continue; }
+						float r = 0, g = 0, bl = 0, a = 0;	// premultiplied while it's built
+						auto over = [&](float cr, float cg, float cb, float ca)
+						{
+							r = cr * ca + r * (1 - ca); g = cg * ca + g * (1 - ca); bl = cb * ca + bl * (1 - ca); a = ca + a * (1 - ca);
+						};
+						if (pad && !covered)
+						{
+							float ds = sdf(px, py, spread);
+							float sa = blur > 0 ? 1 - std::min(1.0f, std::max(0.0f, (ds + blur) / (2 * blur))) : std::min(1.0f, std::max(0.0f, 0.5f - ds));
+							sa = sa * sa * (3 - 2 * sa);
+							if (sa > 0) over(shC[0], shC[1], shC[2], sa * shC[3]);
+						}
+						float cov = std::min(1.0f, std::max(0.0f, 0.5f - d));
+						if (cov > 0)
+						{
+							uint32_t fc = fill;
+							if (!stops.empty()) fc = gfc;
+							if (fc >> 24)
 							{
-								if (t <= stops[k - 1].first) break;
-								float t0 = stops[k - 1].first, t1 = stops[k].first;
-								float f = t1 > t0 ? std::min(1.0f, (t - t0) / (t1 - t0)) : 1;
-								uint32_t c0 = stops[k - 1].second, c1 = stops[k].second;
-								auto lp = [&](int sh) { return (uint32_t)std::lround(((c0 >> sh) & 255) + ((float)((c1 >> sh) & 255) - ((c0 >> sh) & 255)) * f) << sh; };
-								fc = lp(24) | lp(16) | lp(8) | lp(0);
+								if (fc != fillFor) { fillFor = fc; fillC[0] = ch(fc, 16); fillC[1] = ch(fc, 8); fillC[2] = ch(fc, 0); fillC[3] = ch(fc, 24); }
+								over(fillC[0], fillC[1], fillC[2], cov * fillC[3]);
+							}
+							if (border > 0 && borderColor >> 24)
+							{
+								float bc = cov * std::min(1.0f, std::max(0.0f, 0.5f + d + border));
+								if (bc > 0) over(bdC[0], bdC[1], bdC[2], bc * bdC[3]);
 							}
 						}
-						if (fc >> 24) over(ch(fc, 16), ch(fc, 8), ch(fc, 0), cov * ch(fc, 24));
-						if (border > 0 && borderColor >> 24)
-						{
-							float bc = cov * std::min(1.0f, std::max(0.0f, 0.5f + d + border));
-							if (bc > 0) over(ch(borderColor, 16), ch(borderColor, 8), ch(borderColor, 0), bc * ch(borderColor, 24));
-						}
+						uint8_t* o = &b.px[((size_t)y * b.w + x) * 4];
+						if (a == 1.0f) { o[0] = (uint8_t)roundHalfUp(r * 255); o[1] = (uint8_t)roundHalfUp(g * 255); o[2] = (uint8_t)roundHalfUp(bl * 255); }	// (x / 1 is x)
+						else if (a > 0) { o[0] = (uint8_t)roundHalfUp(r / a * 255); o[1] = (uint8_t)roundHalfUp(g / a * 255); o[2] = (uint8_t)roundHalfUp(bl / a * 255); }
+						o[3] = (uint8_t)roundHalfUp(a * 255);
+						if (covered && !innerMade) { memcpy(inner, o, 4); innerMade = true; }
+						if (covered && !stops.empty()) { memcpy(lastCovered, o, 4); lastCoveredFc = gfc; coveredMade = true; }
 					}
-					uint8_t* o = &b.px[((size_t)y * b.w + x) * 4];
-					if (a > 0) { o[0] = (uint8_t)std::lround(r / a * 255); o[1] = (uint8_t)std::lround(g / a * 255); o[2] = (uint8_t)std::lround(bl / a * 255); }
-					o[3] = (uint8_t)std::lround(a * 255);
+					for (int x = xEnd; x < b.w; x++) memcpy(&b.px[((size_t)y * b.w + x) * 4], &b.px[((size_t)y * b.w + (b.w - 1 - x)) * 4], 4);
 				}
+			};
+			// a big one's rows shared out among the cores, the mirrored half after
+			int yEnd = ySym ? (b.h + 1) / 2 : b.h;
+			int parts = (size_t)b.w * yEnd >= 16384 ? std::min(16, std::max(1, yEnd / 8)) : 1;
+			if (parts > 1) Pool::get().run(parts, [&](int i) { rows(yEnd * i / parts, yEnd * (i + 1) / parts); });
+			else rows(0, yEnd);
+			for (int y = yEnd; y < b.h; y++) memcpy(&b.px[(size_t)y * b.w * 4], &b.px[(size_t)(b.h - 1 - y) * b.w * 4], (size_t)b.w * 4);
 			if (shadowColor == 0xffffffffu && !(fill >> 24) && stops.empty() && !(border > 0 && borderColor >> 24))
 			{
 				// a white glow drawn in its colour: kept as coverage (one byte a pixel, blended as text is)
@@ -711,13 +924,17 @@ namespace banana
 		{
 			float k = f.k;
 			uint32_t fill = 0;
-			bool hasFill = color(c, "fill", fill) || color(c, "color", fill);
+			bool hasFill = color(c, K("fill"), fill) || color(c, K("color"), fill);
 			std::vector<std::pair<float, uint32_t>> stops;
 			for (int i = 0; i < 16; i++)
 			{
-				std::string key = "gradient.stops." + std::to_string(i);
-				if (!has(c, key)) { key = "gradient." + std::to_string(i); if (!has(c, key)) break; }
-				std::string t = str(c, key);
+				// (the keys made once)
+				static const std::vector<std::string> stopNames = [] { std::vector<std::string> v; for (int j = 0; j < 16; j++) v.push_back("gradient.stops." + std::to_string(j)); return v; }();
+				static const std::vector<std::string> shortNames = [] { std::vector<std::string> v; for (int j = 0; j < 16; j++) v.push_back("gradient." + std::to_string(j)); return v; }();
+				static const std::vector<Key> stopKeys(stopNames.begin(), stopNames.end()), shortKeys(shortNames.begin(), shortNames.end());
+				const Key* key = &stopKeys[i];
+				if (!has(c, *key)) { key = &shortKeys[i]; if (!has(c, *key)) break; }
+				std::string t = str(c, *key);
 				// "#rrggbb" or "#rrggbb 40%"
 				size_t sp = t.find(' ');
 				uint32_t col = 0;
@@ -730,18 +947,19 @@ namespace banana
 				for (size_t i = 0; i < stops.size(); i++) if (stops[i].first < 0) stops[i].first = stops.size() == 1 ? 0 : (float)i / (stops.size() - 1);
 				if (stops.size() == 1) { fill = stops[0].second; hasFill = true; stops.clear(); }
 			}
-			float angle = (float)num(c, "gradient.angle", 180);
+			float angle = (float)num(c, K("gradient.angle"), 180);
 			float rad[4];
-			double r0 = num(c, "radius", 0, std::min(w, h));
-			for (int i = 0; i < 4; i++) rad[i] = (float)(has(c, "radius." + std::to_string(i)) ? num(c, "radius." + std::to_string(i), 0) : r0) * k * s;
-			float border = (float)num(c, "border", 0) * k * s;
-			if (has(c, "border.width")) border = (float)num(c, "border.width", 0) * k * s;
+			double r0 = num(c, K("radius"), 0, std::min(w, h));
+			static const Key radKeys[4] = { Key("radius.0"), Key("radius.1"), Key("radius.2"), Key("radius.3") };
+			for (int i = 0; i < 4; i++) rad[i] = (float)(has(c, radKeys[i]) ? num(c, radKeys[i], 0) : r0) * k * s;
+			float border = (float)num(c, K("border"), 0) * k * s;
+			if (has(c, K("border.width"))) border = (float)num(c, K("border.width"), 0) * k * s;
 			uint32_t bc = 0;
-			if (!color(c, "borderColor", bc)) color(c, "border.color", bc);
+			if (!color(c, K("borderColor"), bc)) color(c, K("border.color"), bc);
 			uint32_t shc = 0;
-			color(c, "shadow.color", shc);
-			float blur = (float)num(c, "shadow.blur", 0) * k * s, spread = (float)num(c, "shadow.spread", 0) * k * s;
-			float sx = (float)num(c, "shadow.x", 0) * k * s, sy = (float)num(c, "shadow.y", 0) * k * s;
+			color(c, K("shadow.color"), shc);
+			float blur = (float)num(c, K("shadow.blur"), 0) * k * s, spread = (float)num(c, K("shadow.spread"), 0) * k * s;
+			float sx = (float)num(c, K("shadow.x"), 0) * k * s, sy = (float)num(c, K("shadow.y"), 0) * k * s;
 			if (!hasFill && stops.empty() && !(border > 0 && bc >> 24) && !(shc >> 24)) return;
 			float dx = x * s, dy = y * s, dw = w * s, dh = h * s;
 			bool plain = stops.empty() && !(border > 0 && bc >> 24) && !(shc >> 24) && rad[0] <= 0 && rad[1] <= 0 && rad[2] <= 0 && rad[3] <= 0;
@@ -776,17 +994,17 @@ namespace banana
 		{
 			if (L.lines.empty() || !L.st.font) return;
 			uint32_t col = 0xffffffff;
-			color(c, "color", col);
-			std::string align = str(c, "align", "left"), valign = str(c, "valign", "top");
+			color(c, K("color"), col);
+			std::string align = str(c, K("align"), "left"), valign = str(c, K("valign"), "top");
 			float top = y;
 			if (h > 0 && valign == "middle") top = y + (h - L.h) / 2;
 			else if (h > 0 && valign == "bottom") top = y + h - L.h;
 			uint32_t shc = 0;
-			bool shadow = color(c, "shadow.color", shc) && shc >> 24;
-			float sx = (float)num(c, "shadow.x", 1) * f.k, sy = (float)num(c, "shadow.y", 1) * f.k;
+			bool shadow = color(c, K("shadow.color"), shc) && shc >> 24;
+			float sx = (float)num(c, K("shadow.x"), 1) * f.k, sy = (float)num(c, K("shadow.y"), 1) * f.k;
 			uint32_t olc = 0;
-			bool outline = color(c, "outline.color", olc) && olc >> 24;
-			float ow = (float)num(c, "outline.width", 1) * f.k;
+			bool outline = color(c, K("outline.color"), olc) && olc >> 24;
+			float ow = (float)num(c, K("outline.width"), 1) * f.k;
 			for (size_t i = 0; i < L.lines.size(); i++)
 			{
 				const rnds::TextLine& l = L.lines[i];
@@ -805,7 +1023,7 @@ namespace banana
 			}
 		}
 
-		std::string imageSrc(const Ctx& c, const std::string& k)
+		std::string imageSrc(const Ctx& c, const Key& k)
 		{
 			std::string v = str(c, k);
 			if (v.empty() || v.compare(0, 8, "romicon:") == 0 || v[0] == '/') return v;
@@ -816,18 +1034,18 @@ namespace banana
 
 		void drawImage(const Ctx& c, float x, float y, float w, float h, const Frame& f)
 		{
-			std::string src = imageSrc(c, "src");
-			if ((src.empty() || failed.count(src)) && has(c, "fallback")) src = imageSrc(c, "fallback");
+			std::string src = imageSrc(c, K("src"));
+			if ((src.empty() || failed.count(src)) && has(c, K("fallback"))) src = imageSrc(c, K("fallback"));
 			if (src.empty() || failed.count(src)) { drawPlaceholder(c, x, y, w, h, f); return; }
-			std::string fit = str(c, "fit", "cover"), crop = str(c, "crop");
+			std::string fit = str(c, K("fit"), "cover"), crop = str(c, K("crop"));
 			int iw = (int)std::lround(w * s), ih = (int)std::lround(h * s);
 			if (iw <= 0 || ih <= 0) return;
-			float radius = (float)num(c, "radius", 0, std::min(w, h)) * f.k * s;
+			float radius = (float)num(c, K("radius"), 0, std::min(w, h)) * f.k * s;
 			char kb[64];
 			snprintf(kb, sizeof kb, "|%d|%d|%g", iw, ih, radius);
 			std::string key = src + "|" + fit + "|" + crop + kb;
 			uint32_t tc = 0xffffffff;
-			color(c, "tint", tc);
+			color(c, K("tint"), tc);
 			rnds::Color tint = colorFrom(tc, f.opacity);
 			auto it = images.find(key);
 			if (it == images.end())
@@ -857,25 +1075,25 @@ namespace banana
 		void drawPlaceholder(const Ctx& c, float x, float y, float w, float h, const Frame& f)
 		{
 			uint32_t pc;
-			if (color(c, "placeholder", pc) && pc >> 24) m->be->fill(std::round(x * s), std::round(y * s), std::round(w * s), std::round(h * s), colorFrom(pc, f.opacity));
+			if (color(c, K("placeholder"), pc) && pc >> 24) m->be->fill(std::round(x * s), std::round(y * s), std::round(w * s), std::round(h * s), colorFrom(pc, f.opacity));
 		}
 
 		// an element's box in its parent (layout px, before the frame's scale): x, y, w, h
 		struct Box { float x, y, w, h; };
 		Box boxOf(const Ctx& c, float pw, float ph, float natW, float natH)
 		{
-			float w = (float)num(c, "w", -1, pw), h = (float)num(c, "h", -1, ph);
-			bool hasX = has(c, "x"), hasR = has(c, "right"), hasY = has(c, "y"), hasB = has(c, "bottom");
-			float x = (float)num(c, "x", 0, pw), y = (float)num(c, "y", 0, ph);
-			if (w < 0 && hasX && hasR) w = pw - x - (float)num(c, "right", 0, pw);
-			if (h < 0 && hasY && hasB) h = ph - y - (float)num(c, "bottom", 0, ph);
+			float w = (float)num(c, K("w"), -1, pw), h = (float)num(c, K("h"), -1, ph);
+			bool hasX = has(c, K("x")), hasR = has(c, K("right")), hasY = has(c, K("y")), hasB = has(c, K("bottom"));
+			float x = (float)num(c, K("x"), 0, pw), y = (float)num(c, K("y"), 0, ph);
+			if (w < 0 && hasX && hasR) w = pw - x - (float)num(c, K("right"), 0, pw);
+			if (h < 0 && hasY && hasB) h = ph - y - (float)num(c, K("bottom"), 0, ph);
 			if (w < 0) w = natW >= 0 ? natW : (c.n->type == "text" || c.n->type == "image" ? 0 : pw);
 			if (h < 0) h = natH >= 0 ? natH : (c.n->type == "text" || c.n->type == "image" ? 0 : ph);
-			if (!hasX && hasR) x = pw - (float)num(c, "right", 0, pw) - w;
-			if (!hasY && hasB) y = ph - (float)num(c, "bottom", 0, ph) - h;
+			if (!hasX && hasR) x = pw - (float)num(c, K("right"), 0, pw) - w;
+			if (!hasY && hasB) y = ph - (float)num(c, K("bottom"), 0, ph) - h;
 			// the anchor: where on the element its x, y are ("center", "bottom", "top right", or ax, ay 0..1)
 			float ax = 0, ay = 0;
-			std::string an = str(c, "anchor");
+			std::string an = str(c, K("anchor"));
 			if (!an.empty())
 			{
 				if (an.find("center") != std::string::npos || an.find("middle") != std::string::npos) { ax = 0.5f; ay = 0.5f; }
@@ -886,9 +1104,9 @@ namespace banana
 				if (an == "top" || an == "bottom") ax = 0.5f;
 				if (an == "left" || an == "right") ay = 0.5f;
 			}
-			ax = (float)num(c, "ax", ax); ay = (float)num(c, "ay", ay);
+			ax = (float)num(c, K("ax"), ax); ay = (float)num(c, K("ay"), ay);
 			// "scale": the element grown or shrunk about its anchor point
-			float sc = (float)num(c, "scale", 1);
+			float sc = (float)num(c, K("scale"), 1);
 			x -= ax * w * sc; y -= ay * h * sc;
 			return { x, y, w * sc, h * sc };
 		}
@@ -911,24 +1129,24 @@ namespace banana
 			}
 			if (c.n->type == "text")
 			{
-				float bw = (float)num(c, "w", 0, pw);
+				float bw = (float)num(c, K("w"), 0, pw);
 				TextLayout L = layoutText(c, k, bw * k);
 				nw = bw > 0 ? bw : L.w / k; nh = L.h / k;
 				return;
 			}
 			// a row or a column: its children's sizes, the gaps and the padding (a pill as wide as its text)
-			std::string lay = str(c, "layout");
+			std::string lay = str(c, K("layout"));
 			if (c.n->type != "group" || (lay != "row" && lay != "column")) return;
 			bool row = lay == "row";
-			float gap = (float)num(c, "gap", 0), pad = (float)num(c, "padding", 0), along = 0, across = 0;
+			float gap = (float)num(c, K("gap"), 0), pad = (float)num(c, K("padding"), 0), along = 0, across = 0;
 			int kids = 0;
 			for (auto& ch : c.n->children)
 			{
-				Ctx cc = ctx(ch.get(), c.sc, "");
-				if ((has(cc, "visible") && !flag(cc, "visible")) || (has(cc, "if") && !flag(cc, "if"))) continue;
+				Ctx cc = ctx(ch.get(), c.sc, noKey());
+				if ((has(cc, K("visible")) && !flag(cc, K("visible"))) || (has(cc, K("if")) && !flag(cc, K("if")))) continue;
 				float kw, kh;
 				natural(cc, pw, ph, k, kw, kh);
-				kw = (float)num(cc, "w", kw >= 0 ? kw : 0, pw); kh = (float)num(cc, "h", kh >= 0 ? kh : 0, ph);
+				kw = (float)num(cc, K("w"), kw >= 0 ? kw : 0, pw); kh = (float)num(cc, K("h"), kh >= 0 ? kh : 0, ph);
 				along += row ? kw : kh;
 				across = std::max(across, row ? kh : kw);
 				kids++;
@@ -942,9 +1160,9 @@ namespace banana
 		void renderNode(const Node* n, const Scope& sc, const Frame& f, float pw, float ph, const std::string& key)
 		{
 			Ctx c = ctx(n, &sc, key);
-			if (has(c, "visible") && !flag(c, "visible")) return;
-			if (has(c, "if") && !flag(c, "if")) return;
-			float opacity = f.opacity * (float)std::min(1.0, std::max(0.0, num(c, "opacity", 1)));
+			if (has(c, K("visible")) && !flag(c, K("visible"))) return;
+			if (has(c, K("if")) && !flag(c, K("if"))) return;
+			float opacity = f.opacity * (float)std::min(1.0, std::max(0.0, num(c, K("opacity"), 1)));
 			if (opacity <= 0.002f) return;
 			// the scope of the children: a component's parameters
 			Scope inner;
@@ -956,41 +1174,41 @@ namespace banana
 			TextLayout L;
 			if (n->type == "text")
 			{
-				float bw = (float)num(c, "w", 0, pw);
-				float sc0 = (float)num(c, "scale", 1);
+				float bw = (float)num(c, K("w"), 0, pw);
+				float sc0 = (float)num(c, K("scale"), 1);
 				L = layoutText(c, f.k * sc0, bw * f.k * sc0);
 				nw = L.w / (f.k * sc0); nh = L.h / (f.k * sc0);
 				if (bw > 0) nw = bw;
 			}
-			else if (n->type == "group" && (!has(c, "w") || !has(c, "h"))) natural(c, pw, ph, f.k, nw, nh);
+			else if (n->type == "group" && (!has(c, K("w")) || !has(c, K("h")))) natural(c, pw, ph, f.k, nw, nh);
 			Box b = boxOf(c, pw, ph, nw, nh);
 			float ax0 = f.x + b.x * f.k, ay0 = f.y + b.y * f.k, aw = b.w * f.k, ah = b.h * f.k;	// absolute layout px
-			if (has(c, "onTap") || has(c, "tap"))
-				hits.push_back(Hit{ f.screen, ax0 * s, ay0 * s, (ax0 + aw) * s, (ay0 + ah) * s, "", -1, str(c, has(c, "onTap") ? "onTap" : "tap") });
+			if (has(c, K("onTap")) || has(c, K("tap")))
+				hits.push_back(Hit{ f.screen, ax0 * s, ay0 * s, (ax0 + aw) * s, (ay0 + ah) * s, "", -1, str(c, has(c, K("onTap")) ? "onTap" : "tap") });
 			// its scale to 1/100: boxes and texts are drawn anew for every size they are seen at, and a scale that
 			// moves all the time (Noir's pulsing cards) made new ones each frame; to the hundredth, a pulse goes
 			// through a few sizes that stay cached (a step is ~1 px on a 100 px box)
-			double scl = num(c, "scale", 1);
+			double scl = num(c, K("scale"), 1);
 			if (scl != 1) scl = std::round(scl * 100) / 100;
 			Frame cf{ ax0, ay0, f.k * (float)scl, opacity, f.screen };
 			if (n->type == "rect") drawRect(c, ax0, ay0, aw, ah, cf);
 			else if (n->type == "text")
 			{
 				// scaled text is laid out at its scaled size (sharp, not a stretched bitmap)
-				drawText(c, ax0, ay0, has(c, "w") ? aw : 0, has(c, "h") ? ah : 0, cf, L);
+				drawText(c, ax0, ay0, has(c, K("w")) ? aw : 0, has(c, K("h")) ? ah : 0, cf, L);
 			}
 			else if (n->type == "image") drawImage(c, ax0, ay0, aw, ah, cf);
 			else if (n->type == "group")
 			{
 				// a group can paint a box behind its children too
-				if (has(c, "fill") || has(c, "gradient.stops.0") || has(c, "gradient.0") || has(c, "border") || has(c, "border.width") || has(c, "shadow.color")) drawRect(c, ax0, ay0, aw, ah, cf);
+				if (has(c, K("fill")) || has(c, K("gradient.stops.0")) || has(c, K("gradient.0")) || has(c, K("border")) || has(c, K("border.width")) || has(c, K("shadow.color"))) drawRect(c, ax0, ay0, aw, ah, cf);
 			}
-			bool clip = flag(c, "clip");
+			bool clip = flag(c, K("clip"));
 			if (clip) m->be->pushClip(std::round(ax0 * s), std::round(ay0 * s), std::round(aw * s), std::round(ah * s));
 			if (n->type == "list") renderList(c, csc, cf, b.w, b.h, key);
 			else if (!n->children.empty())
 			{
-				std::string lay = str(c, "layout");
+				std::string lay = str(c, K("layout"));
 				if (lay == "row" || lay == "column") renderFlow(c, csc, cf, b.w, b.h, key, lay == "row");
 				else for (size_t i = 0; i < n->children.size(); i++) renderNode(n->children[i].get(), csc, cf, b.w, b.h, key + "/" + std::to_string(i));
 			}
@@ -1001,18 +1219,18 @@ namespace banana
 		// align across the group
 		void renderFlow(const Ctx& c, const Scope& sc, const Frame& f, float w, float h, const std::string& key, bool row)
 		{
-			float gap = (float)num(c, "gap", 0), pad = (float)num(c, "padding", 0);
-			std::string justify = str(c, "justify", "start"), align = str(c, "align", "start");
+			float gap = (float)num(c, K("gap"), 0), pad = (float)num(c, K("padding"), 0);
+			std::string justify = str(c, K("justify"), "start"), align = str(c, K("align"), "start");
 			struct Kid { const Node* n; float w, h; };
 			std::vector<Kid> kids;
 			float total = 0;
 			for (auto& ch : c.n->children)
 			{
-				Ctx cc = ctx(ch.get(), &sc, "");
-				if ((has(cc, "visible") && !flag(cc, "visible")) || (has(cc, "if") && !flag(cc, "if"))) continue;
+				Ctx cc = ctx(ch.get(), &sc, noKey());
+				if ((has(cc, K("visible")) && !flag(cc, K("visible"))) || (has(cc, K("if")) && !flag(cc, K("if")))) continue;
 				float nw, nh;
 				natural(cc, w, h, f.k, nw, nh);
-				float kw = (float)num(cc, "w", nw >= 0 ? nw : 0, w), kh = (float)num(cc, "h", nh >= 0 ? nh : 0, h);
+				float kw = (float)num(cc, K("w"), nw >= 0 ? nw : 0, w), kh = (float)num(cc, K("h"), nh >= 0 ? nh : 0, h);
 				kids.push_back({ ch.get(), kw, kh });
 				total += row ? kw : kh;
 			}
@@ -1040,21 +1258,21 @@ namespace banana
 		{
 			const Node* tpl = c.n->item.get();
 			if (!tpl) { if (c.n->children.empty()) return; tpl = c.n->children[0].get(); }
-			std::string source = str(c, "source", "systems");
+			std::string source = str(c, K("source"), "systems");
 			int n = 0, cur = -1;
 			std::vector<std::pair<std::string, std::string>> hl;
 			if (source == "systems") { n = (int)systems.size(); cur = m->mSys; }
 			else if (source == "games") { n = (int)games.size(); cur = m->mView == rnds::UI::HOME ? -1 : m->mGame; }
 			else if (source == "hints") { hl = hintsNow(); n = (int)hl.size(); }
-			else if (source == "range") n = (int)num(c, "count", 0);
+			else if (source == "range") n = (int)num(c, K("count"), 0);
 			else { err("list source \"" + source + "\": systems, games, hints or range"); return; }
-			std::string dirn = str(c, "direction", "free");
-			float itemW = (float)num(c, "itemW", dirn == "column" ? w : 100), itemH = (float)num(c, "itemH", dirn == "row" ? h : 40);
-			float gap = (float)num(c, "gap", 0);
-			int cols = std::max(1, (int)num(c, "columns", 1));
-			float stepX = (float)num(c, "stepX", itemW + gap), stepY = (float)num(c, "stepY", itemH + gap);
-			std::string mode = str(c, "scrollMode", "center");
-			bool loop = flag(c, "loop") && n > 0;
+			std::string dirn = str(c, K("direction"), "free");
+			float itemW = (float)num(c, K("itemW"), dirn == "column" ? w : 100), itemH = (float)num(c, K("itemH"), dirn == "row" ? h : 40);
+			float gap = (float)num(c, K("gap"), 0);
+			int cols = std::max(1, (int)num(c, K("columns"), 1));
+			float stepX = (float)num(c, K("stepX"), itemW + gap), stepY = (float)num(c, K("stepY"), itemH + gap);
+			std::string mode = str(c, K("scrollMode"), "center");
+			bool loop = flag(c, K("loop")) && n > 0;
 			// the list the cursor is on scrolls with its eased position; another one stands at its selection
 			bool active = (source == "systems" && m->mView == rnds::UI::HOME) || (source == "games" && m->mView != rnds::UI::HOME);
 			float pos0 = active ? scroll : (float)std::max(0, cur);
@@ -1083,7 +1301,7 @@ namespace banana
 			int lines = dirn == "grid" ? (n + cols - 1) / cols : n;
 			// the items in view (and one more each side); a free list draws those within "range" of the cursor
 			int lo = 0, hi = n - 1;
-			if (dirn == "free") { int r = (int)num(c, "range", 8); int cc = std::max(0, cur); lo = cc - r; hi = cc + r; if (!loop) { lo = std::max(0, lo); hi = std::min(n - 1, hi); } }
+			if (dirn == "free") { int r = (int)num(c, K("range"), 8); int cc = std::max(0, cur); lo = cc - r; hi = cc + r; if (!loop) { lo = std::max(0, lo); hi = std::min(n - 1, hi); } }
 			else
 			{
 				int l0 = (int)std::floor(first) - 1, l1 = (int)std::ceil(first + along / std::max(1.0f, step)) + 1;
@@ -1096,7 +1314,7 @@ namespace banana
 			std::vector<int> order;
 			for (int i = lo; i <= hi; i++) order.push_back(i);
 			// the selected one drawn last (over its neighbours) unless the theme says otherwise
-			if (flag(c, "selectedOnTop", true) && cur >= 0) std::stable_sort(order.begin(), order.end(), [&](int a, int b) { auto idx = [&](int v) { return ((v % n) + n) % n; }; return (idx(a) == cur) < (idx(b) == cur); });
+			if (flag(c, K("selectedOnTop"), true) && cur >= 0) std::stable_sort(order.begin(), order.end(), [&](int a, int b) { auto idx = [&](int v) { return ((v % n) + n) % n; }; return (idx(a) == cur) < (idx(b) == cur); });
 			// an item's scope: its index, whether it's the selection, where it is from the cursor, its own fields
 			auto fill = [&](Scope& is, int v, int i)
 			{
@@ -1125,7 +1343,7 @@ namespace banana
 			};
 			// "flow": each item as wide (row) or high (column) as it is, one after another (hints of different lengths)
 			std::vector<float> flowAt;
-			if (flag(c, "flow") && (dirn == "row" || dirn == "column"))
+			if (flag(c, K("flow")) && (dirn == "row" || dirn == "column"))
 			{
 				float at = 0;
 				for (int i = 0; i < n; i++)
@@ -1133,10 +1351,10 @@ namespace banana
 					flowAt.push_back(at);
 					Scope is;
 					fill(is, i, i);
-					Ctx tc = ctx(tpl, &is, "");
+					Ctx tc = ctx(tpl, &is, noKey());
 					float nw, nh;
 					natural(tc, itemW, itemH, f.k, nw, nh);
-					at += (float)(dirn == "row" ? num(tc, "w", nw >= 0 ? nw : itemW, itemW) : num(tc, "h", nh >= 0 ? nh : itemH, itemH)) + gap;
+					at += (float)(dirn == "row" ? num(tc, K("w"), nw >= 0 ? nw : itemW, itemW) : num(tc, K("h"), nh >= 0 ? nh : itemH, itemH)) + gap;
 				}
 			}
 			for (int v : order)
@@ -1360,6 +1578,8 @@ namespace banana
 	{
 		d->shapes.clear();
 		d->shapeBytes = 0;
+		d->shapeKeys.clear();
+		d->textKeys.clear();
 		d->texts.clear();
 	}
 
