@@ -541,10 +541,10 @@ namespace banana
 			add(N, "nds", "Fog", "The distance fog some games draw in 3D. Off leaves it out.", bds, "render.fog", { "On", "Off" }, { "on", "off" });
 			add(N, "nds", "Frame pacing", "Panels runs the DS at the panels' 60 Hz, a new frame every refresh (0.3% fast, the sound matched). DS rate keeps the DS's own 59.83 Hz, a frame shown twice every ~6 s.",
 				bds, "kms.pace", { "Panels", "DS rate" }, { "display", "ds" });
-			// experimental: BananaDS's kms.lowlat (its docs/SETTINGS.md): no queue, frames aimed at the vblank; run-ahead
-			// (runahead2 left out of the list in 0.5.0: it never fit a refresh in any game measured; the value still works)
-			add(N, "nds", "Low latency (experimental)", "Experimental. On: no frame queue, each frame started as late as the panels allow: a press shows about two refreshes (35-40 ms) sooner. Run-ahead also runs a frame ahead and back, so the game answers a frame sooner than its own lag, but only where that fits a refresh: it needs about twice the CPU plus a 9-18 ms snapshot, which no game measured left room for on these handhelds, so it mostly acts as On.",
-				bds, "kms.lowlat", { "Off", "On", "Run-ahead 1 frame" }, { "off", "on", "runahead1" });
+			// experimental: BananaDS's kms.lowlat (its docs/SETTINGS.md): no queue, frames aimed at the vblank
+			// (run-ahead left out in 0.5.0: it never fit a refresh on these handhelds, agent-qa LL2; run-bananads turns a card's into on)
+			add(N, "nds", "Low latency (experimental)", "Experimental. On: no frame queue, each frame started as late as the panels allow: a press shows about two refreshes (35-40 ms) sooner, with the same sound.",
+				bds, "kms.lowlat", { "Off", "On" }, { "off", "on" });
 			add(N, "nds", "CPU clock", "Saves battery finds the lowest clock each game runs at full speed and remembers it. Always full keeps the top clock.",
 				bds, "cpugov", { "Saves battery", "Always full" }, { "on", "off" });
 			add(N, "nds", "Timing", "Accurate is melonDS's own. Fast lets the two CPUs run longer between meeting (about 10% faster), but it can break a game: Golden Sun: Dark Dawn loses its 3D world.",

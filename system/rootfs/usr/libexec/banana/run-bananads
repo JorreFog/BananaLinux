@@ -84,10 +84,12 @@ if [ ! -e /run/banana/asound.conf ]; then
 elif ! grep -q 'capture\.pcm *{ *type plug' /run/banana/asound.conf; then
     echo "run-bananads: /run/banana/asound.conf has a capture.pcm without the 48 kHz plug: the mic may not start" >&2
 fi
-# Settings > Nintendo DS > Low latency (experimental): bananads.conf's kms.lowlat (off, on, runahead1, runahead2),
-# which BananaDS reads itself (its docs/SETTINGS.md): no frame queue, each frame aimed at the panels' refresh, and
-# run-ahead. Said in the log, for a report that comes with one
+# Settings > Nintendo DS > Low latency (experimental): bananads.conf's kms.lowlat (off, on), which BananaDS reads itself
+# (its docs/SETTINGS.md): no frame queue, each frame aimed at the panels' refresh. Run-ahead (runahead1, runahead2)
+# left Settings in 0.5.0: it never fit a refresh on these handhelds (agent-qa LL2: a 9-18 ms snapshot on top of two
+# frames), so a card that has it gets On, which is what BananaDS did with it anyway. Said in the log, for a report
 ll=$(sed -n '/^ *kms\.lowlat *= */{s///;h};${x;p}' $C 2>/dev/null)
+case $ll in runahead*) sed -i 's/^ *kms\.lowlat *=.*/kms.lowlat = on/' $C; ll=on ;; esac
 [ -n "$ll" ] && [ "$ll" != off ] && echo "run-bananads: low latency (experimental): $ll" >&2
 export DSFLIP_SHADER_DIR=/usr/lib/superdrastic/shaders
 # Mesa's shader cache on the card (kms.shader's program, compiled once instead of at every start): BananaDS gets
