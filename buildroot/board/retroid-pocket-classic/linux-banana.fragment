@@ -20,3 +20,28 @@ CONFIG_INPUT_EVDEV=y
 # userspace Samba -- so without this the setting turns "on" and the share silently never starts (modprobe ksmbd
 # fails). The crypto and NLS pieces it selects are already on in linux-rocknix.config.
 CONFIG_SMB_SERVER=m
+
+# ---- debug overhead off ----
+# The ROCKNIX base keeps these on because it brings up many devices; on a shipping handheld nothing here uses
+# ftrace/tracefs or dynamic-debug (no Banana userland script opens /sys/kernel/debug). Off saves kernel size and a
+# little boot work. FTRACE is what most of the tracer machinery hangs off, so it has to go together with TRACING (a
+# tracer would re-select it).
+# (SLUB_DEBUG is left alone: it has a prompt only under CONFIG_EXPERT, so without EXPERT it takes its default y and a
+#  "# ... is not set" line has no effect -- and turning EXPERT on just to reach it would expose hundreds of others.)
+# CONFIG_FTRACE is not set
+# CONFIG_TRACING is not set
+# CONFIG_DYNAMIC_DEBUG is not set
+
+# ---- dead silicon for this board ----
+# One 1240x1080 DSI panel, no HDMI out, no camera or V4L2 media pipeline: the base enables all of that for its other
+# devices. The only DSI PHY this panel binds is the 5nm one (qcom,sm4450-dsi-phy-5nm -> dsi_phy_7nm.c's
+# dsi_phy_5nm_8450_cfgs), so the older PHY generations are dead code here.
+# CONFIG_DRM_MSM_HDMI is not set
+# CONFIG_DRM_MSM_HDMI_HDCP is not set
+# CONFIG_MEDIA_SUPPORT is not set
+# CONFIG_VIDEO_DEV is not set
+# CONFIG_DRM_MSM_DSI_28NM_PHY is not set
+# CONFIG_DRM_MSM_DSI_20NM_PHY is not set
+# CONFIG_DRM_MSM_DSI_28NM_8960_PHY is not set
+# CONFIG_DRM_MSM_DSI_14NM_PHY is not set
+# CONFIG_DRM_MSM_DSI_10NM_PHY is not set
