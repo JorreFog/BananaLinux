@@ -1,5 +1,6 @@
 #include "expr.h"
 #include <algorithm>
+#include <charconv>
 #include <cctype>
 #include <cmath>
 #include <cstdio>
@@ -23,7 +24,7 @@ namespace banana
 		if (isStr) return s;
 		if (std::isnan(n)) return "";
 		char b[32];
-		if (n == std::floor(n) && std::fabs(n) < 1e15) snprintf(b, sizeof b, "%lld", (long long)n);
+		if (n == std::floor(n) && std::fabs(n) < 1e15) { auto r = std::to_chars(b, b + sizeof b, (long long)n); return std::string(b, r.ptr); }
 		else snprintf(b, sizeof b, "%g", n);
 		return b;
 	}
@@ -41,6 +42,26 @@ namespace banana
 	// ---- colours ----------------------------------------------------------------------------------------------------
 	bool parseColorText(const std::string& v0, uint32_t& out)
 	{
+		// "#rrggbb" and "#rrggbbaa" as they are (the usual case, and what colorText makes): read directly, the same
+		// result as below
+		if ((v0.size() == 7 || v0.size() == 9) && v0[0] == '#')
+		{
+			uint32_t x = 0;
+			bool hex = true;
+			for (size_t i = 1; i < v0.size() && hex; i++)
+			{
+				char ch = v0[i];
+				int d = ch >= '0' && ch <= '9' ? ch - '0' : ch >= 'a' && ch <= 'f' ? ch - 'a' + 10 : ch >= 'A' && ch <= 'F' ? ch - 'A' + 10 : -1;
+				if (d < 0) hex = false;
+				else x = x << 4 | (uint32_t)d;
+			}
+			if (hex)
+			{
+				if (v0.size() == 7) x = x << 8 | 0xff;
+				out = (x >> 8) | (x & 0xff) << 24;
+				return true;
+			}
+		}
 		std::string v = v0;
 		while (!v.empty() && isspace((unsigned char)v.back())) v.pop_back();
 		while (!v.empty() && isspace((unsigned char)v[0])) v.erase(0, 1);
@@ -74,9 +95,14 @@ namespace banana
 	}
 	std::string colorText(uint32_t c)
 	{
-		char b[16];
-		snprintf(b, sizeof b, "#%06x%02x", c & 0xffffff, c >> 24);
-		return b;
+		// (as printf's "#%06x%02x", without printf: themes mix colours in expressions for every element, every frame)
+		static const char hx[] = "0123456789abcdef";
+		char b[10];
+		b[0] = '#';
+		uint32_t rgba = (c << 8) | (c >> 24);
+		for (int i = 0; i < 8; i++) b[1 + i] = hx[(rgba >> (28 - 4 * i)) & 15];
+		b[9] = 0;
+		return std::string(b, 9);
 	}
 	static uint32_t colorOf(const EV& v)
 	{
