@@ -996,6 +996,9 @@ int main(int argc, char** argv)
 	ClockBoost boost;
 	sound.enabled = settings["sounds"] != "off";
 	sound.setBgm(settings["bgm"] != "off");		// the ambient loop, if the card or the image has one
+	// the boot splash's insert is the first cue, ~10 s after the kernel, before the AudioReach card can be opened:
+	// warm the device up now so that cue finds it open (independent of the background loop, which may be off)
+	if (settings["splash"] != "off" && settings["sounds"] != "off") sound.warm();
 	lib.onCue = [&sound](const std::string& n) { sound.play(n); };
 
 	// the library and the menu are made on another thread while the boot animation plays

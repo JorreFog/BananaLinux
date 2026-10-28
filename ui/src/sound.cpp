@@ -172,8 +172,21 @@ static bool dspFrontendsFree()
 		cv.notify_all();
 	}
 
-	void Sound::setBgm(bool on)
+	/* The boot warm-up: open the device now, independent of the background loop, and hold it until the first cue.
+	 * The splash's insert is ~10 s after the kernel started, when the AudioReach card is not openable yet; the cue's
+	 * own open then fails. The runner retries until the card comes up and holds the stream open (silence) ready for
+	 * it. Cleared by the first cue, and by a deadline so a splash with no cue can't hold the device forever. */
+	void Sound::warm()
 	{
+		if (!enabled) return;
+		warmUp = true;
+#ifdef BANANA_ALSA
+		slog("warm(): the first cue will find the device open");
+#endif
+		cv.notify_all();
+	}
+
+	void Sound::setBgm(bool on)	{
 		bgmOn = on && bgmLoaded;
 		/* The amp's PLL and the DSP graph need a moment after the card comes up (dmesg: start failure (-1)
 		 * every few seconds until the amp locks), and the first few seconds of a boot are when the splash
@@ -339,7 +352,8 @@ static bool dspFrontendsFree()
 					first = false;
 				}
 			}
-			if (snd_pcm_open(&pcm, "default", SND_PCM_STREAM_PLAYBACK, 0) < 0) { slog("open failed"); pcm = nullptr; return false; }
+			int e = snd_pcm_open(&pcm, "default", SND_PCM_STREAM_PLAYBACK, 0);
+			if (e < 0) { slog("open failed: %s", snd_strerror(e)); pcm = nullptr; return false; }
 			if (snd_pcm_set_params(pcm, SND_PCM_FORMAT_S16_LE, SND_PCM_ACCESS_RW_INTERLEAVED, c.channels, c.rate, 1, 30000) < 0)
 			{
 				slog("set_params failed"); snd_pcm_close(pcm); pcm = nullptr; return false;
@@ -400,7 +414,7 @@ static bool dspFrontendsFree()
 			{
 				std::unique_lock<std::mutex> l(m);
 				// closed: nothing to do until a cue, a game's release, or the loop wanting the device again
-				if (!pcm) cv.wait(l, [this] { return stop || closeNow || !queued.empty() || bgmOn.load(); });
+				if (!pcm) cv.wait(l, [this] { return stop || closeNow || !queued.empty() || bgmOn.load() || warmUp.load(); });
 				if (stop) break;
 				if (closeNow) { closeDev("release"); cur = nullptr; closeNow = false; continue; }	// a game is starting
 				name = queued;
@@ -411,6 +425,8 @@ static bool dspFrontendsFree()
 			// not pushed forward, so it is already past) and keeps it open; a closed device stays open for it
 			// instead of closing after a quiet spell. The amp settles while writeFrames retries in place.
 			const bool wantBgm = bgmOn.load() && bgmLoaded && (devOpen.load() || now >= bgmStartAt);
+			// the boot warm-up opens and holds the device the same way, with no loop to play (the splash's cue)
+			const bool wantOpen = wantBgm || warmUp.load();
 			if (!name.empty())
 			{
 				static bool loggedCue = false;
@@ -429,16 +445,33 @@ static bool dspFrontendsFree()
 					if (!routeIsAsPublished()) closeDev("route stale");
 				}
 				if (pcm && (openRate != c.rate || openCh != c.channels)) closeDev("format");
-				if (!pcm && !openDev(c)) continue;
+				if (!pcm && !openDev(c))
+				{
+					// the card is not up yet (a boot-time cue): keep the cue and try again, so the splash's click
+					// plays once it is, instead of being lost to the failed open
+					if (warmUp.load())
+					{
+						std::lock_guard<std::mutex> l(m);
+						if (queued.empty()) queued = name;
+						std::this_thread::sleep_for(std::chrono::milliseconds(250));
+					}
+					continue;
+				}
 				cur = &c;
 				at = 0;
 				lastSound = now;
+				warmUp = false;	// the device is open and the cue is playing: the boot warm-up is done
 			}
 			else if (!cur)
 			{
-				// nothing to play: keep the stream open for the loop, else let it go after a quiet spell
-				if (!wantBgm && now - lastSound >= quiet) { closeDev("quiet"); continue; }
-				if (!pcm && wantBgm && bgmLoaded && !openDev(bgm)) continue;
+				// nothing to play: keep the stream open for the loop or the warm-up, else let it go after a quiet spell
+				if (warmUp.load() && now - lastSound >= quiet) warmUp = false;	// the cue never came: stop holding the device
+				if (!wantOpen && now - lastSound >= quiet) { closeDev("quiet"); continue; }
+				if (!pcm && wantOpen && !openDev(warmUp.load() ? warmClip : bgm))
+				{
+					if (warmUp.load()) std::this_thread::sleep_for(std::chrono::milliseconds(250));	// the card isn't up yet
+					continue;
+				}
 			}
 			if (!pcm) continue;
 			// the jack changed while the stream runs (every 250 ms): the next sound opens where sound plays now
