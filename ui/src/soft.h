@@ -24,6 +24,9 @@ namespace banana
 		enum { CLEAR = 0, SOLID = 1, MIXED = 2 };
 		std::vector<uint32_t> runs;
 		std::vector<uint32_t> rowAt;
+		// a rectangle of solid pixels inside it [ix0, ix1) x [iy0, iy1) (empty: none found): drawn at its own size
+		// with a solid tint, what is under it there can't show
+		int ix0 = 0, iy0 = 0, ix1 = 0, iy1 = 0;
 		// drawn at another size: what a scaled draw samples depends only on its size and where its first pixel's
 		// centre falls in the texture (the sub-pixel phase), so a draw seen again at a size and phase (a tile at rest,
 		// or moving by whole pixels) keeps its samples and is copied from then on. The last few, most recent first;
@@ -31,6 +34,7 @@ namespace banana
 		struct Scaled
 		{
 			double phX, phY; float w, h; int bw, bh;
+			uint64_t frame;	// the frame it was first seen in (a draw seen in more tiles of one frame isn't seen again)
 			std::shared_ptr<SoftTex> tex;
 			bool same(const Scaled& o) const { return phX == o.phX && phY == o.phY && w == o.w && h == o.h && bw == o.bw && bh == o.bh; }
 		};
@@ -93,6 +97,7 @@ namespace banana
 		{
 			Cmd c;
 			Clip box;	// the pixels it can touch: its rectangle in its clip
+			Clip opq;	// the pixels it covers with solid colour (nothing under them shows; empty: none). Not compared
 			bool operator==(const Item& o) const
 			{
 				return c.op == o.c.op && c.tex == o.c.tex && c.x == o.c.x && c.y == o.c.y && c.w == o.c.w && c.h == o.c.h &&
@@ -107,6 +112,8 @@ namespace banana
 		Clip bounds(const Cmd& c, const Clip& clip) const;
 		void addDirty(const Clip& r);
 		void redraw(const Clip& r);
+		Clip opaqueBox(const Item& it) const;
+		uint64_t frameNo = 0;
 		const uint64_t* vertical(SoftTex* t, float y, float h, int64_t stepY, int by0, int by1);
 		void columns(const SoftTex* t, float x, int64_t stepX, int bx0, int x0, int n);
 		void sample(const SoftTex* t, float x, float y, float w, float h, int x0, int y0, int x1, int y1, uint32_t* px, uint8_t* a8, int stride);

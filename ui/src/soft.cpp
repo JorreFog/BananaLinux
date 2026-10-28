@@ -40,7 +40,8 @@ namespace banana
 		return (a << 24) | (r << 16) | (g << 8) | b;
 	}
 
-	// a row's runs from a per-pixel kind
+	static void findInterior(SoftTex& t);
+
 	// a row's runs from each pixel's alpha (or coverage): the byte at a[0], a[step], ... of each row, rows stride
 	// bytes apart
 	static void encodeRuns(SoftTex& t, const uint8_t* a, size_t step, size_t stride)
@@ -66,6 +67,43 @@ namespace banana
 			}
 		}
 		t.rowAt[t.h] = (uint32_t)t.runs.size();
+		findInterior(t);
+	}
+
+	// a rectangle of solid pixels: the longest solid run of the middle row (or its middle part), as many rows up and
+	// down as have a solid run over the same columns; the biggest of a few
+	static void findInterior(SoftTex& t)
+	{
+		t.ix0 = t.iy0 = t.ix1 = t.iy1 = 0;
+		if (t.w <= 0 || t.h <= 0 || t.rowAt.size() != (size_t)t.h + 1) return;
+		auto solidOver = [&t](int y, int l, int r)
+		{
+			int x = 0;
+			for (uint32_t i = t.rowAt[y]; i < t.rowAt[y + 1]; i++)
+			{
+				int len = (int)(t.runs[i] & 0x3fffffffu);
+				if (x + len > l) return (int)(t.runs[i] >> 30) == SoftTex::SOLID && x <= l && x + len >= r;
+				x += len;
+			}
+			return false;
+		};
+		int m = t.h / 2, L = 0, R = 0, x = 0;
+		for (uint32_t i = t.rowAt[m]; i < t.rowAt[m + 1]; i++)
+		{
+			int len = (int)(t.runs[i] & 0x3fffffffu);
+			if ((int)(t.runs[i] >> 30) == SoftTex::SOLID && len > R - L) { L = x; R = x + len; }
+			x += len;
+		}
+		if (R - L < 8) return;
+		int64_t best = 0;
+		for (int cut : { 0, 1, 2, 3 })
+		{
+			int l = L + (R - L) * cut / 8, r = R - (R - L) * cut / 8;
+			int y0 = m, y1 = m + 1;
+			while (y0 > 0 && solidOver(y0 - 1, l, r)) y0--;
+			while (y1 < t.h && solidOver(y1, l, r)) y1++;
+			if ((int64_t)(r - l) * (y1 - y0) > best) { best = (int64_t)(r - l) * (y1 - y0); t.ix0 = l; t.ix1 = r; t.iy0 = y0; t.iy1 = y1; }
+		}
 	}
 
 	// the alpha byte of the premultiplied words' rows (the word's top byte: the fourth in memory)
@@ -161,7 +199,11 @@ namespace banana
 			default:
 			{
 				Clip b = bounds(c, clips.back());
-				if (b.x0 < b.x1) items.push_back({ std::move(c), b });
+				if (b.x0 < b.x1)
+				{
+					items.push_back({ std::move(c), b, { 0, 0, 0, 0 } });
+					items.back().opq = opaqueBox(items.back());
+				}
 			}
 			}
 		}
@@ -185,28 +227,66 @@ namespace banana
 		dirty.push_back(r);
 	}
 
+	// the pixels a draw or fill covers with solid colour: a fill or a draw whose tint is solid, over its texture's
+	// solid rectangle (at its own size) or all of an opaque texture (scaled: every sample is a blend of solid texels)
+	SoftBackend::Clip SoftBackend::opaqueBox(const Item& it) const
+	{
+		Clip none = { 0, 0, 0, 0 };
+		const Cmd& c = it.c;
+		if (std::lround(std::min(1.0f, std::max(0.0f, c.c[3])) * 255) != 255) return none;
+		if (c.op == Cmd::FILL) return it.box;
+		auto t = (const SoftTex*)c.tex.get();
+		bool exact = std::fabs(c.w - t->w) < 0.01f && std::fabs(c.h - t->h) < 0.01f;
+		if (!exact) return t->opaque ? it.box : none;
+		int bx0 = edge(c.x), by0 = edge(c.y);
+		Clip r = { std::max(it.box.x0, bx0 + t->ix0), std::max(it.box.y0, by0 + t->iy0), std::min(it.box.x1, bx0 + t->ix1), std::min(it.box.y1, by0 + t->iy1) };
+		return r.x0 < r.x1 && r.y0 < r.y1 ? r : none;
+	}
+
 	// r from black (as ES's renderer clears before each frame: the screen's corners aren't covered by the engine),
-	// every draw that touches it clipped to it
+	// every draw that touches it clipped to it. In tiles, each drawn through before the next (a tile's pixels stay in
+	// the cache from draw to draw), from the last draw that covers all of the tile with solid colour (what is under
+	// it can't show). Each pixel sees the same draws in the same order as drawn in one go: the same result
 	void SoftBackend::redraw(const Clip& r)
 	{
-		uint32_t* base = scr[cur].data();
-		for (int y = r.y0; y < r.y1; y++) std::fill(base + (size_t)y * W + r.x0, base + (size_t)y * W + r.x1, 0xff000000u);
 		touch(r);
 		redrawn += (uint64_t)(r.x1 - r.x0) * (r.y1 - r.y0);
-		for (auto& it : items)
+		const int TW = 64, TH = 32;
+		uint32_t* base = scr[cur].data();
+		for (int ty = r.y0; ty < r.y1; ty = (ty / TH + 1) * TH)
 		{
-			const Clip& b = it.box;
-			if (!overlaps(b.x0, b.y0, b.x1, b.y1, r.x0, r.y0, r.x1, r.y1)) continue;
-			Clip cl = { std::max(b.x0, r.x0), std::max(b.y0, r.y0), std::min(b.x1, r.x1), std::min(b.y1, r.y1) };
-			const Cmd& c = it.c;
-			rnds::Color col(c.c[0], c.c[1], c.c[2], c.c[3]);
-			if (c.op == Cmd::DRAW) doDraw((SoftTex*)c.tex.get(), c.x, c.y, c.w, c.h, col, cl);
-			else doFill(c.x, c.y, c.w, c.h, col, cl);
+			int ty1 = std::min(r.y1, (ty / TH + 1) * TH);
+			for (int tx = r.x0; tx < r.x1; tx = (tx / TW + 1) * TW)
+			{
+				Clip t = { tx, ty, std::min(r.x1, (tx / TW + 1) * TW), ty1 };
+				size_t from = items.size();
+				while (from > 0)
+				{
+					const Clip& o = items[from - 1].opq;
+					if (o.x0 <= t.x0 && o.y0 <= t.y0 && o.x1 >= t.x1 && o.y1 >= t.y1) break;
+					from--;
+				}
+				if (from == 0)
+					for (int y = t.y0; y < t.y1; y++) std::fill(base + (size_t)y * W + t.x0, base + (size_t)y * W + t.x1, 0xff000000u);
+				else from--;
+				for (size_t i = from; i < items.size(); i++)
+				{
+					const Item& it = items[i];
+					const Clip& b = it.box;
+					if (!overlaps(b.x0, b.y0, b.x1, b.y1, t.x0, t.y0, t.x1, t.y1)) continue;
+					Clip cl = { std::max(b.x0, t.x0), std::max(b.y0, t.y0), std::min(b.x1, t.x1), std::min(b.y1, t.y1) };
+					const Cmd& c = it.c;
+					rnds::Color col(c.c[0], c.c[1], c.c[2], c.c[3]);
+					if (c.op == Cmd::DRAW) doDraw((SoftTex*)c.tex.get(), c.x, c.y, c.w, c.h, col, cl);
+					else doFill(c.x, c.y, c.w, c.h, col, cl);
+				}
+			}
 		}
 	}
 
 	void SoftBackend::endScreen()
 	{
+		frameNo++;
 		if (overlay) overlay(cur);
 		resolve();
 		std::vector<Item>& old = last[cur];
@@ -453,14 +533,14 @@ namespace banana
 
 		// scaled at a size and phase it was scaled at before: the samples kept from then (the tint is applied as
 		// they are drawn, as below)
-		SoftTex::Scaled key = { (bx0 + 0.5) - x, (by0 + 0.5) - y, w, h, bx1 - bx0, by1 - by0, nullptr };
+		SoftTex::Scaled key = { (bx0 + 0.5) - x, (by0 + 0.5) - y, w, h, bx1 - bx0, by1 - by0, frameNo, nullptr };
 		size_t k = 0;
 		while (k < t->scaled.size() && !t->scaled[k].same(key)) k++;
 		if (k < t->scaled.size())
 		{
 			std::rotate(t->scaled.begin(), t->scaled.begin() + k, t->scaled.begin() + k + 1);	// most recent first
 			SoftTex::Scaled& e = t->scaled[0];
-			if (!e.tex && (int64_t)key.bw * key.bh <= (int64_t)W * H / 4)
+			if (!e.tex && e.frame != frameNo && (int64_t)key.bw * key.bh <= (int64_t)W * H / 4)
 			{
 				// the second time: sample the whole box once
 				auto st = std::make_shared<SoftTex>();
