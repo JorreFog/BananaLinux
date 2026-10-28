@@ -927,6 +927,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			double total = 0, worst = 0, draw = 0, drawWorst = 0, work = 0, workWorst = 0;
 			be.skipped = 0;
 			be.redrawn = 0;
+			be.composeMs = 0;
 			std::vector<double> dts;
 			for (int i = 0; i < n; i++)
 			{
@@ -950,7 +951,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			double p95 = dts.empty() ? 0 : dts[std::min(dts.size() - 1, (size_t)(dts.size() * 0.95))];
 			int over = 0;
 			for (double d : dts) over += d > 16.7;
-			logf("bench: %d frames, %.2f ms average, %.2f ms p95, %d over 16.7 ms", n, n ? total / n : 0, p95, over);
+			logf("bench: %d frames, %.2f ms average, %.2f ms p95, %d over 16.7 ms (composing the screens %.2f ms average)", n, n ? total / n : 0, p95, over, n ? be.composeMs / n : 0);
 			logf("bench: %d frames, %.2f ms average, %.2f ms worst (drawing %.2f / %.2f; the worker %.2f / %.2f), %d of %d screens unchanged, %.1f%% of pixels drawn again", n, total / n, worst,
 				draw / n, drawWorst, work / n, workWorst, be.skipped, 2 * n, 100.0 * be.redrawn / (2.0 * n * be.width() * be.height()));
 		}

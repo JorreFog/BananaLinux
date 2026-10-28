@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <chrono>
 
 namespace banana
 {
@@ -264,22 +265,11 @@ namespace banana
 		}
 	}
 
-	// a rectangle to draw again: merged with the ones it overlaps, so each pixel is drawn once
-	void SoftBackend::addDirty(const Clip& r0)
+	// a rectangle to draw again: the tiles it touches
+	void SoftBackend::addDirty(const Clip& r)
 	{
-		Clip r = r0;
-		for (size_t i = 0; i < dirty.size();)
-		{
-			const Clip& d = dirty[i];
-			if (overlaps(r.x0, r.y0, r.x1, r.y1, d.x0, d.y0, d.x1, d.y1))
-			{
-				r = { std::min(r.x0, d.x0), std::min(r.y0, d.y0), std::max(r.x1, d.x1), std::max(r.y1, d.y1) };
-				dirty.erase(dirty.begin() + i);
-				i = 0;	// the grown rectangle may reach ones already passed
-			}
-			else i++;
-		}
-		dirty.push_back(r);
+		for (int ty = r.y0 / TH; ty <= (r.y1 - 1) / TH; ty++)
+			memset(&dirty[(size_t)ty * tilesX + r.x0 / TW], 1, (r.x1 - 1) / TW - r.x0 / TW + 1);
 	}
 
 	// the pixels a draw or fill covers with solid colour: a fill or a draw whose tint is solid, over its texture's
@@ -298,57 +288,91 @@ namespace banana
 		return r.x0 < r.x1 && r.y0 < r.y1 ? r : none;
 	}
 
-	// r from black (as ES's renderer clears before each frame: the screen's corners aren't covered by the engine),
-	// every draw that touches it clipped to it. In tiles, each drawn through before the next (a tile's pixels stay in
-	// the cache from draw to draw), from the last draw that covers all of the tile with solid colour (what is under
-	// it can't show). Each pixel sees the same draws in the same order as drawn in one go: the same result
-	void SoftBackend::redraw(const Clip& r)
+	// a tile from black (as ES's renderer clears before each frame: the screen's corners aren't covered by the engine),
+	// every draw that touches it clipped to it, from the last draw that covers all of it with solid colour (what is
+	// under that can't show). Drawn tile by tile, a tile's pixels stay in the cache from draw to draw; each pixel sees
+	// the same draws in the same order as drawn in one go, the same result
+	void SoftBackend::redrawTile(const Clip& t)
 	{
-		touch(r);
-		redrawn += (uint64_t)(r.x1 - r.x0) * (r.y1 - r.y0);
-		const int TW = 64, TH = 32;
-		uint32_t* base = scr[cur].data();
-		for (int ty = r.y0; ty < r.y1; ty = (ty / TH + 1) * TH)
+		touch(t);
+		redrawn += (uint64_t)(t.x1 - t.x0) * (t.y1 - t.y0);
+		composeTile(t, scr[cur].data(), items.size(), base[cur].n);
+	}
+
+	// the first n draws over a tile of the pixels px (rows of W), from black, or from the background kept if those
+	// draws start with its draws (from = their count)
+	void SoftBackend::composeTile(const Clip& t, uint32_t* px, size_t n, size_t fromBase)
+	{
+		tgt = px;
+		size_t from = n;
+		while (from > 0)
 		{
-			int ty1 = std::min(r.y1, (ty / TH + 1) * TH);
-			for (int tx = r.x0; tx < r.x1; tx = (tx / TW + 1) * TW)
-			{
-				Clip t = { tx, ty, std::min(r.x1, (tx / TW + 1) * TW), ty1 };
-				size_t from = items.size();
-				while (from > 0)
-				{
-					const Clip& o = items[from - 1].opq;
-					if (o.x0 <= t.x0 && o.y0 <= t.y0 && o.x1 >= t.x1 && o.y1 >= t.y1) break;
-					from--;
-				}
-				if (from == 0)
-					for (int y = t.y0; y < t.y1; y++) std::fill(base + (size_t)y * W + t.x0, base + (size_t)y * W + t.x1, 0xff000000u);
-				else from--;
-				for (size_t i = from; i < items.size(); i++)
-				{
-					const Item& it = items[i];
-					const Clip& b = it.box;
-					if (!overlaps(b.x0, b.y0, b.x1, b.y1, t.x0, t.y0, t.x1, t.y1)) continue;
-					Clip cl = { std::max(b.x0, t.x0), std::max(b.y0, t.y0), std::min(b.x1, t.x1), std::min(b.y1, t.y1) };
-					const Cmd& c = it.c;
-					rnds::Color col(c.c[0], c.c[1], c.c[2], c.c[3]);
-					if (c.op == Cmd::DRAW) doDraw((SoftTex*)c.tex.get(), c.x, c.y, c.w, c.h, col, cl);
-					else doFill(c.x, c.y, c.w, c.h, col, cl);
-				}
-			}
+			const Clip& o = items[from - 1].opq;
+			if (o.x0 <= t.x0 && o.y0 <= t.y0 && o.x1 >= t.x1 && o.y1 >= t.y1) break;
+			from--;
 		}
+		if (from > 0) from--;
+		else if (!fromBase)
+			for (int y = t.y0; y < t.y1; y++) std::fill(px + (size_t)y * W + t.x0, px + (size_t)y * W + t.x1, 0xff000000u);
+		if (fromBase && from < fromBase)
+		{
+			const uint32_t* b = base[cur].px.data();
+			for (int y = t.y0; y < t.y1; y++) memcpy(px + (size_t)y * W + t.x0, b + (size_t)y * W + t.x0, (size_t)(t.x1 - t.x0) * 4);
+			from = fromBase;
+		}
+		for (size_t i = from; i < n; i++)
+		{
+			const Item& it = items[i];
+			const Clip& b = it.box;
+			if (!overlaps(b.x0, b.y0, b.x1, b.y1, t.x0, t.y0, t.x1, t.y1)) continue;
+			Clip cl = { std::max(b.x0, t.x0), std::max(b.y0, t.y0), std::min(b.x1, t.x1), std::min(b.y1, t.y1) };
+			const Cmd& c = it.c;
+			rnds::Color col(c.c[0], c.c[1], c.c[2], c.c[3]);
+			if (c.op == Cmd::DRAW) doDraw((SoftTex*)c.tex.get(), c.x, c.y, c.w, c.h, col, cl);
+			else doFill(c.x, c.y, c.w, c.h, col, cl);
+		}
+	}
+
+	// the background: the screen's first draws when they have stayed the same for a while and cover the screen more
+	// than about twice (a tile drawn again then starts from a copy of them). Kept while the list starts with them;
+	// made again at most every half second
+	void SoftBackend::updateBase(const std::vector<Item>& old)
+	{
+		Base& b = base[cur];
+		if (b.n && (b.n > items.size() || !std::equal(b.items.begin(), b.items.end(), items.begin()))) { b.n = 0; b.items.clear(); }
+		size_t p = 0;
+		while (p < items.size() && p < old.size() && items[p] == old[p]) p++;
+		b.hist[b.histAt++ % 8] = p;
+		size_t stable = p;
+		for (size_t h : b.hist) stable = std::min(stable, h);
+		if (stable <= b.n || frameNo < b.built + 60) return;
+		auto area = [this](size_t n) { uint64_t a = 0; for (size_t i = 0; i < n; i++) a += (uint64_t)(items[i].box.x1 - items[i].box.x0) * (items[i].box.y1 - items[i].box.y0); return a; };
+		uint64_t screen = (uint64_t)W * H, now = area(stable);
+		if (now < screen * 2 || now < area(b.n) + screen / 2) return;
+		b.px.resize((size_t)W * H);
+		b.n = 0;
+		for (int ty = 0; ty < H; ty += TH)
+			for (int tx = 0; tx < W; tx += TW) composeTile({ tx, ty, std::min(W, tx + TW), std::min(H, ty + TH) }, b.px.data(), stable, 0);
+		b.items.assign(items.begin(), items.begin() + stable);
+		b.n = stable;
+		b.built = frameNo;
 	}
 
 	void SoftBackend::endScreen()
 	{
+		auto t0 = std::chrono::steady_clock::now();
+		struct Timed { std::chrono::steady_clock::time_point t0; double& ms; ~Timed() { ms += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count(); } } timed{ t0, composeMs };
 		frameNo++;
 		if (overlay) overlay(cur);
 		resolve();
 		std::vector<Item>& old = last[cur];
-		dirty.clear();
+		if (!full[cur]) updateBase(old);
+		tilesX = (W + TW - 1) / TW; tilesY = (H + TH - 1) / TH;
+		dirty.assign((size_t)tilesX * tilesY, 0);
+		bool any = false;
 		if (full[cur])
 		{
-			dirty.push_back({ 0, 0, W, H });
+			addDirty({ 0, 0, W, H });
 			full[cur] = false;
 		}
 		else
@@ -369,9 +393,12 @@ namespace banana
 				else addDirty(it.box);
 			}
 			for (; p < old.size(); p++) addDirty(old[p].box);
-			if (dirty.empty()) { skipped++; std::swap(items, old); return; }
+			for (uint8_t d : dirty) any |= d;
+			if (!any) { skipped++; std::swap(items, old); return; }
 		}
-		for (auto& r : dirty) redraw(r);
+		for (int ty = 0; ty < tilesY; ty++)
+			for (int tx = 0; tx < tilesX; tx++)
+				if (dirty[(size_t)ty * tilesX + tx]) redrawTile({ tx * TW, ty * TH, std::min(W, (tx + 1) * TW), std::min(H, (ty + 1) * TH) });
 		std::swap(items, old);
 	}
 
@@ -403,7 +430,7 @@ namespace banana
 		uint32_t p = premul(c);
 		for (int yy = y0; yy < y1; yy++)
 		{
-			uint32_t* d = &scr[cur][(size_t)yy * W];
+			uint32_t* d = &tgt[(size_t)yy * W];
 			if ((p >> 24) == 255)
 				std::fill(d + x0, d + x1, p);
 			else
@@ -534,7 +561,7 @@ namespace banana
 		const uint32_t* runs = t->runs.data();
 		for (int yy = y0; yy < y1; yy++)
 		{
-			uint32_t* d = &scr[cur][(size_t)yy * W + bx0];
+			uint32_t* d = &tgt[(size_t)yy * W + bx0];
 			int sy = yy - by0;
 			int x = 0;
 			uint32_t r = t->rowAt[sy], rEnd = t->rowAt[sy + 1];
@@ -620,7 +647,7 @@ namespace banana
 		const uint64_t* vrows = t->smooth && !t->alpha ? vertical(t, y, h, stepY, by0, by1) : nullptr;
 		for (int yy = y0; yy < y1; yy++)
 		{
-			uint32_t* d = &scr[cur][(size_t)yy * W + x0];
+			uint32_t* d = &tgt[(size_t)yy * W + x0];
 			int64_t sv = (int64_t)(((yy + 0.5) - y) * stepY) - (t->smooth ? 32768 : 0);
 			if (!t->smooth)
 			{

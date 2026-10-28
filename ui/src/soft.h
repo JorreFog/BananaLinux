@@ -79,6 +79,8 @@ namespace banana
 		int skipped = 0;
 		// pixels redrawn (the changed rectangles' area), for the benchmark
 		uint64_t redrawn = 0;
+		// time spent composing the screens (endScreen), ms, for the benchmark
+		double composeMs = 0;
 
 	private:
 		// a screen's draws are recorded and only run at endScreen. The list is compared with the last frame's, draw by
@@ -106,12 +108,20 @@ namespace banana
 		};
 		std::vector<Cmd> rec[2];
 		std::vector<Item> items, last[2];
-		std::vector<Clip> dirty;
+		std::vector<uint8_t> dirty;	// the tiles to draw again (TW x TH pixels each, rows of tilesX)
+		int tilesX = 0, tilesY = 0;
+		static const int TW = 64, TH = 32;
 		bool full[2] = { true, true };
 		void resolve();
 		Clip bounds(const Cmd& c, const Clip& clip) const;
 		void addDirty(const Clip& r);
-		void redraw(const Clip& r);
+		void redrawTile(const Clip& t);
+		void composeTile(const Clip& t, uint32_t* px, size_t n, size_t fromBase);
+		// a screen's first n draws composed (the background under what moves), kept while its list starts with them
+		struct Base { std::vector<uint32_t> px; std::vector<Item> items; size_t n = 0; uint64_t built = 0; size_t hist[8] = {}; unsigned histAt = 0; };
+		Base base[2];
+		void updateBase(const std::vector<Item>& old);
+		uint32_t* tgt = nullptr;	// the pixels drawn on (the screen's, or its background's)
 		Clip opaqueBox(const Item& it) const;
 		uint64_t frameNo = 0;
 		const uint64_t* vertical(SoftTex* t, float y, float h, int64_t stepY, int by0, int by1);
