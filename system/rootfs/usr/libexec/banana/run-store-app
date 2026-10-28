@@ -1,0 +1,22 @@
+#!/bin/sh
+# An app from the Store (the Apps shelf): its entry (written by rocknixds-store into /data/store/tiles) with bash, as a
+# port, but with both panels left on: an app made for the handheld draws on both (eReaderDS: a page on each). Its files
+# and settings go under /data/home, not the read-only root.
+#   run-store-app <entry>
+export HOME=/data/home XDG_DATA_HOME=/data/home/.local/share XDG_CONFIG_HOME=/data/home/.config XDG_RUNTIME_DIR=/run
+mkdir -p $XDG_DATA_HOME $XDG_CONFIG_HOME
+export SDL_KMSDRM_FIRST=${BANANA_TOP:-DSI-2} TERM=linux
+cd "$(dirname "$1")"
+# the app in its own session (its process group = $C): a quit from the menu, and the app's end, reach everything it
+# started (as run-port)
+setsid bash "$1" &
+C=$!
+trap 'kill -TERM -$C 2>/dev/null' TERM INT HUP
+wait $C; S=$?
+while kill -0 $C 2>/dev/null; do wait $C; S=$?; done
+if kill -0 -$C 2>/dev/null; then
+    kill -TERM -$C 2>/dev/null
+    for i in 1 2 3 4 5 6 7 8 9 10; do kill -0 -$C 2>/dev/null || break; sleep 0.2; done
+    kill -KILL -$C 2>/dev/null
+fi
+exit $S

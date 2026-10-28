@@ -10,11 +10,43 @@
 #   update apply <package>          write it to the other slot and make it the default (then restart)
 #   update switch [a|b]             make the other slot (or the one named) the default, when it holds a system
 #   update status                   which slot is running, which is the default, what each holds
-DISK=$(cat /run/banana/disk 2>/dev/null || echo /dev/mmcblk0)
-SLOT=$(cat /run/banana/slot 2>/dev/null || echo a)
-BOARD=$(cat /etc/banana/board 2>/dev/null)
-STATUS=/run/banana/update-status
-UPDATES=/data/banana/updates
+# Over the air (#69): the newest release on GitHub for this handheld, downloaded to the card and then applied as above.
+#   update check [--daily]          ask GitHub's releases for a newer version for this board; the answer is kept in
+#                                   banana/updates/.check (key=value lines, also printed). --daily: only when
+#                                   Settings' update_daily is on and the last check is 20 hours old (Wi-Fi's hook)
+#   update download                 the release .check found, into banana/updates/.partial (resumed where it was
+#                                   left), its SHA-256 checked against the release's SHA256SUMS-<board>.txt, then
+#                                   moved into banana/updates for apply. Progress in /run/banana/update-download:
+#                                   "downloading <bytes> <total>", "verifying", "ready <package>", "cancelled <bytes>
+#                                   <total>", "failed: <why>"; its pid in /run/banana/update-download.pid
+#   update cancel                   stops the download (what came stays in .partial for the next one)
+# The beta channel: test builds from the BananaOS site's password-protected folder instead of GitHub (its feed has
+# the shape of GitHub's release list). The password is asked once (Settings > System > Update > Beta channel), checked
+# with the site, and kept in banana/updates/.beta as a curl config file (curl -K: never on a command line, never in a
+# log). With it there, check and download use that feed with the password; without it, GitHub as before.
+#   update beta-login               the password on stdin (one line): asked of the site, kept when it is right.
+#                                   Exit 0 "ok", 3 "wrong password", 1 and why when the site couldn't be asked
+#   update beta-off                 the beta channel off (the password forgotten): GitHub again
+# (The host test points these elsewhere: BANANA_DATA, BANANA_RUN, BANANA_BOARD, BANANA_VERSION, BANANA_UPDATE_FEED
+# (the releases' JSON: any URL curl reads, file:// too), BANANA_UPDATE_BETA_FEED (the beta channel's), BANANA_UPDATE_CURL
+# (more curl options), BANANA_UPDATE_FREE_KB, BANANA_UPDATE_REUSE (seconds a fetched list is used again).)
+RUN=${BANANA_RUN:-/run/banana}
+DATA=${BANANA_DATA:-/data/banana}
+DISK=$(cat $RUN/disk 2>/dev/null || echo /dev/mmcblk0)
+SLOT=$(cat $RUN/slot 2>/dev/null || echo a)
+BOARD=${BANANA_BOARD:-$(cat /etc/banana/board 2>/dev/null)}
+VERSION=${BANANA_VERSION:-$(cat /etc/banana/version 2>/dev/null)}
+STATUS=$RUN/update-status
+UPDATES=$DATA/updates
+FEED=${BANANA_UPDATE_FEED:-https://api.github.com/repos/JorreFog/BananaLinux/releases?per_page=10}
+CHECK=$UPDATES/.check
+BETA_FEED=${BANANA_UPDATE_BETA_FEED:-https://bananaos-cfw.dev/beta/releases.json}
+BETA_USER=beta
+BETA=$UPDATES/.beta
+CHANNEL=github; SRC=GitHub
+[ -s "$BETA" ] && { CHANNEL=beta; SRC="the beta server"; FEED=$BETA_FEED; }
+PARTIAL=$UPDATES/.partial
+DL=$RUN/update-download
 other() { [ "$1" = a ] && echo b || echo a; }
 partition() { [ "$1" = a ] && echo ${DISK}p2 || echo ${DISK}p3; }
 status() { echo "$*" > $STATUS.new && mv -f $STATUS.new $STATUS; }
@@ -25,13 +57,74 @@ uncache() { sync; echo 3 > /proc/sys/vm/drop_caches 2>/dev/null; }
 boot_rw() { mount -o remount,rw /boot || fail "the boot partition can't be written"; }
 boot_ro() { sync; mount -o remount,ro /boot 2>/dev/null; }
 default_slot() { sed -n 's/^DEFAULT *//p' /boot/extlinux/extlinux.conf 2>/dev/null | head -n 1; }
+# extlinux.conf with <slot> the default, on stdout. The kernel options for a faster boot (0.4.2: RCU grace periods
+# expedited, the CPU's top clock until the menu sets its own, the touchscreens probed beside the rest) added to every
+# APPEND line that lacks them: a card made before 0.4.2 never had them, as an update only changed DEFAULT
+extlinux_for() {
+    sed -e "s/^DEFAULT .*/DEFAULT $1/" \
+        -e '/^[[:space:]]*APPEND /{
+/rcupdate\.rcu_expedited=/!s/[[:space:]]*$/ rcupdate.rcu_expedited=1/
+/cpufreq\.default_governor=/!s/[[:space:]]*$/ cpufreq.default_governor=performance/
+/driver_async_probe=/!s/[[:space:]]*$/ driver_async_probe=Goodix-TS/
+}' "$2"
+}
+# the new extlinux.conf looks whole: <slot> the default, as many LABEL and APPEND lines as before, each APPEND still with
+# its root= (a short or empty file would leave the handheld unbootable)
+extlinux_ok() {   # extlinux_ok <slot> <new> <old>
+    [ -s "$2" ] && grep -q "^DEFAULT $1\$" "$2" &&
+        [ "$(grep -c '^LABEL ' "$2")" = "$(grep -c '^LABEL ' "$3")" ] &&
+        [ "$(grep -c 'APPEND .*root=' "$2")" = "$(grep -c 'APPEND .*root=' "$3")" ]
+}
 set_default() {   # set_default <slot>: extlinux.conf rewritten, the small file renamed over the old one
     boot_rw
-    sed "s/^DEFAULT .*/DEFAULT $1/" /boot/extlinux/extlinux.conf > /boot/extlinux/extlinux.conf.new &&
-        mv -f /boot/extlinux/extlinux.conf.new /boot/extlinux/extlinux.conf || fail "can't write extlinux.conf"
+    E=/boot/extlinux/extlinux.conf
+    extlinux_for "$1" $E > $E.new && sync && extlinux_ok "$1" $E.new $E || {
+        # (the options' edit is what could go wrong: DEFAULT alone as before)
+        sed "s/^DEFAULT .*/DEFAULT $1/" $E > $E.new && sync && extlinux_ok "$1" $E.new $E
+    } || { rm -f $E.new; fail "can't write extlinux.conf"; }
+    mv -f $E.new $E || fail "can't write extlinux.conf"
     boot_ro
 }
 hash_of() { sha256sum "$1" | cut -d' ' -f1; }
+# ---- over the air: helpers -------------------------------------------------------------------------------------
+# Settings' value of a key (banana/settings.conf: "key = value"), or the default
+conf_get() {
+    _v=$(sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" $DATA/settings.conf 2>/dev/null | tail -n 1 | tr -d '\r')
+    echo "${_v:-$2}"
+}
+field() { sed -n "s/^$1=//p" $CHECK 2>/dev/null | head -n 1; }    # a line of the last check's answer
+lastchan() { _c=$(field channel); echo ${_c:-github}; }   # the channel it asked (a check from before the beta channel: GitHub)
+size_of() { ls -ln "$1" 2>/dev/null | awk '{ print $5 }'; }      # (busybox has no stat, and its wc -c reads it all)
+dl() { echo "$*" > $DL.new && mv -f $DL.new $DL; }
+dfail() { dl "failed: $*"; echo "update: $*" >&2; rm -f $DL.pid; unawake; exit 1; }
+# bananad doesn't sleep for idleness while a download runs (its pid in awake.pid, as banana-scrape does it; taken
+# only when no one alive holds it, and given back only when it is still this one's)
+awake() { _p=$(cat $RUN/awake.pid 2>/dev/null); { [ -n "$_p" ] && kill -0 "$_p" 2>/dev/null; } || echo $$ > $RUN/awake.pid; }
+unawake() { [ "$(cat $RUN/awake.pid 2>/dev/null)" = "$$" ] && rm -f $RUN/awake.pid; :; }
+CURL="curl -sS --connect-timeout 20 --speed-limit 1024 --speed-time 60"
+# the beta channel's password, for its requests only (curl doesn't send it on to another host a redirect leads to)
+AUTH=; [ $CHANNEL = beta ] && AUTH="-K $BETA"
+# a request, tried a second time 3 s later when the name didn't resolve, the connection failed or timed out (the
+# handheld's DNS through some routers fails now and then)
+net() {
+    "$@"; _rc=$?
+    case $_rc in 6|7|28) sleep 3; "$@"; _rc=$? ;; esac
+    return $_rc
+}
+# why a curl failed, in words
+net_error() {
+    case $1 in
+    6) echo "$2's address couldn't be looked up: is Wi-Fi connected? (Or the network's DNS isn't answering: try again in a minute)" ;;
+    7) echo "couldn't connect to $2: is Wi-Fi connected?" ;;
+    28) echo "$2 didn't answer in time (a weak Wi-Fi signal?)" ;;
+    35|51|53|54|58|59|60|77|80|83|90|91) echo "the secure connection to $2 failed: is the clock right? (It says $(date '+%Y-%m-%d %H:%M'))" ;;
+    16|18|52|55|56|92) echo "the connection to $2 broke off" ;;
+    22) echo "$2 refused the download (HTTP error)" ;;
+    23) echo "the card can't be written (full?)" ;;
+    37) echo "the file isn't there" ;;
+    *) echo "the connection to $2 failed (curl error $1)" ;;
+    esac
+}
 
 case $1 in
 list)
@@ -80,11 +173,27 @@ apply)
     # a universal package fits any card (it has this handheld's device tree too; a card made for one handheld names
     # its device tree in extlinux.conf, which the package keeps the name of)
     [ -z "$BOARD" ] || [ "$PB" = "$BOARD" ] || [ "$PB" = universal ] || fail "that is a package for the $PB, this is the $BOARD"
-    # every file as the build hashed it
+    # every file as the build hashed it. A wrong one: unpacked again once (a write the card got wrong while unpacking
+    # comes out right the second time); still wrong, the package itself is damaged (#36: a download or a copy to the
+    # card cut short or changed), and its own checksum is shown to compare with the release's SHA256SUMS
+    bad=
     while read -r h f; do
         [ -f "$DIR/$f" ] || fail "the package has no $f"
-        [ "$(hash_of "$DIR/$f")" = "$h" ] || fail "$f is damaged (its hash is wrong)"
+        [ "$(hash_of "$DIR/$f")" = "$h" ] || { bad=$f; break; }
     done < "$DIR/sha256sums"
+    if [ -n "$bad" ] && [ -f "$P" ]; then
+        echo "$bad's hash is wrong: unpacking again" >&2
+        rm -rf "$X"; mkdir -p "$X"; sync
+        tar -xf "$P" -C "$X" || fail "the package can't be unpacked"
+        bad=
+        while read -r h f; do
+            [ "$(hash_of "$DIR/$f")" = "$h" ] || { bad=$f; break; }
+        done < "$DIR/sha256sums"
+    fi
+    if [ -n "$bad" ]; then
+        [ -f "$P" ] && fail "$bad is damaged in $(basename "$P"): download it again. (Its SHA-256 starts $(hash_of "$P" | cut -c1-12); the release's SHA256SUMS file lists the right one.)"
+        fail "$bad is damaged (its hash is wrong)"
+    fi
     ROOT_HASH=$(sed -n 's/ \+rootfs.squashfs$//p' "$DIR/sha256sums")
     TO=$(other $SLOT); PART=$(partition $TO)
     [ -b "$PART" ] || fail "no partition for slot $TO ($PART)"
@@ -115,12 +224,252 @@ apply)
     for f in /boot/$TO/*.dtb; do [ -f "$DIR/$(basename "$f")" ] || rm -f "$f"; done
     boot_ro
     set_default $TO
-    rm -f /data/banana/panel-tune.txt      # the new device tree is tuned on its first boot
+    rm -f $DATA/panel-tune.txt      # the new device tree is tuned on its first boot
     [ -d "$UPDATES/.unpack" ] && rm -rf "$UPDATES/.unpack"
-    mkdir -p /data/banana/logs; echo "$(date '+%Y-%m-%d %H:%M:%S') $PV to slot $TO from $(basename "$P")" >> /data/banana/logs/updates.log
+    mkdir -p $DATA/logs; echo "$(date '+%Y-%m-%d %H:%M:%S') $PV to slot $TO from $(basename "$P")" >> $DATA/logs/updates.log
     status "done $PV"
     echo "update $PV written to slot $TO; restart to run it"
     ;;
-*) echo "usage: update list | apply <package> | switch [a|b] | status" >&2; exit 2 ;;
+check)
+    if [ "$2" = --daily ]; then
+        # Wi-Fi's hook, when it connects: only with Settings' "Check once a day" on, and a day since the last answer
+        [ "$(conf_get update_daily off)" = on ] || exit 0
+        last=$(field checked)
+        [ -n "$last" ] && [ $(( $(date +%s) - last )) -lt 72000 ] && [ $(( $(date +%s) - last )) -ge 0 ] && exit 0
+    fi
+    mkdir -p $UPDATES $RUN 2>/dev/null
+    exec 8> $RUN/update-check.lock
+    flock -n 8 || { echo "update: a check is already running" >&2; exit 1; }
+    pre=$(conf_get update_prerelease on)
+    # (the beta channel's builds are all test versions: counted whatever Test versions says)
+    [ $CHANNEL = beta ] && pre=on
+    feed=$UPDATES/.feed.json; etag=$UPDATES/.feed.etag; hdr=$RUN/update-feed.hdr
+    [ $CHANNEL = beta ] && { feed=$UPDATES/.feed-beta.json; etag=$UPDATES/.feed-beta.etag; }
+    now=$(date +%s); fetched=$(field fetched); checked=$(field checked); err=
+    [ "$(lastchan)" = $CHANNEL ] || fetched=     # the other channel's list: asked again
+    # GitHub answers 60 questions an hour from one address without an account (a whole household's, behind one
+    # router; an unchanged list's 304 counts too when there is no account): the list fetched less than 5 minutes ago
+    # is used again, and otherwise it is asked for with its ETag (a 304 is a few hundred bytes, not the 80 KB list)
+    age=$(( now - ${fetched:-0} ))
+    if [ -s "$feed" ] && [ -n "$fetched" ] && [ $age -ge 0 ] && [ $age -lt ${BANANA_UPDATE_REUSE:-300} ]; then
+        :
+    else
+        set -- -H "Accept: application/vnd.github+json" -H "User-Agent: BananaOS/${VERSION:-dev} ($BOARD)" -D "$hdr" -o "$feed.new" -w '%{http_code}'
+        [ -s "$feed" ] && [ -s "$etag" ] && set -- "$@" -H "If-None-Match: $(cat "$etag")"
+        rm -f "$feed.new"
+        code=$(net $CURL $AUTH $BANANA_UPDATE_CURL "$@" "$FEED"); rc=$?
+        code=$(printf '%s' "$code" | tail -c 3)     # (a second try: both tries' codes)
+        if [ $rc != 0 ]; then
+            err=$(net_error $rc "$SRC")
+        else
+            case $code in
+            000|200)   # (000: a file:// feed)
+                if [ -s "$feed.new" ]; then
+                    mv -f "$feed.new" "$feed"
+                    sed -n 's/^[Ee][Tt][Aa][Gg]: *//p' "$hdr" 2>/dev/null | tr -d '\r' > "$etag"
+                    fetched=$now
+                else
+                    err="$SRC's answer was empty"
+                fi ;;
+            304) fetched=$now ;;
+            401) err="the beta server refused the password: enter it again in Settings > System > Update > Beta channel" ;;
+            403|429)
+                reset=$(sed -n 's/^[Xx]-[Rr]ate[Ll]imit-[Rr]eset: *//p' "$hdr" 2>/dev/null | tr -d '\r')
+                at=; [ -n "$reset" ] && at=$(date -d "@$reset" '+%H:%M' 2>/dev/null)
+                err="GitHub's limit of 60 checks an hour from this network was reached: try again ${at:+after $at}"
+                [ -n "$at" ] || err="${err}in an hour" ;;
+            *) err="$SRC answered HTTP $code" ;;
+            esac
+        fi
+        rm -f "$feed.new" "$hdr"
+    fi
+    if [ -n "$err" ]; then
+        # what was found the last time stays (the Update row keeps saying a version is out); checked isn't moved,
+        # so the next Wi-Fi connection tries again
+        { printf 'state=error\nerror=%s\nboard=%s\ncurrent=%s\nprerelease_setting=%s\nchannel=%s\n' "$err" "$BOARD" "$VERSION" "$(conf_get update_prerelease on)" $CHANNEL
+          [ -n "$checked" ] && printf 'checked=%s\n' "$checked"
+          [ -n "$fetched" ] && printf 'fetched=%s\n' "$fetched"
+          [ "$(lastchan)" = $CHANNEL ] &&      # (what the other channel found doesn't count)
+          awk -F= '$1 == "state" && $2 != "error" { print "last_state=" $2; next }
+              $1 ~ /^(last_state|latest|tag|prerelease|file|url|size|sums|notes)$/' $CHECK 2>/dev/null
+          :
+        } > $CHECK.new && mv -f $CHECK.new $CHECK
+        cat $CHECK
+        echo "update: $err" >&2
+        exit 1
+    fi
+    # the releases' names, assets and notes, newest first. grep -o takes each wanted "key": value pair out of the
+    # JSON as it comes, whatever its layout: a quote inside a string is \" there, so the notes can't fake a key
+    grep -oE '"(tag_name|draft|prerelease|size|browser_download_url|body)": *("([^"\\]|\\.)*"|true|false|[0-9]+)' "$feed" |
+    awk -v board="$BOARD" -v cur="${VERSION:-0}" -v pre="$pre" -v now="$now" -v fetched="$fetched" -v chan=$CHANNEL -v preset="$(conf_get update_prerelease on)" '
+    # versions as 0.4.10 > 0.4.9, and 0.5.0-beta.1 < 0.5.0
+    function vcmp(a, b,   x, y, n, m, i, pa, pb, k) {
+        sub(/^v/, "", a); sub(/^v/, "", b)
+        pa = ""; k = index(a, "-"); if (k) { pa = substr(a, k + 1); a = substr(a, 1, k - 1) }
+        pb = ""; k = index(b, "-"); if (k) { pb = substr(b, k + 1); b = substr(b, 1, k - 1) }
+        n = split(a, x, "."); m = split(b, y, ".")
+        for (i = 1; i <= (n > m ? n : m); i++) if (x[i] + 0 != y[i] + 0) return x[i] + 0 < y[i] + 0 ? -1 : 1
+        if (pa == pb) return 0
+        if (pa == "") return 1
+        if (pb == "") return -1
+        n = split(pa, x, "."); m = split(pb, y, ".")
+        for (i = 1; i <= (n > m ? n : m); i++) {
+            if (x[i] == y[i]) continue
+            if (x[i] == "") return -1
+            if (y[i] == "") return 1
+            if (x[i] ~ /^[0-9]+$/ && y[i] ~ /^[0-9]+$/) return x[i] + 0 < y[i] + 0 ? -1 : 1
+            return x[i] < y[i] ? -1 : 1
+        }
+        return 0
+    }
+    function val(s) { sub(/^"[a-z_]+": *"?/, "", s); sub(/"$/, "", s); return s }
+    # the notes'"'"' first paragraph, as plain text
+    function firstlines(b,   l, n, i, out, t, lk) {
+        gsub(/\\r/, "", b)
+        n = split(b, l, /\\n/); out = ""
+        for (i = 1; i <= n; i++) {
+            t = l[i]
+            gsub(/\\"/, "\"", t); gsub(/\\t/, " ", t); gsub(/\\\\/, "\\", t)
+            gsub(/\*\*|__|`/, "", t); sub(/^[> ]*#* */, "", t); sub(/^[-*] /, "", t)
+            while (match(t, /\[[^]]*\]\([^)]*\)/)) { lk = substr(t, RSTART + 1, RLENGTH - 1); sub(/\]\(.*/, "", lk); t = substr(t, 1, RSTART - 1) lk substr(t, RSTART + RLENGTH) }
+            if (t ~ /^ *$/) { if (out != "") break; continue }
+            out = out (out == "" ? "" : " ") t
+            if (length(out) > 400) break
+        }
+        if (length(out) > 400) { out = substr(out, 1, 400); sub(/ [^ ]*$/, "", out); out = out "..." }
+        return out
+    }
+    function done() {
+        if (tag == "") return
+        if (draft == "true") { tag = ""; return }
+        if (prerel == "true" && pre != "on") { skippedpre++; tag = ""; return }
+        if (pkg == "") { if (other) wrong++; tag = ""; return }
+        if (sums == "") { nosums++; tag = ""; return }
+        # on the beta channel a test version without a suffix is the first beta of it (0.5.0 = 0.5.0-beta.1, before
+        # 0.5.0-beta.2): the first 0.5.0 beta was published as plain 0.5.0
+        key = ver; if (chan == "beta" && prerel == "true" && index(ver, "-") == 0) key = ver "-beta.1"
+        if (best == "" || vcmp(key, bkey) > 0) {
+            best = tag; bver = ver; bkey = key; bpkg = pkg; burl = url; bsize = psize; bsums = sums; bpre = prerel == "true"; bnotes = firstlines(notes)
+        }
+        tag = ""
+    }
+    { key = $0; sub(/^"/, "", key); sub(/".*/, "", key) }
+    key == "tag_name" { done(); tag = val($0); draft = prerel = pkg = url = sums = notes = ver = ""; psize = 0; other = 0; next }
+    key == "draft" { draft = val($0); next }
+    key == "prerelease" { prerel = val($0); next }
+    key == "size" { size = val($0); next }
+    key == "body" { notes = val($0); next }
+    key == "browser_download_url" {
+        u = val($0); n = u; sub(/.*\//, "", n)
+        if (n == "SHA256SUMS-" board ".txt") sums = u
+        else if (index(n, "banana-" board "-") == 1 && n ~ /\.update\.tar$/ && substr(n, length(board) + 9, 1) ~ /[0-9]/) {
+            # banana-<board>-<version>.update.tar: this handheld'"'"'s (banana-rgds-plus-... is not the rgds'"'"'s)
+            pkg = n; url = u; psize = size; ver = substr(n, length(board) + 9); sub(/\.update\.tar$/, "", ver)
+        } else if (n ~ /^banana-.*\.update\.tar$/) other = 1
+    }
+    END {
+        done()
+        # and a handheld on a plain version (0.5.0: the first beta, installed by hand) is offered that version'"'"'s later
+        # betas (0.5.0-beta.2 ...), which plain ordering puts before it, but never 0.5.0 again; a stable 0.5.0 on the
+        # beta list (not a pre-release) is newer than all of its betas, and the same as a handheld on 0.5.0
+        c = cur; k = index(bkey, "-")
+        if (chan == "beta" && index(cur, "-") == 0 && k && vcmp(substr(bkey, 1, k - 1), cur) == 0) c = cur "-beta.1"
+        state = best == "" ? "none" : vcmp(bkey, c) > 0 ? "newer" : "current"
+        printf "state=%s\nchecked=%s\nfetched=%s\nboard=%s\ncurrent=%s\nprerelease_setting=%s\nchannel=%s\n", state, now, fetched, board, cur, preset, chan
+        if (best != "") printf "latest=%s\ntag=%s\nprerelease=%d\nfile=%s\nurl=%s\nsize=%s\nsums=%s\nnotes=%s\n", bver, best, bpre, bpkg, burl, bsize + 0, bsums, bnotes
+        printf "skipped_other_board=%d\nskipped_prerelease=%d\nskipped_no_sums=%d\n", wrong, skippedpre, nosums
+    }' > $CHECK.new && mv -f $CHECK.new $CHECK || { echo "update: can't write $CHECK" >&2; exit 1; }
+    cat $CHECK
+    ;;
+download)
+    mkdir -p $RUN $PARTIAL 2>/dev/null
+    exec 9> $RUN/update-download.lock
+    flock -n 9 || { echo "update: a download is already running" >&2; exit 1; }
+    echo $$ > $DL.pid
+    cpid=
+    F=$(field file); URL=$(field url); SUMS=$(field sums); TOTAL=$(field size); TOTAL=${TOTAL:-0}
+    [ "$(field state)" = newer ] || [ "$(field last_state)" = newer ] || dfail "there is no newer version to download: Check for updates first"
+    [ "$(field board)" = "$BOARD" ] || dfail "that check was for the $(field board), this is the $BOARD"
+    case $F in banana-"$BOARD"-*.update.tar) ;; *) dfail "the release's package has an odd name ($F)" ;; esac
+    case $F in */*|.*) dfail "the release's package has an odd name ($F)" ;; esac
+    # what an earlier download of another version left goes
+    for f in "$PARTIAL"/*; do [ -e "$f" ] && [ "${f##*/}" != "$F" ] && rm -f "$f"; done
+    T=$PARTIAL/$F
+    [ -f "$UPDATES/$F" ] && T=$UPDATES/$F      # already here (a download that finished, or copied over): checked again
+    have=$(size_of "$T"); have=${have:-0}
+    [ "$TOTAL" -gt 0 ] && [ "$have" -gt "$TOTAL" ] && { rm -f "$T"; have=0; }
+    # room for the rest of it, and for the copy apply unpacks beside it while it installs, and 32 MB to spare
+    free=${BANANA_UPDATE_FREE_KB:-$(df -Pk "$UPDATES" 2>/dev/null | awk 'NR == 2 { print $4 }')}
+    need=$(( (TOTAL - have + TOTAL) / 1024 + 32768 ))
+    [ -n "$free" ] && [ "$free" -lt "$need" ] &&
+        dfail "not enough space on the card: the update needs $(( need / 1024 )) MB free (the download, and its unpacked copy while it installs); there are $(( free / 1024 )) MB"
+    dl "downloading $have $TOTAL"
+    # the release's checksum first (small): the package isn't fetched if it can't be checked
+    [ "$(lastchan)" = $CHANNEL ] || dfail "the update channel changed since the check: Check for updates again"
+    sum=$(net $CURL -fL $AUTH $BANANA_UPDATE_CURL "$SUMS") || dfail "$(net_error $? "$SRC") (fetching SHA256SUMS-$BOARD.txt)"
+    sum=$(printf '%s\n' "$sum" | awk -v f="$F" '$2 == f || $2 == "*" f { print $1; exit }')
+    [ ${#sum} = 64 ] || dfail "the release's SHA256SUMS-$BOARD.txt doesn't list $F"
+    trap 'trap - TERM INT HUP; [ -n "$cpid" ] && kill $cpid 2>/dev/null; dl "cancelled $(size_of "$T") $TOTAL"; rm -f $DL.pid; unawake; exit 130' TERM INT HUP
+    if [ "$TOTAL" = 0 ] || [ "$have" -lt "$TOTAL" ]; then
+        for again in 1 2; do
+            # resumed from what is there (-C -): GitHub's file host answers ranges
+            $CURL -fL $AUTH $BANANA_UPDATE_CURL -C - -o "$T" "$URL" 2>/dev/null &
+            cpid=$!
+            while kill -0 $cpid 2>/dev/null; do dl "downloading $(size_of "$T") $TOTAL"; awake; sleep 1; done
+            wait $cpid; rc=$?; cpid=
+            got=$(size_of "$T"); got=${got:-0}
+            [ $rc = 0 ] && break
+            [ "$TOTAL" -gt 0 ] && [ "$got" = "$TOTAL" ] && { rc=0; break; }
+            # 33: the server wouldn't resume; 22 with a range it didn't like: from the start, once
+            [ $again = 1 ] && { [ $rc = 33 ] || [ $rc = 36 ] || [ $rc = 22 ]; } && { rm -f "$T"; continue; }
+            break
+        done
+        [ $rc = 0 ] || dfail "$(net_error $rc "$SRC"). What came ($(( got / 1048576 )) MB) is kept: Download again carries on from there"
+    fi
+    got=$(size_of "$T"); got=${got:-0}
+    [ "$TOTAL" = 0 ] || [ "$got" = "$TOTAL" ] ||
+        dfail "the download stopped at $(( got / 1048576 )) of $(( TOTAL / 1048576 )) MB: Download again carries on from there"
+    dl verifying
+    if [ "$(hash_of "$T")" != "$sum" ]; then
+        rm -f "$T"
+        dfail "the download is damaged: its SHA-256 doesn't match the release's SHA256SUMS, so it was deleted. Download it again"
+    fi
+    [ "$T" = "$UPDATES/$F" ] || mv -f "$T" "$UPDATES/$F" || dfail "can't move the download into banana/updates"
+    trap - TERM INT HUP
+    mkdir -p $DATA/logs; echo "$(date '+%Y-%m-%d %H:%M:%S') downloaded $F (SHA-256 checked)" >> $DATA/logs/updates.log
+    dl "ready $UPDATES/$F"
+    rm -f $DL.pid; unawake
+    echo "$UPDATES/$F"
+    ;;
+beta-login)
+    # the password from stdin, into a curl config file made only for the owner (the card's exFAT keeps no modes: on
+    # the card it is as private as banana/wifi.conf), asked of the site with it, and kept only when the site says yes
+    IFS= read -r pw || [ -n "$pw" ] || { echo "update: no password given" >&2; exit 2; }
+    pw=$(printf '%s' "$pw" | tr -d '\r')
+    [ -n "$pw" ] || { echo "update: no password given" >&2; exit 2; }
+    mkdir -p $UPDATES $RUN 2>/dev/null
+    t=$RUN/update-beta.$$
+    ( umask 077; printf 'user = "%s:%s"\n' "$BETA_USER" "$(printf '%s' "$pw" | sed 's/[\\"]/\\&/g')" > $t ) || { echo "update: can't write $t" >&2; exit 1; }
+    code=$(net $CURL -K $t $BANANA_UPDATE_CURL -o /dev/null -w '%{http_code}' "$BETA_FEED"); rc=$?
+    code=$(printf '%s' "$code" | tail -c 3)
+    if [ $rc != 0 ]; then rm -f $t; echo "$(net_error $rc "the beta server")"; exit 1; fi
+    case $code in
+    200) ;;
+    401|403) rm -f $t; echo "wrong password"; exit 3 ;;
+    *) rm -f $t; echo "the beta server answered HTTP $code"; exit 1 ;;
+    esac
+    ( umask 077; cp $t $BETA.new ) && mv -f $BETA.new $BETA || { rm -f $t $BETA.new; echo "update: can't write $BETA" >&2; exit 1; }
+    rm -f $t; sync
+    echo ok
+    ;;
+beta-off)
+    rm -f $BETA $UPDATES/.feed-beta.json $UPDATES/.feed-beta.etag; sync
+    echo off
+    ;;
+cancel)
+    p=$(cat $DL.pid 2>/dev/null)
+    if [ -n "$p" ] && grep -q update /proc/$p/cmdline 2>/dev/null && kill "$p" 2>/dev/null; then echo "cancelled"; else echo "no download running"; fi
+    ;;
+*) echo "usage: update list | apply <package> | switch [a|b] | status | check [--daily] | download | cancel | beta-login | beta-off" >&2; exit 2 ;;
 esac
 exit 0

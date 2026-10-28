@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <gameList>
 	<game>
-		<path>./Bank &amp; Trade.app</path>
-		<name>Bank &amp; Trade</name>
-		<desc>A Pokémon bank, legality checker and trading app, built on PKHeX.Core.</desc>
+		<path>./Poketool.app</path>
+		<name>Poketool</name>
+		<desc>A Pokémon bank, save editor, legality checker and trading app, built on PKHeX.Core (formerly Bank &amp; Trade).</desc>
 		<image>./media/bank-image.png</image>
 		<thumbnail>./media/bank-thumb.png</thumbnail>
 		<marquee>./media/bank-marquee.png</marquee>

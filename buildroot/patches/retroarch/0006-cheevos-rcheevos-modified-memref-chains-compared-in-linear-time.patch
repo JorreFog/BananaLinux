@@ -1,0 +1,70 @@
+From: JorreFog <JorreFog@users.noreply.github.com>
+Subject: [PATCH] cheevos: rcheevos compares modified memref chains in linear time (v12.2.0's fix)
+
+A game start with RetroAchievements froze RetroArch's main thread for ~26 s after the first frame (Pokemon Unbound,
+130 achievements with long AddAddress/AddSource chains, RG DS Plus): rc_alloc_modified_memref looks for an existing
+modified memref for every one it is asked for, and rc_operands_are_equal walked both parents' whole chains each time
+(511 of 533 samples of the main thread in rc_operands_are_equal). Backported from rcheevos upstream: 84f3f9b
+"greatly improve performance converting long AddSource chains into modified_memref chains" (v12.2.0: a depth per
+modified memref, compared first, the modifier before the parent) and the quick match on the same memref from
+fef2f83. RetroArch 1.22.2 bundles rcheevos 12.1.0. After: the freeze ~0.25 s, the same 129 achievements loaded.
+
+diff --git a/deps/rcheevos/src/rcheevos/memref.c b/deps/rcheevos/src/rcheevos/memref.c
+--- a/deps/rcheevos/src/rcheevos/memref.c
++++ b/deps/rcheevos/src/rcheevos/memref.c
+@@ -154,8 +154,14 @@
+   memcpy(&modified_memref->parent, parent, sizeof(modified_memref->parent));
+   memcpy(&modified_memref->modifier, modifier, sizeof(modified_memref->modifier));
+   modified_memref->modifier_type = modifier_type;
++  modified_memref->depth = 0;
+   modified_memref->memref.address = rc_operand_is_memref(modifier) ? modifier->value.memref->address : modifier->value.num;
+ 
++  if (rc_operand_is_memref(parent) && parent->value.memref->value.memref_type == RC_MEMREF_TYPE_MODIFIED_MEMREF) {
++    const rc_modified_memref_t* parent_modified_memref = (const rc_modified_memref_t*)parent->value.memref;
++    modified_memref->depth = parent_modified_memref->depth + 1;
++  }
++
+   return modified_memref;
+ }
+ 
+diff --git a/deps/rcheevos/src/rcheevos/operand.c b/deps/rcheevos/src/rcheevos/operand.c
+--- a/deps/rcheevos/src/rcheevos/operand.c
++++ b/deps/rcheevos/src/rcheevos/operand.c
+@@ -325,7 +325,13 @@
+   }
+ 
+   /* comparing two memrefs - look for exact matches on type and size */
+-  if (left->size != right->size || left->value.memref->value.memref_type != right->value.memref->value.memref_type)
++  if (left->size != right->size)
++    return 0;
++
++  if (left->value.memref == right->value.memref) /* quick match if pointing to same memref */
++    return 1;
++
++  if (left->value.memref->value.memref_type != right->value.memref->value.memref_type)
+     return 0;
+ 
+   switch (left->value.memref->value.memref_type) {
+@@ -334,8 +340,9 @@
+       const rc_modified_memref_t* left_memref = (const rc_modified_memref_t*)left->value.memref;
+       const rc_modified_memref_t* right_memref = (const rc_modified_memref_t*)right->value.memref;
+       return (left_memref->modifier_type == right_memref->modifier_type &&
+-              rc_operands_are_equal(&left_memref->parent, &right_memref->parent) &&
+-              rc_operands_are_equal(&left_memref->modifier, &right_memref->modifier));
++              left_memref->depth == right_memref->depth &&
++              rc_operands_are_equal(&left_memref->modifier, &right_memref->modifier) &&
++              rc_operands_are_equal(&left_memref->parent, &right_memref->parent));
+     }
+ 
+     default:
+diff --git a/deps/rcheevos/src/rcheevos/rc_internal.h b/deps/rcheevos/src/rcheevos/rc_internal.h
+--- a/deps/rcheevos/src/rcheevos/rc_internal.h
++++ b/deps/rcheevos/src/rcheevos/rc_internal.h
+@@ -18,6 +18,7 @@
+   rc_operand_t parent;             /* The parent memref this memref is derived from (type will always be a memref type) */
+   rc_operand_t modifier;           /* The modifier to apply to the parent. */
+   uint8_t modifier_type;           /* How to apply the modifier to the parent. (RC_OPERATOR_*) */
++  uint16_t depth;                  /* The number of parents this memref has. */
+ }
+ rc_modified_memref_t;
+ 

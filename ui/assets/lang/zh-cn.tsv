@@ -1,0 +1,1560 @@
+# BananaOS translation: Simplified Chinese(简体中文)
+# Translated by Majirefy.
+# Made by tools/lang-from-docx.py from BananaOS-0.3.0-translation-zh-cn.doc. Columns: part, context, English, translation.
+#: language = 简体中文
+#: language-en = Simplified Chinese
+#: translated-by = Majirefy
+# 2026-10-27: Majirefy's BananaOS-0.5.0-translation.docx merged in: every line it has is theirs now; the draft notes below
+# apply only to the lines it didn't have yet (added after that document was made).
+menu		Ready	就绪
+menu		Fav	收藏
+menu		Start	启动
+menu		Resume	继续
+menu		Back	返回
+menu		No games	暂无游戏
+menu		Starting	启动中
+menu		Plays	游玩
+menu		Last played	上次游玩
+menu		Time	时间
+menu		Game	游戏
+menu		Games	游戏
+menu		Played	已游玩
+menu		App	应用
+menu		{n} game	{n} 个游戏
+menu		{n} games	{n} 个游戏
+menu		Last played: {game}	上次游玩：{game}
+menu		Play	游玩
+menu		No games yet	暂无游戏
+menu		{unlocked} / {total} achievements	{unlocked} / {total} 项成就
+menu		Library	游戏库
+menu		Open	打开
+menu		Favourite	收藏
+menu		Unfavourite	取消收藏
+menu		Systems	系统
+menu		Never	从不
+menu		Sunday	周日
+menu		Monday	周一
+menu		Tuesday	周二
+menu		Wednesday	周三
+menu		Thursday	周四
+menu		Friday	周五
+menu		Saturday	周六
+menu		Jan	1月
+menu		Feb	2月
+menu		Mar	3月
+menu		Apr	4月
+menu		May	5月
+menu		Jun	6月
+menu		Jul	7月
+menu		Aug	8月
+menu		Sep	9月
+menu		Oct	10月
+menu		Nov	11月
+menu		Dec	12月
+menu		Today	今天
+menu		Yesterday	昨天
+menu		Last week	上周
+menu		Favorites	收藏
+menu		Collection	收藏集
+menu		Not played yet	尚未游玩
+menu		Can't read the card's games	无法读取卡带的游戏
+menu		Nothing here yet	这里还什么都没有
+menu		The BANANA partition needs exFAT	BANANA 分区需要 exFAT
+menu		Y on a game adds it here	在游戏上按 Y 可添加到此处
+menu		Copy {.ext} files to roms/{folder}	将 {.ext} 文件复制到 roms/{folder}
+menu		Battery nearly empty: {percent}%	电量即将耗尽：{percent}%
+menu		Save your game now. At {percent} Banana closes it and shuts down.	请立即保存游戏。电量到 {percent} 时，Banana 会关闭游戏并关机。
+menu		Battery low: {percent}%	电量低：{percent}%
+menu		Plug in the charger soon. At {percent} Banana closes the game and shuts down.	请尽快连接充电器。电量到 {percent} 时，Banana 会关闭游戏并关机。
+menu		Time to find the charger.	该去找充电器了。
+menu		banana-perf {value}	banana-perf {value}
+menu		Brightness	亮度
+menu		Volume	音量
+settings		1 package	1 个软件包
+settings		{n} packages	{n} 个软件包
+settings		UTC	UTC
+settings		London, Dublin, Lisbon	伦敦、都柏林、里斯本
+settings		Lagos, Algiers	拉各斯、阿尔及尔
+settings		Amsterdam, Berlin, Paris, Rome	阿姆斯特丹、柏林、巴黎、罗马
+settings		Johannesburg	约翰内斯堡
+settings		Athens, Helsinki, Kyiv	雅典、赫尔辛基、基辅
+settings		Cairo	开罗
+settings		Istanbul, Riyadh, Nairobi	伊斯坦布尔、利雅得、内罗毕
+settings		Moscow	莫斯科
+settings		Dubai	迪拜
+settings		Karachi	卡拉奇
+settings		India	印度
+settings		Bangkok, Jakarta	曼谷、雅加达
+settings		Beijing, Singapore, Perth	北京、新加坡、珀斯
+settings		Tokyo, Seoul	东京、首尔
+settings		Adelaide	阿德莱德
+settings		Brisbane	布里斯班
+settings		Sydney, Melbourne	悉尼、墨尔本
+settings		Auckland	奥克兰
+settings		Honolulu	火奴鲁鲁
+settings		Anchorage	安克雷奇
+settings		Los Angeles, Vancouver	洛杉矶、温哥华
+settings		Phoenix	凤凰城
+settings		Denver, Calgary	丹佛、卡尔加里
+settings		Mexico City	墨西哥城
+settings		Chicago, Winnipeg	芝加哥、温尼伯
+settings		New York, Toronto	纽约、多伦多
+settings		Halifax	哈利法克斯
+settings		Santiago	圣地亚哥
+settings		Sao Paulo, Buenos Aires	圣保罗、布宜诺斯艾利斯
+settings		Display & sound	显示与声音
+settings		Theme	主题
+settings		ROCKNIXDS Pixel's two palettes, dark or light for daylight; or Carts (experimental): your games as cartridges on a shelf, in a clean typeface.	ROCKNIXDS Pixel 的两套配色，深色或浅色以适应白天；或 Carts（实验性）：将你的游戏像卡带一样摆在架子上，采用简洁字体。
+settings		Dark	深色
+settings		Light	浅色
+settings		Carts	卡带
+settings		Accent colour	强调色
+settings		The colour of the selection, the logo and the boot animation's banana.	选中项、标志以及开机动画里那根香蕉的颜色。
+settings		Yellow	黄色
+settings		Blue	蓝色
+settings		Red	红色
+settings		Green	绿色
+settings		Purple	紫色
+settings		Pink	粉色
+settings		Brightness	亮度
+settings		Both panels' backlights. F + volume changes it anywhere, in games too.	两块屏幕的背光。按 F + 音量键随处可调，游戏中亦可。
+settings		Motion	动态效果
+settings		The top screen's bob and shine. Off holds it still and saves a little battery.	上屏幕的轻微浮动与光泽。关闭则保持静止，并节省一点电量。
+settings		On	开
+settings		Off	关闭
+settings		Volume	音量
+settings		The speakers or the headphones, whichever is playing. The volume keys change it anywhere.	正在发声的扬声器或耳机。音量键可在任何地方调节。
+settings		Menu sounds	菜单音效
+settings		The menu's clicks, and the cartridge going into the console.	菜单的点击声，以及卡带插入主机的声音。
+settings		Battery	电池
+settings		The battery on the top screen: its icon, or its icon and how full it is.	上屏幕上的电池：仅图标，或图标加剩余电量。
+settings		Icon	图标
+settings		Icon and %	图标和百分比
+settings		Clock	时钟
+settings		How the time on the top screen is written.	上屏幕上时间的显示方式。
+settings		Boot animation	开机动画
+settings		The bananas and the cartridge while Banana starts. Off goes straight to the menu once it is ready.	Banana 启动时的香蕉与卡带动画。关闭则准备就绪后直接进菜单。
+settings		Sleep & power	休眠与电源
+settings		Sleep when idle	闲置时休眠
+settings		In the menu, after this long with no button pressed. Never while a game is running.	在菜单中，超过此时长未按下任何按键即休眠。游戏运行时永不休眠。
+settings		Never	从不
+settings		5 minutes	5 分钟
+settings		10 minutes	10 分钟
+settings		15 minutes	15 分钟
+settings		30 minutes	30 分钟
+settings		1 hour	1 小时
+settings		2 hours	2 小时
+settings		Dim when idle	闲置时调暗
+settings		In the menu, the panels go down to a third after this long with no button pressed, and back at the first press. Never while a game is running.	在菜单中，超过此时长未按键，屏幕亮度降至三分之一，首次按键即恢复。游戏运行时永不调暗。
+settings		1 minute	1 分钟
+settings		2 minutes	2 分钟
+settings		Closing the lid	合上翻盖
+settings		Sleep with the lid: the game pauses, opening the lid carries on where you were.	合盖休眠：游戏暂停，掀开翻盖后从原处继续。
+settings		Sleeps	休眠
+settings		Does nothing	不执行任何操作
+settings		Waking up	唤醒
+settings		Fast: the handheld's parts wake up together. Careful: one after the other, slower but the safest. Banana switches to Careful by itself if a sleep ever fails.	快速：掌机的各个部件同时唤醒。谨慎：依次唤醒，较慢但最安全。若某次休眠失败，Banana 会自动切换到「谨慎」。
+settings		Fast	快速
+settings		Careful	谨慎
+settings		LEDs	LED
+settings		Green, red when the battery is low, blinking red when nearly empty, amber while charging.	绿色，电量低时变红，即将耗尽时红色闪烁，充电时常亮琥珀色。
+settings		Bright	明亮
+settings		Dim	昏暗
+settings		Nintendo DS	Nintendo DS
+settings		Emulator	模拟器
+settings		SuperDrastic: DraStic straight onto both panels, with its own governor. BananaDS: Banana's own emulator (melonDS's core). Both draw 3D with the Gengis Engine at 2x and have their menu on L3; each keeps its own settings below.	SuperDrastic：DraStic 直接输出到双屏，使用其自带的调速器。BananaDS：Banana 自家的模拟器（基于 melonDS 核心）。二者均以 Gengis Engine 在 2 倍分辨率下渲染 3D，菜单均通过 L3 调出；各自在下方保留独立设置。
+settings		SuperDrastic	SuperDrastic
+settings		BananaDS	BananaDS
+settings		Quick resume	快速继续
+settings		On: quitting keeps where you are, and the game goes on from there next time (a shutdown too). Off: quitting ends the game, which starts from its title next time.	开：退出时保留进度，下次（包括关机）从该处继续。关：退出即结束游戏，下次从标题画面开始。
+settings		None	无
+settings		Crisp	Crisp
+settings		Crisp + DS colours	Crisp + DS colours
+settings		LCD grid	LCD grid
+settings		LCD grid + colours	LCD grid + colours
+settings		FSR	FSR
+settings		LCD (DS colours)	LCD (DS colours)
+settings		LCD 1x	LCD 1x
+settings		LCD 3x	LCD 3x
+settings		Fast LCD	Fast LCD
+settings		DS colours	DS colours
+settings		Retro	Retro
+settings		Bevel	Bevel
+settings		Sharp bilinear	Sharp bilinear
+settings		Sharp + scanlines	Sharp + scanlines
+settings		Fast CRT	Fast CRT
+settings		Integer	整数
+settings		Integer fill	Integer fill
+settings		LCD grid 2x	LCD grid 2x
+settings		Dot (MiZai)	Dot (MiZai)
+settings		Dot (MiZai, RG DS+)	Dot (MiZai, RG DS+)
+settings		Retro tiles	Retro tiles
+settings		DraStic LCD	DraStic LCD
+settings		DraStic LCD + colours	DraStic LCD + colours
+settings		DraStic Quilez	DraStic Quilez
+settings		DraStic sharp	DraStic sharp
+settings		DraStic sharp + colours	DraStic sharp + colours
+settings		DraStic fast LCD	DraStic fast LCD
+settings		DraStic fast LCD + colours	DraStic fast LCD + colours
+settings		Crisp: exact pixel-area scaling. Grid and LCD: the DS's screen grid. Colours: the DS's own, duller colours. CRT: a TV's scanlines. FSR: smooth edges, the heaviest. None costs no GPU work.	清晰：精确像素区域缩放。网格与 LCD：DS 的屏幕网格。原色：DS 自身的、较暗淡的色彩。CRT：电视的扫描线。FSR：边缘平滑，最耗性能。无：不占用 GPU。
+settings		Shader	着色器
+settings		3D resolution	3D 分辨率
+settings		2x draws the DS's 3D at twice its size on these panels. 1x is the DS's own, the lightest.	2x 以两倍尺寸在本机屏幕上渲染 DS 的 3D。1x 为 DS 原始分辨率，最省性能。
+settings		Edge marking	边缘描边
+settings		The outlines some games draw round their 3D models (Zelda, Kirby, many Pokémon battles). Off leaves them out.	部分游戏为其 3D 模型绘制的轮廓线（塞尔达、星之卡比、众多宝可梦对战）。关闭则不包含它们。
+settings		Fog	雾效
+settings		The distance fog some games draw in 3D. Off leaves it out.	部分游戏在 3D 中绘制的远景雾效。关闭则不包含它。
+settings		Frame pacing	帧同步
+settings		Panels runs the DS at the panels' 60 Hz, a new frame every refresh (0.3% fast, the sound matched). DS rate keeps the DS's own 59.83 Hz, a frame shown twice every ~6 s.	面板：以屏幕的 60 Hz 运行 DS，每次刷新输出新帧（快 0.3%，声音同步）。DS 帧率：保持 DS 原生的 59.83 Hz，约每 6 秒重复显示一帧。
+settings		Panels	面板
+settings		DS rate	DS 帧率
+# (the low latency rows below are a draft, not Majirefy's: for them to check)
+settings		Low latency (experimental)	低延迟（实验性）
+settings		Experimental. On: no frame queue, each frame ready just before the panels' next refresh: a press shows about two refreshes sooner. Run-ahead also runs 1 or 2 frames ahead and back every frame, so the game answers sooner than its own lag; it needs twice the CPU or more (light 2D games at 1x) and turns itself off where it doesn't fit.	实验性功能。开：无帧队列，每帧在屏幕下次刷新前刚好就绪：按键约提前两次刷新显示。Run-ahead 还会每帧向前预跑 1 或 2 帧再回退，使游戏响应早于自身延迟；它需要两倍或更多 CPU（1x 下的轻量 2D 游戏），并在不适用处自动关闭。
+settings		Run-ahead 1 frame	Run-ahead 1 帧
+settings		Run-ahead 2 frames	Run-ahead 2 帧
+settings		Experimental. On: no frame queue: each frame goes to the panels at the next refresh it can make, and DraStic starts each frame as late as that allows, so a press shows about two refreshes sooner (the sound a little sooner too). Uneven frames (2x, heavy scenes) can show as small stutters the queue would hide.	实验性功能。开：无帧队列：每帧在其能赶上的下一次刷新时送往屏幕，DraStic 尽可能晚地开始每帧，使按键约提前两次刷新显示（声音也会稍早）。不均匀的帧（2x、繁重场景）可能表现为小幅卡顿，而队列本可隐藏这些卡顿。
+settings		CPU clock	CPU 时钟
+settings		Saves battery finds the lowest clock each game runs at full speed and remembers it. Always full keeps the top clock.	省电：为每款游戏寻找能全速运行的最低频率并记住它。始终满频：保持最高频率。
+settings		Saves battery	省电
+settings		Always full	始终满频
+settings		Timing	时序
+settings		Fast lets the two CPUs run longer between meeting (about 10% faster). Accurate is melonDS's own, for a game that misbehaves.	快速：两颗 CPU 在同步间隔更长（约快 10%）。准确：melonDS 原生时序，用于运行异常的游戏。
+settings		Accurate	精确
+settings		Microphone	麦克风
+settings		How loud a blow or a word must be to reach the game.	吹气或说话需达到多大声才会被游戏识别。
+settings		Medium	中
+settings		High	高
+settings		Low	低
+settings		2x draws the DS's 3D at twice its size on these panels, at full speed with SuperDrastic.	2x 在这些屏幕上以两倍尺寸绘制 DS 的 3D 画面，在 SuperDrastic 下可全速运行。
+settings		Other systems	其他系统
+settings		Screen	屏幕
+settings		Which panel the systems other than the DS use (RetroArch). The other one shows the game panel (Second screen), or is switched off.	DS 以外的系统（RetroArch）使用哪块屏幕。另一块显示游戏屏（第二屏幕），或关闭。
+settings		Top	上屏
+settings		Bottom	下屏
+settings		Second screen	第二屏幕
+settings		While a game plays on one screen, the other shows its RetroAchievements and tiles to save, load, open RetroArch's menu, fast forward and quit (by touch when they are on the bottom screen). Off: the other screen stays dark.	当游戏在其中一块屏幕运行时，另一块显示其 RetroAchievements，以及用于保存、读取、打开 RetroArch 菜单、快进和退出的图标（位于底部屏幕时可通过触摸操作）。关：另一块屏幕保持黑屏。
+settings		Game panel	游戏屏
+settings		Game panel when idle	游戏屏闲置时
+settings		With a game on the top screen, what the game panel on the bottom one does when nothing has touched it or pressed a button for a while: stays on, dims, or turns off. A touch or any button lights it again.	上屏运行游戏时，下屏游戏屏在一段时间未被触摸或按键后的行为：保持亮起、调暗，或关闭。触摸或任意按键会重新点亮它。
+settings		Dims	调暗
+settings		Turns off	关闭
+settings		Stays on	保持亮起
+settings		Game panel idle time	游戏屏闲置时间
+settings		How long the game panel waits, with no touch and no button, before it dims or turns off (Game panel when idle).	游戏屏在无触摸、无按键的情况下，等待多久后调暗或关闭（游戏屏闲置时）。
+settings		After 10 s	10 秒后
+settings		After 30 s	30 秒后
+settings		After 1 minute	1 分钟后
+settings		Pokémon companion	Pokémon companion
+settings		Pokémon Ruby, Sapphire, Emerald, FireRed and LeafGreen (the English releases) on the second screen: the party with levels, HP and moves, and in a battle the foe, its types and how each move does against it. Read from the game as it plays; other games keep the panel as it is. Needs Second screen on. Inspired by PokeDaisy by Lidor Itzhari.	宝可梦 红宝石、蓝宝石、绿宝石、火红与叶绿（英文版）在第二屏幕上的显示：队伍及其等级、HP 与招式；对战中显示对手、其属性，以及各招式对其的效果。随游戏运行实时读取；其他游戏保持面板不变。需要开启「第二屏幕」。灵感来自 Lidor Itzhari 的 PokeDaisy。
+settings		Game companion	游戏伴侣
+settings		Other Game Boy Advance games on the second screen: seven pages about the game as it plays (status, a closer look, the fight, the map, the bag, collectibles, progress), read from the game where it can be and notes where not. Pokémon games keep the Pokémon companion. Needs Second screen on. Inspired by PokeDaisy by Lidor Itzhari.	其他 Game Boy Advance 游戏在第二屏幕上的显示：随游戏运行展示七个页面（状态、细看、战斗、地图、背包、收集品、进度），能读取时从游戏获取，不能时则显示备注。宝可梦游戏仍使用宝可梦伴侣。需要开启「第二屏幕」。灵感来自 Lidor Itzhari 的 PokeDaisy。
+settings		Network	网络
+settings		Wi-Fi	Wi-Fi
+settings		The networks around: A on one joins it, with a password typed on the keyboard here (or by touch).	附近的网络：在某网络上按 A 即可加入，密码在此处用键盘输入（或通过触摸）。
+settings		File sharing	文件共享
+settings		System	系统
+settings		Time zone	时区
+settings		The clock's time zone, summer time included, for the menu and the games (a DS game's clock too). The time itself comes from Wi-Fi or the handheld's own clock.	用于菜单和游戏（包括 DS 游戏时钟）的时区，含夏令时。时间本身来自 Wi-Fi 或主机自身的时钟。
+settings		Update	更新
+settings		A new version of Banana, downloaded from GitHub over Wi-Fi or from a package on the card, written to the other slot and run from the next restart; this one stays as it is until then.	Banana 的新版本，通过 Wi-Fi 从 GitHub 下载，或使用卡上的软件包，写入另一个插槽并从下次重启开始运行；此版本在此之前保持不变。
+settings		Box art	封面
+settings		Covers, title screens, genres and years for your games, from libretro's free collections (no account, Wi-Fi needed). It keeps going in the background; games that already have art are skipped, so running it again only fetches what is new.	游戏的封面、标题画面、类型和年份，来自 libretro 的免费图库（无需账号，需 Wi-Fi）。它在后台持续运行；已有封面的游戏会被跳过，因此再次运行只会获取新增内容。
+settings		Previous version	上一版本
+settings		Restarts into the other slot: the version that ran before the last update. Press A twice.	重启进入另一个插槽：上次更新前运行的版本。按 A 两次。
+settings		SSH	SSH
+settings		First-time setup	首次设置
+settings		The steps from the first boot again: Wi-Fi, the time zone and the RetroAchievements account (ScreenScraper: not available yet).	再次执行首次启动的步骤：Wi-Fi、时区和 RetroAchievements 账号（ScreenScraper：暂不可用）。
+settings		About	关于
+settings		Restart	重启
+settings		Restarts the handheld. Press A twice.	重启主机。按 A 两次。
+settings		Shut down	关机
+settings		Turns the handheld off. Press A twice. (Or hold the power button.)	关闭主机。按 A 两次。（或长按电源键。）
+settings		%.1f GB free of %.1f GB	%.1f GB 可用（总容量：%.1f GB）
+settings		Connected	已连接
+settings		Not connected	未连接
+settings		Connected: {address}	已连接：{address}
+settings		Banana {version} (slot {slot}) on the {handheld}.	Banana {version}（插槽 {slot}），运行于 {handheld}。
+settings		handheld	掌机
+settings		dev	开发版
+settings		Battery {percent}%.	电池 {percent}%
+settings		Card: {free space}.	存储卡：{free space}
+settings		The other slot holds no system.	另一个插槽没有系统。
+settings		Settings	设置
+settings		%d settings	%d 项设置
+settings		Choose a group	选择分组
+settings		Close	关闭
+settings		Open	打开
+settings		Wi-Fi: {status}. Network, below, joins one; networks can also be written in banana/wifi.conf on a computer (see banana/README.txt).	Wi-Fi：{status}。下方的「网络」可加入一个；也可在电脑上把网络写入 banana/wifi.conf（参见 banana/README.txt）。
+settings		For working on Banana itself: ssh root@{address}, with the public keys in banana/ssh/authorized_keys on the card (no passwords). Files: scp -O (dropbear has no SFTP), or File sharing.	用于操作Banana 本身：ssh root@{address}，使用卡上 banana/ssh/authorized_keys 中的公钥（无需密码）。传输文件：scp -O（dropbear 不支持 SFTP），或使用「文件共享」。
+settings		<address>	<address>
+settings		The card on the network: \\{address}\banana in Windows' File Explorer, smb://{address}/banana on a Mac (Finder, Go, Connect to Server). Anyone on the network can open it with no password: leave it off on networks you don't trust.	网络上的存储卡：在 Windows 文件资源管理器中为 \\{address}\banana，在 Mac 上为 smb://{address}/banana（访达 - 前往 - 连接服务器）。网络上的任何人无需密码即可打开：在不信任的网络上请保持关闭。
+settings		(Not connected to Wi-Fi now.)	（当前未连接 Wi-Fi。）
+settings		Fetching covers and title screens. The menu shows them as they come, and it carries on if you leave this screen.	正在获取封面与标题画面。菜单会随获取进度显示，离开本屏幕也会继续。
+settings		Press A again	再次按 A
+settings		Choose	选择
+settings		Back	返回
+settings		Confirm	确认
+settings		Start	Start
+settings		Change	更改
+settings		RetroAchievements	RetroAchievements
+settings		RetroAchievements login failed	RetroAchievements 登录失败
+settings		Connected to {network} ({address}).	已连接到 {network}（{address}）。
+settings		Joined {network}, but it gave the handheld no address.	已加入 {network}，但它没有为主机分配地址。
+settings		Couldn't join {network}. If the password was wrong, A on it types it again.	无法加入 {network}。若密码错误，在其上按 A 可重新输入。
+settings		Joining {network}...	正在加入 {network}…
+settings		Connected to {network}	已连接到 {network}
+settings		Password for {network}	{network} 的密码
+settings		Shift	Shift
+settings		Space	Space
+settings		Del	Del
+settings		Done	完成
+settings		Wi-Fi networks	Wi-Fi 网络
+settings		Wi-Fi is off	Wi-Fi 已关闭
+settings		Joining {network}	正在加入 {network}
+settings		Wi-Fi is switched off. X switches it on and searches.	Wi-Fi 已关闭。按 X 可打开并搜索。
+settings		Networks	网络
+settings		Searching...	正在搜索…
+settings		{n} network	{n} 个网络
+settings		{n} networks	{n} 个网络
+settings		Joining	正在加入
+settings		Saved	已保存
+settings		No networks found. X searches again.	未找到网络。按 X 再次搜索。
+settings		Password	密码
+settings		Join	加入
+settings		{n} character	{n} 个字符
+settings		{n} characters	{n} 个字符
+settings		Type here	在此输入
+settings		Delete	删除
+settings		Writing the update: {status}	正在写入更新：{status}
+settings		Written: restart to run it	已写入：重启以运行
+settings		Failed	失败
+settings		Running {version}	正在运行 {version}
+settings		Running {version}, slot {slot}	正在运行 {version}，插槽 {slot}
+settings		The new version is being written to the other slot and checked; this one isn't touched. Don't turn the handheld off. It takes a minute or two.	新版本正在写入另一个插槽并进行校验；当前版本不受影响。请勿关闭主机。这大约需要一两分钟。
+settings		The new version is in the other slot and will run from the next restart. A restarts now. If it ever fails to start, Previous version brings this one back.	新版本已在另一个插槽，并将从下次重启开始运行。按 A 立即重启。若日后无法启动，可用「上一版本」恢复当前版本。
+settings		The update wasn't applied: {reason}. This version is untouched.	更新未应用：{reason}。当前版本未受影响。
+settings		No update packages found. Put a banana-{board}-<version>.update.tar from a release in banana/updates on the card (File sharing can copy it over Wi-Fi), then come back here.	未找到更新包。请将发布版中的 banana-{board}-<version>.update.tar 放入卡上的 banana/updates（可用「文件共享」经 Wi-Fi 复制），然后返回此处。
+settings		A on a package writes it to the other slot and checks it; the running version stays until the restart. Packages are in banana/updates on the card.	在更新包上按 A 将其写入另一插槽并校验；运行中的版本直到重启前保持不变。更新包位于卡上的 banana/updates。
+settings		Update packages	更新包
+settings		{n} package	{n} 个更新包
+settings		Banana {version}	Banana {version}
+settings		for both handhelds	适用于两款掌机
+settings		for the {handheld}	适用于 {handheld}
+settings		not for this handheld	不适用于此掌机
+settings		Nothing in banana/updates on the card.	卡上的 banana/updates 中没有内容。
+settings		Test versions	测试版本
+settings		Whether Update's check counts test versions (GitHub pre-releases). Every BananaOS release so far is one, so with them left out the check finds nothing until a stable version comes out.	「更新」的检查是否计入测试版本（GitHub 预发布版）。迄今为止的每个 BananaOS 版本都是测试版，因此若排除它们，在稳定版发布前检查将一无所获。
+settings		Included	已包含
+settings		Left out	已排除
+settings		Update check	更新检查
+settings		When asked: GitHub is only asked when you choose Check for updates. Daily: also when Wi-Fi connects, at most once a day, so the Update row says when a new version is out. Nothing is downloaded without you.	按需：仅在你选择「检查更新」时才会询问 GitHub。每日：在 Wi-Fi 连接时也会检查，每天最多一次，使「更新」一行能显示是否有新版本。任何内容都不会在未经你同意的情况下下载。
+settings		When asked	按需
+settings		Daily	每日
+settings		Downloading {n}%	正在下载 {n}%
+settings		{version} available	{version} 可用
+settings		Checking for updates...	正在检查更新…
+settings		Checking the download...	正在校验下载…
+settings		{p}% · {done} of {total} MB	{p}% · {done} / {total} MB
+settings		Downloading Banana {version}	正在下载 Banana {version}
+settings		Downloaded	已下载
+settings		Install Banana {version}	安装 Banana {version}
+settings		Install	安装
+settings		Resume: {done} of {total} MB	继续：{done} / {total} MB
+settings		Download Banana {version}	下载 Banana {version}
+settings		Download	下载
+settings		Check for updates	检查更新
+settings		Check	检查
+settings		Cancel	取消
+settings		Up to date	已是最新
+settings		None for this handheld	此掌机无适用版本
+settings		Newest for the {handheld}: {version} (a test version)	{handheld} 的最新版本：{version}（测试版）
+settings		Newest for the {handheld}: {version}	{handheld} 的最新版本：{version}
+settings		Up to date: {version} is the newest for the {handheld}	已是最新：{version} 是 {handheld} 的最新版本
+settings		No release for the {handheld} yet	{handheld} 尚无发布版本
+settings		The check failed	检查失败
+settings		Asking GitHub which version is the newest for this handheld...	正在询问 GitHub，本掌机的最新版本是哪一个…
+settings		Checking the download against the release's SHA-256...	正在对照发布的 SHA-256 校验下载…
+settings		Downloading to banana/updates on the card. B goes back and the download carries on (this page shows how far it is); A cancels it, and the next Download carries on from where it stopped.	正在下载到卡上的 banana/updates。按 B 返回，下载仍会继续（本页显示进度）；按 A 取消，下次「下载」会从中断处继续。
+settings		The download failed: {reason}.	下载失败：{reason}。
+settings		The check failed: {reason}.	检查失败：{reason}。
+settings		Downloaded and checked against the release's SHA-256. A, then A again, writes it to the other slot; this version stays as it is until the restart.	已下载并对照发布的 SHA-256 校验通过。按 A，再次按 A，将其写入另一个插槽；此版本在重启前保持不变。
+settings		A downloads it ({n} MB) to banana/updates on the card and checks it; nothing is installed until you choose Install. X checks again.	按 A 将其（{n} MB）下载到卡上的 banana/updates 并校验；在你选择「安装」之前不会安装任何内容。按 X 重新校验。
+settings		This handheld has the newest version. A checks again.	此掌机已是最新版本。按 A 重新检查。
+settings		GitHub has no release for this handheld. With Settings > System > Test versions left out, only stable versions count, and there are none yet.	GitHub 上没有适用于此掌机的发布版本。由于「设置 > 系统 > 测试版本」已排除，仅稳定版计入，而目前还没有稳定版。
+settings		A asks GitHub (Wi-Fi needed) whether a newer version is out for this handheld. Nothing is downloaded until you choose Download.	按 A 询问 GitHub（需 Wi-Fi）此掌机是否有更新版本。在你选择「下载」之前不会下载任何内容。
+settings		The check didn't answer.	检查未响应。
+settings		{n} MB	{n} MB
+settings		A Wi-Fi password has 8 to 63 characters; this one has {count}.	Wi-Fi 密码为 8 到 63 个字符；此密码为 {count} 个。
+settings		The account's name, as on retroachievements.org.	账号名称，与 retroachievements.org 上的相同。
+settings		RetroAchievements password for {name}	RetroAchievements 的密码（{name}）
+settings		The account's name, as on screenscraper.fr.	账号名称，与 screenscraper.fr 上的相同。
+settings		ScreenScraper password for {name}	ScreenScraper 的密码（{name}）
+settings		Checking the account {name}...	正在校验账号 {name}…
+settings		No connection: check Wi-Fi, then try again from the setup	无连接：请检查 Wi-Fi，然后从设置中重试
+settings		Logged in as {name}	已登录为 {name}
+settings		Logged in as {name} · {score} points	已登录为 {name} · {score} 分
+settings		Wrong account name or password	账号名或密码错误
+settings		The server said no ({code})	服务器拒绝了请求（{code}）
+settings		Account name	账号名称
+settings		Finish	完成
+settings		Not signed in	未登录
+settings		Your home network: the games' achievements, the clock and the art need it. A picks it from the networks around; the password goes in on the keyboard.	你的家庭网络：游戏的成就、时钟与封面都需要它。按 A 从附近网络中选择；密码在键盘上输入。
+settings		The clock on the top screen, and the games' own clocks. Left and right change it.	上屏幕的时钟，以及游戏各自的时钟。左右方向键可调整。
+settings		Your retroachievements.org account: DraStic and RetroArch unlock achievements with it. A types the name, then the password. Leave it if you have none.	你的 retroachievements.org 账号：DraStic 和 RetroArch 用它解锁成就。按 A 输入名称，然后输入密码。没有可留空。
+settings		Covers, title screens, genres and years for the games on the card, from libretro's free collections: no account. A starts it (Wi-Fi first); it keeps going while you finish the setup, and the menu shows the art as it comes. Settings > System > Box art runs it again for new games.	卡上游戏的封面、标题画面、类型和年份，来自 libretro 的免费图库：无需账号。按 A 开始（需先连 Wi-Fi）；在您完成设置期间它会持续运行，菜单会随获取进度显示封面。设置 > 系统 > 封面 可针对新游戏再次运行。
+settings		Everything here is in the settings too (Start in the menu), and this setup is under System > First-time setup. A finishes.	此处所有内容也都可在设置中找到（菜单中按 Start），本设置位于 系统 > 首次设置。按 A 完成。
+settings		Fetching covers and title screens. It carries on while you finish the setup.	正在获取封面与标题画面。在您完成设置期间它会持续运行。
+settings		Welcome to Banana	欢迎使用 Banana
+settings		Skip	跳过
+settings		Next zone	下一时区
+settings		Running	正在运行
+settings		Wi-Fi is off: switch it on in Network first.	Wi-Fi 已关闭：请先在「网络」中打开它。
+settings		Starting	启动中
+settings		{found} of {total} found	{found} / {total} 已找到
+settings		No connection	无连接
+settings		Didn't work	未成功
+settings		Not yet	尚未
+settings		Save	保存
+settings		Load	读取
+settings		Menu	菜单
+settings	Second screen (RetroArch games)	Fast	快进
+settings		Quit	退出
+settings		F + START	F + START
+settings		Latest achievements	最近成就
+settings		None unlocked yet. Good luck!	尚未解锁任何成就。祝你好运！
+settings		just now	刚刚
+settings		%lld min ago	%lld 分钟前
+settings		today %H:%M	今天 %H:%M
+settings		Waiting for RetroArch...	正在等待 RetroArch…
+settings		Looking the game up...	正在查询该游戏…
+settings		This game has no achievements.	该游戏没有成就。
+settings		RetroAchievements is off, or its login failed: check the account in Settings > System > First-time setup.	RetroAchievements 已关闭，或其登录失败：请在 设置 > 系统 > 首次设置 中检查账号。
+settings		No connection to RetroAchievements: check Wi-Fi.	无法连接到 RetroAchievements：请检查 Wi-Fi。
+settings		Tap a tile, or hold F with the button under it	点按某个磁贴，或按住 F 并配合其下方的按键
+settings		Hold F with the button under each tile	按住 F 并配合每个磁贴下方的按键
+settings		Party	队伍
+settings		Battle	对战
+settings		Achievements	成就
+settings		Waiting for the game...	正在等待游戏…
+settings		Waiting for the battle...	正在等待对战…
+settings		No Pokémon in the party yet.	队伍中还没有宝可梦。
+settings		RetroArch can't read the game's memory with this emulator: %s	RetroArch 无法用此模拟器读取游戏内存：%s
+settings		Weak to	弱点
+settings		EGG	蛋
+settings		SLP	SLP
+settings		PSN	PSN
+settings		BRN	BRN
+settings		FRZ	FRZ
+settings		PAR	PAR
+settings		FNT	FNT
+settings		Lv	Lv
+settings		PP	PP
+settings	Pokémon types	Normal	一般
+settings	Pokémon types	Fighting	格斗
+settings	Pokémon types	Flying	飞行
+settings	Pokémon types	Poison	毒
+settings	Pokémon types	Ground	地面
+settings	Pokémon types	Rock	岩石
+settings	Pokémon types	Bug	虫
+settings	Pokémon types	Ghost	幽灵
+settings	Pokémon types	Steel	钢
+settings	Pokémon types	Fire	火
+settings	Pokémon types	Water	水
+settings	Pokémon types	Grass	草
+settings	Pokémon types	Electric	电
+settings	Pokémon types	Psychic	超能力
+settings	Pokémon types	Ice	冰
+settings	Pokémon types	Dragon	龙
+settings	Pokémon types	Dark	恶
+# (the Pokémon companion's rows below, from 0.4.3's full-panel companion, are a draft, not Majirefy's: for them to check)
+settings		Resists	抗性
+settings		Immune to	免疫
+settings		Exp	经验
+settings		Next	下一级
+settings		Pwr	威力
+settings		You	我方
+settings		Foe	敌方
+settings		It's still an egg.	它还是一颗蛋。
+settings		the list of covers	封面列表
+settings		the boot partition can't be written	启动分区无法写入
+settings		can't write extlinux.conf	无法写入 extlinux.conf
+settings		slot {slot} holds no system	插槽 {slot} 没有系统
+settings		switched {slot}	已切换至插槽 {slot}
+settings		no such package: {package}	没有该更新包：{package}
+settings		checking	校验中
+settings		the package can't be unpacked	该更新包无法解包
+settings		the package has no {file}	该更新包缺少 {file}
+settings		the package has no device tree	该更新包没有设备树
+settings		that is a package for the {package's handheld}, this is the {this handheld}	那是用于 {package's handheld} 的更新包，而当前主机是 {this handheld}。
+settings		{file} is damaged (its hash is wrong)	{file} 已损坏（其哈希值错误）
+settings		no partition for slot {slot} ({partition})	插槽 {slot} 没有分区（{partition}）
+settings		the system ({size} bytes) doesn't fit the slot ({limit} bytes)	系统（{size} 字节）无法放入插槽（{limit} 字节）
+settings		writing {percent}%	正在写入 {percent}%
+settings		writing slot {slot} failed	写入插槽 {slot} 失败
+settings		verifying	校验中
+settings		slot {slot} reads back wrong	插槽 {slot} 回读错误
+settings		can't write /boot/{slot}/{file}	无法写入 /boot/{slot}/{file}
+settings		/boot/{slot}/{file} reads back wrong	/boot/{slot}/{file} 回读错误
+settings		done {version}	完成 {version}
+bananads		Today %s	今天 %s
+bananads		Yesterday %s	昨天 %s
+bananads		No picture in this save	此存档没有图片
+bananads		Empty slot	空槽位
+bananads		Slot %d	槽位 %d
+bananads		A: load this save. You can undo it after.	A：读取此存档。读取后你可以撤销。
+bananads		Nothing saved here yet	这里还没有存档
+bananads		A: save here (replaces this save)	A：在此存档（覆盖当前存档）
+bananads		A: save here	A：在此存档
+bananads		THIS SESSION	本次会话
+bananads		LAST SAVE %s	上次存档 %s
+bananads		None yet	还没有
+bananads		LAST SAVE	上次存档
+bananads		this menu	此菜单
+bananads		save to slot 1	保存到槽位 1
+bananads		load slot 1	读取槽位 1
+bananads		F + START	F + START
+bananads		save your spot and quit	保存进度并退出
+bananads		LATEST ACHIEVEMENTS	最新成就
+bananads		None unlocked yet. Good luck!	还没有解锁任何成就。祝你好运！
+bananads		Resume	继续
+bananads		Save	保存
+bananads		Load	读取
+bananads		Quick settings	快速设置
+bananads		Restart game	重启游戏
+bananads		Quit game	退出游戏
+bananads		Please wait	请稍候
+bananads		One moment...	稍等一下……
+bananads		Paused	已暂停
+bananads		or press L3	或按 L3
+bananads		%d slots	%d 个槽位
+bananads		last: slot %d	上一个：槽位 %d
+bananads		no saves yet	还没有存档
+bananads		volume, shader, effects	音量、着色器、特效
+bananads		volume, brightness	音量、亮度
+bananads		from the title screen	从标题界面
+bananads		keeps your spot	保留你的进度
+bananads		back to the menu	返回菜单
+bananads		Slot %d of %d	槽位 %d / %d
+bananads		Empty	空
+bananads		changes apply at once	更改立即生效
+bananads		Volume	音量
+bananads		Brightness	亮度
+bananads		Microphone	麦克风
+bananads		Test / blow	测试 / 吹气
+bananads		Left / right to change, or tap the bar	左右键调整，或点击进度条
+bananads		Left / right to change, both screens	左右键调整，双屏
+bananads		A live meter of the mic, and a blow for games that ask for one	麦克风的实时电平表，并提供吹气功能供需要吹气的游戏使用。
+bananads		Left / right to change: it applies at once, and stays for the next game	左右键调整：立即生效，并保留到下一局游戏
+bananads		Blow on the mic	对麦克风吹气
+bananads		No microphone found	未找到麦克风
+bananads		Heard!	听到了！
+bananads		Listening	正在聆听
+bananads		The game hears a blow past the red line (sensitivity: %s).	吹气超过红线时游戏即可识别（灵敏度：%s）。
+bananads		The microphone's gate is off, so the game hears everything it picks up.	麦克风门限已关闭，因此游戏会听到它拾取到的所有声音。
+bananads		A: blow for 3 s, for when the real mic isn't picked up	A：吹气 3 秒，用于真实麦克风未被识别时
+bananads		Back	返回
+bananads		Select	选择
+bananads		Open	打开
+bananads		OK	确定
+bananads		Blow for 3 s	吹气 3 秒
+bananads		D-pad or tap	D-pad 或点按
+bananads		Undo last load	撤销上次读取
+bananads		Replace slot %d?	覆盖槽位 %d？
+bananads		The save from %s will be replaced by this one.	来自 %s 的存档将被此存档覆盖。
+bananads		Cancel	取消
+bananads		Replace	覆盖
+bananads		Quit to the menu?	退出到菜单？
+bananads		Your spot is saved. Next time the game picks up right here.	你的进度已保存。下次游戏会从此处继续。
+bananads		Anything since your last save will be lost.	自上次保存以来的所有进度都将丢失。
+bananads		Keep playing	继续游戏
+bananads		Quit	退出
+bananads		Restart the game?	重启游戏？
+bananads		Back to the title screen. Anything since your last save will be lost.	返回标题界面。自上次保存以来的所有进度都将丢失。
+bananads		Restart	重启
+bananads		Saving to slot %d	正在保存到槽位 %d
+bananads		Undoing the load	正在撤销读取
+bananads		Loading	正在读取
+bananads		the undo slot	撤销槽位
+bananads		the slot	该槽位
+bananads		Saving your spot	正在保存进度
+bananads		Restarting	正在重启
+bananads		Achievement unlocked · %u points	成就解锁 · %u 分
+bananads		All achievements unlocked!	所有成就已解锁！
+bananads		Leaderboard submitted	排行榜已提交
+bananads		RetroAchievements	RetroAchievements
+bananads		Offline: unlocks will be sent later	离线：解锁记录稍后发送
+bananads		Back online, unlocks sent	已重新联网，解锁记录已发送
+bananads		This game isn't known to RetroAchievements	RetroAchievements 不认识此游戏
+bananads		Couldn't load the game	无法读取游戏
+bananads		%u of %u achievements unlocked	%u / %u 项成就已解锁
+bananads		No achievements for this game yet	此游戏暂无成就
+bananads		Logged in as %s · %u points	已登录为 %s · %u 分
+bananads		Logged in as %s	已登录为 %s
+bananads		Login expired: enter your password in Settings	登录已过期：请在设置中输入密码
+bananads		RetroAchievements login failed	RetroAchievements 登录失败
+bananads		Check the account in Settings	请在设置中检查账户
+bananads		No password: enter it in Settings	没有密码：请在设置中输入
+bananads		None	无
+bananads		Crisp	Crisp
+bananads		Crisp + DS colours	Crisp + DS colours
+bananads		LCD grid	LCD grid
+bananads		LCD grid + colours	LCD grid + colours
+bananads		LCD grid 2x	LCD grid 2x
+bananads		FSR	FSR
+bananads		LCD (DS colours)	LCD (DS colours)
+bananads		LCD 1x	LCD 1x
+bananads		LCD 3x	LCD 3x
+bananads		Fast LCD	Fast LCD
+bananads		DS colours	DS colours
+bananads		Retro	Retro
+bananads		Bevel	Bevel
+bananads		Sharp bilinear	Sharp bilinear
+bananads		Sharp + scanlines	Sharp + scanlines
+bananads		Fast CRT	Fast CRT
+bananads		Integer	Integer
+bananads		Integer fill	Integer fill
+bananads		Dot (MiZai)	Dot (MiZai)
+bananads		Dot (MiZai, RG DS+)	Dot (MiZai, RG DS+)
+bananads		Retro tiles	Retro tiles
+bananads		DraStic LCD	DraStic LCD
+bananads		DraStic LCD + colours	DraStic LCD + colours
+bananads		DraStic Quilez	DraStic Quilez
+bananads		DraStic sharp	DraStic sharp
+bananads		DraStic sharp + colours	DraStic sharp + colours
+bananads		DraStic fast LCD	DraStic fast LCD
+bananads		DraStic fast LCD + colours	DraStic fast LCD + colours
+bananads		Shader	着色器
+bananads		Edge marking	边缘描边
+bananads		Fog	雾效
+bananads		On	开
+bananads		Off	关
+# (the in-game menu rows below are a draft, not Majirefy's: for them to check)
+bananads		Save and quit	保存并退出
+bananads		Quit without saving	不保存退出
+bananads		Quit without saving?	不保存退出？
+bananads		Saved to slot %d	已保存到槽位 %d
+bananads		Loaded slot %d	已读取槽位 %d
+bananads		Couldn't save	无法保存
+bananads		Couldn't load	无法读取
+bananads		Nothing saved in slot %d	槽位 %d 中没有存档
+bananads		Slot %d couldn't be read	无法读取槽位 %d
+bananads		Hotkeys	快捷键
+bananads		while you play	游戏时使用
+bananads		This menu	此菜单
+bananads		Save state (slot 1)	保存状态（槽位 1）
+bananads		Load state (slot 1)	读取状态（槽位 1）
+bananads		Fast-forward (held)	快进（按住）
+bananads		Fast-forward on / off	快进 开 / 关
+bananads		Screenshot	截图
+bananads		Save your spot and quit	保存进度并退出
+superdrastic		Today %s	今天 %s
+superdrastic		Yesterday %s	昨天 %s
+superdrastic		volume %d >/dev/null 2>&1	volume %d >/dev/null 2>&1
+superdrastic		brightness set all %d >/dev/null 2>&1	brightness set all %d >/dev/null 2>&1
+superdrastic		No picture in this save	此存档没有图片
+superdrastic		Empty slot	空槽位
+superdrastic		Slot %d	槽位 %d
+superdrastic		A: load this save. You can undo it after.	A：读取此存档。读取后你可以撤销。
+superdrastic		Nothing saved here yet	这里还没有存档
+superdrastic		A: save here (replaces this save)	A：在此存档（覆盖当前存档）
+superdrastic		A: save here	A：在此存档
+superdrastic		THIS SESSION	本次会话
+superdrastic		LAST SAVE %s	上次存档 %s
+superdrastic		None yet	还没有
+superdrastic		LAST SAVE	上次存档
+superdrastic		LATEST ACHIEVEMENTS	最新成就
+superdrastic		None unlocked yet. Good luck!	还没有解锁任何成就。祝你好运！
+superdrastic		Resume	继续
+superdrastic		Save	保存
+superdrastic		Load	读取
+superdrastic		Quick settings	快速设置
+superdrastic		DraStic menu	DraStic 菜单
+superdrastic		Quit game	退出游戏
+superdrastic		Please wait	请稍候
+superdrastic		One moment...	稍等一下……
+superdrastic		Paused	已暂停
+superdrastic		or press L3	或按 L3
+superdrastic		%d slots	%d 个槽位
+superdrastic		last: slot %d	上一个：槽位 %d
+superdrastic		no saves yet	还没有存档
+superdrastic		volume, brightness	音量、亮度
+superdrastic		cheats, controls	金手指、操作
+superdrastic		keeps your spot	保留你的进度
+superdrastic		back to the menu	返回菜单
+superdrastic		Slot %d of %d	槽位 %d / %d
+superdrastic		Empty	空
+superdrastic		changes apply at once	更改立即生效
+superdrastic		Volume	音量
+superdrastic		Brightness	亮度
+superdrastic		Microphone	麦克风
+superdrastic		Test / blow	测试 / 吹气
+superdrastic		Left / right to change, or tap the bar	左右键调整，或点击进度条
+superdrastic		Left / right to change, both screens	左右键调整，双屏
+superdrastic		A live meter of the mic, and a blow for games that ask for one	麦克风的实时电平表，并提供吹气功能供需要吹气的游戏使用。
+superdrastic		Blow on the mic	对麦克风吹气
+superdrastic		No microphone found	未找到麦克风
+superdrastic		Heard!	听到了！
+superdrastic		Listening	正在聆听
+superdrastic		The game hears a blow past the red line (sensitivity: %s).	游戏会在吹气超过红线时识别（灵敏度：%s）。
+superdrastic		Microphone sensitivity is off in ES, so the game only gets the blow below.	麦克风灵敏度在 ES 中已关闭，因此游戏只能获得下方的吹气。
+superdrastic		A: blow for 3 s, for when the real mic isn't picked up	A：吹气 3 秒，用于真实麦克风未被识别时
+superdrastic		Back	返回
+superdrastic		Select	选择
+superdrastic		Open	打开
+superdrastic		OK	确定
+superdrastic		Blow for 3 s	吹气 3 秒
+superdrastic		D-pad or tap	D-pad 或点按
+superdrastic		Undo last load	撤销上次读取
+superdrastic		Replace slot %d?	覆盖槽位 %d？
+superdrastic		The save from %s will be replaced by this one.	来自 %s 的存档将被此存档覆盖。
+superdrastic		Cancel	取消
+superdrastic		Replace	覆盖
+superdrastic		Quit to the menu?	退出到菜单？
+superdrastic		Your spot is saved. Next time the game picks up right here.	你的进度已保存。下次游戏会从此处继续。
+superdrastic		Anything since your last save will be lost.	自上次保存以来的所有进度都将丢失。
+superdrastic		Keep playing	继续游戏
+superdrastic		Quit	退出
+superdrastic		Saved to slot %d	已保存到槽位 %d
+superdrastic		Couldn't save	无法保存
+superdrastic		DraStic's Save state control has no button	DraStic 的保存状态控制没有按键
+superdrastic		Back to before the load	回到读取之前
+superdrastic		Loaded slot %d	已读取槽位 %d
+superdrastic		Undoing the load	正在撤销读取
+superdrastic		Loading	正在读取
+superdrastic		Wrong one? Load, then Y undoes it	读错了？读取后按 Y 撤销
+superdrastic		Couldn't load	无法读取
+superdrastic		DraStic's Load state control has no button	DraStic 的读取状态控制没有按键
+superdrastic		Blowing into the mic...	正在对麦克风吹气……
+superdrastic		The game hears it for 3 seconds	游戏会识别 3 秒
+superdrastic		Saving your spot	正在保存进度
+superdrastic		Achievement unlocked · %u points	成就解锁 · %u 分
+superdrastic		All achievements unlocked!	所有成就已解锁！
+superdrastic		Leaderboard submitted	排行榜已提交
+superdrastic		RetroAchievements	RetroAchievements
+superdrastic		offline: unlocks will be sent later	离线：解锁记录稍后发送
+superdrastic		back online, unlocks sent	已重新联网，解锁记录已发送
+superdrastic		this ROM isn't recognised	此 ROM 未被识别
+superdrastic		couldn't load the game	无法读取游戏
+superdrastic		%u of %u unlocked (softcore)	%u / %u 已解锁（softcore）
+superdrastic		no achievements for this game yet	此游戏暂无成就
+superdrastic		login expired: re-enter your password in ES	登录已过期：请在 ES 中重新输入密码
+superdrastic		RetroAchievements login failed	RetroAchievements 登录失败
+superdrastic		check user/password in ES	请在 ES 中检查用户名/密码
+superdrastic		no password set in ES	ES 中未设置密码
+superdrastic		Resumed where you left off	已从你离开的地方继续
+superdrastic		Quit with the exit hotkey to save your place again	使用退出快捷键退出以再次保存进度
+superdrastic		DraStic didn't write the savestate	DraStic 未写入存档状态
+superdrastic		DraStic didn't read the savestate	DraStic 未读取存档状态
+superdrastic		, resuming this session	，正在恢复本次会话
+superdrastic		, a resume state exists but isn't loaded	，存在恢复状态但未加载
+# (the in-game menu rows below are a draft, not Majirefy's: for them to check)
+superdrastic		Save and quit	保存并退出
+superdrastic		Quit without saving	不保存退出
+superdrastic		Quit without saving?	不保存退出？
+superdrastic		Hotkeys	快捷键
+superdrastic		while you play	游戏时使用
+superdrastic		This menu	此菜单
+superdrastic		Save state	保存状态
+superdrastic		Load state	读取状态
+superdrastic		Fast-forward	快进
+superdrastic		Swap screens	交换屏幕
+superdrastic		Save your spot and quit (hold)	保存进度并退出（按住）
+superdrastic		Quit (hold)	退出（按住）
+superdrastic		Not set	未设置
+systems		Nintendo DS	Nintendo DS
+systems		Nintendo	Nintendo
+systems		Game Boy Advance	Game Boy Advance
+systems		Game Boy Color	Game Boy Color
+systems		Game Boy	Game Boy
+systems		Nintendo Entertainment System	Nintendo Entertainment System
+systems		Super Nintendo	Super Nintendo
+systems		Mega Drive	Mega Drive
+systems		Sega	Sega
+systems		PlayStation	PlayStation
+systems		Sony	Sony
+systems		Nintendo 64	Nintendo 64
+systems		Döda Kvarter	Döda Kvarter
+systems		ROCKNIXDS	ROCKNIXDS
+systems		Poketool	Poketool
+systems		PICO-8	PICO-8
+systems		Lexaloffle	Lexaloffle
+systems		Ports	Ports
+systems		PortMaster	PortMaster
+# (the menu-feedback rows below are a draft, not Majirefy's: for them to check)
+settings		Text on accent	强调色上的文字
+settings		The text on the selection's colour. Auto picks dark or light, whichever reads better on the accent.	选中项颜色上的文字。自动在深色或浅色中选择在强调色上更易阅读的一种。
+settings		Auto	自动
+settings		Power	电源
+settings		Sleep	休眠
+settings		The handheld sleeps, as with a press of the power button; a game running is paused. Press the power button to wake it.	主机进入休眠，如同按下电源键；运行中的游戏暂停。按电源键唤醒。
+settings		Delete game...	删除游戏…
+settings		Delete this game	删除本游戏
+settings		Keep its saves and art	保留其存档与封面
+settings		With its saves, states and art	连同其存档、即时存档与封面
+settings		A again: the game (saves kept)	再次按 A：删除游戏（保留存档）
+settings		A again: the game, saves and art	再次按 A：删除游戏、存档与封面
+settings		Delete...	删除…
+settings		The game couldn't be deleted: the card may be read-only.	无法删除该游戏：存储卡可能为只读。
+settings		Removes this game's file from the card: %s. Left and right choose whether its saves, save states and box art go too, or stay (they come back if you copy the game again). Nothing else is touched: no other game, no BIOS. A asks first; A again deletes.	从存储卡移除本游戏的文件：%s。左右方向键选择其存档、即时存档与封面是随同删除还是保留（若再次复制游戏，它们会回来）。不会涉及其他内容：其他游戏、BIOS 均不受影响。先按 A 确认；再次按 A 删除。
+settings		Shown systems	显示的系统
+settings		Which systems are on the home row. Each one: with games (when it has something to start), hidden, or always (with nothing in it too: Ports for PortMaster).	主行上显示哪些系统。每个系统可选：有游戏时（有可启动内容时）、隐藏，或始终（即使没有内容也显示：Ports 用于 PortMaster）。
+settings		With games	有游戏时
+settings		Hidden	隐藏
+settings		Always	始终
+settings		With games: on the home row while there is something in it to start. Hidden: never. Always: with nothing in it too (Ports: for PortMaster, which gets ports).	有游戏时：只要其中有可启动的内容，就显示在主行。隐藏：从不显示。始终：即使没有内容也显示（Ports：用于 PortMaster，用于获取移植游戏）。
+settings		Hotkeys	热键
+settings		The buttons that do something everywhere, in the menu and in each emulator.	在菜单与各个模拟器中随处可用的按键。
+settings		Volume keys	音量键
+settings		Everywhere, in games too: the speakers, or the headphones while they are in.	随处可用（包括游戏中）：扬声器，或插入时的耳机。
+settings		F + volume	F + 音量键
+settings		Everywhere, in games too: both screens' backlights together. Each screen's own: Settings > Display & sound.	随处可用（包括游戏中）：同时调节两块屏幕的背光。单独调节某块屏幕：设置 > 显示与声音。
+settings		Everywhere: a press sleeps (a game is paused where it is), a press wakes. Closing the lid does the same.	随处可用：按一下休眠（游戏在原处暂停），再按一下唤醒。合上翻盖效果相同。
+settings		Hold power	长按电源键
+settings		Everywhere: held for 2 seconds. A game running saves first.	随处可用：长按 2 秒。运行中的游戏会先保存。
+settings		Menu: START	菜单：START
+settings		In the menu: Settings. Y there: Sleep, Restart and Shut down.	菜单中：设置。在其中按 Y：休眠、重启与关机。
+settings		Menu: SELECT	菜单：SELECT
+settings		In the menu: search every system's games by name.	菜单中：按名称搜索各系统的游戏。
+settings		Menu: X	菜单：X
+settings		Resume, options	继续、选项
+settings		On the home row: the system's last game. On a game: its page (name, box art, emulator, delete).	在主行上：该系统上次的游戏。在某游戏上：其页面（名称、封面、模拟器、删除）。
+settings		Menu: L / R	菜单：L / R
+settings		A page	一页
+settings		In a game list or a settings list: five at a time. Up and down too.	在游戏列表或设置列表中：每次翻五条。上下方向键同样可用。
+settings		Its menu	其菜单
+settings		DS games in SuperDrastic: save, load, quick settings (volume, brightness), quit. L3 opens it too.	SuperDrastic 中的 DS 游戏：保存、读取、快速设置（音量、亮度）、退出。按 L3 也可打开。
+settings		DS games in SuperDrastic: back to the menu, the spot saved to resume from when Quick resume is on.	SuperDrastic 中的 DS 游戏：返回菜单，并在开启「快速继续」时保存进度以便继续。
+settings		Save / load state	保存 / 读取即时存档
+settings		DS games in SuperDrastic: DraStic's quick save state, and loading it.	SuperDrastic 中的 DS 游戏：DraStic 的快速即时存档，以及读取它。
+settings		Fast-forward	快进
+settings		DS games in SuperDrastic: held, the game runs as fast as it can.	SuperDrastic 中的 DS 游戏：按住时，游戏以最快速度运行。
+settings		DS games in BananaDS: save, load, quick settings, achievements, quit.	BananaDS 中的 DS 游戏：保存、读取、快速设置、成就、退出。
+settings		Save to slot 1	保存到插槽 1
+settings		Load slot 1	读取插槽 1
+settings		DS games in BananaDS.	BananaDS 中的 DS 游戏。
+settings		DS games in BananaDS: your spot saved, then back to the menu.	BananaDS 中的 DS 游戏：保存你的进度，然后返回菜单。
+settings		The other systems (RetroArch). Settings > Other systems > RetroArch hotkeys Off leaves this and F + START only.	其他系统（RetroArch）。设置 > 其他系统 > RetroArch 热键 关闭后，仅保留本组合与 F + START。
+settings		The other systems (RetroArch): back to the menu.	其他系统（RetroArch）：返回菜单。
+settings		The other systems (RetroArch): the current state slot.	其他系统（RetroArch）：当前的即时存档插槽。
+settings		The other systems (RetroArch): on, and off again.	其他系统（RetroArch）：开启，再次按下关闭。
+settings		Rewind	回退
+settings		The other systems (RetroArch): held, the game runs backwards.	其他系统（RetroArch）：按住时，游戏倒退运行。
+settings		Frame rate	帧率
+settings		The other systems (RetroArch): shown in a corner, or not.	其他系统（RetroArch）：在角落显示帧率，或不显示。
+# (the screen border rows below are a draft, not Majirefy's: for them to check)
+settings		Screen border	屏幕边框
+settings		On: the black around a game's picture filled with a quiet border in the menu's colours (the theme's), the picture at a sharp whole-number size where that fits. The DS, the N64 and a picture that already fills the screen have none.	开：游戏画面周围的黑边以菜单配色（主题色）的淡边框填充，画面在合适处按清晰的整数尺寸显示。DS、N64 以及已铺满屏幕的画面不适用。
+# (the beta channel rows below are English only, untranslated: for Majirefy to translate)
+settings		Beta channel	测试频道
+settings		Beta channel password	测试频道密码
+settings		Checking...	
+settings		Turn on	开启
+settings		Turn off	关闭
+settings		For beta testers: updates from the test builds on bananaos-cfw.dev instead of GitHub's releases. A asks for the beta password (once: it is checked with the site, then kept on the card for the updater only).	面向测试者：更新来自 bananaos-cfw.dev 上的测试构建，而非 GitHub 的发布版本。按 A 请求测试密码（仅一次：与站点校验后保存在卡上，仅供更新程序使用）。
+settings		On: updates come from the beta testers' builds on bananaos-cfw.dev instead of GitHub's releases. A, then A again, turns it off (the password is forgotten), and GitHub is asked again.	开：更新来自 bananaos-cfw.dev 上的测试者构建，而非 GitHub 的发布版本。按 A，再次按 A，将其关闭（密码被遗忘），并重新向 GitHub 请求。
+settings		The beta testers' password for BananaOS's test builds. A types the key, B deletes, X capitals, L symbols, Y a space, START checks it with bananaos-cfw.dev. It is kept on the card for the updater only.	BananaOS 测试版的测试者密码。按 A 输入字符，B 删除，X 大写，L 符号，Y 空格，输入完成后按 START 与 bananaos-cfw.dev 校验。它仅保存在卡上供更新程序使用。
+settings		Type the beta password, then START.	输入测试密码，然后按 START。
+settings		Checking the password with bananaos-cfw.dev...	正在与 bananaos-cfw.dev 校验密码…
+settings		Beta channel on: Check for updates now asks bananaos-cfw.dev for test builds.	测试频道已开启：「检查更新」现在会向 bananaos-cfw.dev 请求测试版本。
+settings		Wrong password: bananaos-cfw.dev refused it. The beta channel stays off.	密码错误：bananaos-cfw.dev 拒绝了该密码。测试频道保持关闭。
+settings		Beta channel off: Check for updates asks GitHub again.	测试频道已关闭：「检查更新」重新向 GitHub 请求。
+settings		The password couldn't be checked: %s.	无法校验密码：%s。
+settings		Asking the beta server (bananaos-cfw.dev) which test build is the newest for this handheld...	正在询问测试服务器（bananaos-cfw.dev）本掌机最新的测试版本是哪一个…
+settings		The beta server has no test build for this handheld.	测试服务器没有适用于此掌机的测试版本。
+settings		A asks the beta server (bananaos-cfw.dev, Wi-Fi needed) whether a newer test build is out for this handheld. Nothing is downloaded until you choose Download.	按 A 询问测试服务器（bananaos-cfw.dev，需 Wi-Fi）此掌机是否有更新的测试版本。在你选择「下载」之前不会下载任何内容。
+# (the language switch's question below is a machine-translated draft, not Majirefy's: for them to check)
+settings		Change the menu's language?	更改菜单语言？
+settings		No, keep it	不，保持不变
+settings		Yes, change it	是，更改
+settings		The menu starts again in the new language.	菜单将以新语言重新启动。
+settings		OK	确定
+# (the 4x warning below is a machine-translated draft, not Majirefy's: for them to check)
+settings		4x runs hot	4x 会发热
+settings		4x runs the handheld hot and drains the battery much faster. When it gets too hot it slows down to cool off, and games can lag. If that happens, switch back to 2x, then restart and let the handheld cool down.	4x 会使掌机发热并大幅加快耗电。过热时它会降速以降温，游戏可能出现卡顿。若发生这种情况，请切换回 2x，然后重启并让掌机冷却。
+settings		Use 4x?	使用 4x？
+settings		Use 4x	使用 4x
+settings		Keep %s	保持 %s
+settings		This game's 3D resolution	本游戏的 3D 分辨率
+# (the Credits page's lines below are a machine-translated draft, not Majirefy's: for them to check; the names and titles in /etc/banana/credits.txt stay as written)
+settings		Credits	致谢
+settings		Thank you	谢谢
+settings		The people who made this version of BananaOS: development, translations, testing and thanks. A opens the list.	制作此 BananaOS 版本的人员：开发、翻译、测试与致谢。按 A 打开名单。
+settings		Development	开发
+settings		Translations	翻译
+settings		Testing	测试
+settings		Thanks	鸣谢
+# (the first-time setup's slides and the first boot's welcome below are a machine-translated draft, not Majirefy's: for them to check)
+settings		Step {n} of {m}	第 {n} 步，共 {m} 步
+settings		Welcome to	欢迎使用
+settings		Welcome	欢迎
+settings		All set	设置完成
+settings		Wi-Fi	Wi-Fi
+settings		RetroAchievements	RetroAchievements
+settings		Choose a network	选择网络
+settings		Choose another network	选择其他网络
+settings		Skip for now	暂时跳过
+settings		Test the connection	测试连接
+settings		Test again	再次测试
+settings		Testing the connection	正在测试连接
+settings		Testing {network}...	正在测试 {network}…
+settings		Off	关
+settings		Type a name	输入名称
+settings		Change the name	更改名称
+settings		Log in	登录
+settings		Log in with another account	使用其他账号登录
+settings		Check the login	检查登录
+settings		Check again	再次检查
+settings		Checking the login	正在检查登录
+settings		Checking...	正在检查…
+settings		Try again	重试
+settings		Logged in	已登录
+settings		Not logged in	未登录
+settings		No answer	无响应
+settings		Start fetching box art	开始获取封面
+settings		Fetch again	重新获取
+settings		Finish	完成
+settings		translated by	翻译：
+settings		Connected, address {address}	已连接，地址 {address}
+settings		No connection: no address from the network	无连接：网络未分配地址
+settings		Internet	互联网
+settings		No internet: the network doesn't reach it	无法访问互联网：该网络无法连到外网
+settings		Clock	时钟
+settings		Clock set from the internet	时钟已通过互联网设置
+settings		The clock couldn't be set (time server)	无法设置时钟（时间服务器）
+settings		Asking retroachievements.org...	正在询问 retroachievements.org…
+settings		Saved (not checked here)	已保存（此处未检查）
+settings		Skipped	已跳过
+settings		Not fetched	未获取
+settings		Login failed	登录失败
+settings		Fetching in the background	正在后台获取
+settings		{network} (no internet)	{network}（无互联网）
+settings		The menu's language, and the settings' and the emulators' menus. The rest of the setup is in the language picked.	菜单的语言，以及设置和模拟器菜单的语言。之后的设置步骤将使用所选语言。
+settings		Your home network: achievements, the clock, box art and updates need it. Pick it from the networks around, type its password, and the connection is tested.	你的家庭网络：成就、时钟、封面和更新都需要它。从附近的网络中选择，输入密码，然后会测试连接。
+settings		For the clock on the top screen and the games' own clocks. Left and right change it.	用于上屏的时钟和游戏自身的时钟。左右键可更改。
+settings		For the clock on the top screen and the games' own clocks. Left and right change it; the time itself came from the internet.	用于上屏的时钟和游戏自身的时钟。左右键可更改；时间本身已从互联网获取。
+settings		Your name on the DS, as a real one asks for it the first time: Mario Kart's records, Pictochat, a game's save. 10 characters at most. Leave it and the emulators use their own.	你在 DS 上的名字，就像真机首次启动时询问的那样：用于马力欧赛车的记录、PictoChat、游戏存档。最多 10 个字符。不填则模拟器使用其默认名称。
+settings		Your retroachievements.org account: DraStic and RetroArch unlock achievements with it. The login is checked with the site. No account? Skip this: it can be added later.	你的 retroachievements.org 账号：DraStic 和 RetroArch 用它解锁成就。登录信息会与网站核对。没有账号？跳过即可，之后可以再添加。
+settings		Fetching covers and title screens. It carries on in the background while you finish the setup; the menu shows the art as it comes.	正在获取封面和标题画面。完成设置期间它会在后台继续进行；菜单会随时显示已获取的图片。
+settings		Covers, title screens, genres and years for the games on the card, from libretro's free collections: no account needed. Settings > System > Box art runs it again for new games.	从 libretro 的免费图库获取卡上游戏的封面、标题画面、类型和年份：无需账号。设置 > 系统 > 封面 可为新游戏再次运行。
+settings		Everything here is in Settings too (START in the menu), and this setup is under System > First-time setup.	这里的所有内容也都在设置中（菜单中按 START），本设置位于 系统 > 首次设置。
+settings		The first boot's setup again, a step at a time: Wi-Fi (with a test of the connection), the time zone, the DS's name, the RetroAchievements login and box art. B on its first step comes back here.	再次进行首次启动的设置，一次一步：Wi-Fi（并测试连接）、时区、DS 名称、RetroAchievements 登录和封面。在第一步按 B 返回此处。
+settings		Looking at the connection	正在查看连接
+settings		Looking at the connection...	正在查看连接…
+settings		Keep it and go on	保留并继续
+settings		Fetch art for new games	为新游戏获取封面
+settings		{have} of {all} games have art	{all} 个游戏中有 {have} 个已有封面
+settings		Logged in as {name}	已登录为 {name}
+settings		Checking {name}...	正在检查 {name}…
+settings		No answer from the site: no connection, or it is down	网站无响应：没有网络连接，或网站已关闭
+# (from BananaOS-0.5.0-translation.docx)
+menu		Starting...	启动中…
+menu		%ldh %02ldm	%ldh %02ldm
+menu		Recently played	最近游玩
+menu		Search	搜索
+menu		No games match	没有匹配的游戏
+menu		SELECT searches again	按 SELECT 再次搜索
+menu		Charging	充电中
+menu		Full	已充满
+menu		Favorite	收藏
+menu		Last played: {sys.resumeTitle}  ·  X to resume	上次游玩：{sys.resumeTitle} · 按 X 继续
+menu		Plays: {either(game.plays, '0')}	游玩：{either(game.plays, '0')}
+menu		Time: {either(game.time, '0m')}	时间：{either(game.time, '0m')}
+menu		Options	选项
+menu		--assets {shellQuote} --splash {shellQuote} --banana {shellQuote} --systems {shellQuote} --roms {shellQuote}	--assets {shellQuote} --splash {shellQuote} --banana {shellQuote} --systems {shellQuote} --roms {shellQuote}
+menu		Reading the second SD card	正在读取第二张 SD 卡
+menu		Looking for games	正在查找游戏
+menu		Its games join the list in a moment	它的游戏马上就会加入列表
+menu		The game list is updated in a moment	游戏列表马上更新
+menu		The list is updated on the home screen	列表会在主屏幕上更新
+settings		Lagos, Algiers, Kinshasa	拉各斯、阿尔及尔、金沙萨
+settings		Johannesburg, Harare	约翰内斯堡、哈拉雷
+settings		Dubai, Baku	迪拜、巴库
+settings		Karachi, Tashkent, Almaty	卡拉奇、塔什干、阿拉木图
+settings		India, Sri Lanka	印度、斯里兰卡
+settings		Bangkok, Jakarta, Hanoi	曼谷、雅加达、河内
+settings		Brisbane, Guam	布里斯班、关岛
+settings		Los Angeles, Tijuana	洛杉矶、蒂华纳
+settings		Phoenix, Vancouver, Yukon	凤凰城、温哥华、育空
+settings		Denver	丹佛
+settings		Mexico City, Calgary	墨西哥城、卡尔加里
+settings		Chicago	芝加哥
+settings		Buenos Aires, Sao Paulo	布宜诺斯艾利斯、圣保罗
+settings		ROCKNIXDS Pixel's two palettes, dark or light for daylight; Carts (experimental): your games as cartridges on a shelf, in a clean typeface; or a theme of your own: a .json in banana/themes on the card (banana/themes/README.txt says how).	ROCKNIXDS Pixel 的两套调色板，深色或浅色适合白天使用；Carts（实验性）：将你的游戏以卡带形式陈列在书架上，采用简洁字体；或者使用自定义主题：卡上的 banana/themes 目录中的 .json 文件（具体方法见 banana/themes/README.txt）。
+settings		The top screen's backlight. F + volume changes both screens anywhere, in games too.	上屏幕的背光。按 F + 音量键可在任何地方（包括游戏中）同时调节两块屏幕。
+settings		The bananas and the cartridge while Banana starts, and backwards when it shuts down. Off goes straight to the menu once it is ready, and straight to black.	Banana 启动时显示的香蕉与卡带，关机时反向播放。关闭后，准备就绪便直接进入菜单，关机则直接黑屏。
+settings		SuperDrastic: DraStic straight onto both panels, with its own governor. BananaDS: Banana's own emulator (melonDS's core). Both draw 3D with the Gengis Engine at 2x and have their menu on L3; each keeps its own settings below. X on a game in the library picks one for that game alone.	SuperDrastic：DraStic 直接铺满两块屏幕，使用其自带的调度器。BananaDS：Banana 自家的模拟器（基于 melonDS 内核）。两者均用 Gengis Engine 以 2 倍分辨率渲染 3D，并拥有 L3 菜单；各自的设置在下方保留。在游戏库中对某游戏按 X 可单独为其指定其一。
+settings		Sharp pixels (integer)	Sharp pixels (integer)
+settings		Sharp pixels: every DS pixel an exact square, no blur (4x4 on the RG DS Plus, 2x2 in a frame on the RG DS). Crisp: exact pixel-area scaling. Grid and LCD: the DS's screen grid. Colours: the DS's own, duller colours. CRT: a TV's scanlines. FSR: smooth edges, the heaviest. None: smooth scaling, no GPU work. Your own: .frag files in banana/shaders (letters, digits and . _ + - in the name).	Sharp pixels：每个 DS 像素都是精确的方块，无模糊（RG DS Plus 上为 4×4，RG DS 上为带边框的 2×2）。Crisp：精确的像素面积缩放。Grid 与 LCD：DS 的屏幕网格。Colours：DS 自身的、较暗的原色。CRT：电视的扫描线。FSR：平滑边缘，最耗费性能。None：平滑缩放，不占用 GPU。自定义：banana/shaders 中的 .frag 文件（名称只能包含字母、数字以及 . _ + -）。
+settings		2x draws the DS's 3D at twice its size on these panels. 1x is the DS's own, the lightest. 3x and 4x (experimental): three or four times (4x is the RG DS Plus panels' own size), the sharpest and the heaviest: a busy 3D scene can drop below full speed.	2x 在这些屏幕上以两倍尺寸绘制 DS 的 3D 画面。1x 为 DS 原生分辨率，最轻量。3x 与 4x（实验性）：三倍或四倍（4x 即 RG DS Plus 屏幕的原生尺寸），最清晰也最耗费性能：繁忙的 3D 场景可能低于全速。
+settings		Accurate is melonDS's own. Fast lets the two CPUs run longer between meeting (about 10% faster), but it can break a game: Golden Sun: Dark Dawn loses its 3D world.	精确：melonDS 自带的模式。快速：让两颗 CPU 在两次同步之间运行更久（约快 10%），但可能导致游戏异常：《黄金太阳：黑暗黎明》会丢失其 3D 场景。
+settings		How loud a word or a blow must be to reach the game. Off: the game hears nothing from the mic, and the in-game menu's Blow still works for a game that wants one.	需要多大声（说话或吹气）才能被游戏接收到。关：游戏听不到麦克风的声音，但游戏内菜单的「吹气」仍可用于需要它的游戏。
+settings		The card on the network: \\{address}\banana in Windows' File Explorer, smb://{address}/banana on a Mac (Finder, Go, Connect to Server). {sharing}	网络上的存储卡：在 Windows 文件资源管理器中为 \\{address}\banana，在 Mac 上为 smb://{address}/banana（Finder，前往，连接服务器）。{sharing}
+settings		A on a package writes it to the other slot and checks it; the running version stays until the restart. Y deletes the package from the card{on}	在某更新包上按 A 将其写入另一个插槽并校验；运行中的版本会保持到重启。按 Y 可从卡上删除该更新包{on}
+settings	Settings: updates	{n} packages	{n} 个更新包
+settings		Reykjavik, Accra, Dakar	雷克雅未克、阿克拉、达喀尔
+settings		Tehran	德黑兰
+settings		Kabul	喀布尔
+settings		Kathmandu	加德满都
+settings		Dhaka	达卡
+settings		Yangon	仰光
+settings		Darwin	达尔文
+settings		Noumea, Solomon Islands	努美阿、所罗门群岛
+settings		Fiji	斐济
+settings		Tonga, Samoa	汤加、萨摩亚
+settings		Pago Pago	帕果帕果
+settings		Bogota, Lima, Panama, Winnipeg	波哥大、利马、巴拿马、温尼伯
+settings		Havana	哈瓦那
+settings		Caracas, La Paz, Manaus	加拉加斯、拉巴斯、马瑙斯
+settings		Puerto Rico, Santo Domingo	波多黎各、圣多明各
+settings		St. John's	圣约翰斯
+settings		Fernando de Noronha	费尔南多·迪诺罗尼亚
+settings		Azores	亚速尔群岛
+settings		Cape Verde	佛得角
+settings		Gamma	伽马
+settings		Black	黑色
+settings		Grey steps	灰度阶梯
+settings		Colour bars	彩条
+settings		White	白色
+settings		Mid grey	中灰
+settings		None (smooth)	无（平滑）
+settings		{n} (card)	{n}（存储卡）
+settings		Top brightness	上屏亮度
+settings		Bottom brightness	下屏亮度
+settings		The bottom screen's backlight. F + volume changes both screens anywhere, in games too.	下屏幕的背光。按 F + 音量键可在任何地方（包括游戏中）同时调节两块屏幕。
+settings		Screen colours	屏幕色彩
+settings		Power off after sleeping	休眠后关机
+settings		Asleep this long (not while charging), the game is saved where you are and the handheld turns itself off, so the battery keeps for weeks. Press power to start it again: it goes straight back into the game.	休眠达到此时长（充电时不计），游戏会在当前进度保存后自动关机，使电池可续航数周。按电源键再次开机：会直接回到游戏中。
+settings		DS language	DS 语言
+settings		The language the DS itself is set to: a game that has several starts in it. Both emulators.	DS 本机所设置的语言：内含多个启动项的游戏会用到。两个模拟器均适用。
+settings		English	英语
+settings		Japanese	日语
+settings		French	法语
+settings		German	德语
+settings		Italian	意大利语
+settings		Spanish	西班牙语
+settings		DS name	DS 名称
+settings		The name the DS itself is set to, as on a real one: Mario Kart's records, Pictochat, a game's save. 10 characters at most. Both emulators; empty: Dr DraStic in SuperDrastic, Banana in BananaDS.	DS 本机所设置的名称，与真实主机相同：用于 Mario Kart 的记录、Pictochat、游戏的存档。最多 10 个字符。两个模拟器均适用；留空时：SuperDrastic 中为 Dr DraStic，BananaDS 中为 Banana。
+settings		On: the game hears the real microphone (a blow, a voice; the DS's own games that ask for one). Off: it hears nothing from the mic, and the in-game menu's Blow still works for a game that wants one.	开：游戏可听到真实麦克风的声音（吹气、人声；即 DS 本机游戏所要求的那种）。关：游戏听不到麦克风声音，但游戏内菜单的「吹气」仍可用于需要它的游戏。
+settings		Mic sensitivity	麦克风灵敏度
+settings		How far above the room's noise a word or a blow must be to reach the game. Gate off lets the game hear everything the microphone picks up, its own sound from the speaker included.	说话或吹气的声音需高出环境噪声多少才能被游戏接收到。关闭门限则游戏会听到麦克风捕捉到的一切，包括扬声器传出的自身声音。
+settings		Gate off	关闭门限
+settings		Reset BananaDS	重置 BananaDS
+settings		BananaDS's settings back to Banana's. Saves, save states and each game's clock stay. Press A twice.	将 BananaDS 的设置恢复为 Banana 的默认值。存档、即时存档以及每款游戏的时钟保持不变。按 A 两次。
+settings		Threaded 3D	多线程 3D
+settings		On draws the DS's 3D beside the game, the faster way. Off draws it in step with the game: for a game whose 3D shows on the wrong screen or a frame late with it on (the Dragon Quest games).	开：在游戏旁并行绘制 DS 的 3D，速度更快。关：与游戏同步绘制：适用于开启后 3D 显示错屏或慢一帧的游戏（勇者斗恶龙系列）。
+settings		Reset buttons	重置按键
+settings		DraStic's buttons back to Banana's, for a button setup gone wrong in DraStic's menu: the pad as printed, F or L3 the menu, R2 save, L2 load, R3 fast forward. (HOME always opens the menu.) Press A twice.	将 DraStic 的按键恢复为 Banana 的默认值，用于修正 DraStic 菜单中出错的按键配置：十字键按印刷标示，F 或 L3 打开菜单，R2 保存，L2 读取，R3 快进。（HOME 始终打开菜单。）按 A 两次。
+settings		Reset DraStic	重置 DraStic
+settings		All of DraStic's and SuperDrastic's settings back to Banana's, the buttons too. Saves, save states, cheats and the DS's name and birthday stay. Press A twice.	将 DraStic 与 SuperDrastic 的全部设置（包括按键）恢复为 Banana 的默认值。存档、即时存档、金手指以及 DS 的名称和生日保持不变。按 A 两次。
+settings		Softcore: achievements unlock with save states, rewind and cheats still there. Hardcore: those are locked for the game, and the unlocks count as hardcore on retroachievements.org. RetroArch's own menu changes the same setting.	Softcore：成就可在保留即时存档、回退与金手指的情况下解锁。Hardcore：这些功能对该游戏锁定，且解锁记录将在 retroachievements.org 计为 Hardcore。RetroArch 自身的菜单可更改同一设置。
+settings		Softcore	Softcore
+settings		Hardcore	Hardcore
+settings		On: quitting keeps where you are, and the game goes on from there next time (RetroArch's automatic save state; not in Hardcore). Off: a game starts from its title.	开：退出时保留进度，下次从该处继续（RetroArch 的自动即时存档；Hardcore 下不可用）。关：游戏从标题画面开始。
+settings		A look for the systems RetroArch runs: a handheld's LCD grid, a CRT's scanlines, or sharp pixels at any size. RetroArch's own Shaders menu still picks any of libretro's presets.	为 RetroArch 运行的系统提供外观：掌机的 LCD 网格、CRT 的扫描线，或任意尺寸的锐利像素。RetroArch 自身的「着色器」菜单仍可选择 libretro 的任何预设。
+settings		LCD	LCD
+settings		CRT	CRT
+settings		Sharp pixels	Sharp pixels
+settings		Audio latency	音频延迟
+settings		RetroArch's audio buffer. Low is the quickest to react and can crackle on a busy game; Safe has the most margin (and the most delay).	RetroArch 的音频缓冲。低：反应最快，但在繁忙游戏中可能出现爆音；安全：余量最大（延迟也最大）。
+settings		Low (32 ms)	低（32 毫秒）
+settings		Default (64 ms)	默认（64 毫秒）
+settings		Safe (128 ms)	安全（128 毫秒）
+settings		On waits for the panel's refresh before drawing the next frame, so nothing tears. Off lets a core run as fast as it can; the panel can show a half-drawn frame.	开：在绘制下一帧前等待屏幕刷新，从而避免画面撕裂。关：让核心尽可能快运行；屏幕可能显示未绘制完成的帧。
+settings		The emulator for GBA games. gpSP: the fastest. mGBA: the most accurate, and the one RetroAchievements accepts for hardcore. Cores downloaded with RetroArch's Core Downloader (its Online Updater) are listed here too.	用于 GBA 游戏的模拟器。gpSP：速度最快。mGBA：最精确，也是 RetroAchievements 在 Hardcore 下接受的模拟器。通过 RetroArch 的「核心下载器」（其 Online Updater）下载的核心也会列于此处。
+settings		RetroArch hotkeys	RetroArch 热键
+settings		F + a button in a game: X the menu, Start quits, L and R load and save a state, Y the frame counter, L2 rewind, R2 fast forward. Off: only F + X and F + Start, the two needed to get out, and none bound in RetroArch's own menu either.	游戏中按 F + 某按键：X 打开菜单，Start 退出，L 和 R 读取与保存即时存档，Y 帧计数器，L2 回退，R2 快进。关：仅保留 F + X 与 F + Start 这两个退出所需组合，且在 RetroArch 自身菜单中也不绑定其他组合。
+settings		Reset RetroArch	重置 RetroArch
+settings		RetroArch's settings back to Banana's: for a button bound away in RetroArch's menu (an A that does something else, a hotkey on a face button). Its controls, remaps and overrides go to retroarch/backup-<date> on the card. Saves, states, the RetroAchievements account and these settings stay. Press A twice.	将 RetroArch 的设置恢复为 Banana 的默认值：用于修正在 RetroArch 菜单中被改绑的按键（执行其他功能的 A、面部按键上的热键）。其控制、重映射与覆盖会保存到卡上的 retroarch/backup-<date>。存档、即时存档、RetroAchievements 账号以及这些设置保持不变。按 A 两次。
+settings		Controllers, headphones and speakers. Off (the default) leaves the radio unpowered, which saves battery; Bluetooth devices, below, pairs them. While Bluetooth headphones are connected the sound plays on them.	手柄、耳机与扬声器。关（默认）时不给无线模块供电，以节省电量；下方的「蓝牙设备」可与之配对。连接蓝牙耳机后，声音将通过耳机播放。
+settings		Bluetooth devices	蓝牙设备
+settings		The devices paired and the ones around: A pairs with one in pairing mode, connects a paired one or disconnects it.	已配对设备及附近设备：按 A 与处于配对模式的设备配对，或连接/断开已配对设备。
+settings		Bluetooth audio	蓝牙音频
+settings		Low latency: aptX, or SBC on headphones without it: the sound as close to the picture as Bluetooth gets, for games. Best quality: LDAC, aptX HD or a richer SBC when the headphones have them, a little later (tens of ms) and a little more battery. Headphones connected now reconnect to take the change.	低延迟：aptX，或耳机不支持时使用 SBC：声音尽可能贴近画面，适合游戏。最佳音质：耳机支持时使用 LDAC、aptX HD 或更高码率的 SBC，稍晚一些（数十毫秒）且更费电。当前已连接的耳机会重新连接以应用更改。
+settings		Low latency	低延迟
+settings		Best quality	最佳音质
+settings		Sharing login	共享登录
+settings		Name and password: the card asks for the name and password below (Windows refuses a share with no password). Guest: anyone on the network opens it with none; only on a network you trust.	名称与密码：存储卡会要求输入下方的名称与密码（Windows 拒绝无密码的共享）。访客：网络上任何人无需密码即可打开；仅在你信任的网络上使用。
+settings		Name and password	名称与密码
+settings		Guest	访客
+settings		Sharing name and password	共享名称与密码
+settings		The language of the menu and the settings. Lines not yet translated stay in English.	菜单与设置的显示语言。尚未翻译的行会保持英文。
+settings		{name} ({English name}): translated by {translator}.	{name}（{English name}）：由 {translator} 翻译。
+settings		Language	语言
+settings		Box art from	封面来源
+settings		libretro: libretro's collections. libretro + Twilight: TwilightBoxart (boxart.kirovair.com) for the covers libretro has none of. Twilight first: TwilightBoxart's covers where it has them. TwilightBoxart is asked one game a second.	libretro：libretro 的图库。libretro + Twilight：对于 libretro 没有封面的游戏，使用 TwilightBoxart（boxart.kirovair.com）。Twilight 优先：在 TwilightBoxart 有所封面时使用它的封面。TwilightBoxart 每秒查询一款游戏。
+settings		libretro + Twilight	libretro + Twilight
+settings		Twilight first	优先 Twilight
+settings		Second SD card	第二张 SD 卡
+settings		Games on the card in the second slot (its roms folder, with the same system folders as this card) show up in the library with the others while it's in. exFAT or FAT32.	插着时，第二插槽中存储卡上的游戏（其 roms 文件夹，系统文件夹与本卡相同）会与其他游戏一同出现在游戏库中。文件系统为 exFAT 或 FAT32。
+settings		Show its games	显示其游戏
+settings		Reset system settings	重置系统设置
+settings		Puts the menu, display, sound, power and network settings back to their defaults, the time zone too (the language stays). Your games, saves and the emulators' settings are untouched. Press A twice.	将菜单、显示、声音、电源与网络设置恢复为默认值（时区也会重置，语言不变）。你的游戏、存档以及模拟器的设置不受影响。按 A 两次。
+settings		Reset emulator settings	重置模拟器设置
+settings		Puts the emulator choices back to their defaults: the DS emulator, Quick resume, each system's emulator (core), and RetroArch's shader, audio latency, VSync and hotkeys. Your menu settings, saves and games stay. Press A twice.	将模拟器选项恢复为默认值：DS 模拟器、快速继续、各系统的模拟器（核心），以及 RetroArch 的着色器、音频延迟、VSync 与热键。你的菜单设置、存档与游戏保持不变。按 A 两次。
+settings		Search	搜索
+settings		SuperDrastic: F	SuperDrastic：F
+settings		SuperDrastic: F + START	SuperDrastic：F + START
+settings		SuperDrastic: R2 / L2	SuperDrastic：R2 / L2
+settings		SuperDrastic: R3	SuperDrastic：R3
+settings		BananaDS: F / L3	BananaDS：F / L3
+settings		BananaDS: F + R	BananaDS：F + R
+settings		BananaDS: F + L	BananaDS：F + L
+settings		BananaDS: F + START	BananaDS：F + START
+settings		RetroArch: F + X	RetroArch：F + X
+settings		RetroArch: F + START	RetroArch：F + START
+settings		RetroArch: F + R / F + L	RetroArch：F + R / F + L
+settings		RetroArch: F + R2	RetroArch：F + R2
+settings		RetroArch: F + L2	RetroArch：F + L2
+settings		RetroArch: F + Y	RetroArch：F + Y
+settings		From the theme	跟随主题
+settings		This theme sets its own accent colour. Pick Dark, Light or a theme without one to choose it here.	此主题已设定自身的强调色。选择深色、浅色，或不带强调色的主题，即可在此处自行选择。
+settings		Name	名称
+settings		The DS's name	DS 的名称
+settings		10 characters at most	最多 10 个字符
+settings		DraStic's buttons are Banana's again.	DraStic 的按键已恢复为 Banana 的默认值。
+settings		Back to Banana's settings.	已恢复为 Banana 的设置。
+settings		Couldn't reset: the card may be read-only.	重置失败：存储卡可能为只读。
+settings		RetroArch is back to Banana's settings. The old ones are in {out} on the card.	RetroArch 已恢复为 Banana 的设置。旧设置保存在卡上的 {out}。
+settings		RetroArch couldn't be reset.	RetroArch 无法重置。
+settings		Emulator settings reset	模拟器设置已重置
+settings		System settings reset	系统设置已重置
+settings		The core choices and RetroArch's options are back to their defaults.	核心选择与 RetroArch 的选项已恢复为默认值。
+settings		The menu, display, sound and power settings are back to their defaults.	菜单、显示、声音与电源设置已恢复为默认值。
+settings		Linux {release}.	Linux {release}。
+settings		The two screens rarely show the same white. This corrects one of them towards the other: the same test pattern on both, and red, green, blue, gamma, brightness and black for the one corrected (the handheld has one colour table, so one screen). Now: {c}	两块屏幕很少显示相同的白色。此功能将其中一块向另一块校正：两块显示同一测试图案，并对被校正的一块提供红、绿、蓝、伽马、亮度与黑场（主机共用一张色彩表，因此仅一块屏幕）。当前：{c}
+settings		no correction.	不校正。
+settings		the top screen corrected.	已校正上屏。
+settings		the bottom screen corrected.	已校正下屏。
+settings		What a computer asks for when it opens the share: name {name}, password {password}. A changes them (they are kept in banana/accounts.conf, which the share never shows).	电脑打开共享时所要求的：名称 {name}、密码 {password}。按 A 可更改（保存在 banana/accounts.conf 中，共享不会显示该文件）。
+settings		Anyone on the network can open it with no password (Sharing login): leave it off on networks you don't trust.	网络上任何人无需密码即可打开它（共享登录）：在你不信任的网络上请保持关闭。
+settings		Name {name}, password {password} (Sharing name and password, below).	名称 {name}、密码 {password}（见下方的「共享名称与密码」）。
+settings		Not set	未设置
+settings		The pictures didn't come: no connection?	图片未能获取：是否无连接？
+settings		Not fetched: {error}.	未能获取：{error}。
+settings		no connection	无连接
+settings		No connection: is Wi-Fi connected?	无连接：Wi-Fi 是否已连接？
+settings		Nothing in libretro's collection for "{words}". Fewer words, or another spelling (B, then A to type again).	libretro 的图库中没有匹配「{words}」的内容。请减少字数或更换拼写（按 B，再按 A 重新输入）。
+settings		Couldn't write banana/wifi.conf on the card.	无法在卡上写入 banana/wifi.conf。
+settings		{network} signs in a way the menu can't (a company network, or the old WEP): it can be written in banana/wifi.conf on a computer.	{network} 的登录方式菜单无法处理（公司网络，或旧的 WEP）：可在电脑上写入 banana/wifi.conf。
+settings		Password for	密码（用于）
+settings		{name} forgotten: its password is gone from banana/wifi.conf.	{name} 已遗忘：其密码已从 banana/wifi.conf 中移除。
+settings		A joins the network chosen, with its password typed on the keyboard (or by touch). X searches again, Y forgets a saved network. Passwords are kept in banana/wifi.conf on the card.	按 A 加入所选网络，密码在键盘上输入（或通过触摸）。按 X 再次搜索，按 Y 遗忘已保存的网络。密码保存在卡上的 banana/wifi.conf 中。
+settings		Every system's games	各系统的游戏
+settings		No games match	没有匹配的游戏
+settings		{value} game matches	{value} 款游戏匹配
+settings		A types the key, B deletes, X capitals, Y a space, START searches: the games found open as a shelf of their own, first on the shelf. Part of a name is enough; an empty search takes the shelf away.	按 A 输入字符，B 删除，X 大写，Y 空格，START 搜索：找到的游戏会作为独立书架打开，排在最前。输入部分名称即可；清空搜索则移除该书架。
+settings		A types the key, B deletes, X capitals, L symbols, Y a space, START joins. Or tap the keys. The password is kept in banana/wifi.conf on the card.	按 A 输入字符，B 删除，X 大写，L 符号，Y 空格，START 加入。也可点按按键。密码保存在卡上的 banana/wifi.conf 中。
+settings		A types the key, B deletes, X capitals, L symbols, Y a space, START when it is typed. Kept in both emulators' settings (DraStic's drastic.cfg, BananaDS's bananads.conf).	按 A 输入字符，B 删除，X 大写，L 符号，Y 空格，输入完成后按 START。保存在两个模拟器的设置中（DraStic 的 drastic.cfg、BananaDS 的 bananads.conf）。
+settings		A types the key, B deletes, X capitals, L symbols, Y a space, START when it is typed. Kept in banana/game-titles.tsv on the card.	按 A 输入字符，B 删除，X 大写，L 符号，Y 空格，输入完成后按 START。保存在卡上的 banana/game-titles.tsv 中。
+settings		A types the key, B deletes, X capitals, L symbols, Y a space, START looks. A few words of the name are enough: the closest names come first.	按 A 输入字符，B 删除，X 大写，L 符号，Y 空格，START 查找。输入名称的几个字即可：最相近的名称排在最前。
+settings		A types the key, B deletes, X capitals, L symbols, Y a space, START when it is typed. Or tap the keys. Accounts are kept in banana/accounts.conf on the card.	按 A 输入字符，B 删除，X 大写，L 符号，Y 空格，输入完成后按 START。账号保存在卡上的 banana/accounts.conf 中。
+settings		failed: the download stopped	失败：下载已停止
+settings		RetroAchievements password for	RetroAchievements 的密码（用于）
+settings		ScreenScraper password for	ScreenScraper 的密码（用于）
+settings		A name of letters, digits, dots, dashes or underscores, at most 32.	名称由字母、数字、点、连字符或下划线组成，最多 32 个字符。
+settings		File sharing password for	文件共享的密码（用于）
+settings		The password can't be empty: Sharing login > Guest is for a share with none.	密码不能为空：「共享登录」>「访客」适用于无密码的共享。
+settings		The DS takes 10 characters at most; this one has {count}.	DS 最多 10 个字符；此名称有 {count} 个。
+settings		Looking in libretro's collection...	正在查找 libretro 的图库…
+settings		The time zone is still UTC, so the clock shows {time}. Left and right pick yours; Finish again to keep UTC.	时区仍为 UTC，因此时钟显示 {time}。左右方向键可选择你的时区；再次「完成」可保留 UTC。
+settings		Your name on the DS, as a real one asks for it the first time: Mario Kart's records, Pictochat, a game's save. A types it (10 characters at most). Leave it and the emulators use their own.	你在 DS 上的名称，如同真实主机首次使用时所要求：用于 Mario Kart 的记录、Pictochat、游戏的存档。按 A 输入（最多 10 个字符）。留空则由模拟器使用各自的默认名称。
+settings		Tap a tile; F + X opens RetroArch's menu, F + Start quits	点按某个磁贴；F + X 打开 RetroArch 菜单，F + Start 退出
+settings		F + X opens RetroArch's menu, F + Start quits	F + X 打开 RetroArch 菜单，F + Start 退出
+settings		{server}'s address couldn't be looked up: is Wi-Fi connected? (Or the network's DNS isn't answering: try again in a minute)	{server} 的地址无法解析：Wi-Fi 是否已连接？（或网络的 DNS 未响应：请一分钟后重试）
+settings		couldn't connect to {server}: is Wi-Fi connected?	无法连接到 {server}：Wi-Fi 是否已连接？
+settings		{server} didn't answer in time (a weak Wi-Fi signal?)	{server} 未及时响应（Wi-Fi 信号弱？）
+settings		the secure connection to {server} failed: is the clock right? (It says {date})	与 {server} 的安全连接失败：时钟是否正确？（当前显示为 {date}）
+settings		the connection to {server} broke off	与 {server} 的连接已中断
+settings		{server} refused the download (HTTP error)	{server} 拒绝了下载（HTTP 错误）
+settings		the card can't be written (full?)	存储卡无法写入（已满？）
+settings		the file isn't there	文件不存在
+settings		{file} is damaged in {file}: download it again. (Its SHA-256 starts {hash}; the release's SHA256SUMS file lists the right one.)	{file} 中的 {file} 已损坏：请重新下载。（其 SHA-256 以 {hash} 开头；发布的 SHA256SUMS 文件列出了正确的版本。）
+settings		there is no newer version to download: Check for updates first	没有可供下载的较新版本：请先检查更新
+settings		that check was for the {board}, this is the {board}	那次检查针对的是 {board}，而当前是 {board}
+settings		the release's package has an odd name ({file})	发布的更新包名称异常（{file}）
+settings		not enough space on the card: the update needs {n} MB free (the download, and its unpacked copy while it installs); there are {n} MB	存储卡空间不足：更新需要 {n} MB 可用空间（下载文件，以及安装时解包出的副本）；当前仅有 {n} MB
+settings		{error} (fetching SHA256SUMS-{board}.txt)	{error}（获取 SHA256SUMS-{board}.txt 时）
+settings		the release's SHA256SUMS-{board}.txt doesn't list {file}	发布的 SHA256SUMS-{board}.txt 中未列出 {file}
+settings		{error}. What came ({n} MB) is kept: Download again carries on from there	{error}。已下载的部分（{n} MB）会保留：再次「下载」将从中断处继续
+settings		the download stopped at {n} of {n} MB: Download again carries on from there	下载在 {n} / {n} MB 处停止：再次「下载」将从中断处继续
+settings		the download is damaged: its SHA-256 doesn't match the release's SHA256SUMS, so it was deleted. Download it again	下载已损坏：其 SHA-256 与发布的 SHA256SUMS 不匹配，因此已被删除。请重新下载
+settings		can't move the download into banana/updates	无法将下载内容移入 banana/updates
+settings		Fetching the cover and the title screen...	正在获取封面与标题画面…
+settings		Box art for	封面（用于）
+settings		{value} (B works once it has answered.)	{value}（回答后 B 可用。）
+settings		libretro's names for the words typed, the closest first. A fetches that game's cover and title screen for this one (over what it had), and every scrape after keeps them. B types other words.	libretro 中与你输入字词匹配的名称，最相近的排在最前。按 A 为该游戏获取封面与标题画面（覆盖原有内容），之后的每次抓取都会保留它们。按 B 可输入其他字词。
+settings		Looking...	正在查找…
+settings		Use	使用
+settings		{shader} (not on the card)	{shader}（卡上不存在）
+settings		Wi-Fi is off: switch it on in Settings > Network first.	Wi-Fi 已关闭：请先在「设置 > 网络」中打开它。
+settings		Box art: the game's name in libretro's collection	封面：游戏在 libretro 图库中的名称
+settings		This game's name	本游戏的名称
+settings		This game's sort title	本游戏的排序标题
+settings		As in Settings ({setting})	与设置相同（{setting}）
+settings		As in Settings: {shader}	与设置相同：{shader}
+settings		As scraped	按抓取结果
+settings		By its name	按名称
+settings		Sort title	排序标题
+settings		Fetched	已获取
+settings		Find it by name	按名称查找
+settings		This game's emulator	本游戏的模拟器
+settings		This game's shader	本游戏的着色器
+settings		This game's 3D	本游戏的 3D
+settings		This game's microphone	本游戏的麦克风
+settings		This game's box art	本游戏的封面
+settings		SuperDrastic: DraStic onto both panels, the fastest. BananaDS: Banana's own emulator (melonDS's core), the most accurate. The choice is for this game only; the others follow Settings > Nintendo DS > Emulator.	SuperDrastic：DraStic 铺满两块屏幕，速度最快。BananaDS：Banana 自家的模拟器（基于 melonDS 内核），最精确。此选择仅适用于本游戏；其余游戏遵循 设置 > Nintendo DS > 模拟器。
+settings		The picture's shader for this game only, in either emulator; the others follow Settings > Nintendo DS > Shader. None scales smoothly and costs no GPU work.{PLUS_SHADER_NOTE}	仅本游戏的画面着色器，两种模拟器均可；其余游戏遵循 设置 > Nintendo DS > 着色器。None 平滑缩放且不占用 GPU。{PLUS_SHADER_NOTE}
+settings		SuperDrastic (DraStic) only. On draws the DS's 3D beside the game, the faster way; Off draws it in step with the game, for a game whose 3D shows on the wrong screen or a frame late (the Dragon Quest games). The others follow Settings > Nintendo DS > Threaded 3D.	仅 SuperDrastic（DraStic）。开：在游戏旁并行绘制 DS 的 3D，速度更快；关：与游戏同步绘制，适用于开启后 3D 显示错屏或慢一帧的游戏（勇者斗恶龙系列）。其余游戏遵循 设置 > Nintendo DS > 多线程 3D。
+settings		How loud a word or a blow must be to reach this game, in either emulator: High hears a quiet voice, Low only a loud one, Off none. For a game that needs the microphone (Nintendogs) or one it bothers.	需多大声（说话或吹气）才能被本游戏接收到，两种模拟器均可：高 可听到轻微人声，低 仅能听到很响的声音，关 则完全听不到。适用于需要麦克风（Nintendogs）或受其干扰的游戏。
+settings		The name the menu shows for this game. A types it; an empty one goes back to the scraped name. Kept in banana/game-titles.tsv, which scraping the box art again leaves alone.	菜单中显示的本游戏名称。按 A 输入；留空则恢复为抓取的命名。保存在 banana/game-titles.tsv 中，再次抓取封面不会改动它。
+settings		The library's order goes by this instead of the name: Dragon Quest 04, 05 and 09 keep IV, V and IX in their order. A types it; an empty one sorts by the name again.	游戏库改以此而非名称排序：如 勇者斗恶龙 04、05、09 保持 IV、V、IX 的顺序。按 A 输入；留空则恢复按名称排序。
+settings		For a game the box art scrape got wrong or didn't find (a translation, a hack, another name): A types its name as libretro's collection has it, then you pick the right one from what it finds. Wi-Fi needed.	适用于封面抓取错误或未找到的游戏（翻译版、改版、其他名称）：按 A 输入其在 libretro 图库中的名称，然后从搜索结果中选择正确的一个。需 Wi-Fi。
+settings		This game	本游戏
+settings		Type	输入
+settings		Find	查找
+settings		Search games	搜索游戏
+settings		Pairing with {name}...	正在与 {name} 配对…
+settings		Connecting to {name}...	正在连接 {name}…
+settings		Disconnecting {name}...	正在断开 {name}…
+settings		Forgetting {name}...	正在遗忘 {name}…
+settings		Bluetooth didn't come on: {reason}.	蓝牙未能开启：{reason}。
+settings		Paired with {n}.	已与 {n} 配对。
+settings		Couldn't pair with {n}{reason} Put it in pairing mode again (its manual says how), then A.	无法与 {n} 配对{reason}请将其重新置于配对模式（其说明书有说明），然后按 A。
+settings		Couldn't connect to {n}{reason} Is it on and near the handheld?	无法连接到 {n}{reason}它是否已开启并靠近主机？
+settings		{n} disconnected.	{n} 已断开。
+settings		Couldn't disconnect {n}{reason}	无法断开 {n}{reason}
+settings		{n} forgotten: pair with it again to use it.	{n} 已遗忘：需重新配对才能使用。
+settings		Couldn't forget {n}{reason}	无法遗忘 {n}{reason}
+settings		Bluetooth is off	蓝牙已关闭
+settings		Nothing connected	未连接任何设备
+settings		Bluetooth is switched off. X switches it on and searches.	蓝牙已关闭。按 X 可打开并搜索。
+settings		A pairs with the device chosen (put it in pairing mode first), connects a paired one, or disconnects it. X searches again, Y forgets a paired device. Headphones play the sound while they are connected; controllers work in the games.	按 A 与所选设备配对（需先置于配对模式），或连接/断开已配对设备。按 X 再次搜索，按 Y 遗忘已配对设备。连接耳机时声音通过耳机播放；手柄可在游戏中使用。
+settings		Devices	设备
+settings		Paired	已配对
+settings		No devices found. X searches again.	未找到设备。按 X 再次搜索。
+settings		Pair	配对
+settings		Disconnect	断开
+settings		Connect	连接
+settings		Headphones	耳机
+settings		Controller	手柄
+settings		Keyboard	键盘
+settings		Mouse	鼠标
+settings		Back to no correction: A keeps that, B goes back to what was kept.	返回「不校正」：按 A 应用该状态，按 B 回到之前保留的设置。
+settings		The display refused it: {error}. Nothing was kept.	显示拒绝应用：{error}。未保留任何更改。
+settings		The card can't be written.	存储卡无法写入。
+settings		No correction	不校正
+settings		The top screen corrected	已校正上屏
+settings		The bottom screen corrected	已校正下屏
+settings		Screen colours  ·  {pattern}  ·  L / R: another pattern	屏幕色彩 · {pattern} · L / R：切换图案
+settings		Make the screen you correct look like the other one. X: no correction.	使被校正的屏幕看起来与另一块一致。按 X：不校正。
+settings		Correct the top	校正上屏
+settings		Correct the bottom	校正下屏
+settings		Keep	保留
+settings		3x (experimental)	3x（实验性）
+settings		4x (experimental)	4x（实验性）
+settings		The emulator (RetroArch core) for this system's games: the first is BananaOS's own. Cores downloaded with RetroArch's Core Downloader (its Online Updater) are listed here too.	本系统游戏的模拟器（RetroArch 核心）：第一个是 BananaOS 自带的。通过 RetroArch 的「核心下载器」（其 Online Updater）下载的核心也会列于此处。
+settings		Home server	家庭服务器
+settings		Your games, their box art and your saves from a server at home: Romhost (Homeport's ROM library) or RomM. A opens its page: pairing, Sync now, and what syncs.	来自家庭服务器上的你的游戏、其封面与存档：Romhost（Homeport 的 ROM 库）或 RomM。按 A 打开其页面：配对、立即同步，以及同步内容。
+settings		SuperDrastic: F + SELECT	SuperDrastic：F + SELECT
+settings		Swap the screens	交换屏幕
+settings		DS games in SuperDrastic: the DS's top screen on the bottom panel and its bottom screen on the top one (touch follows it: the RG DS's top touchscreen; on the RG DS Plus no touch while swapped), and back. Kept for each game.	SuperDrastic 中的 DS 游戏：将 DS 的上屏显示在下屏、下屏显示在上屏（触摸随之切换：RG DS 的顶触摸；RG DS Plus 交换时禁用触摸），并可还原。每个游戏单独保存。
+settings		BananaDS: F + SELECT	BananaDS：F + SELECT
+settings		DS games in BananaDS: the DS's top screen on the bottom panel and its bottom screen on the top one (touch follows it: the RG DS's top touchscreen; on the RG DS Plus no touch while swapped), and back. Kept for each game.	BananaDS 中的 DS 游戏：将 DS 的上屏显示在下屏、下屏显示在上屏（触摸随之切换：RG DS 的顶触摸；RG DS Plus 交换时禁用触摸），并可还原。每个游戏单独保存。
+settings		Server	服务器
+settings		Sync now	立即同步
+settings		Copies the server's games (with their covers and names) to the card and syncs the saves both ways. It carries on in the background; the handheld doesn't sleep while games download. Files of your own are never replaced or deleted: only the ones a sync put there.	将服务器上的游戏（含封面与名称）复制到卡上，并双向同步存档。它在后台持续进行；下载游戏时主机不会休眠。你自己的文件绝不会被替换或删除：仅同步放入的那些文件。
+settings		Download: the server's games for the systems below come to the card (and leave it when they leave the server). Saves only: the games stay as they are and only the saves sync.	下载：下方各系统对应的游戏会从服务器来到卡上（服务器移除时卡上也随之移除）。仅存档：游戏保持不变，仅同步存档。
+settings		Saves only	仅存档
+settings		Save states	即时存档
+settings		On: save states sync too, not only the games' own saves (RomM; on Romhost its Devices page decides). Quick-resume states never sync.	开：即时存档也会同步，而不只是游戏自身的存档（RomM；在 Romhost 上由其 Devices 页面决定）。快速继续的状态永不同步。
+settings		Auto sync	自动同步
+settings		Leaving a game: its saves go to the server as you leave it (a few seconds, in the background). And on Wi-Fi: also games and saves whenever Wi-Fi connects. Never while a game runs.	离开游戏时：其存档会在你离开时发送到服务器（后台进行，耗时数秒）。并且通过 Wi-Fi：每次 Wi-Fi 连接时也会同步游戏与存档。游戏运行时永不进行。
+settings		Leaving a game	离开游戏时
+settings		And on Wi-Fi	以及通过 Wi-Fi
+settings		Which systems sync on this handheld. A skipped system's games stay as they are on the card.	在此掌机上同步哪些系统。跳过的系统的游戏在卡上保持不变。
+settings		Forget this server	遗忘此服务器
+settings		Unpairs the handheld: nothing syncs until it is paired again. The games and saves stay on the card. Press A twice.	取消掌机的配对：在重新配对前不会同步任何内容。游戏与存档保留在卡上。按 A 两次。
+settings		Home server systems	家庭服务器系统
+settings		Sync: its games and saves sync with the home server. Skip: they stay as they are on this handheld.	同步：其游戏与存档与家庭服务器同步。跳过：它们在此掌机上保持不变。
+settings		Sync	同步
+settings		Unpaired. The games and saves stay on the card.	未配对。游戏与存档保留在卡上。
+settings		OVERFLOW	OVERFLOW
+settings		Mario & Luigi - Partners in Time (Europe) (En,Fr,De,Es,It) (Rev 1).nds	Mario & Luigi - Partners in Time (Europe) (En,Fr,De,Es,It) (Rev 1).nds
+settings		Game page > {value}	游戏页面 > {value}
+settings		wrong password	密码错误
+settings		no answer	无响应
+settings		{n} old packages removed from banana/updates.	{n} 个旧更新包已从 banana/updates 中移除。
+settings		Banana {count}'s package deleted from banana/updates.	Banana {count} 的更新包已从 banana/updates 中删除。
+settings		Banana {count}'s package couldn't be deleted.	Banana {count} 的更新包无法删除。
+settings		Pairing code for	配对码（用于）
+settings		No Romhost answered. Server address	没有 Romhost 响应。服务器地址
+settings		Romhost or RomM	Romhost 或 RomM
+settings		Asking {name} for a pairing code...	正在向 {name} 请求配对码…
+settings		Nothing answers there as a Romhost or RomM server. Check the address (and :port) and that the handheld is on the same network.	那里没有以 Romhost 或 RomM 服务器身份响应的设备。请检查地址（及 :port）以及掌机是否在同一网络上。
+settings		On {hsName}, open {url} (signed in) and enter {code}, then approve this handheld. Waiting...	在 {hsName} 上，打开 {url}（已登录）并输入 {code}，然后批准此掌机。等待中…
+settings		Paired with {ln}. Sync now, below, gets the games and saves.	已与 {ln} 配对。下方的「立即同步」会获取游戏与存档。
+settings		Pairing didn't work: {ln}.	配对失败：{ln}。
+settings		None right now.	当前无。
+settings		Tap: back	点按：返回
+settings		%s %s: the title "%s" is too long for its tab (give "tab")	%s %s：标题 "%s" 对其标签页而言过长（请提供 "tab"）
+settings		%s %s: a reference page with %zu characters	%s %s：一个包含 %zu 个字符的参考页
+settings		On the Plus a shader also heats the chip: a heavy 3D game can drop frames after a few minutes. Give such a game None on its own page (X in the library).	在 Plus 机型上，着色器也会使芯片发热：繁重的 3D 游戏几分钟后可能掉帧。请为此类游戏在其单独页面选择 None（在游戏库中按 X）。
+settings		VBA Next	VBA Next
+settings		VBA-M	VBA-M
+settings		Meteor	Meteor
+settings		Gambatte	Gambatte
+settings		Gearboy	Gearboy
+settings		TGB Dual	TGB Dual
+settings		NES	NES
+settings		Nestopia UE	Nestopia UE
+settings		Mesen	Mesen
+settings		QuickNES	QuickNES
+settings		Snes9x	Snes9x
+settings		Snes9x 2010	Snes9x 2010
+settings		Snes9x 2005 Plus	Snes9x 2005 Plus
+settings		Snes9x 2005	Snes9x 2005
+settings		Snes9x 2002	Snes9x 2002
+settings		Mesen-S	Mesen-S
+settings		PicoDrive	PicoDrive
+settings		Genesis Plus GX	Genesis Plus GX
+settings		BlastEm	BlastEm
+settings		PCSX ReARMed	PCSX ReARMed
+settings		SwanStation	SwanStation
+settings		Beetle PSX	Beetle PSX
+settings		ParaLLEl N64	ParaLLEl N64
+settings		The picture's shader for this game only, in either emulator; the others follow Settings > Nintendo DS > Shader. None scales smoothly and costs no GPU work.	仅本游戏的画面着色器，两种模拟器均可；其余游戏遵循 设置 > Nintendo DS > 着色器。None 平滑缩放且不占用 GPU。
+settings		RetroArch {ra}, updated with BananaOS.	RetroArch {ra}，随 BananaOS 更新。
+settings		Not paired. A looks for Romhost on the network (Homeport > ROMs > Pair a device shows its code); when none answers, type the address of a Romhost or a RomM server (a name or IP, and :port if it isn't the usual one). RomM then shows a code to enter on its Pair device page.	未配对。按 A 在网络上查找 Romhost（Homeport > ROMs > Pair a device 会显示其配对码）；若无响应，请输入 Romhost 或 RomM 服务器的地址（名称或 IP，非默认端口时加 :port）。随后 RomM 会显示一个需在「Pair device」页面输入的配对码。
+settings		Paired with {n}. A pairs again (another server, or after the handheld was removed there).	已与 {n} 配对。按 A 可重新配对（更换服务器，或在掌机已从该处移除后）。
+settings		Last sync: {g} files of games down, {rm} removed; saves {up} up, {dn} down{cf}{er}	上次同步：游戏文件下载 {g}，移除 {rm}；存档上传 {up}，下载 {dn}{cf}{er}
+settings		; {cf} in conflict (on Romhost: decide in Homeport; on RomM the newer won and the other is kept on the card as a .bak)	；{cf} 个冲突（Romhost 上：在 Homeport 中决定；RomM 上：较新的获胜，另一个作为 .bak 保留在卡上）
+settings		. {er} didn't work: {reason}.	。{er} 个未成功：{reason}。
+settings		The last sync didn't work: {syncLine}.	上次同步未成功：{syncLine}。
+settings		Syncing with {homeServer}. It carries on if you leave this screen; the library shows the new games when it's done.	正在与 {homeServer} 同步。离开本屏幕也会继续；完成后游戏库会显示新游戏。
+settings		the server	服务器
+settings		Pairing	配对中
+settings		Not paired	未配对
+settings		The home server's address: its name or IP, and :port when it isn't the usual (Romhost 8092, RomM 8080 or 80). A types the key, B deletes, L symbols (the dot and colon), START when it is typed.	家庭服务器的地址：其名称或 IP，非默认端口时加 :port（Romhost 为 8092，RomM 为 8080 或 80）。按 A 输入字符，B 删除，L 符号（点号与冒号），输入完成后按 START。
+settings		The code Homeport shows under ROMs > Pair a device (or, for RomM, a client token's pairing code). START when it is typed.	Homeport 在 ROMs > Pair a device 下显示的配对码（或 RomM 的客户令牌配对码）。输入完成后按 START。
+settings		no reason given	未给出原因
+settings		Y again deletes this package from banana/updates on the card (the installed versions aren't touched). Any other button keeps it.	再次按 Y 将此更新包从卡上的 banana/updates 中删除（已安装的版本不受影响）。其他按键则保留它。
+settings		X again removes {on} ({ob} MB) not newer than the version running now from banana/updates. Any other button keeps them.	再次按 X 从 banana/updates 中移除不比当前运行版本更新的 {on}（{ob} MB）。其他按键则保留它们。
+settings		; X removes every package not newer than this version ({on}{ob} MB).	；再按 X 移除所有不比此版本更新的更新包（{on}{ob} MB）。
+settings		1 package, {value}	1 个更新包，{value}
+settings		{on} packages,	{on} 个更新包，
+settings		Press Y again: delete	再次按 Y：删除
+settings		Press X again: remove	再次按 X：移除
+settings		Delete!	删除！
+settings		Written to the other slot	已写入另一个插槽
+settings		The update wasn't installed	更新未安装
+settings		Writing the new version	正在写入新版本
+settings		Checking what was written	正在校验写入内容
+settings		Unpacking and checking the package	正在解包并校验更新包
+settings		Update ready	更新就绪
+settings		Update failed	更新失败
+settings		Installing update	正在安装更新
+settings		Don't turn the handheld off	请勿关闭掌机
+settings		Don't turn the handheld off. Your games, saves and settings stay; the running version isn't touched until the restart. It takes a minute or two.	请勿关闭掌机。你的游戏、存档与设置保持不变；运行中的版本在重启前不受影响。这大约需要一两分钟。
+settings		A restarts into the new version now. If it ever fails to start, Settings > System > Previous version brings this one back.	按 A 立即重启进入新版本。若日后无法启动，可用 设置 > 系统 > 上一版本 恢复当前版本。
+settings		The password couldn't be passed on ({runDir} can't be written).	无法传递密码（{runDir} 无法写入）。
+settings		Looking for a home server on the network...	正在网络上查找家庭服务器…
+settings		Not paired yet: Server, above, pairs the handheld.	尚未配对：上方的「服务器」可为掌机配对。
+settings		Syncing	正在同步
+settings		Didn't all work	未全部成功
+settings		Done, conflicts	完成，存在冲突
+settings		Pair again	重新配对
+settings		the update channel changed since the check: Check for updates again	检查后更新频道已变更：请再次检查更新
+settings		In use	使用中
+settings		A uses it	按 A 使用
+settings		Drawing...	正在绘制…
+settings		No picture	无画面
+settings		Themes	主题
+settings		BananaDS only. The size the DS's 3D is drawn at for this game: 1x the DS's own, 2x twice, 3x and 4x (experimental) three and four times, the sharpest and the heaviest (a busy 3D scene can drop below full speed). The others follow Settings > Nintendo DS > 3D resolution.	仅 BananaDS。本游戏 DS 的 3D 绘制尺寸：1x 为 DS 原生，2x 两倍，3x 与 4x（实验性）为三、四倍，最清晰也最耗费性能（繁忙的 3D 场景可能低于全速）。其余游戏遵循 设置 > Nintendo DS > 3D 分辨率。
+settings		HP	HP
+settings		no data	无数据
+settings		Map	地图
+settings		Bag	背包
+settings		Dex	图鉴
+settings		Guide	指引
+settings		Reading the save...	正在读取存档…
+settings		Somewhere unnamed	某处（未命名）
+settings		Unknown place	未知地点
+settings		Map %d.%d  ·  x %d, y %d	地图 %d.%d · x %d，y %d
+settings		This game's region map wasn't found in its ROM.	本游戏的地区地图未在其 ROM 中找到。
+settings		Tapped: {nm}	已点按：{nm}
+settings		(no name)	（无名）
+settings		Not on the region map here	此地不在地区地图上
+settings		Tap the map: a place's name	点按地图：显示地点名称
+settings		Tap a square: its name	点按方格：显示其名称
+settings		Items	道具
+settings		Key items	重要道具
+settings		Balls	精灵球
+settings		TMs & HMs	招式学习器与秘传学习器
+settings		Berries	树果
+settings		Nothing here. (A CFRU hack may keep its bag elsewhere: what this shows is FireRed's bag.)	此处为空。（某些 CFRU 改版可能将背包存放在别处：此处显示的是 FireRed 的背包。）
+settings		Nothing in this pocket.	此口袋为空。
+settings		Money {money}	金钱 {money}
+settings		Seen	见过
+settings		Caught	已捕获
+settings		All species (this game keeps its own Pokédex)	全部物种（本游戏保留自己的图鉴）
+settings		Pokédex	图鉴
+settings		Nothing seen yet.	尚未见过任何宝可梦。
+settings		Tap one for its entry	点按查看其条目
+settings		No entry in this game.	本游戏中无此条目。
+settings		%s Pokémon  ·  %d.%d m  ·  %d.%d kg	%s 宝可梦 · %d.%d 米 · %d.%d 千克
+settings		Seen, not caught yet: the entry opens once one is caught.	已见，尚未捕获：捕获后才会打开条目。
+settings		Tap to go back	点按返回
+settings		Next: {who}, gym {next} of 8	下一个：{who}，第 {next} / 8 个道馆
+settings		All eight badges: on to the league.	八枚徽章集齐：向联盟进发。
+settings		Champion! The story is done; the post-game is yours.	冠军！主线剧情完成；后日谈由你开启。
+settings		Next: {goals}, {goals} ({lang})	下一个目标：{goals}、{goals}（{lang}）
+settings		Next: the Pokémon League. First, {who} ({lang})	下一个目标：宝可梦联盟。首先，{who}（{lang}）
+settings		Badges	徽章
+settings		No goal read from the save.	未能从存档中读取目标。
+settings		Their team	他们的队伍
+settings		Against {lang}	对手语言：{lang}
+settings		hits {bestQ}	造成 {bestQ} 效果
+settings		Rock Smash	碎岩
+settings		Fishing	钓鱼
+settings		Wild Pokémon here	此处有野生宝可梦
+settings		No wild Pokémon on this map.	本地图上没有野生宝可梦。
+settings		Accent: not caught yet	强调色：尚未捕获
+settings		Reference	参考
+settings		Nothing here right now: this page fills in when the game gets to it.	此处目前为空：当游戏进行到相应内容时，此页会填充。
+settings		Status	状态
+settings		Detail	详情
+settings		Collect	收集
+settings		Progress	进度
+settings		ROXANNE	杜娟
+settings		Rustboro City gym	卡那兹市道馆
+settings		BRAWLY	藤树
+settings		Dewford Town gym	武斗镇道馆
+settings		WATTSON	铁旋
+settings		Mauville City gym	紫堇市道馆
+settings		FLANNERY	亚莎
+settings		Lavaridge Town gym	釜炎镇道馆
+settings		NORMAN	千里
+settings		Petalburg City gym	橙华市道馆
+settings		WINONA	娜琪
+settings		Fortree City gym	茵郁市道馆
+settings		Tate & Liza	小枫与小南
+settings		Mossdeep City gym	绿岭市道馆
+settings		WALLACE	米可利
+settings		Sootopolis City gym	琉璃市道馆
+settings		SIDNEY	花月
+settings		the Pokémon League	宝可梦联盟
+settings		PHOEBE	芙蓉
+settings		GLACIA	波妮
+settings		DRAKE	源治
+settings		STEVEN	大吾
+settings		Steven, the Champion	冠军大吾
+settings		JUAN	亚当
+settings		Wallace, the Champion	冠军米可利
+settings		BROCK	小刚
+settings		Pewter City gym	深灰市道馆
+settings		MISTY	小霞
+settings		Cerulean City gym	华蓝市道馆
+settings		LT. SURGE	马志士
+settings		Lt. Surge	马志士
+settings		Vermilion City gym	枯叶市道馆
+settings		ERIKA	莉佳
+settings		Celadon City gym	彩虹市道馆
+settings		KOGA	阿桔
+settings		Fuchsia City gym	红莲市道馆
+settings		SABRINA	娜姿
+settings		Saffron City gym	金黄市道馆
+settings		BLAINE	夏伯
+settings		Cinnabar Island gym	红莲岛道馆
+settings		GIOVANNI	坂木
+settings		Viridian City gym	常磐市道馆
+settings		LORELEI	科拿
+settings		BRUNO	希巴
+settings		AGATHA	菊子
+settings		LANCE	阿渡
+settings		SEED	种子
+settings		Seed	种子
+settings		UNKNOWN	未知
+settings		Unknown	未知
+settings	Pokémon types	Fairy	妖精
+settings	Pokémon types	Roxanne	杜娟
+settings	Pokémon types	Brawly	藤树
+settings	Pokémon types	Wattson	铁旋
+settings	Pokémon types	Flannery	亚莎
+settings	Pokémon types	Norman	千里
+settings	Pokémon types	Winona	娜琪
+settings	Pokémon types	Wallace	米可利
+settings	Pokémon types	Sidney	花月
+settings	Pokémon types	Phoebe	芙蓉
+settings	Pokémon types	Glacia	波妮
+settings	Pokémon types	Drake	源治
+settings	Pokémon types	Juan	亚当
+settings	Pokémon types	Brock	小刚
+settings	Pokémon types	Misty	小霞
+settings	Pokémon types	Erika	莉佳
+settings	Pokémon types	Koga	阿桔
+settings	Pokémon types	Sabrina	娜姿
+settings	Pokémon types	Blaine	夏伯
+settings	Pokémon types	Giovanni	坂木
+settings	Pokémon types	Lorelei	科拿
+settings	Pokémon types	Bruno	希巴
+settings	Pokémon types	Agatha	菊子
+settings	Pokémon types	Lance	阿渡
+bananads		or press F / L3	或按 F / L3
+bananads		The game hears a word or a blow past the red line (sensitivity: %s).	游戏会在声音或吹气超过红线时识别（灵敏度：%s）。
+bananads		%ldh %02ldm	%ld时 %02ld分
+bananads		BUTTONS	按键
+bananads		LAST	上次
+bananads		Cheats	金手指
+bananads		%d of %d on	%d / %d 已开启
+bananads		None found	未找到
+bananads		Action Replay codes for this game: A to see them	本游戏的 Action Replay 金手指：按 A 查看
+bananads		No cheats for this game yet.	本游戏暂无金手指。
+bananads		In RetroArch: Online Updater > Update Cheats	在 RetroArch 中：在线更新 > 更新金手指
+bananads		(BananaDS finds the game's file there),	（BananaDS 会在此处找到游戏文件），
+bananads		or put a melonDS .mch file in	或将 melonDS 的 .mch 文件放入
+bananads		Up / down to pick, L / R a page; some games need a restart for a code to work	上 / 下键选择，L / R 翻页；部分游戏需重启才能使代码生效
+bananads		Starting...	正在启动……
+bananads		Turn off	关闭
+bananads		Turn on	开启
+bananads		>> Max	>> 最大
+bananads		3D effects	3D 特效
+bananads		FPS counter	FPS 显示
+bananads		Fast-forward	快进
+bananads		Edge + fog	边缘 + 雾
+bananads		Edge only	仅边缘
+bananads		Fog only	仅雾
+bananads		Max	最大
+bananads		FXAA	FXAA
+bananads		Code {n}	代码 {n}
+bananads		Screenshot saved	截图已保存
+bananads		Screenshot not saved	截图未保存
+bananads		the card may be full	存储卡可能已满
+bananads		, and run-ahead: 1 frame	，run-ahead 1帧
+bananads		, and run-ahead: 2 frames	，run-ahead 2帧
+bananads		BananaDS	BananaDS
+bananads		Swap the screens	交换屏幕
+bananads		the touchscreen	触摸屏
+bananads		the top panel's touchscreen	顶部面板的触摸屏
+bananads		Screens swapped	屏幕已交换
+bananads		Screens back	屏幕已还原
+bananads		F + SELECT puts them back	F + SELECT 将其还原
+bananads		F + SELECT swaps them again	F + SELECT 再次交换它们
+bananads		DSi eMMC CID/CPU	DSi eMMC CID/CPU
+bananads		dsi_nand.bin can't be read	dsi_nand.bin 无法读取
+bananads		it needs its nocash footer	它需要 nocash 页脚
+bananads		DSi game: needs a BIOS file	DSi 游戏：需要 BIOS 文件
+bananads		put bios7.bin in {dir}	将 bios7.bin 放入 {dir}
+bananads		This .cia is encrypted	此 .cia 文件已加密
+bananads		decrypt it on a 3DS (or a PC tool) first	请先在 3DS（或电脑工具）上解密
+superdrastic		%ldh %02ldm	%ld时 %02ld分
+superdrastic		LAST	上次
+superdrastic		Starting...	正在启动……
+superdrastic		Microphone sensitivity is off in Settings, so the game only gets the blow below.	麦克风灵敏度在设置中已关闭，因此游戏只能获得下方的吹气。
+superdrastic		Battery %d%%%s	电量 %d%%%s
+superdrastic		, charging	，充电中
+superdrastic		%sF + SELECT	%sF + SELECT
+superdrastic		Screens swapped	屏幕已交换
+superdrastic		Screens back	屏幕已还原
+superdrastic		F + SELECT puts them back	F + SELECT 将其还原
+superdrastic		F + SELECT swaps them again	F + SELECT 再次交换它们

@@ -107,7 +107,7 @@ BY_TYPE = {
 }
 
 HOOKS = ('view W H screen time clock date battery charging batteryMode online motion brand accent accent.light accent.dark '
-         'accent.band accent.low cursor count scroll moved entered dir launch.progress launch.t empty empty.title empty.hint '
+         'accent.band accent.low accent.ink accent.inkSub cursor count scroll moved entered dir launch.progress launch.t empty empty.title empty.hint '
          'systems.count games.count i n sel rel pos first last ix iy item.key item.label').split()
 SYS = 'id name maker color icon games played time fav app hasResume resumeTitle resumeEyebrow resumeArt resumeBox resumeCart resumeLabel index'.split()
 GAME = 'title sub plays last time art box cart label icon rom romIcon achA achB achLabel achProgress fav index systemId systemName'.split()

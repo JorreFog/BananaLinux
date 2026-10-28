@@ -1,0 +1,43 @@
+From: Jacob Cook <jacobmcook1984@gmail.com>
+Subject: [PATCH] power: supply: rk817-charger: take the ocv floor when the
+ saved soc is below it too
+
+Off the charger at boot, a counter a tenth of the pack below the ocv
+floor is rejected in favour of the saved soc, but the saved soc was
+never checked against that floor. When the pack charged while the
+system was powered off and neither the counter nor the save saw it,
+both are low and the stale save stands. An RG DS Plus left powered off
+on a charger for 22 hours, then unplugged and started, read 25% with
+4.255V on the pack (about 95% on the table) and stayed there.
+
+When the saved soc is a tenth of the pack below the floor as well, take
+the floor. Under load the terminal voltage sits below the open circuit
+voltage, so the floor still reads low; the next rested relax pair
+corrects the rest.
+
+Assisted-by: Claude:claude-opus-5-5
+---
+--- a/drivers/power/supply/rk817_charger.c
++++ b/drivers/power/supply/rk817_charger.c
+@@ -941,7 +941,20 @@
+ 			else
+ 				keep_saved = boot_soc < table_soc - 10000;
+ 
+-			if (keep_saved)
++			if (keep_saved && !charger->plugged_in &&
++			    charger->soc < table_soc - 10000) {
++				/*
++				 * The saved soc is below the floor as well: the
++				 * pack charged while the system was off and neither
++				 * the counter nor the save saw it (an RG DS Plus
++				 * powered off on the charger for 22 hours booted at
++				 * 25% with 4.255V on the pack). Take the floor.
++				 */
++				dev_info(charger->dev,
++					 "counter %d and saved soc %d below the voltage floor %d, taking the floor\n",
++					 boot_soc, charger->soc, table_soc);
++				charger->soc = table_soc;
++			} else if (keep_saved)
+ 				dev_info(charger->dev,
+ 					 "counter %d, voltage allows %d, keeping saved soc %d\n",
+ 					 boot_soc, table_soc, charger->soc);

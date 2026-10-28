@@ -8,7 +8,7 @@ CXXFLAGS ?= -O2
 override CXXFLAGS += -std=c++17 -Wall -Wno-unused-function
 override LDLIBS += -lpthread
 
-SRC = src/main.cpp src/soft.cpp src/kms.cpp src/input.cpp src/library.cpp src/sound.cpp src/splash.cpp src/settings.cpp src/settings_defaults.cpp src/wifi.cpp src/zip.cpp src/carts.cpp src/cart3d.cpp src/theme.cpp src/json.cpp src/expr.cpp src/layout.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp
+SRC = src/main.cpp src/lang.cpp src/soft.cpp src/kms.cpp src/colors.cpp src/input.cpp src/library.cpp src/sound.cpp src/splash.cpp src/arrival.cpp src/settings.cpp src/settings_defaults.cpp src/wifi.cpp src/bluetooth.cpp src/zip.cpp src/carts.cpp src/cart3d.cpp src/theme.cpp src/pokemon.cpp src/pokemap.cpp src/gamecomp.cpp src/json.cpp src/expr.cpp src/layout.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp
 PKGS = freetype2 libdrm zlib
 ifeq ($(ALSA),1)
 PKGS += alsa
@@ -24,6 +24,10 @@ banana-ui: $(SRC) $(wildcard src/*.h rnds/*.h)
 banana-scrape: src/scrape.cpp
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $< -lpthread -ldl
 
+# home server sync (Settings > Network > Home server): Romhost and RomM, games, box art and saves
+banana-sync: src/sync.cpp src/sync_util.h src/json.cpp src/json.h
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ src/sync.cpp src/json.cpp -ldl
+
 # the game panel's DRM lease for RetroArch (preloaded by run-retroarch)
 CC ?= gcc
 banana-leaseshim.so: src/leaseshim.c
@@ -32,18 +36,34 @@ banana-leaseshim.so: src/leaseshim.c
 host:
 	$(MAKE) ALSA=0 banana-ui
 
+# the Pokémon companion's decoder on data made from the documented layouts (tests/run.sh runs it)
+tests/pokemon-test: tests/pokemon-test.cpp src/pokemon.cpp src/pokemap.cpp src/pokemon.h src/zip.cpp
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/pokemon-test.cpp src/pokemon.cpp src/pokemap.cpp src/zip.cpp -lz -lpthread
+
+# the game companion's engine (tests/run.sh runs it)
+tests/gamecomp-test: tests/gamecomp-test.cpp src/gamecomp.cpp src/gamecomp.h src/json.cpp src/expr.cpp src/zip.cpp
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/gamecomp-test.cpp src/gamecomp.cpp src/json.cpp src/expr.cpp src/zip.cpp -lz -lpthread
+
+# the left stick's deadzone and hysteresis (tests/run.sh runs it)
+tests/input-test: tests/input-test.cpp src/input.cpp src/input.h
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/input-test.cpp src/input.cpp
+
 install:
 	install -D -m 755 banana-ui $(DESTDIR)/usr/bin/banana-ui
 	install -D -m 755 banana-leaseshim.so $(DESTDIR)/usr/lib/banana/banana-leaseshim.so
 	install -D -m 755 banana-scrape $(DESTDIR)/usr/bin/banana-scrape
+	install -D -m 755 banana-sync $(DESTDIR)/usr/bin/banana-sync
 	# (the folders' contents: "cp -r dir dst" into a dst that is there from a build before nests a copy in it, and
 	# the files in use were never replaced)
 	mkdir -p $(DESTDIR)/usr/share/banana/rnds $(DESTDIR)/usr/share/banana/splash $(DESTDIR)/usr/share/banana/banana
 	cp -r assets/rnds/. $(DESTDIR)/usr/share/banana/rnds/
 	cp -r assets/splash/. $(DESTDIR)/usr/share/banana/splash/
 	cp -r assets/banana/. $(DESTDIR)/usr/share/banana/banana/	# (fonts/: Inter, the Carts theme's)
+	# the menu's languages (lang.h): one file each, the menu's and the DS emulators' translations
+	mkdir -p $(DESTDIR)/usr/share/banana/lang
+	cp -r assets/lang/. $(DESTDIR)/usr/share/banana/lang/
 
 clean:
-	rm -f banana-ui banana-leaseshim.so banana-scrape
+	rm -f banana-ui banana-leaseshim.so banana-scrape banana-sync tests/pokemon-test tests/gamecomp-test tests/input-test
 
 .PHONY: host install clean

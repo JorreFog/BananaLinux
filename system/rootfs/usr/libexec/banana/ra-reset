@@ -1,0 +1,46 @@
+#!/bin/sh
+# Settings > Other systems > Reset RetroArch: RetroArch's settings back to Banana's (/etc/banana/retroarch.cfg, then
+# what run-retroarch adds at the next game), for a card where a button was bound away in RetroArch's menu and can't
+# be found again (a remapped A, a hotkey on a face button). What can hold a bind goes: retroarch.cfg, the remap files
+# (Quick Menu > Controls) and the core, folder and game overrides (config/<core>/*.cfg). Moved into
+# retroarch/backup-<date>, not deleted. Kept: saves, states, screenshots, core options (.opt), shader presets, the
+# RetroAchievements account (banana/accounts.conf, run-retroarch writes it in again) and what Banana's own settings
+# keep in retroarch.cfg (Screen, RetroAchievements Softcore/Hardcore, Quick resume).
+#   ra-reset        prints where the old settings went
+R=/data/retroarch
+CFG=$R/retroarch.cfg
+[ -e /run/banana/game.pid ] && { echo "A game is running." >&2; exit 1; }
+# the RetroAchievements password and token out of retroarch.cfg first (into banana/accounts.conf): the backup below is
+# on the card, where file sharing shows it
+/usr/libexec/banana/ra-secrets scrub
+B=$R/backup-$(date +%Y%m%d-%H%M%S)
+mkdir -p "$B" || { echo "Can't write to the card." >&2; exit 1; }
+# Banana's own settings from the old file, to write into the new one
+keep=
+if [ -f $CFG ]; then
+    for k in video_monitor_index cheevos_hardcore_mode_enable savestate_auto_save savestate_auto_load; do
+        v=$(sed -n "s/^$k = \"\(.*\)\"$/\1/p" $CFG | tail -n 1)
+        [ -n "$v" ] && keep="$keep$k = \"$v\"
+"
+    done
+    mv $CFG "$B/"
+fi
+cp /etc/banana/retroarch.cfg $CFG.new || { echo "Can't write to the card." >&2; exit 1; }
+# (the defaults' own lines for these dropped, the kept ones after: one line per key)
+for k in video_monitor_index cheevos_hardcore_mode_enable savestate_auto_save savestate_auto_load; do
+    printf '%s' "$keep" | grep -q "^$k = " && sed -i "/^$k = /d" $CFG.new
+done
+printf '%s' "$keep" >> $CFG.new
+mv $CFG.new $CFG
+[ -d $R/remaps ] && mv $R/remaps "$B/"
+[ -f $R/.banana-hotkeys.keep ] && mv $R/.banana-hotkeys.keep "$B/"	# (a hotkeys-Off run's lines: not over the new file)
+# overrides: config/<core>/<core|folder|game>.cfg (core options are .opt, shader presets .glslp: they stay)
+if [ -d $R/config ]; then
+    find $R/config -type f -name '*.cfg' | while read -r f; do
+        rel=${f#$R/config/}
+        case $rel in */*) mkdir -p "$B/config/${rel%/*}" ;; *) mkdir -p "$B/config" ;; esac
+        mv "$f" "$B/config/$rel"
+    done
+fi
+sync
+echo "${B#/data/}"

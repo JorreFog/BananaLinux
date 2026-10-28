@@ -55,6 +55,9 @@ namespace banana
 		Expr expr;
 		std::vector<std::pair<std::string, Expr>> parts;	// template: text before each expression (the last: none)
 		std::string error;
+		// a literal's colour, parsed the first time it's read as one (-1: not yet, 0: not a colour) (layout.cpp)
+		mutable signed char litColor = -1;
+		mutable uint32_t litColorV = 0;
 		static Prop parse(const std::string& text);
 		static Prop number(double v) { Prop p; p.lit = EV(v); return p; }
 		EV eval(const Scope& sc) const;

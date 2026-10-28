@@ -1,7 +1,9 @@
 #include "soft.h"
+#include "pool.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <chrono>
 
 namespace banana
 {
@@ -24,6 +26,61 @@ namespace banana
 		return s + mul255(d, 255 - sa);
 	}
 
+	// the same arithmetic four pixels at a time (each channel in a 16-bit lane: x * k / 255 rounded, as mul255): the
+	// rows' blends below give the same words as the loops of single pixels
+	typedef uint8_t V8 __attribute__((vector_size(16)));
+	typedef uint16_t V16 __attribute__((vector_size(32)));
+	static inline V16 wide(V8 v) { return __builtin_convertvector(v, V16); }
+	static inline V8 narrow(V16 v) { return __builtin_convertvector(v, V8); }
+	static inline V16 div255(V16 t) { t += 128; return (t + (t >> 8)) >> 8; }
+	static inline V8 load4(const uint32_t* p) { V8 v; memcpy(&v, p, 16); return v; }
+	static inline void store4(uint32_t* p, V8 v) { memcpy(p, &v, 16); }
+	static inline V8 alphas(V8 v) { return __builtin_shufflevector(v, v, 3, 3, 3, 3, 7, 7, 7, 7, 11, 11, 11, 11, 15, 15, 15, 15); }
+	// source-over of premultiplied words, s + d * (255 - s's alpha) (as over(): its two shortcuts give the same)
+	static inline V8 over4(V8 s, V8 d) { return s + narrow(div255(wide(d) * wide((V8)(255 - alphas(s))))); }
+
+	// a row of premultiplied words over a row
+	static void overRow(uint32_t* d, const uint32_t* s, int n)
+	{
+		int i = 0;
+		for (; i + 4 <= n; i += 4) store4(d + i, over4(load4(s + i), load4(d + i)));
+		for (; i < n; i++) d[i] = s[i] + mul255(d[i], 255 - (s[i] >> 24));
+	}
+
+	// a row of coverage times a premultiplied colour over a row
+	static void coverRow(uint32_t* d, const uint8_t* c, uint32_t col, int n)
+	{
+		int i = 0;
+		V8 colv = (V8)(uint32_t __attribute__((vector_size(16)))){ col, col, col, col };
+		V16 colw = wide(colv);
+		for (; i + 4 <= n; i += 4)
+		{
+			uint32_t c4; memcpy(&c4, c + i, 4);
+			V8 cv = (V8)(uint32_t __attribute__((vector_size(16)))){ c4, c4, c4, c4 };
+			cv = __builtin_shufflevector(cv, cv, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3);
+			V8 sv = narrow(div255(colw * wide(cv)));
+			store4(d + i, over4(sv, load4(d + i)));
+		}
+		for (; i < n; i++) d[i] = over(mul255(col, c[i]), d[i]);
+	}
+
+	static inline uint32_t tinted(uint32_t p, uint32_t tr, uint32_t tg, uint32_t tb, uint32_t ta);
+
+	// a row of premultiplied words, tinted (tinted()), over a row
+	static void tintRow(uint32_t* d, const uint32_t* s, uint32_t tr, uint32_t tg, uint32_t tb, uint32_t ta, int n)
+	{
+		int i = 0;
+		V16 k = { (uint16_t)tb, (uint16_t)tg, (uint16_t)tr, 255, (uint16_t)tb, (uint16_t)tg, (uint16_t)tr, 255,
+			(uint16_t)tb, (uint16_t)tg, (uint16_t)tr, 255, (uint16_t)tb, (uint16_t)tg, (uint16_t)tr, 255 };
+		V16 a = (V16){} + (uint16_t)ta;
+		for (; i + 4 <= n; i += 4)
+		{
+			V16 sw = div255(div255(wide(load4(s + i)) * k) * a);
+			store4(d + i, over4(narrow(sw), load4(d + i)));
+		}
+		for (; i < n; i++) d[i] = over(tinted(s[i], tr, tg, tb, ta), d[i]);
+	}
+
 	static inline uint32_t premul(const rnds::Color& c)
 	{
 		float a = std::min(1.0f, std::max(0.0f, c.a));
@@ -40,7 +97,8 @@ namespace banana
 		return (a << 24) | (r << 16) | (g << 8) | b;
 	}
 
-	// a row's runs from a per-pixel kind
+	static void findInterior(SoftTex& t);
+
 	// a row's runs from each pixel's alpha (or coverage): the byte at a[0], a[step], ... of each row, rows stride
 	// bytes apart
 	static void encodeRuns(SoftTex& t, const uint8_t* a, size_t step, size_t stride)
@@ -66,6 +124,43 @@ namespace banana
 			}
 		}
 		t.rowAt[t.h] = (uint32_t)t.runs.size();
+		findInterior(t);
+	}
+
+	// a rectangle of solid pixels: the longest solid run of the middle row (or its middle part), as many rows up and
+	// down as have a solid run over the same columns; the biggest of a few
+	static void findInterior(SoftTex& t)
+	{
+		t.ix0 = t.iy0 = t.ix1 = t.iy1 = 0;
+		if (t.w <= 0 || t.h <= 0 || t.rowAt.size() != (size_t)t.h + 1) return;
+		auto solidOver = [&t](int y, int l, int r)
+		{
+			int x = 0;
+			for (uint32_t i = t.rowAt[y]; i < t.rowAt[y + 1]; i++)
+			{
+				int len = (int)(t.runs[i] & 0x3fffffffu);
+				if (x + len > l) return (int)(t.runs[i] >> 30) == SoftTex::SOLID && x <= l && x + len >= r;
+				x += len;
+			}
+			return false;
+		};
+		int m = t.h / 2, L = 0, R = 0, x = 0;
+		for (uint32_t i = t.rowAt[m]; i < t.rowAt[m + 1]; i++)
+		{
+			int len = (int)(t.runs[i] & 0x3fffffffu);
+			if ((int)(t.runs[i] >> 30) == SoftTex::SOLID && len > R - L) { L = x; R = x + len; }
+			x += len;
+		}
+		if (R - L < 8) return;
+		int64_t best = 0;
+		for (int cut : { 0, 1, 2, 3 })
+		{
+			int l = L + (R - L) * cut / 8, r = R - (R - L) * cut / 8;
+			int y0 = m, y1 = m + 1;
+			while (y0 > 0 && solidOver(y0 - 1, l, r)) y0--;
+			while (y1 < t.h && solidOver(y1, l, r)) y1++;
+			if ((int64_t)(r - l) * (y1 - y0) > best) { best = (int64_t)(r - l) * (y1 - y0); t.ix0 = l; t.ix1 = r; t.iy0 = y0; t.iy1 = y1; }
+		}
 	}
 
 	// the alpha byte of the premultiplied words' rows (the word's top byte: the fourth in memory)
@@ -161,43 +256,70 @@ namespace banana
 			default:
 			{
 				Clip b = bounds(c, clips.back());
-				if (b.x0 < b.x1) items.push_back({ std::move(c), b });
+				if (b.x0 < b.x1)
+				{
+					items.push_back({ std::move(c), b, { 0, 0, 0, 0 } });
+					items.back().opq = opaqueBox(items.back());
+				}
 			}
 			}
 		}
 	}
 
-	// a rectangle to draw again: merged with the ones it overlaps, so each pixel is drawn once
-	void SoftBackend::addDirty(const Clip& r0)
+	// a rectangle to draw again: the tiles it touches
+	void SoftBackend::addDirty(const Clip& r)
 	{
-		Clip r = r0;
-		for (size_t i = 0; i < dirty.size();)
-		{
-			const Clip& d = dirty[i];
-			if (overlaps(r.x0, r.y0, r.x1, r.y1, d.x0, d.y0, d.x1, d.y1))
-			{
-				r = { std::min(r.x0, d.x0), std::min(r.y0, d.y0), std::max(r.x1, d.x1), std::max(r.y1, d.y1) };
-				dirty.erase(dirty.begin() + i);
-				i = 0;	// the grown rectangle may reach ones already passed
-			}
-			else i++;
-		}
-		dirty.push_back(r);
+		for (int ty = r.y0 / TH; ty <= (r.y1 - 1) / TH; ty++)
+			memset(&dirty[(size_t)ty * tilesX + r.x0 / TW], 1, (r.x1 - 1) / TW - r.x0 / TW + 1);
 	}
 
-	// r from black (as ES's renderer clears before each frame: the screen's corners aren't covered by the engine),
-	// every draw that touches it clipped to it
-	void SoftBackend::redraw(const Clip& r)
+	// the pixels a draw or fill covers with solid colour: a fill or a draw whose tint is solid, over its texture's
+	// solid rectangle (at its own size) or all of an opaque texture (scaled: every sample is a blend of solid texels)
+	SoftBackend::Clip SoftBackend::opaqueBox(const Item& it) const
 	{
-		uint32_t* base = scr[cur].data();
-		for (int y = r.y0; y < r.y1; y++) std::fill(base + (size_t)y * W + r.x0, base + (size_t)y * W + r.x1, 0xff000000u);
-		touch(r);
-		redrawn += (uint64_t)(r.x1 - r.x0) * (r.y1 - r.y0);
-		for (auto& it : items)
+		Clip none = { 0, 0, 0, 0 };
+		const Cmd& c = it.c;
+		if (std::lround(std::min(1.0f, std::max(0.0f, c.c[3])) * 255) != 255) return none;
+		if (c.op == Cmd::FILL) return it.box;
+		auto t = (const SoftTex*)c.tex.get();
+		bool exact = std::fabs(c.w - t->w) < 0.01f && std::fabs(c.h - t->h) < 0.01f;
+		if (!exact) return t->opaque ? it.box : none;
+		int bx0 = edge(c.x), by0 = edge(c.y);
+		Clip r = { std::max(it.box.x0, bx0 + t->ix0), std::max(it.box.y0, by0 + t->iy0), std::min(it.box.x1, bx0 + t->ix1), std::min(it.box.y1, by0 + t->iy1) };
+		return r.x0 < r.x1 && r.y0 < r.y1 ? r : none;
+	}
+
+	// a tile from black (as ES's renderer clears before each frame: the screen's corners aren't covered by the engine),
+	// every draw that touches it clipped to it, from the last draw that covers all of it with solid colour (what is
+	// under that can't show). Drawn tile by tile, a tile's pixels stay in the cache from draw to draw; each pixel sees
+	// the same draws in the same order as drawn in one go, the same result
+
+	// the first n draws over a tile of the pixels px (rows of W), from black, or from the background kept if those
+	// draws start with its draws (from = their count)
+	void SoftBackend::composeTile(const Clip& t, uint32_t* px, size_t n, size_t fromBase)
+	{
+		size_t from = n;
+		while (from > 0)
 		{
+			const Clip& o = items[from - 1].opq;
+			if (o.x0 <= t.x0 && o.y0 <= t.y0 && o.x1 >= t.x1 && o.y1 >= t.y1) break;
+			from--;
+		}
+		if (from > 0) from--;
+		else if (!fromBase)
+			for (int y = t.y0; y < t.y1; y++) std::fill(px + (size_t)y * W + t.x0, px + (size_t)y * W + t.x1, 0xff000000u);
+		if (fromBase && from < fromBase)
+		{
+			const uint32_t* b = base[cur].px.data();
+			for (int y = t.y0; y < t.y1; y++) memcpy(px + (size_t)y * W + t.x0, b + (size_t)y * W + t.x0, (size_t)(t.x1 - t.x0) * 4);
+			from = fromBase;
+		}
+		for (size_t i = from; i < n; i++)
+		{
+			const Item& it = items[i];
 			const Clip& b = it.box;
-			if (!overlaps(b.x0, b.y0, b.x1, b.y1, r.x0, r.y0, r.x1, r.y1)) continue;
-			Clip cl = { std::max(b.x0, r.x0), std::max(b.y0, r.y0), std::min(b.x1, r.x1), std::min(b.y1, r.y1) };
+			if (!overlaps(b.x0, b.y0, b.x1, b.y1, t.x0, t.y0, t.x1, t.y1)) continue;
+			Clip cl = { std::max(b.x0, t.x0), std::max(b.y0, t.y0), std::min(b.x1, t.x1), std::min(b.y1, t.y1) };
 			const Cmd& c = it.c;
 			rnds::Color col(c.c[0], c.c[1], c.c[2], c.c[3]);
 			if (c.op == Cmd::DRAW) doDraw((SoftTex*)c.tex.get(), c.x, c.y, c.w, c.h, col, cl);
@@ -205,15 +327,47 @@ namespace banana
 		}
 	}
 
+	// the background: the screen's first draws when they have stayed the same for a while and cover the screen more
+	// than about twice (a tile drawn again then starts from a copy of them). Kept while the list starts with them;
+	// made again at most every half second
+	void SoftBackend::updateBase(const std::vector<Item>& old)
+	{
+		Base& b = base[cur];
+		if (b.n && (b.n > items.size() || !std::equal(b.items.begin(), b.items.end(), items.begin()))) { b.n = 0; b.items.clear(); }
+		size_t p = 0;
+		while (p < items.size() && p < old.size() && items[p] == old[p]) p++;
+		b.hist[b.histAt++ % 8] = p;
+		size_t stable = p;
+		for (size_t h : b.hist) stable = std::min(stable, h);
+		if (stable <= b.n || frameNo < b.built + 60) return;
+		auto area = [this](size_t n) { uint64_t a = 0; for (size_t i = 0; i < n; i++) a += (uint64_t)(items[i].box.x1 - items[i].box.x0) * (items[i].box.y1 - items[i].box.y0); return a; };
+		uint64_t screen = (uint64_t)W * H, now = area(stable);
+		if (now < screen * 2 || now < area(b.n) + screen / 2) return;
+		b.px.resize((size_t)W * H);
+		b.n = 0;
+		tgt = b.px.data();
+		int tx = (W + TW - 1) / TW, ty = (H + TH - 1) / TH;
+		Pool::get().run(tx * ty, [&](int i) { int x = i % tx * TW, y = i / tx * TH; composeTile({ x, y, std::min(W, x + TW), std::min(H, y + TH) }, b.px.data(), stable, 0); });
+		b.items.assign(items.begin(), items.begin() + stable);
+		b.n = stable;
+		b.built = frameNo;
+	}
+
 	void SoftBackend::endScreen()
 	{
+		auto t0 = std::chrono::steady_clock::now();
+		struct Timed { std::chrono::steady_clock::time_point t0; double& ms; ~Timed() { ms += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count(); } } timed{ t0, composeMs };
+		frameNo++;
 		if (overlay) overlay(cur);
 		resolve();
 		std::vector<Item>& old = last[cur];
-		dirty.clear();
+		if (!full[cur]) updateBase(old);
+		tilesX = (W + TW - 1) / TW; tilesY = (H + TH - 1) / TH;
+		dirty.assign((size_t)tilesX * tilesY, 0);
+		bool any = false;
 		if (full[cur])
 		{
-			dirty.push_back({ 0, 0, W, H });
+			addDirty({ 0, 0, W, H });
 			full[cur] = false;
 		}
 		else
@@ -234,9 +388,24 @@ namespace banana
 				else addDirty(it.box);
 			}
 			for (; p < old.size(); p++) addDirty(old[p].box);
-			if (dirty.empty()) { skipped++; std::swap(items, old); return; }
+			for (uint8_t d : dirty) any |= d;
+			if (!any) { skipped++; std::swap(items, old); return; }
 		}
-		for (auto& r : dirty) redraw(r);
+		// the tiles shared out among the cores (each tile's pixels are its own; a scaled draw's samples, kept on its
+		// texture, are made by one thread at a time)
+		tiles.clear();
+		for (int ty = 0; ty < tilesY; ty++)
+			for (int tx = 0; tx < tilesX; tx++)
+				if (dirty[(size_t)ty * tilesX + tx])
+				{
+					Clip t = { tx * TW, ty * TH, std::min(W, (tx + 1) * TW), std::min(H, (ty + 1) * TH) };
+					touch(t);
+					redrawn += (uint64_t)(t.x1 - t.x0) * (t.y1 - t.y0);
+					tiles.push_back(t);
+				}
+		tgt = scr[cur].data();
+		size_t fromBase = base[cur].n;
+		Pool::get().run((int)tiles.size(), [&](int i) { composeTile(tiles[i], scr[cur].data(), items.size(), fromBase); });
 		std::swap(items, old);
 	}
 
@@ -268,7 +437,7 @@ namespace banana
 		uint32_t p = premul(c);
 		for (int yy = y0; yy < y1; yy++)
 		{
-			uint32_t* d = &scr[cur][(size_t)yy * W];
+			uint32_t* d = &tgt[(size_t)yy * W];
 			if ((p >> 24) == 255)
 				std::fill(d + x0, d + x1, p);
 			else
@@ -399,7 +568,7 @@ namespace banana
 		const uint32_t* runs = t->runs.data();
 		for (int yy = y0; yy < y1; yy++)
 		{
-			uint32_t* d = &scr[cur][(size_t)yy * W + bx0];
+			uint32_t* d = &tgt[(size_t)yy * W + bx0];
 			int sy = yy - by0;
 			int x = 0;
 			uint32_t r = t->rowAt[sy], rEnd = t->rowAt[sy + 1];
@@ -420,18 +589,14 @@ namespace banana
 				{
 					const uint8_t* s = &t->a8[(size_t)sy * t->w];
 					if (kind == SoftTex::SOLID && solidTint) std::fill(d + a, d + e, tintWord);
-					else for (int i = a; i < e; i++) d[i] = over(mul255(tintWord, s[i]), d[i]);
+					else coverRow(d + a, s + a, tintWord, e - a);
 				}
 				else
 				{
 					const uint32_t* s = &t->px[(size_t)sy * t->w];
 					if (plain && kind == SoftTex::SOLID) memcpy(d + a, s + a, (size_t)(e - a) * 4);
-					else if (plain)
-					{
-						// a mixed run has no clear or solid pixels: always a blend
-						for (int i = a; i < e; i++) d[i] = s[i] + mul255(d[i], 255 - (s[i] >> 24));
-					}
-					else for (int i = a; i < e; i++) d[i] = over(tinted(s[i], tr, tg, tb, ta), d[i]);
+					else if (plain) overRow(d + a, s + a, e - a);	// a mixed run: always a blend
+					else tintRow(d + a, s + a, tr, tg, tb, ta, e - a);
 				}
 			}
 		}
@@ -450,17 +615,18 @@ namespace banana
 		uint32_t tr = q(tint.r), tg = q(tint.g), tb = q(tint.b), ta = q(tint.a);
 		uint32_t tintWord = premul(tint);	// what an alpha texture's coverage scales
 		if (exact) { blitRuns(t, bx0, by0, x0, y0, x1, y1, tr, tg, tb, ta, tintWord); return; }
+		std::lock_guard<std::mutex> scaledHeld(scaledLock);
 
 		// scaled at a size and phase it was scaled at before: the samples kept from then (the tint is applied as
 		// they are drawn, as below)
-		SoftTex::Scaled key = { (bx0 + 0.5) - x, (by0 + 0.5) - y, w, h, bx1 - bx0, by1 - by0, nullptr };
+		SoftTex::Scaled key = { (bx0 + 0.5) - x, (by0 + 0.5) - y, w, h, bx1 - bx0, by1 - by0, frameNo, nullptr };
 		size_t k = 0;
 		while (k < t->scaled.size() && !t->scaled[k].same(key)) k++;
 		if (k < t->scaled.size())
 		{
 			std::rotate(t->scaled.begin(), t->scaled.begin() + k, t->scaled.begin() + k + 1);	// most recent first
 			SoftTex::Scaled& e = t->scaled[0];
-			if (!e.tex && (int64_t)key.bw * key.bh <= (int64_t)W * H / 4)
+			if (!e.tex && e.frame != frameNo && (int64_t)key.bw * key.bh <= (int64_t)W * H / 4)
 			{
 				// the second time: sample the whole box once
 				auto st = std::make_shared<SoftTex>();
@@ -489,7 +655,7 @@ namespace banana
 		const uint64_t* vrows = t->smooth && !t->alpha ? vertical(t, y, h, stepY, by0, by1) : nullptr;
 		for (int yy = y0; yy < y1; yy++)
 		{
-			uint32_t* d = &scr[cur][(size_t)yy * W + x0];
+			uint32_t* d = &tgt[(size_t)yy * W + x0];
 			int64_t sv = (int64_t)(((yy + 0.5) - y) * stepY) - (t->smooth ? 32768 : 0);
 			if (!t->smooth)
 			{

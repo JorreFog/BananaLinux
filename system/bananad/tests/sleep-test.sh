@@ -6,11 +6,12 @@
 # (its process group must be stopped while asleep) and a stand-in banana-ui (it must get SIGUSR1 after a wake).
 #
 #   sudo system/bananad/tests/sleep-test.sh        (root: it mounts in a private namespace; nothing outside changes)
+#   sleep-test.sh --build <dir>                      only the programs, into <dir> (for a runner of its own, then --inside)
 set -e
 HERE=$(cd "$(dirname "$0")/.." && pwd)
 ROOTFS=$(cd "$HERE/../rootfs" && pwd)
 if [ "$1" != --inside ]; then
-    W=$(mktemp -d)
+    if [ "$1" = --build ]; then W=$2; mkdir -p "$W"; else W=$(mktemp -d); fi
     cc -O2 -o "$W/bananad" "$HERE/bananad.c"
     cc -O2 -o "$W/banana-ui" -x c - <<'EOF'
 #include <signal.h>
@@ -19,6 +20,51 @@ if [ "$1" != --inside ]; then
 static void on(int s) { FILE *f = fopen("/run/test/ui-signals", "a"); if (f) { fprintf(f, "SIGUSR1\n"); fclose(f); } }
 int main(void) { signal(SIGUSR1, on); for (;;) pause(); }
 EOF
+    # stand-in emulators for Power off after sleeping, one program under each name bananad looks for (drastic,
+    # bananads, retroarch): what reaches it (SIGUSR1, SIGTERM, the lines on its stdin) in /run/test/<name>.log, then
+    # "saved" a moment later and it quits, on a signal or on RetroArch's QUIT
+    cc -O2 -o "$W/drastic" -x c - <<'EOF'
+#include <fcntl.h>
+#include <libgen.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+static volatile sig_atomic_t got;
+static void on(int s) { got = s; }
+static const char *name;
+static void say(const char *m) { char p[128]; snprintf(p, sizeof p, "/run/test/%s.log", name); FILE *f = fopen(p, "a"); if (f) { fprintf(f, "%s\n", m); fclose(f); } }
+int main(int argc, char **argv)
+{
+	(void)argc; name = basename(argv[0]);
+	signal(SIGUSR1, on); signal(SIGTERM, on);
+	fcntl(0, F_SETFL, fcntl(0, F_GETFL) | O_NONBLOCK);
+	char buf[512]; size_t have = 0;
+	for (;;) {
+		if (got) {
+			say(got == SIGUSR1 ? "USR1" : "TERM"); usleep(300000);
+			const char *rf = getenv("TEST_RESUME");	/* the resume state, when the test wants one written */
+			if (got == SIGUSR1 && rf && *rf) { FILE *f = fopen(rf, "w"); if (f) { fputs("state", f); fclose(f); } }
+			say("saved"); return 0;
+		}
+		ssize_t r = read(0, buf + have, sizeof buf - 1 - have);
+		if (r > 0) {
+			have += r; buf[have] = 0;
+			char *nl;
+			while ((nl = strchr(buf, '\n'))) {
+				*nl = 0; say(buf);
+				int quit = !strcmp(buf, "QUIT");
+				memmove(buf, nl + 1, strlen(nl + 1) + 1); have = strlen(buf);
+				if (quit) { usleep(300000); say("saved"); return 0; }
+			}
+		}
+		usleep(20000);
+	}
+}
+EOF
+    cp "$W/drastic" "$W/bananads"; cp "$W/drastic" "$W/retroarch"
+    [ "$1" = --build ] && exit 0
     mkdir -p /data 2>/dev/null || true
     exec unshare -m -p -f --mount-proc sh "$0" --inside "$W" "$ROOTFS"
 fi
@@ -138,8 +184,16 @@ grep -q 'trying the safer way' /data/banana/logs/sleep.log && ok "fell back afte
 [ "$(cat /sys/class/backlight/backlight0/bl_power)" = 4 ] && ok "panels dark with the lid shut" || bad "backlight bl_power $(cat /sys/class/backlight/backlight0/bl_power)"
 echo 0 > /run/test/lid; ev $EV_SW $SW_LID 0; sleep 0.3
 [ "$(cat /sys/class/backlight/backlight0/bl_power)" = 0 ] && ok "panels back when the lid opens" || bad "panels still dark"
-stop
+# the same bananad, suspends working again: the next sleep is deep again (s2idle was for that one sleep), still with
+# the devices one at a time
 rmdir /sys/power/state; mkfifo /sys/power/state
+echo "[s2idle] deep" > /sys/power/mem_sleep
+echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
+asleep && ok "the next sleep suspends" || bad "no suspend after the failed one"
+[ "$(cat /sys/power/mem_sleep)" = deep ] && ok "deep again after the s2idle fallback" || bad "mem_sleep $(cat /sys/power/mem_sleep)"
+[ "$(cat /sys/power/pm_async)" = 0 ] && ok "devices still one at a time" || bad "pm_async $(cat /sys/power/pm_async)"
+echo 0 > /run/test/lid; wake
+stop
 
 echo "6. lid sleep off: closing the lid only turns the backlights off"
 start "lid_sleep = no"
@@ -182,6 +236,107 @@ echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1; sleep 1
 echo 0 > /sys/class/power_supply/charger/online
 asleep && ok "asleep once the charger is pulled out" || bad "no sleep after unplugging"
 echo 0 > /run/test/lid; wake
+rm -rf /sys/class/power_supply/charger
+rm -f /run/banana/game.pid
+stop
+
+# Power off after sleeping: a game as banana-ui starts one (sh -c in a session of its own, BANANA_ROM set), the
+# emulator a child of the launcher
+game() {    # game <emulator> <rom> [stdin]
+    rm -f /run/test/$1.log
+    BANANA_ROM=$2 setsid sh -c '"$0" < "$1"; :' "$W/$1" "${3:-/dev/null}" & GAME=$!
+    sleep 0.2; echo $GAME > /run/banana/game.pid
+}
+poweroff() { for i in $(seq 50); do [ $POWEROFF = 1 ] && return 0; sleep 0.1; done; return 1; }
+echo 60 > /sys/class/power_supply/battery/capacity
+
+echo "9. Power off after sleeping: the deadline's alarm, the lid still shut: SuperDrastic saves and quits, a shutdown"
+mkdir -p /data/drastic/savestates /data/states/nds
+export TEST_RESUME="/data/drastic/savestates/Peel Quest.resume.dss"
+game drastic "/data/roms/nds/Peel Quest.nds"
+: > /run/test/ui-signals; rm -f /data/banana/resume-boot
+start "sleep_check_hours = 4" "poweroff_after_sleep_minutes = 0.02"    # 1.2 s
+echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
+asleep && ok "suspended" || bad "no suspend"
+[ "$(cat /sys/class/rtc/rtc0/wakealarm)" = +1 ] && ok "the RTC alarm at the deadline, not the 4 h battery check" || bad "wakealarm $(cat /sys/class/rtc/rtc0/wakealarm)"
+[ "$(gstate)" = T ] && ok "game stopped while asleep" || bad "game not stopped ($(gstate))"
+sleep 1.3; : > /sys/class/rtc/rtc0/wakealarm; wake
+poweroff && ok "shut down cleanly (init asked to power off)" || bad "no shutdown at the deadline"
+grep -qx USR1 /run/test/drastic.log 2>/dev/null && ok "drastic got SIGUSR1 (save a resume state and quit)" || bad "drastic: $(cat /run/test/drastic.log 2>/dev/null)"
+grep -qx saved /run/test/drastic.log 2>/dev/null && ! kill -0 $GAME 2>/dev/null && ok "the shutdown waited for the save" || bad "shut down before the save"
+[ "$(cat /data/banana/resume-boot 2>/dev/null)" = "$(printf 'rom=/data/roms/nds/Peel Quest.nds\nemulator=superdrastic')" ] && ok "resume-boot names the game" || bad "resume-boot: $(cat /data/banana/resume-boot 2>/dev/null)"
+[ "$(cat /sys/class/backlight/backlight0/bl_power)" = 4 ] && ok "the panels stayed dark" || bad "bl_power $(cat /sys/class/backlight/backlight0/bl_power)"
+[ ! -s /run/test/ui-signals ] && ok "the menu wasn't woken" || bad "the menu was told to redraw"
+grep -q 'the game saved, then shutting down' /data/banana/logs/sleep.log && ok "logged" || bad "not logged"
+stop; POWEROFF=0; echo 0 > /run/test/lid; echo 0 > /sys/class/backlight/backlight0/bl_power
+
+echo "9b. SuperDrastic quits without writing a resume state (an older one on the card): no resume-boot"
+export TEST_RESUME=; rm -f /data/banana/resume-boot
+touch -d '2026-01-01 12:00' "/data/drastic/savestates/Peel Quest.resume.dss"
+game drastic "/data/roms/nds/Peel Quest.nds"
+start "poweroff_after_sleep_minutes = 0.02"
+echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
+asleep && ok "suspended" || bad "no suspend"
+sleep 1.3; : > /sys/class/rtc/rtc0/wakealarm; wake
+poweroff && ok "shut down" || bad "no shutdown"
+grep -qx USR1 /run/test/drastic.log 2>/dev/null && ok "drastic got SIGUSR1" || bad "drastic: $(cat /run/test/drastic.log 2>/dev/null)"
+[ ! -e /data/banana/resume-boot ] && ok "no resume-boot (the old state isn't this save)" || bad "resume-boot written: $(cat /data/banana/resume-boot)"
+grep -q 'quit without a new resume state' /data/banana/logs/sleep.log && ok "logged" || bad "not logged"
+stop; POWEROFF=0; echo 0 > /run/test/lid; echo 0 > /sys/class/backlight/backlight0/bl_power
+
+echo "10. a power-button sleep with the lid open: BananaDS saves at the deadline"
+export TEST_RESUME="/data/states/nds/Banana Kart DS.resume.mst"
+game bananads "/data/roms/nds/Banana Kart DS.nds"
+start "poweroff_after_sleep_minutes = 0.02"     # (sleep_check_hours 0: the deadline is the only alarm)
+ev $EV_KEY $KEY_POWER 1; ev $EV_KEY $KEY_POWER 0
+asleep && ok "suspended on the power button" || bad "no suspend"
+[ "$(cat /sys/class/rtc/rtc0/wakealarm)" = +1 ] && ok "the alarm set with no battery check" || bad "wakealarm $(cat /sys/class/rtc/rtc0/wakealarm)"
+sleep 1.3; : > /sys/class/rtc/rtc0/wakealarm; wake
+poweroff && ok "shut down" || bad "no shutdown"
+grep -qx USR1 /run/test/bananads.log 2>/dev/null && grep -qx saved /run/test/bananads.log && ok "bananads got SIGUSR1 and saved" || bad "bananads: $(cat /run/test/bananads.log 2>/dev/null)"
+grep -qx emulator=bananads /data/banana/resume-boot 2>/dev/null && ok "resume-boot: bananads" || bad "resume-boot: $(cat /data/banana/resume-boot 2>/dev/null)"
+stop; POWEROFF=0
+
+export TEST_RESUME=
+echo "11. RetroArch: the slot down to its automatic one, SAVE_STATE, QUIT (through its command pipe)"
+mkdir -p /data/retroarch; printf 'state_slot = "2"\n' > /data/retroarch/retroarch.cfg
+rm -f /run/banana/retroarch.cmd; mkfifo /run/banana/retroarch.cmd; exec 5<>/run/banana/retroarch.cmd
+game retroarch "/data/roms/gba/Orchard Tactics.gba" /run/banana/retroarch.cmd
+start "poweroff_after_sleep_minutes = 0.02"
+echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
+asleep && ok "suspended" || bad "no suspend"
+sleep 1.3; : > /sys/class/rtc/rtc0/wakealarm; wake
+poweroff && ok "shut down" || bad "no shutdown"
+ra=$(grep -v AUDIO_REINIT /run/test/retroarch.log 2>/dev/null | tr '\n' ' ')     # (bananad's at its start: the pipe is there)
+[ "$ra" = "STATE_SLOT_MINUS STATE_SLOT_MINUS STATE_SLOT_MINUS STATE_SLOT_MINUS SAVE_STATE QUIT saved " ] &&
+    ok "RetroArch: slot 2 down past 0, saved, quit" || bad "retroarch: $ra"
+grep -qx emulator=retroarch /data/banana/resume-boot 2>/dev/null && ok "resume-boot: retroarch" || bad "resume-boot: $(cat /data/banana/resume-boot 2>/dev/null)"
+stop; POWEROFF=0; exec 5>&-; rm -f /run/banana/retroarch.cmd /data/banana/resume-boot; echo 0 > /run/test/lid
+
+echo "12. another program (a port): SIGTERM, no resume-boot"
+setsid sleep 600 & GAME=$!; sleep 0.1; echo $GAME > /run/banana/game.pid
+start "poweroff_after_sleep_minutes = 0.02"
+echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
+asleep && ok "suspended" || bad "no suspend"
+sleep 1.3; : > /sys/class/rtc/rtc0/wakealarm; wake
+poweroff && ok "shut down" || bad "no shutdown"
+kill -0 $GAME 2>/dev/null && bad "the game wasn't stopped" || ok "the game got SIGTERM"
+[ ! -e /data/banana/resume-boot ] && ok "no resume-boot (nothing to resume)" || bad "resume-boot written"
+stop; POWEROFF=0; echo 0 > /run/test/lid
+
+echo "13. on the charger the deadline doesn't count; unplugged, it starts at the real sleep; opening the lid first wins"
+mkdir -p /sys/class/power_supply/charger
+echo USB > /sys/class/power_supply/charger/type; echo 1 > /sys/class/power_supply/charger/online
+setsid sleep 600 & GAME=$!; sleep 0.1; echo $GAME > /run/banana/game.pid
+start "poweroff_after_sleep_minutes = 0.05"     # 3 s
+echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1; sleep 4
+[ $POWEROFF = 0 ] && kill -0 $GAME 2>/dev/null && ok "dark on the charger past the deadline: no shutdown" || bad "shut down on the charger"
+echo 0 > /sys/class/power_supply/charger/online
+asleep && ok "asleep once unplugged" || bad "no sleep after unplugging"
+[ "$(cat /sys/class/rtc/rtc0/wakealarm)" = +3 ] && ok "the deadline from the real sleep (+3)" || bad "wakealarm $(cat /sys/class/rtc/rtc0/wakealarm)"
+echo 0 > /run/test/lid; wake       # the lid opened before the alarm
+[ $POWEROFF = 0 ] && [ "$(gstate)" != T ] && ok "awake and playing, no shutdown" || bad "shut down or still paused after the lid opened"
+grep -q 'awake (lid opened)' /data/banana/logs/sleep.log && ok "a normal wake" || bad "no wake logged"
 rm -rf /sys/class/power_supply/charger
 rm -f /run/banana/game.pid
 stop

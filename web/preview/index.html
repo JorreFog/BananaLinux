@@ -6,7 +6,7 @@
 <title>BananaOS | Linux for Anbernic RG DS &amp; RG DS Plus</title>
 <!-- a temporary preview: kept out of search engines -->
 <meta name="robots" content="noindex, nofollow">
-<meta name="description" content="Lightweight Linux for the Anbernic RG DS and RG DS Plus, with a pixel-art menu, two DS emulators, lid sleep and simple updates.">
+<meta name="description" content="Lightweight Linux for the Anbernic RG DS and RG DS Plus, with a pixel-art menu, two DS emulators, lid sleep, Bluetooth, layout themes and updates over Wi-Fi.">
 <link rel="icon" href="assets/banana-32.png">
 <link rel="stylesheet" href="css/style.css">
 <script>
@@ -40,11 +40,13 @@
   <div class="brand">
     <!-- as in the menu's status bar: the logo in its dark chip, then the release stage and version -->
     <a class="logo-chip" href="#hero"><img src="assets/banana-32.png" alt=""><span><span class="y">BANANA</span><span class="os">OS</span></span></a>
-    <a class="version" href="https://github.com/JorreFog/BananaLinux/releases/tag/v0.4.2">Alpha 0.4.2</a>
+    <a class="version" href="https://github.com/JorreFog/BananaLinux/releases/tag/v0.5.0">Beta 0.5.0</a>
   </div>
   <div class="links">
+    <a href="#new">What's new</a>
     <a href="#features">Features</a>
     <a href="#emulators">Emulators</a>
+    <a href="#themes">Themes</a>
     <a href="#inside">Under the hood</a>
     <a href="https://github.com/JorreFog/BananaLinux">GitHub</a>
     <a href="https://discord.gg/3wf73cK2Qq">Discord</a>
@@ -68,7 +70,35 @@
         <a class="btn" href="#features">Take a tour</a>
         <a class="btn" href="https://discord.gg/3wf73cK2Qq">Join the Discord</a>
       </div>
-      <p class="alpha">Alpha 0.4.2 · <a href="https://github.com/JorreFog/BananaLinux#status">Check known issues</a> before installing.</p>
+      <p class="alpha">Beta 0.5.0 · <a href="#new">What's new</a> · <a href="https://github.com/JorreFog/BananaLinux#status">Check known issues</a> before installing.</p>
+    </div>
+  </section>
+
+  <section id="new" class="panel-right">
+    <div class="card reveal">
+      <p class="eyebrow">New in 0.5.0</p>
+      <h2>Faster, cooler and wireless.</h2>
+      <p>Tested by the QA team on both handhelds through twelve beta builds.</p>
+      <ul class="facts">
+        <li><b>BananaDS, 12.6% faster.</b> It runs 5 °C cooler, and a full-speed game needs about a quarter less CPU.</li>
+        <li><b>3x and 4x resolution.</b> Experimental, in BananaDS. 4x is the RG DS Plus's native screen size.</li>
+        <li><b>Low latency, fixed.</b> Experimental: in BananaDS a press shows about two refreshes sooner.</li>
+        <li><b>Bluetooth.</b> Headphones and speakers with aptX, aptX HD, LDAC and FastStream, and controllers.</li>
+        <li><b>Updates over Wi-Fi.</b> Checked, downloaded and verified on the handheld.</li>
+        <li><b>Your library on a home server.</b> Games, box art and saves kept in step with Romhost or RomM.</li>
+        <li><b>Companions on the second screen.</b> A redesigned Pokémon companion, and game companions for 500+ GBA games.</li>
+        <li><b>Ten layout themes, built in.</b> Made with the Banana Theme Studio; pick one in Settings.</li>
+        <li><b>A new first boot.</b> An arrival animation, then a step-by-step setup.</li>
+      </ul>
+      <div class="stats units">
+        <div><b>9.8 s</b><span>power button to menu</span></div>
+        <div><b>+12.6%</b><span>BananaDS speed</span></div>
+        <div><b>10</b><span>built-in themes</span></div>
+      </div>
+      <p class="alpha">Boot: 12.0 s in 0.4.2, timed with a stopwatch by a QA tester (handheld not recorded). BananaDS: fast-forward throughput at 2x on an RG DS Plus, average of 9 games.</p>
+      <div class="cta">
+        <a class="btn" href="https://github.com/JorreFog/BananaLinux/releases/tag/v0.5.0">Read the release notes</a>
+      </div>
     </div>
   </section>
 
@@ -78,11 +108,13 @@
       <h2>A small bunch of thoughtful features.</h2>
       <p>Built around two screens, a clamshell and the games you want to play.</p>
       <div class="tiles">
-        <div class="tile"><img src="assets/icons/nds.png" alt=""><b>Two ways to play DS</b><span>Choose SuperDrastic or BananaDS, with each DS screen on its own display.</span></div>
-        <div class="tile"><img src="assets/icons/moon.png" alt=""><b>Close the lid</b><span>Take a break. Your game pauses when the handheld sleeps and resumes when you open it.</span></div>
-        <div class="tile"><img src="assets/icons/gamepad.png" alt=""><b>Beyond Nintendo DS</b><span>Play GBA, Game Boy, NES, SNES, Mega Drive, PlayStation and N64 through RetroArch.</span></div>
-        <div class="tile"><img src="assets/icons/store.png" alt=""><b>Updates in one file</b><span>Copy an update to the card and install it from Settings. The previous system version stays in the other slot.</span></div>
-        <div class="tile"><img src="assets/icons/phone.png" alt=""><b>Connected when you want</b><span>Copy games over Wi-Fi. Use BananaDS for RetroAchievements and online DS play.</span></div>
+        <div class="tile"><img src="assets/icons/nds.png" alt=""><b>Two ways to play DS</b><span>Choose SuperDrastic or BananaDS, with each DS screen on its own display. F + SELECT swaps them.</span></div>
+        <div class="tile"><img src="assets/icons/moon.png" alt=""><b>Close the lid</b><span>Take a break. Your game pauses when the handheld sleeps and resumes when you open it. After a long sleep on the battery it saves and powers off.</span></div>
+        <div class="tile"><img src="assets/icons/gamepad.png" alt=""><b>Beyond Nintendo DS</b><span>Play GBA, Game Boy, NES, SNES, Mega Drive, PlayStation and N64 through RetroArch. In 0.5.0 N64 is up to twice as fast, and PlayStation games no longer stutter or crackle.</span></div>
+        <div class="tile"><img src="assets/icons/store.png" alt=""><b>Updates over Wi-Fi</b><span>Settings finds, downloads and checks the update. It installs to the other slot, so the previous version stays one restart away.</span></div>
+        <div class="tile"><img src="assets/icons/music.png" alt=""><b>Bluetooth</b><span>Headphones, speakers and controllers. Wi-Fi keeps working while Bluetooth plays.</span></div>
+        <div class="tile"><img src="assets/icons/phone.png" alt=""><b>Connected when you want</b><span>Copy games over Wi-Fi, sync with a home server, and use BananaDS for RetroAchievements and online DS play.</span></div>
+        <div class="tile"><img src="assets/icons/gba.png" alt=""><b>Companions</b><span>The second screen shows your Pokémon party and battles, or status, items and maps for 500+ GBA games.</span></div>
         <div class="tile"><img src="assets/icons/book.png" alt=""><b>English and Simplified Chinese</b><span>Choose your language in Settings. Simplified Chinese translation by Majirefy; some newer text remains in English.</span></div>
       </div>
     </div>
@@ -105,7 +137,8 @@
           <ul>
             <li>2x rendering with Gengis Engine 3D</li>
             <li>Per-game CPU tuning</li>
-            <li>Save states with previews and shader settings</li>
+            <li>Save slots with both screens as their picture</li>
+            <li>Low latency (experimental)</li>
           </ul>
         </article>
         <article class="card emu" style="--emu: #f0b429">
@@ -113,11 +146,28 @@
           <h3>melonDS, with more ways to play</h3>
           <p class="emu-sub">The melonDS core on BananaOS's display path and menu.</p>
           <ul>
+            <li>12.6% faster in 0.5.0, and 5 °C cooler</li>
+            <li>3x and 4x resolution (experimental)</li>
             <li>RetroAchievements and Nintendo WFC online play</li>
-            <li>Real microphone support</li>
-            <li>Cheats and fast-forward</li>
+            <li>Real microphone, cheats and fast-forward</li>
           </ul>
         </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="themes" class="panel-left">
+    <div class="card reveal">
+      <p class="eyebrow">Layout themes</p>
+      <h2>Make the menu yours.</h2>
+      <p>In 0.5.0 a theme file can draw the whole menu: where everything is, how it looks and how it moves. Ten
+        layout themes come built in: pick one in Settings &gt; Display &amp; sound &gt; Theme. To make your own, or
+        edit one of these, use the Banana Theme Studio, the theme editor that runs in your browser.</p>
+      <div class="theme-chips" id="theme-chips" aria-label="The ten themes: pick one to show it on the handheld"></div>
+      <p class="alpha" id="theme-now" aria-live="polite">On the screens: each theme's home screen, as the Theme Studio draws it.</p>
+      <div class="cta">
+        <a class="btn primary" href="https://jorrefog.github.io/BananaLinux/theme-studio/">Open the Theme Studio</a>
+        <a class="btn" href="https://github.com/JorreFog/BananaLinux/blob/main/docs/MAKE-A-THEME.md">Make your own theme</a>
       </div>
     </div>
   </section>
@@ -132,11 +182,11 @@
         <li>System and files, kept separate. The system lives in a read-only SquashFS image. Games, saves and settings live on an exFAT partition you can access from your computer.</li>
         <li>Straight to the menu. The interface starts as soon as the data partition is mounted.</li>
         <li>Room for the game. Before launching a game, the menu releases the screens, controls and audio for the emulator to use.</li>
-        <li>Two system slots. Updates install to the other slot, keeping the previous system version available.</li>
+        <li>Two system slots. Updates come over Wi-Fi and install to the other slot, keeping the previous system version available.</li>
       </ul>
       <div class="stats">
         <div><b data-count="2">2</b><span>system slots</span></div>
-        <div><b data-count="1">1</b><span>update file</span></div>
+        <div><b data-count="2">2</b><span>DS emulators</span></div>
         <div><b>2</b><span>handhelds: RG DS &amp; RG DS Plus</span></div>
       </div>
     </div>
@@ -148,25 +198,32 @@
       <h2>Your next game starts here.</h2>
       <p>Choose the image for your handheld, flash a microSD card and boot BananaOS.</p>
       <div class="cta">
-        <a class="btn primary" href="https://github.com/JorreFog/BananaLinux/releases/download/v0.4.2/banana-rgds.img.gz" data-asset="banana-rgds.img.gz">Download for RG DS</a>
-        <a class="btn primary" href="https://github.com/JorreFog/BananaLinux/releases/download/v0.4.2/banana-rgds-plus.img.gz" data-asset="banana-rgds-plus.img.gz">Download for RG DS Plus</a>
+        <a class="btn primary" href="https://github.com/JorreFog/BananaLinux/releases/download/v0.5.0/banana-rgds.img.gz" data-asset="banana-rgds.img.gz">Download for RG DS</a>
+        <a class="btn primary" href="https://github.com/JorreFog/BananaLinux/releases/download/v0.5.0/banana-rgds-plus.img.gz" data-asset="banana-rgds-plus.img.gz">Download for RG DS Plus</a>
       </div>
-      <p class="alpha">Alpha software. Read the <a href="https://github.com/JorreFog/BananaLinux#status">known issues</a> before installing. Flashing erases the
+      <p class="alpha">Beta 0.5.0. Read the <a href="https://github.com/JorreFog/BananaLinux#status">known issues</a> before installing. Flashing erases the
         selected card, so back up anything you want to keep.</p>
       <ol class="steps">
         <li>Flash your card. Use the <a href="https://github.com/jesussaves-ai/banana-linux-flasher/releases/latest">BananaLinux Flasher</a> by jesussaves-ai, or open the matching <code>.img.gz</code> image in <a href="https://etcher.balena.io/">balenaEtcher</a> without unzipping it. Check the selected drive before you start.</li>
-        <li>Start your handheld. Insert the card and power on. The first boot prepares your data partition, then guides you through setup. Wi-Fi and the other setup steps are optional.</li>
+        <li>Start your handheld. Insert the card and power on. The first boot prepares your data partition, then guides you through setup step by step: language, Wi-Fi, time zone, your DS's name, RetroAchievements and box art. Skip any step with B.</li>
         <li>Add your games. Open the <code>BANANA</code> drive on your computer and copy games into <code>roms/nds</code>, <code>roms/gba</code> and the other system folders. You can also copy them over Wi-Fi.</li>
       </ol>
       <div class="cta">
+        <a class="btn" href="https://github.com/JorreFog/BananaLinux/releases/tag/v0.5.0">Release notes</a>
         <a class="btn" href="https://github.com/JorreFog/BananaLinux#get-it">Full install guide</a>
         <a class="btn" href="https://github.com/JorreFog/BananaLinux/releases">All releases</a>
         <a class="btn" href="https://jorrefog.github.io/BananaLinux/save-mover/">Move your saves</a>
         <a class="btn" href="https://discord.gg/3wf73cK2Qq">Join the Discord</a>
         <a class="btn" href="https://github.com/JorreFog/BananaLinux">Source on GitHub</a>
       </div>
-      <p>Already using BananaOS? See the <a href="https://github.com/JorreFog/BananaLinux#update">update guide</a> for compatible versions and instructions.</p>
-      <p class="fine">BananaOS is an independent alpha project for the Anbernic RG DS and RG DS Plus. Developed with
+      <p>Already using BananaOS? From 0.4.x, put <a href="https://github.com/JorreFog/BananaLinux/releases/download/v0.5.0/banana-rgds-plus-0.5.0.update.tar">banana-rgds-plus-0.5.0.update.tar</a>
+        (RG DS Plus) or <a href="https://github.com/JorreFog/BananaLinux/releases/download/v0.5.0/banana-rgds-0.5.0.update.tar">banana-rgds-0.5.0.update.tar</a> (RG DS) in
+        <code>banana/updates</code> on the card and install it from Settings &gt; System &gt; Update. Games, saves and settings stay. From 0.5.0 on,
+        updates come over Wi-Fi. More in the <a href="https://github.com/JorreFog/BananaLinux#update">update guide</a>.</p>
+      <p class="credits"><b>Made by</b> JorreFog (maintainer), jesussaves-ai and marlupatrocinio ·
+        <b>Simplified Chinese</b> Majirefy · <b>QA</b> Duncan, Majirefy, Smizzle and nigel777 · <b>UI/UX</b> Numberjerry ·
+        <a href="https://github.com/JorreFog/BananaLinux#credits">everyone we build on</a></p>
+      <p class="fine">BananaOS is an independent beta project for the Anbernic RG DS and RG DS Plus. Developed with
         Claude as a coding assistant, directed, reviewed and tested on real hardware by the maintainer. Not
         affiliated with Anbernic or Nintendo. The handheld model is a fan recreation. Game titles and artwork belong
         to their owners. No games, ROMs or BIOS files are included. See the <a href="https://github.com/JorreFog/BananaLinux/blob/main/LICENSE">project

@@ -20,7 +20,11 @@
  *     rk817, whose capture gain bananad sets for the DS's microphone (audio_setup). The route is ALSA's default
  *     device, written to /run/banana/asound.conf (/etc/asound.conf points
  *     there), so everything opened after a change follows it; the volume keys change the card that plays.
+ *     Bluetooth headphones or speakers, while connected, come before both: the bluetooth script writes the one
+ *     playing to /run/banana/bt/audio (from bluez-alsa's events), bananad watches that folder and plays through
+ *     bluez-alsa's ALSA plugin, and back to the speakers or the jack when the file goes.
  *
+ * The menu's Sleep: banana-ui writes /run/banana/sleep-now and sends SIGHUP; the power button's sleep follows.
  * Settings: /etc/banana/bananad.conf, then /data/banana/bananad.conf (key = value lines, see bananad.conf); SIGHUP
  * reads them again (the menu's settings screen sends it).
  * It reads the input devices alongside banana-ui and the games (evdev allows many readers) and grabs nothing.
@@ -66,7 +70,9 @@ static struct {
 	int sleep_poweroff_pct;	/* found at or under this while asleep: shut down cleanly */
 	double dim_min;			/* idle minutes in the menu before the panels dim (0: never) */
 	int dim_pct;			/* dimmed to this percent of their brightness */
-} cfg = { "auto", 5, 8, 10, 1, 2000, 3, "deep", 128, 20, 5, 1, 4, 5, 2, 30 };
+	int mic_gain;			/* the rk817's microphone preamp, 0..15 (-1: left as it is) */
+	double poweroff_after_min;	/* asleep this long on the battery: the game saved, then a clean shutdown (0: never) */
+} cfg = { "auto", 5, 8, 10, 1, 2000, 3, "deep", 128, 20, 5, 1, 4, 5, 2, 30, 12, 0 };
 
 static int devfd[MAXDEV], ndev;
 static void leds_update(void);
@@ -77,6 +83,9 @@ static char bottom_bl[64];	/* the bottom panel's backlight name; banana-ui's idl
 static int headphones;
 static int fn_held, power_down, lid_closed;
 static int lid_retry_off;	/* a suspend failed with the lid shut: no retry until it opens */
+static double lid_sleep_at;	/* the lid shut in a DS game: the sleep a moment later, once the game has seen it */
+static double menu_sleep_at;	/* the menu's Sleep (banana-ui wrote /run/banana/sleep-now and sent SIGHUP): a moment later,
+				 * once the button that chose it is let go */
 static double power_since, last_input, ignore_power_until;
 
 static volatile sig_atomic_t reload;
@@ -122,6 +131,7 @@ static void load_conf(const char *path)
 		else if (!strcmp(k, "brightness_step")) cfg.brightness_step = atoi(v);
 		else if (!strcmp(k, "autosleep_minutes")) cfg.autosleep_min = atoi(v);
 		else if (!strcmp(k, "lid_sleep")) cfg.lid_sleep = !strcmp(v, "yes") || !strcmp(v, "1");
+		else if (!strcmp(k, "mic_gain")) cfg.mic_gain = atoi(v);
 		else if (!strcmp(k, "power_long_ms")) cfg.power_long_ms = atoi(v);
 		else if (!strcmp(k, "battery_shutdown_percent")) cfg.battery_off_pct = atoi(v);
 		else if (!strcmp(k, "mem_sleep")) snprintf(cfg.mem_sleep, sizeof cfg.mem_sleep, "%s", v);
@@ -133,6 +143,7 @@ static void load_conf(const char *path)
 		else if (!strcmp(k, "sleep_poweroff_percent")) cfg.sleep_poweroff_pct = atoi(v);
 		else if (!strcmp(k, "dim_minutes")) cfg.dim_min = atof(v);
 		else if (!strcmp(k, "dim_percent")) cfg.dim_pct = atoi(v);
+		else if (!strcmp(k, "poweroff_after_sleep_minutes")) cfg.poweroff_after_min = atof(v);
 	}
 	fclose(f);
 }
@@ -308,6 +319,10 @@ static void drain_inputs(void)
 static void shutdown_now(const char *why);
 static int battery_discharging_pct(void);
 static int sleep_fallback;		/* 0 as configured; 1 devices one at a time; 2 also s2idle (a suspend failed) */
+/* (the fallback to s2idle is for the one sleep that needed it: the next sleep, and a sleep again after the battery
+ * check, try deep again. Both handhelds' xhci-hcd fails a suspend now and then ("Clearing Run/Stop bit failed",
+ * -ETIMEDOUT), with the devices one at a time too, and two of those in one boot used to leave every later sleep in
+ * s2idle until a reboot, which drains the battery more) */
 
 static void sleep_log(const char *fmt, ...)
 {
@@ -384,6 +399,232 @@ static void panel_off_again(void)
 }
 
 static int charger_online(void);
+/* dark and awake on the charger: waits up to ms for a press of the power button (on its release), the other
+ * devices' events dropped (a key while dark wakes nothing, as in a sleep) */
+static int power_pressed(int ms)
+{
+	struct pollfd pf[MAXDEV];
+	for (int i = 0; i < ndev; i++) pf[i] = (struct pollfd){ devfd[i], POLLIN, 0 };
+	if (poll(pf, ndev, ms) <= 0) return 0;
+	int got = 0, readable = 0;
+	for (int i = 0; i < ndev; i++) {
+		if (!(pf[i].revents & POLLIN)) continue;
+		readable = 1;
+		struct input_event ev[32];
+		ssize_t r;
+		while ((r = read(devfd[i], ev, sizeof ev)) > 0)
+			for (int k = 0; k < r / (ssize_t)sizeof ev[0]; k++)
+				if (ev[k].type == EV_KEY && ev[k].code == KEY_POWER && ev[k].value == 0) got = 1;
+	}
+	/* only a device's hang-up or error (a USB pad pulled out while dark): wait the time out anyway, not a busy loop */
+	if (!readable) usleep(ms * 1000);
+	return got;
+}
+/* dark on the charger: the buttons and touchscreens grabbed for bananad alone, so a press there reaches neither the
+ * menu nor a game (it looks asleep: A launched the game under the cursor, a tap hit RetroArch's game panel); the lid's
+ * hall sensor stays shared, as BananaDS and SuperDrastic must see the lid open to wake the game they put to sleep */
+static void inputs_grab(int on)
+{
+	for (int i = 0; i < ndev; i++) {
+		unsigned long sw[(SW_MAX + 8 * sizeof(long)) / (8 * sizeof(long))] = { 0 };
+		ioctl(devfd[i], EVIOCGBIT(EV_SW, sizeof sw), sw);
+		if (sw[SW_LID / (8 * sizeof(long))] >> (SW_LID % (8 * sizeof(long))) & 1) continue;
+		ioctl(devfd[i], EVIOCGRAB, on ? 1 : 0);
+	}
+}
+/* the battery's charge in percent whatever the charger says (-1: none): asleep dark on a charger too weak to keep up,
+ * it still goes down */
+static int battery_capacity(void)
+{
+	DIR *d = opendir("/sys/class/power_supply");
+	if (!d) return -1;
+	struct dirent *e;
+	int r = -1;
+	while (r < 0 && (e = readdir(d))) {
+		if (e->d_name[0] == '.') continue;
+		char p[320], t[32];
+		snprintf(p, sizeof p, "/sys/class/power_supply/%s/type", e->d_name);
+		read_str(p, t, sizeof t);
+		if (strcmp(t, "Battery")) continue;
+		snprintf(p, sizeof p, "/sys/class/power_supply/%s/capacity", e->d_name);
+		r = read_int(p, -1);
+	}
+	closedir(d);
+	return r;
+}
+/* ---- Power off after sleeping (poweroff_after_sleep_minutes) -------------------------------------------------------
+ * Asleep that long on the battery, the RTC wakes the handheld quietly (the panels stay dark, no hooks, nothing for the
+ * menu), the game saves a resume state and quits, and it shuts down cleanly; /data/banana/resume-boot then names the
+ * game, which banana-ui starts again once at the next boot with its resume state loaded (the launchers' resume-once).
+ * The lid can't switch it back on: the hall sensor is the SoC's GPIO0_C3 (gpio-keys-hall), which is unpowered once the
+ * RK817 has shut down, and the RK817 powers up only from its own PWRON key (and a charger). Power starts it again. */
+
+/* the pid of the process in process group pg named comm (/proc/<pid>/stat), 0 if none */
+static pid_t pgrp_member(pid_t pg, const char *comm)
+{
+	DIR *d = opendir("/proc");
+	if (!d) return 0;
+	struct dirent *e;
+	pid_t r = 0;
+	while (!r && (e = readdir(d))) {
+		if (!isdigit((unsigned char)e->d_name[0])) continue;
+		char path[300], st[512];
+		snprintf(path, sizeof path, "/proc/%s/stat", e->d_name);
+		read_str(path, st, sizeof st);
+		/* "pid (comm) state ppid pgrp ...": the name may hold spaces and parentheses, so from the last ')' */
+		char *open = strchr(st, '('), *close = strrchr(st, ')');
+		if (!open || !close || close < open) continue;
+		int pgrp = 0, ppid;
+		char state;
+		if (sscanf(close + 1, " %c %d %d", &state, &ppid, &pgrp) != 3 || pgrp != pg) continue;
+		*close = 0;
+		if (!strcmp(open + 1, comm)) r = atoi(e->d_name);
+	}
+	closedir(d);
+	return r;
+}
+
+/* the game's ROM, as banana-ui gave it to the launcher (BANANA_ROM in its environment); "" if none */
+static void game_rom(pid_t game, char *out, size_t n)
+{
+	out[0] = 0;
+	char path[64], env[16384];
+	snprintf(path, sizeof path, "/proc/%d/environ", (int)game);
+	int fd = open(path, O_RDONLY | O_CLOEXEC);
+	if (fd < 0) return;
+	ssize_t len = read(fd, env, sizeof env - 1);
+	close(fd);
+	if (len <= 0) return;
+	env[len] = 0;
+	for (char *p = env; p < env + len; p += strlen(p) + 1)
+		if (!strncmp(p, "BANANA_ROM=", 11)) { snprintf(out, n, "%s", p + 11); return; }
+}
+
+/* the resume state the DS launchers name for rom (run-drastic, run-bananads): <dir>/<file name without its
+ * extension><ext>; "" for another emulator (RetroArch's QUIT waits for its own save, so it isn't checked) */
+static void resume_state_path(const char *emu, const char *rom, char *out, size_t n)
+{
+	out[0] = 0;
+	const char *dir, *ext;
+	if (!strcmp(emu, "superdrastic")) dir = "/data/drastic/savestates", ext = ".resume.dss";
+	else if (!strcmp(emu, "bananads")) dir = "/data/states/nds", ext = ".resume.mst";
+	else return;
+	const char *b = strrchr(rom, '/');
+	b = b ? b + 1 : rom;
+	const char *dot = strrchr(b, '.');
+	int len = dot && dot != b ? (int)(dot - b) : (int)strlen(b);
+	snprintf(out, n, "%s/%.*s%s", dir, len, b, ext);
+}
+
+/* a command for RetroArch on its stdin (run-retroarch's pipe, or banana-ui's for the game panel) */
+static void ra_command(const char *c)
+{
+	int fd = open("/run/banana/retroarch.cmd", O_WRONLY | O_NONBLOCK | O_CLOEXEC);
+	if (fd < 0) return;
+	if (write(fd, c, strlen(c)) < 0) {}
+	close(fd);
+}
+
+/* waits up to secs for the game to quit, the backlights kept off meanwhile (a display handed back, or banana-ui's
+ * modeset, can switch a panel's backlight on again); 1 when it has */
+static int game_gone(pid_t game, double secs)
+{
+	for (double t0 = mono(); mono() - t0 < secs; usleep(100000)) {
+		if (kill(game, 0) != 0) return 1;
+		backlights_power(0);
+	}
+	return kill(game, 0) != 0;
+}
+
+static void sleep_poweroff(pid_t game, pid_t pg, double asleep)
+{
+	sleep_log("asleep %.0f min: the game saved, then shutting down (poweroff_after_sleep_minutes)", asleep / 60);
+	backlights_power(0);
+	if (game) {
+		/* quiet: the game runs again for a moment to save. The levels kept first (the next boot restores them), then
+		 * the volume down; not Bluetooth headphones, whose own volume would stay down */
+		char mixer[64];
+		read_str("/run/banana/mixer", mixer, sizeof mixer);
+		if (strncmp(mixer, "bluealsa", 8)) {
+			char *store[] = { "alsactl", "-f", "/data/banana/asound.state", "store", NULL };
+			run(store);
+			char *mute[] = { "/usr/libexec/banana/volume", "set", "0", NULL };
+			run(mute);
+		}
+		char rom[1024];
+		game_rom(game, rom, sizeof rom);
+		const char *emu = NULL;
+		pid_t p, grp = pg > 0 ? -pg : game;
+		double wait = 60;	/* (the emulators' own limits are shorter: never cut a save short) */
+		struct timespec asked;	/* the resume state must be newer than this to count as this save's */
+		clock_gettime(CLOCK_REALTIME, &asked);
+		asked.tv_sec -= 1;	/* (a filesystem's timestamps may be coarser than the clock) */
+		if (pg > 0 && (p = pgrp_member(pg, "drastic"))) {
+			/* SuperDrastic: SIGUSR1 saves the resume state (DSFLIP_RESUME_FILE, which run-drastic always sets) and
+			 * quits; sent while stopped, it is the first thing the game does on SIGCONT */
+			emu = "superdrastic";
+			kill(p, SIGUSR1);
+			kill(grp, SIGCONT);
+		} else if (pg > 0 && (p = pgrp_member(pg, "bananads"))) {
+			/* BananaDS: SIGUSR1 quits with the resume state written whatever resume.on_quit says, then the save */
+			emu = "bananads";
+			kill(p, SIGUSR1);
+			kill(grp, SIGCONT);
+		} else if (pg > 0 && (p = pgrp_member(pg, "retroarch"))) {
+			/* RetroArch: a state in its automatic slot (-1: the slot down past 0, from wherever it is; the one
+			 * savestate_auto_load reads), then QUIT, which waits for the save task to finish. run-retroarch puts
+			 * the slot back after. No state in Hardcore: then it only quits (its SRAM is written on the way). */
+			emu = "retroarch";
+			kill(grp, SIGCONT);
+			usleep(500000);	/* (the pipe is read once a frame: running first) */
+			int slot = 0;
+			FILE *f = fopen("/data/retroarch/retroarch.cfg", "r");
+			if (f) {
+				char ln[256];
+				while (fgets(ln, sizeof ln, f)) sscanf(ln, "state_slot = \"%d\"", &slot);
+				fclose(f);
+			}
+			if (slot < 0) slot = 0;
+			if (slot > 997) slot = 997;
+			for (int i = 0; i < slot + 2; i++) { ra_command("STATE_SLOT_MINUS\n"); usleep(100000); }	/* (one a frame or more: each is a press) */
+			ra_command("SAVE_STATE\n");
+			usleep(500000);
+			ra_command("QUIT\n");
+		} else {
+			/* the rest (PortMaster ports, PICO-8): SIGTERM, as a shutdown; no resume state to come back to */
+			kill(grp, SIGCONT);
+			kill(grp, SIGTERM);
+			wait = 10;
+		}
+		if (game_gone(game, wait)) {
+			/* SuperDrastic quits after 5 s whether or not DraStic wrote the state, and BananaDS when it can't
+			 * write it: then an older resume state (or none) is all there is, and the next boot mustn't start the
+			 * game from it as if it were this one (review 0.4.3: resume-boot was written either way) */
+			char rs[1200];
+			struct stat st;
+			if (emu && rom[0]) resume_state_path(emu, rom, rs, sizeof rs); else rs[0] = 0;
+			if (rs[0] && (stat(rs, &st) || st.st_mtim.tv_sec < asked.tv_sec)) {
+				sleep_log("%s quit without a new resume state (%s): not started again at the next boot", emu, rs);
+				emu = NULL;
+			}
+			if (emu && rom[0]) {
+				FILE *f = fopen("/data/banana/resume-boot.new", "w");
+				if (f) {
+					fprintf(f, "rom=%s\nemulator=%s\n", rom, emu);
+					fflush(f);
+					fsync(fileno(f));
+					fclose(f);
+					rename("/data/banana/resume-boot.new", "/data/banana/resume-boot");
+				}
+				sleep_log("%s saved %s: it starts again at the next boot", emu, rom);
+			}
+		} else sleep_log("the game hasn't quit after %.0f s: shutting down anyway", wait);
+	}
+	backlights_power(0);
+	shutdown_now("asleep too long");
+	for (;;) pause();	/* init is shutting down: nothing more to do (not a sleep again with the lid shut) */
+}
+
 static void suspend_now(const char *why)
 {
 	double t0 = mono();
@@ -392,27 +633,62 @@ static void suspend_now(const char *why)
 	if (pg > 0) kill(-pg, SIGSTOP);	/* DraStic's dynarec mustn't run on while the clocks drop (ROCKNIX's finding) */
 	hooks("pre", 0);
 	sync();
+	if (sleep_fallback > 1) sleep_fallback = 1;	/* deep again (devices one at a time), see sleep_fallback */
 	sleep_mode();
-	int cycles = 0, rtc_wakes = 0, failures = 0, dark = 0;
+	int cycles = 0, rtc_wakes = 0, failures = 0, dark = 0, dark_lid = 0;
 	double asleep = 0, dark_from = 0, led_at = 0;
+	int dark_cap = -1;	/* the battery when the dark state began (a charger that can't keep up: it falls from there) */
 	const char *woke = "?";
+	/* Power off after sleeping: the wall clock's deadline (it goes on while asleep), from the first real sleep */
+	time_t off_at = 0;
 	for (;;) {
-		/* charging with the lid shut: no suspend, which turns the charging light off (it is a PWM LED, and the PWM
-		 * stops in suspend). Dark and awake instead, the game still paused, until the lid opens (back as from a
-		 * sleep) or the charger is pulled out (then a real sleep). */
-		if (lid_closed && charger_online()) {
+		/* charging: no suspend, which turns the charging light off (it is a PWM LED, and the PWM stops in suspend).
+		 * Dark and awake instead, the game still paused, until the lid opens or the power button is pressed (back as
+		 * from a sleep), or the charger is pulled out (then a real sleep). Since 0.4.2 a power-button sleep too, not
+		 * only the lid's (#8: the light went out when the handheld was put to sleep on the charger). */
+		if (charger_online()) {
+			/* (no Power off after sleeping here: nothing drains, the charging light would go out, and the handheld is
+			 * picked up charged; unplugged, the deadline starts at the real sleep) */
+			off_at = 0;
 			if (!dark) {
-				dark = 1; dark_from = mono();
+				dark = 1; dark_from = mono(); dark_lid = lid_closed; dark_cap = battery_capacity();
 				backlights_power(0);
+				inputs_grab(1);
 				sleep_log("%s while charging: dark and awake, so the charging light stays on%s", why, game ? ", game paused" : "");
 			}
-			if (mono() >= led_at) { leds_update(); led_at = mono() + 10; }	/* (it goes out when the battery is full) */
-			usleep(500000);
+			if (mono() >= led_at) {
+				leds_update(); led_at = mono() + 10;	/* (it goes out when the battery is full) */
+				/* a charger too weak for the handheld: shut down cleanly before the battery is empty. Only once the
+				 * level has fallen since the dark state began: a low battery on a good charger (plugged in at 4%, the
+				 * lid shut) charges, and shutting down then cut the game and the charging light for nothing */
+				int cap = battery_capacity();
+				if (cap >= 0 && cap <= cfg.sleep_poweroff_pct && dark_cap >= 0 && cap < dark_cap) {
+					sleep_log("dark on the charger, but the battery is down to %d%%: shutting down", cap);
+					inputs_grab(0);
+					if (pg > 0) kill(-pg, SIGCONT);	/* the game gets SIGTERM next, to write its saves */
+					shutdown_now("battery empty while charging");
+					return;
+				}
+			}
+			/* the power button wakes it, as from a sleep; with the lid shut it doesn't (a sleep goes back to
+			 * sleep then: a press in a bag mustn't run the game) */
+			if (power_pressed(500)) { read_lid(); if (!(lid_closed && cfg.lid_sleep)) { woke = "power button"; break; } }
 			read_lid();
-			if (!lid_closed) { woke = "lid opened"; break; }
+			if (dark_lid && !lid_closed) { woke = "lid opened"; break; }
+			if (!dark_lid && lid_closed) dark_lid = 1;	/* shut meanwhile: opening it wakes too */
 			continue;
 		}
-		time_t alarm = rtc_alarm((int)(cfg.sleep_check_hours * 3600));
+		/* the RTC alarm: the sooner of the battery check and the deadline (passed: woken for it, or anything else
+		 * after it with the lid shut, and the game is saved and the handheld shut down) */
+		if (cfg.poweroff_after_min > 0 && !off_at) off_at = time(NULL) + (time_t)(cfg.poweroff_after_min * 60 + 0.5);
+		if (off_at && time(NULL) >= off_at) {
+			if (dark) inputs_grab(0);
+			sleep_poweroff(game, pg, asleep);
+			return;
+		}
+		int secs = (int)(cfg.sleep_check_hours * 3600);
+		if (off_at && (secs <= 0 || off_at - time(NULL) < secs)) secs = (int)(off_at - time(NULL));
+		time_t alarm = rtc_alarm(secs);
 		double t_in = mono();
 		struct timespec b0, b1;
 		clock_gettime(CLOCK_BOOTTIME, &b0);	/* BOOTTIME counts the time asleep, MONOTONIC doesn't */
@@ -427,16 +703,20 @@ static void suspend_now(const char *why)
 		rtc_alarm(0);
 		cycles++;
 		if (r) {
-			/* it didn't suspend: devices one at a time, then the lighter s2idle, then give up and blank the panels */
+			/* it didn't suspend: devices one at a time, then the lighter s2idle, then give up and blank the panels.
+			 * Already one at a time (an earlier sleep failed): that once more before s2idle */
 			failures++;
-			sleep_log("suspend failed (%s)%s", strerror(err), sleep_fallback < 2 ? ": trying the safer way" : "");
-			if (sleep_fallback < 2 && failures <= 2) { sleep_fallback++; sleep_mode(); usleep(200000); continue; }
+			int again = sleep_fallback < 2 && failures <= 2, safer = sleep_fallback == 0 || failures >= 2;
+			sleep_log("suspend failed (%s)%s", strerror(err), !again ? "" : safer ? ": trying the safer way" : ": trying again");
+			if (again) { if (safer) sleep_fallback++; sleep_mode(); usleep(200000); continue; }
 			woke = "failed";
 			if (lid_closed) backlights_power(0);	/* can't sleep: at least dark until the lid opens */
 			lid_retry_off = 1;	/* ...and not tried again every 5 s with the lid still shut */
 			break;
 		}
 		asleep += (b1.tv_sec - b0.tv_sec) + (b1.tv_nsec - b0.tv_nsec) / 1e9;
+		failures = 0;	/* it slept: a sleep again (the battery check, the lid still shut) starts from deep */
+		if (sleep_fallback > 1) { sleep_fallback = 1; sleep_mode(); }
 		/* why it woke: the battery check's alarm, or someone (lid, power button) */
 		if (rtc_fired) {
 			rtc_wakes++;
@@ -458,6 +738,7 @@ static void suspend_now(const char *why)
 	double t_wake = mono();
 	/* the panels on when the lid is open: dark while charging, or dark from a lid shut with lid_sleep off before a
 	 * power-button sleep (the lid-open event that would light them is drained below) */
+	if (dark) inputs_grab(0);	/* the buttons and touchscreens shared again */
 	if (dark || !lid_closed) backlights_power(!lid_closed);
 	if (pg > 0) kill(-pg, SIGCONT);
 	pid_t ui = ui_pid();
@@ -499,6 +780,27 @@ static double save_volume_at, save_backlight_at;	/* debounced: written a moment 
 
 /* ---- sound: which card plays ----------------------------------------------------------------------------------- */
 static int card_codec = -1, card_speaker = -1, card_play = 0;	/* rk817; aw88166 (RG DS Plus only); the one playing */
+#define BT_AUDIO_DIR "/run/banana/bt"
+static char bt_mac[18], bt_pcm[160];	/* Bluetooth headphones playing now ("" none): their address, bluez-alsa's PCM */
+
+/* the bluetooth script's /run/banana/bt/audio: "<MAC> <PCM path>" while A2DP headphones are connected */
+static int bt_audio_read(void)
+{
+	char mac[32] = "", pcm[160] = "";
+	FILE *f = fopen(BT_AUDIO_DIR "/audio", "r");
+	if (f) {
+		if (fscanf(f, "%31s %159s", mac, pcm) != 2) mac[0] = pcm[0] = 0;
+		fclose(f);
+	}
+	/* AA:BB:CC:DD:EE:FF, and a path with nothing ALSA's configuration would read as its own */
+	int ok = strlen(mac) == 17 && strncmp(pcm, "/org/bluealsa/", 14) == 0;
+	for (int i = 0; ok && i < 17; i++) ok = i % 3 == 2 ? mac[i] == ':' : isxdigit((unsigned char)mac[i]);
+	for (char *c = pcm; ok && *c; c++) ok = isalnum((unsigned char)*c) || *c == '/' || *c == '_';
+	if (!ok) mac[0] = pcm[0] = 0;
+	snprintf(bt_mac, sizeof bt_mac, "%s", mac);
+	snprintf(bt_pcm, sizeof bt_pcm, "%s", pcm);
+	return bt_mac[0] != 0;
+}
 
 /* the cards by what they are, from /proc/asound/cards (" 0 [rk817hp ]: simple-card - rk817_hp") */
 static void audio_find_cards(void)
@@ -526,13 +828,18 @@ static void audio_find_cards(void)
 
 static void audio_route(void)
 {
-	card_play = card_speaker >= 0 && !headphones ? card_speaker : card_codec;
+	int bt = bt_audio_read();
+	/* Bluetooth headphones being called back (after a wake, or a codec change: the bluetooth script's bt/hold) and
+	 * not back yet: the codec with no speaker on it (the RG DS's amplifier switched off; on the Plus the rk817 drives
+	 * only the jack), so a game plays on at its pace, through a real device's clock, and nothing comes out loud */
+	int hold = !bt && access(BT_AUDIO_DIR "/hold", F_OK) == 0;
+	card_play = card_speaker >= 0 && !headphones && !hold ? card_speaker : card_codec;
 	/* the RG DS: one card, whose HP output feeds both the jack and the speaker amplifier; the amplifier is the card's
 	 * "Internal Speakers Switch" (a pin switch), off while headphones are in, or the speakers play along (#13) */
 	if (card_speaker < 0 && card_codec >= 0) {
 		char c[16];
 		snprintf(c, sizeof c, "%d", card_codec);
-		char *argv[] = { "amixer", "-q", "-c", c, "cset", "name=Internal Speakers Switch", headphones ? "off" : "on", NULL };
+		char *argv[] = { "amixer", "-q", "-c", c, "cset", "name=Internal Speakers Switch", headphones || hold ? "off" : "on", NULL };
 		run(argv);
 	}
 	/* The RG DS Plus's aw88166 amplifiers play 48 kHz whatever rate the I2S is set to (measured: 44.1 kHz audio is
@@ -547,8 +854,12 @@ static void audio_route(void)
 	 * capture never started whatever bananad set the gains to (a standalone arecord, with no playback running, was
 	 * fine). Pinning the capture's slave to 48 kHz makes the emulator's 44.1 kHz capture run at the playback's
 	 * rate, ALSA's plug resampling it, and the two streams agree. */
-	char play[160], cap[160];
-	if (card_play >= 0)
+	char play[192], cap[160];
+	/* Bluetooth headphones first: bluez-alsa's PCM plugin (A2DP), plug converting the rest; the microphone stays the
+	 * rk817's */
+	if (bt)
+		snprintf(play, sizeof play, "{ type plug slave.pcm { type bluealsa device \"%s\" profile \"a2dp\" } }", bt_mac);
+	else if (card_play >= 0)
 		snprintf(play, sizeof play, "{ type plug slave { pcm \"hw:%d\" format S16_LE channels 2 rate 48000 } }", card_play);
 	else
 		snprintf(play, sizeof play, "\"null\"");
@@ -556,11 +867,13 @@ static void audio_route(void)
 		snprintf(cap, sizeof cap, "{ type plug slave { pcm \"hw:%d\" format S16_LE channels 2 rate 48000 } }", card_codec);
 	else
 		snprintf(cap, sizeof cap, "\"null\"");
+	const char *where = bt ? "Bluetooth headphones" : hold ? "nowhere: Bluetooth headphones being called back"
+		: card_play == card_speaker ? "speakers" : headphones ? "headphones" : "the codec";
 	char conf[768];
 	int n = snprintf(conf, sizeof conf,
 		"# bananad: where sound plays now (%s)\n"
 		"pcm.!default { type asym playback.pcm %s capture.pcm %s }\n",
-		card_play == card_speaker ? "speakers" : headphones ? "headphones" : "the codec", play, cap);
+		where, play, cap);
 	/* no card yet (the codec probed late, QEMU): "null" keeps the alias valid instead of a "plughw:-1" that would
 	 * fail every later open; the ctl defaults to one, so its line goes only with a real card */
 	if (card_play >= 0 && n > 0 && (size_t)n < sizeof conf)
@@ -578,7 +891,8 @@ static void audio_route(void)
 	/* the control the volume keys change, for the settings screen's Volume (amixer -c <card> sset <control>) */
 	f = fopen("/run/banana/mixer.new", "w");
 	if (f) {
-		fprintf(f, "%d %s\n", card_play, strcmp(cfg.mixer, "auto") ? cfg.mixer : card_play == card_speaker ? "PCM" : "Master");
+		if (bt) fprintf(f, "bluealsa %s\n", bt_pcm);	/* (the volume script: the headphones' own volume) */
+		else fprintf(f, "%d %s\n", card_play, strcmp(cfg.mixer, "auto") ? cfg.mixer : card_play == card_speaker ? "PCM" : "Master");
 		fclose(f);
 		rename("/run/banana/mixer.new", "/run/banana/mixer");
 	}
@@ -590,8 +904,9 @@ static void audio_route(void)
 		if (write(rc, "AUDIO_REINIT\n", 13) < 0) {}
 		close(rc);
 	}
-	say("sound: playback on card %d (%s), recording on card %d (both 48 kHz, the shared DAI's one rate)", card_play,
-	    card_play == card_speaker ? "speakers" : headphones ? "headphones" : "codec", card_codec);
+	if (bt) say("sound: playback on Bluetooth %s, recording on card %d (48 kHz)", bt_mac, card_codec);
+	else say("sound: playback on card %d (%s), recording on card %d (both 48 kHz, the shared DAI's one rate)", card_play,
+	    where, card_codec);
 }
 
 static void audio_setup(void)
@@ -603,18 +918,19 @@ static void audio_setup(void)
 	/* the rk817's output path: HP drives both its jack and (on the RG DS) the speaker amplifier */
 	char *argv[] = { "amixer", "-q", "-c", c, "sset", "Playback Mux", "HP", NULL };
 	run(argv);
-	/* ...and its input path, the microphone every DS emulator records from (asound.conf sends "default"'s capture
-	 * here; SuperDrastic and BananaDS both open it). Only the gains are userspace's to set: DAPM powers the ADC and
-	 * the microphone itself when a capture stream opens, and the codec has no capture mute. Set them anyway, so a
-	 * muted or turned-down state restored from another firmware's asound.state (or left by a program) can't leave a
-	 * game without a microphone. Exact hardware values, since as a percentage each reads backwards: the ADC volume's 0x00
-	 * is 0 dB (full) and 0xff is -95 dB, and the PGA "Mic Capture Gain" is -18 dB (0) to +27 dB (0xf) in 3 dB steps,
-	 * so 10 is +12 dB, a little over unity for the DS's quiet microphone. The RG DS Plus's mic is differential, which
-	 * its device tree enables in the codec (rockchip,mic-in-differential). */
-	char *mic[] = { "amixer", "-q", "-c", c, "sset", "Mic Capture Gain", "10", NULL };
-	run(mic);
-	char *cap[] = { "amixer", "-q", "-c", c, "sset", "Master Capture Volume", "0", NULL };
+	/* the microphone (#14): the rk817's "Master" is the DAC's volume AND the ADC's, and the volume keys set both, so
+	 * with the volume down the games heard next to nothing (a card saved at volume 0 recorded at -95 dB, at 43% at
+	 * -54 dB). The ADC at 0 dB always (the volume script changes playback only now), and the preamp at mic_gain: a
+	 * word from 30 cm reached an RMS of 0.01 at the old 6, 0.08 at 12 (the room's noise 0.012), where the games' and
+	 * BananaDS's thresholds expect a voice */
+	char *cap[] = { "amixer", "-q", "-c", c, "cset", "name=Master Capture Volume", "255,255", NULL };
 	run(cap);
+	if (cfg.mic_gain >= 0 && cfg.mic_gain <= 15) {
+		char g[8];
+		snprintf(g, sizeof g, "%d", cfg.mic_gain);
+		char *gain[] = { "amixer", "-q", "-c", c, "sset", "Mic Capture Gain", g, NULL };
+		run(gain);
+	}
 	audio_route();
 }
 
@@ -662,60 +978,59 @@ static void brightness(int dir)
 	if (pct >= 0) osd("brightness", pct);
 }
 
-/* both backlights at a fraction of their maximum */
-static void backlight_set_permille(int pm)
+/* The two panels' backlights, each its own level (N2): backlight1 lights the top panel (dsi1, DSI-2), backlight0 the
+ * bottom one (dsi0, DSI-1), as the device trees of both handhelds have it. The level kept in /data/banana/backlight is
+ * "<top> <bottom>" in thousandths of the maximum; a file with one number (before 0.4.2) is both. */
+static const char *BL[2] = { "backlight1", "backlight0" };	/* top, bottom */
+static void backlight_set_one(int i, int pm)
 {
-	DIR *d = opendir("/sys/class/backlight");
-	if (!d) return;
-	struct dirent *e;
-	while ((e = readdir(d))) {
-		if (e->d_name[0] == '.') continue;
-		char p[320], v[32];
-		snprintf(p, sizeof p, "/sys/class/backlight/%s/max_brightness", e->d_name);
-		int max = read_int(p, 0);
-		int nv = max * pm / 1000;
-		if (nv < 1) nv = 1;
-		snprintf(p, sizeof p, "/sys/class/backlight/%s/brightness", e->d_name);
-		snprintf(v, sizeof v, "%d", nv);
-		write_file(p, v);
-	}
-	closedir(d);
+	char p[96], v[32];
+	snprintf(p, sizeof p, "/sys/class/backlight/%s/max_brightness", BL[i]);
+	int max = read_int(p, 0);
+	if (max <= 0) return;
+	int nv = (max * pm + 500) / 1000;	/* (rounded both ways: the panels' 1666 steps kept in thousandths, a level
+						 * saved and restored at every shutdown no longer creeps down a step each time) */
+	if (nv < 1) nv = 1;
+	snprintf(p, sizeof p, "/sys/class/backlight/%s/brightness", BL[i]);
+	snprintf(v, sizeof v, "%d", nv);
+	write_file(p, v);
+}
+static void backlight_set_pair(int top, int bottom) { backlight_set_one(0, top); backlight_set_one(1, bottom); }
+/* a level file ("<top> <bottom>" or one number for both): 0 when it has none */
+static int read_pair(const char *path, int *top, int *bottom)
+{
+	FILE *f = fopen(path, "r");
+	if (!f) return 0;
+	int n = fscanf(f, "%d %d", top, bottom);
+	fclose(f);
+	if (n < 1) return 0;
+	if (n == 1) *bottom = *top;
+	/* one panel's level unusable (a 0 kept while that panel was off): the other's for both, instead of the whole
+	 * file ignored and both panels left at the kernel's 50% */
+	int okt = *top > 0 && *top <= 1000, okb = *bottom > 0 && *bottom <= 1000;
+	if (!okt && okb) *top = *bottom;
+	else if (okt && !okb) *bottom = *top;
+	return okt || okb;
+}
+/* a panel's level now, in thousandths of its maximum (-1: no such backlight) */
+static int backlight_permille(int i)
+{
+	char p[96];
+	snprintf(p, sizeof p, "/sys/class/backlight/%s/max_brightness", BL[i]);
+	int max = read_int(p, 0);
+	snprintf(p, sizeof p, "/sys/class/backlight/%s/brightness", BL[i]);
+	return max > 0 ? (read_int(p, 0) * 1000 + max / 2) / max : -1;
 }
 
-/* the first backlight's level, in thousandths of its maximum */
-static int backlight_permille(void)
-{
-	DIR *d = opendir("/sys/class/backlight");
-	if (!d) return -1;
-	struct dirent *e;
-	int r = -1;
-	while (r < 0 && (e = readdir(d))) {
-		if (e->d_name[0] == '.') continue;
-		char p[320];
-		snprintf(p, sizeof p, "/sys/class/backlight/%s/max_brightness", e->d_name);
-		int max = read_int(p, 0);
-		snprintf(p, sizeof p, "/sys/class/backlight/%s/brightness", e->d_name);
-		if (max > 0) r = read_int(p, 0) * 1000 / max;
-	}
-	closedir(d);
-	return r;
-}
-
-/* the bottom panel's backlight, from the backlight-path script (the DSI node names it, as one-panel does). While
- * banana-ui is managing the bottom's idle dim itself (it writes /run/banana/bottom-ui, see ui/src/main.cpp), the
- * menu's own dim leaves that one backlight to it: it would otherwise dim the bottom twice and undo banana-ui's
- * restore. Only the name is kept: the empty string means no bottom panel to single out (QEMU). */
+/* the bottom panel's backlight (BL[1], backlight0 on both handhelds). While banana-ui is managing the bottom's idle dim
+ * itself (it writes /run/banana/bottom-ui, see ui/src/main.cpp), the menu's own dim leaves that one backlight to it:
+ * it would otherwise dim the bottom twice and undo banana-ui's restore. The empty string: no bottom panel (QEMU). */
 static void find_bottom_bl(void)
 {
-	FILE *p = popen("/usr/libexec/banana/backlight-path bottom 2>/dev/null", "r");
-	if (!p) return;
-	char path[256] = "";
-	if (fgets(path, sizeof path, p)) path[strcspn(path, "\n")] = 0;
-	pclose(p);
-	if (!path[0] || strncmp(path, "/sys/class/backlight/", 21)) return;
-	const char *s = strrchr(path, '/');
-	if (!s || !s[1]) return;
-	snprintf(bottom_bl, sizeof bottom_bl, "%s", s + 1);
+	char path[96];
+	snprintf(path, sizeof path, "/sys/class/backlight/%s", BL[1]);
+	if (access(path, F_OK)) return;
+	snprintf(bottom_bl, sizeof bottom_bl, "%s", BL[1]);
 	/* published for banana-ui, whose idle timer dims the bottom itself (ui/src/main.cpp) */
 	FILE *f = fopen("/run/banana/backlight-bottom.new", "w");
 	if (f) {
@@ -755,10 +1070,24 @@ static void dim(void)
 	dimmed = dim_count > 0;
 	/* the level before dimming, for the settings screen (opened by the press that undims) */
 	if (dimmed) {
-		char p[600];
-		snprintf(p, sizeof p, "/sys/class/backlight/%.255s/max_brightness", dim_name[0]);
-		int max = read_int(p, 0);
-		if (max > 0) { char v[16]; snprintf(v, sizeof v, "%d\n", dim_level[0] * 1000 / max); write_file("/run/banana/dim", v); }
+		/* (dim_level is per backlight already; the pair, top and bottom, from those levels before dimming) */
+		int lv[2] = { -1, -1 };
+		for (int k = 0; k < dim_count; k++)
+			for (int i = 0; i < 2; i++)
+				if (!strcmp(dim_name[k], BL[i])) {
+					char p[96];
+					snprintf(p, sizeof p, "/sys/class/backlight/%s/max_brightness", BL[i]);
+					int max = read_int(p, 0);
+					if (max > 0) lv[i] = dim_level[k] * 1000 / max;
+				}
+		/* (fopen, not write_file: that one opens without O_CREAT, for sysfs, and this file is new each time: never
+		 * written, rcK saved the dimmed level as the user's at every shutdown during a dim, 30% less each time: the
+		 * black screens of 0.5.0-beta.3) */
+		if (lv[0] > 0) {
+			FILE *f = fopen("/run/banana/dim", "w");
+			if (f) { fprintf(f, "%d %d\n", lv[0], lv[1] > 0 ? lv[1] : lv[0]); fclose(f); }
+			else say("dim: /run/banana/dim not written: %s", strerror(errno));
+		}
 	}
 }
 static void undim(void)
@@ -774,14 +1103,20 @@ static void undim(void)
 	unlink("/run/banana/dim");
 }
 
+/* A saved level under 5% (in thousandths) is never one a person chose: the Settings rows go down to 10% and F + volume
+ * to one brightness step; under it the panels look black, as if dead. Such a level (a dim saved as the user's, 0.5.0
+ * beta.3's black screens after a reboot) comes back as 50%. */
+#define BL_FLOOR_PM 50
+static int bl_sane(int pm) { return pm < BL_FLOOR_PM || pm > 1000 ? 500 : pm; }
 static void save_settings(double now)
 {
 	if (save_backlight_at > 0 && now >= save_backlight_at) {
 		save_backlight_at = 0;
-		char v[16];
-		snprintf(v, sizeof v, "%d\n", backlight_permille());
-		FILE *f = fopen("/data/banana/backlight", "w");
-		if (f) { fputs(v, f); fclose(f); }
+		int t = backlight_permille(0), b = backlight_permille(1);
+		if (t >= BL_FLOOR_PM && (b <= 0 || b >= BL_FLOOR_PM)) {
+			FILE *f = fopen("/data/banana/backlight", "w");
+			if (f) { fprintf(f, "%d %d\n", t, b > 0 ? b : t); fclose(f); }
+		}
 	}
 	if (save_volume_at > 0 && now >= save_volume_at) {
 		save_volume_at = 0;
@@ -792,11 +1127,10 @@ static void save_settings(double now)
 
 static void restore_settings(void)
 {
-	int pm = read_int("/data/banana/backlight", -1);
-	if (pm > 0 && pm <= 1000) backlight_set_permille(pm);
-	/* started again while the panels were dimmed (/run/banana/dim: the level before): undimmed, as the last one would */
-	int dimmed_from = read_int("/run/banana/dim", -1);
-	if (dimmed_from > 0 && dimmed_from <= 1000) { backlight_set_permille(dimmed_from); unlink("/run/banana/dim"); }
+	int t, b;
+	if (read_pair("/data/banana/backlight", &t, &b)) backlight_set_pair(bl_sane(t), bl_sane(b));
+	/* started again while the panels were dimmed (/run/banana/dim: the levels before): undimmed, as the last one would */
+	if (read_pair("/run/banana/dim", &t, &b)) { backlight_set_pair(bl_sane(t), bl_sane(b)); unlink("/run/banana/dim"); }
 	if (access("/data/banana/asound.state", R_OK) == 0) {
 		char *argv[] = { "alsactl", "-f", "/data/banana/asound.state", "restore", NULL };
 		run(argv);
@@ -948,11 +1282,12 @@ static void spawn_bg(char *const argv[])
 	if (p > 0) while (waitpid(p, NULL, 0) < 0 && errno == EINTR) {}
 }
 
-/* a USB device's driver, as udev would load it: the module its MODALIAS names (an Xbox pad's xpad, a USB serial
- * adapter's); the handheld's own hardware is built into the kernel */
+/* a USB or HID device's driver, as udev would load it: the module its MODALIAS names (an Xbox pad's xpad, a USB
+ * serial adapter's; a Bluetooth controller's HID driver, hid-nintendo for a Switch Pro controller); the handheld's own
+ * hardware is built into the kernel */
 static void load_driver(const char *alias)
 {
-	if (strncmp(alias, "usb:", 4)) return;
+	if (strncmp(alias, "usb:", 4) && strncmp(alias, "hid:", 4)) return;
 	char a[256];
 	snprintf(a, sizeof a, "%s", alias);
 	char *argv[] = { "/sbin/modprobe", "-q", a, NULL };
@@ -979,10 +1314,12 @@ static void load_drivers_present(void)
 
 /* the second SD card: mounted, and its games offered to the library, to match the slot (/usr/libexec/banana/sd2).
  * In the background (a slow card's mount mustn't hold up the power button or sleep), one scan at a time: a card
- * going in sends several uevents */
+ * going in sends several uevents. -o: the scan's children don't get the lock's descriptor (its "share restart"
+ * starts ksmbd.mountd, which kept the lock for as long as it ran, and every later scan waited forever: the card's
+ * games missing until Settings scanned again, #65) */
 static void sd2_scan(void)
 {
-	char *argv[] = { "/bin/sh", "-c", "flock /run/banana/sd2.lock /usr/libexec/banana/sd2 scan </dev/null >/dev/null 2>&1 &", NULL };
+	char *argv[] = { "/bin/sh", "-c", "flock -o /run/banana/sd2.lock /usr/libexec/banana/sd2 scan </dev/null >/dev/null 2>&1 &", NULL };
 	run(argv);
 }
 
@@ -1034,14 +1371,34 @@ static void open_inputs(void)
 	read_lid();
 }
 
+/* the game running is a DS one (its command line): its emulator passes the lid on to the game */
+static int ds_game(void)
+{
+	pid_t g = pid_of("/run/banana/game.pid");
+	if (!g) return 0;
+	char p[64], cmd[512] = "";
+	snprintf(p, sizeof p, "/proc/%d/cmdline", (int)g);
+	FILE *f = fopen(p, "r");
+	if (!f) return 0;
+	size_t n = fread(cmd, 1, sizeof cmd - 1, f);
+	fclose(f);
+	for (size_t i = 0; i < n; i++) if (!cmd[i]) cmd[i] = ' ';
+	cmd[n] = 0;
+	/* (the launchers exec the emulator: /usr/bin/bananads, superdrastic-run then /data/drastic/drastic) */
+	return strstr(cmd, "bananads") || strstr(cmd, "drastic") || strstr(cmd, "run-nds");
+}
+
 static void handle(const struct input_event *e)
 {
 	double now = mono();
 	if (e->type == EV_KEY) { last_input = now; undim(); }
 	if (e->type == EV_SW && e->code == SW_LID) {
 		lid_closed = e->value;
-		if (!lid_closed) { undim(); lid_retry_off = 0; }
-		if (lid_closed && cfg.lid_sleep) suspend_now("lid closed");
+		if (!lid_closed) { if (lid_sleep_at > 0) say("lid opened again before the sleep"); undim(); lid_retry_off = 0; lid_sleep_at = 0; }
+		/* a DS game: the panels dark now, the sleep 1.5 s later, so the game sees its lid close first (BananaDS and
+		 * SuperDrastic read the hall sensor too: its sleep mode, its lid sound); opened before that, no sleep */
+		if (lid_closed && cfg.lid_sleep && ds_game()) { lid_sleep_at = now + 1.5; backlights_power(0); say("lid shut in a DS game: asleep in 1.5 s"); }
+		else if (lid_closed && cfg.lid_sleep) suspend_now("lid closed");
 		else if (!lid_closed || !cfg.lid_sleep) { backlights_power(!lid_closed); if (!lid_closed) panel_off_again(); }	/* no sleep: at least the panels go dark */
 		return;
 	}
@@ -1105,15 +1462,27 @@ int main(int argc, char **argv)
 	load_conf("/etc/banana/bananad.conf");
 	load_conf("/data/banana/bananad.conf");
 	load_timezone();
+	/* the LEDs at the user's level first: everything below (the inputs, alsactl, the mixer, the second card) takes a
+	 * while, and the power LED is the first sign the handheld is starting (U-Boot lit it, the kernel kept it on) */
+	leds_update();
 	signal(SIGCHLD, SIG_DFL);
 	struct sigaction sa = { 0 };
 	sa.sa_handler = on_hup;		/* no SA_RESTART: poll() returns, and the loop reloads */
 	sigaction(SIGHUP, &sa, NULL);
 	mkdir("/run/banana", 0755);
+	/* a menu Sleep asked for while bananad wasn't running would otherwise come true at the next, unrelated SIGHUP
+	 * (any settings change): dropped */
+	unlink("/run/banana/sleep-now");
 	find_bottom_bl();	/* which backlight is the bottom one: banana-ui's idle dim owns it */
+	mkdir(BT_AUDIO_DIR, 0755);
 
 	int ino = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
-	if (ino >= 0) inotify_add_watch(ino, "/dev/input", IN_CREATE | IN_DELETE);
+	int wd_input = -1, wd_bt = -1;
+	if (ino >= 0) {
+		wd_input = inotify_add_watch(ino, "/dev/input", IN_CREATE | IN_DELETE);
+		/* Bluetooth headphones coming and going (its own folder: nothing else written in /run/banana wakes us) */
+		wd_bt = inotify_add_watch(ino, BT_AUDIO_DIR, IN_CLOSE_WRITE | IN_MOVED_TO | IN_DELETE);
+	}
 	open_inputs();
 	headphones = headphones_in();
 	/* the saved volumes first, then the route: the restore also brings back the speakers' switch as it was last
@@ -1154,6 +1523,8 @@ int main(int argc, char **argv)
 		if (lid_closed && cfg.lid_sleep && !lid_retry_off) { double d = 5.0 - (tnow - last_input); if (d > 0 && d < wait) wait = d; }
 		if ((save_volume_at > 0 || save_backlight_at > 0) && wait > 0.5) wait = 0.5;
 		if (power_down && wait > 0.1) wait = 0.1;
+		if (lid_sleep_at > 0) { double d = lid_sleep_at - tnow; if (d < wait) wait = d > 0 ? d : 0; }
+		if (menu_sleep_at > 0) { double d = menu_sleep_at - tnow; if (d < wait) wait = d > 0 ? d : 0; }
 		int timeout = wait <= 0 ? 20 : (int)(wait * 1000) + 20;
 		poll(pf, n, timeout);
 		double now = mono();
@@ -1166,6 +1537,8 @@ int main(int argc, char **argv)
 			leds_last = -2;
 			leds_update();
 			say("settings read again: lid %s, auto-sleep %d min, LEDs %d", cfg.lid_sleep ? "sleeps" : "ignored", cfg.autosleep_min, cfg.led_brightness);
+			/* the menu's Power > Sleep: the same sleep as a press of the power button, half a second on */
+			if (unlink("/run/banana/sleep-now") == 0) { menu_sleep_at = mono() + 0.5; say("the menu asked for a sleep"); }
 		}
 
 		for (int i = 0; i < ndev; i++) {
@@ -1178,10 +1551,20 @@ int main(int argc, char **argv)
 		if (uev_at >= 0 && (pf[uev_at].revents & POLLIN) && uevent_read(uev)) leds_update();
 		save_settings(now);
 		if (ino_at >= 0 && (pf[ino_at].revents & POLLIN)) {
-			char buf[4096];
-			while (read(ino, buf, sizeof buf) > 0) {}
-			usleep(200000);	/* udev/mdev sets the node's permissions */
-			open_inputs();
+			char buf[4096] __attribute__((aligned(__alignof__(struct inotify_event))));
+			ssize_t len;
+			int inputs = 0, bt = 0;
+			while ((len = read(ino, buf, sizeof buf)) > 0)
+				for (char *p = buf; p < buf + len; p += sizeof(struct inotify_event) + ((struct inotify_event *)p)->len) {
+					struct inotify_event *ev = (struct inotify_event *)p;
+					if (ev->wd == wd_input) inputs = 1;
+					else if (ev->wd == wd_bt && ev->len && (!strcmp(ev->name, "audio") || !strcmp(ev->name, "hold"))) bt = 1;
+				}
+			if (bt) audio_route();
+			if (inputs) {
+				usleep(200000);	/* udev/mdev sets the node's permissions */
+				open_inputs();
+			}
 		}
 
 		if (power_down && now - power_since >= cfg.power_long_ms / 1000.0) { power_down = 0; shutdown_now("power held"); }
@@ -1193,8 +1576,10 @@ int main(int argc, char **argv)
 		if (cfg.autosleep_min > 0 && !game && now - last_input >= cfg.autosleep_min * 60.0 && !charger_online() &&
 		    !pid_of("/run/banana/awake.pid"))
 			suspend_now("idle");
+		if (lid_sleep_at > 0 && now >= lid_sleep_at) { lid_sleep_at = 0; if (lid_closed) suspend_now("lid closed"); }
+		if (menu_sleep_at > 0 && now >= menu_sleep_at) { menu_sleep_at = 0; suspend_now("the menu's Sleep"); }
 		/* started or woken with the lid shut */
-		if (lid_closed && cfg.lid_sleep && !lid_retry_off && now - last_input > 5) suspend_now("lid still closed");
+		if (lid_closed && cfg.lid_sleep && !lid_retry_off && lid_sleep_at == 0 && now - last_input > 5) suspend_now("lid still closed");
 
 		if (now >= next_battery) {
 			next_battery = now + 60;

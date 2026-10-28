@@ -1,0 +1,505 @@
+# file	codes	title12	crc32s	exclusive	zip (banana-ui's game companion, gamecomp.h)
+007-everything-or-nothing.json	BJBE	BOND EON	9d4f1e18	0	007 - Everything or Nothing.zip
+007-nightfire.json	A7OE	NIGHTFIRE	56c83c16	0	007 - Nightfire.zip
+activision-anthology.json	BAVE	ACTANTHOLOGY	14a28d68	0	Activision Anthology.zip
+advance-guardian-heroes.json	BGCE	ADVANCE GH	c501917f	0	Advance Guardian Heroes.zip
+advance-wars-2-black-hole-rising.json	AW2E	ADVANCEWARS2	5ad0e571	0	Advance Wars 2 - Black Hole Rising.zip
+advance-wars.json	AWRE	ADVANCEWARS	26fd0fc9	0	Advance Wars.zip
+aero-the-acro-bat.json	AAOE	AEROACROBATX	b47ac020	0	Aero the Acro-Bat.zip
+airforce-delta-storm.json	AAKE	AIRFORCEDELT	ebf757b8	0	AirForce Delta Storm.zip
+aladdin.json	BADE	ALADDIN	40b383f6	0	Aladdin.zip
+alien-hominid.json	BAHP	ALIENHOMINID	dff47236	0	Alien Hominid.zip
+altered-beast-guardian-of-the-realms.json	AARE	ALTEREDBEAST	c4955f69	0	Altered Beast - Guardian of the Realms.zip
+american-bass-challenge.json	AABE	AMERICA_BASS	d76ad62d	0	American Bass Challenge.zip
+astro-boy-omega-factor.json	BTAE	ASTROBOY	e8619031	0	Astro Boy - Omega Factor.zip
+atari-anniversary-advance.json	AAVE	ATARI_ANNIVE	4505a638	0	Atari Anniversary Advance.zip
+baldur-s-gate-dark-alliance.json	BGDE	BALDURSGATE	deedd7d9	0	Baldur's Gate - Dark Alliance.zip
+ballistic-ecks-vs-sever.json	AEEE	BALLISTIC EC	0477f153	0	Ballistic - Ecks vs. Sever.zip
+banjo-kazooie-grunty-s-revenge.json	BKZE	BANJOKAZOOIE	dfb5aba3	0	Banjo-Kazooie - Grunty's Revenge.zip
+banjo-pilot.json	BAJE	BANJO PILOT	6e4030a1	0	Banjo-Pilot.zip
+baseball-advance.json	ABPE	BASEBALL ADV	339f35b8	0	Baseball Advance.zip
+batman-begins.json	BBGE	BATMANBEGINS	83c90106	0	Batman Begins.zip
+batman-rise-of-sin-tzu.json	BATE	BATMAN-RISE	ef3790d1	0	Batman - Rise of Sin Tzu.zip
+batman-vengeance.json	ABTE	BATMAN-VENGE	9fa17935	0	Batman - Vengeance.zip
+battle-b-daman-fire-spirits.json	BBME	BB-DAMA2FIRE	5789f441	0	Battle B-Daman - Fire Spirits!.zip
+battle-b-daman.json	BDXE	BB-DAMAN	6dce8a26	0	Battle B-Daman.zip
+beyblade-g-revolution.json	BB2E	BEYBLADEGREV	33afdbe8	0	Beyblade G-Revolution.zip
+blackthorne.json	AQXE	BLACKTHORNE	8e6dcd53	0	Blackthorne.zip
+blades-of-thunder.json	BBHE	BLADESOFTHDR	2ccd4915	0	Blades of Thunder.zip
+blender-bros.json	ABRE	BLENDER BROS	9a91d7f1	0	Blender Bros..zip
+boktai-2-solar-boy-django.json	U32E	BOKTAI2	e1ffb2d1	0	Boktai 2 - Solar Boy Django.zip
+boktai-the-sun-is-in-your-hand.json	U3IE	BOKTAI	e715ac45	0	Boktai - The Sun Is in Your Hand.zip
+bomberman-max-2-blue-advance.json	AMHE	MAX2BLUEADV	94c620f3	0	Bomberman Max 2 - Blue Advance.zip
+bomberman-max-2-red-advance.json	AMYE	MAX2-REDADV	4db517c1	0	Bomberman Max 2 - Red Advance.zip
+bomberman-tournament.json	ABSE	BOMSTORYUSA	240282e6	0	Bomberman Tournament.zip
+boulder-dash-ex.json	ABDE	B-DASH EX	b355365a	0	Boulder Dash EX.zip
+breath-of-fire-ii.json	AB2E	BOF2	6f098da3	0	Breath of Fire II.zip
+breath-of-fire.json	ABFE	BOF1	f06422a8	0	Breath of Fire.zip
+broken-sword-the-shadow-of-the-templars.json	ABJE	BROKENSWORD	3278ce51	0	Broken Sword - The Shadow of the Templars.zip
+bruce-lee-return-of-the-legend.json	ALEE	BRUCE LEE	b2a45a4c	0	Bruce Lee - Return of the Legend.zip
+bubble-bobble-old-new.json	AONE	BUBBLE BOBBL	feec503c	0	Bubble Bobble - Old & New.zip
+capcom-classics-mini-mix.json	BC6E	CAPCOMINIMIX	0bb2d391	0	Capcom Classics Mini Mix.zip
+car-battler-joe.json	ACBE	CARBATTLERJO	ea0a1b94	0	Car Battler Joe.zip
+castlevania-aria-of-sorrow.json	A2CE	CASTLEVANIA2	35536183	0	Castlevania - Aria of Sorrow.zip
+castlevania-circle-of-the-moon.json	AAME	DRACULA AGB1	1cc059a4	0	Castlevania - Circle of the Moon.zip
+castlevania-harmony-of-dissonance.json	ACHE	CASTLEVANIA1	88c1b562	0	Castlevania - Harmony of Dissonance.zip
+centipede-breakout-warlords.json	B6ZE	CENTIPEDECOM	02e0cca4	0	Centipede, Breakout & Warlords.zip
+chuchu-rocket.json	ACRE	CHUCHUROCKET	057fb1b6	0	ChuChu Rocket!.zip
+cima-the-enemy.json	BCME	CIMATHEENEMY	ebd928ed	0	CIMA - The Enemy.zip
+classic-nes-series-bomberman.json	FBME	BOMBER MAN	cd67f2ba	0	Classic NES Series - Bomberman.zip
+classic-nes-series-castlevania.json	FADE	CASTLEVANIA	cfc1f558	0	Classic NES Series - Castlevania.zip
+classic-nes-series-donkey-kong.json	FDKE	DONKEY KONG	ba82d416	0	Classic NES Series - Donkey Kong.zip
+classic-nes-series-dr-mario.json	FDME	DR. MARIO	ca9f5d2f	0	Classic NES Series - Dr. Mario.zip
+classic-nes-series-excitebike.json	FEBE	EXCITEBIKE	945c292f	0	Classic NES Series - Excitebike.zip
+classic-nes-series-ice-climber.json	FICE	ICE CLIMBER	3126d612	0	Classic NES Series - Ice Climber.zip
+classic-nes-series-metroid.json	FMRE	NES METROID	b2a153c3	0	Classic NES Series - Metroid.zip
+classic-nes-series-pac-man.json	FP7E	PAC-MAN	231f80d6	0	Classic NES Series - Pac-Man.zip
+classic-nes-series-super-mario-bros.json	FSME	SUPER MARIO	7eddffad	0	Classic NES Series - Super Mario Bros..zip
+classic-nes-series-the-legend-of-zelda.json	FZLE	ZELDA 1	68b1b7a8	0	Classic NES Series - The Legend of Zelda.zip
+classic-nes-series-xevious.json	FXVE	XEVIOUS	9e923716	0	Classic NES Series - Xevious.zip
+classic-nes-series-zelda-ii-the-adventure-of-link.json	FLBE	NES ZELDA 2	f2dc3b09	0	Classic NES Series - Zelda II - The Adventure of Link.zip
+columns-crown.json	ACGE	COLUMNSCROWN	6242ffb2	0	Columns Crown.zip
+comix-zone.json	ACZP	COMIX ZONE	9f30002f	0	Comix Zone.zip
+contra-advance-the-alien-wars-ex.json	AAWE	CONTRAADVANC	59781c54	0	Contra Advance - The Alien Wars EX.zip
+crash-bandicoot-2-n-tranced.json	AC8E	CRASH2	2e16184a	0	Crash Bandicoot 2 - N-Tranced.zip
+crash-bandicoot-purple-ripto-s-rampage.json	BD4E	CRASH PURPLE	3ddf07a1	0	Crash Bandicoot Purple - Ripto's Rampage.zip
+crash-bandicoot-the-huge-adventure.json	ACQE	CRASH	034d2d4b	0	Crash Bandicoot - The Huge Adventure.zip
+crash-nitro-kart.json	BCNE	NITRO KART	e6d58aa0	0	Crash Nitro Kart.zip
+crazy-taxi-catch-a-ride.json	A3CE	CRAZY TAXI C	8ec709d6	0	Crazy Taxi - Catch a Ride.zip
+ct-special-forces-2-back-in-the-trenches.json	A9CE	CT SPECIAL F	d2b58a33	0	CT Special Forces 2 - Back in the Trenches.zip
+ct-special-forces-3-bioterror.json	BC3P	CT SPECIAL F	7dc40eda	0	CT Special Forces 3 - Bioterror.zip
+ct-special-forces.json	AC7E	CT SPECIAL F	aea22ae0	0	CT Special Forces.zip
+dark-arena.json	ADAE	DARK ARENA	de5dcdee	0	Dark Arena.zip
+demikids-dark-version.json	AC5E	DEBITIRUYAMI	1bab58bd	0	DemiKids - Dark Version.zip
+demikids-light-version.json	AL4E	DEBITIRUHIKA	dc4357c4	0	DemiKids - Light Version.zip
+denki-blocks.json	ADBE	DENKIBLOCKS!	e064107f	0	Denki Blocks!.zip
+densetsu-no-stafy.json	ASTJ	STAFY	d5110b5f	1	Densetsu no Stafy.zip
+desert-strike-advance.json	ADIE	DESERTSTRIKE	cc1c1405	0	Desert Strike Advance.zip
+digimon-battle-spirit-2.json	BDSE	DIGIMON BS2	c4c246ef	0	Digimon Battle Spirit 2.zip
+digimon-battle-spirit.json	A8SE	DIGIMON BTSP	ceef2008	0	Digimon Battle Spirit.zip
+digimon-racing.json	BDGE	DIGIMONRACIN	dadd4c10	0	Digimon Racing.zip
+dinotopia-the-timestone-pirates.json	AD3E	DINOTOPIA	7bd01b31	0	Dinotopia - The Timestone Pirates.zip
+dk-king-of-swing.json	BBKE	KINGOFSWING	d610b239	0	DK - King of Swing.zip
+dokapon-monster-hunter.json	ADQE	DOKAPON	5617e407	0	Dokapon - Monster Hunter.zip
+donald-duck-advance.json	ADKE	DISNEY'S DON	936daab2	0	Donald Duck Advance.zip
+donkey-kong-country-2.json	B2DE	RAREDKC2	11417fc1	0	Donkey Kong Country 2.zip
+donkey-kong-country-3.json	BDQE	RAREDKC3	fe03e5af	0	Donkey Kong Country 3.zip
+donkey-kong-country.json	A5NE	RAREDKC1	12f7a968	0	Donkey Kong Country.zip
+doom-ii.json	A9DE	DOOM II	c885d9e9	0	Doom II.zip
+doom.json	ADME	AGB-DOOM	58c641b3	0	Doom.zip
+double-dragon-advance.json	BDDE	DOUBLEDRAGON	764fafb5	0	Double Dragon Advance.zip
+dr-mario-puzzle-league.json	BZPE	DRMARIO&PONE	4c2b7349	0	Dr. Mario & Puzzle League.zip
+dragon-ball-advanced-adventure.json	BDVE	DRAGONBALLAA	7d7306df	0	Dragon Ball - Advanced Adventure.zip
+dragon-ball-gt-transformation.json	BT4E	DBGTTRANSFOR	ad964a91	0	Dragon Ball GT - Transformation.zip
+dragon-ball-z-buu-s-fury.json	BG3E	DBZBUUSFURY	01c1707f	0	Dragon Ball Z - Buu's Fury.zip
+dragon-ball-z-collectible-card-game.json	ADZE	DBZCARDGAME1	f6124d7f	0	Dragon Ball Z - Collectible Card Game.zip
+dragon-ball-z-supersonic-warriors.json	AZJE	DRAGONBLSSWU	9a857a70	0	Dragon Ball Z - Supersonic Warriors.zip
+dragon-ball-z-the-legacy-of-goku-ii.json	ALFE	DBZLGCYGOKU2	204142e1	0	Dragon Ball Z - The Legacy of Goku II.zip
+dragon-ball-z-the-legacy-of-goku.json	ALGE	DBZ LGCYGOKU	d47ccff4	0	Dragon Ball Z - The Legacy of Goku.zip
+dragon-quest-monsters-caravan-heart.json	A9HJ	DQM-CARAVANH	5b925fc9	1	Dragon Quest Monsters - Caravan Heart.zip
+drill-dozer.json	V49E	DRILL DOZER	e60ec183	0	Drill Dozer.zip
+driv3r.json	B3RE	DRIVER3	6c66cfbe	0	Driv3r.zip
+driver-2-advance.json	ADUE	DRIVER2ADV	bbe2a163	0	Driver 2 Advance.zip
+drome-racers.json	AOEE	LEGO DROME R	ad356fb9	0	Drome Racers.zip
+dual-blades.json	AB9E	DUAL BLADES	aff3a0c6	0	Dual Blades.zip
+duel-masters-kaijudo-showdown.json	BD6E	DM KAIJUDO	804e5de2	0	Duel Masters - Kaijudo Showdown.zip
+duel-masters-sempai-legends.json	AA9E	DM SEMPAI	1ce344ca	0	Duel Masters - Sempai Legends.zip
+duel-masters-shadow-of-the-code.json	BDUE	DM SHADOW	94d9053d	0	Duel Masters - Shadow of the Code.zip
+duke-nukem-advance.json	AD9E	DUKE NUKEM A	06570282	0	Duke Nukem Advance.zip
+dungeons-dragons-eye-of-the-beholder.json	AD4E	DDEOTB	91b16892	0	Dungeons & Dragons - Eye of the Beholder.zip
+dynasty-warriors-advance.json	B36E	DYN WARS ADV	ad5a2a4e	0	Dynasty Warriors Advance.zip
+earthworm-jim-2.json	AJ4E	EARTHWORM J2	7496555c	0	Earthworm Jim 2.zip
+earthworm-jim.json	AEJE	EWJ	c4991d13	0	Earthworm Jim.zip
+ecks-vs-sever.json	AESE	ECKS VSE SEV	86a861f1	0	Ecks vs. Sever.zip
+egg-mania.json	AEME	EGGOMANIA	e8b15678	0	Egg Mania.zip
+f-zero-climax.json	BFTJ	F-ZEROCLIMAX	35602080	1	F-Zero Climax.zip
+f-zero-gp-legend.json	BFZE	F-ZERO2	781aab58	0	F-Zero - GP Legend.zip
+f-zero-maximum-velocity.json	AFZE	F-ZERO ADVAN	bd5e9798	0	F-Zero - Maximum Velocity.zip
+family-feud.json	B2FE	FAMILY FEUD	ec36a3df	0	Family Feud.zip
+fifa-soccer-07.json	B7FE	FIFA 07	d8c7553b	0	FIFA Soccer 07.zip
+final-fantasy-i-ii-dawn-of-souls.json	BFFE	FF1&2DAWNOFS	1b39cdab	0	Final Fantasy I & II - Dawn of Souls.zip
+final-fantasy-iv-advance.json	BZ4E	FF4ADVANCE	feeebde4	0	Final Fantasy IV Advance.zip
+final-fantasy-tactics-advance.json	AFXE	FFTA_USVER.	5645e56c	0	Final Fantasy Tactics Advance.zip
+final-fantasy-v-advance.json	BZ5E	FF5ADVANCE	7a24ab0c	0	Final Fantasy V Advance.zip
+final-fantasy-vi-advance.json	BZ6E	FF6ADVANCE	d708f5ab	0	Final Fantasy VI Advance.zip
+final-fight-one.json	AFFE	FINAL FIGHT	052c9997	0	Final Fight One.zip
+fire-emblem-fuuin-no-tsurugi.json	AFEJ	FIREEMBLEM6	99b8b6d7	1	Fire Emblem - Fuuin no Tsurugi.zip
+fire-emblem-the-sacred-stones.json	BE8E	FIREEMBLEM2E	a47246ae	0	Fire Emblem - The Sacred Stones.zip
+fire-emblem.json	AE7E	FIREEMBLEME	2a524221	0	Fire Emblem.zip
+fire-pro-wrestling-2.json	AFYE	FP2 NA	b9cfc1d3	0	Fire Pro Wrestling 2.zip
+fire-pro-wrestling.json	AFPE	FP US	12aa524c	0	Fire Pro Wrestling.zip
+fortress.json	AFOE	FORTRESS	bee67855	0	Fortress.zip
+frogger-advance-the-great-quest.json	AFQE	FROGQST	b75782c9	0	Frogger Advance - The Great Quest.zip
+frogger-s-adventures-2-the-lost-wand.json	AFBE	FG2 THE LOST	27b95c01	0	Frogger's Adventures 2 - The Lost Wand.zip
+frogger-s-adventures-temple-of-the-frog.json	AFRE	FROG: TEMPLE	2eb9eee6	0	Frogger's Adventures - Temple of the Frog.zip
+frogger-s-journey-the-forgotten-relic.json	BFJE	FROGGER RPG	6f8bfdbc	0	Frogger's Journey - The Forgotten Relic.zip
+gadget-racers.json	AQAE	GADGETRACERS	95dd156a	0	Gadget Racers.zip
+game-watch-gallery-4.json	AQWE	G&W GALLERY4	7e90cea2	0	Game & Watch Gallery 4.zip
+garfield-and-his-nine-lives.json	BG9E	GARFIELD	d442f13d	0	Garfield and His Nine Lives.zip
+gauntlet-dark-legacy.json	AYGE	GAUNTLET_DL	e99de964	0	Gauntlet - Dark Legacy.zip
+gauntlet-rampart.json	B69E	GAUNTLETCOMP	5f255362	0	Gauntlet & Rampart.zip
+gekido-advance-kintaro-s-revenge.json	AGEE	GEKIDO	6bbc5f4d	0	Gekido Advance - Kintaro's Revenge.zip
+gem-smashers.json	AZSE	GEM SMASHERS	2eb60177	0	Gem Smashers.zip
+gensou-suikoden-card-stories.json	AGKJ	GENSOU-CARD1	dafac900	1	Gensou Suikoden Card Stories.zip
+ghost-rider.json	BR8E	GHOST RIDER	cf190f2e	0	Ghost Rider.zip
+godzilla-domination.json	AG4E	GODZILLADOMI	eade083f	0	Godzilla - Domination!.zip
+golden-sun-the-lost-age.json	AGFE	GOLDEN_SUN_B	606a1c4d	0	Golden Sun - The Lost Age.zip
+golden-sun.json	AGSE	Golden_Sun_A	e1fb68e8	0	Golden Sun.zip
+gradius-galaxies.json	AGAE	GRADIUSGALAX	8103428d	0	Gradius Galaxies.zip
+grand-theft-auto-advance.json	BGTE	GTA	1fa131e8	0	Grand Theft Auto Advance.zip
+gt-advance-2-rally-racing.json	AGWE	GT ADVANCE 2	f335db88	0	GT Advance 2 - Rally Racing.zip
+gt-advance-3-pro-concept-racing.json	A2GE	GT ADVANCE 3	0a331e11	0	GT Advance 3 - Pro Concept Racing.zip
+gt-advance-championship-racing.json	ACAE	GT ADVANCE C	8c411acc	0	GT Advance - Championship Racing.zip
+guilty-gear-x-advance-edition.json	AGXE	GGXAE	70db3f96	0	Guilty Gear X - Advance Edition.zip
+gumby-vs-the-astrobots.json	BGVE	GUMBY	2b7e3ccb	0	Gumby vs. the Astrobots.zip
+gunstar-super-heroes.json	BHGE	GUNSTAR SH	7cd86b02	0	Gunstar Super Heroes.zip
+gyakuten-saiban-3.json	A3JJ	GYAKUTEN_SA3	ac456caa	1	Gyakuten Saiban 3.zip
+hagane-no-renkinjutsushi-meisou-no-rondo.json	BHRJ	HAGANERONDO	bc3f79b5	1	Hagane no Renkinjutsushi - Meisou no Rondo.zip
+hagane-no-renkinjutsushi-omoide-no-sonata.json	BH2J	HAGANESONATA	08be6ed0	1	Hagane no Renkinjutsushi - Omoide no Sonata.zip
+hajime-no-ippo-the-fighting.json	A2HJ	HAJIMENOIPPO	5130a355	1	Hajime no Ippo - The Fighting!.zip
+hamtaro-ham-ham-games.json	B85A	HAMSPORTS	cc1cf806	0	Hamtaro - Ham-Ham Games.zip
+hamtaro-ham-ham-heartbreak.json	AH3E	HAMUTARO3	cd48b673	0	Hamtaro - Ham-Ham Heartbreak.zip
+hamtaro-rainbow-rescue.json	A84P	HAMUTARO4	5d051081	0	Hamtaro - Rainbow Rescue.zip
+harry-potter-and-the-chamber-of-secrets.json	A7HE	HPOTTER COS	342816db	0	Harry Potter and the Chamber of Secrets.zip
+harry-potter-and-the-goblet-of-fire.json	BH8E	POTTER G.O.F	052708d7	0	Harry Potter and the Goblet of Fire.zip
+harry-potter-and-the-order-of-the-phoenix.json	BJXE	HARRYPHOENI	302b8b3d	0	Harry Potter and the Order of the Phoenix.zip
+harry-potter-and-the-prisoner-of-azkaban.json	BHTE	HARRY POTTER	c0bccaad	0	Harry Potter and the Prisoner of Azkaban.zip
+harry-potter-and-the-sorcerer-s-stone.json	AHRE	HARRY POTTER	f755065c	0	Harry Potter and the Sorcerer's Stone.zip
+harry-potter-quidditch-world-cup.json	BHPE	QUIDDITCH WC	486041a4	0	Harry Potter - Quidditch World Cup.zip
+harvest-moon-friends-of-mineral-town.json	A4NE	HARVESTMOGBA	8e923168	0	Harvest Moon - Friends of Mineral Town.zip
+harvest-moon-more-friends-of-mineral-town.json	BFGE	HM MFOM USA	1736b957	0	Harvest Moon - More Friends of Mineral Town.zip
+hobbit-the-the-prelude-to-the-lord-of-the-rings.json	AH9E	HOBBIT US	d3f654b3	0	Hobbit, The - The Prelude to The Lord of the Rings.zip
+i-spy-challenger.json	A4CE	ISPY CHALNGR	946d2cbb	0	I Spy Challenger!.zip
+ice-nine.json	AR3E	ICE NINE	14c23257	0	Ice Nine.zip
+incredible-hulk-the.json	AHLE	HULKV1	0b978dfa	0	Incredible Hulk, The.zip
+incredibles-the.json	BICE	INCREDBLEAGB	194d5f6c	0	Incredibles, The.zip
+international-superstar-soccer-advance.json	AY2P	ISS ADVANCE	7eb2f6d6	0	International Superstar Soccer Advance.zip
+international-superstar-soccer.json	AISP	I.S.S. AGB  	9989ce55	0	International Superstar Soccer.zip
+invader.json	AIVP	INVADER	a94d6058	0	Invader.zip
+invincible-iron-man-the.json	AIOE	THE INVINCIB	39a31b68	0	Invincible Iron Man, The.zip
+iridion-3d.json	AI3E	IRIDION3D	34189e74	0	Iridion 3D.zip
+iridion-ii.json	AI2E	IRIDIONII	dd8a7104	0	Iridion II.zip
+it-s-mr-pants.json	BPIE	ITS MR PANTS	757a4efb	0	It's Mr. Pants.zip
+jackie-chan-adventures-legend-of-the-dark-hand.json	AJCE	JACKIECHANDH	13247954	0	Jackie Chan Adventures - Legend of the Dark Hand.zip
+james-pond-codename-robocod.json	AJDE	JAMES POND 2	eb25bb5b	0	James Pond - Codename RoboCod.zip
+jazz-jackrabbit.json	AJJE	JAZZJACKRABB	948531d4	0	Jazz Jackrabbit.zip
+jet-grind-radio.json	AJRE	JETGRNDRADIO	ae4142b5	0	Jet Grind Radio.zip
+jungle-book-the.json	AJFE	JUNGLE BOOK	e9a21637	0	Jungle Book, The.zip
+jurassic-park-iii-park-builder.json	AJ3E	JP3PARKBUILD	edddcf19	0	Jurassic Park III - Park Builder.zip
+justice-league-heroes-the-flash.json	BJHE	JLH: FLASH	87a4d12c	0	Justice League Heroes - The Flash.zip
+karnaaj-rally.json	AYKE	KARNAAJ	63fe3dfe	0	Karnaaj Rally.zip
+kill-switch.json	BKHE	KILLSWITCH	2b207d1f	0	Kill.Switch.zip
+kim-possible-2-drakken-s-demise.json	BKME	KIMPOSSIBLE2	fa946fc6	0	Kim Possible 2 - Drakken's Demise.zip
+kim-possible-3-team-possible.json	BQPE	KIMPOSSIBLE3	fdec60ec	0	Kim Possible 3 - Team Possible.zip
+kim-possible-revenge-of-monkey-fist.json	AEYE	KIM POSSIBLE	1a56efbd	0	Kim Possible - Revenge of Monkey Fist.zip
+king-of-fighters-ex-the-neo-blood.json	AKOE	KINGOFEXNEOB	0f960e70	0	King of Fighters EX, The - Neo Blood.zip
+king-of-fighters-ex2-the-howling-blood.json	AEXE	KOFEX2HOWLIN	15f8f9d5	0	King of Fighters EX2, The - Howling Blood.zip
+kingdom-hearts-chain-of-memories.json	B8CE	KINGDOMHEART	d031ce67	0	Kingdom Hearts - Chain of Memories.zip
+kirby-nightmare-in-dream-land.json	A7KE	AGB KIRBY DX	20ef3f64	0	Kirby - Nightmare in Dream Land.zip
+kirby-the-amazing-mirror.json	B8KE	AGB KIRBY AM	9f2a3048	0	Kirby & the Amazing Mirror.zip
+klonoa-2-dream-champ-tournament.json	AN6E	KLONOA2	8bd23a7f	0	Klonoa 2 - Dream Champ Tournament.zip
+klonoa-empire-of-dreams.json	AKLE	KLONOA	f74e1036	0	Klonoa - Empire of Dreams.zip
+konami-collector-s-series-arcade-advanced.json	AKCE	KCS ARCADE	2db31825	0	Konami Collector's Series - Arcade Advanced.zip
+konami-krazy-racers.json	AKWE	KRAZY RACERS	c80d4f5c	0	Konami Krazy Racers.zip
+kuru-kuru-kururin.json	AKRP	KURURIN	c4dab956	0	Kuru Kuru Kururin.zip
+lady-sia.json	ALDE	LADY SIA	139e95bd	0	Lady Sia.zip
+legend-of-spyro-the-a-new-beginning.json	B3YE	TLOS:ANB	1b81cc00	0	Legend of Spyro, The - A New Beginning.zip
+legend-of-spyro-the-the-eternal-night.json	BU7E	TLOS TEN	bd2751e6	0	Legend of Spyro, The - The Eternal Night.zip
+legend-of-zelda-the-a-link-to-the-past-four-swords.json	AZLE	GBAZELDA	8e91cd13	0	Legend of Zelda, The - A Link to the Past & Four Swords.zip
+legend-of-zelda-the-the-minish-cap.json	BZME	GBAZELDA MC	abcebbb1	0	Legend of Zelda, The - The Minish Cap.zip
+lego-bionicle.json	ALBE	LEGO BIONICL	3e5ec871	0	LEGO Bionicle.zip
+lego-racers-2.json	ALRE	LEGO RACERS	e13b63ad	0	LEGO Racers 2.zip
+lego-star-wars-ii-the-original-trilogy.json	BL7E	LSW2GBA	da1e9444	0	LEGO Star Wars II - The Original Trilogy.zip
+lego-star-wars-the-video-game.json	BLWE	LEGOSTARWARS	aeabfa5f	0	LEGO Star Wars - The Video Game.zip
+lilo-stitch-2-haemsterviel-havoc.json	BLSE	LILO&STITCH2	021a5755	0	Lilo & Stitch 2 - Haemsterviel Havoc.zip
+lilo-stitch.json	ALTE	LILO AND STI	542aa4ac	0	Lilo & Stitch.zip
+lion-king-1-1-2-the.json	BLKE	LIONKING 1.5	ea5ed4c0	0	Lion King 1 1-2, The.zip
+lord-of-the-rings-the-the-fellowship-of-the-ring.json	ALOE	UNIVERSLOTR	5a2b01f1	0	Lord of the Rings, The - The Fellowship of the Ring.zip
+lord-of-the-rings-the-the-return-of-the-king.json	BLRE	RETURN KING	7590ebfa	0	Lord of the Rings, The - The Return of the King.zip
+lord-of-the-rings-the-the-third-age.json	B3AE	THIRD AGE	2def3656	0	Lord of the Rings, The - The Third Age.zip
+lord-of-the-rings-the-the-two-towers.json	ALPE	TWO TOWERS	a1e3bf33	0	Lord of the Rings, The - The Two Towers.zip
+lost-vikings-the.json	ALVE	LOSTVIKINGS	8cb58997	0	Lost Vikings, The.zip
+lucky-luke-wanted.json	ALLP	LUCKY LUKE W	f12f29a9	0	Lucky Luke - Wanted!.zip
+lufia-the-ruins-of-lore.json	AGDE	LUFIA	de5ffcbc	0	Lufia - The Ruins of Lore.zip
+lunar-legend.json	ALNE	LUNAR LEGEND	885266a2	0	Lunar Legend.zip
+magical-quest-2-starring-mickey-minnie.json	AQME	M&M MAGICAL2	69f1117d	0	Magical Quest 2 Starring Mickey & Minnie.zip
+magical-quest-3-starring-mickey-donald.json	BMQE	M&D MAGICAL3	5a23094d	0	Magical Quest 3 Starring Mickey & Donald.zip
+magical-quest-starring-mickey-minnie.json	A3ME	MIC&MIN MA	b4294fa7	0	Magical Quest Starring Mickey & Minnie.zip
+magical-vacation.json	AMVJ	MAGICAL VACA	98fbbd9a	1	Magical Vacation.zip
+manic-miner.json	A4MP	MANIC MINER	138439f4	0	Manic Miner.zip
+marble-madness-klax.json	B68E	KLAXCOMP	5da05880	0	Marble Madness & Klax.zip
+mario-golf-advance-tour.json	BMGE	MARIOGOLFGBA	d56c2e54	0	Mario Golf - Advance Tour.zip
+mario-kart-super-circuit.json	AMKE	MARIO KART	ed316e37	0	Mario Kart - Super Circuit.zip
+mario-luigi-superstar-saga.json	A88E	MARIO&LUIGIU	e718d850	0	Mario & Luigi - Superstar Saga.zip
+mario-party-advance.json	B8ME	MARIOPARTYUS	f094a4cb	0	Mario Party Advance.zip
+mario-pinball-land.json	BMVE	MARIO BALL	70a6d2c1	0	Mario Pinball Land.zip
+mario-tennis-power-tour.json	BTME	MARIOTENNISA	da192d29	0	Mario Tennis - Power Tour.zip
+mario-vs-donkey-kong.json	BM5E	MARIOVSDK	25c394d1	0	Mario vs. Donkey Kong.zip
+marvel-ultimate-alliance.json	B4ME	MV1 ALLIANCE	a74294db	0	Marvel - Ultimate Alliance.zip
+max-payne.json	BMEE	MAX PAYNE   	296e1092	0	Max Payne.zip
+mazes-of-fate.json	BFQE	MAZESOFFATE	0b725a08	0	Mazes of Fate.zip
+mech-platoon.json	AKGE	MECH PLATOON	769fde96	0	Mech Platoon.zip
+medabots-ax-metabee-ver.json	AK8E	MEDABOTS MTB	03294511	0	Medabots AX - Metabee Ver..zip
+medabots-ax-rokusho-ver.json	AK9E	MEDABOTS RKS	92fdb8d6	0	Medabots AX - Rokusho Ver..zip
+medabots-metabee-version.json	A8BE	MEDABOTSMTBV	59f208fc	0	Medabots - Metabee Version.zip
+medabots-rokusho-version.json	A9BE	MEDABOTSRKSV	e144ded2	0	Medabots - Rokusho Version.zip
+medal-of-honor-infiltrator.json	BMHE	INFILTRATOR	f23150a4	0	Medal of Honor - Infiltrator.zip
+mega-man-bass.json	A6ME	MEGAMAN&BASS	eea68c2e	0	Mega Man & Bass.zip
+mega-man-battle-chip-challenge.json	A89E	BATTLECHIPGP	26be44fd	0	Mega Man Battle Chip Challenge.zip
+mega-man-battle-network-2.json	AE2E	MEGAMAN_EXE2	6d961f82	0	Mega Man Battle Network 2.zip
+mega-man-battle-network-3-blue-version.json	A3XE	MEGA_EXE3_BL	c0c780f9	0	Mega Man Battle Network 3 - Blue Version.zip
+mega-man-battle-network-3-white-version.json	A6BE	MEGA_EXE3_WH	0be4410a	0	Mega Man Battle Network 3 - White Version.zip
+mega-man-battle-network-4-blue-moon.json	B4BE	MEGAMANBN4BM	758a46e9	0	Mega Man Battle Network 4 - Blue Moon.zip
+mega-man-battle-network-4-red-sun.json	B4WE	MEGAMANBN4RS	2120695c	0	Mega Man Battle Network 4 - Red Sun.zip
+mega-man-battle-network-5-team-colonel.json	BRKE	MEGAMAN5_TC_	a552f683	0	Mega Man Battle Network 5 - Team Colonel.zip
+mega-man-battle-network-5-team-protoman.json	BRBE	MEGAMAN5_TP_	a73e83a4	0	Mega Man Battle Network 5 - Team Protoman.zip
+mega-man-battle-network-6-cybeast-falzar.json	BR6E	MEGAMAN6_FXX	dee6f2a9	0	Mega Man Battle Network 6 - Cybeast Falzar.zip
+mega-man-battle-network-6-cybeast-gregar.json	BR5E	MEGAMAN6_GXX	79452182	0	Mega Man Battle Network 6 - Cybeast Gregar.zip
+mega-man-battle-network.json	AREE	MEGAMAN_BN	1d347971	0	Mega Man Battle Network.zip
+mega-man-zero-2.json	A62E	MEGAMANZERO2	ce1e37bb	0	Mega Man Zero 2.zip
+mega-man-zero-3.json	BZ3E	MEGAMANZERO3	2784f3f2	0	Mega Man Zero 3.zip
+mega-man-zero-4.json	B4ZE	MEGAMANZERO4	7ee24793	0	Mega Man Zero 4.zip
+mega-man-zero.json	AZCE	MEGAMAN ZERO	9707d2a1	0	Mega Man Zero.zip
+metal-slug-advance.json	BSME	METAL SLUG	09980880	0	Metal Slug Advance.zip
+metroid-fusion.json	AMTE	METROID4USA	6c75479c	0	Metroid Fusion.zip
+metroid-zero-mission.json	BMXE	ZEROMISSIONE	5c61a844	0	Metroid - Zero Mission.zip
+micro-machines.json	AXZP	MICRO MACHIN	9d102c82	0	Micro Machines.zip
+midway-s-greatest-arcade-hits.json	AM3E	MGAH	c01c4d0a	0	Midway's Greatest Arcade Hits.zip
+millipede-super-breakout-lunar-lander.json	B62E	MILLIPEDECOM	d191b56f	0	Millipede, Super Breakout & Lunar Lander.zip
+mobile-suit-gundam-seed-battle-assault.json	BGNE	GUNDAMSEED-B	180d1491	0	Mobile Suit Gundam SEED - Battle Assault.zip
+monopoly.json	BUME	MONOPOLY	b01cbc07	0	Monopoly.zip
+monster-force.json	AM8E	MONSTERFORCE	ad4691d9	0	Monster Force.zip
+monster-house.json	BQ7E	MONSTERHOUSE	148b5072	0	Monster House.zip
+monster-rancher-advance-2.json	A2QE	MONSTERRANC2	1d695b1b	0	Monster Rancher Advance 2.zip
+monster-rancher-advance.json	AMFE	MONSRANCHERA	42cfa4b5	0	Monster Rancher Advance.zip
+monster-truck-madness.json	BMTE	MTM	dd872538	0	Monster Truck Madness.zip
+mortal-kombat-advance.json	AM5E	MK_ADVANCE	bcdabb47	0	Mortal Kombat Advance.zip
+mortal-kombat-deadly-alliance.json	AXDE	MKALLIANCE	a29ba64f	0	Mortal Kombat - Deadly Alliance.zip
+mortal-kombat-tournament-edition.json	AW4E	MKTOURNAMENT	968be7bc	0	Mortal Kombat - Tournament Edition.zip
+mother-1-2.json	A2UJ	MOTHER12	7b1ff152	1	Mother 1+2.zip
+mother-3.json	A3UJ	MOTHER3	a323c029	1	Mother 3.zip
+moto-racer-advance.json	A9ME	MR ADVANCE	2fdbe7a8	0	Moto Racer Advance.zip
+motocross-maniacs-advance.json	AMRE	MM ADVANCE	0a0faef4	0	Motocross Maniacs Advance.zip
+motogp.json	AM4E	MOTOGP	8ee93eb8	0	MotoGP.zip
+mr-driller-2.json	BR2E	MR. DRILLER2	02f51696	0	Mr. Driller 2.zip
+mr-nutz.json	AZRP	MISTER NUTZ	7f21d693	0	Mr. Nutz.zip
+ms-pac-man-maze-madness.json	BPCE	MSPAC-MANMM	dde5df02	0	Ms. Pac-Man - Maze Madness.zip
+namco-museum-50th-anniversary.json	B5NE	NAMCO 50	38da81fe	0	Namco Museum - 50th Anniversary.zip
+namco-museum.json	ANME	NAMCOMUSEUM	c58a04c1	0	Namco Museum.zip
+napoleon.json	ANPF	NAPOLEON F	a9ba0a11	1	Napoleon.zip
+naruto-ninja-council-2.json	BN2E	NARUTO US2	94699fca	0	Naruto - Ninja Council 2.zip
+naruto-ninja-council.json	A7AE	NARUTO US1	c402878c	0	Naruto - Ninja Council.zip
+nba-jam-2002.json	ABNE	NBA JAM 2002	ca428a7a	0	NBA Jam 2002.zip
+need-for-speed-carbon-own-the-city.json	BN7E	NFS CARBON	f4c0d140	0	Need for Speed Carbon - Own the City.zip
+need-for-speed-most-wanted.json	BNWE	NFSMW	ea15a16e	0	Need for Speed - Most Wanted.zip
+need-for-speed-porsche-unleashed.json	AZFE	NEEDFORSPEED	99078af4	0	Need for Speed - Porsche Unleashed.zip
+need-for-speed-underground-2.json	BNFE	NFSUG2	9a0c5090	0	Need for Speed - Underground 2.zip
+need-for-speed-underground.json	BNSE	NFSUG	828020e9	0	Need for Speed - Underground.zip
+nightmare-before-christmas-the-the-pumpkin-king.json	BNCE	NIGHTMARE	3c247c14	0	Nightmare Before Christmas, The - The Pumpkin King.zip
+ninja-five-o.json	ANXE	NINJA FIVE 0	eb3954c6	0	Ninja Five-O.zip
+oddworld-munch-s-oddysee.json	BODE	MUNCH	97367887	0	Oddworld - Munch's Oddysee.zip
+one-piece.json	BONE	ONEPIECE	7d2cf2a1	0	One Piece.zip
+onimusha-tactics.json	A6OE	ONITAC1US	70475d7f	0	Onimusha Tactics.zip
+oriental-blue-ao-no-tengai.json	AORJ	ORIENTALBLUE	8a850da7	1	Oriental Blue - Ao no Tengai.zip
+pac-man-collection.json	APCE	PACMANCOLLE	6e5c16f4	0	Pac-Man Collection.zip
+pac-man-world-2.json	B2CE	PAC WORLD 2	814a7d33	0	Pac-Man World 2.zip
+pac-man-world.json	BPAE	PAC-MANWORLD	b2a4fc78	0	Pac-Man World.zip
+paperboy-rampage.json	B6BE	PAPERBOYCOMP	79fe9284	0	Paperboy & Rampage.zip
+phalanx.json	APXE	PHALANX	eb733713	0	Phalanx.zip
+phantasy-star-collection.json	AYCE	PHANTASYSTAR	e5a7fe17	0	Phantasy Star Collection.zip
+pinball-advance.json	APZP	PINBALL ADV	39479369	0	Pinball Advance.zip
+pinball-of-the-dead-the.json	APDE	PINBALL DEAD	0a09c517	0	Pinball of the Dead, The.zip
+pinobee-wings-of-adventure.json	APBE	PINOBEE	d9385207	0	Pinobee - Wings of Adventure.zip
+pirates-of-the-caribbean-dead-man-s-chest.json	B8QE	PIRATESDMC	d1a67be8	0	Pirates of the Caribbean - Dead Man's Chest.zip
+pirates-of-the-caribbean-the-curse-of-the-black-pearl.json	A8QE	PIRATESCARIB	8f15bf4c	0	Pirates of the Caribbean - The Curse of the Black Pearl.zip
+pitfall-the-lost-expedition.json	BPHE	PITFALL	5c11dc26	0	Pitfall - The Lost Expedition.zip
+planet-monsters.json	APME	PLANET MNSTR	9b182354	0	Planet Monsters.zip
+play-novel-silent-hill.json	ASHJ	SILENT HILL	a8c9892e	1	Play Novel - Silent Hill.zip
+pocky-rocky-with-becky.json	APKE	POCKY-ROCKY	53a8ee86	0	Pocky & Rocky with Becky.zip
+pokemon-mystery-dungeon-red-rescue-team.json	B24E	POKE DUNGEON	dd0ac86c	0	Pokemon Mystery Dungeon - Red Rescue Team.zip
+pokemon-pinball-ruby-sapphire.json	BPPE	POKEPIN R/S	b992a3c0	0	Pokemon Pinball - Ruby & Sapphire.zip
+polarium-advance.json	BIIE	POLARIUMGBA	02d62ce9	0	Polarium Advance.zip
+pong-asteroids-yars-revenge.json	B64E	PONGCOMP	dbd04637	0	Pong, Asteroids & Yars' Revenge.zip
+prehistorik-man.json	APHE	PREHISTO MAN	0d3b922b	0	Prehistorik Man.zip
+prince-of-persia-the-sands-of-time.json	BPYE	PRINCEPERSIA	5adf72e6	0	Prince of Persia - The Sands of Time.zip
+puyo-pop-fever.json	BPFP	PUYO POP FEV	6e5880ed	0	Puyo Pop Fever.zip
+puyo-pop.json	APYE	PUYO POP	0901be49	0	Puyo Pop.zip
+r-type-iii-the-third-lightning.json	BR3E	RTYPE III	ea863f4d	0	R-Type III - The Third Lightning.zip
+racing-gears-advance.json	BRAE	RACING GEARS	bf648e5c	0	Racing Gears Advance.zip
+rave-master-special-attack-force.json	BRME	RAVE MASTER	c39b9418	0	Rave Master - Special Attack Force!.zip
+rayman-3-hoodlum-havoc.json	AYZE	RAYMAN 3	d1613266	0	Rayman 3 - Hoodlum Havoc.zip
+rayman-advance.json	ARYE	RAYMAN	8aba5ab8	0	Rayman Advance.zip
+rayman-hoodlum-s-revenge.json	BRYE	HOODLUMS REV	025a9998	0	Rayman - Hoodlum's Revenge.zip
+rayman-raving-rabbids.json	BQ3E	RAYMAN4	751ef0d2	0	Rayman - Raving Rabbids.zip
+rebelstar-tactical-command.json	BRLE	REBELSTAR	fb6c590f	0	Rebelstar - Tactical Command.zip
+revenge-of-shinobi-the.json	A3RE	REVENGEOFSHI	e9339304	0	Revenge of Shinobi, The.zip
+rhythm-tengoku.json	BRIJ	RHYTHMTENGOK	baf7ffd2	1	Rhythm Tengoku.zip
+river-city-ransom-ex.json	BDTE	RIVERCRANSOM	8686436e	0	River City Ransom EX.zip
+riviera-the-promised-land.json	BREE	RIVIERA	4fb6958d	0	Riviera - The Promised Land.zip
+road-rash-jailbreak.json	A9RE	ROADRASHJAIL	8834af99	0	Road Rash - Jailbreak.zip
+road-trip-shifting-gears.json	A6RE	ROADTRIPSHIF	549bf1c5	0	Road Trip - Shifting Gears.zip
+robopon-2-cross-version.json	ACVE	ROBOPON2CROS	68d3023a	0	Robopon 2 - Cross Version.zip
+robopon-2-ring-version.json	ARPE	ROBOPON2RING	ca73e17a	0	Robopon 2 - Ring Version.zip
+robotech-the-macross-saga.json	ARBE	ROBO MACROSS	325a6596	0	Robotech - The Macross Saga.zip
+rock-n-roll-racing.json	A4RE	RRRACING	15f2dd16	0	Rock n' Roll Racing.zip
+rockman-exe-4-5-real-operation.json	BR4J	ROCKEXE4.5RO	0a7d0372	1	Rockman EXE 4.5 - Real Operation.zip
+sabre-wulf.json	AWUE	SABREWULFTHQ	73787a16	0	Sabre Wulf.zip
+samurai-deeper-kyo.json	AOSE	SAMURAI_DST1	4ab65478	0	Samurai Deeper Kyo.zip
+samurai-jack-the-amulet-of-time.json	AJTE	SAMURAIJACK	b250366c	0	Samurai Jack - The Amulet of Time.zip
+scooby-doo-mystery-mayhem.json	BMME	SCOOBYMAYHEM	3d389a12	0	Scooby-Doo! Mystery Mayhem.zip
+scorpion-king-the-sword-of-osiris.json	ASZE	SCORPIONKING	6e0a8585	0	Scorpion King, The - Sword of Osiris.zip
+scurge-hive.json	BHVE	SCURGEHIVE	1ae38ac0	0	Scurge - Hive.zip
+sd-gundam-force.json	BGEE	SDGFORCE	68b21289	0	SD Gundam Force.zip
+sega-arcade-gallery.json	AYPE	SEGA ARCADE	3b8ffdf4	0	Sega Arcade Gallery.zip
+sega-smash-pack.json	A3PE	SEGA SMASH P	5c2e97ba	0	Sega Smash Pack.zip
+shaman-king-legacy-of-the-spirits-soaring-hawk.json	BHLE	SK LOS HAWK	798593a5	0	Shaman King - Legacy of the Spirits - Soaring Hawk.zip
+shaman-king-legacy-of-the-spirits-sprinting-wolf.json	BWSE	SK LOS WOLF	fa1aa3f6	0	Shaman King - Legacy of the Spirits - Sprinting Wolf.zip
+shaman-king-master-of-spirits-2.json	B2ME	SHAMAN KING2	201e3412	0	Shaman King - Master of Spirits 2.zip
+shaman-king-master-of-spirits.json	BSOE	SHAMAN KING	10e554ae	0	Shaman King - Master of Spirits.zip
+shin-bokura-no-taiyou-gyakushuu-no-sabata.json	U33J	BOKTAI3	1266101a	1	Shin Bokura no Taiyou - Gyakushuu no Sabata.zip
+shin-megami-tensei.json	AAUJ	DDS_1	4f234031	1	Shin Megami Tensei.zip
+shinchan-aventuras-en-cineland.json	BKCS	KURESHIN2004	4c5ffba8	1	Shinchan Aventuras en Cineland.zip
+shining-force-resurrection-of-the-dark-dragon.json	AF5E	SHININGFORCE	563aa3a0	0	Shining Force - Resurrection of the Dark Dragon.zip
+shining-soul-ii.json	AU2E	SHININGSOUL2	4038e282	0	Shining Soul II.zip
+shining-soul.json	AHUE	SHINING SOUL	e95bba0c	0	Shining Soul.zip
+shrek-2.json	BSEE	SHREK 2	52ff42d4	0	Shrek 2.zip
+sigma-star-saga.json	B3GE	SIGMA STAR	a8b80a7c	0	Sigma Star Saga.zip
+silent-scope.json	AIPE	SILENT SCOPE	c5ce1b2c	0	Silent Scope.zip
+simcity-2000.json	A5CE	SIMCITY2000	097e8628	0	SimCity 2000.zip
+simpsons-the-road-rage.json	A4AE	SIMPSONSRAGE	409e8252	0	Simpsons, The - Road Rage.zip
+sims-2-the-pets.json	B4OE	SIMS2 PETS	ec1f4029	0	Sims 2, The - Pets.zip
+sims-2-the.json	B46E	THE SIMS 2	8b1bc7df	0	Sims 2, The.zip
+sims-bustin-out-the.json	ASIE	THE SIMS ADV	d1183501	0	Sims Bustin' Out, The.zip
+smashing-drive.json	BSVE	SMASHDRIVE	2390aca6	0	Smashing Drive.zip
+snood-2-on-vacation.json	B2VE	SNOOD2ONVAC	d8e05727	0	Snood 2 - On Vacation.zip
+snood.json	ASQE	SNOOD	f1f1f148	0	Snood.zip
+sonic-advance-2.json	A2NE	SONICADVANC2	7efee7f7	0	Sonic Advance 2.zip
+sonic-advance-3.json	B3SE	SONICADVANC3	49dda5e6	0	Sonic Advance 3.zip
+sonic-advance.json	ASOE	SONICADVANCE	63f70fd8	0	Sonic Advance.zip
+sonic-battle.json	BSBE	SONICBATTLE	9ec9d86f	0	Sonic Battle.zip
+sonic-pinball-party.json	A3VE	SONICPINBALL	08794743	0	Sonic Pinball Party.zip
+sonic-the-hedgehog-genesis.json	BIJE	SONICGENESIS	027bc70d	0	Sonic the Hedgehog Genesis.zip
+space-channel-5-ulala-s-cosmic-attack.json	A5UE	SPACE CHANNE	0666f37a	0	Space Channel 5 - Ulala's Cosmic Attack.zip
+space-invaders.json	AIDE	SPACE INVADE	5ea3f3b5	0	Space Invaders.zip
+spider-man-2.json	BSPE	SPIDER-MAN2	0145f3f4	0	Spider-Man 2.zip
+spider-man-3.json	BI3E	SPIDERMAN3	ad0228a1	0	Spider-Man 3.zip
+spider-man-battle-for-new-york.json	BC9E	SPIDEY	6310ba16	0	Spider-Man - Battle for New York.zip
+spider-man-mysterio-s-menace.json	ASEE	SPIDERMAN MM	6e135b4d	0	Spider-Man - Mysterio's Menace.zip
+spider-man.json	AKXE	SPIDERMAN	406265b8	0	Spider-Man.zip
+spirits-spells.json	AWNE	SPIRITSPELLS	2fa6db95	0	Spirits & Spells.zip
+spongebob-squarepants-battle-for-bikini-bottom.json	BSQE	SBSPBATTLEBB	235628c3	0	SpongeBob SquarePants - Battle for Bikini Bottom.zip
+spy-hunter-super-sprint.json	B6AE	SPYHUNTCOMP	ad2f5353	0	Spy Hunter & Super Sprint.zip
+spy-hunter.json	AHNE	SPY HUNTER	b04892c9	0	Spy Hunter.zip
+spyro-2-season-of-flame.json	A2SE	SPYRO 2	37e120e7	0	Spyro 2 - Season of Flame.zip
+spyro-attack-of-the-rhynocs.json	AOWE	SPYRO 3	13f10a1e	0	Spyro - Attack of the Rhynocs.zip
+spyro-orange-the-cortex-conspiracy.json	BSTE	SPYRO ORANGE	bbf2549d	0	Spyro Orange - The Cortex Conspiracy.zip
+spyro-season-of-ice.json	ASYE	SPYRO	2f2389d2	0	Spyro - Season of Ice.zip
+star-wars-episode-i-jedi-power-battles.json	ASWE	JEDIPOWERBAT	3f19e156	0	Star Wars Episode I - Jedi Power Battles.zip
+star-wars-episode-ii-attack-of-the-clones.json	AS2E	STAR WARS EP	8fb5e2c6	0	Star Wars Episode II - Attack of the Clones.zip
+star-wars-episode-iii-revenge-of-the-sith.json	BE3E	STARWARSROTS	3e34aab7	0	Star Wars Episode III - Revenge of the Sith.zip
+star-wars-the-new-droid-army.json	A2WE	STAR WARS: T	59c52f98	0	Star Wars - The New Droid Army.zip
+star-wars-trilogy-apprentice-of-the-force.json	BCKE	STAR WARS TR	714a0d3a	0	Star Wars Trilogy - Apprentice of the Force.zip
+star-x.json	AS8E	STAR X	8b02b2b1	0	Star X.zip
+steel-empire.json	BKTP	STEEL EMPIRE	cb91922e	0	Steel Empire.zip
+street-fighter-alpha-3.json	AZUE	STREET FIGHT	80b707c2	0	Street Fighter Alpha 3.zip
+stuntman.json	AUXE	STUNTMAN	0d58ba07	0	Stuntman.zip
+summon-night-swordcraft-story-2.json	BSKE	SWORDCRAFT2	1eac1f48	0	Summon Night - Swordcraft Story 2.zip
+summon-night-swordcraft-story.json	AB4E	SUMMONIGHSCS	3ea860c2	0	Summon Night - Swordcraft Story.zip
+super-army-war.json	BG6E	ARMY WAR	baf484be	0	Super Army War.zip
+super-bust-a-move.json	ABME	BUSTAMOVEGBA	2fb4b14d	0	Super Bust-A-Move.zip
+super-dodge-ball-advance.json	ADFE	SUPERDODGE	63ca5050	0	Super Dodge Ball Advance.zip
+super-ghouls-n-ghosts.json	AG5E	SUPER GHOULS	1ef2acf3	0	Super Ghouls 'n Ghosts.zip
+super-mario-advance-2-super-mario-world.json	AA2E	SUPER MARIOB	5206880a	0	Super Mario Advance 2 - Super Mario World.zip
+super-mario-advance-3-yoshi-s-island.json	A3AE	SUPER MARIOC	40a48276	0	Super Mario Advance 3 - Yoshi's Island.zip
+super-mario-advance-4-super-mario-bros-3.json	AX4E	SUPER MARIOD	88dab27f	0	Super Mario Advance 4 - Super Mario Bros. 3.zip
+super-mario-advance.json	AMAE	SUPER MARIOA	1e4c6d6a	0	Super Mario Advance.zip
+super-monkey-ball-jr.json	ALUE	MONKEYBALLJR	0a8031f0	0	Super Monkey Ball Jr..zip
+super-puzzle-fighter-ii.json	AZ8E	PUZZLEFIGHT2	62066fc9	0	Super Puzzle Fighter II.zip
+super-robot-taisen-j.json	B6JJ	SRWJ	3b3cd715	1	Super Robot Taisen J.zip
+super-robot-taisen-original-generation-2.json	B2RE	SRTOG2	2aee0380	0	Super Robot Taisen - Original Generation 2.zip
+super-robot-taisen-original-generation.json	AOGE	SRTOG	58e86266	0	Super Robot Taisen - Original Generation.zip
+super-street-fighter-ii-turbo-revival.json	AXRE	SSF2TREVIVAL	063045aa	0	Super Street Fighter II Turbo - Revival.zip
+sword-of-mana.json	AVSE	SWORD OF MAN	7f1eac75	0	Sword of Mana.zip
+tactics-ogre-the-knight-of-lodis.json	ATOE	TACTICSOGRE	6649d2ce	0	Tactics Ogre - The Knight of Lodis.zip
+tak-2-the-staff-of-dreams.json	BT9E	TAK&JUJUENG	8f7eb026	0	Tak 2 - The Staff of Dreams.zip
+tak-and-the-power-of-juju.json	BJUE	TAK&JUJUENG	a9af1381	0	Tak and the Power of Juju.zip
+tak-the-great-juju-challenge.json	BJWE	TAK GJC	881c8416	0	Tak - The Great Juju Challenge.zip
+tales-of-phantasia.json	AN8E	PHANTASIA	01a0fca8	0	Tales of Phantasia.zip
+tang-tang.json	ATAE	TANG TANG	f5f0c143	0	Tang Tang.zip
+tarzan-return-to-the-jungle.json	AJGE	TARZANRTJ	32c6df3f	0	Tarzan - Return to the Jungle.zip
+teen-titans-2.json	BZUE	TEEN TITAN 2	ccacd823	0	Teen Titans 2.zip
+teen-titans.json	BBLE	TEENTITANS	12a0442c	0	Teen Titans.zip
+teenage-mutant-ninja-turtles-2-battle-nexus.json	BT2E	TMNT GBA 2	802fc7c1	0	Teenage Mutant Ninja Turtles 2 - Battle Nexus.zip
+teenage-mutant-ninja-turtles.json	BNTE	TMNT GBA	f6c36783	0	Teenage Mutant Ninja Turtles.zip
+tekken-advance.json	ATKE	TEKKEN	c59ea73b	0	Tekken Advance.zip
+terminator-3-rise-of-the-machines.json	AO3E	TERMINATOR 3	f74b3c7d	0	Terminator 3 - Rise of the Machines.zip
+tetris-worlds.json	ATWE	TETRISWORLDS	7b729804	0	Tetris Worlds.zip
+tiny-toon-adventures-scary-dreams.json	ATTE	TTABBD	fcd7a7c0	0	Tiny Toon Adventures - Scary Dreams.zip
+tiny-toon-adventures-wacky-stackers.json	AWSE	TTA-WACKY	e03c633e	0	Tiny Toon Adventures - Wacky Stackers.zip
+tmnt.json	BEXE	TMNT	916db9d5	0	TMNT.zip
+tokyo-xtreme-racer-advance.json	BTZE	TXRA	ab272800	0	Tokyo Xtreme Racer Advance.zip
+tom-clancy-s-rainbow-six-rogue-spear.json	AR6E	RAINBOWSIX-R	23575bf2	0	Tom Clancy's Rainbow Six - Rogue Spear.zip
+tom-clancy-s-splinter-cell-pandora-tomorrow.json	BSLE	TOM CLANCY'S	aefb7b54	0	Tom Clancy's Splinter Cell - Pandora Tomorrow.zip
+tom-clancy-s-splinter-cell.json	AO4E	SPLINTERCELL	308ba69c	0	Tom Clancy's Splinter Cell.zip
+tomb-raider-legend.json	BL8E	TOMB RAIDER	5a3dfb37	0	Tomb Raider - Legend.zip
+tomb-raider-the-prophecy.json	AL9E	TOMB RAIDER	556f40fa	0	Tomb Raider - The Prophecy.zip
+tony-hawk-s-american-sk8land.json	BH9E	TH SK8LAND	7b089f4a	0	Tony Hawk's American Sk8land.zip
+tony-hawk-s-downhill-jam.json	BXSE	TONY HAWK'S	37b0b53d	0	Tony Hawk's Downhill Jam.zip
+tony-hawk-s-pro-skater-2.json	ATHE	TONY HAWK 2!	812dc57a	0	Tony Hawk's Pro Skater 2.zip
+tony-hawk-s-pro-skater-3.json	AT3E	TONY HAWK 3!	f669a368	0	Tony Hawk's Pro Skater 3.zip
+tony-hawk-s-pro-skater-4.json	AT6E	TONY HAWK 4!	8cb0aa77	0	Tony Hawk's Pro Skater 4.zip
+tony-hawk-s-underground-2.json	B2TE	THUG2	bf864083	0	Tony Hawk's Underground 2.zip
+tony-hawk-s-underground.json	BTOE	THUGTHUGTHUG	1f5149bc	0	Tony Hawk's Underground.zip
+top-gear-rally.json	BTGE	TGRALLY	4dd90762	0	Top Gear Rally.zip
+tower-sp-the.json	BTRE	THE TOWER SP	95e05895	0	Tower SP, The.zip
+tr-metroid-fusion.json	AMTJ	METROID4JPN	6f8a46b0	1	Metroid Fusion.zip
+tron-2-0-killer-app.json	BTNE	TRON 2.0 KIL	77d50ec6	0	Tron 2.0 - Killer App.zip
+turbo-turtle-adventure.json	AK3E	TURBO TURTLE	e5e0b0f1	0	Turbo Turtle Adventure.zip
+turok-evolution.json	AT4E	TUROK EVOL	4edac27a	0	Turok - Evolution.zip
+tweety-and-the-magic-gems.json	ATME	TWEETY MAGIC	2da5c91e	0	Tweety and the Magic Gems.zip
+ultimate-brain-games.json	ABUE	UBG	b6c9f401	0	Ultimate Brain Games.zip
+ultimate-card-games.json	BUCE	UCG	94863423	0	Ultimate Card Games.zip
+ultimate-muscle-the-kinnikuman-legacy-the-path-of-the-superhero.json	AK2E	UMUSCLE	bb85ad55	0	Ultimate Muscle - The Kinnikuman Legacy - The Path of the Superhero.zip
+ultimate-spider-man.json	BULE	ULTSPIDERMAN	931e2c18	0	Ultimate Spider-Man.zip
+uno-52.json	BU5E	UNO 52	c659c6db	0	Uno 52.zip
+uno-free-fall.json	BUIE	UNO FREEFALL	19fcc78e	0	Uno Free Fall.zip
+urbz-the-sims-in-the-city.json	BOCE	THE URBZ AGB	8b3330bb	0	Urbz, The - Sims in the City.zip
+v-rally-3.json	AVRE	VRALLY 3	d3ae3d37	0	V-Rally 3.zip
+virtua-tennis.json	AVTE	VIRTUATENNIS	e0bd3b75	0	Virtua Tennis.zip
+virtual-kasparov.json	AVKE	VIRTKASPAROV	815b722f	0	Virtual Kasparov.zip
+wade-hixton-s-counter-punch.json	BSRE	WADE HIXTONS	47b49060	0	Wade Hixton's Counter Punch.zip
+wario-land-4.json	AWAE	WARIOLANDE	d6141609	0	Wario Land 4.zip
+warioware-inc-mega-microgames.json	AZWE	WARIOWAREINC	785d8b8c	0	WarioWare, Inc. - Mega Microgames!.zip
+warioware-twisted.json	RZWE	WARIOTWISTED	cb4e844b	0	WarioWare - Twisted!.zip
+wing-commander-prophecy.json	AW9E	WING COMMAND	62d9e3d0	0	Wing Commander - Prophecy.zip
+wings.json	AWQE	WINGS	49041bc8	0	Wings.zip
+wolfenstein-3d.json	AWOE	WOLF3D	c4aa2b7b	0	Wolfenstein 3D.zip
+woody-woodpecker-in-crazy-castle-5.json	AWWE	WWCC5	b9a3c878	0	Woody Woodpecker in Crazy Castle 5.zip
+world-soccer-winning-eleven.json	AEWJ	UI IRE	47986403	1	World Soccer Winning Eleven.zip
+worms-blast.json	AWBP	WORMS BLAST	5223f5aa	0	Worms Blast.zip
+worms-world-party.json	AWYE	WORMSWORLDPT	e8789c18	0	Worms World Party.zip
+wwe-road-to-wrestlemania-x8.json	AW8E	WWE_RTWM_X8	f1fb4fd1	0	WWE Road to WrestleMania X8.zip
+wwe-survivor-series.json	BWWE	WWE_SURVIVOR	6694f94d	0	WWE Survivor Series.zip
+wwf-road-to-wrestlemania.json	AWFE	WWF_ROAD_WM	8d3b116e	0	WWF Road to WrestleMania.zip
+x-men-2-wolverine-s-revenge.json	AWVE	X2 WOLVERINE	41a92220	0	X-Men 2 - Wolverine's Revenge.zip
+x-men-reign-of-apocalypse.json	AXME	XMENROA	25f43491	0	X-Men - Reign of Apocalypse.zip
+x-men-the-official-game.json	B3XE	X-MEN: THE O	c87f460a	0	X-Men - The Official Game.zip
+yggdra-union-we-ll-never-fight-alone.json	BYUE	YGGDRA UNION	3bfa68f7	0	Yggdra Union - We'll Never Fight Alone.zip
+yoshi-topsy-turvy.json	KYGE	YOSHI TOPSY	e64c265c	0	Yoshi Topsy-Turvy.zip
+yu-gi-oh-7-trials-to-glory-world-championship-tournament-2005.json	BY7E	YWCT2005USA	584db6a6	0	Yu-Gi-Oh! 7 Trials to Glory - World Championship Tournament 2005.zip
+yu-gi-oh-destiny-board-traveler.json	BYDE	YUGIOU DBT	611e7bbd	0	Yu-Gi-Oh! Destiny Board Traveler.zip
+yu-gi-oh-dungeon-dice-monsters.json	AYDE	YU-GI-OH DDM	8b5e0a27	0	Yu-Gi-Oh! Dungeon Dice Monsters.zip
+yu-gi-oh-gx-duel-academy.json	BYGE	YUGIOHGXDA	3b8a00fe	0	Yu-Gi-Oh! GX - Duel Academy.zip
+yu-gi-oh-reshef-of-destruction.json	AY8E	YUGIOH DM8	09e0c559	0	Yu-Gi-Oh! Reshef of Destruction.zip
+yu-gi-oh-the-eternal-duelist-soul.json	AY5E	YU-GI-OH!EDS	dfd07a36	0	Yu-Gi-Oh! The Eternal Duelist Soul.zip
+yu-gi-oh-the-sacred-cards.json	AY7E	YUGIOH DM7	141fb1cc	0	Yu-Gi-Oh! The Sacred Cards.zip
+yu-gi-oh-ultimate-masters-world-championship-tournament-2006.json	BY6E	YUGIOHWCT06	f968a196	0	Yu-Gi-Oh! Ultimate Masters - World Championship Tournament 2006.zip
+yu-gi-oh-world-championship-tournament-2004.json	BYWE	YWCT2004USA	69b6f229	0	Yu-Gi-Oh! World Championship Tournament 2004.zip
+yu-gi-oh-worldwide-edition-stairway-to-the-destined-duel.json	AYWE	YUGIOHWWE	39b5e771	0	Yu-Gi-Oh! Worldwide Edition - Stairway to the Destined Duel.zip
+yu-yu-hakusho-ghostfiles-spirit-detective.json	BYYE	YUYUHAKUSHO1	d3784b52	0	Yu Yu Hakusho - Ghostfiles - Spirit Detective.zip
+yu-yu-hakusho-ghostfiles-tournament-tactics.json	BRGE	YUYUHAKUSHO2	aef6b7cc	0	Yu Yu Hakusho - Ghostfiles - Tournament Tactics.zip
+zatch-bell-electric-arena.json	A4GE	ZATCH EA1	b4f1e785	0	Zatch Bell! Electric Arena.zip
+zoids-legacy.json	AZ2E	ZOIDS LEGACY	302e75f3	0	Zoids Legacy.zip
+zone-of-the-enders-the-fist-of-mars.json	AZEE	Z.O.E USA	24244415	0	Zone of the Enders - The Fist of Mars.zip
+zoocube.json	ANCE	ZOO CUBE	af20be72	0	ZooCube.zip
+zooo-action-puzzle-game.json	BMZP	ZOOO	897b2893	0	Zooo - Action Puzzle Game.zip

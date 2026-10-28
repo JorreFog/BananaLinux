@@ -1,0 +1,1575 @@
+{
+  "name": "Felt Table",
+  "author": "Banana Theme Studio",
+  "base": "dark",
+  "font": "inter",
+  "screens": {
+    "home": {
+      "top": [
+        {
+          "use": "table"
+        },
+        {
+          "x": "=66 + (1 - mv) * 70",
+          "y": 62,
+          "use": "card",
+          "scale": 2.18,
+          "opacity": "=0.25 + 0.75 * mv",
+          "with": {
+            "rank": "=sys.games",
+            "pic": "=sys.icon",
+            "title": "=sys.name",
+            "tint": "=mod(sys.index, 2) == 0 ? red : cardInk"
+          }
+        },
+        {
+          "type": "text",
+          "x": 362,
+          "y": 78,
+          "text": "THE HOUSE PRESENTS",
+          "size": 10,
+          "color": "=gold",
+          "font": "inter-bold",
+          "spacing": 3
+        },
+        {
+          "type": "text",
+          "x": 362,
+          "y": 96,
+          "text": "{sys.name}",
+          "size": 30,
+          "color": "=cream",
+          "w": 240,
+          "font": "inter-bold",
+          "wrap": true,
+          "maxLines": 2,
+          "opacity": "=0.4 + 0.6 * mv"
+        },
+        {
+          "type": "text",
+          "x": 362,
+          "y": 178,
+          "text": "=either(sys.maker, 'The house')",
+          "size": 14,
+          "color": "=alpha(cream, 0.7)",
+          "w": 240
+        },
+        {
+          "type": "rect",
+          "x": 362,
+          "y": 206,
+          "w": 240,
+          "h": 1.5,
+          "fill": "=alpha(gold, 0.8)"
+        },
+        {
+          "type": "text",
+          "x": 362,
+          "y": 223,
+          "text": "CARDS IN THE DECK",
+          "size": 10,
+          "color": "=gold",
+          "font": "inter-semibold",
+          "spacing": 2
+        },
+        {
+          "type": "text",
+          "x": 482,
+          "y": 220,
+          "text": "{sys.games}",
+          "size": 16,
+          "color": "=cream",
+          "w": 120,
+          "align": "right",
+          "font": "inter-bold"
+        },
+        {
+          "type": "rect",
+          "x": 362,
+          "y": 245,
+          "w": 240,
+          "h": 1,
+          "fill": "=alpha(gold, 0.25)"
+        },
+        {
+          "type": "text",
+          "x": 362,
+          "y": 253,
+          "text": "HANDS PLAYED",
+          "size": 10,
+          "color": "=gold",
+          "font": "inter-semibold",
+          "spacing": 2
+        },
+        {
+          "type": "text",
+          "x": 482,
+          "y": 250,
+          "text": "{sys.played}",
+          "size": 16,
+          "color": "=cream",
+          "w": 120,
+          "align": "right",
+          "font": "inter-bold"
+        },
+        {
+          "type": "rect",
+          "x": 362,
+          "y": 275,
+          "w": 240,
+          "h": 1,
+          "fill": "=alpha(gold, 0.25)"
+        },
+        {
+          "type": "text",
+          "x": 362,
+          "y": 283,
+          "text": "TIME AT THE TABLE",
+          "size": 10,
+          "color": "=gold",
+          "font": "inter-semibold",
+          "spacing": 2
+        },
+        {
+          "type": "text",
+          "x": 482,
+          "y": 280,
+          "text": "=either(sys.time, '—')",
+          "size": 16,
+          "color": "=cream",
+          "w": 120,
+          "align": "right",
+          "font": "inter-bold"
+        },
+        {
+          "type": "rect",
+          "x": 362,
+          "y": 305,
+          "w": 240,
+          "h": 1,
+          "fill": "=alpha(gold, 0.25)"
+        },
+        {
+          "type": "group",
+          "x": 362,
+          "y": 322,
+          "w": 240,
+          "h": 74,
+          "children": [
+            {
+              "type": "image",
+              "x": 9,
+              "y": 9,
+              "w": 56,
+              "h": 56,
+              "src": "{sys.resumeArt}",
+              "fit": "cover",
+              "radius": 6,
+              "placeholder": "#0a2a19"
+            },
+            {
+              "type": "text",
+              "x": 76,
+              "y": 12,
+              "text": "LAST HAND",
+              "size": 9,
+              "color": "=gold",
+              "font": "inter-bold",
+              "spacing": 2
+            },
+            {
+              "type": "text",
+              "x": 76,
+              "y": 28,
+              "text": "{sys.resumeTitle}",
+              "size": 13,
+              "color": "=cream",
+              "w": 156,
+              "font": "inter-semibold",
+              "wrap": true,
+              "maxLines": 2
+            }
+          ],
+          "radius": 10,
+          "fill": "#00000048",
+          "border": 1,
+          "borderColor": "=alpha(gold, 0.5)",
+          "visible": "=sys.hasResume"
+        }
+      ],
+      "bottom": [
+        {
+          "use": "table"
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 36,
+          "text": "YOUR HAND",
+          "size": 11,
+          "color": "=gold",
+          "w": 640,
+          "align": "center",
+          "font": "inter-bold",
+          "spacing": 4
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 54,
+          "text": "card {cursor + 1} of {count}",
+          "size": 11,
+          "color": "=alpha(cream, 0.6)",
+          "w": 640,
+          "align": "center"
+        },
+        {
+          "type": "list",
+          "source": "systems",
+          "direction": "free",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "itemW": 150,
+          "itemH": 190,
+          "gap": 14,
+          "scrollMode": "none",
+          "item": {
+            "type": "group",
+            "w": 120,
+            "h": 168,
+            "children": [
+              {
+                "type": "rect",
+                "x": 0,
+                "y": 0,
+                "w": 120,
+                "h": 168,
+                "fill": "#00000000",
+                "radius": 10,
+                "opacity": "=1 - min(abs(pos), 1)",
+                "shadow": {
+                  "x": 0,
+                  "y": 0,
+                  "blur": 22,
+                  "spread": 3,
+                  "color": "=alpha(gold, 0.95)"
+                }
+              },
+              {
+                "x": 0,
+                "y": 0,
+                "use": "card",
+                "with": {
+                  "rank": "=item.games",
+                  "pic": "=item.icon",
+                  "title": "=item.name",
+                  "tint": "=mod(i, 2) == 0 ? red : cardInk"
+                }
+              },
+              {
+                "type": "rect",
+                "x": 0,
+                "y": 0,
+                "w": 120,
+                "h": 168,
+                "fill": "#03160c",
+                "radius": 10,
+                "opacity": "=min(abs(pos), 4) * 0.16"
+              }
+            ],
+            "anchor": "center",
+            "x": "=320 + pos * 76",
+            "y": "=250 + abs(pos) * abs(pos) * 6 - (1 - min(abs(pos), 1)) * 30",
+            "scale": "=1 - min(abs(pos), 4) * 0.06",
+            "opacity": "=clamp(1 - max(abs(pos) - 2.6, 0) * 0.75, 0, 1)",
+            "onTap": "a"
+          },
+          "range": 6
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 372,
+          "text": "{sys.name}",
+          "size": 18,
+          "color": "=cream",
+          "w": 640,
+          "align": "center",
+          "font": "inter-bold",
+          "opacity": "=0.3 + 0.7 * mv"
+        },
+        {
+          "type": "list",
+          "source": "hints",
+          "direction": "row",
+          "x": 40,
+          "y": 418,
+          "w": 560,
+          "h": 30,
+          "itemW": 150,
+          "itemH": 30,
+          "gap": 16,
+          "scrollMode": "none",
+          "item": {
+            "use": "hint"
+          },
+          "flow": true
+        }
+      ]
+    },
+    "library": {
+      "top": [
+        {
+          "use": "table"
+        },
+        {
+          "type": "rect",
+          "x": 40,
+          "y": 58,
+          "w": 232,
+          "h": 316,
+          "fill": "#00000055",
+          "radius": 12,
+          "border": 2,
+          "borderColor": "=gold",
+          "shadow": {
+            "x": 0,
+            "y": 6,
+            "blur": 14,
+            "color": "#00000080"
+          }
+        },
+        {
+          "type": "image",
+          "x": 48,
+          "y": 66,
+          "w": 216,
+          "h": 300,
+          "src": "{game.art}",
+          "fit": "contain",
+          "fallback": "{sys.icon}",
+          "radius": 6,
+          "opacity": "=0.2 + 0.8 * mv",
+          "placeholder": "#0a2a19"
+        },
+        {
+          "type": "text",
+          "x": 300,
+          "y": 64,
+          "text": "{upper(sys.name)}  ·  HAND {game.index + 1}",
+          "size": 10,
+          "color": "=gold",
+          "w": 300,
+          "font": "inter-bold",
+          "spacing": 2
+        },
+        {
+          "type": "text",
+          "x": 300,
+          "y": 82,
+          "text": "{game.title}",
+          "size": 26,
+          "color": "=cream",
+          "w": 300,
+          "font": "inter-bold",
+          "wrap": true,
+          "maxLines": 2,
+          "opacity": "=0.3 + 0.7 * mv"
+        },
+        {
+          "type": "text",
+          "x": 300,
+          "y": 150,
+          "text": "{game.sub}",
+          "size": 13,
+          "color": "=alpha(cream, 0.7)",
+          "w": 300,
+          "maxLines": 1
+        },
+        {
+          "type": "rect",
+          "x": 300,
+          "y": 176,
+          "w": 300,
+          "h": 1.5,
+          "fill": "=alpha(gold, 0.8)"
+        },
+        {
+          "type": "list",
+          "source": "range",
+          "direction": "free",
+          "x": 300,
+          "y": 190,
+          "w": 150,
+          "h": 130,
+          "itemW": 150,
+          "itemH": 190,
+          "gap": 14,
+          "scrollMode": "none",
+          "item": {
+            "type": "group",
+            "w": 40,
+            "h": 10,
+            "children": [
+              {
+                "type": "rect",
+                "x": 0,
+                "y": 0,
+                "w": 40,
+                "h": 10,
+                "fill": "=pick(floor(i / 8), red, '#1e4fa3', '#1b1b1b')",
+                "radius": 5,
+                "shadow": {
+                  "x": 0,
+                  "y": 1,
+                  "blur": 1,
+                  "color": "#00000099"
+                }
+              },
+              {
+                "type": "rect",
+                "x": 6,
+                "y": 0,
+                "w": 4,
+                "h": 10,
+                "fill": "#ffffffc8"
+              },
+              {
+                "type": "rect",
+                "x": 18,
+                "y": 0,
+                "w": 4,
+                "h": 10,
+                "fill": "#ffffffc8"
+              },
+              {
+                "type": "rect",
+                "x": 30,
+                "y": 0,
+                "w": 4,
+                "h": 10,
+                "fill": "#ffffffc8"
+              }
+            ],
+            "x": "=4 + floor(i / 8) * 46",
+            "y": "=112 - mod(i, 8) * 9 - (1 - easeOutBack(progress(moved - i * 30, 260))) * 40",
+            "visible": "=i < min(game.plays, 24)"
+          },
+          "count": 24,
+          "range": 30
+        },
+        {
+          "type": "text",
+          "x": 300,
+          "y": 318,
+          "text": "=game.plays > 0 ? '' : 'No bets yet'",
+          "size": 13,
+          "color": "=alpha(cream, 0.6)"
+        },
+        {
+          "type": "text",
+          "x": 460,
+          "y": 228,
+          "text": "{game.plays}",
+          "size": 44,
+          "color": "=cream",
+          "w": 140,
+          "align": "right",
+          "font": "inter-bold"
+        },
+        {
+          "type": "text",
+          "x": 460,
+          "y": 284,
+          "text": "=game.plays == 1 ? 'HAND PLAYED' : 'HANDS PLAYED'",
+          "size": 10,
+          "color": "=gold",
+          "w": 140,
+          "align": "right",
+          "font": "inter-semibold",
+          "spacing": 2
+        },
+        {
+          "type": "rect",
+          "x": 300,
+          "y": 340,
+          "w": 300,
+          "h": 1,
+          "fill": "=alpha(gold, 0.3)"
+        },
+        {
+          "type": "text",
+          "x": 300,
+          "y": 350,
+          "text": "AT THE TABLE",
+          "size": 10,
+          "color": "=gold",
+          "font": "inter-semibold",
+          "spacing": 2
+        },
+        {
+          "type": "text",
+          "x": 450,
+          "y": 347,
+          "text": "=either(game.time, '—')",
+          "size": 14,
+          "color": "=cream",
+          "w": 150,
+          "align": "right",
+          "font": "inter-bold"
+        },
+        {
+          "type": "text",
+          "x": 300,
+          "y": 374,
+          "text": "LAST HAND",
+          "size": 10,
+          "color": "=gold",
+          "font": "inter-semibold",
+          "spacing": 2
+        },
+        {
+          "type": "text",
+          "x": 450,
+          "y": 371,
+          "text": "=either(game.last, 'never')",
+          "size": 14,
+          "color": "=cream",
+          "w": 150,
+          "align": "right",
+          "font": "inter-bold"
+        },
+        {
+          "type": "group",
+          "x": 48,
+          "y": 388,
+          "w": 216,
+          "h": 26,
+          "children": [
+            {
+              "type": "text",
+              "x": 0,
+              "y": 6,
+              "text": "♥  HOUSE FAVOURITE",
+              "size": 10,
+              "color": "=cream",
+              "w": 216,
+              "align": "center",
+              "font": "inter-bold",
+              "spacing": 2
+            }
+          ],
+          "radius": 13,
+          "fill": "=red",
+          "border": 1,
+          "borderColor": "=gold",
+          "visible": "=game.fav"
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 200,
+          "text": "=empty ? empty.title : ''",
+          "size": 22,
+          "color": "=cream",
+          "w": 640,
+          "align": "center",
+          "font": "inter-bold"
+        }
+      ],
+      "bottom": [
+        {
+          "use": "table"
+        },
+        {
+          "type": "group",
+          "x": 34,
+          "y": 30,
+          "w": 572,
+          "h": 380,
+          "children": [
+            {
+              "type": "rect",
+              "x": 0,
+              "y": 0,
+              "w": 572,
+              "h": 380,
+              "fill": "#202430",
+              "radius": 4,
+              "gradient": {
+                "angle": 180,
+                "stops": [
+                  "#00000000",
+                  "#8a6a2218"
+                ]
+              }
+            },
+            {
+              "type": "text",
+              "x": 20,
+              "y": 13,
+              "text": "DEALER'S LEDGER",
+              "size": 14,
+              "color": "=cardInk",
+              "font": "inter-bold",
+              "spacing": 3
+            },
+            {
+              "type": "text",
+              "x": 300,
+              "y": 15,
+              "text": "{sys.name} · {count} hands",
+              "size": 12,
+              "color": "=red",
+              "w": 252,
+              "align": "right",
+              "font": "inter-semibold"
+            },
+            {
+              "type": "rect",
+              "x": 12,
+              "y": 38,
+              "w": 548,
+              "h": 1.5,
+              "fill": "=red"
+            },
+            {
+              "type": "rect",
+              "x": 12,
+              "y": 42,
+              "w": 548,
+              "h": 1,
+              "fill": "=red"
+            },
+            {
+              "type": "text",
+              "x": 16,
+              "y": 50,
+              "text": "No.",
+              "size": 10,
+              "color": "#8a7a5a",
+              "w": 40,
+              "align": "right",
+              "font": "inter-semibold"
+            },
+            {
+              "type": "text",
+              "x": 78,
+              "y": 50,
+              "text": "GAME",
+              "size": 10,
+              "color": "#8a7a5a",
+              "font": "inter-semibold",
+              "spacing": 2
+            },
+            {
+              "type": "text",
+              "x": 440,
+              "y": 50,
+              "text": "HANDS",
+              "size": 10,
+              "color": "#8a7a5a",
+              "w": 110,
+              "align": "right",
+              "font": "inter-semibold",
+              "spacing": 2
+            },
+            {
+              "type": "rect",
+              "x": 66,
+              "y": 44,
+              "w": 1.5,
+              "h": 336,
+              "fill": "=alpha(red, 0.55)"
+            },
+            {
+              "type": "list",
+              "source": "games",
+              "direction": "column",
+              "x": 0,
+              "y": 68,
+              "w": 572,
+              "h": 306,
+              "itemW": 572,
+              "itemH": 34,
+              "gap": 0,
+              "scrollMode": "edge",
+              "item": {
+                "type": "group",
+                "w": 572,
+                "h": 34,
+                "children": [
+                  {
+                    "type": "rect",
+                    "x": 8,
+                    "y": 2,
+                    "w": 556,
+                    "h": 30,
+                    "fill": "=alpha(gold, 0.42)",
+                    "radius": 4,
+                    "opacity": 0,
+                    "states": [
+                      {
+                        "when": "=sel",
+                        "opacity": 1
+                      }
+                    ]
+                  },
+                  {
+                    "type": "rect",
+                    "x": 8,
+                    "y": 33,
+                    "w": 556,
+                    "h": 1,
+                    "fill": "#5d7fa850"
+                  },
+                  {
+                    "type": "text",
+                    "x": 16,
+                    "y": 9,
+                    "text": "{pad(i + 1, 3, '0')}",
+                    "size": 12,
+                    "color": "#9a8a6a",
+                    "w": 40,
+                    "align": "right",
+                    "font": "inter-medium"
+                  },
+                  {
+                    "type": "rect",
+                    "x": 60,
+                    "y": 11,
+                    "w": 12,
+                    "h": 12,
+                    "fill": "=red",
+                    "radius": "50%",
+                    "visible": "=sel"
+                  },
+                  {
+                    "type": "text",
+                    "x": 80,
+                    "y": 8,
+                    "text": "{item.title}",
+                    "size": 15,
+                    "color": "=cardInk",
+                    "w": 360,
+                    "states": [
+                      {
+                        "when": "=sel",
+                        "font": "inter-bold",
+                        "color": "#7a1219"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "x": 440,
+                    "y": 9,
+                    "text": "{item.plays}",
+                    "size": 13,
+                    "color": "=cardInk",
+                    "w": 110,
+                    "align": "right",
+                    "font": "inter-semibold"
+                  }
+                ],
+                "onTap": "a"
+              },
+              "clip": true
+            },
+            {
+              "type": "text",
+              "x": 0,
+              "y": 180,
+              "text": "=empty ? empty.hint : ''",
+              "size": 14,
+              "color": "#8a7a5a",
+              "w": 572,
+              "align": "center"
+            }
+          ],
+          "radius": 4,
+          "fill": "=cream",
+          "shadow": {
+            "x": 0,
+            "y": 6,
+            "blur": 16,
+            "color": "#000000a0"
+          }
+        },
+        {
+          "type": "list",
+          "source": "hints",
+          "direction": "row",
+          "x": 40,
+          "y": 424,
+          "w": 560,
+          "h": 30,
+          "itemW": 150,
+          "itemH": 30,
+          "gap": 16,
+          "scrollMode": "none",
+          "item": {
+            "use": "hint"
+          },
+          "flow": true
+        }
+      ]
+    },
+    "launch": {
+      "top": [
+        {
+          "use": "table"
+        },
+        {
+          "type": "rect",
+          "x": 320,
+          "y": 236,
+          "w": 250,
+          "h": 340,
+          "fill": "#00000000",
+          "anchor": "center",
+          "radius": 16,
+          "opacity": "=clamp((launch.progress - 0.65) / 0.2, 0, 1)",
+          "shadow": {
+            "x": 0,
+            "y": 0,
+            "blur": 40,
+            "spread": 6,
+            "color": "=alpha(gold, 0.9)"
+          }
+        },
+        {
+          "type": "group",
+          "x": 320,
+          "y": "=236 - (1 - deal) * 330",
+          "w": "=230 * max(abs(cosd(flip * 180)), 0.02)",
+          "h": 320,
+          "children": [
+            {
+              "type": "group",
+              "x": 0,
+              "y": 0,
+              "w": "100%",
+              "h": "100%",
+              "children": [
+                {
+                  "type": "rect",
+                  "x": 0,
+                  "y": 0,
+                  "w": "100%",
+                  "h": "100%",
+                  "fill": "=red",
+                  "radius": 14,
+                  "border": 6,
+                  "borderColor": "=cream"
+                },
+                {
+                  "type": "rect",
+                  "x": "9%",
+                  "y": "7%",
+                  "w": "82%",
+                  "h": "86%",
+                  "fill": "#00000000",
+                  "radius": 8,
+                  "border": 2,
+                  "borderColor": "=alpha(gold, 0.9)"
+                },
+                {
+                  "type": "rect",
+                  "x": "22%",
+                  "y": "28%",
+                  "w": "56%",
+                  "h": "44%",
+                  "fill": "#00000000",
+                  "radius": "50%",
+                  "border": 2,
+                  "borderColor": "=alpha(cream, 0.8)"
+                },
+                {
+                  "type": "rect",
+                  "x": "38%",
+                  "y": "40%",
+                  "w": "24%",
+                  "h": "20%",
+                  "fill": "=gold",
+                  "radius": "50%"
+                }
+              ],
+              "visible": "=flip < 0.5"
+            },
+            {
+              "type": "group",
+              "x": 0,
+              "y": 0,
+              "w": "100%",
+              "h": "100%",
+              "children": [
+                {
+                  "type": "rect",
+                  "x": 0,
+                  "y": 0,
+                  "w": "100%",
+                  "h": "100%",
+                  "fill": "=cream",
+                  "radius": 14,
+                  "border": 1,
+                  "borderColor": "#00000040"
+                },
+                {
+                  "type": "image",
+                  "x": "7%",
+                  "y": "6%",
+                  "w": "86%",
+                  "h": "72%",
+                  "src": "{game.art}",
+                  "fit": "contain",
+                  "fallback": "{sys.icon}"
+                },
+                {
+                  "type": "text",
+                  "x": "5%",
+                  "y": 258,
+                  "text": "{game.title}",
+                  "size": 15,
+                  "color": "=cardInk",
+                  "w": "90%",
+                  "align": "center",
+                  "font": "inter-bold",
+                  "wrap": true,
+                  "maxLines": 2,
+                  "visible": "=flip > 0.9"
+                }
+              ],
+              "visible": "=flip >= 0.5"
+            }
+          ],
+          "anchor": "center"
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 416,
+          "text": "NOW DEALING",
+          "size": 12,
+          "color": "=gold",
+          "w": 640,
+          "align": "center",
+          "font": "inter-bold",
+          "spacing": 5,
+          "opacity": "=deal"
+        }
+      ],
+      "bottom": [
+        {
+          "use": "table"
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 120,
+          "text": "=launch.progress < 0.6 ? 'PLACE YOUR BETS' : 'GOOD LUCK'",
+          "size": 26,
+          "color": "=cream",
+          "w": 640,
+          "align": "center",
+          "font": "inter-bold",
+          "spacing": 4
+        },
+        {
+          "type": "list",
+          "source": "range",
+          "direction": "free",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "itemW": 150,
+          "itemH": 190,
+          "gap": 14,
+          "scrollMode": "none",
+          "item": {
+            "w": 30,
+            "h": 30,
+            "x": "=lerp(-40 - i * 50, 221 + i * 34, easeOut(clamp(launch.progress * 1.8 - i * 0.12, 0, 1)))",
+            "y": 220,
+            "use": "chip"
+          },
+          "count": 6,
+          "range": 8
+        },
+        {
+          "type": "rect",
+          "x": 80,
+          "y": 320,
+          "w": 480,
+          "h": 4,
+          "fill": "#00000060",
+          "radius": 2
+        },
+        {
+          "type": "rect",
+          "x": 80,
+          "y": 320,
+          "w": "=480 * launch.progress",
+          "h": 4,
+          "fill": "=gold",
+          "radius": 2
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 338,
+          "text": "{game.title}",
+          "size": 14,
+          "color": "=alpha(cream, 0.75)",
+          "w": 640,
+          "align": "center"
+        }
+      ]
+    },
+    "all": {
+      "top": [
+        {
+          "type": "text",
+          "x": 50,
+          "y": 27,
+          "text": "♥  FELT TABLE",
+          "size": 10,
+          "color": "=alpha(gold, 0.9)",
+          "font": "inter-bold",
+          "spacing": 3
+        },
+        {
+          "type": "group",
+          "x": 430,
+          "y": 18,
+          "w": 180,
+          "h": 26,
+          "children": [
+            {
+              "type": "text",
+              "x": 12,
+              "y": 5,
+              "text": "{clock}",
+              "size": 13,
+              "color": "=cream",
+              "font": "inter-bold"
+            },
+            {
+              "type": "rect",
+              "x": 72,
+              "y": 16,
+              "w": 3,
+              "h": 4,
+              "fill": "=online ? gold : alpha(cream, 0.25)",
+              "radius": 1
+            },
+            {
+              "type": "rect",
+              "x": 77,
+              "y": 12,
+              "w": 3,
+              "h": 8,
+              "fill": "=online ? gold : alpha(cream, 0.25)",
+              "radius": 1
+            },
+            {
+              "type": "rect",
+              "x": 82,
+              "y": 8,
+              "w": 3,
+              "h": 12,
+              "fill": "=online ? gold : alpha(cream, 0.25)",
+              "radius": 1
+            },
+            {
+              "type": "group",
+              "x": 100,
+              "y": 7,
+              "w": 70,
+              "h": 12,
+              "children": [
+                {
+                  "type": "rect",
+                  "x": 0,
+                  "y": 0,
+                  "w": 24,
+                  "h": 12,
+                  "fill": "#00000000",
+                  "radius": 3,
+                  "border": 1.5,
+                  "borderColor": "=alpha(cream, 0.8)"
+                },
+                {
+                  "type": "rect",
+                  "x": 24,
+                  "y": 4,
+                  "w": 2,
+                  "h": 4,
+                  "fill": "=alpha(cream, 0.8)"
+                },
+                {
+                  "type": "rect",
+                  "x": 3,
+                  "y": 3,
+                  "w": "=18 * clamp(battery, 0, 100) / 100",
+                  "h": 6,
+                  "fill": "=charging ? feltLite : (battery < 20 ? '#e0473f' : gold)",
+                  "radius": 1
+                },
+                {
+                  "type": "text",
+                  "x": 30,
+                  "y": -1,
+                  "text": "{battery}%",
+                  "size": 11,
+                  "color": "=cream",
+                  "w": 40,
+                  "align": "right",
+                  "font": "inter-semibold"
+                }
+              ],
+              "visible": "=battery >= 0"
+            }
+          ],
+          "radius": 13,
+          "fill": "#05201480",
+          "border": 1,
+          "borderColor": "=alpha(gold, 0.6)"
+        }
+      ]
+    }
+  },
+  "colors": {
+    "screenBg": "#0a3d24",
+    "ink": "#f7f0dc",
+    "muted": "#b9c9b0"
+  },
+  "vars": {
+    "feltDeep": "#083520",
+    "feltLite": "#3fa86c",
+    "gold": "#d9b45b",
+    "cream": "#f7f0dc",
+    "cardInk": "#1c1c1c",
+    "red": "#b8212b",
+    "wood": "#7a4422",
+    "woodDeep": "#2e1509",
+    "mv": "=easeOut(progress(moved, 380))",
+    "deal": "=easeOut(clamp(launch.progress / 0.25, 0, 1))",
+    "flip": "=clamp((launch.progress - 0.25) / 0.45, 0, 1)"
+  },
+  "components": {
+    "table": {
+      "type": "group",
+      "children": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "#202430",
+          "gradient": {
+            "angle": 180,
+            "stops": [
+              "=wood",
+              "=woodDeep"
+            ]
+          }
+        },
+        {
+          "type": "group",
+          "x": 10,
+          "y": 10,
+          "w": 620,
+          "h": 460,
+          "children": [
+            {
+              "type": "rect",
+              "x": 310,
+              "y": 230,
+              "w": 380,
+              "h": 260,
+              "fill": "#00000000",
+              "anchor": "center",
+              "radius": "50%",
+              "shadow": {
+                "x": 0,
+                "y": 0,
+                "blur": 170,
+                "spread": 70,
+                "color": "=alpha(feltLite, 0.55)"
+              }
+            },
+            {
+              "type": "rect",
+              "x": 310,
+              "y": 230,
+              "w": 260,
+              "h": 170,
+              "fill": "#00000000",
+              "anchor": "center",
+              "radius": "50%",
+              "shadow": {
+                "x": 0,
+                "y": 0,
+                "blur": 110,
+                "spread": 20,
+                "color": "=alpha(feltLite, 0.35)"
+              }
+            },
+            {
+              "type": "rect",
+              "x": 0,
+              "y": 0,
+              "w": 620,
+              "h": 70,
+              "fill": "#202430",
+              "gradient": {
+                "angle": 180,
+                "stops": [
+                  "#00000066",
+                  "#00000000"
+                ]
+              }
+            },
+            {
+              "type": "rect",
+              "x": 0,
+              "y": 390,
+              "w": 620,
+              "h": 70,
+              "fill": "#202430",
+              "gradient": {
+                "angle": 0,
+                "stops": [
+                  "#00000077",
+                  "#00000000"
+                ]
+              }
+            },
+            {
+              "type": "list",
+              "source": "range",
+              "direction": "free",
+              "x": 0,
+              "y": 0,
+              "w": 620,
+              "h": 460,
+              "itemW": 150,
+              "itemH": 190,
+              "gap": 14,
+              "scrollMode": "none",
+              "item": {
+                "type": "group",
+                "w": 2,
+                "h": 2,
+                "children": [
+                  {
+                    "type": "rect",
+                    "x": 0,
+                    "y": 0,
+                    "w": 2,
+                    "h": 2,
+                    "fill": "=mod(i, 3) == 0 ? '#ffffff14' : '#00000022'",
+                    "radius": 1
+                  }
+                ],
+                "x": "=mod(i * 137.31 + 17, 620)",
+                "y": "=mod(i * 71.97 + 29, 460)"
+              },
+              "count": 90,
+              "range": 100
+            }
+          ],
+          "radius": 46,
+          "fill": "=feltDeep",
+          "clip": true,
+          "shadow": {
+            "x": 0,
+            "y": 0,
+            "blur": 10,
+            "spread": 3,
+            "color": "#000000c0"
+          }
+        },
+        {
+          "type": "rect",
+          "x": 22,
+          "y": 22,
+          "w": 596,
+          "h": 436,
+          "fill": "#00000000",
+          "radius": 36,
+          "border": 1.5,
+          "borderColor": "=alpha(gold, 0.65)"
+        }
+      ]
+    },
+    "card": {
+      "type": "group",
+      "children": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 120,
+          "h": 168,
+          "fill": "=cream",
+          "radius": 10,
+          "border": 1,
+          "borderColor": "#00000030",
+          "shadow": {
+            "x": 0,
+            "y": 4,
+            "blur": 10,
+            "color": "#00000090"
+          }
+        },
+        {
+          "type": "rect",
+          "x": 6,
+          "y": 6,
+          "w": 108,
+          "h": 156,
+          "fill": "#00000000",
+          "radius": 6,
+          "border": 1,
+          "borderColor": "=alpha(tint, 0.45)"
+        },
+        {
+          "type": "text",
+          "x": 8,
+          "y": 8,
+          "text": "{rank}",
+          "size": 17,
+          "color": "=tint",
+          "w": 28,
+          "align": "center",
+          "font": "inter-bold"
+        },
+        {
+          "type": "text",
+          "x": 8,
+          "y": 29,
+          "text": "♥",
+          "size": 13,
+          "color": "=tint",
+          "w": 28,
+          "align": "center"
+        },
+        {
+          "type": "image",
+          "x": 26,
+          "y": 40,
+          "w": 68,
+          "h": 68,
+          "src": "{pic}",
+          "fit": "contain"
+        },
+        {
+          "type": "text",
+          "x": 8,
+          "y": 114,
+          "text": "{title}",
+          "size": 11,
+          "color": "=cardInk",
+          "w": 104,
+          "align": "center",
+          "font": "inter-semibold",
+          "wrap": true,
+          "maxLines": 2
+        },
+        {
+          "type": "text",
+          "x": 84,
+          "y": 134,
+          "text": "{rank}",
+          "size": 17,
+          "color": "=tint",
+          "w": 28,
+          "align": "center",
+          "font": "inter-bold"
+        }
+      ],
+      "w": 120,
+      "h": 168
+    },
+    "chip": {
+      "type": "group",
+      "children": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 30,
+          "h": 30,
+          "fill": "=pick(mod(i, 4), red, '#1e4fa3', '#1b1b1b', '#6b2fa3')",
+          "radius": "50%",
+          "shadow": {
+            "x": 0,
+            "y": 2,
+            "blur": 2,
+            "color": "#00000090"
+          }
+        },
+        {
+          "type": "rect",
+          "x": 13,
+          "y": 0,
+          "w": 4,
+          "h": 6,
+          "fill": "#ffffffd0"
+        },
+        {
+          "type": "rect",
+          "x": 13,
+          "y": 24,
+          "w": 4,
+          "h": 6,
+          "fill": "#ffffffd0"
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 13,
+          "w": 6,
+          "h": 4,
+          "fill": "#ffffffd0"
+        },
+        {
+          "type": "rect",
+          "x": 24,
+          "y": 13,
+          "w": 6,
+          "h": 4,
+          "fill": "#ffffffd0"
+        },
+        {
+          "type": "rect",
+          "x": 6,
+          "y": 6,
+          "w": 18,
+          "h": 18,
+          "fill": "#00000000",
+          "radius": "50%",
+          "border": 1.5,
+          "borderColor": "#ffffffa0"
+        }
+      ],
+      "w": 30,
+      "h": 30
+    },
+    "hint": {
+      "type": "group",
+      "children": [
+        {
+          "type": "group",
+          "x": 0,
+          "y": 0,
+          "w": 30,
+          "h": 30,
+          "children": [
+            {
+              "x": 0,
+              "y": 0,
+              "use": "chip"
+            },
+            {
+              "type": "text",
+              "x": 0,
+              "y": "=len(item.key) > 1 ? 10 : 7",
+              "text": "=len(item.key) > 1 ? substr(item.key, 0, 3) : item.key",
+              "size": "=len(item.key) > 1 ? 8 : 12",
+              "color": "#ffffff",
+              "w": 30,
+              "align": "center",
+              "font": "inter-bold"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 0,
+          "text": "{item.label}",
+          "size": 13,
+          "color": "=cream",
+          "font": "inter-semibold"
+        }
+      ],
+      "layout": "row",
+      "gap": 7,
+      "align": "center",
+      "h": 30
+    }
+  },
+  "input": {
+    "home": {
+      "left": "prev",
+      "right": "next",
+      "up": "none",
+      "down": "none",
+      "l": "prev:3",
+      "r": "next:3",
+      "a": "open",
+      "x": "resume",
+      "y": "fav"
+    },
+    "library": {
+      "up": "prev",
+      "down": "next",
+      "left": "prev:5",
+      "right": "next:5",
+      "l": "prevSystem",
+      "r": "nextSystem",
+      "a": "open",
+      "b": "back",
+      "y": "fav"
+    }
+  },
+  "hints": {
+    "home": [
+      [
+        "A",
+        "Deal"
+      ],
+      [
+        "X",
+        "Last hand"
+      ],
+      [
+        "Y",
+        "Keep"
+      ]
+    ],
+    "library": [
+      [
+        "A",
+        "Play"
+      ],
+      [
+        "B",
+        "Fold"
+      ],
+      [
+        "Y",
+        "Keep"
+      ]
+    ]
+  },
+  "behavior": {
+    "cues": {
+      "insert": 1000
+    },
+    "launchMs": 1500,
+    "scrollMs": 90,
+    "settleMs": 750,
+    "fps": 30,
+    "wrap": true,
+    "extraHints": true
+  },
+  "accent": "#d9b45b"
+}

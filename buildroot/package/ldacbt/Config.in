@@ -1,0 +1,8 @@
+config BR2_PACKAGE_LDACBT
+	bool "ldacbt"
+	help
+	  Sony's LDAC Bluetooth audio encoder (AOSP's libldac) with its
+	  adaptive bit rate library, as a standalone build: what
+	  bluez-alsa's --enable-ldac links against.
+
+	  https://github.com/EHfive/ldacBT

@@ -1,0 +1,17 @@
+#!/bin/sh
+# Bluetooth through a sleep: off before (the chip's Bluetooth unpowered, the daemons gone, the pairings saved), on
+# again after when it was on. The sound stays routed to the headphones meanwhile (down sleep), so a game woken stays
+# quiet until they are called back instead of playing on the speakers. "post" runs in the background already; the
+# up goes on beside the Wi-Fi's.
+[ -f /run/banana/bluetoothd.pid ] || [ -f /run/banana/bt-was-up ] || exit 0	# off: nothing to do, at once
+case $1 in
+pre)
+    touch /run/banana/bt-was-up
+    /usr/libexec/banana/bluetooth down sleep
+    ;;
+post)
+    rm -f /run/banana/bt-was-up
+    /usr/libexec/banana/bluetooth up >/dev/null 2>&1 &
+    ;;
+esac
+exit 0

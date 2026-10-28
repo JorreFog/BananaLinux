@@ -1,0 +1,367 @@
+From: casualducko (GitHub)
+Subject: [PATCH] SDL_BANANA_PANELS: zero-copy panels (GBM, both CRTCs on one buffer)
+
+Contributed in BananaLinux issue #39 by casualducko (eReaderDS): with SDL_BANANA_PANELS the window is a GBM
+surface and each frame both panels flip to the same buffer, each showing its half through its plane's source
+offset, instead of reading every frame back from GL (~125 ms a frame -> ~15 ms, 60 Hz).
+SDL_BANANA_READBACK=1 forces the old path, SDL_BANANA_TRACE=1 logs the steps.
+Source: https://github.com/casualducko/eReaderDS/blob/main/runtime/banana-sdl/0002-banana-zero-copy-panels.patch
+---
+diff --git a/src/video/dummy/SDL_bananapanels.c b/src/video/dummy/SDL_bananapanels.c
+index 133ad8d..70c8bdb 100644
+--- a/src/video/dummy/SDL_bananapanels.c
++++ b/src/video/dummy/SDL_bananapanels.c
+@@ -176,6 +176,7 @@ fail:
+ }
+ 
+ int BP_Active(void) { return bp_on; }
++void BP_GBM_Disable(void);
+ 
+ /* the panel's place in the window */
+ static void bp_rect(int s, int *x, int *y)
+@@ -228,6 +229,7 @@ int BP_Present(const void *pixels, int pitch, int w, int h)
+ }
+ 
+ /* the same from a GL read-back: RGBA, the last row first */
++int BP_read_bgra = 0;   /* the read-back is already in the panels' order (GL_BGRA_EXT) */
+ int BP_PresentRGBA(const void *pixels, int w, int h)
+ {
+     int s;
+@@ -241,6 +243,11 @@ int BP_PresentRGBA(const void *pixels, int w, int h)
+         rows = SDL_min((int)pn->h, h - y0);
+         cols = SDL_min((int)pn->w, w - x0);
+         if (rows <= 0 || cols <= 0) continue;
++        if (BP_read_bgra) {
++            for (y = 0; y < rows; y++)
++                SDL_memcpy(pn->buf[back].map + (size_t)y * pn->buf[back].pitch,
++                           (const Uint8 *)pixels + ((size_t)(h - 1 - (y0 + y)) * w + x0) * 4, (size_t)cols * 4);
++        } else
+         for (y = 0; y < rows; y++) {
+             const Uint8 *src = (const Uint8 *)pixels + ((size_t)(h - 1 - (y0 + y)) * w + x0) * 4;
+             Uint32 *dst = (Uint32 *)(pn->buf[back].map + (size_t)y * pn->buf[back].pitch);
+@@ -270,7 +277,184 @@ void BP_Quit(void)
+     if (!bp_on) return;
+     bp_wait_flips();
+     bp_on = 0;
++    BP_GBM_Disable();
+     bp_free();   /* closing the device gives the display back (the menu takes it again) */
+ }
+ 
++
++/* ---- zero-copy: the window is a GBM surface the GPU draws into, and both panels scan out of its buffers, each
++   showing its part (the CRTC's viewport x, y into the buffer): no read-back, no copy. libgbm is loaded at run time. ---- */
++#include <dlfcn.h>
++
++#define BP_FOURCC_XR24 0x34325258u
++static void *bp_gbm_dev, *bp_gbm_surf, *bp_gbm_bo_shown, *bp_gbm_bo_queued;
++static int bp_gbm_w, bp_gbm_h, bp_gbm_started, bp_gbm_trace;
++static void *(*g_create_device)(int);
++static void (*g_destroy_device)(void *);
++static void *(*g_surface_create)(void *, Uint32, Uint32, Uint32, Uint32);
++static void (*g_surface_destroy)(void *);
++static void *(*g_lock_front)(void *);
++static void (*g_release)(void *, void *);
++static Uint64 (*g_bo_handle)(void *);
++static Uint32 (*g_bo_stride)(void *);
++static Uint64 (*g_bo_modifier)(void *);
++static struct { void *bo; Uint32 fb; } bp_gbm_fbs[8];
++static int bp_gbm_nfb;
++/* a window made again (LOVE's setMode, a resize): the surface before it, its buffers' framebuffers and the two it had
++ * on the panels, kept until the new surface's first frame is up (then nothing scans out of them) */
++static void *bp_gbm_old_surf, *bp_gbm_old_shown, *bp_gbm_old_queued;
++static Uint32 bp_gbm_old_fbs[8];
++static int bp_gbm_old_nfb;
++
++static void bp_gbm_rmfb(Uint32 fb)
++{
++    if (fb) bp_ioctl(DRM_IOCTL_MODE_RMFB, &fb);
++}
++/* the old surface and its framebuffers, once the panels show the new one */
++static void bp_gbm_drop_old(void)
++{
++    int i;
++    for (i = 0; i < bp_gbm_old_nfb; i++) bp_gbm_rmfb(bp_gbm_old_fbs[i]);
++    bp_gbm_old_nfb = 0;
++    if (bp_gbm_old_surf && g_surface_destroy) g_surface_destroy(bp_gbm_old_surf);
++    bp_gbm_old_surf = bp_gbm_old_shown = bp_gbm_old_queued = NULL;
++}
++
++void *BP_GBM_Device(void)
++{
++    void *lib;
++    if (!bp_on || SDL_getenv("SDL_BANANA_READBACK")) return NULL;
++    if (bp_gbm_dev) return bp_gbm_dev;
++    bp_gbm_trace = SDL_getenv("SDL_BANANA_TRACE") != NULL;
++    lib = dlopen("libgbm.so.1", RTLD_NOW | RTLD_LOCAL);
++    if (!lib) return NULL;
++    g_create_device = (void *(*)(int))dlsym(lib, "gbm_create_device");
++    g_destroy_device = (void (*)(void *))dlsym(lib, "gbm_device_destroy");
++    g_surface_create = (void *(*)(void *, Uint32, Uint32, Uint32, Uint32))dlsym(lib, "gbm_surface_create");
++    g_surface_destroy = (void (*)(void *))dlsym(lib, "gbm_surface_destroy");
++    g_lock_front = (void *(*)(void *))dlsym(lib, "gbm_surface_lock_front_buffer");
++    g_release = (void (*)(void *, void *))dlsym(lib, "gbm_surface_release_buffer");
++    g_bo_handle = (Uint64 (*)(void *))dlsym(lib, "gbm_bo_get_handle");
++    g_bo_stride = (Uint32 (*)(void *))dlsym(lib, "gbm_bo_get_stride");
++    g_bo_modifier = (Uint64 (*)(void *))dlsym(lib, "gbm_bo_get_modifier");
++    if (!g_create_device || !g_surface_create || !g_lock_front || !g_release || !g_bo_handle || !g_bo_stride) return NULL;
++    bp_gbm_dev = g_create_device(bp_fd);
++    if (bp_gbm_trace) fprintf(stderr, "[bananapanels] gbm device %p\n", bp_gbm_dev);
++    return bp_gbm_dev;
++}
++
++/* give the zero-copy path up (EGL on GBM wouldn't start): the read-back path takes over */
++void BP_GBM_Disable(void)
++{
++    int i;
++    bp_gbm_drop_old();
++    for (i = 0; i < bp_gbm_nfb; i++) bp_gbm_rmfb(bp_gbm_fbs[i].fb);
++    bp_gbm_nfb = 0;
++    bp_gbm_bo_shown = bp_gbm_bo_queued = NULL;
++    if (bp_gbm_surf && g_surface_destroy) g_surface_destroy(bp_gbm_surf);
++    if (bp_gbm_dev && g_destroy_device) g_destroy_device(bp_gbm_dev);
++    bp_gbm_dev = bp_gbm_surf = NULL;
++}
++
++void *BP_GBM_CreateSurface(int w, int h)
++{
++    int i;
++    if (!bp_gbm_dev) return NULL;
++    if (bp_gbm_surf) {
++        /* a window made again: its framebuffers were cached by buffer and never removed, so once the cache was full
++           every frame of the new surface added one (a KMS framebuffer leaked a frame), and a new buffer at an old
++           one's address was shown with the old framebuffer. The panels may still scan out of the old surface: it
++           goes once the new one's first frame is up (BP_GBM_Present) */
++        bp_wait_flips();
++        bp_gbm_drop_old();
++        bp_gbm_old_surf = bp_gbm_surf;
++        bp_gbm_old_shown = bp_gbm_bo_shown;
++        bp_gbm_old_queued = bp_gbm_bo_queued;
++        for (i = 0; i < bp_gbm_nfb; i++) bp_gbm_old_fbs[i] = bp_gbm_fbs[i].fb;
++        bp_gbm_old_nfb = bp_gbm_nfb;
++        bp_gbm_nfb = 0;
++        bp_gbm_bo_shown = bp_gbm_bo_queued = NULL;
++        bp_gbm_surf = NULL;
++        bp_gbm_started = 0;      /* the first frame of the new one is set on the CRTCs (it may be another size) */
++    }
++    bp_gbm_w = w; bp_gbm_h = h;
++    bp_gbm_surf = g_surface_create(bp_gbm_dev, w, h, BP_FOURCC_XR24, 1 /* SCANOUT */ | 4 /* RENDERING */);
++    if (bp_gbm_trace) fprintf(stderr, "[bananapanels] gbm surface %dx%d %p\n", w, h, bp_gbm_surf);
++    return bp_gbm_surf;
++}
++
++int BP_GBM_Active(void) { return bp_gbm_surf != NULL; }
++int BP_GBM_Enabled(void) { return bp_gbm_dev != NULL; }
++
++static Uint32 bp_gbm_fb(void *bo)
++{
++    struct drm_mode_fb_cmd2 f;
++    int i;
++    for (i = 0; i < bp_gbm_nfb; i++) if (bp_gbm_fbs[i].bo == bo) return bp_gbm_fbs[i].fb;
++    SDL_zero(f);
++    f.width = bp_gbm_w; f.height = bp_gbm_h; f.pixel_format = BP_FOURCC_XR24;
++    f.handles[0] = (Uint32)g_bo_handle(bo);
++    f.pitches[0] = g_bo_stride(bo);
++    if (g_bo_modifier) {
++        Uint64 m = g_bo_modifier(bo);
++        if (m != 0 && m != 0x00ffffffffffffffULL) { f.flags = 2 /* DRM_MODE_FB_MODIFIERS */; f.modifier[0] = m; }
++    }
++    if (bp_ioctl(DRM_IOCTL_MODE_ADDFB2, &f)) {
++        if (bp_gbm_trace) fprintf(stderr, "[bananapanels] ADDFB2 failed: %s (handle %u pitch %u mod %llx)\n", strerror(errno),
++                                  f.handles[0], f.pitches[0], (unsigned long long)f.modifier[0]);
++        return 0;
++    }
++    if (bp_gbm_nfb == 8) {
++        /* full (a surface with more buffers than that): the oldest entry that isn't on the panels or queued makes room,
++           its framebuffer removed (it isn't scanned out) */
++        for (i = 0; i < 8; i++)
++            if (bp_gbm_fbs[i].bo != bp_gbm_bo_shown && bp_gbm_fbs[i].bo != bp_gbm_bo_queued) break;
++        if (i == 8) i = 0;
++        bp_gbm_rmfb(bp_gbm_fbs[i].fb);
++        SDL_memmove(&bp_gbm_fbs[i], &bp_gbm_fbs[i + 1], (size_t)(7 - i) * sizeof bp_gbm_fbs[0]);
++        bp_gbm_nfb = 7;
++    }
++    bp_gbm_fbs[bp_gbm_nfb].bo = bo; bp_gbm_fbs[bp_gbm_nfb++].fb = f.fb_id;
++    return f.fb_id;
++}
++
++/* the frame just swapped onto both panels */
++void BP_GBM_Present(void)
++{
++    void *bo;
++    Uint32 fb;
++    int s;
++    if (!bp_gbm_surf) return;
++    bo = g_lock_front(bp_gbm_surf);
++    if (!bo) return;
++    fb = bp_gbm_fb(bo);
++    if (!fb) { g_release(bp_gbm_surf, bo); return; }
++    bp_wait_flips();                                   /* the last frame is on the panels now */
++    if (bp_gbm_bo_shown) g_release(bp_gbm_surf, bp_gbm_bo_shown);
++    bp_gbm_bo_shown = bp_gbm_bo_queued;
++    bp_gbm_bo_queued = bo;
++    for (s = 0; s < 2; s++) {
++        BP_Panel *pn = &bp_p[s];
++        int x0, y0;
++        bp_rect(s, &x0, &y0);
++        if (!bp_gbm_started) {
++            struct drm_mode_crtc sc;
++            SDL_zero(sc);
++            sc.crtc_id = pn->crtc; sc.fb_id = fb; sc.x = x0; sc.y = y0;
++            sc.set_connectors_ptr = (Uint64)(uintptr_t)&pn->conn; sc.count_connectors = 1;
++            sc.mode = pn->mode; sc.mode_valid = 1;
++            if (bp_ioctl(DRM_IOCTL_MODE_SETCRTC, &sc) && bp_gbm_trace)
++                fprintf(stderr, "[bananapanels] SETCRTC %d failed: %s\n", s, strerror(errno));
++        } else {
++            struct drm_mode_crtc_page_flip pf;
++            SDL_zero(pf);
++            pf.crtc_id = pn->crtc; pf.fb_id = fb; pf.flags = DRM_MODE_PAGE_FLIP_EVENT;
++            if (bp_ioctl(DRM_IOCTL_MODE_PAGE_FLIP, &pf) == 0) bp_pending++;
++            else if (bp_gbm_trace) fprintf(stderr, "[bananapanels] flip %d failed: %s\n", s, strerror(errno));
++        }
++    }
++    if (!bp_gbm_started) bp_gbm_drop_old();      /* SETCRTC is synchronous: the old surface is off the panels now */
++    bp_gbm_started = 1;
++}
++
+ #endif /* SDL_VIDEO_DRIVER_DUMMY */
+diff --git a/src/video/dummy/SDL_bananapanels.h b/src/video/dummy/SDL_bananapanels.h
+index 4bbcbf4..cfdaa59 100644
+--- a/src/video/dummy/SDL_bananapanels.h
++++ b/src/video/dummy/SDL_bananapanels.h
+@@ -10,6 +10,13 @@ extern int BP_Init(int *w, int *h);          /* 0: on, and the two panels' size
+ extern int BP_Active(void);
+ extern int BP_Present(const void *pixels, int pitch, int w, int h);
+ extern int BP_PresentRGBA(const void *pixels, int w, int h);   /* a GL read-back: RGBA, bottom-up */
++extern int BP_read_bgra;
++extern void *BP_GBM_Device(void);            /* the GBM device zero-copy draws on (NULL: use the read-back) */
++extern void BP_GBM_Disable(void);
++extern void *BP_GBM_CreateSurface(int w, int h);
++extern int BP_GBM_Active(void);              /* the window's surface exists */
++extern int BP_GBM_Enabled(void);             /* EGL runs on the GBM device */
++extern void BP_GBM_Present(void);            /* after the swap: both panels show the new frame */
+ extern void BP_MapTouch(float *x, float *y);
+ extern void BP_Quit(void);
+ 
+diff --git a/src/video/offscreen/SDL_offscreenopengles.c b/src/video/offscreen/SDL_offscreenopengles.c
+index 739d677..4964300 100644
+--- a/src/video/offscreen/SDL_offscreenopengles.c
++++ b/src/video/offscreen/SDL_offscreenopengles.c
+@@ -22,6 +22,7 @@
+ 
+ #if defined(SDL_VIDEO_DRIVER_OFFSCREEN) && defined(SDL_VIDEO_OPENGL_EGL)
+ 
++#include <stdio.h>
+ #include "SDL_offscreenopengles.h"
+ #include "SDL_offscreenvideo.h"
+ #include "SDL_offscreenwindow.h"
+@@ -31,7 +32,31 @@
+ 
+ int OFFSCREEN_GLES_LoadLibrary(_THIS, const char *path)
+ {
+-    int ret = SDL_EGL_LoadLibraryOnly(_this, path);
++    int ret;
++#ifdef SDL_VIDEO_DRIVER_DUMMY
++    /* Banana: zero-copy, EGL on a GBM device the panels scan out of (BP_GBM_*); if that can't start, the read-back */
++    if (BP_Active()) {
++        void *gdev = BP_GBM_Device();
++        int tr = SDL_getenv("SDL_BANANA_TRACE") != NULL;
++        if (gdev) {
++            int r1 = SDL_EGL_LoadLibrary(_this, path, (NativeDisplayType)gdev, 0x31D7 /* EGL_PLATFORM_GBM_KHR */);
++            if (tr) fprintf(stderr, "[bananapanels] EGL on GBM: %d (%s)\n", r1, r1 ? SDL_GetError() : "ok");
++            if (r1 == 0) {
++                int r2;
++                SDL_EGL_SetRequiredVisualId(_this, 0x34325258 /* XRGB8888 */);
++                r2 = SDL_EGL_ChooseConfig(_this);
++                if (tr) fprintf(stderr, "[bananapanels] config: %d (%s)\n", r2, r2 ? SDL_GetError() : "ok");
++                if (r2 == 0) {
++                    return 0;
++                }
++            }
++            SDL_EGL_UnloadLibrary(_this);
++            BP_GBM_Disable();
++            if (tr) fprintf(stderr, "[bananapanels] zero-copy given up, read-back\n");
++        }
++    }
++#endif
++    ret = SDL_EGL_LoadLibraryOnly(_this, path);
+     if (ret != 0) {
+         return ret;
+     }
+@@ -80,22 +105,36 @@ int OFFSCREEN_GLES_SwapWindow(_THIS, SDL_Window *window)
+     OFFSCREEN_Window *offscreen_wind = window->driverdata;
+ 
+ #ifdef SDL_VIDEO_DRIVER_DUMMY
+-    /* Banana: the frame onto the panels (SDL_BANANA_PANELS), read back before the swap */
++    /* Banana: the frame onto the panels (SDL_BANANA_PANELS). Zero-copy: the swap, then both panels flip to the new
++       buffer. Otherwise it is read back first (in the panels' own order when GL can, which is much faster). */
+     if (BP_Active()) {
+-        static void (*readPixels)(int, int, int, int, unsigned int, unsigned int, void *);
+-        static void *buf;
+-        static size_t bufsize;
+-        size_t need = (size_t)window->w * window->h * 4;
+-        if (!readPixels) {
+-            readPixels = (void (*)(int, int, int, int, unsigned int, unsigned int, void *))SDL_GL_GetProcAddress("glReadPixels");
+-        }
+-        if (need > bufsize) {
+-            void *nb = SDL_realloc(buf, need);
+-            if (nb) { buf = nb; bufsize = need; }
+-        }
+-        if (readPixels && buf && need <= bufsize) {
+-            readPixels(0, 0, window->w, window->h, 0x1908 /* GL_RGBA */, 0x1401 /* GL_UNSIGNED_BYTE */, buf);
+-            BP_PresentRGBA(buf, window->w, window->h);
++        if (BP_GBM_Active()) {
++            int r = SDL_EGL_SwapBuffers(_this, offscreen_wind->egl_surface);
++            BP_GBM_Present();
++            return r;
++        } else {
++            static void (*readPixels)(int, int, int, int, unsigned int, unsigned int, void *);
++            static void *buf;
++            static size_t bufsize;
++            static int checked;
++            size_t need = (size_t)window->w * window->h * 4;
++            if (!readPixels) {
++                readPixels = (void (*)(int, int, int, int, unsigned int, unsigned int, void *))SDL_GL_GetProcAddress("glReadPixels");
++            }
++            if (!checked) {
++                const char *(*getString)(unsigned int) = (const char *(*)(unsigned int))SDL_GL_GetProcAddress("glGetString");
++                const char *ex = getString ? getString(0x1F03 /* GL_EXTENSIONS */) : NULL;
++                BP_read_bgra = ex && SDL_strstr(ex, "GL_EXT_read_format_bgra") != NULL;
++                checked = 1;
++            }
++            if (need > bufsize) {
++                void *nb = SDL_realloc(buf, need);
++                if (nb) { buf = nb; bufsize = need; }
++            }
++            if (readPixels && buf && need <= bufsize) {
++                readPixels(0, 0, window->w, window->h, BP_read_bgra ? 0x80E1 /* GL_BGRA_EXT */ : 0x1908 /* GL_RGBA */, 0x1401 /* GL_UNSIGNED_BYTE */, buf);
++                BP_PresentRGBA(buf, window->w, window->h);
++            }
+         }
+     }
+ #endif
+diff --git a/src/video/offscreen/SDL_offscreenwindow.c b/src/video/offscreen/SDL_offscreenwindow.c
+index bc0d121..4d0219d 100644
+--- a/src/video/offscreen/SDL_offscreenwindow.c
++++ b/src/video/offscreen/SDL_offscreenwindow.c
+@@ -26,6 +26,7 @@
+ #include "../SDL_egl_c.h"
+ 
+ #include "SDL_offscreenwindow.h"
++#include "../dummy/SDL_bananapanels.h"
+ 
+ int OFFSCREEN_CreateWindow(_THIS, SDL_Window *window)
+ {
+@@ -54,6 +55,13 @@ int OFFSCREEN_CreateWindow(_THIS, SDL_Window *window)
+             return SDL_SetError("Cannot create an OPENGL window invalid egl_data");
+         }
+ 
++#ifdef SDL_VIDEO_DRIVER_DUMMY
++        if (BP_Active() && BP_GBM_Enabled()) {
++            /* Banana: a surface the panels scan out of */
++            void *gs = BP_GBM_CreateSurface(window->w, window->h);
++            offscreen_window->egl_surface = gs ? SDL_EGL_CreateSurface(_this, (NativeWindowType)gs) : EGL_NO_SURFACE;
++        } else
++#endif
+         offscreen_window->egl_surface = SDL_EGL_CreateOffscreenSurface(_this, window->w, window->h);
+ 
+         if (offscreen_window->egl_surface == EGL_NO_SURFACE) {

@@ -9,6 +9,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <string_view>
 #include <deque>
 #include <map>
 #include <mutex>
@@ -433,6 +434,35 @@ namespace rnds
 	static FT_Library sFt = nullptr;
 	static std::mutex sFtLock;
 
+	// Banana: the fallback font for the characters a style's font doesn't have (CJK), and its native pixel size: its
+	// glyphs are drawn at a whole multiple of it on the device (a pixel font is sharp only there), chosen from the text's
+	// device size (sDeviceScale: device px per CSS px, the host's)
+	static std::shared_ptr<Font> sFallback;
+	static float sFallbackPx = 12, sDeviceScale = 1;
+	void setFallbackFont(std::shared_ptr<Font> f, float pixelSize, float deviceScale)
+	{
+		// the font it replaces is released after the lock: its destructor takes sFtLock (FT_Done_Face), so dropping it
+		// under the lock deadlocked the caller (0.5.0-beta.3: Settings > Credits froze the menu in English, where the
+		// menu had read the CJK font already)
+		std::shared_ptr<Font> old;
+		{
+			std::lock_guard<std::mutex> lock(sFtLock);
+			old = std::move(sFallback);
+			sFallback = std::move(f); sFallbackPx = pixelSize; sDeviceScale = deviceScale > 0 ? deviceScale : 1;
+		}
+	}
+	// the fallback's device size for text of `device` px: the whole multiple of its pixel size nearest the text's em (as
+	// a CJK typeface is set at the same size as the Latin beside it), never under one pixel per pixel
+	static float fallbackSize(float device)
+	{
+		long k = std::lround(device / sFallbackPx);
+		return sFallbackPx * (float)(k < 1 ? 1 : k);
+	}
+
+	static std::u32string (*sTranslate)(const std::u32string&) = nullptr;
+	void setTranslator(std::u32string (*translate)(const std::u32string&)) { sTranslate = translate; }
+	Translator translator() { return sTranslate; }
+
 	std::shared_ptr<Font> Font::load(const std::string& path)
 	{
 		std::lock_guard<std::mutex> lock(sFtLock);
@@ -481,7 +511,18 @@ namespace rnds
 	bool Font::hasGlyph(uint32_t cp)
 	{
 		std::lock_guard<std::mutex> lock(sFtLock);
-		return glyphIndex(cp) != 0;
+		return glyphIndex(cp) != 0 || (sFallback && sFallback.get() != this && sFallback->glyphIndex(cp) != 0);
+	}
+
+	// the font that draws cp: this one, or the fallback when only it has the character
+	Font* Font::faceFor(uint32_t cp, unsigned& gi)
+	{
+		gi = glyphIndex(cp);
+		if (gi || !sFallback || sFallback.get() == this) return this;
+		unsigned f = sFallback->glyphIndex(cp);
+		if (!f) return this;
+		gi = f;
+		return sFallback.get();
 	}
 
 	int Font::advance(uint32_t cp, uint32_t next, float size)
@@ -498,7 +539,15 @@ namespace rnds
 		if (it != mAdvance.end())
 			return it->second;
 		int& memo = mAdvance[Key3{ cp, next, sb }];
-		unsigned gi = glyphIndex(cp);
+		unsigned gi;
+		if (Font* fb = faceFor(cp, gi); fb != this)
+		{
+			// the fallback's advance at its device size, in CSS px (whole ones, as the layout keeps them)
+			FT_Fixed adv = 0;
+			FT_Get_Advance(fb->mFace, gi, FT_LOAD_NO_SCALE, &adv);
+			memo = roundi(adv * fallbackSize(size * sDeviceScale) / fb->mUpm / sDeviceScale);
+			return memo;
+		}
 		FT_Fixed adv = 0;
 		FT_Get_Advance(mFace, gi, FT_LOAD_NO_SCALE, &adv);
 		int a = roundi(adv * size / mUpm);
@@ -550,12 +599,18 @@ namespace rnds
 		return o;
 	}
 
-	static std::u32string prepared(const std::u32string& t, const TextStyle& st) { return st.upper ? upper(t) : t; }
+	// the text as it is drawn: translated (Banana: the menu's language, setTranslator), then uppercased for the style
+	static std::u32string prepared(const std::u32string& t, const TextStyle& st)
+	{
+		std::u32string x = sTranslate ? sTranslate(t) : t;
+		return st.upper ? upper(x) : x;
+	}
 
-	TextLine layoutLine(const std::u32string& text, const TextStyle& st)
+	// a line of text already prepared (the layout functions' own use: a translation looked up once, not per piece)
+	TextLine lineOf(const std::u32string& text, const TextStyle& st)
 	{
 		TextLine line;
-		line.text = prepared(text, st);
+		line.text = text;
 		line.x.reserve(line.text.size());
 		float pen = 0;
 		std::lock_guard<std::mutex> lock(sFtLock);
@@ -569,9 +624,11 @@ namespace rnds
 		return line;
 	}
 
-	TextLine layoutEllipsis(const std::u32string& text, const TextStyle& st, int maxWidth)
+	TextLine layoutLine(const std::u32string& text, const TextStyle& st) { return lineOf(prepared(text, st), st); }
+
+	static TextLine ellipsisOf(const std::u32string& text, const TextStyle& st, int maxWidth)
 	{
-		TextLine full = layoutLine(text, st);
+		TextLine full = lineOf(text, st);
 		if (full.width <= maxWidth + 0.01f)
 			return full;
 		const std::u32string ell = U"…";
@@ -585,8 +642,33 @@ namespace rnds
 				break;
 			keep = i + 1;
 		}
-		return layoutLine(full.text.substr(0, keep) + ell, TextStyle{ st.font, st.size, st.letterSpacing, false });
+		return lineOf(full.text.substr(0, keep) + ell, TextStyle{ st.font, st.size, st.letterSpacing, false });
 	}
+
+	TextLine layoutEllipsis(const std::u32string& text, const TextStyle& st, int maxWidth) { return ellipsisOf(prepared(text, st), st, maxWidth); }
+
+	float marqueeOffset(double elapsed, float overflow, bool* moving, double* wake)
+	{
+		if (moving) *moving = false;
+		if (wake) *wake = -1;
+		if (overflow <= 0) return 0;
+		const double run = overflow / MARQUEE_SPEED * 1000, cycle = MARQUEE_PAUSE + run + MARQUEE_PAUSE;
+		double t = std::fmod(std::max(0.0, elapsed), cycle);
+		if (t < MARQUEE_PAUSE) { if (wake) *wake = MARQUEE_PAUSE - t; return 0; }
+		t -= MARQUEE_PAUSE;
+		if (t < run) { if (moving) *moving = true; if (wake) *wake = 0; return (float)(t / 1000 * MARQUEE_SPEED); }
+		if (wake) *wake = MARQUEE_PAUSE - (t - run);	// (still at the end, then back to the start)
+		return overflow;
+	}
+
+	// Banana: CJK text has no spaces: a line may break between any two of its characters (each its own word, joined
+	// without a space), but not before closing punctuation nor after an opening one
+	static bool cjk(char32_t c)
+	{
+		return (c >= 0x2e80 && c <= 0x9fff) || (c >= 0xf900 && c <= 0xfaff) || (c >= 0xff00 && c <= 0xffef) || (c >= 0x20000 && c <= 0x2fa1f);
+	}
+	static bool closing(char32_t c) { return std::u32string_view(U"，。、；：！？）」』》〉】〕…—,.;:!?)]%").find(c) != std::u32string_view::npos; }
+	static bool opening(char32_t c) { return std::u32string_view(U"（「『《〈【〔([").find(c) != std::u32string_view::npos; }
 
 	std::vector<TextLine> layoutWrap(const std::u32string& text0, const TextStyle& st, int maxWidth, int maxLines, int firstLineIndent)
 	{
@@ -595,13 +677,20 @@ namespace rnds
 		plain.upper = false;
 
 		std::vector<std::u32string> words;
+		std::vector<bool> spaced;	// a space before the word (CJK characters follow on without one)
 		std::u32string cur;
-		for (auto c : text)
+		bool curSpaced = false;
+		for (size_t i = 0; i < text.size(); i++)
 		{
-			if (c == U' ') { words.push_back(cur); cur.clear(); }
-			else cur.push_back(c);
+			char32_t c = text[i];
+			if (c == U' ') { words.push_back(cur); spaced.push_back(curSpaced); cur.clear(); curSpaced = true; continue; }
+			// a break before a CJK character (or after one), unless punctuation holds the two together
+			bool brk = !cur.empty() && (cjk(c) || cjk(cur.back())) && !closing(c) && !opening(cur.back());
+			if (brk) { words.push_back(cur); spaced.push_back(curSpaced); cur.clear(); curSpaced = false; }
+			cur.push_back(c);
 		}
 		words.push_back(cur);
+		spaced.push_back(curSpaced);
 
 		std::vector<std::u32string> lines;
 		std::u32string line;
@@ -609,9 +698,9 @@ namespace rnds
 		std::vector<size_t> lineStartWord;
 		for (; w < words.size(); w++)
 		{
-			std::u32string trial = line.empty() ? words[w] : line + U" " + words[w];
+			std::u32string trial = line.empty() ? words[w] : line + (spaced[w] ? U" " : U"") + words[w];
 			int indent = lines.empty() ? firstLineIndent : 0;
-			if (!line.empty() && layoutLine(trial, plain).width + indent > maxWidth + 0.01f)
+			if (!line.empty() && lineOf(trial, plain).width + indent > maxWidth + 0.01f)
 			{
 				lines.push_back(line);
 				line = words[w];
@@ -627,17 +716,17 @@ namespace rnds
 			if (maxLines > 0 && (int)i == maxLines - 1 && lines.size() > (size_t)maxLines)
 			{
 				// -webkit-line-clamp: the last shown line ends in an ellipsis
-				TextLine l = layoutLine(lines[i], plain);
+				TextLine l = lineOf(lines[i], plain);
 				const std::u32string ell = U"…";
 				float ellW = st.font->advance(ell[0], 0, st.size) + st.letterSpacing;
 				int indent = i == 0 ? firstLineIndent : 0;
 				if (l.width + ellW + indent <= maxWidth + 0.01f)
-					out.push_back(layoutLine(lines[i] + ell, plain));
+					out.push_back(lineOf(lines[i] + ell, plain));
 				else
-					out.push_back(layoutEllipsis(lines[i] + U"……", plain, maxWidth - indent));
+					out.push_back(ellipsisOf(lines[i] + U"……", plain, maxWidth - indent));
 				break;
 			}
-			out.push_back(layoutLine(lines[i], plain));
+			out.push_back(lineOf(lines[i], plain));
 		}
 		return out;
 	}
@@ -669,9 +758,19 @@ namespace rnds
 		float baseline = pad + topFrac + baselineCss * scale;
 		bool subpixel = (gTextMode & 1) != 0;
 		FT_Int32 flags = (gTextMode & 2) ? (FT_LOAD_NO_HINTING | FT_LOAD_NO_BITMAP) : FT_LOAD_TARGET_LIGHT;
+		// (Banana: a fallback character is drawn with its own face, at its own size: fallbackSize)
+		int fbSize64 = 0;
 		for (size_t i = 0; i < line.text.size(); i++)
 		{
-			unsigned gi = st.font->glyphIndex(line.text[i]);
+			unsigned gi;
+			Font* fnt = st.font->faceFor(line.text[i], gi);
+			int glyphSize64 = size64;
+			if (fnt != st.font.get())
+			{
+				glyphSize64 = roundi(fallbackSize(size) * 64);
+				if (fbSize64 != glyphSize64) { FT_Set_Char_Size(fnt->mFace, 0, (FT_F26Dot6)glyphSize64, 72, 72); fbSize64 = glyphSize64; }
+			}
+			FT_Face face = fnt->mFace;
 			float penX = pad + leftFrac + line.x[i] * scale;
 			int ix = subpixel ? (int)std::floor(penX) : roundi(penX);
 			int iy = roundi(baseline);
@@ -681,7 +780,7 @@ namespace rnds
 			bool fresh = true;
 			if (!subpixel)
 			{
-				auto r = st.font->mGlyphs.emplace(Font::Key3{ gi, (uint32_t)size64, (uint32_t)flags }, Font::Glyph());
+				auto r = fnt->mGlyphs.emplace(Font::Key3{ gi, (uint32_t)glyphSize64, (uint32_t)flags }, Font::Glyph());
 				gl = &r.first->second;
 				fresh = r.second;
 			}

@@ -45,6 +45,13 @@ The launcher runs in its own session (`setsid`), with signals at their defaults 
   and records the play (anything over 5 s). Exit code 0 is a normal quit; anything else is logged.
 - **Shutdown while playing**: a long power press or an empty battery sends `SIGTERM` to the process group and
   waits up to 5 s for saves to be written before powering off. Write saves on `SIGTERM`.
+- **Power off after sleeping** (Settings > Sleep & power): asleep past the deadline, bananad continues the game with
+  a request to save a resume state and quit, then shuts down: `SIGUSR1` to `drastic` (SuperDrastic) or `bananads`,
+  RetroArch's `STATE_SLOT_MINUS` (to the automatic slot) + `SAVE_STATE` + `QUIT` on `/run/banana/retroarch.cmd`,
+  `SIGTERM` to anything else. It waits up to 60 s. At the next boot banana-ui launches the game again with its ROM in
+  `/run/banana/resume-once`: the launcher deletes that file and loads the resume state this once, even with Quick
+  resume off (SuperDrastic `DSFLIP_RESUME_LOAD=1`, BananaDS `resume.on_start` left on, RetroArch
+  `savestate_auto_load`).
 
 ## Where things go on the card
 
@@ -59,6 +66,11 @@ The launcher runs in its own session (`setsid`), with signals at their defaults 
 
 Everything under `/usr` is read-only: an emulator that writes next to itself (DraStic) is copied to `/data`
 first by its launcher.
+
+RetroArch keeps a save folder per core (`/data/saves/gpSP`, `/data/saves/mGBA`...), except for the Game Boy
+Advance: every GBA core uses `/data/saves/gba/<game>.srm` (run-retroarch), so a game can switch between gpSP and
+mGBA (Settings > Other systems) with the same save. A game with no save there yet gets a copy of its newest
+non-blank one from a core's folder; those files stay as they were. States stay per core (their formats differ).
 
 The two DS emulators share their in-game saves: `nds-saves`, run by both launchers before a game, writes the
 newer of DraStic's `drastic/backup/<game>.dsv` and BananaDS's `saves/nds/<game>.sav` over the other in its own

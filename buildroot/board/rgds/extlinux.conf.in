@@ -4,8 +4,8 @@ PROMPT 0
 LABEL a
   LINUX /a/Image
   FDT /a/@DTB@.dtb
-  APPEND root=PARTLABEL=banana-root-a rootfstype=squashfs ro rootwait quiet loglevel=3 console=ttyS2,1500000 init=/sbin/init
+  APPEND root=PARTLABEL=banana-root-a rootfstype=squashfs ro rootwait quiet loglevel=3 console=ttyS2,1500000 init=/sbin/init rcupdate.rcu_expedited=1 cpufreq.default_governor=performance driver_async_probe=Goodix-TS
 LABEL b
   LINUX /b/Image
   FDT /b/@DTB@.dtb
-  APPEND root=PARTLABEL=banana-root-b rootfstype=squashfs ro rootwait quiet loglevel=3 console=ttyS2,1500000 init=/sbin/init
+  APPEND root=PARTLABEL=banana-root-b rootfstype=squashfs ro rootwait quiet loglevel=3 console=ttyS2,1500000 init=/sbin/init rcupdate.rcu_expedited=1 cpufreq.default_governor=performance driver_async_probe=Goodix-TS

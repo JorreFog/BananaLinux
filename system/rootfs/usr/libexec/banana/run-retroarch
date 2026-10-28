@@ -5,15 +5,19 @@
 CORE=/usr/lib/libretro/$1_libretro.so
 # setting <key>: the card's value, else the image's template (a card from an older Banana, or a line taken out)
 setting() {
-    v=$(sed -n "s/^ *$1 *= *//p" /data/banana/settings.conf 2>/dev/null | tail -n 1)
-    [ -n "$v" ] || v=$(sed -n "s/^ *$1 *= *//p" /etc/banana/settings.conf 2>/dev/null | tail -n 1)
+    v=$(sed -n "/^ *$1 *= */{s///;h};\${x;p}" /data/banana/settings.conf 2>/dev/null)
+    [ -n "$v" ] || v=$(sed -n "/^ *$1 *= */{s///;h};\${x;p}" /etc/banana/settings.conf 2>/dev/null)
     printf '%s' "$v"
 }
 # Settings > Other systems > the system's core (settings.conf's core.<system>, BANANA_SYSTEM from banana-ui): another
-# installed core instead of systems.conf's, e.g. mGBA for the Game Boy Advance (RetroAchievements); one not installed is ignored
+# installed core instead of systems.conf's, e.g. mGBA for the Game Boy Advance (RetroAchievements), or one downloaded
+# with RetroArch's Core Downloader; one not installed is ignored
 if [ -n "$BANANA_SYSTEM" ]; then
     c=$(setting "core.$BANANA_SYSTEM")
-    [ -n "$c" ] && [ -f /usr/lib/libretro/${c}_libretro.so ] && CORE=/usr/lib/libretro/${c}_libretro.so
+    # (the image's cores, then the ones RetroArch's Core Downloader put on the card)
+    for d in /usr/lib/libretro /data/retroarch/cores; do
+        [ -n "$c" ] && [ -f $d/${c}_libretro.so ] && { CORE=$d/${c}_libretro.so; break; }
+    done
 fi
 [ -f "$CORE" ] || { echo "no core $1" >&2; exit 1; }
 # the core that really runs, in banana-ui's log (its "starting" line names systems.conf's)
@@ -43,15 +47,84 @@ if [ ! -f $M ]; then
     grep -q '^mupen64plus-ThreadedRenderer = ' $O 2>/dev/null && sed -i 's|^mupen64plus-ThreadedRenderer = .*|mupen64plus-ThreadedRenderer = "True"|' $O || echo 'mupen64plus-ThreadedRenderer = "True"' >> $O
     touch $M
 fi
+# The N64 core's frame buffers at the N64's own resolution (GLideN64 "Native res. factor" 1x, the output still
+# 640x480), once (a change in RetroArch's Core Options afterwards is kept). The Plus' Mali-G52 has one shader core and
+# at 640x480 it is the limit: Banjo-Kazooie unthrottled made 64 VIs a second (68 in a cutscene), 50 with the
+# synchronous colour copy Paper Mario's GLideN64 settings force; at 1x 126 (102 in the cutscene, 89 with that copy).
+# NTSC games need 60. (Its own marker: .banana-defaults-2 is used by another branch.)
+M=/data/retroarch/.banana-defaults-n64-1
+if [ ! -f $M ]; then
+    O=/data/retroarch/config/Mupen64Plus-Next/Mupen64Plus-Next.opt
+    mkdir -p ${O%/*}
+    sed -i '/^mupen64plus-EnableNativeResFactor = /d' $O 2>/dev/null
+    echo 'mupen64plus-EnableNativeResFactor = "1"' >> $O
+    touch $M
+fi
+# The N64 core with three swapchain images (RetroArch's core override for it, once; a change saved over it from
+# RetroArch's menu is kept): with the two the other systems get (retroarch.cfg, the lowest latency), RetroArch's KMS
+# context waits for every page flip before the next frame starts, so GLideN64's ~16 ms of GPU work a frame can't
+# overlap the next one. Bomberman 64 in play on an RG DS: 42 frames a second (70% speed) with two, 59.7 (99.4%)
+# with three, the GPU busy 70% -> 100%. A frame more of latency, on a core whose threaded renderer has one already.
+M=/data/retroarch/.banana-defaults-n64-2
+if [ ! -f $M ]; then
+    OV=/data/retroarch/config/Mupen64Plus-Next/Mupen64Plus-Next.cfg
+    mkdir -p ${OV%/*}
+    grep -q '^video_max_swapchain_images = ' $OV 2>/dev/null || echo 'video_max_swapchain_images = "3"' >> $OV
+    touch $M
+fi
 # Shaders: Shaders > Load Preset opens the image's libretro GLSL presets (/usr/share/libretro/shaders/glsl), read
 # where they are: copied to the card they took 238 MB (a few thousand small files in exFAT's large clusters) and a long
-# first start. The Online Updater is shown (the core downloader not: cores come with the image).
+# first start. The Online Updater is shown (the core downloader since .banana-assets-1, below).
 S=/data/retroarch/.banana-shaders-1
 if [ ! -f $S ]; then
     set_cfg video_shader_dir /usr/share/libretro/shaders/glsl
     set_cfg menu_show_online_updater true
     set_cfg menu_show_core_updater false
     touch $S
+fi
+# RetroArch's own menu in more languages, its Core Downloader, and no load-content bar, once (a change made in
+# RetroArch's menu afterwards is kept):
+# - assets: the image's (/usr/share/retroarch/assets): RGUI's fonts for Russian, Belarusian, Ukrainian, Chinese,
+#   Japanese, Korean, Polish, Czech... Without them RGUI went back to English. Only over the card's empty default.
+# - the Core Downloader (Online Updater) installs into /data/retroarch/cores (libretro_directory: the image is
+#   read-only); RetroArch lists the image's cores beside those (patch 0004), which it never touches. Settings > Other
+#   systems picks a downloaded core for a system. libretro's aarch64 Linux cores (RetroArch has no address for them).
+# - the bar RetroArch slides in for 2.6 s at a game's start: with RGUI it never finds a system icon (a white square)
+M=/data/retroarch/.banana-assets-1
+if [ ! -f $M ]; then
+    a=$(sed -n 's/^assets_directory = "\(.*\)"/\1/p' $CFG | tail -n 1)
+    case $a in ""|default|"~/retroarch/assets"|/data/retroarch/retroarch/assets) set_cfg assets_directory /usr/share/retroarch/assets ;; esac
+    l=$(sed -n 's/^libretro_directory = "\(.*\)"/\1/p' $CFG | tail -n 1)
+    case $l in ""|default|/usr/lib/libretro) set_cfg libretro_directory /data/retroarch/cores ;; esac
+    set_cfg core_updater_buildbot_cores_url https://buildbot.libretro.com/nightly/linux/aarch64/latest/
+    set_cfg menu_show_core_updater true
+    set_cfg menu_show_load_content_animation false
+    touch $M
+fi
+[ -d /data/retroarch/cores ] || mkdir -p /data/retroarch/cores
+# RetroArch's menu in the menu's language (Settings > System > Language): its user_language follows Banana's while it
+# is still the one Banana last set (English at first); one picked in RetroArch's own menu is kept. QA #15: the menu in
+# Chinese, RetroArch's still in English. (RetroArch's numbers: 0 English, 12 Simplified Chinese.)
+L=/data/retroarch/.banana-language
+case $(setting language) in zh-cn) want=12 ;; *) want=0 ;; esac
+have=$(sed -n 's/^user_language = "\(.*\)"/\1/p' $CFG | tail -n 1)
+if [ "$have" = "$(cat $L 2>/dev/null || echo 0)" ] || [ -z "$have" ]; then
+    [ "$have" = "$want" ] || set_cfg user_language $want
+    [ "$(cat $L 2>/dev/null)" = "$want" ] || echo $want > $L
+fi
+# ...and its on-screen messages (achievements, saves) in a font with the language's characters: its built-in one has
+# none, so a Chinese title showed as "?????". The menu's Fusion Pixel (crisp at whole multiples of 12 px: 24 on the
+# RG DS's 480 lines, 36 on the Plus's 768). Only over the default font or the one Banana set; English: back to the default.
+F=/data/retroarch/.banana-font
+CJK=/usr/share/banana/rnds/fonts/fusion-pixel-12px-proportional-zh_hans.ttf
+font=$(sed -n 's/^video_font_path = "\(.*\)"/\1/p' $CFG | tail -n 1)
+if [ -z "$font" ] || [ "$font" = "$(cat $F 2>/dev/null)" ]; then
+    if [ $want = 12 ] && [ -f $CJK ]; then
+        size=24; grep -qi plus /proc/device-tree/model 2>/dev/null && size=36
+        set_cfg video_font_path $CJK; set_cfg video_font_size $size; echo $CJK > $F
+    elif [ -n "$font" ]; then
+        set_cfg video_font_path ""; set_cfg video_font_size 32; rm -f $F
+    fi
 fi
 # Settings > Other systems > Shader: RetroArch's global preset, a reference to one of the image's presets. Only a
 # global.glslp Banana wrote (its first line) is changed or removed: one saved from RetroArch's own menu stays.
@@ -74,15 +147,22 @@ elif ours; then
     rm -f $GP
     set_cfg video_shader_enable false
 fi
-# Settings > Other systems > Audio latency and VSync: Banana's values written into RetroArch's config before it starts
-# (a change made in RetroArch's own menu afterwards is kept until the setting is changed here again)
+# Settings > Other systems > Audio latency and VSync: Banana's values written into RetroArch's config at every start
+# (so these two follow Settings: a change made to them in RetroArch's own menu lasts until the game quits)
 lat=$(setting ra_audio_latency)
 case $lat in 32|64|128) set_cfg audio_latency $lat ;; esac
 vs=$(setting ra_vsync)
 case $vs in on) set_cfg video_vsync true ;; off) set_cfg video_vsync false ;; esac
 # Quick resume: the setting writes savestate_auto_save; loading the state at the start follows it
-q=$(sed -n 's/^savestate_auto_save = "\(.*\)"/\1/p' $CFG | tail -n 1)
+q=$(sed -n '/^savestate_auto_save = "\(.*\)"/{s//\1/;h};${x;p}' $CFG)
 set_cfg savestate_auto_load ${q:-false}
+# Settings > Sleep & power > Power off after sleeping: bananad saved this game in RetroArch's automatic slot (the state
+# slot turned down to -1, SAVE_STATE, QUIT) and shut down, and banana-ui started it again at the next boot
+# (/run/banana/resume-once names it): the automatic state loaded this once, Quick resume on or off
+ONCE=0
+[ -f /run/banana/resume-once ] && [ "$(cat /run/banana/resume-once 2>/dev/null)" = "${BANANA_ROM:-$2}" ] && { ONCE=1; rm -f /run/banana/resume-once; echo "run-retroarch: resuming after Power off after sleeping" >&2; }
+# (the slot as it was before the game: bananad's save leaves -1, the automatic one, and RetroArch writes it on exit)
+SLOT=$(sed -n '/^state_slot = "\(-*[0-9]*\)"/{s//\1/;h};${x;p}' $CFG); SLOT=${SLOT:-0}
 # the RetroAchievements account from the setup (banana/accounts.conf) for RetroArch: its name in retroarch.cfg, but its
 # password, and the token RetroArch gets with it, only in a config appended from /run, never in retroarch.cfg, which
 # file sharing shows (it hides accounts.conf). What RetroArch saves of them on exit (a login in its own menu too) goes
@@ -99,10 +179,137 @@ if [ -n "$u" ]; then
 elif [ -f $A ]; then
     set_cfg cheevos_enable false
 fi
+# Settings > Other systems > RetroArch hotkeys, Off: no F + button shortcuts but the two needed to get out, F + X (the
+# menu) and F + Start (quit). RetroArch's hotkeys come from the joypad's autoconfig profile, and a hotkey "unbound" in
+# its menu (nul in retroarch.cfg) falls back to the profile's, which is why one can't be taken away there; so
+# RetroArch gets a copy of the profiles with the other hotkeys left out, and every hotkey in retroarch.cfg as nul
+# (one bound to a face button in its menu, the A that stopped working, goes too). What it saves of those on exit is
+# put back below.
+HOTKEYS="ai_service audio_mute cheat_index_minus cheat_index_plus cheat_toggle close_content desktop_menu_toggle
+disk_eject_toggle disk_next disk_prev fps_toggle frame_advance game_focus_toggle grab_mouse_toggle halt_replay
+hold_fast_forward hold_slowmotion load_state netplay_fade_chat_toggle netplay_game_watch netplay_host_toggle
+netplay_ping_toggle netplay_player_chat next_replay_checkpoint osk_toggle overlay_next pause_toggle play_replay
+preempt_toggle prev_replay_checkpoint record_replay recording_toggle replay_slot_decrease replay_slot_increase reset
+rewind runahead_toggle save_replay_checkpoint save_state screenshot shader_hold shader_next shader_prev shader_toggle
+state_slot_decrease state_slot_increase streaming_toggle toggle_fast_forward toggle_fullscreen toggle_slowmotion
+toggle_statistics toggle_vrr_runloop turbo_fire_toggle volume_down volume_up"
+HK=/run/banana/retroarch-hotkeys.cfg
+HKA=
+# the lines kept for putting back, on the card (synced) so that a run cut short (power lost, a hang after RetroArch
+# saved its settings) is put right at the next start: else retroarch.cfg kept the autoconfig folder in /run, gone
+# after a restart, and the pad had no profile and no way out but the touch tiles
+KEEP=/data/retroarch/.banana-hotkeys.keep
+names=$(echo $HOTKEYS | tr ' ' '|')
+HKKEYS="^(joypad_autoconfig_dir|input_($names|enable_hotkey|menu_toggle|exit_emulator)_(btn|axis)) = "
+if [ -f $KEEP ]; then
+    sed -i -E "/$HKKEYS/d" $CFG && cat $KEEP >> $CFG && rm -f $KEEP && sync
+    echo "run-retroarch: the hotkey lines of a run cut short put back" >&2
+fi
+grep -q '^joypad_autoconfig_dir = "/run/' $CFG && set_cfg joypad_autoconfig_dir /usr/share/libretro/autoconfig
+rm -f $HK
+if [ "$(sed -n '/^ra_hotkeys *= */{s///;h};${x;p}' /data/banana/settings.conf 2>/dev/null)" = off ]; then
+    AC=/run/banana/ra-autoconfig
+    rm -rf $AC; mkdir -p $AC/udev
+    for f in /usr/share/libretro/autoconfig/udev/*.cfg; do
+        grep -vE "^input_($names)_(btn|axis) *=" "$f" > $AC/udev/${f##*/}
+    done
+    {
+        echo "joypad_autoconfig_dir = \"$AC\""
+        for h in $HOTKEYS enable_hotkey menu_toggle exit_emulator; do printf 'input_%s_btn = "nul"\ninput_%s_axis = "nul"\n' $h $h; done
+    } > $HK
+    grep -E "$HKKEYS" $CFG > $KEEP.new && mv $KEEP.new $KEEP && sync
+    HKA="|$HK"
+fi
+# Settings > Other systems > Screen border (ra_border, default off): the black area around the picture filled with a
+# border in the menu's look (tools/make-borders.py made them: /usr/share/banana/borders/<panel mode>/<theme>/<system>),
+# as a RetroArch overlay with a clear hole, and the picture put exactly in that hole as RetroArch's custom viewport
+# (borders.conf). The theme's own border when the image has one for it (dark, light, the example themes as the image
+# has them), else its base palette's. A system with no border for this panel (its picture fills it) runs as it does
+# without. What RetroArch saves of these keys on exit is put back below, as for the hotkeys (and at the next start
+# after a run cut short).
+BCFG=/run/banana/retroarch-border.cfg
+BKEEP=/data/retroarch/.banana-border.keep
+BKEYS='^(aspect_ratio_index|custom_viewport_(x|y|width|height)|video_viewport_bias_[xy]|video_scale_integer|input_overlay(_enable|_opacity|_hide_in_menu|_behind_menu|_auto_scale|_scale_landscape|_[xy]_offset_landscape|_aspect_adjust_landscape|_[xy]_separation_landscape|_show_inputs|_hide_when_gamepad_connected|_enable_autopreferred)?) = '
+if [ -f $BKEEP ]; then
+    sed -i -E "/$BKEYS/d" $CFG && cat $BKEEP >> $CFG && rm -f $BKEEP && sync
+    echo "run-retroarch: the screen border lines of a run cut short put back" >&2
+fi
+rm -f $BCFG
+BA=
+if [ "$(setting ra_border)" = on ] && [ -n "$BANANA_SYSTEM" ]; then
+    BD=/usr/share/banana/borders
+    MODE=$(cat /sys/class/drm/card0-*/modes 2>/dev/null | head -n 1)
+    read BX BY BW BH <<EOF
+$(awk -v m="$MODE" -v s="$BANANA_SYSTEM" '$1 == m && $2 == s { print $3, $4, $5, $6; exit }' $BD/borders.conf 2>/dev/null)
+EOF
+    th=$(setting theme)
+    case $th in
+    user:*)
+        n=${th#user:}; j=/data/banana/themes/$n.json; [ -f "$j" ] || j=/usr/share/banana/themes/$n.json
+        # the image's border for an example theme only while the card's file is the image's (a copy changed on the
+        # card has colours the border doesn't know): else the base palette it starts from
+        if [ -d "$BD/$MODE/$n" ] && { [ "$j" = /usr/share/banana/themes/$n.json ] || cmp -s "$j" /usr/share/banana/themes/$n.json; }; then
+            th=$n
+        elif grep -q '"base" *: *"light"' "$j" 2>/dev/null; then th=light; else th=dark; fi ;;
+    light) ;;
+    *) th=dark ;;
+    esac
+    OV=$BD/$MODE/$th/$BANANA_SYSTEM.cfg
+    if [ -n "$BH" ] && [ -f "$OV" ]; then
+        {
+            # (RetroArch 1.22 places a custom viewport by video_viewport_bias_x/y as well as by custom_viewport_x/y:
+            # x = custom_viewport_x + (panel - width) * bias. The rectangle is centred, so 0 and 0.5 put it at BX,BY;
+            # BX,BY in x/y too drew it twice as far in, measured on the RG DS)
+            printf 'aspect_ratio_index = "23"\ncustom_viewport_x = "0"\ncustom_viewport_y = "0"\n'
+            printf 'video_viewport_bias_x = "0.500000"\nvideo_viewport_bias_y = "0.500000"\n'
+            printf 'custom_viewport_width = "%s"\ncustom_viewport_height = "%s"\nvideo_scale_integer = "false"\n' "$BW" "$BH"
+            printf 'input_overlay_enable = "true"\ninput_overlay = "%s"\ninput_overlay_opacity = "1.000000"\n' "$OV"
+            printf 'input_overlay_hide_in_menu = "true"\ninput_overlay_behind_menu = "false"\ninput_overlay_auto_scale = "false"\n'
+            printf 'input_overlay_scale_landscape = "1.000000"\ninput_overlay_aspect_adjust_landscape = "0.000000"\n'
+            printf 'input_overlay_x_offset_landscape = "0.000000"\ninput_overlay_y_offset_landscape = "0.000000"\n'
+            printf 'input_overlay_x_separation_landscape = "0.000000"\ninput_overlay_y_separation_landscape = "0.000000"\n'
+            printf 'input_overlay_show_inputs = "0"\ninput_overlay_hide_when_gamepad_connected = "false"\n'
+            printf 'input_overlay_enable_autopreferred = "false"\n'
+        } > $BCFG
+        grep -E "$BKEYS" $CFG > $BKEEP.new; mv $BKEEP.new $BKEEP && sync
+        BA="|$BCFG"
+        echo "run-retroarch: screen border $MODE/$th/$BANANA_SYSTEM, picture at $BX,$BY ${BW}x$BH" >&2
+    fi
+fi
+# The Game Boy Advance's saves in one folder for every GBA core, /data/saves/gba/<game>.srm (QA: "would like to be
+# able to use the same save file across both"): RetroArch otherwise keeps a folder per core (sort_savefiles_enable),
+# so a game started in mGBA didn't see its gpSP save. The cores write the same raw save (gpSP pads it to 128 KB with
+# 0xff, mGBA writes the cartridge's size: 512 bytes for a small EEPROM; RetroArch loads the part a core asks for), so
+# one file serves both. A game with no save there yet gets a copy of its newest one from a core's folder (one with
+# data in it: a core that only ever wrote a blank one doesn't win); the core folders' files stay as they were, as
+# backups. States stay per core (their formats differ). What RetroArch saves of the two keys on exit is put back below.
+GBASAVE=
+if [ "$BANANA_SYSTEM" = gba ]; then
+    GBASAVE=/data/saves/gba
+    mkdir -p $GBASAVE
+    n=${2##*/}; n=${n%.*}
+    if [ ! -f "$GBASAVE/$n.srm" ]; then
+        best=
+        for d in gpSP mGBA "VBA Next" "VBA-M" Meteor; do
+            f="/data/saves/$d/$n.srm"
+            [ -s "$f" ] || continue
+            # (blank: only 0xff or only 0x00 bytes; counted, not compared: the shell drops a NUL from $(...))
+            [ "$(tr -d '\377' < "$f" | head -c 1 | wc -c)" = 0 ] && continue
+            [ "$(tr -d '\000' < "$f" | head -c 1 | wc -c)" = 0 ] && continue
+            if [ -z "$best" ] || [ "$f" -nt "$best" ]; then best=$f; fi
+        done
+        if [ -n "$best" ]; then
+            cp -p "$best" "$GBASAVE/$n.srm.new" && mv "$GBASAVE/$n.srm.new" "$GBASAVE/$n.srm" && sync
+            echo "run-retroarch: the GBA save from $best, now $GBASAVE/$n.srm (every GBA core)" >&2
+        fi
+    fi
+    SVD=$(sed -n '/^savefile_directory = "\(.*\)"/{s//\1/;h};${x;p}' $CFG)
+    SVS=$(sed -n '/^sort_savefiles_enable = "\(.*\)"/{s//\1/;h};${x;p}' $CFG)
+fi
 # anything RetroArch keeps that retroarch.cfg doesn't place (remaps, core options, playlists...) under the card's
 # retroarch folder, not ~/.config on the read-only root
 export HOME=/data/retroarch XDG_CONFIG_HOME=/data/retroarch
-MON=$(sed -n 's/^video_monitor_index = "\([0-9]\)"/\1/p' $CFG | tail -n 1)
+MON=$(sed -n '/^video_monitor_index = "\([0-9]\)"/{s//\1/;h};${x;p}' $CFG)
 if [ -n "$BANANA_DRM_LEASE_FD" ]; then
     # the game panel (banana-ui keeps the other panel): RetroArch draws on the panel it was lent (a DRM lease, its
     # only connector, so monitor 1, through banana-leaseshim.so), takes banana-ui's tiles as commands on its stdin,
@@ -110,10 +317,16 @@ if [ -n "$BANANA_DRM_LEASE_FD" ]; then
     # put back below.
     L=/run/banana/retroarch-panel.cfg
     printf 'video_monitor_index = "1"\nstdin_cmd_enable = "true"\n' > $L
+    [ $ONCE = 1 ] && echo 'savestate_auto_load = "true"' >> $L
+    [ -n "$GBASAVE" ] && printf 'savefile_directory = "%s"\nsort_savefiles_enable = "false"\n' $GBASAVE >> $L
     rm -f /run/banana/retroarch.log
-    LD_PRELOAD=/usr/lib/banana/banana-leaseshim.so retroarch --config $CFG --appendconfig "$L|$RA" --verbose \
-        --log-file /run/banana/retroarch.log -L "$CORE" "$2" < "${BANANA_RA_CMD:-/dev/null}" &
+    # the Pokemon companion (Settings > Other systems): RetroArch's stdout, where it answers the panel's
+    # READ_CORE_MEMORY commands, into the pipe banana-ui reads (its log goes to the file above, not there)
+    if [ -n "$BANANA_RA_OUT" ] && [ -p "$BANANA_RA_OUT" ]; then exec 4>"$BANANA_RA_OUT"; else exec 4>&1; fi
+    LD_PRELOAD=/usr/lib/banana/banana-leaseshim.so retroarch --config $CFG --appendconfig "$L|$RA$HKA$BA" --verbose \
+        --log-file /run/banana/retroarch.log -L "$CORE" "$2" < "${BANANA_RA_CMD:-/dev/null}" >&4 &
     P=$!
+    exec 4>&-
 else
     # the panel RetroArch doesn't use (video_monitor_index: 2 the top, 1 the bottom) stays dark while the game runs
     . /usr/libexec/banana/one-panel
@@ -124,19 +337,45 @@ else
     rm -f $FIFO; mkfifo -m 600 $FIFO && exec 3<>$FIFO
     L=/run/banana/retroarch-stdin.cfg
     printf 'stdin_cmd_enable = "true"\n' > $L
-    retroarch --config $CFG --appendconfig "$L|$RA" -L "$CORE" "$2" < $FIFO &
+    [ $ONCE = 1 ] && echo 'savestate_auto_load = "true"' >> $L
+    [ -n "$GBASAVE" ] && printf 'savefile_directory = "%s"\nsort_savefiles_enable = "false"\n' $GBASAVE >> $L
+    retroarch --config $CFG --appendconfig "$L|$RA$HKA$BA" -L "$CORE" "$2" < $FIFO &
     P=$!
 fi
 trap 'kill -TERM $P 2>/dev/null' TERM INT HUP
 wait $P; S=$?
 while kill -0 $P 2>/dev/null; do wait $P; S=$?; done	# a trap interrupted the wait: until RetroArch has quit
 /usr/libexec/banana/ra-secrets scrub; rm -f $RA
+# the lines put back after the game, all in one rewrite of retroarch.cfg (RetroArch has just rewritten it on its exit
+# anyway): each set_cfg was a read and a rewrite of the ~110 KB file, ~10 ms each, while the menu waited
+fix_d=; fix_l=
+fix() { fix_d="$fix_d/^$1 = /d;"; fix_l="$fix_l$1 = \"$2\"
+"; }
+[ -n "$SLOT" ] && [ "$SLOT" != -1 ] && grep -qx 'state_slot = "-1"' $CFG && fix state_slot "$SLOT"
+[ $ONCE = 1 ] && fix savestate_auto_load ${q:-false}
+if [ -n "$GBASAVE" ]; then
+    fix savefile_directory "${SVD:-/data/saves}"
+    fix sort_savefiles_enable "${SVS:-true}"
+fi
+if [ -n "$HKA" ]; then
+    # the hotkey lines as they were before the game (RetroArch wrote the Off ones into retroarch.cfg on exit)
+    sed -i -E "/$HKKEYS/d" $CFG
+    cat $KEEP >> $CFG
+    rm -f $HK $KEEP
+fi
+if [ -n "$BA" ]; then
+    # the screen border's keys as they were before the game (RetroArch wrote the border's into retroarch.cfg on exit)
+    sed -i -E "/$BKEYS/d" $CFG
+    cat $BKEEP >> $CFG
+    rm -f $BCFG $BKEEP
+fi
 if [ -n "$BANANA_DRM_LEASE_FD" ]; then
-    set_cfg video_monitor_index ${MON:-2}
-    set_cfg stdin_cmd_enable false
+    fix video_monitor_index ${MON:-2}
+    fix stdin_cmd_enable false
 else
     exec 3>&-; rm -f $FIFO
-    set_cfg stdin_cmd_enable false
+    fix stdin_cmd_enable false
     one_panel_restore
 fi
+[ -n "$fix_d" ] && sed -i "$fix_d" $CFG && printf '%s' "$fix_l" >> $CFG
 exit $S

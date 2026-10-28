@@ -29,6 +29,7 @@ namespace banana
 		void setHome(int sys) override;
 		void setLibrary(int sys, int game) override;
 		void dataChanged() override;
+		void trim() override;
 		View view() const override { return mView; }
 		int systemIndex() const override { return mSys; }
 		int gameIndex() const override { return mGame; }

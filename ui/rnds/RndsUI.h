@@ -46,6 +46,8 @@ namespace rnds
 		std::string box;		// the 2D box cover (top screen)
 		std::string cart;		// the real cartridge scan (its label art fills the drawn cartridge)
 		std::string label;		// label art made from the cover (the media tool's "boxback"), when there is no scan
+		std::string cartArt;	// the bottom screen's cartridge picture when the host chose one (the DS game's own icon,
+								// Settings > Display & sound > DS cartridges): before the art above on the shelf
 		std::string rom;		// a DS ROM (.nds, .zip) whose own icon goes on the bottom screen's cartridge instead
 								// of the art above (the host's opt-in setting; the art when the ROM has no icon)
 		std::string icon;		// what a cartridge with none of the art above shows on a plain label instead of
@@ -66,6 +68,7 @@ namespace rnds
 		virtual std::string clockText() = 0;	// "01:01 PM" / "13:01"
 		virtual std::string dateText() = 0;		// "10/02"
 		virtual float battery() = 0;			// 0..1, < 0 unknown
+		virtual bool charging() { return false; }	// a charger plugged in: a bolt on the battery icon
 		virtual std::string batteryMode() { return "icon"; }	// ES's "show battery status": "" none, "icon", "text" (icon and %)
 		virtual bool topMotion() { return true; }	// false: the top screen holds still (no rise on a move, no bob)
 		virtual bool online() = 0;
@@ -148,6 +151,14 @@ namespace rnds
 	};
 	extern ThemeFiles themeFiles;
 	bool themeColor(const char* name, Color& c);	// c replaced by the theme's colour of that name: true
+	// Banana: text on an accent-coloured surface (the selected tile, the plate's START, a picked row). The ink is dark or
+	// light by contrast with that colour (accentTextMode 0, Auto), or always dark (1) or light (2); the second line
+	// (a sublabel, a value) is the surface's own hue darkened or lightened towards the ink until it reads (4.5:1)
+	extern int accentTextMode;
+	inline int accentTextModeOf(const std::string& v) { return v == "dark" ? 1 : v == "light" ? 2 : 0; }	// settings.conf's accent_text
+	uint32_t inkOn(uint32_t rgb);					// 0x17161c or 0xffffff
+	uint32_t subInkOn(uint32_t rgb);
+	float contrastRatio(uint32_t a, uint32_t b);	// WCAG, 1..21
 	void tintAccent(Bitmap& b);						// RGBA8: its yellows in the accent's hue (nothing with the yellow)
 	uint32_t tintAccent(uint32_t argb);				// one colour, 0xAARRGGBB (premultiplied is fine: hue and ratios)
 

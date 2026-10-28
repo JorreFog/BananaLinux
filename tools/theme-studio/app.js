@@ -238,6 +238,7 @@
     if (name === "accent" || name === "accent.base") return ok(a.base);
     if (name === "accent.light") return ok(a.light); if (name === "accent.dark") return ok(a.dark);
     if (name === "accent.band") return ok(a.band); if (name === "accent.low") return ok(a.low);
+    if (name === "accent.ink" || name === "accent.inkSub") return ok(inkOn(a.base, name === "accent.inkSub"));
     if (name.indexOf("palette.") === 0) { const p = palette(); const k = name.slice(8); return ok(p[k] !== undefined ? p[k] : ""); }
     if (name === "cursor") return ok(1); if (name === "count") return ok(7); if (name === "scroll") return ok(1);
     if (name === "moved") return ok(140); if (name === "entered") return ok(140); if (name === "dir") return ok(1);
@@ -639,7 +640,7 @@
     if (type === "list") return { type: "list", source: "systems", direction: "row", x: 0, y: 100, w: 640, h: 240, itemW: 150, itemH: 190, gap: 14, scrollMode: "center", item: { type: "group", w: 150, h: 190, children: [] } };
     return { type: "rect", x: 0, y: 0, w: 200, h: 100, fill: "#202430" };
   }
-  
+
 
   // ---- the inspector ---------------------------------------------------------------------------------
   function renderInspector() {
@@ -2136,3 +2137,16 @@
     undo: undo, redo: redo, validate: validate, pushTheme: pushTheme, markDirty: markDirty, renderAll: renderAll, openGuide: openGuide, setIcon: setIcon, resetIcon: resetIcon,
     stills: doStills, setLibrary: setLibrary, press: press, live: live, openOptimize: openOptimize, elementPath: elementPath, openTemplates: openTemplates };
 })();
+// banana-ui's rnds::inkOn / subInkOn (RndsUI.cpp), Auto: the text on the accent dark or light by contrast, and the
+// second line the accent's hue towards that ink until it reads (4.5:1)
+function inkOn(base, sub) {
+  const rgb = (h) => { const v = parseInt(String(h).replace("#", ""), 16) || 0; return [(v >> 16) & 255, (v >> 8) & 255, v & 255]; };
+  const lum = (c) => { const f = (x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
+  const cr = (a, b) => { const la = lum(a), lb = lum(b); return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05); };
+  const hex = (c) => "#" + c.map((x) => Math.round(x).toString(16).padStart(2, "0")).join("");
+  const bg = rgb(base), dark = [0x17, 0x16, 0x1c], light = [255, 255, 255];
+  const ink = cr(bg, dark) >= cr(bg, light) ? dark : light;
+  if (!sub) return hex(ink);
+  for (let t = 0.5; t <= 1.0001; t += 0.05) { const m = bg.map((x, i) => x * (1 - t) + ink[i] * t); if (cr(m.map(Math.round), bg) >= 4.5) return hex(m); }
+  return hex(ink);
+}

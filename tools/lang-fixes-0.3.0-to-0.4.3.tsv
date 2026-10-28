@@ -1,0 +1,19 @@
+# lang-to-docx.py --fixes for the 0.3.0 document -> 0.4.3: what the automatic matching can't tell (checked by hand, 2026-10-25)
+101	changed	Los Angeles, Tijuana
+109	changed	Buenos Aires, Sao Paulo
+189	changed	Sharp pixels (integer)
+202	changed	Sharp pixels: every DS pixel an exact square, no blur (4x4 on the RG DS Plus, 2x2 with a frame on the RG DS). None scales smoothly. Your own: .frag files in banana/shaders, named with letters, digits and . _ + - only. Crisp: exact pixel-area scaling. Grid and LCD: the DS's screen grid. Colours: the DS's own, duller colours. CRT: a TV's scanlines. FSR: smooth edges, the heaviest. None costs no GPU work.
+219	changed	Accurate is melonDS's own. Fast lets the two CPUs run longer between meeting (about 10% faster), but it can break a game: Golden Sun: Dark Dawn loses its 3D world.
+222	changed	How loud a word or a blow must be to reach the game. Off: the game hears nothing from the mic, and the in-game menu's Blow still works for a game that wants one.
+275	changed	The card on the network: \\{address}\banana in Windows' File Explorer, smb://{address}/banana on a Mac (Finder, Go, Connect to Server). {sharing}
+669	changed	Poketool
+400	kept
+75	notshown
+274	notshown
+276	notshown
+499	notshown
+500	notshown
+555	notshown
+556	notshown
+653	notshown
+654	notshown

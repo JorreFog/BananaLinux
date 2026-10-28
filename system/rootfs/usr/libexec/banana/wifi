@@ -8,57 +8,116 @@
 #   wifi up | down | restart     wpa_supplicant on wlan0 (also with no networks yet)
 #   wifi scan                    the networks around (wpa_cli scan_results), starting wpa_supplicant if needed
 #   wifi status                  the connection (wpa_cli status)
+#   wifi test                    the first-time setup's check, a line per step as it ends: "link ok <address>" (or
+#                                "link fail"), "internet ok|fail", "time ok|fail" (the clock set over the network)
 # An address is asked for (udhcpc) only once wpa_supplicant is connected: wpa_cli runs this script as its action
 # script, "wifi wlan0 CONNECTED|DISCONNECTED", so nothing wakes the handheld while there is no network.
 CONF=/data/banana/wifi.conf
 CTRL=/run/wpa_supplicant
 W="wpa_cli -p $CTRL -i wlan0"
 stop() { [ -f "$1" ] && kill $(cat "$1") 2>/dev/null; rm -f "$1"; }
-case $1 in
-up)
+# Settings starts up, down and scan in the background, so two can overlap (switched on, then the Networks page
+# straight away): one at a time. A second wpa_supplicant started beside the first fails on the control socket and,
+# leaving, deletes the first one's pid file, after which every scan started a third and found nothing until a
+# restart. The daemons get the lock's fd closed (9>&-), or they'd hold it for good.
+case $1 in up|down|restart|scan) exec 9>/run/banana/wifi.lock; flock 9 ;; esac
+running() { $W ping 2>/dev/null | grep -q PONG; }	# whether one answers, pid file or not
+# the wpa_cli running this script on events (also one whose pid file wasn't written yet when a down came)
+actions() { for p in $(pidof wpa_cli); do tr '\0' ' ' < /proc/$p/cmdline 2>/dev/null | grep -q " -a /usr/libexec/banana/wifi " && echo $p; done; }
+up() {
     for i in 1 2 3 4 5 6 7 8 9 10; do [ -d /sys/class/net/wlan0 ] && break; sleep 0.5; done
-    [ -d /sys/class/net/wlan0 ] || exit 1
-    [ -f /run/banana/wpa.pid ] && kill -0 $(cat /run/banana/wpa.pid) 2>/dev/null && exit 0
-    rm -f /run/banana/wpa.pid    # one that died
+    [ -d /sys/class/net/wlan0 ] || return 1
+    if running; then
+        pidof wpa_supplicant > /run/banana/wpa.pid
+        [ -n "$(actions)" ] || $W -a /usr/libexec/banana/wifi -B -P /run/banana/wpa_cli.pid 9>&-
+        return 0
+    fi
     # with no known network in reach, scans back off from every 3 s to every 5 min (the radio mostly asleep)
     { echo "ctrl_interface=$CTRL"; echo "update_config=0"; echo "autoscan=exponential:3:300"; [ -f $CONF ] && cat $CONF; } > /run/banana/wpa.conf
     ip link set wlan0 up
-    wpa_supplicant -B -i wlan0 -c /run/banana/wpa.conf -P /run/banana/wpa.pid || exit 1
-    $W -a /usr/libexec/banana/wifi -B -P /run/banana/wpa_cli.pid
-    ;;
-down)
-    stop /run/banana/wpa_cli.pid
+    wpa_supplicant -B -i wlan0 -c /run/banana/wpa.conf -P /run/banana/wpa.pid 9>&- || return 1
+    $W -a /usr/libexec/banana/wifi -B -P /run/banana/wpa_cli.pid 9>&-
+}
+down() {
+    rm -f /run/banana/wpa_cli.pid
+    kill $(actions) 2>/dev/null
     stop /run/banana/udhcpc.pid
-    stop /run/banana/wpa.pid
+    rm -f /run/banana/wpa.pid
+    # all of them (one without its pid file too), and gone before the next up: one still leaving takes the
+    # interface's scans down with it
+    killall wpa_supplicant 2>/dev/null
+    for i in 1 2 3 4 5 6 7 8 9 10; do pidof wpa_supplicant >/dev/null || break; sleep 0.2; done
+    killall -9 wpa_supplicant 2>/dev/null
+    rm -f $CTRL/wlan0
     ip link set wlan0 down 2>/dev/null
-    ;;
+}
+case $1 in
+up) up || exit 1 ;;
+down) down ;;
 restart)
-    "$0" down
+    down
     sleep 0.2
-    "$0" up
+    up || exit 1
     ;;
 scan)
-    [ -f /run/banana/wpa.pid ] || "$0" up || exit 1
+    cold=; running || { up || exit 1; cold=1; }
+    flock -u 9
     $W scan >/dev/null      # FAIL-BUSY while one is running: its results come all the same
     sleep 3
+    # just started: its first scan is still running after 3 s, and would read as no networks around
+    [ -n "$cold" ] && for i in 1 2 3 4 5 6; do $W scan_results | grep -q '	' && break; sleep 1; done
     $W scan_results
     ;;
 status)
     [ -f /run/banana/wpa.pid ] && $W status
+    ;;
+test)
+    # connected with an address (one just joined gets its address a few seconds after: up to 15 s for it)
+    ip=
+    for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+        st=$([ -f /run/banana/wpa.pid ] && $W status 2>/dev/null)
+        echo "$st" | grep -qx 'wpa_state=COMPLETED' && ip=$(echo "$st" | sed -n 's/^ip_address=//p')
+        [ -n "$ip" ] && break
+        sleep 1
+    done
+    [ -n "$ip" ] || { echo "link fail"; exit 0; }
+    echo "link ok $ip"
+    # the internet: any answer from the project's site, else GitHub (plain HTTP: no certificate, so a clock not set
+    # yet doesn't make it fail)
+    net=fail
+    for u in http://bananaos-cfw.dev/ http://github.com/; do
+        c=$(curl -s -o /dev/null -m 8 -w '%{http_code}' "$u" 2>/dev/null)
+        [ -n "$c" ] && [ "$c" != 000 ] && { net=ok; break; }
+    done
+    echo "internet $net"
+    # the clock: the connect's ntpd (above) marks time-synced; one still asking is waited for, else asked once more
+    if [ ! -f /run/banana/time-synced ] && [ $net = ok ]; then
+        for i in 1 2 3 4 5 6 7 8 9 10; do pidof ntpd >/dev/null || break; sleep 1; done
+        [ -f /run/banana/time-synced ] ||
+            { timeout 12 ntpd -q -n -p pool.ntp.org >/dev/null 2>&1 && { hwclock -w 2>/dev/null; date +%s > /run/banana/time-synced; }; }
+    fi
+    [ -f /run/banana/time-synced ] && echo "time ok" || echo "time fail"
     ;;
 wlan0)
     # wpa_cli's events
     case $2 in
     CONNECTED)
         stop /run/banana/udhcpc.pid
+        # (time-synced: the clock came from the network this boot, for wifi test)
         udhcpc -b -t 5 -i wlan0 -p /run/banana/udhcpc.pid -s /usr/share/udhcpc/default.script >/dev/null 2>&1 &&
-            { ntpd -q -n -p pool.ntp.org >/dev/null 2>&1 && hwclock -w 2>/dev/null; } &
+            { ntpd -q -n -p pool.ntp.org >/dev/null 2>&1 && { hwclock -w 2>/dev/null; date +%s > /run/banana/time-synced; }; } &
+        # Settings > System > Update check: Daily asks GitHub for a newer version, once a day at most (the update
+        # script reads the setting itself; nothing is downloaded). After the clock had its chance: TLS needs it
+        ( sleep 20; /usr/libexec/banana/update check --daily ) >/dev/null 2>&1 &
+        # Settings > Network > Home server: Auto sync "Leaving a game and on Wi-Fi" syncs games and saves with the
+        # paired server (banana-sync reads the setting itself, and does nothing while a game runs or one is going)
+        ( sleep 25; [ -x /usr/bin/banana-sync ] && /usr/bin/banana-sync sync --auto wifi ) >/dev/null 2>&1 &
         ;;
     DISCONNECTED)
         stop /run/banana/udhcpc.pid
         ;;
     esac
     ;;
-*) echo "usage: wifi up|down|restart|scan|status" >&2; exit 1 ;;
+*) echo "usage: wifi up|down|restart|scan|status|test" >&2; exit 1 ;;
 esac
 exit 0

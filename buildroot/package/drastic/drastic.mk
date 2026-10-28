@@ -17,11 +17,13 @@ define DRASTIC_EXTRACT_CMDS
 endef
 
 # ROCKNIX's settings and button map for the RG DS (board/rgds/drastic.cfg), with what ROCKNIXDS turns on for
-# SuperDrastic: 2x internal resolution and 3D on its own thread
+# SuperDrastic: 2x internal resolution and 3D on its own thread; and Hinge on Pause, the key SuperDrastic holds
+# while the handheld's lid is shut (run-drastic sets it in a configuration made before 0.4.2)
 define DRASTIC_INSTALL_TARGET_CMDS
 	mkdir -p $(TARGET_DIR)/usr/share/drastic/config
 	cp -a $(@D)/drastic_aarch64/. $(TARGET_DIR)/usr/share/drastic/
 	sed -e 's/^hires_3d = .*/hires_3d = 1/' -e 's/^threaded_3d = .*/threaded_3d = 1/' \
+		-e 's/^controls_a\[CONTROL_INDEX_HINGE\] = .*/controls_a[CONTROL_INDEX_HINGE] = 328/' \
 		$(BR2_EXTERNAL_BANANA_PATH)/board/rgds/drastic.cfg > $(TARGET_DIR)/usr/share/drastic/config/drastic.cfg
 endef
 

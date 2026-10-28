@@ -211,6 +211,25 @@ p { color: var(--text); margin: 0 0 14px; }
 .stats b { display: block; font: clamp(26px, 9cqi, 34px) "Pixelify", sans-serif; font-weight: normal; }
 .stats span { display: block; font-size: 11px; letter-spacing: .1em; line-height: 1.3; text-transform: uppercase; color: var(--hero-text); }
 
+/* numbers with their units (9.8 s, 360 ms): a size smaller, so they fit a phone's column */
+.stats.units b { font-size: clamp(20px, 7cqi, 30px); white-space: nowrap; }
+.stats + .alpha { margin-top: 10px; }
+
+/* the ten layout themes: one chip each, the one on the handheld's screens lit */
+.theme-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.theme-chips button {
+  font: 13px "Pixelify", sans-serif; text-transform: uppercase; letter-spacing: .05em; padding: 4px 10px; cursor: pointer;
+  border-radius: 9px; border: 2px solid var(--tile-line); color: var(--ink); background: var(--tile);
+  transition: border-color .2s, background .2s, transform .2s;
+}
+.theme-chips button:hover { transform: translateY(-2px); border-color: var(--line); }
+.theme-chips button[aria-pressed="true"] { border-color: var(--accent); background: var(--tile-hover); color: var(--accent); }
+:root[data-theme="light"] .theme-chips button[aria-pressed="true"] { color: #191820; background: var(--accent); }
+.theme-chips button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#themes .alpha { margin-top: 12px; }
+.credits { font-size: 13px; color: var(--soft); margin: 16px 0 0; }
+.credits b { font-family: "Pixelify", sans-serif; font-weight: normal; color: var(--ink); }
+
 .get { text-align: center; }
 .get .cta { justify-content: center; }
 .get-banana { width: 72px; image-rendering: pixelated; animation: bob 1.6s ease-in-out infinite; }
@@ -259,6 +278,8 @@ p { color: var(--text); margin: 0 0 14px; }
 }
 
 .caption:empty { display: none; }
+/* phones: a long caption wraps inside the screen instead of running off it */
+@media (max-width: 899px) { .caption { white-space: normal; text-align: center; width: max-content; max-width: calc(100vw - 2 * var(--gutter)); } }
 
 .reveal { opacity: 0; transform: translateY(40px); }
 

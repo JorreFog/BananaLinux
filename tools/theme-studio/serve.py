@@ -240,7 +240,7 @@ class Handler(BaseHTTPRequestHandler):
         # static, confined to this directory
         rel = os.path.normpath(path).lstrip("/")
         target = (HERE / rel).resolve()
-        if not str(target).startswith(str(HERE.resolve())) or not target.exists():
+        if not target.is_relative_to(HERE.resolve()) or not target.exists():	# (not a sibling such as theme-studio-desktop/)
             return self._send(404, "not found", "text/plain")
         return self._file(target)
 

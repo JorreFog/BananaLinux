@@ -1,0 +1,43 @@
+From: JorreFog <JorreFog@users.noreply.github.com>
+Subject: [PATCH] core_info: the system image's cores listed besides libretro_directory's
+
+On BananaOS the cores that come with the system are in /usr/lib/libretro, on
+a read-only image, so the Core Downloader can only install into a folder on
+the card (libretro_directory). RetroArch lists the cores of one folder; the
+image's folder is listed too, so Load Core, the core information and the
+running core's details keep the image's cores while downloaded ones are added.
+A folder that doesn't exist yet (no download so far) isn't an error when the
+image's folder is there.
+
+Upstream-Status: Inappropriate [BananaOS-specific]
+---
+--- a/core_info.c
++++ b/core_info.c
+@@ -23,6 +23,11 @@
+ #include <streams/interface_stream.h>
+ #include <formats/rjson.h>
+ #include <lists/dir_list.h>
++
++/* BananaOS: the system image's own cores (read-only), listed besides libretro_directory's */
++#if defined(__linux__) && !defined(BANANA_IMAGE_CORE_DIR)
++#define BANANA_IMAGE_CORE_DIR "/usr/lib/libretro"
++#endif
+ #include <file/archive_file.h>
+ 
+ #ifdef HAVE_CONFIG_H
+@@ -1424,6 +1429,15 @@
+       }
+    }
+ #else
++#if defined(__linux__) && defined(BANANA_IMAGE_CORE_DIR)
++   /* BananaOS: the cores that come with the system image are listed too,
++    * besides the ones the Core Downloader put in libretro_directory (on the
++    * card: the image is read-only) */
++   if (!string_is_equal(core_dir, BANANA_IMAGE_CORE_DIR))
++      dir_list_ok = dir_list_append(path_list->dir_list,
++            BANANA_IMAGE_CORE_DIR, exts, false, show_hidden_files,
++            false, false) || dir_list_ok;
++#endif
+    /* Keep the old 'directory not found' behaviour */
+    if (!dir_list_ok)
+       goto error;
