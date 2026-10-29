@@ -6157,7 +6157,7 @@ namespace banana
 		gTitle = title; gSystem = system; gScreen = screen; gTouch = touch;
 		gHotkeys = getConfValue(data + "/settings.conf", "ra_hotkeys", "on") != "off";
 		gFlash = gDown = -1; gSeen = -1; awardsSeen = 0; wake = false;
-		pkView = PK_PARTY; pkMon = pkMonPage = 0; pkBattle = false; pkPocket = pkBagPage = pkDexPage = pkDexNat = 0; pkGoalKey.clear(); pkGoalTeam.clear();
+		pkView = PK_PARTY; pkMon = pkMonPage = 0; pkBattle = false; pkPocket = pkBagPage = pkDexPage = pkDexNat = 0; pkGoalKey.clear(); pkGoalTeam.clear(); pkWildPage = 0; pkWildKey = -1;
 		gcView = gcomp::P_STATUS; gcScreen = 0; gcScreens = 1; gcList = gcRow = -1; gcBattle = false; gcHits.clear();
 		if (gameComp) gameComp->want(gcView);
 		raw = std::make_shared<RaWatch>();
@@ -6322,6 +6322,8 @@ namespace banana
 					if (i >= 0 && i < (int)pkDexShown.size()) { pkDexNat = pkDexShown[i]; pkView = PK_DEXMON; }
 				}
 				else if (!down && pkView == PK_DEXMON) pkView = PK_DEX;
+				else if (!down && pkView == PK_GUIDE && pkWildPages > 1 && ly >= 370 && ly < 412 && lx >= 524)	// (the wild list's pages)
+					pkWildPage = std::min(pkWildPages - 1, std::max(0, pkWildPage + (lx < 571 ? -1 : 1)));
 				else if (!down && pkView == PK_MAP && pkMapW > 0 && pkMapCell > 0)
 				{
 					// a square of the region map: its section named under the map (tapped again, or off the map: the legend)
@@ -7444,35 +7446,58 @@ namespace banana
 		static const char* const METHOD[4] = { "Grass", "Water", "Rock Smash", "Fishing" };
 		std::string area = t.mapName(sn.mapsec);
 		text(fit(area.empty() ? "Wild Pokémon here" : area, true, 17, 264), true, 17, 342, 26, p.ink);
+		// laid out in pages first: a row a species (28 high, its icon reaching 24 below its top), a method's name over
+		// its first row on each page; the rows stop above the bottom line (the legend, the page and its buttons)
+		struct Row { int mth; pkmn::RomTables::Wild w; float y; bool head; };
+		std::vector<std::vector<Row>> pages(1);
 		float wy = 54;
-		bool any = false;
-		bool dexKnown = !sn.dexSeen.empty();
-		for (int mth = 0; mth < 4 && wy < 380; mth++)
-		{
-			auto list = t.wild(sn.group, sn.num, mth);
-			if (list.empty()) continue;
-			any = true;
-			text(METHOD[mth], true, 13, 342, wy, p.accent, true, 1.0f);
-			wy += 20;
-			for (auto& w : list)
+		for (int mth = 0; mth < 4; mth++)
+			for (auto& w : t.wild(sn.group, sn.num, mth))
 			{
-				if (wy > 372) break;
-				monIcon(w.species, false, 338, wy - 8, kk);
-				int nat = w.species < t.natDex.size() ? t.natDex[w.species] : 0;
-				bool c = dexKnown && dexBit(sn.dexOwned, nat);
-				Color nc = !dexKnown || c ? p.ink : p.accent;	// (not caught yet: in the accent)
-				text(fit(t.speciesName(w.species), true, 15, 120), true, 15, 372, wy, nc);
-				std::string lv = w.minLv == w.maxLv ? "Lv" + std::to_string(w.minLv) : "Lv" + std::to_string(w.minLv) + "-" + std::to_string(w.maxLv);
-				text(lv, false, 13, 496, wy + 2, p.muted);
-				std::string pc = std::to_string(w.percent) + "%";
-				float pw = num(pc, 14, 0, 0, p.ink, true);
-				num(pc, 14, 606 - pw, wy, p.ink);
-				wy += 30;
+				bool head = pages.back().empty() || pages.back().back().mth != mth;
+				float at = wy + (head && !pages.back().empty() ? 4 : 0) + (head ? 20 : 0);
+				if (at > 344 && !pages.back().empty()) { pages.emplace_back(); head = true; at = 74; }
+				pages.back().push_back({ mth, w, at, head });
+				wy = at + 28;
 			}
-			wy += 4;
+		int mapKey = sn.group * 1000 + sn.num;
+		if (mapKey != pkWildKey) { pkWildKey = mapKey; pkWildPage = 0; }	// (another map: its first page)
+		pkWildPages = (int)pages.size();
+		pkWildPage = std::min(pkWildPage, pkWildPages - 1);
+		bool dexKnown = !sn.dexSeen.empty();
+		for (auto& r : pages[pkWildPage])
+		{
+			if (r.head) text(METHOD[r.mth], true, 13, 342, r.y - 20, p.accent, true, 1.0f);
+			const auto& w = r.w;
+			monIcon(w.species, false, 338, r.y - 8, kk);
+			int nat = w.species < t.natDex.size() ? t.natDex[w.species] : 0;
+			bool c = dexKnown && dexBit(sn.dexOwned, nat);
+			Color nc = !dexKnown || c ? p.ink : p.accent;	// (not caught yet: in the accent)
+			text(fit(t.speciesName(w.species), true, 15, 120), true, 15, 372, r.y, nc);
+			std::string lv = w.minLv == w.maxLv ? "Lv" + std::to_string(w.minLv) : "Lv" + std::to_string(w.minLv) + "-" + std::to_string(w.maxLv);
+			text(lv, false, 13, 496, r.y + 2, p.muted);
+			std::string pc = std::to_string(w.percent) + "%";
+			float pw = num(pc, 14, 0, 0, p.ink, true);
+			num(pc, 14, 606 - pw, r.y, p.ink);
 		}
-		if (!any) wrapped("No wild Pokémon on this map.", 16, 342, 56, 264, 3, p.muted);
-		else if (dexKnown) text("Accent: not caught yet", false, 13, 342, 390, p.muted);
+		bool paged = pkWildPages > 1;
+		if (pages[0].empty()) wrapped("No wild Pokémon on this map.", 16, 342, 56, 264, 3, p.muted);
+		else if (dexKnown) text(fit("Accent: not caught yet", false, paged ? 12 : 13, paged ? 146 : 264), false, paged ? 12 : 13, 342, 384, p.muted);
+		if (paged)
+		{
+			// the page and two buttons (pkWildStep), as the pager's
+			std::string pg = std::to_string(pkWildPage + 1) + "/" + std::to_string(pkWildPages);
+			num(pg, 14, 520 - num(pg, 14, 0, 0, p.ink, true), 383, p.ink);
+			int ka = std::max(1, (int)std::lround(2 * s));
+			for (int i = 0; i < 2; i++)
+			{
+				bool on = i ? pkWildPage < pkWildPages - 1 : pkWildPage > 0;
+				float bx = i ? 572 : 526;
+				box("slot", false, bx, 374, 44, 32);
+				Color c = on ? p.accent : p.line;
+				sprite(i ? PX_NEXT : PX_PREV, 9, bx + 22 - 2.5f * ka / s, 390 - 4.5f * ka / s, ka, [&](char) { return c; });
+			}
+		}
 	}
 
 	// ---- the game companion (gamecomp.h): the Pokémon companion's look for any GBA game with a definition. The whole

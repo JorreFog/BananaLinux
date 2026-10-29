@@ -525,6 +525,7 @@ namespace banana
 		std::vector<uint8_t> pkMapCells;
 		std::string pkGoalKey;
 		std::vector<std::pair<uint16_t, uint8_t>> pkGoalTeam;
+		int pkWildPage = 0, pkWildPages = 1, pkWildKey = -1;	// the guide's wild Pokémon: the page shown, how many, its map
 		void pokeMap(const SPal& p);
 		void pokeBag(const SPal& p);
 		void pokeDex(const SPal& p);
