@@ -39,3 +39,8 @@ fi
 sync
 umount /data 2>/dev/null || mount -o remount,ro /data
 sync
+# Shut down with the charger plugged in (#34): the card is unmounted and safe; stay in charge_only so the
+# PWM amber LED stays lit, and reboot cleanly into rcS if the power button is pressed to turn it back on.
+if [ "$(cat /sys/class/power_supply/rk817-charger/online 2>/dev/null)" = "1" ] || grep -q '^1$' /sys/class/power_supply/*/online 2>/dev/null; then
+    bananad --charge && reboot -f
+fi

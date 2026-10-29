@@ -5,6 +5,10 @@ export PATH=/usr/sbin:/usr/bin:/sbin:/bin
 mount -t proc proc /proc
 mount -t sysfs sysfs /sys
 mount -t devtmpfs devtmpfs /dev 2>/dev/null
+# Powered on by a charger while switched off (#34): hold here in the foreground before the panels or the card
+# are touched. bananad turns the backlights and extra cores off, lights the amber charging LED, and waits:
+# unplugging powers off; pressing the power button returns 0 and the boot carries on below.
+bananad --charge
 # both panels powered up now, beside the rest of the boot: the menu waited for that at its start (the RG DS Plus's
 # panels ~1.2 s, the RG DS's ~0.3 s); its own start then finds them lit. Only the display, nothing on the card
 banana-ui --panels-on </dev/null >/dev/null 2>&1 &
