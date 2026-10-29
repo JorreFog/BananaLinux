@@ -10,6 +10,7 @@
 #include <sys/resource.h>
 #include <sys/syscall.h>
 #include <unistd.h>
+#include <zlib.h>
 
 namespace banana::pkmn
 {
@@ -64,17 +65,22 @@ namespace banana::pkmn
 			return 2;
 		}
 
+		// the saves' layouts (pokeruby / pokeemerald / pokefirered: SaveBlock1, SaveBlock2)
+		const SaveLayout SAVE_RS = { 0x1220, 0x807, 0x800, 0x490, 0, { 0x560, 0x5b0, 0x600, 0x640, 0x740 }, { 20, 20, 16, 64, 46 } };
+		const SaveLayout SAVE_E = { 0x1270, 0x867, 0x864, 0x490, 0xac, { 0x560, 0x5d8, 0x650, 0x690, 0x790 }, { 30, 30, 16, 64, 46 } };
+		const SaveLayout SAVE_FR = { 0x0ee0, 0x820, 0x82c, 0x290, 0xf20, { 0x310, 0x3b8, 0x430, 0x464, 0x54c }, { 42, 30, 13, 58, 43 } };
+
 		// the English releases (pret's symbol files: gPlayerPartyCount, gPlayerParty, gBattleMons, gBattleTypeFlags, gEnemyParty,
-		// and gMain's byte with inBattle in bit 1: 0x439 in Emerald and FireRed, 0x43D in Ruby)
-		const GameInfo GAMES[] = {
-			// (then the save: Ruby's gSaveBlock1/2 themselves, the others' gSaveBlock1Ptr/2Ptr; gMapHeader)
-			{ "AXVE", "Pokémon Ruby", 0x03004350, 0x03004360, 0x02024a80, 0x020239f8, 0x03001770 + 0x43d, 0x030045c0, 0, 0x02025734, 0x02024ea4, 0x0202e828 },
-			{ "AXPE", "Pokémon Sapphire", 0x03004350, 0x03004360, 0x02024a80, 0x020239f8, 0x03001770 + 0x43d, 0x030045c0, 0, 0x02025734, 0x02024ea4, 0x0202e828 },
-			{ "BPEE", "Pokémon Emerald", 0x020244e9, 0x020244ec, 0x02024084, 0x02022fec, 0x030022c0 + 0x439, 0x02024744, 1, 0x03005d8c, 0x03005d90, 0x02037318 },
-			{ "BPRE", "Pokémon FireRed", 0x02024029, 0x02024284, 0x02023be4, 0x02022b4c, 0x030030f0 + 0x439, 0x0202402c, 2, 0x03005008, 0x0300500c, 0x02036dfc },
-			{ "BPGE", "Pokémon LeafGreen", 0x02024029, 0x02024284, 0x02023be4, 0x02022b4c, 0x030030f0 + 0x439, 0x0202402c, 2, 0x03005008, 0x0300500c, 0x02036dfc },
+		// and gMain's byte with inBattle in bit 1: 0x439 in Emerald and FireRed, 0x43D in Ruby; then the save: Ruby's
+		// gSaveBlock1/2 themselves, the others' gSaveBlock1Ptr/2Ptr; gMapHeader)
+		const GameProfile GAMES[] = {
+			{ "AXVE", "Pokémon Ruby", 0, RUBY_SAPPHIRE, 0x03004350, 0x03004360, 0x02024a80, 0x020239f8, 0x03001770 + 0x43d, 0x030045c0, true, 0x02025734, 0x02024ea4, 0x0202e828, SAVE_RS, {} },
+			{ "AXPE", "Pokémon Sapphire", 0, RUBY_SAPPHIRE, 0x03004350, 0x03004360, 0x02024a80, 0x020239f8, 0x03001770 + 0x43d, 0x030045c0, true, 0x02025734, 0x02024ea4, 0x0202e828, SAVE_RS, {} },
+			{ "BPEE", "Pokémon Emerald", 0, EMERALD, 0x020244e9, 0x020244ec, 0x02024084, 0x02022fec, 0x030022c0 + 0x439, 0x02024744, false, 0x03005d8c, 0x03005d90, 0x02037318, SAVE_E, {} },
+			{ "BPRE", "Pokémon FireRed", 0, FIRERED, 0x02024029, 0x02024284, 0x02023be4, 0x02022b4c, 0x030030f0 + 0x439, 0x0202402c, false, 0x03005008, 0x0300500c, 0x02036dfc, SAVE_FR, {} },
+			{ "BPGE", "Pokémon LeafGreen", 0, FIRERED, 0x02024029, 0x02024284, 0x02023be4, 0x02022b4c, 0x030030f0 + 0x439, 0x0202402c, false, 0x03005008, 0x0300500c, 0x02036dfc, SAVE_FR, {} },
 		};
-		const int PARTY = 100, BATTLER = 0x58;
+		const uint32_t DEX_LEN = 0x68;	// SaveBlock2's Pokédex: owned[52], then seen[52]
 
 		// the Western character set: a byte's text ("" for one with none here)
 		const char* glyph(uint8_t b)
@@ -166,11 +172,30 @@ namespace banana::pkmn
 
 	bool typeInGame(int t, bool modern) { return (t >= 0 && t <= DARK && t != MYSTERY) || (modern && t == FAIRY); }
 
-	const GameInfo* detectGame(const uint8_t* h, size_t n)
+	const GameProfile* detectGameIn(const GameProfile* list, size_t count, const uint8_t* h, size_t n, uint32_t crc)
 	{
 		if (n < 0xb0) return nullptr;
-		for (auto& g : GAMES) if (memcmp(h + 0xac, g.code, 4) == 0) return &g;
-		return nullptr;
+		const GameProfile* any = nullptr;
+		for (size_t i = 0; i < count; i++)
+		{
+			const GameProfile& g = list[i];
+			if (memcmp(h + 0xac, g.code, 4) != 0) continue;
+			if (g.crc && crc && g.crc == crc) return &g;
+			if (!g.crc && !any) any = &g;
+		}
+		return any;
+	}
+
+	const GameProfile* detectGame(const uint8_t* h, size_t n, uint32_t crc)
+	{
+		return detectGameIn(GAMES, sizeof GAMES / sizeof GAMES[0], h, n, crc);
+	}
+
+	bool crcMatters(const uint8_t* h, size_t n)
+	{
+		if (n < 0xb0) return false;
+		for (auto& g : GAMES) if (g.crc && memcmp(h + 0xac, g.code, 4) == 0) return true;
+		return false;
 	}
 
 	std::string decodeText(const uint8_t* p, size_t max)
@@ -227,23 +252,30 @@ namespace banana::pkmn
 		return true;
 	}
 
-	bool decodeBattler(const uint8_t* p, Mon& m, int maxSpecies)
+	bool decodeParty(const uint8_t* p, Mon& m, const MonLayout& L)
+	{
+		if (!decodeParty(p, m, L.coding)) return false;
+		m.species &= L.speciesMask;
+		return m.species != 0;
+	}
+
+	bool decodeBattler(const uint8_t* p, Mon& m, int maxSpecies, const BattlerLayout& L)
 	{
 		m = Mon();
 		m.species = le16(p);
 		if (m.species == 0 || m.species > maxSpecies) return false;
-		for (int i = 0; i < 4; i++) { m.moves[i] = le16(p + 0x0c + i * 2); m.pp[i] = p[0x24 + i]; }
-		m.types[0] = p[0x21]; m.types[1] = p[0x22];
-		m.hp = le16(p + 0x28);
-		m.level = p[0x2a];
-		m.maxHp = le16(p + 0x2c);
-		m.item = le16(p + 0x2e);
-		m.nick = decodeText(p + 0x30, 10);
-		m.ppBonuses = p[0x3b];
-		m.status = le32(p + 0x4c);
-		m.egg = p[0x17] & 0x40;
-		m.exp = le32(p + 0x44);
-		m.pid = le32(p + 0x48);
+		for (int i = 0; i < 4; i++) { m.moves[i] = le16(p + L.moves + i * 2); m.pp[i] = p[L.pp + i]; }
+		m.types[0] = p[L.types]; m.types[1] = p[L.types + 1];
+		m.hp = le16(p + L.hp);
+		m.level = p[L.level];
+		m.maxHp = le16(p + L.maxHp);
+		m.item = le16(p + L.item);
+		m.nick = decodeText(p + L.nick, 10);
+		m.ppBonuses = p[L.ppBonuses];
+		m.status = le32(p + L.status);
+		m.egg = p[L.eggByte] & L.eggBit;
+		m.exp = le32(p + L.exp);
+		m.pid = le32(p + L.pid);
 		return true;
 	}
 
@@ -417,7 +449,7 @@ namespace banana::pkmn
 		static const uint8_t ORDER0[] = { 0x00, 0x20, 0xc0, 0x46, 0xc0, 0x46 }, NOP[] = { 0xc0, 0x46 };
 		if (n > 0x3f960 && memcmp(rom + 0xac, "BPRE", 4) == 0 && memcmp(rom + 0x3f94c, ORDER0, 6) == 0 &&
 			memcmp(rom + 0x3f906, NOP, 2) == 0 && memcmp(rom + 0x3f92a, NOP, 2) == 0)
-			t.plainMons = true;
+			t.has.plainMons = true;
 		// CFRU's "Expanded Pokedex RAM": the seen flags at a fixed address in the literal at 0x104b10 (gSaveBlock1's
 		// dexSeenFlags, 0x0202583c), the caught ones right after; ResetPokedex clears 0x7d bytes of each (999
 		// national numbers). The games' own (52 bytes in SaveBlock2) are no longer used
@@ -426,13 +458,15 @@ namespace banana::pkmn
 			rom[0x549bf] == 0x30)
 		{
 			uint32_t a = le32(rom + 0x104b10);
-			if (a >> 24 == 2 && (a & 0xffffff) + 2 * 0x7d <= 0x40000 && le32(rom + 0x549d0) == a) { t.dexRam = a; t.dexBytes = 0x7d; }
+			if (a >> 24 == 2 && (a & 0xffffff) + 2 * 0x7d <= 0x40000 && le32(rom + 0x549d0) == a) { t.has.dexRam = a; t.has.dexBytes = 0x7d; }
 		}
 		// CFRU's "Expanded Bag": GetBagItemQuantity reads the count as it is (ldrh r0, [r0, #4] at 0x99dfc), the
-		// pockets in RAM of their own that gBagPockets (0x0203988c: pointer and size, five of them) points to
+		// pockets in RAM of their own that gBagPockets (0x0203988c: pointer and size, five of them) points to (a CFRU hack
+		// without it: its bag may not be the save's either)
 		if (n > 0x9a000 && memcmp(rom + 0xac, "BPRE", 4) == 0 && rom[0x99dfc] == 0x80 && rom[0x99dfd] == 0x88 &&
 			memcmp(rom + 0x98984, NOP, 2) == 0)
-			t.plainBag = true;
+			t.has.bagPockets = 0x0203988c;
+		t.has.bagUnsure = t.has.leadersFromTrainers && !t.has.bagPockets;
 		return t;
 	}
 
@@ -521,6 +555,9 @@ namespace banana::pkmn
 
 	namespace
 	{
+		// a CFRU hack, told by its tables (the Fairy type, more than 412 species): what it has beyond FireRed's
+		void cfru(RomTables& t) { t.has.modernTypes = t.has.ownDex = t.has.leadersFromTrainers = true; }
+
 		void fromHeader(RomTables& t, const uint8_t* rom, size_t n)
 		{
 			// the header (pokeemerald / pokefirered rom_header_gf.c): 0x138 icons, 0x13c their palette numbers, 0x140
@@ -561,10 +598,10 @@ namespace banana::pkmn
 					t.genderRatio.push_back(e[0x10]);
 					t.growth.push_back(e[0x13]);
 					t.speciesAbilities.push_back({ e[0x16], e[0x17] });
-					if (e[6] == FAIRY || e[7] == FAIRY) t.cfru = true;
+					if (e[6] == FAIRY || e[7] == FAIRY) cfru(t);
 				}
 			}
-			if (ns > 412) t.cfru = true;
+			if (ns > 412) cfru(t);
 			// abilities: their names' size from the gap between the first two ("-------", then Stench)
 			long ab = romPtr(rom, n, 0x1c0, 64);
 			if (ab >= 0 && nameAt(rom + ab, 32) > 0)
@@ -634,9 +671,9 @@ namespace banana::pkmn
 		}
 
 		// the region maps and their names
-		void mapTables(RomTables& t, const uint8_t* rom, size_t n, int gen)
+		void mapTables(RomTables& t, const uint8_t* rom, size_t n, Family gen)
 		{
-			if (gen == 2)
+			if (gen == FIRERED)
 			{
 				// FireRed: the names of sections 0x58 (Pallet Town) on, a pointer each: the run of pointers to short
 				// names nearest 109 long (another such table, of names people have, is longer)
@@ -768,17 +805,18 @@ namespace banana::pkmn
 		{ "LORELEI", "Lorelei", "the Pokémon League", ICE }, { "BRUNO", "Bruno", "the Pokémon League", FIGHTING },
 		{ "AGATHA", "Agatha", "the Pokémon League", GHOST }, { "LANCE", "Lance", "the Pokémon League", DRAGON } };
 
-	const Goal* goalsFor(int gen, int& count)
+	const Goal* goalsFor(Family gen, int& count)
 	{
-		if (gen == 0) { count = (int)(sizeof GOALS_RS / sizeof GOALS_RS[0]); return GOALS_RS; }
-		if (gen == 1) { count = (int)(sizeof GOALS_E / sizeof GOALS_E[0]); return GOALS_E; }
+		if (gen == RUBY_SAPPHIRE) { count = (int)(sizeof GOALS_RS / sizeof GOALS_RS[0]); return GOALS_RS; }
+		if (gen == EMERALD) { count = (int)(sizeof GOALS_E / sizeof GOALS_E[0]); return GOALS_E; }
 		count = (int)(sizeof GOALS_FR / sizeof GOALS_FR[0]); return GOALS_FR;
 	}
 
 	void findExtras(RomTables& t, const uint8_t* rom, size_t n)
 	{
-		int gen = n >= 0xb0 && !memcmp(rom + 0xac, "BPEE", 4) ? 1 : n >= 0xb0 && (!memcmp(rom + 0xac, "BPRE", 4) || !memcmp(rom + 0xac, "BPGE", 4)) ? 2 : 0;
-		if (gen) fromHeader(t, rom, n);
+		const GameProfile* g = detectGame(rom, n);
+		Family gen = g ? g->family : RUBY_SAPPHIRE;
+		if (gen != RUBY_SAPPHIRE) fromHeader(t, rom, n);
 		// no header pointers (Ruby, Sapphire): the ability names by their shape (13 bytes each, the 78 of the games, the
 		// first "-------"), the items by theirs (44 bytes, the first "????????", each with its own index at 14)
 		static const uint8_t none[8] = { 0xae, 0xae, 0xae, 0xae, 0xae, 0xae, 0xae, 0xff };
@@ -858,7 +896,7 @@ namespace banana::pkmn
 		}
 		if (best < 20) t.wildHeaders = -1;
 		// the gym leaders' teams for the guide; a CFRU hack's leaders (class 0x54, FireRed's) in the table's order
-		if (t.cfru)
+		if (t.has.leadersFromTrainers)
 		{
 			// (every record of that class anywhere: a hack can keep a table for each difficulty)
 			for (size_t p = 0; p + 120 <= n; p += 4)
@@ -1112,21 +1150,24 @@ namespace banana::pkmn
 		if (!info) return false;
 		sh = std::make_shared<Shared>();
 		std::shared_ptr<Shared> s = sh;
-		std::thread([s, rom]
+		std::thread([s, rom, h]
 		{
 			setpriority(PRIO_PROCESS, (id_t)syscall(SYS_gettid), 10);	// (this thread only: beside the game starting)
 			std::vector<uint8_t> all = readRom(rom, 32u << 20);
 			auto t = std::make_shared<RomTables>(findTables(all.data(), all.size()));
 			size_t bytes = all.size();
+			// (a release told by its CRC-32: only where one is listed for the code)
+			const GameProfile* profile = crcMatters(h.data(), h.size()) ? detectGame(h.data(), h.size(), (uint32_t)crc32(0L, all.data(), (uInt)all.size())) : nullptr;
 			t->rom = std::make_shared<const std::vector<uint8_t>>(std::move(all));
 			fprintf(stderr, "pokemon: %zu species, %zu moves, %zu species types, %zu move records, %zu icons (%zu palette numbers, %zu palettes), "
 				"%zu growth rates from the ROM (%zu bytes); %s, %zu abilities, %zu items, %zu map names, %zu region maps, %zu dex numbers, "
 				"dex entries %s, wild table %s, %zu CFRU gym leaders\n", t->species.size(), t->moves.size(), t->speciesTypes.size(), t->moveInfo.size(),
-				t->icons.size(), t->iconPal.size(), t->palettes.size(), t->expTable.size(), bytes, t->cfru ? "a CFRU hack" : "not CFRU",
+				t->icons.size(), t->iconPal.size(), t->palettes.size(), t->expTable.size(), bytes, t->has.modernTypes ? "modern types" : "the games' types",
 				t->abilities.size(), t->items.size(), t->mapNames.size(), t->grids.size(), t->natDex.size(), t->dexEntries >= 0 ? "found" : "none",
 				t->wildHeaders >= 0 ? "found" : "none", t->leaders.size());
 			std::lock_guard<std::mutex> l(s->mu);
 			s->tables = t;
+			s->profile = profile;
 			s->ready = true;
 		}).detach();
 		return true;
@@ -1159,22 +1200,14 @@ namespace banana::pkmn
 		return sh->tables;
 	}
 
-	namespace
-	{
-		// where the save keeps the bag, the money and the flags (pokeruby / pokeemerald / pokefirered, SaveBlock1),
-		// and the key its item counts and money are XORed with (SaveBlock2; Ruby and Sapphire have none)
-		struct SaveLayout { uint32_t flags; int badge0, clear; uint32_t money, key; uint32_t pocket[5]; int count[5]; };
-		const SaveLayout LAYOUTS[3] = {
-			{ 0x1220, 0x807, 0x800, 0x490, 0, { 0x560, 0x5b0, 0x600, 0x640, 0x740 }, { 20, 20, 16, 64, 46 } },
-			{ 0x1270, 0x867, 0x864, 0x490, 0xac, { 0x560, 0x5d8, 0x650, 0x690, 0x790 }, { 30, 30, 16, 64, 46 } },
-			{ 0x0ee0, 0x820, 0x82c, 0x290, 0xf20, { 0x310, 0x3b8, 0x430, 0x464, 0x54c }, { 42, 30, 13, 58, 43 } } };
-		const uint32_t DEX_OWNED = 0x28, DEX_LEN = 0x68;	// SaveBlock2's Pokédex: owned[52], then seen[52]
-	}
-
 	std::string Companion::requests(double now)
 	{
 		if (!info) return "";
-		if (!tablesSeen && sh) { std::lock_guard<std::mutex> l(sh->mu); if (sh->ready) { tablesSeen = true; changed = true; } }
+		if (!tablesSeen && sh)
+		{
+			std::lock_guard<std::mutex> l(sh->mu);
+			if (sh->ready) { tablesSeen = true; changed = true; if (sh->profile) info = sh->profile; }
+		}
 		if (now < nextAt || (waiting > 0 && now - sentAt < 10000)) return "";
 		count.clear(); party.clear(); flags.clear(); mainB.clear(); battle.clear(); enemy.clear();
 		bagPtrB.clear(); for (auto& b : pocketB) b.clear();
@@ -1184,47 +1217,47 @@ namespace banana::pkmn
 		wants.clear();
 		wants.push_back({ info->mainFlags, 1, &mainB, false });
 		wants.push_back({ info->partyCount, 1, &count, false });
-		wants.push_back({ info->party, 6 * PARTY, &party, false });
+		wants.push_back({ info->party, 6 * info->mon.size, &party, false });
 		if (wantBattle)
 		{
 			wants.push_back({ info->battleFlags, 4, &flags, false });
-			wants.push_back({ info->battleMons, 4 * BATTLER, &battle, false });
-			wants.push_back({ info->enemyParty, 6 * PARTY, &enemy, false });
+			wants.push_back({ info->battleMons, 4 * info->mon.battler.size, &battle, false });
+			wants.push_back({ info->enemyParty, 6 * info->mon.size, &enemy, false });
 		}
 		// the save's data for the other pages: Ruby and Sapphire keep it in one place; the others move it on every
 		// map change, behind two pointers read in the same set (the data read at last set's addresses counts only
 		// when they haven't moved)
 		wantSave = ext;
 		std::shared_ptr<const RomTables> tb = ext ? tables() : nullptr;
-		const RomTables* cdex = tb && tb->dexRam ? tb.get() : nullptr;
-		dexCfru = cdex ? cdex->dexBytes : 0;
-		bagCfru = tb && tb->plainBag && info->gen == 2;
+		const RomTables::Features* has = tb ? &tb->has : nullptr;
+		dexOwn = has && has->dexRam ? has->dexBytes : 0;
+		bagPockets = has ? has->bagPockets : 0;
 		if (ext)
 		{
-			bool fixed = info->gen == 0;
+			bool fixed = info->fixedSave;
 			if (!fixed) wants.push_back({ info->sb1, 8, &sbp, false });
 			uint32_t s1 = fixed ? info->sb1 : sbSeen[0], s2 = fixed ? info->sb2 : sbSeen[1];
 			sbUsed[0] = s1; sbUsed[1] = s2;
 			wants.push_back({ info->mapHeader, 0x1c, &mh, false });
 			if (s1 >> 24 == 2 && s2 >> 24 == 2)
 			{
-				const SaveLayout& L = LAYOUTS[info->gen];
+				const SaveLayout& L = info->save;
 				wants.push_back({ s1, 12, &sb1h, false });
 				uint32_t b0 = L.pocket[0], b1 = L.pocket[4] + 4 * L.count[4];
-				if (!bagCfru) wants.push_back({ s1 + b0, (int)(b1 - b0), &bagB, false });
+				if (!bagPockets) wants.push_back({ s1 + b0, (int)(b1 - b0), &bagB, false });
 				wants.push_back({ s1 + L.money, 4, &moneyB, false });
 				if (L.key) wants.push_back({ s2 + L.key, 4, &keyB, false });
-				if (!cdex) wants.push_back({ s2 + DEX_OWNED, (int)DEX_LEN, &dexB, false });
+				if (!dexOwn) wants.push_back({ s2 + L.dexOwned, (int)DEX_LEN, &dexB, false });
 				wants.push_back({ s1 + L.flags + 0x100, 16, &flagB, false });
 				wants.push_back({ s2, 8, &nameB, false });
 			}
-			// a CFRU hack's own Pokédex flags (seen, then caught), at a fixed address
-			if (cdex) wants.push_back({ cdex->dexRam, 2 * cdex->dexBytes, &dexB, false });
-			// a CFRU hack's bag: gBagPockets, and the pockets where the last read of it pointed (both in this set: the
-			// pockets count when the pointers haven't moved)
-			if (bagCfru)
+			// the game's own Pokédex flags (seen, then caught), at a fixed address (a CFRU hack's)
+			if (dexOwn) wants.push_back({ has->dexRam, 2 * dexOwn, &dexB, false });
+			// the game's own bag (a CFRU hack's): gBagPockets, and the pockets where the last read of it pointed (both in
+			// this set: the pockets count when the pointers haven't moved)
+			if (bagPockets)
 			{
-				wants.push_back({ 0x0203988c, 40, &bagPtrB, false });
+				wants.push_back({ bagPockets, 40, &bagPtrB, false });
 				for (int k = 0; k < 5; k++)
 					if (bagSeen[k] >> 24 == 2 && bagCap[k] > 0) wants.push_back({ bagSeen[k], 4 * bagCap[k], &pocketB[k], false });
 			}
@@ -1270,14 +1303,14 @@ namespace banana::pkmn
 			s.mapsec = snap.mapsec; s.layout = snap.layout; s.money = snap.money; for (int i = 0; i < 5; i++) s.pockets[i] = snap.pockets[i];
 			s.bag = snap.bag; s.dexOwned = snap.dexOwned; s.dexSeen = snap.dexSeen; s.badges = snap.badges; s.champion = snap.champion; };
 		if (!wantSave) { keep(); return; }
-		if (info->gen != 0 && sbp.size() >= 8)
+		if (!info->fixedSave && sbp.size() >= 8)
 		{
 			uint32_t a = le32(sbp.data()), b = le32(sbp.data() + 4);
 			bool moved = a != sbUsed[0] || b != sbUsed[1];
 			sbSeen[0] = a; sbSeen[1] = b;
 			if (moved) { keep(); nextAt = 0; return; }	// (asked again at once, at the new addresses)
 		}
-		const SaveLayout& L = LAYOUTS[info->gen];
+		const SaveLayout& L = info->save;
 		s.ext = true;
 		if (mh.size() >= 0x1c && mh[3] == 0x08) { s.mapsec = mh[0x14]; s.layout = le32(mh.data()); }	// (its first word a ROM pointer: it is a map header)
 		else s.mapsec = -1;
@@ -1286,7 +1319,7 @@ namespace banana::pkmn
 		uint32_t key = keyB.size() >= 4 ? le32(keyB.data()) : 0;
 		if (moneyB.size() >= 4) s.money = (long)(le32(moneyB.data()) ^ key);
 		uint32_t b0 = L.pocket[0];
-		if (bagCfru)
+		if (bagPockets)
 		{
 			// (the pointers and sizes read now; the pockets read in this set count when they were read where these point)
 			bool same = bagPtrB.size() >= 40;
@@ -1324,9 +1357,9 @@ namespace banana::pkmn
 					if (id && c && c <= 999) s.pockets[k].push_back({ id, c });
 				}
 		}
-		if (dexCfru > 0)
+		if (dexOwn > 0)
 		{
-			if (dexB.size() >= 2 * (size_t)dexCfru) { s.dexSeen.assign(dexB.begin(), dexB.begin() + dexCfru); s.dexOwned.assign(dexB.begin() + dexCfru, dexB.begin() + 2 * dexCfru); }
+			if (dexB.size() >= 2 * (size_t)dexOwn) { s.dexSeen.assign(dexB.begin(), dexB.begin() + dexOwn); s.dexOwned.assign(dexB.begin() + dexOwn, dexB.begin() + 2 * dexOwn); }
 		}
 		else if (dexB.size() >= DEX_LEN) { s.dexOwned.assign(dexB.begin(), dexB.begin() + 52); s.dexSeen.assign(dexB.begin() + 0x34, dexB.begin() + 0x68); }
 		if (flagB.size() >= 16)
@@ -1355,28 +1388,32 @@ namespace banana::pkmn
 		if (s.seen)
 		{
 			s.inBattle = mainB[0] & 2;
-			// (the tables say how the game keeps its Pokémon; until they are read, either)
-			MonCoding coding = !t ? MonCoding::EITHER : t->plainMons ? MonCoding::PLAIN : MonCoding::ENCRYPTED;
+			// (the profile says how the game keeps its Pokémon, the tables whether a hack's patches took the encryption
+			// out; until they are read, either)
+			MonLayout L = info->mon;
+			if (!t) L.coding = MonCoding::EITHER;
+			else if (t->has.plainMons) L.coding = MonCoding::PLAIN;
+			const size_t PARTY = L.size, BATTLER = L.battler.size;
 			int c = count.empty() ? 6 : std::min<int>(count[0], 6);
-			for (int i = 0; i < c && (size_t)(i + 1) * PARTY <= party.size(); i++)
+			for (int i = 0; i < c && (i + 1) * PARTY <= party.size(); i++)
 			{
 				Mon m;
-				if (decodeParty(party.data() + i * PARTY, m, coding)) { typed(m); s.party.push_back(m); }
+				if (decodeParty(party.data() + i * PARTY, m, L)) { typed(m); s.party.push_back(m); }
 			}
-			if (s.inBattle && wantBattle && flags.size() >= 4 && battle.size() >= 4 * (size_t)BATTLER)
+			if (s.inBattle && wantBattle && flags.size() >= 4 && battle.size() >= 4 * BATTLER)
 			{
 				s.doubles = flags[0] & 1;
-				decodeBattler(battle.data(), s.lead, maxSpecies);
+				decodeBattler(battle.data(), s.lead, maxSpecies, L.battler);
 				for (int b : { 1, 3 })
 				{
 					if (b == 3 && !s.doubles) break;
 					Mon m;
-					if (decodeBattler(battle.data() + b * BATTLER, m, maxSpecies)) s.foes.push_back(m);
+					if (decodeBattler(battle.data() + b * BATTLER, m, maxSpecies, L.battler)) s.foes.push_back(m);
 				}
-				for (int i = 0; i < 6 && (size_t)(i + 1) * PARTY <= enemy.size(); i++)
+				for (int i = 0; i < 6 && (i + 1) * PARTY <= enemy.size(); i++)
 				{
 					Mon m;
-					if (decodeParty(enemy.data() + i * PARTY, m, coding)) s.foeParty.push_back(m);
+					if (decodeParty(enemy.data() + i * PARTY, m, L)) s.foeParty.push_back(m);
 				}
 			}
 			else if (s.inBattle) { s.lead = snap.lead; s.foes = snap.foes; s.doubles = snap.doubles; s.foeParty = snap.foeParty; }	// (read in the next set)

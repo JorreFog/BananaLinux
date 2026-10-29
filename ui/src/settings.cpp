@@ -6606,7 +6606,7 @@ namespace banana
 		G g[3] = { { "Weak to", {} }, { "Resists", {} }, { "Immune to", {} } };
 		for (int a = 0; a < pkmn::NUM_TYPES; a++)
 		{
-			bool modern = companion && companion->tables() && companion->tables()->cfru;
+			bool modern = companion && companion->tables() && companion->tables()->has.modernTypes;
 			if (!pkmn::typeInGame(a, modern)) continue;
 			int q = pkmn::effect(a, t1, t2, modern);
 			if (q >= 8) g[0].list.push_back({ a, q });
@@ -6978,7 +6978,7 @@ namespace banana
 				else
 					for (size_t f = 0; f < sn.foes.size(); f++)
 					{
-						int q = pkmn::effect(t.moveInfo[mv].type, sn.foes[f].types[0], sn.foes[f].types[1], t.cfru);
+						int q = pkmn::effect(t.moveInfo[mv].type, sn.foes[f].types[0], sn.foes[f].types[1], t.has.modernTypes);
 						if (f == 0) q0 = q;
 						e += (f ? " / " : "") + times(q);
 					}
@@ -7216,7 +7216,7 @@ namespace banana
 		const int PER = 18;	// two columns of nine
 		pkPages = std::max(1, (int)((list.size() + PER - 1) / PER));
 		pkBagPage = std::min(pkBagPage, pkPages - 1);
-		if (list.empty()) wrapped(t.cfru && !t.plainBag ? "Nothing here. (A CFRU hack may keep its bag elsewhere: what this shows is FireRed's bag.)" : "Nothing in this pocket.",
+		if (list.empty()) wrapped(t.has.bagUnsure ? "Nothing here. (A CFRU hack may keep its bag elsewhere: what this shows is FireRed's bag.)" : "Nothing in this pocket.",
 			17, 40, 90, 560, 3, p.muted);
 		for (int i = 0; i < PER && pkBagPage * PER + i < (int)list.size(); i++)
 		{
@@ -7248,7 +7248,7 @@ namespace banana
 		bool known = !sn.dexSeen.empty();
 		std::vector<int> nats;
 		int maxNat = (int)t.dexSpecies.size() - 1;
-		if (!t.cfru) maxNat = std::min(maxNat, 386);
+		if (!t.has.ownDex) maxNat = std::min(maxNat, 386);
 		int seen = 0, caught = 0;
 		for (int n = 1; n <= maxNat; n++)
 		{
@@ -7266,7 +7266,7 @@ namespace banana
 			x += text("Caught", true, 15, x, 28, p.muted, true, 1.0f) + 8;
 			num(std::to_string(caught), 19, x, 25, p.accent);
 		}
-		else text(fit(t.cfru ? "All species (this game keeps its own Pokédex)" : "Pokédex", false, 16, 560), false, 16, 36, 27, p.muted);
+		else text(fit(t.has.ownDex ? "All species (this game keeps its own Pokédex)" : "Pokédex", false, 16, 560), false, 16, 36, 27, p.muted);
 		box("bubble", false, 18, 68, 604, 298);
 		const int PER = 15;	// three columns of five
 		pkPages = std::max(1, (int)((nats.size() + PER - 1) / PER));
@@ -7314,7 +7314,7 @@ namespace banana
 			{
 				int ty = t.speciesTypes[sp][i];
 				if (i == 1 && ty == t.speciesTypes[sp][0]) break;
-				if (!pkmn::typeInGame(ty, t.cfru)) continue;
+				if (!pkmn::typeInGame(ty, t.has.modernTypes)) continue;
 				typeChip(ty, cx, 90);
 				cx += chip(lang::tr("Pokémon types", pkmn::typeName(ty)), 0, 0, 0, true) + 6;
 			}
@@ -7336,7 +7336,7 @@ namespace banana
 		auto tb = companion->tables();
 		pkmn::RomTables none;
 		const pkmn::RomTables& t = tb ? *tb : none;
-		const pkmn::GameInfo* gi = companion->game();
+		const pkmn::GameProfile* gi = companion->game();
 		int kk = std::max(1, (int)std::lround(1 * s));
 		// ---- left: the next goal, its team, how the party does against its type
 		box("bubble", false, 18, 14, 298, 398);
@@ -7346,7 +7346,7 @@ namespace banana
 		for (int i = 0; i < 8 && sn.badges >= 0; i++) if (!(sn.badges >> i & 1)) { next = i; break; }
 		std::string line, who;
 		int type = -1;
-		if (t.cfru)
+		if (t.has.leadersFromTrainers)
 		{
 			if (next >= 0 && next < (int)t.leaders.size())
 			{
@@ -7360,7 +7360,7 @@ namespace banana
 		else if (gi)
 		{
 			int count = 0;
-			const pkmn::Goal* goals = pkmn::goalsFor(gi->gen, count);
+			const pkmn::Goal* goals = pkmn::goalsFor(gi->family, count);
 			int at = next >= 0 ? next : 8;
 			if (sn.champion) line = "Champion! The story is done; the post-game is yours.";
 			else if (at < count)
@@ -7388,7 +7388,7 @@ namespace banana
 			{
 				// (a gym's leader by the Leader class in FireRed, LeafGreen and their hacks: Giovanni's Rocket Hideout and Silph
 				// battles are a Boss's)
-				int cls = t.cfru || (gi && gi->gen == 2 && next >= 0) ? 0x54 : -1;
+				int cls = t.has.leadersFromTrainers || (gi && gi->family == pkmn::FIRERED && next >= 0) ? 0x54 : -1;
 				for (auto& m : t.team(who, &cls)) pkGoalTeam.push_back({ m.species, m.level });
 			}
 		}
@@ -7414,7 +7414,7 @@ namespace banana
 			}
 			y += ((std::min<size_t>(pkGoalTeam.size(), 6) + 1) / 2) * 38 + 6;
 		}
-		if (type >= 0 && pkmn::typeInGame(type, t.cfru) && y < 330)
+		if (type >= 0 && pkmn::typeInGame(type, t.has.modernTypes) && y < 330)
 		{
 			// the party against that type: its best move's multiplier, and what it takes from that type
 			std::string h = "Against " + lang::tr("Pokémon types", pkmn::typeName(type));
@@ -7429,9 +7429,9 @@ namespace banana
 				{
 					uint16_t mv = m.moves[k];
 					if (!mv || mv >= t.moveInfo.size() || t.moveInfo[mv].power <= 1) continue;
-					bestQ = std::max(bestQ, pkmn::effect(t.moveInfo[mv].type, type, type, t.cfru));
+					bestQ = std::max(bestQ, pkmn::effect(t.moveInfo[mv].type, type, type, t.has.modernTypes));
 				}
-				int takes = pkmn::effect(type, m.types[0], m.types[1], t.cfru);
+				int takes = pkmn::effect(type, m.types[0], m.types[1], t.has.modernTypes);
 				text(fit(!m.nick.empty() ? m.nick : t.speciesName(m.species), false, 15, 110), false, 15, 34, y, p.ink);
 				if (bestQ >= 0)
 				{

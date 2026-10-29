@@ -12,7 +12,9 @@
 //    English releases, whose RAM addresses below are the decompilations' symbol files: pret/pokeruby, pokeemerald,
 //    pokefirered). Another game, or another language, shows nothing: the panel is as before. ROM hacks keep their base
 //    game's code: a FireRed one built on CFRU (Skeli's Complete Fire Red Upgrade: Pokémon Unbound and many others) is
-//    told apart by its tables (more than 412 species, the Fairy type in the base stats) and read with them.
+//    told apart by its tables (more than 412 species, the Fairy type in the base stats) and read with them. A game
+//    is a GameProfile (its addresses, its save's and its Pokémon's layouts); a hack that moves its base game's RAM
+//    gets one of its own, told by the ROM's CRC-32. What a game has beyond its base game is RomTables::Features.
 //  - names, types, move data: read from the player's own ROM file once at the start: through the pointers in the
 //    games' own ROM header at 0x100 (Emerald, FireRed, LeafGreen and the hacks built on them, which keep those pointers
 //    up to date when they move a table), else found by their shape (Ruby, Sapphire). Nothing of the games is in
@@ -41,16 +43,58 @@ namespace banana::pkmn
 	int effect(int atk, int t1, int t2, bool modern = false);
 	bool typeInGame(int t, bool modern);	// a type a move or a Pokémon can have in that game
 
-	struct GameInfo
+	// how a game keeps a Pokémon in RAM. A party slot: 100 bytes, encrypted with the personality and trainer ID, its
+	// four parts in one of 24 orders (the games'), or plain (CFRU's byte replacements take the encryption and the
+	// shuffle out: Pokémon Unbound...), or either (not known yet)
+	enum class MonCoding { ENCRYPTED, PLAIN, EITHER };
+	// the battle's own copy of a battler (BattlePokemon: not encrypted), where each field is (the games': 0x58 bytes)
+	struct BattlerLayout
+	{
+		int size = 0x58;
+		int moves = 0x0c, types = 0x21, pp = 0x24, hp = 0x28, level = 0x2a, maxHp = 0x2c, item = 0x2e, nick = 0x30;
+		int ppBonuses = 0x3b, exp = 0x44, pid = 0x48, status = 0x4c;
+		int eggByte = 0x17, eggBit = 0x40;		// (the IV word's egg bit)
+	};
+	struct MonLayout
+	{
+		int size = 100;							// a party slot's bytes
+		MonCoding coding = MonCoding::ENCRYPTED;
+		uint16_t speciesMask = 0xffff;			// the species' bits in its halfword (a hack may pack more in beside it)
+		BattlerLayout battler;
+	};
+
+	// the base game a game is (or a hack is built on): the save's layout, the region and its goals
+	enum Family { RUBY_SAPPHIRE, EMERALD, FIRERED };
+	// where the save keeps the bag, the money and the flags (SaveBlock1), and the key its item counts and money are
+	// XORed with and the Pokédex (SaveBlock2; Ruby and Sapphire have no key)
+	struct SaveLayout
+	{
+		uint32_t flags; int badge0, clear; uint32_t money, key;
+		uint32_t pocket[5]; int count[5];		// Items, Key Items, Poké Balls, TMs & HMs, Berries
+		uint32_t dexOwned = 0x28;				// owned[52], then seen[52]
+	};
+	// a game, or one release of it: what the companion reads and where. Told by the header's code, and by the ROM's
+	// CRC-32 for a profile that names one (a hack that keeps its base game's code but not its RAM: the one with the
+	// CRC is preferred over the code's own)
+	struct GameProfile
 	{
 		const char* code;		// the header's four letters
 		const char* name;
+		uint32_t crc;			// 0: any ROM with the code
+		Family family;
 		uint32_t partyCount, party, battleMons, battleFlags, mainFlags, enemyParty;	// RAM addresses
-		int gen;				// 0 Ruby/Sapphire, 1 Emerald, 2 FireRed/LeafGreen (the save's layout)
-		uint32_t sb1, sb2;		// the save blocks: their addresses (Ruby/Sapphire), or where the pointers to them are
+		bool fixedSave;			// the save blocks at sb1, sb2 (Ruby, Sapphire); else sb1 and sb2 hold pointers to them
+		uint32_t sb1, sb2;
 		uint32_t mapHeader;		// gMapHeader (its region map section at 0x14)
+		SaveLayout save;
+		MonLayout mon;
 	};
-	const GameInfo* detectGame(const uint8_t* header, size_t n);	// the ROM's first bytes (0xB0 at least)
+	// the ROM's first bytes (0xB0 at least); crc: the whole ROM's CRC-32 when known (0 not)
+	const GameProfile* detectGame(const uint8_t* rom, size_t n, uint32_t crc = 0);
+	// the same in a list of one's own (tests)
+	const GameProfile* detectGameIn(const GameProfile* list, size_t count, const uint8_t* rom, size_t n, uint32_t crc);
+	// whether a profile for the ROM's code is told by its CRC-32 (else not worth reading the whole ROM for)
+	bool crcMatters(const uint8_t* rom, size_t n);
 
 	std::string decodeText(const uint8_t* p, size_t max);			// the games' Western character set, to UTF-8
 
@@ -73,13 +117,11 @@ namespace banana::pkmn
 		uint8_t friendship = 0, abilitySlot = 0;
 		int nature() const { return (int)(pid % 25); }
 	};
-	// a party slot (100 bytes): false when empty, or when the checksum is wrong (a slot being written, a wrong address).
-	// coding: the games' own (encrypted with the personality and trainer ID, its four parts in one of 24 orders), or a
-	// CFRU hack's (Pokémon Unbound...: CFRU's byte replacements take the encryption and the shuffle out), or either
-	enum class MonCoding { ENCRYPTED, PLAIN, EITHER };
+	// a party slot: false when empty, or when the checksum is wrong (a slot being written, a wrong address)
 	bool decodeParty(const uint8_t* p, Mon& m, MonCoding coding = MonCoding::ENCRYPTED);
-	// one battler of the battle's own copy (0x58 bytes, not encrypted); species above maxSpecies: none
-	bool decodeBattler(const uint8_t* p, Mon& m, int maxSpecies = 450);
+	bool decodeParty(const uint8_t* p, Mon& m, const MonLayout& layout);
+	// one battler of the battle's own copy; species above maxSpecies: none
+	bool decodeBattler(const uint8_t* p, Mon& m, int maxSpecies = 450, const BattlerLayout& layout = BattlerLayout());
 	const char* statusName(uint32_t status);	// "SLP", "PSN", ... or "" (none)
 	const char* natureName(int nature);		// English, by personality % 25 ("" out of range)
 	// the stat a nature raises and the one it lowers, as Mon::stats numbers them (0 Attack ... 4 Sp. Def): -1 for both
@@ -101,12 +143,22 @@ namespace banana::pkmn
 		std::vector<std::vector<uint8_t>> icons;
 		std::vector<uint8_t> iconPal;
 		std::vector<std::array<uint32_t, 16>> palettes;
+		// what the game has beyond its base game's, which the pages and the reads follow (found in the ROM: a CFRU hack's
+		// tables and patches)
+		struct Features
+		{
+			bool modernTypes = false;			// the type chart since Generation VI, with Fairy
+			bool ownDex = false;				// a Pokédex past the 386 national numbers
+			bool leadersFromTrainers = false;	// the gym leaders found in the trainer table (Leader class), not our goals
+			bool plainMons = false;				// the Pokémon not encrypted (CFRU's patch to GetSubstruct and co.)
+			uint32_t dexRam = 0;				// the Pokédex's seen flags (RAM, fixed; 0 the save's own), then caught
+			int dexBytes = 0;					// each that many bytes
+			uint32_t bagPockets = 0;			// the bag where gBagPockets (here) points, its counts not XORed (CFRU's
+												// "Expanded Bag"; 0 the save's own)
+			bool bagUnsure = false;				// the bag perhaps not the save's own, and not found elsewhere either
+		};
+		Features has;
 		// what the other pages need (empty: not found)
-		bool cfru = false;					// a CFRU hack: expanded tables, the modern type chart
-		bool plainMons = false;				// the Pokémon data not encrypted (CFRU's patch to GetSubstruct and co.)
-		uint32_t dexRam = 0;				// CFRU: the Pokédex's seen flags (RAM, fixed; 0 the games' own), then caught
-		int dexBytes = 0;					// each that many bytes
-		bool plainBag = false;				// CFRU's "Expanded Bag": the pockets where gBagPockets points, counts not XORed
 		int numSpecies = 412;				// the species table's length (with none at 0)
 		std::vector<std::string> abilities;
 		std::vector<std::array<uint8_t, 2>> speciesAbilities;	// by species, from the base stats (0x16, 0x17)
@@ -123,7 +175,7 @@ namespace banana::pkmn
 		uint8_t mapsecNone = 0xff;
 		std::vector<uint16_t> natDex;		// species -> national Pokédex number (0 none)
 		std::vector<uint16_t> dexSpecies;	// national number -> species
-		std::vector<std::string> leaders;	// CFRU: the gym leaders, weakest team first (the order they are met)
+		std::vector<std::string> leaders;	// has.leadersFromTrainers: the gym leaders, weakest team first (the order they are met)
 		std::vector<int> leaderTypes;		// and the type most of their Pokémon have, over all their battles
 		std::shared_ptr<const std::vector<uint8_t>> rom;	// the whole ROM, for the look-ups below
 		long dexEntries = -1, wildHeaders = -1, trainers = -1;
@@ -158,13 +210,13 @@ namespace banana::pkmn
 	// pokemap.cpp: the GBA BIOS's LZ77 (type 0x10) at rom[at]: false when it isn't one, runs past the end or decodes to
 	// more than maxOut; used: the compressed bytes read
 	bool lz77(const uint8_t* rom, size_t n, size_t at, std::vector<uint8_t>& out, size_t maxOut, size_t* used = nullptr);
-	// the region map pictures for t.grids (gen: 0 Ruby/Sapphire, 1 Emerald, 2 FireRed/LeafGreen and their hacks)
+	// the region map pictures for t.grids (gen: the game's Family)
 	void findRegionMaps(RomTables& t, const uint8_t* rom, size_t n, int gen);
 
 	// the guide's goals: the gym leaders and the league in the order they are met (who, where, their type; rom: the
-	// trainer's name in the ROM, for the team), by the game's gen
+	// trainer's name in the ROM, for the team), by the game's family
 	struct Goal { const char* rom; const char* who; const char* where; int type; };
-	const Goal* goalsFor(int gen, int& count);
+	const Goal* goalsFor(Family family, int& count);
 
 	// one line of RetroArch's stdout: true for a READ_CORE_MEMORY reply with data (an error reply: true, bytes empty)
 	bool parseReply(const std::string& line, uint32_t& addr, std::vector<uint8_t>& bytes);
@@ -201,7 +253,7 @@ namespace banana::pkmn
 		bool open(const std::string& rom);
 		void close();
 		bool active() const { return info != nullptr; }
-		const GameInfo* game() const { return info; }
+		const GameProfile* game() const { return info; }
 		// the commands for RetroArch's stdin now ("" none): a set every 250 ms, the next once the last was answered
 		// (RetroArch answers in its menu and paused too; asked again after 10 s without, never piling sets up)
 		std::string requests(double nowMs);
@@ -211,12 +263,13 @@ namespace banana::pkmn
 		std::shared_ptr<const RomTables> tables() const;	// null until read
 		// (tests: the ROM's tables from memory)
 		void setTables(RomTables t);
-		void openWith(const GameInfo* g) { close(); info = g; }
+		void openWith(const GameProfile* g) { close(); info = g; }
 		// the pages open on the panel that need the save's data (Map, Bag, Dex, Guide): read only while one is
 		void wantExt(bool on) { ext = on; }
 	private:
-		const GameInfo* info = nullptr;
-		struct Shared { std::mutex mu; std::shared_ptr<const RomTables> tables; bool ready = false; };
+		const GameProfile* info = nullptr;
+		// (the tables, and the profile the whole ROM's CRC-32 tells, from the thread)
+		struct Shared { std::mutex mu; std::shared_ptr<const RomTables> tables; const GameProfile* profile = nullptr; bool ready = false; };
 		std::shared_ptr<Shared> sh;
 		bool tablesSeen = false;
 		double nextAt = 0, sentAt = 0, errorSince = -1;
@@ -226,10 +279,10 @@ namespace banana::pkmn
 		Snapshot snap, next;
 		std::vector<uint8_t> count, party, flags, mainB, battle, enemy;
 		bool ext = false, wantSave = false;
-		bool bagCfru = false;		// the set's bag read through gBagPockets (a CFRU hack's own bag)
+		uint32_t bagPockets = 0;	// the set's bag read through gBagPockets, here (0 the save's)
 		uint32_t bagSeen[5] = {}; int bagCap[5] = {};	// its pockets, as the last read of gBagPockets had them
 		std::vector<uint8_t> bagPtrB, pocketB[5];
-		int dexCfru = 0;			// the set's Pokédex read: a CFRU hack's own flags, each that many bytes (0 the games')
+		int dexOwn = 0;				// the set's Pokédex read: the game's own flags in RAM, each that many bytes (0 the save's)
 		uint32_t sbUsed[2] = {}, sbSeen[2] = {};	// the save blocks' addresses the set's reads used, and the latest read
 		std::vector<uint8_t> sbp, sb1h, mh, bagB, moneyB, keyB, dexB, flagB, nameB;
 		struct Want { uint32_t addr; int len; std::vector<uint8_t>* into; bool done; };
