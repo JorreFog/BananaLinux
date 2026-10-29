@@ -210,13 +210,20 @@ namespace banana::pkmn
 		m.pid = pid;
 		m.exp = le32(part[0] + 4);
 		m.ppBonuses = part[0][8];
+		m.friendship = part[0][9];
 		for (int i = 0; i < 4; i++) { m.moves[i] = le16(part[1] + i * 2); m.pp[i] = part[1][8 + i]; }
-		m.egg = (p[0x13] & 4) || (le32(part[3] + 4) >> 30 & 1);
+		for (int i = 0; i < 6; i++) m.evs[i] = part[2][i];
+		// the IVs: five bits each (HP, Attack, Defense, Speed, Sp. Atk, Sp. Def), then the egg bit, the ability bit
+		uint32_t iv = le32(part[3] + 4);
+		for (int i = 0; i < 6; i++) m.ivs[i] = (uint8_t)(iv >> (5 * i) & 31);
+		m.abilitySlot = (uint8_t)(iv >> 31);
+		m.egg = (p[0x13] & 4) || (iv >> 30 & 1);
 		m.nick = decodeText(p + 8, 10);
 		m.status = le32(p + 0x50);
 		m.level = p[0x54];
 		m.hp = le16(p + 0x56);
 		m.maxHp = le16(p + 0x58);
+		for (int i = 0; i < 5; i++) m.stats[i] = le16(p + 0x5a + i * 2);
 		return true;
 	}
 
@@ -249,6 +256,21 @@ namespace banana::pkmn
 		if (s & 0x20) return "FRZ";
 		if (s & 0x40) return "PAR";
 		return "";
+	}
+
+	const char* natureName(int n)
+	{
+		static const char* const NATURES[25] = { "Hardy", "Lonely", "Brave", "Adamant", "Naughty", "Bold", "Docile", "Relaxed", "Impish",
+			"Lax", "Timid", "Hasty", "Serious", "Jolly", "Naive", "Modest", "Mild", "Quiet", "Bashful", "Rash", "Calm", "Gentle", "Sassy",
+			"Careful", "Quirky" };
+		return n >= 0 && n < 25 ? NATURES[n] : "";
+	}
+
+	void natureStats(int n, int& up, int& down)
+	{
+		// (the natures run five by five: the one raised by the row, the one lowered by the column)
+		up = n / 5; down = n % 5;
+		if (n < 0 || n >= 25 || up == down) up = down = -1;
 	}
 
 	int maxPP(int base, uint8_t bonuses, int slot) { return base + base * ((bonuses >> (2 * slot)) & 3) / 5; }
@@ -288,6 +310,7 @@ namespace banana::pkmn
 				t.speciesTypes.push_back({ e[6], e[7] });
 				t.genderRatio.push_back(e[0x10]);
 				t.growth.push_back(e[0x13]);
+				t.speciesAbilities.push_back({ e[0x16], e[0x17] });
 			}
 		// moves: 12 bytes each (effect, power, type, accuracy, PP, ...); found by Pound's, Karate Chop's and Double Slap's
 		// power, type, accuracy and PP
@@ -530,13 +553,14 @@ namespace banana::pkmn
 			long bs = romPtr(rom, n, 0x1bc, 28 * (size_t)ns);
 			if (bs >= 0 && rom[bs + 28] == 45 && rom[bs + 28 + 6] == GRASS && rom[bs + 28 + 7] == POISON)
 			{
-				t.speciesTypes.clear(); t.genderRatio.clear(); t.growth.clear();
+				t.speciesTypes.clear(); t.genderRatio.clear(); t.growth.clear(); t.speciesAbilities.clear();
 				for (int i = 0; i < ns; i++)
 				{
 					const uint8_t* e = rom + bs + i * 28;
 					t.speciesTypes.push_back({ e[6], e[7] });
 					t.genderRatio.push_back(e[0x10]);
 					t.growth.push_back(e[0x13]);
+					t.speciesAbilities.push_back({ e[0x16], e[0x17] });
 					if (e[6] == FAIRY || e[7] == FAIRY) t.cfru = true;
 				}
 			}
@@ -550,6 +574,7 @@ namespace banana::pkmn
 				if (e < 32 && nameAt(rom + ab + e, e) > 0)
 				{
 					int na = countNames(rom, n, ab, e, 1000);
+					t.abilities.clear();
 					for (int i = 0; i < na; i++) t.abilities.push_back(decodeText(rom + ab + i * e, e));
 				}
 			}
@@ -754,6 +779,27 @@ namespace banana::pkmn
 	{
 		int gen = n >= 0xb0 && !memcmp(rom + 0xac, "BPEE", 4) ? 1 : n >= 0xb0 && (!memcmp(rom + 0xac, "BPRE", 4) || !memcmp(rom + 0xac, "BPGE", 4)) ? 2 : 0;
 		if (gen) fromHeader(t, rom, n);
+		// no header pointers (Ruby, Sapphire): the ability names by their shape (13 bytes each, the 78 of the games, the
+		// first "-------"), the items by theirs (44 bytes, the first "????????", each with its own index at 14)
+		static const uint8_t none[8] = { 0xae, 0xae, 0xae, 0xae, 0xae, 0xae, 0xae, 0xff };
+		for (const uint8_t* p = rom; t.abilities.empty() && (p = (const uint8_t*)memmem(p, n - (p - rom), none, sizeof none)); p++)
+		{
+			long a = p - rom;
+			if (countNames(rom, n, a, 13, 78) < 78) continue;
+			for (int i = 0; i < 78; i++) t.abilities.push_back(decodeText(rom + a + i * 13, 13));
+		}
+		static const uint8_t unknown[9] = { 0xac, 0xac, 0xac, 0xac, 0xac, 0xac, 0xac, 0xac, 0xff };
+		for (const uint8_t* p = rom; t.items.empty() && (p = (const uint8_t*)memmem(p, n - (p - rom), unknown, sizeof unknown)); p++)
+		{
+			size_t a = p - rom;
+			if (a + 3 * 44 > n || le16(p + 14) != 0 || le16(p + 44 + 14) != 1 || le16(p + 88 + 14) != 2) continue;
+			for (int i = 0; i < 2000 && a + (i + 1) * 44 <= n; i++)
+			{
+				const uint8_t* e = rom + a + i * 44;
+				if (nameAt(e, 14) < 0 && le16(e + 14) != i) break;
+				t.items.push_back({ decodeText(e, 14), e[0x1a] });
+			}
+		}
 		mapTables(t, rom, n, gen);
 		findRegionMaps(t, rom, n, gen);
 		// species -> national number: a run of u16s 1, 2, 3, ... (Bulbasaur to Celebi keep their numbers)
@@ -863,6 +909,14 @@ namespace banana::pkmn
 	{
 		if (i < items.size()) return items[i].name;
 		return "#" + std::to_string(i);
+	}
+
+	std::string RomTables::abilityName(const Mon& m) const
+	{
+		if (m.species >= speciesAbilities.size()) return "";
+		const auto& a = speciesAbilities[m.species];
+		int id = m.abilitySlot && a[1] ? a[1] : a[0];
+		return id > 0 && id < (int)abilities.size() ? abilities[id] : "";
 	}
 
 	std::string RomTables::mapName(int mapsec) const
@@ -1319,7 +1373,9 @@ namespace banana::pkmn
 				k += m.nick + "|" + std::to_string(m.pid) + "," + std::to_string(m.exp) + "," + std::to_string(m.item) + "," + std::to_string(m.species) + "," + std::to_string(m.level) + "," + std::to_string(m.hp) + "," +
 					std::to_string(m.maxHp) + "," + std::to_string(m.status) + "," + std::to_string(m.types[0]) + "," + std::to_string(m.types[1]);
 				for (int i = 0; i < 4; i++) k += "," + std::to_string(m.moves[i]) + ":" + std::to_string(m.pp[i]);
-				k += ";";
+				for (int i = 0; i < 5; i++) k += "," + std::to_string(m.stats[i]);
+				for (int i = 0; i < 6; i++) k += "," + std::to_string(m.ivs[i]) + ":" + std::to_string(m.evs[i]);
+				k += "," + std::to_string(m.friendship) + "," + std::to_string(m.abilitySlot) + ";";
 			};
 			for (auto& m : x.party) one(m);
 			one(x.lead);

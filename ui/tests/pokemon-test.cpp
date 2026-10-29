@@ -54,8 +54,9 @@ static std::vector<uint8_t> partySlot(const Plain& m, bool breakSum = false, boo
 	uint8_t g[12] = {}, a[12] = {}, e[12] = {}, x[12] = {};
 	put16(g, m.species); put16(g + 2, m.item); put32(g + 4, (uint32_t)(m.level * m.level * m.level + 40 * m.level)); g[8] = m.ppBonuses; g[9] = 70;
 	for (int i = 0; i < 4; i++) { put16(a + i * 2, m.moves[i]); a[8 + i] = m.pp[i]; }
-	e[0] = 4; e[6] = 10;
-	put32(x + 4, (31u) | (m.egg ? 1u << 30 : 0));
+	e[0] = 4; e[1] = 252; e[3] = 6; e[6] = 10;
+	// IVs 31, 20, 15, 10, 5, 0 (HP, Attack, Defense, Speed, Sp. Atk, Sp. Def), the second ability when the personality is odd
+	put32(x + 4, 31u | 20u << 5 | 15u << 10 | 10u << 15 | 5u << 20 | (m.egg ? 1u << 30 : 0) | (m.pid & 1) << 31);
 	uint8_t d[48];
 	const char* ord = ORDERS[plain ? 0 : m.pid % 24];
 	for (int pos = 0; pos < 4; pos++)
@@ -70,6 +71,7 @@ static std::vector<uint8_t> partySlot(const Plain& m, bool breakSum = false, boo
 		put32(&p[0x20 + i], v);
 	}
 	put32(&p[0x50], m.status); p[0x54] = m.level; put16(&p[0x56], m.hp); put16(&p[0x58], m.maxHp);
+	for (int i = 0; i < 5; i++) put16(&p[0x5a + i * 2], (uint16_t)(m.level * 2 + 1 + i));	// Attack, Defense, Speed, Sp. Atk, Sp. Def
 	return p;
 }
 
@@ -279,6 +281,24 @@ int main(int argc, char** argv)
 		EQ(d.ppBonuses, (uint8_t)0x1b);
 		EQ(std::string(statusName(d.status)), std::string("PAR"));
 		CHECK(!d.egg);
+		EQ(d.friendship, (uint8_t)70);
+		EQ(d.stats[0], (uint16_t)47); EQ(d.stats[2], (uint16_t)49); EQ(d.stats[4], (uint16_t)51);
+		EQ(d.ivs[0], (uint8_t)31); EQ(d.ivs[1], (uint8_t)20); EQ(d.ivs[3], (uint8_t)10); EQ(d.ivs[5], (uint8_t)0);
+		EQ(d.evs[0], (uint8_t)4); EQ(d.evs[1], (uint8_t)252); EQ(d.evs[3], (uint8_t)6); EQ(d.evs[5], (uint8_t)0);
+		EQ((int)d.abilitySlot, (int)(m.pid & 1));
+		EQ(d.nature(), (int)(m.pid % 25));
+	}
+	// ---- the natures: five by five, the row raised, the column lowered (Attack, Defense, Speed, Sp. Atk, Sp. Def)
+	{
+		int up, down;
+		EQ(std::string(natureName(3)), std::string("Adamant"));
+		natureStats(3, up, down); EQ(up, 0); EQ(down, 3);		// Adamant: Attack up, Sp. Atk down
+		EQ(std::string(natureName(10)), std::string("Timid"));
+		natureStats(10, up, down); EQ(up, 2); EQ(down, 0);		// Timid: Speed up, Attack down
+		EQ(std::string(natureName(24)), std::string("Quirky"));
+		natureStats(24, up, down); EQ(up, -1); EQ(down, -1);	// Quirky: neither
+		natureStats(12, up, down); EQ(up, -1);					// Serious
+		EQ(std::string(natureName(25)), std::string(""));
 	}
 	{
 		Plain m{ 7, 99, "EGG", 152, 0, { 33, 45, 0, 0 }, { 35, 40, 0, 0 }, 0, 0, 5, 20, 20, true };
@@ -553,6 +573,19 @@ int main(int argc, char** argv)
 		move(1, 40, NORMAL, 100, 35); move(2, 50, FIGHTING, 100, 25); move(3, 15, NORMAL, 85, 10);
 		move(33, 35, NORMAL, 95, 35); move(45, 0, NORMAL, 100, 40); move(55, 40, WATER, 100, 25); move(189, 20, GROUND, 100, 10);
 		move(44, 60, DARK, 100, 25); move(10, 40, NORMAL, 100, 35); move(52, 40, FIRE, 100, 25); move(98, 40, NORMAL, 100, 30);
+		names(0x48000, 13, 78, { 0xae, 0xae, 0xae, 0xae, 0xae, 0xae, 0xae, 0xff }, [](size_t i) -> std::string
+		{
+			return i == 67 ? "TORRENT" : i == 53 ? "PICKUP" : i == 51 ? "KEEN EYE" : i == 44 ? "RAIN DISH" : i == 66 ? "BLAZE" : "ABILITY" + std::to_string(i);
+		});
+		auto abilities = [&](int sp, int a, int b) { rom[st + sp * 28 + 0x16] = (uint8_t)a; rom[st + sp * 28 + 0x17] = (uint8_t)b; };
+		abilities(283, 67, 0); abilities(288, 53, 0); abilities(309, 51, 44); abilities(280, 66, 0);
+		for (int i = 0; i < 20; i++)
+		{
+			uint8_t* e = &rom[0x49000 + i * 44];
+			std::vector<uint8_t> n = i == 0 ? std::vector<uint8_t>(8, 0xac) : enc(i == 13 ? "POTION" : "ITEM" + std::to_string(i));
+			memcpy(e, n.data(), n.size()); e[n.size()] = 0xff;
+			put16(e + 14, (uint16_t)i);
+		}
 		addExtras(rom, st, 0x50000);
 		Plain a{ 0x11111111, 0x22222222, "MUDKIP", 283, 13, { 33, 45, 55, 189 }, { 35, 40, 21, 10 }, 0x30, 0, 14, 38, 41, false };
 		Plain b{ 0x33333335, 0x22222222, "Ziggy", 288, 0, { 33, 45, 0, 0 }, { 35, 40, 0, 0 }, 0, 0x08, 9, 11, 30, false };
@@ -601,6 +634,16 @@ int main(int argc, char** argv)
 			EQ((int)tt->moveInfo[189].type, (int)GROUND);
 			EQ(tt->icons.size(), (size_t)413);
 			EQ(tt->palettes.size(), (size_t)3);
+			EQ(tt->abilities.size(), (size_t)78);
+			EQ(tt->itemName(13), std::string("POTION"));
+			Mon mk; mk.species = 283; mk.abilitySlot = 1;
+			EQ(tt->abilityName(mk), std::string("TORRENT"));	// (one ability: the second slot is the first)
+			mk.species = 309;
+			EQ(tt->abilityName(mk), std::string("RAIN DISH"));
+			mk.abilitySlot = 0;
+			EQ(tt->abilityName(mk), std::string("KEEN EYE"));
+			mk.species = 411;
+			EQ(tt->abilityName(mk), std::string(""));			// (none in the table)
 			if (!dir.empty()) CHECK(iconsPng(*tt, { { 283, false }, { 288, false }, { 309, false }, { 280, false }, { 286, false }, { 0, true } }, dir + "/poke-icons.png"));
 		}
 		// another game's header: nothing to do

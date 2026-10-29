@@ -514,7 +514,7 @@ namespace banana
 		// Pokédex's page and the entry open; the guide's look-ups (a trainer's team: a ROM search) kept by goal
 		enum { PK_PARTY, PK_BATTLE, PK_GAME, PK_MON, PK_MAP, PK_BAG, PK_DEX, PK_DEXMON, PK_GUIDE };
 		enum { PK_TABS = 7 };
-		int pkView = PK_PARTY, pkMon = 0;
+		int pkView = PK_PARTY, pkMon = 0, pkMonPage = 0;	// (the summary's right column: 0 the moves, 1 the stats)
 		bool pkBattle = false;
 		float pkTabX[PK_TABS] = {}, pkTabW[PK_TABS] = {};
 		int pkPocket = 0, pkBagPage = 0, pkDexPage = 0, pkDexNat = 0, pkPages = 1;

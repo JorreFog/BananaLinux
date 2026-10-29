@@ -6157,7 +6157,7 @@ namespace banana
 		gTitle = title; gSystem = system; gScreen = screen; gTouch = touch;
 		gHotkeys = getConfValue(data + "/settings.conf", "ra_hotkeys", "on") != "off";
 		gFlash = gDown = -1; gSeen = -1; awardsSeen = 0; wake = false;
-		pkView = PK_PARTY; pkMon = 0; pkBattle = false; pkPocket = pkBagPage = pkDexPage = pkDexNat = 0; pkGoalKey.clear(); pkGoalTeam.clear();
+		pkView = PK_PARTY; pkMon = pkMonPage = 0; pkBattle = false; pkPocket = pkBagPage = pkDexPage = pkDexNat = 0; pkGoalKey.clear(); pkGoalTeam.clear();
 		gcView = gcomp::P_STATUS; gcScreen = 0; gcScreens = 1; gcList = gcRow = -1; gcBattle = false; gcHits.clear();
 		if (gameComp) gameComp->want(gcView);
 		raw = std::make_shared<RaWatch>();
@@ -6306,6 +6306,7 @@ namespace banana
 					if (lx >= 526) pkView = PK_PARTY;
 					else if (lx >= 18 && (int)((lx - 18) / 80) < (int)party.size()) pkMon = (int)((lx - 18) / 80);
 				}
+				else if (!down && pkView == PK_MON && lx >= 326 && ly >= 14 && ly < 336) pkMonPage ^= 1;	// (the right column: moves, stats)
 				else if (!down && (pkView == PK_BAG || pkView == PK_DEX) && ly >= 372 && ly < 418)
 				{
 					// the pager: the left third back a page, the right third on
@@ -6496,6 +6497,7 @@ namespace banana
 			".##..##..", "..####..." };
 		const char* const PX_FEMALE[9] = { "..###..", ".##.##.", "##...##", "##...##", ".##.##.", "..###..", "...#...", ".#####.", "...#..." };
 		const char* const PX_ITEM[7] = { "...#...", "..###..", ".##o##.", "##ooo##", ".##o##.", "..###..", "...#..." };
+		const char* const PX_UP[3] = { "..#..", ".###.", "#####" }, * const PX_DOWN[3] = { "#####", ".###.", "..#.." };
 		const uint32_t HP_GREEN = 0x58d068, HP_YELLOW = 0xf8c030, HP_RED = 0xf05848, EXP_BLUE = 0x58a8f8;
 		uint32_t statusColour(const std::string& st)
 		{
@@ -6791,37 +6793,94 @@ namespace banana
 			be->fill(std::round(X(36)), std::round(X(200)), std::round(X(268)), std::max(1.0f, std::round(X(2))), p.line);
 			pokeMatchups(p, m.types[0], m.types[1], 36, 210, 270, 328);
 		}
-		// ---- right: the four moves, each with its type, power and PP
-		for (int i = 0; i < 4; i++)
+		// ---- right: the moves or the stats, named at the column's top (a tap on the column changes which)
+		static const char* const SIDE[2] = { "Moves", "Stats" };
+		for (int i = 0; i < 2; i++)
 		{
-			float y = 26 + i * 77;
-			if (i) be->fill(std::round(X(336)), std::round(X(y - 6)), std::round(X(268)), std::max(1.0f, std::round(X(2))), p.line);
-			uint16_t mv = m.moves[i];
-			if (!mv) { text("-", true, 19, 348, y + 6, p.muted); continue; }
-			bool known = mv < t.moveInfo.size();
-			uint32_t tc = known ? pkmn::typeColor(t.moveInfo[mv].type) : 0x808080;
-			be->fill(std::round(X(336)), std::round(X(y)), std::round(X(4)), std::round(X(62)), Color::hex(tc));
-			bool out = m.pp[i] == 0;
-			text(fit(t.moveName(mv), true, 19, 256), true, 19, 348, y + 2, out ? p.muted : p.ink);
-			if (known) typeChip(t.moveInfo[mv].type, 348, y + 34);
-			// PWR n  PP a/b (right-aligned)
-			int mx = known ? pkmn::maxPP(t.moveInfo[mv].pp, m.ppBonuses, i) : 0;
-			std::string pp = std::to_string(m.pp[i]) + (mx ? "/" + std::to_string(mx) : "");
-			float r = 604;
-			float pw = num(pp, 16, 0, 0, p.ink, true);
-			num(pp, 16, r - pw, y + 34, out ? Color::hex(0xff8a96) : p.ink);
-			r -= pw + 5;
-			r -= text("PP", true, 13, 0, 0, p.muted, true, 0, true);
-			text("PP", true, 13, r, y + 37, p.muted, true);
-			if (known)
+			float w = text(SIDE[i], true, 15, 0, 0, p.ink, true, 1.0f, true);
+			float tx = std::round(403 + i * 134 - w / 2);
+			text(SIDE[i], true, 15, tx, 22, i == pkMonPage ? p.accent : p.muted, true, 1.0f);
+			if (i == pkMonPage) be->fill(std::round(X(tx)), std::round(X(42)), std::round(X(w)), std::round(X(3)), p.accent);
+		}
+		if (pkMonPage == 0)
+			// the four moves, each with its type, power and PP
+			for (int i = 0; i < 4; i++)
 			{
-				std::string pwr = t.moveInfo[mv].power > 1 ? std::to_string(t.moveInfo[mv].power) : "-";
-				r -= 12;
-				float ww = num(pwr, 16, 0, 0, p.ink, true);
-				num(pwr, 16, r - ww, y + 34, p.accent);
-				r -= ww + 5;
-				r -= text("Pwr", true, 13, 0, 0, p.muted, true, 0, true);
-				text("Pwr", true, 13, r, y + 37, p.muted, true);
+				float y = 58 + i * 69;
+				if (i) be->fill(std::round(X(336)), std::round(X(y - 6)), std::round(X(268)), std::max(1.0f, std::round(X(2))), p.line);
+				uint16_t mv = m.moves[i];
+				if (!mv) { text("-", true, 19, 348, y + 6, p.muted); continue; }
+				bool known = mv < t.moveInfo.size();
+				uint32_t tc = known ? pkmn::typeColor(t.moveInfo[mv].type) : 0x808080;
+				be->fill(std::round(X(336)), std::round(X(y)), std::round(X(4)), std::round(X(56)), Color::hex(tc));
+				bool out = m.pp[i] == 0;
+				text(fit(t.moveName(mv), true, 19, 256), true, 19, 348, y + 2, out ? p.muted : p.ink);
+				if (known) typeChip(t.moveInfo[mv].type, 348, y + 32);
+				// PWR n  PP a/b (right-aligned)
+				int mx = known ? pkmn::maxPP(t.moveInfo[mv].pp, m.ppBonuses, i) : 0;
+				std::string pp = std::to_string(m.pp[i]) + (mx ? "/" + std::to_string(mx) : "");
+				float r = 604;
+				float pw = num(pp, 16, 0, 0, p.ink, true);
+				num(pp, 16, r - pw, y + 32, out ? Color::hex(0xff8a96) : p.ink);
+				r -= pw + 5;
+				r -= text("PP", true, 13, 0, 0, p.muted, true, 0, true);
+				text("PP", true, 13, r, y + 35, p.muted, true);
+				if (known)
+				{
+					std::string pwr = t.moveInfo[mv].power > 1 ? std::to_string(t.moveInfo[mv].power) : "-";
+					r -= 12;
+					float ww = num(pwr, 16, 0, 0, p.ink, true);
+					num(pwr, 16, r - ww, y + 32, p.accent);
+					r -= ww + 5;
+					r -= text("Pwr", true, 13, 0, 0, p.muted, true, 0, true);
+					text("Pwr", true, 13, r, y + 35, p.muted, true);
+				}
+			}
+		else if (m.egg) wrapped("Nothing to see until it hatches.", 16, 336, 60, 268, 3, p.muted);
+		else
+		{
+			// the nature, the ability, the held item, friendship
+			std::string ab = t.abilityName(m);
+			const std::string about[4][2] = { { "Nature", pkmn::natureName(m.nature()) }, { "Ability", ab.empty() ? "-" : ab },
+				{ "Item", m.item ? t.itemName(m.item) : "None" }, { "Friendship", std::to_string(m.friendship) } };
+			for (int i = 0; i < 4; i++)
+			{
+				float y = 58 + i * 26;
+				float lw = text(about[i][0], true, 13, 336, y + 3, p.muted, true, 1.0f);
+				std::string v = fit(about[i][1], true, 16, 268 - lw - 12);
+				float vw = text(v, true, 16, 0, 0, p.ink, false, 0, true);
+				text(v, true, 16, 604 - vw, y, p.ink);
+			}
+			be->fill(std::round(X(336)), std::round(X(164)), std::round(X(268)), std::max(1.0f, std::round(X(2))), p.line);
+			// the stats in the summary's order, each with its IV (31 the best: in the accent) and EVs; the one the nature
+			// raises in red with a mark up, the one it lowers in blue with a mark down (as the games colour them)
+			static const char* const STAT[6] = { "HP", "Attack", "Defense", "Sp. Atk", "Sp. Def", "Speed" };
+			static const int IV[6] = { 0, 1, 2, 4, 5, 3 };	// (Mon::ivs and evs: HP, Attack, Defense, Speed, Sp. Atk, Sp. Def)
+			int up, down;
+			pkmn::natureStats(m.nature(), up, down);
+			auto right = [&](const std::string& v, float size, float r, float y, const Color& c) { num(v, size, r - num(v, size, 0, 0, c, true), y, c); };
+			int evTotal = 0;
+			for (int e : m.evs) evTotal += e;
+			text("EVs " + std::to_string(evTotal) + "/510", true, 12, 336, 174, p.muted, true, 1.0f);
+			for (int i = 0; i < 2; i++)
+			{
+				const char* h = i ? "EV" : "IV";
+				float r = i ? 604 : 534;
+				text(h, true, 12, r - text(h, true, 12, 0, 0, p.muted, true, 1.0f, true), 174, p.muted, true, 1.0f);
+			}
+			int ka = std::max(1, (int)std::lround(2 * s));
+			for (int i = 0; i < 6; i++)
+			{
+				float y = 196 + i * 22;
+				int st = IV[i] - 1;	// (Mon::stats: no HP)
+				bool raised = i && st == up, lowered = i && st == down;
+				Color c = raised ? Color::hex(HP_RED) : lowered ? Color::hex(EXP_BLUE) : p.ink;
+				float lw = text(STAT[i], true, 15, 336, y, c);
+				if (raised || lowered) sprite(raised ? PX_UP : PX_DOWN, 3, 336 + lw + 6, y + 6, ka, [&](char) { return c; });
+				right(std::to_string(i ? m.stats[st] : m.maxHp), 16, 466, y - 1, p.ink);
+				int iv = m.ivs[IV[i]], ev = m.evs[IV[i]];
+				right(std::to_string(iv), 15, 534, y, iv == 31 ? p.accent : p.ink);
+				right(std::to_string(ev), 15, 604, y, ev ? p.ink : p.muted);
 			}
 		}
 		// ---- the members to switch to, and back to the party

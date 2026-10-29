@@ -1,7 +1,7 @@
 #pragma once
 // banana-ui: the Pokémon companion on the game panel (Settings > Other systems > Pokémon companion). While a Game Boy
 // Advance Pokémon game plays in RetroArch on one panel, the other shows the party (levels, HP, status, moves and their
-// PP) and, in a battle, the foe with its types and how each of the lead's moves does against it.
+// PP; a member's stats, IVs, EVs, nature and ability) and, in a battle, the foe with its types and how each of the lead's moves does against it.
 //
 // The idea is PokeDaisy's (https://github.com/lidor30/pokedaisy, by Lidor Itzhari): a live companion for the Pokémon
 // games on a handheld's second screen. None of its code is here (it is GPL-3.0, Banana MIT): the layouts below are
@@ -66,6 +66,12 @@ namespace banana::pkmn
 		uint8_t types[2] = { 255, 255 };	// in a battle (the battle's own copy); else from the ROM's table
 		bool egg = false;
 		uint32_t pid = 0, exp = 0;			// personality (gender, with the species' ratio), experience points
+		// a party member's (not a battler's): its stats (HP is maxHp), IVs and EVs, friendship, which of the species'
+		// two abilities it has (1 the second)
+		uint16_t stats[5] = {};				// Attack, Defense, Speed, Sp. Atk, Sp. Def (the games' order)
+		uint8_t ivs[6] = {}, evs[6] = {};	// HP, Attack, Defense, Speed, Sp. Atk, Sp. Def
+		uint8_t friendship = 0, abilitySlot = 0;
+		int nature() const { return (int)(pid % 25); }
 	};
 	// a party slot (100 bytes): false when empty, or when the checksum is wrong (a slot being written, a wrong address).
 	// coding: the games' own (encrypted with the personality and trainer ID, its four parts in one of 24 orders), or a
@@ -75,6 +81,10 @@ namespace banana::pkmn
 	// one battler of the battle's own copy (0x58 bytes, not encrypted); species above maxSpecies: none
 	bool decodeBattler(const uint8_t* p, Mon& m, int maxSpecies = 450);
 	const char* statusName(uint32_t status);	// "SLP", "PSN", ... or "" (none)
+	const char* natureName(int nature);		// English, by personality % 25 ("" out of range)
+	// the stat a nature raises and the one it lowers, as Mon::stats numbers them (0 Attack ... 4 Sp. Def): -1 for both
+	// when it changes neither (Hardy, Docile, Serious, Bashful, Quirky)
+	void natureStats(int nature, int& up, int& down);
 	int maxPP(int basePP, uint8_t ppBonuses, int slot);
 
 	struct MoveInfo { uint8_t power = 0, type = 0, accuracy = 0, pp = 0; };
@@ -99,6 +109,7 @@ namespace banana::pkmn
 		bool plainBag = false;				// CFRU's "Expanded Bag": the pockets where gBagPockets points, counts not XORed
 		int numSpecies = 412;				// the species table's length (with none at 0)
 		std::vector<std::string> abilities;
+		std::vector<std::array<uint8_t, 2>> speciesAbilities;	// by species, from the base stats (0x16, 0x17)
 		struct Item { std::string name; uint8_t pocket = 0; };
 		std::vector<Item> items;
 		std::vector<std::string> mapNames;	// by region map section (MAPSEC); "" none
@@ -126,6 +137,8 @@ namespace banana::pkmn
 		// a species' icon as 32x32 RGBA (false: none in the ROM's tables); egg: the egg's
 		bool iconRGBA(uint16_t species, bool egg, std::vector<uint8_t>& rgba) const;
 		std::string itemName(uint16_t i) const;
+		// a party member's ability ("" not known): the species' second when slot is 1 and it has one, else its first
+		std::string abilityName(const Mon& m) const;
 		std::string mapName(int mapsec) const;
 		// a Pokédex entry by national number: false when the ROM has none
 		struct DexEntry { std::string category, text; int height = 0, weight = 0; };	// (decimetres, hectograms)
