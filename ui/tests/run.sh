@@ -38,7 +38,13 @@ for size in 640x480 1024x768; do
     check "battery 4%: notice hidden"      # the charger on
     [ "$(grep -c 'notice Battery low: 19%' "$log")" = 2 ] || { echo "FAIL $size: the notice didn't come back after charging"; fail=1; }
     grep -q "battery 18%" "$log" && { echo "FAIL $size: a second notice in the same step"; fail=1; }
-    for s in boot-drop boot-word boot-click home lib lib2 ready settings settings-list settings-system settings-tz battery-low battery-empty; do
+    # the splash is one screen now (no second panel, no console/cartridge): only -top is written for it
+    for s in boot-drop boot-word boot-click; do
+        f=$OUT/$size-$s-top.png
+        [ -s "$f" ] || { echo "FAIL $size: no $f"; fail=1; continue; }
+        [ "$(convert "$f" -format '%[fx:standard_deviation>0.01]' info:)" = 1 ] || { echo "FAIL $size: $f is blank"; fail=1; }
+    done
+    for s in home lib lib2 ready settings settings-list settings-system settings-tz battery-low battery-empty; do
         for p in top bot; do
             f=$OUT/$size-$s-$p.png
             [ -s "$f" ] || { echo "FAIL $size: no $f"; fail=1; continue; }

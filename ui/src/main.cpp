@@ -633,8 +633,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			static Splash sp;
 			static bool loaded = false;
 			if (!loaded && !(loaded = sp.load(o.splash, o.banana + "/banana-48.png", variant, o.w, o.h))) { logf("no splash assets in %s", o.splash.c_str()); return 1; }
-			sp.draw(be.canvas(0), be.canvas(1), t, ready != 0);
-			if (!save(0, o.headless + name + "-top.png") || !save(1, o.headless + name + "-bot.png")) return 1;
+			sp.draw(be.canvas(0), t, ready != 0);
+			if (!save(0, o.headless + name + "-top.png")) return 1;
 			logf("splash %s at %.0f ms", name.c_str(), t);
 		}
 		else if (op == "boot")
@@ -706,21 +706,20 @@ static Splash gSplash;
 
 // plays until the intro is over and the menu is ready (with the animation off: only the wait for the menu)
 static void playSplash(Display& disp, SoftBackend& be, const Options& o, const std::string& variant, bool on,
-	std::atomic<bool>& ready, Sound& sound, int sig)
+	std::atomic<bool>& ready, int sig)
 {
 	if (!on || !gSplash.load(o.splash, o.banana + "/banana-48.png", variant, be.width(), be.height()))
 	{
 		while (!ready) usleep(2000);
 		return;
 	}
-	gSplash.onCue = [&sound](const std::string& n) { sound.play(n); };
 	double t0 = nowMs();
 	for (;;)
 	{
 		double t = nowMs() - t0;
 		bool r = ready;
 		if (gSplash.finished(t, r)) break;
-		gSplash.draw(be.canvas(0), be.canvas(1), t, r);
+		gSplash.draw(be.canvas(0), t, r);
 		showFrame(disp, be, sig);
 		int wait = gSplash.nextFrame(nowMs() - t0, ready);
 		if (wait > 16) usleep(std::min(wait, 50) * 1000);	// waiting on the library: look again now and then
@@ -1042,7 +1041,7 @@ int main(int argc, char** argv)
 		uiPtr->finishWork();
 		ready = true;
 	});
-	playSplash(disp, be, o, variant, settings["splash"] != "off", ready, sound, sigPipe[0]);
+	playSplash(disp, be, o, variant, settings["splash"] != "off", ready, sigPipe[0]);
 	loader.join();
 	Menu* ui = uiPtr.get();
 	ui->setLog([](const std::string& m) { logf("%s", m.c_str()); });

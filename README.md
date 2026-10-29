@@ -1,12 +1,19 @@
 # Banana Pocket
 
 Banana for the **Retroid Pocket Classic** (Qualcomm Snapdragon G1 Gen 2 / SM4450): a read-only squashfs
-root, an exFAT data partition, a Pixel UI drawn on the CPU, and no systemd, no compositor and no sound
-server. It boots from two A/B root slots, so an update never touches the running system.
+root, an exFAT data partition, a Pixel UI drawn on the CPU, and no systemd and no sound server. The menu
+draws straight on KMS (no compositor; only a running game gets `cage`, a kiosk one). It boots from two A/B
+root slots, so an update never touches the running system.
+
+The menu is drawn as the original Banana UI's **bottom screen**: a raised bezel on a dot grid, a boxed system
+card, a carousel of square tiles whose selection is a raised gold tile with a label strip, and the button pills
+along the bottom — in five palettes (`pocket`, `pocket-ocean`, `pocket-sakura`, `pocket-sunset`,
+`pocket-terminal`). Choosing a game drops its box art into a console slot as a cartridge while it starts.
 
 This repository is **early access**. It is a work in progress, built from source, and tested in QEMU on
 every image the CI produces. The hardware is real: the panel timings, the AW88166 amplifiers' PLL, the
-Qualcomm AudioReach DSP graph and the power/sleep behaviour are all measured on the handheld.
+Qualcomm AudioReach DSP graph and the power/sleep behaviour are all measured on the handheld — `docs/BOOT-SOUND.md`
+is one such trail (why the first audio used to take ~20 s, and what fixed it to ~8 s).
 
 ## Screenshots
 
@@ -24,8 +31,8 @@ All of these are the 1240×1080 panel in QEMU, taken by the boot test (`tools/qe
 
 | Part | What |
 |---|---|
-| `banana-ui` | the menu: a ROCKNIXDS Pixel frontend with a software Backend, KMS dumb buffers, inotify-watched ROM folders |
-| `bananad` | the daemon: input, sleep, battery, LEDs, the sound route, the clock, Wi-Fi and the RTC alarm |
+| `banana-ui` | the menu: the layout engine (ROCKNIXDS Pixel's, imported unchanged) with a software Backend, KMS dumb buffers, inotify-watched ROM folders |
+| `bananad` | the daemon: input, sleep, battery, LEDs, the sound route, the clock and Wi-Fi |
 | `banana-perf` | the clock profiles: `ui`, `powersave`, `balanced`, `performance` |
 | RetroArch + cores | the emulators, launched from the library with the menu's settings |
 

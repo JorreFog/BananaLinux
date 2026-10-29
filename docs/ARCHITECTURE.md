@@ -44,7 +44,10 @@ applies an update in the VM and boots the other slot, reading `extlinux.conf` as
    clocks. Wi-Fi, the clock and the rest go to the background.
 4. init starts `banana-ui`. It opens the panel and plays the boot animation from its first frame while another
    thread reads the library and builds the menu; when both are done it dissolves into the menu (four steps of an
-   ordered dither in the animation's own pixel size). `splash = off` in settings.conf goes straight to the menu.
+   ordered dither in the animation's own pixel size). The animation is one screen (the panel's), so there is no
+   second panel and no console/cartridge: the pixel bunch is at rest, BANANAOS types itself in, a shine runs over
+   the bananas and LOADING ticks until the menu takes over, and there is no click. `splash = off` in settings.conf
+   goes straight to the menu.
 
 What is worth measuring on the device: OpenABL to kernel, kernel to init (the MMC probe and `rootwait`), and init
 to the menu's first frame. The kernel's `initcall_debug` and banana-ui's log (it logs the library scan's time)
@@ -88,7 +91,8 @@ ROCKNIXDS, ES is the Source and its GL renderer the Backend. In Banana:
 
 The RPC has one screen, so the layout is the DS's 640-wide one at the panel's scale: the canvas is 640 wide and as
 tall as the panel allows (640x557 at 1.9375). `themes/pocket.json` is the single-screen theme (status bar, the
-shelf of systems at home, the game list in the library, a launch card); `src/settings.cpp` draws the setting's
+shelf of systems at home, the game list in the library, a launch card that drops the game's art into a console slot
+as a cartridge -- the insert the boot animation used to end on); `src/settings.cpp` draws the setting's
 description and help in the strip under the list where a two-screen handheld put them on the second panel.
 
 **Settings** (`src/settings.cpp`, Start): drawn with the engine's own box styles and Pixelify Sans through the

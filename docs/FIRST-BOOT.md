@@ -18,9 +18,9 @@ the internal Android is still there.
 
 ## What should happen
 
-1. A second or two after power-on, the boot animation on the panel: the bananas drop, BANANAOS types, the cartridge
-   goes in. The very first boot spends a few more seconds before it, making the data partition from the rest of the
-   card.
+1. A second or two after power-on, the boot animation on the panel: the bananas at rest, BANANAOS typing itself in,
+   LOADING ticking. The very first boot spends a few more seconds before it, making the data partition from the rest
+   of the card.
 2. The first-time setup, on the panel: Wi-Fi (the networks around, the password on the keyboard), the time zone, a
    RetroAchievements account, a ScreenScraper account; B skips it (Settings > System > First-time setup brings it
    back), A on Finish ends it.
