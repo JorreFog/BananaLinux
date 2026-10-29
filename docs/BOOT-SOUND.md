@@ -18,9 +18,13 @@ Cross-reference: `docs/RPC-PORT.md` ("The menu's audio delay") and `docs/ARCHITE
 - **Fix A** (kernel patch `0062-ASoC-codecs-aw88166-lock-on-the-i2s-clocks-not-the-acf-re-upload.patch`): retry the
   light start sequence on a short timer, without the ACF re-upload, so the amp locks a few attempts after the first
   write starts BCLK. The final failure line now carries the `SYSST` value.
-- **Fix B** (userspace, in progress): a second, independent ~7 s is lost *before* the card binds — `q6apm`'s first
-  `APM_CMD_GET_SPF_STATE` times out (`wait_event_timeout(..., 5 * HZ)` in `audioreach_send_cmd_sync()`), and only then
-  does the DAIS service → rx_macro → SoundWire → WCD937x → card cascade run. `rcS` now emits per-step timing marks.
+- **Fix B** (`rcS`, done): a second, independent ~7 s was lost *before* the card binds — `q6apm`'s first
+  `APM_CMD_GET_SPF_STATE` timed out (`wait_event_timeout(..., 5 * HZ)` in `audioreach_send_cmd_sync()`), and the whole
+  cascade (DAIS service → rx_macro → SoundWire → WCD937x → card) waited behind it. Loading the DSP services first,
+  with no fixed `sleep 2`, brings the card up at ~5.5 s and — more importantly — the ADSP's graph is ready to pull
+  audio at **~8.1 s** instead of ~20–27 s.
+- **Net result:** the RPC has sound ~8 s after the kernel, which is *before the splash ends*, so the boot click is
+  reachable again (verified over consecutive boots: zero write failures, `trigger_time` 8.15 s / 8.33 s).
 
 ## The device and its audio stack
 
@@ -133,16 +137,35 @@ Two candidates remain, and the rcS instruments above are what separates them:
 1. the ~5 s `q6apm` timeout (below) delaying the whole bring-up; and/or
 2. the ADSP's AudioReach service simply not scheduling the graph until ~20 s after boot.
 
-## Root cause 2 — the ~7 s before the card binds (Fix B, in progress)
+## Root cause 2 — the ~7 s before the card binds (Fix B, done)
 
 `audioreach_send_cmd_sync()` (the shared GPR command helper) waits `wait_event_timeout(..., 5 * HZ)` and prints
 `CMD timeout for [%x] opcode` when it expires. `q6apm_get_apm_state()` sends `APM_CMD_GET_SPF_STATE` and does not
-check the result. On this boot that one command blocked from ~3.4 s to **8.413 s**, and *everything* else
-(DAIS GPR service, `rx_macro`, SoundWire, WCD937x, the card) only ran after it — the whole audio stack is behind that
-single 5 s wait. The card then binds at ~9.0 s.
+check the result. The old rcS loaded the DSP services *after* a fixed `sleep 2` (its comment hoped to dodge the
+timeout), so that one command blocked from ~3.4 s to **8.413 s** — and *everything* else (DAIS GPR service,
+`rx_macro`, SoundWire, WCD937x, the card) only ran after it, with the card bound at ~9.0 s.
 
-So two independent delays stack up: ~7 s to bind the card, then the ~20 s the ADSP takes before it pulls audio (the amp
-spiral on top of that is what Fix A removed).
+The `rcS` per-step marks located the 5 s exactly (the `modprobe … q6apm+q6prm` step alone, 3.06 s → 8.18 s), so the
+fix is to **load the DSP services first, as soon as the ADSP is up, and drop the fixed `sleep 2`**: the command is
+sent at ~1.1 s, the ADSP answers when it is ready, and the whole stack moves up with it. Measured before/after:
+
+```
+                                   before            after
+rcS: audio: q6apm+q6prm            8.18 s     ->     1.06 s
+rcS: audio: card                   8.84 s     ->     5.48 s
+banana-ui: the menu               12.46 s     ->    10.52 s
+the stream's trigger_time          ~20-27 s   ->     8.15 s
+```
+
+Crucially the **first good write** moved from ~20–27 s to **~8.1 s** — far more than the ~3 s the marks account for.
+The early `APM_CMD_GET_SPF_STATE` is what brings the ADSP's AudioReach graph up, so with the command sent at ~1.1 s
+the ADSP is ready to pull audio by ~8 s (the `CMD timeout` still fires once, now at ~6.3 s, and is harmless).
+Verified over two consecutive boots: **zero `write failed` lines**, `trigger_time` 8.15 s and 8.33 s.
+
+That is now *before the splash ends*, so the boot click is reachable again.
+
+So both delays are handled: the amp spiral by Fix A (kernel), and the DSP bring-up by Fix B (`rcS`). Sound is
+available ~8 s after the kernel — early enough for the boot animation's click (which is at ~8.7 s), if it is restored.
 
 `rcS` now `mark`s each audio step, which located the 5 s exactly — the `modprobe … q6apm+q6prm` step alone takes
 **5.12 s** (3.06 s → 8.18 s) while every other step is ~0.05 s:
@@ -197,8 +220,10 @@ device, instead of `start failure (-1)` ~12 s later and no sound until ~20–33 
 
 ## Current state
 
-- The boot animation has **no click** and, on the RPC's single panel, is a single screen.
+- The boot animation has **no click** and, on the RPC's single panel, is a single screen. With sound now up at ~8 s the
+  click **can be restored** (it lands at ~8.7 s); that is a UI decision, not a blocker.
 - The cartridge-insert animation **moved to the game launch** (`themes/pocket.json` and its colour variants).
-- The boot warm-up (`Sound::warm()`) still pre-opens the device so the first *menu* cue is not cold.
-- **Fix A** is the kernel patch above; **Fix B** needs the `rcS` marks' first results to choose between a shorter /
-  retried `APM_CMD_GET_SPF_STATE`, a different module order, or polling the ADSP's readiness.
+- The boot warm-up (`Sound::warm()`) still pre-opens the device so the first *menu* cue is not cold — and it is now the
+  thing that has the device open and playing by 8.1 s.
+- **Fix A** is the kernel patch `0062-…`; **Fix B** is the `rcS` ordering above. The `rcS: audio: …` marks are kept —
+  they are a few lines and make the next audio regression obvious.

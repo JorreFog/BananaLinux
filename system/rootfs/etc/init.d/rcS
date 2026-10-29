@@ -69,19 +69,30 @@ mount -t vfat -o ro,noatime ${DISK}p1 /boot 2>/dev/null
 #   5. the machine driver (sc8280xp -- the card is "qcom,sm4450-sndcard", "qcom,sm8450-sndcard"), which also loads
 #      the audioreach topology the DSP runs the graph from (firmware qcom/sm8450/RetroidPocketClassic-tplg.bin).
 modprobe -a qcom_q6v5_pas qcom_q6v5 qcom_sysmon qcom_common 2>/dev/null
+mark "rcS: audio: adsp modprobe"
 # the remoteproc says "running" before the DSP is answering, so give it a couple of seconds before the stack loads
 i=0
 while [ $i -lt 40 ] && ! grep -q running /sys/class/remoteproc/remoteproc*/state 2>/dev/null; do sleep 0.2; i=$((i+1)); done
-sleep 2
+mark "rcS: audio: adsp running"
+# The DSP services first. q6apm's first APM_CMD_GET_SPF_STATE waits audioreach_send_cmd_sync()'s 5 s for the ADSP to
+# answer, and everything else (the DAIS GPR service, the macros, SoundWire, the card) is behind that wait -- so start
+# it as early as possible; the fixed `sleep 2` used to push it ~2 s later for nothing (the command is sent whether or
+# not the ADSP is ready, and it answers when it is).
+modprobe -a snd-q6dsp-common snd-q6apm q6apm-dai q6apm-lpass-dais q6prm q6prm-clocks 2>/dev/null
+mark "rcS: audio: q6apm+q6prm"
 modprobe -a snd-soc-lpass-macro-common snd-soc-lpass-rx-macro snd-soc-lpass-tx-macro snd-soc-lpass-va-macro soundwire-qcom 2>/dev/null
+mark "rcS: audio: macros+soundwire"
 modprobe -a snd-soc-wcd-common snd-soc-wcd-mbhc snd-soc-wcd-classh snd-soc-wcd937x snd-soc-aw88261 2>/dev/null
-modprobe -a snd-soc-qcom-common snd-q6dsp-common snd-q6apm q6apm-dai q6apm-lpass-dais q6prm q6prm-clocks 2>/dev/null
+mark "rcS: audio: wcd937x"
+modprobe -a snd-soc-qcom-common 2>/dev/null
 modprobe snd-soc-sc8280xp 2>/dev/null
+mark "rcS: audio: machine"
 # the card's probe loads the DSP graph, which takes a moment after modprobe returns; bananad reads
 # /proc/asound/cards once, at startup, and writes the "default" PCM from what it finds, so wait for the card here
 # (up to 4 s) or the menu's sounds go to a null device
 i=0
 while [ $i -lt 40 ] && ! grep -q '\[' /proc/asound/cards 2>/dev/null; do sleep 0.1; i=$((i+1)); done
+mark "rcS: audio: card"
 # the board's own modules: the cooling fan (pwm-fan) and the charger/battery gauge (qcom_battmgr, which bananad reads
 # the level and the charging state from)
 modprobe -a pwm-fan qcom_battmgr 2>/dev/null
