@@ -1,5 +1,6 @@
 #include <ctime>
 #include "settings.h"
+#include "settings_draw.h"
 #include "lang.h"
 #include "settings_defaults.h"
 #include "theme.h"
@@ -152,16 +153,7 @@ namespace banana
 		closedir(d);
 	}
 
-	// ---- palette: ROCKNIXDS Pixel's (RndsUI.cpp darkPal / lightPal), the colours this screen uses ----------------------
-	struct SPal
-	{
-		Color ink, muted, line, edge, screenBg, screenFrame, screenBand, ditherA, ditherB;
-		Color panelBand, panelBody, panelLow, bubbleBand, bubbleBody, bubbleLow, slotOn, kbdBg, kbdInk, blackish, shade45;
-		Color accent;
-		// the selected row of a list: the yellow plate the shelf's cartridge stands on (the engine's START plate), dark
-		// text on it, and a dark amber for what the accent marks elsewhere ("Connected", "Press A again")
-		Color pick, pickBand, pickLow, pickEdge, onPick, onPickAccent;
-	};
+	// ---- palette: ROCKNIXDS Pixel's (RndsUI.cpp darkPal / lightPal), the colours this screen uses (settings_draw.h) ---
 	// Update's row: a download going on, a newer version the last check found, or how many update packages wait in
 	// banana/updates on the card ("" for none); looked at once every 2 s at most (the list is drawn on every change)
 	static std::string updatesWaiting(const std::string& updates, const std::string& run, const std::string& running)
@@ -208,7 +200,7 @@ namespace banana
 		return v;
 	}
 
-	static SPal pal(bool light)
+	SPal pal(bool light)
 	{
 		SPal p;
 		if (!light)
@@ -907,6 +899,14 @@ namespace banana
 		return h;
 	}
 
+	void Settings::close()
+	{
+		mOpen = false;
+		page = LIST;
+		wizard = false;
+		closeBshare();
+	}
+
 	void Settings::open()
 	{
 		// a core downloaded (or deleted) in RetroArch since the rows were made: a system's emulator row comes or goes
@@ -1236,6 +1236,7 @@ namespace banana
 		if (page == CREDITS) return pressCredits(k);
 		if (page == PICKGAMES) return pressPickGames(k);
 		if (langAsk >= 0) return pressLangAsk(k);
+		if (page == BSHARE) return pressBshare(k);
 		if (inGroups) return pressGroups(k);
 		int g = groupOf(sel), b = groupStart(g), e = groupEnd(g);
 		switch (k)
@@ -1384,6 +1385,7 @@ namespace banana
 			int t = askTouch(cx, cy, langYes);
 			return t < 0 ? NONE : t == 0 ? MOVED : pressLangAsk(Key::A);
 		}
+		if (page == BSHARE) return touchBshare(cx, cy);
 		if (page == SETUP)
 		{
 			// the chips (B Back, START Skip, A OK), and a choice: one tap does it (a value row: its left or right half)
@@ -1647,6 +1649,40 @@ namespace banana
 		textFit(label, true, 19, x + 15 + kw + 8, 431, w - (15 + kw + 8) - 18, p.ink, true);
 	}
 
+	// where each chip goes: the left ones from 18 on, 8 apart; the right ones from 622 back
+	std::vector<float> Settings::chipXs(const std::vector<Chip>& cs, std::vector<float>& ws)
+	{
+		std::vector<float> xs(cs.size());
+		ws.resize(cs.size());
+		float left = 18, right = 622;
+		for (size_t i = 0; i < cs.size(); i++)
+		{
+			ws[i] = faceWidth(cs[i].face, cs[i].label);
+			if (cs[i].right) { right -= ws[i]; xs[i] = right; right -= 8; }
+			else { xs[i] = left; left += ws[i] + 8; }
+		}
+		return xs;
+	}
+
+	void Settings::drawChips(const std::vector<Chip>& cs)
+	{
+		std::vector<float> ws, xs = chipXs(cs, ws);
+		for (size_t i = 0; i < cs.size(); i++) face(cs[i].face, cs[i].label, xs[i], ws[i]);
+	}
+
+	Key Settings::chipAt(const std::vector<Chip>& cs, float x)
+	{
+		std::vector<float> ws, xs = chipXs(cs, ws);
+		Key best = Key::NONE;
+		float far = 1e9f;
+		for (size_t i = 0; i < cs.size(); i++)
+		{
+			float d = x < xs[i] ? xs[i] - x : x > xs[i] + ws[i] ? x - xs[i] - ws[i] : 0;
+			if (d < far) { far = d; best = cs[i].key; }
+		}
+		return best;
+	}
+
 	void Settings::notice(const std::string& title, const std::string& body, int percent)
 	{
 		SPal p = pal(light);
@@ -1669,6 +1705,31 @@ namespace banana
 		if (lv > 0) be->fill(bx + 3 * k, by + 3 * k, (float)lv * k, (float)8 * k, lc);
 		text(title, true, 22, 172, 360, p.ink);
 		wrapped(body, 18, 172, 392, 404, 2, p.muted);
+	}
+
+	void Settings::banner(const std::string& title, const std::string& body, int sign, uint32_t accent)
+	{
+		// the toasts' look (drawToast): the dark pill across the top, the accent's square with its sign, the title in
+		// the accent and the line in light text; a second line when the text needs it
+		static const char* const SIGN[4][9] = {
+			{ ".........", ".........", ".........", ".........", ".........", ".........", ".........", ".........", "........." },
+			{ ".........", "........#", ".......##", "......##.", "#....##..", "##..##...", ".####....", "..##.....", "........." },
+			{ "##.....##", ".##...##.", "..##.##..", "...###...", "...###...", "..##.##..", ".##...##.", "##.....##", "........." },
+			{ "...##....", "...##....", "...##....", "...##....", "...##....", "...##....", ".........", "...##....", "...##...." } };
+		const Color lightText = Color::hex(0xf1ede2), acc = Color::hex(accent);
+		bool two = !body.empty() && text(body, false, 18, 0, 0, lightText, false, 0, true) > 536;
+		box("osd", false, 8, 4, 624, two ? 86 : 64);
+		float bs = 48, tx = 16, ty = 12;
+		be->fill(std::round(X(tx)), std::round(X(ty)), std::round(X(bs)), std::round(X(bs)), acc);
+		int k = std::max(1, (int)std::lround(X(bs) / 14));
+		float ox = std::round(X(tx + bs / 2)) - 9 * k / 2.0f, oy = std::round(X(ty + bs / 2)) - 9 * k / 2.0f;
+		if (sign > 0 && sign < 4)
+			for (int r = 0; r < 9; r++)
+				for (int c = 0; c < 9; c++)
+					if (SIGN[sign][r][c] == '#') be->fill(std::round(ox + c * k), std::round(oy + r * k), (float)k, (float)k, Color::hex(0x12181f));
+		text(fit(title, true, 17, 540), true, 17, 78, 14, acc);
+		if (two) wrapped(body, 18, 78, 37, 536, 2, lightText);
+		else if (!body.empty()) text(fit(body, false, 18, 540), false, 18, 78, 38, lightText);
 	}
 
 	void Settings::level(const std::string& label, int percent)
@@ -1939,6 +2000,7 @@ namespace banana
 		if (page == CREDITS) { renderCredits(); return; }
 		if (page == PICKGAMES) { renderPickGames(); return; }
 		if (langAsk >= 0) { renderLangAsk(); return; }
+		if (page == BSHARE) { renderBshare(); return; }
 		if (inGroups) { renderGroups(); return; }
 		SPal p = pal(light);
 		const Item& cur = items[sel];
@@ -2139,6 +2201,7 @@ namespace banana
 		}
 		bool changed = scrapeChanged || changed0;
 		changed |= btUpdate();
+		if (bs && page == BSHARE && updateBshare(t)) changed = true;
 		if (page == UPDATES && applying && now >= nextStatus2)
 		{
 			std::string before = ustatus;
@@ -2232,6 +2295,8 @@ namespace banana
 		int mine = raCheck ? 200 : toastUntil > t ? std::max(0, (int)(toastUntil - t) + 1) : -1;
 		if (mine >= 0 && (w < 0 || mine < w)) w = mine;
 		if (scraping() && (w < 0 || w > 500)) w = std::max(0, (int)(scrapeNext - t));	// the box art's progress
+		int b = bshareWake(t);	// Bshare's request countdown, a send's progress
+		if (b >= 0 && (w < 0 || b < w)) w = b;
 		return w;
 	}
 
@@ -2768,7 +2833,7 @@ namespace banana
 		be->beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
-		icon(entry == ENTRY_SEARCH ? "search" : "phone", 50, 56, 3);
+		icon(entry == ENTRY_SEARCH ? "search" : entry == ENTRY_BSHARE_PIN || entry == ENTRY_BSHARE_MYPIN ? "bshare" : "phone", 50, 56, 3);
 		text(entryTitle, true, 17, 170, 62, p.muted, true, 1.4f);
 		text(fit(entrySub, true, 30, 420), true, 30, 170, 88, p.ink);
 		box("slot", true, 50, 150, 540, 56);
@@ -2788,6 +2853,7 @@ namespace banana
 		}
 		text(n, true, 17, 50, 216, p.muted);
 		std::string help = !message.empty() ? message
+			: !entryHelp.empty() ? entryHelp
 			: entry == ENTRY_SEARCH ? "A types the key, B deletes, X capitals, Y a space, START searches: the games found open as a shelf of their own, first on the shelf. Part of a name is enough; an empty search takes the shelf away."
 			: entry == ENTRY_WIFI ? "A types the key, B deletes, X capitals, L symbols, Y a space, START joins. Or tap the keys. The password is kept in banana/wifi.conf on the card."
 			: entry == ENTRY_HS_ADDR ? "The home server's address: its name or IP, and :port when it isn't the usual (Romhost 8092, RomM 8080 or 80). A types the key, B deletes, L symbols (the dot and colon), START when it is typed."
@@ -4771,6 +4837,7 @@ namespace banana
 	void Settings::startEntry(Entry e, const std::string& title, const std::string& sub, Page back, const std::string& start)
 	{
 		entry = e; entryTitle = title; entrySub = sub; entryBack = back;
+		entryHelp.clear();
 		pw = start;
 		layer = 0; krow = 1; kcol = 0;
 		message.clear();
@@ -4982,6 +5049,9 @@ namespace banana
 			pw.clear();
 			close();
 			return SEARCH;
+		case ENTRY_BSHARE_PIN:
+		case ENTRY_BSHARE_MYPIN:
+			return finishBshareEntry();
 		}
 		return NONE;
 	}

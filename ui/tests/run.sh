@@ -377,6 +377,47 @@ for size in 640x480 1024x768; do
         a=${pair% *}; b=${pair#* }
         cmp -s "$OUT/$size-$a-bot.png" "$OUT/$size-$b-bot.png" && { echo "FAIL $size: $a and $b are the same picture"; fail=1; }
     done
+    # Bshare's pages (settings_bshare.cpp) against a stand-in helper (its arguments noted, a send's state written): a
+    # device's request accepted into a folder chosen on the card (Location), a game in roms/gb (the first folder) sent
+    # to a device seen, Options' Receive when closed turned to Ask
+    blog=$OUT/$size-bshare.log; BRUN=$OUT/bsrun
+    rm -rf "$BRUN"; mkdir -p "$BRUN"; : > "$blog"; sed -i '/^bshare_/d' "$FX/data/settings.conf"
+    printf '#!/bin/sh\necho "$@" >> "%s/args"\n[ "$1" = send ] && printf "sending\\tMy Mac\\t1\\t2\\t500\\t1000\\n" > "%s/bshare-send"\nexit 0\n' "$BRUN" "$BRUN" > "$BRUN/helper"
+    chmod +x "$BRUN/helper"
+    printf 'id\tabc123\nfrom\tPixel 8\nmodel\tPixel\nfiles\t3\nbytes\t12400000\nfirst\tPokemon Emerald.gba\n' > "$BRUN/bshare-request"
+    printf 'mac-fp\t10.0.0.5\t53317\thttps\tMy Mac\tMacBook\tdesktop\t1\nph-fp\t10.0.0.6\t53317\thttps\tPixel 8\tPixel\tmobile\t1\n' > "$BRUN/bshare-peers"
+    run_bs() { BANANA_BSHARE="$BRUN/helper" BSHARE_RUN="$BRUN" "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" \
+        --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" --script "$1" 2>> "$blog" ||
+        { echo "FAIL $size: banana-ui (bshare) exited $?"; fail=1; }; }
+    # a request there as the app opens: its Receive page at Accept; Location: the card itself, chosen; then Accept
+    run_bs "homeid bshare; shot bs-tile; press a; wait 1; shot bs-request; press down; press down; press a; shot bs-location; press a; shot bs-card; \
+        press a; shot bs-located; press up; press up; press a; wait 1; shot bs-accepted"
+    grep -q "press a: banana:bshare open" "$blog" || { echo "FAIL $size: bshare: the tile didn't open its page"; fail=1; }
+    grep -q "^accept abc123 $FX$" "$BRUN/bshare-answer" 2>/dev/null || { echo "FAIL $size: bshare: no accept into the card ($(cat "$BRUN/bshare-answer" 2>/dev/null))"; fail=1; }
+    rm -f "$BRUN/bshare-request"
+    # Send: Device (My Mac), Files (roms/gb's game, A picks it), START done, START sends; then Options' Receive when
+    # closed to Ask
+    run_bs "homeid bshare; press a; wait 1; shot bs-home; press down; press a; shot bs-send; press a; shot bs-devices; press a; \
+        press down; press a; press a; press down; press a; press a; press a; shot bs-files; press start; shot bs-send-ready; press start; wait 1; \
+        shot bs-status; press b; press b; press down; press a; press right; shot bs-options; press down; press a; shot bs-options-pin"
+    for i in $(seq 30); do grep -q "^send " "$BRUN/args" && break; sleep 0.1; done    # (the helper started on its own)
+    grep -q "^send mac-fp $FX/roms/gb/Pocket Peel.gb$" "$BRUN/args" || { echo "FAIL $size: bshare: no send to My Mac: $(cat "$BRUN/args")"; fail=1; }
+    grep -q '^bshare_receive = ask$' "$FX/data/settings.conf" || { echo "FAIL $size: bshare: Options' Receive when closed didn't turn to Ask"; fail=1; }
+    grep -q '^bshare_require_pin = on$' "$FX/data/settings.conf" && grep -Eq '^bshare_pin = [0-9]{4}$' "$FX/data/settings.conf" ||
+        { echo "FAIL $size: bshare: Options' Require PIN didn't turn on with a PIN: $(grep '^bshare_' "$FX/data/settings.conf")"; fail=1; }
+    grep -q "^serve$" "$BRUN/args" || { echo "FAIL $size: bshare: the helper wasn't started to serve"; fail=1; }
+    sed -i '/^bshare_/d' "$FX/data/settings.conf"
+    # a device that asks for a PIN (LocalSend's Require PIN): the helper says "pin", the keyboard comes up on its own,
+    # the PIN typed and START: the same file sent again with it
+    : > "$BRUN/args"; rm -f "$BRUN/bshare-send"
+    printf '#!/bin/sh\necho "$@" >> "%s/args"\nif [ "$1" = send ] && [ "$2" = --pin ]; then printf "done\\tMy Mac\\t1\\t1\\t1000\\t1000\\n" > "%s/bshare-send"; elif [ "$1" = send ]; then printf "pin\\tMy Mac\\t0\\t1\\t0\\t1000\\n" > "%s/bshare-send"; fi\nexit 0\n' "$BRUN" "$BRUN" "$BRUN" > "$BRUN/helper"
+    run_bs "homeid bshare; press a; wait 1; shot bs-pin-home; press down; press a; shot bs-pin-send; press a; shot bs-pin-devices; press a; \
+        press down; press a; press a; press down; press a; press a; press a; shot bs-pin-files; press start; shot bs-pin-ready; press start; wait 1; \
+        shot bs-pin-status; sleep 800; shot bs-pin; type 4242; press start; sleep 800; shot bs-pin-sent"
+    for i in $(seq 30); do grep -q "^send --pin" "$BRUN/args" && break; sleep 0.1; done
+    grep -q "^send mac-fp $FX/roms/gb/Pocket Peel.gb$" "$BRUN/args" && grep -q "^send --pin 4242 mac-fp $FX/roms/gb/Pocket Peel.gb$" "$BRUN/args" ||
+        { echo "FAIL $size: bshare: the PIN wasn't asked for and sent: $(cat "$BRUN/args")"; fail=1; }
+    sed -i '/^bshare_/d' "$FX/data/settings.conf"
     grep 'bench:' "$log" | sed "s/^banana-ui: /$size /"
 done
 # updates over the air (#69): the update script against a stand-in for GitHub, and the Update page

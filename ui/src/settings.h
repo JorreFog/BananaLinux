@@ -35,6 +35,7 @@ namespace banana
 		Settings(rnds::Backend* be, const std::string& assets, const std::string& dataDir, float scale, const std::string& variant);
 		void setVariant(const std::string& variant);	// "dark", "light", or "carts" (dark, in Inter: setFontDir first)
 		void setFontDir(const std::string& dir) { fontDir = dir; }
+		void setLibraryPaths(const std::string& roms) { romRoot = roms; }	// (Bshare's cards: the games' folder)
 		void open();
 		void openPower();	// the Power list (Sleep, Restart, Shut down): Y on the groups
 		void openSection(const std::string& section);	// a list with no tile (Shown systems)
@@ -42,7 +43,7 @@ namespace banana
 		void setSystems(const std::vector<std::pair<std::string, std::string>>& systems);
 		std::vector<std::pair<std::string, std::string>> shelfSystems;
 		void addShelfRows();
-		void close() { mOpen = false; page = LIST; wizard = false; }
+		void close();
 		// the first-time setup, from the host: boot = the first boot's (it ends in the host's Welcome and the menu:
 		// takeSetupFinished), else as from Settings > System (it ends back in Settings); at: the slide to start on (a
 		// setup cut off by a restart or a language change: banana/setup-step)
@@ -59,6 +60,13 @@ namespace banana
 		// a title card on black (the host's arrival and Welcome): l1 on the top panel at y (CSS px), l2 under it in the
 		// muted colour; the bottom panel black
 		void renderCard(const std::string& l1, const std::string& l2, float y, float size);
+		// the shelf's Bshare tile: files to and from phones and computers with LocalSend (settings_bshare.cpp)
+		void openBshare();
+		// a "banana:<page>" tile's page (systems.conf's run): Bshare's
+		void openApp(const std::string& run) { if (run == "banana:bshare") openBshare(); }
+		// Bshare's helper serving (seen by LocalSend's apps, receiving): from the start while Receive is on
+		static void bshareServe(bool want);
+		bool bshareReceiving() const;
 		bool isOpen() const { return mOpen; }
 		std::vector<std::string> deletedFiles;	// what the last Delete game removed (DELETED)
 		int gridCount() const;	// the groups with a tile (Power has none)
@@ -124,6 +132,8 @@ namespace banana
 		// a notice over the screen being drawn (between the backend's beginScreen and endScreen): the battery icon at
 		// percent, a title and a line or two, in the bubble style near the bottom of the panel
 		void notice(const std::string& title, const std::string& body, int percent);
+		// a notification's banner at the top (Bshare's): sign 1 a tick, 2 a cross, 3 "!", in the accent's square
+		void banner(const std::string& title, const std::string& body, int sign, uint32_t accent);
 		// the volume or brightness keys' level: a small bubble near the bottom of the panel, its label, the percent and
 		// a bar (drawn like notice)
 		void level(const std::string& label, int percent);
@@ -167,7 +177,7 @@ namespace banana
 		std::string about, wifiInfo, ip;
 
 		// the Wi-Fi pages: the networks around, and the keyboard for a password (settings-wifi.cpp)
-		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS, PICKGAMES } page = LIST;
+		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS, PICKGAMES, BSHARE } page = LIST;
 		// Home server > Choose games: the server's games (banana-sync games), a system at a time, ticked to sync
 		struct PickGame { std::string sys, key, title; long long bytes = 0; bool on = false, there = false; };
 		std::vector<PickGame> pickGames;
@@ -231,9 +241,11 @@ namespace banana
 		void renderGame();
 		// the keyboard types a text for a purpose: a Wi-Fi password, or an account's name or password
 		// (banana/accounts.conf: RetroAchievements for DraStic and RetroArch, ScreenScraper for the scraper to come)
-		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SMB_USER, ENTRY_SMB_PASS, ENTRY_GAME_NAME, ENTRY_GAME_SORT, ENTRY_ART_SEARCH, ENTRY_DS_NAME, ENTRY_SEARCH, ENTRY_HS_ADDR, ENTRY_HS_CODE, ENTRY_BETA_PASS } entry = ENTRY_WIFI;
+		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SMB_USER, ENTRY_SMB_PASS, ENTRY_GAME_NAME, ENTRY_GAME_SORT, ENTRY_ART_SEARCH, ENTRY_DS_NAME, ENTRY_SEARCH, ENTRY_HS_ADDR, ENTRY_HS_CODE, ENTRY_BETA_PASS, ENTRY_BSHARE_PIN, ENTRY_BSHARE_MYPIN } entry = ENTRY_WIFI;
 		std::string entryTitle, entrySub;
 		Page entryBack = NETWORKS;
+		std::string romRoot = "/data/roms";
+		std::string entryHelp;		// what the keyboard is for, when the purpose says it itself (Bshare's PINs)
 		void startEntry(Entry e, const std::string& title, const std::string& sub, Page back, const std::string& start = "");
 		Result finishEntry();
 		std::string account(const char* key);
@@ -497,6 +509,18 @@ namespace banana
 		void scrapeBar(float x, float y, float w);	// the progress bar and the game being fetched, while it runs
 		struct RaWatch;							// the achievements: RetroArch's log and the server (settings.cpp)
 		std::shared_ptr<RaWatch> raw;
+		// Bshare (settings_bshare.cpp): its pages, reading banana-bshare's files in /run/banana
+		struct Bshare;
+		std::shared_ptr<Bshare> bs;
+		Result pressBshare(Key k);
+		Result touchBshare(float cx, float cy);
+		void renderBshare();
+		bool updateBshare(double nowMs);
+		int bshareWake(double nowMs) const;
+		Result finishBshareEntry();
+		void closeBshare();
+		void tick(float x, float y, const rnds::Color& c);	// a mark on a 2 px grid (a chosen file)
+		void meter(float x, float y, float w, double fraction);	// a progress bar
 		std::string gTitle, gSystem;
 		int gScreen = 1, gFlash = -1, gDown = -1;
 		bool gTouch = true;
@@ -580,6 +604,7 @@ namespace banana
 		// the top panel's header and help text (Settings' rows and a game's page): where they go, in 640x480 CSS px
 		static constexpr float HEAD_ICON_Y = 42, HEAD_SECTION_Y = 46, HEAD_LABEL_Y = 70, HEAD_VALUE_Y = 110;
 		static constexpr float HELP_X = 50, HELP_W = 540, HELP_TOP = 152, HELP_BOTTOM = 438;
+		static constexpr float HINT_TOP = 300;	// a choice's hint, under the row's sentence
 		bool helpFit(const std::string& t, float top, float bottom, float& size, int& lines) const;
 		void helpText(const std::string& t, float top, float bottom, const rnds::Color& c);
 		std::string helpOf(int item);
@@ -589,6 +614,12 @@ namespace banana
 		void arrow(bool right, float x, float y, const rnds::Color& c);
 		void face(const std::string& key, const std::string& label, float x, float w);
 		float faceWidth(const std::string& key, const std::string& label);
+		// a page's buttons along the bottom panel: B and the page's others from the left, its main one (right) at the
+		// right. Drawn and tapped from the same list, so a tap presses the chip it is on (or the nearest one).
+		struct Chip { Key key; std::string face, label; bool right = false; };
+		void drawChips(const std::vector<Chip>& cs);
+		Key chipAt(const std::vector<Chip>& cs, float x);	// Key::NONE with no chips
+		std::vector<float> chipXs(const std::vector<Chip>& cs, std::vector<float>& ws);
 		static constexpr int ROWS = 5;
 		static constexpr float SETUP_Y = 82, SETUP_PITCH = 66, SETUP_H = 58;	// the setup's choices on the bottom panel
 	};

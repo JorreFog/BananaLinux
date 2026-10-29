@@ -9,6 +9,8 @@ override CXXFLAGS += -std=c++17 -Wall -Wno-unused-function
 override LDLIBS += -lpthread
 
 SRC = src/main.cpp src/lang.cpp src/soft.cpp src/kms.cpp src/colors.cpp src/input.cpp src/library.cpp src/sound.cpp src/splash.cpp src/arrival.cpp src/settings.cpp src/settings_defaults.cpp src/wifi.cpp src/bluetooth.cpp src/zip.cpp src/carts.cpp src/cart3d.cpp src/theme.cpp src/pokemon.cpp src/pokemap.cpp src/gamecomp.cpp src/json.cpp src/expr.cpp src/layout.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp
+# (Bshare's pages: its helper, banana-bshare, does the network)
+SRC += src/settings_bshare.cpp
 PKGS = freetype2 libdrm zlib
 ifeq ($(ALSA),1)
 PKGS += alsa
@@ -31,8 +33,8 @@ banana-sync: src/sync.cpp src/sync_util.h src/json.cpp src/json.h
 # Bshare (the shelf's tile): files to and from phones and computers with LocalSend, run by banana-ui while Receive
 # is on or its page is open (settings_bshare.cpp)
 banana-bshare: src/bshare.cpp src/json.cpp src/json.h
-	$(CXX) $(CXXFLAGS) $(shell $(PKG_CONFIG) --cflags libcurl) $(LDFLAGS) -o $@ src/bshare.cpp src/json.cpp \
-		$(shell $(PKG_CONFIG) --libs libcurl) -lpthread
+	$(CXX) $(CXXFLAGS) $(shell $(PKG_CONFIG) --cflags libcurl libcrypto) $(LDFLAGS) -o $@ src/bshare.cpp src/json.cpp \
+		$(shell $(PKG_CONFIG) --libs libcurl libcrypto) -lpthread
 
 # the game panel's DRM lease for RetroArch (preloaded by run-retroarch)
 CC ?= gcc

@@ -22,7 +22,7 @@ ux_lt() { awk -v a="$1" -v b="$2" 'BEGIN { exit !(a < b) }'; }
 # the home row has two ends (Pixel): on the first system nothing is drawn left of it (the track alone); on the last,
 # nothing right of it; left on the first still goes to the last
 ux_run row "home 0; wait 2400; shot ux-row-first; press left; wait 2400; shot ux-row-last"
-ux_check row "press left: used, view 0 sys 5"     # (six systems: Ports with PortMaster alone is off the row)
+ux_check row "press left: used, view 0 sys 6"     # (six systems and Bshare: Ports with PortMaster alone is off the row)
 ux_lt "$(ux_std "$OUT/$size-ux-row-first-bot.png" 210 80 30 200)" 0.08 || { echo "FAIL $size: something drawn left of the first system"; fail=1; }
 ux_lt "$(ux_std "$OUT/$size-ux-row-last-bot.png" 210 80 400 200)" 0.08 || { echo "FAIL $size: something drawn right of the last system"; fail=1; }
 

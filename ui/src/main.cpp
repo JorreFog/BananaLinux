@@ -296,6 +296,11 @@ struct Repeat
 	}
 };
 
+// a tile whose run is "banana:<page>" is one of the menu's own pages (systems.conf's [bshare]), not a program: A on
+// it opens the page at once, with no cartridge going in, and a launch of its entry (by touch, or the Carts theme's
+// ready screen) does the same
+static bool internalApp(const SystemDef& sd) { return sd.run.compare(0, 7, "banana:") == 0; }
+
 static bool uiButton(Key k, rnds::UI::Button& b)
 {
 	switch (k)
@@ -450,6 +455,65 @@ struct LowBattery
 	}
 };
 
+// Bshare's news (its helper's files, settings_bshare.cpp): a device asking to send, a transfer done or declined;
+// shown as the battery's notice is (the banner at the top, 4 s, any press hides it), looked at once a second
+struct BshareNotice
+{
+	std::string title, body;
+	int sign = 1;			// Settings::banner's
+	uint32_t accent = 0x6ad07a;
+	double until = 0, lookedAt = -1e9;
+	std::string bsReq, bsRecv = "?", bsSend = "?";	// the request, receive and send, as last read ("?": not yet)
+	bool showing(double now) const { return until > now; }
+	bool hide(double now) { bool was = showing(now); until = 0; return was; }
+	void show(const std::string& t, const std::string& b, int sg, uint32_t acc, double now)
+	{
+		title = t; body = b; sign = sg; accent = acc; until = now + 4000;
+	}
+	// true when a new one came
+	bool check(double now)
+	{
+		if (now - lookedAt < 1000) return false;
+		lookedAt = now;
+		bool came = false;
+		const char* run = getenv("BSHARE_RUN");
+		std::string dir = run && *run ? run : "/run/banana";
+		auto read = [&](const char* n) { std::ifstream f(dir + "/" + n); std::stringstream s; s << f.rdbuf(); return s.str(); };
+		auto cols = [](const std::string& l) { std::vector<std::string> c; std::stringstream s(l); std::string x; while (std::getline(s, x, '\t')) c.push_back(x); return c; };
+		std::string req = read("bshare-request");
+		if (req != bsReq)
+		{
+			std::string from, n;
+			std::stringstream in(req);
+			std::string l;
+			while (std::getline(in, l)) { auto c = cols(l); if (c.size() >= 2 && c[0] == "from") from = c[1]; if (c.size() >= 2 && c[0] == "files") n = c[1]; }
+			if (!req.empty()) { show(from + " wants to send " + n + (n == "1" ? " file" : " files"), "Open Bshare to accept.", 3, 0x4a9bff, now); came = true; }
+			bsReq = req;
+		}
+		std::string rc = read("bshare-receive");
+		if (rc != bsRecv)
+		{
+			auto c = cols(rc.substr(0, rc.find('\n')));
+			if (bsRecv != "?" && c.size() >= 7 && (c[0] == "done" || c[0] == "partly"))
+			{
+				show("Received " + c[2] + (c[2] == "1" ? " file" : " files") + " from " + c[1],
+					c[6] == "received" ? "In banana/received." : c[6] == "games" || c[6] == "both" ? "Games went into their system's folder." : "In " + c[6] + ".", 1, 0x6fdc87, now);
+				came = true;
+			}
+			bsRecv = rc;
+		}
+		std::string sc = read("bshare-send");
+		if (sc != bsSend)
+		{
+			auto c = cols(sc.substr(0, sc.find('\n')));
+			if (bsSend != "?" && c.size() >= 4 && c[0] == "done") { show("Sent " + c[3] + (c[3] == "1" ? " file" : " files") + " to " + c[1], "", 1, 0x6fdc87, now); came = true; }
+			if (bsSend != "?" && c.size() >= 2 && c[0] == "declined") { show(c[1] + " said no", "Nothing was sent.", 2, 0xffb340, now); came = true; }
+			bsSend = sc;
+		}
+		return came;
+	}
+};
+
 static int shutdownPercent(const std::string& data)
 {
 	return atoi(getConfValue(data + "/bananad.conf", "battery_shutdown_percent",
@@ -584,6 +648,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	};
 	ui.setHome(0);
 	Settings settings(&be, o.assets, o.data, o.h / 480.0f, variant);
+	settings.setLibraryPaths(o.roms);
 	settings.thumbArgs = "--assets " + shellQuote(o.assets) + " --splash " + shellQuote(o.splash) + " --banana " + shellQuote(o.banana) +
 		" --systems " + shellQuote(o.systems) + " --roms " + shellQuote(o.roms);
 	settings.setSystems(shelfSystems(lib));
@@ -605,6 +670,16 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		cs >> op;
 		ui.update(now);
 		if (op == "home") { int s = 0; cs >> s; ui.setHome(s); }
+		else if (op == "homeid")
+		{
+			// homeid <system id>: the shelf on that system's tile (one whose place depends on the card's games)
+			std::string id; cs >> id;
+			int at = -1;
+			for (int i = 0; i < lib.systemCount(); i++) if (lib.shelf(i).def.id == id) at = i;
+			if (at < 0) { logf("homeid %s: not on the shelf", id.c_str()); return 2; }
+			ui.setHome(at);
+			logf("homeid %s: tile %d", id.c_str(), at);
+		}
 		else if (op == "lib") { int s = 0, g = 0; cs >> s >> g; lib.openLibrary(s); ui.setLibrary(s, g); }
 		else if (op == "wait") { double ms = 0; cs >> ms; now += ms; }
 		// sleep <ms>: as wait, but the time really passes (a helper process working meanwhile: the update download)
@@ -639,6 +714,13 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 				auto t = lib.gameTitles(key);
 				settings.openGame(lib.gameAt(ui.gameIndex()).title, path.substr(path.rfind('/') + 1), lib.systemOf(ui.gameIndex()).id == "nds", key, t.name, t.sort, path, lib.gameAt(ui.gameIndex()).scraped);
 				logf("press x: game page for %s", path.c_str());
+				continue;
+			}
+			if (!settings.isOpen() && it->second == Key::A && ui.view() == rnds::UI::HOME && ui.systemIndex() >= 0 &&
+				ui.systemIndex() < lib.systemCount() && internalApp(lib.shelf(ui.systemIndex()).def))
+			{
+				settings.openApp(lib.shelf(ui.systemIndex()).def.run);
+				logf("press a: %s open", lib.shelf(ui.systemIndex()).def.run.c_str());
 				continue;
 			}
 			if (settings.isOpen() || it->second == Key::START)
@@ -987,6 +1069,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			int g = lib.pendingLaunch();
 			logf("launch %d: %s (system %s)", g, lib.gameAt(g).path.c_str(), lib.systemOf(g).id.c_str());
 			lib.clearLaunch();
+			if (internalApp(lib.systemOf(g))) { ui.setHome(lib.currentShelf()); settings.openApp(lib.systemOf(g).run); logf("%s open", lib.systemOf(g).run.c_str()); }
 		}
 		ui.update(now);
 		if (rearrange(lib, ui)) logf("shelf: %d systems, cursor on %s", lib.systemCount(), lib.shelf(ui.systemIndex()).def.id.c_str());
@@ -1765,7 +1848,10 @@ int main(int argc, char** argv)
 	int lastMinute = -1;
 	pkmn::Companion companion;	// the game panel's Pokémon companion (pokemon.h), for the game running
 	gcomp::Engine gameComp;		// or its game companion (gamecomp.h), for another GBA game with a definition
+	settingsView.setLibraryPaths(o.roms);
+	if (settingsView.bshareReceiving()) Settings::bshareServe(true);	// (Bshare's Receive on: seen from the start)
 	LowBattery low;
+	BshareNotice bsNotice;
 	bool batteryDue = true;
 	RomWatch roms;
 	roms.watch(lib.watchDirs());
@@ -1789,6 +1875,7 @@ int main(int argc, char** argv)
 		if (screen != 0) return;
 		double t = nowMs();
 		if (low.showing(t)) settingsView.notice(low.title, low.body, low.percent);
+		else if (bsNotice.showing(t)) settingsView.banner(bsNotice.title, bsNotice.body, bsNotice.sign, bsNotice.accent);
 		else if (osdUntil > t) settingsView.level(osdLabel, osdPercent);
 		else if (int k = looking())
 			settingsView.popup(k == 2 ? "Reading the second SD card" : "Looking for games",
@@ -1883,7 +1970,11 @@ int main(int argc, char** argv)
 	{
 		// (the bottom screen's idle dim is a game-panel thing only, so its touch handling is in gamePanel's own sink)
 		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) { boost.frame(nowMs()); fstat.press(ev.t); }	// what it starts drawn fast
-		if ((ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) && low.hide(nowMs())) dirty = true;
+		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN)
+		{
+			bool lowWas = low.hide(nowMs()), bsWas = bsNotice.hide(nowMs());	// (both hidden, whichever showed)
+			if (lowWas || bsWas) dirty = true;
+		}
 		if ((ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) && resumeLater.until > 0)
 		{
 			logf("resume after power-off: a press, %s not waited for any more", resumeLater.rom.c_str());
@@ -1954,6 +2045,22 @@ int main(int argc, char** argv)
 		if (ev.type == InputEvent::TOUCH_MOVE) { std::lock_guard<std::mutex> l(worker.uiLock); dirty |= ui->touchMove(ev.screen, ev.x, ev.y); return; }
 		if (ev.type == InputEvent::TOUCH_UP) { std::lock_guard<std::mutex> l(worker.uiLock); dirty |= ui->touch(ev.screen, ev.x, ev.y, false); return; }
 		if (ev.type == InputEvent::RELEASE) { if (rep.key == ev.key) rep.key = Key::NONE; return; }
+		if (ev.type == InputEvent::PRESS && ev.key == Key::A)
+		{
+			// A on an app's tile (Bshare): its page
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			int s = ui->systemIndex();
+			if (ui->view() == rnds::UI::HOME && s >= 0 && s < lib.systemCount() && internalApp(lib.shelf(s).def))
+			{
+				ui->touchCancel();
+				settingsView.setVariant(settings["theme"]);
+				settingsView.openApp(lib.shelf(s).def.run);
+				rep.key = Key::NONE;
+				sound.play("select");
+				dirty = true;
+				return;
+			}
+		}
 		rnds::UI::Button b;
 		if (!uiButton(ev.key, b)) return;
 		double now = nowMs();
@@ -2375,6 +2482,17 @@ int main(int argc, char** argv)
 		if (g >= 0)
 		{
 			lib.clearLaunch();
+			if (internalApp(lib.systemOf(g)))
+			{
+				// an app's entry launched (a touch, the Carts theme): its page, the shelf behind it on the tile
+				std::lock_guard<std::mutex> l(worker.uiLock);
+				ui->setHome(lib.currentShelf());
+				settingsView.setVariant(settings["theme"]);
+				settingsView.openApp(lib.systemOf(g).run);
+				rep.key = Key::NONE;
+				dirty = true;
+				continue;
+			}
 			runGame(g);
 			continue;
 		}
@@ -2435,6 +2553,7 @@ int main(int argc, char** argv)
 			batteryDue = false;
 			if (low.check(lib.power(), shutdownPercent(o.data), now)) dirty = true;
 		}
+		if (bsNotice.check(now)) { logf("notice: %s", bsNotice.title.c_str()); dirty = true; }
 
 		bool want;
 		{
@@ -2504,6 +2623,15 @@ int main(int argc, char** argv)
 		{
 			int left = (int)(low.until - now) + 1;
 			if (timeout < 0 || left < timeout) timeout = left;
+		}
+		if (bsNotice.showing(now))
+		{
+			int left = (int)(bsNotice.until - now) + 1;
+			if (timeout < 0 || left < timeout) timeout = left;
+		}
+		{
+			int left = (int)(bsNotice.lookedAt + 5000 - now) + 1;	// (a look at least every 5 s: the menu idle isn't woken more)
+			if (left > 0 && (timeout < 0 || left < timeout)) timeout = left;
 		}
 		if (osdUntil > now)
 		{

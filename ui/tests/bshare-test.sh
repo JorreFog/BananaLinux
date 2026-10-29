@@ -57,7 +57,12 @@ check(open(T + "/data/roms/gba/Peel Quest.gba", "rb").read() == game, "the game 
 check(open(T + "/data/banana/received/beach.jpg", "rb").read() == photo, "the photo in banana/received")
 st = open(T + "/run/bshare-receive").read()
 check(st.startswith("done\tTest Phone\t2\t2\t") and st.strip().endswith("both"), "bshare-receive: done, both places (%s)" % st.strip())
-log = open(T + "/data/banana/logs/bshare.log").read()
+# (the helper writes the end of the transfer, then its log line: give it a moment)
+for _ in range(20):
+    log = open(T + "/data/banana/logs/bshare.log").read()
+    if "received 2 of 2 files" in log:
+        break
+    time.sleep(0.1)
 check("received 2 of 2 files" in log and "Test Phone" in log, "logged")
 
 print("bshare 3. names: no way out of the folder, folders kept, nothing overwritten, chunked")
@@ -128,9 +133,33 @@ open(T + "/run/bshare-answer", "w").write("decline " + req["id"] + "\n")
 th.join()
 check(res["r"][0] == 403, "declined: 403")
 check(not os.path.exists(T + "/run/bshare-request"), "the request gone after the answer")
+print("bshare 4b. Require PIN (Options): no PIN 401 'PIN required', a wrong one 401 'Invalid PIN', the right one in")
+open(T + "/data/banana/settings.conf", "w").write("bshare_receive = auto\nbshare_require_pin = on\nbshare_pin = 4321\n")
+s, b = post("prepare-upload", files(("p1", "pin.gba", b"pin")))
+check(s == 401 and "PIN required" in b, "no PIN: 401 PIN required (%d %s)" % (s, b))
+s, b = post("prepare-upload?pin=1111", files(("p1", "pin.gba", b"pin")))
+check(s == 401 and "Invalid PIN" in b, "a wrong PIN: 401 Invalid PIN (%d %s)" % (s, b))
+s, b = post("prepare-upload?pin=4321", files(("p1", "pin.gba", b"pin")))
+check(s == 200, "the right PIN: 200 (%d)" % s)
+if s == 200:
+    j = json.loads(b)
+    post("upload?sessionId=%s&fileId=p1&token=%s" % (j["sessionId"], j["files"]["p1"]), raw=b"pin")
 setting("off")
 s4, _ = post("prepare-upload", files(("o1", "x.gba", b"x")))
 check(s4 == 403, "Receive off: 403")
+open(T + "/run/bshare-receiving", "w").close()     # Bshare's Receive page open: asked, Options' off or not
+th = threading.Thread(target=ask); th.start()
+for i in range(50):
+    if os.path.exists(T + "/run/bshare-request"): break
+    time.sleep(0.1)
+check(os.path.exists(T + "/run/bshare-request"), "off, but the Receive page open: the menu asked")
+req = dict(l.split("\t", 1) for l in open(T + "/run/bshare-request").read().splitlines())
+open(T + "/run/bshare-answer", "w").write("decline " + req["id"] + "\n")
+th.join()
+os.remove(T + "/run/bshare-receiving")
+os.makedirs(T + "/data/bananads", exist_ok=True)
+open(T + "/data/bananads/bananads.conf", "w").write("firmware.nickname = Swou\n")
+with urllib.request.urlopen(base + "info", timeout=5) as r: check(json.loads(r.read())["alias"] == "Swou", "the DS's name shown, at once")
 print("bshare (receiving): %d passed, %d failed" % (passed, failed))
 sys.exit(1 if failed else 0)
 EOF
@@ -151,6 +180,10 @@ class H(http.server.BaseHTTPRequestHandler):
         if self.path.startswith("/api/localsend/v2/prepare-upload"):
             j = json.loads(data)
             if os.path.exists(T + "/decline"): return self.reply(403)
+            if os.path.exists(T + "/pin"):   # (LocalSend's Require PIN: ?pin=..., else 401)
+                want = open(T + "/pin").read().strip()
+                q = dict(p.split("=") for p in self.path.split("?")[1].split("&")) if "?" in self.path else {}
+                if q.get("pin") != want: return self.reply(401, json.dumps({"message": "PIN required" if "pin" not in q else "Invalid PIN"}).encode())
             state["files"] = {k: v["fileName"] for k, v in j["files"].items()}
             open(T + "/out/info.json", "w").write(json.dumps(j["info"]))
             return self.reply(200, json.dumps({"sessionId": "S1", "files": {k: "tok-" + k for k in j["files"]}}).encode())
@@ -175,8 +208,27 @@ echo "bshare 5. sending: a file and a folder to the made-up app; declined"
 cmp -s "$T/send/shot.png" "$T/out/shot.png" && ok "the screenshot arrived whole" || bad "shot.png"
 [ "$(cat "$T/out/Saves/a.sav" "$T/out/Saves/b.sav" 2>/dev/null)" = "save
 save2" ] && ok "the folder's files, in their folder" || bad "Saves/: $(ls -R "$T/out")"
-grep -q '"alias": "RG DS Plus"' "$T/out/info.json" && ok "the handheld named itself" || bad "info: $(cat "$T/out/info.json")"
+grep -q '"alias": "Swou"' "$T/out/info.json" && ok "the handheld named itself (its DS name)" || bad "info: $(cat "$T/out/info.json")"
 grep -q "^done	My Mac	3	3	" "$T/run/bshare-send" && ok "bshare-send: done, 3 of 3" || bad "bshare-send: $(cat "$T/run/bshare-send")"
+echo "bshare 6. a device that asks for a PIN (LocalSend's Require PIN): 401 is \"pin\", a wrong one \"badpin\", the right one sends"
+echo 4242 > "$T/pin"
+"$B" send mac-fp "$T/send/shot.png" 2>>"$T/send.log" && bad "no PIN but exit 0" || ok "no PIN: exit 1"
+grep -q "^pin	My Mac" "$T/run/bshare-send" && ok "bshare-send: pin (the menu asks for it)" || bad "bshare-send: $(cat "$T/run/bshare-send")"
+"$B" send --pin 1111 mac-fp "$T/send/shot.png" 2>>"$T/send.log" && bad "a wrong PIN but exit 0" || ok "a wrong PIN: exit 1"
+grep -q "^badpin	My Mac" "$T/run/bshare-send" && ok "bshare-send: badpin" || bad "bshare-send: $(cat "$T/run/bshare-send")"
+rm -f "$T/out/shot.png"
+"$B" send --pin 4242 mac-fp "$T/send/shot.png" 2>>"$T/send.log" && ok "the right PIN: exit 0" || bad "the right PIN: exit $? ($(tail -n1 "$T/send.log"))"
+cmp -s "$T/send/shot.png" "$T/out/shot.png" && ok "sent with the PIN" || bad "shot.png not sent with the PIN"
+grep -q "^mac-fp	4242$" "$T/data/banana/bshare/pins" && ok "the PIN remembered for that device" || bad "pins: $(cat "$T/data/banana/bshare/pins" 2>&1)"
+rm -f "$T/out/shot.png"
+"$B" send mac-fp "$T/send/shot.png" 2>>"$T/send.log" && cmp -s "$T/send/shot.png" "$T/out/shot.png" &&
+    ok "sent again without typing it (the remembered PIN)" || bad "the remembered PIN wasn't used"
+echo 9999 > "$T/pin"
+"$B" send mac-fp "$T/send/shot.png" 2>>"$T/send.log" && bad "a changed PIN but exit 0" || ok "the device's PIN changed: exit 1"
+grep -q "^pin	My Mac" "$T/run/bshare-send" && ! grep -q "^mac-fp	" "$T/data/banana/bshare/pins" &&
+    ok "the old PIN forgotten, asked for again (pin)" || bad "after a changed PIN: $(cat "$T/run/bshare-send"); pins: $(cat "$T/data/banana/bshare/pins")"
+rm -f "$T/pin"
+[ -s "$T/data/banana/bshare/cert.pem" ] && [ -s "$T/data/banana/bshare/key.pem" ] && ok "its certificate made, kept on the card (LocalSend asks for it)" || bad "no certificate: $(ls "$T/data/banana" 2>&1)"
 touch "$T/decline"
 "$B" send mac-fp "$T/send/shot.png" 2>>"$T/send.log" && bad "declined but exit 0" || ok "declined: exit 1"
 grep -q "^declined	My Mac" "$T/run/bshare-send" && ok "bshare-send: declined" || bad "bshare-send: $(cat "$T/run/bshare-send")"
