@@ -8,6 +8,7 @@ namespace banana
 	// timings (ms)
 	static constexpr double WORD_AT = 560, LETTER = 60, LOAD_AT = 600, DOT = 240;
 	static constexpr double SHINE_AT = 1000, SHINE = 300;
+	static constexpr double CLICK_AT = 1000;	// the wordmark is complete and the shine starts: the intro's cue
 
 	// the layout, in CSS px of a 640x480 panel
 	static constexpr float BUNCH_Y = 96, WORD_Y = 268, LOAD_Y = 342, DOTS_Y = 368;
@@ -193,6 +194,10 @@ namespace banana
 				fill(scr, dx + i * (dw + gap), X(DOTS_Y) + oy, dw, dw, c);
 			}
 		}
+		// the intro's cue: as the wordmark finishes and the shine starts. The sound device is pre-opened by
+		// Sound::warm() at boot (the rcS bring-up has the DSP playing by ~8 s, before this), so it is a write,
+		// not a graph to instantiate.
+		if (!cued && t >= CLICK_AT) { cued = true; if (onCue) onCue("insert"); }
 	}
 
 	int Splash::nextFrame(double t, bool ready) const

@@ -22,6 +22,7 @@ namespace banana
 		bool played() const { return W > 0; }
 		// ms until the next frame is different (16 while anything moves)
 		int nextFrame(double t, bool ready) const;
+		std::function<void(const std::string&)> onCue;	// "insert": once, as the wordmark finishes and the shine runs
 
 		static constexpr double INTRO_END = 1390;
 
@@ -31,7 +32,7 @@ namespace banana
 		int W = 0, H = 0, K = 2, KW = 6, KL = 2;	// device px per sprite pixel: the bunch, the word, LOADING
 		int oy = 0;						// the composition is centred on a panel taller than 480 CSS px
 		float s = 1;
-		bool light = false;
+		bool light = false, cued = false;
 		std::vector<uint32_t> bgTop;
 		Rgba bunch;
 		Mask word, loading;

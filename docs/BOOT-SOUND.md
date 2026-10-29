@@ -23,8 +23,8 @@ Cross-reference: `docs/RPC-PORT.md` ("The menu's audio delay") and `docs/ARCHITE
   cascade (DAIS service → rx_macro → SoundWire → WCD937x → card) waited behind it. Loading the DSP services first,
   with no fixed `sleep 2`, brings the card up at ~5.5 s and — more importantly — the ADSP's graph is ready to pull
   audio at **~8.1 s** instead of ~20–27 s.
-- **Net result:** the RPC has sound ~8 s after the kernel, which is *before the splash ends*, so the boot click is
-  reachable again (verified over consecutive boots: zero write failures, `trigger_time` 8.15 s / 8.33 s).
+- **Net result:** the RPC has sound ~8 s after the kernel, which is *before the splash ends*, so the boot animation's
+  click is **back** (verified over consecutive boots: zero write failures, `trigger_time` 8.15 s / 8.33 s).
 
 ## The device and its audio stack
 
@@ -220,8 +220,9 @@ device, instead of `start failure (-1)` ~12 s later and no sound until ~20–33 
 
 ## Current state
 
-- The boot animation has **no click** and, on the RPC's single panel, is a single screen. With sound now up at ~8 s the
-  click **can be restored** (it lands at ~8.7 s); that is a UI decision, not a blocker.
+- The boot animation is a **single screen** and plays its **click** again — as the wordmark finishes, ~1 s into the
+  animation (so ~8.7 s after the kernel). With sound up at ~8 s the cue has ~0.5 s to spare; it is an ordinary cue, so
+  a boot that were ever slower would simply lose it rather than delay anything.
 - The cartridge-insert animation **moved to the game launch** (`themes/pocket.json` and its colour variants).
 - The boot warm-up (`Sound::warm()`) still pre-opens the device so the first *menu* cue is not cold — and it is now the
   thing that has the device open and playing by 8.1 s.

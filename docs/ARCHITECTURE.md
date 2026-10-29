@@ -46,8 +46,8 @@ applies an update in the VM and boots the other slot, reading `extlinux.conf` as
    thread reads the library and builds the menu; when both are done it dissolves into the menu (four steps of an
    ordered dither in the animation's own pixel size). The animation is one screen (the panel's), so there is no
    second panel and no console/cartridge: the pixel bunch is at rest, BANANAOS types itself in, a shine runs over
-   the bananas and LOADING ticks until the menu takes over, and there is no click. `splash = off` in settings.conf
-   goes straight to the menu.
+   the bananas and LOADING ticks until the menu takes over, with the intro's cue as the wordmark finishes. The sound
+   device is up well before that (docs/BOOT-SOUND.md). `splash = off` in settings.conf goes straight to the menu.
 
 What is worth measuring on the device: OpenABL to kernel, kernel to init (the MMC probe and `rootwait`), and init
 to the menu's first frame. The kernel's `initcall_debug` and banana-ui's log (it logs the library scan's time)

@@ -706,13 +706,14 @@ static Splash gSplash;
 
 // plays until the intro is over and the menu is ready (with the animation off: only the wait for the menu)
 static void playSplash(Display& disp, SoftBackend& be, const Options& o, const std::string& variant, bool on,
-	std::atomic<bool>& ready, int sig)
+	std::atomic<bool>& ready, Sound& sound, int sig)
 {
 	if (!on || !gSplash.load(o.splash, o.banana + "/banana-48.png", variant, be.width(), be.height()))
 	{
 		while (!ready) usleep(2000);
 		return;
 	}
+	gSplash.onCue = [&sound](const std::string& n) { sound.play(n); };
 	double t0 = nowMs();
 	for (;;)
 	{
@@ -1041,7 +1042,7 @@ int main(int argc, char** argv)
 		uiPtr->finishWork();
 		ready = true;
 	});
-	playSplash(disp, be, o, variant, settings["splash"] != "off", ready, sigPipe[0]);
+	playSplash(disp, be, o, variant, settings["splash"] != "off", ready, sound, sigPipe[0]);
 	loader.join();
 	Menu* ui = uiPtr.get();
 	ui->setLog([](const std::string& m) { logf("%s", m.c_str()); });
