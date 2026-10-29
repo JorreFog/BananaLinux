@@ -913,8 +913,9 @@ namespace banana
 		wizard = false;
 	}
 
-	// the sd2 script again, under bananad's lock (Files: a roms folder made on the second card, offered to the library)
-	void Settings::sd2Scan() { spawn("/bin/sh", "-c", "flock /run/banana/sd2.lock /usr/libexec/banana/sd2 scan </dev/null >/dev/null 2>&1"); }
+	// the sd2 script again, under bananad's lock (Files: a roms folder made on the second card, offered to the library).
+	// -o, as bananad's: a ksmbd.mountd the scan starts mustn't keep the lock, or every later scan waits forever (#65)
+	void Settings::sd2Scan() { spawn("/bin/sh", "-c", "flock -o /run/banana/sd2.lock /usr/libexec/banana/sd2 scan </dev/null >/dev/null 2>&1"); }
 
 	void Settings::open()
 	{
