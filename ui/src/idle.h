@@ -15,7 +15,7 @@ namespace banana
 	{
 	public:
 		// brightness: the panel's .../brightness file; maximum: its .../max_brightness. Empty: no panel to guard.
-		void attach(const std::string& brightness, const std::string& maximum) { bl = brightness; blMax = maximum; }
+		void attach(const std::string& brightness, const std::string& maximum) { bl = brightness; blMax = maximum; ensureOn(); }
 		bool attached() const { return !bl.empty(); }
 		// the idle thresholds in ms (the test shortens them)
 		void setThresholds(int dim, int blank) { dimMs = dim; blankMs = blank; }
@@ -46,16 +46,50 @@ namespace banana
 		bool wake(double now, Sound* sound)
 		{
 			lastInput = now;
-			if (st == 0) return false;
+			// The panel can be dark without a dim of ours to undo: the menu was restarted while it was blanked, or a
+			// sleep that began with it dark came back at brightness 0. Nothing else would ever turn it on again --
+			// the guard believed it was awake -- so a dark panel is always brought back here.
+			bool restored = st != 0 ? restorePanel() : ensureOn();
+			// The screen is on again: pre-open the sound device, so the *next* press (this one is swallowed) plays
+			// its cue instantly instead of waiting for the DSP graph to be instantiated (Sound::setScreenOn).
+			if (restored && sound) { sound->setScreenOn(true); sound->setBgmGain(280); }
+			return restored;
+		}
+
+	private:
+		// back from a dim/blank of ours: the level it recorded, and the markers cleared
+		bool restorePanel()
+		{
 			if (savedBright >= 0) write(savedBright);
 			unlink("/run/banana/dim");
-			if (sound) sound->setBgmGain(280);
+			unlink("/run/banana/screen-off");
 			savedBright = -1;
 			st = 0;
 			return true;
 		}
-
-	private:
+		// a dark panel with nothing of ours to undo: back to the user's level (bananad keeps it in
+		// /data/banana/backlight), else the level the burn-in dim recorded, else 60%. True when it restored one.
+		bool ensureOn()
+		{
+			if (bl.empty()) { st = 0; savedBright = -1; return false; }
+			int cur = -1, max = -1;
+			{ std::ifstream f(bl); f >> cur; }
+			if (cur != 0) { if (st != 0) { st = 0; savedBright = -1; } unlink("/run/banana/screen-off"); return false; }
+			{ std::ifstream f(blMax); f >> max; }
+			if (max <= 0) return false;
+			int v = -1, pm = -1;
+			{ std::ifstream f("/data/banana/backlight"); f >> pm; }
+			if (pm > 0) v = max * pm / 1000;
+			if (v <= 0) { pm = -1; std::ifstream g("/run/banana/dim"); g >> pm; if (pm > 0) v = max * pm / 1000; }
+			if (v <= 0) v = max * 60 / 100;
+			if (v < 1) v = 1;
+			write(v);
+			unlink("/run/banana/dim");
+			unlink("/run/banana/screen-off");
+			savedBright = -1;
+			st = 0;
+			return true;
+		}
 		std::string bl, blMax;
 		double lastInput = 0;
 		int st = 0, savedBright = -1;
@@ -63,6 +97,7 @@ namespace banana
 		void write(int v) { if (!bl.empty()) { std::ofstream o(bl); o << v << "\n"; } }
 		void dim(Sound* sound)
 		{
+			std::ofstream("/run/banana/screen-off") << "1\n";	// bananad: a power press now wakes the screen, not sleeps
 			int cur = -1, max = -1;
 			{ std::ifstream f(bl); f >> cur; }
 			{ std::ifstream f(blMax); f >> max; }
@@ -76,6 +111,8 @@ namespace banana
 			if (sound) sound->setBgmGain(120);	// the loop a little quieter while dimmed
 			st = 1;
 		}
-		void blank(Sound* sound) { write(0); if (sound) sound->setBgmGain(0); st = 2; }
+		// blanked: the panel off, and the sound device released with it -- the screen being off is the real idle,
+		// and the stream lives only while it is on (Sound::setScreenOn)
+		void blank(Sound* sound) { std::ofstream("/run/banana/screen-off") << "1\n"; write(0); if (sound) sound->setScreenOn(false); st = 2; }
 	};
 }

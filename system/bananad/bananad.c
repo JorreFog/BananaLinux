@@ -547,10 +547,20 @@ static void sleep_quiet_begin(void)
 	struct dirent *e;
 	while (d && (e = readdir(d)) && sleep_bl_n < 4) {
 		if (e->d_name[0] == '.' || strlen(e->d_name) >= sizeof sleep_bl_name[0]) continue;
-		char p[600];
+		char p[600], mx[600];
 		snprintf(p, sizeof p, "/sys/class/backlight/%.255s/brightness", e->d_name);
+		snprintf(mx, sizeof mx, "/sys/class/backlight/%.255s/max_brightness", e->d_name);
 		int cur = read_int(p, -1);
 		if (cur < 0) continue;
+		/* A panel that is already dark (the menu's burn-in guard blanked it, or an earlier sleep) has no level of
+		 * its own to come back to, and saving the 0 would wake the handheld to a black screen. Come back to the
+		 * user's brightness instead; with nothing written down, leave the panel to the menu's guard. */
+		if (cur == 0) {
+			int pm = read_int("/data/banana/backlight", -1), max = read_int(mx, 0);
+			cur = (pm > 0 && max > 0) ? max * pm / 1000 : -1;
+			if (cur == 0) cur = 1;
+		}
+		if (cur <= 0) continue;
 		snprintf(sleep_bl_name[sleep_bl_n], sizeof sleep_bl_name[0], "%s", e->d_name);
 		sleep_bl_val[sleep_bl_n++] = cur;
 		write_file(p, "0");
@@ -1207,6 +1217,10 @@ static void handle(const struct input_event *e)
 	case BTN_SELECT: select_held = e->value; break;
 	case KEY_POWER:
 		if (now < ignore_power_until) break;
+		/* The menu's burn-in guard has the screen dimmed or blanked (/run/banana/screen-off): this press is to wake
+		 * it, so it must not also start a sleep -- two things at once is what makes waking it feel broken. The next
+		 * press, screen on, sleeps it as usual. */
+		if (e->value && access("/run/banana/screen-off", F_OK) == 0) break;
 		if (e->value) { power_down = 1; power_since = now; }
 		else if (power_down) { power_down = 0; suspend_now("power button"); }
 		break;
