@@ -90,10 +90,12 @@ grep -q "^nds	nds/Peel Quest (USA).nds	.*	0	0$" "$OUT/pick-games.tsv" || bad "ga
 bs rc sync > "$OUT/pick-sync2.log" 2>&1 || bad "pick sync 2: $(tail -3 "$OUT/pick-sync2.log")"
 has "rc/roms/gba/Banana Run (USA).gba"
 # a sync killed while it runs (Stop, a shutdown): the status says "error stopped" at once, not "running" for 120 s
+# (killed by its sync.pid, as the menu's Stop does: $! is a subshell under dash, Ubuntu's sh, and killing that would
+# leave banana-sync running with the lock held, so every later sync of this card would say "already running")
 bs rb sync > "$OUT/romm-kill.log" 2>&1 & KP=$!
-for i in $(seq 300); do case "$(st rb)" in running*) break;; esac; sleep 0.01; done
-if case "$(st rb)" in running*) true;; *) false;; esac; then
-    kill -TERM $KP; wait $KP 2>/dev/null
+for i in $(seq 300); do case "$(st rb)" in running*) [ -s "$OUT/rb/run/sync.pid" ] && break;; esac; sleep 0.01; done
+if case "$(st rb)" in running*) [ -s "$OUT/rb/run/sync.pid" ];; *) false;; esac; then
+    kill -TERM "$(cat "$OUT/rb/run/sync.pid")"; wait $KP 2>/dev/null
     [ "$(st rb)" = "error stopped" ] || bad "a killed sync left the status: $(st rb)"
 else
     wait $KP; echo "note: the sync ended before it could be killed ($(st rb)): the kill case not checked this run"
