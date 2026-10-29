@@ -514,7 +514,7 @@ namespace banana
 		// Pokédex's page and the entry open; the guide's look-ups (a trainer's team: a ROM search) kept by goal
 		enum { PK_PARTY, PK_BATTLE, PK_GAME, PK_MON, PK_MAP, PK_BAG, PK_DEX, PK_DEXMON, PK_GUIDE };
 		enum { PK_TABS = 7 };
-		int pkView = PK_PARTY, pkMon = 0;
+		int pkView = PK_PARTY, pkMon = 0, pkMonPage = 0;	// (the summary's right column: 0 the moves, 1 the stats)
 		bool pkBattle = false;
 		float pkTabX[PK_TABS] = {}, pkTabW[PK_TABS] = {};
 		int pkPocket = 0, pkBagPage = 0, pkDexPage = 0, pkDexNat = 0, pkPages = 1;
@@ -525,12 +525,19 @@ namespace banana
 		std::vector<uint8_t> pkMapCells;
 		std::string pkGoalKey;
 		std::vector<std::pair<uint16_t, uint8_t>> pkGoalTeam;
+		int pkWildPage = 0, pkWildPages = 1, pkWildKey = -1;	// the guide's wild Pokémon: the page shown, how many, its map
 		void pokeMap(const SPal& p);
 		void pokeBag(const SPal& p);
 		void pokeDex(const SPal& p);
 		void pokeDexMon(const SPal& p);
 		void pokeGuide(const SPal& p);
 		void pager(const SPal& p, int page, int pages, const std::string& left);
+		// a pager's back and on buttons, side by side (w x h each, gap between): drawn, greyed at the first and the
+		// last page; a tap on them: -1 back, 1 on, 0 neither (each button's whole box and a little around it)
+		struct PagerButtons { float x, y, w, h, gap; };
+		static const PagerButtons PAGER, GUIDE_PAGER;	// the pages' own (Bag, Pokédex, the game companion), the Guide's
+		void pagerButtons(const SPal& p, int page, int pages, const PagerButtons& b);
+		int pagerStep(float lx, float ly, const PagerButtons& b) const;
 		// the game companion's views: a page (gcomp::PageId) or GC_GAME (the panel's tiles); within a page, its screen
 		// (a page longer than the panel is paged); a list's row opened (its fields in full); where the tabs and the
 		// rows were drawn (for touch)
@@ -550,7 +557,7 @@ namespace banana
 		int wrapLines(const std::string& t, float size, float width);
 		std::map<int, rnds::TexPtr> pkIcons;
 		std::shared_ptr<const pkmn::RomTables> pkTables;	// (the tables the icons came from)
-		std::map<int, rnds::TexPtr> pkMapTex;				// the region map pictures uploaded (by picture), and their tables
+		std::map<int, rnds::TexPtr> pkMapTex;				// the region map pictures uploaded (by picture and scale), and their tables
 		std::shared_ptr<const pkmn::RomTables> pkMapTables;
 		void pokeRender(const SPal& p);
 		void pokeParty(const SPal& p);

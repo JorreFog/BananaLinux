@@ -319,7 +319,7 @@ for size in 640x480 1024x768; do
     # decoder's test): the party, a member's summary by touch, another member from the strip, back, a battle (shown by
     # itself), the Game tab (the panel's tiles and achievements); then the same in the light theme and in Chinese
     klog=$OUT/$size-pokemon.log
-    pkscript="home 0; gamepanel 1 $OUT/poke.gba; gshot pk-wait; pokefeed $OUT/poke-party.txt; gshot pk-party; gtouch 100 70; gshot pk-mon; \
+    pkscript="home 0; gamepanel 1 $OUT/poke.gba; gshot pk-wait; pokefeed $OUT/poke-party.txt; gshot pk-party; gtouch 100 70; gshot pk-mon; gtouch 470 200; gshot pk-mon-stats; \
         gtouch 134 384; gshot pk-mon2; gtouch 570 384; gshot pk-back; wait 300; pokefeed $OUT/poke-battle.txt; wait 300; \
         pokefeed $OUT/poke-battle.txt; gshot pk-battle; gtouch 580 447; gshot pk-game"
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
@@ -334,7 +334,7 @@ for size in 640x480 1024x768; do
     LX=$OUT/fixture-light; rm -rf "$LX"; cp -r "$FX/data" "$LX"; printf 'theme = light\nlanguage = zh-cn\n' >> "$LX/settings.conf"
     "$HERE/banana-ui" --headless "$OUT/$size-zh-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
         --roms "$FX/roms" --data "$LX" --script "$pkscript" 2> "$OUT/$size-pokemon-zh.log" || { echo "FAIL $size: banana-ui (Pokémon companion, light, zh-cn) exited $?"; fail=1; }
-    for s in pk-wait pk-party pk-mon pk-mon2 pk-back pk-battle pk-game pk-none zh-pk-party zh-pk-mon zh-pk-battle zh-pk-game; do
+    for s in pk-wait pk-party pk-mon pk-mon-stats pk-mon2 pk-back pk-battle pk-game pk-none zh-pk-party zh-pk-mon zh-pk-mon-stats zh-pk-battle zh-pk-game; do
         f=$OUT/$size-$s-bot.png
         [ -s "$f" ] || { echo "FAIL $size: no $f"; fail=1; continue; }
         [ "$(convert "$f" -format '%[fx:standard_deviation>0.01]' info: 2>/dev/null)" = 1 ] || { echo "FAIL $size: $f is blank"; fail=1; }

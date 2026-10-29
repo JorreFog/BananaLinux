@@ -54,8 +54,9 @@ static std::vector<uint8_t> partySlot(const Plain& m, bool breakSum = false, boo
 	uint8_t g[12] = {}, a[12] = {}, e[12] = {}, x[12] = {};
 	put16(g, m.species); put16(g + 2, m.item); put32(g + 4, (uint32_t)(m.level * m.level * m.level + 40 * m.level)); g[8] = m.ppBonuses; g[9] = 70;
 	for (int i = 0; i < 4; i++) { put16(a + i * 2, m.moves[i]); a[8 + i] = m.pp[i]; }
-	e[0] = 4; e[6] = 10;
-	put32(x + 4, (31u) | (m.egg ? 1u << 30 : 0));
+	e[0] = 4; e[1] = 252; e[3] = 6; e[6] = 10;
+	// IVs 31, 20, 15, 10, 5, 0 (HP, Attack, Defense, Speed, Sp. Atk, Sp. Def), the second ability when the personality is odd
+	put32(x + 4, 31u | 20u << 5 | 15u << 10 | 10u << 15 | 5u << 20 | (m.egg ? 1u << 30 : 0) | (m.pid & 1) << 31);
 	uint8_t d[48];
 	const char* ord = ORDERS[plain ? 0 : m.pid % 24];
 	for (int pos = 0; pos < 4; pos++)
@@ -70,6 +71,7 @@ static std::vector<uint8_t> partySlot(const Plain& m, bool breakSum = false, boo
 		put32(&p[0x20 + i], v);
 	}
 	put32(&p[0x50], m.status); p[0x54] = m.level; put16(&p[0x56], m.hp); put16(&p[0x58], m.maxHp);
+	for (int i = 0; i < 5; i++) put16(&p[0x5a + i * 2], (uint16_t)(m.level * 2 + 1 + i));	// Attack, Defense, Speed, Sp. Atk, Sp. Def
 	return p;
 }
 
@@ -235,7 +237,7 @@ int main(int argc, char** argv)
 		std::vector<uint8_t> h(0xc0, 0);
 		memcpy(&h[0xa0], "POKEMON EMER", 12);
 		memcpy(&h[0xac], "BPEE", 4);
-		const GameInfo* g = detectGame(h.data(), h.size());
+		const GameProfile* g = detectGame(h.data(), h.size());
 		CHECK(g && std::string(g->name) == "Pokémon Emerald" && g->party == 0x020244ec);
 		memcpy(&h[0xac], "BPRE", 4);
 		g = detectGame(h.data(), h.size());
@@ -279,6 +281,24 @@ int main(int argc, char** argv)
 		EQ(d.ppBonuses, (uint8_t)0x1b);
 		EQ(std::string(statusName(d.status)), std::string("PAR"));
 		CHECK(!d.egg);
+		EQ(d.friendship, (uint8_t)70);
+		EQ(d.stats[0], (uint16_t)47); EQ(d.stats[2], (uint16_t)49); EQ(d.stats[4], (uint16_t)51);
+		EQ(d.ivs[0], (uint8_t)31); EQ(d.ivs[1], (uint8_t)20); EQ(d.ivs[3], (uint8_t)10); EQ(d.ivs[5], (uint8_t)0);
+		EQ(d.evs[0], (uint8_t)4); EQ(d.evs[1], (uint8_t)252); EQ(d.evs[3], (uint8_t)6); EQ(d.evs[5], (uint8_t)0);
+		EQ((int)d.abilitySlot, (int)(m.pid & 1));
+		EQ(d.nature(), (int)(m.pid % 25));
+	}
+	// ---- the natures: five by five, the row raised, the column lowered (Attack, Defense, Speed, Sp. Atk, Sp. Def)
+	{
+		int up, down;
+		EQ(std::string(natureName(3)), std::string("Adamant"));
+		natureStats(3, up, down); EQ(up, 0); EQ(down, 3);		// Adamant: Attack up, Sp. Atk down
+		EQ(std::string(natureName(10)), std::string("Timid"));
+		natureStats(10, up, down); EQ(up, 2); EQ(down, 0);		// Timid: Speed up, Attack down
+		EQ(std::string(natureName(24)), std::string("Quirky"));
+		natureStats(24, up, down); EQ(up, -1); EQ(down, -1);	// Quirky: neither
+		natureStats(12, up, down); EQ(up, -1);					// Serious
+		EQ(std::string(natureName(25)), std::string(""));
 	}
 	{
 		Plain m{ 7, 99, "EGG", 152, 0, { 33, 45, 0, 0 }, { 35, 40, 0, 0 }, 0, 0, 5, 20, 20, true };
@@ -336,6 +356,80 @@ int main(int argc, char** argv)
 		EQ(d.hp, (uint16_t)15); EQ(d.maxHp, (uint16_t)27); EQ(d.types[0], (uint8_t)GRASS); EQ(d.moves[2], (uint16_t)71);
 		std::vector<uint8_t> z(0x58, 0);
 		CHECK(!decodeBattler(z.data(), d));
+	}
+
+	// ---- the layouts as data: a species packed with other bits, a battler with its fields elsewhere
+	{
+		Plain m{ 0x1234567u, 0x89abcdefu, "Kid", 155 | (5 << 11), 0, { 33, 0, 0, 0 }, { 35, 0, 0, 0 }, 0, 0, 5, 20, 20, false };
+		MonLayout L;
+		L.speciesMask = 0x07ff;
+		Mon d;
+		CHECK(decodeParty(partySlot(m).data(), d, L) && d.species == 155);
+		CHECK(decodeParty(partySlot(m).data(), d) && d.species == (155 | (5 << 11)));	// (the games': as it is)
+		Plain zero{ 0x1234567u, 0x89abcdefu, "Kid", 5 << 11, 0, { 33, 0, 0, 0 }, { 35, 0, 0, 0 }, 0, 0, 5, 20, 20, false };
+		CHECK(!decodeParty(partySlot(zero).data(), d, L));		// (no species in its bits)
+		// a battler 8 bytes longer, everything after the types moved on by 8
+		auto b = battler(277, "TREECKO", 9, 15, 27, GRASS, GRASS, { 1, 43, 71 });
+		std::vector<uint8_t> w(b.begin(), b.begin() + 0x23);
+		w.insert(w.end(), 8, 0);
+		w.insert(w.end(), b.begin() + 0x23, b.end());
+		BattlerLayout W;
+		W.size = 0x60; W.pp += 8; W.hp += 8; W.level += 8; W.maxHp += 8; W.item += 8; W.nick += 8; W.ppBonuses += 8; W.exp += 8; W.pid += 8; W.status += 8;
+		CHECK(decodeBattler(w.data(), d, 450, W) && d.species == 277 && d.nick == "TREECKO" && d.level == 9 && d.hp == 15 && d.maxHp == 27 && d.moves[2] == 71);
+		CHECK(decodeBattler(w.data(), d) && d.level != 9);		// (read as the games' keep it: wrong)
+	}
+
+	// ---- a map's wild Pokémon by how they are met: the fishing table's ten slots, each rod its own and adding up to 100
+	{
+		std::vector<uint8_t> rom(0x1000, 0);
+		size_t h = 0x100;		// the headers: group, number, then grass / water / rock smash / fishing info pointers
+		rom[h] = 3; rom[h + 1] = 5;
+		put32(&rom[h + 16], 0x08000200);
+		rom[h + 20] = 0xff;
+		put32(&rom[0x204], 0x08000300);	// (the info: the rate, then the slots)
+		// old rod: Magikarp twice; good rod: Magikarp, Goldeen twice; super rod: Goldeen, Seaking twice, Gyarados twice
+		const uint16_t sp[10] = { 129, 129, 129, 118, 118, 118, 119, 119, 130, 130 };
+		for (int i = 0; i < 10; i++) { rom[0x300 + i * 4] = (uint8_t)(5 + i); rom[0x301 + i * 4] = (uint8_t)(10 + i); put16(&rom[0x302 + i * 4], sp[i]); }
+		RomTables t;
+		t.rom = std::make_shared<const std::vector<uint8_t>>(rom);
+		t.wildHeaders = (long)h;
+		auto sum = [](const std::vector<RomTables::Wild>& w) { int s = 0; for (auto& e : w) s += e.percent; return s; };
+		auto old = t.wild(3, 5, 3), good = t.wild(3, 5, 4), super = t.wild(3, 5, 5);
+		CHECK(old.size() == 1 && old[0].species == 129 && old[0].percent == 100 && old[0].minLv == 5 && old[0].maxLv == 11);
+		CHECK(good.size() == 2 && good[0].species == 129 && good[0].percent == 60 && good[1].species == 118 && good[1].percent == 40);
+		CHECK(super.size() == 3 && super[0].species == 119 && super[0].percent == 55 && super[1].species == 118 && super[1].percent == 40 &&
+			super[2].species == 130 && super[2].percent == 5);
+		EQ(sum(old), 100); EQ(sum(good), 100); EQ(sum(super), 100);
+		CHECK(t.wild(3, 5, 0).empty() && t.wild(3, 6, 3).empty() && t.wild(3, 5, 6).empty());	// (no grass; another map; no such way)
+	}
+
+	// ---- profiles: a release told by its CRC-32 before its code's own
+	{
+		std::vector<uint8_t> h(0xc0, 0);
+		memcpy(&h[0xac], "BPEE", 4);
+		const GameProfile* e = detectGame(h.data(), h.size());
+		CHECK(e && e->family == EMERALD && !e->fixedSave && e->save.key == 0xac && e->mon.size == 100 && e->mon.battler.size == 0x58);
+		CHECK(!crcMatters(h.data(), h.size()));		// (none listed yet)
+		GameProfile hack = *e;
+		hack.name = "A hack"; hack.crc = 0x12345678; hack.party = 0x02019c20;
+		GameProfile list[] = { *e, hack };
+		CHECK(detectGameIn(list, 2, h.data(), h.size(), 0x12345678)->party == 0x02019c20);
+		CHECK(detectGameIn(list, 2, h.data(), h.size(), 0x87654321)->party == 0x020244ec);	// (another release: the code's)
+		CHECK(detectGameIn(list, 2, h.data(), h.size(), 0)->party == 0x020244ec);
+		CHECK(detectGameIn(list + 1, 1, h.data(), h.size(), 0) == nullptr);		// (only a release: not this one, not known)
+		memcpy(&h[0xac], "AXVE", 4);
+		const GameProfile* r = detectGame(h.data(), h.size());
+		CHECK(r && r->family == RUBY_SAPPHIRE && r->fixedSave && r->save.key == 0);
+
+		// the companion reads where its profile says, slots as long as its layout's
+		hack.mon.size = 104;
+		Companion c;
+		c.openWith(&hack);
+		RomTables t;
+		for (int i = 0; i < 412; i++) { t.species.push_back("S" + std::to_string(i)); t.speciesTypes.push_back({ (uint8_t)WATER, (uint8_t)GROUND }); }
+		c.setTables(t);
+		std::string q = c.requests(0);
+		CHECK(q.find("READ_CORE_MEMORY 2019c20 624\n") != std::string::npos);
 	}
 
 	// ---- the tables, found in a made-up ROM by their shape (with look-alikes before them)
@@ -439,7 +533,7 @@ int main(int argc, char** argv)
 	{
 		std::vector<uint8_t> h(0xc0, 0);
 		memcpy(&h[0xac], "BPEE", 4);
-		const GameInfo* g = detectGame(h.data(), h.size());
+		const GameProfile* g = detectGame(h.data(), h.size());
 		Companion c;
 		c.openWith(g);
 		RomTables t;
@@ -553,6 +647,19 @@ int main(int argc, char** argv)
 		move(1, 40, NORMAL, 100, 35); move(2, 50, FIGHTING, 100, 25); move(3, 15, NORMAL, 85, 10);
 		move(33, 35, NORMAL, 95, 35); move(45, 0, NORMAL, 100, 40); move(55, 40, WATER, 100, 25); move(189, 20, GROUND, 100, 10);
 		move(44, 60, DARK, 100, 25); move(10, 40, NORMAL, 100, 35); move(52, 40, FIRE, 100, 25); move(98, 40, NORMAL, 100, 30);
+		names(0x48000, 13, 78, { 0xae, 0xae, 0xae, 0xae, 0xae, 0xae, 0xae, 0xff }, [](size_t i) -> std::string
+		{
+			return i == 67 ? "TORRENT" : i == 53 ? "PICKUP" : i == 51 ? "KEEN EYE" : i == 44 ? "RAIN DISH" : i == 66 ? "BLAZE" : "ABILITY" + std::to_string(i);
+		});
+		auto abilities = [&](int sp, int a, int b) { rom[st + sp * 28 + 0x16] = (uint8_t)a; rom[st + sp * 28 + 0x17] = (uint8_t)b; };
+		abilities(283, 67, 0); abilities(288, 53, 0); abilities(309, 51, 44); abilities(280, 66, 0);
+		for (int i = 0; i < 20; i++)
+		{
+			uint8_t* e = &rom[0x49000 + i * 44];
+			std::vector<uint8_t> n = i == 0 ? std::vector<uint8_t>(8, 0xac) : enc(i == 13 ? "POTION" : "ITEM" + std::to_string(i));
+			memcpy(e, n.data(), n.size()); e[n.size()] = 0xff;
+			put16(e + 14, (uint16_t)i);
+		}
 		addExtras(rom, st, 0x50000);
 		Plain a{ 0x11111111, 0x22222222, "MUDKIP", 283, 13, { 33, 45, 55, 189 }, { 35, 40, 21, 10 }, 0x30, 0, 14, 38, 41, false };
 		Plain b{ 0x33333335, 0x22222222, "Ziggy", 288, 0, { 33, 45, 0, 0 }, { 35, 40, 0, 0 }, 0, 0x08, 9, 11, 30, false };
@@ -601,6 +708,16 @@ int main(int argc, char** argv)
 			EQ((int)tt->moveInfo[189].type, (int)GROUND);
 			EQ(tt->icons.size(), (size_t)413);
 			EQ(tt->palettes.size(), (size_t)3);
+			EQ(tt->abilities.size(), (size_t)78);
+			EQ(tt->itemName(13), std::string("POTION"));
+			Mon mk; mk.species = 283; mk.abilitySlot = 1;
+			EQ(tt->abilityName(mk), std::string("TORRENT"));	// (one ability: the second slot is the first)
+			mk.species = 309;
+			EQ(tt->abilityName(mk), std::string("RAIN DISH"));
+			mk.abilitySlot = 0;
+			EQ(tt->abilityName(mk), std::string("KEEN EYE"));
+			mk.species = 411;
+			EQ(tt->abilityName(mk), std::string(""));			// (none in the table)
 			if (!dir.empty()) CHECK(iconsPng(*tt, { { 283, false }, { 288, false }, { 309, false }, { 280, false }, { 286, false }, { 0, true } }, dir + "/poke-icons.png"));
 		}
 		// another game's header: nothing to do
@@ -622,17 +739,17 @@ int main(int argc, char** argv)
 		memcpy(&rom[0x3f94c], order0, 6);
 		rom[0x3f906] = rom[0x3f92a] = 0xc0; rom[0x3f907] = rom[0x3f92b] = 0x46;
 		RomTables plainOnly = findTables(rom.data(), rom.size());
-		CHECK(plainOnly.plainMons && plainOnly.dexRam == 0);
+		CHECK(plainOnly.has.plainMons && plainOnly.has.dexRam == 0);
 		for (int a : { 0x104b00, 0x104b02 }) { rom[a] = 0xc0; rom[a + 1] = 0x46; }
 		rom[0x549b6] = 0x7d; rom[0x549b7] = 0x22; rom[0x549be] = 0x7d; rom[0x549bf] = 0x30;
 		put32(&rom[0x104b10], 0x0202583c); put32(&rom[0x549d0], 0x0202583c);
-		CHECK(!findTables(rom.data(), rom.size()).plainBag);
+		CHECK(!findTables(rom.data(), rom.size()).has.bagPockets);
 		rom[0x99dfc] = 0x80; rom[0x99dfd] = 0x88; rom[0x98984] = 0xc0; rom[0x98985] = 0x46;
 		RomTables t = findTables(rom.data(), rom.size());
-		CHECK(t.plainMons && t.dexRam == 0x0202583c && t.dexBytes == 0x7d && t.plainBag);
+		CHECK(t.has.plainMons && t.has.dexRam == 0x0202583c && t.has.dexBytes == 0x7d && t.has.bagPockets == 0x0203988c);
 		memcpy(&rom[0xac], "BPEE", 4);
 		RomTables em = findTables(rom.data(), rom.size());
-		CHECK(!em.plainMons && em.dexRam == 0);		// (only FireRed's offsets)
+		CHECK(!em.has.plainMons && em.has.dexRam == 0);		// (only FireRed's offsets)
 
 		Companion c;
 		std::vector<uint8_t> h(0xc0, 0); memcpy(&h[0xac], "BPRE", 4);
@@ -704,7 +821,8 @@ int main(int argc, char** argv)
 		CHECK(cc.open(up) && std::string(cc.game()->code) == "BPRE");
 		std::shared_ptr<const RomTables> tt;
 		for (int i = 0; i < 3000 && !(tt = cc.tables()); i++) usleep(10000);
-		CHECK(tt && tt->cfru && tt->plainMons && tt->dexRam == 0x0202583c && tt->dexBytes == 0x7d && tt->plainBag);
+		CHECK(tt && tt->has.modernTypes && tt->has.ownDex && tt->has.leadersFromTrainers && tt->has.plainMons && tt->has.dexRam == 0x0202583c &&
+			tt->has.dexBytes == 0x7d && tt->has.bagPockets == 0x0203988c && !tt->has.bagUnsure);
 	}
 
 	// ---- the region map pictures (pokemap.cpp): the LZ77 decoder, then made-up Hoenn and Kanto maps found and drawn
@@ -881,7 +999,7 @@ int main(int argc, char** argv)
 		{
 			EQ(tt->speciesName(280), std::string("TORCHIC"));
 			EQ(tt->icons.size(), (size_t)413);
-			EQ(tt->palettes.size(), (size_t)3);
+			CHECK(tt->palettes.size() >= 3);	// (the header's table: six, the last three unused)
 			FILE* f = fopen(rp, "rb");
 			std::vector<uint8_t> rom;
 			if (f && std::string(rp).find(".zip") == std::string::npos)

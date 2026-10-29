@@ -6157,7 +6157,7 @@ namespace banana
 		gTitle = title; gSystem = system; gScreen = screen; gTouch = touch;
 		gHotkeys = getConfValue(data + "/settings.conf", "ra_hotkeys", "on") != "off";
 		gFlash = gDown = -1; gSeen = -1; awardsSeen = 0; wake = false;
-		pkView = PK_PARTY; pkMon = 0; pkBattle = false; pkPocket = pkBagPage = pkDexPage = pkDexNat = 0; pkGoalKey.clear(); pkGoalTeam.clear();
+		pkView = PK_PARTY; pkMon = pkMonPage = 0; pkBattle = false; pkPocket = pkBagPage = pkDexPage = pkDexNat = 0; pkGoalKey.clear(); pkGoalTeam.clear(); pkWildPage = 0; pkWildKey = -1;
 		gcView = gcomp::P_STATUS; gcScreen = 0; gcScreens = 1; gcList = gcRow = -1; gcBattle = false; gcHits.clear();
 		if (gameComp) gameComp->want(gcView);
 		raw = std::make_shared<RaWatch>();
@@ -6266,11 +6266,8 @@ namespace banana
 				if (!down)
 				{
 					if (gcRow >= 0) { gcList = gcRow = -1; }	// (a row's view: a tap goes back to the list)
-					else if (gcScreens > 1 && ly >= 372 && ly < 418)
-					{
-						if (lx < 220) gcScreen = std::max(0, gcScreen - 1);
-						else if (lx >= 420) gcScreen = std::min(gcScreens - 1, gcScreen + 1);
-					}
+					else if (gcScreens > 1 && ly >= 372 && ly < 418)	// (the pager: its buttons, its page count)
+						gcScreen = std::min(gcScreens - 1, std::max(0, gcScreen + pagerStep(lx, ly, PAGER)));
 					else
 						for (auto& h : gcHits)
 							if (ly >= h.y0 && ly < h.y1) { gcList = h.list; gcRow = h.row; break; }
@@ -6306,12 +6303,12 @@ namespace banana
 					if (lx >= 526) pkView = PK_PARTY;
 					else if (lx >= 18 && (int)((lx - 18) / 80) < (int)party.size()) pkMon = (int)((lx - 18) / 80);
 				}
+				else if (!down && pkView == PK_MON && lx >= 326 && ly >= 14 && ly < 336) pkMonPage ^= 1;	// (the right column: moves, stats)
 				else if (!down && (pkView == PK_BAG || pkView == PK_DEX) && ly >= 372 && ly < 418)
 				{
-					// the pager: the left third back a page, the right third on
+					// the pager: its back and on buttons
 					int& pg = pkView == PK_BAG ? pkBagPage : pkDexPage;
-					if (lx < 220) pg = std::max(0, pg - 1);
-					else if (lx >= 420) pg = std::min(pkPages - 1, pg + 1);
+					pg = std::min(pkPages - 1, std::max(0, pg + pagerStep(lx, ly, PAGER)));
 				}
 				else if (!down && pkView == PK_BAG && ly >= 14 && ly < 60)
 				{
@@ -6324,6 +6321,8 @@ namespace banana
 					if (i >= 0 && i < (int)pkDexShown.size()) { pkDexNat = pkDexShown[i]; pkView = PK_DEXMON; }
 				}
 				else if (!down && pkView == PK_DEXMON) pkView = PK_DEX;
+				else if (int st = !down && pkView == PK_GUIDE && pkWildPages > 1 ? pagerStep(lx, ly, GUIDE_PAGER) : 0)	// (the wild list's pages)
+					pkWildPage = std::min(pkWildPages - 1, std::max(0, pkWildPage + st));
 				else if (!down && pkView == PK_MAP && pkMapW > 0 && pkMapCell > 0)
 				{
 					// a square of the region map: its section named under the map (tapped again, or off the map: the legend)
@@ -6496,6 +6495,7 @@ namespace banana
 			".##..##..", "..####..." };
 		const char* const PX_FEMALE[9] = { "..###..", ".##.##.", "##...##", "##...##", ".##.##.", "..###..", "...#...", ".#####.", "...#..." };
 		const char* const PX_ITEM[7] = { "...#...", "..###..", ".##o##.", "##ooo##", ".##o##.", "..###..", "...#..." };
+		const char* const PX_UP[3] = { "..#..", ".###.", "#####" }, * const PX_DOWN[3] = { "#####", ".###.", "..#.." };
 		const uint32_t HP_GREEN = 0x58d068, HP_YELLOW = 0xf8c030, HP_RED = 0xf05848, EXP_BLUE = 0x58a8f8;
 		uint32_t statusColour(const std::string& st)
 		{
@@ -6605,7 +6605,7 @@ namespace banana
 		G g[3] = { { "Weak to", {} }, { "Resists", {} }, { "Immune to", {} } };
 		for (int a = 0; a < pkmn::NUM_TYPES; a++)
 		{
-			bool modern = companion && companion->tables() && companion->tables()->cfru;
+			bool modern = companion && companion->tables() && companion->tables()->has.modernTypes;
 			if (!pkmn::typeInGame(a, modern)) continue;
 			int q = pkmn::effect(a, t1, t2, modern);
 			if (q >= 8) g[0].list.push_back({ a, q });
@@ -6668,7 +6668,8 @@ namespace banana
 		if (!sn.seen)
 		{
 			box("bubble", false, 18, 14, 604, 398);
-			std::string why = !sn.error.empty() ? "RetroArch can't read the game's memory with this emulator: " + sn.error : "Waiting for the game...";
+			std::string why = sn.unknownRelease ? "This release of the game isn't one the companion knows." :
+				!sn.error.empty() ? "RetroArch can't read the game's memory with this emulator: " + sn.error : "Waiting for the game...";
 			text(fit(gTitle, true, 22, 560), true, 22, 40, 34, p.ink);
 			wrapped(why, 18, 40, 80, 560, 4, p.muted);
 		}
@@ -6791,37 +6792,94 @@ namespace banana
 			be->fill(std::round(X(36)), std::round(X(200)), std::round(X(268)), std::max(1.0f, std::round(X(2))), p.line);
 			pokeMatchups(p, m.types[0], m.types[1], 36, 210, 270, 328);
 		}
-		// ---- right: the four moves, each with its type, power and PP
-		for (int i = 0; i < 4; i++)
+		// ---- right: the moves or the stats, named at the column's top (a tap on the column changes which)
+		static const char* const SIDE[2] = { "Moves", "Stats" };
+		for (int i = 0; i < 2; i++)
 		{
-			float y = 26 + i * 77;
-			if (i) be->fill(std::round(X(336)), std::round(X(y - 6)), std::round(X(268)), std::max(1.0f, std::round(X(2))), p.line);
-			uint16_t mv = m.moves[i];
-			if (!mv) { text("-", true, 19, 348, y + 6, p.muted); continue; }
-			bool known = mv < t.moveInfo.size();
-			uint32_t tc = known ? pkmn::typeColor(t.moveInfo[mv].type) : 0x808080;
-			be->fill(std::round(X(336)), std::round(X(y)), std::round(X(4)), std::round(X(62)), Color::hex(tc));
-			bool out = m.pp[i] == 0;
-			text(fit(t.moveName(mv), true, 19, 256), true, 19, 348, y + 2, out ? p.muted : p.ink);
-			if (known) typeChip(t.moveInfo[mv].type, 348, y + 34);
-			// PWR n  PP a/b (right-aligned)
-			int mx = known ? pkmn::maxPP(t.moveInfo[mv].pp, m.ppBonuses, i) : 0;
-			std::string pp = std::to_string(m.pp[i]) + (mx ? "/" + std::to_string(mx) : "");
-			float r = 604;
-			float pw = num(pp, 16, 0, 0, p.ink, true);
-			num(pp, 16, r - pw, y + 34, out ? Color::hex(0xff8a96) : p.ink);
-			r -= pw + 5;
-			r -= text("PP", true, 13, 0, 0, p.muted, true, 0, true);
-			text("PP", true, 13, r, y + 37, p.muted, true);
-			if (known)
+			float w = text(SIDE[i], true, 15, 0, 0, p.ink, true, 1.0f, true);
+			float tx = std::round(403 + i * 134 - w / 2);
+			text(SIDE[i], true, 15, tx, 22, i == pkMonPage ? p.accent : p.muted, true, 1.0f);
+			if (i == pkMonPage) be->fill(std::round(X(tx)), std::round(X(42)), std::round(X(w)), std::round(X(3)), p.accent);
+		}
+		if (pkMonPage == 0)
+			// the four moves, each with its type, power and PP
+			for (int i = 0; i < 4; i++)
 			{
-				std::string pwr = t.moveInfo[mv].power > 1 ? std::to_string(t.moveInfo[mv].power) : "-";
-				r -= 12;
-				float ww = num(pwr, 16, 0, 0, p.ink, true);
-				num(pwr, 16, r - ww, y + 34, p.accent);
-				r -= ww + 5;
-				r -= text("Pwr", true, 13, 0, 0, p.muted, true, 0, true);
-				text("Pwr", true, 13, r, y + 37, p.muted, true);
+				float y = 58 + i * 69;
+				if (i) be->fill(std::round(X(336)), std::round(X(y - 6)), std::round(X(268)), std::max(1.0f, std::round(X(2))), p.line);
+				uint16_t mv = m.moves[i];
+				if (!mv) { text("-", true, 19, 348, y + 6, p.muted); continue; }
+				bool known = mv < t.moveInfo.size();
+				uint32_t tc = known ? pkmn::typeColor(t.moveInfo[mv].type) : 0x808080;
+				be->fill(std::round(X(336)), std::round(X(y)), std::round(X(4)), std::round(X(56)), Color::hex(tc));
+				bool out = m.pp[i] == 0;
+				text(fit(t.moveName(mv), true, 19, 256), true, 19, 348, y + 2, out ? p.muted : p.ink);
+				if (known) typeChip(t.moveInfo[mv].type, 348, y + 32);
+				// PWR n  PP a/b (right-aligned)
+				int mx = known ? pkmn::maxPP(t.moveInfo[mv].pp, m.ppBonuses, i) : 0;
+				std::string pp = std::to_string(m.pp[i]) + (mx ? "/" + std::to_string(mx) : "");
+				float r = 604;
+				float pw = num(pp, 16, 0, 0, p.ink, true);
+				num(pp, 16, r - pw, y + 32, out ? Color::hex(0xff8a96) : p.ink);
+				r -= pw + 5;
+				r -= text("PP", true, 13, 0, 0, p.muted, true, 0, true);
+				text("PP", true, 13, r, y + 35, p.muted, true);
+				if (known)
+				{
+					std::string pwr = t.moveInfo[mv].power > 1 ? std::to_string(t.moveInfo[mv].power) : "-";
+					r -= 12;
+					float ww = num(pwr, 16, 0, 0, p.ink, true);
+					num(pwr, 16, r - ww, y + 32, p.accent);
+					r -= ww + 5;
+					r -= text("Pwr", true, 13, 0, 0, p.muted, true, 0, true);
+					text("Pwr", true, 13, r, y + 35, p.muted, true);
+				}
+			}
+		else if (m.egg) wrapped("Nothing to see until it hatches.", 16, 336, 60, 268, 3, p.muted);
+		else
+		{
+			// the nature, the ability, the held item, friendship
+			std::string ab = t.abilityName(m);
+			const std::string about[4][2] = { { "Nature", pkmn::natureName(m.nature()) }, { "Ability", ab.empty() ? "-" : ab },
+				{ "Item", m.item ? t.itemName(m.item) : "None" }, { "Friendship", std::to_string(m.friendship) } };
+			for (int i = 0; i < 4; i++)
+			{
+				float y = 58 + i * 26;
+				float lw = text(about[i][0], true, 13, 336, y + 3, p.muted, true, 1.0f);
+				std::string v = fit(about[i][1], true, 16, 268 - lw - 12);
+				float vw = text(v, true, 16, 0, 0, p.ink, false, 0, true);
+				text(v, true, 16, 604 - vw, y, p.ink);
+			}
+			be->fill(std::round(X(336)), std::round(X(164)), std::round(X(268)), std::max(1.0f, std::round(X(2))), p.line);
+			// the stats in the summary's order, each with its IV (31 the best: in the accent) and EVs; the one the nature
+			// raises in red with a mark up, the one it lowers in blue with a mark down (as the games colour them)
+			static const char* const STAT[6] = { "HP", "Attack", "Defense", "Sp. Atk", "Sp. Def", "Speed" };
+			static const int IV[6] = { 0, 1, 2, 4, 5, 3 };	// (Mon::ivs and evs: HP, Attack, Defense, Speed, Sp. Atk, Sp. Def)
+			int up, down;
+			pkmn::natureStats(m.nature(), up, down);
+			auto right = [&](const std::string& v, float size, float r, float y, const Color& c) { num(v, size, r - num(v, size, 0, 0, c, true), y, c); };
+			int evTotal = 0;
+			for (int e : m.evs) evTotal += e;
+			text("EVs " + std::to_string(evTotal) + "/510", true, 12, 336, 174, p.muted, true, 1.0f);
+			for (int i = 0; i < 2; i++)
+			{
+				const char* h = i ? "EV" : "IV";
+				float r = i ? 604 : 534;
+				text(h, true, 12, r - text(h, true, 12, 0, 0, p.muted, true, 1.0f, true), 174, p.muted, true, 1.0f);
+			}
+			int ka = std::max(1, (int)std::lround(2 * s));
+			for (int i = 0; i < 6; i++)
+			{
+				float y = 196 + i * 22;
+				int st = IV[i] - 1;	// (Mon::stats: no HP)
+				bool raised = i && st == up, lowered = i && st == down;
+				Color c = raised ? Color::hex(HP_RED) : lowered ? Color::hex(EXP_BLUE) : p.ink;
+				float lw = text(STAT[i], true, 15, 336, y, c);
+				if (raised || lowered) sprite(raised ? PX_UP : PX_DOWN, 3, 336 + lw + 6, y + 6, ka, [&](char) { return c; });
+				right(std::to_string(i ? m.stats[st] : m.maxHp), 16, 466, y - 1, p.ink);
+				int iv = m.ivs[IV[i]], ev = m.evs[IV[i]];
+				right(std::to_string(iv), 15, 534, y, iv == 31 ? p.accent : p.ink);
+				right(std::to_string(ev), 15, 604, y, ev ? p.ink : p.muted);
 			}
 		}
 		// ---- the members to switch to, and back to the party
@@ -6920,7 +6978,7 @@ namespace banana
 				else
 					for (size_t f = 0; f < sn.foes.size(); f++)
 					{
-						int q = pkmn::effect(t.moveInfo[mv].type, sn.foes[f].types[0], sn.foes[f].types[1], t.cfru);
+						int q = pkmn::effect(t.moveInfo[mv].type, sn.foes[f].types[0], sn.foes[f].types[1], t.has.modernTypes);
 						if (f == 0) q0 = q;
 						e += (f ? " / " : "") + times(q);
 					}
@@ -6947,16 +7005,44 @@ namespace banana
 
 	// ---- the pages that read the save: Map, Bag, Dex, Guide
 
+	namespace
+	{
+		const char* const PX_PREV[9] = { "....#", "...##", "..###", ".####", "#####", ".####", "..###", "...##", "....#" };
+		const char* const PX_NEXT[9] = { "#....", "##...", "###..", "####.", "#####", "####.", "###..", "##...", "#...." };
+	}
+
 	void Settings::pager(const SPal& p, int page, int pages, const std::string& left)
 	{
-		box("slot", false, 18, 372, 604, 40);
-		if (!left.empty()) text(fit(left, false, 15, 180), false, 15, 34, 384, p.muted);
-		if (pages <= 1) return;
+		// the left text and the page in a box; back and on as two buttons at its right, each its whole box to tap
+		// (pagerStep), greyed at the first and the last page
+		bool paged = pages > 1;
+		box("slot", false, 18, 372, paged ? 392 : 604, 40);
+		if (!left.empty()) text(fit(left, false, 15, paged ? 280 : 560), false, 15, 34, 384, p.muted);
+		if (!paged) return;
 		std::string pg = std::to_string(page + 1) + " / " + std::to_string(pages);
-		float w = num(pg, 16, 0, 0, p.ink, true);
-		num(pg, 16, 320 - w / 2, 382, p.ink);
-		if (page > 0) arrow(false, 236, 392, p.accent);
-		if (page < pages - 1) arrow(true, 398, 392, p.accent);
+		num(pg, 16, 394 - num(pg, 16, 0, 0, p.ink, true), 382, p.ink);
+		pagerButtons(p, page, pages, PAGER);
+	}
+
+	const Settings::PagerButtons Settings::PAGER = { 418, 372, 98, 40, 8 }, Settings::GUIDE_PAGER = { 526, 374, 44, 32, 2 };
+
+	void Settings::pagerButtons(const SPal& p, int page, int pages, const PagerButtons& b)
+	{
+		int k = std::max(1, (int)std::lround(2 * s));
+		for (int i = 0; i < 2; i++)
+		{
+			bool on = i ? page < pages - 1 : page > 0;
+			float bx = b.x + i * (b.w + b.gap);
+			box("slot", false, bx, b.y, b.w, b.h);
+			Color c = on ? p.accent : p.line;
+			sprite(i ? PX_NEXT : PX_PREV, 9, bx + b.w / 2 - 2.5f * k / s, b.y + b.h / 2 - 4.5f * k / s, k, [&](char) { return c; });
+		}
+	}
+
+	int Settings::pagerStep(float lx, float ly, const PagerButtons& b) const
+	{
+		if (ly < b.y - 4 || ly >= b.y + b.h + 6 || lx < b.x - 4) return 0;
+		return lx < b.x + b.w + b.gap / 2 ? -1 : 1;
 	}
 
 	void Settings::pokeMap(const SPal& p)
@@ -6965,22 +7051,17 @@ namespace banana
 		auto tb = companion->tables();
 		pkmn::RomTables none;
 		const pkmn::RomTables& t = tb ? *tb : none;
-		// ---- where: the area's name, the map and the place on it
-		box("bubble", false, 18, 14, 604, 62);
+		// ---- one box: the area's name along its top (the player's at the right), the region map as large as the box
+		// takes, a legend (or a tapped place's name) along its bottom
+		box("bubble", false, 18, 14, 604, 398);
 		std::string area = t.mapName(sn.mapsec);
 		if (area.empty()) area = sn.mapsec >= 0 ? "Somewhere unnamed" : "Unknown place";
-		text(fit(area, true, 22, 400), true, 22, 36, 24, p.ink);
-		char at[64];
-		snprintf(at, sizeof at, "Map %d.%d  ·  x %d, y %d", sn.group, sn.num, sn.x, sn.y);
-		text(at, false, 14, 36, 52, p.muted);
-		if (!sn.player.empty())
-		{
-			float w = text(sn.player, true, 17, 0, 0, p.accent, false, 0, true);
-			text(sn.player, true, 17, 604 - w, 28, p.accent);
-		}
+		float nw = sn.player.empty() ? 0 : text(sn.player, true, 17, 0, 0, p.accent, false, 0, true);
+		if (nw > 0) text(sn.player, true, 17, 604 - nw, 24, p.accent);
+		text(fit(area, true, 20, 560 - nw), true, 20, 36, 22, p.ink);
+		const float MX = 22, MY = 52, MW = 596, MH = 322;	// (where the map goes)
 		// ---- the region map from the ROM's own layout: a square a section (towns brighter), the area in the accent, the
-		// player a dot; a legend under it, and a tapped square's name there
-		box("bubble", false, 18, 84, 604, 328);
+		// player a dot
 		pkMapW = pkMapH = 0;
 		const pkmn::RomTables::Grid* g = nullptr;
 		int best = 0;
@@ -6991,7 +7072,7 @@ namespace banana
 			if (c > best) { best = c; g = &gr; }
 		}
 		if (!g && !t.grids.empty()) g = &t.grids[0];
-		if (!g) { wrapped("This game's region map wasn't found in its ROM.", 17, 40, 104, 560, 2, p.muted); return; }
+		if (!g) { wrapped("This game's region map wasn't found in its ROM.", 17, 40, 64, 560, 2, p.muted); return; }
 		// the game's own region map picture under the sections when the ROM has one (pokemap.cpp), else squares
 		int gi = (int)(g - t.grids.data());
 		const pkmn::RomTables::MapImage* im = gi >= 0 && gi < (int)t.gridImage.size() && t.gridImage[gi] >= 0 &&
@@ -6999,26 +7080,33 @@ namespace banana
 		float cell, ox, oy;
 		if (im)
 		{
-			// a whole number of panel pixels a picture pixel (crisp), as large as the box takes
+			// as large as the box takes, k panel pixels a picture pixel: a whole number of them in the texture (each a
+			// square), smoothed down to k (crisp, without the uneven columns of a nearest scale by 2.4)
 			if (tb != pkMapTables) { pkMapTex.clear(); pkMapTables = tb; }
-			int key = t.gridImage[gi];
+			float k = std::min(MW * s / im->w, MH * s / im->h);
+			int up = std::max(1, (int)std::ceil(k - 0.01f));
+			int key = t.gridImage[gi] * 16 + std::min(up, 15);
 			auto it = pkMapTex.find(key);
 			if (it == pkMapTex.end())
 			{
 				rnds::Bitmap bm;
-				bm.w = im->w; bm.h = im->h; bm.px = im->rgba;
-				it = pkMapTex.emplace(key, be->upload(bm, false)).first;	// (nearest: crisp pixels)
+				bm.w = im->w * up; bm.h = im->h * up;
+				bm.px.resize((size_t)bm.w * bm.h * 4);
+				for (int y = 0; y < bm.h; y++)
+					for (int x = 0; x < bm.w; x++)
+						memcpy(&bm.px[((size_t)y * bm.w + x) * 4], &im->rgba[((size_t)(y / up) * im->w + x / up) * 4], 4);
+				it = pkMapTex.emplace(key, be->upload(bm, true)).first;
 			}
-			int k = std::max(1, (int)std::floor(std::min(588.0f * s / im->w, 276.0f * s / im->h)));
-			float pw = (float)im->w * k, ph = (float)im->h * k;
-			float px0 = std::round(X(18 + 302) - pw / 2), py0 = std::round(X(92) + (X(276) - ph) / 2);
+			float pw = std::round(im->w * k), ph = std::round(im->h * k);
+			k = pw / im->w;
+			float px0 = std::round(X(MX + MW / 2) - pw / 2), py0 = std::round(X(MY) + (X(MH) - ph) / 2);
 			if (it->second) be->draw(it->second, px0, py0, pw, ph, Color(1, 1, 1, 1));
 			cell = 8.0f * k / s; ox = (px0 + im->cellX * k) / s; oy = (py0 + im->cellY * k) / s;
 		}
 		else
 		{
-			cell = std::floor(std::min(576.0f / g->w, 262.0f / g->h));
-			ox = 18 + (604 - cell * g->w) / 2; oy = 94 + (268 - cell * g->h) / 2;
+			cell = std::floor(std::min((MW - 12) / g->w, (MH - 6) / g->h));
+			ox = MX + (MW - cell * g->w) / 2; oy = MY + (MH - cell * g->h) / 2;
 		}
 		pkMapX = ox; pkMapY = oy; pkMapCell = cell; pkMapW = g->w; pkMapH = g->h; pkMapCells = g->cells;
 		std::map<int, int> size;
@@ -7058,7 +7146,7 @@ namespace banana
 			}
 		// the legend (or the name of the place tapped)
 		{
-			float ly = 376, lx = 36, sq = 12;
+			float ly = 384, lx = 36, sq = 12;
 			auto key = [&](Color c, const char* what, bool frame)
 			{
 				if (frame)
@@ -7100,7 +7188,7 @@ namespace banana
 		}
 		if (x1 < 0)
 		{
-			if (!im) text("Not on the region map here", false, 14, 36, 352, p.muted);
+			if (!im) text("Not on the region map here", false, 14, 36, 358, p.muted);
 			return;
 		}
 		// the player: inside the area's squares by the place on its map (a route several squares long)
@@ -7135,7 +7223,7 @@ namespace banana
 		const int PER = 18;	// two columns of nine
 		pkPages = std::max(1, (int)((list.size() + PER - 1) / PER));
 		pkBagPage = std::min(pkBagPage, pkPages - 1);
-		if (list.empty()) wrapped(t.cfru && !t.plainBag ? "Nothing here. (A CFRU hack may keep its bag elsewhere: what this shows is FireRed's bag.)" : "Nothing in this pocket.",
+		if (list.empty()) wrapped(t.has.bagUnsure ? "Nothing here. (A CFRU hack may keep its bag elsewhere: what this shows is FireRed's bag.)" : "Nothing in this pocket.",
 			17, 40, 90, 560, 3, p.muted);
 		for (int i = 0; i < PER && pkBagPage * PER + i < (int)list.size(); i++)
 		{
@@ -7167,7 +7255,7 @@ namespace banana
 		bool known = !sn.dexSeen.empty();
 		std::vector<int> nats;
 		int maxNat = (int)t.dexSpecies.size() - 1;
-		if (!t.cfru) maxNat = std::min(maxNat, 386);
+		if (!t.has.ownDex) maxNat = std::min(maxNat, 386);
 		int seen = 0, caught = 0;
 		for (int n = 1; n <= maxNat; n++)
 		{
@@ -7185,7 +7273,7 @@ namespace banana
 			x += text("Caught", true, 15, x, 28, p.muted, true, 1.0f) + 8;
 			num(std::to_string(caught), 19, x, 25, p.accent);
 		}
-		else text(fit(t.cfru ? "All species (this game keeps its own Pokédex)" : "Pokédex", false, 16, 560), false, 16, 36, 27, p.muted);
+		else text(fit(t.has.ownDex ? "All species (this game keeps its own Pokédex)" : "Pokédex", false, 16, 560), false, 16, 36, 27, p.muted);
 		box("bubble", false, 18, 68, 604, 298);
 		const int PER = 15;	// three columns of five
 		pkPages = std::max(1, (int)((nats.size() + PER - 1) / PER));
@@ -7233,7 +7321,7 @@ namespace banana
 			{
 				int ty = t.speciesTypes[sp][i];
 				if (i == 1 && ty == t.speciesTypes[sp][0]) break;
-				if (!pkmn::typeInGame(ty, t.cfru)) continue;
+				if (!pkmn::typeInGame(ty, t.has.modernTypes)) continue;
 				typeChip(ty, cx, 90);
 				cx += chip(lang::tr("Pokémon types", pkmn::typeName(ty)), 0, 0, 0, true) + 6;
 			}
@@ -7255,7 +7343,7 @@ namespace banana
 		auto tb = companion->tables();
 		pkmn::RomTables none;
 		const pkmn::RomTables& t = tb ? *tb : none;
-		const pkmn::GameInfo* gi = companion->game();
+		const pkmn::GameProfile* gi = companion->game();
 		int kk = std::max(1, (int)std::lround(1 * s));
 		// ---- left: the next goal, its team, how the party does against its type
 		box("bubble", false, 18, 14, 298, 398);
@@ -7265,7 +7353,7 @@ namespace banana
 		for (int i = 0; i < 8 && sn.badges >= 0; i++) if (!(sn.badges >> i & 1)) { next = i; break; }
 		std::string line, who;
 		int type = -1;
-		if (t.cfru)
+		if (t.has.leadersFromTrainers)
 		{
 			if (next >= 0 && next < (int)t.leaders.size())
 			{
@@ -7279,7 +7367,7 @@ namespace banana
 		else if (gi)
 		{
 			int count = 0;
-			const pkmn::Goal* goals = pkmn::goalsFor(gi->gen, count);
+			const pkmn::Goal* goals = pkmn::goalsFor(gi->family, count);
 			int at = next >= 0 ? next : 8;
 			if (sn.champion) line = "Champion! The story is done; the post-game is yours.";
 			else if (at < count)
@@ -7298,14 +7386,16 @@ namespace banana
 		}
 		wrapped(line.empty() ? "No goal read from the save." : line, 17, 34, 54, 266, 3, p.ink);
 		// the team (a search of the ROM, kept while the goal is the same)
-		std::string key = who + "/" + std::to_string(sn.badges);
+		std::string key = who + "/" + std::to_string(sn.badges) + "/" + std::to_string((uintptr_t)tb.get());	// (the tables read since: again)
 		if (key != pkGoalKey)
 		{
 			pkGoalKey = key;
 			pkGoalTeam.clear();
 			if (!who.empty())
 			{
-				int cls = t.cfru ? 0x54 : -1;
+				// (a gym's leader by the Leader class in FireRed, LeafGreen and their hacks: Giovanni's Rocket Hideout and Silph
+				// battles are a Boss's)
+				int cls = t.has.leadersFromTrainers || (gi && gi->family == pkmn::FIRERED && next >= 0) ? 0x54 : -1;
 				for (auto& m : t.team(who, &cls)) pkGoalTeam.push_back({ m.species, m.level });
 			}
 		}
@@ -7331,7 +7421,7 @@ namespace banana
 			}
 			y += ((std::min<size_t>(pkGoalTeam.size(), 6) + 1) / 2) * 38 + 6;
 		}
-		if (type >= 0 && pkmn::typeInGame(type, t.cfru) && y < 330)
+		if (type >= 0 && pkmn::typeInGame(type, t.has.modernTypes) && y < 330)
 		{
 			// the party against that type: its best move's multiplier, and what it takes from that type
 			std::string h = "Against " + lang::tr("Pokémon types", pkmn::typeName(type));
@@ -7346,9 +7436,9 @@ namespace banana
 				{
 					uint16_t mv = m.moves[k];
 					if (!mv || mv >= t.moveInfo.size() || t.moveInfo[mv].power <= 1) continue;
-					bestQ = std::max(bestQ, pkmn::effect(t.moveInfo[mv].type, type, type, t.cfru));
+					bestQ = std::max(bestQ, pkmn::effect(t.moveInfo[mv].type, type, type, t.has.modernTypes));
 				}
-				int takes = pkmn::effect(type, m.types[0], m.types[1], t.cfru);
+				int takes = pkmn::effect(type, m.types[0], m.types[1], t.has.modernTypes);
 				text(fit(!m.nick.empty() ? m.nick : t.speciesName(m.species), false, 15, 110), false, 15, 34, y, p.ink);
 				if (bestQ >= 0)
 				{
@@ -7362,38 +7452,56 @@ namespace banana
 		}
 		// ---- right: the wild Pokémon here (the ROM's encounter table), caught ones marked from the Pokédex
 		box("bubble", false, 326, 14, 296, 398);
-		static const char* const METHOD[4] = { "Grass", "Water", "Rock Smash", "Fishing" };
+		static const char* const METHOD[6] = { "Grass", "Water", "Rock Smash", "Old Rod", "Good Rod", "Super Rod" };
 		std::string area = t.mapName(sn.mapsec);
 		text(fit(area.empty() ? "Wild Pokémon here" : area, true, 17, 264), true, 17, 342, 26, p.ink);
+		// laid out in pages first: a row a species, as high as its icon takes (32 at 640x480; a whole number of panel
+		// pixels a pixel of it, so larger on a larger panel), a method's name over its first row on each page; the rows
+		// (their icons too) stop above the bottom line (the legend, the page and its buttons)
+		float ic = 32.0f * kk / s, step = std::max(28.0f, ic - 4), head = std::max(20.0f, ic / 2 + 2), last = 361 - ic / 2;
+		struct Row { int mth; pkmn::RomTables::Wild w; float y; bool head; };
+		std::vector<std::vector<Row>> pages(1);
 		float wy = 54;
-		bool any = false;
-		bool dexKnown = !sn.dexSeen.empty();
-		for (int mth = 0; mth < 4 && wy < 380; mth++)
-		{
-			auto list = t.wild(sn.group, sn.num, mth);
-			if (list.empty()) continue;
-			any = true;
-			text(METHOD[mth], true, 13, 342, wy, p.accent, true, 1.0f);
-			wy += 20;
-			for (auto& w : list)
+		for (int mth = 0; mth < 6; mth++)
+			for (auto& w : t.wild(sn.group, sn.num, mth))
 			{
-				if (wy > 372) break;
-				monIcon(w.species, false, 338, wy - 8, kk);
-				int nat = w.species < t.natDex.size() ? t.natDex[w.species] : 0;
-				bool c = dexKnown && dexBit(sn.dexOwned, nat);
-				Color nc = !dexKnown || c ? p.ink : p.accent;	// (not caught yet: in the accent)
-				text(fit(t.speciesName(w.species), true, 15, 120), true, 15, 372, wy, nc);
-				std::string lv = w.minLv == w.maxLv ? "Lv" + std::to_string(w.minLv) : "Lv" + std::to_string(w.minLv) + "-" + std::to_string(w.maxLv);
-				text(lv, false, 13, 496, wy + 2, p.muted);
-				std::string pc = std::to_string(w.percent) + "%";
-				float pw = num(pc, 14, 0, 0, p.ink, true);
-				num(pc, 14, 606 - pw, wy, p.ink);
-				wy += 30;
+				bool first = pages.back().empty() || pages.back().back().mth != mth;
+				float at = wy + (first && !pages.back().empty() ? 4 : 0) + (first ? head : 0);
+				if (at > last && !pages.back().empty()) { pages.emplace_back(); first = true; at = 54 + head; }
+				pages.back().push_back({ mth, w, at, first });
+				wy = at + step;
 			}
-			wy += 4;
+		int mapKey = sn.group * 1000 + sn.num;
+		if (mapKey != pkWildKey) { pkWildKey = mapKey; pkWildPage = 0; }	// (another map: its first page)
+		pkWildPages = (int)pages.size();
+		pkWildPage = std::min(pkWildPage, pkWildPages - 1);
+		bool dexKnown = !sn.dexSeen.empty();
+		for (auto& r : pages[pkWildPage])
+		{
+			if (r.head) text(METHOD[r.mth], true, 13, 342, r.y - head, p.accent, true, 1.0f);
+			const auto& w = r.w;
+			monIcon(w.species, false, 340, r.y + 9 - ic / 2, kk);	// (centred on the name)
+			float tx = 342 + ic;
+			int nat = w.species < t.natDex.size() ? t.natDex[w.species] : 0;
+			bool c = dexKnown && dexBit(sn.dexOwned, nat);
+			Color nc = !dexKnown || c ? p.ink : p.accent;	// (not caught yet: in the accent)
+			text(fit(t.speciesName(w.species), true, 15, 490 - tx), true, 15, tx, r.y, nc);
+			std::string lv = w.minLv == w.maxLv ? "Lv" + std::to_string(w.minLv) : "Lv" + std::to_string(w.minLv) + "-" + std::to_string(w.maxLv);
+			text(lv, false, 13, 496, r.y + 2, p.muted);
+			std::string pc = std::to_string(w.percent) + "%";
+			float pw = num(pc, 14, 0, 0, p.ink, true);
+			num(pc, 14, 606 - pw, r.y, p.ink);
 		}
-		if (!any) wrapped("No wild Pokémon on this map.", 16, 342, 56, 264, 3, p.muted);
-		else if (dexKnown) text("Accent: not caught yet", false, 13, 342, 390, p.muted);
+		bool paged = pkWildPages > 1;
+		if (pages[0].empty()) wrapped("No wild Pokémon on this map.", 16, 342, 56, 264, 3, p.muted);
+		else if (dexKnown) text(fit("Accent: not caught yet", false, paged ? 12 : 13, paged ? 146 : 264), false, paged ? 12 : 13, 342, 384, p.muted);
+		if (paged)
+		{
+			// the page and the pager's two buttons, smaller
+			std::string pg = std::to_string(pkWildPage + 1) + "/" + std::to_string(pkWildPages);
+			num(pg, 14, 520 - num(pg, 14, 0, 0, p.ink, true), 383, p.ink);
+			pagerButtons(p, pkWildPage, pkWildPages, GUIDE_PAGER);
+		}
 	}
 
 	// ---- the game companion (gamecomp.h): the Pokémon companion's look for any GBA game with a definition. The whole
