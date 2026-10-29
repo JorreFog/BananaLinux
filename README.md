@@ -103,7 +103,7 @@ The easiest route is the [BananaLinux Flasher](https://github.com/jesussaves-ai/
 - Windows: download `BananaLinuxFlasher.exe` from [its releases](https://github.com/jesussaves-ai/banana-linux-flasher/releases/latest) and run it as administrator. It is an unsigned community build, so SmartScreen may ask: More info > Run anyway.
 - Linux and macOS: run it from source with Python 3 and Tkinter (`python3 flash_banana.py`).
 
-Or flash by hand: download the image for your handheld from the [0.5.0 release](https://github.com/JorreFog/BananaLinux/releases/tag/v0.5.0) and open it in [balenaEtcher](https://etcher.balena.io/) without unzipping it.
+Or flash by hand: download the image for your handheld from the [0.5.0 release](https://github.com/JorreFog/BananaLinux/releases/tag/v0.5.0) and open it in [Raspberry Pi Imager](https://www.raspberrypi.com/software/) (Choose OS > Use custom image) without unzipping it. Avoid balenaEtcher: several people have found it writes the card incorrectly, and the handheld then fails to boot.
 
 | Handheld | Image | Update package |
 |---|---|---|

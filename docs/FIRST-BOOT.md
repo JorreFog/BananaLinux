@@ -10,7 +10,9 @@ and which files tell what went wrong.
 | RG DS | `banana-rgds.img.gz` |
 | RG DS Plus | `banana-rgds-plus.img.gz` |
 
-Write it to a microSD card with balenaEtcher (it takes the `.gz` as it is), put the card in the slot, power on.
+Write it to a microSD card with [Raspberry Pi Imager](https://www.raspberrypi.com/software/) (Choose OS > Use
+custom image; it takes the `.gz` as it is), put the card in the slot, power on. Avoid balenaEtcher: it has been
+found to write the card incorrectly, and the handheld then fails to boot.
 
 ## What should happen
 
