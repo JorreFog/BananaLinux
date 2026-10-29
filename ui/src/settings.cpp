@@ -6266,11 +6266,9 @@ namespace banana
 				if (!down)
 				{
 					if (gcRow >= 0) { gcList = gcRow = -1; }	// (a row's view: a tap goes back to the list)
-					else if (gcScreens > 1 && ly >= 372 && ly < 418)
-					{
-						if (lx < 220) gcScreen = std::max(0, gcScreen - 1);
-						else if (lx >= 420) gcScreen = std::min(gcScreens - 1, gcScreen + 1);
-					}
+					else if (gcScreens > 1 && pagerStep(lx, ly))
+						gcScreen = std::min(gcScreens - 1, std::max(0, gcScreen + pagerStep(lx, ly)));
+					else if (gcScreens > 1 && ly >= 372 && ly < 418) {}	// (the pager's page count)
 					else
 						for (auto& h : gcHits)
 							if (ly >= h.y0 && ly < h.y1) { gcList = h.list; gcRow = h.row; break; }
@@ -6309,10 +6307,9 @@ namespace banana
 				else if (!down && pkView == PK_MON && lx >= 326 && ly >= 14 && ly < 336) pkMonPage ^= 1;	// (the right column: moves, stats)
 				else if (!down && (pkView == PK_BAG || pkView == PK_DEX) && ly >= 372 && ly < 418)
 				{
-					// the pager: the left third back a page, the right third on
+					// the pager: its back and on buttons
 					int& pg = pkView == PK_BAG ? pkBagPage : pkDexPage;
-					if (lx < 220) pg = std::max(0, pg - 1);
-					else if (lx >= 420) pg = std::min(pkPages - 1, pg + 1);
+					pg = std::min(pkPages - 1, std::max(0, pg + pagerStep(lx, ly)));
 				}
 				else if (!down && pkView == PK_BAG && ly >= 14 && ly < 60)
 				{
@@ -7006,16 +7003,37 @@ namespace banana
 
 	// ---- the pages that read the save: Map, Bag, Dex, Guide
 
+	namespace
+	{
+		const char* const PX_PREV[9] = { "....#", "...##", "..###", ".####", "#####", ".####", "..###", "...##", "....#" };
+		const char* const PX_NEXT[9] = { "#....", "##...", "###..", "####.", "#####", "####.", "###..", "##...", "#...." };
+	}
+
 	void Settings::pager(const SPal& p, int page, int pages, const std::string& left)
 	{
-		box("slot", false, 18, 372, 604, 40);
-		if (!left.empty()) text(fit(left, false, 15, 180), false, 15, 34, 384, p.muted);
-		if (pages <= 1) return;
+		// the left text and the page in a box; back and on as two buttons at its right, each its whole box to tap
+		// (pagerStep), greyed at the first and the last page
+		bool paged = pages > 1;
+		box("slot", false, 18, 372, paged ? 392 : 604, 40);
+		if (!left.empty()) text(fit(left, false, 15, paged ? 280 : 560), false, 15, 34, 384, p.muted);
+		if (!paged) return;
 		std::string pg = std::to_string(page + 1) + " / " + std::to_string(pages);
-		float w = num(pg, 16, 0, 0, p.ink, true);
-		num(pg, 16, 320 - w / 2, 382, p.ink);
-		if (page > 0) arrow(false, 236, 392, p.accent);
-		if (page < pages - 1) arrow(true, 398, 392, p.accent);
+		num(pg, 16, 394 - num(pg, 16, 0, 0, p.ink, true), 382, p.ink);
+		int k = std::max(1, (int)std::lround(2 * s));
+		for (int i = 0; i < 2; i++)
+		{
+			bool on = i ? page < pages - 1 : page > 0;
+			float bx = i ? 524 : 418;
+			box("slot", false, bx, 372, 98, 40);
+			Color c = on ? p.accent : p.line;
+			sprite(i ? PX_NEXT : PX_PREV, 9, bx + 49 - 2.5f * k / s, 392 - 4.5f * k / s, k, [&](char) { return c; });
+		}
+	}
+
+	int Settings::pagerStep(float lx, float ly) const
+	{
+		if (ly < 372 || ly >= 418 || lx < 414) return 0;
+		return lx < 521 ? -1 : 1;
 	}
 
 	void Settings::pokeMap(const SPal& p)

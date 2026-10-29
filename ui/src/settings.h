@@ -531,6 +531,7 @@ namespace banana
 		void pokeDexMon(const SPal& p);
 		void pokeGuide(const SPal& p);
 		void pager(const SPal& p, int page, int pages, const std::string& left);
+		int pagerStep(float lx, float ly) const;	// a tap on the pager: -1 its back button, 1 its on button, 0 neither
 		// the game companion's views: a page (gcomp::PageId) or GC_GAME (the panel's tiles); within a page, its screen
 		// (a page longer than the panel is paged); a list's row opened (its fields in full); where the tabs and the
 		// rows were drawn (for touch)
