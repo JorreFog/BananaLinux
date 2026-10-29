@@ -32,3 +32,17 @@ Limoncello's drop at 0:06).
     WORK=/tmp/distro python3 tools/promo/distro.py screens      # banana-ui's frames (30 fps)
     WORK=/tmp/distro python3 tools/promo/distro.py 3d           # the handheld's shots (software WebGL: slow)
     WORK=/tmp/distro SITE=<capture> MUSIC=song.mp3 python3 tools/promo/distro.py render out.mp4
+
+**The 0.5.0 trailer** (release.py): what is new in the first beta, one feature a scene, cut to Wasabi's beat
+(wasabi-beats.json, from librosa's beat tracker: the drop brings the first feature, the end card lands where the
+song comes back in). BananaOS's look in 3D: the menu's pixel icons and the logo as lit voxels, the example themes'
+screens, the Banana Theme Studio and the cards on tilted panels, a floor grid and pixel dust in depth, a pixel-block
+wipe between scenes, bloom and grain, the glow pulsing with the beat. No dates anywhere: "Coming very soon in 0.5.0
+beta". The GBA companions scene plays the RG DS Plus recordings from the media/companionvideo branch
+(COMPANION: the folder holding companionvideo.mp4 and pokemoncompanionvideo.mp4). COMPANIONS sets how many games
+have a GBA companion (left out when not given). The BananaDS performance scene charts docs/PERFORMANCE-0.5.0.md
+(release/0.5.0): 0.4.2 against the 0.5.0 beta on the RG DS Plus. Renders on every core.
+
+    NO_DATE=1 python3 tools/promo/screens.py hillside turntable classic   # the clocks without dates
+    git show origin/media/companionvideo:media/companionvideo.mp4 > rec/companionvideo.mp4   # and pokemoncompanionvideo.mp4
+    STUDIO=dir-with-1.webp-and-2.webp COMPANION=rec MUSIC=Wasabi.mp3 python3 tools/promo/release.py out.mp4

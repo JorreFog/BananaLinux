@@ -4,3 +4,4 @@ frames/
 *.mp4
 *.png
 __pycache__/
+frames-release/
