@@ -9,6 +9,7 @@
 //   /data/bananads/bananads.conf   BananaDS's own settings (shader, 3D resolution, ...; BananaDS reads it)
 //   /data/drastic/config/drastic.cfg  the DS's 3D resolution
 //   /sys/class/backlight + /data/banana/backlight   brightness
+// and the shelf's Files (settings_files.cpp): the cards' folders, copied, moved, renamed and deleted through fileops.h
 #include "../rnds/RndsUI.h"
 #include "input.h"
 #include "wifi.h"
@@ -20,12 +21,13 @@
 #include <memory>
 #include <mutex>
 #include <functional>
+#include <set>
 #include <string>
 #include <vector>
 
 namespace banana
 {
-	struct SPal;	// (settings.cpp: the palette)
+	struct SPal;	// (settings_draw.h: the palette)
 	class Settings
 	{
 	public:
@@ -35,6 +37,8 @@ namespace banana
 		Settings(rnds::Backend* be, const std::string& assets, const std::string& dataDir, float scale, const std::string& variant);
 		void setVariant(const std::string& variant);	// "dark", "light", or "carts" (dark, in Inter: setFontDir first)
 		void setFontDir(const std::string& dir) { fontDir = dir; }
+		// the library's systems.conf and ROM folder (Files: the card is the ROM folder's parent, the systems' folders stay put)
+		void setLibraryPaths(const std::string& systems, const std::string& roms) { systemsConf = systems; romRoot = roms; }
 		void open();
 		void openPower();	// the Power list (Sleep, Restart, Shut down): Y on the groups
 		void openSection(const std::string& section);	// a list with no tile (Shown systems)
@@ -42,7 +46,17 @@ namespace banana
 		void setSystems(const std::vector<std::pair<std::string, std::string>>& systems);
 		std::vector<std::pair<std::string, std::string>> shelfSystems;
 		void addShelfRows();
-		void close() { mOpen = false; page = LIST; wizard = false; }
+		void close();
+		// the shelf's Files tile: the cards' folders and files, copied, moved, renamed and deleted (settings_files.cpp)
+		void openFiles();
+		// the headless test's Files jobs on their own thread, as on the handheld (BANANA_FILES_ASYNC; else in sync mode
+		// they are done at once)
+		bool filesAsync = false;
+		bool filesWorking() const;	// a Files job still at work on its thread (the headless test waits for it)
+		// a card came or went (the host saw the mount table change): Files' cards again; true when that changed the page
+		bool cardsChanged();
+		// a line for the log (a Files job's outcome, an action refused): the host's logf
+		std::function<void(const std::string&)> log;
 		// the first-time setup, from the host: boot = the first boot's (it ends in the host's Welcome and the menu:
 		// takeSetupFinished), else as from Settings > System (it ends back in Settings); at: the slide to start on (a
 		// setup cut off by a restart or a language change: banana/setup-step)
@@ -91,8 +105,9 @@ namespace banana
 		// box art (banana-scrape) finished since the last call: the library is read again
 		bool takeLibraryChanged() { bool r = libChanged; libChanged = false; return r; }
 
-		// what the host has to do after an input
-		enum Result { NONE, MOVED, CHANGED, CLOSED, THEME, REBOOT, POWEROFF, SEARCH, TITLES, LANGUAGE, DELETED, SHELVES };
+		// what the host has to do after an input (ACTED: a page did something that changes no setting, as Files' copy or
+		// rename: the select sound alone, not CHANGED's settings.conf read again and the menu's texts made again)
+		enum Result { NONE, MOVED, CHANGED, CLOSED, THEME, REBOOT, POWEROFF, SEARCH, TITLES, LANGUAGE, DELETED, SHELVES, ACTED };
 		// DELETED: the game page's Delete game removed the ROM (deletedFiles says what went): the library read again
 		// SELECT in the menu: the keyboard alone, for a search of the games; SEARCH when it is done, with the text in
 		// searchText (empty: the search taken away)
@@ -110,9 +125,15 @@ namespace banana
 		bool colorsOpen() const { return mOpen && page == COLORS; }
 		std::string searchText;
 		std::function<int(const std::string&)> searchCount;	// the games the text typed so far finds (the host's library)
+		// wakes the host's loop from another thread (a Files job finished: update() takes it); unset, the pages look
+		// for it on their own wake instead
+		std::function<void()> wakeHost;
 		Result press(Key k);
 		Result touch(float x, float y, bool down);	// bottom panel, device px
 		void render();
+		// the textures the pages keep (the headless test's mem): their entries, the bytes they hold, the byte budget
+		struct CacheStats { size_t entries = 0, bytes = 0, budget = 0; };
+		CacheStats cacheStats() const;
 		// background work (the Wi-Fi scan, joining a network): true when something changed and wants a frame
 		bool update(double nowMs);
 		// ms until update() has something to do, -1 nothing pending
@@ -167,7 +188,7 @@ namespace banana
 		std::string about, wifiInfo, ip;
 
 		// the Wi-Fi pages: the networks around, and the keyboard for a password (settings-wifi.cpp)
-		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS, PICKGAMES } page = LIST;
+		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS, PICKGAMES, FILES } page = LIST;
 		// Home server > Choose games: the server's games (banana-sync games), a system at a time, ticked to sync
 		struct PickGame { std::string sys, key, title; long long bytes = 0; bool on = false, there = false; };
 		std::vector<PickGame> pickGames;
@@ -231,8 +252,10 @@ namespace banana
 		void renderGame();
 		// the keyboard types a text for a purpose: a Wi-Fi password, or an account's name or password
 		// (banana/accounts.conf: RetroAchievements for DraStic and RetroArch, ScreenScraper for the scraper to come)
-		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SMB_USER, ENTRY_SMB_PASS, ENTRY_GAME_NAME, ENTRY_GAME_SORT, ENTRY_ART_SEARCH, ENTRY_DS_NAME, ENTRY_SEARCH, ENTRY_HS_ADDR, ENTRY_HS_CODE, ENTRY_BETA_PASS } entry = ENTRY_WIFI;
+		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SMB_USER, ENTRY_SMB_PASS, ENTRY_GAME_NAME, ENTRY_GAME_SORT, ENTRY_ART_SEARCH, ENTRY_DS_NAME, ENTRY_SEARCH, ENTRY_HS_ADDR, ENTRY_HS_CODE, ENTRY_BETA_PASS, ENTRY_FOLDER, ENTRY_RENAME } entry = ENTRY_WIFI;
 		std::string entryTitle, entrySub;
+		std::string entryHelp;		// what the keyboard is for, when the purpose says it itself (Files' names)
+		size_t entryMax = 63;		// the longest text (Wi-Fi's 63; a path or an address is longer)
 		Page entryBack = NETWORKS;
 		void startEntry(Entry e, const std::string& title, const std::string& sub, Page back, const std::string& start = "");
 		Result finishEntry();
@@ -422,15 +445,29 @@ namespace banana
 		void renderKeyboard();
 		void bars(int n, float x, float y, const rnds::Color& on, const rnds::Color& off);
 		void lock(float x, float y, const rnds::Color& c);
-		std::string fit(const std::string& t, bool medium, float size, float width);
+		// (upper, ls: the style the text is drawn in, as text() takes them: measured otherwise, a label in capitals and
+		// letter-spaced ran past its width)
+		std::string fit(const std::string& t, bool medium, float size, float width, bool upper = false, float ls = 0);
+		std::string fitEnd(const std::string& t, bool medium, float size, float width, bool upper = false, float ls = 0);	// "..." and the end that fits
 
 		std::shared_ptr<rnds::Font> R, M;
 		std::string fontDir;		// Inter's TTFs (the Carts theme)
 		bool cleanFonts = false;
 		std::string fontsLoaded;	// the fonts R and M are (setVariant): a user theme's, or "carts"
 		std::string drawnLook;	// what the cache's pictures were drawn for (setVariant): the same look again keeps them
-		struct Cached { rnds::TexPtr tex; int ox = 0, oy = 0; float w = 0; };
+		// what the pages draw, by what it is (a box's kind and size, a line's text and style, an icon): its texture, and a
+		// line's width. A line only measured (a value's width, a name too long for its row, which fit() cuts) is laid out,
+		// not drawn: its bitmap is made when something draws it. After each frame (render(), gameRender()) the least
+		// recently used go while the cache holds more than its budget (evict): Files lists any number of names
+		struct Cached { rnds::TexPtr tex; int ox = 0, oy = 0; float w = 0; bool drawn = false; size_t bytes = 0; uint64_t used = 0; };
 		std::map<std::string, Cached> cache;
+		uint64_t frame = 0;					// render()'s count: an entry's used is the last frame that drew or measured it
+		size_t cacheBytes = 0, budget = 0;	// what the entries hold; CACHE_1X at this scale
+		std::map<std::string, Cached>::iterator put(const std::string& key, Cached c, const rnds::Bitmap& b);
+		Cached& keep(std::map<std::string, Cached>::iterator it) { it->second.used = frame; return it->second; }
+		void evict();
+		void renderPage();	// render()'s frame: the page open
+		void gameFrame();	// gameRender()'s frame: the game panel, a companion's view or the tiles
 
 		void build();
 		void load(Item& it);
@@ -497,6 +534,19 @@ namespace banana
 		void scrapeBar(float x, float y, float w);	// the progress bar and the game being fetched, while it runs
 		struct RaWatch;							// the achievements: RetroArch's log and the server (settings.cpp)
 		std::shared_ptr<RaWatch> raw;
+		// Files (settings_files.cpp): its pages' state, the job copying, moving or deleting (fileops.h)
+		struct Files;
+		std::shared_ptr<Files> fm;
+		std::string systemsConf = "/etc/banana/systems.conf", romRoot = "/data/roms";
+		Result pressFiles(Key k);
+		Result touchFiles(float cx, float cy);
+		void renderFiles();
+		bool updateFiles(double nowMs);
+		int filesWake(double nowMs) const;
+		Result finishFilesEntry();
+		void sd2Scan();	// the sd2 script again (Files: a roms folder made on the second card is offered to the library)
+		void tick(float x, float y, const rnds::Color& c);	// a mark on a 2 px grid (a chosen file)
+		void meter(float x, float y, float w, double fraction);	// a progress bar
 		std::string gTitle, gSystem;
 		int gScreen = 1, gFlash = -1, gDown = -1;
 		bool gTouch = true;
@@ -596,6 +646,13 @@ namespace banana
 		void arrow(bool right, float x, float y, const rnds::Color& c);
 		void face(const std::string& key, const std::string& label, float x, float w);
 		float faceWidth(const std::string& key, const std::string& label);
+		// a page's buttons along the bottom panel: B and the page's others from the left, its main one (right) at the
+		// right. Drawn and tapped from the same list, so a tap presses the chip it is on (or the nearest one).
+		struct Chip { Key key; std::string face, label; bool right = false; };
+		void drawChips(const std::vector<Chip>& cs);
+		Key chipAt(const std::vector<Chip>& cs, float x);	// Key::NONE with no chips
+		std::vector<float> chipXs(const std::vector<Chip>& cs, std::vector<float>& ws);
+		std::vector<Chip> keyboardChips();
 		static constexpr int ROWS = 5;
 		static constexpr float SETUP_Y = 82, SETUP_PITCH = 66, SETUP_H = 58;	// the setup's choices on the bottom panel
 	};

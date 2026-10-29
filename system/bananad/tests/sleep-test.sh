@@ -73,6 +73,8 @@ fi
 W=$2 ROOTFS=$3
 POWEROFF=0
 trap 'POWEROFF=1' USR2
+# (a kernel without power management, as a container's VM: no /sys/power to mount over, so a made-up /sys of our own)
+[ -d /sys/power ] || { mount -t tmpfs none /sys; mkdir -p /sys/power /sys/class; }
 mount -t tmpfs none /sys/power
 mount -t tmpfs none /sys/class
 mount -t tmpfs none /dev/input 2>/dev/null || { mkdir -p /dev/input; mount -t tmpfs none /dev/input; }
@@ -339,6 +341,19 @@ echo 0 > /run/test/lid; wake       # the lid opened before the alarm
 grep -q 'awake (lid opened)' /data/banana/logs/sleep.log && ok "a normal wake" || bad "no wake logged"
 rm -rf /sys/class/power_supply/charger
 rm -f /run/banana/game.pid
+stop
+
+echo "14. a Files job (banana-ui's pid in files.pid) holds the idle sleep; once it is over, the handheld sleeps"
+setsid sleep 600 & JOB=$!
+echo $JOB > /run/banana/files.pid
+start "autosleep_minutes = 0.03" "dim_minutes = 0"     # 1.8 s
+sleep 2.5
+asleep 2>/dev/null && { bad "it slept during a Files job"; wake; } || ok "no idle sleep during a Files job"
+rm -f /run/banana/files.pid
+sleep 3     # (bananad looks again within 5 s)
+asleep && ok "asleep once the job is over" || bad "no idle sleep after the job"
+wake
+kill $JOB 2>/dev/null || true
 stop
 
 kill $UI $GAME 2>/dev/null || true

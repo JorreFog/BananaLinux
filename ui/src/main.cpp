@@ -327,6 +327,18 @@ static const char* soundOf(Key k, rnds::UI::View before, rnds::UI::View after)
 	}
 }
 
+// a tile whose run is "banana:<page>" is one of the menu's own pages (systems.conf's [files]), not a program: A or X
+// on it opens the page at once, with no cartridge going in, and a launch of its entry (by touch, or the Carts and
+// layout themes' own start of an app) does the same. The page's name, or "" for a program
+static std::string internalPage(const SystemDef& sd) { return sd.run.compare(0, 7, "banana:") == 0 ? sd.run.substr(7) : ""; }
+
+// opens that page on the settings screen; false for a name no page has
+static bool openPage(Settings& st, const std::string& page)
+{
+	if (page == "files") { st.openFiles(); return true; }
+	return false;
+}
+
 // a favourite starred or unstarred: once the shelf shows, the Favorites collection and the favourite systems are put
 // right, and the cursor stays on the system it was on
 template <class U> static bool rearrange(Host& lib, U& ui)
@@ -588,6 +600,9 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		" --systems " + shellQuote(o.systems) + " --roms " + shellQuote(o.roms);
 	settings.setSystems(shelfSystems(lib));
 	settings.setSync(true);
+	settings.filesAsync = getenv("BANANA_FILES_ASYNC") != nullptr;	// (Files' job page and Stop: the sleep and filesdone ops)
+	settings.setLibraryPaths(o.systems, o.roms);
+	settings.log = [](const std::string& m) { logf("%s", m.c_str()); };
 	settings.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
 	settings.artCount = [&] { return artCount(lib); };
 	LowBattery low;
@@ -605,6 +620,16 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		cs >> op;
 		ui.update(now);
 		if (op == "home") { int s = 0; cs >> s; ui.setHome(s); }
+		else if (op == "homeid")
+		{
+			// homeid <system id>: the shelf on that system's tile (one whose place depends on the card's games)
+			std::string id; cs >> id;
+			int at = -1;
+			for (int i = 0; i < lib.systemCount(); i++) if (lib.shelf(i).def.id == id) at = i;
+			if (at < 0) { logf("homeid %s: not on the shelf", id.c_str()); return 2; }
+			ui.setHome(at);
+			logf("homeid %s: tile %d", id.c_str(), at);
+		}
 		else if (op == "lib") { int s = 0, g = 0; cs >> s >> g; lib.openLibrary(s); ui.setLibrary(s, g); }
 		else if (op == "wait") { double ms = 0; cs >> ms; now += ms; }
 		// sleep <ms>: as wait, but the time really passes (a helper process working meanwhile: the update download)
@@ -613,6 +638,9 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		// type <text>: typed on the open keyboard at once (the rest of the command, spaces too; never logged)
 		else if (op == "type") { std::string t; std::getline(cs >> std::ws, t); settings.typeText(t); }
 		else if (op == "resumeboot") { ResumeLater later; resumeAfterPoweroff(lib, o.data, nullptr, &later, now); }	// as at boot after Power off after sleeping
+		// filesdone: real time until Files' job on its thread (BANANA_FILES_ASYNC) is over, 30 s at most; the update
+		// after this command tells its outcome
+		else if (op == "filesdone") { for (int i = 0; i < 3000 && settings.filesWorking(); i++) usleep(10000); }
 		else if (op == "battery")
 		{
 			// battery <percent> [charging]: what /sys would say from now on
@@ -639,6 +667,12 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 				auto t = lib.gameTitles(key);
 				settings.openGame(lib.gameAt(ui.gameIndex()).title, path.substr(path.rfind('/') + 1), lib.systemOf(ui.gameIndex()).id == "nds", key, t.name, t.sort, path, lib.gameAt(ui.gameIndex()).scraped);
 				logf("press x: game page for %s", path.c_str());
+				continue;
+			}
+			if (!settings.isOpen() && (it->second == Key::A || it->second == Key::X) && ui.view() == rnds::UI::HOME && ui.systemIndex() >= 0 &&
+				ui.systemIndex() < lib.systemCount() && openPage(settings, internalPage(lib.shelf(ui.systemIndex()).def)))
+			{
+				logf("press %s: %s open", b.c_str(), lib.shelf(ui.systemIndex()).def.run.c_str());
 				continue;
 			}
 			if (settings.isOpen() || it->second == Key::START)
@@ -759,18 +793,27 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 				logf("romicon %s: %dx%d, middle #%02x%02x%02x", path.c_str(), b.w, b.h, px[0], px[1], px[2]);
 			}
 		}
+		else if (op == "frame")
+		{
+			// frame: the screens drawn once, as the device draws them after a press (no picture: many in a row are cheap)
+			if (settings.isOpen()) { settings.update(now); settings.update(now); settings.render(); }
+			else { settle(); ui.render(); }
+		}
 		else if (op == "mem")
 		{
-			// mem: what the process holds now (RSS) and the texture cache's share of it
+			// mem: what the process holds now (RSS) and the texture caches' shares of it (the menu's, the settings')
 			std::ifstream st("/proc/self/status");
 			std::string ln, rss;
 			while (std::getline(st, ln)) if (ln.compare(0, 6, "VmRSS:") == 0) rss = ln.substr(6);
+			Settings::CacheStats ss = settings.cacheStats();
+			char sc[96];
+			snprintf(sc, sizeof sc, "; settings cache %zu entries, %.1f MB of a %.1f MB budget", ss.entries, ss.bytes / 1048576.0, ss.budget / 1048576.0);
 			if (auto* rm = dynamic_cast<RndsMenu*>(&ui))
 			{
 				rnds::UI::CacheStats cs = rm->engine().cacheStats();
-				logf("mem: RSS%s; texture cache %zu entries, %.1f MB of a %.1f MB budget", rss.c_str(), cs.entries, cs.bytes / 1048576.0, cs.budget / 1048576.0);
+				logf("mem: RSS%s; texture cache %zu entries, %.1f MB of a %.1f MB budget%s", rss.c_str(), cs.entries, cs.bytes / 1048576.0, cs.budget / 1048576.0, sc);
 			}
-			else logf("mem: RSS%s", rss.c_str());
+			else logf("mem: RSS%s%s", rss.c_str(), sc);
 		}
 		else if (op == "touch")
 		{
@@ -894,6 +937,16 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			if (!save(0, o.headless + name + "-top.png") || !save(1, o.headless + name + "-bot.png")) { logf("can't write %s", name.c_str()); return 1; }
 			logf("gshot %s", name.c_str());
 		}
+		else if (op == "swipe")
+		{
+			// swipe <x1> <y1> <x2> <y2>: a finger down at one point and up at the other, on the settings' bottom panel
+			float x1 = 0, y1 = 0, x2 = 0, y2 = 0;
+			cs >> x1 >> y1 >> x2 >> y2;
+			float k = o.h / 480.0f;
+			if (!settings.isOpen()) { logf("swipe: the settings aren't open"); return 2; }
+			settings.touch(x1 * k, y1 * k, true);
+			logf("swipe %.0f %.0f -> %.0f %.0f: settings result %d", x1, y1, x2, y2, (int)settings.touch(x2 * k, y2 * k, false));
+		}
 		else if (op == "shot")
 		{
 			std::string name; cs >> name;
@@ -985,8 +1038,10 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		if (lib.pendingLaunch() >= 0)
 		{
 			int g = lib.pendingLaunch();
-			logf("launch %d: %s (system %s)", g, lib.gameAt(g).path.c_str(), lib.systemOf(g).id.c_str());
 			lib.clearLaunch();
+			// (an internal page's entry first: in a test there is no .app file for it, so no game at g)
+			if (openPage(settings, internalPage(lib.systemOf(g)))) { ui.setHome(lib.currentShelf()); logf("launch %d: %s open", g, lib.systemOf(g).run.c_str()); }
+			else logf("launch %d: %s (system %s)", g, lib.gameAt(g).path.c_str(), lib.systemOf(g).id.c_str());
 		}
 		ui.update(now);
 		if (rearrange(lib, ui)) logf("shelf: %d systems, cursor on %s", lib.systemCount(), lib.shelf(ui.systemIndex()).def.id.c_str());
@@ -1717,6 +1772,10 @@ int main(int argc, char** argv)
 	settingsView.setSystems(shelfSystems(lib));
 	settingsView.setColors = [&](const ScreenColors& c) { std::string e = disp.setColors(c); if (!e.empty()) logf("screen colours: %s", e.c_str()); return e; };
 	settingsView.setFontDir(o.banana + "/fonts");
+	settingsView.setLibraryPaths(o.systems, o.roms);
+	settingsView.log = [](const std::string& m) { logf("%s", m.c_str()); };
+	settingsView.wakeHost = [&] { uint64_t one = 1; if (write(worker.wakeFd, &one, 8) < 0) {} };	// (a Files job finished)
+	unlink("/run/banana/files.pid");	// (a job of a menu that went away mid-way holds no sleep)
 	settingsView.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
 	settingsView.artCount = [&] { return artCount(lib); };
 	settingsView.setVariant(settings["theme"]);	// (Carts: Inter)
@@ -1851,6 +1910,7 @@ int main(int argc, char** argv)
 			sound.play("select");
 			break;
 		}
+		case Settings::ACTED: sound.play("select"); break;	// (Files: a copy, a rename... no setting changed)
 		case Settings::SEARCH:
 		{
 			// the Search collection first on the shelf, opened on its first game (an empty text takes it away)
@@ -1954,6 +2014,24 @@ int main(int argc, char** argv)
 		if (ev.type == InputEvent::TOUCH_MOVE) { std::lock_guard<std::mutex> l(worker.uiLock); dirty |= ui->touchMove(ev.screen, ev.x, ev.y); return; }
 		if (ev.type == InputEvent::TOUCH_UP) { std::lock_guard<std::mutex> l(worker.uiLock); dirty |= ui->touch(ev.screen, ev.x, ev.y, false); return; }
 		if (ev.type == InputEvent::RELEASE) { if (rep.key == ev.key) rep.key = Key::NONE; return; }
+		if (ev.type == InputEvent::PRESS && (ev.key == Key::A || ev.key == Key::X))
+		{
+			// A or X on an internal page's tile (Files): its page
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			int s = ui->systemIndex();
+			if (ui->view() == rnds::UI::HOME && s >= 0 && s < lib.systemCount() && !internalPage(lib.shelf(s).def).empty())
+			{
+				ui->touchCancel();
+				settingsView.setVariant(settings["theme"]);
+				if (openPage(settingsView, internalPage(lib.shelf(s).def)))
+				{
+					rep.key = Key::NONE;
+					sound.play("select");
+					dirty = true;
+					return;
+				}
+			}
+		}
 		rnds::UI::Button b;
 		if (!uiButton(ev.key, b)) return;
 		double now = nowMs();
@@ -2315,6 +2393,9 @@ int main(int argc, char** argv)
 		close(launchWatch);
 		launchWatch = -1;
 	}
+	// the mount table: poll() gives POLLPRI when a file system comes or goes (the second SD card in or out), so Files'
+	// list of cards follows it while it is open (no read needed: the poll itself takes the event)
+	int mountsFd = open("/proc/self/mounts", O_RDONLY | O_CLOEXEC);
 	resumeAfterPoweroff(lib, o.data, "/run/banana/resume-once", &resumeLater, nowMs());	// (its game starts at the loop's first turn)
 	while (!quit)
 	{
@@ -2375,6 +2456,18 @@ int main(int argc, char** argv)
 		if (g >= 0)
 		{
 			lib.clearLaunch();
+			std::string page = internalPage(lib.systemOf(g));
+			if (!page.empty())
+			{
+				// an internal page's entry launched (a touch, the Carts and layout themes): its page, the shelf behind it
+				// on the tile
+				std::lock_guard<std::mutex> l(worker.uiLock);
+				ui->setHome(lib.currentShelf());
+				settingsView.setVariant(settings["theme"]);
+				if (openPage(settingsView, page)) { rep.key = Key::NONE; dirty = true; }
+				else logf("launch: no page %s", page.c_str());
+				continue;
+			}
 			runGame(g);
 			continue;
 		}
@@ -2519,11 +2612,19 @@ int main(int argc, char** argv)
 		if (uevent >= 0) fds.push_back({ uevent, POLLIN, 0 });
 		if (disp.isOpen()) fds.push_back({ disp.pollFd(), POLLIN, 0 });
 		for (int fd : input.fds()) fds.push_back({ fd, POLLIN, 0 });
+		if (mountsFd >= 0) fds.push_back({ mountsFd, POLLPRI, 0 });
 		int n = poll(fds.data(), fds.size(), timeout);
 		if (n == 0 && !want) dirty = true;	// the engine's next step is due
 		if (n <= 0) continue;
 		for (auto& p : fds)
 		{
+			if (p.fd == mountsFd)
+			{
+				if (!(p.revents & (POLLPRI | POLLERR))) continue;
+				std::lock_guard<std::mutex> l(worker.uiLock);
+				if (settingsView.isOpen() && settingsView.cardsChanged()) dirty = true;
+				continue;
+			}
 			if (!(p.revents & POLLIN)) continue;
 			if (p.fd == sigPipe[0])
 			{

@@ -25,6 +25,46 @@ awk '!/^#/ && NF >= 3 && $2 != "-" { print $2 }' "$HERE/assets/rnds/systems.cfg"
     [ -f "$HERE/assets/rnds/icons/$ic" ] || { echo "FAIL systems.cfg: no icons/$ic"; exit 1; }
 done || fail=1
 grep -q '^rocknixdsbank .* poketool\.png ' "$HERE/assets/rnds/systems.cfg" || { echo "FAIL systems.cfg: Poketool's tile isn't its own logo"; fail=1; }
+# fileops' job on its own thread, as on the handheld (the runs below do it in sync mode): Stop in a file, a move between
+# file systems stopped, quitting in the middle, long names; with ThreadSanitizer where the compiler and kernel have it.
+# And on the cards' own file systems where this machine lets us make them (root, losetup, mkfs.vfat and mkfs.exfat: a
+# privileged container will do): an exFAT image mounted as rcS mounts the data card and a FAT32 one as the sd2 script
+# mounts the second, with those scripts' own options, for what tmpfs can't show (fileops-test's card())
+FT=$OUT/fileops-test FTLOG=$OUT/fileops-test.log
+O2=$OUT; [ -w /dev/shm ] && [ "$(stat -c %d /dev/shm)" != "$(stat -c %d "$OUT")" ] && O2=/dev/shm
+CD="" LF="" LE=""
+cards_up()
+{
+    why="not root"; [ "$(id -u)" = 0 ] || return 1
+    for t in losetup mkfs.vfat mkfs.exfat; do why="no $t"; command -v $t >/dev/null || return 1; done
+    exopt=$(sed -n 's|.*mount -t exfat -o \([^ ]*\) .* /data .*|\1|p' "$HERE/../system/rootfs/etc/init.d/rcS" | head -n 1)
+    fatopt=$(sed -n 's|.*mount -t vfat -o \([^ ]*\) .*|\1|p' "$HERE/../system/rootfs/usr/libexec/banana/sd2" | head -n 1)
+    why="rcS's or sd2's mount options not found"; [ -n "$exopt" ] && [ -n "$fatopt" ] || return 1
+    why="the images couldn't be made"
+    CD=$(mktemp -d) && mkdir "$CD/fat" "$CD/ex" && truncate -s 128M "$CD/fat.img" "$CD/ex.img" &&
+        mkfs.vfat -F 32 "$CD/fat.img" >/dev/null 2>&1 && mkfs.exfat "$CD/ex.img" >/dev/null 2>&1 || return 1
+    why="no loop device (not a privileged container?)"
+    LF=$(losetup -f --show "$CD/fat.img" 2>/dev/null) && LE=$(losetup -f --show "$CD/ex.img" 2>/dev/null) || return 1
+    why="vfat or exfat can't be mounted"
+    mount -t vfat -o "$fatopt" "$LF" "$CD/fat" 2>/dev/null && mount -t exfat -o "$exopt" "$LE" "$CD/ex" 2>/dev/null
+}
+cards_down()
+{
+    [ -n "$CD" ] || return 0
+    umount "$CD/fat" "$CD/ex" 2>/dev/null || true
+    for l in $LF $LE; do losetup -d $l 2>/dev/null || true; done
+    rm -rf "$CD" || true
+    CD="" LF="" LE=""
+}
+trap cards_down EXIT; trap 'exit 1' INT TERM
+cards_up || { cards_down; echo "note: fileops on FAT32 and exFAT skipped: $why"; }
+TSAN=-fsanitize=thread
+echo 'int main() { return 0; }' | ${CXX:-g++} -x c++ $TSAN -o "$OUT/tsan-probe" - 2>/dev/null && "$OUT/tsan-probe" 2>/dev/null || TSAN=
+if ${CXX:-g++} -std=c++17 -O1 -g $TSAN -o "$FT" "$HERE/tests/fileops-test.cpp" "$HERE/src/fileops.cpp" -lpthread; then
+    "$FT" "$OUT" "$O2" ${CD:+"$CD/fat" "$CD/ex"} > "$FTLOG" 2>&1 || { echo "FAIL: fileops-test (see $FTLOG)"; fail=1; }
+    grep -q "WARNING: ThreadSanitizer" "$FTLOG" && { echo "FAIL: fileops-test: a data race (see $FTLOG)"; fail=1; }
+else echo "FAIL: fileops-test doesn't build"; fail=1; fi
+cards_down; trap - EXIT INT TERM
 for size in 640x480 1024x768; do
     log=$OUT/$size.log
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" \
@@ -296,6 +336,15 @@ for size in 640x480 1024x768; do
     for s in reset-system reset-emulator; do
         [ -s "$OUT/$size-$s-top.png" ] && [ -s "$OUT/$size-$s-bot.png" ] || { echo "FAIL $size: no $s shot"; fail=1; }
     done
+    # an action is A's alone: on Shut down (two up from System's first row: Hotkeys is the list's last), RIGHT twice (as a
+    # held RIGHT repeats) isn't the second press; A twice then is (result 6: POWEROFF)
+    alog=$OUT/$size-action.log
+    "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" \
+        --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
+        --script "home 0; press start; press r; press r; press r; press r; press r; press a; press up; press up; press right; press right; press a; press a" \
+        2> "$alog" || { echo "FAIL $size: banana-ui (action) exited $?"; fail=1; }
+    [ "$(grep -c 'press right: settings result 0' "$alog")" = 2 ] && grep -q 'press a: settings result 6' "$alog" ||
+        { echo "FAIL $size: Shut down by RIGHT, or not by A: $(grep 'press [ar]' "$alog" | tail -4 | tr '\n' ' ')"; fail=1; }
     # a layout theme (the image's canvas.json): every screen drawn from its JSON, home -> library -> a launch, a
     # tap on a system, and no complaint about the theme in the log
     llog=$OUT/$size-layout.log
@@ -377,6 +426,146 @@ for size in 640x480 1024x768; do
         a=${pair% *}; b=${pair#* }
         cmp -s "$OUT/$size-$a-bot.png" "$OUT/$size-$b-bot.png" && { echo "FAIL $size: $a and $b are the same picture"; fail=1; }
     done
+    # Files (the shelf's tile): a card of its own (the fixture again) and a second card in /dev/shm when that is a
+    # file system of its own (a move between the two then copies and deletes, as between the RG DS Plus's cards).
+    # Copy to the second card, move back into gba, folders made and renamed by touch (a name refused), a paste over
+    # names already there (Replace, Keep both, Skip), a copy beside itself, a card's own folder offered no Move or
+    # Delete, a folder pasted into itself refused, a folder deleted with what is in it, a file too big for the room
+    # refused before a byte, and a folder of 200 long names scrolled through within the settings' cache budget
+    FM=$OUT/fm-$size; mlog=$OUT/$size-files.log; : > "$mlog"
+    "$HERE/tests/fixture.sh" "$FM" >/dev/null
+    SD2=$(mktemp -d /dev/shm/banana-sd2.XXXXXX 2>/dev/null || true)
+    if [ -z "$SD2" ] || [ "$(stat -c %d "$SD2")" = "$(stat -c %d "$FM")" ]; then
+        [ -n "$SD2" ] && rmdir "$SD2"
+        SD2=$OUT/sd2-$size; rm -rf "$SD2"; mkdir -p "$SD2"
+        echo "note $size: /dev/shm isn't a file system of its own here: the move between cards is a rename"
+    fi
+    run_fm() { BANANA_SD2="$SD2" "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" \
+        --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FM/roms" \
+        --data "$FM/data" --script "$1" 2>> "$mlog" || { echo "FAIL $size: banana-ui (files) exited $?"; fail=1; }; }
+    fcheck() { grep -q "$1" "$mlog" || { echo "FAIL $size: files: no '$1'"; fail=1; }; }
+    fsame() { cmp -s "$1" "$2" || { echo "FAIL $size: files: $1 isn't $2"; fail=1; }; }
+    fhas() { [ -e "$1" ] || { echo "FAIL $size: files: no $1"; fail=1; }; }
+    fnot() { [ -e "$1" ] && { echo "FAIL $size: files: $1 is there"; fail=1; }; true; }
+    N=$FM/roms/nds G=$FM/roms/gba
+    # the cards; This card's root (data, roms) > roms (gb, gba, nds, snes) > nds; two games marked, copied, pasted on the second card
+    run_fm "homeid files; press a; shot files-cards; press a; press down; press a; press down; press down; press a; shot files-folder; \
+        press down; press y; press down; press y; press x; shot files-actions; press a; press b; press b; press b; press down; press a; \
+        press x; press a; shot files-pasted"
+    fcheck "press a: banana:files open"
+    fcheck "files: Copied 2 files (8.0 KB) into Second SD card."
+    fsame "$SD2/Banana Kart DS.nds" "$N/Banana Kart DS.nds"; fsame "$SD2/Monkey Puzzle League.nds" "$N/Monkey Puzzle League.nds"
+    # both moved from the second card into gba (a file at a time between two file systems)
+    run_fm "homeid files; press a; press down; press a; press y; press down; press y; press x; press down; press a; press b; press up; \
+        press a; press down; press a; press down; press a; press x; press a; shot files-moved"
+    fcheck "files: Moved 2 files (8.0 KB) into This card/roms/gba."
+    fnot "$SD2/Banana Kart DS.nds"; fnot "$SD2/Monkey Puzzle League.nds"
+    fsame "$G/Banana Kart DS.nds" "$N/Banana Kart DS.nds"; fsame "$G/Monkey Puzzle League.nds" "$N/Monkey Puzzle League.nds"
+    # in gba: New folder "a:b" refused, then "rpg"; "x"; rpg renamed to x (taken: refused), then to y; a game renamed (.NDS)
+    run_fm "homeid files; press a; press a; press down; press a; press down; press a; press x; press down; press down; press down; \
+        press down; press a; $(key 2,0) press x; $(key 2,9) press x; $(key 3,4) press start; shot files-badname; press b; press b; press b; \
+        $(key 1,3 1,9 2,4) press start; press x; press down; press down; press down; press down; press a; $(key 3,1) press start; \
+        press up; press x; press down; press down; press a; press b; press b; press b; $(key 3,1) press start; press b; $(key 1,5) press start; \
+        press down; press x; press down; press down; press a; press b; press b; press b; press x; $(key 3,5 2,2 2,1) press start"
+    fcheck "files: new folder refused: A name can't have : in it"
+    fcheck "files: Made the folder rpg."
+    fcheck "files: rename refused: There is already something called x here."
+    fcheck "files: Renamed rpg to y."
+    fcheck "files: Renamed Banana Kart DS.nds to Banana Kart DS.NDS."
+    fhas "$G/x"; fhas "$G/y"; fnot "$G/rpg"; fnot "$G/a:b"; fhas "$G/Banana Kart DS.NDS"
+    # Peel Quest from nds into gba, where an older one is: Replace (A twice), then Keep both, then Skip
+    echo old > "$G/Peel Quest.nds"
+    run_fm "homeid files; press a; press a; press down; press a; press down; press down; press a; press down; press down; press down; \
+        press x; press a; press b; press up; press a; press x; press a; shot files-clash; press down; press a; press a; \
+        press x; press a; press a; press x; press a; press down; press down; press a"
+    fsame "$G/Peel Quest.nds" "$N/Peel Quest.nds"; fsame "$G/Peel Quest (2).nds" "$N/Peel Quest.nds"; fnot "$G/Peel Quest (3).nds"
+    fcheck "files: Nothing was pasted. 1 left as it was."
+    # roms: gb (a system's folder) offered no Move, Rename or Delete; gba copied and pasted into itself: refused; in gba
+    # the folder old deleted with what is in it; Orchard Tactics copied beside itself
+    mkdir -p "$G/old/sub"; echo f > "$G/old/sub/f"; echo g > "$G/old/g"
+    run_fm "homeid files; press a; press a; press down; press a; press x; press b; press down; press x; press a; press a; press x; press a; \
+        press x; press down; press down; press down; press down; press a; press a; press down; press down; press down; press down; press x; \
+        press down; press a; press x; press a"
+    fcheck "files: actions for gb: Copy, New folder, Mark all"
+    fcheck "files: paste refused: A folder can't go into itself"
+    fcheck "files: Deleted 1 folder."
+    fnot "$G/old"; fhas "$N/Peel Quest.nds"
+    fsame "$G/Orchard Tactics (2).gba" "$G/Orchard Tactics.gba"
+    # a file bigger than the second card's room: refused before a byte is written
+    truncate -s 1T "$FM/roms/gb/big.gb"
+    run_fm "homeid files; press a; press a; press down; press a; press a; press x; press a; press b; press b; press b; press down; press a; \
+        press x; press a"
+    fcheck "files: Not enough room: "
+    fnot "$SD2/big.gb"; [ -z "$(ls -A "$SD2")" ] || { echo "FAIL $size: files: left on the second card: $(ls -A "$SD2")"; fail=1; }
+    rm -f "$FM/roms/gb/big.gb"
+    # 200 long names: the settings' cache stays within its budget, banana-ui's memory within 64 MB of where it was
+    mkdir -p "$FM/long"
+    for i in $(seq 100 299); do : > "$FM/long/$i Some Rather Long Game Title With A Subtitle - The Revenge of the Long File Names (Europe) (En,Fr,De,Es,It) (Rev 1).nds"; done
+    steps=""; for i in $(seq 200); do steps="$steps press down; frame;"; done
+    run_fm "homeid files; press a; press a; press down; press a; mem; $steps mem; shot files-long"
+    awk '/mem: RSS/ { rss[++n] = $3; for (i = 1; i <= NF; i++) if ($i == "settings") { used = $(i + 4); budget = $(i + 8) } }
+        END { if (n < 2 || used == "" || used + 0 > budget + 0 || rss[2] - rss[1] > 65536) { print "FAIL: files: cache " used " of " budget " MB, RSS " rss[1] " -> " rss[2] " kB"; exit 1 } }' "$mlog" \
+        || { echo "FAIL $size: files: memory, see $mlog"; fail=1; }
+    # a fresh card for the rest (fm2): a job on its thread, its page shot while it works and Y twice stopping it; RIGHT
+    # never choosing an action; a 244-byte name copied; an empty folder copied and a folder merged said as one folder;
+    # Mark all in roms moving or deleting only the user's own folder; SELECT leaving a rename; a Windows device name
+    FM=$OUT/fm2-$size; mlog=$OUT/$size-files2.log; : > "$mlog"
+    "$HERE/tests/fixture.sh" "$FM" >/dev/null
+    rm -rf "$SD2"/* 2>/dev/null || true
+    N=$FM/roms/nds G=$FM/roms/gba
+    # in gba: X, down to Delete, RIGHT twice (as a held RIGHT repeats); B, RIGHT twice on the file
+    run_fm "homeid files; press a; press a; press down; press a; press down; press a; press x; press down; press down; press down; \
+        press right; press right; press b; press right; press right"
+    fhas "$G/Orchard Tactics.gba"; grep -q "files: Deleted\|files: copy" "$mlog" && { echo "FAIL $size: files: RIGHT chose an action"; fail=1; }
+    # Big.gba (256 MB, sparse) copied beside itself on its thread, slower than a card (100 ms a MiB: 25 s, longer than
+    # a shot takes even in a sanitizer's build; Stop ends it within a block): its page shot while it works (the page
+    # comes 300 ms after the first update since the paste: frame, then wait), Y twice
+    truncate -s 256M "$G/Big.gba"
+    BANANA_FILES_ASYNC=1 BANANA_FILES_PACE=100 run_fm "homeid files; press a; press a; press down; press a; press down; press a; press x; press a; \
+        press x; press a; frame; wait 400; sleep 30; shot files-job; press y; press y; filesdone"
+    fcheck "files: Stopped: 0 of 1 done."
+    fnot "$G/Big (2).gba"; [ -z "$(ls -A "$G" | grep '^\.banana-')" ] || { echo "FAIL $size: files: a hidden copy left in gba"; fail=1; }
+    rm -f "$G/Big.gba"
+    long=$(printf 'A%.0s' $(seq 241)).gb; : > "$FM/roms/gb/$long"
+    run_fm "homeid files; press a; press a; press down; press a; press a; press x; press a; press b; press b; press b; press down; press a; \
+        press x; press a"
+    fcheck "files: Copied 1 file into Second SD card."; fhas "$SD2/$long"
+    mkdir "$G/empty"; mkdir -p "$N/pack" "$G/pack"; : > "$N/pack/a.nds"; : > "$N/pack/b.nds"
+    run_fm "homeid files; press a; press a; press down; press a; press down; press a; press x; press a; press b; press b; press b; \
+        press down; press a; press x; press a"
+    fcheck "files: Copied 1 folder into Second SD card."; fhas "$SD2/empty"
+    run_fm "homeid files; press a; press a; press down; press a; press down; press down; press a; press down; press x; press down; press a; \
+        press b; press up; press a; press x; press a; press down; press a; press a"
+    fcheck "files: Moved 1 folder into This card/roms/gba."; fhas "$G/pack/a.nds"; fnot "$N/pack"
+    mkdir "$FM/roms/my-stuff"
+    run_fm "homeid files; press a; press a; press down; press a; press x; press down; press down; press a; press x; press down; press down; \
+        press a; press a"
+    fcheck "files: actions for 5 items: Copy, Move, Delete, New folder, Unmark all"
+    fcheck "files: Deleted 1 folder."; fnot "$FM/roms/my-stuff"; fhas "$FM/roms/gb"
+    # (SELECT on the keyboard: back to the actions, the cursor on Rename; two down is New folder)
+    run_fm "homeid files; press a; press a; press down; press a; press down; press a; press x; press down; press down; press a; press select; \
+        press down; press down; press a; $(key 3,5 1,6 2,8) press start"
+    fhas "$G/empty"; grep -q "files: Renamed" "$mlog" && { echo "FAIL $size: files: SELECT renamed"; fail=1; }
+    fcheck "files: new folder refused: Windows keeps the name nul"
+    # a swipe up that starts on a row (the fourth) scrolls a page (the sixth chosen), not a tap on that row
+    mkdir -p "$FM/swipe"; for i in 00 01 02 03 04 05 06 07 08 09 10 11; do : > "$FM/swipe/f$i"; done
+    run_fm "homeid files; press a; press a; press down; press down; press a; swipe 300 300 300 100; press x"
+    fcheck "files: actions for f05:"
+    # a systems.conf of the user's made before Files (no [files]): the tile is there all the same
+    awk '/^\[files\]/ { skip = 1; next } /^\[/ { skip = 0 } !skip' "$HERE/../system/rootfs/etc/banana/systems.conf" > "$OUT/systems-nofiles.conf"
+    nlog=$OUT/$size-nofiles.log
+    "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --banana "$HERE/assets/banana" \
+        --systems "$OUT/systems-nofiles.conf" --roms "$FM/roms" --data "$FM/data" --script "homeid files; press a" 2> "$nlog" \
+        || { echo "FAIL $size: banana-ui (no [files]) exited $?"; fail=1; }
+    grep -q "press a: banana:files open" "$nlog" || { echo "FAIL $size: no Files tile without [files] in systems.conf"; fail=1; }
+    for s in files-cards files-folder files-actions files-pasted files-moved files-badname files-clash files-long files-job; do
+        for p in top bot; do
+            f=$OUT/$size-$s-$p.png
+            [ -s "$f" ] || { echo "FAIL $size: no $f"; fail=1; continue; }
+            [ "$(convert "$f" -format '%[fx:standard_deviation>0.01]' info:)" = 1 ] || { echo "FAIL $size: $f is blank"; fail=1; }
+        done
+    done
+    case $SD2 in /dev/shm/*) rm -rf "$SD2" ;; esac
     grep 'bench:' "$log" | sed "s/^banana-ui: /$size /"
 done
 # updates over the air (#69): the update script against a stand-in for GitHub, and the Update page
