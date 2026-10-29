@@ -253,6 +253,16 @@ namespace banana
 				while (is >> e) cur->exts.push_back(lower(e[0] == '.' ? e.substr(1) : e));
 			}
 		}
+		// the menu's own Files page on a user's copy too: banana/systems.conf replaces this file, and one made before
+		// Files came has no [files] (no way to it otherwise). A [files] of the user's own is taken as it is (an empty
+		// folder and always = no hide the tile)
+		if (std::none_of(defs.begin(), defs.end(), [](const SystemDef& d) { return d.id == "files" || d.run == "banana:files"; }))
+		{
+			SystemDef d;
+			d.id = "files"; d.name = "Files"; d.maker = "Banana"; d.folder = "/usr/share/banana/apps/files";
+			d.exts = { "app" }; d.run = "banana:files"; d.always = true;
+			defs.push_back(d);
+		}
 	}
 
 	// the theme's systems.cfg, read the way ROCKNIXDS reads it (RndsEs.cpp)
@@ -826,7 +836,9 @@ namespace banana
 		for (auto& g : s.games) { if (g.plays > 0) r.played++; secs += g.seconds; }
 		r.time = fmtTime(secs);
 		r.fav = favSystems.count(s.def.id) > 0;
-		int res = resumeIndex(s);
+		// (one of the menu's own pages, as Files: never played, so no "Not played yet" chip for its one entry, nor "Last
+		// played: Files"; X on it opens the page as A does)
+		int res = s.def.run.compare(0, 7, "banana:") == 0 ? -1 : resumeIndex(s);
 		if (res >= 0)
 		{
 			const Game& g = s.games[res];

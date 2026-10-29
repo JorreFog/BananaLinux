@@ -55,7 +55,7 @@
   const SOUNDS = ["scroll", "select", "back", "fav", "ready", "insert"];
   // the systems the menu ships (system/rootfs/etc/banana/systems.conf); the server can add a card's own
   const SYSTEM_IDS = ["nds", "gba", "gbc", "gb", "nes", "snes", "megadrive", "psx", "n64",
-    "dodakvarter", "rocknixdsbank", "pico-8", "ports"];
+    "dodakvarter", "rocknixdsbank", "pico-8", "ports", "files"];
   const BUILTIN_FONTS = ["pixel", "pixel-medium", "inter", "inter-medium", "inter-semibold", "inter-bold"];
 
   // ---- buttons and the actions a view can bind ------------------------------------------------------------

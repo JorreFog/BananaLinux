@@ -170,6 +170,49 @@ password, so it is off by default and the settings screen says so. banana-ui wat
 games copied in are read into the library once the copying has been quiet for 2 s, while the menu shows its home
 screen.
 
+**Files** (the shelf's tile, `run = banana:files` in systems.conf: one of the menu's own pages, not a program; A or
+X on the tile opens it, and so does a launch of its entry, by touch or from the Carts and layout themes; a user's
+`banana/systems.conf` without `[files]` gets it from the library all the same): the cards' folders and files, the
+settings' pages drawn by `src/settings_files.cpp`, the work done by `src/fileops.cpp`. This card is the ROM folder's
+parent (`/data`), the second SD card `/run/sd2` while it is in (the list of cards follows the mount table, poll's
+POLLPRI on `/proc/self/mounts`, while Files is open); the system's squashfs isn't shown, nor are hidden (`.`) files.
+In a folder A opens, Y marks, X offers Paste here, Copy, Move, Rename, Delete (A twice), New folder and Mark all.
+RIGHT only goes in (a card, a folder): held, it repeats, so it never chooses an action, here or anywhere in the
+settings (an action such as Shut down, Update's apply, joining a network, Box art's downloads are A's alone). A name
+typed on the keyboard is checked for what exFAT, FAT32 and Windows refuse (`\ / : * ? " < > |`, a trailing dot or
+space, Windows' device names `CON`, `NUL`, `COM1`..., and the card's limit: 255 UTF-16 characters on exFAT and FAT32
+alike); SELECT leaves the keyboard with nothing changed. The card's own folders (`banana`, `bios`, `roms`, `saves`,
+`states` and each system's folder in `roms`, which `data-layout` makes again at every boot and the library looks in)
+can be copied, not moved, renamed or deleted; marked with others, Move and Delete take the others. A paste whose
+names are taken asks once: Keep both (`name (2).ext`, a two-part extension such as PICO-8's `.p8.png` kept whole,
+the name cut to the card's limit), Replace (A twice; a folder merged), Skip those; a source is never replaced by
+itself, and a folder can't go into itself. Copies, moves and deletes run on a thread of their own, niced, one at a
+time; the page (shown once a job has run 300 ms) shows the file in hand, the bytes and the speed, and Y (twice,
+within 3 s) stops between two 1 MiB blocks, or the counting before them (Files stays open till the job is done); the
+outcome counts what was asked for ("Copied 1 folder"), or what of it was done. Before the first byte the room is
+checked (each file rounded up to the card's cluster) and FAT32's 4 GB a file; a copy is written as
+`.banana-copy-<name>` (cut to fit a name) beside its place, sent to the card 8 MiB at a time as it goes
+(`sync_file_range`: the bar shows what is on the card rather than in the RAM, and Stop waits a window at most),
+given its source's time, flushed and renamed into place, so a cut never leaves half a file under the real name (its
+leftover goes the next time the folder is listed; a change of case cut off between its two renames,
+`.banana-rename-<name>`, gets its name back there too). A folder that can't be read (a card error) fails with its
+reason: it isn't copied empty, nor left behind by a move without a word. A move on one card is a rename; between the
+two cards each file is copied so, and its source deleted once its folder is flushed too (the new name on the card: a
+leftover is never the only copy). The cards pasted on and taken from are flushed (`syncfs`, on the job's thread)
+before the outcome is told, and a folder made or an entry renamed has its folder flushed at once (`fsync`: the
+second card may be taken out right after; the card's `syncfs` would hold the page up for all else on its way there,
+a big file coming over SMB, say). The second card taken out mid-way (the `sd2` script's `umount -l`: `/run/sd2` is
+then the mount point's own folder, in the RAM): what the job makes is checked to be on the card's file system
+(`st_dev`, as the cards were when the paste was asked for), and the job ends there, "the card was taken out", no
+source deleted; a paste on a card taken out before it starts, or a name typed while the keyboard was up, does
+nothing. While a job runs, `/run/banana/files.pid` (banana-ui's pid) holds bananad's idle sleep; the lid still
+sleeps, and the job goes on after the wake. Games moved or copied show up in the library through the ROM folders'
+watch once Files is closed (a `roms` folder made or pasted on a second card that had none is offered to the library
+then: `sd2 scan`, under bananad's lock); a game's play time and Favorites star go by its place, so moved or renamed
+it starts without them (the page says so). The settings' pages keep their textures within a budget (8 MB at 1x,
+times the panel's area; the least recently used go after each frame), as the menu's engine does, and a folder's rows
+get their words only for the window on screen: a folder of any number of names doesn't fill the memory.
+
 **SSH** (Settings > Network, off by default): dropbear with keys only, as root. The keys are written in
 `banana/ssh/authorized_keys` on the card and copied to `/run/banana/ssh` (mode 0600, which exFAT can't hold;
 `/root/.ssh` points there); the host key is made once per card. Logs and `sleep_debug`'s timings can be read

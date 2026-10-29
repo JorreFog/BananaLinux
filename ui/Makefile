@@ -8,7 +8,7 @@ CXXFLAGS ?= -O2
 override CXXFLAGS += -std=c++17 -Wall -Wno-unused-function
 override LDLIBS += -lpthread
 
-SRC = src/main.cpp src/lang.cpp src/soft.cpp src/kms.cpp src/colors.cpp src/input.cpp src/library.cpp src/sound.cpp src/splash.cpp src/arrival.cpp src/settings.cpp src/settings_defaults.cpp src/wifi.cpp src/bluetooth.cpp src/zip.cpp src/carts.cpp src/cart3d.cpp src/theme.cpp src/pokemon.cpp src/pokemap.cpp src/gamecomp.cpp src/json.cpp src/expr.cpp src/layout.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp
+SRC = src/main.cpp src/lang.cpp src/soft.cpp src/kms.cpp src/colors.cpp src/input.cpp src/library.cpp src/sound.cpp src/splash.cpp src/arrival.cpp src/settings.cpp src/settings_defaults.cpp src/wifi.cpp src/bluetooth.cpp src/zip.cpp src/carts.cpp src/cart3d.cpp src/theme.cpp src/pokemon.cpp src/pokemap.cpp src/gamecomp.cpp src/json.cpp src/expr.cpp src/layout.cpp src/fileops.cpp src/settings_files.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp
 PKGS = freetype2 libdrm zlib
 ifeq ($(ALSA),1)
 PKGS += alsa
@@ -62,6 +62,9 @@ install:
 	# the menu's languages (lang.h): one file each, the menu's and the DS emulators' translations
 	mkdir -p $(DESTDIR)/usr/share/banana/lang
 	cp -r assets/lang/. $(DESTDIR)/usr/share/banana/lang/
+	# the shelf's Files tile: one of the menu's own pages (systems.conf's [files]), its one entry
+	mkdir -p $(DESTDIR)/usr/share/banana/apps/files
+	touch $(DESTDIR)/usr/share/banana/apps/files/Files.app
 
 clean:
 	rm -f banana-ui banana-leaseshim.so banana-scrape banana-sync tests/pokemon-test tests/gamecomp-test tests/input-test

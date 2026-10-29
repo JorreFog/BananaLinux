@@ -3,7 +3,8 @@
  *   - Sleep: a short press of the power button, closing the lid, or (in the menu) a few idle minutes put the
  *     handheld into suspend-to-RAM. The running game is paused first (SIGSTOP to its process group) and resumed
  *     after, the hooks in /etc/banana/sleep.d run around it, and banana-ui is told to draw its panels again.
- *     Opening the lid or pressing power wakes it (the device tree marks both as wakeup sources).
+ *     Opening the lid or pressing power wakes it (the device tree marks both as wakeup sources). A copy, move or
+ *     delete of the shelf's Files (/run/banana/files.pid) holds the idle sleep; the lid still sleeps (it pauses).
  *   - A long press of the power button shuts down cleanly.
  *   - Volume keys change the mixer; F (BTN_MODE) + volume changes both panels' backlights.
  *   - A battery about to run out shuts the handheld down before the data partition can be cut off mid-write.
@@ -58,7 +59,7 @@ static struct {
 	char mixer[64];			/* ALSA simple control the volume keys change; "auto": the playing card's own */
 	int volume_step;		/* percent */
 	int brightness_step;	/* percent of max */
-	int autosleep_min;		/* idle minutes in the menu before sleeping; 0 = never */
+	double autosleep_min;	/* idle minutes in the menu before sleeping; 0 = never */
 	int lid_sleep;			/* closing the lid sleeps */
 	int power_long_ms;		/* holding power this long shuts down */
 	int battery_off_pct;	/* at or under this, discharging: shut down */
@@ -129,7 +130,7 @@ static void load_conf(const char *path)
 		if (!strcmp(k, "mixer")) snprintf(cfg.mixer, sizeof cfg.mixer, "%s", v);
 		else if (!strcmp(k, "volume_step")) cfg.volume_step = atoi(v);
 		else if (!strcmp(k, "brightness_step")) cfg.brightness_step = atoi(v);
-		else if (!strcmp(k, "autosleep_minutes")) cfg.autosleep_min = atoi(v);
+		else if (!strcmp(k, "autosleep_minutes")) cfg.autosleep_min = atof(v);
 		else if (!strcmp(k, "lid_sleep")) cfg.lid_sleep = !strcmp(v, "yes") || !strcmp(v, "1");
 		else if (!strcmp(k, "mic_gain")) cfg.mic_gain = atoi(v);
 		else if (!strcmp(k, "power_long_ms")) cfg.power_long_ms = atoi(v);
@@ -1496,7 +1497,7 @@ int main(int argc, char **argv)
 	last_input = mono();
 	double next_battery = 0;
 	int low_count = 0;
-	say("running: lid %s, auto-sleep %d min, %s", cfg.lid_sleep ? "sleeps" : "ignored", cfg.autosleep_min, cfg.mem_sleep);
+	say("running: lid %s, auto-sleep %g min, %s", cfg.lid_sleep ? "sleeps" : "ignored", cfg.autosleep_min, cfg.mem_sleep);
 
 	for (;;) {
 		struct pollfd pf[MAXDEV + 2];
@@ -1509,9 +1510,10 @@ int main(int argc, char **argv)
 		 * check, a pending save, the power button's hold; nothing wakes bananad otherwise */
 		double tnow = mono(), wait = next_battery - tnow;
 		int game = pid_of("/run/banana/game.pid") != 0;
-		/* a job that must not be slept through (banana-scrape's downloads): its pid in /run/banana/awake.pid; looked
-		 * at again every 5 s, so the idle sleep comes once it is over */
-		int awake = pid_of("/run/banana/awake.pid") != 0;
+		/* a job that must not be slept through (banana-scrape's downloads: its pid in /run/banana/awake.pid; a Files
+		 * job's: banana-ui's in /run/banana/files.pid); looked at again every 5 s, so the idle sleep comes once it is
+		 * over */
+		int awake = pid_of("/run/banana/awake.pid") != 0 || pid_of("/run/banana/files.pid") != 0;
 		if (awake && wait > 5) wait = 5;
 		/* (only deadlines still ahead: one already passed was acted on after the last poll, or is held back by what
 		 * the action checks (the charger, the lid, no backlight) and a uevent or an input event brings it back; counted
@@ -1536,7 +1538,7 @@ int main(int argc, char **argv)
 			save_volume_at = mono() + 2;	/* the settings screen may have set the volume: keep it as the keys' is kept */
 			leds_last = -2;
 			leds_update();
-			say("settings read again: lid %s, auto-sleep %d min, LEDs %d", cfg.lid_sleep ? "sleeps" : "ignored", cfg.autosleep_min, cfg.led_brightness);
+			say("settings read again: lid %s, auto-sleep %g min, LEDs %d", cfg.lid_sleep ? "sleeps" : "ignored", cfg.autosleep_min, cfg.led_brightness);
 			/* the menu's Power > Sleep: the same sleep as a press of the power button, half a second on */
 			if (unlink("/run/banana/sleep-now") == 0) { menu_sleep_at = mono() + 0.5; say("the menu asked for a sleep"); }
 		}
@@ -1574,7 +1576,7 @@ int main(int argc, char **argv)
 		if (cfg.dim_min > 0 && !dimmed && !game && !lid_closed && now - last_input >= cfg.dim_min * 60.0) dim();
 		/* (not while charging: a sleep would put the charging light out; the menu stays dimmed instead) */
 		if (cfg.autosleep_min > 0 && !game && now - last_input >= cfg.autosleep_min * 60.0 && !charger_online() &&
-		    !pid_of("/run/banana/awake.pid"))
+		    !pid_of("/run/banana/awake.pid") && !pid_of("/run/banana/files.pid"))
 			suspend_now("idle");
 		if (lid_sleep_at > 0 && now >= lid_sleep_at) { lid_sleep_at = 0; if (lid_closed) suspend_now("lid closed"); }
 		if (menu_sleep_at > 0 && now >= menu_sleep_at) { menu_sleep_at = 0; suspend_now("the menu's Sleep"); }

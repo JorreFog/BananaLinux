@@ -22,7 +22,7 @@ ux_lt() { awk -v a="$1" -v b="$2" 'BEGIN { exit !(a < b) }'; }
 # the home row has two ends (Pixel): on the first system nothing is drawn left of it (the track alone); on the last,
 # nothing right of it; left on the first still goes to the last
 ux_run row "home 0; wait 2400; shot ux-row-first; press left; wait 2400; shot ux-row-last"
-ux_check row "press left: used, view 0 sys 5"     # (six systems: Ports with PortMaster alone is off the row)
+ux_check row "press left: used, view 0 sys 6"     # (seven systems, Files the last: Ports with PortMaster alone is off the row)
 ux_lt "$(ux_std "$OUT/$size-ux-row-first-bot.png" 210 80 30 200)" 0.08 || { echo "FAIL $size: something drawn left of the first system"; fail=1; }
 ux_lt "$(ux_std "$OUT/$size-ux-row-last-bot.png" 210 80 400 200)" 0.08 || { echo "FAIL $size: something drawn right of the last system"; fail=1; }
 
@@ -98,9 +98,9 @@ done
 
 # the home row: a system with nothing to start is left off, Ports with PortMaster's own entry alone is on it (PortMaster
 # gets ports: deleting the last port must not take it away); Display & sound > Shown systems (R twice, down) hides one
-# (Game Boy Advance), then Ports (the last row)
+# (Game Boy Advance), then Ports (the row before Files, the last)
 UXP=$UXFX/roms/ports; mkdir -p "$UXP"; printf '#!/bin/bash\n' > "$UXP/PortMaster.sh"
-ux_run shelves "home 0; press left; press start; press a; press r; press r; press down; press a; press down; press right; press up; press up; press right; press b; press start; home 0; press left"
+ux_run shelves "home 0; press left; press start; press a; press r; press r; press down; press a; press down; press right; press up; press up; press up; press right; press b; press start; home 0; press left"
 grep -q '^shelf.gba = hide' "$UXFX/data/settings.conf" && grep -q '^shelf.ports = hide' "$UXFX/data/settings.conf" || { echo "FAIL $size: shown systems: $(grep shelf "$UXFX/data/settings.conf" | tr '\n' ' ')"; fail=1; }
 # the row's systems: n at first with Ports (left from the first is n - 1), n - 1 without the GBA, n - 2 without Ports
 first=$(sed -n 's/.*press left: used, view 0 sys \([0-9]*\).*/\1/p' "$OUT/$size-shelves.log" | head -1)
