@@ -7024,22 +7024,17 @@ namespace banana
 		auto tb = companion->tables();
 		pkmn::RomTables none;
 		const pkmn::RomTables& t = tb ? *tb : none;
-		// ---- where: the area's name, the map and the place on it
-		box("bubble", false, 18, 14, 604, 62);
+		// ---- one box: the area's name along its top (the player's at the right), the region map as large as the box
+		// takes, a legend (or a tapped place's name) along its bottom
+		box("bubble", false, 18, 14, 604, 398);
 		std::string area = t.mapName(sn.mapsec);
 		if (area.empty()) area = sn.mapsec >= 0 ? "Somewhere unnamed" : "Unknown place";
-		text(fit(area, true, 22, 400), true, 22, 36, 24, p.ink);
-		char at[64];
-		snprintf(at, sizeof at, "Map %d.%d  ·  x %d, y %d", sn.group, sn.num, sn.x, sn.y);
-		text(at, false, 14, 36, 52, p.muted);
-		if (!sn.player.empty())
-		{
-			float w = text(sn.player, true, 17, 0, 0, p.accent, false, 0, true);
-			text(sn.player, true, 17, 604 - w, 28, p.accent);
-		}
+		float nw = sn.player.empty() ? 0 : text(sn.player, true, 17, 0, 0, p.accent, false, 0, true);
+		if (nw > 0) text(sn.player, true, 17, 604 - nw, 24, p.accent);
+		text(fit(area, true, 20, 560 - nw), true, 20, 36, 22, p.ink);
+		const float MX = 22, MY = 52, MW = 596, MH = 322;	// (where the map goes)
 		// ---- the region map from the ROM's own layout: a square a section (towns brighter), the area in the accent, the
-		// player a dot; a legend under it, and a tapped square's name there
-		box("bubble", false, 18, 84, 604, 328);
+		// player a dot
 		pkMapW = pkMapH = 0;
 		const pkmn::RomTables::Grid* g = nullptr;
 		int best = 0;
@@ -7050,7 +7045,7 @@ namespace banana
 			if (c > best) { best = c; g = &gr; }
 		}
 		if (!g && !t.grids.empty()) g = &t.grids[0];
-		if (!g) { wrapped("This game's region map wasn't found in its ROM.", 17, 40, 104, 560, 2, p.muted); return; }
+		if (!g) { wrapped("This game's region map wasn't found in its ROM.", 17, 40, 64, 560, 2, p.muted); return; }
 		// the game's own region map picture under the sections when the ROM has one (pokemap.cpp), else squares
 		int gi = (int)(g - t.grids.data());
 		const pkmn::RomTables::MapImage* im = gi >= 0 && gi < (int)t.gridImage.size() && t.gridImage[gi] >= 0 &&
@@ -7058,26 +7053,33 @@ namespace banana
 		float cell, ox, oy;
 		if (im)
 		{
-			// a whole number of panel pixels a picture pixel (crisp), as large as the box takes
+			// as large as the box takes, k panel pixels a picture pixel: a whole number of them in the texture (each a
+			// square), smoothed down to k (crisp, without the uneven columns of a nearest scale by 2.4)
 			if (tb != pkMapTables) { pkMapTex.clear(); pkMapTables = tb; }
-			int key = t.gridImage[gi];
+			float k = std::min(MW * s / im->w, MH * s / im->h);
+			int up = std::max(1, (int)std::ceil(k - 0.01f));
+			int key = t.gridImage[gi] * 16 + std::min(up, 15);
 			auto it = pkMapTex.find(key);
 			if (it == pkMapTex.end())
 			{
 				rnds::Bitmap bm;
-				bm.w = im->w; bm.h = im->h; bm.px = im->rgba;
-				it = pkMapTex.emplace(key, be->upload(bm, false)).first;	// (nearest: crisp pixels)
+				bm.w = im->w * up; bm.h = im->h * up;
+				bm.px.resize((size_t)bm.w * bm.h * 4);
+				for (int y = 0; y < bm.h; y++)
+					for (int x = 0; x < bm.w; x++)
+						memcpy(&bm.px[((size_t)y * bm.w + x) * 4], &im->rgba[((size_t)(y / up) * im->w + x / up) * 4], 4);
+				it = pkMapTex.emplace(key, be->upload(bm, true)).first;
 			}
-			int k = std::max(1, (int)std::floor(std::min(588.0f * s / im->w, 276.0f * s / im->h)));
-			float pw = (float)im->w * k, ph = (float)im->h * k;
-			float px0 = std::round(X(18 + 302) - pw / 2), py0 = std::round(X(92) + (X(276) - ph) / 2);
+			float pw = std::round(im->w * k), ph = std::round(im->h * k);
+			k = pw / im->w;
+			float px0 = std::round(X(MX + MW / 2) - pw / 2), py0 = std::round(X(MY) + (X(MH) - ph) / 2);
 			if (it->second) be->draw(it->second, px0, py0, pw, ph, Color(1, 1, 1, 1));
 			cell = 8.0f * k / s; ox = (px0 + im->cellX * k) / s; oy = (py0 + im->cellY * k) / s;
 		}
 		else
 		{
-			cell = std::floor(std::min(576.0f / g->w, 262.0f / g->h));
-			ox = 18 + (604 - cell * g->w) / 2; oy = 94 + (268 - cell * g->h) / 2;
+			cell = std::floor(std::min((MW - 12) / g->w, (MH - 6) / g->h));
+			ox = MX + (MW - cell * g->w) / 2; oy = MY + (MH - cell * g->h) / 2;
 		}
 		pkMapX = ox; pkMapY = oy; pkMapCell = cell; pkMapW = g->w; pkMapH = g->h; pkMapCells = g->cells;
 		std::map<int, int> size;
@@ -7117,7 +7119,7 @@ namespace banana
 			}
 		// the legend (or the name of the place tapped)
 		{
-			float ly = 376, lx = 36, sq = 12;
+			float ly = 384, lx = 36, sq = 12;
 			auto key = [&](Color c, const char* what, bool frame)
 			{
 				if (frame)
@@ -7159,7 +7161,7 @@ namespace banana
 		}
 		if (x1 < 0)
 		{
-			if (!im) text("Not on the region map here", false, 14, 36, 352, p.muted);
+			if (!im) text("Not on the region map here", false, 14, 36, 358, p.muted);
 			return;
 		}
 		// the player: inside the area's squares by the place on its map (a route several squares long)

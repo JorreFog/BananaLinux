@@ -550,7 +550,7 @@ namespace banana
 		int wrapLines(const std::string& t, float size, float width);
 		std::map<int, rnds::TexPtr> pkIcons;
 		std::shared_ptr<const pkmn::RomTables> pkTables;	// (the tables the icons came from)
-		std::map<int, rnds::TexPtr> pkMapTex;				// the region map pictures uploaded (by picture), and their tables
+		std::map<int, rnds::TexPtr> pkMapTex;				// the region map pictures uploaded (by picture and scale), and their tables
 		std::shared_ptr<const pkmn::RomTables> pkMapTables;
 		void pokeRender(const SPal& p);
 		void pokeParty(const SPal& p);
