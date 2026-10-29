@@ -655,6 +655,41 @@ Found on the way, both worth keeping: **RetroArch's log is now rotated** (`retro
 current one) -- a core that crashes takes its own log with it, since the next launch truncates the file -- and
 `run-retroarch` raises `ulimit -c` and runs from the card, so a fatal signal leaves a core dump in `/data` for gdb.
 
+## The menu's audio delay (2026-10-29)
+
+A cue lagged behind the press. Two causes, both about what an open costs on this card (a frontend's graph is
+instantiated at the open, so any open is the expensive thing):
+
+- The menu kept its stream open between cues but **closed it after 20 quiet seconds**, so any pause longer than that
+  paid for a full DSP graph instantiation before the next cue (~0.3-1 s, the log's `opening the device` to
+  `device open`). It now keeps the stream for as long as the **screen is on** (`Sound::setScreenOn()`): the burn-in
+  guard's blank is the real idle and releases the device there, and its wake pre-opens it again -- the press that
+  woke the screen is swallowed, which is the head-start. A game's `release()` still hands the frontend over, and the
+  menu's next open follows it with `Sound::warm()`.
+- **Every open forked four or five `amixer` processes** (`applyRoute()`'s two, the read-back's `popen`, the
+  first-cue check), ~20-50 ms each, for the DSP's route mixers. They are now the ALSA mixer API
+  (`snd_mixer_open`/`find_selem`/`set_playback_switch`) on one handle. That handle is **re-read before every look-up**,
+  which the first version got wrong: alsa-lib's mixer keeps the element list it read, and this DSP *rebuilds its
+  controls with each graph's life*, so an element found a minute ago silently pointed at a control that no longer
+  existed -- the route write went nowhere, the frontend opened with the route off and `snd_pcm_open` answered `EINVAL`
+  ("an unrouted PCM cannot even be opened"). `tools/route-probe` (built by `tools/rpc-probe-build.sh`) is the probe
+  that showed it: a long-lived handle "sets" the switch with no effect, a fresh one moves it.
+- **The boot's own click was given up on, and the splash is a single screen.** The intro's click fired ~1 s in
+  (~10.5 s after the kernel), but the AW88166's PLL and the AudioReach graph are not playable until ~19.6 s (dmesg:
+  `aw88166 0-0034: start failure (-1)` then the first write that sticks), and the amp only retries its start on a
+  new open -- so a boot chime would mean holding the loading screen some 10-20 s, a worse trade than losing it. The
+  RPC has one panel (and `present` only shows screen 0), so the animation no longer draws the DS's second screen --
+  the console and the cartridge it inserted are gone too, with the bunch at rest from the first frame. There is no
+  click cue. (The boot warm-up stays: it pre-opens the device so the first menu cue is not cold.) The insert itself
+  moved to the game launch: `themes/pocket.json`'s launch view drops the game's art into a console slot as a
+  cartridge (a clipped group driven by `launch.progress`), so choosing a game still shows the cartridge going in --
+  and the `insert` cue plays there, when the sound is up.
+
+Both the frontend poll (up to 1.2 s) and the 0.6 s settle after it are for a **handover** -- the game that just
+ended may still hold the frontend, and an open inside its teardown comes up half connected -- so they now run only
+when `release()` raised that flag, not on the menu's own reopen. The host buffer is tried at 15 ms then 20 ms before
+the 30 ms that has always worked (a 128 ms one is refused outright on this card), and the writes are 5 ms chunks.
+
 ## The PlayStation's CD reads (2026-10-28)
 
 The BIOS intro and the CD-XA voices in a cutscene are the two busiest stretches of CD reading a PS1 game has, and

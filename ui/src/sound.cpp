@@ -186,6 +186,20 @@ static bool dspFrontendsFree()
 		cv.notify_all();
 	}
 
+	/* idle.h's burn-in guard calls this: the stream lives exactly while the screen is on. Blanking the panel is the
+	 * real idle, so the device can go then -- and coming back from it pre-opens the stream, so the next cue is
+	 * instant. The wake press itself is swallowed by the guard, which is the head-start. */
+	void Sound::setScreenOn(bool on)
+	{
+		if (!enabled) return;
+		if (on) { warm(); return; }
+		{
+			std::lock_guard<std::mutex> l(m);
+			screenOff = true;
+		}
+		cv.notify_all();
+	}
+
 	void Sound::setBgm(bool on)	{
 		bgmOn = on && bgmLoaded;
 		/* The amp's PLL and the DSP graph need a moment after the card comes up (dmesg: start failure (-1)
@@ -215,6 +229,7 @@ static bool dspFrontendsFree()
 			slog("release(): the device is handed over");
 #endif
 			closeNow = true;
+			handover = true;	// the game that starts now has the frontend: the menu's next open needs the DSP's settle
 			queued.clear();
 			bgmOn = false;	// the game takes the device; main.cpp calls setBgm(true) again when it comes back
 		}
@@ -237,12 +252,11 @@ static bool dspFrontendsFree()
 	void Sound::run()
 	{
 #ifdef BANANA_ALSA
-		// While the device is open the stream never stops: after a sound, silence follows, until QUIET with nothing to
-		// play. The DSP's output is started when the stream powers up, and the first try fails because the I2S clock
-		// isn't running yet; the next try is ~0.4 s later and finds no
-		// clock either if a short click has already ended, so an amplifier gave up for the whole time the device was
-		// open (one speaker, or none). A running stream lets the retry find its clock. Writing 10 ms at a time also
-		// lets a new sound cut the one playing (a held direction scrolls fast) within the 30 ms buffer.
+		// While the device is open the stream never stops: after a sound, silence follows. The DSP's output is
+		// started when the stream powers up, and the first try fails because the I2S clock isn't running yet; a
+		// running stream lets the retry find its clock. Writing 5 ms at a time also lets a new sound cut the one
+		// playing (a held direction scrolls fast) within the buffer. QUIET is the boot warm-up's deadline: it holds
+		// the device open for the first cue, then stops.
 		const auto QUIET = std::chrono::seconds(20);
 		snd_pcm_t* pcm = nullptr;
 		int openRate = 0, openCh = 0;
@@ -264,11 +278,55 @@ static bool dspFrontendsFree()
 		long long routeLoaded = routeId();
 		int routeCheck = 0;
 		bool first = true;		// the first cue of the session says what the DSP answered (see below)
+		/* The DSP's route mixers through the ALSA mixer API, not `amixer`: this used to fork four or five processes
+		 * per open (applyRoute's two, the read-back's popen, the first-cue check), ~20-50 ms each, which on the
+		 * menu's own reopen was most of the delay before the first cue. One handle, kept for the thread's life and
+		 * dropped when alsa-lib's configuration is (the jack moved). */
+		snd_mixer_t* mx = nullptr;
+		auto dropMixer = [&] { if (mx) { snd_mixer_close(mx); mx = nullptr; } };
+		auto mixer = [&]() -> bool
+		{
+			if (mx) return true;
+			if (snd_mixer_open(&mx, 0) < 0) { mx = nullptr; return false; }
+			if (snd_mixer_attach(mx, "hw:0") < 0 || snd_mixer_selem_register(mx, nullptr, nullptr) < 0 || snd_mixer_load(mx) < 0)
+			{
+				snd_mixer_close(mx);
+				mx = nullptr;
+				return false;
+			}
+			return true;
+		};
+		/* The DSP **rebuilds its controls with each graph's life**, and alsa-lib's mixer keeps the element list it
+		 * read: an element found a minute ago points at a control that no longer exists, and the write then goes
+		 * nowhere, silently (measured on the unit with tools/route-probe: a long-lived handle found the selem and
+		 * "set" it with no effect, a fresh one moved it). So every look-up starts from a whole fresh mixer --
+		 * open, attach, register, load, exactly as the probe does; re-registering an already-loaded handle fails,
+		 * which is what the first version of this did (the boot log read '?' for the route). A local parse of the
+		 * same ~180 controls, no device I/O, no fork. */
+		auto refresh = [&] { dropMixer(); return mixer(); };
+		auto selem = [&](const std::string& name) -> snd_mixer_elem_t*
+		{
+			if (!mx) return nullptr;
+			snd_mixer_selem_id_t* sid = nullptr;
+			snd_mixer_selem_id_alloca(&sid);
+			snd_mixer_selem_id_set_index(sid, 0);
+			snd_mixer_selem_id_set_name(sid, name.c_str());
+			return snd_mixer_find_selem(mx, sid);
+		};
+		auto switchTo = [&](const std::string& name, int on) -> bool
+		{
+			snd_mixer_elem_t* e = selem(name);
+			if (!e) return false;
+			/* these switches are not "joined" (the probe: has_playback_switch 1, joined 0), so both channels are set */
+			snd_mixer_selem_set_playback_switch_all(e, on);
+			return true;
+		};
 		/* bananad's published route, written into the DSP's mixer: "control=values" a line, its speakers or its
 		 * codec depending on the jack. The fallback (no file: an older card, or a cue before bananad has written
 		 * one) is the speakers, which is what every handheld without a DSP routing switch wants. */
-		auto applyRoute = []
+		auto applyRoute = [&]
 		{
+			if (!refresh()) return;
 			std::ifstream rt("/run/banana/audio-route");
 			std::string line;
 			bool any = false;
@@ -276,39 +334,30 @@ static bool dspFrontendsFree()
 			{
 				size_t eq = line.rfind('=');
 				if (eq == std::string::npos || eq + 1 >= line.size()) continue;
-				std::string cmd = "amixer -q -c 0 cset 'name=" + line.substr(0, eq) + "' " +
-					line.substr(eq + 1) + " 2>/dev/null";
-				if (system(cmd.c_str()) == 0) any = true;
+				if (switchTo(line.substr(0, eq), line.compare(eq + 1, 2, "on") == 0 ? 1 : 0)) any = true;
 			}
-			if (!any)
-				if (system("amixer -q -c 0 cset 'name=SENARY_MI2S_RX Audio Mixer MultiMedia1' on,on 2>/dev/null")) {}
+			if (!any) switchTo("SENARY_MI2S_RX Audio Mixer MultiMedia1", 1);
 		};
 		/* Still as bananad published it? A graph keeps the route it was instantiated with, so a route taken away
-		 * under a live stream cannot be repaired by writing it again -- only by opening a new stream. Checking one
-		 * mixer and comparing is a few milliseconds; a cue that would otherwise be heard nowhere is not. */
-		auto routeIsAsPublished = []
+		 * under a live stream cannot be repaired by writing it again -- only by opening a new stream. Reading one
+		 * mixer is microseconds now; a cue that would otherwise be heard nowhere is not. */
+		auto routeIsAsPublished = [&]
 		{
+			if (!refresh()) return true;
 			std::ifstream rt("/run/banana/audio-route");
 			std::string line;
 			if (!std::getline(rt, line)) return true;	// nothing published (not the RPC's card): never stale
 			size_t eq = line.rfind('=');
 			if (eq == std::string::npos) return true;
-			std::string want = line.substr(eq + 1), name = line.substr(0, eq);
+			std::string name = line.substr(0, eq);
 			/* the first channel's answer only: these DSP mixers take the value for the pair and answer with the
 			 * second one forced off ("on,on" reads back "on,off"), so comparing every value would call a perfectly
 			 * good route stale and have the menu rebuild its stream on every cue */
-			size_t wcomma = want.find(',');
-			if (wcomma != std::string::npos) want = want.substr(0, wcomma);
-			std::string cmd = "amixer -c 0 cset name='" + name + "' 2>/dev/null | sed -n 's/.*: *values=//p'";
-			FILE* r = popen(cmd.c_str(), "r");
-			if (!r) return true;
-			char v[64] = "";
-			if (!fgets(v, sizeof v, r)) strcpy(v, "?");
-			pclose(r);
-			char* comma = strchr(v, ','); if (comma) *comma = 0;	/* (same: the first channel is the answer) */
-			size_t n = strlen(v); while (n && isspace((unsigned char)v[n - 1])) v[--n] = 0;
-			n = 0; while (n < want.size() && isspace((unsigned char)want[n])) n++;	/* trim its front too */
-			return strcmp(want.c_str() + n, v) == 0;
+			snd_mixer_elem_t* e = selem(name);
+			if (!e) return true;	// (not up yet, or not this card: don't hold the open up)
+			int v = 0;
+			if (snd_mixer_selem_get_playback_switch(e, SND_MIXER_SCHN_FRONT_LEFT, &v) < 0) return true;
+			return v == (line.compare(eq + 1, 2, "on") == 0 ? 1 : 0);
 		};
 		/* The RPC's DSP (audioreach): a frontend's graph is instantiated at the open and takes the mixer values it
 		 * finds at that moment, and closing a stream tears that graph down -- asynchronously, which is the part that
@@ -319,7 +368,7 @@ static bool dspFrontendsFree()
 		auto openDev = [&](const Clip& c) -> bool
 		{
 			slog("opening the device");
-			if (long long r = routeId(); r != routeLoaded) { snd_config_update_free_global(); routeLoaded = r; }
+			if (long long r = routeId(); r != routeLoaded) { snd_config_update_free_global(); dropMixer(); routeLoaded = r; }
 			if (access("/proc/asound/card0", F_OK) == 0)
 			{
 				/* The DSP latches the mixer values when the frontend's graph is instantiated -- at our open, not
@@ -340,39 +389,51 @@ static bool dspFrontendsFree()
 					applyRoute();
 					std::this_thread::sleep_for(std::chrono::milliseconds(200));
 				}
-				bool wasHeld = false;
-				for (int t = 0; t < 12 && !dspFrontendsFree(); t++)
+				/* The frontend poll and the settle are for a *handover*: the game that just ended may still be
+				 * holding the DSP frontend, and an open inside its teardown comes up half connected (the amps answer
+				 * "start failure (-1)": measured on the RPC with a game and a menu cue overlapping by a few hundred
+				 * ms). The menu's *own* reopen -- its own graph just went down -- needs neither, and they were most
+				 * of the delay before its first cue. release() raises `handover` for the open that follows a game. */
+				if (handover.exchange(false))
 				{
-					wasHeld = true;
-					std::this_thread::sleep_for(std::chrono::milliseconds(100));
+					bool wasHeld = false;
+					for (int t = 0; t < 12 && !dspFrontendsFree(); t++)
+					{
+						wasHeld = true;
+						std::this_thread::sleep_for(std::chrono::milliseconds(100));
+					}
+					slog("DSP frontends %s", wasHeld ? "were held: waited" : "were free");
+					if (wasHeld)
+						std::this_thread::sleep_for(std::chrono::milliseconds(600));
 				}
-				slog("DSP frontends %s", wasHeld ? "were held: waited" : "were free");
-				/* A substream reads "closed" while the DSP is still tearing the graph down, and a frontend opened
-				 * into that window comes up half connected -- the speaker amplifiers answer every start attempt with
-				 * "start failure (-1)" and the sound is simply not there (measured on the RPC with a game and a menu
-				 * cue overlapping by a few hundred milliseconds). run-retroarch waits the same beat. */
-				if (wasHeld)
-					std::this_thread::sleep_for(std::chrono::milliseconds(600));
 				if (first)	// one line, so a silent menu says what the DSP was told and what it answered
 				{
-					FILE* r = popen("amixer -c 0 cset name='SENARY_MI2S_RX Audio Mixer MultiMedia1' 2>/dev/null | sed -n 's/.*: *values=//p'", "r");
-					char v[64] = "";
-					if (r) { if (!fgets(v, sizeof v, r)) strcpy(v, "?"); pclose(r); }
-					size_t n = strlen(v); while (n && (v[n - 1] == '\n' || v[n - 1] == '\r')) v[--n] = 0;
-					fprintf(stderr, "banana-ui: sound: the speaker route reads '%s' before the first cue\n", v);
+					refresh();
+					snd_mixer_elem_t* e = selem("SENARY_MI2S_RX Audio Mixer MultiMedia1");
+					int v = -1;
+					if (e) snd_mixer_selem_get_playback_switch(e, SND_MIXER_SCHN_FRONT_LEFT, &v);
+					fprintf(stderr, "banana-ui: sound: the speaker route reads '%s' before the first cue\n",
+						v < 0 ? "?" : v ? "on" : "off");
 					first = false;
 				}
 			}
 			int e = snd_pcm_open(&pcm, "default", SND_PCM_STREAM_PLAYBACK, 0);
 			if (e < 0) { slog("open failed: %s", snd_strerror(e)); pcm = nullptr; return false; }
-			if (snd_pcm_set_params(pcm, SND_PCM_FORMAT_S16_LE, SND_PCM_ACCESS_RW_INTERLEAVED, c.channels, c.rate, 1, 30000) < 0)
+			/* The host buffer: as small as the DSP will take, so a cue starts as soon as the mixer has it. A 128 ms
+			 * buffer is refused outright on this card (no sound at all, docs/RPC-PORT.md), so try 15 ms and 20 ms
+			 * before the 30 ms that has always worked; what took is logged. */
+			int us = 0;
+			for (int tryUs : { 15000, 20000, 30000 })
+				if (snd_pcm_set_params(pcm, SND_PCM_FORMAT_S16_LE, SND_PCM_ACCESS_RW_INTERLEAVED, c.channels, c.rate, 1, (unsigned)tryUs) >= 0)
+				{ us = tryUs; break; }
+			if (!us)
 			{
 				slog("set_params failed"); snd_pcm_close(pcm); pcm = nullptr; return false;
 			}
 			openRate = c.rate; openCh = c.channels;
 			devOpen = true;
-			slog("device open, %d Hz, %d ch", openRate, openCh);
-			silence.assign((size_t)(openRate / 100) * openCh, 0);
+			slog("device open, %d Hz, %d ch, %d ms buffer", openRate, openCh, us / 1000);
+			silence.assign((size_t)(openRate / 200) * openCh, 0);
 			return true;
 		};
 		auto writeFrames = [&](const int16_t* p, size_t frames) -> bool
@@ -427,9 +488,17 @@ static bool dspFrontendsFree()
 			{
 				std::unique_lock<std::mutex> l(m);
 				// closed: nothing to do until a cue, a game's release, or the loop wanting the device again
-				if (!pcm) cv.wait(l, [this] { return stop || closeNow || !queued.empty() || bgmOn.load() || warmUp.load(); });
+				if (!pcm) cv.wait(l, [this] { return stop || closeNow || screenOff.load() || !queued.empty() || bgmOn.load() || warmUp.load(); });
 				if (stop) break;
 				if (closeNow) { closeDev("release"); cur = nullptr; closeNow = false; continue; }	// a game is starting
+				// the burn-in guard blanked the screen (idle.h): the real idle, so let the device go -- unless a
+				// cue came with it, in which case the screen is being used again
+				if (screenOff.exchange(false) && queued.empty())
+				{
+					closeDev("screen off");
+					cur = nullptr;
+					continue;
+				}
 				name = queued;
 				queued.clear();
 			}
@@ -477,9 +546,10 @@ static bool dspFrontendsFree()
 			}
 			else if (!cur)
 			{
-				// nothing to play: keep the stream open for the loop or the warm-up, else let it go after a quiet spell
+				// Nothing to play: the device stays open (a cue is then instant). Only the warm-up has a deadline,
+				// so a splash with no cue cannot hold it forever, and the guard's blank and a game's release are
+				// what else let it go.
 				if (warmUp.load() && now - lastSound >= quiet) warmUp = false;	// the cue never came: stop holding the device
-				if (!wantOpen && now - lastSound >= quiet) { closeDev("quiet"); continue; }
 				if (!pcm && wantOpen && !openDev(warmUp.load() ? warmClip : bgm))
 				{
 					if (warmUp.load()) std::this_thread::sleep_for(std::chrono::milliseconds(250));	// the card isn't up yet
@@ -491,7 +561,7 @@ static bool dspFrontendsFree()
 			if (++routeCheck >= 25) { routeCheck = 0; if (routeId() != routeLoaded) { closeDev("route changed"); cur = nullptr; continue; } }
 
 			const bool haveBgm = wantBgm && bgmLoaded && bgmGain.load() > 0;
-			size_t nframes = (size_t)(openRate / 100);	// the next 10 ms: the cue, the loop, or silence
+			size_t nframes = (size_t)(openRate / 200);	// the next 5 ms: the cue, the loop, or silence
 			if (!cur && !haveBgm)
 			{
 				if (!writeFrames(silence.data(), silence.size() / openCh)) { closeDev("write err (silence)"); continue; }
@@ -530,6 +600,7 @@ static bool dspFrontendsFree()
 			}
 		}
 		closeDev("end");
+		dropMixer();
 #else
 		std::unique_lock<std::mutex> l(m);
 		for (;;)

@@ -1307,6 +1307,7 @@ int main(int argc, char** argv)
 		ui->setLibrary(lib.currentShelf(), game);
 		if (disp.isOpen()) irisFromGame(disp, be, *ui);
 		sound.setBgm(settings["bgm"] != "off");	// the ambient loop comes back with the menu
+		sound.warm();				// the game handed the DSP frontend back: have it open before the next press
 		guard.input(nowMs());			// the game's own time doesn't count as menu idle
 		dirty = true;
 		batteryDue = true;	// a step passed during the game shows now
@@ -1508,7 +1509,7 @@ int main(int argc, char** argv)
 						disp.close();
 						for (int tries = 0; !disp.openSingle(o.top, err) && tries < 50; tries++) usleep(20000);
 						std::lock_guard<std::mutex> l(worker.uiLock);
-						be.invalidate(); ui->dataChanged(); dirty = true; batteryDue = true; guard.wake(nowMs(), &sound); sound.setBgm(settings["bgm"] != "off");
+						be.invalidate(); ui->dataChanged(); dirty = true; batteryDue = true; guard.wake(nowMs(), &sound); sound.setBgm(settings["bgm"] != "off"); sound.warm();
 					}
 					if (c == SIGUSR2)
 					{

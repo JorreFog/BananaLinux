@@ -243,8 +243,12 @@ frontend is opened (the DSP instantiates the graph at the open and takes the mix
 first frontend produces sound (so the menu and a game hand it over), and there is no UCM profile (so routing is by
 `amixer`, not the `hooks` plugin). bananad publishes the route it chose (speakers or headphones) to
 `/run/banana/audio-route`; banana-ui and `run-retroarch` both write those values and fall back to "speakers on".
-The menu holds its stream open between cues and gives it up only for a game (`Sound::release()`), and both sides
-wait one beat after a handover.
+The menu's stream lives exactly as long as the screen is on: a cue then costs nothing, no DSP graph to instantiate
+(`Sound::setScreenOn()`, which the burn-in guard's blank calls -- the screen being off *is* the idle -- and its wake
+undoes, pre-opening the device while the press that woke the screen is swallowed). It is given up for a game
+(`Sound::release()`) and pre-opened again when the game ends. Both sides wait one beat only after such a handover.
+The route and its read-back are the ALSA mixer API, not `amixer` (forking four or five processes per open was most
+of the delay before the menu's first cue), asound.conf's own change being what makes it re-open the mixer.
 
 **Volume** is the two AW88166 amplifiers' own gain, not the DSP's per-stream volume: a frontend's graph latches the
 mixers when it is instantiated, so the stream volume cannot be changed under a running game, while the amp's gain
