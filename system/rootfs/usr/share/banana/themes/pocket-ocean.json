@@ -1,0 +1,176 @@
+{
+  // Ocean: the Pocket layout (the DS bottom screen) in the ocean palette, for its one 1240x1080 screen, drawn as the original Banana UI's
+  // *bottom* screen -- the interactive one on a DS: a raised bezel with a dot grid, a pixel font, a boxed system
+  // card, a carousel of square tiles whose selection is a raised gold tile with a label strip, the position along
+  // an outlined track ("03 / 12"), and the button pills spread along the bottom.
+  // The panel at the DS panels' scale is 640x557 layout px.
+  "name": "Ocean",
+  "author": "BananaOS",
+  "base": "dark",
+  "accent": "#35c4e8",
+  "colors": { "screenBg": "#0b1d2a", "ink": "#e8f8ff", "muted": "#8fb6c9" },
+  "font": "pixel",
+
+  "vars": {
+    "bg": "#0b1d2a",
+    "dot": "#15384f",
+    "bezel": "#06121b",
+    "ring": "#2b5670",
+    "panel": "#0e2638",
+    "card": "#0a1c29",
+    "cardEdge": "#2b5670",
+    "ink": "#e8f8ff",
+    "soft": "#8fb6c9",
+    "edge": "#cdeefb",
+    "tile": "#15384f",
+    "gold": "#35c4e8",
+    "goldHi": "#8ce8ff",
+    "goldLo": "#0a6d8c",
+    "hi": "=gold"
+  },
+
+  // one list on screen: up and down by one, left and right by a page of the shelf
+  "input": { "library": { "up": "prev", "down": "next", "left": "prev:5", "right": "next:5" } },
+
+  "behavior": { "launchMs": 700, "scrollMs": 90, "cues": { "insert": 450 } },
+
+  "components": {
+    // the status bar: the clock, the battery as a bar and its percent
+    "status": {
+      "type": "group", "x": 0, "y": 0, "w": "100%", "h": 36,
+      "children": [
+        { "type": "rect", "x": 0, "y": 0, "w": "100%", "h": 36, "fill": "=bezel" },
+        { "type": "rect", "x": 0, "y": 0, "w": "100%", "h": 2, "fill": "=panel" },
+        { "type": "rect", "x": 0, "y": 32, "w": "100%", "h": 3, "fill": "=ring" },
+        { "type": "text", "x": 18, "y": 11, "text": "{clock}", "font": "pixel-medium", "size": 15, "color": "=ink" },
+        { "type": "text", "right": 18, "y": 12, "w": 120, "align": "right", "text": "=battery < 0 ? '' : battery + '%'",
+          "font": "pixel", "size": 13, "color": "=soft" },
+        { "type": "rect", "right": 134, "y": 13, "w": 26, "h": 12, "radius": 2, "border": 2, "borderColor": "=soft",
+          "visible": "=battery >= 0" },
+        { "type": "rect", "right": 137, "y": 16, "w": "=20 * battery / 100", "h": 6, "radius": 1,
+          "fill": "=battery < 20 ? '#ff5a5a' : gold", "visible": "=battery >= 0" }
+      ]
+    },
+    // the raised bezel the DS bottom screen sits in
+    "bezel": {
+      "type": "group",
+      "children": [
+        { "type": "rect", "x": 8, "y": 44, "w": 624, "h": 505, "radius": 10, "fill": "=bezel" },
+        { "type": "rect", "x": 12, "y": 48, "w": 616, "h": 497, "radius": 8, "fill": "=ring" },
+        { "type": "rect", "x": 15, "y": 51, "w": 610, "h": 491, "radius": 6, "fill": "=panel" },
+        // the dot grid, one baked texture (a per-dot list cost 11 ms a frame)
+        { "type": "image", "src": "panel.png", "fit": "pixel", "tint": "=dot", "x": 18, "y": 54, "w": 604, "h": 485 }
+      ]
+    },
+    // a button pill: the key in a chip and what it does
+    "pill": {
+      // a row group so the list can measure it (natural width) and spread the row with "justify between"
+      "type": "group", "layout": "row", "gap": 9, "align": "center", "h": 30,
+      "children": [
+        { "type": "group", "layout": "row", "padding": 6, "h": 30, "radius": 8, "align": "center",
+          "fill": "=panel", "border": 2, "borderColor": "=edge",
+          "children": [ { "type": "text", "text": "{item.key}", "font": "pixel-medium", "size": 13, "color": "=ink" } ] },
+        { "type": "text", "text": "{item.label}", "font": "pixel", "size": 15, "color": "=soft" }
+      ]
+    },
+    // a game in the library: its art, its title and what the shelf knows about it
+    "row": {
+      "type": "group", "w": 600, "h": 58,
+      "children": [
+        { "type": "rect", "x": 0, "y": 0, "w": 600, "h": 58, "radius": 8, "fill": "=sel ? '#16394f' : card",
+          "border": 2, "borderColor": "=sel ? gold : '#1d4a63'" },
+        { "type": "image", "src": "{item.art}", "fallback": "{item.icon}", "fit": "cover", "x": 9, "y": 9, "w": 40, "h": 40, "radius": 4, "placeholder": "#00000033" },
+        { "type": "text", "x": 60, "y": 13, "w": 470, "text": "{item.title}", "font": "pixel-medium", "size": 16, "color": "=ink" },
+        { "type": "text", "x": 60, "y": 35, "w": 470, "text": "{item.sub}", "font": "pixel", "size": 12, "color": "=soft" },
+        { "type": "image", "src": "fav.png", "right": 16, "y": 20, "w": 16, "h": 16, "visible": "=item.fav" }
+      ]
+    }
+  },
+
+  "screens": {
+    // over every view: the status bar
+    "all": { "top": { "use": "status" } },
+
+    "home": {
+      "top": [
+        { "type": "rect", "fill": "=bg" },
+        { "use": "bezel" },
+
+        // the header: the section on the left with its L shoulder, the selected system and R on the right
+        { "type": "text", "x": 30, "y": 70, "text": "Systems", "font": "pixel", "size": 16, "color": "=soft" },
+        { "type": "text", "right": 30, "y": 70, "text": "{sys.name}", "font": "pixel", "size": 16, "color": "=soft" },
+
+        // the selected system in a boxed card, its notch pointing down at the tile
+        { "type": "rect", "x": 130, "y": 102, "w": 380, "h": 84, "radius": 10, "fill": "=card", "border": 2, "borderColor": "=cardEdge" },
+        { "type": "text", "x": 0, "w": "100%", "y": 118, "align": "center", "text": "{sys.name}", "font": "pixel-medium", "size": 28, "color": "=ink",
+          "opacity": "=easeOut(progress(moved, 200))", "scale": "=0.94 + 0.06 * easeOutBack(progress(moved, 300))" },
+        { "type": "text", "x": 0, "w": "100%", "y": 153, "align": "center", "text": "{upper(sys.maker)}", "font": "pixel", "size": 13, "spacing": 1, "color": "=soft" },
+        { "type": "rect", "x": 316, "y": 186, "w": 10, "h": 10, "radius": 2, "fill": "=card", "border": 2, "borderColor": "=cardEdge" },
+        { "type": "rect", "x": 316, "y": 184, "w": 10, "h": 9, "radius": 2, "fill": "=card" },
+
+        // the carousel: square tiles, the selection a raised gold tile with its label strip, clipped inside the bezel
+        { "type": "list", "source": "systems", "direction": "row", "x": 18, "y": 208, "w": 604, "h": 132, "clip": true,
+          "itemW": 96, "itemH": 132, "gap": 16, "scrollMode": "center",
+          "item": {
+            "type": "group", "w": 96, "h": 132, "children": [
+              { "type": "rect", "x": 52, "y": 60, "w": 112, "h": 108, "anchor": "center", "radius": 8, "fill": "#040e15", "visible": "=sel" },
+              { "type": "rect", "x": 48, "y": 56, "w": 112, "h": 108, "anchor": "center", "radius": 8, "visible": "=sel",
+                "fill": "=gold", "gradient": { "angle": 180, "stops": [ "=goldHi", "=gold", "=goldLo" ] },
+                "border": 2, "borderColor": "=goldLo" },
+              { "type": "rect", "x": 48, "y": 50, "w": 84, "h": 84, "anchor": "center", "radius": 8, "visible": "=sel ? 0 : 1",
+                "fill": "=tile", "border": 2, "borderColor": "=edge" },
+              { "type": "image", "src": "{item.icon}", "fit": "pixelContain", "x": 48, "y": 46, "w": 52, "h": 52, "anchor": "center",
+                "opacity": "=sel ? 1 : 0.85" },
+              { "type": "text", "x": -9, "w": 114, "y": 88, "align": "center", "text": "{item.name}", "font": "pixel-medium", "size": 11,
+                "color": "#04222c", "visible": "=sel" },
+              { "type": "image", "src": "fav.png", "x": 74, "y": 6, "w": 16, "h": 16, "visible": "=item.fav" }
+            ]
+          } },
+
+        // where the shelf is, like the DS bottom screen's "01 / 10": an outlined track with a gold fill
+        { "type": "text", "x": 40, "y": 364, "text": "=sys.games == 1 ? '1 game' : sys.games + ' games'", "font": "pixel", "size": 13, "color": "=soft" },
+        { "type": "text", "right": 40, "y": 364, "text": "{cursor + 1} / {systemCount}", "font": "pixel", "size": 14, "color": "=soft" },
+        { "type": "rect", "x": 40, "y": 388, "w": 560, "h": 14, "radius": 7, "fill": "#00000000", "border": 2, "borderColor": "=edge" },
+        { "type": "rect", "x": "=44 + (552 - 88) * cursor / max(1, systemCount - 1)", "y": 392, "w": 88, "h": 6, "radius": 3,
+          "fill": "=gold", "smooth": { "x": 150 } },
+
+        { "type": "text", "x": 0, "w": "100%", "y": 442, "align": "center", "visible": "=sys.hasResume",
+          "text": "Last played: {sys.resumeTitle}", "font": "pixel", "size": 14, "color": "=soft" },
+        { "type": "list", "source": "hints", "direction": "row", "x": 40, "y": 500, "w": 560, "h": 30, "gap": 12, "flow": true, "scrollMode": "none",
+          "justify": "between", "item": { "use": "pill" } }
+      ]
+    },
+
+    "library": {
+      "top": [
+        { "type": "rect", "fill": "=bg" },
+        { "use": "bezel" },
+        // the box art behind the list, very faint
+        { "type": "image", "src": "{game.art}", "fit": "cover", "x": 0, "y": 0, "w": 640, "h": 557, "opacity": 0.10 },
+        { "type": "rect", "x": 15, "y": 51, "w": 610, "h": 491, "radius": 6, "fill": "=alpha(panel, 0.88)" },
+        { "type": "image", "src": "{sys.icon}", "fit": "pixelContain", "x": 40, "y": 62, "w": 30, "h": 30 },
+        { "type": "text", "x": 80, "y": 64, "text": "{sys.name}", "font": "pixel-medium", "size": 22, "color": "=ink" },
+        { "type": "text", "right": 40, "y": 68, "w": 180, "align": "right", "text": "{cursor + 1} / {count}", "font": "pixel", "size": 14, "color": "=soft" },
+        { "type": "text", "x": 0, "w": "100%", "y": 240, "align": "center", "text": "{empty.title}", "font": "pixel-medium", "size": 20, "color": "=ink", "visible": "=empty" },
+        { "type": "text", "x": 40, "w": 560, "y": 276, "align": "center", "text": "{empty.hint}", "font": "pixel", "size": 14, "color": "=soft", "visible": "=empty", "wrap": true },
+        { "type": "list", "source": "games", "direction": "column", "x": 24, "y": 104, "w": 592, "h": 384,
+          "itemH": 58, "gap": 6, "scrollMode": "edge", "clip": true,
+          "item": { "use": "row" } },
+        { "type": "list", "source": "hints", "direction": "row", "x": 40, "y": 500, "w": 560, "h": 30, "gap": 12, "flow": true, "scrollMode": "none",
+          "justify": "between", "item": { "use": "pill" } }
+      ]
+    },
+
+    "launch": {
+      "top": [
+        { "type": "rect", "fill": "=bg" },
+        { "use": "bezel" },
+        { "type": "image", "src": "{game.art}", "fallback": "{sys.icon}", "fit": "contain", "x": 320, "y": 210, "w": 220, "h": 300, "anchor": "center",
+          "radius": 8, "scale": "=1 + 0.6 * easeIn(launch.progress)", "opacity": "=1 - easeIn(launch.progress)" },
+        { "type": "text", "x": 0, "w": "100%", "y": 400, "align": "center", "text": "Starting {game.title}", "font": "pixel-medium", "size": 22, "color": "=ink" },
+        { "type": "rect", "x": 170, "y": 444, "w": 300, "h": 14, "radius": 7, "fill": "#00000000", "border": 2, "borderColor": "=edge" },
+        { "type": "rect", "x": 174, "y": 450, "w": "=292 * easeInOut(launch.progress)", "h": 2, "radius": 1, "fill": "=gold" }
+      ]
+    }
+  }
+}

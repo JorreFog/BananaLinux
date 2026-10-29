@@ -1,21 +1,32 @@
 {
-  // Pocket: the Retroid Pocket Classic's menu, for its one 1240x1080 screen. The panel at the DS panels' scale is
-  // 640x557 layout px (640 wide, and taller than a DS screen), so this theme keeps the DS themes' 640-wide
-  // coordinates and uses the extra height at the bottom. A single screen shows one view at a time: the shelf of
-  // systems at home, the game list in the library, a launch card while a game starts.
+  // Pocket: the Retroid Pocket Classic's menu, for its one 1240x1080 screen, drawn as the original Banana UI's
+  // *bottom* screen -- the interactive one on a DS: a raised bezel with a dot grid, a pixel font, a boxed system
+  // card, a carousel of square tiles whose selection is a raised gold tile with a label strip, the position along
+  // an outlined track ("03 / 12"), and the button pills spread along the bottom.
+  // The panel at the DS panels' scale is 640x557 layout px.
   "name": "Pocket",
   "author": "BananaOS",
   "base": "dark",
-  "accent": "#7c9cff",
-  "colors": { "screenBg": "#0d1017", "ink": "#eef1ff", "muted": "#9aa3c0" },
-  "font": "inter",
+  "accent": "#f0b429",
+  "colors": { "screenBg": "#12141c", "ink": "#eef1f7", "muted": "#99a1b4" },
+  "font": "pixel",
 
   "vars": {
-    "bg": "#0d1017",
-    "card": "#1b2030",
-    "ink": "#eef1ff",
-    "soft": "#9aa3c0",
-    "hi": "=accent"
+    "bg": "#12141c",
+    "dot": "#1e2230",
+    "bezel": "#06080d",
+    "ring": "#454b5c",
+    "panel": "#14161e",
+    "card": "#171a24",
+    "cardEdge": "#7a6a4a",
+    "ink": "#eef1f7",
+    "soft": "#99a1b4",
+    "edge": "#cfd5e2",
+    "tile": "#20242f",
+    "gold": "#f0b429",
+    "goldHi": "#ffd76a",
+    "goldLo": "#9c6f08",
+    "hi": "=gold"
   },
 
   // one list on screen: up and down by one, left and right by a page of the shelf
@@ -28,32 +39,50 @@
     "status": {
       "type": "group", "x": 0, "y": 0, "w": "100%", "h": 36,
       "children": [
-        { "type": "text", "x": 20, "y": 10, "text": "{clock}", "font": "inter-semibold", "size": 15, "color": "=ink" },
-        { "type": "text", "right": 20, "y": 10, "w": 120, "align": "right", "text": "=battery < 0 ? '' : battery + '%'",
-          "size": 13, "color": "=soft" },
-        { "type": "rect", "right": 146, "y": 13, "w": 26, "h": 12, "radius": 3, "border": 1.5, "borderColor": "=soft",
+        { "type": "rect", "x": 0, "y": 0, "w": "100%", "h": 36, "fill": "=bezel" },
+        { "type": "rect", "x": 0, "y": 0, "w": "100%", "h": 2, "fill": "=panel" },
+        { "type": "rect", "x": 0, "y": 32, "w": "100%", "h": 3, "fill": "=ring" },
+        { "type": "text", "x": 18, "y": 11, "text": "{clock}", "font": "pixel-medium", "size": 15, "color": "=ink" },
+        { "type": "text", "right": 18, "y": 12, "w": 120, "align": "right", "text": "=battery < 0 ? '' : battery + '%'",
+          "font": "pixel", "size": 13, "color": "=soft" },
+        { "type": "rect", "right": 134, "y": 13, "w": 26, "h": 12, "radius": 2, "border": 2, "borderColor": "=soft",
           "visible": "=battery >= 0" },
-        { "type": "rect", "right": 148, "y": 15, "w": "=22 * battery / 100", "h": 8, "radius": 1.5,
-          "fill": "=battery < 20 ? '#ff5a5a' : hi", "visible": "=battery >= 0" }
+        { "type": "rect", "right": 137, "y": 16, "w": "=20 * battery / 100", "h": 6, "radius": 1,
+          "fill": "=battery < 20 ? '#ff5a5a' : gold", "visible": "=battery >= 0" }
       ]
     },
-    // a button hint: the key in a round chip and what it does
-    "hint": {
-      "type": "group", "layout": "row", "gap": 6, "align": "center", "h": 24,
+    // the raised bezel the DS bottom screen sits in
+    "bezel": {
+      "type": "group",
       "children": [
-        { "type": "group", "layout": "row", "padding": 5, "h": 22, "fill": "=ink", "radius": 11,
-          "children": [ { "type": "text", "y": -2, "text": "{item.key}", "font": "inter-bold", "size": 12, "color": "=bg" } ] },
-        { "type": "text", "text": "{item.label}", "size": 13, "color": "=soft", "y": 3 }
+        { "type": "rect", "x": 8, "y": 44, "w": 624, "h": 505, "radius": 10, "fill": "=bezel" },
+        { "type": "rect", "x": 12, "y": 48, "w": 616, "h": 497, "radius": 8, "fill": "=ring" },
+        { "type": "rect", "x": 15, "y": 51, "w": 610, "h": 491, "radius": 6, "fill": "=panel" },
+        // the dot grid, one baked texture (a per-dot list cost 11 ms a frame)
+        { "type": "image", "src": "panel.png", "fit": "pixel", "tint": "=dot", "x": 18, "y": 54, "w": 604, "h": 485 }
+      ]
+    },
+    // a button pill: the key in a chip and what it does
+    "pill": {
+      // a row group so the list can measure it (natural width) and spread the row with "justify between"
+      "type": "group", "layout": "row", "gap": 9, "align": "center", "h": 30,
+      "children": [
+        { "type": "group", "layout": "row", "padding": 6, "h": 30, "radius": 8, "align": "center",
+          "fill": "=panel", "border": 2, "borderColor": "=edge",
+          "children": [ { "type": "text", "text": "{item.key}", "font": "pixel-medium", "size": 13, "color": "=ink" } ] },
+        { "type": "text", "text": "{item.label}", "font": "pixel", "size": 15, "color": "=soft" }
       ]
     },
     // a game in the library: its art, its title and what the shelf knows about it
     "row": {
-      "type": "group", "w": 604, "h": 54, "fill": "=sel ? hi : card", "radius": 12,
+      "type": "group", "w": 600, "h": 58,
       "children": [
-        { "type": "image", "src": "{item.art}", "fallback": "{item.icon}", "fit": "cover", "x": 8, "y": 7, "w": 40, "h": 40, "radius": 8, "placeholder": "#00000033" },
-        { "type": "text", "x": 60, "y": 10, "w": 470, "text": "{item.title}", "font": "inter-semibold", "size": 15, "color": "=sel ? bg : ink" },
-        { "type": "text", "x": 60, "y": 31, "w": 470, "text": "{item.sub}", "size": 11, "color": "=sel ? alpha(bg, 0.7) : soft" },
-        { "type": "text", "right": 14, "y": 17, "text": "♥", "font": "inter", "size": 16, "color": "=sel ? bg : hi", "visible": "=item.fav" }
+        { "type": "rect", "x": 0, "y": 0, "w": 600, "h": 58, "radius": 8, "fill": "=sel ? '#242938' : card",
+          "border": 2, "borderColor": "=sel ? gold : '#2c3242'" },
+        { "type": "image", "src": "{item.art}", "fallback": "{item.icon}", "fit": "cover", "x": 9, "y": 9, "w": 40, "h": 40, "radius": 4, "placeholder": "#00000033" },
+        { "type": "text", "x": 60, "y": 13, "w": 470, "text": "{item.title}", "font": "pixel-medium", "size": 16, "color": "=ink" },
+        { "type": "text", "x": 60, "y": 35, "w": 470, "text": "{item.sub}", "font": "pixel", "size": 12, "color": "=soft" },
+        { "type": "image", "src": "fav.png", "right": 16, "y": 20, "w": 16, "h": 16, "visible": "=item.fav" }
       ]
     }
   },
@@ -64,66 +93,83 @@
 
     "home": {
       "top": [
-        { "type": "rect", "gradient": { "angle": 160, "stops": [ "=mix(sys.color, bg, 0.55)", "=bg + ' 70%'" ] } },
-        { "type": "image", "src": "{sys.icon}", "fit": "pixelContain", "x": 320, "y": 130, "w": 104, "h": 104, "anchor": "center",
-          "opacity": "=easeOut(progress(moved, 250))", "scale": "=0.85 + 0.15 * easeOutBack(progress(moved, 300))" },
-        { "type": "text", "x": 0, "w": "100%", "y": 190, "align": "center", "text": "{sys.name}", "font": "inter-bold", "size": 32, "color": "=ink" },
-        { "type": "text", "x": 0, "w": "100%", "y": 230, "align": "center", "text": "{upper(sys.maker)}  ·  {plural(sys.games, 'game')}", "size": 12, "spacing": 1, "color": "=soft" },
-        // the shelf: a row centred on the selection, eased as it moves
-        { "type": "list", "source": "systems", "direction": "row", "x": 0, "y": 266, "w": 640, "h": 176,
-          "itemW": 112, "itemH": 152, "gap": 12, "scrollMode": "center",
+        { "type": "rect", "fill": "=bg" },
+        { "use": "bezel" },
+
+        // the header: the section on the left with its L shoulder, the selected system and R on the right
+        { "type": "text", "x": 30, "y": 70, "text": "Systems", "font": "pixel", "size": 16, "color": "=soft" },
+        { "type": "text", "right": 30, "y": 70, "text": "{sys.name}", "font": "pixel", "size": 16, "color": "=soft" },
+
+        // the selected system in a boxed card, its notch pointing down at the tile
+        { "type": "rect", "x": 130, "y": 102, "w": 380, "h": 84, "radius": 10, "fill": "=card", "border": 2, "borderColor": "=cardEdge" },
+        { "type": "text", "x": 0, "w": "100%", "y": 118, "align": "center", "text": "{sys.name}", "font": "pixel-medium", "size": 28, "color": "=ink",
+          "opacity": "=easeOut(progress(moved, 200))", "scale": "=0.94 + 0.06 * easeOutBack(progress(moved, 300))" },
+        { "type": "text", "x": 0, "w": "100%", "y": 153, "align": "center", "text": "{upper(sys.maker)}", "font": "pixel", "size": 13, "spacing": 1, "color": "=soft" },
+        { "type": "rect", "x": 316, "y": 186, "w": 10, "h": 10, "radius": 2, "fill": "=card", "border": 2, "borderColor": "=cardEdge" },
+        { "type": "rect", "x": 316, "y": 184, "w": 10, "h": 9, "radius": 2, "fill": "=card" },
+
+        // the carousel: square tiles, the selection a raised gold tile with its label strip, clipped inside the bezel
+        { "type": "list", "source": "systems", "direction": "row", "x": 18, "y": 208, "w": 604, "h": 132, "clip": true,
+          "itemW": 96, "itemH": 132, "gap": 16, "scrollMode": "center",
           "item": {
-            "type": "group", "w": 112, "h": 152,
-            "children": [
-              { "type": "rect", "x": 56, "y": 76, "w": 112, "h": 152, "anchor": "center", "radius": 16,
-                "scale": "=sel ? 1.06 : 0.94", "smooth": { "scale": 90 },
-                "fill": "=sel ? mix(item.color, card, 0.35) : card",
-                "border": "=sel ? 3 : 0", "borderColor": "=hi",
-                "shadow": { "y": 6, "blur": 10, "color": "=sel ? '#00000099' : '#00000000'" } },
-              { "type": "image", "src": "{item.icon}", "fit": "pixelContain", "x": 56, "y": 62, "w": 56, "h": 56, "anchor": "center",
-                "opacity": "=sel ? 1 : 0.55" },
-              { "type": "text", "x": 4, "w": 104, "y": 108, "align": "center", "text": "{item.name}", "size": 11,
-                "font": "=sel ? 'inter-semibold' : 'inter'", "color": "=sel ? ink : soft" },
-              { "type": "text", "x": 4, "w": 104, "y": 126, "align": "center", "text": "=item.app ? 'App' : plural(item.games, 'game')",
-                "size": 10, "color": "=soft", "opacity": 0.8 },
-              { "type": "text", "x": 92, "y": 8, "text": "★", "font": "inter", "size": 13, "color": "=hi", "visible": "=item.fav" }
+            "type": "group", "w": 96, "h": 132, "children": [
+              { "type": "rect", "x": 52, "y": 60, "w": 112, "h": 108, "anchor": "center", "radius": 8, "fill": "#05070b", "visible": "=sel" },
+              { "type": "rect", "x": 48, "y": 56, "w": 112, "h": 108, "anchor": "center", "radius": 8, "visible": "=sel",
+                "fill": "=gold", "gradient": { "angle": 180, "stops": [ "=goldHi", "=gold", "=goldLo" ] },
+                "border": 2, "borderColor": "=goldLo" },
+              { "type": "rect", "x": 48, "y": 50, "w": 84, "h": 84, "anchor": "center", "radius": 8, "visible": "=sel ? 0 : 1",
+                "fill": "=tile", "border": 2, "borderColor": "=edge" },
+              { "type": "image", "src": "{item.icon}", "fit": "pixelContain", "x": 48, "y": 46, "w": 52, "h": 52, "anchor": "center",
+                "opacity": "=sel ? 1 : 0.85" },
+              { "type": "text", "x": -9, "w": 114, "y": 88, "align": "center", "text": "{item.name}", "font": "pixel-medium", "size": 11,
+                "color": "#241606", "visible": "=sel" },
+              { "type": "image", "src": "fav.png", "x": 74, "y": 6, "w": 16, "h": 16, "visible": "=item.fav" }
             ]
           } },
-        { "type": "text", "x": 0, "w": "100%", "y": 458, "align": "center", "visible": "=sys.hasResume",
-          "text": "Last played: {sys.resumeTitle}  ·  X to resume", "size": 12, "color": "=soft" },
-        { "type": "list", "source": "hints", "direction": "row", "x": 20, "y": 514, "w": 600, "h": 24, "gap": 18, "flow": true, "scrollMode": "none",
-          "item": { "use": "hint" } }
+
+        // where the shelf is, like the DS bottom screen's "01 / 10": an outlined track with a gold fill
+        { "type": "text", "x": 40, "y": 364, "text": "=sys.games == 1 ? '1 game' : sys.games + ' games'", "font": "pixel", "size": 13, "color": "=soft" },
+        { "type": "text", "right": 40, "y": 364, "text": "{cursor + 1} / {systemCount}", "font": "pixel", "size": 14, "color": "=soft" },
+        { "type": "rect", "x": 40, "y": 388, "w": 560, "h": 14, "radius": 7, "fill": "#00000000", "border": 2, "borderColor": "=edge" },
+        { "type": "rect", "x": "=44 + (552 - 88) * cursor / max(1, systemCount - 1)", "y": 392, "w": 88, "h": 6, "radius": 3,
+          "fill": "=gold", "smooth": { "x": 150 } },
+
+        { "type": "text", "x": 0, "w": "100%", "y": 442, "align": "center", "visible": "=sys.hasResume",
+          "text": "Last played: {sys.resumeTitle}", "font": "pixel", "size": 14, "color": "=soft" },
+        { "type": "list", "source": "hints", "direction": "row", "x": 40, "y": 500, "w": 560, "h": 30, "gap": 12, "flow": true, "scrollMode": "none",
+          "justify": "between", "item": { "use": "pill" } }
       ]
     },
 
     "library": {
       "top": [
         { "type": "rect", "fill": "=bg" },
-        // the box art, blurred-looking backdrop behind the list
-        { "type": "image", "src": "{game.art}", "fit": "cover", "x": 0, "y": 0, "w": 640, "h": 557, "opacity": 0.14 },
-        { "type": "rect", "gradient": { "angle": 90, "stops": [ "=alpha(bg, 0.97)", "=alpha(bg, 0.72)" ] } },
-        { "type": "image", "src": "{sys.icon}", "fit": "pixelContain", "x": 20, "y": 50, "w": 30, "h": 30 },
-        { "type": "text", "x": 58, "y": 50, "text": "{sys.name}", "font": "inter-bold", "size": 21, "color": "=ink" },
-        { "type": "text", "right": 20, "y": 57, "w": 180, "align": "right", "text": "{cursor + 1} / {count}", "size": 12, "color": "=soft" },
-        { "type": "text", "x": 0, "w": "100%", "y": 220, "align": "center", "text": "{empty.title}", "size": 20, "color": "=ink", "visible": "=empty" },
-        { "type": "text", "x": 40, "w": 560, "y": 256, "align": "center", "text": "{empty.hint}", "size": 13, "color": "=soft", "visible": "=empty", "wrap": true },
-        // the games as a list down the screen, the selection kept in view
-        { "type": "list", "source": "games", "direction": "column", "x": 18, "y": 92, "w": 604, "h": 410,
-          "itemH": 54, "gap": 6, "scrollMode": "edge", "clip": true,
+        { "use": "bezel" },
+        // the box art behind the list, very faint
+        { "type": "image", "src": "{game.art}", "fit": "cover", "x": 0, "y": 0, "w": 640, "h": 557, "opacity": 0.10 },
+        { "type": "rect", "x": 15, "y": 51, "w": 610, "h": 491, "radius": 6, "fill": "=alpha(panel, 0.88)" },
+        { "type": "image", "src": "{sys.icon}", "fit": "pixelContain", "x": 40, "y": 62, "w": 30, "h": 30 },
+        { "type": "text", "x": 80, "y": 64, "text": "{sys.name}", "font": "pixel-medium", "size": 22, "color": "=ink" },
+        { "type": "text", "right": 40, "y": 68, "w": 180, "align": "right", "text": "{cursor + 1} / {count}", "font": "pixel", "size": 14, "color": "=soft" },
+        { "type": "text", "x": 0, "w": "100%", "y": 240, "align": "center", "text": "{empty.title}", "font": "pixel-medium", "size": 20, "color": "=ink", "visible": "=empty" },
+        { "type": "text", "x": 40, "w": 560, "y": 276, "align": "center", "text": "{empty.hint}", "font": "pixel", "size": 14, "color": "=soft", "visible": "=empty", "wrap": true },
+        { "type": "list", "source": "games", "direction": "column", "x": 24, "y": 104, "w": 592, "h": 384,
+          "itemH": 58, "gap": 6, "scrollMode": "edge", "clip": true,
           "item": { "use": "row" } },
-        { "type": "list", "source": "hints", "direction": "row", "x": 18, "y": 514, "w": 604, "h": 24, "gap": 18, "flow": true, "scrollMode": "none",
-          "item": { "use": "hint" } }
+        { "type": "list", "source": "hints", "direction": "row", "x": 40, "y": 500, "w": 560, "h": 30, "gap": 12, "flow": true, "scrollMode": "none",
+          "justify": "between", "item": { "use": "pill" } }
       ]
     },
 
     "launch": {
       "top": [
         { "type": "rect", "fill": "=bg" },
+        { "use": "bezel" },
         { "type": "image", "src": "{game.art}", "fallback": "{sys.icon}", "fit": "contain", "x": 320, "y": 210, "w": 220, "h": 300, "anchor": "center",
-          "radius": 10, "scale": "=1 + 0.6 * easeIn(launch.progress)", "opacity": "=1 - easeIn(launch.progress)" },
-        { "type": "text", "x": 0, "w": "100%", "y": 400, "align": "center", "text": "Starting {game.title}", "font": "inter-semibold", "size": 21, "color": "=ink" },
-        { "type": "rect", "x": 170, "y": 444, "w": 300, "h": 6, "radius": 3, "fill": "=card" },
-        { "type": "rect", "x": 170, "y": 444, "w": "=300 * easeInOut(launch.progress)", "h": 6, "radius": 3, "fill": "=hi" }
+          "radius": 8, "scale": "=1 + 0.6 * easeIn(launch.progress)", "opacity": "=1 - easeIn(launch.progress)" },
+        { "type": "text", "x": 0, "w": "100%", "y": 400, "align": "center", "text": "Starting {game.title}", "font": "pixel-medium", "size": 22, "color": "=ink" },
+        { "type": "rect", "x": 170, "y": 444, "w": 300, "h": 14, "radius": 7, "fill": "#00000000", "border": 2, "borderColor": "=edge" },
+        { "type": "rect", "x": 174, "y": 450, "w": "=292 * easeInOut(launch.progress)", "h": 2, "radius": 1, "fill": "=gold" }
       ]
     }
   }

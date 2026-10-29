@@ -149,24 +149,26 @@ for size in 640x480 1024x768; do
     for s in reset-system reset-emulator; do
         [ -s "$OUT/$size-$s-top.png" ] && [ -s "$OUT/$size-$s-bot.png" ] || { echo "FAIL $size: no $s shot"; fail=1; }
     done
-    # a layout theme (the image's canvas.json): every screen drawn from its JSON, home -> library -> a launch, a
-    # tap on a system, and no complaint about the theme in the log
+    # a layout theme (the image's pocket.json, the handheld's own): every screen drawn from its JSON, home ->
+    # library -> a launch, and a tap on a system. It is the single-panel layout, so it runs at its own 640x557.
+    # The menu reads the theme from the card's settings.conf (--theme is the real launcher's), so point it at the
+    # file for this run and put it back (the settings cases above check for dark).
     llog=$OUT/$size-layout.log
-    "$HERE/banana-ui" --headless "$OUT/$size-layout-" --size $size --assets "$HERE/assets/rnds" --banana "$HERE/assets/banana" \
+    sed -i "s|^ *theme *=.*|theme = file:$HERE/../system/rootfs/usr/share/banana/themes/pocket.json|" "$FX/data/settings.conf"
+    "$HERE/banana-ui" --headless "$OUT/$size-layout-" --size 640x557 --single --assets "$HERE/assets/rnds" --banana "$HERE/assets/banana" \
         --systems "$HERE/tests/systems.conf" --roms "$FX/roms" --data "$FX/data" \
-        --theme "$HERE/../system/rootfs/usr/share/banana/themes/canvas.json" \
-        --script "home 0; wait 1000; shot home; press right; wait 1000; shot home2; touch 1 160 250; wait 1000; press a; wait 1000; shot lib; \
+        --script "home 0; wait 1000; shot home; press right; wait 1000; shot home2; touch 0 180 250; wait 1000; press a; wait 1000; shot lib; \
             press down; wait 600; shot lib2; press a; wait 350; shot launch; wait 1000; wait 1" 2> "$llog" || { echo "FAIL $size: banana-ui (layout) exited $?"; fail=1; }
+    sed -i "s|^ *theme *=.*|theme = dark|" "$FX/data/settings.conf"
     grep -q "theme:" "$llog" && { echo "FAIL $size: the layout theme: $(grep 'theme:' "$llog" | head -3)"; fail=1; }
-    grep -q "touch 160 250: used" "$llog" || { echo "FAIL $size: the layout theme's tap on a system"; fail=1; }
+    grep -q "touch 180 250: used" "$llog" || { echo "FAIL $size: the layout theme's tap on a system"; fail=1; }
     grep -q "press down: used, view 1 sys 0 game 1" "$llog" || { echo "FAIL $size: the layout theme's own buttons (down: the next game)"; fail=1; }
     grep -q "launch 1: .*Monkey Puzzle League.nds" "$llog" || { echo "FAIL $size: the layout theme's launch: $(grep launch "$llog")"; fail=1; }
+    # the Pocket layout is single-screen (one panel): only the "top" canvas has anything on it
     for s in home home2 lib lib2 launch; do
-        for p in top bot; do
-            f=$OUT/$size-layout-$s-$p.png
-            [ -s "$f" ] || { echo "FAIL $size: no $f"; fail=1; continue; }
-            [ "$(convert "$f" -format '%[fx:standard_deviation>0.01]' info:)" = 1 ] || { echo "FAIL $size: $f is blank"; fail=1; }
-        done
+        f=$OUT/$size-layout-$s-top.png
+        [ -s "$f" ] || { echo "FAIL $size: no $f"; fail=1; continue; }
+        [ "$(convert "$f" -format '%[fx:standard_deviation>0.01]' info:)" = 1 ] || { echo "FAIL $size: $f is blank"; fail=1; }
     done
     grep 'bench:' "$log" | sed "s/^banana-ui: /$size /"
     grep 'boot-metrics:' "$log" | sed "s/^banana-ui: /$size /"

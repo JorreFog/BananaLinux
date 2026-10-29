@@ -1074,6 +1074,7 @@ namespace banana
 			if (flag(c, "flow") && (dirn == "row" || dirn == "column"))
 			{
 				float at = 0;
+				std::vector<float> fw;
 				for (int i = 0; i < n; i++)
 				{
 					flowAt.push_back(at);
@@ -1082,7 +1083,16 @@ namespace banana
 					Ctx tc = ctx(tpl, &is, "");
 					float nw, nh;
 					natural(tc, itemW, itemH, f.k, nw, nh);
-					at += (float)(dirn == "row" ? num(tc, "w", nw >= 0 ? nw : itemW, itemW) : num(tc, "h", nh >= 0 ? nh : itemH, itemH)) + gap;
+					float e = (float)(dirn == "row" ? num(tc, "w", nw >= 0 ? nw : itemW, itemW) : num(tc, "h", nh >= 0 ? nh : itemH, itemH));
+					fw.push_back(e);
+					at += e + gap;
+				}
+				// "justify": "between" spreads the items across the list by their own widths (the button pills
+				// along the bottom of the DS-shaped themes), instead of packing them from the left
+				if (dirn == "row" && n > 1 && str(c, "justify", "start") == "between")
+				{
+					float extra = (w - (at - gap)) / (n - 1);
+					if (extra > 0) for (int i = 0; i < n; i++) flowAt[i] += extra * i;
 				}
 			}
 			for (int v : order)

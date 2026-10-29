@@ -20,17 +20,18 @@ Windows' File Explorer, or `smb://<address>/banana` on a Mac.
 the normal look. If a theme file cannot be read, the menu quietly uses Dark and writes down why in
 `banana/logs/banana-ui.log`.
 
-**Work on a copy.** A new card already has the themes BananaOS ships in `banana/themes/` — `ocean.json`,
-`sakura.json`, `terminal.json`, `sunset.json` and the layout theme `canvas.json` — and the originals live in
-`/usr/share/banana/themes` on the handheld. Copy one, rename it, and edit that. A file on the card with an
-example's name replaces that example.
+**Work on a copy.** A new card already has the themes BananaOS ships in `banana/themes/` — the Pocket layout
+(`pocket.json`) and its colour variations (`pocket-ocean.json`, `pocket-sakura.json`, `pocket-sunset.json`,
+`pocket-terminal.json`) — and the originals live in `/usr/share/banana/themes` on the handheld. Copy one, rename it,
+and edit that. A file on the card with an example's name replaces that example.
 
 **Picking it up.** **Settings ▸ Display & sound ▸ Theme** lists every theme by its `name`. If you change a file
 the menu is already using, pick the theme again to reload it.
 
 ## 1. The quick one: change the colours
 
-Copy `ocean.json` to `cherry.json` and change what it says:
+`pocket-ocean.json` is the whole layout with its colours in one `vars` block — copy it to `cherry.json` and change
+them there. For colours *only*, a theme with no `screens` section is enough, and starts from the normal look:
 
 ```jsonc
 {
@@ -96,7 +97,7 @@ one part. Sounds change the next time the menu starts.
 ## 2. The big one: rearrange the menu
 
 Everything so far changes colours and files. A theme that *also* has a `screens` section draws the whole menu
-itself: what is on each screen, where it is, how big, what colour, and how it moves. `canvas.json` is one, and it
+itself: what is on each screen, where it is, how big, what colour, and how it moves. `pocket.json` (and its colour variations) is one, and it
 is the best thing to read while you learn.
 
 You do not have to hand-write it — the format is documented below for reference.
@@ -177,7 +178,7 @@ on a grey) and the position you typed (280 is fine, 680 is off the 640-wide scre
 ## 7. Where to go next
 
 - **[THEMES.md](THEMES.md)** — every element, every property, every expression function. The full reference.
-- **[canvas.json](../system/rootfs/usr/share/banana/themes/canvas.json)** — a complete example layout theme, and
+- **[pocket.json](../system/rootfs/usr/share/banana/themes/pocket.json)** — the handheld's own layout theme, and
   the best starting point to copy.
 - The other examples: [hillside.json](themes/hillside.json) (all shapes, no pictures),
   [turntable.json](themes/turntable.json) (moves on its own), [classic.json](themes/classic.json) (a status bar).

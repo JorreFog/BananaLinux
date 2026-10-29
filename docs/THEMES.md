@@ -8,8 +8,9 @@ look (see `/usr/share/banana/themes/README.txt`).
 > **New to themes?** [MAKE-A-THEME.md](MAKE-A-THEME.md) is a gentler introduction: changing colours, using the
 > theme editor, your own pictures and fonts, and putting it on the card. This page is the exact reference.
 
-`canvas.json` in `/usr/share/banana/themes` (copied to `banana/themes` on a new card) is a complete example. Copy it
-and change it.
+`pocket.json` in `/usr/share/banana/themes` (copied to `banana/themes` on a new card) is the handheld's own layout,
+and a complete example. Its colour variations `pocket-ocean.json`, `pocket-sakura.json`, `pocket-sunset.json` and
+`pocket-terminal.json` are the same layout with a different palette. Copy one and change it.
 
 ## Trying a theme on a computer
 

@@ -3,7 +3,8 @@ BANANA THEMES
 
 A theme is one text file in JSON, in banana/themes on the card (file sharing, or the card in a computer):
 for example banana/themes/my-theme.json. Pick it in Settings > Display & sound > Theme, where it shows under its
-"name". To start, copy one of the examples (ocean.json, sakura.json, terminal.json: they are in the system's
+"name". To start, copy one of the examples (pocket.json, the handheld's own layout, and its colour variations
+pocket-ocean.json, pocket-sakura.json, pocket-sunset.json and pocket-terminal.json: they are in the system's
 /usr/share/banana/themes, and copies are in banana/themes on a new card) and change it. A file on the card with an
 example's file name replaces that example.
 
@@ -70,7 +71,7 @@ Layout themes
 -------------
 A theme with "screens" in it draws the whole menu itself: every element on the screen, where it goes, how it
 looks and how it moves, from the menu's data (the systems, the games, the selection, the clock, the battery...).
-canvas.json is one. In Banana's source (github.com/jesussaves-ai/Banana-Pocket): docs/MAKE-A-THEME.md starts from the
+pocket.json (the handheld's own) is one. In Banana's source (github.com/jesussaves-ai/Banana-Pocket): docs/MAKE-A-THEME.md starts from the
 beginning, with the theme editor, and docs/THEMES.md describes the format exactly.
 
 Themes apply to the Dark/Light style (ROCKNIXDS Pixel) and to Settings (its colours and fonts); the Carts theme
