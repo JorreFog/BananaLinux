@@ -191,6 +191,17 @@ namespace banana::pkmn
 		return detectGameIn(GAMES, sizeof GAMES / sizeof GAMES[0], h, n, crc);
 	}
 
+	namespace
+	{
+		// the first profile with the ROM's code, a release's too (a guess, till its CRC-32 is known)
+		const GameProfile* anyWithCode(const uint8_t* h, size_t n)
+		{
+			if (n < 0xb0) return nullptr;
+			for (auto& g : GAMES) if (memcmp(h + 0xac, g.code, 4) == 0) return &g;
+			return nullptr;
+		}
+	}
+
 	bool crcMatters(const uint8_t* h, size_t n)
 	{
 		if (n < 0xb0) return false;
@@ -318,9 +329,9 @@ namespace banana::pkmn
 		return "#" + std::to_string(i);
 	}
 
-	void findExtras(RomTables& t, const uint8_t* rom, size_t n);
+	void findExtras(RomTables& t, const uint8_t* rom, size_t n, const GameProfile* g);
 
-	RomTables findTables(const uint8_t* rom, size_t n)
+	RomTables findTables(const uint8_t* rom, size_t n, const GameProfile* game)
 	{
 		RomTables t;
 		// species names: 11 bytes each, 412 (none + 411), the first "??????????"
@@ -442,7 +453,7 @@ namespace banana::pkmn
 			}
 			break;
 		}
-		findExtras(t, rom, n);
+		findExtras(t, rom, n, game ? game : detectGame(rom, n));
 		// CFRU's "Decryption" byte replacements (FireRed 1.0): GetSubstruct's order always the first (movs r0, #0) and
 		// the XOR in EncryptBoxMon / DecryptBoxMon gone (nops): the party is kept as it is, which the games' own
 		// decoding read as noise (an empty party in Pokémon Unbound)
@@ -465,8 +476,10 @@ namespace banana::pkmn
 		// without it: its bag may not be the save's either)
 		if (n > 0x9a000 && memcmp(rom + 0xac, "BPRE", 4) == 0 && rom[0x99dfc] == 0x80 && rom[0x99dfd] == 0x88 &&
 			memcmp(rom + 0x98984, NOP, 2) == 0)
+		{
 			t.has.bagPockets = 0x0203988c;
-		t.has.bagUnsure = t.has.leadersFromTrainers && !t.has.bagPockets;
+			t.has.bagUnsure = false;
+		}
 		return t;
 	}
 
@@ -556,7 +569,8 @@ namespace banana::pkmn
 	namespace
 	{
 		// a CFRU hack, told by its tables (the Fairy type, more than 412 species): what it has beyond FireRed's
-		void cfru(RomTables& t) { t.has.modernTypes = t.has.ownDex = t.has.leadersFromTrainers = true; }
+		// (its bag perhaps not the save's: until its own is found, below)
+		void cfru(RomTables& t) { t.has.modernTypes = t.has.ownDex = t.has.leadersFromTrainers = t.has.bagUnsure = true; }
 
 		void fromHeader(RomTables& t, const uint8_t* rom, size_t n)
 		{
@@ -812,9 +826,8 @@ namespace banana::pkmn
 		count = (int)(sizeof GOALS_FR / sizeof GOALS_FR[0]); return GOALS_FR;
 	}
 
-	void findExtras(RomTables& t, const uint8_t* rom, size_t n)
+	void findExtras(RomTables& t, const uint8_t* rom, size_t n, const GameProfile* g)
 	{
-		const GameProfile* g = detectGame(rom, n);
 		Family gen = g ? g->family : RUBY_SAPPHIRE;
 		if (gen != RUBY_SAPPHIRE) fromHeader(t, rom, n);
 		// no header pointers (Ruby, Sapphire): the ability names by their shape (13 bytes each, the 78 of the games, the
@@ -1147,17 +1160,21 @@ namespace banana::pkmn
 		close();
 		std::vector<uint8_t> h = readRom(rom, 0xc0);
 		info = detectGame(h.data(), h.size());
+		// (a code with releases told by their CRC-32: which one it is once the whole ROM is read, nothing read till then;
+		// a guess meanwhile, which may turn out none of them)
+		byCrc = crcMatters(h.data(), h.size());
+		if (byCrc && !info) info = anyWithCode(h.data(), h.size());
 		if (!info) return false;
 		sh = std::make_shared<Shared>();
 		std::shared_ptr<Shared> s = sh;
-		std::thread([s, rom, h]
+		bool crc = byCrc;
+		std::thread([s, rom, h, crc]
 		{
 			setpriority(PRIO_PROCESS, (id_t)syscall(SYS_gettid), 10);	// (this thread only: beside the game starting)
 			std::vector<uint8_t> all = readRom(rom, 32u << 20);
-			auto t = std::make_shared<RomTables>(findTables(all.data(), all.size()));
+			const GameProfile* profile = crc ? detectGame(h.data(), h.size(), (uint32_t)crc32(0L, all.data(), (uInt)all.size())) : nullptr;
+			auto t = std::make_shared<RomTables>(findTables(all.data(), all.size(), profile));
 			size_t bytes = all.size();
-			// (a release told by its CRC-32: only where one is listed for the code)
-			const GameProfile* profile = crcMatters(h.data(), h.size()) ? detectGame(h.data(), h.size(), (uint32_t)crc32(0L, all.data(), (uInt)all.size())) : nullptr;
 			t->rom = std::make_shared<const std::vector<uint8_t>>(std::move(all));
 			fprintf(stderr, "pokemon: %zu species, %zu moves, %zu species types, %zu move records, %zu icons (%zu palette numbers, %zu palettes), "
 				"%zu growth rates from the ROM (%zu bytes); %s, %zu abilities, %zu items, %zu map names, %zu region maps, %zu dex numbers, "
@@ -1176,6 +1193,7 @@ namespace banana::pkmn
 	void Companion::close()
 	{
 		info = nullptr;
+		byCrc = false;
 		sh.reset();
 		tablesSeen = false;
 		nextAt = sentAt = 0;
@@ -1206,8 +1224,14 @@ namespace banana::pkmn
 		if (!tablesSeen && sh)
 		{
 			std::lock_guard<std::mutex> l(sh->mu);
-			if (sh->ready) { tablesSeen = true; changed = true; if (sh->profile) info = sh->profile; }
+			if (sh->ready)
+			{
+				tablesSeen = true; changed = true;
+				if (byCrc && sh->profile) { info = sh->profile; byCrc = false; }		// (before any read: nothing to forget)
+				else if (byCrc) snap.unknownRelease = true;
+			}
 		}
+		if (byCrc) return "";
 		if (now < nextAt || (waiting > 0 && now - sentAt < 10000)) return "";
 		count.clear(); party.clear(); flags.clear(); mainB.clear(); battle.clear(); enemy.clear();
 		bagPtrB.clear(); for (auto& b : pocketB) b.clear();

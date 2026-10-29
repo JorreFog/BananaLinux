@@ -95,6 +95,7 @@ namespace banana::pkmn
 	const GameProfile* detectGameIn(const GameProfile* list, size_t count, const uint8_t* rom, size_t n, uint32_t crc);
 	// whether a profile for the ROM's code is told by its CRC-32 (else not worth reading the whole ROM for)
 	bool crcMatters(const uint8_t* rom, size_t n);
+	// the ROM's tables; game: its profile (null: by the header's code)
 
 	std::string decodeText(const uint8_t* p, size_t max);			// the games' Western character set, to UTF-8
 
@@ -205,7 +206,7 @@ namespace banana::pkmn
 		std::vector<TeamMon> team(const std::string& name, int* trainerClass = nullptr) const;
 		bool layoutSize(uint32_t layoutPtr, int& w, int& h) const;	// a map layout's size (from the map header)
 	};
-	RomTables findTables(const uint8_t* rom, size_t n);
+	RomTables findTables(const uint8_t* rom, size_t n, const GameProfile* game = nullptr);
 
 	// pokemap.cpp: the GBA BIOS's LZ77 (type 0x10) at rom[at]: false when it isn't one, runs past the end or decodes to
 	// more than maxOut; used: the compressed bytes read
@@ -225,6 +226,7 @@ namespace banana::pkmn
 	struct Snapshot
 	{
 		bool seen = false;			// a reply with data has come
+		bool unknownRelease = false;	// a release of the game the companion has no profile for (nothing read)
 		std::string error;			// RetroArch's reply when it had none ("no memory map defined"...)
 		std::vector<Mon> party;
 		bool inBattle = false, doubles = false;
@@ -268,6 +270,7 @@ namespace banana::pkmn
 		void wantExt(bool on) { ext = on; }
 	private:
 		const GameProfile* info = nullptr;
+		bool byCrc = false;			// the profile told by the ROM's CRC-32: nothing read until it is (info till then: a guess)
 		// (the tables, and the profile the whole ROM's CRC-32 tells, from the thread)
 		struct Shared { std::mutex mu; std::shared_ptr<const RomTables> tables; const GameProfile* profile = nullptr; bool ready = false; };
 		std::shared_ptr<Shared> sh;

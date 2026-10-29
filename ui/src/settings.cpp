@@ -6266,9 +6266,8 @@ namespace banana
 				if (!down)
 				{
 					if (gcRow >= 0) { gcList = gcRow = -1; }	// (a row's view: a tap goes back to the list)
-					else if (gcScreens > 1 && pagerStep(lx, ly))
-						gcScreen = std::min(gcScreens - 1, std::max(0, gcScreen + pagerStep(lx, ly)));
-					else if (gcScreens > 1 && ly >= 372 && ly < 418) {}	// (the pager's page count)
+					else if (gcScreens > 1 && ly >= 372 && ly < 418)	// (the pager: its buttons, its page count)
+						gcScreen = std::min(gcScreens - 1, std::max(0, gcScreen + pagerStep(lx, ly, PAGER)));
 					else
 						for (auto& h : gcHits)
 							if (ly >= h.y0 && ly < h.y1) { gcList = h.list; gcRow = h.row; break; }
@@ -6309,7 +6308,7 @@ namespace banana
 				{
 					// the pager: its back and on buttons
 					int& pg = pkView == PK_BAG ? pkBagPage : pkDexPage;
-					pg = std::min(pkPages - 1, std::max(0, pg + pagerStep(lx, ly)));
+					pg = std::min(pkPages - 1, std::max(0, pg + pagerStep(lx, ly, PAGER)));
 				}
 				else if (!down && pkView == PK_BAG && ly >= 14 && ly < 60)
 				{
@@ -6322,8 +6321,8 @@ namespace banana
 					if (i >= 0 && i < (int)pkDexShown.size()) { pkDexNat = pkDexShown[i]; pkView = PK_DEXMON; }
 				}
 				else if (!down && pkView == PK_DEXMON) pkView = PK_DEX;
-				else if (!down && pkView == PK_GUIDE && pkWildPages > 1 && ly >= 370 && ly < 412 && lx >= 524)	// (the wild list's pages)
-					pkWildPage = std::min(pkWildPages - 1, std::max(0, pkWildPage + (lx < 571 ? -1 : 1)));
+				else if (int st = !down && pkView == PK_GUIDE && pkWildPages > 1 ? pagerStep(lx, ly, GUIDE_PAGER) : 0)	// (the wild list's pages)
+					pkWildPage = std::min(pkWildPages - 1, std::max(0, pkWildPage + st));
 				else if (!down && pkView == PK_MAP && pkMapW > 0 && pkMapCell > 0)
 				{
 					// a square of the region map: its section named under the map (tapped again, or off the map: the legend)
@@ -6669,7 +6668,8 @@ namespace banana
 		if (!sn.seen)
 		{
 			box("bubble", false, 18, 14, 604, 398);
-			std::string why = !sn.error.empty() ? "RetroArch can't read the game's memory with this emulator: " + sn.error : "Waiting for the game...";
+			std::string why = sn.unknownRelease ? "This release of the game isn't one the companion knows." :
+				!sn.error.empty() ? "RetroArch can't read the game's memory with this emulator: " + sn.error : "Waiting for the game...";
 			text(fit(gTitle, true, 22, 560), true, 22, 40, 34, p.ink);
 			wrapped(why, 18, 40, 80, 560, 4, p.muted);
 		}
@@ -7021,21 +7021,28 @@ namespace banana
 		if (!paged) return;
 		std::string pg = std::to_string(page + 1) + " / " + std::to_string(pages);
 		num(pg, 16, 394 - num(pg, 16, 0, 0, p.ink, true), 382, p.ink);
+		pagerButtons(p, page, pages, PAGER);
+	}
+
+	const Settings::PagerButtons Settings::PAGER = { 418, 372, 98, 40, 8 }, Settings::GUIDE_PAGER = { 526, 374, 44, 32, 2 };
+
+	void Settings::pagerButtons(const SPal& p, int page, int pages, const PagerButtons& b)
+	{
 		int k = std::max(1, (int)std::lround(2 * s));
 		for (int i = 0; i < 2; i++)
 		{
 			bool on = i ? page < pages - 1 : page > 0;
-			float bx = i ? 524 : 418;
-			box("slot", false, bx, 372, 98, 40);
+			float bx = b.x + i * (b.w + b.gap);
+			box("slot", false, bx, b.y, b.w, b.h);
 			Color c = on ? p.accent : p.line;
-			sprite(i ? PX_NEXT : PX_PREV, 9, bx + 49 - 2.5f * k / s, 392 - 4.5f * k / s, k, [&](char) { return c; });
+			sprite(i ? PX_NEXT : PX_PREV, 9, bx + b.w / 2 - 2.5f * k / s, b.y + b.h / 2 - 4.5f * k / s, k, [&](char) { return c; });
 		}
 	}
 
-	int Settings::pagerStep(float lx, float ly) const
+	int Settings::pagerStep(float lx, float ly, const PagerButtons& b) const
 	{
-		if (ly < 372 || ly >= 418 || lx < 414) return 0;
-		return lx < 521 ? -1 : 1;
+		if (ly < b.y - 4 || ly >= b.y + b.h + 6 || lx < b.x - 4) return 0;
+		return lx < b.x + b.w + b.gap / 2 ? -1 : 1;
 	}
 
 	void Settings::pokeMap(const SPal& p)
@@ -7379,7 +7386,7 @@ namespace banana
 		}
 		wrapped(line.empty() ? "No goal read from the save." : line, 17, 34, 54, 266, 3, p.ink);
 		// the team (a search of the ROM, kept while the goal is the same)
-		std::string key = who + "/" + std::to_string(sn.badges);
+		std::string key = who + "/" + std::to_string(sn.badges) + "/" + std::to_string((uintptr_t)tb.get());	// (the tables read since: again)
 		if (key != pkGoalKey)
 		{
 			pkGoalKey = key;
@@ -7490,18 +7497,10 @@ namespace banana
 		else if (dexKnown) text(fit("Accent: not caught yet", false, paged ? 12 : 13, paged ? 146 : 264), false, paged ? 12 : 13, 342, 384, p.muted);
 		if (paged)
 		{
-			// the page and two buttons (pkWildStep), as the pager's
+			// the page and the pager's two buttons, smaller
 			std::string pg = std::to_string(pkWildPage + 1) + "/" + std::to_string(pkWildPages);
 			num(pg, 14, 520 - num(pg, 14, 0, 0, p.ink, true), 383, p.ink);
-			int ka = std::max(1, (int)std::lround(2 * s));
-			for (int i = 0; i < 2; i++)
-			{
-				bool on = i ? pkWildPage < pkWildPages - 1 : pkWildPage > 0;
-				float bx = i ? 572 : 526;
-				box("slot", false, bx, 374, 44, 32);
-				Color c = on ? p.accent : p.line;
-				sprite(i ? PX_NEXT : PX_PREV, 9, bx + 22 - 2.5f * ka / s, 390 - 4.5f * ka / s, ka, [&](char) { return c; });
-			}
+			pagerButtons(p, pkWildPage, pkWildPages, GUIDE_PAGER);
 		}
 	}
 

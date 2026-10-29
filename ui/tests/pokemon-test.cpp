@@ -379,6 +379,30 @@ int main(int argc, char** argv)
 		CHECK(decodeBattler(w.data(), d) && d.level != 9);		// (read as the games' keep it: wrong)
 	}
 
+	// ---- a map's wild Pokémon by how they are met: the fishing table's ten slots, each rod its own and adding up to 100
+	{
+		std::vector<uint8_t> rom(0x1000, 0);
+		size_t h = 0x100;		// the headers: group, number, then grass / water / rock smash / fishing info pointers
+		rom[h] = 3; rom[h + 1] = 5;
+		put32(&rom[h + 16], 0x08000200);
+		rom[h + 20] = 0xff;
+		put32(&rom[0x204], 0x08000300);	// (the info: the rate, then the slots)
+		// old rod: Magikarp twice; good rod: Magikarp, Goldeen twice; super rod: Goldeen, Seaking twice, Gyarados twice
+		const uint16_t sp[10] = { 129, 129, 129, 118, 118, 118, 119, 119, 130, 130 };
+		for (int i = 0; i < 10; i++) { rom[0x300 + i * 4] = (uint8_t)(5 + i); rom[0x301 + i * 4] = (uint8_t)(10 + i); put16(&rom[0x302 + i * 4], sp[i]); }
+		RomTables t;
+		t.rom = std::make_shared<const std::vector<uint8_t>>(rom);
+		t.wildHeaders = (long)h;
+		auto sum = [](const std::vector<RomTables::Wild>& w) { int s = 0; for (auto& e : w) s += e.percent; return s; };
+		auto old = t.wild(3, 5, 3), good = t.wild(3, 5, 4), super = t.wild(3, 5, 5);
+		CHECK(old.size() == 1 && old[0].species == 129 && old[0].percent == 100 && old[0].minLv == 5 && old[0].maxLv == 11);
+		CHECK(good.size() == 2 && good[0].species == 129 && good[0].percent == 60 && good[1].species == 118 && good[1].percent == 40);
+		CHECK(super.size() == 3 && super[0].species == 119 && super[0].percent == 55 && super[1].species == 118 && super[1].percent == 40 &&
+			super[2].species == 130 && super[2].percent == 5);
+		EQ(sum(old), 100); EQ(sum(good), 100); EQ(sum(super), 100);
+		CHECK(t.wild(3, 5, 0).empty() && t.wild(3, 6, 3).empty() && t.wild(3, 5, 6).empty());	// (no grass; another map; no such way)
+	}
+
 	// ---- profiles: a release told by its CRC-32 before its code's own
 	{
 		std::vector<uint8_t> h(0xc0, 0);

@@ -532,7 +532,12 @@ namespace banana
 		void pokeDexMon(const SPal& p);
 		void pokeGuide(const SPal& p);
 		void pager(const SPal& p, int page, int pages, const std::string& left);
-		int pagerStep(float lx, float ly) const;	// a tap on the pager: -1 its back button, 1 its on button, 0 neither
+		// a pager's back and on buttons, side by side (w x h each, gap between): drawn, greyed at the first and the
+		// last page; a tap on them: -1 back, 1 on, 0 neither (each button's whole box and a little around it)
+		struct PagerButtons { float x, y, w, h, gap; };
+		static const PagerButtons PAGER, GUIDE_PAGER;	// the pages' own (Bag, Pokédex, the game companion), the Guide's
+		void pagerButtons(const SPal& p, int page, int pages, const PagerButtons& b);
+		int pagerStep(float lx, float ly, const PagerButtons& b) const;
 		// the game companion's views: a page (gcomp::PageId) or GC_GAME (the panel's tiles); within a page, its screen
 		// (a page longer than the panel is paged); a list's row opened (its fields in full); where the tabs and the
 		// rows were drawn (for touch)
