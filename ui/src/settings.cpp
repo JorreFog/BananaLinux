@@ -7386,7 +7386,9 @@ namespace banana
 			pkGoalTeam.clear();
 			if (!who.empty())
 			{
-				int cls = t.cfru ? 0x54 : -1;
+				// (a gym's leader by the Leader class in FireRed, LeafGreen and their hacks: Giovanni's Rocket Hideout and Silph
+				// battles are a Boss's)
+				int cls = t.cfru || (gi && gi->gen == 2 && next >= 0) ? 0x54 : -1;
 				for (auto& m : t.team(who, &cls)) pkGoalTeam.push_back({ m.species, m.level });
 			}
 		}

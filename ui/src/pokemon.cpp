@@ -716,12 +716,12 @@ namespace banana::pkmn
 			t.grids.push_back(g);
 		}
 
-		// trainers: every record with that name, the first of the class asked for (any: -1)
-		long findTrainer(const uint8_t* rom, size_t n, const std::string& name, int cls)
+		// trainers: every record with that name, the first of the class asked for (any: -1) from the byte from on
+		long findTrainer(const uint8_t* rom, size_t n, const std::string& name, int cls, size_t from = 0)
 		{
 			std::vector<uint8_t> e;
-			if (!encName(name, e)) return -1;
-			for (const uint8_t* p = rom; (p = (const uint8_t*)memmem(p, n - (p - rom), e.data(), e.size())); p++)
+			if (!encName(name, e) || from >= n) return -1;
+			for (const uint8_t* p = rom + from; (p = (const uint8_t*)memmem(p, n - (p - rom), e.data(), e.size())); p++)
 			{
 				size_t a = p - rom;
 				if (a < 4 || !trainerAt(rom, n, a - 4)) continue;
@@ -974,9 +974,33 @@ namespace banana::pkmn
 	std::vector<RomTables::TeamMon> RomTables::team(const std::string& name, int* cls) const
 	{
 		if (!rom) return {};
-		long a = findTrainer(rom->data(), rom->size(), name, cls ? *cls : -1);
-		if (a >= 0 && cls) *cls = rom->data()[a + 1];
-		return teamAt(rom->data(), rom->size(), a, numSpecies);
+		const uint8_t* r = rom->data();
+		size_t n = rom->size();
+		// every record of that trainer: the battle met first is among those of the lowest levels (rematches are far
+		// higher: Emerald's, a hack's post-game ones at 80 and more); of those, one not in a run of records of the same
+		// name (a hack's difficulty variants of one battle: Pokémon Unbound keeps three in a row, its own elsewhere),
+		// and the one with the most Pokémon (Unbound's Tessy: a story battle of three, her gym's of five)
+		struct Rec { long a; std::vector<TeamMon> team; int top; bool run; };
+		std::vector<Rec> recs;
+		for (long a = 0; (a = findTrainer(r, n, name, cls ? *cls : -1, (size_t)a + 8)) >= 0; )
+		{
+			Rec x{ a, teamAt(r, n, a, numSpecies), 0, false };
+			if (x.team.empty()) continue;
+			for (auto& m : x.team) x.top = std::max(x.top, (int)m.level);
+			for (long b : { a - 40, a + 40 })
+				x.run |= b >= 0 && (size_t)b + 40 <= n && r[b + 1] == r[a + 1] && memcmp(r + b + 4, r + a + 4, 12) == 0 && trainerAt(r, n, b);
+			recs.push_back(std::move(x));
+		}
+		if (recs.empty()) return {};
+		int low = 999;
+		bool single = false;
+		for (auto& x : recs) low = std::min(low, x.top);
+		for (auto& x : recs) single |= x.top <= low + 10 && !x.run;
+		const Rec* best = nullptr;
+		for (auto& x : recs)
+			if (x.top <= low + 10 && (!single || !x.run) && (!best || x.team.size() > best->team.size())) best = &x;
+		if (cls) *cls = r[best->a + 1];
+		return best->team;
 	}
 
 	bool RomTables::layoutSize(uint32_t p, int& w, int& h) const
