@@ -143,7 +143,8 @@ namespace banana::pkmn
 		// a Pokédex entry by national number: false when the ROM has none
 		struct DexEntry { std::string category, text; int height = 0, weight = 0; };	// (decimetres, hectograms)
 		bool dexEntry(int nat, DexEntry& e) const;
-		// the wild Pokémon of a map, by how they are met (0 grass, 1 water, 2 rock smash, 3 fishing): species, levels
+		// the wild Pokémon of a map, by how they are met (0 grass, 1 water, 2 rock smash, 3 the old rod, 4 the good rod,
+		// 5 the super rod): species, levels
 		// and the chance in percent (the slots of one species added up)
 		struct Wild { uint16_t species; uint8_t minLv, maxLv; int percent; };
 		std::vector<Wild> wild(int group, int num, int method) const;

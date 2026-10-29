@@ -7443,22 +7443,24 @@ namespace banana
 		}
 		// ---- right: the wild Pokémon here (the ROM's encounter table), caught ones marked from the Pokédex
 		box("bubble", false, 326, 14, 296, 398);
-		static const char* const METHOD[4] = { "Grass", "Water", "Rock Smash", "Fishing" };
+		static const char* const METHOD[6] = { "Grass", "Water", "Rock Smash", "Old Rod", "Good Rod", "Super Rod" };
 		std::string area = t.mapName(sn.mapsec);
 		text(fit(area.empty() ? "Wild Pokémon here" : area, true, 17, 264), true, 17, 342, 26, p.ink);
-		// laid out in pages first: a row a species (28 high, its icon reaching 24 below its top), a method's name over
-		// its first row on each page; the rows stop above the bottom line (the legend, the page and its buttons)
+		// laid out in pages first: a row a species, as high as its icon takes (32 at 640x480; a whole number of panel
+		// pixels a pixel of it, so larger on a larger panel), a method's name over its first row on each page; the rows
+		// (their icons too) stop above the bottom line (the legend, the page and its buttons)
+		float ic = 32.0f * kk / s, step = std::max(28.0f, ic - 4), head = std::max(20.0f, ic / 2 + 2), last = 361 - ic / 2;
 		struct Row { int mth; pkmn::RomTables::Wild w; float y; bool head; };
 		std::vector<std::vector<Row>> pages(1);
 		float wy = 54;
-		for (int mth = 0; mth < 4; mth++)
+		for (int mth = 0; mth < 6; mth++)
 			for (auto& w : t.wild(sn.group, sn.num, mth))
 			{
-				bool head = pages.back().empty() || pages.back().back().mth != mth;
-				float at = wy + (head && !pages.back().empty() ? 4 : 0) + (head ? 20 : 0);
-				if (at > 344 && !pages.back().empty()) { pages.emplace_back(); head = true; at = 74; }
-				pages.back().push_back({ mth, w, at, head });
-				wy = at + 28;
+				bool first = pages.back().empty() || pages.back().back().mth != mth;
+				float at = wy + (first && !pages.back().empty() ? 4 : 0) + (first ? head : 0);
+				if (at > last && !pages.back().empty()) { pages.emplace_back(); first = true; at = 54 + head; }
+				pages.back().push_back({ mth, w, at, first });
+				wy = at + step;
 			}
 		int mapKey = sn.group * 1000 + sn.num;
 		if (mapKey != pkWildKey) { pkWildKey = mapKey; pkWildPage = 0; }	// (another map: its first page)
@@ -7467,13 +7469,14 @@ namespace banana
 		bool dexKnown = !sn.dexSeen.empty();
 		for (auto& r : pages[pkWildPage])
 		{
-			if (r.head) text(METHOD[r.mth], true, 13, 342, r.y - 20, p.accent, true, 1.0f);
+			if (r.head) text(METHOD[r.mth], true, 13, 342, r.y - head, p.accent, true, 1.0f);
 			const auto& w = r.w;
-			monIcon(w.species, false, 338, r.y - 8, kk);
+			monIcon(w.species, false, 340, r.y + 9 - ic / 2, kk);	// (centred on the name)
+			float tx = 342 + ic;
 			int nat = w.species < t.natDex.size() ? t.natDex[w.species] : 0;
 			bool c = dexKnown && dexBit(sn.dexOwned, nat);
 			Color nc = !dexKnown || c ? p.ink : p.accent;	// (not caught yet: in the accent)
-			text(fit(t.speciesName(w.species), true, 15, 120), true, 15, 372, r.y, nc);
+			text(fit(t.speciesName(w.species), true, 15, 490 - tx), true, 15, tx, r.y, nc);
 			std::string lv = w.minLv == w.maxLv ? "Lv" + std::to_string(w.minLv) : "Lv" + std::to_string(w.minLv) + "-" + std::to_string(w.maxLv);
 			text(lv, false, 13, 496, r.y + 2, p.muted);
 			std::string pc = std::to_string(w.percent) + "%";

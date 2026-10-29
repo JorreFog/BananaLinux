@@ -940,7 +940,7 @@ namespace banana::pkmn
 	std::vector<RomTables::Wild> RomTables::wild(int group, int num, int method) const
 	{
 		std::vector<Wild> out;
-		if (!rom || wildHeaders < 0 || method < 0 || method > 3) return out;
+		if (!rom || wildHeaders < 0 || method < 0 || method > 5) return out;
 		const uint8_t* r = rom->data();
 		size_t n = rom->size();
 		static const int GRASS[12] = { 20, 20, 10, 10, 10, 10, 5, 5, 4, 4, 1, 1 }, WATER5[5] = { 60, 30, 5, 4, 1 },
@@ -948,17 +948,19 @@ namespace banana::pkmn
 		for (size_t a = wildHeaders; a + 20 <= n && r[a] != 0xff; a += 20)
 		{
 			if (r[a] != group || r[a + 1] != num) continue;
-			long info = romPtr(r, n, a + 4 + method * 4, 8);
+			long info = romPtr(r, n, a + 4 + std::min(method, 3) * 4, 8);
 			if (info < 0) return out;
-			int slots = method == 0 ? 12 : method == 3 ? 10 : 5;
+			int slots = method == 0 ? 12 : method >= 3 ? 10 : 5;
 			long mons = romPtr(r, n, info + 4, 4 * (size_t)slots);
 			if (mons < 0) return out;
-			for (int i = 0; i < slots; i++)
+			// (a rod: its own slots of the fishing table, its chances adding up to 100 as the game rolls them)
+			int from = method == 4 ? 2 : method == 5 ? 5 : 0, to = method == 3 ? 2 : method == 4 ? 5 : slots;
+			for (int i = from; i < to; i++)
 			{
 				const uint8_t* m = r + mons + i * 4;
 				uint16_t sp = le16(m + 2);
 				if (!sp || sp >= numSpecies) continue;
-				int pc = method == 0 ? GRASS[i] : method == 3 ? FISH[i] : WATER5[i];
+				int pc = method == 0 ? GRASS[i] : method >= 3 ? FISH[i] : WATER5[i];
 				auto it = std::find_if(out.begin(), out.end(), [&](const Wild& w) { return w.species == sp; });
 				if (it == out.end()) out.push_back({ sp, m[0], m[1], pc });
 				else { it->minLv = std::min(it->minLv, m[0]); it->maxLv = std::max(it->maxLv, m[1]); it->percent += pc; }
