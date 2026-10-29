@@ -151,3 +151,28 @@ wins over the file and would freeze the settings screen's choices. Both launcher
 frame statistics in the log) or `BANANADS_POWER_CPU_LATENCY_US=100` (the cores kept out of deep idle while a game
 runs: ~1.5% faster, a battery cost not measured yet). BananaDS needs no BIOS or firmware files (melonDS's FreeBIOS and a
 generated firmware).
+
+## Nintendo 3DS (Panda3DS)
+
+The 3DS shelf runs Panda3DS as a RetroArch core (`run-retroarch panda3ds`, `buildroot/package/libretro-panda3ds`):
+upstream at a pinned commit, with Banana's patches for the RG DS Plus's Cortex-A55 over it. Games go in
+`roms/3ds` (`.3ds`, `.cci`, `.cxi`, `.3dsx`, `.elf`), decrypted. Both 3DS screens are on RetroArch's panel, the top
+one over the bottom one; a frontend with each screen on its own panel, as BananaDS has, is still to come.
+
+What the patches change, each measured with `tools/3ds-perf` on the stress-test ROM (`tools/3ds-bench`):
+
+- the emulated CPU's waits: when no 3DS thread can run, time skips to the next event (a VBlank, a GPU interrupt,
+  a thread's wakeup) instead of the idle loop being run, which upstream did for the length of every GPU wait;
+- the GPU on its own thread, with an EGL context that shares RetroArch's: the command lists, transfers and the
+  frame's composition run beside the emulated CPU, and the GPU's interrupts reach the game when it next waits or at
+  the VBlank, once that thread is done (so the game sees the same thing whatever the cores' speeds);
+- dynarmic's code for the A55: conditional exits use the flags still in the CPU, flag writes nothing reads are
+  dropped, and no FPSR is read or written per block (the guest's floating-point exception flags aren't gathered);
+- the renderer: textures decoded a tile at a time, immediate-mode triangles in one draw, fragment uniforms uploaded
+  only when they change; and textures upstream never refreshed (written by the CPU, copied by the transfer engine,
+  rendered to), procedural textures (citro2d's sprites).
+
+`PANDA3DS_BASELINE=1` in the environment runs upstream's code paths instead, and `PANDA3DS_GPU_THREAD=0` keeps the
+GPU on RetroArch's thread, for comparisons. `panda3ds-bench` (in the image with `BR2_PACKAGE_LIBRETRO_PANDA3DS_BENCH`)
+runs the stress-test ROM with no window and prints each scene's frame times:
+`panda3ds-bench /usr/share/banana/3ds-bench/3ds-bench.3dsx --renderer gl`.

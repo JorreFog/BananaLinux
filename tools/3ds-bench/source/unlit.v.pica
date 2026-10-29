@@ -1,0 +1,50 @@
+; Unlit transform with vertex colour (u8 attribute scaled to 0..1) and three
+; texcoord outputs (tc1/tc2 are affine transforms of tc0 for multi-texturing).
+.fvec projection[4], modelView[4]
+.fvec tcXform1   ; tc1 = tc0 * xy + zw
+.fvec tcXform2   ; tc2 = tc0.yx * xy + zw
+
+.constf myconst(0.0, 1.0, 0.00392156862745098, 0.5)
+.alias  zeros myconst.xxxx
+.alias  ones  myconst.yyyy
+.alias  inv255 myconst.zzzz
+
+.out outpos position
+.out outtc0 texcoord0
+.out outtc1 texcoord1
+.out outtc2 texcoord2
+.out outclr color
+
+.alias inpos v0
+.alias intex v1
+.alias inclr v2
+
+.proc main
+	mov r0.xyz, inpos
+	mov r0.w,   ones
+
+	dp4 r1.x, modelView[0], r0
+	dp4 r1.y, modelView[1], r0
+	dp4 r1.z, modelView[2], r0
+	dp4 r1.w, modelView[3], r0
+
+	dp4 outpos.x, projection[0], r1
+	dp4 outpos.y, projection[1], r1
+	dp4 outpos.z, projection[2], r1
+	dp4 outpos.w, projection[3], r1
+
+	mov outtc0, intex
+
+	mov r2, zeros
+	mul r2.xy, tcXform1.xy, intex.xy
+	add r2.xy, tcXform1.zw, r2.xy
+	mov outtc1, r2
+
+	mov r3, zeros
+	mul r3.xy, tcXform2.xy, intex.yx
+	add r3.xy, tcXform2.zw, r3.xy
+	mov outtc2, r3
+
+	mul outclr, inv255, inclr
+	end
+.end
