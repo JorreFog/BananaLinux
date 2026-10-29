@@ -22,8 +22,8 @@ All of these are the 1240×1080 panel in QEMU, taken by the boot test (`tools/qe
 | | |
 |---|---|
 | ![the menu](docs/screenshots/menu_thumb.png) | the menu, after the library scan |
-| ![first-time setup](docs/screenshots/first-setup_thumb.png) | the first-time setup: Wi-Fi, time zone, RetroAchievements, ScreenScraper |
-| ![settings](docs/screenshots/settings_thumb.png) | Settings (Start): theme, brightness, sleep, Wi-Fi |
+| ![first-time setup](docs/screenshots/first-setup_thumb.png) | the first-time setup: Wi-Fi, time zone, RetroAchievements, box art |
+| ![settings](docs/screenshots/settings_thumb.png) | Settings (Start): display & sound, sleep & power, network, system |
 | ![update](docs/screenshots/update_thumb.png) | System > Update: the package, written to the other slot |
 | ![a game](docs/screenshots/game_thumb.png) | a GBA game running through RetroArch on the panel |
 
