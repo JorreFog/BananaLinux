@@ -71,7 +71,9 @@ BananaOS image, checks it against the release's SHA-256 and refuses your compute
 - Linux and macOS: run it from source with Python 3 and Tkinter (`python3 flash_banana.py`).
 
 Or flash by hand: download the image for your handheld from the [0.4.2 release](https://github.com/JorreFog/BananaLinux/releases/tag/v0.4.2) and
-open it in [balenaEtcher](https://etcher.balena.io/) without unzipping it.
+open it in [Raspberry Pi Imager](https://www.raspberrypi.com/software/) (Choose OS > Use custom image) without
+unzipping it. Avoid balenaEtcher: several people have found it writes the card incorrectly, and the handheld then
+fails to boot.
 
 | Handheld | Image | Update package |
 |---|---|---|
