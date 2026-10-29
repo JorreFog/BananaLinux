@@ -1,6 +1,6 @@
 #pragma once
 // banana-ui: the settings screen's colours (ROCKNIXDS Pixel's palettes, a user theme's over them), shared by the
-// translation units that draw its pages (settings.cpp, settings_files.cpp)
+// translation units that draw its pages (settings.cpp, settings_files.cpp, settings_bshare.cpp)
 #include "../rnds/RndsUI.h"
 
 namespace banana

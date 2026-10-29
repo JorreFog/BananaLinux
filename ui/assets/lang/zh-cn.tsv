@@ -1558,3 +1558,31 @@ superdrastic		Screens swapped	屏幕已交换
 superdrastic		Screens back	屏幕已还原
 superdrastic		F + SELECT puts them back	F + SELECT 将其还原
 superdrastic		F + SELECT swaps them again	F + SELECT 再次交换它们
+settings		Accept	接受
+settings		Decline	拒绝
+settings		Location	位置
+settings		Usual places	默认位置
+settings		Receive	接收
+settings		Quick save	快速保存
+settings		Send files	发送文件
+settings		Sending	正在发送
+settings		Received files	已接收的文件
+settings		About Bshare	关于 Bshare
+settings		This folder	此文件夹
+settings		Phones and computers with LocalSend can send files to this handheld.	装有 LocalSend 的手机和电脑可以向此掌机发送文件。
+settings		Not seen by other devices.	其他设备看不到此掌机。
+settings		Pick files or folders on the cards, then send them to a phone or computer with LocalSend open.	在存储卡上选择文件或文件夹，然后发送到打开了 LocalSend 的手机或电脑。
+settings		Games go straight into their system's folder. Everything else goes into banana/received on the card.	游戏直接放入对应系统的文件夹，其他文件放入存储卡上的 banana/received。
+settings		Bshare works with LocalSend, the free and open-source app by Tien Do Nam and its contributors (localsend.org). It is Banana's own small version of LocalSend's open protocol: get LocalSend on your phone or computer, on the same Wi-Fi.	Bshare 可与 LocalSend 配合使用，LocalSend 是由 Tien Do Nam 及其贡献者开发的免费开源应用（localsend.org）。Bshare 是 Banana 对 LocalSend 开放协议的精简实现：请在同一 Wi-Fi 下的手机或电脑上安装 LocalSend。
+settings		A opens a folder. Y marks a file or a folder. START sends what is marked.	按 A 打开文件夹，按 Y 标记文件或文件夹，按 START 发送已标记的内容。
+settings		Phones and computers with LocalSend open, on the same Wi-Fi. They ask there before taking the files.	在同一 Wi-Fi 下打开了 LocalSend 的手机和电脑。对方接收文件前会先询问。
+settings		Looking... Open LocalSend on the other device.	正在查找……请在另一台设备上打开 LocalSend。
+settings		An empty folder.	空文件夹。
+settings		Nothing is saved, and the other side is told.	不会保存任何内容，并会通知对方。
+settings		Games go into their system's folder, everything else into banana/received.	游戏放入对应系统的文件夹，其他文件放入 banana/received。
+settings		A picks a folder on the cards for all of them.	按 A 在存储卡上为所有文件选择一个文件夹。
+settings		How phones and computers see this handheld in LocalSend. A changes it.	手机和电脑在 LocalSend 中看到的此掌机名称。按 A 修改。
+menu		Open Bshare to accept.	打开 Bshare 以接受。
+menu		In banana/received.	已保存在 banana/received。
+menu		Games went into their system's folder.	游戏已放入对应系统的文件夹。
+menu		Nothing was sent.	没有发送任何内容。

@@ -73,6 +73,11 @@ namespace banana
 		// a title card on black (the host's arrival and Welcome): l1 on the top panel at y (CSS px), l2 under it in the
 		// muted colour; the bottom panel black
 		void renderCard(const std::string& l1, const std::string& l2, float y, float size);
+		// the shelf's Bshare tile: files to and from phones and computers with LocalSend (settings_bshare.cpp)
+		void openBshare();
+		// Bshare's helper serving (seen by LocalSend's apps, receiving): from the start while Receive is on
+		static void bshareServe(bool want);
+		bool bshareReceiving() const;
 		bool isOpen() const { return mOpen; }
 		std::vector<std::string> deletedFiles;	// what the last Delete game removed (DELETED)
 		int gridCount() const;	// the groups with a tile (Power has none)
@@ -145,6 +150,8 @@ namespace banana
 		// a notice over the screen being drawn (between the backend's beginScreen and endScreen): the battery icon at
 		// percent, a title and a line or two, in the bubble style near the bottom of the panel
 		void notice(const std::string& title, const std::string& body, int percent);
+		// a notification's banner at the top (Bshare's): sign 1 a tick, 2 a cross, 3 "!", in the accent's square
+		void banner(const std::string& title, const std::string& body, int sign, uint32_t accent);
 		// the volume or brightness keys' level: a small bubble near the bottom of the panel, its label, the percent and
 		// a bar (drawn like notice)
 		void level(const std::string& label, int percent);
@@ -188,7 +195,7 @@ namespace banana
 		std::string about, wifiInfo, ip;
 
 		// the Wi-Fi pages: the networks around, and the keyboard for a password (settings-wifi.cpp)
-		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS, PICKGAMES, FILES } page = LIST;
+		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS, PICKGAMES, FILES, BSHARE } page = LIST;
 		// Home server > Choose games: the server's games (banana-sync games), a system at a time, ticked to sync
 		struct PickGame { std::string sys, key, title; long long bytes = 0; bool on = false, there = false; };
 		std::vector<PickGame> pickGames;
@@ -252,9 +259,9 @@ namespace banana
 		void renderGame();
 		// the keyboard types a text for a purpose: a Wi-Fi password, or an account's name or password
 		// (banana/accounts.conf: RetroAchievements for DraStic and RetroArch, ScreenScraper for the scraper to come)
-		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SMB_USER, ENTRY_SMB_PASS, ENTRY_GAME_NAME, ENTRY_GAME_SORT, ENTRY_ART_SEARCH, ENTRY_DS_NAME, ENTRY_SEARCH, ENTRY_HS_ADDR, ENTRY_HS_CODE, ENTRY_BETA_PASS, ENTRY_FOLDER, ENTRY_RENAME } entry = ENTRY_WIFI;
+		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SMB_USER, ENTRY_SMB_PASS, ENTRY_GAME_NAME, ENTRY_GAME_SORT, ENTRY_ART_SEARCH, ENTRY_DS_NAME, ENTRY_SEARCH, ENTRY_HS_ADDR, ENTRY_HS_CODE, ENTRY_BETA_PASS, ENTRY_FOLDER, ENTRY_RENAME, ENTRY_BSHARE_PIN, ENTRY_BSHARE_MYPIN } entry = ENTRY_WIFI;
 		std::string entryTitle, entrySub;
-		std::string entryHelp;		// what the keyboard is for, when the purpose says it itself (Files' names)
+		std::string entryHelp;		// what the keyboard is for, when the purpose says it itself (Files' names, Bshare's PINs)
 		size_t entryMax = 63;		// the longest text (Wi-Fi's 63; a path or an address is longer)
 		Page entryBack = NETWORKS;
 		void startEntry(Entry e, const std::string& title, const std::string& sub, Page back, const std::string& start = "");
@@ -545,6 +552,16 @@ namespace banana
 		int filesWake(double nowMs) const;
 		Result finishFilesEntry();
 		void sd2Scan();	// the sd2 script again (Files: a roms folder made on the second card is offered to the library)
+		// Bshare (settings_bshare.cpp): its pages, reading banana-bshare's files in /run/banana
+		struct Bshare;
+		std::shared_ptr<Bshare> bs;
+		Result pressBshare(Key k);
+		Result touchBshare(float cx, float cy);
+		void renderBshare();
+		bool updateBshare(double nowMs);
+		int bshareWake(double nowMs) const;
+		Result finishBshareEntry();
+		void closeBshare();
 		void tick(float x, float y, const rnds::Color& c);	// a mark on a 2 px grid (a chosen file)
 		void meter(float x, float y, float w, double fraction);	// a progress bar
 		std::string gTitle, gSystem;
@@ -637,6 +654,7 @@ namespace banana
 		// the top panel's header and help text (Settings' rows and a game's page): where they go, in 640x480 CSS px
 		static constexpr float HEAD_ICON_Y = 42, HEAD_SECTION_Y = 46, HEAD_LABEL_Y = 70, HEAD_VALUE_Y = 110;
 		static constexpr float HELP_X = 50, HELP_W = 540, HELP_TOP = 152, HELP_BOTTOM = 438;
+		static constexpr float HINT_TOP = 300;	// a choice's hint, under the row's sentence
 		bool helpFit(const std::string& t, float top, float bottom, float& size, int& lines) const;
 		void helpText(const std::string& t, float top, float bottom, const rnds::Color& c);
 		std::string helpOf(int item);

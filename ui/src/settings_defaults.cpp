@@ -28,6 +28,7 @@ namespace banana
 		const char* const ON_OFF[] = { "on", "off", nullptr };
 		const char* const DS_CART_ART[] = { "box", "icon", nullptr };
 		const char* const ALL_CHOSEN[] = { "all", "chosen", nullptr };
+		const char* const BSHARE_RECEIVE[] = { "off", "ask", "auto", nullptr };
 		const char* const ACCENT_TEXT[] = { "auto", "dark", "light", nullptr };
 		const char* const ACCENTS[] = { "yellow", "blue", "red", "green", "purple", "pink", nullptr };
 		const char* const SHADERS[] = { "off", "lcd", "crt", "sharp", nullptr };
@@ -85,6 +86,7 @@ namespace banana
 			{ "homesync_auto", "off", ENUM, HOMESYNC_AUTO, 0, 0 },
 			{ "boxart_twilight_url", "https://boxart.kirovair.com", TEXT, nullptr, 0, 0 },
 			{ "boxart_twilight_key", "tb2_9f4c1d7a3e8b5062", TEXT, nullptr, 0, 0 },
+			{ "bshare_receive", "off", ENUM, BSHARE_RECEIVE, 0, 0 },
 			{ "core.gba", "gpsp", CORE, nullptr, 0, 0 },
 		};
 

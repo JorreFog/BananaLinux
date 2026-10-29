@@ -105,6 +105,34 @@
     "system": "rocknixdsbank",
     "dir": "/usr/share/banana/apps/bank"
    }
+  },
+  {
+   "id": "bshare",
+   "name": "Bshare",
+   "tile": "Bshare",
+   "kind": "app",
+   "developer": "Banana",
+   "genre": "Tool",
+   "players": "1",
+   "releasedate": "20261028T000000",
+   "accent": "#4a9bff",
+   "summary": "Files to and from your phone or computer over Wi-Fi, with LocalSend.",
+   "description": "Sends files between the handheld and phones or computers on the same Wi-Fi that have LocalSend open (the free and open-source app by Tien Do Nam and its contributors, localsend.org). Receive is off until you turn it on: then you accept each transfer, games go straight into their system's folder and everything else into banana/received, or into a location you choose. To send, mark files or folders on the cards and pick a device. Bshare is Banana's own small version of LocalSend's open protocol. It comes with BananaOS: removing it takes its tile off the menu, installing it puts the tile back.",
+   "icon": "apps/bshare/icon.png",
+   "screenshots": [
+    "apps/bshare/screen.png"
+   ],
+   "devices": [
+    "rgds",
+    "rgds-plus"
+   ],
+   "requires": {
+    "bananaos": "0.4.2"
+   },
+   "builtin": {
+    "system": "bshare",
+    "dir": "/usr/share/banana/apps/bshare"
+   }
   }
  ]
 }

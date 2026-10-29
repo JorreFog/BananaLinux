@@ -30,9 +30,9 @@ cp -r "$DARK/rnds" "$HERE/ui/assets/rnds"
 # Banana's own pictures over ROCKNIXDS's (the logo; see ui/assets/overrides)
 cp "$HERE"/ui/assets/overrides/*.png "$HERE/ui/assets/rnds/"
 # and system icons Banana redrew or added (icons/: ports.png, its PC three pixels lower, centred as the others; the
-# Files tile's files.png)
+# Files tile's files.png, the Bshare tile's bshare.png)
 cp "$HERE"/ui/assets/overrides/icons/*.png "$HERE/ui/assets/rnds/icons/"
-# and Banana's own systems' lines (overrides/systems.cfg: the Files tile) after ROCKNIXDS's (a name listed twice
+# and Banana's own systems' lines (overrides/systems.cfg: the Files and Bshare tiles) after ROCKNIXDS's (a name listed twice
 # keeps its last line)
 { echo; cat "$HERE/ui/assets/overrides/systems.cfg"; } >> "$HERE/ui/assets/rnds/systems.cfg"
 

@@ -32,9 +32,12 @@ $(foreach b,$(BOARDS),$(eval $(call board,$(b))))
 
 ui:
 	$(MAKE) -C ui host
+	@if pkg-config --exists libcurl libcrypto; then $(MAKE) -C ui banana-bshare; \
+	else echo "banana-bshare not built (libcurl's and OpenSSL's dev packages): Bshare's tests are skipped"; fi
 
 test: ui
 	ui/tests/run.sh
+	@if [ -x ui/banana-bshare ]; then sh ui/tests/bshare-test.sh; fi
 
 # tools/theme-studio: the layout-theme editor's tests (expr.js vs ui/src/expr.cpp, the preview server, the schema)
 theme-studio: ui

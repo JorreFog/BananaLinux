@@ -17,6 +17,12 @@ Banana's own code (ui/src, system/, buildroot/package, tools/) is under the MIT 
 | RK3568 TF-A (BL31) | buildroot/board/rgds/rkbin | [rockchip-linux/rkbin](https://github.com/rockchip-linux/rkbin) | Rockchip's binary license (rkbin/LICENSE) |
 | Nintendo DS cheat files (Action Replay codes, for BananaDS) | buildroot/package/libretro-cheats-nds (tarball) | [libretro/libretro-database](https://github.com/libretro/libretro-database) cht/Nintendo - Nintendo DS at 12c21cf | CC BY-SA 4.0 |
 
+Bshare (`ui/src/bshare.cpp`, `ui/src/settings_bshare.cpp`) is Banana's own code: it speaks the open protocol of
+[LocalSend](https://localsend.org), the free and open-source app by Tien Do Nam and its contributors, as documented in
+[localsend/protocol](https://github.com/localsend/protocol), so that LocalSend's apps and the handheld can send each
+other files. No LocalSend code, name or logo is included; Bshare's icon is Banana's own pixel drawing of the common
+share symbol.
+
 RetroArch's joypad map for the RG DS (`buildroot/package/retroarch/retrogame_joypad.cfg`) is ROCKNIX's (GPL-2.0).
 
 Downloaded at build time, not kept here: RetroArch (GPL-3.0) and its cores (gpSP, Gambatte, FCEUmm, PCSX ReARMed and

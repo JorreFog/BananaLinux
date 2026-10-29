@@ -1,5 +1,6 @@
 #include <ctime>
 #include "settings.h"
+#include "settings_draw.h"
 #include "lang.h"
 #include "settings_defaults.h"
 #include "settings_draw.h"
@@ -911,6 +912,7 @@ namespace banana
 		mOpen = false;
 		page = LIST;
 		wizard = false;
+		closeBshare();
 	}
 
 	// the sd2 script again, under bananad's lock (Files: a roms folder made on the second card, offered to the library).
@@ -1247,6 +1249,7 @@ namespace banana
 		if (page == PICKGAMES) return pressPickGames(k);
 		if (page == FILES) return pressFiles(k);
 		if (langAsk >= 0) return pressLangAsk(k);
+		if (page == BSHARE) return pressBshare(k);
 		if (inGroups) return pressGroups(k);
 		int g = groupOf(sel), b = groupStart(g), e = groupEnd(g);
 		switch (k)
@@ -1398,6 +1401,7 @@ namespace banana
 			int t = askTouch(cx, cy, langYes);
 			return t < 0 ? NONE : t == 0 ? MOVED : pressLangAsk(Key::A);
 		}
+		if (page == BSHARE) return touchBshare(cx, cy);
 		if (page == SETUP)
 		{
 			// the chips (B Back, START Skip, A OK), and a choice: one tap does it (a value row: its left or right half)
@@ -1788,6 +1792,31 @@ namespace banana
 		wrapped(body, 18, 172, 392, 404, 2, p.muted);
 	}
 
+	void Settings::banner(const std::string& title, const std::string& body, int sign, uint32_t accent)
+	{
+		// the toasts' look (drawToast): the dark pill across the top, the accent's square with its sign, the title in
+		// the accent and the line in light text; a second line when the text needs it
+		static const char* const SIGN[4][9] = {
+			{ ".........", ".........", ".........", ".........", ".........", ".........", ".........", ".........", "........." },
+			{ ".........", "........#", ".......##", "......##.", "#....##..", "##..##...", ".####....", "..##.....", "........." },
+			{ "##.....##", ".##...##.", "..##.##..", "...###...", "...###...", "..##.##..", ".##...##.", "##.....##", "........." },
+			{ "...##....", "...##....", "...##....", "...##....", "...##....", "...##....", ".........", "...##....", "...##...." } };
+		const Color lightText = Color::hex(0xf1ede2), acc = Color::hex(accent);
+		bool two = !body.empty() && text(body, false, 18, 0, 0, lightText, false, 0, true) > 536;
+		box("osd", false, 8, 4, 624, two ? 86 : 64);
+		float bs = 48, tx = 16, ty = 12;
+		be->fill(std::round(X(tx)), std::round(X(ty)), std::round(X(bs)), std::round(X(bs)), acc);
+		int k = std::max(1, (int)std::lround(X(bs) / 14));
+		float ox = std::round(X(tx + bs / 2)) - 9 * k / 2.0f, oy = std::round(X(ty + bs / 2)) - 9 * k / 2.0f;
+		if (sign > 0 && sign < 4)
+			for (int r = 0; r < 9; r++)
+				for (int c = 0; c < 9; c++)
+					if (SIGN[sign][r][c] == '#') be->fill(std::round(ox + c * k), std::round(oy + r * k), (float)k, (float)k, Color::hex(0x12181f));
+		text(fit(title, true, 17, 540), true, 17, 78, 14, acc);
+		if (two) wrapped(body, 18, 78, 37, 536, 2, lightText);
+		else if (!body.empty()) text(fit(body, false, 18, 540), false, 18, 78, 38, lightText);
+	}
+
 	void Settings::level(const std::string& label, int percent)
 	{
 		// ROCKNIXDS's volume indicator (SuperDrastic's ui.c render_volume), in the same place: a pill at the top of the
@@ -2064,6 +2093,7 @@ namespace banana
 		if (page == PICKGAMES) { renderPickGames(); return; }
 		if (page == FILES) { renderFiles(); return; }
 		if (langAsk >= 0) { renderLangAsk(); return; }
+		if (page == BSHARE) { renderBshare(); return; }
 		if (inGroups) { renderGroups(); return; }
 		SPal p = pal(light);
 		const Item& cur = items[sel];
@@ -2265,6 +2295,7 @@ namespace banana
 		bool changed = scrapeChanged || changed0;
 		changed |= btUpdate();
 		if (fm && updateFiles(t)) changed = true;	// (a job's progress, its end)
+		if (bs && page == BSHARE && updateBshare(t)) changed = true;
 		if (page == UPDATES && applying && now >= nextStatus2)
 		{
 			std::string before = ustatus;
@@ -2360,6 +2391,8 @@ namespace banana
 		if (scraping() && (w < 0 || w > 500)) w = std::max(0, (int)(scrapeNext - t));	// the box art's progress
 		int d = fm ? filesWake(t) : -1;	// a Files job's progress
 		if (d >= 0 && (w < 0 || d < w)) w = d;
+		int b = bshareWake(t);	// Bshare's request countdown, a send's progress
+		if (b >= 0 && (w < 0 || b < w)) w = b;
 		return w;
 	}
 
@@ -2926,7 +2959,7 @@ namespace banana
 		be->beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
-		icon(entry == ENTRY_SEARCH ? "search" : entry == ENTRY_FOLDER || entry == ENTRY_RENAME ? "files" : "phone", 50, 56, 3);
+		icon(entry == ENTRY_SEARCH ? "search" : entry == ENTRY_FOLDER || entry == ENTRY_RENAME ? "files" : entry == ENTRY_BSHARE_PIN || entry == ENTRY_BSHARE_MYPIN ? "bshare" : "phone", 50, 56, 3);
 		text(entryTitle, true, 17, 170, 62, p.muted, true, 1.4f);
 		text(fit(entrySub, true, 30, 420), true, 30, 170, 88, p.ink);
 		box("slot", true, 50, 150, 540, 56);
@@ -5142,6 +5175,9 @@ namespace banana
 			return SEARCH;
 		case ENTRY_FOLDER: case ENTRY_RENAME:
 			return finishFilesEntry();
+		case ENTRY_BSHARE_PIN:
+		case ENTRY_BSHARE_MYPIN:
+			return finishBshareEntry();
 		}
 		return NONE;
 	}

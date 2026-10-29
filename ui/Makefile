@@ -9,6 +9,8 @@ override CXXFLAGS += -std=c++17 -Wall -Wno-unused-function
 override LDLIBS += -lpthread
 
 SRC = src/main.cpp src/lang.cpp src/soft.cpp src/kms.cpp src/colors.cpp src/input.cpp src/library.cpp src/sound.cpp src/splash.cpp src/arrival.cpp src/settings.cpp src/settings_defaults.cpp src/wifi.cpp src/bluetooth.cpp src/zip.cpp src/carts.cpp src/cart3d.cpp src/theme.cpp src/pokemon.cpp src/pokemap.cpp src/gamecomp.cpp src/json.cpp src/expr.cpp src/layout.cpp src/fileops.cpp src/settings_files.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp
+# (Bshare's pages: its helper, banana-bshare, does the network)
+SRC += src/settings_bshare.cpp
 PKGS = freetype2 libdrm zlib
 ifeq ($(ALSA),1)
 PKGS += alsa
@@ -27,6 +29,12 @@ banana-scrape: src/scrape.cpp
 # home server sync (Settings > Network > Home server): Romhost and RomM, games, box art and saves
 banana-sync: src/sync.cpp src/sync_util.h src/json.cpp src/json.h
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ src/sync.cpp src/json.cpp -ldl
+
+# Bshare (the shelf's tile): files to and from phones and computers with LocalSend, run by banana-ui while Receive
+# is on or its page is open (settings_bshare.cpp)
+banana-bshare: src/bshare.cpp src/json.cpp src/json.h
+	$(CXX) $(CXXFLAGS) $(shell $(PKG_CONFIG) --cflags libcurl libcrypto) $(LDFLAGS) -o $@ src/bshare.cpp src/json.cpp \
+		$(shell $(PKG_CONFIG) --libs libcurl libcrypto) -lpthread
 
 # the game panel's DRM lease for RetroArch (preloaded by run-retroarch)
 CC ?= gcc
@@ -53,6 +61,10 @@ install:
 	install -D -m 755 banana-leaseshim.so $(DESTDIR)/usr/lib/banana/banana-leaseshim.so
 	install -D -m 755 banana-scrape $(DESTDIR)/usr/bin/banana-scrape
 	install -D -m 755 banana-sync $(DESTDIR)/usr/bin/banana-sync
+	install -D -m 755 banana-bshare $(DESTDIR)/usr/bin/banana-bshare
+	# (Bshare's tile on the shelf: its one entry, systems.conf's [bshare])
+	mkdir -p $(DESTDIR)/usr/share/banana/apps/bshare
+	touch $(DESTDIR)/usr/share/banana/apps/bshare/Bshare.app
 	# (the folders' contents: "cp -r dir dst" into a dst that is there from a build before nests a copy in it, and
 	# the files in use were never replaced)
 	mkdir -p $(DESTDIR)/usr/share/banana/rnds $(DESTDIR)/usr/share/banana/splash $(DESTDIR)/usr/share/banana/banana
@@ -67,6 +79,6 @@ install:
 	touch $(DESTDIR)/usr/share/banana/apps/files/Files.app
 
 clean:
-	rm -f banana-ui banana-leaseshim.so banana-scrape banana-sync tests/pokemon-test tests/gamecomp-test tests/input-test
+	rm -f banana-ui banana-leaseshim.so banana-scrape banana-sync banana-bshare tests/pokemon-test tests/gamecomp-test tests/input-test
 
 .PHONY: host install clean

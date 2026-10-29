@@ -336,6 +336,7 @@ static std::string internalPage(const SystemDef& sd) { return sd.run.compare(0, 
 static bool openPage(Settings& st, const std::string& page)
 {
 	if (page == "files") { st.openFiles(); return true; }
+	if (page == "bshare") { st.openBshare(); return true; }
 	return false;
 }
 
@@ -459,6 +460,65 @@ struct LowBattery
 		bool was = showing(now);
 		until = 0;
 		return was;
+	}
+};
+
+// Bshare's news (its helper's files, settings_bshare.cpp): a device asking to send, a transfer done or declined;
+// shown as the battery's notice is (the banner at the top, 4 s, any press hides it), looked at once a second
+struct BshareNotice
+{
+	std::string title, body;
+	int sign = 1;			// Settings::banner's
+	uint32_t accent = 0x6ad07a;
+	double until = 0, lookedAt = -1e9;
+	std::string bsReq, bsRecv = "?", bsSend = "?";	// the request, receive and send, as last read ("?": not yet)
+	bool showing(double now) const { return until > now; }
+	bool hide(double now) { bool was = showing(now); until = 0; return was; }
+	void show(const std::string& t, const std::string& b, int sg, uint32_t acc, double now)
+	{
+		title = t; body = b; sign = sg; accent = acc; until = now + 4000;
+	}
+	// true when a new one came
+	bool check(double now)
+	{
+		if (now - lookedAt < 1000) return false;
+		lookedAt = now;
+		bool came = false;
+		const char* run = getenv("BSHARE_RUN");
+		std::string dir = run && *run ? run : "/run/banana";
+		auto read = [&](const char* n) { std::ifstream f(dir + "/" + n); std::stringstream s; s << f.rdbuf(); return s.str(); };
+		auto cols = [](const std::string& l) { std::vector<std::string> c; std::stringstream s(l); std::string x; while (std::getline(s, x, '\t')) c.push_back(x); return c; };
+		std::string req = read("bshare-request");
+		if (req != bsReq)
+		{
+			std::string from, n;
+			std::stringstream in(req);
+			std::string l;
+			while (std::getline(in, l)) { auto c = cols(l); if (c.size() >= 2 && c[0] == "from") from = c[1]; if (c.size() >= 2 && c[0] == "files") n = c[1]; }
+			if (!req.empty()) { show(from + " wants to send " + n + (n == "1" ? " file" : " files"), "Open Bshare to accept.", 3, 0x4a9bff, now); came = true; }
+			bsReq = req;
+		}
+		std::string rc = read("bshare-receive");
+		if (rc != bsRecv)
+		{
+			auto c = cols(rc.substr(0, rc.find('\n')));
+			if (bsRecv != "?" && c.size() >= 7 && (c[0] == "done" || c[0] == "partly"))
+			{
+				show("Received " + c[2] + (c[2] == "1" ? " file" : " files") + " from " + c[1],
+					c[6] == "received" ? "In banana/received." : c[6] == "games" || c[6] == "both" ? "Games went into their system's folder." : "In " + c[6] + ".", 1, 0x6fdc87, now);
+				came = true;
+			}
+			bsRecv = rc;
+		}
+		std::string sc = read("bshare-send");
+		if (sc != bsSend)
+		{
+			auto c = cols(sc.substr(0, sc.find('\n')));
+			if (bsSend != "?" && c.size() >= 4 && c[0] == "done") { show("Sent " + c[3] + (c[3] == "1" ? " file" : " files") + " to " + c[1], "", 1, 0x6fdc87, now); came = true; }
+			if (bsSend != "?" && c.size() >= 2 && c[0] == "declined") { show(c[1] + " said no", "Nothing was sent.", 2, 0xffb340, now); came = true; }
+			bsSend = sc;
+		}
+		return came;
 	}
 };
 
@@ -1824,7 +1884,9 @@ int main(int argc, char** argv)
 	int lastMinute = -1;
 	pkmn::Companion companion;	// the game panel's Pokémon companion (pokemon.h), for the game running
 	gcomp::Engine gameComp;		// or its game companion (gamecomp.h), for another GBA game with a definition
+	if (settingsView.bshareReceiving()) Settings::bshareServe(true);	// (Bshare's Receive on: seen from the start)
 	LowBattery low;
+	BshareNotice bsNotice;
 	bool batteryDue = true;
 	RomWatch roms;
 	roms.watch(lib.watchDirs());
@@ -1848,6 +1910,7 @@ int main(int argc, char** argv)
 		if (screen != 0) return;
 		double t = nowMs();
 		if (low.showing(t)) settingsView.notice(low.title, low.body, low.percent);
+		else if (bsNotice.showing(t)) settingsView.banner(bsNotice.title, bsNotice.body, bsNotice.sign, bsNotice.accent);
 		else if (osdUntil > t) settingsView.level(osdLabel, osdPercent);
 		else if (int k = looking())
 			settingsView.popup(k == 2 ? "Reading the second SD card" : "Looking for games",
@@ -1943,7 +2006,11 @@ int main(int argc, char** argv)
 	{
 		// (the bottom screen's idle dim is a game-panel thing only, so its touch handling is in gamePanel's own sink)
 		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) { boost.frame(nowMs()); fstat.press(ev.t); }	// what it starts drawn fast
-		if ((ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) && low.hide(nowMs())) dirty = true;
+		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN)
+		{
+			bool lowWas = low.hide(nowMs()), bsWas = bsNotice.hide(nowMs());	// (both hidden, whichever showed)
+			if (lowWas || bsWas) dirty = true;
+		}
 		if ((ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) && resumeLater.until > 0)
 		{
 			logf("resume after power-off: a press, %s not waited for any more", resumeLater.rom.c_str());
@@ -2528,6 +2595,7 @@ int main(int argc, char** argv)
 			batteryDue = false;
 			if (low.check(lib.power(), shutdownPercent(o.data), now)) dirty = true;
 		}
+		if (bsNotice.check(now)) { logf("notice: %s", bsNotice.title.c_str()); dirty = true; }
 
 		bool want;
 		{
@@ -2597,6 +2665,15 @@ int main(int argc, char** argv)
 		{
 			int left = (int)(low.until - now) + 1;
 			if (timeout < 0 || left < timeout) timeout = left;
+		}
+		if (bsNotice.showing(now))
+		{
+			int left = (int)(bsNotice.until - now) + 1;
+			if (timeout < 0 || left < timeout) timeout = left;
+		}
+		{
+			int left = (int)(bsNotice.lookedAt + 5000 - now) + 1;	// (a look at least every 5 s: the menu idle isn't woken more)
+			if (left > 0 && (timeout < 0 || left < timeout)) timeout = left;
 		}
 		if (osdUntil > now)
 		{

@@ -1,6 +1,7 @@
 /output/
 /.buildroot/
 /ui/banana-ui
+/ui/banana-bshare
 /ui/tests/out/
 /ui/tests/pokemon-test
 /ui/tests/gamecomp-test
