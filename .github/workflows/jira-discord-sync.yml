@@ -1,0 +1,44 @@
+name: Sync Discord issues → Jira
+
+on:
+  schedule:
+    # Discord has no GitHub webhook; poll the issues forum.
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Print actions without writing to Jira"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync Discord forum threads into Jira (KAN)
+        env:
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          JIRA_PROJECT_KEY: KAN
+          JIRA_EPIC_BUGS: KAN-97
+          JIRA_EPIC_FEATURES: KAN-98
+          JIRA_EPIC_IMPROVEMENTS: KAN-99
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_FORUM_CHANNEL_ID: ${{ secrets.DISCORD_FORUM_CHANNEL_ID }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
+        run: |
+          if [ -z "$DISCORD_BOT_TOKEN" ] || [ -z "$DISCORD_FORUM_CHANNEL_ID" ]; then
+            echo "::warning::Missing Discord secrets. Add DISCORD_BOT_TOKEN and DISCORD_FORUM_CHANNEL_ID under repo Settings → Secrets and variables → Actions. Skipping."
+            exit 0
+          fi
+          if [ -z "$JIRA_BASE_URL" ] || [ -z "$JIRA_EMAIL" ] || [ -z "$JIRA_API_TOKEN" ]; then
+            echo "::error::Missing Jira secrets. Add JIRA_BASE_URL, JIRA_EMAIL, and JIRA_API_TOKEN under repo Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          python3 tools/jira-discord-sync.py
