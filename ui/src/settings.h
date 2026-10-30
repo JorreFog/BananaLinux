@@ -567,7 +567,7 @@ namespace banana
 		};
 		struct ServerInfo { std::string id, title, protocol, address; bool plainFtp = false; };
 		void filesShow(const std::string& dir, const std::string& focus, bool actions);	// Files on a folder (its actions open)
-		void filesRoot(const std::string& focus, const std::string& message);	// Files' list: "job", "add", "options", "server:<id>"
+		void filesRoot(const std::string& focus, const std::string& message);	// Files' list: "job", "server:<id>"; its settings: "add", "options"
 		void pickFolder(int purpose, const std::string& start, const std::string& what);	// 1 a download's folder, 2 an unpacking's
 		void setRemoteClip(const RemoteClip& c);
 		// Files' servers (settings_servers.cpp): a server's folders, a download's or an unpacking's page, the job in the

@@ -513,7 +513,8 @@ for size in 640x480 1024x768; do
     "$HERE/tests/fixture.sh" "$FM" >/dev/null
     rm -rf "$SD2"/* 2>/dev/null || true
     N=$FM/roms/nds G=$FM/roms/gba
-    # in gba: X, down to Delete, RIGHT twice (as a held RIGHT repeats); B, RIGHT twice on the file
+    # in gba: X, down to Delete, RIGHT twice (as a held RIGHT repeats: a page down, to Mark all); B, RIGHT twice in the
+    # folder (pages too): nothing deleted or copied
     run_fm "homeid files; press a; press a; press down; press a; press down; press a; press x; press down; press down; press down; \
         press right; press right; press b; press right; press right"
     fhas "$G/Orchard Tactics.gba"; grep -q "files: Deleted\|files: copy" "$mlog" && { echo "FAIL $size: files: RIGHT chose an action"; fail=1; }
@@ -551,6 +552,11 @@ for size in 640x480 1024x768; do
     mkdir -p "$FM/swipe"; for i in 00 01 02 03 04 05 06 07 08 09 10 11; do : > "$FM/swipe/f$i"; done
     run_fm "homeid files; press a; press a; press down; press down; press a; swipe 300 300 300 100; press x"
     fcheck "files: actions for f05:"
+    # LEFT and RIGHT turn a page (5 rows), L and R go to the first and last rows: in swipe, from f00, RIGHT twice is f10,
+    # R f11, LEFT f06, L f00 (X on each: its actions)
+    run_fm "homeid files; press a; press a; press down; press down; press a; press right; press right; press x; press b; press r; press x; \
+        press b; press left; press x; press b; press l; press x"
+    for f in f10 f11 f06 f00; do fcheck "files: actions for $f:"; done
     # a systems.conf of the user's made before Files (no [files]): the tile is there all the same
     awk '/^\[files\]/ { skip = 1; next } /^\[/ { skip = 0 } !skip' "$HERE/../system/rootfs/etc/banana/systems.conf" > "$OUT/systems-nofiles.conf"
     nlog=$OUT/$size-nofiles.log
@@ -604,7 +610,8 @@ PY
         tail -n +$((n + 1)) "$slog" | grep '^banana-ui: press b' | head -n 1 | grep -q 'settings result' &&
             tail -n +$((n + 1)) "$slog" | grep '^banana-ui: press b' | sed -n 2p | grep -q 'settings closed' ||
             { echo "FAIL $size: servers: with one card, B at its root didn't come back to Files' list"; fail=1; }
-        # Files' list: This card, Locked, Test NAS, Add a server, Download options. RIGHT on Test NAS twice, then A: its
+        # Files' list: This card, Locked, Test NAS (Add a server and Download options are START's). RIGHT on Test NAS twice
+        # (a page down: it stays on the last row, and logs in to nothing), then A: its
         # /Games (gba, nds); in nds Alpha Quest.nds and Beta Racer.zip marked, X, Download: the folder by type (roms/nds),
         # Unpack archives (No: the DS plays zips) turned to Yes; START. B on the job's page comes back to nds, B up to
         # /Games, / and Files' list
@@ -622,10 +629,10 @@ PY
             { echo "FAIL $size: servers: Beta Racer.zip wasn't downloaded and unpacked, the zip kept"; fail=1; }
         printf 'target = /Games/nds\tdata:roms/nds\n' | grep -qxFf - "$SV/data/nas.conf" || { echo "FAIL $size: servers: the folder wasn't remembered"; fail=1; }
         # Files' list: Last download, This card, Locked, Test NAS... /Games/gba's Echo.gba, Download: the folder roms/gba;
-        # A on it: Files on roms/gba, X makes Hacks (opened at once), Y chooses it; START. Then the same again: the folder
+        # A on it: Files on roms/gba, X makes Hacks (opened at once, empty), A chooses it; START. Then the same again: the folder
         # is Hacks (last time), and B from it up to the cards and once more gives the choice up
         run_sv "homeid files; press a; press down; press down; press down; press a; wait 1; press a; wait 1; press x; press a; press a; shot sv-pick; \
-            press x; type Hacks; press start; shot sv-pick-new; press y; shot sv-picked; press start; wait 1; wait 300; fetchdone; press b; wait 1; \
+            press x; type Hacks; press start; shot sv-pick-new; press a; shot sv-picked; press start; wait 1; wait 300; fetchdone; press b; wait 1; \
             press x; press a; press a; press b; press b; press b; press b; press b; shot sv-pick-cancelled"
         scheck "files: Made the folder Hacks."
         scheck "files: folder chosen: $SV/roms/gba/Hacks$"
@@ -634,13 +641,16 @@ PY
         [ -f "$SV/roms/gba/Hacks/Echo.gba" ] || { echo "FAIL $size: servers: Echo.gba isn't in the folder chosen"; fail=1; }
         printf 'target = /Games/gba\tdata:roms/gba/Hacks\n' | grep -qxFf - "$SV/data/nas.conf" || { echo "FAIL $size: servers: the folder chosen wasn't remembered"; fail=1; }
         # the second card in (Files' list: Last download, This card, Second SD card, Locked, Test NAS...): Echo.gba again,
-        # its folder Hacks as last time, and the Card row turned to the second card: the same folder there (made by the
+        # its folder Hacks as last time, chosen again in Files by A on its file (Echo.gba: A takes the folder shown, as Y),
+        # and the Card row turned to the second card: the same folder there (made by the
         # download). The page's job done, START closes Files before the runner's word comes: its banner over the menu
         SV_SD2=$OUT/svsd2-$size; rm -rf "$SV_SD2"; mkdir -p "$SV_SD2"
         n=$(wc -l < "$slog")
         run_sv "homeid files; press a; press down; press down; press down; press down; press a; wait 1; press a; wait 1; press x; press a; \
-            press down; press right; shot sv-card; press start; wait 1; wait 300; press start; shot sv-closed; fetchdone; shot sv-banner"
+            press a; press a; press down; press right; shot sv-card; press start; wait 1; wait 300; press start; shot sv-closed; fetchdone; shot sv-banner"
         scheck "1 files from Test NAS into $SV_SD2/roms/gba/Hacks$"
+        tail -n +$((n + 1)) "$slog" | grep -q "files: folder chosen: $SV/roms/gba/Hacks$" ||
+            { echo "FAIL $size: servers: A on a file didn't choose the folder shown"; fail=1; }
         [ -f "$SV_SD2/roms/gba/Hacks/Echo.gba" ] || { echo "FAIL $size: servers: Echo.gba isn't on the second card"; fail=1; }
         tail -n +$((n + 1)) "$slog" | grep -A 3 'press start: settings closed' | grep -q 'notice: Downloaded: Echo.gba' ||
             { echo "FAIL $size: servers: no banner for a job done with Files closed"; fail=1; }
@@ -697,10 +707,11 @@ PY
         else
             echo "SKIP $size: servers: an archive with a password (no 7zz)"
         fi
-        # Download options (the last row): Unpack after a download to Always; Add a server: SFTP, its address typed (qwe),
-        # START saves it; Locked: its password typed (qwe)
-        run_sv "homeid files; press a; press up; press a; press right; shot sv-options; press b; press up; press a; press down; press right; press down; \
-            press a; type qwe; press start; shot sv-edit; press start; wait 1; shot sv-saved"
+        # START on Files' list: its settings (Add a server, Download options). Download options: Unpack after a download to
+        # Always; B back to the settings, on Download options; Add a server: SFTP, its address typed (qwe), START saves it;
+        # Locked: its password typed (qwe)
+        run_sv "homeid files; press a; press start; shot sv-settings; press down; press a; press right; shot sv-options; press b; press up; press a; \
+            press down; press right; press down; press a; type qwe; press start; shot sv-edit; press start; wait 1; shot sv-saved"
         grep -q '^files_unpack = always$' "$SV/data/settings.conf" || { echo "FAIL $size: servers: Download options didn't keep Unpack after a download"; fail=1; }
         grep -q '^host = qwe$' "$SV/data/nas.conf" && grep -q '^protocol = sftp$' "$SV/data/nas.conf" ||
             { echo "FAIL $size: servers: the server added isn't in nas.conf"; fail=1; }
@@ -769,7 +780,7 @@ PY
                 { echo "FAIL $size: servers: the settings' texture cache went past its budget: ${m1##*settings cache }"; fail=1; }
         fi
         for s in sv-one-root sv-one-card sv-one-back sv-card sv-closed sv-banner sv-multi-actions sv-multi sv-multi-back sv-root sv-browse sv-actions sv-target sv-status sv-done sv-root-done sv-pick sv-pick-new sv-picked sv-pick-cancelled sv-copied \
-            sv-banana sv-paste sv-paste-target sv-unpack-action sv-unpack sv-unpacked sv-unpack-back sv-options sv-edit sv-saved sv-password \
+            sv-banana sv-paste sv-paste-target sv-unpack-action sv-unpack sv-unpacked sv-unpack-back sv-settings sv-options sv-edit sv-saved sv-password \
             sv-locked sv-reconnected sv-unreachable sv-job-row sv-progress sv-retry sv-stop sv-stopped sv-part sv-cancel sv-cancelled sv-names; do
             for p in top bot; do
                 f=$OUT/$size-$s-$p.png

@@ -2,13 +2,16 @@
 // archives unpacked, and the file servers' downloaded (as the settings' pages: a list on the bottom panel, what is
 // chosen explained on the top one).
 //   cards     the job in the background (a download, an unpacking), the cards (this one, the second SD card while it
-//             is in), the servers, Add a server, Download options
-//   folder    a folder: A opens, Y marks, X the actions, B up
+//             is in), the servers; START Files' settings
+//   settings  Add a server, Download options (START from the cards, B or START back)
+//   folder    a folder: A opens (a file: the actions), Y marks, X the actions, B up
 //   actions   for what is marked (or the row under the cursor) and for the folder: Paste here (a server's files copied:
 //             downloaded here), Copy, Move, Rename, Delete, Unpack..., New folder, Mark all, Clear the clipboard
 //   clash     a paste whose names are taken: Keep both, Replace, Skip those
 //   job       a copy, a move or a delete at work: its file, its progress; Y stops
-// Choosing a folder for a download or an unpacking (pick) is the same navigation: Y takes the folder shown, X makes one.
+// In every list LEFT and RIGHT turn a page, L and R go to its first and last rows: none of them opens or chooses.
+// Choosing a folder for a download or an unpacking (pick) is the same navigation: Y takes the folder shown (A too, on a
+// file or in an empty folder), X makes one.
 // fileops.h does the work (the job on a thread of its own); the servers, the downloads and the unpacking are
 // settings_servers.cpp's. This file asks and draws.
 #include "settings.h"
@@ -56,7 +59,7 @@ namespace banana
 
 	struct Settings::Files
 	{
-		enum Sub { CARDS, FOLDER, ACTIONS, CLASH, JOB, SUBS };
+		enum Sub { CARDS, SETTINGS, FOLDER, ACTIONS, CLASH, JOB, SUBS };
 		// what each row does
 		enum Kind { R_CARD, R_ENTRY, R_JOB, R_SERVER, R_ADD, R_OPTIONS, A_PASTE, A_COPY, A_MOVE, A_RENAME, A_DELETE, A_UNPACK, A_FOLDER,
 			A_MARKALL, A_UNMARKALL, A_CLEAR, C_KEEP, C_REPLACE, C_SKIP, J_ITEM };
@@ -171,18 +174,28 @@ namespace banana
 			for (size_t i = 0; i < cards.size(); i++) if (!dir.empty() && files::inside(dir, cards[i].root)) focus(R_CARD, (int)i);
 		}
 
-		// the list's cursor on a row of that kind (and index)
+		// the page's cursor on a row of that kind (and index): the cards' list, or the settings'
 		void focus(int kind, int index)
 		{
 			std::vector<Row> r = rows();
 			for (size_t i = 0; i < r.size(); i++)
 				if (r[i].kind == kind && (index < 0 || r[i].index == index))
 				{
-					sel[CARDS] = (int)i;
-					if (sel[CARDS] < top[CARDS]) top[CARDS] = sel[CARDS];
-					if (sel[CARDS] >= top[CARDS] + ROWS) top[CARDS] = sel[CARDS] - ROWS + 1;
+					sel[sub] = (int)i;
+					if (sel[sub] < top[sub]) top[sub] = sel[sub];
+					if (sel[sub] >= top[sub] + ROWS) top[sub] = sel[sub] - ROWS + 1;
 					return;
 				}
+		}
+
+		// Files' settings (START on the cards): Add a server, Download options
+		Result openSettings()
+		{
+			sub = SETTINGS;
+			sel[SETTINGS] = top[SETTINGS] = 0;
+			armed = -1;
+			message.clear();
+			return MOVED;
 		}
 
 		// Banana's own folder on the data card, banana/ (the settings, the servers, the jobs): no download or unpacking goes
@@ -207,6 +220,7 @@ namespace banana
 			if (same) return false;
 			cards = now;
 			if (pending) return true;
+			// (the settings' page has no card on it: it stays, and B goes back to the cards as they are now)
 			if (!dir.empty() && !cardOf(dir))
 			{
 				message = "The second SD card was taken out.";
@@ -214,10 +228,10 @@ namespace banana
 				dir.clear();
 				entries.clear();
 				marked.clear();
-				home();
+				if (sub != SETTINGS) home();
 				return true;
 			}
-			if (sub == CARDS || (cards.size() > 1 && dir.empty())) home();
+			if (sub == CARDS || (sub != SETTINGS && cards.size() > 1 && dir.empty())) home();
 			return true;
 		}
 
@@ -325,10 +339,12 @@ namespace banana
 				}
 				if (pick) break;
 				for (size_t i = 0; i < servers.size(); i++) add(servers[i].title, servers[i].protocol, R_SERVER, (int)i)->glyph = 3;
+				break;
+			}
+			case SETTINGS:
 				add("Add a server", "", R_ADD);
 				add("Download options", "", R_OPTIONS);
 				break;
-			}
 			case FOLDER:
 				// (the words only for the rows on screen and the one chosen: a folder may hold thousands of names, and its
 				// rows are made at every press and every frame)
@@ -418,21 +434,40 @@ namespace banana
 				armed = -1;
 				return MOVED;
 			};
+			// a page up or down (the cursor where it was on the screen, the window at the list's ends), or to the first or
+			// last row (end): no wrap, as they repeat while held
+			auto page = [&](int d, bool end)
+			{
+				if (!n) return NONE;
+				int last = std::max(0, n - ROWS);
+				if (end) { s = d < 0 ? 0 : n - 1; t = d < 0 ? 0 : last; }
+				else { s = std::max(0, std::min(n - 1, s + d * ROWS)); t = std::max(0, std::min(last, t + d * ROWS)); }
+				if (s < t) t = s;
+				if (s >= t + ROWS) t = s - ROWS + 1;
+				armed = -1;
+				return MOVED;
+			};
 			switch (k)
 			{
 			case Key::UP: return moveTo(s - 1);
 			case Key::DOWN: return moveTo(s + 1);
-			case Key::L: if (!n) return NONE; s = std::max(0, s - ROWS); t = std::max(0, t - ROWS); if (s < t) t = s; armed = -1; return MOVED;
-			case Key::R: if (!n) return NONE; s = std::min(n - 1, s + ROWS); if (s >= t + ROWS) t = s - ROWS + 1; armed = -1; return MOVED;
-			case Key::START: ui->close(); return CLOSED;
-			case Key::B: case Key::LEFT: return back();
+			// LEFT and RIGHT turn a page, L and R go to the ends (a folder of thousands of names): none of them opens or
+			// chooses anything. They repeat while held, and RIGHT as A chose Delete's or Replace's second press, or pasted
+			case Key::LEFT: return page(-1, false);
+			case Key::RIGHT: return page(1, false);
+			case Key::L: return page(-1, true);
+			case Key::R: return page(1, true);
+			// START: Files' settings from the cards (not while a folder is chosen: Add a server would leave the download's
+			// page behind), and back from them
+			case Key::START:
+				if (sub == CARDS && !pick) return openSettings();
+				if (sub == SETTINGS) return back();
+				return NONE;
+			case Key::B: return back();
 			case Key::A:
-				// (choosing a folder: A opens one, a file is nothing to choose)
-				if (pick && sub == FOLDER) return cur && entries[cur->index].dir ? activate(*cur) : NONE;
+				// (choosing a folder: A opens one; on a file, or in an empty folder, it takes the folder shown, as Y)
+				if (pick && sub == FOLDER) return cur && entries[cur->index].dir ? activate(*cur) : dir.empty() ? NONE : choose();
 				return cur ? activate(*cur) : (sub == FOLDER ? openActions() : NONE);
-			// RIGHT only goes in (a card, a folder; not a server, which it would log in to again and again): it repeats
-			// while held, and as A it chose Delete's or Replace's second press, or pasted, without a second press of anything
-			case Key::RIGHT: return cur && ((sub == CARDS && cur->kind == R_CARD) || (sub == FOLDER && entries[cur->index].dir)) ? activate(*cur) : NONE;
 			case Key::X:
 				if (sub == FOLDER && pick) return newFolder();
 				return sub == FOLDER ? openActions() : NONE;
@@ -460,6 +495,7 @@ namespace banana
 				if (pick) { pick = NO_PICK; message.clear(); log("no folder chosen"); ui->pickCancelled(); return MOVED; }	// (the download's folder as it was)
 				ui->close();
 				return CLOSED;
+			case SETTINGS: message.clear(); home(); return MOVED;
 			case FOLDER:
 			{
 				message.clear();
@@ -831,7 +867,8 @@ namespace banana
 					files::Space sp;
 					if (files::space(cards[cur->index].root, sp)) t.accent = files::bytes(sp.free) + " free of " + files::bytes(sp.total);
 					t.help = pick ? pickNote + "A opens a card, then its folders: Y takes the folder shown, X makes a new one. B goes back to the download as it was."
-						: "The cards' folders and files: A opens a card. In a folder, Y marks, X copies, moves, renames, deletes or unpacks what is marked, or makes a new folder.";
+						: "The cards' folders and files: A opens a card. In a folder, Y marks, X copies, moves, renames, deletes or unpacks what is marked, or makes a new folder. "
+						"LEFT and RIGHT turn a page, L and R go to the first and last rows. START: Files' settings (a new server, the download options).";
 				}
 				else if (kind == R_JOB)
 				{
@@ -849,9 +886,17 @@ namespace banana
 					t.help = "A opens its folders: Y marks, X downloads what is marked into a folder on a card, or copies it for Paste here in one. Y here changes the server or deletes it.";
 					if (v.plainFtp) t.help += " Plain FTP sends the password unencrypted.";
 				}
-				else if (kind == R_ADD) t.help = "A NAS, or a computer sharing a folder: over SMB (Windows' and macOS's file sharing, most NAS), SFTP (SSH) or FTP. Its files are downloaded onto the cards, archives unpacked.";
-				else if (kind == R_OPTIONS) t.help = "Unpacking after a download, the archive deleted after, an archive's single folder unwrapped, the servers' hidden files.";
 				t.help += clipNote;
+				break;
+			}
+			case SETTINGS:
+			{
+				t.label = "Files' settings";
+				t.title = cur ? cur->label : "";
+				int kind = cur ? cur->kind : -1;
+				if (kind == R_ADD) t.help = "A NAS, or a computer sharing a folder: over SMB (Windows' and macOS's file sharing, most NAS), SFTP (SSH) or FTP. Its files are downloaded onto the cards, archives unpacked.";
+				else if (kind == R_OPTIONS) t.help = "Unpacking after a download, the archive deleted after, an archive's single folder unwrapped, the servers' hidden files.";
+				t.help += " B goes back to the cards and the servers.";
 				break;
 			}
 			case FOLDER:
@@ -862,8 +907,8 @@ namespace banana
 				{
 					t.title = dir.empty() ? "Files" : files::baseName(dir);
 					t.accent = dir.empty() ? "" : "An empty folder";
-					t.help = dir.empty() ? "" : pick ? pickNote + "Y takes this folder, X makes a new one in it. B goes up."
-						: "X makes a new folder here" + std::string(clipEmpty() ? "." : ", or pastes.") + clipNote;
+					t.help = dir.empty() ? "" : pick ? pickNote + "A or Y takes this folder, X makes a new one in it. B goes up."
+						: "A or X makes a new folder here" + std::string(clipEmpty() ? "." : ", or pastes.") + clipNote;
 					break;
 				}
 				t.title = e->name;
@@ -876,10 +921,10 @@ namespace banana
 				}
 				else t.accent = files::bytes((uint64_t)e->size) + (e->mtime > 0 ? " \xc2\xb7 " + date(e->mtime) : "");
 				std::string name = ui->fit(e->name, true, 30, 420) == e->name ? "" : e->name + ". ";
-				t.help = name + (e->dir ? "A opens it, " : "") + "Y marks, X: copy, move, rename, delete, unpack, a new folder. B goes up." + clipNote;
+				t.help = name + (e->dir ? "A opens it, Y marks, X: " : "Y marks, A or X: ") + "copy, move, rename, delete, unpack, a new folder. B goes up." + clipNote;
 				if (parts.count(e->name)) t.help = name + "A download is writing it: it takes its own name once it is whole." + clipNote;
 				if (!marked.empty()) t.help = plural((long long)marked.size(), "item marked", "items marked") + ": X for what to do with them." + clipNote;
-				if (pick) t.help = pickNote + name + (e->dir ? "A opens it. " : "") + "Y takes the folder shown (" + where(dir) + "), X makes a new one in it. B goes up; from the cards, back to the download as it was.";
+				if (pick) t.help = pickNote + name + (e->dir ? "A opens it. Y takes" : "A or Y takes") + " the folder shown (" + where(dir) + "), X makes a new one in it. B goes up; from the cards, back to the download as it was.";
 				break;
 			}
 			case ACTIONS:
@@ -1038,7 +1083,7 @@ namespace banana
 			std::string count = r.empty() ? "" : sub == JOB ? plural((long long)r.size(), "item", "items") : std::to_string(sel[sub] + 1) + " / " + std::to_string(r.size());
 			if (sub == FOLDER && !marked.empty()) count = std::to_string(marked.size()) + " marked";
 			float cw = ui->text(count, true, 17, 0, 0, p.muted, false, 0, true);
-			std::string head = sub == CARDS ? (pick ? "Choose a folder" : "Files") : sub == ACTIONS ? "What to do" : sub == CLASH ? "Already here" :
+			std::string head = sub == CARDS ? (pick ? "Choose a folder" : "Files") : sub == SETTINGS ? "Files' settings" : sub == ACTIONS ? "What to do" : sub == CLASH ? "Already here" :
 				sub == JOB ? t.label : dir.empty() ? "Files" : headerPath(where(dir), 22, 540 - cw);
 			ui->text(ui->fit(head, true, 22, 540 - cw), true, 22, 38, 28, p.ink);
 			ui->text(count, true, 17, 602 - cw, 31, p.muted);
@@ -1081,22 +1126,30 @@ namespace banana
 			switch (sub)
 			{
 			case CARDS:
-				a = !cur ? "" : cur->kind == R_SERVER ? "Connect" : cur->kind == R_ADD ? "Add" : "Open";
+				a = !cur ? "" : cur->kind == R_SERVER ? "Connect" : "Open";
 				if (cur && cur->kind == R_SERVER) cs.push_back({ Key::Y, "Y", "Edit" });
+				if (!pick) cs.push_back({ Key::START, "START", "Settings" });
 				break;
+			case SETTINGS: a = !cur ? "" : cur->kind == R_ADD ? "Add" : "Open"; break;
 			case FOLDER:
+			{
+				bool onDir = cur && entries[cur->index].dir;
 				if (pick)
 				{
-					// (choosing a folder: Y takes the one shown, X makes one in it)
-					if (!dir.empty() && !inBanana(dir)) cs.push_back({ Key::Y, "Y", pick == PICK_UNPACK ? "Unpack here" : "Download here" });
+					// (choosing a folder: Y takes the one shown, X makes one in it. On a file or in an empty folder A takes it
+					// too, and its chip alone says so: two chips of "Download here" beside X's and B's don't fit in the bar)
+					std::string here = dir.empty() || inBanana(dir) ? "" : pick == PICK_UNPACK ? "Unpack here" : "Download here";
+					if (onDir && !here.empty()) cs.push_back({ Key::Y, "Y", here });
 					if (!dir.empty()) cs.push_back({ Key::X, "X", "New folder" });
-					a = cur && entries[cur->index].dir ? "Open" : "";
+					a = onDir ? "Open" : here;
 					break;
 				}
 				if (cur) cs.push_back({ Key::Y, "Y", marked.count(entries[cur->index].name) ? "Unmark" : "Mark" });
 				if (!dir.empty()) cs.push_back({ Key::X, "X", "Actions" });
-				a = cur && entries[cur->index].dir ? "Open" : "";
+				// (A on a file, or in an empty folder, opens the actions as X does)
+				a = onDir ? "Open" : !dir.empty() ? "Actions" : "";
 				break;
+			}
 			case ACTIONS:
 				a = !cur ? "" : cur->kind == A_DELETE && armed == A_DELETE ? "Confirm" : cur->kind == A_PASTE ? "Paste" : cur->kind == A_UNPACK ? "Unpack" :
 					cur->kind == A_RENAME || cur->kind == A_FOLDER ? "Type" : "Choose";
@@ -1155,6 +1208,8 @@ namespace banana
 		fm->servers = serverList();
 		fm->home();
 		fm->message = msg;
+		// (back from a new server's page or the options': Files' settings, where they were opened from)
+		if (focus == "add" || focus == "options") fm->sub = Files::SETTINGS;
 		if (focus == "job") fm->focus(Files::R_JOB, -1);
 		else if (focus == "add") fm->focus(Files::R_ADD, -1);
 		else if (focus == "options") fm->focus(Files::R_OPTIONS, -1);

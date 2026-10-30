@@ -175,13 +175,15 @@ X on the tile opens it, and so does a launch of its entry, by touch or from the 
 `banana/systems.conf` without `[files]` gets it from the library all the same): the cards' folders and files, the
 settings' pages drawn by `src/settings_files.cpp`, the work done by `src/fileops.cpp`; and the file servers', downloaded
 and unpacked (below, Files' servers). Its list, always shown first (B at a card's root comes back to it): the job in
-the background, if there is one, the cards, the servers, Add a server, Download options. This card is the ROM folder's
+the background, if there is one, the cards, the servers; START there opens Files' settings, Add a server and Download
+options (B or START goes back). This card is the ROM folder's
 parent (`/data`), the second SD card `/run/sd2` while it is in (the list of cards follows the mount table, poll's
 POLLPRI on `/proc/self/mounts`, while Files is open); the system's squashfs isn't shown, nor are hidden (`.`) files.
-In a folder A opens, Y marks, X offers Paste here, Copy, Move, Rename, Delete (A twice), Unpack... (the archives among
-what is marked), New folder and Mark all.
-RIGHT only goes in (a card, a folder): held, it repeats, so it never chooses an action, here or anywhere in the
-settings (an action such as Shut down, Update's apply, joining a network, Box art's downloads are A's alone). A name
+In a folder A opens (on a file, or in an empty folder, it offers the actions as X does), Y marks, X offers Paste
+here, Copy, Move, Rename, Delete (A twice), Unpack... (the archives among what is marked), New folder and Mark all.
+In each of Files' lists (and its servers') LEFT and RIGHT turn a page, L and R go to the first and last rows; none of
+them goes in or up (A and B do): held, they repeat, so they never choose an action, here or anywhere in the settings
+(an action such as Shut down, Update's apply, joining a network, Box art's downloads are A's alone). A name
 typed on the keyboard is checked for what exFAT, FAT32 and Windows refuse (`\ / : * ? " < > |`, a trailing dot or
 space, Windows' device names `CON`, `NUL`, `COM1`..., and the card's limit: 255 UTF-16 characters on exFAT and FAT32
 alike); SELECT leaves the keyboard with nothing changed. The card's own folders (`banana`, `bios`, `roms`, `saves`,
@@ -236,18 +238,19 @@ takes the panels back, records the play, and shows the game's library again.
 
 Files' list has the file servers beside the cards: a NAS's or a computer's shares over SMB, SFTP or FTP, read only
 (nothing is written, renamed or deleted on a server, nor copied from one server to another). Their pages are the
-settings' too (`src/settings_servers.cpp`): a server's folders are browsed with Files' keys (A or RIGHT opens a folder,
-Y marks, X: Download, Copy, Mark all; B goes up, out of the start folder back to Files' list, or there when the folder
-above doesn't come: the server unreachable, or B again while it is awaited; RIGHT on a server's row in the list logs in
-to nothing, as it repeats while held). Two ways to where a download goes:
+settings' too (`src/settings_servers.cpp`): a server's folders are browsed with Files' keys (A opens a folder, Y marks,
+X: Download, Copy, Mark all; B goes up, out of the start folder back to Files' list, or there when the folder above
+doesn't come: the server unreachable, or B again while it is awaited; LEFT and RIGHT turn a page, a choice's value on
+its row). Two ways to where a download goes:
 
 - **Download** opens its page with the folder guessed: where this server folder's downloads went last time (kept per
   server folder in `nas.conf`, as `card:folder`, any folder on either card), else the system the files belong to by
   their extension (an archive's suffix looked through; zip and an extension two systems share say nothing), else by
   the server's folder names from the deepest up (a system's id, folder, name, systems.conf's `aliases` and the usual
   names: `src/sysfolders.cpp`), else `roms`. A on its Folder row opens Files' own navigation on that folder (or the
-  nearest one there) to choose another: the cards, their folders, Y takes the folder shown, X makes a new one (opened
-  at once); B from the cards gives the choice up, the page as it was. The Card row takes the same folder on the other
+  nearest one there) to choose another: the cards, their folders, Y takes the folder shown (A too, on a file or in an
+  empty folder; on a folder A opens it), X makes a new one (opened at once); B from the cards gives the choice up, the
+  page as it was. The Card row takes the same folder on the other
   card (made when the download starts).
 - **Copy** puts the marked files in Files' clipboard (the server, its folder, the names): in any folder of a card,
   X, Paste here opens the Download page on that folder. A server's files and the cards' share one clipboard.

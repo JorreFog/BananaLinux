@@ -9,6 +9,7 @@
 //   status    the job: its files, the one in hand's progress; Stop, Resume, Cancel
 //   edit      a server: its protocol, address, login, start folder...
 //   options   unpacking after a download, the archive deleted after, one folder unwrapped, hidden files on the servers
+// As in Files, LEFT and RIGHT turn a page (on a choice's row, its value), L and R go to the first and last rows.
 // banana-fetch does the network and the unpacking: its session (nas::Session) logs in and lists while the pages need it,
 // its runner does the jobs in the background, also while the menu does anything else. This file asks and draws.
 #include "settings.h"
@@ -1218,26 +1219,39 @@ namespace banana
 				if (armed >= 0 && armed != K_TRUST) armed = -1;
 				return MOVED;
 			};
+			// a page up or down (the cursor where it was on the screen, the window at the list's ends), or to the first or
+			// last row (end): no wrap, as they repeat while held (Files' own lists turn their pages the same way)
+			auto page = [&](int d, bool end)
+			{
+				if (!n) return NONE;
+				int last = std::max(0, n - ROWS);
+				if (end) { s = d < 0 ? 0 : n - 1; t = d < 0 ? 0 : last; }
+				else { s = std::max(0, std::min(n - 1, s + d * ROWS)); t = std::max(0, std::min(last, t + d * ROWS)); }
+				if (s < t) t = s;
+				if (s >= t + ROWS) t = s - ROWS + 1;
+				if (armed >= 0 && armed != K_TRUST) armed = -1;
+				return MOVED;
+			};
 			switch (k)
 			{
 			case Key::UP: return moveTo(s - 1);
 			case Key::DOWN: return moveTo(s + 1);
-			case Key::L: if (!n) return NONE; s = std::max(0, s - ROWS); t = std::max(0, t - ROWS); if (s < t) t = s; return MOVED;
-			case Key::R: if (!n) return NONE; s = std::min(n - 1, s + ROWS); if (s >= t + ROWS) t = s - ROWS + 1; return MOVED;
+			case Key::L: return page(-1, true);
+			case Key::R: return page(1, true);
 			case Key::START:
 				if (sub == EDIT) { save(); return MOVED; }
 				if (sub == TARGET) return activate(T_GO, nullptr);
 				ui->close();
 				return CLOSED;
 			case Key::B: return back();
+			// LEFT and RIGHT: a choice's other value, else a page of the list (a server's folder of thousands of games).
+			// Neither goes up or in, nor chooses an action: held, they repeat
 			case Key::LEFT:
 				if (cur && cur->choice) { change(cur->kind, -1); armed = -1; return ACTED; }
-				return back();
+				return page(-1, false);
 			case Key::RIGHT:
-				// (a choice's next value, or into a folder: held, it repeats, so it never chooses an action)
 				if (cur && cur->choice) { change(cur->kind, 1); armed = -1; return ACTED; }
-				if (sub == BROWSE && cur && items[cur->index].dir) return activate(B_ITEM, cur);
-				return NONE;
+				return page(1, false);
 			case Key::A:
 				if (cur) return activate(cur->kind, cur);
 				if (sub == STATUS) return activate(S_ITEM, nullptr);
