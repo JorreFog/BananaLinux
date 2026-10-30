@@ -513,7 +513,8 @@ for size in 640x480 1024x768; do
     "$HERE/tests/fixture.sh" "$FM" >/dev/null
     rm -rf "$SD2"/* 2>/dev/null || true
     N=$FM/roms/nds G=$FM/roms/gba
-    # in gba: X, down to Delete, RIGHT twice (as a held RIGHT repeats); B, RIGHT twice on the file
+    # in gba: X, down to Delete, RIGHT twice (as a held RIGHT repeats: a page down, to Mark all); B, RIGHT twice in the
+    # folder (pages too): nothing deleted or copied
     run_fm "homeid files; press a; press a; press down; press a; press down; press a; press x; press down; press down; press down; \
         press right; press right; press b; press right; press right"
     fhas "$G/Orchard Tactics.gba"; grep -q "files: Deleted\|files: copy" "$mlog" && { echo "FAIL $size: files: RIGHT chose an action"; fail=1; }
@@ -551,6 +552,11 @@ for size in 640x480 1024x768; do
     mkdir -p "$FM/swipe"; for i in 00 01 02 03 04 05 06 07 08 09 10 11; do : > "$FM/swipe/f$i"; done
     run_fm "homeid files; press a; press a; press down; press down; press a; swipe 300 300 300 100; press x"
     fcheck "files: actions for f05:"
+    # LEFT and RIGHT turn a page (5 rows), L and R go to the first and last rows: in swipe, from f00, RIGHT twice is f10,
+    # R f11, LEFT f06, L f00 (X on each: its actions)
+    run_fm "homeid files; press a; press a; press down; press down; press a; press right; press right; press x; press b; press r; press x; \
+        press b; press left; press x; press b; press l; press x"
+    for f in f10 f11 f06 f00; do fcheck "files: actions for $f:"; done
     # a systems.conf of the user's made before Files (no [files]): the tile is there all the same
     awk '/^\[files\]/ { skip = 1; next } /^\[/ { skip = 0 } !skip' "$HERE/../system/rootfs/etc/banana/systems.conf" > "$OUT/systems-nofiles.conf"
     nlog=$OUT/$size-nofiles.log
@@ -566,6 +572,225 @@ for size in 640x480 1024x768; do
         done
     done
     case $SD2 in /dev/shm/*) rm -rf "$SD2" ;; esac
+    # Files' servers (settings_servers.cpp), with banana-fetch itself (built when this computer has its libraries; the
+    # top Makefile's test does it) and its test protocol, "dir", standing in for a server (a folder here; only with
+    # BANANA_FETCH_TEST=1). Headless, the menu runs banana-fetch's runner to the end at once. A server's folder browsed,
+    # two files marked and downloaded into the folder their type says (the zip unpacked, as asked; RIGHT on the server
+    # logs in to nothing); a folder made and chosen through Files' own navigation (and a choice given up on); a file
+    # copied on the server and pasted into a new folder of the card (not into banana/); an archive on the card unpacked
+    # where it is; an option changed, a server added, a locked server's password typed; the connection lost with Wi-Fi
+    # off (the folder back once it connects, B out of it meanwhile); a job's runner at work beside the menu (its
+    # progress, the retry's countdown, X Stop and Y Cancel tapped); a server's folder of long names within the cache
+    if [ -x "$HERE/banana-fetch" ]; then
+        SV=$OUT/sv-$size; slog=$OUT/$size-servers.log; NAS=$OUT/nas-$size; SRUN=$OUT/srun-$size
+        "$HERE/tests/fixture.sh" "$SV" >/dev/null
+        rm -rf "$NAS" "$SRUN"; mkdir -p "$NAS/Games/nds" "$NAS/Games/gba" "$SRUN"; : > "$slog"
+        head -c 70000 /dev/urandom > "$NAS/Games/nds/Alpha Quest.nds"
+        head -c 1000 /dev/zero > "$NAS/Games/gba/Echo.gba"
+        python3 - "$NAS/Games/nds/Beta Racer.zip" "$SV/Delta.zip" <<'PY'
+import sys, zipfile
+with zipfile.ZipFile(sys.argv[1], 'w', zipfile.ZIP_DEFLATED) as z:
+    z.writestr('Beta Racer.nds', b'B' * 50000)
+with zipfile.ZipFile(sys.argv[2], 'w', zipfile.ZIP_DEFLATED) as z:
+    z.writestr('Delta/Delta.gba', b'D' * 30000)
+PY
+        printf '[locked]\nname = Locked\nprotocol = dir\nhost = %s\nuser = u\nremember = no\n\n[testnas]\nname = Test NAS\nprotocol = dir\nhost = %s\nguest = yes\nstart = /Games\n' \
+            "$NAS" "$NAS" > "$SV/data/nas.conf"
+        SV_SD2=""  # (the second card: set only where a scenario wants it)
+        run_sv() { BANANA_SD2="$SV_SD2" BANANA_FETCH="$HERE/banana-fetch" BANANA_FETCH_TEST=1 BANANA_FETCH_TEST_FAST=1 BANANA_FETCH_TEST_PASSWORD=qwe BANANA_RUN="$SRUN" \
+            "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --banana "$HERE/assets/banana" \
+            --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$SV/roms" --data "$SV/data" --script "$1" 2>> "$slog" ||
+            { echo "FAIL $size: banana-ui (servers) exited $?"; fail=1; }; }
+        scheck() { grep -q "$1" "$slog" || { echo "FAIL $size: servers: no '$1'"; fail=1; }; }
+        # (headless, a press the menu takes isn't followed by its update: "wait 1" lets banana-fetch's answer in)
+        # one card: Files opens on its list all the same (the servers are in it), and B at the card's root comes back to
+        # it; B there closes Files
+        n=$(wc -l < "$slog")
+        run_sv "homeid files; press a; shot sv-one-root; press a; shot sv-one-card; press b; shot sv-one-back; press b"
+        tail -n +$((n + 1)) "$slog" | grep '^banana-ui: press b' | head -n 1 | grep -q 'settings result' &&
+            tail -n +$((n + 1)) "$slog" | grep '^banana-ui: press b' | sed -n 2p | grep -q 'settings closed' ||
+            { echo "FAIL $size: servers: with one card, B at its root didn't come back to Files' list"; fail=1; }
+        # Files' list: This card, Locked, Test NAS (Add a server and Download options are START's). RIGHT on Test NAS twice
+        # (a page down: it stays on the last row, and logs in to nothing), then A: its
+        # /Games (gba, nds); in nds Alpha Quest.nds and Beta Racer.zip marked, X, Download: the folder by type (roms/nds),
+        # Unpack archives (No: the DS plays zips) turned to Yes; START. B on the job's page comes back to nds, B up to
+        # /Games, / and Files' list
+        run_sv "homeid files; press a; shot sv-root; press down; press down; press right; press right; press a; wait 1; shot sv-browse; \
+            press down; press a; wait 1; press y; press down; press y; press x; shot sv-actions; press a; press down; press right; shot sv-target; \
+            press start; wait 1; wait 300; shot sv-status; fetchdone; shot sv-done; press b; wait 1; press b; wait 1; press b; wait 1; press b; shot sv-root-done"
+        [ "$(grep -c 'servers: connected to Test NAS' "$slog")" = 1 ] || { echo "FAIL $size: servers: RIGHT on a server logged in"; fail=1; }
+        scheck "servers: connected to Test NAS (DIR), home /"
+        scheck "servers: /Games/nds: 2 entries"
+        scheck "2 files from Test NAS into $SV/roms/nds$"
+        scheck "notice: Downloaded: 2 files from Test NAS"
+        scheck "servers: /: 1 entries"
+        cmp -s "$NAS/Games/nds/Alpha Quest.nds" "$SV/roms/nds/Alpha Quest.nds" || { echo "FAIL $size: servers: Alpha Quest.nds wasn't downloaded"; fail=1; }
+        [ -f "$SV/roms/nds/Beta Racer.nds" ] && cmp -s "$NAS/Games/nds/Beta Racer.zip" "$SV/roms/nds/Beta Racer.zip" ||
+            { echo "FAIL $size: servers: Beta Racer.zip wasn't downloaded and unpacked, the zip kept"; fail=1; }
+        printf 'target = /Games/nds\tdata:roms/nds\n' | grep -qxFf - "$SV/data/nas.conf" || { echo "FAIL $size: servers: the folder wasn't remembered"; fail=1; }
+        # Files' list: Last download, This card, Locked, Test NAS... /Games/gba's Echo.gba, Download: the folder roms/gba;
+        # A on it: Files on roms/gba, X makes Hacks (opened at once, empty), A chooses it; START. Then the same again: the folder
+        # is Hacks (last time), and B from it up to the cards and once more gives the choice up
+        run_sv "homeid files; press a; press down; press down; press down; press a; wait 1; press a; wait 1; press x; press a; press a; shot sv-pick; \
+            press x; type Hacks; press start; shot sv-pick-new; press a; shot sv-picked; press start; wait 1; wait 300; fetchdone; press b; wait 1; \
+            press x; press a; press a; press b; press b; press b; press b; press b; shot sv-pick-cancelled"
+        scheck "files: Made the folder Hacks."
+        scheck "files: folder chosen: $SV/roms/gba/Hacks$"
+        scheck "1 files from Test NAS into $SV/roms/gba/Hacks$"
+        scheck "files: no folder chosen"
+        [ -f "$SV/roms/gba/Hacks/Echo.gba" ] || { echo "FAIL $size: servers: Echo.gba isn't in the folder chosen"; fail=1; }
+        printf 'target = /Games/gba\tdata:roms/gba/Hacks\n' | grep -qxFf - "$SV/data/nas.conf" || { echo "FAIL $size: servers: the folder chosen wasn't remembered"; fail=1; }
+        # the second card in (Files' list: Last download, This card, Second SD card, Locked, Test NAS...): Echo.gba again,
+        # its folder Hacks as last time, chosen again in Files by A on its file (Echo.gba: A takes the folder shown, as Y),
+        # and the Card row turned to the second card: the same folder there (made by the
+        # download). The page's job done, START closes Files before the runner's word comes: its banner over the menu
+        SV_SD2=$OUT/svsd2-$size; rm -rf "$SV_SD2"; mkdir -p "$SV_SD2"
+        n=$(wc -l < "$slog")
+        run_sv "homeid files; press a; press down; press down; press down; press down; press a; wait 1; press a; wait 1; press x; press a; \
+            press a; press a; press down; press right; shot sv-card; press start; wait 1; wait 300; press start; shot sv-closed; fetchdone; shot sv-banner"
+        scheck "1 files from Test NAS into $SV_SD2/roms/gba/Hacks$"
+        tail -n +$((n + 1)) "$slog" | grep -q "files: folder chosen: $SV/roms/gba/Hacks$" ||
+            { echo "FAIL $size: servers: A on a file didn't choose the folder shown"; fail=1; }
+        [ -f "$SV_SD2/roms/gba/Hacks/Echo.gba" ] || { echo "FAIL $size: servers: Echo.gba isn't on the second card"; fail=1; }
+        tail -n +$((n + 1)) "$slog" | grep -A 3 'press start: settings closed' | grep -q 'notice: Downloaded: Echo.gba' ||
+            { echo "FAIL $size: servers: no banner for a job done with Files closed"; fail=1; }
+        cmp -s "$OUT/$size-sv-closed-top.png" "$OUT/$size-sv-banner-top.png" && { echo "FAIL $size: servers: the banner isn't drawn over the menu"; fail=1; }
+        printf 'target = /Games/gba\tsd2:roms/gba/Hacks\n' | grep -qxFf - "$SV/data/nas.conf" || { echo "FAIL $size: servers: the second card's folder wasn't remembered"; fail=1; }
+        SV_SD2=""
+        # Alpha Quest.nds copied (X, Copy) on the server; up and out to This card: Paste here in its banana folder (here
+        # data) refused; on roms, X, New folder Downloads; in it, X, Paste here: the Download page on it, START
+        run_sv "homeid files; press a; press down; press down; press down; press a; wait 1; press down; press a; wait 1; press a; press down; press a; \
+            shot sv-copied; press b; wait 1; press b; wait 1; press b; wait 1; press up; press up; press a; press a; press x; press a; shot sv-banana; \
+            press b; press down; press x; press down; press down; press a; type Downloads; press start; press a; press x; shot sv-paste; press a; \
+            shot sv-paste-target; press start; wait 1; wait 300; fetchdone"
+        scheck "servers: copy 1 from Test NAS /Games/nds"
+        scheck "files: paste refused: Not into banana/"
+        scheck "files: download 1 from Test NAS into $SV/Downloads$"
+        cmp -s "$NAS/Games/nds/Alpha Quest.nds" "$SV/Downloads/Alpha Quest.nds" || { echo "FAIL $size: servers: the paste didn't download into Downloads"; fail=1; }
+        ls "$SV/data" | grep -q 'Alpha' && { echo "FAIL $size: servers: something went into banana/"; fail=1; }
+        # This card's root (data, Downloads, roms, Delta.zip): Delta.zip, X, Unpack...: the folder it is in, Delete the
+        # archive after (Options' Ask) to Yes, START: its one folder unwrapped; B back to the card's folder, without it
+        run_sv "homeid files; press a; press down; press a; press down; press down; press down; press x; press down; press down; press down; press down; \
+            shot sv-unpack-action; press a; shot sv-unpack; press down; press right; press start; wait 1; wait 300; fetchdone; shot sv-unpacked; press b; shot sv-unpack-back"
+        scheck "1 archive unpacked into $SV$"
+        scheck "notice: Unpacked Delta.zip"
+        [ "$(cat "$SV/Delta.gba" 2>/dev/null | wc -c)" = 30000 ] || { echo "FAIL $size: servers: Delta.zip wasn't unpacked on the card"; fail=1; }
+        [ -e "$SV/Delta.zip" ] && { echo "FAIL $size: servers: Delta.zip wasn't deleted, as asked"; fail=1; }
+        # two archives marked among other files (Packs: Notes.txt, One.zip, Two.zip): Unpack... takes the archives, one job
+        mkdir -p "$SV/Packs"; echo notes > "$SV/Packs/Notes.txt"
+        python3 - "$SV/Packs" <<'PY'
+import sys, zipfile
+for n in ('One', 'Two'):
+    with zipfile.ZipFile(sys.argv[1] + '/' + n + '.zip', 'w', zipfile.ZIP_DEFLATED) as z:
+        z.writestr(n + '.gba', n[0].encode() * 1000)
+PY
+        run_sv "homeid files; press a; press down; press a; press down; press down; press a; press down; press y; press down; press y; press x; \
+            shot sv-multi-actions; press down; press down; press down; press a; shot sv-multi; press start; wait 1; wait 300; fetchdone; press b; shot sv-multi-back"
+        scheck "files: actions for 2 items: Copy, Move, Delete, Unpack..., New folder, Mark all"
+        scheck "2 archives unpacked into $SV/Packs$"
+        scheck "notice: Unpacked 2 archives"
+        [ "$(cat "$SV/Packs/One.gba" "$SV/Packs/Two.gba" 2>/dev/null | wc -c)" = 2000 ] || { echo "FAIL $size: servers: the two archives weren't unpacked"; fail=1; }
+        # an archive with a password (7zz's): Unpack... looks into it, the keyboard asks; a wrong one asks again; the right
+        # one unpacks it. Neither is in the log
+        if command -v 7zz >/dev/null; then
+            cp "$HERE/tests/archives/encrypted.7z" "$SV/Packs/"
+            run_sv "homeid files; press a; press down; press a; press down; press down; press a; press x; press down; press down; press down; press down; \
+                press a; press start; wait 1; shot sv-arcpw; type wrong; press start; wait 1; shot sv-arcpw-wrong; type Secret123; press start; wait 1; \
+                wait 300; fetchdone; shot sv-arcpw-done"
+            scheck "servers: inspect: password: "
+            scheck "servers: inspect: wrong_password: "
+            scheck "1 archive unpacked into $SV/Packs$"
+            [ "$(cat "$SV/Packs/game.nds" 2>/dev/null | wc -c)" = 32768 ] || { echo "FAIL $size: servers: the archive with a password wasn't unpacked"; fail=1; }
+            grep -q 'Secret123\|wrong$' "$slog" && { echo "FAIL $size: servers: a password is in the log"; fail=1; }
+            ls "$SRUN"/*.apw >/dev/null 2>&1 && { echo "FAIL $size: servers: the archive's password file stayed in /run"; fail=1; }
+            for s in sv-arcpw sv-arcpw-wrong sv-arcpw-done; do for p in top bot; do [ -s "$OUT/$size-$s-$p.png" ] || { echo "FAIL $size: no $s"; fail=1; }; done; done
+        else
+            echo "SKIP $size: servers: an archive with a password (no 7zz)"
+        fi
+        # START on Files' list: its settings (Add a server, Download options). Download options: Unpack after a download to
+        # Always; B back to the settings, on Download options; Add a server: SFTP, its address typed (qwe), START saves it;
+        # Locked: its password typed (qwe)
+        run_sv "homeid files; press a; press start; shot sv-settings; press down; press a; press right; shot sv-options; press b; press up; press a; \
+            press down; press right; press down; press a; type qwe; press start; shot sv-edit; press start; wait 1; shot sv-saved"
+        grep -q '^files_unpack = always$' "$SV/data/settings.conf" || { echo "FAIL $size: servers: Download options didn't keep Unpack after a download"; fail=1; }
+        grep -q '^host = qwe$' "$SV/data/nas.conf" && grep -q '^protocol = sftp$' "$SV/data/nas.conf" ||
+            { echo "FAIL $size: servers: the server added isn't in nas.conf"; fail=1; }
+        scheck "servers: server .* saved"
+        run_sv "homeid files; press a; press down; press down; press a; shot sv-password; type qwe; press start; wait 1; shot sv-locked"
+        scheck "servers: connected to Locked (DIR), home /"
+        # the lid shut in a server's folder: Wi-Fi unloaded, back only a while after the lid opens. In nds the connection
+        # is gone (the 3rd listing) and connecting again fails (the 2nd connection): SELECT reads the folder in vain, then
+        # B connects again by itself and goes up to /Games. And with B first: Files' list, not nds for good
+        export BANANA_FETCH_TEST_DROPLIST=3 BANANA_FETCH_TEST_OFFLINE=2
+        n=$(wc -l < "$slog")
+        run_sv "homeid files; press a; press down; press down; press down; press down; press a; wait 1; press down; press a; wait 1; \
+            press select; wait 1; press b; wait 1; shot sv-reconnected"
+        tail -n +$((n + 1)) "$slog" | grep -A 4 "servers: list: network: " | grep -q "servers: /Games: 2 entries" ||
+            { echo "FAIL $size: servers: the folder didn't come back after connecting again failed"; fail=1; }
+        n=$(wc -l < "$slog")
+        run_sv "homeid files; press a; press down; press down; press down; press down; press a; wait 1; press down; press a; wait 1; \
+            press b; wait 1; shot sv-unreachable; press b"
+        tail -n +$((n + 1)) "$slog" | grep -A 2 "servers: list: network: " | grep -q "press b: settings closed" ||
+            { echo "FAIL $size: servers: B didn't get out of the folder of a server that can't be reached"; fail=1; }
+        unset BANANA_FETCH_TEST_DROPLIST BANANA_FETCH_TEST_OFFLINE
+        # a job's runner at work beside the menu (started here, a piece every 100 ms, the connection cut at 1 MB): its row
+        # first in Files' list; the job's page while it downloads (its two bars) and while it waits to try again; X Stop
+        # tapped twice stops it, its part and its job kept (the part shown as downloading, nothing to do with it); then Y
+        # Cancel tapped twice deletes both. ("sleep": real time, for the runner)
+        head -c 3000000 /dev/urandom > "$NAS/Games/nds/Gamma Big.nds"
+        JOB=$SV/data/downloads/20990101-000000-1.job
+        printf 'title = Gamma Big.nds\nserver = testnas\nunpack = no\ntemp_root = %s\nget\t3000000\t/Games/nds/Gamma Big.nds\t%s\n' "$SV" "$SV/roms/nds/Gamma Big.nds" > "$JOB"
+        BANANA_DATA="$SV/data" BANANA_RUN="$SRUN" BANANA_FETCH_TEST=1 BANANA_FETCH_TEST_DELAY=100 BANANA_FETCH_TEST_CUT=1000000 "$HERE/banana-fetch" run 2>> "$slog" & rp=$!
+        upto() { i=0; until grep -q "^$1 " "$SRUN/fetch/status" 2>/dev/null || [ $i -ge 100 ]; do sleep 0.1; i=$((i + 1)); done; }
+        upto get
+        run_sv "homeid files; press a; shot sv-job-row; press a; shot sv-progress"
+        upto retry
+        run_sv "homeid files; press a; press a; shot sv-retry; touch 1 180 442; shot sv-stop; touch 1 180 442; sleep 1500; wait 600; shot sv-stopped"
+        wait $rp || true
+        grep -q '^stopped' "$SRUN/fetch/status" && [ -f "$JOB" ] && [ -s "$SV/roms/nds/Gamma Big.nds.part" ] ||
+            { echo "FAIL $size: servers: X Stop (tapped) didn't stop the download, its part and job kept: $(cat "$SRUN/fetch/status")"; fail=1; }
+        # (This card: data, Downloads, Packs, roms; roms: gb, gba, nds; nds: media, Alpha Quest.nds, Banana Kart DS.nds,
+        # Beta Racer.nds, Beta Racer.zip, Gamma Big.nds.part)
+        run_sv "homeid files; press a; press down; press a; press down; press down; press down; press a; press down; press down; press a; \
+            press down; press down; press down; press down; press down; shot sv-part; press x"
+        scheck "files: actions for This card/roms/nds: New folder, Mark all"
+        run_sv "homeid files; press a; press a; touch 1 180 442; shot sv-cancel; touch 1 180 442; wait 1; shot sv-cancelled"
+        scheck "servers: $JOB cancelled"
+        [ ! -e "$JOB" ] && [ ! -e "$SV/roms/nds/Gamma Big.nds.part" ] || { echo "FAIL $size: servers: Y Cancel (tapped) left the job or its part"; fail=1; }
+        cmp -s "$OUT/$size-sv-progress-top.png" "$OUT/$size-sv-retry-top.png" && { echo "FAIL $size: servers: the retry's countdown looks like the progress"; fail=1; }
+        # a server's folder of long names scrolled through (DOWN, then a frame, as the device draws it), on a card of its
+        # own: the settings' texture cache keeps to its budget, and banana-ui's memory with it
+        NAMES=$OUT/names-$size; rm -rf "$NAMES"; mkdir -p "$NAMES/nas" "$NAMES/data" "$NAMES/run" "$NAMES/roms"
+        i=1; while [ $i -le 200 ]; do : > "$NAMES/nas/$i - Mystery Dungeon - Explorers of the Long Name, Special Edition (Europe) (En,Fr,De,Es,It) (Rev 1).nds"; i=$((i + 1)); done
+        printf '[names]\nname = Names\nprotocol = dir\nhost = %s\nguest = yes\n' "$NAMES/nas" > "$NAMES/data/nas.conf"
+        S=""; i=1; while [ $i -lt 200 ]; do S="$S press down; frame;"; i=$((i + 1)); done
+        n=$(wc -l < "$slog")
+        BANANA_FETCH="$HERE/banana-fetch" BANANA_FETCH_TEST=1 BANANA_RUN="$NAMES/run" "$HERE/banana-ui" --headless "$OUT/$size-" --size $size \
+            --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$SV/roms" --data "$NAMES/data" \
+            --script "homeid files; press a; press down; press a; wait 1; frame; mem; $S mem; shot sv-names" 2>> "$slog" ||
+            { echo "FAIL $size: banana-ui (a server's folder of long names) exited $?"; fail=1; }
+        scheck "servers: /: 200 entries"
+        m0=$(tail -n +$((n + 1)) "$slog" | grep 'mem: RSS' | head -n 1); m1=$(tail -n +$((n + 1)) "$slog" | grep 'mem: RSS' | tail -n 1)
+        if [ -z "$m0" ] || [ "$m0" = "$m1" ]; then echo "FAIL $size: servers: no mem lines from the folder of long names"; fail=1
+        else
+            kb() { echo "$1" | sed 's/.*RSS[^0-9]*\([0-9]*\) kB.*/\1/'; }
+            grown=$(( ($(kb "$m1") - $(kb "$m0")) / 1024 ))
+            [ $grown -lt 64 ] || { echo "FAIL $size: servers: 200 long names scrolled through took $grown MB more"; fail=1; }
+            echo "$m1" | awk '{ sub(/.*settings cache /, ""); exit !($3 <= $7) }' ||
+                { echo "FAIL $size: servers: the settings' texture cache went past its budget: ${m1##*settings cache }"; fail=1; }
+        fi
+        for s in sv-one-root sv-one-card sv-one-back sv-card sv-closed sv-banner sv-multi-actions sv-multi sv-multi-back sv-root sv-browse sv-actions sv-target sv-status sv-done sv-root-done sv-pick sv-pick-new sv-picked sv-pick-cancelled sv-copied \
+            sv-banana sv-paste sv-paste-target sv-unpack-action sv-unpack sv-unpacked sv-unpack-back sv-settings sv-options sv-edit sv-saved sv-password \
+            sv-locked sv-reconnected sv-unreachable sv-job-row sv-progress sv-retry sv-stop sv-stopped sv-part sv-cancel sv-cancelled sv-names; do
+            for p in top bot; do
+                f=$OUT/$size-$s-$p.png
+                [ -s "$f" ] || { echo "FAIL $size: no $f"; fail=1; continue; }
+                [ "$(convert "$f" -format '%[fx:standard_deviation>0.01]' info:)" = 1 ] || { echo "FAIL $size: $f is blank"; fail=1; }
+            done
+        done
+    else
+        echo "SKIP $size: Files' servers (no ui/banana-fetch: make -C ui banana-fetch, with libcurl, libssh2 and OpenSSL's dev packages)"
+    fi
     # Bshare's pages (settings_bshare.cpp) against a stand-in helper (its arguments noted, a send's state written): a
     # device's request accepted into a folder chosen on the card (Location), a game in roms/gb (the first folder) sent
     # to a device seen, Options' Receive when closed turned to Ask

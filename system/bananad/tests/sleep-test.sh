@@ -356,6 +356,48 @@ wake
 kill $JOB 2>/dev/null || true
 stop
 
+echo "15. a download of Files' (banana-fetch's runner in transfer.pid): the lid shut makes it dark, the sleep waits for it"
+asleep_in() { for i in $(seq $(($1 * 10))); do [ "$(cat /proc/$BD/wchan 2>/dev/null)" = wait_for_partner ] && return 0; sleep 0.1; done; return 1; }
+setsid sleep 600 & DL=$!; sleep 0.1; echo $DL > /run/banana/transfer.pid
+start
+echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1; sleep 1
+asleep 2>/dev/null && { bad "it suspended during the download"; wake; } || ok "no suspend during the download"
+[ "$(cat /sys/class/backlight/backlight0/bl_power)" = 4 ] && ok "panels dark" || bad "backlight bl_power $(cat /sys/class/backlight/backlight0/bl_power)"
+grep -q 'lid closed during a download' /data/banana/logs/sleep.log && ok "logged" || bad "not logged"
+kill $DL; wait $DL 2>/dev/null || true      # the download done: asleep within the 5 s look
+asleep_in 9 && ok "asleep once the download is done" || bad "awake after the download"
+grep -q 'sleep (lid closed, the download done)' /data/banana/logs/sleep.log && ok "logged why" || bad "the sleep's reason not logged"
+echo 0 > /run/test/lid; wake
+stop
+echo "   ...and the idle sleep waits for it too"
+setsid sleep 600 & DL=$!; sleep 0.1; echo $DL > /run/banana/transfer.pid
+start "autosleep_minutes = 0.03" "dim_minutes = 0"     # 1.8 s
+sleep 2.5
+asleep 2>/dev/null && { bad "it slept for idleness during a download"; wake; } || ok "no idle sleep during a download"
+kill $DL; wait $DL 2>/dev/null || true
+asleep_in 9 && ok "asleep for idleness once it is done" || bad "no idle sleep after the download"
+wake
+stop
+echo "   ...and with a game running, the lid sleeps as ever"
+setsid sleep 600 & DL=$!; sleep 0.1; echo $DL > /run/banana/transfer.pid
+setsid sleep 600 & GAME=$!; sleep 0.1; echo $GAME > /run/banana/game.pid
+start
+echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
+asleep && ok "suspended on the lid with a game running (the download is paused)" || bad "no suspend with a game running"
+echo 0 > /run/test/lid; wake
+kill $DL; wait $DL 2>/dev/null || true
+rm -f /run/banana/game.pid /run/banana/transfer.pid
+stop
+echo "   ...and a runner left stopped (banana-ui went away during a game) holds nothing: the lid sleeps"
+setsid sleep 600 & DL=$!; sleep 0.1; kill -STOP $DL; echo $DL > /run/banana/transfer.pid
+start
+echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
+asleep && ok "suspended on the lid with the runner stopped" || bad "a stopped runner held the sleep"
+echo 0 > /run/test/lid; wake
+kill -CONT $DL; kill $DL; wait $DL 2>/dev/null || true
+rm -f /run/banana/transfer.pid
+stop
+
 kill $UI $GAME 2>/dev/null || true
 echo "sleep test: $pass passed, $fail failed"
 [ $fail = 0 ]

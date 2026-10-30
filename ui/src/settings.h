@@ -10,6 +10,7 @@
 //   /data/drastic/config/drastic.cfg  the DS's 3D resolution
 //   /sys/class/backlight + /data/banana/backlight   brightness
 // and the shelf's Files (settings_files.cpp): the cards' folders, copied, moved, renamed and deleted through fileops.h
+// and its servers (settings_servers.cpp): banana/nas.conf through banana-fetch, its jobs in banana/downloads
 #include "../rnds/RndsUI.h"
 #include "input.h"
 #include "wifi.h"
@@ -53,6 +54,10 @@ namespace banana
 		// they are done at once)
 		bool filesAsync = false;
 		bool filesWorking() const;	// a Files job still at work on its thread (the headless test waits for it)
+		// a roms folder on the second card not offered to the library yet (a download or an unpacking made it): offered
+		void offerSd2Roms();
+		// banana-fetch's session (Files' servers) stopped: when Settings closes, and the menu at its end
+		void closeServers();
 		// a card came or went (the host saw the mount table change): Files' cards again; true when that changed the page
 		bool cardsChanged();
 		// a line for the log (a Files job's outcome, an action refused): the host's logf
@@ -195,7 +200,7 @@ namespace banana
 		std::string about, wifiInfo, ip;
 
 		// the Wi-Fi pages: the networks around, and the keyboard for a password (settings-wifi.cpp)
-		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS, PICKGAMES, FILES, BSHARE } page = LIST;
+		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS, PICKGAMES, FILES, BSHARE, SERVERS } page = LIST;
 		// Home server > Choose games: the server's games (banana-sync games), a system at a time, ticked to sync
 		struct PickGame { std::string sys, key, title; long long bytes = 0; bool on = false, there = false; };
 		std::vector<PickGame> pickGames;
@@ -259,7 +264,7 @@ namespace banana
 		void renderGame();
 		// the keyboard types a text for a purpose: a Wi-Fi password, or an account's name or password
 		// (banana/accounts.conf: RetroAchievements for DraStic and RetroArch, ScreenScraper for the scraper to come)
-		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SMB_USER, ENTRY_SMB_PASS, ENTRY_GAME_NAME, ENTRY_GAME_SORT, ENTRY_ART_SEARCH, ENTRY_DS_NAME, ENTRY_SEARCH, ENTRY_HS_ADDR, ENTRY_HS_CODE, ENTRY_BETA_PASS, ENTRY_FOLDER, ENTRY_RENAME, ENTRY_BSHARE_PIN, ENTRY_BSHARE_MYPIN } entry = ENTRY_WIFI;
+		enum Entry { ENTRY_WIFI, ENTRY_RA_USER, ENTRY_RA_PASS, ENTRY_SS_USER, ENTRY_SS_PASS, ENTRY_SMB_USER, ENTRY_SMB_PASS, ENTRY_GAME_NAME, ENTRY_GAME_SORT, ENTRY_ART_SEARCH, ENTRY_DS_NAME, ENTRY_SEARCH, ENTRY_HS_ADDR, ENTRY_HS_CODE, ENTRY_BETA_PASS, ENTRY_FOLDER, ENTRY_RENAME, ENTRY_BSHARE_PIN, ENTRY_BSHARE_MYPIN, ENTRY_SERVER } entry = ENTRY_WIFI;
 		std::string entryTitle, entrySub;
 		std::string entryHelp;		// what the keyboard is for, when the purpose says it itself (Files' names, Bshare's PINs)
 		size_t entryMax = 63;		// the longest text (Wi-Fi's 63; a path or an address is longer)
@@ -552,6 +557,44 @@ namespace banana
 		int filesWake(double nowMs) const;
 		Result finishFilesEntry();
 		void sd2Scan();	// the sd2 script again (Files: a roms folder made on the second card is offered to the library)
+		// Files and its servers' pages (settings_servers.cpp), each other's ways in. Files lists the servers beside the
+		// cards and chooses a folder by its own navigation; a server's files copied wait in Files' clipboard
+		struct RemoteClip
+		{
+			struct Item { std::string name; bool dir = false, link = false; int64_t size = -1; };
+			std::string server, title, dir;	// the server's id and name, the folder the items are in
+			std::vector<Item> items;
+		};
+		struct ServerInfo { std::string id, title, protocol, address; bool plainFtp = false; };
+		void filesShow(const std::string& dir, const std::string& focus, bool actions);	// Files on a folder (its actions open)
+		void filesRoot(const std::string& focus, const std::string& message);	// Files' list: "job", "server:<id>"; its settings: "add", "options"
+		void pickFolder(int purpose, const std::string& start, const std::string& what);	// 1 a download's folder, 2 an unpacking's
+		void setRemoteClip(const RemoteClip& c);
+		// Files' servers (settings_servers.cpp): a server's folders, a download's or an unpacking's page, the job in the
+		// background, a server's editor, the options; banana-fetch does the network and the unpacking (nas.h)
+		struct Servers;
+		std::shared_ptr<Servers> srv;
+		Servers& servers();
+		void serversRefresh();			// the servers' list and the job read again (Files opened)
+		std::vector<ServerInfo> serverList();
+		// the job in the background, for Files' list: false when there is none
+		bool fetchJobRow(std::string& label, std::string& value, std::string& title, std::string& state, bool& warn);
+		std::set<std::string> fetchParts();	// the .part files the job at work still writes (Files leaves them alone)
+		void openServer(const std::string& id);
+		void editServer(const std::string& id);	// "" a new one
+		void openServerOptions();
+		void openFetchJob();
+		std::string pasteDownload(const RemoteClip& c, const std::string& dir);	// "" when its page opened, else why not
+		void unpackArchives(const std::vector<std::string>& archives, const std::string& dir);
+		void folderPicked(const std::string& dir);
+		void pickCancelled();
+		bool serversCardsChanged();
+		Result pressServers(Key k);
+		Result touchServers(float cx, float cy);
+		void renderServers();
+		bool updateServers(double nowMs);
+		int serversWake(double nowMs) const;
+		Result finishServersEntry();
 		// Bshare (settings_bshare.cpp): its pages, reading banana-bshare's files in /run/banana
 		struct Bshare;
 		std::shared_ptr<Bshare> bs;

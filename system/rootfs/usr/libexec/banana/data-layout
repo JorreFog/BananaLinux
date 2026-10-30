@@ -5,7 +5,7 @@ D=/data
 # makes it again at every menu start)
 SYSTEMS=/etc/banana/systems.conf
 /usr/libexec/banana/systems-merge 2>/dev/null && [ -s /run/banana/systems.conf ] && SYSTEMS=/run/banana/systems.conf
-mkdir -p $D/banana/logs $D/banana/updates $D/bios $D/saves $D/states  # (banana/updates: where the release notes say to put an update)
+mkdir -p $D/banana/logs $D/banana/updates $D/banana/downloads $D/bios $D/saves $D/states  # (banana/updates: where the release notes say to put an update; banana/downloads: Files' downloads and unpackings, the jobs)
 # the Store's cache, its apps, and their entries (the Apps shelf's folder: it must be there for the menu to watch it)
 mkdir -p $D/store/data $D/store/apps $D/store/tiles
 # every system's folder (its "folder", or its id; not an app's absolute one, which ships with the system)

@@ -45,9 +45,10 @@ up)
 	store dos attributes = no
 	hide dot files = yes
 	; secrets stay off the network (neither listed nor opened, in any folder; a card in a computer still has them):
-	; the SSH host key, the RetroAchievements account and tokens, the Wi-Fi networks' passwords
+	; the SSH host key, the RetroAchievements account and tokens, the Wi-Fi networks' passwords, Files' servers' (nas.conf,
+	; its key nas.key)
 	; (a leading * because ksmbd matches an open against the whole path, a listing against the bare name)
-	veto files = /*host_key_ed25519/*accounts.conf/*ra.token/*wifi.conf/
+	veto files = /*host_key_ed25519/*accounts.conf/*ra.token/*wifi.conf/*nas.conf/*nas.key/
 CONF
     # the second SD card while it's in (the RG DS Plus: sd2 restarts the share when it goes in or out), as \\<address>\sd2
     if grep -q ' /run/sd2 ' /proc/mounts; then

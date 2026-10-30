@@ -8,19 +8,23 @@ CXXFLAGS ?= -O2
 override CXXFLAGS += -std=c++17 -Wall -Wno-unused-function
 override LDLIBS += -lpthread
 
-SRC = src/main.cpp src/lang.cpp src/soft.cpp src/kms.cpp src/colors.cpp src/input.cpp src/library.cpp src/sound.cpp src/splash.cpp src/arrival.cpp src/settings.cpp src/settings_defaults.cpp src/wifi.cpp src/bluetooth.cpp src/zip.cpp src/carts.cpp src/cart3d.cpp src/theme.cpp src/pokemon.cpp src/pokemap.cpp src/gamecomp.cpp src/json.cpp src/expr.cpp src/layout.cpp src/fileops.cpp src/settings_files.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp
+SRC = src/main.cpp src/lang.cpp src/soft.cpp src/kms.cpp src/colors.cpp src/input.cpp src/library.cpp src/sound.cpp src/splash.cpp src/arrival.cpp src/settings.cpp src/settings_defaults.cpp src/wifi.cpp src/bluetooth.cpp src/zip.cpp src/zipdir.cpp src/carts.cpp src/cart3d.cpp src/theme.cpp src/pokemon.cpp src/pokemap.cpp src/gamecomp.cpp src/json.cpp src/expr.cpp src/layout.cpp src/fileops.cpp src/settings_files.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp
 # (Bshare's pages: its helper, banana-bshare, does the network)
 SRC += src/settings_bshare.cpp
+# (Files' servers: their pages, and the bits of banana-fetch they share with it; no network in banana-ui itself)
+SRC += src/settings_servers.cpp src/nas.cpp src/sysfolders.cpp src/fetch/names.cpp src/fetch/jobfile.cpp src/fetch/servers.cpp
 PKGS = freetype2 libdrm zlib
+UI_FLAGS =
 ifeq ($(ALSA),1)
 PKGS += alsa
-override CXXFLAGS += -DBANANA_ALSA
+UI_FLAGS += -DBANANA_ALSA
 endif
-override CXXFLAGS += $(shell $(PKG_CONFIG) --cflags $(PKGS))
-override LDLIBS += $(shell $(PKG_CONFIG) --libs $(PKGS))
+# (banana-ui's own: asked for when it is built, so its helpers need none of its libraries)
+UI_FLAGS += $(shell $(PKG_CONFIG) --cflags $(PKGS))
+UI_LIBS = $(shell $(PKG_CONFIG) --libs $(PKGS))
 
-banana-ui: $(SRC) $(wildcard src/*.h rnds/*.h)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $(SRC) $(LDLIBS)
+banana-ui: $(SRC) $(wildcard src/*.h src/fetch/*.h rnds/*.h)
+	$(CXX) $(CXXFLAGS) $(UI_FLAGS) $(LDFLAGS) -o $@ $(SRC) $(UI_LIBS) $(LDLIBS)
 
 # box art, title screens, genres and years from libretro's free collections (Settings and the first-time setup)
 banana-scrape: src/scrape.cpp
@@ -36,6 +40,21 @@ banana-bshare: src/bshare.cpp src/json.cpp src/json.h
 	$(CXX) $(CXXFLAGS) $(shell $(PKG_CONFIG) --cflags libcurl libcrypto) $(LDFLAGS) -o $@ src/bshare.cpp src/json.cpp \
 		$(shell $(PKG_CONFIG) --libs libcurl libcrypto) -lpthread
 
+# Files' servers: SMB, SFTP and FTP, the downloads and the unpacking, run by banana-ui while there is work
+# (settings_servers.cpp). SMB=0 builds it without libsmb2, for a computer that has none.
+SMB ?= 1
+FETCH_SRC = $(wildcard src/fetch/*.cpp) src/zipdir.cpp
+FETCH_PKGS = libcurl libssh2 libssl libcrypto zlib
+ifeq ($(SMB),1)
+FETCH_PKGS += libsmb2
+else
+FETCH_SRC := $(filter-out src/fetch/remote_smb.cpp,$(FETCH_SRC))
+FETCH_FLAGS = -DFETCH_NO_SMB
+endif
+banana-fetch: $(FETCH_SRC) $(wildcard src/fetch/*.h) src/zipdir.h
+	$(CXX) $(CXXFLAGS) $(FETCH_FLAGS) $(shell $(PKG_CONFIG) --cflags $(FETCH_PKGS)) $(LDFLAGS) -o $@ $(FETCH_SRC) \
+		$(shell $(PKG_CONFIG) --libs $(FETCH_PKGS)) -lpthread
+
 # the game panel's DRM lease for RetroArch (preloaded by run-retroarch)
 CC ?= gcc
 banana-leaseshim.so: src/leaseshim.c
@@ -45,12 +64,12 @@ host:
 	$(MAKE) ALSA=0 banana-ui
 
 # the Pokémon companion's decoder on data made from the documented layouts (tests/run.sh runs it)
-tests/pokemon-test: tests/pokemon-test.cpp src/pokemon.cpp src/pokemap.cpp src/pokemon.h src/zip.cpp
-	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/pokemon-test.cpp src/pokemon.cpp src/pokemap.cpp src/zip.cpp -lz -lpthread
+tests/pokemon-test: tests/pokemon-test.cpp src/pokemon.cpp src/pokemap.cpp src/pokemon.h src/zip.cpp src/zipdir.cpp
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/pokemon-test.cpp src/pokemon.cpp src/pokemap.cpp src/zip.cpp src/zipdir.cpp -lz -lpthread
 
 # the game companion's engine (tests/run.sh runs it)
-tests/gamecomp-test: tests/gamecomp-test.cpp src/gamecomp.cpp src/gamecomp.h src/json.cpp src/expr.cpp src/zip.cpp
-	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/gamecomp-test.cpp src/gamecomp.cpp src/json.cpp src/expr.cpp src/zip.cpp -lz -lpthread
+tests/gamecomp-test: tests/gamecomp-test.cpp src/gamecomp.cpp src/gamecomp.h src/json.cpp src/expr.cpp src/zip.cpp src/zipdir.cpp
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/gamecomp-test.cpp src/gamecomp.cpp src/json.cpp src/expr.cpp src/zip.cpp src/zipdir.cpp -lz -lpthread
 
 # the left stick's deadzone and hysteresis (tests/run.sh runs it)
 tests/input-test: tests/input-test.cpp src/input.cpp src/input.h
@@ -62,6 +81,7 @@ install:
 	install -D -m 755 banana-scrape $(DESTDIR)/usr/bin/banana-scrape
 	install -D -m 755 banana-sync $(DESTDIR)/usr/bin/banana-sync
 	install -D -m 755 banana-bshare $(DESTDIR)/usr/bin/banana-bshare
+	install -D -m 755 banana-fetch $(DESTDIR)/usr/bin/banana-fetch
 	# (Bshare's tile on the shelf: its one entry, systems.conf's [bshare])
 	mkdir -p $(DESTDIR)/usr/share/banana/apps/bshare
 	touch $(DESTDIR)/usr/share/banana/apps/bshare/Bshare.app
@@ -79,6 +99,6 @@ install:
 	touch $(DESTDIR)/usr/share/banana/apps/files/Files.app
 
 clean:
-	rm -f banana-ui banana-leaseshim.so banana-scrape banana-sync banana-bshare tests/pokemon-test tests/gamecomp-test tests/input-test
+	rm -f banana-ui banana-leaseshim.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test
 
 .PHONY: host install clean

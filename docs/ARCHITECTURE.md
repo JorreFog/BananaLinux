@@ -8,7 +8,7 @@
 | partition 1, `BANANA-BOOT` (FAT) | `a/Image` and `a/<handheld>.dtb` (and `b/` after an update), `extlinux/extlinux.conf` with a label per slot and `DEFAULT` naming the one to boot | 64 MB |
 | partition 2, `banana-root-a` (squashfs, LZ4) | the system, read-only | 256 MB (tens used) |
 | partition 3, `banana-root-b` | the other slot: empty until the first update writes the new system there | 256 MB |
-| partition 4, `BANANA` (exFAT) | made on the first boot from the rest of the card: `roms/`, `bios/`, `saves/`, `states/`, `banana/` (settings, logs, play stats, favourites, `updates/`), `drastic/`, `superdrastic/` | the rest |
+| partition 4, `BANANA` (exFAT) | made on the first boot from the rest of the card: `roms/`, `bios/`, `saves/`, `states/`, `banana/` (settings, logs, play stats, favourites, `updates/`, Files' `downloads/` and `nas.conf`), `drastic/`, `superdrastic/` | the rest |
 
 The image holds the first three partitions (the empty slot costs nothing compressed), so it is small and quick to
 write. `/usr/libexec/banana/firstboot`
@@ -173,12 +173,17 @@ screen.
 **Files** (the shelf's tile, `run = banana:files` in systems.conf: one of the menu's own pages, not a program; A or
 X on the tile opens it, and so does a launch of its entry, by touch or from the Carts and layout themes; a user's
 `banana/systems.conf` without `[files]` gets it from the library all the same): the cards' folders and files, the
-settings' pages drawn by `src/settings_files.cpp`, the work done by `src/fileops.cpp`. This card is the ROM folder's
+settings' pages drawn by `src/settings_files.cpp`, the work done by `src/fileops.cpp`; and the file servers', downloaded
+and unpacked (below, Files' servers). Its list, always shown first (B at a card's root comes back to it): the job in
+the background, if there is one, the cards, the servers; START there opens Files' settings, Add a server and Download
+options (B or START goes back). This card is the ROM folder's
 parent (`/data`), the second SD card `/run/sd2` while it is in (the list of cards follows the mount table, poll's
 POLLPRI on `/proc/self/mounts`, while Files is open); the system's squashfs isn't shown, nor are hidden (`.`) files.
-In a folder A opens, Y marks, X offers Paste here, Copy, Move, Rename, Delete (A twice), New folder and Mark all.
-RIGHT only goes in (a card, a folder): held, it repeats, so it never chooses an action, here or anywhere in the
-settings (an action such as Shut down, Update's apply, joining a network, Box art's downloads are A's alone). A name
+In a folder A opens (on a file, or in an empty folder, it offers the actions as X does), Y marks, X offers Paste
+here, Copy, Move, Rename, Delete (A twice), Unpack... (the archives among what is marked), New folder and Mark all.
+In each of Files' lists (and its servers') LEFT and RIGHT turn a page, L and R go to the first and last rows; none of
+them goes in or up (A and B do): held, they repeat, so they never choose an action, here or anywhere in the settings
+(an action such as Shut down, Update's apply, joining a network, Box art's downloads are A's alone). A name
 typed on the keyboard is checked for what exFAT, FAT32 and Windows refuse (`\ / : * ? " < > |`, a trailing dot or
 space, Windows' device names `CON`, `NUL`, `COM1`..., and the card's limit: 255 UTF-16 characters on exFAT and FAT32
 alike); SELECT leaves the keyboard with nothing changed. The card's own folders (`banana`, `bios`, `roms`, `saves`,
@@ -229,6 +234,116 @@ Starting a game: banana-ui writes the game's pid to `/run/banana/game.pid`, clos
 devices and the sound device, sets the system's clock profile, and runs its `run` command. When the game exits it
 takes the panels back, records the play, and shows the game's library again.
 
+## Files' servers: banana-fetch
+
+Files' list has the file servers beside the cards: a NAS's or a computer's shares over SMB, SFTP or FTP, read only
+(nothing is written, renamed or deleted on a server, nor copied from one server to another). Their pages are the
+settings' too (`src/settings_servers.cpp`): a server's folders are browsed with Files' keys (A opens a folder, Y marks,
+X: Download, Copy, Mark all; B goes up, out of the start folder back to Files' list, or there when the folder above
+doesn't come: the server unreachable, or B again while it is awaited; LEFT and RIGHT turn a page, a choice's value on
+its row). Two ways to where a download goes:
+
+- **Download** opens its page with the folder guessed: where this server folder's downloads went last time (kept per
+  server folder in `nas.conf`, as `card:folder`, any folder on either card), else the system the files belong to by
+  their extension (an archive's suffix looked through; zip and an extension two systems share say nothing), else by
+  the server's folder names from the deepest up (a system's id, folder, name, systems.conf's `aliases` and the usual
+  names: `src/sysfolders.cpp`), else `roms`. A on its Folder row opens Files' own navigation on that folder (or the
+  nearest one there) to choose another: the cards, their folders, Y takes the folder shown (A too, on a file or in an
+  empty folder; on a folder A opens it), X makes a new one (opened at once); B from the cards gives the choice up, the
+  page as it was. The Card row takes the same folder on the other
+  card (made when the download starts).
+- **Copy** puts the marked files in Files' clipboard (the server, its folder, the names): in any folder of a card,
+  X, Paste here opens the Download page on that folder. A server's files and the cards' share one clipboard.
+
+The page then asks what Download options leave to it (`files_*` in settings.conf: ask, always, never): whether
+archives are unpacked and deleted after, and, when some of the files are on the card already, Skip them, Replace them
+or Keep both (`name (2).ext`, as Files' paste). A server's folder named after the system the folder chosen is (its
+"GBA" into `roms/gba`) goes into it itself; into any other folder it goes as a folder, as a paste does. Banana's own
+folder, `banana/`, is never a download's or an unpacking's (its settings, its servers, its jobs). Archives on a card:
+X, Unpack... on one or more (the first volume of a multi-volume one) opens the same page, the folder they are in
+first; one is looked into first (its password typed, a dictionary bigger than the memory free said), several go as
+they are (one with a password is left packed, and its row on the job's page shows it in Files to be unpacked from
+there). The job's page shows the job in hand: B leaves it working, X stops it (its parts and the job kept: A goes on
+from there), Y cancels it (the job deleted with what its unfinished downloads left; the files it finished stay).
+Leaving it (B, the job cleared or cancelled) goes back where it was opened: the server's folder, the card's folder, or
+Files' list from the job's row there. While the job works, its `.part` files show in their folder as downloading, and
+Files leaves them alone.
+
+banana-ui has no network code for it: `banana-fetch` (`src/fetch/`) does it, in two shapes.
+
+- `banana-fetch serve`, while the pages need it (started at a server's first page, an archive looked into, a server
+  saved): a line protocol on its stdin and stdout (tab-separated fields), one request at a time, its answer read on a
+  thread (which wakes the menu's loop when it is in): log in, list a folder, walk the folders chosen into the files to
+  download and where each goes, look into an archive, add or change a server. A listing or a walk that finds the
+  connection gone (an idle NAS hung up, Wi-Fi slept) connects again once; when that fails on the network too (Wi-Fi is
+  back only a while after a sleep: unloaded before it, loaded again after), the next request tries again. A paste of
+  another server's files than the one logged in to logs in to that one first. It goes when Settings closes, or after
+  10 idle minutes.
+- `banana-fetch run`, the jobs: `banana/downloads/<time>.job` on the card (the server, the files with their sizes and
+  where each goes, or the archives and the folder; unpacking, the archive deleted after; the card's root and its file
+  system's `st_dev`), done one after the other in the background while the menu shows anything else. What happened to
+  each file is a line of `<job>.done`, so a job cut short (stopped, the battery, a crash) goes on from there when A
+  resumes it, and a file half downloaded goes on from its `.part`. Its pid is `/run/banana/transfer.pid`, its progress
+  a line in `/run/banana/fetch/status` (twice a second at most, in a folder of its own so that the menu's watch on
+  `/run/banana` isn't woken by it), which the pages read. A job done becomes `<time>.finished` and is told in
+  `/run/banana/fetch.finished`: the menu then says the finished jobs it hasn't seen in a banner over the top panel,
+  whatever it shows (and offers a `roms` folder a download made on a fresh second card to the library). It runs
+  niced, with idle I/O priority, and banana-ui stops it (SIGSTOP to its process group, 7zz with it) while a game runs,
+  and lets it go on after the game, or when the menu starts again (one that went away during a game). It runs as
+  root and the job is a file on the card, so it writes only on the cards (inside the card the job is for, never
+  `banana/`), reads a password file only of `/run/banana`, and checks before each folder it makes, each try at a file
+  and each unpacking that the card is still the one the job was written for: the second card taken out (the `sd2`
+  script's `umount -l`, its mount point then a folder of `/run`, the RAM), the job stops there, kept, and goes on once
+  the card is back.
+
+Protocols: SMB 2 and 3 (libsmb2: a NAS's shares, Windows' and macOS's file sharing; a server's shares are its
+root; a guest logs in over SMB 3.0.2, or SMB 2 on an older server, as libsmb2 6.2 signs a 3.1.1 guest's requests with
+a key the server doesn't have), SFTP (libssh2: a password, or keyboard-interactive; the server's key trusted the
+first time and checked after), FTP and FTPS (libcurl: passive, explicit TLS, the certificate trusted the first time
+and checked in OpenSSL's own verification, before the password is sent; MLSD, or LIST where a server has no MLSD;
+names in CP1251 or CP866 for old servers). A file goes into `<file>.part` next to where it belongs and is renamed once
+its size is right; its name is made one the cards take, as Files' own names are (`\ / : * ? " < > |` to `_`, no
+trailing dot or space, a `_` before a hidden name or a Windows device name, cut before its extension to 250 UTF-16
+characters, the cards' 255 less `.part`). A drop (Wi-Fi coming back after a sleep, a server restarting, on any of the
+protocols) is tried again after 3, 10, 30, 60 and 60 s from where it stopped, and a connection quiet for 30 s is
+dropped and tried again. What another try won't change (the login refused, a key that changed, a file that isn't there
+or isn't allowed, a full card) fails the file at once, and the job goes on with the next. The room needed and FAT32's
+4 GB a file (the second card may be FAT32) are checked before anything is written.
+
+Archives: zip natively (stored and deflated, zip64, CRCs checked; names in UTF-8, or in CP866 or CP437 as old Windows
+zips have them), 7z, RAR and the rest (an encrypted zip, another method) with 7-Zip's own `7zz` (built from its
+source: Buildroot's p7zip has no RAR), on one thread (several take many times the memory). A multi-volume archive
+(`.7z.001`, `.partN.rar`, `.rar` with `.r00`...) is unpacked once its last volume is in. Unpacking goes into
+`<card>/.banana-unpack/`, on the same card, and its files are moved into place when it worked; an archive with a
+path out of it (`..`, an absolute one) is refused whole, macOS's and Windows' clutter (`__MACOSX`, `.DS_Store`,
+`Thumbs.db`) and links are left out, names the cards can't take are changed (the same name twice gets ` (2)`, and a
+file never takes the place of a folder of its name, nor a folder a file's), and an archive holding a single folder is
+unwrapped (Download options). An archive whose dictionary wouldn't fit in the memory free is left packed, as is one
+with a password: Unpack... in Files unpacks it, the password typed there. Zips for a system whose emulator plays them
+zipped (the DS, the GBA...) are kept as they are unless asked, each archive judged by itself (the job's
+`keep_zips`): the Download page's Unpack archives decides for a choice of zips alone, a row of their own when the
+choice may hold 7z or RAR archives too (a folder), which are unpacked all the same.
+
+Servers are in `banana/nas.conf` (sections of key = value, read as data, never run). A password is kept only when
+Remember password is on, sealed: AES-256-GCM under a key made (HKDF-SHA256) from `banana/nas.key` (32 random bytes)
+and the SoC's serial number (`/proc/device-tree/serial-number`), which isn't on the card, and bound to the server's
+protocol, address, port and user. The card read on a computer, or put in another handheld, doesn't give it away
+(Files asks for it again); someone with the handheld itself can still open it, as there is no secure store. That
+rests on the serial number, which U-Boot puts in the device tree: without one, the key is made from `nas.key` alone,
+so the card alone opens the passwords, and banana-fetch says so in `banana/logs/downloads.log` when it seals one.
+File sharing leaves both files out. A password not kept goes to the runner in a file of `/run/banana` (tmpfs, 0600)
+that it reads once and deletes, and an archive's goes to 7zz on its stdin (where 7zz asks for it), not with `-p`:
+passwords are never on a command line nor in `banana/logs/downloads.log`.
+
+`ui/tests/fetch-test.sh` checks the archives (7z and RAR test archives, and zips made by Python: CP866 names, a zip
+slip, zip64..., and a 7z of 1502 files), the session and the runner (cuts, stalls, `.part`s, a full card, passwords,
+a connection lost between listings, names made for the cards, a job's paths outside its card or in `banana/`, its card
+taken out) against a folder standing in for a server (`BANANA_FETCH_TEST=1`); `ui/tests/run.sh` goes through the pages
+headless with it (Files' list, a folder chosen and made through its navigation, a paste of a server's files, an
+archive unpacked, taps on the buttons, and a runner at work beside the menu); and `ui/tests/fetch-servers.sh` runs
+against real servers in Docker (vsftpd for FTP and FTPS, pure-ftpd for MLSD, OpenSSH, Samba with a guest share), a
+download on each protocol cut in the middle by a proxy and resumed.
+
 ## Sleep: bananad
 
 `bananad` reads every input device next to the menu and the games (evdev allows several readers; it grabs
@@ -273,6 +388,11 @@ SoC's GPIO0_C3 (`gpio-keys-hall`), unpowered once the RK817 is off, and the RK81
 game that fails isn't started at every boot), names the ROM in `/run/banana/resume-once` and launches it; the
 launcher loads its resume state once, Quick resume on or off. On the charger ("dark and awake") the deadline doesn't
 count: nothing drains, and the charging light would go out; unplugged, it starts at the real sleep.
+
+A download or an unpacking of Files' (banana-fetch's runner, its pid in `/run/banana/transfer.pid`) with no game
+running holds the lid's sleep and the idle one: the lid shut makes the panels dark, the job goes on, and the handheld
+sleeps once it is done (`sleep.log` says so). The power button sleeps at once, as ever, and the job goes on from where
+it was after. A runner that is stopped (`T` in `/proc/<pid>/stat`: banana-ui went away during a game) holds nothing.
 
 If a suspend fails, bananad goes on more carefully by itself: devices one at a time, then `s2idle`; if even that
 fails with the lid shut, both backlights go off until it opens. With lid sleep switched off, closing the lid only
