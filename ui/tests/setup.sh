@@ -100,9 +100,9 @@ st_not again "setup finished"
 # the language picked on the first slide: saved, the menu starts again (LANGUAGE), on the Wi-Fi slide (setup-step)
 st_run lang "home 0; setup; press right; press up; press a"
 st_check lang "press a: settings result 9"
-grep -q '^language = zh-cn' "$SFX/data/settings.conf" || { echo "FAIL $size: the setup's language wasn't saved"; fail=1; }
+grep -q '^language = ru' "$SFX/data/settings.conf" || { echo "FAIL $size: the setup's language wasn't saved"; fail=1; }
 [ "$(cat "$SFX/data/setup-step" 2>/dev/null)" = "wifi boot" ] || { echo "FAIL $size: setup-step after the language: $(cat "$SFX/data/setup-step" 2>/dev/null)"; fail=1; }
-st_run zh "home 0; setupat wifi; shot st-zh-wifi"
+st_run ru "home 0; setupat wifi; shot st-ru-wifi"
 sed -i '/^language = /d' "$SFX/data/settings.conf"
 
 # the arrival: its frames drawn (the zoom, the rumble, the burst, the flight, the glow, white, black, the card, dark)
@@ -121,7 +121,7 @@ for s in ar-black ar-end; do
 done
 [ "$(convert "$OUT/$size-ar-card-top.png" -format '%[fx:standard_deviation>0.01]' info: 2>/dev/null)" = 1 ] || { echo "FAIL $size: the arrival's card is blank"; fail=1; }
 # every slide's shot is there and drawn
-for s in st-up-lang st-up-wifi st-up-name st-up-ra st-up-art st-up-done st-lang st-wifi st-wifi-joining st-wifi-ok st-tz st-name st-name-set st-ra st-ra-ok st-art st-done st-welcome st-wifi-nonet st-ra-wrong st-ra-down st-done-skipped st-zh-wifi; do
+for s in st-up-lang st-up-wifi st-up-name st-up-ra st-up-art st-up-done st-lang st-wifi st-wifi-joining st-wifi-ok st-tz st-name st-name-set st-ra st-ra-ok st-art st-done st-welcome st-wifi-nonet st-ra-wrong st-ra-down st-done-skipped st-ru-wifi; do
     [ "$(convert "$OUT/$size-$s-top.png" -format '%[fx:standard_deviation>0.01]' info: 2>/dev/null)" = 1 ] || { echo "FAIL $size: the setup's $s shot is missing or blank"; fail=1; }
 done
 kill $st_http 2>/dev/null || true

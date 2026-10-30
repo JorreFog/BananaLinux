@@ -1,0 +1,1539 @@
+# BananaOS translation: Russian(Русский)
+# Made by tools/lang-from-docx.py from BananaOS-0.5.0-ru_RU.doc (converted to .docx by LibreOffice). Columns: part, context, English, translation.
+#: language = Русский
+#: language-en = Russian
+menu		Ready	Готово
+menu		Fav	В избр.
+menu		Start	Старт
+menu		Resume	Продолжить
+menu		Back	Назад
+menu		No games	Игр нет
+menu		Starting	Запуск…
+menu		Plays	Запусков
+menu		Last played	Недавние
+menu		Time	Время
+menu		Game	Игра
+menu		Games	Игры
+menu		Played	Сыграно
+menu		App	Приложение
+menu		{n} game	{n} игра
+menu		{n} games	{n} игр
+menu		Last played: {game}	Недавняя: {game}
+menu		Play	Играть
+menu		No games yet	Игр пока нет
+menu		{unlocked} / {total} achievements	{unlocked} / {total} достижений
+menu		Library	Библиотека
+menu		Open	Открыть
+menu		Favourite	Избранное
+menu		Unfavourite	Убрать из избранного
+menu		Systems	Системы
+menu		Never	Никогда
+menu		Sunday	Воскресенье
+menu		Monday	Понедельник
+menu		Tuesday	Вторник
+menu		Wednesday	Среда
+menu		Thursday	Четверг
+menu		Friday	Пятница
+menu		Saturday	Суббота
+menu		Jan	Янв.
+menu		Feb	Февр.
+menu		Mar	Март
+menu		Apr	Апр.
+menu		May	Май
+menu		Jun	Июнь
+menu		Jul	Июль
+menu		Aug	Авг.
+menu		Sep	Сент.
+menu		Oct	Окт.
+menu		Nov	Нояб.
+menu		Dec	Дек.
+menu		Today	Сегодня
+menu		Yesterday	Вчера
+menu		Last week	На прошлой неделе
+menu		Favorites	Избранное
+menu		Collection	Коллекция
+menu		Not played yet	Не запускались
+menu		Can't read the card's games	Не удалось прочитать игры с карты
+menu		Nothing here yet	Здесь пока пусто
+menu		The BANANA partition needs exFAT	Для раздела BANANA нужен формат exFAT
+menu		Y on a game adds it here	Кнопка Y добавит игру сюда
+menu		Copy {.ext} files to roms/{folder}	Скопируйте файлы {.ext} в roms/{folder}
+menu		Battery nearly empty: {percent}%	Заряд батареи почти на исходе: {percent}%
+menu		Save your game now. At {percent} Banana closes it and shuts down.	Сохраните игру прямо сейчас. На отметке {percent} Banana закроет её и завершит работу.
+menu		Battery low: {percent}%	Низкий заряд батареи: {percent}%
+menu		Plug in the charger soon. At {percent} Banana closes the game and shuts down.	Как можно скорее подключите зарядное устройство. При достижении {percent} Banana закроет игру и выключится.
+menu		Time to find the charger.	Настало время найти зарядное устройство.
+menu		Brightness	Яркость
+menu		Volume	Громкость
+menu		Starting...	Запуск…
+menu		%ldh %02ldm	%ldч %02ldм
+menu		Recently played	Недавно запущенные
+menu		Search	Поиск
+menu		No games match	Игры не найдены
+menu		SELECT searches again	SELECT для повторного поиска
+menu		Charging	Заряжается
+menu		Full	Заряжено
+menu		Favorite	Избранное
+menu		Last played: {sys.resumeTitle}  ·  X to resume	Недавняя: {sys.resumeTitle} · X для продолжения
+menu		Plays: {either(game.plays, '0')}	Запуски: {either(game.plays, '0')}
+menu		Time: {either(game.time, '0m')}	Время: {either(game.time, '0m')}
+menu		Options	Опции
+menu		Reading the second SD card	Чтение второй карты памяти
+menu		Looking for games	Поиск игр
+menu		Its games join the list in a moment	Игры с неё скоро появятся в списке
+menu		The game list is updated in a moment	Список игр сейчас обновится
+menu		The list is updated on the home screen	Список обновляется на главном экране
+settings		1 package	1 пакет
+settings		{n} packages	{n} пакетов
+settings		UTC	UTC
+settings		London, Dublin, Lisbon	Лондон, Дублин, Лиссабон
+settings		Lagos, Algiers, Kinshasa	Лагос, Алжир, Киншаса
+settings		Amsterdam, Berlin, Paris, Rome	Амстердам, Берлин, Париж, Рим
+settings		Johannesburg, Harare	Йоханнесбург, Хараре
+settings		Athens, Helsinki, Kyiv	Афины, Хельсинки, Киев
+settings		Cairo	Каир
+settings		Istanbul, Riyadh, Nairobi	Стамбул, Эр-Рияд, Найроби
+settings		Moscow	Москва
+settings		Dubai, Baku	Дубай, Баку
+settings		Karachi, Tashkent, Almaty	Карачи, Ташкент, Алматы
+settings		India, Sri Lanka	Индия, Шри-Ланка
+settings		Bangkok, Jakarta, Hanoi	Бангкок, Джакарта, Ханой
+settings		Beijing, Singapore, Perth	Пекин, Сингапур, Перт
+settings		Tokyo, Seoul	Токио, Сеул
+settings		Adelaide	Аделаида
+settings		Brisbane, Guam	Брисбен, Гуам
+settings		Sydney, Melbourne	Сидней, Мельбурн
+settings		Auckland	Окленд
+settings		Honolulu	Гонолулу
+settings		Anchorage	Анкоридж
+settings		Los Angeles, Tijuana	Лос-Анджелес, Тихуана
+settings		Phoenix, Vancouver, Yukon	Финикс, Ванкувер, Юкон
+settings		Denver	Денвер
+settings		Mexico City, Calgary	Мехико Сити, Калгари
+settings		Chicago	Чикаго
+settings		New York, Toronto	Нью-Йорк, Торонто
+settings		Halifax	Галифакс
+settings		Santiago	Сантьяго
+settings		Buenos Aires, Sao Paulo	Буэнос-Айрес, Сан-Паулу
+settings		Display & sound	Экран и звук
+settings		Theme	Тема
+settings		ROCKNIXDS Pixel's two palettes, dark or light for daylight; Carts (experimental): your games as cartridges on a shelf, in a clean typeface; or a theme of your own: a .json in banana/themes on the card (banana/themes/README.txt says how).	Две палитры ROCKNIXDS Pixel: тёмная или светлая (для дня); Картриджи (эксперим.): ваши игры в виде картриджей на полке с аккуратным шрифтом; или ваша тема: файл .json в banana/themes на карте (см. README.txt).
+settings		Dark	Тёмная
+settings		Light	Светлая
+settings		Carts	Картриджи
+settings		Accent colour	Цвет акцента
+settings		The colour of the selection, the logo and the boot animation's banana.	Цвет выделения, логотипа и банана в анимации загрузки
+settings		Yellow	Жёлтый
+settings		Blue	Синий
+settings		Red	Красный
+settings		Green	Зелёный
+settings		Purple	Фиолетовый
+settings		Pink	Розовый
+settings		Brightness	Яркость
+settings		The top screen's backlight. F + volume changes both screens anywhere, in games too.	Подсветка верхнего экрана. F + громкость регулирует оба экрана везде, включая игры.
+settings		Motion	Анимация
+settings		The top screen's bob and shine. Off holds it still and saves a little battery.	Покачивание и блеск верхнего экрана. Отключение делает его статичным и немного экономит заряд.
+settings		On	Вкл
+settings		Off	Выкл
+settings		Volume	Громкость
+settings		The speakers or the headphones, whichever is playing. The volume keys change it anywhere.	Динамики или наушники, смотря через что сейчас идет звук. Кнопки громкости меняют её в любом месте.
+settings		Menu sounds	Звуки меню
+settings		The menu's clicks, and the cartridge going into the console.	Щелчки в меню и звук установки картриджа.
+settings		Battery	Батарея
+settings		The battery on the top screen: its icon, or its icon and how full it is.	Батарея на верхнем экране: только значок или значок и процент заряда.
+settings		Icon	Значок
+settings		Icon and %	Значок и %
+settings		Clock	Часы
+settings		How the time on the top screen is written.	Формат времени на верхнем экране.
+settings		Boot animation	Анимация загрузки
+settings		The bananas and the cartridge while Banana starts, and backwards when it shuts down. Off goes straight to the menu once it is ready, and straight to black.	Бананы и картридж при запуске, и в обратном порядке при выключении. «Выкл» переводит сразу в меню, как только оно готово, и сразу в чёрный экран.
+settings		Sleep & power	Спящий режим и питание
+settings		Sleep when idle	Сон при бездействии
+settings		In the menu, after this long with no button pressed. Never while a game is running.	В меню, после указанного времени без нажатий. Не работает во время игры.
+settings		Never	Никогда
+settings		5 minutes	5 минут
+settings		10 minutes	10 минут
+settings		15 minutes	15 минут
+settings		30 minutes	30 минут
+settings		Dim when idle	Затемнение при бездействии
+settings		In the menu, the panels go down to a third after this long with no button pressed, and back at the first press. Never while a game is running.	В меню яркость падает до трети при бездействии и возвращается по первому нажатию. Не работает во время игры.
+settings		1 minute	1 минута
+settings		2 minutes	2 минуты
+settings		Closing the lid	Закрытие крышки
+settings		Sleep with the lid: the game pauses, opening the lid carries on where you were.	Спящий режим при закрытии крышки: игра ставится на паузу, открытие крышки возобновляет игру.
+settings		Sleeps	Сон
+settings		Does nothing	Ничего не делает
+settings		Waking up	Пробуждение
+settings		Fast: the handheld's parts wake up together. Careful: one after the other, slower but the safest. Banana switches to Careful by itself if a sleep ever fails.	Быстрое: все компоненты пробуждаются сразу. Безопасное: по очереди, медленнее, но надежнее. Banana сама перейдет на «Безопасное», если выход из сна даст сбой.
+settings		Fast	Быстрое
+settings		Careful	Безопасное
+settings		LEDs	Светодиоды
+settings		Green, red when the battery is low, blinking red when nearly empty, amber while charging.	Зелёный; красный при низком заряде, мигает красным при критическом, оранжевый при зарядке.
+settings		Bright	Яркие
+settings		Dim	Тусклые
+settings		Nintendo DS	Nintendo DS
+settings		Emulator	Эмулятор
+settings		SuperDrastic: DraStic straight onto both panels, with its own governor. BananaDS: Banana's own emulator (melonDS's core). Both draw 3D with the Gengis Engine at 2x and have their menu on L3; each keeps its own settings below. X on a game in the library picks one for that game alone.	SuperDrastic: DraStic напрямую на оба экрана со своим управлением частотой. BananaDS: встроенный эмулятор (ядро melonDS). Оба рендерят 3D через Gengis Engine в 2x, меню на L3, настройки каждого — ниже. Кнопка X в библиотеке задаёт эмулятор для конкретной игры.
+settings		SuperDrastic	SuperDrastic
+settings		BananaDS	BananaDS
+settings		Quick resume	Быстрый старт
+settings		On: quitting keeps where you are, and the game goes on from there next time (a shutdown too). Off: quitting ends the game, which starts from its title next time.	«Вкл»: при выходе сохраняется ваша позиция, и игра продолжится с неё (даже после выключения). «Выкл»: игра закрывается полностью и в следующий раз начнется с титульного экрана.
+settings		None	Нет
+settings		Crisp	Чёткий (Crisp)
+settings		Crisp + DS colours	Чёткий + цвета DS
+settings		LCD grid	LCD сетка
+settings		LCD grid + colours	LCD сетка + цвета
+settings		FSR	FSR
+settings		LCD (DS colours)	LCD (цвета DS)
+settings		LCD 1x	LCD 1x
+settings		LCD 3x	LCD 3x
+settings		Fast LCD	Быстрый LCD
+settings		DS colours	Цвета DS
+settings		Retro	Ретро
+settings		Bevel	Рамки
+settings		Sharp bilinear	Резкий билинейный
+settings		Sharp + scanlines	Резкий + сканлайны
+settings		Fast CRT	Быстрый CRT
+settings		Sharp pixels (integer)	Резкие пиксели (Integer)
+settings		Integer fill	Заполнение (Integer)
+settings		LCD grid 2x	LCD сетка 2x
+settings		Dot (MiZai)	Dot (MiZai)
+settings		Dot (MiZai, RG DS+)	Dot (MiZai, RG DS+)
+settings		Retro tiles	Ретро плитка
+settings		DraStic LCD	DraStic LCD
+settings		DraStic LCD + colours	DraStic LCD + цвета
+settings		DraStic Quilez	DraStic Quilez
+settings		DraStic sharp	DraStic резкий
+settings		DraStic sharp + colours	DraStic резкий + цвета
+settings		DraStic fast LCD	DraStic быстрый LCD
+settings		DraStic fast LCD + colours	DraStic быстрый LCD + цвета
+settings		Sharp pixels: every DS pixel an exact square, no blur (4x4 on the RG DS Plus, 2x2 in a frame on the RG DS). Crisp: exact pixel-area scaling. Grid and LCD: the DS's screen grid. Colours: the DS's own, duller colours. CRT: a TV's scanlines. FSR: smooth edges, the heaviest. None: smooth scaling, no GPU work. Your own: .frag files in banana/shaders (letters, digits and . _ + - in the name).	Резкие пиксели (Sharp pixels): каждый пиксель DS — точный квадрат без размытия (4x4 на RG DS Plus, 2x2 с рамкой на RG DS). «Нет» (None) масштабирует плавно и не требует работы GPU. Свои шейдеры: файлы .frag в banana/shaders (в названиях только буквы, цифры и ._+-). Crisp: точное пиксельное масштабирование. Grid и LCD: экранная сетка DS. Colours: собственные, более тусклые цвета DS. CRT: телевизионные сканлайны. FSR: гладкие края, самый тяжелый шейдер.
+settings		Shader	Шейдер
+settings		3D resolution	Разрешение 3D
+settings		2x draws the DS's 3D at twice its size on these panels. 1x is the DS's own, the lightest. 3x and 4x (experimental): three or four times (4x is the RG DS Plus panels' own size), the sharpest and the heaviest: a busy 3D scene can drop below full speed.	2x отрисовывает 3D-графику DS в двойном размере на этих экранах. 1x — оригинальное разрешение DS, самое нетребовательное.
+settings		Edge marking	Контуры
+settings		The outlines some games draw round their 3D models (Zelda, Kirby, many Pokémon battles). Off leaves them out.	Контуры, которые некоторые игры рисуют вокруг своих 3D-моделей (Zelda, Kirby, многие битвы в Pokémon). «Выкл» убирает их.
+settings		Fog	Туман
+settings		The distance fog some games draw in 3D. Off leaves it out.	Эффект тумана вдалеке в некоторых 3D-играх. «Выкл» убирает его.
+settings		Frame pacing	Синхронизация кадров
+settings		Panels runs the DS at the panels' 60 Hz, a new frame every refresh (0.3% fast, the sound matched). DS rate keeps the DS's own 59.83 Hz, a frame shown twice every ~6 s.	«Экраны»: запуск при 60 Гц дисплея, новый кадр каждое обновление (быстрее на 0.3%, звук подстроен). «Частота DS»: оригинальные 59.83 Гц, один кадр дублируется каждые ~6 сек.
+settings		Panels	Экраны
+settings		DS rate	Частота DS
+settings		CPU clock	Частота ЦП
+settings		Saves battery finds the lowest clock each game runs at full speed and remembers it. Always full keeps the top clock.	«Экономия заряда» подбирает и запоминает минимальную частоту для работы игры на полной скорости. «Всегда максимум» держит максимальную частоту.
+settings		Saves battery	Экономия заряда
+settings		Always full	Всегда максимум
+settings		Timing	Тайминги
+settings		Accurate is melonDS's own. Fast lets the two CPUs run longer between meeting (about 10% faster), but it can break a game: Golden Sun: Dark Dawn loses its 3D world.	«Точные» — родные тайминги melonDS. «Быстрые» позволяют двум процессорам дольше работать без синхронизации (на ~10% быстрее), но могут ломать игры: например, в Golden Sun: Dark Dawn пропадает 3D-мир.
+settings		Accurate	Точные
+settings		Microphone	Микрофон
+settings		How loud a word or a blow must be to reach the game. Off: the game hears nothing from the mic, and the in-game menu's Blow still works for a game that wants one.	Насколько громким должно быть слово или дуновение, чтобы игра его уловила. «Выкл»: микрофон отключен, а кнопка «Дуновение» в меню игры всё равно работает.
+settings		Medium	Средняя
+settings		High	Высокая
+settings		Low	Низкая
+settings		2x draws the DS's 3D at twice its size on these panels, at full speed with SuperDrastic.	2x отрисовывает 3D-графику DS в двойном разрешении на этих экранах с полной скоростью в SuperDrastic.
+settings		Other systems	Другие системы
+settings		Screen	Экран
+settings		Which panel the systems other than the DS use (RetroArch). The other one shows the game panel (Second screen), or is switched off.	Какой экран используют системы помимо DS (RetroArch). На втором отображается игровая панель (Второй экран) или он отключается.
+settings		Top	Верхний
+settings		Bottom	Нижний
+settings		Second screen	Второй экран
+settings		While a game plays on one screen, the other shows its RetroAchievements and tiles to save, load, open RetroArch's menu, fast forward and quit (by touch when they are on the bottom screen). Off: the other screen stays dark.	Пока игра запущена на одном экране, на другом показаны достижения RetroAchievements и кнопки: сохранение, загрузка, меню RetroArch, ускорение и выход (по касанию на нижнем экране). «Выкл»: экран остаётся выключенным.
+settings		Game panel	Игровая панель
+settings		Network	Сеть
+settings		Wi-Fi	Wi-Fi
+settings		The networks around: A on one joins it, with a password typed on the keyboard here (or by touch).	Доступные сети: нажмите A для подключения и введите пароль с помощью экранной клавиатуры (или сенсором).
+settings		File sharing	Общий доступ к файлам
+settings		System	Система
+settings		Time zone	Часовой пояс
+settings		The clock's time zone, summer time included, for the menu and the games (a DS game's clock too). The time itself comes from Wi-Fi or the handheld's own clock.	Часовой пояс (включая летнее время) для меню и игр (включая часы в играх DS). Время синхронизируется по Wi-Fi или берется из внутренних часов консоли.
+settings		Update	Обновление
+settings		A new version of Banana, downloaded from GitHub over Wi-Fi or from a package on the card, written to the other slot and run from the next restart; this one stays as it is until then.	Новая версия Banana, загруженная с GitHub по Wi-Fi или из пакета на карте памяти, записывается во второй слот и запускается после перезагрузки; текущая версия остаётся без изменений до перезапуска.
+settings		Box art	Обложки
+settings		Covers, title screens, genres and years for your games, from libretro's free collections (no account, Wi-Fi needed). It keeps going in the background; games that already have art are skipped, so running it again only fetches what is new.	Обложки, титульные экраны, жанры и годы выпуска игр из открытой базы libretro (без аккаунта, нужен Wi-Fi). Загрузка идёт в фоне; игры с готовыми обложками пропускаются, поэтому повторный запуск скачивает только новые.
+settings		Previous version	Предыдущая версия
+settings		Restarts into the other slot: the version that ran before the last update. Press A twice.	Перезагрузка во второй слот: версия, работавшая до последнего обновления. Нажмите A дважды.
+settings		SSH	SSH
+settings		First-time setup	Начальная настройка
+settings		The steps from the first boot again: Wi-Fi, the time zone and the RetroAchievements account (ScreenScraper: not available yet).	Повтор начальной настройки: Wi-Fi, часовой пояс и аккаунт RetroAchievements (ScreenScraper пока недоступен).
+settings		About	Об устройсте
+settings		Restart	Перезагрузка
+settings		Restarts the handheld. Press A twice.	Перезагружает консоль. Нажмите A дважды.
+settings		Shut down	Выключение
+settings		Turns the handheld off. Press A twice. (Or hold the power button.)	Выключает консоль. Нажмите A дважды. (Или удерживайте кнопку питания.)
+settings		%.1f GB free of %.1f GB	Свободно %.1f ГБ из %.1f ГБ
+settings		Connected	Подключено
+settings		Not connected	Не подключено
+settings		Connected: {address}	Подключено: {address}
+settings		Banana {version} (slot {slot}) on the {handheld}.	Banana {version} (слот {slot}) на {handheld}.
+settings		handheld	консоль
+settings		dev	dev
+settings		Battery {percent}%.	Батарея {percent}%.
+settings		Card: {free space}.	Карта памяти: {free space}.
+settings		The other slot holds no system.	Во втором слоте нет системы.
+settings		Settings	Настройки
+settings		%d settings	Настроек: %d
+settings		Choose a group	Выберите группу
+settings		Close	Закрыть
+settings		Open	Открыть
+settings		Wi-Fi: {status}. Network, below, joins one; networks can also be written in banana/wifi.conf on a computer (see banana/README.txt).	Wi-Fi: {status}. Раздел «Сеть» ниже служит для подключения; сети также можно прописать в banana/wifi.conf на компьютере (см. banana/README.txt).
+settings		For working on Banana itself: ssh root@{address}, with the public keys in banana/ssh/authorized_keys on the card (no passwords). Files: scp -O (dropbear has no SFTP), or File sharing.	Для работы с системой Banana: ssh root@{address}, открытые ключи в banana/ssh/authorized_keys на карте памяти (без пароля). Передача файлов: scp -O (в dropbear нет SFTP) или «Общий доступ к файлам».
+settings		The card on the network: \\{address}\banana in Windows' File Explorer, smb://{address}/banana on a Mac (Finder, Go, Connect to Server). {sharing}	Карта памяти в сети: {address}в проводнике Windows, smb://{address}/banana на Mac (Finder > Переход > Подключение к серверу). {sharing}
+settings		Fetching covers and title screens. The menu shows them as they come, and it carries on if you leave this screen.	Загрузка обложек и титульных экранов. Они сразу появляются в меню; процесс продолжится, даже если выйти из этого экрана.
+settings		Press A again	Нажмите A ещё раз
+settings		Choose	Выбрать
+settings		Back	Назад
+settings		Confirm	Подтвердить
+settings		Start	Старт
+settings		Change	Изменить
+settings		RetroAchievements	RetroAchievements
+settings		RetroAchievements login failed	Ошибка входа в RetroAchievements
+settings		Connected to {network} ({address}).	Подключено к {network} ({address}).
+settings		Joined {network}, but it gave the handheld no address.	Подключено к {network}, но консоль не получила IP-адрес.
+settings		Couldn't join {network}. If the password was wrong, A on it types it again.	Не удалось подключиться к {network}. Если пароль неверен, нажмите A для повторного ввода.
+settings		Joining {network}...	Подключение к {network}…
+settings		Connected to {network}	Подключено к {network}
+settings		Password for {network}	Пароль для {network}
+settings		Shift	Shift
+settings		Space	Пробел
+settings		Del	Удалить
+settings		Done	Готово
+settings		Wi-Fi networks	Сети Wi-Fi
+settings		Wi-Fi is off	Wi-Fi выключен
+settings		Joining {network}	Подключение к {network}
+settings		Wi-Fi is switched off. X switches it on and searches.	Wi-Fi выключен. Кнопка X включает его и запускает поиск.
+settings		Networks	Сети
+settings		Searching...	Поиск…
+settings		{n} network	{n} сеть
+settings		{n} networks	{n} сетей
+settings		Joining	Подключение
+settings		Saved	Сохранено
+settings		No networks found. X searches again.	Сети не найдены. Кнопка X запускает повторный поиск.
+settings		Password	Пароль
+settings		Join	Подключиться
+settings		{n} character	{n} символ
+settings		{n} characters	{n} символов
+settings		Type here	Введите здесь
+settings		Delete	Удалить
+settings		Writing the update: {status}	Запись обновления: {status}
+settings		Written: restart to run it	Записано: перезагрузите для запуска
+settings		Failed	Ошибка
+settings		Running {version}	Версия {version}
+settings		Running {version}, slot {slot}	Версия {version}, слот {slot}
+settings		The new version is being written to the other slot and checked; this one isn't touched. Don't turn the handheld off. It takes a minute or two.	Новая версия записывается во второй слот и проверяется; текущая не затрагивается. Не выключайте консоль. Это займет минуту или две.
+settings		The new version is in the other slot and will run from the next restart. A restarts now. If it ever fails to start, Previous version brings this one back.	Новая версия записана во второй слот и запустится при следующей перезагрузке. Нажмите A для перезагрузки. Если она не запустится, «Предыдущая версия» вернёт текущую.
+settings		The update wasn't applied: {reason}. This version is untouched.	Обновление не установлено: {reason}. Текущая версия не изменена.
+settings		No update packages found. Put a banana-{board}-<version>.update.tar from a release in banana/updates on the card (File sharing can copy it over Wi-Fi), then come back here.	Пакеты обновлений не найдены. Поместите файл banana-{board}-.update.tar из релиза в папку banana/updates на карте памяти (можно передать по Wi-Fi через «Общий доступ»), затем вернитесь сюда.
+settings		A on a package writes it to the other slot and checks it; the running version stays until the restart. Y deletes the package from the card{on}	Кнопка A на пакете записывает его во второй слот и проверяет; текущая версия остаётся до перезагрузки. Y удаляет пакет с карты памяти{on}
+settings		Update packages	Пакеты обновлений
+settings		{n} package	{n} пакет
+settings		Banana {version}	Banana {version}
+settings		for both handhelds	для обоих устройств
+settings		for the {handheld}	для {handheld}
+settings		not for this handheld	не для этого устройства
+settings		Nothing in banana/updates on the card.	В папке banana/updates на карте пусто.
+settings		A Wi-Fi password has 8 to 63 characters; this one has {count}.	Пароль Wi-Fi должен содержать от 8 до 63 символов; введено {count}.
+settings		The account's name, as on retroachievements.org.	Имя аккаунта, как на retroachievements.org.
+settings		RetroAchievements password for {name}	Пароль RetroAchievements для {name}
+settings		The account's name, as on screenscraper.fr.	Имя аккаунта, как на screenscraper.fr.
+settings		ScreenScraper password for {name}	Пароль ScreenScraper для {name}
+settings		Checking the account {name}...	Проверка аккаунта {name}…
+settings		No connection: check Wi-Fi, then try again from the setup	Нет подключения: проверьте Wi-Fi и повторите попытку из меню настройки
+settings		Logged in as {name}	Выполнен вход: {name}
+settings		Logged in as {name} · {score} points	Выполнен вход: {name} · {score} очков
+settings		Wrong account name or password	Неверное имя аккаунта или пароль
+settings		The server said no ({code})	Сервер отклонил запрос ({code})
+settings		Account name	Имя аккаунта
+settings		Finish	Завершить
+settings		Not signed in	Вход не выполнен
+settings		Your home network: the games' achievements, the clock and the art need it. A picks it from the networks around; the password goes in on the keyboard.	Ваша домашняя сеть: нужна для достижений, часов и обложек. Кнопка A выбирает сеть из списка; пароль вводится с клавиатуры.
+settings		The clock on the top screen, and the games' own clocks. Left and right change it.	Часы на верхнем экране и внутриигровые часы. Влево и вправо для изменения.
+settings		Your retroachievements.org account: DraStic and RetroArch unlock achievements with it. A types the name, then the password. Leave it if you have none.	Ваш аккаунт retroachievements.org: DraStic и RetroArch открывают с ним достижения. Нажмите A для ввода имени и пароля. Пропустите, если аккаунта нет.
+settings		Covers, title screens, genres and years for the games on the card, from libretro's free collections: no account. A starts it (Wi-Fi first); it keeps going while you finish the setup, and the menu shows the art as it comes. Settings > System > Box art runs it again for new games.	Обложки, титульные экраны, жанры и годы для игр на карте из открытой базы libretro: аккаунт не нужен. Нажмите A для запуска (сначала подключите Wi-Fi); загрузка продолжится в фоне, а обложки появятся в меню. «Настройки > Система > Обложки» запускает её снова для новых игр.
+settings		Everything here is in the settings too (Start in the menu), and this setup is under System > First-time setup. A finishes.	Все эти параметры есть и в настройках (кнопка Start в меню), а этот мастер доступен в меню «Система > Начальная настройка». Нажмите A для завершения.
+settings		Fetching covers and title screens. It carries on while you finish the setup.	Загрузка обложек и заставок. Процесс продолжится, пока вы завершаете настройку.
+settings		Welcome to Banana	Добро пожаловать в Banana
+settings		Skip	Пропустить
+settings		Next zone	След. пояс
+settings		Running	Работает
+settings		Wi-Fi is off: switch it on in Network first.	Wi-Fi выключен: сначала включите его в разделе «Сеть».
+settings		Starting	Запуск…
+settings		{found} of {total} found	Найдено {found} из {total}
+settings		No connection	Нет подключения
+settings		Didn't work	Не удалось
+settings		Not yet	Пока нет
+settings		Save	Сохранить
+settings		Load	Загрузить
+settings		Menu	Меню
+settings	Second screen (RetroArch games)	Fast	Ускорение
+settings		Quit	Выход
+settings		F + START	F + START
+settings		Latest achievements	Последние достижения
+settings		None unlocked yet. Good luck!	Пока не открыто ни одного. Удачи!
+settings		just now	только что
+settings		%lld min ago	%lld мин. назад
+settings		today %H:%M	сегодня, %H:%M
+settings		Waiting for RetroArch...	Ожидание RetroArch…
+settings		Looking the game up...	Поиск игры…
+settings		This game has no achievements.	У этой игры нет достижений.
+settings		RetroAchievements is off, or its login failed: check the account in Settings > System > First-time setup.	RetroAchievements отключен или вход не удался: проверьте аккаунт в «Настройки > Система > Начальная настройка».
+settings		No connection to RetroAchievements: check Wi-Fi.	Нет связи с RetroAchievements: проверьте Wi-Fi.
+settings		Tap a tile, or hold F with the button under it	Коснитесь плитки или удерживайте F с кнопкой под ней
+settings		Hold F with the button under each tile	Удерживайте F с кнопкой под каждой плиткой
+settings		the boot partition can't be written	не удалось записать загрузочный раздел
+settings		can't write extlinux.conf	не удалось записать extlinux.conf
+settings		slot {slot} holds no system	в слоте {slot} нет системы
+settings		switched {slot}	переключено на {slot}
+settings		no such package: {package}	пакет не найден: {package}
+settings		checking	проверка
+settings		the package can't be unpacked	не удалось распаковать пакет
+settings		the package has no {file}	в пакете нет файла {file}
+settings		the package has no device tree	в пакете нет дерева устройств (device tree)
+settings		that is a package for the {package's handheld}, this is the {this handheld}	это пакет для {package's handheld}, а устройство — {this handheld}
+settings		{file} is damaged (its hash is wrong)	{file} повреждён (не совпадает хеш)
+settings		no partition for slot {slot} ({partition})	нет раздела для слота {slot} ({partition})
+settings		the system ({size} bytes) doesn't fit the slot ({limit} bytes)	система ({size} байт) не помещается в слот ({limit} байт)
+settings		writing {percent}%	запись: {percent}%
+settings		writing slot {slot} failed	ошибка записи в слот {slot}
+settings		verifying	проверка целостности
+settings		slot {slot} reads back wrong	ошибка проверки данных в слоте {slot}
+settings		can't write /boot/{slot}/{file}	не удалось записать /boot/{slot}/{file}
+settings		/boot/{slot}/{file} reads back wrong	ошибка проверки /boot/{slot}/{file}
+settings		done {version}	готово {version}
+settings		With games: on the home row while there is something in it to start. Hidden: never. Always: with nothing in it too (Ports: for PortMaster, which gets ports).	«С играми»: на главном экране, пока есть во что играть. «Скрыто»: никогда не показывать. «Всегда»: даже когда пусто (например, Порты для PortMaster).
+settings		With games	С играми
+settings		Hidden	Скрыто
+settings		Always	Всегда
+settings		Reykjavik, Accra, Dakar	Рейкьявик, Аккра, Дакар
+settings		Tehran	Тегеран
+settings		Kabul	Кабул
+settings		Kathmandu	Катманду
+settings		Dhaka	Дакка
+settings		Yangon	Янгон
+settings		Darwin	Дарвин
+settings		Noumea, Solomon Islands	Нумеа, Соломоновы Острова
+settings		Fiji	Фиджи
+settings		Tonga, Samoa	Тонга, Самоа
+settings		Pago Pago	Паго-Паго
+settings		Bogota, Lima, Panama, Winnipeg	Богота, Лима, Панама, Виннипег
+settings		Havana	Гавана
+settings		Caracas, La Paz, Manaus	Каракас, Ла-Пас, Манаус
+settings		Puerto Rico, Santo Domingo	Пуэрто-Рико, Санто-Доминго
+settings		St. John's	Сент-Джонс
+settings		Fernando de Noronha	Фернанду-ди-Норонья
+settings		Azores	Азорские острова
+settings		Cape Verde	Кабо-Верде
+settings		Gamma	Гамма
+settings		Black	Чёрный
+settings		Grey steps	Градации серого
+settings		Colour bars	Цветные полосы
+settings		White	Белый
+settings		Mid grey	Средне-серый
+settings		None (smooth)	Нет (сглаживание)
+settings		FXAA	FXAA
+settings		{n} (card)	{n} (карта)
+settings		Text on accent	Текст на акценте
+settings		The text on the selection's colour. Auto picks dark or light, whichever reads better on the accent.	Цвет текста на фоне цвета выделения. «Авто» выбирает тёмный или светлый, в зависимости от лучшей читаемости.
+settings		Auto	Авто
+settings		Top brightness	Яркость верхнего экрана
+settings		Bottom brightness	Яркость нижнего экрана
+settings		The bottom screen's backlight. F + volume changes both screens anywhere, in games too.	Подсветка нижнего экрана. F + громкость регулирует оба экрана везде, включая игры.
+settings		Screen colours	Цвета экранов
+settings		Shown systems	Отображаемые системы
+settings		Which systems are on the home row. Each one: with games (when it has something to start), hidden, or always (with nothing in it too: Ports for PortMaster).	Какие системы отображаются в основном ряду меню. Для каждой: «С играми» (когда есть игры), «Скрыто» или «Всегда» (даже если пусто: например, Порты для PortMaster).
+settings		Power off after sleeping	Выключение после сна
+settings		Asleep this long (not while charging), the game is saved where you are and the handheld turns itself off, so the battery keeps for weeks. Press power to start it again: it goes straight back into the game.	Если устройство спит указанное время (не на зарядке), прогресс игры сохраняется, и консоль выключается, сохраняя заряд неделями. Включение кнопкой питания возвращает сразу в игру.
+settings		1 hour	1 час
+settings		2 hours	2 часа
+settings		DS language	Язык DS
+settings		The language the DS itself is set to: a game that has several starts in it. Both emulators.	Язык самой системы DS: мультиязычные игры запускаются на нём. Для обоих эмуляторов.
+settings		English	Английский
+settings		Japanese	Японский
+settings		French	Французский
+settings		German	Немецкий
+settings		Italian	Итальянский
+settings		Spanish	Испанский
+settings		DS name	Имя DS
+settings		The name the DS itself is set to, as on a real one: Mario Kart's records, Pictochat, a game's save. 10 characters at most. Both emulators; empty: Dr DraStic in SuperDrastic, Banana in BananaDS.	Имя консоли DS, как на настоящей: рекорды Mario Kart, Pictochat, сохранения игр. Не более 10 символов. Для обоих эмуляторов; если пусто: Dr DraStic в SuperDrastic, Banana в BananaDS.
+settings		Low latency (experimental)	Низкая задержка (эксперим.)
+settings		Experimental. On: no frame queue, each frame ready just before the panels' next refresh: a press shows about two refreshes sooner. Run-ahead also runs 1 or 2 frames ahead and back every frame, so the game answers sooner than its own lag; it needs twice the CPU or more (light 2D games at 1x) and turns itself off where it doesn't fit.	Экспериментально. «Вкл»: без очереди кадров, каждый кадр готов прямо перед обновлением экрана: отклик быстрее примерно на два обновления. Упреждение (Run-ahead) также просчитывает 1-2 кадра вперед и назад каждый кадр, сокращая собственный лаг игры; требует вдвое больше ресурсов ЦП (для простых 2D-игр в 1x) и отключается автоматически при нехватке мощности.
+settings		Run-ahead 1 frame	Упреждение 1 кадр
+settings		Run-ahead 2 frames	Упреждение 2 кадра
+settings		On: the game hears the real microphone (a blow, a voice; the DS's own games that ask for one). Off: it hears nothing from the mic, and the in-game menu's Blow still works for a game that wants one.	«Вкл»: игра слышит настоящий микрофон (дуновение, голос; для требующих микрофон игр DS). «Выкл»: микрофон отключен, а кнопка «Дуновение» в меню игры по-прежнему работает.
+settings		Mic sensitivity	Чувствительность микрофона
+settings		How far above the room's noise a word or a blow must be to reach the game. Gate off lets the game hear everything the microphone picks up, its own sound from the speaker included.	Насколько звук голоса или дуновения должен превышать фоновый шум комнаты, чтобы дойти до игры. «Без фильтра» передаёт игре абсолютно всё, включая звук из динамиков.
+settings		Gate off	Без фильтра
+settings		Reset BananaDS	Сброс BananaDS
+settings		BananaDS's settings back to Banana's. Saves, save states and each game's clock stay. Press A twice.	Сброс настроек BananaDS к стандартным. Обычные и быстрые сохранения, а также часы игр сохраняются. Нажмите A дважды.
+settings		Threaded 3D	Многопоточный 3D-рендеринг
+settings		On draws the DS's 3D beside the game, the faster way. Off draws it in step with the game: for a game whose 3D shows on the wrong screen or a frame late with it on (the Dragon Quest games).	«Вкл» отрисовывает 3D-графику параллельно игре (быстрее). «Выкл» отрисовывает синхронно с игрой: для игр, где при включении 3D отображается не на том экране или отстает на кадр (серия Dragon Quest).
+settings		Experimental. On: no frame queue: each frame goes to the panels at the next refresh it can make, and DraStic starts each frame as late as that allows, so a press shows about two refreshes sooner (the sound a little sooner too). Uneven frames (2x, heavy scenes) can show as small stutters the queue would hide.	Экспериментально. «Вкл»: без очереди кадров, каждый кадр выводится на дисплей при первой возможности, а DraStic начинает отрисовку как можно позже, снижая задержку ввода примерно на 2 кадра обновления (звук также опережает). При неравномерном фреймрейте (2x, тяжелые сцены) возможны микрорывки, которые очередь кадров скрыла бы.
+settings		Reset buttons	Сброс кнопок
+settings		DraStic's buttons back to Banana's, for a button setup gone wrong in DraStic's menu: the pad as printed, F or L3 the menu, R2 save, L2 load, R3 fast forward. (HOME always opens the menu.) Press A twice.	Сброс раскладки кнопок DraStic к настройкам Banana (если раскладка сбилась в меню DraStic): кнопки как на корпусе, F или L3 — меню, R2 — сохранение, L2 — загрузка, R3 — ускорение. (HOME всегда открывает меню.) Нажмите A дважды.
+settings		Reset DraStic	Сброс DraStic
+settings		All of DraStic's and SuperDrastic's settings back to Banana's, the buttons too. Saves, save states, cheats and the DS's name and birthday stay. Press A twice.	Сброс всех настроек DraStic и SuperDrastic к стандартным значениям Banana, включая кнопки. Сохранения, быстрые сохранения, читы, имя DS и дата рождения сохраняются. Нажмите A дважды.
+settings		Game panel when idle	Игровая панель при бездействии
+settings		With a game on the top screen, what the game panel on the bottom one does when nothing has touched it or pressed a button for a while: stays on, dims, or turns off. A touch or any button lights it again.	Когда игра запущена на верхнем экране, определяет поведение игровой панели на нижнем экране при отсутствии нажатий и касаний: оставаться включенной, затемняться или выключаться. Касание или любая кнопка включают её обратно.
+settings		Dims	Затемняется
+settings		Turns off	Выключается
+settings		Stays on	Остаётся включенной
+settings		Game panel idle time	Время до затухания панели
+settings		How long the game panel waits, with no touch and no button, before it dims or turns off (Game panel when idle).	Время ожидания без касаний и нажатий кнопок перед затемнением или отключением игровой панели (см. «Игровая панель при бездействии»).
+settings		After 10 s	Через 10 с
+settings		After 30 s	Через 30 с
+settings		After 1 minute	Через 1 мин
+settings		Pokémon companion	Pokémon companion
+settings		Pokémon Ruby, Sapphire, Emerald, FireRed and LeafGreen (the English releases) on the second screen: the party with levels, HP and moves, and in a battle the foe, its types and how each move does against it. Read from the game as it plays; other games keep the panel as it is. Needs Second screen on. Inspired by PokeDaisy by Lidor Itzhari.	Pokémon Ruby, Sapphire, Emerald, FireRed и LeafGreen (английские версии) на втором экране: состав команды с уровнями, HP и атаками, а в бою — противник, его стихии и эффективность каждого удара против него. Считывается прямо из игры во время прохождения; для остальных игр панель остаётся стандартной. Требует включения функции «Второй экран». Создано по мотивам PokeDaisy от Лидора Ицхари (Lidor Itzhari).
+settings		Softcore: achievements unlock with save states, rewind and cheats still there. Hardcore: those are locked for the game, and the unlocks count as hardcore on retroachievements.org. RetroArch's own menu changes the same setting.	Softcore: достижения открываются даже при использовании сохранений, перемотки и читов. Hardcore: эти функции блокируются в игре, а достижения засчитываются как хардкорные на retroachievements.org. В собственном меню RetroArch меняется та же опция.
+settings		Softcore	Softcore
+settings		Hardcore	Hardcore
+settings		On: quitting keeps where you are, and the game goes on from there next time (RetroArch's automatic save state; not in Hardcore). Off: a game starts from its title.	«Вкл»: при выходе текущее место сохраняется, и в следующий раз игра продолжится с него (автосохранение RetroArch; недоступно в режиме Hardcore). «Выкл»: игра запускается с титульного экрана.
+settings		A look for the systems RetroArch runs: a handheld's LCD grid, a CRT's scanlines, or sharp pixels at any size. RetroArch's own Shaders menu still picks any of libretro's presets.	Визуальный стиль для систем, работающих через RetroArch: сетка портативного LCD-экрана, сканлайны CRT-телевизора или резкие пиксели в любом разрешении. Меню шейдеров самого RetroArch по-прежнему позволяет выбрать любые пресеты libretro.
+settings		LCD	LCD
+settings		CRT	CRT
+settings		Sharp pixels	Резкие пиксели
+settings		Audio latency	Задержка звука
+settings		RetroArch's audio buffer. Low is the quickest to react and can crackle on a busy game; Safe has the most margin (and the most delay).	Буфер звука в RetroArch. «Низкая» даёт мгновенный отклик, но в ресурсоёмких играх возможен треск звука; «Безопасная» обеспечивает максимальный запас стабильности (но с большей задержкой).
+settings		Low (32 ms)	Низкая (32 мс)
+settings		Default (64 ms)	По умолчанию (64 мс)
+settings		Safe (128 ms)	Безопасная (128 мс)
+settings		On waits for the panel's refresh before drawing the next frame, so nothing tears. Off lets a core run as fast as it can; the panel can show a half-drawn frame.	«Вкл» ждет обновления экрана перед выводом следующего кадра, устраняя разрывы изображения (тиринг). «Выкл» позволяет ядру работать на максимуме, но на экране могут появляться разорванные кадры.
+settings		The emulator for GBA games. gpSP: the fastest. mGBA: the most accurate, and the one RetroAchievements accepts for hardcore. Cores downloaded with RetroArch's Core Downloader (its Online Updater) are listed here too.	Эмулятор для игр GBA. gpSP: самый быстрый. mGBA: самый точный и поддерживаемый RetroAchievements для хардкорного режима. Ядра, загруженные через загрузчик ядер RetroArch (Online Updater), также появятся здесь.
+settings		RetroArch hotkeys	Горячие клавиши RetroArch
+settings		F + a button in a game: X the menu, Start quits, L and R load and save a state, Y the frame counter, L2 rewind, R2 fast forward. Off: only F + X and F + Start, the two needed to get out, and none bound in RetroArch's own menu either.	F + кнопка в игре: X — меню, Start — выход, L и R — загрузка и сохранение, Y — счётчик FPS, L2 — перемотка назад, R2 — ускорение. «Выкл»: работают только F + X и F + Start (для выхода), остальные комбинации отключены и в меню RetroArch.
+settings		Reset RetroArch	Сброс RetroArch
+settings		RetroArch's settings back to Banana's: for a button bound away in RetroArch's menu (an A that does something else, a hotkey on a face button). Its controls, remaps and overrides go to retroarch/backup-<date> on the card. Saves, states, the RetroAchievements account and these settings stay. Press A twice.	Сброс настроек RetroArch к стандарту Banana: полезно, если в меню RetroArch переназначились кнопки (например, кнопка A делает другое или горячая клавиша попала на основную кнопку). Управление, ремапы и переопределения будут сохранены в retroarch/backup- на карте памяти. Обычные и быстрые сохранения, аккаунт RetroAchievements и данные настройки останутся. Нажмите A дважды.
+settings		Bluetooth	Bluetooth
+settings		Controllers, headphones and speakers. Off (the default) leaves the radio unpowered, which saves battery; Bluetooth devices, below, pairs them. While Bluetooth headphones are connected the sound plays on them.	Геймпады, наушники и колонки. «Выкл» (по умолчанию) обесточивает модуль Bluetooth для экономии заряда; пункт «Устройства Bluetooth» ниже служит для сопряжения. При подключении Bluetooth-наушников звук воспроизводится через них.
+settings		Bluetooth devices	Устройства Bluetooth
+settings		The devices paired and the ones around: A pairs with one in pairing mode, connects a paired one or disconnects it.	Сопряженные и находящиеся рядом устройства: кнопка A выполняет сопряжение с устройством в режиме поиска, подключает или отключает его.
+settings		Bluetooth audio	Звук Bluetooth
+settings		Low latency: aptX, or SBC on headphones without it: the sound as close to the picture as Bluetooth gets, for games. Best quality: LDAC, aptX HD or a richer SBC when the headphones have them, a little later (tens of ms) and a little more battery. Headphones connected now reconnect to take the change.	«Низкая задержка»: кодек aptX (или SBC при его отсутствии), минимальная задержка звука для игр. «Лучшее качество»: LDAC, aptX HD или расширенный SBC при поддержке наушниками; задержка чуть выше (на десятки миллисекунд) и выше расход заряда. Подключенные наушники переподключатся для применения изменений.
+settings		Low latency	Низкая задержка
+settings		Best quality	Лучшее качество
+settings		Sharing login	Авторизация общего доступа
+settings		Name and password: the card asks for the name and password below (Windows refuses a share with no password). Guest: anyone on the network opens it with none; only on a network you trust.	«Имя и пароль»: доступ к карте требует указанные ниже имя и пароль (Windows блокирует сетевой доступ без пароля). «Гостевой»: любой в сети может открыть файлы без пароля (используйте только в доверенных сетях).
+settings		Name and password	Имя и пароль
+settings		Guest	Гостевой
+settings		Sharing name and password	Имя и пароль для общего доступа
+settings		The language of the menu and the settings. Lines not yet translated stay in English.	Язык меню и настроек. Непереведенные строки остаются на английском языке.
+settings		{name} ({English name}): translated by {translator}.	{name} ({English name}): перевод: {translator}.
+settings		Language	Язык
+settings		Test versions	Тестовые версии
+settings		Whether Update's check counts test versions (GitHub pre-releases). Every BananaOS release so far is one, so with them left out the check finds nothing until a stable version comes out.	Учитывать ли предварительные тестовые версии (пререлизы на GitHub) при проверке обновлений. Пока все выпуски BananaOS являются таковыми, поэтому без этой опции проверка не найдет обновлений до выхода стабильной версии.
+settings		Included	Включены
+settings		Left out	Исключены
+settings		Update check	Проверка обновлений
+settings		When asked: GitHub is only asked when you choose Check for updates. Daily: also when Wi-Fi connects, at most once a day, so the Update row says when a new version is out. Nothing is downloaded without you.	«По запросу»: запрос к GitHub отправляется только при выборе «Проверить обновления». «Ежедневно»: также при подключении к Wi-Fi (не чаще раза в день), строка обновления сообщит о выходе новой версии. Без вашего согласия ничего не скачивается.
+settings		When asked	По запросу
+settings		Daily	Ежедневно
+settings		Box art from	Источник обложек
+settings		libretro: libretro's collections. libretro + Twilight: TwilightBoxart (boxart.kirovair.com) for the covers libretro has none of. Twilight first: TwilightBoxart's covers where it has them. TwilightBoxart is asked one game a second.	libretro: база libretro. libretro + Twilight: TwilightBoxart (boxart.kirovair.com) для отсутствующих в libretro обложек. Twilight first: приоритет обложкам TwilightBoxart. Запросы к TwilightBoxart отправляются по одной игре в секунду.
+settings		libretro + Twilight	libretro + Twilight
+settings		Twilight first	Twilight first
+settings		Second SD card	Вторая карта памяти
+settings		Games on the card in the second slot (its roms folder, with the same system folders as this card) show up in the library with the others while it's in. exFAT or FAT32.	Игры на карте памяти во втором слоте (папка roms с теми же подпапками систем, что и на основной карте) отображаются в библиотеке вместе с остальными, пока карта вставлена. Поддерживаются exFAT и FAT32.
+settings		Show its games	Показывать её игры
+settings		Reset system settings	Сброс настроек системы
+settings		Puts the menu, display, sound, power and network settings back to their defaults, the time zone too (the language stays). Your games, saves and the emulators' settings are untouched. Press A twice.	Сбрасывает настройки меню, дисплея, звука, питания, сети и часовой пояс на стандартные (язык сохраняется). Ваши игры, сохранения и настройки эмуляторов останутся нетронутыми. Нажмите A дважды.
+settings		Reset emulator settings	Сброс настроек эмуляторов
+settings		Puts the emulator choices back to their defaults: the DS emulator, Quick resume, each system's emulator (core), and RetroArch's shader, audio latency, VSync and hotkeys. Your menu settings, saves and games stay. Press A twice.	Сбрасывает параметры эмуляторов на стандартные: выбор эмулятора DS, «Быстрый старт», ядра для каждой системы, а также шейдер, задержку звука, VSync и горячие клавиши RetroArch. Настройки меню, сохранения и игры останутся. Нажмите A дважды.
+settings		Hotkeys	Горячие клавиши
+settings		The buttons that do something everywhere, in the menu and in each emulator.	Кнопки и сочетания, работающие повсюду: в меню и в каждом эмуляторе.
+settings		Volume keys	Кнопки громкости
+settings		Everywhere, in games too: the speakers, or the headphones while they are in.	Везде, включая игры: громкость динамиков (или наушников при их подключении).
+settings		F + volume	F + громкость
+settings		Everywhere, in games too: both screens' backlights together. Each screen's own: Settings > Display & sound.	Везде, включая игры: регулировка подсветки обоих экранов одновременно. Раздельно для каждого экрана: «Настройки > Экран и звук».
+settings		Power	Кнопка питания
+settings		Sleep	Сон
+settings		Everywhere: a press sleeps (a game is paused where it is), a press wakes. Closing the lid does the same.	Везде: нажатие переводит в сон (игра ставится на паузу), повторное нажатие пробуждает. Закрытие крышки делает то же самое.
+settings		Hold power	Удержание кнопки питания
+settings		Everywhere: held for 2 seconds. A game running saves first.	Везде: удержание в течение 2 секунд. Запущенная игра предварительно сохраняется.
+settings		Menu: START	Меню: START
+settings		In the menu: Settings. Y there: Sleep, Restart and Shut down.	В меню: «Настройки». Кнопка Y в настройках: «Сон», «Перезагрузка» и «Выключение».
+settings		Menu: SELECT	Меню: SELECT
+settings		Search	Поиск
+settings		In the menu: search every system's games by name.	В меню: поиск игр по названию во всех системах.
+settings		Menu: X	Меню: X
+settings		Resume, options	Продолжить, опции
+settings		On the home row: the system's last game. On a game: its page (name, box art, emulator, delete).	В главном ряду: последняя игра системы. На плитке игры: страница игры (название, обложка, эмулятор, удаление).
+settings		Menu: L / R	Меню: L / R
+settings		A page	На страницу
+settings		In a game list or a settings list: five at a time. Up and down too.	В списке игр или настроек: перелистывание по пять пунктов. Вверх и вниз тоже.
+settings		SuperDrastic: F	SuperDrastic: F
+settings		Its menu	Меню эмулятора
+settings		DS games in SuperDrastic: save, load, quick settings (volume, brightness), quit. L3 opens it too.	Игры DS в SuperDrastic: сохранение, загрузка, быстрые настройки (громкость, яркость), выход. Кнопка L3 также открывает его.
+settings		SuperDrastic: F + START	SuperDrastic: F + START
+settings		DS games in SuperDrastic: back to the menu, the spot saved to resume from when Quick resume is on.	Игры DS в SuperDrastic: возврат в меню с сохранением точки выхода (если включен «Быстрый старт»).
+settings		SuperDrastic: R2 / L2	SuperDrastic: R2 / L2
+settings		Save / load state	Быстрое сохр. / загр.
+settings		DS games in SuperDrastic: DraStic's quick save state, and loading it.	Игры DS в SuperDrastic: быстрое сохранение DraStic и его загрузка.
+settings		SuperDrastic: R3	SuperDrastic: R3
+settings		Fast-forward	Ускорение
+settings		DS games in SuperDrastic: held, the game runs as fast as it can.	Игры DS в SuperDrastic: при удержании игра работает с максимальной скоростью.
+settings		BananaDS: F / L3	BananaDS: F / L3
+settings		DS games in BananaDS: save, load, quick settings, achievements, quit.	Игры DS в BananaDS: сохранение, загрузка, быстрые настройки, достижения, выход.
+settings		BananaDS: F + R	BananaDS: F + R
+settings		Save to slot 1	Сохранить в слот 1
+settings		DS games in BananaDS.	Игры DS в BananaDS.
+settings		BananaDS: F + L	BananaDS: F + L
+settings		Load slot 1	Загрузить слот 1
+settings		BananaDS: F + START	BananaDS: F + START
+settings		DS games in BananaDS: your spot saved, then back to the menu.	Игры DS в BananaDS: текущее место сохраняется, затем возврат в меню.
+settings		RetroArch: F + X	RetroArch: F + X
+settings		The other systems (RetroArch). Settings > Other systems > RetroArch hotkeys Off leaves this and F + START only.	Остальные системы (RetroArch). Если опция «Настройки > Другие системы > Горячие клавиши RetroArch» выключена, работают только эта комбинация и F + START.
+settings		RetroArch: F + START	RetroArch: F + START
+settings		The other systems (RetroArch): back to the menu.	Остальные системы (RetroArch): возврат в меню.
+settings		RetroArch: F + R / F + L	RetroArch: F + R / F + L
+settings		The other systems (RetroArch): the current state slot.	Остальные системы (RetroArch): сохранение / загрузка в текущий слот.
+settings		RetroArch: F + R2	RetroArch: F + R2
+settings		The other systems (RetroArch): on, and off again.	Остальные системы (RetroArch): включение и выключение ускорения.
+settings		RetroArch: F + L2	RetroArch: F + L2
+settings		Rewind	Перемотка назад
+settings		The other systems (RetroArch): held, the game runs backwards.	Остальные системы (RetroArch): при удержании игра перематывается назад.
+settings		RetroArch: F + Y	RetroArch: F + Y
+settings		Frame rate	Частота кадров
+settings		The other systems (RetroArch): shown in a corner, or not.	Остальные системы (RetroArch): отображение FPS в углу экрана.
+settings		The handheld sleeps, as with a press of the power button; a game running is paused. Press the power button to wake it.	Консоль переходит в спящий режим, как при нажатии кнопки питания; запущенная игра ставится на паузу. Нажмите кнопку питания для пробуждения.
+settings		From the theme	Из темы оформления
+settings		This theme sets its own accent colour. Pick Dark, Light or a theme without one to choose it here.	Эта тема использует собственный цвет акцента. Выберите тему «Тёмная», «Светлая» или другую тему без фиксированного акцента, чтобы настроить его здесь.
+settings		Name	Имя
+settings		The DS's name	Имя консоли DS
+settings		10 characters at most	Не более 10 символов
+settings		DraStic's buttons are Banana's again.	Кнопки DraStic сброшены к стандартным Banana.
+settings		Back to Banana's settings.	Назад к настройкам Banana.
+settings		Couldn't reset: the card may be read-only.	Не удалось сбросить: возможно, карта памяти доступна только для чтения.
+settings		RetroArch is back to Banana's settings. The old ones are in {out} on the card.	RetroArch сброшен к настройкам Banana. Прежние настройки сохранены в {out} на карте памяти.
+settings		RetroArch couldn't be reset.	Не удалось сбросить настройки RetroArch.
+settings		Emulator settings reset	Настройки эмуляторов сброшены
+settings		System settings reset	Настройки системы сброшены
+settings		The core choices and RetroArch's options are back to their defaults.	Выбор ядер и параметры RetroArch возвращены к значениям по умолчанию.
+settings		The menu, display, sound and power settings are back to their defaults.	Настройки меню, экрана, звука и питания возвращены к значениям по умолчанию.
+settings		Linux {release}.	Linux {release}.
+settings		The two screens rarely show the same white. This corrects one of them towards the other: the same test pattern on both, and red, green, blue, gamma, brightness and black for the one corrected (the handheld has one colour table, so one screen). Now: {c}	Два экрана редко показывают одинаковый белый цвет. Эта настройка корректирует один экран под другой: одинаковый тестовый шаблон на обоих и регулировка красного, зелёного, синего, гаммы, яркости и точки чёрного для настраиваемого экрана (в консоли одна таблица цветов, поэтому настраивается один экран). Сейчас: {c}
+settings		no correction.	без коррекции.
+settings		the top screen corrected.	верхний экран скорректирован.
+settings		the bottom screen corrected.	нижний экран скорректирован.
+settings		What a computer asks for when it opens the share: name {name}, password {password}. A changes them (they are kept in banana/accounts.conf, which the share never shows).	Данные для входа с компьютера в сетевую папку: имя {name}, пароль {password}. Нажмите A для изменения (они хранятся в файле banana/accounts.conf, скрытом из общего доступа).
+settings		Anyone on the network can open it with no password (Sharing login): leave it off on networks you don't trust.	Любой в локальной сети может открыть файлы без пароля (см. «Авторизация общего доступа»): отключайте в ненадёжных сетях.
+settings		Name {name}, password {password} (Sharing name and password, below).	Имя {name}, пароль {password} (см. «Имя и пароль для общего доступа» ниже).
+settings		Not set	Не задано
+settings		The pictures didn't come: no connection?	Изображения не загрузились: нет подключения?
+settings		Not fetched: {error}.	Не удалось загрузить: {error}.
+settings		no connection	нет подключения
+settings		No connection: is Wi-Fi connected?	Нет подключения: подключен ли Wi-Fi?
+settings		Nothing in libretro's collection for "{words}". Fewer words, or another spelling (B, then A to type again).	В базе libretro ничего не найдено по запросу «{words}». Попробуйте меньше слов или другое написание (B, затем A для повторного ввода).
+settings		Couldn't write banana/wifi.conf on the card.	Не удалось записать banana/wifi.conf на карту памяти.
+settings		{network} signs in a way the menu can't (a company network, or the old WEP): it can be written in banana/wifi.conf on a computer.	{network} использует неподдерживаемый тип авторизации (корпоративная сеть или устаревший WEP): параметры можно прописать в banana/wifi.conf на компьютере.
+settings		Password for	Пароль для
+settings		{name} forgotten: its password is gone from banana/wifi.conf.	Сеть {name} забыта: пароль удален из banana/wifi.conf.
+settings		A joins the network chosen, with its password typed on the keyboard (or by touch). X searches again, Y forgets a saved network. Passwords are kept in banana/wifi.conf on the card.	Кнопка A подключает к выбранной сети с вводом пароля на клавиатуре (или касанием). X ищет снова, Y забывает сохранённую сеть. Пароли хранятся в banana/wifi.conf на карте памяти.
+settings		Every system's games	Игры всех систем
+settings		No games match	Игры не найдены
+settings		{value} game matches	Найдено игр: {value}
+settings		A types the key, B deletes, X capitals, Y a space, START searches: the games found open as a shelf of their own, first on the shelf. Part of a name is enough; an empty search takes the shelf away.	A — ввод буквы, B — удаление, X — заглавные, Y — пробел, START — поиск: найденные игры откроются на отдельной полке первой в списке. Достаточно части названия; пустой поиск убирает полку.
+settings		A types the key, B deletes, X capitals, L symbols, Y a space, START joins. Or tap the keys. The password is kept in banana/wifi.conf on the card.	A — ввод символа, B — удаление, X — заглавные, L — знаки, Y — пробел, START — подключение (или коснитесь экрана). Пароль сохраняется в banana/wifi.conf на карте памяти.
+settings		A types the key, B deletes, X capitals, L symbols, Y a space, START when it is typed. Kept in both emulators' settings (DraStic's drastic.cfg, BananaDS's bananads.conf).	A — ввод символа, B — удаление, X — заглавные, L — знаки, Y — пробел, START — подтверждение ввода. Сохраняется в настройках обоих эмуляторов (drastic.cfg для DraStic, bananads.conf для BananaDS).
+settings		A types the key, B deletes, X capitals, L symbols, Y a space, START when it is typed. Kept in banana/game-titles.tsv on the card.	A — ввод символа, B — удаление, X — заглавные, L — знаки, Y — пробел, START — подтверждение ввода. Сохраняется в banana/game-titles.tsv на карте памяти.
+settings		A types the key, B deletes, X capitals, L symbols, Y a space, START looks. A few words of the name are enough: the closest names come first.	A — ввод символа, B — удаление, X — заглавные, L — знаки, Y — пробел, START — поиск. Достаточно пары слов из названия: наиболее точные совпадения идут первыми.
+settings		A types the key, B deletes, X capitals, L symbols, Y a space, START when it is typed. Or tap the keys. Accounts are kept in banana/accounts.conf on the card.	A — ввод символа, B — удаление, X — заглавные, L — знаки, Y — пробел, START — подтверждение (или нажимайте на экране). Аккаунты хранятся в banana/accounts.conf на карте памяти.
+settings		Downloading {n}%	Загрузка: {n}%
+settings		The check didn't answer.	Сервер проверки не ответил.
+settings		failed: the download stopped	ошибка: загрузка прервана
+settings		Checking for updates...	Проверка обновлений…
+settings		Checking the download...	Проверка загруженного файла…
+settings		{p}% · {done} of {total} MB	{p}% · {done} из {total} МБ
+settings		Cancel	Отмена
+settings		Downloading Banana {version}	Загрузка Banana {version}
+settings		Downloaded	Загружено
+settings		Install	Установить
+settings		Install Banana {version}	Установить Banana {version}
+settings		Resume: {done} of {total} MB	Продолжить: {done} из {total} МБ
+settings		{n} MB	{n} МБ
+settings		Download	Скачать
+settings		Download Banana {version}	Скачать Banana {version}
+settings		Check	Проверить
+settings		Up to date	Обновлений нет
+settings		None for this handheld	Нет для этой консоли
+settings		Check for updates	Проверить обновления
+settings		Newest for the {handheld}: {version} (a test version)	Новейшая для {handheld}: {version} (тестовая версия)
+settings		Newest for the {handheld}: {version}	Новейшая для {handheld}: {version}
+settings		Up to date: {version} is the newest for the {handheld}	Установлена новейшая версия: {version} для {handheld}
+settings		No release for the {handheld} yet	Для {handheld} пока нет релизов
+settings		The check failed	Ошибка проверки обновлений
+settings		Asking GitHub which version is the newest for this handheld...	Запрос к GitHub о наличии обновлений для этой консоли…
+settings		Checking the download against the release's SHA-256...	Проверка загруженного файла по контрольной сумме SHA-256…
+settings		Downloading to banana/updates on the card. B goes back and the download carries on (this page shows how far it is); A cancels it, and the next Download carries on from where it stopped.	Загрузка в папку banana/updates на карте. Кнопка B возвращает назад, а загрузка продолжится в фоне (на этой странице виден прогресс); кнопка A отменяет её, а при следующем нажатии «Скачать» загрузка возобновится с места остановки.
+settings		The download failed: {reason}.	Ошибка загрузки: {reason}.
+settings		The check failed: {reason}.	Ошибка проверки: {reason}.
+settings		Downloaded and checked against the release's SHA-256. A, then A again, writes it to the other slot; this version stays as it is until the restart.	Загружено и проверено по SHA-256. Нажатие A, а затем снова A, запишет систему во второй слот; текущая версия не изменится до перезагрузки.
+settings		A downloads it ({n} MB) to banana/updates on the card and checks it; nothing is installed until you choose Install. X checks again.	Кнопка A скачивает обновление ({n} МБ) в banana/updates на карте и проверяет его; установка начнется только при выборе «Установить». X проверяет снова.
+settings		This handheld has the newest version. A checks again.	На консоли установлена самая свежая версия. Кнопка A запускает повторную проверку.
+settings		GitHub has no release for this handheld. With Settings > System > Test versions left out, only stable versions count, and there are none yet.	На GitHub нет релизов для этой консоли. Если параметр «Настройки > Система > Тестовые версии» отключен, учитываются только стабильные релизы, а их пока нет.
+settings		A asks GitHub (Wi-Fi needed) whether a newer version is out for this handheld. Nothing is downloaded until you choose Download.	Кнопка A отправляет запрос на GitHub (требуется Wi-Fi) о наличии новой версии. Файлы не будут скачиваться, пока вы не нажмете «Скачать».
+settings		RetroAchievements password for	Пароль RetroAchievements для
+settings		ScreenScraper password for	Пароль ScreenScraper для
+settings		A name of letters, digits, dots, dashes or underscores, at most 32.	Имя из букв, цифр, точек, дефисов или подчёркиваний, не более 32 символов.
+settings		File sharing password for	Пароль общего доступа для
+settings		The password can't be empty: Sharing login > Guest is for a share with none.	Пароль не может быть пустым: для доступа без пароля выберите «Авторизация общего доступа > Гостевой».
+settings		The DS takes 10 characters at most; this one has {count}.	Имя DS может содержать не более 10 символов; введено {count}.
+settings		Looking in libretro's collection...	Поиск в коллекции libretro…
+settings		The time zone is still UTC, so the clock shows {time}. Left and right pick yours; Finish again to keep UTC.	Часовой пояс остался UTC, часы показывают {time}. Выберите свой стрелками влево/вправо; нажмите «Завершить» ещё раз, чтобы оставить UTC.
+settings		Your name on the DS, as a real one asks for it the first time: Mario Kart's records, Pictochat, a game's save. A types it (10 characters at most). Leave it and the emulators use their own.	Ваше имя в DS, как на оригинальной консоли при первом включении: рекорды Mario Kart, Pictochat, сохранения. Нажмите A для ввода (до 10 знаков). Если пропустить, эмуляторы используют стандартное.
+settings		Tap a tile; F + X opens RetroArch's menu, F + Start quits	Коснитесь плитки; F + X открывает меню RetroArch, F + Start — выход
+settings		F + X opens RetroArch's menu, F + Start quits	F + X открывает меню RetroArch, F + Start — выход
+settings		{server}'s address couldn't be looked up: is Wi-Fi connected? (Or the network's DNS isn't answering: try again in a minute)	Не удалось определить адрес {server}: подключен ли Wi-Fi? (Либо DNS не отвечает: попробуйте через минуту)
+settings		couldn't connect to {server}: is Wi-Fi connected?	не удалось подключиться к {server}: подключен ли Wi-Fi?
+settings		{server} didn't answer in time (a weak Wi-Fi signal?)	{server} не ответил вовремя (слабый сигнал Wi-Fi?)
+settings		the secure connection to {server} failed: is the clock right? (It says {date})	сбой защищенного соединения с {server}: правильно ли настроены часы? (Сейчас: {date})
+settings		the connection to {server} broke off	соединение с {server} оборвалось
+settings		{server} refused the download (HTTP error)	{server} отклонил загрузку (ошибка HTTP)
+settings		the card can't be written (full?)	не удалось записать на карту памяти (заполнена?)
+settings		the file isn't there	файл отсутствует
+settings		{file} is damaged in {file}: download it again. (Its SHA-256 starts {hash}; the release's SHA256SUMS file lists the right one.)	{file} поврежден в {file}: скачайте заново. (Его SHA-256 начинается с {hash}; правильный указан в файле SHA256SUMS).
+settings		there is no newer version to download: Check for updates first	нет более новой версии для загрузки: сначала выполните «Проверить обновления»
+settings		that check was for the {board}, this is the {board}	проверка выполнялась для {board}, а здесь установлена {board}
+settings		the release's package has an odd name ({file})	некорректное имя пакета обновления ({file})
+settings		not enough space on the card: the update needs {n} MB free (the download, and its unpacked copy while it installs); there are {n} MB	недостаточно места на карте памяти: требуется {n} МБ свободного места (для загрузки и распаковки при установке); доступно {n} МБ
+settings		{error} (fetching SHA256SUMS-{board}.txt)	{error} (при получении SHA256SUMS-{board}.txt)
+settings		the release's SHA256SUMS-{board}.txt doesn't list {file}	в файле SHA256SUMS-{board}.txt релиза нет записи для {file}
+settings		{error}. What came ({n} MB) is kept: Download again carries on from there	{error}. Загруженная часть ({n} МБ) сохранена: повторное нажатие «Скачать» продолжит с этого места
+settings		the download stopped at {n} of {n} MB: Download again carries on from there	загрузка прервалась на {n} из {n} МБ: повторное нажатие «Скачать» продолжит с этого места
+settings		the download is damaged: its SHA-256 doesn't match the release's SHA256SUMS, so it was deleted. Download it again	загруженный файл поврежден: контрольная сумма SHA-256 не совпадает с SHA256SUMS, файл удален. Скачайте его заново
+settings		can't move the download into banana/updates	не удалось переместить загрузку в banana/updates
+settings		Fetching the cover and the title screen...	Загрузка обложки и заставки…
+settings		Box art for	Обложка для
+settings		{value} (B works once it has answered.)	{value} (кнопка B сработает после ответа).
+settings		libretro's names for the words typed, the closest first. A fetches that game's cover and title screen for this one (over what it had), and every scrape after keeps them. B types other words.	Названия в базе libretro по введенным словам, наиболее точные первыми. Кнопка A скачивает обложку и заставку для этой игры (заменяя старые), и последующие поиски их не сотрут. B — ввести другие слова.
+settings		Looking...	Поиск…
+settings		Use	Использовать
+settings		{shader} (not on the card)	{shader} (нет на карте)
+settings		Wi-Fi is off: switch it on in Settings > Network first.	Wi-Fi выключен: сначала включите его в «Настройки > Сеть».
+settings		Box art: the game's name in libretro's collection	Обложка: название игры в базе libretro
+settings		The game couldn't be deleted: the card may be read-only.	Не удалось удалить игру: возможно, карта памяти доступна только для чтения.
+settings		This game's name	Название этой игры
+settings		This game's sort title	Сортировочное имя игры
+settings		As in Settings ({setting})	Как в настройках ({setting})
+settings		As in Settings: {shader}	Как в настройках: {shader}
+settings		As scraped	Как найдено в базе
+settings		By its name	По имени файла
+settings		Sort title	Имя для сортировки
+settings		Delete game...	Удалить игру…
+settings		A again: the game, saves and art	Нажмите A ещё раз: игра, сохранения и обложка
+settings		A again: the game (saves kept)	Нажмите A ещё раз: игра (сохранения останутся)
+settings		With its saves, states and art	Вместе с сохранениями и обложкой
+settings		Keep its saves and art	Оставить сохранения и обложку
+settings		Fetched	Загружено
+settings		Find it by name	Найти по названию
+settings		This game's emulator	Эмулятор для этой игры
+settings		This game's shader	Шейдер для этой игры
+settings		This game's 3D	3D для этой игры
+settings		This game's microphone	Микрофон для этой игры
+settings		Delete this game	Удалить эту игру
+settings		This game's box art	Обложка для этой игры
+settings		SuperDrastic: DraStic onto both panels, the fastest. BananaDS: Banana's own emulator (melonDS's core), the most accurate. The choice is for this game only; the others follow Settings > Nintendo DS > Emulator.	SuperDrastic: DraStic на оба экрана (самый быстрый). BananaDS: собственный эмулятор Banana (ядро melonDS, самый точный). Выбор действует только для этой игры; остальные следуют опции «Настройки > Nintendo DS > Эмулятор».
+settings		The picture's shader for this game only, in either emulator; the others follow Settings > Nintendo DS > Shader. None scales smoothly and costs no GPU work.{PLUS_SHADER_NOTE}	Шейдер изображения только для этой игры в любом эмуляторе; остальные следуют настройке «Настройки > Nintendo DS > Шейдер». «Нет» масштабирует плавно и не нагружает GPU.{PLUS_SHADER_NOTE}
+settings		SuperDrastic (DraStic) only. On draws the DS's 3D beside the game, the faster way; Off draws it in step with the game, for a game whose 3D shows on the wrong screen or a frame late (the Dragon Quest games). The others follow Settings > Nintendo DS > Threaded 3D.	Только для SuperDrastic (DraStic). «Вкл» отрисовывает 3D параллельно игре (быстрее); «Выкл» синхронно с игрой, если 3D отображается не на том экране или опаздывает на кадр (игры Dragon Quest). Остальные следуют «Настройки > Nintendo DS > Многопоточный 3D-рендеринг».
+settings		How loud a word or a blow must be to reach this game, in either emulator: High hears a quiet voice, Low only a loud one, Off none. For a game that needs the microphone (Nintendogs) or one it bothers.	Громкость голоса или дуновения для этой игры в любом эмуляторе: «Высокая» слышит тихий голос, «Низкая» — только громкий, «Выкл» отключает микрофон. Для игр, использующих микрофон (Nintendogs), или если он мешает.
+settings		The name the menu shows for this game. A types it; an empty one goes back to the scraped name. Kept in banana/game-titles.tsv, which scraping the box art again leaves alone.	Отображаемое название игры в меню. Нажмите A для ввода; пустое поле возвращает название из базы. Хранится в banana/game-titles.tsv, повторный поиск обложек его не изменит.
+settings		The library's order goes by this instead of the name: Dragon Quest 04, 05 and 09 keep IV, V and IX in their order. A types it; an empty one sorts by the name again.	Порядок сортировки в библиотеке вместо обычного имени: например, Dragon Quest 04, 05 и 09 для правильного порядка IV, V и IX. Нажмите A для ввода; пустое поле возвращает сортировку по имени.
+settings		Removes this game's file from the card: %s. Left and right choose whether its saves, save states and box art go too, or stay (they come back if you copy the game again). Nothing else is touched: no other game, no BIOS. A asks first; A again deletes.	Удаляет файл игры с карты памяти: %s. Влево/вправо переключает, удалять ли сохранения, быстрые сохранения и обложки, или оставить их (они восстановятся при повторном копировании игры). Никакие другие файлы не затронутся. Кнопка A запрашивает подтверждение, повторное нажатие A удаляет.
+settings		For a game the box art scrape got wrong or didn't find (a translation, a hack, another name): A types its name as libretro's collection has it, then you pick the right one from what it finds. Wi-Fi needed.	Для игр, обложки которых не нашлись или определились неверно (русификаторы, хаки, альтернативные названия): нажмите A для ввода названия как в базе libretro, затем выберите верный вариант. Требуется Wi-Fi.
+settings		This game	Эта игра
+settings		Type	Ввести
+settings		Find	Найти
+settings		Delete...	Удалить…
+settings		Search games	Поиск игр
+settings		Type a name	Введите название
+settings		Pairing with {name}...	Сопряжение с {name}…
+settings		Connecting to {name}...	Подключение к {name}…
+settings		Disconnecting {name}...	Отключение {name}…
+settings		Forgetting {name}...	Удаление {name}…
+settings		Bluetooth didn't come on: {reason}.	Не удалось включить Bluetooth: {reason}.
+settings		Paired with {n}.	Сопряжено с {n}.
+settings		Couldn't pair with {n}{reason} Put it in pairing mode again (its manual says how), then A.	Не удалось выполнить сопряжение с {n}{reason} Переведите устройство в режим сопряжения снова (см. его инструкцию) и нажмите A.
+settings		Couldn't connect to {n}{reason} Is it on and near the handheld?	Не удалось подключиться к {n}{reason} Включено ли устройство и находится ли рядом с консолью?
+settings		{n} disconnected.	{n} отключено.
+settings		Couldn't disconnect {n}{reason}	Не удалось отключить {n}{reason}
+settings		{n} forgotten: pair with it again to use it.	{n} удалено: выполните сопряжение снова для использования.
+settings		Couldn't forget {n}{reason}	Не удалось удалить {n}{reason}
+settings		Bluetooth is off	Bluetooth выключен
+settings		Nothing connected	Нет подключений
+settings		Bluetooth is switched off. X switches it on and searches.	Bluetooth выключен. Кнопка X включает его и запускает поиск.
+settings		A pairs with the device chosen (put it in pairing mode first), connects a paired one, or disconnects it. X searches again, Y forgets a paired device. Headphones play the sound while they are connected; controllers work in the games.	Кнопка A выполняет сопряжение (сначала переведите устройство в режим сопряжения), подключает или отключает его. X — поиск, Y — удалить устройство. При подключении наушников звук идёт в них; геймпады работают в играх.
+settings		Devices	Устройства
+settings		Paired	Сопряжённые
+settings		No devices found. X searches again.	Устройства не найдены. Кнопка X ищет снова.
+settings		Pair	Сопряжение
+settings		Disconnect	Отключить
+settings		Connect	Подключить
+settings		Headphones	Наушники
+settings		Controller	Геймпад
+settings		Keyboard	Клавиатура
+settings		Mouse	Мышь
+settings		Back to no correction: A keeps that, B goes back to what was kept.	Сброс калибровки: A сохраняет это состояние, B отменяет изменения.
+settings		The display refused it: {error}. Nothing was kept.	Дисплей отклонил настройки: {error}. Изменения не сохранены.
+settings		The card can't be written.	Не удалось записать данные на карту памяти.
+settings		No correction	Без коррекции
+settings		The top screen corrected	Верхний экран скорректирован
+settings		The bottom screen corrected	Нижний экран скорректирован
+settings		Screen colours  ·  {pattern}  ·  L / R: another pattern	Цвета экранов · {pattern} · L / R: другой шаблон
+settings		Make the screen you correct look like the other one. X: no correction.	Отрегулируйте настраиваемый экран так, чтобы цвета совпадали с другим. X: без коррекции.
+settings		Correct the top	Настроить верхний
+settings		Correct the bottom	Настроить нижний
+settings		Keep	Сохранить
+settings		3x (experimental)	3x (эксперим.)
+settings		4x (experimental)	4x (эксперим.)
+settings		Game companion	Game companion
+settings		Other Game Boy Advance games on the second screen: seven pages about the game as it plays (status, a closer look, the fight, the map, the bag, collectibles, progress), read from the game where it can be and notes where not. Pokémon games keep the Pokémon companion. Needs Second screen on. Inspired by PokeDaisy by Lidor Itzhari.	Другие игры Game Boy Advance на втором экране: семь страниц с информацией по ходу игры (статус, подробности, бой, карта, сумка, коллекционирование, прогресс), считываемой из памяти игры (или заметок, где это невозможно). В играх Pokémon остаётся Pokémon companion. Требуется включенный «Второй экран». Создано по мотивам PokeDaisy от Лидора Ицхари (Lidor Itzhari).
+settings		Screen border	Рамка экрана
+settings		On: the black around a game's picture filled with a quiet border in the menu's colours (the theme's), the picture at a sharp whole-number size where that fits. The DS, the N64 and a picture that already fills the screen have none.	«Вкл»: чёрные поля вокруг изображения игры заполняются ненавязчивой рамкой в цветах меню (темы), само изображение масштабируется в чёткий целочисленный размер (если помещается). Для DS, N64 и игр, уже заполняющих экран, рамка не используется.
+settings		The emulator (RetroArch core) for this system's games: the first is BananaOS's own. Cores downloaded with RetroArch's Core Downloader (its Online Updater) are listed here too.	Эмулятор (ядро RetroArch) для игр этой системы: первым идёт встроенное ядро BananaOS. Ядра, загруженные через загрузчик ядер RetroArch (Online Updater), также отображаются здесь.
+settings		Home server	Домашний сервер
+settings		Your games, their box art and your saves from a server at home: Romhost (Homeport's ROM library) or RomM. A opens its page: pairing, Sync now, and what syncs.	Ваши игры, обложки и сохранения с домашнего сервера: Romhost (библиотека ROM-файлов Homeport) или RomM. Кнопка A открывает страницу: сопряжение, «Синхронизировать сейчас» и параметры синхронизации.
+settings		Credits	Авторы
+settings		The people who made this version of BananaOS: development, translations, testing and thanks. A opens the list.	Люди, создавшие эту версию BananaOS: разработка, перевод, тестирование и благодарности. Кнопка A открывает список.
+settings		SuperDrastic: F + SELECT	SuperDrastic: F + SELECT
+settings		Swap the screens	Поменять экраны местами
+settings		DS games in SuperDrastic: the DS's top screen on the bottom panel and its bottom screen on the top one (touch follows it: the RG DS's top touchscreen; on the RG DS Plus no touch while swapped), and back. Kept for each game.	Игры DS в SuperDrastic: верхний экран DS на нижней панели, а нижний — на верхней (сенсор перемещается вместе с экраном: на верхний сенсорный экран RG DS; на RG DS Plus при смене экранов сенсор не работает) и обратно. Запоминается для каждой игры.
+settings		BananaDS: F + SELECT	BananaDS: F + SELECT
+settings		DS games in BananaDS: the DS's top screen on the bottom panel and its bottom screen on the top one (touch follows it: the RG DS's top touchscreen; on the RG DS Plus no touch while swapped), and back. Kept for each game.	Игры DS в BananaDS: верхний экран DS на нижней панели, а нижний — на верхней (сенсор перемещается вместе с экраном: на верхний сенсорный экран RG DS; на RG DS Plus при смене экранов сенсор не работает) и обратно. Запоминается для каждой игры.
+settings		Server	Сервер
+settings		Sync now	Синхронизировать сейчас
+settings		Copies the server's games (with their covers and names) to the card and syncs the saves both ways. It carries on in the background; the handheld doesn't sleep while games download. Files of your own are never replaced or deleted: only the ones a sync put there.	Копирует игры с сервера (с обложками и названиями) на карту памяти и синхронизирует сохранения в обе стороны. Выполняется в фоне; консоль не переходит в спящий режим во время загрузки игр. Ваши собственные файлы никогда не заменяются и не удаляются: только файлы, загруженные синхронизацией.
+settings		Download: the server's games for the systems below come to the card (and leave it when they leave the server). Saves only: the games stay as they are and only the saves sync.	«Загружать»: игры с сервера для выбранных ниже систем копируются на карту (и удаляются, когда удаляются с сервера). «Только сохранения»: игры не скачиваются, синхронизируются только файлы сохранений.
+settings		Saves only	Только сохранения
+settings		Save states	Быстрые сохранения
+settings		On: save states sync too, not only the games' own saves (RomM; on Romhost its Devices page decides). Quick-resume states never sync.	«Вкл»: синхронизируются также файлы быстрых сохранений (save states), а не только обычные сохранения (RomM; в Romhost это задаётся на странице Devices). Состояния быстрого старта (Quick resume) никогда не синхронизируются.
+settings		Auto sync	Автосинхронизация
+settings		Leaving a game: its saves go to the server as you leave it (a few seconds, in the background). And on Wi-Fi: also games and saves whenever Wi-Fi connects. Never while a game runs.	«При выходе из игры»: сохранения отправляются на сервер при выходе из игры (за пару секунд, в фоне). «И по Wi-Fi»: также синхронизирует игры и сохранения при каждом подключении к Wi-Fi. Никогда не выполняется во время запущенной игры.
+settings		Leaving a game	При выходе из игры
+settings		And on Wi-Fi	И по Wi-Fi
+settings		Which systems sync on this handheld. A skipped system's games stay as they are on the card.	Какие системы синхронизировать на этой консоли. Игры пропущенных систем останутся на карте памяти без изменений.
+settings		Forget this server	Забыть этот сервер
+settings		Unpairs the handheld: nothing syncs until it is paired again. The games and saves stay on the card. Press A twice.	Отвязывает консоль: синхронизация прекратится до повторного сопряжения. Игры и сохранения останутся на карте памяти. Нажмите A дважды.
+settings		Home server systems	Системы домашнего сервера
+settings		Sync: its games and saves sync with the home server. Skip: they stay as they are on this handheld.	«Синхр.»: игры и сохранения синхронизируются с домашним сервером. «Пропуск»: остаются без изменений на этой консоли.
+settings		Sync	Синхр.
+settings		Unpaired. The games and saves stay on the card.	Сервер отвязан. Игры и сохранения остались на карте памяти.
+settings		OVERFLOW	ПЕРЕПОЛНЕНИЕ
+settings		Mario & Luigi - Partners in Time (Europe) (En,Fr,De,Es,It) (Rev 1).nds	Mario & Luigi - Partners in Time (Europe) (En,Fr,De,Es,It) (Rev 1).nds
+settings		Game page > {value}	Страница игры > {value}
+settings		This game's 3D resolution	Разрешение 3D для этой игры
+settings		4x runs hot	4x вызывает нагрев
+settings		4x runs the handheld hot and drains the battery much faster. When it gets too hot it slows down to cool off, and games can lag. If that happens, switch back to 2x, then restart and let the handheld cool down.	В режиме 4x консоль сильно нагревается и значительно быстрее разряжает аккумулятор. При перегреве процессор сбрасывает частоту для охлаждения, из-за чего игры могут тормозить. Если это происходит, вернитесь на 2x, перезагрузите устройство и дайте ему остыть.
+settings		Use 4x?	Включить 4x?
+settings		Use 4x	Включить 4x
+settings		Beta channel on: Check for updates now asks bananaos-cfw.dev for test builds.	Бета-канал включен: проверка обновлений теперь запрашивает тестовые сборки с bananaos-cfw.dev.
+settings		wrong password	неверный пароль
+settings		Wrong password: bananaos-cfw.dev refused it. The beta channel stays off.	Неверный пароль: сервер bananaos-cfw.dev отклонил его. Бета-канал остаётся выключенным.
+settings		The password couldn't be checked: %s.	Не удалось проверить пароль: %s.
+settings		no answer	нет ответа
+settings		Beta channel password	Пароль бета-канала
+settings		Beta channel off: Check for updates asks GitHub again.	Бета-канал выключен: проверка обновлений снова запрашивает GitHub.
+settings		{n} old packages removed from banana/updates.	Удалено устаревших пакетов из banana/updates: {n}.
+settings		Banana {count}'s package deleted from banana/updates.	Пакет Banana {count} удален из banana/updates.
+settings		Banana {count}'s package couldn't be deleted.	Не удалось удалить пакет Banana {count}.
+settings		Thank you	Спасибо
+settings		Change the menu's language?	Изменить язык меню?
+settings		No, keep it	Нет, оставить
+settings		Yes, change it	Да, изменить
+settings		The menu starts again in the new language.	Меню перезапустится на новом языке.
+settings		Pairing code for	Код сопряжения для
+settings		No Romhost answered. Server address	Romhost не ответил. Адрес сервера
+settings		Romhost or RomM	Romhost или RomM
+settings		Asking {name} for a pairing code...	Запрос кода сопряжения у {name}…
+settings		Nothing answers there as a Romhost or RomM server. Check the address (and :port) and that the handheld is on the same network.	По этому адресу не отвечает сервер Romhost или RomM. Проверьте адрес (и :порт), а также подключение консоли к той же сети.
+settings		On {hsName}, open {url} (signed in) and enter {code}, then approve this handheld. Waiting...	В {hsName} откройте {url} (войдите в аккаунт), введите {code} и подтвердите сопряжение с консолью. Ожидание…
+settings		Paired with {ln}. Sync now, below, gets the games and saves.	Сопряжено с {ln}. «Синхронизировать сейчас» ниже загрузит игры и сохранения.
+settings		Pairing didn't work: {ln}.	Не удалось выполнить сопряжение: {ln}.
+settings		None right now.	Сейчас нет.
+settings		Tap: back	Касание: назад
+settings		%s %s: the title "%s" is too long for its tab (give "tab")	%s %s: заголовок «%s» слишком длинный для вкладки (задайте «tab»)
+settings		%s %s: a reference page with %zu characters	%s %s: справочная страница из %zu символов
+settings		On the Plus a shader also heats the chip: a heavy 3D game can drop frames after a few minutes. Give such a game None on its own page (X in the library).	На версии Plus шейдер также дополнительно нагревает чип: тяжёлая 3D-игра может начать пропускать кадры через несколько минут. Для таких игр выберите шейдер «Нет» на индивидуальной странице игры (кнопка X в библиотеке).
+settings		VBA Next	VBA Next
+settings		VBA-M	VBA-M
+settings		Meteor	Meteor
+settings		Gambatte	Gambatte
+settings		Gearboy	Gearboy
+settings		TGB Dual	TGB Dual
+settings		NES	NES
+settings		Nestopia UE	Nestopia UE
+settings		Mesen	Mesen
+settings		QuickNES	QuickNES
+settings		Snes9x	Snes9x
+settings		Snes9x 2010	Snes9x 2010
+settings		Snes9x 2005 Plus	Snes9x 2005 Plus
+settings		Snes9x 2005	Snes9x 2005
+settings		Snes9x 2002	Snes9x 2002
+settings		Mesen-S	Mesen-S
+settings		PicoDrive	PicoDrive
+settings		Genesis Plus GX	Genesis Plus GX
+settings		BlastEm	BlastEm
+settings		PCSX ReARMed	PCSX ReARMed
+settings		SwanStation	SwanStation
+settings		Beetle PSX	Beetle PSX
+settings		ParaLLEl N64	ParaLLEl N64
+settings		The picture's shader for this game only, in either emulator; the others follow Settings > Nintendo DS > Shader. None scales smoothly and costs no GPU work.	Шейдер изображения только для этой игры в любом эмуляторе; остальные следуют настройке «Настройки > Nintendo DS > Шейдер». «Нет» масштабирует плавно и не нагружает GPU.
+settings		RetroArch {ra}, updated with BananaOS.	RetroArch {ra}, обновляется вместе с BananaOS.
+settings		Not paired. A looks for Romhost on the network (Homeport > ROMs > Pair a device shows its code); when none answers, type the address of a Romhost or a RomM server (a name or IP, and :port if it isn't the usual one). RomM then shows a code to enter on its Pair device page.	Не сопряжено. Кнопка A выполняет поиск Romhost в сети (в Homeport код виден в ROMs > Pair a device); если сервер не найден, введите адрес сервера Romhost или RomM (имя или IP, и :порт, если он отличается от стандартного). RomM затем покажет код для ввода на странице сопряжения устройств.
+settings		Paired with {n}. A pairs again (another server, or after the handheld was removed there).	Сопряжено с {n}. Кнопка A сопрягает снова (с другим сервером или после удаления консоли на сервере).
+settings		Last sync: {g} files of games down, {rm} removed; saves {up} up, {dn} down{cf}{er}	Посл. синхронизация: загружено игр: {g}, удалено: {rm}; сохранений загружено: {up}, скачано: {dn}{cf}{er}
+settings		; {cf} in conflict (on Romhost: decide in Homeport; on RomM the newer won and the other is kept on the card as a .bak)	; конфликтов: {cf} (на Romhost: решите в Homeport; на RomM выбрана более свежая версия, а вторая сохранена на карте как .bak)
+settings		. {er} didn't work: {reason}.	. Ошибка {er}: {reason}.
+settings		The last sync didn't work: {syncLine}.	Последняя синхронизация не удалась: {syncLine}.
+settings		Syncing with {homeServer}. It carries on if you leave this screen; the library shows the new games when it's done.	Синхронизация с {homeServer}. Процесс продолжится при выходе с этого экрана; новые игры появятся в библиотеке по завершении.
+settings		the server	сервер
+settings		Pairing	Сопряжение
+settings		Not paired	Не сопряжено
+settings		The home server's address: its name or IP, and :port when it isn't the usual (Romhost 8092, RomM 8080 or 80). A types the key, B deletes, L symbols (the dot and colon), START when it is typed.	Адрес домашнего сервера: его имя или IP, и :порт, если он нестандартный (Romhost 8092, RomM 8080 или 80). A — ввод, B — удаление, L — спецсимволы (точка и двоеточие), START — подтверждение ввода.
+settings		The beta testers' password for BananaOS's test builds. A types the key, B deletes, X capitals, L symbols, Y a space, START checks it with bananaos-cfw.dev. It is kept on the card for the updater only.	Пароль бета-тестера для тестовых сборок BananaOS. A — ввод, B — удаление, X — заглавные, L — знаки, Y — пробел, START проверяет пароль на bananaos-cfw.dev. Сохраняется на карте памяти только для средства обновления.
+settings		The code Homeport shows under ROMs > Pair a device (or, for RomM, a client token's pairing code). START when it is typed.	Код, отображаемый Homeport в меню ROMs > Pair a device (или код сопряжения токена клиента для RomM). START — подтверждение ввода.
+settings		no reason given	причина не указана
+settings		Asking the beta server (bananaos-cfw.dev) which test build is the newest for this handheld...	Запрос к бета-серверу (bananaos-cfw.dev) о самой свежей тестовой сборке для этой консоли…
+settings		The beta server has no test build for this handheld.	На бета-сервере нет тестовых сборок для этой консоли.
+settings		A asks the beta server (bananaos-cfw.dev, Wi-Fi needed) whether a newer test build is out for this handheld. Nothing is downloaded until you choose Download.	Кнопка A запрашивает бета-сервер (bananaos-cfw.dev, требуется Wi-Fi) о наличии новой сборки для этой консоли. Файлы не будут скачиваться, пока вы не нажмете «Скачать».
+settings		Checking the password with bananaos-cfw.dev...	Проверка пароля на bananaos-cfw.dev…
+settings		On: updates come from the beta testers' builds on bananaos-cfw.dev instead of GitHub's releases. A, then A again, turns it off (the password is forgotten), and GitHub is asked again.	«Вкл»: обновления загружаются из бета-сборок на bananaos-cfw.dev вместо релизов GitHub. Нажатие A, а затем снова A отключает эту опцию (пароль забывается), и обновления снова берутся с GitHub.
+settings		For beta testers: updates from the test builds on bananaos-cfw.dev instead of GitHub's releases. A asks for the beta password (once: it is checked with the site, then kept on the card for the updater only).	Для бета-тестеров: обновления из тестовых сборок на bananaos-cfw.dev вместо релизов на GitHub. Кнопка A запрашивает пароль бета-тестера (однократно: он проверяется сайтом и сохраняется на карте только для апдейтера).
+settings		Y again deletes this package from banana/updates on the card (the installed versions aren't touched). Any other button keeps it.	Повторное нажатие Y удаляет этот пакет из banana/updates на карте (установленные версии не затронутся). Любая другая кнопка оставит файл.
+settings		X again removes {on} ({ob} MB) not newer than the version running now from banana/updates. Any other button keeps them.	Повторное нажатие X удалит из banana/updates устаревшие пакеты ({on}, {ob} МБ), не новее текущей версии. Любая другая кнопка оставит их.
+settings		; X removes every package not newer than this version ({on}{ob} MB).	; кнопка X удаляет все пакеты не новее текущей версии ({on}{ob} МБ).
+settings		1 package, {value}	1 пакет, {value}
+settings		{on} packages,	Пакетов: {on},
+settings		Beta channel	Бета-канал
+settings		Checking...	Проверка…
+settings		Press Y again: delete	Нажмите Y ещё раз: удалить
+settings		Press X again: remove	Нажмите X ещё раз: очистить
+settings		Turn on	Включить
+settings		Turn off	Выключить
+settings		Delete!	Удалить!
+settings		Written to the other slot	Записано во второй слот
+settings		The update wasn't installed	Обновление не было установлено
+settings		Writing the new version	Запись новой версии
+settings		Checking what was written	Проверка записанных данных
+settings		Unpacking and checking the package	Распаковка и проверка пакета
+settings		Update ready	Обновление готово
+settings		Update failed	Ошибка обновления
+settings		Installing update	Установка обновления
+settings		Don't turn the handheld off	Не выключайте консоль
+settings		Don't turn the handheld off. Your games, saves and settings stay; the running version isn't touched until the restart. It takes a minute or two.	Не выключайте консоль. Ваши игры, сохранения и настройки сохраняются; текущая работающая версия не изменится до перезагрузки. Это займёт минуту или две.
+settings		A restarts into the new version now. If it ever fails to start, Settings > System > Previous version brings this one back.	Нажмите A для перезагрузки в новую версию. Если запуск не удастся, опция «Настройки > Система > Предыдущая версия» вернёт текущую.
+settings		Type the beta password, then START.	Введите пароль бета-тестера, затем нажмите START.
+settings		The password couldn't be passed on ({runDir} can't be written).	Не удалось передать пароль (ошибка записи в {runDir}).
+settings		Looking for a home server on the network...	Поиск домашнего сервера в сети…
+settings		Not paired yet: Server, above, pairs the handheld.	Ещё не сопряжено: пункт «Сервер» выше позволяет привязать консоль.
+settings		Syncing	Синхронизация
+settings		Didn't all work	Выполнено с ошибками
+settings		Done, conflicts	Готово, есть конфликты
+settings		Pair again	Сопрячь заново
+settings		the update channel changed since the check: Check for updates again	канал обновления изменился после проверки: выполните проверку заново
+settings		In use	Используется
+settings		A uses it	A: применить
+settings		Drawing...	Отрисовка…
+settings		No picture	Нет изображения
+settings		Themes	Темы
+settings		BananaDS only. The size the DS's 3D is drawn at for this game: 1x the DS's own, 2x twice, 3x and 4x (experimental) three and four times, the sharpest and the heaviest (a busy 3D scene can drop below full speed). The others follow Settings > Nintendo DS > 3D resolution.	Только для BananaDS. Разрешение рендеринга 3D для этой игры: 1x — оригинальное DS, 2x — двойное, 3x и 4x (эксперим.) — в три и четыре раза больше: максимально чёткое, но самое требовательное (в сложных 3D-сценах возможны просадки скорости). Для остальных игр действует «Настройки > Nintendo DS > Разрешение 3D».
+settings		SLP	СОН
+settings		PSN	ЯД
+settings		BRN	ОЖОГ
+settings		FRZ	ЗАМ
+settings		PAR	ПАР
+settings		Weak to	Уязвим к
+settings		Resists	Устойчив к
+settings		Immune to	Иммунитет к
+settings		Party	Команда
+settings		Battle	Битва
+settings		RetroArch can't read the game's memory with this emulator: %s	RetroArch не может прочитать память игры с этим эмулятором: %s
+settings		Waiting for the game...	Ожидание игры…
+settings		EGG	ЯЙЦО
+settings		Lv	Ур
+settings		FNT	НОК
+settings		HP	HP
+settings		It's still an egg.	Это всё ещё яйцо.
+settings		Exp	Опыт
+settings		Next	До след.
+settings		PP	PP
+settings		Pwr	Сила
+settings		Waiting for the battle...	Ожидание битвы…
+settings		You	Вы
+settings		Foe	Противник
+settings		no data	нет данных
+settings	Pokémon types	Normal	Нормальный
+settings	Pokémon types	Fighting	Боевой
+settings	Pokémon types	Flying	Летающий
+settings	Pokémon types	Poison	Ядовитый
+settings	Pokémon types	Ground	Земляной
+settings	Pokémon types	Rock	Каменный
+settings	Pokémon types	Bug	Насекомый
+settings	Pokémon types	Ghost	Призрачный
+settings	Pokémon types	Steel	Стальной
+settings	Pokémon types	Fire	Огненный
+settings	Pokémon types	Water	Водный
+settings	Pokémon types	Grass	Травяной
+settings	Pokémon types	Electric	Электрический
+settings	Pokémon types	Psychic	Психический
+settings	Pokémon types	Ice	Ледяной
+settings	Pokémon types	Dragon	Драконий
+settings	Pokémon types	Dark	Тёмный
+settings		Map	Карта
+settings		Bag	Сумка
+settings		Dex	Покедекс
+settings		Guide	Гид
+settings		Reading the save...	Чтение сохранения…
+settings		Somewhere unnamed	Безымянное место
+settings		Unknown place	Неизвестное место
+settings		Map %d.%d  ·  x %d, y %d	Карта %d.%d · x %d, y %d
+settings		This game's region map wasn't found in its ROM.	Карта региона не найдена в ROM-файле этой игры.
+settings		Tapped: {nm}	Выбрано: {nm}
+settings		(no name)	(без названия)
+settings		Not on the region map here	Не на этой карте региона
+settings		Tap the map: a place's name	Коснитесь карты: название места
+settings		Tap a square: its name	Коснитесь клетки: её название
+settings		Items	Предметы
+settings		Key items	Важные предметы
+settings		Balls	Покеболы
+settings		TMs & HMs	TM и HM
+settings		Berries	Ягоды
+settings		Nothing here. (A CFRU hack may keep its bag elsewhere: what this shows is FireRed's bag.)	Здесь пусто. (CFRU-хак может хранить сумку в другом месте: здесь показана сумка FireRed.)
+settings		Nothing in this pocket.	В этом кармане пусто.
+settings		Money {money}	Деньги: {money}
+settings		Seen	Встречено
+settings		Caught	Поймано
+settings		All species (this game keeps its own Pokédex)	Все виды (в этой игре свой Покедекс)
+settings		Pokédex	Покедекс
+settings		Nothing seen yet.	Пока никого не встречено.
+settings		Tap one for its entry	Коснитесь для просмотра записи
+settings		No entry in this game.	В этой игре нет записи.
+settings		%s Pokémon  ·  %d.%d m  ·  %d.%d kg	%s Покемон · %d.%d м · %d.%d кг
+settings		Seen, not caught yet: the entry opens once one is caught.	Встречен, но ещё не пойман: запись откроется после поимки.
+settings		Tap to go back	Коснитесь, чтобы вернуться
+settings		Next: {who}, gym {next} of 8	Далее: {who}, гим {next} из 8
+settings		All eight badges: on to the league.	Все восемь значков: путь в Лигу открыт.
+settings		Champion! The story is done; the post-game is yours.	Чемпион! Сюжет завершён, впереди постгейм.
+settings		Next: {goals}, {goals} ({lang})	Далее: {goals}, {goals} ({lang})
+settings		Next: the Pokémon League. First, {who} ({lang})	Далее: Лига Покемонов. Сначала {who} ({lang})
+settings		Badges	Значки
+settings		No goal read from the save.	В сохранении нет данных о цели.
+settings		Their team	Их команда
+settings		Against {lang}	Против {lang}
+settings		hits {bestQ}	урон: {bestQ}
+settings		Rock Smash	Rock Smash
+settings		Fishing	Рыбалка
+settings		Wild Pokémon here	Дикие Покемоны здесь
+settings		No wild Pokémon on this map.	На этой карте нет диких Покемонов.
+settings		Accent: not caught yet	Выделение: ещё не пойман
+settings		Reference	Справка
+settings		Nothing here right now: this page fills in when the game gets to it.	Пока здесь пусто: страница заполнится по ходу игры.
+settings		Status	Статус
+settings		Detail	Подробно
+settings		Collect	Коллекция
+settings		Progress	Прогресс
+settings		ROXANNE	РОКСАННА
+settings		Rustboro City gym	Гим города Растборо
+settings		BRAWLY	БРОЛИ
+settings		Dewford Town gym	Гим города Дьюфорд
+settings		WATTSON	УОТТСОН
+settings		Mauville City gym	Гим города Мовилль
+settings		FLANNERY	ФЛАННЕРИ
+settings		Lavaridge Town gym	Гим города Лаваридж
+settings		NORMAN	НОРМАН
+settings		Petalburg City gym	Гим города Петалбург
+settings		WINONA	ВАЙНОНА
+settings		Fortree City gym	Гим города Фортри
+settings		Tate & Liza	Тейт и Лиза
+settings		Mossdeep City gym	Гим города Моссдип
+settings		WALLACE	УОЛЛЕС
+settings		Sootopolis City gym	Гим города Сутополис
+settings		SIDNEY	СИДНИ
+settings		the Pokémon League	Лига Покемонов
+settings		PHOEBE	ФИБИ
+settings		GLACIA	ГЛАСИЯ
+settings		DRAKE	ДРЕЙК
+settings		STEVEN	СТИВЕН
+settings		Steven, the Champion	Стивен, Чемпион
+settings		JUAN	ХУАН
+settings		Wallace, the Champion	Уоллес, Чемпион
+settings		BROCK	БРОК
+settings		Pewter City gym	Гим города Пьютер
+settings		MISTY	МИСТИ
+settings		Cerulean City gym	Гим города Церулин
+settings		LT. SURGE	ЛЕЙТЕНАНТ СЁРДЖ
+settings		Lt. Surge	Лейтенант Сёрдж
+settings		Vermilion City gym	Гим города Вермилион
+settings		ERIKA	ЭРИКА
+settings		Celadon City gym	Гим города Селадон
+settings		KOGA	КОГА
+settings		Fuchsia City gym	Гим города Фуксия
+settings		SABRINA	САБРИНА
+settings		Saffron City gym	Гим города Сафрон
+settings		BLAINE	БЛЕЙН
+settings		Cinnabar Island gym	Гим острова Циннабар
+settings		GIOVANNI	ДЖОВАННИ
+settings		Viridian City gym	Гим города Виридиан
+settings		LORELEI	ЛОРЕЛЕЙ
+settings		BRUNO	БРУНО
+settings		AGATHA	АГАТА
+settings		LANCE	ЛЭНС
+settings		SEED	СЕМЯ
+settings		Seed	Семя
+settings		UNKNOWN	НЕИЗВЕСТНО
+settings		Unknown	Неизвестно
+settings	Pokémon types	Normal	Нормальный
+settings	Pokémon types	Fighting	Боевой
+settings	Pokémon types	Flying	Летающий
+settings	Pokémon types	Poison	Ядовитый
+settings	Pokémon types	Ground	Земляной
+settings	Pokémon types	Rock	Каменный
+settings	Pokémon types	Bug	Насекомый
+settings	Pokémon types	Ghost	Призрачный
+settings	Pokémon types	Steel	Стальной
+settings	Pokémon types	Fire	Огненный
+settings	Pokémon types	Water	Водный
+settings	Pokémon types	Grass	Травяной
+settings	Pokémon types	Electric	Электрический
+settings	Pokémon types	Psychic	Психический
+settings	Pokémon types	Ice	Ледяной
+settings	Pokémon types	Dragon	Драконий
+settings	Pokémon types	Dark	Тёмный
+settings	Pokémon types	Fairy	Волшебный
+settings	Pokémon types	Roxanne	Роксанна
+settings	Pokémon types	Brawly	Броли
+settings	Pokémon types	Wattson	Уоттсон
+settings	Pokémon types	Flannery	Фланнери
+settings	Pokémon types	Norman	Норман
+settings	Pokémon types	Winona	Вайнона
+settings	Pokémon types	Wallace	Уоллес
+settings	Pokémon types	Sidney	Сидни
+settings	Pokémon types	Phoebe	Фиби
+settings	Pokémon types	Glacia	Гласия
+settings	Pokémon types	Drake	Дрейк
+settings	Pokémon types	Juan	Хуан
+settings	Pokémon types	Brock	Брок
+settings	Pokémon types	Misty	Мисти
+settings	Pokémon types	Erika	Эрика
+settings	Pokémon types	Koga	Кога
+settings	Pokémon types	Sabrina	Сабрина
+settings	Pokémon types	Blaine	Блейн
+settings	Pokémon types	Giovanni	Джованни
+settings	Pokémon types	Lorelei	Лорелей
+settings	Pokémon types	Bruno	Бруно
+settings	Pokémon types	Agatha	Агата
+settings	Pokémon types	Lance	Лэнс
+bananads		Today %s	Сегодня, %s
+bananads		Yesterday %s	Вчера, %s
+bananads		No picture in this save	В этом сохранении нет скриншота
+bananads		Empty slot	Пустой слот
+bananads		Slot %d	Слот %d
+bananads		A: load this save. You can undo it after.	A: загрузить это сохранение. После можно отменить.
+bananads		Nothing saved here yet	Здесь пока ничего не сохранено
+bananads		A: save here (replaces this save)	A: сохранить здесь (перезапишет сохранение)
+bananads		A: save here	A: сохранить здесь
+bananads		THIS SESSION	ТЕКУЩАЯ СЕССИЯ
+bananads		LAST SAVE %s	ПОСЛЕДНЕЕ СОХРАНЕНИЕ: %s
+bananads		None yet	Пока нет
+bananads		LAST SAVE	ПОСЛЕДНЕЕ СОХРАНЕНИЕ
+bananads		this menu	это меню
+bananads		save to slot 1	сохранить в слот 1
+bananads		load slot 1	загрузить слот 1
+bananads		F + START	F + START
+bananads		save your spot and quit	сохранить позицию и выйти
+bananads		LATEST ACHIEVEMENTS	ПОСЛЕДНИЕ ДОСТИЖЕНИЯ
+bananads		None unlocked yet. Good luck!	Пока не открыто ни одного. Удачи!
+bananads		Resume	Продолжить
+bananads		Save	Сохранить
+bananads		Load	Загрузить
+bananads		Quick settings	Быстрые настройки
+bananads		Restart game	Перезапустить игру
+bananads		Quit game	Выйти из игры
+bananads		Please wait	Пожалуйста, подождите
+bananads		One moment...	Минутку…
+bananads		Paused	Пауза
+bananads		or press F / L3	или нажмите F / L3
+bananads		%d slots	Слотов: %d
+bananads		last: slot %d	посл.: слот %d
+bananads		no saves yet	нет сохранений
+bananads		volume, shader, effects	громкость, шейдер, эффекты
+bananads		volume, brightness	громкость, яркость
+bananads		from the title screen	с титульного экрана
+bananads		keeps your spot	сохраняет вашу позицию
+bananads		back to the menu	назад в меню
+bananads		Slot %d of %d	Слот %d из %d
+bananads		Empty	Пусто
+bananads		changes apply at once	изменения применяются сразу
+bananads		Volume	Громкость
+bananads		Brightness	Яркость
+bananads		Microphone	Микрофон
+bananads		Test / blow	Тест / дуновение
+bananads		Left / right to change, or tap the bar	Влево / вправо для изменения или коснитесь шкалы
+bananads		Left / right to change, both screens	Влево / вправо для изменения, оба экрана
+bananads		A live meter of the mic, and a blow for games that ask for one	Шкала микрофона и дуновение для требующих его игр
+bananads		Left / right to change: it applies at once, and stays for the next game	Влево / вправо для изменения: применяется сразу и сохранится для следующей игры
+bananads		Blow on the mic	Подуйте в микрофон
+bananads		No microphone found	Микрофон не найден
+bananads		Heard!	Слышно!
+bananads		Listening	Прослушивание
+bananads		The game hears a word or a blow past the red line (sensitivity: %s).	Игра слышит голос или дуновение за красной линией (чувствительность: %s).
+bananads		The microphone's gate is off, so the game hears everything it picks up.	Шумоподавление микрофона отключено: игра слышит всё, что он улавливает.
+bananads		A: blow for 3 s, for when the real mic isn't picked up	A: дуть 3 сек., если настоящий микрофон не улавливает звук
+bananads		Back	Назад
+bananads		Select	Выбрать
+bananads		Open	Открыть
+bananads		OK	OK
+bananads		Blow for 3 s	Дуть 3 сек.
+bananads		D-pad or tap	Крестовина или касание
+bananads		Undo last load	Отменить последнюю загрузку
+bananads		Replace slot %d?	Заменить слот %d?
+bananads		The save from %s will be replaced by this one.	Сохранение от %s будет заменено текущим.
+bananads		Cancel	Отмена
+bananads		Replace	Заменить
+bananads		Quit to the menu?	Выйти в меню?
+bananads		Your spot is saved. Next time the game picks up right here.	Ваша позиция сохранена. В следующий раз игра продолжится прямо отсюда.
+bananads		Anything since your last save will be lost.	Весь прогресс после последнего сохранения будет потерян.
+bananads		Keep playing	Продолжать игру
+bananads		Quit	Выйти
+bananads		Restart the game?	Перезапустить игру?
+bananads		Back to the title screen. Anything since your last save will be lost.	Возврат на титульный экран. Всё после последнего сохранения будет потеряно.
+bananads		Restart	Перезапуск
+bananads		Saving to slot %d	Сохранение в слот %d
+bananads		Undoing the load	Отмена загрузки
+bananads		Loading	Загрузка
+bananads		Saving your spot	Сохранение позиции
+bananads		Restarting	Перезапуск…
+bananads		Achievement unlocked · %u points	Достижение разблокировано · %u очков
+bananads		All achievements unlocked!	Все достижения разблокированы!
+bananads		Leaderboard submitted	Результат отправлен в таблицу рекордов
+bananads		RetroAchievements	RetroAchievements
+bananads		Offline: unlocks will be sent later	Офлайн: достижения будут отправлены позже
+bananads		Back online, unlocks sent	Снова в сети, достижения отправлены
+bananads		This game isn't known to RetroAchievements	Эта игра не найдена в RetroAchievements
+bananads		Couldn't load the game	Не удалось загрузить игру
+bananads		%u of %u achievements unlocked	Разблокировано %u из %u достижений
+bananads		No achievements for this game yet	Для этой игры пока нет достижений
+bananads		Logged in as %s · %u points	Выполнен вход: %s · %u очков
+bananads		Logged in as %s	Выполнен вход: %s
+bananads		Login expired: enter your password in Settings	Сессия истекла: введите пароль в меню «Настройки»
+bananads		RetroAchievements login failed	Ошибка входа в RetroAchievements
+bananads		Check the account in Settings	Проверьте аккаунт в меню «Настройки»
+bananads		No password: enter it in Settings	Нет пароля: введите его в меню «Настройки»
+bananads		None	Нет
+bananads		Crisp	Чёткий (Crisp)
+bananads		Crisp + DS colours	Чёткий + цвета DS
+bananads		LCD grid	LCD сетка
+bananads		LCD grid + colours	LCD сетка + цвета
+bananads		LCD grid 2x	LCD сетка 2x
+bananads		FSR	FSR
+bananads		LCD (DS colours)	LCD (цвета DS)
+bananads		LCD 1x	LCD 1x
+bananads		LCD 3x	LCD 3x
+bananads		Fast LCD	Быстрый LCD
+bananads		DS colours	Цвета DS
+bananads		Retro	Ретро
+bananads		Bevel	Рамки
+bananads		Sharp bilinear	Резкий билинейный
+bananads		Sharp + scanlines	Резкий + сканлайны
+bananads		Fast CRT	Быстрый CRT
+bananads		Integer	Резкие пиксели (Integer)
+bananads		Integer fill	Заполнение (Integer)
+bananads		Dot (MiZai)	Dot (MiZai)
+bananads		Dot (MiZai, RG DS+)	Dot (MiZai, RG DS+)
+bananads		Retro tiles	Ретро плитка
+bananads		DraStic LCD	DraStic LCD
+bananads		DraStic LCD + colours	DraStic LCD + цвета
+bananads		DraStic Quilez	DraStic Quilez
+bananads		DraStic sharp	DraStic резкий
+bananads		DraStic sharp + colours	DraStic резкий + цвета
+bananads		DraStic fast LCD	DraStic быстрый LCD
+bananads		DraStic fast LCD + colours	DraStic быстрый LCD + цвета
+bananads		Shader	Шейдер
+bananads		On	Вкл
+bananads		Off	Выкл
+bananads		%ldh %02ldm	%ldч %02ldм
+bananads		BUTTONS	КНОПКИ
+bananads		LAST	ПОСЛЕДНИЙ
+bananads		Cheats	Читы
+bananads		%d of %d on	Включено: %d из %d
+bananads		None found	Не найдено
+bananads		Action Replay codes for this game: A to see them	Коды Action Replay для этой игры: A для просмотра
+bananads		No cheats for this game yet.	Для этой игры пока нет читов.
+bananads		In RetroArch: Online Updater > Update Cheats	В RetroArch: Online Updater > Update Cheats
+bananads		(BananaDS finds the game's file there),	(BananaDS найдёт файл игры там),
+bananads		or put a melonDS .mch file in	или поместите файл melonDS .mch в
+bananads		Up / down to pick, L / R a page; some games need a restart for a code to work	Вверх / вниз для выбора, L / R — страница; для некоторых кодов нужен перезапуск
+bananads		Hotkeys	Горячие клавиши
+bananads		while you play	во время игры
+bananads		Starting...	Запуск…
+bananads		Turn off	Выключить
+bananads		Turn on	Включить
+bananads		Save and quit	Сохранить и выйти
+bananads		Quit without saving	Выйти без сохранения
+bananads		Quit without saving?	Выйти без сохранения?
+bananads		>> Max	>> Макс
+bananads		This menu	Это меню
+bananads		Save state (slot 1)	Сохранить (слот 1)
+bananads		Load state (slot 1)	Загрузить (слот 1)
+bananads		Fast-forward (held)	Ускорение (удержание)
+bananads		Fast-forward on / off	Ускорение вкл / выкл
+bananads		Screenshot	Скриншот
+bananads		Save your spot and quit	Сохранить позицию и выйти
+bananads		3D effects	Эффекты 3D
+bananads		FPS counter	Счётчик FPS
+bananads		Fast-forward	Ускорение
+bananads		Edge + fog	Контуры + туман
+bananads		Edge only	Только контуры
+bananads		Fog only	Только туман
+bananads		Max	Макс
+bananads		FXAA	FXAA
+bananads		Code {n}	Код {n}
+bananads		Screenshot saved	Скриншот сохранён
+bananads		Screenshot not saved	Скриншот не сохранён
+bananads		the card may be full	возможно, карта памяти заполнена
+bananads		, and run-ahead: 1 frame	, и упреждение: 1 кадр
+bananads		, and run-ahead: 2 frames	, и упреждение: 2 кадра
+bananads		Saved to slot %d	Сохранено в слот %d
+bananads		Couldn't save	Не удалось сохранить
+bananads		Loaded slot %d	Загружен слот %d
+bananads		Nothing saved in slot %d	В слоте %d ничего не сохранено
+bananads		Slot %d couldn't be read	Не удалось прочитать слот %d
+bananads		Couldn't load	Не удалось загрузить
+bananads		BananaDS	BananaDS
+bananads		Swap the screens	Поменять экраны местами
+bananads		the touchscreen	сенсорный экран
+bananads		the top panel's touchscreen	сенсорный экран верхней панели
+bananads		Screens swapped	Экраны поменяны местами
+bananads		Screens back	Экраны возвращены
+bananads		F + SELECT puts them back	F + SELECT возвращает их назад
+bananads		F + SELECT swaps them again	F + SELECT меняет их снова
+bananads		DSi eMMC CID/CPU	DSi eMMC CID/CPU
+bananads		dsi_nand.bin can't be read	dsi_nand.bin не читается
+bananads		it needs its nocash footer	требуется nocash-футер
+bananads		DSi game: needs a BIOS file	Игра DSi: требуется файл BIOS
+bananads		put bios7.bin in {dir}	поместите bios7.bin в {dir}
+bananads		This .cia is encrypted	Этот .cia зашифрован
+bananads		decrypt it on a 3DS (or a PC tool) first	сначала расшифруйте его на 3DS (или через ПК)
+superdrastic		Today %s	Сегодня, %s
+superdrastic		Yesterday %s	Вчера, %s
+superdrastic		No picture in this save	В этом сохранении нет скриншота
+superdrastic		Empty slot	Пустой слот
+superdrastic		Slot %d	Слот %d
+superdrastic		A: load this save. You can undo it after.	A: загрузить это сохранение. После можно отменить.
+superdrastic		Nothing saved here yet	Здесь пока ничего не сохранено
+superdrastic		A: save here (replaces this save)	A: сохранить здесь (перезапишет сохранение)
+superdrastic		A: save here	A: сохранить здесь
+superdrastic		THIS SESSION	ТЕКУЩАЯ СЕССИЯ
+superdrastic		LAST SAVE %s	ПОСЛЕДНЕЕ СОХРАНЕНИЕ: %s
+superdrastic		None yet	Пока нет
+superdrastic		LAST SAVE	ПОСЛЕДНЕЕ СОХРАНЕНИЕ
+superdrastic		LATEST ACHIEVEMENTS	ПОСЛЕДНИЕ ДОСТИЖЕНИЯ
+superdrastic		None unlocked yet. Good luck!	Пока не открыто ни одного. Удачи!
+superdrastic		Resume	Продолжить
+superdrastic		Save	Сохранить
+superdrastic		Load	Загрузить
+superdrastic		Quick settings	Быстрые настройки
+superdrastic		DraStic menu	Меню DraStic
+superdrastic		Quit game	Выйти из игры
+superdrastic		Please wait	Пожалуйста, подождите
+superdrastic		One moment...	Минутку…
+superdrastic		Paused	Пауза
+superdrastic		or press L3	или нажмите L3
+superdrastic		%d slots	Слотов: %d
+superdrastic		last: slot %d	посл.: слот %d
+superdrastic		no saves yet	нет сохранений
+superdrastic		volume, brightness	громкость, яркость
+superdrastic		cheats, controls	читы, управление
+superdrastic		keeps your spot	сохраняет вашу позицию
+superdrastic		back to the menu	назад в меню
+superdrastic		Slot %d of %d	Слот %d из %d
+superdrastic		Empty	Пусто
+superdrastic		changes apply at once	изменения применяются сразу
+superdrastic		Volume	Громкость
+superdrastic		Brightness	Яркость
+superdrastic		Microphone	Микрофон
+superdrastic		Test / blow	Тест / дуновение
+superdrastic		Left / right to change, or tap the bar	Влево / вправо для изменения или коснитесь шкалы
+superdrastic		Left / right to change, both screens	Влево / вправо для изменения, оба экрана
+superdrastic		A live meter of the mic, and a blow for games that ask for one	Шкала микрофона и дуновение для требующих его игр
+superdrastic		Blow on the mic	Подуйте в микрофон
+superdrastic		No microphone found	Микрофон не найден
+superdrastic		Heard!	Слышно!
+superdrastic		Listening	Прослушивание
+superdrastic		The game hears a blow past the red line (sensitivity: %s).	Игра слышит дуновение за красной линией (чувствительность: %s).
+superdrastic		Microphone sensitivity is off in ES, so the game only gets the blow below.	Чувствительность микрофона отключена в ES, поэтому игра реагирует только на дуновение ниже.
+superdrastic		A: blow for 3 s, for when the real mic isn't picked up	A: дуть 3 сек., если настоящий микрофон не улавливает звук
+superdrastic		Back	Назад
+superdrastic		Select	Выбрать
+superdrastic		Open	Открыть
+superdrastic		OK	OK
+superdrastic		Blow for 3 s	Дуть 3 сек.
+superdrastic		D-pad or tap	Крестовина или касание
+superdrastic		Undo last load	Отменить последнюю загрузку
+superdrastic		Replace slot %d?	Заменить слот %d?
+superdrastic		The save from %s will be replaced by this one.	Сохранение от %s будет заменено текущим.
+superdrastic		Cancel	Отмена
+superdrastic		Replace	Заменить
+superdrastic		Quit to the menu?	Выйти в меню?
+superdrastic		Your spot is saved. Next time the game picks up right here.	Ваша позиция сохранена. В следующий раз игра продолжится прямо отсюда.
+superdrastic		Anything since your last save will be lost.	Весь прогресс после последнего сохранения будет потерян.
+superdrastic		Keep playing	Продолжить игру
+superdrastic		Quit	Выйти
+superdrastic		Saved to slot %d	Сохранено в слот %d
+superdrastic		Couldn't save	Не удалось сохранить
+superdrastic		DraStic's Save state control has no button	У действия «Сохранить состояние» в DraStic не назначена кнопка
+superdrastic		Back to before the load	Возврат к состоянию до загрузки
+superdrastic		Loaded slot %d	Загружен слот %d
+superdrastic		Undoing the load	Отмена загрузки
+superdrastic		Loading	Загрузка
+superdrastic		Wrong one? Load, then Y undoes it	Не то? Загрузите, затем кнопка Y отменит это
+superdrastic		Couldn't load	Не удалось загрузить
+superdrastic		DraStic's Load state control has no button	У действия «Загрузить состояние» в DraStic не назначена кнопка
+superdrastic		Blowing into the mic...	Дуновение в микрофон…
+superdrastic		The game hears it for 3 seconds	Игра слышит это в течение 3 секунд
+superdrastic		Saving your spot	Сохранение позиции
+superdrastic		Achievement unlocked · %u points	Достижение разблокировано · %u очков
+superdrastic		All achievements unlocked!	Все достижения разблокированы!
+superdrastic		Leaderboard submitted	Результат отправлен в таблицу рекордов
+superdrastic		RetroAchievements	RetroAchievements
+superdrastic		offline: unlocks will be sent later	офлайн: достижения будут отправлены позже
+superdrastic		back online, unlocks sent	снова в сети, достижения отправлены
+superdrastic		this ROM isn't recognised	этот ROM не распознан
+superdrastic		couldn't load the game	не удалось загрузить игру
+superdrastic		%u of %u unlocked (softcore)	Разблокировано %u из %u (softcore)
+superdrastic		no achievements for this game yet	для этой игры пока нет достижений
+superdrastic		login expired: re-enter your password in ES	сессия истекла: введите пароль заново в ES
+superdrastic		RetroAchievements login failed	Ошибка входа в RetroAchievements
+superdrastic		check user/password in ES	проверьте логин/пароль в ES
+superdrastic		no password set in ES	не задан пароль в ES
+superdrastic		Resumed where you left off	Игра возобновлена с места выхода
+superdrastic		Quit with the exit hotkey to save your place again	Выходите через горячую клавишу выхода, чтобы сохранить позицию
+superdrastic		DraStic didn't write the savestate	DraStic не смог записать сохранение
+superdrastic		DraStic didn't read the savestate	DraStic не смог прочитать сохранение
+superdrastic		%ldh %02ldm	%ldч %02ldм
+superdrastic		This menu	Это меню
+superdrastic		Save state	Сохранить состояние
+superdrastic		Load state	Загрузить состояние
+superdrastic		Fast-forward	Ускорение
+superdrastic		Swap screens	Поменять экраны
+superdrastic		Save your spot and quit (hold)	Сохранить позицию и выйти (удержание)
+superdrastic		Quit (hold)	Выйти (удержание)
+superdrastic		LAST	ПОСЛЕДНИЙ
+superdrastic		Hotkeys	Горячие клавиши
+superdrastic		while you play	во время игры
+superdrastic		Not set	Не задано
+superdrastic		Starting...	Запускается…
+superdrastic		Microphone sensitivity is off in Settings, so the game only gets the blow below.	Чувствительность микрофона отключена в настройках, поэтому игра реагирует только на дуновение в микрофон.
+superdrastic		Save and quit	Сохранить и выйти
+superdrastic		Quit without saving	Выход без сохранения
+superdrastic		Quit without saving?	Выйти без сохранения?
+superdrastic		Battery %d%%%s	Батарея %d%%%s
+superdrastic		, charging	, заряжается
+superdrastic		%sF + SELECT	%sF + SELECT
+superdrastic		Screens swapped	Экраны поменяны местами
+superdrastic		Screens back	Экраны возвращены
+superdrastic		F + SELECT puts them back	F + SELECT возвращает их назад
+superdrastic		F + SELECT swaps them again	F + SELECT меняет их снова
+systems		Nintendo DS	Nintendo DS
+systems		Nintendo	Nintendo
+systems		Game Boy Advance	Game Boy Advance
+systems		Game Boy Color	Game Boy Color
+systems		Game Boy	Game Boy
+systems		Nintendo Entertainment System	Nintendo Entertainment System
+systems		Super Nintendo	Super Nintendo
+systems		Mega Drive	Mega Drive
+systems		Sega	Sega
+systems		PlayStation	PlayStation
+systems		Sony	Sony
+systems		Nintendo 64	Nintendo 64
+systems		Döda Kvarter	Döda Kvarter
+systems		ROCKNIXDS	ROCKNIXDS
+systems		Poketool	Poketool
+systems		PICO-8	PICO-8
+systems		Lexaloffle	Lexaloffle
+systems		Ports	Ports
+systems		PortMaster	PortMaster
+systems		Store	Store
+systems		Apps	Apps
+# (the lines below are a machine-translated draft, not the translator's: the first-time setup's slides, Bshare and a
+# few emulator menu rows, which the 0.5.0 document didn't have; for them to check in the next round)
+settings		Achievements	Достижения
+settings		Integer	Целое
+settings		(Not connected to Wi-Fi now.)	(Сейчас нет подключения к Wi-Fi.)
+settings		the list of covers	список обложек
+settings		OK	OK
+settings		Keep %s	Оставить %s
+settings		Development	Разработка
+settings		Translations	Переводы
+settings		Testing	Тестирование
+settings		Thanks	Благодарности
+settings		translated by	перевод:
+settings		Step {n} of {m}	Шаг {n} из {m}
+settings		Welcome to	Добро пожаловать в
+settings		Welcome	Добро пожаловать
+settings		All set	Всё готово
+settings		Choose a network	Выбрать сеть
+settings		Choose another network	Выбрать другую сеть
+settings		Skip for now	Пока пропустить
+settings		Test the connection	Проверить подключение
+settings		Test again	Проверить снова
+settings		Testing the connection	Проверка подключения
+settings		Looking at the connection	Определение подключения
+settings		Looking at the connection...	Определение подключения…
+settings		Keep it and go on	Оставить и продолжить
+settings		Change the name	Изменить имя
+settings		Log in	Войти
+settings		Log in with another account	Войти в другой аккаунт
+settings		Check the login	Проверить вход
+settings		Check again	Проверить снова
+settings		Checking the login	Проверка входа
+settings		Try again	Попробовать снова
+settings		Logged in	Вход выполнен
+settings		Not logged in	Вход не выполнен
+settings		Login failed	Ошибка входа
+settings		No answer	Нет ответа
+settings		No answer from the site: no connection, or it is down	Сайт не отвечает: нет подключения или он недоступен
+settings		Asking retroachievements.org...	Запрос к retroachievements.org…
+settings		Saved (not checked here)	Сохранено (здесь не проверено)
+settings		Skipped	Пропущено
+settings		Start fetching box art	Загрузить обложки
+settings		Fetch again	Загрузить снова
+settings		Fetch art for new games	Загрузить обложки для новых игр
+settings		Not fetched	Не загружено
+settings		Fetching in the background	Загрузка в фоне
+settings		{have} of {all} games have art	Обложки есть у {have} из {all} игр
+settings		Connected, address {address}	Подключено, адрес {address}
+settings		No connection: no address from the network	Нет подключения: сеть не выдала адрес
+settings		Internet	Интернет
+settings		No internet: the network doesn't reach it	Нет интернета: сеть не выходит в него
+settings		{network} (no internet)	{network} (нет интернета)
+settings		Clock set from the internet	Часы установлены по интернету
+settings		The clock couldn't be set (time server)	Не удалось установить часы (сервер времени)
+settings		The menu's language, and the settings' and the emulators' menus. The rest of the setup is in the language picked.	Язык меню, настроек и меню эмуляторов. Остальная настройка пройдёт на выбранном языке.
+settings		Your home network: achievements, the clock, box art and updates need it. Pick it from the networks around, type its password, and the connection is tested.	Ваша домашняя сеть: она нужна для достижений, часов, обложек и обновлений. Выберите её из сетей поблизости, введите пароль, и подключение будет проверено.
+settings		Your name on the DS, as a real one asks for it the first time: Mario Kart's records, Pictochat, a game's save. 10 characters at most. Leave it and the emulators use their own.	Ваше имя на DS, как его спрашивает настоящая консоль при первом включении: рекорды Mario Kart, Pictochat, сохранения игр. Не более 10 символов. Если не менять, эмуляторы используют своё.
+settings		Your retroachievements.org account: DraStic and RetroArch unlock achievements with it. The login is checked with the site. No account? Skip this: it can be added later.	Ваш аккаунт retroachievements.org: с ним DraStic и RetroArch открывают достижения. Вход проверяется на сайте. Нет аккаунта? Пропустите этот шаг: его можно добавить позже.
+settings		Fetching covers and title screens. It carries on in the background while you finish the setup; the menu shows the art as it comes.	Загрузка обложек и титульных экранов. Она продолжится в фоне, пока вы завершаете настройку; меню покажет изображения по мере загрузки.
+settings		Covers, title screens, genres and years for the games on the card, from libretro's free collections: no account needed. Settings > System > Box art runs it again for new games.	Обложки, титульные экраны, жанры и годы выпуска игр на карте из бесплатных коллекций libretro: аккаунт не нужен. «Настройки > Система > Обложки» запускает загрузку снова для новых игр.
+settings		Everything here is in Settings too (START in the menu), and this setup is under System > First-time setup.	Всё это есть и в настройках (START в меню), а эта настройка находится в «Система > Начальная настройка».
+settings		The first boot's setup again, a step at a time: Wi-Fi (with a test of the connection), the time zone, the DS's name, the RetroAchievements login and box art. B on its first step comes back here.	Настройка первого запуска заново, шаг за шагом: Wi-Fi (с проверкой подключения), часовой пояс, имя DS, вход в RetroAchievements и обложки. B на первом шаге возвращает сюда.
+settings		Accept	Принять
+settings		Decline	Отклонить
+settings		Location	Расположение
+settings		Usual places	Обычные места
+settings		Receive	Приём
+settings		Quick save	Быстрое сохранение
+settings		Send files	Отправить файлы
+settings		Sending	Отправка
+settings		Received files	Полученные файлы
+settings		About Bshare	О Bshare
+settings		This folder	Эта папка
+settings		Looking... Open LocalSend on the other device.	Поиск… Откройте LocalSend на другом устройстве.
+settings		An empty folder.	Пустая папка.
+settings		Games go into their system's folder, everything else into banana/received.	Игры попадают в папку своей системы, всё остальное — в banana/received.
+menu		Open Bshare to accept.	Откройте Bshare, чтобы принять.
+menu		In banana/received.	В banana/received.
+menu		Games went into their system's folder.	Игры помещены в папки своих систем.
+menu		Nothing was sent.	Ничего не отправлено.
+bananads		or press L3	или нажмите L3
+bananads		The game hears a blow past the red line (sensitivity: %s).	Игра слышит дуновение выше красной линии (чувствительность: %s).
+bananads		Edge marking	Контуры
+bananads		Fog	Туман
