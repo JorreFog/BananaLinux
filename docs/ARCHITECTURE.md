@@ -274,6 +274,11 @@ game that fails isn't started at every boot), names the ROM in `/run/banana/resu
 launcher loads its resume state once, Quick resume on or off. On the charger ("dark and awake") the deadline doesn't
 count: nothing drains, and the charging light would go out; unplugged, it starts at the real sleep.
 
+A download or an unpacking of Files' (banana-fetch's runner, its pid in `/run/banana/transfer.pid`) with no game
+running holds the lid's sleep and the idle one: the lid shut makes the panels dark, the job goes on, and the handheld
+sleeps once it is done (`sleep.log` says so). The power button sleeps at once, as ever, and the job goes on from where
+it was after. A runner that is stopped (`T` in `/proc/<pid>/stat`: banana-ui went away during a game) holds nothing.
+
 If a suspend fails, bananad goes on more carefully by itself: devices one at a time, then `s2idle`; if even that
 fails with the lid shut, both backlights go off until it opens. With lid sleep switched off, closing the lid only
 turns the backlights off. Every sleep is a line in `banana/logs/sleep.log` (time to suspend, time asleep, why it
