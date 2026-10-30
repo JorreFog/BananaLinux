@@ -377,6 +377,23 @@ asleep && ok "the lid sleeps again without the flag (a sleep is still a sleep)" 
 echo 0 > /run/test/lid; wake
 stop
 
+echo "16. the buttons heard at once at start, while the sound is still being set up (a slow alsactl restore, #87)"
+mkdir -p "$W/bin"; printf '#!/bin/sh\nsleep 3\n' > "$W/bin/alsactl"; chmod +x "$W/bin/alsactl"
+: > /data/banana/asound.state; : > /run/banana/boot-times
+rm -f /run/banana/game.pid /run/banana/bananad-ready
+P0=$PATH; PATH="$W/bin:$PATH"; start; PATH=$P0
+[ -e /run/banana/bananad-ready ] && ok "bananad-ready at once, for rcS (the sound still being set up)" || bad "no bananad-ready while the sound is set up"
+grep -q 'bananad: sound ready' /run/banana/boot-times && bad "sound ready before alsactl was done" || ok "the sound not ready yet"
+ev $EV_KEY $KEY_POWER 1; ev $EV_KEY $KEY_POWER 0
+# within a second (a bananad still in its setup would take the press only after alsactl's 3 s)
+s=1; for i in $(seq 10); do [ "$(cat /proc/$BD/wchan 2>/dev/null)" = wait_for_partner ] && { s=0; break; }; sleep 0.1; done
+[ $s = 0 ] && ok "the power button heard within a second, during the sound's setup (a sleep)" || bad "the power button not heard during the sound's setup"
+wake
+for i in $(seq 40); do grep -q 'bananad: sound ready' /run/banana/boot-times && break; sleep 0.1; done
+grep -q 'bananad: sound ready' /run/banana/boot-times && ok "boot-times: $(grep 'bananad' /run/banana/boot-times | tr -s ' ' | tr '\n' ';')" || bad "no 'sound ready' in boot-times"
+stop
+rm -f /data/banana/asound.state
+
 kill $UI $GAME 2>/dev/null || true
 echo "sleep test: $pass passed, $fail failed"
 [ $fail = 0 ]

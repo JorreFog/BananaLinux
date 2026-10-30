@@ -71,6 +71,12 @@ mark "rcS: data partition ready"
 mount -t vfat -o ro,noatime ${DISK}p1 /boot 2>/dev/null
 
 bananad &
+# the power and volume keys live before the menu's boot animation (#87): bananad creates bananad-ready once its loop
+# hears them (a few ms: the sound's slow setup runs beside it, a volume step waits for it); at most 1 s, so a bananad
+# that can't start doesn't hold the menu back
+i=0
+while [ ! -e /run/banana/bananad-ready ] && [ $i -lt 20 ]; do sleep 0.05; i=$((i + 1)); done
+mark "rcS: bananad ready"
 
 # not needed for the menu's first frame
 (
