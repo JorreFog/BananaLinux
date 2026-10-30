@@ -179,6 +179,9 @@ namespace rnds
 	// ---- images -----------------------------------------------------------------------------------------------------
 	Bitmap decodeFile(const std::string& path);		// RGBA8; empty on failure (decoder is set by the host)
 	void setDecoder(Bitmap(*decoder)(const std::string& path));
+	// Banana: a picture's size from its header, without decoding it; false without a sizer or on failure
+	bool imageSize(const std::string& path, int& w, int& h);
+	void setSizer(bool(*sizer)(const std::string& path, int& w, int& h));
 
 	// resample (bilinear, area-averaged when shrinking) to w x h
 	Bitmap resize(const Bitmap& src, int w, int h);
