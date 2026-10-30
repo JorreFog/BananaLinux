@@ -6,17 +6,21 @@
 # Before either emulator starts a game the newer of the two is written over the other in its own form (the footer
 # left off for BananaDS), the file replaced kept as .bak. The save's exact size is kept: melonDS picks the save
 # memory from the ROM, and a file of another size is what makes a game say its save data is corrupted. Run by
-# run-drastic and run-bananads.
+# run-drastic and run-bananads. A save under 512 bytes (the smallest real one is a 4 Kbit EEPROM's) is no save: it
+# never goes over one that has something in it (#96); the other way round instead.
 #   nds-saves <rom>
+#   BANANA_ROOT=<dir> nds-saves <rom>   the data partition somewhere else than /data (system/tests/launchers-test.sh;
+#                                       banana-sync's --root, not BANANA_DATA: that is banana/ to banana-ui and update)
+DATA=${BANANA_ROOT:-/data}
 G=${1##*/}; G=${G%.*}
-DSV="/data/drastic/backup/$G.dsv"
-SAV="/data/saves/nds/$G.sav"
-mkdir -p /data/drastic/backup /data/saves/nds
+DSV="$DATA/drastic/backup/$G.dsv"
+SAV="$DATA/saves/nds/$G.sav"
+mkdir -p "$DATA/drastic/backup" "$DATA/saves/nds"
 # a save from ROCKNIX, beside the game (roms/nds/<game>.dsv, on either card, #25): taken when Banana has no save for
 # the game yet, so a copy of the old file can never write over a game played here since; the file beside the game
 # stays as it is
 R="${1%.*}.dsv"
-if [ -f "$R" ] && [ ! -f "$DSV" ] && [ ! -f "$SAV" ]; then
+if [ -s "$R" ] && [ ! -f "$DSV" ] && [ ! -f "$SAV" ]; then
     cp -p "$R" "$DSV" && echo "nds-saves: $G: the save beside the game (ROCKNIX's) taken"
 fi
 # raw_of_dsv <dsv> <out>: the raw save inside a .dsv, DeSmuME's footer and padding left off; the file as it is
@@ -33,13 +37,28 @@ raw_of_dsv() {
     head -c "$_p" "$1" > "$2"
 }
 
-if [ -f "$DSV" ] && { [ ! -f "$SAV" ] || [ "$DSV" -nt "$SAV" ]; }; then
+# size <file>: its bytes, 0 when there is none
+size() { wc -c 2>/dev/null < "$1" || echo 0; }
+TO= WHY=newer
+if [ -f "$DSV" ] && { [ ! -f "$SAV" ] || [ "$DSV" -nt "$SAV" ]; }; then TO=sav
+elif [ -f "$SAV" ] && { [ ! -f "$DSV" ] || [ "$SAV" -nt "$DSV" ]; }; then TO=dsv; fi
+# the newer one empty (a game quit before it wrote, a file made and never filled: SM64DS in SuperDrastic, #96) and
+# the older one a save: the older one is kept and goes over the empty one instead
+if [ "$TO" = sav ] && [ "$(size "$SAV")" -gt 0 ]; then
+    raw_of_dsv "$DSV" "$SAV.new" || exit 0
+    n=$(size "$SAV.new"); rm -f "$SAV.new"
+    [ "$n" -lt 512 ] && { echo "nds-saves: $G: DraStic's save is newer but empty ($n bytes): BananaDS's kept, DraStic takes it"; TO=dsv WHY=kept; }
+elif [ "$TO" = dsv ] && [ "$(size "$SAV")" -lt 512 ] && [ "$(size "$DSV")" -gt 0 ]; then
+    echo "nds-saves: $G: BananaDS's save is newer but empty ($(size "$SAV") bytes): DraStic's kept, BananaDS takes it"; TO=sav WHY=kept
+fi
+
+if [ "$TO" = sav ]; then
     raw_of_dsv "$DSV" "$SAV.new" || exit 0
     if [ -f "$SAV" ] && cmp -s "$SAV.new" "$SAV"; then rm -f "$SAV.new"; exit 0; fi
     [ -f "$SAV" ] && cp -p "$SAV" "$SAV.bak"
     mv -f "$SAV.new" "$SAV" && touch -r "$DSV" "$SAV"
-    echo "nds-saves: $G: DraStic's save is newer: BananaDS takes it ($(wc -c < "$SAV") bytes)"
-elif [ -f "$SAV" ] && { [ ! -f "$DSV" ] || [ "$SAV" -nt "$DSV" ]; }; then
+    echo "nds-saves: $G: DraStic's save is $WHY: BananaDS takes it ($(wc -c < "$SAV") bytes)"
+elif [ "$TO" = dsv ]; then
     if [ -f "$DSV" ]; then
         raw_of_dsv "$DSV" "$DSV.cmp.$$"
         cmp -s "$DSV.cmp.$$" "$SAV" && { rm -f "$DSV.cmp.$$"; exit 0; }
@@ -47,6 +66,6 @@ elif [ -f "$SAV" ] && { [ ! -f "$DSV" ] || [ "$SAV" -nt "$DSV" ]; }; then
         cp -p "$DSV" "$DSV.bak"
     fi
     cat "$SAV" > "$DSV.new" && mv -f "$DSV.new" "$DSV" && touch -r "$SAV" "$DSV"
-    echo "nds-saves: $G: BananaDS's save is newer: DraStic takes it ($(wc -c < "$DSV") bytes)"
+    echo "nds-saves: $G: BananaDS's save is $WHY: DraStic takes it ($(wc -c < "$DSV") bytes)"
 fi
 exit 0

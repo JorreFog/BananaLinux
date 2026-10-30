@@ -1,6 +1,7 @@
 #!/bin/sh
 # The DS launchers' file work against a made-up card, no emulator: run-drastic's per-game drastic.cfg lines (#117)
-# and its move of fast forward off R3 (#113), taken from run-drastic itself (its functions, not a copy).
+# and its move of fast forward off R3 (#113), taken from run-drastic itself (its functions, not a copy); nds-saves on
+# a made-up data partition (BANANA_ROOT): an empty save never goes over a real one (#96).
 #   sh system/tests/launchers-test.sh
 cd "$(dirname "$0")/../.." || exit 1
 R=$PWD L=$PWD/system/rootfs/usr/libexec/banana
@@ -69,6 +70,45 @@ check "$(keys b)" "SAVE_STATE=1031 LOAD_STATE=1028 FAST_FORWARD=1036 " "set b, c
 rm -f config/drastic.cfg; ff_on_r2
 check "$(ls config | grep -c drastic.cfg)" "0" "no drastic.cfg yet: nothing made"
 cd - >/dev/null || exit 1
+
+echo "nds-saves: an empty save never goes over one with something in it (#96)"
+D=$T/data
+# saves <dsv bytes|-> <sav bytes|-> <newer: dsv|sav>: a made-up card with those two files ('-': none), then nds-saves
+saves() {
+    rm -rf "$D"; mkdir -p "$D/drastic/backup" "$D/saves/nds"
+    [ "$1" = - ] || head -c "$1" /dev/zero | tr '\0' d > "$D/drastic/backup/Game.dsv"
+    [ "$2" = - ] || head -c "$2" /dev/zero | tr '\0' s > "$D/saves/nds/Game.sav"
+    for f in "$D/drastic/backup/Game.dsv" "$D/saves/nds/Game.sav"; do [ -f "$f" ] && touch -d '2026-01-01 10:00' "$f"; done
+    case $3 in dsv) touch -d '2026-01-01 11:00' "$D/drastic/backup/Game.dsv" ;; sav) touch -d '2026-01-01 11:00' "$D/saves/nds/Game.sav" ;; esac
+    BANANA_ROOT=$D sh "$L/nds-saves" "/roms/nds/Game.nds" > "$T/log"
+}
+# what each holds now: <bytes><its letter>
+held() { for f in "$D/drastic/backup/Game.dsv" "$D/saves/nds/Game.sav"; do [ -f "$f" ] && printf '%s%s ' "$(wc -c < "$f" | tr -d ' ')" "$(head -c 1 "$f")" || printf -- '- '; done; }
+saves 8192 0 sav
+check "$(held)" "8192d 8192d " "an empty .sav newer than an 8 KB .dsv: the .dsv kept and copied over it"
+check "$(grep -c 'empty (0 bytes)' "$T/log")" "1" "...and said so"
+saves 8192 100 sav
+check "$(held)" "8192d 8192d " "a 100-byte .sav (no save) newer: the same"
+saves 0 8192 dsv
+check "$(held)" "8192s 8192s " "an empty .dsv newer than an 8 KB .sav: the .sav kept and copied over it"
+saves 8192 512 sav
+check "$(held)" "512s 512s " "a 512-byte .sav newer (a 4 Kbit EEPROM): taken, as before"
+saves 512 8192 dsv
+check "$(held)" "512d 512d " "a newer .dsv that is a save: taken, as before"
+saves 8192 - x
+check "$(held)" "8192d 8192d " "no .sav yet: made from the .dsv"
+saves - 8192 x
+check "$(held)" "8192s 8192s " "no .dsv yet: made from the .sav"
+saves 8192 0 sav; saves_again=$(held)
+BANANA_ROOT=$D sh "$L/nds-saves" "/roms/nds/Game.nds" > "$T/log"
+check "$(held) $(wc -c < "$T/log" | tr -d ' ')" "$saves_again 0" "a second run: nothing more to do"
+# a ROCKNIX save beside the game (#25): an empty one is not taken
+rm -rf "$D"; mkdir -p "$T/roms"; : > "$T/roms/Game.dsv"
+BANANA_ROOT=$D sh "$L/nds-saves" "$T/roms/Game.nds" > "$T/log"
+check "$(held)" "- - " "an empty ROCKNIX .dsv beside the game is not taken"
+head -c 8192 /dev/zero | tr '\0' r > "$T/roms/Game.dsv"
+BANANA_ROOT=$D sh "$L/nds-saves" "$T/roms/Game.nds" > "$T/log"
+check "$(held)" "8192r 8192r " "one with a save in it is"
 
 echo "launchers-test: $passed passed, $failed failed"
 [ $failed = 0 ]
