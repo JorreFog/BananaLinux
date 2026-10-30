@@ -356,6 +356,27 @@ wake
 kill $JOB 2>/dev/null || true
 stop
 
+echo "15. a shutdown with the lid shut never sleeps (#46): bananad's own (power held), then rcK's (the menu's Shut down)"
+# (init here only notes the SIGUSR2, so bananad runs on as it does while rcK unmounts the card)
+start "power_long_ms = 300"
+ev $EV_KEY $KEY_POWER 1; sleep 0.6; ev $EV_KEY $KEY_POWER 0
+poweroff && ok "power held: shutting down" || bad "no shutdown on power held"
+echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
+asleep 2>/dev/null && { bad "the lid shut during the shutdown wrote mem"; wake; } || ok "no sleep on the lid once shutting down"
+sleep 5.5   # ("lid still closed" is tried again after 5 s without a press)
+asleep 2>/dev/null && { bad "lid still closed slept during the shutdown"; wake; } || ok "no sleep for the lid still closed either"
+stop; POWEROFF=0; echo 0 > /run/test/lid
+start
+: > /run/banana/powering-off     # rcK's first line
+echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
+asleep 2>/dev/null && { bad "the lid shut during rcK wrote mem"; wake; } || ok "no sleep on the lid while rcK runs"
+echo 0 > /run/test/lid; ev $EV_SW $SW_LID 0; sleep 0.3
+rm -f /run/banana/powering-off
+echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
+asleep && ok "the lid sleeps again without the flag (a sleep is still a sleep)" || bad "no sleep on the lid"
+echo 0 > /run/test/lid; wake
+stop
+
 kill $UI $GAME 2>/dev/null || true
 echo "sleep test: $pass passed, $fail failed"
 [ $fail = 0 ]

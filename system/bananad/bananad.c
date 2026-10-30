@@ -319,6 +319,11 @@ static void drain_inputs(void)
  * button pressed in a bag, the battery check): straight back to sleep, without running anything again. */
 static void shutdown_now(const char *why);
 static int battery_discharging_pct(void);
+/* shutting down (#46): shutdown_now started, or rcK runs (a shutdown from the menu or over SSH writes
+ * /run/banana/powering-off first). No sleep from then on: the lid still shut while the game saves and the card is
+ * unmounted put the handheld to sleep instead, found asleep hours later */
+static int shutting_down;
+static int powering_off(void) { return shutting_down || access("/run/banana/powering-off", F_OK) == 0; }
 static int sleep_fallback;		/* 0 as configured; 1 devices one at a time; 2 also s2idle (a suspend failed) */
 /* (the fallback to s2idle is for the one sleep that needed it: the next sleep, and a sleep again after the battery
  * check, try deep again. Both handhelds' xhci-hcd fails a suspend now and then ("Clearing Run/Stop bit failed",
@@ -628,6 +633,7 @@ static void sleep_poweroff(pid_t game, pid_t pg, double asleep)
 
 static void suspend_now(const char *why)
 {
+	if (powering_off()) { static int told; if (!told++) say("no sleep (%s): shutting down", why); return; }
 	double t0 = mono();
 	pid_t game = pid_of("/run/banana/game.pid");
 	pid_t pg = game ? getpgid(game) : 0;
@@ -643,6 +649,9 @@ static void suspend_now(const char *why)
 	/* Power off after sleeping: the wall clock's deadline (it goes on while asleep), from the first real sleep */
 	time_t off_at = 0;
 	for (;;) {
+		/* a shutdown begun meanwhile (rcK, while dark on the charger or awake for the battery check): awake, so the
+		 * game, paused, gets its SIGTERM and writes its saves */
+		if (powering_off()) { woke = "shutting down"; break; }
 		/* charging: no suspend, which turns the charging light off (it is a PWM LED, and the PWM stops in suspend).
 		 * Dark and awake instead, the game still paused, until the lid opens or the power button is pressed (back as
 		 * from a sleep), or the charger is pulled out (then a real sleep). Since 0.4.2 a power-button sleep too, not
@@ -766,6 +775,7 @@ static void suspend_now(const char *why)
 static void shutdown_now(const char *why)
 {
 	say("shutting down (%s)", why);
+	shutting_down = 1;
 	pid_t game = pid_of("/run/banana/game.pid");
 	if (game) {
 		pid_t pg = getpgid(game);
