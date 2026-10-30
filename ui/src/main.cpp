@@ -29,6 +29,7 @@
 #include "menu.h"
 #include "carts.h"
 #include "layout.h"
+#include "nas.h"
 
 #include <algorithm>
 #include <atomic>
@@ -56,6 +57,7 @@
 #define SYS_pidfd_open 434	// (the toolchain's headers predate it; the handhelds' kernel has it)
 #endif
 #include <sys/inotify.h>
+#include <set>
 #include <sys/socket.h>
 #include <linux/netlink.h>
 #include <sys/wait.h>
@@ -522,6 +524,62 @@ struct BshareNotice
 	}
 };
 
+// Files' downloads and unpackings (banana-fetch's runner, settings_servers.cpp): a job finished, said whatever the menu
+// shows, as Bshare's news is (the banner at the top, 4 s, any press hides it). The runner says so in
+// /run/banana/fetch.finished, which the launch watch hears; the finished jobs not seen yet are counted (the first look
+// only notes the ones there already: a job finished before the menu started isn't news)
+struct FetchNotice
+{
+	std::string title, body;
+	int sign = 1;
+	uint32_t accent = 0x6ad07a;
+	double until = 0;
+	std::set<std::string> seen;
+	bool looked = false;
+	bool showing(double now) const { return until > now; }
+	bool hide(double now) { bool was = showing(now); until = 0; return was; }
+	// true when a job finished since the last look
+	bool check(const std::string& data, double now)
+	{
+		std::vector<std::string> done = fetch::finishedJobs(fetch::Paths::fromEnv(data).jobs());
+		bool first = !looked;
+		looked = true;
+		fetch::Status st;
+		int jobs = 0, unpacks = 0;
+		std::string name;
+		for (auto& f : done)
+		{
+			if (!seen.insert(f).second || first) continue;
+			fetch::Job j;
+			if (!fetch::readJob(f, j)) continue;
+			fetch::Status s = fetch::summary(j, fetch::readOutcomes(f + ".done"));
+			st.downloaded += s.downloaded;
+			st.unpacked += s.unpacked;
+			st.packed += s.packed;
+			st.failed += s.failed;
+			name = j.title;
+			jobs++;
+			if (j.server.empty()) unpacks++;
+		}
+		if (!jobs) return false;
+		std::string what;
+		auto part = [&](int n, const char* word) { if (n > 0) what += (what.empty() ? "" : ", ") + std::to_string(n) + " " + word; };
+		part(st.downloaded, "downloaded");
+		part(st.unpacked, "unpacked");
+		part(st.packed, "left packed");
+		part(st.failed, "failed");
+		std::string kind = unpacks == jobs ? "Unpacked" : "Downloaded";
+		title = (jobs > 1 ? std::to_string(jobs) + " jobs done" : name) + (st.failed ? ": not all of it" : "");
+		body = (what.empty() ? "Nothing new" : what) + ". In Files.";
+		// (an unpacking's title says it already: "Unpack Delta.zip")
+		if (!st.failed && jobs == 1) title = unpacks ? "Unpacked" + (name.compare(0, 7, "Unpack ") == 0 ? name.substr(6) : ": " + name) : kind + ": " + name;
+		sign = st.failed ? 2 : 1;
+		accent = st.failed ? 0xffb340 : 0x6fdc87;
+		until = now + 4000;
+		return true;
+	}
+};
+
 static int shutdownPercent(const std::string& data)
 {
 	return atoi(getConfValue(data + "/bananad.conf", "battery_shutdown_percent",
@@ -666,10 +724,13 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	settings.searchCount = [&](const std::string& q) { return lib.countMatches(q); };
 	settings.artCount = [&] { return artCount(lib); };
 	LowBattery low;
+	FetchNotice fetchNotice;
+	fetchNotice.check(o.data, now);	// (the jobs finished before: not news)
 	int looking = 0;	// "looking 1|2|0": the games-being-read pop-up as the device shows it (a change waiting, the second card)
 	be.overlay = [&](int screen)
 	{
 		if (screen == 0 && low.showing(now)) settings.notice(low.title, low.body, low.percent);
+		else if (screen == 0 && fetchNotice.showing(now)) settings.banner(fetchNotice.title, fetchNotice.body, fetchNotice.sign, fetchNotice.accent);
 		else if (screen == 0 && looking) settings.popup(looking == 2 ? "Reading the second SD card" : "Looking for games",
 			looking == 2 ? "Its games join the list in a moment" : "The game list is updated in a moment");
 	};
@@ -701,6 +762,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		// filesdone: real time until Files' job on its thread (BANANA_FILES_ASYNC) is over, 30 s at most; the update
 		// after this command tells its outcome
 		else if (op == "filesdone") { for (int i = 0; i < 3000 && settings.filesWorking(); i++) usleep(10000); }
+		// fetchdone: banana-fetch's runner said a job finished (fetch.finished), as the device's loop hears of it
+		else if (op == "fetchdone") { if (fetchNotice.check(o.data, now)) { logf("notice: %s: %s", fetchNotice.title.c_str(), fetchNotice.body.c_str()); settings.offerSd2Roms(); } }
 		else if (op == "battery")
 		{
 			// battery <percent> [charging]: what /sys would say from now on
@@ -1887,6 +1950,12 @@ int main(int argc, char** argv)
 	if (settingsView.bshareReceiving()) Settings::bshareServe(true);	// (Bshare's Receive on: seen from the start)
 	LowBattery low;
 	BshareNotice bsNotice;
+	FetchNotice fetchNotice;
+	fetchNotice.check(o.data, nowMs());	// (the jobs finished before the menu started: not news)
+	bool fetchDone = false;				// /run/banana/fetch.finished written: a Files job finished
+	// a job of Files' the last menu paused for a game and never let go on (it went away during the game): on again, or
+	// it would hold the sleep (bananad) and the queue until a reboot
+	nas::pauseRunner(fetch::Paths::fromEnv(o.data), false);
 	bool batteryDue = true;
 	RomWatch roms;
 	roms.watch(lib.watchDirs());
@@ -1911,6 +1980,7 @@ int main(int argc, char** argv)
 		double t = nowMs();
 		if (low.showing(t)) settingsView.notice(low.title, low.body, low.percent);
 		else if (bsNotice.showing(t)) settingsView.banner(bsNotice.title, bsNotice.body, bsNotice.sign, bsNotice.accent);
+		else if (fetchNotice.showing(t)) settingsView.banner(fetchNotice.title, fetchNotice.body, fetchNotice.sign, fetchNotice.accent);
 		else if (osdUntil > t) settingsView.level(osdLabel, osdPercent);
 		else if (int k = looking())
 			settingsView.popup(k == 2 ? "Reading the second SD card" : "Looking for games",
@@ -2008,8 +2078,8 @@ int main(int argc, char** argv)
 		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) { boost.frame(nowMs()); fstat.press(ev.t); }	// what it starts drawn fast
 		if (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN)
 		{
-			bool lowWas = low.hide(nowMs()), bsWas = bsNotice.hide(nowMs());	// (both hidden, whichever showed)
-			if (lowWas || bsWas) dirty = true;
+			bool lowWas = low.hide(nowMs()), bsWas = bsNotice.hide(nowMs()), fetchWas = fetchNotice.hide(nowMs());	// (all hidden, whichever showed)
+			if (lowWas || bsWas || fetchWas) dirty = true;
 		}
 		if ((ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) && resumeLater.until > 0)
 		{
@@ -2314,6 +2384,10 @@ int main(int argc, char** argv)
 		drawn = false;	// the menu is drawn afresh when the panels come back
 		rep.key = Key::NONE;
 		if (system(("banana-perf " + shellQuote(sd.perf.empty() ? "balanced" : sd.perf)).c_str()) != 0) {}
+		// a job of Files' (a download, an unpacking) stops while the game runs (the network, the card and the CPU are the
+		// game's), and goes on after it: banana-fetch's runner and its 7zz, stopped as a group
+		const fetch::Paths fetchPaths = fetch::Paths::fromEnv(o.data);
+		nas::pauseRunner(fetchPaths, true);
 		const char* PROGRESS = "/run/banana/ra-progress";	// "<unlocked> <total>", from the emulator (docs/EMULATORS.md)
 		unlink(PROGRESS);
 		double start = nowMs();
@@ -2354,6 +2428,7 @@ int main(int argc, char** argv)
 			else while (waitpid(pid, &status, 0) < 0 && errno == EINTR) {}
 			unlink("/run/banana/game.pid");
 		}
+		nas::pauseRunner(fetchPaths, false);
 		const double ended = nowMs();
 		if (panel)
 		{
@@ -2596,6 +2671,12 @@ int main(int argc, char** argv)
 			if (low.check(lib.power(), shutdownPercent(o.data), now)) dirty = true;
 		}
 		if (bsNotice.check(now)) { logf("notice: %s", bsNotice.title.c_str()); dirty = true; }
+		if (fetchDone)
+		{
+			fetchDone = false;
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			if (fetchNotice.check(o.data, now)) { logf("notice: %s", fetchNotice.title.c_str()); settingsView.offerSd2Roms(); dirty = true; }
+		}
 
 		bool want;
 		{
@@ -2671,6 +2752,11 @@ int main(int argc, char** argv)
 			int left = (int)(bsNotice.until - now) + 1;
 			if (timeout < 0 || left < timeout) timeout = left;
 		}
+		if (fetchNotice.showing(now))
+		{
+			int left = (int)(fetchNotice.until - now) + 1;
+			if (timeout < 0 || left < timeout) timeout = left;
+		}
 		{
 			int left = (int)(bsNotice.lookedAt + 5000 - now) + 1;	// (a look at least every 5 s: the menu idle isn't woken more)
 			if (left > 0 && (timeout < 0 || left < timeout)) timeout = left;
@@ -2737,8 +2823,16 @@ int main(int argc, char** argv)
 			}
 			else if (p.fd == launchWatch)
 			{
+				// (the loop's next pass looks for the launch file); banana-fetch's runner's word that a job finished: said over
+				// the top panel, whatever the menu shows (its progress is in a folder of its own, not watched)
 				alignas(inotify_event) char buf[1024];
-				while (read(launchWatch, buf, sizeof buf) > 0) {}	// (the loop's next pass looks for the launch file)
+				for (ssize_t n; (n = read(launchWatch, buf, sizeof buf)) > 0;)
+					for (char* q = buf; q < buf + n;)
+					{
+						auto* e = (inotify_event*)q;
+						if (e->len && strcmp(e->name, "fetch.finished") == 0) fetchDone = true;
+						q += sizeof(inotify_event) + e->len;
+					}
 			}
 			else if (p.fd == uevent)
 			{
@@ -2777,6 +2871,10 @@ int main(int argc, char** argv)
 		f << ui->systemIndex() << "\n";
 	}
 	bottomIdle.setOwned(false, nowMs());	// the backlight and the marker back as they were
+	{
+		std::lock_guard<std::mutex> l(worker.uiLock);
+		settingsView.closeServers();	// (banana-fetch's session first: its answers wake the loop through the worker's eventfd)
+	}
 	worker.finish();
 	// not straight after a game: a shutdown from it (the power button held) gives rcK's 3 s to its saves instead
 	if (shuttingDown && disp.isOpen() && settings["splash"] != "off" && nowMs() - gameEnded > 2000)

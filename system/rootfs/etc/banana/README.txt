@@ -16,6 +16,11 @@ keyboard there. Or put your network in banana/wifi.conf on a computer:
 Files (a tile on the home screen): copy, move, rename and delete files and folders on this card and the second
 SD card, and make folders. Y marks, X says what can be done. The card's own folders stay where they are.
 A copy keeps Files open till it is done; Y twice stops it.
+Files also gets games from a NAS or a computer over SMB, SFTP or FTP (Add a server in its list), into the folder
+their type says or any folder you choose, and unpacks zip, 7z and RAR archives (X, Unpack... on one on the card).
+Its servers are kept in banana/nas.conf (a remembered password sealed for this handheld: another one, or a
+computer, can't open it), its downloads in banana/downloads, its log in banana/logs/downloads.log. Download
+options there: banana/settings.conf's files_* lines.
 
 File sharing: Settings > Network > File sharing puts this card on the network (\\<address>\banana in Windows,
 smb://<address>/banana on a Mac), so games can be copied in over Wi-Fi. It asks for a name and a password:

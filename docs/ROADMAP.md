@@ -64,6 +64,14 @@
 - [ ] EmulationStation as an alternative frontend
 - [ ] Charging while switched off on the RG DS Plus (#34)
 - [ ] Golden Sun: Dark Dawn's opening flyover at full speed in BananaDS
+- [ ] Files' servers (banana-fetch): games from a NAS or a computer over SMB 2/3, SFTP and FTP/FTPS, into a folder
+      guessed or chosen on either card, archives unpacked (zip, 7z, RAR); built and tested on the host
+      (`ui/tests/fetch-test.sh`, the pages headless, real servers in Docker). Open: the units (Windows 11, Samba and
+      Synology shares, a guest on Windows and on a Synology, their share lists; Wi-Fi off mid-download; the lid and the
+      power button during one; the second SD card taken out during one; 4 GB files on exFAT and on a FAT32 second
+      card), the SoC's serial number in `/proc/device-tree/serial-number` under the mainline U-Boot (the passwords' key:
+      without it `nas.key` alone opens them), the throughput and CPU over the RK3566's Wi-Fi, a big 7z's memory on the
+      RG DS, `.local` names (no mDNS in glibc: IP addresses for now)
 
 ## Later
 

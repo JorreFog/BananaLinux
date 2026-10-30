@@ -913,6 +913,7 @@ namespace banana
 		page = LIST;
 		wizard = false;
 		closeBshare();
+		closeServers();	// (banana-fetch's session: its answers wake the loop through the worker's eventfd)
 	}
 
 	// the sd2 script again, under bananad's lock (Files: a roms folder made on the second card, offered to the library).
@@ -1250,6 +1251,7 @@ namespace banana
 		if (page == FILES) return pressFiles(k);
 		if (langAsk >= 0) return pressLangAsk(k);
 		if (page == BSHARE) return pressBshare(k);
+		if (page == SERVERS) return pressServers(k);
 		if (inGroups) return pressGroups(k);
 		int g = groupOf(sel), b = groupStart(g), e = groupEnd(g);
 		switch (k)
@@ -1402,6 +1404,7 @@ namespace banana
 			return t < 0 ? NONE : t == 0 ? MOVED : pressLangAsk(Key::A);
 		}
 		if (page == BSHARE) return touchBshare(cx, cy);
+		if (page == SERVERS) return touchServers(cx, cy);
 		if (page == SETUP)
 		{
 			// the chips (B Back, START Skip, A OK), and a choice: one tap does it (a value row: its left or right half)
@@ -2094,6 +2097,7 @@ namespace banana
 		if (page == FILES) { renderFiles(); return; }
 		if (langAsk >= 0) { renderLangAsk(); return; }
 		if (page == BSHARE) { renderBshare(); return; }
+		if (page == SERVERS) { renderServers(); return; }
 		if (inGroups) { renderGroups(); return; }
 		SPal p = pal(light);
 		const Item& cur = items[sel];
@@ -2296,6 +2300,7 @@ namespace banana
 		changed |= btUpdate();
 		if (fm && updateFiles(t)) changed = true;	// (a job's progress, its end)
 		if (bs && page == BSHARE && updateBshare(t)) changed = true;
+		if (srv && updateServers(t)) changed = true;	// (also under the keyboard: a login answered; Files' row of the job)
 		if (page == UPDATES && applying && now >= nextStatus2)
 		{
 			std::string before = ustatus;
@@ -2393,6 +2398,8 @@ namespace banana
 		if (d >= 0 && (w < 0 || d < w)) w = d;
 		int b = bshareWake(t);	// Bshare's request countdown, a send's progress
 		if (b >= 0 && (w < 0 || b < w)) w = b;
+		int v = serversWake(t);	// a server's answer, a download's progress
+		if (v >= 0 && (w < 0 || v < w)) w = v;
 		return w;
 	}
 
@@ -2564,8 +2571,9 @@ namespace banana
 		case Key::Y: if (pw.size() < entryMax) pw += ' '; return MOVED;
 		case Key::START: return keyboardKey(4, FKEYS[4].c0);
 		case Key::SELECT:
-			// Files' names: back with nothing changed (B takes a character off, and Rename starts with the whole name)
-			if (entry != ENTRY_FOLDER && entry != ENTRY_RENAME) return NONE;
+			// Files' names and its servers' fields: back with nothing changed (B takes a character off, and Rename starts with
+			// the whole name)
+			if (entry != ENTRY_FOLDER && entry != ENTRY_RENAME && entry != ENTRY_SERVER) return NONE;
 			pw.clear();
 			page = entryBack;
 			message.clear();
@@ -2959,7 +2967,7 @@ namespace banana
 		be->beginScreen(0);
 		box("screen", false, 0, 0, 640, 480);
 		box("hero", false, 18, 20, 604, 436);
-		icon(entry == ENTRY_SEARCH ? "search" : entry == ENTRY_FOLDER || entry == ENTRY_RENAME ? "files" : entry == ENTRY_BSHARE_PIN || entry == ENTRY_BSHARE_MYPIN ? "bshare" : "phone", 50, 56, 3);
+		icon(entry == ENTRY_SEARCH ? "search" : entry == ENTRY_FOLDER || entry == ENTRY_RENAME || entry == ENTRY_SERVER ? "files" : entry == ENTRY_BSHARE_PIN || entry == ENTRY_BSHARE_MYPIN ? "bshare" : "phone", 50, 56, 3);
 		text(entryTitle, true, 17, 170, 62, p.muted, true, 1.4f);
 		text(fit(entrySub, true, 30, 420), true, 30, 170, 88, p.ink);
 		box("slot", true, 50, 150, 540, 56);
@@ -4961,7 +4969,8 @@ namespace banana
 		entry = e; entryTitle = title; entrySub = sub; entryBack = back;
 		entryHelp.clear();
 		// (a name on the card: 255 characters on exFAT and FAT32, up to 3 bytes each; files::nameProblem says what it takes)
-		entryMax = e == ENTRY_FOLDER || e == ENTRY_RENAME ? 765 : 63;
+		// (a server's address, a start folder, a password: up to 255)
+		entryMax = e == ENTRY_FOLDER || e == ENTRY_RENAME ? 765 : e == ENTRY_SERVER ? 255 : 63;
 		pw = start;
 		layer = 0; krow = 1; kcol = 0;
 		message.clear();
@@ -5178,6 +5187,8 @@ namespace banana
 		case ENTRY_BSHARE_PIN:
 		case ENTRY_BSHARE_MYPIN:
 			return finishBshareEntry();
+		case ENTRY_SERVER:
+			return finishServersEntry();
 		}
 		return NONE;
 	}
