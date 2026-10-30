@@ -45,6 +45,10 @@ namespace banana
 		void handleEvents();	// the flip events from pollFd()
 		// after a resume or a lost master: show the current buffers again
 		void restore();
+		// after a game: the panels the menu owns (not a leased one) blacked at once, both buffers zeroed, the first
+		// modeset up, front and pending reset. Whatever a game left on a panel (its last frame, a panel whose flip was
+		// refused on the way back) is gone before the menu draws over it, so the launcher never shows stale game UI.
+		void blank();
 		// screen s's panel (its connector, CRTC and primary plane) leased to a program that draws on it itself (a
 		// RetroArch game while the menu keeps the other panel for the game panel): the lease's fd, which is that
 		// program's DRM device, or -1. present() and restore() leave the screen alone until close().

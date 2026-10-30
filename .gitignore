@@ -10,7 +10,8 @@
 /system/bananad/banana-panel-tune
 *.o
 /banana-*.bundle
-
+AGENTS.md
+/issues.md
 # Python bytecode
 __pycache__/
 *.pyc
