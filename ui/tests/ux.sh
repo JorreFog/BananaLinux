@@ -25,6 +25,10 @@ ux_run row "home 0; wait 2400; shot ux-row-first; press left; wait 2400; shot ux
 ux_check row "press left: used, view 0 sys 7"     # (six systems, Bshare and Files: Ports with PortMaster alone is off the row)
 ux_lt "$(ux_std "$OUT/$size-ux-row-first-bot.png" 210 80 30 200)" 0.08 || { echo "FAIL $size: something drawn left of the first system"; fail=1; }
 ux_lt "$(ux_std "$OUT/$size-ux-row-last-bot.png" 210 80 400 200)" 0.08 || { echo "FAIL $size: something drawn right of the last system"; fail=1; }
+# the plate's START on its accent, the dark band below it (#128: the band cut through the letters): the plate under
+# START (y 328) the same colour as above it (y 300)
+ux_mean() { convert "$1" -crop "$(awk -v k=$ux_k -v y=$2 'BEGIN { printf "%dx%d+%d+%d", 100 * k, 4 * k, 270 * k, y * k }')" -format '%[fx:int(255*mean.r)] %[fx:int(255*mean.g)] %[fx:int(255*mean.b)]' info: 2>/dev/null; }
+[ "$(ux_mean "$OUT/$size-ux-row-first-bot.png" 328)" = "$(ux_mean "$OUT/$size-ux-row-first-bot.png" 300)" ] || { echo "FAIL $size: the plate's dark band runs into START"; fail=1; }
 
 # the box art's frame (Pixel): it fits the picture (owner, 0.5.0: a square frame stood taller than a DS box): a tall
 # cover's frame top is elsewhere than a wide one's, and a game without one keeps the square

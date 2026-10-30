@@ -1392,7 +1392,7 @@ namespace rnds
 		BoxCss plateBox()
 		{
 			BoxCss b; b.key = "plate"; b.radius = 18; b.border = 3; b.borderColor = EDGE; b.bg = Color::hex(accent.base);
-			b.bands = { Band{ 0, 14, Color::hex(accent.light) }, Band{ 132, -1, Color::hex(accent.dark) } };
+			b.bands = { Band{ 0, 14, Color::hex(accent.light) }, Band{ 150, -1, Color::hex(accent.dark) } };
 			b.shadows = { inset(0, -8, 0, Color(0, 0, 0, 0.35f)), outer(4, 4, SHADE40) };
 			return b;
 		}
