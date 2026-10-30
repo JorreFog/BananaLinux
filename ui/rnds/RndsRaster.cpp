@@ -595,6 +595,8 @@ namespace rnds
 			else if (c == 0xff) c = 0x178;
 			else if (c >= 0x100 && c <= 0x17f && (c & 1) && c != 0x131 && c != 0x138 && c != 0x149 && !(c >= 0x139 && c <= 0x148) && !(c >= 0x179 && c <= 0x17e)) c -= 1;
 			else if (((c >= 0x139 && c <= 0x148) || (c >= 0x179 && c <= 0x17e)) && !(c & 1)) c -= 1;
+			else if (c >= 0x430 && c <= 0x44f) c -= 32;	// (Banana: Cyrillic, а-я and ѐ-џ)
+			else if (c >= 0x450 && c <= 0x45f) c -= 80;
 		}
 		return o;
 	}

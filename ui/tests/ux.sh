@@ -109,12 +109,12 @@ first=$(sed -n 's/.*press left: used, view 0 sys \([0-9]*\).*/\1/p' "$OUT/$size-
 sed -i '/^shelf\./d' "$UXFX/data/settings.conf"
 
 # System > Language (its first row) asks before switching, No first: right then A keeps English; right, down, A
-# switches (the menu starts again: settings result 9, LANGUAGE)
+# switches (the menu starts again: settings result 9, LANGUAGE) to the first language after English, ru
 ux_run langask "home 0; press start; press r; press r; press r; press r; press r; press a; press right; shot ux-langask; press a"
-grep -q '^language = zh-cn' "$UXFX/data/settings.conf" && { echo "FAIL $size: the language switched without a Yes"; fail=1; }
+grep -q '^language = ' "$UXFX/data/settings.conf" && { echo "FAIL $size: the language switched without a Yes"; fail=1; }
 ux_check langask "press a: settings result 1"
 ux_run langyes "home 0; press start; press r; press r; press r; press r; press r; press a; press right; press down; press a"
-grep -q '^language = zh-cn' "$UXFX/data/settings.conf" || { echo "FAIL $size: Yes didn't switch the language"; fail=1; }
+grep -q '^language = ru' "$UXFX/data/settings.conf" || { echo "FAIL $size: Yes didn't switch the language"; fail=1; }
 sed -i '/^language = /d' "$UXFX/data/settings.conf"
 
 # System > Credits (after About: up four from the first row) opens the credits from credits.txt; with no names in it,
@@ -137,7 +137,7 @@ ux_run splash-b "splash ux-boot-word 700"
 # (the RG DS Plus adds a note to the Shader rows); "helpcheck" lays each out as the panel does
 HCFX=$OUT/ux-help-fixture-$size
 rm -rf "$HCFX"; "$HERE/tests/fixture.sh" "$HCFX" >/dev/null
-for hl in en zh-cn; do
+for hl in en zh-cn ru; do
     for he in superdrastic bananads; do
         for hb in rgds rgds-plus; do
             touch "$HCFX/data/settings.conf"; sed -i '/^language\b/d; /^nds_emulator\b/d' "$HCFX/data/settings.conf"
@@ -146,7 +146,7 @@ for hl in en zh-cn; do
             BANANA_BOARD=$hb "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --splash "$HERE/assets/splash" \
                 --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$HCFX/roms" --data "$HCFX/data" \
                 --script "home 0; helpcheck" 2> "$OUT/$size-$hn.log" || { echo "FAIL $size: banana-ui ($hn) exited $?"; fail=1; }
-            [ "$hl" = en ] || ux_check $hn "language: .*(zh-cn)"
+            [ "$hl" = en ] || ux_check $hn "language: .*($hl)"
             hc=$(sed -n 's/.*helpcheck: \([0-9]*\) texts/\1/p' "$OUT/$size-$hn.log")
             [ "${hc:-0}" -ge 100 ] || { echo "FAIL $size ($hn): helpcheck checked ${hc:-no} texts"; fail=1; }
             grep 'helpcheck .*OVERFLOW' "$OUT/$size-$hn.log" | sed "s/^banana-ui: helpcheck /FAIL $size ($hn): help text too long: /" | grep . && fail=1

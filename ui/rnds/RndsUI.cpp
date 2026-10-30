@@ -1871,7 +1871,7 @@ namespace rnds
 		{
 			std::u32string t = upper(utf8to32(game(ui->mGame).title));
 			char32_t c = t.empty() ? U'#' : t[0];
-			bool letter = (c >= U'A' && c <= U'Z') || (c >= 0xc0 && c <= 0x17f && c != 0xd7 && c != 0xf7);
+			bool letter = (c >= U'A' && c <= U'Z') || (c >= 0xc0 && c <= 0x17f && c != 0xd7 && c != 0xf7) || (c >= 0x400 && c <= 0x42f);
 			if (!letter || !M->hasGlyph(c)) c = U'#';
 			const float w = 36, h = 30, ptrH = 8;
 			float top = 391 - ptrH - h + 3;				// the pointer's tip 3 px over the thumb
