@@ -736,7 +736,7 @@ namespace rnds
 				}
 			}
 			char k[48];
-			snprintf(k, sizeof k, "cart:%dx%d:", dw, dh);
+			snprintf(k, sizeof k, "cart2:%dx%d:", dw, dh);
 			std::string key = std::string(k) + art0.scan + "|" + art0.label + "|" + art0.box + "|" + art0.icon;
 			if (auto e = find(key)) return e->sp;
 			std::shared_ptr<const Bitmap> shellRef = shell;
@@ -761,10 +761,21 @@ namespace rnds
 				}
 				if (!art.empty())
 				{
-					// the shell's whole label (x 4..96, y 4..90): the art is all there is on it, no header or margin
+					// the shell's whole label (x 4..96, y 4..90): the art is all there is on it, no header or margin. All of
+					// it, fitted, on the plain label where it leaves room (#108: cut to the window, a title screen lost its
+					// sides)
 					int wx = (int)std::lround(4 * sc), wy = (int)std::lround(4 * sc);
 					int ww = (int)std::lround(96 * sc) - wx, wh = (int)std::lround(90 * sc) - wy;
-					blit(master, coverTop(art, ww, wh), wx, wy);
+					for (int y = wy; y < wy + wh; y++)
+						for (int x = wx; x < wx + ww; x++)
+						{
+							uint8_t* p = &master.px[((size_t)y * mw + x) * 4];
+							p[0] = (uint8_t)(plain >> 24); p[1] = (uint8_t)(plain >> 16); p[2] = (uint8_t)(plain >> 8); p[3] = 255;
+						}
+					float fw, fh;
+					containSize(art.w, art.h, ww, wh, fw, fh);
+					int aw = std::max(1, (int)std::lround(fw)), ah = std::max(1, (int)std::lround(fh));
+					blit(master, resize(art, aw, ah), wx + (ww - aw) / 2, wy + (wh - ah) / 2);
 				}
 				if (!shellCopy.empty())
 					blit(master, mw == shellCopy.w && mh == shellCopy.h ? shellCopy : resizeNearest(shellCopy, mw, mh), 0, 0);
@@ -1392,7 +1403,7 @@ namespace rnds
 		BoxCss plateBox()
 		{
 			BoxCss b; b.key = "plate"; b.radius = 18; b.border = 3; b.borderColor = EDGE; b.bg = Color::hex(accent.base);
-			b.bands = { Band{ 0, 14, Color::hex(accent.light) }, Band{ 132, -1, Color::hex(accent.dark) } };
+			b.bands = { Band{ 0, 14, Color::hex(accent.light) }, Band{ 150, -1, Color::hex(accent.dark) } };
 			b.shadows = { inset(0, -8, 0, Color(0, 0, 0, 0.35f)), outer(4, 4, SHADE40) };
 			return b;
 		}

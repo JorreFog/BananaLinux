@@ -84,6 +84,7 @@ namespace banana
 			{ "homesync_roms", "on", ENUM, ON_OFF, 0, 0 },
 			{ "homesync_states", "off", ENUM, ON_OFF, 0, 0 },
 			{ "homesync_auto", "off", ENUM, HOMESYNC_AUTO, 0, 0 },
+			{ "homesync_tls", "on", ENUM, ON_OFF, 0, 0 },
 			{ "boxart_twilight_url", "https://boxart.kirovair.com", TEXT, nullptr, 0, 0 },
 			{ "boxart_twilight_key", "tb2_9f4c1d7a3e8b5062", TEXT, nullptr, 0, 0 },
 			{ "bshare_receive", "off", ENUM, BSHARE_RECEIVE, 0, 0 },

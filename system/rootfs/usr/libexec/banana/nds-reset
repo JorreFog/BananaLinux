@@ -17,7 +17,7 @@ buttons|drastic)
         # the image's file with the card's firmware lines (the name the games show, the language, the birthday)
         awk 'NR == FNR { if (/^firmware\./) { k = $1; mine[k] = $0 } next } ($1 in mine) { print mine[$1]; next } { print }' \
             $CFG $DEF > $CFG.new
-        rm -f /data/banana/superdrastic.conf /data/drastic/config/.threaded_3d.settings	# (a game's Threaded 3D left from a cut-off run)
+        rm -f /data/banana/superdrastic.conf /data/drastic/config/.threaded_3d.settings /data/drastic/config/.hires_3d.settings	# (a game's Threaded 3D or 3D resolution left from a cut-off run)
     fi
     sync $CFG.new 2>/dev/null; mv -f $CFG.new $CFG && sync
     ;;

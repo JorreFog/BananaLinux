@@ -14,7 +14,8 @@
 //   banana-sync sync [--saves-only] [--auto quit|wifi] [--dry-run]
 //   banana-sync status                         the pairing and the last sync, for a person
 // The card: --root /data (saves/, states/, drastic/), --roms <root>/roms, --conf <root>/banana/romsync.json,
-// --settings <root>/banana/settings.conf (homesync_roms, homesync_states, homesync_auto, homesync.<system>).
+// --settings <root>/banana/settings.conf (homesync_roms, homesync_states, homesync_auto, homesync_tls,
+// homesync.<system>).
 // Rules kept (PROTOCOL.md "What a device sync must do"): only files the sync put there are ever changed or deleted
 // (the state lists them with their hashes; a file of the user's at the same path is left alone and reported);
 // downloads go to <file>.part, are checked, then renamed; gamelist.xml is merged; saves never sync while a game runs.
@@ -48,6 +49,7 @@ namespace
 	const char* VERSION = "banana-sync 1.0";
 	std::string ROOT = "/data", ROMS, CONF, SETTINGS, STATUS = "/run/banana/sync.status", RUN = "/run/banana";
 	bool dryRun = false, verbose = false;
+	bool tlsVerify = true;	// homesync_tls = off: a Home server's certificate taken unchecked (a name on the LAN, no CA for it)
 
 	// ---- the status line the menu reads ---------------------------------------------------------------------------
 	std::string statusLine;
@@ -207,7 +209,7 @@ namespace
 		O_HEADERDATA = 10029, O_CUSTOMREQUEST = 10036, O_MIMEPOST = 10269, O_WRITEFUNCTION = 20011, O_HEADERFUNCTION = 20079,
 		O_XFERINFOFUNCTION = 20219, O_XFERINFODATA = 10057, O_NOPROGRESS = 43, O_TIMEOUT = 13, O_LOW_SPEED_LIMIT = 19,
 		O_LOW_SPEED_TIME = 20, O_CONNECTTIMEOUT = 78, O_NOSIGNAL = 99, O_FOLLOWLOCATION = 52, O_POSTFIELDSIZE_LARGE = 30120,
-		O_HTTPGET = 80, I_RESPONSE_CODE = 0x200002
+		O_HTTPGET = 80, O_SSL_VERIFYPEER = 64, O_SSL_VERIFYHOST = 81, I_RESPONSE_CODE = 0x200002
 	};
 	std::string urlEsc(const std::string& s)
 	{
@@ -293,6 +295,7 @@ namespace
 		if (q.timeout) cu.setopt(h, O_TIMEOUT, q.timeout);
 		else { cu.setopt(h, O_LOW_SPEED_LIMIT, 1024L); cu.setopt(h, O_LOW_SPEED_TIME, 60L); }
 		cu.setopt(h, O_FOLLOWLOCATION, 1L);
+		if (!tlsVerify) { cu.setopt(h, O_SSL_VERIFYPEER, 0L); cu.setopt(h, O_SSL_VERIFYHOST, 0L); }
 		cu.setopt(h, O_HEADERFUNCTION, onHeader);
 		cu.setopt(h, O_HEADERDATA, &r.hdr);
 		if (q.out) { cu.setopt(h, O_WRITEFUNCTION, onFile); cu.setopt(h, O_WRITEDATA, q.out); }
@@ -1283,8 +1286,12 @@ namespace
 		std::vector<std::string> tries;
 		std::string a = trim(addr);
 		bool hasPort = a.find(':', a.find("://") == std::string::npos ? 0 : a.find("://") + 3) != std::string::npos;
-		if (hasPort || a.find("://") != std::string::npos) tries.push_back(normUrl(a, 0));
-		if (!hasPort) { tries.push_back(normUrl(a, 8092)); tries.push_back(normUrl(a, 8080)); tries.push_back(normUrl(a, 80)); }
+		bool scheme = a.find("://") != std::string::npos, tls = lower(a.substr(0, 8)) == "https://";
+		if (hasPort || scheme) tries.push_back(normUrl(a, 0));
+		// a bare address: Romhost's port first (the LAN's usual server), then the web ports, and https (443) last (#109);
+		// https typed without a port is that server's 443 alone
+		if (!hasPort && !tls) { tries.push_back(normUrl(a, 8092)); tries.push_back(normUrl(a, 8080)); tries.push_back(normUrl(a, 80)); }
+		if (!hasPort && !scheme) tries.push_back(normUrl("https://" + a, 0));
 		for (auto& u : tries)
 		{
 			Req q; q.url = u + "/api/v1/hello"; q.timeout = 5;
@@ -1480,6 +1487,11 @@ int main(int argc, char** argv)
 	if (ROMS.empty()) ROMS = ROOT + "/roms";
 	if (CONF.empty()) CONF = ROOT + "/banana/romsync.json";
 	if (SETTINGS.empty()) SETTINGS = ROOT + "/banana/settings.conf";
+	{
+		auto set = readConf(SETTINGS);
+		auto t = set.find("homesync_tls");
+		tlsVerify = t == set.end() || t->second != "off";
+	}
 	if (args.empty()) { fprintf(stderr, "usage: banana-sync discover | probe <address> | pair <address> [code] | forget | sync [--saves-only] [--auto quit|wifi] [--dry-run] | status | games\n"); return 2; }
 	std::string cmd = args[0];
 	if (!cu.load()) { status("error libcurl is missing"); fprintf(stderr, "banana-sync: libcurl is missing\n"); return 1; }

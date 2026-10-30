@@ -157,6 +157,45 @@ has "ra/roms/psx/Disc Game (USA).m3u"
 bs ra status | grep -q "paired with RomM 5.4.1" || bad "status: $(bs ra status)"
 bs ra forget; [ -f "$OUT/ra/banana/romsync.json" ] && bad "forget left the pairing"
 
+# ---------------------------------------------------------------- RomM on https (#109)
+# behind a certificate of its own making (no CA on the handheld for it): https typed is used as it is, the check
+# refuses it until Settings' Check certificate is Off, and http to the TLS port is a quick none, not a hang
+TLS=$OUT/tls; mkdir -p "$TLS"
+if openssl req -x509 -newkey rsa:2048 -nodes -subj /CN=romm.lan -days 2 -keyout "$TLS/key.pem" -out "$TLS/cert.pem" >/dev/null 2>&1; then
+    TP=$(port)
+    FAKE_ROMM_TLS="$TLS/cert.pem:$TLS/key.pem" python3 "$HERE/tests/fake-romm.py" "$TP" "$L" 2> "$OUT/romm-tls.log" & PIDS="$PIDS $!"
+    for i in $(seq 50); do curl -sk "https://127.0.0.1:$TP/api/heartbeat" >/dev/null && break; sleep 0.1; done
+    card ta
+    [ "$(bs ta probe "https://127.0.0.1:$TP" | cut -d' ' -f1)" = none ] || bad "https: a certificate of no CA's was taken with Check certificate On"
+    printf 'homesync_tls = off\n' > "$OUT/ta/banana/settings.conf"
+    [ "$(bs ta probe "https://127.0.0.1:$TP")" = "romm https://127.0.0.1:$TP RomM 5.4.1" ] || bad "https probe: $(bs ta probe "https://127.0.0.1:$TP")"
+    t0=$(date +%s); r=$(bs ta probe "127.0.0.1:$TP"); t1=$(date +%s)
+    [ "$(echo "$r" | cut -d' ' -f1)" = none ] || bad "http to the TLS port: $r"
+    [ $((t1 - t0)) -le 3 ] || bad "http to the TLS port took $((t1 - t0)) s"
+    # a bare address: Romhost's 8092 first, https (443) when nothing answers on the http ports. 443 needs its own network
+    # namespace (root in there, nobody's port 443 out here)
+    if unshare -rn true 2>/dev/null; then
+        export BIN OUT HERE TLS L
+        unshare -rn sh -c '
+            ip link set lo up
+            BANANA_SYNC_NAME=t "$BIN" --root "$OUT/ta" --run "$OUT/ta/run" --status "$OUT/ta/run/sync.status" probe 127.0.0.1 > "$OUT/tls-none.txt"
+            FAKE_ROMM_TLS="$TLS/cert.pem:$TLS/key.pem" python3 "$HERE/tests/fake-romm.py" 443 "$L" 2>> "$OUT/romm-tls.log" & A=$!
+            for i in $(seq 50); do curl -sk https://127.0.0.1/api/heartbeat >/dev/null && break; sleep 0.1; done
+            BANANA_SYNC_NAME=t "$BIN" --root "$OUT/ta" --run "$OUT/ta/run" --status "$OUT/ta/run/sync.status" probe 127.0.0.1 > "$OUT/tls-443.txt"
+            python3 "$HERE/tests/fake-romm.py" 8092 "$L" 2>> "$OUT/romm-tls.log" & B=$!
+            for i in $(seq 50); do curl -s http://127.0.0.1:8092/api/heartbeat >/dev/null && break; sleep 0.1; done
+            BANANA_SYNC_NAME=t "$BIN" --root "$OUT/ta" --run "$OUT/ta/run" --status "$OUT/ta/run/sync.status" probe 127.0.0.1 > "$OUT/tls-8092.txt"
+            kill $A $B'
+        [ "$(cat "$OUT/tls-none.txt")" = "none  " ] || bad "a bare address with nothing there: $(cat "$OUT/tls-none.txt")"
+        [ "$(cat "$OUT/tls-443.txt")" = "romm https://127.0.0.1 RomM 5.4.1" ] || bad "a bare address didn't find https on 443: $(cat "$OUT/tls-443.txt")"
+        [ "$(cat "$OUT/tls-8092.txt")" = "romm http://127.0.0.1:8092 RomM 5.4.1" ] || bad "a bare address didn't try 8092 first: $(cat "$OUT/tls-8092.txt")"
+    else
+        echo "SKIP sync: a bare address on 443 (no unshare -rn here)"
+    fi
+else
+    echo "SKIP sync: https (no openssl)"
+fi
+
 # ---------------------------------------------------------------- Romhost
 RS=${ROMHOST_SRC:-$HOME/romhost}; RPY=${ROMHOST_PY:-python3}
 if [ -f "$RS/server.py" ] && "$RPY" -c 'import aiohttp, PIL' 2>/dev/null; then

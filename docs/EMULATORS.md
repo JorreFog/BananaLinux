@@ -77,8 +77,9 @@ newer of DraStic's `drastic/backup/<game>.dsv` and BananaDS's `saves/nds/<game>.
 form. DraStic's `.dsv` is the raw save; a `.dsv` from DeSmuME (a card scraped under another firmware) carries
 DeSmuME's footer, which `nds-saves` reads (`padded_size`, 36 bytes from the end) and leaves off for BananaDS.
 The size is kept exactly — melonDS picks the save memory from the ROM, and a file of another size is what makes a
-game report its save data as corrupted — and the file replaced is kept as `.bak`. The emulators' own save states
-(`.dss`, `.mst`) are not shared.
+game report its save data as corrupted — and the file replaced is kept as `.bak`. A newer file under 512 bytes is
+no save (the smallest, a 4 Kbit EEPROM's, is 512): it never goes over one with something in it, which goes over it
+instead (#96). The emulators' own save states (`.dss`, `.mst`) are not shared.
 
 ## Settings
 
