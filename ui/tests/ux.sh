@@ -37,6 +37,21 @@ for s in wide none tall; do
 done
 [ "$(ux_diff "$OUT/$size-ux-cover-wide-edge.png" "$OUT/$size-ux-cover-tall-edge.png")" = 0 ] && { echo "FAIL $size: the frame didn't follow the cover's shape"; fail=1; }
 
+# Last played with DS cartridges: Game icon (#107): the chip's cartridge shows the ROM's own icon (Yellow Planet's
+# yellow disc) as the reel does, not its box art (blue here); with the default, the box as before
+RIFX=$OUT/ux-resume-fixture-$size
+rm -rf "$RIFX"; "$HERE/tests/fixture.sh" "$RIFX" >/dev/null
+convert -size 420x380 "gradient:#4060d0-black" "$RIFX/roms/nds/media/box/Yellow Planet [!].png"
+printf 'nds/Yellow Planet [!].zip\t2\t600\t%s\n' "$(date +%s)" >> "$RIFX/data/playstats.tsv"
+UXFX_SAVE=$UXFX; UXFX=$RIFX
+ux_run resume-box "home 0; wait 2400; shot ux-resume-box"
+echo "ds_cart_art = icon" >> "$RIFX/data/settings.conf"
+ux_run resume-icon "home 0; wait 2400; shot ux-resume-icon"
+UXFX=$UXFX_SAVE
+ux_yellow() { convert "$1" -crop "$(awk -v k=$ux_k 'BEGIN { printf "%dx%d+%d+%d", 30 * k, 30 * k, 233 * k, 333 * k }')" -format '%[fx:mean.r > 0.8 && mean.b < 0.3]' info: 2>/dev/null; }
+[ "$(ux_yellow "$OUT/$size-ux-resume-icon-top.png")" = 1 ] || { echo "FAIL $size: Last played doesn't show the DS game's icon (Game icon)"; fail=1; }
+[ "$(ux_yellow "$OUT/$size-ux-resume-box-top.png")" = 0 ] || { echo "FAIL $size: Last played shows the icon over the box art (default)"; fail=1; }
+
 # the text on the accent (Auto): dark or light by contrast, the second line in the accent's hue and readable (4.5:1);
 # blue's sublabel is a blue, not the brown that suited yellow only. Light: white text, the plate's START too
 ux_run ink "inkon f0b429; inkon 4a9fe0; inkon e8574d; inkon 1a2a6c"
