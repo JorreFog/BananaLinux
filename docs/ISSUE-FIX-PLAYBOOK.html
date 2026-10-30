@@ -1,0 +1,1316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>BananaOS issue-fix playbook — Claude Opus 5.5</title>
+<style>
+@page {
+  size: A4;
+  margin: 14mm 12mm 16mm 12mm;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  padding: 0;
+  color: #111;
+  background: #fff;
+  font: 10.5pt/1.45 "Source Serif 4", "Liberation Serif", "Times New Roman", serif;
+}
+.wrap { max-width: 180mm; margin: 0 auto; }
+h1 {
+  font: 700 20pt/1.2 "Source Sans 3", "Liberation Sans", sans-serif;
+  margin: 0 0 8pt;
+  padding-bottom: 8pt;
+  border-bottom: 2pt solid #111;
+  page-break-after: avoid;
+}
+h2 {
+  font: 700 13.5pt/1.25 "Source Sans 3", "Liberation Sans", sans-serif;
+  margin: 18pt 0 8pt;
+  padding-top: 8pt;
+  border-top: 0.6pt solid #bbb;
+  page-break-before: always;
+  page-break-after: avoid;
+}
+h1 + p, h1 + hr + h2 { page-break-before: auto; }
+h2:first-of-type { page-break-before: auto; }
+/* first h2 after title should not force a blank page — markdown puts ## 0. after intro */
+.wrap > h2:nth-of-type(1) { page-break-before: auto; border-top: none; padding-top: 0; }
+h3 {
+  font: 700 11.5pt/1.25 "Source Sans 3", "Liberation Sans", sans-serif;
+  margin: 14pt 0 6pt;
+  page-break-after: avoid;
+  page-break-before: auto;
+}
+/* each WP is an h3 under §7 — keep together with following block */
+h3 + p, h3 + table, h3 + pre { page-break-before: avoid; }
+p { margin: 0 0 8pt; }
+a { color: #111; text-decoration: none; border-bottom: 0.4pt solid #888; }
+strong { font-weight: 700; }
+code {
+  font: 8.8pt/1.35 "Source Code Pro", "Liberation Mono", monospace;
+  background: #f3f3f3;
+  padding: 0 2pt;
+}
+pre {
+  font: 7.8pt/1.35 "Source Code Pro", "Liberation Mono", monospace;
+  background: #f4f4f4;
+  border: 0.4pt solid #ccc;
+  padding: 7pt 8pt;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  page-break-inside: auto;
+  margin: 0 0 10pt;
+}
+pre code { background: none; padding: 0; font: inherit; }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0 0 10pt;
+  font-size: 9.2pt;
+  page-break-inside: auto;
+}
+th, td {
+  border: 0.4pt solid #bbb;
+  padding: 3.5pt 5pt;
+  vertical-align: top;
+  text-align: left;
+}
+th {
+  background: #eee;
+  font: 650 9pt/1.3 "Source Sans 3", "Liberation Sans", sans-serif;
+}
+tr { page-break-inside: avoid; }
+hr {
+  border: 0;
+  border-top: 0.4pt solid #ccc;
+  margin: 12pt 0;
+}
+ul, ol { margin: 0 0 8pt; padding-left: 16pt; }
+li { margin: 0 0 3pt; }
+blockquote {
+  margin: 0 0 10pt;
+  padding: 6pt 10pt;
+  border-left: 2.5pt solid #111;
+  background: #f7f7f7;
+}
+.cover {
+  margin: 0 0 16pt;
+  padding-bottom: 10pt;
+}
+.cover .kicker {
+  font: 650 9pt/1.3 "Source Sans 3", "Liberation Sans", sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #444;
+  margin: 0 0 4pt;
+}
+.cover .meta {
+  font: 9.5pt/1.4 "Source Sans 3", "Liberation Sans", sans-serif;
+  color: #333;
+  margin: 0 0 10pt;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="cover">
+<p class="kicker">JorreFog / BananaLinux · implementation playbook</p>
+<p class="meta">For Claude Opus 5.5 · snapshot 30 October 2026 (Europe/Stockholm) · tree 12474fb<br>
+One work package per commit. Do not reimplement open PRs. Do not enable USB gadget without the sleep fix.</p>
+</div>
+<h1 id="bananaos-issue-fix-playbook-for-claude-opus-55">BananaOS issue-fix playbook for Claude Opus 5.5</h1>
+<p><strong>Audience:</strong> a Claude Opus 5.5 coding agent (or a human following the same steps) that will land the remaining GitHub issues in <a href="https://github.com/JorreFog/BananaLinux">JorreFog/BananaLinux</a>.</p>
+<p><strong>Companion:</strong> <code>docs/ISSUES.md</code> is the cause/fix map of all 98 issues (snapshot 30 October 2026, Europe/Stockholm, tree <code>12474fb</code>). This playbook is the <em>implementation</em> document: files, current code, the exact patch shape, tests, and done-when. Do not re-derive causes from GitHub threads unless a work package says the tree has moved.</p>
+<p><strong>Do not implement everything in one PR.</strong> One work package = one commit = one reviewable diff. Merge the open fix PRs before rewriting them.</p>
+<hr />
+<h2 id="0-paste-this-into-a-new-opus-session">0. Paste this into a new Opus session</h2>
+<p>Use this as the system / first-user instruction, then attach this file.</p>
+<pre><code>You are implementing BananaOS (JorreFog/BananaLinux), a Buildroot Linux for the
+Anbernic RG DS and RG DS Plus. Follow docs/ISSUE-FIX-PLAYBOOK.md exactly.
+
+Rules:
+- One work package per commit. Do not batch unrelated issues.
+- Match existing comment voice (lowercase, parenthetical asides, issue numbers).
+- UI strings: Banana prose, not GitHub-issue voice. See §3.
+- Never send the user into DraStic's on-device control mapper.
+- Never enable CONFIG_USB_GADGET without the sleep/OTG fix (PR #101).
+- Do not reimplement open PRs #101 #123 #73 #91 #94. Review/rebase them.
+- Do not add PSP, dsperate, YouTube, MTP, undervolt, or a home-screen grid
+  unless the user names that package.
+- Tests: `make test` (ui/tests/run.sh) after every UI change; `sh -n` on
+  every edited shell script; `ui/tests/sync.sh` after sync.cpp; sudo
+  system/bananad/tests/sleep-test.sh after bananad/rcK sleep/shutdown.
+- If a test is not runnable in this environment, still add the assertion.
+- Read the work package, read the cited files, then patch. Do not invent
+  a second design.
+</code></pre>
+<p>Then: “Start at the first unfinished work package in §6. Stop when that package’s Done-when is green. Commit.”</p>
+<hr />
+<h2 id="1-hard-rules-do-not-negotiate">1. Hard rules (do not negotiate)</h2>
+<ol>
+<li><strong>Tree first.</strong> Causes in this playbook were read from <code>main</code> at <code>12474fb</code>. If a cited snippet is gone, search the symbol; do not recreate a deleted design.</li>
+<li><strong>Open PRs first.</strong> <code>#101</code> sleep/OTG, <code>#123</code> charge LED, <code>#73</code> settings fuzz, <code>#91</code> trial boot, <code>#94</code> flight recorder. Review, request changes, or rebase. Do not write a parallel patch.</li>
+<li><strong>One cluster, one fix.</strong> Clusters A–K in <code>docs/ISSUES.md</code> are the same bug under several numbers. Fix the cluster once; mention every issue number in the commit body.</li>
+<li><strong>No DraStic mapper.</strong> <code>#113</code> and <code>#77</code>: change <code>drastic.cfg</code> from Banana, migrate existing 1036 like the hinge 65535→328 path in <code>run-drastic</code>. Do not tell people to open DraStic’s control editor (it can lock them out).</li>
+<li><strong>No gadget without sleep.</strong> <code># CONFIG_USB_GADGET is not set</code> is why xHCI halt returns <code>-110</code>. Enabling gadget without dual-role OTG + s2idle-for-that-sleep-only (PR <code>#101</code>) makes overnight drain worse. MTP (<code>#130</code>) waits until that lands.</li>
+<li><strong>Do not “improve” Banana voice.</strong> Comments and Settings help are a house style. Copy nearby sentences. See §3.</li>
+<li><strong>Do not expand scope.</strong> Folders (<code>#121</code>), grid (<code>#120</code>), PSP (<code>#103</code>), dsperate (<code>#100</code>), YouTube (<code>#38</code>), undervolt (<code>#125</code>) are product work, not leftovers of a small bug.</li>
+<li><strong>Hardware you cannot run.</strong> You will not have an RG DS. Prove UI with <code>banana-ui --headless --script</code>. Prove shell with <code>sh -n</code> and unit-style fixtures. Write the on-device check in the commit body so a human can run it.</li>
+<li><strong>Settings help lives on the top screen.</strong> <code>helpOf</code> / <code>gameHelpOf</code> + <code>helpText()</code> draw on screen 0. Do not add a second help paragraph on screen 1 that can run into <code>face("B","Back")</code>.</li>
+<li><strong>SuperDrastic 3D scale is 1-bit.</strong> BananaDS <code>BANANADS_RENDER_SCALE</code> is 1–4. DraStic <code>hires_3d</code> is only <code>0</code> or <code>1</code>. Map 1→0, 2|3|4→1. Never write <code>hires_3d = 3</code>.</li>
+</ol>
+<hr />
+<h2 id="2-repo-map-where-to-stand">2. Repo map (where to stand)</h2>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ui/</code></td>
+<td>banana-ui. Headless tests in <code>ui/tests/run.sh</code>. <code>make test</code> from repo root.</td>
+</tr>
+<tr>
+<td><code>ui/src/library.cpp</code></td>
+<td>Library scan, resume chip, <code>dsCartIcons</code>, <code>romIconCover</code>.</td>
+</tr>
+<tr>
+<td><code>ui/rnds/RndsUI.cpp</code></td>
+<td>DSi-style reel, <code>plateBox()</code>, <code>cart()</code>, battery bolt.</td>
+</tr>
+<tr>
+<td><code>ui/src/settings.cpp</code></td>
+<td>Settings + per-game page (<code>renderGame</code>, <code>gameHelpOf</code>). ~8k lines; search by key.</td>
+</tr>
+<tr>
+<td><code>ui/src/sync.cpp</code></td>
+<td>banana-sync. Built and tested by <code>ui/tests/sync.sh</code> (not in <code>make test</code>).</td>
+</tr>
+<tr>
+<td><code>system/rootfs/usr/libexec/banana/run-drastic</code></td>
+<td>SuperDrastic launcher. <strong>This is the #117 fix.</strong></td>
+</tr>
+<tr>
+<td><code>system/rootfs/usr/libexec/banana/run-bananads</code></td>
+<td>BananaDS launcher. Already reads <code>nds-per-game-res.conf</code>.</td>
+</tr>
+<tr>
+<td><code>system/rootfs/usr/libexec/banana/nds-game-option</code></td>
+<td><code>awk</code> reader: <code>nds-game-option &lt;file&gt; &lt;rom&gt;</code> prints the value or nothing.</td>
+</tr>
+<tr>
+<td><code>system/rootfs/usr/libexec/banana/nds-saves</code></td>
+<td>Shares <code>.dsv</code> / <code>.sav</code> by mtime. <code>#96</code> lives here.</td>
+</tr>
+<tr>
+<td><code>system/rootfs/etc/init.d/rcK</code></td>
+<td>Shutdown: TERM games, umount <code>/data</code>. <code>#46</code> leftover.</td>
+</tr>
+<tr>
+<td><code>system/bananad/bananad.c</code></td>
+<td>Sleep, volume, LEDs, ALSA, charger. Tests: <code>sudo system/bananad/tests/sleep-test.sh</code>.</td>
+</tr>
+<tr>
+<td><code>buildroot/board/rgds/drastic.cfg</code></td>
+<td>Stock DraStic maps. Copied to <code>/data/drastic</code> on first run.</td>
+</tr>
+<tr>
+<td><code>buildroot/board/rgds/linux-banana.fragment</code></td>
+<td>Kernel. <code># CONFIG_USB_GADGET is not set</code> at line 162.</td>
+</tr>
+<tr>
+<td><code>docs/EMULATORS.md</code></td>
+<td>Contract <code>run-drastic</code> / <code>run-bananads</code> keep.</td>
+</tr>
+<tr>
+<td>BananaDS sources</td>
+<td><strong>Not in this tree.</strong> Fetched from <code>JorreFog/SuperDrastic</code> (<code>bananads/</code> subdir) at the pin in <code>buildroot/package/bananads/bananads.mk</code>. In-game pause HUD (<code>#35</code>, <code>#114</code>) is there.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>CI</strong> (<code>.github/workflows/ci.yml</code>): <code>make test</code>; <code>make -C ui</code>; bananad native + aarch64 <code>-Werror</code>; <code>sudo system/bananad/tests/sleep-test.sh</code>; <code>sh -n</code> on init/libexec scripts; Buildroot defconfig option check. Image build is <code>workflow_dispatch</code> only. You do not need a full image to land UI/shell packages.</p>
+<p><strong>Headless UI.</strong> From <code>ui/</code> after <code>make host</code>:</p>
+<pre><code>./banana-ui --headless /tmp/shot- --size 640x480 \
+  --assets assets/rnds \
+  --systems ../system/rootfs/etc/banana/systems.conf \
+  --roms &lt;fixture&gt;/roms --data &lt;fixture&gt;/data \
+  --script &quot;home 0; press start; shot settings&quot;
+</code></pre>
+<p><code>ui/tests/run.sh</code> already builds a fixture. Copy its <code>--script</code> patterns. <code>shot NAME</code> writes <code>NAME-top.png</code> and <code>NAME-bot.png</code>. Scripts in run.sh are the regression net: if you change row order on the game page, those scripts break.</p>
+<hr />
+<h2 id="3-voice-and-comments-copy-this-do-not-invent-a-new-one">3. Voice and comments (copy this, do not invent a new one)</h2>
+<p>Comments in launchers and banana-ui:</p>
+<ul>
+<li>Sentence case, often starting mid-thought after <code>//</code> or <code>#</code>.</li>
+<li>Parenthetical asides for history: <code>(#27)</code>, <code>(a run cut short is put right at the next start, above)</code>.</li>
+<li>Technical names as the code uses them (<code>threaded_3d</code>, <code>hires_3d</code>, <code>dsCartIcons</code>), not marketing names, except in user-visible strings.</li>
+<li>User-visible Settings help: short words, “the handheld”, “the card”, “Banana”, “A” / “B” / “START” for buttons. No “please”, no “simply”, no GitHub issue titles in the UI.</li>
+</ul>
+<p>Example from <code>run-drastic</code> (copy this rhythm for <code>hires_3d</code>):</p>
+<pre><code># the game's own Threaded 3D (#27): DraStic reads it from drastic.cfg alone, so the game's value goes in for this run
+# and Settings' comes back after (kept beside it until then: a run cut short is put right at the next start, above)
+</code></pre>
+<p>Settings help example (Reset buttons — you will edit this string in WP5):</p>
+<pre><code>DraStic's buttons back to Banana's, for a button setup gone wrong in DraStic's menu: the pad as printed, F or L3 the menu, R2 save, L2 load, R3 fast forward. (HOME always opens the menu.) Press A twice.
+</code></pre>
+<p>After WP5 that must not say “R3 fast forward”.</p>
+<hr />
+<h2 id="4-tests-run-these-do-not-skip">4. Tests — run these, do not skip</h2>
+<table>
+<thead>
+<tr>
+<th>Change in</th>
+<th>Command</th>
+<th>What must hold</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ui/**</code> except only comments</td>
+<td><code>make test</code> from repo root</td>
+<td><code>ui/tests/run.sh</code> exit 0. PNGs in <code>ui/tests/out/</code>.</td>
+</tr>
+<tr>
+<td><code>ui/src/sync.cpp</code></td>
+<td><code>sh ui/tests/sync.sh</code></td>
+<td>Existing RomM/Romhost cases still pass; add the new https cases from WP4.</td>
+</tr>
+<tr>
+<td><code>run-drastic</code>, <code>nds-game-option</code>, <code>nds-saves</code>, <code>rcK</code>, any <code>libexec/banana/*</code></td>
+<td><code>sh -n &lt;file&gt;</code></td>
+<td>Parse. CI runs this on every script.</td>
+</tr>
+<tr>
+<td><code>run-drastic</code> <code>#117</code></td>
+<td>New fixture in WP1 (shell, no device)</td>
+<td>Mapping 1→0, 2/3/4→1; restore after; crash-restore on next start.</td>
+</tr>
+<tr>
+<td><code>bananad.c</code>, <code>rcK</code></td>
+<td><code>sudo system/bananad/tests/sleep-test.sh</code></td>
+<td>Existing cases. Add a “shutdown does not write mem” case if you touch suspend.</td>
+</tr>
+<tr>
+<td><code>drastic.cfg</code></td>
+<td>grep both control sets</td>
+<td><code>FAST_FORWARD</code> not 1036. Reset-buttons copies the same values.</td>
+</tr>
+<tr>
+<td>Kernel fragment</td>
+<td><strong>do not</strong> land gadget in the same commit as a UI fix</td>
+<td>PR <code>#101</code> only.</td>
+</tr>
+</tbody>
+</table>
+<p>If <code>make test</code> needs ImageMagick: <code>convert</code> must exist (CI installs it). Headless banana-ui is built by <code>make ui</code>.</p>
+<p><strong>Do not</strong> add a test that needs DraStic’s binary. SuperDrastic is not in this tree. Test the launcher’s sed against a fake <code>config/drastic.cfg</code>.</p>
+<hr />
+<h2 id="5-execution-order">5. Execution order</h2>
+<p>Do not reorder unless a package is already in <code>main</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Order</th>
+<th>Package</th>
+<th>Issues</th>
+<th>Why this order</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>Review open PRs</td>
+<td>#101 #123 #73 #91 #94</td>
+<td>They are the sleep/LED/brick/boot work. Parallel rewrites waste the tree.</td>
+</tr>
+<tr>
+<td>1</td>
+<td>WP1 SuperDrastic per-game 3D res</td>
+<td>#117 leftover of #27</td>
+<td>Small, local, copies an existing pattern. Unblocks closing #27.</td>
+</tr>
+<tr>
+<td>2</td>
+<td>WP2 Resume chip uses DS icons</td>
+<td>#107</td>
+<td>Ten lines in <code>Library::system()</code>.</td>
+</tr>
+<tr>
+<td>3</td>
+<td>WP3 START not on the dark band</td>
+<td>#128</td>
+<td>One geometry tweak.</td>
+</tr>
+<tr>
+<td>4</td>
+<td>WP4 banana-sync TLS</td>
+<td>#109</td>
+<td><code>probe()</code> + <code>sync.sh</code>.</td>
+</tr>
+<tr>
+<td>5</td>
+<td>WP5 SuperDrastic FF / hotkeys</td>
+<td>#113 #77</td>
+<td><code>drastic.cfg</code> + Reset-buttons copy + migrate 1036.</td>
+</tr>
+<tr>
+<td>6</td>
+<td>WP6 Help vs Back</td>
+<td>#122</td>
+<td>Footer / game-page help.</td>
+</tr>
+<tr>
+<td>7</td>
+<td>WP7 Cart art contain</td>
+<td>#108</td>
+<td><code>cart()</code> blit.</td>
+</tr>
+<tr>
+<td>8</td>
+<td>WP8 Shutdown is not sleep</td>
+<td>#46 leftover of #84</td>
+<td><code>rcK</code> + bananad. Needs sleep-test.</td>
+</tr>
+<tr>
+<td>9</td>
+<td>WP9 nds-saves do not clobber</td>
+<td>#96</td>
+<td><code>nds-saves</code> empty/.sav vs .dsv.</td>
+</tr>
+<tr>
+<td>10</td>
+<td>WP10 Keys before the boot animation</td>
+<td>#87 leftover of #86</td>
+<td>Startup order.</td>
+</tr>
+<tr>
+<td>11</td>
+<td>WP11 Settings lists off the UI thread</td>
+<td>#41</td>
+<td>Time zone / themes / box-art.</td>
+</tr>
+<tr>
+<td>12</td>
+<td>WP12 Missing PortMaster folder</td>
+<td>#78 leftover</td>
+<td>Boot must not refuse.</td>
+</tr>
+<tr>
+<td>13</td>
+<td>WP13 BananaDS pause charging bolt</td>
+<td>#35 leftover</td>
+<td>BananaDS repo, not this tree.</td>
+</tr>
+<tr>
+<td>—</td>
+<td>Stop</td>
+<td>—</td>
+<td>Everything else is §8 (close on GitHub) or §9 (out of scope / product).</td>
+</tr>
+</tbody>
+</table>
+<p>After each WP: commit, <code>make test</code> if UI, <code>sh -n</code> if shell. Push when the human asks; do not open a kitchen-sink PR.</p>
+<hr />
+<h2 id="6-phase-0-open-prs-review-do-not-rewrite">6. Phase 0 — open PRs (review, do not rewrite)</h2>
+<p>Clone is <code>JorreFog/BananaLinux</code>. For each PR: read the diff, run the tests that apply, leave review comments if needed. <strong>Merge is a human action</strong> unless you were told you may merge.</p>
+<h3 id="pr-101-sleep-dual-role-otg-79-cluster-b">PR #101 — sleep / dual-role OTG (<code>#79</code>, cluster B)</h3>
+<ul>
+<li>Kernel: gadget/OTG so DWC3 is not stuck host-only; xHCI halt <code>-110</code> is the overnight drain.</li>
+<li>bananad: s2idle fallback for <em>that sleep only</em>, not a permanent demotion (0.5.0 already retries deep every time).</li>
+<li><strong>Must not</strong> enable gadget in a way that keeps the host controller up in suspend.</li>
+<li>Hardware floor even when suspend works: ~0.5 %/h. <code>#85</code>’s Power-off-after-sleeping is the safety net, already in 0.5.0.</li>
+<li><code>#64</code> white SuperDrastic screens after ~36 min: DraStic frame-timer; ignored since 0.5.0. Not this PR.</li>
+</ul>
+<h3 id="pr-123-bananad-charge-34-99-104-116-cluster-a">PR #123 — <code>bananad --charge</code> (<code>#34</code> <code>#99</code> <code>#104</code> <code>#116</code>, cluster A)</h3>
+<ul>
+<li>Amber LED is PWM on the RK817. Fully off, that rail is down → no light, even while the charger IC takes current.</li>
+<li>0.5.0 gauge voltage floor should stop the stuck-percent lie. This PR is the LED-while-off path.</li>
+<li><strong>Must not</strong> undo a real power-off (a tiny on-charger context that never suspends will drain). Confirm a true off still draws like stock off, not like dark-awake.</li>
+<li>Keep <code>#34</code> as the tracker until a long off-charge on 0.5.0+ shows the right percent <em>and</em> a light.</li>
+</ul>
+<h3 id="pr-73-settings-fuzz-88">PR #73 — settings fuzz (<code>#88</code>)</h3>
+<ul>
+<li>Unexpected enums crash every boot; <code>pad()</code> with an empty filler can hang.</li>
+<li>Merge this before any other <code>settings.cpp</code> work if it still applies cleanly; otherwise rebase WP6/WP11 on it.</li>
+</ul>
+<h3 id="pr-91-trial-boot-90">PR #91 — trial boot (<code>#90</code>)</h3>
+<ul>
+<li>Failed <em>update</em> (A/B slot), not a blank first flash (<code>#102</code> <code>#83</code> <code>#58</code> are install/docs).</li>
+<li>Trial boot then <code>DEFAULT</code> back to the old slot; breadcrumbs on the card.</li>
+</ul>
+<h3 id="pr-94-flight-recorder-93">PR #94 — flight recorder (<code>#93</code>)</h3>
+<ul>
+<li>Off by default. No secrets (Wi-Fi PSK, RA password, SMB password) in the tape.</li>
+</ul>
+<p>Closed unmerged — <strong>do not resurrect wholesale</strong>:</p>
+<ul>
+<li>PR <code>#86</code> buttons: take only “keys live before the boot animation” into WP10. Skip the hardware-check toast unless asked.</li>
+<li>PR <code>#84</code> sleep extras: take only “pause suspend until poweroff finishes” into WP8. Skip LED-while-asleep / rewrite of sleep help.</li>
+</ul>
+<hr />
+<h2 id="7-work-packages">7. Work packages</h2>
+<p>Each package: Goal, files, current code, patch, tests, Done-when, Do not.</p>
+<hr />
+<h3 id="wp1-117-superdrastic-ignores-per-game-3d-resolution">WP1 — <code>#117</code> SuperDrastic ignores per-game 3D resolution</h3>
+<p><strong>Goal.</strong> X on a DS game → 3D resolution writes <code>/data/banana/nds-per-game-res.conf</code>. SuperDrastic must honour it for that run, then put Settings’ <code>hires_3d</code> back. BananaDS already works (<code>run-bananads</code> lines 109–110).</p>
+<p><strong>Files</strong></p>
+<ul>
+<li><code>system/rootfs/usr/libexec/banana/run-drastic</code> (edit)</li>
+<li><code>system/rootfs/usr/libexec/banana/nds-game-option</code> (read only; already parses this file)</li>
+<li><code>system/rootfs/usr/libexec/banana/run-bananads</code> (read only; the pattern for BananaDS)</li>
+<li><code>ui/src/settings.cpp</code> <code>gameHelpOf</code> for <code>PG_RES</code> (edit the “BananaDS only” sentence)</li>
+<li><code>ui/tests/run.sh</code> already writes <code>nds-per-game-res.conf</code>; it does <strong>not</strong> exec <code>run-drastic</code>. Add a shell fixture beside it or <code>system/rootfs/usr/libexec/banana/tests/</code> if that folder exists; otherwise a small <code>tools/</code> or <code>system/</code> test script that CI can <code>sh</code>.</li>
+</ul>
+<p><strong>Current code — <code>run-drastic</code> already swaps <code>threaded_3d</code>.</strong> Copy this block. It is at the end of the file (lines 144–163). The <code>hires_3d</code> swap belongs <em>immediately before</em> the <code>threaded_3d</code> swap, and both must share one <code>exec</code> vs <code>wait</code> path.</p>
+<pre><code># the game's own Threaded 3D (#27): DraStic reads it from drastic.cfg alone, so the game's value goes in for this run
+# and Settings' comes back after (kept beside it until then: a run cut short is put right at the next start, above)
+t=$(/usr/libexec/banana/nds-game-option nds-per-game-3d.conf &quot;$1&quot;)
+was=$(sed -n '/^threaded_3d = /{s///p;q}' config/drastic.cfg)
+if [ -z &quot;$t&quot; ] || [ -z &quot;$was&quot; ] || [ &quot;$t&quot; = &quot;$was&quot; ]; then
+    exec $SD/superdrastic-run $D/drastic &quot;$1&quot;
+fi
+echo &quot;run-drastic: ${1##*/} has its own Threaded 3D: $t&quot; &gt;&amp;2
+echo &quot;$was&quot; &gt; config/.threaded_3d.settings &amp;&amp; sync
+sed -i &quot;s/^threaded_3d = .*/threaded_3d = $t/&quot; config/drastic.cfg
+$SD/superdrastic-run $D/drastic &quot;$1&quot; &amp;
+...
+sed -i &quot;s/^threaded_3d = .*/threaded_3d = $was/&quot; config/drastic.cfg &amp;&amp; rm -f config/.threaded_3d.settings
+exit $S
+</code></pre>
+<p>Crash recovery at the top of the same file (lines 19–25):</p>
+<pre><code>if [ -f config/.threaded_3d.settings ]; then
+    t=$(cat config/.threaded_3d.settings)
+    case $t in 0|1) sed -i &quot;s/^threaded_3d = .*/threaded_3d = $t/&quot; config/drastic.cfg ;; esac
+    rm -f config/.threaded_3d.settings
+fi
+</code></pre>
+<p><strong><code>nds-game-option</code> usage</strong> (already correct):</p>
+<pre><code>/usr/libexec/banana/nds-game-option nds-per-game-res.conf &quot;$rom&quot;
+</code></pre>
+<p>Prints <code>1</code> <code>2</code> <code>3</code> or <code>4</code>, or empty when the game follows Settings. File format: <code>&lt;rom file name&gt; = &lt;value&gt;</code> in <code>/data/banana/nds-per-game-res.conf</code>. Last line for that name wins.</p>
+<p><strong><code>run-bananads</code> already:</strong></p>
+<pre><code>r=$(/usr/libexec/banana/nds-game-option nds-per-game-res.conf &quot;$1&quot;)
+case $r in 1|2|3|4) echo &quot;run-bananads: ${1##*/} has its own 3D resolution: ${r}x&quot; &gt;&amp;2; export BANANADS_RENDER_SCALE=$r ;; esac
+</code></pre>
+<p>Do not change BananaDS in this package.</p>
+<p><strong>Patch shape (required)</strong></p>
+<ol>
+<li>Map the per-game res to DraStic’s bit:</li>
+</ol>
+<p><code>r=$(/usr/libexec/banana/nds-game-option nds-per-game-res.conf "$1")
+   case $r in
+     1) h=0 ;;
+     2|3|4) h=1 ;;
+     *) h= ;;
+   esac</code></p>
+<p>SuperDrastic has no 3x/4x. 3 and 4 become <code>hires_3d = 1</code> (2x). Log it: <code>run-drastic: foo.nds has its own 3D resolution: ${r}x (hires_3d $h)</code>.</p>
+<ol start="2">
+<li>
+<p>Read Settings’ current value: <code>was_h=$(sed -n '/^hires_3d = /{s///p;q}' config/drastic.cfg)</code> (actual key is <code>hires_3d</code>; confirm with <code>grep hires_3d</code> on <code>buildroot/board/rgds/drastic.cfg</code> and <code>/usr/share/drastic/config/drastic.cfg</code> if present).</p>
+</li>
+<li>
+<p><strong>Combine with the threaded_3d early-exec.</strong> Today if <code>t</code> equals <code>was</code>, the script <code>exec</code>s and never restores anything. After this patch, <code>exec</code> is only valid when <em>both</em> threaded_3d and hires_3d need no change. If either differs:</p>
+</li>
+</ol>
+<ul>
+<li>write <code>config/.threaded_3d.settings</code> as today if threaded changes</li>
+<li>write <code>config/.hires_3d.settings</code> with the old <code>hires_3d</code> if hires changes (only <code>0</code> or <code>1</code>)</li>
+<li><code>sync</code> the marker files before <code>sed</code> on <code>drastic.cfg</code></li>
+<li><code>sed</code> the lines that change</li>
+<li>run SuperDrastic in the foreground-with-wait path (the existing <code>&amp;</code> / <code>wait</code> / trap), not <code>exec</code></li>
+<li>restore both lines after <code>wait</code></li>
+<li><code>rm -f</code> the marker files</li>
+</ul>
+<ol start="4">
+<li>
+<p>At the top of <code>run-drastic</code>, restore <code>hires_3d</code> from <code>config/.hires_3d.settings</code> the same way as <code>threaded_3d</code> (drop an empty or non-0/1 marker).</p>
+</li>
+<li>
+<p><strong>Do not</strong> leave Settings’ <code>hires_3d</code> permanently changed. DraStic writes <code>drastic.cfg</code> on quit; restore after wait, as threaded_3d does.</p>
+</li>
+<li>
+<p>Update <code>gameHelpOf</code> for <code>PG_RES</code> in <code>ui/src/settings.cpp</code> (search <code>row == PG_RES</code>). Current text starts “BananaDS only.” Change it so SuperDrastic is included: 1x/2x apply to both; 3x/4x are BananaDS only (SuperDrastic treats them as 2x). Keep Banana prose.</p>
+</li>
+</ol>
+<p><strong>Tests to add</strong> (shell, no DraStic binary)</p>
+<p>Create a throwaway tree:</p>
+<pre><code>D=/tmp/drastic-wp1
+mkdir -p &quot;$D/config&quot; /tmp/banana-wp1
+printf 'threaded_3d = 0\nhires_3d = 0\n' &gt; &quot;$D/config/drastic.cfg&quot;
+printf 'Mario Kart DS.nds = 2\n' &gt; /tmp/banana-wp1/nds-per-game-res.conf
+</code></pre>
+<p>The real script uses <code>/data/banana</code> and <code>/data/drastic</code>. For the unit test, either:</p>
+<ul>
+<li>extract the mapping + restore into a tiny helper the launcher calls, or</li>
+<li>run the launcher with a stub <code>superdrastic-run</code> on <code>PATH</code> and override dirs if you add <code>DRASTIC_DIR</code> / <code>BANANA_DATA</code> — <strong>do not add env knobs unless they already exist</strong>. Prefer a stub copied from the restore/sed logic tested by sourcing a extracted function.</li>
+</ul>
+<p>Minimum assertions:</p>
+<table>
+<thead>
+<tr>
+<th>Case</th>
+<th>conf</th>
+<th>starting hires_3d</th>
+<th>after stub-run cfg</th>
+<th>after restore</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>no per-game line</td>
+<td>empty</td>
+<td>0</td>
+<td>0</td>
+<td>0, no marker left</td>
+</tr>
+<tr>
+<td><code>= 1</code></td>
+<td>1</td>
+<td>1</td>
+<td>1 (no swap)</td>
+<td>1</td>
+</tr>
+<tr>
+<td><code>= 1</code></td>
+<td>1</td>
+<td>0</td>
+<td>0 during run, then 0</td>
+<td>wait: during run 0 means 1x; map 1→0 so starting 0 is already right: no swap</td>
+</tr>
+<tr>
+<td><code>= 2</code></td>
+<td>2</td>
+<td>0</td>
+<td>1 during run</td>
+<td>0 after, marker gone</td>
+</tr>
+<tr>
+<td><code>= 4</code></td>
+<td>4</td>
+<td>0</td>
+<td>1 during run (not 4)</td>
+<td>0</td>
+</tr>
+<tr>
+<td>power cut</td>
+<td>marker <code>1</code>, cfg <code>0</code></td>
+<td>—</td>
+<td>next start writes 1 then deletes marker</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>Stub SuperDrastic: a shell script that greps <code>hires_3d</code> from cfg into a log, then exits 0. Point <code>SD</code> at it by editing only the test copy, not production, if you extract a function. If you cannot stub without refactoring, add a <strong>comment-free</strong> extracted function <code>apply_per_game_hires</code> in <code>run-drastic</code> and a 40-line test script that copies those functions. Keep production behaviour identical.</p>
+<p>Also: <code>sh -n system/rootfs/usr/libexec/banana/run-drastic</code>.</p>
+<p><code>ui/tests/run.sh</code> already checks that Use 4x writes <code>Banana Kart DS.nds = 4</code>. Do not break that script (row order on the game page).</p>
+<p><strong>Done-when</strong></p>
+<ul>
+<li>A game with <code>nds-per-game-res.conf</code> <code>= 2</code> (or 3 or 4) runs SuperDrastic with <code>hires_3d = 1</code> and Settings’ value is back afterwards.</li>
+<li><code>= 1</code> runs with <code>hires_3d = 0</code> for that run.</li>
+<li>No per-game line: Settings’ value untouched, <code>exec</code> still used when threaded_3d also matches (no extra wait).</li>
+<li>Crash mid-run: next <code>run-drastic</code> restores Settings’ <code>hires_3d</code>.</li>
+<li>Game-page help no longer says the row is BananaDS only.</li>
+<li><code>sh -n run-drastic</code> clean. <code>make test</code> still passes.</li>
+</ul>
+<p><strong>Do not</strong></p>
+<ul>
+<li>Write <code>hires_3d = 2</code> or <code>3</code> or <code>4</code>.</li>
+<li>Change BananaDS.</li>
+<li>Patch <code>drastic.cfg</code> in the image for a global 2x default (Settings already owns <code>hires_3d</code>).</li>
+<li>Call DraStic’s menu.</li>
+</ul>
+<hr />
+<h3 id="wp2-107-last-played-chip-ignores-ds-cartridge-icons">WP2 — <code>#107</code> Last-played chip ignores DS cartridge icons</h3>
+<p><strong>Goal.</strong> Settings &gt; Display &amp; sound &gt; DS cartridges = Game icon (<code>ds_cart_art=icon</code>) already fills the reel via <code>Library::game()</code>. The top-screen Last-played chip is filled by <code>Library::system()</code> and still uses box/cart/label. When <code>dsCartIcons</code> is on and the resume game is a DS ROM, the chip must show <code>romIconCover</code> the same way.</p>
+<p><strong>Files</strong></p>
+<ul>
+<li><code>ui/src/library.cpp</code> <code>Library::system()</code> around lines 841–851</li>
+<li><code>ui/src/library.cpp</code> <code>Library::game()</code> around 871–878 (the pattern to copy)</li>
+<li><code>ui/src/library.h</code> <code>bool dsCartIcons</code> (already exists, set from <code>ds_cart_art == "icon"</code> in <code>ui/src/main.cpp</code>)</li>
+<li><code>ui/rnds/RndsUI.cpp</code> resume chip uses <code>sy.resumeCart, sy.resumeLabel, sy.resumeBox</code> (around 1766). You should not need to change the draw if the fields are right.</li>
+</ul>
+<p><strong>Current <code>system()</code> (wrong for icons):</strong></p>
+<pre><code>r.resumeBox = g.box; r.resumeCart = g.cart; r.resumeLabel = g.label;
+if (g.box.empty() &amp;&amp; g.cart.empty() &amp;&amp; g.label.empty() &amp;&amp; isDsRom(g.path, s.def.id))
+    r.resumeLabel = romIconCover(dataDir, g.path);  // the game's own icon on the chip's cartridge
+</code></pre>
+<p><strong>Current <code>game()</code> (right):</strong></p>
+<pre><code>if (ext == &quot;nds&quot; || (ext == &quot;zip&quot; &amp;&amp; systemOf(i).id == &quot;nds&quot;))
+{
+    if (dsCartIcons || g.box.empty()) r.rom = g.path;
+    if (dsCartIcons) r.cartArt = romIconCover(dataDir, g.path);
+}
+</code></pre>
+<p><code>isDsRom</code> is already in <code>library.cpp</code>:</p>
+<pre><code>static bool isDsRom(const std::string&amp; path, const std::string&amp; system)
+{
+    ...
+    return ext == &quot;nds&quot; || (ext == &quot;zip&quot; &amp;&amp; system == &quot;nds&quot;);
+}
+</code></pre>
+<p><strong>Patch.</strong> Inside the <code>if (res &gt;= 0)</code> block of <code>Library::system()</code>, after filling resumeBox/Cart/Label:</p>
+<pre><code>if (dsCartIcons &amp;&amp; isDsRom(g.path, s.def.id))
+{
+    r.resumeLabel = romIconCover(dataDir, g.path);  // Settings &gt; DS cartridges: Game icon, as the reel
+    // a ROM without a banner icon: leave box/cart so the chip is not blank
+}
+</code></pre>
+<p>Match <code>game()</code>: when <code>dsCartIcons</code> is set, prefer the icon even if box art exists. If <code>romIconCover</code> returns <code>""</code>, keep <code>resumeBox</code>/<code>resumeCart</code> so the chip still has art.</p>
+<p>Also set whatever field the chip actually draws as the cartridge face. The draw is:</p>
+<pre><code>Sprite c = cart(CartArt{ sy.resumeCart, sy.resumeLabel, sy.resumeBox, &quot;&quot;, sy.icon }, 54, 56);
+</code></pre>
+<p><code>CartArt</code> order in <code>artOf</code> is <code>{ g.cart, g.label, g.box, g.rom, g.icon }</code>. For the reel, <code>game()</code> sets <code>r.cartArt</code> (→ <code>g.cart</code> path in GameInfo — check <code>GameInfo</code> in <code>RndsUI.h</code>). Read <code>struct GameInfo</code> / <code>struct SysInfo</code>:</p>
+<ul>
+<li><code>GameInfo.cartArt</code> is the icon override used as cartridge art.</li>
+<li><code>SysInfo</code> has <code>resumeBox</code>, <code>resumeCart</code>, <code>resumeLabel</code> — <strong>no</strong> <code>resumeRom</code>.</li>
+</ul>
+<p>So putting the icon path in <code>resumeLabel</code> is what the empty-art fallback already did. When <code>dsCartIcons</code> is on, set <code>resumeLabel</code> to <code>romIconCover(...)</code> <strong>and</strong> clear or keep box? <code>cart()</code> uses <code>labelArt(art0)</code> which prefers scan, then label, then box-without-strip. If <code>resumeBox</code> is still the title screen, <code>labelArt</code> may ignore <code>resumeLabel</code>. <strong>Read <code>labelArt()</code></strong> (<code>RndsUI.cpp</code> ~699) before patching:</p>
+<pre><code>// made from the cover, else the cover without its NINTENDO DS strip
+</code></pre>
+<p>If <code>labelArt</code> prefers <code>box</code> over <code>label</code>, you must clear <code>resumeBox</code>/<code>resumeCart</code> when applying the icon, <strong>or</strong> pass the ROM path. SysInfo has no <code>resumeRom</code>. Prefer: when <code>dsCartIcons &amp;&amp; isDsRom</code>, set <code>resumeLabel = romIconCover(...)</code>, and if that string is non-empty, set <code>resumeBox</code> and <code>resumeCart</code> to <code>""</code> so <code>labelArt</code> cannot prefer the title screen.</p>
+<p><strong>Tests.</strong> In <code>ui/tests/run.sh</code> there is already <code>romicon</code> in the long <code>--script</code>. Add:</p>
+<ol>
+<li>Fixture: a DS ROM with a banner icon (the fixture already has <code>Banana Kart DS.nds</code> / <code>Yellow Planet</code>).</li>
+<li><code>settings.conf</code>: <code>ds_cart_art = icon</code>.</li>
+<li>Script: open home, <code>shot resume-icon</code>.</li>
+<li>Assert the top PNG is not identical to the title-screen chip (or that a known icon colour is present). If pixel asserts are brittle, at least assert the code path with a log line you add only if the tree already logs library decisions — <strong>do not add noisy logs</strong>. Prefer a screenshot diff against a golden if run.sh already does that for other shots; if not, a comment in the test that <code>ds_cart_art=icon</code> was set and the menu rendered is acceptable plus a visual <code>shot</code>.</li>
+</ol>
+<p><code>make test</code> must stay green on 640x480 and 1024x768.</p>
+<p><strong>Done-when</strong></p>
+<ul>
+<li>With <code>ds_cart_art=icon</code>, Last played on the system page shows the same icon family as the reel, not the scraped title screen.</li>
+<li>With the default (box art), behaviour is unchanged.</li>
+<li>Empty banner: chip still shows box art, not a blank cart.</li>
+</ul>
+<p><strong>Do not</strong> change <code>romIconCover</code> scaling. Do not apply icons to non-DS systems.</p>
+<hr />
+<h3 id="wp3-128-start-sits-on-the-plates-dark-band">WP3 — <code>#128</code> START sits on the plate’s dark band</h3>
+<p><strong>Goal.</strong> The START word is drawn on the dark bottom band of the home/library plate, so dark ink looks cut. Keep the plate 124×162.</p>
+<p><strong>Files:</strong> <code>ui/rnds/RndsUI.cpp</code></p>
+<p><code>plateBox()</code> (~1392):</p>
+<pre><code>b.bands = { Band{ 0, 14, Color::hex(accent.light) }, Band{ 132, -1, Color::hex(accent.dark) } };
+</code></pre>
+<p>Plate draw (~1965): <code>drawBox(plateBox(), 258, ry + 4, 124, 162);</code></p>
+<p>START (~2026):</p>
+<pre><code>drawFit(std::string(&quot;START&quot;), tsr, 320 - 54, ry + 124, 24, 108, Color::hex(inkOn(accent.base)), true, true);
+</code></pre>
+<p>The plate’s top is <code>ry+4</code>, height 162, so the plate occupies y <code>ry+4</code> .. <code>ry+166</code>. Local y 132 of the plate is screen y <code>ry+4+132 = ry+136</code>. START is at <code>ry+124</code> with height 24 → it spans <code>ry+124</code> .. <code>ry+148</code>, which crosses the band at <code>ry+136</code>.</p>
+<p><strong>Preferred patch (smallest):</strong> move START up so its box sits fully in <code>accent.base</code>, above y 132 of the plate.</p>
+<ul>
+<li>Plate local y of the text box should end at ≤ 130 (2 px gap before the band), or the band should start lower.</li>
+<li><code>drawFit(..., ry + 124, 24, ...)</code> → try <code>ry + 112</code> (local y 108: 108+24=132, flush with the band — still tight). Better: <strong><code>ry + 108</code></strong> (local 104; 104+24=128, 4 px above the band).</li>
+<li>If translations of START are taller, <code>drawFit</code> already scrolls in width; height stays 24.</li>
+</ul>
+<p><strong>Alternative:</strong> drop the bottom band (<code>bands</code> only the top 0–14) or start it at 150. Only do this if moving START collides with the centre cartridge (cartridge is at <code>ry+16</code> size 96 → occupies ~<code>ry+16</code>..<code>ry+112</code>). <code>ry+108</code> for START sits just below that. <strong>Do not</strong> change plate size 124×162. <strong>Do not</strong> change radius/border.</p>
+<p><strong>Tests.</strong> <code>ui/tests/run.sh</code> already <code>shot home</code> and <code>shot lib</code>. After the change, those PNGs will differ. If the test compares pixels against goldens, update goldens; if it only checks that files are non-empty / stddev, you are fine. Add a comment in the commit: START’s baseline is above the dark band.</p>
+<p>On 640x480 and 1024x768 (run.sh loops both).</p>
+<p><strong>Done-when</strong></p>
+<ul>
+<li>START letters sit on <code>accent.base</code>, not <code>accent.dark</code>.</li>
+<li>Plate still 124×162.</li>
+<li>Empty library still has no plate (existing <code>n &gt; 0</code> guard).</li>
+</ul>
+<p><strong>Do not</strong> restyle the whole plate, remove the top light band, or change the reel geometry.</p>
+<hr />
+<h3 id="wp4-109-probe-never-tries-https-443">WP4 — <code>#109</code> <code>probe()</code> never tries https / :443</h3>
+<p><strong>Goal.</strong> Typing a RomM host without a scheme/port must find a TLS server on 443. Optional skip-verify for a LAN self-signed cert, <strong>off by default</strong>.</p>
+<p><strong>Files</strong></p>
+<ul>
+<li><code>ui/src/sync.cpp</code> <code>normUrl</code>, <code>probe</code> (~1232–1299), <code>http()</code> (~282)</li>
+<li><code>ui/tests/sync.sh</code></li>
+<li>Settings row: <code>ui/src/settings.cpp</code> Network / Home server group (search <code>hs_server</code>)</li>
+</ul>
+<p><strong>Current <code>probe()</code>:</strong></p>
+<pre><code>bool hasPort = a.find(':', a.find(&quot;://&quot;) == std::string::npos ? 0 : a.find(&quot;://&quot;) + 3) != std::string::npos;
+if (hasPort || a.find(&quot;://&quot;) != std::string::npos) tries.push_back(normUrl(a, 0));
+if (!hasPort) { tries.push_back(normUrl(a, 8092)); tries.push_back(normUrl(a, 8080)); tries.push_back(normUrl(a, 80)); }
+</code></pre>
+<p><code>normUrl</code> prepends <code>http://</code> when there is no scheme. So <code>romm.lan</code> becomes <code>http://romm.lan:8092</code> etc. Never <code>https://romm.lan</code> or <code>:443</code>.</p>
+<p><strong>Current <code>http()</code>:</strong> libcurl via dlopen. The option enum (~204) has <strong>no</strong> <code>O_SSL_VERIFYPEER</code>. curl’s <code>CURLOPT_SSL_VERIFYPEER</code> is <strong>64</strong>, <code>CURLOPT_SSL_VERIFYHOST</code> is <strong>81</strong>. Add them to the enum when you implement skip-verify. Do not include <code>&lt;curl/curl.h&gt;</code> if the file does not already (it uses numeric CURLOPT values on purpose).</p>
+<p><strong>Patch</strong></p>
+<ol>
+<li>In <code>probe()</code>, when <code>!hasPort</code> and no scheme, after the http tries (or interleaved, https first for :443 to avoid a 400 on an https-only host that still answers on 80):</li>
+</ol>
+<p>Preferred try order for a bare host <code>h</code>:<br />
+   1. <code>http://h:8092</code> (Romhost default — keep first so LAN Romhost stays fast)<br />
+   2. <code>http://h:8080</code><br />
+   3. <code>http://h:80</code><br />
+   4. <code>https://h</code> (443 implied)<br />
+   5. <code>https://h:443</code> only if (4) is not already that — <code>https://h</code> is enough if <code>normUrl</code> does not force a port. For <code>normUrl("https://h", 0)</code>: no extra port. Good.<br />
+   6. If the user typed <code>https://h</code> with no port, do <strong>not</strong> also hammer :8092.</p>
+<ol start="2">
+<li>
+<p>If the address already has <code>https://</code>, use it as-is (<code>hasPort</code> / scheme branch already <code>normUrl(a, 0)</code>). Do not rewrite https → http.</p>
+</li>
+<li>
+<p>IPv6: <code>hasPort</code> using <code>find(':')</code> is already wrong for <code>::1</code>. <strong>Do not try to fix IPv6 in this package</strong> unless a test already covers it. Mention in the commit body.</p>
+</li>
+<li>
+<p>Skip-verify: Settings key e.g. <code>homesync_tls = verify</code> (default) / <code>off</code>. Read it in <code>http()</code> from the same conf <code>probe</code>’s process already uses (<code>banana/settings.conf</code>). When <code>off</code>: <code>cu.setopt(h, O_SSL_VERIFYPEER, 0L); cu.setopt(h, O_SSL_VERIFYHOST, 0L);</code>. Help text: “Off: a Home server with a certificate the handheld has no CA for (a name on the LAN). Leave On on a network you do not trust.” Default On.</p>
+</li>
+<li>
+<p>Do not skip-verify globally for banana-scrape / RA login.</p>
+</li>
+</ol>
+<p><strong>Tests in <code>ui/tests/sync.sh</code></strong></p>
+<p>Existing: <code>bs ra probe "127.0.0.1:$P"</code> against <code>fake-romm.py</code> on http. Keep it.</p>
+<p>Add:</p>
+<ul>
+<li>A Python <code>http.server</code> or extend <code>fake-romm.py</code> with TLS (self-signed). <code>ssl.wrap_socket</code> / <code>ssl.SSLContext</code>. Probe <code>127.0.0.1</code> <strong>without</strong> a port must not be required to find it if http :8092 is tried first and something else is there — so bind TLS on a dedicated port and <code>probe https://127.0.0.1:$TLS</code>.</li>
+<li>Assert <code>probe https://127.0.0.1:$TLS</code> returns <code>romm</code>.</li>
+<li>Assert <code>probe 127.0.0.1:$TLS</code> (http to a TLS port) is <code>none</code> or not a hang (timeout is 5 s per try; keep the extra tries small).</li>
+<li>With skip-verify off, a self-signed cert may fail verify — that is correct. The skip-verify on case should succeed.</li>
+</ul>
+<p>If adding a real TLS server is painful in the test harness, a <strong>minimum</strong> is: unit-test the try-list construction by making <code>probe</code> log tries when <code>BANANA_SYNC_DEBUG=1</code> (only if such a flag exists). Prefer a real TLS fake.</p>
+<p><code>make test</code> does not run <code>sync.sh</code>. You must run <code>sh ui/tests/sync.sh</code> yourself. If CI does not run it, still add the cases.</p>
+<p><strong>Done-when</strong></p>
+<ul>
+<li><code>https://host</code> and <code>https://host:443</code> are probed.</li>
+<li>Bare <code>host</code> still finds Romhost on 8092 first.</li>
+<li>Skip-verify is a Settings toggle, default verify on.</li>
+<li><code>ui/tests/sync.sh</code> passes.</li>
+</ul>
+<p><strong>Do not</strong> send RomM passwords in logs. Do not follow http→https redirects in a way that downgrades later.</p>
+<hr />
+<h3 id="wp5-113-77-superdrastic-fast-forward-and-hotkeys">WP5 — <code>#113</code> + <code>#77</code> SuperDrastic fast-forward and hotkeys</h3>
+<p><strong>Goal.</strong> The Plus has no R3. Stock FF is <code>1036</code> (R3). BananaDS FF is hold R2. SuperDrastic must FF on a Plus-present control. Do not open DraStic’s mapper. Optionally move save/load off L2/R2 so R2 can be FF without losing save (see below).</p>
+<p><strong>Files</strong></p>
+<ul>
+<li><code>buildroot/board/rgds/drastic.cfg</code> — both <code>controls_a</code> and <code>controls_b</code>:</li>
+<li><code>CONTROL_INDEX_SAVE_STATE = 1031</code> (R2)</li>
+<li><code>CONTROL_INDEX_LOAD_STATE = 1030</code> (L2)</li>
+<li><code>CONTROL_INDEX_FAST_FORWARD = 1036</code> (R3) ← the bug</li>
+<li>Menu: <code>1035</code> / <code>1034</code> (F / L3)</li>
+<li><code>system/rootfs/usr/libexec/banana/run-drastic</code> — hinge migrate pattern to copy for 1036</li>
+<li><code>ui/src/settings.cpp</code> Reset buttons help (~575) and the reset action that copies stock maps</li>
+</ul>
+<p><strong>Scancodes (from this cfg):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Code</th>
+<th>Plus physical</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L2</td>
+<td>1030</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>R2</td>
+<td>1031</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>L3</td>
+<td>1034</td>
+<td>yes (stick press)</td>
+</tr>
+<tr>
+<td>R3</td>
+<td>1036</td>
+<td><strong>Plus: no</strong></td>
+</tr>
+<tr>
+<td>F / HOME</td>
+<td>1035</td>
+<td>yes</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Decision (do not invent a third layout):</strong></p>
+<p><strong>Preferred, matches BananaDS:</strong> FF = R2 (<code>1031</code>). Then save/load cannot stay on R2.</p>
+<p>Combined with <code>#77</code> (F+L / F+R style):</p>
+<ul>
+<li>FF: <code>1031</code> (R2), same as BananaDS hold-R2</li>
+<li>Save / load: leave unbound in DraStic (<code>65535</code>) and document F-combos <strong>only if SuperDrastic actually sees F as a modifier</strong>. DraStic maps are one key per action, not chords. <strong>Do not claim F+L saves unless the wrapper implements chords.</strong></li>
+</ul>
+<p>Safer layout that needs no chords:</p>
+<ul>
+<li>FF: R2 (<code>1031</code>)</li>
+<li>Save: L2 (<code>1030</code>) — swap: used to be load</li>
+<li>Load: unbind (<code>65535</code>) or keep load on a combo the wrapper already has</li>
+</ul>
+<p><strong>Better safer layout (document in Settings):</strong></p>
+<ul>
+<li>FF = R2 (<code>1031</code>) on <strong>both</strong> a and b</li>
+<li>Save stays R2? <strong>Conflict.</strong> So save must move.</li>
+</ul>
+<p>Joar’s BananaDS: hold R2 = FF. SuperDrastic should feel the same: <strong>R2 = FF</strong>. Move save off R2.</p>
+<p>Recommended maps to write in <code>drastic.cfg</code> <strong>and</strong> in Reset buttons:</p>
+<ul>
+<li><code>FAST_FORWARD = 1031</code> (R2)</li>
+<li><code>SAVE_STATE = 65535</code> (unbind) <strong>or</strong> if a chord-free key remains: do not use R3</li>
+<li><code>LOAD_STATE = 65535</code> (unbind)</li>
+</ul>
+<p>Then <code>#77</code> is “use the in-game menu (F/L3) for save/load”, which already exists. Update help: “F or L3 the menu (save and load there), R2 fast forward.”</p>
+<p>If you can bind save/load to keys the Plus has that are currently <code>65535</code> and not used in-game: there are none on the face that are free besides the menu. <strong>Do not</strong> steal A/B/X/Y/L/R/Start/Select.</p>
+<p><strong>Migrate existing cards</strong> in <code>run-drastic</code>, next to the hinge block (~26–31):</p>
+<pre><code># Fast forward was R3 (1036); the Plus has none (#113): R2 (1031), as BananaDS
+if grep -q '^controls_a\[CONTROL_INDEX_FAST_FORWARD\] = 1036' config/drastic.cfg 2&gt;/dev/null; then
+    sed -i 's/^controls_a\[CONTROL_INDEX_FAST_FORWARD\] = 1036/controls_a[CONTROL_INDEX_FAST_FORWARD] = 1031/' config/drastic.cfg
+fi
+# same for controls_b
+# if SAVE_STATE is also 1031, unbind save so FF and save are not the same key
+</code></pre>
+<p>Only migrate <strong>1036 → 1031</strong>. If the user already remapped FF to something else, leave it.</p>
+<p>If after migration FF and SAVE are both 1031, unbind SAVE (<code>65535</code>) and LOAD can stay 1030 (L2) — load without save is odd. Unbind both save and load if they collide with FF; menu still saves.</p>
+<p><strong>Reset buttons</strong> must copy the new defaults, not 1036. Find the implementation of <code>nds-reset-buttons</code> (search that key in <code>settings.cpp</code>) and point it at the image <code>drastic.cfg</code>.</p>
+<p>Help string (~575) must drop “R3 fast forward”. New:</p>
+<pre><code>DraStic's buttons back to Banana's, for a button setup gone wrong in DraStic's menu: the pad as printed, F or L3 the menu (save and load there), R2 fast forward. (HOME always opens the menu.) Press A twice.
+</code></pre>
+<p><strong>Tests</strong></p>
+<ul>
+<li><code>grep FAST_FORWARD buildroot/board/rgds/drastic.cfg</code> → not 1036, is 1031, both a and b.</li>
+<li><code>sh -n run-drastic</code>.</li>
+<li>A tiny shell test of the sed migrate: cfg with 1036 becomes 1031; cfg with 1029 is left alone.</li>
+</ul>
+<p><strong>Done-when</strong></p>
+<ul>
+<li>New cards: FF on R2, no R3.</li>
+<li>Old cards with 1036: migrated on next SuperDrastic launch.</li>
+<li>Reset buttons help and action match.</li>
+<li>No UI copy tells the user to open DraStic’s control editor.</li>
+</ul>
+<p><strong>Do not</strong> add a Settings row that writes arbitrary scancodes unless it reuses an existing choice widget. Do not bind FF to L3 (that is the menu).</p>
+<hr />
+<h3 id="wp6-122-help-description-runs-into-back">WP6 — <code>#122</code> Help / description runs into Back</h3>
+<p><strong>Goal.</strong> A long description on a settings-like bottom screen must never draw through the Back chip.</p>
+<p><strong>Where to look (in order)</strong></p>
+<ol>
+<li><code>Settings::render()</code> bottom (~2128–2188): rows + <code>face("B","Back",18,bw)</code> + A chip. There is <strong>no</strong> help paragraph here; help is on the top via <code>helpOf</code>. If the bug is a <strong>translation</strong> of a row label overflowing into Back, <code>textFit</code> on the label already clips — check a long locale.</li>
+<li><code>Settings::renderGame()</code> (~4931–4955): same pattern. Help is on the top (<code>gameHelpOf</code>).</li>
+<li>Search <code>beginScreen(1)</code> together with <code>help</code> / <code>wrapped(</code> / <code>helpText</code> in <code>settings.cpp</code> and <code>RndsUI.cpp</code>.</li>
+<li>Emulator-options page: the game page <code>PG_RES</code> / <code>PG_SHADER</code> values are long (“As in Settings (4x (experimental))”) and use <code>fit(..., 380)</code> — a long translation of “As in Settings…” can still sit above Back, not through it.</li>
+</ol>
+<p>If the reporter’s screenshot is the <strong>top</strong> help looking cramped: that is <code>helpFit</code> / <code>HELP_BOTTOM</code>, already supposed to shrink to 16 px. Do not invent a bottom help line.</p>
+<p><strong>If you find a bottom-screen sentence</strong> that is not clipped to <code>[18+bw+8, 622-aw-8]</code>: clip it. Preferred: <strong>delete</strong> the bottom sentence if the top already has <code>helpOf</code>.</p>
+<p><strong>Also in this package (cheap, related):</strong> <code>gameHelpOf</code> <code>PG_RES</code> “BananaDS only” — if WP1 did not land yet, do it there not here.</p>
+<p><strong>Tests.</strong> <code>make test</code>. If you change footer geometry, <code>shot settings</code> / <code>shot settings-list</code> still exist. For a long string: <code>--script</code> onto Nintendo DS &gt; Shader (long help) and assert Back’s pixels are still the chip (optional).</p>
+<p><strong>Done-when.</strong> Back’s letters are not overdrawn by a description on 640x480 and 1024x768. No new help on the bottom screen.</p>
+<p><strong>Do not</strong> move Back. Do not shrink <code>face()</code> globally.</p>
+<hr />
+<h3 id="wp7-108-cartridge-art-contain-pad-not-cover-crop">WP7 — <code>#108</code> Cartridge art: contain + pad, not cover-crop</h3>
+<p><strong>Goal.</strong> Title screens on the cartridge label are <code>coverTop</code> (aspect preserved, bottom cropped). Reporter wants contain + white (or label-colour) pad, plus the existing Display row for icon vs art.</p>
+<p><strong>Files:</strong> <code>ui/rnds/RndsUI.cpp</code> <code>cart()</code> ~762–768:</p>
+<pre><code>if (!art.empty())
+{
+    int wx = (int)std::lround(4 * sc), wy = (int)std::lround(4 * sc);
+    int ww = (int)std::lround(96 * sc) - wx, wh = (int)std::lround(90 * sc) - wy;
+    blit(master, coverTop(art, ww, wh), wx, wy);
+}
+</code></pre>
+<p><code>containSize</code> already exists in <code>RndsRaster.cpp</code>. <code>coverArt()</code> for the top-screen box already uses contain into a square. <strong>Reuse that idea.</strong></p>
+<p><strong>Patch</strong></p>
+<ol>
+<li>Fill the label window with white (title screens) or <code>P.cartLabel</code> (already used for icon carts) — white was requested; use <strong>white</strong> for title/box-on-label so letterbox bars match a DS label, unless the palette’s <code>cartLabel</code> is the house fill. Prefer <code>P.cartLabel</code> if it is already the label colour (icon carts use it). Do not introduce a new theme key.</li>
+<li><code>containSize(art.w, art.h, ww, wh, fw, fh)</code> then <code>resize(art, fw, fh)</code> and <code>blit</code> centred in the window: <code>wx + (ww-fw)/2</code>, <code>wy + (wh-fh)/2</code>.</li>
+<li>Keep <code>iconCart</code> as it is (already contain-like, nearest-neighbour).</li>
+<li>Cache key already includes art paths; changing the blit invalidates by code change (same key, different pixels) — <strong>bump the key prefix</strong> from <code>"cart:"</code> to <code>"cart2:"</code> so old cache files are not reused if any on-disk cache exists. If the cache is in-memory only, still bump the prefix.</li>
+</ol>
+<p><strong>Settings.</strong> “A Display row already picks icon vs art (<code>#106</code>). Add Box / Title / Icon if still missing.” Check Settings &gt; Display &amp; sound &gt; DS cartridges. If it is only box vs icon, do <strong>not</strong> add a third mode in this package unless it is a one-line enum already plumbed. Contain applies to whichever picture is on the label.</p>
+<p><strong>Tests.</strong> <code>make test</code>; <code>shot lib</code> / <code>shot ready</code>. Visual: a wide title screen should show side pads, not a cropped centre.</p>
+<p><strong>Done-when.</strong> Label shows the whole picture, padded; icons still pixel-scaled. No cover-crop of title screens on carts.</p>
+<p><strong>Do not</strong> change top-screen <code>coverArt()</code> (that is contain already into 214×214). Do not bilinear-upscale 32×32 ROM icons.</p>
+<hr />
+<h3 id="wp8-46-shutdown-becomes-sleep">WP8 — <code>#46</code> Shutdown becomes sleep</h3>
+<p><strong>Goal.</strong> A unit that was shut down is found asleep hours later. <code>rcK</code> can let bananad suspend again while powering off. 0.5.0 added a Power menu and shutdown animation; it did <strong>not</strong> stop re-sleep.</p>
+<p><strong>Files</strong></p>
+<ul>
+<li><code>system/rootfs/etc/init.d/rcK</code> (current: TERM games, umount <code>/data</code>, <strong>no</strong> suspend guard)</li>
+<li><code>system/bananad/bananad.c</code> <code>shutdown_now()</code> (~766), <code>suspend_now()</code>, lid/power handlers</li>
+<li><code>system/bananad/tests/sleep-test.sh</code></li>
+</ul>
+<p><strong>Current <code>shutdown_now</code>:</strong></p>
+<pre><code>sync();
+if (kill(1, SIGUSR2)) reboot(RB_POWER_OFF);
+</code></pre>
+<p>busybox init runs <code>rcK</code> on SIGUSR2. Meanwhile the lid is still closed → <code>suspend_now("lid still closed")</code> can fire from the main loop if shutdown is slow.</p>
+<p><strong>Patch (the useful part of closed PR #84)</strong></p>
+<ol>
+<li>A flag file <code>/run/banana/powering-off</code> (or a bananad-internal <code>shutting_down</code>) set at the start of <code>shutdown_now</code>, before SIGTERM to the game.</li>
+<li>Every <code>suspend_now(...)</code> path returns immediately if that flag is set. Also skip <code>lid still closed</code> retry.</li>
+<li><code>rcK</code>: as the first lines, <code>killall -STOP bananad</code> or write the flag if bananad did not, so a lid event cannot sleep after umount. <strong>Do not</strong> <code>kill -9 bananad</code> before it has TERMed the game — <code>shutdown_now</code> already waits up to 5 s for the game.</li>
+<li>After umount, <code>reboot -f -p</code> / <code>RB_POWER_OFF</code> remains init’s job. Do not call <code>echo mem &gt; /sys/power/state</code> from <code>rcK</code>.</li>
+</ol>
+<p><strong>Tests.</strong> Extend <code>sleep-test.sh</code>: trigger shutdown with the fake lid closed; assert <code>/sys/power/state</code> was <strong>not</strong> written <code>mem</code> after the shutdown path started. The test already namespaces <code>/sys/power/state</code> as a FIFO.</p>
+<p><strong>Done-when</strong></p>
+<ul>
+<li>Lid closed + Shut down does not write <code>mem</code> after <code>shutdown_now</code> starts.</li>
+<li>Sleep from the Power menu still sleeps.</li>
+<li><code>sh -n rcK</code>; <code>sudo system/bananad/tests/sleep-test.sh</code>.</li>
+</ul>
+<p><strong>Do not</strong> revive PR #84’s extra LED/idle work. Do not change Power-off-after-sleeping (<code>#85</code>, already shipped).</p>
+<hr />
+<h3 id="wp9-96-superdrastic-sm64ds-not-saving">WP9 — <code>#96</code> SuperDrastic SM64DS not saving</h3>
+<p><strong>Goal.</strong> In-game save missing after reload in SuperDrastic; BananaDS fine. Likely <code>nds-saves</code> copying the wrong way: a newer empty <code>.sav</code> overwriting a good <code>.dsv</code>, or name mismatch.</p>
+<p><strong>Files:</strong> <code>system/rootfs/usr/libexec/banana/nds-saves</code></p>
+<p><strong>Current rule:</strong> whichever of <code>.dsv</code> / <code>.sav</code> is newer (<code>-nt</code>) overwrites the other. A 0-byte or tiny <code>.sav</code> that is newer wins.</p>
+<p><strong>Patch</strong></p>
+<ol>
+<li>Never replace a non-empty <code>.dsv</code> with a <code>.sav</code> that is empty or smaller than 512 bytes (DS saves are kilobytes; a 0-byte file is not a save).</li>
+<li>Never replace a non-empty <code>.sav</code> with a 0-byte <code>.dsv</code>.</li>
+<li>If sizes differ by more than the DeSmuME footer (122 bytes) <strong>and</strong> the newer file is smaller than 64 bytes, keep the larger.</li>
+<li>Log the decision (the script already echoes <code>nds-saves: $G: ...</code>).</li>
+<li>Do not change the ROCKNIX-beside-ROM import (<code>#25</code>) except to refuse a 0-byte source.</li>
+</ol>
+<p><strong>Tests.</strong> A 20-line shell test:</p>
+<pre><code>DSV has 8192 bytes of 'x', SAV is 0 bytes and newer → after nds-saves, DSV unchanged, SAV becomes the raw of DSV (or SAV left empty but DSV not destroyed — prefer fill SAV from DSV, do not wipe DSV).
+</code></pre>
+<p>Run <code>nds-saves</code> with paths: the script hardcodes <code>/data/drastic</code> and <code>/data/saves/nds</code>. For a test, either bind-mount <code>/data</code> in a tmp dir (root) or add <code>BANANA_DATA</code> <strong>only if you must</strong> — prefer <code>mkdir -p /tmp/fake-data</code> and run under <code>fakeroot</code>/<code>unshare -m</code> if CI allows. If you cannot remap <code>/data</code>, extract <code>raw_of_dsv</code> tests separately and add a comment that on-device is required for the full script. <strong>Best:</strong> at the top of <code>nds-saves</code>, <code>DATA=${BANANA_DATA:-/data}</code> and use <code>$DATA/drastic/backup</code> — a one-line indirection that matches how other banana scripts sometimes use env in tests (<code>BANANA_NDS_SAVES</code> already exists for sync.sh). Use <code>BANANA_DATA</code> if you add it; document it in the script header.</p>
+<p><strong>Done-when.</strong> A non-empty <code>.dsv</code> is never replaced by an empty <code>.sav</code>. SM64DS in SuperDrastic keeps in-game saves across a quit (on-device check in the commit body).</p>
+<p><strong>Do not</strong> merge saves bytewise. Do not rename <code>.dsv</code> to include the ROM ID unless you prove SM64DS uses a different stem than <code>${G%.*}</code>.</p>
+<hr />
+<h3 id="wp10-87-powervolume-dead-during-boot-animation">WP10 — <code>#87</code> Power/volume dead during boot animation</h3>
+<p><strong>Goal.</strong> Menu is up before bananad owns power/volume, so those keys do nothing for a few seconds.</p>
+<p><strong>Files.</strong> Search startup: <code>system/rootfs/etc/init.d/rcS</code>, <code>system/rootfs/usr/libexec/banana/</code> boot, <code>system/bananad/bananad.c</code> evdev grab, <code>ui/src/main.cpp</code> splash.</p>
+<p><strong>Patch (the useful part of closed PR #86)</strong></p>
+<ul>
+<li>Start bananad’s input grab <strong>before</strong> banana-ui paints the boot animation, <strong>or</strong></li>
+<li>banana-ui handles volume/power until it receives a “bananad ready” signal (if one exists — do not invent a protocol if <code>/run/banana/</code> already has a socket/flag).</li>
+</ul>
+<p>Prefer: init order. If <code>rcS</code> starts banana-ui then bananad, swap them. If banana-ui is started first so it can show a splash while bananad opens devices, then banana-ui must pass volume to ALSA itself for that window (there may already be a path — search <code>volume</code> in <code>main.cpp</code>).</p>
+<p><strong>Do not</strong> resurrect the hardware-check toast from #86 unless asked.</p>
+<p><strong>Tests.</strong> Hard without a device. <code>sleep-test.sh</code> plus a note. If there is a boot script test, add “bananad pid exists before banana-ui” by reading <code>rcS</code>.</p>
+<p><strong>Done-when.</strong> <code>rcS</code> / unit files show bananad grabbing input before the splash, or banana-ui handles volume until then. Power during splash still shuts down/sleeps as designed (do not eat the power key).</p>
+<hr />
+<h3 id="wp11-41-time-zone-themes-box-art-hitch-the-ui-thread">WP11 — <code>#41</code> Time zone / themes / box-art hitch the UI thread</h3>
+<p><strong>Goal.</strong> Opening those rows hitch 15s+ because they walk large lists or the card on the UI thread.</p>
+<p><strong>Files:</strong> <code>ui/src/settings.cpp</code> — Time zone <code>ZONES</code> (~651), Theme list (~476, ~752), Box art scrape UI.</p>
+<p><strong>Patch</strong></p>
+<ul>
+<li>Build timezone names once (they are already a static <code>ZONES</code> table — if the hitch is <code>tzset</code> / scanning zoneinfo, cache).</li>
+<li>Themes: the comment at ~752 says themes on the card are listed live. Enumerate <code>banana/themes</code> on a worker (the UI already has workers for carts). Keep the last list; refresh on a timer or when the page opens, not in <code>draw</code>.</li>
+<li>Box art source row should not scrape on highlight.</li>
+</ul>
+<p><strong>Never</strong> scan the card inside the row’s draw/open on the UI thread.</p>
+<p><strong>Tests.</strong> <code>make test</code>. <code>shot settings-tz</code> already exists in run.sh (<code>press down; press right; shot settings-tz</code>). Must still open.</p>
+<p><strong>Done-when.</strong> Opening Time zone / Theme / Box art from does not block rendering for multiple frames in headless (if you can assert frame time in the log; run.sh has <code>bench 120</code>). Do not add threads if a static cache is enough.</p>
+<hr />
+<h3 id="wp12-78-missing-portmaster-folder-must-not-refuse-boot">WP12 — <code>#78</code> Missing PortMaster folder must not refuse boot</h3>
+<p><strong>Goal.</strong> 0.5.0 can hide systems. Deleting the PortMaster folder once refused boot. Guard so a missing <code>roms/ports</code> / <code>PortMaster.sh</code> cannot brick the menu.</p>
+<p><strong>Files:</strong> <code>ui/src/library.cpp</code> ~629 (PortMaster counts as launchable), scan/mkdir of system folders; <code>ui/src/main.cpp</code> startup; <code>systems.conf</code> ports entry.</p>
+<p><strong>Patch.</strong> If the ports folder is missing, treat the shelf as empty (or Always + PortMaster gone → empty), <strong>log</strong>, and continue. Never <code>exit</code> the menu because <code>opendir</code> failed on one system. <code>mkdir</code> the folder only if the rest of the tree already creates empty system dirs at first boot — do not start creating every system folder here.</p>
+<p><strong>Tests.</strong> <code>ui/tests/ux.sh</code> already cares about PortMaster on the home row. Add: fixture <strong>without</strong> <code>roms/ports</code>; banana-ui <code>--script "home 0; shot home"</code> must exit 0.</p>
+<p><strong>Done-when.</strong> Missing ports dir: menu boots, Ports hidden or empty, not a crash.</p>
+<hr />
+<h3 id="wp13-35-charging-bolt-missing-in-bananads-pause">WP13 — <code>#35</code> Charging bolt missing in BananaDS pause</h3>
+<p><strong>Goal.</strong> 0.4.2 home bolt; 0.5.0 banana-ui pause menus. Reporter still sees no bolt in <strong>BananaDS’s</strong> in-game menu.</p>
+<p><strong>BananaDS is not in this tree.</strong> Pin: <code>buildroot/package/bananads/bananads.mk</code> <code>BANANADS_VERSION</code>. Sources: <code>https://github.com/JorreFog/SuperDrastic</code> subdirectory <code>bananads/</code>.</p>
+<p><strong>Patch (in SuperDrastic/BananaDS, then bump the pin)</strong></p>
+<ul>
+<li>Pass charger-online into the pause HUD the way banana-ui does (<code>Library::power().charging</code> uses <code>.../online</code> because the rk817 gauge says Discharging while it charges — <code>library.cpp</code> ~937).</li>
+<li>Draw a bolt using the same 8-row <code>BOLT</code> bitmap as <code>RndsUI.cpp</code> ~1486, or BananaDS’s own icon if it has a battery widget.</li>
+<li>Do not use gauge status alone.</li>
+</ul>
+<p><strong>This package is a different repo.</strong> If you only have BananaLinux: document the required BananaDS change in the commit that bumps <code>BANANADS_VERSION</code> once the emulator PR exists. Do not vendor BananaDS into BananaLinux.</p>
+<hr />
+<h2 id="8-close-on-github-no-code">8. Close on GitHub (no code)</h2>
+<p>Behaviour already in 0.4.2 or 0.5.0. Close after a one-line check; do not “fix” them.</p>
+<table>
+<thead>
+<tr>
+<th>Issue</th>
+<th>Why close</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>#70</code></td>
+<td>About shows kernel + RetroArch.</td>
+</tr>
+<tr>
+<td><code>#69</code></td>
+<td>OTA from GitHub.</td>
+</tr>
+<tr>
+<td><code>#40</code></td>
+<td>A on a saved SSID joins with stored PSK.</td>
+</tr>
+<tr>
+<td><code>#39</code></td>
+<td>SDL_BANANA_PANELS zero-copy in 0.4.2.</td>
+</tr>
+<tr>
+<td><code>#36</code></td>
+<td>Update explains a bad SHA.</td>
+</tr>
+<tr>
+<td><code>#30</code></td>
+<td>DS name in setup.</td>
+</tr>
+<tr>
+<td><code>#26</code></td>
+<td>Threaded 3D in Settings.</td>
+</tr>
+<tr>
+<td><code>#23</code></td>
+<td>SSH under Network.</td>
+</tr>
+<tr>
+<td><code>#18</code></td>
+<td>Volume ear curve — close if 0.4.2+ still sounds right.</td>
+</tr>
+<tr>
+<td><code>#65</code></td>
+<td>sd2 scan lock vs ksmbd.</td>
+</tr>
+<tr>
+<td><code>#8</code></td>
+<td>Sleep-on-charger LED: dark-awake since 0.4.2. <strong>Confirm</strong>, then close. Off-charge LED stays <code>#34</code>/<code>#123</code>.</td>
+</tr>
+<tr>
+<td><code>#27</code></td>
+<td>Close when WP1 (<code>#117</code>) lands.</td>
+</tr>
+<tr>
+<td><code>#106</code> <code>#111</code> <code>#115</code> <code>#126</code> <code>#98</code></td>
+<td>Already closed or shipped.</td>
+</tr>
+</tbody>
+</table>
+<p>Kitchen-sink <code>#49</code>: split remaining bullets (<code>#121</code> folders, <code>#120</code> grid, <code>#56</code> RA) and close <code>#49</code>.</p>
+<hr />
+<h2 id="9-out-of-scope-for-this-pass-do-not-start">9. Out of scope for this pass (do not start)</h2>
+<table>
+<thead>
+<tr>
+<th>Issue</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>#103</code> PSP</td>
+<td>New core + shelf. RK3566 is marginal.</td>
+</tr>
+<tr>
+<td><code>#100</code> dsperate</td>
+<td>New emulator contract, not a SuperDrastic swap.</td>
+</tr>
+<tr>
+<td><code>#125</code> undervolt</td>
+<td>Needs per-board OPP characterisation; can hard-lock.</td>
+</tr>
+<tr>
+<td><code>#38</code> YouTube</td>
+<td>Store/PortMaster app, ToS/codec.</td>
+</tr>
+<tr>
+<td><code>#130</code> MTP</td>
+<td>Needs gadget after PR <code>#101</code>, then a Settings toggle.</td>
+</tr>
+<tr>
+<td><code>#120</code> <code>#121</code> <code>#49</code> grid/folders</td>
+<td>Product UI, not a bug.</td>
+</tr>
+<tr>
+<td><code>#74</code> two colour curves</td>
+<td>VOP2 has <strong>one</strong> <code>GAMMA_LUT</code>. Same table on both CRTCs maybe; two independent curves no.</td>
+</tr>
+<tr>
+<td><code>#129</code> green tints</td>
+<td>Bisect LUT / panel-tune / DTS vs ROCKNIX first. Do not guess a LUT.</td>
+</tr>
+<tr>
+<td><code>#131</code> charge heat</td>
+<td>Measure board temp; then maybe lower RK817 current. Do not guess.</td>
+</tr>
+<tr>
+<td><code>#114</code> <code>#76</code> shaders</td>
+<td>BananaDS integer-then-<code>.frag</code>. Other repo.</td>
+</tr>
+<tr>
+<td><code>#112</code> capital H</td>
+<td>Font glyph. Screenshot at native size.</td>
+</tr>
+<tr>
+<td><code>#118</code> one-bud BT</td>
+<td>Log bluez-alsa PCM channels first; then SBC stereo / reject 1ch.</td>
+</tr>
+<tr>
+<td><code>#105</code> <code>#97</code> <code>#95</code> <code>#82</code> <code>#92</code> <code>#67</code></td>
+<td>DraStic / melonDS / Gengis core bugs. Per-game Threaded 3D Off is the workaround for swapped screens.</td>
+</tr>
+<tr>
+<td><code>#48</code> RA hardcore</td>
+<td>Needs core enforcement.</td>
+</tr>
+<tr>
+<td><code>#56</code> RA browser</td>
+<td>Large UI.</td>
+</tr>
+<tr>
+<td><code>#55</code> <code>#52</code> remap/unmap</td>
+<td>Related to WP5; full remap table is a feature.</td>
+</tr>
+<tr>
+<td><code>#54</code> ROCKNIX overlay</td>
+<td>BananaDS FPS extend; SuperDrastic will not grow one.</td>
+</tr>
+<tr>
+<td><code>#102</code> <code>#83</code> <code>#58</code></td>
+<td>Install/U-Boot at sector 64. Document writer; not runtime.</td>
+</tr>
+<tr>
+<td><code>#64</code> white screens</td>
+<td>DraStic timer; ignored since 0.5.0.</td>
+</tr>
+<tr>
+<td><code>#71</code> RA speed vs ROCKNIX</td>
+<td>0.5.0 leftovers (threaded video default). Measure first.</td>
+</tr>
+<tr>
+<td><code>#14</code> Spirit Tracks mic</td>
+<td>0.5.0.1 path shipped; remaining is that title’s sampling.</td>
+</tr>
+<tr>
+<td><code>#110</code> FF mute</td>
+<td>Document in in-game help; optional quiet mix later.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="10-commit-messages">10. Commit messages</h2>
+<p>Subject: <code>fix: ...</code> or <code>ui: ...</code> or <code>drastic: ...</code>, 72 chars, issue number.</p>
+<p>Body: cluster numbers, on-device check the human should run, tests you ran.</p>
+<p>Example for WP1:</p>
+<pre><code>fix: SuperDrastic honours per-game 3D resolution (#117)
+
+nds-per-game-res.conf was only read by run-bananads. run-drastic now
+swaps hires_3d for that run (1→0, 2/3/4→1) and puts Settings' value
+back, same as threaded_3d.
+
+On device: X on a DS game, 3D resolution 2x, SuperDrastic, confirm
+sharp 3D; then Settings' 1x still applies to the next game without a
+line in the file.
+</code></pre>
+<p>One issue (or one cluster) per commit. Do not mix WP1 and WP5.</p>
+<hr />
+<h2 id="11-quick-file-index-for-remaining-cause-known-tickets">11. Quick file index for remaining “cause known” tickets</h2>
+<p>Use this when a package above is done and the human asks for the next leftover.</p>
+<table>
+<thead>
+<tr>
+<th>Issue</th>
+<th>File:symbol</th>
+<th>One-line fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>#75</code></td>
+<td><code>settings.cpp</code> <code>bottom_idle_mode</code></td>
+<td>Add a Dark panel choice that ignores the light theme.</td>
+</tr>
+<tr>
+<td><code>#45</code></td>
+<td>Settings &gt; Nintendo DS</td>
+<td>Favourite colour / birthday / region.</td>
+</tr>
+<tr>
+<td><code>#29</code> leftover</td>
+<td>library titles</td>
+<td>Show edited Name, not only Sort, after scrape.</td>
+</tr>
+<tr>
+<td><code>#28</code> leftover</td>
+<td>box art search</td>
+<td>Preview art before apply.</td>
+</tr>
+<tr>
+<td><code>#25</code> leftover</td>
+<td>ksmbd</td>
+<td>Windows tree connect / signing.</td>
+</tr>
+<tr>
+<td><code>#47</code></td>
+<td>RA HTTP in <code>settings.cpp</code> ~5262</td>
+<td>Retry 502; persist token; wait for time.</td>
+</tr>
+<tr>
+<td><code>#118</code></td>
+<td><code>bananad.c</code> <code>bt_audio_read</code></td>
+<td>Log PCM channels; force SBC stereo.</td>
+</tr>
+<tr>
+<td><code>#87</code></td>
+<td><code>rcS</code> / bananad grab</td>
+<td>WP10.</td>
+</tr>
+<tr>
+<td><code>#41</code></td>
+<td><code>settings.cpp</code> lists</td>
+<td>WP11.</td>
+</tr>
+<tr>
+<td><code>#78</code></td>
+<td><code>library.cpp</code> scan</td>
+<td>WP12.</td>
+</tr>
+<tr>
+<td><code>#35</code></td>
+<td>BananaDS HUD</td>
+<td>WP13.</td>
+</tr>
+<tr>
+<td><code>#122</code></td>
+<td>footer</td>
+<td>WP6.</td>
+</tr>
+<tr>
+<td><code>#108</code></td>
+<td><code>cart()</code></td>
+<td>WP7.</td>
+</tr>
+<tr>
+<td><code>#46</code></td>
+<td><code>rcK</code> / <code>shutdown_now</code></td>
+<td>WP8.</td>
+</tr>
+<tr>
+<td><code>#96</code></td>
+<td><code>nds-saves</code></td>
+<td>WP9.</td>
+</tr>
+<tr>
+<td><code>#113</code> <code>#77</code></td>
+<td><code>drastic.cfg</code></td>
+<td>WP5.</td>
+</tr>
+<tr>
+<td><code>#117</code></td>
+<td><code>run-drastic</code></td>
+<td>WP1.</td>
+</tr>
+<tr>
+<td><code>#107</code></td>
+<td><code>Library::system</code></td>
+<td>WP2.</td>
+</tr>
+<tr>
+<td><code>#128</code></td>
+<td><code>plateBox</code> / START y</td>
+<td>WP3.</td>
+</tr>
+<tr>
+<td><code>#109</code></td>
+<td><code>probe()</code></td>
+<td>WP4.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="12-definition-of-a-finished-agent-pass">12. Definition of a finished agent pass</h2>
+<p>You are done with <strong>this</strong> playbook’s first pass when WP1–WP7 are in <code>main</code> or in review PRs, Phase 0 PRs are reviewed (not necessarily merged by you), and WP8–WP12 have either a patch or a one-paragraph blocker (e.g. “needs device”). WP13 is a BananaDS pin bump.</p>
+<p>Do not start <code>#120</code>/<code>#121</code>/<code>#103</code> in the same pass.</p>
+</div>
+</body>
+</html>
