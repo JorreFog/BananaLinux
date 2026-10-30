@@ -1,7 +1,9 @@
 # BananaOS translation: Russian(Русский)
+# Translated by Vladislav (LVD) and Ruslan (Nestrahoff).
 # Made by tools/lang-from-docx.py from BananaOS-0.5.0-ru_RU.doc (converted to .docx by LibreOffice). Columns: part, context, English, translation.
 #: language = Русский
 #: language-en = Russian
+#: translated-by = Vladislav (LVD), Ruslan (Nestrahoff)
 menu		Ready	Готово
 menu		Fav	В избр.
 menu		Start	Старт
@@ -1453,7 +1455,7 @@ systems		Ports	Ports
 systems		PortMaster	PortMaster
 systems		Store	Store
 systems		Apps	Apps
-# (the lines below are a machine-translated draft, not the translator's: the first-time setup's slides, Bshare and a
+# (the lines below are a machine-translated draft, not Vladislav's and Ruslan's: the first-time setup's slides, Bshare and a
 # few emulator menu rows, which the 0.5.0 document didn't have; for them to check in the next round)
 settings		Achievements	Достижения
 settings		Integer	Целое

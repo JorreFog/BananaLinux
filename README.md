@@ -36,7 +36,7 @@ A pixel-art menu, two DS emulators and a system built around your handheld's two
 
 BananaOS is a complete Linux system built specifically for the RG DS and RG DS Plus. It uses Buildroot, a Linux kernel with [ROCKNIX](https://rocknix.org) hardware support, BusyBox init and a dedicated interface for both screens. The system image is read-only; games, saves and settings live on a separate exFAT partition.
 
-It starts directly in the menu, releases display, input and audio resources when launching a game, and pauses play when you close the lid. Updates come over Wi-Fi and install to a second system slot, so the previous version remains one restart away. The menu speaks English, Simplified Chinese (简体中文, translated by Majirefy) and Russian (Русский).
+It starts directly in the menu, releases display, input and audio resources when launching a game, and pauses play when you close the lid. Updates come over Wi-Fi and install to a second system slot, so the previous version remains one restart away. The menu speaks English, Simplified Chinese (简体中文, translated by Majirefy) and Russian (Русский, translated by Vladislav (LVD) and Ruslan (Nestrahoff)).
 
 <p align="center">
   <img src="docs/img/readme/stats.png" width="100%" alt="9.8 s from the power button to the menu, BananaDS 12.6% faster, 10 built-in layout themes, 2 DS emulators">
@@ -330,12 +330,13 @@ make test          # renders the menu from a test library into ui/tests/out
 The people who made 0.5.0 (also in Settings › System › Credits):
 
 - **Development:** JorreFog (maintainer) · jesussaves-ai · marlupatrocinio
-- **Translation:** Majirefy (简体中文, Simplified Chinese)
+- **Translation:** Majirefy (简体中文, Simplified Chinese) · Vladislav (LVD) and Ruslan (Nestrahoff) (Русский, Russian)
 - **QA:** Duncan · Majirefy · Smizzle · nigel777 · v (QA and mod)
 - **UI/UX:** Numberjerry
 
 Thanks to:
 
+- Vladislav (LVD) and Ruslan (Nestrahoff) for the Russian (Русский) translation.
 - Majirefy for the Simplified Chinese (简体中文) translation. The characters are drawn with [Fusion Pixel Font](https://github.com/TakWolf/fusion-pixel-font) (缝合像素字体) by TakWolf. To translate BananaOS into your language, ask for the translation document; `tools/lang-from-docx.py` turns a filled-in one into `ui/assets/lang/<language>.tsv`.
 - jesussaves-ai: the [BananaLinux Flasher](https://github.com/jesussaves-ai/banana-linux-flasher), the card writer for Windows, Linux and macOS, and in BananaOS the PS1 game panel, the game panel's idle dimming, the microphone routing and the Reset rows.
 - casualducko: the zero-copy panel patch for LÖVE apps on both panels (eReaderDS).
