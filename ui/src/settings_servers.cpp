@@ -1615,7 +1615,8 @@ namespace banana
 					: "Into the folder chosen. Archives are unpacked after their last part comes in.";
 				if (cur && cur->kind == T_FOLDER)
 					t.help = (how == BY_TYPE ? "The files' type says it. " : how == LAST ? "Where this server folder's downloads went last time. " : "") +
-						std::string("A chooses another folder on the cards, or makes one: Files opens on it, Y takes the folder shown, X makes a new one.") +
+						std::string("A chooses another folder on the cards, or makes one: Files opens on it, Y takes the folder shown (A too, on a file or in an "
+							"empty folder), X makes a new one.") +
 						(!local && mergeNames().empty() ? " A server's folder goes in as a folder." : !local ? " The server's folder of this system goes into it itself." : "");
 				if (cur && cur->kind == T_CARD) t.help = "The same folder on the other card (made when it starts, if it isn't there).";
 				if (cur && cur->kind == T_UNPACK)

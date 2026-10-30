@@ -866,7 +866,8 @@ namespace banana
 				{
 					files::Space sp;
 					if (files::space(cards[cur->index].root, sp)) t.accent = files::bytes(sp.free) + " free of " + files::bytes(sp.total);
-					t.help = pick ? pickNote + "A opens a card, then its folders: Y takes the folder shown, X makes a new one. B goes back to the download as it was."
+					t.help = pick ? pickNote + "A opens a card, then its folders: Y takes the folder shown (A too, on a file or in an empty folder), X makes a new one. "
+						"B goes back to the download as it was."
 						: "The cards' folders and files: A opens a card. In a folder, Y marks, X copies, moves, renames, deletes or unpacks what is marked, or makes a new folder. "
 						"LEFT and RIGHT turn a page, L and R go to the first and last rows. START: Files' settings (a new server, the download options).";
 				}
