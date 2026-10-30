@@ -276,6 +276,17 @@ EOF
         echo "run-retroarch: screen border $MODE/$th/$BANANA_SYSTEM, picture at $BX,$BY ${BW}x$BH" >&2
     fi
 fi
+# A shader or the screen border each add a full-screen pass on the panels' one shader core (Mali-G52). With the two
+# swapchain images the other systems get (retroarch.cfg, the lowest latency), RetroArch's KMS context waits for every
+# page flip before the next frame can start, so a frame that misses its vblank costs a whole one (Minish Cap drops
+# from ~60 to ~40 fps with lcd3x, and audio stutters as audio_sync chases it). With either active, three images let
+# the next frame render while the last one flips (as the N64 core's own override does, above in spirit): one frame
+# more latency, and the added pass gets the vblank it needs. Nothing when neither is on: the two images stay.
+SC=
+if [ -n "$SP" ] || [ -n "$BA" ] || grep -q '^video_shader_enable = "true"' $CFG 2>/dev/null; then
+    SC=/run/banana/retroarch-perf.cfg
+    printf 'video_max_swapchain_images = "3"\n' > $SC
+fi
 # The Game Boy Advance's saves in one folder for every GBA core, /data/saves/gba/<game>.srm (QA: "would like to be
 # able to use the same save file across both"): RetroArch otherwise keeps a folder per core (sort_savefiles_enable),
 # so a game started in mGBA didn't see its gpSP save. The cores write the same raw save (gpSP pads it to 128 KB with
@@ -323,7 +334,7 @@ if [ -n "$BANANA_DRM_LEASE_FD" ]; then
     # the Pokemon companion (Settings > Other systems): RetroArch's stdout, where it answers the panel's
     # READ_CORE_MEMORY commands, into the pipe banana-ui reads (its log goes to the file above, not there)
     if [ -n "$BANANA_RA_OUT" ] && [ -p "$BANANA_RA_OUT" ]; then exec 4>"$BANANA_RA_OUT"; else exec 4>&1; fi
-    LD_PRELOAD=/usr/lib/banana/banana-leaseshim.so retroarch --config $CFG --appendconfig "$L|$RA$HKA$BA" --verbose \
+    LD_PRELOAD=/usr/lib/banana/banana-leaseshim.so retroarch --config $CFG --appendconfig "$L|$RA$HKA$BA$SC" --verbose \
         --log-file /run/banana/retroarch.log -L "$CORE" "$2" < "${BANANA_RA_CMD:-/dev/null}" >&4 &
     P=$!
     exec 4>&-
@@ -339,7 +350,7 @@ else
     printf 'stdin_cmd_enable = "true"\n' > $L
     [ $ONCE = 1 ] && echo 'savestate_auto_load = "true"' >> $L
     [ -n "$GBASAVE" ] && printf 'savefile_directory = "%s"\nsort_savefiles_enable = "false"\n' $GBASAVE >> $L
-    retroarch --config $CFG --appendconfig "$L|$RA$HKA$BA" -L "$CORE" "$2" < $FIFO &
+    retroarch --config $CFG --appendconfig "$L|$RA$HKA$BA$SC" -L "$CORE" "$2" < $FIFO &
     P=$!
 fi
 trap 'kill -TERM $P 2>/dev/null' TERM INT HUP

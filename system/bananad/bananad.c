@@ -78,6 +78,7 @@ static struct {
 static int devfd[MAXDEV], ndev;
 static void leds_update(void);
 static void audio_route(void);
+static void mic_gains(void);
 static void undim(void);
 static void find_bottom_bl(void);
 static char bottom_bl[64];	/* the bottom panel's backlight name; banana-ui's idle dim owns it while it runs */
@@ -754,6 +755,7 @@ static void suspend_now(const char *why)
 	read_lid();
 	leds_update();
 	if (headphones_in() != headphones) { headphones = !headphones; audio_route(); }
+	mic_gains();	/* the codec's capture gains can come back from suspend at their reset default: the mic silent */
 	ignore_power_until = mono() + 1.0;
 	power_down = 0;
 	last_input = mono();
@@ -910,6 +912,30 @@ static void audio_route(void)
 	    where, card_codec);
 }
 
+/* The rk817's microphone gains: the ADC at 0 dB and the preamp at mic_gain (#14: the codec's "Master" is shared
+ * between the DAC and the ADC, and the volume keys used to take the mic down with the playback; a card saved at
+ * volume 0 recorded at -95 dB). A word from 30 cm reached an RMS of 0.01 at the old preamp 6, 0.08 at 12 (the room's
+ * noise 0.012), which is where the games' and BananaDS's thresholds expect a voice.
+ *
+ * Set at boot and again after a wake or a jack change: the codec can come back from suspend to RAM with the capture
+ * path muted or its ADC/PGA at the reset default, and a DS emulator's capture thread (opened before the sleep, still
+ * reading) then gets pure silence (bananads.1.log's "loudest 0.000") until the gains are put back. The rk817's
+ * capture path (MICL/MICR -> PGA -> ADC) is DAPM-powered and has no capture mux to select, so the two gains are it. */
+static void mic_gains(void)
+{
+	if (card_codec < 0) return;
+	char c[16];
+	snprintf(c, sizeof c, "%d", card_codec);
+	char *cap[] = { "amixer", "-q", "-c", c, "cset", "name=Master Capture Volume", "255,255", NULL };
+	run(cap);
+	if (cfg.mic_gain >= 0 && cfg.mic_gain <= 15) {
+		char g[8];
+		snprintf(g, sizeof g, "%d", cfg.mic_gain);
+		char *gain[] = { "amixer", "-q", "-c", c, "sset", "Mic Capture Gain", g, NULL };
+		run(gain);
+	}
+}
+
 static void audio_setup(void)
 {
 	audio_find_cards();
@@ -919,19 +945,7 @@ static void audio_setup(void)
 	/* the rk817's output path: HP drives both its jack and (on the RG DS) the speaker amplifier */
 	char *argv[] = { "amixer", "-q", "-c", c, "sset", "Playback Mux", "HP", NULL };
 	run(argv);
-	/* the microphone (#14): the rk817's "Master" is the DAC's volume AND the ADC's, and the volume keys set both, so
-	 * with the volume down the games heard next to nothing (a card saved at volume 0 recorded at -95 dB, at 43% at
-	 * -54 dB). The ADC at 0 dB always (the volume script changes playback only now), and the preamp at mic_gain: a
-	 * word from 30 cm reached an RMS of 0.01 at the old 6, 0.08 at 12 (the room's noise 0.012), where the games' and
-	 * BananaDS's thresholds expect a voice */
-	char *cap[] = { "amixer", "-q", "-c", c, "cset", "name=Master Capture Volume", "255,255", NULL };
-	run(cap);
-	if (cfg.mic_gain >= 0 && cfg.mic_gain <= 15) {
-		char g[8];
-		snprintf(g, sizeof g, "%d", cfg.mic_gain);
-		char *gain[] = { "amixer", "-q", "-c", c, "sset", "Mic Capture Gain", g, NULL };
-		run(gain);
-	}
+	mic_gains();
 	audio_route();
 }
 
@@ -1404,7 +1418,7 @@ static void handle(const struct input_event *e)
 		return;
 	}
 	if (e->type == EV_SW && e->code == SW_HEADPHONE_INSERT) {
-		if (headphones != e->value) { headphones = e->value; audio_route(); }
+		if (headphones != e->value) { headphones = e->value; audio_route(); mic_gains(); }
 		return;
 	}
 	if (e->type != EV_KEY) return;
