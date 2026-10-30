@@ -1,9 +1,9 @@
 #!/bin/sh
-# The DS launchers' file work against a made-up card, no emulator: run-drastic's per-game drastic.cfg lines (#117),
-# taken from run-drastic itself (its functions, not a copy).
+# The DS launchers' file work against a made-up card, no emulator: run-drastic's per-game drastic.cfg lines (#117)
+# and its move of fast forward off R3 (#113), taken from run-drastic itself (its functions, not a copy).
 #   sh system/tests/launchers-test.sh
 cd "$(dirname "$0")/../.." || exit 1
-L=$PWD/system/rootfs/usr/libexec/banana
+R=$PWD L=$PWD/system/rootfs/usr/libexec/banana
 T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT
 passed=0 failed=0
@@ -45,6 +45,29 @@ cfg_back hires_3d
 check "$(hires) $(ls -A config | grep -c settings)" "1 0" "an empty marker is dropped, the line left alone"
 cfg_game hires_3d 4
 check "$(hires) $(ls -A config | grep -c settings)" "1 0" "a value other than 0 or 1 never goes in"
+
+echo "run-drastic: fast forward off R3 (#113), save on L2, load from the menu (#77)"
+fn "$L/run-drastic" ff_on_r2
+IMG=$R/buildroot/board/rgds/drastic.cfg
+keys() { grep -E "^controls_$1\[CONTROL_INDEX_(FAST_FORWARD|SAVE_STATE|LOAD_STATE)\]" "${2:-config/drastic.cfg}" | sed 's/.*_INDEX_//; s/\] = /=/' | tr '\n' ' '; }
+check "$(keys a "$IMG")" "SAVE_STATE=1030 LOAD_STATE=65535 FAST_FORWARD=1031 " "the image's controls_a: save L2, load none, fast forward R2"
+check "$(keys b "$IMG")" "SAVE_STATE=1030 LOAD_STATE=65535 FAST_FORWARD=1031 " "the image's controls_b: the same"
+check "$(grep -c '= 1036$' "$IMG")" "0" "nothing on R3 in the image"
+# a card from before: the image's file with the old three
+sed -e 's/^\(controls_[ab]\[CONTROL_INDEX_SAVE_STATE\]\) = .*/\1 = 1031/' -e 's/^\(controls_[ab]\[CONTROL_INDEX_LOAD_STATE\]\) = .*/\1 = 1030/' \
+    -e 's/^\(controls_[ab]\[CONTROL_INDEX_FAST_FORWARD\]\) = .*/\1 = 1036/' "$IMG" > config/drastic.cfg
+ff_on_r2
+check "$(cmp -s config/drastic.cfg "$IMG" && echo same)" "same" "an old card's controls become the image's"
+cp config/drastic.cfg config/once; ff_on_r2
+check "$(cmp -s config/drastic.cfg config/once && echo same)" "same" "twice changes nothing"
+# a player's own setup in set b (load moved to L, 1028): set b left alone, set a moved
+sed -e 's/^\(controls_[ab]\[CONTROL_INDEX_SAVE_STATE\]\) = .*/\1 = 1031/' -e 's/^\(controls_[ab]\[CONTROL_INDEX_FAST_FORWARD\]\) = .*/\1 = 1036/' \
+    -e 's/^\(controls_a\[CONTROL_INDEX_LOAD_STATE\]\) = .*/\1 = 1030/' -e 's/^\(controls_b\[CONTROL_INDEX_LOAD_STATE\]\) = .*/\1 = 1028/' "$IMG" > config/drastic.cfg
+ff_on_r2
+check "$(keys a)" "SAVE_STATE=1030 LOAD_STATE=65535 FAST_FORWARD=1031 " "set a, as it was: moved"
+check "$(keys b)" "SAVE_STATE=1031 LOAD_STATE=1028 FAST_FORWARD=1036 " "set b, changed by the player: left alone"
+rm -f config/drastic.cfg; ff_on_r2
+check "$(ls config | grep -c drastic.cfg)" "0" "no drastic.cfg yet: nothing made"
 cd - >/dev/null || exit 1
 
 echo "launchers-test: $passed passed, $failed failed"
