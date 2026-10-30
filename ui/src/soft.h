@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <cstring>
 #include <functional>
+#include <mutex>
 #include <vector>
 
 namespace banana
@@ -24,6 +25,9 @@ namespace banana
 		enum { CLEAR = 0, SOLID = 1, MIXED = 2 };
 		std::vector<uint32_t> runs;
 		std::vector<uint32_t> rowAt;
+		// a rectangle of solid pixels inside it [ix0, ix1) x [iy0, iy1) (empty: none found): drawn at its own size
+		// with a solid tint, what is under it there can't show
+		int ix0 = 0, iy0 = 0, ix1 = 0, iy1 = 0;
 		// drawn at another size: what a scaled draw samples depends only on its size and where its first pixel's
 		// centre falls in the texture (the sub-pixel phase), so a draw seen again at a size and phase (a tile at rest,
 		// or moving by whole pixels) keeps its samples and is copied from then on. The last few, most recent first;
@@ -31,6 +35,7 @@ namespace banana
 		struct Scaled
 		{
 			double phX, phY; float w, h; int bw, bh;
+			uint64_t frame;	// the frame it was first seen in (a draw seen in more tiles of one frame isn't seen again)
 			std::shared_ptr<SoftTex> tex;
 			bool same(const Scaled& o) const { return phX == o.phX && phY == o.phY && w == o.w && h == o.h && bw == o.bw && bh == o.bh; }
 		};
@@ -75,6 +80,8 @@ namespace banana
 		int skipped = 0;
 		// pixels redrawn (the changed rectangles' area), for the benchmark
 		uint64_t redrawn = 0;
+		// time spent composing the screens (endScreen), ms, for the benchmark
+		double composeMs = 0;
 
 	private:
 		// a screen's draws are recorded and only run at endScreen. The list is compared with the last frame's, draw by
@@ -93,6 +100,7 @@ namespace banana
 		{
 			Cmd c;
 			Clip box;	// the pixels it can touch: its rectangle in its clip
+			Clip opq;	// the pixels it covers with solid colour (nothing under them shows; empty: none). Not compared
 			bool operator==(const Item& o) const
 			{
 				return c.op == o.c.op && c.tex == o.c.tex && c.x == o.c.x && c.y == o.c.y && c.w == o.c.w && c.h == o.c.h &&
@@ -101,12 +109,23 @@ namespace banana
 		};
 		std::vector<Cmd> rec[2];
 		std::vector<Item> items, last[2];
-		std::vector<Clip> dirty;
+		std::vector<uint8_t> dirty;	// the tiles to draw again (TW x TH pixels each, rows of tilesX)
+		int tilesX = 0, tilesY = 0;
+		static const int TW = 64, TH = 32;
 		bool full[2] = { true, true };
 		void resolve();
 		Clip bounds(const Cmd& c, const Clip& clip) const;
 		void addDirty(const Clip& r);
-		void redraw(const Clip& r);
+		std::vector<Clip> tiles;	// the tiles to draw this frame
+		std::mutex scaledLock;		// (a scaled draw keeps its samples on its texture, and uses colA ... below)
+		void composeTile(const Clip& t, uint32_t* px, size_t n, size_t fromBase);
+		// a screen's first n draws composed (the background under what moves), kept while its list starts with them
+		struct Base { std::vector<uint32_t> px; std::vector<Item> items; size_t n = 0; uint64_t built = 0; size_t hist[8] = {}; unsigned histAt = 0; };
+		Base base[2];
+		void updateBase(const std::vector<Item>& old);
+		uint32_t* tgt = nullptr;	// the pixels drawn on (the screen's, or its background's)
+		Clip opaqueBox(const Item& it) const;
+		uint64_t frameNo = 0;
 		const uint64_t* vertical(SoftTex* t, float y, float h, int64_t stepY, int by0, int by1);
 		void columns(const SoftTex* t, float x, int64_t stepX, int bx0, int x0, int n);
 		void sample(const SoftTex* t, float x, float y, float w, float h, int x0, int y0, int x1, int y1, uint32_t* px, uint8_t* a8, int stride);

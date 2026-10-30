@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<gameList>
+	<game>
+		<path>./Store.app</path>
+		<name>Store</name>
+		<desc>Apps for the handheld, from their makers' releases on GitHub: install, update and remove them here. They show up on the Apps shelf.</desc>
+		<image>./media/store-image.png</image>
+		<developer>JorreFog</developer>
+		<genre>Tool</genre>
+	</game>
+</gameList>

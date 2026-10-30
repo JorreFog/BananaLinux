@@ -3,6 +3,7 @@
 // present() copies the part that changed into the hidden one and flips to it on the next vblank.
 #include <cstdint>
 #include <string>
+#include "colors.h"
 
 namespace banana
 {
@@ -27,12 +28,18 @@ namespace banana
 		// the first DRM device with two connected panels of top's connector type; top is the connector shown as the
 		// top screen ("DSI-2" on the handheld; "Virtual-2" on QEMU's virtio GPU, see tools/qemu-boot.sh)
 		bool open(const std::string& top, std::string& err);
+		// the boot's early light-up (banana-ui --panels-on, from rcS's first lines): both panels powered up while the
+		// rest of the boot runs; the master given up as soon as the modesets are queued, so the menu's own open() takes the
+		// display over at once (the panels lit, no second power-up) whenever it comes
+		bool handOver = false;
 		void close();
 		bool isOpen() const { return fd >= 0; }
 		int width() const { return W; }
 		int height() const { return H; }
 		int pollFd() const { return fd; }
 		bool flipPending() const { return pending > 0; }
+		bool masterAtOpen = false;	// the master was had at open() (else another program still held it after the wait)
+		int failedFlips = 0, failedSets = 0;	// page flips refused, and of those not put up by a modeset either (no master)
 		// the composed screens (rows of width() words) and what changed on each since the last present
 		bool present(const uint32_t* const screens[2], const Damage dmg[2]);
 		void handleEvents();	// the flip events from pollFd()
@@ -43,13 +50,24 @@ namespace banana
 		// program's DRM device, or -1. present() and restore() leave the screen alone until close().
 		int lease(int s);
 		int leasedScreen() const { return leased; }
+		// the display controller's interrupt storm (VOP2 POST_BUF_EMPTY, a panel's scanout underflowing ~100k times a
+		// second, seen after RetroArch's leased panel was given back): measured over 200 ms, and when it storms both
+		// CRTCs are switched off and on again, the one thing that ends it. The rate after, or -1 when it was calm.
+		long stormCheck();
+		// the interrupts so far, for a cheap look every few seconds (-1: unknown)
+		static long long vopIrqCount();
+		// the screen colours' table (colors.h): on c.screen's CRTC (GAMMA_LUT), and none on the other (the display
+		// controller has one table); neutral values: none on either. "" when it took, else what the kernel said
+		std::string setColors(const ScreenColors& c);
 
 	private:
 		struct Buf { uint32_t handle = 0, fb = 0, pitch = 0; uint64_t size = 0; uint8_t* map = nullptr; };
 		struct Panel { uint32_t conn = 0, crtc = 0; uint8_t mode[68]; Buf buf[2]; int front = 0; Damage missed[2]; };
 		int fd = -1, W = 0, H = 0, pending = 0, leased = -1;
+		int lightWaiting = 0;	// lightBoth's flips still to come (a member: an event late past its wait lands here)
 		Panel p[2];
 		bool makeBuf(Buf& b);
+		bool lightBoth();
 		void freeBuf(Buf& b);
 	};
 }

@@ -1,0 +1,1396 @@
+{
+  "name": "Phosphor Terminal",
+  "author": "Banana Theme Studio",
+  "base": "dark",
+  "font": "pixel",
+  "screens": {
+    "home": {
+      "top": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "#00000000",
+          "use": "tube"
+        },
+        {
+          "type": "rect",
+          "x": 24,
+          "y": 48,
+          "w": 592,
+          "h": 322,
+          "fill": "#00000000",
+          "use": "box"
+        },
+        {
+          "type": "rect",
+          "x": 38,
+          "y": 40,
+          "w": 118,
+          "h": 16,
+          "fill": "=bg"
+        },
+        {
+          "type": "text",
+          "x": 44,
+          "y": 40,
+          "text": "[ /sys/info ]",
+          "size": 14,
+          "color": "=mid"
+        },
+        {
+          "type": "rect",
+          "x": 38,
+          "y": 66,
+          "w": 140,
+          "h": 140,
+          "fill": "#00000000",
+          "use": "box"
+        },
+        {
+          "type": "image",
+          "x": "=44 + round(5 * (1 - progress(moved, 260)) * sin(moved * 0.8))",
+          "y": 72,
+          "w": 128,
+          "h": 128,
+          "src": "{sys.icon}",
+          "fit": "pixelContain",
+          "tint": "=ph",
+          "opacity": "=0.35 + 0.65 * easeOut(progress(moved, 300))"
+        },
+        {
+          "type": "text",
+          "x": 194,
+          "y": 64,
+          "text": "{upper(sys.name)}",
+          "size": 34,
+          "color": "=ph",
+          "w": 410,
+          "font": "pixel-medium",
+          "shadow": {
+            "x": 2,
+            "y": 2,
+            "color": "#0d4a1e"
+          }
+        },
+        {
+          "type": "text",
+          "x": 196,
+          "y": 114,
+          "text": "maker ........",
+          "size": 16,
+          "color": "=dim"
+        },
+        {
+          "type": "text",
+          "x": 320,
+          "y": 114,
+          "text": "{either(sys.maker, '-')}",
+          "size": 16,
+          "color": "=hot",
+          "w": 280
+        },
+        {
+          "type": "text",
+          "x": 196,
+          "y": 136,
+          "text": "games ........",
+          "size": 16,
+          "color": "=dim"
+        },
+        {
+          "type": "text",
+          "x": 320,
+          "y": 136,
+          "text": "{sys.games}",
+          "size": 16,
+          "color": "=hot",
+          "w": 280
+        },
+        {
+          "type": "text",
+          "x": 196,
+          "y": 158,
+          "text": "played ........",
+          "size": 16,
+          "color": "=dim"
+        },
+        {
+          "type": "text",
+          "x": 320,
+          "y": 158,
+          "text": "{sys.played}",
+          "size": 16,
+          "color": "=hot",
+          "w": 280
+        },
+        {
+          "type": "text",
+          "x": 196,
+          "y": 180,
+          "text": "uptime ........",
+          "size": 16,
+          "color": "=dim"
+        },
+        {
+          "type": "text",
+          "x": 320,
+          "y": 180,
+          "text": "{either(sys.time, '0m')}",
+          "size": 16,
+          "color": "=hot",
+          "w": 280
+        },
+        {
+          "type": "text",
+          "x": 40,
+          "y": 222,
+          "text": "=\"disk  [\" + substr('########################', 0, round(24 * sys.played / max(sys.games, 1))) + substr('........................', 0, 24 - round(24 * sys.played / max(sys.games, 1))) + '] ' + round(100 * sys.played / max(sys.games, 1)) + '% played'",
+          "size": 16,
+          "color": "=mid",
+          "w": 560
+        },
+        {
+          "type": "text",
+          "x": 40,
+          "y": 250,
+          "text": "> last session: {sys.resumeTitle}",
+          "size": 16,
+          "color": "=ph",
+          "w": 560,
+          "visible": "=sys.hasResume"
+        },
+        {
+          "type": "text",
+          "x": 40,
+          "y": 250,
+          "text": "> no saved session",
+          "size": 16,
+          "color": "=dim",
+          "w": 560,
+          "visible": "=!sys.hasResume"
+        },
+        {
+          "type": "text",
+          "x": 40,
+          "y": 272,
+          "text": "  press [X] to resume it",
+          "size": 13,
+          "color": "=dim",
+          "w": 560,
+          "visible": "=sys.hasResume"
+        },
+        {
+          "type": "rect",
+          "x": 38,
+          "y": 304,
+          "w": 564,
+          "h": 1,
+          "fill": "=faint"
+        },
+        {
+          "type": "group",
+          "x": 40,
+          "y": 322,
+          "w": 560,
+          "h": 22,
+          "children": [
+            {
+              "type": "text",
+              "x": 0,
+              "y": 0,
+              "text": "root@banana:~/roms$ ",
+              "size": 17,
+              "color": "=mid"
+            },
+            {
+              "type": "text",
+              "x": 0,
+              "y": 0,
+              "text": "=substr('cd ' + lower(sys.id) + '/', 0, floor(typed * 22))",
+              "size": 17,
+              "color": "=hot"
+            },
+            {
+              "type": "rect",
+              "x": 0,
+              "y": 0,
+              "w": 10,
+              "h": 18,
+              "fill": "=ph",
+              "opacity": "=(step(0.5, pulse(time, 1060)))",
+              "shadow": {
+                "x": 0,
+                "y": 0,
+                "blur": 8,
+                "spread": 0,
+                "color": "#39ff6a88"
+              }
+            }
+          ],
+          "layout": "row",
+          "align": "center",
+          "gap": 0
+        },
+        {
+          "type": "text",
+          "x": 30,
+          "y": 384,
+          "text": "{systems.count} filesystems mounted on /roms   |   {either(brand, 'BananaOS')}",
+          "size": 14,
+          "color": "=dim",
+          "w": 580
+        },
+        {
+          "type": "text",
+          "x": 30,
+          "y": 406,
+          "text": "Last login: {date} on tty1. Type 'help' for help.",
+          "size": 14,
+          "color": "=dim",
+          "w": 580
+        },
+        {
+          "type": "text",
+          "x": 30,
+          "y": 432,
+          "text": "=pad(cursor + 1, 2, '0') + '/' + pad(count, 2, '0') + '  ' + upper(sys.id)",
+          "size": 14,
+          "color": "=faint",
+          "w": 580
+        }
+      ],
+      "bottom": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "#00000000",
+          "use": "tube"
+        },
+        {
+          "type": "text",
+          "x": 28,
+          "y": 22,
+          "text": "root@banana:~$ ls -l /roms",
+          "size": 16,
+          "color": "=mid"
+        },
+        {
+          "type": "text",
+          "x": 420,
+          "y": 22,
+          "text": "total {systems.count}",
+          "size": 16,
+          "color": "=dim",
+          "w": 192,
+          "align": "right"
+        },
+        {
+          "type": "rect",
+          "x": 22,
+          "y": 48,
+          "w": 596,
+          "h": 360,
+          "fill": "#00000000",
+          "use": "box"
+        },
+        {
+          "type": "list",
+          "source": "systems",
+          "direction": "column",
+          "x": 28,
+          "y": 54,
+          "w": 584,
+          "h": 348,
+          "itemW": 584,
+          "itemH": 26,
+          "gap": 2,
+          "scrollMode": "edge",
+          "item": {
+            "type": "group",
+            "w": 150,
+            "h": 190,
+            "children": [
+              {
+                "type": "rect",
+                "x": 0,
+                "y": 0,
+                "w": 584,
+                "h": 26,
+                "fill": "#00000000",
+                "states": [
+                  {
+                    "when": "=sel",
+                    "fill": "=ph",
+                    "shadow": {
+                      "x": 0,
+                      "y": 0,
+                      "blur": 14,
+                      "spread": 0,
+                      "color": "#39ff6a66"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "x": 8,
+                "y": 4,
+                "text": "drwxr-xr-x",
+                "size": 16,
+                "color": "=sel ? bg : dim"
+              },
+              {
+                "type": "text",
+                "x": 118,
+                "y": 4,
+                "text": "{item.games}",
+                "size": 16,
+                "color": "=sel ? bg : hot",
+                "w": 36,
+                "align": "right"
+              },
+              {
+                "type": "text",
+                "x": 160,
+                "y": 4,
+                "text": "=item.games == 1 ? 'game' : 'games'",
+                "size": 16,
+                "color": "=sel ? bg : dim"
+              },
+              {
+                "type": "text",
+                "x": 230,
+                "y": 3,
+                "text": "{lower(item.id)}/",
+                "size": 17,
+                "color": "=sel ? bg : ph",
+                "w": 150,
+                "font": "pixel-medium"
+              },
+              {
+                "type": "text",
+                "x": 386,
+                "y": 4,
+                "text": "# {item.name}",
+                "size": 16,
+                "color": "=sel ? bg : mid",
+                "w": 192
+              }
+            ],
+            "opacity": "=clamp((entered - min(abs(rel), 12) * 40) / 90, 0, 1)"
+          }
+        },
+        {
+          "type": "text",
+          "x": 36,
+          "y": "=62 + min(count, 12) * 28",
+          "text": "root@banana:~$ ",
+          "size": 16,
+          "color": "=mid",
+          "visible": "=count < 12"
+        },
+        {
+          "type": "rect",
+          "x": 170,
+          "y": "=62 + min(count, 12) * 28",
+          "w": 9,
+          "h": 17,
+          "fill": "=mid",
+          "visible": "=count < 12"
+        },
+        {
+          "type": "rect",
+          "x": 28,
+          "y": 420,
+          "w": 134,
+          "h": 20,
+          "fill": "=mid"
+        },
+        {
+          "type": "text",
+          "x": 34,
+          "y": 421,
+          "text": "='--More--(' + round((cursor + 1) * 100 / max(count, 1)) + '%)'",
+          "size": 15,
+          "color": "=bg",
+          "w": 126
+        },
+        {
+          "type": "list",
+          "source": "hints",
+          "direction": "row",
+          "x": 172,
+          "y": 421,
+          "w": 446,
+          "h": 20,
+          "itemW": 150,
+          "itemH": 190,
+          "gap": 10,
+          "scrollMode": "none",
+          "item": {
+            "type": "text",
+            "w": "=(len(item.key) + len(item.label) + 3) * 7 + 8",
+            "h": 190,
+            "children": [],
+            "text": "[{item.key}] {item.label}",
+            "size": 14,
+            "color": "=mid",
+            "y": 1
+          },
+          "flow": true
+        }
+      ]
+    },
+    "library": {
+      "top": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "#00000000",
+          "use": "tube"
+        },
+        {
+          "type": "text",
+          "x": 28,
+          "y": 44,
+          "text": "root@banana:~/roms/{lower(game.systemId)}$ stat \"{game.title}\"",
+          "size": 15,
+          "color": "=mid",
+          "w": 584
+        },
+        {
+          "type": "rect",
+          "x": 24,
+          "y": 70,
+          "w": 592,
+          "h": 290,
+          "fill": "#00000000",
+          "use": "box"
+        },
+        {
+          "type": "rect",
+          "x": 36,
+          "y": 82,
+          "w": 208,
+          "h": 208,
+          "fill": "#00000000",
+          "use": "box"
+        },
+        {
+          "type": "rect",
+          "x": 40,
+          "y": 86,
+          "w": 200,
+          "h": 200,
+          "fill": "=faint"
+        },
+        {
+          "type": "text",
+          "x": 40,
+          "y": 176,
+          "text": "[ NO SIGNAL ]",
+          "size": 16,
+          "color": "=mid",
+          "w": 200,
+          "align": "center"
+        },
+        {
+          "type": "image",
+          "x": 40,
+          "y": 86,
+          "w": 200,
+          "h": 200,
+          "src": "{game.art}",
+          "fit": "cover",
+          "fallback": "{game.icon}",
+          "tint": "=ph"
+        },
+        {
+          "type": "rect",
+          "x": 40,
+          "y": "=86 + 200 * easeOut(progress(min(moved, entered), 520))",
+          "w": 200,
+          "h": "=200 * (1 - easeOut(progress(min(moved, entered), 520)))",
+          "fill": "#020b04"
+        },
+        {
+          "type": "rect",
+          "x": 40,
+          "y": "=85 + 200 * easeOut(progress(min(moved, entered), 520))",
+          "w": 200,
+          "h": 2,
+          "fill": "=hot",
+          "visible": "=progress(min(moved, entered), 520) < 1",
+          "shadow": {
+            "x": 0,
+            "y": 0,
+            "blur": 8,
+            "spread": 0,
+            "color": "#39ff6aaa"
+          }
+        },
+        {
+          "type": "text",
+          "x": 260,
+          "y": 84,
+          "text": "{game.title}",
+          "size": 24,
+          "color": "=hot",
+          "w": 344,
+          "font": "pixel-medium",
+          "wrap": true,
+          "maxLines": 2
+        },
+        {
+          "type": "text",
+          "x": 260,
+          "y": 144,
+          "text": "{either(game.sub, game.systemName)}",
+          "size": 15,
+          "color": "=dim",
+          "w": 344
+        },
+        {
+          "type": "text",
+          "x": 262,
+          "y": 176,
+          "text": "Plays:",
+          "size": 16,
+          "color": "=dim"
+        },
+        {
+          "type": "text",
+          "x": 350,
+          "y": 176,
+          "text": "{game.plays}",
+          "size": 16,
+          "color": "=ph",
+          "w": 254
+        },
+        {
+          "type": "text",
+          "x": 262,
+          "y": 200,
+          "text": "Access:",
+          "size": 16,
+          "color": "=dim"
+        },
+        {
+          "type": "text",
+          "x": 350,
+          "y": 200,
+          "text": "{either(game.last, 'never')}",
+          "size": 16,
+          "color": "=ph",
+          "w": 254
+        },
+        {
+          "type": "text",
+          "x": 262,
+          "y": 224,
+          "text": "Time:",
+          "size": 16,
+          "color": "=dim"
+        },
+        {
+          "type": "text",
+          "x": 350,
+          "y": 224,
+          "text": "{either(game.time, '0m')}",
+          "size": 16,
+          "color": "=ph",
+          "w": 254
+        },
+        {
+          "type": "text",
+          "x": 262,
+          "y": 248,
+          "text": "Flags:",
+          "size": 16,
+          "color": "=dim"
+        },
+        {
+          "type": "text",
+          "x": 350,
+          "y": 248,
+          "text": "{game.fav ? '+fav' : '-'}",
+          "size": 16,
+          "color": "=ph",
+          "w": 254
+        },
+        {
+          "type": "text",
+          "x": 40,
+          "y": 304,
+          "text": "=\"ach   [\" + substr('####################', 0, round(20 * game.achProgress)) + substr('....................', 0, 20 - round(20 * game.achProgress)) + '] ' + game.achLabel",
+          "size": 16,
+          "color": "=mid",
+          "w": 560,
+          "visible": "=game.achB > 0"
+        },
+        {
+          "type": "text",
+          "x": 40,
+          "y": 304,
+          "text": "ach   (none recorded)",
+          "size": 16,
+          "color": "=dim",
+          "w": 560,
+          "visible": "=game.achB <= 0"
+        },
+        {
+          "type": "text",
+          "x": 40,
+          "y": 330,
+          "text": "File: {game.rom}",
+          "size": 13,
+          "color": "=dim",
+          "w": 560
+        },
+        {
+          "type": "text",
+          "x": 30,
+          "y": 380,
+          "text": "inode {game.index + 1} of {games.count} in {game.systemName}",
+          "size": 14,
+          "color": "=dim",
+          "w": 580
+        },
+        {
+          "type": "text",
+          "x": 30,
+          "y": 404,
+          "text": "[L]/[R] cd ../prev-system  ../next-system",
+          "size": 14,
+          "color": "=faint",
+          "w": 580
+        }
+      ],
+      "bottom": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "#00000000",
+          "use": "tube"
+        },
+        {
+          "type": "text",
+          "x": 28,
+          "y": 22,
+          "text": "$ ls -l ~/roms/{lower(sys.id)}",
+          "size": 16,
+          "color": "=mid",
+          "w": 420
+        },
+        {
+          "type": "text",
+          "x": 420,
+          "y": 22,
+          "text": "total {games.count}",
+          "size": 16,
+          "color": "=dim",
+          "w": 192,
+          "align": "right"
+        },
+        {
+          "type": "rect",
+          "x": 22,
+          "y": 48,
+          "w": 596,
+          "h": 360,
+          "fill": "#00000000",
+          "use": "box"
+        },
+        {
+          "type": "text",
+          "x": 30,
+          "y": 54,
+          "text": "MODE",
+          "size": 13,
+          "color": "=dim"
+        },
+        {
+          "type": "text",
+          "x": 130,
+          "y": 54,
+          "text": "PLAYS",
+          "size": 13,
+          "color": "=dim"
+        },
+        {
+          "type": "text",
+          "x": 206,
+          "y": 54,
+          "text": "LAST",
+          "size": 13,
+          "color": "=dim"
+        },
+        {
+          "type": "text",
+          "x": 330,
+          "y": 54,
+          "text": "NAME",
+          "size": 13,
+          "color": "=dim"
+        },
+        {
+          "type": "rect",
+          "x": 28,
+          "y": 72,
+          "w": 584,
+          "h": 1,
+          "fill": "=faint"
+        },
+        {
+          "type": "list",
+          "source": "games",
+          "direction": "column",
+          "x": 28,
+          "y": 78,
+          "w": 584,
+          "h": 324,
+          "itemW": 584,
+          "itemH": 24,
+          "gap": 2,
+          "scrollMode": "edge",
+          "item": {
+            "type": "group",
+            "w": 150,
+            "h": 190,
+            "children": [
+              {
+                "type": "rect",
+                "x": 0,
+                "y": 0,
+                "w": 584,
+                "h": 24,
+                "fill": "#00000000",
+                "states": [
+                  {
+                    "when": "=sel",
+                    "fill": "=ph",
+                    "shadow": {
+                      "x": 0,
+                      "y": 0,
+                      "blur": 14,
+                      "spread": 0,
+                      "color": "#39ff6a66"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "x": 4,
+                "y": 3,
+                "text": "=item.fav ? '-rwxr-xr-x' : '-rw-r--r--'",
+                "size": 15,
+                "color": "=sel ? bg : dim"
+              },
+              {
+                "type": "text",
+                "x": 116,
+                "y": 3,
+                "text": "{item.plays}",
+                "size": 15,
+                "color": "=sel ? bg : hot",
+                "w": 50,
+                "align": "right"
+              },
+              {
+                "type": "text",
+                "x": 180,
+                "y": 3,
+                "text": "{either(item.last, '--')}",
+                "size": 15,
+                "color": "=sel ? bg : mid",
+                "w": 140
+              },
+              {
+                "type": "text",
+                "x": 302,
+                "y": 3,
+                "text": "=item.title + (item.fav ? '*' : '')",
+                "size": 15,
+                "color": "=sel ? bg : ph",
+                "w": 276
+              }
+            ],
+            "opacity": "=clamp((entered - min(abs(rel), 13) * 35) / 90, 0, 1)"
+          }
+        },
+        {
+          "type": "rect",
+          "x": 28,
+          "y": 420,
+          "w": 134,
+          "h": 20,
+          "fill": "=mid"
+        },
+        {
+          "type": "text",
+          "x": 34,
+          "y": 421,
+          "text": "='--More--(' + round((cursor + 1) * 100 / max(count, 1)) + '%)'",
+          "size": 15,
+          "color": "=bg",
+          "w": 126
+        },
+        {
+          "type": "list",
+          "source": "hints",
+          "direction": "row",
+          "x": 172,
+          "y": 421,
+          "w": 446,
+          "h": 20,
+          "itemW": 150,
+          "itemH": 190,
+          "gap": 10,
+          "scrollMode": "none",
+          "item": {
+            "type": "text",
+            "w": "=(len(item.key) + len(item.label) + 3) * 7 + 8",
+            "h": 190,
+            "children": [],
+            "text": "[{item.key}] {item.label}",
+            "size": 14,
+            "color": "=mid",
+            "y": 1
+          },
+          "flow": true
+        }
+      ]
+    },
+    "all": {
+      "top": [
+        {
+          "type": "rect",
+          "x": 18,
+          "y": 16,
+          "w": 604,
+          "h": 20,
+          "fill": "#00000000",
+          "use": "status"
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "#00000000",
+          "use": "crt"
+        }
+      ],
+      "bottom": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "#00000000",
+          "use": "crt"
+        }
+      ]
+    },
+    "launch": {
+      "top": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "#00000000",
+          "use": "tube"
+        },
+        {
+          "type": "text",
+          "x": 28,
+          "y": 44,
+          "text": "root@banana:~$ exec \"{game.rom}\"",
+          "size": 15,
+          "color": "=mid",
+          "w": 584
+        },
+        {
+          "type": "list",
+          "source": "range",
+          "direction": "column",
+          "x": 30,
+          "y": 72,
+          "w": 580,
+          "h": 360,
+          "itemW": 580,
+          "itemH": 28,
+          "gap": 4,
+          "scrollMode": "none",
+          "item": {
+            "type": "group",
+            "w": 150,
+            "h": 190,
+            "children": [
+              {
+                "type": "text",
+                "x": 0,
+                "y": 4,
+                "text": "=i == 10 ? '[ >>>> ]' : '[  OK  ]'",
+                "size": 16,
+                "color": "=i == 10 ? hot : ph"
+              },
+              {
+                "type": "text",
+                "x": 96,
+                "y": 4,
+                "text": "=pick(i, 'Mounting /roms/' + lower(game.systemId), 'Loading ' + game.systemName + ' core', 'Reading ROM header', 'Verifying checksum', 'Restoring save RAM', 'Mapping input devices', 'Allocating video memory', 'Syncing audio clock', 'Starting ' + game.title, 'Releasing the console', 'Handing over. Good luck.')",
+                "size": 16,
+                "color": "=i == 10 ? hot : mid",
+                "w": 484
+              }
+            ],
+            "visible": "=lp >= i * 0.07 + 0.02"
+          },
+          "count": 11
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "#00000000",
+          "use": "poweroff"
+        }
+      ],
+      "bottom": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "#00000000",
+          "use": "tube"
+        },
+        {
+          "type": "rect",
+          "x": 40,
+          "y": 130,
+          "w": 560,
+          "h": 200,
+          "fill": "#00000000",
+          "use": "box"
+        },
+        {
+          "type": "rect",
+          "x": 56,
+          "y": 122,
+          "w": 150,
+          "h": 16,
+          "fill": "=bg"
+        },
+        {
+          "type": "text",
+          "x": 62,
+          "y": 121,
+          "text": "[ loading image ]",
+          "size": 14,
+          "color": "=mid"
+        },
+        {
+          "type": "text",
+          "x": 64,
+          "y": 156,
+          "text": "{game.title}",
+          "size": 22,
+          "color": "=hot",
+          "w": 512,
+          "font": "pixel-medium"
+        },
+        {
+          "type": "rect",
+          "x": 64,
+          "y": 200,
+          "w": 512,
+          "h": 30,
+          "fill": "#00000000",
+          "border": 1,
+          "borderColor": "=ph"
+        },
+        {
+          "type": "rect",
+          "x": 68,
+          "y": 204,
+          "w": "=504 * easeInOut(clamp(lp / 0.82, 0, 1))",
+          "h": 22,
+          "fill": "=ph",
+          "shadow": {
+            "x": 0,
+            "y": 0,
+            "blur": 12,
+            "spread": 0,
+            "color": "#39ff6a88"
+          }
+        },
+        {
+          "type": "text",
+          "x": 64,
+          "y": 244,
+          "text": "='[' + substr('##############################', 0, floor(30 * clamp(lp / 0.82, 0, 1))) + substr('..............................', 0, 30 - floor(30 * clamp(lp / 0.82, 0, 1))) + ']'",
+          "size": 16,
+          "color": "=mid",
+          "w": 512
+        },
+        {
+          "type": "text",
+          "x": 64,
+          "y": 244,
+          "text": "{round(100 * clamp(lp / 0.82, 0, 1))}%",
+          "size": 16,
+          "color": "=hot",
+          "w": 512,
+          "align": "right"
+        },
+        {
+          "type": "text",
+          "x": 64,
+          "y": 276,
+          "text": "='' + round(4096 * clamp(lp / 0.82, 0, 1)) + ' / 4096 KiB   ' + game.systemName",
+          "size": 14,
+          "color": "=dim",
+          "w": 512
+        },
+        {
+          "type": "text",
+          "x": 40,
+          "y": 360,
+          "text": "do not power off the console",
+          "size": 14,
+          "color": "=dim",
+          "w": 560,
+          "align": "center"
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "#00000000",
+          "use": "poweroff"
+        }
+      ]
+    }
+  },
+  "colors": {
+    "screenBg": "#010702",
+    "ink": "#39ff6a",
+    "muted": "#22b84a",
+    "line": "#137a30"
+  },
+  "vars": {
+    "bg": "#010702",
+    "bg2": "#03190b",
+    "ph": "#39ff6a",
+    "hot": "#c6ffd4",
+    "mid": "#23b84b",
+    "dim": "#147a31",
+    "faint": "#0a3a18",
+    "bar": "=substr('##########', 0, round(clamp(battery, 0, 100) / 10)) + substr('..........', 0, 10 - round(clamp(battery, 0, 100) / 10))",
+    "typed": "=progress(moved, 650)",
+    "lp": "=launch.progress"
+  },
+  "components": {
+    "crt": {
+      "type": "group",
+      "children": [
+        {
+          "type": "list",
+          "source": "range",
+          "direction": "column",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "itemW": 640,
+          "itemH": 1,
+          "gap": 2,
+          "scrollMode": "none",
+          "item": {
+            "type": "group",
+            "w": 150,
+            "h": 190,
+            "children": [
+              {
+                "type": "rect",
+                "x": 0,
+                "y": 0,
+                "w": 640,
+                "h": 1,
+                "fill": "#00000070"
+              }
+            ]
+          },
+          "count": 160
+        },
+        {
+          "type": "rect",
+          "x": -46,
+          "y": -46,
+          "w": 732,
+          "h": 572,
+          "fill": "#00000000",
+          "border": 56,
+          "borderColor": "#000000",
+          "radius": 72
+        },
+        {
+          "type": "rect",
+          "x": 10,
+          "y": 10,
+          "w": 620,
+          "h": 460,
+          "fill": "#00000000",
+          "border": 1,
+          "borderColor": "#0f4a20",
+          "radius": 22
+        }
+      ]
+    },
+    "box": {
+      "type": "group",
+      "children": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": "100%",
+          "h": "100%",
+          "fill": "#03170a",
+          "border": 1,
+          "borderColor": "=dim",
+          "radius": 2,
+          "shadow": {
+            "x": 0,
+            "y": 0,
+            "blur": 14,
+            "spread": 0,
+            "color": "#39ff6a14"
+          }
+        }
+      ]
+    },
+    "tube": {
+      "type": "group",
+      "children": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "#202430",
+          "gradient": {
+            "angle": 180,
+            "stops": [
+              "=bg2",
+              "=bg + ' 70%'",
+              "=bg"
+            ]
+          }
+        },
+        {
+          "type": "rect",
+          "x": 320,
+          "y": 230,
+          "w": 380,
+          "h": 180,
+          "fill": "#00000000",
+          "anchor": "center",
+          "radius": "50%",
+          "shadow": {
+            "x": 0,
+            "y": 0,
+            "blur": 140,
+            "spread": -40,
+            "color": "#39ff6a1c"
+          }
+        }
+      ]
+    },
+    "poweroff": {
+      "type": "group",
+      "children": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": "=240 * smoothstep(0.84, 0.95, lp)",
+          "fill": "#000000"
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": "=480 - 240 * smoothstep(0.84, 0.95, lp)",
+          "w": 640,
+          "h": "=240 * smoothstep(0.84, 0.95, lp) + 1",
+          "fill": "#000000"
+        },
+        {
+          "type": "rect",
+          "x": 320,
+          "y": 240,
+          "w": "=640 * (1 - smoothstep(0.95, 1, lp))",
+          "h": 2,
+          "fill": "=hot",
+          "anchor": "center",
+          "visible": "=lp > 0.86",
+          "shadow": {
+            "x": 0,
+            "y": 0,
+            "blur": 16,
+            "spread": 2,
+            "color": "#39ff6aaa"
+          }
+        }
+      ]
+    },
+    "status": {
+      "type": "group",
+      "children": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 604,
+          "h": 20,
+          "fill": "=ph",
+          "shadow": {
+            "x": 0,
+            "y": 0,
+            "blur": 12,
+            "spread": 0,
+            "color": "#39ff6a55"
+          }
+        },
+        {
+          "type": "text",
+          "x": 8,
+          "y": 1,
+          "text": "BANANA tty1",
+          "size": 15,
+          "color": "=bg",
+          "font": "pixel-medium"
+        },
+        {
+          "type": "text",
+          "x": 150,
+          "y": 1,
+          "text": "{date} {clock}",
+          "size": 15,
+          "color": "=bg",
+          "w": 150
+        },
+        {
+          "type": "text",
+          "x": 300,
+          "y": 1,
+          "text": "=online ? 'wlan0:UP' : 'wlan0:--'",
+          "size": 15,
+          "color": "=bg",
+          "w": 110
+        },
+        {
+          "type": "text",
+          "x": 414,
+          "y": 1,
+          "text": "=battery < 0 ? 'AC' : (charging ? '+' : '') + 'BAT[' + bar + '] ' + battery + '%'",
+          "size": 15,
+          "color": "=bg",
+          "w": 184,
+          "align": "right"
+        }
+      ]
+    }
+  },
+  "input": {
+    "home": {
+      "up": "prev",
+      "down": "next",
+      "left": "prev",
+      "right": "next",
+      "l": "first",
+      "r": "last",
+      "a": "open",
+      "x": "resume",
+      "y": "fav"
+    },
+    "library": {
+      "up": "prev",
+      "down": "next",
+      "left": "first",
+      "right": "last",
+      "l": "prevSystem",
+      "r": "nextSystem",
+      "a": "open",
+      "b": "back",
+      "y": "fav"
+    }
+  },
+  "hints": {
+    "home": [
+      [
+        "A",
+        "cd"
+      ],
+      [
+        "X",
+        "resume"
+      ],
+      [
+        "Y",
+        "+fav"
+      ]
+    ],
+    "library": [
+      [
+        "A",
+        "exec"
+      ],
+      [
+        "B",
+        "exit"
+      ],
+      [
+        "Y",
+        "+fav"
+      ]
+    ]
+  },
+  "behavior": {
+    "cues": {
+      "insert": 1500
+    },
+    "launchMs": 2200,
+    "scrollMs": 70,
+    "settleMs": 750,
+    "fps": 20,
+    "extraHints": true
+  },
+  "accent": "#39ff6a"
+}

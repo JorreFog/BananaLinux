@@ -9,50 +9,124 @@
 (function (global) {
   "use strict";
 
-  // ---- values (the engine's EV): a JS number or string, with EV's coercion rules -------------------
-  function evNum(v) {
-    if (typeof v === "number") return v;
-    const d = parseFloat(v);
-    return Number.isNaN(d) ? 0 : d;			// strtod: no number -> 0
+  // ---- the C library, as expr.cpp sees it ---------------------------------------------------------
+  // The engine's strings are UTF-8 bytes and its character classes are the C locale's (ASCII only); its numbers
+  // come from strtod and go out through printf; std::min/max, std::round and pow have C's rules for NaN and
+  // halves. Each helper here is the C call it is named after.
+  const isSpaceC = (ch) => ch === " " || ch === "\t" || ch === "\n" || ch === "\v" || ch === "\f" || ch === "\r";
+  const isDigitC = (ch) => ch >= "0" && ch <= "9";
+  const isXDigitC = (ch) => /^[0-9a-fA-F]$/.test(ch);
+  // std::min / std::max: (b < a) ? b : a and (a < b) ? b : a, so a NaN on one side is not always the answer
+  const cmin = (a, b) => (b < a ? b : a);
+  const cmax = (a, b) => (a < b ? b : a);
+  // std::round: halves away from zero
+  const cround = (x) => (x < 0 ? -Math.round(-x) : Math.round(x));
+  // C pow: pow(1, anything) and pow(-1, ±inf) are 1 (JS says NaN)
+  const cpow = (a, b) => (a === 1 || (a === -1 && (b === Infinity || b === -Infinity)) ? 1 : Math.pow(a, b));
+  // a double to int / uint32_t: undefined in C when it doesn't fit; the handhelds (aarch64) saturate, NaN is 0
+  const toInt = (x) => (x !== x ? 0 : x >= 2147483647 ? 2147483647 : x <= -2147483648 ? -2147483648 : Math.trunc(x));
+  const toUint = (x) => (x !== x || x <= 0 ? 0 : x >= 4294967295 ? 4294967295 : Math.trunc(x));
+  // a string's length in UTF-8 bytes (what std::string::size() counts)
+  function utf8Len(s) {
+    let n = 0;
+    for (const ch of s) { const c = ch.codePointAt(0); n += c < 0x80 ? 1 : c < 0x800 ? 2 : c < 0x10000 ? 3 : 4; }
+    return n;
   }
-  // C's "%g" with 6 significant digits (what EV::str prints for a non-integer number). printf rounds a
-  // decimal tie to even; JS toPrecision rounds it away from zero, so the digits are rounded here by hand.
-  function incDigits(d) {
-    const a = d.split("");
+  // toupper / tolower in the C locale: a-z only
+  const upperC = (s) => s.replace(/[a-z]+/g, (m) => m.toUpperCase());
+  const lowerC = (s) => s.replace(/[A-Z]+/g, (m) => m.toLowerCase());
+
+  // strtod from s[i]: { value, end } (end === i when there is no number). Leading C whitespace, a sign, decimal
+  // with an optional exponent, hex ("0x1.8p3"), "inf"/"infinity" and "nan" / "nan(...)", any case.
+  function strtod(s, i) {
+    const start = i || 0;
+    let j = start;
+    while (j < s.length && isSpaceC(s[j])) j++;
+    let neg = false;
+    if (s[j] === "+" || s[j] === "-") { neg = s[j] === "-"; j++; }
+    const rest = s.slice(j, j + 8).toLowerCase();
+    if (rest.startsWith("inf")) return { value: neg ? -Infinity : Infinity, end: j + (rest.startsWith("infinity") ? 8 : 3) };
+    if (rest.startsWith("nan")) {
+      let e = j + 3;
+      if (s[e] === "(") { let k = e + 1; while (k < s.length && /[0-9A-Za-z_]/.test(s[k])) k++; if (s[k] === ")") e = k + 1; }
+      return { value: NaN, end: e };
+    }
+    if (s[j] === "0" && (s[j + 1] === "x" || s[j + 1] === "X")) {
+      let k = j + 2, mant = "", frac = 0, any = false;
+      while (k < s.length && isXDigitC(s[k])) { mant += s[k++]; any = true; }
+      if (s[k] === ".") { k++; while (k < s.length && isXDigitC(s[k])) { mant += s[k++]; frac++; any = true; } }
+      if (any) {
+        let exp = 0;
+        if (s[k] === "p" || s[k] === "P") {
+          let q = k + 1, eneg = false;
+          if (s[q] === "+" || s[q] === "-") { eneg = s[q] === "-"; q++; }
+          if (isDigitC(s[q] || "")) { let ev = 0; while (q < s.length && isDigitC(s[q])) { ev = Math.min(1e6, ev * 10 + (s.charCodeAt(q) - 48)); q++; } exp = eneg ? -ev : ev; k = q; }
+        }
+        // the hex digits exactly, then scaled by two (in steps, so a huge or tiny scale doesn't overflow early)
+        let v = Number(BigInt("0x" + mant)), e2 = exp - 4 * frac;
+        while (e2 > 0 && v !== Infinity) { const st = Math.min(e2, 1000); v *= Math.pow(2, st); e2 -= st; }
+        while (e2 < 0 && v !== 0) { const st = Math.max(e2, -1000); v *= Math.pow(2, st); e2 -= st; }
+        return { value: neg ? -v : v, end: k };
+      }
+      return { value: neg ? -0 : 0, end: j + 1 };			// "0x" with no digits: the "0"
+    }
+    const m = /^(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][+-]?[0-9]+)?/.exec(s.slice(j));
+    if (!m) return { value: 0, end: start };
+    const v = Number(m[0]);					// correctly rounded, as glibc's strtod
+    return { value: neg ? -v : v, end: j + m[0].length };
+  }
+
+  // a finite double's exact decimal value: { digits, point } with value = 0.digits * 10^point (digits has no
+  // leading zeros; "" for zero). Every double is a finite binary fraction, so this is exact (BigInt).
+  function exactDecimal(x) {
+    x = Math.abs(x);
+    if (x === 0) return { digits: "", point: 0 };
+    const dv = new DataView(new ArrayBuffer(8)); dv.setFloat64(0, x);
+    const hi = dv.getUint32(0), lo = dv.getUint32(4), be = (hi >>> 20) & 0x7ff;
+    let mant = (BigInt(hi & 0xfffff) << 32n) | BigInt(lo), e2;
+    if (be === 0) e2 = -1074; else { mant |= 1n << 52n; e2 = be - 1075; }
+    let digits, frac;
+    if (e2 >= 0) { digits = (mant << BigInt(e2)).toString(); frac = 0; }
+    else { digits = (mant * 5n ** BigInt(-e2)).toString(); frac = -e2; }
+    const lead = digits.match(/^0*/)[0].length;
+    return { digits: digits.slice(lead).replace(/0+$/, ""), point: digits.length - frac - lead };
+  }
+  // round the digit string to keep `n` digits, ties to even (printf's rounding of an exact value): new digits
+  // (length n, or n + 1 when it carried) and whether it carried
+  function roundDigits(digits, n) {
+    if (n < 0) return { digits: "", carry: false };
+    if (digits.length <= n) return { digits: digits + "0".repeat(n - digits.length), carry: false };
+    const keep = digits.slice(0, n), rest = digits.slice(n);
+    const first = rest.charCodeAt(0) - 48;
+    // more than a half, or exactly a half and the kept digit odd (nothing kept: 0, even)
+    const up = first > 5 || (first === 5 && (/[1-9]/.test(rest.slice(1)) || (n > 0 && (keep.charCodeAt(n - 1) - 48) % 2 === 1)));
+    if (!up) return { digits: keep, carry: false };
+    const a = keep.split("");
     let i = a.length - 1;
     for (; i >= 0; i--) { if (a[i] === "9") a[i] = "0"; else { a[i] = String.fromCharCode(a[i].charCodeAt(0) + 1); break; } }
-    if (i < 0) a.unshift("1");
-    return a.join("");
+    if (i < 0) { a.unshift("1"); return { digits: a.join(""), carry: true }; }
+    return { digits: a.join(""), carry: false };
   }
+  const nanText = (x) => (x !== x ? "-nan" : x < 0 ? "-inf" : "inf");	// (an expression's NaN is the FPU's: negative)
+  const negative = (x) => x < 0 || (x === 0 && 1 / x < 0);
+  // printf("%.*f", prec, x)
+  function formatF(x, prec) {
+    if (!isFinite(x)) return nanText(x);
+    const d = exactDecimal(x), ip = Math.max(0, d.point);
+    const r = roundDigits((d.point < 0 ? "0".repeat(-d.point) : "") + d.digits, ip + prec);
+    const n = ip + (r.carry ? 1 : 0);
+    return (negative(x) ? "-" : "") + (r.digits.slice(0, n) || "0") + (prec > 0 ? "." + r.digits.slice(n) : "");
+  }
+  // C's "%g" with 6 significant digits (what EV::str prints for a number that isn't whole)
   function formatG(x, p) {
     p = p === undefined ? 6 : p;
-    if (x === 0) return "0";
-    if (!isFinite(x)) return String(x);
+    if (!isFinite(x)) return nanText(x);
+    if (x === 0) return negative(x) ? "-0" : "0";
     const sign = x < 0 ? "-" : "";
-    let s = Math.abs(x).toPrecision(17);				// exact-ish decimal, enough to round at p
-    let mant = s, off = 0;
-    const epos = s.indexOf("e");
-    if (epos !== -1) { mant = s.slice(0, epos); off = parseInt(s.slice(epos + 1), 10); }
-    const dot = mant.indexOf(".");
-    let digits, pointPos;
-    if (dot !== -1) { digits = mant.slice(0, dot) + mant.slice(dot + 1); pointPos = dot; }
-    else { digits = mant; pointPos = mant.length; }
-    let lead = 0;
-    while (lead < digits.length - 1 && digits.charAt(lead) === "0") lead++;
-    digits = digits.slice(lead); pointPos -= lead;
-    let E = pointPos - 1 + off;
-    let keep = digits.slice(0, p);
-    const rest = digits.slice(p);
-    let up = false;
-    if (rest.length) {
-      const first = rest.charCodeAt(0) - 48;
-      if (first > 5) up = true;
-      else if (first === 5) {
-        if (/[1-9]/.test(rest.slice(1))) up = true;			// more than a half
-        else up = ((keep.charCodeAt(keep.length - 1) - 48) % 2) === 1;	// exact tie: to even
-      }
-    }
-    if (up) { keep = incDigits(keep); if (keep.length > p) { keep = keep.slice(0, p); E++; } }
+    const d = exactDecimal(x);
+    const r = roundDigits(d.digits, p);
+    let keep = r.digits, E = d.point - 1;
+    if (r.carry) { keep = keep.slice(0, p); E++; }
     if (E < -4 || E >= p) {
       let mantissa = keep.charAt(0);
       const frac = keep.slice(1).replace(/0+$/, "");
@@ -60,16 +134,23 @@
       return sign + mantissa + "e" + (E < 0 ? "-" : "+") + String(Math.abs(E)).padStart(2, "0");
     }
     let out;
-    if (E + 1 <= 0) out = "0." + "0".repeat(-E - 1) + keep;
+    if (E < 0) out = "0." + "0".repeat(-E - 1) + keep;
     else if (E + 1 >= keep.length) out = keep + "0".repeat(E + 1 - keep.length);
     else out = keep.slice(0, E + 1) + "." + keep.slice(E + 1);
     if (out.indexOf(".") !== -1) out = out.replace(/0+$/, "").replace(/\.$/, "");
     return sign + out;
   }
+
+  // ---- values (the engine's EV): a JS number or string, with EV's coercion rules -------------------
+  function evNum(v) {
+    if (typeof v === "number") return v;
+    const s = String(v), r = strtod(s, 0);
+    return r.end !== 0 ? r.value : 0;			// strtod: no number -> 0
+  }
   function evStr(v) {
     if (typeof v === "string") return v;
     if (typeof v !== "number" || Number.isNaN(v)) return "";
-    if (Number.isInteger(v) && Math.abs(v) < 1e15) return String(v);
+    if (Number.isInteger(v) && Math.abs(v) < 1e15) return String(v);	// "%lld" ("0" for -0 too)
     return formatG(v, 6);
   }
   function evTruthy(v) {
@@ -84,7 +165,10 @@
   // or a few names -> 0xAARRGGBB, or null when it isn't a colour.
   function parseColorText(v0) {
     let v = v0 === null || v0 === undefined ? "" : String(v0);
-    v = v.replace(/^\s+/, "").replace(/\s+$/, "");
+    let b0 = 0, e0 = v.length;					// (C's isspace: ASCII only)
+    while (b0 < e0 && isSpaceC(v[b0])) b0++;
+    while (e0 > b0 && isSpaceC(v[e0 - 1])) e0--;
+    v = v.slice(b0, e0);
     if (v === "") return null;
     if (v === "transparent" || v === "none") return 0;
     if (Object.prototype.hasOwnProperty.call(COLOR_NAMES, v)) return COLOR_NAMES[v] >>> 0;
@@ -98,12 +182,18 @@
       return (((rgba >>> 8) | ((rgba & 0xff) << 24)) >>> 0);
     }
     if (v.startsWith("rgb(") || v.startsWith("rgba(")) {
-      const raw = v.slice(v.indexOf("(") + 1).split(",");
-      const nums = raw.map((s) => parseFloat(s));
-      if (nums.length < 3 || Number.isNaN(nums[0]) || Number.isNaN(nums[1]) || Number.isNaN(nums[2])) return null;
-      const alpha = nums.length > 3 && !Number.isNaN(nums[3]) ? nums[3] : 1;
-      const b = (x) => Math.min(255, Math.max(0, Math.floor(x + 0.5)));
-      return ((b(alpha * 255) << 24) | (b(nums[0]) << 16) | (b(nums[1]) << 8) | b(nums[2])) >>> 0;
+      // sscanf(v + "(", "%f , %f , %f , %f"): floats, each after optional spaces and a comma; at least three
+      const c = [0, 0, 0, 1], f = Math.fround;
+      let i = v.indexOf("(") + 1, n = 0;
+      for (; n < 4; n++) {
+        if (n > 0) { while (i < v.length && isSpaceC(v[i])) i++; if (v[i] !== ",") break; i++; }
+        const r = strtod(v, i);
+        if (r.end === i) break;
+        c[n] = f(r.value); i = r.end;
+      }
+      if (n < 3) return null;
+      const b = (x) => toUint(cmin(255, cmax(0, f(x + 0.5))));
+      return ((b(f(c[3] * 255)) << 24) | (b(c[0]) << 16) | (b(c[1]) << 8) | b(c[2])) >>> 0;
     }
     return null;
   }
@@ -113,11 +203,11 @@
   }
   function colorOf(v) {
     if (typeof v === "string") { const p = parseColorText(v); return p === null ? 0xff000000 : p; }
-    return ((0xff000000 | (Math.trunc(evNum(v)) >>> 0)) >>> 0);
+    return ((0xff000000 | toUint(evNum(v))) >>> 0);
   }
   function mixColor(a, b, t) {
-    t = Math.min(1, Math.max(0, t));
-    const ch = (sh) => { const x = (a >>> sh) & 255, y = (b >>> sh) & 255; return (Math.round(x + (y - x) * t) << sh) >>> 0; };
+    t = cmin(1, cmax(0, t));
+    const ch = (sh) => { const x = (a >>> sh) & 255, y = (b >>> sh) & 255; return (cround(x + (y - x) * t) << sh) >>> 0; };	// lround
     return ((ch(24) | ch(16) | ch(8) | ch(0)) >>> 0);
   }
 
@@ -137,9 +227,9 @@
   // ---- the parser (a recursive descent over the same grammar as expr.cpp) --------------------------
   class Parser {
     constructor(s) { this.s = s; this.i = 0; this.err = ""; }
-    ws() { while (this.i < this.s.length && /\s/.test(this.s[this.i])) this.i++; }
+    ws() { while (this.i < this.s.length && isSpaceC(this.s[this.i])) this.i++; }
     eat(t) { this.ws(); if (this.s.startsWith(t, this.i)) { this.i += t.length; return true; } return false; }
-    fail(m) { if (!this.err) this.err = m + " at " + this.i; return null; }
+    fail(m) { if (!this.err) this.err = m + " at " + utf8Len(this.s.slice(0, this.i)); return null; }	// (a byte offset, as the engine's)
     node(op, a) { return { op: op, a: a }; }
 
     ternary() {
@@ -239,11 +329,10 @@
         while (this.i < this.s.length && /[0-9a-fA-F]/.test(this.s[this.i])) this.i++;
         return { op: "lit", lit: this.s.slice(b, this.i) };
       }
-      if (/[0-9.]/.test(c)) {
-        const m = /^(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/.exec(this.s.slice(this.i));
-        if (!m) return this.fail("a number expected");
-        this.i += m[0].length;
-        return { op: "lit", lit: parseFloat(m[0]) };
+      if (isDigitC(c) || c === ".") {				// strtod: 0x10, 1e3, .5 (nothing taken: a 0, then an error)
+        const r = strtod(this.s, this.i);
+        this.i = r.end;
+        return { op: "lit", lit: r.value };
       }
       if (/[A-Za-z_$]/.test(c)) {
         const b = this.i;
@@ -279,7 +368,7 @@
 
   // ---- evaluation ---------------------------------------------------------------------------------
   const PI = 3.14159265358979323846;
-  function clamp01(t) { return Math.min(1, Math.max(0, t)); }
+  function clamp01(t) { return cmin(1, cmax(0, t)); }
 
   function evalExpr(e, sc) {
     if (!e) return 0;
@@ -319,15 +408,15 @@
     const S = (k) => (k < v.length ? evStr(v[k]) : "");
     const A = (k) => (k < v.length ? v[k] : 0);
 
-    if (f === "min") { let r = N(0); for (let k = 1; k < v.length; k++) r = Math.min(r, N(k)); return r; }
-    if (f === "max") { let r = N(0); for (let k = 1; k < v.length; k++) r = Math.max(r, N(k)); return r; }
-    if (f === "clamp") return Math.min(N(2, 1), Math.max(N(1), N(0)));
+    if (f === "min") { let r = N(0); for (let k = 1; k < v.length; k++) r = cmin(r, N(k)); return r; }
+    if (f === "max") { let r = N(0); for (let k = 1; k < v.length; k++) r = cmax(r, N(k)); return r; }
+    if (f === "clamp") return cmin(N(2, 1), cmax(N(1), N(0)));
     if (f === "abs") return Math.abs(N(0));
     if (f === "floor") return Math.floor(N(0));
     if (f === "ceil") return Math.ceil(N(0));
-    if (f === "round") { const m = Math.pow(10, N(1)); return Math.round(N(0) * m) / m; }
-    if (f === "sqrt") return Math.sqrt(Math.max(0, N(0)));
-    if (f === "pow") return Math.pow(N(0), N(1));
+    if (f === "round") { const m = cpow(10, N(1)); return cround(N(0) * m) / m; }
+    if (f === "sqrt") return Math.sqrt(cmax(0, N(0)));
+    if (f === "pow") return cpow(N(0), N(1));
     if (f === "sign") return (N(0) > 0 ? 1 : 0) - (N(0) < 0 ? 1 : 0);
     if (f === "mod") { const b = N(1, 1); if (b === 0) return 0; const r = N(0) % b; return r < 0 ? r + b : r; }
     if (f === "sin") return Math.sin(N(0));
@@ -337,14 +426,14 @@
     if (f === "lerp") return N(0) + (N(1) - N(0)) * N(2);
     if (f === "step") return N(1) >= N(0) ? 1 : 0;
     if (f === "smoothstep") { const d = (N(1) - N(0)) === 0 ? 1 : N(1) - N(0); const t = clamp01((N(2) - N(0)) / d); return t * t * (3 - 2 * t); }
-    if (f === "progress") return clamp01(N(0) / Math.max(1, N(1, 1)));
+    if (f === "progress") return clamp01(N(0) / cmax(1, N(1, 1)));
     if (f === "easeIn") { const t = clamp01(N(0)); return t * t * t; }
     if (f === "easeOut") { const t = 1 - clamp01(N(0)); return 1 - t * t * t; }
-    if (f === "easeInOut") { const t = clamp01(N(0)); return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+    if (f === "easeInOut") { const t = clamp01(N(0)); return t < 0.5 ? 4 * t * t * t : 1 - cpow(-2 * t + 2, 3) / 2; }
     if (f === "easeOutBack") { const t = clamp01(N(0)) - 1, c = N(1, 1.70158); return 1 + (c + 1) * t * t * t + c * t * t; }
     if (f === "easeOutElastic") {
       const t = clamp01(N(0));
-      return t === 0 || t === 1 ? t : Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * (2 * PI / 3)) + 1;
+      return t === 0 || t === 1 ? t : cpow(2, -10 * t) * Math.sin((t * 10 - 0.75) * (2 * PI / 3)) + 1;
     }
     if (f === "bounce") {
       let t = clamp01(N(0)); const k = 7.5625, d = 2.75;
@@ -353,46 +442,54 @@
       if (t < 2.5 / d) { t -= 2.25 / d; return k * t * t + 0.9375; }
       t -= 2.625 / d; return k * t * t + 0.984375;
     }
-    if (f === "pulse") return 0.5 - 0.5 * Math.cos(N(0) * 2 * PI / Math.max(1, N(1, 1000)));
+    if (f === "pulse") return 0.5 - 0.5 * Math.cos(N(0) * 2 * PI / cmax(1, N(1, 1000)));
     if (f === "mix") return colorText(mixColor(colorOf(A(0)), colorOf(A(1)), N(2, 0.5)));
-    if (f === "alpha") { const c = colorOf(A(0)); return colorText((((c & 0xffffff) | ((Math.round(clamp01(N(1, 1)) * ((c >>> 24) & 255)) << 24)) >>> 0) >>> 0)); }
+    if (f === "alpha") { const c = colorOf(A(0)); return colorText((((c & 0xffffff) | ((cround(clamp01(N(1, 1)) * ((c >>> 24) & 255)) << 24)) >>> 0) >>> 0)); }
     if (f === "lighten") { const c = colorOf(A(0)); return colorText(mixColor(c, (((c & 0xff000000) | 0xffffff) >>> 0), N(1, 0.2))); }
     if (f === "darken") { const c = colorOf(A(0)); return colorText(mixColor(c, ((c & 0xff000000) >>> 0), N(1, 0.2))); }
     if (f === "rgb" || f === "rgba") {
-      const b = (x) => Math.min(255, Math.max(0, Math.floor(x + 0.5)));
+      const b = (x) => toUint(cmin(255, cmax(0, x + 0.5)));
       return colorText(((b(N(3, 1) * 255) << 24) | (b(N(0)) << 16) | (b(N(1)) << 8) | b(N(2))) >>> 0);
     }
     if (f === "hsl") {
       let h = (N(0) % 360) / 60, s = clamp01(N(1)), l = clamp01(N(2)), c = (1 - Math.abs(2 * l - 1)) * s;
       if (h < 0) h += 6;
       const x = c * (1 - Math.abs((h % 2) - 1)), m = l - c / 2;
-      let r = 0, g = 0, bb = 0; const k = Math.trunc(h);
+      let r = 0, g = 0, bb = 0; const k = toInt(h);
       if (k === 0) { r = c; g = x; } else if (k === 1) { r = x; g = c; } else if (k === 2) { g = c; bb = x; }
       else if (k === 3) { g = x; bb = c; } else if (k === 4) { r = x; bb = c; } else { r = c; bb = x; }
-      const b = (y) => Math.min(255, Math.max(0, Math.floor(y * 255 + 0.5)));
+      const b = (y) => toUint(cmin(255, cmax(0, y * 255 + 0.5)));
       return colorText(((b(N(3, 1)) << 24) | (b(r + m) << 16) | (b(g + m) << 8) | b(bb + m)) >>> 0);
     }
-    if (f === "upper") return S(0).toUpperCase();
-    if (f === "lower") return S(0).toLowerCase();
+    if (f === "upper") return upperC(S(0));
+    if (f === "lower") return lowerC(S(0));
     if (f === "len") return Array.from(S(0)).length;
     if (f === "substr") {
-      const s = Array.from(S(0)), from = Math.trunc(N(1)), n = v.length > 2 ? Math.trunc(N(2)) : (1 << 30);
+      const s = Array.from(S(0)), from = toInt(N(1)), n = v.length > 2 ? toInt(N(2)) : (1 << 30), to = (from + n) | 0;	// (int: wraps)
       let r = "";
-      for (let k = 0; k < s.length; k++) if (k >= from && k < from + n) r += s[k];
+      for (let k = 0; k < s.length; k++) if (k >= from && k < to) r += s[k];
       return r;
     }
     if (f === "contains") return S(0).includes(S(1)) ? 1 : 0;
     if (f === "replace") {
       let s = S(0); const a = S(1), b = S(2);
-      if (a !== "") for (let at = 0; (at = s.indexOf(a, at)) !== -1; at += (b.length || a.length)) s = s.slice(0, at) + b + s.slice(at + a.length);
+      if (a !== "") for (let at = 0; (at = s.indexOf(a, at)) !== -1; at += b.length) s = s.slice(0, at) + b + s.slice(at + a.length);
       return s;
     }
-    if (f === "pad") { let s = S(0); const w = Math.trunc(N(1)), ch = v.length > 2 ? S(2) : "0"; while (s.length < w) s = ch + s; return s; }
-    if (f === "fixed") { const digits = Math.max(0, Math.min(10, Math.trunc(N(1)))); return N(0).toFixed(digits); }
+    if (f === "pad") {
+      // to a width in bytes (UTF-8), as std::string::size() counts. (A huge width stops the engine for good; the
+      // editor stops at 4096 bytes, a width no theme needs.)
+      let s = S(0); const w = Math.min(4096, toInt(N(1))), ch = v.length > 2 ? S(2) : "0";
+      if (ch === "") return s;
+      let len = utf8Len(s); const cl = utf8Len(ch);
+      while (len < w) { s = ch + s; len += cl; }
+      return s;
+    }
+    if (f === "fixed") return formatF(N(0), cmax(0, cmin(10, toInt(N(1)))));
     if (f === "str") return S(0);
     if (f === "num") return N(0);
     if (f === "plural") return evStr(N(0)) + " " + (N(0) === 1 ? S(1) : (v.length > 2 ? S(2) : S(1) + "s"));
-    if (f === "pick") { if (v.length < 2) return ""; const k = Math.max(0, Math.min(v.length - 2, Math.trunc(N(0)))); return v[k + 1]; }
+    if (f === "pick") { if (v.length < 2) return ""; const k = cmax(0, cmin(v.length - 2, toInt(N(0)))); return v[k + 1]; }
     if (f === "either") { for (const e of v) if (evTruthy(e)) return e; return v.length ? v[v.length - 1] : ""; }
     return 0;
   }
@@ -435,7 +532,7 @@
     "pick", "either", "if"];
 
   const api = { compileExpr, evalExpr, Scope, parseProp, evalProp, propNumber, parseColorText, colorText,
-    colorOf, mixColor, evNum, evStr, evTruthy, formatG, FUNCTIONS };
+    colorOf, mixColor, evNum, evStr, evTruthy, formatG, formatF, strtod, utf8Len, FUNCTIONS };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   global.BananaExpr = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

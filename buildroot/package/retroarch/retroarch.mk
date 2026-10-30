@@ -17,6 +17,16 @@ RETROARCH_JOYPADS_VERSION = f3b62b847ed21939b668b897b18bbc1defbaae05
 RETROARCH_EXTRA_DOWNLOADS = \
 	https://github.com/libretro/retroarch-joypad-autoconfig/archive/$(RETROARCH_JOYPADS_VERSION).tar.gz
 
+# RGUI's bitmap fonts (libretro/retroarch-assets rgui/font, ~250 KB): without them RetroArch's menu can't be switched to
+# Russian, Belarusian, Ukrainian (patch 0005), Chinese, Japanese, Korean, Polish, Czech, Slovak, Turkish, Hungarian or
+# Esperanto (it says "missing fonts" and stays in English). Installed in /usr/share/retroarch/assets, the assets folder
+# the shipped retroarch.cfg names. Pinned like the other sources.
+RETROARCH_ASSETS_VERSION = d9f969054dc7fbb6fa89519036d2b971e0855b51
+RETROARCH_RGUI_FONTS = bitmap10x10_eng.bin bitmap10x10_rus.bin bitmap10x10_chn.bin bitmap10x10_jpn.bin \
+	bitmap10x10_kor.bin bitmap6x10_eng.bin bitmap6x10_lse.bin
+RETROARCH_EXTRA_DOWNLOADS += $(foreach f,$(RETROARCH_RGUI_FONTS),\
+	https://raw.githubusercontent.com/libretro/retroarch-assets/$(RETROARCH_ASSETS_VERSION)/rgui/font/$(f))
+
 # what a handheld with two KMS panels and no display server needs (built and linked for aarch64 with these options)
 RETROARCH_CONF_OPTS = --prefix=/usr \
 	--disable-x11 --disable-wayland --disable-pulse --disable-oss --disable-jack --disable-qt --disable-vulkan \
@@ -60,6 +70,10 @@ define RETROARCH_INSTALL_TARGET_CMDS
 			-exec $(INSTALL) -m 0644 -t $(TARGET_DIR)/usr/share/libretro/autoconfig/udev {} + ; \
 	fi
 	mkdir -p $(TARGET_DIR)/usr/lib/libretro
+	$(foreach f,$(RETROARCH_RGUI_FONTS),\
+		$(INSTALL) -D -m 0644 $(RETROARCH_DL_DIR)/$(f) $(TARGET_DIR)/usr/share/retroarch/assets/rgui/font/$(f)$(sep))
+	# the version, for Settings > System > About (RetroArch comes with BananaOS's updates; it has no updater of its own on Linux)
+	printf '%s\n' '$(patsubst v%,%,$(RETROARCH_VERSION))' > $(TARGET_DIR)/usr/share/retroarch/version
 endef
 
 $(eval $(generic-package))

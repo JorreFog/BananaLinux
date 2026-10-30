@@ -13,8 +13,29 @@ done
 /usr/libexec/banana/share down 2>/dev/null     # a computer's open files on the card
 /usr/libexec/banana/ssh down 2>/dev/null
 /usr/libexec/banana/wifi down 2>/dev/null
+/usr/libexec/banana/bluetooth down 2>/dev/null   # (its pairings saved on the card)
 hwclock -w 2>/dev/null
-/usr/libexec/banana/boot-log       # the boot's log, complete, whenever the handheld is turned off
+# the panels' brightness as it is now, for bananad to restore at the next boot ("<top> <bottom>" in thousandths): only
+# the settings rows, F + volume and the DS emulators' menus wrote the file, so a level set any other way (or set a moment
+# before the shutdown, or a file never written at all) came back as the kernel's 50%. Idle-dimmed: the levels from
+# before (/run/banana/dim); a panel at 0 (the game panel's idle "off") keeps the level saved before. (A panel switched
+# off with bl_power, by a one-panel program or the menu's display going away, still has its level in brightness.)
+bl_pm() {
+    local b=/sys/class/backlight/$1 m v
+    m=$(cat $b/max_brightness 2>/dev/null); v=$(cat $b/brightness 2>/dev/null)
+    # (under 5%: not a level anyone chose, e.g. a dim the menu never undid: the saved one stays, see bananad's BL_FLOOR_PM)
+    [ "${m:-0}" -gt 0 ] && [ "${v:-0}" -gt 0 ] && [ $(( (v * 1000 + m / 2) / m )) -ge 50 ] && echo $(( (v * 1000 + m / 2) / m ))
+}
+if [ -f /run/banana/dim ] && read dt db < /run/banana/dim && [ "${dt:-0}" -ge 50 ] && [ "${db:-0}" -ge 50 ]; then
+    cp /run/banana/dim /data/banana/backlight 2>/dev/null
+else
+    read old_t old_b 2>/dev/null < /data/banana/backlight
+    t=$(bl_pm backlight1); b=$(bl_pm backlight0)
+    t=${t:-$old_t}; b=${b:-${old_b:-$old_t}}
+    [ -n "$t" ] || t=$b; [ -n "$b" ] || b=$t
+    [ -n "$t" ] && [ "$t $b" != "$old_t $old_b" ] && echo "$t $b" > /data/banana/backlight
+fi
+/usr/libexec/banana/boot-log off   # the boot's log, complete, whenever the handheld is turned off; the battery noted
 sync
 umount /data 2>/dev/null || mount -o remount,ro /data
 sync

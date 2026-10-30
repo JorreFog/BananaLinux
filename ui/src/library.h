@@ -24,6 +24,8 @@ namespace banana
 	struct Game
 	{
 		std::string path, rel, title, genre, year;	// rel: the path under the system's folder
+		std::string scraped;	// the title before the game page's own name (gamelist.xml's, or the file's)
+		std::string sort;		// the sort title, when it isn't the title (gamelist.xml's sortname, or the game page's)
 		std::string box, cart, label;
 		int plays = 0;
 		long seconds = 0;
@@ -49,6 +51,8 @@ namespace banana
 		// romRoot: where the system folders are; dataDir: Banana's own files (stats, favourites); assets: the theme's rnds/
 		Library(const std::string& confPath, const std::string& romRoot, const std::string& dataDir, const std::string& assets);
 		void scan();	// (re)read everything from disk
+		std::map<std::string, std::string> shelfModes() const;	// settings.conf's shelf.<id>: auto, hide, show
+		const std::vector<SystemDef>& systemDefs() const { return defs; }
 		// the folders whose changes change the library: the ROM root, each system's folder and its media folders
 		std::vector<std::string> watchDirs() const;
 		// the folders with system folders in them: romRoot, then the second SD card's roms folder while it's in and
@@ -93,6 +97,8 @@ namespace banana
 		std::string clockText() override;
 		std::string dateText() override;
 		float battery() override;
+		bool charging() override { return power().charging; }
+		void powerChanged() { powerAt = 0; }	// a power_supply uevent: read /sys again at the next ask
 		bool online() override;
 		void selectSystem(int i) override { home = i; }
 		void selectGame(int) override {}
@@ -106,6 +112,15 @@ namespace banana
 		std::string emptyTitle() override;
 		std::string emptyHint() override;
 		std::vector<std::pair<std::string, std::string>> hints(bool library, int sys, int game) override;
+		struct Titles { std::string name, sort; };
+		// a game's own name and sort title (the game page, #29): "<system>/<rel>"; empty ones mean the scraped or
+		// file name again. Kept in banana/game-titles.tsv, which a scrape never writes; the library is read again
+		std::string gameKey(int game);
+		Titles gameTitles(const std::string& key) const { auto it = titles.find(key); return it == titles.end() ? Titles() : it->second; }
+		void setGameTitles(const std::string& key, const std::string& name, const std::string& sort);
+		// Settings > Display & sound > DS cartridges: "box" (the scraped box art, the game's own icon without one) or
+		// "icon" (the DS game's own icon on every cartridge, as the DSi menu shows it)
+		bool dsCartIcons = false;
 
 	private:
 		struct Look { std::string icon, maker; rnds::Color accent; bool hasAccent = false, app = false; };
@@ -114,8 +129,11 @@ namespace banana
 		std::vector<Shelf> shelves;
 		std::map<std::string, Look> looks;
 		std::set<std::string> favGames, favSystems;	// "<system>/<rel>", system ids
+		std::set<std::string> hidden;				// system ids the Store took off the menu (its built-in apps removed)
 		struct Stat { int plays = 0; long seconds = 0; time_t last = 0; int achA = -1, achB = 0; };
 		std::map<std::string, Stat> stats;			// "<system>/<rel>"
+		std::map<std::string, Titles> titles;
+		std::set<std::string> matched;				// "<system>/<file name without .ext>": a cover picked by name (#28)		// "<system>/<rel>": the game page's name and sort title
 		int lib = 0, home = 0, launchGame = -1;
 		bool changed = false;
 		std::string query;
@@ -123,6 +141,7 @@ namespace banana
 		void loadDefs();
 		void loadLooks();
 		void loadState();
+		std::string storeDir() const;
 		void saveFavs();
 		void saveStats();
 		Look lookOf(const std::string& id) const;

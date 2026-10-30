@@ -7,6 +7,10 @@ for example banana/themes/my-theme.json. Pick it in Settings > Display & sound >
 /usr/share/banana/themes, and copies are in banana/themes on a new card) and change it. A file on the card with an
 example's file name replaces that example.
 
+Ten more come with the system (0.5.0), made with the Banana Theme Studio, which draw the whole menu in their own
+layout: comic-panel, coral-reef, felt-table, neon-arcade, oak-bookshelf, orbital-hud, paper-notebook,
+phosphor-terminal, swiss-poster and vinyl-lounge. Open one in the Theme Studio to make your own from it.
+
     {
       "name": "My theme",          the name shown in Settings (else the file name)
       "author": "you",             (shown nowhere yet)

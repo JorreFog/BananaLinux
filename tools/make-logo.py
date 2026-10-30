@@ -20,6 +20,17 @@ WORD, SUFFIX = "BANANA", "OS"      # the wordmark: BANANA in banana tones, OS in
 GRID_SIZE = 1000 / 92
 
 
+# the wordmark's B, drawn here rather than taken from the font: with its left corners rounded (as the font's build
+# behind the first assets had it) the B of BANANAOS read as a G. Square on the left, the bowls round on the right
+B_GLYPH = ["####.",
+           "#...#",
+           "#...#",
+           "####.",
+           "#...#",
+           "#...#",
+           "####."]
+
+
 def text_layer(font_path, scale, text):
     font = ImageFont.truetype(font_path, GRID_SIZE)
     l, t, r, b = font.getbbox(text)
@@ -28,6 +39,10 @@ def text_layer(font_path, scale, text):
     d.fontmode = "1"        # whole pixels only
     d.text((2 - l, 2 - t), text, font=font, fill=255)
     im = im.crop(im.getbbox())
+    if text.startswith("B") and im.height == len(B_GLYPH):
+        for y, row in enumerate(B_GLYPH):
+            for x, c in enumerate(row):
+                im.putpixel((x, y), 255 if c == "#" else 0)
     return im.resize((im.width * scale, im.height * scale), Image.NEAREST)
 
 

@@ -1,0 +1,369 @@
+From 0dbd9f1d2ce5863dfc0313861fe5244ecd5bdd2e Mon Sep 17 00:00:00 2001
+From: JorreFog <JorreFog@users.noreply.github.com>
+Date: Tue, 20 Oct 2026 21:31:51 +0200
+Subject: [PATCH] store: BananaOS mode (RNDS_STORE_PLATFORM=banana, -DBANANA)
+
+The package manager: /storage paths mapped to /data (apps in /data/store/apps,
+their entries on the Apps shelf in /data/store/tiles), no EmulationStation,
+systemd, sway or Ports, BananaOS's catalog (the one beside it while
+BananaLinux's isn't on the network), requires.bananaos, Python's own HTTPS
+when there is no curl binary. The app: its name and the strings that told of
+the home screen's tiles and the background check.
+---
+ store/device/rocknixds-store | 124 ++++++++++++++++++++++++++++++-----
+ store/src/main.c             |  27 ++++++--
+ 2 files changed, 129 insertions(+), 22 deletions(-)
+
+diff --git a/store/device/rocknixds-store b/store/device/rocknixds-store
+index 437df21..a2a14be 100755
+--- a/store/device/rocknixds-store
++++ b/store/device/rocknixds-store
+@@ -52,9 +52,28 @@ import zipfile
+ import zlib
+ 
+ ROOT = os.environ.get("RNDS_STORE_ROOT", "")
++
++
++def _platform():
++    """rocknix, or banana on BananaOS (RNDS_STORE_PLATFORM, else /etc/os-release): there the card is /data, the menu
++    is banana-ui (no EmulationStation, systemd or sway), and the Store and its catalog come with the system"""
++    p = os.environ.get("RNDS_STORE_PLATFORM")
++    if p:
++        return p
++    try:
++        with open("/etc/os-release") as f:
++            if re.search(r"^ID=bananaos$", f.read(), re.M):
++                return "banana"
++    except OSError:
++        pass
++    return "rocknix"
++
++
++BANANA = _platform() == "banana"
+ CATALOG_ENV = os.environ.get("RNDS_STORE_CATALOG")
+ CATALOG_URL = CATALOG_ENV or os.environ.get(       # (RNDS_STORE_MAIN_CATALOG: tests)
+-    "RNDS_STORE_MAIN_CATALOG", "https://raw.githubusercontent.com/JorreFog/ROCKNIXDS/main/store/catalog.json")
++    "RNDS_STORE_MAIN_CATALOG", "https://raw.githubusercontent.com/JorreFog/BananaLinux/main/store/catalog.json" if BANANA
++    else "https://raw.githubusercontent.com/JorreFog/ROCKNIXDS/main/store/catalog.json")
+ RAW = os.environ.get("RNDS_STORE_RAW", "https://raw.githubusercontent.com/JorreFog/ROCKNIXDS")   # a ref's files
+ NOTIFY = os.environ.get("RNDS_STORE_NOTIFY", "http://localhost:1234/notify")   # the menu's API
+ API = os.environ.get("RNDS_STORE_API", "https://api.github.com/repos/{repo}/releases?per_page=100")
+@@ -62,8 +81,25 @@ DOWNLOAD = os.environ.get("RNDS_STORE_DOWNLOAD", "https://github.com/{repo}/rele
+ SCHEMA = 1                                  # the catalog format this tool reads
+ 
+ 
++def banana_path(path):
++    """a catalog's ROCKNIX path where BananaOS keeps it: the apps in /data/store/apps, their tiles' entries together in
++    /data/store/tiles (the menu's Apps shelf), the rest of /storage on /data"""
++    m = re.match(r"^/storage/\.config/rocknixds/apps/[^/]+(/.*)?$", path)
++    if m:
++        return "/data/store/tiles" + (m.group(1) or "")
++    m = re.match(r"^/storage/\.config/rocknixds/store(/.*)?$", path)
++    if m:
++        return "/data/store" + (m.group(1) or "")
++    m = re.match(r"^/storage/\.config/rocknixds/(.+)$", path)
++    if m:
++        return "/data/store/apps/" + m.group(1)
++    return "/data/" + path[len("/storage/"):]
++
++
+ def P(path):
+     """a handheld path (under RNDS_STORE_ROOT in the tests)"""
++    if BANANA and path.startswith("/storage/"):
++        path = banana_path(path)
+     return ROOT + path if path.startswith("/") else path
+ 
+ 
+@@ -71,7 +107,8 @@ DATA = os.environ.get("RNDS_STORE_DATA") or P("/storage/.config/rocknixds/store/
+ ES_DIR = P("/storage/.config/emulationstation")
+ ES_STORE_CFG = os.path.join(ES_DIR, "es_systems_rocknixds-store.cfg")
+ ES_APPS_CFG = os.path.join(ES_DIR, "es_systems_rocknixds.cfg")       # ROCKNIXDS 1.6 on: apps have tiles
+-PORTS = "/storage/roms/ports"
++PORTS = None if BANANA else "/storage/roms/ports"    # (BananaOS: apps are never Ports, and a port of the same
++                                                    # name there is the user's own)
+ THEME_MARK_BEGIN = "# ---- rocknixds-store: apps installed from the Store (rocknixds-store relink writes this) ----"
+ THEME_MARK_END = "# ---- rocknixds-store end ----"
+ MEDIA_KINDS = ("image", "thumbnail", "marquee")
+@@ -124,14 +161,30 @@ def device():
+ 
+ 
+ def rocknixds_version():
++    """the system's version: ROCKNIXDS's, or BananaOS's (an app's "requires" names one of the two)"""
+     try:
+-        with open(P("/storage/.config/rocknixds-version")) as f:
++        with open(ROOT + "/etc/banana/version" if BANANA else P("/storage/.config/rocknixds-version")) as f:
+             return f.read().split()[0]
+     except (OSError, IndexError):
+         return ""
+ 
+ 
+ # ---- network ------------------------------------------------------------------------------------------------------
++def fetch_urllib(url, dest, timeout):
++    """fetch() without a curl binary (a BananaOS before 0.4.2): Python's own HTTPS"""
++    import urllib.request
++    try:
++        req = urllib.request.Request(url, headers={"User-Agent": "rocknixds-store"})
++        with urllib.request.urlopen(req, timeout=timeout) as r:
++            if dest:
++                with open(dest, "wb") as f:
++                    shutil.copyfileobj(r, f)
++                return dest
++            return r.read()
++    except Exception:
++        return None
++
++
+ def fetch(url, dest=None, timeout=30):
+     """the body (bytes), or the file written; None when it can't be had. curl, as every ROCKNIXDS script on the
+     handheld uses (file:// works for the tests)"""
+@@ -141,7 +194,7 @@ def fetch(url, dest=None, timeout=30):
+     try:
+         r = subprocess.run(cmd + [url], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+     except OSError:
+-        return None
++        return fetch_urllib(url, dest, timeout)
+     if r.returncode != 0:
+         return None
+     return dest if dest else r.stdout
+@@ -173,6 +226,8 @@ def catalog_urls():
+     if CATALOG_ENV:
+         return [as_url(CATALOG_URL)]
+     urls = [CATALOG_URL]
++    if BANANA:
++        return urls
+     try:
+         with open(P("/storage/.config/rocknixds/installed-id")) as f:
+             ref = f.read().strip()
+@@ -549,7 +604,7 @@ class Menu:
+         self.stopped = False
+ 
+     def off(self):
+-        if ROOT or os.environ.get("RNDS_STORE_NO_ES"):
++        if ROOT or BANANA or os.environ.get("RNDS_STORE_NO_ES"):
+             return
+         if subprocess.run(["systemctl", "is-active", "-q", "essway.service"]).returncode != 0:
+             return
+@@ -568,8 +623,8 @@ class Menu:
+ 
+ 
+ def tiles():
+-    """this ROCKNIXDS gives apps tiles of their own (1.6 on)"""
+-    return os.path.exists(ES_APPS_CFG)
++    """this ROCKNIXDS gives apps tiles of their own (1.6 on); BananaOS lists them on its Apps shelf"""
++    return BANANA or os.path.exists(ES_APPS_CFG)
+ 
+ 
+ def gamelist(folder, action, entry, fields):
+@@ -607,6 +662,8 @@ def gamelist(folder, action, entry, fields):
+ 
+ def unlist(folder, lay):
+     """the app's script, pictures and line out of that folder"""
++    if folder is None:                                   # (BananaOS's PORTS)
++        return
+     folder = P(folder)
+     entry = lay["entry"]
+     if not entry or not os.path.exists(os.path.join(folder, entry)):
+@@ -624,6 +681,13 @@ def shq(s):
+     return "'" + str(s).replace("'", "'\\''") + "'"
+ 
+ 
++# BananaOS's entry for such an app: banana-ui has let go of both panels (no compositor to give one back to)
++LAUNCHER_BANANA = """#!/bin/sh
++# %(name)s, from the Store (written by rocknixds-store: an install or an update writes it again)
++exec %(script)s "$@"
++"""
++
++
+ # The tile's entry for an app whose own start script lives in its folder ("launch"): it runs that script and gives the
+ # menu its bottom panel back as it was. An app made for ROCKNIX turns the bottom panel off as it leaves (ROCKNIX's
+ # menu has it off); ROCKNIXDS's dual-screen menu has it on.
+@@ -678,8 +742,9 @@ def list_in_menu(app, lay):
+     tmp = os.path.join(folder, entry + ".new")
+     if lay["launch"]:
+         with open(tmp, "w", encoding="utf-8") as f:
+-            f.write(LAUNCHER % {"name": re.sub(r"[\r\n]", " ", app.get("name", app["id"])),
+-                                "script": shq(os.path.join(lay["dest"], safe_rel(lay["launch"])))})
++            f.write((LAUNCHER_BANANA if BANANA else LAUNCHER) % {
++                "name": re.sub(r"[\r\n]", " ", app.get("name", app["id"])),
++                "script": shq(os.path.join(P(lay["dest"]) if BANANA else lay["dest"], safe_rel(lay["launch"])))})
+     else:
+         shutil.copyfile(os.path.join(dest, safe_rel(entry)), tmp)
+     os.chmod(tmp, 0o755)
+@@ -733,7 +798,10 @@ def theme_dirs():
+ 
+ 
+ def relink():
+-    """ES systems and theme lines for the installed apps that need them; stale ones go"""
++    """ES systems and theme lines for the installed apps that need them; stale ones go (BananaOS: none, its Apps
++    shelf lists them)"""
++    if BANANA:
++        return
+     have = []
+     if tiles():
+         for a in apps():
+@@ -829,15 +897,18 @@ def check_device(app):
+     devs = app.get("devices")
+     if devs and device() not in devs:
+         raise Fail("Not made for this handheld")
+-    need = (app.get("requires") or {}).get("rocknixds")
++    need = (app.get("requires") or {}).get(REQUIRES)
+     have = rocknixds_version()
+     if need and have and newer(need, have):
+-        raise Fail("Needs ROCKNIXDS %s" % need)
++        raise Fail("Needs %s %s" % ("BananaOS" if BANANA else "ROCKNIXDS", need))
++
++
++REQUIRES = "bananaos" if BANANA else "rocknixds"
+ 
+ 
+ def check_idle(lay):
+     u = lay.get("unit")
+-    if u and not ROOT and subprocess.run(["systemctl", "is-active", "-q", u + ".service"]).returncode == 0:
++    if u and not ROOT and not BANANA and subprocess.run(["systemctl", "is-active", "-q", u + ".service"]).returncode == 0:
+         raise Fail("It's running: quit it first")
+ 
+ 
+@@ -1043,7 +1114,7 @@ def remove(app_id):
+         # the tile's folder, once nothing but the list and its empty pictures folder are left
+         folder = P(lay["folder"])
+         imgs = os.path.join(folder, "images")
+-        if os.path.isdir(folder) and set(os.listdir(folder)) <= {"images", "gamelist.xml"} and \
++        if not BANANA and os.path.isdir(folder) and set(os.listdir(folder)) <= {"images", "gamelist.xml"} and \
+                 not (os.path.isdir(imgs) and os.listdir(imgs)):
+             shutil.rmtree(folder, ignore_errors=True)
+         relink()
+@@ -1053,8 +1124,26 @@ def remove(app_id):
+ 
+ 
+ # ---- refresh, list, status ----------------------------------------------------------------------------------------
++def packaged_catalog():
++    """the catalog that came with the Store (beside it; the repository's in a checkout), with where it is"""
++    global CATALOG_FROM
++    here = os.path.dirname(os.path.abspath(__file__))
++    for p in (os.path.join(here, "catalog.json"), os.path.join(here, "..", "catalog.json")):
++        c = load_json(p, None)
++        if isinstance(c, dict) and isinstance(c.get("apps"), list):
++            CATALOG_FROM = c["_from"] = as_url(p)
++            return c
++    return None
++
++
+ def refresh():
+     c = fetch_catalog()
++    offline_if_none = False
++    if c is None and BANANA:
++        # BananaOS: the catalog that came with the system until one is on the network (the releases still come
++        # from GitHub; no network for those either is OFFLINE)
++        c = packaged_catalog()
++        offline_if_none = True
+     if c is None:
+         out("OFFLINE")
+         return
+@@ -1069,6 +1158,9 @@ def refresh():
+             r = None
+         if r:
+             latest[a["id"]] = {"version": r["version"], "size": r.get("size", 0), "notes": plain_notes(r.get("notes"))}
++    if offline_if_none and cache and not any(isinstance(v, list) for v in cache.values()):
++        out("OFFLINE")
++        return
+     save_json(data("latest.json"), {"time": int(time.time()), "apps": latest})
+     base = catalog_base()
+     for a in apps():
+@@ -1094,7 +1186,7 @@ def rows():
+             continue
+         new = (latest.get(a["id"]) or {}).get("version", "")
+         size = (latest.get(a["id"]) or {}).get("size", 0) or (a.get("release") or {}).get("size", 0)
+-        need = (a.get("requires") or {}).get("rocknixds")
++        need = (a.get("requires") or {}).get(REQUIRES)
+         if a.get("devices") and dev not in a["devices"]:
+             state = "unsupported"
+         elif need and rv and newer(need, rv) and not have:
+@@ -1177,6 +1269,8 @@ def notify():
+     if load_json(data("notified.json"), {}).get("key") == key:
+         return                                           # once per update
+     msg = ("%d updates" % len(ups) if len(ups) > 1 else "An update") + " in the Store: " + names
++    if BANANA:                                           # (no menu API to tell)
++        return
+     try:
+         r = subprocess.run(["curl", "-fs", "--max-time", "5", "-X", "POST", "--data-binary", msg, NOTIFY],
+                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+diff --git a/store/src/main.c b/store/src/main.c
+index 9ad5bb6..7762d17 100644
+--- a/store/src/main.c
++++ b/store/src/main.c
+@@ -20,6 +20,19 @@
+ #ifndef STORE_VERSION
+ #define STORE_VERSION "dev"
+ #endif
++/* BananaOS (-DBANANA): the Store comes with the system, its apps are on the menu's Apps shelf, and nothing looks
++   for updates in the background */
++#ifdef BANANA
++#define STORE_NAME "Store"
++#define OS_NAME "BananaOS"
++#define WHERE_TILE "on the menu's Apps shelf"
++#define AUTO_CHECK "Open the Store again to look for updates: START looks now."
++#else
++#define STORE_NAME "ROCKNIXDS Store"
++#define OS_NAME "ROCKNIXDS"
++#define WHERE_TILE "on the menu's home screen"
++#define AUTO_CHECK "The Store also looks for updates every few hours by itself, and the menu says when one is out."
++#endif
+ #define UPDATE_EXIT 75                  /* the Store updated itself: the session starts the new one */
+ 
+ /* ROCKNIXDS Pixel's dark palette, near enough */
+@@ -126,8 +139,8 @@ static void press_a(void) {
+     App *a = cur();
+     if (!a) return;
+     if (a->state == ST_INSTALL || a->state == ST_UPDATE) start_job(a->state == ST_INSTALL ? "install" : "update", a);
+-    else if (a->state == ST_INSTALLED) toast("Installed: its tile is on the menu's home screen");
+-    else if (a->state == ST_NEEDS) toast("It needs a newer ROCKNIXDS: update it from the menu first");
++    else if (a->state == ST_INSTALLED) toast("Installed: its tile is " WHERE_TILE);
++    else if (a->state == ST_NEEDS) toast("It needs a newer " OS_NAME ": update it from the menu first");
+     else if (a->state == ST_UNSUPPORTED) toast("It isn't made for this handheld");
+     else toast(U.offline ? "No network: connect to Wi-Fi, then START" : "No release of it yet");
+ }
+@@ -273,7 +286,7 @@ static void draw_top(Surf *s) {
+     fill(s, C_BG);
+     App *a = cur();
+     if (!a) {
+-        text_big(s, 16, 20, 2, C_TEXT, 0, "ROCKNIXDS Store");
++        text_big(s, 16, 20, 2, C_TEXT, 0, STORE_NAME);
+         if (U.tab == TAB_UPDATES && U.cat.n) {
+             int inst = 0; for (int i = 0; i < U.cat.n; i++) inst += U.cat.apps[i].have[0] != 0;
+             char t[160];
+@@ -282,7 +295,7 @@ static void draw_top(Surf *s) {
+             text_wrap(s, FONT_NORMAL, 16, 56, W - 32, U.offline ? C_DIM : C_TEXT,
+                       U.offline ? "No network: the Store can't check for updates. Connect to Wi-Fi and press START." : t);
+             text_wrap(s, FONT_NORMAL, 16, 84, W - 32, C_DIM,
+-                      "The Store also looks for updates every few hours by itself, and the menu says when one is out.");
++                      AUTO_CHECK);
+         } else
+             text_wrap(s, FONT_NORMAL, 16, 56, W - 32, C_DIM,
+                       U.cat.n ? "Nothing here yet." : "The catalog isn't here yet. Connect to Wi-Fi and press START.");
+@@ -470,7 +483,7 @@ static void draw_bottom(Surf *s) {
+                 else if (!strncmp(job_args(), "remove", 6)) snprintf(t, sizeof t, "Removed.");
+                 else if (!strcmp(job_args(), "update ")) snprintf(t, sizeof t, "Everything is up to date.");
+                 else if (!strncmp(job_args(), "update", 6)) snprintf(t, sizeof t, "Updated to version %s. What it keeps (saves, settings) stayed.", step);
+-                else snprintf(t, sizeof t, "Done%s%s. Its tile is on the menu's home screen when you leave the Store.",
++                else snprintf(t, sizeof t, "Done%s%s. Its tile is " WHERE_TILE " when you leave the Store.",
+                               step[0] ? ": version " : "", step);
+                 rectf(s, bx + 10, by + 30, 6, 6, C_GREEN);
+                 text_wrap(s, FONT_NORMAL, bx + 22, by + 28, bw - 32, C_TEXT, t);
+@@ -527,12 +540,12 @@ int main(int argc, char **argv) {
+         if (!strcmp(a, "--backend") && v) { backend = v; i++; }
+         else if (!strcmp(a, "--size") && v) { setenv("DK_HEADLESS_SIZE", v, 1); setenv("DK_WINDOW_SIZE", v, 1); i++; }
+         else if (!strcmp(a, "--script") && v) { script = v; i++; }
+-        else if (!strcmp(a, "--version")) { printf("ROCKNIXDS Store %s\n", STORE_VERSION); return 0; }
++        else if (!strcmp(a, "--version")) { printf(STORE_NAME " %s\n", STORE_VERSION); return 0; }
+         else if (!strcmp(a, "--help")) { printf("usage: %s [--backend kms|sdl|headless] [--size WxH] [--script ...]\n", argv[0]); return 0; }
+     }
+     signal(SIGTERM, on_signal); signal(SIGINT, on_signal); signal(SIGHUP, on_signal);
+     if (!getenv("DK_LOG_NAME")) setenv("DK_LOG_NAME", "store.log", 1);
+-    plat_log("ROCKNIXDS Store %s", STORE_VERSION);
++    plat_log(STORE_NAME " %s", STORE_VERSION);
+     PlatInfo pi;
+     if (plat_init(backend, &pi)) { fprintf(stderr, "store: no display\n"); plat_log("no display"); return 3; }
+     plat_log("display: %s, panels %dx%d, scale %d, logical %dx%d", pi.backend, pi.panel_w, pi.panel_h, pi.scale, pi.top_w, pi.top_h);
+-- 
+2.56.0
+

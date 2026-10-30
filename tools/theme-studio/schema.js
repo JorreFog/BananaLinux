@@ -55,13 +55,13 @@
   const SOUNDS = ["scroll", "select", "back", "fav", "ready", "insert"];
   // the systems the menu ships (system/rootfs/etc/banana/systems.conf); the server can add a card's own
   const SYSTEM_IDS = ["nds", "gba", "gbc", "gb", "nes", "snes", "megadrive", "psx", "n64",
-    "dodakvarter", "rocknixdsbank", "pico-8", "ports"];
+    "dodakvarter", "rocknixdsbank", "pico-8", "ports", "files"];
   const BUILTIN_FONTS = ["pixel", "pixel-medium", "inter", "inter-medium", "inter-semibold", "inter-bold"];
 
   // ---- buttons and the actions a view can bind ------------------------------------------------------------
   const BUTTONS = ["left", "right", "up", "down", "a", "b", "x", "y", "l", "r"];
-  const BUTTON_ACTIONS = [["prev", "the previous item"], ["next", "the next item"], ["prev:N", "back N items"],
-    ["next:N", "forward N items"], ["first", "the first item"], ["last", "the last item"], ["open", "open the system / play the game"],
+  const BUTTON_ACTIONS = [["prev", "the previous item"], ["next", "the next item"], ["prev:3", "back 3 items (a grid's row)"],
+    ["next:3", "forward 3 items"], ["prev:5", "back 5 items"], ["next:5", "forward 5 items"], ["prev:10", "back 10 items"], ["next:10", "forward 10 items"], ["first", "the first item"], ["last", "the last item"], ["open", "open the system / play the game"],
     ["back", "leave the library"], ["fav", "star the selection"], ["resume", "the system's last game"],
     ["prevSystem", "the previous system"], ["nextSystem", "the next system"], ["none", "nothing"]];
 
@@ -93,7 +93,7 @@
       ["fill", "color"], ["gradient", "object"], ["radius", "length"], ["border", "any"], ["borderColor", "color"], ["shadow", "object"]],
     list: [["source", "enum", ["systems", "games", "hints", "range"]], ["direction", "enum", ["row", "column", "grid", "free"]],
       ["columns", "number"], ["itemW", "number"], ["itemH", "number"], ["gap", "number"], ["stepX", "number"], ["stepY", "number"],
-      ["scrollMode", "enum", ["center", "edge", "none"]], ["loop", "bool"], ["flow", "bool"], ["range", "number"],
+      ["scrollMode", "enum", ["center", "edge", "none"]], ["loop", "bool"], ["flow", "bool"], ["range", "number"], ["count", "number"],
       ["selectedOnTop", "bool"], ["item", "tree"]],
   };
   const TYPE_LABELS = { rect: "Rectangle", text: "Text", image: "Picture", group: "Group", list: "List" };
@@ -196,7 +196,7 @@
     { group: "The view", names: ["view", "W", "H", "screen"] },
     { group: "Time", names: ["time", "clock", "date", "moved", "entered", "dir"] },
     { group: "Status", names: ["battery", "charging", "batteryMode", "online", "motion", "brand"] },
-    { group: "Colour", names: ["accent", "accent.light", "accent.dark", "accent.band", "accent.low", "palette.<name>"] },
+    { group: "Colour", names: ["accent", "accent.light", "accent.dark", "accent.band", "accent.low", "accent.ink", "accent.inkSub", "palette.<name>"] },
     { group: "The list", names: ["cursor", "count", "scroll", "systems.count", "games.count"] },
     { group: "The launch view", names: ["launch.progress", "launch.t"] },
     { group: "An empty library", names: ["empty", "empty.title", "empty.hint"] },

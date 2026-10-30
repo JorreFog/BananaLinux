@@ -11,7 +11,8 @@
 
 namespace banana
 {
-	static const char* CARD_DIR = "/data/banana/themes";
+	// (BANANA_THEMES: another folder for the card's, the host's tests)
+	static const char* const CARD_DIR = getenv("BANANA_THEMES") && *getenv("BANANA_THEMES") ? getenv("BANANA_THEMES") : "/data/banana/themes";
 	static const char* IMAGE_DIR = "/usr/share/banana/themes";
 
 	// ---- a small JSON reader: objects, strings, numbers, true/false/null, arrays skipped; enough for a theme --------
@@ -180,6 +181,15 @@ namespace banana
 			return "";
 		}
 		return p;
+	}
+
+	std::string themePreview(const std::string& value)
+	{
+		std::string path = themePath(value);
+		if (path.empty()) return "";
+		std::map<std::string, std::string> kv;
+		if (!readTheme(path, kv, nullptr) || kv["preview"].empty()) return "";
+		return themeImage(path.substr(0, path.rfind('/')), kv["preview"]);
 	}
 
 	bool themeSetsAccent(const std::string& value)

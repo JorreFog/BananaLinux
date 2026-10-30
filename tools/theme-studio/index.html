@@ -1,102 +1,130 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Banana Theme Studio</title>
 <!-- Banana Theme Studio: makes a "layout theme" for BananaOS (a theme whose JSON has a "screens" member and draws
-     the whole menu). The panels are laid out like the desktop Banana Theme Studio (banana studio/); the look is
-     the BananaOS website's (web/preview): charcoal cards, a cream border, banana yellow, Pixelify Sans.
-     Open this file to edit offline; run tools/theme-studio/serve.py for exact previews. The format is docs/THEMES.md. -->
+     the whole menu). Open this file straight from the disk (or put the folder on any web host): everything works,
+     including the live preview, which is the menu's own engine compiled to WebAssembly (wasm/banana-engine.js).
+     Nothing is uploaded. serve.py adds your themes folder and Send to handheld. The format is docs/THEMES.md. -->
 <link rel="stylesheet" href="ui.css">
 </head>
 <body>
-<header class="top">
-  <div class="brand">
-    <span class="logo-chip"><img src="assets/banana-32.png" alt=""><span class="os">BANANA</span><span class="studio">STUDIO</span></span>
-    <span class="sub">layout themes</span>
+<header class="topbar">
+  <div class="tb-left">
+    <img class="logo" src="assets/banana-32.png" alt="">
+    <div class="doc">
+      <span class="app-name">Theme Studio</span>
+      <span class="doc-name" id="docName">My theme</span>
+      <span class="dirty-dot" id="dirtyDot" title="Changes not saved yet" hidden></span>
+    </div>
+    <div class="menu-wrap">
+      <button id="fileMenuBtn" class="btn ghost" aria-haspopup="true" aria-expanded="false">File <span class="caret-down"></span></button>
+      <div id="fileMenu" class="menu" hidden>
+        <button id="newBtn" class="menu-item" title="Start a new theme from a template">New theme…<kbd></kbd></button>
+        <button id="openBtn" class="menu-item" title="Open a theme's .json, a .zip with its files, or the .json and its pictures together. You can also drop them on the page">Open file…<kbd>Ctrl O</kbd></button>
+        <button id="openDirBtn" class="menu-item" title="Open a folder: the theme's .json and the pictures, fonts and sounds beside it">Open folder…</button>
+        <button id="templatesBtn" class="menu-item" title="Start from one of the example themes">Templates…</button>
+        <div class="menu-sep"></div>
+        <button id="saveBtn" class="menu-item" title="Download the theme's .json">Save .json<kbd>Ctrl S</kbd></button>
+        <button id="exportBtn" class="menu-item" title="Download a .zip with the theme and every file it uses, ready to unzip into banana/themes/ on the card">Export for the handheld (.zip)<kbd>Ctrl ⇧ S</kbd></button>
+        <button id="copyBtn" class="menu-item" title="Copy the theme's JSON to the clipboard">Copy JSON</button>
+      </div>
+    </div>
+    <div class="tb-group">
+      <button id="undoBtn" class="icon-btn" title="Undo (Ctrl+Z)" aria-label="Undo" disabled><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
+      <button id="redoBtn" class="icon-btn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" disabled><svg viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
+    </div>
   </div>
-  <div class="tools">
-    <button id="newBtn" class="btn">New</button>
-    <button id="openBtn" class="btn">Open</button>
-    <button id="saveBtn" class="btn primary">Save</button>
-    <button id="copyBtn" class="btn">Copy</button>
-    <button id="validateBtn" class="btn">Validate</button>
-    <button id="templatesBtn" class="btn" title="Start from one of the example themes">Templates</button>
-    <button id="guideBtn" class="btn" title="How to make a theme, in plain words (opens docs/MAKE-A-THEME.md)">Guide</button>
-    <button id="themeSwitch" class="theme-switch" title="The editor's own dark or light look (the theme's own background is under Theme settings > base)"><span class="track"><span class="knob"></span></span><span id="themeLabel">Dark</span></button>
+  <div class="tb-right">
+    <button id="validateBtn" class="btn ghost" title="Check the theme for mistakes"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Check</button>
+    <button id="optimizeBtn" class="btn ghost" title="Find what makes the theme slow or battery-hungry on the handheld, and fix it"><svg viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Optimize</button>
+    <button id="guideBtn" class="btn ghost" title="How to make a theme, and the full reference"><svg viewBox="0 0 24 24"><path d="M2 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H2z"/><path d="M22 4h-7a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h8z"/></svg>Guide</button>
+    <button id="themeSwitch" class="icon-btn" title="Light or dark editor" aria-label="Light or dark editor"><svg class="moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><svg class="sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span id="themeLabel" class="sr">Dark</span></button>
+    <button id="exportQuickBtn" class="btn primary" title="Download a .zip ready to unzip into banana/themes/ on the card">Export</button>
   </div>
-  <input id="fileInput" type="file" accept=".json,application/json" class="hidden">
-  <span id="status" class="status">…</span>
+  <input id="fileInput" type="file" accept=".json,.zip,application/json,application/zip,.png,.jpg,.jpeg,.ttf,.otf,.wav" multiple class="hidden">
+  <input id="dirInput" type="file" webkitdirectory directory multiple class="hidden">
 </header>
+<div id="banner" class="banner" hidden></div>
 
 <main class="app">
-  <aside class="col left">
-    <section class="dock">
-      <h2 class="dock-title">Add elements</h2>
-      <div class="dock-body" id="palette"></div>
-    </section>
-    <section class="dock grow">
-      <h2 class="dock-title">Layers</h2>
-      <div class="dock-body" id="pane-elements"></div>
-    </section>
-    <section class="dock">
-      <div class="tabs" data-group="library">
-        <button data-tab="components" aria-selected="true">Components</button>
-        <button data-tab="assets">Assets</button>
-      </div>
-      <div class="dock-body">
-        <div id="pane-components"></div>
-        <div id="pane-assets" hidden></div>
-      </div>
-    </section>
+  <aside class="side left">
+    <nav class="tabs" data-group="library">
+      <button data-tab="layers" aria-selected="true">Layers</button>
+      <button data-tab="add">Add</button>
+      <button data-tab="assets">Files</button>
+      <button data-tab="components">Components</button>
+    </nav>
+    <div class="side-body">
+      <div id="pane-elements"></div>
+      <div id="palette" hidden></div>
+      <div id="pane-assets" hidden></div>
+      <div id="pane-components" hidden></div>
+    </div>
   </aside>
 
-  <section class="col center">
-    <div class="tabs" data-group="center">
-      <button data-tab="design" aria-selected="true">Design</button>
-      <button data-tab="json">JSON</button>
+  <section class="stage">
+    <div class="stage-bar">
+      <nav class="seg tabs" data-group="center">
+        <button data-tab="design" aria-selected="true">Design</button>
+        <button data-tab="json">Code</button>
+      </nav>
+      <span class="grow"></span>
+      <div class="menu-wrap">
+        <button id="previewMenuBtn" class="btn ghost" aria-haspopup="true" aria-expanded="false" title="The device, battery, Wi-Fi and the test games the preview shows"><svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>Preview settings <span class="caret-down"></span></button>
+        <div id="previewMenu" class="menu wide" hidden>
+          <div id="preview-controls"></div>
+        </div>
+      </div>
     </div>
-    <div class="center-body">
+    <div class="stage-body">
       <div id="design"><div id="preview"></div></div>
       <div id="json" hidden></div>
     </div>
   </section>
 
-  <aside class="col right">
-    <section class="dock grow">
-      <div class="tabs" data-group="properties">
-        <button data-tab="inspector" aria-selected="true">Inspector</button>
-        <button data-tab="theme">Theme settings</button>
+  <aside class="side right">
+    <nav class="tabs" data-group="properties">
+      <button data-tab="inspector" aria-selected="true">Element</button>
+      <button data-tab="theme">Theme</button>
+    </nav>
+    <div class="side-body">
+      <div id="inspector"></div>
+      <div id="theme" hidden>
+        <details class="section" open><summary>General</summary><div id="pane-theme"></div></details>
+        <details class="section" open><summary>Colours, fonts and sounds</summary><div id="pane-colours"></div></details>
+        <details class="section"><summary>System icons</summary><div id="pane-icons"></div></details>
+        <details class="section"><summary>Variables</summary><div id="pane-vars"></div></details>
+        <details class="section"><summary>Buttons and hints</summary><div id="pane-input"></div></details>
+        <details class="section"><summary>Timing</summary><div id="pane-behaviour"></div></details>
       </div>
-      <div class="dock-body">
-        <div id="inspector"></div>
-        <div id="theme" hidden>
-          <div id="pane-theme"></div>
-          <div id="pane-vars"></div>
-          <div id="pane-colours"></div>
-          <div id="pane-input"></div>
-          <div id="pane-behaviour"></div>
-        </div>
-      </div>
-    </section>
+    </div>
   </aside>
 </main>
 
-<footer class="bottom">
-  <div class="tabs" data-group="bottom">
-    <button data-tab="controls" aria-selected="true">Preview</button>
-    <button data-tab="problems">Problems</button>
-  </div>
-  <div class="bottom-body">
-    <div id="preview-controls"></div>
-    <div id="log" hidden></div>
-  </div>
+<footer class="statusbar">
+  <span id="status" class="status">…</span>
+  <span class="grow"></span>
+  <nav class="tabs" data-group="bottom">
+    <button data-tab="problems" id="problemsBtn" class="problems-btn" title="What the engine and the checks found">Problems</button>
+  </nav>
 </footer>
+<section id="drawer" class="drawer" hidden>
+  <div class="drawer-head"><b>Problems</b><span class="grow"></span><button id="drawerClose" class="icon-btn" aria-label="Close" title="Close"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+  <div id="log"></div>
+</section>
 
+<!-- classic scripts only, so the page works from file:// (wasm/banana-engine.js is loaded by engine.js when the page
+     is up: 3.6 MB, the engine with its fonts and test library inlined) -->
 <script src="expr.js"></script>
 <script src="schema.js"></script>
 <script src="templates.js"></script>
+<script src="guide.js"></script>
+<script src="zip.js"></script>
+<script src="optimize.js"></script>
+<script src="engine.js"></script>
 <script src="render.js"></script>
 <script src="app.js"></script>
 </body>

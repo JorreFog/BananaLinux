@@ -24,48 +24,70 @@ namespace banana
 			bool emulator = false;		// EMULATOR scope (also true for Type CORE below)
 		};
 
-		const char* const ON_OFF[] = { "on", "off" };
-		const char* const ACCENTS[] = { "yellow", "blue", "red", "green", "purple", "pink" };
-		const char* const SHADERS[] = { "off", "lcd", "crt", "sharp" };
-		const char* const NDS[] = { "superdrastic", "bananads" };
-		const char* const PANEL[] = { "panel", "off" };
-		const char* const BOXART[] = { "libretro", "both", "twilight" };
-		const char* const LATENCY[] = { "32", "64", "128" };
+		// each list ends in nullptr: valid() walks it to the end
+		const char* const ON_OFF[] = { "on", "off", nullptr };
+		const char* const DS_CART_ART[] = { "box", "icon", nullptr };
+		const char* const ALL_CHOSEN[] = { "all", "chosen", nullptr };
+		const char* const BSHARE_RECEIVE[] = { "off", "ask", "auto", nullptr };
+		const char* const ACCENT_TEXT[] = { "auto", "dark", "light", nullptr };
+		const char* const ACCENTS[] = { "yellow", "blue", "red", "green", "purple", "pink", nullptr };
+		const char* const SHADERS[] = { "off", "lcd", "crt", "sharp", nullptr };
+		const char* const NDS[] = { "superdrastic", "bananads", nullptr };
+		const char* const PANEL[] = { "panel", "off", nullptr };
+		const char* const IDLE[] = { "dim", "off", "on", nullptr };
+		const char* const BOXART[] = { "libretro", "both", "twilight", nullptr };
+		const char* const HOMESYNC_AUTO[] = { "off", "quit", "both", nullptr };
+		const char* const LATENCY[] = { "32", "64", "128", nullptr };
+		const char* const LOGIN[] = { "password", "guest", nullptr };
+		const char* const BT_AUDIO[] = { "latency", "quality", nullptr };
 
+		// (language is left out on purpose: a reset keeps the menu's language, and the codes are lang/'s files)
 		// The values /etc/banana/settings.conf documents, and the ones a card is completed with when that file is
 		// missing (the host test, or a card whose root is older than the menu). Keep in step with the template file.
 		const KeyDef KEYS[] = {
 			{ "accent", "yellow", ENUM, ACCENTS, 0, 0 },
+			{ "accent_text", "auto", ENUM, ACCENT_TEXT, 0, 0 },
 			{ "theme", "dark", TEXT, nullptr, 0, 0 },
 			{ "motion", "on", ENUM, ON_OFF, 0, 0 },
+			{ "ds_cart_art", "box", ENUM, DS_CART_ART, 0, 0 },
+			{ "homesync_games", "all", ENUM, ALL_CHOSEN, 0, 0 },
 			{ "sounds", "on", ENUM, ON_OFF, 0, 0 },
 			{ "battery", "icon", TEXT, nullptr, 0, 0 },
 			{ "clock", "24h", TEXT, nullptr, 0, 0 },
 			{ "splash", "on", ENUM, ON_OFF, 0, 0 },
-			{ "bottom_idle_seconds", "10", INTEGER, nullptr, 0, 3600 },
-			{ "bottom_dim_percent", "0", INTEGER, nullptr, 0, 100 },
+			{ "bottom_idle_mode", "dim", ENUM, IDLE, 0, 0 },
+			{ "bottom_idle_seconds", "30", INTEGER, nullptr, 0, 3600 },
+			{ "bottom_dim_percent", "25", INTEGER, nullptr, 0, 100 },
 			{ "wifi", "on", ENUM, ON_OFF, 0, 0 },
+			{ "bluetooth", "off", ENUM, ON_OFF, 0, 0 },
+			// (in the template since Bluetooth audio, but not here: normalizeSettings kept the card's line as an unknown
+			// key and added the template's again at every start, 36 lines of it on the Plus)
+			{ "bt_audio", "latency", ENUM, BT_AUDIO, 0, 0 },
 			{ "quick_resume", "off", ENUM, ON_OFF, 0, 0, true },
 			{ "sd2_roms", "on", ENUM, ON_OFF, 0, 0 },
 			{ "ra_shader", "off", ENUM, SHADERS, 0, 0, true },
+			{ "ra_border", "off", ENUM, ON_OFF, 0, 0, true },
 			{ "ra_audio_latency", "64", ENUM, LATENCY, 0, 0, true },
 			{ "ra_vsync", "on", ENUM, ON_OFF, 0, 0, true },
+			{ "ra_hotkeys", "on", ENUM, ON_OFF, 0, 0, true },
 			{ "nds_emulator", "superdrastic", ENUM, NDS, 0, 0, true },
 			{ "share", "off", ENUM, ON_OFF, 0, 0 },
+			{ "share_login", "password", ENUM, LOGIN, 0, 0 },
 			{ "ssh", "off", ENUM, ON_OFF, 0, 0 },
 			{ "timezone", "UTC0", TIMEZONE, nullptr, 0, 0 },
 			{ "retroarch_panel", "panel", ENUM, PANEL, 0, 0 },
+			{ "pokemon_companion", "off", ENUM, ON_OFF, 0, 0, true },
+			{ "game_companion", "off", ENUM, ON_OFF, 0, 0, true },
 			{ "boxart_source", "libretro", ENUM, BOXART, 0, 0 },
+			{ "update_prerelease", "on", ENUM, ON_OFF, 0, 0 },
+			{ "update_daily", "off", ENUM, ON_OFF, 0, 0 },
+			{ "homesync_roms", "on", ENUM, ON_OFF, 0, 0 },
+			{ "homesync_states", "off", ENUM, ON_OFF, 0, 0 },
+			{ "homesync_auto", "off", ENUM, HOMESYNC_AUTO, 0, 0 },
 			{ "boxart_twilight_url", "https://boxart.kirovair.com", TEXT, nullptr, 0, 0 },
 			{ "boxart_twilight_key", "tb2_9f4c1d7a3e8b5062", TEXT, nullptr, 0, 0 },
+			{ "bshare_receive", "off", ENUM, BSHARE_RECEIVE, 0, 0 },
 			{ "core.gba", "gpsp", CORE, nullptr, 0, 0 },
-			{ "core.gbc", "gambatte", CORE, nullptr, 0, 0 },
-			{ "core.gb", "gambatte", CORE, nullptr, 0, 0 },
-			{ "core.nes", "fceumm", CORE, nullptr, 0, 0 },
-			{ "core.snes", "snes9x", CORE, nullptr, 0, 0 },
-			{ "core.megadrive", "picodrive", CORE, nullptr, 0, 0 },
-			{ "core.psx", "pcsx_rearmed", CORE, nullptr, 0, 0 },
-			{ "core.n64", "mupen64plus_next", CORE, nullptr, 0, 0 },
 		};
 
 		const KeyDef* find(const std::string& key)

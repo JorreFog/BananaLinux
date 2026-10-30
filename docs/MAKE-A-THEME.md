@@ -105,18 +105,20 @@ You do not have to hand-write it. **Use the editor.**
 
 There are two versions, and they look and work the same. Take whichever suits you.
 
-**In a browser, offline**
+**In a browser**
+
+Open **<https://jorrefog.github.io/BananaLinux/theme-studio/>**: nothing to install, and nothing you make leaves
+your computer (the page runs on its own once loaded). Or offline, from a checkout:
 
 ```sh
 xdg-open tools/theme-studio/index.html      # or just double-click the file
 ```
 
-Everything works with no server, except the preview. For a **live preview drawn by the menu's own engine**, start
-the little server instead:
-
-```sh
-python3 tools/theme-studio/serve.py         # builds banana-ui if it can, then opens the page
-```
+Everything works straight from the file, with nothing to install, including a **live preview drawn by the menu's
+own engine**: both screens, exactly as the handheld draws them, which you can drive with the keys and the mouse. The
+folder also works from any web host. Open a theme together with its pictures (its folder, or a `.zip`), and
+**Export (.zip)** gives you the theme and its files ready to unzip into `banana/themes/`. The little server,
+`python3 tools/theme-studio/serve.py`, is only needed for **Send to handheld** and a themes folder of your own.
 
 **As a desktop app**
 
@@ -142,6 +144,10 @@ It needs Python 3 and PySide6 (`pip install PySide6`).
 
 The exact preview is the menu's own engine drawing your theme — not the editor's redrawing of it — so what you see
 is what the handheld shows.
+
+**Optimize** finds what makes a theme slow or hard on the battery — usually something that keeps a
+screen redrawing when nothing happens, like a twinkle that reads `time` — and fixes it: the safe fixes change nothing
+you can see, the others are yours to pick.
 
 **Keep your themes out of the repository.** Both editors start their Open and Save dialogs in `~/BananaThemes`,
 which is where your themes should live on your computer, so they never turn up in a commit. The web editor can be

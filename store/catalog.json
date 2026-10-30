@@ -1,0 +1,138 @@
+{
+ "schema": 1,
+ "name": "Store",
+ "_comment": "BananaOS's Store catalog (rocknixds-store reads it with RNDS_STORE_PLATFORM=banana). Paths are ROCKNIX's, mapped by the Store: /storage/.config/rocknixds/<id> -> /data/store/apps/<id>, the tile folder -> /data/store/tiles. Döda Kvarter and Bank come with the system (\"builtin\": removing one takes its tile off the menu, installing puts it back), and so does the Store.",
+ "apps": [
+  {
+   "id": "ereaderds",
+   "name": "eReaderDS",
+   "tile": "eReaderDS",
+   "kind": "app",
+   "developer": "casualducko",
+   "genre": "Reader",
+   "players": "1",
+   "releasedate": "20260925T000000",
+   "accent": "#2b395e",
+   "summary": "A two-page ebook reader: hold the handheld sideways like an open book.",
+   "description": "Each screen shows one page. Reads EPUB and text books, and comics and manga (.cbz). Bookmarks, highlights, a dictionary, themes and fonts, KOReader sync, and books from Standard Ebooks, Project Gutenberg and other catalogs, or sent from your phone or computer over Wi-Fi. Put books in roms/ebook on the card (the banana share's roms\\ebook folder); your books, settings and reading places stay there, also when the app is removed. Made by casualducko for the RG DS Plus; it updates itself too, and the Store follows its releases.",
+   "icon": "apps/ereaderds/icon.png",
+   "screenshots": [
+    "apps/ereaderds/library.png"
+   ],
+   "devices": [
+    "rgds-plus"
+   ],
+   "release": {
+    "github": "casualducko/eReaderDS",
+    "tag_prefix": "v",
+    "asset": "eReaderDS-v{version}.zip"
+   },
+   "package": {
+    "root": "Ports",
+    "dest": "/storage/.config/rocknixds/ereaderds",
+    "check": "eReaderDS/launch.sh",
+    "executable": [
+     "eReaderDS.sh",
+     "eReaderDS/launch.sh",
+     "eReaderDS/runtime/love.aarch64"
+    ],
+    "version_file": "eReaderDS/app/version.lua",
+    "version_match": "return \"([^\"]+)\""
+   },
+   "menu": {
+    "system": "ereaderds",
+    "folder": "/storage/.config/rocknixds/apps/ereaderds",
+    "entry": "eReaderDS.sh",
+    "launch": "eReaderDS.sh",
+    "ports": false,
+    "media": {
+     "image": "eReaderDS/icon.png"
+    }
+   }
+  },
+  {
+   "id": "dodakvarter",
+   "name": "Döda Kvarter",
+   "tile": "Döda Kvarter",
+   "kind": "game",
+   "developer": "JorreFog",
+   "genre": "Shooter / Roguelike",
+   "players": "1",
+   "releasedate": "20261006T000000",
+   "accent": "#b8323a",
+   "summary": "A zombie roguelike for both screens, set in a Swedish suburb at night.",
+   "description": "Survive round after round as in Call of Duty Zombies: earn kronor, buy your way through barricades into new districts, find the power, drink Julmust and Snabbkaffe, try Lådan (beware the Dalahäst) and upgrade at Smedjan. Every town is new and the loot gets better every round. Eight bosses from Swedish folklore. The top screen is the game, the bottom screen your inventory, health, ammo and the map. It comes with BananaOS: removing it takes its tile off the menu (your saves stay in apps/dodakvarter on the card), installing it puts the tile back.",
+   "icon": "apps/dodakvarter/icon.png",
+   "screenshots": [
+    "apps/dodakvarter/screen.png"
+   ],
+   "devices": [
+    "rgds",
+    "rgds-plus"
+   ],
+   "requires": {
+    "bananaos": "0.4.2"
+   },
+   "builtin": {
+    "system": "dodakvarter",
+    "dir": "/usr/share/banana/apps/dodakvarter"
+   }
+  },
+  {
+   "id": "bank",
+   "name": "Poketool",
+   "tile": "Poketool",
+   "kind": "app",
+   "developer": "JorreFog",
+   "genre": "Tool",
+   "players": "1-2",
+   "releasedate": "20261006T000000",
+   "accent": "#3d6fb8",
+   "summary": "A Pokémon bank, save editor, legality checker and trading app, built on PKHeX.Core.",
+   "description": "Formerly Bank & Trade. Reads your game saves (generation 1 to 5), stores Pokémon in boxes of its own, moves them between games, boxes and parties through the bank (they change format only when they move up a generation, as Pal Park and Poké Transfer did), edits Pokémon (or makes new ones), trainers, bags and Pokédexes as PKHeX does, duplicates Pokémon, checks every one with PKHeX's legality analysis, and trades with another handheld over Wi-Fi, in a lobby or a private room. Close the game before you use it. It comes with BananaOS: removing it takes its tile off the menu (your bank stays in apps/bank on the card), installing it puts the tile back.",
+   "icon": "apps/bank/icon.png",
+   "screenshots": [
+    "apps/bank/screen.png"
+   ],
+   "devices": [
+    "rgds",
+    "rgds-plus"
+   ],
+   "requires": {
+    "bananaos": "0.4.2"
+   },
+   "builtin": {
+    "system": "rocknixdsbank",
+    "dir": "/usr/share/banana/apps/bank"
+   }
+  },
+  {
+   "id": "bshare",
+   "name": "Bshare",
+   "tile": "Bshare",
+   "kind": "app",
+   "developer": "Banana",
+   "genre": "Tool",
+   "players": "1",
+   "releasedate": "20261028T000000",
+   "accent": "#4a9bff",
+   "summary": "Files to and from your phone or computer over Wi-Fi, with LocalSend.",
+   "description": "Sends files between the handheld and phones or computers on the same Wi-Fi that have LocalSend open (the free and open-source app by Tien Do Nam and its contributors, localsend.org). Receive is off until you turn it on: then you accept each transfer, games go straight into their system's folder and everything else into banana/received, or into a location you choose. To send, mark files or folders on the cards and pick a device. Bshare is Banana's own small version of LocalSend's open protocol. It comes with BananaOS: removing it takes its tile off the menu, installing it puts the tile back.",
+   "icon": "apps/bshare/icon.png",
+   "screenshots": [
+    "apps/bshare/screen.png"
+   ],
+   "devices": [
+    "rgds",
+    "rgds-plus"
+   ],
+   "requires": {
+    "bananaos": "0.4.2"
+   },
+   "builtin": {
+    "system": "bshare",
+    "dir": "/usr/share/banana/apps/bshare"
+   }
+  }
+ ]
+}

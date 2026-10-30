@@ -1,0 +1,116 @@
+{
+ "schema": 1,
+ "title": "Tetris Worlds",
+ "match": {
+  "code": "ATWE",
+  "title12": "TETRISWORLDS",
+  "crc32": [
+   "7b729804"
+  ],
+  "zip": "Tetris Worlds.zip"
+ },
+ "accent": "#3a6ad8",
+ "quality": "reference-only",
+ "sources": [
+  "own knowledge of the game (written in our own words)"
+ ],
+ "credit": "Companion idea: PokeDaisy (Lidor Itzhari)",
+ "vars": {},
+ "enums": {},
+ "pages": [
+  {
+   "id": "status",
+   "title": "Board",
+   "widgets": [
+    {
+     "type": "static",
+     "text": "Lines, level, score; next pieces preview"
+    }
+   ]
+  },
+  {
+   "id": "detail",
+   "title": "Pieces",
+   "widgets": [
+    {
+     "type": "kv",
+     "rows": [
+      [
+       "7 tetrominoes",
+       "I, O, T, S, Z, J, L"
+      ]
+     ]
+    },
+    {
+     "type": "static",
+     "text": "Hold piece; hard drop"
+    }
+   ]
+  },
+  {
+   "id": "battle",
+   "title": "Tips",
+   "widgets": [
+    {
+     "type": "static",
+     "text": "Keep the stack flat; leave a column for the I piece (Tetris = 4 lines)"
+    },
+    {
+     "type": "kv",
+     "rows": [
+      [
+       "T-spin",
+       "rotate the T into a slot"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "map",
+   "title": "Modes",
+   "widgets": [
+    {
+     "type": "static",
+     "text": "Tetris, Sticky, Fusion, Cascade, Square, Hot-Line"
+    }
+   ]
+  },
+  {
+   "id": "bag",
+   "title": "Next",
+   "widgets": [
+    {
+     "type": "static",
+     "text": "Next queue and the Hold slot"
+    }
+   ]
+  },
+  {
+   "id": "collection",
+   "title": "Stats",
+   "widgets": [
+    {
+     "type": "kv",
+     "rows": [
+      [
+       "Lines by type",
+       "single, double, triple, tetris"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "progress",
+   "title": "Progress",
+   "widgets": [
+    {
+     "type": "static",
+     "text": "Level goals per mode"
+    }
+   ]
+  }
+ ],
+ "genre": "puzzle"
+}

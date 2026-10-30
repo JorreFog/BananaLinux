@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Builds templates.js: the example layout themes, inlined for the editor's "start from a template".
+"""Builds templates.js: the example layout themes, inlined for the editor's "start from a template", and guide.js:
+the theme guides (docs/MAKE-A-THEME.md, docs/THEMES.md, the colour keys' README.txt), for the Guide button.
 
     python3 tools/theme-studio/make-templates.py
 
@@ -7,7 +8,7 @@ The web editor is often opened straight from a checkout with no server running, 
 cannot fetch its neighbours, so the themes it offers as starting points travel inside this script instead.
 serve.py reads the same files (TEMPLATE_DIRS) while it is running, and its /api/templates wins when it answers.
 
-Re-run this after changing any of the examples: tools/theme-studio/tests/run.sh checks the file is up to date.
+Re-run this after changing any of the examples or guides: tools/theme-studio/tests/run.sh checks both are up to date.
 """
 import json
 import re
@@ -17,12 +18,18 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 OUT = HERE / "templates.js"
+GUIDE = HERE / "guide.js"
+GUIDES = [("make", "Make a theme", ROOT / "docs" / "MAKE-A-THEME.md"), ("ref", "Reference", ROOT / "docs" / "THEMES.md"),
+          ("colours", "Colour keys", ROOT / "system" / "rootfs" / "usr" / "share" / "banana" / "themes" / "README.txt")]
 DIRS = [ROOT / "system" / "rootfs" / "usr" / "share" / "banana" / "themes", ROOT / "docs" / "themes"]
+# themes made with the editor itself (and the thumbnails of every starting point, made from their home screens)
+PREMADE = HERE / "premade"
 
 
 def entries():
     out = []
-    for d in DIRS:
+    desc = json.loads((PREMADE / "descriptions.json").read_text(encoding="utf-8")) if (PREMADE / "descriptions.json").exists() else {}
+    for d in [PREMADE] + DIRS:
         if not d.exists():
             continue
         for f in sorted(d.glob("*.json")):
@@ -30,8 +37,16 @@ def entries():
             if not re.search(r'"screens"\s*:', text):		# layout themes only: the editor edits those
                 continue
             m = re.search(r'"name"\s*:\s*"([^"]*)"', text)
-            out.append({"name": m.group(1) if m else f.stem,
-                        "file": str(f.relative_to(ROOT)), "json": text})
+            if f.name == "descriptions.json":
+                continue
+            e = {"name": m.group(1) if m else f.stem, "file": str(f.relative_to(ROOT)), "json": text,
+                 "group": "premade" if d == PREMADE else "example"}
+            if f.stem in desc:
+                e["description"] = desc[f.stem]
+            thumb = PREMADE / "thumbs" / (f.stem + ".jpg")
+            if thumb.exists():
+                e["thumb"] = str(thumb.relative_to(HERE))
+            out.append(e)
     return out
 
 
@@ -47,6 +62,18 @@ def main():
         "})(typeof globalThis !== \"undefined\" ? globalThis : this);\n",
         encoding="utf-8")
     print("wrote %s (%d templates)" % (OUT.relative_to(ROOT), len(entries())))
+    docs = [{"id": i, "title": t, "file": str(f.relative_to(ROOT)), "text": f.read_text(encoding="utf-8")}
+            for i, t, f in GUIDES if f.exists()]
+    body = ",\n".join("  " + json.dumps(d, ensure_ascii=False) for d in docs)
+    GUIDE.write_text(
+        "// Banana Theme Studio: the theme guides, inlined so Guide works with no server and from file://. Generated\n"
+        "// by tools/theme-studio/make-templates.py from docs/ - re-run it after changing them.\n"
+        "(function (global) {\n  \"use strict\";\n  const GUIDES = [\n" + body + "\n  ];\n"
+        "  if (typeof module !== \"undefined\" && module.exports) module.exports = GUIDES;\n"
+        "  global.BananaGuides = GUIDES;\n"
+        "})(typeof globalThis !== \"undefined\" ? globalThis : this);\n",
+        encoding="utf-8")
+    print("wrote %s (%d guides)" % (GUIDE.relative_to(ROOT), len(docs)))
     return 0
 
 

@@ -1,3 +1,4 @@
+(This file comes with BananaOS and every update replaces it: keep notes of your own in another file.)
 DS SHADERS OF YOUR OWN
 ======================
 

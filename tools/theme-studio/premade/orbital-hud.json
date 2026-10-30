@@ -1,0 +1,1827 @@
+{
+  "name": "Orbital HUD",
+  "author": "Banana Theme Studio",
+  "base": "dark",
+  "font": "inter",
+  "screens": {
+    "home": {
+      "top": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": "100%",
+          "h": "100%",
+          "fill": "=bg",
+          "id": "space",
+          "gradient": {
+            "angle": 180,
+            "stops": [
+              "=bg",
+              "=mix(bg2, sys.color, 0.18) + ' 50%'",
+              "=bg"
+            ]
+          }
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "use": "navgrid"
+        },
+        {
+          "type": "rect",
+          "x": 320,
+          "y": 220,
+          "w": 230,
+          "h": 230,
+          "fill": "#00000000",
+          "anchor": "center",
+          "radius": "50%",
+          "id": "halo",
+          "shadow": {
+            "blur": 60,
+            "spread": -40,
+            "color": "=alpha(mix(line, sys.color, 0.5), 0.55)"
+          }
+        },
+        {
+          "type": "rect",
+          "x": 320,
+          "y": 220,
+          "w": 300,
+          "h": 300,
+          "fill": "#00000000",
+          "anchor": "center",
+          "radius": "50%",
+          "border": 1,
+          "borderColor": "=alpha(line, 0.35)",
+          "id": "ring-outer"
+        },
+        {
+          "type": "rect",
+          "x": 320,
+          "y": 220,
+          "w": 232,
+          "h": 232,
+          "fill": "#00000000",
+          "anchor": "center",
+          "radius": "50%",
+          "border": 1.5,
+          "borderColor": "=alpha(line, 0.8)",
+          "id": "ring-mid",
+          "scale": "=0.86 + 0.14 * inMove"
+        },
+        {
+          "type": "rect",
+          "x": 320,
+          "y": 220,
+          "w": 164,
+          "h": 164,
+          "fill": "#00000000",
+          "anchor": "center",
+          "radius": "50%",
+          "border": 1,
+          "borderColor": "=alpha(line, 0.45)",
+          "id": "ring-inner",
+          "scale": "=1.12 - 0.12 * inMove"
+        },
+        {
+          "type": "list",
+          "source": "range",
+          "direction": "free",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "itemW": 150,
+          "itemH": 190,
+          "gap": 14,
+          "scrollMode": "center",
+          "item": {
+            "type": "rect",
+            "w": "=mod(i, 6) == 0 ? 5 : 2",
+            "h": "=mod(i, 6) == 0 ? 5 : 2",
+            "children": [],
+            "anchor": "center",
+            "x": "=320 + cosd(i * 7.5) * 162",
+            "y": "=220 + sind(i * 7.5) * 162",
+            "fill": "=mod(i, 6) == 0 ? line : alpha(line, 0.5)"
+          },
+          "id": "ticks",
+          "count": 48,
+          "range": 64
+        },
+        {
+          "type": "rect",
+          "x": 130,
+          "y": 220,
+          "w": 28,
+          "h": 1,
+          "fill": "=alpha(line, 0.7)"
+        },
+        {
+          "type": "rect",
+          "x": 482,
+          "y": 220,
+          "w": 28,
+          "h": 1,
+          "fill": "=alpha(line, 0.7)"
+        },
+        {
+          "type": "rect",
+          "x": 320,
+          "y": 30,
+          "w": 1,
+          "h": 28,
+          "fill": "=alpha(line, 0.7)"
+        },
+        {
+          "type": "rect",
+          "x": 320,
+          "y": 382,
+          "w": 1,
+          "h": 28,
+          "fill": "=alpha(line, 0.7)"
+        },
+        {
+          "type": "list",
+          "source": "range",
+          "direction": "free",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "itemW": 150,
+          "itemH": 190,
+          "gap": 14,
+          "scrollMode": "center",
+          "item": {
+            "type": "rect",
+            "w": "=7 - i * 0.4",
+            "h": "=7 - i * 0.4",
+            "children": [],
+            "anchor": "center",
+            "radius": "50%",
+            "x": "=320 + cosd((time * 0.045) - i * 3.2) * 116",
+            "y": "=220 + sind((time * 0.045) - i * 3.2) * 116",
+            "fill": "=i == 0 ? ink : line",
+            "opacity": "=(1 - i / 14) * 0.9"
+          },
+          "id": "sweep",
+          "count": 14,
+          "range": 64
+        },
+        {
+          "type": "image",
+          "x": 320,
+          "y": 220,
+          "w": 104,
+          "h": 104,
+          "src": "{sys.icon}",
+          "fit": "pixelContain",
+          "id": "target",
+          "anchor": "center",
+          "scale": "=0.6 + 0.4 * easeOutBack(progress(moved, 460))",
+          "opacity": "=easeOut(progress(moved, 240))"
+        },
+        {
+          "type": "rect",
+          "x": 320,
+          "y": 220,
+          "w": "=128 + 110 * (1 - inMove)",
+          "h": "=128 + 110 * (1 - inMove)",
+          "use": "brackets",
+          "id": "lock",
+          "anchor": "center",
+          "opacity": "=0.4 + 0.6 * inMove"
+        },
+        {
+          "type": "text",
+          "x": 22,
+          "y": 70,
+          "text": "PAYLOAD",
+          "size": 10,
+          "color": "=soft",
+          "font": "pixel",
+          "spacing": 2,
+          "w": 140
+        },
+        {
+          "type": "text",
+          "x": 22,
+          "y": 85,
+          "text": "{pad(sys.games, 3)}",
+          "size": 22,
+          "color": "=ink",
+          "font": "pixel-medium",
+          "w": 140
+        },
+        {
+          "type": "text",
+          "x": 22,
+          "y": 140,
+          "text": "SORTIES",
+          "size": 10,
+          "color": "=soft",
+          "font": "pixel",
+          "spacing": 2,
+          "w": 140
+        },
+        {
+          "type": "text",
+          "x": 22,
+          "y": 155,
+          "text": "{pad(sys.played, 3)}",
+          "size": 22,
+          "color": "=ink",
+          "font": "pixel-medium",
+          "w": 140
+        },
+        {
+          "type": "text",
+          "x": 488,
+          "y": 70,
+          "text": "FLIGHT TIME",
+          "size": 10,
+          "color": "=soft",
+          "font": "pixel",
+          "spacing": 2,
+          "align": "right",
+          "w": 130
+        },
+        {
+          "type": "text",
+          "x": 488,
+          "y": 85,
+          "text": "=either(sys.time, '0m')",
+          "size": 22,
+          "color": "=ink",
+          "font": "pixel-medium",
+          "align": "right",
+          "w": 130
+        },
+        {
+          "type": "text",
+          "x": 488,
+          "y": 140,
+          "text": "SECTOR",
+          "size": 10,
+          "color": "=soft",
+          "font": "pixel",
+          "spacing": 2,
+          "align": "right",
+          "w": 130
+        },
+        {
+          "type": "text",
+          "x": 488,
+          "y": 155,
+          "text": "{pad(cursor + 1, 2)}/{pad(count, 2)}",
+          "size": 22,
+          "color": "=ink",
+          "font": "pixel-medium",
+          "align": "right",
+          "w": 130
+        },
+        {
+          "type": "rect",
+          "x": 22,
+          "y": 120,
+          "w": 100,
+          "h": 1,
+          "fill": "=alpha(line, 0.35)"
+        },
+        {
+          "type": "rect",
+          "x": 518,
+          "y": 120,
+          "w": 100,
+          "h": 1,
+          "fill": "=alpha(line, 0.35)"
+        },
+        {
+          "type": "text",
+          "x": 22,
+          "y": 210,
+          "text": "=sys.fav ? '* MARKED' : ''",
+          "size": 11,
+          "color": "=amber",
+          "font": "pixel",
+          "spacing": 2
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": "=388 + 12 * (1 - inMove)",
+          "text": "{upper(sys.name)}",
+          "size": 28,
+          "color": "=ink",
+          "font": "inter-bold",
+          "w": "100%",
+          "align": "center",
+          "spacing": 5,
+          "opacity": "=inMove",
+          "id": "name"
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 428,
+          "text": "=either(upper(sys.maker), 'UNKNOWN') + '  //  ' + upper(plural(sys.games, 'target'))",
+          "size": 11,
+          "color": "=line",
+          "font": "pixel",
+          "w": "100%",
+          "align": "center",
+          "spacing": 3,
+          "opacity": "=inMove"
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 452,
+          "text": "RESUME > {upper(sys.resumeTitle)}",
+          "size": 10,
+          "color": "=amber",
+          "font": "pixel",
+          "w": "100%",
+          "align": "center",
+          "spacing": 2,
+          "visible": "=sys.hasResume"
+        }
+      ],
+      "bottom": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "=bg"
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "use": "navgrid",
+          "opacity": 0.6
+        },
+        {
+          "type": "text",
+          "x": 22,
+          "y": 18,
+          "text": "DOCKING BAYS",
+          "size": 12,
+          "color": "=line",
+          "font": "pixel",
+          "spacing": 3
+        },
+        {
+          "type": "text",
+          "x": 418,
+          "y": 16,
+          "text": "BAY {pad(cursor + 1, 2)} / {pad(count, 2)}",
+          "size": 13,
+          "color": "=ink",
+          "font": "pixel-medium",
+          "w": 200,
+          "align": "right"
+        },
+        {
+          "type": "rect",
+          "x": 22,
+          "y": 40,
+          "w": 596,
+          "h": 1,
+          "fill": "=alpha(line, 0.4)"
+        },
+        {
+          "type": "list",
+          "source": "systems",
+          "direction": "row",
+          "x": 0,
+          "y": 92,
+          "w": 640,
+          "h": 210,
+          "itemW": 136,
+          "itemH": 176,
+          "gap": 22,
+          "scrollMode": "center",
+          "item": {
+            "type": "group",
+            "w": 136,
+            "h": 176,
+            "children": [
+              {
+                "type": "rect",
+                "x": 0,
+                "y": 0,
+                "w": 136,
+                "h": 176,
+                "fill": "=alpha(bg2, 0.85)",
+                "border": 1,
+                "borderColor": "=alpha(line, 0.25)",
+                "states": [
+                  {
+                    "when": "=sel",
+                    "fill": "=alpha(mix(bg2, item.color, 0.25), 0.95)",
+                    "borderColor": "=line",
+                    "shadow": {
+                      "blur": 22,
+                      "spread": -6,
+                      "color": "=alpha(line, 0.45)"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "rect",
+                "x": 0,
+                "y": 0,
+                "w": 136,
+                "h": 3,
+                "fill": "=sel ? line : alpha(line, 0.25)"
+              },
+              {
+                "type": "text",
+                "x": 10,
+                "y": 10,
+                "text": "BAY {pad(i + 1, 2)}",
+                "size": 10,
+                "color": "=sel ? line : dim",
+                "font": "pixel",
+                "spacing": 1
+              },
+              {
+                "type": "rect",
+                "x": 116,
+                "y": 12,
+                "w": 8,
+                "h": 8,
+                "fill": "=amber",
+                "radius": "50%",
+                "visible": "=item.fav"
+              },
+              {
+                "type": "image",
+                "x": 68,
+                "y": 80,
+                "w": 72,
+                "h": 72,
+                "src": "{item.icon}",
+                "fit": "pixelContain",
+                "anchor": "center"
+              },
+              {
+                "type": "text",
+                "x": 6,
+                "y": 128,
+                "text": "{upper(item.name)}",
+                "size": 11,
+                "color": "=ink",
+                "font": "pixel",
+                "w": 124,
+                "align": "center",
+                "spacing": 1
+              },
+              {
+                "type": "text",
+                "x": 6,
+                "y": 148,
+                "text": "{pad(item.games, 3)} TGT",
+                "size": 10,
+                "color": "=sel ? line : soft",
+                "font": "pixel",
+                "w": 124,
+                "align": "center"
+              },
+              {
+                "type": "rect",
+                "x": 68,
+                "y": 88,
+                "w": "=150 + 40 * (1 - inMove)",
+                "h": "=190 + 40 * (1 - inMove)",
+                "use": "brackets",
+                "anchor": "center",
+                "visible": "=sel"
+              }
+            ],
+            "opacity": "=clamp(1 - abs(pos) * 0.28, 0.25, 1)",
+            "onTap": "a"
+          },
+          "id": "bays",
+          "loop": true
+        },
+        {
+          "type": "rect",
+          "x": 40,
+          "y": 350,
+          "w": 560,
+          "h": 1,
+          "fill": "=alpha(line, 0.3)"
+        },
+        {
+          "type": "list",
+          "source": "systems",
+          "direction": "row",
+          "x": "=320 - (count * 18 - 8) / 2",
+          "y": 344,
+          "w": 560,
+          "h": 12,
+          "itemW": 10,
+          "itemH": 12,
+          "gap": 8,
+          "scrollMode": "none",
+          "item": {
+            "type": "rect",
+            "w": 10,
+            "h": "=sel ? 12 : 4",
+            "children": [],
+            "x": 0,
+            "y": "=sel ? 0 : 4",
+            "fill": "=sel ? line : alpha(line, 0.35)"
+          },
+          "id": "track"
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 370,
+          "text": "{upper(sys.name)}  //  {upper(plural(sys.games, 'target'))}  //  {either(sys.time, '0m')} LOGGED",
+          "size": 11,
+          "color": "=soft",
+          "font": "pixel",
+          "w": "100%",
+          "align": "center",
+          "spacing": 1
+        },
+        {
+          "type": "rect",
+          "x": 22,
+          "y": 432,
+          "w": 596,
+          "h": 1,
+          "fill": "=alpha(line, 0.4)"
+        },
+        {
+          "type": "list",
+          "source": "hints",
+          "direction": "row",
+          "x": 22,
+          "y": 446,
+          "w": 600,
+          "h": 24,
+          "itemW": 150,
+          "itemH": 190,
+          "gap": 18,
+          "scrollMode": "none",
+          "item": {
+            "type": "group",
+            "children": [
+              {
+                "type": "group",
+                "x": 0,
+                "y": 0,
+                "children": [
+                  {
+                    "type": "text",
+                    "text": "{item.key}",
+                    "size": 11,
+                    "color": "=line",
+                    "font": "pixel"
+                  }
+                ],
+                "layout": "row",
+                "padding": 4,
+                "border": 1,
+                "borderColor": "=line",
+                "fill": "=alpha(line, 0.10)"
+              },
+              {
+                "type": "text",
+                "text": "{upper(item.label)}",
+                "size": 11,
+                "color": "=soft",
+                "font": "pixel"
+              }
+            ],
+            "layout": "row",
+            "gap": 6,
+            "align": "center"
+          },
+          "flow": true
+        }
+      ]
+    },
+    "library": {
+      "top": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": "100%",
+          "h": "100%",
+          "fill": "=bg",
+          "gradient": {
+            "angle": 160,
+            "stops": [
+              "=mix(bg2, sys.color, 0.15)",
+              "=bg + ' 70%'"
+            ]
+          }
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "use": "navgrid"
+        },
+        {
+          "type": "rect",
+          "x": 36,
+          "y": 62,
+          "w": 236,
+          "h": 236,
+          "fill": "=alpha(bg2, 0.9)",
+          "border": 1,
+          "borderColor": "=alpha(line, 0.35)"
+        },
+        {
+          "type": "image",
+          "x": 46,
+          "y": 72,
+          "w": 216,
+          "h": 216,
+          "src": "{game.art}",
+          "fit": "=game.art ? 'cover' : 'pixelContain'",
+          "fallback": "{sys.icon}",
+          "placeholder": "=alpha(line, 0.08)",
+          "opacity": "=0.3 + 0.7 * easeOut(progress(moved, 500))"
+        },
+        {
+          "type": "rect",
+          "x": 46,
+          "y": "=72 + 216 * easeInOut(progress(moved, 700))",
+          "w": 216,
+          "h": 2,
+          "fill": "=line",
+          "opacity": "=1 - progress(moved, 700)",
+          "shadow": {
+            "blur": 10,
+            "color": "=alpha(line, 0.9)"
+          }
+        },
+        {
+          "type": "rect",
+          "x": 154,
+          "y": 180,
+          "w": "=252 + 60 * (1 - inMove)",
+          "h": "=252 + 60 * (1 - inMove)",
+          "use": "brackets",
+          "anchor": "center"
+        },
+        {
+          "type": "text",
+          "x": 36,
+          "y": 306,
+          "text": "TGT-{pad(cursor + 1, 3)}",
+          "size": 10,
+          "color": "=line",
+          "font": "pixel",
+          "spacing": 2
+        },
+        {
+          "type": "text",
+          "x": 152,
+          "y": 306,
+          "text": "{upper(sys.name)}",
+          "size": 10,
+          "color": "=soft",
+          "font": "pixel",
+          "w": 120,
+          "align": "right"
+        },
+        {
+          "type": "group",
+          "x": "=300 + 24 * (1 - inMove)",
+          "y": 62,
+          "w": 316,
+          "h": 300,
+          "children": [
+            {
+              "type": "text",
+              "x": 0,
+              "y": 0,
+              "text": "MISSION FILE",
+              "size": 10,
+              "color": "=line",
+              "font": "pixel",
+              "spacing": 3
+            },
+            {
+              "type": "text",
+              "x": 0,
+              "y": 18,
+              "text": "{game.title}",
+              "size": 24,
+              "color": "=ink",
+              "w": 316,
+              "font": "inter-bold",
+              "wrap": true,
+              "maxLines": 3,
+              "lineHeight": 28
+            },
+            {
+              "type": "rect",
+              "x": 0,
+              "y": 112,
+              "w": 316,
+              "h": 1,
+              "fill": "=alpha(line, 0.5)"
+            },
+            {
+              "type": "text",
+              "x": 0,
+              "y": 124,
+              "text": "SORTIES",
+              "size": 10,
+              "color": "=soft",
+              "font": "pixel",
+              "spacing": 2
+            },
+            {
+              "type": "text",
+              "x": 166,
+              "y": 122,
+              "text": "=pad(num(game.plays), 3)",
+              "size": 14,
+              "color": "=ink",
+              "font": "pixel-medium",
+              "w": 150,
+              "align": "right"
+            },
+            {
+              "type": "rect",
+              "x": 0,
+              "y": 146,
+              "w": 316,
+              "h": 1,
+              "fill": "=gridc"
+            },
+            {
+              "type": "text",
+              "x": 0,
+              "y": 156,
+              "text": "FLIGHT TIME",
+              "size": 10,
+              "color": "=soft",
+              "font": "pixel",
+              "spacing": 2
+            },
+            {
+              "type": "text",
+              "x": 166,
+              "y": 154,
+              "text": "=either(game.time, '0m')",
+              "size": 14,
+              "color": "=ink",
+              "font": "pixel-medium",
+              "w": 150,
+              "align": "right"
+            },
+            {
+              "type": "rect",
+              "x": 0,
+              "y": 178,
+              "w": 316,
+              "h": 1,
+              "fill": "=gridc"
+            },
+            {
+              "type": "text",
+              "x": 0,
+              "y": 188,
+              "text": "LAST CONTACT",
+              "size": 10,
+              "color": "=soft",
+              "font": "pixel",
+              "spacing": 2
+            },
+            {
+              "type": "text",
+              "x": 136,
+              "y": 186,
+              "text": "=upper(either(game.last, 'never'))",
+              "size": 14,
+              "color": "=ink",
+              "font": "pixel-medium",
+              "w": 180,
+              "align": "right"
+            },
+            {
+              "type": "rect",
+              "x": 0,
+              "y": 210,
+              "w": 316,
+              "h": 1,
+              "fill": "=gridc"
+            },
+            {
+              "type": "text",
+              "x": 0,
+              "y": 220,
+              "text": "STATUS",
+              "size": 10,
+              "color": "=soft",
+              "font": "pixel",
+              "spacing": 2
+            },
+            {
+              "type": "group",
+              "y": 216,
+              "w": 96,
+              "h": 20,
+              "children": [
+                {
+                  "type": "text",
+                  "x": 0,
+                  "y": 4,
+                  "text": "=game.fav ? 'PRIORITY' : num(game.plays) > 0 ? 'ACTIVE' : 'STANDBY'",
+                  "size": 10,
+                  "color": "=game.fav ? amber : num(game.plays) > 0 ? line : soft",
+                  "font": "pixel",
+                  "w": 96,
+                  "align": "center",
+                  "spacing": 1
+                }
+              ],
+              "right": 0,
+              "border": 1,
+              "fill": "#00000000",
+              "borderColor": "=game.fav ? amber : num(game.plays) > 0 ? line : soft"
+            },
+            {
+              "type": "group",
+              "x": 0,
+              "y": 252,
+              "w": 316,
+              "h": 40,
+              "children": [
+                {
+                  "type": "text",
+                  "x": 0,
+                  "y": 0,
+                  "text": "OBJECTIVES",
+                  "size": 10,
+                  "color": "=soft",
+                  "font": "pixel",
+                  "spacing": 2
+                },
+                {
+                  "type": "text",
+                  "x": 166,
+                  "y": 0,
+                  "text": "{game.achLabel}",
+                  "size": 10,
+                  "color": "=ink",
+                  "font": "pixel",
+                  "w": 150,
+                  "align": "right"
+                },
+                {
+                  "type": "list",
+                  "source": "range",
+                  "direction": "free",
+                  "x": 0,
+                  "y": 18,
+                  "w": 316,
+                  "h": 10,
+                  "itemW": 150,
+                  "itemH": 190,
+                  "gap": 14,
+                  "scrollMode": "center",
+                  "item": {
+                    "type": "rect",
+                    "w": 12,
+                    "h": 10,
+                    "children": [],
+                    "x": "=i * 16",
+                    "y": 0,
+                    "fill": "=i < round(game.achProgress * 20 * inMove) ? line : alpha(line, 0.15)"
+                  },
+                  "count": 20,
+                  "range": 64
+                }
+              ],
+              "visible": "=game.achB > 0"
+            }
+          ],
+          "id": "file",
+          "opacity": "=inMove"
+        },
+        {
+          "type": "text",
+          "x": 36,
+          "y": 336,
+          "text": "TELEMETRY",
+          "size": 10,
+          "color": "=soft",
+          "font": "pixel",
+          "spacing": 2,
+          "visible": "=!empty"
+        },
+        {
+          "type": "list",
+          "source": "range",
+          "direction": "free",
+          "x": 36,
+          "y": 352,
+          "w": 568,
+          "h": 56,
+          "itemW": 150,
+          "itemH": 190,
+          "gap": 14,
+          "scrollMode": "center",
+          "item": {
+            "type": "rect",
+            "w": 6,
+            "h": "=(6 + mod(i * 37 + game.index * 53 + floor(i / 5) * 11, 46)) * easeOut(progress(moved - i * 8, 420))",
+            "children": [],
+            "x": "=i * 12",
+            "y": "=56 - (6 + mod(i * 37 + game.index * 53 + floor(i / 5) * 11, 46)) * easeOut(progress(moved - i * 8, 420))",
+            "fill": "=mod(i, 8) == 0 ? amber : alpha(line, 0.55)"
+          },
+          "id": "signal",
+          "count": 48,
+          "range": 64,
+          "visible": "=!empty"
+        },
+        {
+          "type": "rect",
+          "x": 36,
+          "y": 408,
+          "w": 568,
+          "h": 1,
+          "fill": "=alpha(line, 0.35)",
+          "visible": "=!empty"
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 200,
+          "text": "{upper(empty.title)}",
+          "size": 18,
+          "color": "=amber",
+          "font": "pixel-medium",
+          "w": "100%",
+          "align": "center",
+          "visible": "=empty"
+        },
+        {
+          "type": "text",
+          "x": 60,
+          "y": 230,
+          "text": "{empty.hint}",
+          "size": 11,
+          "color": "=soft",
+          "font": "pixel",
+          "w": 520,
+          "align": "center",
+          "wrap": true,
+          "visible": "=empty"
+        },
+        {
+          "type": "rect",
+          "x": 36,
+          "y": 448,
+          "w": 568,
+          "h": 2,
+          "fill": "=alpha(line, 0.2)"
+        },
+        {
+          "type": "rect",
+          "x": "=36 + 560 * cursor / max(1, count - 1)",
+          "y": 444,
+          "w": 8,
+          "h": 10,
+          "fill": "=line",
+          "visible": "=count > 0"
+        },
+        {
+          "type": "text",
+          "x": 36,
+          "y": 424,
+          "text": "TRACKING {pad(cursor + 1, 3)} / {pad(count, 3)}",
+          "size": 10,
+          "color": "=soft",
+          "font": "pixel",
+          "spacing": 2
+        }
+      ],
+      "bottom": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "=bg"
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "use": "navgrid",
+          "opacity": 0.5
+        },
+        {
+          "type": "image",
+          "x": 22,
+          "y": 10,
+          "w": 26,
+          "h": 26,
+          "src": "{sys.icon}",
+          "fit": "pixelContain"
+        },
+        {
+          "type": "text",
+          "x": 56,
+          "y": 16,
+          "text": "MISSION LOG // {upper(sys.name)}",
+          "size": 12,
+          "color": "=line",
+          "font": "pixel",
+          "spacing": 2,
+          "w": 420
+        },
+        {
+          "type": "text",
+          "x": 468,
+          "y": 15,
+          "text": "{pad(count, 3)} ENTRIES",
+          "size": 12,
+          "color": "=ink",
+          "font": "pixel-medium",
+          "w": 150,
+          "align": "right"
+        },
+        {
+          "type": "rect",
+          "x": 22,
+          "y": 42,
+          "w": 596,
+          "h": 1,
+          "fill": "=alpha(line, 0.4)"
+        },
+        {
+          "type": "list",
+          "source": "games",
+          "direction": "column",
+          "x": 22,
+          "y": 52,
+          "w": 596,
+          "h": 370,
+          "itemW": 596,
+          "itemH": 42,
+          "gap": 4,
+          "scrollMode": "edge",
+          "item": {
+            "type": "group",
+            "w": 596,
+            "h": 42,
+            "children": [
+              {
+                "type": "rect",
+                "x": 0,
+                "y": 0,
+                "w": 596,
+                "h": 42,
+                "fill": "#00000000",
+                "border": 1,
+                "borderColor": "=alpha(line, 0.08)",
+                "states": [
+                  {
+                    "when": "=sel",
+                    "fill": "=alpha(line, 0.12)",
+                    "borderColor": "=alpha(line, 0.9)"
+                  }
+                ]
+              },
+              {
+                "type": "rect",
+                "x": 0,
+                "y": 0,
+                "w": "=sel ? 4 : 0",
+                "h": 42,
+                "fill": "=line"
+              },
+              {
+                "type": "text",
+                "x": 14,
+                "y": 15,
+                "text": "{pad(i + 1, 3)}",
+                "size": 11,
+                "color": "=sel ? line : dim",
+                "font": "pixel"
+              },
+              {
+                "type": "text",
+                "x": 58,
+                "y": 11,
+                "text": "{item.title}",
+                "size": 16,
+                "color": "=sel ? ink : soft",
+                "w": 400,
+                "font": "=sel ? 'inter-semibold' : 'inter'"
+              },
+              {
+                "type": "group",
+                "x": 490,
+                "y": 11,
+                "w": 92,
+                "h": 20,
+                "children": [
+                  {
+                    "type": "text",
+                    "x": 0,
+                    "y": 4,
+                    "text": "=item.fav ? 'PRIORITY' : num(item.plays) > 0 ? 'ACTIVE' : 'STANDBY'",
+                    "size": 10,
+                    "color": "=item.fav ? amber : num(item.plays) > 0 ? line : soft",
+                    "font": "pixel",
+                    "w": 92,
+                    "align": "center",
+                    "spacing": 1
+                  }
+                ],
+                "border": 1,
+                "fill": "#00000000",
+                "borderColor": "=item.fav ? amber : num(item.plays) > 0 ? alpha(line, 0.8) : alpha(soft, 0.5)"
+              },
+              {
+                "type": "rect",
+                "x": 298,
+                "y": 21,
+                "w": "=604 + 20 * (1 - inMove)",
+                "h": "=50 + 14 * (1 - inMove)",
+                "use": "brackets",
+                "anchor": "center",
+                "visible": "=sel"
+              }
+            ],
+            "onTap": "a"
+          },
+          "id": "missions",
+          "clip": true
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 220,
+          "text": "NO TARGETS IN RANGE",
+          "size": 14,
+          "color": "=soft",
+          "font": "pixel-medium",
+          "w": "100%",
+          "align": "center",
+          "visible": "=empty"
+        },
+        {
+          "type": "rect",
+          "x": 22,
+          "y": 432,
+          "w": 596,
+          "h": 1,
+          "fill": "=alpha(line, 0.4)"
+        },
+        {
+          "type": "list",
+          "source": "hints",
+          "direction": "row",
+          "x": 22,
+          "y": 446,
+          "w": 600,
+          "h": 24,
+          "itemW": 150,
+          "itemH": 190,
+          "gap": 18,
+          "scrollMode": "none",
+          "item": {
+            "type": "group",
+            "children": [
+              {
+                "type": "group",
+                "x": 0,
+                "y": 0,
+                "children": [
+                  {
+                    "type": "text",
+                    "text": "{item.key}",
+                    "size": 11,
+                    "color": "=line",
+                    "font": "pixel"
+                  }
+                ],
+                "layout": "row",
+                "padding": 4,
+                "border": 1,
+                "borderColor": "=line",
+                "fill": "=alpha(line, 0.10)"
+              },
+              {
+                "type": "text",
+                "text": "{upper(item.label)}",
+                "size": 11,
+                "color": "=soft",
+                "font": "pixel"
+              }
+            ],
+            "layout": "row",
+            "gap": 6,
+            "align": "center"
+          },
+          "flow": true
+        }
+      ]
+    },
+    "all": {
+      "top": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 30,
+          "use": "statusbar"
+        }
+      ]
+    },
+    "launch": {
+      "top": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "=bg"
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "use": "navgrid",
+          "opacity": "=1 - launch.progress * 0.6"
+        },
+        {
+          "type": "image",
+          "x": 320,
+          "y": 230,
+          "w": 200,
+          "h": 200,
+          "src": "{game.art}",
+          "fit": "=game.art ? 'contain' : 'pixelContain'",
+          "fallback": "{sys.icon}",
+          "anchor": "center",
+          "scale": "=0.9 + 0.25 * easeIn(launch.progress)"
+        },
+        {
+          "type": "rect",
+          "x": 320,
+          "y": 230,
+          "w": 160,
+          "h": 160,
+          "fill": "#00000000",
+          "anchor": "center",
+          "radius": "50%",
+          "border": 2.5,
+          "borderColor": "=line",
+          "scale": "=0.4 + 3.2 * easeIn(clamp(launch.progress * 1.3 - 0.0, 0, 1))",
+          "opacity": "=0.9 * (1 - clamp(launch.progress * 1.3 - 0.0, 0, 1))"
+        },
+        {
+          "type": "rect",
+          "x": 320,
+          "y": 230,
+          "w": 160,
+          "h": 160,
+          "fill": "#00000000",
+          "anchor": "center",
+          "radius": "50%",
+          "border": 2.5,
+          "borderColor": "=line",
+          "scale": "=0.4 + 3.2 * easeIn(clamp(launch.progress * 1.3 - 0.18, 0, 1))",
+          "opacity": "=0.9 * (1 - clamp(launch.progress * 1.3 - 0.18, 0, 1))"
+        },
+        {
+          "type": "rect",
+          "x": 320,
+          "y": 230,
+          "w": 160,
+          "h": 160,
+          "fill": "#00000000",
+          "anchor": "center",
+          "radius": "50%",
+          "border": 2.5,
+          "borderColor": "=line",
+          "scale": "=0.4 + 3.2 * easeIn(clamp(launch.progress * 1.3 - 0.36, 0, 1))",
+          "opacity": "=0.9 * (1 - clamp(launch.progress * 1.3 - 0.36, 0, 1))"
+        },
+        {
+          "type": "rect",
+          "x": 320,
+          "y": 230,
+          "w": "=230 + 260 * (1 - easeOut(clamp(launch.progress * 2, 0, 1)))",
+          "h": "=230 + 200 * (1 - easeOut(clamp(launch.progress * 2, 0, 1)))",
+          "use": "brackets",
+          "anchor": "center"
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 360,
+          "text": "=launch.progress < 0.5 ? 'ACQUIRING LOCK' : 'LOCK ACQUIRED'",
+          "size": 14,
+          "color": "=launch.progress < 0.5 ? amber : line",
+          "font": "pixel-medium",
+          "w": "100%",
+          "align": "center",
+          "spacing": 4
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 390,
+          "text": "{upper(game.title)}",
+          "size": 12,
+          "color": "=ink",
+          "font": "pixel",
+          "w": "100%",
+          "align": "center",
+          "spacing": 2
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "#e8fdff",
+          "opacity": "=smoothstep(0.86, 1, launch.progress)"
+        }
+      ],
+      "bottom": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "=bg"
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "use": "navgrid",
+          "opacity": 0.5
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 120,
+          "text": "IGNITION SEQUENCE",
+          "size": 12,
+          "color": "=line",
+          "font": "pixel",
+          "w": "100%",
+          "align": "center",
+          "spacing": 6
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 150,
+          "text": "T-{fixed((1 - launch.progress) * 3, 1)}",
+          "size": 48,
+          "color": "=ink",
+          "font": "pixel-medium",
+          "w": "100%",
+          "align": "center"
+        },
+        {
+          "type": "list",
+          "source": "range",
+          "direction": "free",
+          "x": 104,
+          "y": 250,
+          "w": 432,
+          "h": 18,
+          "itemW": 150,
+          "itemH": 190,
+          "gap": 14,
+          "scrollMode": "center",
+          "item": {
+            "type": "rect",
+            "w": 14,
+            "h": 18,
+            "children": [],
+            "x": "=i * 18",
+            "y": 0,
+            "fill": "=i < floor(launch.progress * 25) ? line : alpha(line, 0.12)"
+          },
+          "count": 24,
+          "range": 64
+        },
+        {
+          "type": "text",
+          "x": 104,
+          "y": 280,
+          "text": "THRUST",
+          "size": 10,
+          "color": "=soft",
+          "font": "pixel",
+          "spacing": 2
+        },
+        {
+          "type": "text",
+          "x": 386,
+          "y": 280,
+          "text": "{round(launch.progress * 100)}%",
+          "size": 10,
+          "color": "=ink",
+          "font": "pixel",
+          "w": 150,
+          "align": "right"
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 330,
+          "text": "{upper(sys.name)}  //  TGT-{pad(game.index + 1, 3)}",
+          "size": 11,
+          "color": "=soft",
+          "font": "pixel",
+          "w": "100%",
+          "align": "center",
+          "spacing": 2
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "#e8fdff",
+          "opacity": "=smoothstep(0.86, 1, launch.progress) * 0.7"
+        }
+      ]
+    }
+  },
+  "colors": {
+    "screenBg": "#050b1a",
+    "ink": "#d8f7ff",
+    "muted": "#7fb4c8",
+    "line": "#3ee6ff"
+  },
+  "vars": {
+    "bg": "#050b1a",
+    "bg2": "#0b1d3a",
+    "line": "#3ee6ff",
+    "ink": "#d8f7ff",
+    "soft": "#7fb4c8",
+    "dim": "#2a5068",
+    "gridc": "#3ee6ff12",
+    "amber": "#ffb347",
+    "inMove": "=easeOut(progress(moved, 420))"
+  },
+  "components": {
+    "brackets": {
+      "type": "group",
+      "children": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 16,
+          "h": 2,
+          "fill": "=line"
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 2,
+          "h": 16,
+          "fill": "=line"
+        },
+        {
+          "type": "rect",
+          "y": 0,
+          "w": 16,
+          "h": 2,
+          "fill": "=line",
+          "right": 0
+        },
+        {
+          "type": "rect",
+          "y": 0,
+          "w": 2,
+          "h": 16,
+          "fill": "=line",
+          "right": 0
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "w": 16,
+          "h": 2,
+          "fill": "=line",
+          "bottom": 0
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "w": 2,
+          "h": 16,
+          "fill": "=line",
+          "bottom": 0
+        },
+        {
+          "type": "rect",
+          "w": 16,
+          "h": 2,
+          "fill": "=line",
+          "right": 0,
+          "bottom": 0
+        },
+        {
+          "type": "rect",
+          "w": 2,
+          "h": 16,
+          "fill": "=line",
+          "right": 0,
+          "bottom": 0
+        }
+      ],
+      "w": 100,
+      "h": 100
+    },
+    "navgrid": {
+      "type": "group",
+      "children": [
+        {
+          "type": "list",
+          "source": "range",
+          "direction": "free",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "itemW": 150,
+          "itemH": 190,
+          "gap": 14,
+          "scrollMode": "center",
+          "item": {
+            "type": "rect",
+            "w": 1,
+            "h": 480,
+            "children": [],
+            "x": "=i * 40",
+            "y": 0,
+            "fill": "=mod(i, 4) == 0 ? alpha(line, 0.14) : gridc"
+          },
+          "count": 17,
+          "range": 64
+        },
+        {
+          "type": "list",
+          "source": "range",
+          "direction": "free",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "itemW": 150,
+          "itemH": 190,
+          "gap": 14,
+          "scrollMode": "center",
+          "item": {
+            "type": "rect",
+            "w": 640,
+            "h": 1,
+            "children": [],
+            "x": 0,
+            "y": "=i * 40",
+            "fill": "=mod(i, 4) == 0 ? alpha(line, 0.14) : gridc"
+          },
+          "count": 13,
+          "range": 64
+        }
+      ],
+      "w": 640,
+      "h": 480
+    },
+    "statusbar": {
+      "type": "group",
+      "children": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 30,
+          "fill": "#050b1ae0"
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 29,
+          "w": 640,
+          "h": 1,
+          "fill": "=alpha(line, 0.35)"
+        },
+        {
+          "type": "rect",
+          "x": 18,
+          "y": 11,
+          "w": 8,
+          "h": 8,
+          "fill": "=amber",
+          "radius": "50%",
+          "opacity": "=step(0.5, pulse(time, 1600)) * 0.85 + 0.15",
+          "shadow": {
+            "blur": 8,
+            "color": "=alpha(amber, 0.8)"
+          }
+        },
+        {
+          "type": "text",
+          "x": 34,
+          "y": 9,
+          "text": "ORBITAL//HUD",
+          "size": 11,
+          "color": "=line",
+          "font": "pixel",
+          "spacing": 2
+        },
+        {
+          "type": "text",
+          "x": 160,
+          "y": 9,
+          "text": "=upper(view) + ' DECK'",
+          "size": 11,
+          "color": "=soft",
+          "font": "pixel",
+          "spacing": 2
+        },
+        {
+          "type": "text",
+          "x": 300,
+          "y": 8,
+          "text": "T+{clock}",
+          "size": 12,
+          "color": "=ink",
+          "font": "pixel-medium",
+          "w": 110,
+          "align": "right"
+        },
+        {
+          "type": "text",
+          "x": 430,
+          "y": 9,
+          "text": "=online ? 'LINK OK' : 'NO LINK'",
+          "size": 11,
+          "color": "=online ? line : amber",
+          "font": "pixel",
+          "w": 80,
+          "align": "right",
+          "spacing": 1
+        },
+        {
+          "type": "group",
+          "x": 528,
+          "y": 9,
+          "w": 96,
+          "h": 12,
+          "children": [
+            {
+              "type": "list",
+              "source": "range",
+              "direction": "free",
+              "x": 0,
+              "y": 0,
+              "w": 60,
+              "h": 12,
+              "itemW": 150,
+              "itemH": 190,
+              "gap": 14,
+              "scrollMode": "center",
+              "item": {
+                "type": "rect",
+                "w": 9,
+                "h": 12,
+                "children": [],
+                "x": "=i * 12",
+                "y": 0,
+                "fill": "=i < ceil(clamp(battery, 0, 100) / 20) ? (charging ? '#5dffa8' : battery < 20 ? amber : line) : alpha(line, 0.15)"
+              },
+              "count": 5,
+              "range": 64
+            },
+            {
+              "type": "text",
+              "x": 64,
+              "y": 0,
+              "text": "{battery}",
+              "size": 11,
+              "color": "=ink",
+              "font": "pixel",
+              "w": 32,
+              "align": "right"
+            }
+          ],
+          "visible": "=battery >= 0"
+        }
+      ],
+      "w": 640,
+      "h": 30
+    }
+  },
+  "input": {
+    "home": {
+      "left": "prev",
+      "right": "next",
+      "up": "prev",
+      "down": "next",
+      "l": "first",
+      "r": "last",
+      "a": "open",
+      "x": "resume",
+      "y": "fav"
+    },
+    "library": {
+      "up": "prev",
+      "down": "next",
+      "left": "prevSystem",
+      "right": "nextSystem",
+      "l": "first",
+      "r": "last",
+      "a": "open",
+      "b": "back",
+      "y": "fav"
+    }
+  },
+  "hints": {
+    "home": [
+      [
+        "A",
+        "Engage"
+      ],
+      [
+        "X",
+        "Resume"
+      ],
+      [
+        "Y",
+        "Mark"
+      ]
+    ],
+    "library": [
+      [
+        "A",
+        "Launch"
+      ],
+      [
+        "B",
+        "Abort"
+      ],
+      [
+        "Y",
+        "Priority"
+      ]
+    ]
+  },
+  "behavior": {
+    "launchMs": 1500,
+    "scrollMs": 120,
+    "settleMs": 900,
+    "fps": 30,
+    "wrap": true,
+    "extraHints": true
+  },
+  "accent": "#3ee6ff"
+}

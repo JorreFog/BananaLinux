@@ -42,6 +42,8 @@ pick_kernel() {
     KERNEL=$(awk -v l="$LABEL" '$1 == "LABEL" { cur = $2 } $1 == "LINUX" && cur == l { print $2 }' "$OUT/extlinux.conf")
     ROOT=$(awk -v l="$LABEL" '$1 == "LABEL" { cur = $2 } $1 == "APPEND" && cur == l { for (i = 2; i <= NF; i++) if ($i ~ /^root=/) print $i }' "$OUT/extlinux.conf")
     mcopy -o -i "$CARD@@$BOOT_AT" "::$KERNEL" "$OUT/Image"
+    # (the card's kernel is LZ4-compressed for U-Boot since 0.4.3; QEMU's -kernel takes it plain)
+    [ "$(head -c 4 "$OUT/Image" | od -An -tx1 | tr -d ' ')" = 04224d18 ] && lz4 -d -f -q "$OUT/Image" "$OUT/Image.plain" && mv -f "$OUT/Image.plain" "$OUT/Image"
     APPEND="$ROOT rootfstype=squashfs ro rootwait quiet loglevel=3 console=ttyAMA0 video=Virtual-1:640x480e video=Virtual-2:640x480e banana.console=1 banana.top=Virtual-2 banana.touch=virtio"
     echo "booting label $LABEL: $KERNEL, $ROOT"
 }
@@ -189,10 +191,13 @@ echo "1. the first boot: the data partition made, the menu, a shutdown"
 boot first
 grep -q "rcS: data partition ready" "$OUT/serial.log" && ok "the data partition was made and mounted" || bad "no data partition"
 grep -q "panels 640x480" "$OUT/serial.log" && ok "both panels opened at 640x480" || bad "the panels didn't open"
-# the first-time setup opens over the menu on a first boot; B skips it (and writes setup-done on the card)
+# the first-time setup after the arrival on a first boot: START skips the arrival, then each slide (seven: Language
+# to the summary), the last START finishes it (setup-done on the card), the Welcome and the iris into the menu
 grep -q "banana-ui: first-time setup" "$OUT/serial.log" && ok "the first-time setup opened" || bad "no first-time setup on the first boot"
+key s; sleep 2
 shot first-setup
-key backspace; sleep 1
+for i in 1 2 3 4 5 6 7; do key s; sleep 0.5; done
+sleep 4
 shot first-menu
 key s; sleep 1; shot first-settings; key backspace; sleep 0.5
 shutdown_from_settings first
@@ -203,7 +208,7 @@ add_game() {    # a DS game and a GBA one, so both launchers run (DraStic's and 
     head -c 65536 /dev/zero > "$DATA/roms/gba/Boot Test Advance.gba"
     ls "$DATA/banana/" | tr '\n' ' '; echo
     [ -f "$DATA/banana/README.txt" ] && ok "the card has its folders and README" || bad "no README on the card"
-    [ -f "$DATA/banana/setup-done" ] && ok "the skipped setup is remembered on the card" || bad "no setup-done on the card"
+    [ -f "$DATA/banana/setup-done" ] && ok "the setup is remembered on the card" || bad "no setup-done on the card"
 }
 with_data add_game
 

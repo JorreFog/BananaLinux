@@ -1,0 +1,28 @@
+#!/bin/sh
+# Settings > Nintendo DS > Reset: the DS emulators' settings back to Banana's, for a setup gone wrong (a button
+# remapped in DraStic's menu until nothing opened it any more). Saves, save states, cheats and the per-game clocks
+# stay; so do DraStic's firmware name, language and birthday (the games' profile, not a setting).
+#   nds-reset buttons     DraStic's buttons (every controls_a/controls_b line) as on a new card
+#   nds-reset drastic     all of DraStic's and SuperDrastic's settings (drastic.cfg, banana/superdrastic.conf)
+#   nds-reset bananads    BananaDS's settings (bananads.conf)
+DEF=/usr/share/drastic/config/drastic.cfg CFG=/data/drastic/config/drastic.cfg
+case "$1" in
+buttons|drastic)
+    [ -f $DEF ] || { echo "DraStic isn't installed."; exit 1; }
+    [ -f $CFG ] || { echo "DraStic's settings are Banana's already."; exit 0; }
+    if [ $1 = buttons ]; then
+        # the card's file without its controls, then the image's controls
+        { grep -v '^controls_[ab]\[' $CFG; grep '^controls_[ab]\[' $DEF; } > $CFG.new
+    else
+        # the image's file with the card's firmware lines (the name the games show, the language, the birthday)
+        awk 'NR == FNR { if (/^firmware\./) { k = $1; mine[k] = $0 } next } ($1 in mine) { print mine[$1]; next } { print }' \
+            $CFG $DEF > $CFG.new
+        rm -f /data/banana/superdrastic.conf /data/drastic/config/.threaded_3d.settings	# (a game's Threaded 3D left from a cut-off run)
+    fi
+    sync $CFG.new 2>/dev/null; mv -f $CFG.new $CFG && sync
+    ;;
+bananads)
+    rm -f /data/bananads/bananads.conf && sync
+    ;;
+*) echo "nds-reset buttons|drastic|bananads"; exit 2 ;;
+esac

@@ -111,12 +111,14 @@ namespace rnds
 	private:
 		Font() {}
 		friend TextLine layoutLine(const std::u32string& text, const TextStyle& st);
+		friend TextLine lineOf(const std::u32string& text, const TextStyle& st);	// (layoutLine's, on text already prepared)
 		friend TextBitmap renderLine(const TextLine& line, const TextStyle& st, float scale, float baselineCss, float leftFrac, float topFrac);
 		std::vector<uint8_t> mData;
 		FT_Face mFace = nullptr;
 		int mUpm = 1000, mAsc = 0, mDesc = 0;
 		std::unordered_map<uint32_t, unsigned> mGlyphIndex;
 		unsigned glyphIndex(uint32_t cp);
+		Font* faceFor(uint32_t cp, unsigned& gi);	// (Banana: this font, or the fallback for a character only it has)
 		int advanceLocked(uint32_t cp, uint32_t next, float size);	// advance() with the FreeType lock held
 		// memos of the FreeType results (all under the FreeType lock): advances by (cp, next, size), rendered glyphs by
 		// (glyph, 26.6 size, load flags)
@@ -135,6 +137,14 @@ namespace rnds
 		bool upper = false;			// text-transform: uppercase
 	};
 
+	// Banana: a font for the characters the styles' fonts lack (CJK: a pixel font of pixelSize px, drawn at whole
+	// multiples of it), and the host's device px per CSS px; and the menu's language: every text laid out goes through
+	// translate first (nullptr: as it is)
+	void setFallbackFont(std::shared_ptr<Font> f, float pixelSize, float deviceScale);
+	void setTranslator(std::u32string (*translate)(const std::u32string&));
+	using Translator = std::u32string (*)(const std::u32string&);
+	Translator translator();	// (the one set: a text drawn as it is sets nullptr around it)
+
 	std::u32string utf8to32(const std::string& s);
 	std::u32string upper(const std::u32string& s);
 
@@ -149,6 +159,13 @@ namespace rnds
 	TextLine layoutLine(const std::u32string& text, const TextStyle& st);
 	// text-overflow: ellipsis within maxWidth (device px)
 	TextLine layoutEllipsis(const std::u32string& text, const TextStyle& st, int maxWidth);
+	// a label too long for its box, while its item is the one picked: it scrolls (a marquee) instead of ending in "...":
+	// MARQUEE_PAUSE ms still at its start, then MARQUEE_SPEED CSS px a second until its end shows, MARQUEE_PAUSE ms
+	// still there, then back to the start. elapsed: ms since the item was picked; overflow: how much wider than the box
+	// (CSS px). Returns how far it is scrolled (CSS px); moving: whether it moves now; wake: ms until it next moves
+	// (0 while it moves). One timing for banana-ui's Settings and rnds' menu, so every marquee runs alike.
+	constexpr double MARQUEE_PAUSE = 1500, MARQUEE_SPEED = 36;
+	float marqueeOffset(double elapsed, float overflow, bool* moving = nullptr, double* wake = nullptr);
 	// greedy wrap at spaces (CSS white-space: normal), at most maxLines (the last one ends in an ellipsis when cut)
 	std::vector<TextLine> layoutWrap(const std::u32string& text, const TextStyle& st, int maxWidth, int maxLines = 0, int firstLineIndent = 0);
 
@@ -194,7 +211,7 @@ namespace rnds
 	Bitmap ndsBannerIcon(const uint8_t* banner);
 	// the host's zip archives (ES: es-core's Utils::Zip::ZipFile): pick chooses a member from the list (its index, -1
 	// for none), sink takes that member's bytes in order until it returns false; false when the archive can't be read
-	struct ZipMember { std::string name; uint64_t size = 0; };
+	struct ZipMember { std::string name; uint64_t size = 0; uint32_t crc = 0; };	// (crc: the CRC-32 the central directory gives)
 	typedef bool (*ZipReader)(const std::string& zip, const std::function<int(const std::vector<ZipMember>&)>& pick,
 		const std::function<bool(const uint8_t*, size_t)>& sink);
 	void setZipReader(ZipReader reader);

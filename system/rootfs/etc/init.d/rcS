@@ -5,6 +5,9 @@ export PATH=/usr/sbin:/usr/bin:/sbin:/bin
 mount -t proc proc /proc
 mount -t sysfs sysfs /sys
 mount -t devtmpfs devtmpfs /dev 2>/dev/null
+# both panels powered up now, beside the rest of the boot: the menu waited for that at its start (the RG DS Plus's
+# panels ~1.2 s, the RG DS's ~0.3 s); its own start then finds them lit. Only the display, nothing on the card
+banana-ui --panels-on </dev/null >/dev/null 2>&1 &
 mkdir -p /dev/pts /dev/shm
 mount -t devpts devpts /dev/pts
 mount -t tmpfs -o mode=1777,nosuid,nodev tmpfs /dev/shm
@@ -16,11 +19,19 @@ ln -sfn /proc/self/fd/2 /dev/stderr
 mount -t tmpfs -o mode=0755,nosuid,nodev tmpfs /run
 mount -t tmpfs -o mode=1777,nosuid,nodev tmpfs /tmp
 mkdir -p /run/banana /var/log
+# the second SD card's folder before the menu starts: banana-ui watches it for the card's games, and bananad's first
+# "sd2 scan" runs in the background, so the menu could start first and miss the card for the whole boot (#65)
+mkdir -p /run/banana/sd2
 # boot milestones, seconds since the kernel started (logs/boot.txt)
 mark() { read up rest < /proc/uptime; printf '%-28s %6.2f s\n' "$1" "$up" >> /run/banana/boot-times; }
 # banana.console=1 on the kernel's command line: the boot's progress on the console (the UART, QEMU's serial)
 grep -q 'banana\.console=1' /proc/cmdline && mark() { read up rest < /proc/uptime; printf '%-28s %6.2f s\n' "$1" "$up" | tee -a /run/banana/boot-times > /dev/console; }
 mark "rcS: started"
+# the boot at full speed: the CPU's top clock until the menu is up (banana-ui sets its own profile then), and RCU grace
+# periods expedited for good: every input device's close waited one (7-27 ms on the RG DS, ~120 ms each time the menu
+# handed the buttons and screens to a game and back), as do module loads and network set-ups; expedited, ~0.1 ms
+echo 1 > /sys/kernel/rcu_expedited 2>/dev/null
+banana-perf performance
 [ -f /etc/sysctl.d/banana.conf ] && sysctl -q -p /etc/sysctl.d/banana.conf
 hostname banana	# (before syslogd: it takes the name once, and the kernel's default is ROCKNIX's unfilled @DEVICENAME@)
 syslogd -O /run/banana/messages -s 256 -b 1
@@ -60,7 +71,6 @@ mark "rcS: data partition ready"
 mount -t vfat -o ro,noatime ${DISK}p1 /boot 2>/dev/null
 
 bananad &
-banana-perf ui
 
 # not needed for the menu's first frame
 (
@@ -73,6 +83,8 @@ banana-perf ui
     if [ -f /data/banana/wifi.conf ] && ! grep -q '^ *wifi *= *off' /data/banana/settings.conf 2>/dev/null; then
         /usr/libexec/banana/wifi up &     # (its wait for wlan0 doesn't hold up sharing and SSH)
     fi
+    # Bluetooth when it was switched on in the settings (off at first: the chip's Bluetooth stays unpowered)
+    grep -q '^ *bluetooth *= *on' /data/banana/settings.conf 2>/dev/null && /usr/libexec/banana/bluetooth up >/dev/null 2>&1 &
     # a wired network when there is one (a USB Ethernet adapter; QEMU's virtio): an address by DHCP
     for e in /sys/class/net/eth*; do
         [ -d "$e" ] || continue

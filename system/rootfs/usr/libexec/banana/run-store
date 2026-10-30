@@ -1,0 +1,12 @@
+#!/bin/sh
+# The Store (the shelf's app tile): straight onto both panels (KMS), as Döda Kvarter, with its cache and log on the card
+# (/data/store/data) and the apps it installs in /data/store/apps, their entries on the Apps shelf (/data/store/tiles).
+# The package manager (rocknixds-store) runs in BananaOS's mode: no EmulationStation, systemd or sway. banana-ui has
+# let go of the panels.
+#   run-store [entry]
+S=/data/store
+mkdir -p $S/data $S/apps $S/tiles
+cd $S
+export DK_DATA=$S/data DK_TOP=${BANANA_TOP:-DSI-2} DK_TOUCH_BOTTOM=${BANANA_TOUCH:-fe5e0000.i2c}
+export RNDS_STORE_CLI=/usr/share/banana/apps/store/rocknixds-store RNDS_STORE_DATA=$S/data RNDS_STORE_PLATFORM=banana
+exec /usr/bin/rocknixds-store-ui --backend kms

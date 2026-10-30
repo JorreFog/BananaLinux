@@ -4,6 +4,24 @@
 # in dmesg.1.txt). Run by rcS 20 s after boot and by rcK at shutdown, so the file is complete either way.
 L=/data/banana/logs
 mkdir -p $L 2>/dev/null || exit 0
+# The battery when the handheld was turned off and when it came on again (#34: does it charge while off?):
+# logs/battery-while-off.txt, a line a boot. rcK runs this with "off" to note it at shutdown.
+bat() {
+    B=/sys/class/power_supply/battery; c=0
+    for o in /sys/class/power_supply/*/online; do [ "$(cat $o 2>/dev/null)" = 1 ] && c=1; done
+    # (the rk817 has no voltage_now: the average, and at boot the one it measured as the handheld came on)
+    v=$(cat $B/voltage_avg 2>/dev/null); [ "$1" = boot ] && v=$(cat $B/voltage_boot 2>/dev/null || echo $v)
+    echo "$(date +%s) $(cat $B/capacity 2>/dev/null) ${v:-0} $c $(cat $B/charge_now 2>/dev/null || echo 0)"
+}
+if [ "$1" = off ]; then bat > $L/battery-off.txt 2>/dev/null; sync
+elif [ ! -f /run/banana/dmesg-saved ] && [ -f $L/battery-off.txt ]; then
+    read -r t0 p0 v0 c0 q0 < $L/battery-off.txt
+    set -- $(bat boot)
+    { tail -n 19 $L/battery-while-off.txt 2>/dev/null
+      echo "$(date '+%F %T'): off $(( ($1 - t0) / 60 )) min, battery ${p0}% $((v0 / 1000)) mV -> ${2}% $(($3 / 1000)) mV at power-on, gauge $(( ($5 - ${q0:-0}) / 1000 )) mAh (charger at shutdown: $([ "$c0" = 1 ] && echo in || echo out), now: $([ "$4" = 1 ] && echo in || echo out))"
+    } > $L/battery-while-off.txt.new 2>/dev/null && mv -f $L/battery-while-off.txt.new $L/battery-while-off.txt
+    rm -f $L/battery-off.txt
+fi
 # (rotated on this boot's first run: the one before kept, a boot that crashed before its shutdown among them)
 [ -f /run/banana/dmesg-saved ] || mv -f $L/dmesg.txt $L/dmesg.1.txt 2>/dev/null
 dmesg > $L/dmesg.txt 2>/dev/null

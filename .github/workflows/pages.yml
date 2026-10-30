@@ -1,9 +1,10 @@
 name: Website
-# web/ on GitHub Pages: https://jorrefog.github.io/BananaLinux/ (the Save Mover at save-mover/)
+# web/ on GitHub Pages: https://jorrefog.github.io/BananaLinux/ (the Save Mover at save-mover/), and the theme
+# editor (tools/theme-studio: the page and its scripts, the engine built for the browser) at theme-studio/
 on:
   push:
     branches: [main]
-    paths: ["web/**", ".github/workflows/pages.yml"]
+    paths: ["web/**", "tools/theme-studio/**", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
 permissions:
@@ -24,8 +25,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      - name: The site, and the theme editor in it
+        run: |
+          mkdir -p _site/theme-studio/wasm
+          cp -r web/. _site/
+          cd tools/theme-studio
+          # what the page loads: no tests, no server, no build scripts
+          cp index.html ui.css app.js engine.js expr.js guide.js optimize.js render.js schema.js templates.js zip.js \
+             ../../_site/theme-studio/
+          cp -r assets ../../_site/theme-studio/
+          mkdir -p ../../_site/theme-studio/premade && cp -r premade/thumbs ../../_site/theme-studio/premade/
+          cp wasm/banana-engine.js ../../_site/theme-studio/wasm/
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: web
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4

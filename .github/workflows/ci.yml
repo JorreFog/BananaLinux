@@ -14,6 +14,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # tools/systems-history.sh --check reads every earlier systems.conf from git
       - name: Packages
         run: sudo apt-get update && sudo apt-get install -y libfreetype-dev libdrm-dev libasound2-dev zlib1g-dev imagemagick g++-aarch64-linux-gnu
       - name: banana-ui (headless test, both panel sizes)
@@ -28,7 +30,7 @@ jobs:
       - name: Sleep (bananad against a made-up /sys in its own namespaces)
         run: sudo system/bananad/tests/sleep-test.sh
       - name: Shell scripts parse
-        run: for f in system/rootfs/etc/init.d/* system/rootfs/usr/bin/* system/rootfs/usr/libexec/banana/* system/rootfs/etc/banana/sleep.d/* buildroot/board/rgds/*.sh tools/*.sh; do sh -n "$f" || exit 1; done
+        run: for f in system/rootfs/etc/init.d/* system/rootfs/usr/bin/* system/rootfs/usr/libexec/banana/* system/rootfs/etc/banana/sleep.d/* buildroot/board/rgds/*.sh tools/*.sh; do case "$(head -n 1 "$f")" in '#!'*python*) continue;; esac; sh -n "$f" || exit 1; done
       - name: Buildroot defconfigs keep every option
         run: |
           git clone --depth 1 --branch 2026.02.3 https://github.com/buildroot/buildroot /tmp/br

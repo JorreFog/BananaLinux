@@ -929,7 +929,7 @@ class IconsTable(QWidget):
     """The theme's own icons, by system id: the file replaces the menu's icon for that system"""
 
     IDS = ['nds', 'gba', 'gbc', 'gb', 'nes', 'snes', 'megadrive', 'psx', 'n64',
-           'dodakvarter', 'rocknixdsbank', 'pico-8', 'ports']
+           'dodakvarter', 'rocknixdsbank', 'pico-8', 'ports', 'files']
 
     def __init__(self, studio):
         super().__init__()

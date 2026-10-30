@@ -29,6 +29,19 @@ restart away from the one before it. Each update is a line in `banana/logs/updat
 is retuned by `banana-panel-tune` on its first boot. `tools/qemu-boot.sh` applies an update in the VM and boots
 the other slot, reading `extlinux.conf` as U-Boot does.
 
+Over the air (#69): the Update page's first row asks GitHub. `update check` reads the release list
+(`api.github.com/repos/JorreFog/BananaLinux/releases`, with `curl` and the image's CA certificates), keeps the newest
+release that has this board's `banana-<board>-<version>.update.tar` and `SHA256SUMS-<board>.txt` (drafts never;
+pre-releases only with Settings > System > Test versions, on by default since every release so far is one) and
+writes the answer to `banana/updates/.check`. GitHub allows 60 unauthenticated requests an hour per address, so the
+list is fetched at most once in 5 minutes (`.feed.json`, asked for again with its ETag). `update download` runs on
+its own (the page polls `/run/banana/update-download`, B leaves it running, A cancels): it checks the card has room
+for the package twice over (apply unpacks it beside itself), fetches the SHA256SUMS first, downloads into
+`banana/updates/.partial` (`curl -C -` carries on from a cancelled or broken download), checks the SHA-256 and only
+then moves the package into `banana/updates/`, where `update apply` installs it as any copied package. With Settings >
+System > Update check on Daily, the Wi-Fi script runs `update check --daily` when it connects (once a day at most;
+nothing is downloaded). `ui/tests/ota.sh` runs all of it against a stand-in server.
+
 ## Boot
 
 1. The boot ROM loads U-Boot from sector 64. U-Boot is built with no boot delay, no environment and only the SD card
@@ -56,7 +69,7 @@ from ROCKNIXDS by `tools/import-rnds.sh`): a *Source* gives it systems, games an
 textures, and it rasterizes everything else itself (CSS-like boxes, Pixelify Sans text, fitted pictures). In
 ROCKNIXDS, ES is the Source and its GL renderer the Backend. In Banana:
 
-- **Source** (`src/library.cpp`): the systems in `/etc/banana/systems.conf` (or the copy in `/data/banana/`),
+- **Source** (`src/library.cpp`): the systems in `/run/banana/systems.conf` (`/etc/banana/systems.conf` with the card's `/data/banana/systems.conf` merged over it per system by `libexec/banana/systems-merge` at the menu's start),
   their icons and colours from the theme's `systems.cfg`, the games found in each system's folder, names and art
   from an EmulationStation `gamelist.xml` when one is there (a card scraped under ROCKNIX keeps its art) or from
   `media/box|cart|label/<rom name>.png`, and Banana's own play counts, play time and favourites.
@@ -92,12 +105,18 @@ change rebuilds the engine in the other palette), `banana/bananad.conf` (then SI
 zoneinfo files on the root): banana-ui sets `TZ` for itself and every game it starts, so a DS game's clock is local
 too, and bananad takes it for its logs on SIGHUP.
 
-**First-time setup**: with no `banana/setup-done` on the card, the menu opens the setup after the boot animation:
-five steps on the settings' own pages (Wi-Fi through the network chooser, the time zone, RetroAchievements and
-ScreenScraper through the keyboard, Finish). The accounts go to `banana/accounts.conf` (`ra_user`, `ra_password`,
-`ss_user`, `ss_password`); run-drastic hands the RetroAchievements one to SuperDrastic (`DSFLIP_RA_*`) and
-run-retroarch writes it into RetroArch's `cheevos_*`. Skipping writes `setup-done` too; Settings > System >
-First-time setup runs it again.
+**First-time setup** (0.5.0): when `banana/setup-done` is missing or isn't `setup 2` (a fresh card, or an update from
+0.4.x whose file says `done`), the boot animation goes on into the arrival (ui/src/arrival.cpp: the camera zooms into
+the cartridge, bananas burst out, one is followed until both panels are white, then "Welcome to BANANAOS"; A or START
+skips it) and the setup fades in: a slide per step (Language when the card has more than English, Wi-Fi with a real
+test (`wifi test`: an address, the internet, the clock), Time zone, DS name, RetroAchievements (the login checked with
+the site), Box art, a summary). Each slide starts from what the card has (a network from before is tested at once, an
+account's login checked at once, art already fetched counted), so A straight through keeps everything; Skip (or
+START) leaves a step. `banana/setup-step` keeps the slide reached: a restart (a language picked, a power cut) comes
+back to it without the arrival. The accounts go to `banana/accounts.conf` (`ra_user`, `ra_password`); run-drastic
+hands the RetroAchievements one to SuperDrastic (`DSFLIP_RA_*`) and run-retroarch writes it into RetroArch's
+`cheevos_*`. The end writes `setup 2` into setup-done, shows "Welcome" and opens the menu through the iris; Settings >
+System > First-time setup runs the same slides (no arrival) and ends back in Settings.
 
 **Wi-Fi** (Settings > Network): the networks around from `wifi scan` (wpa_cli's scan results, one row per name,
 strongest first, with its signal, a lock, *Saved* or *Connected*), run on a thread so the menu never waits. A on a
@@ -106,7 +125,43 @@ the d-pad (A types, B deletes, X capitals, Y space, START joins) or by touch on 
 network's block first in `banana/wifi.conf` (WPA3-only networks get `key_mgmt=SAE`; a block for the same name is
 replaced), restarts wpa_supplicant and follows `wifi status` until it has an address. udhcpc is started by
 wpa_cli's action script only once wpa_supplicant is connected, so a handheld with no network in reach isn't kept
-awake asking for an address. Company (802.1X) and WEP networks are listed but go in `wifi.conf` by hand.
+awake asking for an address. Company (802.1X) and WEP networks are listed but go in `wifi.conf` by hand. The Wi-Fi
+row switches it on and off (`wifi` in settings.conf): kept across boots (rcS starts it only when it is on and
+`wifi.conf` has a network) and sleeps (the hook brings it back only when it was running).
+
+**Bluetooth** (Settings > Network > Bluetooth, `bluetooth` in settings.conf, off by default). Both handhelds' RTL8821CS
+has its Bluetooth on `uart1`, a serdev device in the device trees (`realtek,rtl8821cs-bt`, enable on gpio0 PD5):
+`hci_uart` (H5, Realtek's setup through `btrtl`, firmware `rtl_bt/rtl8821cs_fw.bin` and the mandatory
+`rtl8821cs_config.bin`, linux-firmware's link to `rtl8761b_config.bin`). Everything is a module and
+`usr/libexec/banana/bluetooth up` loads it only when Bluetooth is on, then starts D-Bus's system bus, `bluetoothd`
+(BlueZ, its input plugins for controllers) and `bluealsa` (bluez-alsa, the A2DP source); `down` unloads `hci_uart`,
+which cuts the chip's Bluetooth power. Bluetooth devices lists what is paired and what a search finds; A pairs (Just
+Works: bluetoothctl with no agent, so devices that want a PIN or a passkey, keyboards and Wii remotes, don't pair
+yet), connects or disconnects, Y forgets. BlueZ's `/var/lib/bluetooth` is `/run/banana/bluetooth`, kept on the card
+as `banana/bluetooth.tar` (exFAT can't hold its `AA:BB:...` folder names). Headphones: bluealsa-cli's events write the
+A2DP sink playing to `/run/banana/bt/audio`, and bananad plays there (below, Sound). Controllers call the handheld back
+themselves; the headphones played last (`banana/bluetooth-audio`) are called back at boot and after a wake, the
+sound held quiet meanwhile (`/run/banana/bt/hold`: bananad plays to the codec with no speaker on it, so the games keep
+their pace).
+
+The link: hci_uart runs H5 at 1.5 Mbaud with RTS/CTS flow control and DMA on `uart1`, what the chip's config asks for
+(`rtl8821cs_config.bin`: 0x04928002 at offset 0x0c, flow control bit set); about 1.09 Mbit/s of payload after the
+UART's 11 bits a byte, before H5's framing. Enough for every codec here but LDAC at 990 kbps, which is why LDAC runs at
+660 with its adaptive bit rate. A faster UART (3 Mbaud is in btrtl's table) would need a config of our own and
+testing on the hardware. Wi-Fi and Bluetooth share the chip's radio: rtw88's coexistence code and the Bluetooth
+firmware split the air time by themselves (nothing to configure); a Wi-Fi scan or a large transfer while headphones
+play costs Bluetooth air time.
+
+**Bluetooth audio** (Settings > Network, `bt_audio`): bluez-alsa offers its codecs in its order (LDAC, aptX HD, aptX,
+FastStream, SBC) and the headphones take the first they share. Low latency (the default) offers aptX, FastStream and
+SBC (bitpool 53); Best quality LDAC (660 kbps, adaptive), aptX HD, aptX and SBC XQ. What the handheld adds to the delay
+is the player's ALSA buffer (30 ms for banana-ui, SuperDrastic and BananaDS, 64 for RetroArch), bluez-alsa's 10 ms
+pipe and the codec's frames (a few ms for SBC and aptX, more for LDAC); the headphones' own buffer, typically 100-200
+ms, is the rest, and no codec here shortens it (aptX Low Latency and LE Audio aren't available: no encoder, and the
+chip is Bluetooth 4.2). bluealsa's I/O threads run at real-time priority 25, above the emulators' audio threads; its
+pipe is paced at the stream's rate, so SuperDrastic's and BananaDS's blocking writes pace them as a sound card does.
+No AAC: fdk-aac's licence grants no patent rights and doesn't combine with libopenaptx's GPL-3.0. Its
+settings lines are new since the 0.3.0 translation document: English in 简体中文 until the translator's next round.
 
 **File sharing** (Settings > Network): the card's data partition as `\\<address>\banana` over SMB3, served by
 the kernel (`ksmbd`, a module loaded only when sharing is switched on) and ksmbd-tools' `ksmbd.mountd`, as a guest
@@ -114,6 +169,49 @@ share forced to root (exFAT has no owners) with DOS attributes not stored (exFAT
 password, so it is off by default and the settings screen says so. banana-ui watches the ROM folders (inotify):
 games copied in are read into the library once the copying has been quiet for 2 s, while the menu shows its home
 screen.
+
+**Files** (the shelf's tile, `run = banana:files` in systems.conf: one of the menu's own pages, not a program; A or
+X on the tile opens it, and so does a launch of its entry, by touch or from the Carts and layout themes; a user's
+`banana/systems.conf` without `[files]` gets it from the library all the same): the cards' folders and files, the
+settings' pages drawn by `src/settings_files.cpp`, the work done by `src/fileops.cpp`. This card is the ROM folder's
+parent (`/data`), the second SD card `/run/sd2` while it is in (the list of cards follows the mount table, poll's
+POLLPRI on `/proc/self/mounts`, while Files is open); the system's squashfs isn't shown, nor are hidden (`.`) files.
+In a folder A opens, Y marks, X offers Paste here, Copy, Move, Rename, Delete (A twice), New folder and Mark all.
+RIGHT only goes in (a card, a folder): held, it repeats, so it never chooses an action, here or anywhere in the
+settings (an action such as Shut down, Update's apply, joining a network, Box art's downloads are A's alone). A name
+typed on the keyboard is checked for what exFAT, FAT32 and Windows refuse (`\ / : * ? " < > |`, a trailing dot or
+space, Windows' device names `CON`, `NUL`, `COM1`..., and the card's limit: 255 UTF-16 characters on exFAT and FAT32
+alike); SELECT leaves the keyboard with nothing changed. The card's own folders (`banana`, `bios`, `roms`, `saves`,
+`states` and each system's folder in `roms`, which `data-layout` makes again at every boot and the library looks in)
+can be copied, not moved, renamed or deleted; marked with others, Move and Delete take the others. A paste whose
+names are taken asks once: Keep both (`name (2).ext`, a two-part extension such as PICO-8's `.p8.png` kept whole,
+the name cut to the card's limit), Replace (A twice; a folder merged), Skip those; a source is never replaced by
+itself, and a folder can't go into itself. Copies, moves and deletes run on a thread of their own, niced, one at a
+time; the page (shown once a job has run 300 ms) shows the file in hand, the bytes and the speed, and Y (twice,
+within 3 s) stops between two 1 MiB blocks, or the counting before them (Files stays open till the job is done); the
+outcome counts what was asked for ("Copied 1 folder"), or what of it was done. Before the first byte the room is
+checked (each file rounded up to the card's cluster) and FAT32's 4 GB a file; a copy is written as
+`.banana-copy-<name>` (cut to fit a name) beside its place, sent to the card 8 MiB at a time as it goes
+(`sync_file_range`: the bar shows what is on the card rather than in the RAM, and Stop waits a window at most),
+given its source's time, flushed and renamed into place, so a cut never leaves half a file under the real name (its
+leftover goes the next time the folder is listed; a change of case cut off between its two renames,
+`.banana-rename-<name>`, gets its name back there too). A folder that can't be read (a card error) fails with its
+reason: it isn't copied empty, nor left behind by a move without a word. A move on one card is a rename; between the
+two cards each file is copied so, and its source deleted once its folder is flushed too (the new name on the card: a
+leftover is never the only copy). The cards pasted on and taken from are flushed (`syncfs`, on the job's thread)
+before the outcome is told, and a folder made or an entry renamed has its folder flushed at once (`fsync`: the
+second card may be taken out right after; the card's `syncfs` would hold the page up for all else on its way there,
+a big file coming over SMB, say). The second card taken out mid-way (the `sd2` script's `umount -l`: `/run/sd2` is
+then the mount point's own folder, in the RAM): what the job makes is checked to be on the card's file system
+(`st_dev`, as the cards were when the paste was asked for), and the job ends there, "the card was taken out", no
+source deleted; a paste on a card taken out before it starts, or a name typed while the keyboard was up, does
+nothing. While a job runs, `/run/banana/files.pid` (banana-ui's pid) holds bananad's idle sleep; the lid still
+sleeps, and the job goes on after the wake. Games moved or copied show up in the library through the ROM folders'
+watch once Files is closed (a `roms` folder made or pasted on a second card that had none is offered to the library
+then: `sd2 scan`, under bananad's lock); a game's play time and Favorites star go by its place, so moved or renamed
+it starts without them (the page says so). The settings' pages keep their textures within a budget (8 MB at 1x,
+times the panel's area; the least recently used go after each frame), as the menu's engine does, and a folder's rows
+get their words only for the window on screen: a folder of any number of names doesn't fill the memory.
 
 **SSH** (Settings > Network, off by default): dropbear with keys only, as root. The keys are written in
 `banana/ssh/authorized_keys` on the card and copied to `/run/banana/ssh` (mode 0600, which exFAT can't hold;
@@ -139,7 +237,8 @@ the handheld to sleep:
 
 1. The game's process group gets `SIGSTOP` (ROCKNIX found DraStic's dynarec must not run on while the clocks drop).
 2. `/etc/banana/sleep.d/*` run with `pre` (Wi-Fi down and its driver unloaded: the RTL8821CS doesn't survive a
-   suspend otherwise; nothing at all when Wi-Fi is off).
+   suspend otherwise; nothing at all when Wi-Fi is off. Bluetooth down the same way, its modules unloaded, the sound
+   held quiet so a woken game isn't loud on the speakers until the headphones are called back).
 3. `sync()`: this kernel has `SUSPEND_SKIP_SYNC`, so the flush is bananad's (with saves written within 2 s anyway,
    `vm.dirty_expire`).
 4. The RTC alarm for the battery check (`sleep_check_hours`, 4), devices set to resume in parallel
@@ -155,8 +254,25 @@ When `/sys/power/state` returns:
 - **Anything with the lid still shut** (the power button pressed in a bag): straight back to sleep.
 - **The lid opened, or the power button with the lid open**: the game gets `SIGCONT` and banana-ui `SIGUSR1` (a
   redraw: the kernel's DRM resume has already put our buffers back on the panels, so no modeset), all within a
-  fraction of a millisecond of the kernel returning; then the `post` hooks (Wi-Fi back) in the background, the LEDs,
+  fraction of a millisecond of the kernel returning; then the `post` hooks (Wi-Fi and Bluetooth back) in the background, the LEDs,
   the headphone route; the press that woke it is ignored.
+
+**Power off after sleeping** (Settings > Sleep & power; `poweroff_after_sleep_minutes`, 0 = never, the default; 15,
+30, 60 or 120): the RTC alarm is then the sooner of the battery check and that deadline, counted from the first real
+sleep. When it is reached (its own alarm, or any wake with the lid still shut after it) the handheld is woken
+quietly: the panels stay dark, no `post` hooks, nothing for the menu, the volume down (the levels stored first, so
+the next boot has them). The game saves a resume state and quits, by what each emulator already does:
+SuperDrastic `SIGUSR1` to `drastic` (run-drastic always sets `DSFLIP_RESUME_FILE`; with Quick resume off,
+`DSFLIP_RESUME_ON_QUIT=0` keeps the player's own quits unsaved), BananaDS `SIGUSR1` to `bananads` (the resume state
+whatever `resume.on_quit` says), RetroArch through its command pipe (`STATE_SLOT_MINUS` down to the automatic slot,
+`SAVE_STATE`, `QUIT`, which waits for the save task; run-retroarch puts the slot back), anything else `SIGTERM`.
+bananad waits for the game to quit (60 s at most; 10 for `SIGTERM`), writes `banana/resume-boot` (the ROM and the
+emulator) for a game that saved, and shuts down cleanly. The lid can't switch it on again: the hall sensor is the
+SoC's GPIO0_C3 (`gpio-keys-hall`), unpowered once the RK817 is off, and the RK817 starts only from its own power key
+(or a charger). At the next boot (power pressed) banana-ui takes `resume-boot` (deleted before the game starts, so a
+game that fails isn't started at every boot), names the ROM in `/run/banana/resume-once` and launches it; the
+launcher loads its resume state once, Quick resume on or off. On the charger ("dark and awake") the deadline doesn't
+count: nothing drains, and the charging light would go out; unplugged, it starts at the real sleep.
 
 If a suspend fails, bananad goes on more carefully by itself: devices one at a time, then `s2idle`; if even that
 fails with the lid shut, both backlights go off until it opens. With lid sleep switched off, closing the lid only
@@ -184,9 +300,10 @@ headless at 640x480, 12 MB at 1024x768), bananad 1.6 MB, init, getty and the she
 idle. The menu draws only when something changes and sleeps in `poll()` otherwise; bananad wakes about once a
 minute; no sound server, no udev, no compositor, no shell waiting for input. The kernel is built for these two handhelds
 only: from ROCKNIX's RK3566 config, shared by many devices, Banana's fragment leaves out what the two device trees
-don't have (other panels, touchscreens and codecs, HDMI, cameras, USB gadget mode, packet filtering, Bluetooth,
-FUSE, swap, netsched), so the kernel in memory is smaller and boot probes fewer drivers; fourteen modules remain
-(Wi-Fi, the GPU, xpad, file sharing, virtio for QEMU). Wi-Fi's scans back off to one every five minutes when no
+don't have (other panels, touchscreens and codecs, HDMI, cameras, USB gadget mode, packet filtering, Bluetooth
+adapters other than the RTL8821CS's UART, FUSE, swap, netsched), so the kernel in memory is smaller and boot probes
+fewer drivers; the modules are Wi-Fi, the GPU, xpad, file sharing, Bluetooth (loaded only while it is on) and virtio
+for QEMU. Wi-Fi's scans back off to one every five minutes when no
 known network is in reach. Buildroot builds everything with `-O2` for the Cortex-A55, without the stack protector
 in every function and without eager symbol binding at start: a single-user game device gets the cycles instead.
 RetroArch runs with two swapchain images and nothing behind the game (no rewind buffer, no run-ahead, no shader
@@ -215,7 +332,9 @@ LED follows the charger's own LED trigger (`<battery>-charging`), the critical b
 **Sound.** No sound server: ALSA's default device is written by bananad to `/run/banana/asound.conf`. RG DS: the
 rk817 (card 0) with its `Playback Mux` on HP. RG DS Plus: playback on the aw88166 card, or on the rk817 while its
 `Headphones Jack` switch is on; capture always from the rk817 (the microphone). Volume keys: `PCM` on the aw88166,
-`Master` on the rk817. A program opened before a change keeps its device until it opens it again. bananad also sets
+`Master` on the rk817. Bluetooth headphones, while connected, come first: bluez-alsa's PCM plugin through `plug`
+(A2DP: aptX, SBC, LDAC... as above), and the volume keys change the headphones' own volume (`bluealsa-cli volume`, 0-127). A program opened
+before a change keeps its device until it opens it again. bananad also sets
 the rk817's capture gains at boot (`Mic Capture Gain` and `Master Capture Volume`), after `alsactl restore`, so a
 state saved by another firmware can't leave the DS's microphone muted; the emulators open `default`'s capture side
 unless Settings > Nintendo DS turns the mic off. Playback and capture of one card share its I2S DAI, and
@@ -230,8 +349,9 @@ resamples the emulators' 44.1 kHz capture to it; opened at 44.1 kHz against a 48
 |---|---|---|---|
 | `ui` | schedutil, at most ~1.1 GHz | powersave | the menu |
 | `powersave` | schedutil, at most ~1.4 GHz | on demand | 8-bit and 16-bit systems |
-| `balanced` | schedutil, full range | on demand | GBA, SNES, PlayStation |
-| `performance` | performance | performance | N64, ports |
+| `balanced` | schedutil, full range | on demand | GBA, apps |
+| `steady` | schedutil, full range above a 1.1 GHz floor (between page flips plain schedutil dropped to 408-600 MHz and the next frame started late) | on demand | PlayStation |
+| `performance` | performance | performance | SNES, N64, ports |
 | `superdrastic` | performance (SuperDrastic's own governor takes over: the lowest clock with no dropped frames, per game) | on demand | Nintendo DS |
 
 ## Booting it without the handheld

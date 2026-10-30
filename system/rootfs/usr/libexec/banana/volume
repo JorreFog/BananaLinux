@@ -3,17 +3,39 @@
 #   volume get              the level, 0-100
 #   volume set <0-100>
 #   volume up|down <n>      n percent louder or quieter, then the new level (as get prints it)
-# bananad writes which card plays and its control to /run/banana/mixer ("<card> <control>"). The rk817's Master
-# (the RG DS's speaker, the jack) is a plain level and amixer's percent is right for it. The RG DS Plus's speakers are
-# two aw88166 amplifiers whose control is an attenuation instead: 0 the loudest, 1023 mute, 64 a 6 dB step, and
-# this kernel names them "Left PCM" and "Right PCM" (amixer's "PCM" isn't there, so the keys changed nothing). Their
-# percent is 50 dB of range, 2.5 dB a 5% step, and 0% is mute.
+# bananad writes which card plays and its control to /run/banana/mixer ("<card> <control>"). The percent is the one
+# the ear hears (#18), as alsamixer's: ALSA's mapped volume (amixer -M), 10^(dB/60) over the control's range, so 50%
+# is about -17 dB, not half the dB range down. The rk817's Master (the RG DS's speaker, the jack) is -95..0 dB over
+# 0-255, and amixer's plain percent was linear in those steps: 50% was -47.5 dB, next to silent. The RG DS Plus's
+# speakers are two aw88166 amplifiers whose control is an attenuation instead: 0 the loudest, 1023 mute, 64 a 6 dB
+# step, and this kernel names them "Left PCM" and "Right PCM" (amixer's "PCM" isn't there, so the keys changed
+# nothing); amixer -M can't map it (no dB scale), so the same curve is a table here, 0% mute.
 read -r CARD CONTROL < /run/banana/mixer 2>/dev/null || exit 1
+# Bluetooth headphones playing (bananad writes "bluealsa <PCM path>"): their own volume, 0-127 over AVRCP (or
+# bluez-alsa's software volume when they have none), in straight steps: the headphones apply their own curve
+if [ "$CARD" = bluealsa ]; then
+    bget() { bluealsa-cli volume "$CONTROL" 2>/dev/null | sed -n 's/^Volume: L*:* *\([0-9]*\).*/\1/p' | head -n 1; }
+    bset() { p=$1; [ $p -lt 0 ] && p=0; [ $p -gt 100 ] && p=100; bluealsa-cli volume "$CONTROL" $(((p * 127 + 50) / 100)) || exit 1; }
+    bpct() { v=$(bget); [ -n "$v" ] || exit 1; echo $(((v * 100 + 63) / 127)); }
+    case $1 in
+    get) bpct ;;
+    set) bset "${2:-0}" ;;
+    up|down)
+        p=$(bpct); n=${2:-5}; [ $1 = down ] && n=-$n
+        bset $((p + n)); bpct
+        ;;
+    *) echo "volume get | set <0-100> | up <n> | down <n>" >&2; exit 2 ;;
+    esac
+    exit 0
+fi
 AW=
 if [ "$(cat /proc/asound/card$CARD/id 2>/dev/null)" = aw88166 ]; then
     AW="$CONTROL"
     amixer -c $CARD sget "$CONTROL" >/dev/null 2>&1 || AW="Left $CONTROL|Right $CONTROL"
 fi
+
+# the aw88166's attenuation for 0..100% (python: ALSA's volume_mapping.c with -95.8..0 dB, 1022 the quietest step)
+AW_TABLE="1023 931 863 808 763 724 689 659 631 606 583 562 542 524 506 490 475 460 446 433 421 409 397 386 375 365 355 346 336 327 319 310 302 294 287 279 272 265 258 251 244 238 232 225 219 213 208 202 196 191 186 180 175 170 165 160 156 151 146 142 137 133 129 124 120 116 112 108 104 100 96 92 89 85 81 78 74 71 67 64 60 57 54 50 47 44 41 38 35 32 29 26 23 20 17 14 11 8 5 3 0"
 
 raw() {   # raw <control>: the amplifier's attenuation now
     amixer -c $CARD sget "$1" 2>/dev/null | sed -n 's/.*Playback \([0-9]*\) \[.*/\1/p' | head -n 1
@@ -22,19 +44,27 @@ get() {
     if [ -n "$AW" ]; then
         v=$(raw "${AW%%|*}"); [ -n "$v" ] || exit 1
         [ $v -ge 1023 ] && echo 0 && return
-        p=$((100 - (v * 3 + 8) / 16)); [ $p -lt 1 ] && p=1
-        echo $p
+        # the percent whose step is nearest (a level set by hand between two)
+        i=0 best=1 bd=9999
+        for t in $AW_TABLE; do
+            d=$((t - v)); [ $d -lt 0 ] && d=$((-d))
+            [ $i -gt 0 ] && [ $d -lt $bd ] && { bd=$d; best=$i; }
+            i=$((i + 1))
+        done
+        echo $best
     else
-        amixer -c $CARD sget "$CONTROL" 2>/dev/null | sed -n 's/.*\[\([0-9]*\)%\].*/\1/p' | head -n 1
+        # (the playback's percent: the rk817's Master has the microphone's on the same line, kept at 100%)
+        amixer -M -c $CARD sget "$CONTROL" 2>/dev/null | sed -n 's/.*Playback [0-9]* \[\([0-9]*\)%\].*/\1/p' | head -n 1
     fi
 }
 set_to() {
     p=$1; [ $p -lt 0 ] && p=0; [ $p -gt 100 ] && p=100
     if [ -n "$AW" ]; then
-        if [ $p = 0 ]; then v=1023; else v=$(((100 - p) * 16 / 3)); fi
-        IFS='|'; for c in $AW; do amixer -q -c $CARD sset "$c" $v || exit 1; done
+        set -- $AW_TABLE; shift $p; v=$1
+        ifs=$IFS; IFS='|'; for c in $AW; do amixer -q -c $CARD sset "$c" $v || exit 1; done; IFS=$ifs	# (get splits the table after it)
     else
-        amixer -q -c $CARD sset "$CONTROL" $p% || exit 1
+        # playback only: the rk817's Master is the microphone's level too (bananad keeps that at 0 dB, #14)
+        amixer -q -M -c $CARD sset "$CONTROL" playback $p% || exit 1
     fi
 }
 

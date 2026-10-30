@@ -1,9 +1,13 @@
 #!/bin/sh
 # The data partition's folders, made when missing (a fresh card, or one that was formatted on a computer)
 D=/data
+# the systems list: the built-in one with the card's banana/systems.conf merged over it (systems-merge; banana-ui-session
+# makes it again at every menu start)
 SYSTEMS=/etc/banana/systems.conf
-[ -f $D/banana/systems.conf ] && SYSTEMS=$D/banana/systems.conf     # the user's copy replaces it
+/usr/libexec/banana/systems-merge 2>/dev/null && [ -s /run/banana/systems.conf ] && SYSTEMS=/run/banana/systems.conf
 mkdir -p $D/banana/logs $D/banana/updates $D/bios $D/saves $D/states  # (banana/updates: where the release notes say to put an update)
+# the Store's cache, its apps, and their entries (the Apps shelf's folder: it must be there for the menu to watch it)
+mkdir -p $D/store/data $D/store/apps $D/store/tiles
 # every system's folder (its "folder", or its id; not an app's absolute one, which ships with the system)
 awk '/^\[/{if(id!="")print (f!=""?f:id); id=substr($0,2,length($0)-2); f=""} /^folder *=/{sub(/^folder *= */,""); f=$0} END{if(id!="")print (f!=""?f:id)}' \
     "$SYSTEMS" | while read -r f; do case $f in /*) ;; *) mkdir -p "$D/roms/$f" ;; esac; done
@@ -14,7 +18,9 @@ if [ -d $D/roms/ports ] && [ ! -f $D/roms/ports/PortMaster.sh ] && [ -f /usr/sha
 fi
 # the built-in systems list, to copy as banana/systems.conf and change (kept up to date with the system)
 cmp -s /etc/banana/systems.conf $D/banana/systems.conf.default 2>/dev/null || cp /etc/banana/systems.conf $D/banana/systems.conf.default
-[ -f $D/banana/README.txt ] || cp /etc/banana/README.txt $D/banana/README.txt
+# Banana's own READMEs, kept up to date with the system (each says so in its first line: a copy from an older version
+# told of settings that had moved)
+cmp -s /etc/banana/README.txt $D/banana/README.txt 2>/dev/null || cp /etc/banana/README.txt $D/banana/README.txt
 # DS shaders of your own (Settings > Nintendo DS > Shader lists them), with how to make one
-mkdir -p $D/banana/shaders; [ -f $D/banana/shaders/README.txt ] || cp /etc/banana/shaders-README.txt $D/banana/shaders/README.txt 2>/dev/null
+mkdir -p $D/banana/shaders; cmp -s /etc/banana/shaders-README.txt $D/banana/shaders/README.txt 2>/dev/null || cp /etc/banana/shaders-README.txt $D/banana/shaders/README.txt 2>/dev/null
 exit 0

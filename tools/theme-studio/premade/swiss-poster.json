@@ -1,0 +1,1270 @@
+{
+  "name": "Swiss Poster",
+  "author": "Banana Theme Studio",
+  "base": "light",
+  "font": "inter",
+  "screens": {
+    "home": {
+      "top": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "=paper"
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "use": "grid12"
+        },
+        {
+          "type": "text",
+          "x": "=25 - 50 * (1 - slideA)",
+          "y": -18,
+          "text": "{pad(cursor + 1, 2)}",
+          "size": 200,
+          "color": "=ink",
+          "font": "inter-bold",
+          "spacing": -8,
+          "opacity": "=slideA",
+          "id": "number"
+        },
+        {
+          "type": "rect",
+          "x": 375,
+          "y": 40,
+          "w": "=240 * slideA",
+          "h": 240,
+          "fill": "=red",
+          "id": "block"
+        },
+        {
+          "type": "image",
+          "x": 495,
+          "y": 160,
+          "w": 140,
+          "h": 140,
+          "src": "{sys.icon}",
+          "fit": "pixelContain",
+          "anchor": "center",
+          "opacity": "=slideB"
+        },
+        {
+          "type": "text",
+          "x": 375,
+          "y": 254,
+          "text": "=pad(cursor + 1, 2) + ' / ' + pad(count, 2)",
+          "size": 12,
+          "color": "=paper",
+          "font": "inter-bold",
+          "opacity": "=slideB"
+        },
+        {
+          "type": "text",
+          "x": 25,
+          "y": 230,
+          "text": "System",
+          "size": 13,
+          "color": "=red",
+          "font": "inter-bold"
+        },
+        {
+          "type": "text",
+          "x": "=25 - 70 * (1 - slideB)",
+          "y": 262,
+          "text": "{sys.name}",
+          "size": 58,
+          "color": "=ink",
+          "font": "inter-bold",
+          "w": 590,
+          "spacing": -2,
+          "opacity": "=slideB",
+          "id": "name"
+        },
+        {
+          "type": "text",
+          "x": 25,
+          "y": 336,
+          "text": "=either(sys.maker, '—')",
+          "size": 16,
+          "color": "=grey",
+          "font": "inter-medium",
+          "w": 290
+        },
+        {
+          "type": "rect",
+          "x": 25,
+          "y": 372,
+          "w": 590,
+          "h": 3,
+          "fill": "=ink"
+        },
+        {
+          "type": "text",
+          "x": 25,
+          "y": 384,
+          "text": "Games",
+          "size": 11,
+          "color": "=grey",
+          "font": "inter-semibold",
+          "w": 140
+        },
+        {
+          "type": "text",
+          "x": 25,
+          "y": 400,
+          "text": "{sys.games}",
+          "size": 28,
+          "color": "=ink",
+          "font": "inter-bold",
+          "w": 140
+        },
+        {
+          "type": "text",
+          "x": 175,
+          "y": 384,
+          "text": "Played",
+          "size": 11,
+          "color": "=grey",
+          "font": "inter-semibold",
+          "w": 140
+        },
+        {
+          "type": "text",
+          "x": 175,
+          "y": 400,
+          "text": "{sys.played}",
+          "size": 28,
+          "color": "=ink",
+          "font": "inter-bold",
+          "w": 140
+        },
+        {
+          "type": "text",
+          "x": 325,
+          "y": 384,
+          "text": "Time",
+          "size": 11,
+          "color": "=grey",
+          "font": "inter-semibold",
+          "w": 140
+        },
+        {
+          "type": "text",
+          "x": 325,
+          "y": 400,
+          "text": "=either(sys.time, '0m')",
+          "size": 28,
+          "color": "=ink",
+          "font": "inter-bold",
+          "w": 140
+        },
+        {
+          "type": "text",
+          "x": 475,
+          "y": 384,
+          "text": "Continue (X)",
+          "size": 11,
+          "color": "=grey",
+          "font": "inter-semibold",
+          "w": 140
+        },
+        {
+          "type": "text",
+          "x": 475,
+          "y": 402,
+          "text": "=sys.hasResume ? sys.resumeTitle : '—'",
+          "size": 15,
+          "color": "=red",
+          "font": "inter-bold",
+          "w": 140,
+          "wrap": true,
+          "maxLines": 3,
+          "lineHeight": 17
+        }
+      ],
+      "bottom": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "=paper"
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "use": "grid12"
+        },
+        {
+          "type": "text",
+          "x": 25,
+          "y": 14,
+          "text": "Systems",
+          "size": 34,
+          "color": "=ink",
+          "font": "inter-bold",
+          "spacing": -1
+        },
+        {
+          "type": "text",
+          "x": 375,
+          "y": 14,
+          "text": "=pad(cursor + 1, 2) + '—' + pad(count, 2)",
+          "size": 34,
+          "color": "=red",
+          "font": "inter-bold",
+          "w": 240,
+          "align": "right",
+          "spacing": -1
+        },
+        {
+          "type": "rect",
+          "x": 25,
+          "y": 62,
+          "w": 590,
+          "h": 3,
+          "fill": "=ink"
+        },
+        {
+          "type": "list",
+          "source": "systems",
+          "direction": "row",
+          "x": 25,
+          "y": 82,
+          "w": 590,
+          "h": 300,
+          "itemW": 190,
+          "itemH": 300,
+          "gap": 10,
+          "scrollMode": "edge",
+          "item": {
+            "type": "group",
+            "w": 190,
+            "h": 300,
+            "children": [
+              {
+                "type": "rect",
+                "x": 0,
+                "y": 0,
+                "w": 190,
+                "h": 300,
+                "fill": "#00000000",
+                "states": [
+                  {
+                    "when": "=sel",
+                    "fill": "=ink"
+                  }
+                ]
+              },
+              {
+                "type": "rect",
+                "x": 0,
+                "y": 0,
+                "w": 190,
+                "h": 8,
+                "fill": "=sel ? red : ink"
+              },
+              {
+                "type": "rect",
+                "x": 0,
+                "y": 8,
+                "w": 1,
+                "h": 292,
+                "fill": "=ink"
+              },
+              {
+                "type": "text",
+                "x": "=sel ? 12 - 30 * (1 - slideA) : 12",
+                "y": 8,
+                "text": "{pad(i + 1, 2)}",
+                "size": 84,
+                "color": "=sel ? paper : ink",
+                "font": "inter-bold",
+                "spacing": -4
+              },
+              {
+                "type": "rect",
+                "x": 168,
+                "y": 20,
+                "w": 12,
+                "h": 12,
+                "fill": "=red",
+                "visible": "=item.fav"
+              },
+              {
+                "type": "text",
+                "x": "=sel ? 12 - 40 * (1 - slideB) : 12",
+                "y": 140,
+                "text": "{item.name}",
+                "size": 26,
+                "color": "=sel ? paper : ink",
+                "w": 166,
+                "font": "inter-bold",
+                "wrap": true,
+                "maxLines": 3,
+                "lineHeight": 27,
+                "spacing": -0.5
+              },
+              {
+                "type": "text",
+                "x": 12,
+                "y": 266,
+                "text": "=plural(item.games, 'game')",
+                "size": 13,
+                "color": "=sel ? red : grey",
+                "font": "inter-semibold"
+              },
+              {
+                "type": "image",
+                "x": 146,
+                "y": 256,
+                "w": 32,
+                "h": 32,
+                "src": "{item.icon}",
+                "fit": "pixelContain"
+              }
+            ],
+            "onTap": "a"
+          },
+          "id": "cards",
+          "clip": true
+        },
+        {
+          "type": "rect",
+          "x": 25,
+          "y": 400,
+          "w": 590,
+          "h": 1,
+          "fill": "=ink"
+        },
+        {
+          "type": "text",
+          "x": 25,
+          "y": 408,
+          "text": "{sys.name}",
+          "size": 12,
+          "color": "=ink",
+          "font": "inter-bold",
+          "w": 290
+        },
+        {
+          "type": "text",
+          "x": 325,
+          "y": 408,
+          "text": "=upper(either(sys.maker, ''))",
+          "size": 12,
+          "color": "=grey",
+          "font": "inter-semibold",
+          "w": 290,
+          "align": "right",
+          "spacing": 1
+        },
+        {
+          "type": "list",
+          "source": "hints",
+          "direction": "row",
+          "x": 25,
+          "y": 442,
+          "w": 590,
+          "h": 24,
+          "itemW": 150,
+          "itemH": 190,
+          "gap": 20,
+          "scrollMode": "none",
+          "item": {
+            "type": "group",
+            "children": [
+              {
+                "type": "group",
+                "x": 0,
+                "y": 0,
+                "children": [
+                  {
+                    "type": "text",
+                    "text": "{item.key}",
+                    "size": 11,
+                    "color": "=paper",
+                    "font": "inter-bold"
+                  }
+                ],
+                "layout": "row",
+                "padding": 5,
+                "fill": "=ink"
+              },
+              {
+                "type": "text",
+                "text": "{item.label}",
+                "size": 13,
+                "color": "=ink",
+                "font": "inter-semibold"
+              }
+            ],
+            "layout": "row",
+            "gap": 7,
+            "align": "center"
+          },
+          "flow": true
+        }
+      ]
+    },
+    "library": {
+      "top": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "=paper"
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "use": "grid12"
+        },
+        {
+          "type": "rect",
+          "x": 375,
+          "y": 40,
+          "w": 240,
+          "h": 240,
+          "fill": "=red"
+        },
+        {
+          "type": "image",
+          "x": "=game.art ? 375 : 425",
+          "y": "=game.art ? 40 : 80",
+          "w": "=game.art ? 240 : 140",
+          "h": "=game.art ? 240 : 160",
+          "src": "{game.art}",
+          "fit": "=game.art ? 'cover' : 'pixelContain'",
+          "fallback": "{sys.icon}",
+          "opacity": "=slideB"
+        },
+        {
+          "type": "text",
+          "x": "=25 - 50 * (1 - slideA)",
+          "y": 20,
+          "text": "{pad(cursor + 1, 3)}",
+          "size": 100,
+          "color": "=red",
+          "font": "inter-bold",
+          "spacing": -5,
+          "opacity": "=slideA"
+        },
+        {
+          "type": "text",
+          "x": 25,
+          "y": 140,
+          "text": "{sys.name}",
+          "size": 13,
+          "color": "=ink",
+          "font": "inter-bold"
+        },
+        {
+          "type": "text",
+          "x": "=25 - 70 * (1 - slideB)",
+          "y": 160,
+          "text": "{game.title}",
+          "size": 38,
+          "color": "=ink",
+          "w": 340,
+          "font": "inter-bold",
+          "wrap": true,
+          "maxLines": 3,
+          "lineHeight": 39,
+          "spacing": -1.2,
+          "opacity": "=slideB",
+          "id": "title"
+        },
+        {
+          "type": "rect",
+          "x": 25,
+          "y": 300,
+          "w": 590,
+          "h": 3,
+          "fill": "=ink"
+        },
+        {
+          "type": "text",
+          "x": 25,
+          "y": 312,
+          "text": "Plays",
+          "size": 11,
+          "color": "=grey",
+          "font": "inter-semibold",
+          "w": 140
+        },
+        {
+          "type": "text",
+          "x": 25,
+          "y": 328,
+          "text": "=pad(num(game.plays), 2)",
+          "size": 28,
+          "color": "=ink",
+          "font": "inter-bold",
+          "w": 140
+        },
+        {
+          "type": "text",
+          "x": 175,
+          "y": 312,
+          "text": "Time",
+          "size": 11,
+          "color": "=grey",
+          "font": "inter-semibold",
+          "w": 140
+        },
+        {
+          "type": "text",
+          "x": 175,
+          "y": 328,
+          "text": "=either(game.time, '0m')",
+          "size": 28,
+          "color": "=ink",
+          "font": "inter-bold",
+          "w": 140
+        },
+        {
+          "type": "text",
+          "x": 325,
+          "y": 312,
+          "text": "Last played",
+          "size": 11,
+          "color": "=grey",
+          "font": "inter-semibold",
+          "w": 140
+        },
+        {
+          "type": "text",
+          "x": 325,
+          "y": 328,
+          "text": "=either(game.last, 'Never')",
+          "size": 20,
+          "color": "=ink",
+          "font": "inter-bold",
+          "w": 140
+        },
+        {
+          "type": "text",
+          "x": 475,
+          "y": 312,
+          "text": "Starred",
+          "size": 11,
+          "color": "=grey",
+          "font": "inter-semibold"
+        },
+        {
+          "type": "rect",
+          "x": 475,
+          "y": 332,
+          "w": 26,
+          "h": 26,
+          "fill": "=game.fav ? red : alpha(ink, 0.12)"
+        },
+        {
+          "type": "group",
+          "x": 25,
+          "y": 384,
+          "w": 590,
+          "h": 40,
+          "children": [
+            {
+              "type": "text",
+              "x": 0,
+              "y": 0,
+              "text": "Achievements",
+              "size": 11,
+              "color": "=grey",
+              "font": "inter-semibold"
+            },
+            {
+              "type": "text",
+              "x": 290,
+              "y": 0,
+              "text": "{game.achLabel}",
+              "size": 11,
+              "color": "=ink",
+              "font": "inter-bold",
+              "w": 290,
+              "align": "right"
+            },
+            {
+              "type": "rect",
+              "x": 0,
+              "y": 18,
+              "w": 590,
+              "h": 10,
+              "fill": "=alpha(ink, 0.12)"
+            },
+            {
+              "type": "rect",
+              "x": 0,
+              "y": 18,
+              "w": "=590 * game.achProgress * slideA",
+              "h": 10,
+              "fill": "=red"
+            }
+          ],
+          "visible": "=game.achB > 0"
+        },
+        {
+          "type": "text",
+          "x": 25,
+          "y": 434,
+          "text": "Index",
+          "size": 11,
+          "color": "=grey",
+          "font": "inter-semibold",
+          "visible": "=!empty"
+        },
+        {
+          "type": "text",
+          "x": 475,
+          "y": 434,
+          "text": "=pad(cursor + 1, 3) + ' of ' + pad(count, 3)",
+          "size": 11,
+          "color": "=ink",
+          "font": "inter-bold",
+          "w": 140,
+          "align": "right",
+          "visible": "=!empty"
+        },
+        {
+          "type": "rect",
+          "x": 25,
+          "y": 456,
+          "w": 590,
+          "h": 1,
+          "fill": "=ink",
+          "visible": "=!empty"
+        },
+        {
+          "type": "rect",
+          "x": "=25 + 590 * cursor / max(1, count)",
+          "y": 450,
+          "w": "=590 / max(1, count)",
+          "h": 12,
+          "fill": "=red",
+          "visible": "=!empty",
+          "smooth": {
+            "x": 90
+          }
+        },
+        {
+          "type": "text",
+          "x": 25,
+          "y": 160,
+          "text": "{empty.title}",
+          "size": 38,
+          "color": "=ink",
+          "font": "inter-bold",
+          "w": 340,
+          "wrap": true,
+          "visible": "=empty"
+        },
+        {
+          "type": "text",
+          "x": 25,
+          "y": 250,
+          "text": "{empty.hint}",
+          "size": 14,
+          "color": "=grey",
+          "font": "inter-medium",
+          "w": 340,
+          "wrap": true,
+          "visible": "=empty"
+        }
+      ],
+      "bottom": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "=paper"
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "use": "grid12"
+        },
+        {
+          "type": "text",
+          "x": 25,
+          "y": 16,
+          "text": "{sys.name}",
+          "size": 30,
+          "color": "=ink",
+          "font": "inter-bold",
+          "w": 390,
+          "spacing": -1
+        },
+        {
+          "type": "text",
+          "x": 425,
+          "y": 16,
+          "text": "=plural(count, 'game')",
+          "size": 30,
+          "color": "=grey",
+          "font": "inter-bold",
+          "w": 190,
+          "align": "right",
+          "spacing": -1
+        },
+        {
+          "type": "rect",
+          "x": 25,
+          "y": 60,
+          "w": 590,
+          "h": 3,
+          "fill": "=ink"
+        },
+        {
+          "type": "list",
+          "source": "games",
+          "direction": "column",
+          "x": 25,
+          "y": 66,
+          "w": 590,
+          "h": 352,
+          "itemW": 590,
+          "itemH": 44,
+          "gap": 0,
+          "scrollMode": "edge",
+          "item": {
+            "type": "group",
+            "w": 590,
+            "h": 44,
+            "children": [
+              {
+                "type": "rect",
+                "x": 0,
+                "y": 0,
+                "w": "=sel ? 590 * easeOut(progress(moved, 320)) : 0",
+                "h": 43,
+                "fill": "=red"
+              },
+              {
+                "type": "rect",
+                "x": 0,
+                "y": 43,
+                "w": 590,
+                "h": 1,
+                "fill": "=ink"
+              },
+              {
+                "type": "text",
+                "x": "=sel ? 10 - 20 * (1 - slideA) : 0",
+                "y": 13,
+                "text": "{pad(i + 1, 3)}",
+                "size": 15,
+                "color": "=sel && slideA > 0.4 ? paper : grey",
+                "font": "inter-bold"
+              },
+              {
+                "type": "text",
+                "x": "=sel ? 85 - 30 * (1 - slideA) : 75",
+                "y": 10,
+                "text": "{item.title}",
+                "size": 19,
+                "color": "=sel && slideA > 0.4 ? paper : ink",
+                "w": 390,
+                "font": "=sel ? 'inter-bold' : 'inter-medium'",
+                "spacing": -0.3
+              },
+              {
+                "type": "rect",
+                "x": 450,
+                "y": 17,
+                "w": 10,
+                "h": 10,
+                "fill": "=sel ? paper : red",
+                "visible": "=item.fav"
+              },
+              {
+                "type": "text",
+                "x": 450,
+                "y": 13,
+                "text": "=num(item.plays) > 0 ? plural(num(item.plays), 'play') : '—'",
+                "size": 14,
+                "color": "=sel && slideA > 0.4 ? paper : grey",
+                "font": "inter-semibold",
+                "w": 140,
+                "align": "right"
+              }
+            ],
+            "onTap": "a"
+          },
+          "id": "index",
+          "clip": true
+        },
+        {
+          "type": "text",
+          "x": 25,
+          "y": 200,
+          "text": "Nothing here yet.",
+          "size": 26,
+          "color": "=ink",
+          "font": "inter-bold",
+          "visible": "=empty"
+        },
+        {
+          "type": "rect",
+          "x": 25,
+          "y": 426,
+          "w": 590,
+          "h": 1,
+          "fill": "=ink"
+        },
+        {
+          "type": "list",
+          "source": "hints",
+          "direction": "row",
+          "x": 25,
+          "y": 442,
+          "w": 590,
+          "h": 24,
+          "itemW": 150,
+          "itemH": 190,
+          "gap": 20,
+          "scrollMode": "none",
+          "item": {
+            "type": "group",
+            "children": [
+              {
+                "type": "group",
+                "x": 0,
+                "y": 0,
+                "children": [
+                  {
+                    "type": "text",
+                    "text": "{item.key}",
+                    "size": 11,
+                    "color": "=paper",
+                    "font": "inter-bold"
+                  }
+                ],
+                "layout": "row",
+                "padding": 5,
+                "fill": "=ink"
+              },
+              {
+                "type": "text",
+                "text": "{item.label}",
+                "size": 13,
+                "color": "=ink",
+                "font": "inter-semibold"
+              }
+            ],
+            "layout": "row",
+            "gap": 7,
+            "align": "center"
+          },
+          "flow": true
+        }
+      ]
+    },
+    "all": {
+      "top": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 30,
+          "use": "status"
+        }
+      ]
+    },
+    "launch": {
+      "top": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "=paper"
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "use": "grid12"
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": "=640 * easeInOut(clamp(launch.progress * 1.8, 0, 1))",
+          "h": 480,
+          "fill": "=red"
+        },
+        {
+          "type": "text",
+          "x": "=25 - 90 * (1 - easeOut(clamp((launch.progress - 0.3) * 2.5, 0, 1)))",
+          "y": 120,
+          "text": "Start",
+          "size": 14,
+          "color": "=paper",
+          "font": "inter-bold",
+          "opacity": "=clamp((launch.progress - 0.3) * 4, 0, 1)"
+        },
+        {
+          "type": "text",
+          "x": "=25 - 120 * (1 - easeOut(clamp((launch.progress - 0.34) * 2.5, 0, 1)))",
+          "y": 144,
+          "text": "{game.title}",
+          "size": 60,
+          "color": "=paper",
+          "w": 590,
+          "font": "inter-bold",
+          "wrap": true,
+          "maxLines": 3,
+          "lineHeight": 60,
+          "spacing": -2.5,
+          "opacity": "=clamp((launch.progress - 0.34) * 4, 0, 1)"
+        },
+        {
+          "type": "rect",
+          "x": 25,
+          "y": 396,
+          "w": 590,
+          "h": 2,
+          "fill": "=paper",
+          "opacity": "=clamp((launch.progress - 0.4) * 4, 0, 1)"
+        },
+        {
+          "type": "text",
+          "x": 25,
+          "y": 408,
+          "text": "{sys.name}",
+          "size": 14,
+          "color": "=paper",
+          "font": "inter-bold",
+          "opacity": "=clamp((launch.progress - 0.4) * 4, 0, 1)"
+        },
+        {
+          "type": "text",
+          "x": 475,
+          "y": 408,
+          "text": "No. {pad(game.index + 1, 3)}",
+          "size": 14,
+          "color": "=paper",
+          "font": "inter-bold",
+          "w": 140,
+          "align": "right",
+          "opacity": "=clamp((launch.progress - 0.4) * 4, 0, 1)"
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": "=640 * easeIn(clamp((launch.progress - 0.72) / 0.28, 0, 1))",
+          "h": 480,
+          "fill": "=ink"
+        }
+      ],
+      "bottom": [
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "fill": "=paper"
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "use": "grid12"
+        },
+        {
+          "type": "text",
+          "x": 25,
+          "y": 40,
+          "text": "{sys.name}",
+          "size": 13,
+          "color": "=red",
+          "font": "inter-bold"
+        },
+        {
+          "type": "text",
+          "x": 25,
+          "y": 50,
+          "text": "=pad(round(launch.progress * 100), 3)",
+          "size": 210,
+          "color": "=ink",
+          "font": "inter-bold",
+          "spacing": -10
+        },
+        {
+          "type": "text",
+          "x": 475,
+          "y": 96,
+          "text": "%",
+          "size": 90,
+          "color": "=red",
+          "font": "inter-bold"
+        },
+        {
+          "type": "rect",
+          "x": 25,
+          "y": 340,
+          "w": 590,
+          "h": 3,
+          "fill": "=ink"
+        },
+        {
+          "type": "rect",
+          "x": 25,
+          "y": 356,
+          "w": "=590 * easeInOut(launch.progress)",
+          "h": 24,
+          "fill": "=red"
+        },
+        {
+          "type": "text",
+          "x": 25,
+          "y": 396,
+          "text": "Loading",
+          "size": 11,
+          "color": "=grey",
+          "font": "inter-semibold"
+        },
+        {
+          "type": "text",
+          "x": 25,
+          "y": 412,
+          "text": "{game.title}",
+          "size": 18,
+          "color": "=ink",
+          "font": "inter-bold",
+          "w": 590
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 0,
+          "w": "=640 * easeIn(clamp((launch.progress - 0.72) / 0.28, 0, 1))",
+          "h": 480,
+          "fill": "=ink"
+        }
+      ]
+    }
+  },
+  "colors": {
+    "screenBg": "#f2efe8",
+    "ink": "#111111",
+    "muted": "#6e6e6e",
+    "line": "#111111"
+  },
+  "vars": {
+    "paper": "#f2efe8",
+    "ink": "#111111",
+    "red": "#e30613",
+    "grey": "#6e6e6e",
+    "colband": "#1111110a",
+    "slideA": "=easeOut(progress(moved, 380))",
+    "slideB": "=easeOut(progress(moved - 70, 420))"
+  },
+  "components": {
+    "grid12": {
+      "type": "group",
+      "children": [
+        {
+          "type": "list",
+          "source": "range",
+          "direction": "free",
+          "x": 0,
+          "y": 0,
+          "w": 640,
+          "h": 480,
+          "itemW": 150,
+          "itemH": 190,
+          "gap": 14,
+          "scrollMode": "center",
+          "item": {
+            "type": "rect",
+            "w": 40,
+            "h": 480,
+            "children": [],
+            "x": "=25 + i * 50",
+            "y": 0,
+            "fill": "=colband"
+          },
+          "count": 12,
+          "range": 64
+        },
+        {
+          "type": "rect",
+          "x": 25,
+          "y": 0,
+          "w": 1,
+          "h": 480,
+          "fill": "=alpha(red, 0.25)"
+        },
+        {
+          "type": "rect",
+          "x": 614,
+          "y": 0,
+          "w": 1,
+          "h": 480,
+          "fill": "=alpha(red, 0.25)"
+        }
+      ],
+      "w": 640,
+      "h": 480
+    },
+    "status": {
+      "type": "group",
+      "children": [
+        {
+          "type": "text",
+          "x": 375,
+          "y": 10,
+          "text": "{clock}",
+          "size": 12,
+          "color": "=ink",
+          "font": "inter-bold",
+          "w": 90
+        },
+        {
+          "type": "group",
+          "x": 475,
+          "y": 10,
+          "w": 90,
+          "h": 14,
+          "children": [
+            {
+              "type": "rect",
+              "x": 0,
+              "y": 2,
+              "w": 30,
+              "h": 10,
+              "fill": "#00000000",
+              "border": 1.5,
+              "borderColor": "=ink"
+            },
+            {
+              "type": "rect",
+              "x": 2.5,
+              "y": 4.5,
+              "w": "=25 * clamp(battery, 0, 100) / 100",
+              "h": 5,
+              "fill": "=charging ? ink : battery < 20 ? red : ink"
+            },
+            {
+              "type": "text",
+              "x": 36,
+              "y": 0,
+              "text": "{battery}%",
+              "size": 12,
+              "color": "=ink",
+              "font": "inter-semibold",
+              "w": 50
+            }
+          ],
+          "visible": "=battery >= 0"
+        },
+        {
+          "type": "text",
+          "x": 575,
+          "y": 10,
+          "text": "=online ? 'Wi-Fi' : 'Offline'",
+          "size": 12,
+          "color": "=online ? ink : red",
+          "font": "inter-semibold",
+          "w": 50
+        }
+      ],
+      "w": 640,
+      "h": 30
+    }
+  },
+  "input": {
+    "home": {
+      "left": "prev",
+      "right": "next",
+      "up": "prev",
+      "down": "next",
+      "l": "first",
+      "r": "last",
+      "a": "open",
+      "x": "resume",
+      "y": "fav"
+    },
+    "library": {
+      "up": "prev",
+      "down": "next",
+      "left": "prevSystem",
+      "right": "nextSystem",
+      "l": "first",
+      "r": "last",
+      "a": "open",
+      "b": "back",
+      "y": "fav"
+    }
+  },
+  "hints": {
+    "home": [
+      [
+        "A",
+        "Open"
+      ],
+      [
+        "X",
+        "Continue"
+      ],
+      [
+        "Y",
+        "Star"
+      ]
+    ],
+    "library": [
+      [
+        "A",
+        "Play"
+      ],
+      [
+        "B",
+        "Back"
+      ],
+      [
+        "Y",
+        "Star"
+      ]
+    ]
+  },
+  "behavior": {
+    "launchMs": 1100,
+    "scrollMs": 90,
+    "settleMs": 590,
+    "fps": 30,
+    "extraHints": true
+  },
+  "accent": "#e30613"
+}

@@ -102,17 +102,18 @@ namespace banana
 		if (th.joinable()) th.join();
 	}
 
-	void Sound::play(const std::string& name)
+	void Sound::play(const std::string& name, bool closeAfter)
 	{
 		if (!enabled || !clips.count(name)) return;
 		{
 			std::lock_guard<std::mutex> l(m);
 			queued = name;
+			closeAfterQueued = closeAfter;
 		}
 		cv.notify_all();
 	}
 
-	void Sound::release()
+	void Sound::release(bool wait)
 	{
 		{
 			std::lock_guard<std::mutex> l(m);
@@ -120,6 +121,7 @@ namespace banana
 			queued.clear();
 		}
 		cv.notify_all();
+		if (!wait) return;
 		// wait until the device is closed
 		for (int i = 0; i < 100; i++)
 		{
@@ -153,6 +155,18 @@ namespace banana
 		int routeCheck = 0;
 		const Clip* cur = nullptr;
 		size_t at = 0;			// cur's next frame
+		// the sound cur cut in on, when cur is a launch's last cue (the cartridge's click): played on under it to its end
+		// instead of cut off. A starts the launch with the "ready" chime (0.46 s) and the click comes ~140 ms later since
+		// the insert plays 3x as fast (0.5.0): the chime was cut off after a third of it (QA #12)
+		const Clip* under = nullptr;
+		size_t underAt = 0;
+		std::vector<int16_t> mixed;
+		bool closeAfter = false;	// cur was a launch's last cue: the device closes once it has played out
+		int tail = -1;			// then the 10 ms blocks of silence still to write before the close
+		// (150 ms: ALSA's 30 ms buffer and what the speaker amplifiers keep after it, so the chime's end is heard; the
+		// launch's own close cut it off, testers said)
+		const int TAIL = 15;
+		bool closing = false;	// release() asked while a sound played: the close once it has played out
 		auto lastSound = std::chrono::steady_clock::now();
 		for (;;)
 		{
@@ -161,14 +175,32 @@ namespace banana
 				std::unique_lock<std::mutex> l(m);
 				if (!pcm) cv.wait(l, [this] { return stop || closeNow || !queued.empty(); });	// closed: nothing to do
 				if (stop) break;
-				if (closeNow) { closeDev(); cur = nullptr; closeNow = false; continue; }	// a game is starting
+				if (closeNow)	// a game is starting: the device closed, after the sound still playing (the chime)
+				{
+					if (pcm && (cur || under || tail > 0)) closing = true;
+					else { closeDev(); cur = under = nullptr; tail = -1; closeAfter = closing = false; closeNow = false; continue; }
+				}
 				name = queued;
 				queued.clear();
+				if (!name.empty()) { closeAfter = closeAfterQueued; tail = -1; }
+			}
+			if (name.empty() && !cur && !under && tail == 0)
+			{
+				closeDev();
+				tail = -1;
+				closeAfter = closing = false;
+				std::lock_guard<std::mutex> l(m);
+				closeNow = false;
+				continue;
 			}
 			auto now = std::chrono::steady_clock::now();
 			if (!name.empty())
 			{
 				const Clip& c = clips[name];
+				// (only a launch's cue plays over the sound before it; any other cuts it, as a held direction's scroll must)
+				bool keep = closeAfter && cur && pcm && openRate == c.rate && openCh == c.channels;
+				if (keep) { under = cur; underAt = at; }
+				else under = nullptr;
 				if (pcm && (openRate != c.rate || openCh != c.channels)) closeDev();
 				if (!pcm)
 				{
@@ -185,24 +217,46 @@ namespace banana
 				at = 0;
 				lastSound = now;
 			}
-			else if (!cur && now - lastSound >= QUIET) { closeDev(); continue; }
+			else if (!cur && !under && now - lastSound >= QUIET) { closeDev(); continue; }
 			// the jack changed while the stream runs (every 250 ms): the next sound opens where sound plays now
-			if (++routeCheck >= 25) { routeCheck = 0; if (routeId() != routeLoaded) { closeDev(); cur = nullptr; continue; } }
+			if (++routeCheck >= 25) { routeCheck = 0; if (routeId() != routeLoaded) { closeDev(); cur = under = nullptr; continue; } }
 			// the next 10 ms: the sound's, or silence
 			const int16_t* p = silence.data();
 			snd_pcm_sframes_t frames = (snd_pcm_sframes_t)(silence.size() / openCh);
-			if (cur)
+			if (cur && !under)
 			{
 				size_t total = cur->pcm.size() / openCh;
 				frames = (snd_pcm_sframes_t)std::min<size_t>((size_t)frames, total - at);
 				p = cur->pcm.data() + at * openCh;
 				at += (size_t)frames;
-				if (at >= total) { cur = nullptr; lastSound = now; }
+				if (at >= total) { cur = nullptr; lastSound = now; if (closeAfter || closing) tail = TAIL; }
 			}
+			else if (cur || under)
+			{
+				// both: summed (clipped) over the longer of what is left of them in this block
+				std::vector<int32_t> acc(silence.size(), 0);
+				size_t n = 0;
+				auto add = [&](const Clip*& c, size_t& a)
+				{
+					if (!c) return;
+					size_t total = c->pcm.size() / openCh, k = std::min<size_t>((size_t)frames, total - a);
+					for (size_t i = 0; i < k * openCh; i++) acc[i] += c->pcm[a * openCh + i];
+					a += k; n = std::max(n, k);
+					if (a >= total) c = nullptr;
+				};
+				add(cur, at);
+				add(under, underAt);
+				mixed.resize(n * openCh);
+				for (size_t i = 0; i < mixed.size(); i++) mixed[i] = (int16_t)std::min(32767, std::max(-32768, acc[i]));
+				p = mixed.data();
+				frames = (snd_pcm_sframes_t)n;
+				if (!cur && !under) { lastSound = now; if (closeAfter || closing) tail = TAIL; }
+			}
+			else if (tail > 0) tail--;
 			while (frames > 0)
 			{
 				snd_pcm_sframes_t w = snd_pcm_writei(pcm, p, (snd_pcm_uframes_t)frames);	// blocks while the buffer is full
-				if (w < 0) { if (snd_pcm_recover(pcm, (int)w, 1) < 0) { closeDev(); cur = nullptr; break; } continue; }
+				if (w < 0) { if (snd_pcm_recover(pcm, (int)w, 1) < 0) { closeDev(); cur = under = nullptr; break; } continue; }
 				frames -= w; p += w * openCh;
 			}
 		}

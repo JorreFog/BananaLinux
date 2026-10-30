@@ -1,9 +1,10 @@
 // Banana Theme Studio: the editor.
 //
 // A layout theme is one JSON file (docs/THEMES.md). This edits that JSON directly — the object you load is the
-// object you save, so key order and any members the editor does not know are kept. The editor is offline-first:
-// the tree, inspector, live expression values and colour keys all work with no server; server.py adds exact
-// previews drawn by the real engine (render.js).
+// object you save, so key order and any members the editor does not know are kept. Everything works from the page
+// alone, opened from file:// or any static host: the live preview is the menu's own engine compiled to
+// WebAssembly (engine.js), the examples and guides are inlined (templates.js, guide.js), and a theme travels with
+// its files as a .zip (zip.js). serve.py, when it runs, adds your themes folder and Send to handheld (render.js).
 (function () {
   "use strict";
   const G = typeof globalThis !== "undefined" ? globalThis : window;
@@ -49,7 +50,11 @@
 
   // ---- state -----------------------------------------------------------------------------------------
   const state = { theme: clone(STARTER), sel: null, view: "home", screen: "top", addScreen: "top", size: "640x480",
-    shots: null, drag: null, open: {}, templates: null, localThemes: [], systemIds: null, assets: {} };
+    shots: null, drag: null, open: {}, templates: null, localThemes: [], systemIds: null, assets: {},
+    every: false,			// the preview's library: fixture.sh's (false) or a game for every system (true)
+    orig: {},				// the members the theme had when it was opened (see themeOut)
+    unsaved: false, undo: [], redo: [], cur: null, curKey: "", curAt: 0 };
+  const ENGINE = G.BananaEngine, ZIP = G.BananaZip;
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
 
   // ---- tiny DOM helper -------------------------------------------------------------------------------
@@ -68,6 +73,54 @@
     }
     return e;
   }
+
+  // ---- small line icons (24 x 24, stroked) ----------------------------------------------------------
+  const ICONS = {
+    rect: '<rect x="4" y="6" width="16" height="12" rx="2"/>',
+    text: '<path d="M5 6V4h14v2M12 4v16M9 20h6"/>',
+    image: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/>',
+    group: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 8h6M7 12h10M7 16h4"/>',
+    list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+    row: '<rect x="2" y="7" width="6" height="10" rx="1"/><rect x="9" y="7" width="6" height="10" rx="1"/><rect x="16" y="7" width="6" height="10" rx="1"/>',
+    column: '<rect x="6" y="2" width="12" height="6" rx="1"/><rect x="6" y="9" width="12" height="6" rx="1"/><rect x="6" y="16" width="12" height="6" rx="1"/>',
+    carousel: '<rect x="8" y="5" width="8" height="14" rx="2"/><path d="M4 8v8M20 8v8"/>',
+    hints: '<circle cx="6" cy="12" r="3"/><path d="M11 12h3"/><circle cx="18" cy="12" r="3"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    battery: '<rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 11v2M6 10v4M10 10v4"/>',
+    dots: '<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>',
+    component: '<path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/>',
+    up: '<path d="m18 15-6-6-6 6"/>', down: '<path d="m6 9 6 6 6-6"/>', plus: '<path d="M12 5v14M5 12h14"/>',
+    copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
+    trash: '<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/>',
+    chevron: '<path d="m9 18 6-6-6-6"/>', chevronDown: '<path d="m6 9 6 6 6-6"/>',
+    home: '<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+    grid: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>',
+    reload: '<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>',
+    x: '<path d="M18 6 6 18M6 6l12 12"/>',
+  };
+  function icon(name) {
+    const s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    s.setAttribute("viewBox", "0 0 24 24"); s.setAttribute("aria-hidden", "true");
+    s.innerHTML = ICONS[name] || ICONS.rect;
+    return s;
+  }
+  // a small pop-up menu under a button: items are [label, fn, iconName?]
+  function popMenu(anchor, items) {
+    closePop();
+    const m = h("div", { class: "menu pop", role: "menu" });
+    items.forEach((it) => {
+      if (!it) { m.appendChild(h("div", { class: "menu-sep" })); return; }
+      const b = h("button", { type: "button", class: "menu-item" }, it[2] ? icon(it[2]) : null, it[0]);
+      b.onclick = (e) => { e.stopPropagation(); closePop(); it[1](); };
+      m.appendChild(b);
+    });
+    const r = anchor.getBoundingClientRect();
+    m.style.position = "fixed"; m.style.top = (r.bottom + 4) + "px";
+    m.style.left = Math.max(8, Math.min(window.innerWidth - 270, r.left)) + "px";
+    document.body.appendChild(m);
+    setTimeout(() => document.addEventListener("click", closePop, { once: true }), 0);
+  }
+  function closePop() { document.querySelectorAll(".menu.pop").forEach((m) => m.remove()); }
 
   // ---- a plain-words complaint about broken JSON, instead of the parser's raw message -------------------
   function badJson(what, e) {
@@ -110,7 +163,11 @@
       if (str) { out += c; if (c === "\\") { out += n || ""; i += 2; continue; } if (c === '"') str = false; i++; continue; }
       if (c === '"') { str = true; out += c; i++; continue; }
       if (c === "/" && n === "/") { while (i < text.length && text[i] !== "\n") i++; continue; }
-      if (c === "/" && n === "*") { i += 2; while (i < text.length && !(text[i] === "*" && text[i + 1] === "/")) i++; i += 2; continue; }
+      if (c === "/" && n === "*") {			// (its newlines kept, so an error's line number is the file's)
+        i += 2;
+        while (i < text.length && !(text[i] === "*" && text[i + 1] === "/")) { if (text[i] === "\n") out += "\n"; i++; }
+        i += 2; continue;
+      }
       if (c === ",") {					// drop a comma before a closing brace or bracket
         let j = i + 1;
         while (j < text.length && /\s/.test(text[j])) j++;
@@ -181,6 +238,7 @@
     if (name === "accent" || name === "accent.base") return ok(a.base);
     if (name === "accent.light") return ok(a.light); if (name === "accent.dark") return ok(a.dark);
     if (name === "accent.band") return ok(a.band); if (name === "accent.low") return ok(a.low);
+    if (name === "accent.ink" || name === "accent.inkSub") return ok(inkOn(a.base, name === "accent.inkSub"));
     if (name.indexOf("palette.") === 0) { const p = palette(); const k = name.slice(8); return ok(p[k] !== undefined ? p[k] : ""); }
     if (name === "cursor") return ok(1); if (name === "count") return ok(7); if (name === "scroll") return ok(1);
     if (name === "moved") return ok(140); if (name === "entered") return ok(140); if (name === "dir") return ok(1);
@@ -218,11 +276,12 @@
   function argbCss(c) { const p = argbParts(c); return "rgba(" + p.r + "," + p.g + "," + p.b + "," + (p.a / 255).toFixed(3) + ")"; }
 
   // ---- the inspector's field widget ------------------------------------------------------------------
+  let fieldSeq = 0;
   function field(parent, label, get, set, kind, options, labelNode) {
     const lab = labelNode || h("label", null, (S.FIELD_LABELS && S.FIELD_LABELS[label]) || label);
     const tip = S.FIELD_TIPS && S.FIELD_TIPS[label];
     if (!labelNode && tip) lab.title = tip;
-    const row = h("div", { class: "field" }); row.appendChild(lab);
+    const row = h("div", { class: "field" }); row.appendChild(lab); row.dataset.key = label;
     const ctl = h("div", { class: "ctl" }); row.appendChild(ctl); parent.appendChild(row);
     const chip = h("span", { class: "res" });
     const opts = () => (typeof options === "function" ? options(Object.keys(state.theme.fonts || {})) : (options || []));
@@ -232,26 +291,47 @@
       chip.textContent = r.error ? r.error : r.text;
       if (!r.error && r.color !== null) { const sw = h("span", { class: "sw" }); sw.style.background = argbCss(r.color); chip.appendChild(document.createTextNode(" ")); chip.appendChild(sw); }
     }
-    function commit(nv) { set(nv); markDirty(); chipFor(); }
+    const fid = "field" + (++fieldSeq);		// (typing in one field is one step of undo)
+    function commit(nv) { set(nv); markDirty(fid); chipFor(); }
+    row.classList.toggle("is-code", false);
+    // the form picked with the buttons, while the value can't show it yet: an empty expression (a lone "=" is an
+    // error to the engine, so nothing is written until there is something after it), or a template with no braces
+    // yet (text without {} is a literal to the engine, which is the same thing)
+    let picked = "";
+    const empty = (v) => v === undefined || v === null || v === "";
+    function formOf(cur) {
+      const c = classify(cur);
+      if (picked === "expr" && (empty(cur) || c === "expr")) return "expr";
+      if (picked === "tmpl" && c !== "expr" && (empty(cur) || typeof cur === "string")) return "tmpl";
+      return c;
+    }
     function build() {
       ctl.innerHTML = "";
-      const cur = get(), form = classify(cur);
-      const seg = h("div", { class: "seg" });
-      [["lit", "Lit"], ["expr", "Expr"], ["tmpl", "Tmpl"]].forEach(function (fp) {
-        const b = h("button", { type: "button" }, fp[1]); b.setAttribute("aria-pressed", String(form === fp[0]));
-        b.onclick = () => { if (form === fp[0]) return; commit(convertForm(cur, fp[0], kind)); build(); };
-        seg.appendChild(b);
-      });
-      ctl.appendChild(seg);
-      if (form === "expr") { ctl.appendChild(document.createTextNode("=")); const i = h("input", { type: "text", spellcheck: "false", value: cur.slice(1) }); i.oninput = () => commit("=" + i.value); ctl.appendChild(i); }
-      else if (form === "tmpl") { const i = h("input", { type: "text", spellcheck: "false", value: cur }); i.oninput = () => commit(i.value); ctl.appendChild(i); }
+      const cur = get(), form = formOf(cur);
+      // one small switch: a plain value, or an =expression worked out live (text with {braces} is a template by itself)
+      const seg = h("button", { type: "button", class: "fx", title: form === "expr" ? "Back to a plain value" : "Use an expression instead: =sel ? accent : '#202430'" }, "ƒx");
+      seg.setAttribute("aria-pressed", String(form === "expr"));
+      seg.onclick = () => {
+        const to = form === "expr" ? "lit" : "expr";
+        picked = to;
+        if (!empty(cur)) commit(convertForm(cur, to, kind));
+        build();
+        const i = ctl.querySelector("input[type=text]"); if (i && to === "expr") i.focus();
+      };
+      seg.classList.toggle("on", form === "expr");
+      if (form === "expr") { ctl.appendChild(document.createTextNode("=")); const i = h("input", { type: "text", spellcheck: "false", value: empty(cur) ? "" : cur.slice(1), placeholder: "an expression" }); i.oninput = () => commit(i.value === "" ? "" : "=" + i.value); ctl.appendChild(i); }
+      else if (form === "tmpl") { const i = h("input", { type: "text", spellcheck: "false", value: empty(cur) ? "" : String(cur), placeholder: "text with {expressions}" }); i.oninput = () => commit(i.value); ctl.appendChild(i); }
       else buildLiteral(cur);
-      ctl.appendChild(chip); chipFor();
+      ctl.appendChild(seg);
+      // what an expression or a template works out to now (a plain value shows itself)
+      ctl.appendChild(chip); chipFor(); chip.hidden = form === "lit";
     }
     function buildLiteral(cur) {
       if (kind === "bool") { const i = h("input", { type: "checkbox" }); i.checked = !!(cur === true || cur === "true" || cur === 1); i.onchange = () => commit(i.checked); ctl.appendChild(i); return; }
       if (kind === "enum") {
         const sel = h("select"); sel.appendChild(h("option", { value: "" }, "(none)"));
+        const known = opts().map((o) => (Array.isArray(o) ? o[0] : o));
+        if (typeof cur === "string" && cur !== "" && known.indexOf(cur) < 0) { const op = h("option", { value: cur }, cur + "  (not one of the list)"); op.setAttribute("selected", ""); sel.appendChild(op); }
         opts().forEach((o) => {
           const val = Array.isArray(o) ? o[0] : o, txt = Array.isArray(o) ? o[1] : o;
           const op = h("option", { value: val }, txt); if (val === cur) op.setAttribute("selected", ""); sel.appendChild(op);
@@ -267,16 +347,19 @@
         const put = () => { const a = +ai.value; const s = ci.value + (a === 255 ? "" : a.toString(16).padStart(2, "0")); sw.textContent = s; commit(s); };
         ci.oninput = put; ai.oninput = put; ctl.appendChild(ci); ctl.appendChild(ai); ctl.appendChild(sw); return;
       }
-      if (kind === "number") { const i = h("input", { type: "number", value: typeof cur === "number" ? cur : "" }); i.oninput = () => commit(i.value === "" ? 0 : +i.value); ctl.appendChild(i); return; }
+      // (emptied, the property goes: the element is back to its default, as if it had never been set)
+      if (kind === "number") { const i = h("input", { type: "number", value: typeof cur === "number" ? cur : "", placeholder: "default" }); i.oninput = () => commit(i.value === "" ? "" : +i.value); ctl.appendChild(i); return; }
       if (kind === "length") {
         const pct = typeof cur === "string" && cur.slice(-1) === "%";
-        const i = h("input", { type: "number", value: pct ? parseFloat(cur) : (typeof cur === "number" ? cur : "") });
+        const i = h("input", { type: "number", value: pct ? parseFloat(cur) : (typeof cur === "number" ? cur : ""), placeholder: "default" });
         const p = h("button", { type: "button" }, "%"); p.setAttribute("aria-pressed", String(pct));
-        i.oninput = () => commit(pct ? (parseFloat(i.value) || 0) + "%" : (isNaN(parseFloat(i.value)) ? 0 : +i.value));
+        i.oninput = () => commit(i.value === "" ? "" : pct ? (parseFloat(i.value) || 0) + "%" : (isNaN(parseFloat(i.value)) ? 0 : +i.value));
         p.onclick = () => { const n = parseFloat(i.value) || 0; commit(pct ? n : n + "%"); build(); };
         ctl.appendChild(i); ctl.appendChild(p); return;
       }
-      const i = h("input", { type: "text", spellcheck: "false", value: litText(cur) }); i.oninput = () => commit(i.value); ctl.appendChild(i);
+      // (a field that takes anything: a number typed is a number, not the text "8")
+      const i = h("input", { type: "text", spellcheck: "false", value: litText(cur) });
+      i.oninput = () => commit(kind === "any" && /^-?(\d+\.?\d*|\.\d+)$/.test(i.value.trim()) ? +i.value.trim() : i.value); ctl.appendChild(i);
     }
     build();
     return { refresh: build };
@@ -308,8 +391,10 @@
       const arr = Array.isArray(get()) ? get() : [];
       arr.forEach(function (s, i) {
         const r = h("div", { class: "kv" });
-        const i2 = h("input", { type: "text", spellcheck: "false", value: s }); i2.oninput = () => { const a = arr.slice(); a[i] = i2.value; set(a); markDirty(); };
-        const rm = h("button", { class: "ghost danger", type: "button" }, "✕"); rm.onclick = () => { const a = arr.slice(); a.splice(i, 1); set(a); markDirty(); build(); };
+        // (each edit starts from the stops as they are now: another stop may have changed since this was drawn)
+        const now = () => (Array.isArray(get()) ? get().slice() : []);
+        const i2 = h("input", { type: "text", spellcheck: "false", value: s }); i2.oninput = () => { const a = now(); a[i] = i2.value; set(a); markDirty(); };
+        const rm = h("button", { class: "ghost danger", type: "button", title: "Remove this stop" }, "✕"); rm.onclick = () => { const a = now(); a.splice(i, 1); set(a); markDirty(); build(); };
         r.appendChild(i2); r.appendChild(h("span")); r.appendChild(rm); box.appendChild(r);
       });
       const add = h("button", { class: "ghost", type: "button" }, "+ stop"); add.onclick = () => { set((Array.isArray(get()) ? get() : []).concat(["#000000"])); markDirty(); build(); };
@@ -318,7 +403,7 @@
     build(); return { refresh: build };
   }
   function statesField(parent, get, set) {
-    const box = h("div"); parent.appendChild(box);
+    const box = h("div", { class: "states-box" }); parent.appendChild(box);
     function build() {
       box.innerHTML = "";
       const arr = Array.isArray(get()) ? get() : [];
@@ -348,7 +433,7 @@
     build(); return { refresh: build };
   }
   function smoothField(parent, get, set) {
-    const box = h("div"); parent.appendChild(box);
+    const box = h("div", { class: "smooth-box" }); parent.appendChild(box);
     function build() {
       box.innerHTML = "";
       const cur = get();
@@ -374,7 +459,7 @@
       box.innerHTML = "";
       const cur = get();
       if (Array.isArray(cur)) {
-        ["tl", "tr", "br", "bl"].forEach(function (n, i) { const f = h("div"); box.appendChild(f); field(f, "radius " + n, () => cur[i], (nv) => { const a = cur.slice(); a[i] = nv; set(a); markDirty(); }, "length"); });
+        ["tl", "tr", "br", "bl"].forEach(function (n, i) { const f = h("div"); box.appendChild(f); field(f, "radius " + n, () => (Array.isArray(get()) ? get() : cur)[i], (nv) => { const a = (Array.isArray(get()) ? get() : cur).slice(); a[i] = nv; set(a); markDirty(); }, "length"); });
         const one = h("button", { class: "ghost", type: "button" }, "single"); one.onclick = () => { set(12); markDirty(); build(); }; box.appendChild(one);
       } else {
         const f = h("div"); box.appendChild(f); field(f, "radius", () => (typeof get() === "number" || typeof get() === "string" ? get() : ""), (nv) => set(nv), "length");
@@ -427,81 +512,126 @@
     return n ? n + (n === 1 ? " child" : " children") : "";
   }
   function hasKids(el) { return Array.isArray(el.children) ? el.children.length > 0 : el.item !== undefined; }
+  const VIEW_LABELS = { home: "Home", library: "Library", launch: "Launch", all: "Every view" };
+  const VIEW_TIPS = { home: "The screen you pick a system on", library: "A system's games", launch: "While a game starts",
+    all: "Drawn over every view (a status bar, a clock...)" };
   function renderTree() {
     const pane = $("#pane-elements"); pane.innerHTML = "";
-    const vsel = h("div", { class: "viewsel" });
-    S.VIEWS.forEach((v) => { const b = h("button", { type: "button" }, v); b.setAttribute("aria-pressed", String(state.view === v)); b.onclick = () => { state.view = v; renderTree(); }; vsel.appendChild(b); });
+    const vsel = h("div", { class: "viewsel seg", title: "Which part of the menu you are editing" });
+    S.VIEWS.forEach((v) => { const b = h("button", { type: "button", title: VIEW_TIPS[v] || "" }, VIEW_LABELS[v] || v); b.setAttribute("aria-pressed", String(state.view === v)); b.onclick = () => { state.view = v; renderTree(); renderPalette(); previewView(v); }; vsel.appendChild(b); });
     pane.appendChild(vsel);
     S.SCREENS.forEach(function (scr) {
       const head = h("div", { class: "screenhead" });
-      const nm = h("span", { class: "name" + (state.screen === scr ? " on" : ""), title: "Click a screen to work on it: elements you add go there" }, scr);
+      const nm = h("span", { class: "name" + (state.screen === scr ? " on" : ""), title: "Click to work on this screen: elements you add go here" }, scr === "top" ? "Top screen" : "Bottom screen");
       nm.onclick = () => { state.screen = scr; state.addScreen = scr; renderTree(); renderPalette(); };
       head.appendChild(nm);
-      const add = h("button", { class: "ghost", type: "button" }, "+ element"); add.onclick = () => addTo(screenArr(scr), ["screens", state.view, scr]); head.appendChild(add);
+      const add = h("button", { class: "ghost small", type: "button", title: "Add an element to the " + scr + " screen" }, icon("plus"), "Add");
+      add.onclick = (e) => { e.stopPropagation(); addTo(screenArr(scr), ["screens", state.view, scr], undefined, add); }; head.appendChild(add);
       pane.appendChild(head);
       const arr = screenArr(scr);
-      if (!arr.length) pane.appendChild(h("div", { class: "muted", style: "margin:2px 0 6px" }, "(empty — add an element; a screen with no elements is black)"));
+      if (!arr.length) pane.appendChild(h("div", { class: "tree-empty" }, emptyNote(state.view, scr)));
       arr.forEach((el, i) => pane.appendChild(node(["screens", state.view, scr, i], el, i, arr)));
     });
+    // the components, so their insides can be edited like any element's (every use follows)
+    const comps = state.theme.components && typeof state.theme.components === "object" ? Object.keys(state.theme.components) : [];
+    if (comps.length) {
+      const head = h("div", { class: "screenhead" }, h("span", { class: "name", title: "Reusable elements: change one here and every use of it follows" }, "Components"));
+      pane.appendChild(head);
+      comps.forEach((n) => { const c = state.theme.components[n]; if (c && typeof c === "object" && !Array.isArray(c)) pane.appendChild(node(["components", n], c, 0, null)); });
+    }
+  }
+  // what the engine draws on a screen with no elements: the next view's (launch -> library -> home), else nothing
+  function emptyNote(view, scr) {
+    const sc = state.theme.screens || {};
+    const has = (v) => Array.isArray(sc[v] && sc[v][scr]) ? sc[v][scr].length > 0 : !!(sc[v] && sc[v][scr]);
+    if (view === "all") return "Nothing is drawn over the views.";
+    const next = view === "launch" ? ["library", "home"] : view === "library" ? ["home"] : [];
+    for (const v of next) if (has(v)) return "Empty: the menu shows the " + (VIEW_LABELS[v] || v) + " " + scr + " screen here. Add an element to give this view its own.";
+    return "Empty: this screen is black. Add an element, or pick one from the Add tab.";
   }
   function node(path, el, index, arr) {
     const wrap = h("div", { class: "node" });
-    const row = h("div", { class: "row" + (samePath(state.sel, path) ? " sel" : "") });
+    const row = h("div", { class: "row" + (samePath(state.sel, path) ? " sel" : "") }); row.dataset.path = JSON.stringify(path);
     const kids = hasKids(el);
     const openKey = JSON.stringify(path);
-    const caret = h("span", { class: "caret" + (kids ? "" : " leaf") }, state.open[openKey] === false ? "▸" : "▾");
+    const caret = h("span", { class: "caret" + (kids ? "" : " leaf") }, icon(state.open[openKey] === false ? "chevron" : "chevronDown"));
     caret.onclick = (e) => { e.stopPropagation(); state.open[openKey] = state.open[openKey] === false; renderTree(); };
     row.appendChild(caret);
-    row.appendChild(h("span", { class: "t" }, (S.TYPE_LABELS && S.TYPE_LABELS[typeOf(el)]) || typeOf(el)));
-    const lbl = h("span", { class: "lbl" }, labelOf(el)); lbl.title = el.type || ""; row.appendChild(lbl);
+    const tname = el.use ? "component" : typeOf(el);
+    row.appendChild(h("span", { class: "t" }, icon(tname === "group" && el.layout === "row" ? "row" : tname === "group" && el.layout === "column" ? "column" : tname),
+      path[0] === "components" && path.length === 2 ? String(path[1]) : el.use ? el.use : (el.id ? String(el.id) : (S.TYPE_LABELS && S.TYPE_LABELS[typeOf(el)]) || typeOf(el))));
+    const lbl = h("span", { class: "lbl" }, el.use ? "component" : labelOf(el)); lbl.title = labelOf(el); row.appendChild(lbl);
     const acts = h("div", { class: "acts" });
-    const mk = (t, fn, danger) => { const b = h("button", { class: "ghost" + (danger ? " danger" : ""), type: "button" }, t); b.onclick = (e) => { e.stopPropagation(); fn(); }; return b; };
+    const mk = (ic, tip, fn, danger) => { const b = h("button", { class: "ghost" + (danger ? " danger" : ""), type: "button", title: tip, "aria-label": tip }, icon(ic)); b.onclick = (e) => { e.stopPropagation(); fn(b); }; return b; };
     if (Array.isArray(arr)) {
-      acts.appendChild(mk("↑", () => { if (index > 0) { const x = arr.splice(index, 1)[0]; arr.splice(index - 1, 0, x); state.sel = parentOf(path).concat(index - 1); renderAll(); rerender(); } }));
-      acts.appendChild(mk("↓", () => { if (index < arr.length - 1) { const x = arr.splice(index, 1)[0]; arr.splice(index + 1, 0, x); state.sel = parentOf(path).concat(index + 1); renderAll(); rerender(); } }));
-      acts.appendChild(mk("+", () => addTo(arr, parentOf(path), index)));
-      acts.appendChild(mk("⧉", () => { arr.splice(index + 1, 0, clone(el)); state.sel = parentOf(path).concat(index + 1); renderAll(); rerender(); }));
+      acts.appendChild(mk("up", "Move up (drawn earlier, further back)", () => { if (index > 0) { const x = arr.splice(index, 1)[0]; arr.splice(index - 1, 0, x); state.sel = parentOf(path).concat(index - 1); markDirty(); renderAll(); rerender(); } }));
+      acts.appendChild(mk("down", "Move down (drawn later, in front)", () => { if (index < arr.length - 1) { const x = arr.splice(index, 1)[0]; arr.splice(index + 1, 0, x); state.sel = parentOf(path).concat(index + 1); markDirty(); renderAll(); rerender(); } }));
+      acts.appendChild(mk("plus", "Add an element after this one", (b) => addTo(arr, parentOf(path), index, b)));
+      acts.appendChild(mk("copy", "Duplicate", () => { arr.splice(index + 1, 0, clone(el)); state.sel = parentOf(path).concat(index + 1); markDirty(); renderAll(); rerender(); }));
     }
-    acts.appendChild(mk("✕", () => { delPath(path); state.sel = null; renderAll(); rerender(); }, true));
+    acts.appendChild(mk("trash", "Delete", () => { delPath(path); state.sel = null; markDirty(); renderAll(); rerender(); }, true));
     row.appendChild(acts);
     row.onclick = () => { state.sel = path; renderTree(); rerender(); };
     row.setAttribute("draggable", "true");
-    row.addEventListener("dragstart", () => { state.drag = { path: path, par: parentOf(path) }; });
+    row.addEventListener("dragstart", (e) => {
+      state.drag = { path: path, par: parentOf(path) };
+      try { e.dataTransfer.setData("text/plain", path.join(".")); e.dataTransfer.effectAllowed = "move"; } catch (err) { /* (Firefox starts no drag without data) */ }
+    });
     row.addEventListener("dragover", (e) => { if (state.drag && samePath(state.drag.par, parentOf(path))) e.preventDefault(); });
     row.addEventListener("drop", (e) => {
       e.preventDefault();
       if (!Array.isArray(arr) || !state.drag || !samePath(state.drag.par, parentOf(path))) return;
       const from = +state.drag.path.slice(-1), to = index;
       if (from === to) return;
-      const x = arr.splice(from, 1)[0]; arr.splice(to, 0, x); state.drag = null; state.sel = parentOf(path).concat(to); renderAll(); rerender();
+      const x = arr.splice(from, 1)[0]; arr.splice(to, 0, x); state.drag = null; state.sel = parentOf(path).concat(to); markDirty(); renderAll(); rerender();
     });
     wrap.appendChild(row);
+    const kidsBox = h("div", { class: "kids" });
     if (kids && state.open[openKey] !== false) {
-      if (Array.isArray(el.children)) el.children.forEach((c, i) => wrap.appendChild(node(path.concat("children", i), c, i, el.children)));
+      if (Array.isArray(el.children)) el.children.forEach((c, i) => kidsBox.appendChild(node(path.concat("children", i), c, i, el.children)));
       else if (el.item !== undefined) {
-        const child = h("div"); child.appendChild(node(path.concat("item"), el.item, 0, null));
-        const rm = h("button", { class: "ghost danger", type: "button" }, "remove item"); rm.onclick = () => { delete el.item; renderAll(); rerender(); };
-        child.appendChild(rm); wrap.appendChild(child);
+        const it = node(path.concat("item"), el.item, 0, null);
+        const t = it.querySelector(".lbl"); if (t) t.textContent = "drawn for each item";
+        kidsBox.appendChild(it);
       }
       if (el.type === "group" || el.children !== undefined) {
-        const addc = h("button", { class: "ghost", type: "button" }, "+ child"); addc.onclick = () => { if (!Array.isArray(el.children)) el.children = []; addTo(el.children, path.concat("children")); };
-        wrap.appendChild(addc);
+        const addc = h("button", { class: "ghost add-child", type: "button", title: "Add an element inside this group" }, icon("plus"), "Add inside");
+        addc.onclick = (e) => { e.stopPropagation(); if (!Array.isArray(el.children)) el.children = []; addTo(el.children, path.concat("children"), undefined, addc); };
+        kidsBox.appendChild(addc);
       }
     }
-    if (!kids && el.type === "group" && !Array.isArray(el.children)) {
-      const addc = h("button", { class: "ghost", type: "button" }, "+ child"); addc.onclick = () => { el.children = []; renderAll(); rerender(); };
-      wrap.appendChild(addc);
+    if (!kids && (typeOf(el) === "group" || Array.isArray(el.children)) && !el.use) {
+      // an empty group (a new list's item too): something to put in it
+      const addc = h("button", { class: "ghost add-child", type: "button", title: "Add an element inside this group" }, icon("plus"), "Add inside");
+      addc.onclick = (e) => { e.stopPropagation(); if (!Array.isArray(el.children)) el.children = []; addTo(el.children, path.concat("children"), undefined, addc); };
+      kidsBox.appendChild(addc);
     }
+    if (kidsBox.childNodes.length) wrap.appendChild(kidsBox);
     return wrap;
   }
-  function addTo(arr, parPath, at) {
-    const type = (window.prompt("Element type — rect, text, image, group or list", "rect") || "").trim().toLowerCase();
-    if (["rect", "text", "image", "group", "list"].indexOf(type) < 0) return;
+  function addTo(arr, parPath, at, anchor) {
+    if (anchor) {
+      popMenu(anchor, [["Rectangle", () => addTo2("rect"), "rect"], ["Text", () => addTo2("text"), "text"], ["Picture", () => addTo2("image"), "image"],
+        ["Group (holds others)", () => addTo2("group"), "group"], ["List (repeats for each system or game)", () => addTo2("list"), "list"]]);
+      return;
+    }
+    addTo2("rect");
+    function addTo2(type) { addElementAt(arr, parPath, at, type); }
+  }
+  function addElementAt(arr, parPath, at, type) {
     const el = makeElement(type);
     const idx = at === undefined ? arr.length : at + 1;
     arr.splice(idx, 0, el);
     state.sel = parPath.concat(idx); state.open[JSON.stringify(parPath)] = true;
-    renderAll(); rerender();
+    markDirty(); renderAll(); rerender();
+  }
+  // an element made with Add, then turned into a component's use: what Add gave it besides its place (its type,
+  // empty children, the default size and colours) would cover the component's own, so it goes
+  function dropDefaults(el) {
+    const t = typeOf(el), d = makeElement(t);
+    delete el.type;
+    if (Array.isArray(el.children) && !el.children.length) delete el.children;
+    Object.keys(d).forEach((k) => { if (k !== "x" && k !== "y" && k !== "type" && JSON.stringify(el[k]) === JSON.stringify(d[k])) delete el[k]; });
   }
   function makeElement(type) {
     if (type === "text") return { type: "text", x: 20, y: 20, text: "Text", size: 20, color: "#ffffff" };
@@ -510,32 +640,42 @@
     if (type === "list") return { type: "list", source: "systems", direction: "row", x: 0, y: 100, w: 640, h: 240, itemW: 150, itemH: 190, gap: 14, scrollMode: "center", item: { type: "group", w: 150, h: 190, children: [] } };
     return { type: "rect", x: 0, y: 0, w: 200, h: 100, fill: "#202430" };
   }
-  
+
 
   // ---- the inspector ---------------------------------------------------------------------------------
   function renderInspector() {
     const pane = $("#inspector"); pane.innerHTML = "";
-    if (!state.sel) { pane.appendChild(h("div", { class: "muted", style: "padding:10px" }, "Select an element in the tree to edit it.")); return; }
+    if (!state.sel) {
+      pane.appendChild(h("div", { class: "empty" }, h("p", null, h("b", null, "Nothing selected")),
+        h("p", null, "Pick an element in Layers on the left to change it here."),
+        h("p", null, "Settings for the whole theme (name, colours, system icons, buttons) are on the Theme tab.")));
+      return;
+    }
     const el = getPath(state.sel);
     if (!el || typeof el !== "object") { state.sel = null; renderInspector(); return; }
-    const crumbs = state.sel.slice(1).map((s) => (/^\d+$/.test(String(s)) ? "element " + (+s + 1) : s));
-    pane.appendChild(h("div", { class: "muted", style: "font-size:11px;margin:2px 0 6px", title: "Where it sits in the file: " + state.sel.join(".") }, crumbs.join("  ›  ")));
+    const crumbs = state.sel.slice(1).map((s) => (/^\d+$/.test(String(s)) ? "#" + (+s + 1) : VIEW_LABELS[s] || s));
+    const tn = el.use ? "component" : typeOf(el);
+    pane.appendChild(h("div", { class: "insp-head" }, h("span", { class: "type-badge" }, icon(tn), el.use ? "Component: " + el.use : ((S.TYPE_LABELS && S.TYPE_LABELS[typeOf(el)]) || typeOf(el)))));
+    pane.appendChild(h("div", { class: "crumbs", title: "Where it sits in the file: " + state.sel.join(".") }, crumbs.join("  ›  ")));
     // type
     const trow = h("div", { class: "field" }); trow.appendChild(h("label", null, "Type"));
     const tctl = h("div", { class: "ctl" });
     const cur0 = typeOf(el);
     const sel = h("select"); ["rect", "text", "image", "group", "list"].forEach((t) => { const o = h("option", { value: t }, S.TYPE_LABELS[t] || t); if (cur0 === t) o.setAttribute("selected", ""); sel.appendChild(o); });
     sel.title = "What this element is: a rectangle, some text, a picture, a box of children, or a list of repeats";
-    sel.onchange = () => { el.type = sel.value; markDirty(); renderAll(); rerender(); };
+    sel.onchange = () => {
+      // the old type's leftovers that mean nothing to the new one (a group's empty children, a list's defaults) go
+      const old = typeOf(el), keep = {}; (S.TYPE_PROPS[sel.value] || []).forEach((p) => { keep[p[0]] = true; });
+      const d = makeElement(old);
+      Object.keys(d).forEach((k) => { if (!keep[k] && k !== "type" && k !== "x" && k !== "y" && JSON.stringify(el[k]) === JSON.stringify(d[k])) delete el[k]; });
+      if (Array.isArray(el.children) && !el.children.length && !keep.children) delete el.children;
+      el.type = sel.value; markDirty(); renderAll(); rerender();
+    };
     tctl.appendChild(sel);
-    const dup = h("button", { class: "ghost", type: "button" }, "delete"); dup.onclick = () => { delPath(state.sel); state.sel = null; renderAll(); rerender(); };
+    const dup = h("button", { class: "ghost danger", type: "button", title: "Delete this element" }, icon("trash"), "Delete"); dup.onclick = () => { delPath(state.sel); state.sel = null; markDirty(); renderAll(); rerender(); };
     tctl.appendChild(dup); trow.appendChild(tctl); pane.appendChild(trow);
-
-    // component use
-    const comps = Object.keys(state.theme.components || {});
-    pane.appendChild(h("h3", { class: "sec" }, "Reusable component"));
-    field(pane, "use", () => el.use, (nv) => { if (nv) el.use = nv; else delete el.use; markDirty(); }, "enum", comps.concat([""]));
-    if (el.use) { kvField(pane, "with", () => el.with, (nv) => { if (nv) el.with = nv; else delete el.with; }, []); rawWitheditor(pane, el); }
+    field(pane, "id", () => el.id, (nv) => { if (nv === "" || nv === undefined) delete el.id; else el.id = nv; markDirty(); renderTree(); }, "text", null,
+      h("label", { title: "A name of your own for it, shown in Layers (the menu ignores it)" }, "Name"));
 
     pane.appendChild(h("h3", { class: "sec" }, "Position, size and visibility"));
     S.COMMON.forEach((p) => field(pane, p[0], () => el[p[0]], (nv) => { if (nv === "" || nv === undefined) delete el[p[0]]; else el[p[0]] = nv; markDirty(); }, p[1], p[2]));
@@ -560,6 +700,29 @@
       if (kind === "tree" || kind === "object") return;
       field(pane, k, () => el[k], (nv) => { if (nv === "" || nv === undefined) delete el[k]; else el[k] = nv; markDirty(); }, kind, p[2]);
     });
+    // how it changes (states) and eases (smooth): every type has them
+    pane.appendChild(h("h3", { class: "sec" }, "Changes when…"));
+    pane.appendChild(h("p", { class: "muted", style: "font-size:12px" }, "Other values while a condition holds, e.g. when =sel (the selected item of a list) it is bigger and brighter."));
+    statesField(pane, () => el.states, (a) => { if (a && a.length) el.states = a; else delete el.states; markDirty(); });
+    pane.appendChild(h("h3", { class: "sec" }, "Ease smoothly"));
+    smoothField(pane, () => el.smooth, (o) => { if (o === undefined || o === "") delete el.smooth; else el.smooth = o; markDirty(); });
+
+    // component use
+    const comps = Object.keys(state.theme.components || {});
+    pane.appendChild(h("h3", { class: "sec" }, "Reusable component"));
+    field(pane, "use", () => el.use, (nv) => {
+      if (nv) { if (!el.use) dropDefaults(el); el.use = nv; } else delete el.use;
+      markDirty(); renderTree(); setTimeout(rerender, 0);
+    }, "enum", comps.concat([""]));
+    if (el.use) {
+      // its parameters (with): a field each, and a row to add one (the component reads it by that name)
+      kvField(pane, "with", () => el.with, (nv) => { if (nv && Object.keys(nv).length) el.with = nv; else delete el.with; }, Object.keys(el.with || {}));
+      const pn = h("input", { type: "text", placeholder: "parameter name" });
+      const pa = h("button", { type: "button", class: "ghost" }, icon("plus"), "Add parameter");
+      pa.onclick = () => { const n = pn.value.trim(); if (!n) return; el.with = Object.assign({}, el.with || {}); if (!(n in el.with)) el.with[n] = ""; markDirty(); rerender(); };
+      pane.appendChild(h("div", { class: "ctl", style: "margin:4px 0 8px" }, pn, pa));
+      rawWitheditor(pane, el);
+    }
     rawField(pane, () => getPath(state.sel));
   }
   function rawWitheditor(pane, el) {
@@ -573,18 +736,18 @@
   function renderColours() {
     const pane = $("#pane-colours"); pane.innerHTML = "";
     const th = state.theme;
-    const baseRow = h("div", { class: "field" }); baseRow.appendChild(h("label", null, "base"));
+    const baseRow = h("div", { class: "field" }); baseRow.appendChild(h("label", { title: "The light or dark palette Settings and the keyboard start from" }, "Settings look"));
     const bsel = h("select"); ["dark", "light"].forEach((b) => { const o = h("option", { value: b }, b); if (th.base === b) o.setAttribute("selected", ""); bsel.appendChild(o); });
     bsel.onchange = () => { th.base = bsel.value; markDirty(); renderColours(); }; baseRow.appendChild(h("div", { class: "ctl" }, bsel)); pane.appendChild(baseRow);
 
     // accent
     const a = th.accent;
     const amode = typeof a === "object" ? "five" : (S.ACCENTS[a] ? a : "custom");
-    const arow = h("div", { class: "field" }); arow.appendChild(h("label", null, "accent"));
+    const arow = h("div", { class: "field" }); arow.appendChild(h("label", { title: "The selection colour; also the accent hook in expressions" }, "Accent"));
     const actl = h("div", { class: "ctl" });
     const asel = h("select");
-    Object.keys(S.ACCENTS).forEach((n) => { const o = h("option", { value: n }, n); if (amode === n) o.setAttribute("selected", ""); asel.appendChild(o); });
-    asel.appendChild(h("option", { value: "custom" }, "custom colour")); asel.appendChild(h("option", { value: "five" }, "five shades"));
+    Object.keys(S.ACCENTS).forEach((n) => { const o = h("option", { value: n }, n.charAt(0).toUpperCase() + n.slice(1)); if (amode === n) o.setAttribute("selected", ""); asel.appendChild(o); });
+    asel.appendChild(h("option", { value: "custom" }, "My own colour")); asel.appendChild(h("option", { value: "five" }, "Five shades of my own"));
     if (amode === "custom") asel.value = "custom"; if (amode === "five") asel.value = "five";
     actl.appendChild(asel);
     if (amode === "custom") { const c = h("input", { type: "color", value: (E.parseColorText(typeof a === "string" ? a : "#7c9cff") === null ? "#7c9cff" : (typeof a === "string" ? a.slice(0, 7) : "#7c9cff")) }); c.oninput = () => { th.accent = c.value; markDirty(); }; actl.appendChild(c); }
@@ -593,6 +756,8 @@
     if (amode === "five") S.ACCENT_SHADES.forEach((s) => field(pane, "accent." + s, () => (th.accent || {})[s], (v) => { th.accent[s] = v; markDirty(); }, "color"));
 
     // colour keys
+    pane.appendChild(h("h3", { class: "sec" }, "Settings colours"));
+    pane.appendChild(h("p", { class: "muted", style: "font-size:12px" }, "The colours of Banana's Settings screens and keyboard. In your own elements they are palette.<name>."));
     const cols = th.colors || (th.colors = {});
     S.COLOR_GROUPS.forEach((g) => {
       const d = h("details", { class: "adv" }); d.appendChild(h("summary", null, g[0]));
@@ -613,50 +778,104 @@
     });
 
     // fonts, logo, background
-    pane.appendChild(h("h3", { class: "sec" }, "fonts & pictures"));
+    pane.appendChild(h("h3", { class: "sec" }, "Fonts and pictures"));
     const fonts = th.fonts || (th.fonts = {});
-    field(pane, "font regular", () => fonts.regular, (v) => { if (v) fonts.regular = v; else delete fonts.regular; markDirty(); }, "text");
-    field(pane, "font medium", () => fonts.medium, (v) => { if (v) fonts.medium = v; else delete fonts.medium; markDirty(); }, "text");
-    field(pane, "logo", () => th.logo, (v) => { if (v) th.logo = v; else delete th.logo; markDirty(); }, "text");
+    field(pane, "font regular", () => fonts.regular, (v) => { if (v) fonts.regular = v; else delete fonts.regular; markDirty(); }, "text", null, h("label", { title: "A .ttf file beside the theme: the text of Settings" }, "Regular font"));
+    field(pane, "font medium", () => fonts.medium, (v) => { if (v) fonts.medium = v; else delete fonts.medium; markDirty(); }, "text", null, h("label", { title: "A .ttf file beside the theme: titles in Settings" }, "Medium font"));
+    field(pane, "logo", () => th.logo, (v) => { if (v) th.logo = v; else delete th.logo; markDirty(); }, "text", null, h("label", null, "Logo"));
     const bg = th.background || (th.background = {});
-    field(pane, "background top", () => bg.top, (v) => { if (v) bg.top = v; else delete bg.top; markDirty(); }, "text");
-    field(pane, "background bottom", () => bg.bottom, (v) => { if (v) bg.bottom = v; else delete bg.bottom; markDirty(); }, "text");
-    field(pane, "dither", () => bg.dither, (v) => { if (v === "" || v === undefined) delete bg.dither; else bg.dither = v; markDirty(); }, "bool");
+    field(pane, "background top", () => bg.top, (v) => { if (v) bg.top = v; else delete bg.top; markDirty(); }, "text", null, h("label", null, "Top picture"));
+    field(pane, "background bottom", () => bg.bottom, (v) => { if (v) bg.bottom = v; else delete bg.bottom; markDirty(); }, "text", null, h("label", null, "Bottom picture"));
+    field(pane, "dither", () => bg.dither, (v) => { if (v === "" || v === undefined) delete bg.dither; else bg.dither = v; markDirty(); }, "bool", null, h("label", { title: "The dot pattern over the background pictures" }, "Dot pattern"));
 
     // sounds
-    pane.appendChild(h("h3", { class: "sec" }, "sounds"));
+    pane.appendChild(h("h3", { class: "sec" }, "Sounds (WAV files)"));
     const snd = th.sounds || (th.sounds = {});
     S.SOUNDS.forEach((s) => { const f = h("div"); pane.appendChild(f); field(f, s, () => snd[s], (v) => { if (v) snd[s] = v; else delete snd[s]; markDirty(); }, "text"); });
 
-    // icons
-    // the system icons: a picture per system id, which the engine uses everywhere for that system
-    pane.appendChild(h("h3", { class: "sec" }, "system icons"));
-    pane.appendChild(h("div", { class: "muted", style: "font-size:12px" }, "a picture per system id replaces the menu's icon for that system (home, lists, Settings). 128×128 is plenty."));
-    const icons = th.icons || (th.icons = {});
-    const ids = systemIds();
-    Object.keys(icons).forEach(function (k) {
-      const f = h("div"); pane.appendChild(f);
-      const sel = h("select");
-      (ids.indexOf(k) < 0 ? [k].concat(ids) : ids).forEach(function (o) {
-        const op = h("option", { value: o }, o); if (o === k) op.setAttribute("selected", ""); sel.appendChild(op);
-      });
-      sel.onchange = () => {
-        const v = sel.value; if (v === k) return;
-        const path = icons[k]; delete icons[k]; icons[v] = path; markDirty(); renderColours();
-      };
-      field(f, k, () => icons[k], (v) => { if (v) icons[k] = v; else delete icons[k]; markDirty(); }, "text", null, sel);
-    });
-    const addSel = h("select");
-    ids.forEach((o) => addSel.appendChild(h("option", { value: o }, o)));
-    addSel.appendChild(h("option", { value: "__other" }, "other…"));
-    const ikb = h("button", { class: "ghost", type: "button" }, "add icon");
-    ikb.onclick = () => {
-      let id = addSel.value;
-      if (id === "__other") id = (window.prompt("System id (as in systems.conf)", "") || "").trim();
-      if (id && id !== "__other") { icons[id] = fileStem() + "/icons/" + id + ".png"; markDirty(); renderColours(); }
-    };
-    pane.appendChild(h("div", { class: "ctl" }, addSel, ikb));
   }
+
+  // ---- system icons: a picture per system id, in place of the menu's own (theme.cpp's themedIcon) ------------
+  // Every system systems.conf lists, and the collections, with the built-in icon beside the theme's. Picking a file
+  // attaches it to the theme (it travels in the .zip) under <theme>/icons/<id>.<ext>; Reset puts the built-in one
+  // back. The preview shows it at once; "every system" in the preview's library puts each one on the shelf.
+  function iconSystems() {
+    const out = ENGINE && ENGINE.ready() ? ENGINE.systems()
+      : S.SYSTEM_IDS.map((id) => ({ id: id, name: id, icon: "" })).concat([{ id: "favorites", name: "Favorites", icon: "" }, { id: "recently-played", name: "Recently played", icon: "" }, { id: "search", name: "Search", icon: "" }]);
+    (state.systemIds || []).forEach((id) => { if (!out.some((x) => x.id === id)) out.push({ id: id, name: id, icon: "" }); });
+    Object.keys(state.theme.icons || {}).forEach((id) => { if (!out.some((x) => x.id === id)) out.push({ id: id, name: id + "  (not a system Banana knows)", icon: "", unknown: true }); });
+    return out;
+  }
+  const builtinUrl = {};
+  function builtinIcon(file) {
+    if (!file || !ENGINE || !ENGINE.ready()) return "";
+    if (builtinUrl[file] === undefined) { const b = ENGINE.readFile(file); builtinUrl[file] = b ? URL.createObjectURL(new Blob([b], { type: "image/png" })) : ""; }
+    return builtinUrl[file];
+  }
+  function renderIcons() {
+    const pane = $("#pane-icons"); if (!pane) return; pane.innerHTML = "";
+    const th = state.theme;
+    pane.appendChild(h("p", { class: "muted", style: "font-size:12.5px" }, "Give any system (Game Boy Advance, Nintendo DS…) a picture of your own. It replaces Banana's icon everywhere in the menu. PNG or JPEG, up to 4096 px; Banana's own are 32 × 32 pixel art."));
+    const q = h("input", { type: "search", class: "icon-filter", placeholder: "Find a system…", value: state.iconQuery || "" });
+    q.oninput = () => { state.iconQuery = q.value; const v = q.value.trim().toLowerCase(); list.querySelectorAll(".icon-row").forEach((r) => { r.hidden = !!v && r.dataset.k.indexOf(v) < 0; }); };
+    pane.appendChild(q);
+    const list = h("div", { class: "icons" });
+    iconSystems().forEach(function (sys) {
+      const path = th.icons && typeof th.icons[sys.id] === "string" ? th.icons[sys.id] : "";
+      const a = path ? state.assets[path] : null;
+      const row = h("div", { class: "icon-row" + (path ? " set" : "") });
+      row.dataset.k = (sys.id + " " + sys.name).toLowerCase(); row.dataset.id = sys.id;
+      if (state.iconQuery && row.dataset.k.indexOf(state.iconQuery.trim().toLowerCase()) < 0) row.hidden = true;
+      const def = h("span", { class: "ic", title: "the menu's own" + (sys.icon ? ": " + sys.icon.replace(/^\/rnds\//, "ui/assets/rnds/") : "") });
+      const du = builtinIcon(sys.icon); if (du) def.appendChild(h("img", { src: du, alt: "" }));
+      row.appendChild(def);
+      const mine = h("span", { class: "ic mine", title: path || "no picture of the theme's" });
+      if (a) mine.appendChild(h("img", { src: assetUrl(a), alt: "" })); else if (path) mine.appendChild(h("span", { class: "bad" }, "?"));
+      row.appendChild(mine);
+      const nm = h("div", { class: "nm" }, h("div", null, h("b", null, sys.name !== sys.id ? sys.name : sys.id), h("span", { class: "muted" }, sys.name !== sys.id ? "  " + sys.id : "")));
+      nm.appendChild(h("div", { class: "muted", style: "font-size:11.5px" }, path ? (a ? "Yours: " + path : path + " — file missing, Banana's is shown") : "Banana's icon"));
+      row.appendChild(nm);
+      const pick = h("input", { type: "file", accept: ".png,.jpg,.jpeg,image/png,image/jpeg", class: "hidden" });
+      pick.addEventListener("change", function () { const f = this.files[0]; this.value = ""; if (f) setIcon(sys.id, f); });
+      const choose = h("button", { type: "button" }, path ? "Replace…" : "Choose…"); choose.onclick = () => pick.click();
+      row.appendChild(h("div", { class: "ctl" }, choose, pick));
+      if (path) { const rs = h("button", { class: "ghost", type: "button", title: "Back to Banana's icon" }, "Reset"); rs.onclick = () => resetIcon(sys.id); row.lastChild.appendChild(rs); }
+      list.appendChild(row);
+    });
+    pane.appendChild(list);
+    const other = h("input", { type: "text", placeholder: "Another system id" });
+    const add = h("button", { class: "ghost", type: "button" }, "Add"); add.onclick = () => {
+      const id = other.value.trim(); if (!id) return;
+      th.icons = th.icons || {}; if (!th.icons[id]) th.icons[id] = fileStem() + "/icons/" + id + ".png"; markDirty(); renderIcons();
+    };
+    pane.appendChild(h("div", { class: "ctl", style: "margin-top:6px" }, other, add));
+    const show = h("button", { class: "ghost", type: "button", title: "The preview's library with a game for every system, so each icon is on the shelf" }, icon("grid"), "Show every system in the preview");
+    show.onclick = () => { setLibrary(true); showTab("center", "design"); };
+    pane.appendChild(h("div", { class: "ctl", style: "margin-top:4px" }, show));
+  }
+  async function setIcon(id, file) {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const info = pictureInfo(bytes);
+    if (!info) { alert(file.name + " isn't a PNG or JPEG picture, which is all the menu reads."); return; }
+    if (info.w > 4096 || info.h > 4096) { alert(file.name + " is " + info.w + " × " + info.h + ". The menu reads pictures up to 4096 px a side and would show its own icon instead."); return; }
+    const th = state.theme; th.icons = th.icons || {};
+    const old = th.icons[id], ext = info.type === "jpeg" ? (/\.jpe?g$/i.test(file.name) ? file.name.slice(file.name.lastIndexOf(".")).toLowerCase() : ".jpg") : ".png";
+    // its own file under the theme's folder; a path the theme already gave it is kept when it has the right kind
+    const path = old && Engine_safe(old) && (info.type === "jpeg" ? /\.jpe?g$/i.test(old) : /\.png$/i.test(old)) ? old : fileStem() + "/icons/" + id + ext;
+    th.icons[id] = path;
+    putAsset(path, file.name, bytes);
+    if (old && old !== path) dropAssetIfUnused(old);
+    markDirty(); renderIcons(); renderAssets();
+    setStatus(id + ": " + file.name + " (" + info.w + " × " + info.h + ")", "ok");
+  }
+  function resetIcon(id) {
+    const th = state.theme, old = th.icons && th.icons[id];
+    if (!old && old !== "") return;
+    delete th.icons[id];
+    dropAssetIfUnused(old);
+    markDirty(); renderIcons(); renderAssets();
+  }
+  const Engine_safe = (p) => !!(ENGINE ? ENGINE.safeRel(p) : p);
 
   // ---- vars ------------------------------------------------------------------------------------------
   function renderVars() {
@@ -672,19 +891,33 @@
   // ---- components ------------------------------------------------------------------------------------
   function renderComponents() {
     const pane = $("#pane-components"); pane.innerHTML = "";
-    pane.appendChild(h("p", { class: "muted" }, "Reusable elements. An instance is {\"use\": \"name\", …overrides}. Editing the component changes every instance."));
+    pane.appendChild(h("p", { class: "muted" }, "A component is an element you design once and use in many places. Change it here and every use follows. To use one, add an element and pick it under \"Reusable component\"."));
     const comps = state.theme.components || (state.theme.components = {});
     const names = Object.keys(comps);
-    if (!names.length) pane.appendChild(h("div", { class: "muted" }, "(none yet)"));
+    if (!names.length) pane.appendChild(h("div", { class: "empty" }, "No components yet."));
     names.forEach(function (n) {
-      const row = h("div", { class: "ctl", style: "margin:3px 0" });
-      const edit = h("button", { type: "button" }, n); edit.onclick = () => { state.sel = ["components", n]; showTab("properties", "inspector"); renderTree(); rerender(); };
-      const ren = h("button", { class: "ghost", type: "button" }, "rename"); ren.onclick = () => { const nn = prompt("Rename component", n); if (nn && nn !== n) { comps[nn] = comps[n]; delete comps[n]; markDirty(); renderComponents(); } };
-      const del = h("button", { class: "ghost danger", type: "button" }, "✕"); del.onclick = () => { delete comps[n]; markDirty(); renderComponents(); };
+      const row = h("div", { class: "comp-row" });
+      const edit = h("button", { type: "button", class: "ghost", title: "Edit " + n }, icon("component"), n); edit.onclick = () => { state.sel = ["components", n]; showTab("properties", "inspector"); renderTree(); rerender(); };
+      const ren = h("button", { class: "ghost small", type: "button" }, "Rename"); ren.onclick = () => {
+        const nn = (prompt("Rename component", n) || "").trim();
+        if (!nn || nn === n) return;
+        if (comps[nn]) { alert("There is already a component called " + nn + "."); return; }
+        // the same place in the key order, and every instance follows
+        const all = {}; Object.keys(comps).forEach((k) => { all[k === n ? nn : k] = comps[k]; });
+        Object.keys(comps).forEach((k) => delete comps[k]); Object.assign(comps, all);
+        eachElement((el) => { if (el.use === n) el.use = nn; });
+        if (state.sel && state.sel[0] === "components" && state.sel[1] === n) state.sel = ["components", nn];
+        markDirty(); renderAll(); rerender();
+      };
+      const del = h("button", { class: "ghost danger icon-btn", type: "button", title: "Delete " + n, "aria-label": "Delete " + n }, icon("trash")); del.onclick = () => {
+        let used = 0; eachElement((el) => { if (el.use === n) used++; });
+        if (used && !confirm(n + " is used " + used + (used === 1 ? " time" : " times") + ". Delete it anyway? Those elements will draw nothing.")) return;
+        delete comps[n]; if (state.sel && state.sel[0] === "components" && state.sel[1] === n) state.sel = null; markDirty(); renderAll(); rerender();
+      };
       row.appendChild(edit); row.appendChild(ren); row.appendChild(del); pane.appendChild(row);
     });
-    const nn = h("input", { type: "text", placeholder: "new component name" });
-    const add = h("button", { class: "ghost", type: "button" }, "add"); add.onclick = () => { if (nn.value) { comps[nn.value] = { type: "group", children: [] }; markDirty(); renderComponents(); } };
+    const nn = h("input", { type: "text", placeholder: "New component name" });
+    const add = h("button", { type: "button" }, icon("plus"), "Create"); add.onclick = () => { if (nn.value) { comps[nn.value] = { type: "group", children: [] }; markDirty(); renderComponents(); } };
     pane.appendChild(h("div", { class: "ctl" }, nn, add));
   }
 
@@ -741,18 +974,17 @@
   }
   function renderTheme() {
     const pane = $("#pane-theme"); pane.innerHTML = "";
-    field(pane, "name", () => state.theme.name, (v) => { state.theme.name = v; markDirty(); }, "text");
-    field(pane, "author", () => state.theme.author, (v) => { state.theme.author = v; markDirty(); }, "text");
-    field(pane, "debug", () => state.theme.debug, (v) => { if (v === "" || v === undefined) delete state.theme.debug; else state.theme.debug = v; markDirty(); }, "bool");
-    field(pane, "font (default)", () => state.theme.font, (v) => { state.theme.font = v; markDirty(); }, "enum", S.BUILTIN_FONTS);
-    pane.appendChild(h("h3", { class: "sec" }, "your themes"));
-    if (!RENDER || !RENDER.available || !RENDER.localThemes) {
-      pane.appendChild(h("div", { class: "note", html: "Your own themes live in a folder of their own, outside the repo. Start the server with <code>--themes</code> to list and save them here:<br><br><code>python3 tools/theme-studio/serve.py --themes ~/BananaThemes</code>" }));
-    } else {
+    const L = (t, tip) => { const l = h("label", { title: tip || "" }, t); return l; };
+    field(pane, "name", () => state.theme.name, (v) => { state.theme.name = v; markDirty(); titleNow(); }, "text", null, L("Name", "Shown in Settings › Display & sound › Theme"));
+    field(pane, "author", () => state.theme.author, (v) => { state.theme.author = v; markDirty(); }, "text", null, L("Author"));
+    field(pane, "font (default)", () => state.theme.font, (v) => { state.theme.font = v; markDirty(); }, "enum", S.BUILTIN_FONTS, L("Font", "The font text uses unless it says otherwise"));
+    field(pane, "debug", () => state.theme.debug, (v) => { if (v === "" || v === undefined) delete state.theme.debug; else state.theme.debug = v; markDirty(); }, "bool", null, L("Show errors", "Draw the theme's problems on the handheld's top screen (for testing)"));
+    if (RENDER && RENDER.available && RENDER.localThemes) {
+      pane.appendChild(h("h3", { class: "sec" }, "Your themes folder"));
       pane.appendChild(h("div", { class: "muted", style: "font-size:12px" }, "in " + RENDER.localThemes));
       const save = h("button", { class: "primary", type: "button" }, "Save here");
       save.onclick = async () => {
-        try { const r = await RENDER.saveLocal(fileStem(), state.theme, assetList()); setStatus("saved to " + r.path, "ok"); loadLocalThemes(); }
+        try { const r = await RENDER.saveLocal(fileStem(), themeOut(), assetList()); state.unsaved = false; titleNow(); setStatus("saved to " + r.path, "ok"); loadLocalThemes(); }
         catch (e) { setStatus("save failed: " + e.message, "bad"); }
       };
       pane.appendChild(h("div", { class: "ctl", style: "margin:4px 0" }, save));
@@ -760,75 +992,194 @@
       if (!list.length) pane.appendChild(h("div", { class: "muted" }, "(nothing there yet — Save here puts one in)"));
       list.forEach(function (t) {
         const b = h("button", { type: "button" }, t.name);
-        b.onclick = () => { try { loadTheme(looseParse(t.json)); setStatus("opened " + t.name, "ok"); } catch (e) { setStatus("couldn't load " + t.name + ": " + e.message, "bad"); } };
+        b.onclick = () => { if (!guardUnsaved("Open " + t.name)) return; try { loadTheme(looseParse(t.json), null, "opened " + t.name); } catch (e) { setStatus("couldn't load " + t.name + ": " + e.message, "bad"); } };
         pane.appendChild(h("div", { class: "ctl" }, b));
       });
     }
-    pane.appendChild(h("h3", { class: "sec" }, "Start from a template"));
-    pane.appendChild(h("p", { class: "muted" }, "One of the example themes BananaOS ships. Pick one and change it — that is the easiest way in."));
-    (state.templates || []).forEach(function (t) { const b = h("button", { type: "button" }, t.name); b.title = t.file || ""; b.onclick = () => { loadTheme(looseParse(t.json)); setStatus("started from " + t.name, "ok"); }; pane.appendChild(h("div", { class: "ctl" }, b)); });
-    const any = h("button", { class: "ghost", type: "button" }, "Start from the simple example"); any.onclick = () => loadTheme(clone(STARTER));
-    pane.appendChild(h("div", { class: "ctl" }, any));
-    pane.appendChild(h("p", { class: "muted", style: "font-size:12px" }, "New, up top, always comes back to the simple example."));
+    const t = h("button", { type: "button", class: "ghost" }, icon("grid"), "Start from a template…"); t.onclick = () => openTemplates();
+    pane.appendChild(h("div", { class: "ctl", style: "margin-top:10px" }, t));
+  }
+
+  // ---- New: a gallery of starting points ------------------------------------------------------------
+  function openTemplates(draft) {
+    closePop();
+    let box = $("#templates");
+    if (!box) { box = h("div", { id: "templates", class: "modal", role: "dialog", "aria-label": "Start a theme" }); box.addEventListener("click", (e) => { if (e.target === box) box.remove(); }); document.body.appendChild(box); }
+    box.innerHTML = "";
+    const card = h("div", { class: "card" });
+    const close = h("button", { type: "button", class: "icon-btn", title: "Close (Esc)", "aria-label": "Close" }, icon("x")); close.onclick = () => box.remove();
+    card.appendChild(h("div", { class: "modal-head" }, h("div", null, h("b", null, "Start a theme"), h("div", { class: "muted", style: "font-size:12.5px" }, "Pick one of the ready-made themes and make it yours, or start from scratch.")), h("span", { class: "grow" }), close));
+    if (draft) {
+      // the theme kept in this browser last time: first, so going on with it is one click
+      card.appendChild(h("div", { class: "tpl-head" }, h("b", null, "Continue where you left off")));
+      const cg = h("div", { class: "tpl-grid" }); card.appendChild(cg);
+      const when = new Date(draft.when);
+      let dd = {}; try { dd = JSON.parse(draft.text); } catch (e) { /* ignore */ }
+      const b = h("button", { type: "button", class: "tpl" }, thumb(dd), h("b", null, draft.name || "Untitled"),
+        h("span", null, "Kept in this browser · " + when.toLocaleDateString() + " " + when.toLocaleTimeString().slice(0, 5) + (draft.unsaved ? " · not exported yet" : "")));
+      b.onclick = () => { box.remove(); restoreDraft(draft); };
+      cg.appendChild(b);
+    }
+    const grid = h("div", { class: "tpl-grid" });
+    function thumb(t) {
+      const v = (t && t.vars) || {}, c = (t && t.colors) || {};
+      const pick = (x) => (typeof x === "string" && x.charAt(0) === "#" ? x : null);
+      const bg = pick(v.bg) || pick(c.screenBg) || "#1b1f27", ink = pick(v.ink) || pick(c.ink) || "#ffffff";
+      const ac = typeof t.accent === "string" ? (S.ACCENTS[t.accent] ? null : pick(t.accent)) : null;
+      const d = h("div", { class: "thumb" });
+      d.style.background = "linear-gradient(160deg, " + bg + " 55%, " + (ac || bg) + ")";
+      d.appendChild(h("span", { style: "font-weight:700;font-size:20px;color:" + ink }, (t && t.name) || "Theme"));
+      return d;
+    }
+    let into = grid;
+    const section = (title, note) => {
+      card.appendChild(h("div", { class: "tpl-head" }, h("b", null, title), note ? h("span", { class: "muted" }, note) : null));
+      into = h("div", { class: "tpl-grid" }); card.appendChild(into);
+    };
+    const add = (name, desc, t, fn, pic) => {
+      const th = pic ? h("div", { class: "thumb" }, h("img", { src: pic, alt: "", loading: "lazy" })) : thumb(t);
+      const b = h("button", { type: "button", class: "tpl" }, th, h("b", null, name), h("span", null, desc)); b.onclick = fn; into.appendChild(b);
+    };
+    const open = (t) => () => {
+      if (!guardUnsaved("Start from " + t.name)) return;
+      box.remove(); loadTheme(looseParse(t.json), null, "started from " + t.name + ": make it yours, then Export");
+    };
+    const all = state.templates || [];
+    const premade = all.filter((t) => t.group === "premade"), examples = all.filter((t) => t.group !== "premade");
+    const BLANK = { name: "My theme", author: "you", base: "dark", font: "inter", screens: { home: { top: [], bottom: [] }, library: { top: [], bottom: [] } } };
+    add("Blank", "Nothing on the screens: build it all yourself from the Add tab.", { name: "Blank" }, () => { if (guardUnsaved("Start a new theme")) { box.remove(); loadTheme(clone(BLANK), null, "a blank theme: add elements from the Add tab"); } });
+    add("Simple", "A plain starting point: a carousel of systems and a list of games.", STARTER, () => { if (guardUnsaved("Start a new theme")) { box.remove(); loadTheme(clone(STARTER), null, "a new theme: give it a name on the Theme tab"); } });
+    const doc = (t) => { try { return looseParse(t.json); } catch (e) { return {}; } };
+    if (premade.length) {
+      section("Ready-made themes", "Made with this editor. Pick one to use as it is, or to change.");
+      premade.forEach((t) => add(t.name, t.description || "", doc(t), open(t), t.thumb));
+    }
+    if (examples.length) {
+      section("BananaOS examples", "The themes BananaOS ships.");
+      examples.forEach((t) => { const d = doc(t); add(t.name, t.description || (d.author ? "by " + d.author : "an example BananaOS ships"), d, open(t), t.thumb); });
+    }
+    card.appendChild(h("div", { class: "tpl-head" }, h("b", null, "Start from scratch")));
+    card.appendChild(grid);
+    box.appendChild(card);
   }
 
   // ---- assets ----------------------------------------------------------------------------------------
+  // The files a theme names (pictures, fonts, sounds) by paths relative to its .json. The page can't read them off
+  // the disk by those paths (a web page only gets the files it is given), so they are attached: picked here, dropped
+  // on the page, or opened with the theme as a folder or a .zip. Attached files go to the preview's engine, into
+  // Export (.zip) and to the server's Save here / Send to handheld.
   const ASSET_EXTS = ["png", "jpg", "jpeg", "webp", "ttf", "otf", "wav"];
+  const MIME = { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp", ttf: "font/ttf", otf: "font/otf", wav: "audio/wav" };
   function assetExt(p) { const m = /\.([a-z0-9]+)$/i.exec(p || ""); return m ? m[1].toLowerCase() : ""; }
-  // the relative paths the theme names (heuristic: a string that looks like a file the engine could load)
+  // the relative paths the theme names (a string that looks like a file the engine could load), and where
   function detectAssets() {
     const found = [], seen = {};
-    (function scan(v) {
+    (function scan(v, at) {
       if (typeof v === "string") {
         if (v && v.charAt(0) !== "=" && v.indexOf("{") < 0 && ASSET_EXTS.indexOf(assetExt(v)) >= 0) {
-          if (!seen[v]) { seen[v] = 1; found.push(v); }
+          if (!seen[v]) { seen[v] = []; found.push(v); }
+          seen[v].push(at);
         }
-      } else if (Array.isArray(v)) v.forEach(scan);
-      else if (v && typeof v === "object") Object.keys(v).forEach((k) => scan(v[k]));
-    })(state.theme);
+      } else if (Array.isArray(v)) v.forEach((x, i) => scan(x, at.concat(i)));
+      else if (v && typeof v === "object") Object.keys(v).forEach((k) => scan(v[k], at.concat(k)));
+    })(state.theme, []);
+    detectAssets.where = seen;
     return found;
   }
-  function assetList() {
-    return Object.keys(state.assets).filter((p) => state.assets[p] && state.assets[p].data)
-      .map((p) => ({ path: p, data: state.assets[p].data }));
+  // the first bytes of a picture: { type, w, h } for a PNG or a JPEG (what stb_image reads), else null
+  function pictureInfo(b) {
+    if (b.length > 24 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47)
+      return { type: "png", w: ((b[16] << 24) | (b[17] << 16) | (b[18] << 8) | b[19]) >>> 0, h: ((b[20] << 24) | (b[21] << 16) | (b[22] << 8) | b[23]) >>> 0 };
+    if (b.length > 4 && b[0] === 0xff && b[1] === 0xd8) {
+      for (let i = 2; i + 9 < b.length;) {
+        if (b[i] !== 0xff) { i++; continue; }
+        const m = b[i + 1], len = (b[i + 2] << 8) | b[i + 3];
+        if (m >= 0xc0 && m <= 0xcf && m !== 0xc4 && m !== 0xc8 && m !== 0xcc) return { type: "jpeg", w: (b[i + 7] << 8) | b[i + 8], h: (b[i + 5] << 8) | b[i + 6] };
+        i += 2 + len;
+      }
+      return { type: "jpeg", w: 0, h: 0 };
+    }
+    return null;
   }
-  function attach(path, file) {
+  function putAsset(path, name, bytes) {
+    const old = state.assets[path];
+    if (old && old.url) URL.revokeObjectURL(old.url);
+    state.assets[path] = { name: name, bytes: bytes, info: pictureInfo(bytes) };
+  }
+  function dropAssetIfUnused(path) {
+    if (!path || !state.assets[path]) return;
+    if (detectAssets().indexOf(path) >= 0) return;
+    if (state.assets[path].url) URL.revokeObjectURL(state.assets[path].url);
+    delete state.assets[path];
+  }
+  function assetUrl(a) {
+    if (!a.url) a.url = URL.createObjectURL(new Blob([a.bytes], { type: MIME[assetExt(a.name)] || (a.info ? "image/" + a.info.type : "application/octet-stream") }));
+    return a.url;
+  }
+  function b64(bytes) {
+    let s = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(s);
+  }
+  // for serve.py: [{ path, data: base64 }]
+  function assetList() { return Object.keys(state.assets).map((p) => ({ path: p, data: b64(state.assets[p].bytes) })); }
+  function assetFiles() { const o = {}; Object.keys(state.assets).forEach((p) => { o[p] = state.assets[p].bytes; }); return o; }
+  async function attach(path, file) {
     if (!file) return;
-    const r = new FileReader();
-    r.onload = () => { state.assets[path] = { name: file.name, data: r.result }; markDirty(); renderAssets(); };
-    r.readAsDataURL(file);
+    const rel = ENGINE ? ENGINE.safeRel(path) : path;
+    if (!rel) { alert("“" + path + "” isn't a path beside the theme (no leading /, no ..), so the handheld couldn't find it."); return; }
+    putAsset(rel, file.name, new Uint8Array(await file.arrayBuffer()));
+    const a = state.assets[rel];
+    if (/^(png|jpe?g)$/.test(assetExt(rel)) && !a.info) setStatus(file.name + " isn't a PNG or JPEG: the menu won't draw it", "bad");
+    else if (a.info && (a.info.w > 4096 || a.info.h > 4096)) setStatus(file.name + " is " + a.info.w + " × " + a.info.h + ": over 4096 px, the menu uses its default instead", "bad");
+    else setStatus("attached " + file.name + " as " + rel, "ok");
+    markDirty(); renderAssets(); renderIcons();
   }
+  function fmtSize(n) { return n < 1024 ? n + " B" : n < 1048576 ? (n / 1024).toFixed(0) + " KB" : (n / 1048576).toFixed(1) + " MB"; }
   function renderAssets() {
     const pane = $("#pane-assets"); pane.innerHTML = "";
-    pane.appendChild(h("p", { class: "muted" }, "Pictures, fonts and sounds the theme names, as paths relative to its .json. Attach a file here and previews and \u201cSend to handheld\u201d carry it; without it the engine uses its default."));
-    const refs = detectAssets();
-    if (!refs.length) pane.appendChild(h("div", { class: "muted" }, "this theme names no pictures, fonts or sounds yet"));
+    pane.appendChild(h("p", { class: "muted" }, "The pictures, fonts and sounds your theme uses. Attach each file (or drop files on the page); they go into the preview and the exported .zip. A missing file shows Banana's default instead, as on the handheld."));
+    const refs = detectAssets(), where = detectAssets.where || {};
+    if (!refs.length) pane.appendChild(h("div", { class: "empty" }, "This theme uses no files of its own yet."));
     refs.forEach(function (p) {
       const a = state.assets[p];
-      const row = h("div", { class: "ctl", style: "margin:3px 0" });
-      row.appendChild(h("span", { class: "mono", style: "flex:1;overflow:hidden;text-overflow:ellipsis" }, p));
-      row.appendChild(h("span", { class: "pill" }, a ? a.name : "not attached"));
-      const file = h("input", { type: "file", accept: ".png,.jpg,.jpeg,.webp,.ttf,.otf,.wav" });
-      file.addEventListener("change", function () { attach(p, this.files[0]); });
-      row.appendChild(file);
-      if (a) { const rm = h("button", { class: "ghost danger", type: "button" }, "✕"); rm.onclick = () => { delete state.assets[p]; markDirty(); renderAssets(); }; row.appendChild(rm); }
+      const row = h("div", { class: "asset" + (a ? "" : " missing") });
+      const th = h("span", { class: "ic" });
+      if (a && a.info) th.appendChild(h("img", { src: assetUrl(a), alt: "" }));
+      row.appendChild(th);
+      const info = h("div", { class: "nm" }, h("span", { class: "mono" }, p));
+      const used = (where[p] || []).map((w) => w.join(".")).slice(0, 2).join(", ");
+      info.appendChild(h("div", { class: "muted", style: "font-size:11px" }, a ? a.name + " · " + fmtSize(a.bytes.length) + (a.info ? " · " + a.info.w + " × " + a.info.h : "") + "  — " + used : "not attached — " + used));
+      row.appendChild(info);
+      const file = h("input", { type: "file", accept: ".png,.jpg,.jpeg,.webp,.ttf,.otf,.wav", class: "hidden" });
+      file.addEventListener("change", function () { const f = this.files[0]; this.value = ""; attach(p, f); });
+      const pick = h("button", { class: a ? "ghost" : "", type: "button" }, a ? "Replace…" : "Attach…"); pick.onclick = () => file.click();
+      const ctl = h("div", { class: "ctl" }, pick, file);
+      if (a) { const rm = h("button", { class: "ghost danger", type: "button", title: "detach the file (the theme still names it)" }, "✕"); rm.onclick = () => { if (a.url) URL.revokeObjectURL(a.url); delete state.assets[p]; markDirty(); renderAssets(); renderIcons(); }; ctl.appendChild(rm); }
+      row.appendChild(ctl);
       pane.appendChild(row);
     });
-    const np = h("input", { type: "text", placeholder: "my-theme/extra.png" });
+    const extra = Object.keys(state.assets).filter((p) => refs.indexOf(p) < 0);
+    if (extra.length) {
+      pane.appendChild(h("h3", { class: "sec" }, "attached, not named by the theme"));
+      extra.forEach(function (p) {
+        const rm = h("button", { class: "ghost danger", type: "button" }, "✕"); rm.onclick = () => { delete state.assets[p]; markDirty(); renderAssets(); };
+        pane.appendChild(h("div", { class: "ctl" }, h("span", { class: "mono", style: "flex:1" }, p), h("span", { class: "pill" }, fmtSize(state.assets[p].bytes.length)), rm));
+      });
+    }
+    const np = h("input", { type: "text", placeholder: fileStem() + "/extra.png" });
     const nf = h("input", { type: "file", accept: ".png,.jpg,.jpeg,.webp,.ttf,.otf,.wav" });
     const add = h("button", { class: "ghost", type: "button" }, "attach as…");
     add.onclick = () => { if (np.value && nf.files[0]) attach(np.value, nf.files[0]); };
     pane.appendChild(h("div", { class: "ctl" }, np, nf, add));
-    pane.appendChild(h("h3", { class: "sec" }, "send to handheld"));
-    if (!RENDER || !RENDER.available || !RENDER.themesDir) {
-      pane.appendChild(h("div", { class: "note", html: "Not available. Start the server with <code>--themes-dir</code> pointing at a mounted card, e.g.<br><br><code>python3 tools/theme-studio/serve.py --themes-dir /run/media/you/BANANA/banana/themes</code>" }));
-      return;
-    }
-    pane.appendChild(h("div", { class: "muted" }, "writes into " + RENDER.themesDir));
+    pane.appendChild(h("h3", { class: "sec" }, "Put it on the handheld"));
+    pane.appendChild(h("div", { class: "note" }, h("b", null, "Export"), " (top right) downloads " + fileStem() + ".zip with these files. Unzip it into banana/themes/ on the card, then pick the theme in Settings › Display & sound › Theme."));
+    if (!RENDER || !RENDER.available || !RENDER.themesDir) return;
+    pane.appendChild(h("div", { class: "muted" }, "Send to handheld writes into " + RENDER.themesDir));
     const nm = h("input", { type: "text", value: fileStem() });
     const go = h("button", { class: "primary", type: "button" }, "Send");
     go.onclick = async () => {
-      try { const r = await RENDER.send(nm.value, state.theme, assetList()); setStatus("sent to " + r.path, "ok"); }
+      try { const r = await RENDER.send(nm.value, themeOut(), assetList()); setStatus("sent to " + r.path, "ok"); }
       catch (e) { setStatus("send failed: " + e.message, "bad"); }
     };
     pane.appendChild(h("div", { class: "ctl" }, nm, go));
@@ -840,30 +1191,30 @@
 
   // ---- the "Add elements" palette --------------------------------------------------------------------
   const PALETTE = [
-    ["Shapes", [["rect", "Rect", "a filled box"], ["group-row", "Row", "children in a row"], ["group-column", "Column", "children in a column"]]],
-    ["Text & pictures", [["text", "Text", "a line of text"], ["image", "Image", "a picture"], ["group", "Group", "a box holding children"]]],
-    ["Lists", [["list-systems", "Systems carousel", "a row centred on the selection"], ["list-games", "Games list", "a column of games"], ["list-hints", "Button hints", "the hint chips"]]],
-    ["Status", [["clock", "Clock", "the time"], ["battery", "Battery", "its percent"], ["page-dots", "Page dots", "one per system"]]],
+    ["Basics", [["rect", "Rectangle", "A box with a colour, gradient or border", "rect"], ["text", "Text", "Words, or a hook like {sys.name}", "text"],
+      ["image", "Picture", "A file of yours, or {sys.icon}, {game.art}", "image"], ["group", "Group", "A box that holds other elements", "group"]]],
+    ["Layout", [["group-row", "Row", "Places its children side by side", "row"], ["group-column", "Column", "Places its children one below another", "column"]]],
+    ["Lists", [["list-systems", "Systems carousel", "The systems in a row, the selected one in the middle", "carousel"], ["list-games", "Games list", "A system's games, down the screen", "list"],
+      ["list-hints", "Button hints", "What each button does, as chips", "hints"], ["page-dots", "Page dots", "One dot per system", "dots"]]],
+    ["Status", [["clock", "Clock", "The time", "clock"], ["battery", "Battery", "Its percent", "battery"]]],
   ];
   function renderPalette() {
     const pane = $("#palette"); pane.innerHTML = "";
-    const srow = h("div", { class: "ctl", style: "margin-bottom:6px" });
-    srow.appendChild(h("span", { class: "muted", style: "font-size:12px" }, "add to"));
+    const seg = h("div", { class: "seg" });
     ["top", "bottom"].forEach(function (s) {
-      const b = h("button", { type: "button", class: "ghost" }, s);
+      const b = h("button", { type: "button" }, s === "top" ? "Top screen" : "Bottom screen");
       b.setAttribute("aria-pressed", String(state.addScreen === s));
-      if (state.addScreen === s) b.style.borderColor = "var(--accent)";
       b.onclick = () => { state.addScreen = s; renderPalette(); };
-      srow.appendChild(b);
+      seg.appendChild(b);
     });
-    srow.appendChild(h("span", { class: "muted", style: "font-size:12px" }, state.view));
-    pane.appendChild(srow);
+    pane.appendChild(h("div", { class: "pal-target" }, "Add to", seg));
+    pane.appendChild(h("div", { class: "muted", style: "font-size:12px" }, "of the " + (VIEW_LABELS[state.view] || state.view) + " view. Click an element to add it, then change it on the Element tab."));
     PALETTE.forEach(function (grp) {
       const g = h("div", { class: "pal-group" }); g.appendChild(h("h3", null, grp[0]));
       const grid = h("div", { class: "pal-grid" });
       grp[1].forEach(function (it) {
-        const b = h("button", { type: "button", class: "pal" }, h("b", null, it[1]), h("span", null, it[2]));
-        b.title = "add to the " + state.addScreen + " screen of " + state.view;
+        const b = h("button", { type: "button", class: "pal" }, icon(it[3]), h("b", null, it[1]), h("span", null, it[2]));
+        b.title = "Add to the " + state.addScreen + " screen of the " + (VIEW_LABELS[state.view] || state.view) + " view";
         b.onclick = () => addPreset(it[0]);
         grid.appendChild(b);
       });
@@ -876,6 +1227,7 @@
     state.sel = ["screens", state.view, state.addScreen, arr.length - 1];
     state.open[JSON.stringify(["screens", state.view, state.addScreen])] = true;
     markDirty(); renderAll(); rerender();
+    showTab("library", "layers"); showTab("properties", "inspector"); previewView(state.view);
   }
   function makePreset(kind) {
     if (kind === "group-row") return { type: "group", x: 0, y: 0, w: 400, h: 60, layout: "row", gap: 8, padding: 8, children: [] };
@@ -893,34 +1245,156 @@
     return makeElement(kind);
   }
 
-  // ---- the bottom dock: preview controls and the JSON tab --------------------------------------------
+  // ---- the theme as it is saved ----------------------------------------------------------------------
+  // The panels make the members they show as they are drawn (an empty "hints" list to add to, an empty
+  // "behavior"), but an empty member is not the same as a missing one to the engine: "hints": { "home": [] } takes
+  // the default hints away, and a "behavior" with no "cues" drops the default game-start sound. So what is saved,
+  // previewed and copied leaves out every such member that is empty and wasn't in the theme when it was opened.
+  const WATCHED = ["colors", "fonts", "background", "sounds", "icons", "vars", "components", "input", "input.home", "input.library",
+    "hints", "hints.home", "hints.library", "behavior", "behavior.cues", "screens"];
+  function snapshotOrig(t) {
+    const o = {};
+    const has = (path) => { let v = t; for (const k of path.split(".")) { if (!v || typeof v !== "object" || !(k in v)) return false; v = v[k]; } return true; };
+    WATCHED.forEach((p) => { if (has(p)) o[p] = true; });
+    if (t.screens && typeof t.screens === "object") Object.keys(t.screens).forEach((v) => {
+      o["screens." + v] = true;
+      const sv = t.screens[v];
+      if (sv && typeof sv === "object") Object.keys(sv).forEach((k) => { o["screens." + v + "." + k] = true; });
+    });
+    return o;
+  }
+  const isEmpty = (v) => (Array.isArray(v) ? v.length === 0 : v && typeof v === "object" && Object.keys(v).length === 0);
+  function themeOut() {
+    const t = clone(state.theme), o = state.orig;
+    const drop = (obj, key, path) => { if (obj && isEmpty(obj[key]) && !o[path]) delete obj[key]; };
+    if (t.screens && typeof t.screens === "object") {
+      Object.keys(t.screens).forEach((v) => {
+        const sv = t.screens[v];
+        if (sv && typeof sv === "object" && !Array.isArray(sv)) Object.keys(sv).forEach((k) => drop(sv, k, "screens." + v + "." + k));
+        drop(t.screens, v, "screens." + v);
+      });
+    }
+    // the deepest first, so a parent left empty by its children goes too
+    WATCHED.slice().sort((a, b) => b.split(".").length - a.split(".").length).forEach((p) => {
+      const ks = p.split("."), last = ks.pop();
+      let par = t;
+      for (const k of ks) { par = par && par[k]; }
+      if (par && typeof par === "object") drop(par, last, p);
+    });
+    return t;
+  }
+  function themeText() { return JSON.stringify(themeOut(), null, 2) + "\n"; }
+
+  // ---- undo ------------------------------------------------------------------------------------------
+  // Each change is a step (typing in one field is one step until you pause or move to another); the theme's text
+  // and the selection are kept. Ctrl+Z / Ctrl+Shift+Z (or Ctrl+Y) when you aren't typing in a box, or the buttons.
+  const HISTORY = 300;
+  function snap() { return { text: JSON.stringify(state.theme), sel: state.sel ? state.sel.slice() : null, view: state.view }; }
+  function resetHistory() { state.undo = []; state.redo = []; state.cur = snap(); state.curKey = ""; renderUndo(); }
+  function record(key) {
+    const now = Date.now(), next = snap();
+    if (state.cur && next.text === state.cur.text) { state.cur = next; return; }
+    const merge = key && key === state.curKey && now - state.curAt < 1200;
+    if (!merge && state.cur) { state.undo.push(state.cur); if (state.undo.length > HISTORY) state.undo.shift(); }
+    state.cur = next; state.curKey = key || ""; state.curAt = now; state.redo = [];
+    renderUndo();
+  }
+  function restore(s) {
+    state.theme = JSON.parse(s.text); state.sel = s.sel; state.view = s.view || state.view;
+    if (state.sel && getPath(state.sel) === undefined) state.sel = null;
+    normalize(); renderAll(); rerender(); state.cur = s; state.curKey = ""; renderUndo();
+    state.unsaved = true; titleNow(); schedulePreview(); scheduleDraft();
+  }
+  function undo() { if (!state.undo.length) return; state.redo.push(snap()); restore(state.undo.pop()); setStatus("undone", ""); }
+  function redo() { if (!state.redo.length) return; state.undo.push(snap()); restore(state.redo.pop()); setStatus("redone", ""); }
+  function renderUndo() {
+    const u = $("#undoBtn"), r = $("#redoBtn");
+    if (u) { u.disabled = !state.undo.length; u.title = "Undo (Ctrl+Z)" + (state.undo.length ? ": " + state.undo.length + " step(s)" : ""); }
+    if (r) { r.disabled = !state.redo.length; r.title = "Redo (Ctrl+Shift+Z)"; }
+  }
+  function markDirty(key) {
+    record(key);
+    state.unsaved = true; titleNow();
+    setStatus("edited", "");
+    schedulePreview(); scheduleDraft();
+  }
+  function titleNow() {
+    document.title = (state.unsaved ? "• " : "") + (state.theme.name || "Untitled") + " — Banana Theme Studio";
+    const n = $("#docName"), d = $("#dirtyDot");
+    if (n) n.textContent = state.theme.name || "Untitled";
+    if (d) d.hidden = !state.unsaved;
+  }
+
+  // ---- the bottom dock: preview settings, and the JSON tab --------------------------------------------
+  const DEFAULT_SCRIPT = "home 0; wait 900; shot home; press right; wait 700; shot home2; press a; wait 900; shot lib; press down; wait 600; shot lib2; press a; wait 400; shot launch";
   function renderPreviewControls() {
     const pane = $("#preview-controls"); pane.innerHTML = "";
-    if (!RENDER || !RENDER.available) {
-      pane.appendChild(h("div", { class: "note", html: "Previews need the local server. In a terminal:<br><br><code>python3 tools/theme-studio/serve.py</code><br><br>then open the address it prints. Editing, the tree, expressions and colour keys all work without it." }));
+    if (!liveOk() && !(RENDER && RENDER.available)) {
+      pane.appendChild(h("div", { class: "note" }, ENGINE && ENGINE.state === "loading" ? "Starting the menu's engine…" :
+        "No preview: " + (ENGINE ? ENGINE.detail : "engine.js isn't loaded") + ". Editing, the tree, expressions and colours all work without it."));
       return;
     }
-    const srow = h("div", { class: "field" }); srow.appendChild(h("label", null, "panel size"));
+    const grid = h("div", { class: "pgrid" });
     const sel = h("select");
-    [["640x480", "RG DS  640 × 480"], ["1024x768", "RG DS Plus  1024 × 768"]].forEach(function (o) {
+    [["640x480", "RG DS (640 × 480)"], ["1024x768", "RG DS Plus (1024 × 768)"]].forEach(function (o) {
       const op = h("option", { value: o[0] }, o[1]); if (state.size === o[0]) op.setAttribute("selected", ""); sel.appendChild(op);
     });
-    sel.onchange = () => { state.size = sel.value; doPreview(); };
-    srow.appendChild(h("div", { class: "ctl" }, sel)); pane.appendChild(srow);
-    const go = h("button", { class: "primary", type: "button" }, "Render preview"); go.onclick = doPreview;
-    pane.appendChild(h("div", { class: "ctl", style: "margin-top:6px" }, go, h("span", { class: "pill" }, state.shots ? state.shots.length + " shot(s)" : "not drawn yet")));
-    pane.appendChild(h("div", { class: "muted", style: "font-size:12px;margin-top:6px" }, "Draws the theme with the real engine (ui/banana-ui --headless). Its complaints appear under Problems."));
+    sel.onchange = () => { state.size = sel.value; if (liveOk()) restartLive(); else doServerPreview(); };
+    grid.appendChild(h("label", null, "Device")); grid.appendChild(sel);
+    if (liveOk()) {
+      const lib = h("select");
+      [["0", "A few test games"], ["1", "Every system (one game each)"]].forEach(function (o) {
+        const op = h("option", { value: o[0] }, o[1]); if (String(state.every ? 1 : 0) === o[0]) op.setAttribute("selected", ""); lib.appendChild(op);
+      });
+      lib.onchange = () => setLibrary(lib.value === "1");
+      grid.appendChild(h("label", { title: "The made-up games the preview shows" }, "Games")); grid.appendChild(lib);
+      const o = ENGINE.hostOpts;
+      const bat = h("input", { type: "range", min: -1, max: 100, value: o.battery, title: "-1: no battery reading" });
+      const batT = h("span", { class: "muted" }, o.battery < 0 ? "none" : o.battery + "%");
+      bat.oninput = () => { batT.textContent = +bat.value < 0 ? "none" : bat.value + "%"; ENGINE.setHost({ battery: +bat.value }); kick(); };
+      grid.appendChild(h("label", null, "Battery")); grid.appendChild(h("div", { class: "ctl" }, bat, batT));
+      const flag = (label, key, tip) => {
+        const c = h("input", { type: "checkbox" }); c.checked = !!o[key];
+        c.onchange = () => { const x = {}; x[key] = c.checked; ENGINE.setHost(x); kick(); };
+        return h("label", { class: "chk", title: tip || "" }, c, " " + label);
+      };
+      grid.appendChild(h("label", null, "Handheld"));
+      grid.appendChild(h("div", { class: "ctl wrap" }, flag("Charging", "charging"), flag("Wi-Fi on", "online", "the online hook"), flag("12-hour clock", "twelveHour"),
+        flag("Motion", "motion", "Settings' motion (the motion hook)"), flag("Battery as %", "batteryText", "batteryMode: text")));
+    }
+    pane.appendChild(grid);
+    const go = h("button", { type: "button", title: "Run a script of button presses and keep the screens it draws" }, "Take stills");
+    go.onclick = () => (liveOk() ? doStills() : doServerPreview());
+    const scr = h("input", { type: "text", spellcheck: "false", value: state.script || DEFAULT_SCRIPT, title: "The script: home N, lib S G, wait MS, press BUTTON, touch SCREEN X Y, shot NAME" });
+    scr.onchange = () => { state.script = scr.value; };
+    pane.appendChild(h("div", { class: "stills" }, h("b", null, "Stills"), h("div", { class: "muted", style: "font-size:12px" }, "Pictures of the screens after a script of button presses, shown under the preview."),
+      h("div", { class: "ctl" }, scr, go, h("span", { class: "pill" }, state.shots ? state.shots.length + " still(s)" : "none yet"))));
+    const b = ENGINE && ENGINE.build;
+    pane.appendChild(h("div", { class: "about" }, liveOk()
+      ? "The preview runs the handheld's own menu engine in this page" + (b ? " (built " + b.built + ")" : "") + ": what you see is what the handheld shows."
+      : "Drawn by serve.py with the real engine."));
   }
   function renderJson() {
     const pane = $("#json"); pane.innerHTML = "";
-    const ta = h("textarea", { spellcheck: "false" }); ta.value = JSON.stringify(state.theme, null, 2) + "\n";
+    const ta = h("textarea", { spellcheck: "false" }); ta.value = themeText();
+    const err = h("div", { class: "jerr" });
     const apply = h("button", { class: "primary", type: "button" }, "Apply");
     apply.onclick = () => {
-      try { state.theme = looseParse(ta.value); state.sel = null; normalize(); renderAll(); rerender(); markDirty(); setStatus("applied the JSON", "ok"); }
-      catch (e) { setStatus("JSON error: " + e.message, "bad"); }
+      let t;
+      try { t = looseParse(ta.value); }
+      catch (e) {
+        const m = /line (\d+) column (\d+)/.exec(e.message) || /position (\d+)/.exec(e.message);
+        err.textContent = "Not applied — " + e.message;
+        if (m && m.length === 3) { const lines = ta.value.split("\n"); let at = 0; for (let i = 0; i < +m[1] - 1 && i < lines.length; i++) at += lines[i].length + 1; ta.focus(); ta.setSelectionRange(at + +m[2] - 1, at + +m[2]); }
+        setStatus("JSON error: " + e.message, "bad"); return;
+      }
+      if (!t || typeof t !== "object" || Array.isArray(t)) { err.textContent = "Not applied — a theme is one { ... } object."; return; }
+      err.textContent = "";
+      state.theme = t; state.sel = null; normalize(); markDirty(); renderAll(); rerender(); setStatus("applied the JSON", "ok");
     };
-    const revert = h("button", { type: "button" }, "Revert"); revert.onclick = () => { ta.value = JSON.stringify(state.theme, null, 2) + "\n"; };
+    const revert = h("button", { type: "button" }, "Revert"); revert.onclick = () => { ta.value = themeText(); err.textContent = ""; };
     pane.appendChild(h("div", { class: "row" }, apply, revert, h("span", { class: "muted", style: "font-size:12px" }, "comments and trailing commas are allowed; saving writes plain JSON")));
+    pane.appendChild(err);
     pane.appendChild(ta);
   }
 
@@ -938,7 +1412,7 @@
     if (el.item !== undefined) walk(el.item, path.concat("item"), cb);
   }
   function validate() {
-    const errs = [];
+    const errs = [], warns = [];
     eachElement(function (el, path) {
       const T = ["rect", "text", "image", "group", "list"];
       if (el.type !== undefined && T.indexOf(el.type) < 0 && !el.use) errs.push(path.join(".") + ": unknown type \"" + el.type + "\"");
@@ -952,92 +1426,600 @@
         }
       });
     });
-    return errs;
+    Object.keys(state.theme.vars || {}).forEach(function (k) {
+      const v = state.theme.vars[k];
+      if (typeof v === "string" && (v.charAt(0) === "=" || v.indexOf("{") >= 0)) { const err = E.parseProp(v).error; if (err) errs.push("vars." + k + ": " + err); }
+    });
+    // the files: named but not attached (the handheld shows its default unless the file is beside the theme), too
+    // big, not a picture; icons for ids Banana doesn't know
+    const refs = detectAssets();
+    refs.forEach(function (p) {
+      const a = state.assets[p];
+      if (!ENGINE || !ENGINE.safeRel(p)) errs.push(p + ": a theme's files are named relative to its .json (no leading /, no ..)");
+      else if (!a) warns.push(p + ": not attached here, so the preview and Export leave it out (the handheld needs it beside the theme)");
+      else if (/^(png|jpe?g)$/.test(assetExt(p)) && !a.info) errs.push(p + ": " + a.name + " isn't a PNG or JPEG");
+      else if (a.info && (a.info.w > 4096 || a.info.h > 4096)) errs.push(p + ": " + a.info.w + " × " + a.info.h + " is over 4096 px a side (the menu uses its default)");
+    });
+    const known = iconSystems().filter((x) => !x.unknown).map((x) => x.id);
+    Object.keys(state.theme.icons || {}).forEach((id) => { if (known.indexOf(id) < 0) warns.push("icons." + id + ": no system has that id (systems.conf's ids, favorites, recently-played)"); });
+    return { errs: errs, warns: warns };
   }
   function doValidate() {
-    const errs = validate();
-    const log = $("#log"); log.classList.remove("hidden");
-    log.innerHTML = "";
-    log.appendChild(h("div", { class: "i" }, "validate: " + (errs.length ? errs.length + " problem(s)" : "no expression or reference problems")));
-    errs.forEach((e) => log.appendChild(h("div", { class: "e" }, e)));
+    const r = validate(), eng = liveOk() ? ENGINE.errors() : [];
+    const log = $("#log"); log.innerHTML = "";
+    const n = r.errs.length + eng.length;
+    log.appendChild(h("div", { class: "i" }, "Check: " + (n ? n + " problem(s)" : "no problems") + (r.warns.length ? ", " + r.warns.length + " note(s)" : "")));
+    eng.forEach((e) => log.appendChild(h("div", { class: "e" }, "engine: " + e)));
+    r.errs.forEach((e) => log.appendChild(h("div", { class: "e" }, e)));
+    r.warns.forEach((e) => log.appendChild(h("div", { class: "w" }, e)));
+    showTab.forceOpen = true; showTab("bottom", "problems");
   }
 
-  // ---- preview & log ---------------------------------------------------------------------------------
-  let previewTimer = null;
-  function markDirty() { setStatus("edited", ""); schedulePreview(); }
-  function schedulePreview() { if (previewTimer) clearTimeout(previewTimer); previewTimer = setTimeout(function () { if (RENDER && RENDER.available) doPreview(); }, 700); }
-  async function doPreview() {
+  // ---- the live preview: the menu's engine in the page ------------------------------------------------
+  // Both screens drawn every frame something moves, as on the handheld. Click the screens and use the keys (or the
+  // buttons): arrows, X or Enter for A, Z or Backspace for B, S for X, A for Y, Q and W for L and R. A tap on a screen
+  // is a touch. Editing reloads the theme and stays where the preview is.
+  const KEYMAP = { ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down", x: "a", Enter: "a", z: "b", Backspace: "b", Escape: "b", s: "x", a: "y", q: "l", w: "r" };
+  const live = { top: null, bot: null, imgTop: null, imgBot: null, force: true, pushed: "", errText: null, errAt: 0, raf: 0 };
+  const liveOk = () => !!(ENGINE && ENGINE.ready());
+  function kick() { live.force = true; }
+  function sizeWH() { const m = /^(\d+)x(\d+)$/.exec(state.size) || [0, 640, 480]; return [+m[1], +m[2]]; }
+  function restartLive() {
+    const wh = sizeWH();
+    ENGINE.configure(wh[0], wh[1], state.every);
+    live.pushed = ""; pushTheme(false); renderPreview();
+  }
+  function setLibrary(every) {
+    state.every = !!every;
+    if (liveOk()) { restartLive(); renderPreviewControls(); }
+  }
+  function pushTheme(keep) {
+    if (!liveOk()) return;
+    const text = themeText(), key = text + "\u0000" + Object.keys(state.assets).map((p) => p + ":" + state.assets[p].bytes.length + ":" + state.assets[p].name).join("|");
+    if (key === live.pushed) return;
+    live.pushed = key;
+    ENGINE.setTheme(text, assetFiles(), keep);
+    if (keep && state.view === "launch") previewView("launch");
+    live.force = true;
+    showProblems();
+  }
+  function blit() {
+    if (!live.top || !live.top.isConnected) return;
+    const W = ENGINE.W, H = ENGINE.H;
+    if (!live.imgTop || live.imgTop.width !== W || live.imgTop.height !== H) {
+      [live.top, live.bot].forEach((c) => { c.width = W; c.height = H; });
+      live.imgTop = live.top.getContext("2d").createImageData(W, H);
+      live.imgBot = live.bot.getContext("2d").createImageData(W, H);
+    }
+    live.top.getContext("2d").putImageData(ENGINE.pixels(0, live.imgTop), 0, 0);
+    live.bot.getContext("2d").putImageData(ENGINE.pixels(1, live.imgBot), 0, 0);
+    const w = ENGINE.where(), el = $("#where");
+    followPreview(w);
+    if (w && el) {
+      const ids = state.shelf || (state.shelf = ENGINE.shelf());
+      el.textContent = w.view + " · system " + (w.system + 1) + " of " + w.systems + (ids[w.system] ? " (" + ids[w.system] + ")" : "") + (w.view !== "home" ? " · game " + (w.game + 1) : "");
+    }
+  }
+  function tick(t) {
+    live.raf = requestAnimationFrame(tick);
+    if (!liveOk() || document.hidden || !live.top || !live.top.isConnected || $("#design").hidden) return;
+    if (ENGINE.frame(t, live.force)) blit();
+    live.force = false;
+    if (t - live.errAt > 1000) { live.errAt = t; showProblems(); }
+  }
+  // (the engine's clock moves only when it draws: brought up to now first, or a press after a quiet moment is timed
+  // from the last frame, and the game start, which lasts behavior.launchMs from it, is over at once)
+  function now() { if (liveOk()) ENGINE.frame(performance.now(), false); }
+  function press(b) { if (!liveOk()) return; now(); ENGINE.press(b); kick(); }
+  // the preview shows the view being edited: Layers' Home / Library / Launch move it there (Launch plays the game
+  // start, as A does), and moving about in the preview switches Layers to the view it shows
+  function previewView(v) {
+    if (!liveOk()) return;
+    const w = ENGINE.where(); if (!w) return;
+    if (v === "home" && w.view !== "home") ENGINE.home(w.system);
+    else if (v === "library" && w.view !== "library") ENGINE.library(w.system, w.view === "home" ? 0 : w.game);
+    else if (v === "launch") { if (w.view !== "library") ENGINE.library(w.system, w.view === "home" ? 0 : w.game); now(); ENGINE.press("a"); }
+    live.shown = v === "launch" ? "library" : v;
+    kick();
+  }
+  function followPreview(w) {
+    if (!w || w.view === live.shown) return;
+    live.shown = w.view;
+    // (the game start comes and goes by itself: Layers stays where it is for it)
+    if (w.view === "launch" || state.view === "all" || state.view === "launch" || state.view === w.view) return;
+    state.view = w.view; renderTree(); renderPalette();
+  }
+  function renderPreview() {
+    const p = $("#preview"); p.innerHTML = "";
+    if (liveOk()) {
+      state.shelf = ENGINE.shelf();
+      const ds = h("div", { class: "ds", tabindex: "0", title: "Click the screens, then use the keyboard: arrows, X or Enter = A, Z or Backspace = B, S = X, A = Y, Q and W = L and R. Tap the screens to touch them." });
+      live.top = h("canvas", { class: "scr", "aria-label": "top screen" });
+      live.bot = h("canvas", { class: "scr", "aria-label": "bottom screen" });
+      live.imgTop = null;
+      ds.appendChild(h("div", { class: "screen-wrap" }, h("div", { class: "screen-label" }, "Top screen"), live.top));
+      ds.appendChild(h("div", { class: "screen-wrap" }, h("div", { class: "screen-label" }, "Bottom screen · touch"), live.bot));
+      ds.addEventListener("keydown", (e) => {
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        const b = KEYMAP[e.key] || KEYMAP[e.key.toLowerCase && e.key.toLowerCase()];
+        if (!b) return;
+        e.preventDefault(); press(b);
+      });
+      [live.top, live.bot].forEach(function (cv, screen) {
+        const at = (e) => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * ENGINE.W, (e.clientY - r.top) / r.height * ENGINE.H]; };
+        cv.addEventListener("pointerdown", (e) => { ds.focus(); const q = at(e); ENGINE.touch(screen, q[0], q[1], true); kick(); });
+        cv.addEventListener("pointerup", (e) => { const q = at(e); ENGINE.touch(screen, q[0], q[1], false); kick(); });
+      });
+      const btn = (label, b, cls) => { const x = h("button", { type: "button", class: "pk " + (cls || ""), title: "the " + label + " button" }, label); x.onclick = () => { press(b); ds.focus(); }; return x; };
+      const pad = h("div", { class: "pad" },
+        h("div", { class: "dpad" }, btn("▲", "up", "pu"), btn("◀", "left", "pl"), btn("▶", "right", "pr"), btn("▼", "down", "pd")),
+        h("div", { class: "abxy" }, btn("X", "x", "pu"), btn("Y", "y", "pl"), btn("A", "a", "pr"), btn("B", "b", "pd")),
+        h("div", { class: "lr" }, btn("L", "l"), btn("R", "r")));
+      const jump = h("div", { class: "jump" });
+      const go = (label, ic, fn, tip) => { const b = h("button", { type: "button", class: "ghost small", title: tip }, icon(ic), label); b.onclick = () => { fn(); kick(); ds.focus(); }; return b; };
+      jump.appendChild(go("Home", "home", () => ENGINE.home(0), "Go to the Home view, on the first system"));
+      jump.appendChild(go("Games", "list", () => { const w = ENGINE.where(); ENGINE.library(w && w.view === "home" ? w.system : 0, 0); }, "Open the selected system's games"));
+      jump.appendChild(go("Restart", "reload", () => { live.pushed = ""; pushTheme(false); }, "Load the theme again from the start"));
+      p.appendChild(h("div", { class: "live" }, ds, h("div", { class: "side" }, h("div", { class: "ctlbar" }, pad, h("span", { class: "vsep" }), jump)),
+        h("div", { id: "where" }), h("div", { class: "keys-hint" }, "Keyboard: arrows · X = A · Z = B · S = X · A = Y · Q / W = L / R")));
+      live.force = true;
+      if (!live.raf) live.raf = requestAnimationFrame(tick);
+    } else if (ENGINE && ENGINE.state === "loading") {
+      p.appendChild(h("div", { class: "note stage-msg" }, "Starting the preview…"));
+    } else if (!RENDER || !RENDER.available) {
+      p.appendChild(h("div", { class: "note stage-msg", html: "No preview here: " + esc(ENGINE ? ENGINE.detail : "engine.js isn't loaded") +
+        ".<br><br>The preview is the menu's own engine, compiled to WebAssembly in <code>wasm/banana-engine.js</code> (build it with <code>sh tools/theme-studio/wasm/build.sh</code>), or drawn by <code>python3 tools/theme-studio/serve.py</code>. Everything else — the tree, the inspector, expressions, colours, Export — works without it." }));
+    } else if (!state.shots) p.appendChild(h("div", { class: "note stage-msg" }, "Press Take stills (Preview settings) to draw the theme with the real engine."));
+    if (state.shots && state.shots.length) {
+      const shots = h("div", { class: "shots" });
+      state.shots.forEach(function (s) {
+        const card = h("div", { class: "shot" });
+        card.appendChild(h("div", { class: "cap" }, s.name + "  (top / bottom)"));
+        const pair = h("div", { class: "pair" });
+        if (s.top) pair.appendChild(h("img", { src: s.top, alt: s.name + " top" }));
+        if (s.bot) pair.appendChild(h("img", { src: s.bot, alt: s.name + " bottom" }));
+        card.appendChild(pair); shots.appendChild(card);
+      });
+      if (liveOk()) { const clr = h("button", { class: "ghost small", type: "button" }, icon("x"), "Clear the stills"); clr.onclick = () => { state.shots = null; renderPreview(); renderPreviewControls(); }; shots.appendChild(clr); }
+      p.appendChild(shots);
+    }
+  }
+  function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]); }
+  function doStills() {
     try {
-      const r = await RENDER.render(state.theme, null, state.size, assetList());
+      pushTheme(false);
+      state.shots = ENGINE.stills(state.script || DEFAULT_SCRIPT);
+      setStatus(state.shots.length + " still(s) drawn", "ok");
+    } catch (e) { setStatus("stills: " + e.message, "bad"); }
+    live.pushed = ""; pushTheme(false);			// (the script moved the menu: the live preview starts again)
+    renderPreview(); renderPreviewControls();
+  }
+  // the theme's problems as the engine reports them (Problems, with a count on its tab)
+  function showProblems() {
+    if (!liveOk()) return;
+    const errs = ENGINE.errors(), text = errs.join("\n");
+    if (text === live.errText) return;
+    live.errText = text;
+    showLog("", errs);
+  }
+
+  // ---- previews from serve.py, when the page has no engine of its own ----------------------------------
+  let previewTimer = null;
+  function schedulePreview() {
+    if (previewTimer) clearTimeout(previewTimer);
+    previewTimer = setTimeout(function () {
+      if (liveOk()) pushTheme(true);
+      else if (RENDER && RENDER.available) doServerPreview();
+    }, liveOk() ? 120 : 700);
+  }
+  async function doServerPreview() {
+    if (!RENDER || !RENDER.available) return;
+    try {
+      const r = await RENDER.render(themeOut(), state.script || null, state.size, assetList());
       state.shots = r.shots || [];
       showLog(r.log, r.errors || []);
       renderPreview(); renderPreviewControls();
     } catch (e) { showLog(String(e.message || e), [String(e.message || e)]); }
   }
   function showLog(text, errors) {
-    const log = $("#log"); log.classList.remove("hidden"); log.innerHTML = "";
-    if (errors && errors.length) { log.appendChild(h("div", { class: "e" }, errors.length + " theme error(s):")); errors.forEach((e) => log.appendChild(h("div", { class: "e" }, e))); }
-    else log.appendChild(h("div", { class: "i" }, "the engine didn't complain about the theme"));
+    const log = $("#log"); log.innerHTML = "";
+    if (errors && errors.length) { log.appendChild(h("div", { class: "i" }, errors.length + " problem(s) the engine reports:")); errors.forEach((e) => log.appendChild(h("div", { class: "e" }, e))); }
+    else log.appendChild(h("div", { class: "i" }, "No problems: the engine is happy with the theme."));
     if (text) log.appendChild(h("div", { class: "i" }, text.slice(0, 4000)));
-  }
-  function renderPreview() {
-    const p = $("#preview"); p.innerHTML = "";
-    if (!RENDER || !RENDER.available) {
-      p.appendChild(h("div", { class: "note", html: "The Design canvas shows your theme drawn by the menu's own engine, which needs the local server. In a terminal:<br><br><code>python3 tools/theme-studio/serve.py</code><br><br>then open the address it prints. Everything else — the tree, the inspector, expressions and the colours — works without it. There is a walkthrough in <code>docs/MAKE-A-THEME.md</code>, or press Guide up top." }));
-      return;
-    }
-    if (!state.shots || !state.shots.length) { p.appendChild(h("div", { class: "note" }, "Press Render preview (bottom) to draw the theme with the real engine.")); return; }
-    const shots = h("div", { class: "shots" });
-    state.shots.forEach(function (s) {
-      const card = h("div", { class: "shot" });
-      card.appendChild(h("div", { class: "cap" }, s.name + "  (top / bottom)"));
-      const pair = h("div", { class: "pair" });
-      if (s.top) pair.appendChild(h("img", { src: s.top, alt: s.name + " top" }));
-      if (s.bot) pair.appendChild(h("img", { src: s.bot, alt: s.name + " bottom" }));
-      card.appendChild(pair); shots.appendChild(card);
-    });
-    p.appendChild(shots);
+    const tab = document.querySelector('.tabs[data-group="bottom"] button[data-tab="problems"]');
+    if (tab) { tab.textContent = errors && errors.length ? "Problems (" + errors.length + ")" : "No problems"; tab.classList.toggle("bad", !!(errors && errors.length)); }
   }
 
-  // ---- load / save -----------------------------------------------------------------------------------
-  function loadTheme(t) {
+  // ---- open / save / export --------------------------------------------------------------------------
+  function loadTheme(t, assets, how) {
+    Object.keys(state.assets).forEach((p) => { if (state.assets[p].url) URL.revokeObjectURL(state.assets[p].url); });
     state.theme = t || clone(STARTER);
     state.sel = null; state.shots = null; state.assets = {};
+    Object.keys(assets || {}).forEach((p) => putAsset(p, assets[p].name || p.split("/").pop(), assets[p].bytes));
+    state.orig = snapshotOrig(state.theme);
     normalize();
-    renderAll(); rerender(); markDirty();
+    state.unsaved = false; resetHistory(); titleNow();
+    renderAll(); rerender();
+    live.pushed = ""; if (liveOk()) pushTheme(false); else schedulePreview();
+    scheduleDraft();
+    if (how) setStatus(how, "ok");
+  }
+  function guardUnsaved(what) { return !state.unsaved || confirm(what + "? The changes you haven't saved or exported are lost (the last one is kept in this browser until you start another)."); }
+  function download(name, data, type) {
+    const blob = new Blob([data], { type: type });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 30000);
   }
   function saveTheme() {
-    const name = (state.theme.name || "theme").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "theme";
-    const blob = new Blob([JSON.stringify(state.theme, null, 2) + "\n"], { type: "application/json" });
-    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name + ".json";
-    document.body.appendChild(a); a.click(); a.remove();
-    setStatus("saved " + name + ".json", "ok");
+    download(fileStem() + ".json", themeText(), "application/json");
+    state.unsaved = false; titleNow();
+    const n = Object.keys(state.assets).length;
+    setStatus("saved " + fileStem() + ".json" + (n ? " — it names " + n + " attached file(s): Export (.zip) takes them along" : ""), "ok");
+  }
+  // the theme and its files, as they go into banana/themes/ on the card: <name>.json and the files at their paths
+  function zipBytes() {
+    const files = [{ path: fileStem() + ".json", data: themeText() }];
+    Object.keys(state.assets).sort().forEach((p) => files.push({ path: p, data: state.assets[p].bytes }));
+    return ZIP.write(files);
+  }
+  function exportZip() {
+    const missing = detectAssets().filter((p) => !state.assets[p]);
+    download(fileStem() + ".zip", zipBytes(), "application/zip");
+    state.unsaved = false; titleNow();
+    setStatus("exported " + fileStem() + ".zip (" + (Object.keys(state.assets).length + 1) + " files)" + (missing.length ? " — not in it, not attached: " + missing.join(", ") : "") + ". Unzip it into banana/themes/ on the card.", missing.length ? "" : "ok");
+  }
+  // files from Open, Open folder or a drop: a theme's .json (or a .zip with one) and the files beside it.
+  // A theme is picked (the one with "screens", the shallowest), its folder's files attached at their paths
+  // relative to it; pictures dropped alone are attached where the theme names them (by file name)
+  async function openFiles(list) {
+    const entries = [];
+    for (const f of Array.from(list || [])) {
+      const bytes = new Uint8Array(await f.arrayBuffer());
+      if (/\.zip$/i.test(f.name)) {
+        try { (await ZIP.read(bytes)).forEach((e) => entries.push({ path: e.path, name: e.path.split("/").pop(), bytes: e.data })); }
+        catch (e) { alert(f.name + " couldn't be opened: " + e.message); return; }
+      } else entries.push({ path: f.webkitRelativePath || f.name, name: f.name, bytes: bytes, loose: !f.webkitRelativePath });
+    }
+    const dec = new TextDecoder();
+    const themes = [];
+    entries.filter((e) => /\.json$/i.test(e.path) && !/(^|\/)__MACOSX\//.test(e.path)).forEach((e) => {
+      try { const t = looseParse(dec.decode(e.bytes)); if (t && typeof t === "object" && !Array.isArray(t)) themes.push({ e: e, t: t }); }
+      catch (err) { themes.push({ e: e, err: err }); }
+    });
+    const good = themes.filter((x) => x.t);
+    if (!themes.length) {
+      // files alone: attach them where the current theme names them
+      const refs = detectAssets(), done = [], left = [];
+      entries.forEach((e) => { const p = refs.find((r) => r.split("/").pop() === e.name); if (p) { putAsset(p, e.name, e.bytes); done.push(p); } else left.push(e.name); });
+      if (done.length) { markDirty(); renderAssets(); renderIcons(); }
+      setStatus((done.length ? "attached " + done.join(", ") : "") + (left.length ? (done.length ? "; " : "") + "the theme doesn't name " + left.join(", ") + " (Assets > attach as…)" : ""), done.length ? "ok" : "bad");
+      return;
+    }
+    if (!good.length) {
+      const x = themes[0];
+      alert("This file is not a theme Banana can read, so it was not opened.\n\n" + x.e.path + ": " + x.err.message +
+        "\n\nThemes are JSON. The usual slips: a missing comma between two items, or a word that needs \"quotes\".");
+      return;
+    }
+    const depth = (p) => p.split("/").length;
+    good.sort((a, b) => (!!b.t.screens - !!a.t.screens) || depth(a.e.path) - depth(b.e.path));
+    let pick = good[0];
+    const top = good.filter((x) => !!x.t.screens === !!pick.t.screens && depth(x.e.path) === depth(pick.e.path));
+    if (top.length > 1) {
+      const n = prompt("There are " + top.length + " themes here. Which one?\n\n" + top.map((x, i) => (i + 1) + ". " + x.e.path + (x.t.name ? "  (" + x.t.name + ")" : "")).join("\n"), "1");
+      if (n === null) return;
+      pick = top[Math.max(0, Math.min(top.length - 1, (parseInt(n, 10) || 1) - 1))];
+    }
+    if (!guardUnsaved("Open " + pick.e.path)) return;
+    const base = pick.e.path.indexOf("/") >= 0 ? pick.e.path.slice(0, pick.e.path.lastIndexOf("/") + 1) : "";
+    // the files of the theme's folder (from Open folder or a .zip) at their paths relative to it; files picked
+    // alone go where the theme names them, by their name (below)
+    const assets = {};
+    entries.forEach((e) => {
+      if (e === pick.e || e.loose || !e.path.startsWith(base) || /\.json$/i.test(e.path)) return;
+      const rel = e.path.slice(base.length);
+      if (ASSET_EXTS.indexOf(assetExt(rel)) >= 0) assets[rel] = { name: e.name, bytes: e.bytes };
+    });
+    loadTheme(pick.t, assets);
+    // anything the theme names that came along under another folder: by its file name
+    const refs = detectAssets(), loose = [];
+    refs.forEach((p) => { if (state.assets[p]) return; const e = entries.find((x) => x.name === p.split("/").pop() && x !== pick.e); if (e) { putAsset(p, e.name, e.bytes); loose.push(p); } });
+    if (loose.length) { renderAssets(); renderIcons(); live.pushed = ""; pushTheme(false); }
+    const missing = refs.filter((p) => !state.assets[p]);
+    setStatus("opened " + pick.e.path + (Object.keys(state.assets).length ? " with " + Object.keys(state.assets).length + " file(s)" : "") +
+      (missing.length ? " — not found beside it: " + missing.join(", ") + " (open the theme's folder or .zip to bring them)" : ""), missing.length ? "" : "ok");
+  }
+
+  // ---- Optimize for the handheld (optimize.js, the desktop studio's rules) ------------------------------------------
+  // The findings in three groups: Safe (the screens look exactly the same; ticked), Look (changes the look a little or
+  // trades motion for speed; not ticked) and Advice (by hand). A finding's detail, and its element selected in the
+  // tree, on a click. Apply is one step of undo. A shrunk picture is a new file beside the original (attached, and in
+  // Export), which the theme then names; the original is not touched.
+  const OPT = G.BananaOptimize;
+  function pictureSizes() {
+    const o = {};
+    Object.keys(state.assets).forEach((p) => { const i = state.assets[p].info; if (i && i.w && i.h) o[p] = { w: i.w, h: i.h }; });
+    return o;
+  }
+  // the element a finding's path is in: screens.<view>.<side>[i] or components.<name>, then children[i] / item
+  // steps (a property's path ends in its key, a state's in states[i]...)
+  function elementPath(path) {
+    let n;
+    if (path[0] === "screens" && path.length >= 3) n = typeof path[3] === "number" ? 4 : 3;
+    else if (path[0] === "components" && path.length >= 2) n = 2;
+    else return null;
+    for (;;) {
+      if (path[n] === "children" && typeof path[n + 1] === "number") n += 2;
+      else if (path[n] === "item" || (path[n] === "children" && n + 1 >= path.length)) n += 1;
+      else break;
+    }
+    const p = path.slice(0, n), v = getPath(p);
+    return v && typeof v === "object" && !Array.isArray(v) ? p : null;
+  }
+  function selectFinding(f) {
+    const p = elementPath(f.path);
+    if (!p) return;
+    if (p[0] === "screens" && S.VIEWS.indexOf(p[1]) >= 0) { state.view = p[1]; state.screen = p[2]; previewView(p[1]); }
+    state.sel = p;
+    for (let n = 3; n < p.length; n++) state.open[JSON.stringify(p.slice(0, n))] = true;
+    showTab("properties", "inspector"); renderTree(); rerender();
+  }
+  function openOptimize() {
+    let box = $("#optimize");
+    if (!box) {
+      box = h("div", { id: "optimize", class: "modal", role: "dialog", "aria-label": "Optimize for the handheld" });
+      box.addEventListener("click", (e) => { if (e.target === box) box.remove(); });
+      document.body.appendChild(box);
+    }
+    box.innerHTML = "";
+    const doc = themeOut(), files = pictureSizes();
+    const found = OPT.analyze(doc, files);
+    const ticked = {};
+    found.forEach((f) => { ticked[f.id] = f.category === OPT.SAFE && f.fixable; });
+    const card = h("div", { class: "card opt" });
+    const close = h("button", { type: "button", class: "icon-btn", title: "Close (Esc)", "aria-label": "Close" }, icon("x")); close.onclick = () => box.remove();
+    card.appendChild(h("div", { class: "modal-head" }, h("b", null, "Optimize for the handheld"), h("span", { class: "grow" }), close));
+    if (!found.length) {
+      card.appendChild(h("div", { class: "md" }, h("p", null, isObj(doc.screens) ? "Nothing to do: nothing in this theme makes the handheld work harder than it has to." : "This is a colour theme (no screens): there is nothing to optimize.")));
+      box.appendChild(card); return;
+    }
+    const body = h("div", { class: "opt-body" });
+    const list = h("div", { class: "opt-list" }), detail = h("div", { class: "opt-detail md" });
+    card.appendChild(h("div", { class: "opt-intro" }, "The handheld only redraws the menu while something on it moves; every redraw costs battery and can slow a game running in the background. Safe fixes keep every pixel the same and are ticked. The others change the look a little: tick them one by one and watch the preview."));
+    detail.appendChild(h("p", { class: "muted" }, "Click a finding to read what it means and see its element."));
+    const apply = h("button", { type: "button", class: "primary" });
+    const countTicked = () => { const n = found.filter((f) => ticked[f.id]).length; apply.textContent = n ? "Apply " + n + " fix" + (n === 1 ? "" : "es") : "Apply"; apply.disabled = !n; };
+    [OPT.SAFE, OPT.LOOK, OPT.ADVICE].forEach(function (cat) {
+      const fs = found.filter((f) => f.category === cat);
+      if (!fs.length) return;
+      const grp = h("div", { class: "opt-group " + cat });
+      const all = h("input", { type: "checkbox", title: "tick all of these" });
+      if (cat !== OPT.ADVICE) { all.checked = fs.every((f) => ticked[f.id]); all.onchange = () => { fs.forEach((f) => { ticked[f.id] = all.checked; }); grp.querySelectorAll("input.one").forEach((c) => { c.checked = all.checked; }); countTicked(); }; }
+      grp.appendChild(h("h3", { class: "sec" }, cat !== OPT.ADVICE ? all : null, " " + OPT.CATEGORIES[cat] + " (" + fs.length + ")"));
+      fs.forEach(function (f) {
+        const row = h("div", { class: "opt-row w" + f.weight, title: f.saving || "" });
+        if (f.fixable && cat !== OPT.ADVICE) {
+          const c = h("input", { type: "checkbox", class: "one" }); c.checked = !!ticked[f.id];
+          c.onchange = () => { ticked[f.id] = c.checked; countTicked(); };
+          row.appendChild(c);
+        } else row.appendChild(h("span", { class: "dot" }, "•"));
+        const t = h("span", { class: "t" }, f.title);
+        row.appendChild(t);
+        row.onclick = (e) => {
+          if (e.target.tagName === "INPUT") return;
+          list.querySelectorAll(".opt-row.on").forEach((r) => r.classList.remove("on")); row.classList.add("on");
+          detail.innerHTML = "";
+          detail.appendChild(h("h3", null, f.title));
+          detail.appendChild(h("p", null, f.detail));
+          if (f.saving) detail.appendChild(h("p", null, h("b", null, "Gain: "), f.saving));
+          detail.appendChild(h("p", { class: "muted mono", style: "font-size:11px" }, OPT.pathStr(f.path) + "  ·  " + ["tidying", "small", "heavy work while moving", "keeps a screen redrawing"][f.weight]));
+          selectFinding(f);
+        };
+        grp.appendChild(row);
+      });
+      list.appendChild(grp);
+    });
+    body.appendChild(list); body.appendChild(detail);
+    card.appendChild(body);
+    apply.onclick = async () => {
+      const chosen = found.filter((f) => ticked[f.id]);
+      const pics = chosen.filter((f) => f.rule === "image-cap");
+      if (pics.length && !confirm("Make smaller copies of " + pics.length + " picture" + (pics.length === 1 ? "" : "s") + "?\n\n" +
+        pics.map((f) => f.data.ref + ": " + f.data.old.join("x") + " -> " + f.data.new.join("x")).join("\n") +
+        "\n\nThe theme will name the copies (they are attached and go into Export); the originals stay as they are.")) return;
+      const r = OPT.apply(doc, chosen, files);
+      const made = [];
+      for (const c of r.changes) {
+        try { putAsset(c.dst, c.dst.split("/").pop(), await shrinkPicture(state.assets[c.src], c.newSize[0], c.newSize[1])); made.push(c.dst); }
+        catch (e) { alert("Couldn't make " + c.dst + ": " + e.message + ". The theme keeps naming " + c.ref + "."); restoreRef(r.doc, c); }
+      }
+      // as one step of undo: the theme as the optimizer left it (with the members the editor shows kept)
+      state.theme = r.doc; normalize();
+      if (state.sel && getPath(state.sel) === undefined) state.sel = null;
+      markDirty(); renderAll(); rerender();
+      const left = OPT.analyze(themeOut(), pictureSizes());
+      setStatus("optimized: " + (chosen.length) + " fix" + (chosen.length === 1 ? "" : "es") + (made.length ? ", " + made.length + " smaller picture(s)" : "") + "; " +
+        left.filter((f) => f.category !== OPT.ADVICE).length + " finding(s) left (Undo takes it all back)", "ok");
+      box.remove();
+    };
+    countTicked();
+    const foot = h("div", { class: "ctl opt-foot" }, h("span", { class: "muted grow" }, "Undo takes the fixes back in one step."), apply);
+    card.appendChild(foot);
+    box.appendChild(card);
+  }
+  function restoreRef(doc, c) {
+    (function scan(v, par, key) {
+      if (typeof v === "string") { if (v === c.dst && par) par[key] = c.ref; }
+      else if (Array.isArray(v)) v.forEach((x, i) => scan(x, v, i));
+      else if (v && typeof v === "object") Object.keys(v).forEach((k) => scan(v[k], v, k));
+    })(doc, null, null);
+  }
+  const isObj = (v) => v && typeof v === "object" && !Array.isArray(v);
+  // a picture at w x h (smooth, as Qt's SmoothTransformation in the desktop studio): PNG stays PNG, JPEG is JPEG 92
+  async function shrinkPicture(a, w, hh) {
+    if (!a) throw new Error("the original isn't attached");
+    const jpeg = a.info && a.info.type === "jpeg";
+    const bmp = await createImageBitmap(new Blob([a.bytes], { type: jpeg ? "image/jpeg" : "image/png" }));
+    const cv = document.createElement("canvas"); cv.width = w; cv.height = hh;
+    const ctx = cv.getContext("2d"); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
+    // halving steps first, then the last step: closer to an area average than one bilinear jump
+    let src = bmp, sw = bmp.width, sh = bmp.height;
+    while (sw / 2 >= w && sh / 2 >= hh) {
+      const t = document.createElement("canvas"); t.width = Math.round(sw / 2); t.height = Math.round(sh / 2);
+      const tc = t.getContext("2d"); tc.imageSmoothingQuality = "high"; tc.drawImage(src, 0, 0, t.width, t.height);
+      src = t; sw = t.width; sh = t.height;
+    }
+    ctx.drawImage(src, 0, 0, w, hh);
+    const blob = await new Promise((res) => cv.toBlob(res, jpeg ? "image/jpeg" : "image/png", 0.92));
+    if (!blob) throw new Error("the browser couldn't encode it");
+    return new Uint8Array(await blob.arrayBuffer());
+  }
+
+  // ---- the guides (docs/MAKE-A-THEME.md, docs/THEMES.md, the colour keys), inlined by make-templates.py ----
+  function slug(t) { return t.toLowerCase().replace(/<[^>]+>/g, "").replace(/[^\w\- ]+/g, "").trim().replace(/ /g, "-"); }
+  function inline(t) {
+    return esc(t).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+      .replace(/(^|[^*\w])\*([^*\s][^*]*)\*/g, "$1<i>$2</i>")
+      .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, txt, href) => '<a href="' + href.replace(/"/g, "%22") + '" data-md="1">' + txt + "</a>");
+  }
+  // a small Markdown renderer: headings, paragraphs, lists, fenced code, tables, quotes, inline code/bold/links
+  function markdown(src) {
+    const L = src.replace(/\r/g, "").split("\n"), out = [];
+    let i = 0;
+    while (i < L.length) {
+      const l = L[i];
+      if (/^```/.test(l)) { const b = []; i++; while (i < L.length && !/^```/.test(L[i])) b.push(L[i++]); i++; out.push("<pre><code>" + esc(b.join("\n")) + "</code></pre>"); continue; }
+      const hm = /^(#{1,4})\s+(.*)$/.exec(l);
+      if (hm) { out.push("<h" + (hm[1].length + 1) + ' id="md-' + slug(hm[2]) + '">' + inline(hm[2]) + "</h" + (hm[1].length + 1) + ">"); i++; continue; }
+      if (/^\|/.test(l)) {
+        const rows = []; while (i < L.length && /^\|/.test(L[i])) rows.push(L[i++]);
+        const cells = (r) => r.replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+        let html = "<table>";
+        rows.forEach((r, k) => { if (k === 1 && /^[\s|:-]+$/.test(r)) return; const tag = k === 0 && rows[1] && /^[\s|:-]+$/.test(rows[1]) ? "th" : "td"; const c = cells(r); if (tag === "th" && c.every((x) => !x)) return; html += "<tr>" + c.map((x) => "<" + tag + ">" + inline(x) + "</" + tag + ">").join("") + "</tr>"; });
+        out.push(html + "</table>"); continue;
+      }
+      if (/^\s*([-*]|\d+\.)\s+/.test(l)) {
+        const ordered = /^\s*\d+\./.test(l), items = [];
+        while (i < L.length && (/^\s*([-*]|\d+\.)\s+/.test(L[i]) || (/^\s{2,}\S/.test(L[i]) && items.length))) {
+          if (/^\s*([-*]|\d+\.)\s+/.test(L[i])) items.push(L[i].replace(/^\s*([-*]|\d+\.)\s+/, "")); else items[items.length - 1] += " " + L[i].trim();
+          i++;
+        }
+        out.push((ordered ? "<ol>" : "<ul>") + items.map((x) => "<li>" + inline(x) + "</li>").join("") + (ordered ? "</ol>" : "</ul>"));
+        continue;
+      }
+      if (/^>\s?/.test(l)) { const b = []; while (i < L.length && /^>\s?/.test(L[i])) b.push(L[i++].replace(/^>\s?/, "")); out.push("<blockquote>" + inline(b.join(" ")) + "</blockquote>"); continue; }
+      if (!l.trim()) { i++; continue; }
+      const b = []; while (i < L.length && L[i].trim() && !/^(```|#{1,4}\s|\||>|\s*([-*]|\d+\.)\s)/.test(L[i])) b.push(L[i++]);
+      out.push("<p>" + inline(b.join(" ")) + "</p>");
+    }
+    return out.join("\n");
+  }
+  function openGuide(which, anchor) {
+    const guides = (typeof BananaGuides !== "undefined" && BananaGuides) || [];
+    if (!guides.length) { window.open("../../docs/MAKE-A-THEME.md", "_blank", "noopener"); return; }
+    let box = $("#guide");
+    if (!box) {
+      box = h("div", { id: "guide", class: "modal", role: "dialog", "aria-label": "Guide" });
+      box.addEventListener("click", (e) => { if (e.target === box) box.remove(); });
+      document.body.appendChild(box);
+    }
+    box.innerHTML = "";
+    const g = guides.find((x) => x.id === which) || guides[0];
+    const card = h("div", { class: "card" });
+    const bar = h("div", { class: "tabs" });
+    guides.forEach((x) => { const b = h("button", { type: "button" }, x.title); b.setAttribute("aria-selected", String(x === g)); b.onclick = () => openGuide(x.id); bar.appendChild(b); });
+    const close = h("button", { type: "button", class: "icon-btn", title: "Close (Esc)", "aria-label": "Close" }, icon("x")); close.onclick = () => box.remove();
+    bar.appendChild(h("span", { style: "flex:1" })); bar.appendChild(close);
+    card.appendChild(bar);
+    const body = h("div", { class: "md" });
+    if (/\.md$/.test(g.file)) body.innerHTML = markdown(g.text); else body.appendChild(h("pre", null, g.text));
+    body.appendChild(h("p", { class: "muted", style: "font-size:12px" }, "(" + g.file + ")"));
+    body.addEventListener("click", function (e) {
+      const a = e.target.closest && e.target.closest("a[data-md]"); if (!a) return;
+      const href = a.getAttribute("href");
+      e.preventDefault();
+      if (/^https?:/.test(href)) { window.open(href, "_blank", "noopener"); return; }
+      if (href.charAt(0) === "#") { const t = body.querySelector("#md-" + CSS.escape(href.slice(1))); if (t) t.scrollIntoView(); return; }
+      const name = href.split("#")[0].split("/").pop(), to = guides.find((x) => x.file.split("/").pop() === name);
+      if (to) openGuide(to.id, href.split("#")[1]);
+      else setStatus(href + " is in the BananaLinux repository, not in this page", "");
+    });
+    card.appendChild(body);
+    box.appendChild(card);
+    if (anchor) { const t = body.querySelector("#md-" + CSS.escape(anchor)); if (t) t.scrollIntoView(); } else body.scrollTop = 0;
+  }
+
+  // ---- the last theme, kept in this browser (IndexedDB), in case the tab is closed ----------------------
+  const DRAFT = {
+    db() {
+      if (this._db) return this._db;
+      this._db = new Promise(function (res, rej) {
+        try {
+          const r = indexedDB.open("banana-theme-studio", 1);
+          r.onupgradeneeded = () => r.result.createObjectStore("draft");
+          r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+        } catch (e) { rej(e); }
+      });
+      return this._db;
+    },
+    async put(v) { const db = await this.db(); return new Promise((res, rej) => { const tx = db.transaction("draft", "readwrite"); tx.objectStore("draft").put(v, "last"); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); },
+    async get() { const db = await this.db(); return new Promise((res, rej) => { const q = db.transaction("draft").objectStore("draft").get("last"); q.onsuccess = () => res(q.result || null); q.onerror = () => rej(q.error); }); },
+  };
+  let draftTimer = null, draftReady = false;
+  function scheduleDraft() {
+    if (!draftReady) return;
+    if (draftTimer) clearTimeout(draftTimer);
+    draftTimer = setTimeout(function () {
+      const assets = Object.keys(state.assets).map((p) => ({ path: p, name: state.assets[p].name, bytes: state.assets[p].bytes }));
+      DRAFT.put({ text: JSON.stringify(state.theme), orig: state.orig, assets: assets, when: Date.now(), name: state.theme.name || "", unsaved: state.unsaved }).catch(() => {});
+    }, 800);
+  }
+  async function offerDraft() {
+    let d = null;
+    try { d = await DRAFT.get(); } catch (e) { /* no IndexedDB here (a private window): nothing kept */ }
+    draftReady = true;
+    if (!d || !d.text || d.text === JSON.stringify(STARTER) || state.unsaved) {
+      // arriving: the starting points (the ready-made themes among them), rather than a theme nobody chose
+      if (!state.unsaved && !$(".modal")) openTemplates();
+      return;
+    }
+    if (!$(".modal")) openTemplates(d);
+  }
+  function restoreDraft(d) {
+    const assets = {}; (d.assets || []).forEach((a) => { assets[a.path] = { name: a.name, bytes: a.bytes }; });
+    loadTheme(JSON.parse(d.text), assets, "opened your last theme");
+    if (d.orig) state.orig = d.orig;
+    state.unsaved = !!d.unsaved; titleNow();
   }
 
   // ---- tabs, status, wiring --------------------------------------------------------------------------
   // the desktop studio's dock tabs: each group shows one of its panels
   const TAB_PANES = {
-    library: { components: "#pane-components", assets: "#pane-assets" },
+    library: { layers: "#pane-elements", add: "#palette", assets: "#pane-assets", components: "#pane-components" },
     center: { design: "#design", json: "#json" },
     properties: { inspector: "#inspector", theme: "#theme" },
-    bottom: { controls: "#preview-controls", problems: "#log" },
   };
   function showTab(group, tab) {
+    // the problems drawer above the status bar: open (or shut, clicked again)
+    if (group === "bottom") { const d = $("#drawer"); if (tab === "problems") d.hidden = !d.hidden || !!showTab.forceOpen; else d.hidden = true; showTab.forceOpen = false; return; }
     const bar = document.querySelector('.tabs[data-group="' + group + '"]');
     if (bar && bar.querySelectorAll) bar.querySelectorAll("button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
     const map = TAB_PANES[group] || {};
     Object.keys(map).forEach((k) => { const el = $(map[k]); if (el) el.hidden = (k !== tab); });
     if (group === "center" && tab === "json") renderJson();
+    if (group === "center" && tab === "design") kick();
   }
-  function setStatus(txt, cls) { const s = $("#status"); s.textContent = txt; s.className = "status" + (cls ? " " + cls : ""); }
+  function setStatus(txt, cls) { const s = $("#status"); s.textContent = txt ? txt.charAt(0).toUpperCase() + txt.slice(1) : ""; s.title = txt; s.className = "status" + (cls ? " " + cls : ""); }
   function rerender() { renderInspector(); }
-  function renderAll() { renderPalette(); renderTree(); renderColours(); renderVars(); renderComponents(); renderAssets(); renderInput(); renderBehaviour(); renderTheme(); renderPreviewControls(); renderJson(); }
+  function renderAll() { renderPalette(); renderTree(); renderColours(); renderIcons(); renderVars(); renderComponents(); renderAssets(); renderInput(); renderBehaviour(); renderTheme(); renderPreviewControls(); if (!$("#json").hidden) renderJson(); }
 
-  // The example themes: serve.py's list when it is running, else the copies inlined in templates.js — the page
-  // is usually opened straight from a checkout with no server, and file:// pages cannot fetch their neighbours.
+  // The example themes: the copies inlined in templates.js (the page is usually opened with no server), or
+  // serve.py's list when it is running.
   function loadTemplates() {
     const bundled = (typeof BananaTemplates !== "undefined" && BananaTemplates) || [];
     if (bundled.length) { state.templates = bundled; renderTheme(); }
+    if (!RENDER || !RENDER.available) return;
     fetch("api/templates", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((list) => {
       if (Array.isArray(list) && list.length) { state.templates = list; renderTheme(); }
     }).catch(() => {});
@@ -1054,46 +2036,117 @@
       if (Array.isArray(ids) && ids.length) {
         const all = S.SYSTEM_IDS.slice();
         ids.forEach((i) => { if (all.indexOf(i) < 0) all.push(i); });
-        state.systemIds = all; renderColours();
+        state.systemIds = all; renderIcons();
       }
     }).catch(() => {});
   }
 
+  const typing = (el) => el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
   function wire() {
     document.querySelectorAll(".tabs button").forEach((b) => { b.onclick = () => showTab(b.parentElement.dataset.group, b.dataset.tab); });
     // the dark/light switch, like the website's
+    // the editor's own light or dark look: the system's, until the switch is used
     const root = document.documentElement;
-    const setTheme = (t) => { root.setAttribute("data-theme", t); const lab = $("#themeLabel"); if (lab) lab.textContent = t === "light" ? "Light" : "Dark"; try { localStorage.setItem("banana-studio-theme", t); } catch (e) { /* ignore */ } };
-    try { const q = new URLSearchParams(location.search).get("theme"); const saved = q || localStorage.getItem("banana-studio-theme"); if (saved) setTheme(saved); } catch (e) { /* ignore */ }
-    const sw = $("#themeSwitch"); if (sw) sw.onclick = () => setTheme(root.getAttribute("data-theme") === "light" ? "dark" : "light");
-    $("#newBtn").onclick = () => { if (confirm("Start a new theme? Unsaved changes are lost.")) loadTheme(clone(STARTER)); };
+    const isDark = () => root.getAttribute("data-theme") === "dark" || (root.getAttribute("data-theme") !== "light" && window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches);
+    const showMode = () => { const d = isDark(); const sw = $("#themeSwitch"); if (sw) { sw.querySelector(".sun").style.display = d ? "" : "none"; sw.querySelector(".moon").style.display = d ? "none" : ""; sw.title = d ? "Light editor" : "Dark editor"; } const lab = $("#themeLabel"); if (lab) lab.textContent = d ? "Dark" : "Light"; };
+    const setTheme = (t) => { root.setAttribute("data-theme", t); showMode(); try { localStorage.setItem("banana-studio-theme", t); } catch (e) { /* ignore */ } };
+    try { const q = new URLSearchParams(location.search).get("theme"); const saved = q || localStorage.getItem("banana-studio-theme"); if (saved) root.setAttribute("data-theme", saved); } catch (e) { /* ignore */ }
+    showMode();
+    const sw = $("#themeSwitch"); if (sw) sw.onclick = () => setTheme(isDark() ? "light" : "dark");
+    // the File and Preview settings menus: open on a click, shut on a click elsewhere or Esc
+    const menus = [["#fileMenuBtn", "#fileMenu"], ["#previewMenuBtn", "#previewMenu"]];
+    const shut = () => menus.forEach((m) => { $(m[1]).hidden = true; $(m[0]).setAttribute("aria-expanded", "false"); });
+    menus.forEach(function (m) {
+      $(m[0]).onclick = (e) => { e.stopPropagation(); const open = $(m[1]).hidden; shut(); closePop(); $(m[1]).hidden = !open; $(m[0]).setAttribute("aria-expanded", String(open)); };
+      $(m[1]).addEventListener("click", (e) => { if (m[0] === "#fileMenuBtn" || e.target.closest("button.primary")) shut(); e.stopPropagation(); });
+    });
+    document.addEventListener("click", shut);
+    $("#exportQuickBtn").onclick = exportZip;
+    $("#drawerClose").onclick = () => { $("#drawer").hidden = true; };
+    $("#docName").title = "The theme's name: change it on the Theme tab";
+    $("#docName").onclick = () => { showTab("properties", "theme"); const i = $("#pane-theme input[type=text]"); if (i) { i.focus(); i.select(); } };
+    $("#newBtn").onclick = () => openTemplates();
     $("#openBtn").onclick = () => $("#fileInput").click();
-    $("#fileInput").onchange = function () {
-      const f = this.files[0]; if (!f) return;
-      f.text().then((s) => { try { loadTheme(looseParse(s)); setStatus("opened " + f.name, "ok"); } catch (e) { alert("This file is not a theme Banana can read, so it was not opened.\n\n" + e.message +
-        "\n\nThemes are JSON. If you are not sure, press New once and change that instead."); } });
-      this.value = "";
-    };
+    $("#openDirBtn").onclick = () => $("#dirInput").click();
+    $("#fileInput").onchange = function () { const f = Array.from(this.files); this.value = ""; openFiles(f); };
+    $("#dirInput").onchange = function () { const f = Array.from(this.files); this.value = ""; openFiles(f); };
     $("#saveBtn").onclick = saveTheme;
-    $("#copyBtn").onclick = () => { const t = JSON.stringify(state.theme, null, 2) + "\n"; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => setStatus("copied", "ok"), () => { const ta = h("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); } catch (e) {} ta.remove(); setStatus("copied", "ok"); }); };
+    $("#exportBtn").onclick = exportZip;
+    $("#undoBtn").onclick = undo;
+    $("#redoBtn").onclick = redo;
+    $("#copyBtn").onclick = () => { const t = themeText(); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => setStatus("copied", "ok"), () => { const ta = h("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); } catch (e) {} ta.remove(); setStatus("copied", "ok"); }); };
     $("#validateBtn").onclick = doValidate;
-    $("#templatesBtn").onclick = () => { showTab("properties", "theme"); setStatus("Pick a starting point under “Start from a template”.", ""); };
-    $("#guideBtn").onclick = () => window.open("../../docs/MAKE-A-THEME.md", "_blank", "noopener");
-    window.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); saveTheme(); } });
+    $("#optimizeBtn").onclick = openOptimize;
+    $("#templatesBtn").onclick = () => openTemplates();
+    $("#guideBtn").onclick = () => openGuide("make");
+    window.addEventListener("keydown", (e) => {
+      const mod = e.ctrlKey || e.metaKey;
+      if (e.key === "Escape") { if ($(".modal")) { $(".modal").remove(); return; } closePop(); shut(); if (!$("#drawer").hidden) { $("#drawer").hidden = true; return; } }
+      if (!mod) return;
+      const k = e.key.toLowerCase();
+      if (k === "s") { e.preventDefault(); if (e.shiftKey) exportZip(); else saveTheme(); }
+      else if (k === "o") { e.preventDefault(); $("#fileInput").click(); }
+      else if ((k === "z" || k === "y") && !typing(document.activeElement)) {
+        e.preventDefault();
+        if (k === "y" || e.shiftKey) redo(); else undo();
+      }
+    });
+    window.addEventListener("beforeunload", (e) => { if (state.unsaved) { e.preventDefault(); e.returnValue = ""; } });
+    // files dropped anywhere on the page: a theme (with its folder's files) or pictures for the current one
+    window.addEventListener("dragover", (e) => { if (e.dataTransfer && Array.from(e.dataTransfer.types || []).indexOf("Files") >= 0) { e.preventDefault(); document.body.classList.add("dropping"); } });
+    window.addEventListener("dragleave", (e) => { if (!e.relatedTarget) document.body.classList.remove("dropping"); });
+    window.addEventListener("drop", (e) => {
+      document.body.classList.remove("dropping");
+      if (!e.dataTransfer || !e.dataTransfer.files || !e.dataTransfer.files.length) return;
+      e.preventDefault(); openFiles(e.dataTransfer.files);
+    });
   }
 
   // ---- go --------------------------------------------------------------------------------------------
-  wire(); normalize(); renderAll(); renderInspector(); renderPreview();
+  wire(); normalize(); state.orig = snapshotOrig(state.theme); resetHistory(); titleNow();
+  loadTemplates(); renderAll(); renderInspector(); renderPreview();
   try {						// ?tab=theme / ?tab=json opens on that dock tab
     const t = new URLSearchParams(location.search).get("tab");
     if (t === "theme") showTab("properties", "theme");
     else if (t === "json") showTab("center", "json");
   } catch (e) { /* ignore */ }
-  if (RENDER) {
-    RENDER.check().then(function (ok) {
-      if (ok) { setStatus("preview server ready", "ok"); loadTemplates(); loadLocalThemes(); loadSystemIds(); renderAssets(); } else setStatus("offline — edit & save; run serve.py for previews", "");
-      renderPreview(); renderPreviewControls();
-      try { if (new URLSearchParams(location.search).get("preview")) doPreview(); } catch (e) { /* ignore */ }
+  setStatus(location.protocol === "file:" ? "opened from a file: everything works here, nothing is uploaded" : "ready", "");
+  offerDraft();
+  if (ENGINE) {
+    renderPreview(); renderPreviewControls();
+    ENGINE.load("wasm/banana-engine.js").then(function (ok) {
+      if (ok) {
+        const wh = sizeWH(); ENGINE.configure(wh[0], wh[1], state.every);
+        live.pushed = ""; pushTheme(false);
+        setStatus("the live preview is the menu's own engine", "ok");
+      }
+      renderPreview(); renderPreviewControls(); renderIcons();
     });
   }
+  if (RENDER && location.protocol !== "file:") {
+    RENDER.check().then(function (ok) {
+      if (ok) { loadTemplates(); loadLocalThemes(); loadSystemIds(); renderAssets(); renderTheme(); }
+      renderPreviewControls();
+      if (!liveOk()) renderPreview();
+      try { if (ok && !liveOk() && new URLSearchParams(location.search).get("preview")) doServerPreview(); } catch (e) { /* ignore */ }
+    });
+  }
+
+  // for tests (tests/browser.test.py) and the console
+  G.BananaStudio = { state: state, themeOut: themeOut, themeText: themeText, loadTheme: loadTheme, openFiles: openFiles, zipBytes: zipBytes,
+    undo: undo, redo: redo, validate: validate, pushTheme: pushTheme, markDirty: markDirty, renderAll: renderAll, openGuide: openGuide, setIcon: setIcon, resetIcon: resetIcon,
+    stills: doStills, setLibrary: setLibrary, press: press, live: live, openOptimize: openOptimize, elementPath: elementPath, openTemplates: openTemplates };
 })();
+// banana-ui's rnds::inkOn / subInkOn (RndsUI.cpp), Auto: the text on the accent dark or light by contrast, and the
+// second line the accent's hue towards that ink until it reads (4.5:1)
+function inkOn(base, sub) {
+  const rgb = (h) => { const v = parseInt(String(h).replace("#", ""), 16) || 0; return [(v >> 16) & 255, (v >> 8) & 255, v & 255]; };
+  const lum = (c) => { const f = (x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
+  const cr = (a, b) => { const la = lum(a), lb = lum(b); return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05); };
+  const hex = (c) => "#" + c.map((x) => Math.round(x).toString(16).padStart(2, "0")).join("");
+  const bg = rgb(base), dark = [0x17, 0x16, 0x1c], light = [255, 255, 255];
+  const ink = cr(bg, dark) >= cr(bg, light) ? dark : light;
+  if (!sub) return hex(ink);
+  for (let t = 0.5; t <= 1.0001; t += 0.05) { const m = bg.map((x, i) => x * (1 - t) + ink[i] * t); if (cr(m.map(Math.round), bg) >= 4.5) return hex(m); }
+  return hex(ink);
+}

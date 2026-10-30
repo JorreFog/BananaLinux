@@ -1,67 +1,26 @@
-# Live previews in the browser (WebAssembly) — design
+# The theme engine in the browser (WebAssembly)
 
-The editor previews a theme today by asking `serve.py` to run the real engine (`banana-ui --headless`) and
-handing back PNGs (`render.js`). That is exact and needs a host. The alternative, so the page previews on its
-own with no server, is to compile the same engine to WebAssembly and draw into a `<canvas>` every frame.
+`banana-engine.js` is banana-ui's theme engine compiled to WebAssembly: what the web studio's live preview draws
+with, so the page works on its own (from file:// or any static host) and shows exactly what the handheld shows.
 
-**Status: designed, not built.** There is no Emscripten toolchain in the environment this was developed in, and
-the binding below has to be run to be trusted, so it is not committed half-done. `serve.py` remains the working
-preview. What follows is the exact shape to build it, so it is a contained job for whoever has `emcc`.
-
-## What to compile
-
-The layout engine is small and self-contained — the same files `ui/Makefile` builds for the frontend, minus the
-device parts:
-
-| File | Why |
+| File | What it is |
 | --- | --- |
-| `ui/src/layout.cpp` | the engine: elements, lists, hooks, `LayoutMenu` |
-| `ui/src/expr.cpp` | the expression language |
-| `ui/src/json.cpp` | the JSON reader (comments, trailing commas, key order) |
-| `ui/rnds/RndsRaster.cpp` | text and picture rasterization |
-| `ui/rnds/RndsUI.cpp` | the palette, `Backend`/`Source` interfaces, `UI` |
-| a new `theme-wasm.cpp` | the binding: a `Backend` and a `Source`, plus the JS entry points |
-
-FreeType comes from Emscripten's port: `-sUSE_FREETYPE=1`.
-
-## What the binding has to provide
-
-1. **A `Backend`** (`ui/rnds/RndsUI.h`, seven methods) that draws into the canvas:
-   `upload`, `draw`, `fill`, `pushClip`, `popClip`, `beginScreen`, `endScreen`. `beginScreen(0|1)` selects the
-   top or bottom panel; each is 640×480 (or 1024×768). The simplest faithful implementation keeps two
-   `ImageData` buffers and a 2-D context, and `upload` returns an offscreen canvas per texture. `soft.cpp` is
-   the reference for how the methods are meant to behave, but it writes device pixels, so the canvas version can
-   be much smaller (rounded rects and image blits).
-2. **A `Source`** (`ui/rnds/RndsUI.h`) returning made-up systems and games — the same data the editor already
-   shows in its sample scope (`sampleSys`/`sampleGame` in `app.js`). A few systems, a few games each, one
-   favourite, one with box art, is enough to exercise every hook.
-3. **Entry points** exported to JS:
-   - `themeLoad(themeJson)` → parse with `json.cpp`, build a `LayoutMenu`, return errors (the `theme:` lines).
-   - `themeRender(view, systemIndex, gameIndex, timeMs)` → advance the menu and draw both screens.
-   - `themePress(button)` / `themeTouch(screen, x, y)` → feed the engine's input, so the editor can drive it.
-   - `themeAssets(bytesByPath)` → write fonts/pictures into `MEMFS` at the theme's relative paths.
-
-## Build (with emscripten installed)
+| `theme-wasm.cpp` | The binding. It drives `ui/src/layout.cpp` (and `expr.cpp`, `json.cpp`, `library.cpp`, `theme.cpp`, `soft.cpp`, `zip.cpp`, the rnds rasterizer) as `banana-ui --headless` does: a `SoftBackend` draws both screens in memory, a `Library` reads the made-up test library. C calls for JS (`bt_init`, `bt_load`, `bt_frame`, `bt_pixels`, `bt_press`, `bt_touch`, `bt_script`, `bt_eval`, ...). |
+| `build.sh` | Builds `banana-engine.js` with Emscripten: one file with the wasm, the built-in fonts and icons, `systems.conf` and two libraries inlined (`ui/tests/fixture.sh`'s, at `/fx`, and the same with a game for every system, at `/fxall`). |
+| `sources.sh` | The hash of everything it is built from; the build writes it into the output and `tests/engine.test.js` says when they differ. |
+| `banana-engine.js` | The build (generated: don't edit). |
 
 ```sh
-em++ -O2 -std=c++17 -sUSE_FREETYPE=1 -sALLOW_MEMORY_GROWTH=1 \
-    -I ui/src -I ui/rnds \
-    ui/src/layout.cpp ui/src/expr.cpp ui/src/json.cpp \
-    ui/rnds/RndsRaster.cpp ui/rnds/RndsUI.cpp \
-    tools/theme-studio/wasm/theme-wasm.cpp \
-    --preload-file ui/assets/banana/fonts@/fonts \
-    -sEXPORTED_FUNCTIONS='["_themeLoad","_themeRender","_themePress","_themeTouch","_themeAssets"]' \
-    -sEXPORTED_RUNTIME_METHODS='["ccall","cwrap","FS"]' \
-    -o tools/theme-studio/wasm/banana-theme.js
+git clone https://github.com/emscripten-core/emsdk ~/emsdk && ~/emsdk/emsdk install latest && ~/emsdk/emsdk activate latest
+source ~/emsdk/emsdk_env.sh
+sh tools/theme-studio/wasm/build.sh          # ~15 s; needs ImageMagick for the fixture's box art
+node tools/theme-studio/tests/engine.test.js  # the same pixels as ui/banana-ui, on every example theme, at both sizes
 ```
 
-The editor then loads `banana-theme.js` in place of (or beside) `render.js`: when the module is present it
-draws in real time, and `serve.py` stays as the fallback for exact stills. Keeping both is deliberate — the
-server path proves the WASM path, since both run the same `layout.cpp`.
+The theme being edited is written by `engine.js` to `/theme/theme.json` in the engine's memory file system, with its
+attached files beside it at their relative paths, and loaded as `banana-ui --theme` would load it (`applyTheme`, then
+a `LayoutMenu`). Each animation frame `bt_frame` updates the menu, finishes its picture jobs and draws; the page
+copies the two screens onto canvases when they changed.
 
-## Why not re-implement the elements in JavaScript
-
-Text layout, picture fitting and the easing functions would all have to match the engine pixel for pixel; the
-port would drift with every engine change. Compiling the engine itself cannot drift. (The expression language is
-the one part already ported — `expr.js` — and it is kept honest by `tests/parity.cpp`, so the editor can evaluate
-values live without WASM.)
+Not in it: the Settings screen and the keyboard (START, SELECT), the sounds, and the Carts and Pixel themes; the
+splash. The clock is the browser's.

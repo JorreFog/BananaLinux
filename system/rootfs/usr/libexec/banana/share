@@ -1,10 +1,25 @@
 #!/bin/sh
 # File sharing: the card's data partition (/data: roms, bios, saves, banana/...) on the network over SMB3, through
-# the kernel's own server (ksmbd, a module loaded only now) and ksmbd-tools. Guest access, no password: the
-# settings screen says so, and it is off until switched on there (Settings > Network > File sharing).
-#   share up | down
+# the kernel's own server (ksmbd, a module loaded only now) and ksmbd-tools. Off until switched on there (Settings >
+# Network > File sharing). It asks for a name and a password (#24: Windows refuses guest logins), banana and linux
+# until changed in Settings > Network > Sharing name and password (banana/accounts.conf's smb_user and smb_password,
+# a file the share itself never shows); Sharing login > Guest opens it to anyone with no password instead. The second
+# SD card, while it's in, is a share of its own beside it (\\<address>\sd2, #25), with the same login.
+#   share up | down | restart     (restart: again with the login as it is now, if it is on)
+# one run at a time (Settings starts it on every change, sd2 when a card goes in or out): a down landing after another
+# run's up left the share off, or with the wrong login; restart's own down and up inherit the lock. -o: the server up
+# starts doesn't get the lock's descriptor (it kept the lock for as long as it ran, and every later run waited forever)
+[ -z "$SHARE_LOCKED" ] && SHARE_LOCKED=1 exec flock -o /run/banana/share.lock "$0" "$@"
+export SHARE_LOCKED
 CONF=/run/banana/ksmbd.conf
+DB=/run/banana/ksmbdpwd.db
+# a value from accounts.conf as Settings reads it (spaces around the key and the value, quotes, the last line)
+acct() { sed -n "s/^[ \t]*$1[ \t]*=[ \t]*//p" /data/banana/accounts.conf 2>/dev/null | tail -n 1 | sed 's/[ \t\r]*$//; s/^"\(.*\)"$/\1/'; }
 case $1 in
+restart)
+    pidof ksmbd.mountd >/dev/null || exit 0
+    "$0" down; exec "$0" up
+    ;;
 up)
     /usr/libexec/banana/ra-secrets scrub    # (RetroArch's password out of retroarch.cfg before it is shared)
     modprobe ksmbd 2>/dev/null || exit 1
@@ -13,13 +28,17 @@ up)
 [global]
 	server string = Banana
 	netbios name = BANANA
-	map to guest = bad user
+	; Windows 11 (24H2 on) signs every SMB session and refuses one it can't sign, a guest's among them: signed
+	; when the computer asks
+	server signing = auto
+	map to guest = MAPGUEST
 	guest account = nobody
 [banana]
 	comment = Banana: games, BIOS, saves and settings
 	path = /data
 	read only = no
-	guest ok = yes
+	guest ok = GUESTOK
+	VALIDUSERS
 	force user = root
 	force group = root
 	; exFAT has no extended attributes to keep DOS attributes in
@@ -30,14 +49,28 @@ up)
 	; (a leading * because ksmbd matches an open against the whole path, a listing against the bare name)
 	veto files = /*host_key_ed25519/*accounts.conf/*ra.token/*wifi.conf/
 CONF
-    : > /run/banana/ksmbdpwd.db
-    ksmbd.mountd -C $CONF -P /run/banana/ksmbdpwd.db
+    # the second SD card while it's in (the RG DS Plus: sd2 restarts the share when it goes in or out), as \\<address>\sd2
+    if grep -q ' /run/sd2 ' /proc/mounts; then
+        sed -n '/^\[banana\]/,$p' $CONF | sed 's/^\[banana\]/[sd2]/; s|^\tcomment = .*|\tcomment = The second SD card|; s|^\tpath = /data|\tpath = /run/sd2|' >> $CONF
+    fi
+    login=$(sed -n 's/^ *share_login *= *//p' /data/banana/settings.conf 2>/dev/null | tail -n 1)
+    (umask 077; : > $DB)
+    if [ "$login" = guest ]; then
+        sed -i 's/MAPGUEST/bad user/; s/GUESTOK/yes/; /VALIDUSERS/d' $CONF
+    else
+        # (a name the settings screen didn't write, with a space or a colon: the default instead)
+        u=$(acct smb_user); case $u in ''|*[!A-Za-z0-9._-]*) u=banana ;; esac
+        p=$(acct smb_password); [ -n "$p" ] || p=linux
+        sed -i "s/MAPGUEST/never/; s/GUESTOK/no/; s/VALIDUSERS/valid users = $u/" $CONF
+        ksmbd.adduser -P $DB -C $CONF -a -p "$p" "$u" >/dev/null || exit 1
+    fi
+    ksmbd.mountd -C $CONF -P $DB
     ;;
 down)
     ksmbd.control -s >/dev/null 2>&1
     for i in 1 2 3 4 5 6 7 8 9 10; do pidof ksmbd.mountd >/dev/null || break; sleep 0.2; done
     modprobe -r ksmbd 2>/dev/null
     ;;
-*) echo "usage: share up|down" >&2; exit 1 ;;
+*) echo "usage: share up|down|restart" >&2; exit 1 ;;
 esac
 exit 0

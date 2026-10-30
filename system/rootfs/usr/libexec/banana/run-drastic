@@ -16,6 +16,19 @@ if [ ! -x $D/drastic ]; then
     done
 fi
 cd $D
+# a game's own Threaded 3D (below) left in drastic.cfg by a run that never got to put Settings' back (power lost): back now
+# (only a 0 or a 1: an empty marker, from a power cut while it was written, is dropped)
+if [ -f config/.threaded_3d.settings ]; then
+    t=$(cat config/.threaded_3d.settings)
+    case $t in 0|1) sed -i "s/^threaded_3d = .*/threaded_3d = $t/" config/drastic.cfg ;; esac
+    rm -f config/.threaded_3d.settings
+fi
+# the lid: SuperDrastic holds DraStic's Hinge control while the handheld's lid is shut (the game sees the DS close).
+# Hinge on Pause (256 + its scancode 72), a key no button sends, when neither control set has it on anything
+if grep -q '^controls_a\[CONTROL_INDEX_HINGE\] = 65535' config/drastic.cfg 2>/dev/null &&
+   grep -q '^controls_b\[CONTROL_INDEX_HINGE\] = 65535' config/drastic.cfg; then
+    sed -i 's/^controls_a\[CONTROL_INDEX_HINGE\] = 65535/controls_a[CONTROL_INDEX_HINGE] = 328/' config/drastic.cfg
+fi
 # DraStic writes beside $HOME (SDL's cache); / is read-only
 export HOME=$D XDG_RUNTIME_DIR=/run
 # banana-ui has let go of the panels completely (it closes its display while a game runs)
@@ -28,13 +41,13 @@ export DSFLIP_CPUGOV=${DSFLIP_CPUGOV:-1}
 # the RetroAchievements account from the setup (banana/accounts.conf), for SuperDrastic's achievements
 A=/data/banana/accounts.conf
 if [ -f $A ]; then
-    u=$(sed -n 's/^ra_user=//p' $A | head -n 1); w=$(sed -n 's/^ra_password=//p' $A | head -n 1)
+    u=$(sed -n '/^ra_user=/{s///p;q}' $A); w=$(sed -n '/^ra_password=/{s///p;q}' $A)
     [ -n "$u" ] && export DSFLIP_RA_USER="$u" DSFLIP_RA_PASSWORD="$w"
 fi
 # the in-game menu (L3) in BananaOS's colours and fonts
 export DSFLIP_MENU_THEME=banana
 # a shader of your own (banana/shaders/<name>.frag, listed in Settings as "<name> (card)"): SuperDrastic looks there
-s=$(sed -n 's/^ *DSFLIP_SHADER *= *//p' /data/banana/superdrastic.conf 2>/dev/null | tail -n 1)
+s=$(sed -n '/^ *DSFLIP_SHADER *= */{s///;h};${x;p}' /data/banana/superdrastic.conf 2>/dev/null)
 [ -n "$s" ] && [ -f "/data/banana/shaders/$s.frag" ] && export DSFLIP_SHADER_DIR=/data/banana/shaders
 # Settings > Nintendo DS > Frame pacing (superdrastic.conf DSFLIP_PACE): Panels (the default) runs DraStic at the
 # panels' refresh instead of the DS's 59.83 Hz, which against a 60 Hz panel showed a frame twice every ~6 s (a
@@ -44,12 +57,12 @@ s=$(sed -n 's/^ *DSFLIP_SHADER *= *//p' /data/banana/superdrastic.conf 2>/dev/nu
 refresh() {
     local D=/sys/kernel/debug
     [ -f $D/dri/0/state ] || mount -t debugfs none $D 2>/dev/null
-    set -- $(sed -n 's/.*mode: "[^"]*": [0-9]* \([0-9]*\) [0-9]* [0-9]* [0-9]* \([0-9]*\) [0-9]* [0-9]* [0-9]* \([0-9]*\).*/\1 \2 \3/p' $D/dri/0/state 2>/dev/null | head -n 1)
+    set -- $(sed -n '/.*mode: "[^"]*": [0-9]* \([0-9]*\) [0-9]* [0-9]* [0-9]* \([0-9]*\) [0-9]* [0-9]* [0-9]* \([0-9]*\).*/{s//\1 \2 \3/p;q}' $D/dri/0/state 2>/dev/null)
     [ -n "$3" ] || { echo 60; return; }
     local clk=$(awk '$1 == "dclk_vop1" || $1 == "dclk_vop0" { print $5; exit }' $D/clk/clk_summary 2>/dev/null)
     awk -v k=$1 -v h=$2 -v v=$3 -v c=${clk:-0} 'BEGIN { if (c < 1000000) c = k * 1000; printf "%.4f\n", c / (h * v) }'
 }
-pace=$(sed -n 's/^ *DSFLIP_PACE *= *//p' /data/banana/superdrastic.conf 2>/dev/null | tail -n 1)
+pace=$(sed -n '/^ *DSFLIP_PACE *= */{s///;h};${x;p}' /data/banana/superdrastic.conf 2>/dev/null)
 # DraStic makes 44100 samples a second here whatever the panels' rate (it runs its own 60 frames a second: present/s
 # 60.0 on a 60.17 Hz panel too), so its sound is taken at exactly that: DSFLIP_AUDIO_LOCK_PER = the refresh rate. Taken
 # at the DS's rate it was drained faster than it was made, and DraStic filled the gaps with zeros (Mario Kart DS: 40-66
@@ -61,35 +74,46 @@ fi
 export DSFLIP_AUDIO_DEVICE_RATE=${DSFLIP_AUDIO_DEVICE_RATE:-48000}
 # two finished frames may wait for the panels, not one: DraStic's frames come unevenly (two in one refresh, then
 # none), and with one a frame was dropped and the next refresh repeated the last (HeartGold, 65 s: 12 drops and 8
-# repeats with one, 4 and 3 with two), at one more refresh of latency, as BananaDS's kms.queue
-export DSFLIP_QUEUE=${DSFLIP_QUEUE:-2}
+# repeats with one, 4 and 3 with two), at one more refresh of latency, as BananaDS's kms.queue.
+# Settings > Nintendo DS > Low latency (experimental; superdrastic.conf DSFLIP_LOWLAT=1, exported below): no queue at
+# all, each frame at the next refresh it can make (DraStic no longer held to start late: SuperDrastic 0.5.0, DSFLIP_LOWLAT_ALIGN)
+# (SuperDrastic's docs/INTEGRATION.md); it overrules the queue
+ll=$(sed -n '/^ *DSFLIP_LOWLAT *= */{s///;h};${x;p}' /data/banana/superdrastic.conf 2>/dev/null)
+if [ "$ll" = 1 ]; then echo "run-drastic: low latency (experimental): no frame queue" >&2
+else export DSFLIP_QUEUE=${DSFLIP_QUEUE:-2}; fi
 # the in-game save as BananaDS left it, when it played the game last (nds-saves: the two emulators share saves)
 /usr/libexec/banana/nds-saves "$1"
 # Quit game (the menu) and a shutdown while playing save the spot to a resume state, loaded once at the next start of
 # the game. One older than the game's own save is dropped: loading it would put back an older in-game save too.
-# Only with Settings > Nintendo DS > Quick resume on (settings.conf's quick_resume); off, a quit ends the game.
-if grep -q '^ *quick_resume *= *on' /data/banana/settings.conf 2>/dev/null; then
-    G=$(basename "$1"); G=${G%.*}
-    R=$D/savestates/$G.resume.dss
-    mkdir -p $D/savestates
-    RLOAD=0
-    if [ -f "$R" ]; then
-        if [ -f "$D/backup/$G.dsv" ] && [ "$D/backup/$G.dsv" -nt "$R" ]; then rm -f "$R"; else RLOAD=1; fi
-    fi
-    export DSFLIP_RESUME_FILE="$R" DSFLIP_RESUME_LOAD=$RLOAD
+# Only with Settings > Nintendo DS > Quick resume on (settings.conf's quick_resume); off, a quit ends the game. The
+# file is set either way: off, DSFLIP_RESUME_ON_QUIT=0 keeps it for bananad's SIGUSR1 alone (Power off after
+# sleeping saves the game before it shuts the handheld down), and the state is loaded only at the boot after that.
+# Settings > Sleep & power > Power off after sleeping: bananad saved this game's resume state and shut down, and
+# banana-ui started it again at the next boot (/run/banana/resume-once names it): the state loaded this once, Quick
+# resume on or off
+ONCE=0
+[ -f /run/banana/resume-once ] && [ "$(cat /run/banana/resume-once 2>/dev/null)" = "${BANANA_ROM:-$1}" ] && { ONCE=1; rm -f /run/banana/resume-once; echo "run-drastic: resuming after Power off after sleeping" >&2; }
+G=${1##*/}; G=${G%.*}
+R=$D/savestates/$G.resume.dss
+mkdir -p $D/savestates
+QR=0; grep -q '^ *quick_resume *= *on' /data/banana/settings.conf 2>/dev/null && QR=1
+RLOAD=0
+if [ -f "$R" ]; then
+    if [ -f "$D/backup/$G.dsv" ] && [ "$D/backup/$G.dsv" -nt "$R" ]; then rm -f "$R"; elif [ $QR = 1 ] || [ $ONCE = 1 ]; then RLOAD=1; fi
 fi
+export DSFLIP_RESUME_FILE="$R" DSFLIP_RESUME_LOAD=$RLOAD DSFLIP_RESUME_ON_QUIT=$QR
 # the settings screen's choices (KEY=value lines), exported to SuperDrastic
 . /usr/libexec/banana/kv-env
 kv_export /data/banana/superdrastic.conf DSFLIP_ DSHOOK_  # (read, never run: kv-env)
 # The microphone: SuperDrastic records ALSA's "default" capture device (bananad points that at the rk817, the real
-# microphone, through /run/banana/asound.conf) and presses DraStic's fake-mic key while the level is above this
-# threshold. Its own default is 0 (off), so a game that asks for the mic (Phantom Hourglass's candle, a Nintendogs
-# call) would get silence whatever bananad routes; 0.15 is its "medium" (high 0.03, low 0.3), the fallback here.
-# Settings > Nintendo DS > Microphone writes DSHOOK_MIC_THRESH to banana/superdrastic.conf and wins over it (0 = off).
-# A value the emulator can't read (empty, a word, outside 0..1) would also leave it off, so those fall back to medium.
-mic=${DSHOOK_MIC_THRESH:-}
-awk -v t="$mic" 'BEGIN { exit !(t ~ /^[0-9]*\.?[0-9]+$/ && t + 0 <= 1) }' 2>/dev/null || mic=0.15
-export DSHOOK_MIC_THRESH=$mic
+# microphone, through /run/banana/asound.conf) and presses DraStic's fake-mic key while the level is above
+# DSHOOK_MIC_THRESH. Settings > Nintendo DS > Microphone writes it to banana/superdrastic.conf: Off (0, SuperDrastic's
+# own default, as before 0.4.3), medium 0.15, high 0.03, low 0.3. A value it can't read (a word, outside 0..1) is
+# dropped, so SuperDrastic's default applies.
+if [ -n "${DSHOOK_MIC_THRESH:-}" ] && ! awk -v t="$DSHOOK_MIC_THRESH" 'BEGIN { exit !(t ~ /^[0-9]*\.?[0-9]+$/ && t + 0 <= 1) }' 2>/dev/null; then
+    echo "run-drastic: DSHOOK_MIC_THRESH=$DSHOOK_MIC_THRESH isn't a level from 0 to 1: left out" >&2
+    unset DSHOOK_MIC_THRESH
+fi
 # SuperDrastic records the microphone itself: src/audio.c's mic_thread opens ALSA's "default" capture (its
 # alsa_pcm() hardcodes "default"; there is no device setting of its own or in drastic.cfg, so the alias is the only
 # path and no node can be named here), at 44.1 kHz mono. bananad's capture.pcm is the plug that resamples that to
@@ -112,4 +136,28 @@ if [ -n "$gs" ]; then
 fi
 # the 3D always through the Gengis Engine (no longer a setting; a DSFLIP_RAST=0 left in the file from before is overruled)
 export DSFLIP_RAST=1
-exec $SD/superdrastic-run $D/drastic "$1"
+# the game's own microphone (its page, #27): SuperDrastic's threshold for this run (0: off)
+# (SuperDrastic's scale, its docs/INTEGRATION.md: high 0.03, medium 0.15, low 0.3)
+m=$(/usr/libexec/banana/nds-game-option nds-per-game-mic.conf "$1")
+case $m in low) t=0.3 ;; medium) t=0.15 ;; high) t=0.03 ;; off) t=0 ;; *) t= ;; esac
+[ -n "$t" ] && { echo "run-drastic: ${1##*/} has its own microphone: $m ($t)" >&2; export DSHOOK_MIC_THRESH=$t; }
+# the game's own Threaded 3D (#27): DraStic reads it from drastic.cfg alone, so the game's value goes in for this run
+# and Settings' comes back after (kept beside it until then: a run cut short is put right at the next start, above)
+t=$(/usr/libexec/banana/nds-game-option nds-per-game-3d.conf "$1")
+was=$(sed -n '/^threaded_3d = /{s///p;q}' config/drastic.cfg)
+if [ -z "$t" ] || [ -z "$was" ] || [ "$t" = "$was" ]; then
+    exec $SD/superdrastic-run $D/drastic "$1"
+fi
+echo "run-drastic: ${1##*/} has its own Threaded 3D: $t" >&2
+echo "$was" > config/.threaded_3d.settings && sync	# (on the card before drastic.cfg changes)
+sed -i "s/^threaded_3d = .*/threaded_3d = $t/" config/drastic.cfg
+$SD/superdrastic-run $D/drastic "$1" &
+P=$!
+# (a quit or a shutdown signals the whole process group, SuperDrastic too, which saves the resume state then: a second
+# TERM from here could cut that short. Passed on only if it is still running 5 s later, its own stop taking at most 4.)
+trap 'sleep 5; kill -TERM $P 2>/dev/null' TERM INT HUP
+wait $P; S=$?
+while kill -0 $P 2>/dev/null; do wait $P; S=$?; done	# a trap interrupted the wait: until it has quit
+# Settings' value back (DraStic writes its settings on quitting: only this line is changed back)
+sed -i "s/^threaded_3d = .*/threaded_3d = $was/" config/drastic.cfg && rm -f config/.threaded_3d.settings
+exit $S

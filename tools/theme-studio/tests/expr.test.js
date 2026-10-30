@@ -2,9 +2,12 @@
 // Banana Theme Studio: tests for expr.js.
 //
 // Two halves:
-//   1. Parity — every line of expr-cases.txt is evaluated through expr.js and compared with the real engine.
-//      The engine side is built from ui/src/expr.cpp by tests/parity.cpp (needs g++; skipped, with a warning,
-//      if it isn't there or the build fails).
+//   1. Parity — every line of expr-cases.txt is evaluated through expr.js and compared with the real engine,
+//      twice: ui/src/expr.cpp built for this PC by tests/parity.cpp (needs g++; skipped, with a warning, if it
+//      isn't there or the build fails), and the same file in the browser's engine (wasm/banana-engine.js,
+//      bt_eval). A double that doesn't fit an int is undefined in C: the handhelds (aarch64) and WebAssembly
+//      saturate it, x86 gives INT_MIN; expr.js does what the handhelds do, so those few cases are checked
+//      against the WebAssembly build, and the PC build's answers to them are only listed.
 //   2. Unit checks — the property forms (literal / "=expr" / "{template}"), parse errors and colour parsing.
 //
 // Run: node tools/theme-studio/tests/expr.test.js
@@ -60,12 +63,36 @@ function parity() {
     return;
   }
   if (!expected || expected.size === 0) { console.log("  (parity skipped: the engine produced no output)"); return; }
-  console.log("  parity against ui/src/expr.cpp (" + cases.length + " cases)");
+  const device = wasmResults(cases);
+  console.log("  parity against ui/src/expr.cpp (" + cases.length + " cases" + (device ? ", the PC's build and the WebAssembly one" : "") + ")");
+  const x86 = [];
   for (const c of cases) {
-    const want = expected.get(c);
+    const want = expected.get(c), js = jsResult(c);
     if (want === undefined) { check(false, "missing engine result", c); continue; }
-    check(jsResult(c) === want, JSON.stringify(c), "js=" + jsResult(c) + " engine=" + want);
+    if (device) {
+      check(js === device.get(c), JSON.stringify(c), "js=" + js + " wasm engine=" + device.get(c));
+      if (want !== device.get(c)) x86.push(c + "  (PC " + want + ", handheld/wasm " + device.get(c) + ")");
+    } else if (X86_UB.indexOf(c) < 0) check(js === want, JSON.stringify(c), "js=" + js + " engine=" + want);
   }
+  if (x86.length) console.log("  the PC's build differs (undefined float-to-int conversions) on:\n    " + x86.join("\n    "));
+  if (!device) console.log("  (" + X86_UB.length + " float-to-int cases not checked: wasm/banana-engine.js isn't built)");
+}
+// cases whose answer on x86 comes from an out-of-range double-to-int conversion (undefined in C)
+const X86_UB = ["mix(col, 1e400, 0.5)", "mix(-1, 255, 0)", "mix(4294967296.5, 0, 0)", "mix(1e400, 0, 0)", "pick(1e400, 'a', 'b')"];
+
+// the cases through the WebAssembly build of expr.cpp (synchronously: the module is instantiated in a child)
+function wasmResults(cases) {
+  const js = path.join(HERE, "..", "wasm", "banana-engine.js");
+  if (!fs.existsSync(js)) return null;
+  const runner = "const M = require(process.argv[1]); let d = ''; process.stdin.on('data', (c) => d += c).on('end', async () => {" +
+    " const B = await M({ print() {}, printErr() {} }); const ev = B.cwrap('bt_eval', 'string', ['string']);" +
+    " process.stdout.write(JSON.stringify(JSON.parse(d).map((c) => ev(c)))); });";
+  try {
+    const out = execFileSync(process.execPath, ["-e", runner, js], { input: JSON.stringify(cases), encoding: "utf8", maxBuffer: 1 << 26 });
+    const r = JSON.parse(out), m = new Map();
+    cases.forEach((c, i) => m.set(c, r[i]));
+    return m;
+  } catch (e) { console.log("  (the WebAssembly build couldn't run: " + e.message.split("\n")[0] + ")"); return null; }
 }
 
 // ---- 2. property forms ---------------------------------------------------------------------------------
