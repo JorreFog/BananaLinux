@@ -35,6 +35,9 @@ PROJECT = os.environ.get("JIRA_PROJECT_KEY", "KAN")
 REPO = os.environ.get("GITHUB_REPO", "JorreFog/BananaLinux")
 DRY_RUN = os.environ.get("DRY_RUN", "") in ("1", "true", "yes")
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN") or ""
+EPIC_BUGS = os.environ.get("JIRA_EPIC_BUGS", "KAN-97")
+EPIC_FEATURES = os.environ.get("JIRA_EPIC_FEATURES", "KAN-98")
+EPIC_IMPROVEMENTS = os.environ.get("JIRA_EPIC_IMPROVEMENTS", "KAN-99")
 
 HIGHEST = (
     "brick",
@@ -108,27 +111,33 @@ def http_json(
         raise RuntimeError(f"{method} {url} -> HTTP {e.code}: {detail}") from e
 
 
-def classify(title: str, body: str) -> tuple[str, str]:
+def classify(title: str, body: str) -> tuple[str, str, str, str]:
+    """Return (priority, issue_type, kind, epic_key).
+
+    kind is bug | feature | improvement and drives board grouping.
+    """
     text = f"{title}\n{body}".lower()
     title_l = title.lower()
+    is_feature = (
+        any(k in title_l for k in ("feature", "request"))
+        or any(
+            k in text
+            for k in ("feature request", "would be awesome", "is it possible")
+        )
+        or title_l.startswith(("[feature", "[request"))
+    )
     if any(k in text for k in HIGHEST):
         priority = "Highest"
     elif any(k in text for k in HIGH):
         priority = "High"
-    elif any(k in text for k in FEATURE_MARKERS) or title_l.startswith(
-        ("[feature", "[request")
-    ):
+    elif is_feature or any(k in text for k in FEATURE_MARKERS):
         priority = "Low"
     else:
         priority = "Medium"
 
-    if any(k in title_l for k in ("feature", "request")) or any(
-        k in text for k in ("feature request", "would be awesome", "is it possible")
-    ):
-        issue_type = "Story"
-    else:
-        issue_type = "Task"
-    return priority, issue_type
+    if is_feature:
+        return priority, "Story", "feature", EPIC_FEATURES
+    return priority, "Task", "bug", EPIC_BUGS
 
 
 def github_open_issues() -> list[dict[str, Any]]:
@@ -207,7 +216,13 @@ def adf_from_markdownish(text: str) -> dict[str, Any]:
     return {"type": "doc", "version": 1, "content": content or [{"type": "paragraph"}]}
 
 
-def jira_create(issue: dict[str, Any], priority: str, issue_type: str) -> str:
+def jira_create(
+    issue: dict[str, Any],
+    priority: str,
+    issue_type: str,
+    kind: str,
+    epic_key: str,
+) -> str:
     number = issue["number"]
     title = issue["title"]
     url = issue["html_url"]
@@ -229,12 +244,16 @@ def jira_create(issue: dict[str, Any], priority: str, issue_type: str) -> str:
             "summary": summary,
             "issuetype": {"name": issue_type},
             "priority": {"name": priority},
-            "labels": ["github-import", f"gh-{number}"],
+            "labels": ["github-import", f"gh-{number}", kind],
+            "parent": {"key": epic_key},
             "description": adf_from_markdownish(description),
         }
     }
     if DRY_RUN:
-        print(f"DRY_RUN create {summary!r} priority={priority} type={issue_type}")
+        print(
+            f"DRY_RUN create {summary!r} priority={priority} "
+            f"type={issue_type} kind={kind} epic={epic_key}"
+        )
         return f"DRY-{number}"
     data = http_json(
         "POST",
@@ -291,8 +310,10 @@ def sync_one(issue: dict[str, Any]) -> dict[str, Any]:
     existing = None if DRY_RUN else jira_find_by_gh_label(number)
     if existing:
         return {"gh": number, "key": existing, "action": "exists"}
-    priority, issue_type = classify(issue["title"], issue.get("body") or "")
-    key = jira_create(issue, priority, issue_type)
+    priority, issue_type, kind, epic_key = classify(
+        issue["title"], issue.get("body") or ""
+    )
+    key = jira_create(issue, priority, issue_type, kind, epic_key)
     jira_add_remote_link(key, issue["html_url"], f"GitHub #{number}")
     jira_transition_to_github_issues(key)
     return {
@@ -301,6 +322,8 @@ def sync_one(issue: dict[str, Any]) -> dict[str, Any]:
         "action": "created",
         "priority": priority,
         "issueType": issue_type,
+        "kind": kind,
+        "epic": epic_key,
     }
 
 

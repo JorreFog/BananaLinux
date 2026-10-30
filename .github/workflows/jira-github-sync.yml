@@ -29,6 +29,9 @@ jobs:
           JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
           JIRA_PROJECT_KEY: KAN
+          JIRA_EPIC_BUGS: KAN-97
+          JIRA_EPIC_FEATURES: KAN-98
+          JIRA_EPIC_IMPROVEMENTS: KAN-99
           GITHUB_REPO: ${{ github.repository }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
