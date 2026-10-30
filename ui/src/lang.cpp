@@ -167,9 +167,10 @@ namespace banana::lang
 		void noteMissing(const std::string& s)
 		{
 			// only text with letters in it (not a time, a number, a percent), once each, and not without end; and not a
-			// piece of a line that was translated or cut short already (CJK, an ellipsis: lead bytes from 0xe2 on)
+			// piece of a line that was translated or cut short already (CJK, an ellipsis: lead bytes from 0xe2 on;
+			// Cyrillic: 0xd0-0xd3, as "F + громкость" has a Latin letter in it too)
 			bool letters = false;
-			for (unsigned char c : s) if (c >= 0xe2 && c < 0xf8) return;
+			for (unsigned char c : s) if ((c >= 0xe2 && c < 0xf8) || (c >= 0xd0 && c <= 0xd3)) return;
 			for (unsigned char c : s) if ((c | 0x20) >= 'a' && (c | 0x20) <= 'z') { letters = true; break; }
 			if (!letters || missingPath.empty() || missing.size() >= 3000 || !missing.insert(s).second) return;
 			std::ofstream(missingPath, std::ios::app) << s << "\n";

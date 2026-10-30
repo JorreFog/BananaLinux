@@ -19,6 +19,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lang_docx import PARTS, CONTEXTS  # noqa: E402	(the document's part headings, the Pokémon companion's among them)
 
 W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+PLACEHOLDER = re.compile(r"\{[^}]*\}|%[-0-9.]*l*[dsuxfc]")
+QUOTES = str.maketrans("\u2018\u2019\u201c\u201d", "''\"\"")
 
 
 def text_of(p):
@@ -58,7 +60,7 @@ def main():
     for t in intro:
         m = re.match(r"Language:\s*(.*?)\s*Translated by:\s*(.*)$", t)
         if m:
-            language, by = m.group(1), m.group(2).strip()
+            language, by = m.group(1) or code, m.group(2).strip()	# (left empty: the code)
     lines, first = [], {}
     for part, where, en, tr in rows:
         if not tr.strip():
@@ -66,6 +68,11 @@ def main():
         for s in (en, tr):
             if "\t" in s or "\n" in s:
                 sys.exit("a tab or line break in a cell: %r" % s)
+        # placeholders as the English has them: Word's autocorrect turns a placeholder's ' into ’ ({either(x, '0')},
+        # {package's handheld}), which then matches nothing; put back, and any other difference said
+        tr = re.sub(r"\{[^}]*\}", lambda m: m.group(0).translate(QUOTES), tr)
+        if sorted(PLACEHOLDER.findall(en)) != sorted(PLACEHOLDER.findall(tr)):
+            print("placeholders differ (%s): %r -> %r" % (part, en, tr), file=sys.stderr)
         key = (part, en)
         context = ""
         if where in CONTEXTS:
