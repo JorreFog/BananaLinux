@@ -56,6 +56,18 @@ ux_yellow() { convert "$1" -crop "$(awk -v k=$ux_k 'BEGIN { printf "%dx%d+%d+%d"
 [ "$(ux_yellow "$OUT/$size-ux-resume-icon-top.png")" = 1 ] || { echo "FAIL $size: Last played doesn't show the DS game's icon (Game icon)"; fail=1; }
 [ "$(ux_yellow "$OUT/$size-ux-resume-box-top.png")" = 0 ] || { echo "FAIL $size: Last played shows the icon over the box art (default)"; fail=1; }
 
+# a cartridge's label art is all on the label, fitted, on the plain label where it leaves room (#108: it was cut to
+# the window): a title screen (256x192, a green strip down its left side) keeps its strip, the label shows above it
+mkdir -p "$RIFX/roms/nds/media/label"
+convert -size 256x192 xc:'#203080' -fill '#30c040' -draw 'rectangle 0,0 31,191' "$RIFX/roms/nds/media/label/Banana Kart DS.png"
+sed -i '/^ds_cart_art = /d' "$RIFX/data/settings.conf"	# (the label art, not the icons)
+UXFX=$RIFX
+ux_run label "lib 0 0; wait 2400; shot ux-label"
+UXFX=$UXFX_SAVE
+ux_rgb() { convert "$1" -crop "$(awk -v k=$ux_k -v w=$2 -v h=$3 -v x=$4 -v y=$5 'BEGIN { printf "%dx%d+%d+%d", w * k, h * k, x * k, y * k }')" -format "%[fx:$6]" info: 2>/dev/null; }
+[ "$(ux_rgb "$OUT/$size-ux-label-bot.png" 4 30 281 230 'mean.g > 0.6 && mean.r < 0.3')" = 1 ] || { echo "FAIL $size: the label art cut at its sides"; fail=1; }
+[ "$(ux_rgb "$OUT/$size-ux-label-bot.png" 40 3 300 206 'mean > 0.85')" = 1 ] || { echo "FAIL $size: no plain label above a wide label art"; fail=1; }
+
 # the text on the accent (Auto): dark or light by contrast, the second line in the accent's hue and readable (4.5:1);
 # blue's sublabel is a blue, not the brown that suited yellow only. Light: white text, the plate's START too
 ux_run ink "inkon f0b429; inkon 4a9fe0; inkon e8574d; inkon 1a2a6c"
