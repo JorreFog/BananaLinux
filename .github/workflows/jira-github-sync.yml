@@ -1,8 +1,16 @@
-name: Sync GitHub issues → Jira
+name: Sync GitHub issues and PRs → Jira
 
 on:
   issues:
     types: [opened, reopened, edited]
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - edited
+      - ready_for_review
+      - converted_to_draft
+      - closed
   schedule:
     # Catch anything the webhook missed (Europe/Stockholm morning-ish UTC).
     - cron: "0 6 * * *"
@@ -16,14 +24,17 @@ on:
 permissions:
   contents: read
   issues: read
+  pull-requests: read
 
 jobs:
   sync:
     runs-on: ubuntu-24.04
+    # Fork PRs do not get Actions secrets; skip instead of failing the check.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - uses: actions/checkout@v4
 
-      - name: Sync open issues into Jira (KAN)
+      - name: Sync open issues and pull requests into Jira (KAN)
         env:
           JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
           JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
@@ -32,6 +43,7 @@ jobs:
           JIRA_EPIC_BUGS: KAN-97
           JIRA_EPIC_FEATURES: KAN-98
           JIRA_EPIC_IMPROVEMENTS: KAN-99
+          JIRA_EPIC_PRS: KAN-100
           GITHUB_REPO: ${{ github.repository }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
@@ -42,6 +54,8 @@ jobs:
           fi
           if [ "${{ github.event_name }}" = "issues" ]; then
             python3 tools/jira-github-sync.py --issue "${{ github.event.issue.number }}"
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            python3 tools/jira-github-sync.py --pr "${{ github.event.pull_request.number }}"
           else
             python3 tools/jira-github-sync.py
           fi
