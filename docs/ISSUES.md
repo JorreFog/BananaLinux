@@ -4,6 +4,8 @@ Snapshot of every issue in [JorreFog/BananaLinux](https://github.com/JorreFog/Ba
 
 A live copy of the same notes is [BananaOS issue analysis](https://cursor.com/canvas/store-cfd2f98a-3e84-4197-a0d9-3cf70b8f59ee/f6c2e279-b7ee-40e3-9656-d2466dba4c30) (clusters, charts, the 25 remaining code changes, open PRs, and tickets to close).
 
+To implement the remaining code (files, current snippets, patch shape, tests, done-when), use [ISSUE-FIX-PLAYBOOK.md](ISSUE-FIX-PLAYBOOK.md). It is written so a Claude Opus 5.5 agent can land one work package per commit without re-deriving causes.
+
 ## How to read this
 
 - **Shipped** means the requested behaviour is in a release. Close those tickets after a quick check.
