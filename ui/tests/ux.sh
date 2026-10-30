@@ -127,6 +127,23 @@ for f in "saves/nds/Peel Quest 2.sav" "bios/Peel Quest.bin" "roms/nds/Banana Kar
     [ -e "$UXFX/$f" ] || { echo "FAIL $size: Delete game took $f"; fail=1; }
 done
 
+# a card without roms/ports (#78: a deleted PortMaster folder once kept the menu from starting): the menu starts and
+# Ports is off the row; with Shown systems > Ports > Always its shelf is on it (one more tile), and opens empty; a
+# roms/ports that is a broken link the same
+NPFX=$OUT/ux-noports-fixture-$size
+rm -rf "$NPFX"; "$HERE/tests/fixture.sh" "$NPFX" >/dev/null
+UXFX_SAVE=$UXFX; UXFX=$NPFX
+ux_run noports "home 0; wait 2400; shot ux-noports; press left"
+ux_check noports "press left: used, view 0 sys 7"
+echo "shelf.ports = show" >> "$NPFX/data/settings.conf"
+ux_run noports-show "home 0; press left; press left; press left; press left; press a; wait 2400; shot ux-noports-show"
+ux_check noports-show "press left: used, view 0 sys 8"
+ux_check noports-show "press a: used, view 1 sys 5"
+ln -s nowhere "$NPFX/roms/ports"
+ux_run noports-link "home 0; press left; press left; press left; press left; press a; wait 2400; shot ux-noports-link"
+ux_check noports-link "press a: used, view 1 sys 5"
+UXFX=$UXFX_SAVE
+
 # the home row: a system with nothing to start is left off, Ports with PortMaster's own entry alone is on it (PortMaster
 # gets ports: deleting the last port must not take it away); Display & sound > Shown systems (R twice, down) hides one
 # (Game Boy Advance), then Ports (the row before Files, the last)
