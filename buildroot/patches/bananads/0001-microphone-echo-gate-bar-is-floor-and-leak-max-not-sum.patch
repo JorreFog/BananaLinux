@@ -1,0 +1,30 @@
+diff --git a/bananads/src/mic.cpp b/bananads/src/mic.cpp
+index 6d7e0fb..773c2cf 100644
+--- a/bananads/src/mic.cpp
++++ b/bananads/src/mic.cpp
+@@ -63,7 +63,10 @@ void Mic::block_done() {
+             coup_ = std::min(coup_, t_.coupling_max);
+         }
+     }
+-    double bar = floor_ + t_.threshold + t_.gate_k * coup_ * out;
++    // The floor and the speaker leak are independent, so the bar is the larger of the two plus the threshold, not
++    // their sum: adding them double-counts, and with a high capture gain (bananad's +12 dB leaves the room's floor
++    // near 0.10) the sum sits above a real blow and the gate never opens (SuperDrastic's echo gate is the same max).
++    double bar = std::max(floor_ + t_.threshold, t_.threshold + t_.gate_k * coup_ * out);
+ 
+     if (!gate) {
+         open_ = true;
+diff --git a/bananads/src/mic.h b/bananads/src/mic.h
+index 71fa39e..4b50d18 100644
+--- a/bananads/src/mic.h
++++ b/bananads/src/mic.h
+@@ -5,7 +5,8 @@
+ //  - a DC-blocking high-pass (y = x - x[-1] + 0.998 y[-1], ~14 Hz);
+ //  - a noise floor, averaged over the first 60 blocks, then tracked slowly while the gate is closed;
+ //  - an echo gate: it learns how much of the speaker output leaks into the mic (the coupling) and wants the
+-//    level to clear floor + threshold + gate_k * coupling * output level;
++//    level to clear the larger of the floor and gate_k * coupling * output, plus the threshold (the two are
++//    independent, not added: adding them double-counts and a high capture gain lifts the bar above a real blow);
+ //  - hysteresis: once open it stays open while the level is above 60% of the way from the floor to the bar,
+ //    and for hold_ms at least.
+ // While the gate is closed the game gets silence. threshold 0 turns the gate off (every sample passes).
