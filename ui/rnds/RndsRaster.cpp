@@ -832,6 +832,9 @@ namespace rnds
 	static Bitmap(*sDecoder)(const std::string&) = nullptr;
 	void setDecoder(Bitmap(*decoder)(const std::string& path)) { sDecoder = decoder; }
 	Bitmap decodeFile(const std::string& path) { return sDecoder && !path.empty() ? sDecoder(path) : Bitmap(); }
+	static bool(*sSizer)(const std::string&, int&, int&) = nullptr;
+	void setSizer(bool(*sizer)(const std::string& path, int& w, int& h)) { sSizer = sizer; }
+	bool imageSize(const std::string& path, int& w, int& h) { return sSizer && !path.empty() && sSizer(path, w, h); }
 
 	Bitmap resize(const Bitmap& src, int w, int h)
 	{
