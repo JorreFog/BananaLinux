@@ -1586,3 +1586,6 @@ menu		Open Bshare to accept.	打开 Bshare 以接受。
 menu		In banana/received.	已保存在 banana/received。
 menu		Games went into their system's folder.	游戏已放入对应系统的文件夹。
 menu		Nothing was sent.	没有发送任何内容。
+# (the game page's Timing rows below are a machine-translated draft, not Majirefy's: for them to check)
+settings		This game's timing	本游戏的时序
+settings		BananaDS only. Fast lets the DS's two CPUs run longer between meeting for this game (up to about 10% faster in HeartGold and hacks of it like Origin HeartGold), Accurate is melonDS's own. Fast can break a game (Golden Sun: Dark Dawn loses its 3D world): if this one goes wrong, set it back. The others follow Settings > Nintendo DS > Timing.	仅限 BananaDS。快速：本游戏中 DS 的两颗 CPU 在同步间隔更长（在心金及其改版如起源心金中最多约快 10%）；精确：melonDS 自身的方式。快速可能会让游戏出错（黄金太阳：漆黑的黎明会丢失 3D 世界）：如果本游戏出问题，请改回来。其他游戏遵循 设置 > Nintendo DS > 时序。
