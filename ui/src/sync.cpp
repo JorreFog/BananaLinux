@@ -14,7 +14,9 @@
 //   banana-sync sync [--saves-only] [--auto quit|wifi] [--dry-run]
 //   banana-sync status                         the pairing and the last sync, for a person
 // The card: --root /data (saves/, states/, drastic/), --roms <root>/roms, --conf <root>/banana/romsync.json,
-// --settings <root>/banana/settings.conf (homesync_roms, homesync_states, homesync_auto, homesync.<system>).
+// --settings <root>/banana/settings.conf (homesync_roms, homesync_roms_to, homesync_states, homesync_auto, homesync.<system>).
+// The second SD card's roms folder (homesync_roms_to = sd2) is the one <run>/sd2/roms names, as the library's.
+// Each sync's report: <root>/banana/logs/sync.log (the one before: sync.log.1).
 // Rules kept (PROTOCOL.md "What a device sync must do"): only files the sync put there are ever changed or deleted
 // (the state lists them with their hashes; a file of the user's at the same path is left alone and reported);
 // downloads go to <file>.part, are checked, then renamed; gamelist.xml is merged; saves never sync while a game runs.
@@ -81,10 +83,49 @@ namespace
 		sigemptyset(&sa.sa_mask);
 		for (int sig : { SIGTERM, SIGINT, SIGHUP }) sigaction(sig, &sa, nullptr);
 	}
+	// a sync's report also kept on the card, whoever started it (the menu, leaving a game, Wi-Fi: their output goes
+	// nowhere): banana/logs/sync.log, the one before as sync.log.1
+	// (opened at the first line said, so a sync that has nothing to say, as an automatic one with Auto sync off, doesn't
+	// push the last report to sync.log.1)
+	FILE* logFile = nullptr;
+	bool logWanted = false;
+	void openLog()
+	{
+		std::string dir = ROOT + "/banana/logs", path = dir + "/sync.log";
+		if (mkdir(dir.c_str(), 0755) != 0 && errno != EEXIST)
+		{
+			return;
+		}
+		rename(path.c_str(), (path + ".1").c_str());
+		logFile = fopen(path.c_str(), "w");
+		if (logFile)
+		{
+			// (UTC: the menu and the Wi-Fi script start syncs with different time zones)
+			time_t now = time(nullptr);
+			char when[32];
+			strftime(when, sizeof when, "%Y-%m-%d %H:%M:%S UTC", gmtime(&now));
+			fprintf(logFile, "%s %s\n", VERSION, when);
+		}
+	}
 	void say(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
 	void say(const char* fmt, ...)
 	{
-		va_list a; va_start(a, fmt); vprintf(fmt, a); va_end(a); printf("\n"); fflush(stdout);
+		va_list a; va_start(a, fmt);
+		if (logWanted && !logFile)
+		{
+			logWanted = false;
+			openLog();
+		}
+		if (logFile)
+		{
+			va_list b;
+			va_copy(b, a);
+			vfprintf(logFile, fmt, b);
+			va_end(b);
+			fputc('\n', logFile);
+			fflush(logFile);
+		}
+		vprintf(fmt, a); va_end(a); printf("\n"); fflush(stdout);
 	}
 
 	// ---- files --------------------------------------------------------------------------------------------------------
@@ -129,6 +170,39 @@ namespace
 		std::string d = p;
 		while (!exists(d) && d.size() > 1) d = dirOf(d);
 		return statvfs(d.c_str(), &v) == 0 ? (long long)v.f_bavail * v.f_frsize : -1;
+	}
+	// the second SD card's roms folder, the one the library shows games from: the sd2 script writes its path in
+	// <run>/sd2/roms while the card is in, has a roms folder and Settings shows its games; "" otherwise
+	std::string sd2Roms()
+	{
+		std::string p = trim(readFile(RUN + "/sd2/roms"));
+		if (p.empty() || p == ROMS || !exists(p))
+		{
+			return "";
+		}
+		return p;
+	}
+	// a second SD card that's in but has no roms folder (a fresh one): the folder made and the sd2 script run, as Files
+	// does for a roms folder made there, so the library shows its games and sd2Roms has it. The card at /run/sd2 (the
+	// test: BANANA_SD2, its scan BANANA_SD2_SCAN)
+	void sd2MakeRoms()
+	{
+		const char* fake = getenv("BANANA_SD2");
+		std::string mnt = fake ? fake : "/run/sd2";
+		bool in = fake ? exists(mnt) : readFile("/proc/mounts").find(" " + mnt + " ") != std::string::npos;
+		if (!in || dryRun)
+		{
+			return;
+		}
+		mkdirs(mnt + "/roms");
+		if (!exists(mnt + "/roms"))
+		{
+			return;
+		}
+		say("made a roms folder on the second SD card");
+		const char* scan = getenv("BANANA_SD2_SCAN");
+		std::string cmd = scan ? "'" + std::string(scan) + "'" : "flock -o /run/banana/sd2.lock /usr/libexec/banana/sd2 scan";
+		if (system((cmd + " </dev/null >/dev/null 2>&1").c_str()) != 0) {}
 	}
 	// empty folders left behind by a deleted file, up to (not including) top
 	void pruneDirs(std::string d, const std::string& top)
@@ -216,6 +290,26 @@ namespace
 		{
 			if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') r += (char)c;
 			else { char b[4]; snprintf(b, sizeof b, "%%%02X", c); r += b; }
+		}
+		return r;
+	}
+	// a URL a server gave as it is made safe to request: what a URL can't hold escaped (RomM's cover is
+	// ...big.png?ts=<its updated_at>, a datetime with a space and a "+": curl refused every cover), the rest kept
+	std::string urlFix(const std::string& u)
+	{
+		std::string r;
+		for (unsigned char c : u)
+		{
+			if (c <= ' ' || c >= 0x7f || c == '"' || c == '<' || c == '>' || c == '\\' || c == '^' || c == '`' || c == '{' || c == '|' || c == '}' || c == '+')
+			{
+				char b[4];
+				snprintf(b, sizeof b, "%%%02X", c);
+				r += b;
+			}
+			else
+			{
+				r += (char)c;
+			}
 		}
 		return r;
 	}
@@ -326,7 +420,17 @@ namespace
 		int rc = cu.perform(h);
 		if (hl) cu.slistFree(hl);
 		if (mime) cu.mimeFree(mime);
-		if (rc != 0) { r.err = cu.strerror(rc); cu.cleanup(h); h = nullptr; return r; }
+		if (rc != 0)
+		{
+			r.err = cu.strerror(rc);
+			if (r.err == "Error")
+			{
+				r.err += " (curl " + std::to_string(rc) + ")";	// (a libcurl without its messages, as the image's: which one)
+			}
+			cu.cleanup(h);
+			h = nullptr;
+			return r;
+		}
 		cu.getinfo(h, I_RESPONSE_CODE, &r.code);
 		return r;
 	}
@@ -340,7 +444,9 @@ namespace
 		std::string backend = "romhost", server, token, device, name, serverName, etag, last;
 		bool deviceNum = false;	// Romhost's device id is a number
 		std::map<std::string, std::string> files;					// roms-relative path -> the hash it had when written
+		std::map<std::string, std::string> where;					// a file of files' on the second SD card -> "sd2" (absent: this card)
 		std::map<std::string, std::vector<std::string>> gamelist;	// system folder -> entry paths written into gamelist.xml
+																	// (the second SD card's: "@sd2/<folder>")
 		std::map<std::string, SaveSt> saves;						// data-relative path -> as of the last sync
 		std::map<std::string, SaveSt> states;						// RomM's states (Romhost keeps them with the saves)
 		double lastTime = 0;
@@ -371,6 +477,16 @@ namespace
 		{
 			c.etag = st->str("etag");
 			if (const JVal* f = st->get("files")) if (f->isObj()) for (auto& kv : f->obj) c.files[kv.first] = kv.second->s;
+			if (const JVal* w = st->get("where"))
+			{
+				if (w->isObj())
+				{
+					for (auto& kv : w->obj)
+					{
+						c.where[kv.first] = kv.second->s;
+					}
+				}
+			}
 			if (const JVal* g = st->get("gamelist")) if (g->isObj())
 				for (auto& kv : g->obj) for (auto& p : kv.second->arr) c.gamelist[kv.first].push_back(p->s);
 		}
@@ -400,6 +516,13 @@ namespace
 			",\n \"state\": {\"etag\": " + jsonStr(c.etag) + ", \"files\": {";
 		bool first = true;
 		for (auto& kv : c.files) { o += std::string(first ? "\n  " : ",\n  ") + jsonStr(kv.first) + ": " + jsonStr(kv.second); first = false; }
+		o += "},\n  \"where\": {";
+		first = true;
+		for (auto& kv : c.where)
+		{
+			o += std::string(first ? "\n  " : ",\n  ") + jsonStr(kv.first) + ": " + jsonStr(kv.second);
+			first = false;
+		}
 		o += "},\n  \"gamelist\": {";
 		first = true;
 		for (auto& kv : c.gamelist)
@@ -861,7 +984,7 @@ namespace
 					MFile f;
 					f.media = true;
 					f.path = folder + "/media/box/" + stem + "." + (cext == "png" ? "png" : "jpg");
-					f.url = cover.compare(0, 4, "http") == 0 ? cover : c.server + cover;
+					f.url = urlFix(cover.compare(0, 4, "http") == 0 ? cover : c.server + cover);
 					if (safeRel(f.path)) { g.files.push_back(f); image = "./media/box/" + stem + "." + (cext == "png" ? "png" : "jpg"); }
 				}
 				g.gl.push_back({ "path", "./" + entry });
@@ -904,7 +1027,15 @@ namespace
 			if (c1.size() > 1)	// (the same name on two systems: the one on the card)
 			{
 				std::vector<RommRom*> c2;
-				for (auto* r : c1) if (exists(ROMS + "/" + r->folder + "/" + r->fsName)) c2.push_back(r);
+				std::string sd2 = sd2Roms();
+				for (auto* r : c1)
+				{
+					std::string rel = r->folder + "/" + r->fsName;
+					if (exists(ROMS + "/" + rel) || (!sd2.empty() && exists(sd2 + "/" + rel)))
+					{
+						c2.push_back(r);
+					}
+				}
 				c1 = c2;
 			}
 			if (c1.size() != 1) return false;
@@ -1089,22 +1220,93 @@ namespace
 
 	// chosen: null = every game; else only those games come to the card, and the others' files already on it stay (an
 	// unticked game isn't removed: un-choosing never deletes, as a skipped system's games stay)
-	RomResult syncRoms(Backend& b, Conf& c, const Manifest& m, const std::set<std::string>& skipFolders, const std::set<std::string>* chosen = nullptr)
+	// toSd2 (settings homesync_roms_to = sd2): new games go to the second SD card instead of this one. A game the sync
+	// already put on a card stays on that card (its updates and its removal happen there); a new game whose files are
+	// on either card already (copied by hand) is adopted where it is. With the second card out, the files that belong
+	// on it wait for the next sync (an error says so): they never go to this card instead
+	RomResult syncRoms(Backend& b, Conf& c, const Manifest& m, const std::set<std::string>& skipFolders, const std::set<std::string>* chosen = nullptr,
+		bool toSd2 = false)
 	{
 		RomResult res;
 		std::map<std::string, const MFile*> want;
 		std::set<std::string> keep;
+		std::string sd2 = sd2Roms();
+		std::set<std::string> onSd2;	// the wanted files that belong on the second SD card
 		for (auto& s : m.systems) for (auto& g : s.games)
 		{
 			bool on = !chosen || chosen->count(gameKey(g));
 			for (auto& f : g.files) { if (on) want[f.path] = &f; else keep.insert(f.path); }
+			if (!on)
+			{
+				continue;
+			}
+			int known = -1;		// the card a file of the game was synced to and is still on: 0 this one, 1 the second
+			for (auto& f : g.files)
+			{
+				if (c.files.count(f.path))
+				{
+					// (a file deleted from its card since doesn't hold the game there: it comes back as a new game,
+					// to the card Settings says; one on the second card while that's out is taken as still there)
+					bool sdk = c.where.count(f.path) > 0;
+					std::string root = sdk ? sd2 : ROMS;
+					if (root.empty() || exists(root + "/" + f.path))
+					{
+						known = sdk ? 1 : 0;
+						break;
+					}
+				}
+			}
+			bool sd = known >= 0 ? known == 1 : toSd2;
+			if (known < 0)
+			{
+				bool here = true, there = !sd2.empty(), any = false;
+				for (auto& f : g.files)
+				{
+					if (!f.media)
+					{
+						any = true;
+						here = here && exists(ROMS + "/" + f.path);
+						there = there && exists(sd2 + "/" + f.path);
+					}
+				}
+				if (any && here)
+				{
+					sd = false;
+				}
+				else if (any && there)
+				{
+					sd = true;
+				}
+			}
+			if (sd)
+			{
+				for (auto& f : g.files)
+				{
+					onSd2.insert(f.path);
+				}
+			}
 		}
+		int waiting = 0;	// files on (or for) the second SD card while it's out
 		std::vector<const MFile*> todo;
 		for (auto& kv : want)
 		{
 			const MFile& f = *kv.second;
-			std::string dst = ROMS + "/" + f.path;
+			bool sd = onSd2.count(f.path) > 0;
+			if (sd && sd2.empty())
+			{
+				waiting++;
+				continue;
+			}
+			std::string dst = (sd ? sd2 : ROMS) + "/" + f.path;
 			auto st = c.files.find(f.path);
+			if (st != c.files.end() && (c.where.count(f.path) > 0) != sd)
+			{
+				// synced to the other card once but gone from it (the game was placed again above): not ours here, so a
+				// file at this path is judged as one copied by hand
+				c.files.erase(st);
+				c.where.erase(f.path);
+				st = c.files.end();
+			}
 			bool there = exists(dst);
 			if (st != c.files.end() && st->second == f.key() && there && (f.size < 0 || f.media || fileSize(dst) == f.size)) continue;
 			if (there && st == c.files.end())
@@ -1112,7 +1314,16 @@ namespace
 				if (f.media) continue;	// (the user's own art, banana-scrape's: kept, not ours)
 				std::string lk = localKey(f, dst);
 				bool same = !lk.empty() ? lk == f.key() : (f.size >= 0 && fileSize(dst) == f.size);
-				if (same) { c.files[f.path] = f.key(); continue; }	// the same file, copied by hand: adopted
+				if (same)
+				{
+					// the same file, copied by hand: adopted, on the card it's on
+					c.files[f.path] = f.key();
+					if (sd)
+					{
+						c.where[f.path] = "sd2";
+					}
+					continue;
+				}
 				res.conflicts.push_back(f.path);	// the user's own file at that path: never overwritten
 				continue;
 			}
@@ -1134,12 +1345,25 @@ namespace
 			gone.push_back(kv.first);
 		}
 		if (emptyList) gone.clear();	// a server listing nothing at all while the card has its games: nothing removed
-		long long need = 0;
-		for (auto* f : todo) need += std::max(0LL, f->size);
-		long long fr = freeBytes(ROMS);
-		say("roms: %zu to download (%.1f MB), %zu to remove, %zu conflicts, %.1f GB free%s", todo.size(), need / 1e6, gone.size(), res.conflicts.size(), fr / 1e9,
-			m.skipped ? (", " + std::to_string(m.skipped) + " games skipped").c_str() : "");
-		if (fr >= 0 && need > fr - (64LL << 20)) { res.errors.push_back("not enough space on the card for this sync"); return res; }
+		long long need = 0, needSd2 = 0;
+		for (auto* f : todo)
+		{
+			need += std::max(0LL, f->size);
+			if (onSd2.count(f->path))
+			{
+				needSd2 += std::max(0LL, f->size);
+			}
+		}
+		long long fr = freeBytes(ROMS), frSd2 = sd2.empty() ? -1 : freeBytes(sd2);
+		say("roms: %zu to download (%.1f MB), %zu to remove, %zu conflicts, %.1f GB free%s%s", todo.size(), need / 1e6, gone.size(), res.conflicts.size(), fr / 1e9,
+			m.skipped ? (", " + std::to_string(m.skipped) + " games skipped").c_str() : "",
+			frSd2 >= 0 ? (", " + std::to_string(needSd2 / 1000000) + " MB of it to the second SD card (" + std::to_string(frSd2 / 1000000000) + " GB free)").c_str() : "");
+		if (fr >= 0 && need - needSd2 > fr - (64LL << 20)) { res.errors.push_back("not enough space on the card for this sync"); return res; }
+		if (frSd2 >= 0 && needSd2 > frSd2 - (64LL << 20))
+		{
+			res.errors.push_back("not enough space on the second SD card for this sync");
+			return res;
+		}
 		if (dryRun)
 		{
 			for (auto* f : todo) say("  + %s", f->path.c_str());
@@ -1152,7 +1376,8 @@ namespace
 		for (auto* f : todo)
 		{
 			i++;
-			std::string dst = ROMS + "/" + f->path, err;
+			bool sd = onSd2.count(f->path) > 0;
+			std::string dst = (sd ? sd2 : ROMS) + "/" + f->path, err;
 			std::string label = baseOf(f->path);
 			auto show = [&](long long now) {
 				long long mb = (doneBytes + now) >> 20, tot = std::max(1LL, need >> 20);
@@ -1171,6 +1396,14 @@ namespace
 			doneBytes += std::max(0LL, f->size);
 			if (!ok) { res.errors.push_back(f->path + ": " + (err.empty() ? "write failed" : err)); continue; }
 			c.files[f->path] = f->key();
+			if (sd)
+			{
+				c.where[f->path] = "sd2";
+			}
+			else
+			{
+				c.where.erase(f->path);
+			}
 			res.downloaded++;
 			res.changed = true;
 			saveConf(c);	// progress kept: a sync cut short goes on from here
@@ -1178,49 +1411,79 @@ namespace
 		}
 		for (auto& rel : gone)
 		{
-			std::string p = ROMS + "/" + rel;
+			bool sd = c.where.count(rel) > 0;
+			if (sd && sd2.empty())
+			{
+				waiting++;	// (on the second SD card, which is out: removed when it's back)
+				continue;
+			}
+			std::string root = sd ? sd2 : ROMS, p = root + "/" + rel;
 			if (exists(p) && fileSize(p) > 0 && !unchangedOnCard(c.files[rel], p)) res.errors.push_back(rel + ": changed on the card, kept");
-			else if (unlink(p.c_str()) == 0 || errno == ENOENT) { pruneDirs(dirOf(p), ROMS); res.removed++; res.changed = true; }
+			else if (unlink(p.c_str()) == 0 || errno == ENOENT) { pruneDirs(dirOf(p), root); res.removed++; res.changed = true; }
 			c.files.erase(rel);
+			c.where.erase(rel);
 		}
-		// gamelist.xml per system: the entries of the games whose files are all in place
+		// gamelist.xml per system and card: the entries of the games whose files are all in place, in the gamelist of
+		// the card the game is on (the second card's while it's in)
 		for (auto& s : m.systems)
 		{
-			std::vector<std::vector<std::pair<std::string, std::string>>> ours;
+			std::vector<std::vector<std::pair<std::string, std::string>>> ours[2];
 			for (auto& g : s.games)
 			{
 				bool all = !g.gl.empty();
 				for (auto& f : g.files) { auto st = c.files.find(f.path); if (!f.media && (st == c.files.end() || st->second != f.key())) all = false; }
 				if (!all) continue;
+				int k = !g.files.empty() && c.where.count(g.files[0].path) ? 1 : 0;
+				if (k == 1 && sd2.empty())
+				{
+					continue;
+				}
 				// the picture only when it is there
+				std::string root = k == 1 ? sd2 : ROMS;
 				auto gl = g.gl;
 				for (auto it = gl.begin(); it != gl.end();)
 				{
-					if ((it->first == "image" || it->first == "thumbnail") && !exists(ROMS + "/" + s.folder + "/" + normPath(it->second))) it = gl.erase(it);
+					if ((it->first == "image" || it->first == "thumbnail") && !exists(root + "/" + s.folder + "/" + normPath(it->second))) it = gl.erase(it);
 					else ++it;
 				}
-				ours.push_back(gl);
+				ours[k].push_back(gl);
 			}
-			std::string path = ROMS + "/" + s.folder + "/gamelist.xml", out;
-			auto& before = c.gamelist[s.folder];
-			std::set<std::string> drop(before.begin(), before.end());
-			bool had = exists(path);
-			if (ours.empty() && drop.empty()) { c.gamelist.erase(s.folder); continue; }
-			if (!mergeGamelist(had ? readFile(path) : "", drop, ours, out)) { res.errors.push_back(s.folder + "/gamelist.xml can't be read: left alone"); continue; }
-			if ((!had || readFile(path) != out) && !writeAtomic(path, out)) { res.errors.push_back(s.folder + "/gamelist.xml: write failed"); continue; }
-			before.clear();
-			for (auto& e : ours) for (auto& kv : e) if (kv.first == "path") before.push_back(kv.second);
-			res.changed = true;
+			for (int k = 0; k < 2; k++)
+			{
+				std::string root = k == 1 ? sd2 : ROMS, key = (k == 1 ? "@sd2/" : "") + s.folder;
+				if (root.empty())
+				{
+					continue;	// (the second SD card is out: its gamelist when it's back)
+				}
+				std::string path = root + "/" + s.folder + "/gamelist.xml", out;
+				auto& before = c.gamelist[key];
+				std::set<std::string> drop(before.begin(), before.end());
+				bool had = exists(path);
+				if (ours[k].empty() && drop.empty()) { c.gamelist.erase(key); continue; }
+				if (!mergeGamelist(had ? readFile(path) : "", drop, ours[k], out)) { res.errors.push_back(s.folder + "/gamelist.xml can't be read: left alone"); continue; }
+				if ((!had || readFile(path) != out) && !writeAtomic(path, out)) { res.errors.push_back(s.folder + "/gamelist.xml: write failed"); continue; }
+				before.clear();
+				for (auto& e : ours[k]) for (auto& kv : e) if (kv.first == "path") before.push_back(kv.second);
+				res.changed = true;
+			}
 		}
 		std::set<std::string> listed;
 		for (auto& s : m.systems) listed.insert(s.folder);
 		for (auto it = c.gamelist.begin(); it != c.gamelist.end();)
 		{
-			if (listed.count(it->first) || skipFolders.count(it->first) || emptyList) { ++it; continue; }
-			std::string path = ROMS + "/" + it->first + "/gamelist.xml", out;
+			bool sd = it->first.compare(0, 5, "@sd2/") == 0;
+			std::string folder = sd ? it->first.substr(5) : it->first, root = sd ? sd2 : ROMS;
+			if (listed.count(folder) || skipFolders.count(folder) || emptyList || root.empty()) { ++it; continue; }
+			std::string path = root + "/" + folder + "/gamelist.xml", out;
 			std::set<std::string> drop(it->second.begin(), it->second.end());
 			if (exists(path) && mergeGamelist(readFile(path), drop, {}, out)) writeAtomic(path, out);
 			it = c.gamelist.erase(it);
+		}
+		if (waiting)
+		{
+			// (an error, so the server's list isn't taken as done: the next sync looks at these files again)
+			res.errors.push_back("the second SD card is out, has no roms folder or its games are off in Settings: " + std::to_string(waiting) +
+				(waiting == 1 ? " file waits" : " files wait") + " for it");
 		}
 		if (res.errors.empty()) c.etag = m.etag;
 		saveConf(c);
@@ -1436,7 +1699,14 @@ namespace
 			else if (m.unchanged) say("roms: up to date");
 			else
 			{
-				RomResult r = syncRoms(*b, c, m, skip, pick ? &chosen : nullptr);
+				// (the second SD card only on a handheld with a second slot, as the sd2 script finds: elsewhere the
+				// setting, say from a card moved over from an RG DS Plus, is this card)
+				bool toSd2 = get("homesync_roms_to", "card") == "sd2" && exists(RUN + "/sd2/slot");
+				if (toSd2 && sd2Roms().empty() && get("sd2_roms", "on") != "off")
+				{
+					sd2MakeRoms();	// (a fresh card; not one whose games are off in Settings)
+				}
+				RomResult r = syncRoms(*b, c, m, skip, pick ? &chosen : nullptr, toSd2);
 				downloaded = r.downloaded; removed = r.removed; conflicts = r.conflicts;
 				for (auto& e : r.errors) errors.push_back(e);
 			}
@@ -1516,13 +1786,24 @@ int main(int argc, char** argv)
 		std::string err;
 		if (!b->manifest(m, {}, err)) { printf("error %s\n", err.c_str()); return 1; }
 		std::set<std::string> chosen = readChoice();
+		std::string sd2 = sd2Roms();	// (a game on either card is on the handheld)
 		for (auto& s : m.systems)
 			for (auto& g : s.games)
 			{
 				std::string k = gameKey(g);
 				if (k.empty()) continue;
 				long long bytes = 0; bool there = true;
-				for (auto& f : g.files) if (!f.media) { bytes += std::max(0LL, f.size); if (!exists(ROMS + "/" + f.path)) there = false; }
+				for (auto& f : g.files)
+				{
+					if (!f.media)
+					{
+						bytes += std::max(0LL, f.size);
+						if (!exists(ROMS + "/" + f.path) && (sd2.empty() || !exists(sd2 + "/" + f.path)))
+						{
+							there = false;
+						}
+					}
+				}
 				std::string t = g.title.empty() ? baseOf(k) : g.title;
 				for (char& ch : t) if (ch == '\t' || ch == '\n') ch = ' ';
 				printf("%s\t%s\t%s\t%lld\t%d\t%d\n", s.folder.c_str(), k.c_str(), t.c_str(), bytes, chosen.count(k) ? 1 : 0, there ? 1 : 0);
@@ -1544,6 +1825,7 @@ int main(int argc, char** argv)
 		// the pid for the menu's Stop (Settings > Network > Home server > Sync now while it runs)
 		catchKill();
 		std::ofstream(RUN + "/sync.pid") << getpid() << "\n";
+		logWanted = !dryRun;
 		int rc = doSync(savesOnly, autoWhy);
 		unlink((RUN + "/sync.pid").c_str());
 		return rc;
