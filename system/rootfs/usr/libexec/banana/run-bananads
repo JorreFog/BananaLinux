@@ -108,6 +108,14 @@ fi
 # the game's own 3D resolution (its page: 1, 2, or 3 or 4 (experimental)), for this run (the environment wins over bananads.conf)
 r=$(/usr/libexec/banana/nds-game-option nds-per-game-res.conf "$1")
 case $r in 1|2|3|4) echo "run-bananads: ${1##*/} has its own 3D resolution: ${r}x" >&2; export BANANADS_RENDER_SCALE=$r ;; esac
+# the game's own timing (its page: Accurate, core.slice = 64, or Fast, auto: the two CPUs run up to 512 cycles apart
+# away from IPC, up to ~10% faster in HeartGold), for this run, so a game that takes Fast (Origin HeartGold at 2x on the
+# RG DS Plus) has it while one it breaks (Golden Sun: Dark Dawn) stays Accurate
+t=$(/usr/libexec/banana/nds-game-option nds-per-game-timing.conf "$1")
+case $t in
+accurate) echo "run-bananads: ${1##*/} has its own timing: accurate" >&2; export BANANADS_CORE_SLICE=64 ;;
+fast) echo "run-bananads: ${1##*/} has its own timing: fast" >&2; export BANANADS_CORE_SLICE=auto ;;
+esac
 # the game's own shader (its page, X in the library: nds-game-shader), for this run only (the environment wins over
 # bananads.conf)
 s=$(/usr/libexec/banana/nds-game-shader "$1")
