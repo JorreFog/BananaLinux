@@ -1980,7 +1980,7 @@ namespace banana
 		if (cur.key == "hs_server")
 		{
 			std::string n = homeServer();
-			help = n.empty() ? "Not paired. A looks for Romhost on the network (Homeport > ROMs > Pair a device shows its code); when none answers, type the address of a Romhost or a RomM server (a name or IP, and :port if it isn't the usual one). RomM then shows a code to enter on its Pair device page."
+			help = n.empty() ? "Not paired. A looks for Romhost on the network (Homeport > ROMs > Pair a device shows its code); when none answers, type the address of a Romhost or a RomM server (a name or IP, and :port if it isn't the usual one). For RomM, the handheld then shows an address to open in RomM to approve it."
 				: "Paired with " + n + ". A pairs again (another server, or after the handheld was removed there).";
 		}
 		if (cur.key == "hs_sync" && !syncLine.empty() && !syncing())
@@ -6092,7 +6092,7 @@ namespace banana
 				std::istringstream in(ln.substr(5));
 				std::string code, url;
 				in >> code >> url;
-				message = "On " + hsName + ", open " + url + " (signed in) and enter " + code + ", then approve this handheld. Waiting...";
+				message = "On " + hsName + ", open " + url + " (signed in) and approve this handheld (code " + code + "). Waiting...";
 			}
 			else if (ln.compare(0, 7, "paired ") == 0) { hsStep = 0; hsPairedAt = -1e18; message = "Paired with " + ln.substr(7) + ". Sync now, below, gets the games and saves."; }
 			else if (ln.compare(0, 6, "error ") == 0) { hsStep = 0; message = "Pairing didn't work: " + ln.substr(6) + "."; }
