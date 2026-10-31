@@ -1,0 +1,222 @@
+From 8328cf4259062a2c792cc73f905f4c15e9a16cbd Mon Sep 17 00:00:00 2001
+From: BananaDS <bananads@localhost>
+Date: Sun, 18 Oct 2026 19:47:53 +0000
+Subject: [PATCH 3/3] ARMJIT_A64: an IRQ that CPSR.I masks doesn't end a block
+ chain (MELONDS_JIT_NOIRQCHAIN)
+
+The first session's 0023 (perf/jit, agent jit), ported onto 0030's stubs. melonDS sets ARM::IRQ whenever IME and
+IE & IF say so, whatever CPSR.I is, so while a game runs with interrupts disabled (an IRQ handler, an
+OS_DisableInterrupts section) and one is pending, StopExecution stays set and every block exit went back to the
+loop: ARM_Ret, TriggerIRQ (which returns at once with I set), Timestamp += Cycles, the lookup and ARM_Dispatch, to
+run the block the exit would have gone on to anyway. The exit stubs (ExitCheck, ExitCheckPC, DynExit, DynExitA)
+and a self loop's inline check now look closer when StopExecution is set: with Halted and IdleLoop clear and
+CPSR.I set they go on with their checks (and, at a slice's end, SLICECHAIN's) and into the next block, as the loop
+would. Off the common path (StopExecution clear) nothing changes; NZCV isn't touched. Exact; off with the old code
+generation, MELONDS_JIT_NOIRQCHAIN=1 alone. The first session's tests/irqmask exercises it.
+---
+ src/ARMJIT_A64/ARMJIT_Compiler.cpp | 70 ++++++++++++++++++++++++++----
+ src/ARMJIT_A64/ARMJIT_Compiler.h   |  2 +
+ src/NDS.cpp                        |  5 ++-
+ 3 files changed, 66 insertions(+), 11 deletions(-)
+
+diff --git a/src/ARMJIT_A64/ARMJIT_Compiler.cpp b/src/ARMJIT_A64/ARMJIT_Compiler.cpp
+index ff49adb..95ef68e 100644
+--- a/src/ARMJIT_A64/ARMJIT_Compiler.cpp
++++ b/src/ARMJIT_A64/ARMJIT_Compiler.cpp
+@@ -279,6 +279,8 @@ Compiler::Compiler(melonDS::NDS& nds) : Arm64Gen::ARM64XEmitter(), NDS(nds)
+         OptDynCache = OptDynAddr && !getenv("MELONDS_JIT_NODYNCACHE") && !getenv("MELONDS_JIT_NOLINK");
+         OptExitPC = OptExitStub && !getenv("MELONDS_JIT_NOEXITPC") && !getenv("MELONDS_JIT_NOLINK");   // (ExitCheckPC)
+         OptSelfLoop = OptExitPC && !getenv("MELONDS_JIT_NOSELFLOOP");
++        // IRQCHAIN (the first session's 0023, BananaDS's jit.irqchain): MELONDS_JIT_NOIRQCHAIN=1 turns it off
++        OptIrqChain = OptExitStub && !getenv("MELONDS_JIT_NOIRQCHAIN");
+         // SLICECHAIN (melonDS patch 0030, BananaDS's jit.slice_chain): MELONDS_JIT_SLICECHAIN=0 turns it off, and so
+         // does the old code generation
+         {
+@@ -973,10 +975,12 @@ void Compiler::Comp_ExitTo(bool known, u32 knownR15, bool thumbAfter, bool store
+     };
+     FixupBranch stop, late;
+     const u8* resume = nullptr;   // (a self loop's way round after the late check: SLICECHAIN goes on there)
++    const u8* selfCont = nullptr;
+     if (selfLoop)
+     {
+         LDR(INDEX_UNSIGNED, W0, RCPU, offsetof(ARM, StopExecution));
+         stop = CBNZ(W0);
++        selfCont = (const u8*)GetRXPtr();
+         ARM64Reg ts = LoopMode && LoopTsReg != INVALID_REG ? LoopTsReg : X16;
+         if (ts == X16)
+             MOVP2R(X16, Num ? &NDS.ARM7Timestamp : &NDS.ARM9Timestamp);
+@@ -1021,17 +1025,31 @@ void Compiler::Comp_ExitTo(bool known, u32 knownR15, bool thumbAfter, bool store
+         const u8* entry = LoopMode ? LoopBodyRX : BlockStartRX + EntrySkip[Num];
+         *(u32*)slot = 0x14000000 | ((u32)((entry - slotRX) / 4) & 0x3FFFFFF);
+         LinkedTo[(u32)(BlockStartRX - GetRXBase())].push_back((u32)(slotRX - GetRXBase()));
++        // (the stop way first: W0 is StopExecution only there)
++        SetJumpTarget(stop);
++        if (OptIrqChain)
++        {
++            // IRQCHAIN (as the stubs' irqMasked): only an IRQ that CPSR.I masks: round the loop again. NZCV untouched
++            // (LoopMode may hold pending flags there)
++            ANDI2R(W16, W0, 0x00FF00FF);
++            FixupBranch hard = CBNZ(W16);
++            FixupBranch taken = TBZ(RCPSR, 7);
++            B(selfCont);
++            SetJumpTarget(hard);
++            SetJumpTarget(taken);
++        }
+         if (Num == 0 && SliceChainStub && !LoopMode)
+         {
+             // SLICECHAIN: the slice has ended; round the loop again when the slice loop would only keep time
+             // (nothing is in host registers here but RCPSR, RCycles and the base: callee-saved)
++            FixupBranch out = B();
+             SetJumpTarget(late);
+             BL(SliceChainStub);
+             CBNZ(W0, resume);
++            SetJumpTarget(out);
+         }
+         else
+             SetJumpTarget(late);
+-        SetJumpTarget(stop);
+         flagsOut();
+         if (LoopMode)
+             RegCache.PrepareExit();
+@@ -1067,10 +1085,13 @@ void Compiler::Gen_ExitStubs(int num)
+     u64* ts = num ? &NDS.ARM7Timestamp : &NDS.ARM9Timestamp;   // its Target is the next u64
+ 
+     // the shared part: Timestamp += Cycles, Cycles = 0, to *stop/*late when the loop has to take over
+-    auto checks = [&](FixupBranch& stop, FixupBranch& late)
++    // (*cont: past the StopExecution check, for irqMasked)
++    const u8* contDummy;
++    auto checks = [&](FixupBranch& stop, FixupBranch& late, const u8*& cont)
+     {
+         LDR(INDEX_UNSIGNED, W0, RCPU, offsetof(ARM, StopExecution));
+         stop = CBNZ(W0);
++        cont = (const u8*)GetRXPtr();
+         MOVP2R(X16, ts);
+         LDP(INDEX_SIGNED, X17, X0, X16, 0);
+         if (OptExitStub)
+@@ -1123,12 +1144,28 @@ void Compiler::Gen_ExitStubs(int num)
+         Write32((u32)(ret >> 32));
+     };
+ 
++    // IRQCHAIN, at *stop's target (StopExecution set, in W0): an IRQ is the only reason (Halted and IdleLoop, bytes
++    // 0 and 2, clear) and CPSR.I masks it: the loop would call TriggerIRQ, which returns at once, then go on to the
++    // next block as the stub does, so back to *cont. NZCV untouched (as the rest of the checks)
++    auto irqMasked = [&](FixupBranch& stop, const u8* cont)
++    {
++        SetJumpTarget(stop);
++        if (!OptIrqChain)
++            return;
++        ANDI2R(W16, W0, 0x00FF00FF);
++        FixupBranch hard = CBNZ(W16);
++        FixupBranch taken = TBZ(RCPSR, 7);
++        B(cont);
++        SetJumpTarget(hard);
++        SetJumpTarget(taken);
++    };
++
+     StubsStart[num * 2] = GetRXPtr();
+     if (!OptExitStub)
+     {
+         ExitCheck[num][0] = ExitCheck[num][1] = GetRXPtr();
+         FixupBranch stop, late;
+-        checks(stop, late);
++        checks(stop, late, contDummy);
+         STR(INDEX_UNSIGNED, RCPSR, RCPU, offsetof(ARM, CPSR));   // (the next block reads it from memory)
+         RET();
+         SetJumpTarget(stop);
+@@ -1146,21 +1183,27 @@ void Compiler::Gen_ExitStubs(int num)
+             STR(INDEX_UNSIGNED, W0, RCPU, offsetof(ARM, R[15]));
+             ExitCheck[num][c] = GetRXPtr();
+             FixupBranch stop, late;
+-            checks(stop, late);
++            const u8* cont;
++            checks(stop, late, cont);
+             if (c)
+                 STR(INDEX_UNSIGNED, RCPSR, RCPU, offsetof(ARM, CPSR));   // (the next block reads it from memory)
+             RET();
+-            SetJumpTarget(late);
++            // (the stop way first: W0 is StopExecution only there)
++            irqMasked(stop, cont);
+             if (chain)
+             {
++                FixupBranch toLoop = B();
++                SetJumpTarget(late);
+                 callChain();
+                 FixupBranch out = CBZ(W0);
+                 if (c)
+                     STR(INDEX_UNSIGNED, RCPSR, RCPU, offsetof(ARM, CPSR));
+                 RET();
+                 SetJumpTarget(out);
++                SetJumpTarget(toLoop);
+             }
+-            SetJumpTarget(stop);
++            else
++                SetJumpTarget(late);
+             retToLoop();
+         }
+         if (chain)
+@@ -1184,7 +1227,8 @@ void Compiler::Gen_ExitStubs(int num)
+     {
+         (a ? DynExitA : DynExit)[num][c] = GetRXPtr();
+         FixupBranch stop, late;
+-        checks(stop, late);
++        const u8* cont;
++        checks(stop, late, cont);
+         const u8* resume = (const u8*)GetRXPtr();
+         if (c)
+             STR(INDEX_UNSIGNED, RCPSR, RCPU, offsetof(ARM, CPSR));
+@@ -1245,13 +1289,21 @@ void Compiler::Gen_ExitStubs(int num)
+         }
+         ADD(X16, X17, W16, ArithOption(W16));   // + the entry's offset (uxtw)
+         BR(X16);
+-        SetJumpTarget(late);
++        // (the stop way first: W0 is StopExecution only there)
++        if (OptExitStub)
++            irqMasked(stop, cont);
++        else
++            SetJumpTarget(stop);
+         if (chain)
+         {
++            FixupBranch toLoop = B();
++            SetJumpTarget(late);
+             callChain();
+             CBNZ(W0, resume);
++            SetJumpTarget(toLoop);
+         }
+-        SetJumpTarget(stop);
++        else
++            SetJumpTarget(late);
+         SetJumpTarget(outside);
+         SetJumpTarget(miss);
+         QuickTailCall(X16, ARM_Ret);
+diff --git a/src/ARMJIT_A64/ARMJIT_Compiler.h b/src/ARMJIT_A64/ARMJIT_Compiler.h
+index f289820..20c8824 100644
+--- a/src/ARMJIT_A64/ARMJIT_Compiler.h
++++ b/src/ARMJIT_A64/ARMJIT_Compiler.h
+@@ -284,6 +284,8 @@ public:
+     bool OptExitStub = true;      // NOEXITSTUB: shorter exit stubs, and no CPSR store when RCPSR is unchanged
+     bool OptExitPC = true;        // NOEXITPC: a constant exit's R15 stored by the exit stub, from a literal
+     bool OptSelfLoop = true;      // NOSELFLOOP: an exit back to its own block's start does the checks inline
++    bool OptIrqChain = true;      // NOIRQCHAIN: the exit stubs go on into the next block when the only stop reason is
++                                  // an IRQ that CPSR.I masks (the loop's TriggerIRQ would do nothing)
+     bool OptSliceChain = true;    // MELONDS_JIT_SLICECHAIN=0: the ARM9's exits whose slice has ended ask
+                                   // NDS::SliceChain9 whether the slice loop would only keep time, and go on if so
+     const void* SliceChainStub = nullptr;   // (a self loop's late way BLs it: x4/x30 kept round SliceChain9's call)
+diff --git a/src/NDS.cpp b/src/NDS.cpp
+index 56b4e30..d443c56 100644
+--- a/src/NDS.cpp
++++ b/src/NDS.cpp
+@@ -1513,8 +1513,9 @@ void NDS::RunSlicesJIT()
+     NDS& n = *this;
+     char* const sb = PinAddress(reinterpret_cast<char*>(&n.SysTimestamp));
+     const u32 shift = n.ARM9ClockShift;
+-    // ExecuteJITInline's loop has ended (the stub has added the cycles; StopExecution is clear); target = the ARM9's
+-    // time, as the loop takes it
++    // ExecuteJITInline's loop has ended (the stub has added the cycles; StopExecution is clear, or with IRQCHAIN only
++    // an IRQ that CPSR.I masks, which the loop's TriggerIRQ would leave as it is); target = the ARM9's time, as the
++    // loop takes it
+     const u64 target = n.ARM9Timestamp >> shift;
+     // the ARM7: ahead of the ARM9 (nothing to do), or halted with no IRQ to wake it (first: with a busy ARM7 this is
+     // the way out every time)
+-- 
+2.43.0
+

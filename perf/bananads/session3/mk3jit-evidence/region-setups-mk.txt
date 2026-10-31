@@ -1,0 +1,19 @@
+# SetupExecutableRegion calls per frame by (cpu, region), MK scene 1650-2150 (instrumented build; regions: 1 ITCM, 3 BIOS9, 4 MainRAM, 5 SharedWRAM, 8 BIOS7, 9 WRAM7)
+## 3a743f3 + 0085/0086 (region_pair only):
+  cpu0 region  1   191.4/frame
+  cpu0 region  3   147.4/frame
+  cpu0 region  4   103.3/frame
+  cpu1 region  4     0.0/frame
+  cpu1 region  5   118.0/frame
+  cpu1 region  8    76.8/frame
+  cpu1 region  9     7.6/frame
+  cpu1 region 12     0.0/frame
+## first form of 0087 (two kept regions, BIOS9/SWRAM kept; Execute<JIT> not yet swapping):
+  cpu0 region  1   123.1/frame
+  cpu0 region  3    78.2/frame
+  cpu0 region  4    81.3/frame
+  cpu1 region  4     0.0/frame
+  cpu1 region  5    12.4/frame
+  cpu1 region  8    12.4/frame
+  cpu1 region  9     0.6/frame
+  cpu1 region 12     0.0/frame

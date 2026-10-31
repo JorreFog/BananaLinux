@@ -1,0 +1,767 @@
+diff --git a/bananads/docs/SETTINGS.md b/bananads/docs/SETTINGS.md
+index 976aa40..0513079 100644
+--- a/bananads/docs/SETTINGS.md
++++ b/bananads/docs/SETTINGS.md
+@@ -36,6 +36,7 @@ key can also come from the environment as `BANANADS_<KEY>` (dots become undersco
+ | `render.2d_quarters` | `on` | at `render.scale=2`, a line that shows the 3D layer is composited once per quarter (four times); the four differ only in the 3D layer, so the painter's pass over the 2D layers (the ones below the 3D layer onto the backdrop, the ones above onto nothing) is done once and each quarter only merges its 3D line in, then takes the colour effects as before. `off`: four full passes. Same pixels |
+ | `render.2d_emit_zip` | `on` | at `render.scale=2`, the output stage (master brightness, 6-to-8-bit expansion) writes straight into the frame's two 512-pixel rows: a 3D line's four composited quarters zipped (even and odd pixels) as it goes, and a line without the 3D layer, or of the bottom screen, with each pixel doubled (`render.2d_fast` builds, display mode 1); `off`: a converted 256-pixel line first, then the zip or the doubling. Same pixels |
+ | `render.2d_prefetch` | `off` | at `render.scale=2` with `render.3d_share` and `render.2d_quarters`, the 2D thread prefetches the next line's four 3D quarters (4 KB of Gengis's rows, written on other cores and read once here: the 2D thread's main memory cost at 2x) while it composites this line's. Same pixels; off until the device says it helps (the simulator can't see prefetches) |
++| `render.2d_tiles` | `on` | at `render.scale=2` with `render.2d_quarters` and `render.2d_emit_zip` (display mode 1, `render.2d_fast`), a 3D line's four quarters are composited, given their colour effects and written into the frame's two rows in 64-pixel tiles, so each quarter's composited pixels are read back for the zip while still in L1, instead of four 1 KB lines a pass later. `off`: the whole-line passes. Same pixels |
+ | `render.3d_share` | `on` | with Gengis and the 2D thread, a line's job points at Gengis's rows of the 3D frame (Gengis keeps two frames' rows) instead of a copy: at `render.scale=2` the line's four quarters (4 KB), at 1x the line (1 KB). Exact: the same frames and audio |
+ | `render.2d_lazy` | `on` | with the 2D thread (`render.2d_thread`), a frame's last lines may be drawn while the emulator runs the next frame: at a frame's end the emulator waits only for the frame before's, and whoever reads a frame (the KMS presenter, `top()`/`bottom()`, a savestate's picture) waits for its own. Same pictures |
+ | `render.3d_wait2d` | `on` | with `render.3d_share` (1x and 2x), the 2D thread waits for each line's Gengis bin before compositing it, not the emulator's thread; the emulator waits for the 3D frame only at VBlank (before the geometry engine's next frame; with `render.3d_pipeline` only for its conversion). Same pictures |
+diff --git a/bananads/gpu2d/GPU2D_Banana.cpp b/bananads/gpu2d/GPU2D_Banana.cpp
+index 816ee93..519c397 100644
+--- a/bananads/gpu2d/GPU2D_Banana.cpp
++++ b/bananads/gpu2d/GPU2D_Banana.cpp
+@@ -22,6 +22,7 @@
+ #include <utility>
+ #include "GPU2D_Banana.h"
+ #include "GPU_ColorOp.h"
++#include "Output_Banana.h"
+ 
+ // ---- four-lane SIMD, just what the compositor needs ------------------------------------------------
+ #if !defined(BANANA_NO_SIMD) && (defined(__ARM_NEON) || defined(__aarch64__))
+@@ -131,6 +132,7 @@ bool Banana2DCompUnroll = true;
+ bool Banana2DQuarters = true;
+ bool Banana2DEmitZip = true;
+ bool Banana2DPrefetch = false;
++bool Banana2DTiles = true;
+ bool Banana3DShare = true;
+ bool Banana3DWait2D = true;
+ 
+@@ -595,8 +597,11 @@ static inline bool HasZeroNibble(u32 pix) { return ((pix - 0x11111111u) & ~pix &
+ 
+ void BananaRenderer2D::DrawBG_3D()
+ {
+-    const u32* src = Line3D;
+-    u32* out = BGLine(0);
++    DrawBG_3DTo(BGLine(0), Line3D);
++}
++
++void BananaRenderer2D::DrawBG_3DTo(u32* out, const u32* src)
++{
+     for (int i = 0; i < 256; i++)
+     {
+         u32 c = src[i];
+@@ -2441,11 +2446,11 @@ void BananaRenderer2D::Composite(u32* outTop, u32* outSecond, bool needSecond)
+ // the base itself is the below pixel (a constant when it is the backdrop). The same pixels as the four full passes.
+ // belowKind: 0 the backdrop's colour, 1 a base line, 2 BelowTop/BelowSec
+ template<bool needSecond, bool raw, bool hasAbove, int belowKind>
+-static void MergeQuarter(const u32* c3line, const u32* base, const u32* belowTop, const u32* belowSec, const u32* aboveTop, const u32* aboveSec, u32* outTop, u32* outSecond)
++static void MergeQuarter(const u32* c3line, const u32* base, const u32* belowTop, const u32* belowSec, const u32* aboveTop, const u32* aboveSec, u32* outTop, u32* outSecond, int i0 = 0, int i1 = 256)
+ {
+     const V4 flagbyte = VDup(0xFF000000), orv = VDup(0x40000000);
+     const V4 backdrop = VDup(base[0]);
+-    for (int i = 0; i < 256; i += 4)
++    for (int i = i0; i < i1; i += 4)
+     {
+         V4 c = VLoad(c3line + i);
+         V4 m3;
+@@ -2477,22 +2482,28 @@ static void MergeQuarter(const u32* c3line, const u32* base, const u32* belowTop
+ }
+ 
+ template<bool needSecond, bool raw>
+-static void MergeQuarterN(bool hasAbove, int belowKind, const u32* c3line, const u32* base, const u32* belowTop, const u32* belowSec, const u32* aboveTop, const u32* aboveSec, u32* outTop, u32* outSecond)
++static void MergeQuarterN(bool hasAbove, int belowKind, const u32* c3line, const u32* base, const u32* belowTop, const u32* belowSec, const u32* aboveTop, const u32* aboveSec, u32* outTop, u32* outSecond, int i0 = 0, int i1 = 256)
+ {
+     if (hasAbove)
+     {
+-        if (belowKind == 0)      MergeQuarter<needSecond, raw, true, 0>(c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, outSecond);
+-        else if (belowKind == 1) MergeQuarter<needSecond, raw, true, 1>(c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, outSecond);
+-        else                     MergeQuarter<needSecond, raw, true, 2>(c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, outSecond);
++        if (belowKind == 0)      MergeQuarter<needSecond, raw, true, 0>(c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, outSecond, i0, i1);
++        else if (belowKind == 1) MergeQuarter<needSecond, raw, true, 1>(c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, outSecond, i0, i1);
++        else                     MergeQuarter<needSecond, raw, true, 2>(c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, outSecond, i0, i1);
+     }
+     else
+     {
+-        if (belowKind == 0)      MergeQuarter<needSecond, raw, false, 0>(c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, outSecond);
+-        else if (belowKind == 1) MergeQuarter<needSecond, raw, false, 1>(c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, outSecond);
+-        else                     MergeQuarter<needSecond, raw, false, 2>(c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, outSecond);
++        if (belowKind == 0)      MergeQuarter<needSecond, raw, false, 0>(c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, outSecond, i0, i1);
++        else if (belowKind == 1) MergeQuarter<needSecond, raw, false, 1>(c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, outSecond, i0, i1);
++        else                     MergeQuarter<needSecond, raw, false, 2>(c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, outSecond, i0, i1);
+     }
+ }
+ 
++static inline void MergeQuarterAny(bool needSecond, bool raw, bool hasAbove, int belowKind, const u32* c3line, const u32* base, const u32* belowTop, const u32* belowSec, const u32* aboveTop, const u32* aboveSec, u32* outTop, u32* outSecond, int i0 = 0, int i1 = 256)
++{
++    if (needSecond) { if (raw) MergeQuarterN<true, true>(hasAbove, belowKind, c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, outSecond, i0, i1); else MergeQuarterN<true, false>(hasAbove, belowKind, c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, outSecond, i0, i1); }
++    else            { if (raw) MergeQuarterN<false, true>(hasAbove, belowKind, c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, nullptr, i0, i1);  else MergeQuarterN<false, false>(hasAbove, belowKind, c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, nullptr, i0, i1); }
++}
++
+ void BananaRenderer2D::CompositeHires(u32* dst, const u32* const* q3d)
+ {
+     // which colour effects can apply on this line? (CompositeTo's test)
+@@ -2542,8 +2553,7 @@ void BananaRenderer2D::CompositeHires(u32* dst, const u32* const* q3d)
+         }
+         const u32* c3 = raw ? q3d[q] : BGLine(0);
+         u32* top = possible ? TopLine : outs[q];
+-        if (needSecond) { if (raw) MergeQuarterN<true, true>(nAbove > 0, belowKind, c3, startLine, BelowTop, BelowSec, AboveTop, AboveSec, top, SecondLine); else MergeQuarterN<true, false>(nAbove > 0, belowKind, c3, startLine, BelowTop, BelowSec, AboveTop, AboveSec, top, SecondLine); }
+-        else            { if (raw) MergeQuarterN<false, true>(nAbove > 0, belowKind, c3, startLine, BelowTop, BelowSec, AboveTop, AboveSec, top, nullptr);   else MergeQuarterN<false, false>(nAbove > 0, belowKind, c3, startLine, BelowTop, BelowSec, AboveTop, AboveSec, top, nullptr); }
++        MergeQuarterAny(needSecond, raw, nAbove > 0, belowKind, c3, startLine, BelowTop, BelowSec, AboveTop, AboveSec, top, SecondLine);
+         if (possible) EffectsTo(outs[q], effect, secondTargets);
+     }
+     Line3D = line3d;
+@@ -2595,11 +2605,11 @@ static inline uint32x4_t VFirstBit(uint32x4_t f)
+ }
+ 
+ template<bool up>
+-void BananaRenderer2D::BrightnessPassNeon(u32* dst)
++void BananaRenderer2D::BrightnessPassNeon(u32* dst, int i0, int i1)
+ {
+     const uint32x4_t bc = vdupq_n_u32(R.BlendCnt), evy = vdupq_n_u32(R.EVY), m20 = vdupq_n_u32(0x20);
+     const u8* wm = WindowsOn ? WindowMask : AllOnes;
+-    for (int i = 0; i < 256; i += 4)
++    for (int i = i0; i < i1; i += 4)
+     {
+         uint32x4_t val = vld1q_u32(&TopLine[i]);
+         uint32x4_t hit = vtstq_u32(VFirstBit(vshrq_n_u32(val, 24)), bc);
+@@ -2610,7 +2620,7 @@ void BananaRenderer2D::BrightnessPassNeon(u32* dst)
+ 
+ // EffectsPass four pixels at a time: every result the lanes can need, then the same choices as masks
+ template<u32 effect>
+-void BananaRenderer2D::EffectsPassNeon(u32* dst)
++void BananaRenderer2D::EffectsPassNeon(u32* dst, int i0, int i1)
+ {
+     const u32 blendCnt = R.BlendCnt;
+     const uint32x4_t bc = vdupq_n_u32(blendCnt), evy = vdupq_n_u32(R.EVY);
+@@ -2623,7 +2633,7 @@ void BananaRenderer2D::EffectsPassNeon(u32* dst)
+     const uint32x4_t d3Bright = vdupq_n_u32((effect >= 2 && (blendCnt & 0x01)) ? ~0u : 0);
+     const u8* wm = WindowsOn ? WindowMask : AllOnes;
+ 
+-    for (int i = 0; i < 256; i += 4)
++    for (int i = i0; i < i1; i += 4)
+     {
+         uint32x4_t val1 = vld1q_u32(&TopLine[i]);
+         uint32x4_t val2 = vld1q_u32(&SecondLine[i]);
+@@ -2685,13 +2695,13 @@ void BananaRenderer2D::EffectsPassNeon(u32* dst)
+ // brightness up/down with no 2nd targets in BLDCNT: the only effect that can apply is on 1st-target
+ // pixels inside the effect window
+ template<bool up>
+-void BananaRenderer2D::BrightnessPass(u32* dst)
++void BananaRenderer2D::BrightnessPass(u32* dst, int i0, int i1)
+ {
+     u32 blendCnt = R.BlendCnt;
+     u32 evy = R.EVY;
+     const u8* wm = WindowsOn ? WindowMask : AllOnes;
+ 
+-    for (int i = 0; i < 256; i++)
++    for (int i = i0; i < i1; i++)
+     {
+         u32 val = TopLine[i];
+         u32 f1 = val >> 24;
+@@ -2705,13 +2715,13 @@ void BananaRenderer2D::BrightnessPass(u32* dst)
+ 
+ // melonDS ColorComposite with the 2nd-target bits set: sprite and 3D blending, alpha, brightness
+ template<u32 effect>
+-void BananaRenderer2D::EffectsPass(u32* dst)
++void BananaRenderer2D::EffectsPass(u32* dst, int i0, int i1)
+ {
+     u32 blendCnt = R.BlendCnt;
+     const u8* wm = WindowsOn ? WindowMask : AllOnes;
+     u32 EVA = R.EVA, EVB = R.EVB, EVY = R.EVY;
+ 
+-    for (int i = 0; i < 256; i++)
++    for (int i = i0; i < i1; i++)
+     {
+         u32 val1 = TopLine[i];
+         u32 val2 = SecondLine[i];
+@@ -3038,6 +3048,12 @@ void BananaRenderer2D::DrawScanlineFrom(u32 line, const Banana2DRegs& regs, cons
+     // the others into HiOut), as DraStic composites its 2x frame's quarters
+     if (Banana2DQuarters)
+     {
++        if (Banana2DTiles && EmitRows)
++        {
++            CompositeHiresTiled(dst, q3d, EmitRows);   // (the rows written here: HiLines 0)
++            HiLines = 0;
++            return;
++        }
+         CompositeHires(dst, q3d);   // (the 2D layers' part of the painter's pass done once for the four)
+         HiLines = 4;
+         return;
+@@ -3057,6 +3073,75 @@ void BananaRenderer2D::DrawScanlineFrom(u32 line, const Banana2DRegs& regs, cons
+     HiLines = 4;
+ }
+ 
++// render.2d_tiles: CompositeHires with the merge, the colour effects and the output stage in 64-pixel tiles, the
++// frame's two rows written here (rows: EmitRows; the quarters' zip of EmitA). Each quarter's composited tile is written
++// to its line (quarter 0's to dst = Output2D, for display capture) and read back for the zip at once, while in L1,
++// instead of the four 1 KB lines a line later. The same pixels as CompositeHires + EmitA
++void BananaRenderer2D::CompositeHiresTiled(u32* dst, const u32* const* q3d, u32* rows)
++{
++#if defined(__aarch64__) && !defined(BANANA_NO_SIMD)
++    const u32 blendCnt = R.BlendCnt;
++    const u32 effect = (blendCnt >> 6) & 0x3;
++    const bool secondTargets = (blendCnt & 0x3F00) != 0;
++    const bool possible = secondTargets || ((effect >= 2) && (blendCnt & 0x3F));
++    const bool needSecond = possible && secondTargets;
++
++    CompStep steps[8];
++    u8 full[8];
++    int bg0, start;
++    const u32* startLine;
++    const int n = BuildSteps(steps, full, bg0, needSecond, start, startLine);
++    if (bg0 < start)
++    {
++        // the 3D layer is under a layer that covers the line: the four quarters are the same line
++        CompositeTo(dst);
++        WriteZip(rows, dst, dst, EmitBrightness);
++        WriteZip(rows + 512, dst, dst, EmitBrightness);
++        return;
++    }
++    const bool onBackdrop = Banana2DFast && startLine == BackdropLine;
++    const int nBelow = bg0 - start, nAbove = n - bg0 - 1;
++    if (nBelow) CompositeRange(steps + start, nBelow, startLine, onBackdrop, needSecond, false, BelowTop, BelowSec);
++    if (nAbove) CompositeRange(steps + bg0 + 1, nAbove, ZeroLine, false, needSecond, false, AboveTop, AboveSec);
++    const int belowKind = nBelow ? 2 : onBackdrop ? 0 : 1;
++    const bool raw = steps[bg0].raw3d;
++    const u32* c3[4];
++    for (int q = 0; q < 4; q++)
++    {
++        if (raw) c3[q] = q3d[q];
++        else
++        {
++            // (windows on: the quarter as DrawBG_3D makes it, then the window; quarter 0's is BGLine(0) already)
++            if (q == 0) c3[q] = BGLine(0);
++            else
++            {
++                DrawBG_3DTo(Quarter3D[q], q3d[q]);
++                if (WindowsOn) ApplyWindow(Quarter3D[q], 1);
++                c3[q] = Quarter3D[q];
++            }
++        }
++    }
++    if (Banana2DPrefetch)
++        for (int q = 0; q < 4; q++)
++            for (int i = 0; i < 256; i += 16) __builtin_prefetch(q3d[q] + 1024 + i, 0, 0);
++    u32* const outs[4] = { dst, HiOut[0], HiOut[1], HiOut[2] };
++    for (int i0 = 0; i0 < 256; i0 += 64)
++    {
++        const int i1 = i0 + 64;
++        for (int q = 0; q < 4; q++)
++        {
++            u32* top = possible ? TopLine : outs[q];
++            MergeQuarterAny(needSecond, raw, nAbove > 0, belowKind, c3[q], startLine, BelowTop, BelowSec, AboveTop, AboveSec, top, SecondLine, i0, i1);
++            if (possible) EffectsTo(outs[q], effect, secondTargets, i0, i1);
++        }
++        WriteZip(rows, outs[0], outs[1], EmitBrightness, i0, i1);
++        WriteZip(rows + 512, outs[2], outs[3], EmitBrightness, i0, i1);
++    }
++#else
++    (void)dst; (void)q3d; (void)rows;
++#endif
++}
++
+ // the layers drawn by DrawScanlineFrom composited into dst, with the colour effects
+ void BananaRenderer2D::CompositeTo(u32* dst)
+ {
+@@ -3077,20 +3162,20 @@ void BananaRenderer2D::CompositeTo(u32* dst)
+ }
+ 
+ // the colour effects over TopLine (and SecondLine) into dst
+-void BananaRenderer2D::EffectsTo(u32* dst, u32 effect, bool secondTargets)
++void BananaRenderer2D::EffectsTo(u32* dst, u32 effect, bool secondTargets, int i0, int i1)
+ {
+     if (!secondTargets)
+     {
+ #ifdef BANANA_NEON
+         if (Banana2DFast)
+         {
+-            if (effect == 2) BrightnessPassNeon<true>(dst);
+-            else             BrightnessPassNeon<false>(dst);
++            if (effect == 2) BrightnessPassNeon<true>(dst, i0, i1);
++            else             BrightnessPassNeon<false>(dst, i0, i1);
+             return;
+         }
+ #endif
+-        if (effect == 2) BrightnessPass<true>(dst);
+-        else             BrightnessPass<false>(dst);
++        if (effect == 2) BrightnessPass<true>(dst, i0, i1);
++        else             BrightnessPass<false>(dst, i0, i1);
+         return;
+     }
+ 
+@@ -3099,20 +3184,20 @@ void BananaRenderer2D::EffectsTo(u32* dst, u32 effect, bool secondTargets)
+     {
+         switch (effect)
+         {
+-        case 0: EffectsPassNeon<0>(dst); break;
+-        case 1: EffectsPassNeon<1>(dst); break;
+-        case 2: EffectsPassNeon<2>(dst); break;
+-        default: EffectsPassNeon<3>(dst); break;
++        case 0: EffectsPassNeon<0>(dst, i0, i1); break;
++        case 1: EffectsPassNeon<1>(dst, i0, i1); break;
++        case 2: EffectsPassNeon<2>(dst, i0, i1); break;
++        default: EffectsPassNeon<3>(dst, i0, i1); break;
+         }
+         return;
+     }
+ #endif
+     switch (effect)
+     {
+-    case 0: EffectsPass<0>(dst); break;
+-    case 1: EffectsPass<1>(dst); break;
+-    case 2: EffectsPass<2>(dst); break;
+-    default: EffectsPass<3>(dst); break;
++    case 0: EffectsPass<0>(dst, i0, i1); break;
++    case 1: EffectsPass<1>(dst, i0, i1); break;
++    case 2: EffectsPass<2>(dst, i0, i1); break;
++    default: EffectsPass<3>(dst, i0, i1); break;
+     }
+ }
+ 
+diff --git a/bananads/gpu2d/GPU2D_Banana.h b/bananads/gpu2d/GPU2D_Banana.h
+index e0b44e8..1da062f 100644
+--- a/bananads/gpu2d/GPU2D_Banana.h
++++ b/bananads/gpu2d/GPU2D_Banana.h
+@@ -48,6 +48,10 @@ extern bool Banana2DEmitZip;
+ // render.2d_prefetch (default off; a device-only verdict): at 2x the quarters composite prefetches the next line's 3D
+ // rows (4 KB, written by the Gengis threads) while it merges this line's. No effect on the pixels
+ extern bool Banana2DPrefetch;
++// render.2d_tiles (default on): at 2x the quarters composite, the colour effects and the output stage run in 64-pixel
++// tiles, each quarter's composited tile zipped into the frame's rows while it is still in L1 (no 1 KB line per quarter
++// written and read back). The same pixels
++extern bool Banana2DTiles;
+ extern bool Banana3DShare;
+ extern bool Banana3DWait2D;  // render.3d_wait2d: the 2D thread, not the emulator's, waits for the 3D rows (BananaRenderer)  // render.3d_share: 2D jobs point at Gengis's rows of the 3D frame (BananaRenderer)
+ 
+@@ -128,6 +132,10 @@ public:
+     void DrawScanlineFrom(u32 line, const Banana2DRegs& regs, const u32* line3d, const u32* const* q3d = nullptr);
+     void DrawScanlineHires(u32 line, const u32* const* q3d);   // DrawScanline at 2x
+     int HiLines = 1;
++    // render.2d_tiles: where the quarters composite writes the frame's two 512-pixel rows itself (null: it doesn't; then
++    // HiLines 4 and EmitA zips HiOut), and the master brightness for it. Set by BananaRenderer before each line
++    u32* EmitRows = nullptr;
++    u16 EmitBrightness = 0;
+     alignas(16) u32 HiOut[3][256];
+     void DrawSpritesFrom(u32 line, const Banana2DRegs& regs);
+ 
+@@ -273,11 +281,14 @@ private:
+     void Composite(u32* outTop, u32* outSecond, bool needSecond);
+     void CompositeTo(u32* dst);
+     void CompositeHires(u32* dst, const u32* const* q3d);
+-    void EffectsTo(u32* dst, u32 effect, bool secondTargets);
+-    template<bool up> void BrightnessPass(u32* dst);
+-    template<u32 effect> void EffectsPass(u32* dst);
+-    template<bool up> void BrightnessPassNeon(u32* dst);
+-    template<u32 effect> void EffectsPassNeon(u32* dst);
++    void CompositeHiresTiled(u32* dst, const u32* const* q3d, u32* rows);
++    void EffectsTo(u32* dst, u32 effect, bool secondTargets, int i0 = 0, int i1 = 256);
++    void DrawBG_3DTo(u32* out, const u32* src);
++    alignas(16) u32 Quarter3D[4][256];   // the four quarters as DrawBG_3D makes them (windows on), render.2d_tiles
++    template<bool up> void BrightnessPass(u32* dst, int i0, int i1);
++    template<u32 effect> void EffectsPass(u32* dst, int i0, int i1);
++    template<bool up> void BrightnessPassNeon(u32* dst, int i0, int i1);
++    template<u32 effect> void EffectsPassNeon(u32* dst, int i0, int i1);
+ };
+ 
+ }
+diff --git a/bananads/gpu2d/GPU_Banana.cpp b/bananads/gpu2d/GPU_Banana.cpp
+index 9a2c3a3..4d950dc 100644
+--- a/bananads/gpu2d/GPU_Banana.cpp
++++ b/bananads/gpu2d/GPU_Banana.cpp
+@@ -26,6 +26,7 @@
+ #include "Platform.h"
+ #include "GPU_Banana.h"
+ #include "GPU_ColorOp.h"
++#include "Output_Banana.h"
+ #if defined(__aarch64__) && !defined(BANANA_NO_SIMD)
+ #include <arm_neon.h>
+ #endif
+@@ -113,139 +114,6 @@ void BananaRenderer::FillLine(u32* dst, u32 val)
+ }
+ 
+ #if defined(__aarch64__) && !defined(BANANA_NO_SIMD)
+-// 16 pixels at a time, one plane per byte (ld4/st4): out byte = (c << 2) | (c >> 4), the top two bits of the 6-bit
+-// channel repeated (Expand); with master brightness on the 6-bit channels first, exactly ColorBrightnessUp(c, f, 0)
+-// and ColorBrightnessDown(c, f, 0xF) (each channel's result fits in its 6 bits, so the packed masks drop nothing)
+-static inline uint8x16_t Expand6(uint8x16_t c)
+-{
+-    uint8x16_t t = vshlq_n_u8(c, 2);
+-    return vsriq_n_u8(t, t, 6);
+-}
+-
+-template<int mode>
+-static inline uint8x16_t Bright6(uint8x16_t c, uint8x8_t f)
+-{
+-    c = vandq_u8(c, vdupq_n_u8(0x3F));
+-    if (mode == 1)
+-    {
+-        // c + (((63 - c) * f) >> 4)
+-        uint8x16_t d = vsubq_u8(vdupq_n_u8(0x3F), c);
+-        uint8x8_t lo = vshrn_n_u16(vmull_u8(vget_low_u8(d), f), 4);
+-        uint8x16_t r = vshrn_high_n_u16(lo, vmull_high_u8(d, vcombine_u8(f, f)), 4);
+-        return vaddq_u8(c, r);
+-    }
+-    else
+-    {
+-        // c - ((c * f + 15) >> 4)
+-        uint16x8_t bias = vdupq_n_u16(15);
+-        uint8x8_t lo = vshrn_n_u16(vmlal_u8(bias, vget_low_u8(c), f), 4);
+-        uint8x16_t r = vshrn_high_n_u16(lo, vmlal_high_u8(bias, c, vcombine_u8(f, f)), 4);
+-        return vsubq_u8(c, r);
+-    }
+-}
+-
+-template<int mode>
+-static void WriteLineNeon(u32* dst, const u32* src, u32 factor)
+-{
+-    uint8x8_t f = vdup_n_u8((u8)factor);
+-    for (int i = 0; i < 256; i += 16)
+-    {
+-        uint8x16x4_t s = vld4q_u8((const u8*)(src + i));
+-        uint8x16_t r = s.val[0], g = s.val[1], b = s.val[2];
+-        if (mode)
+-        {
+-            r = Bright6<mode>(r, f);
+-            g = Bright6<mode>(g, f);
+-            b = Bright6<mode>(b, f);
+-        }
+-        uint8x16x4_t o;
+-        o.val[0] = Expand6(b);
+-        o.val[1] = Expand6(g);
+-        o.val[2] = Expand6(r);
+-        o.val[3] = vdupq_n_u8(0xFF);
+-        vst4q_u8((u8*)(dst + i), o);
+-    }
+-}
+-
+-// render.2d_emit_zip: WriteLine of a 2x row's even pixels and odd pixels (256 each, 18-bit) straight into the row of
+-// 512 32-bit pixels: the same planes as WriteLineNeon's, zipped byte by byte (output pixel 2i is even pixel i, 2i + 1
+-// odd pixel i) before the store, so the row is written once and no converted line is kept in between
+-template<int mode>
+-static void WriteZipNeon(u32* dst, const u32* even, const u32* odd, u32 factor)
+-{
+-    uint8x8_t f = vdup_n_u8((u8)factor);
+-    for (int i = 0; i < 256; i += 16)
+-    {
+-        uint8x16x4_t e = vld4q_u8((const u8*)(even + i));
+-        uint8x16x4_t o = vld4q_u8((const u8*)(odd + i));
+-        uint8x16_t er = e.val[0], eg = e.val[1], eb = e.val[2];
+-        uint8x16_t od = o.val[0], og = o.val[1], ob = o.val[2];
+-        if (mode)
+-        {
+-            er = Bright6<mode>(er, f); eg = Bright6<mode>(eg, f); eb = Bright6<mode>(eb, f);
+-            od = Bright6<mode>(od, f); og = Bright6<mode>(og, f); ob = Bright6<mode>(ob, f);
+-        }
+-        er = Expand6(er); eg = Expand6(eg); eb = Expand6(eb);
+-        od = Expand6(od); og = Expand6(og); ob = Expand6(ob);
+-        uint8x16x4_t lo, hi;
+-        lo.val[0] = vzip1q_u8(eb, ob); hi.val[0] = vzip2q_u8(eb, ob);
+-        lo.val[1] = vzip1q_u8(eg, og); hi.val[1] = vzip2q_u8(eg, og);
+-        lo.val[2] = vzip1q_u8(er, od); hi.val[2] = vzip2q_u8(er, od);
+-        lo.val[3] = vdupq_n_u8(0xFF);
+-        hi.val[3] = vdupq_n_u8(0xFF);
+-        vst4q_u8((u8*)(dst + 2 * i), lo);
+-        vst4q_u8((u8*)(dst + 2 * i + 16), hi);
+-    }
+-}
+-
+-// and a 1x line into two rows of 512 with each pixel twice (DoubleLine's layout), in one pass: the bottom screen and
+-// the top screen's lines without the 3D layer
+-template<int mode>
+-static void WriteDoubleNeon(u32* dst, const u32* src, u32 factor)
+-{
+-    uint8x8_t f = vdup_n_u8((u8)factor);
+-    for (int i = 0; i < 256; i += 16)
+-    {
+-        uint8x16x4_t s = vld4q_u8((const u8*)(src + i));
+-        uint8x16_t r = s.val[0], g = s.val[1], b = s.val[2];
+-        if (mode)
+-        {
+-            r = Bright6<mode>(r, f); g = Bright6<mode>(g, f); b = Bright6<mode>(b, f);
+-        }
+-        r = Expand6(r); g = Expand6(g); b = Expand6(b);
+-        uint8x16x4_t lo, hi;
+-        lo.val[0] = vzip1q_u8(b, b); hi.val[0] = vzip2q_u8(b, b);
+-        lo.val[1] = vzip1q_u8(g, g); hi.val[1] = vzip2q_u8(g, g);
+-        lo.val[2] = vzip1q_u8(r, r); hi.val[2] = vzip2q_u8(r, r);
+-        lo.val[3] = vdupq_n_u8(0xFF);
+-        hi.val[3] = vdupq_n_u8(0xFF);
+-        vst4q_u8((u8*)(dst + 2 * i), lo);
+-        vst4q_u8((u8*)(dst + 2 * i + 16), hi);
+-        vst4q_u8((u8*)(dst + 512 + 2 * i), lo);
+-        vst4q_u8((u8*)(dst + 512 + 2 * i + 16), hi);
+-    }
+-}
+-
+-static void WriteDouble(u32* dst, const u32* src, u16 brightness)
+-{
+-    u32 mode = brightness >> 14;
+-    u32 factor = brightness & 0x1F;
+-    if (factor > 16) factor = 16;
+-    if (mode == 1 && factor)      WriteDoubleNeon<1>(dst, src, factor);
+-    else if (mode == 2 && factor) WriteDoubleNeon<2>(dst, src, factor);
+-    else                          WriteDoubleNeon<0>(dst, src, 0);
+-}
+-
+-static void WriteZip(u32* dst, const u32* even, const u32* odd, u16 brightness)
+-{
+-    u32 mode = brightness >> 14;
+-    u32 factor = brightness & 0x1F;
+-    if (factor > 16) factor = 16;
+-    if (mode == 1 && factor)      WriteZipNeon<1>(dst, even, odd, factor);
+-    else if (mode == 2 && factor) WriteZipNeon<2>(dst, even, odd, factor);
+-    else                          WriteZipNeon<0>(dst, even, odd, 0);
+-}
+-
+ // 16 direct-colour pixels (display modes 2 and 3) to the three 6-bit channel planes
+ static inline void Planes15(const u16* p, uint8x16_t& r, uint8x16_t& g, uint8x16_t& b)
+ {
+@@ -415,6 +283,19 @@ static void ZipLine(u32* dst, const u32* even, const u32* odd)
+ #endif
+ }
+ 
++// render.2d_tiles: at 2x, with the NEON output stage and display mode 1, the quarters composite writes the frame's
++// two rows itself, tile by tile (CompositeHiresTiled); it is told where (null: it doesn't, EmitA does). HiLines 0 after
++// the line says it did
++void BananaRenderer::SetEmitTarget(BananaRenderer2D& a, bool screensEnabled, u32 dispcnt, u32* dst, u16 brightness)
++{
++    a.EmitRows = nullptr;
++    a.EmitBrightness = brightness;
++#if defined(__aarch64__) && !defined(BANANA_NO_SIMD)
++    if (Quarter && Banana2DFast && Banana2DEmitZip && Banana2DTiles && screensEnabled && ((dispcnt >> 16) & 0x3) == 1)
++        a.EmitRows = dst;
++#endif
++}
++
+ // unit A's line: at 2x its four composited quarters when the line showed the 3D layer (HiLines 4), else doubled
+ void BananaRenderer::EmitA(u32* dst, u32 dispcnt, u16 brightness, const u16* display)
+ {
+@@ -521,8 +402,12 @@ void BananaRenderer::DrawScanline(u32 line)
+         StatInPlace++;
+         if (job.Line < 192)
+         {
+-            static_cast<BananaRenderer2D&>(*Rend2D_A).DrawScanlineFrom(job.Line, job.Regs[0], job.Q3D[0], Quarter ? job.Q3D : nullptr);
+-            if (job.ScreensEnabled)
++            auto& a = static_cast<BananaRenderer2D&>(*Rend2D_A);
++            SetEmitTarget(a, job.ScreensEnabled, job.Regs[0].DispCnt, job.DstA, job.BrightnessA);
++            a.DrawScanlineFrom(job.Line, job.Regs[0], job.Q3D[0], Quarter ? job.Q3D : nullptr);
++            if (a.HiLines == 0)
++                ;   // (render.2d_tiles: the rows are written)
++            else if (job.ScreensEnabled)
+                 EmitA(job.DstA, job.Regs[0].DispCnt, job.BrightnessA, job.HasDisplay ? job.Display : nullptr);
+             else
+                 Fill(job.DstA, 0xFF000000);
+@@ -627,12 +512,14 @@ void BananaRenderer::DrawScanlineInPlace(u32 line)
+     line = GPU.VCount;
+     if (line < 192)
+     {
++        auto& a = static_cast<BananaRenderer2D&>(*Rend2D_A);
+         if (Quarter)
+         {
+             const u32* q[4];
+             for (int k = 0; k < 4; k++) q[k] = Quarter(QuarterCtx, line, k);
+             Output3D = const_cast<u32*>(q[0]);  // (display capture: quarter 0)
+-            static_cast<BananaRenderer2D&>(*Rend2D_A).DrawScanlineHires(line, q);
++            SetEmitTarget(a, GPU.ScreensEnabled, GPU.GPU2D_A.DispCnt, dstA, GPU.MasterBrightnessA);
++            a.DrawScanlineHires(line, q);
+         }
+         else
+         {
+@@ -643,7 +530,8 @@ void BananaRenderer::DrawScanlineInPlace(u32 line)
+ 
+         if (GPU.ScreensEnabled)
+         {
+-            EmitA(dstA, GPU.GPU2D_A.DispCnt, GPU.MasterBrightnessA, DisplaySource(GPU, line));
++            if (!(Quarter && a.HiLines == 0))   // (render.2d_tiles: the rows are written)
++                EmitA(dstA, GPU.GPU2D_A.DispCnt, GPU.MasterBrightnessA, DisplaySource(GPU, line));
+             EmitB(dstB, GPU.GPU2D_B.DispCnt, GPU.MasterBrightnessB);
+         }
+         else
+@@ -703,12 +591,16 @@ void BananaRenderer::Execute(Job& job)
+     if (job.Line < 192)
+     {
+         if (doA && job.WaitRows) WaitRows(QuarterCtx, job.Line, job.RowsGen);
+-        if (doA) a.DrawScanlineFrom(job.Line, job.Regs[0], job.Q3D[0], Quarter ? job.Q3D : nullptr);
++        if (doA)
++        {
++            SetEmitTarget(a, job.ScreensEnabled, job.Regs[0].DispCnt, job.DstA, job.BrightnessA);
++            a.DrawScanlineFrom(job.Line, job.Regs[0], job.Q3D[0], Quarter ? job.Q3D : nullptr);
++        }
+         b.DrawScanlineFrom(job.Line, job.Regs[1], job.Q3D[0]);
+ 
+         if (job.ScreensEnabled)
+         {
+-            if (doA) EmitA(job.DstA, job.Regs[0].DispCnt, job.BrightnessA, job.HasDisplay ? job.Display : nullptr);
++            if (doA && a.HiLines != 0) EmitA(job.DstA, job.Regs[0].DispCnt, job.BrightnessA, job.HasDisplay ? job.Display : nullptr);
+             EmitB(job.DstB, job.Regs[1].DispCnt, job.BrightnessB);
+         }
+         else
+diff --git a/bananads/gpu2d/GPU_Banana.h b/bananads/gpu2d/GPU_Banana.h
+index ca492a3..3326c0c 100644
+--- a/bananads/gpu2d/GPU_Banana.h
++++ b/bananads/gpu2d/GPU_Banana.h
+@@ -114,6 +114,7 @@ private:
+     // a DS line into the framebuffer at either scale (at 2x dst is two rows of 512)
+     u32* LineDst(int screen, u32 line);
+     void EmitA(u32* dst, u32 dispcnt, u16 brightness, const u16* display);
++    void SetEmitTarget(BananaRenderer2D& a, bool screensEnabled, u32 dispcnt, u32* dst, u16 brightness);
+     void EmitB(u32* dst, u32 dispcnt, u16 brightness);
+     void Fill(u32* dst, u32 val);
+     QuarterFn Quarter = nullptr;
+diff --git a/bananads/src/emu.cpp b/bananads/src/emu.cpp
+index 64f8090..54cf109 100644
+--- a/bananads/src/emu.cpp
++++ b/bananads/src/emu.cpp
+@@ -435,6 +435,8 @@ bool Emu::load_rom(const std::string& path) {
+     melonDS::Banana2DEmitZip = cfg_.flag("render.2d_emit_zip", true);
+     // render.2d_prefetch: at 2x the 2D thread prefetches the next line's 3D rows (off: unmeasured here, a device verdict)
+     melonDS::Banana2DPrefetch = cfg_.flag("render.2d_prefetch", false);
++    // render.2d_tiles: at 2x the quarters composite, effects and output stage in 64-pixel tiles, the rows written there
++    melonDS::Banana2DTiles = cfg_.flag("render.2d_tiles", true);
+     // render.3d_share: at 2x the 2D thread reads Gengis's rows of the 3D frame instead of a 4 KB copy a line (on)
+     melonDS::Banana3DShare = cfg_.flag("render.3d_share", true);
+     // render.3d_wait2d: with render.3d_share, the 2D thread waits for the 3D rows, not the emulator's thread (on)
+
+=== untracked bananads/gpu2d/Output_Banana.h ===
+/*
+    BananaDS 2D engine: the output stage's NEON kernels (master brightness, 6-to-8-bit expansion, the 2x rows), shared
+    by GPU_Banana.cpp (EmitA/EmitB) and GPU2D_Banana.cpp (the tile-fused quarters composite, render.2d_tiles).
+    Copyright 2026 ROCKNIXDS contributors. Part of BananaDS, GPL-3.0-or-later (see GPU_Banana.cpp).
+*/
+#ifndef OUTPUT_BANANA_H
+#define OUTPUT_BANANA_H
+#if defined(__aarch64__) && !defined(BANANA_NO_SIMD)
+#include <arm_neon.h>
+#include "types.h"
+namespace melonDS
+{
+// 16 pixels at a time, one plane per byte (ld4/st4): out byte = (c << 2) | (c >> 4), the top two bits of the 6-bit
+// channel repeated (Expand); with master brightness on the 6-bit channels first, exactly ColorBrightnessUp(c, f, 0)
+// and ColorBrightnessDown(c, f, 0xF) (each channel's result fits in its 6 bits, so the packed masks drop nothing)
+static inline uint8x16_t Expand6(uint8x16_t c)
+{
+    uint8x16_t t = vshlq_n_u8(c, 2);
+    return vsriq_n_u8(t, t, 6);
+}
+
+template<int mode>
+static inline uint8x16_t Bright6(uint8x16_t c, uint8x8_t f)
+{
+    c = vandq_u8(c, vdupq_n_u8(0x3F));
+    if (mode == 1)
+    {
+        // c + (((63 - c) * f) >> 4)
+        uint8x16_t d = vsubq_u8(vdupq_n_u8(0x3F), c);
+        uint8x8_t lo = vshrn_n_u16(vmull_u8(vget_low_u8(d), f), 4);
+        uint8x16_t r = vshrn_high_n_u16(lo, vmull_high_u8(d, vcombine_u8(f, f)), 4);
+        return vaddq_u8(c, r);
+    }
+    else
+    {
+        // c - ((c * f + 15) >> 4)
+        uint16x8_t bias = vdupq_n_u16(15);
+        uint8x8_t lo = vshrn_n_u16(vmlal_u8(bias, vget_low_u8(c), f), 4);
+        uint8x16_t r = vshrn_high_n_u16(lo, vmlal_high_u8(bias, c, vcombine_u8(f, f)), 4);
+        return vsubq_u8(c, r);
+    }
+}
+
+template<int mode>
+static void WriteLineNeon(u32* dst, const u32* src, u32 factor)
+{
+    uint8x8_t f = vdup_n_u8((u8)factor);
+    for (int i = 0; i < 256; i += 16)
+    {
+        uint8x16x4_t s = vld4q_u8((const u8*)(src + i));
+        uint8x16_t r = s.val[0], g = s.val[1], b = s.val[2];
+        if (mode)
+        {
+            r = Bright6<mode>(r, f);
+            g = Bright6<mode>(g, f);
+            b = Bright6<mode>(b, f);
+        }
+        uint8x16x4_t o;
+        o.val[0] = Expand6(b);
+        o.val[1] = Expand6(g);
+        o.val[2] = Expand6(r);
+        o.val[3] = vdupq_n_u8(0xFF);
+        vst4q_u8((u8*)(dst + i), o);
+    }
+}
+
+// render.2d_emit_zip: WriteLine of a 2x row's even pixels and odd pixels (256 each, 18-bit) straight into the row of
+// 512 32-bit pixels: the same planes as WriteLineNeon's, zipped byte by byte (output pixel 2i is even pixel i, 2i + 1
+// odd pixel i) before the store, so the row is written once and no converted line is kept in between
+template<int mode>
+static void WriteZipNeon(u32* dst, const u32* even, const u32* odd, u32 factor, int i0 = 0, int i1 = 256)
+{
+    uint8x8_t f = vdup_n_u8((u8)factor);
+    for (int i = i0; i < i1; i += 16)
+    {
+        uint8x16x4_t e = vld4q_u8((const u8*)(even + i));
+        uint8x16x4_t o = vld4q_u8((const u8*)(odd + i));
+        uint8x16_t er = e.val[0], eg = e.val[1], eb = e.val[2];
+        uint8x16_t od = o.val[0], og = o.val[1], ob = o.val[2];
+        if (mode)
+        {
+            er = Bright6<mode>(er, f); eg = Bright6<mode>(eg, f); eb = Bright6<mode>(eb, f);
+            od = Bright6<mode>(od, f); og = Bright6<mode>(og, f); ob = Bright6<mode>(ob, f);
+        }
+        er = Expand6(er); eg = Expand6(eg); eb = Expand6(eb);
+        od = Expand6(od); og = Expand6(og); ob = Expand6(ob);
+        uint8x16x4_t lo, hi;
+        lo.val[0] = vzip1q_u8(eb, ob); hi.val[0] = vzip2q_u8(eb, ob);
+        lo.val[1] = vzip1q_u8(eg, og); hi.val[1] = vzip2q_u8(eg, og);
+        lo.val[2] = vzip1q_u8(er, od); hi.val[2] = vzip2q_u8(er, od);
+        lo.val[3] = vdupq_n_u8(0xFF);
+        hi.val[3] = vdupq_n_u8(0xFF);
+        vst4q_u8((u8*)(dst + 2 * i), lo);
+        vst4q_u8((u8*)(dst + 2 * i + 16), hi);
+    }
+}
+
+// and a 1x line into two rows of 512 with each pixel twice (DoubleLine's layout), in one pass: the bottom screen and
+// the top screen's lines without the 3D layer
+template<int mode>
+static void WriteDoubleNeon(u32* dst, const u32* src, u32 factor)
+{
+    uint8x8_t f = vdup_n_u8((u8)factor);
+    for (int i = 0; i < 256; i += 16)
+    {
+        uint8x16x4_t s = vld4q_u8((const u8*)(src + i));
+        uint8x16_t r = s.val[0], g = s.val[1], b = s.val[2];
+        if (mode)
+        {
+            r = Bright6<mode>(r, f); g = Bright6<mode>(g, f); b = Bright6<mode>(b, f);
+        }
+        r = Expand6(r); g = Expand6(g); b = Expand6(b);
+        uint8x16x4_t lo, hi;
+        lo.val[0] = vzip1q_u8(b, b); hi.val[0] = vzip2q_u8(b, b);
+        lo.val[1] = vzip1q_u8(g, g); hi.val[1] = vzip2q_u8(g, g);
+        lo.val[2] = vzip1q_u8(r, r); hi.val[2] = vzip2q_u8(r, r);
+        lo.val[3] = vdupq_n_u8(0xFF);
+        hi.val[3] = vdupq_n_u8(0xFF);
+        vst4q_u8((u8*)(dst + 2 * i), lo);
+        vst4q_u8((u8*)(dst + 2 * i + 16), hi);
+        vst4q_u8((u8*)(dst + 512 + 2 * i), lo);
+        vst4q_u8((u8*)(dst + 512 + 2 * i + 16), hi);
+    }
+}
+
+static void WriteDouble(u32* dst, const u32* src, u16 brightness)
+{
+    u32 mode = brightness >> 14;
+    u32 factor = brightness & 0x1F;
+    if (factor > 16) factor = 16;
+    if (mode == 1 && factor)      WriteDoubleNeon<1>(dst, src, factor);
+    else if (mode == 2 && factor) WriteDoubleNeon<2>(dst, src, factor);
+    else                          WriteDoubleNeon<0>(dst, src, 0);
+}
+
+static inline void WriteZip(u32* dst, const u32* even, const u32* odd, u16 brightness, int i0 = 0, int i1 = 256)
+{
+    u32 mode = brightness >> 14;
+    u32 factor = brightness & 0x1F;
+    if (factor > 16) factor = 16;
+    if (mode == 1 && factor)      WriteZipNeon<1>(dst, even, odd, factor, i0, i1);
+    else if (mode == 2 && factor) WriteZipNeon<2>(dst, even, odd, factor, i0, i1);
+    else                          WriteZipNeon<0>(dst, even, odd, 0, i0, i1);
+}
+
+}
+#endif
+#endif // OUTPUT_BANANA_H

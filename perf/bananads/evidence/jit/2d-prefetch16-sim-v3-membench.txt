@@ -1,0 +1,11 @@
+rgds-sim A/B (model v2)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/jit/bin/fl/bananads /home/user/perf/roms/membench-membench.nds pf16v3-membench-A --mode st --frames 100:300 --set render.2d_prefetch16=off
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/jit/bin/fl/bananads /home/user/perf/roms/membench-membench.nds pf16v3-membench-B --mode st --frames 100:300 --set render.2d_prefetch16=on
+
+== thread 0 (main): ms/frame @1104 4.462 -> 4.372 (-2.01%)   @1992 2.691 -> 2.600 (-3.40%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 3.796 -> 3.736 (-1.60%)
+  insn 3272.4k->3286.5k (+0.4%)  base 3682.9k->3693.6k (+0.3%)  l1i_miss 5.8k->5.8k (-0.0%)  l1i_l3miss 1.2k->1.2k (-0.1%)  ld_miss 9.6k->9.4k (-2.1%)  ld_l3miss 2.7k->1.9k (-29.2%)  st_miss 3.6k->3.6k (+0.5%)  st_l3miss 1.3k->1.3k (-0.1%)  itlb_l2 7.2k->7.2k (+0.0%)  itlb_walk 0.0k->0.0k (-10.6%)  dtlb_l2 18.1k->18.3k (+1.3%)  dtlb_walk 0.0k->0.0k (-54.8%)  bcond_miss 18.2k->18.2k (+0.2%)  bind_miss 2.6k->2.6k (+0.0%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  2d                   1.896     1.804    -0.092    1313.0k    1327.2k
+  gengis               0.569     0.570    +0.002     387.8k     387.8k
+  scheduler/core       1.303     1.304    +0.001    1014.4k    1014.4k

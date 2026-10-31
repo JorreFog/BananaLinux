@@ -1,0 +1,25 @@
+# 14:50:21 A1-p1: /data/bananads-dev/s3/bd-p1 frames=2150 measure_from=1650 window=100 clk=1992000 temp=46C extra: 
+BananaDS 0.1.0, /data/roms/nds/Mario Kart DS (USA) (En,Fr,De,Es,It).nds
+[emu] ROM mapped (32 MB), read in the background
+[emu] save /data/mkb/Mario Kart DS (USA) (En,Fr,De,Es,It).sav (262144 bytes)
+Inserted cart with game code: AMCE
+Inserted cart with ID: 00001FC2
+ROM entry: 02000000 00000005
+MAC: 00:09:BF:11:22:33
+Secure area decryption OK
+Game is now booting
+[gengis] Gengis Engine at 2x, 3 render threads
+[emu] Mario Kart DS (USA) (En,Fr,De,Es,It) started (JIT on, MAC 00:09:bf:11:22:33)
+[headless] frames 1650-1750: 62.7 fps
+[headless] frames 1750-1850: 67.8 fps
+[headless] frames 1850-1950: 71.3 fps
+[headless] frames 1950-2050: 72.2 fps
+[headless] frames 2050-2150: 74.8 fps
+[headless] 2150 frames in 21.18 s: 101.5 fps (170% of a DS)
+[headless] slowest window 62.7 fps, slowest frame 19.3 ms (frame 1802)
+[headless] frames 1650-2150: 69.5 fps (116% of a DS)
+Stopping emulated console (Reason: External)
+[emu] the DS stopped (reason 1)
+[2d] 2D thread: 825600 jobs, 24768 lines with unit A drawn in place (display capture), 41.0 MB through the copy log, 1986 waits for the thread (capture, full ring or log)
+[gengis] the emulator's thread drew 48 of 16452 bins and converted 0 frames
+unmappinged everything

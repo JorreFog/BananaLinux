@@ -1,0 +1,124 @@
+From 347784dec93404b84cd48164b74f89194f8d9123 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sun, 18 Oct 2026 16:16:06 +0000
+Subject: [PATCH 07/18] BananaDS perf: render.2d_quarters' merge without the
+ empty halves, the backdrop as a constant
+
+Measured on the device build (qemu-count, dsstress L5, device configuration): the four-quarter merge cost as much as
+the two-step composites it replaced (the 2D thread's composite work 812k -> 890k instructions a frame), because a
+line with no layer above the 3D one still read a zero line written for it (CompositeN<0>, 164k a frame), and the
+base was read as a line when it is the backdrop's one colour. The merge now has the halves as template cases: no
+above layer (no above lines read), the below pixel as the backdrop constant, a base line, or the below lines; the
+empty halves' passes are skipped. Random-stack test (every case, including the base read as a line): 20000 quarter
+cases, 0 mismatches.
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01PvbFhKAw3ERk5a13S651g1
+---
+ bananads/gpu2d/GPU2D_Banana.cpp | 61 +++++++++++++++++++++++++--------
+ 1 file changed, 47 insertions(+), 14 deletions(-)
+
+diff --git a/bananads/gpu2d/GPU2D_Banana.cpp b/bananads/gpu2d/GPU2D_Banana.cpp
+index fa7ab48..598ee0a 100644
+--- a/bananads/gpu2d/GPU2D_Banana.cpp
++++ b/bananads/gpu2d/GPU2D_Banana.cpp
+@@ -2436,31 +2436,62 @@ void BananaRenderer2D::Composite(u32* outTop, u32* outSecond, bool needSecond)
+ // BelowSec, the pixel under it), the layers above it painted onto nothing (AboveTop, AboveSec: nonzero where an
+ // above layer is opaque, where two are). A quarter's top pixel is then the above one where there is one, else the
+ // 3D pixel where it is opaque, else the below one; its second pixel follows the same painter's rule (the pixel that
+-// was on top before the last opaque step). The same pixels as the four full passes, in a quarter of the work
+-template<bool needSecond, bool raw>
+-static void MergeQuarter(const u32* c3line, const u32* belowTop, const u32* belowSec, const u32* aboveTop, const u32* aboveSec, u32* outTop, u32* outSecond)
++// was on top before the last opaque step). With no layer above there is no above line to read, and with none below
++// the base itself is the below pixel (a constant when it is the backdrop). The same pixels as the four full passes.
++// belowKind: 0 the backdrop's colour, 1 a base line, 2 BelowTop/BelowSec
++template<bool needSecond, bool raw, bool hasAbove, int belowKind>
++static void MergeQuarter(const u32* c3line, const u32* base, const u32* belowTop, const u32* belowSec, const u32* aboveTop, const u32* aboveSec, u32* outTop, u32* outSecond)
+ {
+     const V4 flagbyte = VDup(0xFF000000), orv = VDup(0x40000000);
++    const V4 backdrop = VDup(base[0]);
+     for (int i = 0; i < 256; i += 4)
+     {
+         V4 c = VLoad(c3line + i);
+         V4 m3;
+         if (raw) { m3 = VNonZero(VAnd(c, flagbyte)); c = VOr(c, orv); }
+         else     m3 = VNonZero(c);
+-        V4 bt = VLoad(belowTop + i);
++        V4 bt = belowKind == 0 ? backdrop : belowKind == 1 ? VLoad(base + i) : VLoad(belowTop + i);
+         V4 L = VSel(m3, c, bt);                 // the top after the 3D step
+-        V4 at = VLoad(aboveTop + i);
+-        V4 ma = VNonZero(at);
+-        VStore(outTop + i, VSel(ma, at, L));
++        V4 top = L, ma = VZero();
++        if (hasAbove)
++        {
++            V4 at = VLoad(aboveTop + i);
++            ma = VNonZero(at);
++            top = VSel(ma, at, L);
++        }
++        VStore(outTop + i, top);
+         if (needSecond)
+         {
+-            V4 Ls = VSel(m3, bt, VLoad(belowSec + i));   // the second after the 3D step
+-            V4 as = VLoad(aboveSec + i);
+-            VStore(outSecond + i, VSel(ma, VSel(VNonZero(as), as, L), Ls));
++            V4 bs = belowKind == 2 ? VLoad(belowSec + i) : VZero();
++            V4 Ls = VSel(m3, bt, bs);           // the second after the 3D step
++            V4 sec = Ls;
++            if (hasAbove)
++            {
++                V4 as = VLoad(aboveSec + i);
++                sec = VSel(ma, VSel(VNonZero(as), as, L), Ls);
++            }
++            VStore(outSecond + i, sec);
+         }
+     }
+ }
+ 
++template<bool needSecond, bool raw>
++static void MergeQuarterN(bool hasAbove, int belowKind, const u32* c3line, const u32* base, const u32* belowTop, const u32* belowSec, const u32* aboveTop, const u32* aboveSec, u32* outTop, u32* outSecond)
++{
++    if (hasAbove)
++    {
++        if (belowKind == 0)      MergeQuarter<needSecond, raw, true, 0>(c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, outSecond);
++        else if (belowKind == 1) MergeQuarter<needSecond, raw, true, 1>(c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, outSecond);
++        else                     MergeQuarter<needSecond, raw, true, 2>(c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, outSecond);
++    }
++    else
++    {
++        if (belowKind == 0)      MergeQuarter<needSecond, raw, false, 0>(c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, outSecond);
++        else if (belowKind == 1) MergeQuarter<needSecond, raw, false, 1>(c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, outSecond);
++        else                     MergeQuarter<needSecond, raw, false, 2>(c3line, base, belowTop, belowSec, aboveTop, aboveSec, outTop, outSecond);
++    }
++}
++
+ void BananaRenderer2D::CompositeHires(u32* dst, const u32* const* q3d)
+ {
+     // which colour effects can apply on this line? (CompositeTo's test)
+@@ -2484,8 +2515,10 @@ void BananaRenderer2D::CompositeHires(u32* dst, const u32* const* q3d)
+         return;
+     }
+     const bool onBackdrop = Banana2DFast && startLine == BackdropLine;
+-    CompositeRange(steps + start, bg0 - start, startLine, onBackdrop, needSecond, false, BelowTop, BelowSec);
+-    CompositeRange(steps + bg0 + 1, n - bg0 - 1, ZeroLine, false, needSecond, false, AboveTop, AboveSec);
++    const int nBelow = bg0 - start, nAbove = n - bg0 - 1;
++    if (nBelow) CompositeRange(steps + start, nBelow, startLine, onBackdrop, needSecond, false, BelowTop, BelowSec);
++    if (nAbove) CompositeRange(steps + bg0 + 1, nAbove, ZeroLine, false, needSecond, false, AboveTop, AboveSec);
++    const int belowKind = nBelow ? 2 : onBackdrop ? 0 : 1;
+     const bool raw = steps[bg0].raw3d;
+     const u32* const line3d = Line3D;
+     for (int q = 0; q < 4; q++)
+@@ -2499,8 +2532,8 @@ void BananaRenderer2D::CompositeHires(u32* dst, const u32* const* q3d)
+         }
+         const u32* c3 = raw ? q3d[q] : BGLine(0);
+         u32* top = possible ? TopLine : outs[q];
+-        if (needSecond) { if (raw) MergeQuarter<true, true>(c3, BelowTop, BelowSec, AboveTop, AboveSec, top, SecondLine); else MergeQuarter<true, false>(c3, BelowTop, BelowSec, AboveTop, AboveSec, top, SecondLine); }
+-        else            { if (raw) MergeQuarter<false, true>(c3, BelowTop, BelowSec, AboveTop, AboveSec, top, nullptr);   else MergeQuarter<false, false>(c3, BelowTop, BelowSec, AboveTop, AboveSec, top, nullptr); }
++        if (needSecond) { if (raw) MergeQuarterN<true, true>(nAbove > 0, belowKind, c3, startLine, BelowTop, BelowSec, AboveTop, AboveSec, top, SecondLine); else MergeQuarterN<true, false>(nAbove > 0, belowKind, c3, startLine, BelowTop, BelowSec, AboveTop, AboveSec, top, SecondLine); }
++        else            { if (raw) MergeQuarterN<false, true>(nAbove > 0, belowKind, c3, startLine, BelowTop, BelowSec, AboveTop, AboveSec, top, nullptr);   else MergeQuarterN<false, false>(nAbove > 0, belowKind, c3, startLine, BelowTop, BelowSec, AboveTop, AboveSec, top, nullptr); }
+         if (possible) EffectsTo(outs[q], effect, secondTargets);
+     }
+     Line3D = line3d;
+-- 
+2.43.0
+

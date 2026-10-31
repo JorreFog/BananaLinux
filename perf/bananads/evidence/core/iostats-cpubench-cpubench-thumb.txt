@@ -1,0 +1,8 @@
+melonDS IO stats: frames 100-299 (200); per kind: total, then the top entries (calls; words for blocks; per frame)
+  ARM9 JIT slow read: 123471 calls (617.4/frame)
+    04000280         16-bit        63375 (    316.9/frame)
+    040002A0         32-bit        60096 (    300.5/frame)
+  ARM9 JIT slow write: 543744 calls (2718.7/frame)
+    06000000 region  16-bit       543744 (   2718.7/frame)
+  ARM9 JIT block write (STM): 1878 calls (9.4/frame), 7512 words (37.6/frame)
+    02000000 region  32-bit         1878 (      9.4/frame) words         7512

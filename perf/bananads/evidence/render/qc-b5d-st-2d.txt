@@ -1,0 +1,9 @@
+# qemu-count (bananads/tools/perf/qemu-count/measure.sh, st mode: one thread, soft 3D, no 2D thread, 1x), device-like builds under /home/user/perf/tools/qemu-dev, main thread instructions/frame over frames 100-300
+# base = /home/user/perf/build-dev/b/bananads (00c34c78e8de), mine = /home/user/perf/render/b5d/b/bananads (perf/render @ 0fd83cb: every toggle on), unroll-off = mine with --set render.2d_comp_unroll=off
+# driver: evidence/render/measure-all.sh; per-run reports in evidence/render/qc-b5d/<label>.txt
+st-membench-base           main thread: 6013.4k insns/frame
+st-membench-mine           main thread: 5685.2k insns/frame
+st-membench-unroll-off     main thread: 6027.9k insns/frame
+st-ds2dtest-base           main thread: 21212.4k insns/frame
+st-ds2dtest-mine           main thread: 19261.9k insns/frame
+st-ds2dtest-unroll-off     main thread: 21224.2k insns/frame

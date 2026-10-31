@@ -1,0 +1,51 @@
+main thread: 18433.4k insns/frame
+  3d                       16127.1k   87.5%
+  other                     1126.6k    6.1%
+  2d/gpu                     528.3k    2.9%
+  memory                     217.2k    1.2%
+  jit-code                   207.2k    1.1%
+  core                        98.3k    0.5%
+  libs                        72.3k    0.4%
+  audio                       56.4k    0.3%
+  jit-runtime                  0.0k    0.0%
+  interpreter-fallback         0.0k    0.0%
+  JIT total (code+runtime+fallback): 207.2k/frame
+top symbols:
+    11793.8k  [3d] _ZN7melonDS14SoftRenderer3D14RenderScanlineEii
+     3001.7k  [3d] _ZNK7melonDS14SoftRenderer3D11RenderPixelEPKNS_7PolygonEhhhss
+      467.6k  [other] _ZZ4mainENKUlvE_clEv
+      395.4k  [3d] _ZN7melonDS5GPU3D3RunEv
+      270.4k  [other] _ZN7melonDS18DepthTest_LessThanEiij
+      255.8k  [3d] _ZN7melonDS14SoftRenderer3D20PlotTranslucentPixelEjjjjj
+      207.6k  [3d] _ZN7melonDS5GPU3D17SubmitPolygonBodyILb1EEEvv
+      155.3k  [other] _ZN7melonDSL12ConvertRun16EPjPKtijRjS3_.lto_priv.0
+      125.6k  [3d] _ZN7melonDS5GPU3D7Write32Ejj
+      113.9k  [other] _ZN7melonDSL10CompositeNILi1ELb0ELb1EEEvPKNS_8CompStepEPKjbPjS6_.isra.0
+      103.1k  [2d/gpu] _ZN7melonDS16BananaRenderer2D16DrawScanlineFromEjRKNS_12Banana2DRegsEPKjPKS5_
+      102.8k  [3d] _ZN7melonDS14SoftRenderer3D17ScanlineFinalPassEi
+       92.1k  [memory] _ZN7melonDS10SlowWrite9IjLi0EEEvjPNS_5ARMv5Ej
+       83.5k  [2d/gpu] _ZN7melonDS16BananaRenderer2D10BuildStepsEPNS_8CompStepEPhRibS4_RPKj
+       75.3k  [2d/gpu] _ZN7melonDS14BananaRenderer9WriteLineEPjPKjt
+       71.5k  [3d] _ZN7melonDS5GPU3D16SubmitVertexBodyILb1EEEvv
+       65.7k  [memory] _ZN7melonDS9SlowRead9ItLi0EEET_jPNS_5ARMv5E
+       63.0k  [other] _ZN7melonDSL10CompositeNILi0ELb0ELb1EEEvPKNS_8CompStepEPKjbPjS6_.isra.0
+       59.4k  [memory] _ZN7melonDS10SlowWrite9ItLi0EEEvjPNS_5ARMv5Ej
+       50.5k  [3d] _ZNK7melonDS14SoftRenderer3D20SetupPolygonLeftEdgeEPNS0_15RendererPolygonEi.isra.0
+       49.6k  [3d] _ZNK7melonDS14SoftRenderer3D21SetupPolygonRightEdgeEPNS0_15RendererPolygonEi.isra.0
+       44.9k  [audio] _ZZN7melonDS3SPUC4ERNS_3NDSENS_13AudioBitDepthENS_18AudioInterpolationEdENUlPvjE_4_FUNES5_j.lto_priv.0
+       34.0k  [core] _ZN7melonDS3NDS13ScheduleEventEjbijj
+       30.4k  [2d/gpu] _ZN7melonDS16BananaRenderer2D15PrepareScanlineERNS_12Banana2DRegsE
+       29.2k  [3d] _ZN7melonDS16ClipAgainstPlaneILi1ELb1ELi0EEEiRKNS_5GPU3DEPNS_6VertexEii.isra.0
+top JIT blocks:
+       29.2k  mj9:0200085c
+       17.7k  mj9:02000768
+       17.2k  mj9:02000728
+       16.9k  stub:0000ec00
+       16.5k  mj9:020003b0
+       16.4k  mj9:02000668
+       15.5k  mj9:020005e8
+       15.4k  mj9:020006e8
+       15.2k  mj9:020006a8
+       13.3k  mj9:02000628
+        9.9k  mj9:02000850
+        7.3k  mj9:02000894

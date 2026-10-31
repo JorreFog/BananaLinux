@@ -1,0 +1,37 @@
+rgds-sim A/B (model v2)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/render/b12d/b/bananads /home/user/perf/roms/dsstress-L10.nds dev-dsstress-L10-jobstride-A --mode dev --frames 100:300 --set render.2d_job_stride=inline
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/render/b12d/b/bananads /home/user/perf/roms/dsstress-L10.nds dev-dsstress-L10-jobstride-B --mode dev --frames 100:300 --set render.2d_job_stride=compact
+
+== thread 0 (main): ms/frame @1104 2.855 -> 2.836 (-0.66%)   @1992 1.684 -> 1.668 (-0.98%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 2.236 -> 2.214 (-0.98%)
+  insn 2325.6k->2325.8k (+0.0%)  base 2462.6k->2462.9k (+0.0%)  l1i_miss 3.4k->3.4k (+0.6%)  l1i_l3miss 0.7k->0.7k (-0.4%)  ld_miss 2.8k->2.8k (-1.9%)  ld_l3miss 0.8k->0.8k (-2.4%)  st_miss 2.5k->1.9k (-22.5%)  st_l3miss 2.1k->1.6k (-22.1%)  itlb_l2 12.3k->12.4k (+0.3%)  itlb_walk 0.0k->0.0k (-97.9%)  dtlb_l2 20.1k->19.9k (-0.9%)  dtlb_walk 0.0k->0.0k (-96.8%)  bcond_miss 15.8k->15.8k (+0.0%)  bind_miss 5.6k->5.6k (+0.0%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  2d                   0.416     0.402    -0.014     240.6k     240.7k
+  3d-geometry          0.926     0.924    -0.002     847.1k     847.1k
+  libc/lib             0.074     0.073    -0.001      45.8k      46.0k
+  scheduler/core       0.712     0.712    -0.001     579.5k     579.5k
+
+== thread 1 (thread1): ms/frame @1104 2.641 -> 2.352 (-10.96%)   @1992 1.656 -> 1.473 (-11.02%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 2.630 -> 2.334 (-11.25%)
+  insn 1907.2k->1705.0k (-10.6%)  base 1917.5k->1712.5k (-10.7%)  l1i_miss 0.0k->0.0k (-15.6%)  l1i_l3miss 0.0k->0.0k (-20.2%)  ld_miss 14.3k->12.7k (-11.6%)  ld_l3miss 3.4k->3.0k (-11.5%)  st_miss 2.5k->2.2k (-12.4%)  st_l3miss 0.7k->0.6k (-10.2%)  itlb_l2 0.0k->0.0k (-12.7%)  dtlb_l2 5.7k->5.1k (-11.0%)  dtlb_walk 0.0k->0.0k (-10.5%)  bcond_miss 8.1k->7.3k (-10.3%)  bind_miss 0.1k->0.1k (-10.7%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  gengis               2.538     2.258    -0.280    1806.0k    1612.8k
+  other                0.099     0.090    -0.009      99.5k      90.3k
+  libc/lib             0.004     0.004    -0.001       1.7k       1.9k
+
+== thread 2 (thread2): ms/frame @1104 2.513 -> 2.545 (+1.25%)   @1992 1.563 -> 1.595 (+2.07%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 2.505 -> 2.530 (+0.99%)
+  insn 1847.5k->1839.1k (-0.5%)  base 1854.6k->1849.0k (-0.3%)  l1i_miss 0.0k->0.0k (+8.4%)  l1i_l3miss 0.0k->0.0k (+20.4%)  ld_miss 13.6k->13.7k (+0.8%)  ld_l3miss 3.0k->3.3k (+8.5%)  st_miss 2.3k->2.4k (+1.9%)  st_l3miss 0.6k->0.6k (+12.1%)  itlb_l2 0.0k->0.0k (+3.6%)  dtlb_l2 5.5k->5.5k (+0.0%)  dtlb_walk 0.0k->0.0k (+70.0%)  bcond_miss 7.9k->7.8k (-0.5%)  bind_miss 0.1k->0.1k (-0.6%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  gengis               2.414     2.443    +0.029    1748.5k    1738.8k
+  libc/lib             0.003     0.005    +0.002       1.0k       2.9k
+  other                0.096     0.097    +0.000      98.0k      97.4k
+
+== thread 3 (bananads-2d): ms/frame @1104 4.157 -> 4.364 (+4.99%)   @1992 2.845 -> 2.950 (+3.68%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 3.619 -> 3.841 (+6.13%)
+  insn 2312.6k->2529.5k (+9.4%)  base 2613.6k->2831.0k (+8.3%)  l1i_miss 0.1k->0.1k (+13.7%)  l1i_l3miss 0.1k->0.1k (+11.9%)  ld_miss 16.7k->18.0k (+7.4%)  ld_l3miss 9.8k->9.6k (-2.1%)  st_miss 2.9k->3.5k (+18.2%)  st_l3miss 1.6k->1.6k (+1.3%)  itlb_l2 0.4k->0.4k (+6.2%)  itlb_walk 0.0k->0.0k (-44.8%)  dtlb_l2 7.4k->8.1k (+9.6%)  dtlb_walk 0.9k->0.3k (-70.5%)  bcond_miss 9.4k->10.7k (+13.5%)  bind_miss 0.1k->0.1k (+18.1%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  gengis               1.411     1.666    +0.255    1064.1k    1268.8k
+  2d                   2.396     2.339    -0.057     896.8k     897.2k
+  other                0.341     0.349    +0.009     344.8k     356.1k
+  libc/lib             0.009     0.010    +0.001       6.9k       7.4k

@@ -1,0 +1,4 @@
+# zip_test: render.2d_emit_zip's WriteZipNeon vs WriteLineNeon + ZipLine, and WriteDoubleNeon vs WriteLineNeon + DoubleLine; random lines, modes 0/1/2 x factors 0..16; device compiler -O2, under qemu-aarch64
+# build: aarch64-linux-g++.br_real --sysroot=... -O2 -g0 -std=gnu++17 -mcpu=cortex-a55 -fwrapv -static zip_test.cpp; run: qemu-aarch64 ./zip_test
+6000 cases, 0 mismatches
+exit 0

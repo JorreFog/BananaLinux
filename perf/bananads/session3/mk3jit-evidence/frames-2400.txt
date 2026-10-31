@@ -1,0 +1,6 @@
+# MK scene input to 2400 frames (gl/mk.sh, headless.dump_every=100, audio dump): base = 3a743f3 (mk2-b) vs head 88008b0 (clean build), defaults
+frame1700.ppm base 788b3b9c74d3e7add5f854c28404aaab head 788b3b9c74d3e7add5f854c28404aaab SAME
+frame1900.ppm base 7147e6d0fbce501207f3f240eeb25e5f head 7147e6d0fbce501207f3f240eeb25e5f SAME
+frame2100.ppm base 6f258e37449b0ac0e6e1f6d7c7a40bc3 head 6f258e37449b0ac0e6e1f6d7c7a40bc3 SAME
+frame2400.ppm base 9341cb85271ce9b6c0161cfc7b6663fa head 9341cb85271ce9b6c0161cfc7b6663fa SAME
+audio.raw base 00102d7a20f1ea7a5781637a48c15d25 head 00102d7a20f1ea7a5781637a48c15d25 SAME

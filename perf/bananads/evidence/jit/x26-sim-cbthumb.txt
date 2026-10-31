@@ -1,0 +1,13 @@
+rgds-sim A/B (model v1)
+A: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/jit/bin/bananads-d1-x26 /home/user/perf/roms/cpubench-cpubench-thumb.nds x26-cbthumb-A --mode st --frames 100:300 --set jit.entry_x26=off
+B: /home/user/BananaLinux/perf/bananads/rgds-sim/run.sh /home/user/perf/jit/bin/bananads-d1-x26 /home/user/perf/roms/cpubench-cpubench-thumb.nds x26-cbthumb-B --mode st --frames 100:300 --set jit.entry_x26=on
+
+== thread 0 (main): ms/frame @1104 5.694 -> 5.678 (-0.28%)   @1992 3.252 -> 3.244 (-0.26%)
+  sensitivity (params-fit.json, v1-fit-threaded): @1104 3.879 -> 3.872 (-0.19%)
+  insn 5004.1k->4978.3k (-0.5%)  base 5474.7k->5456.8k (-0.3%)  l1i_miss 3.6k->3.7k (+5.0%)  l1i_l3miss 0.3k->0.3k (+0.1%)  ld_miss 2.9k->2.9k (-1.7%)  ld_l3miss 0.8k->0.8k (-0.6%)  st_miss 7.1k->6.5k (-7.2%)  st_l3miss 3.2k->3.3k (+1.6%)  itlb_l2 5.7k->5.7k (-0.0%)  itlb_walk 0.0k->0.0k (+7.8%)  dtlb_l2 32.8k->32.8k (-0.0%)  dtlb_walk 0.0k->0.0k (+17.1%)  bcond_miss 22.5k->22.3k (-0.7%)  bind_miss 10.0k->10.0k (+0.0%)
+  bucket                ms A      ms B     delta    insns A    insns B
+  jit-code             2.909     2.893    -0.016    2797.4k    2771.6k
+  gengis               0.259     0.262    +0.002     160.1k     160.1k
+  frontend             1.194     1.193    -0.002     986.9k     986.9k
+  jit-runtime          0.204     0.203    -0.001     198.9k     198.9k
+  scheduler/core       0.174     0.175    +0.001     164.5k     164.5k

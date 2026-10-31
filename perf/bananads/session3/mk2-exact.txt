@@ -1,0 +1,22 @@
+# coordinator, 11:33 UTC: mk2 3a743f3 (/home/user/perf3/mk2-b/b/bananads, device toolchain) on mk-scene.sh
+## defaults: exit=0
+0ff6f47bd15cce2850845091841ecb74  frame1500.ppm
+2e4ca72f9e51e549e8904b189ae856c6  frame1740.ppm
+83584df2b8764443c10554c08f090add  frame1800.ppm
+58b1524b7623ffd3737a0408f8876277  frame1860.ppm
+0ec41a2e8672fd9729276203048d601a  frame1920.ppm
+901a89f9553547e0f8fb56d65ac1f895  frame1980.ppm
+b61ee9823d3c1b8e01f5bd7d2a160ac0  frame2040.ppm
+6f258e37449b0ac0e6e1f6d7c7a40bc3  frame2100.ppm
+0266610cddc0585a8a0c95c34e6c0d4a  audio.raw
+## every new toggle off (--set render.gx_batch=off --set render.gx_str=off --set render.geom_sort=off --set render.gx_dmarun=off --set jit.wram7fast=off --set render.2d_ring=shared): exit=0
+0ff6f47bd15cce2850845091841ecb74  frame1500.ppm
+2e4ca72f9e51e549e8904b189ae856c6  frame1740.ppm
+83584df2b8764443c10554c08f090add  frame1800.ppm
+58b1524b7623ffd3737a0408f8876277  frame1860.ppm
+0ec41a2e8672fd9729276203048d601a  frame1920.ppm
+901a89f9553547e0f8fb56d65ac1f895  frame1980.ppm
+b61ee9823d3c1b8e01f5bd7d2a160ac0  frame2040.ppm
+6f258e37449b0ac0e6e1f6d7c7a40bc3  frame2100.ppm
+0266610cddc0585a8a0c95c34e6c0d4a  audio.raw
+## both identical to mkside-evidence/mk-scene-base-md5.txt (diff empty)

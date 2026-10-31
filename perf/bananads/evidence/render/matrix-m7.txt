@@ -1,0 +1,22 @@
+# exactness matrix on the device-like builds under qemu-dev: A = build-dev (00c34c78e8de), B = /home/user/perf/render/b7d/b/bananads (perf/render @ 1c9095b, the final head: every toggle on); every 10th frame of 300 + audio; CONFIGS="dev2x 2x-t1 1x-t2-2d"
+m7-dev2x-dsstress-L1: SAME (30 dumps + audio; dsstress-L1.nds 300/10; common: --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=3 --set render.2d_thread=on --set headless.direct=on | A: | B:)
+m7-dev2x-dsstress-L5: SAME (30 dumps + audio; dsstress-L5.nds 300/10; common: --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=3 --set render.2d_thread=on --set headless.direct=on | A: | B:)
+m7-dev2x-dsstress-L10: SAME (30 dumps + audio; dsstress-L10.nds 300/10; common: --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=3 --set render.2d_thread=on --set headless.direct=on | A: | B:)
+m7-dev2x-dsstress-ramp: SAME (30 dumps + audio; dsstress-ramp.nds 300/10; common: --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=3 --set render.2d_thread=on --set headless.direct=on | A: | B:)
+m7-dev2x-thumb-dsstress-L5: SAME (30 dumps + audio; thumb-dsstress-L5.nds 300/10; common: --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=3 --set render.2d_thread=on --set headless.direct=on | A: | B:)
+m7-dev2x-thumb-dsstress-L10: SAME (30 dumps + audio; thumb-dsstress-L10.nds 300/10; common: --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=3 --set render.2d_thread=on --set headless.direct=on | A: | B:)
+m7-dev2x-dsswap: SAME (30 dumps + audio; dsswap.nds 300/10; common: --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=3 --set render.2d_thread=on --set headless.direct=on | A: | B:)
+m7-dev2x-ds2dtest-ds2dtest: SAME (30 dumps + audio; ds2dtest-ds2dtest.nds 300/10; common: --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=3 --set render.2d_thread=on --set headless.direct=on | A: | B:)
+m7-dev2x-membench-membench: SAME (30 dumps + audio; membench-membench.nds 300/10; common: --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=3 --set render.2d_thread=on --set headless.direct=on | A: | B:)
+m7-dev2x-geomtest-geomtest: SAME (30 dumps + audio; geomtest-geomtest.nds 300/10; common: --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=3 --set render.2d_thread=on --set headless.direct=on | A: | B:)
+m7-2x-t1-dsstress-L5: SAME (30 dumps + audio; dsstress-L5.nds 300/10; common: --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=1 --set render.2d_thread=on | A: | B:)
+m7-2x-t1-ds2dtest-ds2dtest: SAME (30 dumps + audio; ds2dtest-ds2dtest.nds 300/10; common: --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=1 --set render.2d_thread=on | A: | B:)
+m7-2x-t1-geomtest-geomtest: SAME (30 dumps + audio; geomtest-geomtest.nds 300/10; common: --set render.renderer=gengis --set render.scale=2 --set render.gengis_threads=1 --set render.2d_thread=on | A: | B:)
+m7-1x-t2-2d-dsstress-L5: SAME (30 dumps + audio; dsstress-L5.nds 300/10; common: --set render.renderer=gengis --set render.scale=1 --set render.gengis_threads=2 --set render.2d_thread=on --set headless.direct=on | A: | B:)
+m7-1x-t2-2d-dsstress-L10: SAME (30 dumps + audio; dsstress-L10.nds 300/10; common: --set render.renderer=gengis --set render.scale=1 --set render.gengis_threads=2 --set render.2d_thread=on --set headless.direct=on | A: | B:)
+m7-1x-t2-2d-ds2dtest-ds2dtest: SAME (30 dumps + audio; ds2dtest-ds2dtest.nds 300/10; common: --set render.renderer=gengis --set render.scale=1 --set render.gengis_threads=2 --set render.2d_thread=on --set headless.direct=on | A: | B:)
+m7-1x-t2-2d-membench-membench: SAME (30 dumps + audio; membench-membench.nds 300/10; common: --set render.renderer=gengis --set render.scale=1 --set render.gengis_threads=2 --set render.2d_thread=on --set headless.direct=on | A: | B:)
+m7-1x-t2-2d-geomtest-geomtest: SAME (30 dumps + audio; geomtest-geomtest.nds 300/10; common: --set render.renderer=gengis --set render.scale=1 --set render.gengis_threads=2 --set render.2d_thread=on --set headless.direct=on | A: | B:)
+m7: 18 configurations, FAILS=0
+
+# bananads-tests (b7d, qemu-dev): all BananaDS host tests passed

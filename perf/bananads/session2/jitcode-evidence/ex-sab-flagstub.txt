@@ -1,0 +1,8 @@
+Sun Oct 18 20:14:33 UTC 2026
+# exact-suite 2026-10-18T20:14:33Z bin=/home/user/perf2/jitcode/bS/b A='jit.flagstub=off' B='jit.flagstub=on' quick
+PICS ok   cpubench-cpubench-thumb (6 files identical)
+PICS ok   jitloops-jitloops-thumb (6 files identical)
+DIFF ok   cpubench-cpubench-thumb (SAME after 300 frames (all of main RAM))
+DIFF ok   jitloops-jitloops-thumb (SAME after 300 frames (all of main RAM))
+FAILS=0
+Sun Oct 18 20:15:10 UTC 2026

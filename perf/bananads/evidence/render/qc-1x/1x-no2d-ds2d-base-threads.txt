@@ -1,0 +1,4 @@
+0	21136.0	5159.2	2754.3
+vcpu	kinsn/frame	kmemops/frame	kbranch/frame
+1	72.9	26.5	13.4
+2	75.4	27.4	13.8

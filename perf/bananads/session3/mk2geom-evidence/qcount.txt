@@ -1,0 +1,46 @@
+# qemu (jitcount), device builds, emulator thread (vcpu 0), MK scene frames 1650-2150 (runs to 1650 and 2150, /500)
+# qc-base = checkpoint 8e98258 (/home/user/perf3/mkall-b), qc-6364 = +0063+0064 (first form: WriteGXFIFOWords inlined), qc-all = dc33057 (0063-0065)
+qc-base      total  13044.6k  without Gengis  12880.1k  (Gengis  164.5k)  geometry+GX DMA   7052.6k
+qc-6364      total  13065.3k  without Gengis  12860.7k  (Gengis  204.6k)  geometry+GX DMA   7048.9k
+qc-all       total  13254.1k  without Gengis  12780.3k  (Gengis  473.8k)  geometry+GX DMA   7052.3k
+
+# per symbol (names normalized), base -> head, |diff| >= 2.5k; rast_kern/line_px/gx_* are Gengis work drawn on the emu thread (qemu timing noise)
+     73.9k       0.0k    -73.9k  _ZSt12__move_mergeIPPN7melonDS7PolygonES3_N9__gnu_cxx5__ops15_Iter_comp_iterIPFbS2_S2_EEEE
+    153.9k     103.1k    -50.8k  _ZN7melonDS5GPU3D17WriteToGXFIFOBodyILb1EEEvj
+     42.3k       4.0k    -38.2k  _ZN7melonDS18SlowBlockTransfer9ILb1ELi0EEEvjPmjPNS_5ARMv5E
+     24.0k       0.0k    -24.0k  _ZSt16__insertion_sortIPPN7melonDS7PolygonEN9__gnu_cxx5__ops15_Iter_comp_iterIPFbS2_S2_EEE
+     23.6k       0.0k    -23.6k  _ZN7melonDSL13GXWrite9RouteERNS_3NDSEjj
+     13.9k       0.1k    -13.9k  _ZN7melonDS18SlowBlockTransfer9ILb0ELi0EEEvjPmjPNS_5ARMv5E
+     10.8k       0.0k    -10.8k  _ZSt16__merge_adaptiveIPPN7melonDS7PolygonElS3_N9__gnu_cxx5__ops15_Iter_comp_iterIPFbS2_S2
+     10.0k       5.9k     -4.2k  _ZN7melonDS14BananaRenderer6NewJobEv
+    137.8k     134.8k     -2.9k  _ZN7melonDS3NDS11ARM7Write32Ejj
+     35.5k      32.8k     -2.7k  _ZN7melonDS3NDS9CheckDMAsEjj
+    169.0k     171.7k     +2.6k  _ZN7melonDS3NDS11SliceChain9EPS0_
+      3.1k       6.0k     +2.9k  rast_kern_h11000
+     -4.1k      -0.9k     +3.3k  rast_kern_h12000
+      1.9k       5.3k     +3.4k  rast_kern_h13010
+     -4.9k       1.3k     +6.2k  rast_kern_h11010
+     -3.5k       2.9k     +6.3k  rast_kern_h13110
+      2.9k      10.6k     +7.7k  f_run
+      6.2k      15.6k     +9.3k  rast_kern_h13000
+     82.4k      91.8k     +9.4k  _ZN7melonDS10SlowWrite9IjLi0EEEvjPNS_5ARMv5Ej
+      2.3k      11.7k     +9.4k  gx2_render_bin
+      6.7k      19.4k    +12.7k  rast_kern_h23110
+      0.0k      13.9k    +13.9k  _ZN7melonDSL22SlowBlockTransfer9BodyILb0ELi0EEEvjPmjPNS_5ARMv5E
+      5.7k      21.4k    +15.7k  gx_polygon
+      9.1k      44.0k    +34.9k  rast_kern_h12010
+      0.0k      39.5k    +39.5k  _ZN7melonDSL13YSortCountingEPPNS_7PolygonEjS2_
+      0.0k      41.7k    +41.7k  _ZN7melonDSL22SlowBlockTransfer9BodyILb1ELi0EEEvjPmjPNS_5ARMv5E
+      7.9k      57.3k    +49.4k  _ZN7melonDS5GPU3D13WriteToGXFIFOEj
+    141.6k     345.6k   +204.0k  line_px
+
+# 0066 (58aa659): qc-66b vs qc-all (dc33057)
+qc-all       total  13254.1k  without Gengis  12780.3k  (Gengis  473.8k)  geometry+GX DMA   7052.3k
+qc-66b       total  12855.0k  without Gengis  12710.6k  (Gengis  144.5k)  geometry+GX DMA   6491.3k
+   1772.8k      76.2k  -1696.7k  _ZN7melonDS3DMA4Run9Ev
+     11.7k       5.4k     -6.3k  gx2_render_bin
+      5.4k       0.0k     -5.4k  _ZN7melonDS5ARMv513AddCycles_CDIEv
+      0.0k       5.4k     +5.4k  _ZN7melonDS5ARMv512AddCycles_CDEv
+      0.0k      57.5k    +57.5k  _ZN7melonDS3DMA8Run9FullEv
+      0.0k     439.0k   +439.0k  _ZN7melonDS3DMA6Run9GXEv
+      0.0k    1135.7k  +1135.7k  _ZN7melonDS5GPU3D16WriteGXFIFOBlockEPKhjjj

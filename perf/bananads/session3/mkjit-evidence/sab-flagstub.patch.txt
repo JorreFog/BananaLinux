@@ -1,0 +1,66 @@
+diff -ru a/src/ARMJIT_A64/ARMJIT_Compiler.cpp b/src/ARMJIT_A64/ARMJIT_Compiler.cpp
+--- a/src/ARMJIT_A64/ARMJIT_Compiler.cpp	2026-10-18 22:34:34.471674213 +0000
++++ b/src/ARMJIT_A64/ARMJIT_Compiler.cpp	2026-10-18 23:06:24.779858176 +0000
+@@ -298,6 +298,7 @@
+         LoopNoXfer = getenv("MELONDS_JIT_NOLOOPXFER");
+         OptLazyFlags = OptKeepFlags && !getenv("MELONDS_JIT_NOLAZYFLAGS");
+         OptFlagStub = OptExitStub && OptLazyFlags && !getenv("MELONDS_JIT_NOFLAGSTUB");
++        SabFlagStub = getenv("MELONDS_JIT_SABFS") ? atoi(getenv("MELONDS_JIT_SABFS")) : 0;
+         FlagsWatch = OptLazyFlags;
+         OptFoldExit = OptCondExit && !getenv("MELONDS_JIT_NOFOLDEXIT") && !getenv("MELONDS_JIT_NOLINK");
+         // the entry prologue: MOVZ, and a MOVK for each other non-zero halfword of the CPU's fast memory base
+@@ -1017,9 +1018,9 @@
+         // the checks (ExitCheck), then the slot: a B to its link path in the far region, until ARM_Dispatch links
+         // it. With storeR15, ExitCheckPC first stores the R15 in the word after the slot.
+         if (ExitFlagsInStub)
+-            BL(storeR15 ? ExitCheckPCF[Num] : ExitCheckF[Num]);   // (c is 1: CPSRDirty, Comp_Exit)
++            BL(SabFlagStub == 5 ? (storeR15 ? ExitCheckPC[Num][1] : ExitCheck[Num][1]) : (storeR15 ? ExitCheckPCF[Num] : ExitCheckF[Num]));   // (c is 1: CPSRDirty, Comp_Exit)
+         else
+-            BL(storeR15 ? ExitCheckPC[Num][c] : ExitCheck[Num][c]);
++            BL(storeR15 ? ExitCheckPC[Num][SabFlagStub == 10 ? 0 : c] : ExitCheck[Num][SabFlagStub == 10 ? 0 : c]);
+     }
+     u8* slot = GetWriteableRWPtr();
+     u8* slotRX = (u8*)GetRXPtr();
+@@ -1127,8 +1128,12 @@
+                 // ExitCheckPCF (FLAGSTUB): the pending flags into RCPSR (FlushFlags' three), on into ExitCheckPC
+                 ExitCheckPCF[num] = GetRXPtr();
+                 MRS(X17, FIELD_NZCV);
+-                ANDI2R(RCPSR, RCPSR, 0x0FFFFFFF);
+-                ORR(RCPSR, RCPSR, W17);
++                if (SabFlagStub != 2 && SabFlagStub != 4)
++                    ANDI2R(RCPSR, RCPSR, 0x0FFFFFFF);
++                if (SabFlagStub != 7 && SabFlagStub != 9)
++                    ORR(RCPSR, RCPSR, W17);
++                if (SabFlagStub == 6 || SabFlagStub == 8)
++                    EORI2R(RCPSR, RCPSR, 0xF0000000);
+             }
+             // ExitCheckPC: R15 from the word after the exit's slot (x30 points to the slot), then ExitCheck
+             ExitCheckPC[num][c] = GetRXPtr();
+@@ -1149,9 +1154,13 @@
+             // ExitCheckF (FLAGSTUB): the same three, then ExitCheck with the CPSR store
+             ExitCheckF[num] = GetRXPtr();
+             MRS(X17, FIELD_NZCV);
+-            ANDI2R(RCPSR, RCPSR, 0x0FFFFFFF);
+-            ORR(RCPSR, RCPSR, W17);
+-            B(ExitCheck[num][1]);
++            if (SabFlagStub != 3 && SabFlagStub != 4)
++                ANDI2R(RCPSR, RCPSR, 0x0FFFFFFF);
++            if (SabFlagStub != 7)
++                ORR(RCPSR, RCPSR, W17);
++            if (SabFlagStub == 6)
++                EORI2R(RCPSR, RCPSR, 0xF0000000);
++            B(ExitCheck[num][SabFlagStub == 1 ? 0 : 1]);
+         }
+     }
+ 
+diff -ru a/src/ARMJIT_A64/ARMJIT_Compiler.h b/src/ARMJIT_A64/ARMJIT_Compiler.h
+--- a/src/ARMJIT_A64/ARMJIT_Compiler.h	2026-10-18 22:34:34.475721241 +0000
++++ b/src/ARMJIT_A64/ARMJIT_Compiler.h	2026-10-18 22:34:34.477244509 +0000
+@@ -252,6 +252,7 @@
+     // then on into ExitCheckPC/ExitCheck with the CPSR store
+     void* ExitCheckF[2] = {};
+     void* ExitCheckPCF[2] = {};
++    int SabFlagStub = 0;          // (sabotage, mkjit: MELONDS_JIT_SABFS=1..5)
+     bool ExitFlagsInStub = false; // (Comp_Exit to Comp_ExitTo: the exit's stub puts the pending flags in RCPSR)
+     void* DynExit[2][2] = {};
+     u32* DynExitBase[2][2] = {};

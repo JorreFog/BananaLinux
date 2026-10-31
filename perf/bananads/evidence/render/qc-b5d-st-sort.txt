@@ -1,0 +1,7 @@
+# qemu-count, st mode, device-like builds under qemu-dev, main thread instructions/frame, frames 100-300 (as qc-b5d-st-2d.txt); sort-off = mine with --set render.geom_sort=off
+st-geomtest-base           main thread: 4473.1k insns/frame
+st-geomtest-mine           main thread: 4475.6k insns/frame
+st-geomtest-sort-off       main thread: 4475.6k insns/frame
+st-L10-base                main thread: 18450.8k insns/frame
+st-L10-mine                main thread: 18433.4k insns/frame
+st-L10-sort-off            main thread: 18451.5k insns/frame

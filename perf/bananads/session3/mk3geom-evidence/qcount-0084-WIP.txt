@@ -1,0 +1,11 @@
+qc5-def      total  12092.2k  without Gengis  11876.8k  (Gengis  215.3k)  geometry+GX DMA   5882.4k
+qc6-on       total  11958.2k  without Gengis  11868.4k  (Gengis   89.9k)  geometry+GX DMA   5792.7k
+qc6-on v0=10163.2k v1=7349.4k v2=7458.9k v3=7138.5k v4=9186.5k v5=1421.0k
+   v0   1007.3k _ZN7melonDS5GPU3D18SubmitPolygonBodyTILb1ELb1EEEvv
+   v5    829.0k _ZNSt6thread11_State_implINS_8_InvokerISt5tupleIJZN7melonDS5GPU3D9Geom
+   v5    475.7k _ZN7melonDS5GPU3D12GeomLightJobERKNS_14GeomLightEntryEj
+   v0    436.2k _ZN7melonDS5GPU3D12GeomLightCmdEv.localalias.lto_priv.0
+   v5    109.5k _ZN7melonDS5GPU3D10GeomColorsERNS_7GeomJobE.localalias.lto_priv.0
+   v0     11.1k _ZN7melonDS5GPU3D8GeomWakeEv.localalias.lto_priv.0
+   v5      5.0k _ZN7melonDS16ClipAgainstPlaneILi0ELb1ELi1EEEijPNS_6VertexEii.isra.0
+   v0      3.2k _ZN7melonDS12GeomFastMath7Mult4x3EPiPKi

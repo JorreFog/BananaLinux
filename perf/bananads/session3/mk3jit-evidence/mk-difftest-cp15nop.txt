@@ -1,0 +1,2 @@
+SAME after 2100 frames (all of main RAM)
+exit 0
