@@ -1266,6 +1266,9 @@ settings		Sync now	立即同步
 settings		Copies the server's games (with their covers and names) to the card and syncs the saves both ways. It carries on in the background; the handheld doesn't sleep while games download. Files of your own are never replaced or deleted: only the ones a sync put there.	将服务器上的游戏（含封面与名称）复制到卡上，并双向同步存档。它在后台持续进行；下载游戏时主机不会休眠。你自己的文件绝不会被替换或删除：仅同步放入的那些文件。
 settings		Download: the server's games for the systems below come to the card (and leave it when they leave the server). Saves only: the games stay as they are and only the saves sync.	下载：下方各系统对应的游戏会从服务器来到卡上（服务器移除时卡上也随之移除）。仅存档：游戏保持不变，仅同步存档。
 settings		Saves only	仅存档
+settings		Games go to	游戏下载到
+settings		Where downloaded games go. Second SD card: its roms folder (made if it has none), while it's in and Second SD card shows its games. A game already on a card stays there; with the second card out, its games wait for the next sync.	下载的游戏存放的位置。第二张 SD 卡：其 roms 文件夹（没有时会自动创建），前提是卡已插入且“第二张 SD 卡”设为显示其游戏。已在某张卡上的游戏会留在原处；第二张卡未插入时，其游戏会等到下次同步。
+settings		This card	本卡
 settings		Save states	即时存档
 settings		On: save states sync too, not only the games' own saves (RomM; on Romhost its Devices page decides). Quick-resume states never sync.	开：即时存档也会同步，而不只是游戏自身的存档（RomM；在 Romhost 上由其 Devices 页面决定）。快速继续的状态永不同步。
 settings		Auto sync	自动同步
