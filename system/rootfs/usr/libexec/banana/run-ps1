@@ -21,6 +21,7 @@ if [ ! -f "$M" ]; then
     *)           INT=true  ;;   # 480p: a clean 2x
     esac
     printf 'video_scale_integer = "%s"\n' "$INT" > "$R/config/$C/$C.cfg"
+    printf 'input_player1_analog_dpad_mode = "1"\n' >> "$R/config/$C/$C.cfg"
 
     # Core options (config/<core>/<core>.opt, RetroArch's per-core override): the ari64 dynarec runs at full speed, so
     # frameskip is 'auto' only as an audio safety net (a late frame is dropped rather than crackling); GPU commands run
