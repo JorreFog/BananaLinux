@@ -1454,14 +1454,77 @@ static int battery_discharging_pct(void)
 	closedir(d);
 	return r;
 }
+/* ---- Charging while switched off (#34) ------------------------------------------------------------------------
+ * Started from rcS as "bananad --charge" before the panels or the card are touched. If no charger is online,
+ * returns at once so a normal boot goes on. Otherwise keeps the panels and the green power LED off, parks the
+ * secondary CPU cores and CPU0 on powersave, and lights the amber LED until the battery is full. Unplugging
+ * powers off cleanly; pressing the power button restores the cores and returns 0 so rcS boots into the menu. */
+static void cpu_low_power(int on)
+{
+	write_file("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor", on ? "powersave" : "performance");
+	for (int c = 1; c <= 3; c++) {
+		char p[64];
+		snprintf(p, sizeof p, "/sys/devices/system/cpu/cpu%d/online", c);
+		write_file(p, on ? "0" : "1");
+	}
+}
 
+static void charge_only(void)
+{
+	if (!charger_online()) return;
+
+	load_conf("/etc/banana/bananad.conf");
+	backlights_power(0);
+	cpu_low_power(1);
+	open_inputs();
+
+	char green[300], red[300], amber[300], bat[256];
+	led_path("power", green, sizeof green);
+	led_path("status", red, sizeof red);
+	led_path("charging", amber, sizeof amber);
+	led_set(green, "off", 0);
+	led_set(red, "off", 0);
+
+	int uev = uevent_open();
+	int last_amber = -1;
+
+	for (;;) {
+		int pct = -1, charging = 0;
+		if (!battery_state(bat, sizeof bat, &pct, &charging)) pct = 100;
+		if (!charger_online()) {
+			led_set(amber, "off", 0);
+			sync();
+			reboot(RB_POWER_OFF);
+			for (;;) pause();
+		}
+		int amber_on = cfg.led_brightness > 0 && (pct < 0 || pct < 100);
+		if (amber_on != last_amber) {
+			last_amber = amber_on;
+			led_set(amber, amber_on ? "on" : "off", cfg.led_brightness);
+		}
+		if (power_pressed(2000)) {
+			read_lid();
+			if (!(lid_closed && cfg.lid_sleep)) break;
+		}
+		if (uev >= 0) uevent_read(uev);
+	}
+
+	if (uev >= 0) close(uev);
+	for (int i = 0; i < ndev; i++) close(devfd[i]);
+	ndev = 0;
+	cpu_low_power(0);
+	backlights_power(1);
+}
+int main(int argc, char **argv)
 int main(int argc, char **argv)
 {
-	(void)argc; (void)argv;
+	if (argc > 1 && !strcmp(argv[1], "--charge")) {
+		charge_only();
+		return 0;
+	}
 	openlog("bananad", LOG_PID, LOG_DAEMON);
 	test_lid = getenv("BANANAD_TEST_LID");
 	load_conf("/etc/banana/bananad.conf");
-	load_conf("/data/banana/bananad.conf");
 	load_timezone();
 	/* the LEDs at the user's level first: everything below (the inputs, alsactl, the mixer, the second card) takes a
 	 * while, and the power LED is the first sign the handheld is starting (U-Boot lit it, the kernel kept it on) */
