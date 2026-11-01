@@ -2248,7 +2248,17 @@ int main(int argc, char** argv)
 				float k = disp.height() / 480.0f;
 				std::lock_guard<std::mutex> l(worker.uiLock);
 				if (w == "tab") settingsView.gcShow((int)tx);
-				else if (tx >= 0 && ty >= 0) { settingsView.gameTouch(tx * k, ty * k, true); settingsView.gameTouch(tx * k, ty * k, false); }
+				else if (tx >= 0 && ty >= 0)
+				{
+					settingsView.gameTouch(tx * k, ty * k, true);
+					// (the tap's command goes to the emulator as a finger's would: a slot loaded from the States view...)
+					Settings::GameAction a = settingsView.gameTouch(tx * k, ty * k, false);
+					char slotCmd[32];
+					snprintf(slotCmd, sizeof slotCmd, "LOAD_STATE_SLOT %d\n", settingsView.gameSlot());
+					const char* c = a == Settings::G_LOADSLOT ? slotCmd : a == Settings::G_SAVE ? "SAVE_STATE\n" : a == Settings::G_LOAD ? "LOAD_STATE\n" :
+						a == Settings::G_MENU ? "MENU_TOGGLE\n" : a == Settings::G_FFWD ? "FAST_FORWARD\n" : a == Settings::G_QUIT ? "QUIT\n" : nullptr;
+					if (c) { logf("game panel: %.*s (panel-tap)", (int)strlen(c) - 1, c); if (write(cmdFd, c, strlen(c)) < 0) {} }
+				}
 				want = true;
 				logf("panel tap %s %.0f %.0f", w.c_str(), tx, ty);
 			}
