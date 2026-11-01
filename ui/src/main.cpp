@@ -2191,6 +2191,7 @@ int main(int argc, char** argv)
 		// the game's end wakes the loop at once (a pidfd is readable then): the 100 ms poll alone kept the menu up to that
 		// much longer before it saw it
 		const int pidFd = (int)syscall(SYS_pidfd_open, pid, 0);
+		bool linkSeen = false;
 		for (;;)
 		{
 			pid_t w = waitpid(pid, &status, WNOHANG);
@@ -2203,6 +2204,11 @@ int main(int argc, char** argv)
 				std::string r = companion.active() ? companion.requests(t) : gameComp.requests(t);
 				// through the emulator's memory export when it attached to it (BananaFront), else RetroArch's stdin
 				if (!r.empty() && !compLink.send(r) && write(cmdFd, r.data(), r.size()) < 0) {}
+			}
+			if (compLink.attached() != linkSeen)	// (once a game: the log says which way the companion reads)
+			{
+				linkSeen = !linkSeen;
+				if (linkSeen) logf("companion: the emulator attached to its memory export (shared memory)");
 			}
 			if (compLink.waiting())
 			{
