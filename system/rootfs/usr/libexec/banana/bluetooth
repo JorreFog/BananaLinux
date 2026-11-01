@@ -4,7 +4,7 @@
 # speakers. Off at first (Settings > Network > Bluetooth, settings.conf bluetooth = on|off): while it is off the
 # modules aren't loaded, so the chip's Bluetooth is unpowered (hci_uart's close drops its BT_REG_ON), and no daemon runs.
 #   bluetooth up | down              the modules, D-Bus's system bus, bluetoothd and bluealsa; down saves the pairings
-#   bluetooth down sleep             (the sleep hook) the same, but the sound is held quiet (bt/hold) until the
+#   bluetooth down sleep             (the sleep hook) the same; headphones playing: the sound is held quiet (bt/hold) until the
 #                                    headphones are back after the wake, instead of loud on the speakers
 #   bluetooth audio                  Settings > Network > Bluetooth > Bluetooth audio changed: bluealsa again with its codecs,
 #                                    and the headphones connected again to take them
@@ -24,6 +24,7 @@ RUN=/run/banana
 STORE=/data/banana/bluetooth.tar
 LAST=/data/banana/bluetooth-audio	# the headphones played last: called back after a wake or a boot
 HOLD=$RUN/bt/hold
+WOKE=$RUN/bt-woke	# down sleep: "speakers" when no headphones were playing as the sleep began
 # (a ceiling on each call: bluetoothctl waits for bluetoothd for ever when it isn't there)
 CTL="timeout 45 bluetoothctl"
 SELF=/usr/libexec/banana/bluetooth
@@ -86,10 +87,16 @@ call_back() {
 # themselves, a press of their home button), the sound held quiet meanwhile; then the route, and the hold gone
 # ("callback wait": in the foreground, under the lock: a codec change's own call back, which the next change waits
 # for, so it can't take that one's hold away halfway)
+# (after a sleep on the speakers - no headphones playing when it began, down sleep's $WOKE says so - they're called
+# back too, but with the speakers playing meanwhile: a hold there was 20-30 s of silence after every wake, Wi-Fi's
+# reconnect and the 15 s call included, for anyone who had ever paired headphones)
 callback() {
     last=$(cat $LAST 2>/dev/null)
+    quiet=1; [ "$(cat $WOKE 2>/dev/null)" = speakers ] && quiet=0
+    rm -f $WOKE
     if mac_ok "$last"; then
-        mkdir -p $RUN/bt; touch $HOLD
+        mkdir -p $RUN/bt
+        if [ $quiet = 1 ]; then touch $HOLD; else rm -f $HOLD; fi
         if [ "$1" = wait ]; then call_back $last; else ( call_back $last ) 9>&- </dev/null >/dev/null 2>&1 & fi
     else
         rm -f $HOLD
@@ -138,9 +145,15 @@ down() {
     save
     stop $RUN/bt-watch.pid
     killall bluealsa-cli 2>/dev/null
-    # a sleep: quiet until the headphones are back after the wake (up calls them back); otherwise the speakers now
-    rm -f $RUN/bt/audio
-    if [ "$1" = sleep ] && mac_ok "$(cat $LAST 2>/dev/null)"; then mkdir -p $RUN/bt; touch $HOLD; else rm -f $HOLD; fi
+    # a sleep with headphones playing: quiet until they are back after the wake (up calls them back); a sleep on the
+    # speakers: the speakers again at once (bt-woke for up's call back); otherwise the speakers now
+    playing=0; [ -f $RUN/bt/audio ] && playing=1
+    rm -f $RUN/bt/audio $WOKE
+    if [ "$1" = sleep ] && [ $playing = 1 ] && mac_ok "$(cat $LAST 2>/dev/null)"; then mkdir -p $RUN/bt; touch $HOLD
+    else
+        rm -f $HOLD
+        [ "$1" = sleep ] && echo speakers > $WOKE
+    fi
     stop $RUN/bluealsa.pid
     stop $RUN/bluetoothd.pid
     for i in 1 2 3 4 5 6 7 8 9 10; do pidof bluetoothd bluealsa >/dev/null || break; sleep 0.1; done
@@ -200,7 +213,7 @@ devices() {
 why() { sed -n 's/.*\(Failed to [a-z]*\|Device [0-9A-F:]* not available\)\(.*\)/\1\2/p' | tail -n 1 | sed 's/org\.bluez\.Error\.//'; }
 
 case $1 in
-up) up || { rm -f $RUN/bt/audio $HOLD; exit 1; } ;;
+up) up || { rm -f $RUN/bt/audio $HOLD $WOKE; exit 1; } ;;
 down) down "$2" ;;
 restart) down; up || exit 1 ;;
 scan)
