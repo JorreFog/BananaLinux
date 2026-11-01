@@ -185,12 +185,12 @@ def run(cmd):
         sys.stderr.write(r.stderr[-2000:])
 
 
-def build(variant, level):
+def build(variant, level, phase_frames=PHASE_FRAMES):
     obj = os.path.join(OUT, "obj-" + variant)
     os.makedirs(obj, exist_ok=True)
     cflags = ["clang", "--target=armv4t-none-eabi", "-mcpu=arm7tdmi", "-mthumb", "-O2", "-ffreestanding",
               "-fno-strict-aliasing", "-fno-exceptions", "-Wall", "-Wextra", "-Wno-unused-parameter",
-              f"-DLEVEL={level}", "-I" + SRC, "-I" + GEN]
+              f"-DLEVEL={level}", f"-DPHASE_FRAMES={phase_frames}", "-I" + SRC, "-I" + GEN]
     objs = []
     for src in [os.path.join(SRC, "main.c"), os.path.join(SRC, "fast.c"), os.path.join(GEN, "data.c")]:
         o = os.path.join(obj, os.path.basename(src) + ".o")
@@ -209,14 +209,15 @@ def build(variant, level):
     open(rom_path, "wb").write(rom)
     with open(rom_path[:-4] + ".phases.tsv", "w") as f:
         for p in range(40):                        # 20 min of phases (soak runs loop the same scenes)
-            f.write(f"{p * PHASE_FRAMES / FPS:.1f}\t{SCENES[p % NSCENES]}\n")
+            f.write(f"{p * phase_frames / FPS:.1f}\t{SCENES[p % NSCENES]}\n")
     return rom_path, len(rom)
 
 
 def main():
     lz = gen()
-    for variant, level in (("realistic", 5), ("L1", 1), ("L10", 10)):
-        path, size = build(variant, level)
+    # quick: the realistic load in 10 s phases (a 50 s loop) for A/B series; its checksums differ from realistic's
+    for variant, level, pf in (("realistic", 5, PHASE_FRAMES), ("L1", 1, PHASE_FRAMES), ("L10", 10, PHASE_FRAMES), ("quick", 5, 600)):
+        path, size = build(variant, level, pf)
         print(f"{path}: {size} bytes (LZ77 tiles {lz} bytes)")
 
 

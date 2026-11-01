@@ -13,7 +13,9 @@
 #include "stress.h"
 #include "data.h"
 
+#ifndef PHASE_FRAMES
 #define PHASE_FRAMES 1800
+#endif
 #define NSCENES 5
 static const char* const scene_names[NSCENES] = { "RACER", "SHOOTER", "TOWN", "RASTER", "LOADER" };
 
