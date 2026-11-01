@@ -12,9 +12,11 @@ LIBRETRO_BANANASNES_SITE = $(call github,JorreFog,BananaSNES,$(LIBRETRO_BANANASN
 LIBRETRO_BANANASNES_LICENSE = Snes9x (non-commercial)
 LIBRETRO_BANANASNES_LICENSE_FILES = LICENSE
 
-# BANANASNES_FLAGS: the optimisation set measured on the stress ROM (see BANANA.md in the repo): hidden symbol visibility,
-# profile-guided optimisation from pgo/ (profiles recorded on the handheld, gcc 14.3 matching this toolchain).
-LIBRETRO_BANANASNES_OPT = -O3 -fvisibility=hidden -fvisibility-inlines-hidden
+# The optimisation set measured on the handhelds (BANANA.md in the repo): profile-guided optimisation from pgo/ (recorded on the Plus with this
+# toolchain's gcc 14.3 and the same sources; the profile names are relative to the source dir, -fprofile-prefix-path). Retrain pgo/ whenever a core
+# source changes (tools/pgo-train.sh + pgo-build.sh); a stale profile only loses the speed-up, never changes the output.
+LIBRETRO_BANANASNES_OPT = -O3 -fvisibility=hidden -fvisibility-inlines-hidden \
+	-fprofile-use=$(@D)/pgo -fprofile-prefix-path=$(@D) -fprofile-partial-training -Wno-missing-profile -Wno-coverage-mismatch
 
 define LIBRETRO_BANANASNES_BUILD_CMDS
 	$(TARGET_MAKE_ENV) $(MAKE) -C $(@D)/libretro platform=unix CC="$(TARGET_CC)" CXX="$(TARGET_CXX)" \
