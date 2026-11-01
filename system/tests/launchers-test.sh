@@ -1,6 +1,6 @@
 #!/bin/sh
 # The DS launchers' file work against a made-up card, no emulator: run-drastic's per-game drastic.cfg lines (#117)
-# and its move of fast forward off R3 (#113), taken from run-drastic itself (its functions, not a copy); nds-saves on
+# and nds-buttons' DraStic controls (#151), taken from the launchers themselves (their functions, not a copy); nds-saves on
 # a made-up data partition (BANANA_ROOT): an empty save never goes over a real one (#96).
 #   sh system/tests/launchers-test.sh
 cd "$(dirname "$0")/../.." || exit 1
@@ -47,27 +47,25 @@ check "$(hires) $(ls -A config | grep -c settings)" "1 0" "an empty marker is dr
 cfg_game hires_3d 4
 check "$(hires) $(ls -A config | grep -c settings)" "1 0" "a value other than 0 or 1 never goes in"
 
-echo "run-drastic: fast forward off R3 (#113), save on L2, load from the menu (#77)"
-fn "$L/run-drastic" ff_on_r2
+echo "nds-buttons: DraStic's L2, R2, L3, R3 from Settings > Nintendo DS > Buttons (#151, replaces #113/#77's fixed move)"
 IMG=$R/buildroot/board/rgds/drastic.cfg
-keys() { grep -E "^controls_$1\[CONTROL_INDEX_(FAST_FORWARD|SAVE_STATE|LOAD_STATE)\]" "${2:-config/drastic.cfg}" | sed 's/.*_INDEX_//; s/\] = /=/' | tr '\n' ' '; }
-check "$(keys a "$IMG")" "SAVE_STATE=1030 LOAD_STATE=65535 FAST_FORWARD=1031 " "the image's controls_a: save L2, load none, fast forward R2"
-check "$(keys b "$IMG")" "SAVE_STATE=1030 LOAD_STATE=65535 FAST_FORWARD=1031 " "the image's controls_b: the same"
-check "$(grep -c '= 1036$' "$IMG")" "0" "nothing on R3 in the image"
-# a card from before: the image's file with the old three
-sed -e 's/^\(controls_[ab]\[CONTROL_INDEX_SAVE_STATE\]\) = .*/\1 = 1031/' -e 's/^\(controls_[ab]\[CONTROL_INDEX_LOAD_STATE\]\) = .*/\1 = 1030/' \
-    -e 's/^\(controls_[ab]\[CONTROL_INDEX_FAST_FORWARD\]\) = .*/\1 = 1036/' "$IMG" > config/drastic.cfg
-ff_on_r2
-check "$(cmp -s config/drastic.cfg "$IMG" && echo same)" "same" "an old card's controls become the image's"
-cp config/drastic.cfg config/once; ff_on_r2
+keys() { grep -E "^controls_$1\[CONTROL_INDEX_(FAST_FORWARD|SAVE_STATE|LOAD_STATE|FAKE_MICROPHONE|MENU)\]" "${2:-config/drastic.cfg}" | sed 's/.*_INDEX_//; s/\] = /=/' | tr '\n' ' '; }
+check "$(keys a "$IMG")" "MENU=65535 SAVE_STATE=1054 LOAD_STATE=1055 FAST_FORWARD=1031 FAKE_MICROPHONE=1035 " "the image's controls_a: F+R save, F+L load, R2 fast forward, L3 blow, L3 not the menu"
+check "$(grep -c '^controls_a.* = 1036$' "$IMG")" "0" "nothing on R3 in the image's set a"
+# a card from before (0.5.0.1: fast forward R3, save R2, load L2, the menu on L3) with the defaults: the image's set a
+sed -e 's/^\(controls_a\[CONTROL_INDEX_SAVE_STATE\]\) = .*/\1 = 1031/' -e 's/^\(controls_a\[CONTROL_INDEX_LOAD_STATE\]\) = .*/\1 = 1030/' \
+    -e 's/^\(controls_a\[CONTROL_INDEX_FAST_FORWARD\]\) = .*/\1 = 1036/' -e 's/^\(controls_a\[CONTROL_INDEX_MENU\]\) = .*/\1 = 1035/' "$IMG" > config/drastic.cfg
+: > "$T/settings.conf"
+sw=$(NDS_BUTTONS_SETTINGS=$T/settings.conf sh "$L/nds-buttons" drastic config/drastic.cfg)
+check "$(keys a)" "$(keys a "$IMG")" "an old card's set a becomes the image's"
+check "$sw" "6" "L2 swaps the screens (DSFLIP_SWAP_BUTTONS 6)"
+cp config/drastic.cfg config/once; NDS_BUTTONS_SETTINGS=$T/settings.conf sh "$L/nds-buttons" drastic config/drastic.cfg >/dev/null
 check "$(cmp -s config/drastic.cfg config/once && echo same)" "same" "twice changes nothing"
-# a player's own setup in set b (load moved to L, 1028): set b left alone, set a moved
-sed -e 's/^\(controls_[ab]\[CONTROL_INDEX_SAVE_STATE\]\) = .*/\1 = 1031/' -e 's/^\(controls_[ab]\[CONTROL_INDEX_FAST_FORWARD\]\) = .*/\1 = 1036/' \
-    -e 's/^\(controls_a\[CONTROL_INDEX_LOAD_STATE\]\) = .*/\1 = 1030/' -e 's/^\(controls_b\[CONTROL_INDEX_LOAD_STATE\]\) = .*/\1 = 1028/' "$IMG" > config/drastic.cfg
-ff_on_r2
-check "$(keys a)" "SAVE_STATE=1030 LOAD_STATE=65535 FAST_FORWARD=1031 " "set a, as it was: moved"
-check "$(keys b)" "SAVE_STATE=1031 LOAD_STATE=1028 FAST_FORWARD=1036 " "set b, changed by the player: left alone"
-rm -f config/drastic.cfg; ff_on_r2
+# a player's choice: L2 saves, R2 nothing
+printf 'nds_btn_l2 = save\nnds_btn_r2 = none\n' > "$T/settings.conf"
+sw=$(NDS_BUTTONS_SETTINGS=$T/settings.conf sh "$L/nds-buttons" drastic config/drastic.cfg)
+check "$(keys a | grep -o 'SAVE_STATE=[0-9]*\|FAST_FORWARD=[0-9]*' | tr '\n' ' ')$sw" "SAVE_STATE=1030 FAST_FORWARD=65535 " "L2 = save, R2 = nothing: save on L2, no fast forward, no swap button"
+rm -f config/drastic.cfg; NDS_BUTTONS_SETTINGS=$T/settings.conf sh "$L/nds-buttons" drastic config/drastic.cfg >/dev/null
 check "$(ls config | grep -c drastic.cfg)" "0" "no drastic.cfg yet: nothing made"
 cd - >/dev/null || exit 1
 
