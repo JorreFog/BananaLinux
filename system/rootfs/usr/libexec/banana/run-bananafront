@@ -1,0 +1,124 @@
+#!/bin/sh
+# BananaFront: BananaOS's own frontend for the libretro cores (the systems RetroArch ran), lean: KMS straight to the
+# game panel, ALSA at 48 kHz, the saves and states RetroArch keeps (same files: a game goes on in either).
+#   run-bananafront <core> <rom>       e.g. run-bananafront gambatte /data/roms/gb/game.gb
+# RetroArch stays installed: Settings > Other systems > the system's frontend (frontend.<system>) picks it back.
+BF=${BANANAFRONT_BIN:-/usr/bin/bananafront}    # (tests: another build)
+[ -x $BF ] || { echo "BananaFront isn't installed" >&2; exit 1; }
+CORE=/usr/lib/libretro/$1_libretro.so
+case $1 in /*) CORE=$1 ;; esac          # (tests: a core by its path)
+ROM=$2
+setting() {
+    v=$(sed -n "/^ *$1 *= */{s///;h};\${x;p}" /data/banana/settings.conf 2>/dev/null)
+    [ -n "$v" ] || v=$(sed -n "/^ *$1 *= */{s///;h};\${x;p}" /etc/banana/settings.conf 2>/dev/null)
+    printf '%s' "$v"
+}
+# the core Settings > Other systems picked for the system (as run-retroarch: the image's, then the card's)
+if [ -n "$BANANA_SYSTEM" ] && [ "${1#/}" = "$1" ]; then
+    c=$(setting "core.$BANANA_SYSTEM")
+    for d in /usr/lib/libretro /data/retroarch/cores; do
+        [ -n "$c" ] && [ -f $d/${c}_libretro.so ] && { CORE=$d/${c}_libretro.so; break; }
+    done
+fi
+[ -f "$CORE" ] || { echo "no core $1" >&2; exit 1; }
+CFG=/data/retroarch/retroarch.cfg
+ra_cfg() { sed -n "/^$1 = \"\(.*\)\"/{s//\1/;h};\${x;p}" $CFG 2>/dev/null; }
+mkdir -p /data/saves /data/states /data/screenshots
+set -- --system "${BANANA_SYSTEM:-}" --config /data/retroarch/config "$CORE" "$ROM"
+# the Game Boy Advance's one save folder for every GBA core (run-retroarch's /data/saves/gba): the same files, and a
+# game with no save there yet gets the newest one from a core's folder, as there
+if [ "$BANANA_SYSTEM" = gba ]; then
+    G=/data/saves/gba; mkdir -p $G
+    n=${ROM##*/}; n=${n%.*}
+    if [ ! -f "$G/$n.srm" ]; then
+        best=
+        for d in gpSP mGBA "VBA Next" "VBA-M" Meteor; do
+            f="/data/saves/$d/$n.srm"
+            [ -s "$f" ] || continue
+            [ "$(tr -d '\377' < "$f" | head -c 1 | wc -c)" = 0 ] && continue
+            [ "$(tr -d '\000' < "$f" | head -c 1 | wc -c)" = 0 ] && continue
+            if [ -z "$best" ] || [ "$f" -nt "$best" ]; then best=$f; fi
+        done
+        [ -n "$best" ] && cp -p "$best" "$G/$n.srm.new" && mv "$G/$n.srm.new" "$G/$n.srm" && sync &&
+            echo "run-bananafront: the GBA save from $best, now $G/$n.srm (every GBA core)" >&2
+    fi
+    set -- --save-dir $G "$@"
+fi
+# Settings > Other systems > Audio latency (RetroArch's setting, the same buffer)
+lat=$(setting ra_audio_latency)
+case $lat in 32|64|128) set -- --audio-latency $lat "$@" ;; esac
+# Quick resume: RetroArch's savestate_auto_save (what the setting writes); after Power off after sleeping, the
+# automatic state loaded this once whatever the setting
+[ "$(ra_cfg savestate_auto_save)" = true ] && set -- --resume-save --resume-load "$@"
+if [ -f /run/banana/resume-once ] && [ "$(cat /run/banana/resume-once 2>/dev/null)" = "${BANANA_ROM:-$ROM}" ]; then
+    rm -f /run/banana/resume-once; set -- --resume-load "$@"
+    echo "run-bananafront: resuming after Power off after sleeping" >&2
+fi
+# Settings > Other systems > Shader (ra_shader): the same looks, as BananaOS's GLSL shaders (SuperDrastic's folder:
+# libretro's zfast-lcd, zfast-crt, sharp-bilinear converted), drawn by the GPU into the picture's place on the panel
+case $(setting ra_shader) in lcd) SH=zfast-lcd ;; crt) SH=zfast-crt ;; sharp) SH=sharp-bilinear ;; *) SH= ;; esac
+SH=${BANANAFRONT_SHADER-$SH}    # (tests: another shader, or "" for none)
+[ -n "$SH" ] && [ -d /usr/lib/superdrastic/shaders ] && { export DSFLIP_SHADER_DIR=/usr/lib/superdrastic/shaders; set -- --shader $SH "$@"; }
+# Settings > Other systems > Screen border (ra_border): the same borders as run-retroarch (the theme's, else its base
+# palette's), on an overlay plane over the panel, the picture in the border's hole (borders.conf)
+if [ "${BANANAFRONT_BORDER:-$(setting ra_border)}" = on ] && [ -n "$BANANA_SYSTEM" ]; then    # (tests: BANANAFRONT_BORDER)
+    BD=/usr/share/banana/borders
+    MODE=$(cat /sys/class/drm/card0-*/modes 2>/dev/null | head -n 1)
+    read BX BY BW BH <<EOF
+$(awk -v m="$MODE" -v s="$BANANA_SYSTEM" '$1 == m && $2 == s { print $3, $4, $5, $6; exit }' $BD/borders.conf 2>/dev/null)
+EOF
+    th=$(setting theme)
+    case $th in
+    user:*)
+        n=${th#user:}; j=/data/banana/themes/$n.json; [ -f "$j" ] || j=/usr/share/banana/themes/$n.json
+        if [ -d "$BD/$MODE/$n" ] && { [ "$j" = /usr/share/banana/themes/$n.json ] || cmp -s "$j" /usr/share/banana/themes/$n.json; }; then
+            th=$n
+        elif grep -q '"base" *: *"light"' "$j" 2>/dev/null; then th=light; else th=dark; fi ;;
+    light) ;;
+    *) th=dark ;;
+    esac
+    PNG=$BD/$MODE/$th/$BANANA_SYSTEM.png
+    [ -n "$BH" ] && [ -f "$PNG" ] && set -- --border "$PNG" --border-rect "$BX,$BY,$BW,$BH" "$@"
+fi
+# the picture's size as RetroArch's (Integer scale in its menu); else the core's aspect, as large as fits
+[ "$(ra_cfg video_scale_integer)" = true ] && set -- --scale integer "$@"
+# low latency: each frame started as late as it still makes its refresh (BananaFront measures its own frames), the
+# buttons read that much later: GBC 16.7 -> 7.5 ms from the read to the picture (bananafront_lowlat, on by default)
+[ "${BANANAFRONT_LOWLAT_SET:-$(setting bananafront_lowlat)}" != off ] && set -- --lowlat "$@"
+# BananaFront's own clock governor (the lowest clock that keeps every frame on time, per game): bananafront_cpugov
+[ "$(setting bananafront_cpugov)" = on ] && set -- --cpugov "$@"
+# RetroAchievements: the setup's account (banana/accounts.conf, as run-retroarch gives RetroArch): its name, RetroArch's
+# token for it and the password, in the environment only (bananafront takes them out of its own at once); off when
+# RetroArch's cheevos_enable is false (Settings > Other systems > RetroAchievements); hardcore as RetroArch has it
+A=/data/banana/accounts.conf
+acct() { sed -n "s/^$1=//p" $A 2>/dev/null | head -n 1; }
+u=$(acct ra_user)
+if [ -n "$u" ] && [ "$(ra_cfg cheevos_enable)" != false ]; then
+    export BANANAFRONT_RA_USER="$u" BANANAFRONT_RA_PASSWORD="$(acct ra_password)" BANANAFRONT_RA_TOKEN="$(acct ra_retroarch_token)"
+    [ "$(ra_cfg cheevos_hardcore_mode_enable)" = true ] && export BANANAFRONT_RA_HARDCORE=1
+fi
+export BANANAFRONT_DATA=/data/bananafront
+# the panel without a lease: RetroArch's video_monitor_index (2 the top, 1 the bottom); the other one dark
+L=/data/banana/logs; mkdir -p $L
+[ -f $L/bananafront.log ] && mv -f $L/bananafront.log $L/bananafront.1.log
+[ -n "$BANANAFRONT_STATS" ] && set -- --stats "$BANANAFRONT_STATS" "$@"
+if [ -n "$BANANA_DRM_LEASE_FD" ]; then
+    # the game panel (banana-ui keeps the other): its tiles' commands on stdin, the companions' replies on stdout
+    if [ -n "$BANANA_RA_OUT" ] && [ -p "$BANANA_RA_OUT" ]; then exec 4>"$BANANA_RA_OUT"; else exec 4>/dev/null; fi
+    exec $BF "$@" < "${BANANA_RA_CMD:-/dev/null}" >&4 2>>$L/bananafront.log
+fi
+MON=$(ra_cfg video_monitor_index)
+. /usr/libexec/banana/one-panel
+case ${MON:-2} in 2) one_panel_dark top; S=top ;; *) one_panel_dark bottom; S=bottom ;; esac
+# commands on stdin here too (bananad's AUDIO_REINIT when the headphone jack changes), as run-retroarch has them
+FIFO=/run/banana/retroarch.cmd
+rm -f $FIFO; mkfifo -m 600 $FIFO && exec 3<>$FIFO
+$BF --screen $S "$@" < $FIFO >/dev/null 2>>$L/bananafront.log &
+P=$!
+trap 'kill -TERM $P 2>/dev/null' TERM INT HUP
+trap 'kill -USR1 $P 2>/dev/null' USR1
+wait $P; S=$?
+while kill -0 $P 2>/dev/null; do wait $P; S=$?; done
+exec 3>&-; rm -f $FIFO
+one_panel_restore
+exit $S

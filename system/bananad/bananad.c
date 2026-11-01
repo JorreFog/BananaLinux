@@ -535,12 +535,31 @@ static void game_rom(pid_t game, char *out, size_t n)
 
 /* the resume state the DS launchers name for rom (run-drastic, run-bananads): <dir>/<file name without its
  * extension><ext>; "" for another emulator (RetroArch's QUIT waits for its own save, so it isn't checked) */
+/* BananaFront's automatic state (RetroArch's name: <state_dir>/<rom_base>.state.auto), from the game-id file it
+ * writes at the start (COMPANION-SPEC.md 2; read before the game is told to quit: it removes the file on exit) */
+static char bf_resume[1300];
+static void bf_resume_path(void)
+{
+	char dir[600] = "", base[600] = "", ln[600];
+	bf_resume[0] = 0;
+	FILE *f = fopen("/run/banana/game-id", "r");
+	if (!f) return;
+	while (fgets(ln, sizeof ln, f)) {
+		ln[strcspn(ln, "\n")] = 0;
+		if (!strncmp(ln, "state_dir=", 10)) snprintf(dir, sizeof dir, "%s", ln + 10);
+		else if (!strncmp(ln, "rom_base=", 9)) snprintf(base, sizeof base, "%s", ln + 9);
+	}
+	fclose(f);
+	if (dir[0] && base[0]) snprintf(bf_resume, sizeof bf_resume, "%s/%s.state.auto", dir, base);
+}
+
 static void resume_state_path(const char *emu, const char *rom, char *out, size_t n)
 {
 	out[0] = 0;
 	const char *dir, *ext;
 	if (!strcmp(emu, "superdrastic")) dir = "/data/drastic/savestates", ext = ".resume.dss";
 	else if (!strcmp(emu, "bananads")) dir = "/data/states/nds", ext = ".resume.mst";
+	else if (!strcmp(emu, "bananafront")) { snprintf(out, n, "%s", bf_resume); return; }
 	else return;
 	const char *b = strrchr(rom, '/');
 	b = b ? b + 1 : rom;
@@ -616,6 +635,13 @@ static void sleep_poweroff(pid_t game, pid_t pg, double asleep)
 		} else if (pg > 0 && (p = pgrp_member(pg, "bananads"))) {
 			/* BananaDS: SIGUSR1 quits with the resume state written whatever resume.on_quit says, then the save */
 			emu = "bananads";
+			kill(p, SIGUSR1);
+			kill(grp, SIGCONT);
+		} else if (pg > 0 && (p = pgrp_member(pg, "bananafront"))) {
+			/* BananaFront: SIGUSR1 quits with the automatic state written (RetroArch's .state.auto, the one Quick
+			 * resume loads) whatever the setting, then the save */
+			emu = "bananafront";
+			bf_resume_path();
 			kill(p, SIGUSR1);
 			kill(grp, SIGCONT);
 		} else if (pg > 0 && (p = pgrp_member(pg, "retroarch"))) {
