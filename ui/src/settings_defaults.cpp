@@ -32,6 +32,7 @@ namespace banana
 		const char* const ACCENT_TEXT[] = { "auto", "dark", "light", nullptr };
 		const char* const ACCENTS[] = { "yellow", "blue", "red", "green", "purple", "pink", nullptr };
 		const char* const SHADERS[] = { "off", "lcd", "crt", "sharp", nullptr };
+		const char* const FRONTEND[] = { "auto", "bananafront", "retroarch", nullptr };
 		const char* const NDS[] = { "superdrastic", "bananads", nullptr };
 		const char* const PANEL[] = { "panel", "off", nullptr };
 		const char* const IDLE[] = { "dim", "off", "on", nullptr };
@@ -65,6 +66,8 @@ namespace banana
 			{ "bt_audio", "latency", ENUM, BT_AUDIO, 0, 0 },
 			{ "quick_resume", "off", ENUM, ON_OFF, 0, 0, true },
 			{ "sd2_roms", "on", ENUM, ON_OFF, 0, 0 },
+			{ "ra_frontend", "auto", ENUM, FRONTEND, 0, 0, true },
+			{ "bananafront_cpugov", "off", ENUM, ON_OFF, 0, 0, true },
 			{ "ra_shader", "off", ENUM, SHADERS, 0, 0, true },
 			{ "ra_border", "off", ENUM, ON_OFF, 0, 0, true },
 			{ "ra_audio_latency", "64", ENUM, LATENCY, 0, 0, true },
