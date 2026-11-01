@@ -5,8 +5,8 @@
 ################################################################################
 
 # (local until it has a home on GitHub: the final step of the 2026-11-01 run points this at the pushed SHA)
-# the BananaFront commit 0.5.1 was tested with: 47c7b85 (F opens the menu only as a tap; on top of e6cfc20, the GPU clock floor while a shader runs, KAN-144). Until
-# its repository is pushed the site is local: build from a `git archive 47c7b85` of it (BANANAFRONT_SITE=<that folder>)
+# the BananaFront commit 0.5.1 was tested with: 3f9a552 (archives zlib cannot open unpacked with 7zz, KAN-146; on top of 47c7b85, F menu only as a tap, and e6cfc20, the GPU clock floor while a shader runs, KAN-144). Until
+# its repository is pushed the site is local: build from a `git archive 3f9a552` of it (BANANAFRONT_SITE=<that folder>)
 BANANAFRONT_VERSION = local
 BANANAFRONT_SITE = $(HOME)/banana-emu/BananaFront
 BANANAFRONT_SITE_METHOD = local
