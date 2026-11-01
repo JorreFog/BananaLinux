@@ -27,7 +27,7 @@ SAN="-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-fram
 FLAGS="-std=c++17 -O1 -g $SAN $(pkg-config --cflags freetype2 libdrm zlib)"
 LIBS="$(pkg-config --libs freetype2 libdrm zlib) -lpthread"
 OBJS=""
-for s in $(sed -n 's/^SRC = //p' "$HERE/Makefile") fuzz/stb.cpp; do	# (stb's code is in main.cpp)
+for s in $(sed -n 's/^SRC +*= //p' "$HERE/Makefile") fuzz/stb.cpp; do	# (stb's code is in main.cpp)
     [ "$s" = src/main.cpp ] && continue
     o=$OUT/obj/$(echo "$s" | tr / _).o
     [ "$o" -nt "$HERE/$s" ] && [ "$o" -nt "$HERE/Makefile" ] || $CXX $FLAGS -fsanitize=fuzzer-no-link -c "$HERE/$s" -o "$o"
