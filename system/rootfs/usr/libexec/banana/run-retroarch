@@ -21,9 +21,11 @@ n64|psx|"") ;;
     bananafront) bf=1 ;;
     retroarch) bf=0 ;;
     *) case " $BF_SYSTEMS " in *" $BANANA_SYSTEM "*) bf=1 ;; *) bf=0 ;; esac
-       # (RetroAchievements in Hardcore: RetroArch, which retroachievements.org knows; an unknown client's hardcore
-       # unlocks are only accepted with its warning)
-       grep -q '^cheevos_hardcore_mode_enable = "true"' /data/retroarch/retroarch.cfg 2>/dev/null && bf=0 ;;
+        # BananaSNES (Settings > Other systems > Super Nintendo > core) is made for BananaFront: chosen, it runs there in Auto too
+        [ "$BANANA_SYSTEM" = snes ] && [ "$(setting core.snes)" = bananasnes ] && bf=1
+        # (RetroAchievements in Hardcore: RetroArch, which retroachievements.org knows; an unknown client's hardcore
+        # unlocks are only accepted with its warning)
+        grep -q '^cheevos_hardcore_mode_enable = "true"' /data/retroarch/retroarch.cfg 2>/dev/null && bf=0 ;;
     esac
     # (the program in /usr/bin; beside the launchers in a test deploy, which can only replace whole folders)
     bfbin=/usr/bin/bananafront; [ -x $bfbin ] || bfbin=/usr/libexec/banana/bananafront

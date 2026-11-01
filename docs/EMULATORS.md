@@ -230,3 +230,21 @@ same files as libretro-fceumm's: switching cores loses nothing.
   its repo holds the tier-1 definition of the stress ROM.
 - **Tests and tools** (in the BananaNES repo, `banana/tools`): `check-all.sh` (every exactness check), `devcheck.sh` (the same on a
   handheld), `nesrun` (a headless libretro host), the stress ROM and its drivers (`tools/stress-roms/nes`).
+
+## BananaSNES
+
+BananaSNES (`libretro-bananasnes`, `bananasnes_libretro.so`; https://github.com/JorreFog/BananaSNES) is Snes9x (the libretro port, the core
+0.5.0 ships) tuned for the two handhelds and run by BananaFront. Snes9x's licence allows free distribution only, so BananaSNES is free
+too; the credit for the emulation is the Snes9x authors' (`LICENSE` in the repo).
+
+- **Chosen** per system in Settings > Other systems > Super Nintendo > core (BananaSNES next to Snes9x); the default stays Snes9x in RetroArch until
+  it is switched after the tests on both handhelds. Chosen, BananaSNES runs in BananaFront even with Frontend on Auto (`run-retroarch`).
+- **What differs from Snes9x**: only changes that measured faster on the handhelds' stress ROM and left the picture and sound bit-identical
+  (checked on 70 example ROMs and the stress ROM's three variants, and EarthBound's first minute on the Plus): a lazily advanced SPC700 timer set,
+  rendering in 16-line bands (all layers of a band before the next, for the A55's shared cache), profile-guided optimisation with a profile
+  recorded on the Plus; plus the complete libretro memory map for the game companion (WRAM $7E0000, cartridge SRAM at the virtual $1000000, SA-1 I-RAM).
+- **Measured** (tools/stress-roms/snes v4, BananaFront on the RG DS Plus, 1992 MHz, the stress loop): retro_run per frame racer / action / town / audio:
+  Snes9x 3.97 / 3.98 / 5.12 / 3.66 ms -> BananaSNES 3.51 / 3.53 / 4.32 / 3.17 ms (-11 to -16%); SA-1 variant -15%, Super FX variant -9%; with BananaFront's
+  clock governor the stock core needs a 1156 MHz mean for the same smoothness, BananaSNES holds 805 MHz. Against RetroArch + Snes9x the whole process uses
+  25-37% less CPU. EarthBound (owner's game, Plus): identical picture and sound for 3600 frames, about -5% on top of the lazy timers (the profile is from the
+  stress ROM and homebrew). Details, every attempt and the exactness gates: the repo's BANANA.md and tools/stress-roms/snes/CALIBRATION.md.
