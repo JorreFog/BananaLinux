@@ -1,0 +1,9 @@
+[nds]
+name = Nintendo DS
+folder = nds
+ext = nds zip
+\xaccent = on
+nds_emulator = off
+ra_shader = nope
+theme = 
+\x\x\x\x
