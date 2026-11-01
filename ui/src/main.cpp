@@ -2464,6 +2464,8 @@ int main(int argc, char** argv)
 	// list of cards follows it while it is open (no read needed: the poll itself takes the event)
 	int mountsFd = open("/proc/self/mounts", O_RDONLY | O_CLOEXEC);
 	resumeAfterPoweroff(lib, o.data, "/run/banana/resume-once", &resumeLater, nowMs());	// (its game starts at the loop's first turn)
+	std::string launchLater;	// a launch file's game not in the library yet (the rescan after a copy), tried again until launchLaterUntil
+	double launchLaterUntil = 0;
 	while (!quit)
 	{
 		if (settingsView.takeSetupFinished() && disp.isOpen())
@@ -2517,7 +2519,18 @@ int main(int argc, char** argv)
 				std::getline(f, want);
 			}
 			unlink("/run/banana/launch");
-			if (!launchPath(lib, want)) logf("launch file: no game at %s", want.c_str());
+			if (!launchPath(lib, want))
+			{
+				// a game just copied into a games folder isn't in the library until its rescan: kept and tried again
+				// for 20 s (scripted stress runs copy the ROM in right before writing the launch file)
+				if (access(want.c_str(), F_OK) == 0) { launchLater = want; launchLaterUntil = now + 20000.0; logf("launch file: %s not in the library yet: waiting for its rescan", want.c_str()); }
+				else logf("launch file: no game at %s", want.c_str());
+			}
+		}
+		else if (!launchLater.empty())
+		{
+			if (launchPath(lib, launchLater)) { logf("launch file: %s started after the rescan", launchLater.c_str()); launchLater.clear(); }
+			else if (now > launchLaterUntil) { logf("launch file: no game at %s (20 s)", launchLater.c_str()); launchLater.clear(); }
 		}
 		int g = lib.pendingLaunch();
 		if (g >= 0)
