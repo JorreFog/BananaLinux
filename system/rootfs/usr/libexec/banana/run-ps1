@@ -21,6 +21,7 @@ if [ ! -f "$M" ]; then
     *)           INT=true  ;;   # 480p: a clean 2x
     esac
     printf 'video_scale_integer = "%s"\n' "$INT" > "$R/config/$C/$C.cfg"
+    printf 'input_player1_analog_dpad_mode = "1"\n' >> "$R/config/$C/$C.cfg"
 
     # Core options (config/<core>/<core>.opt, RetroArch's per-core override): the ari64 dynarec runs at full speed, so
     # frameskip is 'auto' only as an audio safety net (a late frame is dropped rather than crackling); GPU commands run
@@ -51,6 +52,10 @@ fi
 # have the last word and send the game onto both panels: those keys are dropped here, so run-retroarch's panel settings
 # always win. Banana's own keys (video_scale_integer) stay.
 CF=$R/config/$C/$C.cfg
+# The left stick drives the d-pad in games that only know the digital pad (#144: the stick did nothing in PS1 games).
+# "1" (not the forced "3") steps aside when the core's pad is set to an analog one, so DualShock games keep the stick.
+# Added once to cards from before as well; a value set in RetroArch's menu and saved as a core override is kept.
+grep -q '^ *input_player1_analog_dpad_mode *=' "$CF" 2>/dev/null || printf 'input_player1_analog_dpad_mode = "1"\n' >> "$CF"
 if grep -q -e '^ *video_monitor_index *=' -e '^ *stdin_cmd_enable *=' "$CF" 2>/dev/null; then
     sed -i -e '/^ *video_monitor_index *=/d' -e '/^ *stdin_cmd_enable *=/d' "$CF"
 fi
