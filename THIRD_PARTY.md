@@ -25,6 +25,8 @@ share symbol.
 
 RetroArch's joypad map for the RG DS (`buildroot/package/retroarch/retrogame_joypad.cfg`) is ROCKNIX's (GPL-2.0).
 
+BananaNES (the NES core: a fork of libretro-fceumm by CaH4e3 and the FCEUmm / libretro developers, GPL-2.0, with BananaOS' optimisations; its repo keeps the upstream history, licence and Authors file) is built from its own repo (buildroot/package/libretro-banananes).
+
 Downloaded at build time, not kept here: RetroArch (GPL-3.0) and its cores (gpSP, Gambatte, FCEUmm, PCSX ReARMed and
 Mupen64Plus-Next: GPL-2.0; mGBA: MPL-2.0; libretro's GLSL shaders: per shader, mostly GPL/public domain; RGUI's bitmap fonts from libretro/retroarch-assets rgui/font (CC BY 4.0; the Chinese/Japanese ones from PixelMPlus, free licence; the Korean one Galmuri, SIL OFL 1.1); Snes9x and PicoDrive: non-commercial licences), libudev-zero (ISC), Linux, U-Boot, Buildroot and its packages, SuperDrastic (MIT) and DraStic
 (proprietary freeware by Exophase, the build ROCKNIX packages; not redistributed by this repository).
