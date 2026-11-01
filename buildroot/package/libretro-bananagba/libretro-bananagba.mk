@@ -8,7 +8,7 @@
 # counters; ~/banana-emu/BananaGBA, branch banana/main). The same CMake build as libretro-mgba; installed beside it as
 # bananagba_libretro.so (Settings > Other systems > Game Boy Advance > BananaGBA; BananaFront or RetroArch run it).
 # The repository JorreFog/BananaGBA is created at the release step (until then: a local build).
-LIBRETRO_BANANAGBA_VERSION = fea85a07dd8becf40ffa210dd7d87ef52719bed6
+LIBRETRO_BANANAGBA_VERSION = 9d3385cb9ca5ef4d1c646a99edf1a471d4b2bf91
 LIBRETRO_BANANAGBA_SITE = $(call github,JorreFog,BananaGBA,$(LIBRETRO_BANANAGBA_VERSION))
 LIBRETRO_BANANAGBA_LICENSE = MPL-2.0
 LIBRETRO_BANANAGBA_LICENSE_FILES = LICENSE
