@@ -31,6 +31,12 @@ config BR2_PACKAGE_LIBRETRO_SNES9X
 	help
 	  Super Nintendo.
 
+config BR2_PACKAGE_LIBRETRO_BANANASNES
+	bool "libretro-bananasnes"
+	default y
+	help
+	  BananaSNES: the Super Nintendo core BananaFront runs (a Snes9x fork tuned for the RG DS / RG DS Plus).
+
 config BR2_PACKAGE_LIBRETRO_PICODRIVE
 	bool "libretro-picodrive"
 	default y
