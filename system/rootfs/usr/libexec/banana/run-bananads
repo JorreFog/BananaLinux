@@ -120,6 +120,9 @@ t=$(/usr/libexec/banana/nds-game-option nds-per-game-timing.conf "$1")
 case $t in
 accurate) echo "run-bananads: ${1##*/} has its own timing: accurate" >&2; export BANANADS_CORE_SLICE=64 ;;
 fast) echo "run-bananads: ${1##*/} has its own timing: fast" >&2; export BANANADS_CORE_SLICE=auto ;;
+# (dsi: Fast, and the ARM9 at the DSi's 133 MHz, BananaDS's core.arm9_mhz: the game's own lost frames on a DS's 67 MHz
+# ARM9 gone, as Origin HeartGold's authors suggest DSi mode for its 60 fps overworld)
+dsi) echo "run-bananads: ${1##*/} has its own timing: fast, DSi CPU" >&2; export BANANADS_CORE_SLICE=auto BANANADS_CORE_ARM9_MHZ=133 ;;
 esac
 # the game's own shader (its page, X in the library: nds-game-shader), for this run only (the environment wins over
 # bananads.conf)
