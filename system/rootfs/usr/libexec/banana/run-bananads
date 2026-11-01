@@ -17,6 +17,11 @@ export BANANADS_SAVES=/data/saves/nds BANANADS_STATES=/data/states/nds BANANADS_
 export BANANADS_FRONTEND=kms BANANADS_SAVE_DIR=/data/saves/nds BANANADS_STATE_DIR=/data/states/nds
 [ -f $L/bananads.log ] && mv -f $L/bananads.log $L/bananads.1.log
 export BANANADS_LOG_FILE=$L/bananads.log
+# Settings > Nintendo DS > Buttons (nds-buttons): L2, R2, L3 and R3's jobs, the same as SuperDrastic's (over any
+# input.l2... in bananads.conf; the other buttons are the pad as printed, or bananads.conf's)
+for b in l2 r2 l3 r3; do
+    export BANANADS_INPUT_$(echo $b | tr a-z A-Z)=$(/usr/libexec/banana/nds-buttons get $b)
+done
 # Settings > Nintendo DS with BananaDS chosen: its own settings, kept in its own file (bananads.conf, which BananaDS
 # reads itself): the shader (kms.shader, SuperDrastic's shader pass on SuperDrastic's shader files), the 3D resolution
 # (render.scale) and the rest. A card from before they were BananaDS's own gets DraStic's choices copied over once.

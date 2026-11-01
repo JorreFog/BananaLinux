@@ -220,6 +220,47 @@ if [ "$(sed -n '/^ra_hotkeys *= */{s///;h};${x;p}' /data/banana/settings.conf 2>
     grep -E "$HKKEYS" $CFG > $KEEP.new && mv $KEEP.new $KEEP && sync
     HKA="|$HK"
 fi
+# Settings > Other systems > Buttons (ra_btn_l2, ra_btn_r2, ra_btn_l3, ra_btn_r3): L2, R2, L3 or R3 alone, a job of
+# RetroArch's instead of the game's button (fast-forward on and off, save or load a state, its menu, pause, a
+# screenshot, nothing), as Nintendo DS > Buttons is for the DS. RetroArch's hotkeys only work with F held, so bananad
+# sends the job's command down RetroArch's stdin pipe (/run/banana/ra-buttons: "<button> <command>" lines, its list
+# for this game), and the button is moved off the game: its RetroPad bind on joystick button 30-33, which no pad has
+# (a bind of "nul" falls back to the autoconfig profile's). Not PlayStation and N64, whose games use those buttons.
+# What RetroArch saves of the binds on exit is put back below, as for the hotkeys.
+RBF=/run/banana/ra-buttons
+RBCFG=/run/banana/retroarch-buttons.cfg
+RBKEEP=/data/retroarch/.banana-buttons.keep
+RBKEYS='^input_player1_(l2|r2|l3|r3)_btn = '
+if [ -f $RBKEEP ]; then
+    sed -i -E "/$RBKEYS/d" $CFG && cat $RBKEEP >> $CFG && rm -f $RBKEEP && sync
+    echo "run-retroarch: the button lines of a run cut short put back" >&2
+fi
+rm -f $RBF $RBCFG
+RBA=
+case ${BANANA_SYSTEM:-psx} in
+psx|n64) ;;
+*)
+    n=30
+    for b in l2 r2 l3 r3; do
+        j=$(setting ra_btn_$b)
+        [ -n "$j" ] || { [ $b = r2 ] && j=ff || j=game; }
+        case $j in
+        ff) c=FAST_FORWARD ;; save) c=SAVE_STATE ;; load) c=LOAD_STATE ;; menu) c=MENU_TOGGLE ;;
+        pause) c=PAUSE_TOGGLE ;; screenshot) c=SCREENSHOT ;; none) c=- ;; *) c= ;;
+        esac
+        if [ -n "$c" ]; then
+            echo "$b $c" >> $RBF
+            echo "input_player1_${b}_btn = \"$n\"" >> $RBCFG
+        fi
+        n=$((n + 1))
+    done
+    if [ -f $RBCFG ]; then
+        grep -E "$RBKEYS" $CFG > $RBKEEP.new; mv -f $RBKEEP.new $RBKEEP && sync
+        RBA="|$RBCFG"
+        echo "run-retroarch: buttons: $(tr '\n' ' ' < $RBF)" >&2
+    fi
+    ;;
+esac
 # Settings > Other systems > Screen border (ra_border, default off): the black area around the picture filled with a
 # border in the menu's look (tools/make-borders.py made them: /usr/share/banana/borders/<panel mode>/<theme>/<system>),
 # as a RetroArch overlay with a clear hole, and the picture put exactly in that hole as RetroArch's custom viewport
@@ -323,7 +364,7 @@ if [ -n "$BANANA_DRM_LEASE_FD" ]; then
     # the Pokemon companion (Settings > Other systems): RetroArch's stdout, where it answers the panel's
     # READ_CORE_MEMORY commands, into the pipe banana-ui reads (its log goes to the file above, not there)
     if [ -n "$BANANA_RA_OUT" ] && [ -p "$BANANA_RA_OUT" ]; then exec 4>"$BANANA_RA_OUT"; else exec 4>&1; fi
-    LD_PRELOAD=/usr/lib/banana/banana-leaseshim.so retroarch --config $CFG --appendconfig "$L|$RA$HKA$BA" --verbose \
+    LD_PRELOAD=/usr/lib/banana/banana-leaseshim.so retroarch --config $CFG --appendconfig "$L|$RA$HKA$BA$RBA" --verbose \
         --log-file /run/banana/retroarch.log -L "$CORE" "$2" < "${BANANA_RA_CMD:-/dev/null}" >&4 &
     P=$!
     exec 4>&-
@@ -339,7 +380,7 @@ else
     printf 'stdin_cmd_enable = "true"\n' > $L
     [ $ONCE = 1 ] && echo 'savestate_auto_load = "true"' >> $L
     [ -n "$GBASAVE" ] && printf 'savefile_directory = "%s"\nsort_savefiles_enable = "false"\n' $GBASAVE >> $L
-    retroarch --config $CFG --appendconfig "$L|$RA$HKA$BA" -L "$CORE" "$2" < $FIFO &
+    retroarch --config $CFG --appendconfig "$L|$RA$HKA$BA$RBA" -L "$CORE" "$2" < $FIFO &
     P=$!
 fi
 trap 'kill -TERM $P 2>/dev/null' TERM INT HUP
@@ -363,6 +404,13 @@ if [ -n "$HKA" ]; then
     cat $KEEP >> $CFG
     rm -f $HK $KEEP
 fi
+if [ -n "$RBA" ]; then
+    # the button binds as they were before the game (RetroArch wrote the moved ones into retroarch.cfg on exit)
+    sed -i -E "/$RBKEYS/d" $CFG
+    cat $RBKEEP >> $CFG
+    rm -f $RBCFG $RBKEEP
+fi
+rm -f $RBF
 if [ -n "$BA" ]; then
     # the screen border's keys as they were before the game (RetroArch wrote the border's into retroarch.cfg on exit)
     sed -i -E "/$BKEYS/d" $CFG

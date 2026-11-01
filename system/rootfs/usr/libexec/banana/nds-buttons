@@ -1,0 +1,58 @@
+#!/bin/sh
+# Settings > Nintendo DS > Buttons: what L2, R2, L3 and R3 do in a DS game, the same in both emulators. Kept in
+# banana/settings.conf (nds_btn_l2, nds_btn_r2, nds_btn_l3, nds_btn_r3); each emulator is given them as it starts.
+#   nds-buttons get <l2|r2|l3|r3>       the button's job (the default when the card has none, or one it doesn't know)
+#   nds-buttons drastic <drastic.cfg>   DraStic's controls for them written into the file; prints the joystick
+#                                       buttons that swap the screens, for SuperDrastic's DSFLIP_SWAP_BUTTONS
+# A job: a DS button (a b x y l r start select), swap, save, load, ff (fast-forward on and off), blow (the mic, held),
+# menu, none. BananaDS takes the job as it is (run-bananads: BANANADS_INPUT_<BUTTON>). DraStic has a control a job
+# (SAVE_STATE...), each with two buttons (controls_a and controls_b); swap is SuperDrastic's own. F + R and F + L save
+# and load a state in both whatever these are, so DraStic's save and load state controls always have a button: one
+# of these four, or one no pad has (joystick button 30 and 31, 1054 and 1055), that SuperDrastic presses for them.
+S=${NDS_BUTTONS_SETTINGS:-/data/banana/settings.conf}   # (the variable: tests)
+get() {
+    v=$(sed -n "/^ *nds_btn_$1 *= */{s///;s/ *\$//;h};\${x;p}" $S 2>/dev/null)
+    case $v in a|b|x|y|l|r|start|select|swap|save|load|ff|blow|menu|none) echo "$v"; return ;; esac
+    case $1 in l2) echo swap ;; r2) echo ff ;; l3) echo blow ;; *) echo none ;; esac
+}
+case $1 in
+get) get "$2" ;;
+drastic)
+    C=$2
+    [ -f "$C" ] || exit 0
+    # the pad's numbers (retrogame_joypad's order): L2 6, R2 7, L3 11, R3 12, as DraStic's 1024 + n
+    awk -v swapfile="$C.swap" -v map="1030=$(get l2) 1031=$(get r2) 1035=$(get l3) 1036=$(get r3)" '
+    BEGIN {
+        ctl["save"] = "SAVE_STATE"; ctl["load"] = "LOAD_STATE"; ctl["ff"] = "FAST_FORWARD"; ctl["blow"] = "FAKE_MICROPHONE"
+        ctl["menu"] = "MENU"; ctl["a"] = "A"; ctl["b"] = "B"; ctl["x"] = "X"; ctl["y"] = "Y"; ctl["l"] = "L"; ctl["r"] = "R"
+        ctl["start"] = "START"; ctl["select"] = "SELECT"
+        split("a b x y l r start select", d, " "); for (i in d) ds[d[i]] = 1
+        mine[1030] = mine[1031] = mine[1035] = mine[1036] = mine[1054] = mine[1055] = 1
+        n = split(map, m, " ")
+        for (i = 1; i <= n; i++) {
+            split(m[i], kv, "="); code = kv[1]; job = kv[2]
+            if (job == "swap") { swap = swap (swap == "" ? "" : " ") (code - 1024); continue }
+            if (!(job in ctl)) continue
+            c = ctl[job]
+            # a job: controls_a, then controls_b; a DS button: controls_a only (controls_b is the pad as printed)
+            if (!(("a", c) in want)) want["a", c] = code
+            else if (!(job in ds) && !(("b", c) in want)) want["b", c] = code
+        }
+        if (!(("a", "SAVE_STATE") in want)) want["a", "SAVE_STATE"] = 1054
+        if (!(("a", "LOAD_STATE") in want)) want["a", "LOAD_STATE"] = 1055
+    }
+    match($0, /^controls_[ab]\[CONTROL_INDEX_[A-Z_]+\] = [0-9]+/) {
+        set = substr($0, 10, 1); c = $0; sub(/^controls_[ab]\[CONTROL_INDEX_/, "", c); sub(/\].*/, "", c)
+        v = $0; sub(/.* = /, "", v)
+        if (c !~ /^UI_/) {
+            if ((set, c) in want) { print "controls_" set "[CONTROL_INDEX_" c "] = " want[set, c]; next }
+            if ((v + 0) in mine) { print "controls_" set "[CONTROL_INDEX_" c "] = 65535"; next }
+        }
+    }
+    { print }
+    END { print swap > swapfile }' "$C" > "$C.new" || { rm -f "$C.new" "$C.swap"; exit 1; }
+    cat "$C.swap"; rm -f "$C.swap"
+    if cmp -s "$C" "$C.new"; then rm -f "$C.new"; else mv -f "$C.new" "$C"; fi
+    ;;
+*) echo "nds-buttons get <l2|r2|l3|r3> | drastic <drastic.cfg>" >&2; exit 2 ;;
+esac

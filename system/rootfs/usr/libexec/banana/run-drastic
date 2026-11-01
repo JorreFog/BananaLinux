@@ -49,21 +49,9 @@ if grep -q '^controls_a\[CONTROL_INDEX_HINGE\] = 65535' config/drastic.cfg 2>/de
    grep -q '^controls_b\[CONTROL_INDEX_HINGE\] = 65535' config/drastic.cfg; then
     sed -i 's/^controls_a\[CONTROL_INDEX_HINGE\] = 65535/controls_a[CONTROL_INDEX_HINGE] = 328/' config/drastic.cfg
 fi
-# fast forward was R3 (1036), which the Plus has none of (#113): R2, as BananaDS; save moves to L2, load to the menu
-# (#77: a stray press no longer loads an old state over the game). Only a control set with all three as they were
-# (fast forward 1036, save R2 1031, load L2 1030): one the player changed in DraStic's menu stays as it is
-ff_on_r2() {
-    local c f=config/drastic.cfg
-    for c in a b; do
-        grep -q "^controls_$c\[CONTROL_INDEX_FAST_FORWARD\] = 1036\$" $f 2>/dev/null &&
-        grep -q "^controls_$c\[CONTROL_INDEX_SAVE_STATE\] = 1031\$" $f &&
-        grep -q "^controls_$c\[CONTROL_INDEX_LOAD_STATE\] = 1030\$" $f || continue
-        sed -i -e "s/^controls_$c\[CONTROL_INDEX_FAST_FORWARD\] = 1036\$/controls_$c[CONTROL_INDEX_FAST_FORWARD] = 1031/" \
-               -e "s/^controls_$c\[CONTROL_INDEX_SAVE_STATE\] = 1031\$/controls_$c[CONTROL_INDEX_SAVE_STATE] = 1030/" \
-               -e "s/^controls_$c\[CONTROL_INDEX_LOAD_STATE\] = 1030\$/controls_$c[CONTROL_INDEX_LOAD_STATE] = 65535/" $f
-    done
-}
-ff_on_r2
+# Settings > Nintendo DS > Buttons (nds-buttons): L2, R2, L3 and R3's jobs into DraStic's controls, the same as
+# BananaDS's; the ones that swap the screens are SuperDrastic's own (DSFLIP_SWAP_BUTTONS). F + R / F + L save and load
+export DSFLIP_SWAP_BUTTONS="$(/usr/libexec/banana/nds-buttons drastic config/drastic.cfg)"
 # DraStic writes beside $HOME (SDL's cache); / is read-only
 export HOME=$D XDG_RUNTIME_DIR=/run
 # banana-ui has let go of the panels completely (it closes its display while a game runs)
@@ -79,7 +67,7 @@ if [ -f $A ]; then
     u=$(sed -n '/^ra_user=/{s///p;q}' $A); w=$(sed -n '/^ra_password=/{s///p;q}' $A)
     [ -n "$u" ] && export DSFLIP_RA_USER="$u" DSFLIP_RA_PASSWORD="$w"
 fi
-# the in-game menu (L3) in BananaOS's colours and fonts
+# the in-game menu (F) in BananaOS's colours and fonts
 export DSFLIP_MENU_THEME=banana
 # a shader of your own (banana/shaders/<name>.frag, listed in Settings as "<name> (card)"): SuperDrastic looks there
 s=$(sed -n '/^ *DSFLIP_SHADER *= */{s///;h};${x;p}' /data/banana/superdrastic.conf 2>/dev/null)

@@ -182,14 +182,14 @@ Both put each DS screen on its own display and include an in-game menu for save 
 | Microphone | A "blow" key | The real microphone |
 | Extras | Shaders, save slots with both screens as their picture | Cheats for 4,000+ games, fast-forward (R2), FPS counter, screenshots (F + L2), save slots with both screens as their picture |
 
-Press F or L3 for the in-game menu. The Anbernic button also opens it. F + SELECT swaps the two screens. More in [docs/EMULATORS.md](docs/EMULATORS.md), the contract between the menu and any emulator.
+Press F for the in-game menu; the Anbernic button also opens it. In DS games, both emulators: F + R saves a state and F + L loads it, L2 (or F + SELECT) swaps the two screens, R2 fast-forwards and L3 blows on the mic (Settings › Nintendo DS › Buttons changes L2, R2, L3 and R3). More in [docs/EMULATORS.md](docs/EMULATORS.md), the contract between the menu and any emulator.
 
 <a id="and-the-rest"></a>
 <img src="docs/img/readme/h-systems.png" width="100%" alt="">
 
 ## More systems, apps and ports
 
-- RetroArch systems: GBA, Game Boy, NES, SNES, Mega Drive, PlayStation and N64, on one screen. The other screen holds touch tiles for save, load, menu, fast-forward and quit, or a game companion. Shaders and a screen border are included (Settings > Other systems), and each system can use its own emulator.
+- RetroArch systems: GBA, Game Boy, NES, SNES, Mega Drive, PlayStation and N64, on one screen. The other screen holds touch tiles for save, load, menu, fast-forward and quit, or a game companion. Shaders and a screen border are included (Settings > Other systems), and each system can use its own emulator. R2 fast-forwards in the 2D systems' games, and Settings › Other systems › Buttons gives L2, R2, L3 and R3 other jobs.
 - Companions on the second screen: the Pokémon companion for Ruby, Sapphire, Emerald, FireRed, LeafGreen and Pokémon Unbound, and game companions for 500+ GBA games (off by default). More in [docs/COMPANIONS.md](docs/COMPANIONS.md).
 - PortMaster and PICO-8: PortMaster with its ports, as on ROCKNIX; PICO-8 through fake-08, or the official PICO-8 when it is on the card.
 - App Store: install and update Döda Kvarter, Poketool (a Pokémon bank and save editor) and eReaderDS from the menu.

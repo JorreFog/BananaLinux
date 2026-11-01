@@ -532,6 +532,21 @@ static void ra_command(const char *c)
 	close(fd);
 }
 
+/* L2, R2, L3 or R3 pressed alone in a RetroArch game: its job's command (Settings > Other systems > Buttons;
+ * run-retroarch's /run/banana/ra-buttons, "<button> <command>" lines, there only while a game it applies to runs) */
+static void ra_button(const char *name)
+{
+	FILE *f = fopen("/run/banana/ra-buttons", "r");
+	if (!f) return;
+	char line[64], b[8], c[40];
+	while (fgets(line, sizeof line, f))
+		if (sscanf(line, "%7s %39s", b, c) == 2 && !strcmp(b, name)) {
+			if (strcmp(c, "-")) { strcat(c, "\n"); ra_command(c); }
+			break;
+		}
+	fclose(f);
+}
+
 /* waits up to secs for the game to quit, the backlights kept off meanwhile (a display handed back, or banana-ui's
  * modeset, can switch a panel's backlight on again); 1 when it has */
 static int game_gone(pid_t game, double secs)
@@ -1478,6 +1493,11 @@ static void handle(const struct input_event *e)
 	}
 	switch (e->code) {
 	case BTN_MODE: fn_held = e->value; break;
+	/* (with F held they are RetroArch's own hotkeys: F + L2 rewinds) */
+	case BTN_TL2: if (e->value == 1 && !fn_held) ra_button("l2"); break;
+	case BTN_TR2: if (e->value == 1 && !fn_held) ra_button("r2"); break;
+	case BTN_THUMBL: if (e->value == 1 && !fn_held) ra_button("l3"); break;
+	case BTN_THUMBR: if (e->value == 1 && !fn_held) ra_button("r3"); break;
 	case KEY_POWER:
 		if (now < ignore_power_until) break;
 		if (e->value) { power_down = 1; power_since = now; }

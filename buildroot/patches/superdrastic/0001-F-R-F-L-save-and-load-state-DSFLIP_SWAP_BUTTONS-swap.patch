@@ -1,0 +1,100 @@
+From 5454a4a0a40a652d4215757870b35935a49acc90 Mon Sep 17 00:00:00 2001
+From: Toby Smith <toby.smith@seluna.co.uk>
+Date: Sat, 31 Oct 2026 14:51:29 +0000
+Subject: [PATCH] F + R / F + L save and load state, DSFLIP_SWAP_BUTTONS swap
+ the screens
+
+As BananaDS's F + R and F + L: with the menu button (F) held, R presses
+DraStic's save state control and L its load state control, whatever button
+they are on (BananaOS can put them on buttons no pad has, so its four
+shoulder and stick buttons are free), and the press isn't the game's.
+DSFLIP_SWAP_BUTTONS lists joystick buttons that swap the screens as F +
+SELECT does. The menu's Hotkeys page shows both.
+---
+ src/menu.c   | 38 ++++++++++++++++++++++++++++++++++----
+ src/resume.c |  9 +++++++++
+ 2 files changed, 43 insertions(+), 4 deletions(-)
+
+diff --git a/src/menu.c b/src/menu.c
+index e7f442c..d6350aa 100644
+--- a/src/menu.c
++++ b/src/menu.c
+@@ -77,6 +77,23 @@ int resume_menu_save(const char *path, const char *msg, const char *msg2);
+ int resume_menu_load(const char *path, const char *backup, const char *msg, const char *msg2);
+ int resume_menu_busy(void);
+ void resume_press(int b);
++void resume_hotkey_state(int save);
++/* DSFLIP_SWAP_BUTTONS: joystick buttons (numbers, space or comma separated) that swap the screens as F + SELECT does,
++ * their presses not the game's (BananaOS: Settings > Nintendo DS > Buttons). A mask of buttons 0-63 */
++static uint64_t swap_buttons(void) {
++    static int read; static uint64_t mask;
++    if (!read) {
++        read = 1;
++        const char *e = getenv("DSFLIP_SWAP_BUTTONS");
++        for (const char *p = e; p && *p; ) {
++            char *end; long b = strtol(p, &end, 10);
++            if (end == p) { p++; continue; }
++            if (b >= 0 && b < 64) mask |= 1ULL << b;
++            p = end;
++        }
++    }
++    return mask;
++}
+ int resume_quit(void);
+ void resume_quit_nosave(void);
+ int resume_on(void);
+@@ -918,10 +935,13 @@ static void make_keys(void) {
+     ctl_keys("MENU", k, sizeof k);
+     if (lid_home_on()) { size_t l = strlen(k); snprintf(k + l, sizeof k - l, "%sHOME", l ? " / " : ""); }
+     key_add(k, "This menu");
+-    ctl_keys("SAVE_STATE", k, sizeof k); key_add(k, "Save state");
+-    ctl_keys("LOAD_STATE", k, sizeof k); key_add(k, "Load state");
+-    ctl_keys("FAST_FORWARD", k, sizeof k); key_add(k, "Fast-forward");
+-    ctl_keys("SWAP_SCREENS", k, sizeof k); { size_t l = strlen(k); snprintf(k + l, sizeof k - l, "%sF + SELECT", l ? " / " : ""); } key_add(k, "Swap screens");
++    ctl_keys("SAVE_STATE", k, sizeof k); { size_t l = strlen(k); snprintf(k + l, sizeof k - l, "%sF + R", l ? " / " : ""); } key_add(k, "Save state");
++    ctl_keys("LOAD_STATE", k, sizeof k); { size_t l = strlen(k); snprintf(k + l, sizeof k - l, "%sF + L", l ? " / " : ""); } key_add(k, "Load state");
++    ctl_keys("FAST_FORWARD", k, sizeof k); if (*k) key_add(k, "Fast-forward");
++    ctl_keys("SWAP_SCREENS", k, sizeof k);
++    for (int b = 0; b < 64; b++)
++        if ((swap_buttons() >> b & 1) && pad_name(b)) { size_t l = strlen(k); snprintf(k + l, sizeof k - l, "%s%s", l ? " / " : "", pad_name(b)); }
++    { size_t l = strlen(k); snprintf(k + l, sizeof k - l, "%sF + SELECT", l ? " / " : ""); } key_add(k, "Swap screens");
+     ctl_keys("FAKE_MICROPHONE", k, sizeof k); if (*k) key_add(k, "Blow on the mic");
+     int st, se, m1, m2;
+     if (resume_exit_combo(&st, &se, &m1, &m2)) {   /* (held half a second) */
+@@ -1538,6 +1558,16 @@ int menu_event(void *ev) {
+         return 1;
+     }
+     if (pending && down) other = 1;
++    /* F + R / F + L: DraStic's save / load state (as BananaDS's F + R / F + L), the press (and its release) not the
++     * game's */
++    static int rl_eaten;   /* 1: R's, 2: L's */
++    if (down && pending && (b == b_r || b == b_l)) { rl_eaten |= b == b_r ? 1 : 2; resume_hotkey_state(b == b_r); return 1; }
++    if (!down && ((b == b_r && rl_eaten & 1) || (b == b_l && rl_eaten & 2))) { rl_eaten &= b == b_r ? ~1 : ~2; return 1; }
++    /* a button set to swap the screens (DSFLIP_SWAP_BUTTONS): as F + SELECT, its press and release not the game's */
++    if (b < 64 && (swap_buttons() >> b & 1)) {
++        if (down && !dsflip_drastic_menu() && !resume_menu_busy()) swap_toggle();
++        return 1;
++    }
+     /* F + SELECT: the screens swapped, the SELECT press (and its release) not the game's */
+     static int sel_eaten;
+     if (b == b_select && down && pending) { sel_eaten = 1; swap_toggle(); return 1; }
+diff --git a/src/resume.c b/src/resume.c
+index eb1deec..3bd1275 100644
+--- a/src/resume.c
++++ b/src/resume.c
+@@ -299,6 +299,15 @@ int resume_exit_combo(int *start, int *select, int *menu, int *menu2) {
+     return exit_combo && btn_start >= 0;
+ }
+ int resume_menu_busy(void) { return m_saving || m_loading || m_load_next[0] || saving; }
++/* F + R / F + L (menu.c): a press of DraStic's save / load state control, whatever button it is on (a button no pad
++ * has, when BananaOS gives none of the pad's to it); its pop-ups are the ones a press of the control gets */
++void resume_hotkey_state(int save) {
++    const int b = save ? btn_save : btn_load;
++    if (b < 0 || resume_menu_busy()) return;
++    if (!save) { hk_load_at = frames; hk_load_slot = -1; }   /* (resume_saw_event's, for a press it may not see) */
++    cpugov_boost(3000);
++    resume_press(b);
++}
+ /* press a DraStic control's button (held 40 frames, after any press before it) */
+ void resume_press(int b) {
+     if (b < 0) return;

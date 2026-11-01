@@ -1,0 +1,302 @@
+From 5aa0a995b13d4304370b9a323a00c52de5e01a76 Mon Sep 17 00:00:00 2001
+From: Toby Smith <toby.smith@seluna.co.uk>
+Date: Sat, 31 Oct 2026 14:01:56 +0000
+Subject: [PATCH] input.<button>: each of the pad's buttons remappable; L2
+ swaps, R2 fast-forwards, L3 blows
+
+L3 was a third way into the in-game menu, beside F and HOME (#55), and no
+button could be moved (#52). input.<button> (a b x y l r start select up
+down left right l2 r2 l3 r3) now says what each does in a game: one of the
+DS's buttons, or a job (menu, swap, save, load, ff, ffhold, screenshot,
+blow, none). blow is the menu's Blow for as long as the button is held,
+as SuperDrastic's blow key. The defaults are the pad as printed, L2 the
+screens swapped, R2 fast-forward on and off, L3 a blow (it was the menu)
+and R3 nothing (the RG DS Plus has none), as BananaOS sets SuperDrastic's.
+F + a button, HOME and the menu's own keys never change, so no setting can
+lock the menu away. The menu's Hotkeys page lists the buttons with a job.
+---
+ bananads/docs/SETTINGS.md     |   3 +-
+ bananads/src/frontend_kms.cpp | 149 ++++++++++++++++++++++++++--------
+ bananads/src/menu.c           |   4 +-
+ 3 files changed, 117 insertions(+), 39 deletions(-)
+
+diff --git a/bananads/docs/SETTINGS.md b/bananads/docs/SETTINGS.md
+index c3bde46..0cf50e2 100644
+--- a/bananads/docs/SETTINGS.md
++++ b/bananads/docs/SETTINGS.md
+@@ -142,7 +142,8 @@ key can also come from the environment as `BANANADS_<KEY>` (dots become undersco
+ | `sdl.refresh` | `60` | the presents per second with `sdl.vsync=off` (the display's refresh: the RG DS Plus's panels run at 60.003 Hz) |
+ | `kms.top` | `$BANANADS_TOP`, else `DSI-2` | the connector of the panel that shows the top screen; the other connected panel of the same type shows the bottom one (`Virtual-2` in QEMU) |
+ | `kms.touch` | `$BANANADS_TOUCH`, else `fe5e0000.i2c` | the bottom panel's touchscreen: the input device whose sysfs path contains this |
+-| `kms.menu` | `on` | the in-game menu (src/menu.c: SuperDrastic's, in BananaOS's colours): L3 pauses the game and opens it on both panels. Resume, Save and Load (8 slots with pictures; a load can be undone), Quick settings (volume, brightness, the microphone's meter and a blow), Restart game, Quit game. `kms.menu_test=<n>` opens it 3 s in, on the main page (1), Save (2), Load (3), Quick settings (4) or the quit question (5), for tests |
++| `kms.menu` | `on` | the in-game menu (src/menu.c: SuperDrastic's, in BananaOS's colours): F or HOME (and a button set to `menu`, `input.<button>`) pauses the game and opens it on both panels. Resume, Save and Load (8 slots with pictures; a load can be undone), Quick settings (volume, brightness, the microphone's meter and a blow), Restart game, Quit game. `kms.menu_test=<n>` opens it 3 s in, on the main page (1), Save (2), Load (3), Quick settings (4) or the quit question (5), for tests |
++| `input.<button>` | as the pad is printed; `input.l2` `swap`, `input.r2` `ff`, `input.l3` `blow`, `input.r3` `none` (the RG DS Plus has no R3) | what a button of the pad does in a game. `<button>`: `a` `b` `x` `y` `l` `r` `start` `select` `up` `down` `left` `right` `l2` `r2` `l3` `r3`. The value: one of the DS's buttons (`a` `b` `x` `y` `l` `r` `start` `select` `up` `down` `left` `right`; two buttons can be the same DS button) or a job: `menu` (the in-game menu, on release), `swap` (the screens, as F + SELECT, remembered for the game), `save` / `load` (slot 1, as F + R / F + L), `ff` (fast-forward on and off, as F + X), `ffhold` (fast-forward while held), `screenshot`, `blow` (the game hears a blow on the mic while it's held, the menu's Blow, the mic on or off), `none`. A keyboard's keys follow the button they stand for. F + a button, HOME and the menu's own keys never change, so no setting leaves you without the menu. A value it doesn't know is logged and the button keeps its own |
+ | `kms.lowlat` | `off` | **Experimental.** `on`: low latency. Each frame is aimed at a vblank: the emulator's thread starts it as late as its measured time allows (its own work and the presenter's 2D wait and shader pass, each a decaying maximum, plus `kms.lowlat_pad_us`, plus up to 16 ms more after frames that showed late; never the time a frame waited for the panels), so the buttons are read as late as possible. Frames are held to their own vblank's window (never shown a refresh early) and up to three may wait, so a game slower than a refresh starts the next frame early instead of stuttering; the next frame always aims at the refresh after the last waiting one. Measured in 0.5.0 (agent-qa/LL2.md): 15-21 ms from a frame's start to the panels instead of 48-60, 0-3 repeats a minute in a Mario Kart DS race (single frames of 20-60 ms can't be hidden without buffering). cpugov uses a tighter step-down rule (`cpugov.tail` 0.8) and its own memory (`<rom>.<scale>.lowlat`). The game runs at the panels' rate (as `kms.pace=display`). `kms.lowlat_trace=<file>` writes each frame's times at the quit (also without `kms.lowlat`). `runahead1` / `runahead2`: that and run-ahead (`runahead`). A `[lowlat]` log line every 10 s |
+ | `kms.lowlat_margin_us` | `1500` | with `kms.lowlat`: the deadline, this long before the earlier panel's vblank; +300 per commit that missed its vblank (at most 5000), back down after a clean 10 s |
+ | `kms.lowlat_pad_us` | `1000` | with `kms.lowlat`: added to the frames' measured time when a frame is started |
+diff --git a/bananads/src/frontend_kms.cpp b/bananads/src/frontend_kms.cpp
+index 6af46f9..e820ed0 100644
+--- a/bananads/src/frontend_kms.cpp
++++ b/bananads/src/frontend_kms.cpp
+@@ -1132,6 +1132,42 @@ static uint32_t pad_bit(int code) {
+ }
+ static bool is_hotkey(int code) { return code == BTN_MODE || code == KEY_F1; }
+ 
++// input.<button> (docs/SETTINGS.md): what each of the pad's buttons does in a game, a DS button (0-11: the bit of
++// emu.h's Key*) or one of BananaDS's own jobs. F + a button, HOME and the menu's own keys never change, so no setting
++// can leave you without a way into the menu or out of the game.
++enum { PAD_MENU = 100, PAD_SWAP, PAD_SAVE, PAD_LOAD, PAD_FF, PAD_FFHOLD, PAD_SHOT, PAD_BLOW, PAD_NONE };
++enum { P_A, P_B, P_X, P_Y, P_L, P_R, P_START, P_SELECT, P_UP, P_DOWN, P_LEFT, P_RIGHT, P_L2, P_R2, P_L3, P_R3, P_COUNT };
++static const char* const pad_ds_names[12] = {"a", "b", "select", "start", "right", "left", "up", "down", "r", "l", "x", "y"};
++static const char* const pad_job_names[] = {"menu", "swap", "save", "load", "ff", "ffhold", "screenshot", "blow", "none"};
++static const struct { const char* name; int code, kb, def; } pad_buttons[P_COUNT] = {
++    {"a", BTN_EAST, KEY_ENTER, 0}, {"b", BTN_SOUTH, KEY_BACKSPACE, 1}, {"x", BTN_NORTH, KEY_X, 10},
++    {"y", BTN_WEST, KEY_Y, 11}, {"l", BTN_TL, KEY_PAGEUP, 9}, {"r", BTN_TR, KEY_PAGEDOWN, 8},
++    {"start", BTN_START, KEY_S, 3}, {"select", BTN_SELECT, KEY_TAB, 2}, {"up", BTN_DPAD_UP, KEY_UP, 6},
++    {"down", BTN_DPAD_DOWN, KEY_DOWN, 7}, {"left", BTN_DPAD_LEFT, KEY_LEFT, 5}, {"right", BTN_DPAD_RIGHT, KEY_RIGHT, 4},
++    {"l2", BTN_TL2, 0, PAD_SWAP}, {"r2", BTN_TR2, 0, PAD_FF}, {"l3", BTN_THUMBL, 0, PAD_BLOW}, {"r3", BTN_THUMBR, 0, PAD_NONE}};  // (the RG DS Plus has no R3)
++static int g_pad[P_COUNT];  // each button's job (pad_init)
++static int pad_index(int code) {
++    for (int i = 0; i < P_COUNT; i++)
++        if (code == pad_buttons[i].code || (pad_buttons[i].kb && code == pad_buttons[i].kb)) return i;
++    return -1;
++}
++static int pad_parse(const std::string& v) {
++    for (int i = 0; i < 12; i++) if (v == pad_ds_names[i]) return i;
++    for (int i = 0; i < (int)(sizeof pad_job_names / sizeof *pad_job_names); i++) if (v == pad_job_names[i]) return PAD_MENU + i;
++    return -1;
++}
++static void pad_init(const Config& cfg) {
++    for (int i = 0; i < P_COUNT; i++) {
++        g_pad[i] = pad_buttons[i].def;
++        const std::string v = cfg.str(std::string("input.") + pad_buttons[i].name, "");
++        if (v.empty()) continue;
++        const int t = pad_parse(v);
++        if (t < 0) { Log(LogLevel::Warn, "[input] input.%s = %s: not a button or a job, left as it was\n", pad_buttons[i].name, v.c_str()); continue; }
++        g_pad[i] = t;
++        if (t != pad_buttons[i].def) Log(LogLevel::Info, "[input] %s: %s\n", pad_buttons[i].name, v.c_str());
++    }
++}
++
+ static std::vector<InputDev> open_inputs(const std::string& touch_name) {
+     std::vector<InputDev> devs;
+     DIR* d = opendir("/dev/input");
+@@ -1257,7 +1293,7 @@ static int menu_key(int code) {
+         default: return -1;
+     }
+ }
+-static bool is_menu_button(int code) { return code == BTN_THUMBL || code == KEY_F2; }
++static bool is_menu_button(int code) { return code == KEY_F2; }  // (L3: input.l3 = menu)
+ // the menu's Hotkeys page: the buttons the input loop below reads (keep the two together), and bananad's volume keys
+ // kms.input: scripted presses by emulated frame (a benchmark's input that is the same at every speed and scale, so
+ // two runs emulate the same frames: their sound compares bit for bit). headless.input's syntax: "<frame>:<keys>[:<frames
+@@ -1303,13 +1339,28 @@ static std::vector<KmsPress> kms_parse_input(std::string spec) {
+ static bool g_quit_saves = true;  // resume.on_quit: F + START saves the spot
+ static int mh_hotkey(void*, int i, const char** keys, const char** what) {
+     static const char* const k[][2] = {
+-        {"F / L3 / HOME", "This menu"}, {"F + R", "Save state (slot 1)"}, {"F + L", "Load state (slot 1)"},
+-        {"R2", "Fast-forward (held)"}, {"F + X", "Fast-forward on / off"}, {"F + L2", "Screenshot"},
++        {"F / HOME", "This menu"}, {"F + R", "Save state (slot 1)"}, {"F + L", "Load state (slot 1)"},
++        {"F + X", "Fast-forward on / off"}, {"F + L2", "Screenshot"},
+         {"F + SELECT", "Swap the screens"}, {"F + START", nullptr}, {"VOL + / -", "Volume"}, {"F + VOL + / -", "Brightness"}};
+-    if (i < 0 || i >= (int)(sizeof k / sizeof k[0])) return 0;
+-    *keys = k[i][0];
+-    *what = k[i][1] ? k[i][1] : g_quit_saves ? "Save your spot and quit" : "Quit";
+-    return 1;
++    const int n = (int)(sizeof k / sizeof k[0]);
++    if (i < 0) return 0;
++    if (i < n) {
++        *keys = k[i][0];
++        *what = k[i][1] ? k[i][1] : g_quit_saves ? "Save your spot and quit" : "Quit";
++        return 1;
++    }
++    // then the buttons with a job of BananaDS's (input.<button>), as many as the page has room for
++    static const char* const label[P_COUNT] = {"A", "B", "X", "Y", "L", "R", "START", "SELECT", "UP", "DOWN", "LEFT",
++                                               "RIGHT", "L2", "R2", "L3", "R3"};
++    static const char* const job[] = {"This menu", "Swap the screens", "Save state (slot 1)", "Load state (slot 1)",
++                                      "Fast-forward on / off", "Fast-forward (held)", "Screenshot", "Blow on the mic (held)"};
++    for (int b = 0, at = n; b < P_COUNT; b++)
++        if (g_pad[b] >= PAD_MENU && g_pad[b] < PAD_NONE && at++ == i) {
++            *keys = label[b];
++            *what = job[g_pad[b] - PAD_MENU];
++            return 1;
++        }
++    return 0;
+ }
+ 
+ static int mh_canvas(void* c, int panel, uint32_t** px, int* pitch, int* w, int* h) {
+@@ -1504,6 +1555,7 @@ static void opts_init(const Config& cfg, Display& dp) {
+     o.fps = cfg.flag("kms.fps", false);
+     const long ff = cfg.num("kms.ff_speed", 2);
+     o.ff_speed = ff == 3 ? 3 : ff > 3 ? 99 : 2;
++    pad_init(cfg);
+ }
+ static const int ff_speeds[4] = {0, 2, 3, 99};  // the menu's Fast-forward values: Off, 2x, 3x, Max
+ static void save_opt(const char* key, const std::string& v) {
+@@ -1713,7 +1765,7 @@ int run_kms(Emu& emu, const Config& cfg) {
+     std::atomic<int> in_touch{-1};  // y << 16 | x, -1 released
+     std::atomic<int> in_save{0}, in_load{0};
+     std::atomic<bool> run{true};
+-    // the in-game menu (kms.menu, on): L3 pauses the game at its next frame and opens it on both panels
++    // the in-game menu (kms.menu, on): F or HOME pauses the game at its next frame and opens it on both panels
+     const bool menu_on = cfg.flag("kms.menu", true);
+     std::mutex pm;
+     std::condition_variable pcv;
+@@ -2124,11 +2176,12 @@ int run_kms(Emu& emu, const Config& cfg) {
+     ev.version = 3;
+     ev.page_flip_handler2 = on_flip;  // one event per CRTC: a frame is on screen once both panels' have come
+     uint32_t keys = 0;
+-    bool ff_held = false;  // fast-forward from R2 held down (off again when it's let go)
++    bool ff_held = false;  // fast-forward from a button held down (input.<button> = ffhold; off again when it's let go)
+     bool hot = false, menu_down = false;
+     bool hot_used = false;      // a button went down while F was held (F + something, not F alone)
+     bool home_down = false, home_used = false;  // HOME held, and a key (a volume key: a modifier) pressed meanwhile
+     uint32_t stick_keys = 0;    // the d-pad directions the left stick holds
++    uint32_t pad_down = 0;      // the pad's buttons held (P_*), each doing its input.<button> job
+     // the menu: the game paused at its next frame, the flips in flight done, then the menu until it closes; the
+     // game's frame back on both panels, no button left held for the game, the game running again
+     const long menu_test = cfg.num("kms.menu_test", 0);  // (tests: the menu opens 3 s in, on page menu_test - 1)
+@@ -2153,6 +2206,7 @@ int run_kms(Emu& emu, const Config& cfg) {
+         bmenu_run(start);
+         dp.show_game();
+         keys = 0;
++        pad_down = 0;
+         hot = false;
+         home_down = false;
+         menu_down = false;
+@@ -2172,6 +2226,38 @@ int run_kms(Emu& emu, const Config& cfg) {
+         }
+         pcv.notify_all();
+     };
++    // a pad button pressed or let go (P_*): the DS's buttons it stands for, or its job (input.<button>, pad_init)
++    auto pad_set = [&](int p, bool down) {
++        if (((pad_down >> p) & 1) == (down ? 1u : 0u)) return;
++        pad_down ^= 1u << p;
++        const int t = g_pad[p];
++        if (t < 12) {
++            keys = 0;
++            for (int q = 0; q < P_COUNT; q++)
++                if ((pad_down >> q & 1) && g_pad[q] < 12) keys |= 1u << g_pad[q];
++            return;
++        }
++        switch (t) {
++            case PAD_MENU:  // (opens on release: nothing of it reaches the game)
++                if (!menu_on) break;
++                if (down) menu_down = true;
++                else if (menu_down) { menu_down = false; open_menu(0); }
++                break;
++            case PAD_SWAP: if (down) swap_toggle(dp, mh.rom); break;
++            case PAD_SAVE: if (down) in_save = 1; break;
++            case PAD_LOAD: if (down) in_load = 1; break;
++            case PAD_FF: if (down) ff_toggle(); break;
++            case PAD_FFHOLD:  // held: fast-forward while it's down, at the F + X toggle's speed
++                if (down && !g_ff.load()) { g_ff = g_opts.ff_speed; ff_held = true; }
++                else if (!down && ff_held) { g_ff = 0; ff_held = false; }
++                break;
++            case PAD_SHOT: if (down) dp.shot = true; break;
++            // held: the game hears a blow on the mic (the menu's Blow, mic on or off) until it's let go, as
++            // SuperDrastic's blow key (a minute at most)
++            case PAD_BLOW: mh.emu->mic().blow(down ? 60000 : 0); break;
++            default: break;
++        }
++    };
+     std::vector<pollfd> pfd;
+     long shown_mark = 0, made_mark = 0, drop_mark = 0, rep_mark = 0;
+     long long since = now_us();
+@@ -2251,10 +2337,13 @@ int run_kms(Emu& emu, const Config& cfg) {
+                             stick_keys = (stick_keys & ~(KeyUp | KeyDown)) | (x.value < -t ? KeyUp : x.value > t ? KeyDown : 0);
+                         continue;
+                     }
+-                    if (x.type == EV_ABS && x.code == ABS_HAT0X)
+-                        keys = (keys & ~(KeyLeft | KeyRight)) | (x.value < 0 ? KeyLeft : x.value > 0 ? KeyRight : 0);
+-                    else if (x.type == EV_ABS && x.code == ABS_HAT0Y)
+-                        keys = (keys & ~(KeyUp | KeyDown)) | (x.value < 0 ? KeyUp : x.value > 0 ? KeyDown : 0);
++                    if (x.type == EV_ABS && x.code == ABS_HAT0X) {
++                        pad_set(P_LEFT, x.value < 0);
++                        pad_set(P_RIGHT, x.value > 0);
++                    } else if (x.type == EV_ABS && x.code == ABS_HAT0Y) {
++                        pad_set(P_UP, x.value < 0);
++                        pad_set(P_DOWN, x.value > 0);
++                    }
+                     // the lid (a shut lid when the game started counts from the next close: its first event is the open)
+                     if (x.type == EV_SW && x.code == SW_LID) {
+                         in_lid = x.value != 0;
+@@ -2262,7 +2351,7 @@ int run_kms(Emu& emu, const Config& cfg) {
+                     }
+                     if (x.type != EV_KEY || x.value == 2) continue;
+                     if (home_down && x.value && x.code != BTN_Z) home_used = true;  // HOME + something: not HOME alone
+-                    if (x.code == BTN_Z) {  // HOME: the menu, on release (whatever F and L3 do), when let go on its own
++                    if (x.code == BTN_Z) {  // HOME: the menu, on release (whatever F and the pad's buttons do), when let go on its own
+                         if (x.value) { home_down = true; home_used = false; continue; }
+                         if (home_down && !home_used && menu_on) open_menu(0);
+                         home_down = false;
+@@ -2277,20 +2366,6 @@ int run_kms(Emu& emu, const Config& cfg) {
+                         }
+                         continue;
+                     }
+-                    if (x.code == BTN_TL2) {  // F + L2: a screenshot (L2 alone: nothing, the DS has none)
+-                        if (hot && x.value) dp.shot = true;
+-                        continue;
+-                    }
+-                    if (x.code == BTN_TR2) {  // R2 held: fast-forward while it's down, at the F + X toggle's speed
+-                        if (x.value && !g_ff.load()) {
+-                            g_ff = g_opts.ff_speed;
+-                            ff_held = true;
+-                        } else if (!x.value && ff_held) {
+-                            g_ff = 0;
+-                            ff_held = false;
+-                        }
+-                        continue;
+-                    }
+                     if (is_hotkey(x.code)) {
+                         // F pressed and let go on its own opens the menu, as SuperDrastic's does; F + a button is a
+                         // hotkey and opens nothing
+@@ -2302,16 +2377,18 @@ int run_kms(Emu& emu, const Config& cfg) {
+                         continue;
+                     }
+                     if (x.code == KEY_ESC && x.value) g_quit = true;
+-                    const uint32_t b = pad_bit(x.code);
+-                    if (hot && x.value && b) {  // F + a button: BananaDS's own, not the game's
+-                        if (b == KeyStart) g_quit = true;
+-                        else if (b == KeySelect) swap_toggle(dp, mh.rom);
+-                        else if (b == KeyR) in_save = 1;
+-                        else if (b == KeyL) in_load = 1;
+-                        else if (b == KeyX) ff_toggle();
++                    const int p = pad_index(x.code);
++                    if (p < 0) continue;
++                    if (hot && x.value) {  // F + a button: BananaDS's own, not the game's (by the button, whatever its job)
++                        if (p == P_START) g_quit = true;
++                        else if (p == P_SELECT) swap_toggle(dp, mh.rom);
++                        else if (p == P_R) in_save = 1;
++                        else if (p == P_L) in_load = 1;
++                        else if (p == P_X) ff_toggle();
++                        else if (p == P_L2) dp.shot = true;
+                         continue;
+                     }
+-                    keys = x.value ? keys | b : keys & ~b;
++                    pad_set(p, x.value != 0);
+                 }
+             }
+         }
+diff --git a/bananads/src/menu.c b/bananads/src/menu.c
+index 07ed8db..0fb2c27 100644
+--- a/bananads/src/menu.c
++++ b/bananads/src/menu.c
+@@ -740,7 +740,7 @@ static void draw_top(void) {
+             y += S(16);
+             text(c, &F_MED, "BUTTONS", L, y, S(14), C_TEALTXT, 0, 0);
+             y += S(28);
+-            static const char *const keys[][2] = { { "F / L3", "this menu" }, { "F + R", "save to slot 1" },
++            static const char *const keys[][2] = { { "F / HOME", "this menu" }, { "F + R", "save to slot 1" },
+                                                    { "F + L", "load slot 1" }, { "F + START", "save your spot and quit" } };
+             for (int i = 0; i < 4 && y + S(24) <= y1 - S(12); i++, y += S(30)) {
+                 float kw = text_w(&F_MED, keys[i][0], S(15), 99) + S(14);
+@@ -890,7 +890,7 @@ static void draw_bottom(void) {
+             mq_pick = sel; text(c, &F_MED, tile_label[i], x + tw / 2.0f, cy + S(60), S(20), fg, tw - S(16), 1); mq_pick = 0;
+             char h[64] = "";
+             switch (i) {
+-            case 0: snprintf(h, sizeof h, "or press F / L3"); break;
++            case 0: snprintf(h, sizeof h, "or press F / HOME"); break;
+             case 1: snprintf(h, sizeof h, "%d slots", NSLOT); break;
+             case 2: if (nb >= 0) snprintf(h, sizeof h, "last: slot %d", nb + 1); else snprintf(h, sizeof h, "no saves yet"); break;
+             case 3: snprintf(h, sizeof h, H.opt_count && H.opt_count(H.ctx) ? "volume, shader, effects" : "volume, brightness"); break;

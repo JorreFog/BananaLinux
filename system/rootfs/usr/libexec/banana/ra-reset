@@ -34,6 +34,7 @@ printf '%s' "$keep" >> $CFG.new
 mv $CFG.new $CFG
 [ -d $R/remaps ] && mv $R/remaps "$B/"
 [ -f $R/.banana-hotkeys.keep ] && mv $R/.banana-hotkeys.keep "$B/"	# (a hotkeys-Off run's lines: not over the new file)
+[ -f $R/.banana-buttons.keep ] && mv $R/.banana-buttons.keep "$B/"	# (a run's moved L2/R2/L3/R3 binds: the same)
 # overrides: config/<core>/<core|folder|game>.cfg (core options are .opt, shader presets .glslp: they stay)
 if [ -d $R/config ]; then
     find $R/config -type f -name '*.cfg' | while read -r f; do
