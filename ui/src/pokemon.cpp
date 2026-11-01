@@ -1133,7 +1133,7 @@ namespace banana::pkmn
 		std::vector<uint8_t> readRom(const std::string& path, size_t limit)
 		{
 			std::vector<uint8_t> out;
-			if (endsWithI(path, ".zip"))
+			if (endsWithI(path, ".zip") || endsWithI(path, ".7z"))
 			{
 				readZip(path, [](const std::vector<rnds::ZipMember>& ms)
 				{

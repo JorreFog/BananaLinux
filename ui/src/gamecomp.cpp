@@ -244,7 +244,7 @@ namespace banana::gcomp
 		std::vector<uint8_t> readRom(const std::string& path, size_t limit)
 		{
 			std::vector<uint8_t> out;
-			if (endsWithI(path, ".zip"))
+			if (endsWithI(path, ".zip") || endsWithI(path, ".7z"))
 			{
 				readZip(path, [](const std::vector<rnds::ZipMember>& ms)
 				{
@@ -456,7 +456,7 @@ namespace banana::gcomp
 		id.base = path.substr(slash == std::string::npos ? 0 : slash + 1);
 		size_t dot = id.base.find_last_of('.');
 		if (dot != std::string::npos) id.base.erase(dot);
-		if (endsWithI(path, ".zip"))
+		if (endsWithI(path, ".zip") || endsWithI(path, ".7z"))
 		{
 			readZip(path, [&](const std::vector<rnds::ZipMember>& ms)
 			{
