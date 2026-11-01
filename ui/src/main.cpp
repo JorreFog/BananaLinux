@@ -2377,6 +2377,7 @@ int main(int argc, char** argv)
 		logf("game ended after %ld s (status %d)", secs, status);
 		int openTries = 0;
 		for (; !disp.open(o.top, err) && openTries < 100; openTries++) usleep(50000);
+		if (disp.isOpen()) disp.blank();	// the game's last frame on either panel gone before the menu draws (issue: GBA's bottom UI lingering)
 		const double opened = nowMs();
 		// the display controller's interrupt storm (from the game's panel, or the lease given back): counted over the
 		// iris instead of a 200 ms wait before it (every game's way back waited for it); the full check only if it storms

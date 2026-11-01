@@ -291,6 +291,26 @@ namespace banana
 		pending = 0;
 	}
 
+	// every panel the menu owns to black at once (see kms.h): both buffers zeroed, the first modeset up, and the flip
+	// bookkeeping reset so the menu's next present() writes a full frame into the hidden buffer and flips to it
+	void Display::blank()
+	{
+		if (fd < 0) return;
+		for (int s = 0; s < 2; s++)
+		{
+			if (s == leased) continue;
+			Panel& pn = p[s];
+			for (int b = 0; b < 2; b++)
+				if (pn.buf[b].map) memset(pn.buf[b].map, 0, pn.buf[b].size);
+			pn.front = 0;
+			pn.missed[0] = Damage();
+			pn.missed[1] = Damage();
+			drmSetMaster(fd);
+			drmModeSetCrtc(fd, pn.crtc, pn.buf[0].fb, 0, 0, &pn.conn, 1, (drmModeModeInfo*)pn.mode);
+		}
+		pending = 0;
+	}
+
 	// a CRTC's property by name: its id, and its value (0, 0 when there is none)
 	static uint32_t crtcProp(int fd, uint32_t crtc, const char* name, uint64_t* value = nullptr)
 	{

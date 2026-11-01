@@ -1,0 +1,25 @@
+diff --git a/bananads/src/menu.c b/bananads/src/menu.c
+index 7b24477..2ce5b82 100644
+--- a/bananads/src/menu.c
++++ b/bananads/src/menu.c
+@@ -769,7 +769,19 @@ static void draw_bottom(void) {
+         }
+     } else if (s == SC_SET) {
+         draw_header(c, "Quick settings", "changes apply at once", 1);
+-        int y = gy0, rh = nrows > 6 ? S(38) : nrows > 3 ? S(48) : S(54), gap = nrows > 6 ? S(5) : nrows > 3 ? S(6) : S(10);
++        /* The help line under the rows is drawn at y + S(6); the footer's Back pill starts at c->h - S(56). The rows
++         * are sized to leave the help room, so a full page of emulator options (up to 8 rows) never pushes the
++         * description onto the Back button (the missing padding: 8 rows put the help at ~408 on a 480-line panel). */
++        int rh, gap;
++        {
++            int help_top = c->h - S(56) - S(24);
++            int room = help_top - gy0 - S(6) - (nrows > 0 ? nrows - 1 : 0) * S(5);
++            rh = nrows > 3 ? room / (nrows > 0 ? nrows : 1) : S(54);
++            if (rh > S(48)) rh = S(48);
++            if (rh < S(30)) rh = S(30);
++            gap = nrows > 3 ? S(5) : S(10);
++        }
++        int y = gy0;
+         for (int r = 0; r < nrows; r++) {
+             int sel = r == sel_set, id = rows[r];
+             R_ROW[r] = (rect){ gx0, y, gx1, y + rh }; R_BAR[r] = (rect){ 0, 0, 0, 0 };
