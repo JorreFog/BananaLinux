@@ -7707,8 +7707,29 @@ namespace banana
 		snprintf(size, sizeof size, "%s Pokémon  ·  %d.%d m  ·  %d.%d kg", e.category.c_str(), e.height / 10, e.height % 10, e.weight / 10, e.weight % 10);
 		text(fit(size, false, 17, 560), false, 17, 36, 130, p.ink);
 		be->fill(std::round(X(36)), std::round(X(160)), std::round(X(568)), std::max(1.0f, std::round(X(2))), p.line);
+		// where it lives (the wild tables, by region map section; the PokeDaisy idea): once it has been seen
+		std::vector<pkmn::RomTables::Where> wh;
+		if (!known || caught || dexBit(sn.dexSeen, n)) wh = t.where(sp);
+		int textLines = wh.empty() ? 8 : 5;
 		if (known && !caught) wrapped("Seen, not caught yet: the entry opens once one is caught.", 18, 36, 176, 568, 3, p.muted);
-		else wrapped(e.text, 18, 36, 176, 568, 8, p.ink);
+		else wrapped(e.text, 18, 36, 176, 568, textLines, p.ink);
+		if (!wh.empty())
+		{
+			static const char* const HOW[6] = { "grass", "water", "rock smash", "old rod", "good rod", "super rod" };
+			text("Where", true, 14, 36, 290, p.muted, true, 1.0f);
+			for (size_t i = 0; i < wh.size() && i < 3; i++)
+			{
+				const auto& w = wh[i];
+				std::string place = w.mapsec >= 0 ? t.mapName(w.mapsec) : "";
+				if (place.empty()) place = "?";
+				char d[64];
+				if (w.minLv == w.maxLv) snprintf(d, sizeof d, "%s  ·  Lv %d  ·  %d%%", lang::tr(HOW[w.method]).c_str(), w.minLv, w.percent);
+				else snprintf(d, sizeof d, "%s  ·  Lv %d-%d  ·  %d%%", lang::tr(HOW[w.method]).c_str(), w.minLv, w.maxLv, w.percent);
+				float dw = text(d, false, 15, 0, 0, p.muted, false, 0, true);
+				text(d, false, 15, 604 - dw, 314 + i * 22, p.muted);
+				text(fit(place, true, 16, 560 - dw), true, 16, 36, 312 + i * 22, p.ink);
+			}
+		}
 		text("Tap to go back", false, 14, 36, 386, p.muted);
 	}
 

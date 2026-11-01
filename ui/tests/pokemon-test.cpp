@@ -206,6 +206,39 @@ static std::string reply(uint32_t addr, const std::vector<uint8_t>& v)
 int main(int argc, char** argv)
 {
 	// ---- the type chart (Generation III: no Fairy; Steel resists Ghost and Dark)
+	// where a species lives: the wild tables by map, each map's region map section from the ROM's map groups (found
+	// by their shape, checked against every map the wild tables name)
+	{
+		std::vector<uint8_t> rom(0x10000, 0);
+		auto put32 = [&](size_t a, uint32_t v) { for (int i = 0; i < 4; i++) rom[a + i] = (uint8_t)(v >> (8 * i)); };
+		const uint32_t R = 0x08000000;
+		// map headers (0x1c bytes): layout, events, scripts (ROM pointers), connections 0, ..., section at 0x14
+		for (int i = 0; i < 4; i++) { size_t h = 0x3000 + i * 0x1c; put32(h, R + 0x4000); put32(h + 4, R + 0x4100); put32(h + 8, R + 0x4200); rom[h + 0x14] = (uint8_t)(0x10 + i); }
+		// three groups: {h0, h1}, {h2}, {h3}
+		put32(0x2000, R + 0x2100); put32(0x2004, R + 0x2110); put32(0x2008, R + 0x2120);
+		put32(0x2100, R + 0x3000); put32(0x2104, R + 0x301c); put32(0x2110, R + 0x3038); put32(0x2120, R + 0x3054);
+		// wild headers: (0,1) grass with species 25 in slot 0 (20 %) and 10 in slot 2; (2,0) grass with 25 in slot 11 (1 %)
+		auto wildAt = [&](size_t a, int g, int num, size_t info, size_t mons) { rom[a] = (uint8_t)g; rom[a + 1] = (uint8_t)num; put32(a + 4, R + (uint32_t)info); put32(info + 4, R + (uint32_t)mons); };
+		wildAt(0x1000, 0, 1, 0x1100, 0x1200);
+		wildAt(0x1014, 2, 0, 0x1110, 0x1300);
+		for (int i = 0; i < 12; i++) { rom[0x1200 + i * 4] = 3; rom[0x1201 + i * 4] = 5; rom[0x1202 + i * 4] = (uint8_t)(i == 0 ? 25 : i == 2 ? 10 : 7); }
+		for (int i = 0; i < 12; i++) { rom[0x1300 + i * 4] = 30; rom[0x1301 + i * 4] = 32; rom[0x1302 + i * 4] = (uint8_t)(i == 11 ? 25 : 8); }
+		rom[0x1028] = 0xff;
+		RomTables t;
+		t.rom = std::make_shared<const std::vector<uint8_t>>(rom);
+		t.wildHeaders = 0x1000;
+		t.numSpecies = 412;
+		findMapGroups(t, rom.data(), rom.size());
+		EQ((int)t.mapsecs.size(), 3);
+		EQ(t.mapsecs.size() > 0 && t.mapsecs[0].size() > 1 ? t.mapsecs[0][1] : -1, 0x11);
+		EQ(t.mapsecs.size() > 2 && !t.mapsecs[2].empty() ? t.mapsecs[2][0] : -1, 0x13);
+		auto w = t.where(25);
+		EQ((int)w.size(), 2);
+		EQ(w.size() > 0 ? w[0].mapsec : -1, 0x11);		// the commonest first
+		EQ(w.size() > 0 ? w[0].percent : -1, 20);
+		EQ(w.size() > 1 ? w[1].minLv : -1, 30);
+		EQ((int)t.where(99).size(), 0);
+	}
 	// the battle advice: the lead's best move (power x type x STAB x accuracy, PP left), and a party member to switch to
 	{
 		RomTables t;

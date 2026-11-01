@@ -908,6 +908,8 @@ namespace banana::pkmn
 			if (k > 0) a += (k - 1) * 20;
 		}
 		if (best < 20) t.wildHeaders = -1;
+		// each map's region map section (the Dex's "where"): the ROM's map groups, checked against the wild tables
+		findMapGroups(t, rom, n);
 		// the gym leaders' teams for the guide; a CFRU hack's leaders (class 0x54, FireRed's) in the table's order
 		if (t.has.leadersFromTrainers)
 		{
@@ -1536,5 +1538,90 @@ namespace banana::pkmn
 			if (worth > best) { best = worth; a.switchTo = (int)i; a.switchMove = mv; }
 		}
 		return a;
+	}
+}
+
+namespace banana::pkmn
+{
+	namespace
+	{
+		// a map header (0x1c bytes) at off: its layout, events and scripts are ROM pointers; its section in range
+		bool mapHeaderAt(const uint8_t* rom, size_t n, long off)
+		{
+			if (off < 0 || (size_t)off + 0x1c > n || (off & 3)) return false;
+			for (int k = 0; k < 3; k++) if (romPtr(rom, n, (size_t)off + 4 * k) < 0) return false;
+			uint32_t c = le32(rom + off + 12);
+			return c == 0 || (c >= 0x08000000u && c - 0x08000000u < n);
+		}
+	}
+
+	void findMapGroups(RomTables& t, const uint8_t* rom, size_t n)
+	{
+		t.mapsecs.clear();
+		if (t.wildHeaders < 0) return;
+		// the maps the wild tables name: every one must resolve in the table found
+		std::vector<std::pair<int, int>> maps;
+		int maxGroup = 0;
+		for (size_t a = (size_t)t.wildHeaders; a + 20 <= n && rom[a] != 0xff && maps.size() < 4096; a += 20)
+		{
+			maps.push_back({ rom[a], rom[a + 1] });
+			maxGroup = std::max(maxGroup, (int)rom[a]);
+		}
+		if (maps.empty()) return;
+		auto headerOf = [&](size_t table, int g, int num) -> long
+		{
+			long grp = romPtr(rom, n, table + 4 * (size_t)g);
+			if (grp < 0) return -1;
+			long h = romPtr(rom, n, (size_t)grp + 4 * (size_t)num, 0x1c);
+			return h >= 0 && mapHeaderAt(rom, n, h) ? h : -1;
+		};
+		for (size_t a = 0; a + 4 * (size_t)(maxGroup + 1) <= n; a += 4)
+		{
+			// a run of group pointers at least as long as the wild tables need
+			int run = 0;
+			while (a + 4 * (size_t)run + 4 <= n && run < 256 && romPtr(rom, n, a + 4 * (size_t)run) >= 0) run++;
+			if (run <= maxGroup) { a += 4 * (size_t)run; continue; }
+			bool ok = true;
+			for (auto& m : maps) if (headerOf(a, m.first, m.second) < 0) { ok = false; break; }
+			if (!ok) continue;
+			// the groups' lengths: map headers until the next group's table starts (or one isn't a header)
+			t.mapsecs.assign((size_t)run, {});
+			for (int g = 0; g < run; g++)
+			{
+				long grp = romPtr(rom, n, a + 4 * (size_t)g);
+				long next = g + 1 < run ? romPtr(rom, n, a + 4 * (size_t)(g + 1)) : -1;
+				for (int k = 0; k < 256; k++)
+				{
+					if (next > grp && (size_t)grp + 4 * (size_t)k >= (size_t)next) break;
+					long h = headerOf(a, g, k);
+					if (h < 0) break;
+					t.mapsecs[g].push_back(rom[h + 0x14]);
+				}
+			}
+			return;
+		}
+	}
+
+	std::vector<RomTables::Where> RomTables::where(uint16_t species) const
+	{
+		std::vector<Where> out;
+		if (!rom || wildHeaders < 0 || !species) return out;
+		const uint8_t* r = rom->data();
+		size_t n = rom->size();
+		for (size_t a = (size_t)wildHeaders; a + 20 <= n && r[a] != 0xff; a += 20)
+		{
+			int g = r[a], num = r[a + 1];
+			int sec = g < (int)mapsecs.size() && num < (int)mapsecs[g].size() ? mapsecs[g][num] : -1;
+			for (int m = 0; m < 6; m++)
+				for (auto& w : wild(g, num, m))
+				{
+					if (w.species != species) continue;
+					auto it = std::find_if(out.begin(), out.end(), [&](const Where& x) { return x.mapsec == sec && x.method == m && sec >= 0; });
+					if (it == out.end()) out.push_back({ sec, m, w.minLv, w.maxLv, w.percent });
+					else { it->minLv = std::min(it->minLv, w.minLv); it->maxLv = std::max(it->maxLv, w.maxLv); it->percent = std::max(it->percent, w.percent); }
+				}
+		}
+		std::stable_sort(out.begin(), out.end(), [](const Where& x, const Where& y) { return x.percent > y.percent; });
+		return out;
 	}
 }
