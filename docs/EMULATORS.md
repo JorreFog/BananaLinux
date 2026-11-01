@@ -181,3 +181,16 @@ nothing more, in the same files, so a game goes on in either:
   hardcore as RetroArch's setting, answers cached in `/data/banana/ra-cache` for offline starts.
 - `bananafront_cpugov = on`: its own clock governor (per game, remembered in `/data/bananafront/cpugov`).
 - Logs: `/data/banana/logs/bananafront.log` (a stats line every 10 s with `BANANAFRONT_STATS=<file>`).
+
+## BananaSNES
+
+BananaSNES (`libretro-bananasnes`, `bananasnes_libretro.so`; https://github.com/JorreFog/BananaSNES) is Snes9x (the libretro port, the core
+0.5.0 ships) tuned for the two handhelds and run by BananaFront. Snes9x's licence allows free distribution only, so BananaSNES is free
+too; the credit for the emulation is the Snes9x authors' (`LICENSE` in the repo).
+
+- **Chosen** per system in Settings > Other systems > Super Nintendo > core (BananaSNES next to Snes9x); the default stays Snes9x in RetroArch until
+  it is switched after the tests on both handhelds.
+- **What differs from Snes9x**: only changes that measured faster on the handhelds' stress ROM and left the picture and sound bit-identical
+  (a lazily advanced SPC700 timer set, profile-guided optimisation with a profile recorded on the Plus, a NEON tile path without the store-forwarding
+  stall), and the complete libretro memory map for the game companion (WRAM $7E0000, cartridge SRAM at the virtual $1000000, SA-1 I-RAM).
+- **Measured** (tools/stress-roms/snes, BananaFront on the RG DS Plus, the stress loop of four scenes): see the repo's BANANA.md for the table.
