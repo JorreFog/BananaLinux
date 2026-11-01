@@ -7,8 +7,8 @@ import math, os, subprocess, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC, OUT, GEN = os.path.join(HERE, "src"), os.path.join(HERE, "out"), os.path.join(HERE, "out", "gen")
 RATE = 16777216 / 924          # the mixer's sample rate (timer 0 reload 65536 - 924)
-PHASE_FRAMES, NSCENES = 1800, 5
-SCENES = ["racer", "shooter", "town", "raster", "loader"]
+PHASE_FRAMES, NSCENES = 1800, 6
+SCENES = ["racer", "shooter", "town", "raster", "loader", "tactics"]
 FPS = 16777216 / 280896        # 59.7275
 
 # a 5x7 font of our own for ASCII 32..95 (rows top to bottom, '#' = on)

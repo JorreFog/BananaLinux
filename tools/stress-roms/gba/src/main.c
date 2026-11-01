@@ -16,8 +16,8 @@
 #ifndef PHASE_FRAMES
 #define PHASE_FRAMES 1800
 #endif
-#define NSCENES 5
-static const char* const scene_names[NSCENES] = { "RACER", "SHOOTER", "TOWN", "RASTER", "LOADER" };
+#define NSCENES 6
+static const char* const scene_names[NSCENES] = { "RACER", "SHOOTER", "TOWN", "RASTER", "LOADER", "TACTICS" };
 
 /* ---- results + probe (COMPANION-SPEC section 7) ---- */
 typedef struct { u32 frames, checksum; u16 cpu_avg, cpu_max; u16 overruns, pad; } PhaseRes;
@@ -660,6 +660,81 @@ static void loader_frame(void)
 	hud_num(14, 0, cur_ovl, 1);
 }
 
+/* =============================== scene 5: tactics =============================== */
+/* A turn-based strategy map (Advance Wars' pattern, from BananaGBA's fingerprint of the real game: the GBA's CPU never
+ * halts - it waits for the vblank in a loop - an HBlank IRQ on every line, all 128 OBJ in use): a 30x20 grid of
+ * units, a cursor, path-finding (flood fill) for the selected unit every few frames, damage tables. */
+#define GRID_W 30
+#define GRID_H 20
+EWRAM_BSS static u8 terrain[GRID_H][GRID_W], unit_at[GRID_H][GRID_W];
+EWRAM_BSS static u8 reach[GRID_H][GRID_W];
+static s16 cur_x, cur_y;
+static u32 tactics_sum;
+static void tactics_init(void)
+{
+	DISPCNT = 0x0080;
+	u32 t[8];
+	volatile u32* cb = (volatile u32*)CHARBLOCK(0);
+	for (int i = 0; i < 256; i++) { tile4(t, i < 96 ? 0 : i < 192 ? 1 : 4, (u32)i * 5); for (int k = 0; k < 8; k++) cb[i * 8 + k] = t[k]; }
+	palette_ramp(PAL_BG, 240, 13);
+	for (int y = 0; y < GRID_H; y++)
+		for (int x = 0; x < GRID_W; x++) { terrain[y][x] = (u8)(rnd() % 6); unit_at[y][x] = (rnd() % 7 == 0) ? (u8)(1 + rnd() % 12) : 0; }
+	for (int l = 0; l < 3; l++)
+	{
+		volatile u16* m = (volatile u16*)SCREENBLOCK(24 + l);
+		for (int i = 0; i < 1024; i++) m[i] = (u16)(l == 0 ? terrain[(i / 32) % GRID_H][(i % 32) % GRID_W] * 16 + (rnd() & 15) : l == 1 ? ((rnd() & 7) ? 0 : 96 + (rnd() & 63)) : 192 + (rnd() & 63));
+		BGCNT(1 + l) = (u16)(((24 + l) << 8) | (1 + l));
+	}
+	hud_init();
+	obj_tiles();
+	cur_x = 10; cur_y = 8;
+	scene_irq = 1;			/* the per-line HBlank handler, as the game's */
+	DISPSTAT = 0x18;
+	IE = IRQ_VBLANK | IRQ_HBLANK;
+	DISPCNT = 0x1000 | 0x0F00 | 0x0040;
+}
+static void tactics_frame(void)
+{
+	/* the cursor walks the map; every 16 frames the unit under it gets its movement range (a flood fill over terrain
+	 * costs, as these games show the blue squares) */
+	if ((phase_frame & 15) == 0) { cur_x = (s16)((cur_x + 3) % GRID_W); cur_y = (s16)((cur_y + 1 + (cur_x & 1)) % GRID_H); }
+	if ((phase_frame & 15) == 8)
+	{
+		for (int y = 0; y < GRID_H; y++) for (int x = 0; x < GRID_W; x++) reach[y][x] = 0;
+		reach[cur_y][cur_x] = (u8)(6 + SCALE(2));
+		for (int pass = 0; pass < 5; pass++)
+			for (int y = 0; y < GRID_H; y++)
+				for (int x = 0; x < GRID_W; x++)
+				{
+					u8 r = reach[y][x];
+					if (r < 2) continue;
+					u8 cost = (u8)(1 + (terrain[y][x] >> 1));
+					if (x > 0 && reach[y][x - 1] + cost < r) reach[y][x - 1] = (u8)(r - cost);
+					if (x + 1 < GRID_W && reach[y][x + 1] + cost < r) reach[y][x + 1] = (u8)(r - cost);
+					if (y > 0 && reach[y - 1][x] + cost < r) reach[y - 1][x] = (u8)(r - cost);
+					if (y + 1 < GRID_H && reach[y + 1][x] + cost < r) reach[y + 1][x] = (u8)(r - cost);
+				}
+	}
+	/* damage forecast: every unit against its neighbours (a table lookup + a BIOS divide) */
+	for (int y = 0; y < GRID_H; y++)
+		for (int x = 0; x < GRID_W - 1; x++)
+			if (unit_at[y][x] && unit_at[y][x + 1])
+				tactics_sum += (u32)bios_div((s32)(unit_at[y][x] * 55 + terrain[y][x] * 10), (s32)(unit_at[y][x + 1] + 1));
+	checksum += tactics_sum;
+	/* all 128 OBJ: units (16x16), the reach markers (8x8), the cursor */
+	oam_clear();
+	oam_add(cur_x * 8 - 4, cur_y * 8 - 4, 0, 0x4000, (u16)(4 + ((frame >> 3) & 3) * 4));
+	for (int y = 0; y < GRID_H && oam_n < 128; y++)
+		for (int x = 0; x < GRID_W && oam_n < 128; x++)
+		{
+			if (unit_at[y][x]) oam_add(x * 8, y * 8, 0, 0, (u16)(64 + unit_at[y][x]));
+			else if (reach[y][x] > 1 && ((x + y + (int)frame) & 1)) oam_add(x * 8, y * 8, 0x0400, 0, 2);	/* (semi-transparent) */
+		}
+	while (oam_n < 128) oam_add(240, 160, 0, 0, 1);		/* the rest parked off-screen, in use (as the game's) */
+	BGHOFS(1) = (u16)(cur_x * 2); BGVOFS(1) = (u16)(cur_y);
+	hud_num(14, 0, (u32)cur_x, 2);
+}
+
 /* =============================== main loop =============================== */
 static void scene_start(void)
 {
@@ -678,7 +753,8 @@ static void scene_start(void)
 	case 1: shooter_init(); break;
 	case 2: town_init(); break;
 	case 3: raster_init(); break;
-	default: loader_init(); break;
+	case 4: loader_init(); break;
+	default: tactics_init(); break;
 	}
 	IF = 0xFFFF;
 	IME = 1;
@@ -719,7 +795,13 @@ int main(void)
 	u32 last_vb = vblanks;
 	for (;;)
 	{
-		bios_vblank_wait();
+		if (scene == 5)
+		{
+			/* the vblank waited for in a loop, the CPU never halting (the strategy game's way) */
+			u32 seen = vblanks;
+			while (*(volatile u32*)&vblanks == seen) {}
+		}
+		else bios_vblank_wait();
 		u32 vb = vblanks;
 		if (vb - last_vb > 1) overruns++;
 		last_vb = vb;
@@ -745,7 +827,8 @@ int main(void)
 		case 1: shooter_frame(); checksum += (u32)ship_hits; break;
 		case 2: town_frame(); break;
 		case 3: raster_frame(); break;
-		default: loader_frame(); break;
+		case 4: loader_frame(); break;
+		default: tactics_frame(); break;
 		}
 		frame++;
 		phase_frame++;
