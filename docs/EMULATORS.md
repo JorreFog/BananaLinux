@@ -159,7 +159,7 @@ BananaOS's own frontend for the libretro cores of the systems RetroArch ran (`/u
 nothing more, in the same files, so a game goes on in either:
 
 - **Started** by `run-retroarch` when Settings > Other systems > Frontend (`ra_frontend`) says so: `auto` = the
-  systems in run-retroarch's `BF_SYSTEMS` (checked on both handhelds; 2026-11-01: gb gbc gba megadrive pico-8 nes),
+  systems in run-retroarch's `BF_SYSTEMS` (checked on both handhelds; 2026-11-01: gb gbc gba megadrive pico-8 nes snes),
   unless RetroAchievements is in Hardcore; `bananafront` = every 2D system; `retroarch` = never. N64 and PlayStation
   always stay on RetroArch.
 - **Picture:** the game panel by banana-ui's DRM lease (+ a free overlay plane for pop-ups), else DRM master on the
