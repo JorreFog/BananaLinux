@@ -151,3 +151,25 @@ wins over the file and would freeze the settings screen's choices. Both launcher
 frame statistics in the log) or `BANANADS_POWER_CPU_LATENCY_US=100` (the cores kept out of deep idle while a game
 runs: ~1.5% faster, a battery cost not measured yet). BananaDS needs no BIOS or firmware files (melonDS's FreeBIOS and a
 generated firmware).
+
+## BananaNES
+
+BananaNES is the NES / Famicom core: a fork of libretro-fceumm (github.com/libretro/libretro-fceumm, by CaH4e3 and the
+FCEUmm developers; GPL-2.0, history and licence kept) tuned for the Cortex-A55 handhelds. It is a libretro core
+(`/usr/lib/libretro/banananes_libretro.so`, package `buildroot/package/libretro-banananes`) that runs in BananaFront or
+RetroArch: Settings > Other systems > NES core. It reports itself as "FCEUmm", so saves, save states and core options are the
+same files as libretro-fceumm's: switching cores loses nothing.
+
+- **Exactness**: its output (picture, sound, save RAM, save state bytes) is identical to libretro-fceumm's on every ROM
+  checked: the stress ROM, a VRC3 cycle-IRQ test ROM, three free homebrew games, 136 community accuracy test ROMs
+  (blargg and others), under other core options (PAL, Dendy, sound quality, overclocking, no sprite limit, NTSC filter, palettes,
+  overscan crop), on the PC and on the RG DS. Savestates load across the two cores.
+- **Speed** (RG DS, stress ROM): BananaFront pinned at 1416 MHz 1.19 ms per frame against 3.93 ms (the title scene
+  busy-waits on $2002 like polling games do); 60 % -> 29 % of a core with the governor; RetroArch's CPU work over the whole
+  9-scene loop -34 %. What does it: -O3 -flto and profile-guided optimisation, the CPU core's registers and cycle counters
+  kept in locals with inline RAM/ROM fast paths and an APU hook that only runs at its events, the palette table rebuilt only when
+  the palette changes, run-length APU mixing, NEON for the palette blit, the sprite scan and the background tiles.
+- **Companion**: the libretro memory map has RAM at 0x0000, PRG-RAM at 0x6000 (named ram / sram / exram), `companion/nes/` in
+  its repo holds the tier-1 definition of the stress ROM.
+- **Tests and tools** (in the BananaNES repo, `banana/tools`): `check-all.sh` (every exactness check), `devcheck.sh` (the same on a
+  handheld), `nesrun` (a headless libretro host), the stress ROM and its drivers (`tools/stress-roms/nes`).
