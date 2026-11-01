@@ -88,8 +88,12 @@ namespace banana
 		// The game panel (settings.cpp, end): while a RetroArch game runs on one panel through a DRM lease, the other
 		// shows the game's RetroAchievements (progress and the latest unlocks with their badges) and touch tiles for
 		// RetroArch (save, load, its menu, fast forward, quit), in the in-game menu's look.
-		enum GameAction { G_NONE, G_SAVE, G_LOAD, G_MENU, G_FFWD, G_QUIT };
+		enum GameAction { G_NONE, G_SAVE, G_LOAD, G_MENU, G_FFWD, G_QUIT, G_LOADSLOT };
 		void gameOpen(const std::string& title, const std::string& system, int screen, bool touch);
+		// the game's file (before gameOpen): its save states' names (RetroArch's: <name>.state, .state1 ... in
+		// /data/states, thumbnails <state>.png) for the panel's States view (a tap on the achievements box)
+		void gameRom(const std::string& rom, const std::string& stateDir = "/data/states");
+		int gameSlot() const { return gSlotPick; }	// G_LOADSLOT's slot
 		void gameClose();
 		bool gameUpdate(double nowMs);		// true: the panel changed (a log line, a reply, a badge, a flash ending)
 		// true once after something the player should see came up on the panel (an achievement unlocked): it wakes a
@@ -570,6 +574,15 @@ namespace banana
 		void meter(float x, float y, float w, double fraction);	// a progress bar
 		std::string gTitle, gSystem;
 		int gScreen = 1, gFlash = -1, gDown = -1;
+		// the States view (universal companion tier 0): slots 0-9 with their thumbnails; a slot tapped twice loads it
+		bool gStates = false;
+		int gSlotSel = -1, gSlotPick = -1;
+		std::string gStateBase;			// <state dir>/<the game's name>
+		struct StateFile { long long mtime = 0; rnds::TexPtr tex; };
+		StateFile gStateFiles[10];
+		double gStatesScan = 0;
+		void gameStatesScan();
+		void gameStatesFrame(const SPal& p);
 		bool gTouch = true;
 		bool gHotkeys = true;	// Settings > Other systems > RetroArch hotkeys: off, F + R and the like do nothing
 		double gFlashUntil = 0;

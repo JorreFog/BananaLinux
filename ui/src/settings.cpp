@@ -6405,9 +6405,74 @@ namespace banana
 		if (cfgValue(cfg, "cheevos_enable") != "true" || raw->user.empty()) raw->state = 4;
 	}
 
+	void Settings::gameRom(const std::string& rom, const std::string& stateDir)
+	{
+		// RetroArch's (and BananaFront's) state names: the content's file name without its extension
+		std::string b = rom.substr(rom.find_last_of('/') + 1);
+		size_t dot = b.find_last_of('.');
+		if (dot != std::string::npos && dot > 0) b.erase(dot);
+		gStateBase = stateDir + "/" + b;
+	}
+
+	void Settings::gameStatesScan()
+	{
+		gStatesScan = now;
+		for (int i = 0; i < 10; i++)
+		{
+			std::string f = gStateBase + ".state" + (i ? std::to_string(i) : "");
+			struct stat st;
+			long long m = stat(f.c_str(), &st) == 0 ? (long long)st.st_mtime : 0;
+			if (m == gStateFiles[i].mtime) continue;
+			gStateFiles[i].mtime = m;
+			gStateFiles[i].tex.reset();
+			if (!m) continue;
+			rnds::Bitmap b = rnds::decodeFile(f + ".png");
+			if (!b.empty()) gStateFiles[i].tex = be->upload(b, true);
+		}
+	}
+
+	// the States view in the achievements box: ten slots, a picture and the time each was saved
+	void Settings::gameStatesFrame(const SPal& p)
+	{
+		if (gStateBase.empty()) return;
+		if (now - gStatesScan > 2000) gameStatesScan();
+		box("slot", false, 18, 80, 604, 206);
+		text("Save states", true, 15, 40, 96, p.muted, true, 1.2f);
+		std::string hint = gSlotSel >= 0 ? "Tap it again to load" : "Tap a slot twice to load it";
+		float hw = text(hint, false, 14, 0, 0, p.muted, false, 0, true);
+		text(hint, false, 14, 600 - hw, 97, gSlotSel >= 0 ? p.accent : p.muted);
+		for (int i = 0; i < 10; i++)
+		{
+			float x = 30 + (i % 5) * 117, y = 120 + (i / 5) * 82;
+			bool sel = i == gSlotSel;
+			box(sel ? "pick" : "bubble", sel, x, y, 109, 76);
+			const StateFile& f = gStateFiles[i];
+			Color fg = sel ? p.onPick : p.ink;
+			std::string n = i ? std::to_string(i) : "0";
+			if (!f.mtime)
+			{
+				text(n, true, 15, x + 8, y + 6, p.muted);
+				text("Empty", false, 14, x + 30, y + 30, p.muted);
+				continue;
+			}
+			if (f.tex) be->draw(f.tex, X(x + 31), X(y + 5), X(72), X(48), Color(1, 1, 1, 1));
+			text(n, true, 15, x + 8, y + 6, fg);
+			char w[24];
+			time_t tt = (time_t)f.mtime, nt = time(nullptr);
+			struct tm a, b;
+			localtime_r(&tt, &a); localtime_r(&nt, &b);
+			strftime(w, sizeof w, a.tm_yday == b.tm_yday && a.tm_year == b.tm_year ? "%H:%M" : "%d %b", &a);
+			float ww = text(w, false, 13, 0, 0, fg, false, 0, true);
+			text(w, false, 13, x + 55 - ww / 2, y + 56, sel ? p.onPickAccent : p.muted);
+		}
+	}
+
 	void Settings::gameClose()
 	{
 		raw.reset();
+		gStates = false; gSlotSel = gSlotPick = -1;
+		for (auto& f : gStateFiles) f = StateFile();
+		gStateBase.clear();
 		gBadges.clear();
 		pkIcons.clear();
 		pkTables.reset();
@@ -6478,6 +6543,23 @@ namespace banana
 	{
 		float lx = x / s, ly = y / s;
 		int hit = -1;
+		bool gamePage = !((gameComp && gameComp->active() && gcView != GC_GAME) || (companion && companion->active() && pkView != PK_GAME));
+		// the achievements box: a tap opens the save states there; a slot tapped twice loads it, a tap above closes it
+		if (gamePage && !gStateBase.empty() && !down && lx >= 18 && lx < 622)
+		{
+			if (!gStates && ly >= 80 && ly < 286) { gStates = true; gSlotSel = -1; gameStatesScan(); return G_NONE; }
+			if (gStates && ly < 80) { gStates = false; return G_NONE; }
+			if (gStates && ly >= 120 && ly < 284)
+			{
+				int c = (int)((lx - 30) / 117), r = (int)((ly - 120) / 82);
+				if (c < 0 || c > 4 || r < 0 || r > 1) return G_NONE;
+				int i = r * 5 + c;
+				if (!gStateFiles[i].mtime) { gSlotSel = -1; return G_NONE; }
+				if (i != gSlotSel) { gSlotSel = i; return G_NONE; }
+				gSlotPick = i; gSlotSel = -1; gStates = false;
+				return G_LOADSLOT;
+			}
+		}
 		for (int i = 0; i < 5; i++)
 		{
 			float tx = 18 + i * 122;
@@ -6650,8 +6732,15 @@ namespace banana
 			text(fit(gTitle, true, 19, 540 - sw), true, 19, 38, 18, p.ink);
 			text(fit(rpText, false, 15, 564), false, 15, 38, 44, p.accent);
 		}
-		// ---- the achievements
+		// ---- the achievements (or, after a tap on them, the save states)
+		if (gStates) gameStatesFrame(p);
+		else {
 		box("slot", false, 18, 80, 604, 206);
+		if (!gStateBase.empty() && gTouch)
+		{
+			float hw = text("Tap: save states", false, 13, 0, 0, p.muted, false, 0, true);
+			text("Tap: save states", false, 13, 600 - hw, 264, p.muted);
+		}
 		text("Latest achievements", true, 15, 40, 96, p.muted, true, 1.2f);
 		if (state == 2 && total)
 		{
@@ -6724,6 +6813,7 @@ namespace banana
 				state == 4 ? "RetroAchievements is off, or its login failed: check the account in Settings > System > First-time setup." :
 				"No connection to RetroAchievements: check Wi-Fi.";
 			wrapped(msg, 18, 40, 130, 560, 3, p.muted);
+		}
 		}
 		// ---- the tiles: RetroArch's commands by touch, and their buttons
 		for (int i = 0; i < 5; i++)

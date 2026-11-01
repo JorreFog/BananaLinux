@@ -615,6 +615,13 @@ for size in 640x480 1024x768; do
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
         --roms "$FX/roms" --data "$FX/data" --script "home 0; gamepanel 1 /nonexistent.gba; rablock $OUT/ra1.txt; gshot ra-block" 2> "$OUT/$size-rablock.log" ||
         { echo "FAIL $size: banana-ui (RA block) exited $?"; fail=1; }
+    # the game panel's save states (tier 0): a tap on the achievements box opens them, a slot tapped twice loads it
+    SD=$OUT/states-$size; mkdir -p "$SD"; echo x > "$SD/test.state"; echo y > "$SD/test.state3"
+    convert -size 240x160 xc:'#3a8a4a' "$SD/test.state3.png" 2>/dev/null
+    "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; gstates $SD; gamepanel 1 /x.gba; gtouch 300 150; gtouch 400 150; gshot states-sel; gtouch 400 150" 2> "$OUT/$size-states.log" ||
+        { echo "FAIL $size: banana-ui (save states) exited $?"; fail=1; }
+    grep -q "gtouch 400 150: action 6" "$OUT/$size-states.log" || { echo "FAIL $size: slot 3 tapped twice didn't load it"; fail=1; }
     grep -q "rablock .*: state 3 rp 'Lv 23 Charmeleon, Viridian Forest, 3 badges' near 2" "$OUT/$size-rablock.log" || { echo "FAIL $size: the RA block wasn't read"; fail=1; }
     [ "$(convert "$OUT/$size-ra-block-bot.png" -format '%[fx:standard_deviation>0.01]' info: 2>/dev/null)" = 1 ] || { echo "FAIL $size: the RA block panel is blank"; fail=1; }
 done
