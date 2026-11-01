@@ -208,12 +208,19 @@ namespace banana::pkmn
 		// each map's region map section by group and number (findMapGroups; 255: not known) and, from them and the wild
 		// tables, where a species is met: section, how (as wild()), levels, chance; the commonest first
 		std::vector<std::vector<uint8_t>> mapsecs;
+		// the level-up move lists (findLearnsets; -1 not found): the next move a species learns after level (0 none;
+		// its level in lv)
+		long learnsets = -1;
+		uint16_t nextMove(uint16_t species, int level, int& lv) const;
 		struct Where { int mapsec, method; uint8_t minLv, maxLv; int percent; };
 		std::vector<Where> where(uint16_t species) const;
 	};
 	// the ROM's map groups (gMapGroups: a table of the groups' tables of map header pointers), found by their shape
 	// and checked against every map the wild tables name: t.mapsecs (left empty when not found)
 	void findMapGroups(RomTables& t, const uint8_t* rom, size_t n);
+	// gLevelUpLearnsets: numSpecies pointers to lists of (move | level << 9), 0xffff at the end (Ruby, Sapphire,
+	// Emerald, FireRed, LeafGreen and hacks that keep the format), found by their shape: t.learnsets
+	void findLearnsets(RomTables& t, const uint8_t* rom, size_t n);
 	RomTables findTables(const uint8_t* rom, size_t n, const GameProfile* game = nullptr);
 
 	// pokemap.cpp: the GBA BIOS's LZ77 (type 0x10) at rom[at]: false when it isn't one, runs past the end or decodes to

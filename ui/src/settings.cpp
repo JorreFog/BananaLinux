@@ -7151,8 +7151,21 @@ namespace banana
 				text("Next", true, 13, 304 - xw - lw2 - 6, 175, p.muted, true);
 			}
 			else hpBar(m.level >= 100 ? 1 : 0, 1, 72, 176, 232, EXP_BLUE);
-			be->fill(std::round(X(36)), std::round(X(200)), std::round(X(268)), std::max(1.0f, std::round(X(2))), p.line);
-			pokeMatchups(p, m.types[0], m.types[1], 36, 210, 270, 328);
+			// the next move it learns by levelling up (the ROM's level-up lists; the PokeDaisy idea, its LEARN page)
+			int nlv = 0;
+			uint16_t nmv = t.nextMove(m.species, m.level, nlv);
+			float my = 200;
+			if (nmv)
+			{
+				text("Learns", true, 13, 36, 205, p.muted, true);
+				std::string lvs = "Lv " + std::to_string(nlv);
+				float lw3 = text(lvs, true, 15, 0, 0, p.ink, false, 0, true);
+				text(lvs, true, 15, 304 - lw3, 203, p.accent);
+				text(fit(t.moveName(nmv), true, 16, 200 - lw3), true, 16, 98, 202, p.ink);
+				my = 228;
+			}
+			be->fill(std::round(X(36)), std::round(X(my)), std::round(X(268)), std::max(1.0f, std::round(X(2))), p.line);
+			pokeMatchups(p, m.types[0], m.types[1], 36, my + 10, 270, 328);
 		}
 		// ---- right: the moves or the stats, named at the column's top (a tap on the column changes which)
 		static const char* const SIDE[2] = { "Moves", "Stats" };

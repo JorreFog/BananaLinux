@@ -910,6 +910,8 @@ namespace banana::pkmn
 		if (best < 20) t.wildHeaders = -1;
 		// each map's region map section (the Dex's "where"): the ROM's map groups, checked against the wild tables
 		findMapGroups(t, rom, n);
+		// the level-up moves (the summary's "learns next")
+		findLearnsets(t, rom, n);
 		// the gym leaders' teams for the guide; a CFRU hack's leaders (class 0x54, FireRed's) in the table's order
 		if (t.has.leadersFromTrainers)
 		{
@@ -1623,5 +1625,64 @@ namespace banana::pkmn
 		}
 		std::stable_sort(out.begin(), out.end(), [](const Where& x, const Where& y) { return x.percent > y.percent; });
 		return out;
+	}
+}
+
+namespace banana::pkmn
+{
+	namespace
+	{
+		// a level-up list at off: (move | level << 9) entries, levels not going down, then 0xffff (within 64)
+		bool learnsetAt(const uint8_t* rom, size_t n, long off, size_t numMoves)
+		{
+			if (off < 0 || (off & 1)) return false;
+			int last = 0;
+			for (int k = 0; k < 64; k++)
+			{
+				if ((size_t)off + 2 * (size_t)k + 2 > n) return false;
+				uint16_t e = le16(rom + off + 2 * k);
+				if (e == 0xffff) return k > 0;
+				int mv = e & 0x1ff, lv = e >> 9;
+				if (!mv || (numMoves && (size_t)mv >= numMoves) || lv < 1 || lv > 100 || lv < last) return false;
+				last = lv;
+			}
+			return false;
+		}
+	}
+
+	void findLearnsets(RomTables& t, const uint8_t* rom, size_t n)
+	{
+		t.learnsets = -1;
+		size_t need = (size_t)std::max(t.numSpecies, 2);
+		size_t numMoves = t.moves.size();
+		for (size_t a = 0; a + 4 * need <= n; a += 4)
+		{
+			// species 0..40 checked first (cheap), then all of them (0 too: its list is a real one in the games, which
+			// keeps a table one entry off from matching)
+			bool ok = true;
+			for (size_t i = 0; i <= 40 && i < need && ok; i++)
+				ok = learnsetAt(rom, n, romPtr(rom, n, a + 4 * i, 4), numMoves);
+			if (!ok) continue;
+			for (size_t i = 41; i < need && ok; i++)
+				ok = learnsetAt(rom, n, romPtr(rom, n, a + 4 * i, 4), numMoves);
+			if (ok) { t.learnsets = (long)a; return; }
+		}
+	}
+
+	uint16_t RomTables::nextMove(uint16_t species, int level, int& lv) const
+	{
+		lv = 0;
+		if (!rom || learnsets < 0 || species >= (uint16_t)numSpecies) return 0;
+		const uint8_t* r = rom->data();
+		size_t n = rom->size();
+		long l = romPtr(r, n, (size_t)learnsets + 4 * (size_t)species, 4);
+		if (l < 0) return 0;
+		for (int k = 0; k < 64 && (size_t)l + 2 * (size_t)k + 2 <= n; k++)
+		{
+			uint16_t e = le16(r + l + 2 * k);
+			if (e == 0xffff) break;
+			if ((e >> 9) > level) { lv = e >> 9; return e & 0x1ff; }
+		}
+		return 0;
 	}
 }

@@ -206,6 +206,30 @@ static std::string reply(uint32_t addr, const std::vector<uint8_t>& v)
 int main(int argc, char** argv)
 {
 	// ---- the type chart (Generation III: no Fairy; Steel resists Ghost and Dark)
+	// the moves a species learns by level (the ROM's level-up tables, found by their shape): the next one after a level
+	{
+		std::vector<uint8_t> rom(0x8000, 0);
+		auto put32 = [&](size_t a, uint32_t v) { for (int i = 0; i < 4; i++) rom[a + i] = (uint8_t)(v >> (8 * i)); };
+		auto put16 = [&](size_t a, uint16_t v) { rom[a] = (uint8_t)v; rom[a + 1] = (uint8_t)(v >> 8); };
+		RomTables t;
+		t.numSpecies = 412;
+		t.moves.resize(355);
+		// 412 pointers at 0x100, every species' list at 0x1000 + 16 * i: (move 33 Lv 1), (move 45 Lv 7), (move 10 + i Lv 15), end
+		for (int i = 0; i < 412; i++)
+		{
+			size_t l = 0x1000 + 16 * (size_t)i;
+			put32(0x100 + 4 * (size_t)i, 0x08000000 + (uint32_t)l);
+			put16(l, 33 | (1 << 9)); put16(l + 2, 45 | (7 << 9)); put16(l + 4, (uint16_t)((10 + i % 300) | (15 << 9))); put16(l + 6, 0xffff);
+		}
+		t.rom = std::make_shared<const std::vector<uint8_t>>(rom);
+		findLearnsets(t, rom.data(), rom.size());
+		EQ((int)(t.learnsets >= 0), 1);
+		int lv = 0;
+		EQ(t.nextMove(4, 7, lv), 14);	// at Lv 7 (just learned 45): next is move 14 at Lv 15
+		EQ(lv, 15);
+		EQ(t.nextMove(4, 15, lv), 0);	// nothing after Lv 15
+		EQ(t.nextMove(4, 1, lv), 45);
+	}
 	// where a species lives: the wild tables by map, each map's region map section from the ROM's map groups (found
 	// by their shape, checked against every map the wild tables name)
 	{
