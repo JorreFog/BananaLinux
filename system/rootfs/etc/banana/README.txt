@@ -41,7 +41,9 @@ list, to add or change emulators: only what you change, e.g. "[psx]" and a "run 
 the built-in list, banana/systems.conf.default, so the rest keeps up with updates).
 A DS game's own emulator and shader (X on the game in the library): banana/nds-per-game.conf and
 banana/nds-per-game-shader.conf, one "<game's file name> = <emulator or shader>" a line (none: no shader); a game
-not in them follows Settings > Nintendo DS.
+not in them follows Settings > Nintendo DS. Its other rows the same way: nds-per-game-res.conf (BananaDS's 3D
+resolution), nds-per-game-timing.conf (BananaDS's timing: accurate or fast), nds-per-game-3d.conf (DraStic's
+Threaded 3D), nds-per-game-mic.conf (the microphone).
 A game's own name and sort title (X on any game in the library): banana/game-titles.tsv, one
 "<system>/<game's file> TAB name TAB sort title" a line; scraping box art again leaves it alone. A gamelist.xml's
 <sortname> sorts the game too.
