@@ -1,0 +1,10 @@
+config BR2_PACKAGE_BANANAFRONT
+	bool "bananafront"
+	depends on BR2_TOOLCHAIN_USES_GLIBC
+	select BR2_PACKAGE_LIBDRM
+	select BR2_PACKAGE_ALSA_LIB
+	select BR2_PACKAGE_ZLIB
+	help
+	  BananaFront, BananaOS's own frontend for the libretro cores (what RetroArch ran): KMS on the game panel,
+	  ALSA at 48 kHz, the saves and states RetroArch keeps, the in-game menu, RetroAchievements, the companion
+	  export. Launcher: /usr/libexec/banana/run-bananafront; Settings > Other systems > Frontend.
