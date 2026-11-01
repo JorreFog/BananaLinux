@@ -162,11 +162,11 @@ same files as libretro-fceumm's: switching cores loses nothing.
 
 - **Exactness**: its output (picture, sound, save RAM, save state bytes) is identical to libretro-fceumm's on every ROM
   checked: the stress ROM, a VRC3 cycle-IRQ test ROM, three free homebrew games, 136 community accuracy test ROMs
-  (blargg and others), under other core options (PAL, Dendy, sound quality, overclocking, no sprite limit, NTSC filter, palettes,
-  overscan crop), on the PC and on the RG DS. Savestates load across the two cores.
+  (blargg and others), 687 register-fuzz runs over every mapper, under other core options (PAL, Dendy, sound quality, overclocking, no sprite limit, NTSC filter, palettes,
+  overscan crop), on the PC and on the RG DS. Savestates load across the two cores. One deliberate difference: upstream's VRC2 save state (mappers 22, 23, 25) ended with unrelated bytes because an array lacked its terminator; BananaNES writes it terminated.
 - **Speed** (RG DS, stress ROM): BananaFront pinned at 1416 MHz 1.19 ms per frame against 3.93 ms (the title scene
   busy-waits on $2002 like polling games do); 60 % -> 29 % of a core with the governor; RetroArch's CPU work over the whole
-  9-scene loop -34 %. What does it: -O3 -flto and profile-guided optimisation, the CPU core's registers and cycle counters
+  9-scene loop -38 %. Core options cost less too (CPU seconds for 3000 frames, RG DS at 1416 MHz): sound quality High 16.6 -> 8.2, Very High 20.0 -> 11.2, NTSC filter 15.7 -> 8.4. What does it: -O3 -flto and profile-guided optimisation, the CPU core's registers and cycle counters
   kept in locals with inline RAM/ROM fast paths and an APU hook that only runs at its events, the palette table rebuilt only when
   the palette changes, run-length APU mixing, NEON for the palette blit, the sprite scan and the background tiles.
 - **Companion**: the libretro memory map has RAM at 0x0000, PRG-RAM at 0x6000 (named ram / sram / exram), `companion/nes/` in
