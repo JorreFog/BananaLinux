@@ -25,6 +25,13 @@ config BR2_PACKAGE_LIBRETRO_FCEUMM
 	help
 	  NES and Famicom.
 
+config BR2_PACKAGE_LIBRETRO_BANANANES
+	bool "libretro-banananes"
+	default y
+	help
+	  NES and Famicom: BananaNES, a fork of FCEUmm tuned for the RG DS and RG DS Plus (same saves, states and
+	  core options as FCEUmm). Chosen per system in Settings > Other systems; the default after the device checks.
+
 config BR2_PACKAGE_LIBRETRO_SNES9X
 	bool "libretro-snes9x"
 	default y
