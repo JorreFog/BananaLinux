@@ -4628,8 +4628,8 @@ namespace banana
 	// a DS game's own BananaDS timing (core.slice; nds-per-game-timing.conf, run-bananads: accurate 64, fast auto), so
 	// a game that takes Fast (Origin HeartGold at 2x on the RG DS Plus) can have it while the one it breaks (Golden Sun:
 	// Dark Dawn) stays Accurate
-	static const char* const GAME_TIMING_VALUES[] = { "", "accurate", "fast" };
-	static const char* const GAME_TIMING_NAMES[] = { "", "Accurate", "Fast" };
+	static const char* const GAME_TIMING_VALUES[] = { "", "accurate", "fast", "dsi" };
+	static const char* const GAME_TIMING_NAMES[] = { "", "Accurate", "Fast", "Fast, DSi CPU" };
 	// (a level, which each launcher turns into its emulator's own threshold: BananaDS low 0.15, medium 0.05, high 0.02
 	// as Settings' Microphone; SuperDrastic low 0.3, medium 0.15, high 0.03, its own scale)
 	static const char* const GAME_MIC_VALUES[] = { "", "low", "medium", "high", "off" };
@@ -4717,7 +4717,7 @@ namespace banana
 		{
 			std::string v = perGame("nds-per-game-3d.conf", romName), m = perGame("nds-per-game-mic.conf", romName);
 			std::string r = perGame("nds-per-game-res.conf", romName), t = perGame("nds-per-game-timing.conf", romName);
-			for (int i = 1; i < 3; i++) if (t == GAME_TIMING_VALUES[i]) pgTiming = i;
+			for (int i = 1; i < 4; i++) if (t == GAME_TIMING_VALUES[i]) pgTiming = i;
 			for (int i = 1; i < 3; i++) if (v == GAME_3D_VALUES[i]) pg3d = i;
 			for (int i = 1; i < 5; i++) if (r == GAME_RES_VALUES[i]) pgRes = i;
 			for (int i = 1; i < 5; i++) if (m == GAME_MIC_VALUES[i]) pgMic = i;
@@ -4795,7 +4795,7 @@ namespace banana
 				pgRes = to;
 			}
 			else if (row == PG_MIC) pgMic = (pgMic + d + 5) % 5;
-			else if (row == PG_TIMING) pgTiming = (pgTiming + d + 3) % 3;
+			else if (row == PG_TIMING) pgTiming = (pgTiming + d + 4) % 4;
 			else if (row == PG_DELETE) { pgDelAll = !pgDelAll; pgDelArmed = false; }
 			else if (row == PG_SHADER)
 			{
@@ -4874,7 +4874,9 @@ namespace banana
 				  "only a loud one, Off none. For a game that needs the microphone (Nintendogs) or one it bothers."
 				: row == PG_TIMING ? "BananaDS only. Fast lets the DS's two CPUs run longer between meeting for this game (up to about 10% faster in "
 				  "HeartGold and hacks of it like Origin HeartGold), Accurate is melonDS's own. Fast can break a game (Golden Sun: Dark Dawn "
-				  "loses its 3D world): if this one goes wrong, set it back. The others follow Settings > Nintendo DS > Timing."
+				  "loses its 3D world): if this one goes wrong, set it back. Fast, DSi CPU also runs the game's main CPU at the DSi's "
+				  "133 MHz: a game that slows down by itself on a DS (Origin HeartGold's busy towns) keeps its speed, for more of "
+				  "the handheld's power. The others follow Settings > Nintendo DS > Timing."
 				: row == PG_NAME ? "The name the menu shows for this game. A types it; an empty one goes back to the scraped name. Kept in "
 				  "banana/game-titles.tsv, which scraping the box art again leaves alone."
 				: row == PG_SORT ? "The library's order goes by this instead of the name: Dragon Quest 04, 05 and 09 keep IV, V and IX in their order. "
