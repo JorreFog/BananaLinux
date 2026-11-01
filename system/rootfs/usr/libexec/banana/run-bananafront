@@ -59,6 +59,27 @@ fi
 case $(setting ra_shader) in lcd) SH=zfast-lcd ;; crt) SH=zfast-crt ;; sharp) SH=sharp-bilinear ;; *) SH= ;; esac
 SH=${BANANAFRONT_SHADER-$SH}    # (tests: another shader, or "" for none)
 [ -n "$SH" ] && [ -d /usr/lib/superdrastic/shaders ] && { export DSFLIP_SHADER_DIR=/usr/lib/superdrastic/shaders; set -- --shader $SH "$@"; }
+# Settings > Other systems > Screen border (ra_border): the same borders as run-retroarch (the theme's, else its base
+# palette's), on an overlay plane over the panel, the picture in the border's hole (borders.conf)
+if [ "$(setting ra_border)" = on ] && [ -n "$BANANA_SYSTEM" ]; then
+    BD=/usr/share/banana/borders
+    MODE=$(cat /sys/class/drm/card0-*/modes 2>/dev/null | head -n 1)
+    read BX BY BW BH <<EOF
+$(awk -v m="$MODE" -v s="$BANANA_SYSTEM" '$1 == m && $2 == s { print $3, $4, $5, $6; exit }' $BD/borders.conf 2>/dev/null)
+EOF
+    th=$(setting theme)
+    case $th in
+    user:*)
+        n=${th#user:}; j=/data/banana/themes/$n.json; [ -f "$j" ] || j=/usr/share/banana/themes/$n.json
+        if [ -d "$BD/$MODE/$n" ] && { [ "$j" = /usr/share/banana/themes/$n.json ] || cmp -s "$j" /usr/share/banana/themes/$n.json; }; then
+            th=$n
+        elif grep -q '"base" *: *"light"' "$j" 2>/dev/null; then th=light; else th=dark; fi ;;
+    light) ;;
+    *) th=dark ;;
+    esac
+    PNG=$BD/$MODE/$th/$BANANA_SYSTEM.png
+    [ -n "$BH" ] && [ -f "$PNG" ] && set -- --border "$PNG" --border-rect "$BX,$BY,$BW,$BH" "$@"
+fi
 # the picture's size as RetroArch's (Integer scale in its menu); else the core's aspect, as large as fits
 [ "$(ra_cfg video_scale_integer)" = true ] && set -- --scale integer "$@"
 # BananaFront's own clock governor (the lowest clock that keeps every frame on time, per game): bananafront_cpugov
