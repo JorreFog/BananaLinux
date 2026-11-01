@@ -463,7 +463,7 @@ rm -rf /data/banana/logs/sessions; rm -f /run/banana/keyboard
 start "recorder = on"
 [ -e /run/banana/recording ] && ok "recording (/run/banana/recording, for the menu's dot)" || bad "no /run/banana/recording"
 F=$(cat /run/banana/recording 2>/dev/null)
-ev $EV_KEY 304 1; ev $EV_KEY 304 0                          # A
+ev $EV_KEY 305 1; ev $EV_KEY 305 0                          # A (BTN_EAST on the RG DS pad)
 tev 3 57 1  3 53 100  3 54 200  0 0 0                      # a touch: tracking id 1 at 100,200, then the report
 tev 3 57 -1  0 0 0                                          # its lift
 sleep 0.5

@@ -462,7 +462,7 @@ static const char *key_name(int code)
 {
 	switch (code) {
 	case KEY_POWER: return "power"; case KEY_VOLUMEUP: return "volume-up"; case KEY_VOLUMEDOWN: return "volume-down";
-	case BTN_SOUTH: return "a"; case BTN_EAST: return "b"; case BTN_NORTH: return "x"; case BTN_WEST: return "y";
+	case BTN_SOUTH: return "b"; case BTN_EAST: return "a";	/* (the RG DS pad: A is BTN_EAST, B BTN_SOUTH, as banana-ui reads them) */ case BTN_NORTH: return "x"; case BTN_WEST: return "y";
 	case BTN_TL: return "l"; case BTN_TR: return "r"; case BTN_TL2: return "l2"; case BTN_TR2: return "r2";
 	case BTN_SELECT: return "select"; case BTN_START: return "start"; case BTN_MODE: return "f"; case BTN_Z: return "back";
 	case BTN_THUMBL: return "l3"; case BTN_THUMBR: return "r3";
