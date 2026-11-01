@@ -22,8 +22,10 @@ n64|psx|"") ;;
     retroarch) bf=0 ;;
     *) case " $BF_SYSTEMS " in *" $BANANA_SYSTEM "*) bf=1 ;; *) bf=0 ;; esac ;;
     esac
-    [ $bf = 1 ] && [ -x /usr/bin/bananafront ] && [ -x /usr/libexec/banana/run-bananafront ] &&
-        exec /usr/libexec/banana/run-bananafront "$@" ;;
+    # (the program in /usr/bin; beside the launchers in a test deploy, which can only replace whole folders)
+    bfbin=/usr/bin/bananafront; [ -x $bfbin ] || bfbin=/usr/libexec/banana/bananafront
+    [ $bf = 1 ] && [ -x $bfbin ] && [ -x /usr/libexec/banana/run-bananafront ] &&
+        BANANAFRONT_BIN=$bfbin exec /usr/libexec/banana/run-bananafront "$@" ;;
 esac
 # Settings > Other systems > the system's core (settings.conf's core.<system>, BANANA_SYSTEM from banana-ui): another
 # installed core instead of systems.conf's, e.g. mGBA for the Game Boy Advance (RetroAchievements), or one downloaded
