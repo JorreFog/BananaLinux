@@ -1182,10 +1182,10 @@ namespace banana::pkmn
 			t->rom = std::make_shared<const std::vector<uint8_t>>(std::move(all));
 			fprintf(stderr, "pokemon: %zu species, %zu moves, %zu species types, %zu move records, %zu icons (%zu palette numbers, %zu palettes), "
 				"%zu growth rates from the ROM (%zu bytes); %s, %zu abilities, %zu items, %zu map names, %zu region maps, %zu dex numbers, "
-				"dex entries %s, wild table %s, %zu CFRU gym leaders\n", t->species.size(), t->moves.size(), t->speciesTypes.size(), t->moveInfo.size(),
+				"dex entries %s, wild table %s, %zu CFRU gym leaders, %zu map groups, level-up lists %s\n", t->species.size(), t->moves.size(), t->speciesTypes.size(), t->moveInfo.size(),
 				t->icons.size(), t->iconPal.size(), t->palettes.size(), t->expTable.size(), bytes, t->has.modernTypes ? "modern types" : "the games' types",
 				t->abilities.size(), t->items.size(), t->mapNames.size(), t->grids.size(), t->natDex.size(), t->dexEntries >= 0 ? "found" : "none",
-				t->wildHeaders >= 0 ? "found" : "none", t->leaders.size());
+				t->wildHeaders >= 0 ? "found" : "none", t->leaders.size(), t->mapsecs.size(), t->learnsets >= 0 ? "found" : "none");
 			std::lock_guard<std::mutex> l(s->mu);
 			s->tables = t;
 			s->profile = profile;
