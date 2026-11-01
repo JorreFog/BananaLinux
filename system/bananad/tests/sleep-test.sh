@@ -92,6 +92,7 @@ for l in green:power red:status amber:charging; do mkdir -p /sys/class/leds/$l; 
 for b in backlight0 backlight1; do mkdir -p /sys/class/backlight/$b; echo 255 > /sys/class/backlight/$b/max_brightness; echo 200 > /sys/class/backlight/$b/brightness; echo 0 > /sys/class/backlight/$b/bl_power; done
 mkfifo /sys/power/state /dev/input/event0
 exec 3<>/dev/input/event0       # a writer that stays, so bananad's poll doesn't see a hang-up
+mkfifo /run/test/touch; exec 4<>/run/test/touch     # the stand-in touchscreen bananad reads unpolled (BANANAD_TEST_TOUCH)
 echo 0 > /run/test/lid
 
 pass=0 fail=0
@@ -111,7 +112,7 @@ gstate() { awk '{print $3}' /proc/$GAME/stat; }
 start() {   # start [bananad.conf lines]
     echo "s2idle [deep]" > /sys/power/mem_sleep     # the kernel's file always lists both
     printf '%s\n' "autosleep_minutes = 0" "sleep_check_hours = 0" "$@" > /data/banana/bananad.conf
-    BANANAD_TEST_LID=/run/test/lid "$W/bananad" & BD=$!
+    BANANAD_TEST_LID=/run/test/lid BANANAD_TEST_TOUCH=/run/test/touch "$W/bananad" & BD=$!
     sleep 0.5
 }
 stop() { kill $BD 2>/dev/null; wait $BD 2>/dev/null || true; }
@@ -450,6 +451,55 @@ asleep && ok "suspended on the lid with the runner stopped" || bad "a stopped ru
 echo 0 > /run/test/lid; wake
 kill -CONT $DL; kill $DL; wait $DL 2>/dev/null || true
 rm -f /run/banana/transfer.pid
+
+echo "27. the flight recorder: buttons, the lid, a sleep, touches (no position while typing), a marker (Select held) and the stop, on the card"
+# tev <type> <code> <value>...: events on the stand-in touchscreen, with the monotonic time (as the real one stamps them)
+tev() { python3 -c "
+import struct, sys, time
+t = time.clock_gettime(time.CLOCK_MONOTONIC); s = int(t); u = int((t - s) * 1e6)
+a = [int(x) for x in sys.argv[1:]]
+sys.stdout.buffer.write(b''.join(struct.pack('llHHi', s, u, a[i], a[i + 1], a[i + 2]) for i in range(0, len(a), 3)))" "$@" >&4; }
+rm -rf /data/banana/logs/sessions; rm -f /run/banana/keyboard
+start "recorder = on"
+[ -e /run/banana/recording ] && ok "recording (/run/banana/recording, for the menu's dot)" || bad "no /run/banana/recording"
+F=$(cat /run/banana/recording 2>/dev/null)
+ev $EV_KEY 304 1; ev $EV_KEY 304 0                          # A
+tev 3 57 1  3 53 100  3 54 200  0 0 0                      # a touch: tracking id 1 at 100,200, then the report
+tev 3 57 -1  0 0 0                                          # its lift
+sleep 0.5
+: > /run/banana/keyboard
+tev 3 57 2  3 53 300  3 54 50  0 0 0;  tev 3 57 -1  0 0 0  # a touch while typing
+sleep 0.5; rm -f /run/banana/keyboard
+ev $EV_KEY 314 1; ev $EV_KEY 314 0; sleep 0.3                  # a quick Select: no marker
+grep -q "MARK" "$F" 2>/dev/null && bad "a marker from a quick press" || ok "a quick Select: no marker"
+ev $EV_KEY 314 1; sleep 2.4; ev $EV_KEY 314 0                  # Select held 2 s: a marker (written at once)
+sleep 0.5
+grep -q "MARK .*marker 1" "$F" 2>/dev/null && ok "Select held 2 s: the marker on the card at once" || bad "no marker in $F"
+[ "$(cat /sys/class/leds/green:power/brightness)" = 128 ] && ok "the power LED back after its blinks" || bad "LED $(cat /sys/class/leds/green:power/brightness)"
+# banana-ui's events: a datagram on the recorder's socket, copied in (control characters made spaces)
+python3 -c "
+import socket; s = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+s.sendto(b'setting\tTurn off when idle: 1 hour -> 5 minutes', '/run/banana/recorder.sock')
+s.sendto(b'game\tstart: Peel Quest\n(nds, run-nds)', '/run/banana/recorder.sock')"
+sleep 0.3
+echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
+asleep && ok "asleep" || bad "no sleep"
+grep -q "button .*a down" "$F" && grep -q "lid .*closed" "$F" && ok "flushed before the sleep: the button, the lid" || bad "not flushed before the sleep: $(tail -n 3 "$F" 2>/dev/null | tr '\n' '|')"
+grep -q "setting  Turn off when idle: 1 hour -> 5 minutes" "$F" && ok "banana-ui's event copied in (setting)" || bad "no setting line: $(grep -c setting "$F")"
+grep -q "game     start: Peel Quest (nds, run-nds)" "$F" && ok "its newline made a space: one line each" || bad "game line: $(grep game "$F")"
+grep -q "touch .*down 100,200" "$F" && grep -q "touch .*up 100,200" "$F" && ok "the touch, where (100,200)" || bad "touch lines: $(grep touch "$F" | tr '\n' '|')"
+grep -q "keyboard open: where not recorded" "$F" && ! grep -q "300,50" "$F" && ok "the touch while typing, without where" || bad "while typing: $(grep touch "$F" | tr '\n' '|')"
+echo 0 > /run/test/lid; wake; sleep 0.3
+python3 -c "
+import socket; socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM).sendto(b'menu\trestart (Settings)', '/run/banana/recorder.sock')"
+stop    # (SIGTERM, as rcK's: before the unmount, the last lines written out at once, not at the next half-minute)
+grep -q "menu     restart (Settings)" "$F" && grep -q "bananad  stopped" "$F" && ok "stopped: banana-ui's last event and the stop, on the card" || bad "at the stop: $(tail -n 2 "$F" | tr '\n' '|')"
+sed -n '1,2p' "$F" | grep -q "flight recorder" && ok "the session's header" || bad "header: $(head -n1 "$F")"
+start
+[ ! -e /run/banana/recording ] && ok "recorder off: not recording" || bad "recording with recorder off"
+n=$(ls /data/banana/logs/sessions | wc -l)
+ev $EV_KEY 304 1; ev $EV_KEY 304 0; sleep 0.3
+[ "$(ls /data/banana/logs/sessions | wc -l)" = "$n" ] && ok "recorder off: no new session" || bad "a session with recorder off"
 stop
 
 kill $UI $GAME 2>/dev/null || true

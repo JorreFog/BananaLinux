@@ -22,6 +22,7 @@
 #include "lang.h"
 #include "settings.h"
 #include "complink.h"
+#include "recorder.h"
 #include "settings_defaults.h"
 #include "theme.h"
 #include "colors.h"
@@ -702,6 +703,19 @@ template <class U> static void afterShelves(Host& lib, U& ui)
 	logf("shown systems: %d on the home row", lib.systemCount());
 }
 
+// the recorder: the menu's screen when it changes (home, a system's library, a game being started)
+template <class U> static void recordView(U& ui, Host& lib)
+{
+	static int lastView = -1, lastSys = -1;
+	int v = (int)ui.view(), sys = ui.systemIndex();
+	if (v == lastView && (v != rnds::UI::LIBRARY || sys == lastSys)) return;
+	lastView = v; lastSys = sys;
+	std::string name = sys >= 0 && sys < lib.systemCount() ? lib.shelf(sys).def.name : std::string("?");
+	if (v == rnds::UI::HOME) recordEvent("menu", "home");
+	else if (v == rnds::UI::LIBRARY) recordEvent("menu", "library: %s", name.c_str());
+	else if (ui.gameIndex() >= 0) recordEvent("menu", "starting: %s (%s)", lib.gameAt(ui.gameIndex()).title.c_str(), name.c_str());
+}
+
 static int runHeadless(const Options& o, Host& lib, const std::string& variant, const std::string& theme)
 {
 	SoftBackend be(o.w, o.h);
@@ -809,7 +823,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			}
 			if (settings.isOpen() || it->second == Key::START)
 			{
-				if (!settings.isOpen()) { settings.open(); logf("press %s: settings open", b.c_str()); continue; }
+				if (!settings.isOpen()) { settings.open(); recordEvent("settings", "open"); logf("press %s: settings open", b.c_str()); continue; }
 				int r = (int)settings.press(it->second);
 				if (r == Settings::TITLES)
 				{
@@ -833,10 +847,12 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 				}
 				logf("press %s: settings %s", b.c_str(), settings.isOpen() ? ("result " + std::to_string(r)).c_str() : "closed");
 				if (settings.takeSetupFinished()) logf("setup finished: the welcome");
+				if (!settings.isOpen()) recordEvent("settings", "closed");
 				continue;
 			}
 			if (!uiButton(it->second, btn)) { logf("unknown button %s", b.c_str()); return 2; }
 			bool used = ui.press(btn);
+			recordView(ui, lib);
 			logf("press %s: %s, view %d sys %d game %d", b.c_str(), used ? "used" : "unused", (int)ui.view(), ui.systemIndex(), ui.gameIndex());
 		}
 		else if (op == "setup") { settings.setup(); logf("setup open"); }
@@ -1221,6 +1237,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		if (lib.pendingLaunch() >= 0)
 		{
 			int g = lib.pendingLaunch();
+			logf("launch %d: %s (system %s)", g, lib.gameAt(g).path.c_str(), lib.systemOf(g).id.c_str());
+			recordEvent("game", "start: %s (%s)", lib.gameAt(g).title.c_str(), lib.systemOf(g).id.c_str());
 			lib.clearLaunch();
 			// (an internal page's entry first: in a test there is no .app file for it, so no game at g)
 			if (openPage(settings, internalPage(lib.systemOf(g)))) { ui.setHome(lib.currentShelf()); logf("launch %d: %s open", g, lib.systemOf(g).run.c_str()); }
@@ -1981,6 +1999,7 @@ int main(int argc, char** argv)
 	}
 	else irisToMenu(disp, be, *ui);
 	bootMark("banana-ui: the menu");
+	recordEvent("menu", "up");
 
 	// the bottom panel's idle dim (settings.conf's bottom_idle_seconds / bottom_dim_percent): the bottom backlight's
 	// path comes from bananad. It runs only for a RetroArch game whose panel is the bottom screen (Mode A): the menu
@@ -2041,6 +2060,9 @@ int main(int argc, char** argv)
 	{
 		if (screen != 0) return;
 		double t = nowMs();
+		// the flight recorder recording (bananad's /run/banana/recording): a small red dot in the top corner
+		if (access("/run/banana/recording", F_OK) == 0)
+			be.fill(std::round(disp.width() - 16 * scale), std::round(6 * scale), std::round(6 * scale), std::round(6 * scale), rnds::Color::hex(0xff3b30));
 		if (low.showing(t)) settingsView.notice(low.title, low.body, low.percent);
 		else if (bsNotice.showing(t)) settingsView.banner(bsNotice.title, bsNotice.body, bsNotice.sign, bsNotice.accent);
 		else if (fetchNotice.showing(t)) settingsView.banner(fetchNotice.title, fetchNotice.body, fetchNotice.sign, fetchNotice.accent);
@@ -2093,7 +2115,7 @@ int main(int argc, char** argv)
 			sound.play("select");
 			break;
 		}
-		case Settings::CLOSED: sound.play("back"); break;
+		case Settings::CLOSED: sound.play("back"); recordEvent("settings", "closed"); break;
 		case Settings::TITLES:
 		{
 			// a game's own name or sort title typed on its page: the library again, the cursor on the same game
@@ -2127,8 +2149,8 @@ int main(int argc, char** argv)
 			sound.play("select");
 			break;
 		}
-		case Settings::REBOOT: logf("restarting"); kill(1, SIGTERM); break;		// busybox init: SIGTERM reboots
-		case Settings::POWEROFF: logf("shutting down"); kill(1, SIGUSR2); break;	// and SIGUSR2 powers off
+		case Settings::REBOOT: logf("restarting"); recordEvent("menu", "restart (Settings)"); kill(1, SIGTERM); break;		// busybox init: SIGTERM reboots
+		case Settings::POWEROFF: logf("shutting down"); recordEvent("menu", "shut down (Settings)"); kill(1, SIGUSR2); break;	// and SIGUSR2 powers off
 		default: break;
 		}
 		dirty = true;
@@ -2205,6 +2227,7 @@ int main(int argc, char** argv)
 			ui->touchCancel();
 			settingsView.setVariant(settings["theme"]);
 			settingsView.open();
+			recordEvent("settings", "open");
 			rep.key = Key::NONE;
 			sound.play("select");
 			dirty = true;
@@ -2410,6 +2433,12 @@ int main(int argc, char** argv)
 		const double letGo = nowMs();
 		logf("starting %s: %s", sd.id.c_str(), cmd.c_str());
 		{
+			// the recorder: the game, its system, how it's run (the launcher's name: run-retroarch, run-nds...)
+			std::string how = sd.run.substr(0, sd.run.find(' '));
+			how = how.substr(how.rfind('/') + 1);
+			recordEvent("game", "start: %s (%s, %s)", lib.gameAt(game).title.c_str(), sd.id.c_str(), how.c_str());
+		}
+		{
 			std::ofstream f(o.data + "/last-system");
 			f << ui->systemIndex() << "\n";
 		}
@@ -2556,6 +2585,7 @@ int main(int argc, char** argv)
 		}
 		long secs = (long)((nowMs() - start) / 1000);
 		logf("game ended after %ld s (status %d)", secs, status);
+		recordEvent("game", "ended after %ld s (status %d)", secs, status);
 		int openTries = 0;
 		for (; !disp.open(o.top, err) && openTries < 100; openTries++) usleep(50000);
 		if (disp.isOpen()) disp.blank();	// the game's last frame on either panel gone before the menu draws (issue: GBA's bottom UI lingering)
@@ -2648,8 +2678,17 @@ int main(int argc, char** argv)
 	resumeAfterPoweroff(lib, o.data, "/run/banana/resume-once", &resumeLater, nowMs());	// (its game starts at the loop's first turn)
 	std::string launchLater;	// a launch file's game not in the library yet (the rescan after a copy), tried again until launchLaterUntil
 	double launchLaterUntil = 0;
+	bool wasTyping = false;
 	while (!quit)
 	{
+		recordView(*ui, lib);	// (the recorder: the menu's screen when it changed)
+		// the keyboard up or gone: bananad's recorder reads /run/banana/keyboard (no touch positions while typing)
+		if (settingsView.typing() != wasTyping)
+		{
+			wasTyping = !wasTyping;
+			if (wasTyping) { if (FILE* f = fopen("/run/banana/keyboard", "w")) fclose(f); }
+			else unlink("/run/banana/keyboard");
+		}
 		if (settingsView.takeSetupFinished() && disp.isOpen())
 		{
 			// the first boot's setup is over: the Welcome, and the iris onto the menu; presses made meanwhile dropped
@@ -2788,7 +2827,11 @@ int main(int argc, char** argv)
 		if (batteryDue)
 		{
 			batteryDue = false;
-			if (low.check(lib.power(), shutdownPercent(o.data), now)) dirty = true;
+			if (low.check(lib.power(), shutdownPercent(o.data), now))
+			{
+				dirty = true;
+				if (low.showing(now)) recordEvent("notice", "%s", low.title.c_str());
+			}
 		}
 		if (bsNotice.check(now)) { logf("notice: %s", bsNotice.title.c_str()); dirty = true; }
 		if (fetchDone)
@@ -2990,6 +3033,7 @@ int main(int argc, char** argv)
 		std::ofstream f(o.data + "/last-system");
 		f << ui->systemIndex() << "\n";
 	}
+	recordEvent("menu", "quit");
 	bottomIdle.setOwned(false, nowMs());	// the backlight and the marker back as they were
 	{
 		std::lock_guard<std::mutex> l(worker.uiLock);

@@ -1,6 +1,7 @@
 #include <ctime>
 #include "settings.h"
 #include "settings_draw.h"
+#include "recorder.h"
 #include "lang.h"
 #include "settings_defaults.h"
 #include "settings_draw.h"
@@ -743,10 +744,19 @@ namespace banana
 			"", "reset_system", { "" }, { "" }, Item::ACTION);
 		add(S, "gear", "Reset emulator settings", "Puts the emulator choices back to their defaults: the DS emulator, Quick resume, each system's emulator (core), and RetroArch's shader, audio latency, VSync and hotkeys. Your menu settings, saves and games stay. Press A twice.",
 			"", "reset_emulator", { "" }, { "" }, Item::ACTION);
-		add(S, "gear", "About", "", "", "", {}, {}, Item::INFO);
+		add(S, "gear", "About", "", "", "about", {}, {}, Item::INFO);
 		if (!readCredits().empty())
 			add(S, "gear", "Credits", "The people who made this version of BananaOS: development, translations, testing and thanks. A opens the list.", "", "credits", {}, {}, Item::PAGE);
 		add(S, "gear", "Hotkeys", "The buttons that do something everywhere and in the menu. Each DS emulator's own: Nintendo DS > SuperDrastic > Hotkeys and BananaDS > Hotkeys.", "", "hotkeys", {}, {}, Item::PAGE);
+		// (PR #94, swouapiy) last in System, and there only once unlocked: A seven times on About (settings.conf's
+		// developer); groupEnd leaves it out until then
+		add(S, "gear", "Developer options", "Tools for finding what went wrong: a recording of everything the handheld does, on the card.",
+			"", "developer", {}, {}, Item::PAGE);
+		// the Developer options list: opened from that row, not a tile
+		add("Developer options", "gear", "Flight recorder", "Records what the handheld does: buttons, touches, the lid, the screens, sleep, the battery and Wi-Fi, in banana/logs/sessions on the card, even after a restart. Hold Select for 2 seconds to mark a moment (the light blinks twice).", power, "recorder",
+			{ "Off", "On" }, { "off", "on" });
+		add("Developer options", "gear", "Hide developer options", "Takes the Developer options row away again (A seven times on System > About brings it back). Press A twice.",
+			"", "dev_hide", { "" }, { "" }, Item::ACTION);
 		// the hotkey pages: System > Hotkeys (everywhere and the menu) and one for each emulator (from Nintendo DS and
 		// Nintendo DS). What each does, from bananad, the menu, SuperDrastic's drastic.cfg and menu and BananaDS's menu.
 		// Rows to read, key "hk": what each does, or for L2, R2, L3 and R3 their Buttons row's job as it is now
@@ -1044,6 +1054,7 @@ namespace banana
 	{
 		int i = groupStart(g);
 		while (i < (int)items.size() && items[i].section == groups[g]) i++;
+		if (!devOn && i > 0 && items[i - 1].key == "developer") i--;	// (System's last row, until unlocked)
 		return i;
 	}
 	std::string Settings::groupHint(int g) const
@@ -1081,6 +1092,9 @@ namespace banana
 			for (auto& it : items)
 				if (std::find(groups.begin(), groups.end(), it.section) == groups.end()) groups.push_back(it.section);
 		inGroups = true;
+		devOn = getConfValue(data + "/settings.conf", "developer", "off") == "on";
+		aboutTaps = 0;
+		if (!devOn && (items[sel].key == "developer" || items[sel].section == "Developer options")) sel = 0;
 		gsel = std::min(groupOf(sel), gridCount() - 1);	// (Power has no tile: back on the first)
 		{
 			ConfMemo memo;	// (every row's file read once)
@@ -1205,6 +1219,7 @@ namespace banana
 				{ "ra_buttons", "Other systems buttons" },
 				{ "homesync", "Home server" },
 				{ "hs_systems", "Home server systems" },
+				{ "developer", "Developer options" },	// (PR #94: System's last row, once unlocked)
 			};
 			for (const auto& sys : RA_SYSTEMS) v.push_back({ raButtonsKey(sys), raButtonsSection(sys) });
 			return v;
@@ -1225,10 +1240,24 @@ namespace banana
 	Settings::Result Settings::change(int dir)
 	{
 		Item& it = items[sel];
+		if (it.key == "about" && dir > 0 && !devOn)
+		{
+			// (PR #94) A seven times on About: the Developer options row (as a phone's build number); a count from the fourth
+			if (++aboutTaps >= 7)
+			{
+				aboutTaps = 0;
+				devOn = true;
+				setConfValue(data + "/settings.conf", "developer", "on");
+				toast("Developer options are on", "They're at the end of System now.", 0x6ad07a, 1, 5000);
+			}
+			else if (aboutTaps >= 4) toast(std::to_string(7 - aboutTaps) + " more", "for the developer options", 0x6ad07a, 1, 1500);
+			return MOVED;
+		}
 		if (it.kind == Item::INFO) return NONE;
 		if (it.kind == Item::PAGE)
 		{
 			if (dir <= 0) return NONE;
+			if (it.key == "developer") { recordEvent("settings", "Developer options"); openSection("Developer options"); return MOVED; }
 			if (it.key == "scrape") { startScrape(); return MOVED; }
 			if (it.key == "colors") { openColors(); return MOVED; }
 			if (it.key == "share_account") { startEntry(ENTRY_SMB_USER, "File sharing", "Name", LIST, shareUser()); return MOVED; }
@@ -1245,6 +1274,16 @@ namespace banana
 		if (it.kind == Item::ACTION)
 		{
 			if (dir <= 0) { armed = -1; return MOVED; }
+			if (it.key == "dev_hide" && armed == sel)
+			{
+				armed = -1;
+				devOn = false;
+				setConfValue(data + "/settings.conf", "developer", "off");
+				for (size_t i = 0; i < items.size(); i++) if (items[i].key == "about") sel = (int)i;
+				top = std::max(groupStart(groupOf(sel)), sel - ROWS + 1);
+				toast("Developer options hidden", "A seven times on System > About brings them back.", 0x6ad07a, 1, 4000);
+				return MOVED;
+			}
 			if (it.key == "sleep")
 			{
 				// bananad's sleep (the power button's): asked for with a file and SIGHUP, the settings closed first

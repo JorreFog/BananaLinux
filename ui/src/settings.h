@@ -88,6 +88,11 @@ namespace banana
 		std::vector<std::string> deletedFiles;	// what the last Delete game removed (DELETED)
 		int gridCount() const;	// the groups with a tile (Power has none)
 		int powerGroup() const;	// -1: none
+		// the on-screen keyboard is up (a password or an account being typed): the flight recorder leaves touches'
+		// positions out while it is
+		bool typing() const { return mOpen && page == KEYBOARD; }
+		bool devOn = false;		// System's Developer options row unlocked (settings.conf's developer; PR #94)
+		int aboutTaps = 0;		// A's on System > About so far (seven unlock it)
 		bool animating() const;	// the highlight or the list still easing into place: frames wanted
 
 		// The game panel (settings.cpp, end): while a RetroArch game runs on one panel through a DRM lease, the other

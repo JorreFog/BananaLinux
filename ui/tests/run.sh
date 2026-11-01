@@ -879,5 +879,29 @@ done
 OUT="$OUT" "$HERE/tests/ota.sh" || fail=1
 # home server sync (banana-sync) against a stand-in RomM and, when its source is here, the real Romhost
 OUT="$OUT" "$HERE/tests/sync.sh" || fail=1
+# the flight recorder's part in banana-ui: with /run/banana/recording there, its events go to the recorder's socket
+# (a stand-in for bananad here): Settings opened, a group, a setting changed (old -> new), closed, a library
+if [ -w /run ] || [ -w /run/banana ]; then
+    mkdir -p /run/banana; rm -f /run/banana/recorder.sock; : > /run/banana/recording
+    python3 -I - "$OUT/recorder.txt" <<'PY' &
+import socket, sys, time
+s = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM); s.bind('/run/banana/recorder.sock'); s.settimeout(0.5)
+out, end = open(sys.argv[1], 'w'), time.time() + 20
+while time.time() < end:
+    try: out.write(s.recv(400).decode() + '\n'); out.flush()
+    except socket.timeout: pass
+PY
+    L=$!; sleep 0.5
+    "$HERE/banana-ui" --headless "$OUT/rec-" --size 640x480 --assets "$HERE/assets/rnds" \
+        --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
+        --script "home 0; press start; press r; press a; press right; press left; press b; press b; press a; wait 300" 2> "$OUT/rec.log" ||
+        { echo "FAIL: banana-ui (recorder) exited $?"; fail=1; }
+    sleep 0.5; kill $L 2>/dev/null; rm -f /run/banana/recording /run/banana/recorder.sock
+    R=$OUT/recorder.txt
+    # (the Developer options page and Settings' own events are not in this port: the menu's screens, a game, Settings closed)
+    for want in "settings	closed" "menu	library: "; do
+        grep -qF "$want" "$R" || { echo "FAIL: the recorder: no '$want' ($(tr '\n' '|' < "$R"))"; fail=1; }
+    done
+fi
 [ $fail = 0 ] && echo "banana-ui: all checks passed ($OUT)"
 exit $fail
