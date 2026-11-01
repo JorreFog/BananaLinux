@@ -54,6 +54,25 @@ if [ -f /run/banana/resume-once ] && [ "$(cat /run/banana/resume-once 2>/dev/nul
     rm -f /run/banana/resume-once; set -- --resume-load "$@"
     echo "run-bananafront: resuming after Power off after sleeping" >&2
 fi
+# Settings > Other systems > Shader (ra_shader): the same looks, as BananaOS's GLSL shaders (SuperDrastic's folder:
+# libretro's zfast-lcd, zfast-crt, sharp-bilinear converted), drawn by the GPU into the picture's place on the panel
+case $(setting ra_shader) in lcd) SH=zfast-lcd ;; crt) SH=zfast-crt ;; sharp) SH=sharp-bilinear ;; *) SH= ;; esac
+[ -n "$SH" ] && [ -d /usr/lib/superdrastic/shaders ] && { export DSFLIP_SHADER_DIR=/usr/lib/superdrastic/shaders; set -- --shader $SH "$@"; }
+# the picture's size as RetroArch's (Integer scale in its menu); else the core's aspect, as large as fits
+[ "$(ra_cfg video_scale_integer)" = true ] && set -- --scale integer "$@"
+# BananaFront's own clock governor (the lowest clock that keeps every frame on time, per game): bananafront_cpugov
+[ "$(setting bananafront_cpugov)" = on ] && set -- --cpugov "$@"
+# RetroAchievements: the setup's account (banana/accounts.conf, as run-retroarch gives RetroArch): its name, RetroArch's
+# token for it and the password, in the environment only (bananafront takes them out of its own at once); off when
+# RetroArch's cheevos_enable is false (Settings > Other systems > RetroAchievements); hardcore as RetroArch has it
+A=/data/banana/accounts.conf
+acct() { sed -n "s/^$1=//p" $A 2>/dev/null | head -n 1; }
+u=$(acct ra_user)
+if [ -n "$u" ] && [ "$(ra_cfg cheevos_enable)" != false ]; then
+    export BANANAFRONT_RA_USER="$u" BANANAFRONT_RA_PASSWORD="$(acct ra_password)" BANANAFRONT_RA_TOKEN="$(acct ra_retroarch_token)"
+    [ "$(ra_cfg cheevos_hardcore_mode_enable)" = true ] && export BANANAFRONT_RA_HARDCORE=1
+fi
+export BANANAFRONT_DATA=/data/bananafront
 # the panel without a lease: RetroArch's video_monitor_index (2 the top, 1 the bottom); the other one dark
 L=/data/banana/logs; mkdir -p $L
 [ -f $L/bananafront.log ] && mv -f $L/bananafront.log $L/bananafront.1.log
