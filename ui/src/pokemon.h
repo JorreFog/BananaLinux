@@ -223,6 +223,13 @@ namespace banana::pkmn
 	bool parseReply(const std::string& line, uint32_t& addr, std::vector<uint8_t>& bytes);
 
 	// what the panel draws (the last complete set of replies)
+	// what to do in a battle (the PokeDaisy idea, our own scoring): the lead's best damaging move against the foe -
+	// power x type effect x STAB (1.5) x accuracy, only moves with PP left - and a party member worth switching to: one
+	// standing, not an egg, not the lead, whose best move does much more (x1.5) or which takes much less from the foe's
+	// types. -1: none.
+	struct BattleAdvice { int move = -1; int switchTo = -1, switchMove = -1; };
+	BattleAdvice adviseBattle(const Mon& lead, const std::vector<Mon>& party, const Mon& foe, const struct RomTables& t, bool modern);
+
 	struct Snapshot
 	{
 		bool seen = false;			// a reply with data has come

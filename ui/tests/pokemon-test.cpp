@@ -206,6 +206,40 @@ static std::string reply(uint32_t addr, const std::vector<uint8_t>& v)
 int main(int argc, char** argv)
 {
 	// ---- the type chart (Generation III: no Fairy; Steel resists Ghost and Dark)
+	// the battle advice: the lead's best move (power x type x STAB x accuracy, PP left), and a party member to switch to
+	{
+		RomTables t;
+		t.moveInfo.resize(10);
+		t.moveInfo[1] = { 40, NORMAL, 100, 35 };	// Tackle
+		t.moveInfo[2] = { 40, FIRE, 100, 25 };		// Ember
+		t.moveInfo[3] = { 0, NORMAL, 100, 30 };		// Growl (status)
+		t.moveInfo[4] = { 90, WATER, 100, 15 };		// Surf
+		t.moveInfo[5] = { 120, GRASS, 85, 10 };		// (a strong grass move, missing sometimes)
+		Mon lead; lead.species = 1; lead.types[0] = FIRE; lead.types[1] = FIRE; lead.hp = 30; lead.maxHp = 30; lead.pid = 11;
+		lead.moves[0] = 1; lead.moves[1] = 2; lead.moves[2] = 3; lead.pp[0] = 10; lead.pp[1] = 10; lead.pp[2] = 10;
+		Mon foe; foe.species = 2; foe.types[0] = GRASS; foe.types[1] = GRASS; foe.hp = 20;
+		BattleAdvice a = adviseBattle(lead, { lead }, foe, t, false);
+		EQ(a.move, 1);								// Ember: 40 x2 x1.5 beats Tackle and Growl
+		EQ(a.switchTo, -1);							// nobody else
+		lead.pp[1] = 0;
+		EQ(adviseBattle(lead, { lead }, foe, t, false).move, 0);	// no PP left for Ember: Tackle
+		lead.pp[1] = 10;
+		// a water foe: the fire lead is weak to it and resisted; the water member hits it neutrally... the grass one
+		// hits it twice as hard and resists water: switch to the grass member (party slot 2)
+		Mon wfoe; wfoe.types[0] = WATER; wfoe.types[1] = WATER; wfoe.hp = 20;
+		Mon w; w.species = 3; w.types[0] = WATER; w.types[1] = WATER; w.hp = 20; w.pid = 12; w.moves[0] = 4; w.pp[0] = 5;
+		Mon g; g.species = 4; g.types[0] = GRASS; g.types[1] = GRASS; g.hp = 20; g.pid = 13; g.moves[0] = 5; g.pp[0] = 5;
+		Mon fainted = g; fainted.hp = 0; fainted.pid = 14;
+		a = adviseBattle(lead, { lead, w, g, fainted }, wfoe, t, false);
+		EQ(a.switchTo, 2);
+		EQ(a.switchMove, 0);
+		// an egg or a fainted member is never suggested: then the water one (resists water, hits for 67 against the
+		// lead's 40 that takes double)
+		g.egg = true;
+		EQ(adviseBattle(lead, { lead, w, g, fainted }, wfoe, t, false).switchTo, 1);
+		w.hp = 0;
+		EQ(adviseBattle(lead, { lead, w, g, fainted }, wfoe, t, false).switchTo, -1);
+	}
 	EQ(effect(FIRE, GRASS, STEEL), 16);
 	EQ(effect(FIRE, GRASS, GRASS), 8);
 	EQ(effect(FIRE, GRASS, 255), 8);

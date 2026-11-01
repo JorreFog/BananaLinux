@@ -7230,7 +7230,8 @@ namespace banana
 		card(sn.lead, "You", 18, 48, 298, 124, true);
 		if (sn.foes.size() == 1) card(sn.foes[0], "Foe", 326, 48, 296, 124, true);
 		else for (size_t i = 0; i < 2 && i < sn.foes.size(); i++) card(sn.foes[i], "Foe", 326, 48 + i * 64, 296, 60, false);
-		// ---- your lead's moves, rated against the foe(s)
+		// ---- your lead's moves, rated against the foe(s); the best one marked (pkmn::adviseBattle)
+		pkmn::BattleAdvice adv = pkmn::adviseBattle(sn.lead, sn.party, sn.foes[0], t, t.has.modernTypes);
 		box("bubble", false, 18, 180, 298, 236);
 		for (int i = 0; i < 4; i++)
 		{
@@ -7265,14 +7266,26 @@ namespace banana
 				float lw = text("PP", true, 12, 0, 0, p.muted, true, 0, true);
 				text("PP", true, 12, 304 - pw - lw - 5, y + 32, p.muted, true);
 			}
-			text(fit(t.moveName(mv), true, 17, r - 40), true, 17, 32, y + 3, out ? p.muted : p.ink);
+			if (i == adv.move) be->fill(std::round(X(22)), std::round(X(y + 2)), std::max(2.0f, std::round(X(4))), std::round(X(44)), p.accent);
+			text(fit(t.moveName(mv), true, 17, r - 40), true, 17, 32, y + 3, out ? p.muted : i == adv.move ? p.accent : p.ink);
 		}
 		// ---- the foe: what it is weak to and resists
 		box("bubble", false, 326, 180, 296, 236);
 		const pkmn::Mon& f = sn.foes[0];
 		std::string fn = f.nick.empty() ? t.speciesName(f.species) : f.nick;
 		text(fit(fn, true, 17, 268), true, 17, 342, 192, p.accent);
-		pokeMatchups(p, f.types[0], f.types[1], 342, 220, 270, 408);
+		if (adv.switchTo >= 0 && adv.switchTo < (int)sn.party.size())
+		{
+			// a better pick in the party: its name and the move it would use
+			const pkmn::Mon& m = sn.party[adv.switchTo];
+			pokeMatchups(p, f.types[0], f.types[1], 342, 220, 270, 372);
+			be->fill(std::round(X(338)), std::round(X(378)), std::round(X(272)), std::max(1.0f, std::round(X(2))), p.line);
+			std::string who = m.nick.empty() ? t.speciesName(m.species) : m.nick;
+			float lw = text("Switch to", true, 13, 0, 0, p.muted, true, 0, true);
+			text("Switch to", true, 13, 342, 386, p.muted, true);
+			text(fit(who + "  " + t.moveName(m.moves[adv.switchMove]), true, 16, 262 - lw), true, 16, 350 + lw, 384, p.accent);
+		}
+		else pokeMatchups(p, f.types[0], f.types[1], 342, 220, 270, 408);
 	}
 
 	// ---- the pages that read the save: Map, Bag, Dex, Guide

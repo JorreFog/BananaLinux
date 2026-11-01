@@ -1479,3 +1479,62 @@ namespace banana::pkmn
 		snap = s;
 	}
 }
+
+namespace banana::pkmn
+{
+	namespace
+	{
+		// a move's expected damage factor against the foe (power x effect x STAB x accuracy), 0 for none/status
+		double moveScore(const Mon& m, int slot, const Mon& foe, const RomTables& t, bool modern)
+		{
+			uint16_t mv = m.moves[slot];
+			if (!mv || mv >= t.moveInfo.size() || m.pp[slot] == 0) return 0;
+			const MoveInfo& mi = t.moveInfo[mv];
+			if (!mi.power) return 0;
+			double s = mi.power * effect(mi.type, foe.types[0], foe.types[1], modern) / 4.0;
+			if (mi.type == m.types[0] || mi.type == m.types[1]) s *= 1.5;
+			if (mi.accuracy) s *= mi.accuracy / 100.0;
+			return s;
+		}
+		int bestMove(const Mon& m, const Mon& foe, const RomTables& t, bool modern, double& score)
+		{
+			int best = -1;
+			score = 0;
+			for (int i = 0; i < 4; i++)
+			{
+				double s = moveScore(m, i, foe, t, modern);
+				if (s > score) { score = s; best = i; }
+			}
+			return best;
+		}
+		// how hard the foe's own types hit this one (quarters, 4 = normal): the worse of its two
+		int takes(const Mon& m, const Mon& foe, bool modern)
+		{
+			int w = 0;
+			for (int k = 0; k < 2; k++)
+				if (foe.types[k] != 255 && (k == 0 || foe.types[1] != foe.types[0]))
+					w = std::max(w, effect(foe.types[k], m.types[0], m.types[1], modern));
+			return w ? w : 4;
+		}
+	}
+
+	BattleAdvice adviseBattle(const Mon& lead, const std::vector<Mon>& party, const Mon& foe, const RomTables& t, bool modern)
+	{
+		BattleAdvice a;
+		double leadScore;
+		a.move = bestMove(lead, foe, t, modern, leadScore);
+		// a member's worth: its best move's damage over what it takes from the foe's types
+		double leadWorth = leadScore * 4 / takes(lead, foe, modern), best = leadWorth * 1.5;
+		for (size_t i = 0; i < party.size(); i++)
+		{
+			const Mon& m = party[i];
+			if (m.egg || m.hp == 0 || !m.species || (m.pid == lead.pid && m.species == lead.species)) continue;
+			double s;
+			int mv = bestMove(m, foe, t, modern, s);
+			if (mv < 0) continue;
+			double worth = s * 4 / takes(m, foe, modern);
+			if (worth > best) { best = worth; a.switchTo = (int)i; a.switchMove = mv; }
+		}
+		return a;
+	}
+}
