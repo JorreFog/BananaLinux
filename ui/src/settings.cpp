@@ -6411,12 +6411,52 @@ namespace banana
 		std::string b = rom.substr(rom.find_last_of('/') + 1);
 		size_t dot = b.find_last_of('.');
 		if (dot != std::string::npos && dot > 0) b.erase(dot);
+		gStateRoot = stateDir;
+		gStateName = b;
 		gStateBase = stateDir + "/" + b;
 	}
 
 	void Settings::gameStatesScan()
 	{
 		gStatesScan = now;
+		// the folder: BananaFront names it in /run/banana/game-id (state_dir); RetroArch keeps a folder a core
+		// (/data/states/mGBA, gpSP...): the one holding this game's newest state; else the folder itself
+		if (!gStateName.empty())
+		{
+			std::string dir;
+			std::ifstream gid("/run/banana/game-id");
+			std::string ln, sdir, base;
+			while (std::getline(gid, ln))
+			{
+				if (ln.compare(0, 10, "state_dir=") == 0) sdir = ln.substr(10);
+				else if (ln.compare(0, 9, "rom_base=") == 0) base = ln.substr(9);
+			}
+			if (!sdir.empty() && base == gStateName) dir = sdir;
+			if (dir.empty())
+			{
+				long long best = -1;
+				std::vector<std::string> dirs = { gStateRoot };
+				if (DIR* d = opendir(gStateRoot.c_str()))
+				{
+					while (dirent* e = readdir(d))
+						if (e->d_name[0] != '.') dirs.push_back(gStateRoot + "/" + e->d_name);
+					closedir(d);
+				}
+				for (auto& c : dirs)
+					for (int i = 0; i < 10; i++)
+					{
+						struct stat st;
+						std::string f = c + "/" + gStateName + ".state" + (i ? std::to_string(i) : "");
+						if (stat(f.c_str(), &st) == 0 && S_ISREG(st.st_mode) && (long long)st.st_mtime > best) { best = st.st_mtime; dir = c; }
+					}
+			}
+			if (dir.empty()) dir = gStateRoot;
+			if (gStateBase != dir + "/" + gStateName)
+			{
+				gStateBase = dir + "/" + gStateName;
+				for (auto& f : gStateFiles) f = StateFile();
+			}
+		}
 		for (int i = 0; i < 10; i++)
 		{
 			std::string f = gStateBase + ".state" + (i ? std::to_string(i) : "");
@@ -6473,6 +6513,8 @@ namespace banana
 		gStates = false; gSlotSel = gSlotPick = -1;
 		for (auto& f : gStateFiles) f = StateFile();
 		gStateBase.clear();
+		gStateRoot.clear();
+		gStateName.clear();
 		gBadges.clear();
 		pkIcons.clear();
 		pkTables.reset();

@@ -577,7 +577,8 @@ namespace banana
 		// the States view (universal companion tier 0): slots 0-9 with their thumbnails; a slot tapped twice loads it
 		bool gStates = false;
 		int gSlotSel = -1, gSlotPick = -1;
-		std::string gStateBase;			// <state dir>/<the game's name>
+		std::string gStateBase;			// <state dir>/<the game's name> (the dir found at each scan)
+		std::string gStateRoot, gStateName;	// /data/states, the game's name
 		struct StateFile { long long mtime = 0; rnds::TexPtr tex; };
 		StateFile gStateFiles[10];
 		double gStatesScan = 0;
