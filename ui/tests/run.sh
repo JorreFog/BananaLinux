@@ -18,6 +18,7 @@ sh "$HERE/../tools/systems-history.sh" --check || fail=1
 make -s -C "$HERE" tests/pokemon-test >/dev/null && "$HERE/tests/pokemon-test" "$OUT" 2> "$OUT/pokemon-test.log" || { echo "FAIL the Pokémon companion's decoder: $(grep FAIL "$OUT/pokemon-test.log" | head -3)"; fail=1; }
 # the game companion's engine (matching, reads, values), and the made-up ROMs and replies for the game panel's run below
 make -s -C "$HERE" tests/gamecomp-test >/dev/null && "$HERE/tests/gamecomp-test" "$OUT" "$HERE/tests/companions" "$HERE/../system/rootfs/usr/share/banana/companions" 2> "$OUT/gamecomp-test.log" || { echo "FAIL the game companion's engine: $(grep FAIL "$OUT/gamecomp-test.log" | head -3)"; fail=1; }
+make -s -C "$HERE" tests/complink-test >/dev/null && TMPDIR="$OUT" "$HERE/tests/complink-test" 2> "$OUT/complink-test.log" || { echo "FAIL the companion's shared-memory link: $(grep FAIL "$OUT/complink-test.log" | head -3)"; fail=1; }
 # the left stick as a d-pad: its deadzone and hysteresis
 make -s -C "$HERE" tests/input-test >/dev/null && "$HERE/tests/input-test" 2> "$OUT/input-test.log" || { echo "FAIL the stick: $(grep FAIL "$OUT/input-test.log" | head -3)"; fail=1; }
 # every icon the theme's systems.cfg names is there (Poketool's tile pointed at the old Bank & Trade logo)
@@ -854,6 +855,21 @@ PY
     grep -q '^accent = yellow$' "$FX/data/settings.conf" || { echo "FAIL $size: an invalid accent kept: $(grep '^accent' "$FX/data/settings.conf")"; fail=1; }
     grep -q '^nds_emulator = superdrastic$' "$FX/data/settings.conf" || { echo "FAIL $size: an invalid DS emulator kept: $(grep '^nds_emulator' "$FX/data/settings.conf")"; fail=1; }
     grep 'bench:' "$log" | sed "s/^banana-ui: /$size /"
+    # the game panel with an emulator's RetroAchievements block (the universal companion's tier 0: rich presence and the
+    # achievements closest to done, from BananaFront's rcheevos through the shared memory)
+    printf 'state 3\ngame 0\nrp Lv 23 Charmeleon, Viridian Forest, 3 badges\nnear 101 68 34/50 Collect 50 coins in World 1\nnear 102 40 2/5 Beat every boss without a hit\n' > "$OUT/ra1.txt"
+    "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; gamepanel 1 /nonexistent.gba; rablock $OUT/ra1.txt; gshot ra-block" 2> "$OUT/$size-rablock.log" ||
+        { echo "FAIL $size: banana-ui (RA block) exited $?"; fail=1; }
+    # the game panel's save states (tier 0): a tap on the achievements box opens them, a slot tapped twice loads it
+    SD=$OUT/states-$size; mkdir -p "$SD"; echo x > "$SD/test.state"; echo y > "$SD/test.state3"
+    convert -size 240x160 xc:'#3a8a4a' "$SD/test.state3.png" 2>/dev/null
+    "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; gstates $SD; gamepanel 1 /x.gba; gtouch 300 150; gtouch 400 150; gshot states-sel; gtouch 400 150" 2> "$OUT/$size-states.log" ||
+        { echo "FAIL $size: banana-ui (save states) exited $?"; fail=1; }
+    grep -q "gtouch 400 150: action 6" "$OUT/$size-states.log" || { echo "FAIL $size: slot 3 tapped twice didn't load it"; fail=1; }
+    grep -q "rablock .*: state 3 rp 'Lv 23 Charmeleon, Viridian Forest, 3 badges' near 2" "$OUT/$size-rablock.log" || { echo "FAIL $size: the RA block wasn't read"; fail=1; }
+    [ "$(convert "$OUT/$size-ra-block-bot.png" -format '%[fx:standard_deviation>0.01]' info: 2>/dev/null)" = 1 ] || { echo "FAIL $size: the RA block panel is blank"; fail=1; }
 done
 # updates over the air (#69): the update script against a stand-in for GitHub, and the Update page
 OUT="$OUT" "$HERE/tests/ota.sh" || fail=1

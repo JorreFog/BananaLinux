@@ -13,6 +13,13 @@ config BR2_PACKAGE_LIBRETRO_MGBA
 	  Game Boy Advance, accurate and with RetroAchievements support
 	  (gpSP has none): chosen per system in Settings.
 
+config BR2_PACKAGE_LIBRETRO_BANANAGBA
+	bool "libretro-bananagba"
+	default y
+	help
+	  BananaGBA: BananaOS's mGBA for the RG DS and RG DS Plus (the picture drawn
+	  on a second core), as bananagba_libretro.so: chosen per system in Settings.
+
 config BR2_PACKAGE_LIBRETRO_GAMBATTE
 	bool "libretro-gambatte"
 	default y

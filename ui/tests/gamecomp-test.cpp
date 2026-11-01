@@ -10,6 +10,7 @@
 #include <fstream>
 #include <sstream>
 #include <unistd.h>
+#include <sys/stat.h>
 #include <zlib.h>
 
 using namespace banana;
@@ -320,6 +321,82 @@ int main(int argc, char** argv)
 			CHECK(got == dir + "/" + file, "%s (%s \"%s\") is found as %s", file.c_str(), code.c_str(), c[2].c_str(), got.c_str());
 		}
 		fprintf(stderr, "gamecomp-test: %d shipped definitions\n", n);
+	}
+	// ---- schema 2: a definition for any system, by its memory map (systems/<id>.json; COMPANION-SPEC section 5)
+	{
+		std::string sys = argc > 3 ? std::string(argv[3]) + "/systems" : "../system/rootfs/usr/share/banana/companions/systems";
+		setSystemsDir(sys);
+		const char* snes = R"({"schema": 2, "system": "snes", "title": "SNES Test", "match": {"crc32": ["12345678"]},
+			"accent": "#4060c0", "quality": "live-unverified", "sources": [],
+			"vars": {"hp": {"addr": "0x7E0010", "type": "u16"}, "big": {"addr": "0x7E0020", "type": "u16", "endian": "be"},
+			         "score": {"addr": "0x7E0030", "type": "u24"}, "neg": {"addr": "0x7E0040", "type": "s24"},
+			         "viaRa": {"ra": "0x000050", "type": "u8"}},
+			"pages": [{"id": "status", "title": "Status", "widgets": [{"type": "number", "label": "HP", "value": "hp"},
+			{"type": "number", "label": "B", "value": "big"}, {"type": "number", "label": "S", "value": "score"},
+			{"type": "number", "label": "N", "value": "neg"}, {"type": "number", "label": "R", "value": "viaRa"}]}]})";
+		auto d = parseDef(*parseJson(snes), &why);
+		CHECK(d, "a schema 2 SNES definition parses: %s", why.c_str());
+		if (d)
+		{
+			CHECK(d->system == "snes", "its system is snes (%s)", d->system.c_str());
+			CHECK(d->var("viaRa") && d->var("viaRa")->m.addr == 0x7E0050, "an RA address becomes the bus address");
+			Engine e;
+			e.openDef(d);
+			std::string r = e.requests(0);
+			CHECK(r.find("READ_CORE_MEMORY 7e0010 ") != std::string::npos, "it reads the SNES WRAM: %s", r.c_str());
+			// the WRAM's answer: hp 0x1234 (LE), big 0x0102 stored big-endian, score 0x0a0b0c, neg -2 (0xfffffe)
+			std::string rep = "READ_CORE_MEMORY 7e0010";
+			std::vector<uint8_t> m(0x48);
+			m[0] = 0x34; m[1] = 0x12; m[0x10] = 0x01; m[0x11] = 0x02; m[0x20] = 0x0c; m[0x21] = 0x0b; m[0x22] = 0x0a;
+			m[0x30] = 0xfe; m[0x31] = 0xff; m[0x32] = 0xff; m[0x40] = 0x77;
+			// (the engine may ask in one chunk or several: answer each line from m)
+			std::istringstream in(r);
+			std::string ln, ans;
+			while (std::getline(in, ln))
+			{
+				unsigned a = 0, n = 0;
+				if (sscanf(ln.c_str(), "READ_CORE_MEMORY %x %u", &a, &n) != 2) continue;
+				char b[16];
+				snprintf(b, sizeof b, "%x", a);
+				ans += std::string("READ_CORE_MEMORY ") + b;
+				for (unsigned k = 0; k < n; k++) { unsigned o = a + k - 0x7E0010; snprintf(b, sizeof b, " %02x", o < m.size() ? m[o] : 0); ans += b; }
+				ans += "\n";
+			}
+			e.feed(ans.data(), ans.size());
+			auto num = [&](const char* n) { auto it = e.snapshot().vals.find(n); return it != e.snapshot().vals.end() && it->second.ok ? it->second.v.n : -9999; };
+			CHECK(num("hp") == 0x1234, "hp %g", num("hp"));
+			CHECK(num("big") == 0x0102, "a big-endian u16 %g", num("big"));
+			CHECK(num("score") == 0x0a0b0c, "u24 %g", num("score"));
+			CHECK(num("neg") == -2, "s24 %g", num("neg"));
+			CHECK(num("viaRa") == 0x77, "the RA-addressed var %g", num("viaRa"));
+		}
+		// an address outside the system's map is refused; an unknown system too; schema 1 stays the GBA's
+		const char* bad = R"({"schema": 2, "system": "snes", "title": "x", "match": {"crc32": ["1"]}, "accent": "#000000",
+			"quality": "reference-only", "sources": [], "vars": {"v": {"addr": "0x02000000", "type": "u8"}},
+			"pages": [{"id": "status", "title": "S", "widgets": [{"type": "static", "text": "x"}]}]})";
+		CHECK(!parseDef(*parseJson(bad), &why), "a GBA address in a SNES definition is refused");
+		std::string nosys = bad;
+		nosys.replace(nosys.find("snes"), 4, "zzz");
+		CHECK(!parseDef(*parseJson(nosys), &why) && why.find("system") != std::string::npos, "an unknown system is refused: %s", why.c_str());
+		auto g = loadDef(defs + "/golden-sun.json", &why);
+		CHECK(g && g->system == "gba", "schema 1 is the GBA's");
+		// matching: a NES ROM by its CRC-32 in <dir>/nes/
+		std::string nd = out + "/gc-sys";
+		mkdir(nd.c_str(), 0755);
+		mkdir((nd + "/nes").c_str(), 0755);
+		std::vector<uint8_t> rom(0x4010, 0xea);
+		memcpy(rom.data(), "NES\x1a", 4);
+		writeFile(out + "/gc-test.nes", rom);
+		uLong crc = crc32(crc32(0L, Z_NULL, 0), rom.data(), (uInt)rom.size());
+		char cs[16];
+		snprintf(cs, sizeof cs, "%08lx", crc);
+		std::ofstream(nd + "/nes/test-nes.json") << R"({"schema": 2, "system": "nes", "title": "NES Test", "match": {"crc32": [")" << cs <<
+			R"("]}, "accent": "#c04040", "quality": "reference-only", "sources": [], "vars": {"lives": {"addr": "0x0075", "type": "u8"}},
+			"pages": [{"id": "status", "title": "S", "widgets": [{"type": "number", "label": "Lives", "value": "lives"}]}]})";
+		std::string f = findDef(nd, out + "/gc-test.nes", &why, "nes");
+		CHECK(f == nd + "/nes/test-nes.json", "the NES definition is found: %s (%s)", f.c_str(), why.c_str());
+		Engine ne;
+		CHECK(ne.open(out + "/gc-test.nes", nd, "nes") && ne.game()->title == "NES Test", "the engine opens it");
 	}
 	if (fails) { fprintf(stderr, "%d checks failed\n", fails); return 1; }
 	fprintf(stderr, "gamecomp-test: all passed\n");

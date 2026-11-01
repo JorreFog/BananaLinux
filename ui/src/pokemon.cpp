@@ -908,6 +908,10 @@ namespace banana::pkmn
 			if (k > 0) a += (k - 1) * 20;
 		}
 		if (best < 20) t.wildHeaders = -1;
+		// each map's region map section (the Dex's "where"): the ROM's map groups, checked against the wild tables
+		findMapGroups(t, rom, n);
+		// the level-up moves (the summary's "learns next")
+		findLearnsets(t, rom, n);
 		// the gym leaders' teams for the guide; a CFRU hack's leaders (class 0x54, FireRed's) in the table's order
 		if (t.has.leadersFromTrainers)
 		{
@@ -1178,10 +1182,10 @@ namespace banana::pkmn
 			t->rom = std::make_shared<const std::vector<uint8_t>>(std::move(all));
 			fprintf(stderr, "pokemon: %zu species, %zu moves, %zu species types, %zu move records, %zu icons (%zu palette numbers, %zu palettes), "
 				"%zu growth rates from the ROM (%zu bytes); %s, %zu abilities, %zu items, %zu map names, %zu region maps, %zu dex numbers, "
-				"dex entries %s, wild table %s, %zu CFRU gym leaders\n", t->species.size(), t->moves.size(), t->speciesTypes.size(), t->moveInfo.size(),
+				"dex entries %s, wild table %s, %zu CFRU gym leaders, %zu map groups, level-up lists %s\n", t->species.size(), t->moves.size(), t->speciesTypes.size(), t->moveInfo.size(),
 				t->icons.size(), t->iconPal.size(), t->palettes.size(), t->expTable.size(), bytes, t->has.modernTypes ? "modern types" : "the games' types",
 				t->abilities.size(), t->items.size(), t->mapNames.size(), t->grids.size(), t->natDex.size(), t->dexEntries >= 0 ? "found" : "none",
-				t->wildHeaders >= 0 ? "found" : "none", t->leaders.size());
+				t->wildHeaders >= 0 ? "found" : "none", t->leaders.size(), t->mapsecs.size(), t->learnsets >= 0 ? "found" : "none");
 			std::lock_guard<std::mutex> l(s->mu);
 			s->tables = t;
 			s->profile = profile;
@@ -1477,5 +1481,208 @@ namespace banana::pkmn
 		};
 		if (key(s) != key(snap)) changed = true;
 		snap = s;
+	}
+}
+
+namespace banana::pkmn
+{
+	namespace
+	{
+		// a move's expected damage factor against the foe (power x effect x STAB x accuracy), 0 for none/status
+		double moveScore(const Mon& m, int slot, const Mon& foe, const RomTables& t, bool modern)
+		{
+			uint16_t mv = m.moves[slot];
+			if (!mv || mv >= t.moveInfo.size() || m.pp[slot] == 0) return 0;
+			const MoveInfo& mi = t.moveInfo[mv];
+			if (!mi.power) return 0;
+			double s = mi.power * effect(mi.type, foe.types[0], foe.types[1], modern) / 4.0;
+			if (mi.type == m.types[0] || mi.type == m.types[1]) s *= 1.5;
+			if (mi.accuracy) s *= mi.accuracy / 100.0;
+			return s;
+		}
+		int bestMove(const Mon& m, const Mon& foe, const RomTables& t, bool modern, double& score)
+		{
+			int best = -1;
+			score = 0;
+			for (int i = 0; i < 4; i++)
+			{
+				double s = moveScore(m, i, foe, t, modern);
+				if (s > score) { score = s; best = i; }
+			}
+			return best;
+		}
+		// how hard the foe's own types hit this one (quarters, 4 = normal): the worse of its two
+		int takes(const Mon& m, const Mon& foe, bool modern)
+		{
+			int w = 0;
+			for (int k = 0; k < 2; k++)
+				if (foe.types[k] != 255 && (k == 0 || foe.types[1] != foe.types[0]))
+					w = std::max(w, effect(foe.types[k], m.types[0], m.types[1], modern));
+			return w ? w : 4;
+		}
+	}
+
+	BattleAdvice adviseBattle(const Mon& lead, const std::vector<Mon>& party, const Mon& foe, const RomTables& t, bool modern)
+	{
+		BattleAdvice a;
+		double leadScore;
+		a.move = bestMove(lead, foe, t, modern, leadScore);
+		// a member's worth: its best move's damage over what it takes from the foe's types
+		double leadWorth = leadScore * 4 / takes(lead, foe, modern), best = leadWorth * 1.5;
+		for (size_t i = 0; i < party.size(); i++)
+		{
+			const Mon& m = party[i];
+			if (m.egg || m.hp == 0 || !m.species || (m.pid == lead.pid && m.species == lead.species)) continue;
+			double s;
+			int mv = bestMove(m, foe, t, modern, s);
+			if (mv < 0) continue;
+			double worth = s * 4 / takes(m, foe, modern);
+			if (worth > best) { best = worth; a.switchTo = (int)i; a.switchMove = mv; }
+		}
+		return a;
+	}
+}
+
+namespace banana::pkmn
+{
+	namespace
+	{
+		// a map header (0x1c bytes) at off: its layout, events and scripts are ROM pointers; its section in range
+		bool mapHeaderAt(const uint8_t* rom, size_t n, long off)
+		{
+			if (off < 0 || (size_t)off + 0x1c > n || (off & 3)) return false;
+			for (int k = 0; k < 3; k++) if (romPtr(rom, n, (size_t)off + 4 * k) < 0) return false;
+			uint32_t c = le32(rom + off + 12);
+			return c == 0 || (c >= 0x08000000u && c - 0x08000000u < n);
+		}
+	}
+
+	void findMapGroups(RomTables& t, const uint8_t* rom, size_t n)
+	{
+		t.mapsecs.clear();
+		if (t.wildHeaders < 0) return;
+		// the maps the wild tables name: every one must resolve in the table found
+		std::vector<std::pair<int, int>> maps;
+		int maxGroup = 0;
+		for (size_t a = (size_t)t.wildHeaders; a + 20 <= n && rom[a] != 0xff && maps.size() < 4096; a += 20)
+		{
+			maps.push_back({ rom[a], rom[a + 1] });
+			maxGroup = std::max(maxGroup, (int)rom[a]);
+		}
+		if (maps.empty()) return;
+		auto headerOf = [&](size_t table, int g, int num) -> long
+		{
+			long grp = romPtr(rom, n, table + 4 * (size_t)g);
+			if (grp < 0) return -1;
+			long h = romPtr(rom, n, (size_t)grp + 4 * (size_t)num, 0x1c);
+			return h >= 0 && mapHeaderAt(rom, n, h) ? h : -1;
+		};
+		for (size_t a = 0; a + 4 * (size_t)(maxGroup + 1) <= n; a += 4)
+		{
+			// a run of group pointers at least as long as the wild tables need
+			int run = 0;
+			while (a + 4 * (size_t)run + 4 <= n && run < 256 && romPtr(rom, n, a + 4 * (size_t)run) >= 0) run++;
+			if (run <= maxGroup) { a += 4 * (size_t)run; continue; }
+			bool ok = true;
+			for (auto& m : maps) if (headerOf(a, m.first, m.second) < 0) { ok = false; break; }
+			if (!ok) continue;
+			// the groups' lengths: map headers until the next group's table starts (or one isn't a header)
+			t.mapsecs.assign((size_t)run, {});
+			for (int g = 0; g < run; g++)
+			{
+				long grp = romPtr(rom, n, a + 4 * (size_t)g);
+				long next = g + 1 < run ? romPtr(rom, n, a + 4 * (size_t)(g + 1)) : -1;
+				for (int k = 0; k < 256; k++)
+				{
+					if (next > grp && (size_t)grp + 4 * (size_t)k >= (size_t)next) break;
+					long h = headerOf(a, g, k);
+					if (h < 0) break;
+					t.mapsecs[g].push_back(rom[h + 0x14]);
+				}
+			}
+			return;
+		}
+	}
+
+	std::vector<RomTables::Where> RomTables::where(uint16_t species) const
+	{
+		std::vector<Where> out;
+		if (!rom || wildHeaders < 0 || !species) return out;
+		const uint8_t* r = rom->data();
+		size_t n = rom->size();
+		for (size_t a = (size_t)wildHeaders; a + 20 <= n && r[a] != 0xff; a += 20)
+		{
+			int g = r[a], num = r[a + 1];
+			int sec = g < (int)mapsecs.size() && num < (int)mapsecs[g].size() ? mapsecs[g][num] : -1;
+			for (int m = 0; m < 6; m++)
+				for (auto& w : wild(g, num, m))
+				{
+					if (w.species != species) continue;
+					auto it = std::find_if(out.begin(), out.end(), [&](const Where& x) { return x.mapsec == sec && x.method == m && sec >= 0; });
+					if (it == out.end()) out.push_back({ sec, m, w.minLv, w.maxLv, w.percent });
+					else { it->minLv = std::min(it->minLv, w.minLv); it->maxLv = std::max(it->maxLv, w.maxLv); it->percent = std::max(it->percent, w.percent); }
+				}
+		}
+		std::stable_sort(out.begin(), out.end(), [](const Where& x, const Where& y) { return x.percent > y.percent; });
+		return out;
+	}
+}
+
+namespace banana::pkmn
+{
+	namespace
+	{
+		// a level-up list at off: (move | level << 9) entries, levels not going down, then 0xffff (within 64)
+		bool learnsetAt(const uint8_t* rom, size_t n, long off, size_t numMoves)
+		{
+			if (off < 0 || (off & 1)) return false;
+			int last = 0;
+			for (int k = 0; k < 64; k++)
+			{
+				if ((size_t)off + 2 * (size_t)k + 2 > n) return false;
+				uint16_t e = le16(rom + off + 2 * k);
+				if (e == 0xffff) return k > 0;
+				int mv = e & 0x1ff, lv = e >> 9;
+				if (!mv || (numMoves && (size_t)mv >= numMoves) || lv < 1 || lv > 100 || lv < last) return false;
+				last = lv;
+			}
+			return false;
+		}
+	}
+
+	void findLearnsets(RomTables& t, const uint8_t* rom, size_t n)
+	{
+		t.learnsets = -1;
+		size_t need = (size_t)std::max(t.numSpecies, 2);
+		size_t numMoves = t.moves.size();
+		for (size_t a = 0; a + 4 * need <= n; a += 4)
+		{
+			// species 0..40 checked first (cheap), then all of them (0 too: its list is a real one in the games, which
+			// keeps a table one entry off from matching)
+			bool ok = true;
+			for (size_t i = 0; i <= 40 && i < need && ok; i++)
+				ok = learnsetAt(rom, n, romPtr(rom, n, a + 4 * i, 4), numMoves);
+			if (!ok) continue;
+			for (size_t i = 41; i < need && ok; i++)
+				ok = learnsetAt(rom, n, romPtr(rom, n, a + 4 * i, 4), numMoves);
+			if (ok) { t.learnsets = (long)a; return; }
+		}
+	}
+
+	uint16_t RomTables::nextMove(uint16_t species, int level, int& lv) const
+	{
+		lv = 0;
+		if (!rom || learnsets < 0 || species >= (uint16_t)numSpecies) return 0;
+		const uint8_t* r = rom->data();
+		size_t n = rom->size();
+		long l = romPtr(r, n, (size_t)learnsets + 4 * (size_t)species, 4);
+		if (l < 0) return 0;
+		for (int k = 0; k < 64 && (size_t)l + 2 * (size_t)k + 2 <= n; k++)
+		{
+			uint16_t e = le16(r + l + 2 * k);
+			if (e == 0xffff) break;
+			if ((e >> 9) > level) { lv = e >> 9; return e & 0x1ff; }
+		}
+		return 0;
 	}
 }

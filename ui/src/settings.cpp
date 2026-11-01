@@ -415,7 +415,7 @@ namespace banana
 	// default), shown when installed: in the image (/usr/lib/libretro) or downloaded with RetroArch's Core Downloader
 	// (/data/retroarch/cores, libretro_directory). run-retroarch looks in the same two places.
 	static const struct RaSystem { const char* id; const char* label; std::vector<std::pair<const char*, const char*>> cores; } RA_SYSTEMS[] = {
-		{ "gba", "Game Boy Advance", { { "gpsp", "gpSP" }, { "mgba", "mGBA" }, { "vba_next", "VBA Next" }, { "vbam", "VBA-M" }, { "meteor", "Meteor" } } },
+		{ "gba", "Game Boy Advance", { { "gpsp", "gpSP" }, { "mgba", "mGBA" }, { "bananagba", "BananaGBA" }, { "vba_next", "VBA Next" }, { "vbam", "VBA-M" }, { "meteor", "Meteor" } } },
 		{ "gbc", "Game Boy Color", { { "gambatte", "Gambatte" }, { "mgba", "mGBA" }, { "gearboy", "Gearboy" }, { "tgbdual", "TGB Dual" } } },
 		{ "gb", "Game Boy", { { "gambatte", "Gambatte" }, { "mgba", "mGBA" }, { "gearboy", "Gearboy" }, { "tgbdual", "TGB Dual" } } },
 		{ "nes", "NES", { { "fceumm", "FCEUmm" }, { "nestopia", "Nestopia UE" }, { "mesen", "Mesen" }, { "quicknes", "QuickNES" } } },
@@ -6318,6 +6318,11 @@ namespace banana
 		int gen = 0;
 		int awards = 0;		// achievements unlocked while the game runs (each one wakes a dimmed bottom panel)
 		std::string user, token;
+		std::string rp;		// the game's rich presence ("Lv 23, Viridian Forest"), from the emulator's RA block
+		struct Near { uint32_t id; unsigned percent; std::string measured, title; };
+		std::vector<Near> nearest;	// the locked achievements closest to done (measured progress)
+		uint32_t evSeen = 0;		// the block's events read so far
+		bool fromBlock = false;		// the emulator's block is the source (not RetroArch's log)
 		time_t cfgSeen = 0;	// retroarch.cfg's mtime when the token was last looked for in it
 		long long pos = 0;
 		std::string part;
@@ -6382,6 +6387,38 @@ namespace banana
 			for (auto& u : un) if (!w->unlocked.count(u.first)) w->unlocked[u.first] = u.second;
 			w->state = all.empty() ? 3 : 2;
 			w->gen++;
+		}
+		// the emulator's RetroAchievements block (bcomp.h, COMPANION-SPEC section 4): its client (rcheevos) identified the
+		// game and unlocks; the list and the badges still come from the server, as for RetroArch's log
+		void block(const std::shared_ptr<RaWatch>& self, const bcomp_ra& ra)
+		{
+			std::lock_guard<std::mutex> l(mu);
+			fromBlock = true;
+			int st = ra.state == BCOMP_RA_LOGIN || ra.state == BCOMP_RA_LOADING ? 0 : ra.state == BCOMP_RA_NO_SET || ra.state == BCOMP_RA_UNKNOWN_GAME ? 3 :
+				ra.state == BCOMP_RA_LOGIN_FAILED ? 4 : -1;
+			if (st >= 0 && st != state && gameId == 0) { state = st; gen++; }
+			if (ra.game_id && ra.game_id != gameId && (ra.state == BCOMP_RA_ACTIVE || ra.state == BCOMP_RA_OFFLINE))
+			{
+				gameId = ra.game_id;
+				state = 1; gen++;
+				fprintf(stderr, "game panel: the emulator identified game %u\n", gameId);
+				std::thread(fetch, self).detach();
+			}
+			std::string r(ra.rp, strnlen(ra.rp, sizeof ra.rp));
+			if (r != rp) { rp = r; gen++; }
+			std::vector<Near> nn;
+			for (auto& n : ra.near_)
+				if (n.id) nn.push_back({ n.id, n.percent, std::string(n.measured, strnlen(n.measured, sizeof n.measured)), std::string(n.title, strnlen(n.title, sizeof n.title)) });
+			bool same = nn.size() == nearest.size();
+			for (size_t i = 0; same && i < nn.size(); i++) same = nn[i].id == nearest[i].id && nn[i].measured == nearest[i].measured;
+			if (!same) { nearest = nn; gen++; }
+			uint32_t from = ra.ev_head > BCOMP_RA_EVENTS && evSeen < ra.ev_head - BCOMP_RA_EVENTS ? ra.ev_head - BCOMP_RA_EVENTS : evSeen;
+			for (uint32_t i = from; i < ra.ev_head; i++)
+			{
+				const bcomp_ra_event& e = ra.ev[i % BCOMP_RA_EVENTS];
+				if (e.type == BCOMP_EV_UNLOCK) { unlocked[e.id] = (long long)time(nullptr); gen++; awards++; }
+			}
+			evSeen = ra.ev_head;
 		}
 		// RetroArch's log since the last look
 		void poll(const std::shared_ptr<RaWatch>& self, double nowMs)
@@ -6449,9 +6486,116 @@ namespace banana
 		if (cfgValue(cfg, "cheevos_enable") != "true" || raw->user.empty()) raw->state = 4;
 	}
 
+	void Settings::gameRom(const std::string& rom, const std::string& stateDir)
+	{
+		// RetroArch's (and BananaFront's) state names: the content's file name without its extension
+		std::string b = rom.substr(rom.find_last_of('/') + 1);
+		size_t dot = b.find_last_of('.');
+		if (dot != std::string::npos && dot > 0) b.erase(dot);
+		gStateRoot = stateDir;
+		gStateName = b;
+		gStateBase = stateDir + "/" + b;
+	}
+
+	void Settings::gameStatesScan()
+	{
+		gStatesScan = now;
+		// the folder: BananaFront names it in /run/banana/game-id (state_dir); RetroArch keeps a folder a core
+		// (/data/states/mGBA, gpSP...): the one holding this game's newest state; else the folder itself
+		if (!gStateName.empty())
+		{
+			std::string dir;
+			std::ifstream gid("/run/banana/game-id");
+			std::string ln, sdir, base;
+			while (std::getline(gid, ln))
+			{
+				if (ln.compare(0, 10, "state_dir=") == 0) sdir = ln.substr(10);
+				else if (ln.compare(0, 9, "rom_base=") == 0) base = ln.substr(9);
+			}
+			if (!sdir.empty() && base == gStateName) dir = sdir;
+			if (dir.empty())
+			{
+				long long best = -1;
+				std::vector<std::string> dirs = { gStateRoot };
+				if (DIR* d = opendir(gStateRoot.c_str()))
+				{
+					while (dirent* e = readdir(d))
+						if (e->d_name[0] != '.') dirs.push_back(gStateRoot + "/" + e->d_name);
+					closedir(d);
+				}
+				for (auto& c : dirs)
+					for (int i = 0; i < 10; i++)
+					{
+						struct stat st;
+						std::string f = c + "/" + gStateName + ".state" + (i ? std::to_string(i) : "");
+						if (stat(f.c_str(), &st) == 0 && S_ISREG(st.st_mode) && (long long)st.st_mtime > best) { best = st.st_mtime; dir = c; }
+					}
+			}
+			if (dir.empty()) dir = gStateRoot;
+			if (gStateBase != dir + "/" + gStateName)
+			{
+				gStateBase = dir + "/" + gStateName;
+				for (auto& f : gStateFiles) f = StateFile();
+			}
+		}
+		for (int i = 0; i < 10; i++)
+		{
+			std::string f = gStateBase + ".state" + (i ? std::to_string(i) : "");
+			struct stat st;
+			long long m = stat(f.c_str(), &st) == 0 ? (long long)st.st_mtime : 0;
+			if (m == gStateFiles[i].mtime) continue;
+			gStateFiles[i].mtime = m;
+			gStateFiles[i].tex.reset();
+			if (!m) continue;
+			rnds::Bitmap b = rnds::decodeFile(f + ".png");
+			if (!b.empty()) gStateFiles[i].tex = be->upload(b, true);
+		}
+	}
+
+	// the States view in the achievements box: ten slots, a picture and the time each was saved
+	void Settings::gameStatesFrame(const SPal& p)
+	{
+		if (gStateBase.empty()) return;
+		if (now - gStatesScan > 2000) gameStatesScan();
+		box("slot", false, 18, 80, 604, 206);
+		text("Save states", true, 15, 40, 96, p.muted, true, 1.2f);
+		std::string hint = gSlotSel >= 0 ? "Tap it again to load" : "Tap a slot twice to load it";
+		float hw = text(hint, false, 14, 0, 0, p.muted, false, 0, true);
+		text(hint, false, 14, 600 - hw, 97, gSlotSel >= 0 ? p.accent : p.muted);
+		for (int i = 0; i < 10; i++)
+		{
+			float x = 30 + (i % 5) * 117, y = 120 + (i / 5) * 82;
+			bool sel = i == gSlotSel;
+			box(sel ? "pick" : "bubble", sel, x, y, 109, 76);
+			const StateFile& f = gStateFiles[i];
+			Color fg = sel ? p.onPick : p.ink;
+			std::string n = i ? std::to_string(i) : "0";
+			if (!f.mtime)
+			{
+				text(n, true, 15, x + 8, y + 6, p.muted);
+				text("Empty", false, 14, x + 30, y + 30, p.muted);
+				continue;
+			}
+			if (f.tex) be->draw(f.tex, X(x + 31), X(y + 5), X(72), X(48), Color(1, 1, 1, 1));
+			text(n, true, 15, x + 8, y + 6, fg);
+			char w[24];
+			time_t tt = (time_t)f.mtime, nt = time(nullptr);
+			struct tm a, b;
+			localtime_r(&tt, &a); localtime_r(&nt, &b);
+			strftime(w, sizeof w, a.tm_yday == b.tm_yday && a.tm_year == b.tm_year ? "%H:%M" : "%d %b", &a);
+			float ww = text(w, false, 13, 0, 0, fg, false, 0, true);
+			text(w, false, 13, x + 55 - ww / 2, y + 56, sel ? p.onPickAccent : p.muted);
+		}
+	}
+
 	void Settings::gameClose()
 	{
 		raw.reset();
+		gStates = false; gSlotSel = gSlotPick = -1;
+		for (auto& f : gStateFiles) f = StateFile();
+		gStateBase.clear();
+		gStateRoot.clear();
+		gStateName.clear();
 		gBadges.clear();
 		pkIcons.clear();
 		pkTables.reset();
@@ -6464,7 +6608,9 @@ namespace banana
 		if (raw)
 		{
 			if (raw->since == 0) raw->since = t;
-			raw->poll(raw, t);
+			bcomp_ra ra;
+			if (link && link->attached() && link->ra(ra)) raw->block(raw, ra);
+			else if (!raw->fromBlock) raw->poll(raw, t);
 			std::lock_guard<std::mutex> l(raw->mu);
 			// a token RetroArch wrote while the game started (a first login): looked for when the file changes, not on
 			// every pass (the whole retroarch.cfg ten times a second, beside the game, for as long as it had none)
@@ -6520,6 +6666,23 @@ namespace banana
 	{
 		float lx = x / s, ly = y / s;
 		int hit = -1;
+		bool gamePage = !((gameComp && gameComp->active() && gcView != GC_GAME) || (companion && companion->active() && pkView != PK_GAME));
+		// the achievements box: a tap opens the save states there; a slot tapped twice loads it, a tap above closes it
+		if (gamePage && !gStateBase.empty() && !down && lx >= 18 && lx < 622)
+		{
+			if (!gStates && ly >= 80 && ly < 286) { gStates = true; gSlotSel = -1; gameStatesScan(); return G_NONE; }
+			if (gStates && ly < 80) { gStates = false; return G_NONE; }
+			if (gStates && ly >= 120 && ly < 284)
+			{
+				int c = (int)((lx - 30) / 117), r = (int)((ly - 120) / 82);
+				if (c < 0 || c > 4 || r < 0 || r > 1) return G_NONE;
+				int i = r * 5 + c;
+				if (!gStateFiles[i].mtime) { gSlotSel = -1; return G_NONE; }
+				if (i != gSlotSel) { gSlotSel = i; return G_NONE; }
+				gSlotPick = i; gSlotSel = -1; gStates = false;
+				return G_LOADSLOT;
+			}
+		}
 		for (int i = 0; i < 5; i++)
 		{
 			float tx = 18 + i * 122;
@@ -6637,6 +6800,8 @@ namespace banana
 		unsigned total = 0, got = 0;
 		struct Row { std::string title, desc, badge; long long when; unsigned points; };
 		std::vector<Row> rows;
+		std::string rpText;
+		std::vector<RaWatch::Near> nearList;
 		{
 			std::lock_guard<std::mutex> l(raw->mu);
 			gSeen = raw->gen;
@@ -6651,7 +6816,10 @@ namespace banana
 				rows.push_back({ a.title, a.desc, a.badge, u->second, a.points });
 			}
 			std::sort(rows.begin(), rows.end(), [](const Row& a, const Row& b) { return a.when > b.when; });
-			if (rows.size() > 2) rows.resize(2);
+			rpText = raw->rp;
+			nearList = raw->nearest;
+			// with achievements close to done (the emulator's measured progress): the latest unlock, then the closest
+			if (rows.size() > (nearList.empty() ? 2u : 1u)) rows.resize(nearList.empty() ? 2 : 1);
 			for (auto& r : rows) raw->wantBadge(raw, r.badge);
 		}
 		be->beginScreen(gScreen);
@@ -6675,10 +6843,27 @@ namespace banana
 		box("bubble", false, 18, 14, 604, 54);
 		std::string sys = fit(gSystem, true, 17, 200);
 		float sw = text(sys, true, 17, 0, 0, p.muted, false, 0, true);
-		text(sys, true, 17, 602 - sw, 31, p.muted);
-		text(fit(gTitle, true, 22, 540 - sw), true, 22, 38, 28, p.ink);
-		// ---- the achievements
+		if (rpText.empty())
+		{
+			text(sys, true, 17, 602 - sw, 31, p.muted);
+			text(fit(gTitle, true, 22, 540 - sw), true, 22, 38, 28, p.ink);
+		}
+		else
+		{
+			// the game's rich presence under its name (RetroAchievements, any game with a script: "Lv 23, Viridian Forest")
+			text(sys, true, 15, 602 - sw * 15 / 17, 20, p.muted);
+			text(fit(gTitle, true, 19, 540 - sw), true, 19, 38, 18, p.ink);
+			text(fit(rpText, false, 15, 564), false, 15, 38, 44, p.accent);
+		}
+		// ---- the achievements (or, after a tap on them, the save states)
+		if (gStates) gameStatesFrame(p);
+		else {
 		box("slot", false, 18, 80, 604, 206);
+		if (!gStateBase.empty() && gTouch)
+		{
+			float hw = text("Tap: save states", false, 13, 0, 0, p.muted, false, 0, true);
+			text("Tap: save states", false, 13, 600 - hw, 264, p.muted);
+		}
 		text("Latest achievements", true, 15, 40, 96, p.muted, true, 1.2f);
 		if (state == 2 && total)
 		{
@@ -6688,7 +6873,7 @@ namespace banana
 			float bx = 40, bw = 560, by = 122;
 			be->fill(X(bx), X(by), X(bw), X(10), p.line);
 			be->fill(X(bx + 2), X(by + 2), X((bw - 4) * got / total), X(6), p.accent);
-			if (rows.empty()) text("None unlocked yet. Good luck!", false, 18, 40, 150, p.muted);
+			if (rows.empty() && nearList.empty()) text("None unlocked yet. Good luck!", false, 18, 40, 150, p.muted);
 			for (size_t i = 0; i < rows.size(); i++)
 			{
 				float y = 146 + i * 66;
@@ -6729,13 +6914,29 @@ namespace banana
 				text(fit(r.desc, false, 15, 490), false, 15, 110, y + 32, p.muted);
 			}
 		}
-		else
+		// the achievements closest to done, with their progress ("34/50"), under the latest unlock
+		if ((state == 2 && total) || !nearList.empty())
 		{
-			const char* msg = state == 0 ? "Waiting for RetroArch..." : state == 1 ? "Looking the game up..." :
+			float y0 = state == 2 && total ? 146 + rows.size() * 66 : 112;
+			for (size_t i = 0; i < nearList.size() && y0 + 56 <= 286; i++, y0 += 58)
+			{
+				auto& n = nearList[i];
+				text(lang::tr("Second screen (RetroArch games)", "Next"), true, 15, 40, y0 + 4, p.muted);
+				float mw = text(n.measured, true, 17, 0, 0, p.accent, false, 0, true);
+				text(n.measured, true, 17, 600 - mw, y0 + 2, p.accent);
+				text(fit(n.title, true, 19, 470 - mw), true, 19, 110, y0 + 2, p.ink);
+				be->fill(X(110), X(y0 + 32), X(490), X(8), p.line);
+				be->fill(X(111), X(y0 + 33), X(488.0f * std::min(100u, n.percent) / 100), X(6), p.accent);
+			}
+		}
+		if (!(state == 2 && total) && nearList.empty())
+		{
+			const char* msg = state == 0 ? (raw->fromBlock ? "Waiting for the emulator..." : "Waiting for RetroArch...") : state == 1 ? "Looking the game up..." :
 				state == 3 ? "This game has no achievements." :
 				state == 4 ? "RetroAchievements is off, or its login failed: check the account in Settings > System > First-time setup." :
 				"No connection to RetroAchievements: check Wi-Fi.";
 			wrapped(msg, 18, 40, 130, 560, 3, p.muted);
+		}
 		}
 		// ---- the tiles: RetroArch's commands by touch, and their buttons
 		for (int i = 0; i < 5; i++)
@@ -7073,8 +7274,21 @@ namespace banana
 				text("Next", true, 13, 304 - xw - lw2 - 6, 175, p.muted, true);
 			}
 			else hpBar(m.level >= 100 ? 1 : 0, 1, 72, 176, 232, EXP_BLUE);
-			be->fill(std::round(X(36)), std::round(X(200)), std::round(X(268)), std::max(1.0f, std::round(X(2))), p.line);
-			pokeMatchups(p, m.types[0], m.types[1], 36, 210, 270, 328);
+			// the next move it learns by levelling up (the ROM's level-up lists; the PokeDaisy idea, its LEARN page)
+			int nlv = 0;
+			uint16_t nmv = t.nextMove(m.species, m.level, nlv);
+			float my = 200;
+			if (nmv)
+			{
+				text("Learns", true, 13, 36, 205, p.muted, true);
+				std::string lvs = "Lv " + std::to_string(nlv);
+				float lw3 = text(lvs, true, 15, 0, 0, p.ink, false, 0, true);
+				text(lvs, true, 15, 304 - lw3, 203, p.accent);
+				text(fit(t.moveName(nmv), true, 16, 200 - lw3), true, 16, 98, 202, p.ink);
+				my = 228;
+			}
+			be->fill(std::round(X(36)), std::round(X(my)), std::round(X(268)), std::max(1.0f, std::round(X(2))), p.line);
+			pokeMatchups(p, m.types[0], m.types[1], 36, my + 10, 270, 328);
 		}
 		// ---- right: the moves or the stats, named at the column's top (a tap on the column changes which)
 		static const char* const SIDE[2] = { "Moves", "Stats" };
@@ -7242,7 +7456,8 @@ namespace banana
 		card(sn.lead, "You", 18, 48, 298, 124, true);
 		if (sn.foes.size() == 1) card(sn.foes[0], "Foe", 326, 48, 296, 124, true);
 		else for (size_t i = 0; i < 2 && i < sn.foes.size(); i++) card(sn.foes[i], "Foe", 326, 48 + i * 64, 296, 60, false);
-		// ---- your lead's moves, rated against the foe(s)
+		// ---- your lead's moves, rated against the foe(s); the best one marked (pkmn::adviseBattle)
+		pkmn::BattleAdvice adv = pkmn::adviseBattle(sn.lead, sn.party, sn.foes[0], t, t.has.modernTypes);
 		box("bubble", false, 18, 180, 298, 236);
 		for (int i = 0; i < 4; i++)
 		{
@@ -7277,14 +7492,26 @@ namespace banana
 				float lw = text("PP", true, 12, 0, 0, p.muted, true, 0, true);
 				text("PP", true, 12, 304 - pw - lw - 5, y + 32, p.muted, true);
 			}
-			text(fit(t.moveName(mv), true, 17, r - 40), true, 17, 32, y + 3, out ? p.muted : p.ink);
+			if (i == adv.move) be->fill(std::round(X(22)), std::round(X(y + 2)), std::max(2.0f, std::round(X(4))), std::round(X(44)), p.accent);
+			text(fit(t.moveName(mv), true, 17, r - 40), true, 17, 32, y + 3, out ? p.muted : i == adv.move ? p.accent : p.ink);
 		}
 		// ---- the foe: what it is weak to and resists
 		box("bubble", false, 326, 180, 296, 236);
 		const pkmn::Mon& f = sn.foes[0];
 		std::string fn = f.nick.empty() ? t.speciesName(f.species) : f.nick;
 		text(fit(fn, true, 17, 268), true, 17, 342, 192, p.accent);
-		pokeMatchups(p, f.types[0], f.types[1], 342, 220, 270, 408);
+		if (adv.switchTo >= 0 && adv.switchTo < (int)sn.party.size())
+		{
+			// a better pick in the party: its name and the move it would use
+			const pkmn::Mon& m = sn.party[adv.switchTo];
+			pokeMatchups(p, f.types[0], f.types[1], 342, 220, 270, 372);
+			be->fill(std::round(X(338)), std::round(X(378)), std::round(X(272)), std::max(1.0f, std::round(X(2))), p.line);
+			std::string who = m.nick.empty() ? t.speciesName(m.species) : m.nick;
+			float lw = text("Switch to", true, 13, 0, 0, p.muted, true, 0, true);
+			text("Switch to", true, 13, 342, 386, p.muted, true);
+			text(fit(who + "  " + t.moveName(m.moves[adv.switchMove]), true, 16, 262 - lw), true, 16, 350 + lw, 384, p.accent);
+		}
+		else pokeMatchups(p, f.types[0], f.types[1], 342, 220, 270, 408);
 	}
 
 	// ---- the pages that read the save: Map, Bag, Dex, Guide
@@ -7616,8 +7843,29 @@ namespace banana
 		snprintf(size, sizeof size, "%s Pokémon  ·  %d.%d m  ·  %d.%d kg", e.category.c_str(), e.height / 10, e.height % 10, e.weight / 10, e.weight % 10);
 		text(fit(size, false, 17, 560), false, 17, 36, 130, p.ink);
 		be->fill(std::round(X(36)), std::round(X(160)), std::round(X(568)), std::max(1.0f, std::round(X(2))), p.line);
+		// where it lives (the wild tables, by region map section; the PokeDaisy idea): once it has been seen
+		std::vector<pkmn::RomTables::Where> wh;
+		if (!known || caught || dexBit(sn.dexSeen, n)) wh = t.where(sp);
+		int textLines = wh.empty() ? 8 : 5;
 		if (known && !caught) wrapped("Seen, not caught yet: the entry opens once one is caught.", 18, 36, 176, 568, 3, p.muted);
-		else wrapped(e.text, 18, 36, 176, 568, 8, p.ink);
+		else wrapped(e.text, 18, 36, 176, 568, textLines, p.ink);
+		if (!wh.empty())
+		{
+			static const char* const HOW[6] = { "grass", "water", "rock smash", "old rod", "good rod", "super rod" };
+			text("Where", true, 14, 36, 290, p.muted, true, 1.0f);
+			for (size_t i = 0; i < wh.size() && i < 3; i++)
+			{
+				const auto& w = wh[i];
+				std::string place = w.mapsec >= 0 ? t.mapName(w.mapsec) : "";
+				if (place.empty()) place = "?";
+				char d[64];
+				if (w.minLv == w.maxLv) snprintf(d, sizeof d, "%s  ·  Lv %d  ·  %d%%", lang::tr(HOW[w.method]).c_str(), w.minLv, w.percent);
+				else snprintf(d, sizeof d, "%s  ·  Lv %d-%d  ·  %d%%", lang::tr(HOW[w.method]).c_str(), w.minLv, w.maxLv, w.percent);
+				float dw = text(d, false, 15, 0, 0, p.muted, false, 0, true);
+				text(d, false, 15, 604 - dw, 314 + i * 22, p.muted);
+				text(fit(place, true, 16, 560 - dw), true, 16, 36, 312 + i * 22, p.ink);
+			}
+		}
 		text("Tap to go back", false, 14, 36, 386, p.muted);
 	}
 
@@ -8186,7 +8434,7 @@ namespace banana
 		int n = 0;
 		for (int i = 0; i < GC_TABS; i++)
 		{
-			show[i] = i != gcomp::P_BATTLE || !d.pages[i].when.set || gameComp->pageOn(i);
+			show[i] = (i >= gcomp::NUM_PAGES || d.pages[i].present) && (i != gcomp::P_BATTLE || !d.pages[i].when.set || gameComp->pageOn(i));
 			n += show[i];
 		}
 		float cell = 604.0f / n, cx = 18;

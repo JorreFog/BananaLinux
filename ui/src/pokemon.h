@@ -205,7 +205,22 @@ namespace banana::pkmn
 		struct TeamMon { uint16_t species; uint8_t level; };
 		std::vector<TeamMon> team(const std::string& name, int* trainerClass = nullptr) const;
 		bool layoutSize(uint32_t layoutPtr, int& w, int& h) const;	// a map layout's size (from the map header)
+		// each map's region map section by group and number (findMapGroups; 255: not known) and, from them and the wild
+		// tables, where a species is met: section, how (as wild()), levels, chance; the commonest first
+		std::vector<std::vector<uint8_t>> mapsecs;
+		// the level-up move lists (findLearnsets; -1 not found): the next move a species learns after level (0 none;
+		// its level in lv)
+		long learnsets = -1;
+		uint16_t nextMove(uint16_t species, int level, int& lv) const;
+		struct Where { int mapsec, method; uint8_t minLv, maxLv; int percent; };
+		std::vector<Where> where(uint16_t species) const;
 	};
+	// the ROM's map groups (gMapGroups: a table of the groups' tables of map header pointers), found by their shape
+	// and checked against every map the wild tables name: t.mapsecs (left empty when not found)
+	void findMapGroups(RomTables& t, const uint8_t* rom, size_t n);
+	// gLevelUpLearnsets: numSpecies pointers to lists of (move | level << 9), 0xffff at the end (Ruby, Sapphire,
+	// Emerald, FireRed, LeafGreen and hacks that keep the format), found by their shape: t.learnsets
+	void findLearnsets(RomTables& t, const uint8_t* rom, size_t n);
 	RomTables findTables(const uint8_t* rom, size_t n, const GameProfile* game = nullptr);
 
 	// pokemap.cpp: the GBA BIOS's LZ77 (type 0x10) at rom[at]: false when it isn't one, runs past the end or decodes to
@@ -223,6 +238,13 @@ namespace banana::pkmn
 	bool parseReply(const std::string& line, uint32_t& addr, std::vector<uint8_t>& bytes);
 
 	// what the panel draws (the last complete set of replies)
+	// what to do in a battle (the PokeDaisy idea, our own scoring): the lead's best damaging move against the foe -
+	// power x type effect x STAB (1.5) x accuracy, only moves with PP left - and a party member worth switching to: one
+	// standing, not an egg, not the lead, whose best move does much more (x1.5) or which takes much less from the foe's
+	// types. -1: none.
+	struct BattleAdvice { int move = -1; int switchTo = -1, switchMove = -1; };
+	BattleAdvice adviseBattle(const Mon& lead, const std::vector<Mon>& party, const Mon& foe, const struct RomTables& t, bool modern);
+
 	struct Snapshot
 	{
 		bool seen = false;			// a reply with data has come

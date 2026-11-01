@@ -25,11 +25,38 @@ namespace banana::gcomp
 		const char* const POKEMON_CODES[] = { "AXVE", "AXPE", "BPEE", "BPRE", "BPGE" };
 		const uint32_t ROM_BASE = 0x08000000, ROM_END = 0x0a000000;
 
-		// what can be read: EWRAM, IWRAM (RetroArch, live) and the ROM (the file)
-		bool inRam(uint32_t a, int n) { uint64_t e = (uint64_t)a + (uint64_t)std::max(n, 1);
-			return (a >= 0x02000000 && e <= 0x02040000) || (a >= 0x03000000 && e <= 0x03008000); }
-		bool inRom(uint32_t a, int n) { uint64_t e = (uint64_t)a + (uint64_t)std::max(n, 1); return a >= ROM_BASE && e <= ROM_END; }
-		uint32_t ramEnd(uint32_t a) { return a < 0x03000000 ? 0x02040000 : 0x03008000; }
+		// the GBA's map (built in: schema 1 and the 505 definitions need no file)
+		std::shared_ptr<const SysMap> gbaMap()
+		{
+			static std::shared_ptr<const SysMap> m = []
+			{
+				auto g = std::make_shared<SysMap>();
+				g->id = "gba";
+				SysMap::Region ew, iw, rom;
+				ew.start = 0x02000000; ew.end = 0x02040000; ew.ram = true; ew.raBase = 0x008000; ew.hasRa = true;
+				iw.start = 0x03000000; iw.end = 0x03008000; iw.ram = true; iw.raBase = 0; iw.hasRa = true;
+				rom.start = ROM_BASE; rom.end = ROM_END; rom.rom = true;
+				g->regions = { ew, iw, rom };
+				g->serialOff = 0xac; g->serialLen = 4; g->titleOff = 0xa0; g->titleLen = 12;
+				return std::shared_ptr<const SysMap>(g);
+			}();
+			return m;
+		}
+		// the map definitions are parsed and read against (the open game's; the GBA's by default)
+		const SysMap* g_map = nullptr;
+		const SysMap& curMap() { return g_map ? *g_map : *gbaMap(); }
+		const SysMap::Region* regionOf(uint32_t a, int n, bool rom)
+		{
+			uint64_t e = (uint64_t)a + (uint64_t)std::max(n, 1);
+			for (auto& r : curMap().regions)
+				if ((rom ? r.rom : r.ram) && a >= r.start && e <= r.end) return &r;
+			return nullptr;
+		}
+		// what can be read: the system's RAM (the emulator, live) and, on the GBA, the ROM (the file)
+		bool inRam(uint32_t a, int n) { return regionOf(a, n, false) != nullptr; }
+		bool inRom(uint32_t a, int n) { return curMap().id == "gba" && regionOf(a, n, true) != nullptr; }
+		uint32_t ramEnd(uint32_t a) { const SysMap::Region* r = regionOf(a, 1, false); return r ? r->end : a + 1; }
+		std::string g_sysDir = "/usr/share/banana/companions/systems";
 
 		bool parseInt(const JVal* v, long long& out)
 		{
@@ -97,11 +124,12 @@ namespace banana::gcomp
 
 		bool parseMem(const JVal& j, Mem& m, bool field, std::string* why, const std::string& where)
 		{
-			static const char* const T[] = { "u8", "u16", "u32", "s8", "s16", "s32", "bcd8", "bcd16", "bcd32", "bool", "text", "index" };
-			static const int SZ[] = { 1, 2, 4, 1, 2, 4, 1, 2, 4, 1, 0, 0 };
+			static const char* const T[] = { "u8", "u16", "u32", "s8", "s16", "s32", "bcd8", "bcd16", "bcd32", "bool", "text", "index", "u24", "s24" };
+			static const int SZ[] = { 1, 2, 4, 1, 2, 4, 1, 2, 4, 1, 0, 0, 3, 3 };
 			std::string t = j.str("type", "u8");
 			int ti = -1;
-			for (int i = 0; i < 12; i++) if (t == T[i]) ti = i;
+			for (int i = 0; i < 14; i++) if (t == T[i]) ti = i;
+			m.be = j.str("endian", curMap().bigEndian ? "be" : "le") == "be";
 			if (ti < 0 || (ti == INDEX && !field)) { if (why) *why = where + ": type " + t; return false; }
 			m.type = (VType)ti;
 			m.size = SZ[ti];
@@ -125,7 +153,17 @@ namespace banana::gcomp
 				}
 				else
 				{
-					if (!parseInt(j.get("addr"), v)) { if (why) *why = where + ": addr"; return false; }
+					long long ra;
+					if (parseInt(j.get("ra"), ra))
+					{
+						// an address in RetroAchievements' flattened address space (an RA memory note): the bus address
+						const SysMap::Region* hit = nullptr;
+						for (auto& r : curMap().regions)
+							if (r.hasRa && (uint64_t)ra >= r.raBase && (uint64_t)ra < (uint64_t)r.raBase + (r.end - r.start)) hit = &r;
+						if (!hit) { if (why) *why = where + ": ra address not in the system's map"; return false; }
+						v = hit->start + (ra - hit->raBase);
+					}
+					else if (!parseInt(j.get("addr"), v)) { if (why) *why = where + ": addr"; return false; }
 					m.addr = (uint32_t)v;
 					if (!inRam(m.addr, m.size) && !inRom(m.addr, m.size)) { if (why) *why = where + ": address not readable"; return false; }
 				}
@@ -157,7 +195,9 @@ namespace banana::gcomp
 				while (!s.empty() && s.back() == ' ') s.pop_back();
 				return EV(s);
 			}
-			uint32_t raw = le(p, m.size);
+			uint32_t raw = 0;
+			if (m.be) for (int i = 0; i < m.size; i++) raw = (raw << 8) | p[i];
+			else raw = le(p, m.size);
 			double v;
 			if (m.type >= BCD8 && m.type <= BCD32)
 			{
@@ -165,11 +205,11 @@ namespace banana::gcomp
 				for (int i = 0; i < m.size * 2; i++) { r += ((raw >> (4 * i)) & 0xf) % 10 * k; k *= 10; }
 				raw = (uint32_t)r;
 			}
-			if (m.mask != 0xffffffffu || m.type == U8 || m.type == U16 || m.type == U32 || m.type == BOOL || (m.type >= BCD8 && m.type <= BCD32))
+			if (m.mask != 0xffffffffu || m.type == U8 || m.type == U16 || m.type == U24 || m.type == U32 || m.type == BOOL || (m.type >= BCD8 && m.type <= BCD32))
 				v = (double)((raw & m.mask) >> m.shift);
 			else
 			{
-				int32_t s = m.type == S8 ? (int8_t)raw : m.type == S16 ? (int16_t)raw : (int32_t)raw;
+				int32_t s = m.type == S8 ? (int8_t)raw : m.type == S16 ? (int16_t)raw : m.type == S24 ? ((int32_t)(raw << 8) >> 8) : (int32_t)raw;
 				v = (double)(s >> m.shift);
 			}
 			if (m.type == BOOL) v = v != 0;
@@ -238,7 +278,13 @@ namespace banana::gcomp
 	std::shared_ptr<Def> parseDef(const JVal& j, std::string* why)
 	{
 		auto d = std::make_shared<Def>();
-		if (!j.isObj() || j.num("schema", 0) != 1) { if (why) *why = "not a schema 1 definition"; return nullptr; }
+		int schema = j.isObj() ? (int)j.num("schema", 0) : 0;
+		if (schema != 1 && schema != 2) { if (why) *why = "not a schema 1 or 2 definition"; return nullptr; }
+		d->system = schema == 2 ? j.str("system", "") : "gba";
+		d->map = d->system == "gba" ? gbaMap() : systemMap(d->system);
+		if (!d->map) { if (why) *why = "unknown system \"" + d->system + "\" (no systems/" + d->system + ".json)"; return nullptr; }
+		// (parsed against its system's map; the map in use before is put back after)
+		struct MapScope { const SysMap* old; MapScope(const SysMap* m) : old(g_map) { g_map = m; } ~MapScope() { g_map = old; } } scope(d->map.get());
 		d->title = j.str("title");
 		d->quality = j.str("quality");
 		uint32_t c;
@@ -384,7 +430,12 @@ namespace banana::gcomp
 			p.reference = ref && ref->kind == JVal::BOOL ? ref->b : !live;
 		}
 		for (int i = 0; i < NUM_PAGES; i++)
-			if (!have[i]) { if (why) *why = std::string("no page ") + PAGE_IDS[i]; return nullptr; }
+			if (!have[i])
+			{
+				if (schema == 2 && i != P_STATUS) { d->pages[i].present = false; continue; }
+				if (why) *why = std::string("no page ") + PAGE_IDS[i];
+				return nullptr;
+			}
 		return d;
 	}
 
@@ -449,12 +500,14 @@ namespace banana::gcomp
 		bool indexOf(const JVal& j, const std::string& file, IndexLine& l)
 		{
 			const JVal* m = j.get("match");
-			if (!m || j.num("schema", 0) != 1) return false;
+			if (!m || (j.num("schema", 0) != 1 && j.num("schema", 0) != 2)) return false;
 			l.file = file;
 			l.title12 = m->str("title12");
 			l.zip = m->str("zip");
 			l.exclusive = m->flag("exclusive");
-			if (const JVal* c = m->get("code")) { if (c->isStr()) l.codes.push_back(c->s); else for (auto& x : c->arr) l.codes.push_back(x->s); }
+			for (const char* key : { "code", "serial" })
+				if (const JVal* c = m->get(key)) { if (c->isStr()) l.codes.push_back(c->s); else for (auto& x : c->arr) l.codes.push_back(x->s); }
+			if (l.title12.empty()) l.title12 = m->str("header_title");
 			if (const JVal* c = m->get("crc32"))
 			{
 				std::vector<std::string> cs;
@@ -526,8 +579,119 @@ namespace banana::gcomp
 		return out;
 	}
 
-	std::string findDef(const std::string& dir, const std::string& rom, std::string* why)
+	void setSystemsDir(const std::string& dir) { g_sysDir = dir; }
+
+	std::shared_ptr<const SysMap> systemMap(const std::string& id)
 	{
+		if (id == "gba") return gbaMap();
+		static std::map<std::string, std::shared_ptr<const SysMap>> cache;
+		std::string key = g_sysDir + "/" + id;
+		auto it = cache.find(key);
+		if (it != cache.end()) return it->second;
+		std::ifstream f(key + ".json");
+		if (!f) f.open("/data/banana/companions/systems/" + id + ".json");	// (the card's own: a map the image lacks)
+		std::stringstream b;
+		b << f.rdbuf();
+		JPtr j = parseJson(b.str());
+		std::shared_ptr<SysMap> m;
+		if (j && j->isObj() && j->str("system") == id)
+		{
+			m = std::make_shared<SysMap>();
+			m->id = id;
+			m->bigEndian = j->str("endian", "le") == "be";
+			if (const JVal* rs = j->get("regions"))
+				for (auto& r : rs->arr)
+				{
+					long long st, sz, ra;
+					if (!parseInt(r->get("start"), st) || !parseInt(r->get("size"), sz)) continue;
+					SysMap::Region g;
+					g.start = (uint32_t)st; g.end = (uint32_t)(st + sz);
+					std::string k = r->str("kind");
+					g.ram = k == "ram" || k == "sram";
+					g.rom = k == "rom";
+					if (parseInt(r->get("ra_base"), ra)) { g.raBase = (uint32_t)ra; g.hasRa = true; }
+					m->regions.push_back(g);
+				}
+			for (const char* k : { "serial", "header_title" })
+				if (const JVal* h = j->get(k))
+					if (h->isObj() && h->get("rom_offset"))
+					{
+						(k[0] == 's' ? m->serialOff : m->titleOff) = (int)h->num("rom_offset", -1);
+						(k[0] == 's' ? m->serialLen : m->titleLen) = (int)h->num("len", 0);
+					}
+		}
+		cache[key] = m;
+		return m;
+	}
+
+	namespace
+	{
+		// another system's ROM: its definitions in dir (dir/<system>), by CRC-32 (files up to 32 MB), the header's id
+		// and title (where the system's map says), or the file name
+		std::string findDefOther(const std::string& dir, const std::string& rom, std::string* why, const std::string& system)
+		{
+			std::vector<IndexLine> idx = readIndex(dir);
+			if (idx.empty()) { if (why) *why = "no definitions in " + dir; return ""; }
+			auto map = systemMap(system);
+			if (!map) { if (why) *why = "no map for " + system; return ""; }
+			std::string base = rom.substr(rom.find_last_of('/') + 1), code, title;
+			size_t dot = base.find_last_of('.');
+			if (dot != std::string::npos) base.erase(dot);
+			uint32_t crc = 0;
+			bool crcOk = false;
+			FILE* f = fopen(rom.c_str(), "rb");
+			if (f)
+			{
+				auto field = [&](int off, int len)
+				{
+					std::string out;
+					if (off < 0 || len <= 0 || fseek(f, off, SEEK_SET) != 0) return out;
+					out.resize((size_t)len);
+					out.resize(fread(&out[0], 1, (size_t)len, f));
+					while (!out.empty() && (out.back() == 0 || out.back() == ' ')) out.pop_back();
+					return out;
+				};
+				code = field(map->serialOff, map->serialLen);
+				title = field(map->titleOff, map->titleLen);
+				fseek(f, 0, SEEK_END);
+				long n = ftell(f);
+				if (n > 0 && n <= (32L << 20))
+				{
+					uLong c = crc32(0L, Z_NULL, 0);
+					std::vector<uint8_t> b(1 << 20);
+					fseek(f, 0, SEEK_SET);
+					size_t k;
+					while ((k = fread(b.data(), 1, b.size(), f)) > 0) c = crc32(c, b.data(), (uInt)k);
+					crc = (uint32_t)c; crcOk = true;
+				}
+				fclose(f);
+			}
+			if (crcOk)
+				for (auto& l : idx)
+					if (std::find(l.crcs.begin(), l.crcs.end(), crc) != l.crcs.end()) return dir + "/" + l.file;
+			if (!code.empty())
+				for (auto& l : idx)
+				{
+					if (l.exclusive || std::find(l.codes.begin(), l.codes.end(), code) == l.codes.end()) continue;
+					if (!l.title12.empty() && l.title12 != title) continue;
+					return dir + "/" + l.file;
+				}
+			for (auto& l : idx)
+			{
+				std::string z = l.zip;
+				size_t d2 = z.find_last_of('.');
+				if (d2 != std::string::npos) z.erase(d2);
+				if (!l.exclusive && !z.empty() && lower(z) == lower(base)) return dir + "/" + l.file;
+			}
+			if (why) *why = "no " + system + " definition for " + base;
+			return "";
+		}
+	}
+
+	std::string findDef(const std::string& dir0, const std::string& rom, std::string* why, const std::string& system)
+	{
+		if (system != "gba") return findDefOther(dir0 + "/" + system, rom, why, system);
+		const std::string& dir = dir0;
 		std::vector<IndexLine> idx = readIndex(dir);
 		if (idx.empty()) { if (why) *why = "no definitions in " + dir; return ""; }
 		RomId id;
@@ -566,11 +730,11 @@ namespace banana::gcomp
 
 	// ---- the engine --------------------------------------------------------------------------------------------------
 
-	bool Engine::open(const std::string& rom, const std::string& dir)
+	bool Engine::open(const std::string& rom, const std::string& dir, const std::string& system)
 	{
 		close();
 		std::string why;
-		std::string f = findDef(dir, rom, &why);
+		std::string f = findDef(dir, rom, &why, system);
 		if (f.empty()) { fprintf(stderr, "game companion: %s\n", why.c_str()); return false; }
 		auto d = loadDef(f, &why);
 		if (!d) { fprintf(stderr, "game companion: %s: %s\n", f.c_str(), why.c_str()); return false; }
@@ -581,6 +745,7 @@ namespace banana::gcomp
 	{
 		close();
 		def = d;
+		g_map = d->map ? d->map.get() : nullptr;	// (the reads and the checks against its system's map)
 		romPath = rom;
 		rs = std::make_shared<RomShared>();
 		snap.lists.assign(def->lists, {});
@@ -590,6 +755,7 @@ namespace banana::gcomp
 
 	void Engine::close()
 	{
+		if (def && g_map == def->map.get()) g_map = nullptr;
 		def.reset();
 		rs.reset();
 		romPath.clear();

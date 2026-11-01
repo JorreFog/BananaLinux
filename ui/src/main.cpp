@@ -21,6 +21,7 @@
 #include "arrival.h"
 #include "lang.h"
 #include "settings.h"
+#include "complink.h"
 #include "settings_defaults.h"
 #include "theme.h"
 #include "colors.h"
@@ -1009,6 +1010,57 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			settings.gameOpen("Companion Test", "Game Boy Advance", scr, true);
 			logf("gcpanel %s: companion %s", rom.c_str(), on ? gc.game()->title.c_str() : "none");
 		}
+		else if (op == "gstates")
+		{
+			// gstates <dir>: the game panel's save states for <dir>/test.gba, states in <dir> (before gamepanel)
+			std::string dir;
+			std::getline(cs >> std::ws, dir);
+			settings.gameRom(dir + "/test.gba", dir);
+			logf("gstates %s", dir.c_str());
+		}
+		else if (op == "rablock")
+		{
+			// rablock <file>: an emulator's RetroAchievements block (bcomp.h) from "key value" lines - state N, game N,
+			// rp text, near id percent measured title..., unlock id title... - through a producer in this process
+			std::string path;
+			std::getline(cs >> std::ws, path);
+			static CompLink link;
+			static bcomp_producer prod;
+			if (!link.open())
+			{
+				link.create(o.headless + "companion.shm");
+				bcomp_attach(&prod, (o.headless + "companion.shm").c_str());
+				bcomp_publish(&prod);
+			}
+			std::ifstream f(path);
+			std::string ln;
+			bcomp_ra_begin(&prod);
+			bcomp_ra& ra = prod.shm->ra;
+			int nn = 0;
+			while (std::getline(f, ln))
+			{
+				std::istringstream ls(ln);
+				std::string k;
+				ls >> k;
+				if (k == "state") ls >> ra.state;
+				else if (k == "game") ls >> ra.game_id;
+				else if (k == "rp") { std::string v; std::getline(ls >> std::ws, v); snprintf(ra.rp, sizeof ra.rp, "%s", v.c_str()); }
+				else if (k == "near" && nn < BCOMP_RA_NEAR)
+				{
+					bcomp_ra_near& n = ra.near_[nn++];
+					std::string m, t;
+					ls >> n.id >> n.percent >> m;
+					std::getline(ls >> std::ws, t);
+					snprintf(n.measured, sizeof n.measured, "%s", m.c_str());
+					snprintf(n.title, sizeof n.title, "%s", t.c_str());
+				}
+				else if (k == "unlock") { uint32_t id = 0; std::string t; ls >> id; std::getline(ls >> std::ws, t); bcomp_ra_push(&prod, BCOMP_EV_UNLOCK, id, "", t.c_str()); }
+			}
+			bcomp_ra_end(&prod);
+			settings.link = &link;
+			settings.gameUpdate(now);
+			logf("rablock %s: state %u rp '%s' near %d", path.c_str(), ra.state, ra.rp, nn);
+		}
 		else if (op == "gcaudit")
 		{
 			// gcaudit <definitions folder>: every definition's pages drawn once (nothing read): what may want a look
@@ -1955,6 +2007,8 @@ int main(int argc, char** argv)
 	double quietUntil = 0;	// no frame before this: the last one flipped nothing (see present below)
 	int lastMinute = -1;
 	pkmn::Companion companion;	// the game panel's Pokémon companion (pokemon.h), for the game running
+	std::string gameRomPath;	// the running game's file (the game panel's save states)
+	CompLink compLink;	// the emulator's memory export (complink.h), when the emulator attaches to it (BananaFront, BananaDS)
 	gcomp::Engine gameComp;		// or its game companion (gamecomp.h), for another GBA game with a definition
 	if (settingsView.bshareReceiving()) Settings::bshareServe(true);	// (Bshare's Receive on: seen from the start)
 	LowBattery low;
@@ -2208,6 +2262,7 @@ int main(int argc, char** argv)
 			std::lock_guard<std::mutex> l(worker.uiLock);
 			settingsView.companion = outFd >= 0 && companion.active() ? &companion : nullptr;
 			settingsView.gameComp = outFd >= 0 && gameComp.active() ? &gameComp : nullptr;
+			settingsView.gameRom(gameRomPath);
 			settingsView.gameOpen(title, sysName, panelScreen, input.hasTouch(panelScreen));
 		}
 		be.invalidate();
@@ -2215,6 +2270,7 @@ int main(int argc, char** argv)
 		// the game's end wakes the loop at once (a pidfd is readable then): the 100 ms poll alone kept the menu up to that
 		// much longer before it saw it
 		const int pidFd = (int)syscall(SYS_pidfd_open, pid, 0);
+		bool linkSeen = false;
 		for (;;)
 		{
 			pid_t w = waitpid(pid, &status, WNOHANG);
@@ -2225,7 +2281,26 @@ int main(int argc, char** argv)
 			{
 				// the companion's reads of the game's memory, on RetroArch's stdin beside the tiles' commands
 				std::string r = companion.active() ? companion.requests(t) : gameComp.requests(t);
-				if (!r.empty() && write(cmdFd, r.data(), r.size()) < 0) {}
+				// through the emulator's memory export when it attached to it (BananaFront), else RetroArch's stdin
+				if (!r.empty() && !compLink.send(r) && write(cmdFd, r.data(), r.size()) < 0) {}
+			}
+			if (compLink.attached() != linkSeen)	// (once a game: the log says which way the companion reads)
+			{
+				linkSeen = !linkSeen;
+				if (linkSeen) logf("companion: the emulator attached to its memory export (shared memory)");
+			}
+			if (compLink.waiting())
+			{
+				std::string rep = compLink.receive();
+				if (!rep.empty())
+				{
+					if (companion.active()) companion.feed(rep.data(), rep.size());
+					else
+					{
+						std::lock_guard<std::mutex> l(worker.uiLock);
+						gameComp.feed(rep.data(), rep.size());
+					}
+				}
 			}
 			{
 				std::lock_guard<std::mutex> l(worker.uiLock);
@@ -2252,7 +2327,17 @@ int main(int argc, char** argv)
 				float k = disp.height() / 480.0f;
 				std::lock_guard<std::mutex> l(worker.uiLock);
 				if (w == "tab") settingsView.gcShow((int)tx);
-				else if (tx >= 0 && ty >= 0) { settingsView.gameTouch(tx * k, ty * k, true); settingsView.gameTouch(tx * k, ty * k, false); }
+				else if (tx >= 0 && ty >= 0)
+				{
+					settingsView.gameTouch(tx * k, ty * k, true);
+					// (the tap's command goes to the emulator as a finger's would: a slot loaded from the States view...)
+					Settings::GameAction a = settingsView.gameTouch(tx * k, ty * k, false);
+					char slotCmd[32];
+					snprintf(slotCmd, sizeof slotCmd, "LOAD_STATE_SLOT %d\n", settingsView.gameSlot());
+					const char* c = a == Settings::G_LOADSLOT ? slotCmd : a == Settings::G_SAVE ? "SAVE_STATE\n" : a == Settings::G_LOAD ? "LOAD_STATE\n" :
+						a == Settings::G_MENU ? "MENU_TOGGLE\n" : a == Settings::G_FFWD ? "FAST_FORWARD\n" : a == Settings::G_QUIT ? "QUIT\n" : nullptr;
+					if (c) { logf("game panel: %.*s (panel-tap)", (int)strlen(c) - 1, c); if (write(cmdFd, c, strlen(c)) < 0) {} }
+				}
 				want = true;
 				logf("panel tap %s %.0f %.0f", w.c_str(), tx, ty);
 			}
@@ -2260,7 +2345,7 @@ int main(int argc, char** argv)
 			for (int fd : input.fds()) fds.push_back({ fd, POLLIN, 0 });
 			if (outFd >= 0) fds.push_back({ outFd, POLLIN, 0 });
 			if (pidFd >= 0) fds.push_back({ pidFd, POLLIN, 0 });
-			if (poll(fds.data(), fds.size(), 100) <= 0) continue;
+			if (poll(fds.data(), fds.size(), compLink.waiting() ? 10 : 100) <= 0) continue;	// (an export's answer is looked for, not signalled)
 			if (pidFd >= 0)
 			{
 				if (fds.back().revents & POLLIN) continue;	// it ended: waitpid above
@@ -2300,7 +2385,9 @@ int main(int argc, char** argv)
 							a = settingsView.gameTouch(ev.x, ev.y, ev.type == InputEvent::TOUCH_DOWN);
 						}
 						want = true;
-						const char* c = a == Settings::G_SAVE ? "SAVE_STATE\n" : a == Settings::G_LOAD ? "LOAD_STATE\n" :
+						char slotCmd[32];
+						snprintf(slotCmd, sizeof slotCmd, "LOAD_STATE_SLOT %d\n", settingsView.gameSlot());
+						const char* c = a == Settings::G_LOADSLOT ? slotCmd : a == Settings::G_SAVE ? "SAVE_STATE\n" : a == Settings::G_LOAD ? "LOAD_STATE\n" :
 							a == Settings::G_MENU ? "MENU_TOGGLE\n" : a == Settings::G_FFWD ? "FAST_FORWARD\n" :
 							a == Settings::G_QUIT ? "QUIT\n" : nullptr;
 						if (c)
@@ -2317,6 +2404,7 @@ int main(int argc, char** argv)
 	{
 		const SystemDef& sd = lib.systemOf(game);
 		std::string rom = lib.gameAt(game).path;
+		gameRomPath = rom;
 		std::string cmd = replaceAll(replaceAll(sd.run, "%ROM%", shellQuote(rom)), "%SYSTEM%", shellQuote(sd.id));
 		const double letGo = nowMs();
 		logf("starting %s: %s", sd.id.c_str(), cmd.c_str());
@@ -2354,6 +2442,7 @@ int main(int argc, char** argv)
 			leaseFd = disp.lease(gameScreen);
 			unlink(FIFO);
 			unlink("/run/banana/retroarch.log");	// (the last game's: the panel must not read it as this one's)
+			if (!compLink.create()) logf("companion: no shared memory: %s", strerror(errno));
 			if (leaseFd >= 0 && mkfifo(FIFO, 0600) == 0) cmdFd = ::open(FIFO, O_RDWR | O_NONBLOCK | O_CLOEXEC);	// (read too: RetroArch never sees an end)
 			if (leaseFd < 0 || cmdFd < 0)
 			{
@@ -2377,8 +2466,10 @@ int main(int argc, char** argv)
 		// /data/banana/companions (the card's own, written or tried out there) or /usr/share/banana/companions
 		// (gamecomp.h; the Pokémon games are the Pokémon companion's)
 		bool pkOn = panel && sd.id == "gba" && settings["pokemon_companion"] == "on" && companion.open(rom);
-		bool gcOn = !pkOn && panel && sd.id == "gba" && settings["game_companion"] == "on" &&
-			((access("/data/banana/companions", F_OK) == 0 && gameComp.open(rom, "/data/banana/companions")) || gameComp.open(rom));	// (the card's own first)
+		// (any system with a definition: the GBA's in the folder itself, another system's in <folder>/<system>/, schema 2)
+		bool gcOn = !pkOn && panel && settings["game_companion"] == "on" &&
+			((access("/data/banana/companions", F_OK) == 0 && gameComp.open(rom, "/data/banana/companions", sd.id)) ||
+				gameComp.open(rom, "/usr/share/banana/companions", sd.id));	// (the card's own first)
 		if (pkOn || gcOn)
 		{
 			unlink(OUT);
@@ -2423,6 +2514,7 @@ int main(int argc, char** argv)
 			{
 				setenv("BANANA_DRM_LEASE_FD", std::to_string(leaseFd).c_str(), 1);
 				setenv("BANANA_RA_CMD", FIFO, 1);
+				if (compLink.open()) setenv(BCOMP_ENV, BCOMP_DEFAULT_PATH, 1);
 				if (outFd >= 0) setenv("BANANA_RA_OUT", OUT, 1);
 			}
 			execl("/bin/sh", "sh", "-c", cmd.c_str(), (char*)nullptr);
@@ -2454,6 +2546,7 @@ int main(int argc, char** argv)
 			::close(cmdFd);
 			unlink(FIFO);
 			if (outFd >= 0) { ::close(outFd); unlink(OUT); }
+			compLink.close();
 			companion.close();
 			gameComp.close();
 			input.close();

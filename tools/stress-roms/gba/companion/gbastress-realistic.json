@@ -1,0 +1,233 @@
+{
+ "schema": 1,
+ "title": "gbastress",
+ "match": {
+  "code": "BSTE",
+  "title12": "GBASTRESS",
+  "zip": "gbastress-realistic"
+ },
+ "accent": "#e8c33a",
+ "quality": "live-verified",
+ "sources": [
+  "tools/stress-roms/gba/src/main.c: the probe block (0x0203FFE0) and the results table (0x0203FF00) are ours"
+ ],
+ "credit": "Companion idea: PokeDaisy (Lidor Itzhari)",
+ "notes": "The universal companion's tier-1 test page (COMPANION-SPEC section 7): proves the memory export, the system map and the definition loader without a game.",
+ "vars": {
+  "pframe": {
+   "addr": "0x0203FFE8",
+   "type": "u32"
+  },
+  "pscene": {
+   "addr": "0x0203FFEC",
+   "type": "u16"
+  },
+  "pphase": {
+   "addr": "0x0203FFEE",
+   "type": "u16"
+  },
+  "psum": {
+   "addr": "0x0203FFF0",
+   "type": "u32"
+  },
+  "level": {
+   "addr": "0x0203FF08",
+   "type": "u32"
+  },
+  "done": {
+   "addr": "0x0203FF0C",
+   "type": "u32"
+  },
+  "secs": {
+   "expr": "floor(pframe / 60)"
+  }
+ },
+ "enums": {
+  "scenes": {
+   "0": "Racer (Mode 7)",
+   "1": "Shooter",
+   "2": "Town (RPG)",
+   "3": "Raster (HBlank IRQ)",
+   "4": "Loader (overlays)",
+   "5": "Tactics (busy-wait)"
+  }
+ },
+ "pages": [
+  {
+   "id": "status",
+   "title": "Run",
+   "widgets": [
+    {
+     "type": "text",
+     "label": "Scene",
+     "value": "pscene",
+     "enum": "scenes"
+    },
+    {
+     "type": "number",
+     "label": "Phase",
+     "value": "pphase"
+    },
+    {
+     "type": "number",
+     "label": "Frame",
+     "value": "pframe",
+     "format": "thousands"
+    },
+    {
+     "type": "number",
+     "label": "Running time",
+     "value": "pframe",
+     "format": "time60"
+    },
+    {
+     "type": "number",
+     "label": "Checksum",
+     "value": "psum",
+     "format": "hex"
+    },
+    {
+     "type": "number",
+     "label": "Load level",
+     "value": "level"
+    },
+    {
+     "type": "bar",
+     "label": "Loop",
+     "value": "pphase % 6 + 1",
+     "max": 6
+    }
+   ]
+  },
+  {
+   "id": "detail",
+   "title": "Phases",
+   "widgets": [
+    {
+     "type": "list",
+     "title": "Finished phases",
+     "base": "0x0203FF10",
+     "stride": 16,
+     "n": 12,
+     "fields": [
+      {
+       "name": "n",
+       "label": "Phase",
+       "type": "index"
+      },
+      {
+       "name": "frames",
+       "label": "Frames",
+       "off": 0,
+       "type": "u32"
+      },
+      {
+       "name": "sum",
+       "label": "Checksum",
+       "off": 4,
+       "type": "u32",
+       "format": "hex"
+      },
+      {
+       "name": "cpu",
+       "label": "GBA CPU avg %",
+       "off": 8,
+       "type": "u16"
+      },
+      {
+       "name": "cpumax",
+       "label": "GBA CPU max %",
+       "off": 10,
+       "type": "u16"
+      },
+      {
+       "name": "over",
+       "label": "Overruns",
+       "off": 12,
+       "type": "u16"
+      }
+     ],
+     "rowWhen": "frames > 0"
+    }
+   ]
+  },
+  {
+   "id": "battle",
+   "title": "Spike",
+   "when": "pscene == 4",
+   "widgets": [
+    {
+     "type": "static",
+     "text": "Loader scene: BIOS LZ77 into VRAM every 2 s, code overlays copied into IWRAM every 30 frames."
+    }
+   ]
+  },
+  {
+   "id": "map",
+   "title": "Scenes",
+   "widgets": [
+    {
+     "type": "kv",
+     "rows": [
+      [
+       "Racer",
+       "Mode 1 per-line affine (HBlank DMA), 8 karts"
+      ],
+      [
+       "Shooter",
+       "~120 sprites, collisions"
+      ],
+      [
+       "Town",
+       "4 layers, NPCs, VWF text, SRAM saves"
+      ],
+      [
+       "Raster",
+       "HBlank IRQ every line"
+      ],
+      [
+       "Loader",
+       "LZ77 + IWRAM overlays"
+      ],
+      [
+       "Tactics",
+       "CPU never halts, HBlank IRQ every line, 128 OBJ"
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "bag",
+   "title": "Audio",
+   "widgets": [
+    {
+     "type": "static",
+     "text": "8 software-mixed voices at 18157 Hz into Direct Sound A and B, plus PSG effects."
+    }
+   ]
+  },
+  {
+   "id": "collection",
+   "title": "Done",
+   "widgets": [
+    {
+     "type": "count",
+     "label": "Phases finished",
+     "value": "done",
+     "total": 12
+    }
+   ]
+  },
+  {
+   "id": "progress",
+   "title": "About",
+   "widgets": [
+    {
+     "type": "static",
+     "text": "BananaOS's GBA stress ROM. Every scene is deterministic: the checksums must be the same on every correct emulator."
+    }
+   ]
+  }
+ ]
+}

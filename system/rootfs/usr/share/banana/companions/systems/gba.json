@@ -1,0 +1,104 @@
+{
+ "system": "gba",
+ "name": "Game Boy Advance",
+ "endian": "le",
+ "addr_bits": 32,
+ "ra_console": 5,
+ "serial": {
+  "rom_offset": 172,
+  "len": 4
+ },
+ "header_title": {
+  "rom_offset": 160,
+  "len": 12
+ },
+ "regions": [
+  {
+   "name": "ewram",
+   "start": "0x02000000",
+   "size": "0x40000",
+   "kind": "ram",
+   "ra_base": "0x008000",
+   "fallback": "SYSTEM_RAM"
+  },
+  {
+   "name": "iwram",
+   "start": "0x03000000",
+   "size": "0x8000",
+   "kind": "ram",
+   "ra_base": "0x000000"
+  },
+  {
+   "name": "io",
+   "start": "0x04000000",
+   "size": "0x400",
+   "kind": "io"
+  },
+  {
+   "name": "palette",
+   "start": "0x05000000",
+   "size": "0x400",
+   "kind": "vram"
+  },
+  {
+   "name": "vram",
+   "start": "0x06000000",
+   "size": "0x18000",
+   "kind": "vram"
+  },
+  {
+   "name": "oam",
+   "start": "0x07000000",
+   "size": "0x400",
+   "kind": "vram"
+  },
+  {
+   "name": "rom",
+   "start": "0x08000000",
+   "size": "0x2000000",
+   "kind": "rom"
+  },
+  {
+   "name": "sram",
+   "start": "0x0E000000",
+   "size": "0x10000",
+   "kind": "sram",
+   "ra_base": "0x048000",
+   "fallback": "SAVE_RAM"
+  }
+ ],
+ "required": [
+  "ewram",
+  "iwram"
+ ],
+ "probe": {
+  "addr": "0x0203FFE0"
+ },
+ "controls": [
+  [
+   "A",
+   "A"
+  ],
+  [
+   "B",
+   "B"
+  ],
+  [
+   "L1",
+   "L"
+  ],
+  [
+   "R1",
+   "R"
+  ],
+  [
+   "Start",
+   "Start"
+  ],
+  [
+   "Select",
+   "Select"
+  ]
+ ],
+ "notes": "gpSP maps ewram+iwram only (READ_CORE_MEMORY today); mGBA maps all. RA address space: rcheevos consoleinfo.c."
+}

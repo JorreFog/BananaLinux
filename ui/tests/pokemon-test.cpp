@@ -206,6 +206,97 @@ static std::string reply(uint32_t addr, const std::vector<uint8_t>& v)
 int main(int argc, char** argv)
 {
 	// ---- the type chart (Generation III: no Fairy; Steel resists Ghost and Dark)
+	// the moves a species learns by level (the ROM's level-up tables, found by their shape): the next one after a level
+	{
+		std::vector<uint8_t> rom(0x8000, 0);
+		auto put32 = [&](size_t a, uint32_t v) { for (int i = 0; i < 4; i++) rom[a + i] = (uint8_t)(v >> (8 * i)); };
+		auto put16 = [&](size_t a, uint16_t v) { rom[a] = (uint8_t)v; rom[a + 1] = (uint8_t)(v >> 8); };
+		RomTables t;
+		t.numSpecies = 412;
+		t.moves.resize(355);
+		// 412 pointers at 0x100, every species' list at 0x1000 + 16 * i: (move 33 Lv 1), (move 45 Lv 7), (move 10 + i Lv 15), end
+		for (int i = 0; i < 412; i++)
+		{
+			size_t l = 0x1000 + 16 * (size_t)i;
+			put32(0x100 + 4 * (size_t)i, 0x08000000 + (uint32_t)l);
+			put16(l, 33 | (1 << 9)); put16(l + 2, 45 | (7 << 9)); put16(l + 4, (uint16_t)((10 + i % 300) | (15 << 9))); put16(l + 6, 0xffff);
+		}
+		t.rom = std::make_shared<const std::vector<uint8_t>>(rom);
+		findLearnsets(t, rom.data(), rom.size());
+		EQ((int)(t.learnsets >= 0), 1);
+		int lv = 0;
+		EQ(t.nextMove(4, 7, lv), 14);	// at Lv 7 (just learned 45): next is move 14 at Lv 15
+		EQ(lv, 15);
+		EQ(t.nextMove(4, 15, lv), 0);	// nothing after Lv 15
+		EQ(t.nextMove(4, 1, lv), 45);
+	}
+	// where a species lives: the wild tables by map, each map's region map section from the ROM's map groups (found
+	// by their shape, checked against every map the wild tables name)
+	{
+		std::vector<uint8_t> rom(0x10000, 0);
+		auto put32 = [&](size_t a, uint32_t v) { for (int i = 0; i < 4; i++) rom[a + i] = (uint8_t)(v >> (8 * i)); };
+		const uint32_t R = 0x08000000;
+		// map headers (0x1c bytes): layout, events, scripts (ROM pointers), connections 0, ..., section at 0x14
+		for (int i = 0; i < 4; i++) { size_t h = 0x3000 + i * 0x1c; put32(h, R + 0x4000); put32(h + 4, R + 0x4100); put32(h + 8, R + 0x4200); rom[h + 0x14] = (uint8_t)(0x10 + i); }
+		// three groups: {h0, h1}, {h2}, {h3}
+		put32(0x2000, R + 0x2100); put32(0x2004, R + 0x2110); put32(0x2008, R + 0x2120);
+		put32(0x2100, R + 0x3000); put32(0x2104, R + 0x301c); put32(0x2110, R + 0x3038); put32(0x2120, R + 0x3054);
+		// wild headers: (0,1) grass with species 25 in slot 0 (20 %) and 10 in slot 2; (2,0) grass with 25 in slot 11 (1 %)
+		auto wildAt = [&](size_t a, int g, int num, size_t info, size_t mons) { rom[a] = (uint8_t)g; rom[a + 1] = (uint8_t)num; put32(a + 4, R + (uint32_t)info); put32(info + 4, R + (uint32_t)mons); };
+		wildAt(0x1000, 0, 1, 0x1100, 0x1200);
+		wildAt(0x1014, 2, 0, 0x1110, 0x1300);
+		for (int i = 0; i < 12; i++) { rom[0x1200 + i * 4] = 3; rom[0x1201 + i * 4] = 5; rom[0x1202 + i * 4] = (uint8_t)(i == 0 ? 25 : i == 2 ? 10 : 7); }
+		for (int i = 0; i < 12; i++) { rom[0x1300 + i * 4] = 30; rom[0x1301 + i * 4] = 32; rom[0x1302 + i * 4] = (uint8_t)(i == 11 ? 25 : 8); }
+		rom[0x1028] = 0xff;
+		RomTables t;
+		t.rom = std::make_shared<const std::vector<uint8_t>>(rom);
+		t.wildHeaders = 0x1000;
+		t.numSpecies = 412;
+		findMapGroups(t, rom.data(), rom.size());
+		EQ((int)t.mapsecs.size(), 3);
+		EQ(t.mapsecs.size() > 0 && t.mapsecs[0].size() > 1 ? t.mapsecs[0][1] : -1, 0x11);
+		EQ(t.mapsecs.size() > 2 && !t.mapsecs[2].empty() ? t.mapsecs[2][0] : -1, 0x13);
+		auto w = t.where(25);
+		EQ((int)w.size(), 2);
+		EQ(w.size() > 0 ? w[0].mapsec : -1, 0x11);		// the commonest first
+		EQ(w.size() > 0 ? w[0].percent : -1, 20);
+		EQ(w.size() > 1 ? w[1].minLv : -1, 30);
+		EQ((int)t.where(99).size(), 0);
+	}
+	// the battle advice: the lead's best move (power x type x STAB x accuracy, PP left), and a party member to switch to
+	{
+		RomTables t;
+		t.moveInfo.resize(10);
+		t.moveInfo[1] = { 40, NORMAL, 100, 35 };	// Tackle
+		t.moveInfo[2] = { 40, FIRE, 100, 25 };		// Ember
+		t.moveInfo[3] = { 0, NORMAL, 100, 30 };		// Growl (status)
+		t.moveInfo[4] = { 90, WATER, 100, 15 };		// Surf
+		t.moveInfo[5] = { 120, GRASS, 85, 10 };		// (a strong grass move, missing sometimes)
+		Mon lead; lead.species = 1; lead.types[0] = FIRE; lead.types[1] = FIRE; lead.hp = 30; lead.maxHp = 30; lead.pid = 11;
+		lead.moves[0] = 1; lead.moves[1] = 2; lead.moves[2] = 3; lead.pp[0] = 10; lead.pp[1] = 10; lead.pp[2] = 10;
+		Mon foe; foe.species = 2; foe.types[0] = GRASS; foe.types[1] = GRASS; foe.hp = 20;
+		BattleAdvice a = adviseBattle(lead, { lead }, foe, t, false);
+		EQ(a.move, 1);								// Ember: 40 x2 x1.5 beats Tackle and Growl
+		EQ(a.switchTo, -1);							// nobody else
+		lead.pp[1] = 0;
+		EQ(adviseBattle(lead, { lead }, foe, t, false).move, 0);	// no PP left for Ember: Tackle
+		lead.pp[1] = 10;
+		// a water foe: the fire lead is weak to it and resisted; the water member hits it neutrally... the grass one
+		// hits it twice as hard and resists water: switch to the grass member (party slot 2)
+		Mon wfoe; wfoe.types[0] = WATER; wfoe.types[1] = WATER; wfoe.hp = 20;
+		Mon w; w.species = 3; w.types[0] = WATER; w.types[1] = WATER; w.hp = 20; w.pid = 12; w.moves[0] = 4; w.pp[0] = 5;
+		Mon g; g.species = 4; g.types[0] = GRASS; g.types[1] = GRASS; g.hp = 20; g.pid = 13; g.moves[0] = 5; g.pp[0] = 5;
+		Mon fainted = g; fainted.hp = 0; fainted.pid = 14;
+		a = adviseBattle(lead, { lead, w, g, fainted }, wfoe, t, false);
+		EQ(a.switchTo, 2);
+		EQ(a.switchMove, 0);
+		// an egg or a fainted member is never suggested: then the water one (resists water, hits for 67 against the
+		// lead's 40 that takes double)
+		g.egg = true;
+		EQ(adviseBattle(lead, { lead, w, g, fainted }, wfoe, t, false).switchTo, 1);
+		w.hp = 0;
+		EQ(adviseBattle(lead, { lead, w, g, fainted }, wfoe, t, false).switchTo, -1);
+	}
 	EQ(effect(FIRE, GRASS, STEEL), 16);
 	EQ(effect(FIRE, GRASS, GRASS), 8);
 	EQ(effect(FIRE, GRASS, 255), 8);

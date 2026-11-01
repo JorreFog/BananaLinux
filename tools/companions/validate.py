@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate game companion defs against SCHEMA.md (schema 1).
+"""Validate game companion defs against SCHEMA.md (schema 1; schema 2 = any system by its systems/<id>.json map).
 
   python3 validate.py              every defs/*.json
   python3 validate.py a.json ...   those files
@@ -12,9 +12,30 @@ The companion idea is PokeDaisy's (Lidor Itzhari).
 import json, os, re, sys
 
 PAGE_IDS = ["status", "detail", "battle", "map", "bag", "collection", "progress"]
-TYPES = {"u8": 1, "u16": 2, "u32": 4, "s8": 1, "s16": 2, "s32": 4, "bcd8": 1, "bcd16": 2, "bcd32": 4, "bool": 1, "text": 0, "index": 0}
+TYPES = {"u8": 1, "u16": 2, "u32": 4, "s8": 1, "s16": 2, "s32": 4, "bcd8": 1, "bcd16": 2, "bcd32": 4, "bool": 1, "text": 0, "index": 0,
+         "u24": 3, "s24": 3}
 QUALITY = {"live-verified", "live-unverified", "reference-only"}
-RANGES = [(0x02000000, 0x0203FFFF, "EWRAM"), (0x03000000, 0x03007FFF, "IWRAM"), (0x08000000, 0x09FFFFFF, "ROM")]
+GBA_RANGES = [(0x02000000, 0x0203FFFF, "EWRAM"), (0x03000000, 0x03007FFF, "IWRAM"), (0x08000000, 0x09FFFFFF, "ROM")]
+RANGES = GBA_RANGES
+RA_BASES = {"EWRAM": 0x008000, "IWRAM": 0x000000}
+SYSTEMS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "system", "rootfs", "usr", "share", "banana",
+                           "companions", "systems")
+
+
+def system_ranges(sysid):
+    """(ranges, ra bases) of a system's map (systems/<id>.json): its RAM regions, live (the ROM is readable on the GBA only)"""
+    if sysid == "gba":
+        return GBA_RANGES, RA_BASES
+    with open(os.path.join(SYSTEMS_DIR, sysid + ".json")) as f:
+        m = json.load(f)
+    rng, ra = [], {}
+    for r in m.get("regions", []):
+        if r.get("kind") in ("ram", "sram"):
+            lo = parse_int(r["start"])
+            rng.append((lo, lo + parse_int(r["size"]) - 1, r["name"]))
+            if "ra_base" in r:
+                ra[r["name"]] = parse_int(r["ra_base"])
+    return rng, ra
 FUNCS = {"min", "max", "clamp", "abs", "floor", "ceil", "round", "mod", "if", "band", "bor", "bxor", "shl", "shr",
          "bit", "popcount", "sqrt", "pow", "sign", "upper", "lower", "len", "substr"}
 WIDGETS = {"number", "text", "bar", "flags", "count", "list", "static", "grid", "kv"}
@@ -158,8 +179,17 @@ def check_def(path, data=None):
         c.err("top level is not an object")
         return c
     base = os.path.basename(path)
-    if d.get("schema") != 1:
-        c.err("schema must be 1")
+    global RANGES
+    RANGES, ra_bases = GBA_RANGES, RA_BASES
+    schema = d.get("schema")
+    if schema not in (1, 2):
+        c.err("schema must be 1 or 2")
+    if schema == 2:
+        try:
+            RANGES, ra_bases = system_ranges(d.get("system", ""))
+        except Exception:
+            c.err("schema 2: system %r has no systems/<id>.json" % d.get("system"))
+            return c
     for k in ("title", "accent", "quality"):
         if not isinstance(d.get(k), str) or not d.get(k):
             c.err("missing/empty string '%s'" % k)
@@ -169,7 +199,7 @@ def check_def(path, data=None):
         c.err("quality %r (one of %s)" % (d.get("quality"), ", ".join(sorted(QUALITY))))
     if not isinstance(d.get("sources", None), list):
         c.err("sources must be a list")
-    known_top = {"schema", "title", "match", "accent", "quality", "sources", "vars", "enums", "pages", "notes", "genre", "credit"}
+    known_top = {"schema", "system", "controls", "title", "match", "accent", "quality", "sources", "vars", "enums", "pages", "notes", "genre", "credit"}
     for k in d:
         if k not in known_top:
             c.warn("unknown top-level key '%s' (ignored)" % k)
@@ -226,6 +256,22 @@ def check_def(path, data=None):
         if not isinstance(v, dict):
             c.err("%s: must be an object" % w)
             continue
+        if "ra" in v and "addr" not in v:
+            # (an RA address: the bus address through the region's ra_base)
+            try:
+                ra = parse_int(v["ra"])
+                hit = None
+                for lo, hi, name in RANGES:
+                    if name in ra_bases and ra_bases[name] <= ra <= ra_bases[name] + (hi - lo):
+                        hit = lo + (ra - ra_bases[name])
+                if hit is None:
+                    c.err("%s: ra 0x%06X not in the system's map" % (w, ra))
+                    continue
+                v = dict(v)
+                v["addr"] = hit
+            except Exception as e:
+                c.err("%s: ra: %s" % (w, e))
+                continue
         kinds = [k for k in ("addr", "expr", "value") if k in v]
         if "ptr" in v and "addr" not in v:
             kinds.append("addr")  # (a pointer var's place is its ptr; addr optional)
@@ -260,7 +306,7 @@ def check_def(path, data=None):
             continue
         r = region(a, size)
         if not r:
-            c.err("%s: 0x%08X+%d outside EWRAM 0x02000000-0x0203FFFF / IWRAM 0x03000000-0x03007FFF / ROM 0x08000000-0x09FFFFFF" % (w, a, size))
+            c.err("%s: 0x%08X+%d outside the readable regions (%s)" % (w, a, size, ", ".join("%s 0x%X-0x%X" % (n, lo, hi) for lo, hi, n in RANGES)))
         elif r != "ROM":
             live.add(vn)
     # expr vars that depend on live vars are live too
@@ -281,6 +327,8 @@ def check_def(path, data=None):
     ids = [p.get("id") for p in pages if isinstance(p, dict)]
     for pid in PAGE_IDS:
         n = ids.count(pid)
+        if schema == 2 and n == 0 and pid != "status":
+            continue  # (schema 2: a page may be left out; status is always there)
         if n != 1:
             c.err("page '%s' appears %d times (each of the 7 ids exactly once)" % (pid, n))
     for pid in ids:

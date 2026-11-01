@@ -26,7 +26,7 @@
 namespace banana::gcomp
 {
 	// what a value is read as
-	enum VType { U8, U16, U32, S8, S16, S32, BCD8, BCD16, BCD32, BOOL, TEXT, INDEX };	// (INDEX: a list's row number, read from nowhere)
+	enum VType { U8, U16, U32, S8, S16, S32, BCD8, BCD16, BCD32, BOOL, TEXT, INDEX, U24, S24 };	// (INDEX: a list's row number, read from nowhere)
 	struct Mem
 	{
 		VType type = U8;
@@ -41,6 +41,7 @@ namespace banana::gcomp
 		long div = 1, add = 0;
 		int term = 0;					// text: the end byte (-1 none)
 		std::string charmap;			// text: an enum the bytes are looked up in ("" ASCII)
+		bool be = false;				// big-endian (the system's order, or "endian": "be")
 	};
 	struct Var
 	{
@@ -86,11 +87,27 @@ namespace banana::gcomp
 		std::string title, tab;		// (tab: the tab's own short name, "" none)
 		NumRef when;
 		bool reference = false;
+		bool present = true;		// schema 2 may leave a page out (its tab is then not shown); status is always there
 		std::vector<Widget> widgets;
 	};
+	// a system's memory as definitions address it (schema 2: systems/<id>.json; COMPANION-SPEC section 5.1)
+	struct SysMap
+	{
+		std::string id;
+		bool bigEndian = false;
+		struct Region { uint32_t start = 0, end = 0, raBase = 0; bool ram = false, rom = false, hasRa = false; };
+		std::vector<Region> regions;
+		int serialOff = -1, serialLen = 0, titleOff = -1, titleLen = 0;	// the ROM header's id and title (-1: none)
+	};
+	// the folder of systems/<id>.json (default /usr/share/banana/companions/systems); the GBA's map is built in
+	void setSystemsDir(const std::string& dir);
+	std::shared_ptr<const SysMap> systemMap(const std::string& id);	// null: not known
+
 	struct Def
 	{
 		std::string file, title, quality;
+		std::string system = "gba";		// schema 1: always the GBA
+		std::shared_ptr<const SysMap> map;
 		uint32_t accent = 0xd0a030;
 		std::vector<Var> vars;
 		std::map<std::string, int> varIndex;
@@ -110,7 +127,8 @@ namespace banana::gcomp
 	struct RomId { std::string code, title, base; uint32_t crc = 0; bool crcKnown = false; };
 	bool romId(const std::string& path, RomId& id, bool computeCrc);
 	// the definition file for a ROM in dir ("" none): index.tsv when there is one, else every *.json read
-	std::string findDef(const std::string& dir, const std::string& rom, std::string* why = nullptr);
+	// (another system than the GBA: the definitions in dir/<system>/, matched by CRC-32, header id or file name)
+	std::string findDef(const std::string& dir, const std::string& rom, std::string* why = nullptr, const std::string& system = "gba");
 	// index.tsv's lines for the files in dir (the install's step; tests)
 	std::string makeIndex(const std::string& dir);
 
@@ -128,7 +146,7 @@ namespace banana::gcomp
 	public:
 		// the game in rom: false (nothing to do) when no definition in dir matches it, or it is a Pokémon game the
 		// Pokémon companion takes
-		bool open(const std::string& rom, const std::string& dir = "/usr/share/banana/companions");
+		bool open(const std::string& rom, const std::string& dir = "/usr/share/banana/companions", const std::string& system = "gba");
 		bool openDef(std::shared_ptr<const Def> d, const std::string& rom = "");	// (tests)
 		void close();
 		bool active() const { return (bool)def; }

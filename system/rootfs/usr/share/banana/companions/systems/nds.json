@@ -1,0 +1,90 @@
+{
+ "system": "nds",
+ "name": "Nintendo DS",
+ "endian": "le",
+ "addr_bits": 32,
+ "ra_console": 18,
+ "serial": {
+  "rom_offset": 12,
+  "len": 4
+ },
+ "header_title": {
+  "rom_offset": 0,
+  "len": 12
+ },
+ "regions": [
+  {
+   "name": "main",
+   "start": "0x02000000",
+   "size": "0x400000",
+   "kind": "ram",
+   "ra_base": "0x0000000",
+   "fallback": "SYSTEM_RAM"
+  },
+  {
+   "name": "dtcm",
+   "start": "0x0E000000",
+   "size": "0x4000",
+   "kind": "ram",
+   "ra_base": "0x1000000",
+   "note": "RA's address; the real DTCM base is set by the game (CP15)"
+  },
+  {
+   "name": "sharedwram",
+   "start": "0x03000000",
+   "size": "0x8000",
+   "kind": "ram"
+  },
+  {
+   "name": "arm7wram",
+   "start": "0x03800000",
+   "size": "0x10000",
+   "kind": "ram"
+  }
+ ],
+ "required": [
+  "main"
+ ],
+ "probe": {
+  "addr": "0x023F0000"
+ },
+ "controls": [
+  [
+   "A",
+   "A"
+  ],
+  [
+   "B",
+   "B"
+  ],
+  [
+   "X",
+   "X"
+  ],
+  [
+   "Y",
+   "Y"
+  ],
+  [
+   "L1",
+   "L"
+  ],
+  [
+   "R1",
+   "R"
+  ],
+  [
+   "Start",
+   "Start"
+  ],
+  [
+   "Select",
+   "Select"
+  ],
+  [
+   "Touch",
+   "bottom panel"
+  ]
+ ],
+ "notes": "Producer: BananaDS (its KMS frontend), not BananaFront. Main RAM 4 MiB (DSi 16 MiB not exported)."
+}

@@ -1,0 +1,88 @@
+{
+ "system": "gbc",
+ "name": "Game Boy Color",
+ "endian": "le",
+ "addr_bits": 16,
+ "ra_console": 6,
+ "serial": {
+  "rom_offset": 319,
+  "len": 4,
+  "note": "GBC carts only"
+ },
+ "header_title": {
+  "rom_offset": 308,
+  "len": 11
+ },
+ "regions": [
+  {
+   "name": "wram0",
+   "start": "0xC000",
+   "size": "0x1000",
+   "kind": "ram",
+   "ra_base": "0xC000",
+   "fallback": "SYSTEM_RAM"
+  },
+  {
+   "name": "wram1",
+   "start": "0xD000",
+   "size": "0x1000",
+   "kind": "ram",
+   "ra_base": "0xD000",
+   "note": "the bank mapped now (GBC: SVBK)"
+  },
+  {
+   "name": "hram",
+   "start": "0xFF80",
+   "size": "0x7F",
+   "kind": "ram",
+   "ra_base": "0xFF80"
+  },
+  {
+   "name": "sram",
+   "start": "0xA000",
+   "size": "0x2000",
+   "kind": "sram",
+   "ra_base": "0xA000",
+   "fallback": "SAVE_RAM",
+   "note": "the bank mapped now"
+  },
+  {
+   "name": "vram",
+   "start": "0x8000",
+   "size": "0x2000",
+   "kind": "vram"
+  },
+  {
+   "name": "rom",
+   "start": "0x0000",
+   "size": "0x8000",
+   "kind": "rom"
+  }
+ ],
+ "required": [
+  "wram0",
+  "wram1",
+  "hram"
+ ],
+ "probe": {
+  "addr": "0xCFE0"
+ },
+ "controls": [
+  [
+   "A",
+   "A"
+  ],
+  [
+   "B",
+   "B"
+  ],
+  [
+   "Start",
+   "Start"
+  ],
+  [
+   "Select",
+   "Select"
+  ]
+ ]
+}
