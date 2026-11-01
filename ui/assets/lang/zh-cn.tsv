@@ -1292,7 +1292,7 @@ settings		No Romhost answered. Server address	没有 Romhost 响应。服务器�
 settings		Romhost or RomM	Romhost 或 RomM
 settings		Asking {name} for a pairing code...	正在向 {name} 请求配对码…
 settings		Nothing answers there as a Romhost or RomM server. Check the address (and :port) and that the handheld is on the same network.	那里没有以 Romhost 或 RomM 服务器身份响应的设备。请检查地址（及 :port）以及掌机是否在同一网络上。
-settings		On {hsName}, open {url} (signed in) and enter {code}, then approve this handheld. Waiting...	在 {hsName} 上，打开 {url}（已登录）并输入 {code}，然后批准此掌机。等待中…
+settings		On {hsName}, open {url} (signed in) and approve this handheld (code {code}). Waiting...	在 {hsName} 上，打开 {url}（已登录）并批准此掌机（配对码 {code}）。等待中…
 settings		Paired with {ln}. Sync now, below, gets the games and saves.	已与 {ln} 配对。下方的「立即同步」会获取游戏与存档。
 settings		Pairing didn't work: {ln}.	配对失败：{ln}。
 settings		None right now.	当前无。
@@ -1325,7 +1325,7 @@ settings		Beetle PSX	Beetle PSX
 settings		ParaLLEl N64	ParaLLEl N64
 settings		The picture's shader for this game only, in either emulator; the others follow Settings > Nintendo DS > Shader. None scales smoothly and costs no GPU work.	仅本游戏的画面着色器，两种模拟器均可；其余游戏遵循 设置 > Nintendo DS > 着色器。None 平滑缩放且不占用 GPU。
 settings		RetroArch {ra}, updated with BananaOS.	RetroArch {ra}，随 BananaOS 更新。
-settings		Not paired. A looks for Romhost on the network (Homeport > ROMs > Pair a device shows its code); when none answers, type the address of a Romhost or a RomM server (a name or IP, and :port if it isn't the usual one). RomM then shows a code to enter on its Pair device page.	未配对。按 A 在网络上查找 Romhost（Homeport > ROMs > Pair a device 会显示其配对码）；若无响应，请输入 Romhost 或 RomM 服务器的地址（名称或 IP，非默认端口时加 :port）。随后 RomM 会显示一个需在「Pair device」页面输入的配对码。
+settings		Not paired. A looks for Romhost on the network (Homeport > ROMs > Pair a device shows its code); when none answers, type the address of a Romhost or a RomM server (a name or IP, and :port if it isn't the usual one). For RomM, the handheld then shows an address to open in RomM to approve it.	未配对。按 A 在网络上查找 Romhost（Homeport > ROMs > Pair a device 会显示其配对码）；若无响应，请输入 Romhost 或 RomM 服务器的地址（名称或 IP，非默认端口时加 :port）。对于 RomM，掌机随后会显示一个地址，在 RomM 中打开该地址即可批准。
 settings		Paired with {n}. A pairs again (another server, or after the handheld was removed there).	已与 {n} 配对。按 A 可重新配对（更换服务器，或在掌机已从该处移除后）。
 settings		Last sync: {g} files of games down, {rm} removed; saves {up} up, {dn} down{cf}{er}	上次同步：游戏文件下载 {g}，移除 {rm}；存档上传 {up}，下载 {dn}{cf}{er}
 settings		; {cf} in conflict (on Romhost: decide in Homeport; on RomM the newer won and the other is kept on the card as a .bak)	；{cf} 个冲突（Romhost 上：在 Homeport 中决定；RomM 上：较新的获胜，另一个作为 .bak 保留在卡上）

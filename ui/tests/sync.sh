@@ -47,7 +47,7 @@ echo "the user's own" > "$OUT/ra/roms/gba/Old Game (USA).gba"
 bs ra pair "$U" > "$OUT/romm-pair.log" 2>&1 & PP=$!
 for i in $(seq 30); do grep -q '^pair ' "$OUT/ra/run/sync.status" 2>/dev/null && break; sleep 0.2; done
 UC=$(st ra | cut -d' ' -f2)
-case "$(st ra)" in "pair "*" $U/pair/device") ;; *) bad "RomM pairing showed no code: $(st ra)";; esac
+case "$(st ra)" in "pair $UC $U/pair/device?user_code=$UC") ;; *) bad "RomM pairing showed no code, or an address without it (#141): $(st ra)";; esac
 curl -s -XPOST "$U/test/approve" -d "{\"user_code\": \"$UC\"}" >/dev/null
 wait $PP || bad "RomM pairing failed: $(cat "$OUT/romm-pair.log")"
 grep -q '"token": "rmm_' "$OUT/ra/banana/romsync.json" || bad "no RomM token on the card"

@@ -1353,7 +1353,9 @@ namespace
 			if (!j || j->str("device_code").empty()) { status("error " + (r.code == 404 ? std::string("this RomM has no device pairing (update it, or type a client token's code)") : r.error())); return 1; }
 			std::string dc = j->str("device_code"), uc = j->str("user_code");
 			int interval = std::max(2, (int)j->num("interval", 5)), left = (int)j->num("expires_in", 600);
-			std::string verify = url + j->str("verification_path", "/pair/device");
+			// the page's address with the code in it (verification_path_complete): RomM's /pair/device has no field to
+			// type a code into, it takes it from ?user_code= only (#141)
+			std::string verify = url + j->str("verification_path_complete", j->str("verification_path", "/pair/device") + "?user_code=" + urlEsc(uc));
 			status("pair " + uc + " " + verify);
 			say("On RomM, open %s and enter %s", verify.c_str(), uc.c_str());
 			std::string body = "{\"device_code\": " + jsonStr(dc) + "}";
