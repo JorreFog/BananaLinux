@@ -2262,6 +2262,7 @@ int main(int argc, char** argv)
 			std::lock_guard<std::mutex> l(worker.uiLock);
 			settingsView.companion = outFd >= 0 && companion.active() ? &companion : nullptr;
 			settingsView.gameComp = outFd >= 0 && gameComp.active() ? &gameComp : nullptr;
+			settingsView.link = compLink.open() ? &compLink : nullptr;	// (the emulator's RA block, once it attaches)
 			settingsView.gameRom(gameRomPath);
 			settingsView.gameOpen(title, sysName, panelScreen, input.hasTouch(panelScreen));
 		}
@@ -2542,6 +2543,7 @@ int main(int argc, char** argv)
 				settingsView.gameClose();
 				settingsView.companion = nullptr;
 				settingsView.gameComp = nullptr;
+				settingsView.link = nullptr;
 			}
 			::close(cmdFd);
 			unlink(FIFO);
