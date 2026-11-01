@@ -534,13 +534,13 @@ static void ra_command(const char *c)
 
 /* L2, R2, L3 or R3 pressed alone in a RetroArch game: its job's command (Settings > Other systems > Buttons;
  * run-retroarch's /run/banana/ra-buttons, "<button> <command>" lines, there only while a game it applies to runs) */
-static void ra_button(const char *name)
+static void ra_button(const char *name)	/* (c: a command of up to 38, the newline and its end fit) */
 {
 	FILE *f = fopen("/run/banana/ra-buttons", "r");
 	if (!f) return;
 	char line[64], b[8], c[40];
 	while (fgets(line, sizeof line, f))
-		if (sscanf(line, "%7s %39s", b, c) == 2 && !strcmp(b, name)) {
+		if (sscanf(line, "%7s %38s", b, c) == 2 && !strcmp(b, name)) {
 			if (strcmp(c, "-")) { strcat(c, "\n"); ra_command(c); }
 			break;
 		}
