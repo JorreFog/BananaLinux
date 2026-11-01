@@ -18,7 +18,7 @@ define LIBRETRO_BANANANES_BUILD_CMDS
 endef
 
 define LIBRETRO_BANANANES_INSTALL_TARGET_CMDS
-	$(INSTALL) -D -m 0644 $(@D)/build/target/banananes_libretro.so $(TARGET_DIR)/usr/lib/libretro/banananes_libretro.so
+	$(INSTALL) -D -m 0644 `ls $(@D)/build/*/banananes_libretro.so | head -n 1` $(TARGET_DIR)/usr/lib/libretro/banananes_libretro.so
 endef
 
 $(eval $(generic-package))
