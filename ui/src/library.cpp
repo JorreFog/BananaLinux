@@ -848,6 +848,13 @@ namespace banana
 			r.resumeBox = g.box; r.resumeCart = g.cart; r.resumeLabel = g.label;
 			if (g.box.empty() && g.cart.empty() && g.label.empty() && isDsRom(g.path, s.def.id))
 				r.resumeLabel = romIconCover(dataDir, g.path);	// the game's own icon on the chip's cartridge
+			else if (dsCartIcons && isDsRom(g.path, s.def.id))
+			{
+				// DS cartridges: Game icon, as the reel has it (#107): over the label art and the card's scan, the box
+				// kept for an icon that doesn't decode ("" without an icon: the art, as before)
+				std::string ic = romIconCover(dataDir, g.path);
+				if (!ic.empty()) { r.resumeLabel = ic; r.resumeCart.clear(); }
+			}
 		}
 		return r;
 	}

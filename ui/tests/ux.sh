@@ -25,6 +25,10 @@ ux_run row "home 0; wait 2400; shot ux-row-first; press left; wait 2400; shot ux
 ux_check row "press left: used, view 0 sys 7"     # (six systems, Bshare and Files: Ports with PortMaster alone is off the row)
 ux_lt "$(ux_std "$OUT/$size-ux-row-first-bot.png" 210 80 30 200)" 0.08 || { echo "FAIL $size: something drawn left of the first system"; fail=1; }
 ux_lt "$(ux_std "$OUT/$size-ux-row-last-bot.png" 210 80 400 200)" 0.08 || { echo "FAIL $size: something drawn right of the last system"; fail=1; }
+# the plate's START on its accent, the dark band below it (#128: the band cut through the letters): the plate under
+# START (y 328) the same colour as above it (y 300)
+ux_mean() { convert "$1" -crop "$(awk -v k=$ux_k -v y=$2 'BEGIN { printf "%dx%d+%d+%d", 100 * k, 4 * k, 270 * k, y * k }')" -format '%[fx:int(255*mean.r)] %[fx:int(255*mean.g)] %[fx:int(255*mean.b)]' info: 2>/dev/null; }
+[ "$(ux_mean "$OUT/$size-ux-row-first-bot.png" 328)" = "$(ux_mean "$OUT/$size-ux-row-first-bot.png" 300)" ] || { echo "FAIL $size: the plate's dark band runs into START"; fail=1; }
 
 # the box art's frame (Pixel): it fits the picture (owner, 0.5.0: a square frame stood taller than a DS box): a tall
 # cover's frame top is elsewhere than a wide one's, and a game without one keeps the square
@@ -36,6 +40,33 @@ for s in wide none tall; do
     ux_strip "$OUT/$size-ux-cover-$s-top.png" 380 14 "$OUT/$size-ux-cover-$s-shadow.png"
 done
 [ "$(ux_diff "$OUT/$size-ux-cover-wide-edge.png" "$OUT/$size-ux-cover-tall-edge.png")" = 0 ] && { echo "FAIL $size: the frame didn't follow the cover's shape"; fail=1; }
+
+# Last played with DS cartridges: Game icon (#107): the chip's cartridge shows the ROM's own icon (Yellow Planet's
+# yellow disc) as the reel does, not its box art (blue here); with the default, the box as before
+RIFX=$OUT/ux-resume-fixture-$size
+rm -rf "$RIFX"; "$HERE/tests/fixture.sh" "$RIFX" >/dev/null
+convert -size 420x380 "gradient:#4060d0-black" "$RIFX/roms/nds/media/box/Yellow Planet [!].png"
+printf 'nds/Yellow Planet [!].zip\t2\t600\t%s\n' "$(date +%s)" >> "$RIFX/data/playstats.tsv"
+UXFX_SAVE=$UXFX; UXFX=$RIFX
+ux_run resume-box "home 0; wait 2400; shot ux-resume-box"
+echo "ds_cart_art = icon" >> "$RIFX/data/settings.conf"
+ux_run resume-icon "home 0; wait 2400; shot ux-resume-icon"
+UXFX=$UXFX_SAVE
+ux_yellow() { convert "$1" -crop "$(awk -v k=$ux_k 'BEGIN { printf "%dx%d+%d+%d", 30 * k, 30 * k, 233 * k, 333 * k }')" -format '%[fx:mean.r > 0.8 && mean.b < 0.3]' info: 2>/dev/null; }
+[ "$(ux_yellow "$OUT/$size-ux-resume-icon-top.png")" = 1 ] || { echo "FAIL $size: Last played doesn't show the DS game's icon (Game icon)"; fail=1; }
+[ "$(ux_yellow "$OUT/$size-ux-resume-box-top.png")" = 0 ] || { echo "FAIL $size: Last played shows the icon over the box art (default)"; fail=1; }
+
+# a cartridge's label art is all on the label, fitted, on the plain label where it leaves room (#108: it was cut to
+# the window): a title screen (256x192, a green strip down its left side) keeps its strip, the label shows above it
+mkdir -p "$RIFX/roms/nds/media/label"
+convert -size 256x192 xc:'#203080' -fill '#30c040' -draw 'rectangle 0,0 31,191' "$RIFX/roms/nds/media/label/Banana Kart DS.png"
+sed -i '/^ds_cart_art = /d' "$RIFX/data/settings.conf"	# (the label art, not the icons)
+UXFX=$RIFX
+ux_run label "lib 0 0; wait 2400; shot ux-label"
+UXFX=$UXFX_SAVE
+ux_rgb() { convert "$1" -crop "$(awk -v k=$ux_k -v w=$2 -v h=$3 -v x=$4 -v y=$5 'BEGIN { printf "%dx%d+%d+%d", w * k, h * k, x * k, y * k }')" -format "%[fx:$6]" info: 2>/dev/null; }
+[ "$(ux_rgb "$OUT/$size-ux-label-bot.png" 4 30 281 230 'mean.g > 0.6 && mean.r < 0.3')" = 1 ] || { echo "FAIL $size: the label art cut at its sides"; fail=1; }
+[ "$(ux_rgb "$OUT/$size-ux-label-bot.png" 40 3 300 206 'mean > 0.85')" = 1 ] || { echo "FAIL $size: no plain label above a wide label art"; fail=1; }
 
 # the text on the accent (Auto): dark or light by contrast, the second line in the accent's hue and readable (4.5:1);
 # blue's sublabel is a blue, not the brown that suited yellow only. Light: white text, the plate's START too
@@ -95,6 +126,23 @@ done
 for f in "saves/nds/Peel Quest 2.sav" "bios/Peel Quest.bin" "roms/nds/Banana Kart DS.nds" "roms/nds/media/box/Banana Kart DS.png"; do
     [ -e "$UXFX/$f" ] || { echo "FAIL $size: Delete game took $f"; fail=1; }
 done
+
+# a card without roms/ports (#78: a deleted PortMaster folder once kept the menu from starting): the menu starts and
+# Ports is off the row; with Shown systems > Ports > Always its shelf is on it (one more tile), and opens empty; a
+# roms/ports that is a broken link the same
+NPFX=$OUT/ux-noports-fixture-$size
+rm -rf "$NPFX"; "$HERE/tests/fixture.sh" "$NPFX" >/dev/null
+UXFX_SAVE=$UXFX; UXFX=$NPFX
+ux_run noports "home 0; wait 2400; shot ux-noports; press left"
+ux_check noports "press left: used, view 0 sys 7"
+echo "shelf.ports = show" >> "$NPFX/data/settings.conf"
+ux_run noports-show "home 0; press left; press left; press left; press left; press a; wait 2400; shot ux-noports-show"
+ux_check noports-show "press left: used, view 0 sys 8"
+ux_check noports-show "press a: used, view 1 sys 5"
+ln -s nowhere "$NPFX/roms/ports"
+ux_run noports-link "home 0; press left; press left; press left; press left; press a; wait 2400; shot ux-noports-link"
+ux_check noports-link "press a: used, view 1 sys 5"
+UXFX=$UXFX_SAVE
 
 # the home row: a system with nothing to start is left off, Ports with PortMaster's own entry alone is on it (PortMaster
 # gets ports: deleting the last port must not take it away); Display & sound > Shown systems (R twice, down) hides one

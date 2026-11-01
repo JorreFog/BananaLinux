@@ -1,5 +1,9 @@
 #!/bin/sh
 # Shutdown: stop what writes to the card, then unmount it cleanly
+# no sleep from here on (#46): bananad won't suspend while this flag is there, so the lid still shut while the games
+# save and the card is unmounted can't put the handheld to sleep instead of off (bananad itself still runs: it TERMs
+# a game on its own shutdown and waits for it)
+touch /run/banana/powering-off 2>/dev/null
 # the game's process group first (banana-ui starts each game in its own session; a poweroff over SSH reaches
 # BananaDS, SuperDrastic and the ports too, and they write their saves), then the menu; waited for until they are
 # gone, up to 3 s, instead of a second whatever happened
