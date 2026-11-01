@@ -26,12 +26,14 @@ namespace banana
 		// a consistent copy of the RetroAchievements block (false: none, or the producer was writing)
 		bool ra(bcomp_ra& out) const;
 		const bcomp_shm* raw() const { return shm; }
+		void ageForTest(double ms) { sentMs -= ms; }	// (tests: as if the set in flight were older)
 	private:
 		bcomp_shm* shm = nullptr;
 		std::string path, queued;
 		bcomp_range sent[BCOMP_MAX_REQ];
 		int nSent = 0;
 		bool inFlight = false;
+		double sentMs = 0;				// when the set in flight went out (a set not answered in a second is given up)
 		bool flush();
 	};
 }

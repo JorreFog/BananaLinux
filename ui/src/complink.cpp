@@ -3,10 +3,16 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <time.h>
 #include <unistd.h>
 
 namespace banana
 {
+	namespace
+	{
+		double monoMs() { timespec t; clock_gettime(CLOCK_MONOTONIC, &t); return t.tv_sec * 1e3 + t.tv_nsec / 1e6; }
+	}
+
 	bool CompLink::create(const std::string& p)
 	{
 		close();
@@ -64,6 +70,7 @@ namespace banana
 		if (!nSent) return false;
 		if (bcomp_request(shm, sent, nSent) != 0) { nSent = 0; return false; }
 		inFlight = true;
+		sentMs = monoMs();
 		return true;
 	}
 
@@ -71,10 +78,15 @@ namespace banana
 	{
 		if (!inFlight || !shm) return "";
 		uint64_t frame;
-		if (!bcomp_reply(shm, &frame)) return "";
+		if (!bcomp_reply(shm, &frame))
+		{
+			// a paused or stuck emulator: the set is given up after a second, the next goes out
+			if (monoMs() - sentMs > 1000) { inFlight = false; nSent = 0; if (!queued.empty()) flush(); }
+			return "";
+		}
 		std::string out;
 		const uint8_t* d = bcomp_data(shm);
-		char b[8];
+		char b[16];
 		for (int i = 0; i < nSent; i++)
 		{
 			snprintf(b, sizeof b, "%x", sent[i].addr);

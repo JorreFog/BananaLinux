@@ -38,6 +38,15 @@ int main()
 	bcomp_service(&p, 8);
 	CHECK(link.receive() == "READ_CORE_MEMORY 2000020 60\n");
 
+	// a set the producer never answers (a paused or stuck emulator) is given up after a second: the next goes out
+	CHECK(link.send("READ_CORE_MEMORY 2000030 1\n"));
+	CHECK(link.receive().empty() && link.waiting());
+	link.ageForTest(1500);
+	CHECK(link.receive().empty() && !link.waiting());
+	CHECK(link.send("READ_CORE_MEMORY 2000031 1\n"));
+	bcomp_service(&p, 9);
+	CHECK(link.receive() == "READ_CORE_MEMORY 2000031 93\n");
+
 	bcomp_ra_begin(&p);
 	p.shm->ra.state = BCOMP_RA_ACTIVE;
 	p.shm->ra.game_id = 515;
