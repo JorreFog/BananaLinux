@@ -1,0 +1,15 @@
+# gbastress calibration
+
+Status: all scenes **unvalidated** until the final game check (owner's games: Plus 45 GBA, RG DS 8 GBA).
+
+| Scene | Evidence used to design it | Game check (scene vs game, device, commit, date) |
+|---|---|---|
+| racer | (3) Mode 1 + per-scanline affine by HBlank DMA is the documented Mode 7 technique (Tonc, "Mode 7" chapters); MKSC/F-Zero MV render the track this way with scaled OBJ karts | - |
+| shooter | (3) GBA OBJ limit 128 / 1210 cycles a line (GBATEK); shmups keep 80-120 OBJ on screen | - |
+| town | (3) Golden Sun / Mother 3 draw text with a VWF into tiles (hacking docs); RPG maps larger than the 256x256 BG are streamed by rows/columns | - |
+| raster | (3) HBlank IRQ / HDMA raster effects (Sonic Advance water, Castlevania) | - |
+| loader | (3) Golden Sun loads code overlays into IWRAM/EWRAM per area (GS hacking community); LZ77 via BIOS SWI 0x11/0x12 is in most games | - |
+| audio | (3) m4a/Sappy (most GBA games) mixes Direct Sound voices in IWRAM ARM code at 13379 Hz default, up to 12 voices | - |
+
+Fingerprint from the ROM itself (GBA CPU per frame, mGBA, realistic): 65-82 % average, spikes to 95-99 % (scene
+loads, text box redraws, waves): heavy-game territory (80-100 % of the limit in the busiest scenes).
