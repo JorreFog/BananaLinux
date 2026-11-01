@@ -152,6 +152,14 @@ static rnds::Bitmap stbDecode(const std::string& path)
 	return *pic.get();
 }
 
+// a picture's size from its header (stbi_info reads the first few KB, no decoding): the game list's cover frame is
+// drawn at the picture's fitted size while the picture itself is still being decoded
+static bool stbSize(const std::string& path, int& w, int& h)
+{
+	int n;
+	return stbi_info(path.c_str(), &w, &h, &n) != 0;
+}
+
 // settings.conf: key = value lines, the image's defaults under the card's own (settings_defaults.cpp)
 
 static std::string shellQuote(const std::string& s)
@@ -1669,6 +1677,7 @@ int main(int argc, char** argv)
 	}
 
 	rnds::setDecoder(stbDecode);
+	rnds::setSizer(stbSize);
 	rnds::setZipReader(readZip);	// the icon of a DS ROM kept in a .zip
 	// the card's settings.conf made whole (missing keys added, invalid values put back): first boot and after an update
 	normalizeSettings(o.data);
@@ -2377,6 +2386,7 @@ int main(int argc, char** argv)
 		logf("game ended after %ld s (status %d)", secs, status);
 		int openTries = 0;
 		for (; !disp.open(o.top, err) && openTries < 100; openTries++) usleep(50000);
+		if (disp.isOpen()) disp.blank();	// the game's last frame on either panel gone before the menu draws (issue: GBA's bottom UI lingering)
 		const double opened = nowMs();
 		// the display controller's interrupt storm (from the game's panel, or the lease given back): counted over the
 		// iris instead of a 200 ms wait before it (every game's way back waited for it); the full check only if it storms
@@ -2464,6 +2474,8 @@ int main(int argc, char** argv)
 	// list of cards follows it while it is open (no read needed: the poll itself takes the event)
 	int mountsFd = open("/proc/self/mounts", O_RDONLY | O_CLOEXEC);
 	resumeAfterPoweroff(lib, o.data, "/run/banana/resume-once", &resumeLater, nowMs());	// (its game starts at the loop's first turn)
+	std::string launchLater;	// a launch file's game not in the library yet (the rescan after a copy), tried again until launchLaterUntil
+	double launchLaterUntil = 0;
 	while (!quit)
 	{
 		if (settingsView.takeSetupFinished() && disp.isOpen())
@@ -2517,7 +2529,18 @@ int main(int argc, char** argv)
 				std::getline(f, want);
 			}
 			unlink("/run/banana/launch");
-			if (!launchPath(lib, want)) logf("launch file: no game at %s", want.c_str());
+			if (!launchPath(lib, want))
+			{
+				// a game just copied into a games folder isn't in the library until its rescan: kept and tried again
+				// for 20 s (scripted stress runs copy the ROM in right before writing the launch file)
+				if (access(want.c_str(), F_OK) == 0) { launchLater = want; launchLaterUntil = now + 20000.0; logf("launch file: %s not in the library yet: waiting for its rescan", want.c_str()); }
+				else logf("launch file: no game at %s", want.c_str());
+			}
+		}
+		else if (!launchLater.empty())
+		{
+			if (launchPath(lib, launchLater)) { logf("launch file: %s started after the rescan", launchLater.c_str()); launchLater.clear(); }
+			else if (now > launchLaterUntil) { logf("launch file: no game at %s (20 s)", launchLater.c_str()); launchLater.clear(); }
 		}
 		int g = lib.pendingLaunch();
 		if (g >= 0)
