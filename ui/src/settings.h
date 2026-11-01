@@ -422,7 +422,9 @@ namespace banana
 		// instead of GitHub. The password typed once, checked with the site by the update script (beta-login, the
 		// password on its stdin: never on a command line), kept on the card for the script alone (banana/updates/.beta)
 		wifi::Job betaJob;
-		bool betaOn() const;			// the password is there: check and download ask the beta server
+		bool betaOn() const;
+		bool betaKept() const;					// the beta password on the card (on or only turned off)
+		std::string betaRun(const char* what);	// update beta-on / beta-off / beta-forget			// the password is there: check and download ask the beta server
 		bool betaDone();				// the password check's answer taken
 		Result pressBeta();
 	public:

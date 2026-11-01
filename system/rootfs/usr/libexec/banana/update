@@ -26,7 +26,11 @@
 # log). With it there, check and download use that feed with the password; without it, GitHub as before.
 #   update beta-login               the password on stdin (one line): asked of the site, kept when it is right.
 #                                   Exit 0 "ok", 3 "wrong password", 1 and why when the site couldn't be asked
-#   update beta-off                 the beta channel off (the password forgotten): GitHub again
+#   update beta-off                 the beta channel off: GitHub again. The password stays (banana/updates/.channel says
+#                                   "github"), so turning it on again needs none (QA, 0.5.1: switching channels lost it)
+#   update beta-on                  the beta channel on again with the kept password: exit 0 "ok", 4 "no password"
+#   update beta-forget              the kept password forgotten (and the beta channel off)
+# A password the beta server refuses (401 on a check) is forgotten too.
 # (The host test points these elsewhere: BANANA_DATA, BANANA_RUN, BANANA_BOARD, BANANA_VERSION, BANANA_UPDATE_FEED
 # (the releases' JSON: any URL curl reads, file:// too), BANANA_UPDATE_BETA_FEED (the beta channel's), BANANA_UPDATE_CURL
 # (more curl options), BANANA_UPDATE_FREE_KB, BANANA_UPDATE_REUSE (seconds a fetched list is used again).)
@@ -43,8 +47,9 @@ CHECK=$UPDATES/.check
 BETA_FEED=${BANANA_UPDATE_BETA_FEED:-https://bananaos-cfw.dev/beta/releases.json}
 BETA_USER=beta
 BETA=$UPDATES/.beta
+CHOSEN=$UPDATES/.channel      # "github": the beta channel turned off with its password kept
 CHANNEL=github; SRC=GitHub
-[ -s "$BETA" ] && { CHANNEL=beta; SRC="the beta server"; FEED=$BETA_FEED; }
+[ -s "$BETA" ] && [ "$(cat $CHOSEN 2>/dev/null)" != github ] && { CHANNEL=beta; SRC="the beta server"; FEED=$BETA_FEED; }
 PARTIAL=$UPDATES/.partial
 DL=$RUN/update-download
 other() { [ "$1" = a ] && echo b || echo a; }
@@ -272,7 +277,8 @@ check)
                     err="$SRC's answer was empty"
                 fi ;;
             304) fetched=$now ;;
-            401) err="the beta server refused the password: enter it again in Settings > System > Update > Beta channel" ;;
+            401) err="the beta server refused the password: enter it again in Settings > System > Update > Beta channel"
+                 [ $CHANNEL = beta ] && rm -f $BETA $CHOSEN ;;     # (a wrong password isn't kept)
             403|429)
                 reset=$(sed -n 's/^[Xx]-[Rr]ate[Ll]imit-[Rr]eset: *//p' "$hdr" 2>/dev/null | tr -d '\r')
                 at=; [ -n "$reset" ] && at=$(date -d "@$reset" '+%H:%M' 2>/dev/null)
@@ -459,17 +465,27 @@ beta-login)
     *) rm -f $t; echo "the beta server answered HTTP $code"; exit 1 ;;
     esac
     ( umask 077; cp $t $BETA.new ) && mv -f $BETA.new $BETA || { rm -f $t $BETA.new; echo "update: can't write $BETA" >&2; exit 1; }
-    rm -f $t; sync
+    rm -f $t $CHOSEN; sync
     echo ok
     ;;
 beta-off)
-    rm -f $BETA $UPDATES/.feed-beta.json $UPDATES/.feed-beta.etag; sync
+    # (the password kept: only the channel chosen changes)
+    mkdir -p $UPDATES; echo github > $CHOSEN; rm -f $UPDATES/.feed-beta.json $UPDATES/.feed-beta.etag; sync
     echo off
+    ;;
+beta-on)
+    [ -s "$BETA" ] || { echo "no password"; exit 4; }
+    rm -f $CHOSEN; sync
+    echo ok
+    ;;
+beta-forget)
+    rm -f $BETA $CHOSEN $UPDATES/.feed-beta.json $UPDATES/.feed-beta.etag; sync
+    echo forgotten
     ;;
 cancel)
     p=$(cat $DL.pid 2>/dev/null)
     if [ -n "$p" ] && grep -q update /proc/$p/cmdline 2>/dev/null && kill "$p" 2>/dev/null; then echo "cancelled"; else echo "no download running"; fi
     ;;
-*) echo "usage: update list | apply <package> | switch [a|b] | status | check [--daily] | download | cancel | beta-login | beta-off" >&2; exit 2 ;;
+*) echo "usage: update list | apply <package> | switch [a|b] | status | check [--daily] | download | cancel | beta-login | beta-on | beta-off | beta-forget" >&2; exit 2 ;;
 esac
 exit 0

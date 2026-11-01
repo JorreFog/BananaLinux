@@ -3287,8 +3287,20 @@ namespace banana
 
 	bool Settings::betaOn() const
 	{
+		// the password kept (.beta) and the channel not turned off since (.channel says "github" then: the password stays)
+		return betaKept() && readLine(updatesDir + "/.channel") != "github";
+	}
+	bool Settings::betaKept() const
+	{
 		struct stat st;
 		return stat((updatesDir + "/.beta").c_str(), &st) == 0 && st.st_size > 0;
+	}
+	// update beta-on / beta-off / beta-forget, its one line of answer
+	std::string Settings::betaRun(const char* what)
+	{
+		std::string out;
+		if (FILE* p = popen(("'" + updateTool + "' " + what + " 2>&1").c_str(), "r")) { char ln[256]; while (fgets(ln, sizeof ln, p)) out += ln; pclose(p); }
+		return trim(out);
 	}
 
 	// the password check's answer: kept (the channel on, the next check asks the beta server) or refused
@@ -3310,14 +3322,22 @@ namespace banana
 		if (betaJob.running() || downloading || checkJob.running()) return NONE;
 		if (!betaOn())
 		{
+			// the password kept from before (the channel only turned off): on again without asking (QA, 0.5.1)
+			if (betaKept() && betaRun("beta-on") == "ok")
+			{
+				readOnline();
+				message = "Beta channel on again, with the password kept.";
+				armed = -1;
+				return MOVED;
+			}
 			startEntry(ENTRY_BETA_PASS, "Beta channel password", "bananaos-cfw.dev", UPDATES);
 			return MOVED;
 		}
 		if (armed != 3000) { armed = 3000; return MOVED; }		// A again turns it off
 		armed = -1;
-		if (FILE* p = popen(("'" + updateTool + "' beta-off 2>&1").c_str(), "r")) { char ln[256]; while (fgets(ln, sizeof ln, p)) {} pclose(p); }
+		betaRun("beta-off");
 		readOnline();
-		message = "Beta channel off: Check for updates asks GitHub again.";
+		message = "Beta channel off: Check for updates asks GitHub again. The password is kept: A turns the channel on again.";
 		return MOVED;
 	}
 
@@ -3766,6 +3786,16 @@ namespace banana
 			return MOVED;
 		}
 		case Key::X:
+			if (usel == 1 && betaKept() && !betaJob.running() && !downloading && !checkJob.running())
+			{
+				// X, X: the kept beta password forgotten (the channel off; A asks for it again)
+				if (armed != 3001) { armed = 3001; return MOVED; }
+				armed = -1;
+				betaRun("beta-forget");
+				readOnline();
+				message = "Beta password forgotten: A asks for it again.";
+				return MOVED;
+			}
 			if (usel >= 2)
 			{
 				// on a package: every package not newer than this version removed from the card, after X again
@@ -3860,8 +3890,9 @@ namespace banana
 		{
 			if (betaJob.running()) help = "Checking the password with bananaos-cfw.dev...";
 			else if (!message.empty()) help = message;
-			else if (betaOn()) help = "On: updates come from the beta testers' builds on bananaos-cfw.dev instead of GitHub's releases. A, then A again, turns it off (the password is forgotten), and GitHub is asked again.";
-			else help = "For beta testers: updates from the test builds on bananaos-cfw.dev instead of GitHub's releases. A asks for the beta password (once: it is checked with the site, then kept on the card for the updater only).";
+			else if (betaOn()) help = "Two channels: GitHub's releases, or the beta testers' builds on bananaos-cfw.dev. On: the beta builds. A, then A again, turns it off (GitHub again); the password is kept for turning it back on. X twice forgets the password.";
+			else if (betaKept()) help = "Two channels: GitHub's releases (now), or the beta testers' builds on bananaos-cfw.dev. A turns the beta channel on again with the password kept on the card; X twice forgets the password.";
+			else help = "Two channels: GitHub's releases (now), or the beta testers' builds on bananaos-cfw.dev. A asks for the beta password (once: it is checked with the site, then kept on the card for the updater only).";
 		}
 		else if (pkgs.empty()) help = "No update packages found. Put a banana-" + (board.empty() ? std::string("<board>") : board) + "-<version>.update.tar from a release in banana/updates on the card (File sharing can copy it over Wi-Fi), then come back here.";
 		else
@@ -3902,7 +3933,7 @@ namespace banana
 			{
 				name = "Beta channel";
 				hot = armed == 3000 || betaJob.running();
-				tag = betaJob.running() ? "Checking..." : armed == 3000 ? "Press A again" : betaOn() ? "On" : "Off";
+				tag = betaJob.running() ? "Checking..." : armed == 3000 ? "Press A again" : armed == 3001 ? "Press X again: forget" : betaOn() ? "On" : betaKept() ? "Off (password kept)" : "Off";
 			}
 			else
 			{

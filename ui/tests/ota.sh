@@ -158,10 +158,21 @@ rm "$OUT/beta/data/settings.conf"
 echo 'user = "beta:old"' > "$OUT/beta/data/updates/.beta"
 B=rgds-plus V=0.5.0 u beta check && bad "beta refused: exit 0"
 grep -q "^error=the beta server refused the password" "$OUT/beta.out" || bad "beta refused: $(grep error= "$OUT/beta.out")"
-# off: GitHub again, the password forgotten
+# a refused password isn't kept
+[ -e "$OUT/beta/data/updates/.beta" ] && bad "beta refused: the wrong password stayed"
+cp "$OUT/beta.keep" "$OUT/beta/data/updates/.beta"
+# off: GitHub again, the password KEPT (QA, 0.5.1: switching channels lost it); on again: no password asked
 B=rgds-plus V=0.5.0 u beta beta-off; has beta off
-[ -e "$OUT/beta/data/updates/.beta" ] && bad "beta off: the password stayed"
+[ -s "$OUT/beta/data/updates/.beta" ] || bad "beta off: the password was forgotten"
 B=rgds-plus V=0.5.0 u beta check; has beta channel=github; has beta state=current
+B=rgds-plus V=0.5.0 u beta beta-on; has beta ok
+B=rgds-plus V=0.5.0 u beta check; has beta channel=beta; has beta latest=0.5.0-beta.2
+# forget: the password gone, the channel off, and on needs one again
+B=rgds-plus V=0.5.0 u beta beta-forget; has beta forgotten
+[ -e "$OUT/beta/data/updates/.beta" ] && bad "beta forget: the password stayed"
+B=rgds-plus V=0.5.0 u beta beta-on; rc=$?
+[ $rc = 4 ] || bad "beta on without a password: exit $rc"
+B=rgds-plus V=0.5.0 u beta check; has beta channel=github
 
 # ---- the Update page, headless --------------------------------------------------------------------------------
 FX=$OUT/fixture
@@ -220,12 +231,14 @@ mv "$OUT/settings.conf.keep" "$FX/data/settings.conf"
 # the beta channel (the page's second row): a wrong password refused, the right one kept, then the check asks the beta
 # server (the Plus on 0.5.0 is offered 0.5.0-beta.2), and A twice turns it off
 clean
-UB=rgds-plus UV=0.5.0 ui beta "$GOOD" "press down; upstate; shot beta-row; press a; shot beta-kbd; type wrong; press start; upstate; shot beta-wrong; press a; type $PW; press start; upstate; shot beta-on; press up; press a; upstate; shot beta-found; press down; press a; upstate; press a; upstate; shot beta-off"
+UB=rgds-plus UV=0.5.0 ui beta "$GOOD" "press down; upstate; shot beta-row; press a; shot beta-kbd; type wrong; press start; upstate; shot beta-wrong; press a; type $PW; press start; upstate; shot beta-on; press up; press a; upstate; shot beta-found; press down; press a; upstate; press a; upstate; shot beta-off; press a; upstate; shot beta-again; press x; upstate; press x; upstate; shot beta-forgot"
 upstate beta 'row "Check for updates" .* beta off'
 upstate beta 'message "Wrong password: bananaos-cfw.dev refused it. The beta channel stays off." beta off'
 upstate beta 'message "Beta channel on: .*" beta on'
 upstate beta 'row "Download Banana 0.5.0-beta.2" tag "[0-9]* MB" act "Download" state newer latest 0.5.0-beta.2 .* beta on'
-upstate beta 'message "Beta channel off: Check for updates asks GitHub again." beta off'
+upstate beta 'message "Beta channel off: Check for updates asks GitHub again. The password is kept: A turns the channel on again." beta off'
+upstate beta 'message "Beta channel on again, with the password kept." beta on'
+upstate beta 'message "Beta password forgotten: A asks for it again." beta off'
 grep -q "$PW" "$OUT/ui-beta.log" && bad "ui beta: the password is in the menu's log"
 ls "$OUT/ui-beta/run/"update-beta* >/dev/null 2>&1 && bad "ui beta: the password file stayed in run"
 # deleting packages (owner's request 2026-10-27): on 0.4.2, Y Y deletes the first package, X X every one not newer than
