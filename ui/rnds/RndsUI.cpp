@@ -1382,10 +1382,11 @@ namespace rnds
 			b.shadows = { outer(3, 3, SHADE40) };
 			return b;
 		}
-		// the box art's frame: a pixel border, no fill (the cover covers it)
+		// the box art's backing: no border round the picture (owner, 0.5.1: the light frame round the box art went), its
+		// shadow kept; the fill shows only while a picture loads or for a game without one (the system's icon on it)
 		BoxCss coverBox()
 		{
-			BoxCss b; b.key = "cover"; b.radius = 4; b.border = 3; b.borderColor = P.frameBorder; b.bg = P.frameBg;
+			BoxCss b; b.key = "cover"; b.radius = 4; b.border = 0; b.borderColor = P.frameBorder; b.bg = P.frameBg;
 			b.shadows = { outer(4, 4, SHADE40) };
 			return b;
 		}
@@ -1604,7 +1605,7 @@ namespace rnds
 				float rw = fw - r * r * 10;
 				be->fill(std::round(X(cx - rw / 2)), std::round(X(fy - 1 + r * 2)), std::round(X(rw)), std::round(X(2)), fl);
 			}
-			drawBox(coverBox(), x - 3, y - 3 + b, FW + 6, FH + 6);
+			drawBox(coverBox(), x, y + b, FW, FH);	// (no border: the picture's own size; it was 3 px wider all round)
 			if (pending) return;		// the picture is on its way: the empty frame meanwhile
 			x += std::round((FW - w) / 2); y += std::round((FH - h) / 2);
 			if (ce)

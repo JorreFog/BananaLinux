@@ -36,7 +36,7 @@ convert -size 260x420 "gradient:#3d9e9a-black" "$UXFX/roms/nds/media/box/Peel Qu
 ux_run cover "lib 0 0; wait 2400; shot ux-cover-wide; press right; wait 2400; shot ux-cover-none; press right; wait 2400; shot ux-cover-tall"
 ux_strip() { convert "$1" -crop "$(awk -v k=$ux_k -v y=$2 -v h=$3 'BEGIN { printf "%dx%d+%d+%d", 250 * k, h * k, 38 * k, y * k }')" +repage "$4"; }
 for s in wide none tall; do
-    ux_strip "$OUT/$size-ux-cover-$s-top.png" 146 9 "$OUT/$size-ux-cover-$s-edge.png"
+    ux_strip "$OUT/$size-ux-cover-$s-top.png" 146 14 "$OUT/$size-ux-cover-$s-edge.png"	# (to y 160: the picture's own top edge, no border round it since 0.5.1)
     ux_strip "$OUT/$size-ux-cover-$s-top.png" 380 14 "$OUT/$size-ux-cover-$s-shadow.png"
 done
 [ "$(ux_diff "$OUT/$size-ux-cover-wide-edge.png" "$OUT/$size-ux-cover-tall-edge.png")" = 0 ] && { echo "FAIL $size: the frame didn't follow the cover's shape"; fail=1; }

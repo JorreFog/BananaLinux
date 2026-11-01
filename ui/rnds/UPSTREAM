@@ -24,3 +24,5 @@ Banana UX: the count only on a game list longer than five (countShown/railCut); 
 Banana UX: a cover's frame at the picture's fitted size while it loads, from the file's header (RndsRaster's
 imageSize/setSizer; RndsUI's coverFit/coverFrame), not the square that shrank when the picture came; and the covers
 either side of the game list's game decoded ahead, so stepping to one draws it at once.
+
+Banana UX (0.5.1, owner): the box art on the game list's top screen without its pixel border (coverBox: border 0, the backing the picture's own size; the shadow kept).
