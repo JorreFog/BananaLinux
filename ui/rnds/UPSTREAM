@@ -9,6 +9,9 @@ menu spent CPU on it all the time. Carry them into ROCKNIXDS's patch before impo
 Also for Banana's languages (RndsRaster): a translator hook every laid-out text goes through (setTranslator; the
 layout's own pieces go through lineOf/ellipsisOf untranslated), a fallback font for characters a style's font lacks
 (setFallbackFont: a CJK pixel font at whole multiples of its pixel size), and line breaks between CJK characters.
+Banana's Russian: assets/rnds/fonts/PixelifySans-{Regular,Medium}.ttf map Cyrillic О (U+041E) and П (U+041F), which
+Pixelify Sans 1.000 lacks, to its own O and Π glyphs (cmap entries only); keep them when importing the fonts again.
+And RndsRaster's upper() capitalises Cyrillic (а-я, ѐ-џ) for the styles in capitals; RndsUI's rail letter takes А-Я.
 And one for Banana: the game page leaves the
 achievements' label and meter out when the game has none known (empty achLabel), where ROCKNIXDS always had ES's.
 Banana UX (ux/menu-feedback): the shelf and the game list are a row with two ends (LINEAR: nothing drawn left of the

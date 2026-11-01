@@ -104,22 +104,23 @@ fi
 [ -d /data/retroarch/cores ] || mkdir -p /data/retroarch/cores
 # RetroArch's menu in the menu's language (Settings > System > Language): its user_language follows Banana's while it
 # is still the one Banana last set (English at first); one picked in RetroArch's own menu is kept. QA #15: the menu in
-# Chinese, RetroArch's still in English. (RetroArch's numbers: 0 English, 12 Simplified Chinese.)
+# Chinese, RetroArch's still in English. (RetroArch's numbers: 0 English, 9 Russian, 12 Simplified Chinese.)
 L=/data/retroarch/.banana-language
-case $(setting language) in zh-cn) want=12 ;; *) want=0 ;; esac
+case $(setting language) in ru) want=9 ;; zh-cn) want=12 ;; *) want=0 ;; esac
 have=$(sed -n 's/^user_language = "\(.*\)"/\1/p' $CFG | tail -n 1)
 if [ "$have" = "$(cat $L 2>/dev/null || echo 0)" ] || [ -z "$have" ]; then
     [ "$have" = "$want" ] || set_cfg user_language $want
     [ "$(cat $L 2>/dev/null)" = "$want" ] || echo $want > $L
 fi
 # ...and its on-screen messages (achievements, saves) in a font with the language's characters: its built-in one has
-# none, so a Chinese title showed as "?????". The menu's Fusion Pixel (crisp at whole multiples of 12 px: 24 on the
-# RG DS's 480 lines, 36 on the Plus's 768). Only over the default font or the one Banana set; English: back to the default.
+# none, so a Chinese or Russian title showed as "?????". The menu's Fusion Pixel, Cyrillic too (crisp at whole multiples
+# of 12 px: 24 on the RG DS's 480 lines, 36 on the Plus's 768). Only over the default font or the one Banana set;
+# English: back to the default.
 F=/data/retroarch/.banana-font
 CJK=/usr/share/banana/rnds/fonts/fusion-pixel-12px-proportional-zh_hans.ttf
 font=$(sed -n 's/^video_font_path = "\(.*\)"/\1/p' $CFG | tail -n 1)
 if [ -z "$font" ] || [ "$font" = "$(cat $F 2>/dev/null)" ]; then
-    if [ $want = 12 ] && [ -f $CJK ]; then
+    if [ $want != 0 ] && [ -f $CJK ]; then
         size=24; grep -qi plus /proc/device-tree/model 2>/dev/null && size=36
         set_cfg video_font_path $CJK; set_cfg video_font_size $size; echo $CJK > $F
     elif [ -n "$font" ]; then
