@@ -17,8 +17,27 @@ jobs:
         with:
           fetch-depth: 0  # tools/systems-history.sh --check reads every earlier systems.conf from git
       - name: Packages
-        run: sudo apt-get update && sudo apt-get install -y libfreetype-dev libdrm-dev libasound2-dev zlib1g-dev imagemagick g++-aarch64-linux-gnu
-      - name: banana-ui (headless test, both panel sizes)
+        run: sudo apt-get update && sudo apt-get install -y libfreetype-dev libdrm-dev libasound2-dev zlib1g-dev imagemagick g++-aarch64-linux-gnu libcurl4-openssl-dev libssh2-1-dev libssl-dev cmake
+      # banana-fetch's 7z and RAR checks: the official 7zz (Ubuntu's 7zip has no RAR), the version the image builds
+      - name: 7-Zip
+        run: |
+          cd "$RUNNER_TEMP"
+          curl -fsSLO https://www.7-zip.org/a/7z2603-linux-x64.tar.xz
+          echo "dc99eff5008f1ab79bd7084c68513701547a808a89502bf4133683535ab3c695  7z2603-linux-x64.tar.xz" | sha256sum -c -
+          tar -xJf 7z2603-linux-x64.tar.xz 7zz && sudo install -m 755 7zz /usr/local/bin/7zz
+      # banana-fetch's SMB: libsmb2 isn't packaged for Ubuntu 24.04, so the release the image builds
+      # (buildroot/package/libsmb2, the same archive and hash) is built here, and remote_smb.cpp is compiled and linked
+      - name: libsmb2
+        run: |
+          cd "$RUNNER_TEMP"
+          curl -fsSL -o libsmb2-6.2.tar.gz https://github.com/sahlberg/libsmb2/archive/refs/tags/libsmb2-6.2.tar.gz
+          echo "8e1f9efc6b2e0f6546f0fe121ac0ddf4fc2f0908ae5a6bd1f185be7c9e0bcbb3  libsmb2-6.2.tar.gz" | sha256sum -c -
+          mkdir libsmb2 && tar -xzf libsmb2-6.2.tar.gz -C libsmb2 --strip-components=1
+          cmake -S libsmb2 -B libsmb2/build -DENABLE_LIBKRB5=OFF -DENABLE_GSSAPI=OFF -DENABLE_EXAMPLES=OFF -DBUILD_SHARED_LIBS=ON
+          cmake --build libsmb2/build -j 4
+          sudo cmake --install libsmb2/build && sudo ldconfig
+          pkg-config --modversion libsmb2
+      - name: banana-ui and its helpers (headless test, both panel sizes; Files' servers; archives, the session, the runner)
         run: make test
       - name: banana-ui with ALSA
         run: make -C ui clean && make -C ui

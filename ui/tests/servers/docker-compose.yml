@@ -1,0 +1,102 @@
+# Real servers for banana-fetch's protocols (ui/tests/fetch-servers.sh), all serving ./share. The images, pinned by
+# digest: vsftpd (FTP and FTPS), OpenSSH, Samba, and pure-ftpd for an FTP server with MLSD.
+#   ui/tests/fetch-servers.sh --setup        the certificate (./tls) and the files (./share), then:
+#   docker compose -f ui/tests/servers/docker-compose.yml up -d --wait
+#   ui/tests/fetch-servers.sh
+#
+#   FTP  2121  test / test  (vsftpd: LIST, no MLSD; passive ports 21000-21010)
+#   FTPS 2122  test / test  (explicit TLS, passive ports 21011-21020; a self-signed certificate)
+#   MLSD 2123  test / test  (pure-ftpd: MLSD; passive ports 30000-30009)
+#   SFTP 2222  test / test  (the files under /share)
+#   SMB  4445  test / test  (the share "Data"; "Public" for guests: smb.conf)
+name: banana-fetch-servers
+
+services:
+  ftp:
+    image: delfer/alpine-ftp-server:latest@sha256:60bb774d8408d9d4d5c74d05d1c086a34ce192c6c1a142ffac268cac0dbc6fac
+    environment:
+      USERS: "test|test|/ftp/test"
+      MIN_PORT: "21000"
+      MAX_PORT: "21010"
+    ports:
+      - "2121:21"
+      - "21000-21010:21000-21010"
+    volumes:
+      - ./share:/ftp/test
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 21 || exit 1"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  # the same vsftpd with explicit TLS; like vsftpd's defaults, the data connections must resume the control
+  # connection's TLS session
+  ftps:
+    image: delfer/alpine-ftp-server:latest@sha256:60bb774d8408d9d4d5c74d05d1c086a34ce192c6c1a142ffac268cac0dbc6fac
+    environment:
+      USERS: "test|test|/ftp/test"
+      MIN_PORT: "21011"
+      MAX_PORT: "21020"
+      TLS_CERT: /tls/cert.pem
+      TLS_KEY: /tls/key.pem
+    ports:
+      - "2122:21"
+      - "21011-21020:21011-21020"
+    volumes:
+      - ./share:/ftp/test
+      - ./tls:/tls:ro
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 21 || exit 1"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  # an FTP server that lists with MLSD (its users are kept in their home folder: "/" is the share)
+  mlsd:
+    image: stilliard/pure-ftpd:latest@sha256:54eff59f458532899a4f814da339a7c0921ddf0b4d8b3b87318a162cb4232687
+    environment:
+      PUBLICHOST: localhost
+      FTP_USER_NAME: test
+      FTP_USER_PASS: test
+      FTP_USER_HOME: /home/test
+      ADDED_FLAGS: "-p 30000:30009"
+    ports:
+      - "2123:21"
+      - "30000-30009:30000-30009"
+    volumes:
+      - ./share:/home/test
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/21' || exit 1"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  sftp:
+    image: lscr.io/linuxserver/openssh-server:10.3_p1-r1-ls237@sha256:946fa26105e0ec212fdf821b9ddc59aab65f2c2d07c02b25ff0f5001fc332ff0
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      PASSWORD_ACCESS: "true"
+      USER_NAME: test
+      USER_PASSWORD: test
+    ports:
+      - "2222:2222"
+    volumes:
+      - ./share:/share
+
+  samba:
+    image: dockurr/samba:4.23.10@sha256:404f91bdf317d390241a41165579cd25199f34171b44677d877c75dc40184042
+    environment:
+      NAME: Data
+      USER: test
+      PASS: test
+    ports:
+      - "4445:445"
+    volumes:
+      - ./share:/storage
+      - ./smb.conf:/etc/samba/smb.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 445 || exit 1"]
+      interval: 2s
+      timeout: 2s
+      retries: 30

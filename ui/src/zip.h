@@ -1,7 +1,7 @@
 #pragma once
 // banana-ui: reading one member of a .zip in order, for the engine's ROM icons (rnds::setZipReader): the central
 // directory for the list, then the chosen member streamed (stored, or inflated with zlib) until the engine has what
-// it wants. Archives over 4 GB (zip64) and encrypted members are not read.
+// it wants (zipdir.h). Encrypted members are not read.
 #include "../rnds/RndsRaster.h"
 
 namespace banana
