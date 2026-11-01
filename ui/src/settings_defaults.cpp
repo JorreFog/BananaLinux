@@ -37,6 +37,7 @@ namespace banana
 		const char* const IDLE[] = { "dim", "off", "on", nullptr };
 		const char* const BOXART[] = { "libretro", "both", "twilight", nullptr };
 		const char* const HOMESYNC_AUTO[] = { "off", "quit", "both", nullptr };
+		const char* const CARD_SD2[] = { "card", "sd2", nullptr };
 		const char* const LATENCY[] = { "32", "64", "128", nullptr };
 		const char* const LOGIN[] = { "password", "guest", nullptr };
 		const char* const BT_AUDIO[] = { "latency", "quality", nullptr };
@@ -82,6 +83,7 @@ namespace banana
 			{ "update_prerelease", "on", ENUM, ON_OFF, 0, 0 },
 			{ "update_daily", "off", ENUM, ON_OFF, 0, 0 },
 			{ "homesync_roms", "on", ENUM, ON_OFF, 0, 0 },
+			{ "homesync_roms_to", "card", ENUM, CARD_SD2, 0, 0 },
 			{ "homesync_states", "off", ENUM, ON_OFF, 0, 0 },
 			{ "homesync_auto", "off", ENUM, HOMESYNC_AUTO, 0, 0 },
 			{ "boxart_twilight_url", "https://boxart.kirovair.com", TEXT, nullptr, 0, 0 },

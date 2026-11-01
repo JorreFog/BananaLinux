@@ -77,7 +77,8 @@ def roms():
                 "fs_size_bytes": sum(f["file_size_bytes"] for f in files), "name": stem.split(" (")[0],
                 "summary": f"About {stem}.", "metadatum": {"rom_id": rid, "genres": ["Puzzle"], "publishers": ["Banana"],
                                                          "first_release_date": 1262304000000},
-                "path_cover_large": f"/assets/romm/resources/roms/{p['id']}/{rid}/cover/big.png?ts=1" if os.path.exists(cover) else "",
+                # (?ts= is RomM's updated_at as Python prints a datetime: a space and a "+" in it)
+                "path_cover_large": f"/assets/romm/resources/roms/{p['id']}/{rid}/cover/big.png?ts=2026-10-31 15:44:32.123456+00:00" if os.path.exists(cover) else "",
                 "has_multiple_files": multi, "has_simple_single_file": not multi, "missing_from_fs": False,
                 "files": files, "full_path": full})
     return out

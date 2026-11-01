@@ -719,6 +719,11 @@ namespace banana
 			"", "hs_sync", {}, {}, Item::PAGE);
 		add(HS, "phone", "Games", "Download: the server's games for the systems below come to the card (and leave it when they leave the server). Saves only: the games stay as they are and only the saves sync.",
 			menu, "homesync_roms", { "Download", "Saves only" }, { "on", "off" });
+		if (access("/run/banana/sd2/slot", F_OK) == 0)	// a second card slot: the RG DS Plus
+		{
+			add(HS, "phone", "Games go to", "Where downloaded games go. Second SD card: its roms folder (made if it has none), while it's in and Second SD card shows its games. A game already on a card stays there; with the second card out, its games wait for the next sync.",
+				menu, "homesync_roms_to", { "This card", "Second SD card" }, { "card", "sd2" });
+		}
 		add(HS, "phone", "Save states", "On: save states sync too, not only the games' own saves (RomM; on Romhost its Devices page decides). Quick-resume states never sync.",
 			menu, "homesync_states", { "Off", "On" }, { "off", "on" });
 		add(HS, "phone", "Auto sync", "Leaving a game: its saves go to the server as you leave it (a few seconds, in the background). And on Wi-Fi: also games and saves whenever Wi-Fi connects. Never while a game runs.",
