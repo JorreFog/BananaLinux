@@ -189,8 +189,9 @@ BananaSNES (`libretro-bananasnes`, `bananasnes_libretro.so`; https://github.com/
 too; the credit for the emulation is the Snes9x authors' (`LICENSE` in the repo).
 
 - **Chosen** per system in Settings > Other systems > Super Nintendo > core (BananaSNES next to Snes9x); the default stays Snes9x in RetroArch until
-  it is switched after the tests on both handhelds.
+  it is switched after the tests on both handhelds. Chosen, BananaSNES runs in BananaFront even with Frontend on Auto (`run-retroarch`).
 - **What differs from Snes9x**: only changes that measured faster on the handhelds' stress ROM and left the picture and sound bit-identical
-  (a lazily advanced SPC700 timer set, profile-guided optimisation with a profile recorded on the Plus, a NEON tile path without the store-forwarding
-  stall), and the complete libretro memory map for the game companion (WRAM $7E0000, cartridge SRAM at the virtual $1000000, SA-1 I-RAM).
+  (checked on 70 example ROMs and the stress ROM's three variants, and EarthBound's first minute on the Plus): a lazily advanced SPC700 timer set,
+  rendering in 16-line bands (all layers of a band before the next, for the A55's shared cache), profile-guided optimisation with a profile
+  recorded on the Plus; plus the complete libretro memory map for the game companion (WRAM $7E0000, cartridge SRAM at the virtual $1000000, SA-1 I-RAM).
 - **Measured** (tools/stress-roms/snes, BananaFront on the RG DS Plus, the stress loop of four scenes): see the repo's BANANA.md for the table.

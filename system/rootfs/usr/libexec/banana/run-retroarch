@@ -20,7 +20,9 @@ n64|psx|"") ;;
     case $(setting ra_frontend) in
     bananafront) bf=1 ;;
     retroarch) bf=0 ;;
-    *) case " $BF_SYSTEMS " in *" $BANANA_SYSTEM "*) bf=1 ;; *) bf=0 ;; esac ;;
+    *) case " $BF_SYSTEMS " in *" $BANANA_SYSTEM "*) bf=1 ;; *) bf=0 ;; esac
+       # BananaSNES (Settings > Other systems > Super Nintendo > core) is made for BananaFront: chosen, it runs there in Auto too
+       [ "$BANANA_SYSTEM" = snes ] && [ "$(setting core.snes)" = bananasnes ] && bf=1 ;;
     esac
     # (the program in /usr/bin; beside the launchers in a test deploy, which can only replace whole folders)
     bfbin=/usr/bin/bananafront; [ -x $bfbin ] || bfbin=/usr/libexec/banana/bananafront
