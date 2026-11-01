@@ -151,3 +151,33 @@ wins over the file and would freeze the settings screen's choices. Both launcher
 frame statistics in the log) or `BANANADS_POWER_CPU_LATENCY_US=100` (the cores kept out of deep idle while a game
 runs: ~1.5% faster, a battery cost not measured yet). BananaDS needs no BIOS or firmware files (melonDS's FreeBIOS and a
 generated firmware).
+
+## BananaFront
+
+BananaOS's own frontend for the libretro cores of the systems RetroArch ran (`/usr/bin/bananafront`, source
+`~/banana-emu/BananaFront` until it has a GitHub home; launcher `run-bananafront`). It does what RetroArch did here and
+nothing more, in the same files, so a game goes on in either:
+
+- **Started** by `run-retroarch` when Settings > Other systems > Frontend (`ra_frontend`) says so: `auto` = the
+  systems in run-retroarch's `BF_SYSTEMS` (checked on both handhelds), `bananafront` = every 2D system, `retroarch` =
+  never. N64 and PlayStation always stay on RetroArch.
+- **Picture:** the game panel by banana-ui's DRM lease (+ a free overlay plane for pop-ups), else DRM master on the
+  panel RetroArch's `video_monitor_index` names. The display plane scales the core's own picture (no GPU); with
+  `ra_shader` the GPU draws libretro's zfast-lcd / zfast-crt / sharp-bilinear (SuperDrastic's shader folder).
+- **Sound:** ALSA `default` at 48 kHz, `ra_audio_latency`'s buffer, dynamic rate control against the panel's refresh.
+- **Files:** RetroArch's names and formats: saves `/data/saves/<core>/<game>.srm` (`/data/saves/gba` for every GBA
+  core), states `/data/states/<core>/<game>.state[N]` (RASTATE in RZIP) + `.png` thumbnails, `.state.auto` for Quick
+  resume (`savestate_auto_save`), screenshots `/data/screenshots/<game>-YYMMDD-HHMMSS.png`, core options read from
+  RetroArch's `config/<core>/<core>.opt` and `<game>.opt` (never written).
+- **Buttons:** F + START quit, F + X (or F alone) the menu, F + R / F + L save / load state, F + R2 fast-forward,
+  F + SELECT screenshot, F + Y FPS counter, F + UP / DOWN the slot; L2/R2/L3/R3 alone as Settings > Other systems >
+  Buttons (`ra_btn_*`) says.
+- **Game panel and bananad:** RetroArch's command words on stdin (`SAVE_STATE`, `LOAD_STATE`, `MENU_TOGGLE`,
+  `FAST_FORWARD`, `QUIT`, `READ_CORE_MEMORY`, `AUDIO_REINIT`... + `SAVE_STATE_SLOT n` / `LOAD_STATE_SLOT n`),
+  replies on stdout; RetroAchievements' `[RCHEEVOS]` lines in `/run/banana/retroarch.log` for the panel; SIGUSR1 =
+  quit with the automatic state (bananad's Power off after sleeping), SIGTERM = quit with the saves written.
+- **Companion:** `/run/banana/game-id` and the shared-memory export of COMPANION-SPEC.md (BANANA_COMPANION).
+- **RetroAchievements:** rcheevos with the setup's account (accounts.conf; RetroArch's token reused), softcore or
+  hardcore as RetroArch's setting, answers cached in `/data/banana/ra-cache` for offline starts.
+- `bananafront_cpugov = on`: its own clock governor (per game, remembered in `/data/bananafront/cpugov`).
+- Logs: `/data/banana/logs/bananafront.log` (a stats line every 10 s with `BANANAFRONT_STATS=<file>`).
