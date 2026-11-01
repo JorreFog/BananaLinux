@@ -63,7 +63,7 @@ int main(int argc, char **argv)
 	}
 }
 EOF
-    cp "$W/drastic" "$W/bananads"; cp "$W/drastic" "$W/retroarch"
+    cp "$W/drastic" "$W/bananads"; cp "$W/drastic" "$W/retroarch"; cp "$W/drastic" "$W/bananafront"
     [ "$1" = --build ] && exit 0
     mkdir -p /data 2>/dev/null || true
     exec unshare -m -p -f --mount-proc sh "$0" --inside "$W" "$ROOTFS"
@@ -298,6 +298,20 @@ poweroff && ok "shut down" || bad "no shutdown"
 grep -qx USR1 /run/test/bananads.log 2>/dev/null && grep -qx saved /run/test/bananads.log && ok "bananads got SIGUSR1 and saved" || bad "bananads: $(cat /run/test/bananads.log 2>/dev/null)"
 grep -qx emulator=bananads /data/banana/resume-boot 2>/dev/null && ok "resume-boot: bananads" || bad "resume-boot: $(cat /data/banana/resume-boot 2>/dev/null)"
 stop; POWEROFF=0
+
+echo "10b. BananaFront: SIGUSR1 at the deadline, its automatic state (from /run/banana/game-id) counts as the save"
+mkdir -p /data/states/Gambatte
+export TEST_RESUME="/data/states/Gambatte/Banana Land.state.auto"
+printf 'version=1\nsystem=gb\nrom_base=Banana Land\nstate_dir=/data/states/Gambatte\n' > /run/banana/game-id
+game bananafront "/data/roms/gb/Banana Land.gb"
+start "poweroff_after_sleep_minutes = 0.02"
+ev $EV_KEY $KEY_POWER 1; ev $EV_KEY $KEY_POWER 0
+asleep && ok "suspended on the power button" || bad "no suspend"
+sleep 1.3; : > /sys/class/rtc/rtc0/wakealarm; wake
+poweroff && ok "shut down" || bad "no shutdown"
+grep -qx USR1 /run/test/bananafront.log 2>/dev/null && grep -qx saved /run/test/bananafront.log && ok "bananafront got SIGUSR1 and saved" || bad "bananafront: $(cat /run/test/bananafront.log 2>/dev/null)"
+grep -qx emulator=bananafront /data/banana/resume-boot 2>/dev/null && ok "resume-boot: bananafront" || bad "resume-boot: $(cat /data/banana/resume-boot 2>/dev/null)"
+stop; POWEROFF=0; rm -f /run/banana/game-id /data/banana/resume-boot
 
 export TEST_RESUME=
 echo "11. RetroArch: the slot down to its automatic one, SAVE_STATE, QUIT (through its command pipe)"
