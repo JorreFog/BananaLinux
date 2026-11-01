@@ -13,7 +13,7 @@ mv out/stress.nes out/$N.nes
 python3 - "$N" <<'PY'
 import sys
 n = sys.argv[1]
-names = ["title", "platformer", "parallax-irq", "shooter", "town-rpg", "fighter-dmc", "loads", "split-2006"]
+names = ["title", "platformer", "parallax-irq", "shooter", "town-rpg", "fighter-dmc", "loads", "split-2006", "vertical-scroll"]
 with open(f"out/{n}.phases.tsv", "w") as f:
     for i, nm in enumerate(names): f.write(f"{round(i * 1500 / 60.0988, 1)}\t{nm}\n")
 PY

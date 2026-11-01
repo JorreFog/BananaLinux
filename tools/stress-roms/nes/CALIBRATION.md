@@ -36,6 +36,7 @@ Reading it:
 | town-rpg | text boxes + IRQ window | Nova text scenes ($2007 741 p95) are heavier than this scene | partly validated (lighter) |
 | fighter-dmc | digitised drums | DMC bytes/frame 24 p95 (a looping sample = 8-16 bytes/frame at rate $0F...$0C), $4011 direct loads | synthetic |
 | split-2006 | split screens via $2006 | MMC3 IRQ + $2006 trick = what SMB3/Kirby-class games do for status bars and split scroll; none of the homebrew uses it | synthetic |
+| vertical-scroll | 1943 / Ikari / Kid Icarus | not covered by the homebrew set (none scrolls vertically); fingerprint: ~350 sprite-lines, 8 PPU data writes a frame, no $2002 polling | synthetic |
 | loads | scene transitions | $2007 up to 2296 in a frame vs Nova 3181 / Thwaite 3534 / 240p 3095 | validated (same order) |
 
 Exactness gate: `banana/tools/check.sh core.so` (video + audio + save-RAM + state CRC on the three stress levels and the

@@ -26,7 +26,7 @@ M3_DIS = $E000
 M3_EN = $E001
 SRAM = $6000
 PHASE_FRAMES = 1500
-NPHASE = 8
+NPHASE = 9
 P3_BUL_END = .min(LEVEL + 3 + LEVEL * 5, 56 - 16)
 OAMBUF = $0200
 PROBE = $07E0
@@ -99,6 +99,7 @@ sub:        .res 1
 wave_amp:   .res 1
 txtpos:     .res 1
 irq_mode:   .res 1
+vpos:       .res 2
 poll_spin:  .res 1
 col_rows:   .res 1
 attr_end:   .res 1
@@ -149,6 +150,7 @@ T_BULLET = 2
 T_PART = 3
 T_NPC = 4
 T_ENEMY = 5
+T_DIVE = 6
 
 reset:
   sei
@@ -1102,7 +1104,7 @@ ue_done:
   rts
 
 etab:
-  .word e_walk-1, e_fly-1, e_bullet-1, e_part-1, e_npc-1, e_enemy-1
+  .word e_walk-1, e_fly-1, e_bullet-1, e_part-1, e_npc-1, e_enemy-1, e_dive-1
 
 ; common: x += v (16.8), y += v (8.8)
 move_ent:
@@ -1255,6 +1257,26 @@ e_npc:
   jmp ue_next
 npc_vx: .byte 1, $FF, 0, 0
 npc_vy: .byte 0, 0, 1, $FF
+
+; vertical scroller dive-bombers: fall, drift, come back at the top
+e_dive:
+  jsr move_ent
+  lda ent_y,x
+  cmp #232
+  bcc @ok
+  lda #0
+  sta ent_y,x
+  jsr rand
+  sta ent_xl,x
+  lda #0
+  sta ent_xh,x
+  jsr rand
+  and #1
+  sec
+  sbc #1
+  sta ent_vxi,x
+@ok:
+  jmp ue_next
 
 e_enemy:
   jsr move_ent
@@ -1623,12 +1645,13 @@ phase_update:
   sta ptr2+1
   jmp (ptr2)
 
-ph_init:  .word p0_init, p1_init, p2_init, p3_init, p4_init, p5_init, p6_init, p7_init
-ph_upd:   .word p0_upd, p1_upd, p2_upd, p3_upd, p4_upd, p5_upd, p6_upd, p7_upd
+ph_init:  .word p0_init, p1_init, p2_init, p3_init, p4_init, p5_init, p6_init, p7_init, p8_init
+ph_upd:   .word p0_upd, p1_upd, p2_upd, p3_upd, p4_upd, p5_upd, p6_upd, p7_upd, p8_upd
 
 ; phase_init: rendering off during the setup (a scene load), then back on
 phase_init:
   lda #0
+  sta M3_MIRR
   sta PPUMASK
   sta render_on
   sta nbands
@@ -2416,6 +2439,283 @@ p7_init:
   rts
 p7_upd:
   jmp p2_upd
+
+; ===========================================================  PHASE 8: VERTICAL SCROLLER (1943 / Ikari Warriors / Kid Icarus pattern)
+; horizontal mirroring (MMC3 $A000 = 1), the Y scroll walks through two name tables, one new 32-tile row (+ attributes every
+; fourth) streamed in below the screen every four frames, dive-bombers and bullets over it
+p8_init:
+  lda #1
+  sta M3_MIRR
+  lda #$00
+  sta ppuctrl_b
+  lda #<pal_shoot
+  ldx #>pal_shoot
+  jsr load_pal
+  lda #6
+  ldx #8
+  jsr set_chr_bg
+  lda #36
+  ldx #40
+  ldy #44
+  sty t0
+  ldy #48
+  jsr set_chr_spr
+  jsr clear_nt
+  ; all 60 rows (two screens) of the first stretch of the map, rendering off
+  lda #0
+  sta lastcol
+@rows:
+  lda lastcol
+  jsr vrow_make
+  lda lastcol
+  jsr vrow_addr          ; A = hi, X = lo
+  sta PPUADDR
+  stx PPUADDR
+  lda #0
+  sta PPUCTRL
+  ldy #0
+: lda colbuf,y
+  sta PPUDATA
+  iny
+  cpy #32
+  bcc :-
+  inc lastcol
+  lda lastcol
+  cmp #60
+  bcc @rows
+  lda #0
+  sta vpos
+  sta vpos+1
+  sta scx
+  sta scx+1
+  sta scy
+  lda #$1F
+  sta snd_mask
+  lda #240
+  sta snd_row
+  lda #0
+  sta cam
+  sta cam+1
+  ; 12 dive-bombers (2x2) then 12 small bullets
+  ldx #0
+@d:
+  stx t7
+  lda #T_DIVE
+  sta t0
+  lda #1
+  sta t1
+  jsr rand
+  sta t2
+  lda #0
+  sta t3
+  jsr rand
+  and #$7F
+  sta t4
+  lda #0
+  sta t5
+  lda #2
+  sta t6
+  txa
+  and #7
+  clc
+  adc #16
+  ldx t7
+  jsr ent_set
+  inx
+  cpx #(LEVEL + 7)
+  bcc @d
+@b:
+  stx t7
+  lda #T_DIVE
+  sta t0
+  lda #$11
+  sta t1
+  jsr rand
+  sta t2
+  lda #0
+  sta t3
+  jsr rand
+  sta t4
+  lda #0
+  sta t5
+  lda #4
+  sta t6
+  lda #32
+  ldx t7
+  jsr ent_set
+  inx
+  cpx #(LEVEL + 7 + LEVEL * 2)
+  bcc @b
+  stx nent
+  rts
+
+; vrow_make: A = world row -> colbuf[0..31] (32 tiles)
+vrow_make:
+  sta t0
+  asl
+  asl
+  sta t1                 ; row * 4
+  lda t0
+  lsr
+  lsr
+  lsr
+  sta t2                 ; row / 8
+  ldy #0
+@c:
+  tya
+  asl
+  sta t3
+  tya
+  clc
+  adc t3                 ; col * 3
+  clc
+  adc t1
+  adc t0                 ; + row * 5
+  sta t3
+  tya
+  ldx t2
+  beq :+
+  clc
+  adc t2                 ; + (row/8) * col (cheap)
+: eor t3
+  and #$1F
+  tax
+  lda vtab,x
+  sta colbuf,y
+  iny
+  cpy #32
+  bcc @c
+  rts
+vtab: .byte 2,2,2,0,2,2,3,2,2,2,0,0,4,2,2,2,2,5,2,2,2,2,0,2,2,6,2,2,2,2,2,2
+
+; vrow_addr: A = world row -> A:X = PPU address of that row (rows 0..29 nametable 0 at $2000, 30..59 nametable 2 at $2800)
+vrow_addr:
+@m:
+  cmp #60
+  bcc :+
+  sec
+  sbc #60
+  jmp @m
+: cmp #30
+  bcc @top
+  sec
+  sbc #30
+  jsr @a
+  clc
+  adc #$08
+  rts
+@top:
+@a:
+  sta t5
+  lda #0
+  sta t4
+  lda t5
+  asl
+  asl
+  asl
+  asl
+  asl
+  tax
+  lda t5
+  lsr
+  lsr
+  lsr
+  clc
+  adc #$20
+  rts
+
+p8_upd:
+  ; position: 2 px a frame, wrapping at 480
+  clc
+  lda vpos
+  adc #2
+  sta vpos
+  bcc :+
+  inc vpos+1
+: lda vpos+1
+  cmp #1
+  bcc @nowrap
+  lda vpos
+  cmp #$E0
+  bcc @nowrap
+  lda #0
+  sta vpos
+  sta vpos+1
+@nowrap:
+  ; scy / nametable select from the position (0..479)
+  lda vpos+1
+  beq @n0
+  lda vpos
+  clc
+  adc #16
+  sta scy
+  lda #2
+  sta ppuctrl_b
+  jmp @post
+@n0:
+  lda vpos
+  cmp #240
+  bcc @lo
+  sec
+  sbc #240
+  sta scy
+  lda #2
+  sta ppuctrl_b
+  jmp @post
+@lo:
+  sta scy
+  lda #0
+  sta ppuctrl_b
+@post:
+  ; a new row below the screen every 8 px (every 4th frame)
+  lda frame
+  and #3
+  bne @nr
+  lda vpos
+  lsr
+  lsr
+  lsr
+  sta t0                 ; row index (low part)
+  lda vpos+1
+  beq :+
+  lda t0
+  clc
+  adc #32
+  sta t0
+: lda t0
+  clc
+  adc #30
+  sta lastcol            ; world row to write (mod 60 inside vrow_addr)
+  jsr vrow_make
+  lda lastcol
+  jsr vrow_addr
+  sta t0
+  stx t1
+  ldx vlen
+  lda t0
+  sta vbuf,x
+  inx
+  lda t1
+  sta vbuf,x
+  inx
+  lda #32
+  sta vbuf,x
+  inx
+  ldy #0
+: lda colbuf,y
+  sta vbuf,x
+  inx
+  iny
+  cpy #32
+  bcc :-
+  stx vlen
+  lda #0
+  sta vbuf,x
+@nr:
+  jsr update_ents
+  jsr oam_begin
+  jsr draw_ents
+  rts
 
 ; ===========================================================  PHASE 3: SHOOTER (Gradius / R-Type pattern): 64 sprites, 8 per line overflow, bursts
 p3_init:

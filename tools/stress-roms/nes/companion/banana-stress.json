@@ -21,7 +21,7 @@
     "left_s":  { "expr": "floor(ptimer / 60)" }
   },
   "enums": {
-    "scenes": { "0": "Title", "1": "Platformer", "2": "Parallax + IRQ", "3": "Shooter", "4": "Town RPG", "5": "Fighter + DMC", "6": "Scene loads", "7": "Split 2006" }
+    "scenes": { "0": "Title", "1": "Platformer", "2": "Parallax + IRQ", "3": "Shooter", "4": "Town RPG", "5": "Fighter + DMC", "6": "Scene loads", "7": "Split 2006", "8": "Vertical scroll" }
   },
   "pages": [
     { "id": "status", "title": "Stress ROM", "tab": "Status", "widgets": [
@@ -41,7 +41,7 @@
     ] },
     { "id": "progress", "title": "Scenes", "tab": "Scenes", "widgets": [
       { "type": "text", "label": "Now", "value": "scene", "enum": "scenes" },
-      { "type": "text", "label": "Loop", "value": "'8 scenes, 25 s each, 200 s'" }
+      { "type": "text", "label": "Loop", "value": "'9 scenes, 25 s each, 225 s'" }
     ] }
   ]
 }

@@ -6,7 +6,7 @@ Build: `./build.sh [LEVEL]` -> `out/stress-nes.nes` (LEVEL 5 = realistic default
 sprite pressure) + `out/stress-nes.phases.tsv`.
 
 NTSC, no input needed (attract loop), deterministic (fixed seed). One logic tick per vblank (NMI); the lag counter
-(frames the logic overran) is recorded. 8 scenes x 1500 frames (~25 s each), loop ~200 s. The 6502 folds scroll, PRNG,
+(frames the logic overran) is recorded. 9 scenes x 1500 frames (~25 s each), loop ~225 s. The 6502 folds scroll, PRNG,
 sprite counts, sprite-0 hit timing and entity positions into a 16-bit hash; at each scene end it writes
 `hash, frame, lag, sprite-0 wait, sprites` to PRG-RAM `$6008 + scene*8` (signature `BSTRES` at `$6000`), saved as
 the .srm on quit. Build-vs-build exactness = identical .srm + identical video/audio CRCs from `nesrun`.
@@ -20,12 +20,7 @@ the .srm on quit. Build-vs-build exactness = identical .srm + identical video/au
 | 4 | town-rpg | Dragon Quest, Zelda II, Final Fantasy | slow scroll, 14 NPCs, text box typed 1 char / 4 frames, IRQ split to a fixed window, day/night palette |
 | 5 | fighter-dmc | Double Dragon, digitised drums (Battletoads-style) | DMC sample DMA every beat, $4011 direct loads, $4015 polling, 8 PRG bank swaps/frame, sprite CHR banks as animation, screen shake |
 | 7 | split-2006 | Kirby/SMB3-style split screens done with the four-write $2006/$2005 scroll trick | the same 6 IRQ bands as scene 2 but every band start rewrites the PPU address ($2006 x2 + $2005 x2): mid-frame address-register path of the PPU |
+| 8 | vertical-scroll | 1943, Ikari Warriors, Kid Icarus | horizontal mirroring (MMC3 $A000), Y scroll through two name tables with a new 32-tile row streamed in every 4 frames, 12 dive-bombers (2x2) + 12 bullets (about 350 sprite-lines a frame) |
 | 6 | loads | scene changes / fades in any game | rendering off, bulk nametable upload (2 KiB), code copied to PRG-RAM and executed from $6100, SRAM writes, 4-step palette fade |
 
 Evidence per scene and calibration against fingerprints: see CALIBRATION.md.
-
-## Where this lives
-Source of record: the BananaNES repo (`stressrom/`); this folder is the copy that ships with BananaLinux so the ROM can be rebuilt
-with cc65 (`./build.sh`, needs ca65/ld65 in PATH and python3). `tools/test-roms/stress-nes.nes` and `irqtest-vrc3.nes` are the built ROMs
-(own code, GPL-3.0-or-later). The scripts here (stress-run-nes.sh, ab-nes.sh, ab-cores.sh, ra-ab.sh, devrun-nes.sh) are the device
-test drivers used on 2026-11-01; they assume ~/banana-emu/BananaNES and BananaFront's tools/ (see their headers).
