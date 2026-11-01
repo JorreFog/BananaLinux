@@ -2,11 +2,13 @@
 # lang-extract.py: every English line BananaOS shows on screen, from the sources, for the next translation document
 # (tools/lang-to-docx.py writes it) and for checking what a language file is missing.
 #
-#   lang-extract.py [--bl DIR] [--sd DIR] [--bd DIR] [--out strings.tsv] [--doc OLD.docx] [--report]
+#   lang-extract.py [--bl DIR] [--sd DIR] [--bd DIR] [--bf DIR] [--out strings.tsv] [--doc OLD.docx] [--report]
 #
 #   --bl  BananaLinux checkout (banana-ui, its themes, systems.conf, the update script): default this repo
 #   --sd  SuperDrastic checkout (src/: the in-game menu, pop-ups, RetroAchievements)
 #   --bd  the checkout BananaDS is built from (superdrastic repo, bananads/src/)
+#   --bf  BananaFront's checkout (its in-game menu is BananaDS's: its lines go in the same "bananads" part, so one
+#         translation serves both)
 #   --doc the last translation document: its lines tell which Where and part a new line belongs to (lines found in the
 #         same function as an old one go under the same Where), and are matched back by their number.
 #
@@ -344,6 +346,9 @@ BL_UI = [
 SD_FILES = [("src/menu.c", "In-game menu (L3)"), ("src/ui.c", "In-game menu (L3)"), ("src/ra.c", "RetroAchievements pop-ups"),
             ("src/resume.c", "Quick resume pop-ups"), ("src/shader.c", "In-game menu: shader names"),
             ("src/volume.c", "In-game menu (L3)"), ("src/lid.c", "In-game menu (L3)"), ("src/dsflip.c", "In-game pop-ups")]
+BF_FILES = [("src/menu.c", "In-game menu (BananaFront: the other systems)"),
+            ("src/menu_host.c", "In-game menu (BananaFront: the other systems)"),
+            ("src/ra.c", "RetroAchievements pop-ups (BananaFront)")]
 BD_FILES = [("bananads/src/menu.c", "In-game menu (L3)"), ("bananads/src/ra.c", "RetroAchievements pop-ups"),
             ("bananads/src/frontend_kms.cpp", "In-game pop-ups"), ("bananads/src/main.cpp", "In-game pop-ups"),
             ("bananads/src/config.cpp", "In-game menu (L3)"), ("bananads/src/emu.cpp", "In-game pop-ups"),
@@ -447,6 +452,9 @@ def gather(args):
     if bd:
         for rel, where in BD_FILES:
             add_c(bd, rel, "bananads", where, "bd:")
+    if getattr(args, "bf", None):
+        for rel, where in BF_FILES:
+            add_c(args.bf, rel, "bananads", where, "bf:")
     return found
 
 
@@ -535,6 +543,9 @@ def sources_text(args):
     if args.bd:
         for rel, where in BD_FILES:
             add("bananads", os.path.join(args.bd, rel))
+    if getattr(args, "bf", None):
+        for rel, where in BF_FILES:
+            add("bananads", os.path.join(args.bf, rel))
     return out
 
 
@@ -543,6 +554,7 @@ def main():
     ap.add_argument("--bl", default=os.path.dirname(HERE))
     ap.add_argument("--sd")
     ap.add_argument("--bd")
+    ap.add_argument("--bf")
     ap.add_argument("--out", default="-")
     a = ap.parse_args()
     lines = extract(a)
