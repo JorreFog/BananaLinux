@@ -6,8 +6,8 @@
 
 # BananaSNES: our Snes9x fork for the RG DS / RG DS Plus (https://github.com/JorreFog/BananaSNES, branch banana/main).
 # Same licence as Snes9x (free distribution only); the core is installed as bananasnes_libretro.so next to snes9x's.
-# Pin: the commit of the BananaSNES release the 0.5.1 build was tested with (the repo is pushed at the end of the run).
-LIBRETRO_BANANASNES_VERSION = 0000000000000000000000000000000000000000
+# Pin: BananaSNES banana/main at the verified core (a build from this commit == the binary measured on both handhelds; repo not pushed yet: needs the GitHub repo JorreFog/BananaSNES).
+LIBRETRO_BANANASNES_VERSION = 9899f128431f4230390b690489288bab24e638ff
 LIBRETRO_BANANASNES_SITE = $(call github,JorreFog,BananaSNES,$(LIBRETRO_BANANASNES_VERSION))
 LIBRETRO_BANANASNES_LICENSE = Snes9x (non-commercial)
 LIBRETRO_BANANASNES_LICENSE_FILES = LICENSE
