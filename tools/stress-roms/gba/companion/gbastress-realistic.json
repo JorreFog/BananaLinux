@@ -48,7 +48,8 @@
    "1": "Shooter",
    "2": "Town (RPG)",
    "3": "Raster (HBlank IRQ)",
-   "4": "Loader (overlays)"
+   "4": "Loader (overlays)",
+   "5": "Tactics (busy-wait)"
   }
  },
  "pages": [
@@ -93,8 +94,8 @@
     {
      "type": "bar",
      "label": "Loop",
-     "value": "pphase % 5 + 1",
-     "max": 5
+     "value": "pphase % 6 + 1",
+     "max": 6
     }
    ]
   },
@@ -187,6 +188,10 @@
       [
        "Loader",
        "LZ77 + IWRAM overlays"
+      ],
+      [
+       "Tactics",
+       "CPU never halts, HBlank IRQ every line, 128 OBJ"
       ]
      ]
     }
@@ -210,7 +215,7 @@
      "type": "count",
      "label": "Phases finished",
      "value": "done",
-     "total": 10
+     "total": 12
     }
    ]
   },
