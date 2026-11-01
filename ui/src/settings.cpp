@@ -6237,6 +6237,11 @@ namespace banana
 		int gen = 0;
 		int awards = 0;		// achievements unlocked while the game runs (each one wakes a dimmed bottom panel)
 		std::string user, token;
+		std::string rp;		// the game's rich presence ("Lv 23, Viridian Forest"), from the emulator's RA block
+		struct Near { uint32_t id; unsigned percent; std::string measured, title; };
+		std::vector<Near> nearest;	// the locked achievements closest to done (measured progress)
+		uint32_t evSeen = 0;		// the block's events read so far
+		bool fromBlock = false;		// the emulator's block is the source (not RetroArch's log)
 		time_t cfgSeen = 0;	// retroarch.cfg's mtime when the token was last looked for in it
 		long long pos = 0;
 		std::string part;
@@ -6301,6 +6306,38 @@ namespace banana
 			for (auto& u : un) if (!w->unlocked.count(u.first)) w->unlocked[u.first] = u.second;
 			w->state = all.empty() ? 3 : 2;
 			w->gen++;
+		}
+		// the emulator's RetroAchievements block (bcomp.h, COMPANION-SPEC section 4): its client (rcheevos) identified the
+		// game and unlocks; the list and the badges still come from the server, as for RetroArch's log
+		void block(const std::shared_ptr<RaWatch>& self, const bcomp_ra& ra)
+		{
+			std::lock_guard<std::mutex> l(mu);
+			fromBlock = true;
+			int st = ra.state == BCOMP_RA_LOGIN || ra.state == BCOMP_RA_LOADING ? 0 : ra.state == BCOMP_RA_NO_SET || ra.state == BCOMP_RA_UNKNOWN_GAME ? 3 :
+				ra.state == BCOMP_RA_LOGIN_FAILED ? 4 : -1;
+			if (st >= 0 && st != state && gameId == 0) { state = st; gen++; }
+			if (ra.game_id && ra.game_id != gameId && (ra.state == BCOMP_RA_ACTIVE || ra.state == BCOMP_RA_OFFLINE))
+			{
+				gameId = ra.game_id;
+				state = 1; gen++;
+				fprintf(stderr, "game panel: the emulator identified game %u\n", gameId);
+				std::thread(fetch, self).detach();
+			}
+			std::string r(ra.rp, strnlen(ra.rp, sizeof ra.rp));
+			if (r != rp) { rp = r; gen++; }
+			std::vector<Near> nn;
+			for (auto& n : ra.near_)
+				if (n.id) nn.push_back({ n.id, n.percent, std::string(n.measured, strnlen(n.measured, sizeof n.measured)), std::string(n.title, strnlen(n.title, sizeof n.title)) });
+			bool same = nn.size() == nearest.size();
+			for (size_t i = 0; same && i < nn.size(); i++) same = nn[i].id == nearest[i].id && nn[i].measured == nearest[i].measured;
+			if (!same) { nearest = nn; gen++; }
+			uint32_t from = ra.ev_head > BCOMP_RA_EVENTS && evSeen < ra.ev_head - BCOMP_RA_EVENTS ? ra.ev_head - BCOMP_RA_EVENTS : evSeen;
+			for (uint32_t i = from; i < ra.ev_head; i++)
+			{
+				const bcomp_ra_event& e = ra.ev[i % BCOMP_RA_EVENTS];
+				if (e.type == BCOMP_EV_UNLOCK) { unlocked[e.id] = (long long)time(nullptr); gen++; awards++; }
+			}
+			evSeen = ra.ev_head;
 		}
 		// RetroArch's log since the last look
 		void poll(const std::shared_ptr<RaWatch>& self, double nowMs)
@@ -6383,7 +6420,9 @@ namespace banana
 		if (raw)
 		{
 			if (raw->since == 0) raw->since = t;
-			raw->poll(raw, t);
+			bcomp_ra ra;
+			if (link && link->attached() && link->ra(ra)) raw->block(raw, ra);
+			else if (!raw->fromBlock) raw->poll(raw, t);
 			std::lock_guard<std::mutex> l(raw->mu);
 			// a token RetroArch wrote while the game started (a first login): looked for when the file changes, not on
 			// every pass (the whole retroarch.cfg ten times a second, beside the game, for as long as it had none)
@@ -6556,6 +6595,8 @@ namespace banana
 		unsigned total = 0, got = 0;
 		struct Row { std::string title, desc, badge; long long when; unsigned points; };
 		std::vector<Row> rows;
+		std::string rpText;
+		std::vector<RaWatch::Near> nearList;
 		{
 			std::lock_guard<std::mutex> l(raw->mu);
 			gSeen = raw->gen;
@@ -6570,7 +6611,10 @@ namespace banana
 				rows.push_back({ a.title, a.desc, a.badge, u->second, a.points });
 			}
 			std::sort(rows.begin(), rows.end(), [](const Row& a, const Row& b) { return a.when > b.when; });
-			if (rows.size() > 2) rows.resize(2);
+			rpText = raw->rp;
+			nearList = raw->nearest;
+			// with achievements close to done (the emulator's measured progress): the latest unlock, then the closest
+			if (rows.size() > (nearList.empty() ? 2u : 1u)) rows.resize(nearList.empty() ? 2 : 1);
 			for (auto& r : rows) raw->wantBadge(raw, r.badge);
 		}
 		be->beginScreen(gScreen);
@@ -6594,8 +6638,18 @@ namespace banana
 		box("bubble", false, 18, 14, 604, 54);
 		std::string sys = fit(gSystem, true, 17, 200);
 		float sw = text(sys, true, 17, 0, 0, p.muted, false, 0, true);
-		text(sys, true, 17, 602 - sw, 31, p.muted);
-		text(fit(gTitle, true, 22, 540 - sw), true, 22, 38, 28, p.ink);
+		if (rpText.empty())
+		{
+			text(sys, true, 17, 602 - sw, 31, p.muted);
+			text(fit(gTitle, true, 22, 540 - sw), true, 22, 38, 28, p.ink);
+		}
+		else
+		{
+			// the game's rich presence under its name (RetroAchievements, any game with a script: "Lv 23, Viridian Forest")
+			text(sys, true, 15, 602 - sw * 15 / 17, 20, p.muted);
+			text(fit(gTitle, true, 19, 540 - sw), true, 19, 38, 18, p.ink);
+			text(fit(rpText, false, 15, 564), false, 15, 38, 44, p.accent);
+		}
 		// ---- the achievements
 		box("slot", false, 18, 80, 604, 206);
 		text("Latest achievements", true, 15, 40, 96, p.muted, true, 1.2f);
@@ -6607,7 +6661,7 @@ namespace banana
 			float bx = 40, bw = 560, by = 122;
 			be->fill(X(bx), X(by), X(bw), X(10), p.line);
 			be->fill(X(bx + 2), X(by + 2), X((bw - 4) * got / total), X(6), p.accent);
-			if (rows.empty()) text("None unlocked yet. Good luck!", false, 18, 40, 150, p.muted);
+			if (rows.empty() && nearList.empty()) text("None unlocked yet. Good luck!", false, 18, 40, 150, p.muted);
 			for (size_t i = 0; i < rows.size(); i++)
 			{
 				float y = 146 + i * 66;
@@ -6648,9 +6702,24 @@ namespace banana
 				text(fit(r.desc, false, 15, 490), false, 15, 110, y + 32, p.muted);
 			}
 		}
-		else
+		// the achievements closest to done, with their progress ("34/50"), under the latest unlock
+		if ((state == 2 && total) || !nearList.empty())
 		{
-			const char* msg = state == 0 ? "Waiting for RetroArch..." : state == 1 ? "Looking the game up..." :
+			float y0 = state == 2 && total ? 146 + rows.size() * 66 : 112;
+			for (size_t i = 0; i < nearList.size() && y0 + 56 <= 286; i++, y0 += 58)
+			{
+				auto& n = nearList[i];
+				text(lang::tr("Second screen (RetroArch games)", "Next"), true, 15, 40, y0 + 4, p.muted);
+				float mw = text(n.measured, true, 17, 0, 0, p.accent, false, 0, true);
+				text(n.measured, true, 17, 600 - mw, y0 + 2, p.accent);
+				text(fit(n.title, true, 19, 470 - mw), true, 19, 110, y0 + 2, p.ink);
+				be->fill(X(110), X(y0 + 32), X(490), X(8), p.line);
+				be->fill(X(111), X(y0 + 33), X(488.0f * std::min(100u, n.percent) / 100), X(6), p.accent);
+			}
+		}
+		if (!(state == 2 && total) && nearList.empty())
+		{
+			const char* msg = state == 0 ? (raw->fromBlock ? "Waiting for the emulator..." : "Waiting for RetroArch...") : state == 1 ? "Looking the game up..." :
 				state == 3 ? "This game has no achievements." :
 				state == 4 ? "RetroAchievements is off, or its login failed: check the account in Settings > System > First-time setup." :
 				"No connection to RetroAchievements: check Wi-Fi.";

@@ -939,6 +939,49 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			settings.gameOpen("Companion Test", "Game Boy Advance", scr, true);
 			logf("gcpanel %s: companion %s", rom.c_str(), on ? gc.game()->title.c_str() : "none");
 		}
+		else if (op == "rablock")
+		{
+			// rablock <file>: an emulator's RetroAchievements block (bcomp.h) from "key value" lines - state N, game N,
+			// rp text, near id percent measured title..., unlock id title... - through a producer in this process
+			std::string path;
+			std::getline(cs >> std::ws, path);
+			static CompLink link;
+			static bcomp_producer prod;
+			if (!link.open())
+			{
+				link.create(o.headless + "companion.shm");
+				bcomp_attach(&prod, (o.headless + "companion.shm").c_str());
+				bcomp_publish(&prod);
+			}
+			std::ifstream f(path);
+			std::string ln;
+			bcomp_ra_begin(&prod);
+			bcomp_ra& ra = prod.shm->ra;
+			int nn = 0;
+			while (std::getline(f, ln))
+			{
+				std::istringstream ls(ln);
+				std::string k;
+				ls >> k;
+				if (k == "state") ls >> ra.state;
+				else if (k == "game") ls >> ra.game_id;
+				else if (k == "rp") { std::string v; std::getline(ls >> std::ws, v); snprintf(ra.rp, sizeof ra.rp, "%s", v.c_str()); }
+				else if (k == "near" && nn < BCOMP_RA_NEAR)
+				{
+					bcomp_ra_near& n = ra.near_[nn++];
+					std::string m, t;
+					ls >> n.id >> n.percent >> m;
+					std::getline(ls >> std::ws, t);
+					snprintf(n.measured, sizeof n.measured, "%s", m.c_str());
+					snprintf(n.title, sizeof n.title, "%s", t.c_str());
+				}
+				else if (k == "unlock") { uint32_t id = 0; std::string t; ls >> id; std::getline(ls >> std::ws, t); bcomp_ra_push(&prod, BCOMP_EV_UNLOCK, id, "", t.c_str()); }
+			}
+			bcomp_ra_end(&prod);
+			settings.link = &link;
+			settings.gameUpdate(now);
+			logf("rablock %s: state %u rp '%s' near %d", path.c_str(), ra.state, ra.rp, nn);
+		}
 		else if (op == "gcaudit")
 		{
 			// gcaudit <definitions folder>: every definition's pages drawn once (nothing read): what may want a look

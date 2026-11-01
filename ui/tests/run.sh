@@ -609,6 +609,14 @@ for size in 640x480 1024x768; do
         { echo "FAIL $size: bshare: the PIN wasn't asked for and sent: $(cat "$BRUN/args")"; fail=1; }
     sed -i '/^bshare_/d' "$FX/data/settings.conf"
     grep 'bench:' "$log" | sed "s/^banana-ui: /$size /"
+    # the game panel with an emulator's RetroAchievements block (the universal companion's tier 0: rich presence and the
+    # achievements closest to done, from BananaFront's rcheevos through the shared memory)
+    printf 'state 3\ngame 0\nrp Lv 23 Charmeleon, Viridian Forest, 3 badges\nnear 101 68 34/50 Collect 50 coins in World 1\nnear 102 40 2/5 Beat every boss without a hit\n' > "$OUT/ra1.txt"
+    "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; gamepanel 1 /nonexistent.gba; rablock $OUT/ra1.txt; gshot ra-block" 2> "$OUT/$size-rablock.log" ||
+        { echo "FAIL $size: banana-ui (RA block) exited $?"; fail=1; }
+    grep -q "rablock .*: state 3 rp 'Lv 23 Charmeleon, Viridian Forest, 3 badges' near 2" "$OUT/$size-rablock.log" || { echo "FAIL $size: the RA block wasn't read"; fail=1; }
+    [ "$(convert "$OUT/$size-ra-block-bot.png" -format '%[fx:standard_deviation>0.01]' info: 2>/dev/null)" = 1 ] || { echo "FAIL $size: the RA block panel is blank"; fail=1; }
 done
 # updates over the air (#69): the update script against a stand-in for GitHub, and the Update page
 OUT="$OUT" "$HERE/tests/ota.sh" || fail=1

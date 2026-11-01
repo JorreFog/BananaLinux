@@ -1,4 +1,5 @@
 #pragma once
+#include "complink.h"
 // banana-ui: the settings screen (Start in the menu), drawn in ROCKNIXDS Pixel's look with the engine's own pieces
 // (its box styles painted by rnds::paintBox, Pixelify Sans, the theme's pixel icons). Bottom panel: the list, one
 // row per setting in the slots' style, ◀ value ▶ on the right, and the B / A chips; top panel: the setting's
@@ -103,6 +104,9 @@ namespace banana
 		// the game companion (gamecomp.h) for another GBA game with a definition: its seven pages as tabs, the same way
 		// (set before gameOpen, null after gameClose; never both)
 		gcomp::Engine* gameComp = nullptr;
+		// the emulator's memory export (complink.h), when it attached to it: its RetroAchievements block (rich presence,
+		// unlocks, the achievements closest to done) replaces RetroArch's log (set before gameOpen, null after gameClose)
+		const CompLink* link = nullptr;
 		// (tests) every page of the game companion's game drawn once, its values as read so far: a line for each page
 		// that needs more than one screen, a tab that falls back to the page's kind, a short reference page
 		int gcAudit(const std::function<void(const std::string&)>& log);
