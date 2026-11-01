@@ -543,7 +543,7 @@ static void town_frame(void)
 }
 
 /* =============================== scene 3: raster =============================== */
-#define NRING 48
+#define NRING 104
 static s16 ring_x[NRING], ring_y[NRING];
 static s32 pl_x, pl_y, pl_vy, rings_got;
 static void raster_init(void)
@@ -574,7 +574,7 @@ static void raster_frame(void)
 	MOSAIC = (u16)(((frame >> 4) & 3) * 0x11);
 	WIN1H = (u16)((((40 + (frame & 63)) & 255) << 8) | ((120 + (frame & 63)) & 255));
 	oam_clear();
-	int nr = SCALE(40) > NRING ? NRING : SCALE(40);
+	int nr = SCALE(96) > NRING ? NRING : SCALE(96);	/* (Aladdin keeps ~120 OBJ on screen: BananaGBA's fingerprint) */
 	pl_vy += 40; pl_y += pl_vy; pl_x = 60 << 8;
 	if (pl_y > (120 << 8)) { pl_y = 120 << 8; pl_vy = -900 - (s32)((frame & 7) << 6); }
 	for (int i = 0; i < nr; i++)
@@ -582,13 +582,14 @@ static void raster_frame(void)
 		s32 dx = ring_x[i] - (pl_x >> 8), dy = ring_y[i] - (pl_y >> 8);
 		if (dx * dx + dy * dy < 200) { rings_got++; ring_x[i] = (s16)(ring_x[i] + 120); }
 		for (int j = i + 1; j < nr && j < i + 6; j++)	/* rings bounce apart */
-			if ((u32)(ring_x[j] - ring_x[i] + 8) < 16 && (u32)(ring_y[j] - ring_y[i] + 8) < 16) ring_y[j] = (s16)((ring_y[j] + 9) % 150);
+			if ((u32)(ring_x[j] - ring_x[i] + 8) < 16 && (u32)(ring_y[j] - ring_y[i] + 8) < 16) { ring_y[j] = (s16)(ring_y[j] + 9); while (ring_y[j] >= 150) ring_y[j] = (s16)(ring_y[j] - 150); }
 	}
 	oam_add(pl_x >> 8, pl_y >> 8, 0x8000, 0x8000, 192);
 	checksum += (u32)rings_got;
 	for (int i = 0; i < nr; i++)
 	{
-		ring_x[i] = (s16)((ring_x[i] + 238) % 240);
+		ring_x[i] = (s16)(ring_x[i] + 238);	/* (mod 240 without a divide: games avoid the software one) */
+		while (ring_x[i] >= 240) ring_x[i] = (s16)(ring_x[i] - 240);
 		s32 y = ring_y[i] + ((sin_q12[(frame * 3 + i * 21) & 255] * 6) >> 12);
 		if (i < 16)
 		{

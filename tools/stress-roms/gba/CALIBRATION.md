@@ -18,6 +18,8 @@ loads, text box redraws, waves): heavy-game territory (80-100 % of the limit in 
 | Game, spot | GBA CPU busy | IRQs/frame | DMA units/frame (starts) | OBJ in use | mode | used for |
 |---|---|---|---|---|---|---|
 | Advance Wars (USA Rev 1), title/menus after Start, A | **100 %** (no halt) | 229 (HBlank every line) | 112 (28) | 128 | 0 | scene 5 tactics added (busy-wait + HBlank IRQ + 128 OBJ) |
+| Aladdin (RG DS), after Start | 66-68 % | 1 | 2260-2320 (191: HBlank DMA every line) | 118-120 on screen | 0 | raster: 40 -> 96 rings (~97 OBJ on screen) |
+| Pokémon FireRed (RG DS, title/intro, no save) | 100 % | 2 | 624 (29) | 1 | 1 | (title only) |
 | Pokémon Emerald, title -> continue | 28-37 % | 2-3 | 530-624 (28-29) | 128 | 0 | town (busy 65 %: heavier than Emerald's overworld) |
 | gbastress racer / shooter / town / raster / loader / tactics | 84 / 65 / 70 / 79 / 67 / 100 % | 1 / 1 / 1 / 229 / 1 / 229 | 1048 (161) / 425 / 1240 / 408 / 409 / 380 | 29-92 / 128 | 1 / 0 | |
 Note: "OBJ in use" counts entries not hidden by attr0 (games park unused ones off-screen without hiding them).
