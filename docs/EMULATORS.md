@@ -180,5 +180,10 @@ nothing more, in the same files, so a game goes on in either:
 - **Companion:** `/run/banana/game-id` and the shared-memory export of COMPANION-SPEC.md (BANANA_COMPANION).
 - **RetroAchievements:** rcheevos with the setup's account (accounts.conf; RetroArch's token reused), softcore or
   hardcore as RetroArch's setting, answers cached in `/data/banana/ra-cache` for offline starts.
-- `bananafront_cpugov = on`: its own clock governor (per game, remembered in `/data/bananafront/cpugov`).
+- **Clock:** by default the system's profile (schedutil) chooses, with a floor under it: `scaling_min_freq` goes up a
+  step on a late frame or when a second's slowest frame passes 80 % of a refresh, down after 10 s without (max
+  1416 MHz, put back at exit; `BANANAFRONT_FLOOR=0` turns it off). `bananafront_cpugov = on`: its own clock governor
+  instead (performance governor + `scaling_max_freq`, per game, remembered in `/data/bananafront/cpugov`).
+- **Slow frames:** a frame that misses its refresh is caught up (run with its picture not shown) in the same refresh
+  when two fit, else while the next flip waits, so the sound never loses a frame to it.
 - Logs: `/data/banana/logs/bananafront.log` (a stats line every 10 s with `BANANAFRONT_STATS=<file>`).
