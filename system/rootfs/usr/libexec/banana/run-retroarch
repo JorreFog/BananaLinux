@@ -13,7 +13,7 @@ setting() {
 # systems (the same cores, saves, states and settings; RetroArch stays as the fallback). Auto: BananaFront only for the
 # systems checked on it (BF_SYSTEMS, both handhelds: stress ROM at least as fast, saves carried over, a game played);
 # RetroArch: never. N64 and PlayStation always stay on RetroArch (their cores draw with the GPU).
-BF_SYSTEMS=""
+BF_SYSTEMS="gb gbc megadrive pico-8 nes"    # (checked 2026-11-01 on both handhelds: front in overnight-findings)
 case $BANANA_SYSTEM in
 n64|psx|"") ;;
 *)
