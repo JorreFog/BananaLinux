@@ -121,8 +121,9 @@ case $t in
 accurate) echo "run-bananads: ${1##*/} has its own timing: accurate" >&2; export BANANADS_CORE_SLICE=64 ;;
 fast) echo "run-bananads: ${1##*/} has its own timing: fast" >&2; export BANANADS_CORE_SLICE=auto ;;
 # (dsi: Fast, and the ARM9 at the DSi's 133 MHz, BananaDS's core.arm9_mhz: the game's own lost frames on a DS's 67 MHz
-# ARM9 gone, as Origin HeartGold's authors suggest DSi mode for its 60 fps overworld)
-dsi) echo "run-bananads: ${1##*/} has its own timing: fast, DSi CPU" >&2; export BANANADS_CORE_SLICE=auto BANANADS_CORE_ARM9_MHZ=133 ;;
+# ARM9 gone, as Origin HeartGold's authors suggest DSi mode for its 60 fps overworld; and the game card's transfers 8x
+# faster, core.card_fast=3: at each area border Origin HeartGold still lost 7-10 of its own frames at 133 MHz, 4-5 so)
+dsi) echo "run-bananads: ${1##*/} has its own timing: fast, DSi CPU" >&2; export BANANADS_CORE_SLICE=auto BANANADS_CORE_ARM9_MHZ=133 BANANADS_CORE_CARD_FAST=3 ;;
 esac
 # the game's own shader (its page, X in the library: nds-game-shader), for this run only (the environment wins over
 # bananads.conf)
