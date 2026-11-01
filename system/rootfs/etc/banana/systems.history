@@ -3,6 +3,7 @@
 # id<TAB>key<TAB>value
 nds	ext	nds zip
 nds	run	/usr/libexec/banana/run-drastic %ROM%
+nes	run	/usr/libexec/banana/run-retroarch fceumm %ROM%
 ports	always	yes
 ports	maker	PC
 ports	run	/bin/sh %ROM%

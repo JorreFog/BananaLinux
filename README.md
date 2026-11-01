@@ -202,7 +202,7 @@ Press F for the in-game menu; the Anbernic button also opens it. In DS games, bo
 |---|---|
 | GBA | gpSP or mGBA |
 | Game Boy | Gambatte |
-| NES | FCEUmm |
+| NES | BananaNES (a FCEUmm fork) / FCEUmm |
 | SNES | Snes9x |
 | Mega Drive | PicoDrive |
 | PlayStation | PCSX ReARMed |

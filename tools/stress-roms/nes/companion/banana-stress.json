@@ -1,0 +1,47 @@
+{
+  "schema": 2,
+  "system": "nes",
+  "title": "BananaNES stress ROM",
+  "match": { "header_title": "stress-nes", "zip": "stress-nes" },
+  "accent": "#f2c230",
+  "quality": "live-verified",
+  "sources": ["own ROM: stressrom/stress.s (zero page labels in out/stress.lbl), probe block per COMPANION-SPEC section 7"],
+  "genre": "stress test",
+  "credit": "BananaNES",
+  "vars": {
+    "frame":   { "addr": "0x0000", "type": "u16" },
+    "scene":   { "addr": "0x0005", "type": "u8" },
+    "ptimer":  { "addr": "0x0006", "type": "u16" },
+    "scx":     { "addr": "0x0008", "type": "u16" },
+    "hash":    { "addr": "0x000D", "type": "u16" },
+    "lag":     { "addr": "0x000F", "type": "u16" },
+    "sprites": { "addr": "0x0013", "type": "u8" },
+    "ents":    { "addr": "0x002C", "type": "u8" },
+    "probe_frame": { "addr": "0x07E8", "type": "u32" },
+    "left_s":  { "expr": "floor(ptimer / 60)" }
+  },
+  "enums": {
+    "scenes": { "0": "Title", "1": "Platformer", "2": "Parallax + IRQ", "3": "Shooter", "4": "Town RPG", "5": "Fighter + DMC", "6": "Scene loads", "7": "Split 2006", "8": "Vertical scroll" }
+  },
+  "pages": [
+    { "id": "status", "title": "Stress ROM", "tab": "Status", "widgets": [
+      { "type": "text", "label": "Scene", "value": "scene", "enum": "scenes" },
+      { "type": "number", "label": "Frame", "value": "probe_frame" },
+      { "type": "bar", "label": "Scene time", "value": "1500 - ptimer", "max": 1500 },
+      { "type": "number", "label": "Seconds left", "value": "left_s" },
+      { "type": "number", "label": "Lag frames", "value": "lag" }
+    ] },
+    { "id": "map", "title": "Scroll", "tab": "Scroll", "widgets": [
+      { "type": "number", "label": "Camera x", "value": "scx" },
+      { "type": "number", "label": "Entities", "value": "ents" }
+    ] },
+    { "id": "bag", "title": "Sprites", "tab": "Sprites", "widgets": [
+      { "type": "bar", "label": "OAM in use", "value": "sprites", "max": 64 },
+      { "type": "number", "label": "Checksum", "value": "hash", "format": "hex" }
+    ] },
+    { "id": "progress", "title": "Scenes", "tab": "Scenes", "widgets": [
+      { "type": "text", "label": "Now", "value": "scene", "enum": "scenes" },
+      { "type": "text", "label": "Loop", "value": "'9 scenes, 25 s each, 225 s'" }
+    ] }
+  ]
+}
