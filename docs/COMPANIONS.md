@@ -175,3 +175,18 @@ The full spec: `COMPANION-SPEC.md` in the BananaOS emulator projects (`~/banana-
 - Pages: `status` is required; the other six may be left out (their tabs aren't shown).
 - The game companion now runs for any system with a definition (Settings > Game companion), through the emulator's
   memory export (BananaFront) or RetroArch's READ_CORE_MEMORY. ROM addresses are read from the file on the GBA only.
+
+## Tier 0: every game (the universal companion, COMPANION-SPEC section 4)
+- **The memory export**: banana-ui creates `/run/banana/companion.shm` for every game panel game and names it in
+  `BANANA_COMPANION`; an emulator that attaches (BananaFront for the libretro cores, BananaDS) answers the companions'
+  reads between two frames (ui/src/complink.*, the C side in `bcomp.h`/`bcomp.c`). RetroArch never attaches: its
+  READ_CORE_MEMORY pipe is used as before. banana-ui's log says "the emulator attached to its memory export".
+- **RetroAchievements from the emulator**: BananaFront's rcheevos fills the export's RA block; the game panel shows the
+  game's **rich presence** under its name and the **achievements closest to done** (measured progress, e.g. 34/50) under
+  the latest unlock. RetroArch games keep the log-based panel.
+- **Save states**: a tap on the achievements box shows slots 0-9 of the game's states (`/data/states/<name>.state`,
+  `.state1` ...) with their thumbnails (`.png`, BananaFront writes them) and the time saved; a slot tapped twice loads
+  it (`LOAD_STATE_SLOT n`).
+- **Pokémon companion** (also from PokeDaisy's ideas): battle advice (the lead's best move marked, a party member to
+  switch to), the move a party member learns next, and where a Pokémon lives (the Dex entry: up to three maps from the
+  ROM's wild tables and map groups).
