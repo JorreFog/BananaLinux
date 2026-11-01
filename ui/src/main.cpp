@@ -152,6 +152,14 @@ static rnds::Bitmap stbDecode(const std::string& path)
 	return *pic.get();
 }
 
+// a picture's size from its header (stbi_info reads the first few KB, no decoding): the game list's cover frame is
+// drawn at the picture's fitted size while the picture itself is still being decoded
+static bool stbSize(const std::string& path, int& w, int& h)
+{
+	int n;
+	return stbi_info(path.c_str(), &w, &h, &n) != 0;
+}
+
 // settings.conf: key = value lines, the image's defaults under the card's own (settings_defaults.cpp)
 
 static std::string shellQuote(const std::string& s)
@@ -1669,6 +1677,7 @@ int main(int argc, char** argv)
 	}
 
 	rnds::setDecoder(stbDecode);
+	rnds::setSizer(stbSize);
 	rnds::setZipReader(readZip);	// the icon of a DS ROM kept in a .zip
 	// the card's settings.conf made whole (missing keys added, invalid values put back): first boot and after an update
 	normalizeSettings(o.data);

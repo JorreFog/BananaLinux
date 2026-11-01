@@ -18,3 +18,6 @@ in it, the shadow the frame's.
 Banana UX: inkOn/subInkOn/accentTextMode (text on the accent by contrast; Settings > Text on accent); the plate's START in it.
 Banana UX: a game list's L/R (and its ◀ ▶ taps) go a page (page()/pageTarget()), the shoulders naming the games they land on.
 Banana UX: the count only on a game list longer than five (countShown/railCut); no home sublabel that the name already contains.
+Banana UX: a cover's frame at the picture's fitted size while it loads, from the file's header (RndsRaster's
+imageSize/setSizer; RndsUI's coverFit/coverFrame), not the square that shrank when the picture came; and the covers
+either side of the game list's game decoded ahead, so stepping to one draws it at once.
