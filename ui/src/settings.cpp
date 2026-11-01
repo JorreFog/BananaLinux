@@ -640,11 +640,18 @@ namespace banana
 		{
 			// the languages there are files for, each in its own name; the help names who translated them
 			std::vector<std::string> names, codes;
-			std::string help = "The language of the menu and the settings. Lines not yet translated stay in English.";
+			// (each sentence translated on its own: the joined help has no line in a language file, so it stayed English)
+			std::string help = lang::tr("The language of the menu and the settings. Lines not yet translated stay in English.");
 			for (auto& l : lang::available(assets + "/../lang"))
 			{
 				names.push_back(l.name); codes.push_back(l.code);
-				if (!l.by.empty()) help += " " + l.name + " (" + l.nameEn + "): translated by " + l.by + ".";
+				if (!l.by.empty())
+				{
+					std::string t = lang::tr("{name} ({English name}): translated by {translator}.");
+					for (auto [k, v] : { std::pair<std::string, std::string>{ "{name}", l.name }, { "{English name}", l.nameEn }, { "{translator}", l.by } })
+						for (size_t at = t.find(k); at != std::string::npos; at = t.find(k, at + v.size())) t.replace(at, k.size(), v);
+					help += " " + t;
+				}
 			}
 			langHelp = help;
 			if (names.size() > 1) add(S, "gear", "Language", langHelp.c_str(), menu, "language", names, codes);
