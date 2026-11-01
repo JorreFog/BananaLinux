@@ -589,6 +589,7 @@ namespace banana::gcomp
 		auto it = cache.find(key);
 		if (it != cache.end()) return it->second;
 		std::ifstream f(key + ".json");
+		if (!f) f.open("/data/banana/companions/systems/" + id + ".json");	// (the card's own: a map the image lacks)
 		std::stringstream b;
 		b << f.rdbuf();
 		JPtr j = parseJson(b.str());
