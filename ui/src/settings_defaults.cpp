@@ -68,6 +68,7 @@ namespace banana
 			{ "sd2_roms", "on", ENUM, ON_OFF, 0, 0 },
 			{ "ra_frontend", "auto", ENUM, FRONTEND, 0, 0, true },
 			{ "bananafront_cpugov", "off", ENUM, ON_OFF, 0, 0, true },
+			{ "bananafront_lowlat", "on", ENUM, ON_OFF, 0, 0, true },
 			{ "ra_shader", "off", ENUM, SHADERS, 0, 0, true },
 			{ "ra_border", "off", ENUM, ON_OFF, 0, 0, true },
 			{ "ra_audio_latency", "64", ENUM, LATENCY, 0, 0, true },

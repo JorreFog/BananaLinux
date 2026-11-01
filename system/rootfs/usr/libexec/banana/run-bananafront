@@ -82,6 +82,9 @@ EOF
 fi
 # the picture's size as RetroArch's (Integer scale in its menu); else the core's aspect, as large as fits
 [ "$(ra_cfg video_scale_integer)" = true ] && set -- --scale integer "$@"
+# low latency: each frame started as late as it still makes its refresh (BananaFront measures its own frames), the
+# buttons read that much later: GBC 16.7 -> 7.5 ms from the read to the picture (bananafront_lowlat, on by default)
+[ "${BANANAFRONT_LOWLAT_SET:-$(setting bananafront_lowlat)}" != off ] && set -- --lowlat "$@"
 # BananaFront's own clock governor (the lowest clock that keeps every frame on time, per game): bananafront_cpugov
 [ "$(setting bananafront_cpugov)" = on ] && set -- --cpugov "$@"
 # RetroAchievements: the setup's account (banana/accounts.conf, as run-retroarch gives RetroArch): its name, RetroArch's
