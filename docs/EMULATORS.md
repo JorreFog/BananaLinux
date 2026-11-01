@@ -192,6 +192,8 @@ nothing more, in the same files, so a game goes on in either:
   core), states `/data/states/<core>/<game>.state[N]` (RASTATE in RZIP) + `.png` thumbnails, `.state.auto` for Quick
   resume (`savestate_auto_save`), screenshots `/data/screenshots/<game>-YYMMDD-HHMMSS.png`, core options read from
   RetroArch's `config/<core>/<core>.opt` and `<game>.opt` (never written).
+  Archives: a zip's member (stored or deflate) is read in memory; a .7z, or a zip compressed with bzip2, LZMA,
+  Deflate64 and the like, is unpacked with 7zz into `/run/banana/rom-cache/<pid>/` (removed when the game ends).
 - **Buttons:** F + START quit, F + X (or F alone) the menu, F + R / F + L save / load state, F + R2 fast-forward,
   F + SELECT screenshot, F + Y FPS counter, F + UP / DOWN the slot; L2/R2/L3/R3 alone as Settings > Other systems >
   Buttons (`ra_btn_*`) says.
