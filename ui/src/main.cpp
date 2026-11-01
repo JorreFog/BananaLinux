@@ -2260,7 +2260,9 @@ int main(int argc, char** argv)
 		// run-ps1 and run-pico8's fake-08 fallback end up in run-retroarch just the same, so they get the game panel
 		// (settings.conf retroarch_panel) and its touch tiles too; the official PICO-8, when it is on the card, takes
 		// the panels itself.
+		// BananaFront (run-bananafront) takes the same lease, pipe and tiles: it answers RetroArch's commands
 		bool ra = sd.run.find("run-retroarch") != std::string::npos || sd.run.find("run-ps1") != std::string::npos ||
+			sd.run.find("run-bananafront") != std::string::npos ||
 			(sd.run.find("run-pico8") != std::string::npos && access("/data/roms/pico-8/pico8_64", F_OK) != 0);
 		bool panel = ra && settings["retroarch_panel"] != "off" && disp.isOpen();
 		int gameScreen = 0, leaseFd = -1, cmdFd = -1, outFd = -1;
