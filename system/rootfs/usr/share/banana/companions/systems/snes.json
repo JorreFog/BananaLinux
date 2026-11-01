@@ -1,0 +1,85 @@
+{
+ "system": "snes",
+ "name": "Super Nintendo",
+ "endian": "le",
+ "addr_bits": 24,
+ "ra_console": 3,
+ "serial": {
+  "rom_offset_lorom": 32690,
+  "rom_offset_hirom": 65458,
+  "len": 4,
+  "note": "only on newer carts"
+ },
+ "header_title": {
+  "rom_offset_lorom": 32704,
+  "rom_offset_hirom": 65472,
+  "len": 21
+ },
+ "regions": [
+  {
+   "name": "wram",
+   "start": "0x7E0000",
+   "size": "0x20000",
+   "kind": "ram",
+   "ra_base": "0x000000",
+   "fallback": "SYSTEM_RAM"
+  },
+  {
+   "name": "sram",
+   "start": "0x1000000",
+   "size": "0x80000",
+   "kind": "sram",
+   "ra_base": "0x020000",
+   "fallback": "SAVE_RAM",
+   "note": "virtual address (RA's); the cart maps it at 70:0000 (LoROM) / 20:6000 (HiROM) etc."
+  },
+  {
+   "name": "iram",
+   "start": "0x1080000",
+   "size": "0x800",
+   "kind": "ram",
+   "ra_base": "0x0A0000",
+   "note": "SA-1 I-RAM, virtual address (RA's)"
+  }
+ ],
+ "required": [
+  "wram"
+ ],
+ "probe": {
+  "addr": "0x7FFFE0"
+ },
+ "controls": [
+  [
+   "A",
+   "A"
+  ],
+  [
+   "B",
+   "B"
+  ],
+  [
+   "X",
+   "X"
+  ],
+  [
+   "Y",
+   "Y"
+  ],
+  [
+   "L1",
+   "L"
+  ],
+  [
+   "R1",
+   "R"
+  ],
+  [
+   "Start",
+   "Start"
+  ],
+  [
+   "Select",
+   "Select"
+  ]
+ ]
+}

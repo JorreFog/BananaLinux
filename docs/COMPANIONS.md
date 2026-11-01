@@ -161,3 +161,17 @@ second; a pointer var is read where the pointer pointed in the last set (one mor
 
 ### Example
 See `ui/tests/companions/` (real definitions: Castlevania: Aria of Sorrow and Golden Sun read live values, Tetris Worlds is reference pages).
+
+## Schema 2: any system (the universal companion's tier 1)
+The full spec: `COMPANION-SPEC.md` in the BananaOS emulator projects (`~/banana-emu/common`), section 5. In short:
+- `"schema": 2` and **`"system"`**: a BananaOS system id with a memory map in
+  `/usr/share/banana/companions/systems/<system>.json` (gba, nds, nes, snes, gb, gbc so far: its RAM regions, their
+  RetroAchievements address bases, where the ROM header keeps its id and title).
+- Files: another system's definitions are in `companions/<system>/` (the card's own: `/data/banana/companions/<system>/`);
+  the GBA's stay in the folder itself. Matching: `crc32` (the whole file, up to 32 MB), the header's id (`serial`, or
+  `code`) and `header_title`, or the file name (`zip`).
+- Addresses are the system's own bus addresses, inside a RAM region of its map; or `"ra": "0x..."`, an address as
+  RetroAchievements' memory notes give it. `"endian": "be"` per var (default: the system's). Types `u24`, `s24` too.
+- Pages: `status` is required; the other six may be left out (their tabs aren't shown).
+- The game companion now runs for any system with a definition (Settings > Game companion), through the emulator's
+  memory export (BananaFront) or RetroArch's READ_CORE_MEMORY. ROM addresses are read from the file on the GBA only.

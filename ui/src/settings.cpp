@@ -8277,7 +8277,7 @@ namespace banana
 		int n = 0;
 		for (int i = 0; i < GC_TABS; i++)
 		{
-			show[i] = i != gcomp::P_BATTLE || !d.pages[i].when.set || gameComp->pageOn(i);
+			show[i] = (i >= gcomp::NUM_PAGES || d.pages[i].present) && (i != gcomp::P_BATTLE || !d.pages[i].when.set || gameComp->pageOn(i));
 			n += show[i];
 		}
 		float cell = 604.0f / n, cx = 18;

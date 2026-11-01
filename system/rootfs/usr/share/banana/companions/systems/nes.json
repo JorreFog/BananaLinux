@@ -1,0 +1,67 @@
+{
+ "system": "nes",
+ "name": "NES",
+ "endian": "le",
+ "addr_bits": 16,
+ "ra_console": 7,
+ "serial": null,
+ "header_title": null,
+ "regions": [
+  {
+   "name": "ram",
+   "start": "0x0000",
+   "size": "0x800",
+   "kind": "ram",
+   "ra_base": "0x0000",
+   "fallback": "SYSTEM_RAM"
+  },
+  {
+   "name": "sram",
+   "start": "0x6000",
+   "size": "0x2000",
+   "kind": "sram",
+   "ra_base": "0x6000",
+   "fallback": "SAVE_RAM"
+  },
+  {
+   "name": "prg",
+   "start": "0x8000",
+   "size": "0x8000",
+   "kind": "rom",
+   "note": "the banks mapped now; tables: read the ROM file"
+  }
+ ],
+ "required": [
+  "ram"
+ ],
+ "probe": {
+  "addr": "0x07E0"
+ },
+ "controls": [
+  [
+   "A",
+   "A"
+  ],
+  [
+   "B",
+   "B"
+  ],
+  [
+   "X",
+   "Turbo A"
+  ],
+  [
+   "Y",
+   "Turbo B"
+  ],
+  [
+   "Start",
+   "Start"
+  ],
+  [
+   "Select",
+   "Select"
+  ]
+ ],
+ "match_note": "no header id: match by crc32/md5 (RA hash = md5 of the ROM without its iNES header)"
+}
