@@ -1237,7 +1237,6 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		if (lib.pendingLaunch() >= 0)
 		{
 			int g = lib.pendingLaunch();
-			logf("launch %d: %s (system %s)", g, lib.gameAt(g).path.c_str(), lib.systemOf(g).id.c_str());
 			recordEvent("game", "start: %s (%s)", lib.gameAt(g).title.c_str(), lib.systemOf(g).id.c_str());
 			lib.clearLaunch();
 			// (an internal page's entry first: in a test there is no .app file for it, so no game at g)
