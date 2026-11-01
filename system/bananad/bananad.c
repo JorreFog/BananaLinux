@@ -98,7 +98,10 @@ static double sel_since;
 
 static volatile sig_atomic_t reload, stopping;
 static void on_hup(int sig) { (void)sig; reload = 1; }
-static void on_term(int sig) { (void)sig; stopping = 1; }	/* rcK's: the recording written out, then gone */
+static volatile sig_atomic_t in_poll;	/* the main loop's poll: a TERM there is taken by the loop (the recording written out) */
+/* rcK's: the recording written out, then gone. Anywhere but the main loop's poll (a sleep's or a shutdown's own waits,
+ * which may not come back to the loop) at once, as before the recorder */
+static void on_term(int sig) { (void)sig; stopping = 1; if (!in_poll) _exit(0); }
 
 static double mono(void)
 {
@@ -2041,7 +2044,9 @@ int main(int argc, char **argv)
 		if (lid_sleep_at > 0) { double d = lid_sleep_at - tnow; if (d < wait) wait = d > 0 ? d : 0; }
 		if (menu_sleep_at > 0) { double d = menu_sleep_at - tnow; if (d < wait) wait = d > 0 ? d : 0; }
 		int timeout = wait <= 0 ? 20 : (int)(wait * 1000) + 20;
-		poll(pf, n, timeout);
+		in_poll = 1;
+		if (!stopping) poll(pf, n, timeout);
+		in_poll = 0;
 		double now = mono();
 		sound_poll();
 		if (stopping) {	/* a restart or a turn-off from the menu, an update: banana-ui's last events, then the card's copy */
