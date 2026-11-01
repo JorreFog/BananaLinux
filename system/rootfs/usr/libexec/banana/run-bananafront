@@ -61,7 +61,7 @@ SH=${BANANAFRONT_SHADER-$SH}    # (tests: another shader, or "" for none)
 [ -n "$SH" ] && [ -d /usr/lib/superdrastic/shaders ] && { export DSFLIP_SHADER_DIR=/usr/lib/superdrastic/shaders; set -- --shader $SH "$@"; }
 # Settings > Other systems > Screen border (ra_border): the same borders as run-retroarch (the theme's, else its base
 # palette's), on an overlay plane over the panel, the picture in the border's hole (borders.conf)
-if [ "$(setting ra_border)" = on ] && [ -n "$BANANA_SYSTEM" ]; then
+if [ "${BANANAFRONT_BORDER:-$(setting ra_border)}" = on ] && [ -n "$BANANA_SYSTEM" ]; then    # (tests: BANANAFRONT_BORDER)
     BD=/usr/share/banana/borders
     MODE=$(cat /sys/class/drm/card0-*/modes 2>/dev/null | head -n 1)
     read BX BY BW BH <<EOF
