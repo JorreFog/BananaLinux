@@ -21,6 +21,7 @@
 #include "arrival.h"
 #include "lang.h"
 #include "settings.h"
+#include "complink.h"
 #include "settings_defaults.h"
 #include "theme.h"
 #include "colors.h"
@@ -1883,6 +1884,7 @@ int main(int argc, char** argv)
 	double quietUntil = 0;	// no frame before this: the last one flipped nothing (see present below)
 	int lastMinute = -1;
 	pkmn::Companion companion;	// the game panel's Pokémon companion (pokemon.h), for the game running
+	CompLink compLink;	// the emulator's memory export (complink.h), when the emulator attaches to it (BananaFront, BananaDS)
 	gcomp::Engine gameComp;		// or its game companion (gamecomp.h), for another GBA game with a definition
 	if (settingsView.bshareReceiving()) Settings::bshareServe(true);	// (Bshare's Receive on: seen from the start)
 	LowBattery low;
@@ -2146,7 +2148,21 @@ int main(int argc, char** argv)
 			{
 				// the companion's reads of the game's memory, on RetroArch's stdin beside the tiles' commands
 				std::string r = companion.active() ? companion.requests(t) : gameComp.requests(t);
-				if (!r.empty() && write(cmdFd, r.data(), r.size()) < 0) {}
+				// through the emulator's memory export when it attached to it (BananaFront), else RetroArch's stdin
+				if (!r.empty() && !compLink.send(r) && write(cmdFd, r.data(), r.size()) < 0) {}
+			}
+			if (compLink.waiting())
+			{
+				std::string rep = compLink.receive();
+				if (!rep.empty())
+				{
+					if (companion.active()) companion.feed(rep.data(), rep.size());
+					else
+					{
+						std::lock_guard<std::mutex> l(worker.uiLock);
+						gameComp.feed(rep.data(), rep.size());
+					}
+				}
 			}
 			{
 				std::lock_guard<std::mutex> l(worker.uiLock);
@@ -2181,7 +2197,7 @@ int main(int argc, char** argv)
 			for (int fd : input.fds()) fds.push_back({ fd, POLLIN, 0 });
 			if (outFd >= 0) fds.push_back({ outFd, POLLIN, 0 });
 			if (pidFd >= 0) fds.push_back({ pidFd, POLLIN, 0 });
-			if (poll(fds.data(), fds.size(), 100) <= 0) continue;
+			if (poll(fds.data(), fds.size(), compLink.waiting() ? 10 : 100) <= 0) continue;	// (an export's answer is looked for, not signalled)
 			if (pidFd >= 0)
 			{
 				if (fds.back().revents & POLLIN) continue;	// it ended: waitpid above
@@ -2273,6 +2289,7 @@ int main(int argc, char** argv)
 			leaseFd = disp.lease(gameScreen);
 			unlink(FIFO);
 			unlink("/run/banana/retroarch.log");	// (the last game's: the panel must not read it as this one's)
+			if (!compLink.create()) logf("companion: no shared memory: %s", strerror(errno));
 			if (leaseFd >= 0 && mkfifo(FIFO, 0600) == 0) cmdFd = ::open(FIFO, O_RDWR | O_NONBLOCK | O_CLOEXEC);	// (read too: RetroArch never sees an end)
 			if (leaseFd < 0 || cmdFd < 0)
 			{
@@ -2338,6 +2355,7 @@ int main(int argc, char** argv)
 			{
 				setenv("BANANA_DRM_LEASE_FD", std::to_string(leaseFd).c_str(), 1);
 				setenv("BANANA_RA_CMD", FIFO, 1);
+				if (compLink.open()) setenv(BCOMP_ENV, BCOMP_DEFAULT_PATH, 1);
 				if (outFd >= 0) setenv("BANANA_RA_OUT", OUT, 1);
 			}
 			execl("/bin/sh", "sh", "-c", cmd.c_str(), (char*)nullptr);
@@ -2368,6 +2386,7 @@ int main(int argc, char** argv)
 			::close(cmdFd);
 			unlink(FIFO);
 			if (outFd >= 0) { ::close(outFd); unlink(OUT); }
+			compLink.close();
 			companion.close();
 			gameComp.close();
 			input.close();
