@@ -355,6 +355,8 @@ asleep && ok "asleep once the job is over" || bad "no idle sleep after the job"
 wake
 kill $JOB 2>/dev/null || true
 stop
+# more scenarios, a file per topic (tests/sleep-test.d), run here in turn with the helpers above
+for t in "$HERE"/tests/sleep-test.d/*.sh; do [ -f "$t" ] && . "$t"; done
 
 kill $UI $GAME 2>/dev/null || true
 echo "sleep test: $pass passed, $fail failed"

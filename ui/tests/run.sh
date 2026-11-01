@@ -607,6 +607,16 @@ for size in 640x480 1024x768; do
     grep -q "^send mac-fp $FX/roms/gb/Pocket Peel.gb$" "$BRUN/args" && grep -q "^send --pin 4242 mac-fp $FX/roms/gb/Pocket Peel.gb$" "$BRUN/args" ||
         { echo "FAIL $size: bshare: the PIN wasn't asked for and sent: $(cat "$BRUN/args")"; fail=1; }
     sed -i '/^bshare_/d' "$FX/data/settings.conf"
+    # settings.conf values not in their lists are put back to the defaults at start (the lists of allowed values were
+    # read on past their ends: "accent = on" or "nds_emulator = off" could pass, the next list's values, or the menu crash)
+    vlog=$OUT/$size-values.log
+    sed -i '/^accent = /d; /^nds_emulator = /d' "$FX/data/settings.conf"
+    printf 'accent = on\nnds_emulator = off\n' >> "$FX/data/settings.conf"
+    "$HERE/banana-ui" --headless "$OUT/$size-values-" --size $size --assets "$HERE/assets/rnds" \
+        --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" --script "home 0" 2> "$vlog" ||
+        { echo "FAIL $size: banana-ui (invalid settings) exited $?"; fail=1; }
+    grep -q '^accent = yellow$' "$FX/data/settings.conf" || { echo "FAIL $size: an invalid accent kept: $(grep '^accent' "$FX/data/settings.conf")"; fail=1; }
+    grep -q '^nds_emulator = superdrastic$' "$FX/data/settings.conf" || { echo "FAIL $size: an invalid DS emulator kept: $(grep '^nds_emulator' "$FX/data/settings.conf")"; fail=1; }
     grep 'bench:' "$log" | sed "s/^banana-ui: /$size /"
 done
 # updates over the air (#69): the update script against a stand-in for GitHub, and the Update page
