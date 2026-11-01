@@ -1,8 +1,13 @@
 # The values earlier BananaOS systems.conf files shipped and this one doesn't (tools/systems-history.sh, from git):
 # systems-merge takes such a value on the card for the old default it is, so this image's value is used.
 # id<TAB>key<TAB>value
+gba	ext	gba zip
+gbc	ext	gbc gb zip
+gb	ext	gb zip
+megadrive	ext	md gen bin smd zip
 nds	ext	nds zip
 nds	run	/usr/libexec/banana/run-drastic %ROM%
+nes	ext	nes zip
 nes	run	/usr/libexec/banana/run-retroarch fceumm %ROM%
 ports	always	yes
 ports	maker	PC
@@ -11,4 +16,5 @@ psx	ext	chd cue bin iso img mdf pbp m3u
 psx	perf	balanced
 psx	run	/usr/libexec/banana/run-retroarch pcsx_rearmed %ROM%
 rocknixdsbank	name	Bank & Trade
+snes	ext	sfc smc zip
 snes	perf	balanced
