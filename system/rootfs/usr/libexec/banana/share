@@ -2,7 +2,7 @@
 # File sharing: the card's data partition (/data: roms, bios, saves, banana/...) on the network over SMB3, through
 # the kernel's own server (ksmbd, a module loaded only now) and ksmbd-tools. Off until switched on there (Settings >
 # Network > File sharing). It asks for a name and a password (#24: Windows refuses guest logins), banana and linux
-# until changed in Settings > Network > Sharing name and password (banana/accounts.conf's smb_user and smb_password,
+# until changed in Settings > Network > File sharing > Sharing name and password (banana/accounts.conf's smb_user and smb_password,
 # a file the share itself never shows); Sharing login > Guest opens it to anyone with no password instead. The second
 # SD card, while it's in, is a share of its own beside it (\\<address>\sd2, #25), with the same login.
 #   share up | down | restart     (restart: again with the login as it is now, if it is on)

@@ -21,7 +21,7 @@
 #                                   <total>", "failed: <why>"; its pid in /run/banana/update-download.pid
 #   update cancel                   stops the download (what came stays in .partial for the next one)
 # The beta channel: test builds from the BananaOS site's password-protected folder instead of GitHub (its feed has
-# the shape of GitHub's release list). The password is asked once (Settings > System > Update > Beta channel), checked
+# the shape of GitHub's release list). The password is asked once (Settings > System > Updates > Update > Beta channel), checked
 # with the site, and kept in banana/updates/.beta as a curl config file (curl -K: never on a command line, never in a
 # log). With it there, check and download use that feed with the password; without it, GitHub as before.
 #   update beta-login               the password on stdin (one line): asked of the site, kept when it is right.
@@ -277,7 +277,7 @@ check)
                     err="$SRC's answer was empty"
                 fi ;;
             304) fetched=$now ;;
-            401) err="the beta server refused the password: enter it again in Settings > System > Update > Beta channel"
+            401) err="the beta server refused the password: enter it again in Settings > System > Updates > Update > Beta channel"
                  [ $CHANNEL = beta ] && rm -f $BETA $CHOSEN ;;     # (a wrong password isn't kept)
             403|429)
                 reset=$(sed -n 's/^[Xx]-[Rr]ate[Ll]imit-[Rr]eset: *//p' "$hdr" 2>/dev/null | tr -d '\r')

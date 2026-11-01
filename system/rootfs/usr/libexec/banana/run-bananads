@@ -22,6 +22,8 @@ export BANANADS_LOG_FILE=$L/bananads.log
 for b in l2 r2 l3 r3; do
     export BANANADS_INPUT_$(echo $b | tr a-z A-Z)=$(/usr/libexec/banana/nds-buttons get $b)
 done
+# ...and Swap A/B and X/Y: the pad's A the DS's B and so on (off: bananads.conf's input.a... or the pad as printed)
+[ "$(/usr/libexec/banana/nds-buttons swapab)" = on ] && export BANANADS_INPUT_A=b BANANADS_INPUT_B=a BANANADS_INPUT_X=y BANANADS_INPUT_Y=x
 # Settings > Nintendo DS with BananaDS chosen: its own settings, kept in its own file (bananads.conf, which BananaDS
 # reads itself): the shader (kms.shader, SuperDrastic's shader pass on SuperDrastic's shader files), the 3D resolution
 # (render.scale) and the rest. A card from before they were BananaDS's own gets DraStic's choices copied over once.
@@ -56,7 +58,7 @@ fi
 # records the real microphone through ALSA's "default" (bananad points it at the rk817 in /run/banana/asound.conf),
 # and threshold=0.05 is Settings' "Medium". Written to the file, never exported: an exported BANANADS_MIC_SOURCE or
 # BANANADS_MIC_THRESHOLD would win over the file and freeze the settings screen's choices. A card that already
-# names them (including source=none, Settings > Nintendo DS > Microphone Off) is left as it is. Before 0.4.3 the one
+# names them (including source=none, Settings > Nintendo DS > BananaDS > Microphone Off) is left as it is. Before 0.4.3 the one
 # Microphone row's Off wrote mic.threshold = 0, which BananaDS reads as "gate off" (every sound through): such a card
 # gets source=none (what Off meant) and Medium's threshold instead.
 M=$D/.banana-mic-src
@@ -89,7 +91,7 @@ if [ ! -e /run/banana/asound.conf ]; then
 elif ! grep -q 'capture\.pcm *{ *type plug' /run/banana/asound.conf; then
     echo "run-bananads: /run/banana/asound.conf has a capture.pcm without the 48 kHz plug: the mic may not start" >&2
 fi
-# Settings > Nintendo DS > Low latency (experimental): bananads.conf's kms.lowlat (off, on), which BananaDS reads itself
+# Settings > Nintendo DS > BananaDS > Low latency (experimental): bananads.conf's kms.lowlat (off, on), which BananaDS reads itself
 # (its docs/SETTINGS.md): no frame queue, each frame aimed at the panels' refresh. Run-ahead (runahead1, runahead2)
 # left Settings in 0.5.0: it never fit a refresh on these handhelds (agent-qa LL2: a 9-18 ms snapshot on top of two
 # frames), so a card that has it gets On, which is what BananaDS did with it anyway. Said in the log, for a report

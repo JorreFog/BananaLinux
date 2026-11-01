@@ -1990,7 +1990,7 @@ int main(int argc, char** argv)
 	{
 		auto cv = [&](const char* k, const char* d) { return getConfValue(o.data + "/settings.conf", k, getConfValue("/etc/banana/settings.conf", k, d)); };
 		bottomIdle.setOwned(false, nowMs());	// the menu never dims the bottom screen
-		// Settings > Other systems > Game panel when idle: stays on (no timer), dims (to bottom_dim_percent, 25 unless
+		// Settings > Other systems > Second screen > Game panel when idle: stays on (no timer), dims (to bottom_dim_percent, 25 unless
 		// set), or turns off (the backlight at 0); a mode-less card from before the row: a dim percent of 0 is off
 		std::string mode = cv("bottom_idle_mode", "");
 		int pc = atoi(cv("bottom_dim_percent", "25").c_str());
@@ -2458,12 +2458,12 @@ int main(int argc, char** argv)
 		// only case where the bottom screen is Banana's own while a game runs. A game drawing on the bottom, or on
 		// both, is never dimmed. Tell bananad, which leaves the bottom to us for the game's length.
 		bottomIdle.setOwned(panel && gameScreen == 0, nowMs());
-		// Settings > Other systems > Pokémon companion, for a Pokémon game it knows (the ROM header): RetroArch's stdout
+		// Settings > Other systems > Second screen > Pokémon companion, for a Pokémon game it knows (the ROM header): RetroArch's stdout
 		// through a pipe the panel reads (held open both ways here: no end seen when RetroArch quits, and RetroArch
 		// never meets a pipe with no reader)
 		companion.close();
 		gameComp.close();
-		// Settings > Other systems > Game companion: the same for another GBA game with a definition in
+		// Settings > Other systems > Second screen > Game companion: the same for another GBA game with a definition in
 		// /data/banana/companions (the card's own, written or tried out there) or /usr/share/banana/companions
 		// (gamecomp.h; the Pokémon games are the Pokémon companion's)
 		bool pkOn = panel && sd.id == "gba" && settings["pokemon_companion"] == "on" && companion.open(rom);

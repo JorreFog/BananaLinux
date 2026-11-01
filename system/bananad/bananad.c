@@ -577,7 +577,7 @@ static void ra_command(const char *c)
 	close(fd);
 }
 
-/* L2, R2, L3 or R3 pressed alone in a RetroArch game: its job's command (Settings > Other systems > Buttons;
+/* L2, R2, L3 or R3 pressed alone in a RetroArch game: its job's command (Settings > Other systems > Buttons > the system;
  * run-retroarch's /run/banana/ra-buttons, "<button> <command>" lines, there only while a game it applies to runs) */
 static void ra_button(const char *name)	/* (c: a command of up to 38, the newline and its end fit) */
 {

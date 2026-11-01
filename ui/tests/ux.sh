@@ -83,11 +83,12 @@ ux_check ink-light "inkon f0b429: ink ffffff"
 sed -i 's/^accent_text = .*//' "$UXFX/data/settings.conf"
 
 # L/R go a page: five games in a list (the shoulders name the games they land on), five rows in a settings list
-# (Display & sound: R twice from Theme is Clock, Right sets 12-hour)
-ux_run page "lib 0 0; wait 2400; shot ux-page; press r; press l; press start; press a; press r; press r; press right; press b; press b"
+# (Display & sound, the third tile: R twice from Volume is its last row, up is Menu look; A opens it, Clock is its first
+# row, Right sets 12-hour)
+ux_run page "lib 0 0; wait 2400; shot ux-page; press r; press l; press start; press r; press r; press a; press r; press r; press up; press a; press right; press b; press b; press b"
 ux_check page "press r: used, view 1 sys 0 game 4"
 ux_check page "press l: used, view 1 sys 0 game 0"
-grep -q '^clock = 12h' "$UXFX/data/settings.conf" || { echo "FAIL $size: R twice in Display & sound didn't reach Clock"; fail=1; }
+grep -q '^clock = 12h' "$UXFX/data/settings.conf" || { echo "FAIL $size: R twice in Display & sound and Menu look didn't reach Clock"; fail=1; }
 sed -i 's/^clock = 12h/clock = 24h/' "$UXFX/data/settings.conf"
 
 # no noise: the home bubble has no second line repeating the name ("Nintendo DS" / "Nintendo"), and no count under a
@@ -145,10 +146,10 @@ ux_check noports-link "press a: used, view 1 sys 5"
 UXFX=$UXFX_SAVE
 
 # the home row: a system with nothing to start is left off, Ports with PortMaster's own entry alone is on it (PortMaster
-# gets ports: deleting the last port must not take it away); Display & sound > Shown systems (R twice, down) hides one
-# (Game Boy Advance), then Ports (the row before Files, the last)
+# gets ports: deleting the last port must not take it away); Display & sound > Shown systems (R twice to the last row,
+# Menu look, then up) hides one (Game Boy Advance), then Ports (the row before Files, the last)
 UXP=$UXFX/roms/ports; mkdir -p "$UXP"; printf '#!/bin/bash\n' > "$UXP/PortMaster.sh"
-ux_run shelves "home 0; press left; press start; press a; press r; press r; press down; press a; press down; press right; press up; press up; press up; press right; press b; press start; home 0; press left"
+ux_run shelves "home 0; press left; press start; press r; press r; press a; press r; press a; press down; press right; press up; press up; press up; press right; press b; press start; home 0; press left"
 grep -q '^shelf.gba = hide' "$UXFX/data/settings.conf" && grep -q '^shelf.ports = hide' "$UXFX/data/settings.conf" || { echo "FAIL $size: shown systems: $(grep shelf "$UXFX/data/settings.conf" | tr '\n' ' ')"; fail=1; }
 # the row's systems: n at first with Ports (left from the first is n - 1), n - 1 without the GBA, n - 2 without Ports
 first=$(sed -n 's/.*press left: used, view 0 sys \([0-9]*\).*/\1/p' "$OUT/$size-shelves.log" | head -1)
@@ -158,22 +159,37 @@ sed -i '/^shelf\./d' "$UXFX/data/settings.conf"
 
 # System > Language (its first row) asks before switching, No first: right then A keeps English; right, down, A
 # switches (the menu starts again: settings result 9, LANGUAGE) to the first language after English, ru
-ux_run langask "home 0; press start; press r; press r; press r; press r; press r; press a; press right; shot ux-langask; press a"
+ux_run langask "home 0; press start; press r; press r; press r; press r; press r; press a; press down; press right; shot ux-langask; press a"
 grep -q '^language = ' "$UXFX/data/settings.conf" && { echo "FAIL $size: the language switched without a Yes"; fail=1; }
 ux_check langask "press a: settings result 1"
-ux_run langyes "home 0; press start; press r; press r; press r; press r; press r; press a; press right; press down; press a"
+ux_run langyes "home 0; press start; press r; press r; press r; press r; press r; press a; press down; press right; press down; press a"
 grep -q '^language = ru' "$UXFX/data/settings.conf" || { echo "FAIL $size: Yes didn't switch the language"; fail=1; }
 sed -i '/^language = /d' "$UXFX/data/settings.conf"
 
-# System > Credits (after About: up four from the first row) opens the credits from credits.txt; with no names in it,
-# no row (up four is then Restart, an action: A only arms it)
-ux_run credits "home 0; press start; press r; press r; press r; press r; press r; press a; press up; press up; press up; press up; shot ux-credits-row; press a; shot ux-credits; press down; press b" BANANA_CREDITS="$HERE/../system/rootfs/etc/banana/credits.txt"
+# System > Credits (after About, before Hotkeys: up two from the first row) opens the credits from credits.txt; with no
+# names in it, no row (up two is then About, which A leaves as it is)
+ux_run credits "home 0; press start; press r; press r; press r; press r; press r; press a; press down; press down; press down; press down; press down; press down; shot ux-credits-row; press a; shot ux-credits; press down; press b" BANANA_CREDITS="$HERE/../system/rootfs/etc/banana/credits.txt"
 ux_lt 1000 "$(ux_diff "$OUT/$size-ux-credits-bot.png" "$OUT/$size-ux-credits-row-bot.png")" || { echo "FAIL $size: Credits didn't open"; fail=1; }
 grep -q 'Majirefy = ' "$HERE/../system/rootfs/etc/banana/credits.txt" || { echo "FAIL: credits.txt lost Majirefy's credit"; fail=1; }
 
 # System > Hotkeys (its last row: up from the first) opens the list of hotkeys, B back to System on its row
-ux_run hotkeys "home 0; press start; press r; press r; press r; press r; press r; press a; press up; press a; wait 400; shot ux-hotkeys; press b; wait 400; shot ux-hotkeys-back"
+ux_run hotkeys "home 0; press start; press r; press r; press r; press r; press r; press a; press down; press down; press down; press down; press a; wait 400; shot ux-hotkeys; press b; wait 400; shot ux-hotkeys-back"
 ux_lt 1000 "$(ux_diff "$OUT/$size-ux-hotkeys-bot.png" "$OUT/$size-ux-hotkeys-back-bot.png")" || { echo "FAIL $size: Hotkeys didn't open"; fail=1; }
+# Nintendo DS > SuperDrastic (its sixth row) opens that emulator's own page, and Hotkeys there (third from its end) its
+# hotkeys; B back on that row, B again back on SuperDrastic in Nintendo DS
+ux_run hotkeys-sd "home 0; press start; press a; press down; press down; wait 400; shot ux-ds-row; press a; press up; press up; press up; wait 400; shot ux-sd-page; press a; wait 400; shot ux-hotkeys-sd; press b; wait 400; shot ux-hotkeys-sd-back; press b; wait 400; shot ux-sd-back"
+ux_lt 1000 "$(ux_diff "$OUT/$size-ux-ds-row-bot.png" "$OUT/$size-ux-sd-page-bot.png")" || { echo "FAIL $size: Nintendo DS > SuperDrastic didn't open"; fail=1; }
+ux_lt 1000 "$(ux_diff "$OUT/$size-ux-hotkeys-sd-bot.png" "$OUT/$size-ux-hotkeys-sd-back-bot.png")" || { echo "FAIL $size: SuperDrastic > Hotkeys didn't open"; fail=1; }
+# (the list's header, its title and "row / rows" (x 18-622, y 16-66), the same: the same page and row, wherever it scrolled)
+ux_head() { convert "$1" -crop "$(awk -v k=$ux_k 'BEGIN { printf "%dx%d+%d+%d", 604 * k, 50 * k, 18 * k, 16 * k }')" +repage "$2"; }
+for s in sd-page hotkeys-sd-back ds-row sd-back; do ux_head "$OUT/$size-ux-$s-bot.png" "$OUT/$size-ux-$s-head.png"; done
+[ "$(ux_diff "$OUT/$size-ux-sd-page-head.png" "$OUT/$size-ux-hotkeys-sd-back-head.png")" = 0 ] || { echo "FAIL $size: B from SuperDrastic's hotkeys wasn't back on its Hotkeys row"; fail=1; }
+[ "$(ux_diff "$OUT/$size-ux-ds-row-head.png" "$OUT/$size-ux-sd-back-head.png")" = 0 ] || { echo "FAIL $size: B from SuperDrastic wasn't back on its row in Nintendo DS"; fail=1; }
+# Other systems > Picture & sound (its fifth row) opens its page (Shader first), B back on its row
+ux_run ra-picture "home 0; press start; press r; press a; press down; wait 400; shot ux-ra-row; press a; wait 400; shot ux-ra-picture; press b; wait 400; shot ux-ra-back"
+for s in ra-row ra-picture ra-back; do ux_head "$OUT/$size-ux-$s-bot.png" "$OUT/$size-ux-$s-head.png"; done
+ux_lt 1000 "$(ux_diff "$OUT/$size-ux-ra-row-bot.png" "$OUT/$size-ux-ra-picture-bot.png")" || { echo "FAIL $size: Other systems > Picture & sound didn't open"; fail=1; }
+[ "$(ux_diff "$OUT/$size-ux-ra-row-head.png" "$OUT/$size-ux-ra-back-head.png")" = 0 ] || { echo "FAIL $size: B from Picture & sound wasn't back on its row in Other systems"; fail=1; }
 
 # the wordmark's B (tools/make-logo.py's B_GLYPH): square corners on the left, so it doesn't read as a G; in the boot
 # animation's mask (word.png) its top-left and bottom-left pixels are set

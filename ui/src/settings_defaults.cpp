@@ -22,6 +22,7 @@ namespace banana
 			const char* const* allowed;	// ENUM
 			int min, max;				// INTEGER
 			bool emulator = false;		// EMULATOR scope (also true for Type CORE below)
+			bool perSystem = false;		// <key>.<system> too: a system's own (findSystem)
 		};
 
 		// each list ends in nullptr: valid() walks it to the end
@@ -43,7 +44,7 @@ namespace banana
 		const char* const LOGIN[] = { "password", "guest", nullptr };
 		const char* const BT_AUDIO[] = { "latency", "quality", nullptr };
 		// Nintendo DS > Buttons: L2, R2, L3 and R3's job in both DS emulators (nds-buttons)
-		// Other systems > Buttons: L2, R2, L3 and R3 in RetroArch's games (run-retroarch, bananad)
+		// Other systems > Buttons > a system: L2, R2, L3 and R3 in its RetroArch games (run-retroarch, bananad)
 		const char* const RA_BTN[] = { "game", "ff", "save", "load", "menu", "pause", "screenshot", "none", nullptr };
 		const char* const NDS_BTN[] = { "a", "b", "x", "y", "l", "r", "start", "select", "swap", "save", "load", "ff", "blow", "menu", "none", nullptr };
 		const char* const ASK[] = { "ask", "always", "never", nullptr };
@@ -79,16 +80,18 @@ namespace banana
 			{ "ra_border", "off", ENUM, ON_OFF, 0, 0, true },
 			{ "ra_audio_latency", "64", ENUM, LATENCY, 0, 0, true },
 			{ "ra_vsync", "on", ENUM, ON_OFF, 0, 0, true },
-			{ "ra_hotkeys", "on", ENUM, ON_OFF, 0, 0, true },
-			{ "ra_btn_l2", "game", ENUM, RA_BTN, 0, 0, true },
-			{ "ra_btn_r2", "ff", ENUM, RA_BTN, 0, 0, true },
-			{ "ra_btn_l3", "game", ENUM, RA_BTN, 0, 0, true },
-			{ "ra_btn_r3", "game", ENUM, RA_BTN, 0, 0, true },
+			// (only as <key>.<system>, a system's own: these are their values; the template has R2's fast-forward)
+			{ "ra_btn_l2", "game", ENUM, RA_BTN, 0, 0, true, true },
+			{ "ra_btn_r2", "game", ENUM, RA_BTN, 0, 0, true, true },
+			{ "ra_btn_l3", "game", ENUM, RA_BTN, 0, 0, true, true },
+			{ "ra_btn_r3", "game", ENUM, RA_BTN, 0, 0, true, true },
+			{ "ra_swap_ab", "off", ENUM, ON_OFF, 0, 0, true, true },
 			{ "nds_emulator", "superdrastic", ENUM, NDS, 0, 0, true },
 			{ "nds_btn_l2", "swap", ENUM, NDS_BTN, 0, 0, true },
 			{ "nds_btn_r2", "ff", ENUM, NDS_BTN, 0, 0, true },
 			{ "nds_btn_l3", "blow", ENUM, NDS_BTN, 0, 0, true },
 			{ "nds_btn_r3", "none", ENUM, NDS_BTN, 0, 0, true },
+			{ "nds_swap_ab", "off", ENUM, ON_OFF, 0, 0, true },
 			{ "share", "off", ENUM, ON_OFF, 0, 0 },
 			{ "share_login", "password", ENUM, LOGIN, 0, 0 },
 			{ "ssh", "off", ENUM, ON_OFF, 0, 0 },
@@ -118,6 +121,23 @@ namespace banana
 		{
 			for (const auto& k : KEYS) if (key == k.key) return &k;
 			return nullptr;
+		}
+
+		// <key>.<system> for a perSystem key (Other systems > Buttons > a system's page: ra_btn_l2.gba, ra_swap_ab.snes...;
+		// run-retroarch): the key's own values. No default here: a card without the line has the template's, else the
+		// row's first (the game's own, off)
+		const KeyDef* findSystem(const std::string& key)
+		{
+			size_t dot = key.find('.');
+			if (dot == std::string::npos || dot + 1 == key.size()) return nullptr;
+			const KeyDef* base = find(key.substr(0, dot));
+			return base && base->perSystem ? base : nullptr;
+		}
+
+		// a key settings.conf knows: the schema's, a core.<system> or a system's own hotkeys and buttons
+		bool knownKey(const std::string& key)
+		{
+			return find(key) != nullptr || key.rfind("core.", 0) == 0 || findSystem(key) != nullptr;
 		}
 
 		std::string trim(const std::string& s)
@@ -180,6 +200,7 @@ namespace banana
 		bool validKey(const std::string& key, const std::string& value)
 		{
 			if (const KeyDef* k = find(key)) return valid(*k, value);
+			if (const KeyDef* k = findSystem(key)) return valid(*k, value);
 			// core.<system>: a system added to systems.conf gets the same core rule without a schema entry of its own
 			if (key.rfind("core.", 0) == 0)
 			{
@@ -249,7 +270,7 @@ namespace banana
 
 	bool settingIsEmulator(const std::string& key)
 	{
-		if (key.rfind("core.", 0) == 0) return true;
+		if (key.rfind("core.", 0) == 0 || findSystem(key)) return true;
 		const KeyDef* k = find(key);
 		return k && (k->emulator || k->type == CORE);
 	}
@@ -305,7 +326,7 @@ namespace banana
 			if (!ln.empty() && ln.back() == '\r') l.raw.pop_back();
 			if (split(ln, l.key, l.value))
 			{
-				l.known = find(l.key) != nullptr || l.key.rfind("core.", 0) == 0;
+				l.known = knownKey(l.key);
 				if (l.known) last[l.key] = (int)lines.size();
 			}
 			lines.push_back(l);
@@ -347,7 +368,7 @@ namespace banana
 			std::string v = defaultFor(key);
 			return validKey(key, v) ? v : "";
 		};
-		auto known = [&](const std::string& key) { return find(key) != nullptr || key.rfind("core.", 0) == 0; };
+		auto known = [&](const std::string& key) { return knownKey(key); };
 		auto inScope = [&](const std::string& key)
 		{
 			bool emu = settingIsEmulator(key);

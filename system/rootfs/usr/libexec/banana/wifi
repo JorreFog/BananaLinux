@@ -106,7 +106,7 @@ wlan0)
         # (time-synced: the clock came from the network this boot, for wifi test)
         udhcpc -b -t 5 -i wlan0 -p /run/banana/udhcpc.pid -s /usr/share/udhcpc/default.script >/dev/null 2>&1 &&
             { ntpd -q -n -p pool.ntp.org >/dev/null 2>&1 && { hwclock -w 2>/dev/null; date +%s > /run/banana/time-synced; }; } &
-        # Settings > System > Update check: Daily asks GitHub for a newer version, once a day at most (the update
+        # Settings > System > Updates > Update check: Daily asks GitHub for a newer version, once a day at most (the update
         # script reads the setting itself; nothing is downloaded). After the clock had its chance: TLS needs it
         ( sleep 20; /usr/libexec/banana/update check --daily ) >/dev/null 2>&1 &
         # Settings > Network > Home server: Auto sync "Leaving a game and on Wi-Fi" syncs games and saves with the

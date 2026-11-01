@@ -180,6 +180,7 @@ namespace banana
 		struct Item
 		{
 			std::string section, icon, label, help;
+			std::string mirror;						// a hotkeys page's L2 to R3 (INFO): the row whose value it shows
 			std::string file, key;					// where it is kept ("" for the special ones)
 			std::vector<std::string> names, values;	// shown, stored
 			int at = 0;
@@ -196,11 +197,16 @@ namespace banana
 		// the groups (the items' sections, in order): Settings opens on a grid of them, as the in-game menu's main page;
 		// A opens one's list, B goes back to the grid
 		std::vector<std::string> groups;
+		std::map<std::string, std::string> groupIcon;	// a section's icon: its first row's as build adds them, whatever ORDER puts first
 		int gsel = 0;
 		bool inGroups = true;
 		int groupOf(int item) const;			// the group an item is in
 		int groupStart(int g) const, groupEnd(int g) const;	// its items: [start, end)
 		std::string groupHint(int g) const;		// what is in it, for its tile
+		// a section's place: the tile's section down to its own, through the rows that open each subpage
+		// (Nintendo DS, SuperDrastic, SuperDrastic hotkeys); a tile's section alone
+		std::vector<std::string> sectionPath(const std::string& section) const;
+		const Item* itemByKey(const std::string& key) const;	// the first row with that key, or none
 		Result pressGroups(Key k);
 		void renderGroups();
 		bool downOnRow = false;
@@ -432,7 +438,7 @@ namespace banana
 		void typeText(const std::string& t) { if (page == KEYBOARD) pw += t; }	// (the headless test: text typed at once)
 	private:
 
-		// Bluetooth (Settings > Network > Bluetooth devices): the devices known and found, paired, connected, through
+		// Bluetooth (Settings > Network > Bluetooth > Bluetooth devices): the devices known and found, paired, connected, through
 		// the bluetooth script (BANANA_BLUETOOTH: the test's stand-in)
 		std::string btTool;
 		wifi::Job btListJob, btScanJob, btActJob;
@@ -630,7 +636,6 @@ namespace banana
 		void gameStatesScan();
 		void gameStatesFrame(const SPal& p);
 		bool gTouch = true;
-		bool gHotkeys = true;	// Settings > Other systems > RetroArch hotkeys: off, F + R and the like do nothing
 		double gFlashUntil = 0;
 		int gSeen = -1;						// the watch's generation last drawn
 		int awardsSeen = 0; bool wake = false;	// (gameWake)

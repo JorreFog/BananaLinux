@@ -107,12 +107,14 @@ has them) when none of the four is set to them: SuperDrastic presses them for F 
 Load and Quick resume (`buildroot/patches/superdrastic/0001-*`). Those lines of `drastic.cfg` are Banana's, set again
 at every start; the rest of DraStic's buttons stay its own menu's.
 
-The other systems have a **Buttons** page too (Settings > Other systems > Buttons; `ra_btn_l2` ... `ra_btn_r3`): L2,
+The other systems have a **Buttons** page too (Settings > Other systems > Buttons; one page for each system, `ra_btn_l2.<system>` ... `ra_btn_r3.<system>` and `ra_swap_ab.<system>`): L2,
 R2, L3 or R3 pressed alone does a job of RetroArch's instead of the game's button (fast-forward on and off, save or
 load a state, the menu, pause, a screenshot, nothing; R2 fast-forwards by default). RetroArch's own hotkeys only work
 with F held, so `run-retroarch` lists the jobs in `/run/banana/ra-buttons` and moves those buttons' RetroPad binds to
 joystick buttons no pad has (30-33; put back after the game), and bananad sends the job's command down RetroArch's
 stdin pipe when the button is pressed without F. PlayStation and N64 games keep the four buttons, which they use.
+The left stick works as the d-pad in every system but N64 (RetroArch's `input_player1_analog_dpad_mode = "1"`, for the
+run only); a PlayStation game with the core's DualShock pad keeps its analog stick.
 
 ## BananaDS
 

@@ -2,6 +2,7 @@
 # Settings > Nintendo DS > Buttons: what L2, R2, L3 and R3 do in a DS game, the same in both emulators. Kept in
 # banana/settings.conf (nds_btn_l2, nds_btn_r2, nds_btn_l3, nds_btn_r3); each emulator is given them as it starts.
 #   nds-buttons get <l2|r2|l3|r3>       the button's job (the default when the card has none, or one it doesn't know)
+#   nds-buttons swapab                  on when A and B, and X and Y, swap places (nds_swap_ab), else off
 #   nds-buttons drastic <drastic.cfg>   DraStic's controls for them written into the file; prints the joystick
 #                                       buttons that swap the screens, for SuperDrastic's DSFLIP_SWAP_BUTTONS
 # A job: a DS button (a b x y l r start select), swap, save, load, ff (fast-forward on and off), blow (the mic, held),
@@ -15,13 +16,16 @@ get() {
     case $v in a|b|x|y|l|r|start|select|swap|save|load|ff|blow|menu|none) echo "$v"; return ;; esac
     case $1 in l2) echo swap ;; r2) echo ff ;; l3) echo blow ;; *) echo none ;; esac
 }
+swapab() { [ "$(sed -n '/^ *nds_swap_ab *= */{s///;s/ *$//;h};${x;p}' $S 2>/dev/null)" = on ] && echo on || echo off; }
 case $1 in
 get) get "$2" ;;
+swapab) swapab ;;
 drastic)
     C=$2
     [ -f "$C" ] || exit 0
     # the pad's numbers (retrogame_joypad's order): L2 6, R2 7, L3 11, R3 12, as DraStic's 1024 + n
-    awk -v swapfile="$C.swap" -v map="1030=$(get l2) 1031=$(get r2) 1035=$(get l3) 1036=$(get r3)" '
+    # (swapab: the DS's A, B, X and Y on the pad's B, A, Y and X: their printed binds, controls_b, swapped)
+    awk -v swapab="$(swapab)" -v swapfile="$C.swap" -v map="1030=$(get l2) 1031=$(get r2) 1035=$(get l3) 1036=$(get r3)" '
     BEGIN {
         ctl["save"] = "SAVE_STATE"; ctl["load"] = "LOAD_STATE"; ctl["ff"] = "FAST_FORWARD"; ctl["blow"] = "FAKE_MICROPHONE"
         ctl["menu"] = "MENU"; ctl["a"] = "A"; ctl["b"] = "B"; ctl["x"] = "X"; ctl["y"] = "Y"; ctl["l"] = "L"; ctl["r"] = "R"
@@ -40,6 +44,9 @@ drastic)
         }
         if (!(("a", "SAVE_STATE") in want)) want["a", "SAVE_STATE"] = 1054
         if (!(("a", "LOAD_STATE") in want)) want["a", "LOAD_STATE"] = 1055
+        printed["A"] = 1025; printed["B"] = 1024; printed["X"] = 1026; printed["Y"] = 1027
+        if (swapab == "on") { want["b", "A"] = 1024; want["b", "B"] = 1025; want["b", "X"] = 1027; want["b", "Y"] = 1026 }
+        else for (c in printed) want["b", c] = printed[c]
     }
     match($0, /^controls_[ab]\[CONTROL_INDEX_[A-Z_]+\] = [0-9]+/) {
         set = substr($0, 10, 1); c = $0; sub(/^controls_[ab]\[CONTROL_INDEX_/, "", c); sub(/\].*/, "", c)
@@ -54,5 +61,5 @@ drastic)
     cat "$C.swap"; rm -f "$C.swap"
     if cmp -s "$C" "$C.new"; then rm -f "$C.new"; else mv -f "$C.new" "$C"; fi
     ;;
-*) echo "nds-buttons get <l2|r2|l3|r3> | drastic <drastic.cfg>" >&2; exit 2 ;;
+*) echo "nds-buttons get <l2|r2|l3|r3> | swapab | drastic <drastic.cfg>" >&2; exit 2 ;;
 esac

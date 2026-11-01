@@ -1,5 +1,5 @@
 #pragma once
-// banana-ui: the Pokémon companion on the game panel (Settings > Other systems > Pokémon companion). While a Game Boy
+// banana-ui: the Pokémon companion on the game panel (Settings > Other systems > Second screen > Pokémon companion). While a Game Boy
 // Advance Pokémon game plays in RetroArch on one panel, the other shows the party (levels, HP, status, moves and their
 // PP; a member's stats, IVs, EVs, nature and ability) and, in a battle, the foe with its types and how each of the lead's moves does against it.
 //

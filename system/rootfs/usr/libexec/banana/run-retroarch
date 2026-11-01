@@ -32,7 +32,7 @@ n64|psx|"") ;;
     [ $bf = 1 ] && [ -x $bfbin ] && [ -x /usr/libexec/banana/run-bananafront ] &&
         BANANAFRONT_BIN=$bfbin exec /usr/libexec/banana/run-bananafront "$@" ;;
 esac
-# Settings > Other systems > the system's core (settings.conf's core.<system>, BANANA_SYSTEM from banana-ui): another
+# Settings > Other systems > Emulators > the system's core (settings.conf's core.<system>, BANANA_SYSTEM from banana-ui): another
 # installed core instead of systems.conf's, e.g. mGBA for the Game Boy Advance (RetroAchievements), or one downloaded
 # with RetroArch's Core Downloader; one not installed is ignored
 if [ -n "$BANANA_SYSTEM" ]; then
@@ -150,7 +150,7 @@ if [ -z "$font" ] || [ "$font" = "$(cat $F 2>/dev/null)" ]; then
         set_cfg video_font_path ""; set_cfg video_font_size 32; rm -f $F
     fi
 fi
-# Settings > Other systems > Shader: RetroArch's global preset, a reference to one of the image's presets. Only a
+# Settings > Other systems > Picture & sound > Shader: RetroArch's global preset, a reference to one of the image's presets. Only a
 # global.glslp Banana wrote (its first line) is changed or removed: one saved from RetroArch's own menu stays.
 GP=/data/retroarch/config/global.glslp
 look=$(setting ra_shader)
@@ -164,14 +164,14 @@ ours() { head -n 1 $GP 2>/dev/null | grep -q '^# Banana'; }
 if [ -n "$SP" ]; then
     if [ ! -f $GP ] || ours; then
         mkdir -p ${GP%/*}
-        printf '# Banana: Settings > Other systems > Shader (%s)\n#reference "/usr/share/libretro/shaders/glsl/%s"\n' "$look" "$SP" > $GP
+        printf '# Banana: Settings > Other systems > Picture & sound > Shader (%s)\n#reference "/usr/share/libretro/shaders/glsl/%s"\n' "$look" "$SP" > $GP
         set_cfg video_shader_enable true
     fi
 elif ours; then
     rm -f $GP
     set_cfg video_shader_enable false
 fi
-# Settings > Other systems > Audio latency and VSync: Banana's values written into RetroArch's config at every start
+# Settings > Other systems > Picture & sound > Audio latency and VSync: Banana's values written into RetroArch's config at every start
 # (so these two follow Settings: a change made to them in RetroArch's own menu lasts until the game quits)
 lat=$(setting ra_audio_latency)
 case $lat in 32|64|128) set_cfg audio_latency $lat ;; esac
@@ -203,12 +203,10 @@ if [ -n "$u" ]; then
 elif [ -f $A ]; then
     set_cfg cheevos_enable false
 fi
-# Settings > Other systems > RetroArch hotkeys, Off: no F + button shortcuts but the two needed to get out, F + X (the
-# menu) and F + Start (quit). RetroArch's hotkeys come from the joypad's autoconfig profile, and a hotkey "unbound" in
-# its menu (nul in retroarch.cfg) falls back to the profile's, which is why one can't be taken away there; so
-# RetroArch gets a copy of the profiles with the other hotkeys left out, and every hotkey in retroarch.cfg as nul
-# (one bound to a face button in its menu, the A that stopped working, goes too). What it saves of those on exit is
-# put back below.
+# RetroArch hotkeys Off (a setting before 0.5.1, gone): RetroArch ran with a copy of the joypad profiles in /run and its
+# hotkey lines as nul, the card's own lines kept in KEEP. A run of it cut short (power lost, a hang after RetroArch saved
+# its settings) left retroarch.cfg pointing at the /run folder, gone after a restart: no profile, no way out but the
+# touch tiles. Those lines are put back here.
 HOTKEYS="ai_service audio_mute cheat_index_minus cheat_index_plus cheat_toggle close_content desktop_menu_toggle
 disk_eject_toggle disk_next disk_prev fps_toggle frame_advance game_focus_toggle grab_mouse_toggle halt_replay
 hold_fast_forward hold_slowmotion load_state netplay_fade_chat_toggle netplay_game_watch netplay_host_toggle
@@ -217,11 +215,6 @@ preempt_toggle prev_replay_checkpoint record_replay recording_toggle replay_slot
 rewind runahead_toggle save_replay_checkpoint save_state screenshot shader_hold shader_next shader_prev shader_toggle
 state_slot_decrease state_slot_increase streaming_toggle toggle_fast_forward toggle_fullscreen toggle_slowmotion
 toggle_statistics toggle_vrr_runloop turbo_fire_toggle volume_down volume_up"
-HK=/run/banana/retroarch-hotkeys.cfg
-HKA=
-# the lines kept for putting back, on the card (synced) so that a run cut short (power lost, a hang after RetroArch
-# saved its settings) is put right at the next start: else retroarch.cfg kept the autoconfig folder in /run, gone
-# after a restart, and the pad had no profile and no way out but the touch tiles
 KEEP=/data/retroarch/.banana-hotkeys.keep
 names=$(echo $HOTKEYS | tr ' ' '|')
 HKKEYS="^(joypad_autoconfig_dir|input_($names|enable_hotkey|menu_toggle|exit_emulator)_(btn|axis)) = "
@@ -230,44 +223,29 @@ if [ -f $KEEP ]; then
     echo "run-retroarch: the hotkey lines of a run cut short put back" >&2
 fi
 grep -q '^joypad_autoconfig_dir = "/run/' $CFG && set_cfg joypad_autoconfig_dir /usr/share/libretro/autoconfig
-rm -f $HK
-if [ "$(sed -n '/^ra_hotkeys *= */{s///;h};${x;p}' /data/banana/settings.conf 2>/dev/null)" = off ]; then
-    AC=/run/banana/ra-autoconfig
-    rm -rf $AC; mkdir -p $AC/udev
-    for f in /usr/share/libretro/autoconfig/udev/*.cfg; do
-        grep -vE "^input_($names)_(btn|axis) *=" "$f" > $AC/udev/${f##*/}
-    done
-    {
-        echo "joypad_autoconfig_dir = \"$AC\""
-        for h in $HOTKEYS enable_hotkey menu_toggle exit_emulator; do printf 'input_%s_btn = "nul"\ninput_%s_axis = "nul"\n' $h $h; done
-    } > $HK
-    grep -E "$HKKEYS" $CFG > $KEEP.new && mv $KEEP.new $KEEP && sync
-    HKA="|$HK"
-fi
-# Settings > Other systems > Buttons (ra_btn_l2, ra_btn_r2, ra_btn_l3, ra_btn_r3): L2, R2, L3 or R3 alone, a job of
+# Settings > Other systems > Buttons > the system (ra_btn_l2.<system> ... ra_btn_r3.<system>): L2, R2, L3 or R3 alone, a job of
 # RetroArch's instead of the game's button (fast-forward on and off, save or load a state, its menu, pause, a
 # screenshot, nothing), as Nintendo DS > Buttons is for the DS. RetroArch's hotkeys only work with F held, so bananad
 # sends the job's command down RetroArch's stdin pipe (/run/banana/ra-buttons: "<button> <command>" lines, its list
 # for this game), and the button is moved off the game: its RetroPad bind on joystick button 30-33, which no pad has
-# (a bind of "nul" falls back to the autoconfig profile's). Not PlayStation and N64, whose games use those buttons.
-# What RetroArch saves of the binds on exit is put back below, as for the hotkeys.
+# (a bind of "nul" falls back to the autoconfig profile's). No line: the template's (R2 fast-forwards in the 2D
+# systems' games), else the game's own. What RetroArch saves of the binds on exit is put back below, as for the hotkeys.
 RBF=/run/banana/ra-buttons
 RBCFG=/run/banana/retroarch-buttons.cfg
 RBKEEP=/data/retroarch/.banana-buttons.keep
-RBKEYS='^input_player1_(l2|r2|l3|r3)_btn = '
+RBKEYS='^input_player1_((l2|r2|l3|r3|a|b|x|y)_btn|analog_dpad_mode) = '
 if [ -f $RBKEEP ]; then
     sed -i -E "/$RBKEYS/d" $CFG && cat $RBKEEP >> $CFG && rm -f $RBKEEP && sync
     echo "run-retroarch: the button lines of a run cut short put back" >&2
 fi
 rm -f $RBF $RBCFG
 RBA=
-case ${BANANA_SYSTEM:-psx} in
-psx|n64) ;;
+case $BANANA_SYSTEM in
+"") ;;
 *)
     n=30
     for b in l2 r2 l3 r3; do
-        j=$(setting ra_btn_$b)
-        [ -n "$j" ] || { [ $b = r2 ] && j=ff || j=game; }
+        j=$(setting "ra_btn_$b.$BANANA_SYSTEM")
         case $j in
         ff) c=FAST_FORWARD ;; save) c=SAVE_STATE ;; load) c=LOAD_STATE ;; menu) c=MENU_TOGGLE ;;
         pause) c=PAUSE_TOGGLE ;; screenshot) c=SCREENSHOT ;; none) c=- ;; *) c= ;;
@@ -278,14 +256,21 @@ psx|n64) ;;
         fi
         n=$((n + 1))
     done
+    # Other systems > Buttons > the system > Swap A/B and X/Y (ra_swap_ab.<system>): the RetroPad's A on the pad's B and
+    # so on (the profile's A 1, B 0, X 2, Y 3), in the game and in RetroArch's menu
+    [ "$(setting "ra_swap_ab.$BANANA_SYSTEM")" = on ] && printf 'input_player1_a_btn = "0"\ninput_player1_b_btn = "1"\ninput_player1_x_btn = "3"\ninput_player1_y_btn = "2"\n' >> $RBCFG
+    # the left stick as the d-pad (#142) on every system whose pad had no stick: all but N64. RetroArch's "Left Analog"
+    # (1), not the forced one: it only applies while the core's pad is digital, so a PlayStation game with the core's
+    # DualShock keeps its analog stick
+    [ "$BANANA_SYSTEM" != n64 ] && echo 'input_player1_analog_dpad_mode = "1"' >> $RBCFG
     if [ -f $RBCFG ]; then
         grep -E "$RBKEYS" $CFG > $RBKEEP.new; mv -f $RBKEEP.new $RBKEEP && sync
         RBA="|$RBCFG"
-        echo "run-retroarch: buttons: $(tr '\n' ' ' < $RBF)" >&2
+        echo "run-retroarch: buttons: $(tr '\n' ' ' 2>/dev/null < $RBF)$(grep -q '_a_btn' $RBCFG && echo 'A/B and X/Y swapped ')$(grep -q analog_dpad $RBCFG && echo 'left stick as d-pad')" >&2
     fi
     ;;
 esac
-# Settings > Other systems > Screen border (ra_border, default off): the black area around the picture filled with a
+# Settings > Other systems > Picture & sound > Screen border (ra_border, default off): the black area around the picture filled with a
 # border in the menu's look (tools/make-borders.py made them: /usr/share/banana/borders/<panel mode>/<theme>/<system>),
 # as a RetroArch overlay with a clear hole, and the picture put exactly in that hole as RetroArch's custom viewport
 # (borders.conf). The theme's own border when the image has one for it (dark, light, the example themes as the image
@@ -388,7 +373,7 @@ if [ -n "$BANANA_DRM_LEASE_FD" ]; then
     # the Pokemon companion (Settings > Other systems): RetroArch's stdout, where it answers the panel's
     # READ_CORE_MEMORY commands, into the pipe banana-ui reads (its log goes to the file above, not there)
     if [ -n "$BANANA_RA_OUT" ] && [ -p "$BANANA_RA_OUT" ]; then exec 4>"$BANANA_RA_OUT"; else exec 4>&1; fi
-    LD_PRELOAD=/usr/lib/banana/banana-leaseshim.so retroarch --config $CFG --appendconfig "$L|$RA$HKA$BA$RBA" --verbose \
+    LD_PRELOAD=/usr/lib/banana/banana-leaseshim.so retroarch --config $CFG --appendconfig "$L|$RA$BA$RBA" --verbose \
         --log-file /run/banana/retroarch.log -L "$CORE" "$2" < "${BANANA_RA_CMD:-/dev/null}" >&4 &
     P=$!
     exec 4>&-
@@ -404,7 +389,7 @@ else
     printf 'stdin_cmd_enable = "true"\n' > $L
     [ $ONCE = 1 ] && echo 'savestate_auto_load = "true"' >> $L
     [ -n "$GBASAVE" ] && printf 'savefile_directory = "%s"\nsort_savefiles_enable = "false"\n' $GBASAVE >> $L
-    retroarch --config $CFG --appendconfig "$L|$RA$HKA$BA$RBA" -L "$CORE" "$2" < $FIFO &
+    retroarch --config $CFG --appendconfig "$L|$RA$BA$RBA" -L "$CORE" "$2" < $FIFO &
     P=$!
 fi
 trap 'kill -TERM $P 2>/dev/null' TERM INT HUP
@@ -421,12 +406,6 @@ fix() { fix_d="$fix_d/^$1 = /d;"; fix_l="$fix_l$1 = \"$2\"
 if [ -n "$GBASAVE" ]; then
     fix savefile_directory "${SVD:-/data/saves}"
     fix sort_savefiles_enable "${SVS:-true}"
-fi
-if [ -n "$HKA" ]; then
-    # the hotkey lines as they were before the game (RetroArch wrote the Off ones into retroarch.cfg on exit)
-    sed -i -E "/$HKKEYS/d" $CFG
-    cat $KEEP >> $CFG
-    rm -f $HK $KEEP
 fi
 if [ -n "$RBA" ]; then
     # the button binds as they were before the game (RetroArch wrote the moved ones into retroarch.cfg on exit)

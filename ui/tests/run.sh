@@ -71,7 +71,7 @@ for size in 640x480 1024x768; do
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" \
         --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" \
         --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
-        --script "splash boot-drop 200; splash boot-word 700; splash boot-click 1100 1; home 0; wait 2400; shot home; bench 120; press a; wait 2400; shot lib; press right; wait 2400; shot lib2; bench 120; press a; wait 3000; shot ready; press b; press b; press start; shot settings; press a; press down; shot settings-list; press r; shot settings-page; press b; press r; press r; press r; press r; press r; press a; shot settings-system; press down; press right; shot settings-tz; press b; press b; romicon $FX/roms/nds/Yellow Planet [!].zip; romicon $FX/roms/nds/Peel Quest.nds; battery 50; battery 19; shot battery-low; press left; battery 18; battery 4; wait 2400; shot battery-empty; battery 4 charging; shot battery-charging; battery 19; \
+        --script "splash boot-drop 200; splash boot-word 700; splash boot-click 1100 1; home 0; wait 2400; shot home; bench 120; press a; wait 2400; shot lib; press right; wait 2400; shot lib2; bench 120; press a; wait 3000; shot ready; press b; press b; press start; shot settings; press a; press down; shot settings-list; press r; shot settings-page; press b; press r; press r; press r; press r; press r; press a; shot settings-system; press down; press down; press right; shot settings-tz; press b; press b; romicon $FX/roms/nds/Yellow Planet [!].zip; romicon $FX/roms/nds/Peel Quest.nds; battery 50; battery 19; shot battery-low; press left; battery 18; battery 4; wait 2400; shot battery-empty; battery 4 charging; shot battery-charging; battery 19; \
             outro bye-start 0; outro bye-eject 330; outro bye-word 520; outro bye-fall 820; outro bye-crt 1030; outro bye-end 1300" \
         2> "$log" || { echo "FAIL $size: banana-ui exited $?"; fail=1; continue; }
     check() { grep -q "$1" "$log" || { echo "FAIL $size: no '$1'"; fail=1; }; }
@@ -117,7 +117,7 @@ for size in 640x480 1024x768; do
     key() { for rc in "$@"; do awk -v rc=$rc 'BEGIN { split(rc, a, ","); printf "touch 1 %.0f %.0f; ", 18 + a[2] * 60.4 + 27, 80 + a[1] * 66 + 29 }'; done; }
     BANANA_WIFI="$HERE/tests/fake-wifi.sh" FAKE_WIFI_CONF="$FX/data/wifi.conf" "$HERE/banana-ui" --headless "$OUT/$size-" --size $size \
         --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
-        --script "home 0; press start; press r; press r; press r; press r; press a; press down; shot wifi-row; press down; shot share-row; press up; press a; shot wifi-list; press a; \
+        --script "home 0; press start; press r; press r; press r; press a; press down; shot wifi-row; press down; shot share-row; press up; press a; shot wifi-list; press a; \
             $(key 3,4 2,0 3,5) press start; shot wifi-short; $(key 2,0 3,5 2,0 0,0 0,1) shot wifi-keys; press start; wait 2500; shot wifi-joined; \
             press y; press down; press down; press a; wait 2500; press up; press a; press x; $(key 1,0 1,1 1,2 1,3 1,4 1,5 4,0 1,6 1,7) press start; \
             wait 2500; shot wifi-end" 2> "$wlog" || { echo "FAIL $size: banana-ui (Wi-Fi) exited $?"; fail=1; }
@@ -135,17 +135,17 @@ for size in 640x480 1024x768; do
     printf 'ctrl_interface=/run/wpa\nnetwork={\n\tssid="Cafe Free"\n\tkey_mgmt=NONE\n\tpriority=2\n}\nnetwork={\n\tssid="Banana Home"\n\tpsk="oldpassw"\n\tpriority=1\n}\n' > "$conf"
     BANANA_WIFI="$HERE/tests/fake-wifi.sh" FAKE_WIFI_CONF="$conf" "$HERE/banana-ui" --headless "$OUT/$size-" --size $size \
         --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
-        --script "home 0; press start; press r; press r; press r; press r; press a; press down; press a; wait 2500; shot wifi-saved-list; press a; shot wifi-saved; wait 2500; shot wifi-saved-joined" 2> "$nlog" || { echo "FAIL $size: banana-ui (saved Wi-Fi) exited $?"; fail=1; }
+        --script "home 0; press start; press r; press r; press r; press a; press down; press a; wait 2500; shot wifi-saved-list; press a; shot wifi-saved; wait 2500; shot wifi-saved-joined" 2> "$nlog" || { echo "FAIL $size: banana-ui (saved Wi-Fi) exited $?"; fail=1; }
     [ "$(sed -n 's/^[[:space:]]*ssid=//p' "$conf" | tr '\n' '|')" = '"Banana Home"|"Cafe Free"|' ] || { echo "FAIL $size: saved network not moved first: $(grep ssid= "$conf" | tr -d '\t' | tr '\n' ' ')"; fail=1; }
     grep -q 'psk="oldpassw"' "$conf" && grep -q 'priority=3' "$conf" && [ "$(grep -c priority= "$conf")" = 2 ] || { echo "FAIL $size: the saved block: $(tr -d '\t' < "$conf" | tr '\n' ' ')"; fail=1; }
     rm -f "$conf"
-    # Bluetooth: Settings > Network > Bluetooth switched on (the script's up), Bluetooth devices: a search (a stand-in
+    # Bluetooth: Settings > Network > Bluetooth (its page) > Bluetooth switched on (the script's up), Bluetooth devices: a search (a stand-in
     # bluetooth script: headphones, a pad, an 8BitDo that refuses), the headphones paired (and connected), forgotten,
     # the 8BitDo's refusal, the headphones paired again, then Bluetooth off (down); settings.conf keeps it off
     blog=$OUT/$size-bt.log; BT=$OUT/$size-bt; rm -rf "$BT"
     BANANA_BLUETOOTH="$HERE/tests/fake-bluetooth.sh" FAKE_BT="$BT" "$HERE/banana-ui" --headless "$OUT/$size-" --size $size \
         --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
-        --script "home 0; press start; press r; press r; press r; press r; press a; press down; press down; shot bt-row; press right; wait 300; \
+        --script "home 0; press start; press r; press r; press r; press a; press down; press down; shot bt-row; press a; press right; wait 300; \
             press down; shot bt-devices-row; press a; shot bt-list; press down; press a; shot bt-paired; press y; shot bt-forgot; press up; press a; shot bt-refused; \
             press down; press a; press b; press up; press left; wait 300; shot bt-off; press down; press down; press right; wait 300; shot bt-audio" 2> "$blog" || { echo "FAIL $size: banana-ui (Bluetooth) exited $?"; fail=1; }
     [ "$(grep -v '^devices$' "$BT/log" 2>/dev/null | tr '\n' '|')" = "up|up|scan|pair AA:BB:CC:DD:EE:01|forget AA:BB:CC:DD:EE:01|pair AA:BB:CC:DD:EE:03|pair AA:BB:CC:DD:EE:01|down|audio|" ] \
@@ -156,12 +156,12 @@ for size in 640x480 1024x768; do
     for s in bt-row bt-devices-row bt-list bt-paired bt-forgot bt-refused bt-off bt-audio; do
         [ -s "$OUT/$size-$s-top.png" ] && [ -s "$OUT/$size-$s-bot.png" ] || { echo "FAIL $size: no $s shot"; fail=1; }
     done
-    # the file sharing login (#24): Network > Sharing name and password, the keyboard on the name (banana), START, then
+    # the file sharing login (#24): Network > File sharing (two up from the first row) > Sharing name and password, the keyboard on the name (banana), START, then
     # on the password (linux), START: both in accounts.conf, where the share script reads them
     alog=$OUT/$size-smb.log
     rm -f "$FX/data/accounts.conf"
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
-        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press r; press r; press r; press r; press a; press up; press up; press up; press a; shot smb-name; \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press r; press r; press r; press a; press up; press a; press down; press down; press a; shot smb-name; \
             press b; press start; shot smb-pass; press start; wait 300; shot smb-done" 2> "$alog" || { echo "FAIL $size: banana-ui (sharing login) exited $?"; fail=1; }
     grep -qx 'smb_user=banan' "$FX/data/accounts.conf" && grep -qx 'smb_password=linux' "$FX/data/accounts.conf" || { echo "FAIL $size: accounts.conf: $(tr '\n' ' ' < "$FX/data/accounts.conf" 2>/dev/null)"; fail=1; }
     rm -f "$FX/data/accounts.conf"
@@ -207,29 +207,29 @@ for size in 640x480 1024x768; do
     grep -q "resume after power-off: /run/sd2/roms/gba/Later.gba is on the second SD card, waiting" "$rlog" || { echo "FAIL $size: second card game: $(tail -n 3 "$rlog")"; fail=1; }
     [ -e "$FX/data/resume-boot" ] && { echo "FAIL $size: resume-boot (second card) not consumed"; fail=1; }
     rm -f "$FX/data/resume-boot"
-    # Screen colours (N3): Display & sound > Screen colours (the sixth row), Red down 10 steps, A: the bottom screen corrected, red 0.90
+    # Screen colours (N3): Display & sound > Screen colours (the eighth row), Red down 10 steps, A: the bottom screen corrected, red 0.90
     # in screen-colors.conf; then X (no correction) and A: "none"
     clog=$OUT/$size-colors.log; CF="$FX/data/screen-colors.conf"; rm -f "$CF"
     L10="press left; press left; press left; press left; press left; press left; press left; press left; press left; press left;"
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
-        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press a; press down; press down; press down; press down; press down; press a; press down; $L10 shot colors; press a" 2> "$clog" \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press r; press r; press a; press down; press down; press down; press down; press down; press down; press down; press a; press down; $L10 shot colors; press a" 2> "$clog" \
         || { echo "FAIL $size: banana-ui (screen colours) exited $?"; fail=1; }
     grep -qx 'screen = bottom' "$CF" && grep -qx 'red = 0.90' "$CF" || { echo "FAIL $size: screen-colors.conf: $(tr '\n' ' ' < "$CF" 2>/dev/null)"; fail=1; }
     # X is no correction on the Screen row too: from the bottom kept, X then Right is None -> the bottom again (it
     # stayed "Correct the bottom" and Right went to the top); Red one step (0.99) and A keep that
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
-        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press a; press down; press down; press down; press down; press down; press a; press x; press right; press down; press left; press a" 2>> "$clog" \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press r; press r; press a; press down; press down; press down; press down; press down; press down; press down; press a; press x; press right; press down; press left; press a" 2>> "$clog" \
         || { echo "FAIL $size: banana-ui (screen colours X) exited $?"; fail=1; }
     grep -qx 'screen = bottom' "$CF" && grep -qx 'red = 0.99' "$CF" || { echo "FAIL $size: X didn't set the Screen row to None: $(grep -v '^#' "$CF" | tr '\n' ' ')"; fail=1; }
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
-        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press a; press down; press down; press down; press down; press down; press a; press x; press a" 2>> "$clog" \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press r; press r; press a; press down; press down; press down; press down; press down; press down; press down; press a; press x; press a" 2>> "$clog" \
         || { echo "FAIL $size: banana-ui (screen colours 2) exited $?"; fail=1; }
     grep -qx 'screen = none' "$CF" && grep -qx 'red = 1.00' "$CF" || { echo "FAIL $size: X then A didn't take the correction away: $(tr '\n' ' ' < "$CF")"; fail=1; }
     # a file edited by hand (review M1/L1): a capital, an empty value, a letter O for a zero, an indented key: the page
     # opens on them read as meant (empty and wrong: the default, not the bottom of the range), and A keeps that
     printf 'screen = Bottom\nred =\ngreen = O.9\n  blue = 0.8\n' > "$CF"
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
-        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press a; press down; press down; press down; press down; press down; press a; press a" 2>> "$clog" \
+        --roms "$FX/roms" --data "$FX/data" --script "home 0; press start; press r; press r; press a; press down; press down; press down; press down; press down; press down; press down; press a; press a" 2>> "$clog" \
         || { echo "FAIL $size: banana-ui (screen colours 3) exited $?"; fail=1; }
     [ "$(grep -E '^(screen|red|green|blue) ' "$CF" | tr '\n' ' ')" = "screen = bottom red = 1.00 green = 1.00 blue = 0.80 " ] || { echo "FAIL $size: a hand-edited file: $(grep -v '^#' "$CF" | tr '\n' ' ')"; fail=1; }
     rm -f "$CF"
@@ -291,7 +291,7 @@ for size in 640x480 1024x768; do
     run_r "lib 0 1; press x; press down; press down; press down; press down; press down; press down; press a; press b; press b; press b; press b; press b; press b; press start; press a; shot review-m4; press start"
     [ -s "$TT" ] && { echo "FAIL $size: m4 the scraped name typed again kept a name: $(cat "$TT")"; fail=1; }
     rm -f "$TT" "$FX/data/accounts.conf"
-    run_r "home 0; press start; press r; press r; press r; press r; press a; press up; press up; press up; press a; press b; press start; press b"
+    run_r "home 0; press start; press r; press r; press r; press a; press up; press a; press down; press down; press a; press b; press start; press b"
     [ -e "$FX/data/accounts.conf" ] && grep -q smb_user "$FX/data/accounts.conf" && { echo "FAIL $size: m6 the name was written without the password"; fail=1; }
     rm -f "$FX/data/accounts.conf"
     # Box art by name (#28): X on the last DS game, up to Box art (the last row but Delete game), A types (its name, as it is), START
@@ -324,36 +324,40 @@ for size in 640x480 1024x768; do
     rlog=$OUT/$size-reset.log
     # (ra_vsync = lcd: a value from another key's list, which the start (normalizeSettings) must put back; the system
     # reset leaves ra_vsync alone)
-    for kv in "theme = light" "sounds = off" "core.gba = mgba" "ra_shader = crt" "ra_vsync = lcd"; do
+    # (a system's own RetroArch button, ra_btn_l2.snes, an emulator key the system reset keeps; ra_btn_r3.gba = bogus
+    # a value its list hasn't, which the start drops: no line is the template's or the game's own)
+    for kv in "theme = light" "sounds = off" "core.gba = mgba" "ra_shader = crt" "ra_vsync = lcd" "ra_btn_l2.snes = load" "ra_btn_r3.gba = bogus"; do
         k=${kv%% *}
         grep -q "^$k = " "$FX/data/settings.conf" && sed -i "s/^$k = .*/$kv/" "$FX/data/settings.conf" || printf '%s\n' "$kv" >> "$FX/data/settings.conf"
     done
-    # groups: Display & sound, Sleep & power, Nintendo DS, Other systems, Network, System (five R's); System's rows
-    # from the first (Language, Time zone, Update, Test versions, Update check, Box art, Box art from, Previous version,
-    # First-time setup): down nine to Reset system settings, A twice
+    # groups: Nintendo DS, Other systems, Display & sound, Network, Sleep & power, System (five R's); System's rows
+    # from the first (Language, Time zone, Updates, Box art, First-time setup): down five to Reset system settings, A twice
     run_reset() { "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" \
         --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" --script "$1" 2>> "$rlog" ||
         { echo "FAIL $size: banana-ui (reset) exited $?"; fail=1; }; }
-    run_reset "home 0; press start; press r; press r; press r; press r; press r; press a; press down; press down; press down; press down; press down; press down; press down; press down; press down; press a; press a; wait 300; shot reset-system"
+    run_reset "home 0; press start; press r; press r; press r; press r; press r; press a; press up; press up; press a; press a; wait 300; shot reset-system"
     grep -q '^theme = dark' "$FX/data/settings.conf" || { echo "FAIL $size: system reset didn't restore theme: $(grep '^theme' "$FX/data/settings.conf")"; fail=1; }
     grep -q '^sounds = on' "$FX/data/settings.conf" || { echo "FAIL $size: system reset didn't restore sounds"; fail=1; }
     grep -q '^ra_vsync = on' "$FX/data/settings.conf" || { echo "FAIL $size: an invalid ra_vsync was kept: $(grep '^ra_vsync' "$FX/data/settings.conf")"; fail=1; }
     grep -q '^core.gba = mgba' "$FX/data/settings.conf" || { echo "FAIL $size: system reset wiped an emulator core: $(grep '^core.gba' "$FX/data/settings.conf")"; fail=1; }
     grep -q '^ra_shader = crt' "$FX/data/settings.conf" || { echo "FAIL $size: system reset wiped ra_shader"; fail=1; }
-    # down ten from the first row to Reset emulator settings, A twice (theme and sounds are already back)
-    run_reset "home 0; press start; press r; press r; press r; press r; press r; press a; press down; press down; press down; press down; press down; press down; press down; press down; press down; press down; press a; press a; wait 300; shot reset-emulator"
+    grep -q '^ra_btn_l2.snes = load' "$FX/data/settings.conf" || { echo "FAIL $size: a system's own RetroArch button was lost: $(grep '^ra_btn_l2' "$FX/data/settings.conf" | tr '\n' ' ')"; fail=1; }
+    grep -q '^ra_btn_r3.gba' "$FX/data/settings.conf" && { echo "FAIL $size: an invalid ra_btn_r3.gba was kept"; fail=1; }
+    # down six from the first row to Reset emulator settings, A twice (theme and sounds are already back)
+    run_reset "home 0; press start; press r; press r; press r; press r; press r; press a; press up; press a; press a; wait 300; shot reset-emulator"
     grep -q '^core.gba = gpsp' "$FX/data/settings.conf" || { echo "FAIL $size: emulator reset didn't restore core.gba: $(grep '^core.gba' "$FX/data/settings.conf")"; fail=1; }
     grep -q '^ra_shader = off' "$FX/data/settings.conf" || { echo "FAIL $size: emulator reset didn't restore ra_shader"; fail=1; }
+    grep -q '^ra_btn_l2.snes' "$FX/data/settings.conf" && { echo "FAIL $size: emulator reset left a system's own RetroArch button"; fail=1; }
     grep -q '^theme = dark' "$FX/data/settings.conf" || { echo "FAIL $size: emulator reset wiped a system key"; fail=1; }
     for s in reset-system reset-emulator; do
         [ -s "$OUT/$size-$s-top.png" ] && [ -s "$OUT/$size-$s-bot.png" ] || { echo "FAIL $size: no $s shot"; fail=1; }
     done
-    # an action is A's alone: on Shut down (two up from System's first row: Hotkeys is the list's last), RIGHT twice (as a
-    # held RIGHT repeats) isn't the second press; A twice then is (result 6: POWEROFF)
+    # an action is A's alone: on Shut down (Power, Y on the groups: up from Sleep, its first row), RIGHT twice (as a held
+    # RIGHT repeats) isn't the second press; A twice then is (result 6: POWEROFF)
     alog=$OUT/$size-action.log
     "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" \
         --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
-        --script "home 0; press start; press r; press r; press r; press r; press r; press a; press up; press up; press right; press right; press a; press a" \
+        --script "home 0; press start; press y; press up; press right; press right; press a; press a" \
         2> "$alog" || { echo "FAIL $size: banana-ui (action) exited $?"; fail=1; }
     [ "$(grep -c 'press right: settings result 0' "$alog")" = 2 ] && grep -q 'press a: settings result 6' "$alog" ||
         { echo "FAIL $size: Shut down by RIGHT, or not by A: $(grep 'press [ar]' "$alog" | tail -4 | tr '\n' ' ')"; fail=1; }

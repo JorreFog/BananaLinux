@@ -6,7 +6,7 @@
 #   bluetooth up | down              the modules, D-Bus's system bus, bluetoothd and bluealsa; down saves the pairings
 #   bluetooth down sleep             (the sleep hook) the same, but the sound is held quiet (bt/hold) until the
 #                                    headphones are back after the wake, instead of loud on the speakers
-#   bluetooth audio                  Settings > Network > Bluetooth audio changed: bluealsa again with its codecs,
+#   bluetooth audio                  Settings > Network > Bluetooth > Bluetooth audio changed: bluealsa again with its codecs,
 #                                    and the headphones connected again to take them
 #   bluetooth scan                   a search of 10 s, then the devices (as "devices" lists them)
 #   bluetooth devices                the devices known: MAC <tab> paired 0|1 <tab> connected 0|1 <tab> kind <tab> name,
@@ -53,7 +53,7 @@ save() {
     rm -f $STORE.new
 }
 
-# bluealsa with the codecs Settings > Network > Bluetooth audio asks for (settings.conf bt_audio). The headphones and
+# bluealsa with the codecs Settings > Network > Bluetooth > Bluetooth audio asks for (settings.conf bt_audio). The headphones and
 # bluez-alsa agree on the first codec both have, in bluez-alsa's order: LDAC, aptX HD, aptX, FastStream, SBC.
 #  latency (the default): aptX, FastStream, SBC at its usual quality. Codecs with short frames that the A55 encodes
 #    for next to nothing; the headphones' own buffer is most of the delay whatever the codec.

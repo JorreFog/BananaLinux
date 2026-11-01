@@ -21,6 +21,6 @@ cmp -s /etc/banana/systems.conf $D/banana/systems.conf.default 2>/dev/null || cp
 # Banana's own READMEs, kept up to date with the system (each says so in its first line: a copy from an older version
 # told of settings that had moved)
 cmp -s /etc/banana/README.txt $D/banana/README.txt 2>/dev/null || cp /etc/banana/README.txt $D/banana/README.txt
-# DS shaders of your own (Settings > Nintendo DS > Shader lists them), with how to make one
+# DS shaders of your own (Settings > Nintendo DS > SuperDrastic or BananaDS > Shader lists them), with how to make one
 mkdir -p $D/banana/shaders; cmp -s /etc/banana/shaders-README.txt $D/banana/shaders/README.txt 2>/dev/null || cp /etc/banana/shaders-README.txt $D/banana/shaders/README.txt 2>/dev/null
 exit 0

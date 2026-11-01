@@ -1,5 +1,5 @@
 #!/bin/sh
-# Settings > Nintendo DS > Reset: the DS emulators' settings back to Banana's, for a setup gone wrong (a button
+# Settings > Nintendo DS > SuperDrastic or BananaDS > Reset: the DS emulators' settings back to Banana's, for a setup gone wrong (a button
 # remapped in DraStic's menu until nothing opened it any more). Saves, save states, cheats and the per-game clocks
 # stay; so do DraStic's firmware name, language and birthday (the games' profile, not a setting).
 #   nds-reset buttons     DraStic's buttons (every controls_a/controls_b line) as on a new card
@@ -29,7 +29,8 @@ ds-buttons)
     S=/data/banana/settings.conf
     [ -f $S ] || exit 0
     sed -e 's/^ *nds_btn_l2 *=.*/nds_btn_l2 = swap/' -e 's/^ *nds_btn_r2 *=.*/nds_btn_r2 = ff/' \
-        -e 's/^ *nds_btn_l3 *=.*/nds_btn_l3 = blow/' -e 's/^ *nds_btn_r3 *=.*/nds_btn_r3 = none/' $S > $S.new
+        -e 's/^ *nds_btn_l3 *=.*/nds_btn_l3 = blow/' -e 's/^ *nds_btn_r3 *=.*/nds_btn_r3 = none/' \
+        -e 's/^ *nds_swap_ab *=.*/nds_swap_ab = off/' $S > $S.new
     sync $S.new 2>/dev/null; mv -f $S.new $S && sync
     ;;
 *) echo "nds-reset buttons|drastic|bananads|ds-buttons"; exit 2 ;;

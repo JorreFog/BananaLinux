@@ -1,5 +1,5 @@
 #pragma once
-// banana-ui: the game companion on the game panel (Settings > Other systems > Game companion): for a Game Boy Advance
+// banana-ui: the game companion on the game panel (Settings > Other systems > Second screen > Game companion): for a Game Boy Advance
 // game that has a definition, the other screen shows seven pages about the game as it plays (Status, Detail, Battle,
 // Map, Bag, Collection, Progress), in the Pokémon companion's look (pokemon.h), read from the game's memory through
 // RetroArch's READ_CORE_MEMORY the same way. The Pokémon games keep the Pokémon companion.

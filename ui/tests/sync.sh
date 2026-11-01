@@ -316,7 +316,7 @@ if [ -x "$HERE/banana-ui" ]; then
     BANANA_SYNC="$HERE/tests/fake-sync.sh" FAKE_SYNC_LOG="$SL" "$HERE/banana-ui" --headless "$OUT/ui-" --size 640x480 --assets "$HERE/assets/rnds" \
         --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
         --roms "$FX/roms" --data "$FX/data" \
-        --script "home 0; wait 2400; press start; press r; press r; press r; press r; press a; press up; shot hs-row; press a; shot hs-page; press a; wait 300; shot hs-code; press a; press start; wait 300; shot hs-paired; press down; shot hs-sync; press b; press b" \
+        --script "home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; shot hs-row; press a; shot hs-page; press a; wait 300; shot hs-code; press a; press start; wait 300; shot hs-paired; press down; shot hs-sync; press b; press b" \
         2> "$OUT/ui.log" || bad "banana-ui (Home server) exited $?"
     grep -q '^discover' "$SL" || bad "the Server row didn't look on the LAN: $(cat "$SL")"
     grep -q 'pair http://192.168.50.96:8092 .' "$SL" || bad "the code wasn't sent to pair: $(cat "$SL")"

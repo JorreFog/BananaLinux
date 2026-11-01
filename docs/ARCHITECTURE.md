@@ -19,7 +19,7 @@ can read and fill it). The root is never written to; nothing on it can be corrup
 
 The build makes `banana-<board>-<version>.update.tar` next to the image: `Image`, the device tree, `rootfs.squashfs`,
 `VERSION`, `board` and their `sha256sums`. Put in `banana/updates/` on the card (file sharing copies it over Wi-Fi)
-it appears in Settings > System > Update. `/usr/libexec/banana/update apply` checks every file's hash, refuses a
+it appears in Settings > System > Updates > Update. `/usr/libexec/banana/update apply` checks every file's hash, refuses a
 package for the other handheld, writes the squashfs to the slot not in use (16 MB at a time, the progress on the
 screen), reads it back and compares the hash, copies the kernel and device tree to the boot partition's `b/` (or
 `a/`), checks those too, and only then rewrites `extlinux.conf`'s `DEFAULT` (a tiny file, renamed over the old one).
@@ -32,14 +32,14 @@ the other slot, reading `extlinux.conf` as U-Boot does.
 Over the air (#69): the Update page's first row asks GitHub. `update check` reads the release list
 (`api.github.com/repos/JorreFog/BananaLinux/releases`, with `curl` and the image's CA certificates), keeps the newest
 release that has this board's `banana-<board>-<version>.update.tar` and `SHA256SUMS-<board>.txt` (drafts never;
-pre-releases only with Settings > System > Test versions, on by default since every release so far is one) and
+pre-releases only with Settings > System > Updates > Test versions, on by default since every release so far is one) and
 writes the answer to `banana/updates/.check`. GitHub allows 60 unauthenticated requests an hour per address, so the
 list is fetched at most once in 5 minutes (`.feed.json`, asked for again with its ETag). `update download` runs on
 its own (the page polls `/run/banana/update-download`, B leaves it running, A cancels): it checks the card has room
 for the package twice over (apply unpacks it beside itself), fetches the SHA256SUMS first, downloads into
 `banana/updates/.partial` (`curl -C -` carries on from a cancelled or broken download), checks the SHA-256 and only
 then moves the package into `banana/updates/`, where `update apply` installs it as any copied package. With Settings >
-System > Update check on Daily, the Wi-Fi script runs `update check --daily` when it connects (once a day at most;
+System > Updates > Update check on Daily, the Wi-Fi script runs `update check --daily` when it connects (once a day at most;
 nothing is downloaded). `ui/tests/ota.sh` runs all of it against a stand-in server.
 
 ## Boot

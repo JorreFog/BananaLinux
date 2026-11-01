@@ -24,7 +24,7 @@ options there: banana/settings.conf's files_* lines.
 
 File sharing: Settings > Network > File sharing puts this card on the network (\\<address>\banana in Windows,
 smb://<address>/banana on a Mac), so games can be copied in over Wi-Fi. It asks for a name and a password:
-name banana, password linux, until you change them in Settings > Network > Sharing name and password (Sharing
+name banana, password linux, until you change them in Settings > Network > File sharing > Sharing name and password (Sharing
 login > Guest: no password, only on a network you trust). The second SD card, while it's in, is \\<address>\sd2.
 DS saves from ROCKNIX beside the games (roms/nds/<game>.dsv) are taken when a game starts here and BananaOS has no save
 for it yet (so a save you delete here comes back from that file; delete or rename the .dsv too).
@@ -34,10 +34,10 @@ finds controllers, headphones and speakers in pairing mode and pairs them (A). W
 connected the sound plays on them and the volume keys change their volume. Pairings: banana/bluetooth.tar.
 
 SSH (for working on Banana itself): put your public key in banana/ssh/authorized_keys, switch on
-Settings > Network > SSH, then ssh root@<address>. Keys only, no passwords.
+Settings > Network > File sharing > SSH, then ssh root@<address>. Keys only, no passwords.
 
 RetroArch (the systems other than the DS): F + a button in a game, F + X its menu, F + Start quits.
-Settings > Other systems > RetroArch hotkeys: Off leaves only those two. A button bound away in RetroArch's
+A button bound away in RetroArch's
 menu (an A that stopped working): Settings > Other systems > Reset RetroArch puts its settings back to Banana's,
 the old ones moved to retroarch/backup-<date>; saves, states and the RetroAchievements account stay.
 

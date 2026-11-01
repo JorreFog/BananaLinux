@@ -1,5 +1,5 @@
 #pragma once
-// banana-ui: Bluetooth for the settings screen (Settings > Network > Bluetooth devices). The devices come from the
+// banana-ui: Bluetooth for the settings screen (Settings > Network > Bluetooth > Bluetooth devices). The devices come from the
 // bluetooth script (usr/libexec/banana/bluetooth devices | scan), one line each:
 //   <MAC> \t <paired 0|1> \t <connected 0|1> \t <kind: audio, gamepad, keyboard, mouse, other> \t <name>
 // and pair / connect / disconnect / forget answer "OK" or "ERROR <why>" on their last line. The commands run in the
