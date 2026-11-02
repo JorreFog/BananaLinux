@@ -1,6 +1,6 @@
 // What the companion's ROM reader makes of a ROM, as text (and sprites as PNGs), for looking at by eye and for the
 // other workstreams' fixtures. Never commit what it prints: it is the game's own data.
-//   make tests/nds-rom-dump && tests/nds-rom-dump <rom.nds> species|moves|items|zones|zone <id>|trainers|sprite <n> <out.png>
+//   make tests/nds-rom-dump && tests/nds-rom-dump <rom.nds> species|moves|items|zones|zone <id>|trainers|sprite <n> <out.png> [shiny] [female] [form]
 #include "nds/rom.h"
 #include <algorithm>
 #include <cstdio>
@@ -75,9 +75,12 @@ int main(int argc, char** argv)
 		}
 	else if (what == "sprite" && argc > 4)
 	{
-		auto s = r->sprite((uint16_t)atoi(argv[3]), argc > 6 && !strcmp(argv[6], "female"));
+		// options after the PNG: shiny, female, a form number
+		bool shiny = false, female = false;
+		int form = 0;
+		for (int i = 5; i < argc; i++) { if (!strcmp(argv[i], "shiny")) shiny = true; else if (!strcmp(argv[i], "female")) female = true; else form = atoi(argv[i]); }
+		auto s = r->sprite((uint16_t)atoi(argv[3]), female, (uint8_t)form);
 		if (!s || s->frames.empty()) { fprintf(stderr, "no sprite\n"); return 1; }
-		bool shiny = argc > 5 && !strcmp(argv[5], "shiny");
 		// the frames side by side (8 at most, spread over the animation), on grey
 		std::vector<size_t> pick;
 		size_t nf = s->frames.size();

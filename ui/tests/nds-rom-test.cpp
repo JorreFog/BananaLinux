@@ -405,6 +405,7 @@ static void checkGame(const RomData& r)
 	EQ((int)b.types[0], (int)GRASS); EQ((int)b.types[1], (int)POISON);
 	EQ((int)b.base[0], 45); EQ((int)b.base[1], 49); EQ((int)b.base[3], 45); EQ((int)b.base[4], 65);
 	EQ((int)b.catchRate, 45);
+	EQ((int)b.height, 7); EQ((int)b.weight, 69);	// 0.7 m, 6.9 kg
 	EQ((int)b.evYield[4], 1);	// one Sp. Atk point
 	EQ(b.category, std::string("Seed Pokémon"));
 	CHECK(b.dexText.size() > 40 && b.dexText.find('\n') == std::string::npos);
@@ -573,6 +574,16 @@ static void checkGame(const RomData& r)
 		if (!sp->frames.empty()) for (uint8_t v : sp->frames[0]) opaque += v != 0;
 		CHECK(opaque > 500 && opaque < (size_t)(sp->w * sp->h) * 3 / 4);
 		CHECK(sp->anim.size() >= 2);
+	}
+	// Gen V's forms have their own pictures: Deoxys' Attack Forme isn't the Normal one
+	if (g5)
+	{
+		auto a = r.sprite(386, false, 0), b2 = r.sprite(386, false, 1);
+		CHECK(a && b2 && !a->frames.empty() && !b2->frames.empty() && a->frames[0] != b2->frames[0]);
+		// Unown's forms share its palette; Castform's rainy form has its own
+		auto u = r.sprite(201, false, 5), u0 = r.sprite(201), c0 = r.sprite(351), c2 = r.sprite(351, false, 2);
+		CHECK(u && u0 && u->normal == u0->normal && u->frames[0] != u0->frames[0]);
+		CHECK(c0 && c2 && c0->normal != c2->normal);
 	}
 }
 

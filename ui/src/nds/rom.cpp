@@ -61,6 +61,15 @@ namespace banana::nds
 			}
 		}
 
+		// Gen IV's heights (0.1 m) and weights (0.1 kg): members 0 and 1, a u32 per species (Gen V has them in the
+		// personal data)
+		const char* dexDataFor(GameId id)
+		{
+			if (id == GameId::HEARTGOLD || id == GameId::SOULSILVER) return "a/0/7/4";
+			if (id == GameId::DIAMOND || id == GameId::PEARL || id == GameId::PLATINUM) return "application/zukanlist/zkn_data/zukan_data.narc";
+			return nullptr;
+		}
+
 		bool isHgss(GameId id) { return id == GameId::HEARTGOLD || id == GameId::SOULSILVER; }
 		bool isB2w2(GameId id) { return id == GameId::BLACK2 || id == GameId::WHITE2; }
 		bool isDp(GameId id) { return id == GameId::DIAMOND || id == GameId::PEARL; }
@@ -88,10 +97,12 @@ namespace banana::nds
 	public:
 		std::string path;
 		std::map<uint16_t, std::pair<uint16_t, uint8_t>> forms;	// species -> index of form 1, number of forms
+		std::map<uint16_t, std::pair<uint16_t, uint8_t>> formSprites;	// Gen V: species -> its form 1's picture (after the species'), forms
 		std::shared_ptr<const Sprite> sprite(uint16_t species, bool female, uint8_t form) const override;
 		mutable std::mutex lock;
 		mutable std::unique_ptr<nitro::Rom> rom;
 		mutable std::map<uint32_t, std::shared_ptr<const Sprite>> sprites;	// the last few asked for
+		mutable int formOrigin = -1;	// Gen V: where the forms' pictures start in the sprite archive (0: not found)
 	};
 
 	uint16_t speciesIndex(const RomData& r, uint16_t species, uint8_t form)
@@ -234,11 +245,30 @@ namespace banana::nds
 						uint16_t formsAt = p.u16(0x1c);
 						uint8_t formCount = p.u8(0x20);
 						if (formCount > 1 && formsAt > 0 && formsAt < count && i <= (size_t)out.game.dexSize) out.forms[(uint16_t)i] = { formsAt, formCount };
+						// the forms' pictures: 0x1E counts from the first picture after the species'. Species whose forms
+						// are only other colours (Arceus) say 0 too: a start belongs to the lowest species claiming it.
+						if (formCount > 1 && i <= (size_t)out.game.dexSize)
+						{
+							uint16_t first = p.u16(0x1e);
+							bool taken = false;
+							for (auto& fs : out.formSprites) taken = taken || fs.second.first == first;
+							if (!taken) out.formSprites[(uint16_t)i] = { first, formCount };
+						}
 					}
 					// TM/HM bits: TM01.. then the HMs, in the order model.h numbers them
 					int tmCount = gen() == Gen::IV ? 100 : 101;
 					for (int k = 0; k < tmCount; k++) if (p.u8(tmAt + k / 8) >> (k % 8) & 1) s.tms.push_back((uint16_t)(k + 1));
 					if (s.abilities[1] == s.abilities[0]) s.abilities[1] = 0;
+				}
+				if (const char* dd = dexDataFor(id()))
+				{
+					Bytes zb; Narc zn;
+					if (rom.file(dd, zb) && zn.parse(zb) && zn.size() >= 2)
+						for (size_t i = 0; i < out.species.size() && i <= (size_t)out.game.dexSize; i++)
+						{
+							out.species[i].height = (uint16_t)zn[0].u32(4 * i);
+							out.species[i].weight = (uint16_t)zn[1].u32(4 * i);
+						}
 				}
 				// Gen IV's forms: after the species and the two egg entries, in the order the games' code looks them up
 				// (pret pokeplatinum Pokemon_GetFormNarcIndex): Deoxys' three, Wormadam's two, then Platinum/HGSS's
@@ -1018,10 +1048,10 @@ namespace banana::nds
 
 	std::shared_ptr<const Sprite> RomImpl::sprite(uint16_t species, bool female, uint8_t form) const
 	{
-		(void)form;	// (forms: the base form's picture for now)
+		// (Gen IV's forms: the base form's picture; their pictures are in a separate archive laid out by code)
 		if (species == 0 || species > game.dexSize) return nullptr;
 		std::lock_guard<std::mutex> g(lock);
-		uint32_t key = (uint32_t)species << 1 | (female ? 1 : 0);
+		uint32_t key = (uint32_t)species << 9 | (uint32_t)form << 1 | (female ? 1 : 0);
 		auto hit = sprites.find(key);
 		if (hit != sprites.end()) return hit->second;
 		if (!rom)
@@ -1070,6 +1100,30 @@ namespace banana::nds
 			// of, 4-8 its cells and animations, 9-17 the same for the back, 18/19 normal and shiny palette.
 			// Members are LZ-packed (0x11).
 			size_t at = (size_t)species * 20;
+			auto fs = formSprites.find(species);
+			if (form > 0 && fs != formSprites.end() && form < fs->second.second)
+			{
+				// the forms' pictures follow the species' and a few others (eggs, ...): where they start is where the
+				// species owning the first ones (Unown) has its run of pictures with its own palette
+				if (formOrigin < 0)
+				{
+					formOrigin = 0;
+					for (auto& f0 : formSprites)
+					{
+						if (f0.second.first != 0) continue;
+						Span pal = n[(size_t)f0.first * 20 + 18];
+						size_t run = f0.second.second - 1u, entries = n.size() / 20;
+						for (size_t i = (size_t)game.dexSize + 1; formOrigin == 0 && i + run <= entries; i++)
+						{
+							bool same = true;
+							for (size_t k = 0; k < run && same; k++) { Span q = n[(i + k) * 20 + 18]; same = q.n == pal.n && memcmp(q.p, pal.p, pal.n) == 0; }
+							if (same) formOrigin = (int)i;
+						}
+					}
+				}
+				if (formOrigin > 0) at = ((size_t)formOrigin + fs->second.first + form - 1) * 20;
+			}
+			if (at + 20 > n.size()) return nullptr;
 			Span still = female && n[at + 1].n ? n[at + 1] : n[at];
 			Bytes img;
 			Chars c;
@@ -1176,6 +1230,8 @@ namespace banana::nds
 			for (uint16_t m : r.tmMoves) w.u16(m);
 			w.u32((uint32_t)r.forms.size());
 			for (auto& f : r.forms) { w.u16(f.first); w.u16(f.second.first); w.u8(f.second.second); }
+			w.u32((uint32_t)r.formSprites.size());
+			for (auto& f : r.formSprites) { w.u16(f.first); w.u16(f.second.first); w.u8(f.second.second); }
 			return w.b;
 		}
 
@@ -1239,6 +1295,8 @@ namespace banana::nds
 			for (uint16_t& m : r.tmMoves) m = in.u16();
 			size_t forms = in.count(5);
 			for (size_t k = 0; k < forms && in.ok; k++) { uint16_t s = in.u16(); uint16_t a = in.u16(); r.forms[s] = { a, in.u8() }; }
+			size_t fsprites = in.count(5);
+			for (size_t k = 0; k < fsprites && in.ok; k++) { uint16_t s = in.u16(); uint16_t a = in.u16(); r.formSprites[s] = { a, in.u8() }; }
 			return in.ok && in.at == in.n;
 		}
 
