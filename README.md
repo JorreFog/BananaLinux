@@ -12,7 +12,7 @@ A pixel-art menu, two DS emulators and a system built around your handheld's two
   <a href="https://bananaos-cfw.dev">Website</a> ·
   <a href="https://github.com/JorreFog/BananaLinux/releases/tag/v0.5.0">Download</a> ·
   <a href="#get-it">Install</a> ·
-  <a href="#new-in-0-5-0">What's new</a> ·
+  <a href="#new-in-0-5-2-2">What's new</a> ·
   <a href="#status">Known issues</a> ·
   <a href="https://jorrefog.github.io/BananaLinux/save-mover/">Move your saves</a> ·
   <a href="https://discord.gg/3wf73cK2Qq">Discord</a>
@@ -27,7 +27,7 @@ A pixel-art menu, two DS emulators and a system built around your handheld's two
 </p>
 
 > [!WARNING]
-> **Beta 0.5.0.** Tested by the QA team on both handhelds through twelve beta builds, with the known issues listed under [Status](#status). Read them before installing. If something goes wrong, [docs/FIRST-BOOT.md](docs/FIRST-BOOT.md) explains which logs to include in a report.
+> **Beta 0.5.2.2.** An update over Wi-Fi on top of 0.5.0: install 0.5.0 from its card image, then update in Settings › System › Update. Read the known issues under [Status](#status) before installing. If something goes wrong, [docs/FIRST-BOOT.md](docs/FIRST-BOOT.md) explains which logs to include in a report.
 
 <a id="what-it-is"></a>
 <img src="docs/img/readme/h-what.png" width="100%" alt="">
@@ -43,8 +43,26 @@ It starts directly in the menu, releases display, input and audio resources when
 </p>
 <p align="center"><sub>9.8 s from the power button to the menu (12.0 s in 0.4.2), timed with a stopwatch by a QA tester (which handheld was not recorded); BananaDS's fast-forward throughput at 2x on an RG DS Plus, average of 9 games, against 0.4.2. From the kernel starting to the menu, 0.4.2 measured 3.9 s on the RG DS and 5.9 s on the RG DS Plus.</sub></p>
 
-<a id="new-in-0-5-0"></a>
+<a id="new-in-0-5-2-2"></a>
 <img src="docs/img/readme/h-new.png" width="100%" alt="">
+
+## New in 0.5.2.2
+
+The full list: the [0.5.2.2 release notes](https://github.com/JorreFog/BananaLinux/releases/tag/v0.5.2.2). It brings together 0.5.1 and 0.5.2, which went to the closed beta first. Over Wi-Fi only: there is no new card image.
+
+> [!IMPORTANT]
+> **Shut down and Restart have moved.** They are no longer in Settings › System. Press **START** on the home screen, then **Y** for **Power**: Sleep, Restart and Shut down (press A twice). Holding the power button for 2 seconds still shuts down from anywhere.
+
+- **BananaFront, BananaOS's own player:** Game Boy, Game Boy Color, GBA, Mega Drive, NES, SNES and PICO-8 start in it instead of RetroArch, with up to half the CPU work (Game Boy Color −50%, GBA −40%, Mega Drive −33% on an RG DS). Same saves, states and hotkeys; RetroArch is one setting away (Settings › Other systems › Frontend).
+- **New cores:** [BananaNES](https://github.com/JorreFog/BananaNES) (about twice as fast, now the NES default), [BananaGBA](https://github.com/JorreFog/BananaGBA) and [BananaSNES](https://github.com/JorreFog/BananaSNES).
+- **DS Pokémon companion (alpha)** for all nine main-series DS games, Diamond to White 2: battle help with catch chances and IVs, party, team score, the area's wild Pokémon, a guide, a Dex with the game's own sprites and a journey log, behind an icon on the touch screen. BananaDS only, off by default: Settings › Nintendo DS › BananaDS › NDS Pokémon companion (alpha).
+- **Russian (Русский),** translated by Vladislav (LVD) and Ruslan (Nestrahoff). Thank you both!
+- **Buttons pages:** choose what L2, R2, L3 and R3 do. New DS defaults: L2 swaps the screens, F + R saves, F + L loads.
+- **A tidier Settings:** a page per emulator, and subpages such as System › Updates and Network › Bluetooth.
+- **BananaDS:** faster at 3x and 4x, and a per-game "Fast, DSi CPU" timing (Pokémon HeartGold: Origin at 60 fps).
+- **Files and sharing:** games from a NAS or a computer (SMB, SFTP, FTP), archives unpacked on the handheld, and Bshare for LocalSend in the App Store.
+
+<a id="new-in-0-5-0"></a>
 
 ## New in 0.5.0
 
@@ -117,7 +135,7 @@ Insert the card and power on. The first boot prepares your data partition, plays
 
 - **From 0.4.x:** put `banana-rgds-plus-0.5.0.update.tar` (RG DS Plus) or `banana-rgds-0.5.0.update.tar` (RG DS) in `banana/updates` on the card, then Settings › System › Update, A on the package and A again. It installs to the card's other system slot and runs from the next restart; the version you had stays one restart away (Settings › System › Previous version). Games, saves and settings stay.
 - **From a 0.5.0 beta:** Settings › System › Update finds 0.5.0 over Wi-Fi. Beta testers: switch Beta channel off there to follow the releases from now on.
-- **From 0.5.0 on, updates come over Wi-Fi:** Settings › System › Update checks the releases, downloads the package for your handheld and checks it before installing. If a package ever says it is damaged, download it again and compare its SHA-256 with the release's `SHA256SUMS` file.
+- **From 0.5.0 on, updates come over Wi-Fi:** Settings › System › Update (Settings › System › Updates from 0.5.2.2 on) checks the releases, downloads the package for your handheld and checks it before installing. On 0.5.0 or 0.5.0.1 it finds 0.5.2.2. If a package ever says it is damaged, download it again and compare its SHA-256 with the release's `SHA256SUMS-<handheld>.txt` file.
 
 The first start after the update runs the new first-time setup once, prefilled with what your card already has.
 
@@ -189,8 +207,8 @@ Press F for the in-game menu; the Anbernic button also opens it. In DS games, bo
 
 ## More systems, apps and ports
 
-- RetroArch systems: GBA, Game Boy, NES, SNES, Mega Drive, PlayStation and N64, on one screen. The other screen holds touch tiles for save, load, menu, fast-forward and quit, or a game companion. Shaders and a screen border are included (Settings > Other systems), and each system can use its own emulator. R2 fast-forwards in the 2D systems' games, and Settings › Other systems › Buttons gives L2, R2, L3 and R3 other jobs.
-- Companions on the second screen: the Pokémon companion for Ruby, Sapphire, Emerald, FireRed, LeafGreen and Pokémon Unbound, and game companions for 500+ GBA games (off by default). More in [docs/COMPANIONS.md](docs/COMPANIONS.md).
+- Other systems: Game Boy, Game Boy Color, GBA, Mega Drive, NES, SNES and PICO-8 in BananaFront, BananaOS's own player; PlayStation and N64 in RetroArch; each on one screen. The other screen holds touch tiles for save, load, menu, fast-forward and quit, or a game companion. Shaders and a screen border are included (Settings > Other systems), and each system can use its own emulator. R2 fast-forwards in the 2D systems' games, and Settings › Other systems › Buttons gives L2, R2, L3 and R3 other jobs.
+- Companions on the second screen: the Pokémon companion for Ruby, Sapphire, Emerald, FireRed, LeafGreen and Pokémon Unbound, game companions for 500+ GBA games (off by default), and the DS Pokémon companion (alpha) for Diamond, Pearl, Platinum, HeartGold, SoulSilver, Black, White, Black 2 and White 2 in BananaDS (off by default). More in [docs/COMPANIONS.md](docs/COMPANIONS.md).
 - PortMaster and PICO-8: PortMaster with its ports, as on ROCKNIX; PICO-8 through fake-08, or the official PICO-8 when it is on the card.
 - App Store: install and update Döda Kvarter, Poketool (a Pokémon bank and save editor) and eReaderDS from the menu.
 - Search and artwork: search names, genres or years across every system (Select), Recently played and Favorites shelves, box art from libretro or [TwilightBoxart](https://boxart.kirovair.com/), and games on a second SD card on the RG DS Plus.
@@ -249,7 +267,12 @@ In 0.5.0 a theme file can draw the whole menu: where everything is, how it looks
 
 0.5.0 is a beta. The QA team tested it on both handhelds through 0.5.0-beta.1 to beta.12 (a 36-item test plan), with every confirmed report fixed or listed below. Both update packages were installed over earlier builds through Settings › System › Update and over Wi-Fi from the beta channel, and every speed claim was measured on the handhelds' own screens. These are checks of this release, not a compatibility guarantee.
 
-Known issues:
+Known issues in 0.5.2.2:
+
+- **The DS Pokémon companion is an alpha:** BananaDS only (a game set to SuperDrastic in its own options shows no icon); Black 2 / White 2's season isn't read from the game yet (pick it on the Here page); games whose intro needs a touch were not all tested with it on.
+- **Translations:** lines added since the Chinese and Russian translations (the DS companion, the reorganised Settings) show in English or as machine drafts. In Russian, the home screen's START chip and Settings' power-button chip are a little too long.
+
+Known issues from 0.5.0:
 
 - **DSi games and DSiWare** (.dsi, .cia; unpack a .7z first) run on BananaDS with the BIOS dumped from your own DSi: put `dsi_bios9.bin` and `dsi_bios7.bin` (64 KB each; a dump's `DSI_bios9.bin` names and a `DSi BIOS` folder inside it work too) in `bios/` on the card. Your DSi's NAND (`dsi_nand.bin`, optional) goes there too; without it BananaDS keeps DSiWare saves on a NAND of its own. Without the BIOS they stop at a white screen. DSi-enhanced DS games (Pokémon Black 2 / White 2) run as DS games.
 - **SuperDrastic's low latency on the RG DS Plus** is a little rougher than with it off: DraStic runs at 60.0 fps and the Plus's panels at 60.17 Hz. BananaDS's low latency is smooth on both.
