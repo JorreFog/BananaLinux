@@ -21,6 +21,7 @@ make -s -C "$HERE" tests/gamecomp-test >/dev/null && "$HERE/tests/gamecomp-test"
 make -s -C "$HERE" tests/complink-test >/dev/null && TMPDIR="$OUT" "$HERE/tests/complink-test" 2> "$OUT/complink-test.log" || { echo "FAIL the companion's shared-memory link: $(grep FAIL "$OUT/complink-test.log" | head -3)"; fail=1; }
 # the DS Pokémon companion's RAM reader (synthetic RAM in every game's layout)
 make -s -C "$HERE" tests/nds-ram-test >/dev/null && "$HERE/tests/nds-ram-test" 2> "$OUT/nds-ram-test.log" || { echo "FAIL the DS companion's RAM reader: $(grep FAIL "$OUT/nds-ram-test.log" | head -3)"; fail=1; }
+make -s -C "$HERE" tests/nds-logic-test >/dev/null && "$HERE/tests/nds-logic-test" 2> "$OUT/nds-logic-test.log" || { echo "FAIL the DS companion's advice: $(grep FAIL "$OUT/nds-logic-test.log" | head -3)"; fail=1; }
 # the left stick as a d-pad: its deadzone and hysteresis
 make -s -C "$HERE" tests/input-test >/dev/null && "$HERE/tests/input-test" 2> "$OUT/input-test.log" || { echo "FAIL the stick: $(grep FAIL "$OUT/input-test.log" | head -3)"; fail=1; }
 # every icon the theme's systems.cfg names is there (Poketool's tile pointed at the old Bank & Trade logo)

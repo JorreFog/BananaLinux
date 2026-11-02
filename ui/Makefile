@@ -99,7 +99,7 @@ install:
 	touch $(DESTDIR)/usr/share/banana/apps/files/Files.app
 
 clean:
-	rm -f banana-ui banana-leaseshim.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/complink-test tests/nds-ram-test
+	rm -f banana-ui banana-leaseshim.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/complink-test tests/nds-ram-test tests/nds-logic-test
 
 .PHONY: host install clean
 
@@ -112,3 +112,7 @@ tests/complink-test: tests/complink-test.cpp src/complink.cpp src/complink.h src
 NDS_RAM_SRC = src/nds/ram.cpp src/nds/model.cpp src/nds/nitro.cpp
 tests/nds-ram-test: tests/nds-ram-test.cpp $(NDS_RAM_SRC) $(wildcard src/nds/*.h)
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/nds-ram-test.cpp $(NDS_RAM_SRC)
+
+# the DS Pokémon companion's advice (damage, catching, team score, guide progress; tests/run.sh runs it)
+tests/nds-logic-test: tests/nds-logic-test.cpp src/nds/logic.cpp $(NDS_RAM_SRC) $(wildcard src/nds/*.h)
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/nds-logic-test.cpp src/nds/logic.cpp $(NDS_RAM_SRC)

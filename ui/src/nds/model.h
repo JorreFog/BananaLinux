@@ -150,17 +150,34 @@ namespace banana::nds
 
 	// ---- guide data (ours, per game: /usr/share/banana/companions/nds-pokemon/<game>.json) ----------------------
 	enum class Quality : uint8_t { LIVE_VERIFIED, REFERENCE_ONLY };
-	struct GuideStep { std::string id, title, text; std::vector<uint16_t> zones; std::string doneWhen; Quality q; };
+	// (guide.h loads these from the per-game JSON; the schema is in tools/companions/nds-validate.py and docs/COMPANIONS.md.
+	// "zones" are the game's own map/zone ids: where a file only names a place, the loader looks the id up by that name
+	// in the ROM's location names (guide.h: GuideResolver); the names that found no id are in GuideData::unresolved)
+	struct GuideStep { std::string id, title, text; std::vector<uint16_t> zones; std::string doneWhen; Quality q = Quality::REFERENCE_ONLY;
+		std::string stage, source; std::vector<std::string> places; };	// stage: the Milestone id it is shown during
 	struct Milestone { std::string id, name, place; std::vector<uint16_t> trainerIds; Type theme = NO_TYPE;
-		std::string doneWhen; std::vector<uint16_t> reachableZones; Quality q; };	// gyms, E4, rivals, champion
-	struct Secret { std::string id, text; uint16_t zone = 0; int x = -1, y = -1; std::string condition; Quality q; };
+		std::string doneWhen; std::vector<uint16_t> reachableZones; Quality q = Quality::REFERENCE_ONLY;		// gyms, E4, rivals, champion
+		std::string kind;				// gym rival team elite4 champion postgame legendary story
+		std::string leader, tips, badgeNote, source;
+		int levelCap = 0;				// the highest level on the foe's side
+		int badge = 0;					// done_when "badge:N": the Nth badge bit (0 = not a badge milestone)
+		std::string foeName, foeClass; int foeAceLevel = 0;		// how the trainer is found in the ROM (when no trainerIds)
+		std::vector<uint16_t> placeZones;			// the milestone's own place
+		std::vector<std::string> reachablePlaces; };	// the same reachable set as names (zones the ROM had no id for too)
+	struct Secret { std::string id, text; uint16_t zone = 0; int x = -1, y = -1; std::string condition; Quality q = Quality::REFERENCE_ONLY;
+		std::string kind, place, source; std::vector<uint16_t> zones;
+		std::string grid = "map"; };		// x/y on the place's own map grid ("map") or the overworld's global tile grid ("world")
+	struct GuideNote { std::string id, kind, title, text, place, source; std::vector<uint16_t> species, zones; Quality q = Quality::REFERENCE_ONLY; };
 	struct GuideData
 	{
 		std::vector<Milestone> milestones;		// in story order
 		std::vector<GuideStep> steps;
 		std::vector<Secret> secrets;			// hidden items, events, tips tied to a place
 		std::map<uint16_t, std::string> evolutionNotes;	// species -> how to get it in this game (trades, items, places)
+		std::vector<GuideNote> notes;			// version exclusives, roamers, grottos, gifts, legendaries, trades
 		std::vector<std::string> sources;
+		std::string game, title; int revision = 0;
+		std::vector<std::string> unresolved;	// place names the ROM gave no zone id for
 	};
 
 	// ---- the journey log and challenge mode (the logic's product, kept per game + trainer on the card) ----------
