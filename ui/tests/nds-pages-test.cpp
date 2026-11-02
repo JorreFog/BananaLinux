@@ -191,6 +191,17 @@ static void touchTests(const Ctx& c, int w, int h)
 	pg.setCorner((int)(592 * s), (int)(432 * s), (int)(48 * s), (int)(48 * s));
 	// Party: a row picks a member
 	pg.show(Page::PARTY); pg.render();
+	{
+		// the row under the finger is lit while it's down, and not once it lifts
+		auto before = grab(be, 1);
+		CHECK(pg.touchDown((int)(100 * s), (int)(205 * s), 0) == Pages::Action::REDRAW, "a press is shown");
+		pg.render();
+		CHECK(grab(be, 1) != before, "the pressed row lit");
+		CHECK(pg.touchMove((int)(100 * s), (int)(260 * s), 0) == Pages::Action::REDRAW, "a drag unlights it");
+		pg.touchUp((int)(100 * s), (int)(260 * s), 0);
+		pg.render();
+		CHECK(grab(be, 1) == before && pg.partySel() == 0, "nothing picked by a drag");
+	}
 	CHECK(tap(100, 58 + 2 * 60 + 27) == Pages::Action::REDRAW && pg.partySel() == 2, "party row 3 (%d)", pg.partySel());
 	pg.render();
 	// a drag scrolls the member's page; a drag isn't a tap

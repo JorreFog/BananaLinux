@@ -646,8 +646,9 @@ namespace banana::nds
 		// the Dex list's rail: dragging along it runs through the whole Pokédex
 		struct Rail { float x = 0, y = 0, w = 0, h = 0; int id = -1; } rail;
 
-		// touch state
+		// touch state; pressed: what the finger is on (shown lit until it lifts or drags)
 		bool down = false, dragging = false, railDrag = false;
+		bool pressed = false; float pressX = 0, pressY = 0, pressW = 0, pressH = 0;
 		float downX = 0, downY = 0, lastY = 0, startScroll = 0;
 		int dragId = -1;
 
@@ -738,6 +739,11 @@ namespace banana::nds
 			}
 		}
 		dock();
+		if (pressed)
+		{
+			Color c = p.accent; c.a = 0.22f;
+			fill(pressX, pressY, pressW, pressH, c);
+		}
 		if (own) be->endScreen();
 		// (texts and sprites not drawn for a while go, once there are many)
 		if (cache.size() > 900)
@@ -1425,6 +1431,8 @@ namespace banana::nds
 		// the party in a row
 		box("bubble", 236, y, 392, 84);
 		float cw = 392.0f / 6;
+		for (size_t i = lv.party.size(); i < 6; i++)	// (the places still free)
+			box("well", 236 + i * cw + cw / 2 - 18, y + 16, 36, 36);
 		for (size_t i = 0; i < lv.party.size() && i < 6; i++)
 		{
 			const Mon& m = lv.party[i];
@@ -2222,6 +2230,15 @@ namespace banana::nds
 			if (sc.second.shown && cx >= sc.second.vx && cx < sc.second.vx + sc.second.vw && cy >= sc.second.vy && cy < sc.second.vy + sc.second.vh)
 				d->dragId = sc.first;
 		if (d->dragId >= 0) d->startScroll = d->scrolls[d->dragId].y;
+		for (size_t i = d->hits.size(); i-- > 0;)
+		{
+			const auto& h = d->hits[i];
+			if (cx >= h.x && cx < h.x + h.w && cy >= h.y && cy < h.y + h.h)
+			{
+				d->pressed = true; d->pressX = h.x; d->pressY = h.y; d->pressW = h.w; d->pressH = h.h;
+				return Action::REDRAW;
+			}
+		}
 		return Action::NONE;
 	}
 
@@ -2239,8 +2256,9 @@ namespace banana::nds
 			sc.y = ny;
 			return Action::REDRAW;
 		}
-		if (!d->dragging && std::fabs(cy - d->downY) > 7) d->dragging = true;
-		if (!d->dragging || d->dragId < 0) return Action::NONE;
+		bool was = d->pressed;
+		if (!d->dragging && std::fabs(cy - d->downY) > 7) { d->dragging = true; d->pressed = false; }
+		if (!d->dragging || d->dragId < 0) return was != d->pressed ? Action::REDRAW : Action::NONE;
 		Impl::Scroll& sc = d->scrolls[d->dragId];
 		float ny = std::max(0.0f, std::min(sc.max, d->startScroll - (cy - d->downY)));
 		if (ny == sc.y) return Action::NONE;
@@ -2253,9 +2271,11 @@ namespace banana::nds
 		d->now = nowMs;
 		if (!d->down) return Action::NONE;
 		d->down = false;
+		bool was = d->pressed;
+		d->pressed = false;
 		float cx = x / d->s, cy = y / d->s;
 		if (d->railDrag) { d->railDrag = false; return Action::REDRAW; }
-		if (d->dragging) { d->dragging = false; return Action::NONE; }
+		if (d->dragging) { d->dragging = false; return was ? Action::REDRAW : Action::NONE; }
 		// Back to game: its plate and the icon's corner
 		float bx0 = std::min(512.0f, d->cornerX), by0 = std::min(424.0f, d->cornerY);
 		if ((cx >= bx0 && cy >= by0) ||
@@ -2268,7 +2288,7 @@ namespace banana::nds
 			auto in = [&](float px, float py) { return px >= h.x && px < h.x + h.w && py >= h.y && py < h.y + h.h; };
 			if (in(cx, cy) && in(d->downX, d->downY)) { auto act = h.act; act(); return Action::REDRAW; }
 		}
-		return Action::NONE;
+		return was ? Action::REDRAW : Action::NONE;
 	}
 
 	bool Pages::update(double nowMs)
