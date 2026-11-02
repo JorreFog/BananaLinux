@@ -19,6 +19,9 @@ make -s -C "$HERE" tests/pokemon-test >/dev/null && "$HERE/tests/pokemon-test" "
 # the game companion's engine (matching, reads, values), and the made-up ROMs and replies for the game panel's run below
 make -s -C "$HERE" tests/gamecomp-test >/dev/null && "$HERE/tests/gamecomp-test" "$OUT" "$HERE/tests/companions" "$HERE/../system/rootfs/usr/share/banana/companions" 2> "$OUT/gamecomp-test.log" || { echo "FAIL the game companion's engine: $(grep FAIL "$OUT/gamecomp-test.log" | head -3)"; fail=1; }
 make -s -C "$HERE" tests/complink-test >/dev/null && TMPDIR="$OUT" "$HERE/tests/complink-test" 2> "$OUT/complink-test.log" || { echo "FAIL the companion's shared-memory link: $(grep FAIL "$OUT/complink-test.log" | head -3)"; fail=1; }
+# the DS Pokémon companion's ROM reader: containers and text on data made from the documented layouts (the player's
+# own ROMs: tests/nds-rom-test <roms dir> [cache dir], on a PC that has them)
+make -s -C "$HERE" tests/nds-rom-test >/dev/null && "$HERE/tests/nds-rom-test" 2> "$OUT/nds-rom-test.log" || { echo "FAIL the DS companion's ROM reader: $(grep FAIL "$OUT/nds-rom-test.log" | head -3)"; fail=1; }
 # the DS Pokémon companion's guide: the validator on the shipped data, then the loader on a made-up file and on the data
 GD="$HERE/../system/rootfs/usr/share/banana/companions/nds-pokemon"
 python3 -I "$HERE/../tools/companions/nds-validate.py" -q > "$OUT/nds-validate.log" 2>&1 || { echo "FAIL the DS Pokémon guide data: $(grep -m3 error "$OUT/nds-validate.log")"; fail=1; }
