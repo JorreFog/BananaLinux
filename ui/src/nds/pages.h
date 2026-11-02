@@ -100,4 +100,7 @@ namespace banana::nds
 	// the experience a level needs for the games' six growth rates (personal data's growth byte: 0 medium fast,
 	// 1 erratic, 2 fluctuating, 3 medium slow, 4 fast, 5 slow)
 	uint32_t expForLevel(uint8_t growth, int level);
+	// a goal's name and its place for one line: "Gardenia, Eterna City"; the place left out when the name has it already
+	// ("Rival Barry: Route 203")
+	std::string goalWithPlace(const Milestone& m);
 }

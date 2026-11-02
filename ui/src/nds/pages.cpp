@@ -164,6 +164,23 @@ namespace banana::nds
 		}
 	}
 
+	std::string goalWithPlace(const Milestone& m)
+	{
+		if (m.place.empty()) return m.name;
+		auto low = [](std::string t) { std::transform(t.begin(), t.end(), t.begin(), ::tolower); return t; };
+		const std::string name = low(m.name);
+		std::string place = low(m.place);
+		if (name.find(place) != std::string::npos) return m.name;
+		// (a town named without its "City"/"Town": "Plasma Sage Rood in Driftveil" + "Driftveil City")
+		for (const char* tail : { " city", " town" })
+		{
+			const size_t n = std::char_traits<char>::length(tail);
+			if (place.size() > n + 2 && place.compare(place.size() - n, n, tail) == 0 && name.find(place.substr(0, place.size() - n)) != std::string::npos)
+				return m.name;
+		}
+		return m.name + ", " + m.place;
+	}
+
 	// ---- the implementation ------------------------------------------------------------------------------------------
 	struct Pages::Impl
 	{
@@ -1499,7 +1516,7 @@ namespace banana::nds
 			const Milestone& ms = *a->next;
 			float tx = 250;
 			float w1 = text(tr("Next") + ":", false, 13, tx, ny + 11, p.muted, true);
-			text(ms.name + (ms.place.empty() ? "" : ", " + ms.place), true, 15, tx + w1 + 6, ny + 9, p.ink, true, 590 - (tx + w1 + 6));	// (short of the unchecked marker at 602)
+			text(goalWithPlace(ms), true, 15, tx + w1 + 6, ny + 9, p.ink, true, 590 - (tx + w1 + 6));	// (short of the unchecked marker at 602)
 			float cy = ny + 32, cx = tx;
 			if (ms.theme < NUM_TYPES) cx += typeChip(ms.theme, cx, cy) + 8;
 			// the ace: the strongest of the first trainer's team
@@ -1769,7 +1786,7 @@ namespace banana::nds
 			text(ms.name, true, 20, 28, y + 28, p.ink, true, 440);
 			float cx = 28, cy = y + 56;
 			if (ms.theme < NUM_TYPES) cx += typeChip(ms.theme, cx, cy) + 8;
-			if (!ms.place.empty()) text(ms.place, false, 13, cx, cy + 1, p.muted, true);
+			if (goalWithPlace(ms) != ms.name) text(ms.place, false, 13, cx, cy + 1, p.muted, true);	// (not when the name has it)
 			float ty = y + 84;
 			if (t)
 			{
@@ -1846,7 +1863,7 @@ namespace banana::nds
 					if (!next) fill(lx + 2, y + 6, 8, 8, light ? p.screenBand : p.screenBg);
 				}
 				text(ms.name, next, 13, lx + 22, y + 2, done ? p.muted : p.ink, true, 300);
-				if (!ms.place.empty()) text(ms.place, false, 12, 360, y + 3, p.muted, true, 200);
+				if (goalWithPlace(ms) != ms.name) text(ms.place, false, 12, 360, y + 3, p.muted, true, 200);
 				if (ms.theme < NUM_TYPES) typeChip(ms.theme, 560, y);
 				y += 24;
 			}

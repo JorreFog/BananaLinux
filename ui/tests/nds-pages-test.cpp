@@ -402,6 +402,21 @@ int main(int argc, char** argv)
 	c.assets = argc > 2 ? argv[2] : "assets/rnds";
 	c.themes = argc > 3 ? argv[3] : "../system/rootfs/usr/share/banana/themes";
 	mkdir(c.out.c_str(), 0755);
+	{	// a goal's name with its place: the place once (Platinum's Team page said "Rival Barry: Route 203, Route 203")
+		Milestone m; m.name = "Rival Barry: Route 203"; m.place = "Route 203";
+		CHECK(goalWithPlace(m) == "Rival Barry: Route 203", "%s", goalWithPlace(m).c_str());
+		m.name = "Gardenia"; m.place = "Eterna City";
+		CHECK(goalWithPlace(m) == "Gardenia, Eterna City", "%s", goalWithPlace(m).c_str());
+		m.name = "Rival: Cheren at the gate"; m.place = "";
+		CHECK(goalWithPlace(m) == "Rival: Cheren at the gate", "%s", goalWithPlace(m).c_str());
+		m.name = "Team Plasma in the Dreamyard"; m.place = "dreamyard";
+		CHECK(goalWithPlace(m) == "Team Plasma in the Dreamyard", "%s", goalWithPlace(m).c_str());
+		// (a town's name without its "City": Black 2's Team page said "Plasma Sage Rood in Driftveil, Driftveil City")
+		m.name = "Plasma Sage Rood in Driftveil"; m.place = "Driftveil City";
+		CHECK(goalWithPlace(m) == "Plasma Sage Rood in Driftveil", "%s", goalWithPlace(m).c_str());
+		m.name = "Lake Verity's legend"; m.place = "Lake Valor";
+		CHECK(goalWithPlace(m) == "Lake Verity's legend, Lake Valor", "%s", goalWithPlace(m).c_str());
+	}
 	// the growth rates at level 100 (and medium fast at 10)
 	CHECK(expForLevel(0, 10) == 1000 && expForLevel(0, 100) == 1000000, "medium fast");
 	CHECK(expForLevel(1, 100) == 600000 && expForLevel(2, 100) == 1640000, "erratic, fluctuating");
