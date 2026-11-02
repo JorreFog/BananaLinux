@@ -22,6 +22,10 @@
 #include "lang.h"
 #include "settings.h"
 #include "complink.h"
+#include "nds/overlay.h"
+#include "nds/pages_page.h"
+#include "nds/rom.h"
+#include "nds/guide.h"
 #include "recorder.h"
 #include "settings_defaults.h"
 #include "theme.h"
@@ -44,6 +48,7 @@
 #include <cstring>
 #include <fcntl.h>
 #include <fstream>
+#include <functional>
 #include <future>
 #include <list>
 #include <sys/stat.h>
@@ -716,6 +721,106 @@ template <class U> static void recordView(U& ui, Host& lib)
 	else if (ui.gameIndex() >= 0) recordEvent("menu", "starting: %s (%s)", lib.gameAt(ui.gameIndex()).title.c_str(), name.c_str());
 }
 
+// the headless test's BananaDS (ndsoverlay below): the companion overlay's presenter in a child process, by bovl.h alone
+// as BananaDS's compoverlay.cpp does it: it waits for the icon, opens, takes the first picture, drags a finger over the
+// page and takes the next one by its changed part, then a tap on the page's own Back to game must ask for the close.
+// The pictures: <out>ndsoverlay-{icon,open,drag}.png. 0 when everything held
+static int ndsPresenterTest(const std::string& file, const std::string& out, bool pages = false)
+{
+	auto fail = [](const char* why) { fprintf(stderr, "ndsoverlay presenter: FAIL %s\n", why); return 1; };
+	bovl_shm* s = nullptr;
+	if (bovl_attach(file.c_str(), &s) != 0) return fail("no file");
+	bovl_presenter_ready(s, 1);
+	const int W = (int)s->width, H = (int)s->height;
+	auto wait = [](const std::function<bool()>& f, int ms) { for (int i = 0; i < ms / 5; i++) { if (f()) return true; usleep(5000); } return f(); };
+	auto png = [&](const std::string& name, const uint16_t* px, int w, int h, int stride)
+	{
+		std::vector<uint8_t> rgb((size_t)w * h * 3);
+		for (int y = 0; y < h; y++)
+			for (int x = 0; x < w; x++)
+			{
+				const uint16_t v = px[(size_t)y * stride + x];
+				uint8_t* d = &rgb[((size_t)y * w + x) * 3];
+				d[0] = (uint8_t)((v >> 11) << 3 | (v >> 13)); d[1] = (uint8_t)(((v >> 5) & 63) << 2 | ((v >> 9) & 3)); d[2] = (uint8_t)((v & 31) << 3 | ((v >> 2) & 7));
+			}
+		stbi_write_png((out + name).c_str(), w, h, 3, rgb.data(), w * 3);
+	};
+	// the icon (over mid-grey, as on a game)
+	static bovl_icon ic;
+	uint32_t iseq = 0;
+	if (!wait([&] { return bovl_icon_read(s, &iseq, &ic) == 1 && ic.on; }, 3000)) return fail("no icon");
+	if (!ic.w || !ic.h || (!pages && ic.badge != 2) || ic.corner != BOVL_CORNER_BR) return fail("the icon's fields");
+	{
+		std::vector<uint16_t> g(ic.w * ic.h);
+		for (size_t i = 0; i < g.size(); i++)
+		{
+			const uint32_t p = ic.px[i], a = p >> 24, k = 255 - a;
+			const uint32_t r = ((p >> 16) & 255) + 0x80 * k / 255, gg = ((p >> 8) & 255) + 0x80 * k / 255, b = (p & 255) + 0x80 * k / 255;
+			g[i] = (uint16_t)((r >> 3) << 11 | (gg >> 2) << 5 | (b >> 3));
+		}
+		png("ndsoverlay-icon.png", g.data(), (int)ic.w, (int)ic.h, (int)ic.w);
+	}
+	const bovl_rect icon{ W - (int)ic.margin - (int)ic.w, H - (int)ic.margin - (int)ic.h, (int)ic.w, (int)ic.h };
+	bovl_set_rects(s, icon, bovl_rect{ 0, 0, W, H });
+	// open: the first picture made for this opening
+	std::vector<uint16_t> pic((size_t)W * H, 0);
+	uint64_t has = 0;
+	bovl_set_open(s, 1);
+	const uint32_t seq = bovl_open_seq(s);
+	bovl_slot h;
+	auto take = [&](uint32_t wantSeq) -> bool
+	{
+		const int k = bovl_claim(s, has, &h);
+		if (k < 0) return false;
+		const bool ok = h.open_seq == wantSeq;
+		if (ok)
+		{
+			const bovl_rect c = bovl_changed(s, has, h.frame);
+			const uint16_t* src = bovl_pixels(s, (uint32_t)k);
+			for (int y = c.y; y < c.y + c.h; y++) memcpy(&pic[(size_t)y * W + c.x], &src[(size_t)y * (s->stride / 2) + c.x], (size_t)c.w * 2);
+			has = h.frame;
+		}
+		bovl_release(s);
+		return ok;
+	};
+	if (!wait([&] { return take(seq); }, 3000)) return fail("no picture after opening");
+	png("ndsoverlay-open.png", pic.data(), W, H, W);
+	size_t lit = 0;
+	for (uint16_t v : pic) lit += v != 0;
+	if (lit < pic.size() / 2) return fail("the picture is mostly black");
+	if (pages)	// (the companion's pages: the picture is the check; Back to game in the icon's place is BananaDS's own)
+	{
+		bovl_set_open(s, 0);
+		usleep(100000);
+		bovl_detach(s);
+		fprintf(stderr, "ndsoverlay presenter: pages: icon %ux%u badge %u, %d px lit\n", ic.w, ic.h, ic.badge, (int)lit);
+		return 0;
+	}
+	const std::vector<uint16_t> opened = pic;
+	// a finger down and dragged: the page draws a dot under it; the next picture comes by its changed part
+	const uint32_t ms = 1000;
+	bovl_touch_push(s, BOVL_TOUCH_DOWN, W / 6, H * 3 / 4, ms);
+	bovl_touch_push(s, BOVL_TOUCH_MOVE, W / 5, H * 3 / 4, ms + 16);
+	bovl_touch_push(s, BOVL_TOUCH_MOVE, W / 4, H * 3 / 4, ms + 32);
+	const uint64_t before = has;
+	if (!wait([&] { take(seq); return has > before && pic[(size_t)(H * 3 / 4) * W + W / 4] != opened[(size_t)(H * 3 / 4) * W + W / 4]; }, 3000))
+		return fail("no dot under the finger");
+	png("ndsoverlay-drag.png", pic.data(), W, H, W);
+	if (memcmp(pic.data(), opened.data(), (size_t)W * 2 * (H / 8))) return fail("the drag changed the page's title too");	// (the counters below it change)
+	bovl_touch_push(s, BOVL_TOUCH_UP, W / 4, H * 3 / 4, ms + 48);
+	// the page's Back to game, left of the icon (BananaDS takes the icon's own place itself): the painter asks to close
+	const int bx = icon.x - (int)(40 * H / 480.0f), by = icon.y + icon.h - (int)(20 * H / 480.0f);
+	bovl_touch_push(s, BOVL_TOUCH_DOWN, bx, by, ms + 100);
+	bovl_touch_push(s, BOVL_TOUCH_UP, bx, by, ms + 150);
+	uint32_t want = 1;
+	if (!wait([&] { return bovl_take_request(s, &want) && want == 0; }, 3000)) return fail("Back to game didn't ask to close");
+	bovl_set_open(s, 0);
+	usleep(100000);
+	bovl_detach(s);
+	fprintf(stderr, "ndsoverlay presenter: icon %ux%u, pictures %llu, %d px lit\n", ic.w, ic.h, (unsigned long long)has, (int)lit);
+	return 0;
+}
+
 static int runHeadless(const Options& o, Host& lib, const std::string& variant, const std::string& theme)
 {
 	SoftBackend be(o.w, o.h);
@@ -1033,6 +1138,42 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			std::getline(cs >> std::ws, dir);
 			settings.gameRom(dir + "/test.gba", dir);
 			logf("gstates %s", dir.c_str());
+		}
+		else if (op == "ndsoverlay")
+		{
+			// ndsoverlay [rom]: the DS companion's overlay (nds/overlay.h) end to end, as on the handheld: this process
+			// paints in runWhileGame while a child plays BananaDS's part (ndsPresenterTest); the game's end is the child's.
+			// Without a ROM the overlay's test page; with one of the nine games the companion's pages with its ROM data
+			std::string romPath;
+			std::getline(cs >> std::ws, romPath);
+			const std::string f = o.headless + "companion-overlay.shm";
+			nds::setAssets(o.assets);
+			nds::Overlay ov;
+			if (!ov.create(o.w, o.h, f)) { logf("ndsoverlay: no file"); return 2; }
+			std::unique_ptr<nds::OverlayPage> page;
+			if (romPath.empty()) page = nds::makeTestPage(ov);
+			else
+			{
+				std::string err;
+				auto r = nds::loadRom(romPath, o.headless + "nds-cache", &err);
+				if (!r) { logf("ndsoverlay: %s: %s", romPath.c_str(), err.c_str()); return 2; }
+				auto pp = std::make_unique<nds::PagesPage>(ov, o.assets, variant == "light");
+				nds::PageData d;
+				d.rom = r;
+				pp->setData(d);
+				page = std::move(pp);
+				logf("ndsoverlay: %s", r->game.title.c_str());
+			}
+			fflush(nullptr);
+			pid_t pid = fork();
+			if (pid == 0) _exit(ndsPresenterTest(f, o.headless, !romPath.empty()));
+			int status = 0;
+			nds::runWhileGame(ov, *page, pid, status);
+			const bool ok = WIFEXITED(status) && WEXITSTATUS(status) == 0;
+			logf("ndsoverlay: the presenter %s; %llu pictures sent (%.0f KB)", ok ? "passed" : "FAILED", (unsigned long long)ov.framesSent,
+				ov.bytesSent / 1024.0);
+			ov.close();
+			if (!ok || access(f.c_str(), F_OK) == 0) return 1;
 		}
 		else if (op == "rablock")
 		{
@@ -2027,6 +2168,7 @@ int main(int argc, char** argv)
 	pkmn::Companion companion;	// the game panel's Pokémon companion (pokemon.h), for the game running
 	std::string gameRomPath;	// the running game's file (the game panel's save states)
 	CompLink compLink;	// the emulator's memory export (complink.h), when the emulator attaches to it (BananaFront, BananaDS)
+	nds::Overlay ndsOverlay;	// the DS companion's picture for BananaDS's bottom screen (nds/overlay.h)
 	gcomp::Engine gameComp;		// or its game companion (gamecomp.h), for another GBA game with a definition
 	if (settingsView.bshareReceiving()) Settings::bshareServe(true);	// (Bshare's Receive on: seen from the start)
 	LowBattery low;
@@ -2507,6 +2649,68 @@ int main(int argc, char** argv)
 			else if (pkOn) logf("pokemon companion: %s", companion.game()->name);
 			else logf("game companion: %s (%s)", gameComp.game()->title.c_str(), gameComp.game()->file.c_str());
 		}
+		// the DS Pokémon companion (alpha; settings.conf nds_companion): no panel of its own beside a DS game, so its
+		// pages go to BananaDS through the companion overlay (nds/overlay.h), which BananaDS shows on the bottom screen
+		// when its icon is tapped. test: the overlay's test page for any DS game (the overlay's own checks and cost
+		// runs); on: the companion's pages for the nine games, wired with them (nds/pages). SuperDrastic never
+		// attaches: then nothing shows and the loop below just waits for the game, as before
+		// (read at each start: a test flips it in the file between two games, and the Settings row writes the file)
+		std::unique_ptr<nds::OverlayPage> ndsPage;
+		nds::PagesPage* ndsPages = nullptr;
+		std::future<nds::PageData> ndsLoad;	// (the ROM's data read in the background while the game starts)
+		const std::string ndsMode = !panel && sd.id == "nds" && disp.isOpen() ? getConfValue(o.data + "/settings.conf", "nds_companion", "off") : "off";
+		if (ndsMode == "test" || ndsMode == "on")
+		{
+			nds::Game g;
+			if (ndsMode == "on")
+			{
+				uint8_t hdr[0x200] = {};
+				std::ifstream(rom, std::ios::binary).read((char*)hdr, sizeof hdr);
+				g = nds::detectGame(hdr, sizeof hdr);
+			}
+			nds::setAssets(o.assets);
+			if ((ndsMode == "test" || g.id != nds::GameId::NONE) && ndsOverlay.create(disp.width(), disp.height()))
+			{
+				if (ndsMode == "test") ndsPage = nds::makeTestPage(ndsOverlay);
+				else
+				{
+					auto pp = std::make_unique<nds::PagesPage>(ndsOverlay, o.assets, variant == "light");
+					nds::PageData reading;
+					reading.reading = true;
+					pp->setData(reading);
+					ndsPages = pp.get();
+					ndsPage = std::move(pp);
+					// the ROM's names, sprites, places and trainers (decoded once, then from the card's cache) and our
+					// guide for the game; the game's memory (the party, battles) comes through CompLink (nds/ram)
+					const std::string cache = o.data + "/cache/nds-companion";
+					ndsLoad = std::async(std::launch::async, [rom, cache]
+					{
+						nds::PageData d;
+						std::string err;
+						nds::RomLoadInfo info;
+						auto r = nds::loadRom(rom, cache, &err, &info);
+						d.rom = r;
+						if (r)
+						{
+							auto gd = std::make_shared<nds::GuideData>();
+							const nds::GuideResolver res = nds::guideResolver(*r);
+							std::string why;
+							if (nds::loadGuide(r->game, *gd, &why, &res)) d.guide = gd;
+							else logf("nds companion: no guide: %s", why.c_str());
+							logf("nds companion: %s read in %.0f ms%s", r->game.title.c_str(), info.ms, info.fromCache ? " (from the cache)" : "");
+						}
+						else logf("nds companion: the game's data didn't read: %s", err.c_str());
+						return d;
+					});
+				}
+			}
+			if (!ndsPage) { if (ndsMode == "test" || g.id != nds::GameId::NONE) logf("nds companion: no overlay file: %s", strerror(errno)); ndsOverlay.close(); }
+			else
+			{
+				logf("nds companion: %s (%dx%d)", ndsMode == "test" ? "the overlay's test page" : g.title.c_str(), disp.width(), disp.height());
+				if (!compLink.create()) logf("companion: no shared memory: %s", strerror(errno));
+			}
+		}
 		if (!panel)
 		{
 			input.close();
@@ -2546,6 +2750,11 @@ int main(int argc, char** argv)
 				if (compLink.open()) setenv(BCOMP_ENV, BCOMP_DEFAULT_PATH, 1);
 				if (outFd >= 0) setenv("BANANA_RA_OUT", OUT, 1);
 			}
+			if (ndsPage)
+			{
+				setenv(BOVL_ENV, ndsOverlay.file().c_str(), 1);
+				if (compLink.open()) setenv(BCOMP_ENV, BCOMP_DEFAULT_PATH, 1);
+			}
 			execl("/bin/sh", "sh", "-c", cmd.c_str(), (char*)nullptr);
 			_exit(127);
 		}
@@ -2557,10 +2766,26 @@ int main(int argc, char** argv)
 			{
 				gamePanel(pid, status, gameScreen, cmdFd, outFd, lib.gameAt(game).title, sd.name);
 			}
+			else if (ndsPage)
+			{
+				nds::runWhileGame(ndsOverlay, *ndsPage, pid, status, [&](double)
+				{
+					if (ndsPages && ndsLoad.valid() && ndsLoad.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+						ndsPages->setData(ndsLoad.get());
+				});
+				logf("nds companion: %llu pictures sent (%.0f KB)", (unsigned long long)ndsOverlay.framesSent, ndsOverlay.bytesSent / 1024.0);
+			}
 			else while (waitpid(pid, &status, 0) < 0 && errno == EINTR) {}
 			unlink("/run/banana/game.pid");
 		}
 		nas::pauseRunner(fetchPaths, false);
+		if (ndsPage)
+		{
+			if (ndsLoad.valid()) ndsLoad.wait();	// (a game quit while its data was still being read)
+			ndsPage.reset();
+			ndsOverlay.close();
+			compLink.close();
+		}
 		const double ended = nowMs();
 		if (panel)
 		{
