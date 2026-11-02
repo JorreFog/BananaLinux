@@ -4,6 +4,8 @@
 // coming here; the rest of the wider button closes through wantsClose()).
 #include "overlay.h"
 #include "pages.h"
+#include <algorithm>
+#include <ctime>
 
 namespace banana::nds
 {
@@ -38,8 +40,16 @@ namespace banana::nds
 		}
 		void touch(const Touch& t) override
 		{
-			Pages::Action a = t.type == Touch::DOWN ? pages.touchDown(t.x, t.y, now) :
-				t.type == Touch::MOVE ? pages.touchMove(t.x, t.y, now) : pages.touchUp(t.x, t.y, now);
+			// the touch's own time (BananaDS's CLOCK_MONOTONIC ms, 32 bits: its age by a wrapping difference), not the
+			// loop's: touches come in batches, and a fling's speed is told by when the finger was where
+			timespec ts;
+			clock_gettime(CLOCK_MONOTONIC, &ts);
+			const double mono = ts.tv_sec * 1000.0 + ts.tv_nsec / 1e6;
+			const uint32_t age = (uint32_t)(uint64_t)mono - t.ms;
+			const double at = t.ms && age < 2000 ? mono - age : mono;
+			now = std::max(now, at);
+			Pages::Action a = t.type == Touch::DOWN ? pages.touchDown(t.x, t.y, at) :
+				t.type == Touch::MOVE ? pages.touchMove(t.x, t.y, at) : pages.touchUp(t.x, t.y, at);
 			if (a == Pages::Action::REDRAW) dirty = true;
 			if (a == Pages::Action::CLOSE) closing = true;
 		}

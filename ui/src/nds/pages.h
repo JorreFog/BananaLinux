@@ -84,6 +84,7 @@ namespace banana::nds
 
 		// (tests) the scroll of the page's main list and its most
 		float scrollOf(Page p) const;
+		float scrollOf(Page p, int list) const;		// (the page's list'th scroll area: Dex 0 = the list)
 		float scrollMax(Page p) const;
 		bool shiny() const { return dexShiny; }
 		uint16_t dexSpecies() const { return dexSel; }

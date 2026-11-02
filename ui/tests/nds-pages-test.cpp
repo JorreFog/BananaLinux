@@ -389,6 +389,56 @@ static void touchTests(const Ctx& c, int w, int h)
 	// nothing animated: no wake
 	PageData none; none.reading = true; pg.setData(none); pg.render();
 	CHECK(pg.nextWake(0) == -1, "no animation, no wake (%d)", pg.nextWake(0));
+	// momentum: a quick drag on the Dex list flings it on after the finger lifts, slowing down and stopping (the RG DS
+	// validation: a 320 px drag moved 9 rows of 493, no fling); a slow drag doesn't; a tap while it flings fast only
+	// stops it on the list, a tap anywhere else (a tab) is taken (B2: a tab right after a fast drag needed a second tap)
+	{
+		pg.setData(pt.data());
+		pg.showSpecies(1); pg.render();
+		auto list = [&] { return pg.scrollOf(Page::DEX, 0); };
+		auto flick = [&](float y0, float y1, double t0, double ms)
+		{
+			pg.touchDown((int)(100 * s), (int)(y0 * s), t0);
+			for (int i = 1; i <= 6; i++) pg.touchMove((int)(100 * s), (int)((y0 + (y1 - y0) * i / 6) * s), t0 + ms * i / 6);
+			pg.touchUp((int)(100 * s), (int)(y1 * s), t0 + ms);
+		};
+		flick(380, 200, 1000, 90);	// 180 px in 90 ms: 2 px a ms
+		const float atUp = list();
+		CHECK(atUp > 150 && atUp < 200, "the drag itself: %.0f", atUp);
+		double t = 1100;
+		CHECK(pg.update(t) && pg.nextWake(t) >= 0 && pg.nextWake(t) <= 20, "flinging: frames wanted (%d)", pg.nextWake(t));
+		int frames = 0;
+		while (pg.update(t += 16) && frames < 1000) { pg.render(); frames++; }
+		const float flung = list();
+		CHECK(flung > atUp + 300, "flung on: %.0f after %.0f", flung, atUp);
+		CHECK(frames > 20 && frames < 400, "and stopped (%d frames)", frames);
+		CHECK(pg.nextWake(t) == -1 || pg.nextWake(t) > 100, "no frames wanted once it stopped (%d)", pg.nextWake(t));
+		// a slow drag (the finger stops before it lifts): no fling
+		pg.touchDown((int)(100 * s), (int)(380 * s), 5000);
+		pg.touchMove((int)(100 * s), (int)(300 * s), 5100);
+		pg.touchMove((int)(100 * s), (int)(300 * s), 5400);
+		pg.touchUp((int)(100 * s), (int)(300 * s), 5450);
+		const float slow = list();
+		CHECK(!pg.update(5500) && !pg.update(5600) && list() == slow, "a slow drag stays where it was let go");
+		// a tap on the list while it flings fast stops it and picks nothing
+		const uint16_t sel = pg.dexSpecies();
+		flick(380, 200, 6000, 90);
+		pg.update(6100); pg.update(6116);
+		pg.touchDown((int)(100 * s), (int)(200 * s), 6120); pg.touchUp((int)(100 * s), (int)(200 * s), 6180);
+		const float stopped = list();
+		CHECK(pg.dexSpecies() == sel, "the stopping tap picked nothing (%d)", pg.dexSpecies());
+		CHECK(!pg.update(6300) && list() == stopped, "stopped by the tap");
+		pg.render();
+		CHECK(tap(100, 200) == Pages::Action::REDRAW && pg.dexSpecies() != sel, "the next tap picks a row");
+		// a tab tapped while it flings: taken at once
+		pg.render();
+		flick(380, 200, 7000, 90);
+		pg.update(7100); pg.update(7116); pg.render();
+		pg.touchDown((int)((18 + 1 * cell + cell / 2) * s), (int)(448 * s), 7120);
+		CHECK(pg.touchUp((int)((18 + 1 * cell + cell / 2) * s), (int)(448 * s), 7170) == Pages::Action::REDRAW && pg.page() == Page::PARTY,
+			"a tab right after a fast drag (page %d)", (int)pg.page());
+		pg.render();
+	}
 	// no data at all: no crash, the tabs do nothing, Back to game still closes
 	PageData empty; pg.setData(empty); pg.render();
 	CHECK(tap(18 + cell / 2, 448) == Pages::Action::NONE, "no tabs without a game");

@@ -704,6 +704,14 @@ namespace banana::nds
 		bool pressed = false; float pressX = 0, pressY = 0, pressW = 0, pressH = 0;
 		float downX = 0, downY = 0, lastY = 0, startScroll = 0;
 		int dragId = -1;
+		// momentum: where the finger was over the last moments of a drag (ms, y), and the fling it leaves behind (CSS px a
+		// ms, slowing down; flingAt: the frame time it last moved, -1 until the first update after the lift)
+		std::vector<std::pair<double, float>> trail;
+		int flingId = -1; float flingV = 0; double flingAt = -1;
+		bool stopTap = false;		// a press that stopped a fast fling on its list: not a tap
+		static constexpr float FLING_MIN = 0.3f, FLING_STOP = 0.02f, FLING_TAP = 0.12f;	// CSS px a ms
+		static constexpr double FLING_TAU = 325;	// ms: the speed falls to 1/e in this long (a phone list's feel)
+		void stopFling() { flingId = -1; flingV = 0; flingAt = -1; }
 
 		// ---- the frame -------------------------------------------------------------------------------------------
 		std::set<std::string> seenQueue;	// notice ids shown, not yet taken
@@ -2319,6 +2327,7 @@ namespace banana::nds
 	void Pages::show(Page pg)
 	{
 		if (pg >= Page::COUNT) return;
+		if (pg != cur) d->stopFling();
 		cur = pg;
 		d->markSeen(pg);
 	}
@@ -2339,6 +2348,18 @@ namespace banana::nds
 		float cx = x / d->s, cy = y / d->s;
 		d->down = true; d->dragging = false; d->railDrag = false;
 		d->downX = cx; d->downY = cy; d->lastY = cy; d->dragId = -1;
+		d->trail.assign(1, { nowMs, cy });
+		// a press on a list that is still flinging fast only stops it (as a phone's list); anywhere else, or once it has
+		// slowed down, the press is what it would be anyway (a tab right after a fast drag is taken at once)
+		d->stopTap = false;
+		if (d->flingId >= 0)
+		{
+			auto f = d->scrolls.find(d->flingId);
+			if (f != d->scrolls.end() && std::fabs(d->flingV) > Impl::FLING_TAP && cx >= f->second.vx && cx < f->second.vx + f->second.vw &&
+				cy >= f->second.vy && cy < f->second.vy + f->second.vh)
+				d->stopTap = true;
+			d->stopFling();
+		}
 		// along the Dex list's rail: straight to that part of the Pokédex (the zone reaches left over the thin drawn track,
 		// which sits at x 187-189: a finger on it must not land on a row)
 		const auto& r = d->rail;
@@ -2351,6 +2372,7 @@ namespace banana::nds
 			if (sc.second.shown && cx >= sc.second.vx && cx < sc.second.vx + sc.second.vw && cy >= sc.second.vy && cy < sc.second.vy + sc.second.vh)
 				d->dragId = sc.first;
 		if (d->dragId >= 0) d->startScroll = d->scrolls[d->dragId].y;
+		if (d->stopTap) return Action::REDRAW;
 		for (size_t i = d->hits.size(); i-- > 0;)
 		{
 			const auto& h = d->hits[i];
@@ -2368,6 +2390,9 @@ namespace banana::nds
 		d->now = nowMs;
 		if (!d->down) return Action::NONE;
 		float cy = y / d->s;
+		// (the last ~100 ms of the finger's way: the speed it lifts at)
+		d->trail.push_back({ nowMs, cy });
+		while (d->trail.size() > 2 && nowMs - d->trail.front().first > 100) d->trail.erase(d->trail.begin());
 		if (d->railDrag)
 		{
 			Impl::Scroll& sc = d->scrolls[d->dragId];
@@ -2396,7 +2421,22 @@ namespace banana::nds
 		d->pressed = false;
 		float cx = x / d->s, cy = y / d->s;
 		if (d->railDrag) { d->railDrag = false; return Action::REDRAW; }
-		if (d->dragging) { d->dragging = false; return was ? Action::REDRAW : Action::NONE; }
+		if (d->dragging)
+		{
+			d->dragging = false;
+			// let go while moving: the list flings on at the finger's speed over its last 100 ms (none when the finger
+			// had stopped: its last move long before the lift, or no time between the moves to tell a speed by)
+			if (d->dragId >= 0 && d->trail.size() >= 2)
+			{
+				const auto& a = d->trail.front();
+				const auto& b = d->trail.back();
+				const double dt = b.first - a.first;
+				const float v = dt >= 8 && nowMs - b.first < 60 ? -(b.second - a.second) / (float)dt : 0;
+				if (std::fabs(v) >= Impl::FLING_MIN) { d->flingId = d->dragId; d->flingV = v; d->flingAt = -1; }
+			}
+			return was ? Action::REDRAW : Action::NONE;
+		}
+		if (d->stopTap) { d->stopTap = false; return Action::REDRAW; }
 		// Back to game: its plate (to the panel's edges) and the icon's corner
 		Impl::Area ba = d->backArea();
 		ba.x1 = 640;
@@ -2417,10 +2457,31 @@ namespace banana::nds
 	bool Pages::update(double nowMs)
 	{
 		d->now = nowMs;
-		return d->animNext >= 0 && nowMs >= d->animNext;
+		bool moved = false;
+		if (d->flingId >= 0)
+		{
+			auto f = d->scrolls.find(d->flingId);
+			if (f == d->scrolls.end() || !f->second.shown) d->stopFling();
+			else if (d->flingAt < 0) { d->flingAt = nowMs; moved = true; }	// (the first frame after the lift)
+			else
+			{
+				Impl::Scroll& sc = f->second;
+				const double dt = std::min(100.0, std::max(0.0, nowMs - d->flingAt));
+				d->flingAt = nowMs;
+				// the distance covered under a speed falling off exponentially, then the speed left
+				const float k = (float)std::exp(-dt / Impl::FLING_TAU);
+				const float ny = std::max(0.0f, std::min(sc.max, sc.y + d->flingV * (float)Impl::FLING_TAU * (1 - k)));
+				d->flingV *= k;
+				moved = ny != sc.y;
+				sc.y = ny;
+				if (!moved || std::fabs(d->flingV) < Impl::FLING_STOP || ny <= 0 || ny >= sc.max) d->stopFling();
+			}
+		}
+		return moved || (d->animNext >= 0 && nowMs >= d->animNext);
 	}
 	int Pages::nextWake(double nowMs) const
 	{
+		if (d->flingId >= 0) return 16;
 		if (d->animNext < 0) return -1;
 		return (int)std::max(0.0, std::ceil(d->animNext - nowMs));
 	}
@@ -2449,6 +2510,11 @@ namespace banana::nds
 	float Pages::scrollOf(Page pg) const
 	{
 		auto it = d->scrolls.find(d->scrollId(pg, pg == Page::PARTY || pg == Page::DEX ? 1 : 0));
+		return it == d->scrolls.end() ? 0 : it->second.y;
+	}
+	float Pages::scrollOf(Page pg, int list) const
+	{
+		auto it = d->scrolls.find(d->scrollId(pg, list));
 		return it == d->scrolls.end() ? 0 : it->second.y;
 	}
 	float Pages::scrollMax(Page pg) const
