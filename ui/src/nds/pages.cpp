@@ -2151,10 +2151,11 @@ namespace banana::nds
 	{
 		const Live& lv = *dt.live;
 		const Journey* j = dt.journey.get();
+		// (the log holds what happened while the companion ran: its catches, not the Pokédex's, which says "Caught N")
 		int catches = 0;
 		if (j) for (auto& e : j->log) catches += e.kind == LogKind::CATCH;
 		std::string sub = tr("Played") + " " + playTime(lv.playSeconds);
-		if (j) sub += ", " + std::to_string(catches) + " " + tr("caught");
+		if (j && catches) sub += ", " + std::to_string(catches) + " " + tr(catches == 1 ? "catch logged" : "catches logged");
 		header(tr("Journey"), sub, false, true);
 		int id = scrollId(Page::LOG, 0);
 		float y = beginScroll(id, 0, 56, 640, 362) + 2;
