@@ -432,6 +432,9 @@ namespace banana::nds
 		}
 		lastParty = o.party;
 		o.trainerName = monText(g, at(l.name), 8);
+		// a fresh game at its title or before the player is named: the save block is there, empty (Diamond with no save
+		// showed Twinleaf Town and a badge at the title). A playthrough has a name (and soon a party)
+		if (o.party.empty() && o.trainerName.empty()) { problem = "no game started yet (the title or a new game's intro)"; return false; }
 		o.tid = u16(at(l.tid));
 		o.sid = u16(at(l.tid + 2));
 		const uint8_t* t = at(l.time);

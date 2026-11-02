@@ -144,6 +144,16 @@ static void testPlatinum()
 	ram.at(B + 0x7FF4 + 0x12)[0] = 1;
 	p16(ram.at(0x0224A55A), 0x2800);
 
+	{	// a fresh game at its title or before the player is named: the save block is there but empty (no name, no
+		// party). Not a playthrough yet: no pages, no badge (Diamond on the Plus showed Twinleaf Town and a badge at
+		// the title of a game with no save)
+		Ram fresh;
+		p32(fresh.at(0x02101D40), S);
+		p32(fresh.at(B + 0x98), 6);
+		RamReader fr(game(GameId::PLATINUM, Gen::IV));
+		settle(fr, fresh);
+		CHECK(!fr.live()->valid);
+	}
 	RamReader rr(game(GameId::PLATINUM, Gen::IV));
 	CHECK(rr.supported());
 	CHECK(!rr.live()->valid);
