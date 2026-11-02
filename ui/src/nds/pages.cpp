@@ -1452,8 +1452,11 @@ namespace banana::nds
 			float cx = 236 + i * cw;
 			mon(m.species, m.female, m.form, m.shiny() ? 1 : 0, cx + 8, y + 8, cw - 16, 44, false);
 			std::string n = monLabel(m);
-			float nw = std::min(cw - 6, measure(n, true, 12, true));
-			text(n, true, 12, cx + cw / 2 - nw / 2, y + 52, p.ink, true, cw - 6);
+			// (a ten-letter name like Krookodile or Feraligatr is wider than its place at 12 px: a smaller size first)
+			float fs = 12;
+			while (fs > 9 && measure(n, true, fs, true) > cw - 6) fs -= 1;
+			float nw = std::min(cw - 6, measure(n, true, fs, true));
+			text(n, true, fs, cx + cw / 2 - nw / 2, y + 52 + (12 - fs) / 2, p.ink, true, cw - 6);
 			if (!m.egg)
 			{
 				std::string l = tr("Lv") + " " + std::to_string(m.level);
@@ -1468,7 +1471,7 @@ namespace banana::nds
 			const Milestone& ms = *a->next;
 			float tx = 250;
 			float w1 = text(tr("Next") + ":", false, 13, tx, ny + 11, p.muted, true);
-			text(ms.name + (ms.place.empty() ? "" : ", " + ms.place), true, 15, tx + w1 + 6, ny + 9, p.ink, true, 360 - w1);
+			text(ms.name + (ms.place.empty() ? "" : ", " + ms.place), true, 15, tx + w1 + 6, ny + 9, p.ink, true, 590 - (tx + w1 + 6));	// (short of the unchecked marker at 602)
 			float cy = ny + 32, cx = tx;
 			if (ms.theme < NUM_TYPES) cx += typeChip(ms.theme, cx, cy) + 8;
 			// the ace: the strongest of the first trainer's team
@@ -1550,7 +1553,8 @@ namespace banana::nds
 		if (loc)
 			for (auto& e : loc->encounters)
 			{
-				if (e.kind == EncounterKind::SEASON && e.season != 0xff && e.season != lv.season) continue;
+				// (Gen V stores a table per season on any kind of encounter: only this season's counts, or the odds add up over four)
+				if (e.season != 0xff && e.season != lv.season) continue;
 				auto it = std::find_if(rows.begin(), rows.end(), [&](const Row& r) { return r.species == e.species && r.kind == e.kind; });
 				if (it == rows.end()) { rows.push_back(Row{ e.species, e.kind }); it = rows.end() - 1; }
 				it->lo = std::min(it->lo, e.minLevel); it->hi = std::max(it->hi, e.maxLevel);
@@ -2232,9 +2236,10 @@ namespace banana::nds
 		float cx = x / d->s, cy = y / d->s;
 		d->down = true; d->dragging = false; d->railDrag = false;
 		d->downX = cx; d->downY = cy; d->lastY = cy; d->dragId = -1;
-		// along the Dex list's rail: straight to that part of the Pokédex
+		// along the Dex list's rail: straight to that part of the Pokédex (the zone reaches left over the thin drawn track,
+		// which sits at x 187-189: a finger on it must not land on a row)
 		const auto& r = d->rail;
-		if (cur == Page::DEX && r.id >= 0 && cx >= r.x - 4 && cx < r.x + r.w + 6 && cy >= r.y && cy < r.y + r.h)
+		if (cur == Page::DEX && r.id >= 0 && cx >= r.x - 18 && cx < r.x + r.w + 6 && cy >= r.y && cy < r.y + r.h)
 		{
 			d->railDrag = true; d->dragId = r.id;
 			return touchMove(x, y, nowMs);
