@@ -1550,7 +1550,8 @@ namespace banana::nds
 		if (loc)
 			for (auto& e : loc->encounters)
 			{
-				if (e.kind == EncounterKind::SEASON && e.season != 0xff && e.season != lv.season) continue;
+				// (Gen V stores a table per season on any kind of encounter: only this season's counts, or the odds add up over four)
+				if (e.season != 0xff && e.season != lv.season) continue;
 				auto it = std::find_if(rows.begin(), rows.end(), [&](const Row& r) { return r.species == e.species && r.kind == e.kind; });
 				if (it == rows.end()) { rows.push_back(Row{ e.species, e.kind }); it = rows.end() - 1; }
 				it->lo = std::min(it->lo, e.minLevel); it->hi = std::max(it->hi, e.maxLevel);
