@@ -134,6 +134,10 @@ namespace banana::nds
 		uint8_t weather = 0;
 		uint32_t turn = 0;
 	};
+	// the bag's pockets in Live::bag below (the same keys for both generations; Gen V keeps its Poké Balls among the items)
+	enum Pocket : uint8_t { POCKET_ITEMS, POCKET_MEDICINE, POCKET_BALLS, POCKET_TMS, POCKET_BERRIES, POCKET_MAIL,
+		POCKET_BATTLE, POCKET_KEY };
+
 	struct BagItem { uint16_t item = 0, count = 0; };
 	struct Roamer { uint16_t species = 0, zone = 0; uint8_t level = 0; uint16_t hp = 0; bool active = false; };
 	struct Live

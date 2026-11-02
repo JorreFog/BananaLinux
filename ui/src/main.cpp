@@ -24,6 +24,7 @@
 #include "complink.h"
 #include "nds/overlay.h"
 #include "nds/pages_page.h"
+#include "nds/session.h"
 #include "nds/rom.h"
 #include "nds/guide.h"
 #include "recorder.h"
@@ -2768,10 +2769,37 @@ int main(int argc, char** argv)
 			}
 			else if (ndsPage)
 			{
+				// the ROM's data and the guide once read (ndsLoad), then the game's memory: the Session polls it over
+				// CompLink (BananaDS's export), works out the advice again when the game changed, and keeps the journey
+				// log and the notices seen on the card per game + trainer (nds/session)
+				nds::PageData ndsBase;
+				std::unique_ptr<nds::Session> ndsSession;
 				nds::runWhileGame(ndsOverlay, *ndsPage, pid, status, [&](double)
 				{
-					if (ndsPages && ndsLoad.valid() && ndsLoad.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
-						ndsPages->setData(ndsLoad.get());
+					if (!ndsPages) return;
+					if (ndsLoad.valid() && ndsLoad.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+					{
+						ndsBase = ndsLoad.get();
+						ndsPages->setData(ndsBase);
+						if (ndsBase.rom && ndsBase.guide)
+						{
+							ndsSession = std::make_unique<nds::Session>(ndsBase.rom, ndsBase.guide, o.data + "/cache/nds-companion");
+							ndsSession->send = [&](const std::string& l) { return compLink.send(l); };
+							ndsSession->receive = [&] { return compLink.receive(); };
+							ndsSession->setChallenge(getConfValue(o.data + "/settings.conf", "nds_challenge", "off") == "on");
+						}
+					}
+					if (!ndsSession) return;
+					ndsSession->markSeen(ndsPages->takeSeen());
+					if (ndsSession->tick(nowMs(), time(nullptr)))
+					{
+						nds::PageData d = ndsBase;
+						d.live = ndsSession->live();
+						d.advice = ndsSession->advice();
+						d.journey = ndsSession->journey();
+						d.seenNotices = ndsSession->seenList();
+						ndsPages->setData(d);
+					}
 				});
 				logf("nds companion: %llu pictures sent (%.0f KB)", (unsigned long long)ndsOverlay.framesSent, ndsOverlay.bytesSent / 1024.0);
 			}

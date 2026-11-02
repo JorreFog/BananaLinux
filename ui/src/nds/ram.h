@@ -25,10 +25,6 @@
 
 namespace banana::nds
 {
-	// the bag's pockets in Live::bag (the same keys for both generations; Gen V keeps its Poké Balls among the items)
-	enum Pocket : uint8_t { POCKET_ITEMS, POCKET_MEDICINE, POCKET_BALLS, POCKET_TMS, POCKET_BERRIES, POCKET_MAIL,
-		POCKET_BATTLE, POCKET_KEY };
-
 	struct Range { uint32_t addr = 0, len = 0; };
 
 	// ---- the Pokémon structure (exposed for the tests) ------------------------------------------------------------
