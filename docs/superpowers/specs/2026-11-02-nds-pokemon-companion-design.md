@@ -14,8 +14,11 @@ cannot have a panel of its own: it lives behind a small icon on the touch screen
 
 ## Goals
 
-- Games, English (USA) first: **Platinum, HeartGold/SoulSilver, Black 2/White 2** (the owner's: HeartGold,
-  Platinum, Black 2 DSi Enhanced); Diamond/Pearl and Black/White when they come almost free from the same code.
+- Games: **all nine main-series DS Pokémon games** (owner): Diamond, Pearl, Platinum, HeartGold, SoulSilver, Black,
+  White, Black 2, White 2, in the releases on the server PC's library (Romhost, ~/romhost-data/library/nds on
+  192.168.50.96, synced to the handhelds): Diamond (Europe, English, Rev 5), Pearl (USA, Rev 5), Black 2 (USA/Europe,
+  DSi Enhanced), the others as dumped there; each release's layout verified on its own. The owner's handhelds
+  have HeartGold, Platinum and Black 2 (Plus) and Platinum (RG DS).
 - **Icon:** a small, half-see-through icon tucked into the bottom-right corner of the DS bottom screen while a
   supported game runs in BananaDS. A tap on it opens the companion and is never passed to the game. Only shown when the
   companion recognised the game.
@@ -65,8 +68,9 @@ cannot have a panel of its own: it lives behind a small icon on the touch screen
 ## Non-goals
 
 - SuperDrastic (DraStic): it has no memory export; the icon simply doesn't appear there. BananaDS only.
-- Other DS games (the universal game companion covers non-Pokémon games elsewhere).
-- Non-English game releases in the first version (their RAM layouts and text tables differ; later).
+- The spin-offs (Mystery Dungeon, Ranger, Conquest, Trozei!): owner chose main series only; each would be its own
+  project later. Other DS games: the universal game companion's job.
+- Releases not in the server library, and non-English ones (their RAM layouts and text tables differ; later).
 - Changing the game (no cheats, no writes to game memory).
 
 ## Anti-goals (a failure even if it works)
@@ -150,8 +154,8 @@ cannot have a panel of its own: it lives behind a small icon on the touch screen
   decoders (against our own synthetic files), the score, the badge logic; headless renders of every page at 640x480
   and 1024x768 with fixture data.
 - Device: DS stress ROM through run-bananads on both handhelds, companion off / closed / open: fps, drops, audio
-  underruns, CPU per thread vs baseline. Then the final validation on the owner's games (HeartGold, Platinum, Black 2
-  on the Plus; Platinum on the RG DS) with their saves backed up first: every page against the game's own screens,
+  underruns, CPU per thread vs baseline. Then the final validation on all nine games (from the server library, copied to the
+  handhelds for the test and removed after; the owner's own saves backed up first where a game is theirs) with their saves backed up first: every page against the game's own screens,
   the icon placement checked on the overworld, battle, menus, Pokétch/Pokégear/C-Gear, bag and PC screens.
-- Release: **only when everything above is done and tested on all three games** (owner: wait for everything), together
+- Release: **only when everything above is done and tested on all nine games** (owner: wait for everything), together
   with the 0.5.1.1 fixes, on the closed dev OTA with the beta password.
