@@ -73,12 +73,26 @@ namespace banana::nds
 		if (jr->challenge != on) { jr->challenge = on; dirty = true; }
 	}
 
+	static bool wildBattle(const Live& l) { return l.battle.kind == BattleKind::WILD || l.battle.kind == BattleKind::DOUBLE_WILD; }
+
+	bool newEntryKind(const Live& was, const Live& now, uint16_t species, bool recentWild, LogKind& kind)
+	{
+		for (auto& m : now.party)
+			for (auto& o : was.party)
+				if (m.pid && m.pid == o.pid && m.species == species && !m.egg && (o.egg || o.species != species)) return false;
+		kind = recentWild || wildBattle(was) || wildBattle(now) ? LogKind::CATCH : LogKind::GIFT;
+		return true;
+	}
+
 	// the journey: what changed between two readings of the same playthrough
 	void Session::track(const Live& l, time_t wall)
 	{
 		std::shared_ptr<const Live> was = prev;
 		prev = rr.live();
 		if (!was || !was->valid || !l.valid || was->tid != l.tid || was->sid != l.sid) return;
+		// (the catch's Pokédex entry can come a little after the battle's end: the nickname question, the Pokédex page)
+		if (wildBattle(*was) || wildBattle(l)) lastWild = l.playSeconds;
+		const bool recentWild = (int64_t)l.playSeconds - lastWild <= 60;
 		auto add = [&](LogKind k, uint16_t species, const std::string& text)
 		{
 			LogEntry e; e.kind = k; e.playSeconds = l.playSeconds; e.when = (int64_t)wall; e.species = species; e.zone = l.zone;
@@ -100,8 +114,10 @@ namespace banana::nds
 			if (bit(l.dexCaught, (int)i) && !bit(was->dexCaught, (int)i))
 			{
 				const uint16_t s = (uint16_t)(i + 1);
-				add(LogKind::CATCH, s, "Caught " + name(*rom, s));
-				if (jr->challenge)
+				LogKind k;
+				if (!newEntryKind(*was, l, s, recentWild, k)) continue;
+				add(k, s, (k == LogKind::CATCH ? "Caught " : "Received ") + name(*rom, s));
+				if (jr->challenge && k == LogKind::CATCH)
 					for (auto& r : jr->routes) if (r.zone == l.zone && r.species == s && r.outcome == RouteRecord::OPEN) r.outcome = RouteRecord::CAUGHT;
 			}
 		for (auto& m : l.party)

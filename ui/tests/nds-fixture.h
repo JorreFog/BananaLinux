@@ -480,6 +480,7 @@ namespace ndsfx
 			le(LogKind::EVOLVE, 5400, 391, Z_OREBURGH_GATE, "Chimchar evolved into Monferno"), le(LogKind::BADGE, 7200, 0, 0, "Coal Badge from Roark"),
 			le(LogKind::CATCH, 8000, 63, Z_R203, "Caught Abra"), le(LogKind::CATCH, 8900, 406, Z_R204, "Caught Budew"),
 			le(LogKind::EVOLVE, 9900, 404, Z_R205, "Shinx evolved into Luxio"), le(LogKind::EVOLVE, 11800, 64, Z_ETERNA_FOREST, "Abra evolved into Kadabra"),
+			le(LogKind::GIFT, 30000, 403, Z_ETERNA, "Received Shinx (a trade)"),
 			le(LogKind::FIRST, 34800, 0, Z_ETERNA, "Arrived in Eterna City") };
 		f.journey = j;
 		return f;

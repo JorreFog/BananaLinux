@@ -2200,14 +2200,26 @@ namespace banana::nds
 			return;
 		}
 		// the timeline, newest first: the play time, a mark, the Pokémon, what happened
+		auto markColour = [](LogKind k) -> uint32_t
+		{
+			switch (k)
+			{
+			case LogKind::CATCH: return 0xe8504a;
+			case LogKind::GIFT: return 0xa070e0;	// (received: a gift, a trade)
+			case LogKind::EVOLVE: return EXP_BLUE;
+			case LogKind::BADGE: return rnds::accent.base & 0xffffff;
+			case LogKind::LOST: return 0x8a8890;
+			case LogKind::HATCH: return 0xf07890;
+			default: return 0x58d068;
+			}
+		};
 		y = heading(tr("Timeline"), 16, y + 2);
 		float lineX = 92;
 		float top = y;
 		for (size_t r = j->log.size(); r-- > 0;)
 		{
 			const LogEntry& e = j->log[r];
-			uint32_t mc = e.kind == LogKind::CATCH ? 0xe8504a : e.kind == LogKind::EVOLVE ? EXP_BLUE : e.kind == LogKind::BADGE ? (rnds::accent.base & 0xffffff) :
-				e.kind == LogKind::LOST ? 0x8a8890 : e.kind == LogKind::HATCH ? 0xf07890 : 0x58d068;
+			const uint32_t mc = markColour(e.kind);
 			textR(playTime(e.playSeconds), false, 12, lineX - 14, y + 13, p.muted, true);
 			if (r + 1 < j->log.size() || y > top) {}
 			fill(lineX - 5, y + 13, 12, 12, Color::hex(mc));
@@ -2235,8 +2247,7 @@ namespace banana::nds
 		for (size_t r = j->log.size(); r-- > 0;)
 		{
 			const LogEntry& e = j->log[r];
-			uint32_t mc = e.kind == LogKind::CATCH ? 0xe8504a : e.kind == LogKind::EVOLVE ? EXP_BLUE : e.kind == LogKind::BADGE ? (rnds::accent.base & 0xffffff) :
-				e.kind == LogKind::LOST ? 0x8a8890 : e.kind == LogKind::HATCH ? 0xf07890 : 0x58d068;
+			const uint32_t mc = markColour(e.kind);
 			fill(lineX - 5, y + 13, 12, 12, light ? p.screenBand : p.screenBg);
 			fill(lineX - 3, y + 15, 8, 8, Color::hex(mc));
 			y += 46;

@@ -191,7 +191,7 @@ namespace banana::nds
 	};
 
 	// ---- the journey log and challenge mode (the logic's product, kept per game + trainer on the card) ----------
-	enum class LogKind : uint8_t { CATCH, EVOLVE, BADGE, FIRST, LOST, HATCH, NOTE };
+	enum class LogKind : uint8_t { CATCH, EVOLVE, BADGE, FIRST, LOST, HATCH, NOTE, GIFT };	// (GIFT: received, not caught)
 	struct LogEntry { LogKind kind = LogKind::NOTE; uint32_t playSeconds = 0; int64_t when = 0;	// unix s, 0 unknown
 		uint16_t species = 0, zone = 0; std::string text; };								// text: our words, names filled
 	struct RouteRecord { uint16_t zone = 0, species = 0; enum Outcome : uint8_t { OPEN, CAUGHT, MISSED } outcome = OPEN; };

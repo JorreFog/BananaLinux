@@ -16,6 +16,11 @@
 
 namespace banana::nds
 {
+	// how a species new in the Pokédex came, for the journey log: false when a party member evolved or hatched into it
+	// (logged as that); else CATCH when a wild battle is on or recentWild (one just ended), GIFT otherwise (gifts,
+	// trades, events: White's Tepig was logged as caught at 0h00m)
+	bool newEntryKind(const Live& was, const Live& now, uint16_t species, bool recentWild, LogKind& kind);
+
 	class Session
 	{
 	public:
@@ -52,6 +57,7 @@ namespace banana::nds
 		double savedAt = -1e9;
 		bool dirty = false;
 		int challengeWanted = -1;	// setChallenge's (the Settings row), applied again over the card's when it is read
+		int64_t lastWild = -1000;
 		void track(const Live& now, time_t wall);
 		void load();
 		void save();

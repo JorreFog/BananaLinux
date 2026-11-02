@@ -276,6 +276,30 @@ static void testAdvice()
 	CHECK(a.moves.empty() && a.catching.empty());
 }
 
+// how a species new in the Pokédex came: caught in a wild battle (on, or just over), from an evolution or a hatch in
+// the party (logged as that), else received (gifts, trades, events)
+static void testNewEntries()
+{
+	Live was, now;
+	was.valid = now.valid = true;
+	was.playSeconds = 100; now.playSeconds = 101;
+	Mon a; a.pid = 7; a.species = 387; a.nick = "TWIG";
+	was.party = { a };
+	now.party = { a };
+	LogKind k = LogKind::NOTE;
+	CHECK(newEntryKind(was, now, 25, false, k) && k == LogKind::GIFT);
+	CHECK(newEntryKind(was, now, 25, true, k) && k == LogKind::CATCH);		// (a wild battle ended a moment ago)
+	Live inBattle = now; inBattle.battle.kind = BattleKind::WILD;
+	CHECK(newEntryKind(was, inBattle, 25, false, k) && k == LogKind::CATCH);
+	Live trainer = now; trainer.battle.kind = BattleKind::TRAINER;
+	CHECK(newEntryKind(was, trainer, 25, false, k) && k == LogKind::GIFT);	// (no catching in a trainer battle)
+	Live evolved = now; evolved.party[0].species = 388;
+	CHECK(!newEntryKind(was, evolved, 388, true, k));
+	Live egg = was; egg.party[0].egg = true; egg.party[0].species = 175;
+	Live hatched = now; hatched.party[0].species = 175;
+	CHECK(!newEntryKind(egg, hatched, 175, false, k));
+}
+
 // the session over a made-up link answering from a Platinum RAM image: Live, Advice, the journey, seen notices kept
 static void p16(uint8_t* p, uint16_t v) { p[0] = (uint8_t)v; p[1] = (uint8_t)(v >> 8); }
 static void p32(uint8_t* p, uint32_t v) { p16(p, (uint16_t)v); p16(p + 2, (uint16_t)(v >> 16)); }
@@ -327,14 +351,20 @@ static void testSession(const char* tmp)
 		CHECK(s.live()->valid && s.live()->party.size() == 1 && s.live()->party[0].species == 387);
 		CHECK(s.advice()->next && s.advice()->next->id == "gym1");
 		CHECK(s.unseen() >= 1);
-		// a catch and an evolution: the journey has them
+		// an evolution: the journey has it, and the Pokédex entry it brings is not a catch
 		at(B + 0x1328 + 4)[48] |= 0x08;	// 388
 		p16(plain + 8, 388); encryptMon(plain, 236, at(B + 0xA0));
 		for (int i = 0; i < 4; i++, t += 300) s.tick(t, 1762000100);
 		auto j = s.journey();
 		bool caught = false, evolved = false;
 		for (auto& e : j->log) { caught |= e.kind == LogKind::CATCH && e.species == 388; evolved |= e.kind == LogKind::EVOLVE && e.species == 388; }
-		CHECK(caught && evolved);
+		CHECK(!caught && evolved);
+		// a new Pokédex entry with no wild battle about: a gift (White's Tepig was logged "Caught" at 0h00m)
+		at(B + 0x1328 + 4)[16] |= 0x10;	// 133 = bit 132
+		for (int i = 0; i < 4; i++, t += 300) s.tick(t, 1762000120);
+		bool gift = false;
+		for (auto& e : s.journey()->log) gift |= e.kind == LogKind::GIFT && e.species == 133 && e.text.rfind("Received ", 0) == 0;
+		CHECK(gift);
 		// a whole Pokédex turning up in one step (a save that has just loaded) is not a run of catches
 		auto catches = [&] { size_t n = 0; for (auto& e : s.journey()->log) n += e.kind == LogKind::CATCH; return n; };
 		const size_t catchesBefore = catches();
@@ -378,6 +408,7 @@ static void testSession(const char* tmp)
 
 int main()
 {
+	testNewEntries();
 	testDamage();
 	testCatch();
 	testGuide();
