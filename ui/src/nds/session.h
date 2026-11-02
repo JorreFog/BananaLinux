@@ -51,6 +51,7 @@ namespace banana::nds
 		double sentAt = -1e9, lastAt = -1e9;
 		double savedAt = -1e9;
 		bool dirty = false;
+		int challengeWanted = -1;	// setChallenge's (the Settings row), applied again over the card's when it is read
 		void track(const Live& now, time_t wall);
 		void load();
 		void save();

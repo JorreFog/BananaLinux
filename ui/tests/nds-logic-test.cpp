@@ -334,6 +334,24 @@ static void testSession(const char* tmp)
 		auto sl = s.seenList();
 		CHECK(sl.size() == 1 && sl[0] == "next:gym1");
 		CHECK(s.journey()->log.size() >= 2);
+		CHECK(!s.journey()->challenge);
+	}
+	{	// Challenge mode switched on in Settings for a playthrough the card already knows: the setting wins over the
+		// card's "challenge 0" (it was read after the setting and switched it back off)
+		Session s(r, g, tmp);
+		mkSession(s);
+		s.setChallenge(true);
+		double t = 0;
+		for (int i = 0; i < 6; i++, t += 300) s.tick(t, 1762000300);
+		CHECK(s.live()->valid && s.journey()->challenge);
+	}
+	{	// and off again
+		Session s(r, g, tmp);
+		mkSession(s);
+		s.setChallenge(false);
+		double t = 0;
+		for (int i = 0; i < 6; i++, t += 300) s.tick(t, 1762000400);
+		CHECK(s.live()->valid && !s.journey()->challenge);
 	}
 	unlink((std::string(tmp) + "/CPUE-00111-00222.tsv").c_str());
 }
