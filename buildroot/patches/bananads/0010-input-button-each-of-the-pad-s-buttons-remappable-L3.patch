@@ -21,10 +21,10 @@ lock the menu away. The menu's Hotkeys page lists the buttons with a job.
  3 files changed, 117 insertions(+), 39 deletions(-)
 
 diff --git a/bananads/docs/SETTINGS.md b/bananads/docs/SETTINGS.md
-index c3bde46..0cf50e2 100644
+index 4f351fb..5998c2a 100644
 --- a/bananads/docs/SETTINGS.md
 +++ b/bananads/docs/SETTINGS.md
-@@ -142,7 +142,8 @@ key can also come from the environment as `BANANADS_<KEY>` (dots become undersco
+@@ -151,7 +151,8 @@ key can also come from the environment as `BANANADS_<KEY>` (dots become undersco
  | `sdl.refresh` | `60` | the presents per second with `sdl.vsync=off` (the display's refresh: the RG DS Plus's panels run at 60.003 Hz) |
  | `kms.top` | `$BANANADS_TOP`, else `DSI-2` | the connector of the panel that shows the top screen; the other connected panel of the same type shows the bottom one (`Virtual-2` in QEMU) |
  | `kms.touch` | `$BANANADS_TOUCH`, else `fe5e0000.i2c` | the bottom panel's touchscreen: the input device whose sysfs path contains this |
@@ -35,10 +35,10 @@ index c3bde46..0cf50e2 100644
  | `kms.lowlat_margin_us` | `1500` | with `kms.lowlat`: the deadline, this long before the earlier panel's vblank; +300 per commit that missed its vblank (at most 5000), back down after a clean 10 s |
  | `kms.lowlat_pad_us` | `1000` | with `kms.lowlat`: added to the frames' measured time when a frame is started |
 diff --git a/bananads/src/frontend_kms.cpp b/bananads/src/frontend_kms.cpp
-index 6af46f9..e820ed0 100644
+index 9ddf073..32608e1 100644
 --- a/bananads/src/frontend_kms.cpp
 +++ b/bananads/src/frontend_kms.cpp
-@@ -1132,6 +1132,42 @@ static uint32_t pad_bit(int code) {
+@@ -1446,6 +1446,42 @@ static uint32_t pad_bit(int code) {
  }
  static bool is_hotkey(int code) { return code == BTN_MODE || code == KEY_F1; }
  
@@ -81,7 +81,7 @@ index 6af46f9..e820ed0 100644
  static std::vector<InputDev> open_inputs(const std::string& touch_name) {
      std::vector<InputDev> devs;
      DIR* d = opendir("/dev/input");
-@@ -1257,7 +1293,7 @@ static int menu_key(int code) {
+@@ -1571,7 +1607,7 @@ static int menu_key(int code) {
          default: return -1;
      }
  }
@@ -90,7 +90,7 @@ index 6af46f9..e820ed0 100644
  // the menu's Hotkeys page: the buttons the input loop below reads (keep the two together), and bananad's volume keys
  // kms.input: scripted presses by emulated frame (a benchmark's input that is the same at every speed and scale, so
  // two runs emulate the same frames: their sound compares bit for bit). headless.input's syntax: "<frame>:<keys>[:<frames
-@@ -1303,13 +1339,28 @@ static std::vector<KmsPress> kms_parse_input(std::string spec) {
+@@ -1617,13 +1653,28 @@ static std::vector<KmsPress> kms_parse_input(std::string spec) {
  static bool g_quit_saves = true;  // resume.on_quit: F + START saves the spot
  static int mh_hotkey(void*, int i, const char** keys, const char** what) {
      static const char* const k[][2] = {
@@ -125,7 +125,7 @@ index 6af46f9..e820ed0 100644
  }
  
  static int mh_canvas(void* c, int panel, uint32_t** px, int* pitch, int* w, int* h) {
-@@ -1504,6 +1555,7 @@ static void opts_init(const Config& cfg, Display& dp) {
+@@ -1830,6 +1881,7 @@ static void opts_init(const Config& cfg, Display& dp) {
      o.fps = cfg.flag("kms.fps", false);
      const long ff = cfg.num("kms.ff_speed", 2);
      o.ff_speed = ff == 3 ? 3 : ff > 3 ? 99 : 2;
@@ -133,7 +133,7 @@ index 6af46f9..e820ed0 100644
  }
  static const int ff_speeds[4] = {0, 2, 3, 99};  // the menu's Fast-forward values: Off, 2x, 3x, Max
  static void save_opt(const char* key, const std::string& v) {
-@@ -1713,7 +1765,7 @@ int run_kms(Emu& emu, const Config& cfg) {
+@@ -2052,7 +2104,7 @@ int run_kms(Emu& emu, const Config& cfg) {
      std::atomic<int> in_touch{-1};  // y << 16 | x, -1 released
      std::atomic<int> in_save{0}, in_load{0};
      std::atomic<bool> run{true};
@@ -142,7 +142,7 @@ index 6af46f9..e820ed0 100644
      const bool menu_on = cfg.flag("kms.menu", true);
      std::mutex pm;
      std::condition_variable pcv;
-@@ -2124,11 +2176,12 @@ int run_kms(Emu& emu, const Config& cfg) {
+@@ -2498,11 +2550,12 @@ int run_kms(Emu& emu, const Config& cfg) {
      ev.version = 3;
      ev.page_flip_handler2 = on_flip;  // one event per CRTC: a frame is on screen once both panels' have come
      uint32_t keys = 0;
@@ -156,15 +156,15 @@ index 6af46f9..e820ed0 100644
      // the menu: the game paused at its next frame, the flips in flight done, then the menu until it closes; the
      // game's frame back on both panels, no button left held for the game, the game running again
      const long menu_test = cfg.num("kms.menu_test", 0);  // (tests: the menu opens 3 s in, on page menu_test - 1)
-@@ -2153,6 +2206,7 @@ int run_kms(Emu& emu, const Config& cfg) {
-         bmenu_run(start);
+@@ -2529,6 +2582,7 @@ int run_kms(Emu& emu, const Config& cfg) {
          dp.show_game();
+         dp.icon_plane_menu(false);
          keys = 0;
 +        pad_down = 0;
          hot = false;
          home_down = false;
          menu_down = false;
-@@ -2172,6 +2226,38 @@ int run_kms(Emu& emu, const Config& cfg) {
+@@ -2548,6 +2602,38 @@ int run_kms(Emu& emu, const Config& cfg) {
          }
          pcv.notify_all();
      };
@@ -203,7 +203,7 @@ index 6af46f9..e820ed0 100644
      std::vector<pollfd> pfd;
      long shown_mark = 0, made_mark = 0, drop_mark = 0, rep_mark = 0;
      long long since = now_us();
-@@ -2251,10 +2337,13 @@ int run_kms(Emu& emu, const Config& cfg) {
+@@ -2667,10 +2753,13 @@ int run_kms(Emu& emu, const Config& cfg) {
                              stick_keys = (stick_keys & ~(KeyUp | KeyDown)) | (x.value < -t ? KeyUp : x.value > t ? KeyDown : 0);
                          continue;
                      }
@@ -221,7 +221,7 @@ index 6af46f9..e820ed0 100644
                      // the lid (a shut lid when the game started counts from the next close: its first event is the open)
                      if (x.type == EV_SW && x.code == SW_LID) {
                          in_lid = x.value != 0;
-@@ -2262,7 +2351,7 @@ int run_kms(Emu& emu, const Config& cfg) {
+@@ -2678,7 +2767,7 @@ int run_kms(Emu& emu, const Config& cfg) {
                      }
                      if (x.type != EV_KEY || x.value == 2) continue;
                      if (home_down && x.value && x.code != BTN_Z) home_used = true;  // HOME + something: not HOME alone
@@ -230,7 +230,7 @@ index 6af46f9..e820ed0 100644
                          if (x.value) { home_down = true; home_used = false; continue; }
                          if (home_down && !home_used && menu_on) open_menu(0);
                          home_down = false;
-@@ -2277,20 +2366,6 @@ int run_kms(Emu& emu, const Config& cfg) {
+@@ -2693,20 +2782,6 @@ int run_kms(Emu& emu, const Config& cfg) {
                          }
                          continue;
                      }
@@ -251,7 +251,7 @@ index 6af46f9..e820ed0 100644
                      if (is_hotkey(x.code)) {
                          // F pressed and let go on its own opens the menu, as SuperDrastic's does; F + a button is a
                          // hotkey and opens nothing
-@@ -2302,16 +2377,18 @@ int run_kms(Emu& emu, const Config& cfg) {
+@@ -2718,16 +2793,18 @@ int run_kms(Emu& emu, const Config& cfg) {
                          continue;
                      }
                      if (x.code == KEY_ESC && x.value) g_quit = true;
@@ -279,10 +279,10 @@ index 6af46f9..e820ed0 100644
              }
          }
 diff --git a/bananads/src/menu.c b/bananads/src/menu.c
-index 07ed8db..0fb2c27 100644
+index ff2ec94..d233fd1 100644
 --- a/bananads/src/menu.c
 +++ b/bananads/src/menu.c
-@@ -740,7 +740,7 @@ static void draw_top(void) {
+@@ -748,7 +748,7 @@ static void draw_top(void) {
              y += S(16);
              text(c, &F_MED, "BUTTONS", L, y, S(14), C_TEALTXT, 0, 0);
              y += S(28);
@@ -291,7 +291,7 @@ index 07ed8db..0fb2c27 100644
                                                     { "F + L", "load slot 1" }, { "F + START", "save your spot and quit" } };
              for (int i = 0; i < 4 && y + S(24) <= y1 - S(12); i++, y += S(30)) {
                  float kw = text_w(&F_MED, keys[i][0], S(15), 99) + S(14);
-@@ -890,7 +890,7 @@ static void draw_bottom(void) {
+@@ -898,7 +898,7 @@ static void draw_bottom(void) {
              mq_pick = sel; text(c, &F_MED, tile_label[i], x + tw / 2.0f, cy + S(60), S(20), fg, tw - S(16), 1); mq_pick = 0;
              char h[64] = "";
              switch (i) {
