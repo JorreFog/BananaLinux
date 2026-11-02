@@ -10,9 +10,18 @@
 //    Pokédex ... are at PKHeX's save offsets from that object's body. The battle's own copies are at fixed distances
 //    from it (the NDS Ironmon Tracker's).
 //  - Black 2/White 2 keep a pointer at 0x02000024; the save image is 0x920 past it. Black/White keep theirs at a fixed
-//    address (Black 0x0221BBAC, White 0x20 further).
+//    address (Black 0x0221BBAC, White 0x20 further); their battle data sits at fixed distances from it.
 //  - Pokémon are the games' 136/220/236-byte structures: shuffled, encrypted blocks with a checksum. A Pokémon whose
 //    checksum fails (the game is writing it) is not used: the last good reading of that slot stays until a good one.
+//
+// Found and checked, not trusted: those addresses are where the English releases keep things, the first guess. A
+// guess is used once what it points at checks out - a trainer block and a party whose Pokémon pass the game's
+// checksums - and another revision, language or a moved heap is found by looking: the pointer the ARM9's module
+// parameters give (Gen IV), else a search of main RAM for a party that checks out, then for the static word pointing
+// at its save. The battle's copies are found the same way when they don't match the party during a battle. What was
+// found is kept per game + ROM (anchors(): the Session keeps it on the card) and tried first next time.
+// "In a battle" is the battle overlay's code being in RAM (the games load it where the field's code was): its bytes
+// from the player's own ROM (RamHints, rom.h ramHints()), else the known word in it.
 //
 // It only reads. Each read set is answered by the emulator between two frames, so everything in one set is from the
 // same frame; pointers are read in the same set as the data behind them, and a set whose pointers moved is dropped
@@ -45,10 +54,30 @@ namespace banana::nds
 	// Gen IV's type numbers (??? at 9) to model.h's Type; Gen V's are model.h's own
 	Type typeFromGame(Gen gen, uint8_t t);
 
+	// what the player's ROM tells the RAM reader (rom.h ramHints): bytes of the battle overlay's code that only it has
+	// where it is loaded, so "they are in RAM" = a battle is on, in any revision
+	struct RamHints { Range battleSig; std::vector<uint8_t> battleBytes; };
+
 	class RamReader
 	{
 	public:
 		explicit RamReader(const Game& g);
+		void setHints(const RamHints& h) { hints = h; }
+		// where this game + ROM was found to keep things (a few lines of text; the Session keeps it on the card),
+		// tried before the known addresses; changed() once a new place checked out
+		std::string anchors() const;
+		void setAnchors(const std::string& text);
+		bool anchorsChanged() const { return anchorsDirty; }
+		void anchorsSaved() { anchorsDirty = false; }
+		// the save's base as used now (Gen IV: SaveData; B2W2: the 0x02000024 pointer's value; BW: the save image), the
+		// pointer it came from (0: found directly), and whether it checked out (a party that passed)
+		uint32_t saveBase() const { return base; }
+		uint32_t savePointer() const { return cand().ptr; }
+		bool saveChecked() const { return checked; }
+		bool scanning() const { return mode != NORMAL; }
+		// (tests, and /run/banana/nds-ramsearch on a handheld) as if no known place held: the save is searched for
+		void searchFromScratch(double nowMs);
+		int32_t battleOffset() const { return battleShift; }	// where the battle copies were found against the known place
 		bool supported() const { return layout != nullptr; }
 		// the ranges for the next set (<= 64, a few KB; more while a battle runs)
 		std::vector<Range> wants() const;
@@ -62,9 +91,28 @@ namespace banana::nds
 		const std::string& lastProblem() const { return problem; }
 		struct Layout;
 	private:
+		// a pointer's address, or the base itself; when it last stopped checking out
+		struct Anchor { uint32_t ptr = 0, direct = 0; double failedAt = -1e12; };
+		enum Mode { NORMAL, SCAN_SAVE, SCAN_PTR, SCAN_BATTLE };
+		enum Verdict { GOOD, EMPTY, BUSY, BAD };		// party checked out / a save with no game yet / being written / not a save
 		Game game;
 		const Layout* layout = nullptr;
-		uint32_t base = 0;			// Gen IV: SaveData*; Gen V B2W2: the 0x02000024 pointer; BW: 0
+		RamHints hints;
+		std::vector<Anchor> cands;	// the places to try, in order: what was found before, the known one, the module params'
+		size_t ci = 0;				// the one in use
+		Anchor cached;				// what checked out last (anchors())
+		bool anchorsDirty = false, checked = false;
+		int bad = 0;				// sets in a row the one in use didn't check out
+		uint32_t base = 0;			// the save's base now (from the pointer, or the anchor itself)
+		Mode mode = NORMAL;
+		uint32_t scanAt = 0;		// the next address a search reads
+		double lastScan = -1e12, lastBattleScan = -1e12;
+		std::vector<std::pair<int, uint32_t>> found;	// a search's finds (score, address; SCAN_PTR: which save, address)
+		std::vector<std::pair<int, uint32_t>> saves;	// SCAN_SAVE's saves (score, base), best first: SCAN_PTR looks for them
+		std::vector<uint32_t> foundMons;				// SCAN_BATTLE: Gen IV battle Pokémon structures
+		int32_t battleShift = 0, monShift = 0;	// where the battle copies / Gen IV's battle Pokémon were found, against the known
+		int battleBad = 0;			// sets in a row in a battle whose copies didn't match the party
+		bool paramsDone = false;	// (Gen IV: the module params' pointer looked for)
 		uint32_t battlePtrs[4] = {};	// Gen V: the battler objects as last read (0: none)
 		uint32_t battleMons[4] = {};	// ...and their Pokémon
 		std::shared_ptr<const Live> cur = std::make_shared<Live>();
@@ -72,6 +120,17 @@ namespace banana::nds
 		std::string problem;
 		std::vector<Mon> lastParty;		// the last good Pokémon per slot (kept while a slot is being written)
 		uint64_t lastHash = 0;			// of the last set used (an unchanged set changes nothing)
+		Verdict verdict = BAD;
+		const Anchor& cand() const { static const Anchor none; return ci < cands.size() ? cands[ci] : none; }
+		// a save found by searching with no pointer to it, in a game that keeps one (Gen IV, B2W2): only a stand-in - the
+		// games keep a copy of the save while loading it that stays as loaded (the Plus's HeartGold at its title)
+		bool standIn(const Anchor& a) const;
+		void addCand(Anchor a, bool front = false);
+		void nextCand(double nowMs);
+		void startScan(Mode m, double nowMs);
+		std::vector<Range> scanWants() const;
+		void scanDeliver(const std::vector<std::vector<uint8_t>>& d, double nowMs);
+		bool battleOn(const std::vector<std::vector<uint8_t>>& d) const;
 		bool parse(const std::vector<std::vector<uint8_t>>& d, Live& out, time_t wall);
 		void battle4(const std::vector<std::vector<uint8_t>>& d, Live& out);
 		void battle5(const std::vector<std::vector<uint8_t>>& d, Live& out);

@@ -8,6 +8,7 @@
 // decompilations (map headers, encounter slots and their odds, trainer data, sprite scrambling), PKHeX's
 // PersonalInfo5 (Gen V personal data), Universal Pokémon Randomizer ZX's Gen5RomHandler (Gen V records).
 #include "nds/model.h"
+#include "nds/ram.h"
 #include <functional>
 #include <memory>
 #include <string>
@@ -44,6 +45,13 @@ namespace banana::nds
 	// the result's sprite() is safe from any thread.
 	std::shared_ptr<RomData> loadRom(const std::string& path, const std::string& cacheDir, std::string* err = nullptr,
 		RomLoadInfo* info = nullptr, const std::function<void(float)>& progress = {});
+
+	// what the RAM reader can take from the player's ROM (ram.h RamHints): a piece of the battle overlay's code where the
+	// field's overlay is loaded the rest of the time, so finding it in RAM = a battle is on, in any revision. The games
+	// load their battle code over the field's (Ironmon's "in battle" word is a Thumb instruction of each: 0x2100 /
+	// 0x2800); the overlays' numbers are the games' own (DP 11/6, Pt 16/7, HGSS 12/2, BW 93/21, B2W2 167/36), their
+	// places and bytes come from the ROM. Empty when the ROM doesn't have them. Decodes two overlays (a few ms)
+	RamHints ramHints(const RomData& rom);
 
 	// the index in RomData::species of a species' form (0: the species itself; forms the game has no data of: the
 	// species itself)

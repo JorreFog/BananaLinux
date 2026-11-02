@@ -48,6 +48,9 @@ namespace banana::nds::nitro
 		bool arm9(Bytes& out) const;
 		// ARM9 overlay n, unpacked when the overlay table says it is
 		bool overlay9(int n, Bytes& out) const;
+		// the ARM9 overlay table: each overlay's id and where it is loaded in RAM (its code+data size, then its .bss)
+		struct Overlay { uint32_t id = 0, ram = 0, size = 0, bss = 0; };
+		std::vector<Overlay> overlays9() const;
 		const std::map<std::string, int>& paths() const { return names_; }
 	private:
 		bool load(std::string* err);

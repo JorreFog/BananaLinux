@@ -676,6 +676,39 @@ static std::string digestOf(const RomData& r)
 	return d;
 }
 
+// the battle overlay's bytes for the RAM reader: there, and (with NDS_RAM_DUMPS = ~/nds-companion/ram-kit/out, the RAM
+// recorded on the handhelds) in RAM during the recorded battles and not on the field
+static std::vector<uint8_t> dumpAt(const std::string& f, uint32_t addr, uint32_t len)
+{
+	std::vector<uint8_t> v(len);
+	FILE* fp = fopen(f.c_str(), "rb");
+	if (!fp) return {};
+	const bool ok = fseek(fp, (long)(addr - 0x02000000), SEEK_SET) == 0 && fread(v.data(), 1, len, fp) == len;
+	fclose(fp);
+	return ok ? v : std::vector<uint8_t>();
+}
+static void checkHints(const RomData& r)
+{
+	const RamHints h = ramHints(r);
+	CHECK(h.battleBytes.size() == 32 && h.battleSig.len == 32 && h.battleSig.addr >= 0x02000000 && h.battleSig.addr < 0x02400000);
+	fprintf(stderr, "%s: battle overlay bytes at %08x\n", r.game.code.c_str(), h.battleSig.addr);
+	const char* dumps = getenv("NDS_RAM_DUMPS");
+	if (!dumps || h.battleBytes.empty()) return;
+	const std::string d = dumps;
+	struct { const char* code; const char* file; bool battle; } S[] = {
+		{ "IPKE", "/plus-hgc/b1.bin", true }, { "IPKE", "/plus-hgf/b6.bin", true }, { "IPKE", "/plus-hgc/ow.bin", false },
+		{ "IPKE", "/plus-hgd/c0.bin", false }, { "CPUE", "/plus-pta/ow.bin", false }, { "CPUE", "/rgds-pta/ow.bin", false },
+		{ "IREO", "/plus-b2c/b1.bin", true }, { "IREO", "/plus-b2a/ow.bin", false }, { "IREO", "/plus-b2b/p0.bin", false } };
+	for (auto& x : S)
+	{
+		if (r.game.code != x.code) continue;
+		const auto v = dumpAt(d + x.file, h.battleSig.addr, h.battleSig.len);
+		if (v.empty()) continue;
+		CHECK((v == h.battleBytes) == x.battle);
+		fprintf(stderr, "%s %s: %s\n", x.code, x.file, v == h.battleBytes ? "battle" : "field");
+	}
+}
+
 static void testRoms(const std::string& dir, const std::string& cache)
 {
 	DIR* d = opendir(dir.c_str());
@@ -700,6 +733,7 @@ static void testRoms(const std::string& dir, const std::string& cache)
 			if (!cache.empty()) EQ(info.fromCache, pass == 1);
 			checkGame(*r);
 			digest[pass] = digestOf(*r);
+			if (pass == 0) checkHints(*r);
 		}
 		if (!cache.empty()) CHECK(!digest[0].empty() && digest[0] == digest[1]);
 	}

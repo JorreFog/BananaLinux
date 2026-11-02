@@ -139,6 +139,18 @@ namespace banana::nds::nitro
 		return blzDecompress(raw, out);
 	}
 
+	std::vector<Rom::Overlay> Rom::overlays9() const
+	{
+		std::vector<Overlay> out;
+		const uint32_t at = rd32(hdr_ + 0x50), len = rd32(hdr_ + 0x54);
+		if (at > size_ || len > size_ - at || len > 0x10000) return out;
+		Bytes t(len);
+		if (!readAt(at, len, t.data())) return out;
+		for (uint32_t i = 0; i + 32 <= len; i += 32)
+			out.push_back({ rd32(&t[i]), rd32(&t[i + 4]), rd32(&t[i + 8]), rd32(&t[i + 12]) });
+		return out;
+	}
+
 	// ---- NARC -----------------------------------------------------------------------------------------------------
 	bool Narc::parse(const uint8_t* d, size_t n)
 	{

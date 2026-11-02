@@ -1345,6 +1345,54 @@ namespace banana::nds
 		}
 	}
 
+	RamHints ramHints(const RomData& d)
+	{
+		RamHints h;
+		const RomImpl* r = dynamic_cast<const RomImpl*>(&d);
+		if (!r) return h;
+		uint32_t battleId, fieldId;
+		switch (d.game.id)
+		{
+		case GameId::DIAMOND: case GameId::PEARL: battleId = 11; fieldId = 6; break;
+		case GameId::PLATINUM: battleId = 16; fieldId = 7; break;
+		case GameId::HEARTGOLD: case GameId::SOULSILVER: battleId = 12; fieldId = 2; break;
+		case GameId::BLACK: case GameId::WHITE: battleId = 93; fieldId = 21; break;
+		case GameId::BLACK2: case GameId::WHITE2: battleId = 167; fieldId = 36; break;
+		default: return h;
+		}
+		std::lock_guard<std::mutex> g(r->lock);
+		if (!r->rom)
+		{
+			r->rom.reset(new nitro::Rom);
+			if (!r->rom->open(r->path)) { r->rom.reset(); return h; }
+		}
+		const auto table = r->rom->overlays9();
+		int bi = -1, fi = -1;
+		for (size_t i = 0; i < table.size(); i++)
+		{
+			if (table[i].id == battleId) bi = (int)i;
+			if (table[i].id == fieldId) fi = (int)i;
+		}
+		Bytes bo, fo;
+		if (bi < 0 || fi < 0 || !r->rom->overlay9(bi, bo) || !r->rom->overlay9(fi, fo)) return h;
+		const nitro::Rom::Overlay& b = table[bi], & f = table[fi];
+		// where both are loaded (their code and data), the first 32 bytes of the battle's that differ from the field's in
+		// at least a quarter of them and aren't one byte repeated
+		const uint32_t lo = std::max(b.ram, f.ram), hi = std::min(b.ram + (uint32_t)bo.size(), f.ram + (uint32_t)fo.size());
+		for (uint32_t a = (lo + 31) & ~31u; a + 32 <= hi; a += 32)
+		{
+			const uint8_t* x = &bo[a - b.ram], * y = &fo[a - f.ram];
+			int differ = 0;
+			bool same = true;
+			for (int i = 0; i < 32; i++) { differ += x[i] != y[i]; same = same && x[i] == x[0]; }
+			if (differ < 8 || same) continue;
+			h.battleSig = { a, 32 };
+			h.battleBytes.assign(x, x + 32);
+			return h;
+		}
+		return h;
+	}
+
 	// ---- the loader ---------------------------------------------------------------------------------------------------
 	std::shared_ptr<RomData> loadRom(const std::string& path, const std::string& cacheDir, std::string* err, RomLoadInfo* info,
 		const std::function<void(float)>& progress)

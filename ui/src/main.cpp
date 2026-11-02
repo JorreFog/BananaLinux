@@ -2667,6 +2667,7 @@ int main(int argc, char** argv)
 		nds::PagesPage* ndsPages = nullptr;
 		std::future<nds::PageData> ndsLoad;	// (the ROM's data read in the background while the game starts)
 		auto ndsStop = std::make_shared<std::atomic<bool>>(false);	// (the game ended: ndsLoad stops waiting for an unpacked zip)
+		auto ndsHints = std::make_shared<nds::RamHints>();			// (ndsLoad's too: what the ROM tells the RAM reader)
 		uint8_t ndsHdr[0x200] = {};
 		const std::string ndsMode = !panel && sd.id == "nds" && disp.isOpen() ? getConfValue(o.data + "/settings.conf", "nds_companion", "off") : "off";
 		if (ndsMode == "test" || ndsMode == "on")
@@ -2693,7 +2694,7 @@ int main(int argc, char** argv)
 					// the ROM's names, sprites, places and trainers (decoded once, then from the card's cache) and our
 					// guide for the game; the game's memory (the party, battles) comes through CompLink (nds/ram)
 					const std::string cache = o.data + "/cache/nds-companion";
-					ndsLoad = std::async(std::launch::async, [rom, cache, hdr = std::vector<uint8_t>(ndsHdr, ndsHdr + sizeof ndsHdr), stop = ndsStop]
+					ndsLoad = std::async(std::launch::async, [rom, cache, hdr = std::vector<uint8_t>(ndsHdr, ndsHdr + sizeof ndsHdr), stop = ndsStop, hints = ndsHints]
 					{
 						nds::PageData d;
 						std::string err;
@@ -2718,6 +2719,9 @@ int main(int argc, char** argv)
 							if (!nds::loadGuide(r->game, *gd, &why, &res)) { logf("nds companion: no guide: %s", why.c_str()); *gd = nds::GuideData(); }
 							d.guide = gd;
 							logf("nds companion: %s read in %.0f ms%s", r->game.title.c_str(), info.ms, info.fromCache ? " (from the cache)" : "");
+							// (the battle overlay's bytes: "a battle is on" in any revision, nds/ram.h)
+							*hints = nds::ramHints(*r);
+							logf("nds companion: %s rev %d, battle code at %08x", r->game.code.c_str(), r->game.revision, hints->battleSig.addr);
 						}
 						else logf("nds companion: the game's data didn't read: %s", err.c_str());
 						return d;
@@ -2808,6 +2812,7 @@ int main(int argc, char** argv)
 							ss->send = [&](const std::string& l) { return compLink.send(l); };
 							ss->receive = [&] { return compLink.receive(); };
 							ss->setChallenge(getConfValue(o.data + "/settings.conf", "nds_challenge", "off") == "on");
+							ss->setHints(*ndsHints);
 							ndsSession = std::make_unique<nds::SessionThread>(std::move(ss));
 						}
 					}

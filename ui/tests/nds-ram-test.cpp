@@ -112,7 +112,11 @@ static void testCrypto()
 	CHECK(typeFromGame(Gen::V, 9) == FIRE && typeFromGame(Gen::V, 16) == DARK);
 }
 
-static Game game(GameId id, Gen g) { Game x; x.id = id; x.gen = g; return x; }
+static Game game(GameId id, Gen g)
+{
+	static const char* CODES[] = { "ADAE", "APAE", "CPUE", "IPKE", "IPGE", "IRBO", "IRAO", "IREO", "IRDO" };
+	Game x; x.id = id; x.gen = g; x.code = CODES[(int)id]; return x;
+}
 
 // Platinum: SaveData* at 0x02101D40, body 0x14 past it
 static void testPlatinum()
@@ -285,6 +289,302 @@ static void testBlack2()
 	CHECK(rr.live()->battle.kind == BattleKind::NONE);
 }
 
+// ---- found, not trusted: the structures where another revision / language / heap would put them ----------------------
+// run sets until a Live comes (searches take tens of sets: 4 MB in 256 KB pieces)
+static int settleLong(RamReader& rr, Ram& ram, double& now, int sets = 400)
+{
+	for (int i = 0; i < sets; i++, now += 250)
+		if (rr.deliver(ram.answer(rr.wants()), now, 1762000000)) return i + 1;
+	return 0;
+}
+// a Platinum save at S (body S + 0x14): a named trainer, two Pokémon; the pointer at P (0: none)
+static void ptSave(Ram& ram, uint32_t S, uint32_t P)
+{
+	const uint32_t B = S + 0x14;
+	if (P) p32(ram.at(P), S);
+	p32(ram.at(B + 0x98), 6);
+	p32(ram.at(B + 0x9C), 2);
+	uint8_t plain[236];
+	makeMon(Gen::IV, plain, 236, 0x9F5452B2, 396, 2, 34691, 38453, 33);
+	encryptMon(plain, 236, ram.at(B + 0xA0));
+	makeMon(Gen::IV, plain, 236, 0x01020304, 387, 9, 34691, 38453, 75);
+	encryptMon(plain, 236, ram.at(B + 0xA0 + 236));
+	p16(ram.at(B + 0x68), 0x0134); p16(ram.at(B + 0x6A), 0xFFFF);	// "J"
+	p16(ram.at(B + 0x78), 34691); p16(ram.at(B + 0x7A), 38453);
+	p32(ram.at(B + 0x7C), 100);
+	p32(ram.at(B + 0x1280), 420);
+	p16(ram.at(0x0224A55A), 0x2800);
+}
+static bool ptRead(const RamReader& rr)
+{
+	auto l = rr.live();
+	return l->valid && l->party.size() == 2 && l->party[1].species == 387 && l->trainerName == "J" && l->money == 100 && l->zone == 420;
+}
+
+// the game by its header: any revision; the checked languages only
+static void testDetect()
+{
+	uint8_t h[0x200] = {};
+	memcpy(h + 0x0C, "CPUE", 4);
+	h[0x1E] = 1;
+	Game g = detectGame(h, sizeof h);
+	CHECK(g.id == GameId::PLATINUM && g.revision == 1 && g.gen == Gen::IV);
+	memcpy(h + 0x0C, "IREO", 4); h[0x1E] = 0;
+	CHECK(detectGame(h, sizeof h).id == GameId::BLACK2);
+	memcpy(h + 0x0C, "CPUD", 4);	// German Platinum: its text banks aren't checked yet
+	CHECK(detectGame(h, sizeof h).id == GameId::NONE);
+	memcpy(h + 0x0C, "AMCE", 4);	// not one of the nine
+	CHECK(detectGame(h, sizeof h).id == GameId::NONE);
+}
+
+static void testFindGen4()
+{
+	double now = 0;
+	{	// the known pointer: read at once, and remembered
+		Ram ram;
+		ptSave(ram, 0x0227E118, 0x02101D40);
+		RamReader rr(game(GameId::PLATINUM, Gen::IV));
+		CHECK(settleLong(rr, ram, now, 4) && ptRead(rr) && rr.saveChecked() && rr.savePointer() == 0x02101D40);
+		CHECK(rr.anchorsChanged() && rr.anchors().find("ptr 2101d40") != std::string::npos);
+	}
+	{	// Platinum Rev 1 (header 0x1E = 1): the same layout, read (it was refused)
+		Ram ram;
+		ptSave(ram, 0x0227E118, 0x02101D40);
+		Game g = game(GameId::PLATINUM, Gen::IV);
+		g.revision = 1;
+		RamReader rr(g);
+		CHECK(rr.supported() && settleLong(rr, ram, now, 4) && ptRead(rr));
+	}
+	{	// another build: the pointer 0x100 further (the known word holds 0): the ARM9's module parameters give it
+		Ram ram;
+		ptSave(ram, 0x0228A000, 0x02101E40);
+		const uint32_t mp = 0x02000BA0;
+		p32(ram.at(mp + 8), 0x02101E20);		// the first static .bss word
+		p32(ram.at(mp + 0x1C), 0xDEC00621);		// (the SDK's nitro code after the parameters)
+		RamReader rr(game(GameId::PLATINUM, Gen::IV));
+		const int n = settleLong(rr, ram, now, 60);
+		CHECK(n > 0 && n < 30 && ptRead(rr) && rr.savePointer() == 0x02101E40);
+		CHECK(rr.anchors().find("ptr 2101e40") != std::string::npos);
+		// remembered: the next start (another heap address) reads it at once from the remembered pointer
+		Ram again;
+		ptSave(again, 0x02280040, 0x02101E40);
+		RamReader r2(game(GameId::PLATINUM, Gen::IV));
+		r2.setAnchors(rr.anchors());
+		CHECK(settleLong(r2, again, now, 4) && ptRead(r2) && r2.savePointer() == 0x02101E40);
+		// (another game's notes are not used)
+		RamReader r3(game(GameId::HEARTGOLD, Gen::IV));
+		r3.setAnchors(rr.anchors());
+		CHECK(r3.anchors().find("ptr 0") != std::string::npos);
+	}
+	{	// nothing known holds: the search finds the party, the save around it, then the static word pointing at it
+		Ram ram;
+		const uint32_t S = 0x02291234 & ~3u;
+		ptSave(ram, S, 0x02105F00);
+		// (a battle's copy of a party: a party structure with no trainer before it - not the save)
+		p32(ram.at(0x02300000), 6); p32(ram.at(0x02300004), 2);
+		memcpy(ram.at(0x02300008), ram.at(S + 0x14 + 0xA0), 2 * 236);
+		// (a heap object pointing at the save too: above it, not the static one)
+		p32(ram.at(S + 0x40000), S);
+		RamReader rr(game(GameId::PLATINUM, Gen::IV));
+		const int n = settleLong(rr, ram, now);
+		CHECK(n > 0 && ptRead(rr) && rr.saveBase() == S);
+		fprintf(stderr, "found Platinum's save by searching in %d sets\n", n);
+		// then the static word is tried and kept
+		for (int i = 0; i < 12; i++, now += 250) rr.deliver(ram.answer(rr.wants()), now, 1762000000);
+		CHECK(rr.saveChecked() && rr.savePointer() == 0x02105F00 && rr.anchors().find("ptr 2105f00") != std::string::npos);
+		// the save moves (a reset): followed through the pointer
+		Ram moved;
+		ptSave(moved, S + 0x80, 0x02105F00);
+		p32(moved.at(0x02101D40), 0x02350000);	// (a stale word at the known place: not a save there)
+		CHECK(settleLong(rr, moved, now, 6) && ptRead(rr) && rr.saveBase() == S + 0x80);
+	}
+	{	// two copies of the save (the game's loading buffer stays as loaded, at a LOWER address here, no word points at
+		// it): the one a static word points at is taken
+		Ram ram;
+		const uint32_t S = 0x02300000;
+		ptSave(ram, S, 0x02105F00);
+		memcpy(ram.at(0x02200000), ram.at(S), 0x2000);
+		RamReader rr(game(GameId::PLATINUM, Gen::IV));
+		rr.searchFromScratch(now);
+		settleLong(rr, ram, now);
+		for (int i = 0; i < 12; i++, now += 250) rr.deliver(ram.answer(rr.wants()), now, 1762000000);
+		CHECK(rr.saveChecked() && rr.saveBase() == S && rr.savePointer() == 0x02105F00);
+	}
+	{	// HeartGold-like start: only the game's loading copy of the save has the party (no pointer to it), the known
+		// pointer still holds nothing; then the game's own save appears behind the known pointer: taken at once, and
+		// only the pointer is remembered (the copy stays as loaded: money 100 while the game's says 250)
+		Ram ram;
+		ptSave(ram, 0x02390000, 0);
+		RamReader rr(game(GameId::PLATINUM, Gen::IV));
+		const int n = settleLong(rr, ram, now);
+		CHECK(n > 0 && ptRead(rr) && rr.saveBase() == 0x02390000 && !rr.anchorsChanged());
+		ptSave(ram, 0x0227E118, 0x02101D40);
+		p32(ram.at(0x0227E118 + 0x14 + 0x7C), 250);
+		for (int i = 0; i < 12; i++, now += 250) rr.deliver(ram.answer(rr.wants()), now, 1762000000);
+		CHECK(rr.savePointer() == 0x02101D40 && rr.saveChecked() && rr.live()->money == 250);
+		CHECK(rr.anchors().find("ptr 2101d40") != std::string::npos && rr.anchors().find("direct 0") != std::string::npos);
+	}
+	{	// the same with no known place at all (the test flag): the stand-in, then the search again finds the pointer
+		Ram ram;
+		ptSave(ram, 0x02390000, 0);
+		RamReader rr(game(GameId::PLATINUM, Gen::IV));
+		rr.searchFromScratch(now);
+		CHECK(settleLong(rr, ram, now) && rr.saveBase() == 0x02390000);
+		ptSave(ram, 0x0227E118, 0x02101D40);
+		p32(ram.at(0x0227E118 + 0x14 + 0x7C), 250);
+		int sets = 0;
+		for (; sets < 600 && !(rr.savePointer() == 0x02101D40 && rr.saveChecked()); sets++, now += 250) rr.deliver(ram.answer(rr.wants()), now, 1762000000);
+		CHECK(rr.savePointer() == 0x02101D40 && rr.saveChecked());
+		for (int i = 0; i < 4; i++, now += 250) rr.deliver(ram.answer(rr.wants()), now, 1762000000);
+		CHECK(rr.live()->money == 250);
+		fprintf(stderr, "from a stand-in to the game's pointer in %d sets\n", sets);
+		// an old anchors file with a save and no pointer is not used for a game that keeps one
+		RamReader r2(game(GameId::PLATINUM, Gen::IV));
+		r2.setAnchors("game CPUE\nptr 0\ndirect 2390000\n");
+		CHECK(r2.savePointer() == 0x02101D40);
+	}
+	{	// the handheld's test flag: as if nothing were known - searched, and the known pointer found again by it
+		Ram ram;
+		ptSave(ram, 0x0227E118, 0x02101D40);
+		RamReader rr(game(GameId::PLATINUM, Gen::IV));
+		rr.searchFromScratch(now);
+		CHECK(rr.scanning() && settleLong(rr, ram, now) > 16 && ptRead(rr));
+		for (int i = 0; i < 12; i++, now += 250) rr.deliver(ram.answer(rr.wants()), now, 1762000000);
+		CHECK(rr.saveChecked() && rr.savePointer() == 0x02101D40);
+	}
+	{	// a title screen (no save in it yet, nothing anywhere): no Live; the search isn't run again and again
+		Ram ram;
+		RamReader rr(game(GameId::PLATINUM, Gen::IV));
+		int scans = 0;
+		bool was = false;
+		for (int i = 0; i < 4 * 120; i++, now += 250)	// 2 minutes
+		{
+			rr.deliver(ram.answer(rr.wants()), now, 1762000000);
+			if (rr.scanning() && !was) scans++;
+			was = rr.scanning();
+		}
+		CHECK(!rr.live()->valid && scans >= 1 && scans <= 3);
+	}
+}
+
+static void testFindGen5()
+{
+	double now = 0;
+	auto b2Save = [](Ram& ram, uint32_t M, uint32_t P)
+	{
+		const uint32_t V = M + 0x920;
+		if (P) p32(ram.at(P), M);
+		ram.at(V + 0x18E04)[0] = 1;
+		uint8_t plain[236];
+		makeMon(Gen::V, plain, 220, 0x698B86B2, 553, 49, 33054, 28192, 44);
+		encryptMon(plain, 220, ram.at(V + 0x18E08));
+		const char16_t* name = u"Joar";
+		for (int i = 0; i < 4; i++) p16(ram.at(V + 0x19404 + 2 * i), name[i]);
+		p16(ram.at(V + 0x19404 + 8), 0xFFFF);
+		p16(ram.at(V + 0x19414), 33054);
+		p32(ram.at(V + 0x21100), 52832);
+		p16(ram.at(M + 0x41B5C), 96);
+		p16(ram.at(0x021B5138), 0x2800);
+	};
+	{	// Black 2 with its pointer elsewhere: found by the search, then the pointer
+		Ram ram;
+		b2Save(ram, 0x02210000, 0x02000040);
+		RamReader rr(game(GameId::BLACK2, Gen::V));
+		const int n = settleLong(rr, ram, now);
+		auto l = rr.live();
+		CHECK(n > 0 && l->valid && l->party.size() == 1 && l->party[0].species == 553 && l->trainerName == "Joar" && l->money == 52832 && l->zone == 96);
+		for (int i = 0; i < 12; i++, now += 250) rr.deliver(ram.answer(rr.wants()), now, 1762000000);
+		CHECK(rr.savePointer() == 0x02000040 && rr.saveBase() == 0x02210000);
+	}
+	{	// Black: the save image 0x1000 from the known one; its battle data and field offsets go with it
+		Ram ram;
+		const uint32_t V = 0x0221BBAC + 0x1000;
+		ram.at(V + 0x18E04)[0] = 1;
+		uint8_t plain[236];
+		makeMon(Gen::V, plain, 220, 0x12345678, 495, 5, 111, 222, 33);
+		encryptMon(plain, 220, ram.at(V + 0x18E08));
+		p16(ram.at(V + 0x19404), 'A'); p16(ram.at(V + 0x19406), 0xFFFF);
+		p16(ram.at(V + 0x19414), 111);
+		p16(ram.at(V + (0x022592B2 - 0x0221BBAC)), 123);	// the live zone
+		RamReader rr(game(GameId::BLACK, Gen::V));
+		CHECK(settleLong(rr, ram, now) && rr.live()->party.size() == 1 && rr.live()->party[0].species == 495);
+		CHECK(rr.saveBase() == V && rr.savePointer() == 0 && rr.live()->zone == 123);
+		CHECK(rr.anchors().find("direct 221cbac") != std::string::npos);
+	}
+}
+
+// a battle: the overlay's code (the ROM's bytes) says so; the copies looked for when they aren't where expected
+static void testFindBattle()
+{
+	double now = 0;
+	Ram ram;
+	const uint32_t S = 0x0227E118;
+	ptSave(ram, S, 0x02101D40);
+	RamReader rr(game(GameId::PLATINUM, Gen::IV));
+	RamHints h;
+	h.battleSig = { 0x0223B200, 16 };
+	for (int i = 0; i < 16; i++) h.battleBytes.push_back((uint8_t)(0xA0 + i));
+	rr.setHints(h);
+	CHECK(settleLong(rr, ram, now, 4) && ptRead(rr) && rr.live()->battle.kind == BattleKind::NONE);
+	// the word says battle but the overlay's bytes aren't there: not a battle (the hints win)
+	p16(ram.at(0x0224A55A), 0x2100);
+	p32(ram.at(S + 0x7C + 0x14), 101);	// (money: a change, so a new Live)
+	CHECK(settleLong(rr, ram, now, 4) && rr.live()->battle.kind == BattleKind::NONE);
+	// a wild battle with everything 0x40 (copies) / 0x80 (battle Pokémon) further than in Rev 0
+	memcpy(ram.at(0x0223B200), h.battleBytes.data(), 16);
+	const int32_t sh = 0x40, msh = 0x80;
+	uint8_t plain[236];
+	makeMon(Gen::IV, plain, 236, 0x9F5452B2, 396, 2, 34691, 38453, 33);
+	encryptMon(plain, 236, ram.at(S + 0x4B8AC + sh));
+	makeMon(Gen::IV, plain, 236, 0x61E1FAD6, 167, 2, 34691, 38453, 40);
+	encryptMon(plain, 236, ram.at(S + 0x4BE5C + sh));
+	const uint32_t bm = S + 0x47620 - 0x68 + msh;
+	auto mon4 = [&](uint32_t a, uint16_t sp, uint8_t lv, uint32_t pid)
+	{
+		uint8_t* p = ram.at(a);
+		p16(p, sp);
+		for (int i = 0; i < 8; i++) p[0x18 + i] = 6;
+		p[0x34] = lv;
+		p32(p + 0x4C, 13); p32(p + 0x50, 13);
+		p32(p + 0x68, pid);
+	};
+	mon4(bm, 396, 2, 0x9F5452B2);
+	mon4(bm + 0xC0, 167, 2, 0x61E1FAD6);
+	int sets = 0;
+	for (; sets < 200 && rr.live()->battle.kind != BattleKind::WILD; sets++, now += 250) rr.deliver(ram.answer(rr.wants()), now, 1762000000);
+	auto l = rr.live();
+	CHECK(l->battle.kind == BattleKind::WILD && l->battle.foes[0].mon.species == 167 && l->battle.ours[0].mon.species == 396);
+	fprintf(stderr, "found Platinum's moved battle copies in %d sets\n", sets);
+	CHECK(rr.anchors().find("battle 64") != std::string::npos && rr.anchors().find("mon 128") != std::string::npos);
+	// over: the overlay's bytes gone
+	memset(ram.at(0x0223B200), 0, 16);
+	CHECK(settleLong(rr, ram, now, 4) && rr.live()->battle.kind == BattleKind::NONE);
+
+	{	// Black 2: the battle's copies, table and flags 0x40 further than Ironmon's
+		Ram b;
+		const uint32_t M = 0x02204CC4, V = M + 0x920;
+		p32(b.at(0x02000024), M);
+		b.at(V + 0x18E04)[0] = 1;
+		makeMon(Gen::V, plain, 220, 0x698B86B2, 553, 49, 33054, 28192, 44);
+		encryptMon(plain, 220, b.at(V + 0x18E08));
+		p16(b.at(V + 0x19404), 'J'); p16(b.at(V + 0x19406), 0xFFFF);
+		p16(b.at(0x021B5138), 0x2101);
+		const uint32_t T = M + 0x526A8 + 0x40, ob = 0x02300000, fb = 0x02300400, om = 0x02301000, fm = 0x02301100;
+		encryptMon(plain, 220, b.at(M + 0x53610 + 0x40));
+		p32(b.at(T), ob); p32(b.at(T + 0x1C), fb);
+		p32(b.at(ob), om); p32(b.at(fb), fm);
+		encryptMon(plain, 220, b.at(om));
+		makeMon(Gen::V, plain, 220, 0x55555555, 524, 10, 1, 2, 88);
+		encryptMon(plain, 220, b.at(fm));
+		for (uint32_t x : { ob, fb }) { p16(b.at(x + 0x0E), 30); p16(b.at(x + 0x10), 21); b.at(x + 0x18)[0] = x == ob ? 49 : 10; }
+		RamReader r5(game(GameId::BLACK2, Gen::V));
+		int n = 0;
+		for (; n < 200 && r5.live()->battle.kind != BattleKind::WILD; n++, now += 250) r5.deliver(b.answer(r5.wants()), now, 1762000000);
+		CHECK(r5.live()->battle.kind == BattleKind::WILD && r5.live()->battle.foes[0].mon.species == 524 && r5.battleOffset() == 0x40);
+		fprintf(stderr, "found Black 2's moved battle data in %d sets\n", n);
+	}
+}
+
 static void testLink()
 {
 	std::vector<Range> r = { { 0x02101D40, 4 }, {}, { 0x0227E12C, 2 } };
@@ -371,13 +671,71 @@ static void testSnapshots(const std::string& dir)
 		CHECK(l->mapX == 566 && l->mapY == 328);
 }
 
+// the snapshots with the known places broken (as another revision or language would have them): still found
+static void testSnapshotsMoved(const std::string& dir)
+{
+	auto run = [](Ram& ram, GameId id, Gen g, int sets) { RamReader rr(game(id, g)); double now = 0; settleLong(rr, ram, now, sets); return rr.live(); };
+	Ram ram;
+	ram.m = load(dir + "/plus-pta/ow.bin");
+	if (ram.m.size() == 0x400000)
+	{
+		const uint32_t S = ram.at(0x02101D40)[0] | ram.at(0x02101D40)[1] << 8 | ram.at(0x02101D40)[2] << 16 | ram.at(0x02101D40)[3] << 24;
+		p32(ram.at(0x02101D40), 0);	// the known word: as if elsewhere - the module parameters (in RAM) give it
+		auto l = run(ram, GameId::PLATINUM, Gen::IV, 0);
+		Ram r2 = ram;
+		RamReader rr(game(GameId::PLATINUM, Gen::IV));
+		double now = 0;
+		CHECK(!settleLong(rr, r2, now, 30));	// (the word is 0 now, and the module params point at it: nothing)
+		// the save moved to where no word points at it but the static one at 0x021C0794 (the search finds it + that)
+		p32(r2.at(0x02101D40), 0);
+		for (uint32_t a = 0x02000B80; a < 0x02000BE0; a += 4) p32(r2.at(a), 0);	// (no module params either)
+		RamReader r3(game(GameId::PLATINUM, Gen::IV));
+		const int n = settleLong(r3, r2, now);
+		l = r3.live();
+		CHECK(n > 0 && l->party.size() == 1 && l->party[0].species == 396 && l->trainerName == "JOAR" && l->zone == 420 && r3.saveBase() == S);
+		for (int i = 0; i < 12; i++, now += 250) r3.deliver(r2.answer(r3.wants()), now, 1762000000);
+		CHECK(r3.saveChecked() && r3.savePointer() == 0x021C0794);
+		fprintf(stderr, "plus-pta without its known pointer: found in %d sets, pointer %x\n", n, r3.savePointer());
+	}
+	ram.m = load(dir + "/plus-b2a/ow.bin");
+	if (ram.m.size() == 0x400000)
+	{
+		p32(ram.at(0x02000024), 0);
+		RamReader rr(game(GameId::BLACK2, Gen::V));
+		double now = 0;
+		const int n = settleLong(rr, ram, now);
+		auto l = rr.live();
+		CHECK(n > 0 && l->party.size() == 5 && l->party[0].species == 553 && l->trainerName == "Joar" && l->money == 52832 && l->zone == 96);
+		for (int i = 0; i < 12; i++, now += 250) rr.deliver(ram.answer(rr.wants()), now, 1762000000);
+		fprintf(stderr, "plus-b2a without 0x02000024: found in %d sets, pointer %x base %x\n", n, rr.savePointer(), rr.saveBase());
+		CHECK(rr.saveBase() == 0x02204CC4 && rr.savePointer() == 0x021FEA70);
+	}
+	ram.m = load(dir + "/plus-hgc/b1.bin");
+	if (ram.m.size() == 0x400000)
+	{
+		// HeartGold in a battle with its known pointer broken: found, and the battle read
+		p32(ram.at(0x02111880), 0);
+		for (uint32_t a = 0x02000B80; a < 0x02000BE0; a += 4) p32(ram.at(a), 0);
+		RamReader rr(game(GameId::HEARTGOLD, Gen::IV));
+		double now = 0;
+		settleLong(rr, ram, now);
+		for (int i = 0; i < 12; i++, now += 250) rr.deliver(ram.answer(rr.wants()), now, 1762000000);
+		auto l = rr.live();
+		CHECK(l->valid && l->party.size() == 1 && l->party[0].species == 155 && l->battle.kind == BattleKind::WILD && l->battle.foes[0].mon.species == 167);
+	}
+}
+
 int main(int argc, char** argv)
 {
 	testCrypto();
 	testPlatinum();
 	testBlack2();
+	testDetect();
+	testFindGen4();
+	testFindGen5();
+	testFindBattle();
 	testLink();
-	if (argc > 1) testSnapshots(argv[1]);
+	if (argc > 1) { testSnapshots(argv[1]); testSnapshotsMoved(argv[1]); }
 	if (fails) { fprintf(stderr, "%d failed\n", fails); return 1; }
 	fprintf(stderr, "nds-ram-test: all passed\n");
 	return 0;

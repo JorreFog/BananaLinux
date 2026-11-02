@@ -1,6 +1,8 @@
 // banana-ui: the DS Pokémon companion's shared helpers (model.h): the game in a ROM header, the type chart of the DS
 // games (Generations IV and V: no Fairy; Steel resists Ghost and Dark), a Pokémon's shininess and Hidden Power.
 #include "nds/model.h"
+#include <algorithm>
+#include <iterator>
 #include <cstring>
 
 namespace banana::nds
@@ -18,10 +20,16 @@ namespace banana::nds
 			{ "IPG", GameId::SOULSILVER, Gen::IV, "SoulSilver" }, { "IRB", GameId::BLACK, Gen::V, "Black" },
 			{ "IRA", GameId::WHITE, Gen::V, "White" }, { "IRE", GameId::BLACK2, Gen::V, "Black 2" },
 			{ "IRD", GameId::WHITE2, Gen::V, "White 2" } };
-		// the English releases: E (USA, and the English European dumps that carry it) and O (Black 2/White 2's
-		// international code); other languages later (their RAM and text differ)
+		// the game by its first three letters, any revision (header 0x1E: the RAM reader finds and checks its places,
+		// ram.h); the language by the fourth, from the releases whose text banks the ROM reader was checked on. To add
+		// one (D German, F French, I Italian, S Spanish, J Japanese, K Korean): check rom.cpp's text banks and names on
+		// that ROM (tests/nds-rom-test), then list its letter here
+		static const char CHECKED_LANGUAGES[] = {
+			'E',	// USA, and the English European dumps that carry it
+			'O',	// Black 2/White 2's international English code
+		};
 		const char lang = g.code.size() == 4 ? g.code[3] : 0;
-		if (lang != 'E' && lang != 'O') return g;
+		if (std::find(std::begin(CHECKED_LANGUAGES), std::end(CHECKED_LANGUAGES), lang) == std::end(CHECKED_LANGUAGES)) return g;
 		for (auto& e : G)
 			if (!g.code.compare(0, 3, e.c))
 			{

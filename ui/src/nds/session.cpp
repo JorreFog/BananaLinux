@@ -12,7 +12,22 @@
 namespace banana::nds
 {
 	Session::Session(std::shared_ptr<const RomData> r, std::shared_ptr<const GuideData> g, std::string stateDir)
-		: rom(std::move(r)), guide(std::move(g)), dir(std::move(stateDir)), rr(rom ? rom->game : Game{}) {}
+		: rom(std::move(r)), guide(std::move(g)), dir(std::move(stateDir)), rr(rom ? rom->game : Game{})
+	{
+		// where the RAM reader found this game + ROM's save and battle data before: tried first
+		const std::string f = anchorFile();
+		if (f.empty()) return;
+		std::ifstream in(f);
+		std::stringstream t;
+		t << in.rdbuf();
+		rr.setAnchors(t.str());
+	}
+
+	std::string Session::anchorFile() const
+	{
+		if (!rom || dir.empty() || rom->game.romHash.empty()) return "";
+		return dir + "/" + rom->game.code + "-" + rom->game.romHash + ".ram";
+	}
 
 	Session::~Session() { if (dirty) save(); }
 
@@ -23,6 +38,13 @@ namespace banana::nds
 	{
 		if (!rom || !rr.supported() || !send || !receive) return false;
 		bool changed = false;
+		if (!searchChecked)
+		{
+			// (a test on a handheld: the RAM reader as if this were a revision whose places nobody knows)
+			searchChecked = true;
+			struct stat st {};
+			if (stat("/run/banana/nds-ramsearch", &st) == 0) { rr.searchFromScratch(now); fprintf(stderr, "banana-ui: nds companion: RAM: searching from scratch (test)\n"); }
+		}
 		if (waiting)
 		{
 			std::string r = receive();
@@ -32,6 +54,27 @@ namespace banana::nds
 				std::vector<std::vector<uint8_t>> d;
 				replyBytes(r, sent, d);
 				if (rr.deliver(d, now, wall)) changed = true;
+				// (the log: where the save and the battle copies were found, and the searches)
+				if (rr.scanning() != wasScanning)
+				{
+					wasScanning = rr.scanning();
+					fprintf(stderr, "banana-ui: nds companion: RAM: %s at %.1f s%s%s\n", wasScanning ? "searching" : "search done", now / 1000.0,
+						rr.lastProblem().empty() ? "" : ": ", rr.lastProblem().c_str());
+				}
+				if (rr.anchorsChanged())
+				{
+					// (a new place checked out: kept for the next start; rare - once per game + ROM, or after a search)
+					const std::string f = anchorFile();
+					if (!f.empty())
+					{
+						mkdir(dir.c_str(), 0755);
+						{ std::ofstream o(f + ".tmp"); o << "# where the DS Pokémon companion found this game's data in RAM\n" << rr.anchors(); }
+						rename((f + ".tmp").c_str(), f.c_str());
+					}
+					fprintf(stderr, "banana-ui: nds companion: RAM: the save at %08x (pointer %08x), battle copies %+d: kept for the next start\n",
+						rr.saveBase(), rr.savePointer(), (int)rr.battleOffset());
+					rr.anchorsSaved();
+				}
 			}
 			else if (now - sentAt > 1500) waiting = false;	// (not answered: the link gives such a set up; ask again)
 		}

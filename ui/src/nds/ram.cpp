@@ -2,6 +2,8 @@
 // handhelds (its "Verified on device" section).
 #include "nds/ram.h"
 #include "nds/nitro.h"
+#include <algorithm>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -169,7 +171,8 @@ namespace banana::nds
 	{
 		Gen gen;
 		// Gen IV: the SaveData pointer's address, its header (the body's start), the battle's offsets from SaveData.
-		// Gen V: B2W2's pointer (0x02000024) and the save image's distance from it, or BW's fixed save image
+		// Gen V: B2W2's pointer (0x02000024) and the save image's distance from it, or BW's fixed save image (the
+		// known places: the first guess, see RamReader)
 		uint32_t ptr = 0, head = 0, fixedBase = 0;
 		// general-block / save-image offsets (from the body / save image)
 		uint32_t name, tid, money, badges, kanto, time, party, partyCount, bag, map, dex, daycare, roamers;
@@ -177,11 +180,11 @@ namespace banana::nds
 		uint32_t repel, flags, flagBytes;
 		std::vector<PocketAt> pockets;
 		// battle: Gen IV from SaveData: our party's battle copy, the foe's party, BattleMon[0], the trainer id; the
-		// absolute "in battle" word. Gen V (from the B2W2 pointer, or absolute for BW): the same + the battler table
+		// absolute "in battle" word. Gen V (from the B2W2 pointer, or BW's save image): the same + the battler table
 		uint32_t bOurs, bFoes, bMon0, bTrainer, inBattle, bTable, bDouble;
 		uint32_t posMap, posX, posZ;	// Gen V save position block (map, x, z: as saved, not live)
 		uint32_t liveZone, livePos;		// Gen V: the current zone (Ironmon's childMapHeader) and the player's map object
-										// x (+0, z at +4): from the B2W2 pointer, absolute in BW
+										// x (+0, z at +4): from the B2W2 pointer / BW's save image
 	};
 
 	static const std::vector<PocketAt> POCKETS_DP = { { POCKET_ITEMS, 0, 165 }, { POCKET_KEY, 0x294, 50 },
@@ -241,17 +244,20 @@ namespace banana::nds
 		l.pockets = POCKETS_V;
 		// where the player is now (the save's position block keeps the saved spot): the zone and the player's map
 		// object's tile x/z (Black 2: x went 110 -> 111 with a step, the save's stayed)
-		l.liveZone = b2w2 ? 0x41B5C : 0x022592B2 + shift;
-		l.livePos = b2w2 ? 0x38CE8 + 0x2E : 0x022521EC + 0x2E + shift;
+		// (BW: Ironmon's absolute addresses, Black's; White's are all 0x20 further, its save image too: so they are kept
+		// as distances from the save image, which moves them with it when it is found elsewhere)
+		const uint32_t bw = 0x0221BBAC;
+		l.liveZone = b2w2 ? 0x41B5C : 0x022592B2 - bw;
+		l.livePos = b2w2 ? 0x38CE8 + 0x2E : 0x022521EC + 0x2E - bw;
 		if (b2w2)
 		{	// from the 0x02000024 pointer (Ironmon's B2W2 offsets); the "in battle" word is absolute (+0x40 in White 2)
 			l.bOurs = 0x53610; l.bFoes = 0x53B70; l.bTrainer = 0x5262E; l.bTable = 0x526A8; l.bDouble = 0x900A0;
 			l.inBattle = 0x021B5138 + shift;
 		}
 		else
-		{	// absolute (Black; White 0x20 further)
-			l.bOurs = 0x0226A794 + shift; l.bFoes = 0x0226B254 + shift; l.bTrainer = 0x022697BE + shift;
-			l.bTable = 0x02269838 + shift; l.bDouble = 0x022A62F8 + shift; l.inBattle = 0x021D0798 + shift;
+		{	// from the save image (Black's absolute ones less its image's address); the word is absolute
+			l.bOurs = 0x0226A794 - bw; l.bFoes = 0x0226B254 - bw; l.bTrainer = 0x022697BE - bw;
+			l.bTable = 0x02269838 - bw; l.bDouble = 0x022A62F8 - bw; l.inBattle = 0x021D0798 + shift;
 		}
 		return l;
 	}
@@ -267,6 +273,16 @@ namespace banana::nds
 	static const uint32_t RAM_LO = 0x02000000, RAM_HI = 0x02400000;	// main RAM in DS mode (BananaDS's 4 MB export)
 	static bool inRam(uint32_t a, uint32_t len = 1) { return a >= RAM_LO && a + len <= RAM_HI && a + len > a; }
 	static const uint32_t BMON = 0xC0, BATTLER = 0x140;	// Gen IV BattleMon; the part of a Gen V battler object read
+	// a search reads main RAM in pieces of 64 KB, four a set (with a little of each side, so a structure across a
+	// piece's edge is seen whole): 16 sets for the 4 MB, ~4 s at the Session's pace, only when a guess failed
+	static const uint32_t SCAN_PIECE = 0x10000, SCAN_PIECES = 4, SCAN_LEAD = 0x100, SCAN_TAIL = 0x800;
+	// how long a guess may not check out before the next is tried (sets, 4 a second): a wrong place shows it at once,
+	// the right one only while the game rebuilds its heap (a reset) or writes a Pokémon; a pointer that holds no
+	// address yet (the game's first seconds); a save with no game in it yet (the title, a new game's intro)
+	static const int BAD_SETS = 8, NO_POINTER_SETS = 40, EMPTY_SETS = 240;
+	// the searches' pace: after one found nothing, the next no sooner than this (ms)
+	static const double SCAN_AGAIN_MS = 60000, SCAN_AGAIN_EMPTY_MS = 300000, BATTLE_SCAN_AGAIN_MS = 30000;
+	static const int BATTLE_BAD_SETS = 40;	// (10 s: a battle's first seconds - its intro - may come before its copies)
 
 	RamReader::RamReader(const Game& g) : game(g)
 	{
@@ -281,8 +297,67 @@ namespace banana::nds
 		case GameId::WHITE2: layout = &L_W2; break;
 		default: break;
 		}
-		// Platinum revision 1 has other offsets (UPR-ZX lists it apart): not verified, not read
-		if (g.id == GameId::PLATINUM && g.revision != 0) layout = nullptr;
+		// (any revision: the known places are only the first guess, checked before use. Platinum Rev 1, which this
+		// refused before, has Rev 0's ARM9 and overlays byte for byte but overlay 94, so the same RAM layout)
+		if (layout) addCand(layout->ptr ? Anchor{ layout->ptr, 0 } : Anchor{ 0, layout->fixedBase });
+	}
+
+	bool RamReader::standIn(const Anchor& a) const { return !a.ptr && layout && layout->ptr; }
+
+	void RamReader::addCand(Anchor a, bool front)
+	{
+		for (size_t i = 0; i < cands.size(); i++)
+			if (cands[i].ptr == a.ptr && cands[i].direct == a.direct)
+			{
+				if (!front || i == 0) return;
+				cands.erase(cands.begin() + i);
+				if (ci >= i && ci > 0) ci--;
+				break;
+			}
+		if (front) { cands.insert(cands.begin(), a); ci = 0; }
+		else cands.push_back(a);
+	}
+
+	std::string RamReader::anchors() const
+	{
+		char b[160];
+		snprintf(b, sizeof b, "game %s\nptr %x\ndirect %x\nbattle %d\nmon %d\n", game.code.c_str(), cached.ptr, cached.direct,
+			(int)battleShift, (int)monShift);
+		return b;
+	}
+
+	void RamReader::setAnchors(const std::string& text)
+	{
+		Anchor a;
+		int bs = 0, ms = 0;
+		std::string code;
+		char key[16];
+		unsigned v;
+		int iv;
+		for (size_t at = 0; at < text.size();)
+		{
+			size_t nl = text.find('\n', at);
+			if (nl == std::string::npos) nl = text.size();
+			const std::string ln = text.substr(at, nl - at);
+			at = nl + 1;
+			char c[8] = {};
+			if (sscanf(ln.c_str(), "game %7s", c) == 1) code = c;
+			else if (sscanf(ln.c_str(), "%15s %x", key, &v) == 2 && (!strcmp(key, "ptr") || !strcmp(key, "direct")))
+				(key[0] == 'p' ? a.ptr : a.direct) = v;
+			if (sscanf(ln.c_str(), "battle %d", &iv) == 1) bs = iv;
+			if (sscanf(ln.c_str(), "mon %d", &iv) == 1) ms = iv;
+		}
+		if (!layout || code != game.code) return;	// (another game's: not used)
+		// (shifts larger than main RAM are not a place)
+		if (bs > -0x400000 && bs < 0x400000) battleShift = bs;
+		if (ms > -0x400000 && ms < 0x400000) monShift = ms;
+		// (a save with no pointer is kept only for a game without one, BW: elsewhere it was a stand-in)
+		if ((a.ptr && inRam(a.ptr, 4)) || (!a.ptr && !layout->ptr && inRam(a.direct)))
+		{
+			cached = a;
+			addCand(a, true);
+			ci = 0;
+		}
 	}
 
 	// the general part of the save read in one piece (Gen IV: from the body to past the daycare; Gen V: the bag to
@@ -298,43 +373,49 @@ namespace banana::nds
 
 	// the ranges, in this order (deliver() reads them by these indexes)
 	enum { W_PTR, W_MAIN, W_ROAM, W_REPEL, W_OURS, W_FOES, W_BMON, W_TRAINER, W_INBATTLE, W_V_MISC, W_V_DAYCARE,
-		W_V_FLAGS, W_V_TABLE, W_V_DOUBLE, W_V_ZONE, W_V_POS, W_COUNT };
+		W_V_FLAGS, W_V_TABLE, W_V_DOUBLE, W_V_ZONE, W_V_POS, W_PARAMS, W_SIG, W_C0, W_C1, W_C2, W_C3, W_COUNT };
+	static const size_t PEEK = 4;	// the other pointers read in each set (W_C0..): one that holds an address is tried at once
+	// (Gen IV: where the ARM9's module parameters are looked for - 0x02000B68 DP, 0x02000BA0 Pt/HGSS)
+	static const uint32_t PARAMS_AT = 0x02000800, PARAMS_LEN = 0x800;
 
 	std::vector<Range> RamReader::wants() const
 	{
-		std::vector<Range> w(W_COUNT);
 		if (!layout) return {};
+		if (mode != NORMAL) return scanWants();
+		std::vector<Range> w(W_COUNT);
 		const Layout& l = *layout;
-		if (l.ptr) w[W_PTR] = { l.ptr, 4 };
-		const uint32_t s = l.fixedBase ? l.fixedBase : base;	// Gen IV: SaveData; B2W2: the pointer's value
+		const Anchor& a = cand();
+		if (a.ptr) w[W_PTR] = { a.ptr, 4 };
+		for (size_t i = 0; i < PEEK && i < cands.size(); i++) if (cands[i].ptr) w[W_C0 + i] = { cands[i].ptr, 4 };
+		if (l.gen == Gen::IV && !paramsDone) w[W_PARAMS] = { PARAMS_AT, PARAMS_LEN };
+		if (!hints.battleBytes.empty() && inRam(hints.battleSig.addr, hints.battleSig.len)) w[W_SIG] = hints.battleSig;
+		w[W_INBATTLE] = { l.inBattle, 2 };
+		const uint32_t s = a.ptr ? base : a.direct;	// Gen IV: SaveData; B2W2: the pointer's value; BW: the save image
+		if (!inRam(s)) return w;
 		if (l.gen == Gen::IV)
 		{
-			if (!inRam(s)) return w;
 			const uint32_t b = s + l.head;
 			w[W_MAIN] = { b, gen4Span(l) };
 			w[W_ROAM] = { b + l.roamers, 0x14u * l.nRoamers };
 			w[W_REPEL] = { b + l.repel, 1 };
-			w[W_OURS] = { s + l.bOurs, 6 * 236 };
-			w[W_FOES] = { s + l.bFoes, 6 * 236 };
-			w[W_BMON] = { s + l.bMon0, 4 * BMON };
-			w[W_TRAINER] = { s + l.bTrainer, 2 };
-			w[W_INBATTLE] = { l.inBattle, 2 };
+			w[W_OURS] = { s + l.bOurs + battleShift, 6 * 236 };
+			w[W_FOES] = { s + l.bFoes + battleShift, 6 * 236 };
+			w[W_BMON] = { s + l.bMon0 + monShift, 4 * BMON };
+			w[W_TRAINER] = { s + l.bTrainer + battleShift, 2 };
 			return w;
 		}
-		if (!inRam(s)) return w;
-		const uint32_t v = l.fixedBase ? s : s + l.head;	// the save image
-		const uint32_t rel = l.fixedBase ? 0 : s;			// the battle's offsets: absolute (BW) or from the pointer
+		const uint32_t v = s + l.head;	// the save image (BW: head 0)
+		const uint32_t rel = s;			// the battle's and the field's offsets: from the pointer (B2W2) or the image (BW)
 		w[W_MAIN] = { v + l.bag, l.posZ + 2 - l.bag };
 		w[W_V_MISC] = { v + l.money, l.roamers + 0x14u * l.nRoamers - l.money };
 		w[W_V_DAYCARE] = { v + l.daycare, 0x1D0 };
 		w[W_V_FLAGS] = { v + l.flags, l.flagBytes };
 		w[W_REPEL] = { v + l.repel, 1 };
-		w[W_OURS] = { rel + l.bOurs, 6 * 220 };
-		w[W_FOES] = { rel + l.bFoes, 6 * 220 };
-		w[W_TRAINER] = { rel + l.bTrainer, 2 };
-		w[W_INBATTLE] = { l.inBattle, 2 };
-		w[W_V_TABLE] = { rel + l.bTable, 4 * 0x1C };
-		w[W_V_DOUBLE] = { rel + l.bDouble, 1 };
+		w[W_OURS] = { rel + l.bOurs + battleShift, 6 * 220 };
+		w[W_FOES] = { rel + l.bFoes + battleShift, 6 * 220 };
+		w[W_TRAINER] = { rel + l.bTrainer + battleShift, 2 };
+		w[W_V_TABLE] = { rel + l.bTable + battleShift, 4 * 0x1C };
+		w[W_V_DOUBLE] = { rel + l.bDouble + battleShift, 1 };
 		w[W_V_ZONE] = { rel + l.liveZone, 2 };
 		w[W_V_POS] = { rel + l.livePos, 6 };
 		// the battler objects where the last table pointed, and the Pokémon they pointed at (checked against this
@@ -365,32 +446,284 @@ namespace banana::nds
 	}
 	static int8_t stage(uint8_t raw) { return raw <= 12 ? (int8_t)(raw - 6) : 0; }
 
-	bool RamReader::deliver(const std::vector<std::vector<uint8_t>>& d, double, time_t wall)
+	// the next place to try; all tried: a search (no sooner than a minute after the last that found nothing)
+	void RamReader::nextCand(double nowMs)
+	{
+		bad = 0;
+		checked = false;
+		base = 0;
+		memset(battlePtrs, 0, sizeof battlePtrs);
+		memset(battleMons, 0, sizeof battleMons);
+		if (ci < cands.size()) cands[ci].failedAt = nowMs;
+		if (++ci < cands.size()) return;
+		ci = 0;
+		if (nowMs - lastScan >= (verdict == EMPTY ? SCAN_AGAIN_EMPTY_MS : SCAN_AGAIN_MS)) startScan(SCAN_SAVE, nowMs);
+	}
+
+	void RamReader::searchFromScratch(double nowMs)
+	{
+		if (!layout) return;
+		cands.clear();
+		ci = 0; bad = 0; base = 0; checked = false;
+		cached = Anchor{};
+		battleShift = monShift = 0;
+		paramsDone = true;
+		startScan(SCAN_SAVE, nowMs);
+	}
+
+	void RamReader::startScan(Mode m, double nowMs)
+	{
+		mode = m;
+		scanAt = RAM_LO;
+		found.clear();
+		foundMons.clear();
+		if (m == SCAN_BATTLE) lastBattleScan = nowMs;
+		else if (m == SCAN_SAVE) lastScan = nowMs;
+	}
+
+	std::vector<Range> RamReader::scanWants() const
+	{
+		std::vector<Range> w;
+		for (uint32_t k = 0; k < SCAN_PIECES; k++)
+		{
+			const uint32_t a = scanAt + k * SCAN_PIECE;
+			if (a >= RAM_HI) break;
+			const uint32_t lo = a - RAM_LO >= SCAN_LEAD ? a - SCAN_LEAD : RAM_LO;
+			const uint32_t hi = RAM_HI - a > SCAN_PIECE + SCAN_TAIL ? a + SCAN_PIECE + SCAN_TAIL : RAM_HI;
+			w.push_back({ lo, hi - lo });
+		}
+		return w;
+	}
+
+	// a trainer's name as the games keep it: up to 8 characters ending in 0xFFFF (Gen IV's own codes, Gen V UTF-16), not
+	// empty, no control codes
+	static bool nameOk(Gen g, const uint8_t* p)
+	{
+		for (int i = 0; i < 8; i++)
+		{
+			const uint16_t c = u16(p + 2 * i);
+			if (c == 0xFFFF) return i > 0;
+			if (c == 0 || (g == Gen::V && c < 0x20)) return false;
+		}
+		return false;
+	}
+
+	void RamReader::scanDeliver(const std::vector<std::vector<uint8_t>>& d, double nowMs)
+	{
+		const Layout& l = *layout;
+		const Gen g = l.gen;
+		const size_t ps = g == Gen::IV ? 236 : 220;
+		const std::vector<Range> asked = scanWants();
+		const uint32_t blockAt = l.partyCount - 4;	// the party block in the save image (Gen IV {capacity, count}, Gen V count at +4)
+		const uint32_t saveParty = base + l.head + l.party;
+		for (size_t i = 0; i < asked.size() && i < d.size(); i++)
+		{
+			const auto& v = d[i];
+			if (v.size() != asked[i].len) continue;	// (not mapped: nothing there)
+			const uint32_t lo = asked[i].addr, hi = lo + asked[i].len, a = scanAt + (uint32_t)i * SCAN_PIECE;
+			const uint8_t* m = v.data();
+			auto at = [&](uint32_t addr) { return m + (addr - lo); };
+			for (uint32_t p = a; p < a + SCAN_PIECE && p + 8 + 6 * ps <= hi; p += 4)
+			{
+				if (mode == SCAN_PTR)
+				{
+					const uint32_t v = u32(at(p));
+					if (v > p && inRam(v))
+						for (size_t k = 0; k < saves.size(); k++) if (saves[k].second == v) { found.push_back({ (int)k, p }); break; }
+					continue;
+				}
+				if (mode == SCAN_SAVE)
+				{
+					// a party: Gen IV {u32 6, u32 1..6}, Gen V a count byte 1..6 at +4; every Pokémon passing its checksum
+					const uint32_t n = g == Gen::IV ? u32(at(p + 4)) : *at(p + 4);
+					if ((g == Gen::IV && u32(at(p)) != 6) || n < 1 || n > 6) continue;
+					bool ok = true;
+					std::vector<Mon> ms(n);
+					for (uint32_t k = 0; k < n && ok; k++) ok = readMon(g, at(p + 8 + (uint32_t)ps * k), ps, ms[k]);
+					if (!ok || p < blockAt) continue;
+					const uint32_t image = p - blockAt;
+					// ...in a save: the trainer's name and ID where the game keeps them (a battle's party copy has no name
+					// before it); the ID one of the party's own Pokémon carry adds to the score
+					const uint32_t nameAt = image + l.name, tidAt = image + l.tid;
+					if (nameAt < lo || nameAt + 16 > hi || tidAt < lo || tidAt + 2 > hi || !nameOk(g, at(nameAt))) continue;
+					int score = 2;
+					for (auto& x : ms) if (x.otId == u16(at(tidAt))) { score++; break; }
+					if (image - RAM_LO >= l.head) found.push_back({ score, image - l.head });
+					continue;
+				}
+				// SCAN_BATTLE: the battle's copy of the party (its first Pokémon, encrypted as in the save, not the save's
+				// own); Gen IV: a battle Pokémon (plain: species, PID at +0x68, level at +0x34) of one of the party
+				if (lastParty.empty()) break;
+				const Mon& first = lastParty[0];
+				Mon x;
+				if (p != saveParty && u32(at(p)) == first.pid && readMon(g, at(p), ps, x) && x.species == first.species)
+					found.push_back({ 0, p });
+				if (g == Gen::IV)
+					for (auto& pm : lastParty)
+						if (u16(at(p)) == pm.species && u32(at(p + 0x68)) == pm.pid && *at(p + 0x34) == pm.level) { foundMons.push_back(p); break; }
+			}
+		}
+		scanAt += SCAN_PIECES * SCAN_PIECE;
+		if (scanAt < RAM_HI) return;
+		// ---- the whole RAM seen
+		const Mode was = mode;
+		mode = NORMAL;
+		if (was == SCAN_SAVE)
+		{
+			if (found.empty()) { problem = "searched RAM: no save with a party"; return; }
+			std::stable_sort(found.begin(), found.end(), [](const std::pair<int, uint32_t>& x, const std::pair<int, uint32_t>& y) { return x.first > y.first; });
+			// (the games keep more than one copy of the save while loading it - one at the Plus's Platinum intro had no
+			// pointer to it and stays as it was loaded: the one a static word points at is the game's own)
+			saves.clear();
+			for (auto& f : found) if (saves.size() < 8) saves.push_back(f);
+			startScan(SCAN_PTR, nowMs);
+			problem = "searched RAM: " + std::to_string(saves.size()) + " save(s) found, looking for the pointer";
+			return;
+		}
+		if (was == SCAN_PTR)
+		{
+			// the first save (best scored) that a word points at, its lowest words first (static data comes before the
+			// heap); then the saves themselves, the pointed-at one first
+			size_t pick = saves.size();
+			for (auto& f : found) if ((size_t)f.first < pick) pick = (size_t)f.first;
+			std::vector<uint32_t> ptrs;
+			for (auto& f : found) if ((size_t)f.first == pick) ptrs.push_back(f.second);
+			std::sort(ptrs.begin(), ptrs.end());
+			if (pick == saves.size()) pick = 0;
+			// (a game that keeps a pointer: the saves themselves after every pointer - stand-ins until one holds; BW: first)
+			const bool front = !l.ptr;
+			if (front) for (size_t k = saves.size(); k-- > 0;) if (k != pick) addCand({ 0, saves[k].second }, true);
+			if (front) addCand({ 0, saves[pick].second }, true);
+			else { addCand({ 0, saves[pick].second }); for (size_t k = 0; k < saves.size(); k++) if (k != pick) addCand({ 0, saves[k].second }); }
+			for (size_t i = std::min<size_t>(ptrs.size(), 4); i-- > 0;) addCand({ ptrs[i], 0 }, true);
+			bad = 0; base = 0;
+			// the first pointer, else the found save (a stand-in)
+			ci = 0;
+			if (ptrs.empty()) for (size_t i = 0; i < cands.size(); i++) if (cands[i].ptr == 0 && cands[i].direct == saves[pick].second) { ci = i; break; }
+			problem = ptrs.empty() ? "searched RAM: no pointer to the save" : "searched RAM: pointers to the save tried next";
+			return;
+		}
+		// SCAN_BATTLE: the find nearest to where it was expected
+		auto nearest = [](const std::vector<uint32_t>& xs, uint32_t want) -> int64_t
+		{
+			int64_t best = 0; bool any = false;
+			for (uint32_t x : xs) { const int64_t dlt = (int64_t)x - want; if (!any || llabs(dlt) < llabs(best)) { best = dlt; any = true; } }
+			return any ? best : INT64_MIN;
+		};
+		const uint32_t s = cand().ptr ? base : cand().direct;
+		std::vector<uint32_t> ours;
+		for (auto& f : found) ours.push_back(f.second);
+		const int64_t bsh = nearest(ours, s + l.bOurs);
+		if (bsh != INT64_MIN) battleShift = (int32_t)bsh;
+		if (g == Gen::IV)
+		{
+			const int64_t msh = nearest(foundMons, s + l.bMon0);
+			if (msh != INT64_MIN) monShift = (int32_t)msh;
+		}
+		battleBad = 0;
+		if (bsh != INT64_MIN) { anchorsDirty = true; problem = "searched RAM: the battle's copies found"; }
+		else problem = "searched RAM: no battle copy of the party";
+	}
+
+	// a battle is on: the battle overlay's code is in RAM (the player's ROM's bytes), else the known word in it
+	bool RamReader::battleOn(const std::vector<std::vector<uint8_t>>& d) const
+	{
+		if (!hints.battleBytes.empty() && d[W_SIG].size() == hints.battleBytes.size()) return d[W_SIG] == hints.battleBytes;
+		// (Ironmon's "in battle" word: 0x2100 / 0x2101 there, 0x2800 on the field - Thumb code of the battle overlay or of
+		// the field's, loaded at the same address)
+		if (d[W_INBATTLE].size() != 2) return false;
+		const uint16_t v = u16(d[W_INBATTLE].data());
+		return v == 0x2100 || v == 0x2101;
+	}
+
+	bool RamReader::deliver(const std::vector<std::vector<uint8_t>>& d, double nowMs, time_t wall)
 	{
 		problem.clear();
 		if (!layout) { problem = "game not supported"; return false; }
+		if (mode != NORMAL) { scanDeliver(d, nowMs); return false; }
 		if (d.size() < W_COUNT) { problem = "short reply"; return false; }
 		const Layout& l = *layout;
-		if (l.ptr)
+		// Gen IV: the pointer the module parameters give (the first .bss word + 0x20), another guess
+		if (l.gen == Gen::IV && !paramsDone && d[W_PARAMS].size() == PARAMS_LEN)
+		{
+			paramsDone = true;
+			const uint8_t* p = d[W_PARAMS].data();
+			for (uint32_t i = 0x1C; i + 4 <= PARAMS_LEN; i += 4)
+				if (u32(p + i) == 0xDEC00621)
+				{
+					const uint32_t ptr = u32(p + i - 0x1C + 8) + 0x20;
+					if (inRam(ptr, 4)) addCand({ ptr, 0 });
+					break;
+				}
+		}
+		if (standIn(cand()))
+		{
+			// a pointer that holds an address (and didn't just fail) is the game's own save: taken at once
+			for (size_t i = 0; i < PEEK && i < cands.size(); i++)
+				if (cands[i].ptr && d[W_C0 + i].size() == 4 && inRam(u32(d[W_C0 + i].data())) && nowMs - cands[i].failedAt >= SCAN_AGAIN_MS)
+				{
+					ci = i; bad = 0; base = 0; checked = false;
+					problem = "a pointer holds the save now";
+					return false;
+				}
+			// none: the search again now and then, for the pointer (the game may not have had its save in place yet)
+			if (nowMs - lastScan >= SCAN_AGAIN_MS) { startScan(SCAN_SAVE, nowMs); problem = "on a stand-in: searching again"; return false; }
+		}
+		const Anchor a = cand();
+		if (a.ptr)
 		{
 			if (d[W_PTR].size() != 4) { problem = "no pointer"; return false; }
 			const uint32_t p = u32(d[W_PTR].data());
-			if (p != base)
+			if (p != base || !inRam(p))
 			{
 				// the save moved (the game started, or reset): the data in this set is from the old place
 				base = p;
+				checked = false;
 				memset(battlePtrs, 0, sizeof battlePtrs);
 				memset(battleMons, 0, sizeof battleMons);
 				problem = inRam(p) ? "pointer moved" : "no save in RAM yet";
+				if (!inRam(p))
+				{
+					// another guess holding an address is tried now; a pointer that never holds one is not the one
+					for (size_t i = 0; i < PEEK && i < cands.size(); i++)
+						if (i != ci && cands[i].ptr && d[W_C0 + i].size() == 4 && inRam(u32(d[W_C0 + i].data())))
+						{
+							ci = i; bad = 0; base = 0;
+							return false;
+						}
+					if (++bad >= NO_POINTER_SETS)
+					{
+						// (not a failure of the place: taken as soon as it holds one)
+						const size_t was = ci;
+						nextCand(nowMs);
+						if (was < cands.size()) cands[was].failedAt = -1e12;
+					}
+				}
 				return false;
 			}
-			if (!inRam(p)) { problem = "no save in RAM yet"; return false; }
 		}
+		else base = a.direct;
 		uint64_t h = 1469598103934665603ull;
 		for (auto& v : d) h = fnv(h, v);
-		if (h == lastHash && cur->valid) return false;
+		if (h == lastHash && cur->valid)
+		{
+			// (nothing changed: a battle whose copies didn't match still doesn't)
+			if (battleBad > 0 && ++battleBad >= BATTLE_BAD_SETS && checked && nowMs - lastBattleScan >= BATTLE_SCAN_AGAIN_MS) startScan(SCAN_BATTLE, nowMs);
+			return false;
+		}
 		Live out;
-		if (!parse(d, out, wall)) return false;
+		const bool ok = parse(d, out, wall);
+		// how the guess fared: checked out (kept, and remembered for this ROM), a save with no game yet, or not a save
+		if (verdict == GOOD)
+		{
+			bad = 0;
+			checked = true;
+			if (!standIn(a) && (cached.ptr != a.ptr || cached.direct != a.direct)) { cached = a; anchorsDirty = true; }
+		}
+		else if (++bad >= (verdict == EMPTY ? EMPTY_SETS : BAD_SETS)) nextCand(nowMs);
+		// in a battle whose copies don't match the party: they are elsewhere in this revision - look for them
+		if (battleBad >= BATTLE_BAD_SETS && checked && nowMs - lastBattleScan >= BATTLE_SCAN_AGAIN_MS) startScan(SCAN_BATTLE, nowMs);
+		if (!ok) return false;
 		lastHash = h;
 		out.valid = true;
 		cur = std::make_shared<const Live>(std::move(out));
@@ -411,6 +744,7 @@ namespace banana::nds
 		const Layout& l = *layout;
 		const Gen g = l.gen;
 		const auto& m = d[W_MAIN];
+		verdict = BAD;
 		if (m.empty()) { problem = "no save in RAM yet"; return false; }
 		const size_t ps = g == Gen::IV ? 236 : 220;
 		uint32_t rel = g == Gen::IV ? 0 : l.bag;	// offsets in the main range are from its start
@@ -427,13 +761,15 @@ namespace banana::nds
 		for (uint32_t i = 0; i < count; i++)
 		{
 			Mon mon;
-			if (!partySlot(g, at(l.party + ps * i), ps, lastParty, i, mon)) { problem = "a party Pokémon is being written"; return false; }
+			if (!partySlot(g, at(l.party + ps * i), ps, lastParty, i, mon)) { problem = "a party Pokémon is being written"; verdict = BUSY; return false; }
 			o.party.push_back(mon);
 		}
 		lastParty = o.party;
 		o.trainerName = monText(g, at(l.name), 8);
 		// a fresh game at its title or before the player is named: the save block is there, empty (Diamond with no save
-		// showed Twinleaf Town and a badge at the title). A playthrough has a name (and soon a party)
+		// showed Twinleaf Town and a badge at the title). A playthrough has a name (and soon a party). (Only a party that
+		// passed its checksums says this is the save; until the first Pokémon a guess stays unproven: EMPTY)
+		verdict = o.party.empty() ? EMPTY : GOOD;
 		if (o.party.empty() && o.trainerName.empty()) { problem = "no game started yet (the title or a new game's intro)"; return false; }
 		o.tid = u16(at(l.tid));
 		o.sid = u16(at(l.tid + 2));
@@ -474,7 +810,7 @@ namespace banana::nds
 		else
 		{
 			const auto& mi = d[W_V_MISC];
-			if (mi.size() < l.roamers + 0x14u * l.nRoamers - l.money) { problem = "short misc block"; return false; }
+			if (mi.size() < l.roamers + 0x14u * l.nRoamers - l.money) { problem = "short misc block"; verdict = BAD; return false; }
 			auto atm = [&](uint32_t off) { return mi.data() + (off - l.money); };
 			o.money = u32(atm(l.money));
 			o.badges = *atm(l.badges);
@@ -597,23 +933,21 @@ namespace banana::nds
 		return out;
 	}
 
-	// the "in battle" word (Ironmon's): 0x2100 / 0x2101 in a battle, 0x2800 on the field
-	static bool inBattleWord(const std::vector<uint8_t>& w)
-	{
-		if (w.size() != 2) return false;
-		const uint16_t v = u16(w.data());
-		return v == 0x2100 || v == 0x2101;
-	}
-
 	void RamReader::battle4(const std::vector<std::vector<uint8_t>>& d, Live& o)
 	{
 		const auto& bm = d[W_BMON];
-		if (!inBattleWord(d[W_INBATTLE]) || bm.size() != 4 * BMON) return;
+		if (!battleOn(d)) { battleBad = 0; return; }
 		Battle& b = o.battle;
 		Battler slots[4];
-		for (int i = 0; i < 4; i++) battleMon4(bm.data() + BMON * i, slots[i]);
-		if (!slots[0].present || !slots[1].present) return;
+		if (bm.size() == 4 * BMON) for (int i = 0; i < 4; i++) battleMon4(bm.data() + BMON * i, slots[i]);
 		const std::vector<Mon> ours = partyCopy(Gen::IV, d[W_OURS]);
+		// the battle's copies where this revision keeps them? our active Pokémon is one of the party, the copy of the
+		// party starts with its first (else they are looked for: deliver)
+		bool mine = false;
+		for (auto& p : o.party) if (slots[0].present && p.pid == slots[0].mon.pid) mine = true;
+		const bool copyOk = !ours.empty() && !o.party.empty() && ours[0].pid == o.party[0].pid;
+		battleBad = mine && copyOk ? 0 : battleBad + 1;
+		if (!slots[0].present || !slots[1].present) return;
 		b.foeParty = partyCopy(Gen::IV, d[W_FOES]);
 		b.ours[0] = slots[0]; b.foes[0] = slots[1]; b.ours[1] = slots[2]; b.foes[1] = slots[3];
 		for (auto* x : { &b.ours[0], &b.ours[1] }) if (x->present) { fillFrom(ours, x->mon); fillFrom(o.party, x->mon); }
@@ -630,7 +964,7 @@ namespace banana::nds
 	{
 		const auto& tb = d[W_V_TABLE];
 		uint32_t want[4] = {};
-		const bool in = inBattleWord(d[W_INBATTLE]) && tb.size() == 4 * 0x1C;
+		const bool on = battleOn(d), in = on && tb.size() == 4 * 0x1C;
 		const int dbl = d[W_V_DOUBLE].size() == 1 ? d[W_V_DOUBLE][0] : 0;
 		if (in)
 		{
@@ -668,6 +1002,15 @@ namespace banana::nds
 		}
 		memcpy(battlePtrs, want, sizeof want);
 		memcpy(battleMons, nextMons, sizeof nextMons);
+		// the battle's copies where this revision keeps them? (the copy of the party starts with its first; our battler
+		// is read in a few sets - the table, its objects, their Pokémon - so it may be missing a little while)
+		if (!on) battleBad = 0;
+		else
+		{
+			const std::vector<Mon> ours = partyCopy(Gen::V, d[W_OURS]);
+			const bool copyOk = !ours.empty() && !o.party.empty() && ours[0].pid == o.party[0].pid;
+			battleBad = copyOk && b.ours[0].present ? 0 : battleBad + 1;
+		}
 		if (!in || !b.ours[0].present || !b.foes[0].present) { b = Battle{}; return; }
 		b.foeParty = partyCopy(Gen::V, d[W_FOES]);
 		for (auto* x : { &b.ours[0], &b.ours[1] }) if (x->present) fillFrom(o.party, x->mon);

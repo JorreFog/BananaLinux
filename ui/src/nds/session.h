@@ -46,6 +46,10 @@ namespace banana::nds
 		// the advice go by it (the game's own season is not read)
 		void setSeason(int season);
 		const RamReader& reader() const { return rr; }
+		// what the player's ROM tells the RAM reader (rom.h ramHints: the battle overlay's bytes)
+		void setHints(const RamHints& h) { rr.setHints(h); }
+		// (tests) where the RAM reader's finds for this game + ROM are kept (RamReader::anchors)
+		std::string anchorFile() const;
 		// (tests) the file this playthrough's state is kept in ("" until the trainer is known)
 		const std::string& stateFile() const { return file; }
 	private:
@@ -65,7 +69,8 @@ namespace banana::nds
 		int challengeWanted = -1;	// setChallenge's (the Settings row), applied again over the card's when it is read
 		int64_t lastWild = -1000;
 		int seasonPick = -1;
-		bool redo = false;					// (a new season pick: Live and the advice again at the next tick)
+		bool redo = false;
+		bool searchChecked = false, wasScanning = false;	// (the RAM reader's test flag looked at; a search running)					// (a new season pick: Live and the advice again at the next tick)
 		std::shared_ptr<const Live> cur;	// rr's Live with the picked season	// the play time (s) of the last reading in a wild battle (a catch registers around its end)
 		void track(const Live& now, time_t wall);
 		void load();
