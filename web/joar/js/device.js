@@ -46,8 +46,8 @@ export async function mount(host) {
     m.position.set(x, y, z); m.lookAt(0, 0, 0); room.add(m);
   };
   box(6, 3, 0, 4.8, 1, 6);
-  box(1.2, 5, -4.8, 1.5, 1.5, 4, [0.2, 0.8, 1]);       // cyan strip: Hyprland's border, reflected
-  box(1.2, 5, 4.8, 1.2, -1, 3.2, [1, 0.85, 0.45]);     // warm strip: the banana
+  box(1.2, 5, -4.8, 1.5, 1.5, 4);                      // left strip
+  box(1.2, 5, 4.8, 1.2, -1, 3.2, [1, 0.93, 0.84]);     // right strip, warm
   box(5, 1, 0, 0.8, 4.8, 2.2);
   box(4, 1.2, 0, 2, -4.8, 3.5);
   scene.environment = pmrem.fromScene(room, 0.02).texture;
@@ -131,7 +131,6 @@ export async function mount(host) {
   canvas.addEventListener("pointerdown", (e) => {
     drag.on = true; drag.x = e.clientX; drag.y = e.clientY; drag.vy = drag.vp = 0;
     canvas.setPointerCapture(e.pointerId);
-    hint();
   });
   canvas.addEventListener("pointermove", (e) => {
     if (!drag.on) return;
@@ -146,8 +145,6 @@ export async function mount(host) {
   canvas.addEventListener("pointercancel", up);
   // vertical swipes on a phone still scroll the page: only horizontal drags turn the handheld there
   canvas.style.touchAction = "pan-y";
-  let hinted = false;
-  function hint() { if (hinted) return; hinted = true; const h = document.getElementById("dev-hint"); if (h) h.textContent = "släpp för att låta den vila"; }
 
   function resize() {
     const w = host.clientWidth, h = host.clientHeight;
