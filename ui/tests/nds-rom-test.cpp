@@ -9,6 +9,8 @@
 #include <cstdio>
 #include <cstring>
 #include <dirent.h>
+#include <map>
+#include <sys/resource.h>
 #include <unistd.h>
 #include <string>
 #include <vector>
@@ -533,6 +535,22 @@ static void checkGame(const RomData& r)
 	for (auto& z : r.zones) for (auto& e : z.second.encounters) bad += e.species == 0 || e.species > g.dexSize || e.minLevel == 0 || e.minLevel > e.maxLevel || e.maxLevel > 100 ||
 		(e.kind == EncounterKind::GROTTO ? e.percent != 0 : e.percent == 0) || e.percent > 100;
 	EQ(bad, 0);
+	// every slot list adds up to 100% at every time of day (grass, water, rods, rock smash; per season in Gen V)
+	int off = 0;
+	for (auto& z : r.zones)
+	{
+		std::map<std::pair<int, int>, int> sum[4];	// time -> (kind, season) -> percent
+		for (auto& e : z.second.encounters)
+		{
+			int k = (int)e.kind;
+			bool slots = e.kind == EncounterKind::GRASS || e.kind == EncounterKind::SURF || e.kind == EncounterKind::OLD_ROD || e.kind == EncounterKind::GOOD_ROD ||
+				e.kind == EncounterKind::SUPER_ROD || e.kind == EncounterKind::ROCK_SMASH || e.kind == DARK_GRASS || e.kind == SHAKING_GRASS || e.kind == RIPPLE_SURF || e.kind == RIPPLE_FISH;
+			if (!slots) continue;
+			for (int t = 1; t <= 3; t++) if (e.time == TimeOfDay::ANY || (int)e.time == t) sum[t][{ k, e.season }] += e.percent;
+		}
+		for (int t = 1; t <= 3; t++) for (auto& kv : sum[t]) if (kv.second != 100) { if (off++ < 3) fprintf(stderr, "  %s zone %u kind %d season %d time %d: %d%%\n", g.title.c_str(), z.first, kv.first.first, kv.first.second, t, kv.second); }
+	}
+	EQ(off, 0);
 	// the first gym leader's team
 	if (g.id == GameId::DIAMOND || g.id == GameId::PEARL || g.id == GameId::PLATINUM)
 	{
@@ -647,6 +665,9 @@ static void testRoms(const std::string& dir, const std::string& cache)
 		}
 		if (!cache.empty()) CHECK(!digest[0].empty() && digest[0] == digest[1]);
 	}
+	rusage ru;
+	getrusage(RUSAGE_SELF, &ru);
+	fprintf(stderr, "peak memory %ld MiB\n", ru.ru_maxrss / 1024);
 }
 
 int main(int argc, char** argv)
