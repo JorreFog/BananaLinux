@@ -3295,7 +3295,8 @@ namespace banana
 			const float room = std::min(500.f, 600 - nw - 16 - 40);	// the text stops short of it
 			std::string t = fitEnd(pw, true, 24, room);
 			float tw = text(t, true, 24, 0, 0, p.ink, false, 0, true);
-			if (pw.empty()) { tw = 0; text(entrySub.empty() ? "Type here" : entrySub, true, 22, 38, 28, p.muted); }
+			// (empty: the hint after the cursor, which is drawn at 40..50 and hid its first letter: "0 characters at most")
+			if (pw.empty()) { tw = 0; text(entrySub.empty() ? "Type here" : entrySub, true, 22, 58, 28, p.muted); }
 			else text(t, true, 24, 38, 27, p.ink);
 			be->fill(std::round(X(40 + tw)), std::round(X(26)), std::round(X(10)), std::round(X(28)), p.accent);	// the cursor
 			text(n, true, 17, 600 - nw, 31, p.muted);
