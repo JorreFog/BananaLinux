@@ -253,7 +253,8 @@ namespace ndsfx
 		Encounter e; e.species = sp; e.minLevel = (uint8_t)lo; e.maxLevel = (uint8_t)hi; e.percent = (uint8_t)pct; e.kind = k; e.time = t;
 		return e;
 	}
-	inline void setBit(std::vector<uint8_t>& v, int n) { if ((size_t)(n >> 3) >= v.size()) v.resize((n >> 3) + 1); v[n >> 3] |= 1 << (n & 7); }
+	// a Pokédex bit as Live keeps it: species n at bit n - 1 (ram.h)
+	inline void setBit(std::vector<uint8_t>& v, int n) { n--; if ((size_t)(n >> 3) >= v.size()) v.resize((n >> 3) + 1); v[n >> 3] |= 1 << (n & 7); }
 	inline Mon mon(uint16_t sp, int lv, const char* nick, std::array<uint16_t, 4> mv, std::array<uint8_t, 4> pp, int hp, int maxHp,
 		std::array<uint16_t, 5> st, uint8_t nature, uint16_t ability, bool female = false)
 	{
@@ -414,7 +415,7 @@ namespace ndsfx
 		Battle& bt = lv->battle;
 		bt.kind = BattleKind::TRAINER; bt.trainerId = 247; bt.turn = 3;
 		bt.ours[0].mon = lv->party[0]; bt.ours[0].types[0] = FIRE; bt.ours[0].types[1] = FIGHTING; bt.ours[0].present = true;
-		bt.ours[0].stages[0] = 1;
+		bt.ours[0].stages[1] = 1;	// (Atk +1: stages[0] is HP, never used)
 		Mon ro = mon(407, 22, nullptr, { MAGICAL_LEAF, STUN_SPORE, GRASS_KNOT, LEECH_SEED }, { 20, 30, 20, 10 }, 34, 61, { 38, 35, 52, 64, 56 }, 15, NATURAL_CURE, true);
 		bt.foes[0].mon = ro; bt.foes[0].types[0] = GRASS; bt.foes[0].types[1] = POISON; bt.foes[0].present = true;
 		Mon ch = mon(420, 19, nullptr, {}, {}, 0, 49, {}, 0, 0), tw = mon(387, 19, nullptr, {}, {}, 0, 55, {}, 0, 0);

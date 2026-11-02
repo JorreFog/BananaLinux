@@ -226,6 +226,112 @@ static void touchTests(const Ctx& c, int w, int h)
 	pg.render();
 	CHECK(grab(be, 1) != normal, "the shiny picture differs");
 	CHECK(tap(286, 241) == Pages::Action::REDRAW && !pg.shiny(), "Normal again");
+	// the Pokédex bits as the RAM reader keeps them (species n at bit n - 1, ram.h): a species seen only through its own
+	// bit shows its picture, the bit of the species after it doesn't (found on HeartGold on the Plus: Caterpie seen
+	// showed as Blastoise)
+	{
+		ndsfx::Fixture f = ndsfx::platinum();
+		auto dexOnly = [&](int bitIndex)
+		{
+			auto l = std::make_shared<Live>(*f.live);
+			l->dexSeen.assign(64, 0); l->dexCaught.assign(64, 0);
+			if (bitIndex >= 0) l->dexSeen[bitIndex >> 3] |= 1 << (bitIndex & 7);
+			PageData d = f.data(); d.live = l; pg.setData(d);
+			pg.showSpecies(41); pg.render();
+			std::vector<uint32_t> detail;	// (the entry's panel only: the list beside it names the rows it has seen)
+			const uint32_t* px = be.pixels(1);
+			for (int y = (int)(60 * s); y < (int)(410 * s); y++)
+				for (int x = (int)(224 * s); x < (int)(624 * s); x++) detail.push_back(px[(size_t)y * w + x]);
+			return detail;
+		};
+		auto none = dexOnly(-1), own = dexOnly(40), next = dexOnly(41);
+		CHECK(own != none, "species 41 seen through bit 40 shows it");
+		CHECK(next == none, "bit 41 (species 42) leaves 41 unseen");
+		pg.setData(pt.data());
+	}
+	// stat stages in Battler's order (HP, Atk, Def, Speed, SpA, SpD, Acc, Eva): the HP slot is never drawn, Speed is
+	// drawn as Speed (found on HeartGold on the Plus: String Shot's Speed -1 showed as "SpA -1")
+	{
+		ndsfx::Fixture f = ndsfx::platinum();
+		auto withStage = [&](int i, int v)
+		{
+			auto l = std::make_shared<Live>(*f.live);
+			for (auto& st : l->battle.ours[0].stages) st = 0;
+			if (i >= 0) l->battle.ours[0].stages[i] = (int8_t)v;
+			PageData d = f.data(); d.live = l; pg.setData(d);
+			pg.show(Page::BATTLE); pg.render();
+			return grab(be, 1);
+		};
+		auto plain = withStage(-1, 0), hp = withStage(0, 1), spe = withStage(3, -1), spa = withStage(4, -1);
+		CHECK(hp == plain, "the HP stage slot draws nothing");
+		CHECK(spe != plain && spe != spa, "Speed -1 and SpA -1 are drawn differently");
+		pg.setData(pt.data());
+		pg.showSpecies(391);	// (back where the rail test below starts)
+	}
+	// the Guide's "along the way": a step of a later stage stays away even when it names this area (HeartGold's
+	// post-game Embedded Tower step showed on Route 30 at the start)
+	{
+		ndsfx::Fixture f = ndsfx::platinum();
+		auto guideWith = [&](bool extra)
+		{
+			auto g = std::make_shared<GuideData>(*f.guide);
+			if (extra && !g->milestones.empty())
+			{
+				GuideStep later; later.id = "later-step"; later.title = "A post-game errand"; later.text = "Not yet.";
+				later.stage = g->milestones.back().id; later.zones = { f.live->zone };
+				g->steps.insert(g->steps.begin(), later);
+			}
+			PageData d = f.data(); d.guide = g; pg.setData(d);
+			pg.show(Page::GUIDE); pg.render();
+			return grab(be, 1);
+		};
+		CHECK(f.advice->next && f.guide->milestones.size() > 1, "the fixture has a next goal");
+		CHECK(guideWith(true) == guideWith(false), "a later stage's step isn't shown");
+		pg.setData(pt.data());
+		pg.showSpecies(391);
+	}
+	// the notice that raised the badge stays on the page it opened after the logic has dropped it as seen (the session
+	// sends Advice without seen notices a tick later: on Platinum "Shinx lives here" never showed on Team)
+	{
+		ndsfx::Fixture f = ndsfx::platinum();
+		PageData d = f.data();
+		auto bare = std::make_shared<Advice>(*f.advice);
+		bare->notices.clear();
+		PageData without = d; without.advice = bare;
+		pg.setData(without); pg.show(Page::TEAM); pg.render();
+		auto never = grab(be, 1);
+		pg.setData(d); pg.show(Page::GUIDE); pg.opened(0);
+		CHECK(pg.page() == Page::TEAM, "opened on Team (%d)", (int)pg.page());
+		auto taken = pg.takeSeen();
+		without.seenNotices = taken;
+		pg.setData(without); pg.render();
+		CHECK(!taken.empty() && grab(be, 1) != never, "the notice is still drawn after Advice dropped it");
+		pg.setData(pt.data());
+		pg.showSpecies(391);
+	}
+	// Here lists a secret of this place that holds the zone among its zones (a town's houses), as the badge counts it
+	// (White 2: "1 secret here" in the player's house in Aspertia, Here showed none)
+	{
+		ndsfx::Fixture f = ndsfx::platinum();
+		auto hereWith = [&](bool extra)
+		{
+			auto g = std::make_shared<GuideData>(*f.guide);
+			g->secrets.clear();
+			if (extra)
+			{
+				Secret s1; s1.id = "town"; s1.text = "A gift in this town."; s1.zone = (uint16_t)(f.live->zone + 1); s1.zones = { f.live->zone };
+				g->secrets.push_back(s1);
+			}
+			PageData d = f.data(); d.guide = g; pg.setData(d);
+			pg.show(Page::HERE); pg.render();
+			return grab(be, 1);
+		};
+		hereWith(false);	// (the first opening shows the fixture's notice card: past it, the page alone)
+		auto a0 = hereWith(false), b = hereWith(true), a1 = hereWith(false);
+		CHECK(a0 == a1 && b != a0, "a secret found through its zones is listed");
+		pg.setData(pt.data());
+		pg.showSpecies(391);
+	}
 	// the list's rail: its bottom is the end of the Pokédex
 	pg.render();
 	pg.touchDown((int)(199 * s), (int)(408 * s), 0); pg.touchUp((int)(199 * s), (int)(408 * s), 0);

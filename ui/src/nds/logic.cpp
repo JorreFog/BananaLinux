@@ -282,6 +282,11 @@ namespace banana::nds
 		known = true;
 		if (!w.compare(0, 6, "badge:")) { const int n = atoi(w.c_str() + 6); return n >= 1 && n <= 16 && (l.badges >> (n - 1)) & 1; }
 		if (!w.compare(0, 5, "flag:")) return flagSet(l, atoi(w.c_str() + 5));
+		if (w == "party")	// the starter: a Pokémon (not an egg) in the party
+		{
+			for (auto& m : l.party) if (m.species && !m.egg) return true;
+			return false;
+		}
 		known = false;
 		return false;
 	}
@@ -289,8 +294,9 @@ namespace banana::nds
 	{
 		bool known;
 		if (doneByRule(m.doneWhen, live, known)) return true;
-		if (known || m.doneWhen != "later") return false;
-		// "later": done once any later milestone is
+		if (known || (m.doneWhen != "later" && m.doneWhen != "none")) return false;
+		// "later" (and "none": an optional fight or legend must not hold the story's next goal): done once any later
+		// milestone is
 		for (size_t j = index + 1; j < g.milestones.size(); j++)
 		{
 			bool k;
@@ -694,9 +700,13 @@ namespace banana::nds
 		const Battle& b = l.battle;
 		if (b.kind == BattleKind::NONE || !b.ours[0].present || !b.foes[0].present) return;
 		const Fighter me = fighterOf(b.ours[0], rom), foe = fighterOf(b.foes[0], rom);
-		// the foe's move to compare speed against: its first attack (a wild one's are in the battle copy), else none
+		// the foe's move to compare speed against: its first attack without priority (a wild one's are in the battle
+		// copy), else its first attack, else none. (Its first attack alone made a priority move the yardstick: Black 2's
+		// Krookodile, Speed 117, read "slower" than a Tranquill with Quick Attack.)
 		MoveData theirs;
-		for (auto m : b.foes[0].mon.moves) if (auto* d = move(rom, m); damaging(d)) { theirs = *d; break; }
+		bool found = false;
+		for (auto m : b.foes[0].mon.moves) if (auto* d = move(rom, m); damaging(d) && (int8_t)d->priority == 0) { theirs = *d; found = true; break; }
+		if (!found) for (auto m : b.foes[0].mon.moves) if (auto* d = move(rom, m); damaging(d)) { theirs = *d; break; }
 		float bestAvg = -1;
 		size_t bestI = 0;
 		for (int k = 0; k < 4; k++)
@@ -777,6 +787,8 @@ namespace banana::nds
 			int n = 0;
 			for (auto& s : g->secrets)
 			{
+				// (one with a condition, "after Red", is not known to be reachable now: on the Here page, not the badge)
+				if (!s.condition.empty()) continue;
 				bool here = s.zone == l.zone && l.zone;
 				for (auto z : s.zones) if (z == l.zone && l.zone) here = true;
 				n += here;

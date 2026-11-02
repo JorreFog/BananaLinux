@@ -87,6 +87,17 @@ namespace banana::nds
 		{
 			return st == "SLP" ? 0x8890a0 : st == "PSN" || st == "TOX" ? 0xa050c0 : st == "BRN" ? 0xe07040 : st == "FRZ" ? 0x58b0d8 : st == "PAR" ? 0xc8a020 : 0x707070;
 		}
+		// the kinds whose Encounter.condition picks one of several lists (model.h), and that list's name
+		bool listed(EncounterKind k) { return k == EncounterKind::HEADBUTT || k == EncounterKind::DUAL_SLOT || k == EncounterKind::SWARM; }
+		const char* listName(EncounterKind k, uint8_t c)
+		{
+			if (k == EncounterKind::HEADBUTT) return c == 0 ? "common trees" : c == 1 ? "rare trees" : "the third tree list";
+			if (k == EncounterKind::DUAL_SLOT)
+				return c == 1 ? "with Ruby in slot 2" : c == 2 ? "with Sapphire in slot 2" : c == 3 ? "with Emerald in slot 2" :
+					c == 4 ? "with FireRed in slot 2" : c == 5 ? "with LeafGreen in slot 2" : nullptr;
+			if (k == EncounterKind::SWARM) return c == 1 ? "surfing" : c == 2 ? "fishing" : nullptr;
+			return nullptr;
+		}
 		const char* kindName(EncounterKind k)
 		{
 			switch (k)
@@ -519,8 +530,9 @@ namespace banana::nds
 			if (!sp || sp->genderRatio == 255 || m.egg) return 2;
 			return m.female ? 1 : 0;
 		}
-		bool caught(uint16_t n) const { return dt.live && bit(dt.live->dexCaught, n); }
-		bool seen(uint16_t n) const { return dt.live && (bit(dt.live->dexSeen, n) || bit(dt.live->dexCaught, n)); }
+		// (Live's Pokédex bit sets keep species n at bit n - 1, as the games do: ram.h)
+		bool caught(uint16_t n) const { return dt.live && n && bit(dt.live->dexCaught, n - 1); }
+		bool seen(uint16_t n) const { return dt.live && n && (bit(dt.live->dexSeen, n - 1) || bit(dt.live->dexCaught, n - 1)); }
 		int dexSize() const { return dt.rom ? dt.rom->game.dexSize : 493; }
 
 		// ---- sprites -------------------------------------------------------------------------------------------------
@@ -667,7 +679,9 @@ namespace banana::nds
 
 		// ---- the frame -------------------------------------------------------------------------------------------
 		std::set<std::string> seenQueue;	// notice ids shown, not yet taken
-		std::set<std::string> freshNow;		// the notices new when this page was opened (drawn as new)
+		// the notices new when this page was opened, kept as they were: the logic drops a notice from Advice as soon as
+		// it is marked seen (one tick later), and the page must still say what raised the badge
+		std::vector<Notice> freshNow;
 		Page freshFor = Page::COUNT;
 
 		int noticeCount(Page pg) const
@@ -697,7 +711,7 @@ namespace banana::nds
 			for (auto& nt : dt.advice->notices)
 				if (pageOf(nt.page) == pg && std::find(dt.seenNotices.begin(), dt.seenNotices.end(), nt.id) == dt.seenNotices.end())
 				{
-					if (!seenQueue.count(nt.id)) freshNow.insert(nt.id);
+					if (!seenQueue.count(nt.id)) freshNow.push_back(nt);
 					seenQueue.insert(nt.id);
 				}
 		}
@@ -864,10 +878,10 @@ namespace banana::nds
 	// the notices for this page, new since it was last opened: a line each at the top of its content
 	void Pages::Impl::notices(Page pg, float x, float& y, float w)
 	{
-		if (!dt.advice || freshFor != pg) return;
-		for (auto& nt : dt.advice->notices)
+		if (freshFor != pg) return;
+		for (auto& nt : freshNow)
 		{
-			if (pageOf(nt.page) != pg || !freshNow.count(nt.id)) continue;
+			if (pageOf(nt.page) != pg) continue;
 			float th = 20 + wrapHeight(nt.text, 12, w - 48, 2, true);
 			box("best", x, y, w, th + 12);
 			pixels(PX_SPARK, 7, x + 14, y + 12, k(), [&](char) { return p.accent; });
@@ -899,11 +913,11 @@ namespace banana::nds
 		if (m.hp == 0) sn = "FNT";
 		if (!sn.empty()) ex += chip(sn, statusColour(sn), ex, cy) + 5;
 		if (m.shiny()) { pixels(PX_SPARK, 7, ex + 2, cy + 2, k(), [](char) { return Color::hex(0xf8d030); }); ex += 20; }
-		// the stat stages that aren't 0 (Atk, Def, Speed, SpA, SpD, accuracy, evasion)
+		// the stat stages that aren't 0 (Battler.stages: HP (never used), Atk, Def, Speed, SpA, SpD, accuracy, evasion)
 		if (!compact)
 		{
-			static const char* const STG[8] = { "Atk", "Def", "Spe", "SpA", "SpD", "Acc", "Eva", "" };
-			for (int i = 0; i < 7; i++)
+			static const char* const STG[8] = { "", "Atk", "Def", "Spe", "SpA", "SpD", "Acc", "Eva" };
+			for (int i = 1; i < 8; i++)
 				if (b.stages[i] && ex < x + w - 60)
 				{
 					char l[24]; snprintf(l, sizeof l, "%s %+d", STG[i], b.stages[i]);
@@ -1548,15 +1562,18 @@ namespace banana::nds
 		auto z = dt.rom->zones.find(lv.zone);
 		if (z != dt.rom->zones.end()) loc = &z->second;
 		// the wild ones, one row each (a species met more ways: a row for each way)
-		struct Row { uint16_t species; EncounterKind kind; uint8_t lo = 255, hi = 0; int pct[4] = {}; bool timed = false; };
+		// (condition: which of a kind's lists - the headbutt tree kind, the GBA game, the swarm's way: each list's odds
+		// add up to 100 on their own, so they are rows of their own, not summed: Hoothoot showed 100% on Route 30)
+		struct Row { uint16_t species; EncounterKind kind; uint8_t cond = 0; uint8_t lo = 255, hi = 0; int pct[4] = {}; bool timed = false; };
 		std::vector<Row> rows;
 		if (loc)
 			for (auto& e : loc->encounters)
 			{
 				// (Gen V stores a table per season on any kind of encounter: only this season's counts, or the odds add up over four)
 				if (e.season != 0xff && e.season != lv.season) continue;
-				auto it = std::find_if(rows.begin(), rows.end(), [&](const Row& r) { return r.species == e.species && r.kind == e.kind; });
-				if (it == rows.end()) { rows.push_back(Row{ e.species, e.kind }); it = rows.end() - 1; }
+				const uint8_t cond = listed(e.kind) ? e.condition : 0;
+				auto it = std::find_if(rows.begin(), rows.end(), [&](const Row& r) { return r.species == e.species && r.kind == e.kind && r.cond == cond; });
+				if (it == rows.end()) { rows.push_back(Row{ e.species, e.kind, cond }); it = rows.end() - 1; }
 				it->lo = std::min(it->lo, e.minLevel); it->hi = std::max(it->hi, e.maxLevel);
 				if (e.time == TimeOfDay::ANY) for (int t = 1; t < 4; t++) it->pct[t] += e.percent;
 				else { it->pct[(int)e.time] += e.percent; it->timed = true; }
@@ -1599,15 +1616,18 @@ namespace banana::nds
 			// by how they're met, then the likeliest now first
 			int nowCol = lv.timeOfDay == TimeOfDay::ANY ? 2 : (int)lv.timeOfDay;
 			std::stable_sort(rows.begin(), rows.end(), [&](const Row& a, const Row& b)
-				{ return a.kind != b.kind ? a.kind < b.kind : a.pct[nowCol] > b.pct[nowCol]; });
+				{ return a.kind != b.kind ? a.kind < b.kind : a.cond != b.cond ? a.cond < b.cond : a.pct[nowCol] > b.pct[nowCol]; });
 			EncounterKind last = (EncounterKind)255;
+			int lastCond = -1;
 			int tcol = (int)lv.timeOfDay;
 			for (auto& r : rows)
 			{
-				if (r.kind != last)
+				if (r.kind != last || r.cond != lastCond)
 				{
 					last = r.kind;
-					y = heading(tr(kindName(r.kind)), 16, y + 2);
+					lastCond = r.cond;
+					const char* list = listName(r.kind, r.cond);
+					y = heading(tr(kindName(r.kind)), 16, y + 2, list ? list : "");
 					// the times of day as columns when this way of meeting them has them
 					bool timed = std::any_of(rows.begin(), rows.end(), [&](const Row& x) { return x.kind == r.kind && x.timed; });
 					if (timed)
@@ -1654,7 +1674,8 @@ namespace banana::nds
 			bool any = false;
 			for (auto& sc : dt.guide->secrets)
 			{
-				if (sc.zone != lv.zone) continue;
+				// (a place's secret holds all its zones - a town and its houses - as the badge counts them, logic.cpp)
+				if (!lv.zone || (sc.zone != lv.zone && std::find(sc.zones.begin(), sc.zones.end(), lv.zone) == sc.zones.end())) continue;
 				if (!any) { y = heading(tr("Secrets and hidden items"), 16, y + 2); any = true; }
 				float th = std::max(17.0f, wrapHeight(sc.text, 12, sc.x >= 0 ? 470 : 540, 2, true));
 				box("slot", 12, y, 616, th + 18);
@@ -1762,11 +1783,24 @@ namespace banana::nds
 		// along the way: the guide's steps, the ones in this area first
 		if (!g->steps.empty())
 		{
-			y = heading(tr("Along the way"), 16, y + 2);
 			std::vector<const GuideStep*> st;
 			uint16_t zn = dt.live->zone;
-			for (auto& s2 : g->steps) if (std::find(s2.zones.begin(), s2.zones.end(), zn) != s2.zones.end()) st.push_back(&s2);
-			for (auto& s2 : g->steps) if (std::find(s2.zones.begin(), s2.zones.end(), zn) == s2.zones.end()) st.push_back(&s2);
+			// a step belongs to its stage (the milestone it is shown during, model.h): only the current goal's, never a
+			// later or an earlier one's (HeartGold's post-game Embedded Tower step showed on Route 30 at the start
+			// because it names Route 30; Platinum's "Pick your first partner" after the partner was picked). Steps
+			// without a known stage show as before.
+			auto shown = [&](const GuideStep& s2)
+			{
+				if (nextIdx < 0 || s2.stage.empty()) return true;
+				int si = -1;
+				for (size_t i = 0; i < g->milestones.size(); i++) if (g->milestones[i].id == s2.stage) si = (int)i;
+				return si < 0 || si == nextIdx;
+			};
+			for (auto& s2 : g->steps)
+				if (std::find(s2.zones.begin(), s2.zones.end(), zn) != s2.zones.end() && shown(s2)) st.push_back(&s2);
+			for (auto& s2 : g->steps)
+				if (std::find(s2.zones.begin(), s2.zones.end(), zn) == s2.zones.end() && shown(s2)) st.push_back(&s2);
+			if (!st.empty()) y = heading(tr("Along the way"), 16, y + 2);
 			for (size_t i = 0; i < st.size() && i < 8; i++)
 			{
 				const GuideStep& s2 = *st[i];

@@ -152,6 +152,27 @@ static void testGuide()
 	CHECK(reachableZones(g, l).count(40));
 	l.flags.assign(2, 0); l.flags[1] = 0x02;
 	CHECK(nextMilestone(g, l) == nullptr);
+	// "party": done once the player has a Pokémon (the starter); "none" (an optional fight, a legend) doesn't hold the
+	// story up: done once a later one is, like "later" (found on the Plus: HeartGold on Route 30 with a Cyndaquil kept
+	// "Choose your first partner" as the goal; Platinum's lake legends ("none") before Volkner would have stuck there)
+	{
+		GuideData h;
+		Milestone p0; p0.id = "partner"; p0.doneWhen = "party";
+		Milestone p1; p1.id = "legend"; p1.doneWhen = "none";
+		Milestone p2; p2.id = "gym1"; p2.doneWhen = "badge:1";
+		Milestone p3; p3.id = "post"; p3.doneWhen = "none";
+		h.milestones = { p0, p1, p2, p3 };
+		Live q; q.valid = true;
+		CHECK(nextMilestone(h, q) == &h.milestones[0]);
+		Mon egg; egg.species = 175; egg.egg = true;
+		q.party = { egg };
+		CHECK(nextMilestone(h, q) == &h.milestones[0]);	// (an egg isn't a partner yet)
+		Mon cyn; cyn.species = 155; cyn.level = 5;
+		q.party = { cyn };
+		CHECK(nextMilestone(h, q) == &h.milestones[1]);
+		q.badges = 1;
+		CHECK(nextMilestone(h, q) == &h.milestones[3]);	// the legend before the gym passed, the one after stays
+	}
 	CHECK(tmNumber(Gen::IV, 328) == 1 && tmNumber(Gen::IV, 420) == 93 && tmNumber(Gen::V, 618) == 93 && tmNumber(Gen::V, 420) == 96);
 	CHECK(tmNumber(Gen::IV, 4) == 0);
 }
@@ -187,6 +208,13 @@ static void testAdvice()
 	CHECK(a.moves[0].quarters == 0 && a.moves[0].dmgHi == 0);		// Thunderbolt on Rock/Ground
 	CHECK(a.moves[1].quarters == 2 && a.moves[1].best && a.moves[1].movesFirst);	// Tackle, resisted, but the only one
 	CHECK(a.catching.size() == 2 && a.catching[0].ball == 13);	// Dusk Ball at night first
+	{	// a foe whose first attack has priority (Quick Attack) doesn't make the much faster lead "slower": speed is
+		// weighed against its first ordinary attack (Black 2: Krookodile, Speed 117, "slower" than a Tranquill)
+		Live q = l;
+		q.battle.foes[0].mon.moves[0] = 98; q.battle.foes[0].mon.moves[1] = 33;
+		Advice b = computeAdvice(r, q, &g, st);
+		CHECK(b.moves.size() == 2 && b.moves[1].movesFirst);
+	}
 	CHECK(a.next == &g.milestones[0]);
 	CHECK(a.scoreParts.size() == 4 && a.teamScore == a.scoreParts[0].score + a.scoreParts[1].score + a.scoreParts[2].score + a.scoreParts[3].score);
 	CHECK(a.scoreParts[2].score == 22);	// the best (here: both) average Lv 13 against an ace of 14: -3
@@ -213,6 +241,13 @@ static void testAdvice()
 	st.seen = { "next:gym1", "catch:30:129" };
 	a = computeAdvice(r, l, &g, st);
 	CHECK(a.notices.size() == 1 && a.notices[0].id == "secrets:30");
+	{	// a secret with a condition ("after Red", "after Oak's Kanto starter") can't be told reachable: no badge for it
+		// (HeartGold on the Plus: the post-game Blue Orb raised "1 secret here" on Route 30 at 0 badges)
+		GuideData g2 = g;
+		g2.secrets[0].condition = "after the Champion";
+		Advice c = computeAdvice(r, l, &g2, st);
+		CHECK(c.notices.empty());
+	}
 	// evolution watch: Turtwig at Lv 17 of 18
 	auto ev = evolutionWatch(Gen::IV, twig, r, l, &g);
 	CHECK(ev.size() == 1 && ev[0].into == 388 && ev[0].levelsToGo == 1 && !ev[0].ready);
@@ -305,6 +340,24 @@ static void testSession(const char* tmp)
 		auto sl = s.seenList();
 		CHECK(sl.size() == 1 && sl[0] == "next:gym1");
 		CHECK(s.journey()->log.size() >= 2);
+		CHECK(!s.journey()->challenge);
+	}
+	{	// Challenge mode switched on in Settings for a playthrough the card already knows: the setting wins over the
+		// card's "challenge 0" (it was read after the setting and switched it back off)
+		Session s(r, g, tmp);
+		mkSession(s);
+		s.setChallenge(true);
+		double t = 0;
+		for (int i = 0; i < 6; i++, t += 300) s.tick(t, 1762000300);
+		CHECK(s.live()->valid && s.journey()->challenge);
+	}
+	{	// and off again
+		Session s(r, g, tmp);
+		mkSession(s);
+		s.setChallenge(false);
+		double t = 0;
+		for (int i = 0; i < 6; i++, t += 300) s.tick(t, 1762000400);
+		CHECK(s.live()->valid && !s.journey()->challenge);
 	}
 	unlink((std::string(tmp) + "/CPUE-00111-00222.tsv").c_str());
 }

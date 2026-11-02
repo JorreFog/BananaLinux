@@ -58,7 +58,8 @@ Milestone  (gyms, rivals, villain team, Elite Four, champion, post-game; in stor
                 ace_level out); a fight with no trainer in the ROM (a wild legend) has no foe;
   trainer_ids   [int] optional: the ROM's own trainer ids when known (wins over "foe")
   done_when     "badge:N" (N 1-8, 1-16 in HeartGold/SoulSilver: the Nth badge bit is set, Johto first) | "flag:N" (the story flag N, when the RAM workstream
-                has it) | "later" (done once any later milestone is) | "none"
+                has it) | "party" (the player has a Pokémon: the starter) | "later" (done once any later milestone is) |
+                "none" (no rule: like "later", so an optional fight never holds the story's next goal)
   opens         [place key] the places that become reachable while this is the goal (new ones: the loader adds them
                 up, so a milestone's reachable set is everything opened up to and including it)
   tips          the preparation and counters in a few sentences (our words)
@@ -91,7 +92,7 @@ MILESTONE_KINDS = {"gym", "rival", "team", "elite4", "champion", "postgame", "le
 SECRET_KINDS = {"hidden-item", "gift", "event", "trade", "tip", "legendary", "shiny"}
 NOTE_KINDS = {"exclusive", "roamer", "grotto", "gift", "legendary", "trade", "version", "tip"}
 ID_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
-DONE_RE = re.compile(r"^(none|later|badge:([1-9]|1[0-6])|flag:\d+)$")
+DONE_RE = re.compile(r"^(none|later|party|badge:([1-9]|1[0-6])|flag:\d+)$")
 MAX_TEXT, MAX_SOURCE = 480, 160
 # the national dex names 1-649, for checking "name" against "species" (a mistyped number is the likeliest data error)
 _NAMES = (
@@ -369,7 +370,7 @@ def validate(path, stats=None):
             r.err(w, "trainer_ids must be a list of integers")
         dw = m.get("done_when", "none")
         if not isinstance(dw, str) or not DONE_RE.match(dw):
-            r.err(w, "done_when must be none | later | badge:1-16 | flag:N")
+            r.err(w, "done_when must be none | later | party | badge:1-16 | flag:N")
         elif dw.startswith("badge:"):
             gyms.add(int(dw[6:]))
         refs(w, m, "opens")
@@ -408,7 +409,7 @@ def validate(path, stats=None):
         refs(w, s, "places")
         dw = s.get("done_when", "none")
         if not isinstance(dw, str) or not DONE_RE.match(dw):
-            r.err(w, "done_when must be none | later | badge:1-16 | flag:N")
+            r.err(w, "done_when must be none | later | party | badge:1-16 | flag:N")
 
     # secrets
     secs = d.get("secrets", [])

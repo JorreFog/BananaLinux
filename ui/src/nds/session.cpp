@@ -47,6 +47,8 @@ namespace banana::nds
 			snprintf(b, sizeof b, "/%s-%05u-%05u.tsv", rom->game.code.c_str(), l->tid, l->sid);
 			file = dir + b;
 			load();
+			// the Settings row wins over what the card kept for this playthrough (load() read the card's value)
+			if (challengeWanted >= 0 && jr->challenge != (challengeWanted == 1)) { jr->challenge = challengeWanted == 1; dirty = true; }
 		}
 		track(*l, wall);
 		adv = std::make_shared<const Advice>(computeAdvice(*rom, *l, guide.get(), st));
@@ -65,7 +67,11 @@ namespace banana::nds
 	}
 	std::vector<std::string> Session::seenList() const { return std::vector<std::string>(st.seen.begin(), st.seen.end()); }
 	int Session::unseen() const { return (int)adv->notices.size(); }
-	void Session::setChallenge(bool on) { if (jr->challenge != on) { jr->challenge = on; dirty = true; } }
+	void Session::setChallenge(bool on)
+	{
+		challengeWanted = on ? 1 : 0;
+		if (jr->challenge != on) { jr->challenge = on; dirty = true; }
+	}
 
 	// the journey: what changed between two readings of the same playthrough
 	void Session::track(const Live& l, time_t wall)
