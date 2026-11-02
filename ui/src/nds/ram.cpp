@@ -179,7 +179,9 @@ namespace banana::nds
 		// battle: Gen IV from SaveData: our party's battle copy, the foe's party, BattleMon[0], the trainer id; the
 		// absolute "in battle" word. Gen V (from the B2W2 pointer, or absolute for BW): the same + the battler table
 		uint32_t bOurs, bFoes, bMon0, bTrainer, inBattle, bTable, bDouble;
-		uint32_t posMap, posX, posZ;	// Gen V position block (map, x, z); 0: none
+		uint32_t posMap, posX, posZ;	// Gen V save position block (map, x, z: as saved, not live)
+		uint32_t liveZone, livePos;		// Gen V: the current zone (Ironmon's childMapHeader) and the player's map object
+										// x (+0, z at +4): from the B2W2 pointer, absolute in BW
 	};
 
 	static const std::vector<PocketAt> POCKETS_DP = { { POCKET_ITEMS, 0, 165 }, { POCKET_KEY, 0x294, 50 },
@@ -237,6 +239,10 @@ namespace banana::nds
 		l.flags = b2w2 ? 0x1FF00 + 0x1AF * 2 : 0x20100 + 0x13E * 2;
 		l.flagBytes = (b2w2 ? 0xBF8 : 0xB60) / 8;
 		l.pockets = POCKETS_V;
+		// where the player is now (the save's position block keeps the saved spot): the zone and the player's map
+		// object's tile x/z (Black 2: x went 110 -> 111 with a step, the save's stayed)
+		l.liveZone = b2w2 ? 0x41B5C : 0x022592B2 + shift;
+		l.livePos = b2w2 ? 0x38CE8 + 0x2E : 0x022521EC + 0x2E + shift;
 		if (b2w2)
 		{	// from the 0x02000024 pointer (Ironmon's B2W2 offsets); the "in battle" word is absolute (+0x40 in White 2)
 			l.bOurs = 0x53610; l.bFoes = 0x53B70; l.bTrainer = 0x5262E; l.bTable = 0x526A8; l.bDouble = 0x900A0;
@@ -292,7 +298,7 @@ namespace banana::nds
 
 	// the ranges, in this order (deliver() reads them by these indexes)
 	enum { W_PTR, W_MAIN, W_ROAM, W_REPEL, W_OURS, W_FOES, W_BMON, W_TRAINER, W_INBATTLE, W_V_MISC, W_V_DAYCARE,
-		W_V_FLAGS, W_V_TABLE, W_V_DOUBLE, W_V_BATTLERS, W_COUNT };
+		W_V_FLAGS, W_V_TABLE, W_V_DOUBLE, W_V_ZONE, W_V_POS, W_COUNT };
 
 	std::vector<Range> RamReader::wants() const
 	{
@@ -329,6 +335,8 @@ namespace banana::nds
 		w[W_INBATTLE] = { l.inBattle, 2 };
 		w[W_V_TABLE] = { rel + l.bTable, 4 * 0x1C };
 		w[W_V_DOUBLE] = { rel + l.bDouble, 1 };
+		w[W_V_ZONE] = { rel + l.liveZone, 2 };
+		w[W_V_POS] = { rel + l.livePos, 6 };
 		// the battler objects where the last table pointed, and the Pokémon they pointed at (checked against this
 		// set's own table and objects before they are used)
 		for (int i = 0; i < 4; i++)
@@ -467,9 +475,9 @@ namespace banana::nds
 			auto atm = [&](uint32_t off) { return mi.data() + (off - l.money); };
 			o.money = u32(atm(l.money));
 			o.badges = *atm(l.badges);
-			o.zone = u16(at(l.posMap));
-			o.mapX = u16(at(l.posX));
-			o.mapY = u16(at(l.posZ));
+			// the live zone and tile; the save's position block only when they didn't read
+			o.zone = d[W_V_ZONE].size() == 2 ? u16(d[W_V_ZONE].data()) : u16(at(l.posMap));
+			if (d[W_V_POS].size() == 6) { o.mapX = u16(d[W_V_POS].data()); o.mapY = u16(d[W_V_POS].data() + 4); }
 			o.dexCaught = bits(atm(l.dex + 8), dexSize);
 			std::vector<uint8_t> seen(bits(atm(l.dex + 0x5C), dexSize));
 			for (int k = 1; k < 4; k++)		// male, female, shiny male, shiny female: seen = any of them

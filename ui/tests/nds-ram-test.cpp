@@ -231,7 +231,8 @@ static void testBlack2()
 	p16(ram.at(V + 0x19404 + 8), 0xFFFF);
 	p16(ram.at(V + 0x19414), 33054); p16(ram.at(V + 0x19416), 28192);
 	p16(ram.at(V + 0x19424), 9); ram.at(V + 0x19426)[0] = 1; ram.at(V + 0x19427)[0] = 54;
-	p16(ram.at(V + 0x19580), 96); p16(ram.at(V + 0x19586), 177); p16(ram.at(V + 0x1958A), 434);
+	p16(ram.at(V + 0x19580), 95); p16(ram.at(V + 0x19586), 1); p16(ram.at(V + 0x1958A), 2);	// (the saved spot)
+	p16(ram.at(M + 0x41B5C), 96); p16(ram.at(M + 0x38CE8 + 0x2E), 177); p16(ram.at(M + 0x38CE8 + 0x32), 434);	// (now)
 	p32(ram.at(V + 0x21100), 52832); ram.at(V + 0x21104)[0] = 0x0F;
 	ram.at(V + 0x21400 + 8)[0] = 0x01;
 	ram.at(V + 0x21400 + 0x5C + 0x54)[0] = 0x02;	// seen as a female only
@@ -312,6 +313,9 @@ static void testSnapshots(const std::string& dir)
 		CHECK(l->trainerName == "Joar" && l->tid == 33054 && l->money == 52832 && l->badges == 0x0F && l->zone == 96);
 		CHECK(l->battle.kind == BattleKind::NONE && l->bag.at(POCKET_BALLS).size() == 2);
 	}
+	// Black 2 walking on Route 6: the zone and the tile x follow the player (the save's block doesn't)
+	if (snap(dir + "/plus-b2b/p0.bin", GameId::BLACK2, Gen::V, l)) CHECK(l->zone == 331 && l->mapX == 110 && l->mapY == 363);
+	if (snap(dir + "/plus-b2b/p2.bin", GameId::BLACK2, Gen::V, l)) CHECK(l->zone == 331 && l->mapX == 111 && l->mapY == 363);
 	if (snap(dir + "/plus-pta/ow.bin", GameId::PLATINUM, Gen::IV, l))
 	{
 		CHECK(l->party.size() == 1 && l->party[0].species == 396 && l->party[0].level == 2 && l->party[0].nick == "STARLY");
@@ -329,6 +333,23 @@ static void testSnapshots(const std::string& dir)
 		CHECK(l->battle.kind == BattleKind::WILD && l->battle.foes[0].mon.species == 167 && l->battle.foes[0].mon.level == 2);
 		CHECK(l->battle.foes[0].types[0] == BUG && l->battle.foes[0].types[1] == POISON && l->battle.ours[0].types[0] == FIRE);
 		CHECK(l->battle.foes[0].mon.ivs[0] == 17 && l->battle.foes[0].mon.nature == 16 && l->battle.foes[0].mon.ability == 68);
+	}
+	{	// Black 2 wild battle (Route 6, Foongus L26): the battler table chain needs a few sets
+		Ram ram;
+		ram.m = load(dir + "/plus-b2c/b1.bin");
+		if (ram.m.size() == 0x400000)
+		{
+			RamReader rr(game(GameId::BLACK2, Gen::V));
+			for (int i = 0; i < 5; i++) rr.deliver(ram.answer(rr.wants()), i * 250.0, 1762000000);
+			auto b = rr.live();
+			CHECK(b->valid && b->battle.kind == BattleKind::WILD);
+			CHECK(b->battle.foes[0].present && b->battle.foes[0].mon.species == 590 && b->battle.foes[0].mon.level == 26);
+			CHECK(b->battle.foes[0].mon.hp == 71 && b->battle.foes[0].mon.maxHp == 71 && b->battle.foes[0].mon.nature == 24);
+			CHECK(b->battle.ours[0].present && b->battle.ours[0].mon.species == 553 && b->battle.ours[0].mon.hp == 147);
+			fprintf(stderr, "b2 battle: foe moves %d %d stages %d %d ours stats %d %d %d %d %d\n", b->battle.foes[0].mon.moves[0],
+				b->battle.foes[0].mon.pp[0], b->battle.foes[0].stages[1], b->battle.foes[0].stages[3], b->battle.ours[0].mon.stats[0],
+				b->battle.ours[0].mon.stats[1], b->battle.ours[0].mon.stats[2], b->battle.ours[0].mon.stats[3], b->battle.ours[0].mon.stats[4]);
+		}
 	}
 	if (snap(dir + "/plus-hgd/c0.bin", GameId::HEARTGOLD, Gen::IV, l))
 		CHECK(l->mapX == 566 && l->mapY == 328);
