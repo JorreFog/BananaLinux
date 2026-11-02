@@ -190,3 +190,47 @@ The full spec: `COMPANION-SPEC.md` in the BananaOS emulator projects (`~/banana-
 - **Pokémon companion** (also from PokeDaisy's ideas): battle advice (the lead's best move marked, a party member to
   switch to), the move a party member learns next, and where a Pokémon lives (the Dex entry: up to three maps from the
   ROM's wild tables and map groups).
+
+## DS Pokémon guide data (the DS Pokémon companion)
+The DS Pokémon companion (design: `docs/superpowers/specs/2026-11-02-nds-pokemon-companion-design.md`) reads names, trainer
+teams, encounter tables, learnsets, items and Pokédex text from the player's own ROM at run time. What a ROM can't say, the
+story order, level caps, what opens up when, secrets, how to evolve things in this game, version exclusives, is ours: one
+file per game in `/usr/share/banana/companions/nds-pokemon/<game>.json` (`diamond pearl platinum heartgold soulsilver
+black white black2 white2`), written from facts in our own words, never copied. Every entry names its source on ONE line
+and has a quality: `reference-only` (written from web research) or `live-verified` (checked on a running game, with a
+`checked` line). The companion marks reference-only advice as such and drops anything a ROM or a running game contradicts.
+
+Tools: `tools/companions/nds-validate.py` (the schema is in its header; `--stats` counts the entries and lists the places that
+still lack a game id), the loader `ui/src/nds/guide.{h,cpp}` into `GuideData` (`ui/src/nds/model.h`), its host test
+`ui/tests/guide-test.cpp` (`make test`). Files allow `//` and `/* */` comments and trailing commas.
+
+### File
+```
+{ "schema": 1, "kind": "nds-pokemon-guide", "game": "platinum", "code": "CPUE", "title": "Pokemon Platinum", "revision": 1,
+  "sources": ["Bulbapedia ...", "Serebii ..."],
+  "places":     { "oreburgh-city": { "name": "Oreburgh City", "zone": null } },
+  "milestones": [ { "id": "gym-1", "name": "Gym 1: Roark", "kind": "gym", "place": "oreburgh-city", "leader": "Roark",
+                    "theme": "rock", "level_cap": 14, "foe": { "name": "Roark", "class": "Leader", "ace_level": 14 },
+                    "done_when": "badge:1", "opens": ["route-207"], "tips": "...", "quality": "reference-only", "source": "Bulbapedia: Roark" } ],
+  "steps": [], "secrets": [], "evolutions": [], "notes": [] }
+```
+- **places**: every place the file mentions, by key. `name` is the place as the game shows it in English; `zone` is the game's own
+  map/zone id, or `null` while it is not known (`zones`: more ids, e.g. interiors). The loader resolves a `null` by the place's
+  name against the ROM's location names (`GuideResolver`, `guideResolver(rom)`); names it can't find end in
+  `GuideData::unresolved`. Ids are never invented.
+- **milestones**, in story order: `kind` gym / rival / team / elite4 / champion / postgame / legendary / story; `level_cap` the
+  highest level on the foe's side; `theme` a type (gyms, Elite Four); `foe` how the trainer is found in the ROM (name + class
+  text, `ace_level` picks the right team when several share the name) or `trainer_ids` when known; `done_when` is `badge:N`
+  (the Nth badge bit, 1-8, 1-16 in HeartGold/SoulSilver with Johto first), `flag:N` (a story flag, when the RAM reader has it),
+  `later` (done once any later milestone is) or `none`; `opens` lists the places that become reachable while it is the goal
+  (the loader adds them up, so a milestone's `reachableZones` is everything opened up to and including it); `tips` is the preparation.
+- **steps** (tips tied to a `stage` milestone and `places`), **secrets** (`kind` hidden-item / gift / event / trade / tip /
+  legendary / shiny, a `place`, `x`/`y` tiles when known, a `condition`), **evolutions** (`species` = national number plus its
+  English `name`, which the validator checks; several per species are joined into `evolutionNotes`), **notes** (`kind` exclusive /
+  roamer / grotto / gift / legendary / trade / version / tip; `species` + `names`).
+- Every entry: unique `id` (`[a-z0-9-]+`), `quality`, `source` (one line, at most 160 characters). Text fields at most 480 characters:
+  a hint, not a guide page.
+
+### Loader
+`loadGuide(game, out, &why, &resolver)` (or `loadGuideFile`). A file of another game or schema is refused; a broken entry is
+skipped and counted in `why`. `$BANANA_NDS_GUIDE` redirects the folder for tests.
