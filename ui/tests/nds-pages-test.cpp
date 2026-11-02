@@ -309,6 +309,29 @@ static void touchTests(const Ctx& c, int w, int h)
 		pg.setData(pt.data());
 		pg.showSpecies(391);
 	}
+	// Here lists a secret of this place that holds the zone among its zones (a town's houses), as the badge counts it
+	// (White 2: "1 secret here" in the player's house in Aspertia, Here showed none)
+	{
+		ndsfx::Fixture f = ndsfx::platinum();
+		auto hereWith = [&](bool extra)
+		{
+			auto g = std::make_shared<GuideData>(*f.guide);
+			g->secrets.clear();
+			if (extra)
+			{
+				Secret s1; s1.id = "town"; s1.text = "A gift in this town."; s1.zone = (uint16_t)(f.live->zone + 1); s1.zones = { f.live->zone };
+				g->secrets.push_back(s1);
+			}
+			PageData d = f.data(); d.guide = g; pg.setData(d);
+			pg.show(Page::HERE); pg.render();
+			return grab(be, 1);
+		};
+		hereWith(false);	// (the first opening shows the fixture's notice card: past it, the page alone)
+		auto a0 = hereWith(false), b = hereWith(true), a1 = hereWith(false);
+		CHECK(a0 == a1 && b != a0, "a secret found through its zones is listed");
+		pg.setData(pt.data());
+		pg.showSpecies(391);
+	}
 	// the list's rail: its bottom is the end of the Pokédex
 	pg.render();
 	pg.touchDown((int)(199 * s), (int)(408 * s), 0); pg.touchUp((int)(199 * s), (int)(408 * s), 0);

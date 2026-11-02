@@ -1670,7 +1670,8 @@ namespace banana::nds
 			bool any = false;
 			for (auto& sc : dt.guide->secrets)
 			{
-				if (sc.zone != lv.zone) continue;
+				// (a place's secret holds all its zones - a town and its houses - as the badge counts them, logic.cpp)
+				if (!lv.zone || (sc.zone != lv.zone && std::find(sc.zones.begin(), sc.zones.end(), lv.zone) == sc.zones.end())) continue;
 				if (!any) { y = heading(tr("Secrets and hidden items"), 16, y + 2); any = true; }
 				float th = std::max(17.0f, wrapHeight(sc.text, 12, sc.x >= 0 ? 470 : 540, 2, true));
 				box("slot", 12, y, 616, th + 18);
