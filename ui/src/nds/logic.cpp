@@ -700,9 +700,13 @@ namespace banana::nds
 		const Battle& b = l.battle;
 		if (b.kind == BattleKind::NONE || !b.ours[0].present || !b.foes[0].present) return;
 		const Fighter me = fighterOf(b.ours[0], rom), foe = fighterOf(b.foes[0], rom);
-		// the foe's move to compare speed against: its first attack (a wild one's are in the battle copy), else none
+		// the foe's move to compare speed against: its first attack without priority (a wild one's are in the battle
+		// copy), else its first attack, else none. (Its first attack alone made a priority move the yardstick: Black 2's
+		// Krookodile, Speed 117, read "slower" than a Tranquill with Quick Attack.)
 		MoveData theirs;
-		for (auto m : b.foes[0].mon.moves) if (auto* d = move(rom, m); damaging(d)) { theirs = *d; break; }
+		bool found = false;
+		for (auto m : b.foes[0].mon.moves) if (auto* d = move(rom, m); damaging(d) && (int8_t)d->priority == 0) { theirs = *d; found = true; break; }
+		if (!found) for (auto m : b.foes[0].mon.moves) if (auto* d = move(rom, m); damaging(d)) { theirs = *d; break; }
 		float bestAvg = -1;
 		size_t bestI = 0;
 		for (int k = 0; k < 4; k++)

@@ -208,6 +208,13 @@ static void testAdvice()
 	CHECK(a.moves[0].quarters == 0 && a.moves[0].dmgHi == 0);		// Thunderbolt on Rock/Ground
 	CHECK(a.moves[1].quarters == 2 && a.moves[1].best && a.moves[1].movesFirst);	// Tackle, resisted, but the only one
 	CHECK(a.catching.size() == 2 && a.catching[0].ball == 13);	// Dusk Ball at night first
+	{	// a foe whose first attack has priority (Quick Attack) doesn't make the much faster lead "slower": speed is
+		// weighed against its first ordinary attack (Black 2: Krookodile, Speed 117, "slower" than a Tranquill)
+		Live q = l;
+		q.battle.foes[0].mon.moves[0] = 98; q.battle.foes[0].mon.moves[1] = 33;
+		Advice b = computeAdvice(r, q, &g, st);
+		CHECK(b.moves.size() == 2 && b.moves[1].movesFirst);
+	}
 	CHECK(a.next == &g.milestones[0]);
 	CHECK(a.scoreParts.size() == 4 && a.teamScore == a.scoreParts[0].score + a.scoreParts[1].score + a.scoreParts[2].score + a.scoreParts[3].score);
 	CHECK(a.scoreParts[2].score == 22);	// the best (here: both) average Lv 13 against an ace of 14: -3
