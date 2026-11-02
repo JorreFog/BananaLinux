@@ -1,0 +1,43 @@
+// a small made-up guide in the real schema (tests/guide-test.cpp): not facts, not shipped
+{
+	"schema": 1, "kind": "nds-pokemon-guide", "game": "platinum", "code": "CPUE", "title": "Pokemon Platinum (test)",
+	"revision": 3,
+	"sources": ["made up for the loader's test"],
+	"places": {
+		"alpha-town": { "name": "Alpha Town", "zone": 10 },
+		"beta-city": { "name": "Beta City", "zone": null },           /* resolved by name */
+		"route-1": { "name": "Route 1", "zone": null },
+		"nowhere": { "name": "Nowhere Land", "zone": null },         // no id anywhere
+		"gamma-cave": { "name": "Gamma Cave", "zone": 30, "zones": [31, 32] },
+	},
+	"milestones": [
+		{ "id": "gym-1", "name": "Gym 1: Tester", "kind": "gym", "place": "alpha-town", "leader": "Tester", "theme": "rock",
+		  "level_cap": 14, "foe": { "name": "Tester", "class": "Leader", "ace_level": 14 }, "done_when": "badge:1",
+		  "opens": ["alpha-town", "route-1"], "tips": "Water and grass work.", "quality": "reference-only", "source": "test" },
+		{ "id": "rival-1", "name": "Rival on the bridge", "kind": "rival", "place": "route-1", "level_cap": 18,
+		  "trainer_ids": [77], "done_when": "later", "opens": ["beta-city", "nowhere"], "quality": "live-verified", "source": "test", "checked": "x" },
+		{ "id": "gym-1", "name": "same id twice", "quality": "reference-only", "source": "test" },
+		{ "id": "gym-2", "name": "Gym 2", "kind": "gym", "place": "beta-city", "theme": "nope", "level_cap": 20,
+		  "foe": [ { "name": "Tester", "class": "Leader", "ace_level": 14 }, { "name": "Someone", "ace_level": 14 }, { "name": "Nobody" } ],
+		  "done_when": "badge:2", "opens": ["gamma-cave", "missing-place"], "quality": "reference-only", "source": "test" },
+	],
+	"steps": [
+		{ "id": "s1", "title": "Get Cut", "text": "Find the tree cutter.", "stage": "gym-1", "places": ["alpha-town", "beta-city"],
+		  "quality": "reference-only", "source": "test" },
+		{ "id": "s2", "title": "no text", "quality": "reference-only", "source": "test" },
+	],
+	"secrets": [
+		{ "id": "x1", "kind": "hidden-item", "text": "Behind the tree.", "place": "gamma-cave", "x": 5, "y": 9, "grid": "world", "condition": "needs Cut",
+		  "quality": "reference-only", "source": "test" },
+		{ "id": "x2", "kind": "tip", "text": "Place is not listed.", "place": "ghost", "quality": "reference-only", "source": "test" },
+	],
+	"evolutions": [
+		{ "id": "e1", "species": 64, "name": "Kadabra", "text": "Trade it.", "quality": "reference-only", "source": "test" },
+		{ "id": "e2", "species": 64, "name": "Kadabra", "text": "Or the GTS.", "quality": "reference-only", "source": "test" },
+		{ "id": "e3", "species": 900, "name": "x", "text": "out of range", "quality": "reference-only", "source": "test" },
+	],
+	"notes": [
+		{ "id": "n1", "kind": "roamer", "title": "A roamer", "text": "It runs.", "species": [488, 481], "names": ["Cresselia", "Mesprit"],
+		  "place": "route-1", "quality": "reference-only", "source": "test" },
+	],
+}

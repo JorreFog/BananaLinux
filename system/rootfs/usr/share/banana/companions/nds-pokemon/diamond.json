@@ -1,0 +1,3026 @@
+{
+ "schema": 1,
+ "kind": "nds-pokemon-guide",
+ "game": "diamond",
+ "code": "ADAE",
+ "title": "Pokemon Diamond",
+ "revision": 1,
+ "sources": [
+  "Serebii: Diamond/Pearl database and Pokearth Sinnoh (gym leaders, Elite Four, trainers, items, legendaries, exclusives)",
+  "pokemondb.net: Diamond/Pearl gym leaders and Elite Four, version exclusives",
+  "PokeDream: Diamond/Pearl/Platinum walkthrough (story order, HMs, hidden items, side quests)",
+  "Smogon: Diamond/Pearl Battle Tower guide"
+ ],
+ "places": {
+  "twinleaf-town": {
+   "name": "Twinleaf Town",
+   "zone": 411,
+   "zones": [
+    412,
+    413,
+    414,
+    415,
+    416,
+    417
+   ]
+  },
+  "route-201": {
+   "name": "Route 201",
+   "zone": 342
+  },
+  "lake-verity": {
+   "name": "Lake Verity",
+   "zone": 311,
+   "zones": [
+    312
+   ]
+  },
+  "sandgem-town": {
+   "name": "Sandgem Town",
+   "zone": 418,
+   "zones": [
+    419,
+    420,
+    421,
+    422,
+    423,
+    424,
+    425,
+    485
+   ]
+  },
+  "route-202": {
+   "name": "Route 202",
+   "zone": 343
+  },
+  "jubilife-city": {
+   "name": "Jubilife City",
+   "zone": 3,
+   "zones": [
+    4,
+    5,
+    6,
+    7,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    30,
+    31,
+    32,
+    474,
+    517
+   ]
+  },
+  "route-203": {
+   "name": "Route 203",
+   "zone": 344
+  },
+  "route-204": {
+   "name": "Route 204",
+   "zone": 345,
+   "zones": [
+    346
+   ]
+  },
+  "oreburgh-gate": {
+   "name": "Oreburgh Gate",
+   "zone": 258,
+   "zones": [
+    259
+   ]
+  },
+  "oreburgh-city": {
+   "name": "Oreburgh City",
+   "zone": 45,
+   "zones": [
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
+    58,
+    60,
+    61,
+    62,
+    63,
+    64,
+    476
+   ]
+  },
+  "oreburgh-mine": {
+   "name": "Oreburgh Mine",
+   "zone": 197,
+   "zones": [
+    198,
+    199
+   ]
+  },
+  "floaroma-town": {
+   "name": "Floaroma Town",
+   "zone": 426,
+   "zones": [
+    427,
+    428,
+    429,
+    431,
+    432,
+    486
+   ]
+  },
+  "route-205": {
+   "name": "Route 205",
+   "zone": 347,
+   "zones": [
+    348,
+    349
+   ]
+  },
+  "floaroma-meadow": {
+   "name": "Floaroma Meadow",
+   "zone": 256,
+   "zones": [
+    257
+   ]
+  },
+  "valley-windworks": {
+   "name": "Valley Windworks",
+   "zone": 200,
+   "zones": [
+    201
+   ]
+  },
+  "fuego-ironworks": {
+   "name": "Fuego Ironworks",
+   "zone": 204,
+   "zones": [
+    205
+   ]
+  },
+  "eterna-forest": {
+   "name": "Eterna Forest",
+   "zone": 202,
+   "zones": [
+    203
+   ]
+  },
+  "old-chateau": {
+   "name": "Old Chateau",
+   "zone": 295,
+   "zones": [
+    296,
+    297,
+    298,
+    299,
+    300,
+    301,
+    302,
+    303
+   ]
+  },
+  "eterna-city": {
+   "name": "Eterna City",
+   "zone": 65,
+   "zones": [
+    66,
+    67,
+    68,
+    69,
+    70,
+    72,
+    73,
+    74,
+    75,
+    76,
+    77,
+    78,
+    79,
+    81,
+    82,
+    83,
+    84,
+    85,
+    477
+   ]
+  },
+  "route-206": {
+   "name": "Route 206",
+   "zone": 80,
+   "zones": [
+    350,
+    351
+   ]
+  },
+  "route-207": {
+   "name": "Route 207",
+   "zone": 353
+  },
+  "route-208": {
+   "name": "Route 208",
+   "zone": 109,
+   "zones": [
+    354,
+    355
+   ]
+  },
+  "route-211": {
+   "name": "Route 211",
+   "zone": 365,
+   "zones": [
+    366
+   ]
+  },
+  "mt-coronet": {
+   "name": "Mt. Coronet",
+   "zone": 207,
+   "zones": [
+    208,
+    209,
+    210,
+    211,
+    212,
+    213,
+    214,
+    215,
+    216,
+    217,
+    218,
+    219
+   ]
+  },
+  "wayward-cave": {
+   "name": "Wayward Cave",
+   "zone": 284,
+   "zones": [
+    285
+   ]
+  },
+  "hearthome-city": {
+   "name": "Hearthome City",
+   "zone": 86,
+   "zones": [
+    87,
+    88,
+    89,
+    90,
+    91,
+    92,
+    93,
+    94,
+    95,
+    96,
+    97,
+    98,
+    99,
+    100,
+    101,
+    102,
+    103,
+    104,
+    105,
+    106,
+    107,
+    108,
+    112,
+    113,
+    114,
+    115,
+    478
+   ]
+  },
+  "route-209": {
+   "name": "Route 209",
+   "zone": 110,
+   "zones": [
+    356,
+    357,
+    358,
+    359,
+    360,
+    361
+   ]
+  },
+  "solaceon-town": {
+   "name": "Solaceon Town",
+   "zone": 433,
+   "zones": [
+    434,
+    435,
+    436,
+    438,
+    439,
+    440,
+    441,
+    487
+   ]
+  },
+  "solaceon-ruins": {
+   "name": "Solaceon Ruins",
+   "zone": 225,
+   "zones": [
+    226,
+    227,
+    228,
+    229,
+    230,
+    231,
+    232,
+    233,
+    234,
+    235,
+    236,
+    237,
+    238,
+    239,
+    240,
+    241,
+    242,
+    515
+   ]
+  },
+  "route-210": {
+   "name": "Route 210",
+   "zone": 362,
+   "zones": [
+    363,
+    364
+   ]
+  },
+  "route-215": {
+   "name": "Route 215",
+   "zone": 149,
+   "zones": [
+    382
+   ]
+  },
+  "veilstone-city": {
+   "name": "Veilstone City",
+   "zone": 132,
+   "zones": [
+    133,
+    134,
+    135,
+    143,
+    144,
+    145,
+    146,
+    147,
+    148,
+    480
+   ]
+  },
+  "route-214": {
+   "name": "Route 214",
+   "zone": 380,
+   "zones": [
+    381
+   ]
+  },
+  "valor-lakefront": {
+   "name": "Valor Lakefront",
+   "zone": 336
+  },
+  "route-213": {
+   "name": "Route 213",
+   "zone": 373,
+   "zones": [
+    374
+   ]
+  },
+  "pastoria-city": {
+   "name": "Pastoria City",
+   "zone": 120,
+   "zones": [
+    121,
+    122,
+    123,
+    124,
+    125,
+    126,
+    127,
+    128,
+    129,
+    130,
+    131,
+    223,
+    479
+   ]
+  },
+  "great-marsh": {
+   "name": "Great Marsh",
+   "zone": 504,
+   "zones": [
+    505,
+    506,
+    507,
+    508,
+    509
+   ]
+  },
+  "route-212": {
+   "name": "Route 212",
+   "zone": 111,
+   "zones": [
+    367,
+    371,
+    372
+   ]
+  },
+  "trophy-garden": {
+   "name": "Trophy Garden",
+   "zone": 287
+  },
+  "celestic-town": {
+   "name": "Celestic Town",
+   "zone": 442,
+   "zones": [
+    443,
+    444,
+    445,
+    446,
+    447,
+    448,
+    449,
+    488
+   ]
+  },
+  "route-218": {
+   "name": "Route 218",
+   "zone": 388,
+   "zones": [
+    389,
+    390
+   ]
+  },
+  "canalave-city": {
+   "name": "Canalave City",
+   "zone": 33,
+   "zones": [
+    34,
+    35,
+    36,
+    37,
+    41,
+    42,
+    43,
+    44,
+    475,
+    491
+   ]
+  },
+  "iron-island": {
+   "name": "Iron Island",
+   "zone": 288,
+   "zones": [
+    289,
+    290,
+    291,
+    292,
+    293,
+    294,
+    514
+   ]
+  },
+  "lake-valor": {
+   "name": "Lake Valor",
+   "zone": 314,
+   "zones": [
+    315
+   ]
+  },
+  "route-216": {
+   "name": "Route 216",
+   "zone": 383,
+   "zones": [
+    384
+   ]
+  },
+  "route-217": {
+   "name": "Route 217",
+   "zone": 385,
+   "zones": [
+    386,
+    387
+   ]
+  },
+  "acuity-lakefront": {
+   "name": "Acuity Lakefront",
+   "zone": 340
+  },
+  "lake-acuity": {
+   "name": "Lake Acuity",
+   "zone": 317,
+   "zones": [
+    318
+   ]
+  },
+  "snowpoint-city": {
+   "name": "Snowpoint City",
+   "zone": 165,
+   "zones": [
+    166,
+    167,
+    168,
+    169,
+    170,
+    171,
+    482
+   ]
+  },
+  "snowpoint-temple": {
+   "name": "Snowpoint Temple",
+   "zone": 278,
+   "zones": [
+    279,
+    280,
+    281,
+    282,
+    283
+   ]
+  },
+  "spear-pillar": {
+   "name": "Spear Pillar",
+   "zone": 220,
+   "zones": [
+    221
+   ]
+  },
+  "route-219": {
+   "name": "Route 219",
+   "zone": 391
+  },
+  "route-220": {
+   "name": "Route 220",
+   "zone": 467
+  },
+  "route-221": {
+   "name": "Route 221",
+   "zone": 392,
+   "zones": [
+    394
+   ]
+  },
+  "pal-park": {
+   "name": "Pal Park",
+   "zone": 251,
+   "zones": [
+    393
+   ]
+  },
+  "route-222": {
+   "name": "Route 222",
+   "zone": 395,
+   "zones": [
+    396,
+    397,
+    398
+   ]
+  },
+  "sunyshore-city": {
+   "name": "Sunyshore City",
+   "zone": 150,
+   "zones": [
+    151,
+    152,
+    153,
+    154,
+    155,
+    156,
+    158,
+    159,
+    160,
+    161,
+    162,
+    163,
+    481
+   ]
+  },
+  "route-223": {
+   "name": "Route 223",
+   "zone": 468
+  },
+  "victory-road": {
+   "name": "Victory Road",
+   "zone": 244,
+   "zones": [
+    245,
+    246,
+    247,
+    248,
+    249
+   ]
+  },
+  "pokemon-league": {
+   "name": "Pokémon League",
+   "zone": 172,
+   "zones": [
+    173,
+    174,
+    175,
+    176,
+    177,
+    178,
+    179,
+    180,
+    181,
+    182,
+    183,
+    184,
+    185,
+    186,
+    187,
+    483,
+    495,
+    496
+   ]
+  },
+  "fight-area": {
+   "name": "Fight Area",
+   "zone": 188,
+   "zones": [
+    189,
+    190,
+    191,
+    194,
+    195,
+    484
+   ]
+  },
+  "route-224": {
+   "name": "Route 224",
+   "zone": 399
+  },
+  "route-225": {
+   "name": "Route 225",
+   "zone": 193,
+   "zones": [
+    400,
+    498
+   ]
+  },
+  "route-226": {
+   "name": "Route 226",
+   "zone": 469,
+   "zones": [
+    499
+   ]
+  },
+  "route-227": {
+   "name": "Route 227",
+   "zone": 403,
+   "zones": [
+    500
+   ]
+  },
+  "route-228": {
+   "name": "Route 228",
+   "zone": 406,
+   "zones": [
+    501,
+    502,
+    503
+   ]
+  },
+  "route-229": {
+   "name": "Route 229",
+   "zone": 407
+  },
+  "route-230": {
+   "name": "Route 230",
+   "zone": 471
+  },
+  "stark-mountain": {
+   "name": "Stark Mountain",
+   "zone": 262,
+   "zones": [
+    263,
+    264,
+    265
+   ]
+  },
+  "turnback-cave": {
+   "name": "Turnback Cave",
+   "zone": 268,
+   "zones": [
+    269,
+    270,
+    271,
+    272,
+    273,
+    518,
+    519,
+    520,
+    521,
+    522,
+    523,
+    524,
+    525,
+    526,
+    527,
+    528,
+    529,
+    530,
+    531,
+    532,
+    533,
+    534,
+    535,
+    536,
+    537,
+    538,
+    539,
+    540,
+    541,
+    542,
+    543,
+    544,
+    545,
+    546,
+    547,
+    548,
+    549,
+    550,
+    551,
+    552,
+    553,
+    554,
+    555,
+    556,
+    557
+   ]
+  },
+  "full-moon-island": {
+   "name": "Full Moon Island",
+   "zone": 260,
+   "zones": [
+    261
+   ]
+  },
+  "new-moon-island": {
+   "name": "New Moon Island",
+   "zone": 320,
+   "zones": [
+    321
+   ]
+  }
+ },
+ "milestones": [
+  {
+   "id": "barry-route-203",
+   "name": "Rival: Barry, first battle",
+   "kind": "rival",
+   "place": "route-203",
+   "level_cap": 9,
+   "foe": {
+    "name": "Cedric",
+    "ace_level": 9
+   },
+   "done_when": "later",
+   "opens": [
+    "twinleaf-town",
+    "route-201",
+    "lake-verity",
+    "sandgem-town",
+    "route-202",
+    "jubilife-city",
+    "route-203",
+    "route-204"
+   ],
+   "tips": "A short fight: a Starly at Lv 7 and the starter that beats yours at Lv 9. Raise the starter a couple of levels on Route 202 and keep a few Potions; he gives you no more trouble for a while.",
+   "quality": "reference-only",
+   "source": "Serebii: Pokearth Route 203 (DP); PokeDream: DP walkthrough ch1 and ch3"
+  },
+  {
+   "id": "gym1-roark",
+   "name": "Gym 1: Roark",
+   "kind": "gym",
+   "place": "oreburgh-city",
+   "leader": "Roark",
+   "theme": "rock",
+   "level_cap": 14,
+   "foe": {
+    "name": "Roark",
+    "class": "Leader",
+    "ace_level": 14
+   },
+   "done_when": "badge:1",
+   "opens": [
+    "oreburgh-gate",
+    "oreburgh-city",
+    "oreburgh-mine"
+   ],
+   "tips": "Geodude 12, Onix 12, Cranidos 14: Water, Grass and Fighting moves do the work. Turtwig and Piplup walk through; with Chimchar use Mach Punch or catch a Budew on Route 204 or a Machop on Route 207 first.",
+   "badge_note": "Coal Badge: Rock Smash works outside battle (the HM comes from a hiker at the Oreburgh Gate entrance). Roark also hands over TM76 Stealth Rock.",
+   "quality": "reference-only",
+   "source": "Serebii: DP gym leaders, Pokearth Oreburgh City; pokemondb: DP gym leaders; PokeDream ch4"
+  },
+  {
+   "id": "jubilife-grunts",
+   "name": "Team Galactic: Jubilife tag battle",
+   "kind": "team",
+   "place": "jubilife-city",
+   "level_cap": 11,
+   "done_when": "later",
+   "opens": [],
+   "tips": "After Roark you and Dawn face two grunts (Wurmple and Silcoon at Lv 9, a Zubat at Lv 11) in Jubilife. Easy, but heal first. Winning gets you the Fashion Case at the TV station.",
+   "quality": "reference-only",
+   "source": "Serebii: Pokearth Jubilife City (DP); PokeDream: DP walkthrough ch4"
+  },
+  {
+   "id": "mars-windworks",
+   "name": "Team Galactic: Commander Mars at Valley Windworks",
+   "kind": "team",
+   "place": "valley-windworks",
+   "level_cap": 16,
+   "foe": {
+    "name": "Mars",
+    "class": "Commander",
+    "ace_level": 16
+   },
+   "done_when": "later",
+   "opens": [
+    "floaroma-town",
+    "route-205",
+    "floaroma-meadow",
+    "valley-windworks",
+    "eterna-forest"
+   ],
+   "tips": "Zubat Lv 14 and Purugly Lv 16. Purugly is the only real threat and it is pure Normal, so a Fighting move solves it. Save the man in Floaroma Meadow first: he gives the Works Key and Honey.",
+   "quality": "reference-only",
+   "source": "Serebii: Pokearth Valley Windworks (DP); PokeDream: DP walkthrough ch5"
+  },
+  {
+   "id": "jupiter-eterna",
+   "name": "Team Galactic: Commander Jupiter at the Eterna building",
+   "kind": "team",
+   "place": "eterna-city",
+   "level_cap": 20,
+   "foe": {
+    "name": "Jupiter",
+    "class": "Commander",
+    "ace_level": 20
+   },
+   "done_when": "later",
+   "opens": [
+    "eterna-city"
+   ],
+   "tips": "Zubat Lv 18 and Skuntank Lv 20 (Poison/Dark): Ground is the clean answer, and Psychic does nothing to a Dark type. Grunts and a Kadabra scientist on the lower floors are level 12-15. After the win Team Galactic leaves town and the Bicycle shop gives you a bike.",
+   "quality": "reference-only",
+   "source": "Serebii: Pokearth Eterna Galactic Building (DP); PokeDream: DP walkthrough ch6"
+  },
+  {
+   "id": "gym2-gardenia",
+   "name": "Gym 2: Gardenia",
+   "kind": "gym",
+   "place": "eterna-city",
+   "leader": "Gardenia",
+   "theme": "grass",
+   "level_cap": 22,
+   "foe": {
+    "name": "Gardenia",
+    "class": "Leader",
+    "ace_level": 22
+   },
+   "done_when": "badge:2",
+   "opens": [
+    "route-211",
+    "route-206",
+    "route-207",
+    "route-208",
+    "mt-coronet",
+    "wayward-cave",
+    "old-chateau"
+   ],
+   "tips": "Cherubi 19, Turtwig 19, Roserade 22 (Grass/Poison). Fire, Flying, Bug and Ice hit hard; Psychic also works on the Poison half of Roserade. Beat the four trainers in the tree maze first.",
+   "badge_note": "Forest Badge: Cut works outside battle and traded Pokemon up to Lv 30 obey you. Gardenia gives TM86 Grass Knot.",
+   "quality": "reference-only",
+   "source": "Serebii: DP gym leaders, Pokearth Eterna City; pokemondb: DP gym leaders; PokeDream ch6"
+  },
+  {
+   "id": "barry-hearthome",
+   "name": "Rival: Barry in Hearthome",
+   "kind": "rival",
+   "place": "hearthome-city",
+   "level_cap": 21,
+   "foe": {
+    "name": "Cedric",
+    "ace_level": 21
+   },
+   "done_when": "later",
+   "opens": [
+    "hearthome-city",
+    "route-209",
+    "route-209",
+    "solaceon-town",
+    "solaceon-ruins"
+   ],
+   "tips": "Four Pokemon: a Starly at Lv 19, two Lv 20 picks (Buizel, Roselia or Ponyta depending on your starter) and his starter's middle form at Lv 21. Nothing here is hard for a team at Lv 22 or so.",
+   "quality": "reference-only",
+   "source": "Serebii: Pokearth Hearthome City (DP); PokeDream: DP walkthrough ch7"
+  },
+  {
+   "id": "gym3-maylene",
+   "name": "Gym 3: Maylene",
+   "kind": "gym",
+   "place": "veilstone-city",
+   "leader": "Maylene",
+   "theme": "fighting",
+   "level_cap": 30,
+   "foe": {
+    "name": "Maylene",
+    "class": "Leader",
+    "ace_level": 30
+   },
+   "done_when": "badge:3",
+   "opens": [
+    "route-215",
+    "veilstone-city",
+    "route-214",
+    "valor-lakefront",
+    "route-213"
+   ],
+   "tips": "Meditite 27, Machoke 27, Lucario 30 (Fighting/Steel). Flying handles Meditite and Machoke; Lucario is best met with Fire or Ground. The gym is a sliding-board puzzle with Black Belts before her.",
+   "badge_note": "Cobble Badge: Fly works outside battle (the HM itself is picked up in the Veilstone warehouse). Maylene gives TM60 Drain Punch.",
+   "quality": "reference-only",
+   "source": "Serebii: DP gym leaders, Pokearth Veilstone City; pokemondb: DP gym leaders; PokeDream ch9"
+  },
+  {
+   "id": "gym4-wake",
+   "name": "Gym 4: Crasher Wake",
+   "kind": "gym",
+   "place": "pastoria-city",
+   "leader": "Crasher Wake",
+   "theme": "water",
+   "level_cap": 30,
+   "foe": {
+    "name": "Wake",
+    "class": "Leader",
+    "ace_level": 30
+   },
+   "done_when": "badge:4",
+   "opens": [
+    "pastoria-city",
+    "great-marsh",
+    "route-212",
+    "trophy-garden"
+   ],
+   "tips": "Gyarados 27, Quagsire 27, Floatzel 30. Electric kills Gyarados, Grass kills Quagsire (Water/Ground, 4x). The gym is a water-level puzzle you solve with the colored switches before reaching him.",
+   "badge_note": "Fen Badge: Defog works outside battle (HM05 is given in the Great Marsh entrance building). Wake gives TM55 Brine.",
+   "quality": "reference-only",
+   "source": "Serebii: DP gym leaders, Pokearth Pastoria City; pokemondb: DP gym leaders; PokeDream ch10"
+  },
+  {
+   "id": "barry-pastoria",
+   "name": "Rival: Barry outside the Great Marsh",
+   "kind": "rival",
+   "place": "pastoria-city",
+   "level_cap": 28,
+   "foe": {
+    "name": "Cedric",
+    "ace_level": 28
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "After a Galactic grunt leaves the marsh gate, Barry fights you again: Starly Lv 26, two Lv 25 picks, and his starter's middle form at Lv 28. Everything is under Lv 30.",
+   "quality": "reference-only",
+   "source": "Serebii: Pokearth Pastoria City (DP); PokeDream: DP walkthrough ch10"
+  },
+  {
+   "id": "celestic-surf",
+   "name": "Story: Old Charm and Surf in Celestic Town",
+   "kind": "story",
+   "place": "celestic-town",
+   "level_cap": 36,
+   "done_when": "later",
+   "opens": [
+    "celestic-town"
+   ],
+   "tips": "Cynthia gives a SecretPotion for the Psyduck on Route 210 and an Old Charm to carry to her grandmother in Celestic Town. Read the wall paintings in the cave and she hands over Surf. Cyrus speaks to you on the way out.",
+   "quality": "reference-only",
+   "source": "PokeDream: DP walkthrough ch10 and ch11; Serebii: DP HM list"
+  },
+  {
+   "id": "gym5-fantina",
+   "name": "Gym 5: Fantina",
+   "kind": "gym",
+   "place": "hearthome-city",
+   "leader": "Fantina",
+   "theme": "ghost",
+   "level_cap": 36,
+   "foe": {
+    "name": "Fantina",
+    "class": "Leader",
+    "ace_level": 36
+   },
+   "done_when": "badge:5",
+   "opens": [
+    "route-218",
+    "fuego-ironworks",
+    "route-219",
+    "route-220",
+    "route-221"
+   ],
+   "tips": "Drifblim 32, Gengar 34, Mismagius 36. Dark and Ghost moves hit all three and Normal or Fighting moves do nothing. The gym is a quiz-door puzzle; a wrong door starts a trainer fight. Find Fantina near the Contest Hall first.",
+   "badge_note": "Relic Badge: Surf works outside battle. Fantina gives TM65 Shadow Claw.",
+   "quality": "reference-only",
+   "source": "Serebii: DP gym leaders, Pokearth Hearthome City; pokemondb: DP gym leaders; PokeDream ch7 and ch12"
+  },
+  {
+   "id": "barry-canalave",
+   "name": "Rival: Barry on the Canalave bridge",
+   "kind": "rival",
+   "place": "canalave-city",
+   "level_cap": 35,
+   "foe": {
+    "name": "Cedric",
+    "ace_level": 35
+   },
+   "done_when": "later",
+   "opens": [
+    "canalave-city"
+   ],
+   "tips": "Five Pokemon: Heracross at Lv 30, Staravia at Lv 31, two Lv 32 picks and his starter's middle form at Lv 35. Heracross is the new threat; Flying or Psychic moves handle it.",
+   "quality": "reference-only",
+   "source": "Serebii: Pokearth Canalave City (DP); PokeDream: DP walkthrough ch13"
+  },
+  {
+   "id": "gym6-byron",
+   "name": "Gym 6: Byron",
+   "kind": "gym",
+   "place": "canalave-city",
+   "leader": "Byron",
+   "theme": "steel",
+   "level_cap": 39,
+   "foe": {
+    "name": "Byron",
+    "class": "Leader",
+    "ace_level": 39
+   },
+   "done_when": "badge:6",
+   "opens": [
+    "iron-island"
+   ],
+   "tips": "Bronzor 36, Steelix 36, Bastiodon 39. Fire and Ground hit Bronzor and Steelix, and Fighting or Ground wrecks Bastiodon. The gym has an elevator-style puzzle and workers with Onix and Steelix before the leader.",
+   "badge_note": "Mine Badge: Strength works outside battle. Byron gives TM91 Flash Cannon.",
+   "quality": "reference-only",
+   "source": "Serebii: DP gym leaders, Pokearth Canalave City; pokemondb: DP gym leaders; PokeDream ch13"
+  },
+  {
+   "id": "saturn-lake-valor",
+   "name": "Team Galactic: Saturn at Lake Valor",
+   "kind": "team",
+   "place": "lake-valor",
+   "level_cap": 37,
+   "foe": {
+    "name": "Saturn",
+    "class": "Commander",
+    "ace_level": 37
+   },
+   "done_when": "later",
+   "opens": [
+    "lake-valor"
+   ],
+   "tips": "After Rowan's library briefing, Galactic grunts and Commander Saturn wait in the central cave: Kadabra 35, Bronzor 35, Toxicroak 37. Dark, Ghost or Bug moves hit Kadabra, Fire or Ground hits Bronzor, Psychic or Ground hits Toxicroak.",
+   "quality": "reference-only",
+   "source": "Serebii: Pokearth Lake Valor (DP); PokeDream: DP walkthrough ch13"
+  },
+  {
+   "id": "mars-lake-verity",
+   "name": "Team Galactic: Mars at Lake Verity",
+   "kind": "team",
+   "place": "lake-verity",
+   "level_cap": 39,
+   "foe": {
+    "name": "Mars",
+    "class": "Commander",
+    "ace_level": 39
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Mars returns with Golbat, Bronzor and Purugly (Lv 37-39). Fighting for Purugly, Electric or Rock for Golbat, Fire or Ground for Bronzor.",
+   "quality": "reference-only",
+   "source": "Serebii: Pokearth Lake Verity (DP); PokeDream: DP walkthrough ch13"
+  },
+  {
+   "id": "gym7-candice",
+   "name": "Gym 7: Candice",
+   "kind": "gym",
+   "place": "snowpoint-city",
+   "leader": "Candice",
+   "theme": "ice",
+   "level_cap": 42,
+   "foe": {
+    "name": "Candice",
+    "class": "Leader",
+    "ace_level": 42
+   },
+   "done_when": "badge:7",
+   "opens": [
+    "route-216",
+    "route-217",
+    "acuity-lakefront",
+    "snowpoint-city"
+   ],
+   "tips": "Snover 38, Sneasel 38, Medicham 40, Abomasnow 42. Fire and Rock are the answers to the Grass/Ice and Dark/Ice pair; Medicham wants Flying or Ghost. Slide across the ice to smash the snowballs in order.",
+   "badge_note": "Icicle Badge: Rock Climb works outside battle (HM08 is given on Route 217). Candice gives TM72 Avalanche.",
+   "quality": "reference-only",
+   "source": "Serebii: DP gym leaders, Pokearth Snowpoint City; pokemondb: DP gym leaders; PokeDream ch14"
+  },
+  {
+   "id": "lake-acuity-jupiter",
+   "name": "Story: Lake Acuity and Jupiter's exit",
+   "kind": "story",
+   "place": "lake-acuity",
+   "level_cap": 42,
+   "done_when": "later",
+   "opens": [
+    "lake-acuity"
+   ],
+   "tips": "At Acuity Lakefront grunts block the lake. Return after Snowpoint: Jupiter has just beaten Barry and leaves for Veilstone. No fight with her; head to the Veilstone Galactic building.",
+   "quality": "reference-only",
+   "source": "PokeDream: DP walkthrough ch13 and ch14; Serebii: Pokearth Lake Acuity (DP)"
+  },
+  {
+   "id": "cyrus-veilstone",
+   "name": "Team Galactic: Boss Cyrus in Veilstone",
+   "kind": "team",
+   "place": "veilstone-city",
+   "level_cap": 43,
+   "foe": {
+    "name": "Cyrus",
+    "class": "Galactic Boss",
+    "ace_level": 43
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Murkrow 40, Golbat 40, Sneasel 43. Electric and Rock hit the first two, Fighting the last. Get the Storage Key from the grunt outside, open the warehouse for the Galactic Key, then climb. Cyrus gives a Master Ball.",
+   "quality": "reference-only",
+   "source": "Serebii: Pokearth Veilstone Galactic Building (DP); PokeDream: DP walkthrough ch15"
+  },
+  {
+   "id": "saturn-veilstone",
+   "name": "Team Galactic: Saturn in Veilstone",
+   "kind": "team",
+   "place": "veilstone-city",
+   "level_cap": 40,
+   "foe": {
+    "name": "Saturn",
+    "class": "Commander",
+    "ace_level": 40
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Guarding the caged lake trio: Kadabra 38, Bronzor 38, Toxicroak 40. Same plan as at Lake Valor. Press the console after the win to release Uxie, Mesprit and Azelf.",
+   "quality": "reference-only",
+   "source": "Serebii: Pokearth Veilstone Galactic Building (DP); PokeDream: DP walkthrough ch15"
+  },
+  {
+   "id": "mars-jupiter-spear",
+   "name": "Team Galactic: Mars and Jupiter at Spear Pillar",
+   "kind": "team",
+   "place": "spear-pillar",
+   "level_cap": 46,
+   "foe": {
+    "name": "Jupiter",
+    "class": "Commander",
+    "ace_level": 46
+   },
+   "done_when": "later",
+   "opens": [
+    "spear-pillar"
+   ],
+   "tips": "Mars: Bronzor 41, Golbat 42, Purugly 45. Jupiter: Bronzor 41, Golbat 41, Skuntank 46. Barry fights alongside you against Jupiter in one guide, as two singles in another; bring Revives either way.",
+   "quality": "reference-only",
+   "source": "Serebii: Pokearth Spear Pillar (DP); PokeDream: DP walkthrough ch16"
+  },
+  {
+   "id": "cyrus-spear-pillar",
+   "name": "Team Galactic: Cyrus at Spear Pillar",
+   "kind": "team",
+   "place": "spear-pillar",
+   "level_cap": 48,
+   "foe": {
+    "name": "Cyrus",
+    "class": "Galactic Boss",
+    "ace_level": 48
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Honchkrow 45, Crobat 46, Gyarados 45, Weavile 48. Electric and Rock cover three of them; Fighting handles Weavile. He is a single battle after the commanders.",
+   "quality": "reference-only",
+   "source": "Serebii: Pokearth Spear Pillar (DP); PokeDream: DP walkthrough ch16"
+  },
+  {
+   "id": "legend-box",
+   "name": "Legendary: Dialga",
+   "kind": "legendary",
+   "place": "spear-pillar",
+   "level_cap": 47,
+   "done_when": "later",
+   "opens": [],
+   "tips": "Wild Lv 47, one chance, so save first. It is Steel/Dragon; lower it with a move that cannot faint it, add sleep or paralysis, and throw Ultra or Dusk Balls. The Adamant Orb lies nearby afterwards.",
+   "quality": "reference-only",
+   "source": "Serebii: DP legendaries; PokeDream: DP walkthrough ch16"
+  },
+  {
+   "id": "azelf",
+   "name": "Legendary: Azelf",
+   "kind": "legendary",
+   "place": "lake-valor",
+   "level_cap": 50,
+   "done_when": "later",
+   "opens": [],
+   "tips": "Lv 50 in the Lake Valor cave once the Spear Pillar events are over. It does not flee, but there is only one encounter: save, status it, and bring Ultra Balls.",
+   "quality": "reference-only",
+   "source": "Serebii: DP legendaries; Pokearth Lake Valor (DP)"
+  },
+  {
+   "id": "uxie",
+   "name": "Legendary: Uxie",
+   "kind": "legendary",
+   "place": "lake-acuity",
+   "level_cap": 50,
+   "done_when": "later",
+   "opens": [],
+   "tips": "Lv 50 in the Lake Acuity cave after the Spear Pillar events. Single encounter, no fleeing; save and bring status moves.",
+   "quality": "reference-only",
+   "source": "Serebii: DP legendaries; Pokearth Lake Acuity (DP)"
+  },
+  {
+   "id": "mesprit",
+   "name": "Legendary: Mesprit",
+   "kind": "legendary",
+   "place": "lake-verity",
+   "level_cap": 50,
+   "done_when": "later",
+   "opens": [],
+   "tips": "Lv 50 in the Lake Verity cave, but it runs away after the first battle and then roams. A trapping move helps the first time; later track it on the Pokétch map and catch it in the grass it stands in.",
+   "quality": "reference-only",
+   "source": "Serebii: DP legendaries; PokeDream: DP walkthrough ch16"
+  },
+  {
+   "id": "gym8-volkner",
+   "name": "Gym 8: Volkner",
+   "kind": "gym",
+   "place": "sunyshore-city",
+   "leader": "Volkner",
+   "theme": "electric",
+   "level_cap": 49,
+   "foe": {
+    "name": "Volkner",
+    "class": "Leader",
+    "ace_level": 49
+   },
+   "done_when": "badge:8",
+   "opens": [
+    "route-222",
+    "sunyshore-city"
+   ],
+   "tips": "Raichu 46, Ambipom 47, Octillery 47, Luxray 49. Ground handles Raichu and Luxray; Grass or Electric beats Octillery and Fighting beats Ambipom. Flint of the Elite Four shows up in town first.",
+   "badge_note": "Beacon Badge: Waterfall works outside battle (HM07 is given by Jasmine in northern Sunyshore). Volkner gives TM57 Charge Beam.",
+   "quality": "reference-only",
+   "source": "Serebii: DP gym leaders, Pokearth Sunyshore City; pokemondb: DP gym leaders; PokeDream ch17"
+  },
+  {
+   "id": "barry-league",
+   "name": "Rival: Barry at the League gate",
+   "kind": "rival",
+   "place": "pokemon-league",
+   "level_cap": 53,
+   "foe": {
+    "name": "Cedric",
+    "ace_level": 53
+   },
+   "done_when": "later",
+   "opens": [
+    "route-223",
+    "victory-road",
+    "pokemon-league"
+   ],
+   "tips": "Six Pokemon: Staraptor 48, a Lv 49 pair, Heracross 50, Snorlax 51 and his starter's final form at Lv 53. Snorlax is the tank, Heracross the fast hitter. Heal and shop before the doors.",
+   "quality": "reference-only",
+   "source": "Serebii: Pokearth Pokemon League (DP); PokeDream: DP walkthrough ch18"
+  },
+  {
+   "id": "e4-aaron",
+   "name": "Elite Four 1: Aaron",
+   "kind": "elite4",
+   "place": "pokemon-league",
+   "leader": "Aaron",
+   "theme": "bug",
+   "level_cap": 57,
+   "foe": {
+    "name": "Aaron",
+    "class": "Elite Four",
+    "ace_level": 57
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Dustox 53, Beautifly 53, Vespiquen 54, Heracross 54, Drapion 57. Fire, Flying and Rock handle the Bug types; Drapion (Poison/Dark) wants Ground or Psychic.",
+   "quality": "reference-only",
+   "source": "Serebii: Pokearth Pokemon League (DP); pokemondb: DP Elite Four; PokeDream ch18"
+  },
+  {
+   "id": "e4-bertha",
+   "name": "Elite Four 2: Bertha",
+   "kind": "elite4",
+   "place": "pokemon-league",
+   "leader": "Bertha",
+   "theme": "ground",
+   "level_cap": 59,
+   "foe": {
+    "name": "Bertha",
+    "class": "Elite Four",
+    "ace_level": 59
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Quagsire 55, Whiscash 55, Golem 56, Sudowoodo 57, Hippowdon 59. Grass hits all five, and 4x on Quagsire, Whiscash and Golem. Water and Ice also work on the others.",
+   "quality": "reference-only",
+   "source": "Serebii: Pokearth Pokemon League (DP); pokemondb: DP Elite Four; PokeDream ch18"
+  },
+  {
+   "id": "e4-flint",
+   "name": "Elite Four 3: Flint",
+   "kind": "elite4",
+   "place": "pokemon-league",
+   "leader": "Flint",
+   "theme": "fire",
+   "level_cap": 61,
+   "foe": {
+    "name": "Flint",
+    "class": "Elite Four",
+    "ace_level": 61
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Rapidash 58, Steelix 57, Lopunny 57, Drifblim 58, Infernape 61. Only two are Fire. Water and Ground cover Rapidash, Steelix and Infernape; Drifblim wants Rock, Electric or Ice.",
+   "quality": "reference-only",
+   "source": "Serebii: Pokearth Pokemon League (DP); pokemondb: DP Elite Four; PokeDream ch18"
+  },
+  {
+   "id": "e4-lucian",
+   "name": "Elite Four 4: Lucian",
+   "kind": "elite4",
+   "place": "pokemon-league",
+   "leader": "Lucian",
+   "theme": "psychic",
+   "level_cap": 63,
+   "foe": {
+    "name": "Lucian",
+    "class": "Elite Four",
+    "ace_level": 63
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Mr. Mime 59, Girafarig 59, Medicham 60, Alakazam 60, Bronzong 63. Dark, Ghost and Bug moves hit the Psychic types hard; Bronzong (Steel/Psychic) needs Fire or Ground. Alakazam is fast but frail.",
+   "quality": "reference-only",
+   "source": "Serebii: Pokearth Pokemon League (DP); pokemondb: DP Elite Four; PokeDream ch18"
+  },
+  {
+   "id": "champion-cynthia",
+   "name": "Champion: Cynthia",
+   "kind": "champion",
+   "place": "pokemon-league",
+   "leader": "Cynthia",
+   "level_cap": 66,
+   "foe": {
+    "name": "Cynthia",
+    "class": "Champion",
+    "ace_level": 66
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Spiritomb 61, Roserade 60, Gastrodon 60, Lucario 63, Milotic 63, Garchomp 66. Garchomp is Dragon/Ground, so Ice is 4x; Spiritomb has no weakness in this generation. The fight starts as soon as you enter, so heal and save outside.",
+   "quality": "reference-only",
+   "source": "Serebii: Pokearth Pokemon League (DP); pokemondb: DP champion; PokeDream ch18"
+  },
+  {
+   "id": "postgame-fight-area",
+   "name": "Post-game: Fight Area opens",
+   "kind": "postgame",
+   "place": "fight-area",
+   "level_cap": 64,
+   "done_when": "later",
+   "opens": [
+    "fight-area",
+    "route-225",
+    "route-226",
+    "route-227",
+    "route-228",
+    "route-229",
+    "route-230"
+   ],
+   "tips": "After the Hall of Fame, a sailor south of Snowpoint City takes you to the Fight Area, which links to Routes 225 and 230 and to the Battle Park. ",
+   "quality": "reference-only",
+   "source": "Serebii: Pokearth Fight Area (DP); Smogon: DP Battle Tower guide"
+  },
+  {
+   "id": "barry-fight-area",
+   "name": "Post-game: Barry weekend rematch",
+   "kind": "rival",
+   "place": "fight-area",
+   "level_cap": 64,
+   "foe": {
+    "name": "Cedric",
+    "ace_level": 64
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "On weekends Barry waits in the Fight Area with a Lv 58-64 team (Staraptor, Floatzel or Roserade, Heracross, Rapidash, Snorlax and a final-stage starter). Serebii also lists a second set in the 70s.",
+   "quality": "reference-only",
+   "source": "Serebii: Pokearth Fight Area (DP) and DP daily events"
+  },
+  {
+   "id": "postgame-national-dex",
+   "name": "Post-game: National Pokedex",
+   "kind": "postgame",
+   "place": "sandgem-town",
+   "level_cap": 70,
+   "done_when": "later",
+   "opens": [
+    "pal-park",
+    "route-224",
+    "snowpoint-temple",
+    "stark-mountain",
+    "turnback-cave",
+    "full-moon-island"
+   ],
+   "tips": "See all 150 Sinnoh species and the professor in Sandgem upgrades the Pokedex. That opens Pal Park, the Snowpoint Temple, Stark Mountain, Turnback Cave, Full Moon Island and the post-game wild lists. Plan for Lv 70 foes.",
+   "quality": "reference-only",
+   "source": "PokeDream: DP sidequest FAQ; Serebii: DP legendaries and daily events"
+  },
+  {
+   "id": "heatran",
+   "name": "Legendary: Heatran",
+   "kind": "legendary",
+   "place": "stark-mountain",
+   "level_cap": 70,
+   "done_when": "later",
+   "opens": [],
+   "tips": "Needs the National Pokedex. A trainer partners with you through Stark Mountain, takes an item at the end and leaves; find the partner in a Survival Area house, then return to the mountain for Heatran at Lv 70. One chance, so save.",
+   "quality": "reference-only",
+   "source": "Serebii: DP legendaries; PokeDream: DP sidequest FAQ"
+  },
+  {
+   "id": "regigigas",
+   "name": "Legendary: Regigigas",
+   "kind": "legendary",
+   "place": "snowpoint-temple",
+   "level_cap": 70,
+   "done_when": "later",
+   "opens": [],
+   "tips": "Needs the National Pokedex and Regirock, Regice and Registeel from the GBA games (Pal Park). Bring all three to the statue on the bottom floor; Regigigas is Lv 70. Use status and avoid knocking it out too early.",
+   "quality": "reference-only",
+   "source": "Serebii: DP legendaries and Pokearth Snowpoint Temple (DP); PokeDream sidequest"
+  },
+  {
+   "id": "giratina",
+   "name": "Legendary: Giratina",
+   "kind": "legendary",
+   "place": "turnback-cave",
+   "level_cap": 70,
+   "done_when": "later",
+   "opens": [],
+   "tips": "Needs the National Pokedex. Walk through Turnback Cave to the room past the third pillar; Giratina (Lv 70) is waiting. Rooms reshuffle each visit, so a quick route earns an extra item. Bring Ice, Dragon, Ghost or Dark moves.",
+   "quality": "reference-only",
+   "source": "Serebii: DP legendaries and Pokearth Turnback Cave (DP); PokeDream sidequest"
+  },
+  {
+   "id": "cresselia",
+   "name": "Legendary: Cresselia",
+   "kind": "legendary",
+   "place": "full-moon-island",
+   "level_cap": 50,
+   "done_when": "later",
+   "opens": [],
+   "tips": "Needs the National Pokedex. At Canalave, a family above the sailor tells you about nightmares; the sailor then ferries you to Full Moon Island. Cresselia (Lv 50) flees after the first meeting and roams; track it on the Pokétch map.",
+   "quality": "reference-only",
+   "source": "Serebii: DP legendaries and Pokearth Full Moon Island; PokeDream sidequest"
+  },
+  {
+   "id": "battle-tower",
+   "name": "Post-game: Battle Tower and Palmer",
+   "kind": "postgame",
+   "place": "fight-area",
+   "level_cap": 50,
+   "foe": {
+    "name": "Palmer",
+    "class": "Tower Tycoon"
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "North of the Fight Area. All foes are scaled to Lv 50 (your higher Pokemon are lowered, lower ones stay). Seven straight wins form a set; in Single mode Tower Tycoon Palmer appears at win 21 and 49 and pays 20 BP.",
+   "quality": "reference-only",
+   "source": "Serebii: DP Battle Tower; Smogon: DP Battle Tower guide"
+  },
+  {
+   "id": "darkrai",
+   "name": "Event legendary: Darkrai",
+   "kind": "legendary",
+   "place": "new-moon-island",
+   "level_cap": 40,
+   "done_when": "later",
+   "opens": [],
+   "tips": "Needs the Member Card from a past Nintendo event (not in the game itself). Sleep at the Canalave inn, follow the diary, and the sailor takes you to New Moon Island. Darkrai is Lv 40.",
+   "quality": "reference-only",
+   "source": "Serebii: DP legendaries; PokeDream sidequest"
+  },
+  {
+   "id": "shaymin",
+   "name": "Event legendary: Shaymin",
+   "kind": "legendary",
+   "place": "route-224",
+   "level_cap": 30,
+   "done_when": "later",
+   "opens": [],
+   "tips": "Needs Oak's Letter from a Nintendo event. Talk to Oak at the end of Route 224, then walk the extended path to the flower field. Shaymin is Lv 30.",
+   "quality": "reference-only",
+   "source": "Serebii: DP legendaries; PokeDream sidequest"
+  },
+  {
+   "id": "arceus",
+   "name": "Event legendary: Arceus",
+   "kind": "legendary",
+   "place": "spear-pillar",
+   "level_cap": 80,
+   "done_when": "later",
+   "opens": [],
+   "tips": "Needs the Azure Flute from a Nintendo event. Use it at the symbol between the pillars at Spear Pillar to open the stairs to the Hall of Origin. Arceus is Lv 80, the highest wild level in the game.",
+   "quality": "reference-only",
+   "source": "Serebii: DP legendaries; PokeDream sidequest"
+  }
+ ],
+ "steps": [
+  {
+   "id": "st-first-team",
+   "title": "Fill out the early team",
+   "stage": "gym1-roark",
+   "text": "Before Roark, catch a Budew on Route 204 or a Machop on Route 207 if your starter is Chimchar; Turtwig and Piplup already beat Rock. Buy Potions in Jubilife and keep Rock Smash in mind for Oreburgh Gate.",
+   "places": [
+    "route-204",
+    "route-207",
+    "oreburgh-gate"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "PokeDream: DP walkthrough ch4"
+  },
+  {
+   "id": "st-roark-prep",
+   "title": "Get the Poketch and a fishing rod",
+   "stage": "gym1-roark",
+   "text": "In Jubilife City find the three clowns for coupons to get the Pokétch, and the fisherman at the station gives an Old Rod. The Trainers' School and TV station are optional.",
+   "places": [
+    "jubilife-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "PokeDream: DP walkthrough ch3; Serebii: Pokearth Jubilife City"
+  },
+  {
+   "id": "st-windworks",
+   "title": "Rescue the man in the meadow",
+   "stage": "mars-windworks",
+   "text": "Floaroma Meadow grunts hold a man for Honey. Rescue him for Honey and the Works Key (the key opens Valley Windworks). You can then buy Honey in the meadow for the honey trees.",
+   "places": [
+    "floaroma-meadow",
+    "valley-windworks"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "PokeDream: DP walkthrough ch5; Serebii: Sweet Honey"
+  },
+  {
+   "id": "st-eterna-bike",
+   "title": "Pick up the Bicycle and Explorer Kit",
+   "stage": "gym2-gardenia",
+   "text": "After Jupiter leaves, the Bicycle shop gives you a bike free. The old man by the Eterna Pokemon Center gives the Explorer Kit for the Underground. Gardenia's gym is easy with a Fire or Flying Pokemon.",
+   "places": [
+    "eterna-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "PokeDream: DP walkthrough ch6; Serebii: Pokearth Eterna City"
+  },
+  {
+   "id": "st-hearthome-contest",
+   "title": "Meet Fantina at the Contest Hall",
+   "stage": "barry-hearthome",
+   "text": "In Hearthome a runaway Pokemon leads you to the Contest Hall; Fantina is outside. Visit the Fan Club for the Poffin Case, and check Amity Square. The gym is a later stop here.",
+   "places": [
+    "hearthome-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "PokeDream: DP walkthrough ch7"
+  },
+  {
+   "id": "st-lost-tower",
+   "title": "Strength from the Lost Tower",
+   "stage": "gym3-maylene",
+   "text": "On Route 209 climb to the top of Lost Tower for HM04 Strength (usable after the Mine Badge) and a Cleanse Tag. An Oval Stone is on the floor for Happiny.",
+   "places": [
+    "route-209",
+    "route-209"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "PokeDream: DP walkthrough ch7; Serebii: DP HM list and items"
+  },
+  {
+   "id": "st-veilstone-prep",
+   "title": "Veilstone and the warehouse key",
+   "stage": "gym3-maylene",
+   "text": "Two grunts north of the Veilstone entrance fight you alongside Dawn. The Game Corner and department store are there; the Storage Key and the Galactic HQ come back later.",
+   "places": [
+    "veilstone-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "PokeDream: DP walkthrough ch9"
+  },
+  {
+   "id": "st-great-marsh",
+   "title": "Defog and the Great Marsh",
+   "stage": "gym4-wake",
+   "text": "A woman in the marsh entrance gives HM05 Defog. The Great Marsh costs 500 yen for 30 Safari Balls; the Pokemon there change daily. Pick up a Mystic Water on the south side with Surf.",
+   "places": [
+    "pastoria-city",
+    "great-marsh"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "PokeDream: DP walkthrough ch10; Serebii: Pokearth Pastoria City"
+  },
+  {
+   "id": "st-psyduck",
+   "title": "Clear Route 210",
+   "stage": "barry-pastoria",
+   "text": "Cynthia gives a SecretPotion for the Psyduck blocking Route 210. Use it, take the Old Charm north to Celestic Town and learn Surf.",
+   "places": [
+    "route-210",
+    "celestic-town"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "PokeDream: DP walkthrough ch10 and ch11"
+  },
+  {
+   "id": "st-after-surf",
+   "title": "Use Surf for the Ironworks and Route 218",
+   "stage": "gym5-fantina",
+   "text": "With the Relic Badge, Surf reaches Fuego Ironworks (Fire Stone, a Rock Incense), Route 218's water items and the way west. Visit the Poketch Company again for Memo Pad, Marking Map and Link Searcher.",
+   "places": [
+    "fuego-ironworks",
+    "route-218",
+    "jubilife-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "PokeDream: DP walkthrough ch5 and ch12"
+  },
+  {
+   "id": "st-canalave-prep",
+   "title": "Canalave and Iron Island",
+   "stage": "gym6-byron",
+   "text": "The Move Deleter lives in Canalave. A boat from the harbor goes to Iron Island, where Riley asks to be escorted for a Riolu Egg; bring five or fewer Pokemon.",
+   "places": [
+    "canalave-city",
+    "iron-island"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "PokeDream: DP walkthrough ch13 and sidequest FAQ; Serebii: Pokearth Canalave City"
+  },
+  {
+   "id": "st-library",
+   "title": "Lakes and the library briefing",
+   "stage": "saturn-lake-valor",
+   "text": "Rowan at the Canalave Library sends you to Lake Valor. Stock Revives and Full Heals; the grunts there have several Pokemon each.",
+   "places": [
+    "canalave-city",
+    "lake-valor"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "PokeDream: DP walkthrough ch13"
+  },
+  {
+   "id": "st-snow-route",
+   "title": "Rock Climb and the snow routes",
+   "stage": "gym7-candice",
+   "text": "Route 217 gives Rock Climb (HM08) and, near the Ice Rock, the spot for Glaceon. There is a bed on Route 216 to heal. For Candice's Ice team bring Fire, Fighting, Rock or Steel moves.",
+   "places": [
+    "route-216",
+    "route-217"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "PokeDream: DP walkthrough ch13 and ch14"
+  },
+  {
+   "id": "st-galactic-hq",
+   "title": "Break into Galactic HQ",
+   "stage": "cyrus-veilstone",
+   "text": "A grunt outside leaves the Storage Key. The warehouse in the northwest gives a Dusk Stone and the Galactic Key, which opens all locked HQ doors. The Master Ball comes from Cyrus.",
+   "places": [
+    "veilstone-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "PokeDream: DP walkthrough ch15; Serebii: Pokearth Galactic Warehouse"
+  },
+  {
+   "id": "st-spear-prep",
+   "title": "Prepare for Spear Pillar",
+   "stage": "mars-jupiter-spear",
+   "text": "Stock Ultra Balls, Dusk Balls from the Pastoria Mart, Revives and Repels. Bring a Pokemon with Rock Climb for Mt. Coronet. There is no going back mid-event, so heal and save at the base of the peak.",
+   "places": [
+    "mt-coronet",
+    "spear-pillar"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "PokeDream: DP walkthrough ch16"
+  },
+  {
+   "id": "st-catch-legend",
+   "title": "Catching Dialga",
+   "stage": "legend-box",
+   "text": "Dialga is the first of several one-chance encounters. Save before it, keep the Master Ball for a legend that flees (Mesprit, later Cresselia), and pick up the Adamant Orb when the dust settles.",
+   "places": [
+    "spear-pillar"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Serebii: DP legendaries; PokeDream: DP walkthrough ch16"
+  },
+  {
+   "id": "st-lake-trio",
+   "title": "Collect the lake trio",
+   "stage": "azelf",
+   "text": "After Spear Pillar visit Lake Valor (Azelf), Lake Acuity (Uxie) and Lake Verity (Mesprit). Mesprit flees, so a trapping move or the Master Ball helps. Lake Valor and Acuity also hide TM25 Thunder and TM14 Blizzard.",
+   "places": [
+    "lake-valor",
+    "lake-acuity",
+    "lake-verity"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Serebii: DP legendaries and Pokearth lake pages; PokeDream: DP walkthrough ch16"
+  },
+  {
+   "id": "st-victory-road",
+   "title": "Waterfall and Victory Road",
+   "stage": "gym8-volkner",
+   "text": "Jasmine in northern Sunyshore gives HM07 Waterfall after you win. Victory Road needs Surf, Strength, Rock Smash and Waterfall, and wild Pokemon run Lv 40-49.",
+   "places": [
+    "sunyshore-city",
+    "victory-road"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "PokeDream: DP walkthrough ch17"
+  },
+  {
+   "id": "st-pre-league",
+   "title": "Heal and stock before the League",
+   "stage": "e4-aaron",
+   "text": "Barry blocks the door. Buy Full Restores, Revives and status healers first, and use the PC downstairs. Each Elite Four member carries Full Restores, so battles can be long.",
+   "places": [
+    "pokemon-league"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "PokeDream: DP walkthrough ch18; Serebii: Pokearth Pokemon League"
+  },
+  {
+   "id": "st-after-credits",
+   "title": "Unlock the post-game",
+   "stage": "postgame-fight-area",
+   "text": "After the credits the sailor south of Snowpoint takes you to the Fight Area. Check the Sinnoh Pokedex for 150 seen species, then Sandgem's lab upgrades it to the National Pokedex.",
+   "places": [
+    "fight-area",
+    "sandgem-town"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "PokeDream: DP walkthrough sidequest; Serebii: DP daily events"
+  },
+  {
+   "id": "st-weekend-barry",
+   "title": "Weekend rival and Battle Tower",
+   "stage": "barry-fight-area",
+   "text": "Barry battles you in the Fight Area on weekends. In the Battle Tower every foe is Lv 50 and your stronger Pokemon are scaled down, so no extra grinding is needed; BP buys items and TMs.",
+   "places": [
+    "fight-area"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Serebii: DP daily events and Battle Tower"
+  },
+  {
+   "id": "st-legends-after",
+   "title": "Post-game legend order",
+   "stage": "postgame-national-dex",
+   "text": "With the National Pokedex: Cresselia at Full Moon Island, Heatran at Stark Mountain, Giratina in Turnback Cave and Regigigas (needs the three Regis from the GBA games). All are one-shot or fleeing, so save first.",
+   "places": [
+    "full-moon-island",
+    "stark-mountain",
+    "turnback-cave",
+    "snowpoint-temple"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Serebii: DP legendaries; PokeDream: DP walkthrough sidequest"
+  },
+  {
+   "id": "st-swarms-honey",
+   "title": "Swarms, honey trees and rare Pokemon",
+   "stage": "postgame-national-dex",
+   "text": "Your rival's sister in Sandgem names a daily swarm route after the Champion. Honey trees give Aipom, Heracross, Burmy, Combee, Cherubi and Munchlax. The Trophy Garden shows a rare Pokemon each day.",
+   "places": [
+    "sandgem-town",
+    "trophy-garden"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Serebii: DP swarms, Sweet Honey and daily events"
+  }
+ ],
+ "secrets": [
+  {
+   "id": "sec-old-rod",
+   "kind": "gift",
+   "place": "jubilife-city",
+   "text": "The fisherman at the Jubilife station gives an Old Rod. The three clowns around the city give coupons that earn the Pokétch.",
+   "quality": "reference-only",
+   "source": "Serebii: Pokearth Jubilife City (DP); PokeDream: DP ch3"
+  },
+  {
+   "id": "sec-rock-smash",
+   "kind": "gift",
+   "place": "oreburgh-gate",
+   "text": "A hiker at the entrance gives HM06 Rock Smash. It only works outside battle after the Coal Badge. Smashing the boulders inside turns up a Stardust, and Earth Plate needs Strength.",
+   "condition": "Rock Smash after the Coal Badge",
+   "quality": "reference-only",
+   "source": "Serebii: DP HM list; PokeDream: DP ch3 and ch4"
+  },
+  {
+   "id": "sec-fossils",
+   "kind": "tip",
+   "place": "oreburgh-city",
+   "text": "The Oreburgh museum revives fossils at Lv 20. Dig fossils in the Sinnoh Underground; the old ones appear there only after the National Pokedex, and the Skull Fossil (Cranidos line) is the one this version offers.",
+   "quality": "reference-only",
+   "source": "Serebii: Pokearth Oreburgh City (DP), DP Underground, DP exclusives"
+  },
+  {
+   "id": "sec-abra-trade",
+   "kind": "trade",
+   "place": "oreburgh-city",
+   "text": "In an apartment building the girl swaps her Abra (Synchronize, Oran Berry) for a Machop.",
+   "quality": "reference-only",
+   "source": "Serebii: Pokearth Oreburgh City (DP); PokeDream: DP ch4"
+  },
+  {
+   "id": "sec-route-204-water",
+   "kind": "hidden-item",
+   "place": "route-204",
+   "text": "Surfing the ponds on Route 204 reaches a Sea Incense (left pond), an HP Up (right pond) and a Luck Incense (north). A Rock Smash rock in Ravaged Path hides TM39 Rock Tomb.",
+   "condition": "needs Surf (and Rock Smash for the TM)",
+   "quality": "reference-only",
+   "source": "PokeDream: DP walkthrough ch4"
+  },
+  {
+   "id": "sec-honey",
+   "kind": "gift",
+   "place": "floaroma-meadow",
+   "text": "After the rescue, buy Sweet Honey in the meadow for 100 yen. Smear it on a brown tree and return about 12 hours later; if left much longer the Pokemon is gone.",
+   "quality": "reference-only",
+   "source": "Serebii: DP Sweet Honey; PokeDream: DP ch5 and sidequest"
+  },
+  {
+   "id": "sec-leaf-stone",
+   "kind": "hidden-item",
+   "place": "floaroma-meadow",
+   "text": "The Leaf Stone for Gloom and others lies in Floaroma Meadow; the Underground is the only other source.",
+   "quality": "reference-only",
+   "source": "Serebii: DP item list (Leaf Stone)"
+  },
+  {
+   "id": "sec-fire-stone",
+   "kind": "gift",
+   "place": "fuego-ironworks",
+   "text": "A Fire Stone sits in the northeast corner and Mr. Fuego gives another near the furnace. TM35 Flamethrower is next to him.",
+   "quality": "reference-only",
+   "source": "PokeDream: DP ch5; Serebii: DP item list"
+  },
+  {
+   "id": "sec-old-chateau",
+   "kind": "event",
+   "place": "old-chateau",
+   "text": "Cut the trees in the north of Eterna Forest to reach the Old Chateau. The last room holds TM90 Substitute, and wild Haunter and Gengar appear here with any GBA cart in the slot.",
+   "condition": "needs Cut",
+   "quality": "reference-only",
+   "source": "PokeDream: DP ch5 and sidequest; Serebii: DP GBA insertion"
+  },
+  {
+   "id": "sec-rotom",
+   "kind": "legendary",
+   "place": "old-chateau",
+   "text": "Rotom is at the upstairs television. It needs the National Pokedex and the evening or night; if it does not appear, come back later. It joins at Lv 15.",
+   "condition": "National Pokedex, after dark",
+   "quality": "reference-only",
+   "source": "Serebii: DP Rotom Factor; PokeDream: DP sidequest"
+  },
+  {
+   "id": "sec-cut",
+   "kind": "gift",
+   "place": "eterna-city",
+   "text": "Cynthia gives HM01 Cut around Eterna. The Forest Badge lets you use it outside battle. A tree behind the Galactic building hides TM46 Thief.",
+   "condition": "after the Forest Badge",
+   "quality": "reference-only",
+   "source": "PokeDream: DP ch6; Serebii: DP HM list"
+  },
+  {
+   "id": "sec-explorer-kit",
+   "kind": "gift",
+   "place": "eterna-city",
+   "text": "The old man beside the Pokemon Center gives the Explorer Kit, which opens the Sinnoh Underground. It is the main source of evolution stones, plates, fossils and the Odd Keystone.",
+   "quality": "reference-only",
+   "source": "Serebii: DP Underground; Pokearth Eterna City (DP)"
+  },
+  {
+   "id": "sec-chatot-trade",
+   "kind": "trade",
+   "place": "eterna-city",
+   "text": "In the condominiums a kid trades his Chatot (Leppa Berry) for your Buizel. It is a way to get Chatot without the wild lists.",
+   "quality": "reference-only",
+   "source": "Serebii: Pokearth Eterna City (DP); PokeDream: DP ch6"
+  },
+  {
+   "id": "sec-up-grade",
+   "kind": "gift",
+   "place": "eterna-city",
+   "text": "Professor Oak gives an Up-Grade after you have visited Pal Park. It makes Porygon trade-evolve into Porygon2.",
+   "condition": "National Pokedex and Pal Park",
+   "quality": "reference-only",
+   "source": "Serebii: DP item list and Pokearth Eterna City (DP)"
+  },
+  {
+   "id": "sec-odd-keystone",
+   "kind": "hidden-item",
+   "place": "route-208",
+   "text": "A trainer by the honey tree near the end of Route 208 gives an Odd Keystone. You can also dig one up in the Underground. It is the first step to Spiritomb.",
+   "quality": "reference-only",
+   "source": "PokeDream: DP ch6 and sidequest"
+  },
+  {
+   "id": "sec-spiritomb",
+   "kind": "event",
+   "place": "route-209",
+   "text": "Place the Odd Keystone in the Spirit Tower well on Route 209, then talk to 32 people in the Sinnoh Underground (needs DS Wireless link partners). Leave and re-enter between conversations, then return to the well to battle Spiritomb.",
+   "quality": "reference-only",
+   "source": "Serebii: DP Spiritomb Factor; PokeDream: DP sidequest"
+  },
+  {
+   "id": "sec-lost-tower",
+   "kind": "gift",
+   "place": "route-209",
+   "text": "On the top floor an old lady gives HM04 Strength; another gives a Cleanse Tag. An Oval Stone lies on the floor; hold it on Happiny to evolve it in the daytime.",
+   "quality": "reference-only",
+   "source": "PokeDream: DP ch7; Serebii: DP item list and HM list"
+  },
+  {
+   "id": "sec-happiny-egg",
+   "kind": "gift",
+   "place": "hearthome-city",
+   "text": "A man near the east gate of Hearthome gives a Happiny Egg. An Eevee (Lv 25) is also a gift in the same city.",
+   "quality": "reference-only",
+   "source": "PokeDream: DP ch7; Serebii: Pokearth Hearthome City (DP)"
+  },
+  {
+   "id": "sec-amity",
+   "kind": "tip",
+   "place": "hearthome-city",
+   "text": "Amity Square lets one cute Pokemon walk with you; talk to it as you walk and it sometimes finds an item. Spooky Plate is in the northwest corner next to the right ruin.",
+   "quality": "reference-only",
+   "source": "PokeDream: DP ch7"
+  },
+  {
+   "id": "sec-solaceon-ruins",
+   "kind": "hidden-item",
+   "place": "solaceon-ruins",
+   "text": "Follow the Unown glyph hints on the stairs to reach a secret room with a Nugget, Rare Candy, Mind Plate and Odd Incense. Other item balls hold Repel, Escape Rope and Big Mushroom.",
+   "quality": "reference-only",
+   "source": "PokeDream: DP ch8 and sidequest"
+  },
+  {
+   "id": "sec-route-210",
+   "kind": "tip",
+   "place": "route-210",
+   "text": "A Psyduck blocks the route until Cynthia gives a SecretPotion after Wake. A Dragon Tamer and Veteran trainers are here; TM51 Roost comes from a man on the slope.",
+   "quality": "reference-only",
+   "source": "PokeDream: DP ch8 and ch10"
+  },
+  {
+   "id": "sec-defog",
+   "kind": "gift",
+   "place": "great-marsh",
+   "text": "A woman at the entrance gives HM05 Defog. Entry is 500 yen for 30 Safari Balls and 500 steps; the area contents rotate daily.",
+   "quality": "reference-only",
+   "source": "PokeDream: DP ch10; Serebii: DP HM list and Safari"
+  },
+  {
+   "id": "sec-macho-brace",
+   "kind": "gift",
+   "place": "pastoria-city",
+   "text": "Show a Pastoria resident all three Burmy cloak forms and get a Macho Brace. A man also teaches forgotten level-up moves for a Heart Scale.",
+   "condition": "all three Burmy cloaks",
+   "quality": "reference-only",
+   "source": "Serebii: Pokearth Pastoria City (DP); PokeDream: DP ch10"
+  },
+  {
+   "id": "sec-veilstone-warehouse",
+   "kind": "event",
+   "place": "veilstone-city",
+   "text": "A grunt outside the HQ drops the Storage Key. The warehouse holds a Dusk Stone, HM02 Fly and the Galactic Key on B1F, which opens every HQ door.",
+   "quality": "reference-only",
+   "source": "PokeDream: DP ch9 and ch15; Serebii: Pokearth Galactic Warehouse (DP) and HM list"
+  },
+  {
+   "id": "sec-master-ball",
+   "kind": "gift",
+   "place": "veilstone-city",
+   "text": "Cyrus's defeat at the Veilstone building yields a Master Ball. Keep it for Mesprit or Cresselia rather than a stationary legend.",
+   "quality": "reference-only",
+   "source": "Serebii: Pokearth Veilstone Galactic Building (DP); PokeDream: DP ch15"
+  },
+  {
+   "id": "sec-footprint",
+   "kind": "gift",
+   "place": "route-213",
+   "text": "Dr. Footstep's house on Route 213 gives the Footprint Ribbon to a friendly Pokemon. A clown here also gives TM92 Trick Room.",
+   "quality": "reference-only",
+   "source": "PokeDream: DP ch9; Serebii: DP daily events"
+  },
+  {
+   "id": "sec-route-212",
+   "kind": "tip",
+   "place": "route-212",
+   "text": "The Pokemon Mansion has a Soothe Bell and TM87 Swagger; its Trophy Garden shows a rare Pokemon each day once the National Pokedex is in. A Rose Incense is reachable by Surf.",
+   "quality": "reference-only",
+   "source": "PokeDream: DP ch10 and sidequest; Serebii: DP daily events"
+  },
+  {
+   "id": "sec-surf",
+   "kind": "gift",
+   "place": "celestic-town",
+   "text": "Cynthia's grandmother gives HM03 Surf in the cave after you read the paintings. The Pokemon Center gives a Great Ball to a very happy Pokemon once a day.",
+   "quality": "reference-only",
+   "source": "PokeDream: DP ch11; Serebii: DP daily events and HM list"
+  },
+  {
+   "id": "sec-iron-island",
+   "kind": "event",
+   "place": "iron-island",
+   "text": "Bring five or fewer Pokemon and escort Riley to the bottom floor for a Riolu Egg. Metal Coat and Shiny Stone are among the items; Iron Ball, HP Up and TM23 also show up.",
+   "quality": "reference-only",
+   "source": "PokeDream: DP sidequest; Serebii: DP item list"
+  },
+  {
+   "id": "sec-library",
+   "kind": "tip",
+   "place": "canalave-city",
+   "text": "The Move Deleter's house is across from the Pokemart. The first house gives TM48 Skill Swap, and the harbor boat reaches Iron Island and Full Moon Island.",
+   "quality": "reference-only",
+   "source": "PokeDream: DP ch13; Serebii: Pokearth Canalave City (DP)"
+  },
+  {
+   "id": "sec-rock-climb",
+   "kind": "gift",
+   "place": "route-217",
+   "text": "HM08 Rock Climb is behind a house in the snow; TM07 Hail and an Icicle Plate are in the area. Iron lies hidden under the snow in the middle of the road. Near the Ice Rock, Eevee becomes Glaceon.",
+   "quality": "reference-only",
+   "source": "PokeDream: DP ch13; Serebii: DP evolution page"
+  },
+  {
+   "id": "sec-snowbound",
+   "kind": "tip",
+   "place": "route-216",
+   "text": "A lounge with a bed on the snowy route lets you heal by sleeping. An Ice Heal is at the north end after the bridge.",
+   "quality": "reference-only",
+   "source": "PokeDream: DP ch13"
+  },
+  {
+   "id": "sec-snowpoint-trade",
+   "kind": "trade",
+   "place": "snowpoint-city",
+   "text": "A woman in the northwest house swaps a Haunter (Everstone) for your Medicham. The Everstone stops evolution, so unequip it before trading again.",
+   "quality": "reference-only",
+   "source": "Serebii: Pokearth Snowpoint City (DP); PokeDream: DP ch14"
+  },
+  {
+   "id": "sec-lake-tms",
+   "kind": "hidden-item",
+   "place": "lake-valor",
+   "text": "Floor TMs: TM25 Thunder at Lake Valor, TM38 Fire Blast at Lake Verity, TM14 Blizzard at Lake Acuity (northeast corner by Surf).",
+   "quality": "reference-only",
+   "source": "PokeDream: DP ch16; Serebii: Pokearth lake pages (DP)"
+  },
+  {
+   "id": "sec-mt-coronet",
+   "kind": "hidden-item",
+   "place": "mt-coronet",
+   "text": "Hidden spots across the mountain hold Rare Candy (two), Max Elixir, Revive, Full Restore and HP Up. A Dawn Stone is found here; Magneton and Nosepass evolve in the area.",
+   "quality": "reference-only",
+   "source": "PokeDream: DP ch13 and ch16; Serebii: DP item list"
+  },
+  {
+   "id": "sec-wayward-cave",
+   "kind": "event",
+   "place": "wayward-cave",
+   "text": "Escort the trainer Mira to the cave exit to unlock her as a Battle Tower double partner. A hidden entrance has Revive, Elixir, Grip Claw and TM26 Earthquake; Flash helps.",
+   "quality": "reference-only",
+   "source": "PokeDream: DP sidequest"
+  },
+  {
+   "id": "sec-waterfall",
+   "kind": "gift",
+   "place": "sunyshore-city",
+   "text": "Jasmine in the north of Sunyshore gives HM07 Waterfall after Volkner. A Thunderstone is on the east side of town; the Water Stone is also found here.",
+   "quality": "reference-only",
+   "source": "PokeDream: DP ch17; Serebii: DP HM list and item list"
+  },
+  {
+   "id": "sec-victory-road-items",
+   "kind": "hidden-item",
+   "place": "victory-road",
+   "text": "A Dusk Stone and a Razor Claw can be found in the cave, plus TM41 Torment and TM79 Dark Pulse. Full Restore, Max Elixir and Rare Candy are on rocks and walls.",
+   "quality": "reference-only",
+   "source": "PokeDream: DP ch17; Serebii: DP item list"
+  },
+  {
+   "id": "sec-valley-drifloon",
+   "kind": "event",
+   "place": "valley-windworks",
+   "text": "On Fridays a wild Drifloon appears outside the Windworks after Team Galactic is cleared.",
+   "quality": "reference-only",
+   "source": "Serebii: DP daily events and Pokearth Valley Windworks (DP)"
+  },
+  {
+   "id": "sec-route-221",
+   "kind": "event",
+   "place": "route-221",
+   "text": "An old man in a house in the woods asks for a Pokemon of a given level each day and pays with Black Belt, Expert Belt or Focus Sash. Pal Park is here after the National Pokedex.",
+   "quality": "reference-only",
+   "source": "Serebii: DP daily events; PokeDream: DP ch11"
+  },
+  {
+   "id": "sec-evo-items",
+   "kind": "hidden-item",
+   "place": "route-228",
+   "text": "Evolution items by route: Protector and Shiny Stone on Route 228, Dubious Disc on Route 225, Reaper Cloth on Route 229, Razor Claw on Route 224.",
+   "quality": "reference-only",
+   "source": "Serebii: DP item list"
+  },
+  {
+   "id": "sec-lottery",
+   "kind": "tip",
+   "place": "jubilife-city",
+   "text": "The TV station runs a daily lottery on Pokemon ID numbers; prizes include Master Ball, Max Revive and Exp. Share. The Global Trade Station is in the southwest.",
+   "quality": "reference-only",
+   "source": "Serebii: DP daily events and Wi-Fi page"
+  },
+  {
+   "id": "sec-solaceon-news",
+   "kind": "gift",
+   "place": "solaceon-town",
+   "text": "The News Center gives a ball each day for showing a Pokemon you have seen. The Day Care Checker comes from the daycare man after leaving two Pokemon for the same time.",
+   "quality": "reference-only",
+   "source": "Serebii: DP daily events; PokeDream: DP ch8"
+  }
+ ],
+ "evolutions": [
+  {
+   "id": "evo-kadabra",
+   "species": 64,
+   "name": "Kadabra",
+   "text": "Evolves only when traded: use a link partner, the Wi-Fi Club in the Pokemon Center basement, or the GTS in Jubilife. The Oreburgh Abra trade is the in-game start.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-machoke",
+   "species": 67,
+   "name": "Machoke",
+   "text": "Evolves only by trade (link partner, Wi-Fi Club or GTS). Machop can be raised from Route 207.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-graveler",
+   "species": 75,
+   "name": "Graveler",
+   "text": "Evolves only by trade. Geodude and Graveler hold an Everstone in the wild; do not hold it when you trade.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-haunter",
+   "species": 93,
+   "name": "Haunter",
+   "text": "Evolves only by trade. A wild Haunter shows up in the Old Chateau if a GBA cart is in the slot, and the Snowpoint trade gives one holding an Everstone (remove it).",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list; Pokearth Snowpoint City"
+  },
+  {
+   "id": "evo-onix",
+   "species": 95,
+   "name": "Onix",
+   "text": "Trade it while it holds a Metal Coat to get Steelix. Metal Coats are on Iron Island or can be held by wild Steelix and Bronzor.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-scyther",
+   "species": 123,
+   "name": "Scyther",
+   "text": "Trade it while it holds a Metal Coat to get Scizor. Scyther is a Diamond-only wild Pokemon.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-poliwhirl",
+   "species": 61,
+   "name": "Poliwhirl",
+   "text": "Trade it while holding a King's Rock for Politoed. After the National Pokedex wild Poliwhirl may hold the item.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-slowpoke",
+   "species": 79,
+   "name": "Slowpoke",
+   "text": "Trade it while holding a King's Rock for Slowking; Slowbro comes from a normal level-up instead. Slowpoke is a Pearl exclusive, so Diamond needs a trade partner.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-seadra",
+   "species": 117,
+   "name": "Seadra",
+   "text": "Trade it while holding a Dragon Scale for Kingdra. Dragon Scale is a rare wild hold on Horsea, Seadra, Dratini and Dragonair after the National Pokedex.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-porygon",
+   "species": 137,
+   "name": "Porygon",
+   "text": "Trade it while holding an Up-Grade for Porygon2. Professor Oak in Eterna City gives the Up-Grade after Pal Park.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list; Pokearth Eterna City"
+  },
+  {
+   "id": "evo-porygon2",
+   "species": 233,
+   "name": "Porygon2",
+   "text": "Trade it while holding a Dubious Disc for Porygon-Z. The Disc is lying on Route 225.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-rhydon",
+   "species": 112,
+   "name": "Rhydon",
+   "text": "Trade it while holding the Protector for Rhyperior. The Protector is lying on Route 228.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-electabuzz",
+   "species": 125,
+   "name": "Electabuzz",
+   "text": "Trade it while holding an Electirizer for Electivire. Get Elekid via a FireRed cartridge in the GBA slot (a little rarer in Diamond).",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-magmar",
+   "species": 126,
+   "name": "Magmar",
+   "text": "Trade it while holding a Magmarizer for Magmortar. Get Magby via a LeafGreen cartridge in the GBA slot (more common in Diamond).",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-dusclops",
+   "species": 356,
+   "name": "Dusclops",
+   "text": "Trade it while holding Reaper Cloth for Dusknoir. The cloth is on Route 229 and in Turnback Cave.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-clamperl",
+   "species": 366,
+   "name": "Clamperl",
+   "text": "Trade it holding DeepSeaTooth for Huntail or DeepSeaScale for Gorebyss. Wild Carvanha and Sharpedo carry the Tooth, wild Relicanth, Chinchou and Lanturn the Scale, after the National Pokedex.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-togetic",
+   "species": 176,
+   "name": "Togetic",
+   "text": "Use a Shiny Stone for Togekiss. The stone is on Route 228 and Iron Island.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-roselia",
+   "species": 315,
+   "name": "Roselia",
+   "text": "Use a Shiny Stone for Roserade. Roselia comes from a Budew that is raised to high friendship in the daytime.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-murkrow",
+   "species": 198,
+   "name": "Murkrow",
+   "text": "Use a Dusk Stone for Honchkrow. The stone is in the Veilstone warehouse and on Victory Road. Murkrow is a Diamond exclusive.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-misdreavus",
+   "species": 200,
+   "name": "Misdreavus",
+   "text": "Use a Dusk Stone for Mismagius. The stone is in the Veilstone warehouse and on Victory Road. Misdreavus is not in Diamond; trade for one from Pearl.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-kirlia",
+   "species": 281,
+   "name": "Kirlia",
+   "text": "Only a male Kirlia becomes Gallade with a Dawn Stone, found on Mt. Coronet.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-snorunt",
+   "species": 361,
+   "name": "Snorunt",
+   "text": "Only a female Snorunt becomes Froslass with a Dawn Stone, found on Mt. Coronet.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-pikachu",
+   "species": 25,
+   "name": "Pikachu",
+   "text": "Use a Thunderstone for Raichu. The stone is on Sunyshore City's east side and in the Underground.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-eevee-stones",
+   "species": 133,
+   "name": "Eevee",
+   "text": "Water Stone gives Vaporeon (Sunyshore), Thunderstone gives Jolteon (Sunyshore), Fire Stone gives Flareon (Fuego Ironworks). Eevee is a Hearthome gift at Lv 25.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-eevee-friend",
+   "species": 133,
+   "name": "Eevee",
+   "text": "With high friendship, a level-up in the day gives Espeon and at night gives Umbreon. Use a Soothe Bell or the Veilstone massage to raise friendship.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-eevee-leaf",
+   "species": 133,
+   "name": "Eevee",
+   "text": "Level it up next to the Moss Rock in Eterna Forest for Leafeon. Plan a stop there.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-eevee-ice",
+   "species": 133,
+   "name": "Eevee",
+   "text": "Level it up next to the Ice Rock on Route 217 for Glaceon.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-clefairy",
+   "species": 35,
+   "name": "Clefairy",
+   "text": "A Moon Stone gives Clefable (also Nidorina, Nidorino, Jigglypuff). Moon Stones come from the Underground; wild Clefairy and Cleffa may carry one.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-gloom",
+   "species": 44,
+   "name": "Gloom",
+   "text": "Leaf Stone gives Vileplume; Sun Stone gives Bellossom. Leaf Stones are in Floaroma Meadow; Sun Stones come from the Underground.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-budew",
+   "species": 406,
+   "name": "Budew",
+   "text": "Reach high friendship and level up in the daytime for Roselia, then a Shiny Stone for Roserade. Budew is found on Route 204.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-chingling",
+   "species": 433,
+   "name": "Chingling",
+   "text": "Reach high friendship and level up at night for Chimecho.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-riolu",
+   "species": 447,
+   "name": "Riolu",
+   "text": "Reach high friendship and level up in the daytime for Lucario. The Riolu comes from the Iron Island egg.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list; PokeDream sidequest"
+  },
+  {
+   "id": "evo-munchlax",
+   "species": 446,
+   "name": "Munchlax",
+   "text": "High friendship gives Snorlax. Munchlax appears at honey trees; Trees near Valley Windworks and southeast of Eterna Forest are best.",
+   "quality": "reference-only",
+   "source": "Serebii: DP Sweet Honey; PokeDream sidequest"
+  },
+  {
+   "id": "evo-happiny",
+   "species": 440,
+   "name": "Happiny",
+   "text": "Hold an Oval Stone and level up in the daytime for Chansey. Oval Stones are on the Lost Tower floor and held by wild Chansey and Happiny.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-gligar",
+   "species": 207,
+   "name": "Gligar",
+   "text": "Hold a Razor Fang and level up at night for Gliscor. Serebii lists only the Battle Park in the Fight Area as a source for the Razor Fang.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-sneasel",
+   "species": 215,
+   "name": "Sneasel",
+   "text": "Hold a Razor Claw and level up at night for Weavile. Razor Claws are on Route 224, on Victory Road and in the Battle Park.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-burmy",
+   "species": 412,
+   "name": "Burmy",
+   "text": "A female Burmy becomes Wormadam at Lv 20, a male becomes Mothim at 20. The cloak (Plant, Sandy or Trash) follows where its last battle was fought: grass, cave or road, or inside a building.",
+   "quality": "reference-only",
+   "source": "Serebii: DP evolutions and Burmy Factor"
+  },
+  {
+   "id": "evo-combee",
+   "species": 415,
+   "name": "Combee",
+   "text": "Only a female Combee evolves, into Vespiquen at Lv 21. Combee comes from honey trees.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-lickitung",
+   "species": 108,
+   "name": "Lickitung",
+   "text": "Level it up while it knows Rollout for Lickilicky.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-tangela",
+   "species": 114,
+   "name": "Tangela",
+   "text": "Level it up while it knows AncientPower for Tangrowth.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-aipom",
+   "species": 190,
+   "name": "Aipom",
+   "text": "Level it up while it knows Double Hit for Ambipom. Aipom is a honey tree Pokemon.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-yanma",
+   "species": 193,
+   "name": "Yanma",
+   "text": "Level it up while it knows AncientPower for Yanmega.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-piloswine",
+   "species": 221,
+   "name": "Piloswine",
+   "text": "Level it up while it knows AncientPower for Mamoswine.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-bonsly",
+   "species": 438,
+   "name": "Bonsly",
+   "text": "Level it up while it knows Mimic for Sudowoodo.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-mimejr",
+   "species": 439,
+   "name": "Mime Jr.",
+   "text": "Level it up while it knows Mimic for Mr. Mime.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-magneton",
+   "species": 82,
+   "name": "Magneton",
+   "text": "Level it up in Mt. Coronet for Magnezone.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-nosepass",
+   "species": 299,
+   "name": "Nosepass",
+   "text": "Level it up in Mt. Coronet for Probopass.",
+   "quality": "reference-only",
+   "source": "Serebii: DP new evolution methods and item list"
+  },
+  {
+   "id": "evo-feebas",
+   "species": 349,
+   "name": "Feebas",
+   "text": "Raise Beauty by feeding Pokeblocks or Poffins from berry blends, then level up for Milotic. Serebii places Feebas in Mt. Coronet's water, on only a few tiles that change daily.",
+   "quality": "reference-only",
+   "source": "Serebii: DP Feebas Factor"
+  }
+ ],
+ "notes": [
+  {
+   "id": "ex-diamond-larvitar",
+   "kind": "exclusive",
+   "title": "Larvitar line (Diamond only)",
+   "text": "Larvitar, Pupitar and Tyranitar are in Diamond only. Pearl players trade for them.",
+   "species": [
+    246,
+    247,
+    248
+   ],
+   "names": [
+    "Larvitar",
+    "Pupitar",
+    "Tyranitar"
+   ],
+   "quality": "reference-only",
+   "source": "Serebii: DP version exclusives; pokemondb: DP exclusives"
+  },
+  {
+   "id": "ex-diamond-aron",
+   "kind": "exclusive",
+   "title": "Aron line (Diamond only)",
+   "text": "Aron, Lairon and Aggron are in Diamond only. Pearl players trade for them.",
+   "species": [
+    304,
+    305,
+    306
+   ],
+   "names": [
+    "Aron",
+    "Lairon",
+    "Aggron"
+   ],
+   "quality": "reference-only",
+   "source": "Serebii: DP version exclusives; pokemondb: DP exclusives"
+  },
+  {
+   "id": "ex-diamond-scyther",
+   "kind": "exclusive",
+   "title": "Scyther and Scizor (Diamond)",
+   "text": "Scyther is wild in Diamond only. Scizor needs a Metal Coat trade of a Scyther; Pearl players must trade for the base species.",
+   "species": [
+    123,
+    212
+   ],
+   "names": [
+    "Scyther",
+    "Scizor"
+   ],
+   "quality": "reference-only",
+   "source": "Serebii: DP version exclusives; pokemondb: DP exclusives"
+  },
+  {
+   "id": "ex-diamond-murkrow",
+   "kind": "exclusive",
+   "title": "Murkrow and Honchkrow (Diamond)",
+   "text": "Murkrow is Diamond only, and Honchkrow comes from a Dusk Stone.",
+   "species": [
+    198,
+    430
+   ],
+   "names": [
+    "Murkrow",
+    "Honchkrow"
+   ],
+   "quality": "reference-only",
+   "source": "Serebii: DP version exclusives; pokemondb: DP exclusives"
+  },
+  {
+   "id": "ex-diamond-cranidos",
+   "kind": "exclusive",
+   "title": "Cranidos line (Diamond)",
+   "text": "Cranidos and Rampardos come from the Skull Fossil in Diamond. Roark's own Cranidos is the same in both games.",
+   "place": "oreburgh-city",
+   "species": [
+    408,
+    409
+   ],
+   "names": [
+    "Cranidos",
+    "Rampardos"
+   ],
+   "quality": "reference-only",
+   "source": "Serebii: DP version exclusives; pokemondb: DP exclusives"
+  },
+  {
+   "id": "ex-diamond-stunky",
+   "kind": "exclusive",
+   "title": "Stunky line (Diamond)",
+   "text": "Stunky and Skuntank are in Diamond only (Jupiter and the grunts use them in both games).",
+   "species": [
+    434,
+    435
+   ],
+   "names": [
+    "Stunky",
+    "Skuntank"
+   ],
+   "quality": "reference-only",
+   "source": "Serebii: DP version exclusives; pokemondb: DP exclusives"
+  },
+  {
+   "id": "ex-diamond-poochyena",
+   "kind": "exclusive",
+   "title": "Poochyena and Mightyena (Diamond)",
+   "text": "Poochyena and Mightyena are Diamond only. Pearl players trade for them.",
+   "species": [
+    261,
+    262
+   ],
+   "names": [
+    "Poochyena",
+    "Mightyena"
+   ],
+   "quality": "reference-only",
+   "source": "Serebii: DP version exclusives; pokemondb: DP exclusives"
+  },
+  {
+   "id": "ex-diamond-seel",
+   "kind": "exclusive",
+   "title": "Seel and Dewgong (Diamond)",
+   "text": "Seel and Dewgong are wild only in Diamond.",
+   "species": [
+    86,
+    87
+   ],
+   "names": [
+    "Seel",
+    "Dewgong"
+   ],
+   "quality": "reference-only",
+   "source": "Serebii: DP version exclusives; pokemondb: DP exclusives"
+  },
+  {
+   "id": "ex-diamond-kecleon",
+   "kind": "exclusive",
+   "title": "Kecleon (Diamond)",
+   "text": "Kecleon is Diamond only.",
+   "species": [
+    352
+   ],
+   "names": [
+    "Kecleon"
+   ],
+   "quality": "reference-only",
+   "source": "Serebii: DP version exclusives; pokemondb: DP exclusives"
+  },
+  {
+   "id": "ex-diamond-dialga",
+   "kind": "exclusive",
+   "title": "Dialga is on the box",
+   "text": "Dialga appears at Spear Pillar in Diamond, and the Adamant Orb is picked up afterwards. Palkia and the Lustrous Orb belong to Pearl.",
+   "place": "spear-pillar",
+   "species": [
+    483
+   ],
+   "names": [
+    "Dialga"
+   ],
+   "quality": "reference-only",
+   "source": "Serebii: DP version exclusives; pokemondb: DP exclusives"
+  },
+  {
+   "id": "ver-diamond-missing",
+   "kind": "version",
+   "title": "What Pearl has that you lack",
+   "text": "Pearl alone gets Slowpoke line, Pinsir, Misdreavus line, Houndour line, Stantler, Spheal line, Bagon line, Shieldon line, Glameow line and Palkia. Plan trades with a Pearl copy.",
+   "quality": "reference-only",
+   "source": "Serebii: DP version exclusives; pokemondb: DP exclusives"
+  },
+  {
+   "id": "legend-main",
+   "kind": "legendary",
+   "title": "Dialga (this box)",
+   "text": "Level 47 wild at Spear Pillar after the Team Galactic events. Dialga is Steel/Dragon, and Palkia is on the other version.",
+   "place": "spear-pillar",
+   "quality": "reference-only",
+   "source": "Serebii: DP legendaries"
+  },
+  {
+   "id": "legend-trio",
+   "kind": "legendary",
+   "title": "Uxie, Mesprit, Azelf",
+   "text": "All three are Lv 50. Uxie (Acuity) and Azelf (Valor) wait in their caves and can be fought once; Mesprit in Verity flees. They appear after the Spear Pillar events.",
+   "quality": "reference-only",
+   "source": "Serebii: DP legendaries; PokeDream: DP ch16"
+  },
+  {
+   "id": "legend-heatran",
+   "kind": "legendary",
+   "title": "Heatran",
+   "text": "National Pokedex needed. Lv 70 in Stark Mountain after the partner trainer who takes an item at the end has been sent away.",
+   "quality": "reference-only",
+   "source": "Serebii: DP legendaries"
+  },
+  {
+   "id": "legend-regigigas",
+   "kind": "legendary",
+   "title": "Regigigas",
+   "text": "Lv 70 in Snowpoint Temple. You must bring Regirock, Regice and Registeel from the GBA games through Pal Park.",
+   "quality": "reference-only",
+   "source": "Serebii: DP legendaries"
+  },
+  {
+   "id": "legend-giratina",
+   "kind": "legendary",
+   "title": "Giratina",
+   "text": "Lv 70 beyond the third pillar in Turnback Cave. National Pokedex needed.",
+   "quality": "reference-only",
+   "source": "Serebii: DP legendaries; Pokearth Turnback Cave (DP)"
+  },
+  {
+   "id": "legend-cresselia",
+   "kind": "legendary",
+   "title": "Cresselia",
+   "text": "Lv 50 on Full Moon Island after talking to a family in Canalave. It flees and then roams.",
+   "quality": "reference-only",
+   "source": "Serebii: DP legendaries"
+  },
+  {
+   "id": "legend-darkrai",
+   "kind": "legendary",
+   "title": "Darkrai (event)",
+   "text": "Lv 40 on New Moon Island. Needs the Member Card, only given by a past Nintendo event.",
+   "quality": "reference-only",
+   "source": "Serebii: DP legendaries"
+  },
+  {
+   "id": "legend-shaymin",
+   "kind": "legendary",
+   "title": "Shaymin (event)",
+   "text": "Lv 30 at Flower Paradise (Route 224). Needs Oak's Letter from a past event.",
+   "quality": "reference-only",
+   "source": "Serebii: DP legendaries"
+  },
+  {
+   "id": "legend-arceus",
+   "kind": "legendary",
+   "title": "Arceus (event)",
+   "text": "Lv 80 in the Hall of Origin. Needs the Azure Flute from a past event and the Spear Pillar symbol.",
+   "quality": "reference-only",
+   "source": "Serebii: DP legendaries"
+  },
+  {
+   "id": "legend-manaphy",
+   "kind": "legendary",
+   "title": "Manaphy and Phione",
+   "text": "Manaphy is a Pokemon Ranger event Egg delivered to a Poke Mart man; Phione needs Manaphy bred with Ditto.",
+   "quality": "reference-only",
+   "source": "Serebii: DP Manaphy Factor"
+  },
+  {
+   "id": "legend-rotom-spiritomb",
+   "kind": "tip",
+   "title": "Rotom and Spiritomb",
+   "text": "Both are single-game events: Rotom at the Old Chateau TV (after dark, National Pokedex), Spiritomb at the Route 209 well with an Odd Keystone and 32 Underground chats.",
+   "quality": "reference-only",
+   "source": "Serebii: DP Rotom and Spiritomb Factor"
+  },
+  {
+   "id": "roam-mesprit",
+   "kind": "roamer",
+   "title": "Mesprit roams",
+   "text": "After the first fight Mesprit flees and wanders Sinnoh's grass. Use the Marking Map Pokétch app to see where it is, walk into that grass patch, and use a trapping move like Mean Look.",
+   "quality": "reference-only",
+   "source": "Serebii: DP legendaries; PokeDream: DP ch12 and ch16"
+  },
+  {
+   "id": "roam-cresselia",
+   "kind": "roamer",
+   "title": "Cresselia roams",
+   "text": "Cresselia flees after the Full Moon Island meeting and then roams. Track it on the Marking Map, same rules as Mesprit; it is Lv 50.",
+   "quality": "reference-only",
+   "source": "Serebii: DP legendaries; PokeDream sidequest"
+  },
+  {
+   "id": "tip-swarms",
+   "kind": "tip",
+   "title": "Daily swarms",
+   "text": "After the National Pokedex and the Champion, your rival's sister in Sandgem names a swarm route that changes daily. A few species can only be had this way.",
+   "quality": "reference-only",
+   "source": "Serebii: DP swarms and daily events"
+  },
+  {
+   "id": "tip-honey",
+   "kind": "tip",
+   "title": "Honey trees",
+   "text": "Honey from Floaroma Meadow turns brown trees into encounters 12 hours later. They give Aipom, Heracross, Burmy, Combee, Cherubi and Munchlax; Wurmple is the common result.",
+   "quality": "reference-only",
+   "source": "Serebii: DP Sweet Honey"
+  },
+  {
+   "id": "tip-great-marsh",
+   "kind": "tip",
+   "title": "Great Marsh",
+   "text": "Pastoria's Safari Game gives 30 Safari Balls and 500 steps; the binoculars upstairs hint at the area's Pokemon. Many Pokemon appear only with the National Pokedex.",
+   "place": "great-marsh",
+   "quality": "reference-only",
+   "source": "Serebii: DP Safari; PokeDream: DP ch10"
+  },
+  {
+   "id": "tip-gba-slot",
+   "kind": "tip",
+   "title": "GBA cartridge in slot 2",
+   "text": "After the National Pokedex, a Ruby, Sapphire, Emerald, FireRed or LeafGreen cart changes the wild lists (Seedot, Lotad, Magby, Elekid...). Some evolution items come from those.",
+   "quality": "reference-only",
+   "source": "Serebii: DP GBA Pokemon insertion"
+  },
+  {
+   "id": "tip-pal-park",
+   "kind": "tip",
+   "title": "Pal Park",
+   "text": "On Route 221 after the National Pokedex. Move up to six Pokemon from a GBA cart to the game each time. Each one is caught with a Park Ball that never fails, with a timed reward.",
+   "place": "pal-park",
+   "quality": "reference-only",
+   "source": "Serebii: DP Pal Park"
+  },
+  {
+   "id": "tip-underground",
+   "kind": "tip",
+   "title": "Sinnoh Underground",
+   "text": "With the Explorer Kit you dig for spheres, plates, evolution stones and the Odd Keystone. Move Trap, Bubble Trap and Leaf Trap come from the Underground Man's chores.",
+   "quality": "reference-only",
+   "source": "Serebii: DP Underground"
+  },
+  {
+   "id": "tip-trading",
+   "kind": "tip",
+   "title": "Trading for exclusives and trade evolutions",
+   "text": "Trading needs another player. The Pokemon Center basement has the Wi-Fi Club for registered friends, and the GTS in Jubilife lets you search for Pokemon you have seen.",
+   "quality": "reference-only",
+   "source": "Serebii: DP Wi-Fi page and daily events"
+  },
+  {
+   "id": "tip-clock",
+   "kind": "tip",
+   "title": "Time of day",
+   "text": "The DS clock sets morning, day and night. Friendship evolutions (Budew, Chingling, Riolu, Eevee) and Gligar and Sneasel level-ups depend on it.",
+   "quality": "reference-only",
+   "source": "Serebii: DP evolution page"
+  },
+  {
+   "id": "gift-starter",
+   "kind": "gift",
+   "title": "Starter",
+   "text": "Rowan lets you pick Turtwig, Chimchar or Piplup. Barry's starter is always the one that beats yours.",
+   "quality": "reference-only",
+   "source": "PokeDream: DP ch1 and ch3"
+  },
+  {
+   "id": "gift-eevee",
+   "kind": "gift",
+   "title": "Eevee (Hearthome)",
+   "text": "A Lv 25 Eevee in Hearthome City.",
+   "place": "hearthome-city",
+   "quality": "reference-only",
+   "source": "Serebii: Pokearth Hearthome City (DP)"
+  },
+  {
+   "id": "gift-happiny",
+   "kind": "gift",
+   "title": "Happiny Egg (Hearthome)",
+   "text": "A man near the east gate gives a Happiny Egg.",
+   "place": "hearthome-city",
+   "quality": "reference-only",
+   "source": "PokeDream: DP ch7"
+  },
+  {
+   "id": "gift-riolu",
+   "kind": "gift",
+   "title": "Riolu Egg (Iron Island)",
+   "text": "Escort Riley to the cave's bottom floor with five or fewer Pokemon to get a Riolu Egg.",
+   "place": "iron-island",
+   "quality": "reference-only",
+   "source": "PokeDream: DP sidequest"
+  },
+  {
+   "id": "gift-fossils",
+   "kind": "gift",
+   "title": "Fossil revivals (Oreburgh)",
+   "text": "Revived fossils come at Lv 20. The Underground gives the Skull Fossil (Cranidos line) in this version; the Armor Fossil (Shieldon line) comes from the other.",
+   "place": "oreburgh-city",
+   "quality": "reference-only",
+   "source": "Serebii: Pokearth Oreburgh City (DP) and Underground"
+  },
+  {
+   "id": "trade-abra",
+   "kind": "trade",
+   "title": "Machop for Abra (Oreburgh)",
+   "text": "The Oreburgh trader offers an Abra holding an Oran Berry for a Machop.",
+   "place": "oreburgh-city",
+   "quality": "reference-only",
+   "source": "Serebii: Pokearth Oreburgh City (DP)"
+  },
+  {
+   "id": "trade-chatot",
+   "kind": "trade",
+   "title": "Buizel for Chatot (Eterna)",
+   "text": "A kid in the Eterna condominiums swaps a Chatot with a Leppa Berry for a Buizel.",
+   "place": "eterna-city",
+   "quality": "reference-only",
+   "source": "Serebii: Pokearth Eterna City (DP); PokeDream ch6"
+  },
+  {
+   "id": "trade-haunter",
+   "kind": "trade",
+   "title": "Medicham for Haunter (Snowpoint)",
+   "text": "A woman in the northwest Snowpoint house trades a Haunter holding an Everstone for a Medicham.",
+   "place": "snowpoint-city",
+   "quality": "reference-only",
+   "source": "Serebii: Pokearth Snowpoint City (DP); PokeDream ch14"
+  },
+  {
+   "id": "tip-fight-area",
+   "kind": "tip",
+   "title": "Fight Area and Battle Tower",
+   "text": "After the Hall of Fame a sailor south of Snowpoint City takes you to the Fight Area; the Battle Tower is north of it. Weekends bring Barry.",
+   "place": "fight-area",
+   "quality": "reference-only",
+   "source": "Smogon: DP Battle Tower guide; Serebii: DP daily events"
+  }
+ ]
+}
