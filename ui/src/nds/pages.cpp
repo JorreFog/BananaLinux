@@ -2250,14 +2250,15 @@ namespace banana::nds
 	void Pages::opened(double nowMs)
 	{
 		d->now = nowMs;
-		// the page the oldest unseen notice is for, else the battle, else where it was
+		// a battle on: the Battle page (what the player opens the companion for then; the notices wait), else the page
+		// the oldest unseen notice is for, else where it was
+		if (d->inBattle()) { show(Page::BATTLE); return; }
 		if (d->dt.advice)
 			for (auto& nt : d->dt.advice->notices)
 			{
 				Page pg = Impl::pageOf(nt.page);
 				if (pg != Page::COUNT && d->noticeCount(pg) > 0) { show(pg); return; }
 			}
-		if (d->inBattle()) { show(Page::BATTLE); return; }
 		if (cur == Page::BATTLE) cur = Page::PARTY;
 		show(cur);
 	}

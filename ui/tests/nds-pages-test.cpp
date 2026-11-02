@@ -170,7 +170,20 @@ static void touchTests(const Ctx& c, int w, int h)
 	ndsfx::Fixture pt = ndsfx::platinum();
 	pg.setData(pt.data());
 	CHECK(pg.unseen() == 2, "two notices unseen (%d)", pg.unseen());
-	// opened: lands on the page an unseen notice is for (the Team page's first), and that notice is reported seen
+	// opened in a battle: the Battle page, whatever the notices are for (HeartGold on the RG DS landed on Guide in a
+	// wild battle), and those stay unseen
+	pg.opened(0);
+	CHECK(pg.page() == Page::BATTLE, "opened in a battle on page %d, not Battle", (int)pg.page());
+	CHECK(pg.takeSeen().empty() && pg.unseen() == 2, "notices still unseen after a battle opening");
+	// out of the battle: lands on the page an unseen notice is for (the Team page's first), and that notice is reported
+	// seen
+	{
+		auto calm = std::make_shared<Live>(*pt.live);
+		calm->battle = Battle{};
+		PageData d = pt.data();
+		d.live = calm;
+		pg.setData(d);
+	}
 	pg.opened(0);
 	CHECK(pg.page() == Page::TEAM, "opened on page %d, not Team", (int)pg.page());
 	auto seen = pg.takeSeen();
@@ -310,6 +323,7 @@ static void touchTests(const Ctx& c, int w, int h)
 	// sends Advice without seen notices a tick later: on Platinum "Shinx lives here" never showed on Team)
 	{
 		ndsfx::Fixture f = ndsfx::platinum();
+		f.live->battle = Battle{};	// (out of the battle: a battle opens on Battle)
 		PageData d = f.data();
 		auto bare = std::make_shared<Advice>(*f.advice);
 		bare->notices.clear();
