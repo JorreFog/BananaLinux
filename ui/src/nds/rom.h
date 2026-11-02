@@ -24,9 +24,11 @@ namespace banana::nds
 			SPECIES_IN_PARTY, LEVEL_MALE, LEVEL_FEMALE, MAGNETIC_FIELD, MOSS_ROCK, ICE_ROCK };
 	}
 
-	// encounter kinds model.h doesn't name yet (asked for on the board, at the end of EncounterKind in this order)
-	constexpr EncounterKind DARK_GRASS = (EncounterKind)13, SHAKING_GRASS = (EncounterKind)14, RIPPLE_SURF = (EncounterKind)15,
-		RIPPLE_FISH = (EncounterKind)16, HOENN_SOUND = (EncounterKind)17, SINNOH_SOUND = (EncounterKind)18, NIGHT_FISH = (EncounterKind)19;
+	// (the encounter kinds rom.cpp fills, now in model.h; the numbers the cache was written with)
+	static_assert((int)EncounterKind::DARK_GRASS == 13 && (int)EncounterKind::NIGHT_FISH == 19, "cache numbering");
+	constexpr EncounterKind DARK_GRASS = EncounterKind::DARK_GRASS, SHAKING_GRASS = EncounterKind::SHAKING_GRASS,
+		RIPPLE_SURF = EncounterKind::RIPPLE_SURF, RIPPLE_FISH = EncounterKind::RIPPLE_FISH,
+		HOENN_SOUND = EncounterKind::HOENN_SOUND, SINNOH_SOUND = EncounterKind::SINNOH_SOUND, NIGHT_FISH = EncounterKind::NIGHT_FISH;
 
 	struct RomLoadInfo
 	{

@@ -56,6 +56,7 @@ namespace banana::nds
 		std::vector<Evolution> evolutions;
 		std::vector<LevelMove> learnset;
 		std::vector<uint16_t> tms;			// TM/HM numbers it can learn (1-based; HMs after the TMs)
+		uint16_t formsAt = 0; uint8_t formCount = 1;	// RomData::species index of form 1 (forms 1..count-1 follow)
 	};
 	// a sprite: indexed frames + a normal and a shiny palette (BGR555 -> 0xRRGGBB), and the animation (Gen V: the
 	// game's own NANR sequence; Gen IV: its two frames alternating)
@@ -71,9 +72,14 @@ namespace banana::nds
 	// ---- places, encounters, trainers, items --------------------------------------------------------------
 	enum class TimeOfDay : uint8_t { ANY, MORNING, DAY, NIGHT };
 	enum class EncounterKind : uint8_t { GRASS, SURF, OLD_ROD, GOOD_ROD, SUPER_ROD, ROCK_SMASH, HEADBUTT, SWARM,
-		RADAR, DUAL_SLOT, SEASON, GROTTO, SPECIAL };
+		RADAR, DUAL_SLOT, SEASON, GROTTO, SPECIAL,
+		DARK_GRASS, SHAKING_GRASS, RIPPLE_SURF, RIPPLE_FISH,	// Gen V
+		HOENN_SOUND, SINNOH_SOUND, NIGHT_FISH };				// HGSS (the radio's sounds, fishing at night)
 	struct Encounter { uint16_t species = 0; uint8_t minLevel = 0, maxLevel = 0, percent = 0; EncounterKind kind =
-		EncounterKind::GRASS; TimeOfDay time = TimeOfDay::ANY; uint8_t season = 0xff; uint8_t form = 0; };
+		EncounterKind::GRASS; TimeOfDay time = TimeOfDay::ANY; uint8_t season = 0xff; uint8_t form = 0;
+		// DUAL_SLOT: the GBA game in slot 2 (1 Ruby 2 Sapphire 3 Emerald 4 FireRed 5 LeafGreen); SWARM: 0 grass 1 surf
+		// 2 fishing; HEADBUTT: the tree kind
+		uint8_t condition = 0; };
 	struct Location { uint16_t id = 0; std::string name; std::vector<Encounter> encounters; };	// by map / zone id
 	struct TrainerMon { uint16_t species = 0, item = 0; uint8_t level = 0; uint16_t moves[4] = {}; };
 	struct Trainer { uint16_t id = 0; std::string cls, name; std::vector<TrainerMon> team; bool doubleBattle = false; };
