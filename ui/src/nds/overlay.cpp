@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <cerrno>
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <ctime>
 #include <fstream>
@@ -231,7 +233,7 @@ namespace banana::nds
 		be->beginScreen(1);
 	}
 
-	bool Overlay::end()
+	void Overlay::compose()
 	{
 		be->endScreen();
 		const Damage d = be->takeDamage(1);
@@ -240,6 +242,11 @@ namespace banana::nds
 			dirty = bovl_union(dirty, bovl_rect{ d.x0, d.y0, d.x1 - d.x0, d.y1 - d.y0 });
 			dirtyPending = true;
 		}
+	}
+
+	bool Overlay::end()
+	{
+		compose();
 		return send();
 	}
 
@@ -426,6 +433,18 @@ namespace banana::nds
 
 	void runWhileGame(Overlay& ov, OverlayPage& page, pid_t pid, int& status, const std::function<void(double)>& idle)
 	{
+		// (BANANA_NDS_PERFLOG=<file>: a line per loop turn that did any work, for the companion's speed checks: the time
+		// (CLOCK_MONOTONIC ms), then the stages' times in us: idle (the Session), touches (count, the newest one's age in ms), tick,
+		// draw (the page's draw calls), compose (the backend's), send (convert + copy into the file), the rectangle
+		// sent, the gap since the last picture)
+		// (the menu runs from an init script: on a handheld the file /run/banana/nds-perflog holding the log's path does
+		// the same; /run is gone at the next boot)
+		FILE* perf = nullptr;
+		std::string perfPath;
+		if (const char* pl = getenv("BANANA_NDS_PERFLOG")) perfPath = pl;
+		else { std::ifstream f("/run/banana/nds-perflog"); std::getline(f, perfPath); }
+		if (!perfPath.empty() && (perf = fopen(perfPath.c_str(), "w"))) setvbuf(perf, nullptr, _IOLBF, 0);
+		double lastPic = 0;
 		const int pidFd = (int)syscall(SYS_pidfd_open, pid, 0);
 		uint32_t seenSeq = ov.openSeq();
 		bool wasShown = false, finger = false, want = true;
@@ -437,7 +456,10 @@ namespace banana::nds
 			if (w == pid || (w < 0 && errno != EINTR)) break;
 			const double now = monoMs();
 			if (idle) idle(now);
+			const double tIdle = monoMs();
 			ov.setIcon(page.iconOn(), page.badge());
+			int nTouch = 0;
+			uint32_t newestTouch = 0;
 			if (access(CMD, F_OK) == 0)
 			{
 				std::ifstream f(CMD);
@@ -470,9 +492,17 @@ namespace banana::nds
 				page.touch(t);
 				finger = t.type != Touch::UP;
 				want = true;
+				nTouch++;
+				newestTouch = t.ms;
 			}
+			const double tTouch = monoMs();
 			if (page.wantsClose()) ov.requestOpen(false);
-			if (page.tick(now)) want = true;
+			const bool ticked = page.tick(now);
+			if (ticked) want = true;
+			const double tTick = monoMs();
+			double tDraw = tTick, tComp = tTick, tSend = tTick;
+			bool pic = false;
+			bovl_rect sentRect{ 0, 0, 0, 0 };
 			int timeout = shown ? 16 : 50;
 			if (shown && (want || ov.pending()))
 			{
@@ -483,18 +513,34 @@ namespace banana::nds
 					{
 						ov.begin();
 						page.draw(ov.backend(), ov.width(), ov.height(), ov.iconRect());
-						ov.end();
+						tDraw = monoMs();
+						ov.compose();
+						tComp = monoMs();
+						sentRect = ov.dirtyRect();
+						ov.send();
 						want = false;
 					}
-					else ov.send();
+					else { tDraw = tComp = monoMs(); sentRect = ov.dirtyRect(); ov.send(); }
+					tSend = monoMs();
+					pic = true;
 					lastDraw = now;
 				}
 				else timeout = std::max(1, (int)(gap - (now - lastDraw)));
+			}
+			if (perf && (pic || nTouch || tIdle - now > 1 || tTick - tTouch > 1))
+			{
+				const uint32_t nowMsU = (uint32_t)(uint64_t)tTouch;
+				fprintf(perf, "%.1f idle %.0f touch %d %d tick %.0f%s draw %.0f comp %.0f send %.0f rect %d,%d %dx%d gap %.1f\n", now,
+					(tIdle - now) * 1000, nTouch, nTouch ? (int)(nowMsU - newestTouch) : -1, (tTick - tTouch) * 1000, ticked ? "+" : "",
+					(tDraw - tTick) * 1000, (tComp - tDraw) * 1000, (tSend - tComp) * 1000, sentRect.x, sentRect.y, sentRect.w, sentRect.h,
+					pic ? now - lastPic : 0.0);
+				if (pic) lastPic = now;
 			}
 			pollfd p{ pidFd, POLLIN, 0 };
 			if (pidFd >= 0) poll(&p, 1, timeout);
 			else usleep(timeout * 1000);
 		}
 		if (pidFd >= 0) ::close(pidFd);
+		if (perf) fclose(perf);
 	}
 }

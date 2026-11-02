@@ -78,7 +78,9 @@ namespace banana::nds
 		// what changed since the last frame sent: false when no slot was free (BananaDS copying the last one): call
 		// send() again shortly, the picture is kept
 		bool end();
+		void compose();		// end()'s first half: the screen composed, what changed marked to send
 		bool send();
+		bovl_rect dirtyRect() const { return dirty; }
 		bool pending() const { return dirtyPending || seqPending; }
 		const uint32_t* pixels() const { return be->pixels(1); }	// (tests)
 
