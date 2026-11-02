@@ -106,3 +106,7 @@ clean:
 # the companion's shared-memory link (tests/run.sh runs it)
 tests/complink-test: tests/complink-test.cpp src/complink.cpp src/complink.h src/bcomp.c src/bcomp.h
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/complink-test.cpp src/complink.cpp -x c++ src/bcomp.c
+
+# the DS Pokémon companion's guide loader (tests/run.sh runs it)
+tests/guide-test: tests/guide-test.cpp src/nds/guide.cpp src/nds/guide.h src/nds/model.h src/json.cpp
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/guide-test.cpp src/nds/guide.cpp src/json.cpp
