@@ -679,7 +679,9 @@ namespace banana::nds
 
 		// ---- the frame -------------------------------------------------------------------------------------------
 		std::set<std::string> seenQueue;	// notice ids shown, not yet taken
-		std::set<std::string> freshNow;		// the notices new when this page was opened (drawn as new)
+		// the notices new when this page was opened, kept as they were: the logic drops a notice from Advice as soon as
+		// it is marked seen (one tick later), and the page must still say what raised the badge
+		std::vector<Notice> freshNow;
 		Page freshFor = Page::COUNT;
 
 		int noticeCount(Page pg) const
@@ -709,7 +711,7 @@ namespace banana::nds
 			for (auto& nt : dt.advice->notices)
 				if (pageOf(nt.page) == pg && std::find(dt.seenNotices.begin(), dt.seenNotices.end(), nt.id) == dt.seenNotices.end())
 				{
-					if (!seenQueue.count(nt.id)) freshNow.insert(nt.id);
+					if (!seenQueue.count(nt.id)) freshNow.push_back(nt);
 					seenQueue.insert(nt.id);
 				}
 		}
@@ -876,10 +878,10 @@ namespace banana::nds
 	// the notices for this page, new since it was last opened: a line each at the top of its content
 	void Pages::Impl::notices(Page pg, float x, float& y, float w)
 	{
-		if (!dt.advice || freshFor != pg) return;
-		for (auto& nt : dt.advice->notices)
+		if (freshFor != pg) return;
+		for (auto& nt : freshNow)
 		{
-			if (pageOf(nt.page) != pg || !freshNow.count(nt.id)) continue;
+			if (pageOf(nt.page) != pg) continue;
 			float th = 20 + wrapHeight(nt.text, 12, w - 48, 2, true);
 			box("best", x, y, w, th + 12);
 			pixels(PX_SPARK, 7, x + 14, y + 12, k(), [&](char) { return p.accent; });

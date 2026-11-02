@@ -290,6 +290,25 @@ static void touchTests(const Ctx& c, int w, int h)
 		pg.setData(pt.data());
 		pg.showSpecies(391);
 	}
+	// the notice that raised the badge stays on the page it opened after the logic has dropped it as seen (the session
+	// sends Advice without seen notices a tick later: on Platinum "Shinx lives here" never showed on Team)
+	{
+		ndsfx::Fixture f = ndsfx::platinum();
+		PageData d = f.data();
+		auto bare = std::make_shared<Advice>(*f.advice);
+		bare->notices.clear();
+		PageData without = d; without.advice = bare;
+		pg.setData(without); pg.show(Page::TEAM); pg.render();
+		auto never = grab(be, 1);
+		pg.setData(d); pg.show(Page::GUIDE); pg.opened(0);
+		CHECK(pg.page() == Page::TEAM, "opened on Team (%d)", (int)pg.page());
+		auto taken = pg.takeSeen();
+		without.seenNotices = taken;
+		pg.setData(without); pg.render();
+		CHECK(!taken.empty() && grab(be, 1) != never, "the notice is still drawn after Advice dropped it");
+		pg.setData(pt.data());
+		pg.showSpecies(391);
+	}
 	// the list's rail: its bottom is the end of the Pokédex
 	pg.render();
 	pg.touchDown((int)(199 * s), (int)(408 * s), 0); pg.touchUp((int)(199 * s), (int)(408 * s), 0);
