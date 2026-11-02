@@ -5,10 +5,9 @@
 ################################################################################
 
 # BananaNES: BananaOS's NES core, a fork of libretro-fceumm tuned for the RG DS / RG DS Plus (Cortex-A55).
-# (local until it has a home on GitHub: the final step of the 2026-11-01 run points this at the pushed SHA)
-LIBRETRO_BANANANES_VERSION = local
-LIBRETRO_BANANANES_SITE = $(HOME)/banana-emu/BananaNES
-LIBRETRO_BANANANES_SITE_METHOD = local
+# from github.com/JorreFog/BananaNES (public since 2026-11-02)
+LIBRETRO_BANANANES_VERSION = 314422eb4d52f054d4ffce39f3bfac87e8502bcc
+LIBRETRO_BANANANES_SITE = $(call github,JorreFog,BananaNES,$(LIBRETRO_BANANANES_VERSION))
 LIBRETRO_BANANANES_LICENSE = GPL-2.0
 LIBRETRO_BANANANES_LICENSE_FILES = Copying
 
