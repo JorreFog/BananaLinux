@@ -1049,7 +1049,6 @@ namespace banana::nds
 
 	std::shared_ptr<const Sprite> RomImpl::sprite(uint16_t species, bool female, uint8_t form) const
 	{
-		// (Gen IV's forms: the base form's picture; their pictures are in a separate archive laid out by code)
 		if (species == 0 || species > game.dexSize) return nullptr;
 		std::lock_guard<std::mutex> g(lock);
 		uint32_t key = (uint32_t)species << 9 | (uint32_t)form << 1 | (female ? 1 : 0);
@@ -1071,9 +1070,35 @@ namespace banana::nds
 			// is 160x80, two 80x80 frames side by side, scrambled with the LC RNG (pret pokemon_sprite.c: Diamond and
 			// Pearl from the last word down, Platinum and HGSS from the first up)
 			size_t at = (size_t)species * 6;
-			Span front = female && n[at + 2].n ? n[at + 2] : n[at + 3];
+			Span front = female && n[at + 2].n ? n[at + 2] : n[at + 3], pal = n[at + 4], shinyPal = n[at + 5];
+			// forms: their own archive, laid out by the games' code (pret pokeplatinum/pokeheartgold/pokediamond
+			// pokemon.c, the sprite template switch): per species the front picture of form 0 and how far each form
+			// moves it, the palette and how far each form moves it, and the shiny palette's distance
+			Bytes ob;
+			Narc on;
+			if (form > 0)
+			{
+				struct OF { uint16_t species; uint8_t forms; uint16_t chr; uint8_t chrStep; uint16_t palDp, palPt; uint8_t palStep, shinyStep; };
+				// (HeartGold/SoulSilver: Platinum's palettes moved up 4 by Pichu's pictures)
+				static const OF T[] = { { 386, 4, 0x01, 2, 134, 154, 0, 1 }, { 201, 28, 0x09, 2, 136, 156, 0, 1 }, { 351, 4, 0x44, 1, 138, 158, 1, 4 },
+					{ 412, 3, 0x49, 2, 146, 166, 2, 1 }, { 413, 3, 0x4f, 2, 152, 172, 2, 1 }, { 422, 2, 0x56, 1, 158, 178, 2, 1 },
+					{ 423, 2, 0x5a, 1, 162, 182, 2, 1 }, { 421, 2, 0x5e, 1, 166, 186, 1, 2 }, { 493, 18, 0x61, 2, 170, 190, 2, 1 },
+					{ 492, 2, 0x87, 2, 0, 228, 2, 1 }, { 479, 6, 0x8b, 2, 0, 232, 2, 1 }, { 487, 2, 0x97, 2, 0, 244, 2, 1 }, { 172, 2, 0x9b, 2, 0, 0, 2, 1 } };
+				const bool dp = isDp(game.id), hg = isHgss(game.id);
+				const char* other = dp ? "poketool/pokegra/otherpoke.narc" : hg ? "a/1/1/4" : "poketool/pokegra/pl_otherpoke.narc";
+				for (auto& t : T)
+				{
+					if (t.species != species || form >= t.forms) continue;
+					uint16_t palBase = dp ? t.palDp : hg ? (t.species == 172 ? 252 : (uint16_t)(t.palPt + 4)) : t.palPt;
+					if (palBase == 0 || !rom->file(other, ob) || !on.parse(ob)) break;
+					front = on[t.chr + (size_t)t.chrStep * form];
+					size_t pn = palBase + (size_t)t.palStep * form;
+					pal = on[pn]; shinyPal = on[pn + t.shinyStep];
+					break;
+				}
+			}
 			Chars c;
-			if (!chars(front, c) || c.data.n < 6400 || !palette(n[at + 4], s->normal) || !palette(n[at + 5], s->shiny)) return nullptr;
+			if (!chars(front, c) || c.data.n < 6400 || !palette(pal, s->normal) || !palette(shinyPal, s->shiny)) return nullptr;
 			std::vector<uint16_t> w(3200);
 			for (size_t k = 0; k < w.size(); k++) w[k] = c.data.u16(2 * k);
 			const bool fromEnd = isDp(game.id);

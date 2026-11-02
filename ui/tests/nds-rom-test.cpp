@@ -601,8 +601,7 @@ static void checkGame(const RomData& r)
 		CHECK(opaque > 500 && opaque < (size_t)(sp->w * sp->h) * 3 / 4);
 		CHECK(sp->anim.size() >= 2);
 	}
-	// Gen V's forms have their own pictures: Deoxys' Attack Forme isn't the Normal one
-	if (g5)
+	// forms have their own pictures: Deoxys' Attack Forme isn't the Normal one
 	{
 		auto a = r.sprite(386, false, 0), b2 = r.sprite(386, false, 1);
 		CHECK(a && b2 && !a->frames.empty() && !b2->frames.empty() && a->frames[0] != b2->frames[0]);
@@ -610,6 +609,11 @@ static void checkGame(const RomData& r)
 		auto u = r.sprite(201, false, 5), u0 = r.sprite(201), c0 = r.sprite(351), c2 = r.sprite(351, false, 2);
 		CHECK(u && u0 && u->normal == u0->normal && u->frames[0] != u0->frames[0]);
 		CHECK(c0 && c2 && c0->normal != c2->normal);
+		if (!g5 && !(g.id == GameId::DIAMOND || g.id == GameId::PEARL))	// Rotom's appliances: Platinum on
+		{
+			auto r0 = r.sprite(479), r1 = r.sprite(479, false, 1);
+			CHECK(r0 && r1 && r0->normal != r1->normal);
+		}
 	}
 }
 
