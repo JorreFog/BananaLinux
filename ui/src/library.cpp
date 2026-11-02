@@ -1023,10 +1023,12 @@ namespace banana
 	std::vector<std::pair<std::string, std::string>> Library::hints(bool library, int /*sys*/, int game)
 	{
 		std::vector<std::pair<std::string, std::string>> r;
+		// the settings (and from them Y: Sleep, Restart, Shut down) said on the home screen, where nothing showed START;
+		// first, as the bar keeps the hints that fit in order: in Russian SELECT's came first and START's was left out
+		// (bug hunt 0.5.1.1 BUG-ui-10), and a player who can't find Settings can't find anything else either
+		if (!library) r.push_back({ "START", "Settings" });
 		if (library && game >= 0 && game < gameCount()) r.push_back({ "X", "Options" });	// (the game page: a DS game's emulator and shader, any game's name)
 		r.push_back({ "SELECT", "Search" });
-		// the settings (and from them Y: Sleep, Restart, Shut down) said on the home screen, where nothing showed START
-		if (!library) r.push_back({ "START", "Settings" });
 		return r;
 	}
 
