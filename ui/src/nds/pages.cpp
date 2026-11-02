@@ -3,8 +3,15 @@
 #include "../lang.h"
 #include <algorithm>
 #include <cmath>
+#include <condition_variable>
 #include <cstdio>
+#include <deque>
+#include <mutex>
 #include <set>
+#include <sys/resource.h>
+#include <sys/syscall.h>
+#include <thread>
+#include <unistd.h>
 #include <unordered_map>
 
 // The pages are drawn like Settings' (settings.cpp): rnds boxes cached as textures by kind and size, lines of text
@@ -212,6 +219,16 @@ namespace banana::nds
 			loadFonts();
 			p = pal(light);
 		}
+		~Impl()
+		{
+			if (!dec) return;
+			{
+				std::lock_guard<std::mutex> g(dec->m);
+				dec->stop = true;
+			}
+			dec->cv.notify_all();
+			dec->th.join();
+		}
 
 		// ---- caches -------------------------------------------------------------------------------------------------
 		struct Cached { rnds::TexPtr tex; int ox = 0, oy = 0; float w = 0; uint64_t used = 0; bool drawn = false; };
@@ -219,6 +236,183 @@ namespace banana::nds
 		uint64_t frame = 1;
 		struct SprTex { rnds::TexPtr tex; int w = 0, h = 0; uint64_t used = 0; };	// a sprite frame cropped to its picture
 		std::unordered_map<std::string, SprTex> sprites;
+
+		// the pictures' sources: a species' decoded Sprite and the union of its frames (bounds()), asked of the ROM once
+		// per species, not on every draw. (RomData keeps only its last 4: a page showing more species decoded each of
+		// them again on every draw, and walked every frame of a Gen V animation for the bounds - Party 626 ms a picture
+		// with a Black 2 save on the RG DS Plus.) The Sprites (Gen V: ~0.5 MB each, up to 1.8) are let go of, least
+		// recently drawn first, past SPR_KEEP bytes; their bounds and drawn pictures stay.
+		// With the decoder thread on (setDecoderThread: the overlay's pages), a species not decoded yet is decoded there
+		// and drawn as a ring until it is: the paint loop never waits on a decode (a Gen V picture with its animation
+		// is tens of ms on the handhelds)
+		struct SprSrc
+		{
+			std::shared_ptr<const Sprite> spr;
+			int bx0 = 0, by0 = 0, bx1 = 0, by1 = 0, frames = 0;
+			std::vector<Sprite::Step> anim;
+			bool missing = false;
+			uint64_t used = 0;
+			size_t bytes = 0;
+		};
+		static constexpr size_t SPR_KEEP = 24u << 20;
+		std::unordered_map<uint32_t, SprSrc> sprSrc;
+		size_t sprBytes = 0;
+		const RomData* sprRom = nullptr;
+		static uint32_t sprKey(uint16_t sp, bool female, uint8_t form) { return (uint32_t)sp << 9 | (uint32_t)form << 1 | (female ? 1u : 0u); }
+		static SprSrc decodeSrc(const RomData& rom, uint32_t key)
+		{
+			SprSrc r;
+			r.spr = rom.sprite((uint16_t)(key >> 9), key & 1, (uint8_t)(key >> 1));
+			if (!r.spr || r.spr->frames.empty() || r.spr->w <= 0) { r.spr = nullptr; r.missing = true; return r; }
+			bounds(*r.spr, r.bx0, r.by0, r.bx1, r.by1);
+			r.frames = (int)r.spr->frames.size();
+			r.anim = r.spr->anim;
+			for (auto& f : r.spr->frames) r.bytes += f.size();
+			return r;
+		}
+		struct Decoder
+		{
+			std::thread th;
+			std::mutex m;
+			std::condition_variable cv;
+			struct Job { uint32_t key; std::shared_ptr<const RomData> rom; };
+			std::deque<Job> q;
+			struct Done { uint32_t key; const RomData* rom; SprSrc src; };
+			std::vector<Done> done;
+			std::set<uint32_t> asked;	// (queued or being decoded: asked once)
+			bool stop = false;
+		};
+		std::unique_ptr<Decoder> dec;
+		void startDecoder()
+		{
+			if (dec) return;
+			dec = std::make_unique<Decoder>();
+			Decoder* d = dec.get();
+			dec->th = std::thread([d]
+			{
+				// (below the game's threads and the paint loop: it fills in pictures, nothing waits on it)
+				setpriority(PRIO_PROCESS, (id_t)syscall(SYS_gettid), 10);
+				std::unique_lock<std::mutex> g(d->m);
+				for (;;)
+				{
+					d->cv.wait(g, [d] { return d->stop || !d->q.empty(); });
+					if (d->stop) return;
+					Decoder::Job j = d->q.front();
+					d->q.pop_front();
+					g.unlock();
+					SprSrc r = decodeSrc(*j.rom, j.key);
+					g.lock();
+					d->done.push_back({ j.key, j.rom.get(), std::move(r) });
+				}
+			});
+		}
+		// the ROM changed (the pages' first data, another game): nothing of the last one is kept
+		void sprFor(const RomData* rom)
+		{
+			if (rom == sprRom) return;
+			sprRom = rom;
+			sprSrc.clear();
+			sprites.clear();
+			sprBytes = 0;
+			if (!dec) return;
+			std::lock_guard<std::mutex> g(dec->m);
+			dec->q.clear();
+			dec->asked.clear();
+		}
+		// a species' picture to decode on the thread; now: wanted on the screen (before the ones asked ahead)
+		void ask(uint32_t key, bool now)
+		{
+			if (!dec || !dt.rom) return;
+			{
+				std::lock_guard<std::mutex> g(dec->m);
+				if (!dec->asked.insert(key).second)
+				{
+					if (now)	// (asked ahead, still waiting: to the front)
+						for (auto it = dec->q.begin(); it != dec->q.end(); ++it)
+							if (it->key == key) { Decoder::Job j = *it; dec->q.erase(it); dec->q.push_front(j); break; }
+					return;
+				}
+				if (now) dec->q.push_front({ key, dt.rom });
+				else dec->q.push_back({ key, dt.rom });
+			}
+			dec->cv.notify_one();
+		}
+		void keep(uint32_t key, SprSrc&& r)
+		{
+			auto it = sprSrc.find(key);
+			if (it != sprSrc.end()) sprBytes -= it->second.spr ? it->second.bytes : 0;
+			r.used = it != sprSrc.end() ? it->second.used : frame;
+			sprBytes += r.spr ? r.bytes : 0;
+			sprSrc[key] = std::move(r);
+		}
+		// the thread's decoded pictures in: true when any came (the page is drawn again)
+		bool takeDecoded()
+		{
+			if (!dec) return false;
+			std::vector<Decoder::Done> got;
+			{
+				std::lock_guard<std::mutex> g(dec->m);
+				got.swap(dec->done);
+				for (auto& d : got) dec->asked.erase(d.key);
+			}
+			bool any = false;
+			for (auto& d : got)
+				if (d.rom == sprRom) { keep(d.key, std::move(d.src)); any = true; }
+			return any;
+		}
+		// a species' source (null: not decoded yet, asked of the thread)
+		SprSrc* src(uint16_t sp, bool female, uint8_t form)
+		{
+			sprFor(dt.rom.get());
+			const uint32_t key = sprKey(sp, female, form);
+			auto it = sprSrc.find(key);
+			if (it == sprSrc.end())
+			{
+				if (dec) { ask(key, true); return nullptr; }
+				keep(key, decodeSrc(*dt.rom, key));
+				it = sprSrc.find(key);
+			}
+			it->second.used = frame;
+			return &it->second;
+		}
+		// past SPR_KEEP: the least recently drawn Sprites go (not this frame's)
+		void trimSprites()
+		{
+			if (sprBytes <= SPR_KEEP) return;
+			std::vector<std::pair<uint64_t, uint32_t>> old;
+			for (auto& e : sprSrc)
+				if (e.second.spr && e.second.used < frame) old.push_back({ e.second.used, e.first });
+			std::sort(old.begin(), old.end());
+			for (auto& o2 : old)
+			{
+				if (sprBytes <= SPR_KEEP * 2 / 3) break;
+				SprSrc& e = sprSrc[o2.second];
+				sprBytes -= e.bytes;
+				e.spr = nullptr;
+			}
+		}
+		// the species the pages will show (the party, the battle, this place's wild ones, roamers, the day care), decoded
+		// ahead on the thread
+		void askAhead()
+		{
+			if (!dec || !dt.rom || !dt.live || !dt.live->valid) return;
+			sprFor(dt.rom.get());
+			auto want = [&](uint16_t sp, bool female, uint8_t form)
+			{
+				if (!sp || sp > dexSize()) return;
+				const uint32_t key = sprKey(sp, female, form);
+				if (!sprSrc.count(key)) ask(key, false);
+			};
+			const Live& lv = *dt.live;
+			for (auto& m : lv.party) want(m.species, m.female, m.form);
+			for (auto& b : lv.battle.foes) if (b.present) want(b.mon.species, b.mon.female, b.mon.form);
+			for (auto& m : lv.battle.foeParty) want(m.species, m.female, m.form);
+			auto z = dt.rom->zones.find(lv.zone);
+			if (z != dt.rom->zones.end())
+				for (auto& e : z->second.encounters) want(e.species, false, 0);
+			for (auto& r : lv.roamers) if (r.active) want(r.species, false, 0);
+			for (auto& m : lv.daycare) want(m.species, m.female, m.form);
+		}
 
 		void loadFonts()
 		{
@@ -566,7 +760,7 @@ namespace banana::nds
 		// ---- sprites -------------------------------------------------------------------------------------------------
 		double now = 0;
 		double animNext = -1;	// when a sprite drawn in the last frame next changes its frame (-1 none)
-		int frameAt(const Sprite& sp, double t, double* next) const
+		static int frameAt(const SprSrc& sp, double t, double* next)
 		{
 			if (sp.anim.empty()) return 0;
 			uint32_t total = 0;
@@ -575,12 +769,12 @@ namespace banana::nds
 			for (auto& st : sp.anim)
 			{
 				acc += std::max<uint16_t>(st.ms, 1);
-				if (at < acc) { if (next) *next = t + (acc - at); return std::min<int>(st.frame, (int)sp.frames.size() - 1); }
+				if (at < acc) { if (next) *next = t + (acc - at); return std::min<int>(st.frame, sp.frames - 1); }
 			}
 			return 0;
 		}
 		// the union of every frame's picture (so the animation doesn't wander as frames change)
-		void bounds(const Sprite& sp, int& x0, int& y0, int& x1, int& y1) const
+		static void bounds(const Sprite& sp, int& x0, int& y0, int& x1, int& y1)
 		{
 			x0 = sp.w; y0 = sp.h; x1 = 0; y1 = 0;
 			for (auto& f : sp.frames)
@@ -599,17 +793,17 @@ namespace banana::nds
 			float lift = 0)
 		{
 			if (!visible(y, h) || !dt.rom || !sp) return;
-			std::shared_ptr<const Sprite> spr = dt.rom->sprite(sp, female, form);
-			if (!spr || spr->frames.empty() || spr->w <= 0) { pixels(PX_RING, 10, x + w / 2 - 5.0f * k() / s, y + h / 2 - 5.0f * k() / s, k(), [&](char) { return p.line; }); return; }
+			auto ring = [&] { pixels(PX_RING, 10, x + w / 2 - 5.0f * k() / s, y + h / 2 - 5.0f * k() / s, k(), [&](char) { return p.line; }); };
+			SprSrc* sc = src(sp, female, form);
+			if (!sc || sc->missing) { ring(); return; }
 			int fr = 0;
 			if (animate)
 			{
 				double nx = -1;
-				fr = frameAt(*spr, now, &nx);
+				fr = frameAt(*sc, now, &nx);
 				if (nx > 0 && (animNext < 0 || nx < animNext)) animNext = nx;
 			}
-			int bx0, by0, bx1, by1;
-			bounds(*spr, bx0, by0, bx1, by1);
+			const int bx0 = sc->bx0, by0 = sc->by0, bx1 = sc->bx1, by1 = sc->by1;
 			int bw = bx1 - bx0, bh = by1 - by0;
 			float dw = X(w), dh = X(h);
 			float kf = std::min(dw / bw, dh / bh);
@@ -621,6 +815,14 @@ namespace banana::nds
 			auto it = sprites.find(key);
 			if (it == sprites.end())
 			{
+				if (!sc->spr)	// (let go of: decoded again)
+				{
+					if (dec) { ask(sprKey(sp, female, form), true); ring(); return; }
+					keep(sprKey(sp, female, form), decodeSrc(*dt.rom, sprKey(sp, female, form)));
+					sc = &sprSrc[sprKey(sp, female, form)];
+					if (!sc->spr) { ring(); return; }
+				}
+				const std::shared_ptr<const Sprite> spr = sc->spr;
 				rnds::Bitmap b;
 				b.w = bw; b.h = bh; b.px.assign((size_t)bw * bh * 4, 0);
 				const auto& f = spr->frames[fr];
@@ -818,6 +1020,7 @@ namespace banana::nds
 		if (sprites.size() > 160)
 			for (auto it = sprites.begin(); it != sprites.end();)
 				it = it->second.used + 2 < frame ? sprites.erase(it) : std::next(it);
+		trimSprites();
 	}
 
 	void Pages::Impl::header(const std::string& title, const std::string& sub, bool rawTitle, bool rawSub, bool showWhere)
@@ -2297,6 +2500,11 @@ namespace banana::nds
 	{
 		d->dt = data;
 		if (data.rom && dexSel > data.rom->game.dexSize) dexSel = 1;
+		d->askAhead();
+	}
+	void Pages::setDecoderThread(bool on)
+	{
+		if (on) d->startDecoder();
 	}
 	void Pages::setLook(bool light)
 	{
@@ -2457,6 +2665,7 @@ namespace banana::nds
 	bool Pages::update(double nowMs)
 	{
 		d->now = nowMs;
+		const bool decoded = d->takeDecoded();
 		bool moved = false;
 		if (d->flingId >= 0)
 		{
@@ -2477,7 +2686,7 @@ namespace banana::nds
 				if (!moved || std::fabs(d->flingV) < Impl::FLING_STOP || ny <= 0 || ny >= sc.max) d->stopFling();
 			}
 		}
-		return moved || (d->animNext >= 0 && nowMs >= d->animNext);
+		return decoded || moved || (d->animNext >= 0 && nowMs >= d->animNext);
 	}
 	int Pages::nextWake(double nowMs) const
 	{

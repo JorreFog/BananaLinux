@@ -48,6 +48,10 @@ namespace banana::nds
 		~Pages();
 
 		void setData(const PageData& d);
+		// the species' pictures decoded on a thread of their own (drawn as a ring until they are; update() is true when
+		// some came), and the ones the pages will show decoded ahead at each setData. Off (the default, the tests):
+		// decoded when first drawn
+		void setDecoderThread(bool on);
 		void setLook(bool light);		// the theme changed (the host has applied it): everything drawn anew
 		// the icon's rectangle on the bottom panel (device px): Back to game covers it. Default: the bottom-right
 		// 48x48 CSS px
