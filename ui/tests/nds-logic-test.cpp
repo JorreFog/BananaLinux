@@ -254,6 +254,20 @@ static void testAdvice()
 	twig.level = 18;
 	ev = evolutionWatch(Gen::IV, twig, r, l, &g);
 	CHECK(ev[0].ready);
+	{	// roamer: and evolve: notices are not verified on a running game yet: off unless asked for (AdviceState), the
+		// rest as before
+		Live r2 = l;
+		r2.party[1].level = 18;
+		Roamer mesprit; mesprit.species = 481; mesprit.zone = 30; mesprit.level = 50; mesprit.active = true;
+		r2.roamers = { mesprit };
+		auto has = [](const Advice& a, const char* pre) { for (auto& n : a.notices) if (n.id.rfind(pre, 0) == 0) return true; return false; };
+		AdviceState off;
+		Advice a1 = computeAdvice(r, r2, &g, off);
+		CHECK(!has(a1, "evolve:") && !has(a1, "roamer:") && has(a1, "next:") && has(a1, "secrets:"));
+		AdviceState on; on.unverifiedNotices = true;
+		Advice a2 = computeAdvice(r, r2, &g, on);
+		CHECK(has(a2, "evolve:2:388") && has(a2, "roamer:481:30"));
+	}
 	Mon e; e.evs[0] = 252; e.evs[1] = 252; e.evs[3] = 6;
 	CHECK(evTotal(e) == 510);
 	// no battle: no move verdicts, no catching

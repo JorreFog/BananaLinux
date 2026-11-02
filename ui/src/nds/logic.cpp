@@ -777,10 +777,11 @@ namespace banana::nds
 					" lives here", c.why);
 				break;
 			}
-		// a roamer on this route (Gen IV keeps its place)
-		for (auto& r : l.roamers)
-			if (r.active && r.zone && r.zone == l.zone)
-				add("roamer:" + std::to_string(r.species) + ":" + std::to_string(r.zone), "here", speciesName(rom, r.species) + " is on this route", "");
+		// a roamer on this route (Gen IV keeps its place) (not verified on a game yet: AdviceState::unverifiedNotices)
+		if (st.unverifiedNotices)
+			for (auto& r : l.roamers)
+				if (r.active && r.zone && r.zone == l.zone)
+					add("roamer:" + std::to_string(r.species) + ":" + std::to_string(r.zone), "here", speciesName(rom, r.species) + " is on this route", "");
 		// secrets and hidden items here
 		if (g)
 		{
@@ -795,12 +796,13 @@ namespace banana::nds
 			}
 			if (n) add("secrets:" + std::to_string(l.zone), "here", std::to_string(n) + (n == 1 ? " secret here" : " secrets here"), "");
 		}
-		// a party Pokémon that can evolve now
-		for (auto& m : l.party)
-			for (auto& e : evolutionWatch(rom.game.gen, m, rom, l, g))
-				if (e.ready)
-					add("evolve:" + std::to_string(m.pid) + ":" + std::to_string(e.into), "party", m.nick + " can evolve",
-						"into " + speciesName(rom, e.into));
+		// a party Pokémon that can evolve now (not verified on a game yet: AdviceState::unverifiedNotices)
+		if (st.unverifiedNotices)
+			for (auto& m : l.party)
+				for (auto& e : evolutionWatch(rom.game.gen, m, rom, l, g))
+					if (e.ready)
+						add("evolve:" + std::to_string(m.pid) + ":" + std::to_string(e.into), "party", m.nick + " can evolve",
+							"into " + speciesName(rom, e.into));
 	}
 
 	Advice computeAdvice(const RomData& rom, const Live& live, const GuideData* guide, const AdviceState& st)

@@ -88,6 +88,9 @@ namespace banana::nds
 	struct AdviceState
 	{
 		std::set<std::string> seen;		// notice ids the player has seen (kept on the card per game + trainer)
+		// the badge's roamer: and evolve: notices: not yet seen right on a running game (no roamer met, no party member
+		// ready to evolve in the validation runs), so off for shipping; next:, catch: and secrets: were checked
+		bool unverifiedNotices = false;
 	};
 	// everything at once (a few times a second at most)
 	Advice computeAdvice(const RomData& rom, const Live& live, const GuideData* guide, const AdviceState& st);
