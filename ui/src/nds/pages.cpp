@@ -1759,11 +1759,24 @@ namespace banana::nds
 		// along the way: the guide's steps, the ones in this area first
 		if (!g->steps.empty())
 		{
-			y = heading(tr("Along the way"), 16, y + 2);
 			std::vector<const GuideStep*> st;
 			uint16_t zn = dt.live->zone;
-			for (auto& s2 : g->steps) if (std::find(s2.zones.begin(), s2.zones.end(), zn) != s2.zones.end()) st.push_back(&s2);
-			for (auto& s2 : g->steps) if (std::find(s2.zones.begin(), s2.zones.end(), zn) == s2.zones.end()) st.push_back(&s2);
+			// a step belongs to its stage (the milestone it is shown during, model.h): only the current goal's, never a
+			// later or an earlier one's (HeartGold's post-game Embedded Tower step showed on Route 30 at the start
+			// because it names Route 30; Platinum's "Pick your first partner" after the partner was picked). Steps
+			// without a known stage show as before.
+			auto shown = [&](const GuideStep& s2)
+			{
+				if (nextIdx < 0 || s2.stage.empty()) return true;
+				int si = -1;
+				for (size_t i = 0; i < g->milestones.size(); i++) if (g->milestones[i].id == s2.stage) si = (int)i;
+				return si < 0 || si == nextIdx;
+			};
+			for (auto& s2 : g->steps)
+				if (std::find(s2.zones.begin(), s2.zones.end(), zn) != s2.zones.end() && shown(s2)) st.push_back(&s2);
+			for (auto& s2 : g->steps)
+				if (std::find(s2.zones.begin(), s2.zones.end(), zn) == s2.zones.end() && shown(s2)) st.push_back(&s2);
+			if (!st.empty()) y = heading(tr("Along the way"), 16, y + 2);
 			for (size_t i = 0; i < st.size() && i < 8; i++)
 			{
 				const GuideStep& s2 = *st[i];

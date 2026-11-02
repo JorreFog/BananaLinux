@@ -268,6 +268,28 @@ static void touchTests(const Ctx& c, int w, int h)
 		pg.setData(pt.data());
 		pg.showSpecies(391);	// (back where the rail test below starts)
 	}
+	// the Guide's "along the way": a step of a later stage stays away even when it names this area (HeartGold's
+	// post-game Embedded Tower step showed on Route 30 at the start)
+	{
+		ndsfx::Fixture f = ndsfx::platinum();
+		auto guideWith = [&](bool extra)
+		{
+			auto g = std::make_shared<GuideData>(*f.guide);
+			if (extra && !g->milestones.empty())
+			{
+				GuideStep later; later.id = "later-step"; later.title = "A post-game errand"; later.text = "Not yet.";
+				later.stage = g->milestones.back().id; later.zones = { f.live->zone };
+				g->steps.insert(g->steps.begin(), later);
+			}
+			PageData d = f.data(); d.guide = g; pg.setData(d);
+			pg.show(Page::GUIDE); pg.render();
+			return grab(be, 1);
+		};
+		CHECK(f.advice->next && f.guide->milestones.size() > 1, "the fixture has a next goal");
+		CHECK(guideWith(true) == guideWith(false), "a later stage's step isn't shown");
+		pg.setData(pt.data());
+		pg.showSpecies(391);
+	}
 	// the list's rail: its bottom is the end of the Pokédex
 	pg.render();
 	pg.touchDown((int)(199 * s), (int)(408 * s), 0); pg.touchUp((int)(199 * s), (int)(408 * s), 0);
