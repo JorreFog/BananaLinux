@@ -965,7 +965,7 @@
    "kind": "story",
    "place": "new-bark-town",
    "level_cap": 5,
-   "done_when": "later",
+   "done_when": "party",
    "opens": [
     "new-bark-town",
     "route-29",

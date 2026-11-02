@@ -152,6 +152,27 @@ static void testGuide()
 	CHECK(reachableZones(g, l).count(40));
 	l.flags.assign(2, 0); l.flags[1] = 0x02;
 	CHECK(nextMilestone(g, l) == nullptr);
+	// "party": done once the player has a Pokémon (the starter); "none" (an optional fight, a legend) doesn't hold the
+	// story up: done once a later one is, like "later" (found on the Plus: HeartGold on Route 30 with a Cyndaquil kept
+	// "Choose your first partner" as the goal; Platinum's lake legends ("none") before Volkner would have stuck there)
+	{
+		GuideData h;
+		Milestone p0; p0.id = "partner"; p0.doneWhen = "party";
+		Milestone p1; p1.id = "legend"; p1.doneWhen = "none";
+		Milestone p2; p2.id = "gym1"; p2.doneWhen = "badge:1";
+		Milestone p3; p3.id = "post"; p3.doneWhen = "none";
+		h.milestones = { p0, p1, p2, p3 };
+		Live q; q.valid = true;
+		CHECK(nextMilestone(h, q) == &h.milestones[0]);
+		Mon egg; egg.species = 175; egg.egg = true;
+		q.party = { egg };
+		CHECK(nextMilestone(h, q) == &h.milestones[0]);	// (an egg isn't a partner yet)
+		Mon cyn; cyn.species = 155; cyn.level = 5;
+		q.party = { cyn };
+		CHECK(nextMilestone(h, q) == &h.milestones[1]);
+		q.badges = 1;
+		CHECK(nextMilestone(h, q) == &h.milestones[3]);	// the legend before the gym passed, the one after stays
+	}
 	CHECK(tmNumber(Gen::IV, 328) == 1 && tmNumber(Gen::IV, 420) == 93 && tmNumber(Gen::V, 618) == 93 && tmNumber(Gen::V, 420) == 96);
 	CHECK(tmNumber(Gen::IV, 4) == 0);
 }

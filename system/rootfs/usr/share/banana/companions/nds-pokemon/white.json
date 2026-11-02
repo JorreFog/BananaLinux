@@ -677,7 +677,7 @@
     "class": "PKMN Trainer",
     "ace_level": 5
    },
-   "done_when": "later",
+   "done_when": "party",
    "opens": [
     "nuvema-town",
     "route-1",

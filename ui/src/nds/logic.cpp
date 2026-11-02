@@ -282,6 +282,11 @@ namespace banana::nds
 		known = true;
 		if (!w.compare(0, 6, "badge:")) { const int n = atoi(w.c_str() + 6); return n >= 1 && n <= 16 && (l.badges >> (n - 1)) & 1; }
 		if (!w.compare(0, 5, "flag:")) return flagSet(l, atoi(w.c_str() + 5));
+		if (w == "party")	// the starter: a Pokémon (not an egg) in the party
+		{
+			for (auto& m : l.party) if (m.species && !m.egg) return true;
+			return false;
+		}
 		known = false;
 		return false;
 	}
@@ -289,8 +294,9 @@ namespace banana::nds
 	{
 		bool known;
 		if (doneByRule(m.doneWhen, live, known)) return true;
-		if (known || m.doneWhen != "later") return false;
-		// "later": done once any later milestone is
+		if (known || (m.doneWhen != "later" && m.doneWhen != "none")) return false;
+		// "later" (and "none": an optional fight or legend must not hold the story's next goal): done once any later
+		// milestone is
 		for (size_t j = index + 1; j < g.milestones.size(); j++)
 		{
 			bool k;
