@@ -87,6 +87,17 @@ namespace banana::nds
 		{
 			return st == "SLP" ? 0x8890a0 : st == "PSN" || st == "TOX" ? 0xa050c0 : st == "BRN" ? 0xe07040 : st == "FRZ" ? 0x58b0d8 : st == "PAR" ? 0xc8a020 : 0x707070;
 		}
+		// the kinds whose Encounter.condition picks one of several lists (model.h), and that list's name
+		bool listed(EncounterKind k) { return k == EncounterKind::HEADBUTT || k == EncounterKind::DUAL_SLOT || k == EncounterKind::SWARM; }
+		const char* listName(EncounterKind k, uint8_t c)
+		{
+			if (k == EncounterKind::HEADBUTT) return c == 0 ? "common trees" : c == 1 ? "rare trees" : "the third tree list";
+			if (k == EncounterKind::DUAL_SLOT)
+				return c == 1 ? "with Ruby in slot 2" : c == 2 ? "with Sapphire in slot 2" : c == 3 ? "with Emerald in slot 2" :
+					c == 4 ? "with FireRed in slot 2" : c == 5 ? "with LeafGreen in slot 2" : nullptr;
+			if (k == EncounterKind::SWARM) return c == 1 ? "surfing" : c == 2 ? "fishing" : nullptr;
+			return nullptr;
+		}
 		const char* kindName(EncounterKind k)
 		{
 			switch (k)
@@ -1546,14 +1557,17 @@ namespace banana::nds
 		auto z = dt.rom->zones.find(lv.zone);
 		if (z != dt.rom->zones.end()) loc = &z->second;
 		// the wild ones, one row each (a species met more ways: a row for each way)
-		struct Row { uint16_t species; EncounterKind kind; uint8_t lo = 255, hi = 0; int pct[4] = {}; bool timed = false; };
+		// (condition: which of a kind's lists - the headbutt tree kind, the GBA game, the swarm's way: each list's odds
+		// add up to 100 on their own, so they are rows of their own, not summed: Hoothoot showed 100% on Route 30)
+		struct Row { uint16_t species; EncounterKind kind; uint8_t cond = 0; uint8_t lo = 255, hi = 0; int pct[4] = {}; bool timed = false; };
 		std::vector<Row> rows;
 		if (loc)
 			for (auto& e : loc->encounters)
 			{
 				if (e.kind == EncounterKind::SEASON && e.season != 0xff && e.season != lv.season) continue;
-				auto it = std::find_if(rows.begin(), rows.end(), [&](const Row& r) { return r.species == e.species && r.kind == e.kind; });
-				if (it == rows.end()) { rows.push_back(Row{ e.species, e.kind }); it = rows.end() - 1; }
+				const uint8_t cond = listed(e.kind) ? e.condition : 0;
+				auto it = std::find_if(rows.begin(), rows.end(), [&](const Row& r) { return r.species == e.species && r.kind == e.kind && r.cond == cond; });
+				if (it == rows.end()) { rows.push_back(Row{ e.species, e.kind, cond }); it = rows.end() - 1; }
 				it->lo = std::min(it->lo, e.minLevel); it->hi = std::max(it->hi, e.maxLevel);
 				if (e.time == TimeOfDay::ANY) for (int t = 1; t < 4; t++) it->pct[t] += e.percent;
 				else { it->pct[(int)e.time] += e.percent; it->timed = true; }
@@ -1596,15 +1610,18 @@ namespace banana::nds
 			// by how they're met, then the likeliest now first
 			int nowCol = lv.timeOfDay == TimeOfDay::ANY ? 2 : (int)lv.timeOfDay;
 			std::stable_sort(rows.begin(), rows.end(), [&](const Row& a, const Row& b)
-				{ return a.kind != b.kind ? a.kind < b.kind : a.pct[nowCol] > b.pct[nowCol]; });
+				{ return a.kind != b.kind ? a.kind < b.kind : a.cond != b.cond ? a.cond < b.cond : a.pct[nowCol] > b.pct[nowCol]; });
 			EncounterKind last = (EncounterKind)255;
+			int lastCond = -1;
 			int tcol = (int)lv.timeOfDay;
 			for (auto& r : rows)
 			{
-				if (r.kind != last)
+				if (r.kind != last || r.cond != lastCond)
 				{
 					last = r.kind;
-					y = heading(tr(kindName(r.kind)), 16, y + 2);
+					lastCond = r.cond;
+					const char* list = listName(r.kind, r.cond);
+					y = heading(tr(kindName(r.kind)), 16, y + 2, list ? list : "");
 					// the times of day as columns when this way of meeting them has them
 					bool timed = std::any_of(rows.begin(), rows.end(), [&](const Row& x) { return x.kind == r.kind && x.timed; });
 					if (timed)
