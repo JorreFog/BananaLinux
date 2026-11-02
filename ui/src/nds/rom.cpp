@@ -1063,7 +1063,9 @@ namespace banana::nds
 			// is 160x80, two 80x80 frames side by side, scrambled with the LC RNG (pret pokemon_sprite.c: Diamond and
 			// Pearl from the last word down, Platinum and HGSS from the first up)
 			size_t at = (size_t)species * 6;
-			Span front = female && n[at + 2].n ? n[at + 2] : n[at + 3], pal = n[at + 4], shinyPal = n[at + 5];
+			// (a female-only species - Nidoran F, Chansey, Jynx, Happiny... - has only the female front: the male
+			// member is empty, so that one is used whatever was asked)
+			Span front = (female && n[at + 2].n) || !n[at + 3].n ? n[at + 2] : n[at + 3], pal = n[at + 4], shinyPal = n[at + 5];
 			// forms: their own archive, laid out by the games' code (pret pokeplatinum/pokeheartgold/pokediamond
 			// pokemon.c, the sprite template switch): per species the front picture of form 0 and how far each form
 			// moves it, the palette and how far each form moves it, and the shiny palette's distance

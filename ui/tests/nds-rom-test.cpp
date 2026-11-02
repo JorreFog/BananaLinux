@@ -628,6 +628,13 @@ static void checkGame(const RomData& r)
 		CHECK(opaque > 500 && opaque < (size_t)(sp->w * sp->h) * 3 / 4);
 		CHECK(sp->anim.size() >= 2);
 	}
+	// female-only species (Gen IV keeps only the female front: Nidoran F, Chansey, Jynx, Happiny) have a picture when
+	// asked for as not female, as the pages do for wild rows (Platinum's Route 201 Nidoran F showed an empty circle)
+	for (uint16_t n : { 29, 113, 124, 440 })
+	{
+		auto f = r.sprite(n, false, 0);
+		CHECK(f != nullptr && !f->frames.empty());
+	}
 	// forms have their own pictures: Deoxys' Attack Forme isn't the Normal one
 	{
 		auto a = r.sprite(386, false, 0), b2 = r.sprite(386, false, 1);
