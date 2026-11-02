@@ -39,6 +39,8 @@ struct Ctx { std::string out, assets, themes; };
 static void renderAll(const Ctx& c, int w, int h, const std::string& look, bool light, bool all)
 {
 	SoftBackend be(w, h);
+	// (the menu's fallback font for what Pixelify has no glyph for, as banana-ui sets it)
+	if (auto f = rnds::Font::load(c.assets + "/fonts/fusion-pixel-12px-proportional-zh_hans.ttf")) rnds::setFallbackFont(f, 12, h / 480.0f);
 	Pages pg(&be, 1, w, h, c.assets, light);
 	std::string pre = c.out + "/" + std::to_string(w) + "x" + std::to_string(h) + "-" + look + "-";
 	auto shot = [&](const std::string& name)
@@ -106,6 +108,7 @@ static void renderAll(const Ctx& c, int w, int h, const std::string& look, bool 
 	shot("pt-dex-shiny");
 	pg.touchDown(w * 286 / 640, h * 241 / 480, 0); pg.touchUp(w * 286 / 640, h * 241 / 480, 0);
 	pg.showSpecies(493); shot("pt-dex-unseen");
+	pg.showSpecies(29); shot("pt-dex-sign");
 	// Black 2: a wild battle with the catch helper, challenge mode
 	pg.setData(b2.data());
 	pg.show(Page::BATTLE); shot("b2-battle-wild");

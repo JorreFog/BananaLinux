@@ -317,6 +317,7 @@ namespace ndsfx
 			{ 74, "Geodude", "Rock Pokémon", ROCK, GROUND, { 40, 80, 100, 20, 30, 30 }, { ROCK_HEAD, STURDY }, 3, 255, 127, { 0, 0, 1, 0, 0, 0 }, 4, 200, nullptr },
 			{ 408, "Cranidos", "Head Butt Pokémon", ROCK, ROCK, { 67, 125, 40, 58, 30, 30 }, { MOLD_BREAKER }, 2, 45, 31, { 0, 1, 0, 0, 0, 0 }, 9, 315, nullptr },
 			{ 415, "Combee", "Tiny Bee Pokémon", BUG, FLYING, { 30, 30, 42, 70, 30, 42 }, { HONEY_GATHER }, 3, 120, 31, { 0, 0, 0, 1, 0, 0 }, 3, 55, nullptr },
+			{ 29, "Nidoran♀", "Poison Pin Pokémon", POISON, POISON, { 55, 47, 52, 41, 40, 40 }, { POISON_POINT }, 3, 235, 254, { 1, 0, 0, 0, 0, 0 }, 4, 70, nullptr },
 			{ 481, "Mesprit", "Emotion Pokémon", PSYCHIC, PSYCHIC, { 80, 105, 105, 80, 105, 105 }, { LEVITATE }, 5, 3, 255, { 1, 1, 0, 0, 1, 0 }, 3, 3, nullptr },
 		});
 		evo(*r, 390, 4, 14, 391, "Lv 14"); evo(*r, 391, 4, 36, 392, "Lv 36");
@@ -404,7 +405,7 @@ namespace ndsfx
 		g.exp = 2744; g.friendship = 206;
 		lv->party = { a, b, c, d, e, g };
 		for (auto& m : lv->party) { if (!m.friendship) m.friendship = 70; for (int i = 0; i < 6; i++) if (!m.ivs[i]) m.ivs[i] = (uint8_t)((m.species * 7 + i * 11) % 32); }
-		for (int n : { 387, 390, 391, 396, 397, 399, 400, 403, 404, 406, 63, 64, 41, 74, 95, 408, 265, 266, 420, 427, 401, 418, 407, 315 }) setBit(lv->dexSeen, n);
+		for (int n : { 29, 387, 390, 391, 396, 397, 399, 400, 403, 404, 406, 63, 64, 41, 74, 95, 408, 265, 266, 420, 427, 401, 418, 407, 315 }) setBit(lv->dexSeen, n);
 		for (int n : { 390, 391, 396, 397, 399, 400, 403, 404, 406, 63, 64, 265 }) setBit(lv->dexCaught, n);
 		setBit(lv->dexSeen, 493);
 		lv->bag[3] = { { POKE_BALL, 12 }, { GREAT_BALL, 3 }, { DUSK_BALL, 2 } };

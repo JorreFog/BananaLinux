@@ -299,6 +299,16 @@ namespace banana::nds
 			float maxW = 0, bool measureOnly = false)
 		{
 			if (t.empty()) return 0;
+			// a name ending in the male or female sign (NIDORAN♀): the sign drawn in pixels, the fonts have none
+			if (raw && t.size() > 3 && (!t.compare(t.size() - 3, 3, "♂") || !t.compare(t.size() - 3, 3, "♀")))
+			{
+				bool male = !t.compare(t.size() - 3, 3, "♂");
+				int kk = std::max(1, (int)std::lround(s * size / 11));
+				float sw = (male ? 9.0f : 7.0f) * kk / s + 3;
+				float w = text(t.substr(0, t.size() - 3), medium, size, x, top, c, raw, maxW > 0 ? maxW - sw : 0, measureOnly);
+				if (!measureOnly) pixels(male ? PX_MALE : PX_FEMALE, 9, x + w + 3, top + size * 0.2f, kk, [&](char) { return c; });
+				return w + sw;
+			}
 			rnds::TextStyle st;
 			st.font = medium ? M : R; st.size = size;
 			if (!st.font) return 0;
@@ -589,7 +599,7 @@ namespace banana::nds
 			const Species* spc = species(sp);
 			uint32_t tint = look == 2 || !spc ? (light ? 0x9a9488 : 0x5a5560) : TYPE_COLORS[spc->types[0] < NUM_TYPES ? spc->types[0] : 0];
 			box("stage", x, y, w, h, tint);
-			float pad = std::max(2.0f, std::min(w, h) * 0.06f);
+			float pad = std::max(2.0f, std::min(w, h) * 0.03f);
 			mon(sp, female, form, look, x + pad, y + pad, w - 2 * pad, h - 2 * pad, animate);
 		}
 
@@ -1882,9 +1892,12 @@ namespace banana::nds
 		std::string cat = sp->category;
 		if (!cat.empty()) text(cat, false, 12, tx, y + 42, p.muted, true, tw);
 		typeChips(sp->types, tx, y + 60);
-		char hw2[64];
-		snprintf(hw2, sizeof hw2, "%d.%d m   %d.%d kg", sp->height / 10, sp->height % 10, sp->weight / 10, sp->weight % 10);
-		text(hw2, false, 12, tx, y + 84, p.muted, true);
+		if (sp->height || sp->weight)
+		{
+			char hw2[64];
+			snprintf(hw2, sizeof hw2, "%d.%d m   %d.%d kg", sp->height / 10, sp->height % 10, sp->weight / 10, sp->weight % 10);
+			text(hw2, false, 12, tx, y + 84, p.muted, true);
+		}
 		// abilities (the hidden one, Gen V, quieter)
 		float ay = y + 102;
 		text(tr("Ability"), false, 11, tx, ay, p.muted);
