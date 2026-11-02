@@ -80,10 +80,17 @@ namespace banana::nds
 			jr->log.push_back(e);
 			dirty = true;
 		};
-		for (int b = 0; b < 16; b++)
-			if ((l.badges >> b & 1) && !(was->badges >> b & 1)) add(LogKind::BADGE, 0, "Badge " + std::to_string(b + 1));
+		// a save that has just loaded turns up in one step (its badges and Pokédex were not in memory yet at the reading
+		// before): that is the baseline, not a run of new badges and catches (it filled the log with the whole Pokédex)
+		int newBadges = 0, newCatches = 0;
+		for (int b = 0; b < 16; b++) newBadges += (l.badges >> b & 1) && !(was->badges >> b & 1);
 		const bool firstCatch = was->dexCaught.size() == l.dexCaught.size();
 		for (size_t i = 0; firstCatch && i < l.dexCaught.size() * 8; i++)
+			newCatches += bit(l.dexCaught, (int)i) && !bit(was->dexCaught, (int)i);
+		const bool loaded = newCatches >= 6 || newBadges >= 3;
+		for (int b = 0; b < 16 && !loaded; b++)
+			if ((l.badges >> b & 1) && !(was->badges >> b & 1)) add(LogKind::BADGE, 0, "Badge " + std::to_string(b + 1));
+		for (size_t i = 0; firstCatch && !loaded && i < l.dexCaught.size() * 8; i++)
 			if (bit(l.dexCaught, (int)i) && !bit(was->dexCaught, (int)i))
 			{
 				const uint16_t s = (uint16_t)(i + 1);

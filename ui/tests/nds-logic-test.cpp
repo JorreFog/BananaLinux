@@ -286,6 +286,12 @@ static void testSession(const char* tmp)
 		bool caught = false, evolved = false;
 		for (auto& e : j->log) { caught |= e.kind == LogKind::CATCH && e.species == 388; evolved |= e.kind == LogKind::EVOLVE && e.species == 388; }
 		CHECK(caught && evolved);
+		// a whole Pokédex turning up in one step (a save that has just loaded) is not a run of catches
+		auto catches = [&] { size_t n = 0; for (auto& e : s.journey()->log) n += e.kind == LogKind::CATCH; return n; };
+		const size_t catchesBefore = catches();
+		for (int i = 0; i < 8; i++) at(B + 0x1328 + 4)[1 + i] = 0xFF;	// species 9..72
+		for (int i = 0; i < 4; i++, t += 300) s.tick(t, 1762000150);
+		CHECK(catches() == catchesBefore);
 		const int before = s.unseen();
 		s.markSeen({ "next:gym1" });
 		CHECK(s.unseen() == before - 1);
