@@ -1,0 +1,3870 @@
+{
+ "schema": 1,
+ "kind": "nds-pokemon-guide",
+ "game": "heartgold",
+ "code": "IPKE",
+ "title": "Pokémon HeartGold",
+ "revision": 1,
+ "sources": [
+  "Bulbapedia: Walkthrough:Pokémon HeartGold and SoulSilver, parts 1-32 (items, trainer teams, events)",
+  "Bulbapedia: Pokémon HeartGold and SoulSilver Versions; Methods of evolution; Time-based and Friendship Evolution",
+  "Bulbapedia: Silver (game); Lance (game); Red (game); Raikou, Suicune, Dragon Scale, Protector, Reaper Cloth pages",
+  "Serebii: HGSS gym leaders, rival, Team Rocket, Elite Four, Red, legendary Pokémon, gifts, trades, items, exclusives, swarms",
+  "Pokémon Database: HGSS gym leaders and Elite Four (levels, rematch teams)",
+  "pret/pokeheartgold: include/constants/badge.h (badge bit order)"
+ ],
+ "places": {
+  "new-bark-town": {
+   "name": "New Bark Town",
+   "zone": 60,
+   "zones": [
+    61,
+    62,
+    63,
+    64,
+    65,
+    66,
+    384
+   ]
+  },
+  "route-29": {
+   "name": "Route 29",
+   "zone": 33,
+   "zones": [
+    134
+   ]
+  },
+  "cherrygrove-city": {
+   "name": "Cherrygrove City",
+   "zone": 67,
+   "zones": [
+    68,
+    69,
+    70,
+    71,
+    72,
+    144
+   ]
+  },
+  "route-30": {
+   "name": "Route 30",
+   "zone": 34,
+   "zones": [
+    127,
+    143
+   ]
+  },
+  "route-31": {
+   "name": "Route 31",
+   "zone": 35,
+   "zones": [
+    97
+   ]
+  },
+  "violet-city": {
+   "name": "Violet City",
+   "zone": 73,
+   "zones": [
+    135,
+    157,
+    158,
+    159,
+    160,
+    162,
+    167
+   ]
+  },
+  "sprout-tower": {
+   "name": "Sprout Tower",
+   "zone": 110,
+   "zones": [
+    155,
+    156
+   ]
+  },
+  "route-32": {
+   "name": "Route 32",
+   "zone": 36,
+   "zones": [
+    98,
+    169,
+    170
+   ]
+  },
+  "ruins-of-alph": {
+   "name": "Ruins of Alph",
+   "zone": 8,
+   "zones": [
+    113,
+    218,
+    312,
+    313,
+    314,
+    315,
+    316,
+    317,
+    318,
+    319,
+    320,
+    321,
+    323,
+    324,
+    325,
+    326,
+    327,
+    490,
+    491,
+    492
+   ]
+  },
+  "union-cave": {
+   "name": "Union Cave",
+   "zone": 99,
+   "zones": [
+    153,
+    154
+   ]
+  },
+  "route-33": {
+   "name": "Route 33",
+   "zone": 37
+  },
+  "azalea-town": {
+   "name": "Azalea Town",
+   "zone": 74,
+   "zones": [
+    100,
+    136,
+    163,
+    164,
+    165,
+    166,
+    168,
+    180
+   ]
+  },
+  "slowpoke-well": {
+   "name": "Slowpoke Well",
+   "zone": 114,
+   "zones": [
+    177,
+    181
+   ]
+  },
+  "ilex-forest": {
+   "name": "Ilex Forest",
+   "zone": 117
+  },
+  "route-34": {
+   "name": "Route 34",
+   "zone": 38,
+   "zones": [
+    171,
+    331
+   ]
+  },
+  "goldenrod-city": {
+   "name": "Goldenrod City",
+   "zone": 76,
+   "zones": [
+    137,
+    182,
+    183,
+    184,
+    185,
+    191,
+    192,
+    193,
+    194,
+    195,
+    196,
+    197,
+    198,
+    200,
+    201,
+    202,
+    203,
+    204,
+    205,
+    206,
+    208,
+    209,
+    210,
+    211,
+    212,
+    213,
+    219,
+    441,
+    519,
+    536
+   ]
+  },
+  "goldenrod-tunnel": {
+   "name": "Goldenrod Tunnel",
+   "zone": 118,
+   "zones": [
+    199
+   ]
+  },
+  "route-35": {
+   "name": "Route 35",
+   "zone": 39,
+   "zones": [
+    101,
+    102
+   ]
+  },
+  "national-park": {
+   "name": "National Park",
+   "zone": 96,
+   "zones": [
+    487,
+    488
+   ]
+  },
+  "pokeathlon-dome": {
+   "name": "Pokéathlon Dome",
+   "zone": 150,
+   "zones": [
+    280,
+    281,
+    282,
+    283,
+    284,
+    285,
+    286,
+    287
+   ]
+  },
+  "route-36": {
+   "name": "Route 36",
+   "zone": 40,
+   "zones": [
+    103,
+    104,
+    149
+   ]
+  },
+  "route-37": {
+   "name": "Route 37",
+   "zone": 41
+  },
+  "ecruteak-city": {
+   "name": "Ecruteak City",
+   "zone": 78,
+   "zones": [
+    79,
+    80,
+    81,
+    83,
+    84,
+    85,
+    86,
+    128,
+    129,
+    130,
+    131,
+    216
+   ]
+  },
+  "burned-tower": {
+   "name": "Burned Tower",
+   "zone": 7,
+   "zones": [
+    217
+   ]
+  },
+  "bell-tower": {
+   "name": "Bell Tower",
+   "zone": 111,
+   "zones": [
+    332,
+    333,
+    334,
+    335,
+    336,
+    337,
+    338,
+    339,
+    340,
+    341
+   ]
+  },
+  "route-38": {
+   "name": "Route 38",
+   "zone": 42,
+   "zones": [
+    172
+   ]
+  },
+  "route-39": {
+   "name": "Route 39",
+   "zone": 43,
+   "zones": [
+    214,
+    215
+   ]
+  },
+  "olivine-city": {
+   "name": "Olivine City",
+   "zone": 77,
+   "zones": [
+    138,
+    226,
+    227,
+    228,
+    229,
+    230,
+    231,
+    240,
+    330,
+    367
+   ]
+  },
+  "olivine-lighthouse": {
+   "name": "Lighthouse",
+   "zone": 115,
+   "zones": [
+    220,
+    221,
+    222,
+    223,
+    224,
+    225,
+    446
+   ]
+  },
+  "route-40": {
+   "name": "Route 40",
+   "zone": 94,
+   "zones": [
+    366
+   ]
+  },
+  "route-41": {
+   "name": "Route 41",
+   "zone": 95
+  },
+  "whirl-islands": {
+   "name": "Whirl Islands",
+   "zone": 121,
+   "zones": [
+    242,
+    243,
+    244,
+    486
+   ]
+  },
+  "cianwood-city": {
+   "name": "Cianwood City",
+   "zone": 75,
+   "zones": [
+    139,
+    232,
+    233,
+    234,
+    235,
+    236,
+    241,
+    385
+   ]
+  },
+  "route-42": {
+   "name": "Route 42",
+   "zone": 44,
+   "zones": [
+    132
+   ]
+  },
+  "mt-mortar": {
+   "name": "Mt. Mortar",
+   "zone": 119,
+   "zones": [
+    250,
+    251,
+    252
+   ]
+  },
+  "mahogany-town": {
+   "name": "Mahogany Town",
+   "zone": 87,
+   "zones": [
+    116,
+    133,
+    140,
+    246,
+    368,
+    396,
+    397
+   ]
+  },
+  "route-43": {
+   "name": "Route 43",
+   "zone": 45,
+   "zones": [
+    142,
+    245
+   ]
+  },
+  "lake-of-rage": {
+   "name": "Lake of Rage",
+   "zone": 88,
+   "zones": [
+    294,
+    295
+   ]
+  },
+  "route-44": {
+   "name": "Route 44",
+   "zone": 46
+  },
+  "ice-path": {
+   "name": "Ice Path",
+   "zone": 120,
+   "zones": [
+    237,
+    238,
+    239
+   ]
+  },
+  "blackthorn-city": {
+   "name": "Blackthorn City",
+   "zone": 89,
+   "zones": [
+    141,
+    289,
+    290,
+    291,
+    292,
+    293,
+    369
+   ]
+  },
+  "dragons-den": {
+   "name": "Dragon's Den",
+   "zone": 125,
+   "zones": [
+    253,
+    288
+   ]
+  },
+  "route-45": {
+   "name": "Route 45",
+   "zone": 47
+  },
+  "route-46": {
+   "name": "Route 46",
+   "zone": 48
+  },
+  "dark-cave": {
+   "name": "Dark Cave",
+   "zone": 123,
+   "zones": [
+    176
+   ]
+  },
+  "route-27": {
+   "name": "Route 27",
+   "zone": 31,
+   "zones": [
+    322
+   ]
+  },
+  "tohjo-falls": {
+   "name": "Tohjo Falls",
+   "zone": 126,
+   "zones": [
+    298
+   ]
+  },
+  "route-26": {
+   "name": "Route 26",
+   "zone": 30,
+   "zones": [
+    296,
+    297,
+    299
+   ]
+  },
+  "victory-road": {
+   "name": "Victory Road",
+   "zone": 124,
+   "zones": [
+    178,
+    179
+   ]
+  },
+  "indigo-plateau": {
+   "name": "Indigo Plateau",
+   "zone": 58
+  },
+  "ss-aqua": {
+   "name": "S.S. Aqua",
+   "zone": 307,
+   "zones": [
+    308,
+    309,
+    310,
+    311,
+    328,
+    329
+   ]
+  },
+  "vermilion-city": {
+   "name": "Vermilion City",
+   "zone": 54,
+   "zones": [
+    358,
+    359,
+    360,
+    361,
+    362,
+    363,
+    364,
+    365,
+    386,
+    387
+   ]
+  },
+  "route-6": {
+   "name": "Route 6",
+   "zone": 14,
+   "zones": [
+    389,
+    470
+   ]
+  },
+  "saffron-city": {
+   "name": "Saffron City",
+   "zone": 59,
+   "zones": [
+    398,
+    399,
+    400,
+    401,
+    402,
+    404,
+    405,
+    406,
+    407,
+    408,
+    409,
+    410,
+    445,
+    520
+   ]
+  },
+  "route-8": {
+   "name": "Route 8",
+   "zone": 16,
+   "zones": [
+    390
+   ]
+  },
+  "lavender-town": {
+   "name": "Lavender Town",
+   "zone": 53,
+   "zones": [
+    433,
+    434,
+    435,
+    436,
+    437,
+    438,
+    439,
+    494
+   ]
+  },
+  "route-10": {
+   "name": "Route 10",
+   "zone": 18,
+   "zones": [
+    388,
+    466,
+    484
+   ]
+  },
+  "rock-tunnel": {
+   "name": "Rock Tunnel",
+   "zone": 108,
+   "zones": [
+    452
+   ]
+  },
+  "route-9": {
+   "name": "Route 9",
+   "zone": 17
+  },
+  "power-plant": {
+   "name": "Power Plant",
+   "zone": 148,
+   "zones": [
+    467,
+    489
+   ]
+  },
+  "cerulean-city": {
+   "name": "Cerulean City",
+   "zone": 52,
+   "zones": [
+    426,
+    427,
+    428,
+    429,
+    430,
+    431,
+    432,
+    495
+   ]
+  },
+  "route-24": {
+   "name": "Route 24",
+   "zone": 28
+  },
+  "route-25": {
+   "name": "Route 25",
+   "zone": 29,
+   "zones": [
+    440
+   ]
+  },
+  "route-5": {
+   "name": "Route 5",
+   "zone": 13,
+   "zones": [
+    391,
+    468,
+    469,
+    517,
+    532
+   ]
+  },
+  "route-7": {
+   "name": "Route 7",
+   "zone": 15,
+   "zones": [
+    493
+   ]
+  },
+  "celadon-city": {
+   "name": "Celadon City",
+   "zone": 55,
+   "zones": [
+    370,
+    371,
+    372,
+    373,
+    374,
+    375,
+    376,
+    377,
+    378,
+    379,
+    380,
+    381,
+    382,
+    383,
+    393,
+    394,
+    395,
+    442,
+    443,
+    444,
+    537
+   ]
+  },
+  "route-16": {
+   "name": "Route 16",
+   "zone": 24,
+   "zones": [
+    415,
+    421,
+    422
+   ]
+  },
+  "route-17": {
+   "name": "Route 17",
+   "zone": 25
+  },
+  "route-18": {
+   "name": "Route 18",
+   "zone": 26,
+   "zones": [
+    423
+   ]
+  },
+  "fuchsia-city": {
+   "name": "Fuchsia City",
+   "zone": 56,
+   "zones": [
+    478,
+    480,
+    481,
+    482,
+    483,
+    485
+   ]
+  },
+  "pal-park": {
+   "name": "Pal Park",
+   "zone": 109,
+   "zones": [
+    479
+   ]
+  },
+  "route-15": {
+   "name": "Route 15",
+   "zone": 23,
+   "zones": [
+    392
+   ]
+  },
+  "route-14": {
+   "name": "Route 14",
+   "zone": 22
+  },
+  "route-13": {
+   "name": "Route 13",
+   "zone": 21
+  },
+  "route-12": {
+   "name": "Route 12",
+   "zone": 20,
+   "zones": [
+    533
+   ]
+  },
+  "route-11": {
+   "name": "Route 11",
+   "zone": 19,
+   "zones": [
+    425
+   ]
+  },
+  "digletts-cave": {
+   "name": "Diglett's Cave",
+   "zone": 106
+  },
+  "route-2": {
+   "name": "Route 2",
+   "zone": 10,
+   "zones": [
+    414,
+    417,
+    418,
+    419,
+    420
+   ]
+  },
+  "pewter-city": {
+   "name": "Pewter City",
+   "zone": 51,
+   "zones": [
+    471,
+    472,
+    473,
+    474,
+    475,
+    476,
+    477
+   ]
+  },
+  "viridian-forest": {
+   "name": "Viridian Forest",
+   "zone": 147
+  },
+  "route-3": {
+   "name": "Route 3",
+   "zone": 11,
+   "zones": [
+    511,
+    512
+   ]
+  },
+  "mt-moon": {
+   "name": "Mt. Moon",
+   "zone": 107,
+   "zones": [
+    448,
+    449,
+    513,
+    518
+   ]
+  },
+  "route-4": {
+   "name": "Route 4",
+   "zone": 12
+  },
+  "viridian-city": {
+   "name": "Viridian City",
+   "zone": 50,
+   "zones": [
+    496,
+    497,
+    498,
+    499,
+    500,
+    501,
+    502
+   ]
+  },
+  "route-1": {
+   "name": "Route 1",
+   "zone": 9,
+   "zones": [
+    527
+   ]
+  },
+  "pallet-town": {
+   "name": "Pallet Town",
+   "zone": 49,
+   "zones": [
+    503,
+    504,
+    505,
+    506,
+    507
+   ]
+  },
+  "route-21": {
+   "name": "Route 21",
+   "zone": 93
+  },
+  "cinnabar-island": {
+   "name": "Cinnabar Island",
+   "zone": 57,
+   "zones": [
+    508,
+    509
+   ]
+  },
+  "route-20": {
+   "name": "Route 20",
+   "zone": 92,
+   "zones": [
+    416
+   ]
+  },
+  "seafoam-islands": {
+   "name": "Seafoam Islands",
+   "zone": 146,
+   "zones": [
+    453,
+    454,
+    455,
+    456,
+    457,
+    458
+   ]
+  },
+  "route-19": {
+   "name": "Route 19",
+   "zone": 91,
+   "zones": [
+    424
+   ]
+  },
+  "route-22": {
+   "name": "Route 22",
+   "zone": 27
+  },
+  "route-28": {
+   "name": "Route 28",
+   "zone": 32,
+   "zones": [
+    510
+   ]
+  },
+  "mt-silver": {
+   "name": "Mt. Silver",
+   "zone": 90,
+   "zones": [
+    514,
+    515
+   ]
+  },
+  "cerulean-cave": {
+   "name": "Cerulean Cave",
+   "zone": 145,
+   "zones": [
+    450,
+    451
+   ]
+  },
+  "cliff-edge-gate": {
+   "name": "Cliff Edge Gate",
+   "zone": 279
+  },
+  "route-47": {
+   "name": "Route 47",
+   "zone": 151
+  },
+  "embedded-tower": {
+   "name": "Embedded Tower",
+   "zone": 524,
+   "zones": [
+    525,
+    526
+   ]
+  },
+  "route-48": {
+   "name": "Route 48",
+   "zone": 152
+  },
+  "safari-zone-gate": {
+   "name": "Safari Zone Gate",
+   "zone": 173,
+   "zones": [
+    174,
+    534,
+    535
+   ]
+  },
+  "safari-zone": {
+   "name": "Safari Zone",
+   "zone": 343,
+   "zones": [
+    344,
+    345,
+    346,
+    347,
+    348,
+    349,
+    350,
+    351,
+    352,
+    353,
+    354,
+    355,
+    356,
+    357
+   ]
+  },
+  "frontier-access": {
+   "name": "Frontier Access",
+   "zone": 411,
+   "zones": [
+    528,
+    529,
+    530,
+    531
+   ]
+  },
+  "battle-frontier": {
+   "name": "Battle Frontier",
+   "zone": 272,
+   "zones": [
+    273
+   ]
+  }
+ },
+ "milestones": [
+  {
+   "id": "start-partner",
+   "name": "Choose your first partner",
+   "kind": "story",
+   "place": "new-bark-town",
+   "level_cap": 5,
+   "done_when": "later",
+   "opens": [
+    "new-bark-town",
+    "route-29",
+    "cherrygrove-city",
+    "route-30"
+   ],
+   "tips": "Pick Chikorita, Cyndaquil or Totodile in Elm's lab. Cyndaquil is the easiest early on, Totodile is steady, Chikorita is the hard pick. Silver later steals the starter that beats yours, so his ace changes with your choice. Mr. Pokémon on Route 30 gives you the Mystery Egg and Oak the Pokédex.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 1; Serebii: HGSS starters"
+  },
+  {
+   "id": "rival-cherrygrove",
+   "name": "Silver: Cherrygrove City",
+   "kind": "rival",
+   "place": "cherrygrove-city",
+   "level_cap": 5,
+   "foe": {
+    "name": "Boy",
+    "class": "Passerby",
+    "ace_level": 5
+   },
+   "done_when": "later",
+   "opens": [
+    "route-31"
+   ],
+   "tips": "Silver ambushes you on your way back to New Bark Town with the starter that has the type edge on yours. Both sides use one level 5 Pokémon, so Tackle or Scratch plus a Potion is enough.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 2; Serebii: HGSS rival"
+  },
+  {
+   "id": "sprout-tower-li",
+   "name": "Sprout Tower: Elder Li",
+   "kind": "story",
+   "place": "sprout-tower",
+   "level_cap": 10,
+   "foe": {
+    "name": "Li",
+    "class": "Elder",
+    "ace_level": 10
+   },
+   "done_when": "later",
+   "opens": [
+    "violet-city",
+    "sprout-tower"
+   ],
+   "tips": "Climb Sprout Tower to the third floor and beat Elder Li, who owns two Bellsprout and a Hoothoot. Fire and Flying hit the Bellsprout, Rock hits Hoothoot. The reward is TM70 Flash, which only works in the field after the first badge.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 3"
+  },
+  {
+   "id": "gym-falkner",
+   "name": "Gym 1: Falkner",
+   "kind": "gym",
+   "place": "violet-city",
+   "leader": "Falkner",
+   "theme": "flying",
+   "level_cap": 13,
+   "foe": {
+    "name": "Falkner",
+    "class": "Leader",
+    "ace_level": 13
+   },
+   "done_when": "badge:1",
+   "opens": [
+    "route-32",
+    "ruins-of-alph",
+    "union-cave",
+    "route-33"
+   ],
+   "tips": "Falkner uses Pidgey and Pidgeotto. Rock, Electric and Ice moves work, and the Onix from the boy in Violet City (trade a Bellsprout) walks through the fight. Pidgeotto can heal with Roost, so hit hard.",
+   "badge_note": "Zephyr Badge: traded Pokémon up to level 20 obey, and Rock Smash works in the field. TM51 Roost.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 3; Serebii: HGSS gym leaders"
+  },
+  {
+   "id": "rocket-proton-well",
+   "name": "Slowpoke Well: Rocket Executive Proton",
+   "kind": "team",
+   "place": "slowpoke-well",
+   "level_cap": 12,
+   "foe": {
+    "name": "Proton",
+    "class": "Executive",
+    "ace_level": 12
+   },
+   "done_when": "later",
+   "opens": [
+    "azalea-town",
+    "slowpoke-well"
+   ],
+   "tips": "In Azalea Town, Kurt asks for help and you clear Slowpoke Well. Proton waits at the bottom with Zubat and Koffing, so a Ground or Psychic move handles the Koffing. Kurt rewards you with a Fast Ball and can make Apricorn balls.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 5; Serebii: HGSS Team Rocket"
+  },
+  {
+   "id": "gym-bugsy",
+   "name": "Gym 2: Bugsy",
+   "kind": "gym",
+   "place": "azalea-town",
+   "leader": "Bugsy",
+   "theme": "bug",
+   "level_cap": 17,
+   "foe": {
+    "name": "Bugsy",
+    "class": "Leader",
+    "ace_level": 17
+   },
+   "done_when": "badge:2",
+   "opens": [],
+   "tips": "Bugsy leads with Scyther, so keep a Rock, Fire or Flying attacker handy. Metapod and Kakuna barely attack. The gym runs on rail carts: take the left-most cart to reach him.",
+   "badge_note": "Hive Badge: traded Pokémon up to level 30 obey, and Cut works in the field. TM89 U-turn; HM01 Cut itself comes from Ilex Forest.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 5; Serebii: HGSS gym leaders"
+  },
+  {
+   "id": "rival-azalea",
+   "name": "Silver: Azalea Town",
+   "kind": "rival",
+   "place": "azalea-town",
+   "level_cap": 18,
+   "foe": {
+    "name": "Silver",
+    "class": "Rival",
+    "ace_level": 18
+   },
+   "done_when": "later",
+   "opens": [
+    "ilex-forest"
+   ],
+   "tips": "Silver catches you on the west side of town after the gym with Gastly, Zubat and his starter at level 18. Gastly shrugs off Normal moves, so bring a Ghost, Psychic or Dark move or any special attacker.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 5; Serebii: HGSS rival"
+  },
+  {
+   "id": "ilex-forest-cut",
+   "name": "Ilex Forest: Farfetch'd, Cut and Headbutt",
+   "kind": "story",
+   "place": "ilex-forest",
+   "level_cap": 18,
+   "done_when": "later",
+   "opens": [
+    "route-34"
+   ],
+   "tips": "Herd the two Farfetch'd back to the charcoal maker's apprentice to receive HM01 Cut, and use it on the tree that blocks the way to Route 34. A man in the forest teaches Headbutt for free.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 5"
+  },
+  {
+   "id": "goldenrod-radio-card",
+   "name": "Goldenrod City: Radio Card quiz",
+   "kind": "story",
+   "place": "goldenrod-city",
+   "level_cap": 19,
+   "done_when": "later",
+   "opens": [
+    "goldenrod-city",
+    "goldenrod-tunnel"
+   ],
+   "tips": "Whitney is not in her gym until you win the Radio Card from the quiz at the Radio Tower reception. Visit the Department Store, the Game Corner and the Day Care on Route 34 while you are here.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 6; Serebii: HGSS gym leaders"
+  },
+  {
+   "id": "gym-whitney",
+   "name": "Gym 3: Whitney",
+   "kind": "gym",
+   "place": "goldenrod-city",
+   "leader": "Whitney",
+   "theme": "normal",
+   "level_cap": 19,
+   "foe": {
+    "name": "Whitney",
+    "class": "Leader",
+    "ace_level": 19
+   },
+   "done_when": "badge:3",
+   "opens": [
+    "route-35",
+    "national-park",
+    "pokeathlon-dome",
+    "route-36"
+   ],
+   "tips": "Miltank's Rollout hits harder every turn and it heals with Milk Drink. Hit it with Fighting moves, or put it to sleep and set up. Whitney cries after losing; talk to her again to get the badge.",
+   "badge_note": "Plain Badge: Strength works in the field (HM04 comes from a Hiker on Route 42). TM45 Attract; the flower shop then gives the SquirtBottle.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 6; Serebii: HGSS gym leaders"
+  },
+  {
+   "id": "sudowoodo",
+   "name": "Route 36: the Sudowoodo roadblock",
+   "kind": "story",
+   "place": "route-36",
+   "level_cap": 20,
+   "done_when": "later",
+   "opens": [
+    "route-37",
+    "ecruteak-city"
+   ],
+   "tips": "Water the odd tree with the SquirtBottle from the Goldenrod flower shop. It is a level 20 Rock Sudowoodo, so Water or Grass moves finish it quickly. The Berry Pots reward comes from the woman next to it.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 7; Serebii: HGSS interactable"
+  },
+  {
+   "id": "rival-burned-tower",
+   "name": "Silver: Burned Tower",
+   "kind": "rival",
+   "place": "burned-tower",
+   "level_cap": 22,
+   "foe": {
+    "name": "Silver",
+    "class": "Rival",
+    "ace_level": 22
+   },
+   "done_when": "later",
+   "opens": [
+    "burned-tower"
+   ],
+   "tips": "Silver now has Gastly, Zubat, Magnemite and his starter at level 22. A Fire, Ground or Fighting attacker handles Magnemite, and a Ghost or Dark move handles Gastly. Ecruteak City's Gym is locked until the tower event is done.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 8; Serebii: HGSS rival"
+  },
+  {
+   "id": "legend-beasts-released",
+   "name": "Burned Tower: the three beasts break free",
+   "kind": "legendary",
+   "place": "burned-tower",
+   "level_cap": 40,
+   "done_when": "later",
+   "opens": [],
+   "tips": "In the basement Raikou, Entei and Suicune run off when you get close. Raikou and Entei roam Johto from here at level 40; Suicune only shows up at scripted spots. Keep a Master Ball for later and Mean Look or trapping moves ready.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 8/30; Serebii: HGSS legends"
+  },
+  {
+   "id": "gym-morty",
+   "name": "Gym 4: Morty",
+   "kind": "gym",
+   "place": "ecruteak-city",
+   "leader": "Morty",
+   "theme": "ghost",
+   "level_cap": 25,
+   "foe": {
+    "name": "Morty",
+    "class": "Leader",
+    "ace_level": 25
+   },
+   "done_when": "badge:4",
+   "opens": [
+    "route-38",
+    "route-39",
+    "olivine-city",
+    "bell-tower",
+    "route-40"
+   ],
+   "tips": "Morty's Gastly, Haunter and Gengar are Ghost and Poison, so Ghost, Dark and Psychic hit them. Normal and Fighting moves do nothing, and Mean Look traps you. Gengar at level 25 is the last Pokémon.",
+   "badge_note": "Fog Badge: traded Pokémon up to level 50 obey, and Surf works in the field. TM30 Shadow Ball.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 8; Serebii: HGSS gym leaders"
+  },
+  {
+   "id": "olivine-lighthouse",
+   "name": "Olivine Lighthouse: Jasmine and the sick Ampharos",
+   "kind": "story",
+   "place": "olivine-lighthouse",
+   "level_cap": 25,
+   "done_when": "later",
+   "opens": [
+    "olivine-lighthouse",
+    "route-41",
+    "cianwood-city"
+   ],
+   "tips": "Olivine's gym is empty because Jasmine is at the top of the lighthouse with an ill Ampharos. She needs medicine from Cianwood City across the sea, which means Surf and a trip through Route 40 and Route 41.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 9; Serebii: HGSS gym leaders"
+  },
+  {
+   "id": "eusine-cianwood",
+   "name": "Cianwood City: Eusine's challenge",
+   "kind": "story",
+   "place": "cianwood-city",
+   "level_cap": 27,
+   "foe": {
+    "name": "Eusine",
+    "class": "Mystery Man",
+    "ace_level": 27
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Suicune shows up at the northern beach in Cianwood and Eusine challenges you. His Drowzee and Haunter are weak to Dark and Ghost moves; Electrode is last and only fears Ground. Pick up the SecretPotion in the pharmacy.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 10"
+  },
+  {
+   "id": "gym-chuck",
+   "name": "Gym 5: Chuck",
+   "kind": "gym",
+   "place": "cianwood-city",
+   "leader": "Chuck",
+   "theme": "fighting",
+   "level_cap": 31,
+   "foe": {
+    "name": "Chuck",
+    "class": "Leader",
+    "ace_level": 31
+   },
+   "done_when": "badge:5",
+   "opens": [],
+   "tips": "Primeape and Poliwrath are all Chuck has. Flying and Psychic hit Primeape, Grass and Electric hit Poliwrath. Poliwrath can put you to sleep with Hypnosis, so carry an Awakening or a Sleep-proof Pokémon.",
+   "badge_note": "Storm Badge: traded Pokémon up to level 70 obey, and Fly works in the field. TM01 Focus Punch; Chuck's wife hands out HM02 Fly outside.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 10; Serebii: HGSS gym leaders"
+  },
+  {
+   "id": "deliver-secretpotion",
+   "name": "Deliver the SecretPotion to Amphy",
+   "kind": "story",
+   "place": "olivine-lighthouse",
+   "level_cap": 31,
+   "done_when": "later",
+   "opens": [
+    "cliff-edge-gate",
+    "route-47",
+    "route-48",
+    "safari-zone-gate",
+    "safari-zone"
+   ],
+   "tips": "Fly back and give the SecretPotion to Jasmine so she goes home. Warden Baoba then calls to say the Safari Zone is open, reached through the cave on the west side of Cianwood City.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 10; Serebii: HGSS gym leaders"
+  },
+  {
+   "id": "gym-jasmine",
+   "name": "Gym 6: Jasmine",
+   "kind": "gym",
+   "place": "olivine-city",
+   "leader": "Jasmine",
+   "theme": "steel",
+   "level_cap": 35,
+   "foe": {
+    "name": "Jasmine",
+    "class": "Leader",
+    "ace_level": 35
+   },
+   "done_when": "badge:6",
+   "opens": [],
+   "tips": "Jasmine's two Magnemite and a Steelix are Steel types, so Fire, Fighting and Ground do the work. Steelix has high Defense and uses Rock Throw against Fire Pokémon. Thunder Wave is the main nuisance, and Ground Pokémon are immune.",
+   "badge_note": "Mineral Badge. TM23 Iron Tail.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 10; Serebii: HGSS gym leaders"
+  },
+  {
+   "id": "mt-mortar",
+   "name": "Route 42 and Mt. Mortar: Strength",
+   "kind": "story",
+   "place": "route-42",
+   "level_cap": 35,
+   "done_when": "later",
+   "opens": [
+    "route-42",
+    "mt-mortar",
+    "mahogany-town"
+   ],
+   "tips": "Take Route 42 east from Ecruteak. A Hiker at the west entrance of Mt. Mortar gives you HM04 Strength. Mt. Mortar holds many items and the Karate King, and needs Surf, Strength, Flash and Waterfall to clear fully.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 10; Serebii: HGSS gift Pokemon"
+  },
+  {
+   "id": "red-gyarados",
+   "name": "Lake of Rage: the Red Gyarados",
+   "kind": "story",
+   "place": "lake-of-rage",
+   "level_cap": 30,
+   "done_when": "later",
+   "opens": [
+    "route-43",
+    "lake-of-rage"
+   ],
+   "tips": "The red Gyarados at the lake is level 30. Use Electric or Rock moves, then sleep or paralysis; you can catch it or just knock it out. Either way Lance appears afterward and asks you to help against Team Rocket.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 11; Serebii: HGSS interactable"
+  },
+  {
+   "id": "rocket-petrel-hideout",
+   "name": "Mahogany Hideout: Petrel disguised as Giovanni",
+   "kind": "team",
+   "place": "mahogany-town",
+   "level_cap": 24,
+   "foe": {
+    "name": "Petrel",
+    "class": "Executive",
+    "ace_level": 24
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Petrel hides in the leader's office disguised as Giovanni, with Zubat, Koffing and Raticate at level 22 to 24. Psychic or Ground moves handle the Poison types. After the fight a Murkrow copies his voice and leads you to the Radio Transmitter door.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 11; Serebii: HGSS Team Rocket"
+  },
+  {
+   "id": "rocket-ariana-hideout",
+   "name": "Mahogany Hideout: Ariana (with Lance)",
+   "kind": "team",
+   "place": "mahogany-town",
+   "level_cap": 27,
+   "foe": {
+    "name": "Ariana",
+    "class": "Executive",
+    "ace_level": 27
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "A double battle with Lance at your side against Ariana (Arbok, Gloom, Murkrow) and a Grunt. Let Lance's Dragonite hit hard while you cover the Dark and Poison types. Then beat the generator Electrode to stop the signal; Lance gives HM05 Whirlpool.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 11; Serebii: HGSS Team Rocket"
+  },
+  {
+   "id": "gym-pryce",
+   "name": "Gym 7: Pryce",
+   "kind": "gym",
+   "place": "mahogany-town",
+   "leader": "Pryce",
+   "theme": "ice",
+   "level_cap": 34,
+   "foe": {
+    "name": "Pryce",
+    "class": "Leader",
+    "ace_level": 34
+   },
+   "done_when": "badge:7",
+   "opens": [
+    "route-44",
+    "ice-path"
+   ],
+   "tips": "Seel and Dewgong fear Electric and Grass, Dewgong also Fighting and Rock, and Piloswine fears Fighting, Water and Grass. Piloswine has Blizzard, so an Ice resister helps. The gym is rooms of ice tiles where you slide until you hit something.",
+   "badge_note": "Glacier Badge: Whirlpool works in the field. TM07 Hail.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 11; Serebii: HGSS gym leaders"
+  },
+  {
+   "id": "rocket-petrel-tower",
+   "name": "Radio Tower: Petrel disguised as the Director",
+   "kind": "team",
+   "place": "goldenrod-city",
+   "level_cap": 32,
+   "foe": {
+    "name": "Petrel",
+    "class": "Executive",
+    "ace_level": 32
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Take the Rocket disguise from the Goldenrod Tunnel photo booth, then climb the Radio Tower to the fourth floor. Petrel sends five Koffing and a Weezing at level 30 to 32. The Basement Key he drops opens the warehouse in the tunnel.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 12; Serebii: HGSS Team Rocket"
+  },
+  {
+   "id": "rival-goldenrod-tunnel",
+   "name": "Silver: Goldenrod Tunnel",
+   "kind": "rival",
+   "place": "goldenrod-tunnel",
+   "level_cap": 34,
+   "foe": {
+    "name": "Silver",
+    "class": "Rival",
+    "ace_level": 34
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Silver has a level 34 final-evolution starter plus Golbat, Magnemite, Haunter and Sneasel. Fighting, Ground and Psychic coverage works well. If you picked Cyndaquil, his whole team is two levels lower.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 12"
+  },
+  {
+   "id": "rocket-proton-tower",
+   "name": "Radio Tower: Proton",
+   "kind": "team",
+   "place": "goldenrod-city",
+   "level_cap": 33,
+   "foe": {
+    "name": "Proton",
+    "class": "Executive",
+    "ace_level": 33
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Proton returns on the upper floors with a Golbat (28) and a Weezing (33). Psychic, Ground or Rock moves handle both quickly. The Card Key you earn in the tunnel warehouse is what lets you reach these floors.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 12"
+  },
+  {
+   "id": "rocket-ariana-tower",
+   "name": "Radio Tower: Ariana",
+   "kind": "team",
+   "place": "goldenrod-city",
+   "level_cap": 32,
+   "foe": {
+    "name": "Ariana",
+    "class": "Executive",
+    "ace_level": 32
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Ariana uses Arbok, Vileplume and Murkrow, all level 32. Psychic and Ground moves hit Arbok, Fire, Ice and Flying hit Vileplume, and Electric, Ice or Rock hit Murkrow. Beat her to reach the lift to the top.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 12"
+  },
+  {
+   "id": "rocket-archer",
+   "name": "Radio Tower: Archer",
+   "kind": "team",
+   "place": "goldenrod-city",
+   "level_cap": 38,
+   "foe": {
+    "name": "Archer",
+    "class": "Executive",
+    "ace_level": 38
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Archer is the final Rocket boss with Houndour, Koffing and Houndoom at level 38. Water, Ground and Rock moves cover the Fire-Dark Houndoom. Afterward the Director gives the Rainbow Wing.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 12; Serebii: HGSS Team Rocket"
+  },
+  {
+   "id": "gym-clair",
+   "name": "Gym 8: Clair",
+   "kind": "gym",
+   "place": "blackthorn-city",
+   "leader": "Clair",
+   "theme": "dragon",
+   "level_cap": 41,
+   "foe": {
+    "name": "Clair",
+    "class": "Leader",
+    "ace_level": 41
+   },
+   "done_when": "badge:8",
+   "opens": [
+    "blackthorn-city",
+    "route-45",
+    "route-46",
+    "dark-cave",
+    "dragons-den"
+   ],
+   "tips": "Clair has Gyarados, two Dragonair and a level 41 Kingdra. Electric wrecks Gyarados, and Ice or Dragon moves hit the Dragonair. Fire Blast and Aqua Tail hurt your Grass and Fire starter lines. After the fight she sends you to the Dragon's Den for the badge.",
+   "badge_note": "Rising Badge: traded Pokémon of any level obey, and Waterfall works in the field (HM07 lies in the Ice Path). TM59 Dragon Pulse.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 13; Serebii: HGSS gym leaders"
+  },
+  {
+   "id": "dragons-den-trial",
+   "name": "Dragon's Den: the Elder's quiz",
+   "kind": "story",
+   "place": "dragons-den",
+   "level_cap": 41,
+   "done_when": "later",
+   "opens": [],
+   "tips": "Answer the elder's questions with care for your Pokémon to pass. Clair then gives you the Rising Badge. Come back with five or fewer Pokémon in the party for a Dratini; if every answer was right it knows ExtremeSpeed.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 13; Serebii: HGSS gift Pokemon"
+  },
+  {
+   "id": "kimono-girls",
+   "name": "Ecruteak Dance Theater: the five Kimono Girls",
+   "kind": "story",
+   "place": "ecruteak-city",
+   "level_cap": 38,
+   "foe": {
+    "name": "Zuki",
+    "class": "Kimono Girl",
+    "ace_level": 38
+   },
+   "done_when": "later",
+   "opens": [
+    "whirl-islands"
+   ],
+   "tips": "After the eight badges Elm calls you to the theater. You fight five level 38 Eeveelutions back to back (Umbreon, Espeon, Flareon, Jolteon, Vaporeon), so go in healed with PP to spare. The reward is the Clear Bell.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 14"
+  },
+  {
+   "id": "legend-hooh",
+   "name": "Bell Tower: Ho-Oh",
+   "kind": "legendary",
+   "place": "bell-tower",
+   "level_cap": 45,
+   "done_when": "later",
+   "opens": [],
+   "tips": "With the Rainbow Wing and the Clear Bell you can climb the Bell Tower to Ho-Oh (level 45). Weaken it with Water, Electric or Rock moves, then use status and Ultra Balls; it has Sacred Ash as its held item. Elm also gives a Master Ball after the eight badges.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 14; Serebii: HGSS legends"
+  },
+  {
+   "id": "rival-victory-road",
+   "name": "Silver: Victory Road",
+   "kind": "rival",
+   "place": "victory-road",
+   "level_cap": 40,
+   "foe": {
+    "name": "Silver",
+    "class": "Rival",
+    "ace_level": 40
+   },
+   "done_when": "later",
+   "opens": [
+    "route-27",
+    "tohjo-falls",
+    "route-26",
+    "victory-road",
+    "indigo-plateau"
+   ],
+   "tips": "Silver waits at the cave exit with Sneasel, Golbat, Magneton, Kadabra, Haunter and a level 40 starter. Rock, Ground and Fighting cover Sneasel, Golbat and Magneton; Dark and Ghost cover Kadabra and Haunter.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 15; Serebii: HGSS rival"
+  },
+  {
+   "id": "elite4-will",
+   "name": "Elite Four: Will",
+   "kind": "elite4",
+   "place": "indigo-plateau",
+   "leader": "Will",
+   "theme": "psychic",
+   "level_cap": 42,
+   "foe": {
+    "name": "Will",
+    "class": "Elite Four",
+    "ace_level": 42
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Will uses two Xatu, Jynx, Exeggutor and Slowbro. Dark, Bug and Ghost moves are best, and Electric hits Xatu and Slowbro too. Both Xatu can use Confuse Ray, so carry a Persim Berry or a Pokémon that is hard to confuse.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 16; Serebii: HGSS Elite Four"
+  },
+  {
+   "id": "elite4-koga",
+   "name": "Elite Four: Koga",
+   "kind": "elite4",
+   "place": "indigo-plateau",
+   "leader": "Koga",
+   "theme": "poison",
+   "level_cap": 44,
+   "foe": {
+    "name": "Koga",
+    "class": "Elite Four",
+    "ace_level": 44
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Koga mixes Poison and Bug types (Ariados, Venomoth, Forretress, Muk, Crobat). Psychic, Ground and Rock moves cover most of them; Fire covers the Bug typing. Bring Antidotes or a Steel type that cannot be poisoned.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 16; Serebii: HGSS Elite Four"
+  },
+  {
+   "id": "elite4-bruno",
+   "name": "Elite Four: Bruno",
+   "kind": "elite4",
+   "place": "indigo-plateau",
+   "leader": "Bruno",
+   "theme": "fighting",
+   "level_cap": 46,
+   "foe": {
+    "name": "Bruno",
+    "class": "Elite Four",
+    "ace_level": 46
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Bruno keeps three Hitmons, Onix and Machamp. Psychic and Flying moves hit the Fighting types; Water, Grass or Ice moves hit Onix. Machamp's Rock Slide punishes Flying types, so do not rely only on them.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 16; Serebii: HGSS Elite Four"
+  },
+  {
+   "id": "elite4-karen",
+   "name": "Elite Four: Karen",
+   "kind": "elite4",
+   "place": "indigo-plateau",
+   "leader": "Karen",
+   "theme": "dark",
+   "level_cap": 47,
+   "foe": {
+    "name": "Karen",
+    "class": "Elite Four",
+    "ace_level": 47
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Karen's team is Umbreon, Vileplume, Murkrow, Gengar and Houndoom. Fighting, Bug and Rock moves cover most of them, Ice hits Vileplume and Murkrow, and Water or Ground hit Houndoom. Umbreon is very bulky, so use stronger special hits there.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 16; Serebii: HGSS Elite Four"
+  },
+  {
+   "id": "champion-lance",
+   "name": "Champion: Lance",
+   "kind": "champion",
+   "place": "indigo-plateau",
+   "leader": "Lance",
+   "theme": "dragon",
+   "level_cap": 50,
+   "foe": {
+    "name": "Lance",
+    "class": "Champion",
+    "ace_level": 50
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Lance fields Gyarados, Aerodactyl, Charizard and three Dragonite. Ice and Electric hit the Dragons and Gyarados, Rock hits Charizard, Water hits Aerodactyl and Charizard. Each Dragonite has a coverage move (Thunder, Blizzard or Fire Blast), so do not stay in with one weakness.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 16; Serebii: HGSS Elite Four"
+  },
+  {
+   "id": "hall-of-fame",
+   "name": "Hall of Fame and the trip to Kanto",
+   "kind": "postgame",
+   "place": "new-bark-town",
+   "level_cap": 50,
+   "done_when": "later",
+   "opens": [
+    "ss-aqua",
+    "vermilion-city",
+    "frontier-access",
+    "battle-frontier"
+   ],
+   "tips": "After the credits, Elm gives you the S.S. Ticket and Professor Oak upgrades the Pokédex to the National mode. Board the S.S. Aqua at Olivine, and note the Battle Frontier near Route 40 opens too. Kanto's trainers are several levels higher than Johto's.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 17/32"
+  },
+  {
+   "id": "gym-surge",
+   "name": "Kanto Gym: Lt. Surge",
+   "kind": "gym",
+   "place": "vermilion-city",
+   "leader": "Lt. Surge",
+   "theme": "electric",
+   "level_cap": 53,
+   "foe": {
+    "name": "Lt. Surge",
+    "class": "Leader",
+    "ace_level": 53
+   },
+   "done_when": "badge:11",
+   "opens": [
+    "route-6"
+   ],
+   "tips": "Lt. Surge has Raichu, Magneton, Electabuzz and two Electrode. All are Electric, so Ground types ignore their Electric attacks. Find the two hidden switches under the trash cans to lower the electric fences.",
+   "badge_note": "Thunder Badge. TM34 Shock Wave.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 17; Serebii: HGSS gym leaders"
+  },
+  {
+   "id": "gym-sabrina",
+   "name": "Kanto Gym: Sabrina",
+   "kind": "gym",
+   "place": "saffron-city",
+   "leader": "Sabrina",
+   "theme": "psychic",
+   "level_cap": 55,
+   "foe": {
+    "name": "Sabrina",
+    "class": "Leader",
+    "ace_level": 55
+   },
+   "done_when": "badge:14",
+   "opens": [
+    "saffron-city"
+   ],
+   "tips": "Sabrina's Espeon, Mr. Mime and Alakazam are Psychic types, so Dark, Bug and Ghost moves are best. Use the warp tiles in a short route: the first tile, then northwest, southwest, southwest.",
+   "badge_note": "Marsh Badge. TM48 Skill Swap.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 18; Serebii: HGSS gym leaders"
+  },
+  {
+   "id": "legend-eon",
+   "name": "Roaming Latias in Kanto",
+   "kind": "legendary",
+   "place": "vermilion-city",
+   "level_cap": 35,
+   "done_when": "later",
+   "opens": [],
+   "tips": "After the Copycat's Poké Doll errand at the Vermilion Fan Club, Steven Stone tells you Latias now roams Kanto at level 35. Track it on the Pokégear map. It flees at once, so use a trapping ability or move, or a fast sleep move.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 20/30; Serebii: HGSS legends"
+  },
+  {
+   "id": "power-plant-machine-part",
+   "name": "Power Plant: the missing Machine Part",
+   "kind": "story",
+   "place": "power-plant",
+   "level_cap": 30,
+   "done_when": "later",
+   "opens": [
+    "route-8",
+    "lavender-town",
+    "route-10",
+    "rock-tunnel",
+    "route-9",
+    "power-plant",
+    "cerulean-city",
+    "route-24"
+   ],
+   "tips": "Lavender Town and Rock Tunnel lead to the Power Plant, which is down because a part was stolen. In Cerulean City, beat the Rocket Grunt on Nugget Bridge, take the Machine Part from the tubes in the Cerulean Gym and return it. Power comes back for the Magnet Train and the Radio Tower.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 19/20; Serebii: HGSS interactable"
+  },
+  {
+   "id": "gym-misty",
+   "name": "Kanto Gym: Misty",
+   "kind": "gym",
+   "place": "cerulean-city",
+   "leader": "Misty",
+   "theme": "water",
+   "level_cap": 54,
+   "foe": {
+    "name": "Misty",
+    "class": "Leader",
+    "ace_level": 54
+   },
+   "done_when": "badge:10",
+   "opens": [
+    "route-5",
+    "route-25"
+   ],
+   "tips": "Misty is not in her gym until you meet her at the end of Route 25. She has Golduck, Quagsire, Lapras and Starmie. Electric hits most; Grass works too but Lapras and Starmie answer with Ice. Quagsire (Water/Ground) ignores Electric.",
+   "badge_note": "Cascade Badge. TM03 Water Pulse.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 20; Serebii: HGSS gym leaders"
+  },
+  {
+   "id": "legend-suicune",
+   "name": "Route 25: Suicune",
+   "kind": "legendary",
+   "place": "route-25",
+   "level_cap": 40,
+   "done_when": "later",
+   "opens": [],
+   "tips": "After you beat Misty, Suicune waits at the end of the cape on Route 25 at level 40. Bring Mean Look or a trapping ability, Grass or Electric moves, and status to catch it. If you faint it, it returns to the Burned Tower after your next Hall of Fame entry.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 20/30; Serebii: HGSS legends"
+  },
+  {
+   "id": "gym-erika",
+   "name": "Kanto Gym: Erika",
+   "kind": "gym",
+   "place": "celadon-city",
+   "leader": "Erika",
+   "theme": "grass",
+   "level_cap": 56,
+   "foe": {
+    "name": "Erika",
+    "class": "Leader",
+    "ace_level": 56
+   },
+   "done_when": "badge:12",
+   "opens": [
+    "route-7",
+    "celadon-city"
+   ],
+   "tips": "Erika's Jumpluff, Tangela, Victreebel and Bellossom are Grass types. Fire, Ice, Flying and Poison moves all work, and Ice does quadruple damage to Jumpluff. Use Cut on the bushes to reach her.",
+   "badge_note": "Rainbow Badge. TM19 Giga Drain.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 21; Serebii: HGSS gym leaders"
+  },
+  {
+   "id": "gym-janine",
+   "name": "Kanto Gym: Janine",
+   "kind": "gym",
+   "place": "fuchsia-city",
+   "leader": "Janine",
+   "theme": "poison",
+   "level_cap": 50,
+   "foe": {
+    "name": "Janine",
+    "class": "Leader",
+    "ace_level": 50
+   },
+   "done_when": "badge:13",
+   "opens": [
+    "route-16",
+    "route-17",
+    "route-18",
+    "fuchsia-city",
+    "pal-park"
+   ],
+   "tips": "Janine uses Crobat, Weezing, two Ariados and Venomoth. Psychic, Ground and Rock moves work against most of them; Fire handles the Bug typing. Many fake leaders and invisible walls are in the way.",
+   "badge_note": "Soul Badge. TM84 Poison Jab.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 22; Serebii: HGSS gym leaders"
+  },
+  {
+   "id": "snorlax-route-11",
+   "name": "Route 11: wake the Snorlax",
+   "kind": "story",
+   "place": "route-11",
+   "level_cap": 50,
+   "done_when": "later",
+   "opens": [
+    "route-15",
+    "route-14",
+    "route-13",
+    "route-12",
+    "route-11",
+    "digletts-cave",
+    "route-2"
+   ],
+   "tips": "The Snorlax that blocks Route 11 and Diglett's Cave is level 50 and holds Leftovers. Fix the Power Plant, take the EXPN Card from the Kanto Radio Tower manager, then tune the Poké Flute channel while standing next to it. Save first; it hits hard.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 24; Serebii: HGSS interactable"
+  },
+  {
+   "id": "gym-brock",
+   "name": "Kanto Gym: Brock",
+   "kind": "gym",
+   "place": "pewter-city",
+   "leader": "Brock",
+   "theme": "rock",
+   "level_cap": 54,
+   "foe": {
+    "name": "Brock",
+    "class": "Leader",
+    "ace_level": 54
+   },
+   "done_when": "badge:9",
+   "opens": [
+    "pewter-city",
+    "route-3",
+    "route-4"
+   ],
+   "tips": "Brock now uses Graveler, Rhyhorn, Omastar, Onix and Kabutops. Water and Grass hit most of them for extra damage. Omastar and Kabutops are double weak to Grass.",
+   "badge_note": "Boulder Badge. TM80 Rock Slide.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 24; Serebii: HGSS gym leaders"
+  },
+  {
+   "id": "rival-mt-moon",
+   "name": "Silver: Mt. Moon",
+   "kind": "rival",
+   "place": "mt-moon",
+   "level_cap": 50,
+   "foe": {
+    "name": "Silver",
+    "class": "Rival",
+    "ace_level": 50
+   },
+   "done_when": "later",
+   "opens": [
+    "mt-moon"
+   ],
+   "tips": "Silver sits at the cave entrance with Sneasel, Golbat, Magneton, Alakazam, Gengar and a level 50 starter. He evolved his Haunter and Kadabra. After this fight he goes off to train in the Dragon's Den.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 25; Serebii: HGSS rival"
+  },
+  {
+   "id": "gym-blaine",
+   "name": "Kanto Gym: Blaine",
+   "kind": "gym",
+   "place": "seafoam-islands",
+   "leader": "Blaine",
+   "theme": "fire",
+   "level_cap": 59,
+   "foe": {
+    "name": "Blaine",
+    "class": "Leader",
+    "ace_level": 59
+   },
+   "done_when": "badge:15",
+   "opens": [
+    "viridian-city",
+    "viridian-forest",
+    "route-1",
+    "pallet-town",
+    "route-21",
+    "cinnabar-island",
+    "route-20",
+    "seafoam-islands",
+    "route-19"
+   ],
+   "tips": "Blaine moved his gym into the Seafoam Islands because of the volcano. Magmar, Magcargo and Rapidash are Fire types; Water, Ground and Rock all work. Magmar knows ThunderPunch against your Water team.",
+   "badge_note": "Volcano Badge. TM50 Overheat.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 27; Serebii: HGSS gym leaders"
+  },
+  {
+   "id": "legend-articuno",
+   "name": "Seafoam Islands: Articuno",
+   "kind": "legendary",
+   "place": "seafoam-islands",
+   "level_cap": 50,
+   "done_when": "later",
+   "opens": [],
+   "tips": "Articuno sits deep in the Seafoam Islands at level 50 once you hold all 16 badges. Rock, Electric and Steel moves hit it hardest, then use status and Ultra Balls.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 27; Serebii: HGSS legends"
+  },
+  {
+   "id": "gym-blue",
+   "name": "Kanto Gym: Blue",
+   "kind": "gym",
+   "place": "viridian-city",
+   "leader": "Blue",
+   "theme": "normal",
+   "level_cap": 60,
+   "foe": {
+    "name": "Blue",
+    "class": "Leader",
+    "ace_level": 60
+   },
+   "done_when": "badge:16",
+   "opens": [
+    "route-22",
+    "route-28",
+    "mt-silver",
+    "cerulean-cave"
+   ],
+   "tips": "Blue is the last Kanto Gym: Exeggutor, Machamp, Arcanine, Rhydon, Gyarados and Pidgeot (the highest level). Use varied coverage: Electric for Pidgeot and Gyarados, Rock for Arcanine, Pidgeot and Gyarados, Psychic for Machamp. After this Oak gives HM08.",
+   "badge_note": "Earth Badge. TM92 Trick Room; Oak then gives HM08 Rock Climb.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 28; Serebii: HGSS gym leaders"
+  },
+  {
+   "id": "dragons-den-multi",
+   "name": "Dragon's Den: Silver, Clair and Lance (multi battle)",
+   "kind": "rival",
+   "place": "dragons-den",
+   "level_cap": 75,
+   "foe": {
+    "name": "Lance",
+    "class": "Champion",
+    "ace_level": 75
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "After the Mt. Moon fight, enter the Dragon's Den with Silver as your partner for a two-on-two against Clair and Lance. Lance's level 75 Dragonite is the top threat; Ice and Rock moves from both of you are your best tools.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 25; Serebii: HGSS rival"
+  },
+  {
+   "id": "silver-league",
+   "name": "Silver at the Pokémon League (Monday and Wednesday)",
+   "kind": "rival",
+   "place": "indigo-plateau",
+   "level_cap": 60,
+   "foe": {
+    "name": "Silver",
+    "class": "Rival",
+    "ace_level": 60
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "On Mondays and Wednesdays Silver challenges you at the Indigo Plateau with Crobat, Magneton, Gengar, Sneasel, Alakazam and a level 60 starter. On Tuesday and Thursday he trains in the Dragon's Den and cannot be fought.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Silver (game); Serebii: HGSS rival"
+  },
+  {
+   "id": "red-mt-silver",
+   "name": "Mt. Silver: Red",
+   "kind": "postgame",
+   "place": "mt-silver",
+   "level_cap": 88,
+   "foe": {
+    "name": "Red",
+    "class": "PKMN Trainer",
+    "ace_level": 88
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Red's Pikachu is level 88 with a Light Ball, and his five other Pokémon are 80 to 84. A hailstorm blows in the arena, which does not hurt Lapras. Bring about level 85 Pokémon, Ground types for Pikachu, and many Max Revives.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 29; Serebii: HGSS Red"
+  },
+  {
+   "id": "legend-zapdos",
+   "name": "Route 10: Zapdos",
+   "kind": "legendary",
+   "place": "route-10",
+   "level_cap": 50,
+   "done_when": "later",
+   "opens": [],
+   "tips": "Zapdos waits outside the Power Plant at level 50 once you hold all 16 badges. Rock and Ice moves hit it; a Ground-type partner takes Electric attacks without harm.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 30; Serebii: HGSS legends"
+  },
+  {
+   "id": "legend-moltres",
+   "name": "Mt. Silver: Moltres",
+   "kind": "legendary",
+   "place": "mt-silver",
+   "level_cap": 50,
+   "done_when": "later",
+   "opens": [],
+   "tips": "Moltres roosts in a pit in a side chamber of Mt. Silver (level 50). You need Surf, Waterfall and Rock Climb to reach it. Water, Electric or Rock moves weaken it.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 29; Serebii: HGSS legends"
+  },
+  {
+   "id": "legend-mewtwo",
+   "name": "Cerulean Cave: Mewtwo",
+   "kind": "legendary",
+   "place": "cerulean-cave",
+   "level_cap": 70,
+   "done_when": "later",
+   "opens": [],
+   "tips": "Mewtwo sits at the bottom of Cerulean Cave at level 70, open only after all 16 badges. Use Bug, Ghost or Dark moves, then sleep or paralysis. Surf, Rock Smash and Rock Climb are needed to reach it.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 30; Serebii: HGSS legends"
+  },
+  {
+   "id": "legend-embedded-tower",
+   "name": "Embedded Tower: Kyogre",
+   "kind": "legendary",
+   "place": "embedded-tower",
+   "level_cap": 50,
+   "done_when": "later",
+   "opens": [],
+   "tips": "Get the Blue Orb from Mr. Pokémon after the Kanto starter from Oak, then use Rock Climb on Route 47. Kyogre is level 50 and brings its weather ability. The other of the pair has to come from a trade.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 30/31; Serebii: HGSS legends"
+  },
+  {
+   "id": "legend-rayquaza",
+   "name": "Embedded Tower: Rayquaza",
+   "kind": "legendary",
+   "place": "embedded-tower",
+   "level_cap": 50,
+   "done_when": "later",
+   "opens": [],
+   "tips": "Bring both Kyogre and Groudon (each caught in a HGSS Embedded Tower) to Professor Oak to receive the Jade Orb. With it Rayquaza appears in the tower at level 50. It has Air Lock, so weather tricks do not work.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 31; Serebii: HGSS legends"
+  },
+  {
+   "id": "rematch-johto-gyms",
+   "name": "Gym Leader rematches (Johto)",
+   "kind": "postgame",
+   "place": "saffron-city",
+   "level_cap": 62,
+   "done_when": "later",
+   "opens": [],
+   "tips": "After the Hall of Fame, Johto's leaders can be called for rematches once you have their numbers. They wait in the Saffron Fighting Dojo with six-Pokémon teams, up to level 56 to 62. Jasmine's Steelix is the highest.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 18; Serebii: HGSS gym-rematch; Pokemon Database: HGSS gym leaders and Elite Four"
+  },
+  {
+   "id": "rematch-kanto-gyms",
+   "name": "Gym Leader rematches (Kanto)",
+   "kind": "postgame",
+   "place": "saffron-city",
+   "level_cap": 72,
+   "done_when": "later",
+   "opens": [],
+   "tips": "Kanto's leaders rematch in the Fighting Dojo too. Their teams go up to about level 62, and Blue's rematch is a level 67 to 72 team including Tyranitar and Rhyperior, so level up first.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 18; Serebii: HGSS gym-rematch; Pokemon Database: HGSS gym leaders and Elite Four"
+  },
+  {
+   "id": "rematch-elite4",
+   "name": "Elite Four and Lance rematch",
+   "kind": "postgame",
+   "place": "indigo-plateau",
+   "level_cap": 75,
+   "done_when": "later",
+   "opens": [],
+   "tips": "With all 16 badges you can re-challenge the Elite Four at the Indigo Plateau. Their teams are level 58 to 64, with new Pokémon such as Bronzong, Toxicroak, Lucario and Spiritomb. Lance's team peaks at a level 75 Dragonite.",
+   "quality": "reference-only",
+   "source": "Serebii: HGSS elitefour; Pokemon Database: HGSS gym leaders and Elite Four"
+  },
+  {
+   "id": "battle-frontier",
+   "name": "Battle Frontier",
+   "kind": "postgame",
+   "place": "battle-frontier",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [],
+   "tips": "The Frontier has five facilities, and several of them scale strong Pokémon down to level 50 and remove held items. Battle Points buy move tutors and items such as Razor Fang. Win the required streak to face each Frontier Brain for bonus points.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 32; Serebii: HGSS Battle Frontier"
+  }
+ ],
+ "steps": [
+  {
+   "id": "step-partner",
+   "title": "Check your starter's weak spots",
+   "text": "Fire beats Grass and Bug, so Cyndaquil is the easiest, Chikorita the hardest. Catch a Pidgey or Hoothoot for Flying and Normal coverage, and keep a few Potions.",
+   "stage": "start-partner",
+   "places": [
+    "route-29",
+    "route-30"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 1/2"
+  },
+  {
+   "id": "step-egg",
+   "title": "Keep the Egg safe",
+   "text": "Carry the Mystery Egg in your party and walk around; it hatches into a Togepi. You get it back at the Violet Poké Mart after Falkner.",
+   "stage": "rival-cherrygrove",
+   "places": [
+    "violet-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 3"
+  },
+  {
+   "id": "step-sprout",
+   "title": "Prepare for Sprout Tower",
+   "text": "Grass-types in Sprout Tower are weak to Fire and Flying. Pick up Flash from Elder Li; you need the first badge to use it in the field.",
+   "stage": "sprout-tower-li",
+   "places": [
+    "sprout-tower",
+    "violet-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 3"
+  },
+  {
+   "id": "step-falkner",
+   "title": "Get a Rock-type or Electric attacker for Falkner",
+   "text": "Swap a Bellsprout for the Onix in Violet City, or use Electric, Ice or Rock moves. Pidgeotto can use Roost, so hit it hard.",
+   "stage": "gym-falkner",
+   "places": [
+    "violet-city",
+    "route-32"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 3/4"
+  },
+  {
+   "id": "step-well",
+   "title": "Clear Slowpoke Well and meet Kurt",
+   "text": "Bring Antidotes for the Poison types. After Proton, Kurt turns Apricorns into Poké Balls. Grab the King's Rock on B2F once you have Surf and Strength.",
+   "stage": "rocket-proton-well",
+   "places": [
+    "slowpoke-well",
+    "azalea-town"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 5"
+  },
+  {
+   "id": "step-bugsy",
+   "title": "Fire, Flying or Rock for Bugsy",
+   "text": "Scyther's U-turn hits Chikorita hard. Use Quilava's Ember, Pidgeotto or a Geodude. Take the left kart through the gym.",
+   "stage": "gym-bugsy",
+   "places": [
+    "azalea-town"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 5"
+  },
+  {
+   "id": "step-ilex",
+   "title": "Cut and Headbutt in Ilex Forest",
+   "text": "Rescue the two Farfetch'd for HM01 Cut. Learn Headbutt from the man by the trees to catch Pineco and others.",
+   "stage": "ilex-forest-cut",
+   "places": [
+    "ilex-forest"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 5"
+  },
+  {
+   "id": "step-radio",
+   "title": "Win the Radio Card",
+   "text": "Take the quiz at the Radio Tower reception in Goldenrod City to unlock Whitney. Visit the Day Care on Route 34 and buy Great Balls at the Department Store.",
+   "stage": "goldenrod-radio-card",
+   "places": [
+    "goldenrod-city",
+    "route-34"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 6"
+  },
+  {
+   "id": "step-whitney",
+   "title": "Fighting moves and Awakenings for Whitney",
+   "text": "Rollout grows with every hit and Milk Drink heals Miltank. Use Fighting moves, or put it to sleep, and finish it fast. Talk to Whitney a second time after winning to get the badge.",
+   "stage": "gym-whitney",
+   "places": [
+    "goldenrod-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 6"
+  },
+  {
+   "id": "step-sudowoodo",
+   "title": "Get the SquirtBottle",
+   "text": "After Whitney, the Goldenrod flower shop gives you the SquirtBottle. Use it on the tree on Route 36 to open the road to Ecruteak.",
+   "stage": "sudowoodo",
+   "places": [
+    "route-36",
+    "goldenrod-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 6/7"
+  },
+  {
+   "id": "step-beasts",
+   "title": "Save before the Burned Tower basement",
+   "text": "The three beasts flee as you approach. Raikou and Entei roam Johto at level 40; keep Ultra Balls and a trapper ready, and use Repel to make them appear.",
+   "stage": "legend-beasts-released",
+   "places": [
+    "burned-tower"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 8/30"
+  },
+  {
+   "id": "step-morty",
+   "title": "Dark or Ghost for Morty",
+   "text": "Normal and Fighting attacks cannot hit Ghosts. Use Dark Pulse, Shadow Ball or a Dark-type like Murkrow. Morty's Gengar finishes the line-up at level 25.",
+   "stage": "gym-morty",
+   "places": [
+    "ecruteak-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 8"
+  },
+  {
+   "id": "step-lighthouse",
+   "title": "Prepare for the sea crossing",
+   "text": "With Surf you can reach Cianwood City from Olivine via Route 40 and Route 41. Bring Revives and Super Potions, because the route has trainers and whirlpools.",
+   "stage": "olivine-lighthouse",
+   "places": [
+    "olivine-city",
+    "route-40",
+    "route-41",
+    "cianwood-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 9"
+  },
+  {
+   "id": "step-chuck",
+   "title": "Psychic or Flying for Chuck",
+   "text": "Poliwrath's Hypnosis is the danger, so carry Awakenings. Fly arrives after the fight; Chuck's wife gives HM02 outside the gym.",
+   "stage": "gym-chuck",
+   "places": [
+    "cianwood-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 10"
+  },
+  {
+   "id": "step-jasmine",
+   "title": "Fire, Fighting or Ground for Jasmine",
+   "text": "Deliver the SecretPotion first so Jasmine goes home. Her Steelix is slow but sturdy, so bring a strong special attacker.",
+   "stage": "gym-jasmine",
+   "places": [
+    "olivine-lighthouse",
+    "olivine-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 10"
+  },
+  {
+   "id": "step-strength",
+   "title": "Pick up Strength",
+   "text": "The Hiker at the west entrance of Mt. Mortar gives HM04 Strength. Mt. Mortar has a Protector and Dragon Scale and the Karate King's Tyrogue; you cannot get everything on the first visit.",
+   "stage": "mt-mortar",
+   "places": [
+    "route-42",
+    "mt-mortar"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 10"
+  },
+  {
+   "id": "step-hideout",
+   "title": "Take Lance's help in Mahogany",
+   "text": "Beat the red Gyarados, then follow Lance into the shop. Keep antidotes ready and look for hidden items; Lance gives HM05 Whirlpool afterward.",
+   "stage": "rocket-ariana-hideout",
+   "places": [
+    "lake-of-rage",
+    "mahogany-town"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 11"
+  },
+  {
+   "id": "step-pryce",
+   "title": "Fighting, Fire or Electric for Pryce",
+   "text": "Pryce's Piloswine hits hard with Blizzard. Fire and Fighting moves are your best choice. The gym is made of slide puzzles.",
+   "stage": "gym-pryce",
+   "places": [
+    "mahogany-town"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 11"
+  },
+  {
+   "id": "step-archer",
+   "title": "Disguise and climb the Radio Tower",
+   "text": "Get the Rocket uniform from the Goldenrod Tunnel photo booth, beat Petrel, Silver, Proton and Ariana, and finally Archer. The Director then rewards you with the Rainbow Wing.",
+   "stage": "rocket-archer",
+   "places": [
+    "goldenrod-city",
+    "goldenrod-tunnel"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 12"
+  },
+  {
+   "id": "step-clair",
+   "title": "Ice or Dragon for Clair, then Dragon's Den",
+   "text": "Gyarados in her gym is weak to Electric. Then pass the Den quiz to get the Rising Badge. After this you can fly to Ecruteak.",
+   "stage": "gym-clair",
+   "places": [
+    "blackthorn-city",
+    "dragons-den"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 13"
+  },
+  {
+   "id": "step-elm",
+   "title": "Return to Elm",
+   "text": "Fly to New Bark Town: Elm gives a Master Ball for the eight badges. Save it for a legendary, such as Mewtwo or the Kanto birds, or use it on Ho-Oh.",
+   "stage": "kimono-girls",
+   "places": [
+    "new-bark-town",
+    "ecruteak-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 14"
+  },
+  {
+   "id": "step-legend",
+   "title": "Summon Ho-Oh",
+   "text": "You need the Rainbow Wing (from the Radio Tower Director) and the Clear Bell (from the Kimono Girls). Ho-Oh is level 45. Heal and bring several Ultra Balls.",
+   "stage": "legend-hooh",
+   "places": [
+    "bell-tower"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 14"
+  },
+  {
+   "id": "step-vr",
+   "title": "Last prep before Victory Road",
+   "text": "Stock up on Full Restores and Revives and train to level 40 or higher. Silver at the cave's far exit has a level 40 starter. Victory Road has many hidden Max Potions and Max Revives.",
+   "stage": "rival-victory-road",
+   "places": [
+    "route-26",
+    "victory-road"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 15"
+  },
+  {
+   "id": "step-e4",
+   "title": "Plan your Elite Four party",
+   "text": "Will favors Dark/Bug/Ghost, Koga Psychic/Ground, Bruno Psychic/Flying, Karen Fighting/Bug. Bring at least 10 Full Restores and a team at about level 45 to 50.",
+   "stage": "elite4-will",
+   "places": [
+    "indigo-plateau"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 16; Serebii: HGSS Elite Four"
+  },
+  {
+   "id": "step-lance",
+   "title": "Ice and Rock for Lance",
+   "text": "Three Dragonite, Gyarados, Aerodactyl and Charizard. An Ice or Rock Pokémon plus a bulky Electric type is strong; avoid putting a Grass type in against Fire Blast.",
+   "stage": "champion-lance",
+   "places": [
+    "indigo-plateau"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 16"
+  },
+  {
+   "id": "step-kanto",
+   "title": "Board the S.S. Aqua",
+   "text": "After the credits, Elm gives you the S.S. Ticket. Sail from Olivine on Mondays and Fridays. Kanto's gyms are level 47 to 60, so level up your team first.",
+   "stage": "hall-of-fame",
+   "places": [
+    "new-bark-town",
+    "olivine-city",
+    "ss-aqua",
+    "vermilion-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 17"
+  },
+  {
+   "id": "step-surge",
+   "title": "Ground type for Lt. Surge",
+   "text": "Raichu and four other Electric types. A Ground Pokémon is immune to their Electric moves. Find the hidden switches under the cans.",
+   "stage": "gym-surge",
+   "places": [
+    "vermilion-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 17"
+  },
+  {
+   "id": "step-power",
+   "title": "Fix the Power Plant",
+   "text": "Find the Machine Part in the Cerulean Gym tubes (a Grunt is on Nugget Bridge) and return it. Then the radio, Magnet Train and Snorlax event open up.",
+   "stage": "power-plant-machine-part",
+   "places": [
+    "power-plant",
+    "cerulean-city",
+    "lavender-town"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 19/20"
+  },
+  {
+   "id": "step-snorlax",
+   "title": "Wake Snorlax",
+   "text": "Get the EXPN Card from the Radio Tower manager in Lavender Town, tune the Poké Flute station and check the Snorlax by Vermilion City. Save first; it is level 50.",
+   "stage": "snorlax-route-11",
+   "places": [
+    "route-11",
+    "lavender-town"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 20/24"
+  },
+  {
+   "id": "step-blue",
+   "title": "Prepare for the final Kanto gym",
+   "text": "Blue's team is mixed: Pidgeot (60) is the top. Electric, Rock and Water cover most. After the fight, visit Professor Oak for HM08 Rock Climb.",
+   "stage": "gym-blue",
+   "places": [
+    "viridian-city",
+    "pallet-town"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 28"
+  },
+  {
+   "id": "step-red",
+   "title": "Climb Mt. Silver for Red",
+   "text": "Bring many Max Revives, Full Restores, and high-level Pokémon (about level 85). Red's Pikachu is level 88 with a Light Ball. Lapras is immune to the hail.",
+   "stage": "red-mt-silver",
+   "places": [
+    "mt-silver",
+    "route-28"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 28/29"
+  },
+  {
+   "id": "step-embedded",
+   "title": "Orb, Rock Climb and the Embedded Tower",
+   "text": "Take a Kanto starter from Oak, then collect the Blue Orb from Mr. Pokémon. Route 47 via Cliff Edge Gate is the way to the Embedded Tower, where Kyogre (level 50) waits.",
+   "stage": "legend-embedded-tower",
+   "places": [
+    "route-30",
+    "cliff-edge-gate",
+    "route-47",
+    "embedded-tower"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 30/31"
+  },
+  {
+   "id": "step-rematch",
+   "title": "Register numbers for rematches",
+   "text": "Gym leaders give out phone numbers at their off-duty spots, then rematch in the Saffron Fighting Dojo. The strongest are Jasmine (Steelix 62) and Blue (up to level 72).",
+   "stage": "rematch-johto-gyms",
+   "places": [
+    "saffron-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 18; Serebii: HGSS gym-rematch"
+  },
+  {
+   "id": "step-frontier",
+   "title": "Spend Battle Points wisely",
+   "text": "Facilities scale your team. BP buys tutor moves such as Rollout and AncientPower for evolutions, plus Razor Fang and Razor Claw.",
+   "stage": "battle-frontier",
+   "places": [
+    "battle-frontier",
+    "frontier-access"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 32"
+  }
+ ],
+ "secrets": [
+  {
+   "id": "tip-dowsing",
+   "kind": "tip",
+   "text": "The man in the southwest house in Ecruteak City gives you the Dowsing MCHN. Use it near any spot where an item might lie; the large hidden items (Rare Candy, PP Up, Max Revive) are listed here by area.",
+   "place": "ecruteak-city",
+   "condition": "after reaching Ecruteak City",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 8"
+  },
+  {
+   "id": "tip-rematch-numbers",
+   "kind": "tip",
+   "text": "After the Hall of Fame, every gym leader can be rebattled in the Fighting Dojo in Saffron City. Meet them at their off-duty spots to register their phone numbers, then call at the right time of day. They wait in the Dojo until beaten.",
+   "place": "saffron-city",
+   "condition": "after the Hall of Fame",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 18; Serebii: HGSS gym-rematch"
+  },
+  {
+   "id": "tip-friendship",
+   "kind": "tip",
+   "text": "Friendship-based evolutions need at least 220 friendship. In Goldenrod Tunnel the salon brothers (younger on Sunday, Wednesday, Friday for $300; older on Tuesday, Thursday, Saturday for $500) raise it. Daisy Oak in Pallet Town does the same once a day, 15:00 to 16:00.",
+   "place": "goldenrod-tunnel",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 6/26; Bulbapedia: Friendship Evolution"
+  },
+  {
+   "id": "tip-bug-contest",
+   "kind": "event",
+   "text": "The Bug-Catching Contest runs on Tuesday, Thursday and Saturday in the National Park. You bring one Pokémon and get 20 Sport Balls. First prize is a Sun Stone before the National Pokédex, a random evolution stone after it; second is an Everstone, third a Sitrus Berry.",
+   "place": "national-park",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 7"
+  },
+  {
+   "id": "gift-egg-togepi",
+   "kind": "gift",
+   "text": "The Mystery Egg from Mr. Pokémon is given back by Elm's aide in the Violet City Poké Mart after you beat Falkner. It hatches into a Togepi. Show it to Elm for an Everstone.",
+   "place": "violet-city",
+   "condition": "after the first badge",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 1/3"
+  },
+  {
+   "id": "gift-egg-primo",
+   "kind": "gift",
+   "text": "Primo, the TV host next to the PC in the Violet City Pokémon Center, hands out an Egg (Mareep, Wooper or Slugma) and PC wallpapers if you pick the right phrases. The choice depends on your Trainer ID.",
+   "place": "violet-city",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 3; Serebii: HGSS gift Pokemon"
+  },
+  {
+   "id": "hidden-cherrygrove-nuggets",
+   "kind": "hidden-item",
+   "text": "Two Nuggets are hidden by Cherrygrove City: one east of the Pokémon Center, reached by surfing from the southeast pond on Route 30, and one on the northwest cliff.",
+   "place": "cherrygrove-city",
+   "condition": "Surf; the cliff Nugget also needs Rock Climb",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 2"
+  },
+  {
+   "id": "hidden-violet-extras",
+   "kind": "hidden-item",
+   "text": "In Violet City, a Hyper Potion is hidden at the end of the path behind the Pokémon Center (Rock Smash). A Rare Candy lies in the clearing beyond the eastern lake and a PP Up beyond the western lake.",
+   "place": "violet-city",
+   "condition": "Rock Smash and Surf",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 3"
+  },
+  {
+   "id": "trade-violet-onix",
+   "kind": "trade",
+   "text": "A boy in a house southwest of the Pokémon Center swaps his Onix (holding a Persim Berry) for a Bellsprout. Onix makes the first two gyms easy.",
+   "place": "violet-city",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 3; Serebii: HGSS in-game trades"
+  },
+  {
+   "id": "event-sprout-flash",
+   "kind": "event",
+   "text": "Elder Li gives TM70 Flash after the Sprout Tower fight. Flash cannot be used outside battles until you own the Zephyr Badge.",
+   "place": "sprout-tower",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 3"
+  },
+  {
+   "id": "hidden-route32-heart-scale",
+   "kind": "hidden-item",
+   "text": "A Heart Scale is hidden east of the pier on Route 32, on the smaller rock near the pillar under the train bridge. A Great Ball is hidden outside the Union Cave entrance.",
+   "place": "route-32",
+   "condition": "Surf for the Heart Scale",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 4"
+  },
+  {
+   "id": "event-alph-chambers",
+   "kind": "event",
+   "text": "The four chambers of the Ruins of Alph each hide a room behind a word on the back wall. North: ESCAPE (use an Escape Rope), southeast: LIGHT (use Flash), west: HO OH (lead with Ho-Oh), southwest: WATER (have a Water Stone). Each room holds four items and a path to a second Unown message.",
+   "place": "ruins-of-alph",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 4; Serebii: HGSS Ruins of Alph"
+  },
+  {
+   "id": "event-union-lapras",
+   "kind": "event",
+   "text": "On Fridays a wild Lapras shows up in the southern-most pool on Union Cave's lowest level (level 20). A new one appears each Friday, so you can try again.",
+   "place": "union-cave",
+   "condition": "Surf",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 4; Serebii: HGSS interactable"
+  },
+  {
+   "id": "hidden-well-items",
+   "kind": "hidden-item",
+   "text": "Slowpoke Well: a Great Ball sits where Kurt lay at the entrance, Super Potions are hidden on B1F, and a Full Heal is on the central ridge of B1F. A man on the west ridge of B2F hands over a King's Rock.",
+   "place": "slowpoke-well",
+   "condition": "Surf and Strength for the King's Rock",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 5"
+  },
+  {
+   "id": "event-ilex-farfetchd",
+   "kind": "event",
+   "text": "In Ilex Forest, step on the branches to make a Farfetch'd turn and walk it to the charcoal worker. The reward is HM01 Cut. A man southeast of the pond teaches Headbutt for free.",
+   "place": "ilex-forest",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 5"
+  },
+  {
+   "id": "gift-bill-eevee",
+   "kind": "gift",
+   "text": "Meet Bill in the Ecruteak City Pokémon Center, then visit his house in Goldenrod. He gives you an Eevee.",
+   "place": "goldenrod-city",
+   "condition": "after meeting Bill in Ecruteak City",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 6/8; Serebii: HGSS gift Pokemon"
+  },
+  {
+   "id": "trade-goldenrod-machop",
+   "kind": "trade",
+   "text": "On the Goldenrod Department Store's fifth floor, a man swaps his Machop (holding a Macho Brace) for a Drowzee.",
+   "place": "goldenrod-city",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 6; Serebii: HGSS in-game trades"
+  },
+  {
+   "id": "tip-goldenrod-store",
+   "kind": "tip",
+   "text": "In the Department Store, the basement is only reachable by elevator and has hidden items in crates (Antidote, Super Potions, Parlyz Heal). On Sundays a vendor gives TM27 Return if your lead Pokémon likes you, TM21 Frustration if not.",
+   "place": "goldenrod-city",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 6"
+  },
+  {
+   "id": "event-goldenrod-tunnel-shops",
+   "kind": "tip",
+   "text": "Goldenrod Tunnel: the bargain shop opens only on Mondays from 04:00 to 09:00 and sells valuables you can resell; one of each per week. The herbal medicine stall is open on weekends and costs friendship when used.",
+   "place": "goldenrod-tunnel",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 6"
+  },
+  {
+   "id": "hidden-national-park",
+   "kind": "hidden-item",
+   "text": "Two Full Heals are hidden in the National Park, one two steps north and one east of the small southern fountain, and one outside the fence at the end of a narrow path. A Shiny Stone lies on the northeast cliff outside the fence (Rock Climb).",
+   "place": "national-park",
+   "condition": "Rock Climb for the Shiny Stone",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 7"
+  },
+  {
+   "id": "hidden-ecruteak",
+   "kind": "hidden-item",
+   "text": "In Ecruteak City, a Rare Candy is hidden two steps south and one east of the lake's southeast corner. A Hyper Potion, an Ether outside the Burned Tower and an Ultra Ball near the west gate are hidden too.",
+   "place": "ecruteak-city",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 8"
+  },
+  {
+   "id": "event-moomoo-farm",
+   "kind": "event",
+   "text": "Moomoo Farm on Route 39: bring Oran Berries to heal the sick Miltank. In return you get the Seal Case, and a girl in Olivine gives Seals every day. Hidden nearby: PP Up, X Attack, two Nuggets.",
+   "place": "route-39",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 8; Serebii: HGSS daily events"
+  },
+  {
+   "id": "gift-cianwood-shuckle",
+   "kind": "gift",
+   "text": "After beating Chuck, the Poké Maniac in the southwest Cianwood house gives you his level 20 Shuckle holding a Berry Juice. It stays yours if it likes you enough when he asks for it back.",
+   "place": "cianwood-city",
+   "condition": "after the Storm Badge",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 10; Serebii: HGSS gift Pokemon"
+  },
+  {
+   "id": "gift-mortar-tyrogue",
+   "kind": "gift",
+   "text": "In the Mt. Mortar basement the Karate King battles you and hands over a level 10 Tyrogue. Its evolution depends on its Attack and Defense stats.",
+   "place": "mt-mortar",
+   "quality": "reference-only",
+   "source": "Serebii: HGSS gift Pokemon; Bulbapedia: Methods of evolution"
+  },
+  {
+   "id": "hidden-route42-disc",
+   "kind": "hidden-item",
+   "text": "A Dubious Disc is on Route 42 north of the eastern lake, reached via Mt. Mortar with Rock Climb. A Max Potion is hidden southeast of the eastern lake (Surf).",
+   "place": "route-42",
+   "condition": "Rock Climb for the disc",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 10"
+  },
+  {
+   "id": "event-lake-red-scale",
+   "kind": "event",
+   "text": "After beating or catching the red Gyarados you can pick up a Red Scale floating in the lake. Trade it to Mr. Pokémon on Route 30 for an Exp. Share.",
+   "place": "lake-of-rage",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 11/2"
+  },
+  {
+   "id": "hidden-ice-path",
+   "kind": "hidden-item",
+   "text": "The Ice Path hides a Max Potion (northwest, on the second ice patch), an Ice Heal, a Revive near the Iron, and a Carbos on B2F. HM07 Waterfall lies on the east edge of the third ice patch.",
+   "place": "ice-path",
+   "condition": "Strength for the boulders",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 12"
+  },
+  {
+   "id": "event-kimono-sayo",
+   "kind": "event",
+   "text": "Help Sayo, the Kimono Girl frozen to the ground in the Ice Path, by pushing her. This is why she later fights you in the Dance Theater.",
+   "place": "ice-path",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 12/14"
+  },
+  {
+   "id": "hidden-dragons-den",
+   "kind": "hidden-item",
+   "text": "In the Dragon's Den: a Revive west of the Ace Trainer, a Max Potion on the northwest stalagmite, and two Max Elixirs hidden at the southeast corner of the shrine platform. A Dragon Fang lies by the east stairs.",
+   "place": "dragons-den",
+   "condition": "Surf for some",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 13"
+  },
+  {
+   "id": "event-blackthorn-tutors",
+   "kind": "event",
+   "text": "In Blackthorn City, a Move Deleter, the Move Maniac (Heart Scale relearner) and two elders live in houses. Grandma Wilma teaches Draco Meteor to a happy Dragon-type, and the elder next door teaches Frenzy Plant, Blast Burn or Hydro Cannon to a happy, fully evolved first partner.",
+   "place": "blackthorn-city",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 13; Serebii: HGSS move tutors"
+  },
+  {
+   "id": "gift-dratini",
+   "kind": "gift",
+   "text": "After passing the Dragon's Den quiz, go back with five or fewer Pokémon in your party and the elder entrusts you with a level 15 Dratini. It knows ExtremeSpeed only if every quiz answer was the kind one.",
+   "place": "dragons-den",
+   "condition": "after the Rising Badge",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 13; Serebii: HGSS gift Pokemon"
+  },
+  {
+   "id": "hidden-bell-tower",
+   "kind": "hidden-item",
+   "text": "Bell Tower hides a Max Potion on an east-bound ramp, a Full Restore near the stairs up to 4F and a Carbos under the north window. A Rare Candy sits at a central pillar on one of the upper floors.",
+   "place": "bell-tower",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 14"
+  },
+  {
+   "id": "hidden-tohjo-moon-stone",
+   "kind": "hidden-item",
+   "text": "Behind the two waterfalls in Tohjo Falls, a Moon Stone lies at the west end of the path. Surf and Waterfall are needed to reach it.",
+   "place": "tohjo-falls",
+   "condition": "Surf and Waterfall",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 15"
+  },
+  {
+   "id": "hidden-victory-road",
+   "kind": "hidden-item",
+   "text": "Victory Road hides two Full Heals, a Max Potion, a Max Revive, an Ultra Ball, a PP Up, a Hyper Potion and (behind a breakable rock) a Zinc. A Rare Candy and TM26 Earthquake are in the open.",
+   "place": "victory-road",
+   "condition": "Rock Smash for the Zinc",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 15"
+  },
+  {
+   "id": "event-ss-aqua-coat",
+   "kind": "event",
+   "text": "On the first S.S. Aqua trip, find the missing girl (the Captain's cabin, then hide-and-seek) and her grandfather gives you a Metal Coat. After this, the ship sails to Kanto on Mondays and Fridays and back on Sundays and Wednesdays.",
+   "place": "ss-aqua",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 17"
+  },
+  {
+   "id": "event-fan-club",
+   "kind": "event",
+   "text": "The Copycat in Saffron City lost her Poké Doll, which is in the Vermilion Fan Club. Return it to get a Magnet Train Pass; Steven Stone then tells you about the roaming Eon Pokémon.",
+   "place": "vermilion-city",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 20"
+  },
+  {
+   "id": "gift-silph-upgrade",
+   "kind": "gift",
+   "text": "The security guard on the Silph Co. 1F gives you an Up-Grade while the elevator is out of order. It lets Porygon evolve when traded.",
+   "place": "saffron-city",
+   "condition": "before the Power Plant is repaired",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 18"
+  },
+  {
+   "id": "trade-power-plant",
+   "kind": "trade",
+   "text": "A scientist inside the Power Plant swaps his Metal Coat-holding Magneton for a Dugtrio. Dugtrio is only found in Diglett's Cave.",
+   "place": "power-plant",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 19; Serebii: HGSS in-game trades"
+  },
+  {
+   "id": "event-bills-grandfather",
+   "kind": "event",
+   "text": "On Route 25, Bill's grandfather (Sea Cottage) gives an item for the right shown Pokémon: Oddish for a Leaf Stone, Growlithe for a Fire Stone, Jigglypuff for an Everstone, Pichu for a Thunderstone, Marill for a Water Stone.",
+   "place": "route-25",
+   "condition": "shown Pokémon differs by version",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 20"
+  },
+  {
+   "id": "event-cerulean-machine-part",
+   "kind": "event",
+   "text": "The Rocket Grunt who fled from the Cerulean Gym is on Nugget Bridge. The Machine Part he stole is hidden in the pile of inflatable tubes inside the gym and does not show up on the Dowsing MCHN.",
+   "place": "cerulean-city",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 20"
+  },
+  {
+   "id": "hidden-route17-bike",
+   "kind": "hidden-item",
+   "text": "Route 17 (Cycling Road) hides a Max Ether and a Max Elixir on the west side, between the second and third and fifth and sixth pairs of streetlights from the north.",
+   "place": "route-17",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 22"
+  },
+  {
+   "id": "gift-super-rod",
+   "kind": "gift",
+   "text": "The house just south of the Route 12 and 11 intersection belongs to the Fishing Guru's younger brother and gives you the Super Rod.",
+   "place": "route-12",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 23"
+  },
+  {
+   "id": "trade-pewter-xatu",
+   "kind": "trade",
+   "text": "In the Pewter City Pokémon Center a man swaps his Wacan Berry-holding Xatu for a Haunter. The Pewter Museum revives fossils.",
+   "place": "pewter-city",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 24; Serebii: HGSS in-game trades"
+  },
+  {
+   "id": "legend-pewter-wing",
+   "kind": "legendary",
+   "text": "An old man on the hill on the east side of Pewter City gives you the Silver Wing, which lets you meet Lugia at level 70.",
+   "place": "pewter-city",
+   "condition": "after the Hall of Fame",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 24; Serebii: HGSS legends"
+  },
+  {
+   "id": "event-moon-clefairy",
+   "kind": "event",
+   "text": "On Monday nights between 20:00 and 04:00, six Clefairy gather by the pond west of the Mt. Moon entrance and one of them drops a Moon Stone.",
+   "place": "mt-moon",
+   "condition": "Monday night",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 25"
+  },
+  {
+   "id": "event-seafoam-water-stone",
+   "kind": "hidden-item",
+   "text": "The Seafoam Islands hold a Water Stone on the lower level above a ledge, plus hidden Pearls, a Rare Candy, a Zinc and a Max Revive. Articuno also stands deep inside.",
+   "place": "seafoam-islands",
+   "condition": "Strength and Surf",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 27"
+  },
+  {
+   "id": "hidden-route20-deepsea",
+   "kind": "hidden-item",
+   "text": "A DeepSeaTooth and a DeepSeaScale are hidden in the waters around the Seafoam Islands (Route 20). Clamperl needs one of each.",
+   "place": "route-20",
+   "condition": "Surf and the Dowsing MCHN",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 27; Serebii: HGSS items"
+  },
+  {
+   "id": "gift-oak-kanto-starters",
+   "kind": "gift",
+   "text": "After beating Red, Professor Oak lets you pick one of Bulbasaur, Charmander or Squirtle. Only after that does Mr. Pokémon give you the Blue Orb.",
+   "place": "pallet-town",
+   "condition": "after Red",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 30; Serebii: HGSS gift Pokemon"
+  },
+  {
+   "id": "gift-steven-hoenn",
+   "kind": "gift",
+   "text": "After Red, Steven Stone in Silph Co. offers a Treecko, Torchic or Mudkip depending on the stone color you choose, then trades a Beldum holding a Dawn Stone for a Forretress.",
+   "place": "saffron-city",
+   "condition": "after Red",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 30; Serebii: HGSS gift Pokemon"
+  },
+  {
+   "id": "hidden-mt-silver",
+   "kind": "hidden-item",
+   "text": "Mt. Silver: Reaper Cloth on the southwest hill outside the Pokémon Center (Surf), a Dawn Stone at the west end of the top level (Rock Climb), and many hidden Rare Candy, Max Revive and Max Potion on the upper mountainside.",
+   "place": "mt-silver",
+   "condition": "Surf, Waterfall, Rock Climb",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 28/29"
+  },
+  {
+   "id": "hidden-cerulean-cave",
+   "kind": "hidden-item",
+   "text": "Cerulean Cave: Electirizer in the northeast corner, a Dusk Stone at a dead end in the west (Rock Climb), a hidden Big Pearl, Rare Candy, Zinc, Protein and PP Ups. Mewtwo waits at the end.",
+   "place": "cerulean-cave",
+   "condition": "all 16 badges; Surf, Rock Smash, Rock Climb",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 30"
+  },
+  {
+   "id": "event-safari-baoba",
+   "kind": "event",
+   "text": "At the Safari Zone Baoba sets two tasks: catch a Geodude, then a Sandshrew (Sandshrew needs the Desert area, set with the Area Customizer). Afterwards he calls with new placeable objects every three gameplay hours until 24 are open.",
+   "place": "safari-zone",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 31; Serebii: HGSS Safari Zone"
+  },
+  {
+   "id": "event-mr-pokemon-orb",
+   "kind": "legendary",
+   "text": "After you take a Kanto starter from Oak, Mr. Pokémon on Route 30 gives you the Blue Orb. It calls Kyogre into the Embedded Tower on Route 47.",
+   "place": "route-30",
+   "condition": "after Oak's Kanto starter",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 30/31"
+  },
+  {
+   "id": "event-jade-orb",
+   "kind": "legendary",
+   "text": "Catch the Embedded Tower legend of your version, trade for the other one (caught in a HGSS tower), and show both to Professor Oak in Pallet Town. He hands over the Jade Orb that makes Rayquaza appear.",
+   "place": "pallet-town",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 31; Serebii: HGSS legends"
+  },
+  {
+   "id": "event-celebi-ilex",
+   "kind": "event",
+   "text": "Carrying the event Celebi into the Ilex Forest shrine starts a time-travel scene with Silver and his father. The scene ends in a fight with Giovanni (Nidoking, Honchkrow, Nidoqueen, Kangaskhan).",
+   "place": "ilex-forest",
+   "quality": "reference-only",
+   "source": "Serebii: HGSS Celebi event"
+  },
+  {
+   "id": "event-arceus-sinjoh",
+   "kind": "event",
+   "text": "Taking the event Arceus to the Ruins of Alph opens the Sinjoh Ruins, where Cynthia lets you choose Dialga, Palkia or Giratina (level 1, holding its orb). Only works with the event Arceus.",
+   "place": "ruins-of-alph",
+   "quality": "reference-only",
+   "source": "Serebii: HGSS Arceus event; Serebii: HGSS legends"
+  },
+  {
+   "id": "event-pichu-ilex",
+   "kind": "event",
+   "text": "A Pikachu-colored Pichu from an event, kept in the lead near the Ilex Forest shrine, triggers a scene that gives you a Spiky-eared Pichu (level 30, Zap Plate). It cannot evolve or be traded.",
+   "place": "ilex-forest",
+   "quality": "reference-only",
+   "source": "Serebii: HGSS Pichu event"
+  }
+ ],
+ "evolutions": [
+  {
+   "id": "evo-kadabra",
+   "species": 64,
+   "name": "Kadabra",
+   "text": "Alakazam needs a trade. Trade with a second save or another player; the Global Terminal in Goldenrod no longer works online.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; HGSS walkthrough part 6"
+  },
+  {
+   "id": "evo-machoke",
+   "species": 67,
+   "name": "Machoke",
+   "text": "Machamp needs a trade. Get a Machop from the Goldenrod Department Store 5F trade (Drowzee for Machop), raise it to Machoke, then trade it away and back. Trade with a second save or another player; the Global Terminal in Goldenrod no longer works online.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; Serebii: HGSS in-game trades"
+  },
+  {
+   "id": "evo-graveler",
+   "species": 75,
+   "name": "Graveler",
+   "text": "Golem needs a trade; nobody in the game swaps you one. Trade with a second save or another player; the Global Terminal in Goldenrod no longer works online.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; HGSS walkthrough part 6"
+  },
+  {
+   "id": "evo-haunter",
+   "species": 93,
+   "name": "Haunter",
+   "text": "Gengar needs a trade. Gastly is found in Sprout Tower and Bell Tower, Haunter on Route 8. Do not give your Haunter to the Pewter City man; he only returns a Xatu. Trade with a second save or another player; the Global Terminal in Goldenrod no longer works online.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; HGSS walkthrough part 24"
+  },
+  {
+   "id": "evo-onix",
+   "species": 95,
+   "name": "Onix",
+   "text": "Steelix needs a trade while Onix holds a Metal Coat. Metal Coats come from the Gentleman on the S.S. Aqua (after you find his granddaughter) and from the Magneton in the Power Plant trade. Jasmine will also trade you a ready Steelix after her rematch. Trade with a second save or another player; the Global Terminal in Goldenrod no longer works online.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; HGSS walkthrough parts 17, 19; Serebii: HGSS in-game trades"
+  },
+  {
+   "id": "evo-scyther",
+   "species": 123,
+   "name": "Scyther",
+   "text": "Scizor needs a trade while holding a Metal Coat (S.S. Aqua Gentleman, Power Plant trade Magneton). Scyther is a Bug-Catching Contest prize and a regular catch there on Tuesday, Thursday and Saturday. Trade with a second save or another player; the Global Terminal in Goldenrod no longer works online.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; HGSS walkthrough parts 7, 17"
+  },
+  {
+   "id": "evo-seadra",
+   "species": 117,
+   "name": "Seadra",
+   "text": "Kingdra needs a trade while Seadra holds a Dragon Scale. Dragon Scales lie in Mt. Mortar, cost 2500 points at the Pokéathlon Dome after the National Pokédex, and wild Horsea, Seadra, Dratini and Dragonair sometimes carry one. Trade with a second save or another player; the Global Terminal in Goldenrod no longer works online.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; Bulbapedia: Dragon Scale"
+  },
+  {
+   "id": "evo-slowpoke",
+   "species": 79,
+   "name": "Slowpoke",
+   "text": "Slowbro evolves at level 37. For Slowking, trade it while it holds a King's Rock. A King's Rock lies on the west ridge of Slowpoke Well B2F, held by a man you reach with Surf and Strength, and the Pokéathlon Dome sells them. Trade with a second save or another player; the Global Terminal in Goldenrod no longer works online.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; HGSS walkthrough part 5; Serebii: HGSS items"
+  },
+  {
+   "id": "evo-poliwhirl-politoed",
+   "species": 61,
+   "name": "Poliwhirl",
+   "text": "Politoed needs a trade while Poliwhirl holds a King's Rock (Slowpoke Well B2F west ridge, needs Surf and Strength). A Water Stone makes Poliwrath instead, so pick one before you use either. Trade with a second save or another player; the Global Terminal in Goldenrod no longer works online.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; HGSS walkthrough part 5"
+  },
+  {
+   "id": "evo-porygon",
+   "species": 137,
+   "name": "Porygon",
+   "text": "Porygon2 needs a trade while Porygon holds an Up-Grade. The Silph Co. guard in Saffron City hands you an Up-Grade while the Power Plant is still broken. Trade with a second save or another player; the Global Terminal in Goldenrod no longer works online.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; HGSS walkthrough part 18"
+  },
+  {
+   "id": "evo-porygon2",
+   "species": 233,
+   "name": "Porygon2",
+   "text": "Porygon-Z needs a trade while Porygon2 holds a Dubious Disc. The disc lies north of the eastern lake on Route 42 and needs Rock Climb from Mt. Mortar's route. Trade with a second save or another player; the Global Terminal in Goldenrod no longer works online.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; HGSS walkthrough part 10; Bulbapedia: Dubious Disc"
+  },
+  {
+   "id": "evo-electabuzz",
+   "species": 125,
+   "name": "Electabuzz",
+   "text": "Electivire needs a trade while Electabuzz holds an Electirizer. The Electirizer is in the northeast corner of Cerulean Cave and needs Rock Climb (open once you hold all 16 badges). Trade with a second save or another player; the Global Terminal in Goldenrod no longer works online.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; HGSS walkthrough part 30"
+  },
+  {
+   "id": "evo-magmar",
+   "species": 126,
+   "name": "Magmar",
+   "text": "Magmortar needs a trade while Magmar holds a Magmarizer. The Magmarizer is on Cinnabar Island, northeast of the Pokémon Center above a ledge, reached with Rock Climb. Trade with a second save or another player; the Global Terminal in Goldenrod no longer works online.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; HGSS walkthrough part 27"
+  },
+  {
+   "id": "evo-rhydon",
+   "species": 112,
+   "name": "Rhydon",
+   "text": "Rhyperior needs a trade while Rhydon holds a Protector. The Protector is picked up in Mt. Mortar. Trade with a second save or another player; the Global Terminal in Goldenrod no longer works online.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; Bulbapedia: Protector"
+  },
+  {
+   "id": "evo-dusclops",
+   "species": 356,
+   "name": "Dusclops",
+   "text": "Dusknoir needs a trade while Dusclops holds a Reaper Cloth. The cloth is on the southwest hill near the Mt. Silver Pokémon Center and needs Surf. Trade with a second save or another player; the Global Terminal in Goldenrod no longer works online.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; HGSS walkthrough part 28; Bulbapedia: Reaper Cloth"
+  },
+  {
+   "id": "evo-clamperl",
+   "species": 366,
+   "name": "Clamperl",
+   "text": "Clamperl evolves by trade: Huntail with DeepSeaTooth, Gorebyss with DeepSeaScale. Both items are hidden in the water around Route 20 (southeast and northwest of the Seafoam Islands). A Dowsing MCHN and Surf find them. Clamperl swarms on Route 19. Trade with a second save or another player; the Global Terminal in Goldenrod no longer works online.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; HGSS walkthrough part 27; Serebii: HGSS swarms"
+  },
+  {
+   "id": "evo-gligar",
+   "species": 207,
+   "name": "Gligar",
+   "text": "Gliscor needs a level-up at night (20:00 to 03:59 in this game) while holding a Razor Fang. Razor Fang costs 48 BP at the Battle Frontier. Gligar is a HeartGold local (Spinarak and Ariados are too).",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Time-based Evolution; Friendship Evolution; Bulbapedia: Razor Fang"
+  },
+  {
+   "id": "evo-sneasel",
+   "species": 215,
+   "name": "Sneasel",
+   "text": "Weavile needs a level-up at night (20:00 to 03:59) while holding a Razor Claw. Razor Claw is sold in the Battle Frontier shops for Battle Points.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Time-based Evolution; Friendship Evolution; Serebii: HGSS items"
+  },
+  {
+   "id": "evo-togetic",
+   "species": 176,
+   "name": "Togetic",
+   "text": "Togekiss needs a Shiny Stone. One lies on the northeast cliff outside the fence of the National Park (Rock Climb), Bird Keeper Josh sometimes calls with one on Route 14, and the Pokéathlon Dome sells them.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; HGSS walkthrough parts 7, 23"
+  },
+  {
+   "id": "evo-roselia",
+   "species": 315,
+   "name": "Roselia",
+   "text": "Roserade needs a Shiny Stone (National Park cliff, Bird Keeper Josh's phone gift, Pokéathlon Dome). Budew becomes Roselia by leveling up during the day with high friendship.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; Bulbapedia: Time-based Evolution"
+  },
+  {
+   "id": "evo-misdreavus",
+   "species": 200,
+   "name": "Misdreavus",
+   "text": "Mismagius needs a Dusk Stone. A Dusk Stone lies in Cerulean Cave (west-central part, Rock Climb), Biker Reese on Route 17 sometimes gives one, and the Bug-Catching Contest can award one after the National Pokédex.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; HGSS walkthroughs 7, 22, 30"
+  },
+  {
+   "id": "evo-murkrow",
+   "species": 198,
+   "name": "Murkrow",
+   "text": "Honchkrow needs a Dusk Stone (Cerulean Cave, Biker Reese's phone gift, post-dex Bug-Catching Contest prize). ",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; HGSS walkthroughs 7, 22, 30"
+  },
+  {
+   "id": "evo-kirlia",
+   "species": 281,
+   "name": "Kirlia",
+   "text": "Gallade needs a Dawn Stone and a male Kirlia (females stay Gardevoir). A Dawn Stone lies at the west end of the top level of Mt. Silver, and Steven Stone's Beldum trade at Silph Co. gives one.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; HGSS walkthroughs 18, 29"
+  },
+  {
+   "id": "evo-snorunt",
+   "species": 361,
+   "name": "Snorunt",
+   "text": "Froslass needs a Dawn Stone and a female Snorunt (males stay Glalie at the usual level). Dawn Stone sources: Mt. Silver, Silph Co. Beldum trade, Biker Aiden's phone gift on Route 17.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; HGSS walkthroughs 22, 29"
+  },
+  {
+   "id": "evo-eevee-friend",
+   "species": 133,
+   "name": "Eevee",
+   "text": "Espeon needs a level-up with high friendship (at least 220) during the day, Umbreon the same at night. Day is 04:00 to 19:59, night is 20:00 to 03:59. Groom it at Daisy's house in Pallet Town or the Goldenrod Tunnel salon. Bill gives you an Eevee in Goldenrod.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Time-based Evolution; Friendship Evolution; HGSS walkthrough part 6"
+  },
+  {
+   "id": "evo-eevee-stones",
+   "species": 133,
+   "name": "Eevee",
+   "text": "Vaporeon takes a Water Stone, Jolteon a Thunderstone, Flareon a Fire Stone. Bill's grandfather on Route 25 swaps those stones for the right Pokémon, so consider which one you want before using any.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; HGSS walkthrough part 20"
+  },
+  {
+   "id": "evo-eevee-rocks",
+   "species": 133,
+   "name": "Eevee",
+   "text": "Leafeon and Glaceon need a Moss Rock and an Ice Rock, which do not exist in Johto or Kanto. They are impossible to reach by evolving in HeartGold and SoulSilver; only a trade from a Sinnoh game works.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Moss Rock; Ice Rock; Methods of evolution"
+  },
+  {
+   "id": "evo-pikachu",
+   "species": 25,
+   "name": "Pikachu",
+   "text": "Raichu takes a Thunderstone, while Pichu becomes Pikachu on a high-friendship level-up (220 or more). Bill's grandfather on Route 25 gives one for a shown Pichu, Lass Dana on Route 38 sometimes gives one by phone. The event Spiky-eared Pichu can never evolve.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; HGSS walkthroughs 8, 20; Serebii: HGSS Pichu event"
+  },
+  {
+   "id": "evo-cleffa",
+   "species": 173,
+   "name": "Cleffa",
+   "text": "Clefairy comes from leveling up with high friendship (as Igglybuff into Jigglypuff does); Clefable and Wigglytuff then need a Moon Stone (Mt. Moon on Monday night, Tohjo Falls behind the waterfall, Ruins of Alph southeast chamber, Mom's savings).",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; HGSS walkthroughs 4, 15, 25"
+  },
+  {
+   "id": "evo-togepi",
+   "species": 175,
+   "name": "Togepi",
+   "text": "Togetic comes from a level-up with high friendship. Your Mystery Egg hatches into this Togepi once Elm's aide hands the Egg back after Falkner. Show the hatched Togepi to Elm for an Everstone.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Friendship Evolution; HGSS walkthroughs 1, 3"
+  },
+  {
+   "id": "evo-nidorina",
+   "species": 30,
+   "name": "Nidorina",
+   "text": "Nidoqueen needs a Moon Stone, and Nidorino (Nidoking) takes the same stone. The Moon Stone sources are Mt. Moon on Monday night, Tohjo Falls behind the waterfalls, the Ruins of Alph southeast chamber and Mom's savings purchases.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; HGSS walkthroughs 4, 15, 25"
+  },
+  {
+   "id": "evo-fire",
+   "species": 58,
+   "name": "Growlithe",
+   "text": "Arcanine needs a Fire Stone. Growlithe is a HeartGold local. Bill's grandfather on Route 25 gives a Fire Stone for a shown Growlithe; School Kid Alan sometimes calls with one.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; HGSS walkthroughs 7, 20"
+  },
+  {
+   "id": "evo-vulpix",
+   "species": 37,
+   "name": "Vulpix",
+   "text": "Ninetales needs a Fire Stone, but Vulpix is a SoulSilver local, so HeartGold needs a trade for it. Fire Stones come from Bill's grandfather (show a Growlithe) and School Kid Alan.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; HGSS walkthroughs 7, 20"
+  },
+  {
+   "id": "evo-poliwhirl-water",
+   "species": 61,
+   "name": "Poliwhirl",
+   "text": "Poliwrath, Cloyster (Shellder) and Starmie (Staryu) all need a Water Stone. One lies in the lower level of the Seafoam Islands, Bill's grandfather on Route 25 gives one for a shown Marill, and the post-dex Bug-Catching Contest can award one.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; HGSS walkthroughs 7, 20, 27"
+  },
+  {
+   "id": "evo-gloom",
+   "species": 44,
+   "name": "Gloom",
+   "text": "Vileplume needs a Leaf Stone, Bellossom a Sun Stone; Weepinbell and Exeggcute also need a Leaf Stone, Sunkern a Sun Stone. Leaf Stones: Viridian Forest, Bill's grandfather (show an Oddish), Picnicker Gina's phone call. Sun Stones: Camper Tanner's phone call, first prize in the early Bug-Catching Contest.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; HGSS walkthroughs 5, 7, 23, 24"
+  },
+  {
+   "id": "evo-golbat",
+   "species": 42,
+   "name": "Golbat",
+   "text": "Crobat comes from a level-up with high friendship (220 or more). Raise friendship by walking with it in the lead, grooming (Pallet Town, Goldenrod Tunnel), and avoid fainting.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Friendship Evolution"
+  },
+  {
+   "id": "evo-chansey",
+   "species": 113,
+   "name": "Chansey",
+   "text": "Blissey needs a level-up with high friendship. Happiny turns into Chansey in the daytime while holding an Oval Stone (Rock Tunnel B1F with Rock Climb, or Twins Kay and Tia by phone).",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Time-based Evolution; Friendship Evolution; HGSS walkthroughs 19, 23"
+  },
+  {
+   "id": "evo-tyrogue",
+   "species": 236,
+   "name": "Tyrogue",
+   "text": "At level 20 Tyrogue becomes Hitmonlee if Attack is above Defense, Hitmonchan if Defense is higher, or Hitmontop when equal. The Karate King in Mt. Mortar hands you a level 10 Tyrogue after a battle.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; Serebii: HGSS gift Pokemon"
+  },
+  {
+   "id": "evo-wurmple",
+   "species": 265,
+   "name": "Wurmple",
+   "text": "At level 7 Wurmple becomes Silcoon or Cascoon, decided by a hidden personality value you cannot see. Wurmple shows up in the post-dex Bug-Catching Contest and in some headbutt trees.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; Serebii: HGSS Hoenn and Sinnoh Pokemon"
+  },
+  {
+   "id": "evo-nincada",
+   "species": 290,
+   "name": "Nincada",
+   "text": "When Nincada reaches level 20 it becomes Ninjask; a Shedinja only appears if you have an empty party slot and a spare standard Poké Ball in the Bag. Nincada can be caught in the post-dex Bug-Catching Contest.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; Serebii: HGSS Bug-Catching Contest"
+  },
+  {
+   "id": "evo-mantyke",
+   "species": 458,
+   "name": "Mantyke",
+   "text": "Mantine appears when Mantyke levels up with a Remoraid in your party. Mantyke is a HeartGold exclusive.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution; Bulbapedia: HeartGold and SoulSilver Versions"
+  },
+  {
+   "id": "evo-aipom",
+   "species": 190,
+   "name": "Aipom",
+   "text": "Ambipom needs a level-up while Aipom knows Double Hit.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Pokémon that evolve with certain moves"
+  },
+  {
+   "id": "evo-lickitung",
+   "species": 108,
+   "name": "Lickitung",
+   "text": "Lickilicky needs a level-up while Lickitung knows Rollout. The Frontier Front tutor teaches Rollout for 32 BP.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Pokémon that evolve with certain moves; Serebii: HGSS move tutors"
+  },
+  {
+   "id": "evo-tangela",
+   "species": 114,
+   "name": "Tangela",
+   "text": "Tangrowth needs a level-up while Tangela knows AncientPower. The Frontier Front tutor teaches AncientPower for 40 BP.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Pokémon that evolve with certain moves; Serebii: HGSS move tutors"
+  },
+  {
+   "id": "evo-yanma",
+   "species": 193,
+   "name": "Yanma",
+   "text": "Yanmega needs a level-up while Yanma knows AncientPower (Frontier Front tutor, 40 BP). Yanma is a Route 35 swarm.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Pokémon that evolve with certain moves; Serebii: HGSS swarms"
+  },
+  {
+   "id": "evo-piloswine",
+   "species": 221,
+   "name": "Piloswine",
+   "text": "Mamoswine needs a level-up while Piloswine knows AncientPower (Frontier Front tutor, 40 BP).",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Pokémon that evolve with certain moves; Serebii: HGSS move tutors"
+  },
+  {
+   "id": "evo-mimejr",
+   "species": 439,
+   "name": "Mime Jr.",
+   "text": "Mr. Mime appears after a level-up while Mime Jr. knows Mimic.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Pokémon that evolve with certain moves"
+  },
+  {
+   "id": "evo-bonsly",
+   "species": 438,
+   "name": "Bonsly",
+   "text": "Sudowoodo appears after a level-up while Bonsly knows Mimic. Brock on Saturday evenings trades his Rhyhorn for your Bonsly at Diglett's Cave.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Pokémon that evolve with certain moves; Serebii: HGSS in-game trades"
+  },
+  {
+   "id": "evo-magneton",
+   "species": 82,
+   "name": "Magneton",
+   "text": "Magnezone (and Nosepass into Probopass) needs a special magnetic field, a location HeartGold and SoulSilver do not have. They cannot be evolved here; only a trade from another Generation IV game can bring one.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution"
+  },
+  {
+   "id": "evo-feebas",
+   "species": 349,
+   "name": "Feebas",
+   "text": "Milotic needs a Beauty value of 170 and no way exists to raise it here. Only a Feebas traded in with enough Beauty (from a game with Contests) can evolve.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Methods of evolution"
+  }
+ ],
+ "notes": [
+  {
+   "id": "excl-heartgold",
+   "kind": "exclusive",
+   "title": "HeartGold exclusives",
+   "text": "Only found in HeartGold: Mankey line, Growlithe line, Omanyte line (fossils), Spinarak line, Gligar and Gliscor, Mantine and Mantyke, Phanpy line, Sableye, Baltoy line, Anorith line (fossils), Latias (roams Kanto) and Kyogre (Embedded Tower).",
+   "species": [
+    56,
+    57,
+    58,
+    59,
+    138,
+    139,
+    167,
+    168,
+    207,
+    226,
+    231,
+    232,
+    302,
+    343,
+    344,
+    347,
+    348,
+    380,
+    382,
+    458,
+    472
+   ],
+   "names": [
+    "Mankey",
+    "Primeape",
+    "Growlithe",
+    "Arcanine",
+    "Omanyte",
+    "Omastar",
+    "Spinarak",
+    "Ariados",
+    "Gligar",
+    "Mantine",
+    "Phanpy",
+    "Donphan",
+    "Sableye",
+    "Baltoy",
+    "Claydol",
+    "Anorith",
+    "Armaldo",
+    "Latias",
+    "Kyogre",
+    "Mantyke",
+    "Gliscor"
+   ],
+   "quality": "reference-only",
+   "source": "Bulbapedia: Pokémon HeartGold and SoulSilver Versions; Serebii: HGSS exclusives"
+  },
+  {
+   "id": "excl-soulsilver-missing",
+   "kind": "exclusive",
+   "title": "What you need from SoulSilver",
+   "text": "SoulSilver has Vulpix and Ninetales, Meowth and Persian, Ledyba line, Teddiursa line, Delibird, Skarmory, Mawile, Gulpin line, Kabuto and Lileep lines, Latios and Groudon. Trade for these from a SoulSilver save.",
+   "species": [
+    37,
+    38,
+    52,
+    53,
+    140,
+    141,
+    165,
+    166,
+    216,
+    217,
+    225,
+    227,
+    303,
+    316,
+    317,
+    345,
+    346,
+    381,
+    383
+   ],
+   "names": [
+    "Vulpix",
+    "Ninetales",
+    "Meowth",
+    "Persian",
+    "Kabuto",
+    "Kabutops",
+    "Ledyba",
+    "Ledian",
+    "Teddiursa",
+    "Ursaring",
+    "Delibird",
+    "Skarmory",
+    "Mawile",
+    "Gulpin",
+    "Swalot",
+    "Lileep",
+    "Cradily",
+    "Latios",
+    "Groudon"
+   ],
+   "quality": "reference-only",
+   "source": "Bulbapedia: Pokémon HeartGold and SoulSilver Versions"
+  },
+  {
+   "id": "excl-swarms",
+   "kind": "exclusive",
+   "title": "Swarm-only version Pokémon",
+   "text": "Sableye (Route 9) and Baltoy (Route 3) swarm only in HeartGold; Mawile (Route 9) and Gulpin (Route 3) swarm only in SoulSilver. Tune Professor Oak's Pokémon Talk on the radio for the daily swarm; a marked route on the Pokégear map confirms it.",
+   "species": [
+    302,
+    343,
+    303,
+    316
+   ],
+   "names": [
+    "Sableye",
+    "Baltoy",
+    "Mawile",
+    "Gulpin"
+   ],
+   "quality": "reference-only",
+   "source": "Serebii: HGSS swarms"
+  },
+  {
+   "id": "tip-swarms",
+   "kind": "tip",
+   "title": "Daily swarms",
+   "text": "Each day one swarm is announced. Route 32 Qwilfish, Route 34 Ralts, Route 35 Yanma, Route 38 Snubbull, Route 44 Remoraid, Route 45 Swablu, Mt. Mortar Marill, Dark Cave Dunsparce, Route 47 Ditto, Violet City Whiscash, Route 13 Chansey, Route 12 Relicanth, Route 19 Clamperl, Route 25 Buneary, Route 27 Luvdisc, Viridian Forest Kricketot, Vermilion City Wingull and Route 1 Poochyena.",
+   "quality": "reference-only",
+   "source": "Serebii: HGSS swarms"
+  },
+  {
+   "id": "leg-box",
+   "kind": "legendary",
+   "title": "Ho-Oh and Lugia",
+   "text": "Ho-Oh comes first (level 45, Bell Tower) with the Rainbow Wing from the Radio Tower director and the Clear Bell from the Kimono Girls. Later an old man in Pewter City gives the Silver Wing; Lugia then waits in the Whirl Islands at level 70.",
+   "place": "bell-tower",
+   "species": [
+    250,
+    249
+   ],
+   "names": [
+    "Ho-Oh",
+    "Lugia"
+   ],
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 12/14/24; Serebii: HGSS legends"
+  },
+  {
+   "id": "leg-weather-pair",
+   "kind": "legendary",
+   "title": "Embedded Tower: Kyogre",
+   "text": "Take Mr. Pokémon's Blue Orb (given after Oak's Kanto starter) into the Embedded Tower on Route 47 with Rock Climb. Kyogre is level 50. You cannot get Groudon in this game; trade for it, then Oak gives the Jade Orb for Rayquaza (level 50).",
+   "place": "embedded-tower",
+   "species": [
+    382,
+    383,
+    384
+   ],
+   "names": [
+    "Kyogre",
+    "Groudon",
+    "Rayquaza"
+   ],
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 30/31; Serebii: HGSS legends"
+  },
+  {
+   "id": "leg-kanto-birds",
+   "kind": "legendary",
+   "title": "Kanto legendary birds and Mewtwo",
+   "text": "With all 16 badges: Zapdos on Route 10 (level 50), Articuno deep in the Seafoam Islands (level 50), Moltres in a side chamber of Mt. Silver (level 50), and Mewtwo in Cerulean Cave (level 70). Bring status moves and many Ultra Balls.",
+   "species": [
+    144,
+    145,
+    146,
+    150
+   ],
+   "names": [
+    "Articuno",
+    "Zapdos",
+    "Moltres",
+    "Mewtwo"
+   ],
+   "quality": "reference-only",
+   "source": "Serebii: HGSS legends; Bulbapedia: HGSS walkthrough part 27/29/30"
+  },
+  {
+   "id": "leg-snorlax",
+   "kind": "tip",
+   "title": "Snorlax on Route 11",
+   "text": "The Snorlax beside Vermilion City and Route 11 (level 50) wakes up with the Poké Flute radio channel once the Power Plant event is done and you have the EXPN Card. It carries Leftovers.",
+   "place": "route-11",
+   "species": [
+    143
+   ],
+   "names": [
+    "Snorlax"
+   ],
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 24; Serebii: HGSS interactable"
+  },
+  {
+   "id": "leg-events",
+   "kind": "legendary",
+   "title": "Celebi, Arceus and Pichu events",
+   "text": "Three event Pokémon unlock scenes if you bring them to HGSS: Celebi at the Ilex Forest shrine (a time-travel scene ending in a Giovanni fight), Arceus at the Ruins of Alph (Sinjoh Ruins, choose Dialga, Palkia or Giratina), and the Pikachu-colored Pichu at the Ilex shrine (Spiky-eared Pichu). The regular game never gives them.",
+   "species": [
+    251,
+    493,
+    172
+   ],
+   "names": [
+    "Celebi",
+    "Arceus",
+    "Pichu"
+   ],
+   "quality": "reference-only",
+   "source": "Serebii: HGSS events; Celebi event; Pichu event"
+  },
+  {
+   "id": "roam-beasts",
+   "kind": "roamer",
+   "title": "Raikou and Entei (roaming Johto)",
+   "text": "Once the beasts are freed in the Burned Tower, Raikou and Entei roam Johto at level 40. Each time you change routes they dash to a new one, and they try to flee at once and can Roar. Trapping moves or abilities help, as does a fast sleep move.",
+   "place": "burned-tower",
+   "species": [
+    243,
+    244
+   ],
+   "names": [
+    "Raikou",
+    "Entei"
+   ],
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 30; Bulbapedia: Raikou (Pokémon)"
+  },
+  {
+   "id": "roam-beasts-track",
+   "kind": "roamer",
+   "title": "Tracking the roamers",
+   "text": "Once you have seen a roamer in battle, the Pokégear Map card marks its current route. If you knock one out or flee, it returns to the Burned Tower after you enter the Hall of Fame again, and it only starts roaming after you interact with it.",
+   "place": "burned-tower",
+   "species": [
+    243,
+    244
+   ],
+   "names": [
+    "Raikou",
+    "Entei"
+   ],
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 30"
+  },
+  {
+   "id": "roam-suicune",
+   "kind": "roamer",
+   "title": "Suicune's trail",
+   "text": "Suicune is not a free roamer: after the Burned Tower it appears in Cianwood City, near Route 42, Vermilion City, Route 14 and finally at the end of Route 25 (level 40). If you do not catch it, it returns to the Burned Tower after the next Hall of Fame.",
+   "place": "route-25",
+   "species": [
+    245
+   ],
+   "names": [
+    "Suicune"
+   ],
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 10/17/23/30; Bulbapedia: Suicune (Pokémon)"
+  },
+  {
+   "id": "roam-eon",
+   "kind": "roamer",
+   "title": "Latias in Kanto",
+   "text": "Latias roams Kanto at level 35 after Steven Stone tells you about it in Vermilion City. Like the beasts it flees, so bring a trapper. Latios is the other version's roamer and appears only in Pewter City through the Enigma Stone Wi-Fi event.",
+   "place": "vermilion-city",
+   "species": [
+    380,
+    381
+   ],
+   "names": [
+    "Latias",
+    "Latios"
+   ],
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 20/30; Bulbapedia: HeartGold and SoulSilver Versions"
+  },
+  {
+   "id": "roam-rules",
+   "kind": "roamer",
+   "title": "How roaming works",
+   "text": "Walk between two linked routes until one shows up. A Repel with a lead one level below the roamer (and above the local wild levels) keeps other Pokémon away. Open with a trapping or sleep move so it cannot flee.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 30; Serebii: HGSS legends"
+  },
+  {
+   "id": "gift-starters",
+   "kind": "gift",
+   "title": "Three sets of starters",
+   "text": "You pick Chikorita, Cyndaquil or Totodile at the start. After Red, Oak lets you choose Bulbasaur, Charmander or Squirtle, and Steven Stone in Silph Co. lets you pick Treecko, Torchic or Mudkip. Each is level 5.",
+   "quality": "reference-only",
+   "source": "Serebii: HGSS starters; Bulbapedia: HGSS walkthrough part 30"
+  },
+  {
+   "id": "gift-list",
+   "kind": "gift",
+   "title": "Gift Pokémon in order",
+   "text": "Togepi Egg (Violet City after Falkner), Eevee (Bill, Goldenrod), Shuckle (Cianwood), Tyrogue (Mt. Mortar), Dratini (Dragon's Den), Mareep/Wooper/Slugma Egg (Violet Pokémon Center), Bulbasaur/Charmander/Squirtle (Oak after Red), Treecko/Torchic/Mudkip (Steven), Beldum (trade with Steven).",
+   "quality": "reference-only",
+   "source": "Serebii: HGSS gift Pokemon; Bulbapedia: HGSS walkthrough part 3/10/13"
+  },
+  {
+   "id": "trade-list",
+   "kind": "trade",
+   "title": "In-game trades",
+   "text": "Violet: Bellsprout for Onix. Goldenrod: Drowzee for Machop. Olivine: Krabby for Voltorb. Blackthorn: female Dragonair for Dodrio. Pewter: Haunter for Xatu. Power Plant: Dugtrio for Magneton. Silph Co.: Forretress for Beldum. Diglett's Cave: Bonsly for Rhyhorn. Olivine: any Pokémon for Jasmine's Steelix after her rematch.",
+   "quality": "reference-only",
+   "source": "Serebii: HGSS trade"
+  },
+  {
+   "id": "tip-silver-starter",
+   "kind": "tip",
+   "title": "Silver's starter changes with yours",
+   "text": "Silver steals the starter that beats yours, so his ace is Quilava vs your Chikorita, Croconaw vs your Cyndaquil and Bayleef vs your Totodile (and the final forms later). The rest of his team is the same. With Cyndaquil, his Goldenrod Tunnel team is two levels lower.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 2/5/12; Serebii: HGSS rival"
+  },
+  {
+   "id": "tip-pokewalker",
+   "kind": "tip",
+   "title": "Pokéwalker",
+   "text": "The Pokéwalker is an accessory sold with the game; nothing in the main story needs it. It can send items and a few extra Pokémon back via its own courses, so you can ignore it entirely.",
+   "quality": "reference-only",
+   "source": "Serebii: HGSS pokewalker; Serebii: HGSS unobtainable"
+  },
+  {
+   "id": "tip-online",
+   "kind": "tip",
+   "title": "Wi-Fi and the GTS",
+   "text": "The Global Terminal in Goldenrod (GTS, Battle Video Gallery, photo upload) no longer works because online service has ended. Trade evolutions, Wi-Fi events and the Enigma Stone event therefore need a second save, a friend or a local link.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 6; Serebii: HGSS events"
+  },
+  {
+   "id": "tip-day-night",
+   "kind": "tip",
+   "title": "Day and night in this game",
+   "text": "Day is 04:00 to 19:59 and night is 20:00 to 03:59. This decides Espeon/Umbreon, Gliscor/Weavile, Chimecho/Roselia and the Happiny evolution.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Time-based Evolution"
+  },
+  {
+   "id": "tip-safari",
+   "kind": "tip",
+   "title": "Safari Zone",
+   "text": "The Johto Safari Zone costs $500 per visit for 30 Safari Balls. It opens after you return the SecretPotion to Jasmine. Complete Baoba's Geodude and Sandshrew tasks to unlock the Area Customizer and placeable objects.",
+   "place": "safari-zone",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 31; Serebii: HGSS Safari Zone"
+  },
+  {
+   "id": "tip-fossils",
+   "kind": "tip",
+   "title": "Fossils at the Pewter Museum",
+   "text": "A scientist at the Pewter Museum revives one fossil at a time. The version lists put the Omanyte and Anorith lines in HeartGold, and the Kabuto and Lileep lines in SoulSilver. Aerodactyl is not version exclusive.",
+   "place": "pewter-city",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 24; Bulbapedia: Pokémon HeartGold and SoulSilver Versions"
+  },
+  {
+   "id": "ver-summary",
+   "kind": "version",
+   "title": "HeartGold vs SoulSilver at a glance",
+   "text": "HeartGold: Ho-Oh is the box legend (Rainbow Wing, Clear Bell, level 45), Lugia needs the Silver Wing from Pewter (level 70); Blue Orb and Kyogre; Latias roams Kanto; Growlithe/Jigglypuff/Marill answer Bill's grandfather.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 12/14/20/24/30; Bulbapedia: Pokémon HeartGold and SoulSilver Versions"
+  },
+  {
+   "id": "tip-battle-frontier",
+   "kind": "tip",
+   "title": "Battle Frontier shop",
+   "text": "Battle Points buy tutor moves (Rollout, AncientPower, Gastro Acid, Bounce, Gunk Shot and more) at the Frontier Front house, plus Razor Fang and Razor Claw at the shops. Pokémon above level 50 are scaled down for some facilities.",
+   "place": "battle-frontier",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 32; Serebii: HGSS move tutors"
+  },
+  {
+   "id": "tip-pal-park",
+   "kind": "tip",
+   "title": "Pal Park and Hoenn/Sinnoh Pokémon",
+   "text": "After Kanto opens, Pal Park in Fuchsia City migrates Pokémon from the GBA games Ruby, Sapphire, Emerald, FireRed and LeafGreen, six at a time through the Catching Show. The migration is one-way.",
+   "place": "pal-park",
+   "quality": "reference-only",
+   "source": "Bulbapedia: HGSS walkthrough part 22; Bulbapedia: Pokémon HeartGold and SoulSilver Versions"
+  }
+ ]
+}

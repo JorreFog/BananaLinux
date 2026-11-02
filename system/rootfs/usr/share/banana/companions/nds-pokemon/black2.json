@@ -1,0 +1,3249 @@
+{
+ "schema": 1,
+ "kind": "nds-pokemon-guide",
+ "game": "black2",
+ "code": "IREO",
+ "title": "Pokemon Black 2",
+ "revision": 1,
+ "sources": [
+  "Serebii.net Black 2 and White 2 pages (gym leaders, Elite Four, rival, Team Plasma, legendaries, gifts, trades, Hidden Grottoes, swarms, PWT, Join Avenue)",
+  "Thonky Pokemon Black 2 and White 2 walkthrough (route by route items and events)",
+  "Gamer Guides Pokemon Black 2 and White 2 (post-game walkthrough)",
+  "Dittobase and NationalDex.io Black 2 and White 2 guides (cross-check of teams and story order)",
+  "PokemonDB evolution lists; Bulbapedia facts via search snippets (Bulbapedia itself blocked fetches)"
+ ],
+ "places": {
+  "aspertia-city": {
+   "name": "Aspertia City",
+   "zone": 427,
+   "zones": [
+    428,
+    429,
+    430,
+    431,
+    432,
+    433,
+    434,
+    435,
+    436,
+    489
+   ]
+  },
+  "route-19": {
+   "name": "Route 19",
+   "zone": 437
+  },
+  "floccesy-town": {
+   "name": "Floccesy Town",
+   "zone": 439,
+   "zones": [
+    440,
+    441,
+    442,
+    443,
+    600
+   ]
+  },
+  "floccesy-ranch": {
+   "name": "Floccesy Ranch",
+   "zone": 444,
+   "zones": [
+    445
+   ]
+  },
+  "route-20": {
+   "name": "Route 20",
+   "zone": 446
+  },
+  "virbank-city": {
+   "name": "Virbank City",
+   "zone": 448,
+   "zones": [
+    449,
+    450,
+    451,
+    452,
+    454,
+    455,
+    502
+   ]
+  },
+  "virbank-complex": {
+   "name": "Virbank Complex",
+   "zone": 456,
+   "zones": [
+    457
+   ]
+  },
+  "pokestar-studios": {
+   "name": "Pokéstar Studios",
+   "zone": 566,
+   "zones": [
+    567,
+    568,
+    574,
+    586
+   ]
+  },
+  "castelia-city": {
+   "name": "Castelia City",
+   "zone": 28,
+   "zones": [
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    53,
+    54,
+    55,
+    56,
+    58,
+    59,
+    60,
+    61,
+    488,
+    494,
+    500,
+    501
+   ]
+  },
+  "castelia-sewers": {
+   "name": "Castelia Sewers",
+   "zone": 495,
+   "zones": [
+    496,
+    497,
+    498,
+    499
+   ]
+  },
+  "route-4": {
+   "name": "Route 4",
+   "zone": 326,
+   "zones": [
+    327,
+    328,
+    519,
+    520,
+    521,
+    522,
+    523,
+    524,
+    525,
+    526,
+    527,
+    528,
+    529,
+    530,
+    551
+   ]
+  },
+  "desert-resort": {
+   "name": "Desert Resort",
+   "zone": 157,
+   "zones": [
+    158
+   ]
+  },
+  "relic-castle": {
+   "name": "Relic Castle",
+   "zone": 160,
+   "zones": [
+    161,
+    162,
+    163,
+    164,
+    165,
+    166,
+    167,
+    168,
+    169,
+    170,
+    171,
+    172,
+    173,
+    174,
+    175,
+    176,
+    177,
+    178,
+    179,
+    180,
+    181,
+    182,
+    183,
+    184,
+    185,
+    186,
+    187,
+    188,
+    189,
+    190
+   ]
+  },
+  "join-avenue": {
+   "name": "Join Avenue",
+   "zone": 490,
+   "zones": [
+    491
+   ]
+  },
+  "nimbasa-city": {
+   "name": "Nimbasa City",
+   "zone": 62,
+   "zones": [
+    63,
+    64,
+    65,
+    79,
+    80,
+    81,
+    82,
+    83,
+    84,
+    85,
+    86,
+    87,
+    88,
+    89,
+    93,
+    94,
+    95,
+    289,
+    585
+   ]
+  },
+  "route-5": {
+   "name": "Route 5",
+   "zone": 304,
+   "zones": [
+    329,
+    330
+   ]
+  },
+  "driftveil-drawbridge": {
+   "name": "Driftveil Drawbridge",
+   "zone": 253,
+   "zones": [
+    301
+   ]
+  },
+  "driftveil-city": {
+   "name": "Driftveil City",
+   "zone": 96,
+   "zones": [
+    97,
+    98,
+    99,
+    100,
+    101,
+    102,
+    103,
+    104,
+    105,
+    106,
+    290,
+    543,
+    544,
+    545,
+    546,
+    547,
+    548,
+    549,
+    550,
+    603
+   ]
+  },
+  "route-6": {
+   "name": "Route 6",
+   "zone": 305,
+   "zones": [
+    331,
+    332,
+    336
+   ]
+  },
+  "pwt": {
+   "name": "PWT",
+   "zone": 191,
+   "zones": [
+    192,
+    193
+   ]
+  },
+  "relic-passage": {
+   "name": "Relic Passage",
+   "zone": 503,
+   "zones": [
+    504,
+    505
+   ]
+  },
+  "chargestone-cave": {
+   "name": "Chargestone Cave",
+   "zone": 194,
+   "zones": [
+    195,
+    196,
+    197,
+    297,
+    607
+   ]
+  },
+  "mistralton-city": {
+   "name": "Mistralton City",
+   "zone": 107,
+   "zones": [
+    108,
+    109,
+    110,
+    111,
+    112,
+    291
+   ]
+  },
+  "route-7": {
+   "name": "Route 7",
+   "zone": 306,
+   "zones": [
+    337,
+    343,
+    344
+   ]
+  },
+  "celestial-tower": {
+   "name": "Celestial Tower",
+   "zone": 338,
+   "zones": [
+    339,
+    340,
+    341,
+    342
+   ]
+  },
+  "lentimas-town": {
+   "name": "Lentimas Town",
+   "zone": 458,
+   "zones": [
+    459,
+    460,
+    608
+   ]
+  },
+  "reversal-mountain": {
+   "name": "Reversal Mountain",
+   "zone": 461,
+   "zones": [
+    531,
+    532,
+    533,
+    534,
+    535,
+    536,
+    537,
+    538,
+    539,
+    540,
+    541,
+    542
+   ]
+  },
+  "strange-house": {
+   "name": "Strange House",
+   "zone": 462,
+   "zones": [
+    510,
+    511,
+    512,
+    513,
+    514,
+    569,
+    570,
+    571,
+    572
+   ]
+  },
+  "undella-town": {
+   "name": "Undella Town",
+   "zone": 316,
+   "zones": [
+    412,
+    413,
+    415,
+    416,
+    417,
+    599
+   ]
+  },
+  "route-13": {
+   "name": "Route 13",
+   "zone": 311,
+   "zones": [
+    370,
+    371,
+    373
+   ]
+  },
+  "lacunosa-town": {
+   "name": "Lacunosa Town",
+   "zone": 315,
+   "zones": [
+    406,
+    407,
+    408,
+    409,
+    410,
+    411
+   ]
+  },
+  "route-12": {
+   "name": "Route 12",
+   "zone": 310,
+   "zones": [
+    368
+   ]
+  },
+  "village-bridge": {
+   "name": "Village Bridge",
+   "zone": 255,
+   "zones": [
+    256,
+    257,
+    258,
+    259,
+    260,
+    261,
+    262,
+    605
+   ]
+  },
+  "route-11": {
+   "name": "Route 11",
+   "zone": 309,
+   "zones": [
+    365,
+    367
+   ]
+  },
+  "opelucid-city": {
+   "name": "Opelucid City",
+   "zone": 120,
+   "zones": [
+    121,
+    122,
+    123,
+    124,
+    125,
+    126,
+    127,
+    128,
+    129,
+    130,
+    134,
+    135,
+    293,
+    601
+   ]
+  },
+  "marine-tube": {
+   "name": "Marine Tube",
+   "zone": 464
+  },
+  "humilau-city": {
+   "name": "Humilau City",
+   "zone": 465,
+   "zones": [
+    466,
+    467,
+    468,
+    469,
+    470,
+    472,
+    473
+   ]
+  },
+  "route-22": {
+   "name": "Route 22",
+   "zone": 474
+  },
+  "route-21": {
+   "name": "Route 21",
+   "zone": 463
+  },
+  "seaside-cave": {
+   "name": "Seaside Cave",
+   "zone": 515,
+   "zones": [
+    516
+   ]
+  },
+  "plasma-frigate": {
+   "name": "Plasma Frigate",
+   "zone": 552,
+   "zones": [
+    553,
+    554,
+    555,
+    556,
+    557,
+    558,
+    559,
+    560,
+    561,
+    562,
+    563,
+    564,
+    575,
+    576,
+    577,
+    578,
+    579,
+    580,
+    581,
+    582,
+    583
+   ]
+  },
+  "giant-chasm": {
+   "name": "Giant Chasm",
+   "zone": 230,
+   "zones": [
+    231,
+    232,
+    233,
+    234,
+    300,
+    604
+   ]
+  },
+  "route-23": {
+   "name": "Route 23",
+   "zone": 475,
+   "zones": [
+    476,
+    477
+   ]
+  },
+  "victory-road": {
+   "name": "Victory Road",
+   "zone": 214,
+   "zones": [
+    215,
+    216,
+    217,
+    218,
+    219,
+    220,
+    221,
+    222,
+    223,
+    224,
+    225,
+    226,
+    227,
+    228,
+    573,
+    587,
+    588,
+    589,
+    590,
+    591,
+    592,
+    593,
+    594,
+    595,
+    596,
+    602
+   ]
+  },
+  "pokemon-league": {
+   "name": "Pokémon League",
+   "zone": 136,
+   "zones": [
+    137,
+    138,
+    139,
+    140,
+    141,
+    142,
+    143,
+    144,
+    145,
+    146
+   ]
+  },
+  "ns-castle": {
+   "name": "N's Castle",
+   "zone": 264,
+   "zones": [
+    265,
+    266,
+    267,
+    268,
+    269,
+    270,
+    271,
+    272,
+    273,
+    274,
+    275,
+    276,
+    277,
+    278
+   ]
+  },
+  "dragonspiral-tower": {
+   "name": "Dragonspiral Tower",
+   "zone": 205,
+   "zones": [
+    206,
+    207,
+    208,
+    209,
+    210,
+    211,
+    212,
+    213,
+    299
+   ]
+  },
+  "icirrus-city": {
+   "name": "Icirrus City",
+   "zone": 113,
+   "zones": [
+    114,
+    115,
+    116,
+    117,
+    118,
+    119,
+    292
+   ]
+  },
+  "black-city": {
+   "name": "Black City",
+   "zone": 0,
+   "zones": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    294
+   ]
+  },
+  "nacrene-city": {
+   "name": "Nacrene City",
+   "zone": 16,
+   "zones": [
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    598
+   ]
+  },
+  "twist-mountain": {
+   "name": "Twist Mountain",
+   "zone": 198,
+   "zones": [
+    199,
+    200,
+    201,
+    202,
+    203,
+    204,
+    298,
+    509
+   ]
+  },
+  "underground-ruins": {
+   "name": "Underground Ruins",
+   "zone": 565,
+   "zones": [
+    609,
+    610
+   ]
+  },
+  "marvelous-bridge": {
+   "name": "Marvelous Bridge",
+   "zone": 263,
+   "zones": [
+    303
+   ]
+  },
+  "dreamyard": {
+   "name": "Dreamyard",
+   "zone": 152,
+   "zones": [
+    153
+   ]
+  },
+  "cave-of-being": {
+   "name": "Cave of Being",
+   "zone": 517
+  },
+  "p2-laboratory": {
+   "name": "P2 Laboratory",
+   "zone": 238,
+   "zones": [
+    239
+   ]
+  },
+  "striaton-city": {
+   "name": "Striaton City",
+   "zone": 6,
+   "zones": [
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    597
+   ]
+  },
+  "abundant-shrine": {
+   "name": "Abundant Shrine",
+   "zone": 376,
+   "zones": [
+    377
+   ]
+  },
+  "liberty-garden": {
+   "name": "Liberty Garden",
+   "zone": 235,
+   "zones": [
+    236,
+    237
+   ]
+  },
+  "pledge-grove": {
+   "name": "Pledge Grove",
+   "zone": 614
+  },
+  "route-18": {
+   "name": "Route 18",
+   "zone": 387,
+   "zones": [
+    388
+   ]
+  },
+  "route-1": {
+   "name": "Route 1",
+   "zone": 317
+  },
+  "route-14": {
+   "name": "Route 14",
+   "zone": 312,
+   "zones": [
+    374
+   ]
+  },
+  "nuvema-town": {
+   "name": "Nuvema Town",
+   "zone": 389,
+   "zones": [
+    390,
+    391,
+    392,
+    393,
+    394,
+    395,
+    396
+   ]
+  }
+ },
+ "milestones": [
+  {
+   "id": "hugh-aspertia",
+   "name": "Rival: Hugh in Aspertia City",
+   "kind": "rival",
+   "place": "aspertia-city",
+   "level_cap": 5,
+   "foe": {
+    "name": "Rival",
+    "ace_level": 5
+   },
+   "done_when": "later",
+   "opens": [
+    "aspertia-city"
+   ],
+   "tips": "Hugh picks the starter that beats yours, but his first fight is only Level 5. Just keep attacking. Talk to Bianca for the Pokedex and your first Poke Balls before leaving town.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 rival Hugh; Thonky: Aspertia City walkthrough"
+  },
+  {
+   "id": "hugh-floccesy-ranch",
+   "name": "Rival: Hugh at Floccesy Ranch",
+   "kind": "rival",
+   "place": "floccesy-ranch",
+   "level_cap": 8,
+   "foe": {
+    "name": "Rival",
+    "ace_level": 8
+   },
+   "done_when": "later",
+   "opens": [
+    "route-19",
+    "floccesy-town",
+    "floccesy-ranch"
+   ],
+   "tips": "Go north through Route 19 to Floccesy Town and the ranch. Hugh battles you in the fenced area; the Plasma grunt there hands you a TM and runs. The ranch lady heals your team for free.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 rival Hugh; Thonky: Floccesy Ranch walkthrough"
+  },
+  {
+   "id": "gym-1-cheren",
+   "name": "Gym 1: Cheren",
+   "kind": "gym",
+   "place": "aspertia-city",
+   "leader": "Cheren",
+   "theme": "normal",
+   "level_cap": 13,
+   "foe": {
+    "name": "Cheren",
+    "ace_level": 13
+   },
+   "done_when": "badge:1",
+   "opens": [],
+   "tips": "Train with Alder in Floccesy Town first, or the gym stays closed. Cheren uses Normal types, so a Fighting type such as Riolu from the ranch makes the fight easy. Pecha Berries help if you meet status moves.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 gym leaders; Thonky: Aspertia Gym walkthrough; Dittobase gym leaders"
+  },
+  {
+   "id": "gym-2-roxie",
+   "name": "Gym 2: Roxie",
+   "kind": "gym",
+   "place": "virbank-city",
+   "leader": "Roxie",
+   "theme": "poison",
+   "level_cap": 18,
+   "foe": {
+    "name": "Roxie",
+    "ace_level": 18
+   },
+   "done_when": "badge:2",
+   "opens": [
+    "route-20",
+    "virbank-city",
+    "virbank-complex"
+   ],
+   "tips": "Beat her drummer and guitarist first so she hears you. Roxie uses Poison, so bring Ground, Psychic or Steel types. Steel types ignore Poison entirely; Magnemite from the Virbank Complex fits well.",
+   "badge_note": "Roxie later gives HM01 Cut after the dock fight.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 gym leaders; Dittobase: B2W2 gym leaders and Elite Four; Thonky: Virbank Gym"
+  },
+  {
+   "id": "team-virbank-dock",
+   "name": "Team Plasma at Virbank Dock",
+   "kind": "team",
+   "place": "virbank-city",
+   "level_cap": 14,
+   "done_when": "later",
+   "opens": [
+    "pokestar-studios"
+   ],
+   "tips": "After the gym a man sends you to Pokestar Studios, then Team Plasma grunts appear at the dock and on the Route 20 bridge. Grunts here only use Level 14 Pokemon. Roxie gives you HM01 Cut afterwards.",
+   "quality": "reference-only",
+   "source": "Thonky: Team Plasma in Virbank; Thonky: Virbank Gym"
+  },
+  {
+   "id": "hugh-castelia-sewers",
+   "name": "Hugh and the Castelia Sewers",
+   "kind": "rival",
+   "place": "castelia-sewers",
+   "level_cap": 20,
+   "foe": {
+    "name": "Rival",
+    "ace_level": 20
+   },
+   "done_when": "later",
+   "opens": [
+    "castelia-city",
+    "castelia-sewers"
+   ],
+   "tips": "You fight beside Hugh in a double battle against two grunts at Level 16. Hugh heals your party after each fight and hands over HM04 Strength when the sewer is cleared. Iris and Clyde point you to the sewer entrance on Thumb Pier.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 rival Hugh; Thonky: Castelia Sewers walkthrough"
+  },
+  {
+   "id": "gym-3-burgh",
+   "name": "Gym 3: Burgh",
+   "kind": "gym",
+   "place": "castelia-city",
+   "leader": "Burgh",
+   "theme": "bug",
+   "level_cap": 24,
+   "foe": {
+    "name": "Burgh",
+    "ace_level": 24
+   },
+   "done_when": "badge:3",
+   "opens": [],
+   "tips": "Cocoons carry you between the Harlequin trainers up to Burgh. His team is all Bug (Swadloon and Leavanny are also Grass, Dwebble also Rock), so Fire and Flying moves are the safest picks.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 gym leaders; Dittobase: B2W2 gym leaders and Elite Four; Thonky: Castelia Gym Burgh"
+  },
+  {
+   "id": "colress-route-4",
+   "name": "Colress on Route 4",
+   "kind": "team",
+   "place": "route-4",
+   "level_cap": 23,
+   "foe": {
+    "name": "Colress",
+    "ace_level": 23
+   },
+   "done_when": "later",
+   "opens": [
+    "route-4",
+    "desert-resort",
+    "relic-castle",
+    "join-avenue"
+   ],
+   "tips": "Colress meets you on Route 4 and battles with Magnemite and Klink. Route 4 is also the way to the Desert Resort, Relic Castle and Join Avenue. Pick up the Dowsing Machine from Bianca at the Route 4 gate in Castelia.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Team Plasma and Colress; Thonky: Journey to Nimbasa"
+  },
+  {
+   "id": "gym-4-elesa",
+   "name": "Gym 4: Elesa",
+   "kind": "gym",
+   "place": "nimbasa-city",
+   "leader": "Elesa",
+   "theme": "electric",
+   "level_cap": 30,
+   "foe": {
+    "name": "Elesa",
+    "ace_level": 30
+   },
+   "done_when": "badge:4",
+   "opens": [
+    "nimbasa-city"
+   ],
+   "tips": "Elesa is away at the roller coaster first; talk to people around Nimbasa to find her. Ground moves are great against Flaaffy and Zebstrika but do nothing to the Flying Emolga, which Rock and Ice moves hit.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 gym leaders; Dittobase: B2W2 gym leaders and Elite Four; Thonky: Nimbasa Gym Elesa"
+  },
+  {
+   "id": "rood-driftveil",
+   "name": "Plasma Sage Rood in Driftveil",
+   "kind": "team",
+   "place": "driftveil-city",
+   "level_cap": 27,
+   "foe": {
+    "name": "Rood",
+    "ace_level": 27
+   },
+   "done_when": "later",
+   "opens": [
+    "route-5",
+    "driftveil-drawbridge",
+    "driftveil-city"
+   ],
+   "tips": "Head west over the Driftveil Drawbridge. Rood, a sage of the old Team Plasma, battles you with Herdier and Swoobat, then gives you N's Zorua. Hugh's sister's Purrloin is hinted at here.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Team Plasma and Colress; Thonky: Driftveil City"
+  },
+  {
+   "id": "gym-5-clay",
+   "name": "Gym 5: Clay",
+   "kind": "gym",
+   "place": "driftveil-city",
+   "leader": "Clay",
+   "theme": "ground",
+   "level_cap": 33,
+   "foe": {
+    "name": "Clay",
+    "ace_level": 33
+   },
+   "done_when": "badge:5",
+   "opens": [
+    "route-6"
+   ],
+   "tips": "The gym is a set of elevators; visited platforms light up. Clay's Ground team is beaten by Water, Grass or Ice, but Excadrill is also Steel, so Water and Fire or Fighting moves matter most for it.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 gym leaders; Dittobase: B2W2 gym leaders and Elite Four; Thonky: Driftveil Gym Clay"
+  },
+  {
+   "id": "frigate-pwt",
+   "name": "Driftveil: first PWT visit and Hugh",
+   "kind": "story",
+   "place": "pwt",
+   "level_cap": 33,
+   "foe": {
+    "name": "Rival",
+    "ace_level": 33
+   },
+   "done_when": "later",
+   "opens": [
+    "pwt",
+    "relic-passage",
+    "chargestone-cave"
+   ],
+   "tips": "After Clay, follow Hugh and Cheren to the Pokemon World Tournament and take part in the Driftveil tournament, where every team is set to Level 25. Hugh joins you for a Plasma Frigate detour tied to it. Chargestone Cave opens further once this is done.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 rival Hugh; NationalDex: B2W2 walkthrough; Serebii: PWT"
+  },
+  {
+   "id": "gym-6-skyla",
+   "name": "Gym 6: Skyla",
+   "kind": "gym",
+   "place": "mistralton-city",
+   "leader": "Skyla",
+   "theme": "flying",
+   "level_cap": 39,
+   "foe": {
+    "name": "Skyla",
+    "ace_level": 39
+   },
+   "done_when": "badge:6",
+   "opens": [
+    "mistralton-city",
+    "route-7",
+    "celestial-tower"
+   ],
+   "tips": "Fans blow you across the gym unless you hold B and shelter behind the walls. Electric moves hit Swoobat and Swanna hard, while Skarmory (Steel/Flying) fears Fire.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 gym leaders; Dittobase: B2W2 gym leaders and Elite Four; Thonky: Mistralton Gym Skyla"
+  },
+  {
+   "id": "lentimas-juniper",
+   "name": "Flight to Lentimas Town",
+   "kind": "story",
+   "place": "lentimas-town",
+   "level_cap": 39,
+   "done_when": "later",
+   "opens": [
+    "lentimas-town",
+    "reversal-mountain",
+    "strange-house"
+   ],
+   "tips": "Skyla and Juniper fly you to Lentimas Town, and Bianca joins you for Reversal Mountain. Take the east exit. The cave inside Reversal Mountain is filled with water in this version.",
+   "quality": "reference-only",
+   "source": "Thonky: Lentimas Town; Thonky: Reversal Mountain"
+  },
+  {
+   "id": "hugh-undella",
+   "name": "Rival: Hugh in Undella Town",
+   "kind": "rival",
+   "place": "undella-town",
+   "level_cap": 41,
+   "foe": {
+    "name": "Rival",
+    "ace_level": 41
+   },
+   "done_when": "later",
+   "opens": [
+    "undella-town",
+    "route-14"
+   ],
+   "tips": "Hugh blocks the way to Route 13, left of the Pokemon Center, with an Unfezant, a Simi monkey and a Level 41 starter. His starter is strong against yours; the monkey is weak to it. Heal and save before talking to him.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 rival Hugh; Thonky: Undella Town"
+  },
+  {
+   "id": "cobalion",
+   "name": "Cobalion on Route 13",
+   "kind": "legendary",
+   "place": "route-13",
+   "level_cap": 45,
+   "done_when": "none",
+   "opens": [
+    "route-13"
+   ],
+   "tips": "Cobalion stands north of the cuttable trees at Level 45. Its catch rate is very low, so use False Swipe and sleep or freeze it; a Dusk Ball at night helps. If it faints it returns after the Elite Four at Level 65.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 legendary Pokemon; Thonky: Route 13"
+  },
+  {
+   "id": "zinzolin-lacunosa",
+   "name": "Zinzolin in Lacunosa Town",
+   "kind": "team",
+   "place": "lacunosa-town",
+   "level_cap": 44,
+   "foe": {
+    "name": "Zinzolin",
+    "ace_level": 44
+   },
+   "done_when": "later",
+   "opens": [
+    "lacunosa-town",
+    "route-12",
+    "village-bridge"
+   ],
+   "tips": "A double battle with Hugh against Zinzolin's Cryogonal and Sneasel plus a grunt. Fire types such as Litwick and Lampent resist his Ice moves and hit both of his Pokemon hard.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Team Plasma and Colress; Thonky: Lacunosa Town"
+  },
+  {
+   "id": "virizion",
+   "name": "Virizion on Route 11",
+   "kind": "legendary",
+   "place": "route-11",
+   "level_cap": 45,
+   "done_when": "none",
+   "opens": [
+    "route-11"
+   ],
+   "tips": "Virizion jumps out at the west end of Route 11 at Level 45 with a very low catch rate. Wear it down with False Swipe, sleep or freeze it and throw Dusk or Ultra Balls. A fainted one returns after the Elite Four at Level 65.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 legendary Pokemon; Thonky: Route 11"
+  },
+  {
+   "id": "gym-7-drayden",
+   "name": "Gym 7: Drayden",
+   "kind": "gym",
+   "place": "opelucid-city",
+   "leader": "Drayden",
+   "theme": "dragon",
+   "level_cap": 48,
+   "foe": {
+    "name": "Drayden",
+    "ace_level": 48
+   },
+   "done_when": "badge:7",
+   "opens": [
+    "opelucid-city"
+   ],
+   "tips": "Veterans guard the gym, each with Fraxure and Druddigon, so expect Dragon types all the way. Ice moves hit every Dragon here, and Flygon takes four times damage from them.",
+   "badge_note": "The Legend Badge lets traded Pokemon up to Level 80 obey.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 gym leaders; Dittobase: B2W2 gym leaders and Elite Four; Thonky: Opelucid Gym Drayden"
+  },
+  {
+   "id": "opelucid-freeze",
+   "name": "Plasma freezes Opelucid City",
+   "kind": "team",
+   "place": "opelucid-city",
+   "level_cap": 48,
+   "foe": {
+    "name": "Zinzolin",
+    "ace_level": 48
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Grunts at Level 44 guard the frozen streets, then Zinzolin battles with two Cryogonal and a Weavile. Shadow Triad grabs the DNA Splicers and fights with two Pawniard and an Absol. Fire and Fighting types do well.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Team Plasma and Colress; Thonky: Opelucid City Part 2"
+  },
+  {
+   "id": "gym-8-marlon",
+   "name": "Gym 8: Marlon",
+   "kind": "gym",
+   "place": "humilau-city",
+   "leader": "Marlon",
+   "theme": "water",
+   "level_cap": 51,
+   "foe": {
+    "name": "Marlon",
+    "ace_level": 51
+   },
+   "done_when": "badge:8",
+   "opens": [
+    "marine-tube",
+    "humilau-city"
+   ],
+   "tips": "Ride lilypads across the docks past the Ace Trainers. Marlon uses Water types: Grass hits all three and Carracosta takes four times damage; Electric helps against Wailord and Jellicent.",
+   "badge_note": "The Wave Badge lets every Pokemon obey, traded ones included.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 gym leaders; Dittobase: B2W2 gym leaders and Elite Four; Thonky: Humilau Gym Marlon"
+  },
+  {
+   "id": "terrakion",
+   "name": "Terrakion on Route 22",
+   "kind": "legendary",
+   "place": "route-22",
+   "level_cap": 45,
+   "done_when": "none",
+   "opens": [
+    "route-22",
+    "route-21",
+    "seaside-cave"
+   ],
+   "tips": "Colress hands you his Colress MCHN beside Terrakion, then you can battle it at Level 45. Same catching advice as the others: False Swipe, sleep or freeze, Dusk Ball at night. A fainted one returns after the Elite Four at Level 65.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 legendary Pokemon; Thonky: Route 22"
+  },
+  {
+   "id": "frigate-zinzolin",
+   "name": "Plasma Frigate: Zinzolin",
+   "kind": "team",
+   "place": "plasma-frigate",
+   "level_cap": 50,
+   "foe": {
+    "name": "Zinzolin",
+    "ace_level": 50
+   },
+   "done_when": "later",
+   "opens": [
+    "plasma-frigate"
+   ],
+   "tips": "A rock in Seaside Cave wakes up when you carry the Colress MCHN and breaks it, so fight it. Board the Frigate with Hugh from Route 21. The barrier rooms differ by game: the top half has the warp-tile puzzle. Zinzolin and a grunt fight you in a double battle.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Team Plasma and Colress; Thonky: Plasma Frigate"
+  },
+  {
+   "id": "giant-chasm-colress",
+   "name": "Giant Chasm: Colress",
+   "kind": "team",
+   "place": "giant-chasm",
+   "level_cap": 52,
+   "foe": {
+    "name": "Colress",
+    "ace_level": 52
+   },
+   "done_when": "later",
+   "opens": [
+    "giant-chasm"
+   ],
+   "tips": "Colress waits at the Frigate's helm with Magneton, Metang, Beheeyem, Magnezone and Klinklang. Ground and Fire moves hit the Steel members; Dark hits Beheeyem. Collect the cave's items first, including a Moon Stone and Razor Claw.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Team Plasma and Colress; Thonky: Giant Chasm"
+  },
+  {
+   "id": "shadow-triad-chasm",
+   "name": "Shadow Triad ambushes",
+   "kind": "team",
+   "place": "giant-chasm",
+   "level_cap": 51,
+   "foe": {
+    "name": "Shadow",
+    "ace_level": 51,
+    "class": "Team Plasma"
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Three Shadow Triad fights follow, each with two Level 49 Pawniard and a Level 51 Absol, Accelgor or Banette. Fighting moves hit Pawniard and Absol; Ghost or Dark moves hit Banette.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Team Plasma and Colress"
+  },
+  {
+   "id": "ghetsis-kyurem",
+   "name": "Ghetsis and Black Kyurem",
+   "kind": "team",
+   "place": "giant-chasm",
+   "level_cap": 52,
+   "foe": {
+    "name": "Ghetsis",
+    "ace_level": 52
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Black Kyurem attacks first and cannot be caught here, so just knock it out. Ghetsis then fields a Level 52 Hydreigon plus five Level 50 Pokemon. Fighting and Ice moves work against Hydreigon.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Team Plasma and Colress; Thonky: Giant Chasm Part 2"
+  },
+  {
+   "id": "hugh-victory-road",
+   "name": "Rival: Hugh at Victory Road",
+   "kind": "rival",
+   "place": "victory-road",
+   "level_cap": 57,
+   "foe": {
+    "name": "Rival",
+    "ace_level": 57
+   },
+   "done_when": "later",
+   "opens": [
+    "route-23",
+    "victory-road",
+    "pokemon-league"
+   ],
+   "tips": "N meets you at the entrance with HM05 Waterfall. Victory Road needs Strength, Surf, Waterfall, Flash and Cut to explore fully, and its layout differs by game. Hugh battles you near the exit with four Pokemon.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 rival Hugh; Thonky: Victory Road"
+  },
+  {
+   "id": "elite4-shauntal",
+   "name": "Elite Four: Shauntal",
+   "kind": "elite4",
+   "place": "pokemon-league",
+   "leader": "Shauntal",
+   "theme": "ghost",
+   "level_cap": 58,
+   "foe": {
+    "name": "Shauntal",
+    "ace_level": 58
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Ghost team, so Normal and Fighting moves do nothing to most of it. Dark and Ghost moves hit hardest. Chandelure is her Level 58 ace. You can take the four members in any order.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Elite Four; Dittobase: B2W2 gym leaders and Elite Four"
+  },
+  {
+   "id": "elite4-grimsley",
+   "name": "Elite Four: Grimsley",
+   "kind": "elite4",
+   "place": "pokemon-league",
+   "leader": "Grimsley",
+   "theme": "dark",
+   "level_cap": 58,
+   "foe": {
+    "name": "Grimsley",
+    "ace_level": 58
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Dark team, so Psychic moves do nothing. Fighting and Bug moves hit most of it. His ace is a Level 58 Bisharp, which fears Fire and Fighting.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Elite Four; Dittobase: B2W2 gym leaders and Elite Four"
+  },
+  {
+   "id": "elite4-caitlin",
+   "name": "Elite Four: Caitlin",
+   "kind": "elite4",
+   "place": "pokemon-league",
+   "leader": "Caitlin",
+   "theme": "psychic",
+   "level_cap": 58,
+   "foe": {
+    "name": "Caitlin",
+    "ace_level": 58
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Psychic team, so Dark moves hit every member and Ghost and Bug moves hit most. Her ace is a Level 58 Gothitelle.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Elite Four; Dittobase: B2W2 gym leaders and Elite Four"
+  },
+  {
+   "id": "elite4-marshal",
+   "name": "Elite Four: Marshal",
+   "kind": "elite4",
+   "place": "pokemon-league",
+   "leader": "Marshal",
+   "theme": "fighting",
+   "level_cap": 58,
+   "foe": {
+    "name": "Marshal",
+    "ace_level": 58
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Fighting team. Flying and Psychic moves do best. His ace is a Level 58 Conkeldurr; Mienshao is quick, so bring something that survives one hit.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Elite Four; Dittobase: B2W2 gym leaders and Elite Four"
+  },
+  {
+   "id": "champion-iris",
+   "name": "Champion: Iris",
+   "kind": "champion",
+   "place": "pokemon-league",
+   "leader": "Iris",
+   "theme": "dragon",
+   "level_cap": 59,
+   "foe": {
+    "name": "Iris",
+    "ace_level": 59
+   },
+   "done_when": "none",
+   "opens": [],
+   "tips": "Dragon team led by a Level 59 Haxorus, plus Hydreigon, Druddigon, Archeops, Aggron and Lapras. Ice and Fighting moves cover most of it. You cannot leave or use the PC once the League starts, so stock healing items first.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Elite Four; Dittobase: B2W2 gym leaders and Elite Four"
+  },
+  {
+   "id": "national-dex-home",
+   "name": "After the Hall of Fame",
+   "kind": "story",
+   "place": "aspertia-city",
+   "level_cap": 59,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Go home on first reloading: Juniper gives the National Pokedex and your mother two Max Revives. Hugh then tips you off about a Zoroark on Victory Road that leads to N's Castle. Check route gates daily for swarms.",
+   "quality": "reference-only",
+   "source": "Gamer Guides: B2W2 post-game walkthrough; Serebii: B2W2 in-game events"
+  },
+  {
+   "id": "ns-castle",
+   "name": "N in N's Castle",
+   "kind": "postgame",
+   "place": "ns-castle",
+   "leader": "N",
+   "level_cap": 70,
+   "foe": {
+    "name": "N",
+    "ace_level": 70
+   },
+   "done_when": "none",
+   "opens": [
+    "ns-castle"
+   ],
+   "tips": "Follow the Zoroark in Victory Road to N's Castle and accept his challenge; he has one Level 70 Zekrom and Full Restore. Ground types are good against Zekrom. He turns his dragon into the Dark Stone.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Pokemon Trainer N; Gamer Guides: B2W2 N's Castle"
+  },
+  {
+   "id": "dragonspiral-zekrom",
+   "name": "Zekrom at Dragonspiral Tower",
+   "kind": "legendary",
+   "place": "dragonspiral-tower",
+   "level_cap": 70,
+   "done_when": "none",
+   "opens": [
+    "icirrus-city",
+    "dragonspiral-tower"
+   ],
+   "tips": "Fly to Icirrus City, climb Dragonspiral Tower and use the Dark Stone at the top to catch the Level 70 Zekrom. Save first. This is also what you need to fuse with Kyurem later.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 legendary Pokemon; Gamer Guides: B2W2 N's Castle"
+  },
+  {
+   "id": "kyurem-catch",
+   "name": "Kyurem at Giant Chasm",
+   "kind": "legendary",
+   "place": "giant-chasm",
+   "level_cap": 70,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Return to Giant Chasm once you own Zekrom and battle Kyurem at Level 70. It drops the DNA Splicers: use them on Kyurem next to your Zekrom to make Black Kyurem. Save before the battle.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 legendary Pokemon; Gamer Guides: B2W2 Giant Chasm Kyurem"
+  },
+  {
+   "id": "alder-battle",
+   "name": "Alder in Floccesy Town",
+   "kind": "postgame",
+   "place": "floccesy-town",
+   "leader": "Alder",
+   "level_cap": 62,
+   "foe": {
+    "name": "Alder",
+    "ace_level": 62
+   },
+   "done_when": "none",
+   "opens": [
+    "black-city"
+   ],
+   "tips": "Alder's house, after you are Champion: five Level 60 Pokemon and a Level 62 Volcarona. Fire and Flying hit his bugs and Volcarona takes four times damage from Rock. His grandson Benga then opens Black City.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 strong trainers; Gamer Guides: B2W2 battle with Alder"
+  },
+  {
+   "id": "benga-tower",
+   "name": "Benga at the Black Tower",
+   "kind": "postgame",
+   "place": "black-city",
+   "leader": "Benga",
+   "level_cap": 80,
+   "foe": {
+    "name": "Benga",
+    "ace_level": 80
+   },
+   "done_when": "none",
+   "opens": [],
+   "tips": "Ten areas of random trainers whose levels rise to a peak at Area 10, then Benga with Level 80 Latios, Garchomp and Volcarona. Each cleared area pays out items (stat boosters, Rare Candy). Clear Area 5 early; that earns the key for the other game's area.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Black City and White Forest; Serebii: B2W2 strong trainers"
+  },
+  {
+   "id": "colress-p2",
+   "name": "Colress at the P2 Laboratory",
+   "kind": "postgame",
+   "place": "p2-laboratory",
+   "level_cap": 74,
+   "foe": {
+    "name": "Colress",
+    "ace_level": 74
+   },
+   "done_when": "none",
+   "opens": [
+    "route-18",
+    "p2-laboratory"
+   ],
+   "tips": "Colress can be rematched at the P2 Laboratory daily with Level 72 and 74 Pokemon, mostly Steel and Electric types. A scientist in the same lab gives drives to anyone with an event Genesect.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Team Plasma and Colress; Serebii: B2W2 strong trainers"
+  },
+  {
+   "id": "elite4-rematch",
+   "name": "Elite Four rematch",
+   "kind": "postgame",
+   "place": "pokemon-league",
+   "leader": "Iris",
+   "level_cap": 78,
+   "foe": {
+    "name": "Iris",
+    "ace_level": 78
+   },
+   "done_when": "none",
+   "opens": [],
+   "tips": "After you have the National Pokedex the league fights again: members use Levels 72-74 and Iris tops out at Level 78 Haxorus. Bring a full team of high level Pokemon and plenty of Revives and Full Restores.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Elite Four (Round 2)"
+  },
+  {
+   "id": "hugh-post-undella",
+   "name": "Rival: Hugh in Undella Town",
+   "kind": "rival",
+   "place": "undella-town",
+   "level_cap": 64,
+   "foe": {
+    "name": "Rival",
+    "ace_level": 64
+   },
+   "done_when": "none",
+   "opens": [],
+   "tips": "After the Elite Four Hugh fights again with six Pokemon up to Level 64 (Unfezant, Simi monkey, Bouffalant, Flygon, Eelektross and his starter). A second rematch in Driftveil City tops out at Level 67.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 rival Hugh"
+  },
+  {
+   "id": "hugh-post-driftveil",
+   "name": "Rival: Hugh in Driftveil City",
+   "kind": "rival",
+   "place": "driftveil-city",
+   "level_cap": 67,
+   "foe": {
+    "name": "Rival",
+    "ace_level": 67
+   },
+   "done_when": "none",
+   "opens": [],
+   "tips": "A second post-game fight with Hugh: the same six Pokemon at Level 65 and his starter at Level 67. Bring something strong against Flygon and Eelektross.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 rival Hugh"
+  },
+  {
+   "id": "cynthia-undella",
+   "name": "Cynthia in Undella Town",
+   "kind": "postgame",
+   "place": "undella-town",
+   "leader": "Cynthia",
+   "level_cap": 78,
+   "foe": {
+    "name": "Cynthia",
+    "ace_level": 78
+   },
+   "done_when": "none",
+   "opens": [],
+   "tips": "Cynthia appears in Undella Town in spring and summer only, with five Level 76 Pokemon and a Level 78 Garchomp. Ice moves hit that Garchomp for four times damage.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 strong trainers"
+  },
+  {
+   "id": "striaton-trio",
+   "name": "Cilan, Chili and Cress",
+   "kind": "postgame",
+   "place": "striaton-city",
+   "level_cap": 67,
+   "foe": {
+    "name": "Cilan",
+    "ace_level": 67
+   },
+   "done_when": "none",
+   "opens": [],
+   "tips": "The Striaton brothers fight together in a multi battle each day at Levels 65-67. Each uses a Simi monkey of their element plus two more.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 strong trainers"
+  },
+  {
+   "id": "regi-trio",
+   "name": "Regirock and the Regis",
+   "kind": "legendary",
+   "place": "underground-ruins",
+   "level_cap": 65,
+   "done_when": "none",
+   "opens": [
+    "underground-ruins",
+    "twist-mountain"
+   ],
+   "tips": "Solve the Underground Ruins puzzle, which needs a visit by day and by night, to reach Regirock at Level 65. Catching it gives the Iron Key, which you share with a friend on the other version. Regigigas sleeps in Twist Mountain and needs all three Regis.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 legendary Pokemon"
+  },
+  {
+   "id": "heatran",
+   "name": "Heatran at Reversal Mountain",
+   "kind": "legendary",
+   "place": "reversal-mountain",
+   "level_cap": 68,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Find the Magma Stone on the high cliffs of Route 18, then take it to the Reversal Mountain cave Bianca pointed out. Heatran appears at Level 68.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 legendary Pokemon"
+  },
+  {
+   "id": "cresselia",
+   "name": "Cresselia at Marvelous Bridge",
+   "kind": "legendary",
+   "place": "marvelous-bridge",
+   "level_cap": 68,
+   "done_when": "none",
+   "opens": [],
+   "tips": "In the Strange House near Lentimas Town, finish the stair puzzle so a ghost guides you to the Lunar Wing. Bring the Lunar Wing to Marvelous Bridge for a Level 68 Cresselia.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 legendary Pokemon"
+  },
+  {
+   "id": "eon-dreamyard",
+   "name": "Latios in the Dreamyard",
+   "kind": "legendary",
+   "place": "dreamyard",
+   "level_cap": 68,
+   "done_when": "none",
+   "opens": [
+    "dreamyard"
+   ],
+   "tips": "Latios is the version dragon of the Dreamyard after you are Champion: it ambushes you on entry and flies off. Follow and intercept it for a Level 68 battle. Latias cannot be found here, only by trading.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 legendary Pokemon; Gamer Guides: B2W2 legendary Pokemon index"
+  },
+  {
+   "id": "lake-trio",
+   "name": "Uxie, Mesprit and Azelf",
+   "kind": "legendary",
+   "place": "cave-of-being",
+   "level_cap": 65,
+   "done_when": "none",
+   "opens": [
+    "cave-of-being"
+   ],
+   "tips": "After the Hall of Fame, follow the pixies Juniper points out to the Cave of Being. Uxie waits near the Nacrene City museum, Mesprit on the top of Celestial Tower and Azelf at the far left of Route 23. Each is Level 65.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 legendary Pokemon"
+  }
+ ],
+ "steps": [
+  {
+   "id": "step-start",
+   "title": "Pick a starter and learn the basics",
+   "text": "Bianca gives your starter and the Pokedex. The first rival fight is Level 5; keep using Tackle-type moves. Buy Potions before heading north.",
+   "stage": "hugh-aspertia",
+   "places": [
+    "aspertia-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Thonky: Aspertia City walkthrough"
+  },
+  {
+   "id": "step-alder",
+   "title": "Train with Alder",
+   "text": "Rescue the ranch Herdier, then go to Alder's house in Floccesy Town and win his two training battles. Talk to Mr. Medal outside to get the Medal Box.",
+   "stage": "hugh-floccesy-ranch",
+   "places": [
+    "floccesy-town",
+    "floccesy-ranch"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Thonky: Help Alder Train"
+  },
+  {
+   "id": "step-gym1",
+   "title": "Prepare for Cheren",
+   "text": "Aim for Level 11 to 14 and bring a Fighting type; Riolu can be caught at the ranch. Bianca gives TM27 Return outside the gym.",
+   "stage": "gym-1-cheren",
+   "places": [
+    "aspertia-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Thonky: Aspertia Gym walkthrough"
+  },
+  {
+   "id": "step-virbank",
+   "title": "Cross Route 20 to Virbank",
+   "text": "A hiker, a preschooler and twins are the trainers. Dark grass means two wild Pokemon at once. Great Balls come from the gatekeeper at the Virbank gate.",
+   "stage": "gym-2-roxie",
+   "places": [
+    "route-20",
+    "virbank-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Thonky: Journey to Virbank"
+  },
+  {
+   "id": "step-complex",
+   "title": "Catch Magnemite in the complex",
+   "text": "Virbank Complex holds Magnemite, a Steel type that shrugs off Poison. Catch one before facing Roxie around Level 15 to 18.",
+   "stage": "gym-2-roxie",
+   "places": [
+    "virbank-complex"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Thonky: Virbank City; Thonky: Virbank Gym"
+  },
+  {
+   "id": "step-pokestar",
+   "title": "Visit Pokestar Studios",
+   "text": "After Roxie a man invites you to Pokestar Studios. Step inside to open the ship route to Castelia and trigger the Plasma incident at the dock.",
+   "stage": "team-virbank-dock",
+   "places": [
+    "pokestar-studios",
+    "virbank-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Thonky: Team Plasma in Virbank; NationalDex: B2W2 walkthrough"
+  },
+  {
+   "id": "step-castelia",
+   "title": "Explore Castelia City",
+   "text": "Gifts here include a Bicycle, Destiny Knot, Exp. Share and the Dowsing Machine from Bianca at the Route 4 gate. Level 22 to 24 suits Burgh.",
+   "stage": "gym-3-burgh",
+   "places": [
+    "castelia-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Thonky: Castelia City"
+  },
+  {
+   "id": "step-route4",
+   "title": "Route 4 and Join Avenue",
+   "text": "Colress blocks Route 4. Past him are the Desert Resort, Relic Castle and Join Avenue. Calla's house trades a Petilil or Cottonee depending on your game.",
+   "stage": "colress-route-4",
+   "places": [
+    "route-4",
+    "join-avenue"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Thonky: Journey to Nimbasa"
+  },
+  {
+   "id": "step-nimbasa",
+   "title": "Fly and gym four",
+   "text": "Bianca gives HM02 Fly on Route 5. Find Elesa through the roller coaster building, then face her at Level 28 to 31.",
+   "stage": "gym-4-elesa",
+   "places": [
+    "nimbasa-city",
+    "route-5"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Thonky: Nimbasa City; Thonky: Nimbasa Gym Elesa"
+  },
+  {
+   "id": "step-driftveil",
+   "title": "Old Plasma and Clay",
+   "text": "Visit Rood in the former Team Plasma HQ for N's Zorua. Prepare Water, Grass or Ice moves before challenging Clay near Level 31 to 34.",
+   "stage": "gym-5-clay",
+   "places": [
+    "driftveil-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Thonky: Driftveil City; Thonky: Driftveil Gym Clay"
+  },
+  {
+   "id": "step-surf",
+   "title": "Get Surf on Route 6",
+   "text": "Cheren meets you on the bridge by the Weather Institute and gives HM03 Surf. A scientist gives a Level 30 Deerling if you have an open party slot.",
+   "stage": "frigate-pwt",
+   "places": [
+    "route-6"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Thonky: Route 6"
+  },
+  {
+   "id": "step-pwt",
+   "title": "Enter the World Tournament",
+   "text": "The PWT south of Driftveil is part of the story. Hugh and Clay are outside; enter the Driftveil tournament and follow the events that lead to the Frigate.",
+   "stage": "frigate-pwt",
+   "places": [
+    "pwt"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Gamer Guides: B2W2 PWT; Serebii: PWT"
+  },
+  {
+   "id": "step-chargestone",
+   "title": "Chargestone Cave",
+   "text": "Magneton and Nosepass evolve here by levelling up, and Thunderstone and Metal Coat lie on the lower floors. The far side opens after the PWT visit.",
+   "stage": "gym-6-skyla",
+   "places": [
+    "chargestone-cave"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Thonky: Chargestone Cave; Bulbapedia via search: Chargestone Cave"
+  },
+  {
+   "id": "step-skyla",
+   "title": "Celestial Tower and Skyla",
+   "text": "Juniper gives a Master Ball in Mistralton City; keep it for a legend. Climb Celestial Tower for a Lucky Egg, then beat Skyla around Level 35 to 39.",
+   "stage": "gym-6-skyla",
+   "places": [
+    "mistralton-city",
+    "celestial-tower"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Thonky: Mistralton City; Thonky: Celestial Tower"
+  },
+  {
+   "id": "step-reversal",
+   "title": "Reversal Mountain with Bianca",
+   "text": "Bianca heals your team after each fight in the mountain. Items and trainers differ between Black 2 and White 2. A scientist near the end gives TM54 False Swipe in both games.",
+   "stage": "lentimas-juniper",
+   "places": [
+    "reversal-mountain"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Thonky: Reversal Mountain"
+  },
+  {
+   "id": "step-undella",
+   "title": "Undella Town and Route 13",
+   "text": "Prepare for Hugh at the town's Route 13 exit. Cobalion is at Level 45 north of the trees you cut; its catch rate is poor.",
+   "stage": "hugh-undella",
+   "places": [
+    "undella-town",
+    "route-13"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Thonky: Undella Town; Thonky: Route 13"
+  },
+  {
+   "id": "step-opelucid",
+   "title": "Route 12 to Opelucid",
+   "text": "Lacunosa Town's Zinzolin fight is a double battle with Hugh. Cross Village Bridge, then Route 11 where Virizion waits. Drayden's gym is Level 45 to 48.",
+   "stage": "gym-7-drayden",
+   "places": [
+    "route-12",
+    "village-bridge",
+    "route-11",
+    "opelucid-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Thonky: Route 12; Thonky: Village Bridge; Thonky: Route 11"
+  },
+  {
+   "id": "step-humilau",
+   "title": "Marine Tube to Humilau",
+   "text": "Ice patches force detours around Opelucid. From Undella go west to the Marine Tube. Marlon's gym is Level 49 to 52; the Parasol Lady at the tube exit gives TM42 Facade.",
+   "stage": "gym-8-marlon",
+   "places": [
+    "marine-tube",
+    "humilau-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Thonky: Humilau City; Thonky: Humilau Gym Marlon"
+  },
+  {
+   "id": "step-route22",
+   "title": "Route 22 and the Colress MCHN",
+   "text": "Terrakion stands on a platform; Colress gives his device once you tell him you will fight Plasma. Route 21 leads on to Seaside Cave and the Plasma Frigate.",
+   "stage": "terrakion",
+   "places": [
+    "route-22",
+    "route-21",
+    "seaside-cave"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Thonky: Route 22; Thonky: Seaside Cave"
+  },
+  {
+   "id": "step-frigate",
+   "title": "Board the Plasma Frigate",
+   "text": "The barrier puzzle differs between Black 2 and White 2. Collect TM67 Retaliate and the evolution item in the puzzle rooms. After Zinzolin, the ship flies to Giant Chasm.",
+   "stage": "frigate-zinzolin",
+   "places": [
+    "plasma-frigate"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Thonky: Plasma Frigate"
+  },
+  {
+   "id": "step-chasm",
+   "title": "Giant Chasm showdown",
+   "text": "Enter from the northwest corner of Route 22. Collect TM13 Ice Beam and the Razor Claw first. Push the Strength boulder for a shortcut to Lacunosa Town.",
+   "stage": "giant-chasm-colress",
+   "places": [
+    "giant-chasm"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Thonky: Giant Chasm"
+  },
+  {
+   "id": "step-victory",
+   "title": "Route 23 and Victory Road",
+   "text": "Route 23 has TM35 Flamethrower in a house reached by Surf. Victory Road needs Strength, Surf, Waterfall, Flash and Cut for everything. Aim for Level 55 or higher.",
+   "stage": "hugh-victory-road",
+   "places": [
+    "route-23",
+    "victory-road"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Thonky: Route 23; Thonky: Victory Road"
+  },
+  {
+   "id": "step-league",
+   "title": "Stock up for the League",
+   "text": "No Pokemon Center or PC inside. Buy Hyper Potions, Revives, status healers and X items first. Shaking grass near Doctor Logan is usually an Audino for easy experience.",
+   "stage": "elite4-shauntal",
+   "places": [
+    "pokemon-league"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Thonky: Pokemon League"
+  },
+  {
+   "id": "step-champ",
+   "title": "Face Iris",
+   "text": "Her dragons run Levels 57 to 59 with Haxorus as ace. Ice and Fighting moves cover most of the team.",
+   "stage": "champion-iris",
+   "places": [
+    "pokemon-league"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Elite Four"
+  },
+  {
+   "id": "step-post",
+   "title": "National Dex and the first post-game tasks",
+   "text": "Go home for the National Pokedex, then follow Zoroark to N's Castle, then challenge Alder in Floccesy Town to open Black City.",
+   "stage": "national-dex-home",
+   "places": [
+    "aspertia-city",
+    "floccesy-town"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Gamer Guides: B2W2 post-game walkthrough"
+  },
+  {
+   "id": "step-legends",
+   "title": "Legendary hunt",
+   "text": "Catch Zekrom at Dragonspiral Tower, then Kyurem. Use the DNA Splicers to fuse them into Black Kyurem. The Regis, Heatran, Cresselia and the Eon dragon are all post-game as well.",
+   "stage": "dragonspiral-zekrom",
+   "places": [
+    "dragonspiral-tower",
+    "giant-chasm"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 legendary Pokemon"
+  },
+  {
+   "id": "step-grind",
+   "title": "High level training",
+   "text": "The Black Tower, Join Avenue dojo, Pokestar Studios, the Battle Subway and the PWT leader tournaments all give strong fights and Battle Points.",
+   "stage": "benga-tower",
+   "places": [
+    "black-city",
+    "join-avenue",
+    "pwt"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 PWT; Black City and White Forest; Battle Subway"
+  }
+ ],
+ "secrets": [
+  {
+   "id": "sec-starter",
+   "kind": "gift",
+   "text": "Bianca gives your starter at the Aspertia City Outlook: Snivy, Tepig or Oshawott. Hugh takes the one that beats yours.",
+   "place": "aspertia-city",
+   "quality": "reference-only",
+   "source": "Thonky: Aspertia City"
+  },
+  {
+   "id": "sec-ultraball",
+   "kind": "gift",
+   "text": "A blonde girl upstairs in the house east of the stairs to the Outlook gives an Ultra Ball after the first gym.",
+   "place": "aspertia-city",
+   "condition": "after the 1st badge",
+   "quality": "reference-only",
+   "source": "Thonky: Aspertia Gym walkthrough"
+  },
+  {
+   "id": "sec-tm21",
+   "kind": "gift",
+   "text": "The Plasma grunt who flees from Herdier gives TM21 Frustration. A Potion, Parlyz Heal and X Attack also lie around the ranch.",
+   "place": "floccesy-ranch",
+   "quality": "reference-only",
+   "source": "Thonky: Floccesy Ranch"
+  },
+  {
+   "id": "sec-riolu",
+   "kind": "tip",
+   "text": "Riolu can be caught at Floccesy Ranch. It gives you a Fighting type for Cheren and evolves into Lucario with friendship by day.",
+   "place": "floccesy-ranch",
+   "quality": "reference-only",
+   "source": "Thonky: Aspertia Gym walkthrough; PokemonDB: friendship evolutions"
+  },
+  {
+   "id": "sec-xspeed",
+   "kind": "hidden-item",
+   "text": "An X Speed is hidden on the left side of Alder's house. Mr. Medal outside gives the Medal Box and six hint medals.",
+   "place": "floccesy-town",
+   "quality": "reference-only",
+   "source": "Thonky: Help Alder Train"
+  },
+  {
+   "id": "sec-silkscarf",
+   "kind": "hidden-item",
+   "text": "North of the Great Ball man a hidden path leads to a Silk Scarf. He swaps Poke Balls for Great Balls once per day.",
+   "place": "virbank-city",
+   "quality": "reference-only",
+   "source": "Thonky: Virbank City"
+  },
+  {
+   "id": "sec-cut",
+   "kind": "gift",
+   "text": "Roxie gives HM01 Cut after the dock fight with Team Plasma.",
+   "place": "virbank-city",
+   "condition": "after the 2nd badge",
+   "quality": "reference-only",
+   "source": "Thonky: Team Plasma in Virbank; Serebii: B2W2 TMs and HMs"
+  },
+  {
+   "id": "sec-castelia-gifts",
+   "kind": "gift",
+   "text": "Castelia gifts: a Bicycle from a clown north of the dock, a Destiny Knot at the west dock, an Exp. Share from the Battle Company janitor and a Heart Scale at the south end of the arrival dock.",
+   "place": "castelia-city",
+   "quality": "reference-only",
+   "source": "Thonky: Castelia City"
+  },
+  {
+   "id": "sec-dowsing",
+   "kind": "gift",
+   "text": "Bianca hands over the Dowsing Machine at the Route 4 gate. It reveals hidden items nearby and is needed for many entries in this list.",
+   "place": "castelia-city",
+   "quality": "reference-only",
+   "source": "Thonky: Castelia City"
+  },
+  {
+   "id": "sec-flash",
+   "kind": "gift",
+   "text": "TM70 Flash is given by the man behind the dumpster on Narrow Street. TM44 Rest, TM45 Attract, Amulet Coin and Charcoal come from buildings on Castelia Street and Northern Street.",
+   "place": "castelia-city",
+   "quality": "reference-only",
+   "source": "Thonky: Castelia City"
+  },
+  {
+   "id": "sec-strength",
+   "kind": "gift",
+   "text": "Hugh gives HM04 Strength at the end of the sewer. A TwistedSpoon and X Special lie on the sewer floor.",
+   "place": "castelia-sewers",
+   "quality": "reference-only",
+   "source": "Thonky: Castelia Sewers; Serebii: B2W2 TMs and HMs"
+  },
+  {
+   "id": "sec-wide-lens",
+   "kind": "hidden-item",
+   "text": "A Wide Lens sits upstairs in Calla's house, left of the TV. Nearby the Dowsing Machine finds a Red Shard and Stardust.",
+   "place": "route-4",
+   "quality": "reference-only",
+   "source": "Thonky: Journey to Nimbasa"
+  },
+  {
+   "id": "sec-thunderstone",
+   "kind": "hidden-item",
+   "text": "A Thunderstone is hidden just left of the Pokemon Center. A Revive is hidden in the trash can right of the roller coaster.",
+   "place": "nimbasa-city",
+   "quality": "reference-only",
+   "source": "Thonky: Nimbasa City"
+  },
+  {
+   "id": "sec-sunstone",
+   "kind": "gift",
+   "text": "The Ace Trainer upstairs in the house south of the clown gives a Sun Stone. The old lady in the house next to it gives a Soothe Ball if your lead Pokemon likes you.",
+   "place": "nimbasa-city",
+   "quality": "reference-only",
+   "source": "Thonky: Nimbasa City"
+  },
+  {
+   "id": "sec-fly",
+   "kind": "gift",
+   "text": "Bianca gives HM02 Fly on Route 5, shows how to find Hidden Grottoes and asks you to catch a Minccino.",
+   "place": "route-5",
+   "quality": "reference-only",
+   "source": "Thonky: Nimbasa City; Serebii: B2W2 TMs and HMs"
+  },
+  {
+   "id": "sec-zorua",
+   "kind": "gift",
+   "text": "Rood gives N's Zorua (Level 25, Illusion, OT N). Free a party slot first.",
+   "place": "driftveil-city",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 gift Pokemon; Thonky: Driftveil City"
+  },
+  {
+   "id": "sec-surf",
+   "kind": "gift",
+   "text": "Cheren gives HM03 Surf next to the Weather Institute. Inside, a scientist gives a Level 30 Deerling with Serene Grace if you have a free slot.",
+   "place": "route-6",
+   "quality": "reference-only",
+   "source": "Thonky: Route 6; Serebii: B2W2 gift Pokemon"
+  },
+  {
+   "id": "sec-moon-shiny",
+   "kind": "hidden-item",
+   "text": "A Moon Stone lies in a Poke Ball in the fenced area by the Weather Institute, and a girl in the house to the east gives a Shiny Stone.",
+   "place": "route-6",
+   "quality": "reference-only",
+   "source": "Thonky: Route 6"
+  },
+  {
+   "id": "sec-chargestone",
+   "kind": "hidden-item",
+   "text": "Chargestone Cave holds a Thunderstone on B1F and again on B2F, plus Metal Coat spots on both. Dowsing finds a Yellow Shard, Carbos and Electric Gem.",
+   "place": "chargestone-cave",
+   "quality": "reference-only",
+   "source": "Thonky: Chargestone Cave"
+  },
+  {
+   "id": "sec-masterball",
+   "kind": "gift",
+   "text": "Professor Juniper gives a Master Ball in Mistralton City. Save it for a legend that you cannot weaken.",
+   "place": "mistralton-city",
+   "quality": "reference-only",
+   "source": "Thonky: Mistralton City"
+  },
+  {
+   "id": "sec-luckyegg",
+   "kind": "gift",
+   "text": "Juniper gives a Lucky Egg on 1F of Celestial Tower. The 5F has a hidden Ghost Gem; 3F nurse heals you after one trainer.",
+   "place": "celestial-tower",
+   "quality": "reference-only",
+   "source": "Thonky: Celestial Tower"
+  },
+  {
+   "id": "sec-lentimas",
+   "kind": "gift",
+   "text": "In Lentimas Town: a Spell Tag from the old lady in the Pokemon Center, TM57 Charge Beam in the house southwest, and a Fire Stone north of town.",
+   "place": "lentimas-town",
+   "quality": "reference-only",
+   "source": "Thonky: Lentimas Town"
+  },
+  {
+   "id": "sec-falseswipe",
+   "kind": "gift",
+   "text": "A scientist in Reversal Mountain gives TM54 False Swipe in both games. Use it to bring legendaries to 1 HP.",
+   "place": "reversal-mountain",
+   "quality": "reference-only",
+   "source": "Thonky: Reversal Mountain"
+  },
+  {
+   "id": "sec-prismscale",
+   "kind": "gift",
+   "text": "A man on the left of Undella Town's Pokemon Center gives a Prism Scale. A Shiny Stone and Pearls are hidden around town for the Dowsing Machine.",
+   "place": "undella-town",
+   "quality": "reference-only",
+   "source": "Thonky: Undella Town"
+  },
+  {
+   "id": "sec-route13-power",
+   "kind": "gift",
+   "text": "A woman with a Wingull west of the Ranger gives a Power Lens in Black 2 or a Power Band in White 2. A Luxury Ball sits on a dark-grass island reached by Surf.",
+   "place": "route-13",
+   "quality": "reference-only",
+   "source": "Thonky: Route 13"
+  },
+  {
+   "id": "sec-hidden-door",
+   "kind": "tip",
+   "text": "On Village Bridge a hard-to-see door in the west wall under the bridge hides a singing girl. After finding her, a girl on the bridge gives Sitrus Berries.",
+   "place": "village-bridge",
+   "quality": "reference-only",
+   "source": "Thonky: Village Bridge"
+  },
+  {
+   "id": "sec-route12-candy",
+   "kind": "hidden-item",
+   "text": "A Rare Candy is hidden south and west of the entrance, and a Max Repel further west, both found with the Dowsing Machine.",
+   "place": "route-12",
+   "quality": "reference-only",
+   "source": "Thonky: Route 12"
+  },
+  {
+   "id": "sec-facade",
+   "kind": "gift",
+   "text": "The Parasol Lady in the gate building at the Marine Tube exit gives TM42 Facade.",
+   "place": "humilau-city",
+   "quality": "reference-only",
+   "source": "Thonky: Humilau City"
+  },
+  {
+   "id": "sec-mchn",
+   "kind": "event",
+   "text": "Colress gives the Colress MCHN beside Terrakion. A rock in Seaside Cave later wakes up and breaks it, so you cannot keep it.",
+   "place": "route-22",
+   "quality": "reference-only",
+   "source": "Thonky: Route 22; Thonky: Seaside Cave"
+  },
+  {
+   "id": "sec-retaliate",
+   "kind": "gift",
+   "text": "TM67 Retaliate sits on the right of the Plasma Frigate. The walkthrough places a Magmarizer in Black 2's puzzle rooms and an Electirizer in White 2's.",
+   "place": "plasma-frigate",
+   "quality": "reference-only",
+   "source": "Thonky: Plasma Frigate; Serebii: B2W2 evolution items"
+  },
+  {
+   "id": "sec-chasm-items",
+   "kind": "hidden-item",
+   "text": "Giant Chasm has TM13 Ice Beam through the boulder shortcut, a Razor Claw and a Moon Stone after the outside fight, plus a Sun Stone and TM03 Psyshock.",
+   "place": "giant-chasm",
+   "quality": "reference-only",
+   "source": "Thonky: Giant Chasm; Thonky: Giant Chasm Part 2"
+  },
+  {
+   "id": "sec-flamethrower",
+   "kind": "gift",
+   "text": "An old man in a house east of Hiker Don gives TM35 Flamethrower. You reach the house by Surfing. A Rare Candy is hidden in the flowers east of Ace Trainer Juliet.",
+   "place": "route-23",
+   "quality": "reference-only",
+   "source": "Thonky: Route 23"
+  },
+  {
+   "id": "sec-waterfall",
+   "kind": "gift",
+   "text": "N waits at the entrance of Victory Road and gives HM05 Waterfall. A Dusk Stone is hidden east in the ruins.",
+   "place": "victory-road",
+   "quality": "reference-only",
+   "source": "Thonky: Victory Road; Serebii: B2W2 TMs and HMs"
+  },
+  {
+   "id": "sec-eevee",
+   "kind": "gift",
+   "text": "After the Elite Four, a Dream World research assistant in the building on the left of Castelia's Gym Street gives an Eevee with Anticipation.",
+   "place": "castelia-city",
+   "condition": "after the Elite Four",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 gift Pokemon"
+  },
+  {
+   "id": "sec-gible",
+   "kind": "gift",
+   "text": "Beating Benga at the end of the Black Tower earns a Level 1 shiny Gible or Dratini, handed over at Floccesy Town. Which one depends on the game you beat him in.",
+   "place": "floccesy-town",
+   "condition": "after beating Benga",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 gift Pokemon"
+  },
+  {
+   "id": "sec-fossils",
+   "kind": "gift",
+   "text": "Lenora offers Tirtouga (Cover Fossil) or Archen (Plume Fossil) at Nacrene City's museum. With the National Dex, a man in Twist Mountain gives a random fossil each day.",
+   "place": "nacrene-city",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 gift Pokemon"
+  },
+  {
+   "id": "sec-magikarp",
+   "kind": "trade",
+   "text": "A man on Marvelous Bridge sells a Level 5 Magikarp for 500 Pokedollars.",
+   "place": "marvelous-bridge",
+   "condition": "after the Hall of Fame",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 gift Pokemon"
+  },
+  {
+   "id": "sec-memory-link",
+   "kind": "event",
+   "text": "Memory Link with a Black or White save unlocks N's wild Pokemon, flashbacks, and rematches with Bianca (Nuvema Town) and Cheren (Route 5).",
+   "place": "nuvema-town",
+   "quality": "reference-only",
+   "source": "Serebii: Memory Link; Serebii: N's Pokemon"
+  },
+  {
+   "id": "sec-oval-shiny",
+   "kind": "event",
+   "text": "Show Juniper a completed Unova Pokedex for the Oval Charm, and a completed National Pokedex for the Shiny Charm.",
+   "place": "nuvema-town",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Pokedex completion rewards"
+  },
+  {
+   "id": "sec-victini",
+   "kind": "event",
+   "text": "Victini cannot be caught in the game. If you own an event Victini, take it to the basement of Liberty Garden for a short scene; no reward.",
+   "place": "liberty-garden",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 in-game events"
+  },
+  {
+   "id": "sec-landorus",
+   "kind": "event",
+   "text": "Bring a Dream Radar Landorus in Therian Forme to the Abundant Shrine for the Reflecting Mirror, which changes the forme of the three Forces of Nature.",
+   "place": "abundant-shrine",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 in-game events"
+  },
+  {
+   "id": "sec-keldeo",
+   "kind": "event",
+   "text": "An event Keldeo can learn Secret Sword at the special rock in Pledge Grove, which changes it to its Resolute Forme.",
+   "place": "pledge-grove",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 in-game events"
+  },
+  {
+   "id": "sec-meloetta",
+   "kind": "event",
+   "text": "Take an event Meloetta to the Castelia cafe to learn Relic Song. Another person there gives the Funfest Mission about a berry search.",
+   "place": "castelia-city",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 in-game events"
+  },
+  {
+   "id": "sec-genesect",
+   "kind": "event",
+   "text": "With an event Genesect, beat the scientist at the P2 Laboratory for two drives: Burn Drive and Shock Drive in Black 2.",
+   "place": "p2-laboratory",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 in-game events"
+  },
+  {
+   "id": "sec-swarm-sign",
+   "kind": "tip",
+   "text": "Check the scrolling sign inside any route gate for the day's swarm. Swarms start with the National Pokedex.",
+   "place": "route-1",
+   "quality": "reference-only",
+   "source": "Gamer Guides: B2W2 post-game walkthrough; Serebii: B2W2 swarms"
+  },
+  {
+   "id": "sec-regigigas",
+   "kind": "legendary",
+   "text": "Regigigas sleeps in the basement of Twist Mountain. Bring all three Regis you caught, then interact with it for a Level 68 battle.",
+   "place": "twist-mountain",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 legendary Pokemon"
+  },
+  {
+   "id": "sec-heatran-stone",
+   "kind": "legendary",
+   "text": "The Magma Stone is on the highest cliffs of Route 18. Use it at the Reversal Mountain cave Bianca pointed out to summon Heatran.",
+   "place": "route-18",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 legendary Pokemon"
+  }
+ ],
+ "evolutions": [
+  {
+   "id": "evo-kadabra-1",
+   "species": 64,
+   "name": "Kadabra",
+   "text": "Evolves to Alakazam by trade only. In-game, a man in Accumula Town's southern building offers a Level 40 Alakazam for a Hippowdon after you finish his Ambipom trade; otherwise use the GTS or a local trade.",
+   "quality": "reference-only",
+   "source": "PokemonDB: trade evolutions; Serebii: B2W2 in-game trades"
+  },
+  {
+   "id": "evo-machoke-2",
+   "species": 67,
+   "name": "Machoke",
+   "text": "Evolves to Machamp by trade only. No NPC in this game offers one, so use the GTS, a friend, or a second save.",
+   "quality": "reference-only",
+   "source": "PokemonDB: trade evolutions"
+  },
+  {
+   "id": "evo-graveler-3",
+   "species": 75,
+   "name": "Graveler",
+   "text": "Evolves to Golem by trade only. No in-game NPC offers a Golem; use the GTS or a friend.",
+   "quality": "reference-only",
+   "source": "PokemonDB: trade evolutions"
+  },
+  {
+   "id": "evo-haunter-4",
+   "species": 93,
+   "name": "Haunter",
+   "text": "Evolves to Gengar by trade only. Use the GTS or a friend; no in-game NPC supplies one.",
+   "quality": "reference-only",
+   "source": "PokemonDB: trade evolutions"
+  },
+  {
+   "id": "evo-boldore-5",
+   "species": 525,
+   "name": "Boldore",
+   "text": "Evolves to Gigalith by trade. In a house on Route 7 a man offers a Level 35 Gigalith for an Emolga.",
+   "quality": "reference-only",
+   "source": "PokemonDB: trade evolutions; Serebii: B2W2 in-game trades"
+  },
+  {
+   "id": "evo-gurdurr-6",
+   "species": 533,
+   "name": "Gurdurr",
+   "text": "Evolves to Conkeldurr by trade only. No in-game NPC offers one, so use the GTS or a friend.",
+   "quality": "reference-only",
+   "source": "PokemonDB: trade evolutions"
+  },
+  {
+   "id": "evo-karrablast-7",
+   "species": 588,
+   "name": "Karrablast",
+   "text": "Evolves to Escavalier only when traded for a Shelmet; both must be traded at the same time. Use two saves or a friend.",
+   "quality": "reference-only",
+   "source": "PokemonDB: trade evolutions"
+  },
+  {
+   "id": "evo-shelmet-8",
+   "species": 616,
+   "name": "Shelmet",
+   "text": "Evolves to Accelgor only when traded for a Karrablast. Plan the swap with another player or your second game.",
+   "quality": "reference-only",
+   "source": "PokemonDB: trade evolutions"
+  },
+  {
+   "id": "evo-poliwhirl-9",
+   "species": 61,
+   "name": "Poliwhirl",
+   "text": "Becomes Poliwrath with a Water Stone, or Politoed when traded holding a King's Rock. Water Stones turn up on Route 19 and in Clay Tunnel by dowsing; King's Rock is in Nuvema Town and Icirrus City.",
+   "quality": "reference-only",
+   "source": "PokemonDB: trade evolutions; Serebii: B2W2 evolution items"
+  },
+  {
+   "id": "evo-slowpoke-10",
+   "species": 79,
+   "name": "Slowpoke",
+   "text": "Becomes Slowking when traded holding a King's Rock. King's Rock comes from Nuvema Town, Icirrus City, or the White Forest market.",
+   "quality": "reference-only",
+   "source": "PokemonDB: trade evolutions; Serebii: B2W2 items"
+  },
+  {
+   "id": "evo-onix-11",
+   "species": 95,
+   "name": "Onix",
+   "text": "Becomes Steelix when traded holding a Metal Coat. Metal Coats lie in Chargestone Cave (B1F and B2F) and Clay Tunnel.",
+   "quality": "reference-only",
+   "source": "PokemonDB: trade evolutions; Thonky: Chargestone Cave"
+  },
+  {
+   "id": "evo-scyther-12",
+   "species": 123,
+   "name": "Scyther",
+   "text": "Becomes Scizor when traded holding a Metal Coat. Find Metal Coats in Chargestone Cave or Clay Tunnel.",
+   "quality": "reference-only",
+   "source": "PokemonDB: trade evolutions; Thonky: Chargestone Cave"
+  },
+  {
+   "id": "evo-seadra-13",
+   "species": 117,
+   "name": "Seadra",
+   "text": "Becomes Kingdra when traded holding a Dragon Scale. Dragon Scale is found on Victory Road, and one can be bought at the White Forest market.",
+   "quality": "reference-only",
+   "source": "PokemonDB: trade evolutions; Serebii: B2W2 evolution items"
+  },
+  {
+   "id": "evo-porygon-14",
+   "species": 137,
+   "name": "Porygon",
+   "text": "Becomes Porygon2 when traded holding an Up-Grade. Up-Grade is in Striaton City and from Gorm in Pinwheel Forest.",
+   "quality": "reference-only",
+   "source": "PokemonDB: trade evolutions; Serebii: B2W2 evolution items"
+  },
+  {
+   "id": "evo-porygon2-15",
+   "species": 233,
+   "name": "Porygon2",
+   "text": "Becomes Porygon-Z when traded holding a Dubious Disc. The disc is at the P2 Laboratory in the post-game and sold at the Black City market.",
+   "quality": "reference-only",
+   "source": "PokemonDB: trade evolutions; Serebii: B2W2 evolution items"
+  },
+  {
+   "id": "evo-rhydon-16",
+   "species": 112,
+   "name": "Rhydon",
+   "text": "Becomes Rhyperior when traded holding a Protector. Protector is in Wellspring Cave and sold at the Black City market.",
+   "quality": "reference-only",
+   "source": "PokemonDB: trade evolutions; Serebii: B2W2 evolution items"
+  },
+  {
+   "id": "evo-electabuzz-17",
+   "species": 125,
+   "name": "Electabuzz",
+   "text": "Becomes Electivire when traded holding an Electirizer. The walkthrough finds it in the big room of the White 2 Plasma Frigate.",
+   "quality": "reference-only",
+   "source": "PokemonDB: trade evolutions; Thonky: Plasma Frigate"
+  },
+  {
+   "id": "evo-magmar-18",
+   "species": 126,
+   "name": "Magmar",
+   "text": "Becomes Magmortar when traded holding a Magmarizer. The walkthrough finds it in the top-right room of the Black 2 Plasma Frigate.",
+   "quality": "reference-only",
+   "source": "PokemonDB: trade evolutions; Thonky: Plasma Frigate"
+  },
+  {
+   "id": "evo-dusclops-19",
+   "species": 356,
+   "name": "Dusclops",
+   "text": "Becomes Dusknoir when traded holding a Reaper Cloth, found in the Dreamyard.",
+   "quality": "reference-only",
+   "source": "PokemonDB: trade evolutions; Serebii: B2W2 evolution items"
+  },
+  {
+   "id": "evo-clamperl-20",
+   "species": 366,
+   "name": "Clamperl",
+   "text": "Becomes Huntail with a DeepSeaTooth or Gorebyss with a DeepSeaScale when traded. Both are sold at the White Forest market.",
+   "quality": "reference-only",
+   "source": "PokemonDB: trade evolutions; Serebii: B2W2 Black City and White Forest"
+  },
+  {
+   "id": "evo-feebas-21",
+   "species": 349,
+   "name": "Feebas",
+   "text": "Becomes Milotic with a Prism Scale (or max Beauty). Prism Scales are on Route 1, hidden on Route 18, and given by a man in Undella Town.",
+   "quality": "reference-only",
+   "source": "PokemonDB: trade evolutions; Thonky: Undella Town; Serebii: B2W2 items"
+  },
+  {
+   "id": "evo-eevee-22",
+   "species": 133,
+   "name": "Eevee",
+   "text": "Stones: Water, Thunder or Fire for Vaporeon, Jolteon or Flareon. Espeon by day and Umbreon by night with friendship. Leafeon near the Moss Rock in Pinwheel Forest, Glaceon near the Ice Rock in Twist Mountain.",
+   "quality": "reference-only",
+   "source": "PokemonDB: stone and friendship evolutions; Bulbapedia via search: Location-based evolution"
+  },
+  {
+   "id": "evo-pikachu-23",
+   "species": 25,
+   "name": "Pikachu",
+   "text": "Raichu needs a Thunderstone. Thunderstones are hidden in Nimbasa City, lie in Chargestone Cave and are sold in the Black City market; the PWT and Battle Subway sell stones for 3 BP.",
+   "quality": "reference-only",
+   "source": "PokemonDB: stone evolutions; Thonky: Nimbasa City; Serebii: PWT"
+  },
+  {
+   "id": "evo-gloom-24",
+   "species": 44,
+   "name": "Gloom",
+   "text": "Leaf Stone makes Vileplume, Sun Stone makes Bellossom. Leaf Stones are on Route 7 and in Lostlorn Forest; Sun Stones are in Nimbasa City, Pinwheel Forest and Relic Castle.",
+   "quality": "reference-only",
+   "source": "PokemonDB: stone evolutions; Serebii: B2W2 evolution items"
+  },
+  {
+   "id": "evo-clefairy-25",
+   "species": 35,
+   "name": "Clefairy",
+   "text": "Becomes Clefable with a Moon Stone. Moon Stones are on Route 6, in the Dreamyard and in Giant Chasm.",
+   "quality": "reference-only",
+   "source": "PokemonDB: stone evolutions; Thonky: Route 6; Thonky: Giant Chasm"
+  },
+  {
+   "id": "evo-cottonee-26",
+   "species": 546,
+   "name": "Cottonee",
+   "text": "Becomes Whimsicott with a Sun Stone. Cottonee is a Black 2 exclusive; White 2 players trade for it.",
+   "quality": "reference-only",
+   "source": "PokemonDB: stone evolutions; Thonky: Journey to Nimbasa"
+  },
+  {
+   "id": "evo-petilil-27",
+   "species": 548,
+   "name": "Petilil",
+   "text": "Becomes Lilligant with a Sun Stone. Sun Stones are in Nimbasa City and Giant Chasm. Petilil is a White 2 exclusive; Black 2 gets it from Calla's trade on Route 4.",
+   "quality": "reference-only",
+   "source": "PokemonDB: stone evolutions; Thonky: Journey to Nimbasa"
+  },
+  {
+   "id": "evo-minccino-28",
+   "species": 572,
+   "name": "Minccino",
+   "text": "Becomes Cinccino with a Shiny Stone. Shiny Stones are on Route 6, in Undella Town and Dragonspiral Tower.",
+   "quality": "reference-only",
+   "source": "PokemonDB: stone evolutions; Thonky: Route 6; Serebii: B2W2 evolution items"
+  },
+  {
+   "id": "evo-lampent-29",
+   "species": 608,
+   "name": "Lampent",
+   "text": "Becomes Chandelure with a Dusk Stone. A Dusk Stone is hidden on Victory Road and the Black City market sells them.",
+   "quality": "reference-only",
+   "source": "PokemonDB: stone evolutions; Thonky: Victory Road; Serebii: B2W2 Black City and White Forest"
+  },
+  {
+   "id": "evo-kirlia-30",
+   "species": 281,
+   "name": "Kirlia",
+   "text": "Only a male Kirlia becomes Gallade with a Dawn Stone, found in the Dreamyard and Moor of Icirrus.",
+   "quality": "reference-only",
+   "source": "PokemonDB: stone evolutions; Serebii: B2W2 evolution items"
+  },
+  {
+   "id": "evo-snorunt-31",
+   "species": 361,
+   "name": "Snorunt",
+   "text": "Only a female Snorunt becomes Froslass with a Dawn Stone, found in the Dreamyard and Moor of Icirrus.",
+   "quality": "reference-only",
+   "source": "PokemonDB: stone evolutions; Serebii: B2W2 evolution items"
+  },
+  {
+   "id": "evo-magneton-32",
+   "species": 82,
+   "name": "Magneton",
+   "text": "Becomes Magnezone by levelling up inside Chargestone Cave. The far part of the cave opens after the PWT visit.",
+   "quality": "reference-only",
+   "source": "PokemonDB; Bulbapedia via search: Chargestone Cave"
+  },
+  {
+   "id": "evo-nosepass-33",
+   "species": 299,
+   "name": "Nosepass",
+   "text": "Becomes Probopass by levelling up inside Chargestone Cave, like Magneton.",
+   "quality": "reference-only",
+   "source": "Bulbapedia via search: Chargestone Cave"
+  },
+  {
+   "id": "evo-riolu-34",
+   "species": 447,
+   "name": "Riolu",
+   "text": "Becomes Lucario with high friendship during the daytime.",
+   "quality": "reference-only",
+   "source": "PokemonDB: friendship evolutions"
+  },
+  {
+   "id": "evo-woobat-35",
+   "species": 527,
+   "name": "Woobat",
+   "text": "Becomes Swoobat with high friendship. Walk with it and use Join Avenue's Beauty Salon.",
+   "quality": "reference-only",
+   "source": "PokemonDB: friendship; Serebii: Join Avenue"
+  },
+  {
+   "id": "evo-happiny-36",
+   "species": 440,
+   "name": "Happiny",
+   "text": "Becomes Chansey when levelled up in the daytime holding an Oval Stone, sold at the White Forest market.",
+   "quality": "reference-only",
+   "source": "PokemonDB: evolution list; Serebii: B2W2 Black City and White Forest"
+  },
+  {
+   "id": "evo-chansey-37",
+   "species": 113,
+   "name": "Chansey",
+   "text": "Becomes Blissey with high friendship. Happiny is a separate entry.",
+   "quality": "reference-only",
+   "source": "PokemonDB: friendship; Serebii: B2W2 Black City and White Forest"
+  },
+  {
+   "id": "evo-lickitung-38",
+   "species": 108,
+   "name": "Lickitung",
+   "text": "Becomes Lickilicky when levelled up knowing Rollout.",
+   "quality": "reference-only",
+   "source": "PokemonDB: evolution list"
+  },
+  {
+   "id": "evo-tangela-39",
+   "species": 114,
+   "name": "Tangela",
+   "text": "Becomes Tangrowth when levelled up knowing Ancient Power. A Humilau City man also trades a Level 45 Tangrowth for a Mantine.",
+   "quality": "reference-only",
+   "source": "PokemonDB: evolution list; Serebii: B2W2 in-game trades"
+  },
+  {
+   "id": "evo-piloswine-40",
+   "species": 221,
+   "name": "Piloswine",
+   "text": "Becomes Mamoswine when levelled up knowing Ancient Power.",
+   "quality": "reference-only",
+   "source": "PokemonDB: evolution list"
+  },
+  {
+   "id": "evo-aipom-41",
+   "species": 190,
+   "name": "Aipom",
+   "text": "Becomes Ambipom when levelled up knowing Double Hit. A man in Accumula Town trades a Level 40 Ambipom for an Excadrill.",
+   "quality": "reference-only",
+   "source": "PokemonDB: evolution list; Serebii: B2W2 in-game trades"
+  },
+  {
+   "id": "evo-gligar-42",
+   "species": 207,
+   "name": "Gligar",
+   "text": "Becomes Gliscor when levelled up at night holding a Razor Fang, found on Route 11.",
+   "quality": "reference-only",
+   "source": "PokemonDB: evolution list; Serebii: B2W2 evolution items"
+  },
+  {
+   "id": "evo-sneasel-43",
+   "species": 215,
+   "name": "Sneasel",
+   "text": "Becomes Weavile when levelled up at night holding a Razor Claw, found in Giant Chasm.",
+   "quality": "reference-only",
+   "source": "PokemonDB: evolution list; Thonky: Giant Chasm"
+  },
+  {
+   "id": "evo-mantyke-44",
+   "species": 458,
+   "name": "Mantyke",
+   "text": "Becomes Mantine when levelled up with a Remoraid in your party.",
+   "quality": "reference-only",
+   "source": "PokemonDB: evolution list"
+  },
+  {
+   "id": "evo-nincada-45",
+   "species": 290,
+   "name": "Nincada",
+   "text": "At Level 20 Nincada evolves to Ninjask, and Shedinja appears if you have a spare party slot and a Poke Ball in the bag.",
+   "quality": "reference-only",
+   "source": "PokemonDB: level evolutions"
+  }
+ ],
+ "notes": [
+  {
+   "id": "excl-bug-black2",
+   "kind": "exclusive",
+   "title": "Black 2 exclusives: Weedle line, Spinarak line",
+   "text": "Weedle, Kakuna, Beedrill and Spinarak, Ariados are Black 2 only. White 2 has Caterpie and Ledyba instead.",
+   "species": [
+    13,
+    14,
+    15,
+    167,
+    168
+   ],
+   "names": [
+    "Weedle",
+    "Kakuna",
+    "Beedrill",
+    "Spinarak",
+    "Ariados"
+   ],
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 version exclusives"
+  },
+  {
+   "id": "excl-fire-black2",
+   "kind": "exclusive",
+   "title": "Black 2 exclusives: Magmar line",
+   "text": "Magmar, Magby and Magmortar are Black 2 only. White 2 has the Electabuzz line.",
+   "species": [
+    126,
+    240,
+    467
+   ],
+   "names": [
+    "Magmar",
+    "Magby",
+    "Magmortar"
+   ],
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 version exclusives"
+  },
+  {
+   "id": "excl-misc-black2",
+   "kind": "exclusive",
+   "title": "Black 2 exclusives: Sudowoodo, Heracross, Plusle",
+   "text": "Sudowoodo, Bonsly, Heracross, Plusle, Volbeat, Spoink and Grumpig are Black 2 only.",
+   "species": [
+    185,
+    438,
+    214,
+    311,
+    313,
+    325,
+    326
+   ],
+   "names": [
+    "Sudowoodo",
+    "Bonsly",
+    "Heracross",
+    "Plusle",
+    "Volbeat",
+    "Spoink",
+    "Grumpig"
+   ],
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 version exclusives"
+  },
+  {
+   "id": "excl-normal-black2",
+   "kind": "exclusive",
+   "title": "Black 2 exclusives: Buneary, Gible, Gothita",
+   "text": "Buneary, Lopunny, the Gible line, the Gothita line, Vullaby and Mandibuzz are Black 2 only.",
+   "species": [
+    427,
+    428,
+    443,
+    444,
+    445,
+    574,
+    575,
+    576,
+    629,
+    630
+   ],
+   "names": [
+    "Buneary",
+    "Lopunny",
+    "Gible",
+    "Gabite",
+    "Garchomp",
+    "Gothita",
+    "Gothorita",
+    "Gothitelle",
+    "Vullaby",
+    "Mandibuzz"
+   ],
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 version exclusives"
+  },
+  {
+   "id": "excl-trade-black2",
+   "kind": "exclusive",
+   "title": "Black 2 exclusives you can still get",
+   "text": "Cottonee and Whimsicott are Black 2 only but White 2 can trade for them on Route 4. Stunky and Skuntank are Black 2 only but White 2 can get them through the Noisy Hidden Grottoes mission.",
+   "species": [
+    546,
+    547,
+    434,
+    435
+   ],
+   "names": [
+    "Cottonee",
+    "Whimsicott",
+    "Stunky",
+    "Skuntank"
+   ],
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 version exclusives"
+  },
+  {
+   "id": "excl-legend-black2",
+   "kind": "exclusive",
+   "title": "Black 2 exclusive legendaries",
+   "text": "Zekrom, Latios and Registeel are Black 2 exclusive. White 2 has Reshiram, Latias and Regice. Regice and Registeel can be shared through the Iron and Iceberg Keys via Unova Link.",
+   "species": [
+    644,
+    381,
+    379
+   ],
+   "names": [
+    "Zekrom",
+    "Latios",
+    "Registeel"
+   ],
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 version exclusives; Serebii: B2W2 legendary Pokemon"
+  },
+  {
+   "id": "ver-areas",
+   "kind": "version",
+   "title": "Area differences",
+   "text": "Route 4 is a tidy road in Black 2 and an ancient ruin zone with sandstorms in White 2. Reversal Mountain is watery in Black 2 and lava-filled in White 2. Victory Road, the Plasma Frigate, Mistralton City (greenhouses or planting plots) and Opelucid City also differ.",
+   "place": "route-4",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 version exclusives areas; Thonky: Reversal Mountain"
+  },
+  {
+   "id": "ver-frigate",
+   "kind": "version",
+   "title": "Plasma Frigate puzzles",
+   "text": "The Frigate's first deck splits in two. In Black 2 the top half is a warp-tile puzzle; in White 2 the bottom half has the Plasma Card and password rooms. The second visit from Giant Chasm swaps them. The walkthrough lists a Magmarizer in the Black 2 rooms and an Electirizer in the White 2 rooms.",
+   "place": "plasma-frigate",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 version exclusives areas; Thonky: Plasma Frigate"
+  },
+  {
+   "id": "ver-mode",
+   "kind": "version",
+   "title": "Challenge Mode and Easy Mode",
+   "text": "Beating Iris in Black 2 unlocks Challenge Mode. The other mode comes from White 2 by sharing keys through Unova Link. Both are switched on in the Unova Link menu and last until switched off.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Easy and Challenge Mode; Bulbapedia via search: Key System"
+  },
+  {
+   "id": "ver-challenge",
+   "kind": "tip",
+   "title": "Challenge Mode gym caps",
+   "text": "Challenge Mode raises levels by 1 to 5 and adds a fourth Pokemon to Gym Leaders and the Elite Four. Gym aces become Levels 14, 19, 26, 32, 36, 42, 52 and 55 in that mode.",
+   "place": "pokemon-league",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 gym leaders; Serebii: Easy and Challenge Mode"
+  },
+  {
+   "id": "ver-city",
+   "kind": "version",
+   "title": "Black City and the Black Tower",
+   "text": "Black 2 has Black City with the Black Tower. Clearing Area 5 grants a key for the other version's area. After beating either tower, the markets sell stones and evolution items.",
+   "place": "black-city",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Black City and White Forest"
+  },
+  {
+   "id": "ver-benga",
+   "kind": "version",
+   "title": "Benga's team",
+   "text": "Benga uses Latios, Garchomp and Volcarona at Level 80. After you beat him and switch areas, Area 10 is taken over by veteran trainers with Suicune, Heatran and Latios.",
+   "place": "black-city",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Black City and White Forest; Serebii: strong trainers"
+  },
+  {
+   "id": "ver-market",
+   "kind": "tip",
+   "title": "Black City and White Forest markets",
+   "text": "Black City markets stock Dubious Disc, Metal Coat, Protector, Up-Grade, Fire Stone, Thunderstone, Dusk Stone and Dawn Stone. White Forest markets stock Water, Leaf, Shiny and Oval Stones, DeepSeaScale, DeepSeaTooth, Dragon Scale and King's Rock.",
+   "place": "black-city",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Black City and White Forest"
+  },
+  {
+   "id": "ver-trade-route4",
+   "kind": "trade",
+   "title": "Route 4 trade",
+   "text": "Calla's house on Route 4 trades her Petilil for your Cottonee in Black 2. It gives you the version exclusive that you cannot catch normally.",
+   "place": "route-4",
+   "species": [
+    548
+   ],
+   "names": [
+    "Petilil"
+   ],
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 in-game trades; Thonky: Journey to Nimbasa"
+  },
+  {
+   "id": "ver-power",
+   "kind": "version",
+   "title": "Route 13 gift",
+   "text": "The woman in the Wingull house on Route 13 gives a Power Lens in Black 2 (the other game gets the other item).",
+   "place": "route-13",
+   "quality": "reference-only",
+   "source": "Thonky: Route 13"
+  },
+  {
+   "id": "ver-genesect",
+   "kind": "version",
+   "title": "Genesect drives",
+   "text": "The P2 Laboratory scientist gives Burn Drive and Shock Drive in Black 2 to an event Genesect owner.",
+   "place": "p2-laboratory",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 in-game events"
+  },
+  {
+   "id": "ver-kyurem",
+   "kind": "version",
+   "title": "Black Kyurem fusion",
+   "text": "The story Kyurem you fight at Giant Chasm is Black Kyurem in Black 2. Post-game, use the DNA Splicers on Kyurem with Zekrom to make it; Unova Link or trades give the other dragon.",
+   "quality": "reference-only",
+   "source": "Thonky: Giant Chasm Part 2; Gamer Guides: Giant Chasm Kyurem; Serebii: B2W2 exclusives"
+  },
+  {
+   "id": "ver-dragon",
+   "kind": "legendary",
+   "title": "Zekrom via N's Castle",
+   "text": "After the Hall of Fame, follow Zoroark to N's Castle, beat N's Level 70 Zekrom, then use the Dark Stone at the top of Dragonspiral Tower to catch it.",
+   "place": "dragonspiral-tower",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Pokemon Trainer N; Gamer Guides: B2W2 N's Castle"
+  },
+  {
+   "id": "ver-eon",
+   "kind": "legendary",
+   "title": "Latios in the Dreamyard",
+   "text": "Latios is found only in Black 2. It ambushes you in the Dreamyard after the Hall of Fame; follow it and intercept it. The other game has Latias.",
+   "place": "dreamyard",
+   "species": [
+    381
+   ],
+   "names": [
+    "Latios"
+   ],
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 legendary Pokemon; Gamer Guides: B2W2 legendary Pokemon index"
+  },
+  {
+   "id": "ver-regi",
+   "kind": "legendary",
+   "title": "Regirock and the Regis",
+   "text": "Catching Regirock gives the Iron Key in Black 2. Registeel is the native one here; Regice needs the other game's key, sent to you through the Unova Link menu.",
+   "place": "underground-ruins",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 legendary Pokemon; Serebii: B2W2 miscellaneous differences"
+  },
+  {
+   "id": "roamer-none",
+   "kind": "roamer",
+   "title": "No roaming Pokemon",
+   "text": "Black 2 and White 2 have no roaming legends. Latios or Latias is an ambush in the Dreamyard, not a roamer. Daily swarms, shown on a sign in any route gate, replace roamers after you get the National Pokedex.",
+   "quality": "reference-only",
+   "source": "Bulbapedia via search: Roaming Pokemon; Serebii: B2W2 swarms; Gamer Guides: post-game walkthrough"
+  },
+  {
+   "id": "swarm-rules",
+   "kind": "tip",
+   "title": "Swarms",
+   "text": "From the National Pokedex on, a new swarm is chosen each midnight. Read the ticket on the back wall of any route gate. They feature Pokemon that do not otherwise appear in Unova.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 swarms"
+  },
+  {
+   "id": "swarm-versions",
+   "kind": "version",
+   "title": "Version swarms",
+   "text": "Volbeat on Route 3, Plusle on Route 6, Sudowoodo on Route 20 and Ariados on Route 22 swarm in Black 2. White 2 swaps these for Illumise, Minun, Mr. Mime and Ledian.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 swarms"
+  },
+  {
+   "id": "grotto-find",
+   "kind": "grotto",
+   "title": "Finding Hidden Grottoes",
+   "text": "Hidden Grottoes are gaps between trees. Check tree clusters on routes with the A button. Bianca introduces them on Route 5, and Routes 6, 13, 22, 23 and Giant Chasm all hide one.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Hidden Grotto; Thonky: Route 6; Thonky: Route 13; Thonky: Giant Chasm"
+  },
+  {
+   "id": "grotto-rules",
+   "kind": "grotto",
+   "title": "How grotto contents work",
+   "text": "A grotto can hold a Pokemon, a plain item in the middle, or a hidden item that needs the Dowsing Machine. Each 256 steps every grotto has a 5% chance to refill: 40% plain item, 40% hidden item, 20% Pokemon.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Hidden Grotto"
+  },
+  {
+   "id": "grotto-list",
+   "kind": "grotto",
+   "title": "Grotto list",
+   "text": "There are 15 grotto areas: Routes 2, 3, 5, 6, 7, 9, 13, 18, 22 and 23, Floccesy Ranch, Pinwheel Forest, Lostlorn Forest, Giant Chasm and Abundant Shrine. Levels run from 10-15 early on up to 55-60 in the late areas.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Hidden Grotto"
+  },
+  {
+   "id": "grotto-versions",
+   "kind": "grotto",
+   "title": "Grotto version differences",
+   "text": "Pinwheel Forest has Beedrill in Black 2 and Butterfree in White 2; Hariyama is common in Black 2 and Medicham in White 2. Floccesy Ranch has Stunky in Black 2 and Glameow in White 2. Lostlorn Forest swaps rates for Pinsir and Heracross.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Hidden Grotto"
+  },
+  {
+   "id": "grotto-route6",
+   "kind": "grotto",
+   "title": "Route 6 grotto",
+   "text": "The Route 6 grotto sits north of Breeder April and can hold Foongus, Nosepass, Woobat or an Eevee at Levels 25 to 30.",
+   "place": "route-6",
+   "quality": "reference-only",
+   "source": "Thonky: Route 6; Serebii: B2W2 Hidden Grotto"
+  },
+  {
+   "id": "grotto-route13",
+   "kind": "grotto",
+   "title": "Route 13 grotto",
+   "text": "Search the upper trees at the start of the western path on Route 13 for a grotto that can hold Eevee, Foongus, Skorupi or Tangela.",
+   "place": "route-13",
+   "quality": "reference-only",
+   "source": "Thonky: Route 13"
+  },
+  {
+   "id": "legend-cobalion-trio",
+   "kind": "legendary",
+   "title": "Cobalion, Virizion, Terrakion",
+   "text": "Cobalion appears on Route 6 and is catchable on Route 13, Virizion at the west end of Route 11, and Terrakion on Route 22, all at Level 45. Fainted ones return at Level 65 after the Elite Four. Avoid the Master Ball and use sleep plus False Swipe.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 legendary Pokemon; Thonky: Route 13"
+  },
+  {
+   "id": "legend-forces",
+   "kind": "legendary",
+   "title": "Tornadus, Thundurus, Landorus",
+   "text": "These can only come from Pokemon Dream Radar on a 3DS, once per sender and once per receiving game. They are not found in the game itself. A Therian-form Landorus unlocks the Reflecting Mirror at Abundant Shrine.",
+   "species": [
+    641,
+    642,
+    645
+   ],
+   "names": [
+    "Tornadus",
+    "Thundurus",
+    "Landorus"
+   ],
+   "quality": "reference-only",
+   "source": "Serebii: Dream Radar modes; Serebii: B2W2 in-game events"
+  },
+  {
+   "id": "legend-events",
+   "kind": "legendary",
+   "title": "Victini, Keldeo, Meloetta, Genesect",
+   "text": "None of these can be caught in the game; they come from distribution events or transfers. Owning them unlocks scenes: Victini at Liberty Garden, Keldeo at Pledge Grove, Meloetta at the Castelia cafe and Genesect at the P2 Laboratory.",
+   "species": [
+    494,
+    647,
+    648,
+    649
+   ],
+   "names": [
+    "Victini",
+    "Keldeo",
+    "Meloetta",
+    "Genesect"
+   ],
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 unobtainable Pokemon; Serebii: B2W2 in-game events"
+  },
+  {
+   "id": "legend-memory",
+   "kind": "tip",
+   "title": "Memory Link",
+   "text": "Memory Link needs a Black or White save synced through Unova Link or Game Sync. It does not give legendaries, but it adds flashbacks, N's wild Pokemon, Bianca and Cheren rematches, and Dream World items. N's Pokemon need Memory Link, except Zorua.",
+   "quality": "reference-only",
+   "source": "Serebii: Memory Link; Serebii: N's Pokemon"
+  },
+  {
+   "id": "legend-dreamradar",
+   "kind": "tip",
+   "title": "Pokemon Dream Radar",
+   "text": "Pokemon Dream Radar is a 3DS app. Captured Pokemon and items are sent over by 3DS Link. Legendaries can be sent only once; ordinary Pokemon can be received repeatedly.",
+   "quality": "reference-only",
+   "source": "Serebii: Dream Radar modes; Search results via pocketgamer"
+  },
+  {
+   "id": "gift-eevee",
+   "kind": "gift",
+   "title": "Gifts worth knowing",
+   "text": "Zorua (Driftveil, Level 25), Deerling (Route 6 Weather Institute, Level 30), Eevee (Castelia, post Elite Four), Happiny egg (Nacrene Gate) and fossils (Nacrene Museum and Twist Mountain) are free gifts. Magikarp costs 500 from a man on Marvelous Bridge.",
+   "species": [
+    570,
+    585,
+    133,
+    440
+   ],
+   "names": [
+    "Zorua",
+    "Deerling",
+    "Eevee",
+    "Happiny"
+   ],
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 gift Pokemon"
+  },
+  {
+   "id": "trade-list",
+   "kind": "trade",
+   "title": "In-game trades",
+   "text": "Gigalith for Emolga on Route 7, Tangrowth for Mantine in Humilau, Rotom for Ditto in the Route 15 caravan, and Ambipom then Alakazam in Accumula Town. Nimbasa's Dropped Item quest unlocks daily Level 50 trades by Yancy or Curtis.",
+   "species": [
+    526,
+    465,
+    479,
+    424,
+    65
+   ],
+   "names": [
+    "Gigalith",
+    "Tangrowth",
+    "Rotom",
+    "Ambipom",
+    "Alakazam"
+   ],
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 in-game trades"
+  },
+  {
+   "id": "join-avenue",
+   "kind": "tip",
+   "title": "Join Avenue",
+   "text": "Join Avenue (found off Route 4) fills with visitors from PassBy, IR, wireless, Wi-Fi, the GTS and the Dream World, and fans after the Elite Four. Up to eight shops. Send visitors to the shop they ask for; every tenth visitor ranks the shop up, giving discounts.",
+   "place": "join-avenue",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Join Avenue"
+  },
+  {
+   "id": "join-shops",
+   "kind": "tip",
+   "title": "Join Avenue shops",
+   "text": "Raffle (daily prizes), Beauty Salon (happiness), Dojo (levels and EVs), Market, Florist (berries), Antique Shop (stones and fossils), Cafe and Nursery. Stock depends on the visitor's game, not just yours.",
+   "place": "join-avenue",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Join Avenue"
+  },
+  {
+   "id": "pwt-cups",
+   "kind": "tip",
+   "title": "Pokemon World Tournament",
+   "text": "The PWT south of Driftveil opens with the Driftveil tournament (all Level 25). Rental, Mix and Download open next. After the Elite Four the Unova Leaders cup opens, then Kanto, Johto, Hoenn and Sinnoh leaders, then World Leaders and Champions. Battle Points buy TMs and stones.",
+   "place": "pwt",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Pokemon World Tournament"
+  },
+  {
+   "id": "pokestar",
+   "kind": "tip",
+   "title": "Pokestar Studios",
+   "text": "Movies are scripted fights. You start with rented Pokemon and unlock your own after finishing a film. Going off-script without failing can give a Special Shine. Revenue raises your rank and brings fans.",
+   "place": "pokestar-studios",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Pokestar Studios"
+  },
+  {
+   "id": "subway",
+   "kind": "tip",
+   "title": "Battle Subway",
+   "text": "Open after beating Ingo and Emmet. Seven wins pays Battle Points; a Subway Master appears after 21 wins and again after 48. Battle Points buy stat items, stones and Rare Candy.",
+   "place": "nimbasa-city",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Battle Subway"
+  },
+  {
+   "id": "medals",
+   "kind": "tip",
+   "title": "Medal system",
+   "text": "Talk to the Medal Master in any Pokemon Center to get new medals. Medal HQ in Castelia City grants ranks at 50, 100, 150 and 200 medals. Pin one to your Trainer Card.",
+   "place": "castelia-city",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Medal System"
+  },
+  {
+   "id": "shiny-oval",
+   "kind": "tip",
+   "title": "Pokedex charms",
+   "text": "Showing Juniper a completed Unova Pokedex gives the Oval Charm; the National Pokedex (every Pokemon except event legends) gives the Shiny Charm.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Pokedex completion rewards"
+  },
+  {
+   "id": "evo-items",
+   "kind": "tip",
+   "title": "Evolution item shopping",
+   "text": "Beyond the markets, the PWT and Battle Subway sell evolution stones for 3 Battle Points. Join Avenue's Antique Shop also sells stones and fossils.",
+   "quality": "reference-only",
+   "source": "Serebii: B2W2 Pokemon World Tournament; Battle Subway; Join Avenue"
+  }
+ ]
+}

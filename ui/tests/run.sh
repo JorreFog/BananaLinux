@@ -19,6 +19,16 @@ make -s -C "$HERE" tests/pokemon-test >/dev/null && "$HERE/tests/pokemon-test" "
 # the game companion's engine (matching, reads, values), and the made-up ROMs and replies for the game panel's run below
 make -s -C "$HERE" tests/gamecomp-test >/dev/null && "$HERE/tests/gamecomp-test" "$OUT" "$HERE/tests/companions" "$HERE/../system/rootfs/usr/share/banana/companions" 2> "$OUT/gamecomp-test.log" || { echo "FAIL the game companion's engine: $(grep FAIL "$OUT/gamecomp-test.log" | head -3)"; fail=1; }
 make -s -C "$HERE" tests/complink-test >/dev/null && TMPDIR="$OUT" "$HERE/tests/complink-test" 2> "$OUT/complink-test.log" || { echo "FAIL the companion's shared-memory link: $(grep FAIL "$OUT/complink-test.log" | head -3)"; fail=1; }
+# the DS Pokémon companion's ROM reader: containers and text on data made from the documented layouts (the player's
+# own ROMs: tests/nds-rom-test <roms dir> [cache dir], on a PC that has them)
+make -s -C "$HERE" tests/nds-rom-test >/dev/null && "$HERE/tests/nds-rom-test" 2> "$OUT/nds-rom-test.log" || { echo "FAIL the DS companion's ROM reader: $(grep FAIL "$OUT/nds-rom-test.log" | head -3)"; fail=1; }
+# the DS Pokémon companion's guide: the validator on the shipped data, then the loader on a made-up file and on the data
+GD="$HERE/../system/rootfs/usr/share/banana/companions/nds-pokemon"
+python3 -I "$HERE/../tools/companions/nds-validate.py" -q > "$OUT/nds-validate.log" 2>&1 || { echo "FAIL the DS Pokémon guide data: $(grep -m3 error "$OUT/nds-validate.log")"; fail=1; }
+make -s -C "$HERE" tests/guide-test >/dev/null && "$HERE/tests/guide-test" "$HERE/tests/nds-guide" "$GD" > "$OUT/guide-test.log" 2>&1 || { echo "FAIL the DS Pokémon guide's loader: $(grep -m3 FAIL "$OUT/guide-test.log")"; fail=1; }
+# the DS Pokémon companion's pages on made-up games: every page at both sizes and in a few themes as PNGs
+# ($OUT/nds-pages/, for a look), and their touches (tabs, rows, dragging, Normal/Shiny, Back to game)
+make -s -C "$HERE" tests/nds-pages-test >/dev/null && "$HERE/tests/nds-pages-test" "$OUT" "$HERE/assets/rnds" "$HERE/../system/rootfs/usr/share/banana/themes" 2> "$OUT/nds-pages-test.log" || { echo "FAIL the DS companion's pages: $(grep FAIL "$OUT/nds-pages-test.log" | head -3)"; fail=1; }
 # the DS Pokémon companion's RAM reader (synthetic RAM in every game's layout)
 make -s -C "$HERE" tests/nds-ram-test >/dev/null && "$HERE/tests/nds-ram-test" 2> "$OUT/nds-ram-test.log" || { echo "FAIL the DS companion's RAM reader: $(grep FAIL "$OUT/nds-ram-test.log" | head -3)"; fail=1; }
 make -s -C "$HERE" tests/nds-logic-test >/dev/null && "$HERE/tests/nds-logic-test" 2> "$OUT/nds-logic-test.log" || { echo "FAIL the DS companion's advice: $(grep FAIL "$OUT/nds-logic-test.log" | head -3)"; fail=1; }
