@@ -903,5 +903,14 @@ PY
         grep -qF "$want" "$R" || { echo "FAIL: the recorder: no '$want' ($(tr '\n' '|' < "$R"))"; fail=1; }
     done
 fi
+# the DS companion's overlay (nds/overlay.h, COMPANION-SPEC section 10) end to end: banana-ui paints the test page
+# while a child plays BananaDS's part (the icon, a tap open, a drag, the page's Back to game), at both panel sizes;
+# the pictures it took are left as <size>-ndsoverlay-{icon,open,drag}.png
+for size in 640x480 1024x768; do
+    "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" \
+        --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
+        --script "ndsoverlay" 2> "$OUT/$size-ndsoverlay.log" ||
+        { echo "FAIL $size: the DS companion's overlay: $(grep -h 'FAIL\|ndsoverlay:' "$OUT/$size-ndsoverlay.log" | head -2)"; fail=1; }
+done
 [ $fail = 0 ] && echo "banana-ui: all checks passed ($OUT)"
 exit $fail
