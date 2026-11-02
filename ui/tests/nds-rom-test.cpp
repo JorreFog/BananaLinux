@@ -436,6 +436,14 @@ static void checkGame(const RomData& r)
 	EQ(evoCount(r.species[82], evo::MAGNETIC_FIELD), 1);
 	EQ(evoCount(r.species[95], evo::TRADE_ITEM), 1);
 	if (g5) { EQ(evoCount(r.species[588], evo::TRADE_SPECIES), 1); }	// Karrablast for Shelmet
+	// each version's own Pokédex text: Black's Reshiram entry tells of its flames, White's of the weather
+	if (g.id == GameId::BLACK) CHECK(r.species[643].dexText.find("sends flames") != std::string::npos);
+	if (g.id == GameId::WHITE) CHECK(r.species[643].dexText.find("weather") != std::string::npos);
+	if (g.id == GameId::DIAMOND) CHECK(r.species[25].dexText.find("lives in forests") != std::string::npos);
+	if (g.id == GameId::PEARL) CHECK(r.species[25].dexText.find("crackling") != std::string::npos);
+	if (g.id == GameId::PLATINUM) CHECK(r.species[25].dexText.find("recharge") != std::string::npos);
+	if (g.id == GameId::HEARTGOLD) CHECK(r.species[25].dexText.find("roasts") != std::string::npos);	// (Gold's)
+	if (g.id == GameId::SOULSILVER) CHECK(r.species[25].dexText.find("raises its tail") != std::string::npos);	// (Silver's)
 	EQ(r.species[g.dexSize].name, std::string(g5 ? "Genesect" : "ARCEUS"));
 	// moves: Pound; Tackle got stronger in Gen V; Curse is the ??? type in Gen IV
 	CHECK(r.moves.size() > (size_t)(g5 ? 559 : 467));

@@ -43,8 +43,9 @@ namespace banana::nds
 				"a/0/5/6", "a/0/0/4", 237, 750, 749, 720, 722, 222, 221, 34, 279, 729, 730, 803, 816 };
 			static const Files SS = [] { Files f = HG; f.enc = "a/1/3/6"; f.bDex = 804; return f; }();
 			static const Files B = { "a/0/0/2", "a/0/1/6", "a/0/1/8", "a/0/1/9", "a/0/2/1", "a/0/2/4", "a/1/2/6", "a/0/9/2",
-				"a/0/9/3", "a/0/0/4", 70, 203, 202, 182, 183, 54, 53, 24, 89, 190, 191, 235, 260 };
-			static const Files W = [] { Files f = B; f.bDex = 236; return f; }();
+				"a/0/9/3", "a/0/0/4", 70, 203, 202, 182, 183, 54, 53, 24, 89, 190, 191, 236, 260 };
+			// (Black's Pokédex text is bank 236, White's 235: Reshiram's and Zekrom's entries tell them apart)
+			static const Files W = [] { Files f = B; f.bDex = 235; return f; }();
 			static const Files B2 = { "a/0/0/2", "a/0/1/6", "a/0/1/8", "a/0/1/9", "a/0/2/1", "a/0/2/4", "a/1/2/7", "a/0/9/1",
 				"a/0/9/2", "a/0/0/4", 90, 403, 402, 374, 375, 64, 63, 27, 109, 382, 383, 442, 464 };
 			switch (id)
