@@ -1,0 +1,3821 @@
+{
+ "schema": 1,
+ "kind": "nds-pokemon-guide",
+ "game": "platinum",
+ "code": "CPUE",
+ "title": "Pokemon Platinum",
+ "revision": 1,
+ "sources": [
+  "pret/pokeplatinum decompilation (GitHub): trainer data, scripts, hidden items, evolutions, encounters",
+  "Serebii.net Platinum pages: gym enhancements, Elite Four, rival, legendary and roaming Pokemon, gifts, Frontier, TMs and HMs, items, changes from Diamond and Pearl",
+  "Bulbapedia: Walkthrough Pokemon Platinum (contents and part 5, read via web.archive.org)"
+ ],
+ "places": {
+  "twinleaf-town": {
+   "name": "Twinleaf Town",
+   "zone": 411,
+   "zones": [
+    412,
+    413,
+    414,
+    415,
+    416,
+    417
+   ]
+  },
+  "sandgem-town": {
+   "name": "Sandgem Town",
+   "zone": 418,
+   "zones": [
+    419,
+    420,
+    421,
+    422,
+    423,
+    424,
+    425,
+    485
+   ]
+  },
+  "route-201": {
+   "name": "Route 201",
+   "zone": 342
+  },
+  "lake-verity": {
+   "name": "Lake Verity",
+   "zone": 311,
+   "zones": [
+    312
+   ]
+  },
+  "verity-lakefront": {
+   "name": "Verity Lakefront",
+   "zone": 334,
+   "zones": [
+    335
+   ]
+  },
+  "route-202": {
+   "name": "Route 202",
+   "zone": 343
+  },
+  "jubilife-city": {
+   "name": "Jubilife City",
+   "zone": 3,
+   "zones": [
+    4,
+    5,
+    6,
+    7,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    30,
+    31,
+    32,
+    474,
+    517,
+    586
+   ]
+  },
+  "route-203": {
+   "name": "Route 203",
+   "zone": 344
+  },
+  "oreburgh-gate": {
+   "name": "Oreburgh Gate",
+   "zone": 258,
+   "zones": [
+    259
+   ]
+  },
+  "oreburgh-city": {
+   "name": "Oreburgh City",
+   "zone": 45,
+   "zones": [
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
+    58,
+    60,
+    61,
+    62,
+    63,
+    64,
+    476
+   ]
+  },
+  "oreburgh-mine": {
+   "name": "Oreburgh Mine",
+   "zone": 197,
+   "zones": [
+    198,
+    199
+   ]
+  },
+  "route-204": {
+   "name": "Route 204",
+   "zone": 345,
+   "zones": [
+    346
+   ]
+  },
+  "ravaged-path": {
+   "name": "Ravaged Path",
+   "zone": 254
+  },
+  "floaroma-town": {
+   "name": "Floaroma Town",
+   "zone": 426,
+   "zones": [
+    427,
+    428,
+    429,
+    431,
+    432,
+    486
+   ]
+  },
+  "floaroma-meadow": {
+   "name": "Floaroma Meadow",
+   "zone": 256,
+   "zones": [
+    257
+   ]
+  },
+  "valley-windworks": {
+   "name": "Valley Windworks",
+   "zone": 200,
+   "zones": [
+    201
+   ]
+  },
+  "route-205": {
+   "name": "Route 205",
+   "zone": 347,
+   "zones": [
+    348,
+    349
+   ]
+  },
+  "eterna-forest": {
+   "name": "Eterna Forest",
+   "zone": 202,
+   "zones": [
+    203
+   ]
+  },
+  "eterna-city": {
+   "name": "Eterna City",
+   "zone": 65,
+   "zones": [
+    66,
+    67,
+    68,
+    69,
+    70,
+    76,
+    77,
+    78,
+    79,
+    81,
+    82,
+    83,
+    84,
+    85,
+    477
+   ]
+  },
+  "tg-eterna-bldg": {
+   "name": "T.G. Eterna Bldg",
+   "zone": 72,
+   "zones": [
+    73,
+    74,
+    75,
+    572
+   ]
+  },
+  "old-chateau": {
+   "name": "Old Chateau",
+   "zone": 295,
+   "zones": [
+    296,
+    297,
+    298,
+    299,
+    300,
+    301,
+    302,
+    303
+   ]
+  },
+  "route-206": {
+   "name": "Route 206",
+   "zone": 80,
+   "zones": [
+    350,
+    351
+   ]
+  },
+  "wayward-cave": {
+   "name": "Wayward Cave",
+   "zone": 284,
+   "zones": [
+    285
+   ]
+  },
+  "route-207": {
+   "name": "Route 207",
+   "zone": 353
+  },
+  "mt-coronet": {
+   "name": "Mt. Coronet",
+   "zone": 207,
+   "zones": [
+    208,
+    209,
+    210,
+    211,
+    212,
+    213,
+    214,
+    215,
+    216,
+    217,
+    218,
+    219,
+    589
+   ]
+  },
+  "route-208": {
+   "name": "Route 208",
+   "zone": 109,
+   "zones": [
+    354,
+    355
+   ]
+  },
+  "hearthome-city": {
+   "name": "Hearthome City",
+   "zone": 86,
+   "zones": [
+    87,
+    88,
+    89,
+    90,
+    91,
+    92,
+    93,
+    94,
+    95,
+    96,
+    97,
+    98,
+    99,
+    100,
+    101,
+    102,
+    103,
+    104,
+    105,
+    106,
+    107,
+    108,
+    112,
+    113,
+    114,
+    115,
+    478
+   ]
+  },
+  "amity-square": {
+   "name": "Amity Square",
+   "zone": 253
+  },
+  "route-209": {
+   "name": "Route 209",
+   "zone": 110,
+   "zones": [
+    356,
+    357,
+    358,
+    359,
+    360,
+    361
+   ]
+  },
+  "solaceon-town": {
+   "name": "Solaceon Town",
+   "zone": 433,
+   "zones": [
+    434,
+    435,
+    436,
+    438,
+    439,
+    440,
+    441,
+    487
+   ]
+  },
+  "solaceon-ruins": {
+   "name": "Solaceon Ruins",
+   "zone": 225,
+   "zones": [
+    226,
+    227,
+    228,
+    229,
+    230,
+    231,
+    232,
+    233,
+    234,
+    235,
+    236,
+    237,
+    238,
+    239,
+    240,
+    241,
+    242,
+    515
+   ]
+  },
+  "route-210": {
+   "name": "Route 210",
+   "zone": 362,
+   "zones": [
+    363,
+    364
+   ]
+  },
+  "route-215": {
+   "name": "Route 215",
+   "zone": 149,
+   "zones": [
+    382
+   ]
+  },
+  "veilstone-city": {
+   "name": "Veilstone City",
+   "zone": 132,
+   "zones": [
+    133,
+    134,
+    135,
+    143,
+    144,
+    145,
+    146,
+    147,
+    148,
+    480
+   ]
+  },
+  "galactic-hq": {
+   "name": "Galactic HQ",
+   "zone": 305,
+   "zones": [
+    306,
+    307,
+    308,
+    309,
+    310,
+    494,
+    497,
+    569
+   ]
+  },
+  "route-214": {
+   "name": "Route 214",
+   "zone": 380,
+   "zones": [
+    381
+   ]
+  },
+  "ruin-maniac-cave": {
+   "name": "Ruin Maniac Cave",
+   "zone": 286,
+   "zones": [
+    512
+   ]
+  },
+  "maniac-tunnel": {
+   "name": "Maniac Tunnel",
+   "zone": 513
+  },
+  "valor-lakefront": {
+   "name": "Valor Lakefront",
+   "zone": 336
+  },
+  "route-213": {
+   "name": "Route 213",
+   "zone": 373,
+   "zones": [
+    374
+   ]
+  },
+  "pastoria-city": {
+   "name": "Pastoria City",
+   "zone": 120,
+   "zones": [
+    121,
+    122,
+    123,
+    124,
+    125,
+    126,
+    127,
+    128,
+    129,
+    130,
+    131,
+    223,
+    479
+   ]
+  },
+  "great-marsh": {
+   "name": "Great Marsh",
+   "zone": 504,
+   "zones": [
+    505,
+    506,
+    507,
+    508,
+    509
+   ]
+  },
+  "route-212": {
+   "name": "Route 212",
+   "zone": 111,
+   "zones": [
+    367,
+    371,
+    372
+   ]
+  },
+  "trophy-garden": {
+   "name": "Trophy Garden",
+   "zone": 287
+  },
+  "celestic-town": {
+   "name": "Celestic Town",
+   "zone": 442,
+   "zones": [
+    443,
+    444,
+    445,
+    446,
+    447,
+    448,
+    449,
+    488
+   ]
+  },
+  "fuego-ironworks": {
+   "name": "Fuego Ironworks",
+   "zone": 204,
+   "zones": [
+    205
+   ]
+  },
+  "route-219": {
+   "name": "Route 219",
+   "zone": 391
+  },
+  "route-220": {
+   "name": "Route 220",
+   "zone": 467
+  },
+  "route-221": {
+   "name": "Route 221",
+   "zone": 392,
+   "zones": [
+    394
+   ]
+  },
+  "route-218": {
+   "name": "Route 218",
+   "zone": 388,
+   "zones": [
+    389,
+    390
+   ]
+  },
+  "canalave-city": {
+   "name": "Canalave City",
+   "zone": 33,
+   "zones": [
+    34,
+    35,
+    36,
+    37,
+    41,
+    42,
+    43,
+    44,
+    475,
+    491
+   ]
+  },
+  "iron-island": {
+   "name": "Iron Island",
+   "zone": 288,
+   "zones": [
+    289,
+    290,
+    291,
+    292,
+    293,
+    294,
+    514,
+    587
+   ]
+  },
+  "lake-valor": {
+   "name": "Lake Valor",
+   "zone": 314,
+   "zones": [
+    315
+   ]
+  },
+  "valor-cavern": {
+   "name": "Valor Cavern",
+   "zone": 316
+  },
+  "route-211": {
+   "name": "Route 211",
+   "zone": 365,
+   "zones": [
+    366
+   ]
+  },
+  "route-216": {
+   "name": "Route 216",
+   "zone": 383,
+   "zones": [
+    384
+   ]
+  },
+  "route-217": {
+   "name": "Route 217",
+   "zone": 385,
+   "zones": [
+    386,
+    387
+   ]
+  },
+  "acuity-lakefront": {
+   "name": "Acuity Lakefront",
+   "zone": 340
+  },
+  "snowpoint-city": {
+   "name": "Snowpoint City",
+   "zone": 165,
+   "zones": [
+    166,
+    167,
+    168,
+    169,
+    170,
+    171,
+    482
+   ]
+  },
+  "lake-acuity": {
+   "name": "Lake Acuity",
+   "zone": 317,
+   "zones": [
+    318
+   ]
+  },
+  "acuity-cavern": {
+   "name": "Acuity Cavern",
+   "zone": 319
+  },
+  "spear-pillar": {
+   "name": "Spear Pillar",
+   "zone": 220,
+   "zones": [
+    221,
+    584,
+    585
+   ]
+  },
+  "distortion-world": {
+   "name": "Distortion World",
+   "zone": 570,
+   "zones": [
+    573,
+    574,
+    575,
+    576,
+    577,
+    578,
+    579,
+    580,
+    581,
+    582,
+    583
+   ]
+  },
+  "spring-path": {
+   "name": "Spring Path",
+   "zone": 341
+  },
+  "sendoff-spring": {
+   "name": "Sendoff Spring",
+   "zone": 267
+  },
+  "route-222": {
+   "name": "Route 222",
+   "zone": 395,
+   "zones": [
+    396,
+    397,
+    398
+   ]
+  },
+  "sunyshore-city": {
+   "name": "Sunyshore City",
+   "zone": 150,
+   "zones": [
+    151,
+    152,
+    153,
+    154,
+    155,
+    156,
+    158,
+    159,
+    160,
+    161,
+    162,
+    163,
+    481
+   ]
+  },
+  "route-223": {
+   "name": "Route 223",
+   "zone": 468
+  },
+  "pokemon-league": {
+   "name": "Pokémon League",
+   "zone": 172,
+   "zones": [
+    173,
+    174,
+    175,
+    176,
+    177,
+    178,
+    179,
+    180,
+    181,
+    182,
+    183,
+    184,
+    185,
+    186,
+    187,
+    483,
+    495,
+    496
+   ]
+  },
+  "victory-road": {
+   "name": "Victory Road",
+   "zone": 244,
+   "zones": [
+    245,
+    246,
+    247,
+    248,
+    249
+   ]
+  },
+  "turnback-cave": {
+   "name": "Turnback Cave",
+   "zone": 268,
+   "zones": [
+    269,
+    270,
+    271,
+    272,
+    273,
+    518,
+    519,
+    520,
+    521,
+    522,
+    523,
+    524,
+    525,
+    526,
+    527,
+    528,
+    529,
+    530,
+    531,
+    532,
+    533,
+    534,
+    535,
+    536,
+    537,
+    538,
+    539,
+    540,
+    541,
+    542,
+    543,
+    544,
+    545,
+    546,
+    547,
+    548,
+    549,
+    550,
+    551,
+    552,
+    553,
+    554,
+    555,
+    556,
+    557
+   ]
+  },
+  "fullmoon-island": {
+   "name": "Fullmoon Island",
+   "zone": 260,
+   "zones": [
+    261
+   ]
+  },
+  "newmoon-island": {
+   "name": "Newmoon Island",
+   "zone": 320,
+   "zones": [
+    321
+   ]
+  },
+  "snowpoint-temple": {
+   "name": "Snowpoint Temple",
+   "zone": 278,
+   "zones": [
+    279,
+    280,
+    281,
+    282,
+    283
+   ]
+  },
+  "pal-park": {
+   "name": "Pal Park",
+   "zone": 251,
+   "zones": [
+    393
+   ]
+  },
+  "route-224": {
+   "name": "Route 224",
+   "zone": 399
+  },
+  "fight-area": {
+   "name": "Fight Area",
+   "zone": 188,
+   "zones": [
+    189,
+    190,
+    191,
+    194,
+    195,
+    484
+   ]
+  },
+  "battle-frontier": {
+   "name": "Battle Frontier",
+   "zone": 559,
+   "zones": [
+    560
+   ]
+  },
+  "battle-tower": {
+   "name": "Battle Tower",
+   "zone": 326,
+   "zones": [
+    327,
+    328,
+    329,
+    330,
+    331,
+    493,
+    561
+   ]
+  },
+  "battle-factory": {
+   "name": "Battle Factory",
+   "zone": 562
+  },
+  "battle-castle": {
+   "name": "Battle Castle",
+   "zone": 564
+  },
+  "battle-arcade": {
+   "name": "Battle Arcade",
+   "zone": 565
+  },
+  "battle-hall": {
+   "name": "Battle Hall",
+   "zone": 563
+  },
+  "route-225": {
+   "name": "Route 225",
+   "zone": 193,
+   "zones": [
+    400,
+    498
+   ]
+  },
+  "survival-area": {
+   "name": "Survival Area",
+   "zone": 450,
+   "zones": [
+    451,
+    452,
+    453,
+    455,
+    456,
+    489
+   ]
+  },
+  "route-226": {
+   "name": "Route 226",
+   "zone": 469,
+   "zones": [
+    499
+   ]
+  },
+  "route-227": {
+   "name": "Route 227",
+   "zone": 403,
+   "zones": [
+    500
+   ]
+  },
+  "stark-mountain": {
+   "name": "Stark Mountain",
+   "zone": 262,
+   "zones": [
+    263,
+    264,
+    265
+   ]
+  },
+  "route-228": {
+   "name": "Route 228",
+   "zone": 406,
+   "zones": [
+    501,
+    502,
+    503,
+    591
+   ]
+  },
+  "route-229": {
+   "name": "Route 229",
+   "zone": 407
+  },
+  "resort-area": {
+   "name": "Resort Area",
+   "zone": 457,
+   "zones": [
+    458,
+    459,
+    460,
+    461,
+    462,
+    463,
+    465,
+    490
+   ]
+  },
+  "route-230": {
+   "name": "Route 230",
+   "zone": 471
+  },
+  "flower-paradise": {
+   "name": "Flower Paradise",
+   "zone": 274
+  },
+  "verity-cavern": {
+   "name": "Verity Cavern",
+   "zone": 313
+  }
+ },
+ "milestones": [
+  {
+   "id": "rival-route-201",
+   "name": "Rival Barry: first battle",
+   "kind": "rival",
+   "place": "route-201",
+   "level_cap": 5,
+   "foe": {
+    "name": "Cedric",
+    "ace_level": 5
+   },
+   "done_when": "later",
+   "opens": [
+    "twinleaf-town",
+    "route-201",
+    "lake-verity",
+    "verity-lakefront",
+    "sandgem-town"
+   ],
+   "tips": "Barry always picks the starter that has the type edge over yours (Piplup against Chimchar, Turtwig against Piplup, Chimchar against Turtwig), but he only has one Level 5 Pokemon. Train a couple of levels on Route 201 first and the fight is easy.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum rival_route_201_*.json, scripts_route_201.s; Bulbapedia: Walkthrough Part 1 (via archive)"
+  },
+  {
+   "id": "rival-route-203",
+   "name": "Rival Barry: Route 203",
+   "kind": "rival",
+   "place": "route-203",
+   "level_cap": 9,
+   "foe": {
+    "name": "Cedric",
+    "ace_level": 9
+   },
+   "done_when": "later",
+   "opens": [
+    "route-202",
+    "jubilife-city",
+    "route-203"
+   ],
+   "tips": "His team grows to a Starly and his starter, both around Level 7-9. Walk in with at least two healthy Pokemon and a few Potions; the fight sits just before Oreburgh Gate.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum rival_route_203_*.json, scripts_route_203.s; Bulbapedia: Walkthrough Part 2 index"
+  },
+  {
+   "id": "gym-1-roark",
+   "name": "Gym 1: Roark",
+   "kind": "gym",
+   "place": "oreburgh-city",
+   "level_cap": 14,
+   "leader": "Roark",
+   "theme": "rock",
+   "foe": {
+    "name": "Roark",
+    "class": "Leader",
+    "ace_level": 14
+   },
+   "done_when": "badge:1",
+   "opens": [
+    "oreburgh-gate",
+    "oreburgh-city",
+    "oreburgh-mine"
+   ],
+   "tips": "A Rock-type team with Cranidos as the ace at Level 14. Water, Grass, Fighting and Ground attackers do the work, and a Pokemon with solid Defense helps against Cranidos.",
+   "badge_note": "Coal Badge: Rock Smash works in the field (HM06 comes from the hiker in Oreburgh Gate). Gym TM is TM76.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/trainers/data/leader_roark.json; Serebii: Platinum gym enhancements"
+  },
+  {
+   "id": "team-mars-windworks",
+   "name": "Commander Mars at Valley Windworks",
+   "kind": "team",
+   "place": "valley-windworks",
+   "level_cap": 17,
+   "foe": {
+    "name": "Mars",
+    "class": "Commander",
+    "ace_level": 17
+   },
+   "done_when": "later",
+   "opens": [
+    "route-204",
+    "ravaged-path",
+    "floaroma-town",
+    "floaroma-meadow",
+    "valley-windworks"
+   ],
+   "tips": "Mars is the first Commander and has only two Pokemon (Purugly is the Level 17 ace). Clear the grunts and her fight is short. The Electirizer lies on the ground outside the building.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/trainers/data/commander_mars_valley_windworks.json; Bulbapedia: Walkthrough Part 4 index"
+  },
+  {
+   "id": "gym-2-gardenia",
+   "name": "Gym 2: Gardenia",
+   "kind": "gym",
+   "place": "eterna-city",
+   "level_cap": 22,
+   "leader": "Gardenia",
+   "theme": "grass",
+   "foe": {
+    "name": "Gardenia",
+    "class": "Leader",
+    "ace_level": 22
+   },
+   "done_when": "badge:2",
+   "opens": [
+    "route-205",
+    "eterna-forest",
+    "eterna-city"
+   ],
+   "tips": "Grass team topped by Roserade at Level 22. Fire, Flying, Ice, Poison and Bug moves are the answer; the gym floor rotates, so defeat the trainer in each area to open the next.",
+   "badge_note": "Forest Badge: lets you use Cut in the field (HM01). Gym TM is TM86.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/trainers/data/leader_gardenia.json; Serebii: Platinum gym enhancements, changes"
+  },
+  {
+   "id": "team-jupiter-eterna",
+   "name": "Commander Jupiter in the Eterna building",
+   "kind": "team",
+   "place": "tg-eterna-bldg",
+   "level_cap": 23,
+   "foe": {
+    "name": "Jupiter",
+    "class": "Commander",
+    "ace_level": 23
+   },
+   "done_when": "later",
+   "opens": [
+    "tg-eterna-bldg"
+   ],
+   "tips": "Jupiter waits on the top floor behind a maze of grunt rooms (Skuntank is her Level 23 ace). Zubat is Poison/Flying and Skuntank is Poison/Dark, so Electric or Ice hits the first and Ground the second; the Up-Grade lies next to her spot.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/trainers/data/commander_jupiter_team_galactic_eterna_building.json; Bulbapedia: Walkthrough Part 5"
+  },
+  {
+   "id": "gym-3-fantina",
+   "name": "Gym 3: Fantina",
+   "kind": "gym",
+   "place": "hearthome-city",
+   "level_cap": 26,
+   "leader": "Fantina",
+   "theme": "ghost",
+   "foe": {
+    "name": "Fantina",
+    "class": "Leader",
+    "ace_level": 26
+   },
+   "done_when": "badge:5",
+   "opens": [
+    "old-chateau",
+    "route-206",
+    "wayward-cave",
+    "route-207",
+    "mt-coronet",
+    "route-208",
+    "hearthome-city",
+    "amity-square"
+   ],
+   "tips": "In Platinum the Hearthome gym is the third one. Ghost team led by Mismagius at Level 26: Dark and Ghost attacks hit hard, while Normal and Fighting moves do nothing against Ghosts.",
+   "badge_note": "Relic Badge (fifth badge bit, third gym): lets you use Defog (HM05). Gym TM is TM65.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/trainers/data/leader_fantina.json; Serebii: Platinum gym enhancements, changes"
+  },
+  {
+   "id": "rival-route-209",
+   "name": "Rival Barry at the Route 209 gate",
+   "kind": "rival",
+   "place": "route-209",
+   "level_cap": 27,
+   "foe": {
+    "name": "Cedric",
+    "ace_level": 27
+   },
+   "done_when": "later",
+   "opens": [
+    "route-209"
+   ],
+   "tips": "Four Pokemon from Level 23 to 27, with the starter as the ace. He challenges you at the gate once Fantina is beaten. A Staravia is in every version of his team, and Electric or Rock hits it hard.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum rival_route_209_*.json, scripts_route_209_gate_to_hearthome_city.s"
+  },
+  {
+   "id": "gym-4-maylene",
+   "name": "Gym 4: Maylene",
+   "kind": "gym",
+   "place": "veilstone-city",
+   "level_cap": 32,
+   "leader": "Maylene",
+   "theme": "fighting",
+   "foe": {
+    "name": "Maylene",
+    "class": "Leader",
+    "ace_level": 32
+   },
+   "done_when": "badge:3",
+   "opens": [
+    "solaceon-town",
+    "solaceon-ruins",
+    "route-210",
+    "route-215",
+    "veilstone-city"
+   ],
+   "tips": "Fighting team ending in Lucario at Level 32. Flying and Psychic handle Meditite and Machoke, while Fire and Ground are what Lucario fears. The gym is a punching-bag puzzle.",
+   "badge_note": "Cobble Badge (third badge bit, fourth gym): lets you use Fly (HM02 lies in the Veilstone warehouse). Gym TM is TM60.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/trainers/data/leader_maylene.json; Serebii: Platinum gym enhancements"
+  },
+  {
+   "id": "rival-pastoria",
+   "name": "Rival Barry in Pastoria City",
+   "kind": "rival",
+   "place": "pastoria-city",
+   "level_cap": 36,
+   "foe": {
+    "name": "Cedric",
+    "ace_level": 36
+   },
+   "done_when": "later",
+   "opens": [
+    "route-214",
+    "ruin-maniac-cave",
+    "maniac-tunnel",
+    "valor-lakefront",
+    "route-213",
+    "pastoria-city"
+   ],
+   "tips": "He meets you at the edge of the city with four Pokemon up to Level 36, the starter being the ace. Fight him before Crasher Wake; he is about as strong as the gym.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum rival_pastoria_city_*.json, scripts_pastoria_city.s"
+  },
+  {
+   "id": "gym-5-wake",
+   "name": "Gym 5: Crasher Wake",
+   "kind": "gym",
+   "place": "pastoria-city",
+   "level_cap": 37,
+   "leader": "Wake",
+   "theme": "water",
+   "foe": {
+    "name": "Wake",
+    "class": "Leader",
+    "ace_level": 37
+   },
+   "done_when": "badge:4",
+   "opens": [
+    "great-marsh",
+    "route-212",
+    "trophy-garden"
+   ],
+   "tips": "Water team with Floatzel as the Level 37 ace. Grass beats all but Gyarados, and Electric hits Gyarados and Floatzel but not the Ground-type Quagsire. The gym asks you to change the water level to cross platforms.",
+   "badge_note": "Fen Badge (fourth badge bit, fifth gym): needed to use Surf in the field. Gym TM is TM55.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/trainers/data/leader_wake.json; Serebii: Platinum gym enhancements, changes"
+  },
+  {
+   "id": "team-cyrus-celestic",
+   "name": "Cyrus in Celestic Town",
+   "kind": "team",
+   "place": "celestic-town",
+   "level_cap": 36,
+   "foe": {
+    "name": "Cyrus",
+    "class": "Galactic Boss",
+    "ace_level": 36
+   },
+   "done_when": "later",
+   "opens": [
+    "celestic-town",
+    "fuego-ironworks",
+    "route-219",
+    "route-220"
+   ],
+   "tips": "A first, short fight with the Galactic boss (Murkrow is the Level 36 ace). You also pick up Surf here. Murkrow is Dark/Flying and Sneasel is Dark/Ice, so Electric, Rock and Fighting each hit something; Psychic does nothing to the Dark types.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/trainers/data/galactic_boss_cyrus_celestic_town_ruins.json; Bulbapedia: Walkthrough Part 11 index"
+  },
+  {
+   "id": "rival-canalave",
+   "name": "Rival Barry on the Canalave bridge",
+   "kind": "rival",
+   "place": "canalave-city",
+   "level_cap": 38,
+   "foe": {
+    "name": "Cedric",
+    "ace_level": 38
+   },
+   "done_when": "later",
+   "opens": [
+    "route-221",
+    "route-218",
+    "canalave-city"
+   ],
+   "tips": "Five Pokemon up to Level 38 with the starter fully evolved as the ace. Heal first; this fight comes right before Byron.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum rival_canalave_city_*.json, scripts_canalave_city.s"
+  },
+  {
+   "id": "gym-6-byron",
+   "name": "Gym 6: Byron",
+   "kind": "gym",
+   "place": "canalave-city",
+   "level_cap": 41,
+   "leader": "Byron",
+   "theme": "steel",
+   "foe": {
+    "name": "Byron",
+    "class": "Leader",
+    "ace_level": 41
+   },
+   "done_when": "badge:6",
+   "opens": [],
+   "tips": "Steel team with Bastiodon at Level 41. Fire, Fighting and Ground moves are super effective on Magneton, Steelix and Bastiodon alike; Water or Grass helps on Steelix's Ground half.",
+   "badge_note": "Mine Badge (sixth badge bit, sixth gym): lets you use Strength in the field (HM04 is with Riley on Iron Island). Gym TM is TM91.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/trainers/data/leader_byron.json; Serebii: Platinum gym enhancements"
+  },
+  {
+   "id": "team-saturn-valor",
+   "name": "Commander Saturn in Valor Cavern",
+   "kind": "team",
+   "place": "valor-cavern",
+   "level_cap": 40,
+   "foe": {
+    "name": "Saturn",
+    "class": "Commander",
+    "ace_level": 40
+   },
+   "done_when": "later",
+   "opens": [
+    "iron-island",
+    "lake-valor",
+    "valor-cavern"
+   ],
+   "tips": "Saturn's Toxicroak is the Level 40 ace of a short team. Psychic and Ground counter the Poison and Fighting mix. Azelf in the same cavern is a separate encounter after the Distortion World.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/trainers/data/commander_saturn_valor_cavern.json; Bulbapedia: Walkthrough Part 13 index"
+  },
+  {
+   "id": "team-mars-verity",
+   "name": "Commander Mars at Lake Verity",
+   "kind": "team",
+   "place": "lake-verity",
+   "level_cap": 40,
+   "foe": {
+    "name": "Mars",
+    "class": "Commander",
+    "ace_level": 40
+   },
+   "done_when": "later",
+   "opens": [
+    "route-211",
+    "route-216",
+    "route-217"
+   ],
+   "tips": "Mars returns with a Level 40 Purugly. After the fight Route 211, Mt. Coronet and the road north to Snowpoint open up.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/trainers/data/commander_mars_lake_verity.json; Bulbapedia: Walkthrough Part 14 index"
+  },
+  {
+   "id": "gym-7-candice",
+   "name": "Gym 7: Candice",
+   "kind": "gym",
+   "place": "snowpoint-city",
+   "level_cap": 44,
+   "leader": "Candice",
+   "theme": "ice",
+   "foe": {
+    "name": "Candice",
+    "class": "Leader",
+    "ace_level": 44
+   },
+   "done_when": "badge:7",
+   "opens": [
+    "acuity-lakefront",
+    "snowpoint-city",
+    "lake-acuity"
+   ],
+   "tips": "Ice team led by Froslass at Level 44. Fire, Fighting, Rock and Steel are the way in, and Fire hits Abomasnow for 4x. Slide through the gym and smash the snowballs.",
+   "badge_note": "Icicle Badge (seventh badge bit, seventh gym): lets you use Rock Climb (HM08 lies on Route 217). Gym TM is TM72.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/trainers/data/leader_candice.json; Serebii: Platinum gym enhancements"
+  },
+  {
+   "id": "team-saturn-hq",
+   "name": "Commander Saturn at Galactic HQ",
+   "kind": "team",
+   "place": "galactic-hq",
+   "level_cap": 44,
+   "foe": {
+    "name": "Saturn",
+    "class": "Commander",
+    "ace_level": 44
+   },
+   "done_when": "later",
+   "opens": [
+    "galactic-hq"
+   ],
+   "tips": "Saturn's second fight tops out at Toxicroak Level 44. Pick up the Galactic Key in the HQ to open the sealed doors; the same Psychic and Ground advice holds.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/trainers/data/commander_saturn_galactic_hq.json; Bulbapedia: Walkthrough Part 15-16 index"
+  },
+  {
+   "id": "team-cyrus-hq",
+   "name": "Cyrus at Galactic HQ",
+   "kind": "team",
+   "place": "galactic-hq",
+   "level_cap": 46,
+   "foe": {
+    "name": "Cyrus",
+    "class": "Galactic Boss",
+    "ace_level": 46
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Honchkrow Level 46 leads a three-Pokemon team. Electric, Rock and Ice hit the Flying/Dark ace; Sneasel is Dark/Ice and takes 4x from Fighting.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/trainers/data/galactic_boss_cyrus_galactic_hq.json; Bulbapedia: Walkthrough Part 16 index"
+  },
+  {
+   "id": "team-spear-pillar",
+   "name": "Mars and Jupiter at Spear Pillar (tag battle)",
+   "kind": "team",
+   "place": "spear-pillar",
+   "level_cap": 46,
+   "foe": {
+    "name": "Jupiter",
+    "class": "Commander",
+    "ace_level": 46
+   },
+   "done_when": "later",
+   "opens": [
+    "spear-pillar"
+   ],
+   "tips": "A double battle with Barry as your partner against both Commanders, whose aces are at Level 46. Spread attacks and Electric/Water types help against the Zubat line and Bronzor.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/trainers/data/commander_jupiter_spear_pillar.json, commander_mars_spear_pillar.json; scripts_spear_pillar.s"
+  },
+  {
+   "id": "team-cyrus-distortion",
+   "name": "Cyrus in the Distortion World",
+   "kind": "team",
+   "place": "distortion-world",
+   "level_cap": 48,
+   "foe": {
+    "name": "Cyrus",
+    "class": "Galactic Boss",
+    "ace_level": 48
+   },
+   "done_when": "later",
+   "opens": [
+    "distortion-world",
+    "spring-path"
+   ],
+   "tips": "His final team has five Pokemon topped by Weavile at Level 48. Heal before you go in (Cynthia comes with you); Fighting, Rock and Electric hit most of the team.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/trainers/data/galactic_boss_cyrus_distortion_world.json; Serebii: Platinum Distortion World"
+  },
+  {
+   "id": "legend-giratina",
+   "name": "Giratina in the Distortion World",
+   "kind": "legendary",
+   "place": "distortion-world",
+   "level_cap": 47,
+   "done_when": "later",
+   "opens": [],
+   "tips": "You fight it in Origin Forme at Level 47 right after Cyrus. Weaken it carefully and use Dusk or Ultra Balls; if it faints or flees it returns in the Turnback Cave room later.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_distortion_world_giratina_room.s; Serebii: Platinum legendary Pokemon"
+  },
+  {
+   "id": "legend-azelf",
+   "name": "Azelf in Valor Cavern",
+   "kind": "legendary",
+   "place": "valor-cavern",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [
+    "sendoff-spring",
+    "verity-cavern",
+    "acuity-cavern"
+   ],
+   "tips": "A one-time Level 50 fight once Giratina is dealt with. Save first; if it faints, win the Hall of Fame again to bring it back.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_valor_cavern.s, scripts_pokemon_league_hall_of_fame.s; Serebii: Platinum legendary Pokemon"
+  },
+  {
+   "id": "legend-uxie",
+   "name": "Uxie in Acuity Cavern",
+   "kind": "legendary",
+   "place": "acuity-cavern",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Level 50, one chance like Azelf, and reachable after the Distortion World. Save before talking to it.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_acuity_cavern.s; Serebii: Platinum legendary Pokemon"
+  },
+  {
+   "id": "legend-mesprit",
+   "name": "Mesprit at Lake Verity",
+   "kind": "legendary",
+   "place": "lake-verity",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Mesprit flees as soon as the battle starts and then roams Sinnoh at Level 50. Track it on the Pokétch Marking Map and catch it on a route.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_lake_verity_low_water.s; Serebii: Platinum roaming Pokemon"
+  },
+  {
+   "id": "gym-8-volkner",
+   "name": "Gym 8: Volkner",
+   "kind": "gym",
+   "place": "sunyshore-city",
+   "level_cap": 50,
+   "leader": "Volkner",
+   "theme": "electric",
+   "foe": {
+    "name": "Volkner",
+    "class": "Leader",
+    "ace_level": 50
+   },
+   "done_when": "badge:8",
+   "opens": [
+    "route-222",
+    "sunyshore-city"
+   ],
+   "tips": "Electric team led by Electivire at Level 50 (Jolteon and Raichu at 46). Ground types are immune to Electric attacks, so a strong Ground Pokemon trivialises the fight. Expect a short puzzle in the rooms before him.",
+   "badge_note": "Beacon Badge: lets you use Waterfall in the field (HM07 in Sunyshore City). Gym TM is TM57.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/trainers/data/leader_volkner.json; Serebii: Platinum gym enhancements"
+  },
+  {
+   "id": "rival-league",
+   "name": "Rival Barry before the Elite Four",
+   "kind": "rival",
+   "place": "pokemon-league",
+   "level_cap": 51,
+   "foe": {
+    "name": "Cedric",
+    "ace_level": 51
+   },
+   "done_when": "later",
+   "opens": [
+    "route-223",
+    "victory-road",
+    "pokemon-league"
+   ],
+   "tips": "Six Pokemon, the starter at Level 51 and a Snorlax at 49. He catches you in the League lobby before the Elite Four, so use the Pokemon Center to heal and restock.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum rival_pokemon_league_*.json, scripts_pokemon_league_north_pokecenter_1f.s"
+  },
+  {
+   "id": "e4-aaron",
+   "name": "Elite Four: Aaron",
+   "kind": "elite4",
+   "place": "pokemon-league",
+   "level_cap": 53,
+   "leader": "Aaron",
+   "theme": "bug",
+   "foe": {
+    "name": "Aaron",
+    "class": "Elite Four",
+    "ace_level": 53
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Bug team (Yanmega, Scizor, Vespiquen, Heracross, Drapion) with Drapion as the Level 53 ace. Rock hits Yanmega and Vespiquen for 4x, Fire does the same to Scizor, and Ground handles Drapion.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/trainers/data/elite_four_aaron.json; Serebii: Platinum Elite Four"
+  },
+  {
+   "id": "e4-bertha",
+   "name": "Elite Four: Bertha",
+   "kind": "elite4",
+   "place": "pokemon-league",
+   "level_cap": 55,
+   "leader": "Bertha",
+   "theme": "ground",
+   "foe": {
+    "name": "Bertha",
+    "class": "Elite Four",
+    "ace_level": 55
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Ground team up to Rhyperior at Level 55. Water, Grass and Ice are super effective on most of it, and Electric is useless against all of it.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/trainers/data/elite_four_bertha.json; Serebii: Platinum Elite Four"
+  },
+  {
+   "id": "e4-flint",
+   "name": "Elite Four: Flint",
+   "kind": "elite4",
+   "place": "pokemon-league",
+   "level_cap": 57,
+   "leader": "Flint",
+   "theme": "fire",
+   "foe": {
+    "name": "Flint",
+    "class": "Elite Four",
+    "ace_level": 57
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Fire team with Magmortar at Level 57 as the ace. Water, Ground and Rock hit hard; Infernape's Fighting side also punishes Rock and Ice attackers.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/trainers/data/elite_four_flint.json; Serebii: Platinum Elite Four"
+  },
+  {
+   "id": "e4-lucian",
+   "name": "Elite Four: Lucian",
+   "kind": "elite4",
+   "place": "pokemon-league",
+   "level_cap": 59,
+   "leader": "Lucian",
+   "theme": "psychic",
+   "foe": {
+    "name": "Lucian",
+    "class": "Elite Four",
+    "ace_level": 59
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Psychic team led by Gallade at Level 59. Dark, Ghost and Bug moves are the usual answer to most of it; Bronzong is Steel/Psychic, so keep a Fire or Ground option.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/trainers/data/elite_four_lucian.json; Serebii: Platinum Elite Four"
+  },
+  {
+   "id": "champion-cynthia",
+   "name": "Champion Cynthia",
+   "kind": "champion",
+   "place": "pokemon-league",
+   "level_cap": 62,
+   "foe": {
+    "name": "Cynthia",
+    "class": "Champion",
+    "ace_level": 62
+   },
+   "done_when": "later",
+   "opens": [
+    "turnback-cave"
+   ],
+   "tips": "Six Pokemon with Garchomp at Level 62 as the ace, backed by Spiritomb, Roserade, Togekiss, Lucario and Milotic. Ice hits Garchomp for 4x and also Togekiss and Roserade, Fire or Ground handles Lucario, and Electric or Grass handles Milotic. Bring varied attackers and plenty of healing.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/trainers/data/champion_cynthia.json; Serebii: Platinum Elite Four"
+  },
+  {
+   "id": "story-national-dex",
+   "name": "The National Pokédex",
+   "kind": "story",
+   "place": "sandgem-town",
+   "level_cap": 60,
+   "done_when": "none",
+   "opens": [
+    "pal-park",
+    "snowpoint-temple"
+   ],
+   "tips": "After the credits, see every Pokemon in the 210-entry Sinnoh Pokédex and show it to Professor Rowan; Professor Oak then upgrades it. This switches on the roaming birds, Cresselia's island, Dialga and Palkia, and the road to the Survival Area.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_sandgem_town_pokemon_research_lab.s; Serebii: Platinum changes"
+  },
+  {
+   "id": "legend-cresselia",
+   "name": "Cresselia on Fullmoon Island",
+   "kind": "legendary",
+   "place": "fullmoon-island",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [
+    "fullmoon-island"
+   ],
+   "tips": "Needs the National Pokédex and the ship from Canalave City. It runs off right away at Level 50 and starts roaming, leaving a Lunar Wing on the island.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_fullmoon_island_forest.s; Serebii: Platinum legendary Pokemon"
+  },
+  {
+   "id": "legend-dialga",
+   "name": "Dialga at Spear Pillar",
+   "kind": "legendary",
+   "place": "spear-pillar",
+   "level_cap": 70,
+   "done_when": "none",
+   "opens": [],
+   "tips": "A Level 70 Steel/Dragon with a lot of HP. Bring Fighting and Ground attackers and plenty of Ultra Balls; carry the Adamant Orb from Mt. Coronet 4F.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_spear_pillar_dialga.s, scripts_mt_coronet_6f.s; Serebii: Platinum legendary Pokemon"
+  },
+  {
+   "id": "legend-palkia",
+   "name": "Palkia at Spear Pillar",
+   "kind": "legendary",
+   "place": "spear-pillar",
+   "level_cap": 70,
+   "done_when": "none",
+   "opens": [],
+   "tips": "A Level 70 Water/Dragon. Only Dragon attacks are super effective on it, so lean on a strong special attacker; carry the Lustrous Orb from Mt. Coronet 4F. Both Dialga and Palkia can be caught in one save.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_spear_pillar_palkia.s, scripts_mt_coronet_6f.s; Serebii: Platinum legendary Pokemon"
+  },
+  {
+   "id": "postgame-fight-area",
+   "name": "Volkner and Flint tag battle at Fight Area",
+   "kind": "postgame",
+   "place": "fight-area",
+   "level_cap": 58,
+   "foe": {
+    "name": "Volkner",
+    "class": "Leader",
+    "ace_level": 58
+   },
+   "done_when": "later",
+   "opens": [
+    "route-224",
+    "fight-area",
+    "battle-frontier",
+    "battle-tower"
+   ],
+   "tips": "A double battle with Barry as your partner against Volkner and Flint (aces at Level 58). It is the gate to the Battle Frontier. A Ground type beats both leaders' types, though Electric moves do nothing to it.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum leader_volkner_fight_area.json, elite_four_flint_fight_area.json; Serebii: Platinum changes"
+  },
+  {
+   "id": "postgame-survival-rival",
+   "name": "Barry's weekend rematches at the Survival Area",
+   "kind": "rival",
+   "place": "survival-area",
+   "level_cap": 65,
+   "foe": {
+    "name": "Cedric",
+    "ace_level": 65
+   },
+   "done_when": "none",
+   "opens": [
+    "route-225",
+    "survival-area",
+    "route-226",
+    "route-227"
+   ],
+   "tips": "He battles on weekends outside the Top Trainer Cafe; the first team peaks at Level 65 and rises in steps to Level 85 as you clear the Elite Four more often. Treat it as a level-matched endgame test.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum rival_survival_area_*.json; Serebii: Platinum rival weekly battle"
+  },
+  {
+   "id": "postgame-survival-leaders",
+   "name": "Gym leader rematches at the Survival Area",
+   "kind": "postgame",
+   "place": "survival-area",
+   "level_cap": 66,
+   "foe": {
+    "name": "Maylene",
+    "class": "Leader",
+    "ace_level": 66
+   },
+   "done_when": "none",
+   "opens": [],
+   "tips": "A building in the Survival Area hosts one gym leader or tag partner each day. The leader teams run from Level 61 to 66 and are full five-Pokemon sets.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum leader_*_rematch.json; Serebii: Platinum changes"
+  },
+  {
+   "id": "team-mars-stark",
+   "name": "Commander Mars in Stark Mountain",
+   "kind": "team",
+   "place": "stark-mountain",
+   "level_cap": 60,
+   "foe": {
+    "name": "Mars",
+    "class": "Commander",
+    "ace_level": 60
+   },
+   "done_when": "none",
+   "opens": [
+    "stark-mountain"
+   ],
+   "tips": "Mars (Purugly Level 60) is the first of two Commander fights at the top of the volcano. Her Bronzong, Golbat and Purugly are Steel/Psychic, Poison/Flying and Normal, so bring Fire or Ground, Electric or Ice, and Fighting coverage.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/trainers/data/commander_mars_stark_mountain.json; pret/pokeplatinum scripts_stark_mountain_room_1.s"
+  },
+  {
+   "id": "team-jupiter-stark",
+   "name": "Commander Jupiter in Stark Mountain",
+   "kind": "team",
+   "place": "stark-mountain",
+   "level_cap": 60,
+   "foe": {
+    "name": "Jupiter",
+    "class": "Commander",
+    "ace_level": 60
+   },
+   "done_when": "none",
+   "opens": [],
+   "tips": "Skuntank at Level 60 anchors her team, and Ground hits it hard. Push on to the deepest room, where Charon is arrested: from then on the Elite Four and Cynthia use their stronger rematch teams.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/trainers/data/commander_jupiter_stark_mountain.json; pret/pokeplatinum scripts_pokemon_league_champion_room.s"
+  },
+  {
+   "id": "legend-heatran",
+   "name": "Heatran in Stark Mountain",
+   "kind": "legendary",
+   "place": "stark-mountain",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [
+    "route-228",
+    "route-229",
+    "resort-area",
+    "route-230"
+   ],
+   "tips": "Appears in the Level 50 fight where Charon was taken away, after the National Pokédex and the Galactic story at Stark Mountain. Fire/Steel: Ground and Water hit it; bring Dusk Balls for the cave.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_stark_mountain_room_3.s; Serebii: Platinum legendary Pokemon"
+  },
+  {
+   "id": "postgame-e4-rematch",
+   "name": "Elite Four rematch teams",
+   "kind": "elite4",
+   "place": "pokemon-league",
+   "level_cap": 75,
+   "foe": {
+    "name": "Lucian",
+    "class": "Elite Four",
+    "ace_level": 75
+   },
+   "done_when": "none",
+   "opens": [],
+   "tips": "Once Charon has been arrested, every Elite Four visit uses stronger teams: Aaron 65-69, Bertha 66-71, Flint 68-73, Lucian 69-75. You can repeat the run as often as you like.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/trainers/data/elite_four_*_rematch.json; pret/pokeplatinum scripts_pokemon_league_aaron_room.s"
+  },
+  {
+   "id": "postgame-cynthia-rematch",
+   "name": "Cynthia's rematch",
+   "kind": "champion",
+   "place": "pokemon-league",
+   "level_cap": 78,
+   "foe": {
+    "name": "Cynthia",
+    "class": "Champion",
+    "ace_level": 78
+   },
+   "done_when": "none",
+   "opens": [],
+   "tips": "After Charon's arrest the champion room uses a Level 74-78 team with Garchomp at 78. Bring a team in the low 80s and a lot of restoratives.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/trainers/data/champion_cynthia_rematch.json; pret/pokeplatinum scripts_pokemon_league_champion_room.s"
+  },
+  {
+   "id": "legend-regigigas",
+   "name": "Regigigas in Snowpoint Temple",
+   "kind": "legendary",
+   "place": "snowpoint-temple",
+   "level_cap": 1,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Level 1, but only after you carry Regirock, Regice and Registeel to the bottom floor. Bring a weak attacker so it survives long enough to catch; in Platinum the three Regis come from the event Regigigas.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_snowpoint_temple_b5f.s; Serebii: Platinum Regi factor, legendary Pokemon"
+  },
+  {
+   "id": "brain-argenta",
+   "name": "Hall Matron Argenta (Battle Hall)",
+   "kind": "postgame",
+   "place": "battle-hall",
+   "level_cap": 50,
+   "foe": {
+    "name": "Argenta",
+    "class": "Hall Matron"
+   },
+   "done_when": "none",
+   "opens": [
+    "battle-hall"
+   ],
+   "tips": "Appears at win 50 of the Hall streak, and again after finishing rank 10 in every type. Her team is random from any type, so you need a flexible single Pokemon (the hall allows one or two).",
+   "quality": "reference-only",
+   "source": "Serebii: Platinum Frontier Brains; pret/pokeplatinum res/trainers/data hall_matron_argenta_dummy.json"
+  },
+  {
+   "id": "brain-dahlia",
+   "name": "Arcade Star Dahlia (Battle Arcade)",
+   "kind": "postgame",
+   "place": "battle-arcade",
+   "level_cap": 50,
+   "foe": {
+    "name": "Dahlia",
+    "class": "Arcade Star"
+   },
+   "done_when": "none",
+   "opens": [
+    "battle-arcade"
+   ],
+   "tips": "She waits at battle 21 and again at 49. Her team is fixed, so use the roulette results against it. At the second meeting her team includes a legendary and the roulette is faster.",
+   "quality": "reference-only",
+   "source": "Serebii: Platinum Frontier Brains; pret/pokeplatinum arcade_star_dahlia_dummy.json"
+  },
+  {
+   "id": "brain-darach",
+   "name": "Castle Valet Darach (Battle Castle)",
+   "kind": "postgame",
+   "place": "battle-castle",
+   "level_cap": 50,
+   "foe": {
+    "name": "Darach",
+    "class": "Castle Valet"
+   },
+   "done_when": "none",
+   "opens": [
+    "battle-castle"
+   ],
+   "tips": "He appears at battle 21 and again at 49. Castle Points are your healing budget, so skip needless fights and keep CP for the brain.",
+   "quality": "reference-only",
+   "source": "Serebii: Platinum Frontier Brains; pret/pokeplatinum castle_valet_darach_dummy.json"
+  },
+  {
+   "id": "brain-palmer",
+   "name": "Tower Tycoon Palmer (Battle Tower)",
+   "kind": "postgame",
+   "place": "battle-tower",
+   "level_cap": 50,
+   "foe": {
+    "name": "Palmer",
+    "class": "Tower Tycoon"
+   },
+   "done_when": "none",
+   "opens": [],
+   "tips": "Barry's father appears at battle 21 and again at 49, the second time with Heatran, Regigigas and Cresselia. Bring bulky Pokemon with Ice, Fighting, Ground and a Water attacker.",
+   "quality": "reference-only",
+   "source": "Serebii: Platinum Frontier Brains; pret/pokeplatinum tower_tycoon_palmer_dummy.json"
+  },
+  {
+   "id": "brain-thorton",
+   "name": "Factory Head Thorton (Battle Factory)",
+   "kind": "postgame",
+   "place": "battle-factory",
+   "level_cap": 50,
+   "foe": {
+    "name": "Thorton",
+    "class": "Factory Head"
+   },
+   "done_when": "none",
+   "opens": [
+    "battle-factory"
+   ],
+   "tips": "He joins at battle 21 and 49 and fights with rentals, so his team is the same quality as yours. Swap in the strongest rentals after each win.",
+   "quality": "reference-only",
+   "source": "Serebii: Platinum Frontier Brains; pret/pokeplatinum factory_head_thorton_dummy.json"
+  }
+ ],
+ "steps": [
+  {
+   "id": "step-starter",
+   "title": "Pick your first partner",
+   "text": "Choose Turtwig, Chimchar or Piplup from Rowan's case. Barry takes the one that beats yours, so a single level-up on Route 201 before the first fight is enough.",
+   "stage": "rival-route-201",
+   "places": [
+    "route-201",
+    "sandgem-town"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum rival_route_201_*.json; Bulbapedia: Walkthrough Part 1"
+  },
+  {
+   "id": "step-pokedex-jubilife",
+   "title": "Pokétch and Jubilife",
+   "text": "Jubilife City hands out the first Pokétch apps (watch, calculator, pedometer, party status). Pokétch Co. there later gives more, including the Marking Map, which you need to follow roaming legendaries.",
+   "stage": "rival-route-203",
+   "places": [
+    "jubilife-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_jubilife_city.s, scripts_poketch_co_1f.s"
+  },
+  {
+   "id": "step-rock-smash",
+   "title": "Get Rock Smash early",
+   "text": "A hiker in Oreburgh Gate hands over Rock Smash (HM06) and it needs the Coal Badge, so beat Roark first. Teach it to a spare Pokemon; many hidden-item and route blocks later depend on it.",
+   "stage": "gym-1-roark",
+   "places": [
+    "oreburgh-gate",
+    "oreburgh-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_oreburgh_gate_1f.s, field_move_tasks.c"
+  },
+  {
+   "id": "step-windworks",
+   "title": "Valley Windworks and Floaroma",
+   "text": "After Roark go through Route 204 to Floaroma Town and the Meadow. The Windworks building holds Mars; pick up the Electirizer lying outside it for a future Electivire.",
+   "stage": "team-mars-windworks",
+   "places": [
+    "floaroma-town",
+    "valley-windworks",
+    "floaroma-meadow"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Part 3-4 index; pret/pokeplatinum visible items"
+  },
+  {
+   "id": "step-eterna-forest",
+   "title": "Through Eterna Forest",
+   "text": "Route 205 leads to Eterna Forest, where you escort Cheryl out and she hands over a Soothe Bell. The Moss Rock for Leafeon is in the forest. When you reach Eterna City, Cynthia gives you Cut; Gardenia's gym is open right away.",
+   "stage": "gym-2-gardenia",
+   "places": [
+    "route-205",
+    "eterna-forest",
+    "eterna-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Part 4-5; pret/pokeplatinum map_header.c"
+  },
+  {
+   "id": "step-galactic-eterna",
+   "title": "Clear the Eterna Galactic building",
+   "text": "Fight up through the building to Jupiter. Afterward Cynthia gives you the Togepi egg (make room in your party first), and the cycle shop owner you rescued hands you a Bicycle, which opens the Cycling Road on Route 206.",
+   "stage": "team-jupiter-eterna",
+   "places": [
+    "eterna-city",
+    "tg-eterna-bldg"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Part 5; pret/pokeplatinum scripts_eterna_city.s"
+  },
+  {
+   "id": "step-hearthome",
+   "title": "Hearthome City",
+   "text": "Fantina's gym is reachable on your first visit and it is the third gym in Platinum. A house next to the Pokemon Center gives a Level 20 Eevee as a gift. Amity Square is nearby once you want a walking partner.",
+   "stage": "gym-3-fantina",
+   "places": [
+    "hearthome-city",
+    "amity-square"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Serebii: Platinum changes, gifts; pret/pokeplatinum scripts_hearthome_city_northwest_house.s"
+  },
+  {
+   "id": "step-solaceon",
+   "title": "Solaceon and Lost Tower",
+   "text": "Defog (HM05) lies in the deepest room of Solaceon Ruins and needs the Relic Badge to use. The Lost Tower on Route 209 has an Oval Stone on 2F. Barry meets you at the Route 209 gate once Fantina has fallen.",
+   "stage": "rival-route-209",
+   "places": [
+    "route-209",
+    "solaceon-town",
+    "solaceon-ruins"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum visible items, scripts_hearthome_city_gym_leader_room.s"
+  },
+  {
+   "id": "step-veilstone",
+   "title": "Veilstone and the Galactic warehouse",
+   "text": "Maylene's gym uses sliding punching bags. Fly (HM02) is inside the Team Galactic warehouse and needs a Storage Key to enter; you need the Cobble Badge to use it. A house in the north of the city gives a Level 25 Porygon.",
+   "stage": "gym-4-maylene",
+   "places": [
+    "veilstone-city",
+    "route-215"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Serebii: Platinum TMs and HMs, gifts; pret/pokeplatinum scripts_veilstone_city_galactic_warehouse.s"
+  },
+  {
+   "id": "step-pastoria",
+   "title": "Pastoria City and the Great Marsh",
+   "text": "Barry challenges you on arrival, before Wake's gym. The Great Marsh binoculars show the day's rare Pokemon, and a man in town gives the Macho Brace if you show a male and a female Combee.",
+   "stage": "rival-pastoria",
+   "places": [
+    "pastoria-city",
+    "great-marsh",
+    "route-213"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Serebii: Platinum Great Marsh, changes; pret/pokeplatinum scripts_pastoria_city.s"
+  },
+  {
+   "id": "step-surf",
+   "title": "Surf and the sea routes",
+   "text": "Beating Cyrus in the Celestic Town cave earns you Surf (HM03). Using it needs the Fen Badge from Wake, so clear Pastoria's gym first; then the water routes toward Canalave open up.",
+   "stage": "team-cyrus-celestic",
+   "places": [
+    "celestic-town",
+    "route-219",
+    "route-220"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Serebii: Platinum TMs and HMs; pret/pokeplatinum field_move_tasks.c"
+  },
+  {
+   "id": "step-canalave",
+   "title": "Canalave City",
+   "text": "Barry meets you on the bridge before the gym. The gate building on Route 218 hands out the Old Rod, and the Canalave Library has the lore books if you want the background.",
+   "stage": "rival-canalave",
+   "places": [
+    "canalave-city",
+    "route-218"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_route_218_gate_to_jubilife_city.s"
+  },
+  {
+   "id": "step-iron-island",
+   "title": "Iron Island and Riley",
+   "text": "After Byron, Iron Island is next. Riley gives you Strength (HM04, needs the Mine Badge) and the Riolu egg once you have beaten the Galactic grunts, and wild Steelix can be caught inside.",
+   "stage": "gym-6-byron",
+   "places": [
+    "iron-island"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Serebii: Platinum gifts, TMs and HMs; pret/pokeplatinum encounters_iron_island_*.json"
+  },
+  {
+   "id": "step-valor",
+   "title": "Lake Valor and Saturn",
+   "text": "Saturn is in Valor Cavern behind Lake Valor. After his fight, Azelf sits there for a single Level 50 battle (save first). A person at Valor Lakefront has lost a Suite Key; it is hidden on Route 213.",
+   "stage": "team-saturn-valor",
+   "places": [
+    "lake-valor",
+    "valor-cavern",
+    "valor-lakefront"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Part 13 index; pret/pokeplatinum hidden_items.h"
+  },
+  {
+   "id": "step-verity",
+   "title": "Lake Verity and Mars",
+   "text": "Mars is at Lake Verity. Afterward Route 211 and Mt. Coronet north open the way through Route 216 and Route 217 to Snowpoint; Rock Climb (HM08) lies on Route 217.",
+   "stage": "team-mars-verity",
+   "places": [
+    "lake-verity",
+    "route-211",
+    "route-216",
+    "route-217"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Part 14 index; Serebii: Platinum TMs and HMs"
+  },
+  {
+   "id": "step-snowpoint",
+   "title": "Snowpoint and Lake Acuity",
+   "text": "Candice's gym is a sliding-ice puzzle, and Lake Acuity opens after the badge. Uxie waits in the cavern there later, so save before you talk to it.",
+   "stage": "gym-7-candice",
+   "places": [
+    "snowpoint-city",
+    "lake-acuity"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Serebii: Platinum items; Bulbapedia: Walkthrough Part 15 index"
+  },
+  {
+   "id": "step-galactic-hq",
+   "title": "Galactic HQ in Veilstone",
+   "text": "Cyrus's headquarters has sealed doors; Galactic Keys lie on the floors as you go up. Saturn waits in the control room and Cyrus is on the top floor.",
+   "stage": "team-saturn-hq",
+   "places": [
+    "galactic-hq",
+    "veilstone-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_galactic_hq_1f.s, scripts_galactic_hq_control_room.s"
+  },
+  {
+   "id": "step-spear",
+   "title": "Mt. Coronet to Spear Pillar",
+   "text": "Climb Mt. Coronet to the Spear Pillar. Barry is your partner for the Commander tag battle, and after it the Distortion World opens. Carry Surf and Strength.",
+   "stage": "team-spear-pillar",
+   "places": [
+    "mt-coronet",
+    "spear-pillar"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Part 16-17 index; pret/pokeplatinum scripts_spear_pillar.s"
+  },
+  {
+   "id": "step-distortion",
+   "title": "Distortion World",
+   "text": "The world has no items and no wild Pokemon; platforms move when you step on their arrows. At the end push two boulders to reach Cyrus, then Giratina Origin Forme at Level 47. Heal beforehand.",
+   "stage": "team-cyrus-distortion",
+   "places": [
+    "distortion-world"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Serebii: Platinum Distortion World; pret/pokeplatinum scripts_distortion_world_*.s"
+  },
+  {
+   "id": "step-lakes",
+   "title": "Rescue the lake guardians",
+   "text": "After the Spring Path, return to the three lakes. Uxie and Azelf are one-time fights at Acuity and Valor Caverns; Mesprit runs off and roams, tracked on the Marking Map.",
+   "stage": "legend-azelf",
+   "places": [
+    "sendoff-spring",
+    "lake-acuity",
+    "lake-valor",
+    "lake-verity"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Serebii: Platinum legendary Pokemon, roaming Pokemon"
+  },
+  {
+   "id": "step-sunyshore",
+   "title": "Sunyshore City",
+   "text": "Volkner's gym is a switch-controlled floor puzzle. Bring a Ground type for the fight itself, then take Waterfall (HM07, needs the Beacon Badge) toward Victory Road.",
+   "stage": "gym-8-volkner",
+   "places": [
+    "sunyshore-city",
+    "route-222"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Serebii: Platinum gym enhancements; pret/pokeplatinum scripts_sunyshore_city.s"
+  },
+  {
+   "id": "step-league",
+   "title": "Prepare for the League",
+   "text": "Victory Road ends at the League lobby where Barry waits. Stock Full Restores and Revives, then fight Aaron, Bertha, Flint, Lucian and Cynthia in that order.",
+   "stage": "rival-league",
+   "places": [
+    "victory-road",
+    "pokemon-league"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_pokemon_league_*.s; Serebii: Platinum Elite Four"
+  },
+  {
+   "id": "step-postgame-start",
+   "title": "After the credits",
+   "text": "Walk around Sandgem, Twinleaf and the Great Marsh for story follow-ups, finish the Sinnoh Pokédex, and show it to Rowan. The National Pokédex unlocks Pal Park, Cresselia's trip, the birds, Dialga and Palkia.",
+   "stage": "story-national-dex",
+   "places": [
+    "sandgem-town",
+    "twinleaf-town"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Part 21 index; pret/pokeplatinum scripts_sandgem_town_pokemon_research_lab.s"
+  },
+  {
+   "id": "step-roamers",
+   "title": "Hunt the roamers",
+   "text": "Use the Marking Map to see where Mesprit, Cresselia and the three birds are. Switch between two nearby routes quickly until one lands next to you; a KO'd roamer returns after the next Hall of Fame visit.",
+   "stage": "legend-cresselia",
+   "places": [
+    "fullmoon-island",
+    "eterna-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Serebii: Platinum roaming Pokemon; pret/pokeplatinum scripts_pokemon_league_hall_of_fame.s"
+  },
+  {
+   "id": "step-dialga-palkia",
+   "title": "Dialga and Palkia",
+   "text": "With the National Pokédex on, talk to the Celestic Town elder, take the Adamant and Lustrous Orbs from Mt. Coronet 4F, then enter the portals at the Spear Pillar for the Level 70 fights.",
+   "stage": "legend-dialga",
+   "places": [
+    "celestic-town",
+    "mt-coronet",
+    "spear-pillar"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_celestic_town_north_house.s, scripts_mt_coronet_6f.s"
+  },
+  {
+   "id": "step-fight-area",
+   "title": "Fight Area and the Battle Frontier",
+   "text": "Beat Volkner and Flint together with Barry to enter the Frontier. The Tower, Factory, Castle, Arcade and Hall each earn Battle Points for the shops.",
+   "stage": "postgame-fight-area",
+   "places": [
+    "fight-area",
+    "battle-frontier"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Serebii: Platinum Battle Frontier; pret/pokeplatinum scripts_fight_area.s"
+  },
+  {
+   "id": "step-survival",
+   "title": "Survival Area",
+   "text": "Barry's weekend fights and the daily gym leader rematches live here. The Top Trainer Cafe and a building of tag partners are on site.",
+   "stage": "postgame-survival-rival",
+   "places": [
+    "survival-area",
+    "route-225"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Serebii: Platinum rival weekly battle, changes"
+  },
+  {
+   "id": "step-stark",
+   "title": "Stark Mountain",
+   "text": "Mars and Jupiter fight again inside. Buck joins you in the lower rooms. Defeat them to finish Charon's story, then Heatran appears; the Elite Four and Cynthia become Level 65+ rematch teams.",
+   "stage": "team-mars-stark",
+   "places": [
+    "stark-mountain",
+    "route-227"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_stark_mountain_room_*.s, scripts_pokemon_league_champion_room.s"
+  },
+  {
+   "id": "step-brains",
+   "title": "Battle Frontier brains",
+   "text": "Each facility's brain shows up at battle 21 and again at 49 (the Hall needs a longer run). Streaks reset when you lose; keep a team with varied coverage.",
+   "stage": "brain-palmer",
+   "places": [
+    "battle-frontier",
+    "battle-tower"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Serebii: Platinum Frontier Brains"
+  }
+ ],
+ "secrets": [
+  {
+   "id": "hid-odd-keystone",
+   "kind": "hidden-item",
+   "text": "An Odd Keystone is buried in the town. It is the key item for the Spiritomb event at the Hallowed Tower on Route 209.",
+   "place": "twinleaf-town",
+   "x": 107,
+   "y": 893,
+   "condition": "Dowsing Machine app",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h + res/field/events",
+   "grid": "world"
+  },
+  {
+   "id": "hid-draco-plate",
+   "kind": "hidden-item",
+   "text": "Draco Plate, one of Arceus's type plates, is buried in the city.",
+   "place": "eterna-city",
+   "x": 327,
+   "y": 521,
+   "condition": "Dowsing Machine app",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h + res/field/events",
+   "grid": "world"
+  },
+  {
+   "id": "hid-moon-stone-eterna",
+   "kind": "hidden-item",
+   "text": "A hidden Moon Stone (evolves Clefairy, Jigglypuff, Nidorina, Nidorino, Skitty) is elsewhere in the city.",
+   "place": "eterna-city",
+   "x": 347,
+   "y": 517,
+   "condition": "Dowsing Machine app",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h + res/field/events",
+   "grid": "world"
+  },
+  {
+   "id": "hid-max-elixir-windworks",
+   "kind": "hidden-item",
+   "text": "A hidden Max Elixir is outside the Windworks building. The Electirizer lying nearby is a separate visible item.",
+   "place": "valley-windworks",
+   "x": 236,
+   "y": 651,
+   "condition": "Dowsing Machine app",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h + res/field/events",
+   "grid": "world"
+  },
+  {
+   "id": "hid-insect-plate",
+   "kind": "hidden-item",
+   "text": "A hidden Insect Plate inside Eterna Forest, far northwest.",
+   "place": "eterna-forest",
+   "condition": "Dowsing Machine app",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h + res/field/events"
+  },
+  {
+   "id": "hid-rare-candy-207",
+   "kind": "hidden-item",
+   "text": "A hidden Rare Candy on Route 207.",
+   "place": "route-207",
+   "x": 313,
+   "y": 719,
+   "condition": "Dowsing Machine app",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h + res/field/events",
+   "grid": "world"
+  },
+  {
+   "id": "hid-star-piece-208",
+   "kind": "hidden-item",
+   "text": "A hidden Star Piece on Route 208.",
+   "place": "route-208",
+   "x": 389,
+   "y": 717,
+   "condition": "Dowsing Machine app",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h + res/field/events",
+   "grid": "world"
+  },
+  {
+   "id": "hid-dawn-stone-212",
+   "kind": "hidden-item",
+   "text": "A hidden Dawn Stone on the south part of Route 212 (evolves a male Kirlia and a female Snorunt).",
+   "place": "route-212",
+   "x": 561,
+   "y": 835,
+   "condition": "Dowsing Machine app",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h + res/field/events",
+   "grid": "world"
+  },
+  {
+   "id": "hid-rare-candy-212",
+   "kind": "hidden-item",
+   "text": "A hidden Rare Candy on the south part of Route 212.",
+   "place": "route-212",
+   "x": 533,
+   "y": 857,
+   "condition": "Dowsing Machine app",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h + res/field/events",
+   "grid": "world"
+  },
+  {
+   "id": "hid-sun-stone-valor",
+   "kind": "hidden-item",
+   "text": "A hidden Sun Stone near the lakefront (evolves Gloom to Bellossom and Sunkern).",
+   "place": "valor-lakefront",
+   "x": 720,
+   "y": 794,
+   "condition": "Dowsing Machine app",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h + res/field/events",
+   "grid": "world"
+  },
+  {
+   "id": "hid-pp-up-valor",
+   "kind": "hidden-item",
+   "text": "A hidden PP Up on the east side of the lakefront.",
+   "place": "valor-lakefront",
+   "x": 730,
+   "y": 773,
+   "condition": "Dowsing Machine app",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h + res/field/events",
+   "grid": "world"
+  },
+  {
+   "id": "hid-pp-up-veilstone",
+   "kind": "hidden-item",
+   "text": "A hidden PP Up in Veilstone City.",
+   "place": "veilstone-city",
+   "x": 698,
+   "y": 599,
+   "condition": "Dowsing Machine app",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h + res/field/events",
+   "grid": "world"
+  },
+  {
+   "id": "hid-meadow-plate-210",
+   "kind": "hidden-item",
+   "text": "A hidden Meadow Plate on the north part of Route 210, on the same stretch as a hidden Shiny Stone.",
+   "place": "route-210",
+   "x": 526,
+   "y": 519,
+   "condition": "Dowsing Machine app",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h + res/field/events",
+   "grid": "world"
+  },
+  {
+   "id": "hid-shiny-stone-210",
+   "kind": "hidden-item",
+   "text": "A hidden Shiny Stone (for Togetic and Roselia) on the north part of Route 210.",
+   "place": "route-210",
+   "x": 547,
+   "y": 525,
+   "condition": "Dowsing Machine app",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h + res/field/events",
+   "grid": "world"
+  },
+  {
+   "id": "hid-suite-key",
+   "kind": "hidden-item",
+   "text": "A Suite Key lost by someone is hidden on Route 213. Return it at Valor Lakefront for a thank-you.",
+   "place": "route-213",
+   "x": 705,
+   "y": 812,
+   "condition": "Dowsing Machine app",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h + res/field/events",
+   "grid": "world"
+  },
+  {
+   "id": "hid-razor-fang-214",
+   "kind": "hidden-item",
+   "text": "A hidden Razor Fang on Route 214 (lets Gligar evolve at night).",
+   "place": "route-214",
+   "x": 722,
+   "y": 704,
+   "condition": "Dowsing Machine app",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h + res/field/events",
+   "grid": "world"
+  },
+  {
+   "id": "hid-zap-plate-sunyshore",
+   "kind": "hidden-item",
+   "text": "A hidden Zap Plate in Sunyshore City.",
+   "place": "sunyshore-city",
+   "x": 889,
+   "y": 792,
+   "condition": "Dowsing Machine app",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h + res/field/events",
+   "grid": "world"
+  },
+  {
+   "id": "hid-sky-plate-league",
+   "kind": "hidden-item",
+   "text": "A hidden Sky Plate in front of the League.",
+   "place": "pokemon-league",
+   "x": 842,
+   "y": 580,
+   "condition": "Dowsing Machine app",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h + res/field/events",
+   "grid": "world"
+  },
+  {
+   "id": "hid-rare-candy-snowpoint",
+   "kind": "hidden-item",
+   "text": "A hidden Rare Candy in Snowpoint City.",
+   "place": "snowpoint-city",
+   "x": 381,
+   "y": 220,
+   "condition": "Dowsing Machine app",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h + res/field/events",
+   "grid": "world"
+  },
+  {
+   "id": "hid-rare-candy-224",
+   "kind": "hidden-item",
+   "text": "A hidden Rare Candy on Route 224, next to a Big Pearl, Heart Scale and Pearl cluster.",
+   "place": "route-224",
+   "x": 881,
+   "y": 530,
+   "condition": "Dowsing Machine app",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h + res/field/events",
+   "grid": "world"
+  },
+  {
+   "id": "hid-leaf-stone-225",
+   "kind": "hidden-item",
+   "text": "A hidden Leaf Stone on Route 225, plus a hidden Rare Candy nearby.",
+   "place": "route-225",
+   "x": 614,
+   "y": 373,
+   "condition": "Dowsing Machine app",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h + res/field/events",
+   "grid": "world"
+  },
+  {
+   "id": "hid-pp-max-226",
+   "kind": "hidden-item",
+   "text": "A hidden PP Max on Route 226 and a Rare Candy close by.",
+   "place": "route-226",
+   "x": 723,
+   "y": 331,
+   "condition": "Dowsing Machine app",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h + res/field/events",
+   "grid": "world"
+  },
+  {
+   "id": "hid-pp-max-228",
+   "kind": "hidden-item",
+   "text": "A hidden PP Max on Route 228, with a Rare Candy and a Full Restore in the same stretch.",
+   "place": "route-228",
+   "x": 775,
+   "y": 404,
+   "condition": "Dowsing Machine app",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h + res/field/events",
+   "grid": "world"
+  },
+  {
+   "id": "hid-thunderstone-resort",
+   "kind": "hidden-item",
+   "text": "A hidden Thunderstone in the Resort Area, and a hidden Nugget on the same stretch.",
+   "place": "resort-area",
+   "x": 822,
+   "y": 445,
+   "condition": "Dowsing Machine app",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h + res/field/events",
+   "grid": "world"
+  },
+  {
+   "id": "hid-water-stone-230",
+   "kind": "hidden-item",
+   "text": "A hidden Water Stone on Route 230.",
+   "place": "route-230",
+   "x": 725,
+   "y": 427,
+   "condition": "Dowsing Machine app",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h + res/field/events",
+   "grid": "world"
+  },
+  {
+   "id": "hid-honey-meadow",
+   "kind": "hidden-item",
+   "text": "Six Honey are buried around the meadow; they refill each day so you can farm Honey for the trees.",
+   "place": "floaroma-meadow",
+   "condition": "Dowsing Machine app",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h + res/field/events"
+  },
+  {
+   "id": "hid-solaceon-stones",
+   "kind": "hidden-item",
+   "text": "The dead ends of three side rooms hide a Fire Stone, a Water Stone and a Thunderstone. The last room holds Defog.",
+   "place": "solaceon-ruins",
+   "condition": "Dowsing Machine app",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h + res/field/events"
+  },
+  {
+   "id": "hid-wayward-dusk",
+   "kind": "hidden-item",
+   "text": "A hidden Dusk Stone on the basement floor of Wayward Cave.",
+   "place": "wayward-cave",
+   "condition": "Dowsing Machine app",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h + res/field/events"
+  },
+  {
+   "id": "hid-coronet-stones",
+   "kind": "hidden-item",
+   "text": "Stones in Mt. Coronet: a hidden Moon Stone on the outside north part, a hidden Sun Stone and Stone Plate on 4F, and a Dawn Stone lying on the ground on 1F south.",
+   "place": "mt-coronet",
+   "condition": "Dowsing Machine app",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h + res/field/events"
+  },
+  {
+   "id": "hid-iron-plate",
+   "kind": "hidden-item",
+   "text": "A hidden Iron Plate in the B2F left room, along with several Star Pieces across the island's rooms.",
+   "place": "iron-island",
+   "condition": "Dowsing Machine app",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h + res/field/events"
+  },
+  {
+   "id": "hid-stark-fire-stone",
+   "kind": "hidden-item",
+   "text": "A Flame Plate and a Fire Stone are hidden in the second room of the volcano.",
+   "place": "stark-mountain",
+   "condition": "Dowsing Machine app",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h + res/field/events"
+  },
+  {
+   "id": "hid-marsh-plate",
+   "kind": "hidden-item",
+   "text": "A Toxic Plate and a Leaf Stone are hidden in the Great Marsh's inner areas.",
+   "place": "great-marsh",
+   "condition": "Dowsing Machine app",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h + res/field/events"
+  },
+  {
+   "id": "hid-kings-rock",
+   "kind": "hidden-item",
+   "text": "A King's Rock is hidden in the town (for Poliwhirl and Slowpoke trade evolutions).",
+   "place": "celestic-town",
+   "condition": "Dowsing Machine app",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h + res/field/events"
+  },
+  {
+   "id": "tip-plates",
+   "kind": "tip",
+   "text": "Arceus's plates found in the field: Earth (Oreburgh Gate B1F), Insect (Eterna Forest), Draco (Eterna City), Meadow (Route 210 north), Iron (Iron Island), Zap (Sunyshore), Sky (League front), Flame (Stark Mountain), Toxic (Great Marsh), Stone (Mt. Coronet 4F), Spooky (Amity Square), Fist (Route 215), Mind (Solaceon Ruins), Splash (Route 220), Dread (Old Chateau).",
+   "place": "mt-coronet",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum hidden_items.h; scripts_visible_items.s"
+  },
+  {
+   "id": "hm-cut",
+   "kind": "gift",
+   "text": "Cut (HM01): Cynthia hands it over when you first arrive in Eterna City. The Forest Badge is needed to use it.",
+   "place": "eterna-city",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_eterna_city.s; Serebii: Platinum TMs and HMs"
+  },
+  {
+   "id": "hm-fly",
+   "kind": "gift",
+   "text": "Fly (HM02): lies in the Team Galactic warehouse, which needs a Storage Key. The Cobble Badge is needed.",
+   "place": "veilstone-city",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum events_veilstone_city_galactic_warehouse.json"
+  },
+  {
+   "id": "hm-surf",
+   "kind": "gift",
+   "text": "Surf (HM03): handed to you in the Celestic Town cave right after the Cyrus fight; the Fen Badge from Wake is needed to use it.",
+   "place": "celestic-town",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_celestic_town_cave.s"
+  },
+  {
+   "id": "hm-strength",
+   "kind": "gift",
+   "text": "Strength (HM04): Riley gives it to you on Iron Island. The Mine Badge is needed.",
+   "place": "iron-island",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_iron_island.s; Serebii: Platinum TMs and HMs"
+  },
+  {
+   "id": "hm-defog",
+   "kind": "gift",
+   "text": "Defog (HM05): on the ground in the deepest room of Solaceon Ruins. The Relic Badge is needed.",
+   "place": "solaceon-ruins",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_visible_items.s; field_move_tasks.c"
+  },
+  {
+   "id": "hm-rock-smash",
+   "kind": "gift",
+   "text": "Rock Smash (HM06): a hiker in the gate gives it to you. The Coal Badge is needed.",
+   "place": "oreburgh-gate",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_oreburgh_gate_1f.s"
+  },
+  {
+   "id": "hm-waterfall",
+   "kind": "gift",
+   "text": "Waterfall (HM07): given in Sunyshore City after you hold the Beacon Badge.",
+   "place": "sunyshore-city",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_sunyshore_city.s"
+  },
+  {
+   "id": "hm-rock-climb",
+   "kind": "gift",
+   "text": "Rock Climb (HM08): lies on the ground on Route 217; the Icicle Badge is needed to use it.",
+   "place": "route-217",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum events_route_217.json, field_move_tasks.c"
+  },
+  {
+   "id": "gift-togepi-egg",
+   "kind": "gift",
+   "text": "After the Galactic building, Cynthia gives you an egg that hatches into Togepi.",
+   "place": "eterna-city",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_eterna_city.s; Serebii: Platinum gifts"
+  },
+  {
+   "id": "gift-eevee",
+   "kind": "gift",
+   "text": "A woman in the house beside the Pokemon Center gives a Level 20 Eevee.",
+   "place": "hearthome-city",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_hearthome_city_northwest_house.s; Serebii: Platinum gifts"
+  },
+  {
+   "id": "gift-porygon",
+   "kind": "gift",
+   "text": "A resident of a north-east house gives a Level 25 Porygon.",
+   "place": "veilstone-city",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_veilstone_city_northeast_house.s; Serebii: Platinum gifts"
+  },
+  {
+   "id": "gift-riolu-egg",
+   "kind": "gift",
+   "text": "Riley gives you a Riolu egg after the Iron Island Galactic fight.",
+   "place": "iron-island",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_iron_island_b2f_left_room.s; Serebii: Platinum gifts"
+  },
+  {
+   "id": "event-spiritomb",
+   "kind": "event",
+   "text": "Spiritomb: carry the Odd Keystone to the Lost Tower on Route 209 once the game's Underground counter reaches 32 (it counts people you meet there, so it needs link play); a Level 25 wild battle follows.",
+   "place": "route-209",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_route_209.s"
+  },
+  {
+   "id": "event-drifloon",
+   "kind": "event",
+   "text": "On Fridays a Level 15 Drifloon floats outside the Windworks building. It is a one-per-day single battle.",
+   "place": "valley-windworks",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_valley_windworks_outside.s"
+  },
+  {
+   "id": "event-rotom-tv",
+   "kind": "event",
+   "text": "Rotom: at night, thump the TV in the back middle-west room of the Chateau for a Level 20 Rotom. It can try again daily until caught.",
+   "place": "old-chateau",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_old_chateau_back_middle_west_room.s"
+  },
+  {
+   "id": "trade-chatot",
+   "kind": "trade",
+   "text": "A resident of the condominiums swaps a Buizel for a Chatot holding a Leppa Berry.",
+   "place": "eterna-city",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/npc_trades/charap_chatot.json"
+  },
+  {
+   "id": "trade-magikarp",
+   "kind": "trade",
+   "text": "The house on Route 226 trades a German-language Magikarp (holding a Lum Berry) for a Finneon.",
+   "place": "route-226",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/npc_trades/foppa_magikarp.json"
+  },
+  {
+   "id": "trade-haunter",
+   "kind": "trade",
+   "text": "A house on the west side asks for a Medicham and gives a Haunter holding an Everstone.",
+   "place": "snowpoint-city",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/npc_trades/gaspar_haunter.json"
+  },
+  {
+   "id": "trade-abra",
+   "kind": "trade",
+   "text": "A house in the north swaps a Machop for an Abra holding an Oran Berry.",
+   "place": "oreburgh-city",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/npc_trades/kazza_abra.json"
+  },
+  {
+   "id": "tip-turnback-item",
+   "kind": "tip",
+   "text": "The room at the end of the Turnback Cave puzzle holds one item that depends on how many rooms you went through: Reaper Cloth after exactly three, Rare Bone under 15, Stardust otherwise.",
+   "place": "turnback-cave",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_turnback_cave_giratina_room.s"
+  },
+  {
+   "id": "leg-turnback-giratina",
+   "kind": "legendary",
+   "text": "If you lost or KO'd Giratina earlier, it can reappear in the Turnback Cave end room at Level 47 once you have been to the Hall of Fame again.",
+   "place": "turnback-cave",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_pokemon_league_hall_of_fame.s; Serebii: Platinum changes"
+  },
+  {
+   "id": "leg-griseous-orb",
+   "kind": "legendary",
+   "text": "The Griseous Orb lies at the end of a second Distortion World reached through a portal in the Turnback Cave end room. Giratina turns into Origin Forme only while it holds it.",
+   "place": "distortion-world",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum ov9_02249960.c, pokemon.c; Serebii: Platinum Distortion World"
+  },
+  {
+   "id": "tip-fossils-parity",
+   "kind": "tip",
+   "text": "In Underground mining, odd Trainer IDs favour Skull Fossils and Fire Stones, even IDs favour Armor Fossils and Water Stones. Underground mining works solo.",
+   "place": "eterna-city",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum src/underground/mining.c; Serebii: Platinum changes"
+  },
+  {
+   "id": "gift-exp-share",
+   "kind": "gift",
+   "text": "A scientist at the north Cycling Road gate gives an Exp. Share once your Pokedex has at least 35 entries seen.",
+   "place": "route-206",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_route_206_cycling_road_north_gate.s"
+  },
+  {
+   "id": "tip-rods",
+   "kind": "tip",
+   "text": "Old Rod: the gate building on Route 218 toward Jubilife. Good Rod: Route 209. Super Rod: Fight Area.",
+   "place": "route-218",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_route_218_gate_to_jubilife_city.s, scripts_route_209.s, scripts_fight_area.s"
+  },
+  {
+   "id": "gift-gracidea",
+   "kind": "gift",
+   "text": "Shaymin (event) can change to Sky Forme with the Gracidea. A woman in Floaroma Town gives it if she sees that Shaymin in your party.",
+   "place": "floaroma-town",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_floaroma_town.s; Serebii: Platinum changes"
+  },
+  {
+   "id": "gift-macho-brace",
+   "kind": "gift",
+   "text": "A man in a house gives a Macho Brace if you show him a male and a female Combee.",
+   "place": "pastoria-city",
+   "quality": "reference-only",
+   "source": "Serebii: Platinum changes; pret/pokeplatinum scripts_pastoria_city_middle_house.s"
+  },
+  {
+   "id": "gift-lunar-wing",
+   "kind": "gift",
+   "text": "After Cresselia flees, a Lunar Wing appears on the island. It is a one-time pick-up.",
+   "place": "fullmoon-island",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_fullmoon_island_forest.s"
+  },
+  {
+   "id": "gift-coin-case",
+   "kind": "gift",
+   "text": "A south-east house gives the Coin Case for the Game Corner.",
+   "place": "veilstone-city",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_veilstone_city_southeast_house.s"
+  },
+  {
+   "id": "gift-up-grade",
+   "kind": "gift",
+   "text": "The Up-Grade lies next to where Jupiter stood on 4F. It evolves Porygon when traded while held.",
+   "place": "tg-eterna-bldg",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Part 5; pret/pokeplatinum visible items"
+  }
+ ],
+ "evolutions": [
+  {
+   "id": "evo-kadabra",
+   "species": 64,
+   "name": "Kadabra",
+   "text": "Needs a link trade (Union Room, local wireless or the GTS). Platinum has no wild or gift Alakazam, so there is no in-game shortcut.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; encounter tables in pret/pokeplatinum"
+  },
+  {
+   "id": "evo-machoke",
+   "species": 67,
+   "name": "Machoke",
+   "text": "Needs a link trade (Union Room, local wireless or the GTS). No wild or gift Machamp exists in this game, so the trade is the only route.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; encounter tables in pret/pokeplatinum"
+  },
+  {
+   "id": "evo-graveler",
+   "species": 75,
+   "name": "Graveler",
+   "text": "Needs a link trade (Union Room, local wireless or the GTS). Golem cannot be found in the wild here; trade is the only way.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; encounter tables in pret/pokeplatinum"
+  },
+  {
+   "id": "evo-haunter",
+   "species": 93,
+   "name": "Haunter",
+   "text": "Needs a link trade (Union Room, local wireless or the GTS). A Gengar only turns up wild in the Old Chateau when a GBA cartridge sits in the slot, so on its own the game relies on trading.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; encounters_old_chateau_back_middle_east_room.json"
+  },
+  {
+   "id": "evo-onix",
+   "species": 95,
+   "name": "Onix",
+   "text": "Trade it while it holds a Metal Coat to get Steelix. After the National Pokédex, Byron gives a Metal Coat in the Iron Island house. Steelix also lives wild on Iron Island and Victory Road, so catching one is simpler.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum scripts_iron_island_house.s; Serebii: Platinum items"
+  },
+  {
+   "id": "evo-scyther",
+   "species": 123,
+   "name": "Scyther",
+   "text": "Trade it holding a Metal Coat to get Scizor. After the National Pokédex, Byron gives a Metal Coat in the Iron Island house. No Scizor is available any other way in Sinnoh.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum scripts_iron_island_house.s"
+  },
+  {
+   "id": "evo-poliwhirl",
+   "species": 61,
+   "name": "Poliwhirl",
+   "text": "A Water Stone gives Poliwrath. A trade while it holds a King's Rock gives Politoed; King's Rock is a hidden item in Celestic Town, and wild Poliwhirl may carry one once you have the National Pokédex.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; hidden_items.h; Serebii: Platinum items"
+  },
+  {
+   "id": "evo-slowpoke",
+   "species": 79,
+   "name": "Slowpoke",
+   "text": "Trade it holding a King's Rock for Slowking. The King's Rock is a hidden item in Celestic Town; use the Dowsing Machine app to find it.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; hidden_items.h"
+  },
+  {
+   "id": "evo-seadra",
+   "species": 117,
+   "name": "Seadra",
+   "text": "Needs a trade with a Dragon Scale held. There is no Dragon Scale on the ground in Platinum; wild Horsea, Seadra, Dratini and Dragonair may carry one once the National Pokédex is on.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; Serebii: Platinum items"
+  },
+  {
+   "id": "evo-clamperl",
+   "species": 366,
+   "name": "Clamperl",
+   "text": "Trade it holding a Deepseatooth for Huntail or a Deepseascale for Gorebyss. The items come from wild Carvanha/Sharpedo and Chinchou/Lanturn/Relicanth (after the National Pokédex); Clamperl itself does not appear in the Sinnoh wild.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; Serebii: Platinum items"
+  },
+  {
+   "id": "evo-rhydon",
+   "species": 112,
+   "name": "Rhydon",
+   "text": "Trade it holding a Protector for Rhyperior. Protectors lie in the left room of Iron Island B1F and on Route 228.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum visible items"
+  },
+  {
+   "id": "evo-electabuzz",
+   "species": 125,
+   "name": "Electabuzz",
+   "text": "Trade it holding an Electirizer for Electivire. The Electirizer is on the ground outside Valley Windworks.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum visible items"
+  },
+  {
+   "id": "evo-magmar",
+   "species": 126,
+   "name": "Magmar",
+   "text": "Trade it holding a Magmarizer for Magmortar. The Magmarizer is on Route 214.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum visible items; Serebii: Platinum items"
+  },
+  {
+   "id": "evo-dusclops",
+   "species": 356,
+   "name": "Dusclops",
+   "text": "Trade it holding a Reaper Cloth for Dusknoir. Reaper Cloths are on Route 229, at Acuity Lakefront and as the Turnback Cave end-room prize for a very short run.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum visible items, scripts_turnback_cave_giratina_room.s"
+  },
+  {
+   "id": "evo-porygon",
+   "species": 137,
+   "name": "Porygon",
+   "text": "Trade it holding an Up-Grade for Porygon2. The Up-Grade lies in the Team Galactic building in Eterna City (next to Jupiter's spot); Professor Oak in the Eterna City south house gives another one. Your gifted Level 25 Porygon from Veilstone is the starting point.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; Bulbapedia: Walkthrough Part 5; Serebii: Platinum gifts"
+  },
+  {
+   "id": "evo-porygon2",
+   "species": 233,
+   "name": "Porygon2",
+   "text": "Trade it holding a Dubious Disc for Porygon-Z. Discs are at Galactic HQ 1F and on Route 225.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum visible items"
+  },
+  {
+   "id": "evo-eevee-stones",
+   "species": 133,
+   "name": "Eevee",
+   "text": "Fire Stone gives Flareon, Water Stone Vaporeon, Thunderstone Jolteon. Hearthome City gifts you a Level 20 Eevee; wild ones need the National Pokédex.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; Serebii: Platinum gifts"
+  },
+  {
+   "id": "evo-eevee-friendship",
+   "species": 133,
+   "name": "Eevee",
+   "text": "Level up with high friendship (220 or more) in the daytime (04:00-19:59) for Espeon, or at night (20:00-03:59) for Umbreon. Soothe Bell and the Friendship Checker app help.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum rtc.c, constants/pokemon.h"
+  },
+  {
+   "id": "evo-eevee-rocks",
+   "species": 133,
+   "name": "Eevee",
+   "text": "Level up in Eterna Forest (near the Moss Rock) for Leafeon, or on Route 217 (near the Ice Rock) for Glaceon. Both rocks are fixed in the map, not an item.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum map_header.c"
+  },
+  {
+   "id": "evo-pikachu",
+   "species": 25,
+   "name": "Pikachu",
+   "text": "Thunderstone gives Raichu. Thunderstones: Sunyshore City (on the ground), Solaceon Ruins SE dead end and Resort Area (hidden), or Underground mining.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; hidden_items.h; Serebii: Platinum items"
+  },
+  {
+   "id": "evo-clefairy",
+   "species": 35,
+   "name": "Clefairy",
+   "text": "A Moon Stone gives Clefable. Hidden Moon Stones: Eterna City and the north side of Mt. Coronet; also Underground mining.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; hidden_items.h; Serebii: Platinum items"
+  },
+  {
+   "id": "evo-jigglypuff",
+   "species": 39,
+   "name": "Jigglypuff",
+   "text": "A Moon Stone gives Wigglytuff. See Clefairy for where Moon Stones are.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; hidden_items.h"
+  },
+  {
+   "id": "evo-nidorina",
+   "species": 30,
+   "name": "Nidorina",
+   "text": "A Moon Stone gives Nidoqueen. Hidden Moon Stones: Eterna City and the north side of Mt. Coronet.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; hidden_items.h"
+  },
+  {
+   "id": "evo-nidorino",
+   "species": 33,
+   "name": "Nidorino",
+   "text": "A Moon Stone gives Nidoking. Hidden Moon Stones: Eterna City and the north side of Mt. Coronet.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; hidden_items.h"
+  },
+  {
+   "id": "evo-skitty",
+   "species": 300,
+   "name": "Skitty",
+   "text": "A Moon Stone gives Delcatty. Hidden Moon Stones: Eterna City and the north side of Mt. Coronet.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; hidden_items.h"
+  },
+  {
+   "id": "evo-growlithe",
+   "species": 58,
+   "name": "Growlithe",
+   "text": "A Fire Stone gives Arcanine. Fire Stones: Fuego Ironworks (on the ground), Solaceon Ruins and Stark Mountain (hidden), and Underground mining.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; hidden_items.h; pret/pokeplatinum visible items"
+  },
+  {
+   "id": "evo-vulpix",
+   "species": 37,
+   "name": "Vulpix",
+   "text": "A Fire Stone gives Ninetales. Fire Stones: Fuego Ironworks, Solaceon Ruins, Stark Mountain, Underground mining.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; hidden_items.h"
+  },
+  {
+   "id": "evo-gloom",
+   "species": 44,
+   "name": "Gloom",
+   "text": "A Leaf Stone gives Vileplume; a Sun Stone gives Bellossom. Leaf Stones: Floaroma Meadow, hidden in the Great Marsh and on Route 225. Sun Stones: hidden at Valor Lakefront and Mt. Coronet 4F.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; hidden_items.h; pret/pokeplatinum visible items"
+  },
+  {
+   "id": "evo-weepinbell",
+   "species": 70,
+   "name": "Weepinbell",
+   "text": "A Leaf Stone gives Victreebel. Leaf Stones: Floaroma Meadow, the Great Marsh, Route 225.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; hidden_items.h"
+  },
+  {
+   "id": "evo-exeggcute",
+   "species": 102,
+   "name": "Exeggcute",
+   "text": "A Leaf Stone gives Exeggutor. Leaf Stones: Floaroma Meadow, the Great Marsh, Route 225.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; hidden_items.h"
+  },
+  {
+   "id": "evo-nuzleaf",
+   "species": 274,
+   "name": "Nuzleaf",
+   "text": "A Leaf Stone gives Shiftry. Leaf Stones: Floaroma Meadow, the Great Marsh, Route 225.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; hidden_items.h"
+  },
+  {
+   "id": "evo-lombre",
+   "species": 271,
+   "name": "Lombre",
+   "text": "A Water Stone gives Ludicolo. Water Stones: Route 213 (ground), Solaceon Ruins and Route 230 (hidden), Underground mining.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; hidden_items.h; pret/pokeplatinum visible items"
+  },
+  {
+   "id": "evo-shellder",
+   "species": 90,
+   "name": "Shellder",
+   "text": "A Water Stone gives Cloyster. Water Stones: Route 213, Solaceon Ruins, Route 230, Underground mining.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; hidden_items.h"
+  },
+  {
+   "id": "evo-staryu",
+   "species": 120,
+   "name": "Staryu",
+   "text": "A Water Stone gives Starmie. Water Stones: Route 213, Solaceon Ruins, Route 230, Underground mining.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; hidden_items.h"
+  },
+  {
+   "id": "evo-sunkern",
+   "species": 191,
+   "name": "Sunkern",
+   "text": "A Sun Stone gives Sunflora. Sun Stones are hidden at Valor Lakefront and Mt. Coronet 4F, and turn up in Underground mining.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; hidden_items.h"
+  },
+  {
+   "id": "evo-misdreavus",
+   "species": 200,
+   "name": "Misdreavus",
+   "text": "A Dusk Stone gives Mismagius. Dusk Stones: the Veilstone Galactic warehouse, Victory Road 1F, and hidden in Wayward Cave B1F.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; hidden_items.h; pret/pokeplatinum visible items"
+  },
+  {
+   "id": "evo-murkrow",
+   "species": 198,
+   "name": "Murkrow",
+   "text": "A Dusk Stone gives Honchkrow. Dusk Stones: the Veilstone Galactic warehouse, Victory Road 1F, Wayward Cave B1F (hidden).",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; hidden_items.h"
+  },
+  {
+   "id": "evo-kirlia",
+   "species": 281,
+   "name": "Kirlia",
+   "text": "Only a male Kirlia becomes Gallade, with a Dawn Stone; a female Kirlia (or any Kirlia at Level 30) becomes Gardevoir. Dawn Stones: Mt. Coronet 1F south, Route 225 (ground) and Route 212 south (hidden).",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum visible items"
+  },
+  {
+   "id": "evo-snorunt",
+   "species": 361,
+   "name": "Snorunt",
+   "text": "A female Snorunt becomes Froslass with a Dawn Stone; a male still goes to Glalie at Level 42. Dawn Stones: Mt. Coronet 1F south, Route 225, Route 212 south (hidden).",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum visible items"
+  },
+  {
+   "id": "evo-roselia",
+   "species": 315,
+   "name": "Roselia",
+   "text": "A Shiny Stone gives Roserade. Shiny Stones: Iron Island B3F and Route 228 (ground), Route 210 north (hidden).",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum visible items"
+  },
+  {
+   "id": "evo-togepi",
+   "species": 175,
+   "name": "Togepi",
+   "text": "Level up with friendship of 220 or more to get Togetic. Cynthia gives you the Togepi egg in Eterna City after the Galactic building.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum scripts_eterna_city.s"
+  },
+  {
+   "id": "evo-togetic",
+   "species": 176,
+   "name": "Togetic",
+   "text": "A Shiny Stone gives Togekiss. Shiny Stones: Iron Island B3F and Route 228 (ground), Route 210 north (hidden).",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum visible items"
+  },
+  {
+   "id": "evo-happiny",
+   "species": 440,
+   "name": "Happiny",
+   "text": "Level up while holding an Oval Stone during the day (04:00-19:59) to get Chansey. An Oval Stone is on the ground in the Lost Tower (Route 209, 2F).",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum visible items, rtc.c"
+  },
+  {
+   "id": "evo-chansey",
+   "species": 113,
+   "name": "Chansey",
+   "text": "Level up with friendship of 220 or more for Blissey.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; constants/pokemon.h"
+  },
+  {
+   "id": "evo-riolu",
+   "species": 447,
+   "name": "Riolu",
+   "text": "Level up with friendship of 220 or more in the daytime (04:00-19:59). The Riolu egg comes from Riley on Iron Island.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum rtc.c, scripts_iron_island_b2f_left_room.s"
+  },
+  {
+   "id": "evo-munchlax",
+   "species": 446,
+   "name": "Munchlax",
+   "text": "Level up with friendship of 220 or more to become Snorlax.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; constants/pokemon.h"
+  },
+  {
+   "id": "evo-golbat",
+   "species": 42,
+   "name": "Golbat",
+   "text": "Level up with friendship of 220 or more to become Crobat.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; constants/pokemon.h"
+  },
+  {
+   "id": "evo-cleffa",
+   "species": 173,
+   "name": "Cleffa",
+   "text": "Level up with high friendship to become Clefairy.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; constants/pokemon.h"
+  },
+  {
+   "id": "evo-igglybuff",
+   "species": 174,
+   "name": "Igglybuff",
+   "text": "Level up with high friendship to become Jigglypuff.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; constants/pokemon.h"
+  },
+  {
+   "id": "evo-pichu",
+   "species": 172,
+   "name": "Pichu",
+   "text": "Level up with high friendship to become Pikachu. Wild Pichu live in the Trophy Garden next to Route 212.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; Serebii: Platinum Trophy Garden"
+  },
+  {
+   "id": "evo-azurill",
+   "species": 298,
+   "name": "Azurill",
+   "text": "Level up with high friendship to become Marill.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; constants/pokemon.h"
+  },
+  {
+   "id": "evo-buneary",
+   "species": 427,
+   "name": "Buneary",
+   "text": "Level up with high friendship to become Lopunny.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; constants/pokemon.h"
+  },
+  {
+   "id": "evo-budew",
+   "species": 406,
+   "name": "Budew",
+   "text": "Level up with high friendship in the daytime (04:00-19:59) to become Roselia.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum rtc.c"
+  },
+  {
+   "id": "evo-chingling",
+   "species": 433,
+   "name": "Chingling",
+   "text": "Level up with high friendship at night (20:00-03:59) to become Chimecho.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum rtc.c"
+  },
+  {
+   "id": "evo-magneton",
+   "species": 82,
+   "name": "Magneton",
+   "text": "Level up anywhere inside Mt. Coronet (every floor, the outside parts, and Spear Pillar) to become Magnezone.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum map_header.c"
+  },
+  {
+   "id": "evo-nosepass",
+   "species": 299,
+   "name": "Nosepass",
+   "text": "Level up anywhere inside Mt. Coronet to become Probopass.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum map_header.c"
+  },
+  {
+   "id": "evo-sneasel",
+   "species": 215,
+   "name": "Sneasel",
+   "text": "Level up while holding a Razor Claw at night (20:00-03:59) to get Weavile. Razor Claws lie on Victory Road 1F and Route 224.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum rtc.c, visible items"
+  },
+  {
+   "id": "evo-gligar",
+   "species": 207,
+   "name": "Gligar",
+   "text": "Level up while holding a Razor Fang at night to get Gliscor. A Razor Fang is on Route 225 (ground) and hidden on Route 214.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum visible items, hidden_items.h"
+  },
+  {
+   "id": "evo-feebas",
+   "species": 349,
+   "name": "Feebas",
+   "text": "Becomes Milotic by level-up when its Beauty condition is high (170 or more). Feed it Poffins made for the Beauty stat.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum pokemon.c"
+  },
+  {
+   "id": "evo-tyrogue",
+   "species": 236,
+   "name": "Tyrogue",
+   "text": "At Level 20 it becomes Hitmonlee if Attack is higher than Defense, Hitmonchan if lower, Hitmontop if equal.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum pokemon.c"
+  },
+  {
+   "id": "evo-mimejr",
+   "species": 439,
+   "name": "Mime Jr.",
+   "text": "Level up while knowing Mimic to become Mr. Mime. It does not evolve by level alone.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum pokemon.c"
+  },
+  {
+   "id": "evo-bonsly",
+   "species": 438,
+   "name": "Bonsly",
+   "text": "Level up while knowing Mimic to become Sudowoodo.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum pokemon.c"
+  },
+  {
+   "id": "evo-aipom",
+   "species": 190,
+   "name": "Aipom",
+   "text": "Level up while knowing Double Hit to become Ambipom.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum pokemon.c"
+  },
+  {
+   "id": "evo-lickitung",
+   "species": 108,
+   "name": "Lickitung",
+   "text": "Level up while knowing Rollout to become Lickilicky.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum pokemon.c"
+  },
+  {
+   "id": "evo-tangela",
+   "species": 114,
+   "name": "Tangela",
+   "text": "Level up while knowing AncientPower to become Tangrowth. Tangela is a wild Pokémon in Platinum only (Diamond and Pearl lack it).",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum pokemon.c; Serebii: Platinum exclusives"
+  },
+  {
+   "id": "evo-yanma",
+   "species": 193,
+   "name": "Yanma",
+   "text": "Level up while knowing AncientPower to become Yanmega.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum pokemon.c"
+  },
+  {
+   "id": "evo-piloswine",
+   "species": 221,
+   "name": "Piloswine",
+   "text": "Level up while knowing AncientPower to become Mamoswine.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum pokemon.c"
+  },
+  {
+   "id": "evo-mantyke",
+   "species": 458,
+   "name": "Mantyke",
+   "text": "Level up while a Remoraid is in your party to become Mantine.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum pokemon.c"
+  },
+  {
+   "id": "evo-burmy",
+   "species": 412,
+   "name": "Burmy",
+   "text": "At Level 20 a female becomes Wormadam and a male Mothim. Burmy's cloak is set by where it last fought: grass battles give Plant, caves/mountains/plains/sand give Sandy, buildings and bridges give Trash. Wormadam keeps that cloak.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum battle_system.c"
+  },
+  {
+   "id": "evo-combee",
+   "species": 415,
+   "name": "Combee",
+   "text": "Only females evolve (Level 21 into Vespiquen). Show a male and a female Combee to the man in Pastoria City for the Macho Brace.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; Serebii: Platinum changes"
+  },
+  {
+   "id": "evo-nincada",
+   "species": 290,
+   "name": "Nincada",
+   "text": "At Level 20 it becomes Ninjask; with an empty party slot and a Poke Ball in the bag, a Shedinja also appears.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum evolution.c"
+  },
+  {
+   "id": "evo-wurmple",
+   "species": 265,
+   "name": "Wurmple",
+   "text": "At Level 7 it becomes Silcoon or Cascoon, decided by a hidden personality value you cannot choose.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/pokemon/*/data.json; pret/pokeplatinum pokemon.c"
+  }
+ ],
+ "notes": [
+  {
+   "id": "note-gym-order",
+   "kind": "version",
+   "title": "Gym order differs from Diamond and Pearl",
+   "text": "Platinum's gym order is Roark, Gardenia, Fantina, Maylene, Crasher Wake, Byron, Candice, Volkner. The badge bits still follow the old order (Coal, Forest, Cobble, Fen, Relic, Mine, Icicle, Beacon), so Fantina's Relic Badge is the fifth bit but the third gym.",
+   "quality": "reference-only",
+   "source": "Serebii: Platinum changes; pret/pokeplatinum generated/badges.txt, GiveBadge scripts"
+  },
+  {
+   "id": "note-badge-field-moves",
+   "kind": "tip",
+   "title": "Which badge each field move needs",
+   "text": "Cut: Forest. Fly: Cobble. Surf: Fen. Strength: Mine. Defog: Relic. Rock Smash: Coal. Waterfall: Beacon. Rock Climb: Icicle. Because Platinum swaps the gym order, Fly comes sooner and Defog later than in Diamond and Pearl.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum src/field_move_tasks.c"
+  },
+  {
+   "id": "note-new-form-legends",
+   "kind": "version",
+   "title": "Platinum-only forms",
+   "text": "Platinum adds Rotom's appliance forms, Giratina's Origin Forme and Shaymin's Sky Forme. Each form needs its own trigger: an event item for Rotom, the Griseous Orb for Giratina, and the Gracidea for Shaymin.",
+   "quality": "reference-only",
+   "source": "Serebii: Platinum changes, exclusives; pret/pokeplatinum pokemon.c"
+  },
+  {
+   "id": "note-exclusives",
+   "kind": "exclusive",
+   "title": "Wild Pokémon only in Platinum",
+   "text": "Among the Sinnoh games, Platinum alone has wild Tangela, Tropius, Articuno, Zapdos, Moltres, and (via the event Regigigas) Regirock, Regice and Registeel. Tangrowth comes from Tangela.",
+   "species": [
+    114,
+    357,
+    144,
+    145,
+    146,
+    377,
+    378,
+    379
+   ],
+   "names": [
+    "Tangela",
+    "Tropius",
+    "Articuno",
+    "Zapdos",
+    "Moltres",
+    "Regirock",
+    "Regice",
+    "Registeel"
+   ],
+   "quality": "reference-only",
+   "source": "Serebii: Platinum exclusives"
+  },
+  {
+   "id": "note-birds-roam",
+   "kind": "roamer",
+   "title": "Articuno, Zapdos and Moltres roam",
+   "text": "After the National Pokédex, visit Professor Oak in the Eterna City south house to start all three roaming at Level 60. Use the Marking Map app, switch between two routes until one lands beside you, and catch it. A fainted bird comes back after the next Hall of Fame entry or another talk with Oak.",
+   "place": "eterna-city",
+   "species": [
+    144,
+    145,
+    146
+   ],
+   "names": [
+    "Articuno",
+    "Zapdos",
+    "Moltres"
+   ],
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_eterna_city_south_house.s, scripts_pokemon_league_hall_of_fame.s; Serebii: Platinum roaming"
+  },
+  {
+   "id": "note-mesprit",
+   "kind": "roamer",
+   "title": "Mesprit roams after Lake Verity",
+   "text": "Mesprit appears at Lake Verity after Giratina and flees on the first turn. It roams at Level 50; the Marking Map shows its route. If it faints it is reset after the next Hall of Fame entry.",
+   "place": "lake-verity",
+   "species": [
+    481
+   ],
+   "names": [
+    "Mesprit"
+   ],
+   "quality": "reference-only",
+   "source": "Serebii: Platinum roaming Pokemon; pret/pokeplatinum scripts_pokemon_league_hall_of_fame.s"
+  },
+  {
+   "id": "note-cresselia",
+   "kind": "roamer",
+   "title": "Cresselia roams after Fullmoon Island",
+   "text": "With the National Pokédex, take the Canalave ship to Fullmoon Island. Cresselia leaves immediately, then roams at Level 50, leaving a Lunar Wing behind. A KO'd Cresselia returns after the next Hall of Fame entry.",
+   "place": "fullmoon-island",
+   "species": [
+    488
+   ],
+   "names": [
+    "Cresselia"
+   ],
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_fullmoon_island_forest.s; Serebii: Platinum legendary Pokemon"
+  },
+  {
+   "id": "note-giratina",
+   "kind": "legendary",
+   "title": "Giratina",
+   "text": "Level 47 in the Distortion World; after the Hall of Fame you can meet it again in the Turnback Cave end room if you missed it. Origin Forme only lasts while it holds the Griseous Orb. Entering the Union Room or other link rooms in a Pokémon Center moves the orb into your bag (keep a free slot) and sends Giratina, Rotom and Shaymin back to their base forms.",
+   "place": "distortion-world",
+   "species": [
+    487
+   ],
+   "names": [
+    "Giratina"
+   ],
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_distortion_world_giratina_room.s, scripts_pokemon_center_2f_common.s; Serebii: Platinum Distortion World"
+  },
+  {
+   "id": "note-dialga-palkia",
+   "kind": "legendary",
+   "title": "Dialga and Palkia",
+   "text": "After the National Pokédex, talk to the elder in Celestic Town, take the Adamant Orb (Dialga) and Lustrous Orb (Palkia) from Mt. Coronet 4F, then use the portals on the Spear Pillar. Both are Level 70. If one faints, finish the Hall of Fame again to restore it.",
+   "place": "spear-pillar",
+   "species": [
+    483,
+    484
+   ],
+   "names": [
+    "Dialga",
+    "Palkia"
+   ],
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_mt_coronet_6f.s, scripts_pokemon_league_hall_of_fame.s; Serebii: Platinum legendary Pokemon"
+  },
+  {
+   "id": "note-lake-guardians",
+   "kind": "legendary",
+   "title": "Uxie and Azelf",
+   "text": "Both are one-time Level 50 fights in their caverns after the Distortion World. Save beforehand; if they faint, entering the Hall of Fame again returns them.",
+   "place": "valor-cavern",
+   "species": [
+    480,
+    482
+   ],
+   "names": [
+    "Uxie",
+    "Azelf"
+   ],
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_acuity_cavern.s, scripts_valor_cavern.s; Serebii: Platinum legendary Pokemon"
+  },
+  {
+   "id": "note-heatran",
+   "kind": "legendary",
+   "title": "Heatran",
+   "text": "A Level 50 fight in Stark Mountain after the National Pokédex and the Galactic story there. A fainted Heatran returns after the Hall of Fame.",
+   "place": "stark-mountain",
+   "species": [
+    485
+   ],
+   "names": [
+    "Heatran"
+   ],
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_stark_mountain_room_3.s; Serebii: Platinum legendary Pokemon"
+  },
+  {
+   "id": "note-regigigas",
+   "kind": "legendary",
+   "title": "Regigigas needs the three Regis",
+   "text": "Regigigas sleeps at Level 1 in Snowpoint Temple and wakes only when Regirock, Regice and Registeel are all in your party. In Platinum the Regis come from the event Regigigas (caves on Route 228, Mt. Coronet near Route 216 and Iron Island) or from a trade/transfer.",
+   "place": "snowpoint-temple",
+   "species": [
+    486,
+    377,
+    378,
+    379
+   ],
+   "names": [
+    "Regigigas",
+    "Regirock",
+    "Regice",
+    "Registeel"
+   ],
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_snowpoint_temple_b5f.s; Serebii: Platinum Regi factor"
+  },
+  {
+   "id": "note-darkrai",
+   "kind": "legendary",
+   "title": "Darkrai (event item needed)",
+   "text": "Newmoon Island opens by sleeping in the locked Canalave inn, which needs the Member Card from a past Mystery Gift. The Level 50 fight is on the island.",
+   "place": "newmoon-island",
+   "species": [
+    491
+   ],
+   "names": [
+    "Darkrai"
+   ],
+   "quality": "reference-only",
+   "source": "Serebii: Platinum legendary Pokemon; pret/pokeplatinum scripts_newmoon_island_forest.s"
+  },
+  {
+   "id": "note-shaymin",
+   "kind": "legendary",
+   "title": "Shaymin (event item needed)",
+   "text": "Oak's Letter from a past Mystery Gift lets you find Shaymin at Level 30 in Flower Paradise. Afterward the Gracidea from Floaroma Town turns it into Sky Forme, but only in the daytime (04:00-19:59), and it reverts when frozen or at night.",
+   "place": "flower-paradise",
+   "species": [
+    492
+   ],
+   "names": [
+    "Shaymin"
+   ],
+   "quality": "reference-only",
+   "source": "Serebii: Platinum legendary Pokemon; pret/pokeplatinum pokemon.c, scripts_flower_paradise.s"
+  },
+  {
+   "id": "note-arceus",
+   "kind": "legendary",
+   "title": "Arceus (event item needed)",
+   "text": "The Azure Flute from a past Mystery Gift is played at the Spear Pillar to reach the Hall of Origin. Arceus is a Level 80 fight.",
+   "place": "spear-pillar",
+   "species": [
+    493
+   ],
+   "names": [
+    "Arceus"
+   ],
+   "quality": "reference-only",
+   "source": "Serebii: Platinum legendary Pokemon; pret/pokeplatinum scripts_hall_of_origin.s"
+  },
+  {
+   "id": "note-rotom",
+   "kind": "gift",
+   "title": "Rotom and its forms",
+   "text": "Rotom (Level 20) is in the Old Chateau TV at night, once a day until caught. The appliance forms need the Secret Key from a Mystery Gift: use it behind the Eterna Galactic building wall, then pick an appliance. Heat, Wash, Frost, Fan and Mow each teach a special move.",
+   "place": "old-chateau",
+   "species": [
+    479
+   ],
+   "names": [
+    "Rotom"
+   ],
+   "quality": "reference-only",
+   "source": "Serebii: Platinum Rotom Factor; pret/pokeplatinum scripts_rotoms_room.s, scripts_old_chateau_back_middle_west_room.s"
+  },
+  {
+   "id": "note-gifts",
+   "kind": "gift",
+   "title": "In-game gift Pokémon",
+   "text": "Togepi egg (Cynthia, Eterna City, after the Galactic building), Level 20 Eevee (Hearthome City), Level 25 Porygon (Veilstone City), Riolu egg (Riley, Iron Island). Togepi, Eevee and Porygon cannot be found in the wild until later.",
+   "species": [
+    175,
+    133,
+    137,
+    447
+   ],
+   "names": [
+    "Togepi",
+    "Eevee",
+    "Porygon",
+    "Riolu"
+   ],
+   "quality": "reference-only",
+   "source": "Serebii: Platinum gifts; pret/pokeplatinum gift scripts"
+  },
+  {
+   "id": "note-npc-trades",
+   "kind": "trade",
+   "title": "In-game trades",
+   "text": "Four NPCs trade: Buizel for Chatot (Eterna City), Finneon for a German Magikarp (Route 226), Medicham for Haunter holding Everstone (Snowpoint City) and Machop for Abra (Oreburgh City).",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum res/npc_trades/*.json"
+  },
+  {
+   "id": "note-drifloon",
+   "kind": "gift",
+   "title": "Friday Drifloon",
+   "text": "On Fridays a Level 15 Drifloon waits outside Valley Windworks; it is a single battle per day.",
+   "place": "valley-windworks",
+   "species": [
+    425
+   ],
+   "names": [
+    "Drifloon"
+   ],
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_valley_windworks_outside.s"
+  },
+  {
+   "id": "note-spiritomb",
+   "kind": "tip",
+   "title": "Spiritomb",
+   "text": "The hidden Odd Keystone in Twinleaf Town, a visit to the Lost Tower on Route 209, and the game's Spiritomb counter reaching 32 (it advances through Underground activity) lead to a Level 25 Spiritomb fight.",
+   "place": "route-209",
+   "species": [
+    442
+   ],
+   "names": [
+    "Spiritomb"
+   ],
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_route_209.s, hidden_items.h"
+  },
+  {
+   "id": "note-hof-reset",
+   "kind": "tip",
+   "title": "Hall of Fame restores missed legendaries",
+   "text": "Entering the Hall of Fame again puts an uncaught Dialga, Palkia, Heatran, Regigigas, Azelf, Uxie or Giratina back where it was, and resets roamers you fainted. Save before each encounter.",
+   "place": "pokemon-league",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_pokemon_league_hall_of_fame.s"
+  },
+  {
+   "id": "note-rematch-trigger",
+   "kind": "tip",
+   "title": "Elite Four and Cynthia rematch switch",
+   "text": "The Elite Four and Cynthia use their stronger teams (Level 65-78) from the moment Charon is arrested in Stark Mountain. Finish the Stark Mountain story first, then challenge the League again.",
+   "place": "pokemon-league",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum scripts_pokemon_league_aaron_room.s, scripts_pokemon_league_champion_room.s"
+  },
+  {
+   "id": "note-battle-frontier",
+   "kind": "tip",
+   "title": "Battle Frontier basics",
+   "text": "The Frontier at the Fight Area has five facilities (Tower, Factory, Castle, Arcade, Hall). Most modes default to Level 50 (the Tower can also use your highest level, the Factory also Level 100). Battle Points buy items and TMs in the shops.",
+   "place": "battle-frontier",
+   "quality": "reference-only",
+   "source": "Serebii: Platinum Battle Frontier"
+  },
+  {
+   "id": "note-time-bands",
+   "kind": "tip",
+   "title": "Day and night in Platinum",
+   "text": "The game counts 04:00-19:59 as day and 20:00-03:59 as night. Time-based events (Rotom, night evolutions, Gracidea) follow the DS clock, so the emulator's real-time setting matters.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum src/rtc.c"
+  },
+  {
+   "id": "note-gym-tms",
+   "kind": "tip",
+   "title": "Gym TMs",
+   "text": "Roark TM76, Gardenia TM86, Fantina TM65, Maylene TM60, Wake TM55, Byron TM91, Candice TM72, Volkner TM57.",
+   "quality": "reference-only",
+   "source": "pret/pokeplatinum gym scripts"
+  },
+  {
+   "id": "note-center-trainers",
+   "kind": "tip",
+   "title": "Daily rematch trainers",
+   "text": "Pokémon Centers across Sinnoh host trainers who can be rebattled each day, and their levels follow your progress. The Survival Area also hosts a different gym leader each day.",
+   "quality": "reference-only",
+   "source": "Serebii: Platinum changes"
+  }
+ ]
+}

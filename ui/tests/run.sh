@@ -22,6 +22,13 @@ make -s -C "$HERE" tests/complink-test >/dev/null && TMPDIR="$OUT" "$HERE/tests/
 # the DS Pokémon companion's ROM reader: containers and text on data made from the documented layouts (the player's
 # own ROMs: tests/nds-rom-test <roms dir> [cache dir], on a PC that has them)
 make -s -C "$HERE" tests/nds-rom-test >/dev/null && "$HERE/tests/nds-rom-test" 2> "$OUT/nds-rom-test.log" || { echo "FAIL the DS companion's ROM reader: $(grep FAIL "$OUT/nds-rom-test.log" | head -3)"; fail=1; }
+# the DS Pokémon companion's guide: the validator on the shipped data, then the loader on a made-up file and on the data
+GD="$HERE/../system/rootfs/usr/share/banana/companions/nds-pokemon"
+python3 -I "$HERE/../tools/companions/nds-validate.py" -q > "$OUT/nds-validate.log" 2>&1 || { echo "FAIL the DS Pokémon guide data: $(grep -m3 error "$OUT/nds-validate.log")"; fail=1; }
+make -s -C "$HERE" tests/guide-test >/dev/null && "$HERE/tests/guide-test" "$HERE/tests/nds-guide" "$GD" > "$OUT/guide-test.log" 2>&1 || { echo "FAIL the DS Pokémon guide's loader: $(grep -m3 FAIL "$OUT/guide-test.log")"; fail=1; }
+# the DS Pokémon companion's pages on made-up games: every page at both sizes and in a few themes as PNGs
+# ($OUT/nds-pages/, for a look), and their touches (tabs, rows, dragging, Normal/Shiny, Back to game)
+make -s -C "$HERE" tests/nds-pages-test >/dev/null && "$HERE/tests/nds-pages-test" "$OUT" "$HERE/assets/rnds" "$HERE/../system/rootfs/usr/share/banana/themes" 2> "$OUT/nds-pages-test.log" || { echo "FAIL the DS companion's pages: $(grep FAIL "$OUT/nds-pages-test.log" | head -3)"; fail=1; }
 # the left stick as a d-pad: its deadzone and hysteresis
 make -s -C "$HERE" tests/input-test >/dev/null && "$HERE/tests/input-test" 2> "$OUT/input-test.log" || { echo "FAIL the stick: $(grep FAIL "$OUT/input-test.log" | head -3)"; fail=1; }
 # every icon the theme's systems.cfg names is there (Poketool's tile pointed at the old Bank & Trade logo)
