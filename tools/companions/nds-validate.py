@@ -52,7 +52,10 @@ Milestone  (gyms, rivals, villain team, Elite Four, champion, post-game; in stor
   foe           { "name": "Roark", "class": "Leader", "ace_level": 14 } optional: how the loader finds the trainer's
                 data in the ROM (name + class text, and the team's top level when several share the name); a LIST of
                 such objects when the fight has several possible or several opponents (Gen V gym 1's three brothers,
-                the starter-dependent rival); the ids of all of them are collected;
+                the starter-dependent rival); the ids of all of them are collected. name/class are the ROM's own text: a
+                player-named rival is stored under a placeholder ("Cedric" in Diamond/Pearl/Platinum, "Rival" in
+                Black 2/White 2), Gen IV's Crasher Wake is "Wake", the Frontier Brains' ROM teams are level 5 (leave
+                ace_level out); a fight with no trainer in the ROM (a wild legend) has no foe;
   trainer_ids   [int] optional: the ROM's own trainer ids when known (wins over "foe")
   done_when     "badge:N" (N 1-8, 1-16 in HeartGold/SoulSilver: the Nth badge bit is set, Johto first) | "flag:N" (the story flag N, when the RAM workstream
                 has it) | "later" (done once any later milestone is) | "none"

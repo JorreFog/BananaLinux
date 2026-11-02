@@ -13,247 +13,656 @@
  "places": {
   "nuvema-town": {
    "name": "Nuvema Town",
-   "zone": null
+   "zone": 389,
+   "zones": [
+    390,
+    391,
+    392,
+    393,
+    394,
+    395,
+    396
+   ]
   },
   "route-1": {
    "name": "Route 1",
-   "zone": null
+   "zone": 317
   },
   "accumula-town": {
    "name": "Accumula Town",
-   "zone": null
+   "zone": 397,
+   "zones": [
+    398,
+    399,
+    400,
+    401,
+    402,
+    403,
+    404,
+    405
+   ]
   },
   "route-2": {
    "name": "Route 2",
-   "zone": null
+   "zone": 319
   },
   "striaton-city": {
    "name": "Striaton City",
-   "zone": null
+   "zone": 6,
+   "zones": [
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15
+   ]
   },
   "dreamyard": {
    "name": "Dreamyard",
-   "zone": null
+   "zone": 152,
+   "zones": [
+    153
+   ]
   },
   "route-3": {
    "name": "Route 3",
-   "zone": null
+   "zone": 321,
+   "zones": [
+    322,
+    323
+   ]
   },
   "wellspring-cave": {
    "name": "Wellspring Cave",
-   "zone": null
+   "zone": 324,
+   "zones": [
+    325
+   ]
   },
   "nacrene-city": {
    "name": "Nacrene City",
-   "zone": null
+   "zone": 16,
+   "zones": [
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26
+   ]
   },
   "pinwheel-forest": {
    "name": "Pinwheel Forest",
-   "zone": null
+   "zone": 154,
+   "zones": [
+    155
+   ]
   },
   "skyarrow-bridge": {
    "name": "Skyarrow Bridge",
-   "zone": null
+   "zone": 249
   },
   "castelia-city": {
    "name": "Castelia City",
-   "zone": null
+   "zone": 28,
+   "zones": [
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    53,
+    54,
+    55,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61
+   ]
   },
   "route-4": {
    "name": "Route 4",
-   "zone": null
+   "zone": 326,
+   "zones": [
+    327,
+    328
+   ]
   },
   "desert-resort": {
    "name": "Desert Resort",
-   "zone": null
+   "zone": 157,
+   "zones": [
+    158
+   ]
   },
   "relic-castle": {
    "name": "Relic Castle",
-   "zone": null
+   "zone": 160,
+   "zones": [
+    161,
+    162,
+    163,
+    164,
+    165,
+    166,
+    167,
+    168,
+    169,
+    170,
+    171,
+    172,
+    173,
+    174,
+    175,
+    176,
+    177,
+    178,
+    179,
+    180,
+    181,
+    182,
+    183,
+    184,
+    185,
+    186,
+    187,
+    188,
+    189,
+    190
+   ]
   },
   "nimbasa-city": {
    "name": "Nimbasa City",
-   "zone": null
+   "zone": 62,
+   "zones": [
+    63,
+    64,
+    65,
+    79,
+    80,
+    81,
+    82,
+    83,
+    84,
+    85,
+    86,
+    87,
+    88,
+    89,
+    93,
+    94,
+    95,
+    289
+   ]
   },
   "anville-town": {
    "name": "Anville Town",
-   "zone": null
+   "zone": 418,
+   "zones": [
+    419,
+    420,
+    421
+   ]
   },
   "route-5": {
    "name": "Route 5",
-   "zone": null
+   "zone": 304,
+   "zones": [
+    329,
+    330
+   ]
   },
   "driftveil-drawbridge": {
    "name": "Driftveil Drawbridge",
-   "zone": null
+   "zone": 253,
+   "zones": [
+    301
+   ]
   },
   "driftveil-city": {
    "name": "Driftveil City",
-   "zone": null
+   "zone": 96,
+   "zones": [
+    97,
+    98,
+    99,
+    100,
+    101,
+    102,
+    103,
+    104,
+    105,
+    106,
+    290
+   ]
   },
   "cold-storage": {
    "name": "Cold Storage",
-   "zone": null
+   "zone": 191,
+   "zones": [
+    192,
+    193,
+    296
+   ]
   },
   "route-6": {
    "name": "Route 6",
-   "zone": null
+   "zone": 305,
+   "zones": [
+    331,
+    332,
+    336
+   ]
   },
   "chargestone-cave": {
    "name": "Chargestone Cave",
-   "zone": null
+   "zone": 194,
+   "zones": [
+    195,
+    196,
+    197,
+    297
+   ]
   },
   "mistralton-city": {
    "name": "Mistralton City",
-   "zone": null
+   "zone": 107,
+   "zones": [
+    108,
+    109,
+    110,
+    111,
+    112,
+    291
+   ]
   },
   "route-7": {
    "name": "Route 7",
-   "zone": null
+   "zone": 306,
+   "zones": [
+    337,
+    343,
+    344
+   ]
   },
   "celestial-tower": {
    "name": "Celestial Tower",
-   "zone": null
+   "zone": 338,
+   "zones": [
+    339,
+    340,
+    341,
+    342
+   ]
   },
   "route-17": {
    "name": "Route 17",
-   "zone": null
+   "zone": 423
   },
   "route-18": {
    "name": "Route 18",
-   "zone": null
+   "zone": 387,
+   "zones": [
+    388
+   ]
   },
   "p2-laboratory": {
    "name": "P2 Laboratory",
-   "zone": null
+   "zone": 238,
+   "zones": [
+    239
+   ]
   },
   "mistralton-cave": {
    "name": "Mistralton Cave",
-   "zone": null
+   "zone": 333,
+   "zones": [
+    334
+   ]
   },
   "rumination-field": {
    "name": "Rumination Field",
-   "zone": null
+   "zone": 156
   },
   "twist-mountain": {
    "name": "Twist Mountain",
-   "zone": null
+   "zone": 198,
+   "zones": [
+    199,
+    200,
+    201,
+    202,
+    203,
+    204,
+    298
+   ]
   },
   "icirrus-city": {
    "name": "Icirrus City",
-   "zone": null
+   "zone": 113,
+   "zones": [
+    114,
+    115,
+    116,
+    117,
+    118,
+    119,
+    292
+   ]
   },
   "dragonspiral-tower": {
    "name": "Dragonspiral Tower",
-   "zone": null
+   "zone": 205,
+   "zones": [
+    206,
+    207,
+    208,
+    209,
+    210,
+    211,
+    212,
+    213,
+    299
+   ]
   },
   "route-8": {
    "name": "Route 8",
-   "zone": null
+   "zone": 307,
+   "zones": [
+    345
+   ]
   },
   "moor-of-icirrus": {
    "name": "Moor of Icirrus",
-   "zone": null
+   "zone": 346
   },
   "tubeline-bridge": {
    "name": "Tubeline Bridge",
-   "zone": null
+   "zone": 254,
+   "zones": [
+    302
+   ]
   },
   "route-9": {
    "name": "Route 9",
-   "zone": null
+   "zone": 308,
+   "zones": [
+    348
+   ]
   },
   "opelucid-city": {
    "name": "Opelucid City",
-   "zone": null
+   "zone": 120,
+   "zones": [
+    121,
+    122,
+    123,
+    124,
+    125,
+    126,
+    127,
+    128,
+    129,
+    130,
+    134,
+    135,
+    293
+   ]
   },
   "route-10": {
    "name": "Route 10",
-   "zone": null
+   "zone": 355,
+   "zones": [
+    356,
+    357,
+    358,
+    359,
+    360,
+    361,
+    362,
+    363,
+    364
+   ]
   },
   "victory-road": {
    "name": "Victory Road",
-   "zone": null
+   "zone": 214,
+   "zones": [
+    215,
+    216,
+    217,
+    218,
+    219,
+    220,
+    221,
+    222,
+    223,
+    224,
+    225,
+    226,
+    227,
+    228
+   ]
   },
   "pokemon-league": {
    "name": "Pokémon League",
-   "zone": null
+   "zone": 136,
+   "zones": [
+    137,
+    138,
+    139,
+    140,
+    141,
+    142,
+    143,
+    144,
+    145,
+    146
+   ]
   },
   "ns-castle": {
    "name": "N's Castle",
-   "zone": null
+   "zone": 264,
+   "zones": [
+    265,
+    266,
+    267,
+    268,
+    269,
+    270,
+    271,
+    272,
+    273,
+    274,
+    275,
+    276,
+    277,
+    278
+   ]
   },
   "route-11": {
    "name": "Route 11",
-   "zone": null
+   "zone": 309,
+   "zones": [
+    365,
+    367
+   ]
   },
   "village-bridge": {
    "name": "Village Bridge",
-   "zone": null
+   "zone": 255,
+   "zones": [
+    256,
+    257,
+    258,
+    259,
+    260,
+    261,
+    262
+   ]
   },
   "route-12": {
    "name": "Route 12",
-   "zone": null
+   "zone": 310,
+   "zones": [
+    368
+   ]
   },
   "lacunosa-town": {
    "name": "Lacunosa Town",
-   "zone": null
+   "zone": 315,
+   "zones": [
+    406,
+    407,
+    408,
+    409,
+    410,
+    411
+   ]
   },
   "route-13": {
    "name": "Route 13",
-   "zone": null
+   "zone": 311,
+   "zones": [
+    370,
+    371,
+    373
+   ]
   },
   "giant-chasm": {
    "name": "Giant Chasm",
-   "zone": null
+   "zone": 230,
+   "zones": [
+    231,
+    232,
+    233,
+    234,
+    300
+   ]
   },
   "undella-town": {
    "name": "Undella Town",
-   "zone": null
+   "zone": 316,
+   "zones": [
+    412,
+    413,
+    414,
+    415,
+    416,
+    417
+   ]
   },
   "undella-bay": {
    "name": "Undella Bay",
-   "zone": null
+   "zone": 240
   },
   "abyssal-ruins": {
    "name": "Abyssal Ruins",
-   "zone": null
+   "zone": 241,
+   "zones": [
+    242,
+    243,
+    244,
+    245,
+    246,
+    247,
+    248
+   ]
   },
   "route-14": {
    "name": "Route 14",
-   "zone": null
+   "zone": 312,
+   "zones": [
+    374
+   ]
   },
   "abundant-shrine": {
    "name": "Abundant Shrine",
-   "zone": null
+   "zone": 376,
+   "zones": [
+    377
+   ]
   },
   "route-15": {
    "name": "Route 15",
-   "zone": null
+   "zone": 313,
+   "zones": [
+    378,
+    382
+   ]
   },
   "marvelous-bridge": {
    "name": "Marvelous Bridge",
-   "zone": null
+   "zone": 263,
+   "zones": [
+    303
+   ]
   },
   "route-16": {
    "name": "Route 16",
-   "zone": null
+   "zone": 314,
+   "zones": [
+    383
+   ]
   },
   "lostlorn-forest": {
    "name": "Lostlorn Forest",
-   "zone": null
+   "zone": 385,
+   "zones": [
+    386
+   ]
   },
   "challengers-cave": {
    "name": "Challenger's Cave",
-   "zone": null
+   "zone": 352,
+   "zones": [
+    353,
+    354
+   ]
   },
   "liberty-garden": {
    "name": "Liberty Garden",
-   "zone": null
+   "zone": 235,
+   "zones": [
+    236,
+    237
+   ]
   },
   "white-forest": {
    "name": "White Forest",
-   "zone": null
+   "zone": 295,
+   "zones": [
+    424,
+    425,
+    426
+   ]
   }
  },
  "milestones": [

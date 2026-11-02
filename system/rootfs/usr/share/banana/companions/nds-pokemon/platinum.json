@@ -13,379 +13,921 @@
  "places": {
   "twinleaf-town": {
    "name": "Twinleaf Town",
-   "zone": null
+   "zone": 411,
+   "zones": [
+    412,
+    413,
+    414,
+    415,
+    416,
+    417
+   ]
   },
   "sandgem-town": {
    "name": "Sandgem Town",
-   "zone": null
+   "zone": 418,
+   "zones": [
+    419,
+    420,
+    421,
+    422,
+    423,
+    424,
+    425,
+    485
+   ]
   },
   "route-201": {
    "name": "Route 201",
-   "zone": null
+   "zone": 342
   },
   "lake-verity": {
    "name": "Lake Verity",
-   "zone": null
+   "zone": 311,
+   "zones": [
+    312
+   ]
   },
   "verity-lakefront": {
    "name": "Verity Lakefront",
-   "zone": null
+   "zone": 334,
+   "zones": [
+    335
+   ]
   },
   "route-202": {
    "name": "Route 202",
-   "zone": null
+   "zone": 343
   },
   "jubilife-city": {
    "name": "Jubilife City",
-   "zone": null
+   "zone": 3,
+   "zones": [
+    4,
+    5,
+    6,
+    7,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    30,
+    31,
+    32,
+    474,
+    517,
+    586
+   ]
   },
   "route-203": {
    "name": "Route 203",
-   "zone": null
+   "zone": 344
   },
   "oreburgh-gate": {
    "name": "Oreburgh Gate",
-   "zone": null
+   "zone": 258,
+   "zones": [
+    259
+   ]
   },
   "oreburgh-city": {
    "name": "Oreburgh City",
-   "zone": null
+   "zone": 45,
+   "zones": [
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
+    58,
+    60,
+    61,
+    62,
+    63,
+    64,
+    476
+   ]
   },
   "oreburgh-mine": {
    "name": "Oreburgh Mine",
-   "zone": null
+   "zone": 197,
+   "zones": [
+    198,
+    199
+   ]
   },
   "route-204": {
    "name": "Route 204",
-   "zone": null
+   "zone": 345,
+   "zones": [
+    346
+   ]
   },
   "ravaged-path": {
    "name": "Ravaged Path",
-   "zone": null
+   "zone": 254
   },
   "floaroma-town": {
    "name": "Floaroma Town",
-   "zone": null
+   "zone": 426,
+   "zones": [
+    427,
+    428,
+    429,
+    431,
+    432,
+    486
+   ]
   },
   "floaroma-meadow": {
    "name": "Floaroma Meadow",
-   "zone": null
+   "zone": 256,
+   "zones": [
+    257
+   ]
   },
   "valley-windworks": {
    "name": "Valley Windworks",
-   "zone": null
+   "zone": 200,
+   "zones": [
+    201
+   ]
   },
   "route-205": {
    "name": "Route 205",
-   "zone": null
+   "zone": 347,
+   "zones": [
+    348,
+    349
+   ]
   },
   "eterna-forest": {
    "name": "Eterna Forest",
-   "zone": null
+   "zone": 202,
+   "zones": [
+    203
+   ]
   },
   "eterna-city": {
    "name": "Eterna City",
-   "zone": null
+   "zone": 65,
+   "zones": [
+    66,
+    67,
+    68,
+    69,
+    70,
+    76,
+    77,
+    78,
+    79,
+    81,
+    82,
+    83,
+    84,
+    85,
+    477
+   ]
   },
   "tg-eterna-bldg": {
    "name": "T.G. Eterna Bldg",
-   "zone": null
+   "zone": 72,
+   "zones": [
+    73,
+    74,
+    75,
+    572
+   ]
   },
   "old-chateau": {
    "name": "Old Chateau",
-   "zone": null
+   "zone": 295,
+   "zones": [
+    296,
+    297,
+    298,
+    299,
+    300,
+    301,
+    302,
+    303
+   ]
   },
   "route-206": {
    "name": "Route 206",
-   "zone": null
+   "zone": 80,
+   "zones": [
+    350,
+    351
+   ]
   },
   "wayward-cave": {
    "name": "Wayward Cave",
-   "zone": null
+   "zone": 284,
+   "zones": [
+    285
+   ]
   },
   "route-207": {
    "name": "Route 207",
-   "zone": null
+   "zone": 353
   },
   "mt-coronet": {
    "name": "Mt. Coronet",
-   "zone": null
+   "zone": 207,
+   "zones": [
+    208,
+    209,
+    210,
+    211,
+    212,
+    213,
+    214,
+    215,
+    216,
+    217,
+    218,
+    219,
+    589
+   ]
   },
   "route-208": {
    "name": "Route 208",
-   "zone": null
+   "zone": 109,
+   "zones": [
+    354,
+    355
+   ]
   },
   "hearthome-city": {
    "name": "Hearthome City",
-   "zone": null
+   "zone": 86,
+   "zones": [
+    87,
+    88,
+    89,
+    90,
+    91,
+    92,
+    93,
+    94,
+    95,
+    96,
+    97,
+    98,
+    99,
+    100,
+    101,
+    102,
+    103,
+    104,
+    105,
+    106,
+    107,
+    108,
+    112,
+    113,
+    114,
+    115,
+    478
+   ]
   },
   "amity-square": {
    "name": "Amity Square",
-   "zone": null
+   "zone": 253
   },
   "route-209": {
    "name": "Route 209",
-   "zone": null
+   "zone": 110,
+   "zones": [
+    356,
+    357,
+    358,
+    359,
+    360,
+    361
+   ]
   },
   "solaceon-town": {
    "name": "Solaceon Town",
-   "zone": null
+   "zone": 433,
+   "zones": [
+    434,
+    435,
+    436,
+    438,
+    439,
+    440,
+    441,
+    487
+   ]
   },
   "solaceon-ruins": {
    "name": "Solaceon Ruins",
-   "zone": null
+   "zone": 225,
+   "zones": [
+    226,
+    227,
+    228,
+    229,
+    230,
+    231,
+    232,
+    233,
+    234,
+    235,
+    236,
+    237,
+    238,
+    239,
+    240,
+    241,
+    242,
+    515
+   ]
   },
   "route-210": {
    "name": "Route 210",
-   "zone": null
+   "zone": 362,
+   "zones": [
+    363,
+    364
+   ]
   },
   "route-215": {
    "name": "Route 215",
-   "zone": null
+   "zone": 149,
+   "zones": [
+    382
+   ]
   },
   "veilstone-city": {
    "name": "Veilstone City",
-   "zone": null
+   "zone": 132,
+   "zones": [
+    133,
+    134,
+    135,
+    143,
+    144,
+    145,
+    146,
+    147,
+    148,
+    480
+   ]
   },
   "galactic-hq": {
    "name": "Galactic HQ",
-   "zone": null
+   "zone": 305,
+   "zones": [
+    306,
+    307,
+    308,
+    309,
+    310,
+    494,
+    497,
+    569
+   ]
   },
   "route-214": {
    "name": "Route 214",
-   "zone": null
+   "zone": 380,
+   "zones": [
+    381
+   ]
   },
   "ruin-maniac-cave": {
    "name": "Ruin Maniac Cave",
-   "zone": null
+   "zone": 286,
+   "zones": [
+    512
+   ]
   },
   "maniac-tunnel": {
    "name": "Maniac Tunnel",
-   "zone": null
+   "zone": 513
   },
   "valor-lakefront": {
    "name": "Valor Lakefront",
-   "zone": null
+   "zone": 336
   },
   "route-213": {
    "name": "Route 213",
-   "zone": null
+   "zone": 373,
+   "zones": [
+    374
+   ]
   },
   "pastoria-city": {
    "name": "Pastoria City",
-   "zone": null
+   "zone": 120,
+   "zones": [
+    121,
+    122,
+    123,
+    124,
+    125,
+    126,
+    127,
+    128,
+    129,
+    130,
+    131,
+    223,
+    479
+   ]
   },
   "great-marsh": {
    "name": "Great Marsh",
-   "zone": null
+   "zone": 504,
+   "zones": [
+    505,
+    506,
+    507,
+    508,
+    509
+   ]
   },
   "route-212": {
    "name": "Route 212",
-   "zone": null
+   "zone": 111,
+   "zones": [
+    367,
+    371,
+    372
+   ]
   },
   "trophy-garden": {
    "name": "Trophy Garden",
-   "zone": null
+   "zone": 287
   },
   "celestic-town": {
    "name": "Celestic Town",
-   "zone": null
+   "zone": 442,
+   "zones": [
+    443,
+    444,
+    445,
+    446,
+    447,
+    448,
+    449,
+    488
+   ]
   },
   "fuego-ironworks": {
    "name": "Fuego Ironworks",
-   "zone": null
+   "zone": 204,
+   "zones": [
+    205
+   ]
   },
   "route-219": {
    "name": "Route 219",
-   "zone": null
+   "zone": 391
   },
   "route-220": {
    "name": "Route 220",
-   "zone": null
+   "zone": 467
   },
   "route-221": {
    "name": "Route 221",
-   "zone": null
+   "zone": 392,
+   "zones": [
+    394
+   ]
   },
   "route-218": {
    "name": "Route 218",
-   "zone": null
+   "zone": 388,
+   "zones": [
+    389,
+    390
+   ]
   },
   "canalave-city": {
    "name": "Canalave City",
-   "zone": null
+   "zone": 33,
+   "zones": [
+    34,
+    35,
+    36,
+    37,
+    41,
+    42,
+    43,
+    44,
+    475,
+    491
+   ]
   },
   "iron-island": {
    "name": "Iron Island",
-   "zone": null
+   "zone": 288,
+   "zones": [
+    289,
+    290,
+    291,
+    292,
+    293,
+    294,
+    514,
+    587
+   ]
   },
   "lake-valor": {
    "name": "Lake Valor",
-   "zone": null
+   "zone": 314,
+   "zones": [
+    315
+   ]
   },
   "valor-cavern": {
    "name": "Valor Cavern",
-   "zone": null
+   "zone": 316
   },
   "route-211": {
    "name": "Route 211",
-   "zone": null
+   "zone": 365,
+   "zones": [
+    366
+   ]
   },
   "route-216": {
    "name": "Route 216",
-   "zone": null
+   "zone": 383,
+   "zones": [
+    384
+   ]
   },
   "route-217": {
    "name": "Route 217",
-   "zone": null
+   "zone": 385,
+   "zones": [
+    386,
+    387
+   ]
   },
   "acuity-lakefront": {
    "name": "Acuity Lakefront",
-   "zone": null
+   "zone": 340
   },
   "snowpoint-city": {
    "name": "Snowpoint City",
-   "zone": null
+   "zone": 165,
+   "zones": [
+    166,
+    167,
+    168,
+    169,
+    170,
+    171,
+    482
+   ]
   },
   "lake-acuity": {
    "name": "Lake Acuity",
-   "zone": null
+   "zone": 317,
+   "zones": [
+    318
+   ]
   },
   "acuity-cavern": {
    "name": "Acuity Cavern",
-   "zone": null
+   "zone": 319
   },
   "spear-pillar": {
    "name": "Spear Pillar",
-   "zone": null
+   "zone": 220,
+   "zones": [
+    221,
+    584,
+    585
+   ]
   },
   "distortion-world": {
    "name": "Distortion World",
-   "zone": null
+   "zone": 570,
+   "zones": [
+    573,
+    574,
+    575,
+    576,
+    577,
+    578,
+    579,
+    580,
+    581,
+    582,
+    583
+   ]
   },
   "spring-path": {
    "name": "Spring Path",
-   "zone": null
+   "zone": 341
   },
   "sendoff-spring": {
    "name": "Sendoff Spring",
-   "zone": null
+   "zone": 267
   },
   "route-222": {
    "name": "Route 222",
-   "zone": null
+   "zone": 395,
+   "zones": [
+    396,
+    397,
+    398
+   ]
   },
   "sunyshore-city": {
    "name": "Sunyshore City",
-   "zone": null
+   "zone": 150,
+   "zones": [
+    151,
+    152,
+    153,
+    154,
+    155,
+    156,
+    158,
+    159,
+    160,
+    161,
+    162,
+    163,
+    481
+   ]
   },
   "route-223": {
    "name": "Route 223",
-   "zone": null
+   "zone": 468
   },
   "pokemon-league": {
    "name": "Pokémon League",
-   "zone": null
+   "zone": 172,
+   "zones": [
+    173,
+    174,
+    175,
+    176,
+    177,
+    178,
+    179,
+    180,
+    181,
+    182,
+    183,
+    184,
+    185,
+    186,
+    187,
+    483,
+    495,
+    496
+   ]
   },
   "victory-road": {
    "name": "Victory Road",
-   "zone": null
+   "zone": 244,
+   "zones": [
+    245,
+    246,
+    247,
+    248,
+    249
+   ]
   },
   "turnback-cave": {
    "name": "Turnback Cave",
-   "zone": null
+   "zone": 268,
+   "zones": [
+    269,
+    270,
+    271,
+    272,
+    273,
+    518,
+    519,
+    520,
+    521,
+    522,
+    523,
+    524,
+    525,
+    526,
+    527,
+    528,
+    529,
+    530,
+    531,
+    532,
+    533,
+    534,
+    535,
+    536,
+    537,
+    538,
+    539,
+    540,
+    541,
+    542,
+    543,
+    544,
+    545,
+    546,
+    547,
+    548,
+    549,
+    550,
+    551,
+    552,
+    553,
+    554,
+    555,
+    556,
+    557
+   ]
   },
   "fullmoon-island": {
    "name": "Fullmoon Island",
-   "zone": null
+   "zone": 260,
+   "zones": [
+    261
+   ]
   },
   "newmoon-island": {
    "name": "Newmoon Island",
-   "zone": null
+   "zone": 320,
+   "zones": [
+    321
+   ]
   },
   "snowpoint-temple": {
    "name": "Snowpoint Temple",
-   "zone": null
+   "zone": 278,
+   "zones": [
+    279,
+    280,
+    281,
+    282,
+    283
+   ]
   },
   "pal-park": {
    "name": "Pal Park",
-   "zone": null
+   "zone": 251,
+   "zones": [
+    393
+   ]
   },
   "route-224": {
    "name": "Route 224",
-   "zone": null
+   "zone": 399
   },
   "fight-area": {
    "name": "Fight Area",
-   "zone": null
+   "zone": 188,
+   "zones": [
+    189,
+    190,
+    191,
+    194,
+    195,
+    484
+   ]
   },
   "battle-frontier": {
    "name": "Battle Frontier",
-   "zone": null
+   "zone": 559,
+   "zones": [
+    560
+   ]
   },
   "battle-tower": {
    "name": "Battle Tower",
-   "zone": null
+   "zone": 326,
+   "zones": [
+    327,
+    328,
+    329,
+    330,
+    331,
+    493,
+    561
+   ]
   },
   "battle-factory": {
    "name": "Battle Factory",
-   "zone": null
+   "zone": 562
   },
   "battle-castle": {
    "name": "Battle Castle",
-   "zone": null
+   "zone": 564
   },
   "battle-arcade": {
    "name": "Battle Arcade",
-   "zone": null
+   "zone": 565
   },
   "battle-hall": {
    "name": "Battle Hall",
-   "zone": null
+   "zone": 563
   },
   "route-225": {
    "name": "Route 225",
-   "zone": null
+   "zone": 193,
+   "zones": [
+    400,
+    498
+   ]
   },
   "survival-area": {
    "name": "Survival Area",
-   "zone": null
+   "zone": 450,
+   "zones": [
+    451,
+    452,
+    453,
+    455,
+    456,
+    489
+   ]
   },
   "route-226": {
    "name": "Route 226",
-   "zone": null
+   "zone": 469,
+   "zones": [
+    499
+   ]
   },
   "route-227": {
    "name": "Route 227",
-   "zone": null
+   "zone": 403,
+   "zones": [
+    500
+   ]
   },
   "stark-mountain": {
    "name": "Stark Mountain",
-   "zone": null
+   "zone": 262,
+   "zones": [
+    263,
+    264,
+    265
+   ]
   },
   "route-228": {
    "name": "Route 228",
-   "zone": null
+   "zone": 406,
+   "zones": [
+    501,
+    502,
+    503,
+    591
+   ]
   },
   "route-229": {
    "name": "Route 229",
-   "zone": null
+   "zone": 407
   },
   "resort-area": {
    "name": "Resort Area",
-   "zone": null
+   "zone": 457,
+   "zones": [
+    458,
+    459,
+    460,
+    461,
+    462,
+    463,
+    465,
+    490
+   ]
   },
   "route-230": {
    "name": "Route 230",
-   "zone": null
+   "zone": 471
   },
   "flower-paradise": {
    "name": "Flower Paradise",
-   "zone": null
+   "zone": 274
   },
   "verity-cavern": {
    "name": "Verity Cavern",
-   "zone": null
+   "zone": 313
   }
  },
  "milestones": [
@@ -1254,8 +1796,7 @@
    "level_cap": 50,
    "foe": {
     "name": "Argenta",
-    "class": "Hall Matron",
-    "ace_level": 50
+    "class": "Hall Matron"
    },
    "done_when": "none",
    "opens": [
@@ -1273,8 +1814,7 @@
    "level_cap": 50,
    "foe": {
     "name": "Dahlia",
-    "class": "Arcade Star",
-    "ace_level": 50
+    "class": "Arcade Star"
    },
    "done_when": "none",
    "opens": [
@@ -1292,8 +1832,7 @@
    "level_cap": 50,
    "foe": {
     "name": "Darach",
-    "class": "Castle Valet",
-    "ace_level": 50
+    "class": "Castle Valet"
    },
    "done_when": "none",
    "opens": [
@@ -1311,8 +1850,7 @@
    "level_cap": 50,
    "foe": {
     "name": "Palmer",
-    "class": "Tower Tycoon",
-    "ace_level": 50
+    "class": "Tower Tycoon"
    },
    "done_when": "none",
    "opens": [],
@@ -1328,8 +1866,7 @@
    "level_cap": 50,
    "foe": {
     "name": "Thorton",
-    "class": "Factory Head",
-    "ace_level": 50
+    "class": "Factory Head"
    },
    "done_when": "none",
    "opens": [

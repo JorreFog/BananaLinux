@@ -217,10 +217,11 @@ still lack a game id), the loader `ui/src/nds/guide.{h,cpp}` into `GuideData` (`
 - **places**: every place the file mentions, by key. `name` is the place as the game shows it in English; `zone` is the game's own
   map/zone id, or `null` while it is not known (`zones`: more ids, e.g. interiors). The loader resolves a `null` by the place's
   name against the ROM's location names (`GuideResolver`, `guideResolver(rom)`); names it can't find end in
-  `GuideData::unresolved`. Ids are never invented.
+  `GuideData::unresolved`. Ids are never invented: the shipped files carry the ids read from the supported releases'
+  ROMs (all places resolved on all nine), and the place names are the ROM's spelling (HeartGold's "Lighthouse", Black 2's "PWT").
 - **milestones**, in story order: `kind` gym / rival / team / elite4 / champion / postgame / legendary / story; `level_cap` the
   highest level on the foe's side (a legendary's own level; a recommended level for story steps, which may leave it out); `theme` a type (gyms, Elite Four); `foe` how the trainer is found in the ROM (name + class
-  text, `ace_level` picks the right team when several share the name) or `trainer_ids` when known (`foe` may be a list: a fight with several possible opponents, e.g. the starter-dependent first gym; all their ids are kept); `done_when` is `badge:N`
+  text, `ace_level` picks the right team when several share the name) or `trainer_ids` when known (name/class are the ROM's text: a player-named rival is stored as a placeholder, "Cedric" in Gen IV and "Rival" in Black 2/White 2; `foe` may be a list: a fight with several possible opponents, e.g. the starter-dependent first gym; all their ids are kept); `done_when` is `badge:N`
   (the Nth badge bit, 1-8, 1-16 in HeartGold/SoulSilver with Johto first), `flag:N` (a story flag, when the RAM reader has it),
   `later` (done once any later milestone is) or `none`; `opens` lists the places that become reachable while it is the goal
   (the loader adds them up, so a milestone's `reachableZones` is everything opened up to and including it); `tips` is the preparation.

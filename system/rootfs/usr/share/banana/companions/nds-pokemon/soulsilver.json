@@ -16,415 +16,946 @@
  "places": {
   "new-bark-town": {
    "name": "New Bark Town",
-   "zone": null
+   "zone": 60,
+   "zones": [
+    61,
+    62,
+    63,
+    64,
+    65,
+    66,
+    384
+   ]
   },
   "route-29": {
    "name": "Route 29",
-   "zone": null
+   "zone": 33,
+   "zones": [
+    134
+   ]
   },
   "cherrygrove-city": {
    "name": "Cherrygrove City",
-   "zone": null
+   "zone": 67,
+   "zones": [
+    68,
+    69,
+    70,
+    71,
+    72,
+    144
+   ]
   },
   "route-30": {
    "name": "Route 30",
-   "zone": null
+   "zone": 34,
+   "zones": [
+    127,
+    143
+   ]
   },
   "route-31": {
    "name": "Route 31",
-   "zone": null
+   "zone": 35,
+   "zones": [
+    97
+   ]
   },
   "violet-city": {
    "name": "Violet City",
-   "zone": null
+   "zone": 73,
+   "zones": [
+    135,
+    157,
+    158,
+    159,
+    160,
+    162,
+    167
+   ]
   },
   "sprout-tower": {
    "name": "Sprout Tower",
-   "zone": null
+   "zone": 110,
+   "zones": [
+    155,
+    156
+   ]
   },
   "route-32": {
    "name": "Route 32",
-   "zone": null
+   "zone": 36,
+   "zones": [
+    98,
+    169,
+    170
+   ]
   },
   "ruins-of-alph": {
    "name": "Ruins of Alph",
-   "zone": null
+   "zone": 8,
+   "zones": [
+    113,
+    218,
+    312,
+    313,
+    314,
+    315,
+    316,
+    317,
+    318,
+    319,
+    320,
+    321,
+    323,
+    324,
+    325,
+    326,
+    327,
+    490,
+    491,
+    492
+   ]
   },
   "union-cave": {
    "name": "Union Cave",
-   "zone": null
+   "zone": 99,
+   "zones": [
+    153,
+    154
+   ]
   },
   "route-33": {
    "name": "Route 33",
-   "zone": null
+   "zone": 37
   },
   "azalea-town": {
    "name": "Azalea Town",
-   "zone": null
+   "zone": 74,
+   "zones": [
+    100,
+    136,
+    163,
+    164,
+    165,
+    166,
+    168,
+    180
+   ]
   },
   "slowpoke-well": {
    "name": "Slowpoke Well",
-   "zone": null
+   "zone": 114,
+   "zones": [
+    177,
+    181
+   ]
   },
   "ilex-forest": {
    "name": "Ilex Forest",
-   "zone": null
+   "zone": 117
   },
   "route-34": {
    "name": "Route 34",
-   "zone": null
+   "zone": 38,
+   "zones": [
+    171,
+    331
+   ]
   },
   "goldenrod-city": {
    "name": "Goldenrod City",
-   "zone": null
+   "zone": 76,
+   "zones": [
+    137,
+    182,
+    183,
+    184,
+    185,
+    191,
+    192,
+    193,
+    194,
+    195,
+    196,
+    197,
+    198,
+    200,
+    201,
+    202,
+    203,
+    204,
+    205,
+    206,
+    208,
+    209,
+    210,
+    211,
+    212,
+    213,
+    219,
+    441,
+    519,
+    536
+   ]
   },
   "goldenrod-tunnel": {
    "name": "Goldenrod Tunnel",
-   "zone": null
+   "zone": 118,
+   "zones": [
+    199
+   ]
   },
   "route-35": {
    "name": "Route 35",
-   "zone": null
+   "zone": 39,
+   "zones": [
+    101,
+    102
+   ]
   },
   "national-park": {
    "name": "National Park",
-   "zone": null
+   "zone": 96,
+   "zones": [
+    487,
+    488
+   ]
   },
   "pokeathlon-dome": {
    "name": "Pokéathlon Dome",
-   "zone": null
+   "zone": 150,
+   "zones": [
+    280,
+    281,
+    282,
+    283,
+    284,
+    285,
+    286,
+    287
+   ]
   },
   "route-36": {
    "name": "Route 36",
-   "zone": null
+   "zone": 40,
+   "zones": [
+    103,
+    104,
+    149
+   ]
   },
   "route-37": {
    "name": "Route 37",
-   "zone": null
+   "zone": 41
   },
   "ecruteak-city": {
    "name": "Ecruteak City",
-   "zone": null
+   "zone": 78,
+   "zones": [
+    79,
+    80,
+    81,
+    83,
+    84,
+    85,
+    86,
+    128,
+    129,
+    130,
+    131,
+    216
+   ]
   },
   "burned-tower": {
    "name": "Burned Tower",
-   "zone": null
+   "zone": 7,
+   "zones": [
+    217
+   ]
   },
   "bell-tower": {
    "name": "Bell Tower",
-   "zone": null
+   "zone": 111,
+   "zones": [
+    332,
+    333,
+    334,
+    335,
+    336,
+    337,
+    338,
+    339,
+    340,
+    341
+   ]
   },
   "route-38": {
    "name": "Route 38",
-   "zone": null
+   "zone": 42,
+   "zones": [
+    172
+   ]
   },
   "route-39": {
    "name": "Route 39",
-   "zone": null
+   "zone": 43,
+   "zones": [
+    214,
+    215
+   ]
   },
   "olivine-city": {
    "name": "Olivine City",
-   "zone": null
+   "zone": 77,
+   "zones": [
+    138,
+    226,
+    227,
+    228,
+    229,
+    230,
+    231,
+    240,
+    330,
+    367
+   ]
   },
   "olivine-lighthouse": {
-   "name": "Olivine Lighthouse",
-   "zone": null
+   "name": "Lighthouse",
+   "zone": 115,
+   "zones": [
+    220,
+    221,
+    222,
+    223,
+    224,
+    225,
+    446
+   ]
   },
   "route-40": {
    "name": "Route 40",
-   "zone": null
+   "zone": 94,
+   "zones": [
+    366
+   ]
   },
   "route-41": {
    "name": "Route 41",
-   "zone": null
+   "zone": 95
   },
   "whirl-islands": {
    "name": "Whirl Islands",
-   "zone": null
+   "zone": 121,
+   "zones": [
+    242,
+    243,
+    244,
+    486
+   ]
   },
   "cianwood-city": {
    "name": "Cianwood City",
-   "zone": null
+   "zone": 75,
+   "zones": [
+    139,
+    232,
+    233,
+    234,
+    235,
+    236,
+    241,
+    385
+   ]
   },
   "route-42": {
    "name": "Route 42",
-   "zone": null
+   "zone": 44,
+   "zones": [
+    132
+   ]
   },
   "mt-mortar": {
    "name": "Mt. Mortar",
-   "zone": null
+   "zone": 119,
+   "zones": [
+    250,
+    251,
+    252
+   ]
   },
   "mahogany-town": {
    "name": "Mahogany Town",
-   "zone": null
+   "zone": 87,
+   "zones": [
+    116,
+    133,
+    140,
+    246,
+    368,
+    396,
+    397
+   ]
   },
   "route-43": {
    "name": "Route 43",
-   "zone": null
+   "zone": 45,
+   "zones": [
+    142,
+    245
+   ]
   },
   "lake-of-rage": {
    "name": "Lake of Rage",
-   "zone": null
+   "zone": 88,
+   "zones": [
+    294,
+    295
+   ]
   },
   "route-44": {
    "name": "Route 44",
-   "zone": null
+   "zone": 46
   },
   "ice-path": {
    "name": "Ice Path",
-   "zone": null
+   "zone": 120,
+   "zones": [
+    237,
+    238,
+    239
+   ]
   },
   "blackthorn-city": {
    "name": "Blackthorn City",
-   "zone": null
+   "zone": 89,
+   "zones": [
+    141,
+    289,
+    290,
+    291,
+    292,
+    293,
+    369
+   ]
   },
   "dragons-den": {
    "name": "Dragon's Den",
-   "zone": null
+   "zone": 125,
+   "zones": [
+    253,
+    288
+   ]
   },
   "route-45": {
    "name": "Route 45",
-   "zone": null
+   "zone": 47
   },
   "route-46": {
    "name": "Route 46",
-   "zone": null
+   "zone": 48
   },
   "dark-cave": {
    "name": "Dark Cave",
-   "zone": null
+   "zone": 123,
+   "zones": [
+    176
+   ]
   },
   "route-27": {
    "name": "Route 27",
-   "zone": null
+   "zone": 31,
+   "zones": [
+    322
+   ]
   },
   "tohjo-falls": {
    "name": "Tohjo Falls",
-   "zone": null
+   "zone": 126,
+   "zones": [
+    298
+   ]
   },
   "route-26": {
    "name": "Route 26",
-   "zone": null
+   "zone": 30,
+   "zones": [
+    296,
+    297,
+    299
+   ]
   },
   "victory-road": {
    "name": "Victory Road",
-   "zone": null
+   "zone": 124,
+   "zones": [
+    178,
+    179
+   ]
   },
   "indigo-plateau": {
    "name": "Indigo Plateau",
-   "zone": null
+   "zone": 58
   },
   "ss-aqua": {
    "name": "S.S. Aqua",
-   "zone": null
+   "zone": 307,
+   "zones": [
+    308,
+    309,
+    310,
+    311,
+    328,
+    329
+   ]
   },
   "vermilion-city": {
    "name": "Vermilion City",
-   "zone": null
+   "zone": 54,
+   "zones": [
+    358,
+    359,
+    360,
+    361,
+    362,
+    363,
+    364,
+    365,
+    386,
+    387
+   ]
   },
   "route-6": {
    "name": "Route 6",
-   "zone": null
+   "zone": 14,
+   "zones": [
+    389,
+    470
+   ]
   },
   "saffron-city": {
    "name": "Saffron City",
-   "zone": null
+   "zone": 59,
+   "zones": [
+    398,
+    399,
+    400,
+    401,
+    402,
+    404,
+    405,
+    406,
+    407,
+    408,
+    409,
+    410,
+    445,
+    520
+   ]
   },
   "route-8": {
    "name": "Route 8",
-   "zone": null
+   "zone": 16,
+   "zones": [
+    390
+   ]
   },
   "lavender-town": {
    "name": "Lavender Town",
-   "zone": null
+   "zone": 53,
+   "zones": [
+    433,
+    434,
+    435,
+    436,
+    437,
+    438,
+    439,
+    494
+   ]
   },
   "route-10": {
    "name": "Route 10",
-   "zone": null
+   "zone": 18,
+   "zones": [
+    388,
+    466,
+    484
+   ]
   },
   "rock-tunnel": {
    "name": "Rock Tunnel",
-   "zone": null
+   "zone": 108,
+   "zones": [
+    452
+   ]
   },
   "route-9": {
    "name": "Route 9",
-   "zone": null
+   "zone": 17
   },
   "power-plant": {
    "name": "Power Plant",
-   "zone": null
+   "zone": 148,
+   "zones": [
+    467,
+    489
+   ]
   },
   "cerulean-city": {
    "name": "Cerulean City",
-   "zone": null
+   "zone": 52,
+   "zones": [
+    426,
+    427,
+    428,
+    429,
+    430,
+    431,
+    432,
+    495
+   ]
   },
   "route-24": {
    "name": "Route 24",
-   "zone": null
+   "zone": 28
   },
   "route-25": {
    "name": "Route 25",
-   "zone": null
+   "zone": 29,
+   "zones": [
+    440
+   ]
   },
   "route-5": {
    "name": "Route 5",
-   "zone": null
+   "zone": 13,
+   "zones": [
+    391,
+    468,
+    469,
+    517,
+    532
+   ]
   },
   "route-7": {
    "name": "Route 7",
-   "zone": null
+   "zone": 15,
+   "zones": [
+    493
+   ]
   },
   "celadon-city": {
    "name": "Celadon City",
-   "zone": null
+   "zone": 55,
+   "zones": [
+    370,
+    371,
+    372,
+    373,
+    374,
+    375,
+    376,
+    377,
+    378,
+    379,
+    380,
+    381,
+    382,
+    383,
+    393,
+    394,
+    395,
+    442,
+    443,
+    444,
+    537
+   ]
   },
   "route-16": {
    "name": "Route 16",
-   "zone": null
+   "zone": 24,
+   "zones": [
+    415,
+    421,
+    422
+   ]
   },
   "route-17": {
    "name": "Route 17",
-   "zone": null
+   "zone": 25
   },
   "route-18": {
    "name": "Route 18",
-   "zone": null
+   "zone": 26,
+   "zones": [
+    423
+   ]
   },
   "fuchsia-city": {
    "name": "Fuchsia City",
-   "zone": null
+   "zone": 56,
+   "zones": [
+    478,
+    480,
+    481,
+    482,
+    483,
+    485
+   ]
   },
   "pal-park": {
    "name": "Pal Park",
-   "zone": null
+   "zone": 109,
+   "zones": [
+    479
+   ]
   },
   "route-15": {
    "name": "Route 15",
-   "zone": null
+   "zone": 23,
+   "zones": [
+    392
+   ]
   },
   "route-14": {
    "name": "Route 14",
-   "zone": null
+   "zone": 22
   },
   "route-13": {
    "name": "Route 13",
-   "zone": null
+   "zone": 21
   },
   "route-12": {
    "name": "Route 12",
-   "zone": null
+   "zone": 20,
+   "zones": [
+    533
+   ]
   },
   "route-11": {
    "name": "Route 11",
-   "zone": null
+   "zone": 19,
+   "zones": [
+    425
+   ]
   },
   "digletts-cave": {
    "name": "Diglett's Cave",
-   "zone": null
+   "zone": 106
   },
   "route-2": {
    "name": "Route 2",
-   "zone": null
+   "zone": 10,
+   "zones": [
+    414,
+    417,
+    418,
+    419,
+    420
+   ]
   },
   "pewter-city": {
    "name": "Pewter City",
-   "zone": null
+   "zone": 51,
+   "zones": [
+    471,
+    472,
+    473,
+    474,
+    475,
+    476,
+    477
+   ]
   },
   "viridian-forest": {
    "name": "Viridian Forest",
-   "zone": null
+   "zone": 147
   },
   "route-3": {
    "name": "Route 3",
-   "zone": null
+   "zone": 11,
+   "zones": [
+    511,
+    512
+   ]
   },
   "mt-moon": {
    "name": "Mt. Moon",
-   "zone": null
+   "zone": 107,
+   "zones": [
+    448,
+    449,
+    513,
+    518
+   ]
   },
   "route-4": {
    "name": "Route 4",
-   "zone": null
+   "zone": 12
   },
   "viridian-city": {
    "name": "Viridian City",
-   "zone": null
+   "zone": 50,
+   "zones": [
+    496,
+    497,
+    498,
+    499,
+    500,
+    501,
+    502
+   ]
   },
   "route-1": {
    "name": "Route 1",
-   "zone": null
+   "zone": 9,
+   "zones": [
+    527
+   ]
   },
   "pallet-town": {
    "name": "Pallet Town",
-   "zone": null
+   "zone": 49,
+   "zones": [
+    503,
+    504,
+    505,
+    506,
+    507
+   ]
   },
   "route-21": {
    "name": "Route 21",
-   "zone": null
+   "zone": 93
   },
   "cinnabar-island": {
    "name": "Cinnabar Island",
-   "zone": null
+   "zone": 57,
+   "zones": [
+    508,
+    509
+   ]
   },
   "route-20": {
    "name": "Route 20",
-   "zone": null
+   "zone": 92,
+   "zones": [
+    416
+   ]
   },
   "seafoam-islands": {
    "name": "Seafoam Islands",
-   "zone": null
+   "zone": 146,
+   "zones": [
+    453,
+    454,
+    455,
+    456,
+    457,
+    458
+   ]
   },
   "route-19": {
    "name": "Route 19",
-   "zone": null
+   "zone": 91,
+   "zones": [
+    424
+   ]
   },
   "route-22": {
    "name": "Route 22",
-   "zone": null
+   "zone": 27
   },
   "route-28": {
    "name": "Route 28",
-   "zone": null
+   "zone": 32,
+   "zones": [
+    510
+   ]
   },
   "mt-silver": {
    "name": "Mt. Silver",
-   "zone": null
+   "zone": 90,
+   "zones": [
+    514,
+    515
+   ]
   },
   "cerulean-cave": {
    "name": "Cerulean Cave",
-   "zone": null
+   "zone": 145,
+   "zones": [
+    450,
+    451
+   ]
   },
   "cliff-edge-gate": {
    "name": "Cliff Edge Gate",
-   "zone": null
+   "zone": 279
   },
   "route-47": {
    "name": "Route 47",
-   "zone": null
+   "zone": 151
   },
   "embedded-tower": {
    "name": "Embedded Tower",
-   "zone": null
+   "zone": 524,
+   "zones": [
+    525,
+    526
+   ]
   },
   "route-48": {
    "name": "Route 48",
-   "zone": null
+   "zone": 152
   },
   "safari-zone-gate": {
    "name": "Safari Zone Gate",
-   "zone": null
+   "zone": 173,
+   "zones": [
+    174,
+    534,
+    535
+   ]
   },
   "safari-zone": {
    "name": "Safari Zone",
-   "zone": null
+   "zone": 343,
+   "zones": [
+    344,
+    345,
+    346,
+    347,
+    348,
+    349,
+    350,
+    351,
+    352,
+    353,
+    354,
+    355,
+    356,
+    357
+   ]
   },
   "frontier-access": {
    "name": "Frontier Access",
-   "zone": null
+   "zone": 411,
+   "zones": [
+    528,
+    529,
+    530,
+    531
+   ]
   },
   "battle-frontier": {
    "name": "Battle Frontier",
-   "zone": null
+   "zone": 272,
+   "zones": [
+    273
+   ]
   }
  },
  "milestones": [
@@ -1224,11 +1755,6 @@
    "kind": "story",
    "place": "power-plant",
    "level_cap": 30,
-   "foe": {
-    "name": "Rocket Grunt",
-    "class": "Team Rocket",
-    "ace_level": 30
-   },
    "done_when": "later",
    "opens": [
     "route-8",
@@ -1334,11 +1860,6 @@
    "kind": "story",
    "place": "route-11",
    "level_cap": 50,
-   "foe": {
-    "name": "Snorlax",
-    "class": "Wild",
-    "ace_level": 50
-   },
    "done_when": "later",
    "opens": [
     "route-15",
