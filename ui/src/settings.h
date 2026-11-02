@@ -736,7 +736,7 @@ namespace banana
 		void iconCentred(const std::string& name, float cx, float y, int scale);
 		void arrow(bool right, float x, float y, const rnds::Color& c);
 		void face(const std::string& key, const std::string& label, float x, float w);
-		float faceWidth(const std::string& key, const std::string& label);
+		float faceWidth(const std::string& key, const std::string& label, float most = FACE_MAX);
 		// a page's buttons along the bottom panel: B and the page's others from the left, its main one (right) at the
 		// right. Drawn and tapped from the same list, so a tap presses the chip it is on (or the nearest one).
 		struct Chip { Key key; std::string face, label; bool right = false; };

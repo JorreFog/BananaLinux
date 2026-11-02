@@ -1949,10 +1949,10 @@ namespace banana
 		be->draw(it->second.tex, std::round(X(x)), std::round(X(y)), (float)it->second.tex->w, (float)it->second.tex->h, c);
 	}
 
-	float Settings::faceWidth(const std::string& key, const std::string& label)
+	float Settings::faceWidth(const std::string& key, const std::string& label, float most)
 	{
-		// at most FACE_MAX wide (three fit in the bar): a longer label (a translation) scrolls in it (face)
-		return std::min(FACE_MAX, 15 + 12 + text(key, true, 16, 0, 0, Color(), false, 0, true) + 8 + text(label, true, 19, 0, 0, Color(), false, 0, true) + 18);
+		// at most FACE_MAX wide (three fit in the bar; most: a bar with fewer): a longer label (a translation) scrolls in it (face)
+		return std::min(most, 15 + 12 + text(key, true, 16, 0, 0, Color(), false, 0, true) + 8 + text(label, true, 19, 0, 0, Color(), false, 0, true) + 18);
 	}
 
 	// the menu's B / A chips (RndsUI's drawFace)
@@ -2471,7 +2471,9 @@ namespace banana
 		std::string act = cur.kind == Item::ACTION ? (armed == sel ? "Confirm" : cur.label) : cur.kind == Item::INFO ? "" : cur.key == "scrape" ? (scraping() ? "" : "Start") : cur.key == "hs_sync" ? (syncing() ? "Stop" : "Start") : cur.key == "hs_server" ? (hsStep ? "" : "Pair") : cur.kind == Item::PAGE ? "Open" : "Change";
 		if (!act.empty())
 		{
-			float aw = faceWidth("A", act);
+			// (only B beside it: as wide as the bar leaves, so an action's name - "Reset RetroArch" - fits whole instead
+			// of scrolling, cut at both ends; bug hunt 0.5.1.1 BUG-ui-2)
+			float aw = faceWidth("A", act, 622 - (18 + bw + 8));
 			face("A", act, 622 - aw, aw);
 		}
 		be->endScreen();
