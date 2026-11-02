@@ -536,6 +536,12 @@ namespace banana
 				bds, "mic.source", { "On", "Off" }, { "device", "none" });
 			add(BD, "nds", "Mic sensitivity", "How far above the room's noise a word or a blow must be to reach the game. Gate off lets the game hear everything the microphone picks up, its own sound from the speaker included.",
 				bds, "mic.threshold", { "Medium", "High", "Low", "Gate off" }, { "0.05", "0.02", "0.15", "0" });
+			// the DS Pokémon companion (ui/src/nds, docs/superpowers/specs/2026-11-02-nds-pokemon-companion-design.md): the
+			// owner's name for it, "(alpha)" until the owner drops it. BananaDS only: SuperDrastic has no memory export
+			add(BD, "nds", "NDS Pokémon companion (alpha)", "An early version. In Pokémon Diamond, Pearl, Platinum, HeartGold, SoulSilver, Black, White, Black 2 and White 2, a small icon in the touch screen's corner opens a companion: your battle, party, team score, what to catch here, a guide and the Pokédex. The game keeps running and keeps its buttons. BananaDS only.",
+				menu, "nds_companion", { "Off", "On" }, { "off", "on" });
+			add(BD, "nds", "Challenge mode", "For a Nuzlocke-style run: the companion keeps your first encounter on each route and the Pokémon you lost. Needs the NDS Pokémon companion on.",
+				menu, "nds_challenge", { "Off", "On" }, { "off", "on" });
 			add(BD, "nds", "Hotkeys", "The buttons that do something in a DS game in BananaDS: its menu, quitting, swapping the screens, save states, and L2, R2, L3 and R3 as Buttons has them.", "", "hotkeys_bds", {}, {}, Item::PAGE);
 			add(BD, "nds", "Reset BananaDS", "BananaDS's settings back to Banana's. Saves, save states and each game's clock stay. Press A twice.",
 				"", "nds-reset-bananads", { "" }, { "" }, Item::ACTION);
