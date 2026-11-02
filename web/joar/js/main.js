@@ -1,4 +1,4 @@
-// Joar Fogler — CV. A quiet fade as sections come into view, BananaOS's numbers live from the GitHub API
+// Joar Fogler — CV and portfolio. A quiet fade as sections come into view, BananaOS's numbers live from the GitHub API
 // (cached ten minutes; older numbers or a snapshot if the API can't be reached), and the 3D handheld,
 // loaded only when the project section comes near.
 
@@ -8,6 +8,8 @@ const REPO = "JorreFog/BananaLinux";
 const API = "https://api.github.com";
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const fmt = (n) => new Intl.NumberFormat("sv-SE").format(n);
+// a monospace font gives the thousands space a whole cell; a narrow gap reads as one number
+const big = (n) => fmt(n).replace(/\s/g, '<span class="th"></span>');
 
 // ------------------------------------------------------------------ sections fade in, the nav marks where you are
 const io = new IntersectionObserver((entries) => {
@@ -22,17 +24,6 @@ const navIO = new IntersectionObserver((entries) => {
   });
 }, { rootMargin: "-40% 0px -55% 0px" });
 $$("section[id]").forEach((s) => navIO.observe(s));
-
-// ------------------------------------------------------------------ the course's progress, today
-{
-  const el = $("#edu-progress");
-  const a = new Date(el.dataset.start), b = new Date(el.dataset.end);
-  const k = Math.min(1, Math.max(0, (Date.now() - a) / (b - a)));
-  const pio = new IntersectionObserver(([e]) => {
-    if (e.isIntersecting) { $("i", el).style.width = Math.max(2, k * 100) + "%"; pio.disconnect(); }
-  });
-  pio.observe(el);
-}
 
 // ------------------------------------------------------------------ GitHub, live
 const CACHE_MS = 10 * 60 * 1000;
@@ -61,12 +52,10 @@ async function github() {
     const total = rels.json.reduce((s, r) => s + r.assets
       .filter((a) => a.name.endsWith(".img.gz") || a.name.endsWith(".update.tar"))
       .reduce((t, a) => t + a.download_count, 0), 0);
-    const latest = rels.json.find((r) => !r.draft);
-    $("#s-downloads").textContent = fmt(total);
-    $("#s-stars").textContent = fmt(repo.json.stargazers_count);
+    $("#s-downloads").innerHTML = big(total);
+    $("#s-stars").innerHTML = big(repo.json.stargazers_count);
     const m = /page=(\d+)>; rel="last"/.exec(count.link || "");
-    if (m) $("#s-commits").textContent = fmt(Number(m[1]));
-    if (latest) $("#s-tag").textContent = latest.tag_name;
+    if (m) $("#s-commits").innerHTML = big(Number(m[1]));
     $("#gh-dot").classList.add("live");
     const t = new Date(Math.min(repo.t, rels.t, count.t));
     $("#s-src").textContent = `Live från GitHub · hämtat ${t.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}`;
@@ -86,5 +75,8 @@ const dio = new IntersectionObserver(async ([e]) => {
   catch (err) { console.warn("3D:", err); $("#device-load span").textContent = "3D-modellen kunde inte laddas"; }
 }, { rootMargin: "500px 0px" });
 dio.observe(device);
+
+const top = $(".top");
+addEventListener("scroll", () => top.classList.toggle("scrolled", scrollY > 8), { passive: true });
 
 $$("[data-print]").forEach((b) => b.addEventListener("click", () => window.print()));

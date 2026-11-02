@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Joar Fogler · CV</title>
+<title>Joar Fogler · CV och portfolio</title>
 <meta name="description" content="Joar Fogler: IT-säkerhetsanalytiker under utbildning på Medieinstitutet (2026–2028), magister i projektledning och kandidat i visuell kommunikation och design från Karlstads universitet. Skapare av BananaOS.">
-<meta name="theme-color" content="#0b0b0c">
-<meta property="og:title" content="Joar Fogler · CV">
-<meta property="og:description" content="IT-säkerhetsanalytiker under utbildning · projektledare · designer · skapare av BananaOS.">
+<meta name="theme-color" content="#0a0a0b">
+<meta property="og:title" content="Joar Fogler · CV och portfolio">
+<meta property="og:description" content="IT-säkerhetsanalytiker under utbildning, projektledare och designer. Skapare av BananaOS.">
 <meta property="og:image" content="assets/joar.webp">
 <link rel="icon" href="assets/icon.png">
-<link rel="preload" href="assets/fonts/JetBrainsMono-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/Inter-Regular.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/JetBrainsMono-Bold.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="css/style.css">
 <script>document.documentElement.classList.add("js");</script>
@@ -19,163 +19,158 @@
 
 <header class="top">
   <div class="wrap top-in">
-    <a class="logo" href="#" aria-label="Till toppen">JF</a>
+    <a class="brand" href="#">Joar Fogler</a>
     <nav class="nav" aria-label="Sektioner">
-      <a href="#profil">Profil</a>
-      <a href="#utbildning">Utbildning</a>
       <a href="#projekt">Projekt</a>
-      <a href="#erfarenhet">Erfarenhet</a>
+      <a href="#cv">CV</a>
       <a href="#kontakt">Kontakt</a>
     </nav>
-    <button class="print" type="button" data-print>PDF</button>
   </div>
 </header>
 
-<main class="wrap">
+<main>
 
   <!-- ============================================================ intro -->
-  <section class="hero" aria-labelledby="name">
+  <section class="wrap hero" aria-labelledby="name">
     <div class="hero-text">
-      <p class="eyebrow">Curriculum vitae</p>
+      <p class="kicker">IT-säkerhet · Projektledning · Design</p>
       <h1 id="name">Joar Fogler</h1>
-      <p class="title">IT-säkerhetsanalytiker under utbildning</p>
-      <p class="lede">Bakgrund inom visuell kommunikation och projektledning, nu på väg in i IT-säkerhet. Skapare av <a href="#projekt">BananaOS</a>, en Linuxdistribution för handhållna spelkonsoler.</p>
-      <ul class="quick">
-        <li><span>Studerar</span>Medieinstitutet, 2026–2028</li>
-        <li><span>Examen</span>Magister &amp; kandidat, Karlstads universitet</li>
-        <li><span>GitHub</span><a href="https://github.com/JorreFog">github.com/JorreFog</a></li>
-      </ul>
+      <p class="intro">Jag studerar till IT-säkerhetsanalytiker på Medieinstitutet och har en bakgrund inom projektledning och visuell kommunikation. På fritiden bygger jag <a href="#bananaos">BananaOS</a>, en Linuxdistribution för handhållna spelkonsoler.</p>
+      <div class="actions">
+        <a class="btn btn-primary" href="#kontakt">Kontakta mig</a>
+        <button class="btn" type="button" data-print>Ladda ner CV</button>
+      </div>
     </div>
     <figure class="portrait">
       <img src="assets/joar.webp" alt="Porträtt av Joar Fogler" width="900" height="900" fetchpriority="high">
     </figure>
   </section>
 
-  <!-- ============================================================ profil -->
-  <section class="row reveal" id="profil">
-    <h2>Profil</h2>
-    <div class="body prose">
-      <p>Jag studerar till IT-säkerhetsanalytiker på Medieinstitutet och har en magisterexamen i projektledning och en kandidatexamen i visuell kommunikation och design från Karlstads universitet. Den kombinationen gör att jag ser både systemet, människorna som använder det och planen som håller ihop arbetet.</p>
-      <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer posuere erat a ante venenatis dapibus. Donec ullamcorper nulla non metus auctor fringilla, vestibulum id ligula porta felis euismod semper.</p>
-    </div>
-  </section>
-
-  <!-- ============================================================ utbildning -->
-  <section class="row reveal" id="utbildning">
-    <h2>Utbildning</h2>
-    <ol class="body entries">
-      <li class="entry">
-        <p class="when">2026 – 2028</p>
-        <div>
-          <h3>IT-säkerhetsanalytiker <span class="badge">Pågår</span></h3>
-          <p class="where">Medieinstitutet</p>
-          <p class="desc">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nätverk, säkerhetsövervakning, incidenthantering och riskarbete.</p>
-          <div class="progress" id="edu-progress" data-start="2026-08-17" data-end="2028-06-09" aria-hidden="true"><i></i></div>
-        </div>
-      </li>
-      <li class="entry">
-        <p class="when">2018 – 2019</p>
-        <div>
-          <h3>Magisterexamen i projektledning</h3>
-          <p class="where">Karlstads universitet</p>
-          <p class="desc">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec ullamcorper nulla non metus auctor fringilla.</p>
-        </div>
-      </li>
-      <li class="entry">
-        <p class="when">2015 – 2018</p>
-        <div>
-          <h3>Kandidatexamen i visuell kommunikation och design</h3>
-          <p class="where">Karlstads universitet</p>
-          <p class="desc">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras mattis consectetur purus sit amet fermentum.</p>
-        </div>
-      </li>
-    </ol>
-  </section>
-
   <!-- ============================================================ projekt -->
-  <section class="row reveal" id="projekt">
-    <h2>Projekt</h2>
-    <div class="body">
-      <article class="feature">
-        <div class="feature-head">
-          <div>
-            <h3>BananaOS</h3>
-            <p class="where">Skapare och huvudutvecklare · 2026 –</p>
-          </div>
-          <a class="ext" href="https://bananaos-cfw.dev">bananaos-cfw.dev ↗</a>
-        </div>
-        <p class="desc">En komplett Linuxdistribution för Anbernic RG DS och RG DS Plus, byggd på Buildroot. Startar på 9,8 sekunder, har två DS-emulatorer, A/B-uppdateringar över Wi-Fi och ett gränssnitt på tre språk.</p>
+  <section class="wrap section" id="projekt" aria-labelledby="h-projekt">
+    <header class="section-head reveal">
+      <h2 id="h-projekt">Utvalda projekt</h2>
+      <p>Saker jag har byggt, från operativsystem till webbverktyg.</p>
+    </header>
 
-        <div class="device" id="device">
-          <canvas id="stage" aria-label="3D-modell av en RG DS Plus som kör BananaOS. Dra för att vrida."></canvas>
-          <div class="device-load" id="device-load"><span>Laddar modell</span><i id="device-bar"></i></div>
-          <p class="device-caption" id="device-caption">Hem: system, senaste spel och speltid</p>
-          <div class="chips" role="group" aria-label="Välj skärmar">
-            <button type="button" data-set="ui" aria-pressed="true">Gränssnitt</button>
-            <button type="button" data-set="themes" aria-pressed="false">Teman</button>
-          </div>
-        </div>
-
+    <article class="feature reveal" id="bananaos">
+      <div class="media media-3d" id="device">
+        <img class="poster" src="assets/work/bananaos.webp" alt="" width="1200" height="750">
+        <canvas id="stage" aria-label="3D-modell av en RG DS Plus som kör BananaOS. Dra för att vrida."></canvas>
+        <div class="device-load" id="device-load"><i id="device-bar"></i></div>
+        <p class="device-caption" id="device-caption" aria-live="polite"></p>
+        <span class="hint">Dra för att vrida</span>
+      </div>
+      <div class="feature-text">
+        <p class="meta">2026 – · Skapare och huvudutvecklare</p>
+        <h3>BananaOS</h3>
+        <p>En komplett Linuxdistribution för spelkonsolerna Anbernic RG DS och RG DS Plus. Systemet bygger på Buildroot, startar på under tio sekunder och uppdateras över Wi-Fi till en reservplats, så att föregående version alltid finns kvar.</p>
         <dl class="stats">
-          <div><dt>Nedladdningar</dt><dd id="s-downloads">4 041</dd></div>
+          <div><dt>Nedladdningar</dt><dd id="s-downloads">4<span class="th"></span>041</dd></div>
           <div><dt>Stjärnor</dt><dd id="s-stars">87</dd></div>
           <div><dt>Commits</dt><dd id="s-commits">873</dd></div>
-          <div><dt>Senaste release</dt><dd id="s-tag">v0.5.2.2</dd></div>
         </dl>
-        <p class="src"><span class="dot" id="gh-dot"></span><span id="s-src">Siffror från GitHub</span></p>
+        <p class="src"><span class="dot" id="gh-dot"></span><span id="s-src">Från GitHub</span></p>
+        <ul class="tags"><li>Linux</li><li>Buildroot</li><li>C++</li><li>Shell</li><li>CI/CD</li></ul>
+        <p class="links">
+          <a href="https://bananaos-cfw.dev">bananaos-cfw.dev ↗</a>
+          <a href="https://github.com/JorreFog/BananaLinux">GitHub ↗</a>
+        </p>
+      </div>
+    </article>
 
-        <ul class="links">
-          <li><a href="https://github.com/JorreFog/BananaLinux">Källkod ↗</a></li>
-          <li><a href="https://github.com/JorreFog/BananaLinux/releases">Releaser ↗</a></li>
-          <li><a href="https://discord.gg/3wf73cK2Qq">Discord ↗</a></li>
-        </ul>
-      </article>
-
-      <ul class="minor">
-        <li><a href="https://github.com/JorreFog/BananaNES"><b>BananaNES, BananaGBA, BananaSNES</b><span>Emulatorkärnor skrivna för BananaOS egen spelare.</span></a></li>
-        <li><a href="https://jorrefog.github.io/BananaLinux/theme-studio/"><b>Banana Theme Studio</b><span>Temaredigerare i webbläsaren, med BananaOS renderingsmotor i WebAssembly.</span></a></li>
-        <li><a href="https://jorrefog.github.io/BananaLinux/save-mover/"><b>Save Mover</b><span>Flyttar sparfiler från andra system till BananaOS, direkt i webbläsaren.</span></a></li>
-      </ul>
+    <div class="grid">
+      <a class="card reveal" href="https://jorrefog.github.io/BananaLinux/theme-studio/">
+        <div class="media"><img src="assets/work/themes.webp" alt="Sex teman för BananaOS gjorda i Banana Theme Studio" width="1200" height="750" loading="lazy"></div>
+        <p class="meta">Webbverktyg</p>
+        <h3>Banana Theme Studio</h3>
+        <p>Temaredigerare i webbläsaren som kör BananaOS egen renderingsmotor i WebAssembly.</p>
+      </a>
+      <a class="card reveal" href="https://github.com/JorreFog/BananaNES">
+        <div class="media"><img src="assets/work/cores.webp" alt="BananaOS inställningar per spel, där emulator väljs" width="1200" height="750" loading="lazy"></div>
+        <p class="meta">Emulatorer</p>
+        <h3>BananaNES, BananaGBA, BananaSNES</h3>
+        <p>Emulatorkärnor för BananaOS egen spelare, upp till dubbelt så snabba på samma hårdvara.</p>
+      </a>
+      <a class="card reveal" href="https://jorrefog.github.io/BananaLinux/save-mover/">
+        <div class="media"><img src="assets/work/savemover.webp" alt="BananaOS Save Mover i webbläsaren" width="1200" height="750" loading="lazy"></div>
+        <p class="meta">Webbverktyg</p>
+        <h3>Save Mover</h3>
+        <p>Flyttar sparfiler från andra system till BananaOS, helt lokalt i webbläsaren.</p>
+      </a>
     </div>
   </section>
 
-  <!-- ============================================================ erfarenhet -->
-  <section class="row reveal" id="erfarenhet">
-    <h2>Erfarenhet</h2>
-    <ol class="body entries">
-      <li class="entry">
-        <p class="when">20XX – nu</p>
-        <div><h3>Titel</h3><p class="where">Arbetsgivare</p><p class="desc">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla vitae elit libero, a pharetra augue.</p></div>
-      </li>
-      <li class="entry">
-        <p class="when">20XX – 20XX</p>
-        <div><h3>Titel</h3><p class="where">Arbetsgivare</p><p class="desc">Maecenas faucibus mollis interdum. Vivamus sagittis lacus vel augue laoreet rutrum faucibus dolor auctor.</p></div>
-      </li>
-      <li class="entry">
-        <p class="when">20XX – 20XX</p>
-        <div><h3>Titel</h3><p class="where">Arbetsgivare</p><p class="desc">Etiam porta sem malesuada magna mollis euismod. Fusce dapibus, tellus ac cursus commodo.</p></div>
-      </li>
-    </ol>
-  </section>
+  <!-- ============================================================ cv -->
+  <section class="wrap section" id="cv" aria-labelledby="h-cv">
+    <header class="section-head reveal">
+      <h2 id="h-cv">CV</h2>
+    </header>
 
-  <!-- ============================================================ kompetenser -->
-  <section class="row reveal" id="kompetenser">
-    <h2>Kompetenser</h2>
-    <div class="body skills">
-      <div><h3>Säkerhet</h3><p>Nätverkssäkerhet, incidenthantering, sårbarhetsanalys, logganalys, riskanalys</p></div>
-      <div><h3>System &amp; kod</h3><p>Linux, Buildroot, C/C++, Shell, Python, Git, GitHub Actions</p></div>
-      <div><h3>Ledning &amp; design</h3><p>Projektledning, visuell kommunikation, UX/UI, grafisk form</p></div>
+    <div class="cv">
+      <div class="cv-col reveal">
+        <h3 class="cv-h">Utbildning</h3>
+        <ol class="timeline">
+          <li>
+            <p class="when">2026 – 2028</p>
+            <h4>IT-säkerhetsanalytiker</h4>
+            <p class="where">Medieinstitutet · pågående</p>
+            <p class="desc">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nätverk, säkerhetsövervakning, incidenthantering och riskarbete.</p>
+          </li>
+          <li>
+            <p class="when">2018 – 2019</p>
+            <h4>Magisterexamen i projektledning</h4>
+            <p class="where">Karlstads universitet</p>
+          </li>
+          <li>
+            <p class="when">2015 – 2018</p>
+            <h4>Kandidatexamen i visuell kommunikation och design</h4>
+            <p class="where">Karlstads universitet</p>
+          </li>
+        </ol>
+      </div>
+
+      <div class="cv-col reveal">
+        <h3 class="cv-h">Erfarenhet</h3>
+        <ol class="timeline">
+          <li>
+            <p class="when">20XX – nu</p>
+            <h4>Titel</h4>
+            <p class="where">Arbetsgivare</p>
+            <p class="desc">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla vitae elit libero, a pharetra augue.</p>
+          </li>
+          <li>
+            <p class="when">20XX – 20XX</p>
+            <h4>Titel</h4>
+            <p class="where">Arbetsgivare</p>
+            <p class="desc">Maecenas faucibus mollis interdum. Vivamus sagittis lacus vel augue laoreet rutrum faucibus.</p>
+          </li>
+          <li>
+            <p class="when">20XX – 20XX</p>
+            <h4>Titel</h4>
+            <p class="where">Arbetsgivare</p>
+            <p class="desc">Etiam porta sem malesuada magna mollis euismod. Fusce dapibus, tellus ac cursus commodo.</p>
+          </li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="skills reveal">
+      <div><h3 class="cv-h">Säkerhet</h3><p>Nätverkssäkerhet, incidenthantering, sårbarhetsanalys, logganalys, riskanalys</p></div>
+      <div><h3 class="cv-h">Teknik</h3><p>Linux, Buildroot, C/C++, Shell, Python, Git, GitHub Actions</p></div>
+      <div><h3 class="cv-h">Ledning &amp; design</h3><p>Projektledning, visuell kommunikation, UX/UI, grafisk form</p></div>
     </div>
   </section>
 
   <!-- ============================================================ kontakt -->
-  <section class="row reveal" id="kontakt">
-    <h2>Kontakt</h2>
-    <div class="body">
-      <ul class="contact">
-        <li><span>E-post</span><a href="mailto:namn@exempel.se">namn@exempel.se</a></li>
-        <li><span>LinkedIn</span><a href="https://www.linkedin.com/">linkedin.com/in/…</a></li>
-        <li><span>GitHub</span><a href="https://github.com/JorreFog">github.com/JorreFog</a></li>
+  <section class="wrap section contact" id="kontakt" aria-labelledby="h-kontakt">
+    <div class="reveal">
+      <h2 id="h-kontakt">Kontakt</h2>
+      <p class="contact-lead">Hör gärna av dig om säkerhet, projekt eller design.</p>
+      <a class="mail" href="mailto:namn@exempel.se">namn@exempel.se</a>
+      <ul class="socials">
+        <li><a href="https://www.linkedin.com/">LinkedIn ↗</a></li>
+        <li><a href="https://github.com/JorreFog">GitHub ↗</a></li>
       </ul>
     </div>
   </section>
@@ -183,7 +178,7 @@
 </main>
 
 <footer class="wrap foot">
-  <p>© Joar Fogler</p>
+  <p>© 2026 Joar Fogler</p>
   <p>Inga cookies, ingen spårning</p>
 </footer>
 

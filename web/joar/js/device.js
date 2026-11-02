@@ -104,6 +104,7 @@ export async function mount(host) {
     load(SETS.ui[0][0]),
   ]);
   loadEl.classList.add("gone");
+  host.classList.add("ready");
   const model = gltf.scene;
   tilt.add(model);
   model.traverse((o) => {
@@ -124,7 +125,7 @@ export async function mount(host) {
 
   // ---------------------------------------------------------------- pose: the lid opens, then it idles; drag to turn
   const pose = { yaw: -2.4, pitch: 0.12, lid: 0, dist: 0.62 };
-  const target = { yaw: -0.32, pitch: 0.02, lid: 150, dist: 0.39 };
+  const target = { yaw: -0.32, pitch: 0.02, lid: 150, dist: 0.45 };
   const drag = { on: false, x: 0, y: 0, vy: 0, vp: 0, user: 0, last: 0 };
   let intro = 0;   // 0 → 1 over the opening
 
