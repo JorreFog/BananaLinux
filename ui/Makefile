@@ -101,7 +101,7 @@ install:
 	touch $(DESTDIR)/usr/share/banana/apps/files/Files.app
 
 clean:
-	rm -f banana-ui banana-leaseshim.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump
+	rm -f banana-ui banana-leaseshim.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump tests/nds-ram-test tests/nds-logic-test
 
 .PHONY: host install clean
 
@@ -124,3 +124,13 @@ tests/guide-test: tests/guide-test.cpp src/nds/guide.cpp src/nds/guide.h src/nds
 NDS_PAGES_SRC = tests/nds-pages-test.cpp src/nds/pages.cpp src/nds/model.cpp src/settings_pal.cpp src/soft.cpp src/lang.cpp src/theme.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp
 tests/nds-pages-test: $(NDS_PAGES_SRC) tests/nds-fixture.h src/nds/pages.h src/nds/model.h
 	$(CXX) $(CXXFLAGS) -Isrc $(shell $(PKG_CONFIG) --cflags freetype2) -o $@ $(NDS_PAGES_SRC) $(shell $(PKG_CONFIG) --libs freetype2 zlib) -lpthread
+
+# the DS Pokémon companion's RAM reader on synthetic RAM (tests/run.sh runs it; give it ~/nds-companion/ram-kit/out
+# to check the snapshots recorded on the handhelds too)
+NDS_RAM_SRC = src/nds/ram.cpp src/nds/model.cpp src/nds/nitro.cpp
+tests/nds-ram-test: tests/nds-ram-test.cpp $(NDS_RAM_SRC) $(wildcard src/nds/*.h)
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/nds-ram-test.cpp $(NDS_RAM_SRC)
+
+# the DS Pokémon companion's advice (damage, catching, team score, guide progress; tests/run.sh runs it)
+tests/nds-logic-test: tests/nds-logic-test.cpp src/nds/logic.cpp src/nds/session.cpp $(NDS_RAM_SRC) $(wildcard src/nds/*.h)
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/nds-logic-test.cpp src/nds/logic.cpp src/nds/session.cpp $(NDS_RAM_SRC)
