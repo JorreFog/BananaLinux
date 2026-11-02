@@ -311,6 +311,7 @@ namespace banana::nds
 		{
 			if (rom == sprRom) return;
 			sprRom = rom;
+			std::fill(std::begin(warmed), std::end(warmed), false);
 			sprSrc.clear();
 			sprites.clear();
 			sprBytes = 0;
@@ -375,13 +376,13 @@ namespace banana::nds
 			it->second.used = frame;
 			return &it->second;
 		}
-		// past SPR_KEEP: the least recently drawn Sprites go (not this frame's)
+		// past SPR_KEEP: the least recently drawn Sprites go (none drawn in the last 16 frames)
 		void trimSprites()
 		{
 			if (sprBytes <= SPR_KEEP) return;
 			std::vector<std::pair<uint64_t, uint32_t>> old;
 			for (auto& e : sprSrc)
-				if (e.second.spr && e.second.used < frame) old.push_back({ e.second.used, e.first });
+				if (e.second.spr && e.second.used + 16 < frame) old.push_back({ e.second.used, e.first });	// (a warming round draws all seven)
 			std::sort(old.begin(), old.end());
 			for (auto& o2 : old)
 			{
@@ -956,6 +957,47 @@ namespace banana::nds
 		bool inBattle() const { return dt.live && dt.live->valid && dt.live->battle.kind != BattleKind::NONE; }
 
 		void render(bool frame);
+
+		// warming: a page drawn through a backend that draws nothing (its textures still made by the real one), so its
+		// texts, boxes and sprites are ready before it is shown. A page's first drawing rasterizes all of its text and
+		// makes its sprites' pictures: on the Plus a first visit took 30-120 ms (Team 118 ms) and the first opening 218
+		// ms; later ones 7-23 ms. Warmed again after new data and new sprites (a page whose caches are ready costs
+		// ~1 ms). What the drawing leaves behind for touches (hits, the rail, which scroll areas show, the next
+		// animation step) is the shown page's again after
+		struct WarmBackend : rnds::Backend
+		{
+			rnds::Backend* real;
+			explicit WarmBackend(rnds::Backend* r) : real(r) {}
+			rnds::TexPtr upload(const rnds::Bitmap& b, bool smooth) override { return real->upload(b, smooth); }
+			void draw(const rnds::TexPtr&, float, float, float, float, const Color&) override {}
+			void fill(float, float, float, float, const Color&) override {}
+			void pushClip(float, float, float, float) override {}
+			void popClip() override {}
+			void beginScreen(int) override {}
+			void endScreen() override {}
+		};
+		bool warmed[(int)Page::COUNT] = {};
+		void warm(Page pg)
+		{
+			const Page was = o.cur;
+			rnds::Backend* realBe = be;
+			WarmBackend wb(be);
+			std::vector<Hit> keepHits;
+			keepHits.swap(hits);
+			const double keepAnim = animNext;
+			const Rail keepRail = rail;
+			std::map<int, bool> shown;
+			for (auto& a : scrolls) shown[a.first] = a.second.shown;
+			o.cur = pg;
+			be = &wb;
+			render(true);
+			be = realBe;
+			o.cur = was;
+			hits.swap(keepHits);
+			animNext = keepAnim;
+			rail = keepRail;
+			for (auto& a : scrolls) { auto it = shown.find(a.first); a.second.shown = it != shown.end() && it->second; }
+		}
 		void header(const std::string& title, const std::string& sub, bool rawTitle = false, bool rawSub = false, bool where = true);
 		void dock();
 		void notices(Page pg, float x, float& y, float w);
@@ -1011,7 +1053,9 @@ namespace banana::nds
 		}
 		if (own) be->endScreen();
 		// (texts and sprites not drawn for a while go, once there are many)
-		if (cache.size() > 900)
+		// (the Dex alone keeps ~1300 entries, measured lines of its whole list: at 900 every page drawn after it had all
+		// of its text rasterized again; textures of all seven pages are a few MB)
+		if (cache.size() > 4000)
 			for (auto it = cache.begin(); it != cache.end();)
 			{
 				if (it->second.used + 2 < frame) { wrapLines.erase(it->first); it = cache.erase(it); }
@@ -2499,8 +2543,21 @@ namespace banana::nds
 	void Pages::setData(const PageData& data)
 	{
 		d->dt = data;
+		std::fill(std::begin(d->warmed), std::end(d->warmed), false);	// (new texts to make ready)
 		if (data.rom && dexSel > data.rom->game.dexSize) dexSel = 1;
 		d->askAhead();
+	}
+	bool Pages::warmNext()
+	{
+		if (d->dt.reading || !d->dt.rom || !d->dt.live || !d->dt.live->valid) return false;
+		for (int i = 0; i < (int)Page::COUNT; i++)
+		{
+			if (d->warmed[i]) continue;
+			d->warmed[i] = true;
+			d->warm((Page)i);
+			return true;
+		}
+		return false;
 	}
 	void Pages::setDecoderThread(bool on)
 	{
@@ -2511,6 +2568,7 @@ namespace banana::nds
 		d->light = light;
 		d->p = pal(light);
 		d->cache.clear(); d->wrapLines.clear(); d->sprites.clear();
+		std::fill(std::begin(d->warmed), std::end(d->warmed), false);
 		d->loadFonts();
 	}
 	void Pages::setCorner(int x, int y, int w, int h)
@@ -2666,6 +2724,7 @@ namespace banana::nds
 	{
 		d->now = nowMs;
 		const bool decoded = d->takeDecoded();
+		if (decoded) std::fill(std::begin(d->warmed), std::end(d->warmed), false);	// (their pictures to make)
 		bool moved = false;
 		if (d->flingId >= 0)
 		{

@@ -52,6 +52,10 @@ namespace banana::nds
 		// some came), and the ones the pages will show decoded ahead at each setData. Off (the default, the tests):
 		// decoded when first drawn
 		void setDecoderThread(bool on);
+		// the next page not drawn since the last new data (or new sprites) drawn through a backend that draws nothing, so
+		// its showing finds its texts and pictures ready; false when all are (or there is no save to draw yet). For idle
+		// moments
+		bool warmNext();
 		void setLook(bool light);		// the theme changed (the host has applied it): everything drawn anew
 		// the icon's rectangle on the bottom panel (device px): Back to game covers it. Default: the bottom-right
 		// 48x48 CSS px

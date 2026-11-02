@@ -114,6 +114,8 @@ namespace banana::nds
 		virtual bool wantsClose() { return false; }		// a page's own close (a wider Back to game button)
 		virtual int badge() const { return 0; }
 		virtual bool iconOn() const { return true; }
+		// a piece of work for a quiet moment (no touch for a while, nothing to draw): true when one was done
+		virtual bool warm() { return false; }
 	};
 
 	// the theme's folder (the menu's --assets: the Pixelify fonts in <dir>/fonts) for the icon's badge and the test page

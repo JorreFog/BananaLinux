@@ -195,6 +195,12 @@ static void touchTests(const Ctx& c, int w, int h)
 		auto a = grab(be, 1);
 		be.beginScreen(1); pg.draw(); be.endScreen();
 		CHECK(grab(be, 1) == a, "draw() in the overlay's frame");
+		// the pages warmed (each drawn on the other screen): the shown one's picture and its touches are as they were
+		int warmed = 0;
+		while (pg.warmNext()) warmed++;
+		CHECK(warmed == (int)Page::COUNT, "%d pages warmed", warmed);
+		pg.render();
+		CHECK(grab(be, 1) == a, "the shown page unchanged by the warming");
 	}
 	// the tabs: each one's middle (the whole width: Back to game is up in the icon's corner, the top-right one)
 	float cell = (628.0f - 12 - 12) / 7;
@@ -231,6 +237,10 @@ static void touchTests(const Ctx& c, int w, int h)
 		pg.render();
 		CHECK(grab(be, 1) == before && pg.partySel() == 0, "nothing picked by a drag");
 	}
+	// (a tap between a warming and the next drawing goes to the shown page's rows: the warming drew another page)
+	pg.setLook(false);
+	pg.render();
+	CHECK(pg.warmNext(), "a page warmed");
 	CHECK(tap(100, 58 + 2 * 60 + 27) == Pages::Action::REDRAW && pg.partySel() == 2, "party row 3 (%d)", pg.partySel());
 	pg.render();
 	// a drag scrolls the member's page; a drag isn't a tap

@@ -448,6 +448,7 @@ namespace banana::nds
 		const int pidFd = (int)syscall(SYS_pidfd_open, pid, 0);
 		uint32_t seenSeq = ov.openSeq();
 		bool wasShown = false, want = true;
+		double lastTouch = -1e9;
 		double lastDraw = 0;
 		const char* CMD = "/run/banana/companion-cmd";	// (tests over SSH: "open", "close", "tap x y")
 		for (;;)
@@ -493,6 +494,7 @@ namespace banana::nds
 				want = true;
 				nTouch++;
 				newestTouch = t.ms;
+				lastTouch = now;
 			}
 			const double tTouch = monoMs();
 			if (page.wantsClose()) ov.requestOpen(false);
@@ -527,9 +529,18 @@ namespace banana::nds
 				pic = true;
 				lastDraw = now;
 			}
+			// a quiet moment (no touch for 300 ms; closed, or open with nothing to draw): the page's warming, one piece a
+			// turn (a page drawn off-screen: up to ~120 ms on the Plus, so never while a finger is about)
+			bool warmed = false;
+			if (!pic && (!shown || (!want && !ov.pending())) && now - lastTouch > 300)
+			{
+				warmed = page.warm();
+				if (warmed) timeout = 1;
+			}
 			// the next picture is due a gap after the last one began: no longer a whole gap after it was done (a picture
 			// taking 13 ms on the Plus came every 29 ms)
 			if (shown && (want || ov.pending())) timeout = std::max(1, (int)std::ceil(lastDraw + gap - monoMs()));
+			if (perf && warmed) fprintf(perf, "%.1f warm %.0f\n", now, (monoMs() - tTick) * 1000);
 			if (perf && (pic || nTouch || tIdle - now > 1 || tTick - tTouch > 1))
 			{
 				const uint32_t nowMsU = (uint32_t)(uint64_t)tTouch;

@@ -57,6 +57,8 @@ namespace banana::nds
 			if (a == Pages::Action::CLOSE) closing = true;
 		}
 		bool wantsClose() override { bool c = closing; closing = false; return c; }
+		// the pages not shown yet drawn off-screen, one a call, so the first opening and each first tab are ready
+		bool warm() override { return pages.warmNext(); }
 		int badge() const override { return pages.unseen(); }
 		// the notices seen since the last call, for the logic to keep as seen
 		std::vector<std::string> takeSeen() { return pages.takeSeen(); }
