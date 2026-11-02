@@ -31,6 +31,7 @@ make -s -C "$HERE" tests/guide-test >/dev/null && "$HERE/tests/guide-test" "$HER
 make -s -C "$HERE" tests/nds-pages-test >/dev/null && "$HERE/tests/nds-pages-test" "$OUT" "$HERE/assets/rnds" "$HERE/../system/rootfs/usr/share/banana/themes" 2> "$OUT/nds-pages-test.log" || { echo "FAIL the DS companion's pages: $(grep FAIL "$OUT/nds-pages-test.log" | head -3)"; fail=1; }
 # the DS Pokémon companion's RAM reader (synthetic RAM in every game's layout)
 make -s -C "$HERE" tests/nds-ram-test >/dev/null && "$HERE/tests/nds-ram-test" 2> "$OUT/nds-ram-test.log" || { echo "FAIL the DS companion's RAM reader: $(grep FAIL "$OUT/nds-ram-test.log" | head -3)"; fail=1; }
+make -s -C "$HERE" tests/nds-romfile-test >/dev/null && "$HERE/tests/nds-romfile-test" 2> "$OUT/nds-romfile-test.log" || { echo "FAIL the DS companion's zipped games: $(grep FAIL "$OUT/nds-romfile-test.log" | head -3)"; fail=1; }
 make -s -C "$HERE" tests/nds-logic-test >/dev/null && "$HERE/tests/nds-logic-test" 2> "$OUT/nds-logic-test.log" || { echo "FAIL the DS companion's advice: $(grep FAIL "$OUT/nds-logic-test.log" | head -3)"; fail=1; }
 # the left stick as a d-pad: its deadzone and hysteresis
 make -s -C "$HERE" tests/input-test >/dev/null && "$HERE/tests/input-test" 2> "$OUT/input-test.log" || { echo "FAIL the stick: $(grep FAIL "$OUT/input-test.log" | head -3)"; fail=1; }

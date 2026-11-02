@@ -26,6 +26,7 @@
 #include "nds/pages_page.h"
 #include "nds/session.h"
 #include "nds/rom.h"
+#include "nds/romfile.h"
 #include "nds/guide.h"
 #include "recorder.h"
 #include "settings_defaults.h"
@@ -2665,15 +2666,17 @@ int main(int argc, char** argv)
 		std::unique_ptr<nds::OverlayPage> ndsPage;
 		nds::PagesPage* ndsPages = nullptr;
 		std::future<nds::PageData> ndsLoad;	// (the ROM's data read in the background while the game starts)
+		auto ndsStop = std::make_shared<std::atomic<bool>>(false);	// (the game ended: ndsLoad stops waiting for an unpacked zip)
+		uint8_t ndsHdr[0x200] = {};
 		const std::string ndsMode = !panel && sd.id == "nds" && disp.isOpen() ? getConfValue(o.data + "/settings.conf", "nds_companion", "off") : "off";
 		if (ndsMode == "test" || ndsMode == "on")
 		{
 			nds::Game g;
 			if (ndsMode == "on")
 			{
-				uint8_t hdr[0x200] = {};
-				std::ifstream(rom, std::ios::binary).read((char*)hdr, sizeof hdr);
-				g = nds::detectGame(hdr, sizeof hdr);
+				// (a zipped game: the header of the DS game inside it - the library lists .zip for the DS)
+				if (!nds::romHeader(rom, ndsHdr)) memset(ndsHdr, 0, sizeof ndsHdr);
+				g = nds::detectGame(ndsHdr, sizeof ndsHdr);
 			}
 			nds::setAssets(o.assets);
 			if ((ndsMode == "test" || g.id != nds::GameId::NONE) && ndsOverlay.create(disp.width(), disp.height()))
@@ -2690,12 +2693,20 @@ int main(int argc, char** argv)
 					// the ROM's names, sprites, places and trainers (decoded once, then from the card's cache) and our
 					// guide for the game; the game's memory (the party, battles) comes through CompLink (nds/ram)
 					const std::string cache = o.data + "/cache/nds-companion";
-					ndsLoad = std::async(std::launch::async, [rom, cache]
+					ndsLoad = std::async(std::launch::async, [rom, cache, hdr = std::vector<uint8_t>(ndsHdr, ndsHdr + sizeof ndsHdr), stop = ndsStop]
 					{
 						nds::PageData d;
 						std::string err;
 						nds::RomLoadInfo info;
-						auto r = nds::loadRom(rom, cache, &err, &info);
+						// a zipped game: the ROM reader reads the copy run-bananads unpacks it to, once that is whole (up to 2
+						// minutes: a big zip on a slow card; given up when the game ends - run-bananads failed, a full card)
+						std::string path = rom;
+						if (nds::romZipped(rom) && (path = nds::waitUnzipped(rom, "/data/bananads/unzipped", hdr.data(), *stop, 120000)).empty())
+						{
+							logf("nds companion: the unpacked game didn't appear in /data/bananads/unzipped");
+							return d;
+						}
+						auto r = nds::loadRom(path, cache, &err, &info);
 						d.rom = r;
 						if (r)
 						{
@@ -2823,6 +2834,7 @@ int main(int argc, char** argv)
 		nas::pauseRunner(fetchPaths, false);
 		if (ndsPage)
 		{
+			*ndsStop = true;
 			if (ndsLoad.valid()) ndsLoad.wait();	// (a game quit while its data was still being read)
 			ndsPage.reset();
 			ndsOverlay.close();
