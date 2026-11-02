@@ -3,6 +3,7 @@
 #include "nds/nitro.h"
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <mutex>
@@ -386,19 +387,24 @@ namespace banana::nds
 			}
 
 			// ---- wild encounters ---------------------------------------------------------------------------------
+			// cond: what else must hold (the dual-slot game, 1 Ruby .. 5 LeafGreen); entries differing in it stay apart
+			// (model.h has no field for it yet: asked for on the board)
 			static void add(std::vector<Encounter>& v, uint16_t species, uint8_t lo, uint8_t hi, uint8_t pct, EncounterKind k,
-				TimeOfDay t = TimeOfDay::ANY, uint8_t season = 0xff, uint8_t form = 0)
+				TimeOfDay t = TimeOfDay::ANY, uint8_t season = 0xff, uint8_t form = 0, uint8_t cond = 0)
 			{
 				if (species == 0 || pct == 0) return;
 				if (lo > hi) std::swap(lo, hi);
 				// the same Pokémon in two slots of one kind and time: one entry with both odds
-				for (auto& e : v)
-					if (e.species == species && e.kind == k && e.time == t && e.season == season && e.form == form)
+				for (size_t i = 0; i < v.size(); i++)
+				{
+					Encounter& e = v[i];
+					if (e.species == species && e.kind == k && e.time == t && e.season == season && e.form == form && (k != EncounterKind::DUAL_SLOT || cond == 0))
 					{
 						e.minLevel = std::min(e.minLevel, lo); e.maxLevel = std::max(e.maxLevel, hi);
 						e.percent = (uint8_t)std::min(100, e.percent + pct);
 						return;
 					}
+				}
 				Encounter e;
 				e.species = species; e.minLevel = lo; e.maxLevel = hi; e.percent = pct; e.kind = k; e.time = t; e.season = season; e.form = form;
 				v.push_back(e);
@@ -431,7 +437,7 @@ namespace banana::nds
 					for (int k = 0; k < 4; k++) add(v, sp(0x7c + 4 * k), lv[radarSlot[k]], lv[radarSlot[k]], GRASS_PCT[radarSlot[k]], EncounterKind::RADAR);
 					// a Gen III game in the DS's second slot: slots 8 and 9 (Ruby, Sapphire, Emerald, FireRed, LeafGreen)
 					for (int g = 0; g < 5; g++)
-						for (int k = 0; k < 2; k++) add(v, sp(0xa4 + 8 * g + 4 * k), lv[8 + k], lv[8 + k], GRASS_PCT[8 + k], EncounterKind::DUAL_SLOT);
+						for (int k = 0; k < 2; k++) add(v, sp(0xa4 + 8 * g + 4 * k), lv[8 + k], lv[8 + k], GRASS_PCT[8 + k], EncounterKind::DUAL_SLOT, TimeOfDay::ANY, 0xff, 0, (uint8_t)(g + 1));
 				}
 				// water: rate, then 5 x {max, min, pad, s32 species}
 				static const uint8_t SURF[5] = { 60, 30, 5, 4, 1 }, OLD[5] = { 60, 30, 5, 4, 1 }, ROD[5] = { 40, 40, 15, 4, 1 };
@@ -673,6 +679,234 @@ namespace banana::nds
 			c.data = { f.p + at, len };
 			return true;
 		}
+
+
+		// ---- Gen V's animation: cells of the parts sheet (NCER), each cell's animation (NANR: which cell, and
+		// rotation/scale/translation, per 1/60 s), multi-cells placing those animations (NMCR), and the multi-cell
+		// animation picking a multi-cell over time (NMAR). Nitro G2D's formats (as NNS writes them).
+		struct G2dSeq { uint16_t loopStart = 0; uint32_t mode = 0; struct F { uint16_t ticks; uint16_t cell; uint16_t rot; int32_t sx, sy; int16_t tx, ty; }; std::vector<F> frames; uint32_t total = 0; };
+
+		// NANR/NMAR ("KNBA"): sequences {u16 frames, u16 loop start, u16 element type, u16, u32 play mode, u32 frame
+		// offset}; frames {u32 element offset, u16 ticks, u16}; elements: 0 index, 1 index+SRT, 2 index+translation
+		bool g2dAnims(Span f, std::vector<G2dSeq>& out)
+		{
+			if (f.n < 0x30 || memcmp(f.p + 16, "KNBA", 4) != 0) return false;
+			size_t c = 16 + 8, count = f.u16(16 + 8);
+			size_t seqs = c + f.u32(16 + 12), frames = c + f.u32(16 + 16), data = c + f.u32(16 + 20);
+			if (count > 256) return false;
+			for (size_t i = 0; i < count; i++)
+			{
+				size_t e = seqs + 16 * i;
+				if (e + 16 > f.n) return false;
+				G2dSeq q;
+				uint16_t n = f.u16(e), type = f.u16(e + 4);
+				q.loopStart = f.u16(e + 2); q.mode = f.u32(e + 8);
+				size_t fo = frames + f.u32(e + 12);
+				if (n > 1024) return false;
+				for (size_t k = 0; k < n; k++)
+				{
+					size_t fr = fo + 8 * k;
+					if (fr + 8 > f.n) return false;
+					size_t el = data + f.u32(fr);
+					G2dSeq::F x{ f.u16(fr + 4), f.u16(el), 0, 4096, 4096, 0, 0 };
+					if (type == 1) { if (el + 16 > f.n) return false; x.rot = f.u16(el + 2); x.sx = (int32_t)f.u32(el + 4); x.sy = (int32_t)f.u32(el + 8); x.tx = (int16_t)f.u16(el + 12); x.ty = (int16_t)f.u16(el + 14); }
+					else if (type == 2) { if (el + 8 > f.n) return false; x.tx = (int16_t)f.u16(el + 4); x.ty = (int16_t)f.u16(el + 6); }
+					else if (el + 2 > f.n) return false;
+					q.total += x.ticks;
+					q.frames.push_back(x);
+				}
+				out.push_back(std::move(q));
+			}
+			return true;
+		}
+
+		// the frame of a sequence at a tick: play modes 1 once (then its last frame), others loop from the loop start
+		const G2dSeq::F* g2dAt(const G2dSeq& q, uint32_t t)
+		{
+			if (q.frames.empty()) return nullptr;
+			if (q.total == 0) return &q.frames[0];
+			if (t >= q.total)
+			{
+				if (q.mode == 1) return &q.frames.back();
+				uint32_t head = 0;
+				for (size_t k = 0; k < q.loopStart && k < q.frames.size(); k++) head += q.frames[k].ticks;
+				t = q.total > head ? head + (t - head) % (q.total - head) : q.total - 1;
+			}
+			for (auto& fr : q.frames) { if (t < fr.ticks) return &fr; t -= fr.ticks; }
+			return &q.frames.back();
+		}
+
+		struct Oam { int x, y, w, h, tile; bool hflip, vflip; };
+		struct G2d
+		{
+			std::vector<std::vector<Oam>> cells;
+			std::vector<G2dSeq> cellAnims, multiAnims;
+			struct Node { uint16_t anim; int16_t x, y; };
+			std::vector<std::vector<Node>> multi;
+			Chars sheet;
+		};
+
+		bool g2dCells(Span f, std::vector<std::vector<Oam>>& cells)
+		{
+			// NCER ("KBEC"): u16 cells, u16 bounds flag (entries of 16 bytes instead of 8), u32 table offset;
+			// entries {u16 OAM count, u16 attributes, u32 OAM offset (after the table)}; OAMs are the DS's 3 words
+			if (f.n < 0x30 || memcmp(f.p + 16, "KBEC", 4) != 0) return false;
+			size_t count = f.u16(16 + 8), each = f.u16(16 + 10) == 1 ? 16 : 8, table = 16 + 8 + f.u32(16 + 12), oams = table + count * each;
+			static const int SIZE[3][4][2] = { { { 8, 8 }, { 16, 16 }, { 32, 32 }, { 64, 64 } }, { { 16, 8 }, { 32, 8 }, { 32, 16 }, { 64, 32 } },
+				{ { 8, 16 }, { 8, 32 }, { 16, 32 }, { 32, 64 } } };
+			for (size_t i = 0; i < count; i++)
+			{
+				size_t e = table + i * each;
+				if (e + 8 > f.n) return false;
+				size_t n = f.u16(e), at = oams + f.u32(e + 4);
+				std::vector<Oam> cell;
+				for (size_t k = 0; k < n; k++)
+				{
+					size_t o = at + 6 * k;
+					if (o + 6 > f.n) return false;
+					uint16_t a0 = f.u16(o), a1 = f.u16(o + 2), a2 = f.u16(o + 4);
+					int shape = a0 >> 14, size = a1 >> 14;
+					if (shape > 2) continue;
+					Oam m;
+					m.w = SIZE[shape][size][0]; m.h = SIZE[shape][size][1];
+					m.y = (int8_t)(a0 & 0xff); m.x = (a1 & 0x1ff) >= 256 ? (int)(a1 & 0x1ff) - 512 : (a1 & 0x1ff);
+					m.tile = a2 & 0x3ff;
+					bool affine = a0 & 0x100;
+					if (affine && (a0 & 0x200)) { m.x += m.w / 2; m.y += m.h / 2; }	// (double-size: placed by its doubled box)
+					m.hflip = !affine && (a1 & 0x1000); m.vflip = !affine && (a1 & 0x2000);
+					cell.push_back(m);
+				}
+				cells.push_back(std::move(cell));
+			}
+			return true;
+		}
+
+		// one 60 Hz tick of the multi-cell animation, drawn on a canvas (cw x cw, origin at its centre)
+		void g2dDraw(const G2d& g, uint32_t tick, std::vector<uint8_t>& canvas, int cw)
+		{
+			std::fill(canvas.begin(), canvas.end(), 0);
+			const G2dSeq::F* mf = g2dAt(g.multiAnims[0], tick);
+			if (!mf || mf->cell >= g.multi.size()) return;
+			// (time inside the current multi-cell: its cell animations start with it)
+			uint32_t t = tick % std::max<uint32_t>(1, g.multiAnims[0].total), start = 0;
+			for (auto& fr : g.multiAnims[0].frames) { if (&fr == mf) break; start += fr.ticks; }
+			t = t >= start ? t - start : 0;
+			const int sw = g.sheet.wTiles * 8, sh = g.sheet.hTiles * 8;
+			auto sheetPx = [&](int x, int y) -> uint8_t {
+				if (x < 0 || y < 0 || x >= sw || y >= sh) return 0;
+				size_t i = g.sheet.tiled ? ((size_t)(y / 8 * g.sheet.wTiles + x / 8) * 32 + (y % 8) * 4 + (x % 8) / 2) : (size_t)(y * sw + x) / 2;
+				return i < g.sheet.data.n ? (uint8_t)(g.sheet.data.p[i] >> (4 * (x & 1)) & 15) : 0;
+			};
+			const auto& nodes = g.multi[mf->cell];
+			// the first node and the first piece of a cell are on top (as the DS's OAM order draws them): draw backwards
+			for (size_t ni = nodes.size(); ni-- > 0;)
+			{
+				const auto& node = nodes[ni];
+				if (node.anim >= g.cellAnims.size()) continue;
+				const G2dSeq::F* e = g2dAt(g.cellAnims[node.anim], t);
+				if (!e || e->cell >= g.cells.size()) continue;
+				double ang = e->rot * (2 * 3.14159265358979 / 65536), ca = cos(ang), sa = sin(ang);
+				double kx = e->sx ? e->sx / 4096.0 : 1, ky = e->sy ? e->sy / 4096.0 : 1;
+				double ox = cw / 2 + node.x + e->tx, oy = cw / 2 + node.y + e->ty;
+				const auto& cell = g.cells[e->cell];
+				for (size_t k = cell.size(); k-- > 0;)
+				{
+					const Oam& m = cell[k];
+					// the piece's corners on the canvas, then every canvas pixel in that box mapped back into the piece
+					double minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
+					for (int c = 0; c < 4; c++)
+					{
+						double px = (m.x + (c & 1 ? m.w : 0)) * kx, py = (m.y + (c & 2 ? m.h : 0)) * ky;
+						double X = ox + px * ca - py * sa, Y = oy + px * sa + py * ca;
+						minX = std::min(minX, X); maxX = std::max(maxX, X); minY = std::min(minY, Y); maxY = std::max(maxY, Y);
+					}
+					int x0 = std::max(0, (int)floor(minX)), x1 = std::min(cw - 1, (int)ceil(maxX)), y0 = std::max(0, (int)floor(minY)), y1 = std::min(cw - 1, (int)ceil(maxY));
+					for (int y = y0; y <= y1; y++)
+						for (int x = x0; x <= x1; x++)
+						{
+							double dx = x + 0.5 - ox, dy = y + 0.5 - oy;
+							double cx = (dx * ca + dy * sa) / kx, cy = (-dx * sa + dy * ca) / ky;
+							int lx = (int)floor(cx) - m.x, ly = (int)floor(cy) - m.y;
+							if (lx < 0 || ly < 0 || lx >= m.w || ly >= m.h) continue;
+							if (m.hflip) lx = m.w - 1 - lx;
+							if (m.vflip) ly = m.h - 1 - ly;
+							uint8_t v = sheetPx(m.tile % 32 * 8 + lx, m.tile / 32 * 8 + ly);
+							if (v) canvas[(size_t)(y * cw + x)] = v;
+						}
+				}
+			}
+		}
+
+		bool box(const std::vector<uint8_t>& px, int w, int& x0, int& y0, int& x1, int& y1)
+		{
+			x0 = y0 = 1 << 30; x1 = y1 = -1;
+			for (size_t i = 0; i < px.size(); i++)
+				if (px[i]) { int x = (int)(i % w), y = (int)(i / w); x0 = std::min(x0, x); x1 = std::max(x1, x); y0 = std::min(y0, y); y1 = std::max(y1, y); }
+			return x1 >= 0;
+		}
+
+		// the animation as frames the size of the still, at 20 per second, consecutive repeats merged; aligned so
+		// its first frame sits where the still does. false: no animation (the still stays alone).
+		bool gen5Anim(const Narc& n, size_t at, bool female, Sprite& s)
+		{
+			Bytes sheetB, cellB, animB, multiB, multiAnimB;
+			auto get = [&](size_t k, Bytes& b) { Span f = n[at + k]; if (!f.n) return false; if (f.p[0] == 0x10 || f.p[0] == 0x11) return nitro::lzDecompress(f.p, f.n, b); b.assign(f.p, f.p + f.n); return true; };
+			if (!(female && get(3, sheetB)) && !get(2, sheetB)) return false;
+			if (!get(4, cellB) || !get(5, animB) || !get(6, multiB) || !get(7, multiAnimB)) return false;
+			G2d g;
+			if (!chars({ sheetB.data(), sheetB.size() }, g.sheet) || !g2dCells({ cellB.data(), cellB.size() }, g.cells)) return false;
+			if (!g2dAnims({ animB.data(), animB.size() }, g.cellAnims) || !g2dAnims({ multiAnimB.data(), multiAnimB.size() }, g.multiAnims) || g.multiAnims.empty())
+				return false;
+			// NMCR ("KBCM"): u16 multi-cells, u32 table offset, u32 node offset; entries {u16 nodes, u16, u32 offset};
+			// nodes {u16 cell animation, s16 x, s16 y, u16 flags}
+			Span m{ multiB.data(), multiB.size() };
+			if (m.n < 0x2c || memcmp(m.p + 16, "KBCM", 4) != 0) return false;
+			size_t mc = m.u16(16 + 8), table = 24 + m.u32(16 + 12), nodes = 24 + m.u32(16 + 16);
+			for (size_t i = 0; i < mc; i++)
+			{
+				size_t e = table + 8 * i;
+				if (e + 8 > m.n) return false;
+				std::vector<G2d::Node> v;
+				for (size_t k = 0; k < m.u16(e); k++)
+				{
+					size_t o = nodes + m.u32(e + 4) + 8 * k;
+					if (o + 8 > m.n) return false;
+					v.push_back({ m.u16(o), (int16_t)m.u16(o + 2), (int16_t)m.u16(o + 4) });
+				}
+				g.multi.push_back(std::move(v));
+			}
+			const uint32_t total = std::min<uint32_t>(g.multiAnims[0].total, 600), step = 3;	// (10 s at most)
+			if (total < step) return false;
+			const int cw = 256;
+			std::vector<uint8_t> canvas((size_t)cw * cw);
+			g2dDraw(g, 0, canvas, cw);
+			int cx0, cy0, cx1, cy1, sx0, sy0, sx1, sy1;
+			if (!box(canvas, cw, cx0, cy0, cx1, cy1) || !box(s.frames[0], s.w, sx0, sy0, sx1, sy1)) return false;
+			// (centre on centre: the first frame and the still are the same pose)
+			int dx = (sx0 + sx1 - cx0 - cx1) / 2, dy = (sy0 + sy1 - cy0 - cy1) / 2;
+			std::vector<std::vector<uint8_t>> frames;
+			std::vector<Sprite::Step> steps;
+			for (uint32_t t = 0; t < total; t += step)
+			{
+				if (t) g2dDraw(g, t, canvas, cw);
+				std::vector<uint8_t> f((size_t)(s.w * s.h), 0);
+				for (int y = 0; y < s.h; y++)
+					for (int x = 0; x < s.w; x++)
+					{
+						int X = x - dx, Y = y - dy;
+						if (X >= 0 && Y >= 0 && X < cw && Y < cw) f[(size_t)(y * s.w + x)] = canvas[(size_t)(Y * cw + X)];
+					}
+				uint16_t ms = (uint16_t)(std::min(step, total - t) * 1000 / 60);
+				if (!frames.empty() && frames.back() == f) { steps.back().ms = (uint16_t)(steps.back().ms + ms); continue; }
+				frames.push_back(std::move(f));
+				steps.push_back({ (uint16_t)frames.size(), ms });	// (frames[0] is the still: animation frames follow it)
+			}
+			if (frames.size() < 2) return false;
+			for (auto& f : frames) s.frames.push_back(std::move(f));
+			s.anim = std::move(steps);
+			return true;
+		}
+
 	}
 
 	std::shared_ptr<const Sprite> RomImpl::sprite(uint16_t species, bool female, uint8_t form) const
@@ -747,8 +981,9 @@ namespace banana::nds
 						for (int y = 0; y < 8; y++)
 							for (int x = 0; x < 8; x++)
 								s->frames[0][(size_t)(((b[1] + ty) * 8 + y) * 96 + (b[0] + tx) * 8 + x)] = (uint8_t)(c.data.p[t * 32 + y * 4 + x / 2] >> (4 * (x & 1)) & 15);
+			gen5Anim(n, at, female, *s);	// (none or broken: the still alone)
 		}
-		if (sprites.size() >= 8) sprites.clear();
+		if (sprites.size() >= 4) sprites.clear();	// (an animated Gen V sprite is up to a few MB)
 		sprites[key] = s;
 		return s;
 	}

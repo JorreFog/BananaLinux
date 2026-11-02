@@ -2,6 +2,7 @@
 // other workstreams' fixtures. Never commit what it prints: it is the game's own data.
 //   make tests/nds-rom-dump && tests/nds-rom-dump <rom.nds> species|moves|items|zones|zone <id>|trainers|sprite <n> <out.png>
 #include "nds/rom.h"
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -77,17 +78,21 @@ int main(int argc, char** argv)
 		auto s = r->sprite((uint16_t)atoi(argv[3]), argc > 6 && !strcmp(argv[6], "female"));
 		if (!s || s->frames.empty()) { fprintf(stderr, "no sprite\n"); return 1; }
 		bool shiny = argc > 5 && !strcmp(argv[5], "shiny");
-		// every frame side by side
-		int W = s->w * (int)s->frames.size(), H = s->h;
+		// the frames side by side (8 at most, spread over the animation), on grey
+		std::vector<size_t> pick;
+		size_t nf = s->frames.size();
+		for (size_t k = 0; k < std::min<size_t>(8, nf); k++) pick.push_back(nf <= 8 ? k : k * (nf - 1) / 7);
+		int W = s->w * (int)pick.size(), H = s->h;
 		std::vector<uint8_t> rgba((size_t)W * H * 4, 0);
-		for (size_t f = 0; f < s->frames.size(); f++)
+		for (size_t i = 0; i < rgba.size(); i += 4) { rgba[i] = rgba[i + 1] = rgba[i + 2] = 0x99; rgba[i + 3] = 255; }
+		for (size_t f = 0; f < pick.size(); f++)
 			for (int y = 0; y < s->h; y++)
 				for (int x = 0; x < s->w; x++)
 				{
-					uint8_t v = s->frames[f][(size_t)(y * s->w + x)];
+					uint8_t v = s->frames[pick[f]][(size_t)(y * s->w + x)];
 					uint32_t c = (shiny ? s->shiny : s->normal)[v];
 					uint8_t* p = &rgba[((size_t)y * W + f * s->w + x) * 4];
-					p[0] = c >> 16; p[1] = c >> 8; p[2] = (uint8_t)c; p[3] = v ? 255 : 0;
+					if (v) { p[0] = c >> 16; p[1] = c >> 8; p[2] = (uint8_t)c; }
 				}
 		stbi_write_png(argv[4], W, H, 4, rgba.data(), W * 4);
 		printf("%dx%d, %zu frames, %zu steps\n", s->w, s->h, s->frames.size(), s->anim.size());

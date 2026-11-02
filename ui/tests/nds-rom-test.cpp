@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <cstring>
 #include <dirent.h>
+#include <unistd.h>
 #include <string>
 #include <vector>
 
@@ -529,7 +530,10 @@ static void checkGame(const RomData& r)
 	if (dx < r.species.size()) EQ((int)r.species[dx].base[1], 180);
 	EQ((int)speciesIndex(r, 25, 0), 25);
 	// sprites: Gen IV two 80x80 frames, Gen V 96x96 (animated); normal and shiny palettes differ
+	auto t0 = std::chrono::steady_clock::now();
 	auto sp = r.sprite(25);
+	double spMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+	fprintf(stderr, "  sprite 25: %.1f ms, %zu frames\n", spMs, sp ? sp->frames.size() : 0);
 	CHECK(sp != nullptr);
 	if (sp)
 	{
@@ -543,6 +547,31 @@ static void checkGame(const RomData& r)
 	}
 }
 
+// everything RomData holds, flattened (to compare a decode with its cache)
+static std::string digestOf(const RomData& r)
+{
+	std::string d;
+	auto n = [&](long v) { d += std::to_string(v); d += ','; };
+	for (auto& s : r.species)
+	{
+		d += s.name + s.category + s.dexText; n(s.types[0]); n(s.types[1]);
+		for (int k = 0; k < 6; k++) { n(s.base[k]); n(s.evYield[k]); }
+		for (int k = 0; k < 3; k++) n(s.abilities[k]);
+		n(s.catchRate); n(s.growth); n(s.genderRatio); n(s.baseFriendship); n(s.baseExp); n(s.height); n(s.weight);
+		for (auto& e : s.evolutions) { n(e.method); n(e.param); n(e.into); d += e.how; }
+		for (auto& m : s.learnset) { n(m.level); n(m.move); }
+		for (auto t : s.tms) n(t);
+	}
+	for (auto& m : r.moves) { d += m.name + m.description; n(m.type); n((int)m.cat); n(m.power); n(m.accuracy); n(m.pp); n(m.priority); n(m.effect); n(m.effectChance); }
+	for (auto* v : { &r.abilities, &r.natures, &r.abilityText, &r.locationNames }) for (auto& s : *v) d += s + "|";
+	for (auto& i : r.items) { d += i.name + i.description; n(i.pocket); n(i.price); }
+	for (auto& z : r.zones) { n(z.first); d += z.second.name; for (auto& e : z.second.encounters) { n(e.species); n(e.minLevel); n(e.maxLevel); n(e.percent); n((int)e.kind); n((int)e.time); n(e.season); n(e.form); } }
+	for (auto& t : r.trainers) { n(t.first); d += t.second.cls + t.second.name; n(t.second.doubleBattle); for (auto& m : t.second.team) { n(m.species); n(m.item); n(m.level); for (auto mv : m.moves) n(mv); } }
+	for (auto m : r.tmMoves) n(m);
+	for (size_t i = 0; i < r.species.size(); i++) n(speciesIndex(r, (uint16_t)i, 1));
+	return d;
+}
+
 static void testRoms(const std::string& dir, const std::string& cache)
 {
 	DIR* d = opendir(dir.c_str());
@@ -553,6 +582,8 @@ static void testRoms(const std::string& dir, const std::string& cache)
 	std::sort(files.begin(), files.end());
 	for (auto& f : files)
 	{
+		// with a cache: drop this ROM's, decode (and write it), then read it back; both must say the same
+		std::string digest[2];
 		for (int pass = 0; pass < (cache.empty() ? 1 : 2); pass++)
 		{
 			std::string err;
@@ -560,10 +591,13 @@ static void testRoms(const std::string& dir, const std::string& cache)
 			auto r = loadRom(f, cache, &err, &info);
 			CHECK(r != nullptr);
 			if (!r) { fprintf(stderr, "FAIL %s: %s\n", f.c_str(), err.c_str()); break; }
-			fprintf(stderr, "%s: %s in %.0f ms%s (cache %zu KiB)\n", r->game.code.c_str(), info.fromCache ? "cache read" : "decoded", info.ms, "", info.cacheBytes / 1024);
+			if (pass == 0 && info.fromCache) { unlink(info.cacheFile.c_str()); r = loadRom(f, cache, &err, &info); if (!r) break; }
+			fprintf(stderr, "%s: %s in %.0f ms (cache %zu KiB)\n", r->game.code.c_str(), info.fromCache ? "cache read" : "decoded", info.ms, info.cacheBytes / 1024);
 			if (!cache.empty()) EQ(info.fromCache, pass == 1);
 			checkGame(*r);
+			digest[pass] = digestOf(*r);
 		}
+		if (!cache.empty()) CHECK(!digest[0].empty() && digest[0] == digest[1]);
 	}
 }
 
