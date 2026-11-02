@@ -415,7 +415,7 @@ namespace ndsfx
 		Battle& bt = lv->battle;
 		bt.kind = BattleKind::TRAINER; bt.trainerId = 247; bt.turn = 3;
 		bt.ours[0].mon = lv->party[0]; bt.ours[0].types[0] = FIRE; bt.ours[0].types[1] = FIGHTING; bt.ours[0].present = true;
-		bt.ours[0].stages[0] = 1;
+		bt.ours[0].stages[1] = 1;	// (Atk +1: stages[0] is HP, never used)
 		Mon ro = mon(407, 22, nullptr, { MAGICAL_LEAF, STUN_SPORE, GRASS_KNOT, LEECH_SEED }, { 20, 30, 20, 10 }, 34, 61, { 38, 35, 52, 64, 56 }, 15, NATURAL_CURE, true);
 		bt.foes[0].mon = ro; bt.foes[0].types[0] = GRASS; bt.foes[0].types[1] = POISON; bt.foes[0].present = true;
 		Mon ch = mon(420, 19, nullptr, {}, {}, 0, 49, {}, 0, 0), tw = mon(387, 19, nullptr, {}, {}, 0, 55, {}, 0, 0);

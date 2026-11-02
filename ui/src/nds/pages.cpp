@@ -900,11 +900,11 @@ namespace banana::nds
 		if (m.hp == 0) sn = "FNT";
 		if (!sn.empty()) ex += chip(sn, statusColour(sn), ex, cy) + 5;
 		if (m.shiny()) { pixels(PX_SPARK, 7, ex + 2, cy + 2, k(), [](char) { return Color::hex(0xf8d030); }); ex += 20; }
-		// the stat stages that aren't 0 (Atk, Def, Speed, SpA, SpD, accuracy, evasion)
+		// the stat stages that aren't 0 (Battler.stages: HP (never used), Atk, Def, Speed, SpA, SpD, accuracy, evasion)
 		if (!compact)
 		{
-			static const char* const STG[8] = { "Atk", "Def", "Spe", "SpA", "SpD", "Acc", "Eva", "" };
-			for (int i = 0; i < 7; i++)
+			static const char* const STG[8] = { "", "Atk", "Def", "Spe", "SpA", "SpD", "Acc", "Eva" };
+			for (int i = 1; i < 8; i++)
 				if (b.stages[i] && ex < x + w - 60)
 				{
 					char l[24]; snprintf(l, sizeof l, "%s %+d", STG[i], b.stages[i]);

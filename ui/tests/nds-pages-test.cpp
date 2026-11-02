@@ -249,6 +249,25 @@ static void touchTests(const Ctx& c, int w, int h)
 		CHECK(next == none, "bit 41 (species 42) leaves 41 unseen");
 		pg.setData(pt.data());
 	}
+	// stat stages in Battler's order (HP, Atk, Def, Speed, SpA, SpD, Acc, Eva): the HP slot is never drawn, Speed is
+	// drawn as Speed (found on HeartGold on the Plus: String Shot's Speed -1 showed as "SpA -1")
+	{
+		ndsfx::Fixture f = ndsfx::platinum();
+		auto withStage = [&](int i, int v)
+		{
+			auto l = std::make_shared<Live>(*f.live);
+			for (auto& st : l->battle.ours[0].stages) st = 0;
+			if (i >= 0) l->battle.ours[0].stages[i] = (int8_t)v;
+			PageData d = f.data(); d.live = l; pg.setData(d);
+			pg.show(Page::BATTLE); pg.render();
+			return grab(be, 1);
+		};
+		auto plain = withStage(-1, 0), hp = withStage(0, 1), spe = withStage(3, -1), spa = withStage(4, -1);
+		CHECK(hp == plain, "the HP stage slot draws nothing");
+		CHECK(spe != plain && spe != spa, "Speed -1 and SpA -1 are drawn differently");
+		pg.setData(pt.data());
+		pg.showSpecies(391);	// (back where the rail test below starts)
+	}
 	// the list's rail: its bottom is the end of the Pokédex
 	pg.render();
 	pg.touchDown((int)(199 * s), (int)(408 * s), 0); pg.touchUp((int)(199 * s), (int)(408 * s), 0);
