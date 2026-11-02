@@ -2232,9 +2232,10 @@ namespace banana::nds
 		float cx = x / d->s, cy = y / d->s;
 		d->down = true; d->dragging = false; d->railDrag = false;
 		d->downX = cx; d->downY = cy; d->lastY = cy; d->dragId = -1;
-		// along the Dex list's rail: straight to that part of the Pokédex
+		// along the Dex list's rail: straight to that part of the Pokédex (the zone reaches left over the thin drawn track,
+		// which sits at x 187-189: a finger on it must not land on a row)
 		const auto& r = d->rail;
-		if (cur == Page::DEX && r.id >= 0 && cx >= r.x - 4 && cx < r.x + r.w + 6 && cy >= r.y && cy < r.y + r.h)
+		if (cur == Page::DEX && r.id >= 0 && cx >= r.x - 18 && cx < r.x + r.w + 6 && cy >= r.y && cy < r.y + r.h)
 		{
 			d->railDrag = true; d->dragId = r.id;
 			return touchMove(x, y, nowMs);
