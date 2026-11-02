@@ -351,6 +351,12 @@ static void testSnapshots(const std::string& dir)
 				b->battle.ours[0].mon.stats[1], b->battle.ours[0].mon.stats[2], b->battle.ours[0].mon.stats[3], b->battle.ours[0].mon.stats[4]);
 		}
 	}
+	// HeartGold: our Leer lowered the wild Caterpie's Defence, its String Shot our Speed
+	if (snap(dir + "/plus-hgf/b6.bin", GameId::HEARTGOLD, Gen::IV, l))
+	{
+		CHECK(l->battle.kind == BattleKind::WILD && l->battle.foes[0].mon.species == 10);
+		CHECK(l->battle.foes[0].stages[2] == -1 && l->battle.foes[0].stages[1] == 0 && l->battle.ours[0].stages[3] == -1);
+	}
 	if (snap(dir + "/plus-hgd/c0.bin", GameId::HEARTGOLD, Gen::IV, l))
 		CHECK(l->mapX == 566 && l->mapY == 328);
 }
