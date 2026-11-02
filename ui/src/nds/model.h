@@ -165,7 +165,8 @@ namespace banana::nds
 		std::vector<uint16_t> placeZones;			// the milestone's own place
 		std::vector<std::string> reachablePlaces; };	// the same reachable set as names (zones the ROM had no id for too)
 	struct Secret { std::string id, text; uint16_t zone = 0; int x = -1, y = -1; std::string condition; Quality q = Quality::REFERENCE_ONLY;
-		std::string kind, place, source; std::vector<uint16_t> zones; };
+		std::string kind, place, source; std::vector<uint16_t> zones;
+		std::string grid = "map"; };		// x/y on the place's own map grid ("map") or the overworld's global tile grid ("world")
 	struct GuideNote { std::string id, kind, title, text, place, source; std::vector<uint16_t> species, zones; Quality q = Quality::REFERENCE_ONLY; };
 	struct GuideData
 	{

@@ -195,10 +195,18 @@ namespace banana::nds
 				if (m.doneWhen.rfind("badge:", 0) == 0) m.badge = atoi(m.doneWhen.c_str() + 6);
 				m.q = quality(e);
 				m.trainerIds = ints(e.get("trainer_ids"), 0, 0xFFFF);
-				if (const JVal* f = e.get("foe"); f && f->isObj())
+				// foe: one object or a list of them (every opponent the fight can have); the ids of all are kept
+				if (const JVal* f = e.get("foe"))
 				{
-					m.foeName = f->str("name"); m.foeClass = f->str("class"); m.foeAceLevel = (int)f->num("ace_level");
-					if (m.trainerIds.empty() && res && res->trainers) m.trainerIds = res->trainers(m.foeName, m.foeClass, m.foeAceLevel);
+					std::vector<const JVal*> foes;
+					if (f->isArr()) for (const JPtr& x : f->arr) foes.push_back(x.get()); else foes.push_back(f);
+					bool first = true, explicitIds = !m.trainerIds.empty();
+					for (const JVal* x : foes)
+					{
+						if (!x || !x->isObj()) continue;
+						if (first) { m.foeName = x->str("name"); m.foeClass = x->str("class"); m.foeAceLevel = (int)x->num("ace_level"); first = false; }
+						if (!explicitIds && res && res->trainers) addUnique(m.trainerIds, res->trainers(x->str("name"), x->str("class"), (int)x->num("ace_level")));
+					}
 				}
 				L.gather(e.get("opens"), reachZones, &reachNames, nullptr);
 				m.reachableZones = reachZones;
@@ -228,7 +236,7 @@ namespace banana::nds
 				s.id = e.str("id"); s.text = e.str("text"); s.kind = e.str("kind"); s.place = p->name; s.zones = p->zones;
 				s.zone = p->zones.empty() ? 0 : p->zones[0];
 				if (e.get("x") && e.get("y")) { s.x = (int)e.num("x"); s.y = (int)e.num("y"); }
-				s.condition = e.str("condition"); s.q = quality(e); s.source = e.str("source");
+				s.condition = e.str("condition"); s.grid = e.str("grid", "map"); s.q = quality(e); s.source = e.str("source");
 				g.secrets.push_back(std::move(s));
 			}
 

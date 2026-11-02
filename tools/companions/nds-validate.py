@@ -46,9 +46,13 @@ Milestone  (gyms, rivals, villain team, Elite Four, champion, post-game; in stor
   leader        the person's name (optional)
   theme         the type name (lowercase: normal fighting flying poison ground rock bug ghost steel fire water grass
                 electric psychic ice dragon dark) for gyms and Elite Four members (optional)
-  level_cap     the highest level among the foe's Pokemon (1-100): a level to compare the player's team with
+  level_cap     the highest level among the foe's Pokemon (1-100): a level to compare the player's team with; for a
+                story or legendary step with no trainer it is the level to expect (a legendary's own level); a kind
+                story milestone may leave it out (0 in GuideData)
   foe           { "name": "Roark", "class": "Leader", "ace_level": 14 } optional: how the loader finds the trainer's
-                data in the ROM (name + class text, and the team's top level when several share the name);
+                data in the ROM (name + class text, and the team's top level when several share the name); a LIST of
+                such objects when the fight has several possible or several opponents (Gen V gym 1's three brothers,
+                the starter-dependent rival); the ids of all of them are collected;
   trainer_ids   [int] optional: the ROM's own trainer ids when known (wins over "foe")
   done_when     "badge:N" (N 1-8, 1-16 in HeartGold/SoulSilver: the Nth badge bit is set, Johto first) | "flag:N" (the story flag N, when the RAM workstream
                 has it) | "later" (done once any later milestone is) | "none"
@@ -58,8 +62,9 @@ Milestone  (gyms, rivals, villain team, Elite Four, champion, post-game; in stor
   badge_note    optional: what the badge or the fight unlocks (HM use, obedience level)
 
 Step      id, title, text, stage (a milestone id: shown while that is the goal), places [keys], done_when (as above), + common
-Secret    id, kind hidden-item|gift|event|trade|tip|legendary|shiny, text, place (key), x, y (map tiles, optional,
-          both or neither), condition (optional: "after the 3rd badge", "needs Surf"), + common
+Secret    id, kind hidden-item|gift|event|trade|tip|legendary|shiny, text, place (key), x, y (tiles, optional, both or
+          neither), grid ("map": the place's own map grid, the default; "world": the overworld's global tile grid, as
+          the Gen IV decompilations list hidden items), condition (optional: "after the 3rd badge", "needs Surf"), + common
 Evolution species (national dex number), name (the species' English name; the validator checks it against the number),
           text, + common. Several per species are joined.
 Note      id, kind exclusive|roamer|grotto|gift|legendary|trade|version|tip, title, text, place (optional key),
@@ -345,13 +350,17 @@ def validate(path, stats=None):
         if m.get("theme") is not None and m["theme"] not in TYPES:
             r.err(w, "theme %r is not a type name" % m.get("theme"))
         lc = m.get("level_cap")
-        if not is_int(lc) or not (1 <= lc <= 100):
-            r.err(w, "level_cap must be 1-100")
+        if lc is None and m.get("kind") == "story":
+            pass	# a story step with no fight has no cap (levelCap 0 in GuideData)
+        elif not is_int(lc) or not (1 <= lc <= 100):
+            r.err(w, "level_cap must be 1-100 (only a kind story milestone may leave it out)")
         foe = m.get("foe")
         if foe is not None:
-            if not isinstance(foe, dict) or not isinstance(foe.get("name"), str) or \
-                    not isinstance(foe.get("class", ""), str) or not is_int(foe.get("ace_level", 0)):
-                r.err(w, 'foe must be {"name": str, "class": str (optional), "ace_level": int (optional)}')
+            for f in (foe if isinstance(foe, list) else [foe]):
+                if not isinstance(f, dict) or not isinstance(f.get("name"), str) or \
+                        not isinstance(f.get("class", ""), str) or not is_int(f.get("ace_level", 0)):
+                    r.err(w, 'foe must be {"name": str, "class": str (optional), "ace_level": int (optional)} or a list of them')
+                    break
         tid = m.get("trainer_ids", [])
         if not isinstance(tid, list) or not all(is_int(x) and 0 <= x <= 0xFFFF for x in tid):
             r.err(w, "trainer_ids must be a list of integers")
@@ -420,6 +429,10 @@ def validate(path, stats=None):
             r.err(w, "x and y go together")
         elif x is not None and not (is_int(x) and is_int(y) and 0 <= x < 1024 and 0 <= y < 1024):
             r.err(w, "x, y must be map tiles 0-1023")
+        if s.get("grid", "map") not in ("map", "world"):
+            r.err(w, 'grid must be "map" or "world"')
+        if "grid" in s and x is None:
+            r.err(w, "grid without x and y")
         check_text(r, w, s, "condition", False, 120)
 
     # evolutions

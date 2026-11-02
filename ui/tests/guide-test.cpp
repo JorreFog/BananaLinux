@@ -4,6 +4,7 @@
 #include "nds/guide.h"
 #include <cstdio>
 #include <cstdlib>
+#include <set>
 #include <string>
 
 using namespace banana::nds;
@@ -65,7 +66,9 @@ int main(int argc, char** argv)
 		const Milestone& m3 = g.milestones[2];
 		CHECK(m3.id == "gym-2" && m3.theme == NO_TYPE && m3.badge == 2);			// an unknown type name is "no type"
 		CHECK(has(m3.reachableZones, 30) && has(m3.reachableZones, 31) && has(m3.reachableZones, 32) && m3.reachableZones.size() == 7);
-		CHECK(m3.reachablePlaces.size() == 5);										// the unlisted key is ignored
+		CHECK(m3.reachablePlaces.size() == 5);
+		// a list of foes: every one that the ROM has is collected (Tester 5, Someone 7), the first names the entry
+		CHECK(m3.trainerIds.size() == 2 && m3.trainerIds[0] == 5 && m3.trainerIds[1] == 7 && m3.foeName == "Tester");										// the unlisted key is ignored
 	}
 	CHECK(g.unresolved.size() == 1 && g.unresolved[0] == "Nowhere Land");
 	if (!g.steps.empty())
@@ -73,7 +76,7 @@ int main(int argc, char** argv)
 	if (!g.secrets.empty())
 	{
 		const Secret& s = g.secrets[0];
-		CHECK(s.zone == 30 && s.zones.size() == 3 && s.x == 5 && s.y == 9 && s.condition == "needs Cut" && s.place == "Gamma Cave");
+		CHECK(s.zone == 30 && s.zones.size() == 3 && s.x == 5 && s.y == 9 && s.condition == "needs Cut" && s.place == "Gamma Cave" && s.grid == "world");
 	}
 	CHECK(g.evolutionNotes.count(64) && g.evolutionNotes[64] == "Trade it.\nOr the GTS.");
 	if (!g.notes.empty())
@@ -111,17 +114,19 @@ int main(int argc, char** argv)
 			std::string path = std::string(argv[2]) + "/" + guideFileName(a.id);
 			if (!loadGuideFile(path, d, a.id, &w, nullptr)) { fprintf(stderr, "FAIL %s: %s\n", path.c_str(), w.c_str()); fails++; continue; }
 			if (!w.empty()) { fprintf(stderr, "FAIL %s: %s\n", path.c_str(), w.c_str()); fails++; }
-			int badges = 0, champ = 0, prev = 0;
+			int badges = 0, champ = 0;
+			std::set<int> seen;
 			bool order = true;
 			for (const Milestone& m : d.milestones)
 			{
-				if (m.badge) { badges++; if (m.badge != prev + 1) order = false; prev = m.badge; }
+				// (the badge numbers are the game's badge bits, not the story order: Platinum's Fantina is the 5th badge)
+				if (m.badge) { badges++; if (m.badge > a.badges || !seen.insert(m.badge).second) order = false; }
 				if (m.kind == "champion") champ++;
-				if (m.levelCap < 1) order = false;
+				if (m.levelCap < 1 && m.kind != "story") order = false;
 			}
 			if (badges != a.badges || champ < 1 || !order || d.steps.empty() || d.secrets.empty() || d.evolutionNotes.empty())
 			{
-				fprintf(stderr, "FAIL %s: badges %d (want %d) champion %d in-order %d steps %zu secrets %zu evolutions %zu\n", path.c_str(), badges,
+				fprintf(stderr, "FAIL %s: badges %d (want %d) champion %d badges-distinct-and-caps %d steps %zu secrets %zu evolutions %zu\n", path.c_str(), badges,
 					a.badges, champ, (int)order, d.steps.size(), d.secrets.size(), d.evolutionNotes.size());
 				fails++;
 			}

@@ -219,13 +219,13 @@ still lack a game id), the loader `ui/src/nds/guide.{h,cpp}` into `GuideData` (`
   name against the ROM's location names (`GuideResolver`, `guideResolver(rom)`); names it can't find end in
   `GuideData::unresolved`. Ids are never invented.
 - **milestones**, in story order: `kind` gym / rival / team / elite4 / champion / postgame / legendary / story; `level_cap` the
-  highest level on the foe's side; `theme` a type (gyms, Elite Four); `foe` how the trainer is found in the ROM (name + class
-  text, `ace_level` picks the right team when several share the name) or `trainer_ids` when known; `done_when` is `badge:N`
+  highest level on the foe's side (a legendary's own level; a recommended level for story steps, which may leave it out); `theme` a type (gyms, Elite Four); `foe` how the trainer is found in the ROM (name + class
+  text, `ace_level` picks the right team when several share the name) or `trainer_ids` when known (`foe` may be a list: a fight with several possible opponents, e.g. the starter-dependent first gym; all their ids are kept); `done_when` is `badge:N`
   (the Nth badge bit, 1-8, 1-16 in HeartGold/SoulSilver with Johto first), `flag:N` (a story flag, when the RAM reader has it),
   `later` (done once any later milestone is) or `none`; `opens` lists the places that become reachable while it is the goal
   (the loader adds them up, so a milestone's `reachableZones` is everything opened up to and including it); `tips` is the preparation.
 - **steps** (tips tied to a `stage` milestone and `places`), **secrets** (`kind` hidden-item / gift / event / trade / tip /
-  legendary / shiny, a `place`, `x`/`y` tiles when known, a `condition`), **evolutions** (`species` = national number plus its
+  legendary / shiny, a `place`, `x`/`y` tiles when known (`grid` "map" = the place's own grid, the default; "world" = the overworld's global tile grid, which the Gen IV decompilations use), a `condition`), **evolutions** (`species` = national number plus its
   English `name`, which the validator checks; several per species are joined into `evolutionNotes`), **notes** (`kind` exclusive /
   roamer / grotto / gift / legendary / trade / version / tip; `species` + `names`).
 - Every entry: unique `id` (`[a-z0-9-]+`), `quality`, `source` (one line, at most 160 characters). Text fields at most 480 characters:

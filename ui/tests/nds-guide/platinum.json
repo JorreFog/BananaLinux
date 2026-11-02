@@ -18,6 +18,7 @@
 		  "trainer_ids": [77], "done_when": "later", "opens": ["beta-city", "nowhere"], "quality": "live-verified", "source": "test", "checked": "x" },
 		{ "id": "gym-1", "name": "same id twice", "quality": "reference-only", "source": "test" },
 		{ "id": "gym-2", "name": "Gym 2", "kind": "gym", "place": "beta-city", "theme": "nope", "level_cap": 20,
+		  "foe": [ { "name": "Tester", "class": "Leader", "ace_level": 14 }, { "name": "Someone", "ace_level": 14 }, { "name": "Nobody" } ],
 		  "done_when": "badge:2", "opens": ["gamma-cave", "missing-place"], "quality": "reference-only", "source": "test" },
 	],
 	"steps": [
@@ -26,7 +27,7 @@
 		{ "id": "s2", "title": "no text", "quality": "reference-only", "source": "test" },
 	],
 	"secrets": [
-		{ "id": "x1", "kind": "hidden-item", "text": "Behind the tree.", "place": "gamma-cave", "x": 5, "y": 9, "condition": "needs Cut",
+		{ "id": "x1", "kind": "hidden-item", "text": "Behind the tree.", "place": "gamma-cave", "x": 5, "y": 9, "grid": "world", "condition": "needs Cut",
 		  "quality": "reference-only", "source": "test" },
 		{ "id": "x2", "kind": "tip", "text": "Place is not listed.", "place": "ghost", "quality": "reference-only", "source": "test" },
 	],

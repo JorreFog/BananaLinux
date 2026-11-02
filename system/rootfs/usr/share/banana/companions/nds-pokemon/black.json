@@ -1,0 +1,2692 @@
+{
+ "schema": 1,
+ "kind": "nds-pokemon-guide",
+ "game": "black",
+ "code": "IRBO",
+ "title": "Pokemon Black",
+ "revision": 1,
+ "sources": [
+  "Bulbapedia: Walkthrough:Pokémon Black and White (parts 1-18) and the linked Gym, item and Pokémon pages",
+  "Pokémon Database: Black/White gym leaders and Elite Four",
+  "Bulbapedia: Season (game mechanic), Roaming Pokémon, Pokémon Black and White Versions"
+ ],
+ "places": {
+  "nuvema-town": {
+   "name": "Nuvema Town",
+   "zone": null
+  },
+  "route-1": {
+   "name": "Route 1",
+   "zone": null
+  },
+  "accumula-town": {
+   "name": "Accumula Town",
+   "zone": null
+  },
+  "route-2": {
+   "name": "Route 2",
+   "zone": null
+  },
+  "striaton-city": {
+   "name": "Striaton City",
+   "zone": null
+  },
+  "dreamyard": {
+   "name": "Dreamyard",
+   "zone": null
+  },
+  "route-3": {
+   "name": "Route 3",
+   "zone": null
+  },
+  "wellspring-cave": {
+   "name": "Wellspring Cave",
+   "zone": null
+  },
+  "nacrene-city": {
+   "name": "Nacrene City",
+   "zone": null
+  },
+  "pinwheel-forest": {
+   "name": "Pinwheel Forest",
+   "zone": null
+  },
+  "skyarrow-bridge": {
+   "name": "Skyarrow Bridge",
+   "zone": null
+  },
+  "castelia-city": {
+   "name": "Castelia City",
+   "zone": null
+  },
+  "route-4": {
+   "name": "Route 4",
+   "zone": null
+  },
+  "desert-resort": {
+   "name": "Desert Resort",
+   "zone": null
+  },
+  "relic-castle": {
+   "name": "Relic Castle",
+   "zone": null
+  },
+  "nimbasa-city": {
+   "name": "Nimbasa City",
+   "zone": null
+  },
+  "anville-town": {
+   "name": "Anville Town",
+   "zone": null
+  },
+  "route-5": {
+   "name": "Route 5",
+   "zone": null
+  },
+  "driftveil-drawbridge": {
+   "name": "Driftveil Drawbridge",
+   "zone": null
+  },
+  "driftveil-city": {
+   "name": "Driftveil City",
+   "zone": null
+  },
+  "cold-storage": {
+   "name": "Cold Storage",
+   "zone": null
+  },
+  "route-6": {
+   "name": "Route 6",
+   "zone": null
+  },
+  "chargestone-cave": {
+   "name": "Chargestone Cave",
+   "zone": null
+  },
+  "mistralton-city": {
+   "name": "Mistralton City",
+   "zone": null
+  },
+  "route-7": {
+   "name": "Route 7",
+   "zone": null
+  },
+  "celestial-tower": {
+   "name": "Celestial Tower",
+   "zone": null
+  },
+  "route-17": {
+   "name": "Route 17",
+   "zone": null
+  },
+  "route-18": {
+   "name": "Route 18",
+   "zone": null
+  },
+  "p2-laboratory": {
+   "name": "P2 Laboratory",
+   "zone": null
+  },
+  "mistralton-cave": {
+   "name": "Mistralton Cave",
+   "zone": null
+  },
+  "rumination-field": {
+   "name": "Rumination Field",
+   "zone": null
+  },
+  "twist-mountain": {
+   "name": "Twist Mountain",
+   "zone": null
+  },
+  "icirrus-city": {
+   "name": "Icirrus City",
+   "zone": null
+  },
+  "dragonspiral-tower": {
+   "name": "Dragonspiral Tower",
+   "zone": null
+  },
+  "route-8": {
+   "name": "Route 8",
+   "zone": null
+  },
+  "moor-of-icirrus": {
+   "name": "Moor of Icirrus",
+   "zone": null
+  },
+  "tubeline-bridge": {
+   "name": "Tubeline Bridge",
+   "zone": null
+  },
+  "route-9": {
+   "name": "Route 9",
+   "zone": null
+  },
+  "opelucid-city": {
+   "name": "Opelucid City",
+   "zone": null
+  },
+  "route-10": {
+   "name": "Route 10",
+   "zone": null
+  },
+  "victory-road": {
+   "name": "Victory Road",
+   "zone": null
+  },
+  "pokemon-league": {
+   "name": "Pokémon League",
+   "zone": null
+  },
+  "ns-castle": {
+   "name": "N's Castle",
+   "zone": null
+  },
+  "route-11": {
+   "name": "Route 11",
+   "zone": null
+  },
+  "village-bridge": {
+   "name": "Village Bridge",
+   "zone": null
+  },
+  "route-12": {
+   "name": "Route 12",
+   "zone": null
+  },
+  "lacunosa-town": {
+   "name": "Lacunosa Town",
+   "zone": null
+  },
+  "route-13": {
+   "name": "Route 13",
+   "zone": null
+  },
+  "giant-chasm": {
+   "name": "Giant Chasm",
+   "zone": null
+  },
+  "undella-town": {
+   "name": "Undella Town",
+   "zone": null
+  },
+  "undella-bay": {
+   "name": "Undella Bay",
+   "zone": null
+  },
+  "abyssal-ruins": {
+   "name": "Abyssal Ruins",
+   "zone": null
+  },
+  "route-14": {
+   "name": "Route 14",
+   "zone": null
+  },
+  "abundant-shrine": {
+   "name": "Abundant Shrine",
+   "zone": null
+  },
+  "route-15": {
+   "name": "Route 15",
+   "zone": null
+  },
+  "marvelous-bridge": {
+   "name": "Marvelous Bridge",
+   "zone": null
+  },
+  "route-16": {
+   "name": "Route 16",
+   "zone": null
+  },
+  "lostlorn-forest": {
+   "name": "Lostlorn Forest",
+   "zone": null
+  },
+  "challengers-cave": {
+   "name": "Challenger's Cave",
+   "zone": null
+  },
+  "liberty-garden": {
+   "name": "Liberty Garden",
+   "zone": null
+  },
+  "black-city": {
+   "name": "Black City",
+   "zone": null
+  }
+ },
+ "milestones": [
+  {
+   "id": "rival-nuvema",
+   "name": "Rival: Cheren and Bianca at home",
+   "kind": "rival",
+   "place": "nuvema-town",
+   "level_cap": 5,
+   "foe": {
+    "name": "Cheren",
+    "class": "PKMN Trainer",
+    "ace_level": 5
+   },
+   "done_when": "later",
+   "opens": [
+    "nuvema-town",
+    "route-1",
+    "accumula-town"
+   ],
+   "tips": "Friendly practice fights at level 5; losing does not black you out. Whichever starter you pick, Cheren ends up with the one that beats yours and Bianca with the one yours beats.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 1"
+  },
+  {
+   "id": "rival-route-2",
+   "name": "Rival: Bianca on Route 2",
+   "kind": "rival",
+   "place": "route-2",
+   "level_cap": 7,
+   "foe": {
+    "name": "Bianca",
+    "class": "PKMN Trainer",
+    "ace_level": 7
+   },
+   "done_when": "later",
+   "opens": [
+    "route-2"
+   ],
+   "tips": "Her team is a Lillipup around level 6 and her starter at 7. Heal at Accumula Town before the walk, since the three Route 2 trainers come first.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 2"
+  },
+  {
+   "id": "rival-striaton",
+   "name": "Rival: Cheren at the Trainers' School",
+   "kind": "rival",
+   "place": "striaton-city",
+   "level_cap": 8,
+   "foe": {
+    "name": "Cheren",
+    "class": "PKMN Trainer",
+    "ace_level": 8
+   },
+   "done_when": "later",
+   "opens": [
+    "striaton-city"
+   ],
+   "tips": "Cheren holds the Gym shut until you beat him: the Leaders only return once you do. His team is a Purrloin and his starter at level 8; aim for level 12-15 on your own team before the Gym.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 2"
+  },
+  {
+   "id": "gym-1",
+   "name": "Gym 1: Cilan, Chili or Cress",
+   "kind": "gym",
+   "place": "striaton-city",
+   "leader": "Cilan, Chili or Cress",
+   "level_cap": 14,
+   "done_when": "badge:1",
+   "opens": [],
+   "tips": "Your starter picks your opponent: Snivy meets Chili (fire), Tepig meets Cress (water), Oshawott meets Cilan (grass). Each brother sends a Lillipup at 12 and his monkey at 14. The monkey the Dreamyard girl gave you is built to counter exactly this brother.",
+   "badge_note": "TM83 Work Up; Pokemon up to level 20 obey you; Fennel then hands over HM01 Cut.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 2; Pokémon Database: Black/White gym leaders and Elite Four"
+  },
+  {
+   "id": "team-dreamyard",
+   "name": "Team Plasma at the Dreamyard",
+   "kind": "team",
+   "place": "dreamyard",
+   "level_cap": 10,
+   "done_when": "later",
+   "opens": [
+    "dreamyard"
+   ],
+   "tips": "Cut the tree and slip through the fence. Two Plasma grunts with level 10 Patrat and Purrloin guard Munna; Bianca stands with you. Take the Dream Mist back to Fennel for the C-Gear.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 2"
+  },
+  {
+   "id": "rival-route-3",
+   "name": "Rival: Cheren on Route 3",
+   "kind": "rival",
+   "place": "route-3",
+   "level_cap": 14,
+   "foe": {
+    "name": "Cheren",
+    "class": "PKMN Trainer",
+    "ace_level": 14
+   },
+   "done_when": "later",
+   "opens": [
+    "route-3"
+   ],
+   "tips": "Two Pokemon: his starter at 14 and a Purrloin at 12. The Pokemon Day Care is on this route; heal at the preschool building next door when your team gets ragged.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 3"
+  },
+  {
+   "id": "team-wellspring",
+   "name": "Team Plasma in Wellspring Cave",
+   "kind": "team",
+   "place": "wellspring-cave",
+   "level_cap": 12,
+   "done_when": "later",
+   "opens": [
+    "wellspring-cave"
+   ],
+   "tips": "A double battle beside Cheren against level 12 Patrat grunts. Grab TM46 (Thief) near the entrance once the stolen Pokemon is returned.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 3"
+  },
+  {
+   "id": "n-nacrene",
+   "name": "N outside the Nacrene Gym",
+   "kind": "team",
+   "place": "nacrene-city",
+   "level_cap": 13,
+   "foe": {
+    "name": "N",
+    "class": "PKMN Trainer",
+    "ace_level": 13
+   },
+   "done_when": "later",
+   "opens": [
+    "nacrene-city"
+   ],
+   "tips": "A first, short fight with N: Pidove, Timburr and Tympole, all level 13, whatever your starter. He is a story trainer, not a Plasma boss yet.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 3"
+  },
+  {
+   "id": "gym-2",
+   "name": "Gym 2: Lenora",
+   "kind": "gym",
+   "place": "nacrene-city",
+   "leader": "Lenora",
+   "theme": "normal",
+   "level_cap": 20,
+   "foe": {
+    "name": "Lenora",
+    "class": "Leader",
+    "ace_level": 20
+   },
+   "done_when": "badge:2",
+   "opens": [],
+   "tips": "The Gym is a library puzzle: read the memo books in order, then beat the student who guards the last shelf to open the stairs. Lenora uses Herdier (18) and Watchog (20), both weak only to Fighting. A Timburr or a Throh or Sawk from Pinwheel Forest makes it easy.",
+   "badge_note": "TM67 Retaliate; Pokemon up to level 30 obey you.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 3; Pokémon Database: Black/White gym leaders and Elite Four"
+  },
+  {
+   "id": "team-castelia",
+   "name": "Team Plasma at Prime Pier",
+   "kind": "team",
+   "place": "castelia-city",
+   "level_cap": 17,
+   "done_when": "later",
+   "opens": [
+    "pinwheel-forest",
+    "skyarrow-bridge",
+    "castelia-city"
+   ],
+   "tips": "In the Pinwheel Forest a Plasma grunt hands the stolen Dragon Skull back after a fight, and Lenora rewards you with a Moon Stone. In Castelia, help Burgh against grunts with level 17 Sandile; Ghetsis then returns Bianca's Munna.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Parts 4"
+  },
+  {
+   "id": "gym-3",
+   "name": "Gym 3: Burgh",
+   "kind": "gym",
+   "place": "castelia-city",
+   "leader": "Burgh",
+   "theme": "bug",
+   "level_cap": 23,
+   "foe": {
+    "name": "Burgh",
+    "class": "Leader",
+    "ace_level": 23
+   },
+   "done_when": "badge:3",
+   "opens": [],
+   "tips": "Light both posts of each gate to pass; two harlequins hide under the floor. Whirlipede and Dwebble (21) and Leavanny (23) fear Fire, Flying and Rock. TM70 Flash lowers his accuracy if you lack the right type.",
+   "badge_note": "TM76 Struggle Bug; Pokemon up to level 40 obey you.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 4; Pokémon Database: Black/White gym leaders and Elite Four"
+  },
+  {
+   "id": "rival-castelia-gate",
+   "name": "Rival: Bianca at the Castelia gate",
+   "kind": "rival",
+   "place": "castelia-city",
+   "level_cap": 20,
+   "foe": {
+    "name": "Bianca",
+    "class": "PKMN Trainer",
+    "ace_level": 20
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Four Pokemon: Herdier, her monkey and Munna (all 18) and her starter's evolution at 20. Heal up first; the Castelia gate is the last stop before Route 4.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 4"
+  },
+  {
+   "id": "rival-route-4",
+   "name": "Rival: Cheren on Route 4",
+   "kind": "rival",
+   "place": "route-4",
+   "level_cap": 22,
+   "foe": {
+    "name": "Cheren",
+    "class": "PKMN Trainer",
+    "ace_level": 22
+   },
+   "done_when": "later",
+   "opens": [
+    "route-4",
+    "desert-resort",
+    "relic-castle"
+   ],
+   "tips": "Pidove, his monkey and Liepard at 20 and his starter's evolution at 22. Before heading north, visit the house on the west road for TM28 (Dig); Professor Juniper meets you at the Nimbasa gate.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 5"
+  },
+  {
+   "id": "n-nimbasa",
+   "name": "N on the Nimbasa Ferris wheel",
+   "kind": "team",
+   "place": "nimbasa-city",
+   "level_cap": 22,
+   "foe": {
+    "name": "N",
+    "class": "Team Plasma",
+    "ace_level": 22
+   },
+   "done_when": "later",
+   "opens": [
+    "nimbasa-city"
+   ],
+   "tips": "Plasma grunts with level 18 Watchog and Trubbish attack the Day-Care Man first (he gives you the Bicycle). N then fights with Sandile, Scraggy, Darumaka and Sigilyph at 22.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 5"
+  },
+  {
+   "id": "gym-4",
+   "name": "Gym 4: Elesa",
+   "kind": "gym",
+   "place": "nimbasa-city",
+   "leader": "Elesa",
+   "theme": "electric",
+   "level_cap": 27,
+   "foe": {
+    "name": "Elesa",
+    "class": "Leader",
+    "ace_level": 27
+   },
+   "done_when": "badge:4",
+   "opens": [
+    "anville-town"
+   ],
+   "tips": "Ride the coaster cars and flip the switches to reach her. Emolga (25, 25) and Zebstrika (27) all know Volt Switch. Ground moves hit Zebstrika; Ice and Rock hit Emolga, but Static can paralyse you.",
+   "badge_note": "TM72 Volt Switch; Pokemon up to level 50 obey you.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 5; Pokémon Database: Black/White gym leaders and Elite Four"
+  },
+  {
+   "id": "rival-route-5",
+   "name": "Rival: Cheren on Route 5",
+   "kind": "rival",
+   "place": "route-5",
+   "level_cap": 26,
+   "foe": {
+    "name": "Cheren",
+    "class": "PKMN Trainer",
+    "ace_level": 26
+   },
+   "done_when": "later",
+   "opens": [
+    "route-5",
+    "driftveil-drawbridge"
+   ],
+   "tips": "Four Pokemon around 24-26. Afterwards Elesa introduces you to Alder, and the Driftveil Drawbridge is lowered.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 6"
+  },
+  {
+   "id": "team-cold-storage",
+   "name": "Team Plasma in the Cold Storage",
+   "kind": "team",
+   "place": "cold-storage",
+   "level_cap": 24,
+   "done_when": "later",
+   "opens": [
+    "driftveil-city",
+    "cold-storage"
+   ],
+   "tips": "You and Cheren must each beat four of the eight grunts hiding Zinzolin. The floor is ice: slide the left side first for TM55 (Scald). The grunts run Watchog, Scraggy, Sandile and the like at level 23-24.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 6"
+  },
+  {
+   "id": "gym-5",
+   "name": "Gym 5: Clay",
+   "kind": "gym",
+   "place": "driftveil-city",
+   "leader": "Clay",
+   "theme": "ground",
+   "level_cap": 31,
+   "foe": {
+    "name": "Clay",
+    "class": "Leader",
+    "ace_level": 31
+   },
+   "done_when": "badge:5",
+   "opens": [],
+   "tips": "Krokorok and Palpitoad (29), then Excadrill (31). Grass and Water hit Krokorok, and Grass hits Palpitoad for four times damage. Excadrill is part Steel, so use Fire, Water, Ground or Fighting on it and kill it before Hone Claws stacks up.",
+   "badge_note": "TM78 Bulldoze comes from Clay later, at Chargestone Cave; Pokemon up to level 60 obey you.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 6; Pokémon Database: Black/White gym leaders and Elite Four"
+  },
+  {
+   "id": "rival-driftveil",
+   "name": "Rival: Bianca in Driftveil City",
+   "kind": "rival",
+   "place": "driftveil-city",
+   "level_cap": 28,
+   "foe": {
+    "name": "Bianca",
+    "class": "PKMN Trainer",
+    "ace_level": 28
+   },
+   "done_when": "later",
+   "opens": [
+    "route-6"
+   ],
+   "tips": "Herdier, her monkey and Musharna at 26, plus her starter's evolution at 28. She gives you HM02 (Fly) when you win, so heal up and set off for Route 6.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 6"
+  },
+  {
+   "id": "n-chargestone",
+   "name": "N in Chargestone Cave",
+   "kind": "team",
+   "place": "chargestone-cave",
+   "level_cap": 28,
+   "foe": {
+    "name": "N",
+    "class": "Team Plasma",
+    "ace_level": 28
+   },
+   "done_when": "later",
+   "opens": [
+    "chargestone-cave"
+   ],
+   "tips": "Push the floating stones into the magnet rocks to open the path; grunts at 26-28 wait on the way down. N ends with Boldore, Ferroseed, Joltik and Klink at 28: Water for Boldore, Fire for Ferroseed and Klink.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 7"
+  },
+  {
+   "id": "gym-6",
+   "name": "Gym 6: Skyla",
+   "kind": "gym",
+   "place": "mistralton-city",
+   "leader": "Skyla",
+   "theme": "flying",
+   "level_cap": 35,
+   "foe": {
+    "name": "Skyla",
+    "class": "Leader",
+    "ace_level": 35
+   },
+   "done_when": "badge:6",
+   "opens": [
+    "mistralton-city",
+    "route-7",
+    "celestial-tower"
+   ],
+   "tips": "Skyla only takes challengers after you ring the Celestial Tower bell. Swoobat and Unfezant (33) and Swanna (35) are weak to Electric and Rock, but Swanna's Water moves punish Rock users. Use the cannons in order to reach her platform.",
+   "badge_note": "TM62 Acrobatics; Pokemon up to level 70 obey you.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 7; Pokémon Database: Black/White gym leaders and Elite Four"
+  },
+  {
+   "id": "rival-twist-mountain",
+   "name": "Rival: Cheren at Twist Mountain",
+   "kind": "rival",
+   "place": "twist-mountain",
+   "level_cap": 35,
+   "foe": {
+    "name": "Cheren",
+    "class": "PKMN Trainer",
+    "ace_level": 35
+   },
+   "done_when": "later",
+   "opens": [
+    "twist-mountain"
+   ],
+   "tips": "Unfezant, Liepard and his evolved monkey at 33, plus his starter at 35. Alder drops down afterwards and gives you HM03 (Surf), which reopens earlier places and unlocks Routes 17 and 18.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 8"
+  },
+  {
+   "id": "legend-cobalion",
+   "name": "Cobalion in Mistralton Cave",
+   "kind": "legendary",
+   "place": "mistralton-cave",
+   "level_cap": 42,
+   "done_when": "later",
+   "opens": [
+    "mistralton-cave",
+    "route-17",
+    "route-18",
+    "p2-laboratory"
+   ],
+   "tips": "Needs Strength for the boulders and Flash is handy. Justified boosts its Attack when hit by Dark moves, so avoid them; Fire and Ground hit it for double. The old man then lets Terrakion and Virizion be fought.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 8; Bulbapedia: Cobalion"
+  },
+  {
+   "id": "legend-virizion",
+   "name": "Virizion in Rumination Field",
+   "kind": "legendary",
+   "place": "rumination-field",
+   "level_cap": 42,
+   "done_when": "later",
+   "opens": [
+    "rumination-field"
+   ],
+   "tips": "Reach it from the east side of Pinwheel Forest once Cobalion has trusted you. Flying hits it for four times damage, so use a gentle one; do not use Dark moves, because Justified powers it up.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 8"
+  },
+  {
+   "id": "gym-7",
+   "name": "Gym 7: Brycen",
+   "kind": "gym",
+   "place": "icirrus-city",
+   "leader": "Brycen",
+   "theme": "ice",
+   "level_cap": 39,
+   "foe": {
+    "name": "Brycen",
+    "class": "Leader",
+    "ace_level": 39
+   },
+   "done_when": "badge:7",
+   "opens": [
+    "icirrus-city"
+   ],
+   "tips": "Slide across ice with the spinners; every trainer is Ice type. Vanillish and Cryogonal (37), Beartic (39) fall to Fire, Fighting, Rock and Steel. Slides keep sending you back, so leave time for the puzzle.",
+   "badge_note": "TM79 Frost Breath; Pokemon up to level 80 obey you.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 9; Pokémon Database: Black/White gym leaders and Elite Four"
+  },
+  {
+   "id": "team-dragonspiral",
+   "name": "Team Plasma in Dragonspiral Tower",
+   "kind": "team",
+   "place": "dragonspiral-tower",
+   "level_cap": 34,
+   "done_when": "later",
+   "opens": [
+    "dragonspiral-tower"
+   ],
+   "tips": "Grunts at 32-34 line the stairs; Giallo's last four grunts must be beaten in a row on floor 6. At the top N wakes Zekrom and leaves; you cannot stop him yet.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 9"
+  },
+  {
+   "id": "team-relic-castle",
+   "name": "Ghetsis' test in the Relic Castle",
+   "kind": "team",
+   "place": "relic-castle",
+   "level_cap": 36,
+   "done_when": "later",
+   "opens": [],
+   "tips": "Drop through the quicksand floors, fighting grunts at 34-36 on each. At the bottom Ghetsis admits the Light Stone is not there; Lenora hands it to you at the Nacrene museum afterwards.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 10"
+  },
+  {
+   "id": "rival-route-8",
+   "name": "Rival: Bianca on Route 8",
+   "kind": "rival",
+   "place": "route-8",
+   "level_cap": 40,
+   "foe": {
+    "name": "Bianca",
+    "class": "PKMN Trainer",
+    "ace_level": 40
+   },
+   "done_when": "later",
+   "opens": [
+    "route-8",
+    "moor-of-icirrus",
+    "tubeline-bridge",
+    "route-9"
+   ],
+   "tips": "Stoutland, Musharna and her monkey at 38 plus a fully grown starter at 40.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 10"
+  },
+  {
+   "id": "gym-8",
+   "name": "Gym 8: Drayden",
+   "kind": "gym",
+   "place": "opelucid-city",
+   "leader": "Drayden",
+   "theme": "dragon",
+   "level_cap": 43,
+   "foe": {
+    "name": "Drayden",
+    "class": "Leader",
+    "ace_level": 43
+   },
+   "done_when": "badge:8",
+   "opens": [
+    "opelucid-city"
+   ],
+   "tips": "Drayden uses Fraxure and Druddigon (41) and Haxorus (43). Ice and Dragon moves hit all three. Haxorus and Fraxure learn Dragon Dance, so take them down fast or you will be swept.",
+   "badge_note": "TM82 Dragon Tail; every Pokemon obeys you; Professor Juniper gives a Master Ball.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 11; Bulbapedia: Opelucid Gym; Pokémon Database: Black/White gym leaders and Elite Four"
+  },
+  {
+   "id": "legend-roamer",
+   "name": "Tornadus starts roaming",
+   "kind": "legendary",
+   "place": "route-7",
+   "level_cap": 40,
+   "done_when": "later",
+   "opens": [],
+   "tips": "After the eighth badge, walk through the gate towards Route 10, then visit the old woman on Route 7 to start the storm cloud. It roams at level 40; gate bulletin boards show a stormy route where it is.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Roaming Pokemon; Walkthrough Part 11"
+  },
+  {
+   "id": "rival-route-10",
+   "name": "Rival: Cheren on Route 10",
+   "kind": "rival",
+   "place": "route-10",
+   "level_cap": 45,
+   "foe": {
+    "name": "Cheren",
+    "class": "PKMN Trainer",
+    "ace_level": 45
+   },
+   "done_when": "later",
+   "opens": [
+    "route-10",
+    "victory-road"
+   ],
+   "tips": "Unfezant, Liepard and his monkey at 43 plus his starter's final form at 45. Bianca then gives you three Max Revives. Show all eight badges at the check gates to enter Victory Road.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 11"
+  },
+  {
+   "id": "legend-terrakion",
+   "name": "Terrakion in Victory Road",
+   "kind": "legendary",
+   "place": "victory-road",
+   "level_cap": 42,
+   "done_when": "later",
+   "opens": [],
+   "tips": "Appears in the Trial Chamber (6F) only if you completed Mistralton Cave. Water, Grass or Ground moves hit it for double damage; skip Dark moves.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 11"
+  },
+  {
+   "id": "e4-shauntal",
+   "name": "Elite Four: Shauntal",
+   "kind": "elite4",
+   "place": "pokemon-league",
+   "leader": "Shauntal",
+   "theme": "ghost",
+   "level_cap": 50,
+   "foe": {
+    "name": "Shauntal",
+    "class": "Elite Four",
+    "ace_level": 50
+   },
+   "done_when": "later",
+   "opens": [
+    "pokemon-league"
+   ],
+   "tips": "The Elite Four can be fought in any order; heal and save between them. Dark and Ghost moves hit most of Shauntal's ghosts, and Water handles Golurk and Chandelure (50). Cofagrigus and Jellicent are 48.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 12; Pokémon Database: Black/White gym leaders and Elite Four"
+  },
+  {
+   "id": "e4-grimsley",
+   "name": "Elite Four: Grimsley",
+   "kind": "elite4",
+   "place": "pokemon-league",
+   "leader": "Grimsley",
+   "theme": "dark",
+   "level_cap": 50,
+   "foe": {
+    "name": "Grimsley",
+    "class": "Elite Four",
+    "ace_level": 50
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Krookodile, Liepard and Bisharp are weak to Fighting; Scrafty is weak to Flying and Psychic. Liepard and Bisharp carry Aerial Ace, so a pure Fighting team can be punished.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 12"
+  },
+  {
+   "id": "e4-caitlin",
+   "name": "Elite Four: Caitlin",
+   "kind": "elite4",
+   "place": "pokemon-league",
+   "leader": "Caitlin",
+   "theme": "psychic",
+   "level_cap": 50,
+   "foe": {
+    "name": "Caitlin",
+    "class": "Elite Four",
+    "ace_level": 50
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Dark Pokemon are immune to most of her moves; Ghost, Bug and Dark attacks find the weak spots. Watch Reuniclus' Focus Blast and Gothitelle's Flatter confusion (Gothitelle is her ace at 50).",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 12"
+  },
+  {
+   "id": "e4-marshal",
+   "name": "Elite Four: Marshal",
+   "kind": "elite4",
+   "place": "pokemon-league",
+   "leader": "Marshal",
+   "theme": "fighting",
+   "level_cap": 50,
+   "foe": {
+    "name": "Marshal",
+    "class": "Elite Four",
+    "ace_level": 50
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "A pure Fighting line-up (Throh, Sawk, Conkeldurr 48, Mienshao 50). Flying and Psychic moves are best; Aerial Ace from TM40 helps, but he has Rock moves for Flying Pokemon.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 12"
+  },
+  {
+   "id": "legend-dragon",
+   "name": "Reshiram awakens in N's Castle",
+   "kind": "legendary",
+   "place": "ns-castle",
+   "level_cap": 50,
+   "done_when": "later",
+   "opens": [
+    "ns-castle"
+   ],
+   "tips": "After the Elite Four, N's Castle rises. In the throne room the Light Stone turns into Reshiram and fights you at level 50. Its catch rate (45) is far better than other legends: a Quick Ball on turn one or a weakened target and an Ultra Ball works. Once caught it takes the lead slot in your party for the N fight.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 12"
+  },
+  {
+   "id": "team-n-final",
+   "name": "N in N's Castle",
+   "kind": "team",
+   "place": "ns-castle",
+   "level_cap": 52,
+   "foe": {
+    "name": "N",
+    "class": "Team Plasma",
+    "ace_level": 52
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "N rides Zekrom at 52 and brings Carracosta, Vanilluxe, Archeops, Zoroark and Klinklang at 50. Fighting moves hit all but his dragon and Archeops; Fire hits Vanilluxe and Klinklang; Electric hits Carracosta and Archeops.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 12; Pokémon Database: Black/White gym leaders and Elite Four"
+  },
+  {
+   "id": "team-ghetsis",
+   "name": "Ghetsis",
+   "kind": "team",
+   "place": "ns-castle",
+   "level_cap": 54,
+   "foe": {
+    "name": "Ghetsis",
+    "class": "Team Plasma",
+    "ace_level": 54
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Cofagrigus, Bouffalant, Seismitoad, Bisharp and Eelektross at 52, then Hydreigon at 54. Eelektross has no weakness, but Grass is four times effective on Seismitoad. Keep a special-bulky Pokemon for Hydreigon's Dragon Pulse and Fire Blast.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 12; Pokémon Database: Black/White gym leaders and Elite Four"
+  },
+  {
+   "id": "post-sages",
+   "name": "Hunt the Seven Sages with Looker",
+   "kind": "postgame",
+   "place": "nuvema-town",
+   "level_cap": 63,
+   "done_when": "later",
+   "opens": [
+    "route-11",
+    "village-bridge",
+    "route-12",
+    "lacunosa-town",
+    "route-13",
+    "giant-chasm",
+    "challengers-cave"
+   ],
+   "tips": "Looker waits at your house. Rood is on Route 18, Gorm in the Dreamyard basement, Zinzolin in the Cold Storage, Bronius in Chargestone Cave (two level 62-63 grunts), Ryoku in the Relic Castle and Giallo on Route 14. Each gives a TM. Roads east open as well.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Parts 13-14, 17"
+  },
+  {
+   "id": "post-cheren",
+   "name": "Cheren at Victory Road (daily)",
+   "kind": "rival",
+   "place": "victory-road",
+   "level_cap": 67,
+   "foe": {
+    "name": "Cheren",
+    "class": "PKMN Trainer",
+    "ace_level": 67
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "After Route 5 he trains on Victory Road's seventh floor and rebattles daily. Six Pokemon: Liepard, monkey, Unfezant, Gigalith and Haxorus at 65 and his final starter at 67.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 14"
+  },
+  {
+   "id": "legend-volcarona",
+   "name": "Volcarona in the Relic Castle",
+   "kind": "legendary",
+   "place": "relic-castle",
+   "level_cap": 70,
+   "done_when": "later",
+   "opens": [],
+   "tips": "Reach the deepest room after the sand is cleared. Water and Flying moves weaken it fast, watch Quiver Dance, and use Dusk Balls. Ryoku's TM04 and a tower TM26 are on the way.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 13"
+  },
+  {
+   "id": "post-e4-rematch",
+   "name": "Elite Four rematch",
+   "kind": "postgame",
+   "place": "pokemon-league",
+   "level_cap": 73,
+   "done_when": "later",
+   "opens": [],
+   "tips": "Alder must first tell you to wait at the League (Celestial Tower roof). Teams now have five or six Pokemon at 71-73: Shauntal adds Froslass and Drifblim, Grimsley Sharpedo and Drapion, Caitlin Metagross and Bronzong, Marshal Breloom and Toxicroak.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Parts 14-15; Pokémon Database: Black/White gym leaders and Elite Four"
+  },
+  {
+   "id": "champion-alder",
+   "name": "Champion Alder",
+   "kind": "champion",
+   "place": "pokemon-league",
+   "level_cap": 77,
+   "foe": {
+    "name": "Alder",
+    "class": "Champion",
+    "ace_level": 77
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Accelgor, Bouffalant, Druddigon, Vanilluxe and Escavalier at 75 and Volcarona at 77. Fire beats Accelgor, Escavalier and Vanilluxe; Flying beats Accelgor and Volcarona; Fighting beats Bouffalant and Vanilluxe.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 15; Pokémon Database: Black/White gym leaders and Elite Four"
+  },
+  {
+   "id": "legend-kyurem",
+   "name": "Kyurem in the Giant Chasm",
+   "kind": "legendary",
+   "place": "giant-chasm",
+   "level_cap": 75,
+   "done_when": "later",
+   "opens": [],
+   "tips": "Walk the crater forest clockwise to the pit and the whole place goes snowy. Fighting, Rock and Dragon moves hit it for double; Endeavor and Glaciate are its tools. Use Dusk Balls in the cave.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 16"
+  },
+  {
+   "id": "post-cynthia",
+   "name": "Cynthia in Undella Town",
+   "kind": "postgame",
+   "place": "undella-town",
+   "level_cap": 77,
+   "foe": {
+    "name": "Cynthia",
+    "class": "PKMN Trainer",
+    "ace_level": 77
+   },
+   "done_when": "later",
+   "opens": [
+    "undella-town",
+    "undella-bay",
+    "abyssal-ruins",
+    "route-14"
+   ],
+   "tips": "Spiritomb, Eelektross, Milotic, Braviary, Lucario (75) and Garchomp (77). Spiritomb has no weakness and Eelektross is immune to Ground. She battles on your first visit; she is gone in autumn and winter, and fights daily in spring.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 17; Bulbapedia: Season (game mechanic)"
+  },
+  {
+   "id": "legend-landorus",
+   "name": "Landorus at the Abundant Shrine",
+   "kind": "legendary",
+   "place": "abundant-shrine",
+   "level_cap": 70,
+   "done_when": "later",
+   "opens": [
+    "abundant-shrine"
+   ],
+   "tips": "Needs Tornadus and Thundurus together in your party, so one must come from the other version by trade. Water moves hurt it, then use Fighting, Poison or Bug and Ultra Balls. It is level 70.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 17; Bulbapedia: Landorus"
+  },
+  {
+   "id": "post-southeast",
+   "name": "Black City and the south-east",
+   "kind": "postgame",
+   "place": "black-city",
+   "level_cap": 65,
+   "done_when": "later",
+   "opens": [
+    "black-city",
+    "route-15",
+    "marvelous-bridge",
+    "route-16",
+    "lostlorn-forest"
+   ],
+   "tips": "Residents depend on how many days passed before you first arrive, and the trainers inside fight at level 65. Marvelous Bridge's daily Ace Trainer, Route 15's Poke Transfer Lab and Lostlorn Forest are close by.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 18"
+  },
+  {
+   "id": "post-morimoto",
+   "name": "Morimoto in Castelia City (daily)",
+   "kind": "postgame",
+   "place": "castelia-city",
+   "level_cap": 77,
+   "foe": {
+    "name": "Morimoto",
+    "class": "GAME FREAK",
+    "ace_level": 77
+   },
+   "done_when": "none",
+   "opens": [],
+   "tips": "After the Elite Four, he challenges you in the Game Freak building once a day with six Pokemon at 75-77 (Zebstrika leads at 77).",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough:Pokémon Black and White Part 13"
+  },
+  {
+   "id": "legend-victini",
+   "name": "Victini on Liberty Garden",
+   "kind": "legendary",
+   "place": "liberty-garden",
+   "level_cap": 15,
+   "done_when": "none",
+   "opens": [
+    "liberty-garden"
+   ],
+   "tips": "Event only: the ferry runs just with the Liberty Pass item. Victini waits in the lighthouse basement at level 15 and respawns if you flee.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Liberty Garden; Victini"
+  }
+ ],
+ "steps": [
+  {
+   "id": "step-starter",
+   "title": "Choose your partner",
+   "text": "The two starters you skip cannot be had without trading. Snivy has the most weaknesses; Oshawott the fewest.",
+   "stage": "rival-nuvema",
+   "places": [
+    "nuvema-town",
+    "route-1"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 1"
+  },
+  {
+   "id": "step-first-gym-prep",
+   "title": "Train for Striaton",
+   "text": "Beat Route 2's trainers and aim for level 12-15 before the first Gym. Get the monkey from the Dreamyard girl.",
+   "stage": "gym-1",
+   "places": [
+    "route-2",
+    "striaton-city",
+    "dreamyard"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 2"
+  },
+  {
+   "id": "step-dream-mist",
+   "title": "Help Fennel with Dream Mist",
+   "text": "After the first badge, Fennel gives HM01 (Cut). Cut the tree in the Dreamyard, beat the Plasma grunts and return the Dream Mist for the C-Gear.",
+   "stage": "team-dreamyard",
+   "places": [
+    "striaton-city",
+    "dreamyard"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 2"
+  },
+  {
+   "id": "step-route3-day-care",
+   "title": "Route 3 Day Care",
+   "text": "The Day Care takes one Pokemon now and two after Nimbasa. Cheren challenges you at the fork.",
+   "stage": "rival-route-3",
+   "places": [
+    "route-3"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 3"
+  },
+  {
+   "id": "step-lenora-prep",
+   "title": "Fighting types for Lenora",
+   "text": "Timburr, Throh or Sawk from Pinwheel Forest make Lenora's Normal team easy. TM94 (Rock Smash) is from a girl just outside Nacrene City.",
+   "stage": "gym-2",
+   "places": [
+    "nacrene-city",
+    "pinwheel-forest"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 3, 4"
+  },
+  {
+   "id": "step-pinwheel",
+   "title": "Pinwheel Forest rescue",
+   "text": "Chase the Plasma grunts through the forest with Burgh and Lenora. Grab TM86 (Grass Knot) and the Moon Stone Lenora offers.",
+   "stage": "gym-3",
+   "places": [
+    "pinwheel-forest"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 4"
+  },
+  {
+   "id": "step-castelia-prep",
+   "title": "Castelia sidequests",
+   "text": "The scientist on the eastern pier gives an evolution stone. The Pokemon Center man rewards trading, and Narrow Street has TM70 (Flash).",
+   "stage": "gym-3",
+   "places": [
+    "castelia-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 4"
+  },
+  {
+   "id": "step-desert-fossil",
+   "title": "Fossil and desert",
+   "text": "On Route 4 take TM28 (Dig). In the Desert Resort grab the Fire Stone, then pick a fossil in the Relic Castle for the Nacrene museum.",
+   "stage": "rival-route-4",
+   "places": [
+    "route-4",
+    "desert-resort",
+    "relic-castle"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 5"
+  },
+  {
+   "id": "step-nimbasa-prep",
+   "title": "Nimbasa and Elesa",
+   "text": "Rescue the Day-Care Man for the Bicycle. HM04 Strength is in the house north of the Battle Institute; a Ground attacker and Dig help against Elesa.",
+   "stage": "gym-4",
+   "places": [
+    "nimbasa-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 5"
+  },
+  {
+   "id": "step-driftveil",
+   "title": "Driftveil and Cold Storage",
+   "text": "The Cold Storage puzzle is easier on its left ice lane. Clay's Excadrill is the danger; bring Fire, Fighting or Ground.",
+   "stage": "gym-5",
+   "places": [
+    "driftveil-city",
+    "cold-storage"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 6"
+  },
+  {
+   "id": "step-fly",
+   "title": "Fly and Chargestone",
+   "text": "Bianca's HM02 (Fly) speeds travel. In Chargestone Cave push the floating stones toward the larger magnets and collect the Lucky Egg.",
+   "stage": "n-chargestone",
+   "places": [
+    "route-6",
+    "chargestone-cave"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Parts 6-7"
+  },
+  {
+   "id": "step-skyla-prep",
+   "title": "Celestial Tower detour",
+   "text": "Ring the bell on the tower roof first, or Skyla will not fight. Electric and Rock types make her Gym fast.",
+   "stage": "gym-6",
+   "places": [
+    "mistralton-city",
+    "route-7",
+    "celestial-tower"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 7"
+  },
+  {
+   "id": "step-surf",
+   "title": "Surf and the sea routes",
+   "text": "Alder's Surf opens Routes 17 and 18 (HM05 Waterfall, Larvesta Egg, Dubious Disc) and Mistralton Cave. Bring Strength and Flash.",
+   "stage": "legend-cobalion",
+   "places": [
+    "route-17",
+    "route-18",
+    "p2-laboratory",
+    "mistralton-cave"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 8"
+  },
+  {
+   "id": "step-twist",
+   "title": "Twist Mountain and the season",
+   "text": "In winter, snow blocks some Twist Mountain tunnels and makes others reachable (a Metal Coat appears); the month decides, so check before you enter.",
+   "stage": "gym-7",
+   "places": [
+    "twist-mountain",
+    "icirrus-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 9; Season (game mechanic)"
+  },
+  {
+   "id": "step-brycen-prep",
+   "title": "Fire and Fighting for Brycen",
+   "text": "All of Brycen's trainers are Ice type. Bring Fire, Fighting, Rock or Steel moves and TM Flash Cannon from Twist Mountain.",
+   "stage": "gym-7",
+   "places": [
+    "icirrus-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 9"
+  },
+  {
+   "id": "step-dragonspiral",
+   "title": "Dragonspiral Tower",
+   "text": "Cedric Juniper hands out an Old Gateau at the entrance. After N takes his dragon, the story moves to the Relic Castle.",
+   "stage": "team-dragonspiral",
+   "places": [
+    "dragonspiral-tower"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 9"
+  },
+  {
+   "id": "step-relic-castle",
+   "title": "Relic Castle test",
+   "text": "Fight the grunts as you fall through the sand. Afterwards Lenora gives you the Light Stone at the Nacrene museum.",
+   "stage": "team-relic-castle",
+   "places": [
+    "relic-castle",
+    "nacrene-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 10"
+  },
+  {
+   "id": "step-opelucid-prep",
+   "title": "Dragons ahead",
+   "text": "Ice and Dragon moves handle Drayden. After winning, Juniper gives a Master Ball and the roamer starts on Route 7.",
+   "stage": "gym-8",
+   "places": [
+    "opelucid-city",
+    "route-10"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 11"
+  },
+  {
+   "id": "step-victory-road",
+   "title": "Victory Road",
+   "text": "Show eight badges at the check gates. Bring Surf and Strength; Terrakion hides in the trial chamber if Mistralton Cave is done.",
+   "stage": "legend-terrakion",
+   "places": [
+    "route-10",
+    "victory-road"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 11"
+  },
+  {
+   "id": "step-e4-prep",
+   "title": "Before the League",
+   "text": "Aim for the mid-50s, stock Full Restores and Revives, and save after each member. They can be fought in any order.",
+   "stage": "e4-shauntal",
+   "places": [
+    "pokemon-league"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 12"
+  },
+  {
+   "id": "step-castle",
+   "title": "N's Castle",
+   "text": "Heal and use the PC inside. In the throne room catch the dragon, then fight N and Ghetsis; Hydreigon is the hardest part.",
+   "stage": "legend-dragon",
+   "places": [
+    "ns-castle"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 12"
+  },
+  {
+   "id": "step-sages",
+   "title": "After the credits",
+   "text": "Looker asks you to round up the Sages. Each gives a TM. Roads east, Giant Chasm and Challenger's Cave open.",
+   "stage": "post-sages",
+   "places": [
+    "nuvema-town",
+    "route-11",
+    "challengers-cave"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Parts 13-14"
+  },
+  {
+   "id": "step-alder-prep",
+   "title": "Prepare for Alder",
+   "text": "Visit Alder on Celestial Tower's roof, then return to the League for the rematch. Teams are level 71-73; Alder's ace Volcarona is 77.",
+   "stage": "post-e4-rematch",
+   "places": [
+    "celestial-tower",
+    "pokemon-league"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Parts 14-15"
+  },
+  {
+   "id": "step-chasm",
+   "title": "Giant Chasm",
+   "text": "Stock up on Dusk Balls and go clockwise through the crater forest to Kyurem.",
+   "stage": "legend-kyurem",
+   "places": [
+    "route-12",
+    "lacunosa-town",
+    "route-13",
+    "giant-chasm"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Parts 16"
+  },
+  {
+   "id": "step-undella",
+   "title": "Undella Town and the bay",
+   "text": "Get HM06 (Dive), fight Cynthia (best in spring) and explore the Abyssal Ruins for relics.",
+   "stage": "post-cynthia",
+   "places": [
+    "undella-town",
+    "undella-bay",
+    "abyssal-ruins"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 17"
+  },
+  {
+   "id": "step-landorus",
+   "title": "Landorus",
+   "text": "Trade for the missing storm god, bring both Tornadus and Thundurus to the Abundant Shrine, and catch Landorus.",
+   "stage": "legend-landorus",
+   "places": [
+    "route-14",
+    "abundant-shrine"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 17"
+  },
+  {
+   "id": "step-southeast",
+   "title": "South-east loop",
+   "text": "Black City, Route 15, Marvelous Bridge, Route 16 and Lostlorn Forest are the last unexplored places. Marvelous Bridge's Shadow Triad leaves three Orbs for you.",
+   "stage": "post-southeast",
+   "places": [
+    "route-15",
+    "marvelous-bridge",
+    "route-16",
+    "lostlorn-forest"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 18"
+  }
+ ],
+ "secrets": [
+  {
+   "id": "sec-dreamyard-monkey",
+   "kind": "gift",
+   "place": "dreamyard",
+   "text": "The second girl in the outer Dreamyard gives you a level 10 monkey that counters your starter: Pansage if you chose Tepig, Pansear if Oshawott, Panpour if Snivy.",
+   "condition": "after Route 2 trainers",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 2"
+  },
+  {
+   "id": "sec-dreamyard-musharna",
+   "kind": "event",
+   "place": "dreamyard",
+   "text": "A level 50 Musharna appears once every Friday in the basement's eastern grass patch. It is the only Musharna that can carry the hidden ability Telepathy.",
+   "condition": "after the main story",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 13"
+  },
+  {
+   "id": "sec-dreamyard-basement",
+   "kind": "hidden-item",
+   "place": "dreamyard",
+   "text": "TM85 (Dream Eater) is in the basement's northwest corner and a TwistedSpoon in its southwest corner. Trainers down there run; talk to them from the side to fight.",
+   "condition": "after the main story",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 13"
+  },
+  {
+   "id": "sec-route2-cut",
+   "kind": "hidden-item",
+   "place": "route-2",
+   "text": "A Great Ball and a Super Potion sit behind a cuttable tree northwest of the road, so return after Cut.",
+   "condition": "needs Cut",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 2"
+  },
+  {
+   "id": "sec-route3-sandbox",
+   "kind": "hidden-item",
+   "place": "route-3",
+   "text": "A hidden Ultra Ball is buried in the sandbox on Route 3.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 3"
+  },
+  {
+   "id": "sec-nacrene-starter-item",
+   "kind": "gift",
+   "place": "nacrene-city",
+   "text": "A woman in the second building west of the Pokemon Center gives a type-boosting item based on your starter type. Answer Tepig or Oshawott, because Pinwheel Forest has a free Miracle Seed anyway.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 3"
+  },
+  {
+   "id": "sec-nacrene-trade",
+   "kind": "trade",
+   "place": "nacrene-city",
+   "text": "Dye, upstairs in the house east of the Pokemon Center, trades away a Petilil. It cannot be found in the wild in this version.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 3; Bulbapedia: Version page"
+  },
+  {
+   "id": "sec-nacrene-dowsing",
+   "kind": "gift",
+   "place": "nacrene-city",
+   "text": "Bianca gives you the Dowsing MCHN outside the museum after the Plasma raid. It beeps near hidden items.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 3"
+  },
+  {
+   "id": "sec-pinwheel-rock",
+   "kind": "tip",
+   "place": "pinwheel-forest",
+   "text": "A Fighting-type hitting the challenge rock on the southeastern cliff chips off one Star Piece per day.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 4"
+  },
+  {
+   "id": "sec-pinwheel-moonstone",
+   "kind": "gift",
+   "place": "pinwheel-forest",
+   "text": "After the Plasma ambush, Lenora rewards the Dragon Skull rescue with a Moon Stone. TM86 (Grass Knot) lies east of Ranger Miguel; a Miracle Seed sits on a ledge by the north exit.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 4"
+  },
+  {
+   "id": "sec-castelia-stone",
+   "kind": "gift",
+   "place": "castelia-city",
+   "text": "On the eastern pier a scientist gives an evolution stone matching your monkey. Pick a Leaf or Water Stone over the Fire Stone, because a Fire Stone is easy to find later in the Desert Resort.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 4"
+  },
+  {
+   "id": "sec-castelia-zorua",
+   "kind": "tip",
+   "place": "castelia-city",
+   "text": "Listen to the girl reading the picture book in the Game Freak lobby and Zorua is registered in your Pokedex.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 4"
+  },
+  {
+   "id": "sec-castelia-trades",
+   "kind": "gift",
+   "place": "castelia-city",
+   "text": "The man in black on the Pokemon Center's second floor rewards link trading: Wide Lens at 5 partners, Everstone 10, Zoom Lens 20, Choice Scarf 30, PP Max 40 and a Master Ball at 50.",
+   "condition": "needs link-trade partners",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 4"
+  },
+  {
+   "id": "sec-castelia-geoff",
+   "kind": "gift",
+   "place": "castelia-city",
+   "text": "Win through the Battle Company building to the 55th floor and the disguised president gives an Exp. Share. Quick Balls and Timer Balls (three each) are on the 47th floor.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 4"
+  },
+  {
+   "id": "sec-castelia-dancers",
+   "kind": "gift",
+   "place": "castelia-city",
+   "text": "Round up the three dancers (fountain, Narrow Street, Unity Pier) by beating them and Mickey gives an Amulet Coin.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 4"
+  },
+  {
+   "id": "sec-castelia-casteliacone",
+   "kind": "tip",
+   "place": "castelia-city",
+   "text": "Casteliacones, which cure any status condition, are sold on Tuesdays and not in winter.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 4; Bulbapedia: Season (game mechanic)"
+  },
+  {
+   "id": "sec-desert-firestone",
+   "kind": "hidden-item",
+   "place": "desert-resort",
+   "text": "A Fire Stone lies northwest of Psychic Gaven, and a hidden Rare Candy south of him. A Heart Scale is near the northwest castle tower.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 5"
+  },
+  {
+   "id": "sec-relic-fossil",
+   "kind": "gift",
+   "place": "relic-castle",
+   "text": "The backpacker on the west side of floor 1 offers a Cover Fossil or a Plume Fossil, one only. Revive it at the Nacrene museum.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 5"
+  },
+  {
+   "id": "sec-route4-dig",
+   "kind": "gift",
+   "place": "route-4",
+   "text": "A worker in the house beside the vending machine hands out TM28 (Dig).",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 5"
+  },
+  {
+   "id": "sec-nimbasa-gifts",
+   "kind": "gift",
+   "place": "nimbasa-city",
+   "text": "A man north of the Pokemon Center gives a Sun Stone; the blue-haired man in the house north of the Battle Institute gives HM04 (Strength).",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 5"
+  },
+  {
+   "id": "sec-anville-candy",
+   "kind": "gift",
+   "place": "anville-town",
+   "text": "The Depot Agent gives a Rare Candy the first time you talk to him; on weekends several traders swap items.",
+   "condition": "ride the Brown Line from Nimbasa",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 5"
+  },
+  {
+   "id": "sec-driftveil-gifts",
+   "kind": "gift",
+   "place": "driftveil-city",
+   "text": "An old man gives a Shell Bell if you have seen 50 Pokemon, and a man in black at the market gives an Expert Belt if a party Pokemon is level 30 or higher.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 6"
+  },
+  {
+   "id": "sec-driftveil-heartscale",
+   "kind": "tip",
+   "place": "driftveil-city",
+   "text": "The woman north of the market gives a Heart Scale each day you show a Pokemon that knows the move she asks for.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 6"
+  },
+  {
+   "id": "sec-driftveil-tutor",
+   "kind": "gift",
+   "place": "driftveil-city",
+   "text": "A man in the house east of the market teaches your starter Grass, Fire or Water Pledge if it is friendly enough.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 6; Bulbapedia: Move Tutor"
+  },
+  {
+   "id": "sec-driftveil-island",
+   "kind": "hidden-item",
+   "place": "driftveil-city",
+   "text": "A Water Stone sits on the lighthouse island off the harbour.",
+   "condition": "needs Surf",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 6"
+  },
+  {
+   "id": "sec-driftveil-trade",
+   "kind": "trade",
+   "place": "driftveil-city",
+   "text": "A kid in the house southeast of the Pokemon Center trades a Basculin for a Minccino.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 6"
+  },
+  {
+   "id": "sec-route6-shiny",
+   "kind": "gift",
+   "place": "route-6",
+   "text": "A child in the house near Chargestone Cave gives a Shiny Stone; the Season Research Lab gives a Leaf Stone for all four Deerling forms.",
+   "condition": "needs Surf for the stone",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 7"
+  },
+  {
+   "id": "sec-chargestone-items",
+   "kind": "gift",
+   "place": "chargestone-cave",
+   "text": "Professor Juniper hands over a Lucky Egg near the entrance. A Thunderstone is on B1F west of the Plasma grunts and a Rare Candy on B2F.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 7"
+  },
+  {
+   "id": "sec-route7-trade",
+   "kind": "trade",
+   "place": "route-7",
+   "text": "The hiker in the west house trades his Emolga for a Boldore.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 7"
+  },
+  {
+   "id": "sec-mistralton-family",
+   "kind": "tip",
+   "place": "mistralton-city",
+   "text": "The Move Family's old man deletes any move, even HM moves; his granddaughter re-teaches forgotten moves for a Heart Scale.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 7"
+  },
+  {
+   "id": "sec-celestial-items",
+   "kind": "hidden-item",
+   "place": "celestial-tower",
+   "text": "Spell Tag on 3F near Psychic Bryce, TM61 (Will-O-Wisp) on 2F, TM65 (Shadow Claw) on 4F.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 7"
+  },
+  {
+   "id": "sec-route17-items",
+   "kind": "hidden-item",
+   "place": "route-17",
+   "text": "TM06 (Toxic) in shallow water northwest of Fisherman Lydon and a DeepSeaTooth in the shallows near Swimmer Wright.",
+   "condition": "needs Surf",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 8"
+  },
+  {
+   "id": "sec-route18-egg",
+   "kind": "gift",
+   "place": "route-18",
+   "text": "The Ranger in the small house gives an Egg that hatches into Larvesta. Keep a party slot free for it.",
+   "condition": "needs Surf",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 8"
+  },
+  {
+   "id": "sec-route18-items",
+   "kind": "hidden-item",
+   "place": "route-18",
+   "text": "HM05 (Waterfall) lies in tall grass on the island's southwest edge and a Dragon Scale northwest of Backpacker Sam (Strength needed).",
+   "condition": "needs Surf",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 8"
+  },
+  {
+   "id": "sec-p2-lab",
+   "kind": "hidden-item",
+   "place": "p2-laboratory",
+   "text": "A Dubious Disc is on the floor of the empty lab, and TM24 (Thunderbolt) lies in the grass on the island.",
+   "condition": "needs Surf",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 8"
+  },
+  {
+   "id": "sec-mistralton-cave",
+   "kind": "hidden-item",
+   "place": "mistralton-cave",
+   "text": "A Dusk Stone is in the northeast of the Guidance Chamber and a Rare Candy northwest of the old man; TM80 (Rock Slide) is on 2F.",
+   "condition": "needs Strength",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 8"
+  },
+  {
+   "id": "sec-twist-items",
+   "kind": "hidden-item",
+   "place": "twist-mountain",
+   "text": "A Moon Stone is on 3F beside Worker Heath, TM91 (Flash Cannon) in the damp cave on B1F, and in winter a Metal Coat sits in the 1F southeast cave. After the story a worker gives a random fossil daily.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 9, 14"
+  },
+  {
+   "id": "sec-icirrus-fanclub",
+   "kind": "gift",
+   "place": "icirrus-city",
+   "text": "The Fan Club chairman rewards a well-raised Pokemon: Exp. Share at 25-49 levels grown, Cleanse Tag at 50-98, King's Rock at 99. The old gentleman in the Pokemon Center pays double for stones and gems.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 9"
+  },
+  {
+   "id": "sec-dragonspiral-items",
+   "kind": "hidden-item",
+   "place": "dragonspiral-tower",
+   "text": "A Shiny Stone is on 3F's northwest corner, a Dragon Fang on 4F's northeast corner, and TM63 (Embargo) sits east of the tower.",
+   "condition": "Surf for TM63",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 9"
+  },
+  {
+   "id": "sec-route8-rocks",
+   "kind": "gift",
+   "place": "route-8",
+   "text": "A Parasol Lady near the Tubeline Bridge gate gives a weather rock once a day: Damp Rock (morning), Heat Rock (afternoon), Smooth Rock (evening), Icy Rock (night). TM42 (Facade) is from the lady by the signpost.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 10"
+  },
+  {
+   "id": "sec-route10-stones",
+   "kind": "gift",
+   "place": "route-10",
+   "text": "A Dawn Stone lies in the dark grass near Black Belt Corey and a man by the west bridge gives a Dusk Stone. Bianca gives three Max Revives after the rival fight.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 11"
+  },
+  {
+   "id": "sec-opelucid-master-ball",
+   "kind": "gift",
+   "place": "opelucid-city",
+   "text": "After the final badge, Professor Juniper gives you a Master Ball outside the Gym.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 11"
+  },
+  {
+   "id": "sec-opelucid-draco",
+   "kind": "gift",
+   "place": "opelucid-city",
+   "text": "Iris teaches Draco Meteor to your Dragon-type Pokemon; it is the opposite version's Gym Leader.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 14; Bulbapedia: Move Tutor"
+  },
+  {
+   "id": "sec-route13-hunter",
+   "kind": "gift",
+   "place": "route-13",
+   "text": "A treasure hunter on the western path gives a different random rare item every day, including Magmarizer, Electirizer, Protector, Reaper Cloth, Dubious Disc and several flutes. A Veteran in the west house gives the Splash and Draco Plates (needs Surf).",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 16; Bulbapedia: Route 13"
+  },
+  {
+   "id": "sec-route13-grams",
+   "kind": "event",
+   "place": "route-13",
+   "text": "Find the three Grams Wingull lost (an old man, the cliff south of Artist Zach, the southern Parasol Lady) for TM89 (U-turn). A Prism Scale lies on the northeast shore (needs Surf).",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 16"
+  },
+  {
+   "id": "sec-route11-protector",
+   "kind": "hidden-item",
+   "place": "route-11",
+   "text": "A Protector sits northeast of Ranger Crofton after riding down the southern waterfall; TM50 (Overheat) is on the northern waterfall's ledge.",
+   "condition": "needs Waterfall",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 16"
+  },
+  {
+   "id": "sec-route14-cloth",
+   "kind": "hidden-item",
+   "place": "route-14",
+   "text": "A Reaper Cloth lies in tall grass south of the waterfall with the Ultra Ball. The last Sage, Giallo, is up the west waterfall and gives TM08.",
+   "condition": "needs Surf and Waterfall",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 17"
+  },
+  {
+   "id": "sec-lacunosa-gracidea",
+   "kind": "gift",
+   "place": "lacunosa-town",
+   "text": "The woman in the Pokemon Center gives the Gracidea only if you show her a Shaymin with a fateful encounter (an event Pokemon).",
+   "condition": "needs an event Shaymin",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 16"
+  },
+  {
+   "id": "sec-giant-chasm-items",
+   "kind": "hidden-item",
+   "place": "giant-chasm",
+   "text": "The cave entrance hides a Comet Shard and two Star Pieces behind boulders (Strength); inside the crater, TM13 (Ice Beam) and TM03 (Psyshock).",
+   "condition": "needs Strength",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 16"
+  },
+  {
+   "id": "sec-abundant-shrine",
+   "kind": "hidden-item",
+   "place": "abundant-shrine",
+   "text": "TM35 (Flamethrower) lies beyond the pond west of the entrance, a Razor Fang at the far west and TM92 (Trick Room) east of the shrine pond.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 17"
+  },
+  {
+   "id": "sec-undella-dive",
+   "kind": "gift",
+   "place": "undella-town",
+   "text": "A girl on the plateau west of the Pokemon Center gives HM06 (Dive). The wealthy Riches family in the big villa fights you in sequence, and the collector there buys relics.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 17"
+  },
+  {
+   "id": "sec-undella-munchlax",
+   "kind": "trade",
+   "place": "undella-town",
+   "text": "In summer a man in Undella Town trades a Munchlax for a Cinccino.",
+   "condition": "summer only",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 17; Bulbapedia: Season (game mechanic)"
+  },
+  {
+   "id": "sec-abyssal-relics",
+   "kind": "hidden-item",
+   "place": "abyssal-ruins",
+   "text": "Four floors of relics (Vase, Statue, Gold, Band, Silver, Crown) sell for about 1.7 million in total to the collector in Undella's villa.",
+   "condition": "needs Dive, Surf, Strength and Flash",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 17"
+  },
+  {
+   "id": "sec-marvelous-orbs",
+   "kind": "gift",
+   "place": "marvelous-bridge",
+   "text": "At the bridge's west end the Shadow Triad leaves the Adamant, Lustrous and Griseous Orbs for you. A salesman sells a Magikarp for 500, and a Patrat show may give a Big Mushroom.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 18"
+  },
+  {
+   "id": "sec-route15-trade",
+   "kind": "trade",
+   "place": "route-15",
+   "text": "A woman in the trailer trades a Rotom for a Ditto. An Up-Grade lies under the boulder south of the gate and TM09 (Venoshock) up the stairs.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 18"
+  },
+  {
+   "id": "sec-lostlorn-zoroark",
+   "kind": "event",
+   "place": "lostlorn-forest",
+   "text": "A silent woman in the trailer is tied to a level 25 Zoroark, but it is only unlocked with a shiny event Raikou, Entei or Suicune brought over from Gen IV. It cannot be had otherwise.",
+   "condition": "needs an event Pokemon",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 18; Bulbapedia: Zoroark; Version page"
+  },
+  {
+   "id": "sec-relic-castle-deep",
+   "kind": "hidden-item",
+   "place": "relic-castle",
+   "text": "Once the sand clears, the tower holds TM26 (Earthquake) on top, a PP Max on B3F, and Volcarona waits in the deepest room. Ryoku, a Sage, gives TM04 (Calm Mind).",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 13"
+  },
+  {
+   "id": "sec-southeast-entralink",
+   "kind": "tip",
+   "place": "black-city",
+   "text": "Residents of Black City leave if you are away too long and can be replaced only by visiting a friend's White Forest through the Entralink. A maximum crowd needs you to arrive within four days of starting the game.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 18; Bulbapedia: Black City, White Forest"
+  },
+  {
+   "id": "sec-victini-event",
+   "kind": "legendary",
+   "place": "liberty-garden",
+   "text": "Victini needs the Liberty Pass event item. Plasma members fight you on arrival the first time.",
+   "condition": "event item only",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Liberty Garden"
+  }
+ ],
+ "evolutions": [
+  {
+   "id": "evo-pansage",
+   "species": 511,
+   "name": "Pansage",
+   "text": "Needs a Leaf Stone. The scientist on Castelia's eastern pier gives a stone matching your monkey (Leaf, Fire or Water). More Leaf Stones: two on Route 6 beside Parasol Lady Tihana, and one for showing the Season Research Lab all four Deerling forms. Black City's market also sells it.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White; Parts 4, 7; Evolution stone"
+  },
+  {
+   "id": "evo-pansear",
+   "species": 513,
+   "name": "Pansear",
+   "text": "Needs a Fire Stone. Take a different stone from the Castelia scientist, since a Fire Stone also lies in the Desert Resort northwest of Psychic Gaven. Black City's market also sells it.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White; Parts 4, 5"
+  },
+  {
+   "id": "evo-panpour",
+   "species": 515,
+   "name": "Panpour",
+   "text": "Needs a Water Stone. The Castelia pier scientist gives one, and another sits on the lighthouse island off Driftveil City (needs Surf). Black City's market also sells it.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White; Parts 4, 6"
+  },
+  {
+   "id": "evo-munna",
+   "species": 517,
+   "name": "Munna",
+   "text": "Needs a Moon Stone. Lenora gives one for the Dragon Skull rescue in Pinwheel Forest; another lies on Twist Mountain 3F east of Worker Heath. Black City's market also sells it.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White; Parts 4, 9"
+  },
+  {
+   "id": "evo-cottonee",
+   "species": 546,
+   "name": "Cottonee",
+   "text": "Needs a Sun Stone. A man north of Nimbasa's Pokemon Center gives one, and Relic Castle B4F holds another on the east side. Black City's market also sells it. Cottonee is wild in Black; Petilil comes from the Nacrene trade.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White; Parts 5, 10; Version page"
+  },
+  {
+   "id": "evo-petilil",
+   "species": 548,
+   "name": "Petilil",
+   "text": "Needs a Sun Stone: Nimbasa City gift or Relic Castle B4F. Black City's market also sells it. In Black, Petilil comes from the Nacrene trade.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White; Parts 5, 10; Version page"
+  },
+  {
+   "id": "evo-minccino",
+   "species": 572,
+   "name": "Minccino",
+   "text": "Needs a Shiny Stone: Dragonspiral Tower 3F northwest, or the child's gift in the house near Chargestone Cave on Route 6 (after Surf). Black City's market also sells it. The Driftveil trade lets you swap it for a Basculin.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White; Parts 6, 7, 9"
+  },
+  {
+   "id": "evo-lampent",
+   "species": 608,
+   "name": "Lampent",
+   "text": "Needs a Dusk Stone: Mistralton Cave's Guidance Chamber northeast, or the man near the western bridge on Route 10. Black City's market also sells it.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White; Parts 8, 11"
+  },
+  {
+   "id": "evo-murkrow",
+   "species": 198,
+   "name": "Murkrow",
+   "text": "Needs a Dusk Stone (see Lampent for sources). Murkrow is a Black-only wild Pokemon.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Version page; Walkthrough Parts 8, 11"
+  },
+  {
+   "id": "evo-misdreavus",
+   "species": 200,
+   "name": "Misdreavus",
+   "text": "Needs a Dusk Stone (see Lampent for sources). Misdreavus is White only; Black needs a trade.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Version page; Walkthrough Parts 8, 11"
+  },
+  {
+   "id": "evo-kirlia",
+   "species": 281,
+   "name": "Kirlia",
+   "text": "A male Kirlia becomes Gallade with a Dawn Stone, found in the dark grass on Route 10 near Black Belt Corey. Black City's market also sells it. Ralts only shows up in White Forest, so Black needs a trade.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Kirlia; Walkthrough Part 11; Version page"
+  },
+  {
+   "id": "evo-snorunt",
+   "species": 361,
+   "name": "Snorunt",
+   "text": "A female Snorunt becomes Froslass with a Dawn Stone (Route 10 dark grass); males become Glalie at level 42.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Snorunt; Walkthrough Part 11"
+  },
+  {
+   "id": "evo-togetic",
+   "species": 176,
+   "name": "Togetic",
+   "text": "Needs a Shiny Stone to become Togekiss (Dragonspiral Tower 3F, or the Route 6 child's gift). Togepi itself appears only in White Forest, so Black needs a trade.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Togepi; Walkthrough Parts 7, 9, 18"
+  },
+  {
+   "id": "evo-eevee",
+   "species": 133,
+   "name": "Eevee",
+   "text": "Not wild in Black or White: trade or Dream World only. Level up in Pinwheel Forest's southwest for Leafeon (Moss Rock) or in Twist Mountain's lowest floor, in the room with the Ice Rock, for Glaceon. Friendship gives Espeon by day and Umbreon by night; Water, Thunder and Fire Stones do the rest.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Eevee; Moss Rock; Ice Rock"
+  },
+  {
+   "id": "evo-magneton",
+   "species": 82,
+   "name": "Magneton",
+   "text": "Becomes Magnezone when it levels up inside Chargestone Cave, the only magnetic field in Unova.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Magneton; Special magnetic field"
+  },
+  {
+   "id": "evo-nosepass",
+   "species": 299,
+   "name": "Nosepass",
+   "text": "Becomes Probopass when it levels up inside Chargestone Cave (the same magnetic field).",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Nosepass; Special magnetic field"
+  },
+  {
+   "id": "evo-happiny",
+   "species": 440,
+   "name": "Happiny",
+   "text": "Becomes Chansey on a daytime level-up while holding an Oval Stone: Challenger's Cave's central island has one. Black City's market sells it too.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Happiny; Walkthrough Part 14; Version page"
+  },
+  {
+   "id": "evo-kadabra",
+   "species": 64,
+   "name": "Kadabra",
+   "text": "Becomes Alakazam on a trade: needs a link trade (C-Gear wireless or infrared) with another game; the online Wi-Fi/GTS side is closed and no NPC does this one.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Evolution"
+  },
+  {
+   "id": "evo-machoke",
+   "species": 67,
+   "name": "Machoke",
+   "text": "Becomes Machamp on a trade: needs a link trade (C-Gear wireless or infrared) with another game; the online Wi-Fi/GTS side is closed and no NPC does this one.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Evolution"
+  },
+  {
+   "id": "evo-graveler",
+   "species": 75,
+   "name": "Graveler",
+   "text": "Becomes Golem on a trade: needs a link trade (C-Gear wireless or infrared) with another game; the online Wi-Fi/GTS side is closed and no NPC does this one.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Evolution"
+  },
+  {
+   "id": "evo-haunter",
+   "species": 93,
+   "name": "Haunter",
+   "text": "Becomes Gengar on a trade: needs a link trade (C-Gear wireless or infrared) with another game; the online Wi-Fi/GTS side is closed and no NPC does this one.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Evolution"
+  },
+  {
+   "id": "evo-boldore",
+   "species": 525,
+   "name": "Boldore",
+   "text": "Becomes Gigalith on a trade: needs a link trade (C-Gear wireless or infrared) with another game; the online Wi-Fi/GTS side is closed and no NPC does this one. The hiker on Route 7 wants a Boldore for his Emolga, so catch two.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Evolution; Walkthrough Part 7"
+  },
+  {
+   "id": "evo-gurdurr",
+   "species": 533,
+   "name": "Gurdurr",
+   "text": "Becomes Conkeldurr on a trade: needs a link trade (C-Gear wireless or infrared) with another game; the online Wi-Fi/GTS side is closed and no NPC does this one.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Evolution"
+  },
+  {
+   "id": "evo-karrablast",
+   "species": 588,
+   "name": "Karrablast",
+   "text": "Becomes Escavalier when swapped for a Shelmet; neither may hold an Everstone.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Karrablast"
+  },
+  {
+   "id": "evo-shelmet",
+   "species": 616,
+   "name": "Shelmet",
+   "text": "Becomes Accelgor when swapped for a Karrablast; the same trade evolves both.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Karrablast"
+  },
+  {
+   "id": "evo-onix",
+   "species": 95,
+   "name": "Onix",
+   "text": "Becomes Steelix when traded holding a Metal Coat. A Metal Coat lies in a Twist Mountain 1F cave in winter, and the Route 13 treasure hunter may give one.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Onix, Metal Coat; Walkthrough Part 9"
+  },
+  {
+   "id": "evo-scyther",
+   "species": 123,
+   "name": "Scyther",
+   "text": "Becomes Scizor when traded holding a Metal Coat (Twist Mountain 1F in winter, or the Route 13 treasure hunter).",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Scyther, Metal Coat"
+  },
+  {
+   "id": "evo-seadra",
+   "species": 117,
+   "name": "Seadra",
+   "text": "Becomes Kingdra when traded holding a Dragon Scale. One lies on Route 18 northwest of Backpacker Sam (needs Strength).",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Seadra, Dragon Scale; Walkthrough Part 8"
+  },
+  {
+   "id": "evo-poliwhirl",
+   "species": 61,
+   "name": "Poliwhirl",
+   "text": "Politoed: trade it holding a King's Rock (Icirrus Fan Club prize, or the Route 13 treasure hunter). Poliwrath instead needs a Water Stone.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Poliwhirl, King's Rock; Walkthrough Part 9"
+  },
+  {
+   "id": "evo-slowpoke",
+   "species": 79,
+   "name": "Slowpoke",
+   "text": "Slowking: trade it holding a King's Rock (see Poliwhirl for the sources). Slowbro is a plain level-up.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Slowpoke, King's Rock"
+  },
+  {
+   "id": "evo-porygon",
+   "species": 137,
+   "name": "Porygon",
+   "text": "Becomes Porygon2 when traded holding an Up-Grade. Route 15 has one under a boulder south of the gate.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Up-Grade; Walkthrough Part 18"
+  },
+  {
+   "id": "evo-porygon2",
+   "species": 233,
+   "name": "Porygon2",
+   "text": "Becomes Porygon-Z when traded holding a Dubious Disc, which lies on the floor of the P2 Laboratory (Surf there from Route 17).",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Dubious Disc; Walkthrough Part 8"
+  },
+  {
+   "id": "evo-rhydon",
+   "species": 112,
+   "name": "Rhydon",
+   "text": "Becomes Rhyperior when traded holding a Protector. Ride down the southern waterfall on Route 11 to reach one.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Protector; Walkthrough Part 16"
+  },
+  {
+   "id": "evo-electabuzz",
+   "species": 125,
+   "name": "Electabuzz",
+   "text": "Becomes Electivire when traded holding an Electirizer, found on Route 13 southwest of the twins (needs Cut).",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Electirizer; Walkthrough Part 16"
+  },
+  {
+   "id": "evo-magmar",
+   "species": 126,
+   "name": "Magmar",
+   "text": "Becomes Magmortar when traded holding a Magmarizer. In Black and White the only source is the daily random gift of the Route 13 treasure hunter.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Magmarizer; Walkthrough Part 16"
+  },
+  {
+   "id": "evo-dusclops",
+   "species": 356,
+   "name": "Dusclops",
+   "text": "Becomes Dusknoir when traded holding a Reaper Cloth. Route 14 has one in tall grass south of the waterfall with an Ultra Ball.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Reaper Cloth; Walkthrough Part 17"
+  },
+  {
+   "id": "evo-clamperl",
+   "species": 366,
+   "name": "Clamperl",
+   "text": "Becomes Huntail when traded holding a DeepSeaTooth (Route 17 shallows) or Gorebyss with a DeepSeaScale (Route 13 shallows, Surf). Wild Huntail are Black-only.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: DeepSeaTooth, DeepSeaScale; Version page"
+  },
+  {
+   "id": "evo-feebas",
+   "species": 349,
+   "name": "Feebas",
+   "text": "Becomes Milotic by high Beauty, or on a trade holding a Prism Scale (Route 13 northeast shore with Surf, and Undella Town).",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Feebas, Prism Scale"
+  },
+  {
+   "id": "evo-woobat",
+   "species": 527,
+   "name": "Woobat",
+   "text": "Becomes Swoobat on high friendship. Helpers: the Soothe Bell in Nimbasa, the Castelia massage, and the mood checkers at Dye's house in Nacrene and the Icirrus Fan Club.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Woobat; Walkthrough Parts 3-5, 9"
+  },
+  {
+   "id": "evo-munchlax",
+   "species": 446,
+   "name": "Munchlax",
+   "text": "Becomes Snorlax on high friendship. A Munchlax is offered in Undella Town for a Cinccino (during summer).",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Munchlax; Season (game mechanic)"
+  },
+  {
+   "id": "evo-sneasel",
+   "species": 215,
+   "name": "Sneasel",
+   "text": "Becomes Weavile when it levels up at night holding a Razor Claw, found on Route 13 on the cliff south of Artist Zach.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Razor Claw; Walkthrough Part 16"
+  },
+  {
+   "id": "evo-gligar",
+   "species": 207,
+   "name": "Gligar",
+   "text": "Becomes Gliscor when it levels up at night holding a Razor Fang, found at the Abundant Shrine's western edge.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Razor Fang; Walkthrough Part 17"
+  },
+  {
+   "id": "evo-larvesta",
+   "species": 636,
+   "name": "Larvesta",
+   "text": "Becomes Volcarona at level 59. The only Larvesta is the Egg from the Ranger on Route 18, so keep a party slot free.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Larvesta; Walkthrough Part 8"
+  },
+  {
+   "id": "evo-tirtouga",
+   "species": 564,
+   "name": "Tirtouga",
+   "text": "Revived from the Cover Fossil (Relic Castle 1F backpacker) at the Nacrene museum; becomes Carracosta at level 37.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Tirtouga; Walkthrough Parts 5, 14"
+  },
+  {
+   "id": "evo-archen",
+   "species": 566,
+   "name": "Archen",
+   "text": "Revived from the Plume Fossil (Relic Castle 1F backpacker) at the Nacrene museum; becomes Archeops at level 37. You can only keep one of the two fossils there.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Archen; Walkthrough Part 5"
+  },
+  {
+   "id": "evo-deerling",
+   "species": 585,
+   "name": "Deerling",
+   "text": "Becomes Sawsbuck at level 34. Its form follows the season (spring, summer, autumn, winter), changing with the in-game month.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Deerling; Season (game mechanic)"
+  }
+ ],
+ "notes": [
+  {
+   "id": "note-black-exclusives",
+   "kind": "exclusive",
+   "title": "Pokemon only in Black",
+   "text": "These species are found in the wild in Black but not in White (get them in White by trading).",
+   "species": [
+    13,
+    14,
+    15,
+    198,
+    228,
+    229,
+    285,
+    286,
+    311,
+    430,
+    574,
+    575,
+    576,
+    629,
+    630,
+    641,
+    643
+   ],
+   "names": [
+    "Weedle",
+    "Kakuna",
+    "Beedrill",
+    "Murkrow",
+    "Houndour",
+    "Houndoom",
+    "Shroomish",
+    "Breloom",
+    "Plusle",
+    "Honchkrow",
+    "Gothita",
+    "Gothorita",
+    "Gothitelle",
+    "Vullaby",
+    "Mandibuzz",
+    "Tornadus",
+    "Reshiram"
+   ],
+   "quality": "reference-only",
+   "source": "Bulbapedia: Pokemon Black and White Versions"
+  },
+  {
+   "id": "note-white-exclusives",
+   "kind": "version",
+   "title": "Pokemon you must trade for",
+   "text": "These species live only in White. In Black, get them by link trade, from the White Forest equivalents, or via the Dream World.",
+   "species": [
+    10,
+    11,
+    12,
+    46,
+    47,
+    200,
+    261,
+    262,
+    312,
+    429,
+    577,
+    578,
+    579,
+    627,
+    628,
+    642,
+    644
+   ],
+   "names": [
+    "Caterpie",
+    "Metapod",
+    "Butterfree",
+    "Paras",
+    "Parasect",
+    "Misdreavus",
+    "Poochyena",
+    "Mightyena",
+    "Minun",
+    "Mismagius",
+    "Solosis",
+    "Duosion",
+    "Reuniclus",
+    "Rufflet",
+    "Braviary",
+    "Thundurus",
+    "Zekrom"
+   ],
+   "quality": "reference-only",
+   "source": "Bulbapedia: Pokemon Black and White Versions"
+  },
+  {
+   "id": "note-black-city",
+   "kind": "version",
+   "title": "Black City",
+   "text": "Black City (not in White) is a trainer city reached from Route 14 and Route 15. How built-up it is depends on the days it took you to arrive. Its market sells every evolution stone at 10,000 each, plus Rare Bone and Star Piece; the trainers there battle at about level 65.",
+   "place": "black-city",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Black City; Walkthrough Part 18"
+  },
+  {
+   "id": "note-wild-petilil",
+   "kind": "exclusive",
+   "title": "Cottonee and Petilil",
+   "text": "Cottonee is wild here. The Nacrene trade gives Petilil, so both are reachable in either version. Both need a Sun Stone.",
+   "species": [
+    546,
+    548
+   ],
+   "names": [
+    "Cottonee",
+    "Petilil"
+   ],
+   "quality": "reference-only",
+   "source": "Bulbapedia: Pokemon Black and White Versions"
+  },
+  {
+   "id": "note-clamperl",
+   "kind": "exclusive",
+   "title": "Huntail and Gorebyss",
+   "text": "Wild Huntail are exclusive to Black, but Clamperl appears in both. A DeepSeaTooth or DeepSeaScale on a trade picks which one you get.",
+   "species": [
+    366,
+    367,
+    368
+   ],
+   "names": [
+    "Clamperl",
+    "Huntail",
+    "Gorebyss"
+   ],
+   "quality": "reference-only",
+   "source": "Bulbapedia: Pokemon Black and White Versions"
+  },
+  {
+   "id": "note-versions-differ",
+   "kind": "version",
+   "title": "Black versus White places and fights",
+   "text": "Opelucid City looks futuristic in Black and ancient in White; Mistralton has greenhouses here. The final Gym Leader is Drayden. Triple and Rotation Battles are swapped between versions (Driftveil trainer, Opelucid Battle House, Marvelous Bridge Ace Trainer).",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Pokemon Black and White Versions; Walkthrough Parts 6, 11, 18"
+  },
+  {
+   "id": "note-roamer",
+   "kind": "roamer",
+   "title": "Tornadus roams Unova",
+   "text": "After badge eight, speak to the old woman on Route 7 to start the cloud. It roams at level 40 and its route shows as stormy on gate bulletin boards; re-enter the gate until the stormy route appears. Southern routes in the morning, northern in the evening.",
+   "species": [
+    641
+   ],
+   "names": [
+    "Tornadus"
+   ],
+   "quality": "reference-only",
+   "source": "Bulbapedia: Roaming Pokemon, Tornadus; Walkthrough Part 11"
+  },
+  {
+   "id": "note-dragon",
+   "kind": "legendary",
+   "title": "Reshiram and Zekrom",
+   "text": "N takes Zekrom at Dragonspiral Tower and uses it in the final fight. You get Reshiram from the Light Stone in N's Castle at level 50. The other dragon can only come by trade.",
+   "species": [
+    643,
+    644
+   ],
+   "names": [
+    "Reshiram",
+    "Zekrom"
+   ],
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Parts 9-12"
+  },
+  {
+   "id": "note-swords",
+   "kind": "legendary",
+   "title": "Swords of Justice",
+   "text": "Cobalion (Mistralton Cave), Virizion (Rumination Field) and Terrakion (Victory Road trial chamber) are all level 42. They can be fought in any order but Terrakion appears only after Cobalion's cave is done.",
+   "species": [
+    638,
+    640,
+    639
+   ],
+   "names": [
+    "Cobalion",
+    "Virizion",
+    "Terrakion"
+   ],
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Parts 8, 11"
+  },
+  {
+   "id": "note-landorus",
+   "kind": "legendary",
+   "title": "Landorus needs both storm gods",
+   "text": "Landorus appears at the Abundant Shrine only when Tornadus and Thundurus are both in your party. One has to arrive by trade from the other version. Fight it at level 70.",
+   "place": "abundant-shrine",
+   "species": [
+    645,
+    641,
+    642
+   ],
+   "names": [
+    "Landorus",
+    "Tornadus",
+    "Thundurus"
+   ],
+   "quality": "reference-only",
+   "source": "Bulbapedia: Landorus; Walkthrough Part 17"
+  },
+  {
+   "id": "note-kyurem",
+   "kind": "legendary",
+   "title": "Kyurem",
+   "text": "Kyurem waits at level 75 in a small cave in the middle of the Giant Chasm's crater. Reaching it blankets the crater in snow, and if you do not catch it you can come back later.",
+   "place": "giant-chasm",
+   "species": [
+    646
+   ],
+   "names": [
+    "Kyurem"
+   ],
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Part 16"
+  },
+  {
+   "id": "note-volcarona-zoroark",
+   "kind": "legendary",
+   "title": "Volcarona and Zoroark",
+   "text": "Volcarona (level 70) is in the deepest Relic Castle room and cannot be found elsewhere. Zoroark needs an event Pokemon at Lostlorn Forest.",
+   "species": [
+    637,
+    571
+   ],
+   "names": [
+    "Volcarona",
+    "Zoroark"
+   ],
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Parts 13, 18"
+  },
+  {
+   "id": "note-event-pokemon",
+   "kind": "gift",
+   "title": "Event-only Pokemon",
+   "text": "Victini needs the Liberty Pass; An event Meloetta unlocks the Relic Song tutor at Cafe Sonata, and an event Keldeo with Cobalion, Terrakion and Virizion in the party gets Secret Sword at the Moor of Icirrus. Genesect's Drives are version-specific: Burn and Shock here.",
+   "species": [
+    494,
+    647,
+    648,
+    649
+   ],
+   "names": [
+    "Victini",
+    "Keldeo",
+    "Meloetta",
+    "Genesect"
+   ],
+   "quality": "reference-only",
+   "source": "Bulbapedia: Liberty Garden, Move Tutor, Pokemon Black and White Versions"
+  },
+  {
+   "id": "note-trades",
+   "kind": "trade",
+   "title": "In-game trades",
+   "text": "Five NPC trades: Petilil/Cottonee (Nacrene), Basculin for Minccino (Driftveil), Emolga for Boldore (Route 7), Rotom for Ditto (Route 15) and Munchlax for Cinccino (Undella, summer).",
+   "species": [
+    587,
+    550,
+    479,
+    446
+   ],
+   "names": [
+    "Emolga",
+    "Basculin",
+    "Rotom",
+    "Munchlax"
+   ],
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Parts 3, 6, 7, 17, 18"
+  },
+  {
+   "id": "note-seasons",
+   "kind": "tip",
+   "title": "Seasons change areas",
+   "text": "The season follows the month and changes only when you load a new map. Spring is January, May, September; summer February, June, October; autumn March, July, November; winter April, August, December. Snow opens extra Twist Mountain paths; Casteliacones sell on Tuesdays outside winter.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Season (game mechanic)"
+  },
+  {
+   "id": "note-entralink",
+   "kind": "tip",
+   "title": "Entralink",
+   "text": "The Entralink (via the C-Gear) lets you visit another player's world over wireless; in Black and White it is how missing residents move between Black City and White Forest. You cannot travel there from Celestial Tower's roof or the Victory Road exterior.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Entralink; Walkthrough Part 18"
+  },
+  {
+   "id": "note-no-pwt",
+   "kind": "tip",
+   "title": "No World Tournament here",
+   "text": "Pokemon World Tournament, Black Tower and White Treehollow belong to Black 2 and White 2. Here the post-game battle spots are the Battle Subway, Battle Institute, the Royal Unova and Challenger's Cave.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Pokemon World Tournament, White Treehollow, Battle Subway"
+  },
+  {
+   "id": "note-obedience",
+   "kind": "tip",
+   "title": "Badges and obedience",
+   "text": "Badges now only set obedience (level 20 at badge 1, +10 each badge up to level 80) and HMs can be used without a badge; only Cut is needed to finish the story. The 8th badge removes the cap.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Pokemon Black and White Versions; Walkthrough Parts 2-11"
+  },
+  {
+   "id": "note-battle-styles",
+   "kind": "tip",
+   "title": "Triple and Rotation fights",
+   "text": "Driftveil's Charles uses a Rotation Battle, Opelucid's Battle House likewise, and Marvelous Bridge's daily Ace Trainer uses the other style. In a Triple Battle the middle Pokemon can hit all three foes; side Pokemon can hit only two.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Parts 6, 11, 18"
+  },
+  {
+   "id": "note-fossils",
+   "kind": "gift",
+   "title": "Fossils",
+   "text": "Relic Castle's backpacker gives one of two fossils. After the story a worker in Twist Mountain's lowest floor gives a random fossil daily, so all seven can be had. Revive them at the Nacrene museum.",
+   "quality": "reference-only",
+   "source": "Bulbapedia: Walkthrough Black and White Parts 5, 14"
+  }
+ ]
+}
