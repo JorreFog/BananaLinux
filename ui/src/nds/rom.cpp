@@ -97,7 +97,7 @@ namespace banana::nds
 	{
 	public:
 		std::string path;
-		std::map<uint16_t, std::pair<uint16_t, uint8_t>> forms;	// species -> index of form 1, number of forms
+		std::map<uint16_t, std::pair<uint16_t, uint8_t>> forms;	// (while decoding) species -> index of form 1, number of forms
 		std::map<uint16_t, std::pair<uint16_t, uint8_t>> formSprites;	// Gen V: species -> its form 1's picture (after the species'), forms
 		std::shared_ptr<const Sprite> sprite(uint16_t species, bool female, uint8_t form) const override;
 		mutable std::mutex lock;
@@ -108,11 +108,10 @@ namespace banana::nds
 
 	uint16_t speciesIndex(const RomData& r, uint16_t species, uint8_t form)
 	{
-		auto* impl = dynamic_cast<const RomImpl*>(&r);
-		if (form == 0 || !impl) return species;
-		auto it = impl->forms.find(species);
-		if (it == impl->forms.end() || form >= it->second.second) return species;
-		uint16_t i = (uint16_t)(it->second.first + form - 1);
+		if (form == 0 || species >= r.species.size()) return species;
+		const Species& s = r.species[species];
+		if (s.formsAt == 0 || form >= s.formCount) return species;
+		uint16_t i = (uint16_t)(s.formsAt + form - 1);
 		return i < r.species.size() ? i : species;
 	}
 
@@ -285,6 +284,8 @@ namespace banana::nds
 						at = (uint16_t)(at + t.count - 1);
 					}
 				}
+				for (auto& fm : out.forms)
+					if (fm.first < out.species.size()) { out.species[fm.first].formsAt = fm.second.first; out.species[fm.first].formCount = fm.second.second; }
 				// the forms' names: their species'
 				for (auto& fm : out.forms)
 					for (int k = 1; k < fm.second.second; k++)
@@ -419,11 +420,9 @@ namespace banana::nds
 			}
 
 			// ---- wild encounters ---------------------------------------------------------------------------------
-			// cond: what else must hold (the dual-slot game 1 Ruby .. 5 LeafGreen; the headbutt tree 1 common, 2
-			// rare, 3 the third kind); entries differing in it stay apart (model.h has no field for it yet: asked
-			// for on the board)
-			std::vector<uint8_t> conds;	// (per entry of the list being built: its cond)
-			void add(std::vector<Encounter>& v, uint16_t species, uint8_t lo, uint8_t hi, uint8_t pct, EncounterKind k,
+			// cond: Encounter::condition (the dual-slot game 1 Ruby .. 5 LeafGreen; the swarm's kind 0 grass 1 surfing
+			// 2 fishing; the headbutt tree 0 common, 1 rare, 2 the third list); entries differing in it stay apart
+			static void add(std::vector<Encounter>& v, uint16_t species, uint8_t lo, uint8_t hi, uint8_t pct, EncounterKind k,
 				TimeOfDay t = TimeOfDay::ANY, uint8_t season = 0xff, uint8_t form = 0, uint8_t cond = 0)
 			{
 				if (species == 0 || pct == 0) return;
@@ -432,7 +431,7 @@ namespace banana::nds
 				for (size_t i = 0; i < v.size(); i++)
 				{
 					Encounter& e = v[i];
-					if (e.species == species && e.kind == k && e.time == t && e.season == season && e.form == form && conds[i] == cond)
+					if (e.species == species && e.kind == k && e.time == t && e.season == season && e.form == form && e.condition == cond)
 					{
 						e.minLevel = std::min(e.minLevel, lo); e.maxLevel = std::max(e.maxLevel, hi);
 						e.percent = (uint8_t)std::min(100, e.percent + pct);
@@ -440,9 +439,8 @@ namespace banana::nds
 					}
 				}
 				Encounter e;
-				e.species = species; e.minLevel = lo; e.maxLevel = hi; e.percent = pct; e.kind = k; e.time = t; e.season = season; e.form = form;
+				e.species = species; e.minLevel = lo; e.maxLevel = hi; e.percent = pct; e.kind = k; e.time = t; e.season = season; e.form = form; e.condition = cond;
 				v.push_back(e);
-				conds.push_back(cond);
 			}
 
 			// HeartGold/SoulSilver's headbutt trees (a/2/5/2, one member per zone): u16 common trees, u16 rare
@@ -452,13 +450,11 @@ namespace banana::nds
 			{
 				static const uint8_t PCT[6] = { 50, 15, 15, 10, 5, 5 };
 				if (p.n < 4 + 18 * 4) return;
-				// (the list the zone already has: carry its conds so merging keeps them apart)
-				conds.assign(v.size(), 0);
 				for (int t = 0; t < 3; t++)
 					for (int k = 0; k < 6; k++)
 					{
 						size_t o = 4 + (size_t)(t * 6 + k) * 4;
-						add(v, p.u16(o), p.u8(o + 2), p.u8(o + 3), PCT[k], EncounterKind::HEADBUTT, TimeOfDay::ANY, 0xff, 0, (uint8_t)(t + 1));
+						add(v, p.u16(o), p.u8(o + 2), p.u8(o + 3), PCT[k], EncounterKind::HEADBUTT, TimeOfDay::ANY, 0xff, 0, (uint8_t)t);
 					}
 			}
 
@@ -468,7 +464,6 @@ namespace banana::nds
 			std::vector<Encounter> encDppt(Span p)
 			{
 				std::vector<Encounter> v;
-				conds.clear();
 				if (p.n < 424) return v;
 				auto sp = [&](size_t o) { return (uint16_t)(p.u32(o) & 0xffff); };
 				uint8_t lv[12];
@@ -512,7 +507,6 @@ namespace banana::nds
 			std::vector<Encounter> encHgss(Span p, int swarm)
 			{
 				std::vector<Encounter> v;
-				conds.clear();
 				if (p.n < 0xc4) return v;
 				if (p.u8(0))
 				{
@@ -544,11 +538,11 @@ namespace banana::nds
 				group(0x80, 5, 3, ROD, EncounterKind::OLD_ROD);
 				group(0x94, 5, 4, ROD, EncounterKind::GOOD_ROD);
 				group(0xa8, 5, 5, ROD, EncounterKind::SUPER_ROD);
-				if (p.u8(1) && swarm == 1) add(v, p.u16(0xbe), p.u8(0x64), p.u8(0x65), 60, EncounterKind::SWARM);
+				if (p.u8(1) && swarm == 1) add(v, p.u16(0xbe), p.u8(0x64), p.u8(0x65), 60, EncounterKind::SWARM, TimeOfDay::ANY, 0xff, 0, 1);
 				// at night the Good Rod's slot 3 and the Super Rod's slot 1 hold the night fish
 				if (p.u8(4)) add(v, p.u16(0xc0), p.u8(0x94 + 12), p.u8(0x94 + 13), ROD[3], NIGHT_FISH, TimeOfDay::NIGHT);
 				if (p.u8(5)) add(v, p.u16(0xc0), p.u8(0xa8 + 4), p.u8(0xa8 + 5), ROD[1], NIGHT_FISH, TimeOfDay::NIGHT);
-				if (p.u8(5) && swarm == 2) add(v, p.u16(0xc2), p.u8(0xa8), p.u8(0xa9), 100, EncounterKind::SWARM);
+				if (p.u8(5) && swarm == 2) add(v, p.u16(0xc2), p.u8(0xa8), p.u8(0xa9), 100, EncounterKind::SWARM, TimeOfDay::ANY, 0xff, 0, 2);
 				return v;
 			}
 
@@ -558,7 +552,6 @@ namespace banana::nds
 			std::vector<Encounter> encGen5(Span p)
 			{
 				std::vector<Encounter> v;
-				conds.clear();
 				size_t seasons = p.n / 232;
 				if (seasons != 1 && seasons != 4) return v;
 				static const uint8_t SURF[5] = { 60, 30, 5, 4, 1 }, ROD[5] = { 40, 40, 15, 4, 1 };
@@ -1215,7 +1208,7 @@ namespace banana::nds
 				for (uint16_t v : s.abilities) w.u16(v);
 				w.u8(s.catchRate); w.u8(s.growth); w.u8(s.genderRatio); w.u8(s.baseFriendship);
 				for (uint8_t v : s.evYield) w.u8(v);
-				w.u16(s.baseExp); w.u16(s.height); w.u16(s.weight);
+				w.u16(s.baseExp); w.u16(s.height); w.u16(s.weight); w.u16(s.formsAt); w.u8(s.formCount);
 				w.u32((uint32_t)s.evolutions.size());
 				for (auto& e : s.evolutions) { w.u16(e.method); w.u16(e.param); w.u16(e.into); w.str(e.how); }
 				w.u32((uint32_t)s.learnset.size());
@@ -1242,7 +1235,7 @@ namespace banana::nds
 				for (auto& e : z.second.encounters)
 				{
 					w.u16(e.species); w.u8(e.minLevel); w.u8(e.maxLevel); w.u8(e.percent); w.u8((uint8_t)e.kind);
-					w.u8((uint8_t)e.time); w.u8(e.season); w.u8(e.form);
+					w.u8((uint8_t)e.time); w.u8(e.season); w.u8(e.form); w.u8(e.condition);
 				}
 			}
 			w.u32((uint32_t)r.trainers.size());
@@ -1254,8 +1247,6 @@ namespace banana::nds
 			}
 			w.u32((uint32_t)r.tmMoves.size());
 			for (uint16_t m : r.tmMoves) w.u16(m);
-			w.u32((uint32_t)r.forms.size());
-			for (auto& f : r.forms) { w.u16(f.first); w.u16(f.second.first); w.u8(f.second.second); }
 			w.u32((uint32_t)r.formSprites.size());
 			for (auto& f : r.formSprites) { w.u16(f.first); w.u16(f.second.first); w.u8(f.second.second); }
 			return w.b;
@@ -1267,7 +1258,7 @@ namespace banana::nds
 			if (b.size() < 12 || memcmp(b.data(), MAGIC, 8) != 0) return false;
 			in.at = 8;
 			if (in.u32() != ROM_CACHE_VERSION || in.str() != r.game.romHash) return false;
-			r.species.resize(in.count(40));
+			r.species.resize(in.count(43));
 			for (auto& s : r.species)
 			{
 				s.name = in.str(); s.category = in.str(); s.dexText = in.str();
@@ -1276,7 +1267,7 @@ namespace banana::nds
 				for (uint16_t& v : s.abilities) v = in.u16();
 				s.catchRate = in.u8(); s.growth = in.u8(); s.genderRatio = in.u8(); s.baseFriendship = in.u8();
 				for (uint8_t& v : s.evYield) v = in.u8();
-				s.baseExp = in.u16(); s.height = in.u16(); s.weight = in.u16();
+				s.baseExp = in.u16(); s.height = in.u16(); s.weight = in.u16(); s.formsAt = in.u16(); s.formCount = in.u8();
 				s.evolutions.resize(in.count(10));
 				for (auto& e : s.evolutions) { e.method = in.u16(); e.param = in.u16(); e.into = in.u16(); e.how = in.str(); }
 				s.learnset.resize(in.count(3));
@@ -1301,11 +1292,11 @@ namespace banana::nds
 				uint16_t id = in.u16();
 				Location& l = r.zones[id];
 				l.id = id; l.name = in.str();
-				l.encounters.resize(in.count(10));
+				l.encounters.resize(in.count(11));
 				for (auto& e : l.encounters)
 				{
 					e.species = in.u16(); e.minLevel = in.u8(); e.maxLevel = in.u8(); e.percent = in.u8(); e.kind = (EncounterKind)in.u8();
-					e.time = (TimeOfDay)in.u8(); e.season = in.u8(); e.form = in.u8();
+					e.time = (TimeOfDay)in.u8(); e.season = in.u8(); e.form = in.u8(); e.condition = in.u8();
 				}
 			}
 			size_t trainers = in.count(15);
@@ -1319,8 +1310,6 @@ namespace banana::nds
 			}
 			r.tmMoves.resize(in.count(2));
 			for (uint16_t& m : r.tmMoves) m = in.u16();
-			size_t forms = in.count(5);
-			for (size_t k = 0; k < forms && in.ok; k++) { uint16_t s = in.u16(); uint16_t a = in.u16(); r.forms[s] = { a, in.u8() }; }
 			size_t fsprites = in.count(5);
 			for (size_t k = 0; k < fsprites && in.ok; k++) { uint16_t s = in.u16(); uint16_t a = in.u16(); r.formSprites[s] = { a, in.u8() }; }
 			return in.ok && in.at == in.n;

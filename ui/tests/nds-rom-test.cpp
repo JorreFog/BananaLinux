@@ -10,6 +10,7 @@
 #include <cstring>
 #include <dirent.h>
 #include <map>
+#include <set>
 #include <sys/resource.h>
 #include <unistd.h>
 #include <string>
@@ -580,6 +581,32 @@ static void checkGame(const RomData& r)
 	int noMoves = 0;
 	for (auto& t : r.trainers) for (auto& m : t.second.team) noMoves += m.moves[0] == 0;
 	EQ(noMoves, 0);
+	// Species.formsAt/formCount: Deoxys has four formes, the Attack Forme right at formsAt; Pikachu none
+	EQ((int)r.species[386].formCount, 4);
+	CHECK(r.species[386].formsAt > g.dexSize && r.species[386].formsAt < r.species.size());
+	if (r.species[386].formsAt < r.species.size()) EQ((int)r.species[r.species[386].formsAt].base[1], 180);
+	EQ((int)r.species[479].formCount, g.id == GameId::DIAMOND || g.id == GameId::PEARL ? 1 : 6);	// Rotom's appliances from Platinum on
+	EQ((int)r.species[25].formCount, 1); EQ((int)r.species[25].formsAt, 0);
+	// Encounter.condition: Platinum's Route 201 dual slot names its GBA game; HGSS's Route 32 fishing swarm says
+	// fishing (2); HGSS headbutt trees say their kind (0 common, 1 rare); Diamond's Route 201 swarm is grass (0)
+	if (g.id == GameId::PLATINUM)
+	{
+		std::set<int> games;
+		for (auto& z : r.zones) if (z.second.name == "Route 201") for (auto& e : z.second.encounters) if (e.kind == EncounterKind::DUAL_SLOT) games.insert(e.condition);
+		CHECK(games == std::set<int>({ 1, 2, 3, 4, 5 }));
+	}
+	if (hgss)
+	{
+		bool fishSwarm = false, rare = false, common = false;
+		for (auto& z : r.zones)
+			for (auto& e : z.second.encounters)
+			{
+				fishSwarm = fishSwarm || (z.second.name == "Route 32" && e.kind == EncounterKind::SWARM && e.species == 211 && e.condition == 2);
+				if (e.kind == EncounterKind::HEADBUTT) { common = common || e.condition == 0; rare = rare || e.condition == 1; }
+			}
+		CHECK(fishSwarm); CHECK(common); CHECK(rare);
+	}
+	if (g.id == GameId::DIAMOND) { auto z = zoneNamed(r, "Route 201"); bool ok = false; if (z) for (auto& e : z->encounters) ok = ok || (e.kind == EncounterKind::SWARM && e.condition == 0); CHECK(ok); }
 	// forms: Deoxys' Attack Forme has 180 Attack
 	uint16_t dx = speciesIndex(r, 386, 1);
 	CHECK(dx > g.dexSize && dx < r.species.size());
@@ -627,7 +654,7 @@ static std::string digestOf(const RomData& r)
 		d += s.name + s.category + s.dexText; n(s.types[0]); n(s.types[1]);
 		for (int k = 0; k < 6; k++) { n(s.base[k]); n(s.evYield[k]); }
 		for (int k = 0; k < 3; k++) n(s.abilities[k]);
-		n(s.catchRate); n(s.growth); n(s.genderRatio); n(s.baseFriendship); n(s.baseExp); n(s.height); n(s.weight);
+		n(s.catchRate); n(s.growth); n(s.genderRatio); n(s.baseFriendship); n(s.baseExp); n(s.height); n(s.weight); n(s.formsAt); n(s.formCount);
 		for (auto& e : s.evolutions) { n(e.method); n(e.param); n(e.into); d += e.how; }
 		for (auto& m : s.learnset) { n(m.level); n(m.move); }
 		for (auto t : s.tms) n(t);
@@ -635,7 +662,7 @@ static std::string digestOf(const RomData& r)
 	for (auto& m : r.moves) { d += m.name + m.description; n(m.type); n((int)m.cat); n(m.power); n(m.accuracy); n(m.pp); n(m.priority); n(m.effect); n(m.effectChance); }
 	for (auto* v : { &r.abilities, &r.natures, &r.abilityText, &r.locationNames }) for (auto& s : *v) d += s + "|";
 	for (auto& i : r.items) { d += i.name + i.description; n(i.pocket); n(i.price); }
-	for (auto& z : r.zones) { n(z.first); d += z.second.name; for (auto& e : z.second.encounters) { n(e.species); n(e.minLevel); n(e.maxLevel); n(e.percent); n((int)e.kind); n((int)e.time); n(e.season); n(e.form); } }
+	for (auto& z : r.zones) { n(z.first); d += z.second.name; for (auto& e : z.second.encounters) { n(e.species); n(e.minLevel); n(e.maxLevel); n(e.percent); n((int)e.kind); n((int)e.time); n(e.season); n(e.form); n(e.condition); } }
 	for (auto& t : r.trainers) { n(t.first); d += t.second.cls + t.second.name; n(t.second.doubleBattle); for (auto& m : t.second.team) { n(m.species); n(m.item); n(m.level); for (auto mv : m.moves) n(mv); } }
 	for (auto m : r.tmMoves) n(m);
 	for (size_t i = 0; i < r.species.size(); i++) n(speciesIndex(r, (uint16_t)i, 1));

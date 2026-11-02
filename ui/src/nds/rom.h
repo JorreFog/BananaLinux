@@ -50,5 +50,5 @@ namespace banana::nds
 	uint16_t speciesIndex(const RomData& rom, uint16_t species, uint8_t form);
 
 	// the cache file's format version (bump when RomData's fields or their meaning change)
-	constexpr uint32_t ROM_CACHE_VERSION = 2;
+	constexpr uint32_t ROM_CACHE_VERSION = 3;
 }
