@@ -1452,8 +1452,11 @@ namespace banana::nds
 			float cx = 236 + i * cw;
 			mon(m.species, m.female, m.form, m.shiny() ? 1 : 0, cx + 8, y + 8, cw - 16, 44, false);
 			std::string n = monLabel(m);
-			float nw = std::min(cw - 6, measure(n, true, 12, true));
-			text(n, true, 12, cx + cw / 2 - nw / 2, y + 52, p.ink, true, cw - 6);
+			// (a ten-letter name like Krookodile or Feraligatr is wider than its place at 12 px: a smaller size first)
+			float fs = 12;
+			while (fs > 9 && measure(n, true, fs, true) > cw - 6) fs -= 1;
+			float nw = std::min(cw - 6, measure(n, true, fs, true));
+			text(n, true, fs, cx + cw / 2 - nw / 2, y + 52 + (12 - fs) / 2, p.ink, true, cw - 6);
 			if (!m.egg)
 			{
 				std::string l = tr("Lv") + " " + std::to_string(m.level);
@@ -1468,7 +1471,7 @@ namespace banana::nds
 			const Milestone& ms = *a->next;
 			float tx = 250;
 			float w1 = text(tr("Next") + ":", false, 13, tx, ny + 11, p.muted, true);
-			text(ms.name + (ms.place.empty() ? "" : ", " + ms.place), true, 15, tx + w1 + 6, ny + 9, p.ink, true, 360 - w1);
+			text(ms.name + (ms.place.empty() ? "" : ", " + ms.place), true, 15, tx + w1 + 6, ny + 9, p.ink, true, 590 - (tx + w1 + 6));	// (short of the unchecked marker at 602)
 			float cy = ny + 32, cx = tx;
 			if (ms.theme < NUM_TYPES) cx += typeChip(ms.theme, cx, cy) + 8;
 			// the ace: the strongest of the first trainer's team
