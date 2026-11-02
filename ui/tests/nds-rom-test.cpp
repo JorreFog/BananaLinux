@@ -484,16 +484,45 @@ static void checkGame(const RomData& r)
 	if (b2w2) { CHECK(r.zones.count(200) && r.zones.at(200).name == "Twist Mountain"); }
 	// wild Pokémon on the first route
 	if (g.gen == Gen::IV && !hgss) { auto z = zoneNamed(r, "Route 201"); CHECK(hasEncounter(z, 396) && hasEncounter(z, 399)); }	// Starly, Bidoof
-	if (hgss) { auto z = zoneNamed(r, "Route 29"); CHECK(hasEncounter(z, 16) && hasEncounter(z, 161)); }	// Pidgey, Sentret
+	if (hgss)
+	{
+		auto z = zoneNamed(r, "Route 29");
+		CHECK(hasEncounter(z, 16) && hasEncounter(z, 161));	// Pidgey, Sentret
+		// swarms only where the games have them: Qwilfish fished on Route 32, none on Route 29
+		int swarms = 0;
+		if (z) for (auto& e : z->encounters) swarms += e.kind == EncounterKind::SWARM;
+		EQ(swarms, 0);
+		CHECK(hasEncounter(zoneNamed(r, "Route 32"), 211, EncounterKind::SWARM));
+	}
 	if (g.id == GameId::BLACK || g.id == GameId::WHITE) { auto z = zoneNamed(r, "Route 1"); CHECK(hasEncounter(z, 504) && hasEncounter(z, 506)); }	// Patrat, Lillipup
 	if (b2w2) { auto z = zoneNamed(r, "Route 19"); CHECK(hasEncounter(z, 504) && hasEncounter(z, 509)); }	// Patrat, Purrloin
+	// Black 2/White 2's Hidden Grottos: twenty, one in Floccesy Ranch with Herdier at 10-15
+	if (b2w2)
+	{
+		int grottoZones = 0;
+		for (auto& z : r.zones) { bool any = false; for (auto& e : z.second.encounters) any = any || e.kind == EncounterKind::GROTTO; grottoZones += any; }
+		EQ(grottoZones, 16);	// (Routes 3, 6, 13 and Abundant Shrine have two each)
+		bool herdier = false;
+		for (auto& z : r.zones)
+			if (z.second.name == "Floccesy Ranch")
+				for (auto& e : z.second.encounters) herdier = herdier || (e.kind == EncounterKind::GROTTO && e.species == 507 && e.minLevel == 10 && e.maxLevel == 15);
+		CHECK(herdier);
+	}
+	// HeartGold/SoulSilver's headbutt trees: Pineco in many places
+	if (hgss)
+	{
+		int zones = 0;
+		for (auto& z : r.zones) zones += hasEncounter(&z.second, 204, EncounterKind::HEADBUTT);
+		CHECK(zones > 10);
+	}
 	// surfing somewhere: Tentacool (72) in Gen IV, Basculin (550) in Gen V
 	bool surf = false;
 	for (auto& z : r.zones) surf = surf || hasEncounter(&z.second, g5 ? 550 : 72, EncounterKind::SURF);
 	CHECK(surf);
 	// every encounter is a real species with sane levels and odds
 	int bad = 0;
-	for (auto& z : r.zones) for (auto& e : z.second.encounters) bad += e.species == 0 || e.species > g.dexSize || e.minLevel == 0 || e.minLevel > e.maxLevel || e.maxLevel > 100 || e.percent == 0 || e.percent > 100;
+	for (auto& z : r.zones) for (auto& e : z.second.encounters) bad += e.species == 0 || e.species > g.dexSize || e.minLevel == 0 || e.minLevel > e.maxLevel || e.maxLevel > 100 ||
+		(e.kind == EncounterKind::GROTTO ? e.percent != 0 : e.percent == 0) || e.percent > 100;
 	EQ(bad, 0);
 	// the first gym leader's team
 	if (g.id == GameId::DIAMOND || g.id == GameId::PEARL || g.id == GameId::PLATINUM)

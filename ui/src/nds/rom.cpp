@@ -124,6 +124,7 @@ namespace banana::nds
 
 			Bytes textBuf;
 			Narc text;
+			std::vector<int> zoneWild;	// per zone its encounter file (-1 none)
 			std::vector<std::string> bank(int i)
 			{
 				Span s = text[(size_t)i];
@@ -387,9 +388,11 @@ namespace banana::nds
 			}
 
 			// ---- wild encounters ---------------------------------------------------------------------------------
-			// cond: what else must hold (the dual-slot game, 1 Ruby .. 5 LeafGreen); entries differing in it stay apart
-			// (model.h has no field for it yet: asked for on the board)
-			static void add(std::vector<Encounter>& v, uint16_t species, uint8_t lo, uint8_t hi, uint8_t pct, EncounterKind k,
+			// cond: what else must hold (the dual-slot game 1 Ruby .. 5 LeafGreen; the headbutt tree 1 common, 2
+			// rare, 3 the third kind); entries differing in it stay apart (model.h has no field for it yet: asked
+			// for on the board)
+			std::vector<uint8_t> conds;	// (per entry of the list being built: its cond)
+			void add(std::vector<Encounter>& v, uint16_t species, uint8_t lo, uint8_t hi, uint8_t pct, EncounterKind k,
 				TimeOfDay t = TimeOfDay::ANY, uint8_t season = 0xff, uint8_t form = 0, uint8_t cond = 0)
 			{
 				if (species == 0 || pct == 0) return;
@@ -398,7 +401,7 @@ namespace banana::nds
 				for (size_t i = 0; i < v.size(); i++)
 				{
 					Encounter& e = v[i];
-					if (e.species == species && e.kind == k && e.time == t && e.season == season && e.form == form && (k != EncounterKind::DUAL_SLOT || cond == 0))
+					if (e.species == species && e.kind == k && e.time == t && e.season == season && e.form == form && conds[i] == cond)
 					{
 						e.minLevel = std::min(e.minLevel, lo); e.maxLevel = std::max(e.maxLevel, hi);
 						e.percent = (uint8_t)std::min(100, e.percent + pct);
@@ -408,6 +411,24 @@ namespace banana::nds
 				Encounter e;
 				e.species = species; e.minLevel = lo; e.maxLevel = hi; e.percent = pct; e.kind = k; e.time = t; e.season = season; e.form = form;
 				v.push_back(e);
+				conds.push_back(cond);
+			}
+
+			// HeartGold/SoulSilver's headbutt trees (a/2/5/2, one member per zone): u16 common trees, u16 rare
+			// trees, then 3 x 6 slots {u16 species, u8 min, u8 max} (common, rare, and a third list), then the trees'
+			// coordinates. Slot odds from pokeheartgold field/encounter_check.c: 50, 15, 15, 10, 5, 5.
+			void headbutt(Span p, std::vector<Encounter>& v)
+			{
+				static const uint8_t PCT[6] = { 50, 15, 15, 10, 5, 5 };
+				if (p.n < 4 + 18 * 4) return;
+				// (the list the zone already has: carry its conds so merging keeps them apart)
+				conds.assign(v.size(), 0);
+				for (int t = 0; t < 3; t++)
+					for (int k = 0; k < 6; k++)
+					{
+						size_t o = 4 + (size_t)(t * 6 + k) * 4;
+						add(v, p.u16(o), p.u8(o + 2), p.u8(o + 3), PCT[k], EncounterKind::HEADBUTT, TimeOfDay::ANY, 0xff, 0, (uint8_t)(t + 1));
+					}
 			}
 
 			static constexpr uint8_t GRASS_PCT[12] = { 20, 20, 10, 10, 10, 10, 5, 5, 4, 4, 1, 1 };
@@ -416,6 +437,7 @@ namespace banana::nds
 			std::vector<Encounter> encDppt(Span p)
 			{
 				std::vector<Encounter> v;
+				conds.clear();
 				if (p.n < 424) return v;
 				auto sp = [&](size_t o) { return (uint16_t)(p.u32(o) & 0xffff); };
 				uint8_t lv[12];
@@ -454,9 +476,12 @@ namespace banana::nds
 
 			// HeartGold/SoulSilver, 196 bytes (pokeheartgold wild_encounter.h; slot odds and the swarm, radio and
 			// night-fishing replacements from its field/encounter_check.c)
-			std::vector<Encounter> encHgss(Span p)
+			// swarm: which of the file's swarm species this zone can have (-1 none, 0 grass, 1 surfing, 2 fishing; the
+			// games keep a swarm species in every file but use it only on the maps of their swarm table)
+			std::vector<Encounter> encHgss(Span p, int swarm)
 			{
 				std::vector<Encounter> v;
+				conds.clear();
 				if (p.n < 0xc4) return v;
 				if (p.u8(0))
 				{
@@ -476,7 +501,7 @@ namespace banana::nds
 							uint8_t l = p.u8(8 + 2 + 2 * k);
 							add(v, p.u16(0x5c + 4 * s + 2 * k), l, p.u8(8 + 3 + 2 * k), 20, s == 0 ? HOENN_SOUND : SINNOH_SOUND);
 						}
-					add(v, p.u16(0xbc), p.u8(8), p.u8(9), 40, EncounterKind::SWARM);
+					if (swarm == 0) add(v, p.u16(0xbc), p.u8(8), p.u8(9), 40, EncounterKind::SWARM);
 				}
 				static const uint8_t SURF[5] = { 60, 30, 5, 4, 1 }, ROD[5] = { 40, 30, 15, 10, 5 }, ROCK[2] = { 80, 20 };
 				auto group = [&](size_t o, int n, size_t rate, const uint8_t* pct, EncounterKind k) {
@@ -488,11 +513,11 @@ namespace banana::nds
 				group(0x80, 5, 3, ROD, EncounterKind::OLD_ROD);
 				group(0x94, 5, 4, ROD, EncounterKind::GOOD_ROD);
 				group(0xa8, 5, 5, ROD, EncounterKind::SUPER_ROD);
-				if (p.u8(1)) add(v, p.u16(0xbe), p.u8(0x64), p.u8(0x65), 60, EncounterKind::SWARM);
+				if (p.u8(1) && swarm == 1) add(v, p.u16(0xbe), p.u8(0x64), p.u8(0x65), 60, EncounterKind::SWARM);
 				// at night the Good Rod's slot 3 and the Super Rod's slot 1 hold the night fish
 				if (p.u8(4)) add(v, p.u16(0xc0), p.u8(0x94 + 12), p.u8(0x94 + 13), ROD[3], NIGHT_FISH, TimeOfDay::NIGHT);
 				if (p.u8(5)) add(v, p.u16(0xc0), p.u8(0xa8 + 4), p.u8(0xa8 + 5), ROD[1], NIGHT_FISH, TimeOfDay::NIGHT);
-				if (p.u8(5)) add(v, p.u16(0xc2), p.u8(0xa8), p.u8(0xa9), 100, EncounterKind::SWARM);
+				if (p.u8(5) && swarm == 2) add(v, p.u16(0xc2), p.u8(0xa8), p.u8(0xa9), 100, EncounterKind::SWARM);
 				return v;
 			}
 
@@ -502,6 +527,7 @@ namespace banana::nds
 			std::vector<Encounter> encGen5(Span p)
 			{
 				std::vector<Encounter> v;
+				conds.clear();
 				size_t seasons = p.n / 232;
 				if (seasons != 1 && seasons != 4) return v;
 				static const uint8_t SURF[5] = { 60, 30, 5, 4, 1 }, ROD[5] = { 40, 40, 15, 4, 1 };
@@ -578,6 +604,24 @@ namespace banana::nds
 						zone.push_back({ (size_t)nm < names ? nm : 0, w < (int)encs ? w : -1 });
 					}
 				}
+				for (auto& z : zone) zoneWild.push_back(z.second);
+				// HGSS's swarm table: 20 {u16 map, u16 0 grass / 1 surfing / 2 fishing} in the ARM9 (pokeheartgold
+				// unk_02097F6C.c), found by its shape: 20 different zones with wild Pokémon, all three kinds
+				std::map<int, int> swarmAt;
+				if (isHgss(id()))
+					for (size_t s = 0; s + 80 <= arm9.size() && swarmAt.empty(); s += 2)
+					{
+						std::map<int, int> t;
+						int kinds = 0;
+						for (int k = 0; k < 20; k++)
+						{
+							uint16_t m = nitro::rd16(&arm9[s + 4 * k]), ty = nitro::rd16(&arm9[s + 4 * k + 2]);
+							if (m == 0 || m >= zone.size() || zone[m].second < 0 || ty > 2 || t.count(m)) break;
+							t[m] = ty;
+							kinds |= 1 << ty;
+						}
+						if (t.size() == 20 && kinds == 7) swarmAt = t;
+					}
 				std::map<int, std::vector<Encounter>> decoded;
 				for (size_t m = 0; m < zone.size(); m++)
 				{
@@ -586,13 +630,76 @@ namespace banana::nds
 					l.name = out.locationNames[zone[m].first];
 					int w = zone[m].second;
 					if (w < 0) continue;
-					auto it = decoded.find(w);
+					int swarm = swarmAt.count((int)m) ? swarmAt[(int)m] : -1;
+					int key = w * 4 + swarm + 1;
+					auto it = decoded.find(key);
 					if (it == decoded.end())
 					{
 						Span p = en[(size_t)w];
-						it = decoded.emplace(w, gen() == Gen::V ? encGen5(p) : isHgss(id()) ? encHgss(p) : encDppt(p)).first;
+						it = decoded.emplace(key, gen() == Gen::V ? encGen5(p) : isHgss(id()) ? encHgss(p, swarm) : encDppt(p)).first;
 					}
 					l.encounters = it->second;
+				}
+				if (isHgss(id()))
+				{
+					Bytes hb; Narc hn;
+					if (rom.file("a/2/5/2", hb) && hn.parse(hb))
+						for (size_t m = 0; m < zone.size() && m < hn.size(); m++) headbutt(hn[m], out.zones[(uint16_t)m].encounters);
+				}
+				return true;
+			}
+
+			// ---- Black 2/White 2's Hidden Grottos: a/2/7/3 has one 220-byte record per grotto: six blocks of
+			// {u16 species[4], u8 max level[4], u8 min level[4], u8 female %[4], u8 form[4], u16} (blocks 0-2 Black
+			// 2's, 3-5 White 2's; the four columns the grotto's four groups), then 32 item numbers. Which grotto is
+			// where is a table in an overlay: per grotto {u32 zone, u32 x, u32 height, u32 y} (found by its shape:
+			// as many entries as grottos, every zone a real one with wild Pokémon, coordinates in a map's range).
+			// The odds of each block are not in these files: GROTTO encounters carry percent 0 (unknown).
+			bool grottos(const std::vector<int>& zoneWild)
+			{
+				Bytes gb; Narc gn;
+				if (!rom.file("a/2/7/3", gb) || !gn.parse(gb) || gn.size() == 0) return true;	// (no grottos: nothing to add)
+				const size_t count = gn.size(), Z = zoneWild.size();
+				auto fits = [&](const Bytes& d, size_t at) {
+					const uint8_t* e = &d[at];
+					uint32_t z = nitro::rd32(e), x = nitro::rd32(e + 4), h = nitro::rd32(e + 8), y = nitro::rd32(e + 12);
+					return z < Z && zoneWild[z] >= 0 && x < 4096 && h < 256 && y < 4096;
+				};
+				// the table ends where its run of such entries ends (a city's entry before it has the same shape)
+				std::vector<uint16_t> where;
+				Bytes ov;
+				for (int i = 0; where.empty() && rom.overlay9(i, ov); i++)
+					for (size_t at = 0; at + 16 * count <= ov.size(); at += 4)
+					{
+						size_t run = 0;
+						while (at + 16 * (run + 1) <= ov.size() && fits(ov, at + 16 * run)) run++;
+						if (run < count) continue;
+						size_t from = at + 16 * (run - count);
+						for (size_t k = 0; k < count; k++) where.push_back((uint16_t)nitro::rd32(&ov[from + 16 * k]));
+						break;
+					}
+				if (where.empty()) return true;	// (a release laid out differently: no grottos rather than wrong ones)
+				const size_t half = id() == GameId::WHITE2 ? 3 : 0;
+				for (size_t g = 0; g < count; g++)
+				{
+					Span p = gn[g];
+					if (p.n < 156) continue;
+					auto& v = out.zones[where[g]].encounters;
+					for (size_t b = half; b < half + 3; b++)
+						for (int c = 0; c < 4; c++)
+						{
+							size_t o = b * 26;
+							uint16_t sp = p.u16(o + 2 * c);
+							if (sp == 0 || sp > out.game.dexSize) continue;
+							bool dup = false;
+							for (auto& e : v) dup = dup || (e.kind == EncounterKind::GROTTO && e.species == sp && e.form == p.u8(o + 20 + c));
+							if (dup) continue;
+							Encounter e;
+							e.species = sp; e.maxLevel = p.u8(o + 8 + c); e.minLevel = p.u8(o + 12 + c); e.percent = 0;
+							e.kind = EncounterKind::GROTTO; e.form = p.u8(o + 20 + c);
+							if (e.minLevel > e.maxLevel) std::swap(e.minLevel, e.maxLevel);
+							v.push_back(e);
+						}
 				}
 				return true;
 			}
@@ -1215,6 +1322,7 @@ namespace banana::nds
 		step(0.55f);
 		if (!d.tms(arm9)) return fail(d.err);
 		if (!d.zones(arm9)) return fail(d.err);
+		if (isB2w2(r->game.id) && !d.grottos(d.zoneWild)) return fail(d.err);
 		step(0.8f);
 		if (!d.trainers()) return fail(d.err);
 		step(0.95f);
