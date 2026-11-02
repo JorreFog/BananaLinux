@@ -2696,8 +2696,10 @@ int main(int argc, char** argv)
 							auto gd = std::make_shared<nds::GuideData>();
 							const nds::GuideResolver res = nds::guideResolver(*r);
 							std::string why;
-							if (nds::loadGuide(r->game, *gd, &why, &res)) d.guide = gd;
-							else logf("nds companion: no guide: %s", why.c_str());
+							// (the pages and the session need a guide object, an empty one when the game's file is missing or
+							// bad: without it the session never started and the pages said "Waiting for your save")
+							if (!nds::loadGuide(r->game, *gd, &why, &res)) { logf("nds companion: no guide: %s", why.c_str()); *gd = nds::GuideData(); }
+							d.guide = gd;
 							logf("nds companion: %s read in %.0f ms%s", r->game.title.c_str(), info.ms, info.fromCache ? " (from the cache)" : "");
 						}
 						else logf("nds companion: the game's data didn't read: %s", err.c_str());
