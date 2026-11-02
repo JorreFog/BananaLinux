@@ -180,6 +180,14 @@ namespace banana::nds
 		std::vector<std::string> unresolved;	// place names the ROM gave no zone id for
 	};
 
+	// ---- the journey log and challenge mode (the logic's product, kept per game + trainer on the card) ----------
+	enum class LogKind : uint8_t { CATCH, EVOLVE, BADGE, FIRST, LOST, HATCH, NOTE };
+	struct LogEntry { LogKind kind = LogKind::NOTE; uint32_t playSeconds = 0; int64_t when = 0;	// unix s, 0 unknown
+		uint16_t species = 0, zone = 0; std::string text; };								// text: our words, names filled
+	struct RouteRecord { uint16_t zone = 0, species = 0; enum Outcome : uint8_t { OPEN, CAUGHT, MISSED } outcome = OPEN; };
+	struct Journey { std::vector<LogEntry> log; bool challenge = false; std::vector<RouteRecord> routes;	// log: oldest first
+		std::vector<Mon> lost; };
+
 	// ---- advice (the logic's product, for the pages and the badge) --------------------------------------------
 	struct MoveVerdict { uint16_t move = 0; int quarters = 4; float dmgLo = 0, dmgHi = 0; bool best = false;
 		bool movesFirst = false; std::string note; };
