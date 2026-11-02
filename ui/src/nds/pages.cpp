@@ -519,8 +519,9 @@ namespace banana::nds
 			if (!sp || sp->genderRatio == 255 || m.egg) return 2;
 			return m.female ? 1 : 0;
 		}
-		bool caught(uint16_t n) const { return dt.live && bit(dt.live->dexCaught, n); }
-		bool seen(uint16_t n) const { return dt.live && (bit(dt.live->dexSeen, n) || bit(dt.live->dexCaught, n)); }
+		// (Live's Pokédex bit sets keep species n at bit n - 1, as the games do: ram.h)
+		bool caught(uint16_t n) const { return dt.live && n && bit(dt.live->dexCaught, n - 1); }
+		bool seen(uint16_t n) const { return dt.live && n && (bit(dt.live->dexSeen, n - 1) || bit(dt.live->dexCaught, n - 1)); }
 		int dexSize() const { return dt.rom ? dt.rom->game.dexSize : 493; }
 
 		// ---- sprites -------------------------------------------------------------------------------------------------

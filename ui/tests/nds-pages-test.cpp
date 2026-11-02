@@ -226,6 +226,29 @@ static void touchTests(const Ctx& c, int w, int h)
 	pg.render();
 	CHECK(grab(be, 1) != normal, "the shiny picture differs");
 	CHECK(tap(286, 241) == Pages::Action::REDRAW && !pg.shiny(), "Normal again");
+	// the Pokédex bits as the RAM reader keeps them (species n at bit n - 1, ram.h): a species seen only through its own
+	// bit shows its picture, the bit of the species after it doesn't (found on HeartGold on the Plus: Caterpie seen
+	// showed as Blastoise)
+	{
+		ndsfx::Fixture f = ndsfx::platinum();
+		auto dexOnly = [&](int bitIndex)
+		{
+			auto l = std::make_shared<Live>(*f.live);
+			l->dexSeen.assign(64, 0); l->dexCaught.assign(64, 0);
+			if (bitIndex >= 0) l->dexSeen[bitIndex >> 3] |= 1 << (bitIndex & 7);
+			PageData d = f.data(); d.live = l; pg.setData(d);
+			pg.showSpecies(41); pg.render();
+			std::vector<uint32_t> detail;	// (the entry's panel only: the list beside it names the rows it has seen)
+			const uint32_t* px = be.pixels(1);
+			for (int y = (int)(60 * s); y < (int)(410 * s); y++)
+				for (int x = (int)(224 * s); x < (int)(624 * s); x++) detail.push_back(px[(size_t)y * w + x]);
+			return detail;
+		};
+		auto none = dexOnly(-1), own = dexOnly(40), next = dexOnly(41);
+		CHECK(own != none, "species 41 seen through bit 40 shows it");
+		CHECK(next == none, "bit 41 (species 42) leaves 41 unseen");
+		pg.setData(pt.data());
+	}
 	// the list's rail: its bottom is the end of the Pokédex
 	pg.render();
 	pg.touchDown((int)(199 * s), (int)(408 * s), 0); pg.touchUp((int)(199 * s), (int)(408 * s), 0);

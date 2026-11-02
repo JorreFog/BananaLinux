@@ -253,7 +253,8 @@ namespace ndsfx
 		Encounter e; e.species = sp; e.minLevel = (uint8_t)lo; e.maxLevel = (uint8_t)hi; e.percent = (uint8_t)pct; e.kind = k; e.time = t;
 		return e;
 	}
-	inline void setBit(std::vector<uint8_t>& v, int n) { if ((size_t)(n >> 3) >= v.size()) v.resize((n >> 3) + 1); v[n >> 3] |= 1 << (n & 7); }
+	// a Pokédex bit as Live keeps it: species n at bit n - 1 (ram.h)
+	inline void setBit(std::vector<uint8_t>& v, int n) { n--; if ((size_t)(n >> 3) >= v.size()) v.resize((n >> 3) + 1); v[n >> 3] |= 1 << (n & 7); }
 	inline Mon mon(uint16_t sp, int lv, const char* nick, std::array<uint16_t, 4> mv, std::array<uint8_t, 4> pp, int hp, int maxHp,
 		std::array<uint16_t, 5> st, uint8_t nature, uint16_t ability, bool female = false)
 	{
