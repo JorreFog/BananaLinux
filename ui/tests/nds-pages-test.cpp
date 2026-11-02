@@ -52,6 +52,18 @@ static void renderAll(const Ctx& c, int w, int h, const std::string& look, bool 
 		fprintf(stderr, "render %s%s: %.1f ms, again %.1f ms\n", pre.c_str() + c.out.size() + 1, name.c_str(), first, again);
 		CHECK(savePng(be, 1, pre + name + ".png"), "%s", name.c_str());
 	};
+	// a page scrolled by dragging: half way (mid) or to its end
+	auto scrolled = [&](const std::string& name, float x, bool mid)
+	{
+		pg.render();
+		for (int i = 0; i < (mid ? 1 : 6); i++)
+		{
+			pg.touchDown((int)(w * x / 640), h * 400 / 480, 0);
+			pg.touchMove((int)(w * x / 640), h * (mid ? 200 : 70) / 480, 0);
+			pg.touchUp((int)(w * x / 640), h * (mid ? 200 : 70) / 480, 0);
+		}
+		shot(name);
+	};
 	ndsfx::Fixture pt = ndsfx::platinum(), b2 = ndsfx::black2();
 	pg.setData(pt.data());
 	pg.show(Page::BATTLE); shot("pt-battle");
@@ -60,6 +72,10 @@ static void renderAll(const Ctx& c, int w, int h, const std::string& look, bool 
 	pg.show(Page::GUIDE); shot("pt-guide");
 	pg.showSpecies(391); shot("pt-dex");
 	if (!all) return;
+	scrolled("pt-dex-mid", 420, true);
+	scrolled("pt-dex-end", 420, false);
+	pg.show(Page::GUIDE); scrolled("pt-guide-end", 320, false);
+	pg.show(Page::TEAM); scrolled("pt-team-end", 320, false);
 	pg.show(Page::LOG); shot("pt-log");
 	// Here: in Eterna Forest at night (the Platinum fixture is in Eterna City, which has no wild Pokémon)
 	{
@@ -73,6 +89,7 @@ static void renderAll(const Ctx& c, int w, int h, const std::string& look, bool 
 		f.live = lv;
 		pg.setData(f.data());
 		pg.show(Page::HERE); shot("pt-here");
+		scrolled("pt-here-end", 320, false);
 		pg.show(Page::BATTLE); shot("pt-battle-none");
 		// the Party page scrolled to its end (the evolution watch, the next moves, the effort points here)
 		pg.show(Page::PARTY);
@@ -93,6 +110,7 @@ static void renderAll(const Ctx& c, int w, int h, const std::string& look, bool 
 	pg.setData(b2.data());
 	pg.show(Page::BATTLE); shot("b2-battle-wild");
 	pg.show(Page::HERE); shot("b2-here");
+	scrolled("b2-here-end", 320, false);
 	pg.show(Page::LOG); shot("b2-log");
 	pg.showSpecies(447); shot("b2-dex");
 	pg.show(Page::PARTY); shot("b2-party");
@@ -136,12 +154,20 @@ static void touchTests(const Ctx& c, int w, int h)
 	};
 	ndsfx::Fixture pt = ndsfx::platinum();
 	pg.setData(pt.data());
+	CHECK(pg.unseen() == 2, "two notices unseen (%d)", pg.unseen());
 	// opened: lands on the page an unseen notice is for (the Team page's first), and that notice is reported seen
 	pg.opened(0);
 	CHECK(pg.page() == Page::TEAM, "opened on page %d, not Team", (int)pg.page());
 	auto seen = pg.takeSeen();
 	CHECK(seen.size() == 1 && seen[0] == "pt-catch-zubat", "seen %zu", seen.size());
+	CHECK(pg.unseen() == 1, "one left after the Team page (%d)", pg.unseen());
 	pg.render();
+	// draw(): the same picture inside a frame the caller began (the overlay's)
+	{
+		auto a = grab(be, 1);
+		be.beginScreen(1); pg.draw(); be.endScreen();
+		CHECK(grab(be, 1) == a, "draw() in the overlay's frame");
+	}
 	// the tabs: each one's middle
 	float cell = (512.0f - 8 - 12 - 12) / 7;
 	for (int i = 0; i < 7; i++)

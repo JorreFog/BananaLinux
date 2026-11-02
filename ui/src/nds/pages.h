@@ -68,7 +68,10 @@ namespace banana::nds
 		// animation: true when something moved since the last render; nextWake: ms until it next will (-1 never)
 		bool update(double nowMs);
 		int nextWake(double nowMs) const;
-		void render();
+		void render();		// the page between the screen's beginScreen/endScreen
+		void draw();		// the same within a frame the caller began (the overlay's begin()/end())
+
+		int unseen() const;	// notices not yet seen (the icon's red count)
 
 		// notices shown since the last call (their page was opened): the logic marks them seen
 		std::vector<std::string> takeSeen();

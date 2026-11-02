@@ -43,6 +43,7 @@ namespace banana::nds
 		const char* const TYPE_NAMES[NUM_TYPES] = { "Normal", "Fighting", "Flying", "Poison", "Ground", "Rock", "Bug",
 			"Ghost", "Steel", "Fire", "Water", "Grass", "Electric", "Psychic", "Ice", "Dragon", "Dark" };
 		const uint32_t HP_GREEN = 0x58d068, HP_YELLOW = 0xf8c030, HP_RED = 0xf05848, EXP_BLUE = 0x58a8f8, BADGE_RED = 0xe8433a;
+		const float DEX_ROW = 36;	// the Dex list's rows (CSS px): a finger's width on the RG DS's 4" panels
 		const uint32_t GOOD = 0x58d068, BAD = 0xf06858;
 
 		const char* const STAT_NAMES[6] = { "HP", "Attack", "Defense", "Speed", "Sp. Atk", "Sp. Def" };	// (the personal data's order)
@@ -351,31 +352,43 @@ namespace banana::nds
 			return w;
 		}
 		// wrapped at spaces; returns the height it took (CSS px)
-		float wrap(const std::string& t, float size, float x, float top, float width, int maxLines, const Color& c,
-			bool raw = false, bool medium = false, float lineH = 0)
+		// the lines a text wraps to (laid out once, kept with the texts)
+		const std::vector<std::string>& lines(const std::string& t, float size, float width, int maxLines, bool raw, bool medium)
 		{
-			if (t.empty() || !R) return 0;
-			rnds::TextStyle st;
-			st.font = medium ? M : R; st.size = size;
+			static const std::vector<std::string> none;
+			if (t.empty() || !R) return none;
 			std::string key = "wrap:" + t + "|" + std::to_string(size) + "|" + std::to_string((int)width) + "|" + std::to_string(maxLines) + (raw ? "r" : "") + (medium ? "m" : "");
 			auto it = cache.find(key);
 			if (it == cache.end())
 			{
+				rnds::TextStyle st;
+				st.font = medium ? M : R; st.size = size;
 				rnds::Translator tf = rnds::translator();
 				if (raw) rnds::setTranslator(nullptr);
-				std::vector<rnds::TextLine> lines = rnds::layoutWrap(rnds::utf8to32(t), st, (int)width, maxLines);
+				std::vector<rnds::TextLine> ls = rnds::layoutWrap(rnds::utf8to32(t), st, (int)width, maxLines);
 				rnds::setTranslator(tf);
-				Cached cc;
-				cc.w = (float)lines.size();
-				it = cache.emplace(key, cc).first;
-				wrapLines[key].clear();
-				for (auto& l : lines) wrapLines[key].push_back(toUtf8(l.text));
+				it = cache.emplace(key, Cached()).first;
+				auto& v = wrapLines[key];
+				v.clear();
+				for (auto& l : ls) v.push_back(toUtf8(l.text));
 			}
 			it->second.used = frame;
-			float lh = lineH > 0 ? lineH : std::round(size * 1.45f);
-			const auto& lines = wrapLines[key];
-			for (size_t i = 0; i < lines.size(); i++) text(lines[i], medium, size, x, top + i * lh, c, true);	// (translated already)
-			return lines.size() * lh;
+			return wrapLines[key];
+		}
+		float lineHeight(float size, float lineH) const { return lineH > 0 ? lineH : std::round(size * 1.45f); }
+		// the height a wrapped text takes (wrap() draws it)
+		float wrapHeight(const std::string& t, float size, float width, int maxLines, bool raw = false, bool medium = false, float lineH = 0)
+		{
+			return lines(t, size, width, maxLines, raw, medium).size() * lineHeight(size, lineH);
+		}
+		// wrapped at spaces; returns the height it took (CSS px)
+		float wrap(const std::string& t, float size, float x, float top, float width, int maxLines, const Color& c,
+			bool raw = false, bool medium = false, float lineH = 0)
+		{
+			const auto& ls = lines(t, size, width, maxLines, raw, medium);
+			float lh = lineHeight(size, lineH);
+			for (size_t i = 0; i < ls.size(); i++) text(ls[i], medium, size, x, top + i * lh, c, true);	// (translated already)
+			return ls.size() * lh;
 		}
 		std::unordered_map<std::string, std::vector<std::string>> wrapLines;
 
@@ -666,7 +679,7 @@ namespace banana::nds
 		}
 		bool inBattle() const { return dt.live && dt.live->valid && dt.live->battle.kind != BattleKind::NONE; }
 
-		void render();
+		void render(bool frame);
 		void header(const std::string& title, const std::string& sub, bool rawTitle = false, bool rawSub = false, bool where = true);
 		void dock();
 		void notices(Page pg, float x, float& y, float w);
@@ -685,14 +698,14 @@ namespace banana::nds
 	};
 
 	// ---- the frame -----------------------------------------------------------------------------------------------------
-	void Pages::Impl::render()
+	void Pages::Impl::render(bool own)
 	{
 		frame++;
 		hits.clear();
 		animNext = -1;
 		for (auto& sc : scrolls) sc.second.shown = false;
 		rail.id = -1;
-		be->beginScreen(screen);
+		if (own) be->beginScreen(screen);
 		box("screen", 0, 0, 640, 480);
 		if (dt.reading)
 			message("Reading your game", "The companion reads names, sprites and places from your own game once, and keeps them on the card. The game plays on meanwhile.",
@@ -715,7 +728,7 @@ namespace banana::nds
 			}
 		}
 		dock();
-		be->endScreen();
+		if (own) be->endScreen();
 		// (texts and sprites not drawn for a while go, once there are many)
 		if (cache.size() > 900)
 			for (auto it = cache.begin(); it != cache.end();)
@@ -826,7 +839,7 @@ namespace banana::nds
 		for (auto& nt : dt.advice->notices)
 		{
 			if (pageOf(nt.page) != pg || !freshNow.count(nt.id)) continue;
-			float th = 20 + (nt.text.empty() ? 0 : 18 * std::min<size_t>(2, 1 + nt.text.size() * 7 / (size_t)std::max(1.0f, w - 40)));
+			float th = 20 + wrapHeight(nt.text, 12, w - 48, 2, true);
 			box("best", x, y, w, th + 12);
 			pixels(PX_SPARK, 7, x + 14, y + 12, k(), [&](char) { return p.accent; });
 			text(nt.title, true, 14, x + 34, y + 9, p.ink, true, w - 48);
@@ -868,9 +881,15 @@ namespace banana::nds
 					ex += chip(l, b.stages[i] > 0 ? 0x3c8c50 : 0xa84848, ex, cy) + 4;
 				}
 		}
-		float by = compact ? y + h - 22 : y + h - 38;
-		hpBar(m.hp, m.maxHp, tx, by, tw, compact ? 7 : 10);
-		if (!compact)
+		if (compact)
+		{
+			// (a double battle's half-height card: the HP bar beside the types)
+			float bx = ex + 4;
+			if (bx < x + w - 40) hpBar(m.hp, m.maxHp, bx, cy + 6, x + w - 12 - bx, 7);
+			return;
+		}
+		float by = y + h - 38;
+		hpBar(m.hp, m.maxHp, tx, by, tw, 10);
 		{
 			std::string hp = std::to_string(m.hp) + " / " + std::to_string(m.maxHp);
 			text(hp, true, 13, tx, by + 15, p.ink, true);
@@ -1433,7 +1452,7 @@ namespace banana::nds
 					text(as, false, 12, cx, cy + 2, p.muted, true);
 				}
 			}
-			if (ms.q == Quality::REFERENCE_ONLY) unchecked(612, ny + 13);
+			if (ms.q == Quality::REFERENCE_ONLY) unchecked(602, ny + 13);
 			float py = cy + 26;
 			for (size_t i = 0; i < a->nextProblems.size(); i++)
 			{
@@ -1542,7 +1561,10 @@ namespace banana::nds
 		// the encounter table, by how they're met
 		if (!rows.empty())
 		{
-			std::stable_sort(rows.begin(), rows.end(), [](const Row& a, const Row& b) { return a.kind < b.kind; });
+			// by how they're met, then the likeliest now first
+			int nowCol = lv.timeOfDay == TimeOfDay::ANY ? 2 : (int)lv.timeOfDay;
+			std::stable_sort(rows.begin(), rows.end(), [&](const Row& a, const Row& b)
+				{ return a.kind != b.kind ? a.kind < b.kind : a.pct[nowCol] > b.pct[nowCol]; });
 			EncounterKind last = (EncounterKind)255;
 			int tcol = (int)lv.timeOfDay;
 			for (auto& r : rows)
@@ -1565,7 +1587,8 @@ namespace banana::nds
 				box("slot", 12, y, 616, 40);
 				int state = caught(r.species) ? 1 : seen(r.species) ? 0 : -1;
 				mon(r.species, false, 0, 0, 20, y + 3, 40, 34, false);
-				text(speciesName(r.species), true, 14, 70, y + 11, p.ink, true, 150);
+				bool none = groupTimed && tcol >= 1 && tcol <= 3 && r.pct[tcol] == 0;	// (not at this time of day)
+				text(speciesName(r.species), true, 14, 70, y + 11, none ? p.muted : p.ink, true, 150);
 				if (state >= 0) ball(226, y + 13, state, std::max(1, (int)std::lround(1.4f * s)));
 				std::string lvs = tr("Lv") + " " + std::to_string(r.lo) + (r.hi != r.lo ? "-" + std::to_string(r.hi) : "");
 				text(lvs, false, 12, 250, y + 13, p.muted, true);
@@ -1598,12 +1621,12 @@ namespace banana::nds
 			{
 				if (sc.zone != lv.zone) continue;
 				if (!any) { y = heading(tr("Secrets and hidden items"), 16, y + 2); any = true; }
-				float th = std::max(20.0f, std::round(12 * 1.45f) * std::min<float>(2, 1 + sc.text.size() * 7 / 520.0f));
+				float th = std::max(17.0f, wrapHeight(sc.text, 12, sc.x >= 0 ? 470 : 540, 2, true));
 				box("slot", 12, y, 616, th + 18);
 				pixels(PX_SPARK, 7, 24, y + 11, k(), [&](char) { return p.accent; });
 				wrap(sc.text, 12, 46, y + 9, sc.x >= 0 ? 470 : 540, 2, p.ink, true);
-				if (sc.x >= 0) textR("x " + std::to_string(sc.x) + ", y " + std::to_string(sc.y), false, 12, 596, y + 10, p.muted, true);
-				if (sc.q == Quality::REFERENCE_ONLY) unchecked(606, y + 10);
+				if (sc.x >= 0) textR("x " + std::to_string(sc.x) + ", y " + std::to_string(sc.y), false, 12, 588, y + 10, p.muted, true);
+				if (sc.q == Quality::REFERENCE_ONLY) unchecked(600, y + 10);
 				y += th + 24;
 			}
 		}
@@ -1620,8 +1643,7 @@ namespace banana::nds
 			text(tr("Lv") + " " + std::to_string(r.level), false, 12, 220, y + 15, p.muted, true);
 			std::string zn = zoneName(r.zone);
 			text(hereNow ? tr("Here, now") : zn, true, 13, 290, y + 14, hereNow ? p.accent : p.ink, !hereNow, 200);
-			const Species* sp = species(r.species);
-			if (sp && r.hp) hpBar(r.hp, r.hp, 500, y + 18, 110, 6);
+			if (r.hp) textR(tr("HP") + " " + std::to_string(r.hp), false, 12, 614, y + 15, p.muted, true);
 			y += 50;
 		}
 		// the daycare
@@ -1673,7 +1695,7 @@ namespace banana::nds
 			float h = 92 + (t ? 64 : 0) + (a ? 18.0f * std::min<size_t>(4, a->nextProblems.size()) : 0);
 			box("hero", 12, y, 616, h);
 			text(tr("Next"), false, 12, 28, y + 12, p.accent);
-			if (ms.q == Quality::REFERENCE_ONLY) unchecked(608, y + 14);
+			if (ms.q == Quality::REFERENCE_ONLY) unchecked(600, y + 14);
 			text(ms.name, true, 20, 28, y + 28, p.ink, true, 440);
 			float cx = 28, cy = y + 56;
 			if (ms.theme < NUM_TYPES) cx += typeChip(ms.theme, cx, cy) + 8;
@@ -1714,11 +1736,11 @@ namespace banana::nds
 			{
 				const GuideStep& s2 = *st[i];
 				bool hereNow = std::find(s2.zones.begin(), s2.zones.end(), zn) != s2.zones.end();
-				float th = s2.text.empty() ? 0 : std::round(12 * 1.45f) * std::min<float>(3, 1 + s2.text.size() * 7 / 560.0f);
+				float th = wrapHeight(s2.text, 12, 576, 3, true);
 				box("slot", 12, y, 616, 30 + th);
 				if (hereNow) fill(18, y + 9, 3, 12 + th, p.accent);
 				text(s2.title, true, 14, 28, y + 8, p.ink, true, 560);
-				if (s2.q == Quality::REFERENCE_ONLY) unchecked(608, y + 10);
+				if (s2.q == Quality::REFERENCE_ONLY) unchecked(600, y + 10);
 				if (th > 0) wrap(s2.text, 12, 28, y + 27, 576, 3, p.muted, true);
 				y += 36 + th;
 			}
@@ -1757,11 +1779,12 @@ namespace banana::nds
 				if (it == g->evolutionNotes.end() || done.count(m.species)) continue;
 				done.insert(m.species);
 				if (!any) { y = heading(tr("Evolving your team"), 16, y + 2); any = true; }
-				box("slot", 12, y, 616, 50);
+				float th = wrapHeight(it->second, 12, 540, 3, true);
+				box("slot", 12, y, 616, 32 + th);
 				mon(m.species, m.female, m.form, 0, 20, y + 6, 40, 38, false);
-				text(speciesName(m.species), true, 13, 70, y + 7, p.ink, true, 200);
-				wrap(it->second, 12, 70, y + 25, 540, 1, p.muted, true);
-				y += 56;
+				text(speciesName(m.species), true, 13, 70, y + 8, p.ink, true, 200);
+				wrap(it->second, 12, 70, y + 26, 540, 3, p.muted, true);
+				y += 38 + th;
 			}
 		}
 		// where the guide's facts come from
@@ -1790,7 +1813,7 @@ namespace banana::nds
 		// the list on the left (drag it, or along its rail for the whole Pokédex)
 		box("bubble", 12, 58, 196, 358);
 		int lid = scrollId(Page::DEX, 0);
-		const float rowH = 28;
+		const float rowH = DEX_ROW;
 		Scroll& ls = scrolls[lid];
 		ls.max = std::max(0.0f, n * rowH + 4 - 346);
 		float top = beginScroll(lid, 15, 64, 176, 346);
@@ -1802,11 +1825,11 @@ namespace banana::nds
 			if (on) box("pick", 17, y + 1, 172, rowH - 2);
 			char num[16]; snprintf(num, sizeof num, "%03d", i);
 			Color ink = on ? p.onPick : p.ink, mut = on ? p.onPickAccent : p.muted;
-			text(num, false, 12, 26, y + 7, mut, true);
+			text(num, false, 12, 26, y + 11, mut, true);
 			bool sn = seen(i);
-			text(sn ? speciesName(i) : "???", true, 13, 60, y + 6, sn ? ink : mut, true, 100);
-			if (caught(i)) ball(168, y + 8, 1, std::max(1, (int)std::lround(1.2f * s)));
-			else if (sn) ball(168, y + 8, 0, std::max(1, (int)std::lround(1.2f * s)));
+			text(sn ? speciesName(i) : "???", true, 14, 60, y + 10, sn ? ink : mut, true, 100);
+			if (caught(i)) ball(166, y + 12, 1, std::max(1, (int)std::lround(1.2f * s)));
+			else if (sn) ball(166, y + 12, 0, std::max(1, (int)std::lround(1.2f * s)));
 			hit(15, y, 176, rowH, [this, i] { o.dexSel = i; scrolls[scrollId(Page::DEX, 1)].y = 0; });
 		}
 		endScroll(lid, top + n * rowH + 4);
@@ -1913,24 +1936,31 @@ namespace banana::nds
 			if (chain.size() > 1)
 			{
 				y = heading(tr("Evolution"), x, y);
+				// a cell each: the stage, the name under it, how it's reached; arrows between (rows of four at most)
+				size_t perRow = std::min<size_t>(4, chain.size());
+				float cw = std::min(120.0f, (w - 16 * (perRow - 1)) / perRow);
 				float cx = x;
 				for (size_t i = 0; i < chain.size(); i++)
 				{
 					uint16_t cs = chain[i].first;
-					if (i)
-					{
-						if (cx + 150 > x + w) { cx = x; y += 70; }
-						pixels(PX_ARROW_R, 7, cx, y + 18, k(), [&](char) { return p.line; });
-						cx += 16;
-					}
+					if (i && i % perRow == 0) { cx = x; y += 100; }
+					else if (i) { pixels(PX_ARROW_R, 7, cx - 12, y + 18, k(), [&](char) { return p.line; }); }
 					bool cseen = seen(cs);
-					stage(cs, false, 0, cseen ? 0 : 2, cx, y, 44, 44, false);
-					text(cseen ? speciesName(cs) : "???", cs == n, 12, cx + 50, y + 6, cs == n ? p.accent : p.ink, true, 80);
-					if (chain[i].second) wrap(chain[i].second->how, 11, cx + 50, y + 22, 80, 2, p.muted, true, false, 13);
-					if (cs != n) hit(cx, y, 130, 44, [this, cs] { o.dexSel = cs; scrolls[scrollId(Page::DEX, 1)].y = 0; });
-					cx += 134;
+					stage(cs, false, 0, cseen ? 0 : 2, cx + cw / 2 - 24, y, 48, 48, false);
+					std::string nm = cseen ? speciesName(cs) : "???";
+					float nw = std::min(cw, measure(nm, true, 12, true));
+					text(nm, true, 12, cx + cw / 2 - nw / 2, y + 54, cs == n ? p.accent : p.ink, true, cw);
+					if (chain[i].second)
+					{
+						const std::string& how = chain[i].second->how;
+						float hw = std::min(cw, measure(how, false, 11, true));
+						if (hw < cw) text(how, false, 11, cx + cw / 2 - hw / 2, y + 70, p.muted, true);
+						else wrap(how, 11, cx, y + 70, cw, 2, p.muted, true, false, 13);
+					}
+					if (cs != n) hit(cx, y, cw, 90, [this, cs] { o.dexSel = cs; scrolls[scrollId(Page::DEX, 1)].y = 0; });
+					cx += cw + 16;
 				}
-				y += 56;
+				y += 100;
 				if (dt.guide)
 				{
 					auto it = dt.guide->evolutionNotes.find(n);
@@ -2158,7 +2188,7 @@ namespace banana::nds
 		d->scrolls[d->scrollId(Page::DEX, 1)].y = 0;
 		// the list scrolled so the row shows (in its middle)
 		Impl::Scroll& ls = d->scrolls[d->scrollId(Page::DEX, 0)];
-		ls.y = std::max(0.0f, (sp - 1) * 28.0f - 160);
+		ls.y = std::max(0.0f, (sp - 1) * DEX_ROW - 160);
 		show(Page::DEX);
 	}
 
@@ -2238,7 +2268,14 @@ namespace banana::nds
 		if (d->animNext < 0) return -1;
 		return (int)std::max(0.0, std::ceil(d->animNext - nowMs));
 	}
-	void Pages::render() { d->render(); }
+	void Pages::render() { d->render(true); }
+	void Pages::draw() { d->render(false); }
+	int Pages::unseen() const
+	{
+		int n = 0;
+		for (int i = 0; i < (int)Page::COUNT; i++) n += d->noticeCount((Page)i);
+		return n;
+	}
 
 	std::vector<std::string> Pages::takeSeen()
 	{
