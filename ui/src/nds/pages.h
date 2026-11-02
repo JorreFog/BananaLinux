@@ -73,6 +73,12 @@ namespace banana::nds
 
 		int unseen() const;	// notices not yet seen (the icon's red count)
 
+		// Gen V's season for the Here page's odds: the game's own is not read (not found in its RAM), so the page shows
+		// which season the odds are for - the handheld's month (Live::season) until the player taps the one their game
+		// shows (a game resumed from a state keeps the season it started in). season(): -1 when the game has none
+		int season() const;
+		int seasonPick() const { return pickedSeason; }	// -1: not picked (the logic may take it: Session::setSeason)
+
 		// notices shown since the last call (their page was opened): the logic marks them seen
 		std::vector<std::string> takeSeen();
 
@@ -90,6 +96,7 @@ namespace banana::nds
 		bool dexShiny = false;
 		uint16_t dexSel = 1;
 		int partyIdx = 0;
+		int pickedSeason = -1;
 		friend struct Impl;
 	};
 

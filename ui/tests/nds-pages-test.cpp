@@ -402,6 +402,33 @@ int main(int argc, char** argv)
 	c.assets = argc > 2 ? argv[2] : "assets/rnds";
 	c.themes = argc > 3 ? argv[3] : "../system/rootfs/usr/share/banana/themes";
 	mkdir(c.out.c_str(), 0755);
+	// Gen V's season: the game's own isn't read (not found in RAM), so Here shows which season its odds are for (the
+	// handheld's month to begin with) and a tap picks the one the game shows (Black 2 loaded in summer on 2 November)
+	for (int w : { 640, 1024 })
+	{
+		const int h = w * 3 / 4;
+		const float sc = w / 640.0f;
+		SoftBackend be(w, h);
+		Pages pg(&be, 1, w, h, c.assets, false);
+		setTopRight(pg, w, h);
+		ndsfx::Fixture b2 = ndsfx::black2();
+		pg.setData(b2.data());
+		pg.show(Page::HERE); pg.render();
+		CHECK(pg.season() == 2 && pg.seasonPick() < 0, "Here's odds for the handheld's season (%d)", pg.season());
+		auto autumn = grab(be, 1);
+		CHECK(savePng(be, 1, c.out + "/" + std::to_string(w) + "x" + std::to_string(h) + "-dark-b2-here-season.png"), "season png");
+		// the four seasons in a row at the top of the list (the first row: no notice here), Summer second
+		const float cw = 4 * 78, x0 = 628 - cw;
+		pg.touchDown((int)((x0 + 78 + 39) * sc), (int)(78 * sc), 0); pg.touchUp((int)((x0 + 78 + 39) * sc), (int)(78 * sc), 0);
+		pg.render();
+		CHECK(pg.season() == 1 && pg.seasonPick() == 1, "Summer picked (%d, %d)", pg.season(), pg.seasonPick());
+		CHECK(grab(be, 1) != autumn, "the odds drawn again for summer");
+		CHECK(savePng(be, 1, c.out + "/" + std::to_string(w) + "x" + std::to_string(h) + "-dark-b2-here-summer.png"), "summer png");
+		// a game without seasons (Platinum): no switch
+		ndsfx::Fixture ptf = ndsfx::platinum();
+		pg.setData(ptf.data()); pg.show(Page::HERE); pg.render();
+		CHECK(pg.season() < 0, "no season in Gen IV (%d)", pg.season());
+	}
 	{	// a goal's name with its place: the place once (Platinum's Team page said "Rival Barry: Route 203, Route 203")
 		Milestone m; m.name = "Rival Barry: Route 203"; m.place = "Route 203";
 		CHECK(goalWithPlace(m) == "Rival Barry: Route 203", "%s", goalWithPlace(m).c_str());

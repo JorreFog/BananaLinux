@@ -524,8 +524,15 @@ namespace ndsfx
 		zs[Z_R19] = { Z_R19, "Route 19", { enc(504, 2, 4, 50), enc(509, 2, 4, 50) } };
 		zs[Z_FLOCCESY_TOWN] = { Z_FLOCCESY_TOWN, "Floccesy Town", {} };
 		zs[Z_R20] = { Z_R20, "Route 20", { enc(504, 4, 6, 30), enc(509, 4, 6, 30), enc(519, 4, 6, 20), enc(540, 5, 6, 20) } };
-		zs[Z_FLOCCESY_RANCH] = { Z_FLOCCESY_RANCH, "Floccesy Ranch", { enc(506, 5, 7, 40), enc(179, 5, 7, 30), enc(298, 5, 7, 20), enc(54, 5, 7, 5),
+		zs[Z_FLOCCESY_RANCH] = { Z_FLOCCESY_RANCH, "Floccesy Ranch", { enc(179, 5, 7, 30), enc(298, 5, 7, 20), enc(54, 5, 7, 5),
 			enc(447, 5, 7, 5), enc(298, 5, 7, 60, EncounterKind::GROTTO), enc(179, 5, 7, 40, EncounterKind::GROTTO) } };
+		// (a table per season, as Gen V keeps them: Lillipup's slot is Herdier's in autumn here, made up to tell them apart)
+		for (uint8_t se = 0; se < 4; se++)
+		{
+			Encounter e = enc(se == 2 ? 507 : 506, 5, 7, 40);
+			e.season = se;
+			zs[Z_FLOCCESY_RANCH].encounters.push_back(e);
+		}
 		zs[Z_VIRBANK] = { Z_VIRBANK, "Virbank City", {} };
 		f.rom = r;
 		auto lv = std::make_shared<Live>();

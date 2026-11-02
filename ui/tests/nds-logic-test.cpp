@@ -371,6 +371,15 @@ static void testSession(const char* tmp)
 		for (int i = 0; i < 8; i++) at(B + 0x1328 + 4)[1 + i] = 0xFF;	// species 9..72
 		for (int i = 0; i < 4; i++, t += 300) s.tick(t, 1762000150);
 		CHECK(catches() == catchesBefore);
+		// Gen V's season as the player picked it on the Here page (the game's own isn't read): Live carries it, so the
+		// logic's catch-now goes by the same season as the page
+		const uint8_t monthSeason = s.live()->season;
+		s.setSeason((monthSeason + 1) % 4);
+		for (int i = 0; i < 2; i++, t += 300) s.tick(t, 1762000160);
+		CHECK(s.live()->season == (monthSeason + 1) % 4);
+		s.setSeason(-1);
+		for (int i = 0; i < 2; i++, t += 300) s.tick(t, 1762000170);
+		CHECK(s.live()->season == monthSeason);
 		const int before = s.unseen();
 		s.markSeen({ "next:gym1" });
 		CHECK(s.unseen() == before - 1);

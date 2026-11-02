@@ -39,8 +39,16 @@ namespace banana::nds
 			const std::string q = requestLines(sent);
 			if (!q.empty() && send(q)) { waiting = true; sentAt = lastAt = now; }
 		}
+		if (redo && rr.live()->valid) { changed = true; redo = false; }
 		if (!changed) return false;
-		auto l = rr.live();
+		std::shared_ptr<const Live> l = rr.live();
+		if (seasonPick >= 0 && l->season != seasonPick)
+		{
+			auto c = std::make_shared<Live>(*l);
+			c->season = (uint8_t)seasonPick;
+			l = c;
+		}
+		cur = l;
 		if (file.empty() && l->valid)
 		{
 			char b[96];
@@ -56,13 +64,21 @@ namespace banana::nds
 		return true;
 	}
 
+	void Session::setSeason(int season)
+	{
+		season = season >= 0 ? season & 3 : -1;
+		if (season == seasonPick) return;
+		seasonPick = season;
+		redo = true;
+	}
+
 	void Session::markSeen(const std::vector<std::string>& ids)
 	{
 		for (auto& i : ids) if (st.seen.insert(i).second) dirty = true;
 		if (dirty && !ids.empty())
 		{
 			// (the notices recounted without the seen ones)
-			if (auto l = rr.live(); l->valid && rom) adv = std::make_shared<const Advice>(computeAdvice(*rom, *l, guide.get(), st));
+			if (auto l = live(); l->valid && rom) adv = std::make_shared<const Advice>(computeAdvice(*rom, *l, guide.get(), st));
 		}
 	}
 	std::vector<std::string> Session::seenList() const { return std::vector<std::string>(st.seen.begin(), st.seen.end()); }

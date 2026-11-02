@@ -31,7 +31,7 @@ namespace banana::nds
 		std::function<std::string()> receive;
 		// call from the menu's idle loop (any rate; a set goes out every 250 ms): true when Live/Advice changed
 		bool tick(double nowMs, time_t wall);
-		std::shared_ptr<const Live> live() const { return rr.live(); }
+		std::shared_ptr<const Live> live() const { return cur ? cur : rr.live(); }
 		std::shared_ptr<const Advice> advice() const { return adv; }
 		std::shared_ptr<const Journey> journey() const { return std::make_shared<const Journey>(*jr); }	// (a copy: the pages keep it)
 		// notices the pages showed (Pages::takeSeen): never counted again, kept on the card
@@ -39,6 +39,9 @@ namespace banana::nds
 		std::vector<std::string> seenList() const;
 		int unseen() const;					// the badge's count
 		void setChallenge(bool on);
+		// Gen V's season as the player picked it on the Here page (Pages::seasonPick; -1 the handheld's month): Live and
+		// the advice go by it (the game's own season is not read)
+		void setSeason(int season);
 		const RamReader& reader() const { return rr; }
 		// (tests) the file this playthrough's state is kept in ("" until the trainer is known)
 		const std::string& stateFile() const { return file; }
@@ -58,6 +61,9 @@ namespace banana::nds
 		bool dirty = false;
 		int challengeWanted = -1;	// setChallenge's (the Settings row), applied again over the card's when it is read
 		int64_t lastWild = -1000;
+		int seasonPick = -1;
+		bool redo = false;					// (a new season pick: Live and the advice again at the next tick)
+		std::shared_ptr<const Live> cur;	// rr's Live with the picked season	// the play time (s) of the last reading in a wild battle (a catch registers around its end)
 		void track(const Live& now, time_t wall);
 		void load();
 		void save();

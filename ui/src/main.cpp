@@ -2799,6 +2799,7 @@ int main(int argc, char** argv)
 					}
 					if (!ndsSession) return;
 					ndsSession->markSeen(ndsPages->takeSeen());
+					ndsSession->setSeason(ndsPages->raw().seasonPick());	// (Gen V: the season picked on Here)
 					if (ndsSession->tick(nowMs(), time(nullptr)))
 					{
 						nds::PageData d = ndsBase;

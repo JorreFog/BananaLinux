@@ -1597,11 +1597,16 @@ namespace banana::nds
 		// add up to 100 on their own, so they are rows of their own, not summed: Hoothoot showed 100% on Route 30)
 		struct Row { uint16_t species; EncounterKind kind; uint8_t cond = 0; uint8_t lo = 255, hi = 0; int pct[4] = {}; bool timed = false; };
 		std::vector<Row> rows;
+		// (Gen V: the season the odds are for, the handheld's month or the player's pick; it matters where the place
+		// keeps a table per season)
+		const int season = o.season();
+		const bool seasonal = loc && season >= 0 &&
+			std::any_of(loc->encounters.begin(), loc->encounters.end(), [](const Encounter& e) { return e.season != 0xff; });
 		if (loc)
 			for (auto& e : loc->encounters)
 			{
 				// (Gen V stores a table per season on any kind of encounter: only this season's counts, or the odds add up over four)
-				if (e.season != 0xff && e.season != lv.season) continue;
+				if (e.season != 0xff && e.season != season) continue;
 				const uint8_t cond = listed(e.kind) ? e.condition : 0;
 				auto it = std::find_if(rows.begin(), rows.end(), [&](const Row& r) { return r.species == e.species && r.kind == e.kind && r.cond == cond; });
 				if (it == rows.end()) { rows.push_back(Row{ e.species, e.kind, cond }); it = rows.end() - 1; }
@@ -1619,13 +1624,33 @@ namespace banana::nds
 		}
 		std::string sub = total ? std::to_string(got) + " " + tr("of") + " " + std::to_string(total) + " " + tr("caught here") : tr("No wild Pokémon here");
 		sub += ", " + tr(timeName(lv.timeOfDay));
-		if (dt.rom->game.gen == Gen::V) sub += ", " + tr(seasonName(lv.season));
 		if (lv.repelSteps) sub += ", " + tr("repel") + " " + std::to_string(lv.repelSteps) + " " + tr("steps");
 		std::string title = loc && !loc->name.empty() ? loc->name : tr("Here");
 		header(title, sub, loc && !loc->name.empty(), true, !(loc && !loc->name.empty()));
 		int id = scrollId(Page::HERE, 0);
 		float y = beginScroll(id, 0, 56, 640, 362) + 2;
 		notices(Page::HERE, 12, y, 616);
+
+		// the season the odds below are for, and the four to pick from: the game's own is not readable, the handheld's
+		// month is the first guess (a game resumed from a state keeps the season it started in)
+		if (seasonal)
+		{
+			box("bubble", 12, y, 616, 44);
+			text(tr("Season"), true, 14, 26, y + 7, p.ink);
+			text(tr(o.pickedSeason >= 0 ? "picked by you" : "a guess from the date: tap your game's"), false, 12, 26, y + 25, p.muted, false, 270);
+			const float cw = 78, x0 = 628 - 4 * cw;
+			box("well", x0 - 2, y + 7, 4 * cw - 8, 30);
+			for (int i = 0; i < 4; i++)
+			{
+				const bool on = i == season;
+				if (on) box("pick", x0 + i * cw, y + 9, cw - 12, 26);
+				std::string l = tr(seasonName((uint8_t)i));
+				float lw = measure(l, true, 13, true);
+				text(l, true, 13, x0 + i * cw + (cw - 12) / 2 - lw / 2, y + 13, on ? p.onPick : p.muted, true);
+				hit(x0 + i * cw - 4, y, cw, 44, [this, i] { o.pickedSeason = i; });
+			}
+			y += 52;
+		}
 
 		// challenge mode: this route's first encounter
 		if (dt.journey && dt.journey->challenge)
@@ -2401,6 +2426,11 @@ namespace banana::nds
 	}
 	void Pages::render() { d->render(true); }
 	void Pages::draw() { d->render(false); }
+	int Pages::season() const
+	{
+		if (!d->dt.rom || d->dt.rom->game.gen != Gen::V || !d->dt.live || !d->dt.live->valid) return -1;
+		return pickedSeason >= 0 ? pickedSeason : d->dt.live->season & 3;
+	}
 	int Pages::unseen() const
 	{
 		int n = 0;
