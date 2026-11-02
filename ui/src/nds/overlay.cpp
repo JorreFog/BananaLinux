@@ -447,7 +447,7 @@ namespace banana::nds
 		double lastPic = 0;
 		const int pidFd = (int)syscall(SYS_pidfd_open, pid, 0);
 		uint32_t seenSeq = ov.openSeq();
-		bool wasShown = false, finger = false, want = true;
+		bool wasShown = false, want = true;
 		double lastDraw = 0;
 		const char* CMD = "/run/banana/companion-cmd";	// (tests over SSH: "open", "close", "tap x y")
 		for (;;)
@@ -490,7 +490,6 @@ namespace banana::nds
 			while (ov.pollTouch(t))
 			{
 				page.touch(t);
-				finger = t.type != Touch::UP;
 				want = true;
 				nTouch++;
 				newestTouch = t.ms;
@@ -503,30 +502,34 @@ namespace banana::nds
 			double tDraw = tTick, tComp = tTick, tSend = tTick;
 			bool pic = false;
 			bovl_rect sentRect{ 0, 0, 0, 0 };
-			int timeout = shown ? 16 : 50;
-			if (shown && (want || ov.pending()))
+			// a look every 8 ms while closed, so a tap on the icon is answered within half a frame (the open request has no
+			// wake-up of its own: at 50 ms it was 32-43 ms on the RG DS before the first picture was even begun), every 4
+			// ms while open for BananaDS's touches (no wake-up either)
+			int timeout = shown ? 4 : 8;
+			// (60 pictures a second at most: a picture is only made when something changed. It was 30 once the finger
+			// lifted, so a fling's glide ran at half the drag's rate)
+			const double gap = 16;
+			if (shown && (want || ov.pending()) && now - lastDraw >= gap)
 			{
-				const double gap = finger ? 16 : 33;	// (30 pictures a second at most; 60 while a finger drags)
-				if (now - lastDraw >= gap)
+				if (want)
 				{
-					if (want)
-					{
-						ov.begin();
-						page.draw(ov.backend(), ov.width(), ov.height(), ov.iconRect());
-						tDraw = monoMs();
-						ov.compose();
-						tComp = monoMs();
-						sentRect = ov.dirtyRect();
-						ov.send();
-						want = false;
-					}
-					else { tDraw = tComp = monoMs(); sentRect = ov.dirtyRect(); ov.send(); }
-					tSend = monoMs();
-					pic = true;
-					lastDraw = now;
+					ov.begin();
+					page.draw(ov.backend(), ov.width(), ov.height(), ov.iconRect());
+					tDraw = monoMs();
+					ov.compose();
+					tComp = monoMs();
+					sentRect = ov.dirtyRect();
+					ov.send();
+					want = false;
 				}
-				else timeout = std::max(1, (int)(gap - (now - lastDraw)));
+				else { tDraw = tComp = monoMs(); sentRect = ov.dirtyRect(); ov.send(); }
+				tSend = monoMs();
+				pic = true;
+				lastDraw = now;
 			}
+			// the next picture is due a gap after the last one began: no longer a whole gap after it was done (a picture
+			// taking 13 ms on the Plus came every 29 ms)
+			if (shown && (want || ov.pending())) timeout = std::max(1, (int)std::ceil(lastDraw + gap - monoMs()));
 			if (perf && (pic || nTouch || tIdle - now > 1 || tTick - tTouch > 1))
 			{
 				const uint32_t nowMsU = (uint32_t)(uint64_t)tTouch;

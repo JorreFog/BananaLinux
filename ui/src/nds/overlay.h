@@ -123,7 +123,7 @@ namespace banana::nds
 	std::unique_ptr<OverlayPage> makeTestPage(Overlay& ov);
 
 	// the companion's loop while a DS game runs (instead of a plain waitpid): touches to the page, the page drawn and
-	// sent while open (at most 30 times a second, 60 while a finger moves), the icon's badge. Returns when the game
+	// sent while open (at most 60 times a second), the icon's badge. Returns when the game
 	// ends, status as waitpid's. idle: called each turn (the memory reads' pump: CompLink), may be empty
 	void runWhileGame(Overlay& ov, OverlayPage& page, pid_t pid, int& status, const std::function<void(double)>& idle = {});
 }
