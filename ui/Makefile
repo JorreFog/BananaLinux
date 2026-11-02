@@ -106,3 +106,9 @@ clean:
 # the companion's shared-memory link (tests/run.sh runs it)
 tests/complink-test: tests/complink-test.cpp src/complink.cpp src/complink.h src/bcomp.c src/bcomp.h
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/complink-test.cpp src/complink.cpp -x c++ src/bcomp.c
+
+# the DS Pokémon companion's ROM reader: its containers and decoders on data made from the documented layouts, and on
+# the player's own ROMs when given a folder of them (tests/run.sh runs the first part)
+NDS_ROM_SRC = src/nds/nitro.cpp
+tests/nds-rom-test: tests/nds-rom-test.cpp $(NDS_ROM_SRC) $(wildcard src/nds/*.h)
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/nds-rom-test.cpp $(NDS_ROM_SRC) -lpthread
