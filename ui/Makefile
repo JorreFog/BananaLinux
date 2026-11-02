@@ -109,6 +109,9 @@ tests/complink-test: tests/complink-test.cpp src/complink.cpp src/complink.h src
 
 # the DS Pokémon companion's ROM reader: its containers and decoders on data made from the documented layouts, and on
 # the player's own ROMs when given a folder of them (tests/run.sh runs the first part)
-NDS_ROM_SRC = src/nds/nitro.cpp
+NDS_ROM_SRC = src/nds/nitro.cpp src/nds/rom.cpp src/nds/model.cpp
 tests/nds-rom-test: tests/nds-rom-test.cpp $(NDS_ROM_SRC) $(wildcard src/nds/*.h)
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/nds-rom-test.cpp $(NDS_ROM_SRC) -lpthread
+# (what the reader makes of a ROM, printed: for looking at by eye; never commit its output, it is the game's data)
+tests/nds-rom-dump: tests/nds-rom-dump.cpp $(NDS_ROM_SRC) $(wildcard src/nds/*.h)
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/nds-rom-dump.cpp $(NDS_ROM_SRC) -lpthread

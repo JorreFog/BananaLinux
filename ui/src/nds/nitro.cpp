@@ -220,6 +220,38 @@ namespace banana::nds::nitro
 		return true;
 	}
 
+	// ---- LZ77 (0x10 / 0x11) -------------------------------------------------------------------------------------------
+	bool lzDecompress(const uint8_t* in, size_t n, Bytes& out)
+	{
+		if (n < 4 || (in[0] != 0x10 && in[0] != 0x11)) return false;
+		bool ext = in[0] == 0x11;
+		size_t size = in[1] | in[2] << 8 | in[3] << 16, p = 4;
+		if (size == 0) { if (n < 8) return false; size = rd32(in + 4); p = 8; }
+		if (size > MAX_UNPACKED) return false;
+		Bytes o;
+		o.reserve(size);
+		while (o.size() < size)
+		{
+			if (p >= n) return false;
+			uint8_t flags = in[p++];
+			for (int bit = 0; bit < 8 && o.size() < size; bit++, flags <<= 1)
+			{
+				if (!(flags & 0x80)) { if (p >= n) return false; o.push_back(in[p++]); continue; }
+				size_t len, disp;
+				if (p + 2 > n) return false;
+				uint8_t b0 = in[p], b1 = in[p + 1];
+				if (!ext) { len = (b0 >> 4) + 3; disp = ((b0 & 15) << 8 | b1) + 1; p += 2; }
+				else if (b0 >> 4 == 0) { if (p + 3 > n) return false; len = ((b0 & 15) << 4 | b1 >> 4) + 0x11; disp = ((b1 & 15) << 8 | in[p + 2]) + 1; p += 3; }
+				else if (b0 >> 4 == 1) { if (p + 4 > n) return false; len = ((b0 & 15) << 12 | b1 << 4 | in[p + 2] >> 4) + 0x111; disp = ((in[p + 2] & 15) << 8 | in[p + 3]) + 1; p += 4; }
+				else { len = (b0 >> 4) + 1; disp = ((b0 & 15) << 8 | b1) + 1; p += 2; }
+				if (disp > o.size()) return false;
+				for (size_t k = 0; k < len && o.size() < size; k++) o.push_back(o[o.size() - disp]);
+			}
+		}
+		out = std::move(o);
+		return true;
+	}
+
 	// ---- text -----------------------------------------------------------------------------------------------------
 	// Gen IV's character set from 0x0001 (pret's pokeplatinum tools/msgenc/charmap.txt; 0x01E0/0x01E1 are the
 	// games' "PK" "MN" glyphs, 0x01DE and 0x01E2 spaces). Japanese kana and full-width letters included; the kanji

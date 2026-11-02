@@ -76,6 +76,10 @@ namespace banana::nds::nitro
 	// the ARM9 binary, unpacked if its module parameters (found by the SDK's nitro code) say so; ramAddress: header 0x28
 	bool arm9Unpack(const Bytes& arm9, uint32_t ramAddress, Bytes& out);
 
+	// The BIOS-style LZ77 (type 0x10) and its longer-run variant (0x11, which Gen V's sprites use); false: not one
+	// of them or broken
+	bool lzDecompress(const uint8_t* in, size_t n, Bytes& out);
+
 	// Gen IV text bank (msg.narc's members): every entry, as UTF-8. Line breaks become '\n'; the games' commands
 	// (colours, placeholders for names and numbers) are dropped.
 	std::vector<std::string> gen4Text(const uint8_t* data, size_t n);

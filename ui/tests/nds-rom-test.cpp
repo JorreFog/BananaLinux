@@ -4,6 +4,7 @@
 //   make tests/nds-rom-test && tests/nds-rom-test [roms-dir [cache-dir]]
 #include "nds/nitro.h"
 #include "nds/rom.h"
+#include <algorithm>
 #include <chrono>
 #include <cstdio>
 #include <cstring>
@@ -232,6 +233,28 @@ static void testBlz()
 	CHECK(viaRom == unpacked);
 }
 
+// ---- LZ77 ------------------------------------------------------------------------------------------------------
+static void testLz()
+{
+	// 0x10: "abcabcabcX": literals a b c, then a copy of 6 from 3 back, then X
+	Bytes a = { 0x10, 10, 0, 0, 0x10, 'a', 'b', 'c', (6 - 3) << 4, 3 - 1, 'X' };
+	Bytes out;
+	CHECK(nitro::lzDecompress(a.data(), a.size(), out));
+	EQ(std::string(out.begin(), out.end()), std::string("abcabcabcX"));
+	// 0x11: 'z', then a copy of 20 from 1 back (the 3-byte form: indicator 0, length-17 in the next 8 bits), then
+	// one of 3 (the 2-byte form: indicator = length-1)
+	Bytes b = { 0x11, 24, 0, 0, 0x60, 'z', 0x00, 0x30, 0x00, 0x20, 0x00 };
+	CHECK(nitro::lzDecompress(b.data(), b.size(), out));
+	EQ(out.size(), (size_t)24);
+	EQ(std::string(out.begin(), out.end()), std::string(24, 'z'));
+	// a copy from before the start, a truncated stream, and a size no sprite has: refused
+	Bytes c = { 0x10, 10, 0, 0, 0x80, 0x30, 5 };
+	CHECK(!nitro::lzDecompress(c.data(), c.size(), out));
+	CHECK(!nitro::lzDecompress(a.data(), 6, out));
+	Bytes d = { 0x11, 0, 0, 0, 0xff, 0xff, 0xff, 0x7f };
+	CHECK(!nitro::lzDecompress(d.data(), d.size(), out));
+}
+
 // ---- text --------------------------------------------------------------------------------------------------------
 // Gen IV codes for ASCII (charmap: 0x0121 '0', 0x012B 'A', 0x0145 'a', 0x01DE space, 0xE000 newline)
 static std::vector<uint16_t> g4(const std::string& s)
@@ -338,14 +361,222 @@ static void testGen5Text()
 	CHECK(nitro::gen5Text(bank.data(), 8).empty());
 }
 
+
+// ---- the player's own ROMs (when a folder of them is given) ---------------------------------------------------------
+// What every game must show, from facts about the games (Bulbapedia / the games themselves), not from the decoder.
+static const Location* zoneNamed(const RomData& r, const std::string& name, bool withEncounters = true)
+{
+	for (auto& z : r.zones) if (z.second.name == name && (!withEncounters || !z.second.encounters.empty())) return &z.second;
+	return nullptr;
+}
+static bool hasEncounter(const Location* z, uint16_t species, EncounterKind kind = EncounterKind::GRASS)
+{
+	if (!z) return false;
+	for (auto& e : z->encounters) if (e.species == species && e.kind == kind) return true;
+	return false;
+}
+static const Trainer* trainerNamed(const RomData& r, const std::string& cls, const std::string& name)
+{
+	for (auto& t : r.trainers) if (t.second.cls == cls && t.second.name == name && !t.second.team.empty()) return &t.second;
+	return nullptr;
+}
+static bool learns(const Species& s, uint16_t move, uint8_t level)
+{
+	for (auto& m : s.learnset) if (m.move == move && m.level == level) return true;
+	return false;
+}
+static int evoCount(const Species& s, uint16_t method) { int n = 0; for (auto& e : s.evolutions) n += e.method == method; return n; }
+
+static void checkGame(const RomData& r)
+{
+	const Game& g = r.game;
+	const bool g5 = g.gen == Gen::V;
+	const bool hgss = g.id == GameId::HEARTGOLD || g.id == GameId::SOULSILVER;
+	const bool b2w2 = g.id == GameId::BLACK2 || g.id == GameId::WHITE2;
+	fprintf(stderr, "  %s: %zu species, %zu moves, %zu items, %zu zones, %zu trainers\n", g.title.c_str(), r.species.size(), r.moves.size(), r.items.size(), r.zones.size(), r.trainers.size());
+	EQ(g.romHash.size(), (size_t)40);
+	CHECK(r.species.size() > (size_t)g.dexSize);
+	if (r.species.size() <= (size_t)g.dexSize) return;
+	// Bulbasaur
+	const Species& b = r.species[1];
+	// (Gen IV's English names are in capitals, as the games show them)
+	EQ(b.name, std::string(g5 ? "Bulbasaur" : "BULBASAUR"));
+	EQ((int)b.types[0], (int)GRASS); EQ((int)b.types[1], (int)POISON);
+	EQ((int)b.base[0], 45); EQ((int)b.base[1], 49); EQ((int)b.base[3], 45); EQ((int)b.base[4], 65);
+	EQ((int)b.catchRate, 45);
+	EQ((int)b.evYield[4], 1);	// one Sp. Atk point
+	EQ(b.category, std::string("Seed Pokémon"));
+	CHECK(b.dexText.size() > 40 && b.dexText.find('\n') == std::string::npos);
+	if (b.abilities[0] < r.abilities.size()) EQ(r.abilities[b.abilities[0]], std::string("Overgrow"));
+	if (g5) { CHECK(b.abilities[2] < r.abilities.size()); if (b.abilities[2] < r.abilities.size()) EQ(r.abilities[b.abilities[2]], std::string("Chlorophyll")); }
+	CHECK(learns(b, 33, 1));	// Tackle at level 1
+	EQ(b.evolutions.size(), (size_t)1);
+	if (!b.evolutions.empty()) { EQ((int)b.evolutions[0].method, (int)evo::LEVEL); EQ((int)b.evolutions[0].param, 16); EQ((int)b.evolutions[0].into, 2); }
+	CHECK(std::find(b.tms.begin(), b.tms.end(), 6) != b.tms.end());	// TM06 Toxic
+	// Squirtle: Surf is HM03, after the 92 (Gen IV) or 95 (Gen V) TMs
+	const auto& sq = r.species[7].tms;
+	CHECK(std::find(sq.begin(), sq.end(), (g5 ? 95 : 92) + 3) != sq.end());
+	// Pikachu: Thunderstone; Eevee: three stones, two friendship, two places (Moss Rock, Ice Rock)
+	const Species& pika = r.species[25];
+	EQ(pika.name, std::string(g5 ? "Pikachu" : "PIKACHU"));
+	CHECK(learns(pika, 84, 1));	// Thunder Shock
+	if (!pika.evolutions.empty()) { EQ((int)pika.evolutions[0].method, (int)evo::USE_ITEM); EQ((int)pika.evolutions[0].into, 26);
+		if (pika.evolutions[0].param < r.items.size()) EQ(r.items[pika.evolutions[0].param].name, std::string("Thunderstone")); }
+	CHECK(!pika.evolutions.empty() && pika.evolutions[0].how.find("Thunderstone") != std::string::npos);
+	const Species& eevee = r.species[133];
+	EQ(evoCount(eevee, evo::USE_ITEM), 3);
+	EQ(evoCount(eevee, evo::FRIENDSHIP_DAY), 1);
+	EQ(evoCount(eevee, evo::FRIENDSHIP_NIGHT), 1);
+	EQ(evoCount(eevee, evo::MOSS_ROCK), 1);
+	EQ(evoCount(eevee, evo::ICE_ROCK), 1);
+	EQ(r.species[133].category, std::string("Evolution Pokémon"));
+	// Magneton -> Magnezone at Mt. Coronet's (or Chargestone Cave's) magnetic field; Onix: trade holding Metal Coat
+	EQ(evoCount(r.species[82], evo::MAGNETIC_FIELD), 1);
+	EQ(evoCount(r.species[95], evo::TRADE_ITEM), 1);
+	if (g5) { EQ(evoCount(r.species[588], evo::TRADE_SPECIES), 1); }	// Karrablast for Shelmet
+	EQ(r.species[g.dexSize].name, std::string(g5 ? "Genesect" : "ARCEUS"));
+	// moves: Pound; Tackle got stronger in Gen V; Curse is the ??? type in Gen IV
+	CHECK(r.moves.size() > (size_t)(g5 ? 559 : 467));
+	if (r.moves.size() > 174)
+	{
+		EQ(r.moves[1].name, std::string("Pound"));
+		EQ((int)r.moves[1].power, 40); EQ((int)r.moves[1].accuracy, 100); EQ((int)r.moves[1].pp, 35);
+		EQ((int)r.moves[1].cat, (int)MoveCategory::PHYSICAL);
+		EQ((int)r.moves[33].power, g5 ? 50 : 35);
+		EQ((int)r.moves[33].type, (int)NORMAL);
+		EQ((int)r.moves[53].type, (int)FIRE);	// Flamethrower
+		EQ((int)r.moves[53].cat, (int)MoveCategory::SPECIAL);
+		EQ((int)r.moves[129].accuracy, 0);	// Swift never misses
+		EQ((int)r.moves[174].type, (int)(g5 ? GHOST : NO_TYPE));
+		EQ((int)(int8_t)r.moves[98].priority, 1);	// Quick Attack
+		CHECK(!r.moves[1].description.empty());
+	}
+	// abilities, natures, items
+	CHECK(r.abilities.size() > (size_t)(g5 ? 164 : 123));
+	if (r.abilities.size() > 1) EQ(r.abilities[1], std::string("Stench"));
+	EQ(r.abilityText.size(), r.abilities.size());
+	EQ(r.natures.size(), (size_t)25);
+	if (r.natures.size() == 25) { EQ(r.natures[0], std::string("Hardy")); EQ(r.natures[24], std::string("Quirky")); }
+	CHECK(r.items.size() > 400);
+	if (r.items.size() > 17)
+	{
+		EQ(r.items[1].name, std::string("Master Ball"));
+		EQ(r.items[17].name, std::string("Potion"));
+		EQ((int)r.items[17].price, 300);
+		EQ((int)r.items[17].pocket, 1);	// medicine
+		CHECK(!r.items[17].description.empty());
+	}
+	// TMs: TM01 Focus Punch (Gen IV) / Hone Claws (Gen V); Gen V's TM95 Snarl before HM01 Cut
+	EQ(r.tmMoves.size(), (size_t)(g5 ? 101 : 100));
+	if (r.tmMoves.size() >= 100)
+	{
+		EQ((int)r.tmMoves[0], g5 ? 468 : 264);
+		EQ((int)r.tmMoves[g5 ? 95 : 92], 15);	// HM01 Cut
+		if (g5) EQ((int)r.tmMoves[94], 555);
+	}
+	// places
+	const char* home = g.id == GameId::DIAMOND || g.id == GameId::PEARL || g.id == GameId::PLATINUM ? "Twinleaf Town" : hgss ? "New Bark Town" : b2w2 ? "Aspertia City" : "Nuvema Town";
+	CHECK(std::find(r.locationNames.begin(), r.locationNames.end(), home) != r.locationNames.end());
+	CHECK(zoneNamed(r, home, false) != nullptr);
+	if (g.id == GameId::PLATINUM) { CHECK(r.zones.count(200) && r.zones.at(200).name == "Valley Windworks"); }
+	if (hgss) { CHECK(r.zones.count(10) && r.zones.at(10).name == "Route 2"); }
+	if (b2w2) { CHECK(r.zones.count(200) && r.zones.at(200).name == "Twist Mountain"); }
+	// wild Pokémon on the first route
+	if (g.gen == Gen::IV && !hgss) { auto z = zoneNamed(r, "Route 201"); CHECK(hasEncounter(z, 396) && hasEncounter(z, 399)); }	// Starly, Bidoof
+	if (hgss) { auto z = zoneNamed(r, "Route 29"); CHECK(hasEncounter(z, 16) && hasEncounter(z, 161)); }	// Pidgey, Sentret
+	if (g.id == GameId::BLACK || g.id == GameId::WHITE) { auto z = zoneNamed(r, "Route 1"); CHECK(hasEncounter(z, 504) && hasEncounter(z, 506)); }	// Patrat, Lillipup
+	if (b2w2) { auto z = zoneNamed(r, "Route 19"); CHECK(hasEncounter(z, 504) && hasEncounter(z, 509)); }	// Patrat, Purrloin
+	// surfing somewhere: Tentacool (72) in Gen IV, Basculin (550) in Gen V
+	bool surf = false;
+	for (auto& z : r.zones) surf = surf || hasEncounter(&z.second, g5 ? 550 : 72, EncounterKind::SURF);
+	CHECK(surf);
+	// every encounter is a real species with sane levels and odds
+	int bad = 0;
+	for (auto& z : r.zones) for (auto& e : z.second.encounters) bad += e.species == 0 || e.species > g.dexSize || e.minLevel == 0 || e.minLevel > e.maxLevel || e.maxLevel > 100 || e.percent == 0 || e.percent > 100;
+	EQ(bad, 0);
+	// the first gym leader's team
+	if (g.id == GameId::DIAMOND || g.id == GameId::PEARL || g.id == GameId::PLATINUM)
+	{
+		auto t = trainerNamed(r, "Leader", "Roark");
+		CHECK(t && t->team.size() == 3);
+		if (t && t->team.size() == 3) { EQ((int)t->team[0].species, 74); EQ((int)t->team[0].level, 12); EQ((int)t->team[2].species, 408); EQ((int)t->team[2].level, 14); }
+	}
+	if (hgss)
+	{
+		auto t = trainerNamed(r, "Leader", "Falkner");
+		CHECK(t && t->team.size() == 2);
+		if (t && t->team.size() == 2) { EQ((int)t->team[0].species, 16); EQ((int)t->team[0].level, 9); EQ((int)t->team[1].species, 17); EQ((int)t->team[1].level, 13); }
+	}
+	if (g.id == GameId::BLACK || g.id == GameId::WHITE)
+	{
+		auto t = trainerNamed(r, "Leader", "Lenora");
+		CHECK(t && t->team.size() == 2);
+		if (t && t->team.size() == 2) { EQ((int)t->team[0].species, 507); EQ((int)t->team[0].level, 18); EQ((int)t->team[1].species, 505); EQ((int)t->team[1].level, 20); }
+	}
+	if (b2w2)
+	{
+		auto t = trainerNamed(r, "Leader", "Cheren");
+		CHECK(t && t->team.size() == 2);
+		if (t && t->team.size() == 2) { EQ((int)t->team[0].species, 504); EQ((int)t->team[0].level, 11); EQ((int)t->team[1].species, 506); EQ((int)t->team[1].level, 13); }
+	}
+	// every trainer's Pokémon knows something (from the ROM, or the game's own default from the learnset)
+	int noMoves = 0;
+	for (auto& t : r.trainers) for (auto& m : t.second.team) noMoves += m.moves[0] == 0;
+	EQ(noMoves, 0);
+	// forms: Deoxys' Attack Forme has 180 Attack
+	uint16_t dx = speciesIndex(r, 386, 1);
+	CHECK(dx > g.dexSize && dx < r.species.size());
+	if (dx < r.species.size()) EQ((int)r.species[dx].base[1], 180);
+	EQ((int)speciesIndex(r, 25, 0), 25);
+	// sprites: Gen IV two 80x80 frames, Gen V 96x96 (animated); normal and shiny palettes differ
+	auto sp = r.sprite(25);
+	CHECK(sp != nullptr);
+	if (sp)
+	{
+		EQ(sp->w, g5 ? 96 : 80); EQ(sp->h, g5 ? 96 : 80);
+		CHECK(sp->frames.size() >= (g5 ? 1u : 2u));
+		CHECK(sp->normal != sp->shiny);
+		size_t opaque = 0;
+		if (!sp->frames.empty()) for (uint8_t v : sp->frames[0]) opaque += v != 0;
+		CHECK(opaque > 500 && opaque < (size_t)(sp->w * sp->h) * 3 / 4);
+		CHECK(sp->anim.size() >= 2);
+	}
+}
+
+static void testRoms(const std::string& dir, const std::string& cache)
+{
+	DIR* d = opendir(dir.c_str());
+	if (!d) { fprintf(stderr, "FAIL no ROM folder %s\n", dir.c_str()); fails++; return; }
+	std::vector<std::string> files;
+	while (dirent* e = readdir(d)) { std::string n = e->d_name; if (n.size() > 4 && n.compare(n.size() - 4, 4, ".nds") == 0) files.push_back(dir + "/" + n); }
+	closedir(d);
+	std::sort(files.begin(), files.end());
+	for (auto& f : files)
+	{
+		for (int pass = 0; pass < (cache.empty() ? 1 : 2); pass++)
+		{
+			std::string err;
+			RomLoadInfo info;
+			auto r = loadRom(f, cache, &err, &info);
+			CHECK(r != nullptr);
+			if (!r) { fprintf(stderr, "FAIL %s: %s\n", f.c_str(), err.c_str()); break; }
+			fprintf(stderr, "%s: %s in %.0f ms%s (cache %zu KiB)\n", r->game.code.c_str(), info.fromCache ? "cache read" : "decoded", info.ms, "", info.cacheBytes / 1024);
+			if (!cache.empty()) EQ(info.fromCache, pass == 1);
+			checkGame(*r);
+		}
+	}
+}
+
 int main(int argc, char** argv)
 {
 	testSha1();
 	testNarc();
 	testFileSystem();
 	testBlz();
+	testLz();
 	testGen4Text();
 	testGen5Text();
+	if (argc > 1) testRoms(argv[1], argc > 2 ? argv[2] : "");
 	fprintf(stderr, "nds-rom-test: %d checks, %d failed\n", checks, fails);
 	return fails ? 1 : 0;
 }

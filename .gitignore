@@ -18,3 +18,5 @@
 # Python bytecode
 __pycache__/
 *.pyc
+/ui/tests/nds-rom-test
+/ui/tests/nds-rom-dump
