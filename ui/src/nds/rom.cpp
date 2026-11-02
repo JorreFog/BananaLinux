@@ -103,6 +103,7 @@ namespace banana::nds
 		mutable std::mutex lock;
 		mutable std::unique_ptr<nitro::Rom> rom;
 		mutable std::map<uint32_t, std::shared_ptr<const Sprite>> sprites;	// the last few asked for
+		mutable nitro::NarcFile spriteNarc;	// the sprite archive's member table (sprite())
 		mutable int formOrigin = -1;	// Gen V: where the forms' pictures start in the sprite archive (0: not found)
 	};
 
@@ -978,7 +979,7 @@ namespace banana::nds
 
 		// the animation as frames the size of the still, at 20 per second, consecutive repeats merged; aligned so
 		// its first frame sits where the still does. false: no animation (the still stays alone).
-		bool gen5Anim(const Narc& n, size_t at, bool female, Sprite& s)
+		bool gen5Anim(const nitro::NarcFile& n, size_t at, bool female, Sprite& s)
 		{
 			Bytes sheetB, cellB, animB, multiB, multiAnimB;
 			auto get = [&](size_t k, Bytes& b) { Span f = n[at + k]; if (!f.n) return false; if (f.p[0] == 0x10 || f.p[0] == 0x11) return nitro::lzDecompress(f.p, f.n, b); b.assign(f.p, f.p + f.n); return true; };
@@ -1053,9 +1054,10 @@ namespace banana::nds
 			if (!rom->open(path)) { rom.reset(); return nullptr; }
 		}
 		const Files* f = filesFor(game.id);
-		Bytes buf;
-		Narc n;
-		if (!f || !rom->file(f->sprites, buf) || !n.parse(buf)) return nullptr;
+		// (the archive's member table kept; only this picture's members read, and let go of after it)
+		if (!f || (!spriteNarc.isOpen() && !spriteNarc.open(*rom, f->sprites))) return nullptr;
+		nitro::NarcFile& n = spriteNarc;
+		struct Forget { nitro::NarcFile& n; ~Forget() { n.forget(); } } forget{ n };
 		auto s = std::make_shared<Sprite>();
 		if (game.gen == Gen::IV)
 		{

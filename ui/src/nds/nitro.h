@@ -42,6 +42,8 @@ namespace banana::nds::nitro
 		size_t fileCount() const { return fat_.size(); }
 		bool read(int id, Bytes& out) const;
 		bool file(const std::string& path, Bytes& out) const { int id = fileId(path); return id >= 0 && read(id, out); }
+		// n bytes of file id from off (false: outside the file)
+		bool readPart(int id, uint64_t off, size_t n, uint8_t* dst) const;
 		// the ARM9 binary as it runs: unpacked when the SDK's module parameters say it is packed
 		bool arm9(Bytes& out) const;
 		// ARM9 overlay n, unpacked when the overlay table says it is
@@ -68,6 +70,25 @@ namespace banana::nds::nitro
 		Span operator[](size_t i) const { return i < members_.size() ? members_[i] : Span{}; }
 	private:
 		std::vector<Span> members_;
+	};
+
+	// A NARC archive in the ROM, its members read when asked for: only its member table is kept (the sprite archives
+	// are tens of MB - Black 2's ~30 - and a picture needs a few of their members). Members read stay until forget();
+	// not for use from several threads at once
+	class NarcFile
+	{
+	public:
+		bool open(const Rom& rom, const std::string& path);
+		bool isOpen() const { return rom_ != nullptr; }
+		size_t size() const { return fat_.size(); }
+		Span operator[](size_t i) const;	// (empty: none, or unreadable)
+		void forget() { read_.clear(); }
+	private:
+		const Rom* rom_ = nullptr;
+		int id_ = -1;
+		uint64_t img_ = 0;	// where the members' bytes start in the file
+		std::vector<std::pair<uint32_t, uint32_t>> fat_;
+		mutable std::map<size_t, Bytes> read_;
 	};
 
 	// The DS SDK's backward LZ (BLZ): the footer's last 8 bytes say how much is packed and how much it grows.

@@ -109,6 +109,14 @@ namespace banana::nds::nitro
 		return readAt(fat_[id].first, out.size(), out.data());
 	}
 
+	bool Rom::readPart(int id, uint64_t off, size_t n, uint8_t* dst) const
+	{
+		if (id < 0 || (size_t)id >= fat_.size()) return false;
+		const uint64_t len = fat_[id].second - fat_[id].first;
+		if (off > len || n > len - off) return false;
+		return readAt(fat_[id].first + off, n, dst);
+	}
+
 	bool Rom::arm9(Bytes& out) const
 	{
 		uint32_t at = rd32(hdr_ + 0x20), len = rd32(hdr_ + 0x2c);
@@ -157,6 +165,53 @@ namespace banana::nds::nitro
 			members_[i] = { d + img + s, e - s };
 		}
 		return true;
+	}
+
+	bool NarcFile::open(const Rom& rom, const std::string& path)
+	{
+		rom_ = nullptr;
+		fat_.clear();
+		read_.clear();
+		id_ = rom.fileId(path);
+		if (id_ < 0) return false;
+		// (Narc::parse's walk over the chunk headers, each read on its own)
+		uint8_t h[16];
+		if (!rom.readPart(id_, 0, 16, h) || memcmp(h, "NARC", 4) != 0) return false;
+		uint64_t p = rd16(h + 12);
+		uint8_t c[12];
+		if (!rom.readPart(id_, p, 12, c) || memcmp(c, "BTAF", 4) != 0) return false;
+		const uint32_t btafLen = rd32(c + 4), count = rd32(c + 8);
+		if (btafLen < 12 || count > (btafLen - 12) / 8) return false;
+		Bytes fat((size_t)count * 8);
+		if (count && !rom.readPart(id_, p + 12, fat.size(), fat.data())) return false;
+		p += btafLen;
+		if (!rom.readPart(id_, p, 8, c) || memcmp(c, "BTNF", 4) != 0) return false;
+		const uint32_t btnfLen = rd32(c + 4);
+		if (btnfLen < 8) return false;
+		p += btnfLen;
+		if (!rom.readPart(id_, p, 8, c) || memcmp(c, "GMIF", 4) != 0) return false;
+		img_ = p + 8;
+		fat_.resize(count);
+		for (size_t i = 0; i < count; i++)
+		{
+			fat_[i] = { rd32(&fat[i * 8]), rd32(&fat[i * 8 + 4]) };
+			if (fat_[i].second < fat_[i].first) { fat_.clear(); return false; }
+		}
+		rom_ = &rom;
+		return true;
+	}
+
+	Span NarcFile::operator[](size_t i) const
+	{
+		if (!rom_ || i >= fat_.size()) return Span{};
+		auto it = read_.find(i);
+		if (it == read_.end())
+		{
+			Bytes b(fat_[i].second - fat_[i].first);
+			if (!b.empty() && !rom_->readPart(id_, img_ + fat_[i].first, b.size(), b.data())) b.clear();
+			it = read_.emplace(i, std::move(b)).first;
+		}
+		return Span{ it->second.data(), it->second.size() };
 	}
 
 	// ---- BLZ --------------------------------------------------------------------------------------------------------
