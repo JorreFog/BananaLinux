@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Joar Fogler · IT-säkerhet, projektledning, design</title>
+<meta name="description" content="Joar Fogler: IT-säkerhetsanalytiker under utbildning på Medieinstitutet (2026–2028), magister i projektledning och kandidat i visuell kommunikation och design från Karlstads universitet. Skapare av BananaOS.">
+<meta name="theme-color" content="#0b0b0c">
+<meta property="og:title" content="Joar Fogler">
+<meta property="og:description" content="IT-säkerhetsanalytiker under utbildning · projektledare · designer · skapare av BananaOS.">
+<meta property="og:image" content="assets/joar.webp">
+<link rel="icon" href="assets/icon.png">
+<link rel="preload" href="assets/fonts/JetBrainsMono-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/JetBrainsMono-ExtraBold.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/style.css">
+<script>
+  // The boot log plays once per visit, and never for reduced motion. Decided before the first paint.
+  document.documentElement.classList.add("js");
+  try {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches || sessionStorage.getItem("booted")) document.documentElement.classList.add("no-boot");
+  } catch (e) { document.documentElement.classList.add("no-boot"); }
+</script>
+</head>
+<body>
+
+<!-- ============================================================ boot -->
+<div id="boot" aria-hidden="true">
+  <pre id="boot-log"></pre>
+  <p class="boot-skip">tryck var som helst för att hoppa över</p>
+</div>
+
+<!-- ============================================================ waybar -->
+<header class="bar" id="bar">
+  <div class="bar-left">
+    <a class="bar-logo" href="#ws1" aria-label="Till toppen">jf</a>
+    <nav class="workspaces" aria-label="Sektioner">
+      <a href="#ws1" data-ws="1" title="Hem (1)"><span class="n">1</span><span class="l">hem</span></a>
+      <a href="#ws2" data-ws="2" title="Om mig (2)"><span class="n">2</span><span class="l">om</span></a>
+      <a href="#ws3" data-ws="3" title="BananaOS (3)"><span class="n">3</span><span class="l">bananaos</span></a>
+      <a href="#ws4" data-ws="4" title="Projekt (4)"><span class="n">4</span><span class="l">projekt</span></a>
+      <a href="#ws5" data-ws="5" title="Utbildning (5)"><span class="n">5</span><span class="l">utbildning</span></a>
+      <a href="#ws6" data-ws="6" title="Kontakt (6)"><span class="n">6</span><span class="l">kontakt</span></a>
+    </nav>
+  </div>
+  <div class="bar-center" id="bar-title" aria-hidden="true">kitty — joar@fogler: ~</div>
+  <div class="bar-right">
+    <a class="bar-mod bar-gh" id="bar-gh" href="https://github.com/JorreFog/BananaLinux" title="Live från GitHub">
+      <span class="dot" id="gh-dot"></span><span class="bar-gh-text">★ <b id="bar-stars">87</b></span>
+    </a>
+    <span class="bar-mod bar-date" id="bar-date">mån 2 nov</span>
+    <span class="bar-mod bar-clock" id="bar-clock">--:--</span>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- ============================================================ ws1: hem -->
+<section class="ws ws-home" id="ws1" data-ws="1" data-title="kitty — joar@fogler: ~">
+  <article class="win win-intro" data-title="kitty — joar@fogler: ~">
+    <div class="win-label">~/joar <span>zsh</span></div>
+    <div class="intro">
+      <p class="prompt"><span class="p-user">joar@fogler</span> <span class="p-path">~</span> <span class="p-sym">❯</span> whoami</p>
+      <h1 class="name"><span class="scramble" data-text="JOAR">JOAR</span><span class="scramble" data-text="FOGLER">FOGLER</span></h1>
+      <p class="role"><span class="role-k">IT-säkerhetsanalytiker</span> under utbildning <span class="role-sep">/</span> projektledare <span class="role-sep">/</span> designer <span class="role-sep">/</span> skapare av <a href="#ws3">BananaOS</a></p>
+      <p class="pitch">Jag kommer från design och projektledning och bygger mig nu djupare in i systemen – från att rita gränssnittet till att förstå, härda och försvara det som körs under det.</p>
+      <div class="cta">
+        <a class="btn btn-solid" href="#ws3">Se BananaOS <span aria-hidden="true">↓</span></a>
+        <a class="btn" href="#ws6">Kontakt</a>
+        <button class="btn btn-ghost" type="button" data-print>Spara som PDF</button>
+      </div>
+    </div>
+    <dl class="intro-meta">
+      <div><dt>nu</dt><dd>Medieinstitutet · 2026–2028</dd></div>
+      <div><dt>examen</dt><dd>Magister + kandidat, Karlstads universitet</dd></div>
+      <div><dt>bygger</dt><dd><span id="meta-commits">873</span> commits i BananaOS</dd></div>
+    </dl>
+  </article>
+
+  <article class="win win-photo" data-title="imv — joar.webp">
+    <div class="win-label">joar.webp <span>1254×1254</span></div>
+    <figure class="photo">
+      <img src="assets/joar.webp" alt="Porträtt av Joar Fogler i profil, med glasögon och svart tröja mot mörk bakgrund" width="900" height="900" fetchpriority="high">
+      <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
+      <figcaption class="dossier">
+        <span>subjekt: fogler, joar</span>
+        <span>status: <b class="ok">studerar</b></span>
+        <span>spec: it-säkerhet</span>
+      </figcaption>
+      <span class="scan" aria-hidden="true"></span>
+    </figure>
+  </article>
+
+  <article class="win win-term" data-title="kitty — fastfetch">
+    <div class="win-label">kitty <span>skriv <kbd>help</kbd></span></div>
+    <div class="term" id="term" aria-live="polite">
+      <div class="term-out" id="term-out"></div>
+      <form class="term-in" id="term-form" autocomplete="off">
+        <label for="term-input"><span class="p-user">joar@fogler</span> <span class="p-path">~</span> <span class="p-sym">❯</span></label>
+        <input id="term-input" type="text" spellcheck="false" autocapitalize="off" enterkeyhint="send" aria-label="Terminal: skriv ett kommando, till exempel help">
+      </form>
+    </div>
+  </article>
+</section>
+
+<!-- ============================================================ ws2: om mig -->
+<section class="ws ws-about" id="ws2" data-ws="2" data-title="nvim — om-mig.md">
+  <h2 class="ws-title"><span class="ws-n">02</span><span class="scramble" data-text="om mig">om mig</span></h2>
+
+  <article class="win win-text" data-title="nvim — om-mig.md">
+    <div class="win-label">om-mig.md <span>nvim</span></div>
+    <div class="prose">
+      <p class="lead">Designer i grunden, projektledare till utbildning och på väg att bli <em>IT-säkerhetsanalytiker</em>.</p>
+      <p>Sedan 2026 studerar jag till IT-säkerhetsanalytiker på Medieinstitutet. Med mig har jag en magisterexamen i projektledning och en kandidatexamen i visuell kommunikation och design från Karlstads universitet. Den kombinationen gör att jag ser både systemet, människorna som använder det och planen som håller ihop arbetet.</p>
+      <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer posuere erat a ante venenatis dapibus. Donec ullamcorper nulla non metus auctor fringilla, vestibulum id ligula porta felis euismod semper. Cras mattis consectetur purus sit amet fermentum.</p>
+    </div>
+  </article>
+
+  <article class="win win-skills" data-title="btop — kompetenser">
+    <div class="win-label">kompetenser <span>btop</span></div>
+    <div class="skills">
+      <div class="skill-group">
+        <h3>Säkerhet <small>fokus i utbildningen</small></h3>
+        <ul class="tags">
+          <li>Nätverkssäkerhet</li><li>Incidenthantering</li><li>Sårbarhetsanalys</li><li>Logganalys &amp; SIEM</li><li>Riskanalys</li><li>Säkerhetsstandarder</li>
+        </ul>
+      </div>
+      <div class="skill-group">
+        <h3>System &amp; kod <small>visat i BananaOS</small></h3>
+        <ul class="tags">
+          <li>Linux</li><li>Buildroot</li><li>C / C++</li><li>Shell</li><li>Python</li><li>GitHub Actions</li><li>Git</li>
+        </ul>
+      </div>
+      <div class="skill-group">
+        <h3>Ledning &amp; design <small>examen</small></h3>
+        <ul class="tags">
+          <li>Projektledning</li><li>Visuell kommunikation</li><li>UX / UI</li><li>Grafisk form</li><li>Kravställning</li>
+        </ul>
+      </div>
+    </div>
+  </article>
+
+  <article class="win win-exp" data-title="less — erfarenhet.log">
+    <div class="win-label">erfarenhet.log <span>less</span></div>
+    <ol class="log">
+      <li>
+        <span class="log-when">20XX – nu</span>
+        <div><h3>Titel · Arbetsgivare</h3><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla vitae elit libero, a pharetra augue. Aenean lacinia bibendum nulla sed consectetur.</p></div>
+      </li>
+      <li>
+        <span class="log-when">20XX – 20XX</span>
+        <div><h3>Titel · Arbetsgivare</h3><p>Maecenas faucibus mollis interdum. Vivamus sagittis lacus vel augue laoreet rutrum faucibus dolor auctor. Donec sed odio dui.</p></div>
+      </li>
+      <li>
+        <span class="log-when">20XX – 20XX</span>
+        <div><h3>Titel · Arbetsgivare</h3><p>Etiam porta sem malesuada magna mollis euismod. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh.</p></div>
+      </li>
+    </ol>
+  </article>
+</section>
+
+<!-- ============================================================ ws3: bananaos -->
+<section class="ws ws-banana" id="ws3" data-ws="3" data-title="bananaos — showcase">
+  <h2 class="ws-title"><span class="ws-n">03</span><span class="scramble" data-text="bananaos">bananaos</span><span class="ws-sub">Linux för Anbernic RG DS &amp; RG DS Plus</span></h2>
+
+  <article class="win win-device" data-title="bananaos — rgds_plus.glb">
+    <div class="win-label">rgds_plus.glb <span id="dev-hint">dra för att vrida</span></div>
+    <div class="device" id="device">
+      <canvas id="stage" aria-label="3D-modell av en Anbernic RG DS Plus som kör BananaOS. Dra för att vrida på den."></canvas>
+      <div class="device-load" id="device-load"><span>laddar modell</span><i id="device-bar"></i></div>
+      <p class="device-caption" id="device-caption">Hem: system, senaste spel och speltid</p>
+      <div class="chips" id="chips" role="group" aria-label="Välj skärm">
+        <button type="button" data-set="ui" aria-pressed="true">Gränssnitt</button>
+        <button type="button" data-set="themes" aria-pressed="false">10 teman</button>
+      </div>
+    </div>
+  </article>
+
+  <article class="win win-stats" data-title="bananaos — github live">
+    <div class="win-label">api.github.com <span id="stats-src">snapshot</span></div>
+    <div class="stats">
+      <p class="stats-k">nedladdningar totalt</p>
+      <p class="hero-num" id="s-downloads" data-v="4041">4<span class="th"></span>041</p>
+      <p class="stats-note" id="s-dl-note">systemavbilder och uppdateringar, alla releaser</p>
+      <dl class="stat-grid">
+        <div><dt>stjärnor</dt><dd id="s-stars">87</dd></div>
+        <div><dt>forks</dt><dd id="s-forks">10</dd></div>
+        <div><dt>commits</dt><dd id="s-commits">873</dd></div>
+        <div><dt>releaser</dt><dd id="s-releases">8</dd></div>
+      </dl>
+      <a class="latest" id="s-latest" href="https://github.com/JorreFog/BananaLinux/releases">
+        <span class="latest-k">senaste release</span>
+        <span class="latest-v"><b id="s-tag">v0.5.2.2</b> <span id="s-when">idag</span></span>
+      </a>
+    </div>
+  </article>
+
+  <article class="win win-chart" data-title="bananaos — nedladdningar per release">
+    <div class="win-label">nedladdningar per release <span>live</span></div>
+    <div class="chart" id="chart"></div>
+    <details class="chart-table">
+      <summary>Visa som tabell</summary>
+      <table id="chart-table"><thead><tr><th>Release</th><th>Datum</th><th>Nedladdningar</th></tr></thead><tbody></tbody></table>
+    </details>
+  </article>
+
+  <article class="win win-commits" data-title="git log --oneline">
+    <div class="win-label">git log --oneline <span>main</span></div>
+    <ol class="commits" id="commits">
+      <li><code>803e61c</code><span>README: new in 0.5.2.2 (Shut down moved to Power, BananaFront, new cores…)</span><time>idag</time></li>
+      <li><code>3ab901a</code><span>VERSION 0.5.2.2 (zipped DS games and revision-proof memory for the companion)</span><time>idag</time></li>
+      <li><code>838e412</code><span>nds companion: the game's RAM found and checked, not trusted (any revision)</span><time>idag</time></li>
+      <li><code>dcc0e1c</code><span>nds companion: zipped DS games (header from the zip, ROM data from run-bananads' copy)</span><time>idag</time></li>
+      <li><code>b9f5a39</code><span>VERSION 0.5.2.1 (the DS companion's lag fixes on top of 0.5.2)</span><time>idag</time></li>
+    </ol>
+  </article>
+
+  <article class="win win-what" data-title="cat README.md">
+    <div class="win-label">README.md <span>cat</span></div>
+    <div class="prose">
+      <p class="lead">Ett komplett Linuxsystem byggt för en enda handhållen konsol – med två skärmar och ett lock.</p>
+      <p>BananaOS bygger på Buildroot, en Linuxkärna med hårdvarustöd från ROCKNIX och BusyBox init. Systemavbilden är skrivskyddad, uppdateringar kommer över Wi-Fi till en andra systemplats så att förra versionen alltid finns en omstart bort.</p>
+      <ul class="facts">
+        <li><b>9,8 s</b> från strömknappen till menyn</li>
+        <li><b>2</b> DS-emulatorer, BananaDS och SuperDrastic</li>
+        <li><b>A/B</b> systemplatser, uppdateras över Wi-Fi</li>
+        <li><b>3</b> språk: engelska, kinesiska, ryska</li>
+      </ul>
+    </div>
+  </article>
+
+  <article class="win win-langs" data-title="tokei — språk">
+    <div class="win-label">språk i repot <span>live</span></div>
+    <ul class="langs" id="langs"></ul>
+  </article>
+
+  <article class="win win-links" data-title="bananaos — länkar">
+    <div class="win-label">länkar <span>xdg-open</span></div>
+    <div class="links">
+      <a class="big-link" href="https://bananaos-cfw.dev"><span>Webbplats</span><b>bananaos-cfw.dev</b><i aria-hidden="true">↗</i></a>
+      <a class="big-link" href="https://github.com/JorreFog/BananaLinux"><span>Källkod</span><b>github.com/JorreFog/BananaLinux</b><i aria-hidden="true">↗</i></a>
+      <a class="big-link" href="https://github.com/JorreFog/BananaLinux/releases"><span>Ladda ner</span><b>Releaser</b><i aria-hidden="true">↗</i></a>
+      <a class="big-link" href="https://discord.gg/3wf73cK2Qq"><span>Gemenskap</span><b>Discord</b><i aria-hidden="true">↗</i></a>
+    </div>
+  </article>
+
+  <article class="win win-themes" data-title="bananaos — teman">
+    <div class="win-label">teman <span>gjorda i Banana Theme Studio</span></div>
+    <div class="themes" id="themes" tabindex="0" aria-label="Tio layoutteman för BananaOS, rulla i sidled"></div>
+  </article>
+</section>
+
+<!-- ============================================================ ws4: projekt -->
+<section class="ws ws-projects" id="ws4" data-ws="4" data-title="thunar — ~/projekt">
+  <h2 class="ws-title"><span class="ws-n">04</span><span class="scramble" data-text="projekt">projekt</span></h2>
+
+  <a class="win win-proj" href="https://github.com/JorreFog/BananaNES" data-repo="BananaNES" data-title="BananaNES">
+    <div class="win-label">BananaNES <span class="proj-stars"></span></div>
+    <div class="proj"><span class="proj-tag">emulator · nes</span><h3>BananaNES</h3><p class="proj-desc">NES-kärna för BananaOS, ungefär dubbelt så snabb. Förvald för NES sedan 0.5.2.</p><span class="proj-go">github ↗</span></div>
+  </a>
+  <a class="win win-proj" href="https://github.com/JorreFog/BananaGBA" data-repo="BananaGBA" data-title="BananaGBA">
+    <div class="win-label">BananaGBA <span class="proj-stars"></span></div>
+    <div class="proj"><span class="proj-tag">emulator · gba</span><h3>BananaGBA</h3><p class="proj-desc">Game Boy Advance-kärna skriven för BananaFront, BananaOS egen spelare.</p><span class="proj-go">github ↗</span></div>
+  </a>
+  <a class="win win-proj" href="https://github.com/JorreFog/BananaSNES" data-repo="BananaSNES" data-title="BananaSNES">
+    <div class="win-label">BananaSNES <span class="proj-stars"></span></div>
+    <div class="proj"><span class="proj-tag">emulator · snes</span><h3>BananaSNES</h3><p class="proj-desc">SNES-kärna för BananaFront, med samma sparfiler, states och snabbtangenter.</p><span class="proj-go">github ↗</span></div>
+  </a>
+  <a class="win win-proj" href="https://jorrefog.github.io/BananaLinux/theme-studio/" data-title="Banana Theme Studio">
+    <div class="win-label">theme-studio <span>webb</span></div>
+    <div class="proj"><span class="proj-tag">verktyg · webb</span><h3>Banana Theme Studio</h3><p class="proj-desc">Temaredigerare i webbläsaren, med BananaOS egen renderingsmotor kompilerad till WebAssembly.</p><span class="proj-go">öppna ↗</span></div>
+  </a>
+  <a class="win win-proj" href="https://jorrefog.github.io/BananaLinux/save-mover/" data-title="Save Mover">
+    <div class="win-label">save-mover <span>webb</span></div>
+    <div class="proj"><span class="proj-tag">verktyg · webb</span><h3>Save Mover</h3><p class="proj-desc">Flyttar sparfiler från andra system till BananaOS, direkt i webbläsaren.</p><span class="proj-go">öppna ↗</span></div>
+  </a>
+  <div class="win win-proj win-proj-soon" data-title="~/projekt/ctf">
+    <div class="win-label">ctf-writeups <span>kommer</span></div>
+    <div class="proj"><span class="proj-tag">säkerhet</span><h3>CTF-writeups</h3><p class="proj-desc">Lorem ipsum dolor sit amet. Genomgångar av utmaningar och labbar under utbildningen.</p><span class="proj-go">snart</span></div>
+  </div>
+</section>
+
+<!-- ============================================================ ws5: utbildning -->
+<section class="ws ws-edu" id="ws5" data-ws="5" data-title="journalctl — utbildning">
+  <h2 class="ws-title"><span class="ws-n">05</span><span class="scramble" data-text="utbildning">utbildning</span></h2>
+
+  <article class="win win-edu win-edu-now" data-title="Medieinstitutet">
+    <div class="win-label">medieinstitutet.service <span class="running">● active (running)</span></div>
+    <div class="edu">
+      <p class="edu-when">2026 – 2028</p>
+      <h3>IT-säkerhetsanalytiker</h3>
+      <p class="edu-where">Medieinstitutet</p>
+      <div class="progress" id="edu-progress" data-start="2026-08-17" data-end="2028-06-09">
+        <div class="progress-bar"><i></i></div>
+        <p class="progress-k"><b id="edu-pct">0 %</b> genomfört</p>
+      </div>
+      <p class="edu-desc">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Utbildningen spänner över nätverk, säkerhetsövervakning, incidenthantering och riskarbete.</p>
+    </div>
+  </article>
+
+  <article class="win win-edu" data-title="Karlstads universitet">
+    <div class="win-label">kau.service <span class="done">✓ exited (0)</span></div>
+    <div class="edu">
+      <p class="edu-when">Magisterexamen</p>
+      <h3>Projektledning</h3>
+      <p class="edu-where">Karlstads universitet</p>
+      <p class="edu-desc">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec ullamcorper nulla non metus auctor fringilla.</p>
+    </div>
+  </article>
+
+  <article class="win win-edu" data-title="Karlstads universitet">
+    <div class="win-label">kau.service <span class="done">✓ exited (0)</span></div>
+    <div class="edu">
+      <p class="edu-when">2015 – 2018 · Kandidatexamen</p>
+      <h3>Visuell kommunikation och design</h3>
+      <p class="edu-where">Karlstads universitet</p>
+      <p class="edu-desc">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras mattis consectetur purus sit amet fermentum.</p>
+    </div>
+  </article>
+</section>
+
+<!-- ============================================================ ws6: kontakt -->
+<section class="ws ws-contact" id="ws6" data-ws="6" data-title="kitty — cat kontakt.txt">
+  <h2 class="ws-title"><span class="ws-n">06</span><span class="scramble" data-text="kontakt">kontakt</span></h2>
+
+  <article class="win win-contact" data-title="kitty — cat kontakt.txt">
+    <div class="win-label">kontakt.txt <span>cat</span></div>
+    <div class="contact">
+      <p class="prompt"><span class="p-user">joar@fogler</span> <span class="p-path">~</span> <span class="p-sym">❯</span> cat kontakt.txt</p>
+      <p class="contact-lead">Hör av dig om säkerhet, projekt, design – eller handhållna Linuxdatorer.</p>
+      <ul class="contact-list">
+        <li><span>e-post</span><a href="mailto:namn@exempel.se">namn@exempel.se</a></li>
+        <li><span>github</span><a href="https://github.com/JorreFog">github.com/JorreFog</a></li>
+        <li><span>linkedin</span><a href="https://www.linkedin.com/">linkedin.com/in/…</a></li>
+        <li><span>discord</span><a href="https://discord.gg/3wf73cK2Qq">BananaOS-servern</a></li>
+        <li><span>pgp</span><code>0000 0000 0000 0000 0000  0000 0000 0000 0000 0000</code></li>
+      </ul>
+      <div class="cta">
+        <a class="btn btn-solid" href="mailto:namn@exempel.se">Skicka e-post</a>
+        <button class="btn" type="button" data-print>Spara CV som PDF</button>
+      </div>
+    </div>
+  </article>
+
+  <article class="win win-json" data-title="jq . cv.json">
+    <div class="win-label">cv.json <span>jq .</span></div>
+    <pre class="json" id="cv-json"></pre>
+  </article>
+</section>
+
+</main>
+
+<footer class="foot">
+  <p>Joar Fogler · byggd för hand · inga cookies, ingen spårning</p>
+  <p class="foot-hash" title="SHA-256 av sidans HTML, räknat i din webbläsare">sha256 <code id="page-hash">…</code></p>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
