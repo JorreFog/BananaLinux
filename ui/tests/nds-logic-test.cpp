@@ -2,7 +2,11 @@
 // examples of the games' mechanics (Bulbapedia's "Damage" and "Stat" pages), catch chances, milestones, the TM and
 // evolution helpers, and the whole Advice for a battle and a team.
 #include "nds/logic.h"
+#include "nds/session.h"
+#include <cstring>
+#include <unistd.h>
 #include <cmath>
+#include <sstream>
 #include <cstdio>
 
 using namespace banana::nds;
@@ -223,12 +227,92 @@ static void testAdvice()
 	CHECK(a.moves.empty() && a.catching.empty());
 }
 
+// the session over a made-up link answering from a Platinum RAM image: Live, Advice, the journey, seen notices kept
+static void p16(uint8_t* p, uint16_t v) { p[0] = (uint8_t)v; p[1] = (uint8_t)(v >> 8); }
+static void p32(uint8_t* p, uint32_t v) { p16(p, (uint16_t)v); p16(p + 2, (uint16_t)(v >> 16)); }
+static void testSession(const char* tmp)
+{
+	auto r = std::make_shared<FakeRom>(rom(Gen::IV));
+	r->game.id = GameId::PLATINUM; r->game.code = "CPUE";
+	auto g = std::make_shared<GuideData>();
+	Milestone gym; gym.id = "gym1"; gym.name = "Roark"; gym.doneWhen = "badge:1"; gym.trainerIds = { 7 }; gym.reachableZones = { 30 };
+	g->milestones = { gym };
+	std::vector<uint8_t> ram(0x400000);
+	auto at = [&](uint32_t a) { return ram.data() + (a - 0x02000000); };
+	const uint32_t S = 0x0227E118, B = S + 0x14;
+	p32(at(0x02101D40), S); p32(at(B + 0x98), 6); p32(at(B + 0x9C), 1);
+	uint8_t plain[236] = {};
+	p32(plain, 0x1234); p16(plain + 8, 387); plain[0x8C] = 17; p16(plain + 0x8E, 40); p16(plain + 0x90, 50);
+	for (int i = 0; i < 11; i++) p16(plain + 0x48 + 2 * i, 0xFFFF);
+	encryptMon(plain, 236, at(B + 0xA0));
+	p16(at(B + 0x78), 111); p16(at(B + 0x7A), 222); p32(at(B + 0x1280), 30);
+	at(B + 0x1328 + 4)[48] = 0x04;	// caught: 387 = bit 386
+	// the link: send stores the request, receive answers it from the image (READ_CORE_MEMORY lines)
+	std::string pending;
+	auto mkSession = [&](Session& s)
+	{
+		s.send = [&](const std::string& q) { pending = q; return true; };
+		s.receive = [&]() -> std::string
+		{
+			std::string out, line;
+			std::istringstream in(pending);
+			while (std::getline(in, line))
+			{
+				unsigned a = 0, n = 0;
+				if (sscanf(line.c_str(), "READ_CORE_MEMORY %x %u", &a, &n) != 2) continue;
+				char b[16];
+				snprintf(b, sizeof b, "%x", a);
+				out += "READ_CORE_MEMORY " + std::string(b);
+				for (unsigned i = 0; i < n; i++) { snprintf(b, sizeof b, " %02x", at(a)[i]); out += b; }
+				out += "\n";
+			}
+			pending.clear();
+			return out;
+		};
+	};
+	{
+		Session s(r, g, tmp);
+		mkSession(s);
+		double t = 0;
+		for (int i = 0; i < 10; i++, t += 300) s.tick(t, 1762000000);
+		CHECK(s.live()->valid && s.live()->party.size() == 1 && s.live()->party[0].species == 387);
+		CHECK(s.advice()->next && s.advice()->next->id == "gym1");
+		CHECK(s.unseen() >= 1);
+		// a catch and an evolution: the journey has them
+		at(B + 0x1328 + 4)[48] |= 0x08;	// 388
+		p16(plain + 8, 388); encryptMon(plain, 236, at(B + 0xA0));
+		for (int i = 0; i < 4; i++, t += 300) s.tick(t, 1762000100);
+		auto j = s.journey();
+		bool caught = false, evolved = false;
+		for (auto& e : j->log) { caught |= e.kind == LogKind::CATCH && e.species == 388; evolved |= e.kind == LogKind::EVOLVE && e.species == 388; }
+		CHECK(caught && evolved);
+		const int before = s.unseen();
+		s.markSeen({ "next:gym1" });
+		CHECK(s.unseen() == before - 1);
+		CHECK(!s.stateFile().empty());
+	}	// (saved when it ends)
+	{
+		Session s(r, g, tmp);
+		mkSession(s);
+		double t = 0;
+		for (int i = 0; i < 6; i++, t += 300) s.tick(t, 1762000200);
+		auto sl = s.seenList();
+		CHECK(sl.size() == 1 && sl[0] == "next:gym1");
+		CHECK(s.journey()->log.size() >= 2);
+	}
+	unlink((std::string(tmp) + "/CPUE-00111-00222.tsv").c_str());
+}
+
 int main()
 {
 	testDamage();
 	testCatch();
 	testGuide();
 	testAdvice();
+	{
+		char tmp[] = "/tmp/nds-logic-test-XXXXXX";
+		if (mkdtemp(tmp)) { testSession(tmp); rmdir(tmp); }
+	}
 	if (fails) { fprintf(stderr, "%d failed\n", fails); return 1; }
 	fprintf(stderr, "nds-logic-test: all passed\n");
 	return 0;
