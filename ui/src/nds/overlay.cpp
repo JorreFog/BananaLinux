@@ -140,9 +140,14 @@ namespace banana::nds
 		iconBadge = badge;
 		const float k = scale();
 		const int S = (int)std::lround(44 * k), O = (int)std::lround(9 * k), D = (int)std::lround(3 * k);
+		// the plate in the corner itself, the badge over its inner corner (towards the middle of the screen), so the badge
+		// never hangs off the panel: up and left of the plate in the bottom-right corner, down and left in the top-right
+		const bool right = ICON_CORNER == BOVL_CORNER_BR || ICON_CORNER == BOVL_CORNER_TR;
+		const bool bottom = ICON_CORNER == BOVL_CORNER_BR || ICON_CORNER == BOVL_CORNER_BL;
+		const int plateX = right ? O : 0, plateY = bottom ? O : 0;
 		Bitmap pic;
 		pic.w = O + S;
-		pic.h = O + S + D;
+		pic.h = bottom ? O + S + D : S + std::max(O, D);
 		pic.px.assign((size_t)pic.w * pic.h * 4, 0);
 		const Color cream(236 / 255.0f, 228 / 255.0f, 210 / 255.0f, 1), ink = Color::hex(0x1c1b21);
 		int ox, oy;
@@ -152,22 +157,23 @@ namespace banana::nds
 		edge.a = 0.86f;
 		Bitmap b = box(S, S, 10 * k, plate, std::max(1.0f, std::round(3 * k)), edge, &ox, &oy,
 			{ rnds::Shadow{ 0, (float)D, 0, Color(12 / 255.0f, 11 / 255.0f, 15 / 255.0f, 0.6f), false } });
-		rnds::blit(pic, b, O - ox, O - oy);
+		rnds::blit(pic, b, plateX - ox, plateY - oy);
 		// the glyph: two pages, the front one with three lines (the companion's pages)
 		Color back = ink;
 		back.a = 0.9f;
-		rnds::blit(pic, box((int)std::lround(18 * k), (int)std::lround(22 * k), 0, back), O + (int)std::lround(12 * k), O + (int)std::lround(10 * k));
+		rnds::blit(pic, box((int)std::lround(18 * k), (int)std::lround(22 * k), 0, back), plateX + (int)std::lround(12 * k), plateY + (int)std::lround(10 * k));
 		Color page = cream;
 		page.a = 0.94f;
-		rnds::blit(pic, box((int)std::lround(18 * k), (int)std::lround(22 * k), 0, page), O + (int)std::lround(16 * k), O + (int)std::lround(14 * k));
+		rnds::blit(pic, box((int)std::lround(18 * k), (int)std::lround(22 * k), 0, page), plateX + (int)std::lround(16 * k), plateY + (int)std::lround(14 * k));
 		for (int i = 0; i < 3; i++)
 			rnds::blit(pic, box((int)std::lround(12 * k), std::max(1, (int)std::lround(2 * k)), 0, ink),
-				O + (int)std::lround(19 * k), O + (int)std::lround((19 + 5 * i) * k));
-		// the badge: a red dot with the count over the plate's top-left corner
+				plateX + (int)std::lround(19 * k), plateY + (int)std::lround((19 + 5 * i) * k));
+		// the badge: a red dot with the count over the plate's inner corner
 		if (badge > 0)
 		{
 			const int B = (int)std::lround(22 * k);
-			rnds::blit(pic, box(B, B, B / 2.0f, Color::hex(0xe8574d), std::max(1.0f, std::round(2 * k)), cream), 0, 0);
+			const int bx = right ? 0 : pic.w - B, by = bottom ? 0 : S + O - B;
+			rnds::blit(pic, box(B, B, B / 2.0f, Color::hex(0xe8574d), std::max(1.0f, std::round(2 * k)), cream), bx, by);
 			int px = 0, py = 0;
 			float tw = 0;
 			const std::string n = badge > 9 ? "9+" : std::to_string(badge);
@@ -177,7 +183,7 @@ namespace banana::nds
 				rnds::TextStyle st;
 				st.font = font(true);
 				const float asc = st.font ? st.font->ascent(badge > 9 ? 12 : 15) * k : 0, desc = st.font ? st.font->descent(badge > 9 ? 12 : 15) * k : 0;
-				rnds::blit(pic, tint(t, 0xffffff), (int)std::lround((B - tw) / 2) - px, (int)std::lround((B - (asc + desc)) / 2) - py);
+				rnds::blit(pic, tint(t, 0xffffff), bx + (int)std::lround((B - tw) / 2) - px, by + (int)std::lround((B - (asc + desc)) / 2) - py);
 			}
 		}
 		// premultiplied 0xAARRGGBB for the file
@@ -190,9 +196,21 @@ namespace banana::nds
 		}
 		iconW = pic.w;
 		iconH = pic.h;
-		// in the bottom-right corner, 2 px in (the plate's own drop is under it); taps reach 6 px around it
-		bovl_set_icon(shm, px.data(), (uint32_t)pic.w, (uint32_t)pic.h, on ? 1 : 0, (uint32_t)badge, BOVL_CORNER_BR,
-			(uint32_t)std::lround(2 * k), (uint32_t)std::lround(6 * k));
+		// in its corner, 2 px in; taps reach iconSlop() around the picture (BananaDS: while closed)
+		bovl_set_icon(shm, px.data(), (uint32_t)pic.w, (uint32_t)pic.h, on ? 1 : 0, (uint32_t)badge, ICON_CORNER,
+			(uint32_t)std::lround(2 * k), (uint32_t)iconSlop());
+	}
+
+	int Overlay::iconSlop() const
+	{
+		// a fingertip is ~8 mm across: a tap whose finger touches the plate counts, so the tap area reaches half of that
+		// (4 mm) past the plate's edge. The picture already holds the badge's room (9 px of the look) on the plate's inner
+		// sides; the slop is what is still missing to 4 mm (BananaDS takes it only while closed: open, around the icon is
+		// the page)
+		// (the panels' width, from the board's device trees: RG DS 81 mm at 640 px, RG DS Plus 87 mm at 1024 px)
+		const float k = scale();
+		const int fromPlate = (int)std::lround(ICON_SLOP_MM * W / (W >= 1024 ? 87.0 : 81.0));
+		return std::max((int)std::lround(6 * k), fromPlate - (int)std::lround(9 * k));
 	}
 
 	Rect Overlay::iconRect() const
@@ -201,7 +219,9 @@ namespace banana::nds
 		const bovl_rect r = shm->icon_rect;
 		if (r.w > 0 && r.h > 0) return Rect{ r.x, r.y, r.w, r.h };
 		const int m = (int)std::lround(2 * scale());
-		return Rect{ W - m - iconW, H - m - iconH, iconW, iconH };
+		const bool right = ICON_CORNER == BOVL_CORNER_BR || ICON_CORNER == BOVL_CORNER_TR;
+		const bool bottom = ICON_CORNER == BOVL_CORNER_BR || ICON_CORNER == BOVL_CORNER_BL;
+		return Rect{ right ? W - m - iconW : m, bottom ? H - m - iconH : m, iconW, iconH };
 	}
 
 	// ---- frames ----
@@ -353,7 +373,8 @@ namespace banana::nds
 				// Back to game, ending where the icon is: BananaDS takes the taps on the icon's place itself, the rest
 				// of the button comes here (wantsClose)
 				const int bh = X(40), bw = X(190);
-				backBox = Rect{ back.x + back.w - bw, back.y + back.h - bh - X(3), bw, bh };
+				const bool top = back.y < h / 2;
+				backBox = Rect{ back.x + back.w - bw, top ? back.y + X(3) : back.y + back.h - bh - X(3), bw, bh };
 				if (!backTex)
 				{
 					backTex = be.upload(box(bw, bh, 10 * k, Color::hex(rnds::accent.base), std::max(1.0f, std::round(3 * k)), Color::hex(0xece4d2)), false);

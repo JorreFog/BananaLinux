@@ -34,6 +34,13 @@ namespace banana::nds
 		uint32_t ms = 0;	// CLOCK_MONOTONIC
 	};
 
+	// the icon's corner: top-right. The games put Back/Cancel/close in the bottom-right corner of nearly every touch menu
+	// (HGSS party/bag/Pokégear, Gen V menu X and bag arrow, battle submenus) and SoulSilver's touch-only "A Touch" there;
+	// the top-right one holds the least (validate-plus, validate-rgds). Pages put Back to game where it is
+	constexpr uint32_t ICON_CORNER = BOVL_CORNER_TR;
+	// a tap counts this far past the icon's plate (a fingertip, ~8 mm across, touching it), on both panel sizes
+	constexpr float ICON_SLOP_MM = 4.0f;
+
 	class Overlay
 	{
 	public:
@@ -57,8 +64,10 @@ namespace banana::nds
 		void requestOpen(bool open);	// (a page's own Back to game, or a test: BananaDS opens or closes)
 
 		// the icon over the game: drawn here in BananaOS's look (the accent plate with a cream lip, a page glyph, the red
-		// badge with the count when badge > 0), half see-through, in the bottom-right corner
+		// badge with the count when badge > 0), half see-through, in ICON_CORNER
 		void setIcon(bool on, int badge);
+		// how far around the icon's picture a tap still counts (panel px; BananaDS takes it while closed)
+		int iconSlop() const;
 		// where the icon is, in picture pixels (BananaDS placed it): Back to game goes there. Before BananaDS placed it,
 		// where it will be
 		Rect iconRect() const;

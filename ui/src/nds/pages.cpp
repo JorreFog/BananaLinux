@@ -176,7 +176,18 @@ namespace banana::nds
 		SPal p;
 		std::shared_ptr<rnds::Font> R, M;
 		PageData dt;
-		float cornerX = 592, cornerY = 432, cornerW = 48, cornerH = 48;	// CSS px
+		float cornerX = 585, cornerY = 2, cornerW = 53, cornerH = 53;	// CSS px (the overlay's icon: top-right)
+		// Back to game's plate (CSS px): it covers the icon's place, so the same spot opens and closes. With the icon in a
+		// top corner it is the header row's right end (the headers leave it free); in a bottom one the dock's
+		struct Area { float x0, y0, x1, y1; bool in(float x, float y) const { return x >= x0 && x < x1 && y >= y0 && y < y1; } };
+		bool backTop() const { return cornerY + cornerH / 2 < 240; }
+		Area backArea() const
+		{
+			const float x0 = std::min(512.0f, cornerX), x1 = std::max(628.0f, std::min(640.0f, cornerX + cornerW));
+			// (a header button, inside the header's margins: the icon's place up to the panel's edges is in its taps)
+			if (backTop()) return { x0, 6, 628, 50 };
+			return { x0, std::min(424.0f, cornerY), x1, std::max(472.0f, std::min(480.0f, cornerY + cornerH)) };
+		}
 
 		Impl(Pages& owner, rnds::Backend* b, int sc, int w, int h, const std::string& a, bool l)
 			: o(owner), be(b), screen(sc), W(w), H(h), s(w / 640.0f), assets(a), light(l)
@@ -786,8 +797,9 @@ namespace banana::nds
 
 	void Pages::Impl::header(const std::string& title, const std::string& sub, bool rawTitle, bool rawSub, bool showWhere)
 	{
-		// the page's title and a line under it on the left; on the right the badge case and where the player is
-		float right = 628;
+		// the page's title and a line under it on the left; on the right the badge case and where the player is (left of
+		// Back to game when the icon is in the top corner)
+		float right = backTop() ? backArea().x0 - 14 : 628;
 		const Live* lv = dt.live.get();
 		if (lv && lv->valid)
 		{
@@ -812,13 +824,15 @@ namespace banana::nds
 	void Pages::Impl::dock()
 	{
 		// the tabs in one panel along the bottom, Back to game at the corner where the icon is (the same spot opens and
-		// closes the companion); a red count on a tab with something new for the player
-		float bx0 = std::min(512.0f, cornerX), by0 = std::min(424.0f, cornerY);
-		float bx1 = std::max(628.0f, std::min(640.0f, cornerX + cornerW)), by1 = std::max(472.0f, std::min(480.0f, cornerY + cornerH));
-		box("bubble", 12, 424, bx0 - 8 - 12, 48);
+		// closes the companion: the header's right end, or the dock's); a red count on a tab with something new for the
+		// player
+		const Area ba = backArea();
+		const float bx0 = ba.x0, by0 = ba.y0, bx1 = ba.x1, by1 = ba.y1;
+		const float dockEnd = backTop() ? 628 : bx0 - 8;
+		box("bubble", 12, 424, dockEnd - 12, 48);
 		bool usable = !dt.reading && dt.rom && dt.live && dt.live->valid;
 		int n = (int)Page::COUNT;
-		float cell = (bx0 - 8 - 12 - 12) / n;
+		float cell = (dockEnd - 12 - 12) / n;
 		for (int i = 0; i < n; i++)
 		{
 			Page pg = (Page)i;
@@ -2328,9 +2342,11 @@ namespace banana::nds
 		float cx = x / d->s, cy = y / d->s;
 		if (d->railDrag) { d->railDrag = false; return Action::REDRAW; }
 		if (d->dragging) { d->dragging = false; return was ? Action::REDRAW : Action::NONE; }
-		// Back to game: its plate and the icon's corner
-		float bx0 = std::min(512.0f, d->cornerX), by0 = std::min(424.0f, d->cornerY);
-		if ((cx >= bx0 && cy >= by0) ||
+		// Back to game: its plate (to the panel's edges) and the icon's corner
+		Impl::Area ba = d->backArea();
+		ba.x1 = 640;
+		(d->backTop() ? ba.y0 : ba.y1) = d->backTop() ? 0 : 480;
+		if (ba.in(cx, cy) ||
 			(cx >= d->cornerX && cx < d->cornerX + d->cornerW && cy >= d->cornerY && cy < d->cornerY + d->cornerH))
 			return Action::CLOSE;
 		// the last drawn on top: the last hit that holds both the touch's start and end

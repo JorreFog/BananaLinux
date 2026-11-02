@@ -73,7 +73,7 @@ typedef struct {
 	uint32_t icon_seq;                        /* seqlock over icon_* and icon_px (odd while the painter writes) */
 	uint32_t icon_on, badge;                  /* the icon shown over the game; the badge's count (0: none) */
 	uint32_t icon_corner, icon_margin;        /* where: a corner of the game's picture, this far in (picture px) */
-	uint32_t icon_w, icon_h, icon_slop;       /* the picture's size; the tap area reaches icon_slop px around it */
+	uint32_t icon_w, icon_h, icon_slop;       /* the picture's size; taps reach icon_slop px around it (closed) */
 	uint32_t reserved_p0;
 	uint64_t frame;                           /* the newest frame published */
 	uint8_t reserved_p[256 - 64 - 64];

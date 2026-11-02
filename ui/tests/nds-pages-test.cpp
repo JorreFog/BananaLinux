@@ -10,6 +10,7 @@
 #include "soft.h"
 #include "theme.h"
 #include <chrono>
+#include <cmath>
 #include <cstdio>
 #include <sys/stat.h>
 
@@ -36,12 +37,22 @@ static double ms(std::chrono::steady_clock::time_point a) { return std::chrono::
 struct Ctx { std::string out, assets, themes; };
 
 // every page and state of both games in one look at one size
+// the icon's place as banana-ui's overlay puts it (overlay.cpp: the top-right corner, 2 px of the look in, a 53x53 picture
+// of the look) and BananaDS reports it back: Back to game goes there
+static void setTopRight(Pages& pg, int w, int h)
+{
+	const float k = h / 480.0f;
+	const int m = (int)std::lround(2 * k), S = (int)std::lround(44 * k), O = (int)std::lround(9 * k);
+	pg.setCorner(w - m - (O + S), m, O + S, S + O);
+}
+
 static void renderAll(const Ctx& c, int w, int h, const std::string& look, bool light, bool all)
 {
 	SoftBackend be(w, h);
 	// (the menu's fallback font for what Pixelify has no glyph for, as banana-ui sets it)
 	if (auto f = rnds::Font::load(c.assets + "/fonts/fusion-pixel-12px-proportional-zh_hans.ttf")) rnds::setFallbackFont(f, 12, h / 480.0f);
 	Pages pg(&be, 1, w, h, c.assets, light);
+	setTopRight(pg, w, h);
 	std::string pre = c.out + "/" + std::to_string(w) + "x" + std::to_string(h) + "-" + look + "-";
 	auto shot = [&](const std::string& name)
 	{
@@ -147,6 +158,7 @@ static void touchTests(const Ctx& c, int w, int h)
 {
 	SoftBackend be(w, h);
 	Pages pg(&be, 1, w, h, c.assets, false);
+	setTopRight(pg, w, h);
 	float s = w / 640.0f;
 	auto tap = [&](float x, float y) { int X = (int)(x * s), Y = (int)(y * s); pg.touchDown(X, Y, 0); return pg.touchUp(X, Y, 0); };
 	auto drag = [&](float x, float y0, float y1)
@@ -171,8 +183,8 @@ static void touchTests(const Ctx& c, int w, int h)
 		be.beginScreen(1); pg.draw(); be.endScreen();
 		CHECK(grab(be, 1) == a, "draw() in the overlay's frame");
 	}
-	// the tabs: each one's middle
-	float cell = (512.0f - 8 - 12 - 12) / 7;
+	// the tabs: each one's middle (the whole width: Back to game is up in the icon's corner, the top-right one)
+	float cell = (628.0f - 12 - 12) / 7;
 	for (int i = 0; i < 7; i++)
 	{
 		CHECK(tap(18 + i * cell + cell / 2, 448) == Pages::Action::REDRAW, "tab %d", i);
@@ -182,13 +194,17 @@ static void touchTests(const Ctx& c, int w, int h)
 	// the Here notice: seen once its page was shown
 	seen = pg.takeSeen();
 	CHECK(seen.size() == 1 && seen[0] == "pt-hidden-ef", "Here's notice seen (%zu)", seen.size());
-	// Back to game: its plate, and the icon's corner itself
-	CHECK(tap(570, 450) == Pages::Action::CLOSE, "Back to game");
-	CHECK(tap(636, 476) == Pages::Action::CLOSE, "the very corner");
-	pg.setCorner((int)(560 * s), (int)(400 * s), (int)(80 * s), (int)(80 * s));
+	// Back to game: its plate in the header's top-right corner, and the icon's corner itself; the bottom-right corner is
+	// the Log tab now
+	CHECK(tap(530, 30) == Pages::Action::CLOSE, "Back to game");
+	CHECK(tap(638, 2) == Pages::Action::CLOSE, "the very corner");
+	CHECK(tap(600, 450) == Pages::Action::REDRAW && pg.page() == Page::LOG, "the bottom-right corner is a tab");
+	CHECK(tap(470, 30) != Pages::Action::CLOSE, "left of Back to game: the header");
+	CHECK(tap(600, 75) != Pages::Action::CLOSE, "under Back to game: the page");
+	pg.setCorner((int)(560 * s), 0, (int)(80 * s), (int)(56 * s));
 	pg.render();
-	CHECK(tap(565, 405) == Pages::Action::CLOSE, "a bigger corner");
-	pg.setCorner((int)(592 * s), (int)(432 * s), (int)(48 * s), (int)(48 * s));
+	CHECK(tap(565, 5) == Pages::Action::CLOSE, "a wider corner");
+	setTopRight(pg, w, h);
 	// Party: a row picks a member
 	pg.show(Page::PARTY); pg.render();
 	{
@@ -362,7 +378,7 @@ static void touchTests(const Ctx& c, int w, int h)
 	// no data at all: no crash, the tabs do nothing, Back to game still closes
 	PageData empty; pg.setData(empty); pg.render();
 	CHECK(tap(18 + cell / 2, 448) == Pages::Action::NONE, "no tabs without a game");
-	CHECK(tap(570, 450) == Pages::Action::CLOSE, "Back to game without a game");
+	CHECK(tap(530, 30) == Pages::Action::CLOSE, "Back to game without a game");
 }
 
 int main(int argc, char** argv)

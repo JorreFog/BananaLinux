@@ -750,7 +750,13 @@ static int ndsPresenterTest(const std::string& file, const std::string& out, boo
 	static bovl_icon ic;
 	uint32_t iseq = 0;
 	if (!wait([&] { return bovl_icon_read(s, &iseq, &ic) == 1 && ic.on; }, 3000)) return fail("no icon");
-	if (!ic.w || !ic.h || (!pages && ic.badge != 2) || ic.corner != BOVL_CORNER_BR) return fail("the icon's fields");
+	if (!ic.w || !ic.h || (!pages && ic.badge != 2) || ic.corner != BOVL_CORNER_TR) return fail("the icon's fields");
+	{
+		// a tap counts 4 mm past the plate (the picture's inner sides hold the badge's 9 px of the look past it): the panels
+		// are 81 mm (640 px) and 87 mm (1024 px) wide
+		const double mm = (ic.slop + std::lround(9 * H / 480.0)) / (W / (W >= 1024 ? 87.0 : 81.0));
+		if (mm < 3.9) { fprintf(stderr, "ndsoverlay presenter: slop %u px = %.1f mm past the plate\n", ic.slop, mm); return fail("the icon's tap area is too small"); }
+	}
 	{
 		std::vector<uint16_t> g(ic.w * ic.h);
 		for (size_t i = 0; i < g.size(); i++)
@@ -761,7 +767,7 @@ static int ndsPresenterTest(const std::string& file, const std::string& out, boo
 		}
 		png("ndsoverlay-icon.png", g.data(), (int)ic.w, (int)ic.h, (int)ic.w);
 	}
-	const bovl_rect icon{ W - (int)ic.margin - (int)ic.w, H - (int)ic.margin - (int)ic.h, (int)ic.w, (int)ic.h };
+	const bovl_rect icon{ W - (int)ic.margin - (int)ic.w, (int)ic.margin, (int)ic.w, (int)ic.h };
 	bovl_set_rects(s, icon, bovl_rect{ 0, 0, W, H });
 	// open: the first picture made for this opening
 	std::vector<uint16_t> pic((size_t)W * H, 0);
@@ -810,7 +816,7 @@ static int ndsPresenterTest(const std::string& file, const std::string& out, boo
 	if (memcmp(pic.data(), opened.data(), (size_t)W * 2 * (H / 8))) return fail("the drag changed the page's title too");	// (the counters below it change)
 	bovl_touch_push(s, BOVL_TOUCH_UP, W / 4, H * 3 / 4, ms + 48);
 	// the page's Back to game, left of the icon (BananaDS takes the icon's own place itself): the painter asks to close
-	const int bx = icon.x - (int)(40 * H / 480.0f), by = icon.y + icon.h - (int)(20 * H / 480.0f);
+	const int bx = icon.x - (int)(40 * H / 480.0f), by = icon.y + (int)(20 * H / 480.0f);
 	bovl_touch_push(s, BOVL_TOUCH_DOWN, bx, by, ms + 100);
 	bovl_touch_push(s, BOVL_TOUCH_UP, bx, by, ms + 150);
 	uint32_t want = 1;
