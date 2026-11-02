@@ -234,6 +234,13 @@ static void testAdvice()
 	st.seen = { "next:gym1", "catch:30:129" };
 	a = computeAdvice(r, l, &g, st);
 	CHECK(a.notices.size() == 1 && a.notices[0].id == "secrets:30");
+	{	// a secret with a condition ("after Red", "after Oak's Kanto starter") can't be told reachable: no badge for it
+		// (HeartGold on the Plus: the post-game Blue Orb raised "1 secret here" on Route 30 at 0 badges)
+		GuideData g2 = g;
+		g2.secrets[0].condition = "after the Champion";
+		Advice c = computeAdvice(r, l, &g2, st);
+		CHECK(c.notices.empty());
+	}
 	// evolution watch: Turtwig at Lv 17 of 18
 	auto ev = evolutionWatch(Gen::IV, twig, r, l, &g);
 	CHECK(ev.size() == 1 && ev[0].into == 388 && ev[0].levelsToGo == 1 && !ev[0].ready);

@@ -783,6 +783,8 @@ namespace banana::nds
 			int n = 0;
 			for (auto& s : g->secrets)
 			{
+				// (one with a condition, "after Red", is not known to be reachable now: on the Here page, not the badge)
+				if (!s.condition.empty()) continue;
 				bool here = s.zone == l.zone && l.zone;
 				for (auto z : s.zones) if (z == l.zone && l.zone) here = true;
 				n += here;
