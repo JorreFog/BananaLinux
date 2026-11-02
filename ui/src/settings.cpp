@@ -1057,12 +1057,12 @@ namespace banana
 		if (!devOn && i > 0 && items[i - 1].key == "developer") i--;	// (System's last row, until unlocked)
 		return i;
 	}
-	std::string Settings::groupHint(int g) const
+	std::string Settings::groupHint(int g, int names) const
 	{
 		// the first few settings' names, as the in-game menu's tiles say what is behind them
 		std::string h;
 		int n = 0;
-		for (int i = groupStart(g); i < groupEnd(g) && n < 2; i++, n++)
+		for (int i = groupStart(g); i < groupEnd(g) && n < names; i++, n++)
 		{
 			std::string l = lang::tr(items[i].label);	// (each name translated: the joined line has no translation)
 			if (!lang::active()) for (auto& ch : l) ch = (char)std::tolower((unsigned char)ch);	// (English's style; "Wi-Fi" stays)
@@ -2205,7 +2205,11 @@ namespace banana
 				else textFit(t, med, size, x + 98 - w / 2, top, w, c, on);
 			};
 			centred(groups[g], true, 19, y + 84, 180, on ? p.onPick : p.ink);
-			centred(groupHint(g), false, 14, y + 114, 176, on ? p.onPickAccent : p.muted);
+			// (two names when they fit, else the first alone: "sleep when idle, closing t..." read as cut off, bug hunt
+			// 0.5.1.1 BUG-ui-1 / BUG-plus-1)
+			std::string hint = groupHint(g);
+			if (text(hint, false, 14, 0, 0, p.muted, false, 0, true) > 176) hint = groupHint(g, 1);
+			centred(hint, false, 14, y + 114, 176, on ? p.onPickAccent : p.muted);
 		}
 		float bw = faceWidth("B", "Close");
 		face("B", "Close", 18, bw);

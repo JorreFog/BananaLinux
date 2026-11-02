@@ -207,7 +207,7 @@ namespace banana
 		bool inGroups = true;
 		int groupOf(int item) const;			// the group an item is in
 		int groupStart(int g) const, groupEnd(int g) const;	// its items: [start, end)
-		std::string groupHint(int g) const;		// what is in it, for its tile
+		std::string groupHint(int g, int names = 2) const;	// what is in it, for its tile (its first rows' names)
 		// a section's place: the tile's section down to its own, through the rows that open each subpage
 		// (Nintendo DS, SuperDrastic, SuperDrastic hotkeys); a tile's section alone
 		std::vector<std::string> sectionPath(const std::string& section) const;
