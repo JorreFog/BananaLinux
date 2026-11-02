@@ -103,6 +103,19 @@ namespace banana::nds
 			case EncounterKind::DUAL_SLOT: return "Dual-slot";
 			case EncounterKind::SEASON: return "This season";
 			case EncounterKind::GROTTO: return "Hidden Grotto";
+			case EncounterKind::SPECIAL: return "Special";
+			default: break;
+			}
+			// the kinds the ROM reader adds after SPECIAL (rom.h, asked for in model.h)
+			switch ((int)k)
+			{
+			case 13: return "Dark grass";
+			case 14: return "Shaking grass";
+			case 15: return "Rippling water";
+			case 16: return "Fishing in rippling water";
+			case 17: return "Hoenn Sound";
+			case 18: return "Sinnoh Sound";
+			case 19: return "Fishing at night";
 			default: return "Special";
 			}
 		}
