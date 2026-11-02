@@ -3,6 +3,7 @@
 // evolution helpers, and the whole Advice for a battle and a team.
 #include "nds/logic.h"
 #include "nds/session.h"
+#include <algorithm>
 #include <cstring>
 #include <unistd.h>
 #include <cmath>
@@ -411,6 +412,30 @@ static void testSession(const char* tmp)
 		double t = 0;
 		for (int i = 0; i < 6; i++, t += 300) s.tick(t, 1762000400);
 		CHECK(s.live()->valid && !s.journey()->challenge);
+	}
+	{	// on its own thread (the companion's paint loop takes snapshots): the same Live and advice come through take(),
+		// what the pages saw goes back, and it stops (saving) when it goes
+		auto ss = std::make_unique<Session>(r, g, tmp);
+		mkSession(*ss);
+		SessionThread st(std::move(ss), 5);
+		SessionThread::Snapshot sn;
+		bool got = false;
+		for (int i = 0; i < 300 && !got; i++)
+		{
+			usleep(10000);
+			got = st.take(sn) && sn.live && sn.live->valid;
+		}
+		CHECK(got && sn.live->party.size() == 1 && sn.advice && sn.journey);
+		CHECK(!st.take(sn));	// (nothing new since: the RAM image didn't change)
+		st.markSeen({ "x:test" });
+		at(B + 0x1328 + 4)[20] |= 0x01;	// a new Pokédex entry: the next poll changes Live
+		bool seen = false;
+		for (int i = 0; i < 300 && !seen; i++)
+		{
+			usleep(10000);
+			if (st.take(sn)) seen = std::find(sn.seen.begin(), sn.seen.end(), "x:test") != sn.seen.end();
+		}
+		CHECK(seen);
 	}
 	unlink((std::string(tmp) + "/CPUE-00111-00222.tsv").c_str());
 }

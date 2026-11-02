@@ -9,9 +9,12 @@
 //   ... each tick: if (s.tick(now, time(nullptr))) { d.live = s.live(); d.advice = s.advice(); d.journey = s.journey();
 //                  d.seenNotices = s.seenList(); pages->setData(d); }   and  s.markSeen(pages->takeSeen());
 #include "nds/logic.h"
+#include <condition_variable>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace banana::nds
@@ -67,5 +70,40 @@ namespace banana::nds
 		void track(const Live& now, time_t wall);
 		void load();
 		void save();
+	};
+
+	// A Session on a thread of its own, so the companion's paint loop never waits for it: the RAM's replies parsed and
+	// the advice worked out took ~6 ms of every 250 ms poll on the RG DS and up to 17 ms on the Plus, on the thread that
+	// takes the touches and draws (a stalled picture in every fourth of a drag). The paint loop takes what changed
+	// (take) and hands over what the pages saw (markSeen, setSeason).
+	class SessionThread
+	{
+	public:
+		struct Snapshot
+		{
+			std::shared_ptr<const Live> live;
+			std::shared_ptr<const Advice> advice;
+			std::shared_ptr<const Journey> journey;
+			std::vector<std::string> seen;
+		};
+		// s: set up (send/receive/challenge) before; the thread's from now on (send/receive are called on it). The
+		// Session ticks every periodMs
+		explicit SessionThread(std::unique_ptr<Session> s, int periodMs = 10);
+		~SessionThread();	// stops, then the Session goes (saving what it holds) on the caller's thread
+		// what changed since the last take: false when nothing did
+		bool take(Snapshot& out);
+		void markSeen(const std::vector<std::string>& ids);
+		void setSeason(int season);
+	private:
+		std::unique_ptr<Session> ss;
+		std::mutex m;
+		std::condition_variable cv;
+		bool stop = false, fresh = false;
+		Snapshot snap;
+		std::vector<std::string> seenIn;
+		int season = -1;
+		bool seasonIn = false;
+		std::thread th;
+		void run(int periodMs);
 	};
 }

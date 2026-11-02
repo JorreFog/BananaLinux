@@ -2780,8 +2780,10 @@ int main(int argc, char** argv)
 				// the ROM's data and the guide once read (ndsLoad), then the game's memory: the Session polls it over
 				// CompLink (BananaDS's export), works out the advice again when the game changed, and keeps the journey
 				// log and the notices seen on the card per game + trainer (nds/session)
+				// (the Session runs on a thread of its own, nds::SessionThread: the paint loop only takes what changed; CompLink
+				// is the Session's alone while the game runs)
 				nds::PageData ndsBase;
-				std::unique_ptr<nds::Session> ndsSession;
+				std::unique_ptr<nds::SessionThread> ndsSession;
 				nds::runWhileGame(ndsOverlay, *ndsPage, pid, status, [&](double)
 				{
 					if (!ndsPages) return;
@@ -2791,25 +2793,28 @@ int main(int argc, char** argv)
 						ndsPages->setData(ndsBase);
 						if (ndsBase.rom && ndsBase.guide)
 						{
-							ndsSession = std::make_unique<nds::Session>(ndsBase.rom, ndsBase.guide, o.data + "/cache/nds-companion");
-							ndsSession->send = [&](const std::string& l) { return compLink.send(l); };
-							ndsSession->receive = [&] { return compLink.receive(); };
-							ndsSession->setChallenge(getConfValue(o.data + "/settings.conf", "nds_challenge", "off") == "on");
+							auto ss = std::make_unique<nds::Session>(ndsBase.rom, ndsBase.guide, o.data + "/cache/nds-companion");
+							ss->send = [&](const std::string& l) { return compLink.send(l); };
+							ss->receive = [&] { return compLink.receive(); };
+							ss->setChallenge(getConfValue(o.data + "/settings.conf", "nds_challenge", "off") == "on");
+							ndsSession = std::make_unique<nds::SessionThread>(std::move(ss));
 						}
 					}
 					if (!ndsSession) return;
 					ndsSession->markSeen(ndsPages->takeSeen());
 					ndsSession->setSeason(ndsPages->raw().seasonPick());	// (Gen V: the season picked on Here)
-					if (ndsSession->tick(nowMs(), time(nullptr)))
+					nds::SessionThread::Snapshot sn;
+					if (ndsSession->take(sn))
 					{
 						nds::PageData d = ndsBase;
-						d.live = ndsSession->live();
-						d.advice = ndsSession->advice();
-						d.journey = ndsSession->journey();
-						d.seenNotices = ndsSession->seenList();
+						d.live = sn.live;
+						d.advice = sn.advice;
+						d.journey = sn.journey;
+						d.seenNotices = sn.seen;
 						ndsPages->setData(d);
 					}
 				});
+				ndsSession.reset();	// (stopped before CompLink closes)
 				logf("nds companion: %llu pictures sent (%.0f KB)", (unsigned long long)ndsOverlay.framesSent, ndsOverlay.bytesSent / 1024.0);
 			}
 			else while (waitpid(pid, &status, 0) < 0 && errno == EINTR) {}

@@ -6,6 +6,8 @@
 #include <set>
 #include <sstream>
 #include <sys/stat.h>
+#include <chrono>
+#include <ctime>
 
 namespace banana::nds
 {
@@ -214,5 +216,71 @@ namespace banana::nds
 			if (!f) return;
 		}
 		if (rename(tmp.c_str(), file.c_str()) == 0) dirty = false;
+	}
+
+	// ---- the Session on its own thread ----
+
+	SessionThread::SessionThread(std::unique_ptr<Session> s, int periodMs) : ss(std::move(s))
+	{
+		th = std::thread([this, periodMs] { run(periodMs); });
+	}
+
+	SessionThread::~SessionThread()
+	{
+		{
+			std::lock_guard<std::mutex> g(m);
+			stop = true;
+		}
+		cv.notify_all();
+		th.join();
+	}
+
+	bool SessionThread::take(Snapshot& out)
+	{
+		std::lock_guard<std::mutex> g(m);
+		if (!fresh) return false;
+		out = snap;
+		fresh = false;
+		return true;
+	}
+
+	void SessionThread::markSeen(const std::vector<std::string>& ids)
+	{
+		if (ids.empty()) return;
+		std::lock_guard<std::mutex> g(m);
+		seenIn.insert(seenIn.end(), ids.begin(), ids.end());
+	}
+
+	void SessionThread::setSeason(int s)
+	{
+		std::lock_guard<std::mutex> g(m);
+		if (s == season && !seasonIn) return;
+		season = s;
+		seasonIn = true;
+	}
+
+	void SessionThread::run(int periodMs)
+	{
+		std::unique_lock<std::mutex> g(m);
+		for (;;)
+		{
+			cv.wait_for(g, std::chrono::milliseconds(periodMs), [this] { return stop; });
+			if (stop) return;
+			std::vector<std::string> seen;
+			seen.swap(seenIn);
+			const bool newSeason = seasonIn;
+			const int sp = season;
+			seasonIn = false;
+			g.unlock();
+			ss->markSeen(seen);
+			if (newSeason) ss->setSeason(sp);
+			timespec ts;
+			clock_gettime(CLOCK_MONOTONIC, &ts);
+			const bool changed = ss->tick(ts.tv_sec * 1000.0 + ts.tv_nsec / 1e6, time(nullptr));
+			Snapshot n;
+			if (changed) n = Snapshot{ ss->live(), ss->advice(), ss->journey(), ss->seenList() };
+			g.lock();
+			if (changed) { snap = std::move(n); fresh = true; }
+		}
 	}
 }
