@@ -17,6 +17,7 @@
 // Emerald, FireRed and LeafGreen point at most of these from their ROM header (0x100 on); Ruby and Sapphire don't, so
 // every table is also found by its shape, and each one is checked by its first entries either way.
 #include "gba/gen3rom.h"
+#include "gba/gen3map.h"
 #include "nds/nitro.h"
 #include "nds/rom.h"
 #include <algorithm>
@@ -629,6 +630,7 @@ namespace banana::gba
 		for (auto& x : out->locationNames) x = nameCase(x);
 		for (auto& z : out->zones) z.second.name = nameCase(z.second.name);
 		for (auto& tr : out->trainers) { tr.second.cls = nameCase(tr.second.cls); tr.second.name = nameCase(tr.second.name); }
+		fillRegionMaps(t, game, *out);	// (the Map page: the game's region maps and each zone's place on them)
 		return out;
 	}
 

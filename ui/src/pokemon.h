@@ -209,6 +209,7 @@ namespace banana::pkmn
 		// each map's region map section by group and number (findMapGroups; 255: not known) and, from them and the wild
 		// tables, where a species is met: section, how (as wild()), levels, chance; the commonest first
 		std::vector<std::vector<uint8_t>> mapsecs;
+		std::vector<std::vector<long>> mapHeaders;	// (the same maps' headers in the ROM: their layout, so their size)
 		// the level-up move lists (findLearnsets; -1 not found): the next move a species learns after level (0 none;
 		// its level in lv)
 		long learnsets = -1;

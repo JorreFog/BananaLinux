@@ -1599,6 +1599,7 @@ namespace banana::pkmn
 			if (!ok) continue;
 			// the groups' lengths: map headers until the next group's table starts (or one isn't a header)
 			t.mapsecs.assign((size_t)run, {});
+			t.mapHeaders.assign((size_t)run, {});
 			for (int g = 0; g < run; g++)
 			{
 				long grp = romPtr(rom, n, a + 4 * (size_t)g);
@@ -1609,6 +1610,7 @@ namespace banana::pkmn
 					long h = headerOf(a, g, k);
 					if (h < 0) break;
 					t.mapsecs[g].push_back(rom[h + 0x14]);
+					t.mapHeaders[g].push_back(h);
 				}
 			}
 			return;
