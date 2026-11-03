@@ -235,3 +235,21 @@ still lack a game id), the loader `ui/src/nds/guide.{h,cpp}` into `GuideData` (`
 ### Loader
 `loadGuide(game, out, &why, &resolver)` (or `loadGuideFile`). A file of another game or schema is refused; a broken entry is
 skipped and counted in `why`. `$BANANA_NDS_GUIDE` redirects the folder for tests.
+
+### The GBA games (the GBA Pokémon companion)
+The GBA Pokémon companion reuses the DS pages (design: `docs/superpowers/specs/2026-11-03-gba-pokemon-companion-design.md`), so
+its guide data is the same schema (`"kind": "nds-pokemon-guide"`), one file per game in
+`/usr/share/banana/companions/gba-pokemon/<game>.json`: `ruby` (AXVE), `sapphire` (AXPE), `emerald` (BPEE), `firered` (BPRE),
+`leafgreen` (BPGE), English. `tools/companions/nds-validate.py` checks them too (national numbers up to 386; a game's file must
+sit in its own folder).
+- **places**: the name is the region map section's name as the ROM has it, upper case (`"ROUTE 101"`, `"MT. MOON"`,
+  `"POKéMON TOWER"`, `"DIGLETT’S CAVE"`), and `zone` / `zones` are the section ids (MAPSEC) that carry that name, read from
+  the supported ROMs (duplicates such as FireRed's two `ROUTE 4` sections are both listed). Ruby/Sapphire's hideout section
+  (66) is spelled `{EVIL_TEAM} HIDEOUT` in the ROM, a placeholder the game fills in, so it decodes as `" HIDEOUT"`: the files
+  name it `MAGMA HIDEOUT` / `AQUA HIDEOUT` and give the id.
+- **secrets**: hidden items carry `x`/`y` (grid `map`) only when the section has one outdoor map; they are that map's own tile
+  coordinates as the decompilations list them (`map.json` `bg_events`, no camera offset). Caves and multi-area sections say
+  the floor or area in `condition` instead.
+- **foe**: names and classes are the ROM's (upper case). FireRed/LeafGreen's player-named rival is stored as `TERRY`
+  (class `RIVAL`, `CHAMPION` at the league); the Ruby/Sapphire/Emerald rival is listed as both `MAY` and `BRENDAN`.
+- Levels, teams and place names were checked against the ROMs' own tables; the story facts are `reference-only`.
