@@ -17,6 +17,8 @@
 // Emerald, FireRed and LeafGreen point at most of these from their ROM header (0x100 on); Ruby and Sapphire don't, so
 // every table is also found by its shape, and each one is checked by its first entries either way.
 #include "gba/gen3rom.h"
+#include "gba/expansion.h"
+#include "gba/hacks.h"
 #include "nds/nitro.h"
 #include "nds/rom.h"
 #include <algorithm>
@@ -420,6 +422,8 @@ namespace banana::gba
 
 	std::shared_ptr<const RomData> readRomData(const pkmn::RomTables& t, const Game& game, const std::string&)
 	{
+		// (a pokeemerald-expansion build: its own structs and tables, gba/expansion.cpp)
+		if (const HackInfo* h = hackByKey(game.hack.c_str())) if (h->engine == Engine::EXPANSION) return readExpansionRomData(t, game);
 		if (!t.rom || game.gen != Gen::III || game.id == GameId::NONE) return nullptr;
 		if (t.has.modernTypes || t.has.ownDex || t.numSpecies != 412) return nullptr;
 		const uint8_t* rom = t.rom->data();

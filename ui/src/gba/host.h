@@ -9,6 +9,7 @@
 #include "../nds/pages.h"
 #include "../nds/session.h"
 #include "../pokemon.h"
+#include <functional>
 #include <future>
 #include <memory>
 #include <string>
@@ -42,5 +43,6 @@ namespace banana::gba
 		bool fresh = false;
 		std::unique_ptr<nds::SessionThread> session;
 		uint64_t lastSerial = 0;
+		std::function<uint16_t(uint16_t)> itemMap;	// (the game's item ids in the RomData's numbering)
 	};
 }
