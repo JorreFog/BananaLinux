@@ -21,6 +21,7 @@ __pycache__/
 *.pyc
 /ui/tests/nds-rom-test
 /ui/tests/nds-rom-dump
+/ui/tests/nds-townmap-test
 /ui/tests/gba-live-test
 /ui/tests/gba-pages-test
 /ui/tests/gba-rom-test

@@ -1,6 +1,7 @@
 // banana-ui: the DS Pokémon companion's ROM reader (rom.h)
 #include "nds/rom.h"
 #include "nds/nitro.h"
+#include "nds/townmap.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -137,6 +138,7 @@ namespace banana::nds
 			Bytes textBuf;
 			Narc text;
 			std::vector<int> zoneWild;	// per zone its encounter file (-1 none)
+			size_t mapHeaders = SIZE_MAX;	// Gen IV: where the map header table is in the ARM9 (zones())
 			std::vector<std::string> bank(int i)
 			{
 				Span s = text[(size_t)i];
@@ -614,6 +616,7 @@ namespace banana::nds
 						if (m == count) at = s;
 					}
 					if (at == SIZE_MAX) { err = "no map headers in the ARM9"; return false; }
+					mapHeaders = at;
 					for (size_t m = 0; m < count; m++) { int nm, w; entry(at + 24 * m, nm, w); zone.push_back({ nm, w }); }
 				}
 				else
@@ -1253,6 +1256,7 @@ namespace banana::nds
 			for (uint16_t m : r.tmMoves) w.u16(m);
 			w.u32((uint32_t)r.formSprites.size());
 			for (auto& f : r.formSprites) { w.u16(f.first); w.u16(f.second.first); w.u8(f.second.second); }
+			townmap::save(r, w.b);
 			return w.b;
 		}
 
@@ -1316,7 +1320,8 @@ namespace banana::nds
 			for (uint16_t& m : r.tmMoves) m = in.u16();
 			size_t fsprites = in.count(5);
 			for (size_t k = 0; k < fsprites && in.ok; k++) { uint16_t s = in.u16(); uint16_t a = in.u16(); r.formSprites[s] = { a, in.u8() }; }
-			return in.ok && in.at == in.n;
+			if (!in.ok || !townmap::load(r, in.p, in.n, in.at)) return false;
+			return in.at == in.n;
 		}
 
 		bool readFile(const std::string& p, Bytes& out)
@@ -1448,6 +1453,11 @@ namespace banana::nds
 		if (!d.tms(arm9)) return fail(d.err);
 		if (!d.zones(arm9)) return fail(d.err);
 		if (isB2w2(r->game.id) && !d.grottos(d.zoneWild)) return fail(d.err);
+		{
+			auto t1 = std::chrono::steady_clock::now();
+			townmap::read(*rom, arm9, d.mapHeaders, *r);	// (no town map: no Map page, the rest still works)
+			if (info) info->townmapMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t1).count();
+		}
 		step(0.8f);
 		if (!d.trainers()) return fail(d.err);
 		step(0.95f);

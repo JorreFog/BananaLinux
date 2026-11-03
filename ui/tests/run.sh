@@ -22,6 +22,9 @@ make -s -C "$HERE" tests/complink-test >/dev/null && TMPDIR="$OUT" "$HERE/tests/
 # the DS Pokémon companion's ROM reader: containers and text on data made from the documented layouts (the player's
 # own ROMs: tests/nds-rom-test <roms dir> [cache dir], on a PC that has them)
 make -s -C "$HERE" tests/nds-rom-test >/dev/null && "$HERE/tests/nds-rom-test" 2> "$OUT/nds-rom-test.log" || { echo "FAIL the DS companion's ROM reader: $(grep FAIL "$OUT/nds-rom-test.log" | head -3)"; fail=1; }
+# the DS Pokémon companion's region maps: the marker and the cache on made-up data (with NDS_ROMS=<the player's own ROMs>
+# set, every game's town map too; tests/nds-townmap-test <roms dir> <out dir> writes them with the spots outlined)
+make -s -C "$HERE" tests/nds-townmap-test >/dev/null && "$HERE/tests/nds-townmap-test" 2> "$OUT/nds-townmap-test.log" || { echo "FAIL the DS companion's region maps: $(grep FAIL "$OUT/nds-townmap-test.log" | head -3)"; fail=1; }
 # the DS Pokémon companion's guide: the validator on the shipped data, then the loader on a made-up file and on the data
 GD="$HERE/../system/rootfs/usr/share/banana/companions/nds-pokemon"
 python3 -I "$HERE/../tools/companions/nds-validate.py" -q > "$OUT/nds-validate.log" 2>&1 || { echo "FAIL the DS Pokémon guide data: $(grep -m3 error "$OUT/nds-validate.log")"; fail=1; }

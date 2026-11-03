@@ -10,7 +10,7 @@ override LDLIBS += -lpthread
 
 SRC = src/main.cpp src/recorder.cpp src/lang.cpp src/soft.cpp src/kms.cpp src/colors.cpp src/input.cpp src/library.cpp src/sound.cpp src/splash.cpp src/arrival.cpp src/settings.cpp src/settings_pal.cpp src/settings_defaults.cpp src/wifi.cpp src/bluetooth.cpp src/zip.cpp src/zipdir.cpp src/carts.cpp src/cart3d.cpp src/theme.cpp src/pokemon.cpp src/pokemap.cpp src/gamecomp.cpp src/json.cpp src/expr.cpp src/layout.cpp src/fileops.cpp src/settings_files.cpp src/complink.cpp src/bcomp.c rnds/RndsRaster.cpp rnds/RndsUI.cpp
 # (the DS Pokémon companion: the overlay BananaDS shows, its pages, the ROM reader, the guide data)
-SRC += src/bovl.c src/nds/overlay.cpp src/nds/pages.cpp src/nds/model.cpp src/nds/nitro.cpp src/nds/rom.cpp src/nds/guide.cpp src/nds/ram.cpp src/nds/logic.cpp src/nds/session.cpp src/nds/romfile.cpp src/gba/gen3live.cpp src/gba/host.cpp src/gba/gen3rom.cpp src/gba/hacks.cpp
+SRC += src/bovl.c src/nds/overlay.cpp src/nds/pages.cpp src/nds/model.cpp src/nds/nitro.cpp src/nds/rom.cpp src/nds/townmap.cpp src/nds/guide.cpp src/nds/ram.cpp src/nds/logic.cpp src/nds/session.cpp src/nds/romfile.cpp src/gba/gen3live.cpp src/gba/host.cpp src/gba/gen3rom.cpp src/gba/hacks.cpp
 # (Bshare's pages: its helper, banana-bshare, does the network)
 SRC += src/settings_bshare.cpp
 # (Files' servers: their pages, and the bits of banana-fetch they share with it; no network in banana-ui itself)
@@ -101,7 +101,7 @@ install:
 	touch $(DESTDIR)/usr/share/banana/apps/files/Files.app
 
 clean:
-	rm -f banana-ui banana-leaseshim.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump tests/nds-ram-test tests/nds-logic-test tests/nds-romfile-test tests/gba-live-test tests/gba-pages-test tests/gba-rom-test tests/gba-items-gen tests/soft-base-test
+	rm -f banana-ui banana-leaseshim.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump tests/nds-townmap-test tests/nds-ram-test tests/nds-logic-test tests/nds-romfile-test tests/gba-live-test tests/gba-pages-test tests/gba-rom-test tests/gba-items-gen tests/soft-base-test
 
 .PHONY: host install clean
 
@@ -111,13 +111,17 @@ tests/complink-test: tests/complink-test.cpp src/complink.cpp src/complink.h src
 
 # the DS Pokémon companion's ROM reader: its containers and decoders on data made from the documented layouts, and on
 # the player's own ROMs when given a folder of them (tests/run.sh runs the first part)
-NDS_ROM_SRC = src/nds/nitro.cpp src/nds/rom.cpp src/nds/model.cpp
+NDS_ROM_SRC = src/nds/nitro.cpp src/nds/rom.cpp src/nds/townmap.cpp src/nds/model.cpp
 tests/nds-rom-test: tests/nds-rom-test.cpp $(NDS_ROM_SRC) $(wildcard src/nds/*.h)
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/nds-rom-test.cpp $(NDS_ROM_SRC) -lpthread
 # (what the reader makes of a ROM, printed: for looking at by eye; never commit its output, it is the game's data)
 tests/nds-rom-dump: tests/nds-rom-dump.cpp $(NDS_ROM_SRC) $(wildcard src/nds/*.h)
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/nds-rom-dump.cpp $(NDS_ROM_SRC) -lpthread
 # the DS Pokémon companion's ROM file: a game's header from inside a .zip, the wait for run-bananads' unpacked copy
+# the DS companion's region maps (tests/run.sh runs it; give it the ROMs folder, or NDS_ROMS, for the games' own maps)
+tests/nds-townmap-test: tests/nds-townmap-test.cpp $(NDS_ROM_SRC) $(wildcard src/nds/*.h)
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/nds-townmap-test.cpp $(NDS_ROM_SRC) -lpthread
+
 tests/nds-romfile-test: tests/nds-romfile-test.cpp src/nds/romfile.cpp src/nds/romfile.h src/zip.cpp src/zipdir.cpp
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/nds-romfile-test.cpp src/nds/romfile.cpp src/zip.cpp src/zipdir.cpp -lz -lpthread
 # the DS Pokémon companion's guide loader (tests/run.sh runs it)
