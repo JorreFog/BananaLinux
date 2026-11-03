@@ -233,11 +233,14 @@ fallback, as for the rest):
   (the path a 50 Hz game already took); RetroArch has its own VSync switch. Neither needs a BIOS or ROM files from
   the card: VICE's and Fuse's own are in the cores.
 - **Keyboard:** a USB or Bluetooth keyboard is read as the core's keyboard (`RETRO_DEVICE_KEYBOARD` and
-  `RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK`), not as a second pad. Without one, F + B in BananaFront draws its
-  on-screen keyboard over the bottom half of the game's picture: the pad moves, A types the key, X deletes, Y or L/R
-  turn the page (letters, symbols, keys such as F1-F10, RUN/STOP, Return, Shift and the arrows), START is Return,
-  SELECT Escape and B closes it. It is drawn into the core's own frame with a 5x7 pixel font, so the display's
-  nearest-neighbour scaling keeps it sharp at every picture size, and the game keeps running behind it.
+  `RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK`), not as a second pad. Without one, the bottom screen's game panel (the
+  other screen while the game runs on the top one) has a **Keys** tile for these two systems: the panel becomes a
+  keyboard with a finger, pages for letters, symbols and the keys a game uses (F1-F12, RUN/STOP, Return, Shift, the
+  arrows), and every tap is a key of a virtual USB keyboard on `/dev/uinput` that the emulator reads, so it works the
+  same in RetroArch and BananaFront; the game keeps running on its own screen. BananaFront also has a quicker one over
+  its game picture: F + B (the pad moves and types: A a key, X delete, Y or L/R the page, START Return, SELECT Escape,
+  B closes). The panel's keyboard needs the panel to be the bottom screen (the one with the touchscreen: on the RG DS
+  Plus the top screen has none, so put the game on the top — Settings > Other systems > Screen > Top).
 
 ## BananaNES
 

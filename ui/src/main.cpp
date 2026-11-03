@@ -31,6 +31,7 @@
 #include "recorder.h"
 #include "settings_defaults.h"
 #include "theme.h"
+#include "vkbd.h"
 #include "colors.h"
 #include "zip.h"
 #include "sound.h"
@@ -1105,6 +1106,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			bool pk = comp.open(rom);
 			for (int i = 0; pk && i < 300 && !comp.tables(); i++) usleep(10000);
 			settings.companion = pk ? &comp : nullptr;
+			static VirtualKeyboard testVkbd;	// (tests: the panel's Keys tile without a /dev/uinput device)
+			settings.gameKeyboard(getenv("BANANA_TEST_VKBD") ? &testVkbd : nullptr);
 			settings.gameOpen("Pokemon Test", "Game Boy Advance", scr, true);
 			logf("gamepanel %s: companion %s", rom.c_str(), pk ? comp.game()->name : "none");
 		}
@@ -1275,7 +1278,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			cs >> x >> y;
 			float k = o.h / 480.0f;
 			settings.gameTouch(x * k, y * k, true);
-			logf("gtouch %.0f %.0f: action %d", x, y, (int)settings.gameTouch(x * k, y * k, false));
+			const Settings::GameAction act = settings.gameTouch(x * k, y * k, false);
+			logf("gtouch %.0f %.0f: action %d keys %d", x, y, (int)act, settings.gameKeysOpen() ? 1 : 0);
 		}
 		else if (op == "gshot")
 		{
@@ -2427,6 +2431,10 @@ int main(int argc, char** argv)
 	// too, with the game on the bottom) turned into RetroArch's commands through the pipe
 	// on its stdin (stdin_cmd_enable), until the game ends
 	// (outFd: RetroArch's stdout, for the Pokémon companion's replies; -1 without one)
+	// the game panel's on-screen keyboard (a computer's game): a virtual keyboard of its own, made before the game
+	// starts so the emulator sees it as a keyboard plugged in, gone when the game ends (vkbd.h)
+	VirtualKeyboard vkbd;
+	bool keysOn = false;
 	auto gamePanel = [&](pid_t pid, int& status, int gameScreen, int cmdFd, int outFd, const std::string& title, const std::string& sysName)
 	{
 		const int panelScreen = 1 - gameScreen;
@@ -2436,6 +2444,7 @@ int main(int argc, char** argv)
 			settingsView.gameComp = outFd >= 0 && gameComp.active() ? &gameComp : nullptr;
 			settingsView.link = compLink.open() ? &compLink : nullptr;	// (the emulator's RA block, once it attaches)
 			settingsView.gameRom(gameRomPath);
+			settingsView.gameKeyboard(keysOn ? &vkbd : nullptr);
 			settingsView.gameOpen(title, sysName, panelScreen, input.hasTouch(panelScreen));
 		}
 		be.invalidate();
@@ -2636,6 +2645,13 @@ int main(int argc, char** argv)
 		// only case where the bottom screen is Banana's own while a game runs. A game drawing on the bottom, or on
 		// both, is never dimmed. Tell bananad, which leaves the bottom to us for the game's length.
 		bottomIdle.setOwned(panel && gameScreen == 0, nowMs());
+		// a computer's game (C64, ZX Spectrum): the panel's Keys tile, for the LOAD"*",8,1 the handheld has no
+		// keyboard for. Its virtual keyboard is made before the fork, so the emulator finds it as a keyboard plugged
+		// in; and only when the game panel's screen has a touchscreen (the RG DS Plus's top one has none: its games'
+		// panel is the bottom one)
+		keysOn = panel && (sd.id == "c64" || sd.id == "zxspectrum") && input.hasTouch(1 - gameScreen) && vkbd.open();
+		if (panel && (sd.id == "c64" || sd.id == "zxspectrum"))
+			logf("on-screen keyboard: %s", keysOn ? "the game panel's Keys tile" : "not here (no touchscreen, or no /dev/uinput)");
 		// Settings > Other systems > Second screen > Pokémon companion, for a Pokémon game it knows (the ROM header): RetroArch's stdout
 		// through a pipe the panel reads (held open both ways here: no end seen when RetroArch quits, and RetroArch
 		// never meets a pipe with no reader)
@@ -2852,11 +2868,13 @@ int main(int argc, char** argv)
 				std::lock_guard<std::mutex> l(worker.uiLock);
 				int a, b;
 				if (settingsView.gameProgress(a, b)) std::ofstream(PROGRESS) << a << " " << b << "\n";	// RetroArch's, as the panel had it
+				settingsView.gameKeyboard(nullptr);
 				settingsView.gameClose();
 				settingsView.companion = nullptr;
 				settingsView.gameComp = nullptr;
 				settingsView.link = nullptr;
 			}
+			vkbd.close();	// (the game's keyboard gone from /dev/input as the game is)
 			::close(cmdFd);
 			unlink(FIFO);
 			if (outFd >= 0) { ::close(outFd); unlink(OUT); }

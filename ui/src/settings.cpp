@@ -4,10 +4,11 @@
 #include "recorder.h"
 #include "lang.h"
 #include "settings_defaults.h"
-#include "settings_draw.h"
 #include "theme.h"
+#include "vkbd.h"
 #include "json.h"
 #include <fcntl.h>
+#include <linux/input.h>
 #include <sys/file.h>
 #include <algorithm>
 #include <dlfcn.h>
@@ -585,7 +586,7 @@ namespace banana
 		add(O, "picture", "Picture & sound", "How RetroArch's games look and sound: a shader, a screen border, VSync and the audio latency.", "", "ra_picture", {}, {}, Item::PAGE);
 		{
 			const char* SS = "Second screen";
-			add(SS, "gamepad", "Second screen", "While a game plays on one screen, the other shows its RetroAchievements and tiles to save, load, open RetroArch's menu, fast forward and quit (by touch when they are on the bottom screen). Off: the other screen stays dark.",
+			add(SS, "gamepad", "Second screen", "While a game plays on one screen, the other shows its RetroAchievements and tiles to save, load, open RetroArch's menu, fast forward and quit (by touch when they are on the bottom screen). Off: the other screen stays dark. A Commodore 64 or ZX Spectrum game's tiles also have Keys: the panel becomes a touch keyboard (a virtual USB keyboard the emulator reads), which needs the panel on the bottom screen — put the game on the top.",
 				menu, "retroarch_panel", { "Game panel", "Off" }, { "panel", "off" });
 			add(SS, "picture", "Game panel when idle", "With a game on the top screen, what the game panel on the bottom one does when nothing has touched it or pressed a button for a while: stays on, dims, or turns off. A touch or any button lights it again.",
 				menu, "bottom_idle_mode", { "Dims", "Turns off", "Stays on" }, { "dim", "off", "on" });
@@ -6528,9 +6529,48 @@ namespace banana
 			"#####.#####.", "####..####..", "###...###...", "##....##....", "#.....#.....", "............" };
 		const char* const IC_EXIT[12] = { "######......", "#....#......", "#....#...#..", "#....#...##.", "#....#######", "#....#######",
 			"#....#...##.", "#....#...#..", "#....#......", "#....#......", "######......", "............" };
+		const char* const IC_KEY[12] = { "............", "...######...", "..#......#..", ".##########.", ".#........#.",
+			".#.#....#.#.", ".#........#.", ".##########.", "............", "............", "............", "............" };
 		struct GTile { const char* label; const char* keys; const char* const* icon; };
-		const GTile GTILES[5] = { { "Save", "F + R", IC_SAVE }, { "Load", "F + L", IC_LOAD }, { "Menu", "F + X", IC_LIST },
-			{ "Fast", "F + R2", IC_FFWD }, { "Quit", "F + START", IC_EXIT } };
+		const GTile GTILES[6] = { { "Save", "F + R", IC_SAVE }, { "Load", "F + L", IC_LOAD }, { "Menu", "F + X", IC_LIST },
+			{ "Fast", "F + R2", IC_FFWD }, { "Quit", "F + START", IC_EXIT }, { "Keys", "Tap", IC_KEY } };
+
+		// ---- the panel's keyboard (gameKeysFrame, gameTouch): a computer's keys with a finger -------------------
+		// 640x480 design coordinates (X() scales them): 10 columns, 4 rows, then a bar of pages and the keys a game
+		// uses; the whole panel, while the game runs on the other screen
+		const float VK_X = 12, VK_Y = 64, VK_CW = 61.6f, VK_CH = 56, VK_RGAP = 6, VK_BAR_Y = 328, VK_BAR_H = 44;
+		struct VKey { const char* label; int code; bool shift; };	// code -1: the shift toggle; no label: an empty cell
+		const VKey VK_ABC[40] = {
+			{ "1", KEY_1 }, { "2", KEY_2 }, { "3", KEY_3 }, { "4", KEY_4 }, { "5", KEY_5 },
+			{ "6", KEY_6 }, { "7", KEY_7 }, { "8", KEY_8 }, { "9", KEY_9 }, { "0", KEY_0 },
+			{ "Q", KEY_Q }, { "W", KEY_W }, { "E", KEY_E }, { "R", KEY_R }, { "T", KEY_T },
+			{ "Y", KEY_Y }, { "U", KEY_U }, { "I", KEY_I }, { "O", KEY_O }, { "P", KEY_P },
+			{ "A", KEY_A }, { "S", KEY_S }, { "D", KEY_D }, { "F", KEY_F }, { "G", KEY_G },
+			{ "H", KEY_H }, { "J", KEY_J }, { "K", KEY_K }, { "L", KEY_L }, { ";", KEY_SEMICOLON },
+			{ "Z", KEY_Z }, { "X", KEY_X }, { "C", KEY_C }, { "V", KEY_V }, { "B", KEY_B },
+			{ "N", KEY_N }, { "M", KEY_M }, { ",", KEY_COMMA }, { ".", KEY_DOT }, { "/", KEY_SLASH },
+		};
+		const VKey VK_SYM[40] = {
+			{ "!", KEY_1, true }, { "\"", KEY_APOSTROPHE, true }, { "#", KEY_3, true }, { "$", KEY_4, true }, { "%", KEY_5, true },
+			{ "&", KEY_7, true }, { "'", KEY_APOSTROPHE }, { "(", KEY_9, true }, { ")", KEY_0, true }, { "*", KEY_8, true },
+			{ "+", KEY_EQUAL, true }, { ",", KEY_COMMA }, { "-", KEY_MINUS }, { ".", KEY_DOT }, { "/", KEY_SLASH },
+			{ ":", KEY_SEMICOLON, true }, { ";", KEY_SEMICOLON }, { "<", KEY_COMMA, true }, { "=", KEY_EQUAL }, { ">", KEY_DOT, true },
+			{ "?", KEY_SLASH, true }, { "@", KEY_2, true }, { "[", KEY_LEFTBRACE }, { "\\", KEY_BACKSLASH }, { "]", KEY_RIGHTBRACE },
+			{ "^", KEY_6, true }, { "_", KEY_MINUS, true }, { "`", KEY_GRAVE }, { "{", KEY_LEFTBRACE, true }, { "}", KEY_RIGHTBRACE, true },
+			{ "|", KEY_BACKSLASH, true }, { "~", KEY_GRAVE, true },
+			{ nullptr }, { nullptr }, { nullptr }, { nullptr }, { nullptr }, { nullptr }, { nullptr }, { nullptr },
+		};
+		const VKey VK_KEYS[40] = {
+			{ "F1", KEY_F1 }, { "F2", KEY_F2 }, { "F3", KEY_F3 }, { "F4", KEY_F4 }, { "F5", KEY_F5 },
+			{ "F6", KEY_F6 }, { "F7", KEY_F7 }, { "F8", KEY_F8 }, { "F9", KEY_F9 }, { "F10", KEY_F10 },
+			{ "F11", KEY_F11 }, { "F12", KEY_F12 }, { "RUN", KEY_ESC }, { "CLR", KEY_HOME }, { "RET", KEY_ENTER },
+			{ "SPACE", KEY_SPACE }, { "DEL", KEY_BACKSPACE }, { "ESC", KEY_ESC }, { "TAB", KEY_TAB }, { "CAPS", KEY_CAPSLOCK },
+			{ "LEFT", KEY_LEFT }, { "RIGHT", KEY_RIGHT }, { "UP", KEY_UP }, { "DOWN", KEY_DOWN }, { "HOME", KEY_HOME },
+			{ "END", KEY_END }, { "INS", KEY_INSERT }, { "CTRL", KEY_LEFTCTRL }, { "SHIFT", -1 }, { nullptr },
+			{ nullptr }, { nullptr }, { nullptr }, { nullptr }, { nullptr }, { nullptr }, { nullptr }, { nullptr }, { nullptr }, { nullptr },
+		};
+		const VKey* const VK_PAGES[3] = { VK_ABC, VK_SYM, VK_KEYS };
+		const char* const VK_PAGE_NAMES[3] = { "abc", "sym", "keys" };
 	}
 
 	struct Settings::RaWatch
@@ -6699,6 +6739,7 @@ namespace banana
 	{
 		gTitle = title; gSystem = system; gScreen = screen; gTouch = touch;
 		gFlash = gDown = -1; gSeen = -1; awardsSeen = 0; wake = false;
+		gKeysOpen = false; gKeyPage = 0; gKeyShift = 0; gKeyTyped.clear();
 		pkView = PK_PARTY; pkMon = pkMonPage = 0; pkBattle = false; pkPocket = pkBagPage = pkDexPage = pkDexNat = 0; pkGoalKey.clear(); pkGoalTeam.clear(); pkWildPage = 0; pkWildKey = -1;
 		gcView = gcomp::P_STATUS; gcScreen = 0; gcScreens = 1; gcList = gcRow = -1; gcBattle = false; gcHits.clear();
 		if (gameComp) gameComp->want(gcView);
@@ -6894,6 +6935,39 @@ namespace banana
 	{
 		float lx = x / s, ly = y / s;
 		int hit = -1;
+		// the on-screen keyboard (the Keys tile): a key types on the press, the bar's pages and Done on the release
+		if (gKeysOpen)
+		{
+			if (down)
+			{
+				if (ly >= VK_BAR_Y && ly < VK_BAR_Y + VK_BAR_H)
+				{
+					const int i = (int)((lx - 12) / 77);
+					if (lx >= 12 && i >= 0 && i < 8 && lx < 12 + i * 77 + 73)
+						switch (i)
+						{
+						case 0: case 1: case 2: gKeyPage = i; break;
+						case 3: gKeyShift ^= 1; break;
+						case 4: gameKeyTap(KEY_SPACE, false, nullptr); break;
+						case 5: gameKeyTap(KEY_ENTER, false, nullptr); break;
+						case 6: gameKeyTap(KEY_BACKSPACE, false, nullptr); break;
+						case 7: gKeysOpen = false; break;
+						}
+					return G_NONE;
+				}
+				if (ly >= VK_Y && ly < VK_Y + 4 * (VK_CH + VK_RGAP))
+				{
+					const int c = (int)((lx - VK_X) / VK_CW), r = (int)((ly - VK_Y) / (VK_CH + VK_RGAP));
+					const float ry = ly - VK_Y - r * (VK_CH + VK_RGAP);
+					if (c >= 0 && c < 10 && r >= 0 && r < 4 && ry < VK_CH)
+					{
+						const VKey& k = VK_PAGES[gKeyPage < 0 || gKeyPage > 2 ? 0 : gKeyPage][r * 10 + c];
+						if (k.label) gameKeyTap(k.code, k.shift, k.label);
+					}
+				}
+			}
+			return G_NONE;
+		}
 		bool gamePage = !((gameComp && gameComp->active() && gcView != GC_GAME) || (companion && companion->active() && pkView != PK_GAME));
 		// the achievements box: a tap opens the save states there; a slot tapped twice loads it, a tap above closes it
 		if (gamePage && !gStateBase.empty() && !down && lx >= 18 && lx < 622)
@@ -6911,10 +6985,12 @@ namespace banana
 				return G_LOADSLOT;
 			}
 		}
-		for (int i = 0; i < 5; i++)
+		const int ntiles = vkbd && gTouch ? 6 : 5;
+		const float tstep = ntiles == 6 ? 102 : 122, tw = ntiles == 6 ? 96 : 114;
+		for (int i = 0; i < ntiles; i++)
 		{
-			float tx = 18 + i * 122;
-			if (lx >= tx && lx < tx + 114 && ly >= 300 && ly < 420) hit = i;
+			float tx = 18 + i * tstep;
+			if (lx >= tx && lx < tx + tw && ly >= 300 && ly < 420) hit = i;
 		}
 		// the game companion: the tab bar, a page's screens (the pager), a list's row opened or closed; the Game tab is
 		// the panel's own (its tiles, below)
@@ -7009,8 +7085,55 @@ namespace banana
 		gDown = -1;
 		gFlashUntil = now + 220;
 		if (hit < 0 || hit != was) { gFlash = -1; return G_NONE; }
-		static const GameAction acts[5] = { G_SAVE, G_LOAD, G_MENU, G_FFWD, G_QUIT };
+		static const GameAction acts[6] = { G_SAVE, G_LOAD, G_MENU, G_FFWD, G_QUIT, G_NONE };
+		if (hit == 5) { gKeysOpen = true; gKeyPage = 0; gKeyTyped.clear(); return G_NONE; }	// the panel's keyboard
 		return acts[hit];
+	}
+
+	void Settings::gameKeyTap(int code, bool shift, const char* label)
+	{
+		if (code == -1) { gKeyShift ^= 1; return; }	// the shift toggle (sticky: shift then the letters)
+		if (vkbd && vkbd->ready()) vkbd->tap(code, shift || (gKeyShift != 0 && gKeyPage == 0));
+		// what the key typed, in the line at the panel's top (the game's own screen shows it as it arrives)
+		if (code == KEY_BACKSPACE) { if (!gKeyTyped.empty()) gKeyTyped.pop_back(); }
+		else if (code == KEY_ENTER) gKeyTyped.clear();
+		else if (label && label[0] && !label[1] && label[0] > ' ' && label[0] < 127)
+		{
+			gKeyTyped += label;
+			if (gKeyTyped.size() > 46) gKeyTyped.erase(0, gKeyTyped.size() - 46);
+		}
+	}
+
+	void Settings::gameKeysFrame(const SPal& p)
+	{
+		const VKey* pg = VK_PAGES[gKeyPage < 0 || gKeyPage > 2 ? 0 : gKeyPage];
+		text("Keyboard", true, 24, 16, 6, p.ink);
+		const std::string typed = gKeyTyped.empty() ? "Tap a key: the game hears it on the other screen" : gKeyTyped;
+		text(fit(typed, false, 18, 440), false, 18, 170, 12, gKeyTyped.empty() ? p.muted : p.accent);
+		for (int r = 0; r < 4; r++)
+			for (int c = 0; c < 10; c++)
+			{
+				const VKey& k = pg[r * 10 + c];
+				if (!k.label) continue;
+				const float x = VK_X + c * VK_CW, y = VK_Y + r * (VK_CH + VK_RGAP), w = VK_CW - 4;
+				const bool shiftOn = k.code == -1 && gKeyShift;
+				box(shiftOn ? "pick" : "slot", shiftOn, x, y, w, VK_CH);
+				const Color& fg = shiftOn ? p.onPick : p.ink;
+				const float tw = text(k.label, true, 20, 0, 0, fg, false, 0, true);
+				text(k.label, true, 20, x + (w - tw) / 2, y + VK_CH / 2 - 11, fg);
+			}
+		// the bar: the pages, shift, and the keys typed the most
+		const char* bar[8] = { VK_PAGE_NAMES[0], VK_PAGE_NAMES[1], VK_PAGE_NAMES[2], "SHIFT", "SPACE", "RET", "DEL", "DONE" };
+		for (int i = 0; i < 8; i++)
+		{
+			const float x = 12 + i * 77, w = 73;
+			const bool on = (i < 3 && gKeyPage == i) || (i == 3 && gKeyShift);
+			box(on ? "pick" : "slot", on, x, VK_BAR_Y, w, VK_BAR_H);
+			const Color& fg = on ? p.onPick : p.ink;
+			const float tw = text(bar[i], true, 18, 0, 0, fg, false, 0, true);
+			text(bar[i], true, 18, x + (w - tw) / 2, VK_BAR_Y + 13, fg);
+		}
+		text("The game keeps running on the other screen. Done brings the tiles back.", false, 15, 12, 384, p.muted);
 	}
 
 	void Settings::gameRender()
@@ -7052,6 +7175,7 @@ namespace banana
 		}
 		be->beginScreen(gScreen);
 		box("screen", false, 0, 0, 640, 480);
+		if (gKeysOpen) { gameKeysFrame(p); be->endScreen(); return; }	// (the panel is the keyboard while it is open)
 		bool pk = companion && companion->active();
 		if (pk && pkView != PK_GAME)
 		{
@@ -7167,24 +7291,26 @@ namespace banana
 		}
 		}
 		// ---- the tiles: RetroArch's commands by touch, and their buttons
-		for (int i = 0; i < 5; i++)
+		const int ntiles = vkbd && gTouch ? 6 : 5;
+		const float tstep = ntiles == 6 ? 102 : 122, tw = ntiles == 6 ? 96 : 114;
+		for (int i = 0; i < ntiles; i++)
 		{
-			float x = 18 + i * 122, y = 300;
+			float x = 18 + i * tstep, y = 300;
 			bool on = gFlash == i;
-			box(on ? "pick" : "slot", on, x, y, 114, 120);
+			box(on ? "pick" : "slot", on, x, y, tw, 120);
 			Color fg = on ? p.onPick : (i == 4 ? Color::hex(0xff8a96) : p.ink);
 			int k = std::max(1, (int)std::lround(3 * s));
-			float ix = std::round(X(x + 57) - 6 * k), iy = std::round(X(y + 16));
+			float ix = std::round(X(x + tw / 2) - 6 * k), iy = std::round(X(y + 16));
 			for (int r = 0; r < 12; r++)
 				for (int c = 0; c < 12; c++)
 					if (GTILES[i].icon[r][c] == '#') be->fill(ix + c * k, iy + r * k, (float)k, (float)k, fg);
 			// (the document's own translation for this panel: its "Fast" is fast-forward, the settings' is speed)
 			std::string lb = lang::tr("Second screen (RetroArch games)", GTILES[i].label);
 			float lw = text(lb, true, 19, 0, 0, fg, false, 0, true);
-			text(lb, true, 19, x + 57 - lw / 2, y + 60, fg);
+			text(lb, true, 19, x + tw / 2 - lw / 2, y + 60, fg);
 			std::string kk = GTILES[i].keys;
 			float kw = text(kk, false, 14, 0, 0, p.muted, false, 0, true);
-			text(kk, false, 14, x + 57 - kw / 2, y + 90, on ? p.onPickAccent : p.muted);
+			text(kk, false, 14, x + tw / 2 - kw / 2, y + 90, on ? p.onPickAccent : p.muted);
 		}
 		if (pk) { pokeTabs(p); be->endScreen(); return; }	// (the companion's tab bar where the hint was)
 		if (gc) { gcTabs(p); be->endScreen(); return; }
