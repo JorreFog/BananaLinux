@@ -86,6 +86,8 @@ int main(int argc, char** argv)
 		CHECK(r != nullptr, "%s: no RomData", f.c_str());
 		if (!r) continue;
 		fprintf(stderr, "%s (%s): tables + RomData %.0f ms\n", g.title.c_str(), g.code.c_str(), readMs);
+		nds::useModernTypeChart(r->game.modern);	// (as the host does: a hack's Fairy and Generation VI's chart)
+		const std::string tag = g.hack.empty() ? g.code : g.hack;	// (the PNGs' names: a hack's key, its base game's code shared)
 		auto gd = std::make_shared<nds::GuideData>();
 		const nds::GuideResolver res = nds::guideResolver(*r);
 		std::string why;
@@ -104,7 +106,8 @@ int main(int argc, char** argv)
 				if (!wild && e.kind == nds::EncounterKind::GRASS && e.species) { zone = z.first; wild = e.species; }
 		CHECK(wild != 0, "%s: no grass encounter in any zone", g.title.c_str());
 		live->zone = zone;
-		const uint16_t starters[3] = { (uint16_t)(g.id == nds::GameId::FIRERED || g.id == nds::GameId::LEAFGREEN ? 6 : 257), 25, wild ? wild : 16 };
+		const bool kanto = g.id == nds::GameId::FIRERED || g.id == nds::GameId::LEAFGREEN || g.code == "BPRE";
+		const uint16_t starters[3] = { (uint16_t)(kanto ? 6 : 257), 25, wild ? wild : 16 };
 		for (int i = 0; i < 3; i++) live->party.push_back(makeMon(*r, starters[i], i == 0 ? 36 : 20, 0x1000 * (i + 3) + 7));
 		live->money = 12345; live->playSeconds = 9 * 3600 + 45 * 60; live->badges = 0x0F;
 		live->dexCaught.assign(49, 0); live->dexSeen.assign(49, 0);
@@ -141,7 +144,7 @@ int main(int argc, char** argv)
 				pg.render();
 				pg.update(0);
 				pg.render();
-				const std::string name = out + "/" + g.code + "-" + nds::pageName(p) + (pass ? "-wild" : "") + ".png";
+				const std::string name = out + "/" + tag + "-" + nds::pageName(p) + (pass ? "-wild" : "") + ".png";
 				CHECK(savePng(be, 1, name), "%s", name.c_str());
 			}
 		}
