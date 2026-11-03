@@ -26,6 +26,7 @@
 // Data layouts: Bulbapedia's "Pokémon data structure (Generation III)" and "Character encoding (Generation III)".
 #include <array>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -54,6 +55,8 @@ namespace banana::pkmn
 		int moves = 0x0c, types = 0x21, pp = 0x24, hp = 0x28, level = 0x2a, maxHp = 0x2c, item = 0x2e, nick = 0x30;
 		int ppBonuses = 0x3b, exp = 0x44, pid = 0x48, status = 0x4c;
 		int eggByte = 0x17, eggBit = 0x40;		// (the IV word's egg bit)
+		// a build's own decoder (gba/expansion.cpp: pokeemerald-expansion), used instead of the fields above when set
+		std::function<bool(const uint8_t* p, struct Mon& m, int maxSpecies)> decode;
 	};
 	struct MonLayout
 	{
@@ -61,6 +64,7 @@ namespace banana::pkmn
 		MonCoding coding = MonCoding::ENCRYPTED;
 		uint16_t speciesMask = 0xffff;			// the species' bits in its halfword (a hack may pack more in beside it)
 		BattlerLayout battler;
+		std::function<bool(const uint8_t* p, struct Mon& m)> decode;	// (a build's own, as BattlerLayout::decode)
 	};
 
 	// the base game a game is (or a hack is built on): the save's layout, the region and its goals
@@ -72,6 +76,9 @@ namespace banana::pkmn
 		uint32_t flags; int badge0, clear; uint32_t money, key;
 		uint32_t pocket[5]; int count[5];		// Items, Key Items, Poké Balls, TMs & HMs, Berries
 		uint32_t dexOwned = 0x28;				// owned[52], then seen[52]
+		// (pokeemerald-expansion builds) the player's position in SaveBlock1 (then the map's group and number at + 4), and
+		// the Pokédex there: seen[dexBytes], then caught[dexBytes] at dexSb1 (0: SaveBlock2's at dexOwned)
+		uint32_t pos = 0, dexSb1 = 0; int dexBytes = 0;
 	};
 	// a game, or one release of it: what the companion reads and where. Told by the header's code, and by the ROM's
 	// CRC-32 for a profile that names one (a hack that keeps its base game's code but not its RAM: the one with the
@@ -89,6 +96,12 @@ namespace banana::pkmn
 		SaveLayout save;
 		MonLayout mon;
 	};
+	// a ROM whose RAM and layouts its own code says (gba/expansion.cpp: pokeemerald-expansion builds, "RHHEXP" in the
+	// header): the reader that makes its profile and tables from the whole ROM (false: not one, or not found)
+	using OwnProfileReader = bool (*)(const uint8_t* rom, size_t n, std::shared_ptr<const struct GameProfile>& profile, struct RomTables& t);
+	void setOwnProfileReader(OwnProfileReader f);
+	bool hasOwnProfile(const uint8_t* rom, size_t n);	// (the header says so: wait for the reader)
+
 	// the ROM's first bytes (0xB0 at least); crc: the whole ROM's CRC-32 when known (0 not)
 	const GameProfile* detectGame(const uint8_t* rom, size_t n, uint32_t crc = 0);
 	// the same in a list of one's own (tests)
@@ -299,7 +312,9 @@ namespace banana::pkmn
 		const GameProfile* info = nullptr;
 		bool byCrc = false;			// the profile told by the ROM's CRC-32: nothing read until it is (info till then: a guess)
 		// (the tables, and the profile the whole ROM's CRC-32 tells, from the thread)
-		struct Shared { std::mutex mu; std::shared_ptr<const RomTables> tables; const GameProfile* profile = nullptr; bool ready = false; };
+		struct Shared { std::mutex mu; std::shared_ptr<const RomTables> tables; const GameProfile* profile = nullptr; bool ready = false;
+			std::shared_ptr<const GameProfile> own; };	// (own: a build's profile from its ROM, kept while it is used)
+		std::shared_ptr<const GameProfile> owned;
 		std::shared_ptr<Shared> sh;
 		bool tablesSeen = false;
 		double nextAt = 0, sentAt = 0, errorSince = -1;
