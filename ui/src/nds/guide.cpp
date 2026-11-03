@@ -20,6 +20,11 @@ namespace banana::nds
 			{ GameId::RUBY, "ruby", "AXVE", 386 }, { GameId::SAPPHIRE, "sapphire", "AXPE", 386 },
 			{ GameId::EMERALD, "emerald", "BPEE", 386 }, { GameId::FIRERED, "firered", "BPRE", 386 },
 			{ GameId::LEAFGREEN, "leafgreen", "BPGE", 386 },
+			// the GBA ROM hacks (gba/hacks.h: the key is the file's name and its "game"; their Pokédex can be far bigger)
+			{ GameId::HACK, "glazed", "BPEE", 1500 }, { GameId::HACK, "golden-glazed", "BPEE", 1500 },
+			{ GameId::HACK, "glazed-unofficial", "BPEE", 1500 }, { GameId::HACK, "gaia", "BPRE", 1500 },
+			{ GameId::HACK, "heart-and-soul", "BPEE", 1500 }, { GameId::HACK, "lazarus", "BPEE", 1500 },
+			{ GameId::HACK, "seaglass", "BPEE", 1500 }, { GameId::HACK, "soulgold", "BPEE", 1500 },
 		};
 		const GameRow* rowFor(GameId id)
 		{
@@ -289,6 +294,13 @@ namespace banana::nds
 
 	bool loadGuide(const Game& game, GuideData& out, std::string* why, const GuideResolver* resolver)
 	{
+		if (game.id == GameId::HACK)	// (a ROM hack: its key is its file's name and the file's "game")
+		{
+			if (game.hack.empty()) { if (why) *why = "a ROM hack without a key"; return false; }
+			if (!loadGuideFile(std::string(gbaGuideDir()) + "/" + game.hack + ".json", out, GameId::NONE, why, resolver)) return false;
+			if (out.game != game.hack) { if (why) *why = game.hack + ".json is the guide of another game"; out = GuideData(); return false; }
+			return true;
+		}
 		std::string f = guideFileName(game.id);
 		if (f.empty()) { if (why) *why = "not one of the nine games"; return false; }
 		return loadGuideFile(std::string(game.gen == Gen::III ? gbaGuideDir() : guideDir()) + "/" + f, out, game.id, why, resolver);
