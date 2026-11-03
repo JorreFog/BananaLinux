@@ -57,6 +57,20 @@ config BR2_PACKAGE_LIBRETRO_PICODRIVE
 	help
 	  Mega Drive, Master System, Mega CD and 32X.
 
+config BR2_PACKAGE_LIBRETRO_VICE
+	bool "libretro-vice"
+	default y
+	depends on BR2_INSTALL_LIBSTDCPP
+	help
+	  Commodore 64: VICE's x64sc (the cycle-exact emulator), run by
+	  BananaFront or RetroArch from a .d64, .tap, .t64, .prg or .crt.
+
+config BR2_PACKAGE_LIBRETRO_FUSE
+	bool "libretro-fuse"
+	default y
+	help
+	  ZX Spectrum, with its own on-screen keyboard (SELECT).
+
 config BR2_PACKAGE_LIBRETRO_PCSX_REARMED
 	bool "libretro-pcsx-rearmed"
 	default y

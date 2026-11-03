@@ -13,7 +13,9 @@ namespace banana
 			{ "nds", "nds,ds,nintendo ds" }, { "gba", "gba,game boy advance,gameboy advance" },
 			{ "gbc", "gbc,game boy color,gameboy color" }, { "gb", "gb,game boy,gameboy" },
 			{ "nes", "nes,fc,famicom,nintendo entertainment system" }, { "snes", "snes,sfc,super nintendo,super famicom" },
-			{ "megadrive", "md,megadrive,mega drive,genesis,sega genesis" }, { "psx", "psx,ps,ps1,playstation" },
+			{ "megadrive", "md,megadrive,mega drive,genesis,sega genesis" },
+			{ "c64", "c64,commodore 64,commodore64,cbm64" },
+			{ "zxspectrum", "zxspectrum,zx spectrum,spectrum,zx,zxs" }, { "psx", "psx,ps,ps1,playstation" },
 			{ "n64", "n64,nintendo 64" }, { "pico-8", "pico,pico8,pico-8" }, { "ports", "ports" },
 		};
 

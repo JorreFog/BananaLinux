@@ -249,6 +249,7 @@ namespace
 		{ "nds", "Nintendo - Nintendo DS" }, { "gba", "Nintendo - Game Boy Advance" }, { "gbc", "Nintendo - Game Boy Color" },
 		{ "gb", "Nintendo - Game Boy" }, { "nes", "Nintendo - Nintendo Entertainment System" },
 		{ "snes", "Nintendo - Super Nintendo Entertainment System" }, { "megadrive", "Sega - Mega Drive - Genesis" },
+		{ "c64", "Commodore - 64" }, { "zxspectrum", "Sinclair - ZX Spectrum" },
 		{ "psx", "Sony - PlayStation" }, { "n64", "Nintendo - Nintendo 64" } };
 	std::vector<System> systems(const std::string& conf)
 	{
