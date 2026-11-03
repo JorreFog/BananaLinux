@@ -36,7 +36,7 @@ namespace banana::nds
 		std::vector<std::string> seenNotices;	// notice ids the player has already seen (no count on the tabs for them)
 	};
 
-	enum class Page : uint8_t { BATTLE, PARTY, TEAM, HERE, GUIDE, DEX, LOG, COUNT };
+	enum class Page : uint8_t { BATTLE, PARTY, TEAM, HERE, MAP, GUIDE, DEX, LOG, COUNT };	// (MAP: the game's town map, live; 2026-11-03)
 
 	class Pages
 	{

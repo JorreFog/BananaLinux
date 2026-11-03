@@ -132,7 +132,7 @@ int main(int argc, char** argv)
 			SoftBackend be(1024, 768);
 			nds::Pages pg(&be, 1, 1024, 768, assets, false);
 			pg.setData(pd);
-			const nds::Page pages[] = { nds::Page::BATTLE, nds::Page::PARTY, nds::Page::TEAM, nds::Page::HERE, nds::Page::GUIDE, nds::Page::DEX, nds::Page::LOG };
+			const nds::Page pages[] = { nds::Page::BATTLE, nds::Page::PARTY, nds::Page::TEAM, nds::Page::HERE, nds::Page::MAP, nds::Page::GUIDE, nds::Page::DEX, nds::Page::LOG };
 			for (nds::Page p : pages)
 			{
 				if (pass == 1 && p != nds::Page::BATTLE) continue;
