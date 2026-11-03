@@ -253,3 +253,17 @@ sit in its own folder).
 - **foe**: names and classes are the ROM's (upper case). FireRed/LeafGreen's player-named rival is stored as `TERRY`
   (class `RIVAL`, `CHAMPION` at the league); the Ruby/Sapphire/Emerald rival is listed as both `MAY` and `BRENDAN`.
 - Levels, teams and place names were checked against the ROMs' own tables; the story facts are `reference-only`.
+
+### The GBA ROM hacks
+A hack's guide is `gba-pokemon/<key>.json` with `"game": "<key>"` and its base game's code (`ui/src/gba/hacks.cpp`, the
+GAMES table in `ui/src/nds/guide.cpp`): `glazed`, `golden-glazed`, `glazed-unofficial`, `heart-and-soul`, `lazarus`,
+`seaglass`, `soulgold` (BPEE) and `gaia` (BPRE); national numbers up to 1500 (the validator checks names to 649), the
+`fairy` theme allowed, badges 1-16 for the Glazed releases (Tunod + Johto) and Heart & Soul (Johto + Kanto).
+- **places** carry a `name` only: the loader resolves it against that ROM's region map section names (case and punctuation
+  ignored). Every name was checked to be a section with at least one map in that ROM (the expansion builds' tables are
+  read at the base their code points at; SoulGold's map headers keep a 16-bit section id). Names are written as the ROM
+  has them, in its own case (`"Mt Mortar"` in SoulGold, `"Dragon‘s Den"` in Glazed).
+- **foe**: names and levels from that ROM's trainer table, by name and the team's top level; leaders with several teams
+  (Normal/Hard, or Heart & Soul's and SoulGold's gyms 5-7 that scale with your badges) list each variant. The Heart & Soul
+  and SoulGold rival is stored under the player-named placeholder (a control code), so those fights give a level cap and
+  no foe.

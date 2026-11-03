@@ -105,7 +105,7 @@ GAMES = {
 HACKS = {"glazed", "golden-glazed", "glazed-unofficial", "gaia", "heart-and-soul", "lazarus", "seaglass", "soulgold"}
 GBA_GAMES = {"ruby", "sapphire", "emerald", "firered", "leafgreen"} | HACKS
 # the games with two regions' gyms: badges 1-16 (Johto's, then Kanto's)
-SIXTEEN_BADGES = {"heartgold", "soulsilver", "glazed", "golden-glazed", "glazed-unofficial", "heart-and-soul", "soulgold"}
+SIXTEEN_BADGES = {"heartgold", "soulsilver", "glazed", "golden-glazed", "glazed-unofficial", "heart-and-soul"}
 TYPES = {"normal", "fighting", "flying", "poison", "ground", "rock", "bug", "ghost", "steel", "fire", "water",
          "grass", "electric", "psychic", "ice", "dragon", "dark", "fairy"}
 QUALITY = {"reference-only", "live-verified"}
