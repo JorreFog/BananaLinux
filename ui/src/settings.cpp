@@ -7086,13 +7086,19 @@ namespace banana
 		gFlashUntil = now + 220;
 		if (hit < 0 || hit != was) { gFlash = -1; return G_NONE; }
 		static const GameAction acts[6] = { G_SAVE, G_LOAD, G_MENU, G_FFWD, G_QUIT, G_NONE };
-		if (hit == 5) { gKeysOpen = true; gKeyPage = 0; gKeyTyped.clear(); return G_NONE; }	// the panel's keyboard
+		if (hit == 5)	// the panel's keyboard
+		{
+			gKeysOpen = true; gKeyPage = 0; gKeyTyped.clear();
+			fprintf(stderr, "game panel: keyboard open (%s)\n", vkbd && vkbd->ready() ? "the virtual keyboard is there" : "no virtual keyboard");
+			return G_NONE;
+		}
 		return acts[hit];
 	}
 
 	void Settings::gameKeyTap(int code, bool shift, const char* label)
 	{
 		if (code == -1) { gKeyShift ^= 1; return; }	// the shift toggle (sticky: shift then the letters)
+		if (getenv("BANANA_LOG_KEYS")) fprintf(stderr, "game panel: key %d%s\n", code, shift ? " (shift)" : "");
 		if (vkbd && vkbd->ready()) vkbd->tap(code, shift || (gKeyShift != 0 && gKeyPage == 0));
 		// what the key typed, in the line at the panel's top (the game's own screen shows it as it arrives)
 		if (code == KEY_BACKSPACE) { if (!gKeyTyped.empty()) gKeyTyped.pop_back(); }

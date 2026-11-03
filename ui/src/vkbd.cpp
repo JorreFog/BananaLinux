@@ -2,9 +2,14 @@
 // USB keyboard named "Banana on-screen keyboard", so no command has to go through its pipe and both frontends hear it
 // the same way (RetroArch's udev input, BananaFront's evdev input); the core then gets RETRO_DEVICE_KEYBOARD as from a
 // keyboard plugged in. The device exists only while the game runs (created before it starts, gone after it ends).
+//
+// The release is sent a few frames after the press by a thread of the device's own: VICE's keyboard callback only
+// keeps the key's state for process_key (once a frame) and RETRO_DEVICE_KEYBOARD is read at the frame too, so a tap
+// whose press and release came in between two frames would never be seen.
 #include "vkbd.h"
 
 #include <cerrno>
+#include <chrono>
 #include <cstdio>
 #include <cstring>
 #include <fcntl.h>
@@ -54,6 +59,8 @@ namespace banana
 			return false;
 		}
 		usleep(60000);	// (the kernel's udev node and the emulator's inotify need it to be there before the first key)
+		stop = false;
+		th = std::thread(&VirtualKeyboard::worker, this);
 		return true;
 	}
 
@@ -82,14 +89,41 @@ namespace banana
 		if (shift) { emit(KEY_LEFTSHIFT, 1); sync(); }
 		emit(code, 1);
 		sync();
-		emit(code, 0);
-		sync();
-		if (shift) { emit(KEY_LEFTSHIFT, 0); sync(); }
+		{
+			std::lock_guard<std::mutex> l(mu);
+			q.emplace_back(Pending{ code, shift }, std::chrono::steady_clock::now() + std::chrono::milliseconds(KEY_HOLD_MS));
+		}
+		cv.notify_all();
+	}
+
+	void VirtualKeyboard::worker()
+	{
+		std::unique_lock<std::mutex> l(mu);
+		while (!stop)
+		{
+			if (q.empty()) { cv.wait(l); continue; }
+			const auto due = q.front().second;
+			if (std::chrono::steady_clock::now() < due) { cv.wait_until(l, due); continue; }
+			const Pending p = q.front().first;
+			q.pop_front();
+			l.unlock();
+			emit(p.code, 0);
+			sync();
+			if (p.shift) { emit(KEY_LEFTSHIFT, 0); sync(); }
+			l.lock();
+		}
 	}
 
 	void VirtualKeyboard::close()
 	{
 		if (fd < 0) return;
+		{
+			std::lock_guard<std::mutex> l(mu);
+			stop = true;
+			q.clear();
+		}
+		cv.notify_all();
+		if (th.joinable()) th.join();
 		ioctl(fd, UI_DEV_DESTROY);
 		::close(fd);
 		fd = -1;

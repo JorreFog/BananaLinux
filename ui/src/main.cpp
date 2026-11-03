@@ -2649,9 +2649,18 @@ int main(int argc, char** argv)
 		// keyboard for. Its virtual keyboard is made before the fork, so the emulator finds it as a keyboard plugged
 		// in; and only when the game panel's screen has a touchscreen (the RG DS Plus's top one has none: its games'
 		// panel is the bottom one)
-		keysOn = panel && (sd.id == "c64" || sd.id == "zxspectrum") && input.hasTouch(1 - gameScreen) && vkbd.open();
 		if (panel && (sd.id == "c64" || sd.id == "zxspectrum"))
-			logf("on-screen keyboard: %s", keysOn ? "the game panel's Keys tile" : "not here (no touchscreen, or no /dev/uinput)");
+		{
+			if (!input.hasTouch(1 - gameScreen))
+				logf("on-screen keyboard: the game panel's screen (%d) has no touchscreen", 1 - gameScreen);
+			else
+			{
+				errno = 0;
+				keysOn = vkbd.open();
+				if (keysOn) logf("on-screen keyboard: the game panel's Keys tile (a virtual keyboard on /dev/uinput)");
+				else logf("on-screen keyboard: no virtual keyboard: %s", strerror(errno ? errno : EINVAL));
+			}
+		}
 		// Settings > Other systems > Second screen > Pokémon companion, for a Pokémon game it knows (the ROM header): RetroArch's stdout
 		// through a pipe the panel reads (held open both ways here: no end seen when RetroArch quits, and RetroArch
 		// never meets a pipe with no reader)
