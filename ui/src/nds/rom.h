@@ -37,6 +37,7 @@ namespace banana::nds
 		double ms = 0;				// time to decode (or read the cache)
 		std::string cacheFile;		// where it was (or would have been) cached
 		size_t cacheBytes = 0;
+		double townmapMs = 0;		// of ms: the region maps (townmap.h; 0 from the cache)
 	};
 
 	// Reads the ROM at path. cacheDir: where the decoded data is kept (made if missing; "" = no cache). progress
@@ -58,5 +59,5 @@ namespace banana::nds
 	uint16_t speciesIndex(const RomData& rom, uint16_t species, uint8_t form);
 
 	// the cache file's format version (bump when RomData's fields or their meaning change)
-	constexpr uint32_t ROM_CACHE_VERSION = 3;
+	constexpr uint32_t ROM_CACHE_VERSION = 4;	// (4: the region maps and spots, townmap.h)
 }

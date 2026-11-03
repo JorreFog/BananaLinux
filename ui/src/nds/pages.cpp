@@ -1941,7 +1941,10 @@ namespace banana::nds
 			{
 				Color lit = p.accent; lit.a = 0.28f;
 				be->fill(ox + sp->x * k, oy + sp->y * k, sp->w * k, sp->h * k, lit);
-				float fx = sp->tilesW ? (lv.mapX + 0.5f) / sp->tilesW : 0.5f, fy = sp->tilesH ? (lv.mapY + 0.5f) / sp->tilesH : 0.5f;
+				// (model.h MapSpot: the tile counted from the spot's own first tile - the zone's corner on GBA, the
+				// overworld matrix's on DS - and no tile size: its middle)
+				float fx = sp->tilesW ? (lv.mapX - (float)sp->tileX + 0.5f) / sp->tilesW : 0.5f;
+				float fy = sp->tilesH ? (lv.mapY - (float)sp->tileY + 0.5f) / sp->tilesH : 0.5f;
 				fx = std::min(1.0f, std::max(0.0f, fx)); fy = std::min(1.0f, std::max(0.0f, fy));
 				const float px = ox + (sp->x + fx * sp->w) * k, py = oy + (sp->y + fy * sp->h) * k;
 				const float phase = (float)std::fmod(now / 900.0, 1.0);

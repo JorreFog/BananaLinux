@@ -90,9 +90,16 @@ namespace banana::nds
 		// 2 fishing; HEADBUTT: the tree kind
 		uint8_t condition = 0; };
 	// where a zone is on a region map (the Map page, 2026-11-03): its rectangle in the map picture's pixels, and the
-	// zone's own size in tiles, so Live::mapX/mapY (the player's tile in the zone) puts the marker inside it (a route
-	// several squares long). map -1: not on any region map (indoors, a cave the map doesn't show)
-	struct MapSpot { int16_t map = -1; float x = 0, y = 0, w = 0, h = 0; uint16_t tilesW = 0, tilesH = 0; };
+	// zone's own size in tiles, so Live::mapX/mapY puts the marker inside it (a route several squares long). map -1: not
+	// on any region map (a cave the map doesn't show).
+	// Live::mapX/mapY are the overworld's own tile coordinates, not the zone's: the DS games lay their towns and routes
+	// out on one big grid (the "main matrix", 32 x 32 tiles a square) and the player's x/z count from that grid's corner.
+	// So tileX/tileY is the zone's top-left tile on that grid and tilesW/tilesH its size there: the marker is at
+	// x + (mapX - tileX + 0.5) * w / tilesW (clamped to the rectangle), the same for y (townmap.h marker()).
+	// tilesW 0: the zone isn't on the grid (a house, a Pokémon Center, a cave: mapX/mapY count from its own corner):
+	// the marker goes in the rectangle's middle (it is the town's or the place's the zone belongs to)
+	struct MapSpot { int16_t map = -1; float x = 0, y = 0, w = 0, h = 0; uint16_t tilesW = 0, tilesH = 0;
+		uint16_t tileX = 0, tileY = 0; };
 	struct Location { uint16_t id = 0; std::string name; std::vector<Encounter> encounters; MapSpot spot; };	// by map / zone id
 	// a game's own region map (the town map), read from its ROM: the picture, and the places on it as a grid of cells
 	// (a tap names one; the player's place is lit). rgba empty: the cells are drawn as squares instead
