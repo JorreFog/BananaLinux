@@ -9,7 +9,8 @@ namespace banana::gba
 	// a picture's name: Hoenn's one, or FireRed/LeafGreen's Kanto and the Sevii Islands' three
 	static std::string mapName(const nds::Game& g, int picture)
 	{
-		const bool kanto = g.id == nds::GameId::FIRERED || g.id == nds::GameId::LEAFGREEN || g.code == "BPRE" || g.code == "BPGE";
+		if (g.id == nds::GameId::HACK) return "";	// (a hack's own region: its name isn't in the ROM's map tables)
+		const bool kanto = g.id == nds::GameId::FIRERED || g.id == nds::GameId::LEAFGREEN;
 		if (!kanto) return "Hoenn";
 		static const char* const K[] = { "Kanto", "Sevii Islands 1-3", "Sevii Islands 4-5", "Sevii Islands 6-7" };
 		return picture >= 0 && picture < 4 ? K[picture] : "Sevii Islands";

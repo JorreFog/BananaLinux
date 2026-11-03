@@ -31,7 +31,7 @@ namespace banana::gba
 				{
 					nds::PageData d;
 					const auto t0 = std::chrono::steady_clock::now();
-					const nds::Game g = detectGame(t->rom->data(), t->rom->size());
+					const nds::Game g = detectGame(t->rom->data(), t->rom->size(), t->crc);	// (the CRC-32 the companion worked out)
 					if (g.id == nds::GameId::NONE) return d;
 					d.rom = readRomData(*t, g, cd);
 					if (!d.rom) return d;
@@ -69,7 +69,9 @@ namespace banana::gba
 		{
 			lastSerial = comp.serial();
 			auto t = comp.tables();
-			auto l = toLive(comp.snapshot(), t.get(), base.rom.get(), [](uint16_t i) { return itemToGen4(i); });
+			const nds::RomData& r = *base.rom;
+			auto l = toLive(comp.snapshot(), t.get(), base.rom.get(), [&r](uint16_t i) { return itemId(r, i); },
+				[&r](uint16_t s, uint16_t& nat, uint8_t& form) { return speciesOf(r, s, nat, form); });
 			if (l->valid) { session->feed(l); fed++; }
 		}
 		nds::SessionThread::Snapshot sn;

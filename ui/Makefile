@@ -124,8 +124,8 @@ tests/nds-romfile-test: tests/nds-romfile-test.cpp src/nds/romfile.cpp src/nds/r
 # the GBA Pokémon games' ROM data for the DS companion (src/gba/gen3rom.*): tests/gba-rom-test [roms dir [png dir]]
 # (or GBA_ROMS=<dir>: the player's own ROMs; without them the header checks only). tests/gba-items-gen remakes
 # src/gba/gen3items.inc from an Emerald, a FireRed and a HeartGold ROM
-GBA_ROM_SRC = src/gba/gen3rom.cpp src/gba/hacks.cpp src/gba/gen3map.cpp src/pokemon.cpp src/pokemap.cpp src/zip.cpp src/zipdir.cpp src/nds/nitro.cpp src/nds/model.cpp
-tests/gba-rom-test: tests/gba-rom-test.cpp $(GBA_ROM_SRC) src/gba/gen3rom.h src/gba/gen3items.inc src/pokemon.h src/nds/model.h
+GBA_ROM_SRC = src/gba/gen3rom.cpp src/gba/gen3live.cpp src/gba/hacks.cpp src/gba/gen3map.cpp src/pokemon.cpp src/pokemap.cpp src/zip.cpp src/zipdir.cpp src/nds/nitro.cpp src/nds/model.cpp
+tests/gba-rom-test: tests/gba-rom-test.cpp $(GBA_ROM_SRC) src/gba/gen3rom.h src/gba/gen3live.h src/gba/hacks.h src/gba/gen3items.inc src/gba/gen4names.inc src/pokemon.h src/nds/model.h
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/gba-rom-test.cpp $(GBA_ROM_SRC) -lz -lpthread
 
 tests/gba-items-gen: tests/gba-items-gen.cpp $(NDS_ROM_SRC) src/pokemon.cpp src/pokemap.cpp src/zip.cpp src/zipdir.cpp
