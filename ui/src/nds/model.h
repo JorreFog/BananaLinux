@@ -89,7 +89,22 @@ namespace banana::nds
 		// DUAL_SLOT: the GBA game in slot 2 (1 Ruby 2 Sapphire 3 Emerald 4 FireRed 5 LeafGreen); SWARM: 0 grass 1 surf
 		// 2 fishing; HEADBUTT: the tree kind
 		uint8_t condition = 0; };
-	struct Location { uint16_t id = 0; std::string name; std::vector<Encounter> encounters; };	// by map / zone id
+	// where a zone is on a region map (the Map page, 2026-11-03): its rectangle in the map picture's pixels, and the
+	// zone's own size in tiles, so Live::mapX/mapY (the player's tile in the zone) puts the marker inside it (a route
+	// several squares long). map -1: not on any region map (indoors, a cave the map doesn't show)
+	struct MapSpot { int16_t map = -1; float x = 0, y = 0, w = 0, h = 0; uint16_t tilesW = 0, tilesH = 0; };
+	struct Location { uint16_t id = 0; std::string name; std::vector<Encounter> encounters; MapSpot spot; };	// by map / zone id
+	// a game's own region map (the town map), read from its ROM: the picture, and the places on it as a grid of cells
+	// (a tap names one; the player's place is lit). rgba empty: the cells are drawn as squares instead
+	struct RegionMap
+	{
+		std::string name;						// "Hoenn", "Kanto", "Sevii Islands" ...
+		int w = 0, h = 0;						// the picture (px)
+		std::vector<uint32_t> rgba;				// 0xAARRGGBB, w * h
+		int cellX = 0, cellY = 0, cell = 8;		// where the grid's cell 0,0 is on the picture, a cell's size (px)
+		int gridW = 0, gridH = 0;
+		std::vector<uint16_t> cells;			// gridW * gridH: a place's name id (RomData::locationNames), 0xFFFF none
+	};
 	struct TrainerMon { uint16_t species = 0, item = 0; uint8_t level = 0; uint16_t moves[4] = {}; };
 	struct Trainer { uint16_t id = 0; std::string cls, name; std::vector<TrainerMon> team; bool doubleBattle = false; };
 	struct ItemData { std::string name, description; uint8_t pocket = 0; uint16_t price = 0; };
@@ -107,6 +122,7 @@ namespace banana::nds
 		std::map<uint16_t, Location> zones;		// by the game's zone/map id (encounters)
 		std::map<uint16_t, Trainer> trainers;
 		std::vector<uint16_t> tmMoves;			// TM/HM number-1 -> move
+		std::vector<RegionMap> regionMaps;		// the game's town map(s); zones[...].spot places them (empty: no Map page)
 		// sprites on demand (decoding all is slow): species, female, shiny-agnostic (the palettes are in Sprite)
 		virtual std::shared_ptr<const Sprite> sprite(uint16_t species, bool female = false, uint8_t form = 0) const = 0;
 		virtual ~RomData() = default;
