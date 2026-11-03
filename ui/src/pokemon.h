@@ -158,6 +158,7 @@ namespace banana::pkmn
 			uint32_t bagPockets = 0;			// the bag where gBagPockets (here) points, its counts not XORed (CFRU's
 												// "Expanded Bag"; 0 the save's own)
 			bool bagUnsure = false;				// the bag perhaps not the save's own, and not found elsewhere either
+			int fairyType = -1;					// the Fairy type's id (CFRU: 23; a hack that renamed ??? to FAIRY: 9); -1 none
 		};
 		Features has;
 		// what the other pages need (empty: not found)
@@ -180,6 +181,7 @@ namespace banana::pkmn
 		std::vector<std::string> leaders;	// has.leadersFromTrainers: the gym leaders, weakest team first (the order they are met)
 		std::vector<int> leaderTypes;		// and the type most of their Pokémon have, over all their battles
 		std::shared_ptr<const std::vector<uint8_t>> rom;	// the whole ROM, for the look-ups below
+		uint32_t crc = 0;					// the whole ROM's CRC-32 (Companion::open works it out once; 0 not known)
 		long dexEntries = -1, wildHeaders = -1, trainers = -1;
 		int dexStride = 32, numTrainers = 0;
 		std::string speciesName(uint16_t i) const;
@@ -223,6 +225,14 @@ namespace banana::pkmn
 	// Emerald, FireRed, LeafGreen and hacks that keep the format), found by their shape: t.learnsets
 	void findLearnsets(RomTables& t, const uint8_t* rom, size_t n);
 	RomTables findTables(const uint8_t* rom, size_t n, const GameProfile* game = nullptr);
+
+	// Emerald's own code points at its tables from literal pools, and a ROM hack patched from the English Emerald (the
+	// Glazed releases) moves a table by changing those pointers, its code staying where it was. A table's offset as the
+	// words at Emerald's places say: -1 unless every one of them holds the same ROM pointer (another game, a hack built
+	// from the decompilation, whose code is elsewhere)
+	enum class EmTable { NAT_DEX, WILD, LEARNSETS, DEX_ENTRIES, REGION_MAP, TM_COMPAT, TM_MOVES, EVOLUTIONS, TRAINERS,
+		TRAINER_CLASSES, MOVE_DESC, TYPE_EFFECT, TYPE_NAMES, MAP_GROUPS, ABILITY_DESC, NATURE_NAMES };
+	long emeraldTable(const uint8_t* rom, size_t n, EmTable t);
 
 	// pokemap.cpp: the GBA BIOS's LZ77 (type 0x10) at rom[at]: false when it isn't one, runs past the end or decodes to
 	// more than maxOut; used: the compressed bytes read
