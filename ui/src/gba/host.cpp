@@ -55,6 +55,7 @@ namespace banana::gba
 			loading = false;
 			base = load.get();
 			if (!base.rom) { loadFailed = true; return false; }
+			nds::useModernTypeChart(base.rom->game.modern);	// (Fairy and Generation VI's chart for a hack that has them)
 			auto ss = std::make_unique<nds::Session>(base.rom, base.guide, stateDir);
 			ss->setChallenge(challenge);
 			session = std::make_unique<nds::SessionThread>(std::move(ss));

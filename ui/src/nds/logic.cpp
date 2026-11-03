@@ -393,7 +393,7 @@ namespace banana::nds
 namespace banana::nds
 {
 	static const char* TYPE_NAME[NUM_TYPES] = { "Normal", "Fighting", "Flying", "Poison", "Ground", "Rock", "Bug",
-		"Ghost", "Steel", "Fire", "Water", "Grass", "Electric", "Psychic", "Ice", "Dragon", "Dark" };
+		"Ghost", "Steel", "Fire", "Water", "Grass", "Electric", "Psychic", "Ice", "Dragon", "Dark", "Fairy" };
 	static std::string typeName(Type t) { return t < NUM_TYPES ? TYPE_NAME[t] : "?"; }
 	static std::string speciesName(const RomData& rom, uint16_t s) { auto* x = sp(rom, s); return x ? x->name : "?"; }
 	static const MoveData* move(const RomData& rom, uint16_t m) { return m && m < rom.moves.size() ? &rom.moves[m] : nullptr; }
@@ -443,13 +443,13 @@ namespace banana::nds
 		// 1. coverage (25): 12 for the 17 types in general, 13 for the next fight's team
 		ScorePart cov; cov.name = "Coverage";
 		int hit = 0;
-		for (int t = 0; t < NUM_TYPES; t++)
+		for (int t = 0; t < numTypes(); t++)
 		{
 			bool se = false;
 			for (Type x : mt) if (effectiveness(x, (Type)t, NO_TYPE) > 4) se = true;
 			hit += se;
 		}
-		int part = hit * 12 / NUM_TYPES;
+		int part = hit * 12 / numTypes();
 		if (foe)
 		{
 			int beaten = 0;
@@ -469,14 +469,14 @@ namespace banana::nds
 				cov.why.push_back(w);
 			}
 		}
-		else part += hit * 13 / NUM_TYPES;
+		else part += hit * 13 / numTypes();
 		cov.score = std::min(25, part);
-		cov.why.insert(cov.why.begin(), std::to_string(hit) + " of 17 types hit super effectively");
+		cov.why.insert(cov.why.begin(), std::to_string(hit) + " of " + std::to_string(numTypes()) + " types hit super effectively");
 		// 2. defence (25): a type is a hole when at least half the team (2 or more) takes double from it and nobody
 		// resists it; 5 points each
 		ScorePart def; def.name = "Defence";
 		int holes = 0;
-		for (int t = 0; t < NUM_TYPES && !team.empty(); t++)
+		for (int t = 0; t < numTypes() && !team.empty(); t++)
 		{
 			int weak = 0, resist = 0;
 			for (auto* m : team)

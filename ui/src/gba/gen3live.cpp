@@ -7,6 +7,7 @@ namespace banana::gba
 	{
 		if (t < 9) return (nds::Type)t;					// Normal .. Steel
 		if (t >= 10 && t <= 17) return (nds::Type)(t - 1);	// Fire .. Dark (??? at 9 in Gen III)
+		if (t == 23) return nds::FAIRY;						// (CFRU's)
 		return nds::NO_TYPE;
 	}
 

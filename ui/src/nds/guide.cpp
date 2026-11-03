@@ -129,7 +129,7 @@ namespace banana::nds
 	Type typeFromName(const std::string& n)
 	{
 		static const char* names[NUM_TYPES] = { "normal", "fighting", "flying", "poison", "ground", "rock", "bug", "ghost", "steel",
-			"fire", "water", "grass", "electric", "psychic", "ice", "dragon", "dark" };
+			"fire", "water", "grass", "electric", "psychic", "ice", "dragon", "dark", "fairy" };
 		for (int i = 0; i < NUM_TYPES; i++) if (n == names[i]) return (Type)i;
 		return NO_TYPE;
 	}

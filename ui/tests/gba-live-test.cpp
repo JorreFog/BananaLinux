@@ -16,7 +16,7 @@ struct FakeRom : nds::RomData
 int main()
 {
 	CHECK(gba::ndsType(0) == nds::NORMAL && gba::ndsType(8) == nds::STEEL && gba::ndsType(9) == nds::NO_TYPE);
-	CHECK(gba::ndsType(10) == nds::FIRE && gba::ndsType(17) == nds::DARK && gba::ndsType(23) == nds::NO_TYPE);
+	CHECK(gba::ndsType(10) == nds::FIRE && gba::ndsType(17) == nds::DARK && gba::ndsType(23) == nds::FAIRY);
 	pkmn::RomTables t;
 	t.natDex.assign(412, 0);
 	t.natDex[25] = 25;

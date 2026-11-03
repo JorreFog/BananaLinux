@@ -19,7 +19,7 @@ namespace banana::nds
 	// ---- the games -------------------------------------------------------------------------------------------
 	enum class Gen { III, IV, V };	// (III: the GBA games, through ui/src/gba/: the same pages and logic, 2026-11-03)
 	enum class GameId { DIAMOND, PEARL, PLATINUM, HEARTGOLD, SOULSILVER, BLACK, WHITE, BLACK2, WHITE2,
-		RUBY, SAPPHIRE, EMERALD, FIRERED, LEAFGREEN, NONE };	// (the GBA ones last: ids are kept in caches)
+		RUBY, SAPPHIRE, EMERALD, FIRERED, LEAFGREEN, HACK, NONE };	// (HACK: a GBA ROM hack, Game::hack says which)	// (the GBA ones last: ids are kept in caches)
 	struct Game
 	{
 		GameId id = GameId::NONE;
@@ -28,7 +28,9 @@ namespace banana::nds
 		std::string title;		// English name for the companion's header ("Platinum")
 		uint8_t revision = 0;	// header 0x1E
 		bool dsiEnhanced = false;
-		int dexSize = 493;		// 386 (Gen III), 493 (Gen IV), 649 (Gen V)
+		int dexSize = 493;		// 386 (Gen III), 493 (Gen IV), 649 (Gen V); a ROM hack's own
+		bool modern = false;	// Generation VI's type chart (a ROM hack with Fairy): useModernTypeChart
+		std::string hack;		// a GBA ROM hack (GameId::HACK): its key, the guide's file name ("glazed")
 		std::string romHash;	// cache key (the ROM's SHA-1 of the header + ARM9, cheap and unique)
 	};
 	// the game in a ROM header (the first 0x200 bytes); NONE: not one of the nine
@@ -36,7 +38,13 @@ namespace banana::nds
 
 	// ---- types and moves -------------------------------------------------------------------------------------
 	enum Type : uint8_t { NORMAL, FIGHTING, FLYING, POISON, GROUND, ROCK, BUG, GHOST, STEEL, FIRE, WATER, GRASS,
-		ELECTRIC, PSYCHIC, ICE, DRAGON, DARK, NUM_TYPES, NO_TYPE = 255 };	// (the DS games' order: no ??? type here)
+		ELECTRIC, PSYCHIC, ICE, DRAGON, DARK, FAIRY, NUM_TYPES, NO_TYPE = 255 };	// (the DS games' order: no ??? type here;
+	// FAIRY only in GBA ROM hacks with Generation VI's chart: 2026-11-03)
+	// the type chart in use: off (the default) the DS games' and the GBA games'; on Generation VI's (Fairy; Steel no
+	// longer resists Ghost and Dark), for the ROM hacks that have it. Set when a game's data is read (one game at a time)
+	void useModernTypeChart(bool on);
+	bool modernTypeChart();
+	int numTypes();		// the types in the chart in use: 17, or 18 with Fairy
 	int effectiveness(Type atk, Type def1, Type def2);	// in quarters: 0, 1, 2, 4, 8, 16
 	enum class MoveCategory : uint8_t { PHYSICAL, SPECIAL, STATUS };
 	struct MoveData { std::string name; Type type = NORMAL; MoveCategory cat = MoveCategory::STATUS; uint8_t power = 0,

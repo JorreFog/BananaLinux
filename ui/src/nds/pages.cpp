@@ -46,9 +46,9 @@ namespace banana::nds
 		const char* const PX_UP[4] = { "..#..", ".###.", "#####", "....." }, * const PX_DOWN[4] = { "#####", ".###.", "..#..", "....." };
 
 		const uint32_t TYPE_COLORS[NUM_TYPES] = { 0xa8a878, 0xc03028, 0xa890f0, 0xa040a0, 0xe0c068, 0xb8a038, 0xa8b820,
-			0x705898, 0xb8b8d0, 0xf08030, 0x6890f0, 0x78c850, 0xf8d030, 0xf85888, 0x98d8d8, 0x7038f8, 0x705848 };
+			0x705898, 0xb8b8d0, 0xf08030, 0x6890f0, 0x78c850, 0xf8d030, 0xf85888, 0x98d8d8, 0x7038f8, 0x705848, 0xee99ac };
 		const char* const TYPE_NAMES[NUM_TYPES] = { "Normal", "Fighting", "Flying", "Poison", "Ground", "Rock", "Bug",
-			"Ghost", "Steel", "Fire", "Water", "Grass", "Electric", "Psychic", "Ice", "Dragon", "Dark" };
+			"Ghost", "Steel", "Fire", "Water", "Grass", "Electric", "Psychic", "Ice", "Dragon", "Dark", "Fairy" };
 		const uint32_t HP_GREEN = 0x58d068, HP_YELLOW = 0xf8c030, HP_RED = 0xf05848, EXP_BLUE = 0x58a8f8, BADGE_RED = 0xe8433a;
 		const float DEX_ROW = 36;	// the Dex list's rows (CSS px): a finger's width on the RG DS's 4" panels
 		const uint32_t GOOD = 0x58d068, BAD = 0xf06858;
@@ -2355,7 +2355,7 @@ namespace banana::nds
 		// what it takes extra damage from (and nothing from)
 		{
 			std::vector<std::pair<Type, int>> weak, immune;
-			for (int a = 0; a < NUM_TYPES; a++)
+			for (int a = 0; a < numTypes(); a++)
 			{
 				int q = effectiveness((Type)a, sp->types[0], sp->types[1]);
 				if (q > 4) weak.push_back({ (Type)a, q });

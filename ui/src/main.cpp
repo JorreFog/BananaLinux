@@ -2734,6 +2734,7 @@ int main(int argc, char** argv)
 							logf("nds companion: the unpacked game didn't appear in /data/bananads/unzipped");
 							return d;
 						}
+						nds::useModernTypeChart(false);	// (the DS games: their own chart; a GBA hack may have left Generation VI's on)
 						auto r = nds::loadRom(path, cache, &err, &info);
 						d.rom = r;
 						if (r)
