@@ -244,6 +244,7 @@ namespace banana::pkmn
 		if (m.species == 0) return false;
 		m.item = le16(part[0] + 2);
 		m.pid = pid;
+		m.otId = otid;
 		m.exp = le32(part[0] + 4);
 		m.ppBonuses = part[0][8];
 		m.friendship = part[0][9];
@@ -1277,7 +1278,7 @@ namespace banana::pkmn
 				if (L.key) wants.push_back({ s2 + L.key, 4, &keyB, false });
 				if (!dexOwn) wants.push_back({ s2 + L.dexOwned, (int)DEX_LEN, &dexB, false });
 				wants.push_back({ s1 + L.flags + 0x100, 16, &flagB, false });
-				wants.push_back({ s2, 8, &nameB, false });
+				wants.push_back({ s2, 0x12, &nameB, false });	// (the name, then the trainer id at 0x0A and the play time at 0x0E)
 			}
 			// the game's own Pokédex flags (seen, then caught), at a fixed address (a CFRU hack's)
 			if (dexOwn) wants.push_back({ has->dexRam, 2 * dexOwn, &dexB, false });
@@ -1327,7 +1328,7 @@ namespace banana::pkmn
 	void Companion::saveData(Snapshot& s)
 	{
 		// (kept from the last set when this one didn't read them, or read them where the save no longer is)
-		auto keep = [&] { s.ext = snap.ext; s.player = snap.player; s.group = snap.group; s.num = snap.num; s.x = snap.x; s.y = snap.y;
+		auto keep = [&] { s.ext = snap.ext; s.player = snap.player; s.tid = snap.tid; s.sid = snap.sid; s.playSeconds = snap.playSeconds; s.group = snap.group; s.num = snap.num; s.x = snap.x; s.y = snap.y;
 			s.mapsec = snap.mapsec; s.layout = snap.layout; s.money = snap.money; for (int i = 0; i < 5; i++) s.pockets[i] = snap.pockets[i];
 			s.bag = snap.bag; s.dexOwned = snap.dexOwned; s.dexSeen = snap.dexSeen; s.badges = snap.badges; s.champion = snap.champion; };
 		if (!wantSave) { keep(); return; }
@@ -1344,6 +1345,12 @@ namespace banana::pkmn
 		else s.mapsec = -1;
 		if (sb1h.size() >= 12) { s.group = sb1h[4]; s.num = sb1h[5]; s.x = (int16_t)le16(sb1h.data()); s.y = (int16_t)le16(sb1h.data() + 2); }
 		if (nameB.size() >= 8) s.player = decodeText(nameB.data(), 8);
+		if (nameB.size() >= 0x12)
+		{
+			s.tid = le16(nameB.data() + 0x0A);
+			s.sid = le16(nameB.data() + 0x0C);
+			s.playSeconds = (long)le16(nameB.data() + 0x0E) * 3600 + nameB[0x10] * 60 + nameB[0x11];
+		}
 		uint32_t key = keyB.size() >= 4 ? le32(keyB.data()) : 0;
 		if (moneyB.size() >= 4) s.money = (long)(le32(moneyB.data()) ^ key);
 		uint32_t b0 = L.pocket[0];
@@ -1431,6 +1438,7 @@ namespace banana::pkmn
 			if (s.inBattle && wantBattle && flags.size() >= 4 && battle.size() >= 4 * BATTLER)
 			{
 				s.doubles = flags[0] & 1;
+				s.trainerBattle = flags[0] & 8;
 				decodeBattler(battle.data(), s.lead, maxSpecies, L.battler);
 				for (int b : { 1, 3 })
 				{
@@ -1444,7 +1452,7 @@ namespace banana::pkmn
 					if (decodeParty(enemy.data() + i * PARTY, m, L)) s.foeParty.push_back(m);
 				}
 			}
-			else if (s.inBattle) { s.lead = snap.lead; s.foes = snap.foes; s.doubles = snap.doubles; s.foeParty = snap.foeParty; }	// (read in the next set)
+			else if (s.inBattle) { s.lead = snap.lead; s.foes = snap.foes; s.doubles = snap.doubles; s.trainerBattle = snap.trainerBattle; s.foeParty = snap.foeParty; }	// (read in the next set)
 			saveData(s);
 			s.error.clear();
 			errorSince = -1;

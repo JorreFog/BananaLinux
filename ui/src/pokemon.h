@@ -111,6 +111,7 @@ namespace banana::pkmn
 		uint8_t types[2] = { 255, 255 };	// in a battle (the battle's own copy); else from the ROM's table
 		bool egg = false;
 		uint32_t pid = 0, exp = 0;			// personality (gender, with the species' ratio), experience points
+		uint32_t otId = 0;					// a party member's original trainer: id | secret id << 16 (shininess)
 		// a party member's (not a battler's): its stats (HP is maxHp), IVs and EVs, friendship, which of the species'
 		// two abilities it has (1 the second)
 		uint16_t stats[5] = {};				// Attack, Defense, Speed, Sp. Atk, Sp. Def (the games' order)
@@ -251,13 +252,15 @@ namespace banana::pkmn
 		bool unknownRelease = false;	// a release of the game the companion has no profile for (nothing read)
 		std::string error;			// RetroArch's reply when it had none ("no memory map defined"...)
 		std::vector<Mon> party;
-		bool inBattle = false, doubles = false;
+		bool inBattle = false, doubles = false, trainerBattle = false;	// (trainer: gBattleTypeFlags' TRAINER bit)
 		Mon lead;					// the player's battler (battler 0)
 		std::vector<Mon> foes;		// battler 1 (and 3 in a double battle), still standing
 		std::vector<Mon> foeParty;	// the other side's party (its count and who has fainted)
 		// the save's own data (read while the Map, Bag, Dex or Guide page is open: ext)
 		bool ext = false;
 		std::string player;
+		int tid = -1, sid = -1;			// the player's trainer id and secret id (SaveBlock2 0x0A; -1 not read)
+		long playSeconds = -1;			// play time (SaveBlock2 0x0E: hours u16, minutes, seconds)
 		int group = -1, num = -1, x = 0, y = 0, mapsec = -1;	// where the player is
 		uint32_t layout = 0;		// the map's layout (its size, for the place on the region map)
 		long money = -1;
