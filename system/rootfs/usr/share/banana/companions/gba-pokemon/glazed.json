@@ -275,7 +275,7 @@
      "ace_level": 5
     }
    ],
-   "done_when": "party",
+   "done_when": "later",
    "opens": [
     "glenwood-town",
     "forest-pass"
