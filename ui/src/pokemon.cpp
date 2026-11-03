@@ -1487,7 +1487,7 @@ namespace banana::pkmn
 			k.append(x.dexOwned.begin(), x.dexOwned.end()); k.append(x.dexSeen.begin(), x.dexSeen.end());
 			return k;
 		};
-		if (key(s) != key(snap)) changed = true;
+		if (key(s) != key(snap)) { changed = true; serialNo++; }	// (the play time alone isn't a change)
 		snap = s;
 	}
 }

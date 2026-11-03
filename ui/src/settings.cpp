@@ -7,6 +7,8 @@
 #include "settings_draw.h"
 #include "theme.h"
 #include "json.h"
+#include "gba/host.h"
+#include "nds/pages.h"
 #include <fcntl.h>
 #include <sys/file.h>
 #include <algorithm>
@@ -6825,6 +6827,38 @@ namespace banana
 		gBadges.clear();
 		pkIcons.clear();
 		pkTables.reset();
+		gbaRelease();
+	}
+
+	void Settings::gbaRelease()
+	{
+		gbaPages.reset();
+		gbaHost = nullptr;
+		if (pkView == PK_NDS) pkView = PK_PARTY;
+	}
+
+	bool Settings::gbaOn() const { return gbaHost && gbaHost->ready() && companion && companion->active(); }
+
+	void Settings::gbaShow(int view)
+	{
+		static const nds::Page PAGE[] = { nds::Page::PARTY, nds::Page::BATTLE };
+		const bool mine = view == PK_PARTY || view == PK_BATTLE || view == PK_MON || view == PK_DEX || view == PK_DEXMON || view == PK_GUIDE;
+		if (!gbaOn() || !mine) { pkView = view; return; }
+		if (!gbaPages)
+		{
+			gbaPages = std::make_unique<nds::Pages>(be, gScreen, (int)std::lround(640 * s), (int)std::lround(480 * s), assets, light);
+			gbaPages->setDecoderThread(true);	// (the panel never waits on a picture's decode)
+			nds::PageData d;
+			if (gbaHost->takeData(d)) gbaPages->setData(d);
+		}
+		pkView = PK_NDS;
+		gbaPages->show(view == PK_DEX || view == PK_DEXMON ? nds::Page::DEX : view == PK_GUIDE ? nds::Page::GUIDE :
+			view == PK_BATTLE ? PAGE[1] : PAGE[0]);
+	}
+
+	void Settings::gameTouchMove(float x, float y)
+	{
+		if (pkView == PK_NDS && gbaPages) gbaPages->touchMove((int)x, (int)y, now);
 	}
 
 	bool Settings::gameUpdate(double t)
@@ -6849,13 +6883,38 @@ namespace banana
 			if (raw->gen != gSeen) changed = true;
 			if (raw->awards != awardsSeen) { awardsSeen = raw->awards; wake = true; }
 		}
+		if (gbaHost)
+		{
+			// the GBA companion in the DS companion's pages: its data once read, then the Session's newest
+			const bool was = gbaOn();
+			if (gbaHost->tick(t))
+			{
+				nds::PageData d;
+				if (gbaPages && gbaHost->takeData(d)) gbaPages->setData(d);
+				changed = true;
+			}
+			if (!was && gbaOn() && pkView != PK_GAME && pkView != PK_MAP && pkView != PK_BAG) gbaShow(pkView);	// (its pages take over)
+			if (gbaPages)
+			{
+				gbaHost->markSeen(gbaPages->takeSeen());
+				if (gbaPages->update(t)) changed = true;
+			}
+		}
 		if (companion && companion->takeChanged())
 		{
 			changed = true;
 			// a battle starting shows the battle, its end the party (unless another tab was picked meanwhile)
 			bool b = companion->snapshot().inBattle;
-			if (b && !pkBattle && pkView != PK_GAME) pkView = PK_BATTLE;
-			if (!b && pkBattle && pkView == PK_BATTLE) pkView = PK_PARTY;
+			if (pkView == PK_NDS && gbaPages)
+			{
+				if (b && !pkBattle) gbaPages->show(nds::Page::BATTLE);
+				if (!b && pkBattle && gbaPages->page() == nds::Page::BATTLE) gbaPages->show(nds::Page::PARTY);
+			}
+			else
+			{
+				if (b && !pkBattle && pkView != PK_GAME) gbaShow(PK_BATTLE);
+				if (!b && pkBattle && pkView == PK_BATTLE) pkView = PK_PARTY;
+			}
 			pkBattle = b;
 		}
 		if (gameComp && gameComp->takeChanged())
@@ -6892,6 +6951,14 @@ namespace banana
 	{
 		float lx = x / s, ly = y / s;
 		int hit = -1;
+		if (pkView == PK_NDS && gbaPages && companion && companion->active())
+		{
+			// the GBA companion's pages: theirs, all of the panel; their Back to game shows the tiles (and today's tab bar,
+			// which comes back to them)
+			const nds::Pages::Action a = down ? gbaPages->touchDown((int)x, (int)y, now) : gbaPages->touchUp((int)x, (int)y, now);
+			if (a == nds::Pages::Action::CLOSE) pkView = PK_GAME;
+			return G_NONE;
+		}
 		bool gamePage = !((gameComp && gameComp->active() && gcView != GC_GAME) || (companion && companion->active() && pkView != PK_GAME));
 		// the achievements box: a tap opens the save states there; a slot tapped twice loads it, a tap above closes it
 		if (gamePage && !gStateBase.empty() && !down && lx >= 18 && lx < 622)
@@ -6951,8 +7018,8 @@ namespace banana
 			{
 				if (!down)
 					for (int i = 0; i < PK_TABS; i++)
-						if (pkTabW[i] > 0 && lx >= pkTabX[i] && lx < pkTabX[i] + pkTabW[i]) pkView = TAB_VIEW[i];
-				companion->wantExt(pkView == PK_MAP || pkView == PK_BAG || pkView == PK_DEX || pkView == PK_DEXMON || pkView == PK_GUIDE);
+						if (pkTabW[i] > 0 && lx >= pkTabX[i] && lx < pkTabX[i] + pkTabW[i]) gbaShow(TAB_VIEW[i]);
+				companion->wantExt(pkView == PK_NDS || pkView == PK_MAP || pkView == PK_BAG || pkView == PK_DEX || pkView == PK_DEXMON || pkView == PK_GUIDE);
 				gDown = gFlash = -1;
 				return G_NONE;
 			}
@@ -6998,7 +7065,7 @@ namespace banana
 					if (tb && v == tb->mapsecNone) v = -1;
 					pkMapPick = v < 0 || v == 0xff || v == pkMapPick ? -1 : v;
 				}
-				companion->wantExt(pkView == PK_MAP || pkView == PK_BAG || pkView == PK_DEX || pkView == PK_DEXMON || pkView == PK_GUIDE);
+				companion->wantExt(pkView == PK_NDS || pkView == PK_MAP || pkView == PK_BAG || pkView == PK_DEX || pkView == PK_DEXMON || pkView == PK_GUIDE);
 				return G_NONE;
 			}
 		}
@@ -7051,6 +7118,12 @@ namespace banana
 		be->beginScreen(gScreen);
 		box("screen", false, 0, 0, 640, 480);
 		bool pk = companion && companion->active();
+		if (pk && pkView == PK_NDS && gbaPages)
+		{
+			gbaPages->draw();
+			be->endScreen();
+			return;
+		}
 		if (pk && pkView != PK_GAME)
 		{
 			pokeRender(p);
@@ -7374,7 +7447,7 @@ namespace banana
 		if (pkView == PK_BATTLE && !sn.inBattle) pkView = PK_PARTY;
 		if (pkView == PK_MON && pkMon >= (int)sn.party.size()) pkView = PK_PARTY;
 		// the save's data is read only while a page that shows it is open
-		companion->wantExt(pkView == PK_MAP || pkView == PK_BAG || pkView == PK_DEX || pkView == PK_DEXMON || pkView == PK_GUIDE);
+		companion->wantExt(pkView == PK_NDS || pkView == PK_MAP || pkView == PK_BAG || pkView == PK_DEX || pkView == PK_DEXMON || pkView == PK_GUIDE);
 		if (!sn.seen)
 		{
 			box("bubble", false, 18, 14, 604, 398);

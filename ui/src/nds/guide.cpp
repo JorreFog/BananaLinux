@@ -16,6 +16,10 @@ namespace banana::nds
 			{ GameId::SOULSILVER, "soulsilver", "IPGE", 493 }, { GameId::BLACK, "black", "IRBO", 649 },
 			{ GameId::WHITE, "white", "IRAO", 649 }, { GameId::BLACK2, "black2", "IREO", 649 },
 			{ GameId::WHITE2, "white2", "IRDO", 649 },
+			// the GBA games (2026-11-03: the same pages through ui/src/gba/; their files in gba-pokemon/)
+			{ GameId::RUBY, "ruby", "AXVE", 386 }, { GameId::SAPPHIRE, "sapphire", "AXPE", 386 },
+			{ GameId::EMERALD, "emerald", "BPEE", 386 }, { GameId::FIRERED, "firered", "BPRE", 386 },
+			{ GameId::LEAFGREEN, "leafgreen", "BPGE", 386 },
 		};
 		const GameRow* rowFor(GameId id)
 		{
@@ -114,6 +118,12 @@ namespace banana::nds
 	{
 		const char* e = getenv("BANANA_NDS_GUIDE");
 		return e && *e ? e : "/usr/share/banana/companions/nds-pokemon";
+	}
+
+	const char* gbaGuideDir()
+	{
+		const char* e = getenv("BANANA_GBA_GUIDE");
+		return e && *e ? e : "/usr/share/banana/companions/gba-pokemon";
 	}
 
 	Type typeFromName(const std::string& n)
@@ -281,6 +291,6 @@ namespace banana::nds
 	{
 		std::string f = guideFileName(game.id);
 		if (f.empty()) { if (why) *why = "not one of the nine games"; return false; }
-		return loadGuideFile(std::string(guideDir()) + "/" + f, out, game.id, why, resolver);
+		return loadGuideFile(std::string(game.gen == Gen::III ? gbaGuideDir() : guideDir()) + "/" + f, out, game.id, why, resolver);
 	}
 }

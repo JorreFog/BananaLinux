@@ -27,6 +27,9 @@
 #include <string>
 #include <vector>
 
+namespace banana::nds { class Pages; }
+namespace banana::gba { class Host; }
+
 namespace banana
 {
 	struct SPal;	// (settings_draw.h: the palette)
@@ -111,6 +114,12 @@ namespace banana
 		bool gameWake() { bool w = wake; wake = false; return w; }
 		void gameRender();
 		GameAction gameTouch(float x, float y, bool down);	// device px on the panel's screen
+		void gameTouchMove(float x, float y);				// a press moving (the GBA companion's pages scroll by drag)
+		// the GBA Pokémon companion in the DS companion's pages (gba/host.h), when the host runs one for this game:
+		// shown in place of the Party, Battle, Dex and Guide views once its data is read (Map, Bag and Game stay
+		// today's). Set before gameOpen, null after gameClose
+		gba::Host* gbaHost = nullptr;
+		void gbaRelease();	// gbaHost is going: its pages let go of it (before it does)
 		bool gameProgress(int& unlocked, int& total);			// the game's achievements, once the server said
 		// the Pokémon companion (pokemon.h), when the host runs one for this game: the party, the battle and the
 		// achievements as tabs in the panel's middle box (set before gameOpen, null after gameClose)
@@ -652,7 +661,11 @@ namespace banana
 		// seen; where the tabs were drawn (for touch); the party icons as textures, by species (+1000 the egg)
 		// Map, Bag, Dex and Guide read the save's own data (pokemon.h: Snapshot ext); the bag's pocket and page, the
 		// Pokédex's page and the entry open; the guide's look-ups (a trainer's team: a ROM search) kept by goal
-		enum { PK_PARTY, PK_BATTLE, PK_GAME, PK_MON, PK_MAP, PK_BAG, PK_DEX, PK_DEXMON, PK_GUIDE };
+		enum { PK_PARTY, PK_BATTLE, PK_GAME, PK_MON, PK_MAP, PK_BAG, PK_DEX, PK_DEXMON, PK_GUIDE, PK_NDS };
+		// PK_NDS: gbaHost's pages (their own tabs; their Back to game goes to PK_GAME, whose tab bar comes back to them)
+		std::unique_ptr<nds::Pages> gbaPages;
+		bool gbaOn() const;					// gbaHost's pages can show (its data read)
+		void gbaShow(int view);				// a tab of today's bar: its page in gbaHost's pages, or today's view
 		enum { PK_TABS = 7 };
 		int pkView = PK_PARTY, pkMon = 0, pkMonPage = 0;	// (the summary's right column: 0 the moves, 1 the stats)
 		bool pkBattle = false;

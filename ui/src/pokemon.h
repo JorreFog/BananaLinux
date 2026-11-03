@@ -286,6 +286,8 @@ namespace banana::pkmn
 		std::string requests(double nowMs);
 		void feed(const char* data, size_t n);	// RetroArch's stdout
 		bool takeChanged() { bool c = changed; changed = false; return c; }
+		// counts the Snapshots that differed from the one before (a reader of its own: takeChanged is the panel's)
+		uint64_t serial() const { return serialNo; }
 		const Snapshot& snapshot() const { return snap; }
 		std::shared_ptr<const RomTables> tables() const;	// null until read
 		// (tests: the ROM's tables from memory)
@@ -316,6 +318,7 @@ namespace banana::pkmn
 		struct Want { uint32_t addr; int len; std::vector<uint8_t>* into; bool done; };
 		std::vector<Want> wants;
 		bool changed = false;
+		uint64_t serialNo = 0;
 		void finish();
 		void saveData(Snapshot& s);
 	};
