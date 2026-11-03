@@ -101,7 +101,7 @@ install:
 	touch $(DESTDIR)/usr/share/banana/apps/files/Files.app
 
 clean:
-	rm -f banana-ui banana-leaseshim.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump tests/nds-ram-test tests/nds-logic-test tests/nds-romfile-test
+	rm -f banana-ui banana-leaseshim.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump tests/nds-ram-test tests/nds-logic-test tests/nds-romfile-test tests/gba-rom-test tests/gba-items-gen
 
 .PHONY: host install clean
 
@@ -121,6 +121,16 @@ tests/nds-rom-dump: tests/nds-rom-dump.cpp $(NDS_ROM_SRC) $(wildcard src/nds/*.h
 tests/nds-romfile-test: tests/nds-romfile-test.cpp src/nds/romfile.cpp src/nds/romfile.h src/zip.cpp src/zipdir.cpp
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/nds-romfile-test.cpp src/nds/romfile.cpp src/zip.cpp src/zipdir.cpp -lz -lpthread
 # the DS Pokémon companion's guide loader (tests/run.sh runs it)
+# the GBA Pokémon games' ROM data for the DS companion (src/gba/gen3rom.*): tests/gba-rom-test [roms dir [png dir]]
+# (or GBA_ROMS=<dir>: the player's own ROMs; without them the header checks only). tests/gba-items-gen remakes
+# src/gba/gen3items.inc from an Emerald, a FireRed and a HeartGold ROM
+GBA_ROM_SRC = src/gba/gen3rom.cpp src/pokemon.cpp src/pokemap.cpp src/zip.cpp src/zipdir.cpp src/nds/nitro.cpp src/nds/model.cpp
+tests/gba-rom-test: tests/gba-rom-test.cpp $(GBA_ROM_SRC) src/gba/gen3rom.h src/gba/gen3items.inc src/pokemon.h src/nds/model.h
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/gba-rom-test.cpp $(GBA_ROM_SRC) -lz -lpthread
+
+tests/gba-items-gen: tests/gba-items-gen.cpp $(NDS_ROM_SRC) src/pokemon.cpp src/pokemap.cpp src/zip.cpp src/zipdir.cpp
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/gba-items-gen.cpp $(NDS_ROM_SRC) src/pokemon.cpp src/pokemap.cpp src/zip.cpp src/zipdir.cpp -lz -lpthread
+
 tests/guide-test: tests/guide-test.cpp src/nds/guide.cpp src/nds/guide.h src/nds/model.h src/json.cpp
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/guide-test.cpp src/nds/guide.cpp src/json.cpp
 # the DS Pokémon companion's pages on made-up games: every page as a PNG at both sizes, and the touches (tests/run.sh runs it)
