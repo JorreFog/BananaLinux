@@ -22,3 +22,4 @@ __pycache__/
 /ui/tests/nds-rom-test
 /ui/tests/nds-rom-dump
 /ui/tests/gba-live-test
+/ui/tests/gba-pages-test

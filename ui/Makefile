@@ -101,7 +101,7 @@ install:
 	touch $(DESTDIR)/usr/share/banana/apps/files/Files.app
 
 clean:
-	rm -f banana-ui banana-leaseshim.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump tests/nds-ram-test tests/nds-logic-test tests/nds-romfile-test tests/gba-live-test
+	rm -f banana-ui banana-leaseshim.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump tests/nds-ram-test tests/nds-logic-test tests/nds-romfile-test tests/gba-live-test tests/gba-pages-test
 
 .PHONY: host install clean
 
@@ -124,6 +124,11 @@ tests/nds-romfile-test: tests/nds-romfile-test.cpp src/nds/romfile.cpp src/nds/r
 tests/guide-test: tests/guide-test.cpp src/nds/guide.cpp src/nds/guide.h src/nds/model.h src/json.cpp
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/guide-test.cpp src/nds/guide.cpp src/json.cpp
 # the DS Pokémon companion's pages on made-up games: every page as a PNG at both sizes, and the touches (tests/run.sh runs it)
+# the DS companion's pages on the five GBA games' ROMs (a look: tests/out/gba-pages; not in run.sh - needs the ROMs)
+GBA_PAGES_SRC = tests/gba-pages-test.cpp src/gba/gen3rom.cpp src/gba/gen3live.cpp src/pokemon.cpp src/pokemap.cpp src/zip.cpp src/zipdir.cpp src/nds/pages.cpp src/nds/model.cpp src/nds/logic.cpp src/nds/guide.cpp src/json.cpp src/settings_pal.cpp src/soft.cpp src/lang.cpp src/theme.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp
+tests/gba-pages-test: $(GBA_PAGES_SRC) src/nds/pages.h src/nds/model.h src/gba/gen3rom.h src/gba/gen3live.h
+	$(CXX) $(CXXFLAGS) -Isrc $(shell $(PKG_CONFIG) --cflags freetype2) -o $@ $(GBA_PAGES_SRC) $(shell $(PKG_CONFIG) --libs freetype2 zlib) -lpthread
+
 NDS_PAGES_SRC = tests/nds-pages-test.cpp src/nds/pages.cpp src/nds/model.cpp src/settings_pal.cpp src/soft.cpp src/lang.cpp src/theme.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp
 tests/nds-pages-test: $(NDS_PAGES_SRC) tests/nds-fixture.h src/nds/pages.h src/nds/model.h
 	$(CXX) $(CXXFLAGS) -Isrc $(shell $(PKG_CONFIG) --cflags freetype2) -o $@ $(NDS_PAGES_SRC) $(shell $(PKG_CONFIG) --libs freetype2 zlib) -lpthread
