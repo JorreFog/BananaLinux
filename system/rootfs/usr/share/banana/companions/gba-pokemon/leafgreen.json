@@ -11,372 +11,271 @@
  ],
  "places": {
   "pallet-town": {
-   "name": "PALLET TOWN",
-   "zone": 88
+   "name": "Pallet Town"
   },
   "route-1": {
-   "name": "ROUTE 1",
-   "zone": 101
+   "name": "Route 1"
   },
   "viridian-city": {
-   "name": "VIRIDIAN CITY",
-   "zone": 89
+   "name": "Viridian City"
   },
   "route-22": {
-   "name": "ROUTE 22",
-   "zone": 122
+   "name": "Route 22"
   },
   "pewter-city": {
-   "name": "PEWTER CITY",
-   "zone": 90
+   "name": "Pewter City"
   },
   "route-2": {
-   "name": "ROUTE 2",
-   "zone": 102
+   "name": "Route 2"
   },
   "viridian-forest": {
-   "name": "VIRIDIAN FOREST",
-   "zone": 126
+   "name": "Viridian Forest"
   },
   "mt-moon": {
-   "name": "MT. MOON",
-   "zone": 127
+   "name": "Mt. Moon"
   },
   "route-3": {
-   "name": "ROUTE 3",
-   "zone": 103
+   "name": "Route 3"
   },
   "route-4": {
-   "name": "ROUTE 4",
-   "zone": 99,
-   "zones": [
-    104
-   ]
+   "name": "Route 4"
   },
   "cerulean-city": {
-   "name": "CERULEAN CITY",
-   "zone": 91
+   "name": "Cerulean City"
   },
   "route-24": {
-   "name": "ROUTE 24",
-   "zone": 124
+   "name": "Route 24"
   },
   "route-25": {
-   "name": "ROUTE 25",
-   "zone": 125
+   "name": "Route 25"
   },
   "route-5": {
-   "name": "ROUTE 5",
-   "zone": 105
+   "name": "Route 5"
   },
   "underground-path": {
-   "name": "UNDERGROUND PATH",
-   "zone": 129,
-   "zones": [
-    130
-   ]
+   "name": "Underground Path"
   },
   "route-6": {
-   "name": "ROUTE 6",
-   "zone": 106
+   "name": "Route 6"
   },
   "vermilion-city": {
-   "name": "VERMILION CITY",
-   "zone": 93
+   "name": "Vermilion City"
   },
   "s-s-anne": {
-   "name": "S.S. ANNE",
-   "zone": 128
+   "name": "S.S. Anne"
   },
   "digletts-cave": {
-   "name": "DIGLETT’S CAVE",
-   "zone": 131
+   "name": "Diglett’s Cave"
   },
   "route-11": {
-   "name": "ROUTE 11",
-   "zone": 111
+   "name": "Route 11"
   },
   "rock-tunnel": {
-   "name": "ROCK TUNNEL",
-   "zone": 138
+   "name": "Rock Tunnel"
   },
   "route-9": {
-   "name": "ROUTE 9",
-   "zone": 109
+   "name": "Route 9"
   },
   "route-10": {
-   "name": "ROUTE 10",
-   "zone": 100,
-   "zones": [
-    110
-   ]
+   "name": "Route 10"
   },
   "lavender-town": {
-   "name": "LAVENDER TOWN",
-   "zone": 92
+   "name": "Lavender Town"
   },
   "pokemon-tower": {
-   "name": "POKéMON TOWER",
-   "zone": 140
+   "name": "Pokémon Tower"
   },
   "celadon-city": {
-   "name": "CELADON CITY",
-   "zone": 94
+   "name": "Celadon City"
   },
   "route-8": {
-   "name": "ROUTE 8",
-   "zone": 108
+   "name": "Route 8"
   },
   "route-7": {
-   "name": "ROUTE 7",
-   "zone": 107
+   "name": "Route 7"
   },
   "rocket-hideout": {
-   "name": "ROCKET HIDEOUT",
-   "zone": 133
+   "name": "Rocket Hideout"
   },
   "route-12": {
-   "name": "ROUTE 12",
-   "zone": 112
+   "name": "Route 12"
   },
   "route-16": {
-   "name": "ROUTE 16",
-   "zone": 116
+   "name": "Route 16"
   },
   "fuchsia-city": {
-   "name": "FUCHSIA CITY",
-   "zone": 95
+   "name": "Fuchsia City"
   },
   "route-13": {
-   "name": "ROUTE 13",
-   "zone": 113
+   "name": "Route 13"
   },
   "route-14": {
-   "name": "ROUTE 14",
-   "zone": 114
+   "name": "Route 14"
   },
   "route-15": {
-   "name": "ROUTE 15",
-   "zone": 115
+   "name": "Route 15"
   },
   "route-17": {
-   "name": "ROUTE 17",
-   "zone": 117
+   "name": "Route 17"
   },
   "route-18": {
-   "name": "ROUTE 18",
-   "zone": 118
+   "name": "Route 18"
   },
   "safari-zone": {
-   "name": "SAFARI ZONE",
-   "zone": 136
+   "name": "Safari Zone"
   },
   "silph-co": {
-   "name": "SILPH CO.",
-   "zone": 134
+   "name": "Silph Co."
   },
   "saffron-city": {
-   "name": "SAFFRON CITY",
-   "zone": 98
+   "name": "Saffron City"
   },
   "cinnabar-island": {
-   "name": "CINNABAR ISLAND",
-   "zone": 96
+   "name": "Cinnabar Island"
   },
   "route-19": {
-   "name": "ROUTE 19",
-   "zone": 119
+   "name": "Route 19"
   },
   "route-20": {
-   "name": "ROUTE 20",
-   "zone": 120
+   "name": "Route 20"
   },
   "seafoam-islands": {
-   "name": "SEAFOAM ISLANDS",
-   "zone": 139
+   "name": "Seafoam Islands"
   },
   "route-21": {
-   "name": "ROUTE 21",
-   "zone": 121
+   "name": "Route 21"
   },
   "pokemon-mansion": {
-   "name": "POKéMON MANSION",
-   "zone": 135
+   "name": "Pokémon Mansion"
   },
   "one-island": {
-   "name": "ONE ISLAND",
-   "zone": 143
+   "name": "One Island"
   },
   "kindle-road": {
-   "name": "KINDLE ROAD",
-   "zone": 150
+   "name": "Kindle Road"
   },
   "treasure-beach": {
-   "name": "TREASURE BEACH",
-   "zone": 151
+   "name": "Treasure Beach"
   },
   "mt-ember": {
-   "name": "MT. EMBER",
-   "zone": 175
+   "name": "Mt. Ember"
   },
   "two-island": {
-   "name": "TWO ISLAND",
-   "zone": 144
+   "name": "Two Island"
   },
   "cape-brink": {
-   "name": "CAPE BRINK",
-   "zone": 152
+   "name": "Cape Brink"
   },
   "three-island": {
-   "name": "THREE ISLAND",
-   "zone": 145
+   "name": "Three Island"
   },
   "bond-bridge": {
-   "name": "BOND BRIDGE",
-   "zone": 153
+   "name": "Bond Bridge"
   },
   "berry-forest": {
-   "name": "BERRY FOREST",
-   "zone": 176
+   "name": "Berry Forest"
   },
   "three-isle-port": {
-   "name": "THREE ISLE PORT",
-   "zone": 154
+   "name": "Three Isle Port"
   },
   "route-23": {
-   "name": "ROUTE 23",
-   "zone": 123
+   "name": "Route 23"
   },
   "victory-road": {
-   "name": "VICTORY ROAD",
-   "zone": 132
+   "name": "Victory Road"
   },
   "indigo-plateau": {
-   "name": "INDIGO PLATEAU",
-   "zone": 97
+   "name": "Indigo Plateau"
   },
   "pokemon-league": {
-   "name": "POKéMON LEAGUE",
-   "zone": 137
+   "name": "Pokémon League"
   },
   "five-island": {
-   "name": "FIVE ISLAND",
-   "zone": 147
+   "name": "Five Island"
   },
   "four-island": {
-   "name": "FOUR ISLAND",
-   "zone": 146
+   "name": "Four Island"
   },
   "icefall-cave": {
-   "name": "ICEFALL CAVE",
-   "zone": 177
+   "name": "Icefall Cave"
   },
   "five-isle-meadow": {
-   "name": "FIVE ISLE MEADOW",
-   "zone": 161
+   "name": "Five Isle Meadow"
   },
   "memorial-pillar": {
-   "name": "MEMORIAL PILLAR",
-   "zone": 162
+   "name": "Memorial Pillar"
   },
   "resort-gorgeous": {
-   "name": "RESORT GORGEOUS",
-   "zone": 159
+   "name": "Resort Gorgeous"
   },
   "water-labyrinth": {
-   "name": "WATER LABYRINTH",
-   "zone": 160
+   "name": "Water Labyrinth"
   },
   "lost-cave": {
-   "name": "LOST CAVE",
-   "zone": 181
+   "name": "Lost Cave"
   },
   "six-island": {
-   "name": "SIX ISLAND",
-   "zone": 149
+   "name": "Six Island"
   },
   "dotted-hole": {
-   "name": "DOTTED HOLE",
-   "zone": 180
+   "name": "Dotted Hole"
   },
   "pattern-bush": {
-   "name": "PATTERN BUSH",
-   "zone": 182
+   "name": "Pattern Bush"
   },
   "ruin-valley": {
-   "name": "RUIN VALLEY",
-   "zone": 166
+   "name": "Ruin Valley"
   },
   "water-path": {
-   "name": "WATER PATH",
-   "zone": 165
+   "name": "Water Path"
   },
   "green-path": {
-   "name": "GREEN PATH",
-   "zone": 164
+   "name": "Green Path"
   },
   "outcast-island": {
-   "name": "OUTCAST ISLAND",
-   "zone": 163
+   "name": "Outcast Island"
   },
   "altering-cave": {
-   "name": "ALTERING CAVE",
-   "zone": 183
+   "name": "Altering Cave"
   },
   "seven-island": {
-   "name": "SEVEN ISLAND",
-   "zone": 148
+   "name": "Seven Island"
   },
   "trainer-tower": {
-   "name": "TRAINER TOWER",
-   "zone": 167,
-   "zones": [
-    179
-   ]
+   "name": "Trainer Tower"
   },
   "canyon-entrance": {
-   "name": "CANYON ENTRANCE",
-   "zone": 168
+   "name": "Canyon Entrance"
   },
   "sevault-canyon": {
-   "name": "SEVAULT CANYON",
-   "zone": 169
+   "name": "Sevault Canyon"
   },
   "tanoby-ruins": {
-   "name": "TANOBY RUINS",
-   "zone": 170
+   "name": "Tanoby Ruins"
   },
   "rocket-warehouse": {
-   "name": "ROCKET WAREHOUSE",
-   "zone": 178
+   "name": "Rocket Warehouse"
   },
   "power-plant": {
-   "name": "POWER PLANT",
-   "zone": 142
+   "name": "Power Plant"
   },
   "cerulean-cave": {
-   "name": "CERULEAN CAVE",
-   "zone": 141
+   "name": "Cerulean Cave"
   },
   "celadon-dept": {
-   "name": "CELADON DEPT.",
-   "zone": 196
+   "name": "Celadon Dept."
   },
   "tanoby-key": {
-   "name": "TANOBY KEY",
-   "zone": 186
+   "name": "Tanoby Key"
   },
   "tanoby-chambers": {
-   "name": "TANOBY CHAMBERS",
-   "zone": 184
+   "name": "Tanoby Ruins"
   },
   "navel-rock": {
-   "name": "NAVEL ROCK",
-   "zone": 174
+   "name": "Navel Rock"
   },
   "three-isle-path": {
-   "name": "THREE ISLE PATH",
-   "zone": 185
+   "name": "Three Isle Path"
   }
  },
  "milestones": [

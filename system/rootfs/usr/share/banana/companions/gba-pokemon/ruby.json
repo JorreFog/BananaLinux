@@ -12,277 +12,196 @@
  ],
  "places": {
   "magma-hideout": {
-   "name": "MAGMA HIDEOUT",
-   "zone": 66
+   "name": "Magma Hideout"
   },
   "route-103": {
-   "name": "ROUTE 103",
-   "zone": 18
+   "name": "Route 103"
   },
   "littleroot-town": {
-   "name": "LITTLEROOT TOWN",
-   "zone": 0
+   "name": "Littleroot Town"
   },
   "route-101": {
-   "name": "ROUTE 101",
-   "zone": 16
+   "name": "Route 101"
   },
   "oldale-town": {
-   "name": "OLDALE TOWN",
-   "zone": 1
+   "name": "Oldale Town"
   },
   "petalburg-woods": {
-   "name": "PETALBURG WOODS",
-   "zone": 59
+   "name": "Petalburg Woods"
   },
   "route-102": {
-   "name": "ROUTE 102",
-   "zone": 17
+   "name": "Route 102"
   },
   "petalburg-city": {
-   "name": "PETALBURG CITY",
-   "zone": 7
+   "name": "Petalburg City"
   },
   "route-104": {
-   "name": "ROUTE 104",
-   "zone": 19
+   "name": "Route 104"
   },
   "rustboro-city": {
-   "name": "RUSTBORO CITY",
-   "zone": 10
+   "name": "Rustboro City"
   },
   "rusturf-tunnel": {
-   "name": "RUSTURF TUNNEL",
-   "zone": 60
+   "name": "Rusturf Tunnel"
   },
   "route-116": {
-   "name": "ROUTE 116",
-   "zone": 31
+   "name": "Route 116"
   },
   "dewford-town": {
-   "name": "DEWFORD TOWN",
-   "zone": 2
+   "name": "Dewford Town"
   },
   "route-105": {
-   "name": "ROUTE 105",
-   "zone": 20
+   "name": "Route 105"
   },
   "route-106": {
-   "name": "ROUTE 106",
-   "zone": 21
+   "name": "Route 106"
   },
   "granite-cave": {
-   "name": "GRANITE CAVE",
-   "zone": 55
+   "name": "Granite Cave"
   },
   "route-107": {
-   "name": "ROUTE 107",
-   "zone": 22
+   "name": "Route 107"
   },
   "route-108": {
-   "name": "ROUTE 108",
-   "zone": 23
+   "name": "Route 108"
   },
   "route-109": {
-   "name": "ROUTE 109",
-   "zone": 24
+   "name": "Route 109"
   },
   "slateport-city": {
-   "name": "SLATEPORT CITY",
-   "zone": 8
+   "name": "Slateport City"
   },
   "route-110": {
-   "name": "ROUTE 110",
-   "zone": 25
+   "name": "Route 110"
   },
   "mauville-city": {
-   "name": "MAUVILLE CITY",
-   "zone": 9
+   "name": "Mauville City"
   },
   "route-117": {
-   "name": "ROUTE 117",
-   "zone": 32
+   "name": "Route 117"
   },
   "verdanturf-town": {
-   "name": "VERDANTURF TOWN",
-   "zone": 5
+   "name": "Verdanturf Town"
   },
   "route-111": {
-   "name": "ROUTE 111",
-   "zone": 26
+   "name": "Route 111"
   },
   "route-112": {
-   "name": "ROUTE 112",
-   "zone": 27
+   "name": "Route 112"
   },
   "route-113": {
-   "name": "ROUTE 113",
-   "zone": 28
+   "name": "Route 113"
   },
   "fallarbor-town": {
-   "name": "FALLARBOR TOWN",
-   "zone": 4
+   "name": "Fallarbor Town"
   },
   "route-114": {
-   "name": "ROUTE 114",
-   "zone": 29
+   "name": "Route 114"
   },
   "meteor-falls": {
-   "name": "METEOR FALLS",
-   "zone": 63,
-   "zones": [
-    64
-   ]
+   "name": "Meteor Falls"
   },
   "mt-chimney": {
-   "name": "MT. CHIMNEY",
-   "zone": 56
+   "name": "Mt. Chimney"
   },
   "jagged-pass": {
-   "name": "JAGGED PASS",
-   "zone": 76,
-   "zones": [
-    77
-   ]
+   "name": "Jagged Pass"
   },
   "lavaridge-town": {
-   "name": "LAVARIDGE TOWN",
-   "zone": 3
+   "name": "Lavaridge Town"
   },
   "fiery-path": {
-   "name": "FIERY PATH",
-   "zone": 74,
-   "zones": [
-    75
-   ]
+   "name": "Fiery Path"
   },
   "route-119": {
-   "name": "ROUTE 119",
-   "zone": 34
+   "name": "Route 119"
   },
   "route-118": {
-   "name": "ROUTE 118",
-   "zone": 33
+   "name": "Route 118"
   },
   "fortree-city": {
-   "name": "FORTREE CITY",
-   "zone": 11
+   "name": "Fortree City"
   },
   "route-120": {
-   "name": "ROUTE 120",
-   "zone": 35
+   "name": "Route 120"
   },
   "route-121": {
-   "name": "ROUTE 121",
-   "zone": 36
+   "name": "Route 121"
   },
   "safari-zone": {
-   "name": "SAFARI ZONE",
-   "zone": 57
+   "name": "Safari Zone"
   },
   "lilycove-city": {
-   "name": "LILYCOVE CITY",
-   "zone": 12
+   "name": "Lilycove City"
   },
   "route-122": {
-   "name": "ROUTE 122",
-   "zone": 37
+   "name": "Route 122"
   },
   "mt-pyre": {
-   "name": "MT. PYRE",
-   "zone": 65
+   "name": "Mt. Pyre"
   },
   "route-124": {
-   "name": "ROUTE 124",
-   "zone": 39
+   "name": "Route 124"
   },
   "mossdeep-city": {
-   "name": "MOSSDEEP CITY",
-   "zone": 13
+   "name": "Mossdeep City"
   },
   "route-125": {
-   "name": "ROUTE 125",
-   "zone": 40
+   "name": "Route 125"
   },
   "route-127": {
-   "name": "ROUTE 127",
-   "zone": 42
+   "name": "Route 127"
   },
   "shoal-cave": {
-   "name": "SHOAL CAVE",
-   "zone": 67
+   "name": "Shoal Cave"
   },
   "seafloor-cavern": {
-   "name": "SEAFLOOR CAVERN",
-   "zone": 68
+   "name": "Seafloor Cavern"
   },
   "route-126": {
-   "name": "ROUTE 126",
-   "zone": 41
+   "name": "Route 126"
   },
   "route-128": {
-   "name": "ROUTE 128",
-   "zone": 43
+   "name": "Route 128"
   },
   "underwater": {
-   "name": "UNDERWATER",
-   "zone": 50,
-   "zones": [
-    51,
-    52,
-    53,
-    54,
-    69,
-    79
-   ]
+   "name": "Underwater"
   },
   "cave-of-origin": {
-   "name": "CAVE OF ORIGIN",
-   "zone": 72
+   "name": "Cave Of Origin"
   },
   "sootopolis-city": {
-   "name": "SOOTOPOLIS CITY",
-   "zone": 14
+   "name": "Sootopolis City"
   },
   "victory-road": {
-   "name": "VICTORY ROAD",
-   "zone": 70
+   "name": "Victory Road"
   },
   "ever-grande-city": {
-   "name": "EVER GRANDE CITY",
-   "zone": 15
+   "name": "Ever Grande City"
   },
   "sky-pillar": {
-   "name": "SKY PILLAR",
-   "zone": 85
+   "name": "Sky Pillar"
   },
   "battle-tower": {
-   "name": "BATTLE TOWER",
-   "zone": 58
+   "name": "Battle Tower"
   },
   "sealed-chamber": {
-   "name": "SEALED CHAMBER",
-   "zone": 78
+   "name": "Sealed Chamber"
   },
   "route-131": {
-   "name": "ROUTE 131",
-   "zone": 46
+   "name": "Route 131"
   },
   "abandoned-ship": {
-   "name": "ABANDONED SHIP",
-   "zone": 61
+   "name": "Abandoned Ship"
   },
   "mirage-island": {
-   "name": "MIRAGE ISLAND",
-   "zone": 71
+   "name": "Route 130"
   },
   "new-mauville": {
-   "name": "NEW MAUVILLE",
-   "zone": 62
+   "name": "New Mauville"
   },
   "southern-island": {
-   "name": "SOUTHERN ISLAND",
-   "zone": 73
+   "name": "Southern Island"
   }
  },
  "milestones": [

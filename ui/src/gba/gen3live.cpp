@@ -25,6 +25,13 @@ namespace banana::gba
 		o.level = m.level;
 		o.friendship = m.friendship;
 		o.nick = m.nick;
+		// (a Pokémon not nicknamed has its species' name in the game's capitals: as the DS pages write it)
+		if (rom && o.species && o.species < rom->species.size())
+		{
+			std::string up = rom->species[o.species].name;
+			for (char& c : up) if (c >= 'a' && c <= 'z') c = (char)(c - 'a' + 'A');
+			if (m.nick == up) o.nick = rom->species[o.species].name;
+		}
 		o.otId = (uint16_t)(m.otId & 0xffff);
 		o.otSecret = (uint16_t)(m.otId >> 16);
 		o.exp = m.exp;

@@ -621,6 +621,11 @@ namespace banana::gba
 		for (auto& i : out->items) i.name = nameCase(i.name);
 		for (auto& x : out->abilities) x = nameCase(x);
 		for (auto& x : out->natures) x = nameCase(x);
+		// Ruby and Sapphire name their villains' hideout "{EVIL_TEAM} HIDEOUT": the version's team
+		for (auto& x : out->locationNames)
+			if (x == " HIDEOUT" || x == "HIDEOUT") x = game.id == GameId::RUBY ? "MAGMA HIDEOUT" : game.id == GameId::SAPPHIRE ? "AQUA HIDEOUT" : x;
+		for (auto& z : out->zones)
+			if (z.second.name == " HIDEOUT" || z.second.name == "HIDEOUT") z.second.name = game.id == GameId::RUBY ? "MAGMA HIDEOUT" : game.id == GameId::SAPPHIRE ? "AQUA HIDEOUT" : z.second.name;
 		for (auto& x : out->locationNames) x = nameCase(x);
 		for (auto& z : out->zones) z.second.name = nameCase(z.second.name);
 		for (auto& tr : out->trainers) { tr.second.cls = nameCase(tr.second.cls); tr.second.name = nameCase(tr.second.name); }

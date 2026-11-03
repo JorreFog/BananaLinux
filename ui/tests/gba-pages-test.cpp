@@ -92,6 +92,8 @@ int main(int argc, char** argv)
 		if (!nds::loadGuide(r->game, *gd, &why, &res)) fprintf(stderr, "  no guide: %s\n", why.c_str());
 		else fprintf(stderr, "  guide: %zu milestones, %zu steps, %zu secrets%s%s\n", gd->milestones.size(), gd->steps.size(),
 			gd->secrets.size(), why.empty() ? "" : "; ", why.c_str());
+		for (const auto& u : gd->unresolved) fprintf(stderr, "  unresolved place: %s\n", u.c_str());
+		CHECK(gd->unresolved.empty() || gd->milestones.empty(), "%s: %zu places not in the ROM", g.title.c_str(), gd->unresolved.size());
 		// the first zone with grass encounters: the player is there, a wild one of it in battle
 		auto live = std::make_shared<nds::Live>();
 		live->valid = true;

@@ -6852,6 +6852,7 @@ namespace banana
 			if (gbaHost->takeData(d)) gbaPages->setData(d);
 		}
 		pkView = PK_NDS;
+		companion->wantExt(true);	// (the pages need the save's data from the start: the place, the bag, the Pokédex)
 		gbaPages->show(view == PK_DEX || view == PK_DEXMON ? nds::Page::DEX : view == PK_GUIDE ? nds::Page::GUIDE :
 			view == PK_BATTLE ? PAGE[1] : PAGE[0]);
 	}
