@@ -147,11 +147,11 @@ namespace banana::nds
 		atk = std::max(1, atk);
 		def = std::max(1, def);
 		const int lv = 2 * a.level / 5 + 2;
-		int base = g == Gen::IV ? (lv * power * atk / 50) / def : (lv * power * atk / def) / 50;
+		int base = g != Gen::V ? (lv * power * atk / 50) / def : (lv * power * atk / def) / 50;
 		const bool burn = phys && (a.status & 0x10) && a.ability != A_GUTS;
 		const int wx = (w == Weather::RAIN && t == WATER) || (w == Weather::SUN && t == FIRE) ? 3 :
 			(w == Weather::RAIN && t == FIRE) || (w == Weather::SUN && t == WATER) ? 1 : 2;	// halves
-		if (g == Gen::IV)
+		if (g != Gen::V)
 		{
 			if (burn) base /= 2;
 			base = base * wx / 2;
@@ -167,7 +167,7 @@ namespace banana::nds
 		auto roll = [&](int rnd) -> int
 		{
 			int x = base * rnd / 100;
-			if (g == Gen::IV)
+			if (g != Gen::V)
 			{
 				if (a.item == I_LIFE_ORB) x = x * 13 / 10;
 				x = x * stab4096 / 4096;
@@ -227,14 +227,14 @@ namespace banana::nds
 		case I_GREAT: case I_SAFARI: case I_SPORT: b = 1.5f; break;
 		case I_NET: b = (t1 == WATER || t1 == BUG || t2 == WATER || t2 == BUG) ? 3 : 1; break;
 		case I_DIVE: b = c.surfingOrFishing ? 3.5f : 1; break;
-		case I_NEST: b = std::max(1.0f, ((g == Gen::IV ? 40 : 41) - wild.level) / 10.0f); break;
+		case I_NEST: b = std::max(1.0f, ((g != Gen::V ? 40 : 41) - wild.level) / 10.0f); break;
 		case I_REPEAT: b = c.caughtBefore ? 3 : 1; break;
 		case I_TIMER:
 			// turns passed: Gen IV (turns + 10) / 10, Gen V 1 + turns * 1229/4096; both at most 4
-			b = g == Gen::IV ? std::min(4.0f, (c.turn - 1 + 10) / 10.0f) : std::min(4.0f, 1 + (c.turn - 1) * 1229 / 4096.0f);
+			b = g != Gen::V ? std::min(4.0f, (c.turn - 1 + 10) / 10.0f) : std::min(4.0f, 1 + (c.turn - 1) * 1229 / 4096.0f);
 			break;
 		case I_DUSK: b = (c.time == TimeOfDay::NIGHT || c.cave) ? 3.5f : 1; break;
-		case I_QUICK: b = c.turn <= 1 ? (g == Gen::IV ? 4 : 5) : 1; break;
+		case I_QUICK: b = c.turn <= 1 ? (g != Gen::V ? 4 : 5) : 1; break;
 		case I_PARK: sure = true; break;
 		case I_FAST: b = s->base[3] >= 100 ? 4 : 1; break;
 		case I_LEVEL:
@@ -249,8 +249,8 @@ namespace banana::nds
 		const uint32_t st = wild.status;
 		const bool sleepFreeze = (st & 7) || (st & 0x20);
 		const bool other = st & (0x08 | 0x10 | 0x40 | 0x80);
-		const float sm = sleepFreeze ? (g == Gen::IV ? 2.0f : 2.5f) : other ? 1.5f : 1.0f;
-		if (g == Gen::IV)
+		const float sm = sleepFreeze ? (g != Gen::V ? 2.0f : 2.5f) : other ? 1.5f : 1.0f;
+		if (g != Gen::V)
 		{
 			int a = (int)((3 * M - 2 * H) * s->catchRate * b / (3 * M));
 			a = (int)(a * sm);
@@ -325,7 +325,7 @@ namespace banana::nds
 	int tmNumber(Gen g, uint16_t it)
 	{
 		if (it >= 328 && it <= 419) return it - 327;				// TM01..TM92
-		if (g == Gen::IV) return it >= 420 && it <= 427 ? it - 327 : 0;	// HM01..08 = 93..100
+		if (g != Gen::V) return it >= 420 && it <= 427 ? it - 327 : 0;	// HM01..08 = 93..100
 		if (it >= 618 && it <= 620) return it - 618 + 93;			// Gen V TM93..95
 		if (it >= 420 && it <= 425) return it - 420 + 96;			// Gen V HM01..06 = 96..101
 		return 0;
@@ -755,7 +755,7 @@ namespace banana::nds
 		{
 			const Mon& w = b.foes[0].mon;
 			std::string t;
-			if (!(w.status & 0xFF)) t = g == Gen::IV ? "sleep or freeze doubles it" : "sleep or freeze: x2.5";
+			if (!(w.status & 0xFF)) t = g != Gen::V ? "sleep or freeze doubles it" : "sleep or freeze: x2.5";
 			if (w.hp * 2 > w.maxHp) t += std::string(t.empty() ? "" : "; ") + "lower its HP";
 			a.catching[0].tip = a.catching[0].tip.empty() ? t : a.catching[0].tip + "; " + t;
 		}

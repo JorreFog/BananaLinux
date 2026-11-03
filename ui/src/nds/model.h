@@ -17,17 +17,18 @@
 namespace banana::nds
 {
 	// ---- the games -------------------------------------------------------------------------------------------
-	enum class Gen { IV, V };
-	enum class GameId { DIAMOND, PEARL, PLATINUM, HEARTGOLD, SOULSILVER, BLACK, WHITE, BLACK2, WHITE2, NONE };
+	enum class Gen { III, IV, V };	// (III: the GBA games, through ui/src/gba/: the same pages and logic, 2026-11-03)
+	enum class GameId { DIAMOND, PEARL, PLATINUM, HEARTGOLD, SOULSILVER, BLACK, WHITE, BLACK2, WHITE2,
+		RUBY, SAPPHIRE, EMERALD, FIRERED, LEAFGREEN, NONE };	// (the GBA ones last: ids are kept in caches)
 	struct Game
 	{
 		GameId id = GameId::NONE;
 		Gen gen = Gen::IV;
-		std::string code;		// the header's game code (0x0C, 4 letters: CPUE, IPKE, IREO ...)
+		std::string code;		// the header's game code (DS 0x0C, GBA 0xAC; 4 letters: CPUE, IPKE, IREO, BPEE ...)
 		std::string title;		// English name for the companion's header ("Platinum")
 		uint8_t revision = 0;	// header 0x1E
 		bool dsiEnhanced = false;
-		int dexSize = 493;		// 493 (Gen IV), 649 (Gen V)
+		int dexSize = 493;		// 386 (Gen III), 493 (Gen IV), 649 (Gen V)
 		std::string romHash;	// cache key (the ROM's SHA-1 of the header + ARM9, cheap and unique)
 	};
 	// the game in a ROM header (the first 0x200 bytes); NONE: not one of the nine
