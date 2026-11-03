@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Validate the DS Pokemon companion's guide data (system/rootfs/usr/share/banana/companions/nds-pokemon/<game>.json).
+"""Validate the Pokemon companions' guide data: the DS games' (system/rootfs/usr/share/banana/companions/nds-pokemon/<game>.json)
+and the GBA games' (.../companions/gba-pokemon/<game>.json, the same schema: the GBA companion reuses the DS pages).
 
-  python3 nds-validate.py                 every nds-pokemon/*.json
+  python3 nds-validate.py                 every nds-pokemon/*.json and gba-pokemon/*.json
   python3 nds-validate.py a.json ...      those files
   -q                                      only failures and the summary
   --stats                                 entry counts per file (and the places whose game id is still unknown)
@@ -21,13 +22,15 @@ Comments (// and /* */) and trailing commas are allowed (ui/src/json.cpp).
 Top level
   schema        1
   kind          "nds-pokemon-guide"
-  game          diamond | pearl | platinum | heartgold | soulsilver | black | white | black2 | white2
-  code          the header's game code: ADAE APAE CPUE IPKE IPGE IRBO IRAO IREO IRDO (must fit game)
+  game          diamond | pearl | platinum | heartgold | soulsilver | black | white | black2 | white2 (nds-pokemon/)
+                ruby | sapphire | emerald | firered | leafgreen (gba-pokemon/, Gen III: national numbers up to 386)
+  code          the header's game code: ADAE APAE CPUE IPKE IPGE IRBO IRAO IREO IRDO; AXVE AXPE BPEE BPRE BPGE (must fit game)
   title         the game's English name ("Pokemon Platinum")
   revision      this data file's revision (integer, bump when you change facts)
   sources       list of the sites/documents the file draws on (a line each); every entry also names its own
   places        { key: { "name": "Oreburgh City", "zone": 169 | null, "zones": [..] } }
-                key: [a-z0-9-]+. name: the place's name as the game shows it (the loader finds the game's zone ids
+                key: [a-z0-9-]+. name: the place's name as the game shows it (Gen III: the region map section's name, upper
+                case as the ROM has it: "ROUTE 101", "MT. MOON", "POKéMON TOWER"; zone = the section's id, MAPSEC) (the loader finds the game's zone ids
                 by this name in the ROM's location names when "zone" is null). zone: the game's own map/zone id when
                 known; null = "id not known yet, resolve by name" (listed by --stats). zones: more ids (interiors).
   milestones    [Milestone] in story order
@@ -77,14 +80,20 @@ Note      id, kind exclusive|roamer|grotto|gift|legendary|trade|version|tip, tit
 import json, os, re, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(HERE, "..", "..", "system", "rootfs", "usr", "share", "banana", "companions", "nds-pokemon")
+COMPANIONS = os.path.join(HERE, "..", "..", "system", "rootfs", "usr", "share", "banana", "companions")
+DATA_DIR = os.path.join(COMPANIONS, "nds-pokemon")
+DATA_DIRS = [DATA_DIR, os.path.join(COMPANIONS, "gba-pokemon")]
 
 # game -> (code, generation's dex size, number of badges' region is always 8)
 GAMES = {
     "diamond": ("ADAE", 493), "pearl": ("APAE", 493), "platinum": ("CPUE", 493),
     "heartgold": ("IPKE", 493), "soulsilver": ("IPGE", 493),
     "black": ("IRBO", 649), "white": ("IRAO", 649), "black2": ("IREO", 649), "white2": ("IRDO", 649),
+    # the GBA games (the GBA Pokemon companion, 2026-11-03): Gen III, 386 species
+    "ruby": ("AXVE", 386), "sapphire": ("AXPE", 386), "emerald": ("BPEE", 386),
+    "firered": ("BPRE", 386), "leafgreen": ("BPGE", 386),
 }
+GBA_GAMES = {"ruby", "sapphire", "emerald", "firered", "leafgreen"}
 TYPES = {"normal", "fighting", "flying", "poison", "ground", "rock", "bug", "ghost", "steel", "fire", "water",
          "grass", "electric", "psychic", "ice", "dragon", "dark"}
 QUALITY = {"reference-only", "live-verified"}
@@ -279,6 +288,10 @@ def validate(path, stats=None):
         r.err(base, "code for %s must be %s, not %r" % (game, code, d.get("code")))
     if base != game + ".json":
         r.err(base, "file must be named %s.json" % game)
+    folder = os.path.basename(os.path.dirname(os.path.abspath(path)))
+    want_dir = "gba-pokemon" if game in GBA_GAMES else "nds-pokemon"
+    if folder in ("nds-pokemon", "gba-pokemon") and folder != want_dir:
+        r.err(base, "%s's guide belongs in %s/" % (game, want_dir))
     check_text(r, base, d, "title", True, 80)
     if not is_int(d.get("revision")) or d["revision"] < 1:
         r.err(base, "revision must be an integer >= 1")
@@ -499,10 +512,11 @@ def main(argv):
     want_stats = "--stats" in argv
     files = [a for a in argv if not a.startswith("-")]
     if not files:
-        files = sorted(os.path.join(DATA_DIR, f) for f in os.listdir(DATA_DIR) if f.endswith(".json")) \
-            if os.path.isdir(DATA_DIR) else []
+        for dd in DATA_DIRS:
+            if os.path.isdir(dd):
+                files += sorted(os.path.join(dd, f) for f in os.listdir(dd) if f.endswith(".json"))
     if not files:
-        print("no guide files found in %s" % DATA_DIR)
+        print("no guide files found in %s" % " or ".join(DATA_DIRS))
         return 1
     bad, stats = 0, {}
     for p in files:
