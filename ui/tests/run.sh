@@ -36,6 +36,7 @@ make -s -C "$HERE" tests/nds-ram-test >/dev/null && "$HERE/tests/nds-ram-test" 2
 make -s -C "$HERE" tests/gba-rom-test >/dev/null && "$HERE/tests/gba-rom-test" 2> "$OUT/gba-rom-test.log" || { echo "FAIL the GBA companion's ROM reader: $(grep FAIL "$OUT/gba-rom-test.log" | head -3)"; fail=1; }
 make -s -C "$HERE" tests/nds-romfile-test >/dev/null && "$HERE/tests/nds-romfile-test" 2> "$OUT/nds-romfile-test.log" || { echo "FAIL the DS companion's zipped games: $(grep FAIL "$OUT/nds-romfile-test.log" | head -3)"; fail=1; }
 make -s -C "$HERE" tests/nds-logic-test >/dev/null && "$HERE/tests/nds-logic-test" 2> "$OUT/nds-logic-test.log" || { echo "FAIL the DS companion's advice: $(grep FAIL "$OUT/nds-logic-test.log" | head -3)"; fail=1; }
+make -s -C "$HERE" tests/soft-base-test >/dev/null && "$HERE/tests/soft-base-test" 2> "$OUT/soft-base-test.log" || { echo "FAIL the software backend's background copy: $(grep FAIL "$OUT/soft-base-test.log" | head -3)"; fail=1; }
 make -s -C "$HERE" tests/gba-live-test >/dev/null && "$HERE/tests/gba-live-test" 2> "$OUT/gba-live-test.log" || { echo "FAIL the GBA companion's state: $(grep FAIL "$OUT/gba-live-test.log" | head -3)"; fail=1; }
 # the left stick as a d-pad: its deadzone and hysteresis
 make -s -C "$HERE" tests/input-test >/dev/null && "$HERE/tests/input-test" 2> "$OUT/input-test.log" || { echo "FAIL the stick: $(grep FAIL "$OUT/input-test.log" | head -3)"; fail=1; }

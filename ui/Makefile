@@ -101,7 +101,7 @@ install:
 	touch $(DESTDIR)/usr/share/banana/apps/files/Files.app
 
 clean:
-	rm -f banana-ui banana-leaseshim.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump tests/nds-ram-test tests/nds-logic-test tests/nds-romfile-test tests/gba-live-test tests/gba-pages-test tests/gba-rom-test tests/gba-items-gen
+	rm -f banana-ui banana-leaseshim.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump tests/nds-ram-test tests/nds-logic-test tests/nds-romfile-test tests/gba-live-test tests/gba-pages-test tests/gba-rom-test tests/gba-items-gen tests/soft-base-test
 
 .PHONY: host install clean
 
@@ -152,6 +152,10 @@ tests/nds-ram-test: tests/nds-ram-test.cpp $(NDS_RAM_SRC) $(wildcard src/nds/*.h
 # the GBA games' state as the DS companion's (tests/run.sh runs it)
 tests/gba-live-test: tests/gba-live-test.cpp src/gba/gen3live.cpp src/gba/gen3live.h src/pokemon.cpp src/pokemon.h src/pokemap.cpp src/nds/model.h
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/gba-live-test.cpp src/gba/gen3live.cpp src/pokemon.cpp src/pokemap.cpp src/zip.cpp src/zipdir.cpp -lz -lpthread
+
+# the software backend's background copy after invalidate (tests/run.sh runs it)
+tests/soft-base-test: tests/soft-base-test.cpp src/soft.cpp src/soft.h
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/soft-base-test.cpp src/soft.cpp -lpthread
 
 # the DS Pokémon companion's advice (damage, catching, team score, guide progress; tests/run.sh runs it)
 tests/nds-logic-test: tests/nds-logic-test.cpp src/nds/logic.cpp src/nds/session.cpp $(NDS_RAM_SRC) $(wildcard src/nds/*.h)

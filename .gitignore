@@ -25,3 +25,4 @@ __pycache__/
 /ui/tests/gba-pages-test
 /ui/tests/gba-rom-test
 /ui/tests/gba-items-gen
+/ui/tests/soft-base-test
