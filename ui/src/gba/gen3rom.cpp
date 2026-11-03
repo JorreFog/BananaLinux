@@ -21,6 +21,7 @@
 #include "nds/rom.h"
 #include <algorithm>
 #include <cstring>
+#include <cctype>
 #include <map>
 #include <mutex>
 
@@ -614,6 +615,39 @@ namespace banana::gba
 			}
 			out->trainers[tr.id] = std::move(tr);
 		}
+		// the games keep their names in capitals ("BLAZIKEN", "ROUTE 101"): as the DS games write them
+		for (auto& sp : out->species) { sp.name = nameCase(sp.name); sp.category = nameCase(sp.category); }
+		for (auto& m : out->moves) m.name = nameCase(m.name);
+		for (auto& i : out->items) i.name = nameCase(i.name);
+		for (auto& x : out->abilities) x = nameCase(x);
+		for (auto& x : out->natures) x = nameCase(x);
+		for (auto& x : out->locationNames) x = nameCase(x);
+		for (auto& z : out->zones) z.second.name = nameCase(z.second.name);
+		for (auto& tr : out->trainers) { tr.second.cls = nameCase(tr.second.cls); tr.second.name = nameCase(tr.second.name); }
 		return out;
+	}
+
+	std::string nameCase(const std::string& s)
+	{
+		// each word's first letter kept, the rest in lower case; a word starts after a space, '-' or '.' ("Sand-Attack",
+		// "S.S. Anne", "Mt. Moon"); HP, PP, TM/HM (and TM26), TV, UFO and Roman numerals stay as they are. Only ASCII
+		// letters change ("POKéMON" -> "Pokémon")
+		static const char* const KEEP[] = { "HP", "PP", "TV", "UFO", "II", "III", "IV", "EV", "SS", "PC", "TMS", "HMS" };
+		std::string o = s;
+		size_t i = 0;
+		while (i < o.size())
+		{
+			size_t j = i;
+			while (j < o.size() && o[j] != ' ' && o[j] != '-' && o[j] != '.') j++;
+			const std::string w = o.substr(i, j - i);
+			bool keep = false;
+			for (const char* k : KEEP) keep = keep || w == k;
+			if ((w.size() > 2 && (w.compare(0, 2, "TM") == 0 || w.compare(0, 2, "HM") == 0) && isdigit((unsigned char)w[2])) || w.size() <= 1) keep = true;
+			if (!keep)
+				for (size_t k = i + 1; k < j; k++)
+					if (o[k] >= 'A' && o[k] <= 'Z') o[k] = (char)(o[k] - 'A' + 'a');
+			i = j + 1;
+		}
+		return o;
 	}
 }

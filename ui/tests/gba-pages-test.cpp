@@ -2,6 +2,8 @@
 // ROMs read as the game panel reads it, a made-up save on top (a party from the game's first route and a wild battle
 // there), every page drawn at the RG DS Plus's panel size into PNGs for a look. Skips a ROM that isn't there.
 //   gba-pages-test <out dir> <rnds assets> <roms dir> [guide dir]
+#define STB_IMAGE_IMPLEMENTATION
+#include "../third_party/stb_image.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../third_party/stb_image_write.h"
 #include "gba/gen3live.h"

@@ -32,5 +32,7 @@ namespace banana::gba
 	// 420). Items the DS games don't have (Gen III's key items, its mail, the unused ids) get GEN3_ONLY + their own id.
 	// 0 for 0
 	constexpr uint16_t GEN3_ONLY = 1000;
+	// a name as the ROM keeps it (capitals) as the DS games write it: "SAND-ATTACK" -> "Sand-Attack", "TM26" stays
+	std::string nameCase(const std::string& s);
 	uint16_t itemToGen4(uint16_t gen3Item);
 }

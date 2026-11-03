@@ -130,10 +130,10 @@ static void testRom(const std::string& path, const std::string& pngDir)
 	EQ(r->species.size(), (size_t)387);
 	EQ(r->moves.size(), (size_t)355);
 	// species by national number
-	EQ(r->species[25].name, std::string("PIKACHU"));
+	EQ(r->species[25].name, std::string("Pikachu"));
 	EQ((int)r->species[25].types[0], (int)ELECTRIC);
-	EQ(r->species[386].name, std::string("DEOXYS"));
-	EQ(r->species[252].name, std::string("TREECKO"));	// (internal 277: the national order, not the game's)
+	EQ(r->species[386].name, std::string("Deoxys"));
+	EQ(r->species[252].name, std::string("Treecko"));	// (internal 277: the national order, not the game's)
 	EQ((int)r->species[1].types[0], (int)GRASS);
 	EQ((int)r->species[1].types[1], (int)POISON);
 	EQ((int)r->species[6].types[1], (int)FLYING);
@@ -147,9 +147,9 @@ static void testRom(const std::string& path, const std::string& pngDir)
 	EQ((int)r->species[1].baseExp, 64);
 	EQ((int)r->species[1].evYield[4], 1);				// Bulbasaur: 1 Sp. Atk
 	EQ((int)r->species[1].abilities[0], 65);			// Overgrow
-	EQ(r->abilities.size() > 65 ? r->abilities[65] : "", std::string("OVERGROW"));
+	EQ(r->abilities.size() > 65 ? r->abilities[65] : "", std::string("Overgrow"));
 	CHECK(r->abilityText.size() > 65 && !r->abilityText[65].empty());
-	EQ(r->species[1].category, std::string("SEED"));
+	EQ(r->species[1].category, std::string("Seed"));
 	EQ((int)r->species[1].height, 7); EQ((int)r->species[1].weight, 69);
 	CHECK(r->species[1].dexText.size() > 40);
 	CHECK(r->species[1].dexText.find('\n') == std::string::npos);
@@ -163,7 +163,7 @@ static void testRom(const std::string& path, const std::string& pngDir)
 	bool water = false, espeon = false, sil = false, nin = false;
 	for (auto& e : r->species[133].evolutions)
 	{
-		if (e.into == 134 && e.method == evo::USE_ITEM && e.param < r->items.size() && r->items[e.param].name == "WATER STONE") water = true;
+		if (e.into == 134 && e.method == evo::USE_ITEM && e.param < r->items.size() && r->items[e.param].name == "Water Stone") water = true;
 		if (e.into == 196 && e.method == evo::FRIENDSHIP_DAY) espeon = true;
 	}
 	for (auto& e : r->species[265].evolutions) if (e.into == 266 && e.method == evo::LEVEL_PID_LOW && e.param == 7) sil = true;
@@ -181,7 +181,7 @@ static void testRom(const std::string& path, const std::string& pngDir)
 	EQ(r->species[151].tms.size(), (size_t)58);
 	CHECK(r->species[129].tms.empty());	// Magikarp
 	// moves
-	EQ(r->moves[33].name, std::string("TACKLE"));
+	EQ(r->moves[33].name, std::string("Tackle"));
 	EQ((int)r->moves[33].power, 35); EQ((int)r->moves[33].type, (int)NORMAL); EQ((int)r->moves[33].cat, (int)MoveCategory::PHYSICAL);
 	EQ((int)r->moves[33].accuracy, 95); EQ((int)r->moves[33].pp, 35);
 	EQ((int)r->moves[52].cat, (int)MoveCategory::SPECIAL);		// Ember (Fire: special in Gen III)
@@ -193,20 +193,20 @@ static void testRom(const std::string& path, const std::string& pngDir)
 	EQ((int)r->moves[85].effectChance, 10);						// Thunderbolt
 	CHECK(!r->moves[1].description.empty() && !r->moves[354].description.empty());
 	// items in Gen IV's numbering
-	EQ(r->items[1].name, std::string("MASTER BALL"));
+	EQ(r->items[1].name, std::string("Master Ball"));
 	EQ((int)r->items[1].pocket, (int)POCKET_BALLS);
-	EQ(r->items[17].name, std::string("POTION"));
+	EQ(r->items[17].name, std::string("Potion"));
 	EQ((int)r->items[17].price, 300);
 	EQ((int)r->items[17].pocket, (int)POCKET_MEDICINE);
 	CHECK(!r->items[17].description.empty());
 	EQ(r->items[328].name, std::string("TM01"));
 	EQ((int)r->items[328].pocket, (int)POCKET_TMS);
 	EQ(r->items[420].name, std::string("HM01"));
-	EQ(r->items[234].name, std::string("LEFTOVERS"));
+	EQ(r->items[234].name, std::string("Leftovers"));
 	EQ(r->natures.size(), (size_t)25);
-	if (!r->natures.empty()) { EQ(r->natures[0], std::string("HARDY")); EQ(r->natures[24], std::string("QUIRKY")); }
+	if (!r->natures.empty()) { EQ(r->natures[0], std::string("Hardy")); EQ(r->natures[24], std::string("Quirky")); }
 	// trainers: the first gym's leader
-	const Trainer* leader = trainerNamed(*r, frlg ? "BROCK" : "ROXANNE", "LEADER");
+	const Trainer* leader = trainerNamed(*r, frlg ? "Brock" : "Roxanne", "Leader");
 	CHECK(leader != nullptr);
 	if (leader)
 	{
@@ -225,17 +225,17 @@ static void testRom(const std::string& path, const std::string& pngDir)
 	CHECK(doubles);
 	CHECK(r->trainers.size() > 300);
 	// places: Route 101 / Route 1 grass
-	const Location* route = zoneNamed(*r, frlg ? "ROUTE 1" : "ROUTE 101", EncounterKind::GRASS);
+	const Location* route = zoneNamed(*r, frlg ? "Route 1" : "Route 101", EncounterKind::GRASS);
 	CHECK(route != nullptr);
 	if (frlg) { CHECK(has(route, 16, EncounterKind::GRASS)); CHECK(has(route, 19, EncounterKind::GRASS)); }
 	else { CHECK(has(route, 263, EncounterKind::GRASS)); CHECK(has(route, 265, EncounterKind::GRASS)); }
 	if (route) { int sum = 0; for (auto& e : route->encounters) if (e.kind == EncounterKind::GRASS) sum += e.percent; EQ(sum, 100); }
 	CHECK(route && (route->id >> 8) < 64);
-	const Location* rod = zoneNamed(*r, frlg ? "ROUTE 4" : "ROUTE 104", EncounterKind::OLD_ROD);
+	const Location* rod = zoneNamed(*r, frlg ? "Route 4" : "Route 104", EncounterKind::OLD_ROD);
 	CHECK(has(rod, 129, EncounterKind::OLD_ROD));	// Magikarp
-	CHECK(zoneNamed(*r, frlg ? "ROCK TUNNEL" : "ROUTE 111", EncounterKind::ROCK_SMASH) != nullptr);
+	CHECK(zoneNamed(*r, frlg ? "Rock Tunnel" : "Route 111", EncounterKind::ROCK_SMASH) != nullptr);
 	EQ(r->locationNames.size() >= 256, true);
-	EQ(r->locationNames[frlg ? 0x58 : 0], std::string(frlg ? "PALLET TOWN" : "LITTLEROOT TOWN"));
+	EQ(r->locationNames[frlg ? 0x58 : 0], std::string(frlg ? "Pallet Town" : "Littleroot Town"));
 	// sprites
 	auto t1 = std::chrono::steady_clock::now();
 	auto s = r->sprite(25);
