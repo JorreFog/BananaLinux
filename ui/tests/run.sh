@@ -31,6 +31,9 @@ make -s -C "$HERE" tests/guide-test >/dev/null && "$HERE/tests/guide-test" "$HER
 make -s -C "$HERE" tests/nds-pages-test >/dev/null && "$HERE/tests/nds-pages-test" "$OUT" "$HERE/assets/rnds" "$HERE/../system/rootfs/usr/share/banana/themes" 2> "$OUT/nds-pages-test.log" || { echo "FAIL the DS companion's pages: $(grep FAIL "$OUT/nds-pages-test.log" | head -3)"; fail=1; }
 # the DS Pokémon companion's RAM reader (synthetic RAM in every game's layout)
 make -s -C "$HERE" tests/nds-ram-test >/dev/null && "$HERE/tests/nds-ram-test" 2> "$OUT/nds-ram-test.log" || { echo "FAIL the DS companion's RAM reader: $(grep FAIL "$OUT/nds-ram-test.log" | head -3)"; fail=1; }
+# the GBA Pokémon games' ROM data for the DS companion's pages (src/gba/gen3rom.*): header checks, and on the player's own
+# ROMs when GBA_ROMS names a folder of them (tests/gba-rom-test <roms dir> [png dir] on a PC that has them)
+make -s -C "$HERE" tests/gba-rom-test >/dev/null && "$HERE/tests/gba-rom-test" 2> "$OUT/gba-rom-test.log" || { echo "FAIL the GBA companion's ROM reader: $(grep FAIL "$OUT/gba-rom-test.log" | head -3)"; fail=1; }
 make -s -C "$HERE" tests/nds-romfile-test >/dev/null && "$HERE/tests/nds-romfile-test" 2> "$OUT/nds-romfile-test.log" || { echo "FAIL the DS companion's zipped games: $(grep FAIL "$OUT/nds-romfile-test.log" | head -3)"; fail=1; }
 make -s -C "$HERE" tests/nds-logic-test >/dev/null && "$HERE/tests/nds-logic-test" 2> "$OUT/nds-logic-test.log" || { echo "FAIL the DS companion's advice: $(grep FAIL "$OUT/nds-logic-test.log" | head -3)"; fail=1; }
 make -s -C "$HERE" tests/gba-live-test >/dev/null && "$HERE/tests/gba-live-test" 2> "$OUT/gba-live-test.log" || { echo "FAIL the GBA companion's state: $(grep FAIL "$OUT/gba-live-test.log" | head -3)"; fail=1; }

@@ -1591,8 +1591,11 @@ namespace banana::pkmn
 			int run = 0;
 			while (a + 4 * (size_t)run + 4 <= n && run < 256 && romPtr(rom, n, a + 4 * (size_t)run) >= 0) run++;
 			if (run <= maxGroup) { a += 4 * (size_t)run; continue; }
-			bool ok = true;
-			for (auto& m : maps) if (headerOf(a, m.first, m.second) < 0) { ok = false; break; }
+			// (group 0 has maps: a pointer just before the table, to something that isn't a group, would otherwise take
+			// the table one group off - FireRed's and LeafGreen's are found so, as every map the wild tables name is
+			// still a header there)
+			bool ok = headerOf(a, 0, 0) >= 0;
+			for (auto& m : maps) if (ok && headerOf(a, m.first, m.second) < 0) { ok = false; break; }
 			if (!ok) continue;
 			// the groups' lengths: map headers until the next group's table starts (or one isn't a header)
 			t.mapsecs.assign((size_t)run, {});
