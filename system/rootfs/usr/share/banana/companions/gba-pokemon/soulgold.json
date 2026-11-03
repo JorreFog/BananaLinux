@@ -1,0 +1,1194 @@
+{
+ "schema": 1,
+ "kind": "nds-pokemon-guide",
+ "game": "soulgold",
+ "code": "BPEE",
+ "title": "Pokemon SoulGold (v1.1.4)",
+ "revision": 1,
+ "sources": [
+  "The ROM itself (SoulGold 1.1.4, pokeemerald-expansion 1.15 build; its map sections are 16-bit): region map section names (each place resolves to a section with maps) and trainer names, teams and levels (Classic and Hard teams), read on the PC with throwaway tools",
+  "GitHub Eemeliri/soulgold: README (features, optional level caps) and release notes",
+  "pokemonsoulgold.com: changelog, about page, gift Pokémon guide",
+  "soulgold.run (unofficial fan docs): FAQ, walkthrough, starters, legendaries; romhackguides.com (1.1.2)"
+ ],
+ "places": {
+  "new-bark-town": {
+   "name": "New Bark Town"
+  },
+  "route-29": {
+   "name": "Route 29"
+  },
+  "cherrygrove-city": {
+   "name": "Cherrygrove City"
+  },
+  "violet-city": {
+   "name": "Violet City"
+  },
+  "route-30": {
+   "name": "Route 30"
+  },
+  "route-31": {
+   "name": "Route 31"
+  },
+  "dark-cave": {
+   "name": "Dark Cave"
+  },
+  "sprout-tower": {
+   "name": "Sprout Tower"
+  },
+  "slowpoke-well": {
+   "name": "Slowpoke Well"
+  },
+  "route-32": {
+   "name": "Route 32"
+  },
+  "ruins-of-alph": {
+   "name": "Ruins of Alph"
+  },
+  "union-cave": {
+   "name": "Union Cave"
+  },
+  "route-33": {
+   "name": "Route 33"
+  },
+  "azalea-town": {
+   "name": "Azalea Town"
+  },
+  "ilex-forest": {
+   "name": "Ilex Forest"
+  },
+  "route-34": {
+   "name": "Route 34"
+  },
+  "goldenrod-city": {
+   "name": "Goldenrod City"
+  },
+  "national-park": {
+   "name": "National Park"
+  },
+  "route-35": {
+   "name": "Route 35"
+  },
+  "route-36": {
+   "name": "Route 36"
+  },
+  "ecruteak-city": {
+   "name": "Ecruteak City"
+  },
+  "route-37": {
+   "name": "Route 37"
+  },
+  "burned-tower": {
+   "name": "Burned Tower"
+  },
+  "tin-tower": {
+   "name": "Tin Tower"
+  },
+  "cianwood-city": {
+   "name": "Cianwood City"
+  },
+  "route-38": {
+   "name": "Route 38"
+  },
+  "route-39": {
+   "name": "Route 39"
+  },
+  "olivine-city": {
+   "name": "Olivine City"
+  },
+  "route-40": {
+   "name": "Route 40"
+  },
+  "route-41": {
+   "name": "Route 41"
+  },
+  "lighthouse": {
+   "name": "Lighthouse"
+  },
+  "mahogany-town": {
+   "name": "Mahogany Town"
+  },
+  "route-42": {
+   "name": "Route 42"
+  },
+  "mt-mortar": {
+   "name": "Mt Mortar"
+  },
+  "route-43": {
+   "name": "Route 43"
+  },
+  "lake-of-rage": {
+   "name": "Lake of Rage"
+  },
+  "ice-path": {
+   "name": "Ice Path"
+  },
+  "route-44": {
+   "name": "Route 44"
+  },
+  "blackthorn-city": {
+   "name": "Blackthorn City"
+  },
+  "dragons-den": {
+   "name": "Dragon’s Den"
+  },
+  "victory-road": {
+   "name": "Victory Road"
+  },
+  "route-45": {
+   "name": "Route 45"
+  },
+  "route-46": {
+   "name": "Route 46"
+  },
+  "route-27": {
+   "name": "Route 27"
+  },
+  "route-26": {
+   "name": "Route 26"
+  },
+  "tohjo-falls": {
+   "name": "Tohjo Falls"
+  },
+  "indigo-plateau": {
+   "name": "Indigo Plateau"
+  },
+  "mt-silver": {
+   "name": "Mt. Silver"
+  },
+  "route-28": {
+   "name": "Route 28"
+  },
+  "kitakami-border": {
+   "name": "Kitakami Border"
+  },
+  "kitakami-village": {
+   "name": "Kitakami Village"
+  },
+  "embedded-tower": {
+   "name": "Embedded Tower"
+  },
+  "whirl-islands": {
+   "name": "Whirl Islands"
+  },
+  "rinto-village": {
+   "name": "Rinto Village"
+  },
+  "vajra-desert-east": {
+   "name": "Vajra Desert East"
+  },
+  "snowtop-mountain": {
+   "name": "Snowtop Mountain"
+  },
+  "railway-cave": {
+   "name": "Railway Cave"
+  },
+  "spear-pillar": {
+   "name": "Spear Pillar"
+  },
+  "meteor-island": {
+   "name": "Meteor Island"
+  },
+  "vajra-pyramid": {
+   "name": "Vajra Pyramid"
+  },
+  "rocket-arcade": {
+   "name": "Rocket Arcade"
+  },
+  "dream-garden": {
+   "name": "Dream Garden"
+  }
+ },
+ "milestones": [
+  {
+   "id": "story-starter",
+   "name": "A starter from Elm's case",
+   "kind": "story",
+   "place": "new-bark-town",
+   "level_cap": 5,
+   "foe": [
+    {
+     "name": "Gold",
+     "ace_level": 4
+    }
+   ],
+   "done_when": "party",
+   "opens": [
+    "new-bark-town",
+    "route-29",
+    "cherrygrove-city"
+   ],
+   "tips": "Nine starters: Chikorita, Chespin, Sprigatito; Cyndaquil, Fennekin, Torchic; Totodile, Froakie, Popplio. Gold, a second trainer from New Bark, battles you with a Lv 4 Marill. Cherrygrove gives an Alolan Rattata or a Galarian Zigzagoon.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.1.4 trainer table; pokemonsoulgold.com (changelog, gift Pokémon)"
+  },
+  {
+   "id": "gym-1-falkner",
+   "name": "Gym 1: Falkner",
+   "kind": "gym",
+   "place": "violet-city",
+   "leader": "Falkner",
+   "theme": "flying",
+   "level_cap": 12,
+   "foe": [
+    {
+     "name": "Falkner",
+     "ace_level": 12
+    },
+    {
+     "name": "Falkner",
+     "ace_level": 13
+    }
+   ],
+   "done_when": "badge:1",
+   "opens": [
+    "route-30",
+    "route-31",
+    "dark-cave",
+    "violet-city",
+    "sprout-tower"
+   ],
+   "badge_note": "Zephyr Badge. Optional level cap after it: 19.",
+   "tips": "Flying types: Pidgey, Gligar, Pidgeotto (Lv 11-12). Electric, Ice and Rock moves. Hard mode has its own teams (often a level higher, gyms as double battles).",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.1.4 trainer table; GitHub Eemeliri/soulgold README and releases"
+  },
+  {
+   "id": "team-slowpoke-well",
+   "name": "Team Rocket: Proton in Slowpoke Well",
+   "kind": "team",
+   "place": "slowpoke-well",
+   "level_cap": 18,
+   "foe": [
+    {
+     "name": "Proton",
+     "ace_level": 18
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "route-32",
+    "ruins-of-alph",
+    "union-cave",
+    "route-33",
+    "azalea-town",
+    "slowpoke-well"
+   ],
+   "tips": "Proton: Nosepass, Houndour, Porygon (Lv 17-18). Fighting moves; Ground for Nosepass and Houndour.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.1.4 trainer table; soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "gym-2-bugsy",
+   "name": "Gym 2: Bugsy",
+   "kind": "gym",
+   "place": "azalea-town",
+   "leader": "Bugsy",
+   "theme": "bug",
+   "level_cap": 20,
+   "foe": [
+    {
+     "name": "Bugsy",
+     "ace_level": 20
+    }
+   ],
+   "done_when": "badge:2",
+   "opens": [],
+   "badge_note": "Hive Badge. Optional level cap after it: 26.",
+   "tips": "Bug types: Scyther, Whirlipede, Cutiefly (Lv 19-20). Fire, Flying and Rock moves. Hard mode has its own teams (often a level higher, gyms as double battles).",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.1.4 trainer table; GitHub Eemeliri/soulgold README and releases"
+  },
+  {
+   "id": "rival-azalea",
+   "name": "Rival: first battles",
+   "kind": "rival",
+   "place": "azalea-town",
+   "level_cap": 22,
+   "done_when": "later",
+   "opens": [
+    "ilex-forest",
+    "route-34"
+   ],
+   "tips": "The rival (Silver in the sources) fights you several times; his early team is Haunter, Pawniard, Pidgeotto and his starter at Lv 20-22 (21-22 on Hard). He also gives the Odd Egg (Bagon, Gible, Feebas, Riolu, Jangmo-o, Hisuian Zorua or Goomy). The rival is stored under the player-named placeholder, so the companion can't look this battle up by name; the levels are the ROM's.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.1.4 trainer table; pokemonsoulgold.com (changelog, gift Pokémon)"
+  },
+  {
+   "id": "story-gold-route-34",
+   "name": "Gold on Route 34",
+   "kind": "story",
+   "place": "route-34",
+   "level_cap": 22,
+   "foe": [
+    {
+     "name": "Gold",
+     "ace_level": 22
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "Gold again: Zorua, Oricorio, Azumarill (Lv 22).",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.1.4 trainer table; soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "gym-3-whitney",
+   "name": "Gym 3: Whitney",
+   "kind": "gym",
+   "place": "goldenrod-city",
+   "leader": "Whitney",
+   "theme": "normal",
+   "level_cap": 27,
+   "foe": [
+    {
+     "name": "Whitney",
+     "ace_level": 27
+    }
+   ],
+   "done_when": "badge:3",
+   "opens": [
+    "goldenrod-city",
+    "national-park",
+    "route-35",
+    "route-36"
+   ],
+   "badge_note": "Plain Badge. The Battle Factory opens after this gym.",
+   "tips": "Normal types: Audino, Girafarig, Miltank (Lv 25-27). Fighting moves. Her gym opens after the quiz on Radio Tower 1F. Hard mode has its own teams (often a level higher, gyms as double battles).",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.1.4 trainer table; soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "gym-4-morty",
+   "name": "Gym 4: Morty",
+   "kind": "gym",
+   "place": "ecruteak-city",
+   "leader": "Morty",
+   "theme": "ghost",
+   "level_cap": 34,
+   "foe": [
+    {
+     "name": "Morty",
+     "ace_level": 34
+    }
+   ],
+   "done_when": "badge:4",
+   "opens": [
+    "route-37",
+    "ecruteak-city",
+    "burned-tower",
+    "tin-tower"
+   ],
+   "badge_note": "Fog Badge.",
+   "tips": "Ghost types: Corsola, Doublade, Misdreavus, Gengar (Lv 33-34). Dark and Ghost moves. After the Burned Tower, Raikou, Entei and Suicune roam. Hard mode has its own teams (often a level higher, gyms as double battles).",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.1.4 trainer table; GitHub Eemeliri/soulgold README and releases"
+  },
+  {
+   "id": "rival-mid",
+   "name": "Rival: middle battles",
+   "kind": "rival",
+   "place": "ecruteak-city",
+   "level_cap": 33,
+   "done_when": "later",
+   "opens": [],
+   "tips": "Floatzel or Haunter, Pawniard, Staravia, a Lampent/Weepinbell/Clodsire and his starter's middle stage at Lv 30-33. The rival is stored under the player-named placeholder, so the companion can't look this battle up by name; the levels are the ROM's.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.1.4 trainer table"
+  },
+  {
+   "id": "gym-5-chuck",
+   "name": "Gym: Chuck",
+   "kind": "gym",
+   "place": "cianwood-city",
+   "leader": "Chuck",
+   "theme": "fighting",
+   "level_cap": 42,
+   "foe": [
+    {
+     "name": "Chuck",
+     "ace_level": 42
+    },
+    {
+     "name": "Chuck",
+     "ace_level": 45
+    },
+    {
+     "name": "Chuck",
+     "ace_level": 48
+    },
+    {
+     "name": "Chuck",
+     "ace_level": 46
+    },
+    {
+     "name": "Chuck",
+     "ace_level": 49
+    }
+   ],
+   "done_when": "badge:5",
+   "opens": [
+    "route-38",
+    "route-39",
+    "olivine-city",
+    "route-40",
+    "route-41",
+    "cianwood-city"
+   ],
+   "badge_note": "Storm Badge.",
+   "tips": "Fighting types: Hitmontop, Mienshao, Poliwrath, Annihilape (Lv 41-42). Psychic, Flying and Fairy moves. Chuck, Jasmine and Pryce scale with your badges: Lv 42 with four, 45 with five, 48 with six.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.1.4 trainer table; soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "story-eusine",
+   "name": "Eusine",
+   "kind": "story",
+   "place": "cianwood-city",
+   "level_cap": 39,
+   "foe": [
+    {
+     "name": "Eusine",
+     "ace_level": 39
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "Golisopod, Wobbuffet, Magnezone (Lv 38-39).",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.1.4 trainer table"
+  },
+  {
+   "id": "gym-6-jasmine",
+   "name": "Gym: Jasmine",
+   "kind": "gym",
+   "place": "olivine-city",
+   "leader": "Jasmine",
+   "theme": "steel",
+   "level_cap": 45,
+   "foe": [
+    {
+     "name": "Jasmine",
+     "ace_level": 42
+    },
+    {
+     "name": "Jasmine",
+     "ace_level": 45
+    },
+    {
+     "name": "Jasmine",
+     "ace_level": 48
+    },
+    {
+     "name": "Jasmine",
+     "ace_level": 49
+    }
+   ],
+   "done_when": "badge:6",
+   "opens": [
+    "lighthouse"
+   ],
+   "badge_note": "Mineral Badge.",
+   "tips": "Steel types: Skarmory, Tinkaton, Magneton, Scizor, Steelix (Lv 44-45) at five badges. Fire, Fighting and Ground moves. Strength comes from the Olivine café.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.1.4 trainer table; soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "gym-7-pryce",
+   "name": "Gym: Pryce",
+   "kind": "gym",
+   "place": "mahogany-town",
+   "leader": "Pryce",
+   "theme": "ice",
+   "level_cap": 48,
+   "foe": [
+    {
+     "name": "Pryce",
+     "ace_level": 42
+    },
+    {
+     "name": "Pryce",
+     "ace_level": 45
+    },
+    {
+     "name": "Pryce",
+     "ace_level": 48
+    },
+    {
+     "name": "Pryce",
+     "ace_level": 46
+    },
+    {
+     "name": "Pryce",
+     "ace_level": 49
+    }
+   ],
+   "done_when": "badge:7",
+   "opens": [
+    "route-42",
+    "mt-mortar",
+    "mahogany-town",
+    "route-43",
+    "lake-of-rage"
+   ],
+   "badge_note": "Glacier Badge. Optional level cap until the Rocket takeover: 55.",
+   "tips": "Ice types: Ninetales, Mamoswine, Glaceon, Weavile, Froslass (Lv 47-48) at six badges. Fire, Fighting, Rock and Steel moves.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.1.4 trainer table; soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "team-rocket-hideout",
+   "name": "Rocket hideout in Mahogany",
+   "kind": "team",
+   "place": "mahogany-town",
+   "level_cap": 49,
+   "foe": [
+    {
+     "name": "Petrel",
+     "ace_level": 48
+    },
+    {
+     "name": "Ariana",
+     "ace_level": 49
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Petrel (Scrafty, Persian, Pyroar, Weezing (Lv 47-48)) on B3F and Ariana (Arbok, Vileplume, Dragalge (Lv 48-49)) on B2F.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.1.4 trainer table; soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "team-radio-tower",
+   "name": "Team Rocket takes the Radio Tower",
+   "kind": "team",
+   "place": "goldenrod-city",
+   "level_cap": 54,
+   "foe": [
+    {
+     "name": "Proton",
+     "ace_level": 51
+    },
+    {
+     "name": "Petrel",
+     "ace_level": 49
+    },
+    {
+     "name": "Ariana",
+     "ace_level": 51
+    },
+    {
+     "name": "Archer",
+     "ace_level": 54
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Proton on 4F (Crobat, Farigiraf, Porygon-Z, Nidoking, Scrafty (Lv 49-51)), Petrel and Ariana on 5F (Scrafty, Rotom, Persian, Pyroar, Weezing (Lv 48-49); Arbok, Toxapex, Vileplume, Gyarados, Dragalge (Lv 50-51)), Archer at the top (Ninetales, Tauros, Marowak, Slowking, Houndoom (Lv 52-54)). The Mega Ring is yours afterwards, and you choose the Rainbow Wing or the Silver Wing.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.1.4 trainer table; soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "story-gold-ice-path",
+   "name": "Gold in the Ice Path",
+   "kind": "story",
+   "place": "ice-path",
+   "level_cap": 55,
+   "foe": [
+    {
+     "name": "Gold",
+     "ace_level": 55
+    }
+   ],
+   "done_when": "none",
+   "opens": [
+    "route-44",
+    "ice-path"
+   ],
+   "tips": "Azumarill, Zoroark, Oricorio, Flygon, Ampharos (Lv 54-55). The Ice Path also holds Waterfall.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.1.4 trainer table; soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "gym-8-clair",
+   "name": "Gym 8: Clair",
+   "kind": "gym",
+   "place": "blackthorn-city",
+   "leader": "Clair",
+   "theme": "dragon",
+   "level_cap": 58,
+   "foe": [
+    {
+     "name": "Clair",
+     "ace_level": 58
+    },
+    {
+     "name": "Clair",
+     "ace_level": 59
+    }
+   ],
+   "done_when": "badge:8",
+   "opens": [
+    "blackthorn-city",
+    "dragons-den"
+   ],
+   "badge_note": "Rising Badge: Rock Climb (since 1.1). Optional cap until Ho-Oh or Lugia: 62, then 70 to the Champion.",
+   "tips": "Dragons: Altaria, Gyarados, Dragonite, Hydrapple, Kingdra (Lv 57-58). Ice, Dragon and Fairy moves. Hard mode has its own teams (often a level higher, gyms as double battles).",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.1.4 trainer table; soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "rival-late",
+   "name": "Rival: before the league",
+   "kind": "rival",
+   "place": "victory-road",
+   "level_cap": 51,
+   "done_when": "later",
+   "opens": [
+    "route-45",
+    "route-46",
+    "route-27",
+    "route-26",
+    "tohjo-falls",
+    "victory-road",
+    "indigo-plateau"
+   ],
+   "tips": "His full team at Lv 48-51 (Gengar or Floatzel, Bisharp, Staraptor and his starter's final stage). The rival is stored under the player-named placeholder, so the companion can't look this battle up by name; the levels are the ROM's.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.1.4 trainer table"
+  },
+  {
+   "id": "e4-will",
+   "name": "Elite Four: Will",
+   "kind": "elite4",
+   "place": "indigo-plateau",
+   "leader": "Will",
+   "theme": "psychic",
+   "level_cap": 67,
+   "foe": [
+    {
+     "name": "Will",
+     "ace_level": 67
+    },
+    {
+     "name": "Will",
+     "ace_level": 69
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Farigiraf, Espeon, Slowbro, Reuniclus, Alakazam, Braviary (Lv 66-67). Dark, Ghost and Bug moves.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.1.4 trainer table; soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "e4-koga",
+   "name": "Elite Four: Koga",
+   "kind": "elite4",
+   "place": "indigo-plateau",
+   "leader": "Koga",
+   "theme": "poison",
+   "level_cap": 68,
+   "foe": [
+    {
+     "name": "Koga",
+     "ace_level": 68
+    },
+    {
+     "name": "Koga",
+     "ace_level": 69
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Ariados, Roserade, Muk, Overqwil, Scolipede, Crobat (Lv 67-68). Psychic and Ground moves.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.1.4 trainer table; soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "e4-bruno",
+   "name": "Elite Four: Bruno",
+   "kind": "elite4",
+   "place": "indigo-plateau",
+   "leader": "Bruno",
+   "theme": "fighting",
+   "level_cap": 69,
+   "foe": [
+    {
+     "name": "Bruno",
+     "ace_level": 69
+    },
+    {
+     "name": "Bruno",
+     "ace_level": 70
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Hitmontop, Heracross, Staraptor, Annihilape, Kommo-o, Machamp (Lv 67-69). Psychic, Flying and Fairy moves.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.1.4 trainer table; soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "e4-karen",
+   "name": "Elite Four: Karen",
+   "kind": "elite4",
+   "place": "indigo-plateau",
+   "leader": "Karen",
+   "theme": "dark",
+   "level_cap": 70,
+   "foe": [
+    {
+     "name": "Karen",
+     "ace_level": 70
+    },
+    {
+     "name": "Karen",
+     "ace_level": 71
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Grimmsnarl, Umbreon, Kingambit, Scrafty, Honchkrow, Absol (Lv 69-70). Fighting, Bug and Fairy moves.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.1.4 trainer table; soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "champion-lance",
+   "name": "Champion Lance",
+   "kind": "champion",
+   "place": "indigo-plateau",
+   "leader": "Lance",
+   "level_cap": 71,
+   "foe": [
+    {
+     "name": "Lance",
+     "ace_level": 71
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Exeggutor, Dragonite, Baxcalibur, Hydrapple, Dragapult, Archaludon (Lv 69-71). Ice and Fairy moves; Archaludon is Steel/Dragon (Fighting, Ground).",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.1.4 trainer table; soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "post-gold-mt-silver",
+   "name": "Gold on Mt. Silver",
+   "kind": "postgame",
+   "place": "mt-silver",
+   "level_cap": 75,
+   "foe": [
+    {
+     "name": "Gold",
+     "ace_level": 75
+    }
+   ],
+   "done_when": "none",
+   "opens": [
+    "route-28",
+    "mt-silver"
+   ],
+   "tips": "Iron Treads, Zoroark, Baxcalibur, Azumarill, Ampharos, Tangrowth (Lv 73-75).",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.1.4 trainer table; soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "post-e4-rematch",
+   "name": "League rematch and Title Defense",
+   "kind": "postgame",
+   "place": "indigo-plateau",
+   "level_cap": 86,
+   "foe": [
+    {
+     "name": "Lance",
+     "ace_level": 86
+    },
+    {
+     "name": "Will",
+     "ace_level": 85
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "The Elite Four return at Lv 85 and Lance at 86; then Title Defense, where the challenger changes (Lv 86 aces include Genesect, Zamazenta and Giratina).",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.1.4 trainer table; soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "post-gym-rematches",
+   "name": "Gym rematches",
+   "kind": "postgame",
+   "place": "kitakami-border",
+   "level_cap": 85,
+   "foe": [
+    {
+     "name": "Falkner",
+     "ace_level": 85
+    },
+    {
+     "name": "Clair",
+     "ace_level": 85
+    }
+   ],
+   "done_when": "none",
+   "opens": [
+    "kitakami-border",
+    "kitakami-village"
+   ],
+   "tips": "The leaders rematch at new places with Lv 76-81 teams, and again with Lv 85 teams holding a legend each.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.1.4 trainer table"
+  },
+  {
+   "id": "post-steven",
+   "name": "Steven",
+   "kind": "postgame",
+   "place": "embedded-tower",
+   "level_cap": 86,
+   "foe": [
+    {
+     "name": "Steven",
+     "ace_level": 82
+    },
+    {
+     "name": "Steven",
+     "ace_level": 86
+    }
+   ],
+   "done_when": "none",
+   "opens": [
+    "embedded-tower"
+   ],
+   "tips": "Skarmory, Aggron, Cradily, Excadrill, Archeops, Metagross (Lv 80-82); beating him opens Rayquaza at the Embedded Tower.",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.1.4 trainer table; soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "post-leaf",
+   "name": "Leaf",
+   "kind": "postgame",
+   "place": "mt-silver",
+   "level_cap": 87,
+   "foe": [
+    {
+     "name": "Leaf",
+     "ace_level": 87
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "Chansey, Volcarona, Thundurus, Tapu Fini, Dragapult, Venusaur (Lv 85-87).",
+   "quality": "reference-only",
+   "source": "ROM SoulGold 1.1.4 trainer table"
+  },
+  {
+   "id": "legend-wings",
+   "name": "Ho-Oh or Lugia",
+   "kind": "legendary",
+   "place": "tin-tower",
+   "level_cap": 62,
+   "done_when": "none",
+   "opens": [
+    "whirl-islands"
+   ],
+   "tips": "After the Radio Tower you pick the Rainbow Wing (Ho-Oh, Tin Tower) or the Silver Wing (Lugia, Whirl Islands); the radio director gives the other after the Elite Four. Legends are boss fights with several HP bars, and a beaten boss is a sure catch.",
+   "quality": "reference-only",
+   "source": "soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "legend-celebi",
+   "name": "Celebi (Ilex Forest)",
+   "kind": "legendary",
+   "place": "ilex-forest",
+   "level_cap": 62,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Solve all eight Ruins of Alph puzzles, then see Kurt and visit the Ilex shrine.",
+   "quality": "reference-only",
+   "source": "soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "legend-mewtwo",
+   "name": "Mewtwo (Kitakami Border)",
+   "kind": "legendary",
+   "place": "kitakami-border",
+   "level_cap": 85,
+   "done_when": "none",
+   "opens": [],
+   "tips": "In the Nameless Dungeon at the Kitakami Border, after the Elite Four (Rock Climb).",
+   "quality": "reference-only",
+   "source": "soulgold.run (unofficial fan docs)"
+  }
+ ],
+ "steps": [
+  {
+   "id": "step-level-caps",
+   "title": "Optional level caps",
+   "text": "Caps (if turned on): 12, 19, 26, 34, 42, 45, 48, 55 for the Rocket takeover, 58, 62 until Ho-Oh/Lugia, 70 until the Champion.",
+   "stage": "gym-1-falkner",
+   "places": [
+    "violet-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "GitHub Eemeliri/soulgold README and releases"
+  },
+  {
+   "id": "step-innates",
+   "title": "Innate abilities",
+   "text": "Pokémon gain extra innate abilities at Lv 75, 85 and 95; a bookcase in Elm's lab unlocks them early or turns them off.",
+   "stage": "story-starter",
+   "places": [
+    "new-bark-town"
+   ],
+   "done_when": "party",
+   "quality": "reference-only",
+   "source": "pokemonsoulgold.com (changelog, gift Pokémon)"
+  },
+  {
+   "id": "step-hms",
+   "title": "HMs need the HM and the badge",
+   "text": "Strength is from the Olivine café, Waterfall from the Ice Path, Rock Climb works after badge 8.",
+   "stage": "gym-6-jasmine",
+   "places": [
+    "olivine-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "step-gachapon",
+   "title": "Any starter from the casino",
+   "text": "The Goldenrod casino's gachapon sells starters from every generation (3000+ coins).",
+   "stage": "gym-3-whitney",
+   "places": [
+    "goldenrod-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "step-dratini",
+   "title": "Dratini in Blackthorn",
+   "text": "Blackthorn gives a Dratini; answer correctly and it knows Spacial Rend.",
+   "stage": "gym-8-clair",
+   "places": [
+    "blackthorn-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pokemonsoulgold.com (changelog, gift Pokémon)"
+  }
+ ],
+ "secrets": [
+  {
+   "id": "gift-eevee",
+   "kind": "gift",
+   "text": "Bill gives an Eevee or a Pikachu.",
+   "place": "goldenrod-city",
+   "quality": "reference-only",
+   "source": "pokemonsoulgold.com (changelog, gift Pokémon)"
+  },
+  {
+   "id": "gift-gimmighoul",
+   "kind": "gift",
+   "text": "Cianwood gives a Gimmighoul.",
+   "place": "cianwood-city",
+   "quality": "reference-only",
+   "source": "pokemonsoulgold.com (changelog, gift Pokémon)"
+  },
+  {
+   "id": "gift-tyrogue",
+   "kind": "gift",
+   "text": "A Tyrogue in Mt. Mortar.",
+   "place": "mt-mortar",
+   "quality": "reference-only",
+   "source": "pokemonsoulgold.com (changelog, gift Pokémon)"
+  },
+  {
+   "id": "gift-cursola",
+   "kind": "tip",
+   "text": "Since 1.1.4 Cursola lives in the waters of Rinto Village.",
+   "place": "rinto-village",
+   "quality": "reference-only",
+   "source": "pokemonsoulgold.com (changelog, gift Pokémon)"
+  },
+  {
+   "id": "legend-regirock",
+   "kind": "legendary",
+   "text": "Regirock in the Vajra Desert: bring a Tyranitar.",
+   "place": "vajra-desert-east",
+   "quality": "reference-only",
+   "source": "soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "legend-regice",
+   "kind": "legendary",
+   "text": "Regice on Snowtop Mountain (bring a Baxcalibur); Articuno is up there too (Rock Climb).",
+   "place": "snowtop-mountain",
+   "quality": "reference-only",
+   "source": "soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "legend-registeel",
+   "kind": "legendary",
+   "text": "Registeel in the Railway Cave: bring a Kommo-o.",
+   "place": "railway-cave",
+   "quality": "reference-only",
+   "source": "soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "legend-regigigas",
+   "kind": "legendary",
+   "text": "Regigigas on Mt. Silver, with all three Regis in the party.",
+   "place": "mt-silver",
+   "quality": "reference-only",
+   "source": "soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "legend-zapdos",
+   "kind": "legendary",
+   "text": "Zapdos on top of the Olivine lighthouse after badge 8.",
+   "place": "lighthouse",
+   "quality": "reference-only",
+   "source": "soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "legend-moltres",
+   "kind": "legendary",
+   "text": "Moltres on Victory Road.",
+   "place": "victory-road",
+   "quality": "reference-only",
+   "source": "soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "legend-heatran",
+   "kind": "legendary",
+   "text": "Heatran in Mt. Mortar.",
+   "place": "mt-mortar",
+   "quality": "reference-only",
+   "source": "soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "legend-dialga",
+   "kind": "legendary",
+   "text": "Primal Dialga at the Spear Pillar.",
+   "place": "spear-pillar",
+   "quality": "reference-only",
+   "source": "soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "legend-paradox",
+   "kind": "legendary",
+   "text": "Most Paradox Pokémon live on Meteor Island; the changed beasts come from the roaming trio.",
+   "place": "meteor-island",
+   "quality": "reference-only",
+   "source": "soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "legend-shadow-lugia",
+   "kind": "legendary",
+   "text": "Shadow Lugia: the Dark Crystal from the abandoned Rocket warehouse south of Route 33.",
+   "place": "route-33",
+   "quality": "reference-only",
+   "source": "soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "legend-latis",
+   "kind": "legendary",
+   "text": "Latias and Latios in the Vajra temple; the Vajra Pyramid is a battle facility.",
+   "place": "vajra-pyramid",
+   "quality": "reference-only",
+   "source": "soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "tip-arcade",
+   "kind": "tip",
+   "text": "The Rocket Arcade pays money; 25 wins give Magearna.",
+   "place": "rocket-arcade",
+   "quality": "reference-only",
+   "source": "soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "tip-dream-garden",
+   "kind": "tip",
+   "text": "Dream Garden is one of SoulGold's added areas, with Tohjo Pass, Route 50 and Meteor Island.",
+   "place": "dream-garden",
+   "quality": "reference-only",
+   "source": "pokemonsoulgold.com (changelog, gift Pokémon)"
+  }
+ ],
+ "evolutions": [
+  {
+   "id": "evo-phione",
+   "species": 489,
+   "name": "Phione",
+   "text": "Level 58 gives Manaphy.",
+   "quality": "reference-only",
+   "source": "soulgold.run (unofficial fan docs)"
+  },
+  {
+   "id": "evo-sinistea",
+   "species": 854,
+   "name": "Sinistea",
+   "text": "Which tea item you use decides the form it evolves into (1.1).",
+   "quality": "reference-only",
+   "source": "GitHub Eemeliri/soulgold README and releases"
+  },
+  {
+   "id": "evo-trades",
+   "species": 64,
+   "name": "Kadabra",
+   "text": "SoulGold's way of evolving trade evolutions is not documented in the sources; in-game trade Pokémon get 12x shiny odds.",
+   "quality": "reference-only",
+   "source": "soulgold.run (unofficial fan docs)"
+  }
+ ],
+ "notes": [
+  {
+   "id": "note-version",
+   "kind": "version",
+   "title": "SoulGold 1.1.4",
+   "text": "A Johto-only remake on pokeemerald-expansion 1.15 (no Kanto), using an unofficial port of Heart & Soul's assets. 132 areas and every generation's Pokémon, Paradox ones included; Classic and Hard modes. 1.1.4 added innates and night-lighting toggles and an earlier Safari Zone expansion.",
+   "quality": "reference-only",
+   "source": "GitHub Eemeliri/soulgold README and releases; pokemonsoulgold.com (changelog, gift Pokémon)"
+  },
+  {
+   "id": "note-megas",
+   "kind": "tip",
+   "title": "Mega Evolution",
+   "text": "Every Mega, with type-generic stones (Elm gives your starter's); new Megas for Typhlosion, Meowscarada and Primarina. Press START on the move screen to Mega Evolve.",
+   "quality": "reference-only",
+   "source": "GitHub Eemeliri/soulgold README and releases"
+  },
+  {
+   "id": "note-features",
+   "kind": "tip",
+   "title": "Features",
+   "text": "DexNav after the first Poké Balls, followers, daily hidden grottoes, a VS Seeker, feather fishing (IV training), a move relearner with a TM tab, Exp. Share before Violet, a Candy Jar after gym 1, shiny odds setting.",
+   "quality": "reference-only",
+   "source": "GitHub Eemeliri/soulgold README and releases"
+  },
+  {
+   "id": "note-roamers",
+   "kind": "roamer",
+   "title": "The beasts",
+   "text": "Raikou, Entei and Suicune all roam after the Burned Tower; their shininess is rolled when they are released.",
+   "species": [
+    243,
+    244,
+    245
+   ],
+   "names": [
+    "Raikou",
+    "Entei",
+    "Suicune"
+   ],
+   "quality": "reference-only",
+   "source": "soulgold.run (unofficial fan docs)"
+  }
+ ]
+}
