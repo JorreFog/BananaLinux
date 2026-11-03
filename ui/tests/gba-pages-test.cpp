@@ -8,6 +8,7 @@
 #include "../third_party/stb_image_write.h"
 #include "gba/gen3live.h"
 #include "gba/gen3rom.h"
+#include "gba/hacks.h"
 #include "nds/guide.h"
 #include "nds/logic.h"
 #include "nds/pages.h"
@@ -75,7 +76,10 @@ int main(int argc, char** argv)
 	for (const std::string& f : files)
 	{
 		auto bytes = std::make_shared<const std::vector<uint8_t>>(readFile(f));
-		const nds::Game g = gba::detectGame(bytes->data(), bytes->size());
+		nds::Game g = gba::detectGame(bytes->data(), bytes->size());
+		// (a pokeemerald-expansion hack by its CRC-32, until detectGame says HACK for them)
+		if (const gba::HackInfo* h = g.id == nds::GameId::NONE ? gba::hackByCrc(gba::romCrc32(bytes->data(), bytes->size())) : nullptr)
+			if (h->engine == gba::Engine::EXPANSION) { g.id = nds::GameId::HACK; g.gen = nds::Gen::III; g.code = h->base; g.title = h->title; g.hack = h->key; g.modern = true; }
 		if (g.id == nds::GameId::NONE) continue;
 		games++;
 		auto t0 = std::chrono::steady_clock::now();
@@ -85,6 +89,7 @@ int main(int argc, char** argv)
 		const double readMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
 		CHECK(r != nullptr, "%s: no RomData", f.c_str());
 		if (!r) continue;
+		nds::useModernTypeChart(r->game.modern);	// (as the host does: Fairy for a hack that has it)
 		fprintf(stderr, "%s (%s): tables + RomData %.0f ms\n", g.title.c_str(), g.code.c_str(), readMs);
 		nds::useModernTypeChart(r->game.modern);	// (as the host does: a hack's Fairy and Generation VI's chart)
 		const std::string tag = g.hack.empty() ? g.code : g.hack;	// (the PNGs' names: a hack's key, its base game's code shared)

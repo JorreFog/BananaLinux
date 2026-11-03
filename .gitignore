@@ -27,3 +27,5 @@ __pycache__/
 /ui/tests/gba-rom-test
 /ui/tests/gba-items-gen
 /ui/tests/soft-base-test
+/ui/tests/gba-exp-test
+/ui/tests/gba-expitems-gen

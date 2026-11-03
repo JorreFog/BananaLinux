@@ -1,5 +1,6 @@
 // banana-ui: the DS companion's pages for a GBA Pokémon game (host.h).
 #include "gba/host.h"
+#include "gba/expansion.h"
 #include "gba/gen3live.h"
 #include "gba/gen3rom.h"
 #include "nds/guide.h"
@@ -70,8 +71,14 @@ namespace banana::gba
 			lastSerial = comp.serial();
 			auto t = comp.tables();
 			const nds::RomData& r = *base.rom;
-			auto l = toLive(comp.snapshot(), t.get(), base.rom.get(), [&r](uint16_t i) { return itemId(r, i); },
-				[&r](uint16_t s, uint16_t& nat, uint8_t& form) { return speciesOf(r, s, nat, form); });
+			if (!itemMap)	// (an expansion build's own item ids, else the Gen III reader's map)
+			{
+				itemMap = expansionItemMap(&r);
+				if (!itemMap) itemMap = [&r](uint16_t i) { return itemId(r, i); };
+				uint16_t n = 0; uint8_t f = 0;	// (species by the Gen III reader's own table where it has one: hacks' forms)
+				if (speciesOf(r, 1, n, f)) speciesMap = [&r](uint16_t s, uint16_t& nat, uint8_t& form) { return speciesOf(r, s, nat, form); };
+			}
+			auto l = toLive(comp.snapshot(), t.get(), base.rom.get(), itemMap, speciesMap);
 			if (l->valid) { session->feed(l); fed++; }
 		}
 		nds::SessionThread::Snapshot sn;

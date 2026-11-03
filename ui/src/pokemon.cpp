@@ -212,6 +212,14 @@ namespace banana::pkmn
 		return false;
 	}
 
+	namespace { OwnProfileReader ownReader = nullptr; }
+	void setOwnProfileReader(OwnProfileReader f) { ownReader = f; }
+	bool hasOwnProfile(const uint8_t* h, size_t n)
+	{
+		for (size_t a = 0x100; a + 6 <= n && a < 0x400; a += 2) if (!memcmp(h + a, "RHHEXP", 6)) return ownReader != nullptr;
+		return false;
+	}
+
 	std::string decodeText(const uint8_t* p, size_t max)
 	{
 		std::string s;
@@ -269,6 +277,7 @@ namespace banana::pkmn
 
 	bool decodeParty(const uint8_t* p, Mon& m, const MonLayout& L)
 	{
+		if (L.decode) return L.decode(p, m);
 		if (!decodeParty(p, m, L.coding)) return false;
 		m.species &= L.speciesMask;
 		return m.species != 0;
@@ -276,6 +285,7 @@ namespace banana::pkmn
 
 	bool decodeBattler(const uint8_t* p, Mon& m, int maxSpecies, const BattlerLayout& L)
 	{
+		if (L.decode) return L.decode(p, m, maxSpecies);
 		m = Mon();
 		m.species = le16(p);
 		if (m.species == 0 || m.species > maxSpecies) return false;
@@ -1277,17 +1287,19 @@ namespace banana::pkmn
 	bool Companion::open(const std::string& rom)
 	{
 		close();
-		std::vector<uint8_t> h = readRom(rom, 0xc0);
+		std::vector<uint8_t> h = readRom(rom, 0x400);
 		info = detectGame(h.data(), h.size());
 		// (a code with releases told by their CRC-32: which one it is once the whole ROM is read, nothing read till then;
 		// a guess meanwhile, which may turn out none of them)
 		byCrc = crcMatters(h.data(), h.size());
+		const bool own = hasOwnProfile(h.data(), h.size());	// (its own profile, from the thread: nothing read till then)
+		if (own && info) byCrc = true;
 		if (byCrc && !info) info = anyWithCode(h.data(), h.size());
 		if (!info) return false;
 		sh = std::make_shared<Shared>();
 		std::shared_ptr<Shared> s = sh;
-		bool crc = byCrc;
-		std::thread([s, rom, h, crc]
+		bool crc = byCrc && !own;
+		std::thread([s, rom, h, crc, own]
 		{
 			setpriority(PRIO_PROCESS, (id_t)syscall(SYS_gettid), 10);	// (this thread only: beside the game starting)
 			std::vector<uint8_t> all = readRom(rom, 32u << 20);
@@ -1295,7 +1307,10 @@ namespace banana::pkmn
 			// the ROM hacks they know by it: gba/hacks.h)
 			const uint32_t romCrc = (uint32_t)crc32(0L, all.data(), (uInt)all.size());
 			const GameProfile* profile = crc ? detectGame(h.data(), h.size(), romCrc) : nullptr;
-			auto t = std::make_shared<RomTables>(findTables(all.data(), all.size(), profile));
+			std::shared_ptr<const GameProfile> mine;
+			auto t = std::make_shared<RomTables>();
+			if (!(own && ownReader(all.data(), all.size(), mine, *t))) *t = findTables(all.data(), all.size(), profile);
+			if (own) profile = mine.get();
 			t->crc = romCrc;
 			size_t bytes = all.size();
 			t->rom = std::make_shared<const std::vector<uint8_t>>(std::move(all));
@@ -1308,6 +1323,7 @@ namespace banana::pkmn
 			std::lock_guard<std::mutex> l(s->mu);
 			s->tables = t;
 			s->profile = profile;
+			s->own = mine;
 			s->ready = true;
 		}).detach();
 		return true;
@@ -1316,6 +1332,7 @@ namespace banana::pkmn
 	void Companion::close()
 	{
 		info = nullptr;
+		owned.reset();
 		byCrc = false;
 		sh.reset();
 		tablesSeen = false;
@@ -1350,7 +1367,7 @@ namespace banana::pkmn
 			if (sh->ready)
 			{
 				tablesSeen = true; changed = true;
-				if (byCrc && sh->profile) { info = sh->profile; byCrc = false; }		// (before any read: nothing to forget)
+				if (byCrc && sh->profile) { info = sh->profile; owned = sh->own; byCrc = false; }		// (before any read: nothing to forget)
 				else if (byCrc) snap.unknownRelease = true;
 			}
 		}
@@ -1385,16 +1402,17 @@ namespace banana::pkmn
 			if (!fixed) wants.push_back({ info->sb1, 8, &sbp, false });
 			uint32_t s1 = fixed ? info->sb1 : sbSeen[0], s2 = fixed ? info->sb2 : sbSeen[1];
 			sbUsed[0] = s1; sbUsed[1] = s2;
-			wants.push_back({ info->mapHeader, 0x1c, &mh, false });
+			if (info->mapHeader) wants.push_back({ info->mapHeader, 0x1c, &mh, false });
 			if (s1 >> 24 == 2 && s2 >> 24 == 2)
 			{
 				const SaveLayout& L = info->save;
-				wants.push_back({ s1, 12, &sb1h, false });
+				wants.push_back({ s1 + L.pos, 12, &sb1h, false });
 				uint32_t b0 = L.pocket[0], b1 = L.pocket[4] + 4 * L.count[4];
 				if (!bagPockets) wants.push_back({ s1 + b0, (int)(b1 - b0), &bagB, false });
 				wants.push_back({ s1 + L.money, 4, &moneyB, false });
 				if (L.key) wants.push_back({ s2 + L.key, 4, &keyB, false });
-				if (!dexOwn) wants.push_back({ s2 + L.dexOwned, (int)DEX_LEN, &dexB, false });
+				if (!dexOwn && L.dexSb1) wants.push_back({ s1 + L.dexSb1, 2 * L.dexBytes, &dexB, false });
+				else if (!dexOwn) wants.push_back({ s2 + L.dexOwned, (int)DEX_LEN, &dexB, false });
 				wants.push_back({ s1 + L.flags + 0x100, 16, &flagB, false });
 				wants.push_back({ s2, 0x12, &nameB, false });	// (the name, then the trainer id at 0x0A and the play time at 0x0E)
 			}
@@ -1513,6 +1531,10 @@ namespace banana::pkmn
 		if (dexOwn > 0)
 		{
 			if (dexB.size() >= 2 * (size_t)dexOwn) { s.dexSeen.assign(dexB.begin(), dexB.begin() + dexOwn); s.dexOwned.assign(dexB.begin() + dexOwn, dexB.begin() + 2 * dexOwn); }
+		}
+		else if (L.dexSb1 && L.dexBytes > 0)
+		{
+			if (dexB.size() >= 2 * (size_t)L.dexBytes) { s.dexSeen.assign(dexB.begin(), dexB.begin() + L.dexBytes); s.dexOwned.assign(dexB.begin() + L.dexBytes, dexB.begin() + 2 * L.dexBytes); }
 		}
 		else if (dexB.size() >= DEX_LEN) { s.dexOwned.assign(dexB.begin(), dexB.begin() + 52); s.dexSeen.assign(dexB.begin() + 0x34, dexB.begin() + 0x68); }
 		if (flagB.size() >= 16)

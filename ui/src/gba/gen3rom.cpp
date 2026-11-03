@@ -18,6 +18,7 @@
 // every table is also found by its shape, and each one is checked by its first entries either way.
 #include "gba/gen3rom.h"
 #include "gba/gen3map.h"
+#include "gba/expansion.h"
 #include "gba/hacks.h"
 #include "nds/nitro.h"
 #include "nds/rom.h"
@@ -617,6 +618,8 @@ namespace banana::gba
 
 	std::shared_ptr<const RomData> readRomData(const pkmn::RomTables& t, const Game& game, const std::string&)
 	{
+		// (a pokeemerald-expansion build: its own structs and tables, gba/expansion.cpp)
+		if (const HackInfo* h = hackByKey(game.hack.c_str())) if (h->engine == Engine::EXPANSION) return readExpansionRomData(t, game);
 		if (!t.rom || game.gen != Gen::III || game.id == GameId::NONE) return nullptr;
 		Src src;
 		const HackInfo* hi = game.id == GameId::HACK ? hackByKey(game.hack.c_str()) : nullptr;
