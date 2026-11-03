@@ -1,0 +1,960 @@
+{
+ "schema": 1,
+ "kind": "nds-pokemon-guide",
+ "game": "lazarus",
+ "code": "BPEE",
+ "title": "Pokemon Lazarus (v2)",
+ "revision": 1,
+ "sources": [
+  "The ROM itself (Lazarus v2, pokeemerald-expansion build): region map section names (each place resolves to a section with maps) and trainer names, teams and levels (two teams per leader: Normal and Hard), read on the PC with throwaway tools",
+  "mrwalkthroughs.com/pokemon-lazarus: walkthrough parts 1-21, legendaries, evolution items, Wakewater Isle",
+  "retrododo.com and retrohandhelds.gg: the 1.0 release and the 2.0 update's change list; dsogaming.com (release)"
+ ],
+ "places": {
+  "bronze-fields": {
+   "name": "Bronze Fields"
+  },
+  "acrisia-city": {
+   "name": "Acrisia City"
+  },
+  "acrisia-mountains": {
+   "name": "Acrisia Mountains"
+  },
+  "jusmail-town": {
+   "name": "Jusmail Town"
+  },
+  "erinys-path": {
+   "name": "Erinys Path"
+  },
+  "wanderers-woods": {
+   "name": "Wanderer’s Woods"
+  },
+  "kalami-city": {
+   "name": "Kalami City"
+  },
+  "riverwalk-trail": {
+   "name": "Riverwalk Trail"
+  },
+  "pythios-town": {
+   "name": "Pythios Town"
+  },
+  "asfal-hills": {
+   "name": "Asfal Hills"
+  },
+  "sofos-city": {
+   "name": "Sofos City"
+  },
+  "sea-of-asteri": {
+   "name": "Sea of Asteri"
+  },
+  "marmaro-island": {
+   "name": "Marmaro Island"
+  },
+  "myrrini-island": {
+   "name": "Myrrini Island"
+  },
+  "sea-of-vulcai": {
+   "name": "Sea of Vulcai"
+  },
+  "fresco-isles": {
+   "name": "Fresco Isles"
+  },
+  "palati-city": {
+   "name": "Palati City"
+  },
+  "kaptara-island": {
+   "name": "Kaptara Island"
+  },
+  "port-pello": {
+   "name": "Port Pello"
+  },
+  "corrin-crossing": {
+   "name": "Corrin Crossing"
+  },
+  "tower-of-dioxippus": {
+   "name": "Tower of Dioxippus"
+  },
+  "lastlight-road": {
+   "name": "Lastlight Road"
+  },
+  "areios-hideout": {
+   "name": "Areios Hideout"
+  },
+  "davosi-straits": {
+   "name": "Davosi Straits"
+  },
+  "pentepetal-city": {
+   "name": "Péntepetal City"
+  },
+  "pollen-road": {
+   "name": "Pollen Road"
+  },
+  "ruins-of-ahiyawa": {
+   "name": "Ruins of Ahiyawa"
+  },
+  "wakewater-isle": {
+   "name": "Wakewater Isle"
+  },
+  "the-delphis": {
+   "name": "The Delphis"
+  },
+  "kipos-town": {
+   "name": "Kipos Town"
+  }
+ },
+ "milestones": [
+  {
+   "id": "story-bronze-fields",
+   "name": "Team Chimera in Bronze Fields",
+   "kind": "story",
+   "place": "bronze-fields",
+   "level_cap": 5,
+   "foe": [
+    {
+     "name": "Grunt",
+     "ace_level": 5
+    }
+   ],
+   "done_when": "party",
+   "opens": [
+    "acrisia-city",
+    "bronze-fields",
+    "acrisia-mountains"
+   ],
+   "tips": "Professor Elia at Acrisia University offers nine starters (Rowlet, Litten, Popplio, Chespin, Fennekin, Froakie, Sprigatito, Fuecoco, Quaxly), then the Rotom Phone, the Exp. Share and an outfit box. On the parcel errand a Team Chimera thug with a Lv 5 Pancham blocks Bronze Fields.",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "gym-1-polymnia",
+   "name": "Gym 1: Polymnia",
+   "kind": "gym",
+   "place": "jusmail-town",
+   "leader": "Polymnia",
+   "theme": "grass",
+   "level_cap": 11,
+   "foe": {
+    "name": "Polymnia",
+    "ace_level": 11
+   },
+   "done_when": "badge:1",
+   "opens": [
+    "erinys-path",
+    "jusmail-town"
+   ],
+   "badge_note": "Harvest Badge: Cut. TM09 Bullet Seed. Ability Capsules from Elia afterwards.",
+   "tips": "Mixed team around Grass: Cutiefly, Timburr, Shroomish (Lv 10-11). Fire and Flying moves for the Grass ones, Psychic or Flying for Timburr. Normal and Hard each have their own team (Hard adds Pokémon).",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "rival-rania-jusmail",
+   "name": "Rania leaving Jusmail Town",
+   "kind": "rival",
+   "place": "jusmail-town",
+   "level_cap": 12,
+   "foe": [
+    {
+     "name": "Rania",
+     "ace_level": 12
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Rania, a researcher friend, battles you on the way out: Buizel, Vulpix, Bellsprout (Lv 10-12). She gives HM01 Cut.",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "team-wanderers-woods",
+   "name": "Team Chimera admin (Wanderer's Woods)",
+   "kind": "team",
+   "place": "wanderers-woods",
+   "level_cap": 18,
+   "foe": [
+    {
+     "name": "Admin",
+     "ace_level": 18
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "wanderers-woods",
+    "kalami-city",
+    "riverwalk-trail"
+   ],
+   "tips": "A Chimera admin: Magnemite, Galarian Zigzagoon, Crabrawler (Lv 17-18). Afterwards Niko or Rania gives a Rare Egg, depending on your answer.",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "gym-2-ourani",
+   "name": "Gym 2: Ourani",
+   "kind": "gym",
+   "place": "kalami-city",
+   "leader": "Ourani",
+   "theme": "rock",
+   "level_cap": 18,
+   "foe": {
+    "name": "Ourani",
+    "ace_level": 18
+   },
+   "done_when": "badge:2",
+   "opens": [
+    "kalami-city"
+   ],
+   "badge_note": "Gemstone Badge: Rock Smash. TM39 Rock Tomb. Elia gives the DexNav afterwards.",
+   "tips": "Rock-themed: Klawf, Hisuian Voltorb, Mawile (Lv 17-18). Water, Grass, Fighting and Ground moves; Mawile is Steel/Fairy (Fire, Ground). Normal and Hard each have their own team (Hard adds Pokémon).",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "team-erinys",
+   "name": "Team Chimera admin (Erinys Path)",
+   "kind": "team",
+   "place": "erinys-path",
+   "level_cap": 20,
+   "foe": [
+    {
+     "name": "Admin",
+     "ace_level": 19
+    },
+    {
+     "name": "Admin",
+     "ace_level": 20
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "pythios-town"
+   ],
+   "tips": "Another admin on the path: Basculin, Sandile, Alolan Grimer, Cufant (Lv 19) (Hard: Basculin, Wimpod, Tinkatink (Lv 19-20)).",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "gym-3-kleio",
+   "name": "Gym 3: Kleio",
+   "kind": "gym",
+   "place": "pythios-town",
+   "leader": "Kleio",
+   "theme": "ghost",
+   "level_cap": 21,
+   "foe": [
+    {
+     "name": "Kleio",
+     "ace_level": 20
+    },
+    {
+     "name": "Kleio",
+     "ace_level": 21
+    }
+   ],
+   "done_when": "badge:3",
+   "opens": [
+    "pythios-town"
+   ],
+   "badge_note": "Grave Badge: Flash (the cemetery grunts drop HM05). TM04 Calm Mind.",
+   "tips": "Ghost types: Hisuian Zorua, Pumpkaboo, Shuppet, Noctowl (Lv 19-20). Dark and Ghost moves; Normal and Fighting can't touch Ghosts. A Zorua hides behind an illusion. Normal and Hard each have their own team (Hard adds Pokémon).",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "rival-niko",
+   "name": "Niko (Asfal Hills)",
+   "kind": "rival",
+   "place": "asfal-hills",
+   "level_cap": 23,
+   "foe": [
+    {
+     "name": "Niko",
+     "ace_level": 23
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "asfal-hills",
+    "sofos-city"
+   ],
+   "tips": "Niko: Herdier, Mudbray, Alolan Sandshrew (Lv 23). Once you get the stolen Key Stone back he hands over Surf.",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "gym-4-terpsikore",
+   "name": "Gym 4: Terpsikore",
+   "kind": "gym",
+   "place": "sofos-city",
+   "leader": "Terpsikore",
+   "theme": "psychic",
+   "level_cap": 26,
+   "foe": {
+    "name": "Terpsikore",
+    "ace_level": 26
+   },
+   "done_when": "badge:4",
+   "opens": [
+    "sofos-city",
+    "sea-of-asteri"
+   ],
+   "badge_note": "Wisdom Badge: Surf. TM53 Power-Up Punch. She gives the Key Stone (Mega Evolution) after the Satyr's Lair events.",
+   "tips": "Psychic and Fighting: Pawmo, Gothorita, Meditite, Unown (Lv 25-26). Flying, Ghost and Fairy moves cover both. Normal and Hard each have their own team (Hard adds Pokémon).",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "rival-rania-2",
+   "name": "Rania again",
+   "kind": "rival",
+   "place": "marmaro-island",
+   "level_cap": 29,
+   "foe": [
+    {
+     "name": "Rania",
+     "ace_level": 29
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Floatzel, Ninetales, Mawile, Hawlucha (Lv 29).",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus (place: by order)"
+  },
+  {
+   "id": "gym-5-euterpe",
+   "name": "Gym 5: Euterpe",
+   "kind": "gym",
+   "place": "myrrini-island",
+   "leader": "Euterpe",
+   "theme": "water",
+   "level_cap": 30,
+   "foe": {
+    "name": "Euterpe",
+    "ace_level": 30
+   },
+   "done_when": "badge:5",
+   "opens": [
+    "marmaro-island",
+    "myrrini-island",
+    "sea-of-vulcai"
+   ],
+   "badge_note": "Festival Badge: Dive. TM21 Acid Spray (2.0).",
+   "tips": "Water and Poison: Hypno, Gyarados, Hisuian Sneasel, Grafaiai (Lv 29-30). Ground and Psychic moves; Electric for Gyarados. Normal and Hard each have their own team (Hard adds Pokémon).",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "team-marmaro",
+   "name": "Team Chimera admin (Marmaro mines)",
+   "kind": "team",
+   "place": "marmaro-island",
+   "level_cap": 32,
+   "foe": [
+    {
+     "name": "Admin",
+     "ace_level": 32
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "In the Marmaro mines an admin takes a piece of the Ancient Mechanism: Paldean Tauros, Lycanroc, Passimian, Huntail (Lv 31-32). Kalliope, the eighth leader, turns out to lead Chimera.",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "gym-6-thalia-melpomene",
+   "name": "Gym 6: Thalia & Melpomene",
+   "kind": "gym",
+   "place": "fresco-isles",
+   "leader": "Thalia & Melpomene",
+   "theme": "electric",
+   "level_cap": 36,
+   "foe": {
+    "name": "Thal & Mel",
+    "ace_level": 36
+   },
+   "done_when": "badge:6",
+   "opens": [
+    "fresco-isles"
+   ],
+   "badge_note": "Theatrical Badge: Strength. TM49 Bulldoze. Rania gives TM47 Steel Wing after this gym.",
+   "tips": "A double battle, Electric and Ground: Hisuian Electrode, Lanturn, Alolan Raichu, Mudsdale (Lv 34-36). Ground moves for the Electric side, Water and Grass for the Ground side; Lanturn is part Water. Bring them the Box of Chocolate (from Cooltrainer Stella) first. Normal and Hard each have their own team (Hard adds Pokémon).",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "rival-rania-palati",
+   "name": "Rania at the Palati gym",
+   "kind": "rival",
+   "place": "palati-city",
+   "level_cap": 36,
+   "foe": [
+    {
+     "name": "Rania",
+     "ace_level": 36
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "palati-city",
+    "kaptara-island"
+   ],
+   "tips": "Floatzel, Ninetales, Mawile, Flareon (Lv 36).",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "gym-7-rhadine",
+   "name": "Gym 7: Rhadine",
+   "kind": "gym",
+   "place": "palati-city",
+   "leader": "Rhadine",
+   "theme": "fire",
+   "level_cap": 39,
+   "foe": {
+    "name": "Rhadine",
+    "ace_level": 39
+   },
+   "done_when": "badge:7",
+   "opens": [],
+   "badge_note": "Passion Badge: Fly (the HM itself comes from a Bird Keeper on Kaptara Island). TM35 Flamethrower.",
+   "tips": "Fire and Flying: Oricorio, Braviary, Togekiss, Chandelure, Hisuian Arcanine, Salazzle (Lv 38-39). Rock, Electric and Water moves. Normal and Hard each have their own team (Hard adds Pokémon).",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "team-admins-beasts",
+   "name": "Chimera admins with the changed beasts",
+   "kind": "team",
+   "place": "kaptara-island",
+   "level_cap": 43,
+   "foe": [
+    {
+     "name": "Admin",
+     "ace_level": 42
+    },
+    {
+     "name": "Admin",
+     "ace_level": 43
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "kaptara-island",
+    "sofos-city"
+   ],
+   "tips": "Kalliope's machine turns Entei, Raikou and Suicune into Gouging Fire, Raging Bolt and Walking Wake; admins use them to wake Groudon (Satyr's Lair, north of Sofos) and Kyogre (Kaptara Island West). The ROM's admin teams here top at 42-43.",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "rival-rania-pello",
+   "name": "Rania at Port Pello",
+   "kind": "rival",
+   "place": "port-pello",
+   "level_cap": 44,
+   "foe": [
+    {
+     "name": "Rania",
+     "ace_level": 44
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "port-pello",
+    "corrin-crossing"
+   ],
+   "tips": "Floatzel, Ninetales, Espathra, Politoed, Hypno (Lv 44).",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "team-kalliope-tower",
+   "name": "Kalliope on the Tower of Dioxippus",
+   "kind": "team",
+   "place": "tower-of-dioxippus",
+   "level_cap": 44,
+   "foe": [
+    {
+     "name": "Kalliope",
+     "ace_level": 44
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "lastlight-road",
+    "tower-of-dioxippus"
+   ],
+   "tips": "Kalliope at the top of the tower: Hydrapple, Tinkaton, Dracozolt, Tyrantrum, Sneasler, Grimmsnarl (Lv 43-44). Ice, Poison and Steel cover most of it; Hydrapple takes four times from Ice. Rayquaza waits here afterwards.",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "team-areios",
+   "name": "The Areios hideout",
+   "kind": "team",
+   "place": "areios-hideout",
+   "level_cap": 48,
+   "foe": [
+    {
+     "name": "Admin",
+     "ace_level": 47
+    },
+    {
+     "name": "Admin",
+     "ace_level": 48
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "areios-hideout"
+   ],
+   "tips": "The gym leaders raid Chimera's hideout in Areios: grunts at 46-47 and two admins (Basculegion, Golisopod, Paldean Tauros, Dewgong, Feraligatr, Krookodile (Lv 47); Cradily, Zebstrika, Passimian, Perrserker, Klawf, Lycanroc (Lv 48)).",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "gym-8-kalliope",
+   "name": "Gym 8: Kalliope",
+   "kind": "gym",
+   "place": "areios-hideout",
+   "leader": "Kalliope",
+   "theme": "dragon",
+   "level_cap": 50,
+   "foe": {
+    "name": "Kalliope",
+    "ace_level": 50
+   },
+   "done_when": "badge:8",
+   "opens": [],
+   "badge_note": "Myth Badge (handed over by Raikou): Waterfall. TM02 Dragon Claw and the Ancient Mechanism.",
+   "tips": "Dragon and Fairy: Hydrapple, Tinkaton, Dracozolt, Grimmsnarl, Silvally, Raging bolt (Lv 48-50). Steel and Poison moves hit the Fairy side, Ice and Fairy the Dragons; Raging Bolt is Electric/Dragon (Ground, Dragon, Fairy).",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "rival-rania-davosi",
+   "name": "Rania at the end of the Davosi Straits",
+   "kind": "rival",
+   "place": "davosi-straits",
+   "level_cap": 52,
+   "foe": [
+    {
+     "name": "Rania",
+     "ace_level": 52
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "davosi-straits",
+    "pentepetal-city",
+    "pollen-road"
+   ],
+   "tips": "Her last battle, with a Mega Victreebel: Floatzel, Ninetales, Spiritomb, Rampardos, Bewear (Lv 51-52). She gives HM07 Waterfall.",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "e4-polymnia",
+   "name": "Elite Four: Polymnia",
+   "kind": "elite4",
+   "place": "ruins-of-ahiyawa",
+   "leader": "Polymnia",
+   "theme": "grass",
+   "level_cap": 52,
+   "foe": [
+    {
+     "name": "Polymnia",
+     "ace_level": 52
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "ruins-of-ahiyawa"
+   ],
+   "tips": "The leaders form the Elite Four at the Ruins of Ahiyawa: Jumpluff, Appletun, Leafeon, Tsareena, Crustle, Meganium (Lv 52). Fire, Flying, Ice and Bug moves.",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "e4-terpsikore",
+   "name": "Elite Four: Terpsikore",
+   "kind": "elite4",
+   "place": "ruins-of-ahiyawa",
+   "leader": "Terpsikore",
+   "theme": "fighting",
+   "level_cap": 53,
+   "foe": [
+    {
+     "name": "Terpsikore",
+     "ace_level": 53
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "The leaders form the Elite Four at the Ruins of Ahiyawa: Hisuian Braviary, Bruxish, Pangoro, Medicham, Kommo-o, Gallade (Lv 53). Flying, Psychic, Fairy and Ghost moves.",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "e4-euterpe",
+   "name": "Elite Four: Euterpe",
+   "kind": "elite4",
+   "place": "ruins-of-ahiyawa",
+   "leader": "Euterpe",
+   "theme": "water",
+   "level_cap": 54,
+   "foe": [
+    {
+     "name": "Euterpe",
+     "ace_level": 54
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "The leaders form the Elite Four at the Ruins of Ahiyawa: Tentacruel, Carracosta, Lanturn, Gliscor, Arbok, Sneasler (Lv 53-54). Ground and Electric moves; Gliscor takes four times from Ice.",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "e4-rhadine",
+   "name": "Elite Four: Rhadine",
+   "kind": "elite4",
+   "place": "ruins-of-ahiyawa",
+   "leader": "Rhadine",
+   "theme": "flying",
+   "level_cap": 55,
+   "foe": [
+    {
+     "name": "Rhadine",
+     "ace_level": 55
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "The leaders form the Elite Four at the Ruins of Ahiyawa: Oricorio, Toucannon, Simisear, Alolan Marowak, Chatot and 1 more (Lv 54-55). Rock and Electric moves.",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "champion-anyalios",
+   "name": "Champion Anyalios",
+   "kind": "champion",
+   "place": "ruins-of-ahiyawa",
+   "leader": "Anyalios",
+   "level_cap": 56,
+   "foe": [
+    {
+     "name": "Anyalios",
+     "ace_level": 56
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Ceruledge, Spiritomb, Tyrantrum, Golisopod, Scrafty, Obstagoon (Lv 55-56); a Mega Cyclizar is reported with it. Fighting and Fairy for the Dark types, Ground and Water for Ceruledge.",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "post-wakewater",
+   "name": "Post-game: Champion's Defense (Wakewater Isle)",
+   "kind": "postgame",
+   "place": "wakewater-isle",
+   "level_cap": 68,
+   "done_when": "none",
+   "opens": [
+    "wakewater-isle",
+    "the-delphis"
+   ],
+   "tips": "Piraeus sails you to Wakewater Isle; its stadium runs a repeatable defense of three random trainers at Lv 62-68 (healed between fights), the gym leaders among them with Lv 55 teams. Prizes: Nuggets, Big Nuggets, Pearls or a Master Ball.",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table; mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "legend-rayquaza",
+   "name": "Rayquaza (Tower of Dioxippus)",
+   "kind": "legendary",
+   "place": "tower-of-dioxippus",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Optional, on the top floor after Kalliope; it heals your party first. No level in the sources: the cap shown is the story level around it.",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "legend-groudon",
+   "name": "Groudon (Satyr's Lair)",
+   "kind": "legendary",
+   "place": "sofos-city",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Woken in Satyr's Lair north of Sofos; catch it, beat it or flee (it can be found there again if not caught). No level in the sources: the cap shown is the story level around it.",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "legend-kyogre",
+   "name": "Kyogre (Kaptara Island)",
+   "kind": "legendary",
+   "place": "kaptara-island",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [],
+   "tips": "In the sunken temple on Kaptara Island West, under the same rules as Groudon. No level in the sources: the cap shown is the story level around it.",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "legend-beasts",
+   "name": "Raging Bolt, Gouging Fire, Walking Wake",
+   "kind": "legendary",
+   "place": "sofos-city",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [],
+   "tips": "The changed beasts tied to the Acropolis Temple in Sofos (Gouging Fire also in Satyr's Lair); the conditions are not documented. No level in the sources: the cap shown is the story level around it.",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "legend-silvally",
+   "name": "Type: Null (Fresco Isles)",
+   "kind": "legendary",
+   "place": "fresco-isles",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [],
+   "tips": "From the abandoned lab on the Fresco Isles after an ex-scientist's quest. No level in the sources: the cap shown is the story level around it.",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "legend-ogerpon",
+   "name": "Ogerpon (Kipos Town)",
+   "kind": "legendary",
+   "place": "kipos-town",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [],
+   "tips": "In Kipos Town after Mr. Russel's zookeeper quest. No level in the sources: the cap shown is the story level around it.",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus"
+  }
+ ],
+ "steps": [
+  {
+   "id": "step-starter",
+   "title": "Nine starters",
+   "text": "Elia's nine are the Alola, Kalos and Paldea starters. A cheat-code console stands by the university PC.",
+   "stage": "story-bronze-fields",
+   "places": [
+    "acrisia-city"
+   ],
+   "done_when": "party",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "step-difficulty",
+   "title": "Normal or Hard",
+   "text": "Page 2 of the options sets Normal (soft level caps) or Hard (hard caps, bigger gym teams). Since 2.0 the caps can be turned off.",
+   "stage": "gym-1-polymnia",
+   "places": [
+    "acrisia-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus; retrododo.com: Lazarus 2.0 update"
+  },
+  {
+   "id": "step-dex-tms",
+   "title": "Show your Pokédex for TMs",
+   "text": "In many areas a university student gives a TM once you have registered every land Pokémon there.",
+   "stage": "gym-2-ourani",
+   "places": [
+    "kalami-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "step-chocolate",
+   "title": "Box of Chocolate for the sisters",
+   "text": "The Fresco gym's sisters only battle once you bring them the Box of Chocolate that Cooltrainer Stella gives for beating her.",
+   "stage": "gym-6-thalia-melpomene",
+   "places": [
+    "fresco-isles"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "step-rods",
+   "title": "Fishing rods",
+   "text": "Old Rod on the Kalami pier, Good Rod from the Sofos fishing guru, Super Rod at Corrin Crossing.",
+   "stage": null,
+   "places": [
+    "kalami-city",
+    "sofos-city",
+    "corrin-crossing"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus"
+  }
+ ],
+ "secrets": [
+  {
+   "id": "tip-stones",
+   "kind": "tip",
+   "text": "The exchange building in east Sofos City trades Thunder, Fire, Sun, Leaf and Dawn Stones, the Linking Cord and the Metal Coat; a street vendor sells the Tart, Sweet and Syrupy Apples.",
+   "place": "sofos-city",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "tip-ice-stone",
+   "kind": "tip",
+   "text": "The Ice Stone comes from the Pythios cemetery quest.",
+   "place": "pythios-town",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "tip-dusk-stone",
+   "kind": "tip",
+   "text": "Acrisia Mountains: a quest gives the Dusk Stone; the Shiny Stone lies there behind water (Surf).",
+   "place": "acrisia-mountains",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "tip-razor-fang",
+   "kind": "hidden-item",
+   "text": "Razor Fang is in Wanderer's Woods; Razor Claw on the Fresco Isles.",
+   "place": "wanderers-woods",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "tip-armor",
+   "kind": "tip",
+   "text": "The Auspicious and Malicious Armor for Charcadet are on Kaptara Island.",
+   "place": "kaptara-island",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "tip-augurite",
+   "kind": "tip",
+   "text": "Since 2.0 an NPC on Marmaro Island has the Black Augurite (for Kleavor); the island also has mining.",
+   "place": "marmaro-island",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "tip-armor-fossil",
+   "kind": "hidden-item",
+   "text": "An Armor Fossil is hidden on Pollen Road.",
+   "place": "pollen-road",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "gift-wishing-stars",
+   "kind": "gift",
+   "text": "A girl in Bronze Fields gives the first three Wishing Stars for the Wishing Well (its Pokémon come in Cherish Balls since 2.0).",
+   "place": "bronze-fields",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "gift-egg-doll",
+   "kind": "gift",
+   "text": "The Myrrini day care gives an Egg Doll; the Reaper Cloth comes from a Myrrini quest.",
+   "place": "myrrini-island",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "tip-ability-capsule",
+   "kind": "gift",
+   "text": "A sailor in Kalami gives Ability Capsules (Elia gives some after gym 1 too).",
+   "place": "kalami-city",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus"
+  }
+ ],
+ "evolutions": [
+  {
+   "id": "evo-drakloak",
+   "species": 886,
+   "name": "Drakloak",
+   "text": "Level 48 gives Dragapult (it was 60 before 2.0).",
+   "quality": "reference-only",
+   "source": "retrododo.com: Lazarus 2.0 update"
+  },
+  {
+   "id": "evo-trade-cord",
+   "species": 64,
+   "name": "Kadabra",
+   "text": "Kadabra and the other trade evolutions can use the Linking Cord, traded in Sofos City's exchange building (the sources imply it, none states every species).",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "evo-scyther",
+   "species": 123,
+   "name": "Scyther",
+   "text": "The Metal Coat (Sofos exchange) gives Scizor; the Black Augurite (Marmaro NPC) gives Kleavor.",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "evo-charcadet",
+   "species": 935,
+   "name": "Charcadet",
+   "text": "The Auspicious Armor gives Armarouge and the Malicious Armor Ceruledge; both are on Kaptara Island.",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus"
+  },
+  {
+   "id": "evo-applin",
+   "species": 840,
+   "name": "Applin",
+   "text": "Tart, Sweet and Syrupy Apples from the Sofos vendor give Flapple, Appletun and Dipplin.",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus"
+  }
+ ],
+ "notes": [
+  {
+   "id": "note-version",
+   "kind": "version",
+   "title": "Lazarus v2",
+   "text": "Ilios region, Generation II-style graphics, 400+ Pokémon from Gen I-IX (some with changed stats). 2.0 added Megas (Typhlosion, Carracosta, Aurorus, Tyrantrum, Crabominable, Golisopod), turning caps off, changing a Pokémon's ball from the bag, and the BATTLEPASS cheat code.",
+   "quality": "reference-only",
+   "source": "retrododo.com: Lazarus 2.0 update"
+  },
+  {
+   "id": "note-features",
+   "kind": "tip",
+   "title": "Features",
+   "text": "Mega Evolution with many new Megas, a DexNav with shiny chaining, day and night, follower Pokémon, level caps, 60+ side quests, mining on Marmaro.",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-lazarus; retrododo.com: Lazarus 2.0 update"
+  },
+  {
+   "id": "note-hard-mode",
+   "kind": "version",
+   "title": "Two teams per leader",
+   "text": "The ROM has a Normal and a Hard team for every gym leader (the Hard one has an extra Pokémon; Kleio's ace is one level higher).",
+   "quality": "reference-only",
+   "source": "ROM Lazarus v2 trainer table"
+  }
+ ]
+}
