@@ -18,9 +18,10 @@ namespace bsync
 
 	// a downloaded save (dl, checked, on /run) put in place as the save at rel: the save there now kept in the vault
 	// first; journalled; written beside, renamed, read back; then the last good copy. dl is removed when installed.
-	// Blank (a core's fresh save on the server): not taken, and not an error either; err says why when Failed
+	// Blank (a core's fresh save on the server): not taken, and not an error either; err says why when Failed. expect:
+	// the MD5 the save at rel had when the decision to replace it was made ("" for none), so one written since is left
 	enum class Install { Done, Blank, Failed };
-	Install installSave(const std::string& rel, const std::string& dl, const std::string& serverId, std::string& err);
+	Install installSave(const std::string& rel, const std::string& dl, const std::string& serverId, std::string& err, const std::string* expect = nullptr);
 
 	struct JOp
 	{
@@ -34,6 +35,8 @@ namespace bsync
 	bool journalEnd(const std::string& id, const std::string& result, const std::string& after);
 	// each begin with no end (a run killed, the power lost): the save's MD5 says how far it got, the before value
 	// (unchanged), the one wanted (installed) or neither (changed-since: played since, kept as it is); a .new left
-	// beside it removed. Returns "<result> <rel>" for each
-	std::string journalRecover();
+	// beside it removed. One installed is agreed in c's slot record (the run was killed before it could), so the next
+	// sync doesn't take the save for the card's own change. Returns "<result> <rel>" for each
+	struct Conf;
+	std::string journalRecover(Conf* c = nullptr);
 }

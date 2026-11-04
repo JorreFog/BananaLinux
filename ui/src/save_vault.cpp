@@ -104,7 +104,7 @@ namespace bsync
 		return journalLine("end\t" + id + "\t" + result + "\t" + after);
 	}
 
-	Install installSave(const std::string& rel, const std::string& dl, const std::string& serverId, std::string& err)
+	Install installSave(const std::string& rel, const std::string& dl, const std::string& serverId, std::string& err, const std::string* expect)
 	{
 		bool ok;
 		std::string data = readFile(dl, &ok), p = ROOT + "/" + rel;
@@ -112,6 +112,11 @@ namespace bsync
 		if (blankSave(data, saveFolder(rel))) { unlink(dl.c_str()); return Install::Blank; }	// (empty included)
 		std::string want = hashStr(data, "md5"), before = exists(p) ? hashFile(p, "md5") : "", kept;
 		if (before == want) { vaultGood(rel, data); unlink(dl.c_str()); return Install::Done; }
+		// (the save is no longer the one the decision was made on: an emulator wrote it meanwhile)
+		if (expect && before != *expect) { err = "changed while syncing, next time"; return Install::Failed; }
+		// (a run of one game's goes on when a game starts, and that may be this game, its save already read: what goes
+		// under it now would be written over by the game, and then sent as the newer. The next sync decides it again)
+		if (gameRunning()) { err = "a game started, next time"; return Install::Failed; }
 		if (!before.empty() && !vaultKeep(rel, p, kept, err)) return Install::Failed;
 		std::string id = journalBegin({ "install", rel, before, serverId, want, kept, want });
 		if (id.empty()) { err = "the sync's journal can't be written (card full?)"; return Install::Failed; }
@@ -124,10 +129,13 @@ namespace bsync
 		vaultGood(rel, data);
 		journalEnd(id, "ok", want);
 		unlink(dl.c_str());
+		// (BananaDS's quick-resume state belongs with the save it replaced: loaded over this one, it would put that
+		// save's memory back. DraStic's goes the same way when nds-saves gives it the new save)
+		if (rel.compare(0, 10, "saves/nds/") == 0) unlink((ROOT + "/states/nds/" + stemOf(baseOf(rel)) + ".resume.mst").c_str());
 		return Install::Done;
 	}
 
-	std::string journalRecover()
+	std::string journalRecover(Conf* c)
 	{
 		std::ifstream f(journalPath());
 		if (!f) return "";
@@ -146,6 +154,11 @@ namespace bsync
 			std::string rel = b[3], p = ROOT + "/" + rel, h = exists(p) ? hashFile(p, "md5") : "";
 			std::string res = h == b[4] ? "unchanged" : h == b[8] ? "installed" : "changed-since";
 			if (safeRel(rel)) unlink((p + ".new").c_str());
+			// (in place, and the run killed before it could say so: agreed now, as it would have been. The record of a
+			// slot that held the save it replaced, else none: a save changed since is left for the sync to decide)
+			if (res == "installed" && c)
+				for (auto& s : c->slots)
+					if (s.second.rel == rel && s.second.md5 == b[4]) { s.second.md5 = b[8]; s.second.saveId = atoll(b[5].c_str()); s.second.wire.clear(); }
 			if (!journalEnd(kv.first, "recovered " + res, h)) return out;
 			out += res + " " + rel + "\n";
 		}

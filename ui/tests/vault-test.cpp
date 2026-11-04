@@ -84,10 +84,17 @@ static void journal()
 	journalEnd(ie, "ok", "e");
 	expect(!ia.empty() && ia != ib, true, "begin lines written, each its own id");
 	expect(journalBegin({ "install", "saves/gba/a\tb.srm", "", "", "", "", "" }).empty(), true, "a tab in a name: not journalled, so not run");
-	std::string r = journalRecover();
+	// (the slot records as the killed run left them: B's save agreed at what it replaced, C's too; A's at other bytes)
+	Conf conf;
+	conf.slots["2/autosave"] = { hashStr("b before", "md5"), b, 1, "wire" };
+	conf.slots["3/autosave"] = { hashStr("c before", "md5"), c, 1, "" };
+	conf.slots["1/autosave"] = { "other", a, 1, "" };
+	std::string r = journalRecover(&conf);
 	expect(r.find("unchanged " + a + "\n") != std::string::npos, true, "killed before the install: unchanged");
 	expect(r.find("installed " + b + "\n") != std::string::npos, true, "killed after the install: installed");
+	expect(conf.slots["2/autosave"].md5 == hb && conf.slots["2/autosave"].saveId == 2 && conf.slots["2/autosave"].wire.empty(), true, "an installed save agreed in its slot's record");
 	expect(r.find("changed-since " + c + "\n") != std::string::npos, true, "neither: changed since, left as it is");
+	expect(conf.slots["3/autosave"].md5 == hashStr("c before", "md5") && conf.slots["1/autosave"].md5 == "other", true, "the other records as they were");
 	expect(readFile(ROOT + "/" + c) == "c played since", true, "a changed save kept");
 	expect(r.find("unchanged " + d + "\n") != std::string::npos && !exists(ROOT + "/" + d + ".new"), true, "no save before or after, the .new gone");
 	expect(r.find("E.srm") == std::string::npos, true, "an ended operation not recovered");
@@ -98,6 +105,21 @@ static void journal()
 	{ std::ofstream(journalPath(), std::ios::app) << "begin\t1.2.3\tinstall\tsaves/gba/F"; }
 	journalBegin({ "install", "saves/gba/F.srm", hashStr("f before", "md5"), "6", "x", "v", "f" });
 	expect(journalRecover().find("unchanged saves/gba/F.srm\n") != std::string::npos, true, "a begin after a torn line recovered");
+}
+
+// a download put in place: only over the save the decision was made on; a DS save's quick-resume state, which would
+// put the save it replaces back, goes with it
+static void install()
+{
+	const std::string rel = "saves/nds/Peel Quest (USA).sav", dl = ROOT + "/run/dl";
+	std::string err, was = hashStr("was", "md5"), other = hashStr("other", "md5");
+	put(rel, "was"); put("states/nds/Peel Quest (USA).resume.mst", "spot"); writeAtomic(dl, "now");
+	expect(installSave(rel, dl, "1", err, &other) == Install::Failed && readFile(ROOT + "/" + rel) == "was" && err.find("changed while syncing") != std::string::npos, true,
+		"a save other than the one decided on is left");
+	expect(exists(dl), true, "the download kept for the retry");
+	expect(installSave(rel, dl, "1", err, &was) == Install::Done && readFile(ROOT + "/" + rel) == "now", true, "the save decided on replaced");
+	expect(!exists(ROOT + "/states/nds/Peel Quest (USA).resume.mst"), true, "the DS quick-resume state gone with the save it belonged to");
+	expect(!exists(dl), true, "the download used up");
 }
 
 // DeSmuME's footer on a DS save (as DraStic writes it; short: an older DraStic's, without the line saying where to
@@ -220,8 +242,10 @@ int main(int argc, char** argv)
 	if (argc > 1)
 	{
 		ROOT = argv[1];
+		RUN = ROOT + "/run";
 		vault();
 		journal();
+		install();
 		modes();
 	}
 	if (!fails) fprintf(stderr, "vault-test: all passed\n");

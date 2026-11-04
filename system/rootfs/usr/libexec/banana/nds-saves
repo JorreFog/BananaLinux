@@ -4,18 +4,26 @@
 # DeSmuME, and ROCKNIX's DraStic beside the game), is the raw save followed by DeSmuME's 122-byte footer: a
 # 16-byte "|-DESMUME SAVE-|" cookie as the last 16 bytes, and 36 bytes before the end the u32 the raw save was
 # padded to. DraStic also reads a raw save with no footer, which is what it is given here. Before either emulator
-# starts a game the newer of the two is written over the other in its own form (the footer left off for BananaDS),
-# the file replaced kept as .bak. The raw size is kept as it is: melonDS sizes the save memory from its game list,
-# not from the file, and fits a file of another size to it (cut short, or padded with 0xFF) without a word. Run by
-# run-drastic and run-bananads. A save under 512 bytes (the smallest real one is a 4 Kbit EEPROM's) is no save: it
-# never goes over one that has something in it (#96); the other way round instead.
-#   nds-saves <rom>
-#   BANANA_ROOT=<dir> nds-saves <rom>   the data partition somewhere else than /data (system/tests/launchers-test.sh;
-#                                       banana-sync's --root, not BANANA_DATA: that is banana/ to banana-ui and update)
+# starts a game, the one that changed since the two last agreed is written over the other in its own form (the
+# footer left off for BananaDS), and the file replaced is kept in the save sync's vault, as it keeps every save it
+# replaces (banana/save-vault/saves/nds/<game>/<UTC time>-<MD5's first 8>.sav, the same bytes kept once, never
+# removed here). Which one changed is told by content, never by the files' times (the handheld's clock is lost with
+# its battery, and a file dated in the future would win every comparison): the MD5 of the raw save the two last held
+# is kept in banana/nds-saves/<game>.md5, written whenever they are brought together. Both changed since: neither is
+# touched, said, and exit 3, so the emulator starting plays its own and the save sync leaves the game alone until
+# one of the two is chosen. No record yet (the first start after the update): the files' times decide this once,
+# as before, the file replaced in the vault. The raw size is kept as it is: melonDS sizes the save memory from its
+# game list, not from the file, and fits a file of another size to it (cut short, or padded with 0xFF) without a
+# word. Run by run-drastic, run-bananads and banana-sync.
+#   nds-saves <rom>        exit 0, or 3 when both saves changed since they last agreed
+#   BANANA_ROOT=<dir> nds-saves <rom>   the data partition somewhere else than /data (the tests' cards; banana-sync's
+#                                       --root, not BANANA_DATA: that is banana/ to banana-ui and update)
 DATA=${BANANA_ROOT:-/data}
 G=${1##*/}; G=${G%.*}
 DSV="$DATA/drastic/backup/$G.dsv"
 SAV="$DATA/saves/nds/$G.sav"
+REC="$DATA/banana/nds-saves/$G.md5"
+VAULT="$DATA/banana/save-vault/saves/nds/$G"
 mkdir -p "$DATA/drastic/backup" "$DATA/saves/nds"
 # a save from ROCKNIX, beside the game (roms/nds/<game>.dsv, on either card, #25): taken when Banana has no save for
 # the game yet, so a copy of the old file can never write over a game played here since; the file beside the game
@@ -40,37 +48,66 @@ raw_of_dsv() {
     case $_p in "$((_n - 122))"|"$((_n - 40))") ;; *) return 1 ;; esac
     head -c "$_p" "$1" > "$2" && [ "$(size "$2")" = "$_p" ]
 }
-# keep <file>: <file>.bak, a whole copy or none at all (made beside it and renamed: a copy cut short on a full card
-# never replaces a good backup)
-keep() { cp -p "$1" "$1.bak.new" && [ "$(size "$1.bak.new")" = "$(size "$1")" ] && mv -f "$1.bak.new" "$1.bak" || { rm -f "$1.bak.new"; return 1; }; }
+md5() { md5sum "$1" | cut -c1-32; }
+# keep <file> <its md5>: a copy in the vault, named as the save sync names its (the time is a label: the same bytes
+# are found again by their MD5, whatever the clock said)
+keep() {
+    _t=$(printf %s "$2" | cut -c1-8)
+    for _f in "$VAULT"/*-"$_t.sav"; do [ -f "$_f" ] && [ "$(md5 "$_f")" = "$2" ] && return 0; done
+    mkdir -p "$VAULT" || return 1
+    _k="$VAULT/$(date -u +%Y%m%dT%H%M%SZ)-$_t.sav"; _i=2
+    while [ -e "$_k" ]; do _k="$VAULT/$(date -u +%Y%m%dT%H%M%SZ)-$_i-$_t.sav"; _i=$((_i + 1)); done
+    cp "$1" "$_k.new" && mv "$_k.new" "$_k"
+}
+# rec <md5>: the raw save both now hold (W: something was written, so the card is synced before the emulator starts)
+W=
+rec() { W=1; mkdir -p "${REC%/*}" && echo "$1" > "$REC.new" && mv -f "$REC.new" "$REC"; }
+# sav_to_dsv: BananaDS's save written for DraStic (the raw bytes, which it reads as they are); dsv_to_sav: the raw
+# save cut out of DraStic's, already in $SAV.new. Either emulator's quick-resume state belongs with the save it had:
+# loaded over the new one, it would put the old save's memory back, so it goes with the file
+sav_to_dsv() { cat "$SAV" > "$DSV.new" && mv -f "$DSV.new" "$DSV" && rm -f "$DATA/drastic/savestates/$G.resume.dss"; }
+dsv_to_sav() { mv -f "$SAV.new" "$SAV" && rm -f "$DATA/states/nds/$G.resume.mst"; }
 
-TO= WHY=newer
-if [ -f "$DSV" ] && { [ ! -f "$SAV" ] || [ "$DSV" -nt "$SAV" ]; }; then TO=sav
-elif [ -f "$SAV" ] && { [ ! -f "$DSV" ] || [ "$SAV" -nt "$DSV" ]; }; then TO=dsv; fi
-# the newer one empty (a game quit before it wrote, a file made and never filled: SM64DS in SuperDrastic, #96) and
-# the older one a save: the older one is kept and goes over the empty one instead
-if [ "$TO" = sav ] && [ "$(size "$SAV")" -gt 0 ]; then
-    raw_of_dsv "$DSV" "$SAV.new" || { rm -f "$SAV.new"; echo "nds-saves: $G: DraStic's save: its footer doesn't add up or it couldn't be read (card full?), left as it is"; exit 0; }
-    n=$(size "$SAV.new"); rm -f "$SAV.new"
-    [ "$n" -lt 512 ] && { echo "nds-saves: $G: DraStic's save is newer but empty ($n bytes): BananaDS's kept, DraStic takes it"; TO=dsv WHY=kept; }
-elif [ "$TO" = dsv ] && [ "$(size "$SAV")" -lt 512 ] && [ "$(size "$DSV")" -gt 0 ]; then
-    echo "nds-saves: $G: BananaDS's save is newer but empty ($(size "$SAV") bytes): DraStic's kept, BananaDS takes it"; TO=sav WHY=kept
-fi
-
-if [ "$TO" = sav ]; then
-    raw_of_dsv "$DSV" "$SAV.new" || { rm -f "$SAV.new"; echo "nds-saves: $G: DraStic's save: its footer doesn't add up or it couldn't be copied (card full?): BananaDS's left as it is" >&2; exit 0; }
-    if [ -f "$SAV" ] && cmp -s "$SAV.new" "$SAV"; then rm -f "$SAV.new"; exit 0; fi
-    if [ -f "$SAV" ] && ! keep "$SAV"; then rm -f "$SAV.new"; echo "nds-saves: $G: no room for a backup of BananaDS's save: left as it is" >&2; exit 0; fi
-    mv -f "$SAV.new" "$SAV" && touch -r "$DSV" "$SAV"
-    echo "nds-saves: $G: DraStic's save is $WHY: BananaDS takes it ($(wc -c < "$SAV") bytes)"
-elif [ "$TO" = dsv ]; then
-    if [ -f "$DSV" ]; then
-        raw_of_dsv "$DSV" "$DSV.cmp.$$" && cmp -s "$DSV.cmp.$$" "$SAV" && { rm -f "$DSV.cmp.$$"; exit 0; }
-        rm -f "$DSV.cmp.$$"
-        keep "$DSV" || { echo "nds-saves: $G: no room for a backup of DraStic's save: left as it is" >&2; exit 0; }
+A=$(cat "$REC" 2>/dev/null)
+d=; s=
+if [ -f "$DSV" ]; then
+    if ! raw_of_dsv "$DSV" "$SAV.new"; then
+        rm -f "$SAV.new"
+        echo "nds-saves: $G: DraStic's save: its footer doesn't add up, left as it is, and BananaDS's as it is"
+        exit 0
     fi
-    { cat "$SAV" > "$DSV.new" && [ "$(size "$DSV.new")" = "$(size "$SAV")" ]; } || { rm -f "$DSV.new"; echo "nds-saves: $G: BananaDS's save couldn't be copied (card full?): DraStic's left as it is" >&2; exit 0; }
-    mv -f "$DSV.new" "$DSV" && touch -r "$SAV" "$DSV"
-    echo "nds-saves: $G: BananaDS's save is $WHY: DraStic takes it ($(wc -c < "$DSV") bytes)"
+    d=$(md5 "$SAV.new")
 fi
-exit 0
+[ -f "$SAV" ] && s=$(md5 "$SAV")
+done_() { rm -f "$SAV.new"; [ -z "$W" ] || sync; exit "${1:-0}"; }
+if [ -z "$d" ] && [ -z "$s" ]; then done_; fi
+if [ -z "$s" ]; then
+    dsv_to_sav && rec "$d" && echo "nds-saves: $G: DraStic's save: BananaDS takes it ($(wc -c < "$SAV") bytes)"
+    done_
+fi
+if [ -z "$d" ]; then
+    sav_to_dsv && rec "$s" && echo "nds-saves: $G: BananaDS's save: DraStic takes it ($(wc -c < "$DSV") bytes)"
+    done_
+fi
+if [ "$d" = "$s" ]; then
+    [ "$A" = "$s" ] || rec "$s"
+    done_
+fi
+if [ -z "$A" ]; then
+    # (no record yet: the newer by the files' times, this once)
+    if [ "$DSV" -nt "$SAV" ]; then A=$s; else A=$d; fi
+    echo "nds-saves: $G: the two saves differ and never agreed before: the newer file's taken, the other kept in the vault"
+fi
+if [ "$d" = "$A" ]; then
+    # BananaDS's changed: DraStic's, the one it was, kept, then given the new one
+    keep "$SAV.new" "$d" || { echo "nds-saves: $G: DraStic's save can't be kept in the vault (card full?): neither touched"; done_ 3; }
+    sav_to_dsv && rec "$s" && echo "nds-saves: $G: BananaDS's save changed: DraStic takes it ($(wc -c < "$DSV") bytes)"
+    done_
+fi
+if [ "$s" = "$A" ]; then
+    keep "$SAV" "$s" || { echo "nds-saves: $G: BananaDS's save can't be kept in the vault (card full?): neither touched"; done_ 3; }
+    dsv_to_sav && rec "$d" && echo "nds-saves: $G: DraStic's save changed: BananaDS takes it ($(wc -c < "$SAV") bytes)"
+    done_
+fi
+echo "nds-saves: $G: DraStic's and BananaDS's saves both changed since they last agreed: neither touched"
+done_ 3

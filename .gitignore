@@ -16,6 +16,7 @@
 /ui/tests/nds-pages-test
 /ui/fuzz/out/
 /ui/tests/vault-test
+/ui/tests/gamesync-test
 /ui/tests/paths-test
 /system/bananad/bananad
 /system/bananad/banana-panel-tune

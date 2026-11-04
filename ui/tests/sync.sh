@@ -6,8 +6,9 @@
 # What must hold: pairing (RomM's device code, a client token's pairing code; Romhost's code from Homeport, UDP
 # discovery), the games with their covers and gamelist entries in the card's layout, a gamelist's own entries and a
 # file of the user's at a server path left alone, a system skipped on the handheld left as it is, a game gone from
-# the server removed (unless changed on the card), a RomM before 5.4 only giving its saves, and Romhost's saves both
-# ways with nothing lost in a conflict. RomM's saves by slot are tests/sync-slots.sh's.
+# the server removed (unless changed on the card), a RomM before 5.4 only giving its saves (one changed on both sides
+# held, both kept), and Romhost's saves both ways with nothing lost in a conflict. RomM's saves by slot are
+# tests/sync-slots.sh's.
 HERE=$(cd "$(dirname "$0")/.." && pwd)
 OUT=${OUT:-$HERE/tests/out}/sync
 rm -rf "$OUT"; mkdir -p "$OUT"
@@ -300,7 +301,8 @@ for v in 5.3.1 development; do
     sl=; [ $v = 5.3.1 ] || sl='"slot": "autosave", '
     # (a GBA EEPROM's 512 bytes, a size a GBA save comes in)
     curl -s -XPOST "http://127.0.0.1:$p/test/save" -d "{$sl\"rom_id\": 101, \"file_name\": \"Down (USA).srm\", \"data\": \"0102030405$(printf 'ff%.0s' $(seq 507))\"}" >/dev/null
-    mkdir -p "$OUT/$cv/saves/gba"; echo "this handheld's" > "$OUT/$cv/saves/gba/Up (USA).srm"
+    # (a GBA EEPROM's 512 bytes again: a save of a size its system's saves don't come in isn't sent)
+    mkdir -p "$OUT/$cv/saves/gba"; { printf "this handheld's"; head -c 497 /dev/zero | tr '\0' x; } > "$OUT/$cv/saves/gba/Up (USA).srm"; cp "$OUT/$cv/saves/gba/Up (USA).srm" "$OUT/up-$v.srm"
     bs "$cv" sync --saves-only > "$OUT/romm-$v.log" 2>&1
     [ "$(head -c 5 "$OUT/$cv/saves/gba/Down (USA).srm" 2>/dev/null | od -An -tx1 | tr -d ' \n')" = 0102030405 ] || bad "RomM $v: the server's save didn't come down: $(cat "$OUT/romm-$v.log")"
     sent=$(curl -s -H "Authorization: Bearer $t" "http://127.0.0.1:$p/api/saves?rom_id=102" | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')
@@ -309,10 +311,50 @@ for v in 5.3.1 development; do
         [ "$sent" = 0 ] || bad "a save was sent to RomM 5.3.1"
         grep -q 'RomM 5.3.1 only gives saves: update RomM to 5.4 or newer' "$OUT/romm-$v.log" || bad "RomM 5.3.1: not said: $(cat "$OUT/romm-$v.log")"
         bs "$cv" status | grep -q "paired with RomM 5.3.1" || bad "status: $(bs "$cv" status)"
+        # a save changed here and on the server (the card's never synced, the server's other bytes): held, both kept,
+        # the card's as it is, the server's in the vault, nothing beside the save; never the newer by the files' times
+        curl -s -XPOST "http://127.0.0.1:$p/test/save" -d "{\"rom_id\": 102, \"file_name\": \"Up (USA).srm\", \"data\": \"0a0b0c0d0e$(printf 'ff%.0s' $(seq 507))\"}" >/dev/null
+        touch -d "@$(( $(date +%s) - 86400 ))" "$OUT/$cv/saves/gba/Up (USA).srm"
+        bs "$cv" sync --saves-only > "$OUT/romm-$v-held.log" 2>&1
+        cmp -s "$OUT/$cv/saves/gba/Up (USA).srm" "$OUT/up-$v.srm" && grep -q 'conflict, both kept: saves/gba/Up (USA).srm (the server.s in the vault)' "$OUT/romm-$v-held.log" &&
+            [ -z "$(ls "$OUT/$cv/saves/gba" | grep '\.bak$')" ] && ls "$OUT/$cv/banana/save-vault/saves/gba/Up (USA)/" 2>/dev/null | grep -q '\.srm$' &&
+            python3 -c 'import json,sys; h = json.load(open(sys.argv[1]))["held"]; sys.exit(0 if h["102/autosave"]["path"] == "saves/gba/Up (USA).srm" and h["102/autosave"]["vault"] else 1)' "$OUT/$cv/banana/romsync.json" ||
+            bad "RomM 5.3.1: a save changed on both sides: $(cat "$OUT/romm-$v-held.log") $(ls "$OUT/$cv/saves/gba")"
+        # (one game's save, here a game of a system the server has none of: this RomM has no slots to sync it by alone,
+        # so every save of every system comes down, as after a game before)
+        printf 'gba rom third' > "$LV/gba/Third (USA).gba"; cp "$LV/gba/Third (USA).gba" "$OUT/$cv/roms/gba/"
+        curl -s -H "Authorization: Bearer $t" "http://127.0.0.1:$p/api/roms?limit=500" >/dev/null
+        curl -s -XPOST "http://127.0.0.1:$p/test/save" -d "{\"rom_id\": 103, \"file_name\": \"Third (USA).srm\", \"data\": \"0605040302$(printf 'ff%.0s' $(seq 507))\"}" >/dev/null
+        # (before a game starts, though, nothing: every save isn't worth the wait)
+        echo 'homesync_auto = quit' >> "$OUT/$cv/banana/settings.conf"
+        lists() { curl -s "http://127.0.0.1:$p/test/log" | grep -o 'GET /api/platforms' | wc -l; }
+        n=$(lists)
+        bs "$cv" sync --auto launch --rom "nds/Elsewhere (USA).nds" > "$OUT/romm-$v-rom.log" 2>&1
+        [ -e "$OUT/$cv/saves/gba/Third (USA).srm" ] && bad "RomM 5.3.1: every save synced before a game: $(cat "$OUT/romm-$v-rom.log")"
+        # (nor for a save left waiting to be sent, RomM since gone back to before 5.4)
+        python3 -c 'import json, sys; c = json.load(open(sys.argv[1])); c["queue"] = {"101/autosave": {"md5": "x", "vault": "", "since": 1}}; json.dump(c, open(sys.argv[1], "w"))' "$OUT/$cv/banana/romsync.json"
+        bs "$cv" sync --auto wifi > "$OUT/romm-$v-rom.log" 2>&1
+        python3 -c 'import json, sys; c = json.load(open(sys.argv[1])); c["queue"] = {}; json.dump(c, open(sys.argv[1], "w"))' "$OUT/$cv/banana/romsync.json"
+        sed -i '/^homesync_auto/d' "$OUT/$cv/banana/settings.conf"
+        [ -e "$OUT/$cv/saves/gba/Third (USA).srm" ] && bad "RomM 5.3.1: every save synced for the Wi-Fi queue: $(cat "$OUT/romm-$v-rom.log")"
+        [ "$(lists)" = "$n" ] || bad "RomM 5.3.1: its games listed before a game or for the Wi-Fi queue: $(cat "$OUT/romm-$v-rom.log")"
+        # (a game started during a sync of every save: the saves not reached yet stay as they are)
+        curl -s -XPOST "http://127.0.0.1:$p/test/fault" -d '{"path": "GET /api/saves$", "kind": "delay", "arg": 2}' >/dev/null
+        bs "$cv" sync --rom "nds/Elsewhere (USA).nds" > "$OUT/romm-$v-rom.log" 2>&1 & _k=$!; sleep 1; sleep 30 & _g=$!; echo $_g > "$OUT/$cv/run/game.pid"; wait $_k; kill $_g; rm "$OUT/$cv/run/game.pid"
+        [ -e "$OUT/$cv/saves/gba/Third (USA).srm" ] || ! grep -q 'a game started, the rest next time' "$OUT/romm-$v-rom.log" &&
+            bad "RomM 5.3.1: a game started during a sync: $(cat "$OUT/romm-$v-rom.log")"
+        bs "$cv" sync --rom "nds/Elsewhere (USA).nds" > "$OUT/romm-$v-rom.log" 2>&1
+        grep -q "RomM 5.3.1: every save synced, not only nds/Elsewhere (USA).nds's" "$OUT/romm-$v-rom.log" &&
+            [ "$(head -c 5 "$OUT/$cv/saves/gba/Third (USA).srm" 2>/dev/null | od -An -tx1 | tr -d ' \n')" = 0605040302 ] ||
+            bad "RomM 5.3.1: --rom: $(cat "$OUT/romm-$v-rom.log")"
+        rm "$LV/gba/Third (USA).gba"	# (the next RomM's ids as before)
         # (RomM updated, or downgraded, since the pairing: the name follows the heartbeat)
         sed -i 's/"RomM 5.3.1"/"RomM 5.2.0"/; s/"serverVersion": "5.3.1"/"serverVersion": "5.2.0"/' "$OUT/$cv/banana/romsync.json"
         bs "$cv" sync --saves-only >/dev/null 2>&1
-        bs "$cv" status | grep -q "paired with RomM 5.3.1" || bad "the server's name didn't follow its version: $(bs "$cv" status)" ;;
+        bs "$cv" status | grep -q "paired with RomM 5.3.1" || bad "the server's name didn't follow its version: $(bs "$cv" status)"
+        sed -i 's/"RomM 5.3.1"/"RomM 5.2.0"/; s/"serverVersion": "5.3.1"/"serverVersion": "5.2.0"/' "$OUT/$cv/banana/romsync.json"
+        bs "$cv" sync --rom "nds/Elsewhere (USA).nds" >/dev/null 2>&1
+        bs "$cv" status | grep -q "paired with RomM 5.3.1" || bad "--rom: the server's name didn't follow its version: $(bs "$cv" status)" ;;
     *)
         [ "$sent" = 1 ] || bad "RomM $v: the save wasn't sent: $(cat "$OUT/romm-$v.log")"
         grep -q 'only gives saves' "$OUT/romm-$v.log" && bad "RomM $v taken for an old one" ;;
@@ -418,6 +460,102 @@ if [ -x "$HERE/banana-ui" ]; then
         [ -s "$OUT/ui-$s-top.png" ] || bad "no screenshot $s"
     done
     cmp -s "$OUT/ui-hs-row-top.png" "$OUT/ui-hs-page-top.png" && bad "A on Home server didn't open its page"
+fi
+# ---------------------------------------------------------------- the sync before a game
+if [ -x "$HERE/banana-ui" ]; then
+    FX=$OUT/fixture-g; "$HERE/tests/fixture.sh" "$FX" >/dev/null
+    printf 'homesync_auto = quit\n' >> "$FX/data/settings.conf"
+    printf '{"backend": "romm", "server": "http://x", "token": "t"}\n' > "$FX/data/romsync.json"
+    ROM="$FX/roms/gba/Orchard Tactics.gba"
+    SL=$OUT/game-sync.log; PX=$OUT/g-; RUNG=${PX}run; mkdir -p "$RUNG"
+    # gs <how> <script>: a run; its log in $UL, what banana-sync was called with in $SL
+    UL=$OUT/g-ui.log
+    gs() {
+        : > "$SL"
+        BANANA_SYNC=${TOOL:-$HERE/tests/fake-sync.sh} FAKE_SYNC_LOG="$SL" FAKE_SYNC_LAUNCH=$1 "$HERE/banana-ui" --headless "$PX" --size 640x480 --assets "$HERE/assets/rnds" \
+            --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+            --roms "$FX/roms" --data "$FX/data" --script "home 0; $2" 2> "$UL" || bad "banana-ui (sync before a game) exited $?"
+    }
+    has() { grep -q "$1" "$UL" || bad "$2: no \"$1\": $(grep -a 'sync before\|game starts' "$UL")"; }
+    hasnt() { grep -q "$1" "$UL" && bad "$2: \"$1\": $(grep -a 'sync before\|game starts' "$UL")"; }
+    called() { [ -s "$SL" ] && bad "$1: banana-sync was called: $(cat "$SL")"; }
+    # online and quick: the exact call, the game after it, no pop-up
+    gs answer "wifi online; launchpath $ROM; sleep 300; sleep 100; shot g-quick; wait 100"
+    [ "$(cat "$SL")" = "--run $RUNG sync --auto launch --rom $ROM" ] || bad "the sync before a game's call: $(cat "$SL")"
+    has "sync before the game: done" "a quick sync"; has "game starts: $ROM" "a quick sync"
+    # the first answer never comes: stopped at 5 s, not before; said; then the game
+    gs silent "wifi online; launchpath $ROM; sleep 200; wait 450; shot g-plain; wait 4000; sleep 100"
+    hasnt "no answer" "a server silent for under 5 s"; hasnt "game starts" "a server silent for under 5 s"
+    gs silent "wifi online; launchpath $ROM; sleep 200; wait 500; shot g-sync; wait 4500; shot g-not; sleep 100; wait 1000; wait 600; wait 100"
+    has "sync before the game: no answer" "a silent server"; has "sync before the game: Not synced yet" "a silent server"; has "game starts: $ROM" "a silent server"
+    cmp -s "$OUT/g-g-sync-top.png" "$OUT/g-g-not-top.png" && bad "the notice looks like the wait"
+    # the saves held by another sync (the one after the last game, still placing): waited out, and the server then has
+    # its 5 s for a first answer from there, so no answer at all is said 5 s after the hold, not 5 s into it or at the
+    # cap. (The fake holds them 8 s of real time, and the menu's clock moves with every sleep and wait, a step of the
+    # wait at each: the hold is slept through a second at a time to 5.3 s, each step seeing it, the menu's drawing
+    # between steps costing real time but no clock; one sleep of 3.5 s more is past the hold however slow the drawing;
+    # then 4.9 s and 0.2 s of wait)
+    HOLD="sleep 300; sleep 1000; sleep 1000; sleep 1000; sleep 1000; sleep 1000; sleep 3500"
+    gs held "wifi online; launchpath $ROM; $HOLD; wait 1400"
+    hasnt "no answer" "the saves held, then silence, 4.9 s after the hold"; hasnt "game starts" "the saves held, then silence, 4.9 s after the hold"
+    gs held "wifi online; launchpath $ROM; $HOLD; wait 1400; wait 200; wait 1600; wait 100"
+    has "sync before the game: no answer" "the saves held, then silence"; hasnt "stopped at the cap" "the saves held, then silence"; has "game starts: $ROM" "the saves held, then silence"
+    # (held throughout: the cap, 20 s from the wait's start, ends it)
+    gs heldlong "wifi online; launchpath $ROM; sleep 300; wait 19000"
+    hasnt "game starts" "the saves held, at 19.3 s"
+    gs heldlong "wifi online; launchpath $ROM; sleep 300; wait 19000; wait 1000; wait 1600; wait 100"
+    has "sync before the game: no answer" "the saves held past the cap"; has "game starts: $ROM" "the saves held past the cap"
+    # answered, then slow: past 5 s it goes on, the cap at 20 s stops it
+    gs hang "wifi online; launchpath $ROM; sleep 300; wait 6000; sleep 100; wait 10000; sleep 100"
+    hasnt "stopped at the cap" "a transfer before the cap"
+    gs hang "wifi online; launchpath $ROM; sleep 300; wait 6000; sleep 100; wait 14000; sleep 100; wait 1600; wait 100"
+    has "stopped at the cap" "a transfer at the cap"; has "Not synced yet" "a transfer at the cap"; has "game starts" "a transfer at the cap"
+    # B plays now: during the sync, and during the wait for Wi-Fi
+    gs silent "wifi online; launchpath $ROM; sleep 200; press b; wait 100"
+    has "B, played now" "B while syncing"; has "game starts: $ROM" "B while syncing"; hasnt "Not synced yet" "B while syncing"
+    ls "$RUNG" | grep -q '^sync-' && bad "a stopped sync's files left: $(ls "$RUNG")"
+    gs silent "wifi coming; launchpath $ROM; wait 500; shot g-wifi; press b; wait 100"
+    has "B, played now" "B on Wi-Fi"; has "game starts: $ROM" "B on Wi-Fi"; called "B on Wi-Fi"
+    cmp -s "$OUT/g-g-wifi-top.png" "$OUT/g-g-sync-top.png" && bad "the wait for Wi-Fi looks like the sync"
+    # the pop-up leaves with the wait: the menu as it was
+    gs silent "wait 3000; shot g-before; wifi coming; launchpath $ROM; wait 500; press b; wait 100; shot g-after"
+    has "game starts: $ROM" "the wait over"
+    cmp -s "$OUT/g-g-before-top.png" "$OUT/g-g-after-top.png" || bad "the pop-up stayed after the wait"
+    # A on a game in its list, the way a game really starts
+    gs answer "wifi online; lib 1 0; press a; wait 3000; wait 1; sleep 300; wait 100"
+    has "^banana-ui: launch " "A on a game"; has "sync before the game: done" "A on a game"; has "game starts: " "A on a game"
+    # the signs of Wi-Fi coming up not quite meeting: still waiting, and the sync starts when the address comes
+    gs answer "wifi coming; launchpath $ROM; wait 3000; wifi none; wait 3000; wifi online; wait 100; sleep 300; wait 100"
+    has "sync before the game: done" "a gap in Wi-Fi coming up"; hasnt "no Wi-Fi" "a gap in Wi-Fi coming up"
+    # a press ends a notice
+    gs conflict "wifi online; launchpath $ROM; sleep 300; wait 100; shot g-conflict; press a; shot g-x"
+    has "game starts: $ROM" "a press on the notice"
+    # no banana-sync: no wait
+    TOOL=$OUT/none gs answer "wifi online; launchpath $ROM; wait 100"
+    has "no banana-sync" "no banana-sync"; has "game starts: $ROM" "no banana-sync"
+    # another game's resume marker left behind: this one still syncs
+    printf '%s\n' "$FX/roms/gba/Other.gba" > "$RUNG/resume-once"
+    gs answer "wifi online; launchpath $ROM; sleep 300; wait 100"
+    has "sync before the game: done" "a stale resume marker"
+    # Wi-Fi: off, nothing; not coming in 8 s, the game; there part way, the sync starts
+    gs answer "wifi none; launchpath $ROM; wait 100"
+    has "no Wi-Fi" "Wi-Fi off"; has "game starts: $ROM" "Wi-Fi off"; called "Wi-Fi off"
+    gs answer "wifi coming; launchpath $ROM; wait 7000; wait 2000; wait 1600; wait 100"
+    has "Not synced yet" "Wi-Fi never came"; has "game starts: $ROM" "Wi-Fi never came"; called "Wi-Fi never came"
+    gs answer "wifi coming; launchpath $ROM; wait 3000; wifi online; wait 100; sleep 300; wait 100"
+    has "sync before the game: done" "Wi-Fi came"
+    # a conflict and a failure are said, and the game starts on the card's save
+    gs conflict "wifi online; launchpath $ROM; sleep 300; wait 1600; wait 100"
+    has "Save conflict" "a conflict"; has "game starts: $ROM" "a conflict"
+    gs fail "wifi online; launchpath $ROM; sleep 300; wait 1600; wait 100"
+    has "Not synced yet" "a failed sync"
+    # the game started again after a power-off: nothing waits for it
+    printf 'rom=%s\nemulator=x\n' "$ROM" > "$FX/data/resume-boot"
+    gs answer "wifi online; resumeboot; wait 100"
+    has "game starts: $ROM" "the resume launch"; called "the resume launch"
+    # the game's end: the exact call
+    gs answer "wifi none; launchpath $ROM; wait 100; gameend; sleep 300"
+    [ "$(cat "$SL")" = "sync --auto quit --rom $ROM" ] || bad "the sync after a game's call: $(cat "$SL")"
 fi
 [ $fail = 0 ] && echo "banana-sync: all checks passed"
 exit $fail

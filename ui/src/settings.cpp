@@ -3,6 +3,7 @@
 #include "settings_draw.h"
 #include "settings_curl.h"
 #include "recorder.h"
+#include "gamesync.h"
 #include "lang.h"
 #include "settings_defaults.h"
 #include "theme.h"
@@ -896,7 +897,7 @@ namespace banana
 		items.back().hints = { "Only the games' own saves.", "Save states too (RomM). Quick-resume states never sync." };
 		add(HS, "phone", "Auto sync", "When syncing happens by itself.",
 			menu, "homesync_auto", { "Off", "Leaving a game", "And on Wi-Fi" }, { "off", "quit", "both" });
-		items.back().hints = { "Only when you choose Sync now.", "After you leave a game.", "After a game, and when Wi-Fi connects." };
+		items.back().hints = { "Only when you choose Sync now.", "After you leave a game, and before one on RomM (B skips the wait).", "Also when Wi-Fi connects. Never while a game runs." };
 		add(HS, "phone", "Systems", "Which systems sync on this handheld. A skipped system's games stay as they are on the card.", "", "hs_systems", {}, {}, Item::PAGE);
 		add(HS, "phone", "Games to sync", "Which of the server's games come to the card.",
 			menu, "homesync_games", { "All", "Chosen" }, { "all", "chosen" });
@@ -6775,8 +6776,7 @@ namespace banana
 	// ---- home server sync: banana-sync ------------------------------------------------------------------------------
 	std::string Settings::syncTool() const
 	{
-		const char* prog = getenv("BANANA_SYNC");	// (another build of it, or the tests' stand-in)
-		return prog && *prog ? prog : "/usr/bin/banana-sync";
+		return gamesync::syncTool();
 	}
 	void Settings::hsRun(const std::string& args)
 	{

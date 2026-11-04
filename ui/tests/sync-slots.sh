@@ -266,6 +266,10 @@ bs; cmp -s "$S/Killed (USA).srm" "$OUT/k2.srm" || bad "the download after a kill
 [ "$(vaulted Killed "$OUT/k1.srm")" = 1 ] || bad "the save a download replaced isn't in the vault"
 cmp -s "$C/banana/save-vault/saves/gba/Killed (USA)/last-good.srm" "$OUT/k2.srm" || bad "last-good isn't the newest save"
 grep -q "	install	saves/gba/Killed (USA).srm	$(md5sum < "$OUT/k1.srm" | cut -c1-32)	" "$C/banana/logs/sync/journal.log" || bad "the install isn't in the journal"
+# a download that breaks off: nothing of it left in /run, which is memory (the next run has another name for it)
+rm -f "$C/run"/sync-dl.*; head -c 8192 /dev/urandom > "$OUT/k3.srm"; id=$(seed Killed "$(hex "$OUT/k3.srm")" 7); cfault "$id" truncate; bs
+ls "$C/run" | grep -q '^sync-dl' && bad "a broken download left: $(ls "$C/run" | tr '\n' ' ')"
+bs; cmp -s "$S/Killed (USA).srm" "$OUT/k3.srm" || bad "the download after one that broke: $(cat "$OUT/bs.log")"
 # a full card (writes past 16 KiB fail, as on a card with no room: EFBIG for ENOSPC): the vault copy of gpSP's 128 KiB
 # (8 KiB of save, padded with 0xFF) can't be made, so it isn't replaced; a download too big to write leaves it too
 full() { python3 -c 'import os, resource, signal, sys; signal.signal(signal.SIGXFSZ, signal.SIG_IGN); resource.setrlimit(resource.RLIMIT_FSIZE, (16384, 16384)); os.execv(sys.argv[1], sys.argv[1:])' \
@@ -338,34 +342,39 @@ grep -q 'error: saves: snes: core snes9x isn.t installed' "$OUT/bs.log" || bad "
 cmp -s "$K" "$OUT/kart-here.srm" && [ "$(find "$C/saves" -name 'Peel Kart*' | wc -l)" = 1 ] || bad "a save written with no core to say where"
 # the DS: a server .dsv (DraStic's: the raw save, then DeSmuME's footer; RomM's name for the version has its time in
 # it) taken as its raw save, and agreed so: the next sync neither sends nor fetches it. A .sav likewise, DraStic's .dsv
-# brought into step with each. A card whose raw save is the .dsv's agrees with it at once; one of another size than
-# the card's is held, kept in the vault, never put in place
-# (the stand-in for nds-saves says too which of the two copies it would take: the newer)
+# brought into step with each by nds-saves (the real one, on this card), which goes by content, never by the files'
+# times. A card whose raw save is the .dsv's agrees with it at once; one of another size than the card's is held, kept
+# in the vault, never put in place
+NDS=$HERE/../system/rootfs/usr/libexec/banana/nds-saves
 cat > "$OUT/nds-saves3" <<EOF
 #!/bin/sh
 echo "\$1" >> "$OUT/nds-saves3.log"
-G=\${1##*/}; G=\${G%.*}
-[ -f "$C/drastic/backup/\$G.dsv" ] || exit 0
-if [ "$C/saves/nds/\$G.sav" -nt "$C/drastic/backup/\$G.dsv" ]; then echo "\$G: sav-newer"; else echo "\$G: dsv-newer"; fi >> "$OUT/nds-saves3.log"
+BANANA_ROOT=$C exec sh "$NDS" "\$@" >> "$OUT/nds-saves3.log" 2>&1
 EOF
 chmod +x "$OUT/nds-saves3"
-Q=$C/saves/nds/"Peel Quest (USA).sav"
+Q=$C/saves/nds/"Peel Quest (USA).sav"; QD=$C/drastic/backup/"Peel Quest (USA).dsv"; QR=$C/banana/nds-saves/"Peel Quest (USA).md5"
+QV=$C/banana/save-vault/saves/nds/"Peel Quest (USA)"
+# qvault <file>: how many copies of the file's bytes the vault holds for the game (the same bytes kept once)
+qvault() { ls "$QV" 2>/dev/null | grep -c -- "-$(md5sum < "$1" | cut -c1-8)\.sav$"; }
+m() { md5sum < "$1" | cut -c1-32; }
 head -c 8192 /dev/urandom > "$OUT/qd.sav"; dsv "$OUT/qd.sav" "$OUT/qd.dsv"; seedf "Peel Quest (USA).nds" "Peel Quest (USA).dsv" "$(hex "$OUT/qd.dsv")" 0
 BANANA_NDS_SAVES=$OUT/nds-saves3 bs
 cmp -s "$Q" "$OUT/qd.sav" || bad "a server .dsv not taken as its raw save: $(cat "$OUT/bs.log")"
 [ -z "$(find "$C/saves" -name '*.dsv')" ] || bad "a server .dsv was put in saves/: $(find "$C/saves" -name '*.dsv')"
 grep -qx "$C/roms/nds/Peel Quest (USA).nds" "$OUT/nds-saves3.log" 2>/dev/null || bad "nds-saves wasn't run after a .dsv was installed"
+cmp -s "$QD" "$OUT/qd.sav" && [ "$(cat "$QR" 2>/dev/null)" = "$(m "$OUT/qd.sav")" ] || bad "DraStic's copy not made from the DS save installed, or the two not recorded as agreed: $(cat "$OUT/nds-saves3.log")"
 BANANA_NDS_SAVES=$OUT/nds-saves3 bs
 grep -q 'Peel Quest' "$OUT/bs.log" && bad "a .dsv taken once, sent or fetched again: $(cat "$OUT/bs.log")"
 [ "$(nsaves "Peel Quest (USA).nds")" = 1 ] || bad "a .dsv taken, then the card's raw save sent back: $(nsaves "Peel Quest (USA).nds") versions"
-# (DraStic's copy dated a minute ahead, as a card clock ahead of the server's leaves it: the save put in place is still
-# the newer when nds-saves runs after it, so the .dsv isn't written back over it)
+# (DraStic's copy dated a minute ahead, as a card clock ahead of the server's leaves it: the save put in place is the
+# one that changed from what the two last held, so DraStic takes it whatever the files' times say; the raw save
+# replaced is in the vault once, though the sync and nds-saves each kept it)
 head -c 8192 /dev/urandom > "$OUT/quest.sav"; seedf "Peel Quest (USA).nds" "Peel Quest (USA).sav" "$(hex "$OUT/quest.sav")" 5
-cp "$Q" "$C/drastic/backup/Peel Quest (USA).dsv"; touch -d "@$(( $(date +%s) + 60 ))" "$C/drastic/backup/Peel Quest (USA).dsv"
+touch -d "@$(( $(date +%s) + 60 ))" "$QD"
 BANANA_NDS_SAVES=$OUT/nds-saves3 bs
 cmp -s "$Q" "$OUT/quest.sav" || bad "a DS save from the server: $(cat "$OUT/bs.log")"
-[ "$(grep 'Peel Quest (USA): ' "$OUT/nds-saves3.log" | tail -1)" = 'Peel Quest (USA): sav-newer' ] ||
-    bad "a DS save from the server older than DraStic's copy when nds-saves ran: $(cat "$OUT/nds-saves3.log")"
+cmp -s "$QD" "$OUT/quest.sav" && [ "$(cat "$QR")" = "$(m "$OUT/quest.sav")" ] || bad "DraStic's copy, dated ahead, not brought into step with the DS save installed: $(cat "$OUT/nds-saves3.log")"
+[ "$(qvault "$OUT/qd.sav")" = 1 ] || bad "the raw save replaced isn't in the vault once: $(ls "$QV")"
 [ "$(grep -cx "$C/roms/nds/Peel Quest (USA).nds" "$OUT/nds-saves3.log")" -ge 2 ] || bad "nds-saves wasn't run after a DS save was installed"
 head -c 32768 /dev/urandom > "$OUT/qbig.sav"; seedf "Peel Quest (USA).nds" "Peel Quest (USA).sav" "$(hex "$OUT/qbig.sav")" 10
 BANANA_NDS_SAVES=$OUT/nds-saves3 bs
@@ -389,6 +398,67 @@ grep -q 'the server.s newest is this same save in another form: saves/nds/Peel T
 BANANA_NDS_SAVES=$OUT/nds-saves3 bs
 grep -q 'Peel Two' "$OUT/bs.log" && bad "a .dsv agreed with, looked at again: $(cat "$OUT/bs.log")"
 [ "$(nsaves "Peel Two (USA).nds")" = 1 ] || bad "a .dsv agreed with, then the card's raw save sent: $(nsaves "Peel Two (USA).nds") versions"
+# nds-saves between the two emulators' saves, by content: DraStic's changed (played there, the card's clock since put
+# back so BananaDS's file is dated a day ahead of it): BananaDS takes it, the save replaced kept in the vault, and the
+# sync sends it as the card's
+ndsrun() { "$OUT/nds-saves3" "$C/roms/nds/Peel Quest (USA).nds"; }
+# (the slot's head first made the card's own save again, dated 20 s on, with the server's clock put 20 s on too so that
+# everything the card sends after it is newer still; the one held above, of another size, stays a version under them)
+curl -s -XPOST "$U3/test/clock" -d '{"offset_s": 20}' >/dev/null
+seedf "Peel Quest (USA).nds" "Peel Quest (USA).sav" "$(hex "$Q")" 20; BANANA_NDS_SAVES=$OUT/nds-saves3 bs
+head -c 8192 /dev/urandom > "$OUT/qdr.sav"; dsv "$OUT/qdr.sav" "$QD"; touch -d "@$(( $(date +%s) + 86400 ))" "$Q"
+ndsrun; rc=$?
+[ $rc = 0 ] && cmp -s "$Q" "$OUT/qdr.sav" && [ "$(cat "$QR")" = "$(m "$OUT/qdr.sav")" ] || bad "DraStic's changed save, BananaDS's dated ahead: not taken ($rc): $(tail -2 "$OUT/nds-saves3.log")"
+[ "$(qvault "$OUT/quest.sav")" = 1 ] || bad "the save BananaDS had isn't in the vault: $(ls "$QV")"
+[ -e "$Q.bak" ] && bad "nds-saves still keeps a .bak beside the save"
+n=$(nsaves "Peel Quest (USA).nds"); BANANA_NDS_SAVES=$OUT/nds-saves3 bs
+[ "$(nsaves "Peel Quest (USA).nds")" = $((n + 1)) ] && [ "$(srv3 "/api/saves?rom_id=$(ridf "Peel Quest (USA).nds")&slot=autosave" | python3 -c 'import json,sys; print(max(json.load(sys.stdin), key=lambda s: (s["updated_at"], s["id"]))["content_hash"])')" = "$(m "$OUT/qdr.sav")" ] ||
+    bad "DraStic's save, taken by BananaDS, not sent: $(cat "$OUT/bs.log")"
+# both changed since they last agreed (one played in each without a start in between, a save edited by hand): neither
+# touched, said, and the sync leaves the game alone until one is chosen; chosen (DraStic's given BananaDS's), in step
+# again and sent
+head -c 8192 /dev/urandom > "$OUT/qboth.sav"; dsv "$OUT/qboth.sav" "$QD"; head -c 8192 /dev/urandom > "$Q"; cp "$Q" "$OUT/qsav.sav"
+ndsrun; rc=$?
+[ $rc = 3 ] && cmp -s "$Q" "$OUT/qsav.sav" && [ "$(cat "$QR")" = "$(m "$OUT/qdr.sav")" ] && grep -q "both changed since they last agreed: neither touched" "$OUT/nds-saves3.log" ||
+    bad "both DS saves changed: not left alone ($rc): $(tail -2 "$OUT/nds-saves3.log")"
+raw_of_dsv "$QD" "$OUT/qd-now.sav"; cmp -s "$OUT/qd-now.sav" "$OUT/qboth.sav" || bad "both DS saves changed: DraStic's touched"
+n=$(nsaves "Peel Quest (USA).nds"); BANANA_NDS_SAVES=$OUT/nds-saves3 bs
+grep -q "not synced, DraStic's and BananaDS's saves both changed since they last agreed: nds/Peel Quest (USA).nds" "$OUT/bs.log" && [ "$(nsaves "Peel Quest (USA).nds")" = "$n" ] &&
+    cmp -s "$Q" "$OUT/qsav.sav" || bad "both DS saves changed: the sync didn't leave the game alone: $(cat "$OUT/bs.log")"
+cat "$Q" > "$QD"; BANANA_NDS_SAVES=$OUT/nds-saves3 bs
+[ "$(nsaves "Peel Quest (USA).nds")" = $((n + 1)) ] && [ "$(cat "$QR")" = "$(m "$OUT/qsav.sav")" ] || bad "the DS saves chosen by hand: not sent: $(cat "$OUT/bs.log")"
+# a .dsv whose footer doesn't add up: neither touched (DraStic's may hold what BananaDS's doesn't)
+dsv "$OUT/qboth.sav" "$QD" version; head -c 8192 /dev/urandom > "$Q"; cp "$Q" "$OUT/qsav.sav"; cp "$QD" "$OUT/qbad.dsv"
+ndsrun; rc=$?
+[ $rc = 0 ] && cmp -s "$Q" "$OUT/qsav.sav" && cmp -s "$QD" "$OUT/qbad.dsv" && grep -q "footer doesn't add up" "$OUT/nds-saves3.log" || bad "a .dsv whose footer doesn't add up ($rc): $(tail -2 "$OUT/nds-saves3.log")"
+# no record of what the two last held (the first start after the update): the newer file's taken, this once, the
+# other kept in the vault
+cat "$Q" > "$QD"; ndsrun
+head -c 8192 /dev/urandom > "$OUT/qnew.sav"; dsv "$OUT/qnew.sav" "$QD"; touch -d "@$(( $(date +%s) - 60 ))" "$Q"; rm "$QR"
+ndsrun; rc=$?
+[ $rc = 0 ] && cmp -s "$Q" "$OUT/qnew.sav" && [ "$(cat "$QR")" = "$(m "$OUT/qnew.sav")" ] && [ "$(qvault "$OUT/qsav.sav")" = 1 ] ||
+    bad "the two DS saves with no record of what they last held ($rc): $(tail -2 "$OUT/nds-saves3.log")"
+BANANA_NDS_SAVES=$OUT/nds-saves3 bs
+# a game started while a DS save was being placed (nds-saves, which runs right after, stands for it): the save is in
+# place, but not agreed, so the next sync looks again and agrees on it without fetching or sending
+cat > "$OUT/nds-saves-game" <<EOF
+#!/bin/sh
+# (the run before the download finds the save as it was; the one after, the server's bytes placed: a game starts then)
+if cmp -s "$Q" "$OUT/qgame.sav"; then sleep 30 & echo \$! > "$C/run/game.pid"; fi
+exec "$OUT/nds-saves3" "\$@"
+EOF
+chmod +x "$OUT/nds-saves-game"
+head -c 8192 /dev/urandom > "$OUT/qgame.sav"; seedf "Peel Quest (USA).nds" "Peel Quest (USA).sav" "$(hex "$OUT/qgame.sav")" 25	# (past the server's clock, 20 s on)
+s=$(python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1]))["slots"], sort_keys=True))' "$C/banana/romsync.json")
+BANANA_NDS_SAVES=$OUT/nds-saves-game bs
+kill "$(cat "$C/run/game.pid")"; rm "$C/run/game.pid"
+grep -q 'Peel Quest (USA).sav: a game started while it was placed, decided next time' "$OUT/bs.log" && cmp -s "$Q" "$OUT/qgame.sav" &&
+    [ "$(python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1]))["slots"], sort_keys=True))' "$C/banana/romsync.json")" = "$s" ] ||
+    bad "a game started while a DS save was placed: $(cat "$OUT/bs.log")"
+n=$(nsaves "Peel Quest (USA).nds"); BANANA_NDS_SAVES=$OUT/nds-saves3 bs
+[ "$(nsaves "Peel Quest (USA).nds")" = "$n" ] && ! grep -q 'Peel Quest' "$OUT/bs.log" && cmp -s "$Q" "$OUT/qgame.sav" ||
+    bad "a save placed under a game that started, the next sync: $(cat "$OUT/bs.log")"
+curl -s -XPOST "$U3/test/clock" -d '{"offset_s": 0}' >/dev/null
 
 # the GBA: Grout's "<rom>.gba.sav" taken as the GBA save (agreed at once when it is the card's very bytes), gpSP's
 # 128 KiB over mGBA's 32 KiB, and standalone mGBA's with the game's clock after it, taken without the clock; held, kept in the vault, never put in place: 32 KiB over 128 KiB that holds data past
@@ -434,7 +504,7 @@ grep -q "not taken yet, another size than this handheld's save for the game: Tai
 # never weakened (every card's token strict)
 L4=$OUT/lib4
 mkdir -p "$L4/gba" "$L4/nds"
-for g in Shared Gone "Blank Head" Skew Dry Joiner Lone Race "Race Same" "Race Size" Queued "Queued Gone" Refetch Kept Diverged Closed; do printf 'gba rom %s' "$g" > "$L4/gba/$g (USA).gba"; done
+for g in Shared Gone "Blank Head" Skew Dry Joiner Lone Race "Race Same" "Race Size" Queued "Queued Gone" Refetch Kept Diverged Closed Solo Other; do printf 'gba rom %s' "$g" > "$L4/gba/$g (USA).gba"; done
 printf 'nds rom' > "$L4/nds/Peel Quest (USA).nds"; printf 'nds rom race' > "$L4/nds/Race Dsv (USA).nds"
 P4=$(port)
 python3 "$HERE/tests/fake-romm.py" "$P4" "$L4" 2> "$OUT/fake-romm4.log" & PIDS="$PIDS $!"
@@ -520,7 +590,12 @@ head -c 8192 /dev/urandom > "$GB/Shared (USA).srm"; hs b; hs a
 head -c 8192 /dev/urandom > "$GA/Gone (USA).srm"; hs a
 curl -s -XPOST -H "Authorization: Bearer $TA4" -H 'Content-Type: application/json' -d "{\"saves\": [$(head4 "Gone (USA).gba" | cut -d' ' -f3)]}" "$U4/api/saves/delete" >/dev/null
 hs a; [ "$(nv4 "Gone (USA).gba")" = 0 ] || bad "slots: a save deleted on the server was sent back: $(cat "$OUT/hs-a.log")"
-echo more >> "$GA/Gone (USA).srm"; hs a; [ "$(nv4 "Gone (USA).gba")" = 1 ] || bad "slots: a change after a server delete wasn't sent: $(cat "$OUT/hs-a.log")"
+head -c 8192 /dev/urandom > "$GA/Gone (USA).srm"; hs a; [ "$(nv4 "Gone (USA).gba")" = 1 ] || bad "slots: a change after a server delete wasn't sent: $(cat "$OUT/hs-a.log")"
+# a save of a size its system's saves don't come in (one cut short as the emulator wrote it): not sent, said
+head -c 8197 /dev/urandom > "$GA/Gone (USA).srm"; hs a
+[ "$(nv4 "Gone (USA).gba")" = 1 ] && grep -q "error: saves/gba/Gone (USA).srm: not a size this system's saves come in, not sent" "$OUT/hs-a.log" ||
+    bad "slots: a save of no GBA size was sent, or not said: $(cat "$OUT/hs-a.log")"
+head -c 8192 /dev/urandom > "$GA/Gone (USA).srm"; hs a
 # a head that is a fresh core's blank save (another handheld's, never played) is no save: A's goes over it, RomM told
 # first that A has seen it (its guard refuses an upload over a head the device hasn't seen)
 mkdir -p "$OUT/peer4"; TP=$(curl -s -XPOST "$U4/test/token" -d '{}' | jget '["token"]')
@@ -668,6 +743,201 @@ cp "$GU/Kept (USA).srm" "$OUT/kept.srm"; cp "$GU/Diverged (USA).srm" "$OUT/diver
 cmp -s "$GU/Diverged (USA).srm" "$OUT/diverged.srm" && [ "$(head4 "Diverged (USA).gba" | cut -d' ' -f1)" = "$(m "$OUT/div.srm")" ] &&
     grep -q 'conflict, both kept: saves/gba/Diverged (USA).srm' "$OUT/hs-u.log" || bad "slots: a 1.0 card's save against other bytes: $(cat "$OUT/hs-u.log")"
 [ "$(nv4 "Kept (USA).gba")" = 2 ] && [ "$(nv4 "Diverged (USA).gba")" = 2 ] || bad "slots: the unslotted rows: $(nv4 "Kept (USA).gba") $(nv4 "Diverged (USA).gba")"
+# one game's save (sync --rom, its ROM's path roms-relative or absolute): only that game looked at and only its
+# system's games listed; another game's changed save waits for a full sync, and every other game's records stay
+hr() { _n=$1; shift; "$BIN" --root "$OUT/h-$_n" --run "$OUT/h-$_n/run" --status "$OUT/h-$_n/run/sync.status" sync "$@" > "$OUT/hr-$_n.log" 2>&1; }
+others() { rs a 'json.dumps({k: [c[m].get(k) for m in ("conflicts", "held", "queue")] for k in set(c["conflicts"]) | set(c["held"]) | set(c["queue"]) if k != "'"$(rid4 "Solo (USA).gba")"'/autosave"}, sort_keys=True)'; }
+NDSP=$(s4 /api/platforms | python3 -c 'import json,sys; print(next(p["id"] for p in json.load(sys.stdin) if p["fs_slug"] == "nds"))')
+head -c 8192 /dev/urandom > "$GA/Solo (USA).srm"; head -c 8192 /dev/urandom > "$GA/Other (USA).srm"
+# (banana-sync's listing, which names the platform twice; the test's own lookups name it once)
+o=$(others); n=$(logc "GET /api/roms?platform_ids=$NDSP&platform_id=")
+[ "$(rs a 'len(c["held"]) + len(c["conflicts"])')" -gt 0 ] || bad "slots: --rom: no other game's records to keep"
+hr a --rom "$OUT/h-a/roms/gba/Solo (USA).gba"
+[ "$(head4 "Solo (USA).gba" | cut -d' ' -f1)" = "$(m "$GA/Solo (USA).srm")" ] && [ "$(nv4 "Other (USA).gba")" = 0 ] && [ "$(others)" = "$o" ] &&
+    [ "$(logc "GET /api/roms?platform_ids=$NDSP&platform_id=")" = "$n" ] || bad "slots: --rom: not that game's save alone: $(others) (was $o) $(cat "$OUT/hr-a.log")"
+# (its own status line, not the Home server page's, whose Stop is for a sync copying games)
+echo untouched > "$OUT/h-a/run/sync.status"; hr a --rom "gba/Solo (USA).gba"
+grep -q '^done ' "$OUT/h-a/run/gameend.status" && [ "$(cat "$OUT/h-a/run/sync.status")" = untouched ] && [ ! -e "$OUT/h-a/run/sync.pid" ] ||
+    bad "slots: --rom on its own: the status line: $(cat "$OUT/h-a/run/gameend.status") / $(cat "$OUT/h-a/run/sync.status")"
+hr a --rom "gba/Nowhere (USA).gba" && grep -q 'not a game on the server: gba/Nowhere (USA).gba' "$OUT/hr-a.log" || bad "slots: --rom of no game: $(cat "$OUT/hr-a.log")"
+hs a; [ "$(nv4 "Other (USA).gba")" = 1 ] || bad "slots: the other game's save, the next full sync: $(cat "$OUT/hs-a.log")"
+# beside a sync copying games (sync.lock held), one game's save goes at once, and neither run writes over what the
+# other wrote in romsync.json: the games the first has copied so far, the save the second has agreed (a game started
+# meanwhile, so the first leaves the saves alone and writes only its games)
+printf 'gba rom conc a' > "$L4/gba/Conc A (USA).gba"; printf 'gba rom conc b' > "$L4/gba/Conc B (USA).gba"
+curl -s -XPOST "$U4/test/fault" -d '{"path": "GET /api/roms/.*/content/Conc(%20| )B", "kind": "delay", "arg": 6}' >/dev/null
+hr a & _k=$!
+for i in $(seq 50); do [ "$(rs a '"gba/Conc A (USA).gba" in c["state"]["files"]' 2>/dev/null)" = True ] && break; sleep 0.1; done
+head -c 8192 /dev/urandom > "$GA/Solo (USA).srm"; t=$(date +%s)
+"$BIN" --root "$OUT/h-a" --run "$OUT/h-a/run" --status "$OUT/h-a/run/sync.status" sync --rom "gba/Solo (USA).gba" > "$OUT/hr-a2.log" 2>&1
+[ $(( $(date +%s) - t )) -lt 4 ] && [ "$(head4 "Solo (USA).gba" | cut -d' ' -f1)" = "$(m "$GA/Solo (USA).srm")" ] &&
+    [ "$(rs a '"gba/Conc A (USA).gba" in c["state"]["files"]')" = True ] || bad "slots: --rom beside a sync copying games: $(cat "$OUT/hr-a2.log")"
+grep -q '^running ' "$OUT/h-a/run/sync.status" || bad "slots: --rom took the status line of the sync copying games: $(cat "$OUT/h-a/run/sync.status")"
+sleep 30 & _g=$!; echo "$_g" > "$OUT/h-a/run/game.pid"
+wait $_k; kill "$_g"; rm "$OUT/h-a/run/game.pid"
+grep -q 'saves: a game is running' "$OUT/hr-a.log" || bad "slots: the sync copying games took the saves with a game running: $(cat "$OUT/hr-a.log")"
+[ "$(rs a 'c["slots"]["'"$(rid4 "Solo (USA).gba")"'/autosave"]["md5"]')" = "$(m "$GA/Solo (USA).srm")" ] && [ "$(rs a '"gba/Conc B (USA).gba" in c["state"]["files"]')" = True ] ||
+    bad "slots: the two runs' romsync.json: $(rs a 'c["slots"].get("'"$(rid4 "Solo (USA).gba")"'/autosave"), sorted(c["state"]["files"])') $(cat "$OUT/hr-a.log")"
+# one game's run stopped (as when the time before a game runs out): the status line says so, and another sync's
+# sync.pid, for the menu's Stop, stays
+echo 4242 > "$OUT/h-a/run/sync.pid"
+# (stopped before its negotiation, so no session is left open)
+curl -s -XPOST "$U4/test/fault" -d '{"path": "GET /api/platforms$", "kind": "delay", "arg": 5}' >/dev/null
+"$BIN" --root "$OUT/h-a" --run "$OUT/h-a/run" --status "$OUT/h-a/run/sync.status" sync --rom "gba/Solo (USA).gba" > "$OUT/hr-a3.log" 2>&1 & _k=$!
+sleep 1.5; kill -TERM "$_k"; wait "$_k"
+[ "$(cat "$OUT/h-a/run/gameend.status")" = "error stopped" ] && [ -f "$OUT/h-a/run/sync.pid" ] ||
+    bad "slots: --rom stopped: $(cat "$OUT/h-a/run/gameend.status"), sync.pid $(ls "$OUT/h-a/run")"
+rm "$OUT/h-a/run/sync.pid"
+# the card forgotten while one game's run goes on: that run's saves aren't written back as a pairing
+cp "$OUT/h-a/banana/romsync.json" "$OUT/paired.json"
+curl -s -XPOST "$U4/test/fault" -d '{"path": "GET /api/saves$", "kind": "delay", "arg": 3}' >/dev/null
+head -c 8192 /dev/urandom > "$GA/Solo (USA).srm"; hr a --rom "gba/Solo (USA).gba" & _k=$!
+sleep 1; "$BIN" --root "$OUT/h-a" --run "$OUT/h-a/run" --status "$OUT/h-a/run/sync.status" forget; wait "$_k"
+[ -e "$OUT/h-a/banana/romsync.json" ] && bad "slots: --rom wrote a pairing back after a forget: $(cat "$OUT/h-a/banana/romsync.json")"
+# (paired again as before: the save that run sent is the card's, agreed by the next)
+cp "$OUT/paired.json" "$OUT/h-a/banana/romsync.json"; hr a --rom "gba/Solo (USA).gba"
+# the same, paired again with the same server: a new token, and the run's saves aren't written over what it left
+cp "$OUT/h-a/banana/romsync.json" "$OUT/paired.json"; s=$(rs a 'json.dumps(c["slots"], sort_keys=True)')
+curl -s -XPOST "$U4/test/fault" -d '{"path": "GET /api/saves$", "kind": "delay", "arg": 3}' >/dev/null
+head -c 8192 /dev/urandom > "$GA/Solo (USA).srm"; hr a --rom "gba/Solo (USA).gba" & _k=$!
+sleep 1; sed -i 's/"token": "[^"]*"/"token": "another"/' "$OUT/h-a/banana/romsync.json"; wait "$_k"
+[ "$(rs a 'json.dumps(c["slots"], sort_keys=True)')" = "$s" ] || bad "slots: --rom wrote its saves over a new pairing: $(cat "$OUT/hr-a.log")"
+cp "$OUT/paired.json" "$OUT/h-a/banana/romsync.json"; hr a --rom "gba/Solo (USA).gba"
+# a run of one game's says how it went, like any other
+sed -i 's/"last": "[^"]*"/"last": "x"/' "$OUT/h-a/banana/romsync.json"; head -c 8192 /dev/urandom > "$GA/Solo (USA).srm"; hr a --rom "gba/Solo (USA).gba"
+[ "$(rs a 'c["last"]')" = "ok 0 0 1 0 0" ] || bad "slots: --rom's last sync: $(rs a 'c["last"]') $(cat "$OUT/hr-a.log")"
+# the saves one run at a time (save.lock): one game's waits for another run's to end, and gives up after 10 s
+flock -x "$OUT/h-a/run/save.lock" sleep 2 & _k=$!; sleep 0.3
+head -c 8192 /dev/urandom > "$GA/Solo (USA).srm"; hr a --rom "gba/Solo (USA).gba"; wait $_k
+[ "$(head4 "Solo (USA).gba" | cut -d' ' -f1)" = "$(m "$GA/Solo (USA).srm")" ] || bad "slots: --rom after a wait for save.lock: $(cat "$OUT/hr-a.log")"
+flock -x "$OUT/h-a/run/save.lock" sleep 12 & _k=$!; sleep 0.3
+head -c 8192 /dev/urandom > "$GA/Solo (USA).srm"; hr a --rom "gba/Solo (USA).gba"; wait $_k
+grep -q 'error: saves: another sync is saving, next time' "$OUT/hr-a.log" && [ "$(head4 "Solo (USA).gba" | cut -d' ' -f1)" != "$(m "$GA/Solo (USA).srm")" ] ||
+    bad "slots: --rom with save.lock held throughout: $(cat "$OUT/hr-a.log")"
+# a game started while one game's run waits for save.lock: that run doesn't go on to the saves
+hr a --rom "gba/Solo (USA).gba"; s=$(head4 "Solo (USA).gba")
+flock -x "$OUT/h-a/run/save.lock" sleep 2 & _f=$!; sleep 0.3
+head -c 8192 /dev/urandom > "$GA/Solo (USA).srm"; hr a --rom "gba/Solo (USA).gba" & _k=$!
+sleep 0.5; sleep 30 & _g=$!; echo $_g > "$OUT/h-a/run/game.pid"; wait $_f; wait $_k; kill $_g; rm "$OUT/h-a/run/game.pid"
+grep -q 'error: saves: a game is running, next time' "$OUT/hr-a.log" && [ "$(head4 "Solo (USA).gba")" = "$s" ] ||
+    bad "slots: --rom went on to the saves with a game started during its wait for save.lock: $(cat "$OUT/hr-a.log")"
+# and one started during a download of one game's save: nothing goes under it, and the next sync takes it
+hr a --rom "gba/Solo (USA).gba"; hs b; head -c 8192 /dev/urandom > "$GB/Solo (USA).srm"; hs b
+w=$(m "$GB/Solo (USA).srm"); l=$(m "$GA/Solo (USA).srm"); s=$(rs a 'json.dumps(c["slots"], sort_keys=True)')
+curl -s -XPOST "$U4/test/fault" -d '{"path": "GET /api/saves/[0-9]+/content", "kind": "delay", "arg": 2}' >/dev/null
+hr a --rom "gba/Solo (USA).gba" & _k=$!
+sleep 1; sleep 30 & _g=$!; echo $_g > "$OUT/h-a/run/game.pid"; wait $_k; kill $_g; rm "$OUT/h-a/run/game.pid"
+grep -q 'a game started, next time' "$OUT/hr-a.log" && [ "$(m "$GA/Solo (USA).srm")" = "$l" ] && [ "$(rs a 'json.dumps(c["slots"], sort_keys=True)')" = "$s" ] ||
+    bad "slots: a save placed under a game started during its download: $(cat "$OUT/hr-a.log")"
+hr a --rom "gba/Solo (USA).gba"
+[ "$(m "$GA/Solo (USA).srm")" = "$w" ] || bad "slots: the save held back from a game not taken after it: $(cat "$OUT/hr-a.log")"
+# the sync before a game starts (--auto launch --rom): only with Auto sync on and Sync before playing on, RomM's one
+# game's; each request given 10 s at most, so a server that doesn't answer soon is left for the sync after the game
+SA4=$OUT/h-a/banana/settings.conf
+head -c 8192 /dev/urandom > "$GA/Solo (USA).srm"; n=$(logc "GET /api/platforms")
+hr a --auto launch --rom "gba/Solo (USA).gba"
+sed -i 's/^homesync_auto = off$/homesync_auto = quit/' "$SA4"; echo 'homesync_launch = off' >> "$SA4"
+hr a --auto launch --rom "gba/Solo (USA).gba"
+sed -i '/^homesync_launch/d' "$SA4"; hr a --auto launch
+[ "$(logc "GET /api/platforms")" = "$n" ] && [ "$(head4 "Solo (USA).gba" | cut -d' ' -f1)" != "$(m "$GA/Solo (USA).srm")" ] ||
+    bad "slots: a sync before playing with Auto sync off, Sync before playing off, or no game: $(cat "$OUT/hr-a.log")"
+hr a --auto launch --rom "gba/Solo (USA).gba"
+[ "$(head4 "Solo (USA).gba" | cut -d' ' -f1)" = "$(m "$GA/Solo (USA).srm")" ] || bad "slots: the sync before playing: $(cat "$OUT/hr-a.log")"
+# (the saves held by another sync as it starts, the one after the last game still placing: said as waiting in its
+# status, so the menu waits that out rather than counting it against the server; the run done once they are free)
+head -c 8192 /dev/urandom > "$GA/Solo (USA).srm"; rm -f "$OUT/h-a/run/launch.status"
+( flock -x 9; sleep 3 ) 9> "$OUT/h-a/run/save.lock" & _l=$!
+sleep 0.3; hr a --auto launch --rom "gba/Solo (USA).gba" & _k=$!
+sleep 1.5; [ "$(cat "$OUT/h-a/run/launch.status" 2>/dev/null)" = "waiting 0 0 |saves" ] || bad "slots: the wait for the saves before a game isn't said: $(cat "$OUT/h-a/run/launch.status")"
+wait $_l; wait $_k
+grep -q '^done ' "$OUT/h-a/run/launch.status" && [ "$(head4 "Solo (USA).gba" | cut -d' ' -f1)" = "$(m "$GA/Solo (USA).srm")" ] ||
+    bad "slots: the sync before playing after a wait for the saves: $(cat "$OUT/h-a/run/launch.status") $(cat "$OUT/hr-a.log")"
+curl -s -XPOST "$U4/test/fault" -d '{"path": "GET /api/saves$", "kind": "delay", "arg": 15}' >/dev/null
+head -c 8192 /dev/urandom > "$GA/Solo (USA).srm"; t=$(date +%s); hr a --auto launch --rom "gba/Solo (USA).gba"
+[ $(( $(date +%s) - t )) -lt 13 ] && grep -q 'error: saves: ' "$OUT/hr-a.log" && [ "$(head4 "Solo (USA).gba" | cut -d' ' -f1)" != "$(m "$GA/Solo (USA).srm")" ] ||
+    bad "slots: the sync before playing, the server slow: $(( $(date +%s) - t )) s: $(cat "$OUT/hr-a.log")"
+# (its own status file: the first answer said there, its end, and nothing on the menu's Sync row)
+echo 'untouched' > "$OUT/h-a/run/sync.status"; rm -f "$OUT/h-a/run/launch.status"
+curl -s -XPOST "$U4/test/fault" -d '{"path": "GET /api/saves$", "kind": "delay", "arg": 3}' >/dev/null
+hr a --auto launch --rom "gba/Solo (USA).gba" & _k=$!
+sleep 2; [ "$(cat "$OUT/h-a/run/launch.status" 2>/dev/null)" = answered ] || bad "slots: the first answer isn't said before the transfer: $(cat "$OUT/h-a/run/launch.status")"
+wait $_k
+grep -q '^done ' "$OUT/h-a/run/launch.status" && [ "$(cat "$OUT/h-a/run/sync.status")" = untouched ] ||
+    bad "slots: the sync before playing's status: $(cat "$OUT/h-a/run/launch.status") / $(cat "$OUT/h-a/run/sync.status")"
+# (no answer to the first request: that's the run's end, not a second wait; the save stays for the sync after the game)
+head -c 8192 /dev/urandom > "$GA/Solo (USA).srm"
+curl -s -XPOST "$U4/test/fault" -d '{"path": "GET /api/heartbeat$", "kind": "delay", "arg": 15}' >/dev/null
+hr a --auto launch --rom "gba/Solo (USA).gba"
+grep -q 'error: saves: ' "$OUT/hr-a.log" && [ "$(head4 "Solo (USA).gba" | cut -d' ' -f1)" != "$(m "$GA/Solo (USA).srm")" ] ||
+    bad "slots: the sync before playing, no answer to the heartbeat: $(cat "$OUT/hr-a.log")"
+# a game outside the card's ROMs folder (the second card's, an app): nothing asked before it, no games listed after it
+# and nothing said of it
+n=$(logc "GET /api/heartbeat"); hr a --auto launch --rom "/elsewhere/Solo (USA).gba"
+[ "$(logc "GET /api/heartbeat")" = "$n" ] || bad "slots: the sync before a game outside the ROMs folder asked the server: $(cat "$OUT/hr-a.log")"
+n=$(logc "GET /api/platforms"); hr a --auto quit --rom "/elsewhere/Solo (USA).gba"
+[ "$(logc "GET /api/platforms")" = "$n" ] && ! grep -q 'not a game' "$OUT/h-a/run/gameend.status" 2>/dev/null ||
+    bad "slots: the sync after a game outside the ROMs folder: $(cat "$OUT/h-a/run/gameend.status") $(cat "$OUT/hr-a.log")"
+# save states, when they are on: that game's after it, not before it, and no other game's
+ST4=$OUT/h-a/states; mkdir -p "$ST4"; echo 'homesync_states = on' >> "$SA4"
+head -c 4096 /dev/urandom > "$ST4/Solo (USA).state"; head -c 4096 /dev/urandom > "$ST4/Other (USA).state"
+n=$(logc "POST /api/states"); hr a --auto launch --rom "gba/Solo (USA).gba"
+[ "$(logc "POST /api/states")" = "$n" ] || bad "slots: a state sent before playing: $(cat "$OUT/hr-a.log")"
+hr a --auto quit --rom "gba/Solo (USA).gba"
+[ "$(logc "POST /api/states")" = $((n + 1)) ] && [ "$(logc "POST /api/states?rom_id=$(rid4 "Solo (USA).gba")")" = 1 ] ||
+    bad "slots: the states after a game: $(s4 /test/log | grep -o 'POST /api/states[^"]*') $(cat "$OUT/hr-a.log")"
+# a state changed here and on the server (another handheld's): held, both kept (the server's in the vault, fetched
+# once), neither sent over nor taken, nothing beside the state, and never the newer by the files' times
+head -c 4096 /dev/urandom > "$ST4/Solo (USA).state"; cp "$ST4/Solo (USA).state" "$OUT/solo.state"; past "$ST4/Solo (USA).state"
+head -c 4096 /dev/urandom > "$OUT/srv.state"
+curl -s -XPOST "$U4/test/save" -d "{\"kind\": \"states\", \"rom_id\": $(rid4 "Solo (USA).gba"), \"file_name\": \"Solo (USA).state\", \"emulator\": \"retroarch\", \"data\": \"$(hex "$OUT/srv.state")\", \"updated_at\": \"$(date -u -d "@$(( $(date +%s) + 5 ))" +%Y-%m-%dT%H:%M:%SZ)\"}" >/dev/null
+sid=$(s4 "/api/states?platform_id=$(s4 /api/platforms | python3 -c 'import json,sys; print(next(p["id"] for p in json.load(sys.stdin) if p["fs_slug"] == "gba"))')" | python3 -c 'import json,sys; print(next(s["id"] for s in json.load(sys.stdin) if s["file_name"] == "Solo (USA).state"))')
+n=$(logc "POST /api/states"); hr a --auto quit --rom "gba/Solo (USA).gba"
+SK="$(rid4 "Solo (USA).gba")/state:Solo (USA).state"
+grep -q 'conflict, both kept: states/Solo (USA).state (the server.s in the vault)' "$OUT/hr-a.log" && cmp -s "$ST4/Solo (USA).state" "$OUT/solo.state" &&
+    [ "$(logc "POST /api/states")" = "$n" ] && [ "$(s4 "/api/states/$sid" | jget '["content_hash"]')" = "$(m "$OUT/srv.state")" ] &&
+    [ "$(rs a 'c["held"]["'"$SK"'"]["server_md5"]')" = "$(m "$OUT/srv.state")" ] && [ -z "$(ls "$ST4" | grep '\.bak$')" ] &&
+    ls "$OUT/h-a/banana/save-vault/states/Solo (USA)/" | grep -q -- "-$(m "$OUT/srv.state" | cut -c1-8)\.state$" ||
+    bad "slots: a state changed on both sides: $(cat "$OUT/hr-a.log") $(rs a 'c["held"]')"
+n=$(logc "GET /api/states/$sid/content"); hr a --auto quit --rom "gba/Solo (USA).gba"
+grep -q 'conflict, both kept: states/Solo (USA).state' "$OUT/hr-a.log" && [ "$(logc "GET /api/states/$sid/content")" = "$n" ] && [ "$(rs a '"'"$SK"'" in c["held"]')" = True ] ||
+    bad "slots: a held state, the next sync: fetched again or lost: $(cat "$OUT/hr-a.log")"
+# (a full sync, which works out the saves' records afresh, leaves a state's alone; settled by hand, it goes)
+hs a; [ "$(rs a '"'"$SK"'" in c["held"]')" = True ] || bad "slots: a full sync dropped a held state's record"
+cp "$OUT/srv.state" "$ST4/Solo (USA).state"; hr a --auto quit --rom "gba/Solo (USA).gba"
+[ "$(rs a '"'"$SK"'" in c["held"]')" = False ] && ! grep -q 'conflict, both kept' "$OUT/hr-a.log" || bad "slots: a state settled by hand still held: $(cat "$OUT/hr-a.log")"
+sed -i '/^homesync_states/d' "$SA4"; rm "$ST4/Solo (USA).state" "$ST4/Other (USA).state"
+# Wi-Fi back with Auto sync only "Leaving a game": the saves waiting to be sent go, nothing else (no game copied, no
+# other game's save); none waiting, nothing asked of the server
+head -c 8192 /dev/urandom > "$GA/Solo (USA).srm"; head -c 8192 /dev/urandom > "$GA/Other (USA).srm"; o=$(head4 "Other (USA).gba" | cut -d' ' -f1)
+curl -s -XPOST "$U4/test/fault" -d '{"path": "POST /api/saves$", "kind": "500"}' >/dev/null; hr a --auto quit --rom "gba/Solo (USA).gba"
+[ "$(rs a 'list(c["queue"])')" = "['$(rid4 "Solo (USA).gba")/autosave']" ] || bad "slots: Wi-Fi: no save waiting: $(cat "$OUT/hr-a.log")"
+hr a --auto wifi
+[ "$(head4 "Solo (USA).gba" | cut -d' ' -f1)" = "$(m "$GA/Solo (USA).srm")" ] && [ "$(head4 "Other (USA).gba" | cut -d' ' -f1)" = "$o" ] &&
+    [ "$(rs a 'len(c["queue"])')" = 0 ] && ! grep -q '^roms: ' "$OUT/hr-a.log" || bad "slots: Wi-Fi sending what waits: $(cat "$OUT/hr-a.log")"
+n=$(logc "GET /api/platforms"); hr a --auto wifi
+[ "$(logc "GET /api/platforms")" = "$n" ] || bad "slots: Wi-Fi with nothing waiting asked the server: $(cat "$OUT/hr-a.log")"
+# (a game started while the waiting saves go: the rest stay waiting)
+head -c 8192 /dev/urandom > "$GA/Solo (USA).srm"; head -c 8192 /dev/urandom > "$GA/Other (USA).srm"; o=$(head4 "Solo (USA).gba" | cut -d' ' -f1)
+curl -s -XPOST "$U4/test/fault" -d '{"path": "POST /api/saves$", "kind": "500"}' >/dev/null; hr a --auto quit --rom "gba/Solo (USA).gba"
+curl -s -XPOST "$U4/test/fault" -d '{"path": "POST /api/saves$", "kind": "500"}' >/dev/null; hr a --auto quit --rom "gba/Other (USA).gba"
+curl -s -XPOST "$U4/test/fault" -d '{"path": "POST /api/saves$", "kind": "delay", "arg": 3}' >/dev/null
+hr a --auto wifi & _k=$!; sleep 1; sleep 30 & _g=$!; echo $_g > "$OUT/h-a/run/game.pid"; wait $_k; kill $_g; rm "$OUT/h-a/run/game.pid"
+[ "$(head4 "Solo (USA).gba" | cut -d' ' -f1)" = "$o" ] && [ "$(rs a 'len(c["queue"])')" = 1 ] ||
+    bad "slots: a game started during the Wi-Fi queue: $(rs a 'list(c["queue"])') $(cat "$OUT/hr-a.log")"
+hr a --auto wifi
+sed -i 's/^homesync_auto = quit$/homesync_auto = off/' "$SA4"
+# a game started during a sync of every save: the games not reached yet and the states are left alone, and go with the
+# next sync
+head -c 8192 /dev/urandom > "$GA/Solo (USA).srm"; head -c 8192 /dev/urandom > "$GA/Other (USA).srm"; o=$(head4 "Solo (USA).gba" | cut -d' ' -f1)
+echo 'homesync_states = on' >> "$SA4"; head -c 4096 /dev/urandom > "$ST4/Solo (USA).state"; n=$(logc "POST /api/states")
+curl -s -XPOST "$U4/test/fault" -d '{"path": "POST /api/saves$", "kind": "delay", "arg": 3}' >/dev/null
+hs a & _k=$!; sleep 1; sleep 30 & _g=$!; echo $_g > "$OUT/h-a/run/game.pid"; wait $_k
+[ "$(head4 "Solo (USA).gba" | cut -d' ' -f1)" = "$o" ] && [ "$(head4 "Other (USA).gba" | cut -d' ' -f1)" = "$(m "$GA/Other (USA).srm")" ] &&
+    [ "$(logc "POST /api/states")" = "$n" ] && [ "$(grep -c 'error: saves: a game started, the rest next time' "$OUT/hs-a.log")" = 1 ] ||
+    bad "slots: a game started during a sync: $(cat "$OUT/hs-a.log")"
+sed -i '/^homesync_states/d' "$SA4"; rm "$ST4/Solo (USA).state"
+kill $_g; rm "$OUT/h-a/run/game.pid"; hs a
+[ "$(head4 "Solo (USA).gba" | cut -d' ' -f1)" = "$(m "$GA/Solo (USA).srm")" ] || bad "slots: the save left when a game started: $(cat "$OUT/hs-a.log")"
 # the card's sync state as it was before its saves went by slot, kept beside the new one; every negotiation's
 # session completed
 v1=$OUT/h-a/banana/romsync.v1.json

@@ -72,18 +72,26 @@ Advance: every GBA core uses `/data/saves/gba/<game>.srm` (run-retroarch), so a 
 mGBA (Settings > Other systems) with the same save. A game with no save there yet gets a copy of its newest
 non-blank one from a core's folder; those files stay as they were. States stay per core (their formats differ).
 
-The two DS emulators share their in-game saves: `nds-saves`, run by both launchers before a game, writes the
-newer of DraStic's `drastic/backup/<game>.dsv` and BananaDS's `saves/nds/<game>.sav` over the other in its own
-form. A `.dsv` is in DeSmuME's format, whether DraStic, DeSmuME or a card scraped under another firmware wrote it:
+The two DS emulators share their in-game saves: `nds-saves`, run by both launchers before a game (and by the home
+server's sync, before it looks at a DS save and after it puts one in place), writes whichever of DraStic's
+`drastic/backup/<game>.dsv` and BananaDS's `saves/nds/<game>.sav` changed since the two last agreed over the other,
+in its own form. Which one changed is told by content, never by the files' times (the handheld's clock is lost with
+its battery, and a file dated in the future would win every comparison): the MD5 of the raw save the two last held
+is kept in `banana/nds-saves/<game>.md5`. Both changed since (a save edited by hand, a copy that failed): neither is
+touched, the launcher's log says so, and the sync leaves the game alone until one of the two is chosen, by giving
+the other its bytes. With no record yet, the first start after the update goes by the files' times, this once. The
+file replaced is kept in the sync's vault, `banana/save-vault/saves/nds/<game>/`, the same bytes once, never removed
+by Banana; the emulator's quick-resume state goes with it, since it would put the old save's memory back. A `.dsv`
+is in DeSmuME's format, whether DraStic, DeSmuME or a card scraped under another firmware wrote it:
 the raw save followed by DeSmuME's 122-byte footer (40 bytes from an older DraStic, without its text line), which
 `nds-saves` leaves off for BananaDS when its fields add up: version 0, 20 bytes from the end, and `padded_size`, 36
 bytes from the end, the file less the footer. A `.dsv` whose footer doesn't add up is left as it is, and said.
 DraStic also reads a raw save with no footer, which is what it gets back. The home server's sync takes a `.dsv` the
 same way: another device's DraStic save comes in as the raw save. The raw size
 is kept as it is: melonDS sizes the save memory from its game list, not from the file, and quietly cuts short or
-pads with `0xFF` a file of another size. The file replaced is kept as `.bak`. A newer file under 512 bytes is no
-save (the smallest, a 4 Kbit EEPROM's, is 512): it never goes over one with something in it, which goes over it
-instead (#96). The emulators' own save states (`.dss`, `.mst`) are not shared.
+pads with `0xFF` a file of another size. A save under 512 bytes is no save (the smallest, a 4 Kbit EEPROM's, is
+512): it never goes over one with something in it (#96). The emulators' own save states (`.dss`, `.mst`) are not
+shared.
 
 ## Settings
 

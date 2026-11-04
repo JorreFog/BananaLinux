@@ -15,13 +15,21 @@
 //                                              a client token's pairing code; rmm_... = a token pasted. Whichever,
 //                                              the card is then a RomM device: bananaos-<banana/sync-id>, kept
 //   banana-sync forget                         the pairing (and the sync's state) dropped; the files stay
-//   banana-sync sync [--saves-only] [--auto quit|wifi] [--dry-run]
+//   banana-sync sync [--saves-only] [--rom <path>] [--auto quit|wifi|launch] [--dry-run]
+//                                              --rom: that one game's save and, with homesync_states, its states (its
+//                                              ROM's path, roms-relative or absolute, on either SD card), beside a sync
+//                                              that is copying games: one at a time over the saves only, its status in
+//                                              <run>/gameend.status. Romhost and a RomM before 5.4 sync every save
+//                                              instead;
+//                                              --auto launch --rom: the one before the game starts (homesync_launch),
+//                                              the save alone, each request given less time, its status in
+//                                              <run>/launch.status; RomM 5.4 and newer only
 //   banana-sync status                         the pairing and the last sync, for a person
 //   banana-sync blank <file> [<folder>]        exit 0 when the save is blank (a core's fresh one); folder: under saves/
 // The card: --root /data (saves/, states/, drastic/), --roms <root>/roms, --conf <root>/banana/romsync.json,
 // --settings <root>/banana/settings.conf (homesync_roms, homesync_roms_to, homesync_states, homesync_auto,
-// homesync.<system>, homesync_ca: a PEM file of the CA that signed an https server's certificate, homesync_tls = off:
-// no certificate checked).
+// homesync_launch, homesync.<system>, homesync_ca: a PEM file of the CA that signed an https server's certificate,
+// homesync_tls = off: no certificate checked).
 // The second SD card's roms folder (homesync_roms_to = sd2) is the one <run>/sd2/roms names, as the library's.
 // Each sync's report: <root>/banana/logs/sync.log (the one before: sync.log.1).
 // Rules kept (PROTOCOL.md "What a device sync must do"): only files the sync put there are ever changed or deleted
@@ -160,9 +168,13 @@ namespace
 			int n = 0, total = (int)plan->get("actions")->arr.size();
 			for (auto& a : plan->get("actions")->arr)
 			{
+				if (stopForGame(errors)) break;
 				std::string rel = a->str("path"), act = a->str("action");
 				n++;
 				if (!safeRel(rel) || saveKind(rel).empty()) continue;
+				// (the DS's two saves both changed since they last agreed: the game left alone until one is chosen; still
+				// in the plan's list, so the server doesn't take it as deleted)
+				if (ndsDivergedSave(rel)) { say("  not synced, DraStic's and BananaDS's saves both changed since they last agreed: %s", rel.c_str()); continue; }
 				status("running " + std::to_string(n) + " " + std::to_string(total) + " Saves|" + baseOf(rel));
 				std::string p = ROOT + "/" + rel;
 				if (act == "same") c.saves[rel] = { a->num("version"), a->str("sha1"), "" };
@@ -195,8 +207,11 @@ namespace
 					Install in = fetchTo(c.server + "/api/v1/saves/file/" + pathEsc(rel) + "?version=" + fmtNum(a->num("version")), auth(), dl, -1, "sha1", a->str("sha1"), err)
 						? installSave(rel, dl, fmtNum(a->num("version")), err) : Install::Failed;
 					if (in == Install::Blank) { say("  blank on the server, not taken: %s", rel.c_str()); continue; }
-					if (in == Install::Failed) { unlink(dl.c_str()); errors.push_back(rel + ": " + err); continue; }
-					// (its time is now: newer than DraStic's .dsv, so nds-saves passes it on at the next start)
+					if (in == Install::Failed) { dropDownload(dl); errors.push_back(rel + ": " + err); continue; }
+					// (DraStic's .dsv brought into step with a DS save just installed, before either emulator starts)
+					if (saveFolder(rel) == "nds") ndsSaves(ROMS + "/nds/" + stemOf(baseOf(rel)) + ".nds");
+					// (a game started while it was placed: not recorded, so the next sync decides again from what it finds)
+					if (gameRunning()) { errors.push_back(rel + ": a game started while it was placed, decided next time"); continue; }
 					c.saves[rel] = { a->num("version"), a->str("sha1"), "" };
 					down++;
 					say("  down %s", rel.c_str());
@@ -621,8 +636,9 @@ namespace
 		Conf n;
 		n.backend = kind; n.server = url; n.serverName = name; n.name = dev;
 		if (kind == "romm" && name.compare(0, 5, "RomM ") == 0) n.serverVersion = name.substr(5);
-		// a new server: a new state (another server's files and versions mean nothing here); the files stay on the card
-		if (c.server == url && c.backend == kind) { n.files = c.files; n.gamelist = c.gamelist; n.saves = c.saves; n.states = c.states; }
+		// a new server: a new state (another server's files and versions mean nothing here); the files stay on the card.
+		// The same server again: its state as it is, the saves' part too (what was agreed, held or waiting still holds)
+		if (c.server == url && c.backend == kind) { n.files = c.files; n.gamelist = c.gamelist; takeSaves(n, c); }
 		if (kind == "romhost")
 		{
 			if (code.empty()) { status("error the pairing code from Homeport is needed"); return 1; }
@@ -710,20 +726,30 @@ namespace
 		}
 	};
 
-	int doSync(bool savesOnly, const std::string& autoWhy)
+	int doSync(bool savesOnly, const std::string& autoWhy, const std::string& onlyRom)
 	{
 		auto set = readConf(SETTINGS);
 		auto get = [&](const std::string& k, const std::string& d) { auto i = set.find(k); return i == set.end() || i->second.empty() ? d : i->second; };
+		bool queued = false;
 		Conf c = loadConf();
 		if (!c.paired()) { if (autoWhy.empty()) status("error not paired"); return 2; }
 		if (!autoWhy.empty())
 		{
 			std::string a = get("homesync_auto", "off");
-			if (a == "off" || (autoWhy == "wifi" && a != "both")) return 0;
+			if (a == "off") return 0;
+			// (Wi-Fi back with only "Leaving a game": the saves that couldn't be sent then, sent now)
+			if (autoWhy == "wifi" && a != "both")
+			{
+				if (c.queue.empty() || c.backend != "romm") return 0;
+				savesOnly = true;
+				queued = true;
+			}
 			if (autoWhy == "quit") savesOnly = true;	// (leaving a game: only the saves, it's quick)
+			// (before a game starts: RomM's slots only, one game's, under the card's ROMs folder; Romhost's plan is all the
+			// saves at once)
+			if (autoWhy == "launch" && (onlyRom.empty() || onlyRom[0] == '/' || c.backend != "romm" || get("homesync_launch", "on") != "on")) return 0;
 		}
 		if (!tlsVerify && c.server.compare(0, 8, "https://") == 0) say("certificate checks are off (homesync_tls)");
-		bool roms = !savesOnly && get("homesync_roms", "on") == "on";
 		bool states = get("homesync_states", "off") == "on";
 		std::set<std::string> skip;
 		for (auto& kv : set) if (kv.first.compare(0, 9, "homesync.") == 0 && kv.second == "off") skip.insert(kv.first.substr(9));
@@ -734,9 +760,18 @@ namespace
 		b->skip = skip;
 		b->chosen = pick ? &chosen : nullptr;
 		b->ownCovers = ownCoversOf(SYSTEMS);
+		b->onlyRom = onlyRom;
+		b->onlyQueued = queued;
+		b->beforeGame = autoWhy == "launch";
+		if (!onlyRom.empty() && c.backend != "romm") say("Romhost decides which saves move: all of them synced, not only %s's", onlyRom.c_str());
+		// (one game's: its states go too, when they are on, except while it waits to start)
+		if (!onlyRom.empty()) { savesOnly = true; if (autoWhy == "launch") states = false; }
+		bool roms = !savesOnly && get("homesync_roms", "on") == "on";
 		Awake awake;
 		if (roms) awake.take();
-		status("running 0 0 |" + (c.serverName.empty() ? c.server : c.serverName));
+		// (the line before the server's first answer: the menu's wait before a game gives that answer 5 s from it)
+		const std::string first = "running 0 0 |" + (c.serverName.empty() ? c.server : c.serverName);
+		status(first);
 		std::vector<std::string> errors, conflicts;
 		int downloaded = 0, removed = 0, up = 0, down = 0, sconf = 0;
 		std::string note;
@@ -764,13 +799,34 @@ namespace
 				for (auto& e : r.errors) errors.push_back(e);
 			}
 		}
-		if (gameRunning()) errors.push_back("saves: a game is running, next time");
+		// (the saves one run at a time: a sync of one game's beside a sync copying games waits for the other's to end,
+		// and takes the saves' state as that one left it)
+		// (and asked again once it has them: a game can start during that wait, with no lock of its own if a sync held it then)
+		const char* running = "saves: a game is running, next time";
+		// (a wait for the lock said before a game, when there is one: the menu waits it out, up to its cap, instead of
+		// starting the game at 5 s under the sync after the last one, still placing. The line before the first answer
+		// is put back once the lock is had, so a server that then doesn't answer is given its 5 s from there, not the
+		// wait's length over)
+		auto lock = [&]()
+		{
+			if (lockSaves(0)) return true;
+			if (b->beforeGame) status("waiting 0 0 |saves");
+			bool had = lockSaves(onlyRom.empty() ? 60 : 10);
+			if (had && b->beforeGame) status(first);
+			return had;
+		};
+		if (gameRunning()) errors.push_back(running);
+		else if (!lock()) errors.push_back("saves: another sync is saving, next time");
+		else if (gameRunning()) errors.push_back(running);
 		else
 		{
-			// (a run cut short last time: how far each operation got, before anything else touches the saves)
+			takeSaves(c, loadConf());
+			holdSaves = true;
+			// (a run cut short last time: how far each operation got, before anything else touches the saves; a save
+			// found in place is agreed in the record, as the run would have done next)
 			if (!dryRun)
 			{
-				std::string rec = journalRecover();
+				std::string rec = journalRecover(&c);
 				for (size_t a = 0, e; (e = rec.find('\n', a)) != std::string::npos; a = e + 1) say("  journal: %s", rec.substr(a, e - a).c_str());
 				savesFlatFirst();
 			}
@@ -794,6 +850,7 @@ int main(int argc, char** argv)
 	std::vector<std::string> args;
 	std::string autoWhy;
 	bool savesOnly = false;
+	std::string onlyRom;
 	for (int i = 1; i < argc; i++)
 	{
 		std::string a = argv[i];
@@ -808,6 +865,7 @@ int main(int argc, char** argv)
 		else if (a == "--dry-run") dryRun = true;
 		else if (a == "--saves-only") savesOnly = true;
 		else if (a == "--auto") autoWhy = val();
+		else if (a == "--rom") onlyRom = val();
 		else if (a == "-v") verbose = true;
 		else args.push_back(a);
 	}
@@ -821,6 +879,11 @@ int main(int argc, char** argv)
 		SYSTEMS = e ? e : ROOT == "/data" ? (access("/run/banana/systems.conf", R_OK) == 0 ? "/run/banana/systems.conf" :
 			"/etc/banana/systems.conf") : "";
 	}
+	if (!onlyRom.empty()) onlyRom = romsRelative(onlyRom);
+	// (before a game starts, while it waits: a server that doesn't answer soon is left for the sync after the game)
+	if (autoWhy == "launch") { connectTimeout = 3; callTimeout = 10; }
+	// (and its own status file: the menu waits on it, and a run stopped so a game can start says nothing on the Sync row)
+	if (autoWhy == "launch") STATUS = RUN + "/launch.status";
 	// an https server's certificate: signed by the owner's own CA (its certificate file, data-relative or absolute), or,
 	// the owner's choice for one of its own making, not checked at all (homesync_tls = off)
 	{
@@ -829,7 +892,7 @@ int main(int argc, char** argv)
 		if (!CA.empty() && CA[0] != '/') CA = ROOT + "/" + CA;
 		tlsVerify = set["homesync_tls"] != "off";
 	}
-	if (args.empty()) { fprintf(stderr, "usage: banana-sync discover | probe <address> | pair <address> [code] | forget | sync [--saves-only] [--auto quit|wifi] [--dry-run] | status | games | blank <file> [<folder>]\n"); return 2; }
+	if (args.empty()) { fprintf(stderr, "usage: banana-sync discover | probe <address> | pair <address> [code] | forget | sync [--saves-only] [--rom <path>] [--auto quit|wifi|launch] [--dry-run] | status | games | blank <file> [<folder>]\n"); return 2; }
 	std::string cmd = args[0];
 	// (exit 0: blank, a core's fresh save holding nothing yet; what run-retroarch asks before it seeds the GBA folder)
 	if (cmd == "blank" && args.size() > 1)
@@ -898,11 +961,33 @@ int main(int argc, char** argv)
 	}
 	if (cmd == "forget")
 	{
-		if (unlink(CONF.c_str()) != 0 && errno != ENOENT) return 1;
+		// (under the state file's lock: a run writing its part back meanwhile would write the pairing back with it)
+		int lk = open((RUN + "/romsync.lock").c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0644);
+		if (lk >= 0) while (flock(lk, LOCK_EX) != 0 && errno == EINTR) {}
+		int rc = unlink(CONF.c_str()) != 0 && errno != ENOENT ? 1 : 0;
+		if (lk >= 0) close(lk);
+		if (rc) return rc;
 		status("");
 		return 0;
 	}
-	// one at a time (the menu's Sync now beside an automatic one)
+	// one at a time (the menu's Sync now beside an automatic one); a sync of one game's save beside it, by save.lock
+	if (cmd == "sync" && !onlyRom.empty())
+	{
+		// (no sync.pid and not sync.status: the menu's Home server page and its Stop are for a sync copying games, which
+		// holds sync.lock, and this run doesn't. A status line of its own, as the wait before a game has launch.status:
+		// on sync.status the page would offer a Stop with nothing to stop, and take a line left unchanged through a slow
+		// upload for a sync gone)
+		holdRoms = holdSaves = false;
+		if (autoWhy != "launch") STATUS = RUN + "/gameend.status";
+		int other = open((RUN + "/sync.lock").c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0644);
+		bool beside = other >= 0 && flock(other, LOCK_EX | LOCK_NB) != 0;
+		if (other >= 0) close(other);
+		// (the report on the card for the sync after a game, as for every sync: not beside a sync copying games, whose
+		// report it would push aside mid-run, nor for the wait before a game, which reports on launch.status)
+		logWanted = !dryRun && autoWhy != "launch" && !beside;
+		catchKill(false);
+		return doSync(true, autoWhy, onlyRom);
+	}
 	int lk = open((RUN + "/sync.lock").c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0644);
 	if (lk >= 0 && flock(lk, LOCK_EX | LOCK_NB) != 0) { if (autoWhy.empty()) fprintf(stderr, "banana-sync: already running\n"); return 3; }
 	if (cmd == "pair" && args.size() > 1) return pair(args[1], args.size() > 2 ? args[2] : "");
@@ -911,8 +996,9 @@ int main(int argc, char** argv)
 		// the pid for the menu's Stop (Settings > Network > Home server > Sync now while it runs)
 		catchKill();
 		std::ofstream(RUN + "/sync.pid") << getpid() << "\n";
+		holdSaves = false;
 		logWanted = !dryRun;
-		int rc = doSync(savesOnly, autoWhy);
+		int rc = doSync(savesOnly, autoWhy, "");
 		unlink((RUN + "/sync.pid").c_str());
 		return rc;
 	}

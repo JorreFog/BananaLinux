@@ -11,6 +11,7 @@
 #include <functional>
 #include <map>
 #include <set>
+#include <signal.h>
 #include <string>
 #include <sys/stat.h>
 #include <vector>
@@ -25,10 +26,14 @@ namespace bsync
 	extern bool dryRun, verbose;
 	extern bool tlsVerify;	// homesync_tls = off: an https server's certificate taken unchecked
 	extern bool logWanted;	// the next line said opens the report on the card, banana/logs/sync.log
+	// what of romsync.json this run may write: the games and the pairing while it holds sync.lock (holdRoms), the
+	// saves while it holds save.lock (holdSaves); the rest is written back as another run left it
+	extern bool holdRoms, holdSaves;
+	extern long connectTimeout, callTimeout;	// each request's, in seconds (shorter for the sync before a game starts)
 
 	// ---- the status line the menu reads ---------------------------------------------------------------------------
 	void status(const std::string& s);
-	void catchKill();
+	void catchKill(bool pidFile = true);	// pidFile: this run's sync.pid is removed too
 	void say(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
 
 	// ---- files --------------------------------------------------------------------------------------------------------
@@ -135,7 +140,7 @@ namespace bsync
 		FILE* out = nullptr;					// the body into a file instead of Resp::body
 		std::vector<std::pair<std::string, std::string>> fileParts;	// multipart: (field name, file path)
 		std::string partName;					// the multipart file's name as sent
-		long timeout = 60;						// whole request (0 = none: the speed floor below instead)
+		long timeout = callTimeout;				// whole request (0 = none: the speed floor below instead)
 	};
 	Resp http(const Req& q);
 
@@ -171,6 +176,9 @@ namespace bsync
 	};
 	Conf loadConf();
 	bool saveConf(const Conf& c);
+	void takeSaves(Conf& to, const Conf& from);	// the saves' part of the state (saves, states, slots, conflicts, held, queue)
+	// save.lock (one run at a time over the card's saves), waited for up to secs; kept until the run ends
+	bool lockSaves(int secs);
 
 	// ---- what a server offers: one list of files whichever server it is ----------------------------------------------
 	struct MFile
@@ -201,6 +209,14 @@ namespace bsync
 		std::set<std::string> skip;	// system folders this handheld skips (settings: homesync.<system> = off)
 		const std::set<std::string>* chosen = nullptr;	// games chosen for syncing (null: every game)
 		std::set<std::string> ownCovers;	// system folders that make their own covers (systems.conf: covers = own)
+		std::string onlyRom;		// sync --rom: only that game's save (roms-relative); RomM 5.4 and newer, others every save
+		bool gameStarted = false;
+		bool oneGame = false;	// this run moves one game's save and no other's (--rom alone doesn't say: see saves())
+		bool onlyQueued = false;	// only the saves waiting to be sent (their games'), the same way
+		bool beforeGame = false;	// the sync before a game starts: that game's save or none, never every save
+		// a game started meanwhile, with this run holding save.lock: its save may be in use and any of the rest may be it,
+		// so a run of more than one game stops where it is (said once). True: leave the rest for the next sync
+		bool stopForGame(std::vector<std::string>& errors);
 		explicit Backend(Conf& conf) : c(conf) {}
 		virtual ~Backend() {}
 		virtual std::vector<std::string> auth() const { return { "Authorization: Bearer " + c.token }; }
@@ -252,7 +268,22 @@ namespace bsync
 	void savesFlatFirst();
 	void ndsSavesFirst();
 	void ndsSaves(const std::string& romPath);
+	// a DS save (saves/nds/<stem>.sav) whose game's two saves, DraStic's and BananaDS's, both changed since they last
+	// agreed, as the last nds-saves run for it found: not synced either way until one of them is chosen
+	bool ndsDivergedSave(const std::string& rel);
 	bool gameRunning();
+	// SIGTERM and the like wait while this lives: what must not be left half done by a stop (ended early by end())
+	struct KillHold
+	{
+		KillHold();
+		~KillHold() { end(); }
+		void end();
+	private:
+		sigset_t before;
+		bool held = true;
+	};
+	// a download to a name of this run's own given up: what fetchTo keeps for a retry is never retried under it
+	void dropDownload(const std::string& dl);
 	bool fetchTo(const std::string& url, const std::vector<std::string>& headers, const std::string& dst, long long size,
 		const std::string& algo, const std::string& want, std::string& err, std::string* got = nullptr);
 }

@@ -334,6 +334,7 @@ BL_UI = [
     ("ui/src/library.cpp", "menu", "Menu: library, dates and times"),
     ("ui/src/layout.cpp", "menu", "Menu (layout themes)"),
     ("ui/src/main.cpp", "menu", "Menu"),
+    ("ui/src/gamesync.cpp", "menu", "Menu"),
     ("ui/src/theme.cpp", "menu", "Menu"),
     ("ui/src/splash.cpp", "menu", "Menu"),
     ("ui/src/settings.cpp", "settings", "Settings"),

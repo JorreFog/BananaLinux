@@ -10,6 +10,7 @@
 #include <functional>
 #include <signal.h>
 #include <sstream>
+#include <sys/file.h>
 #include <sys/stat.h>
 #include <sys/statvfs.h>
 #include <sys/wait.h>
@@ -19,8 +20,9 @@ namespace bsync
 {
 	const char* VERSION = "banana-sync 1.0";
 	std::string ROOT = "/data", ROMS, CONF, SETTINGS, SYSTEMS, STATUS = "/run/banana/sync.status", RUN = "/run/banana", CA;
-	bool dryRun = false, verbose = false;
+	bool dryRun = false, verbose = false, holdRoms = true, holdSaves = true;
 	bool tlsVerify = true;	// homesync_tls = off: a Home server's certificate taken unchecked (a name on the LAN, no CA for it)
+	long connectTimeout = 10, callTimeout = 60;
 
 	// ---- the status line the menu reads ---------------------------------------------------------------------------
 	namespace
@@ -29,7 +31,7 @@ namespace bsync
 	}
 	void status(const std::string& s)
 	{
-		if (s == statusLine) return;
+		if (STATUS.empty() || s == statusLine) return;
 		statusLine = s;
 		if (verbose) fprintf(stderr, "status: %s\n", s.c_str());
 		std::string tmp = STATUS + ".new";
@@ -44,17 +46,17 @@ namespace bsync
 	void onKill(int sig)
 	{
 		static const char msg[] = "error stopped\n";
-		int fd = open(sigStatusTmp, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644);
+		int fd = sigStatus[0] ? open(sigStatusTmp, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644) : -1;	// (no status line of its own: none)
 		if (fd >= 0) { ssize_t w = write(fd, msg, sizeof msg - 1); (void)w; close(fd); rename(sigStatusTmp, sigStatus); }
-		unlink(sigPid);
+		if (sigPid[0]) unlink(sigPid);
 		_exit(128 + sig);
 	}
 	}
-	void catchKill()
+	void catchKill(bool pidFile)
 	{
 		snprintf(sigStatus, sizeof sigStatus, "%s", STATUS.c_str());
 		snprintf(sigStatusTmp, sizeof sigStatusTmp, "%s.new", STATUS.c_str());
-		snprintf(sigPid, sizeof sigPid, "%s/sync.pid", RUN.c_str());
+		snprintf(sigPid, sizeof sigPid, "%s", pidFile ? (RUN + "/sync.pid").c_str() : "");
 		struct sigaction sa = {};
 		sa.sa_handler = onKill;
 		sigemptyset(&sa.sa_mask);
@@ -372,7 +374,7 @@ namespace bsync
 		cu.setopt(h, O_URL, q.url.c_str());
 		cu.setopt(h, O_USERAGENT, "BananaOS banana-sync/1.0 (+https://github.com/JorreFog/BananaLinux)");
 		cu.setopt(h, O_NOSIGNAL, 1L);
-		cu.setopt(h, O_CONNECTTIMEOUT, 10L);
+		cu.setopt(h, O_CONNECTTIMEOUT, connectTimeout);
 		if (q.timeout) cu.setopt(h, O_TIMEOUT, q.timeout);
 		else { cu.setopt(h, O_LOW_SPEED_LIMIT, 1024L); cu.setopt(h, O_LOW_SPEED_TIME, 60L); }
 		cu.setopt(h, O_FOLLOWLOCATION, 1L);
@@ -516,9 +518,51 @@ namespace bsync
 			for (auto& kv : qu->obj) c.queue[kv.first] = { kv.second->str("md5"), kv.second->str("vault"), kv.second->num("since") };
 		return c;
 	}
+	void takeSaves(Conf& to, const Conf& from)
+	{
+		to.saves = from.saves; to.states = from.states; to.stateVersion = from.stateVersion;
+		to.slots = from.slots; to.conflicts = from.conflicts; to.held = from.held; to.queue = from.queue;
+	}
+	namespace
+	{
+	bool writeConf(const Conf& c);
+	}
 	bool saveConf(const Conf& c)
 	{
 		if (dryRun) return true;
+		// (every write under romsync.lock, a run holding both parts included: another run's read, change and write of
+		// its own part would otherwise land between this one's and be lost. Another run may hold the other part: the
+		// file as it is now read under the lock, and only this run's part written over it. The device is this run's
+		// too whenever it has one: a run over the saves registers it, again when RomM deleted the one held)
+		int lk = open((RUN + "/romsync.lock").c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0644);
+		if (lk >= 0) while (flock(lk, LOCK_EX) != 0 && errno == EINTR) {}
+		if (holdRoms && holdSaves) { bool ok = writeConf(c); if (lk >= 0) close(lk); return ok; }
+		Conf d = loadConf(), w = c;
+		if (!holdRoms)
+		{
+			if (d.server != c.server || d.backend != c.backend || d.token != c.token)
+			{
+				// (the card forgotten or paired again meanwhile: this run's saves mean nothing to that pairing)
+				if (lk >= 0) close(lk);
+				return false;
+			}
+			w = d;
+			takeSaves(w, c);
+			w.last = c.last; w.lastTime = c.lastTime;
+			w.serverVersion = c.serverVersion; w.serverName = c.serverName;
+			// (this run's device: registered again when RomM had deleted the one held, which every later run would
+			// otherwise find gone and register once more)
+			if (!c.device.empty()) { w.device = c.device; w.deviceNum = c.deviceNum; }
+		}
+		if (!holdSaves) takeSaves(w, d);
+		bool ok = writeConf(w);
+		if (lk >= 0) close(lk);
+		return ok;
+	}
+	namespace
+	{
+	bool writeConf(const Conf& c)
+	{
 		std::string o = "{\n \"backend\": " + jsonStr(c.backend) + ",\n \"server\": " + jsonStr(c.server) + ",\n \"token\": " + jsonStr(c.token) +
 			",\n \"device\": " + (c.deviceNum && !c.device.empty() ? c.device : jsonStr(c.device)) + ",\n \"name\": " + jsonStr(c.name) +
 			",\n \"serverName\": " + jsonStr(c.serverName) + ",\n \"serverVersion\": " + jsonStr(c.serverVersion) + ",\n \"last\": " + jsonStr(c.last) + ",\n \"lastTime\": " + fmtNum(c.lastTime) +
@@ -552,18 +596,21 @@ namespace bsync
 					(kv.second.wire.empty() ? "" : ", \"server_md5\": " + jsonStr(kv.second.wire)) + "}";
 				first = false;
 			}
-			o += std::string(first ? "}" : "\n }") + ",\n \"conflicts\": " + notesJson(c.conflicts) + ",\n \"held\": " + notesJson(c.held);
-			o += ",\n \"queue\": {";
-			first = true;
-			for (auto& kv : c.queue)
-			{
-				o += std::string(first ? "\n  " : ",\n  ") + jsonStr(kv.first) + ": {\"md5\": " + jsonStr(kv.second.md5) + ", \"vault\": " + jsonStr(kv.second.vault) + ", \"since\": " + fmtNum(kv.second.since) + "}";
-				first = false;
-			}
 			o += first ? "}" : "\n }";
 		}
+		// (what is held back and what waits, whichever server: Romhost's and an older RomM's saves and the states hold too)
+		o += ",\n \"conflicts\": " + notesJson(c.conflicts) + ",\n \"held\": " + notesJson(c.held);
+		o += ",\n \"queue\": {";
+		first = true;
+		for (auto& kv : c.queue)
+		{
+			o += std::string(first ? "\n  " : ",\n  ") + jsonStr(kv.first) + ": {\"md5\": " + jsonStr(kv.second.md5) + ", \"vault\": " + jsonStr(kv.second.vault) + ", \"since\": " + fmtNum(kv.second.since) + "}";
+			first = false;
+		}
+		o += first ? "}" : "\n }";
 		o += "\n}\n";
 		return writeAtomic(CONF, o, 0600);	// (the token: only root reads it)
+	}
 	}
 
 	// the key of a file on the card, in the form the state keeps for the same manifest file
@@ -640,7 +687,9 @@ namespace bsync
 	}
 	// BananaOS: DraStic's .dsv and BananaDS's .sav brought together (nds-saves <rom>), before a sync (the .sav is the one
 	// that syncs) and after a DS save is installed (DraStic's then matches it). Only on the card's own /data (nds-saves
-	// knows no other root)
+	// knows no other root). A game whose two saves both changed since they last agreed (exit 3) is noted by its stem:
+	// neither is touched, and the sync leaves the game alone until one of them is chosen
+	std::set<std::string> ndsDiverged;
 	namespace
 	{
 	std::string ndsTool()
@@ -654,7 +703,9 @@ namespace bsync
 		std::string cmd = "'" + tool + "' '";
 		for (char ch : rom) { if (ch == '\'') cmd += "'\\''"; else cmd += ch; }
 		cmd += "' >/dev/null 2>&1";
-		if (system(cmd.c_str()) != 0) {}
+		int st = system(cmd.c_str());
+		std::string stem = stemOf(baseOf(rom));
+		if (WIFEXITED(st) && WEXITSTATUS(st) == 3) ndsDiverged.insert(stem); else ndsDiverged.erase(stem);
 	}
 	}
 	void savesFlatFirst()
@@ -692,6 +743,10 @@ namespace bsync
 		std::string t = ndsTool();
 		if (!t.empty()) runNdsSaves(t, romPath);
 	}
+	bool ndsDivergedSave(const std::string& rel)
+	{
+		return rel.compare(0, 10, "saves/nds/") == 0 && ndsDiverged.count(stemOf(baseOf(rel))) > 0;
+	}
 	// a game running (bananad's /run/banana/game.pid): its emulator may be writing its save
 	bool gameRunning()
 	{
@@ -709,6 +764,45 @@ namespace bsync
 		std::string v;
 		for (int i = 0; i < 20 && in >> v; i++) if (i == 19) return strtoull(v.c_str(), nullptr, 10) == start;
 		return false;
+	}
+	KillHold::KillHold()
+	{
+		sigset_t kills;
+		sigemptyset(&kills);
+		for (int sig : { SIGTERM, SIGINT, SIGHUP }) sigaddset(&kills, sig);
+		sigprocmask(SIG_BLOCK, &kills, &before);
+	}
+	void KillHold::end()
+	{
+		if (held) sigprocmask(SIG_SETMASK, &before, nullptr);
+		held = false;
+	}
+	bool Backend::stopForGame(std::vector<std::string>& errors)
+	{
+		if (oneGame) return false;
+		if (!gameStarted && gameRunning())
+		{
+			gameStarted = true;
+			errors.push_back("saves: a game started, the rest next time");
+		}
+		return gameStarted;
+	}
+	bool lockSaves(int secs)
+	{
+		static int fd = -1;
+		if (fd < 0) fd = open((RUN + "/save.lock").c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0644);
+		if (fd < 0) return true;	// (no /run to lock in: as before the lock)
+		for (int i = 0; flock(fd, LOCK_EX | LOCK_NB) != 0; i++)
+		{
+			if (errno != EWOULDBLOCK || i >= secs * 10) return false;
+			usleep(100000);
+		}
+		return true;
+	}
+	void dropDownload(const std::string& dl)
+	{
+		unlink(dl.c_str());
+		unlink((dl + ".part").c_str());
 	}
 	// downloaded to <dst>.part, checked, renamed. The part file is left for a retry when the connection broke
 	bool fetchTo(const std::string& url, const std::vector<std::string>& headers, const std::string& dst, long long size,

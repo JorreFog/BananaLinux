@@ -58,6 +58,7 @@ make -s -C "$HERE" tests/wav-test >/dev/null && "$HERE/tests/wav-test" "$OUT" 2>
 make -s -C "$HERE" tests/lang-test >/dev/null && "$HERE/tests/lang-test" "$HERE/assets/lang" 2> "$OUT/lang-test.log" || { echo "FAIL the menu's languages: $(grep FAIL "$OUT/lang-test.log" | head -3)"; fail=1; }
 # the save sync's blank saves, vault and journal
 make -s -C "$HERE" tests/vault-test >/dev/null && rm -rf "$OUT/vault-card" && "$HERE/tests/vault-test" "$OUT/vault-card" 2> "$OUT/vault-test.log" || { echo "FAIL the save sync's vault: $(grep FAIL "$OUT/vault-test.log" | head -3)"; fail=1; }
+make -s -C "$HERE" tests/gamesync-test >/dev/null && "$HERE/tests/gamesync-test" "$OUT/gamesync" 2> "$OUT/gamesync-test.log" || { echo "FAIL the sync around a game: $(grep FAIL "$OUT/gamesync-test.log" | head -3)"; fail=1; }
 make -s -C "$HERE" tests/paths-test >/dev/null && rm -rf "$OUT/paths-card" && sh "$HERE/tests/paths-test.sh" "$OUT/paths-card" 2> "$OUT/paths-test.log" || { echo "FAIL the save sync's save paths: $(grep FAIL "$OUT/paths-test.log" | head -3)"; fail=1; }
 # every icon the theme's systems.cfg names is there (Poketool's tile pointed at the old Bank & Trade logo)
 awk '!/^#/ && NF >= 3 && $2 != "-" { print $2 }' "$HERE/assets/rnds/systems.cfg" | while read -r ic; do
