@@ -472,6 +472,7 @@ asleep && ok "suspended on the lid with the runner stopped" || bad "a stopped ru
 echo 0 > /run/test/lid; wake
 kill -CONT $DL; kill $DL; wait $DL 2>/dev/null || true
 rm -f /run/banana/transfer.pid
+stop
 
 echo "27. the flight recorder: buttons, the lid, a sleep, touches (no position while typing), a marker (Select held) and the stop, on the card"
 # tev <type> <code> <value>...: events on the stand-in touchscreen, with the monotonic time (as the real one stamps them)
