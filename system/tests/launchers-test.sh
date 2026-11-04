@@ -183,5 +183,24 @@ check "$(cat "$D/data/saves/Mario (USA).srm" 2>/dev/null)" "new" "one system's g
 check "$(grep -c 'Pac-Man (USA).srm' "$T/log")" "1" "the clash is said in the log, once"
 check "$([ -f "$D/run/saves-flat" ] && echo marked || echo again)" "again" "no marker: tried again at the next boot"
 
+echo "run-nds: a DSi game goes to BananaDS whatever Settings say, zipped too"
+# (the launcher with its paths in a made-up root: the two emulators' launchers only say which one would run)
+D=$T/nds; mkdir -p "$D/lib" "$D/banana" "$D/roms/in/sub"
+printf '#!/bin/sh\necho superdrastic\n' > "$D/lib/run-drastic"; printf '#!/bin/sh\necho bananads\n' > "$D/lib/run-bananads"; chmod +x "$D/lib/"*
+sed "s|/usr/libexec/banana/|$D/lib/|g; s|/data/banana/|$D/banana/|g" "$L/run-nds" > "$D/run-nds"
+echo 'nds_emulator = superdrastic' > "$D/banana/settings.conf"
+# header <file> <unit code>: a ROM's first 512 bytes with that unit code at 0x12 (3: DSi only, 0: DS)
+header() { { head -c 18 /dev/zero; printf "\\$(printf %03o "$2")"; head -c 493 /dev/zero; } > "$1"; }
+header "$D/roms/DSi Game (USA).nds" 3; header "$D/roms/DS Game (USA).nds" 0
+header "$D/roms/in/sub/DSi Game [b] (USA).NDS" 3
+(cd "$D/roms/in" && zip -q -r "../DSi Game [b] (USA).zip" sub) && rm -rf "$D/roms/in/sub"
+header "$D/roms/in/DS Game (USA).nds" 0; (cd "$D/roms/in" && zip -q "../DS Game (USA).zip" "DS Game (USA).nds")
+printf x > "$D/roms/in/Ware (USA).dsi"; (cd "$D/roms/in" && zip -q "../DSiWare (USA).zip" "Ware (USA).dsi")
+nds() { sh "$D/run-nds" "$D/roms/$1" 2>/dev/null; }
+check "$(nds "DSi Game (USA).nds") $(nds "DS Game (USA).nds")" "bananads superdrastic" "a DSi .nds to BananaDS, a DS one as Settings say"
+check "$(nds "DSi Game [b] (USA).zip")" "bananads" "a zipped DSi-only .nds (in a folder in the zip) to BananaDS"
+check "$(nds "DSiWare (USA).zip")" "bananads" "a zipped .dsi to BananaDS"
+check "$(nds "DS Game (USA).zip")" "superdrastic" "a zipped DS game as Settings say"
+
 echo "launchers-test: $passed passed, $failed failed"
 [ $failed = 0 ]
