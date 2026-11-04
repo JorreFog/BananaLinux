@@ -2690,6 +2690,7 @@ int main(int argc, char** argv)
 		// keyboard for. Its virtual keyboard is made before the fork, so the emulator finds it as a keyboard plugged
 		// in; and only when the game panel's screen has a touchscreen (the RG DS Plus's top one has none: its games'
 		// panel is the bottom one)
+		keysOn = false;	// (the last game's: only a computer's game has the Keys tile)
 		if (panel && (sd.id == "c64" || sd.id == "zxspectrum"))
 		{
 			if (!input.hasTouch(1 - gameScreen))
