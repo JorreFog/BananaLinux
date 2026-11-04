@@ -1,0 +1,48 @@
+#!/bin/sh
+# One flat save folder for RetroArch and BananaFront: /data/saves (and /data/saves/gba for every GBA
+# core, /data/saves/nds for the DS). Before 0.5.3 RetroArch's sort_savefiles_enable left each core's saves in
+# /data/saves/<core>/; Home server sync writes and reads the flat paths, so those saves were invisible to it.
+# Run once per boot, before the launcher starts the core: a core folder's save moves (newest wins) to the flat
+# path, and the old file goes to /data/banana/saves-legacy/<core>/ as a backup. A failure leaves the old file and
+# writes no marker, so the next boot tries again.
+#
+# (BANANA_DATA / BANANA_RUN / BANANA_SYSTEMS: the tests' made-up card.)
+DATA=${BANANA_DATA:-/data}
+RUN=${BANANA_RUN:-/run/banana}
+SYSTEMS=${BANANA_SYSTEMS:-/etc/banana/systems.conf}
+MARK=$RUN/saves-flat
+[ -f "$MARK" ] && exit 0
+[ -d "$DATA/saves" ] || exit 0
+IDS=$(sed -n 's/^\[\(.*\)\]$/\1/p' "$SYSTEMS" 2>/dev/null)
+FAIL=0
+for dir in "$DATA"/saves/*/; do
+    [ -d "$dir" ] || continue
+    d=${dir%/}; d=${d##*/}
+    echo "$IDS" | grep -qx "$d" && continue	# (gba, nds, psx... are systems, not cores)
+    # every GBA core's save belongs in the one GBA folder; anything else is a RetroArch system save, flat
+    case $d in
+    gpSP|mGBA|"VBA Next"|"VBA-M"|Meteor) dest=$DATA/saves/gba ;;
+    *) dest=$DATA/saves ;;
+    esac
+    mkdir -p "$dest" 2>/dev/null || { FAIL=1; continue; }
+    for f in "$dir"*; do
+        [ -f "$f" ] || continue
+        n=${f##*/}
+        if [ ! -e "$dest/$n" ] || [ "$f" -nt "$dest/$n" ]; then
+            if cp -p "$f" "$dest/$n.new" && mv -f "$dest/$n.new" "$dest/$n"; then
+                :
+            else
+                rm -f "$dest/$n.new"
+                FAIL=1
+                continue
+            fi
+        fi
+        mkdir -p "$DATA/banana/saves-legacy/$d" 2>/dev/null &&
+            mv -f "$f" "$DATA/banana/saves-legacy/$d/$n" || FAIL=1
+    done
+done
+if [ $FAIL = 0 ]; then
+    touch "$MARK"
+    sync
+fi
+exit 0

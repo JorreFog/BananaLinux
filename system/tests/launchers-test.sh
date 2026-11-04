@@ -108,5 +108,21 @@ head -c 8192 /dev/zero | tr '\0' r > "$T/roms/Game.dsv"
 BANANA_ROOT=$D sh "$L/nds-saves" "$T/roms/Game.nds" > "$T/log"
 check "$(held)" "8192r 8192r " "one with a save in it is"
 
+# the save folders: RetroArch's per-core saves move to the one folder the Home server syncs; GBA stays in its own;
+# system folders (nds, megadrive) and their files are left alone
+D=$T/flat; mkdir -p "$D/data/saves/PicoDrive" "$D/data/saves/gpSP" "$D/data/saves/nds" "$D/data/saves/megadrive" "$D/run" "$D/etc"
+printf '[gba]\n[nds]\n[megadrive]\n' > "$D/etc/systems.conf"
+echo gen > "$D/data/saves/PicoDrive/Game.srm"; echo gba > "$D/data/saves/gpSP/Game.srm"
+echo nds > "$D/data/saves/nds/Game.sav"; echo sys > "$D/data/saves/megadrive/Game.srm"
+BANANA_DATA="$D/data" BANANA_RUN="$D/run" BANANA_SYSTEMS="$D/etc/systems.conf" sh "$L/saves-flat"
+check "$(cat "$D/data/saves/Game.srm" 2>/dev/null)" "gen" "a core's save is flat, for the Home server"
+check "$(cat "$D/data/saves/gba/Game.srm" 2>/dev/null)" "gba" "a GBA core's save is in saves/gba"
+check "$(cat "$D/data/saves/nds/Game.sav" 2>/dev/null)" "nds" "a system folder's save is left alone"
+check "$(cat "$D/data/saves/megadrive/Game.srm" 2>/dev/null)" "sys" "a system folder (megadrive) is left alone"
+[ -f "$D/run/saves-flat" ] && [ -f "$D/data/banana/saves-legacy/PicoDrive/Game.srm" ] &&
+    passed=$((passed + 1)) || { failed=$((failed + 1)); echo "  FAIL: no migration marker or backup"; }
+[ ! -e "$D/data/saves/PicoDrive/Game.srm" ] && [ ! -e "$D/data/saves/gpSP/Game.srm" ] &&
+    passed=$((passed + 1)) || { failed=$((failed + 1)); echo "  FAIL: a migrated core file stayed in saves/"; }
+
 echo "launchers-test: $passed passed, $failed failed"
 [ $failed = 0 ]
