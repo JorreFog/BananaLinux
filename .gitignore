@@ -29,3 +29,6 @@ __pycache__/
 /ui/tests/soft-base-test
 /ui/tests/gba-exp-test
 /ui/tests/gba-expitems-gen
+ui/tests/nds-logic-test
+ui/tests/nds-ram-test
+ui/tests/nds-romfile-test
