@@ -148,6 +148,8 @@ echo $GAME > /run/banana/game.pid
 stop
 
 echo "2. menu asleep, woken with the lid still shut, then opened"
+# (the menu alone: 1b put the game back in game.pid, and its wake with no game the menu knew of left a SIGUSR1 here)
+rm -f /run/banana/game.pid; : > /run/test/ui-signals
 start
 echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
 asleep && ok "suspended" || bad "no suspend"
