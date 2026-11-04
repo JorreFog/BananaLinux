@@ -6,7 +6,8 @@
 # - A [system] section on the card overrides only the keys it sets for that system; the others keep the image's, so
 #   a later fix to a system (PlayStation's run-ps1 and 'steady' clocks, the DSi's .dsi/.cia) still arrives on a card
 #   that changed something else about it.
-# - A card section for a system the image doesn't have is added after the image's, in the card's order.
+# - A card section for a system the image doesn't have is added after the image's, in the card's order, unless every
+#   value in it is one an earlier image shipped for that system (below): that is a system this image no longer has.
 # - A card value an earlier image shipped for that system and key (/etc/banana/systems.history: a card copy made from
 #   an older systems.conf.default carries all of them) is that old default, not a change: the image's value is used
 #   (or, for a key the image no longer sets, none). So a full copy of 0.4.2's list still gets 0.5.0's PlayStation.
@@ -58,6 +59,13 @@ function load(file, n,    ln, no, id, k, v, eq, cur, bad) {
 }
 # whether the card sets this key to a value of its own (not one an older image shipped: systems.history)
 function cardset(id, k) { return ((1, id, k) in val) && !((id SUBSEP k SUBSEP val[1, id, k]) in old) }
+# whether a card section for a system the image does not have sets anything of its own: one with only values an
+# older image shipped is that system as an earlier BananaOS had it (the Poketool tile before 0.5.3, in a card copy of
+# an older systems.conf.default), gone from this image, and left out rather than added as an empty system
+function own(id,    i, k) {
+    for (i = 1; i <= nk[1, id]; i++) { k = keys[1, id, i]; if (cardset(id, k) && val[1, id, k] != "") return 1 }
+    return 0
+}
 function emit(id,    i, k, v) {
     printf "\n[%s]\n", id
     for (i = 1; i <= nk[0, id]; i++) {
@@ -81,7 +89,7 @@ BEGIN {
     printf "# The systems list in use: %s, with %s merged over it per system (systems-merge, at the menu'"'"'s start).\n", img, card
     printf "# Generated: change the card'"'"'s file, not this one.\n"
     for (i = 1; i <= nid[0]; i++) emit(ids[0, i])
-    for (i = 1; i <= nid[1]; i++) if (!((0, ids[1, i]) in seen)) emit(ids[1, i])
+    for (i = 1; i <= nid[1]; i++) if (!((0, ids[1, i]) in seen) && own(ids[1, i])) emit(ids[1, i])
 }' > "$TMP"; then
     mv -f "$TMP" "$OUT"
 else
