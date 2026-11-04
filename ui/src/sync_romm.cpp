@@ -615,13 +615,18 @@ namespace bsync
 					h.id = (long long)s->num("id"); h.updated = s->str("updated_at"); h.t = isoTime(h.updated);
 					if (s->get("file_size_bytes")) h.size = (long long)s->num("file_size_bytes");
 					h.name = s->str("file_name"); h.hash = lower(s->str("content_hash"));
-					if (const JVal* o = s->get("origin_device_id")) h.device = o->isNum() ? fmtNum(o->n) : o->s;
+					// (the device it came from by the name its sync record has: the id alone says nothing to a person, and
+					// with no name listed none is shown)
+					std::string origin;
+					if (const JVal* o = s->get("origin_device_id")) origin = o->isNum() ? fmtNum(o->n) : o->s;
 					if (const JVal* ds = s->get("device_syncs"))
 						if (ds->isArr())
 							for (auto& d : ds->arr)
 							{
 								const JVal* di = d->get("device_id");
-								if (di && (di->isNum() ? fmtNum(di->n) : di->s) == c.device) h.current = d->flag("is_current");
+								std::string id = !di ? "" : di->isNum() ? fmtNum(di->n) : di->s;
+								if (!id.empty() && id == c.device) h.current = d->flag("is_current");
+								if (!id.empty() && id == origin) h.device = d->str("device_name");
 							}
 					Head& e = heads[rid];
 					if (!e.id || h.t > e.t || (h.t == e.t && h.id > e.id)) e = h;

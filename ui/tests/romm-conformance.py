@@ -414,6 +414,30 @@ def unslotted_rows():
 
 
 @case
+def lineage_is_case_blind():
+    """a lineage's emulator compared without regard to case, as MariaDB's default collation compares it (the database
+    RomM's own compose file runs): an autocleanup under one spelling cuts versions written under another"""
+    rom = ROMS[4]
+    up, low = f"Case{RUN}", f"case{RUN}"
+    join(TA, A, rom)
+    ok(*upload(TA, A, rom, f"{RUN} case 1".encode(), emulator=up), "1")
+    ok(*upload(TA, A, rom, f"{RUN} case 2".encode(), emulator=up), "2")
+    ok(*upload(TA, A, rom, f"{RUN} case 3".encode(), emulator=low), "3")
+    ok(*upload(TA, A, rom, f"{RUN} case 4".encode(), emulator=low, autocleanup="true", autocleanup_limit=2), "4")
+    left = [s["emulator"] for s in listing(TA, rom) if (s["emulator"] or "").lower() == low]
+    check(len(left) == 2, f"after an autocleanup of 2 under {low}: {left} left of either spelling")
+
+
+@case
+def platform_rom_count():
+    """each platform's rom_count is the number of its ROMs (Grout leaves a platform that says 0 out of its cache, and
+    with it every save of that platform's games)"""
+    for p in ok(*call("GET", "/api/platforms", token=TA), "platforms"):
+        r = ok(*call("GET", "/api/roms", token=TA, query={"platform_ids": p["id"], "limit": 1}), "roms")
+        check(p["rom_count"] == r["total"], f"{p['fs_slug']}: rom_count {p['rom_count']}, {r['total']} ROMs listed")
+
+
+@case
 def promotion_prunes_upload_lineage():
     """identical content promoted from another lineage: the lineage pruned is the upload's"""
     rom = ROMS[13]
@@ -522,6 +546,11 @@ def device_sync_rows():
     ok(*upload(TA, A, rom, f"{RUN} rows A2".encode()), "A's second upload")
     h2, me = mine(TB, B)
     check(h2["id"] != h["id"] and (not me or me[0]["is_current"] is False), f"B's row on the head A put there since: {me}")
+    # (the head's origin among them for another device, by the name it was registered under: what a conflict names
+    # the server's side by)
+    org = [x for x in h2["device_syncs"] if x["device_id"] == h2["origin_device_id"]]
+    check(h2["origin_device_id"] == A and len(org) == 1 and org[0]["device_name"] == f"conformance-{RUN}-a",
+          f"the origin's row on B's listing: {h2['origin_device_id']} {org}")
 
 
 @case

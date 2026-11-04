@@ -10,7 +10,10 @@
 #      down, whole, and the one it replaced kept in the vault. The cuts land in the slow
 #      downloads, which go to /run first; the few milliseconds an install has its journal line open are cut by
 #      ui/tests/vault-test and sync-slots.sh instead
-#   4. the server gone at a game's start, refusing and not answering: the sync before a game tries, says the saves'
+#   4. a conflict asked about on the panels, driven by the VM's keyboard: before a game (A keeps this handheld's, the
+#      game starts after), and on Settings > Network > Home server > Saves (Use the server's, then Restore puts this
+#      handheld's back); each choice checked on the card, the server and in the vault, both panels shot
+#   5. the server gone at a game's start, refusing and not answering: the sync before a game tries, says the saves'
 #      error, and gives up within its budget (3 s to connect, 10 s for a call; the menu's own cap on the wait is 20 s)
 #      and leaves nothing in /run
 # What QEMU can't show is left for a handheld: suspend to RAM (Power off after sleeping), the Wi-Fi's timings, the
@@ -21,7 +24,7 @@
 # Cases 1 and 2 run against ui/tests/fake-romm.py, started here, or against a real RomM 5.4 with ROMM_URL (as this
 # machine reaches it; the VM reaches the same address through QEMU's user network, 127.0.0.1 being 10.0.2.2 there, a
 # host name kept when the VM can look it up) and ROMM_TOKENS (three client tokens of one user as JSON {"A", "B", "C"},
-# or a file of it); they write into the first GBA and DS games of that server. Cases 3 and 4 always use the stand-in.
+# or a file of it); they write into the first GBA and DS games of that server. Cases 3 to 5 always use the stand-in.
 # Needs what tools/qemu-boot.sh needs, and curl.
 set -e
 IMG=$1; OUT=${2:-qemu-sync-out}
@@ -39,6 +42,8 @@ ra() { python3 "$HERE/ui/tests/romm-api.py" "$@" || bad "romm-api.py $1: a wrong
 
 # ---- the servers: the stand-in always, a real RomM for cases 1 and 2 when given
 LIB=$OUT/lib; rm -rf "$LIB"; mkdir -p "$LIB/gba" "$LIB/nds"
+# (the stand-in starts empty each run, so what its peer remembers of it goes too; a real server's peer keeps its own)
+rm -rf "$OUT/peer-stand-in"
 # (cases 1 and 2 take the first GBA game, the cuts the four of their own)
 printf 'gba rom qemu' > "$LIB/gba/Both Ways (USA).gba"
 for g in 1 2 3 4; do printf 'gba rom qemu %s' "$g" > "$LIB/gba/Cut $g (USA).gba"; done
@@ -179,7 +184,88 @@ for n in 1 2 3 4 5; do
         bad "cut $n: $(grep -v ': new$' "$OUT/after-$n" | tr '\n' ' ')"
 done
 
-echo "4. the server gone at a game's start"
+echo "4. a conflict asked about on the panels: before a game, and on the Saves page"
+# The menu's wait before a game asks wlan0 whether Wi-Fi is up, and the VM has a wired network instead: renamed wlan0
+# (its address asked for again), it stands in for Wi-Fi up, the case the wait is for. Only two GBA games are left on
+# the card, so from the DS shelf the menu opens on, Right, A and A start Cut 1
+cutid() { awk -F'\t' -v n="$1" '$2 == n ".gba" { print $1 }' "$OUT/cuts.tsv"; }
+C1=$(cutid "Cut 1 (USA)"); C2=$(cutid "Cut 2 (USA)")
+vm "sed -i '/^homesync_auto/d; /^homesync_launch/d' /data/banana/settings.conf; printf 'homesync_auto = quit\\nhomesync_launch = on\\n' >> /data/banana/settings.conf
+    find /data/roms/gba -type f ! -name 'Cut 1 (USA).gba' ! -name 'Cut 2 (USA).gba' -exec rm -f {} +; sync; reboot" 2>/dev/null
+for i in $(seq 120); do kill -0 $QEMU 2>/dev/null || break; sleep 0.5; done
+kill -0 $QEMU 2>/dev/null && { bad "the VM still running 60 s after a reboot"; kill $QEMU 2>/dev/null; }
+wait $QEMU 2>/dev/null
+asked() { grep -q "sync before the game: $1" "$OUT/serial.log"; }
+if boot prompt && wait_ssh prompt; then
+    vm 'nohup sh -c "kill \$(cat /run/banana/udhcpc-eth0.pid); ip link set eth0 down; ip link set eth0 name wlan0; ip link set wlan0 up;
+        udhcpc -b -q -t 5 -i wlan0 -p /run/banana/udhcpc-wlan0.pid -s /usr/share/udhcpc/default.script" > /dev/null 2>&1 < /dev/null &'
+    sleep 3; wait_ssh "wlan0"
+    [ "$(vm 'find /data/roms/gba -type f | wc -l')" = 2 ] && ok "only Cut 1 and Cut 2 on the GBA shelf" || bad "other GBA games still on the card: $(vm 'find /data/roms/gba -type f')"
+    # Cut 1 changed on the card and by another device: the sync before the game holds it and the menu asks; A keeps
+    # this handheld's, which goes up as the new version, the server's kept in the vault, and then the game starts
+    vm "head -c $CUT_SAVE /dev/urandom > '$(cutsave "$C1")'"; mine=$(vmd5 "$(cutsave "$C1")")
+    head -c $CUT_SAVE /dev/urandom > "$OUT/p1-server.srm"; newhead "$FU" "$FTC" "$C1" "$OUT/p1-server.srm"
+    shot prompt-menu; key right ret; sleep 1; key ret
+    wait_for "sync before the game: asking about a conflict" 60 "the game's conflict asked about before it starts" && { sleep 2; shot prompt; }
+    asked "game starts\|played now" && bad "the game started before the conflict was answered"
+    key ret
+    wait_for "sync before the game: settled" 60 "A on the prompt settled it"
+    [ "$(ra head "$FU" "$FTA" "$C1")" = "$mine" ] && ok "A on the prompt: this handheld's save is the server's head" ||
+        bad "A on the prompt: the server's head isn't this handheld's save"
+    vm "find /data/banana/save-vault -type f -exec md5sum {} +" | cut -c1-32 | grep -qx "$(md5f "$OUT/p1-server.srm")" &&
+        ok "A on the prompt: the server's save kept in the vault" || bad "A on the prompt: the server's save not in the vault"
+    wait_for "starting gba" 30 "then the game started"
+    for i in $(seq 120); do grep -q 'game ended' "$OUT/serial.log" && break; sleep 0.5; done
+    sleep 3
+    # Cut 2 the same, left held by a sync: Settings > Network (the fourth tile) > Home server (the row above its last) >
+    # Saves (the eleventh row) lists it first (conflicts come first); A opens it, Down and A uses the server's
+    vm "head -c $CUT_SAVE /dev/urandom > '$(cutsave "$C2")'"; mine=$(vmd5 "$(cutsave "$C2")")
+    head -c $CUT_SAVE /dev/urandom > "$OUT/p2-server.srm"; newhead "$FU" "$FTC" "$C2" "$OUT/p2-server.srm"
+    # (the menu's sync after Cut 1's game may still have the saves: banana-sync waits 10 s for them, then says so)
+    for i in 1 2 3 4 5 6; do
+        vm 'banana-sync sync --saves-only' > "$OUT/saves-held.log" 2>&1
+        grep -q 'another sync is saving' "$OUT/saves-held.log" || break
+    done
+    vm 'banana-sync saves' > "$OUT/saves-1.tsv"
+    head -n 1 "$OUT/saves-1.tsv" | grep -q "^conflict	$C2/" && ok "Cut 2 held, first on the list" || bad "Cut 2 not held first: $(head -n 3 "$OUT/saves-1.tsv")"
+    key s pgdn pgdn pgdn ret up up ret down down down down down down down down down down ret
+    # (the page reads banana-sync saves in the background, which takes the VM a few seconds or more)
+    wait_for "saves: the list read" 60 "Saves: the page has read the card"; sleep 1; shot saves-list
+    key ret; sleep 1; shot saves-game
+    key down ret
+    for i in $(seq 30); do [ "$(vmd5 "$(cutsave "$C2")")" = "$(md5f "$OUT/p2-server.srm")" ] && break; sleep 1; done
+    [ "$(vmd5 "$(cutsave "$C2")")" = "$(md5f "$OUT/p2-server.srm")" ] && ok "Saves: Use the server's put the server's save on the card" ||
+        bad "Saves: the server's save not on the card"
+    vm "find /data/banana/save-vault -type f -exec md5sum {} +" | cut -c1-32 | grep -qx "$mine" &&
+        ok "Saves: this handheld's save kept in the vault" || bad "Saves: this handheld's save not in the vault"
+    vm 'banana-sync saves' > "$OUT/saves-2.tsv"
+    grep -q "^conflict	$C2/" "$OUT/saves-2.tsv" && bad "Saves: Cut 2 still in conflict" || ok "Saves: the conflict gone from the list"
+    sleep 2; shot saves-settled
+    # the game stays open, its rows now its kept copies in the list's order. Cut 2 played since (new bytes, in no copy
+    # yet), then the copy of this handheld's save put back (Up to the first, Down to it): the save it replaces kept
+    vm "head -c $CUT_SAVE /dev/urandom > '$(cutsave "$C2")'"; played=$(vmd5 "$(cutsave "$C2")")
+    vm "find /data/banana/save-vault -type f -exec md5sum {} +" | cut -c1-32 | grep -qx "$played" && bad "Saves: the save played since already in the vault"
+    r=$(cutsave "$C2" | sed 's#^/data/##')
+    vm "banana-sync saves | awk -F'\t' -v r='$r' '\$1 == \"kept\" && \$2 == r { print \$3 }' | while read -r f; do md5sum < \"\$f\"; done" | cut -c1-32 > "$OUT/kept-2"
+    at=$(grep -nx "$mine" "$OUT/kept-2" | head -n 1 | cut -d: -f1)
+    if [ -n "$at" ]; then
+        key up up up up up up up up
+        n=1; while [ $n -lt "$at" ]; do key down; n=$((n + 1)); done
+        key ret
+        for i in $(seq 30); do [ "$(vmd5 "$(cutsave "$C2")")" = "$mine" ] && break; sleep 1; done
+        [ "$(vmd5 "$(cutsave "$C2")")" = "$mine" ] && ok "Saves: Restore put this handheld's save back" || bad "Saves: Restore didn't put this handheld's save back"
+        vm "find /data/banana/save-vault -type f -exec md5sum {} +" | cut -c1-32 | grep -qx "$played" &&
+            ok "Saves: the save it replaced kept too" || bad "Saves: the save a restore replaced not kept"
+    else
+        bad "Saves: no kept copy of this handheld's save listed: $(cat "$OUT/kept-2")"
+    fi
+    sleep 2; shot saves-restored
+    key s; sleep 2       # (START leaves the settings for the menu, where the shutdown below starts)
+else
+    bad "the card didn't come back for the prompt's case"
+fi
+
+echo "5. the server gone at a game's start"
 kill $FAKE 2>/dev/null; wait $FAKE 2>/dev/null
 vm "sed -i '/^homesync_auto/d; /^homesync_launch/d' /data/banana/settings.conf; printf 'homesync_auto = quit\\nhomesync_launch = on\\n' >> /data/banana/settings.conf"
 # gone <name> <how> <seconds at least> <at most>: the sync before a game, timed; it must have tried (its status the

@@ -1603,3 +1603,48 @@ settings		BananaDS only. Fast lets the DS's two CPUs run longer between meeting 
 # (the game page's "Fast, DSi CPU" timing below is a machine-translated draft, not Majirefy's: for them to check)
 settings		Fast, DSi CPU	快速，DSi CPU
 settings		BananaDS only. Fast lets the DS's two CPUs run longer between meeting for this game (up to about 10% faster in HeartGold and hacks of it like Origin HeartGold), Accurate is melonDS's own. Fast can break a game (Golden Sun: Dark Dawn loses its 3D world): if this one goes wrong, set it back. Fast, DSi CPU also runs the game's main CPU at the DSi's 133 MHz: a game that slows down by itself on a DS (Origin HeartGold's busy towns) keeps its speed, for more of the handheld's power. The others follow Settings > Nintendo DS > Timing.	仅限 BananaDS。快速：本游戏中 DS 的两颗 CPU 在同步间隔更长（在心金及其改版如起源心金中最多约快 10%）；精确：melonDS 自身的方式。快速可能会让游戏出错（黄金太阳：漆黑的黎明会丢失 3D 世界）：如果本游戏出问题，请改回来。“快速，DSi CPU”还会让游戏的主 CPU 以 DSi 的 133 MHz 运行：在 DS 上自身会变慢的游戏（起源心金的热闹城镇）可保持速度，但会多用掌机的性能。其他游戏遵循 设置 > Nintendo DS > 时序。
+# (the save sync's rows below, the wait before a game and Settings > Network > Home server > Saves, are a machine-translated draft, not Majirefy's: for them to check)
+menu		Waiting for Wi-Fi...	正在等待 Wi-Fi…
+menu		Syncing this game's save...	正在同步本游戏的存档…
+menu		B: play now	B：立即游玩
+menu		Not synced yet	尚未同步
+menu		It syncs when you quit	退出时会同步
+menu		Save conflict	存档冲突
+menu		Save conflict: here {here}, server {server}{when}	存档冲突：此处 {here}，服务器 {server}{when}
+menu		No save here: the server has one, {server}{when}	此处没有存档：服务器上有一份，{server}{when}
+menu		A: this handheld's  X: the server's  B: later	A：此掌机的  X：服务器的  B：稍后
+menu		A: take the server's  B: play without	A：取用服务器的  B：不取用直接游玩
+menu		Settling the save...	正在处理存档…
+menu		The save couldn't be settled	无法处理该存档
+menu		A: play this handheld's  B: back	A：用此掌机的存档游玩  B：返回
+menu		The server's newer save didn't arrive	服务器上较新的存档未能取回
+menu		A: play this handheld's (older)  B: back	A：用此掌机的存档游玩（较旧）  B：返回
+menu		Playing this handheld's save	正在用此掌机的存档游玩
+settings		Leaving a game: its saves go to the server as you leave it (a few seconds, in the background). And on Wi-Fi: also games and saves whenever Wi-Fi connects. Before a game too, on RomM (B skips the wait). Never while a game runs.	离开游戏时：其存档会在你离开时发送到服务器（后台进行，耗时数秒）。并且通过 Wi-Fi：每次 Wi-Fi 连接时也会同步游戏与存档。在 RomM 上，游戏开始前也会同步（按 B 跳过等待）。游戏运行时永不进行。
+settings		On: save states sync too, not only the games' own saves (RomM; on Romhost its Devices page decides). A state from RomM is kept in the vault, never put in place. Quick-resume states never sync.	开：即时存档也会同步，而不只是游戏自身的存档（RomM；在 Romhost 上由其 Devices 页面决定）。来自 RomM 的即时存档保存在保管库中，绝不会自动放入使用。快速继续的状态永不同步。
+settings		Sync before playing	游玩前同步
+settings		On: a game's save is brought up to date before it starts (RomM, with Auto sync on). B plays at once.	开：游戏启动前先将其存档更新到最新（RomM，且需开启「自动同步」）。按 B 立即游玩。
+settings		Saves	存档
+settings		Conflicts to settle, saves held back, and the copies kept of every save the sync replaced: A opens them.	待处理的冲突、暂缓同步的存档，以及同步替换过的每个存档的保留副本：按 A 打开。
+settings		; {cf} in conflict (on RomM both are kept and the save is held: choose on Saves; on Romhost, decide in Homeport)	；{cf} 个冲突（RomM 上：两份都会保留，该存档暂缓同步：在「存档」中选择；Romhost 上：在 Homeport 中决定）
+settings		Reading the card...	正在读取存储卡…
+settings		Nothing here: no conflicts, nothing held, and no kept copies.	这里没有内容：没有冲突、没有暂缓同步的存档，也没有保留的副本。
+settings		A opens a game. A conflict stays as it is until you settle it: nothing is lost meanwhile.	按 A 打开游戏。冲突会保持原样，直到你处理它：在此期间不会丢失任何内容。
+settings		A puts a kept copy back, and the save it replaces is kept too. The next sync sends it.	按 A 放回一份保留的副本，被替换的存档也会保留。下次同步时会将其发送。
+settings		Conflict	冲突
+settings		Held back	暂缓同步
+settings		This handheld: {here}. The server: {server}{from}{when}. The one not chosen stays in the vault.	此掌机：{here}。服务器：{server}{from}{when}。未选中的一份会保留在保管库中。
+settings		, from {device}	，来自 {device}
+settings		Changed here and on the server. The next sync that reaches the server fetches its copy to choose from.	此处与服务器上都已更改。下次连上服务器的同步会取回其副本供你选择。
+settings		Missing or blank here since the last sync. Nothing is put back by itself.	自上次同步以来，此处的存档已丢失或为空。不会自动放回任何内容。
+settings		DraStic's and BananaDS's saves differ. Starting the game brings them together.	DraStic 与 BananaDS 的存档不一致。启动游戏时会使二者一致。
+settings		DraStic's save here can't be read. The game isn't synced until it can.	此处 DraStic 的存档无法读取。在能读取之前，本游戏不会同步。
+settings		The server's save is in a format or size this handheld can't use. It stays on the server.	服务器上的存档格式或大小无法在此掌机上使用。它会保留在服务器上。
+settings		Keep this handheld's	保留此掌机的
+settings		Use the server's	使用服务器的
+settings		Restore {when} ({f})	恢复 {when}（{f}）
+settings		Last good	上次完好的版本
+settings		%lld bytes	%lld 字节
+settings		Working...	处理中…
+settings		Done.	完成。
+settings		Not done.	未完成。

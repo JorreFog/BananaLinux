@@ -99,7 +99,7 @@ P2=$(port)
 python3 "$HERE/tests/fake-romm.py" "$P2" "$L2" 2> "$OUT/fake-romm2.log" & PIDS="$PIDS $!"
 waitport "$P2" /api/heartbeat || bad "the peers' fake RomM didn't start"
 U2=http://127.0.0.1:$P2
-for n in g1 g2 b; do curl -s -XPOST "$U2/test/token" -d '{}' | jget '["token"]' > "$OUT/$n.token"; done
+for n in g1 g2 g3 b; do curl -s -XPOST "$U2/test/token" -d '{}' | jget '["token"]' > "$OUT/$n.token"; done
 peer() { n=$1; c=$2; shift 2; python3 "$HERE/tests/romm-peers.py" "$U2" "$(cat "$OUT/$n.token")" "$c" "$OUT/$n" "$@" > "$OUT/$n.json" 2>> "$OUT/peers.err"; }
 said() { jget "$2" < "$OUT/$1.json"; }
 srv() { curl -s -H "Authorization: Bearer $(cat "$OUT/b.token")" "$U2$1"; }
@@ -108,6 +108,8 @@ GS="Saves/GBA/Banana Run (USA).gba.sav"
 # a Grout save edited, dated 2 s ahead: Grout compares whole-second mtimes, so an edit in the second of its last sync
 # looks unchanged to negotiation until the next second
 edit() { head -c 8192 /dev/urandom > "$1"; touch -d "@$(( $(date +%s) + 2 ))" "$1"; }
+# (each Grout with the game on its card, as Grout looks for saves only for the ROMs it has)
+for n in g1 g2; do mkdir -p "$OUT/$n/Roms/Game Boy Advance (GBA)"; cp "$L2/gba/Banana Run (USA).gba" "$OUT/$n/Roms/Game Boy Advance (GBA)/"; done
 mkdir -p "$OUT/g1/Saves/GBA"; head -c 8192 /dev/urandom > "$OUT/g1/$GS"
 peer g1 grout sync
 [ "$(said g1 '["uploaded"]')" = "['Banana Run (USA).gba.sav']" ] || bad "Grout didn't upload its save: $(cat "$OUT/g1.json")"
@@ -115,6 +117,8 @@ srv "/api/saves?rom_id=101" | python3 -c 'import json,re,sys; r=json.load(sys.st
     bad "Grout's version: $(srv "/api/saves?rom_id=101")"
 peer g2 grout sync
 cmp -s "$OUT/g1/$GS" "$OUT/g2/$GS" || bad "a second Grout didn't get the save: $(cat "$OUT/g2.json")"
+peer g3 grout sync
+[ -e "$OUT/g3/$GS" ] && bad "a Grout without the game on its card took its save: $(cat "$OUT/g3.json")"
 [ "$(srv "/api/sync/sessions/$(said g2 '["session"]')" | jget '["status"]')" = COMPLETED ] || bad "Grout's session wasn't completed"
 # both Grouts changed the save: the second to sync is refused (409) and says so, the first's stays the head
 edit "$OUT/g1/$GS"; peer g1 grout sync
@@ -921,6 +925,10 @@ hold2; n=$(apic); "$BIN" --root "$OUT/h-a" --run "$OUT/h-a/run" saves > "$OUT/li
 grep -q "^conflict	$SKEY	saves/gba/Shared (USA).srm		$(m "$OUT/sa.srm")	8192	$(m "$OUT/sb.srm")	8192	.*	both	gba/Shared (USA).gba	both$" "$OUT/list" && grep -q "^kept	saves/gba/Shared (USA).srm	" "$OUT/list" ||
     bad "slots: the Saves page's list: $(cat "$OUT/list")"
 [ "$(apic)" = "$n" ] || bad "slots: the Saves page's list asked the server"
+# (the server's side named by the device it came from, as its sync record has it: B's name, not its id)
+BN=$(s4 "/api/devices/$(devof4 b)" | jget '["name"]')
+[ -n "$BN" ] && [ "$(grep "^conflict	$SKEY	" "$OUT/list" | cut -f9)" = "$BN" ] ||
+    bad "slots: the conflict's other side not named by B's device name ($BN): $(grep "^conflict	$SKEY	" "$OUT/list" | cut -f9)"
 "$BIN" --root "$OUT/h-a" --run "$OUT/h-a/run" saves --rom "gba/Other Game.gba" | grep -q "^conflict" && bad "slots: --rom listed another game's conflict"
 # (the card's: sent, no overwrite, the server's stays in the vault, and the other handheld takes it)
 [ "$(rv a resolve "$SKEY" card)" = ok ] && [ "$(head4 "Shared (USA).gba" | cut -d' ' -f1)" = "$(m "$OUT/sa.srm")" ] && [ "$(rs a '"'"$SKEY"'" in c["conflicts"]')" = False ] ||

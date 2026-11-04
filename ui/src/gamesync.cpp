@@ -258,7 +258,8 @@ namespace gamesync
 			serverOnly = gone;
 			auto kb = [](const std::string& s) { return std::to_string((atoll(s.c_str()) + 512) >> 10) + " KB"; };
 			std::string when = v[9].size() >= 16 ? " (" + v[9].substr(0, 10) + ")" : "";
-			line1 = gone ? "No save here: the server has one, " + kb(v[7]) + when : "Save conflict: here " + kb(v[5]) + ", server " + kb(v[7]) + when;
+			std::string here = kb(v[5]), server = kb(v[7]);
+			line1 = gone ? "No save here: the server has one, " + server + when : "Save conflict: here " + here + ", server " + server + when;
 		}
 		return key;
 	}

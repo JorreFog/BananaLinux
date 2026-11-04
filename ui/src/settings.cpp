@@ -4914,7 +4914,7 @@ namespace banana
 			games.push_back({ rel, "", "", {} });
 			return games.back();
 		};
-		auto bytes = [](const std::string& s) { long long b = atoll(s.c_str()); char t[32]; if (b < 0) return std::string("gone"); if (b < 1024) snprintf(t, sizeof t, "%lld bytes", b); else if (b < (1LL << 20)) snprintf(t, sizeof t, "%lld KB", (b + 512) >> 10); else snprintf(t, sizeof t, "%.1f MB", b / 1048576.0); return std::string(t); };
+		auto bytes = [](const std::string& s) { long long b = atoll(s.c_str()); char t[32]; if (b < 0) return std::string("gone"); if (b < 1024) snprintf(t, sizeof t, lang::tr("%lld bytes").c_str(), b); else if (b < (1LL << 20)) snprintf(t, sizeof t, "%lld KB", (b + 512) >> 10); else snprintf(t, sizeof t, "%.1f MB", b / 1048576.0); return std::string(t); };
 		std::istringstream in(out);
 		std::string ln;
 		while (std::getline(in, ln))
@@ -4929,7 +4929,15 @@ namespace banana
 				if (can == "none" && f[0] == "held" && !g.tag.empty()) continue;
 				g.tag = can == "none" && f[0] == "held" ? "Held back" : "Conflict";
 				// (a fixed line by kind; banana-sync's own reason is in its log)
-				if (can == "both") g.detail = "This handheld: " + bytes(f[5]) + ". The server: " + bytes(f[7]) + (f[8].empty() ? "" : ", from " + f[8]) + (f[9].empty() ? "" : ", " + f[9].substr(0, 16)) + ". The one not chosen stays in the vault.";
+				if (can == "both")
+				{
+					// (each piece named, so a translation can place each one; ", from <device>" translated on its own, since the value a
+					// placeholder captures never is)
+					const std::string& device = f[8];
+					std::string here = bytes(f[5]), server = bytes(f[7]), from = device.empty() ? "" : lang::tr(", from " + device),
+						when = f[9].size() < 16 ? "" : ", " + f[9].substr(0, 10) + " " + f[9].substr(11, 5);
+					g.detail = "This handheld: " + here + ". The server: " + server + from + when + ". The one not chosen stays in the vault.";
+				}
 				else if (kind == "both") g.detail = "Changed here and on the server. The next sync that reaches the server fetches its copy to choose from.";
 				else if (kind == "gone") g.detail = "Missing or blank here since the last sync. Nothing is put back by itself.";
 				else if (kind == "ds") g.detail = "DraStic's and BananaDS's saves differ. Starting the game brings them together.";
@@ -4942,7 +4950,7 @@ namespace banana
 			}
 			else if (f[0] == "kept" && f.size() >= 4)
 			{
-				std::string name = f[2].substr(f[2].rfind('/') + 1), when = name.size() > 15 && name[8] == 'T' ? name.substr(0, 4) + "-" + name.substr(4, 2) + "-" + name.substr(6, 2) + " " + name.substr(9, 2) + ":" + name.substr(11, 2) : "Last good";
+				std::string name = f[2].substr(f[2].rfind('/') + 1), when = name.size() > 15 && name[8] == 'T' ? name.substr(0, 4) + "-" + name.substr(4, 2) + "-" + name.substr(6, 2) + " " + name.substr(9, 2) + ":" + name.substr(11, 2) : lang::tr("Last good");
 				game(f[1]).acts.push_back({ "Restore " + when + " (" + bytes(f[3]) + ")", "restore " + q(f[2]) });
 			}
 		}

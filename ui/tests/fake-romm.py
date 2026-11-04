@@ -200,7 +200,9 @@ def platforms():
     for i, fs in enumerate(sorted(os.listdir(LIB))):
         if fs == "covers" or not os.path.isdir(os.path.join(LIB, fs)):
             continue
-        out.append({"id": i + 1, "slug": SLUGS.get(fs, fs), "fs_slug": fs, "name": fs.upper(), "rom_count": 0,
+        # (rom_count its ROMs, as RomM counts them: Grout leaves a platform of none out of its cache)
+        count = sum(S["ids"].get(f"{fs}/{n}") not in S["deleted"] for n in os.listdir(os.path.join(LIB, fs)))
+        out.append({"id": i + 1, "slug": SLUGS.get(fs, fs), "fs_slug": fs, "name": fs.upper(), "rom_count": count,
                     "fs_size_bytes": 0, "custom_name": None, "category": None, "firmware": []})
     return out
 
@@ -321,8 +323,14 @@ def no_ext(name):
     return EXT.sub("", name).strip()
 
 
+def label(emulator):
+    """An emulator label as the database compares it: without regard to case, as MariaDB's default collation does (the
+    database RomM's own compose file runs; on Postgres gpSP and gpsp would be two)."""
+    return emulator.lower() if emulator else emulator
+
+
 def lineage_of(emulator, name):
-    return (emulator, ext_of(name).lower())
+    return (label(emulator), ext_of(name).lower())
 
 
 def head(rom, slot):    # the upload guard's, the pruning's and the promotion's head: the newest by (updated_at, id)
@@ -385,7 +393,7 @@ def by_name(kind, rom, name, emulator, slot):
     rows = [s for s in sorted(S[kind].values(), key=lambda s: s["id"])
             if s["rom_id"] == rom and s["file_name"] == name and s.get("slot") == slot]
     if emulator is not None:
-        rows = [s for s in rows if s["emulator"] == emulator]
+        rows = [s for s in rows if label(s["emulator"]) == label(emulator)]
     else:
         rows.sort(key=lambda s: s["emulator"] is not None)
     return rows[0] if rows else None
@@ -398,8 +406,8 @@ def version_name(rom, emulator, name):
     stem, ext = os.path.splitext(TAG.sub("", name))
     t = now()
     S["held"] = {k: until for k, until in S["held"].items() if until > t}
-    taken = {s["file_name"] for s in S["saves"].values() if s["rom_id"] == rom and s["emulator"] == emulator}
-    taken |= {k[2] for k in S["held"] if k[0] == rom and k[1] == emulator}
+    taken = {s["file_name"] for s in S["saves"].values() if s["rom_id"] == rom and label(s["emulator"]) == label(emulator)}
+    taken |= {k[2] for k in S["held"] if k[0] == rom and label(k[1]) == label(emulator)}
     start = t.astimezone(TZ)
     for k in range(60):
         n = f"{stem} [{(start + timedelta(seconds=k)).strftime('%Y-%m-%d_%H-%M-%S')}]{ext}"

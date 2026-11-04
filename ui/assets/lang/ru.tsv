@@ -1539,3 +1539,49 @@ bananads		or press L3	или нажмите L3
 bananads		The game hears a blow past the red line (sensitivity: %s).	Игра слышит дуновение выше красной линии (чувствительность: %s).
 bananads		Edge marking	Контуры
 bananads		Fog	Туман
+# (the save sync's rows below, the wait before a game and Settings > Network > Home server > Saves, are a machine-translated
+# draft, not Vladislav's and Ruslan's: for them to check in the next round)
+menu		Waiting for Wi-Fi...	Ожидание Wi-Fi…
+menu		Syncing this game's save...	Синхронизация сохранения этой игры…
+menu		B: play now	B: играть сейчас
+menu		Not synced yet	Ещё не синхронизировано
+menu		It syncs when you quit	Синхронизируется при выходе
+menu		Save conflict	Конфликт сохранений
+menu		Save conflict: here {here}, server {server}{when}	Конфликт сохранений: здесь {here}, на сервере {server}{when}
+menu		No save here: the server has one, {server}{when}	Здесь нет сохранения: на сервере есть, {server}{when}
+menu		A: this handheld's  X: the server's  B: later	A: с этой консоли  X: с сервера  B: позже
+menu		A: take the server's  B: play without	A: взять с сервера  B: играть без него
+menu		Settling the save...	Разрешение конфликта…
+menu		The save couldn't be settled	Конфликт не удалось разрешить
+menu		A: play this handheld's  B: back	A: играть с сохранением консоли  B: назад
+menu		The server's newer save didn't arrive	Более новое сохранение с сервера не пришло
+menu		A: play this handheld's (older)  B: back	A: играть с сохранением консоли (старее)  B: назад
+menu		Playing this handheld's save	Используется сохранение этой консоли
+settings		Leaving a game: its saves go to the server as you leave it (a few seconds, in the background). And on Wi-Fi: also games and saves whenever Wi-Fi connects. Before a game too, on RomM (B skips the wait). Never while a game runs.	При выходе из игры: её сохранения отправляются на сервер, когда вы выходите (несколько секунд, в фоне). И при Wi-Fi: также игры и сохранения при каждом подключении Wi-Fi. Перед игрой тоже, на RomM (B пропускает ожидание). Никогда во время игры.
+settings		On: save states sync too, not only the games' own saves (RomM; on Romhost its Devices page decides). A state from RomM is kept in the vault, never put in place. Quick-resume states never sync.	Вкл.: состояния тоже синхронизируются, а не только собственные сохранения игр (RomM; на Romhost это решает его страница Devices). Состояние с RomM хранится в хранилище и никогда не ставится на место само. Состояния быстрого продолжения не синхронизируются.
+settings		Sync before playing	Синхронизация перед игрой
+settings		On: a game's save is brought up to date before it starts (RomM, with Auto sync on). B plays at once.	Вкл.: сохранение игры обновляется перед её запуском (RomM, при включённой автосинхронизации). B запускает сразу.
+settings		Saves	Сохранения
+settings		Conflicts to settle, saves held back, and the copies kept of every save the sync replaced: A opens them.	Конфликты, требующие решения, отложенные сохранения и копии каждого сохранения, заменённого синхронизацией: A открывает их.
+settings		; {cf} in conflict (on RomM both are kept and the save is held: choose on Saves; on Romhost, decide in Homeport)	; {cf} в конфликте (на RomM хранятся оба, а сохранение отложено: выберите в разделе Сохранения; на Romhost решите в Homeport)
+settings		Reading the card...	Чтение карты…
+settings		Nothing here: no conflicts, nothing held, and no kept copies.	Здесь пусто: нет конфликтов, ничего не отложено, копий нет.
+settings		A opens a game. A conflict stays as it is until you settle it: nothing is lost meanwhile.	A открывает игру. Конфликт остаётся как есть, пока вы его не разрешите: тем временем ничего не теряется.
+settings		A puts a kept copy back, and the save it replaces is kept too. The next sync sends it.	A возвращает сохранённую копию, а заменяемое сохранение тоже сохраняется. Следующая синхронизация отправит её.
+settings		Conflict	Конфликт
+settings		Held back	Отложено
+settings		This handheld: {here}. The server: {server}{from}{when}. The one not chosen stays in the vault.	Эта консоль: {here}. Сервер: {server}{from}{when}. Невыбранное остаётся в хранилище.
+settings		, from {device}	, с {device}
+settings		Changed here and on the server. The next sync that reaches the server fetches its copy to choose from.	Изменено здесь и на сервере. Следующая синхронизация, достигшая сервера, загрузит его копию для выбора.
+settings		Missing or blank here since the last sync. Nothing is put back by itself.	Отсутствует или пусто здесь с последней синхронизации. Само ничего не возвращается.
+settings		DraStic's and BananaDS's saves differ. Starting the game brings them together.	Сохранения DraStic и BananaDS различаются. Запуск игры сведёт их.
+settings		DraStic's save here can't be read. The game isn't synced until it can.	Сохранение DraStic здесь не читается. Игра не синхронизируется, пока его нельзя прочитать.
+settings		The server's save is in a format or size this handheld can't use. It stays on the server.	Сохранение на сервере в формате или размере, который эта консоль не может использовать. Оно остаётся на сервере.
+settings		Keep this handheld's	Оставить сохранение консоли
+settings		Use the server's	Использовать с сервера
+settings		Restore {when} ({f})	Восстановить {when} ({f})
+settings		Last good	Последнее исправное
+settings		%lld bytes	%lld байт
+settings		Working...	Выполняется…
+settings		Done.	Готово.
+settings		Not done.	Не выполнено.

@@ -85,3 +85,7 @@ RG DS
 restore {f}
 drop {gamesync}
 --rom {f}
+
+# the save sync's sizes: pieces of a longer line, never on screen alone
+{folder} KB
+%lld KB

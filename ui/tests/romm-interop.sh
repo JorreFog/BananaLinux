@@ -1,10 +1,11 @@
 #!/bin/sh
 # What a RomM 5.4 shared with other clients sees of BananaOS's save sync, as the save sync's design promises it, one
-# case per row (Grout's side by tests/romm-peers.py's stand-in of it): played here then on Grout, on Grout then here,
-# both changed, the card's clock a day out either way, a core's fresh save, the emulator's data cleared, NextUI's
-# "<rom>.gba.sav", a first pairing with a save of its own, a DraStic save with and without DeSmuME's footer, a DS save
-# of no cartridge's size, DeSmuME's footer under a .sav name, an N64 file of a standalone emulator, many uploads past
-# the server's cap, and a client sharing BananaOS's label that prunes its lineage to 10. Around every run of
+# case per row (Grout's side by tests/romm-peers.py's stand-in of it, or by the real Grout's own sync code): played
+# here then on Grout, on Grout then here, both changed, the card's clock a day out either way, a core's fresh save, the
+# emulator's data cleared, NextUI's "<rom>.gba.sav", a first pairing with a save of its own, a DraStic save with and
+# without DeSmuME's footer, a DS save of no cartridge's size, DeSmuME's footer under a .sav name, an N64 file of a
+# standalone emulator, many uploads past the server's cap, and a client sharing BananaOS's label that prunes its
+# lineage to 10. Around every run of
 # banana-sync the server's rows for the games in play are recorded: a run that removed one, or changed one in place,
 # fails, and so does a version written on a card that is then nowhere, on a card, in a vault or on the server (before
 # the last two cases, which are allowed to take the older ones).
@@ -14,6 +15,9 @@
 #                                                "C"} (or a file of it). It writes save rows into the first GBA games
 #                                                of the server, and into a DS and an N64 game when it has them (the
 #                                                cases of a system the server lacks are skipped): a server for tests
+#   GROUT_SRC=<grout checkout> romm-interop.sh   either, with the real Grout: the checkout at the commit in tests/GROUT,
+#                                                its sync built headless by tools/grout-peer.sh (Go and the SDL2
+#                                                development packages)
 #
 # The version gate (a RomM before 5.4) is tests/sync.sh's.
 HERE=$(cd "$(dirname "$0")/.." && pwd)
@@ -78,7 +82,7 @@ card() {
     printf '{"backend": "romm", "server": "%s", "token": "%s"}\n' "$U" "$2" > "$_c/banana/romsync.json"
 }
 # DS saves brought together by the real nds-saves on the card
-printf '#!/bin/sh\nBANANA_DATA=$BANANA_DATA_ROOT exec sh "%s" "$@"\n' "$HERE/../system/rootfs/usr/libexec/banana/nds-saves" > "$OUT/nds-saves"; chmod +x "$OUT/nds-saves"
+printf '#!/bin/sh\nBANANA_ROOT=$BANANA_DATA_ROOT exec sh "%s" "$@"\n' "$HERE/../system/rootfs/usr/libexec/banana/nds-saves" > "$OUT/nds-saves"; chmod +x "$OUT/nds-saves"
 
 # rows: every save row of the games in play
 rows() { ra rows "$U" "$TC" $IDS; }
@@ -96,23 +100,36 @@ sync() {
     python3 "$HERE/tests/romm-api.py" compare "$OUT/rows.before" "$OUT/rows.after" "$OUT/rows.diff" $MAYGO || bad "$1's sync removed or replaced a row on the server: $(cat "$OUT/rows.diff")"
 }
 rv() { _n=$1; shift; "$BIN" --root "$OUT/$_n" --run "$OUT/$_n/run" "$@" 2>/dev/null; }
-grout() { python3 "$HERE/tests/romm-peers.py" "$U" "$TC" grout "$OUT/grout" sync > "$OUT/grout.log" 2>&1 || bad "Grout's run failed: $(tail -3 "$OUT/grout.log")"; }
+# grout: one sync on Grout's card, by tests/romm-peers.py's scripted Grout or, with GROUT_SRC (a Grout checkout at the
+# commit in tests/GROUT), by the real Grout's own sync code, built headless by tools/grout-peer.sh
+if [ -n "$GROUT_SRC" ]; then
+    sh "$HERE/../tools/grout-peer.sh" "$GROUT_SRC" "$OUT/grout-peer" > "$OUT/grout-build.log" 2>&1 || { bad "the real Grout didn't build: $(tail -3 "$OUT/grout-build.log")"; exit 1; }
+    gsync() { "$OUT/grout-peer" "$U" "$TC" "$OUT/grout"; }
+    WHO="the real Grout ($(cut -d' ' -f3 "$HERE/tests/GROUT"))"
+else
+    skip "the real Grout (GROUT_SRC, a Grout checkout at the commit in tests/GROUT): Grout's side is the scripted one"
+    gsync() { python3 "$HERE/tests/romm-peers.py" "$U" "$TC" grout "$OUT/grout" sync; }
+    WHO="the scripted Grout"
+fi
+grout() { gsync > "$OUT/grout.log" 2>&1 || bad "Grout's run failed: $(tail -3 "$OUT/grout.log")"; }
 peer() { python3 "$HERE/tests/romm-peers.py" "$U" "$TC" bananaos "$OUT/peer" "$@"; }
 head_of() { ra head "$U" "$TC" "$@"; }
 nrows() { ra count "$U" "$TC" "$@"; }
 # vaulted <card> <save, as the card has it under its folder> <file>: the file's bytes kept in that card's vault for
 # that save
 vaulted() { ls "$OUT/$1/banana/save-vault/${2%.*}/" 2>/dev/null | grep -q -- "-$(m "$3" | cut -c1-8)\.${2##*.}$"; }
-# pick <n>: the case's game: G its file, I its id, K its name, S the card's save, V that save under the card's folder
-pick() { G=$(game "$1"); I=$(idof "$G"); K=${G%.*}; V=saves/gba/$K.srm; S=$OUT/a/$V; }
+# pick <n>: the case's game: G its file, I its id, K its name, S the card's save, V that save under the card's folder;
+# the game also put on Grout's card, as Grout looks for saves only for the ROMs it has
+pick() { G=$(game "$1"); I=$(idof "$G"); K=${G%.*}; V=saves/gba/$K.srm; S=$OUT/a/$V; : > "$GR/$G"; }
 LABEL=gpsp      # the card's GBA saves are written as their core's name: gpsp_libretro.so's
-GS=$OUT/grout/Saves/GBA
-mkdir -p "$GS"
+GS=$OUT/grout/Saves/GBA GR="$OUT/grout/Roms/Game Boy Advance (GBA)"
+mkdir -p "$GS" "$GR"
 # gplay <rom file>: played on Grout, which sends what changed since its last sync by the file's time (a second ahead,
 # as the save comes in the same second as that sync here)
 gplay() { head -c 8192 /dev/urandom > "$GS/$1.sav"; touch -d "@$(( $(date +%s) + 2 ))" "$GS/$1.sav"; }
-# gkept <rom file> <file>: the file's bytes in Grout's .backup for that game, where it puts what a download replaces
-gkept() { for _f in "$OUT/grout/.backup/$1 ["*; do [ -f "$_f" ] && cmp -s "$_f" "$2" && return 0; done; return 1; }
+# gkept <rom file> <file>: the file's bytes in Grout's .backup for that game, beside its saves, where it puts what a
+# download replaces
+gkept() { for _f in "$GS/.backup/$1 ["*; do [ -f "$_f" ] && cmp -s "$_f" "$2" && return 0; done; return 1; }
 card a "$TA"
 # base: each case starts from a version the card, Grout and the server all hold, whatever a server used before has as
 # the game's head: a save put up by another device, which the card and Grout then take, each over what it holds
@@ -234,4 +251,4 @@ if [ $FAKE = 1 ]; then
     [ "$(curl -s "$U/test/violations")" = "[]" ] || bad "the cards sent what they never may: $(curl -s "$U/test/violations")"
 fi
 [ -s "$OUT/failures" ] && { echo "romm-interop: $(wc -l < "$OUT/failures") checks failed ($OUT/failures)"; exit 1; }
-echo "romm-interop: all passed against $WHERE"
+echo "romm-interop: all passed against $WHERE, with $WHO"

@@ -3,22 +3,27 @@
 RomM with. Each makes the calls its real client makes (read from its source) in the same order, with the same
 parameters and file names, and keeps a small state of its own as the real one does. Python standard library only.
 
-    romm-peers.py <url> <token> grout <dir> sync        Grout (NextUI/MinUI) with its GBA saves in <dir>/Saves/GBA as
-                                                        "<rom file>.sav"
+    romm-peers.py <url> <token> grout <dir> sync        Grout (NextUI) with its GBA saves in <dir>/Saves/GBA as "<rom
+                                                        file>.sav", for the ROMs in NextUI's GBA folder, <dir>/Roms/Game
+                                                        Boy Advance (GBA)
     romm-peers.py <url> <token> bananaos <dir> join|upload <rom id> [<file> [prune [<label>]]]
                                                         a device that writes as BananaOS's sync will: says it has the
                                                         slot's head, uploads into the slot (prune: with autocleanup to
                                                         10, as a client sharing BananaOS's label might, written as
                                                         <label>, the core's name a card writes its saves with); prints
                                                         the HTTP status
-Each run prints a JSON summary: uploaded, downloaded, conflicts, skipped (save file names), the session, and
+Each run prints a JSON summary: uploaded, downloaded, conflicts, skipped, failed (save file names), the session, and
 negotiation's operations as the server gave them.
 
 Grout: registers with no hostname or MAC (so RomM never matches it to another device), then sends its version again;
 negotiates with no ROM scope; uploads with its folder name as the emulator ("GBA"), autocleanup to 10 and no hash; on
 409 lists the slot and downloads the head when its own save is unchanged since the last sync, else reports a
-conflict; downloads with optimistic=false and says so with /downloaded (no hash); downloads a head for a ROM with no
-save of its own from the listing; completes its session.
+conflict; downloads with optimistic=false and says so with /downloaded (no hash), first copying the save it replaces
+to a .backup folder beside it, named by that file's time; downloads a head for a ROM on its card with no save of its
+own from the listing; takes negotiation's download only for a game it has (a save or the ROM) and, with a save of
+its own, only in that save's slot; skips negotiation's upload of a save unchanged since it came down; completes its
+session, counting conflicts and failures as failed. Read from Grout v5.4.1.0 (rommapp/grout 48b229c, saves/flow.go;
+the version as its pak.json stamps it in); romm-interop.sh runs the real Grout instead when given GROUT_SRC.
 """
 import hashlib
 import json
@@ -110,20 +115,22 @@ def grout():
     st = load_state()
     if not st["device_id"]:
         code, r = call("POST", "/api/devices", {"name": "grout-" + os.path.basename(DIR), "platform": "NEXTUI", "client": "grout",
-                                                "client_version": "4.6.0", "sync_mode": "api"})
+                                                "client_version": "v5.4.1.0", "sync_mode": "api"})
         st["device_id"] = r["device_id"]
-        call("PUT", f"/api/devices/{st['device_id']}", {"client_version": "4.6.0"})
+        call("PUT", f"/api/devices/{st['device_id']}", {"client_version": "v5.4.1.0"})
         save_state(st)
     dev = st["device_id"]
     folder = os.path.join(DIR, "Saves", "GBA")
     os.makedirs(folder, exist_ok=True)
     roms = {r["fs_name"]: r for r in roms_of("gba")}
     by_id = {r["id"]: r for r in roms.values()}
+    rom_dir = os.path.join(DIR, "Roms", "Game Boy Advance (GBA)")
+    on_card = {r["id"] for n, r in roms.items() if os.path.isfile(os.path.join(rom_dir, n))}
     local = {}
     for n in sorted(os.listdir(folder)):
         if n.endswith(".sav") and n[:-4] in roms:
             local[roms[n[:-4]]["id"]] = os.path.join(folder, n)
-    summary = {"uploaded": [], "downloaded": [], "conflicts": [], "skipped": [], "session": None}
+    summary = {"uploaded": [], "downloaded": [], "conflicts": [], "skipped": [], "failed": [], "session": None}
     entries = []
     for rid, p in local.items():
         data = open(p, "rb").read()
@@ -136,12 +143,15 @@ def grout():
     def download(save, rid):
         p = local.get(rid) or os.path.join(folder, by_id[rid]["fs_name"] + ".sav")
         if os.path.exists(p):
-            os.makedirs(os.path.join(DIR, ".backup"), exist_ok=True)
+            # (beside the save, named by the time of the file it keeps)
+            backup = os.path.join(os.path.dirname(p), ".backup")
+            os.makedirs(backup, exist_ok=True)
             stem, ext = os.path.splitext(os.path.basename(p))
-            shutil.copy2(p, os.path.join(DIR, ".backup", f"{stem} [{time.strftime('%Y-%m-%d %H-%M-%S')}]{ext}"))
+            when = time.strftime("%Y-%m-%d %H-%M-%S", time.localtime(os.path.getmtime(p)))
+            shutil.copy2(p, os.path.join(backup, f"{stem} [{when}]{ext}"))
         code, data = call("GET", f"/api/saves/{save['id']}/content", query={"device_id": dev, "optimistic": "false"}, raw=True)
         if code != 200:
-            summary["skipped"].append(os.path.basename(p))
+            summary["failed"].append(os.path.basename(p))
             return
         write_atomic(p, data)
         set_mtime(p, save["updated_at"] if "updated_at" in save else save["server_updated_at"])
@@ -153,9 +163,6 @@ def grout():
         p = local[rid]
         data = open(p, "rb").read()
         rec = st["saves"].get(str(rid), {})
-        if rec.get("hash") == md5(data):
-            summary["skipped"].append(os.path.basename(p))
-            return
         slot = rec.get("slot", "autosave")
         q = {"rom_id": rid, "device_id": dev, "slot": slot, "emulator": "GBA"}
         if slot == "autosave":
@@ -173,30 +180,38 @@ def grout():
             else:
                 summary["conflicts"].append(os.path.basename(p))
         else:
-            summary["skipped"].append(os.path.basename(p))
+            summary["failed"].append(os.path.basename(p))
 
     seen = set()
     for op in neg.get("operations", []):
         rid = op["rom_id"]
         seen.add(rid)
+        rec = st["saves"].get(str(rid), {})
         if op["action"] in ("upload", "conflict") and rid in local:
             if op["action"] == "conflict":
                 summary["conflicts"].append(os.path.basename(local[rid]))
+            elif rec.get("hash") and rec["hash"] == md5(open(local[rid], "rb").read()):
+                summary["skipped"].append(os.path.basename(local[rid]))     # (unchanged since it came down)
             else:
                 upload(rid)
-        elif op["action"] == "download" and rid in by_id:
+        elif op["action"] == "download" and rid in by_id and (rid in local or rid in on_card):
+            # (a game it has, a save or the ROM; with a save of its own, only the slot it keeps)
+            if rid in local and (op["slot"] or "autosave") != rec.get("slot", "autosave"):
+                continue
             download({"id": op["save_id"], "slot": op["slot"], "server_updated_at": op["server_updated_at"]}, rid)
-    rest = [rid for rid in by_id if rid not in local and rid not in seen]
+    # (only a ROM on the card with no save of its own, whatever it synced before: there is nothing here to replace)
+    rest = [rid for rid in on_card if rid not in local and rid not in seen]
     if rest:
         code, rows = call("GET", "/api/saves", query={"device_id": dev, "rom_ids": rest})
         for rid in rest:
             mine = [s for s in rows if s["rom_id"] == rid]
             h = newest([s for s in mine if (s["slot"] or "autosave") == "autosave"]) or newest(mine)
-            if h and st["saves"].get(str(rid), {}).get("save_id") != h["id"]:
+            if h:
                 download(h, rid)
     if summary["session"]:
         call("POST", f"/api/sync/sessions/{summary['session']}/complete",
-             {"operations_completed": len(summary["uploaded"]) + len(summary["downloaded"]), "operations_failed": len(summary["conflicts"])})
+             {"operations_completed": len(summary["uploaded"]) + len(summary["downloaded"]),
+              "operations_failed": len(summary["conflicts"]) + len(summary["failed"])})
     save_state(st)
     out(summary)
 
