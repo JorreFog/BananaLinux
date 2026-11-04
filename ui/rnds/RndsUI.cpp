@@ -608,6 +608,23 @@ namespace rnds
 		}
 
 		TextLine line(const std::string& text, const TStyle& t) { return layoutLine(utf8to32(text), tstyle(t)); }
+		// Banana: the play plate's word: the "Start" line's translation, in English "START" (the key caps' START is
+		// a button's name and keeps its case in every language: lang.cpp)
+		std::u32string plateStart()
+		{
+			Translator tf = translator();
+			std::u32string t = tf ? tf(U"Start") : U"Start";
+			return t == U"Start" ? U"START" : t;
+		}
+		// a line laid out as it is (not through the translator: text looked up already)
+		TextLine lineAsIs(const std::u32string& text, const TStyle& t)
+		{
+			Translator tf = translator();
+			setTranslator(nullptr);
+			TextLine l = layoutLine(text, tstyle(t));
+			setTranslator(tf);
+			return l;
+		}
 
 		// draws a laid-out line whose line box is at (x, top) CSS px
 		void drawLine(const TextLine& l, const TStyle& t, float x, float top, float lh, const Color& c, const Xf* xf = nullptr)
@@ -1331,7 +1348,7 @@ namespace rnds
 					g.mids.push_back(f); g.midW.push_back(w);
 				}
 			}
-			g.startW = line("START", ts(true, 20, 2.4f)).width + 16;
+			g.startW = lineAsIs(plateStart(), ts(true, 20, 2.4f)).width + 16;
 			return g;
 		}
 
@@ -2074,7 +2091,11 @@ namespace rnds
 				{
 					TStyle tsr = ts(true, 20, 2.4f);
 					// Banana: on the plate's accent, in its width (a longer translation scrolls)
-					drawFit(std::string("START"), tsr, 320 - 54, ry + 124, 24, 108, Color::hex(inkOn(accent.base)), true, true);
+					Translator tf = translator();
+					std::u32string t = plateStart();
+					setTranslator(nullptr);	// (the line looked up already)
+					drawFit(t, tsr, 320 - 54, ry + 124, 24, 108, Color::hex(inkOn(accent.base)), true, true);
+					setTranslator(tf);
 				}
 			}
 			be->popClip();
