@@ -410,6 +410,18 @@ for size in 640x480 1024x768; do
     kcheck "pokefeed .*poke-party.txt: asked 3, party 4, battle 0"
     kcheck "pokefeed .*poke-battle.txt: asked 6, party 4, battle 1, foes 1"
     kcheck "gamepanel .*Peel Quest.nds: companion none"
+    # the game panel's on-screen keyboard (a computer's game: C64, ZX Spectrum): the Keys tile opens it, a key types,
+    # Done brings the tiles back (BANANA_TEST_VKBD: the tile without a /dev/uinput device)
+    KK=$OUT/$size-keys.log
+    BANANA_TEST_VKBD=1 "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" \
+        --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" \
+        --script "home 0; gamepanel 1 /nonexistent.gba; gshot keys-tile; gtouch 576 360; gshot keys-page; gtouch 43 92; gshot keys-typed; gtouch 590 350; gshot keys-back" 2> "$KK" ||
+        { echo "FAIL $size: banana-ui (panel keyboard) exited $?"; fail=1; }
+    for s in keys-tile keys-page keys-typed keys-back; do
+        [ -s "$OUT/$size-$s-bot.png" ] || { echo "FAIL $size: no $s picture"; fail=1; }
+    done
+    grep -q "gtouch 576 360: action 0 keys 1" "$KK" || { echo "FAIL $size: the Keys tile didn't open the keyboard"; fail=1; }
+    grep -q "gtouch 590 350: action 0 keys 0" "$KK" || { echo "FAIL $size: Done didn't close the keyboard"; fail=1; }
     LX=$OUT/fixture-light; rm -rf "$LX"; cp -r "$FX/data" "$LX"; printf 'theme = light\nlanguage = zh-cn\n' >> "$LX/settings.conf"
     "$HERE/banana-ui" --headless "$OUT/$size-zh-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
         --roms "$FX/roms" --data "$LX" --script "$pkscript" 2> "$OUT/$size-pokemon-zh.log" || { echo "FAIL $size: banana-ui (Pokémon companion, light, zh-cn) exited $?"; fail=1; }

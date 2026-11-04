@@ -30,6 +30,7 @@
 namespace banana
 {
 	struct SPal;	// (settings_draw.h: the palette)
+	class VirtualKeyboard;	// (vkbd.h: the panel's keyboard, on /dev/uinput)
 	class Settings
 	{
 	public:
@@ -100,6 +101,9 @@ namespace banana
 		// RetroArch (save, load, its menu, fast forward, quit), in the in-game menu's look.
 		enum GameAction { G_NONE, G_SAVE, G_LOAD, G_MENU, G_FFWD, G_QUIT, G_LOADSLOT };
 		void gameOpen(const std::string& title, const std::string& system, int screen, bool touch);
+		// the panel's on-screen keyboard (a computer's game: C64, ZX Spectrum): the virtual keyboard the emulator
+		// reads as a USB one (vkbd.h), made before the game starts. null: no Keys tile on the panel
+		void gameKeyboard(VirtualKeyboard* k) { vkbd = k; }
 		// the game's file (before gameOpen): its save states' names (RetroArch's: <name>.state, .state1 ... in
 		// /data/states, thumbnails <state>.png) for the panel's States view (a tap on the achievements box)
 		void gameRom(const std::string& rom, const std::string& stateDir = "/data/states");
@@ -111,6 +115,7 @@ namespace banana
 		bool gameWake() { bool w = wake; wake = false; return w; }
 		void gameRender();
 		GameAction gameTouch(float x, float y, bool down);	// device px on the panel's screen
+		bool gameKeysOpen() const { return gKeysOpen; }	// (tests: the panel's keyboard page is up)
 		bool gameProgress(int& unlocked, int& total);			// the game's achievements, once the server said
 		// the Pokémon companion (pokemon.h), when the host runs one for this game: the party, the battle and the
 		// achievements as tabs in the panel's middle box (set before gameOpen, null after gameClose)
@@ -641,6 +646,15 @@ namespace banana
 		void gameStatesScan();
 		void gameStatesFrame(const SPal& p);
 		bool gTouch = true;
+		// the panel's on-screen keyboard (a computer's game: the C64's LOAD"*",8,1 with a finger on the bottom screen).
+		// vkbd is the emulator's own keyboard (vkbd.h), made before the game started and gone after it; the Keys tile
+		// opens the pages, a tap types the key into the game
+		VirtualKeyboard* vkbd = nullptr;
+		bool gKeysOpen = false;
+		int gKeyPage = 0, gKeyShift = 0;
+		std::string gKeyTyped;
+		void gameKeysFrame(const SPal& p);
+		void gameKeyTap(int code, bool shift, const char* label);
 		double gFlashUntil = 0;
 		int gSeen = -1;						// the watch's generation last drawn
 		int awardsSeen = 0; bool wake = false;	// (gameWake)

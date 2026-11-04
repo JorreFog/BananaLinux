@@ -197,8 +197,8 @@ nothing more, in the same files, so a game goes on in either:
   Archives: a zip's member (stored or deflate) is read in memory; a .7z, or a zip compressed with bzip2, LZMA,
   Deflate64 and the like, is unpacked with 7zz into `/run/banana/rom-cache/<pid>/` (removed when the game ends).
 - **Buttons:** F + START quit, F + X (or F alone) the menu, F + R / F + L save / load state, F + R2 fast-forward,
-  F + SELECT screenshot, F + Y FPS counter, F + UP / DOWN the slot; L2/R2/L3/R3 alone as Settings > Other systems >
-  Buttons (`ra_btn_*`) says.
+  F + SELECT screenshot, F + Y FPS counter, F + B the on-screen keyboard (the computers), F + UP / DOWN the slot;
+  L2/R2/L3/R3 alone as Settings > Other systems > Buttons (`ra_btn_*`) says.
 - **Game panel and bananad:** RetroArch's command words on stdin (`SAVE_STATE`, `LOAD_STATE`, `MENU_TOGGLE`,
   `FAST_FORWARD`, `QUIT`, `READ_CORE_MEMORY`, `AUDIO_REINIT`... + `SAVE_STATE_SLOT n` / `LOAD_STATE_SLOT n`),
   replies on stdout; RetroAchievements' `[RCHEEVOS]` lines in `/run/banana/retroarch.log` for the panel; SIGUSR1 =
@@ -213,6 +213,35 @@ nothing more, in the same files, so a game goes on in either:
 - **Slow frames:** a frame that misses its refresh is caught up (run with its picture not shown) in the same refresh
   when two fit, else while the next flip waits, so the sound never loses a frame to it.
 - Logs: `/data/banana/logs/bananafront.log` (a stats line every 10 s with `BANANAFRONT_STATS=<file>`).
+
+## Commodore 64 and ZX Spectrum
+
+The two 8-bit computers, in BananaFront or RetroArch (Settings > Other systems > Frontend; RetroArch is the
+fallback, as for the rest):
+
+- **Commodore 64** (`vice_x64sc`, package `buildroot/package/libretro-vice`): VICE's cycle-exact C64 emulator.
+  `[c64]` in `systems.conf` takes `.d64`, `.d71`, `.d81` disks, `.tap` and `.t64` tapes, `.prg` programs, `.crt`
+  cartridges, and zip/7z archives. VICE wants keys for most things (autostart, `LOAD"*",8,1`, a trainer's menu):
+  BananaFront gives it the handheld's on-screen keyboard (F + B, below) or a USB/Bluetooth one. Saves are
+  `/data/saves/VICE x64sc/<game>.srm` (VICE's own save format) and states `/data/states/VICE x64sc/`, the folders
+  RetroArch's VICE core uses too.
+- **ZX Spectrum** (`fuse`, package `buildroot/package/libretro-fuse`): Fuse. `[zxspectrum]` takes `.tap` and `.tzx`
+  tapes, `.z80`, `.sna` and `.szx` snapshots, `.dsk` and `.trd` disks, and zip/7z archives. Fuse has libretro's
+  on-screen keyboard (SELECT opens it); BananaFront's F + B keyboard works there too, and either is what keyword
+  entry and a loader that asks for a key need.
+- **50 Hz:** both are PAL machines. BananaFront paces them by time on the 60 Hz panel and matches the sound's rate
+  (the path a 50 Hz game already took); RetroArch has its own VSync switch. Neither needs a BIOS or ROM files from
+  the card: VICE's and Fuse's own are in the cores.
+- **Keyboard:** a USB or Bluetooth keyboard is read as the core's keyboard (`RETRO_DEVICE_KEYBOARD` and
+  `RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK`), not as a second pad. Without one, the bottom screen's game panel (the
+  other screen while the game runs on the top one) has a **Keys** tile for these two systems: the panel becomes a
+  keyboard with a finger, pages for letters, symbols and the keys a game uses (F1-F12, RUN/STOP, Return, Shift, the
+  arrows), and every tap is a key of a virtual USB keyboard on `/dev/uinput` that the emulator reads, so it works the
+  same in RetroArch and BananaFront; the game keeps running on its own screen. BananaFront also has a quicker one over
+  its game picture: F + B (the pad moves and types: A a key, X delete, Y or L/R the page, START Return, SELECT Escape,
+  B closes). The panel's keyboard needs the panel to be the bottom screen (the one with the touchscreen: on the RG DS
+  Plus the top screen has none, so put the game on the top — Settings > Other systems > Screen > Top).
+
 ## BananaNES
 
 BananaNES is the NES / Famicom core: a fork of libretro-fceumm (github.com/libretro/libretro-fceumm, by CaH4e3 and the

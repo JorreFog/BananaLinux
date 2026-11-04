@@ -5,6 +5,8 @@
 ################################################################################
 
 # from github.com/JorreFog/BananaFront (public since 2026-11-02)
+# (the Commodore 64 / ZX Spectrum keyboard support and the on-screen keyboard are on BananaFront's
+#  feat/c64-zxspectrum branch, on top of e6b8e47: bump BANANAFRONT_VERSION to its commit when it lands upstream)
 # the BananaFront commit 0.5.1.1 was tested with: e6b8e47 (per-system Buttons + Swap A/B and X/Y + stick as d-pad, #151/#142; F hotkeys always on; on 654b40e: no shader = sharp CPU-nearest scaling, fast-forward with a shader at full speed; on 3f9a552: archives zlib cannot open unpacked with 7zz, KAN-146; on top of 47c7b85, F menu only as a tap, and e6cfc20, the GPU clock floor while a shader runs, KAN-144))
 BANANAFRONT_VERSION = e6b8e47d04d3ef6fc3f769c3b988bf3b70055f3b
 BANANAFRONT_SITE = $(call github,JorreFog,BananaFront,$(BANANAFRONT_VERSION))
