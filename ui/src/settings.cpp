@@ -1075,6 +1075,7 @@ namespace banana
 	void Settings::save(const Item& it)
 	{
 		const std::string& v = it.values[it.at];
+		if (it.key == "ra_shader") unlink("/data/banana/.ra-shader");	// (apply this choice even if it matches the marker)
 		if (it.key == "ds_language")
 		{
 			if (access("/data/drastic/config/drastic.cfg", F_OK) != 0)

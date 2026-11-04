@@ -18,7 +18,7 @@ FAIL=0
 for dir in "$DATA"/saves/*/; do
     [ -d "$dir" ] || continue
     d=${dir%/}; d=${d##*/}
-    echo "$IDS" | grep -qx "$d" && continue	# (gba, nds, psx... are systems, not cores)
+    echo "$IDS" | grep -Fxq "$d" && continue	# (gba, nds, psx... are systems, not cores)
     # every GBA core's save belongs in the one GBA folder; anything else is a RetroArch system save, flat
     case $d in
     gpSP|mGBA|"VBA Next"|"VBA-M"|Meteor) dest=$DATA/saves/gba ;;
