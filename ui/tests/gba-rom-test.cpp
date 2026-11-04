@@ -322,10 +322,12 @@ static void testHack(const std::string& path, const std::string& pngDir)
 	const uint32_t crc = gba::romCrc32(rom->data(), rom->size());
 	const double crcMs = msSince(t0);
 	const gba::HackInfo* hi = gba::hackByCrc(crc);
-	if (!hi) return;
+	// (a hack the owner plays that the pages must read - 2026-11-04: Pokémon Unbound had only the old views)
+	if (!hi) { CHECK(path.find("Unbound") == std::string::npos); if (path.find("Unbound") != std::string::npos) fprintf(stderr, "FAIL %s: not a hack the companion knows\n", path.c_str()); return; }
 	const std::string key = hi->key;
 	const bool glazed = key == "glazed", golden = key == "golden-glazed", unoff = key == "glazed-unofficial", gaia = key == "gaia";
-	if (!glazed && !golden && !unoff && !gaia) { fprintf(stderr, "gba-rom-test: %s: %s is read elsewhere (its engine), skipped\n", path.c_str(), hi->title); return; }
+	const bool unbound = key == "unbound";
+	if (!glazed && !golden && !unoff && !gaia && !unbound) { fprintf(stderr, "gba-rom-test: %s: %s is read elsewhere (its engine), skipped\n", path.c_str(), hi->title); return; }
 	t0 = std::chrono::steady_clock::now();
 	Game g = gba::detectGame(rom->data(), rom->size(), crc);
 	const double detectMs = msSince(t0);
@@ -334,13 +336,14 @@ static void testHack(const std::string& path, const std::string& pngDir)
 	EQ(g.title, std::string(hi->title));
 	EQ((int)g.gen, (int)Gen::III);
 	CHECK(g.modern);
-	EQ(g.dexSize, gaia ? 721 : 386);
+	if (!unbound) EQ(g.dexSize, gaia ? 721 : 386);
+	else CHECK(g.dexSize > 721);	// (Unbound: Pokémon up to Generation VIII)
 	EQ(gba::detectGame(rom->data(), rom->size()).hack, key);	// (the CRC-32 worked out there)
 	t0 = std::chrono::steady_clock::now();
 	pkmn::RomTables t = pkmn::findTables(rom->data(), rom->size(), pkmn::detectGame(rom->data(), rom->size()));
 	t.rom = rom; t.crc = crc;
 	const double tablesMs = msSince(t0);
-	EQ(t.has.fairyType, gaia ? (int)pkmn::FAIRY : (int)pkmn::MYSTERY);
+	EQ(t.has.fairyType, gaia || unbound ? (int)pkmn::FAIRY : (int)pkmn::MYSTERY);
 	t0 = std::chrono::steady_clock::now();
 	auto r = gba::readRomData(t, g, "");
 	const double readMs = msSince(t0);
@@ -359,7 +362,26 @@ static void testHack(const std::string& path, const std::string& pngDir)
 	EQ(r->natures.size(), (size_t)25);
 	if (!r->natures.empty()) EQ(r->natures[0], std::string("Hardy"));
 	uint16_t at = 0;
-	if (gaia)
+	if (unbound)
+	{
+		// Pokémon Unbound (CFRU, the Borrius region): Fairy, the newer generations, the split, its first town and gym
+		CHECK(types(named(*r, "Clefairy"), FAIRY, FAIRY));
+		CHECK(types(named(*r, "Sylveon"), FAIRY, FAIRY));
+		CHECK(types(named(*r, "Deino"), DARK, DRAGON));
+		CHECK(named(*r, "Grookey") != nullptr);			// (Generation VIII)
+		CHECK(r->moves.size() > 355);
+		EQ((int)r->moves[242].cat, (int)MoveCategory::PHYSICAL);	// Crunch
+		EQ((int)r->moves[52].cat, (int)MoveCategory::SPECIAL);		// Ember
+		bool dresco = false;
+		for (auto& z : r->zones) dresco |= z.second.name == "Dresco Town";
+		CHECK(dresco);
+		bool mirskle = false;
+		for (auto& tr : r->trainers) mirskle |= tr.second.name == "Mirskle" && !tr.second.team.empty();
+		CHECK(mirskle);
+		uint16_t nat = 0; uint8_t form = 0;
+		CHECK(gba::speciesOf(*r, 1, nat, form) && nat == 1 && form == 0);
+	}
+	else if (gaia)
 	{
 		EQ(r->species[387].name, std::string("Turtwig"));
 		CHECK(types(&r->species[387], GRASS, GRASS));
@@ -435,7 +457,8 @@ static void testHack(const std::string& path, const std::string& pngDir)
 		{
 			auto x = r->sprite((uint16_t)d);
 			// (a form past the Pokédex may share its palettes: Glazed's second Pikachu)
-			if (!x || x->frames.empty() || (x->normal == x->shiny && d <= (size_t)r->game.dexSize)) { bad++; fprintf(stderr, "  %s: %s's picture: %s\n", hi->title, r->species[d].name.c_str(), x ? "its shiny palette is its normal one" : "none"); }
+			// (Minior's Meteor Form is the same shiny: its core differs, which the games show only out of the shell)
+			if (!x || x->frames.empty() || (x->normal == x->shiny && d <= (size_t)r->game.dexSize && r->species[d].name != "Minior")) { bad++; fprintf(stderr, "  %s: %s's picture: %s\n", hi->title, r->species[d].name.c_str(), x ? "its shiny palette is its normal one" : "none"); }
 		}
 	EQ(bad, 0);
 	auto deino = named(*r, "Deino", &at) ? r->sprite(at) : nullptr;
