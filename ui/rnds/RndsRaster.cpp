@@ -462,6 +462,10 @@ namespace rnds
 	static std::u32string (*sTranslate)(const std::u32string&) = nullptr;
 	void setTranslator(std::u32string (*translate)(const std::u32string&)) { sTranslate = translate; }
 	Translator translator() { return sTranslate; }
+	// (Banana: what the player named - a game's title, a file's, a network's - laid out on this thread as it is)
+	static thread_local int sVerbatim = 0;
+	Verbatim::Verbatim(bool on) : on(on) { if (on) sVerbatim++; }
+	Verbatim::~Verbatim() { if (on) sVerbatim--; }
 
 	std::shared_ptr<Font> Font::load(const std::string& path)
 	{
@@ -604,7 +608,7 @@ namespace rnds
 	// the text as it is drawn: translated (Banana: the menu's language, setTranslator), then uppercased for the style
 	static std::u32string prepared(const std::u32string& t, const TextStyle& st)
 	{
-		std::u32string x = sTranslate ? sTranslate(t) : t;
+		std::u32string x = sTranslate && !sVerbatim ? sTranslate(t) : t;
 		return st.upper ? upper(x) : x;
 	}
 

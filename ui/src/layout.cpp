@@ -681,11 +681,16 @@ namespace banana
 			return r;
 		}
 
+		static bool readsTitle(const std::string& n) { return n == "game.title" || n == "item.title" || n == "sys.resumeTitle" || n == "item.resumeTitle"; }
 		// text's own size (layout px): the widest line and the lines' height
 		struct TextLayout { std::vector<rnds::TextLine> lines; float w = 0, h = 0, lineH = 0, asc = 0; rnds::TextStyle st; };
 		TextLayout layoutText(const Ctx& c, float k, float boxW)
 		{
 			TextLayout L;
+			// a text with a game's title in it is drawn as it is (not through the menu's language, whose "Keep %s" turned
+			// the game Keep Calm into Säilytä Calm)
+			const Prop* tp = find(c, K("text"));
+			rnds::Verbatim named(tp && tp->reads(readsTitle));
 			std::string t = str(c, K("text"));
 			L.st.font = font(str(c, K("font"), defaultFont));
 			if (!L.st.font) return L;

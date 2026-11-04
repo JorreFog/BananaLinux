@@ -46,6 +46,8 @@ make -s -C "$HERE" tests/soft-base-test >/dev/null && "$HERE/tests/soft-base-tes
 make -s -C "$HERE" tests/gba-live-test >/dev/null && "$HERE/tests/gba-live-test" 2> "$OUT/gba-live-test.log" || { echo "FAIL the GBA companion's state: $(grep FAIL "$OUT/gba-live-test.log" | head -3)"; fail=1; }
 # the left stick as a d-pad: its deadzone and hysteresis
 make -s -C "$HERE" tests/input-test >/dev/null && "$HERE/tests/input-test" 2> "$OUT/input-test.log" || { echo "FAIL the stick: $(grep FAIL "$OUT/input-test.log" | head -3)"; fail=1; }
+# the translations: a line's %d takes a number only, not a game's or a file's name
+make -s -C "$HERE" tests/lang-raw-test >/dev/null && "$HERE/tests/lang-raw-test" "$OUT" 2> "$OUT/lang-raw-test.log" || { echo "FAIL the translations: $(grep FAIL "$OUT/lang-raw-test.log" | head -3)"; fail=1; }
 # the menu's WAV reader: a theme's broken sample rate is refused, not divided by
 make -s -C "$HERE" tests/wav-test >/dev/null && "$HERE/tests/wav-test" "$OUT" 2> "$OUT/wav-test.log" || { echo "FAIL the menu's WAV reader: $(grep FAIL "$OUT/wav-test.log" | head -3)"; fail=1; }
 # every icon the theme's systems.cfg names is there (Poketool's tile pointed at the old Bank & Trade logo)
@@ -984,6 +986,31 @@ sed -e 's/"count": 12,/"count": 1e300, "loop": true,/' -e 's/"range": 64/"range"
 timeout 60 "$HERE/banana-ui" --headless "$OUT/badrange-" --size 640x480 --assets "$HERE/assets/rnds" --banana "$HERE/assets/banana" \
     --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" --theme "$BT3" \
     --script "home 0; wait 300; shot home; wait 1" 2> "$OUT/badrange.log" || { echo "FAIL: a theme's list of 1e300 items took the menu down (exit $?)"; fail=1; }
+# what the player named is drawn as it is: a language whose lines match the fixture's game titles, file names, a
+# network's and a Bluetooth device's names ("Peel %s", "Split %s", "Office", "Cafe Free", "Wireless Controller") must
+# draw every one of these screens exactly as English does (the translator once made "Keep Calm" "Säilytä Calm")
+VX=$OUT/verbatim; rm -rf "$VX"; mkdir -p "$VX/assets/lang" "$VX/assets/rnds"; ln -s "$HERE/assets/rnds/"* "$VX/assets/rnds/"	# (rnds/../lang: the test's)
+printf '#: language = Test\n#: translated-by = nobody\nmenu\t\tPeel %%s\tZZ %%s\nmenu\t\tSplit %%s\tZZ %%s\nsettings\t\tPeel %%s\tZZ %%s\nsettings\t\tOffice\tZZ\nsettings\t\tCafe Free\tZZ\nsettings\t\tWireless Controller\tZZ\n' > "$VX/assets/lang/xx.tsv"
+for l in en xx; do
+    "$HERE/tests/fixture.sh" "$VX/fx-$l" >/dev/null
+    printf 'language = %s\n' $l >> "$VX/fx-$l/data/settings.conf"
+    vrun() { BANANA_WIFI="$HERE/tests/fake-wifi.sh" FAKE_WIFI_CONF="$VX/wifi-$l.conf" BANANA_BLUETOOTH="$HERE/tests/fake-bluetooth.sh" FAKE_BT="$VX/bt-$l" \
+        "$HERE/banana-ui" --headless "$VX/$l-" --size 640x480 --assets "$VX/assets/rnds" --banana "$HERE/assets/banana" \
+        --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$VX/fx-$l/roms" --data "$VX/fx-$l/data" "$@" 2>> "$VX/$l.log" ||
+        { echo "FAIL: banana-ui (verbatim, $l) exited $?"; fail=1; }; }
+    vrun --script "homeid nds; press a; wait 2400; press right; press right; wait 2400; shot lib; press right; wait 2400; shot lib2; press x; shot page"
+    vrun --theme "$HERE/../system/rootfs/usr/share/banana/themes/canvas.json" --script "homeid nds; press a; wait 1000; press down; press down; wait 1000; shot llib"
+    vrun --script "homeid files; press a; press a; press down; press a; press down; press down; press a; shot folder"
+    vrun --script "home 0; press start; press r; press r; press r; press a; press down; press a; wait 2500; shot wifi"
+    vrun --script "home 0; press start; press r; press r; press r; press a; press down; press down; press a; press right; wait 300; press down; press a; shot bt"
+done
+grep -q "language: Test (xx)" "$VX/xx.log" || { echo "FAIL: verbatim: the test language wasn't loaded"; fail=1; }
+for s in lib lib2 page llib folder wifi bt; do
+    for p in top bot; do
+        d=$(compare -metric AE "$VX/en-$s-$p.png" "$VX/xx-$s-$p.png" null: 2>&1) || true; d=${d%% *}
+        [ "$d" = 0 ] || { echo "FAIL: verbatim: $s-$p differs from English ($d px): a name went through the translator"; fail=1; }
+    done
+done
 # the DS companion's overlay (nds/overlay.h, COMPANION-SPEC section 10) end to end: banana-ui paints the test page
 # while a child plays BananaDS's part (the icon, a tap open, a drag, the page's Back to game), at both panel sizes;
 # the pictures it took are left as <size>-ndsoverlay-{icon,open,drag}.png

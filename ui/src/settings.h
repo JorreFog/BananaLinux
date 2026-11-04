@@ -535,6 +535,15 @@ namespace banana
 		void renderLangPick();
 		void loadCjkFont();
 		bool rawText = false;	// text() draws the string as it is (not through the menu's language): the other language's
+		// while one is alive, text() and fit() draw names as they are: a game's, a file's, a network's, a device's
+		struct AsNamed
+		{
+			Settings& s; bool was;
+			explicit AsNamed(Settings& x, bool on = true) : s(x), was(x.rawText) { s.rawText = was || on; }
+			~AsNamed() { s.rawText = was; }
+			AsNamed(const AsNamed&) = delete;
+			AsNamed& operator=(const AsNamed&) = delete;
+		};
 		bool cjkLoaded = false;
 		Result pressLangAsk(Key k);
 		void renderLangAsk();

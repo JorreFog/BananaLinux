@@ -492,6 +492,21 @@ namespace banana
 		}
 	}
 
+	static bool readsName(const Expr& e, bool (*names)(const std::string&))
+	{
+		if (!e) return false;
+		if (e->op == ExprNode::VAR && names(e->name)) return true;
+		for (auto& x : e->a) if (readsName(x, names)) return true;
+		return false;
+	}
+
+	bool Prop::reads(bool (*names)(const std::string&)) const
+	{
+		if (kind == EXPR) return readsName(expr, names);
+		for (auto& x : parts) if (readsName(x.second, names)) return true;
+		return false;
+	}
+
 	Prop Prop::parse(const std::string& t)
 	{
 		Prop p;
