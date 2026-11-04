@@ -5,6 +5,7 @@
 # the image's current value wins over it. Run it after changing systems.conf, and commit the result.
 #   --check: only say whether the committed file is up to date (exit 1 if not; 0 outside a git checkout)
 cd "$(dirname "$0")/.." || exit 1
+export LC_ALL=C	# (sort/comm: the committed file must compare the same on every host, CI's C included)
 CHECK=0; [ "$1" = --check ] && CHECK=1
 git rev-parse --git-dir >/dev/null 2>&1 || { [ $CHECK = 1 ] && exit 0; echo "not a git checkout" >&2; exit 1; }
 F=system/rootfs/etc/banana/systems.conf

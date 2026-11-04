@@ -330,6 +330,13 @@ ra=$(grep -v AUDIO_REINIT /run/test/retroarch.log 2>/dev/null | tr '\n' ' ')    
 grep -qx emulator=retroarch /data/banana/resume-boot 2>/dev/null && ok "resume-boot: retroarch" || bad "resume-boot: $(cat /data/banana/resume-boot 2>/dev/null)"
 stop; POWEROFF=0; exec 5>&-; rm -f /run/banana/retroarch.cmd /data/banana/resume-boot; echo 0 > /run/test/lid
 
+echo "11b. SIGPIPE (a RetroArch pipe whose reader closed) must not kill bananad"
+start
+kill -PIPE $BD 2>/dev/null
+sleep 0.2
+if kill -0 $BD 2>/dev/null; then ok "bananad survived SIGPIPE"; else bad "bananad died on SIGPIPE"; start; fi
+stop
+
 echo "12. another program (a port): SIGTERM, no resume-boot"
 setsid sleep 600 & GAME=$!; sleep 0.1; echo $GAME > /run/banana/game.pid
 start "poweroff_after_sleep_minutes = 0.02"
