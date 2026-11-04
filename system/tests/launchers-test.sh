@@ -133,6 +133,22 @@ BANANA_DATA="$D/data" BANANA_RUN="$D/run" BANANA_SYSTEMS="$D/etc/systems.conf" s
 check "$(cat "$D/data/saves/cdata/game.p8d.txt" 2>/dev/null)" "cart" "PICO-8's cart data stays in saves/cdata"
 check "$(cat "$D/data/saves/Game.srm" 2>/dev/null)" "new" "the newer core save is the flat one"
 check "$(cat "$D/data/banana/saves-legacy/replaced/Game.srm" 2>/dev/null)" "old" "the flat save it replaced is kept"
+# a blank save (only 0xff or only 0x00 bytes: a core that never got to write one) never goes over one with data in it,
+# newer or not; a save with data goes over a blank one (fl: its first bytes, a blank one's as F or 0)
+fl() { head -c 4 "$1" 2>/dev/null | tr '\377\000' F0; }
+D=$T/flat3; mkdir -p "$D/data/saves/gpSP" "$D/data/saves/mGBA" "$D/data/saves/gba" "$D/data/saves/Snes9x" "$D/run" "$D/etc"
+printf '[gba]\n' > "$D/etc/systems.conf"
+echo real > "$D/data/saves/gpSP/Game.srm"; touch -t 202601010000 "$D/data/saves/gpSP/Game.srm"
+head -c 1024 /dev/zero | tr '\0' '\377' > "$D/data/saves/mGBA/Game.srm"
+head -c 1024 /dev/zero > "$D/data/saves/Snes9x/Other.srm"
+echo real > "$D/data/saves/Other.srm"; touch -t 202601010000 "$D/data/saves/Other.srm"
+head -c 1024 /dev/zero > "$D/data/saves/gba/Third.srm"
+echo real > "$D/data/saves/gpSP/Third.srm"; touch -t 202601010000 "$D/data/saves/gpSP/Third.srm"
+BANANA_DATA="$D/data" BANANA_RUN="$D/run" BANANA_SYSTEMS="$D/etc/systems.conf" sh "$L/saves-flat"
+check "$(fl "$D/data/saves/gba/Game.srm")" "real" "a newer blank 0xff save doesn't go over a real one"
+check "$(fl "$D/data/saves/Other.srm")" "real" "a newer blank 0x00 save doesn't go over a real flat one"
+check "$(fl "$D/data/saves/gba/Third.srm")" "real" "an older real save goes over a newer blank one"
+check "$(wc -c < "$D/data/banana/saves-legacy/mGBA/Game.srm" 2>/dev/null)" "1024" "the blank one is kept in saves-legacy"
 
 echo "launchers-test: $passed passed, $failed failed"
 [ $failed = 0 ]

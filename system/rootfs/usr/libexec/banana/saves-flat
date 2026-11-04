@@ -15,6 +15,11 @@ MARK=$RUN/saves-flat
 [ -d "$DATA/saves" ] || exit 0
 IDS=$(sed -n 's/^\[\(.*\)\]$/\1/p' "$SYSTEMS" 2>/dev/null)
 FAIL=0
+# blank <file>: no save in it, only 0xff or only 0x00 bytes (a core that made the file and never wrote it; counted, not
+# compared: the shell drops a NUL from $(...)), or nothing at all; as run-retroarch tells a GBA core's blank one
+blank() {
+    [ "$(tr -d '\377' < "$1" | head -c 1 | wc -c)" = 0 ] || [ "$(tr -d '\000' < "$1" | head -c 1 | wc -c)" = 0 ]
+}
 for dir in "$DATA"/saves/*/; do
     [ -d "$dir" ] || continue
     d=${dir%/}; d=${d##*/}
@@ -31,7 +36,14 @@ for dir in "$DATA"/saves/*/; do
     for f in "$dir"*; do
         [ -f "$f" ] || continue
         n=${f##*/}
-        if [ ! -e "$dest/$n" ] || [ "$f" -nt "$dest/$n" ]; then
+        # the core's save goes flat when there is none there, when it is newer, and always over a blank one; never a
+        # blank one over a save with data in it (gpSP's real save, then mGBA's empty file of it a day later)
+        take=
+        if [ ! -e "$dest/$n" ]; then take=1
+        elif blank "$f"; then blank "$dest/$n" && [ "$f" -nt "$dest/$n" ] && take=1
+        elif blank "$dest/$n" || [ "$f" -nt "$dest/$n" ]; then take=1
+        fi
+        if [ -n "$take" ]; then
             # (the flat save it replaces is kept too: saves-legacy/replaced/, never overwritten)
             if [ -e "$dest/$n" ]; then
                 r="$DATA/banana/saves-legacy/replaced/${dest#$DATA/saves}/$n"
