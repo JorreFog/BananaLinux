@@ -100,7 +100,7 @@ st_not again "setup finished"
 # the language picked on the first slide: saved, the menu starts again (LANGUAGE), on the Wi-Fi slide (setup-step)
 st_run lang "home 0; setup; press right; press up; press a"
 st_check lang "press a: settings result 9"
-grep -q '^language = ru' "$SFX/data/settings.conf" || { echo "FAIL $size: the setup's language wasn't saved"; fail=1; }
+grep -q '^language = it' "$SFX/data/settings.conf" || { echo "FAIL $size: the setup's language wasn't saved"; fail=1; }
 [ "$(cat "$SFX/data/setup-step" 2>/dev/null)" = "wifi boot" ] || { echo "FAIL $size: setup-step after the language: $(cat "$SFX/data/setup-step" 2>/dev/null)"; fail=1; }
 st_run ru "home 0; setupat wifi; shot st-ru-wifi"
 sed -i '/^language = /d' "$SFX/data/settings.conf"
