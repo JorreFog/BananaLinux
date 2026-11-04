@@ -123,6 +123,16 @@ check "$(cat "$D/data/saves/megadrive/Game.srm" 2>/dev/null)" "sys" "a system fo
     passed=$((passed + 1)) || { failed=$((failed + 1)); echo "  FAIL: no migration marker or backup"; }
 [ ! -e "$D/data/saves/PicoDrive/Game.srm" ] && [ ! -e "$D/data/saves/gpSP/Game.srm" ] &&
     passed=$((passed + 1)) || { failed=$((failed + 1)); echo "  FAIL: a migrated core file stayed in saves/"; }
+# PICO-8's cart data (saves/cdata) stays where it is; a flat save a newer core copy replaces is kept in saves-legacy
+D=$T/flat2; mkdir -p "$D/data/saves/cdata" "$D/data/saves/Snes9x" "$D/run" "$D/etc"
+printf '[gba]\n' > "$D/etc/systems.conf"
+echo cart > "$D/data/saves/cdata/game.p8d.txt"
+echo old > "$D/data/saves/Game.srm"; touch -t 202601010000 "$D/data/saves/Game.srm"
+echo new > "$D/data/saves/Snes9x/Game.srm"
+BANANA_DATA="$D/data" BANANA_RUN="$D/run" BANANA_SYSTEMS="$D/etc/systems.conf" sh "$L/saves-flat"
+check "$(cat "$D/data/saves/cdata/game.p8d.txt" 2>/dev/null)" "cart" "PICO-8's cart data stays in saves/cdata"
+check "$(cat "$D/data/saves/Game.srm" 2>/dev/null)" "new" "the newer core save is the flat one"
+check "$(cat "$D/data/banana/saves-legacy/replaced/Game.srm" 2>/dev/null)" "old" "the flat save it replaced is kept"
 
 echo "launchers-test: $passed passed, $failed failed"
 [ $failed = 0 ]
