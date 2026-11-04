@@ -740,10 +740,50 @@ static void testHackSpecies()
 	{ RamReader r(retail); CHECK(!readMon(Gen::IV, enc, 236, m)); }	// (and back for the next retail game)
 }
 
+// an hg-engine HeartGold's save (Origin HeartGold, the layout read from the owner's save 2026-11-04): the TM pocket 151
+// long, the position and the Pokédex 0xF0 on, its arrays 1024 bits (seen at +0xCC); a Pokémon past 493 in the party
+static void testHgEngineSave()
+{
+	Ram ram;
+	const uint32_t S = 0x0227A000, B = S + 0x10;
+	p32(ram.at(0x02111880), S);
+	p32(ram.at(B + 0x90), 6);	// (the party's capacity, then its count)
+	p32(ram.at(B + 0x94), 1);
+	uint8_t plain[236];
+	makeMon(Gen::IV, plain, 236, 0x01020304, 873, 17, 34691, 38453, 33);	// Frosmoth
+	encryptMon(plain, 236, ram.at(B + 0x98));
+	p16(ram.at(B + 0x64), 0x0134); p16(ram.at(B + 0x66), 0xFFFF);
+	p16(ram.at(B + 0x74), 34691); p16(ram.at(B + 0x76), 38453);
+	p32(ram.at(B + 0x78), 10748);
+	p32(ram.at(B + 0x1324), 33); p32(ram.at(B + 0x1324 + 4), 0xFFFFFFFF);	// Route 29, at 1047 / 97
+	p32(ram.at(B + 0x1324 + 8), 1047); p32(ram.at(B + 0x1324 + 12), 97);
+	p32(ram.at(B + 0x13A8), 0xBEEFCAFE);
+	ram.at(B + 0x13A8 + 4 + 872 / 8)[0] = 1 << (872 % 8);					// caught: 873
+	ram.at(B + 0x13A8 + 0xCC + 872 / 8)[0] = 1 << (872 % 8);					// seen: 873
+	ram.at(B + 0x13A8 + 0xCC)[0] = 1;											// seen: 1
+	p16(ram.at(B + 0x644 + 0x788), 4); p16(ram.at(B + 0x644 + 0x78A), 5);	// 5 Poké Balls
+	Game g = game(GameId::HEARTGOLD, Gen::IV);
+	g.dexSize = 1025; g.hack = "origin-heartgold";
+	RamReader rr(g);
+	CHECK(settle(rr, ram));
+	if (!rr.live()->valid) fprintf(stderr, "  hg-engine save: %s\n", rr.lastProblem().c_str());
+	auto l = rr.live();
+	CHECK(l->valid && l->party.size() == 1 && l->party[0].species == 873 && l->party[0].level == 17);
+	CHECK(l->money == 10748 && l->zone == 33 && l->mapX == 1047 && l->mapY == 97);
+	CHECK(l->dexCaught.size() == 128 && (l->dexCaught[872 / 8] >> (872 % 8) & 1) && (l->dexSeen[0] & 1) && (l->dexSeen[872 / 8] >> (872 % 8) & 1));
+	CHECK(l->bag.count(POCKET_BALLS) && l->bag.at(POCKET_BALLS).size() == 1 && l->bag.at(POCKET_BALLS)[0].count == 5);
+	CHECK(l->roamers.empty() && l->flags.empty());
+	// the same RAM in the retail game's layout: not its place (the reason the hack needs its own)
+	RamReader retail(game(GameId::HEARTGOLD, Gen::IV));
+	settle(retail, ram);
+	CHECK(!retail.live()->valid || retail.live()->zone != 33);
+}
+
 int main(int argc, char** argv)
 {
 	testCrypto();
 	testHackSpecies();
+	testHgEngineSave();
 	testPlatinum();
 	testBlack2();
 	testDetect();
