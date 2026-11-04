@@ -149,6 +149,19 @@ check "$(fl "$D/data/saves/gba/Game.srm")" "real" "a newer blank 0xff save doesn
 check "$(fl "$D/data/saves/Other.srm")" "real" "a newer blank 0x00 save doesn't go over a real flat one"
 check "$(fl "$D/data/saves/gba/Third.srm")" "real" "an older real save goes over a newer blank one"
 check "$(wc -c < "$D/data/banana/saves-legacy/mGBA/Game.srm" 2>/dev/null)" "1024" "the blank one is kept in saves-legacy"
+# a core that runs more than one system (mGBA: GBA, GB and GBC): each save goes where its game's system keeps them, by
+# where the game is (either card, a subfolder too); a save with no game found stays the GBA's
+D=$T/flat4; mkdir -p "$D/data/saves/mGBA" "$D/data/roms/gb" "$D/data/roms/gbc/Zelda" "$D/data/roms/gba" "$D/sd2/roms/gb" "$D/run/sd2" "$D/etc"
+printf '[gba]\n[gb]\n[gbc]\n' > "$D/etc/systems.conf"; echo "$D/sd2/roms" > "$D/run/sd2/roms"
+touch "$D/data/roms/gb/Tetris (World) (Rev 1).gb" "$D/data/roms/gbc/Zelda/Zelda [DX] (USA).gbc" "$D/data/roms/gba/Pokemon Emerald (USA).gba" "$D/sd2/roms/gb/Kirby's Dream Land (USA, Europe).zip"
+for g in "Tetris (World) (Rev 1)" "Zelda [DX] (USA)" "Pokemon Emerald (USA)" "Kirby's Dream Land (USA, Europe)" "No Game Here"; do echo "$g" > "$D/data/saves/mGBA/$g.srm"; done
+BANANA_DATA="$D/data" BANANA_RUN="$D/run" BANANA_SYSTEMS="$D/etc/systems.conf" sh "$L/saves-flat"
+check "$(cat "$D/data/saves/Tetris (World) (Rev 1).srm" 2>/dev/null)" "Tetris (World) (Rev 1)" "mGBA's Game Boy save is flat (roms/gb)"
+check "$(cat "$D/data/saves/Zelda [DX] (USA).srm" 2>/dev/null)" "Zelda [DX] (USA)" "mGBA's Game Boy Color save is flat (a subfolder of roms/gbc)"
+check "$(cat "$D/data/saves/Kirby's Dream Land (USA, Europe).srm" 2>/dev/null)" "Kirby's Dream Land (USA, Europe)" "a game on the second card counts too"
+check "$(cat "$D/data/saves/gba/Pokemon Emerald (USA).srm" 2>/dev/null)" "Pokemon Emerald (USA)" "mGBA's GBA save is in saves/gba"
+check "$(cat "$D/data/saves/gba/No Game Here.srm" 2>/dev/null)" "No Game Here" "a save with no game found stays the GBA's"
+check "$(ls "$D/data/saves/gba" | wc -l)" "2" "no Game Boy save in saves/gba"
 
 echo "launchers-test: $passed passed, $failed failed"
 [ $failed = 0 ]

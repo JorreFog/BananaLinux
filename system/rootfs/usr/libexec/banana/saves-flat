@@ -20,6 +20,39 @@ FAIL=0
 blank() {
     [ "$(tr -d '\377' < "$1" | head -c 1 | wc -c)" = 0 ] || [ "$(tr -d '\000' < "$1" | head -c 1 | wc -c)" = 0 ]
 }
+# where each system's games are (its "folder", or its id: "<id> <folder>" lines), on this card and on the second one
+# (sd2 names its roms folder in $RUN/sd2/roms while it is in)
+FOLDERS=$(awk '/^\[/{if(id!="")print id "\t" (f!=""?f:id); id=substr($0,2,length($0)-2); f=""} /^folder *=/{sub(/^folder *= */,""); f=$0}
+    END{if(id!="")print id "\t" (f!=""?f:id)}' "$SYSTEMS" 2>/dev/null)
+ROOTS=$DATA/roms
+r=$(cat "$RUN/sd2/roms" 2>/dev/null); [ -n "$r" ] && [ -d "$r" ] && ROOTS="$ROOTS
+$r"
+# systems_of <name>: the systems that have a game called <name> (any extension: a .zip too), in their folder or one
+# folder down, a line each (the name quoted: brackets and the like in it are the name's, not a pattern)
+systems_of() {
+    printf '%s\n' "$FOLDERS" | while IFS='	' read -r _id _fo; do
+        case $_fo in ''|/*) continue ;; esac
+        printf '%s\n' "$ROOTS" | while read -r _r; do
+            for _g in "$_r/$_fo/$1".* "$_r/$_fo"/*/"$1".*; do [ -e "$_g" ] && { echo "$_id"; exit; }; done
+        done
+    done
+}
+# dest_of <core folder> <save>: the folder the save belongs in. Every GBA core's save is in the one GBA folder, anything
+# else is a RetroArch system save, flat. A core that runs more than one system (mGBA and VBA-M: the GBA, Game Boy and
+# Game Boy Color) has each system's saves in its one folder, so the game's own folder decides: a Game Boy (Color) game's
+# save is flat. With no game found it goes where it always did, the GBA's: a GB save and a GBA save can't be told apart
+# by their bytes or size (both 8, 32 or 128 KB), and the game can be put back in its folder to find it again.
+dest_of() {
+    case $1 in
+    mGBA|"VBA-M")
+        _s=$(systems_of "${2%.*}")
+        if echo "$_s" | grep -qx gba; then echo "$DATA/saves/gba"
+        elif echo "$_s" | grep -qxE 'gbc?'; then echo "$DATA/saves"
+        else echo "$DATA/saves/gba"; fi ;;
+    gpSP|"VBA Next"|Meteor) echo "$DATA/saves/gba" ;;
+    *) echo "$DATA/saves" ;;
+    esac
+}
 for dir in "$DATA"/saves/*/; do
     [ -d "$dir" ] || continue
     d=${dir%/}; d=${d##*/}
@@ -27,15 +60,11 @@ for dir in "$DATA"/saves/*/; do
     # (not a core's save folder: cdata is PICO-8's cart data, which BananaFront and fake-08 read from saves/cdata -
     # moved flat, a PICO-8 game would start without it)
     case $d in cdata) continue ;; esac
-    # every GBA core's save belongs in the one GBA folder; anything else is a RetroArch system save, flat
-    case $d in
-    gpSP|mGBA|"VBA Next"|"VBA-M"|Meteor) dest=$DATA/saves/gba ;;
-    *) dest=$DATA/saves ;;
-    esac
-    mkdir -p "$dest" 2>/dev/null || { FAIL=1; continue; }
     for f in "$dir"*; do
         [ -f "$f" ] || continue
         n=${f##*/}
+        dest=$(dest_of "$d" "$n")
+        mkdir -p "$dest" 2>/dev/null || { FAIL=1; continue; }
         # the core's save goes flat when there is none there, when it is newer, and always over a blank one; never a
         # blank one over a save with data in it (gpSP's real save, then mGBA's empty file of it a day later)
         take=
