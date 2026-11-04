@@ -13,6 +13,8 @@ fail=0
 # defaults it uses up to date with git (tools/systems-history.sh)
 sh "$HERE/tests/systems-merge.sh" || fail=1
 sh "$HERE/../tools/systems-history.sh" --check || fail=1
+# the Save Mover puts each save where the card's sync and emulators look (node, when there is one)
+if command -v node >/dev/null; then node "$HERE/tests/save-mover-test.js" > "$OUT/save-mover-test.log" 2>&1 || { echo "FAIL the Save Mover: $(grep FAIL "$OUT/save-mover-test.log" | head -3)"; fail=1; }; fi
 # the Pokémon companion's decoder (on data made from the documented layouts), and the made-up game and replies it
 # leaves in $OUT for the game panel's run below
 make -s -C "$HERE" tests/pokemon-test >/dev/null && "$HERE/tests/pokemon-test" "$OUT" 2> "$OUT/pokemon-test.log" || { echo "FAIL the Pokémon companion's decoder: $(grep FAIL "$OUT/pokemon-test.log" | head -3)"; fail=1; }

@@ -1,11 +1,12 @@
 #!/bin/sh
 # The DS's in-game saves shared by the two DS emulators. DraStic (SuperDrastic) keeps drastic/backup/<game>.dsv;
-# BananaDS (melonDS) keeps saves/nds/<game>.sav. DraStic's own .dsv is the raw save; a .dsv written by DeSmuME (a
-# card scraped under another firmware, a save copied from a PC) has DeSmuME's footer after it: a 16-byte
-# "|-DESMUME SAVE-|" cookie as the last 16 bytes, and 36 bytes before the end the u32 the raw save was padded to.
-# Before either emulator starts a game the newer of the two is written over the other in its own form (the footer
-# left off for BananaDS), the file replaced kept as .bak. The save's exact size is kept: melonDS picks the save
-# memory from the ROM, and a file of another size is what makes a game say its save data is corrupted. Run by
+# BananaDS (melonDS) keeps saves/nds/<game>.sav. A .dsv in DeSmuME's format, which is what DraStic writes (and
+# DeSmuME, and ROCKNIX's DraStic beside the game), is the raw save followed by DeSmuME's 122-byte footer: a
+# 16-byte "|-DESMUME SAVE-|" cookie as the last 16 bytes, and 36 bytes before the end the u32 the raw save was
+# padded to. DraStic also reads a raw save with no footer, which is what it is given here. Before either emulator
+# starts a game the newer of the two is written over the other in its own form (the footer left off for BananaDS),
+# the file replaced kept as .bak. The raw size is kept as it is: melonDS sizes the save memory from its game list,
+# not from the file, and fits a file of another size to it (cut short, or padded with 0xFF) without a word. Run by
 # run-drastic and run-bananads. A save under 512 bytes (the smallest real one is a 4 Kbit EEPROM's) is no save: it
 # never goes over one that has something in it (#96); the other way round instead.
 #   nds-saves <rom>
@@ -26,7 +27,7 @@ fi
 # size <file>: its bytes, 0 when there is none
 size() { wc -c 2>/dev/null < "$1" || echo 0; }
 # raw_of_dsv <dsv> <out>: the raw save inside a .dsv, DeSmuME's footer and padding left off; the file as it is
-# when it has no footer (DraStic's own)
+# when it has no footer (one nds-saves wrote)
 raw_of_dsv() {
     _n=$(wc -c < "$1") || return 1
     # (each write checked, and its size: on a full card a copy cut short counted as done and went over the save)
