@@ -1776,6 +1776,55 @@ namespace banana::pkmn
 		// (a hack's wild tables may name a map or two it took out: Gaia's. Then the table that misses fewest, and no
 		// more than one in 30)
 		const int allowed = (int)maps.size() / 30;
+		// Pokémon Unbound hides its groups: FireRed 1.0's Overworld_GetMapHeaderByGroupAndId (0x55238) jumps to a routine
+		// of its own (ldr r2, =f; bx r2) that reads gMapGroups[group] XORed with a key, then that group's map: ldr r3,
+		// =groups; lsl r0, #2; ldr r2, [r0, r3]; ldr r3, =key; lsl r1, #2; eor r3, r2; ldr r0, [r1, r3]; bx lr
+		if (n > 0x55240 && !memcmp(rom + 0xac, "BPRE", 4) && rom[0xbc] == 0 && le16(rom + 0x55238) == 0x4a00 && le16(rom + 0x5523a) == 0x4710)
+		{
+			static const uint8_t F[16] = { 0x03, 0x4b, 0x80, 0x00, 0xc2, 0x58, 0x03, 0x4b, 0x89, 0x00, 0x53, 0x40, 0xc8, 0x58, 0x70, 0x47 };
+			const uint32_t to = le32(rom + 0x5523c);
+			const size_t f = (size_t)(to & ~1u) - 0x08000000u;
+			const long groups = to >= 0x08000000u && f + 24 <= n && !memcmp(rom + f, F, 16) ? romPtr(rom, n, f + 16, 4) : -1;
+			if (groups >= 0)
+			{
+				const uint32_t key = le32(rom + f + 20);
+				auto groupAt = [&](int g) -> long
+				{
+					if ((size_t)groups + 4 * (size_t)g + 4 > n) return -1;
+					const uint32_t v = le32(rom + groups + 4 * (size_t)g) ^ key;
+					return v >= 0x08000000u && v - 0x08000000u < n ? (long)(v - 0x08000000u) : -1;
+				};
+				auto mapAt = [&](int g, int num) -> long
+				{
+					long grp = groupAt(g);
+					long h = grp < 0 ? -1 : romPtr(rom, n, (size_t)grp + 4 * (size_t)num, 0x1c);
+					return h >= 0 && mapHeaderAt(rom, n, h) ? h : -1;
+				};
+				int missed = 0;
+				for (auto& m : maps) missed += mapAt(m.first, m.second) < 0;
+				if (missed <= allowed)
+				{
+					int run = 0;
+					while (run < 256 && groupAt(run) >= 0) run++;
+					t.mapsecs.assign((size_t)run, {});
+					t.mapHeaders.assign((size_t)run, {});
+					for (int g = 0; g < run; g++)
+					{
+						// (each group's maps: headers until one isn't, or the next group's table starts)
+						const long grp = groupAt(g), next = g + 1 < run ? groupAt(g + 1) : -1;
+						for (int k = 0; k < 256; k++)
+						{
+							if (next > grp && (size_t)grp + 4 * (size_t)k >= (size_t)next) break;
+							long h = mapAt(g, k);
+							if (h < 0) break;
+							t.mapsecs[g].push_back(rom[h + 0x14]);
+							t.mapHeaders[g].push_back(h);
+						}
+					}
+					return;
+				}
+			}
+		}
 		size_t found = 0;
 		int fewest = allowed + 1, foundRun = 0;
 		for (size_t a = 0; a + 4 * (size_t)(maxGroup + 1) <= n; a += 4)
