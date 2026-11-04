@@ -42,7 +42,7 @@ namespace bsync
 	inline std::string stemOf(const std::string& name) { size_t d = name.rfind('.'); return d == std::string::npos || d == 0 ? name : name.substr(0, d); }
 	inline std::string extOf(const std::string& name) { size_t d = name.rfind('.'); return d == std::string::npos ? "" : lower(name.substr(d + 1)); }
 	bool syncDir(const std::string& dir);
-	bool writeAtomic(const std::string& path, const std::string& data);
+	bool writeAtomic(const std::string& path, const std::string& data, mode_t mode = 0666);	// (mode: less the umask)
 	long long freeBytes(const std::string& p);
 	void pruneDirs(std::string d, const std::string& top);
 	std::string sd2Roms();
@@ -143,6 +143,15 @@ namespace bsync
 	// The same file romsync.py (Romhost's reference client) keeps: server, token, device, name, state{files,gamelist,
 	// etag}, saves{path: {version, sha1}}, so either can carry on from the other. backend says which server it is.
 	struct SaveSt { double version = 0; std::string hash, server; };	// romm: version = the save's id, hash its MD5, server its updated_at
+	// RomM's save slots (stateVersion 2), keyed "<rom id>/<slot>": the version both sides last held (the agreed one: its
+	// MD5, the server's id for it, and the card's save it was for; wire: the server's MD5 for it when the card holds it
+	// in another form, a DraStic .dsv taken as its raw save), what this handheld holds back for its owner, a conflict
+	// (both kept, the server's version in the vault) or a save it won't take or send by itself, and the saves waiting
+	// to be sent
+	struct SlotSt { std::string md5, rel; long long saveId = 0; std::string wire; };
+	struct SlotNote { std::string rel, why, localMd5, serverMd5, device, updated, vault; long long saveId = 0; };
+	// a save that couldn't be sent (no answer, the server's error): its bytes in the vault, sent by the next sync
+	struct QueueSt { std::string md5, vault; double since = 0; };
 	struct Conf
 	{
 		std::string backend = "romhost", server, token, device, name, serverName, serverVersion, etag, last;	// serverVersion: RomM's, as its heartbeat says
@@ -153,6 +162,10 @@ namespace bsync
 																	// (the second SD card's: "@sd2/<folder>")
 		std::map<std::string, SaveSt> saves;						// data-relative path -> as of the last sync
 		std::map<std::string, SaveSt> states;						// RomM's states (Romhost keeps them with the saves)
+		int stateVersion = 1;										// 2: RomM's saves by slot (romsync.v1.json: the file before)
+		std::map<std::string, SlotSt> slots;
+		std::map<std::string, SlotNote> conflicts, held;
+		std::map<std::string, QueueSt> queue;
 		double lastTime = 0;
 		bool paired() const { return !server.empty() && !token.empty(); }
 	};

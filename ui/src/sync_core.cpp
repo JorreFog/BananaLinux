@@ -135,15 +135,23 @@ namespace bsync
 		return ok;
 	}
 	// written beside, synced, renamed over, the folder synced
-	bool writeAtomic(const std::string& path, const std::string& data)
+	bool writeAtomic(const std::string& path, const std::string& data, mode_t mode)
 	{
 		mkdirs(dirOf(path));
 		std::string tmp = path + ".new";
-		FILE* f = fopen(tmp.c_str(), "wb");
-		if (!f) return false;
-		bool ok = fwrite(data.data(), 1, data.size(), f) == data.size();
-		ok &= fflush(f) == 0 && fsync(fileno(f)) == 0;
-		ok &= fclose(f) == 0;
+		unlink(tmp.c_str());	// (one left by a run cut short would keep its own mode, not this one)
+		int fd = open(tmp.c_str(), O_WRONLY | O_CREAT | O_TRUNC, mode);
+		if (fd < 0) return false;
+		size_t at = 0;
+		while (at < data.size())
+		{
+			ssize_t w = write(fd, data.data() + at, data.size() - at);
+			if (w < 0 && errno == EINTR) continue;
+			if (w <= 0) break;
+			at += (size_t)w;
+		}
+		bool ok = at == data.size() && fsync(fd) == 0;
+		ok &= close(fd) == 0;
 		if (!ok || rename(tmp.c_str(), path.c_str()) != 0) { unlink(tmp.c_str()); return false; }
 		return syncDir(dirOf(path));
 	}
@@ -447,6 +455,29 @@ namespace bsync
 		}
 		return o + (first ? "}" : "\n }");
 	}
+	void readNotes(const JVal* j, std::map<std::string, SlotNote>& out)
+	{
+		if (!j || !j->isObj()) return;
+		for (auto& kv : j->obj)
+		{
+			const JVal& v = *kv.second;
+			out[kv.first] = { v.str("path"), v.str("why"), v.str("local_md5"), v.str("server_md5"), v.str("device"), v.str("updated_at"), v.str("vault"), (long long)v.num("save_id") };
+		}
+	}
+	std::string notesJson(const std::map<std::string, SlotNote>& m)
+	{
+		std::string o = "{";
+		bool first = true;
+		for (auto& kv : m)
+		{
+			const SlotNote& n = kv.second;
+			o += std::string(first ? "\n" : ",\n") + "  " + jsonStr(kv.first) + ": {\"path\": " + jsonStr(n.rel) + (n.why.empty() ? "" : ", \"why\": " + jsonStr(n.why)) +
+				", \"local_md5\": " + jsonStr(n.localMd5) + ", \"save_id\": " + std::to_string(n.saveId) + ", \"server_md5\": " + jsonStr(n.serverMd5) +
+				", \"device\": " + jsonStr(n.device) + ", \"updated_at\": " + jsonStr(n.updated) + ", \"vault\": " + jsonStr(n.vault) + "}";
+			first = false;
+		}
+		return o + (first ? "}" : "\n }");
+	}
 	}
 	Conf loadConf()
 	{
@@ -476,6 +507,13 @@ namespace bsync
 		}
 		readSaves(j->get("saves"), c.saves);
 		readSaves(j->get("states"), c.states);
+		c.stateVersion = (int)j->num("stateVersion", 1);
+		if (const JVal* sl = j->get("slots")) if (sl->isObj())
+			for (auto& kv : sl->obj) c.slots[kv.first] = { kv.second->str("md5"), kv.second->str("path"), (long long)kv.second->num("save_id"), kv.second->str("server_md5") };
+		readNotes(j->get("conflicts"), c.conflicts);
+		readNotes(j->get("held"), c.held);
+		if (const JVal* qu = j->get("queue")) if (qu->isObj())
+			for (auto& kv : qu->obj) c.queue[kv.first] = { kv.second->str("md5"), kv.second->str("vault"), kv.second->num("since") };
 		return c;
 	}
 	bool saveConf(const Conf& c)
@@ -503,14 +541,29 @@ namespace bsync
 			o += "]";
 			first = false;
 		}
-		o += "}},\n \"saves\": " + savesJson(c.saves, c.backend == "romm") + ",\n \"states\": " + savesJson(c.states, true) + "\n}\n";
-		std::string tmp = CONF + ".new";
-		mkdirs(dirOf(CONF));
-		int fd = open(tmp.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600);	// (the token: only root reads it)
-		if (fd < 0) return false;
-		bool ok = write(fd, o.data(), o.size()) == (ssize_t)o.size() && fsync(fd) == 0;
-		ok &= close(fd) == 0;
-		return ok && rename(tmp.c_str(), CONF.c_str()) == 0 && syncDir(dirOf(CONF));
+		o += "}},\n \"saves\": " + savesJson(c.saves, c.backend == "romm") + ",\n \"states\": " + savesJson(c.states, true);
+		if (c.stateVersion >= 2)
+		{
+			o += ",\n \"stateVersion\": " + std::to_string(c.stateVersion) + ",\n \"slots\": {";
+			first = true;
+			for (auto& kv : c.slots)
+			{
+				o += std::string(first ? "\n  " : ",\n  ") + jsonStr(kv.first) + ": {\"md5\": " + jsonStr(kv.second.md5) + ", \"save_id\": " + std::to_string(kv.second.saveId) + ", \"path\": " + jsonStr(kv.second.rel) +
+					(kv.second.wire.empty() ? "" : ", \"server_md5\": " + jsonStr(kv.second.wire)) + "}";
+				first = false;
+			}
+			o += std::string(first ? "}" : "\n }") + ",\n \"conflicts\": " + notesJson(c.conflicts) + ",\n \"held\": " + notesJson(c.held);
+			o += ",\n \"queue\": {";
+			first = true;
+			for (auto& kv : c.queue)
+			{
+				o += std::string(first ? "\n  " : ",\n  ") + jsonStr(kv.first) + ": {\"md5\": " + jsonStr(kv.second.md5) + ", \"vault\": " + jsonStr(kv.second.vault) + ", \"since\": " + fmtNum(kv.second.since) + "}";
+				first = false;
+			}
+			o += first ? "}" : "\n }";
+		}
+		o += "\n}\n";
+		return writeAtomic(CONF, o, 0600);	// (the token: only root reads it)
 	}
 
 	// the key of a file on the card, in the form the state keeps for the same manifest file

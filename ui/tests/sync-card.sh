@@ -78,13 +78,16 @@ blank() {
 }
 
 # DeSmuME's footer: an 82-byte line saying where to cut, then six u32 (actual size, padded size, type, address size,
-# memory size, version 0), then the 16-byte cookie
+# memory size, version 0), then the 16-byte cookie. dsv <raw> <out> [short|version|pad]: the footer without its line
+# (an older DraStic's 40 bytes), with version 1, or with a padded size 4 more than the save
 dsv() {
-    python3 - "$1" "$2" <<'EOF'
+    python3 - "$1" "$2" "$3" <<'EOF'
 import struct, sys
-raw = open(sys.argv[1], "rb").read()
+raw, form = open(sys.argv[1], "rb").read(), sys.argv[3]
 snip = b"|<--Snip above here to create a raw sav by excluding this DeSmuME savedata footer:"
 assert len(snip) == 82
-open(sys.argv[2], "wb").write(raw + snip + struct.pack("<6I", len(raw), len(raw), 0, 2, len(raw), 0) + b"|-DESMUME SAVE-|")
+n = len(raw)
+fields = struct.pack("<6I", n, n + 4 if form == "pad" else n, 0, 2, n, 1 if form == "version" else 0)
+open(sys.argv[2], "wb").write(raw + (b"" if form == "short" else snip) + fields + b"|-DESMUME SAVE-|")
 EOF
 }

@@ -6,7 +6,8 @@
 # What must hold: pairing (RomM's device code, a client token's pairing code; Romhost's code from Homeport, UDP
 # discovery), the games with their covers and gamelist entries in the card's layout, a gamelist's own entries and a
 # file of the user's at a server path left alone, a system skipped on the handheld left as it is, a game gone from
-# the server removed (unless changed on the card), and the saves both ways with nothing lost in a conflict.
+# the server removed (unless changed on the card), a RomM before 5.4 only giving its saves, and Romhost's saves both
+# ways with nothing lost in a conflict. RomM's saves by slot are tests/sync-slots.sh's.
 HERE=$(cd "$(dirname "$0")/.." && pwd)
 OUT=${OUT:-$HERE/tests/out}/sync
 rm -rf "$OUT"; mkdir -p "$OUT"
@@ -229,40 +230,6 @@ printf '#!/bin/sh\necho "$1" >> "%s"\n' "$OUT/nds-saves.log" > "$OUT/nds-saves";
 BANANA_NDS_SAVES=$OUT/nds-saves bs rb sync --saves-only >/dev/null 2>&1
 grep -q "rb/roms/nds/Peel Quest (USA).nds$" "$OUT/nds-saves.log" 2>/dev/null || bad "nds-saves wasn't run for the .dsv"
 rm -rf "$OUT/rb/roms/nds" "$OUT/rb/drastic"; : > "$OUT/rb/banana/settings.conf"
-# saves: up from card A (every GBA core's saves/gba and BananaDS's saves/nds), down to card B
-mkdir -p "$OUT/ra/saves/nds" "$OUT/ra/saves/gba"; echo "ds v1" > "$OUT/ra/saves/nds/Peel Quest (USA).sav"; echo "gba v1" > "$OUT/ra/saves/gba/Banana Run (USA).srm"
-echo bak > "$OUT/ra/saves/gba/Banana Run (USA).srm.bak"; echo resume > "$OUT/ra/saves/nds/Peel Quest (USA).resume.sav"
-bs ra sync --saves-only > "$OUT/romm-saves1.log" 2>&1
-grep -q "2 saves up" "$OUT/romm-saves1.log" || bad "RomM saves up: $(tail -2 "$OUT/romm-saves1.log")"
-curl -s "$U/test/state" | grep -q 'resume\|\.bak' && bad "a .bak or quick-resume file was uploaded"
-# (a save syncs for a game on the card: B gets A's ROMs, as someone copying them over would)
-mkdir -p "$OUT/rb/roms/nds" "$OUT/rb/roms/gba"; cp "$OUT/ra/roms/nds/Peel Quest (USA).nds" "$OUT/rb/roms/nds/"; cp "$OUT/ra/roms/gba/Banana Run (USA).gba" "$OUT/rb/roms/gba/"
-bs rb sync --saves-only > "$OUT/romm-saves2.log" 2>&1
-[ "$(cat "$OUT/rb/saves/nds/Peel Quest (USA).sav" 2>/dev/null)" = "ds v1" ] || bad "card B didn't get the DS save"
-[ "$(cat "$OUT/rb/saves/gba/Banana Run (USA).srm" 2>/dev/null)" = "gba v1" ] || bad "card B didn't get the GBA save"
-# changed on B, synced; A gets it
-echo "ds v2 from B" > "$OUT/rb/saves/nds/Peel Quest (USA).sav"; bs rb sync --saves-only >/dev/null 2>&1
-bs ra sync --saves-only >/dev/null 2>&1
-[ "$(cat "$OUT/ra/saves/nds/Peel Quest (USA).sav")" = "ds v2 from B" ] || bad "card A didn't get B's change"
-# both changed: the newer wins, the other kept beside it as .bak (never lost), and it's counted
-echo "gba A" > "$OUT/ra/saves/gba/Banana Run (USA).srm"; sleep 1.1; echo "gba B newer" > "$OUT/rb/saves/gba/Banana Run (USA).srm"
-bs rb sync --saves-only >/dev/null 2>&1
-bs ra sync --saves-only > "$OUT/romm-conflict.log" 2>&1
-grep -q "1 conflicts" "$OUT/romm-conflict.log" || bad "the conflict wasn't counted: $(tail -1 "$OUT/romm-conflict.log")"
-[ "$(cat "$OUT/ra/saves/gba/Banana Run (USA).srm")" = "gba B newer" ] || bad "the newer save didn't win"
-ls "$OUT/ra/saves/gba/" | grep -q 'Banana Run (USA).srm.card-.*\.bak' || bad "the card's save wasn't kept in a conflict"
-# a save deleted on the card is forgotten, not deleted on the server
-rm "$OUT/rb/saves/nds/Peel Quest (USA).sav"; bs rb sync --saves-only >/dev/null 2>&1
-curl -s "$U/test/state" | grep -q 'Peel Quest (USA).sav' || bad "deleting a save on the card deleted it on the server"
-# choosing games also applies to saves: an unchosen game's save is not pulled to the card
-card rd
-CODE=$(curl -s -XPOST "$U/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
-bs rd pair "$U" "$CODE" >/dev/null 2>&1 || bad "rd: pairing failed: $(st rd)"
-printf 'homesync_games = chosen\n' > "$OUT/rd/banana/settings.conf"
-printf 'gba/Banana Run (USA).gba\n' > "$OUT/rd/banana/homesync-games.txt"
-bs rd sync --saves-only > "$OUT/pick-saves.log" 2>&1 || bad "pick saves: $(tail -3 "$OUT/pick-saves.log")"
-[ -f "$OUT/rd/saves/Banana Run (USA).srm" ] || bad "pick saves: the chosen game's save didn't come"
-[ -e "$OUT/rd/saves/nds/Peel Quest (USA).sav" ] && bad "pick saves: an unchosen game's save came to the card"
 # a system skipped on this handheld: left as it is; a game gone from the server: removed; changed on the card: kept
 printf 'homesync.nds = off\n' > "$OUT/ra/banana/settings.conf"
 curl -s -XPOST "$U/test/delete-rom" -d '{"id": 104}' >/dev/null      # Peel Quest (nds, skipped)
@@ -322,7 +289,7 @@ cmp -s "$LT/gba/Secure Run (USA).gba" "$OUT/ru/roms/gba/Secure Run (USA).gba" ||
 grep -q 'certificate checks are off (homesync_tls)' "$OUT/romm-tls4.log" && grep -q 'certificate checks are off (homesync_tls)' "$OUT/romm-tls5.log" ||
     bad "certificate checks off not said"
 # a RomM before 5.4 (whose slots and device records the other clients sync by): saves only come down, and the note
-# says to update it; a development build counts as new
+# says to update it; a development build counts as new (its saves by slot)
 LV=$OUT/romm-old-lib; mkdir -p "$LV/gba"; printf 'gba rom down' > "$LV/gba/Down (USA).gba"; printf 'gba rom up' > "$LV/gba/Up (USA).gba"
 for v in 5.3.1 development; do
     p=$(port); cv=rv-$v
@@ -330,10 +297,12 @@ for v in 5.3.1 development; do
     waitport "$p" /api/heartbeat || bad "the fake RomM $v didn't start"
     t=$(curl -s -XPOST "http://127.0.0.1:$p/test/token" -d '{}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')
     card "$cv"; bs "$cv" pair "http://127.0.0.1:$p" "$t" >/dev/null 2>&1 && bs "$cv" sync >/dev/null 2>&1 || bad "RomM $v: pairing and the games: $(st "$cv")"
-    curl -s -XPOST "http://127.0.0.1:$p/test/save" -d '{"rom_id": 101, "file_name": "Down (USA).srm", "data": "0102030405"}' >/dev/null
+    sl=; [ $v = 5.3.1 ] || sl='"slot": "autosave", '
+    # (a GBA EEPROM's 512 bytes, a size a GBA save comes in)
+    curl -s -XPOST "http://127.0.0.1:$p/test/save" -d "{$sl\"rom_id\": 101, \"file_name\": \"Down (USA).srm\", \"data\": \"0102030405$(printf 'ff%.0s' $(seq 507))\"}" >/dev/null
     mkdir -p "$OUT/$cv/saves/gba"; echo "this handheld's" > "$OUT/$cv/saves/gba/Up (USA).srm"
     bs "$cv" sync --saves-only > "$OUT/romm-$v.log" 2>&1
-    [ "$(od -An -tx1 "$OUT/$cv/saves/gba/Down (USA).srm" 2>/dev/null | tr -d ' \n')" = 0102030405 ] || bad "RomM $v: the server's save didn't come down: $(cat "$OUT/romm-$v.log")"
+    [ "$(head -c 5 "$OUT/$cv/saves/gba/Down (USA).srm" 2>/dev/null | od -An -tx1 | tr -d ' \n')" = 0102030405 ] || bad "RomM $v: the server's save didn't come down: $(cat "$OUT/romm-$v.log")"
     sent=$(curl -s -H "Authorization: Bearer $t" "http://127.0.0.1:$p/api/saves?rom_id=102" | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')
     case $v in
     5.3.1)

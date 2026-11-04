@@ -27,17 +27,17 @@ fi
 # size <file>: its bytes, 0 when there is none
 size() { wc -c 2>/dev/null < "$1" || echo 0; }
 # raw_of_dsv <dsv> <out>: the raw save inside a .dsv, DeSmuME's footer and padding left off; the file as it is
-# when it has no footer (one nds-saves wrote)
+# when it has no footer (one nds-saves wrote). Fails (out not written) for a footer whose fields don't add up: its
+# version (20 bytes from the end) not 0, or the padded size not the file less one of the footer's two lengths, 122
+# bytes or the 40 an older DraStic wrote without the text line. Such a file is left for its owner, not guessed at
 raw_of_dsv() {
     _n=$(wc -c < "$1") || return 1
     # (each write checked, and its size: on a full card a copy cut short counted as done and went over the save)
-    [ "$_n" -gt 122 ] || { cat "$1" > "$2" && [ "$(size "$2")" = "$_n" ]; return; }
-    [ "$(tail -c 16 "$1")" = "|-DESMUME SAVE-|" ] || { cat "$1" > "$2" && [ "$(size "$2")" = "$_n" ]; return; }
-    # padded_size (u32 LE, 36 bytes from the end) is where DeSmuME put the raw save's end; the fixed 122-byte
-    # footer is the fallback when it is missing (od absent) or out of range
-    _p=$(od -An -tu4 -j $((_n - 36)) -N 4 "$1" 2>/dev/null | tr -d ' \n')
-    case $_p in ''|*[!0-9]*) _p=$((_n - 122)) ;; esac
-    { [ "$_p" -gt 0 ] && [ "$_p" -le $((_n - 40)) ]; } || _p=$((_n - 122))
+    { [ "$_n" -gt 40 ] && [ "$(tail -c 16 "$1")" = "|-DESMUME SAVE-|" ]; } || { cat "$1" > "$2" && [ "$(size "$2")" = "$_n" ]; return; }
+    _v=$(od -An -tu4 -j $((_n - 20)) -N 4 "$1" | tr -d ' \n')
+    _p=$(od -An -tu4 -j $((_n - 36)) -N 4 "$1" | tr -d ' \n')
+    [ "$_v" = 0 ] || return 1
+    case $_p in "$((_n - 122))"|"$((_n - 40))") ;; *) return 1 ;; esac
     head -c "$_p" "$1" > "$2" && [ "$(size "$2")" = "$_p" ]
 }
 # keep <file>: <file>.bak, a whole copy or none at all (made beside it and renamed: a copy cut short on a full card
@@ -50,7 +50,7 @@ elif [ -f "$SAV" ] && { [ ! -f "$DSV" ] || [ "$SAV" -nt "$DSV" ]; }; then TO=dsv
 # the newer one empty (a game quit before it wrote, a file made and never filled: SM64DS in SuperDrastic, #96) and
 # the older one a save: the older one is kept and goes over the empty one instead
 if [ "$TO" = sav ] && [ "$(size "$SAV")" -gt 0 ]; then
-    raw_of_dsv "$DSV" "$SAV.new" || exit 0
+    raw_of_dsv "$DSV" "$SAV.new" || { rm -f "$SAV.new"; echo "nds-saves: $G: DraStic's save: its footer doesn't add up or it couldn't be read (card full?), left as it is"; exit 0; }
     n=$(size "$SAV.new"); rm -f "$SAV.new"
     [ "$n" -lt 512 ] && { echo "nds-saves: $G: DraStic's save is newer but empty ($n bytes): BananaDS's kept, DraStic takes it"; TO=dsv WHY=kept; }
 elif [ "$TO" = dsv ] && [ "$(size "$SAV")" -lt 512 ] && [ "$(size "$DSV")" -gt 0 ]; then
@@ -58,7 +58,7 @@ elif [ "$TO" = dsv ] && [ "$(size "$SAV")" -lt 512 ] && [ "$(size "$DSV")" -gt 0
 fi
 
 if [ "$TO" = sav ]; then
-    raw_of_dsv "$DSV" "$SAV.new" || { rm -f "$SAV.new"; echo "nds-saves: $G: DraStic's save couldn't be copied (card full?): BananaDS's left as it is" >&2; exit 0; }
+    raw_of_dsv "$DSV" "$SAV.new" || { rm -f "$SAV.new"; echo "nds-saves: $G: DraStic's save: its footer doesn't add up or it couldn't be copied (card full?): BananaDS's left as it is" >&2; exit 0; }
     if [ -f "$SAV" ] && cmp -s "$SAV.new" "$SAV"; then rm -f "$SAV.new"; exit 0; fi
     if [ -f "$SAV" ] && ! keep "$SAV"; then rm -f "$SAV.new"; echo "nds-saves: $G: no room for a backup of BananaDS's save: left as it is" >&2; exit 0; fi
     mv -f "$SAV.new" "$SAV" && touch -r "$DSV" "$SAV"

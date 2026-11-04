@@ -1,6 +1,9 @@
-// blank saves (save_adapt.h). What each core writes before a game has saved was measured in a chroot of the image
-// and read from each core's source at the commit its package pins
+// blank saves and a server's saves taken in (save_adapt.h). What each core writes before a game has saved, and the
+// sizes of its saves, were measured in a chroot of the image and read from each core's source at the commit its
+// package pins; the DS's from melonDS (BananaDS) and DeSmuME's footer, which DraStic writes too
 #include "save_adapt.h"
+#include "sync_core.h"
+#include <cstdint>
 
 namespace bsync
 {
@@ -66,5 +69,111 @@ namespace bsync
 		if ((flat || folder == "PCSX-ReARMed") && b == pcsxBlankCard()) return true;
 		if ((flat || folder == "Mupen64Plus-Next") && n64Blank(b)) return true;
 		return false;
+	}
+
+	namespace
+	{
+	// the rules a system's saves are checked by: DS, GBA, cartridge RAM (Game Boy, NES, SNES, Mega Drive), a
+	// PlayStation memory card, Mupen64Plus-Next's struct
+	enum class Kind { None, DS, GBA, Cart, PSX, N64 };
+	Kind kindOf(const std::string& s)
+	{
+		if (s == "nds") return Kind::DS;
+		if (s == "gba") return Kind::GBA;
+		if (s == "gb" || s == "gbc" || s == "nes" || s == "snes" || s == "megadrive") return Kind::Cart;
+		if (s == "psx") return Kind::PSX;
+		if (s == "n64") return Kind::N64;
+		return Kind::None;
+	}
+	bool pow2(size_t n) { return n && !(n & (n - 1)); }
+	uint32_t u32(const std::string& b, size_t at)
+	{
+		return (unsigned char)b[at] | (unsigned char)b[at + 1] << 8 | (unsigned char)b[at + 2] << 16 | (uint32_t)(unsigned char)b[at + 3] << 24;
+	}
+	// DeSmuME's footer off a DS save, as nds-saves cuts it: the cookie last, version 0 at 20 bytes from the end, and
+	// at 36 the padded size, which is the file less the footer, 122 bytes (or 40, an older DraStic's, without the
+	// line saying where to cut). No footer: as it is. false: a footer whose fields don't add up
+	bool cutFooter(std::string& b)
+	{
+		size_t n = b.size();
+		if (n <= 40 || b.compare(n - 16, 16, "|-DESMUME SAVE-|") != 0) return true;
+		if (u32(b, n - 20) != 0) return false;
+		long long p = u32(b, n - 36);
+		if (p != (long long)n - 122 && p != (long long)n - 40) return false;
+		b.resize((size_t)p);
+		return true;
+	}
+	}
+
+	bool wireOk(const std::string& system, const std::string& name, const std::string& own)
+	{
+		std::string e = extOf(name);
+		switch (kindOf(system))
+		{
+		case Kind::DS: return e == "sav" || e == "dsv";
+		case Kind::GBA: case Kind::Cart: return e == "srm" || e == "sav";
+		case Kind::PSX: return e == "srm" || e == "mcd" || e == "mcr";
+		case Kind::N64: return e == "srm";
+		default: return e == lower(own) && e != "zip";
+		}
+	}
+
+	long long maxSave(const std::string& s)
+	{
+		switch (kindOf(s))
+		{
+		case Kind::DS: return (8 << 20) + 122;
+		case Kind::GBA: return (128 << 10) + 16;
+		case Kind::PSX: return 131072;
+		case Kind::N64: return 296960;
+		case Kind::Cart: return s == "nes" ? 32 << 10 : s == "megadrive" ? 64 << 10 : 128 << 10;
+		default: return -1;
+		}
+	}
+
+	std::string adaptIn(const std::string& s, std::string& b, const std::string* local)
+	{
+		const char* size = "not a size this system's saves come in";
+		const char* other = "another size than this handheld's save for the game";
+		size_t n = b.size();
+		bool same = !local || local->size() == n;
+		switch (kindOf(s))
+		{
+		case Kind::DS:
+			// (melonDS never refuses a size: it cuts the file short or pads it to the one its game list gives, so a
+			// wrong one is stopped here)
+			if (!cutFooter(b)) return "a DS save whose footer doesn't add up";
+			n = b.size();
+			if (!pow2(n) || n < 512 || n > (8u << 20)) return size;
+			return !local || local->size() == n ? "" : other;
+		case Kind::GBA:
+		{
+			// (gpSP writes every save as 128 KiB, mGBA its real size, the same bytes in the same places. Standalone mGBA
+			// also writes the game's clock, 16 bytes, after the save of a cartridge that has one, the Pokemon games'
+			// 128 KiB coming out as 131088: left off, as the cores here keep no clock in the save and read it as they
+			// would a save without one)
+			auto gba = [](size_t k) { return k == 512 || k == 8 << 10 || k == 32 << 10 || k == 64 << 10 || k == 128 << 10; };
+			if (!gba(n) && n > 16 && gba(n - 16)) b.resize(n -= 16);
+			if (!gba(n)) return size;
+			same = !local || local->size() == n;
+			if (same || n == 128 << 10) return "";
+			return local->size() == 128 << 10 && allOf(*local, n, local->size() - n, 0xFF) ? "" : other;
+		}
+		case Kind::Cart:
+		{
+			bool ok = s == "nes" ? n >= 128 && n <= 32 << 10
+				: s == "snes" ? pow2(n) && n >= 1 << 10 && n <= 128 << 10
+				: s == "megadrive" ? n % 2 == 0 && n > 0 && n <= 64 << 10
+				// (Game Boy: the RAM sizes a cartridge's header can name, 2 to 128 KiB, and MBC2's 512 bytes. Gambatte, the
+				// core here, writes 8, 32 or 128 KiB only (whole banks, MBC2's as a bank), but it reads a save of any of
+				// these, so one another emulator made is taken in, and the card's own are all within them)
+				: n == 512 || n == 2 << 10 || n == 8 << 10 || n == 32 << 10 || n == 64 << 10 || n == 128 << 10;
+			if (!ok) return size;
+			return same ? "" : other;
+		}
+		case Kind::PSX: return n == 131072 ? "" : size;
+		case Kind::N64: return n == 296960 ? "" : size;
+		default: return "";
+		}
 	}
 }

@@ -36,8 +36,9 @@ user, for a scripted client), POST /test/save {"rom_id","file_name","data"(hex),
 Faults: POST /test/fault {"path": <regex on "METHOD /path">, "kind", "count"?: 1, "arg"?} answers the next matching
 requests wrong: "truncate" (half the body, the whole length announced, the connection closed), "badhash" (the body's
 first byte flipped), "500" (refused before anything is done), "500-after" (done, then answered 500), "slow" (arg
-bytes a second, 1024), "skew" (the Date header arg seconds off), "raise" (the handler fails, as a bug in the
-stand-in would); {"clear": true} drops them.
+bytes a second, 1024), "delay" (answered arg seconds late, 1, as it stood when asked: the state may move meanwhile),
+"skew" (the Date header arg seconds off), "replace" (the body swapped for arg: a string as it is, anything else as
+JSON), "raise" (the handler fails, as a bug in the stand-in would); {"clear": true} drops them.
 Strict: POST /test/strict {"tokens"} notes, for those tokens, what BananaOS must never send (overwrite=true,
 autocleanup, an upload outside a slot, PUT /api/saves/{id}, /api/saves/delete); GET /test/violations lists them.
 """
@@ -525,9 +526,14 @@ class H(http.server.BaseHTTPRequestHandler):
     def write_answer(self, fault):
         code, body, ctype, headers = self.answer
         kind = fault["kind"] if fault else None
+        if kind == "replace":
+            a = fault.get("arg")
+            body = (a if isinstance(a, str) else json.dumps(a)).encode()
         if kind == "badhash" and body and ctype == "application/octet-stream":
             body = bytes([body[0] ^ 0xFF]) + body[1:]
         length = len(body)
+        if kind == "delay":
+            time.sleep(float(fault.get("arg") or 1))
         if kind == "truncate":
             body = body[:len(body) // 2]
             self.close_connection = True
