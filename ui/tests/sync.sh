@@ -199,6 +199,15 @@ ls "$OUT/ra/saves/" | grep -q 'Banana Run (USA).srm.card-.*\.bak' || bad "the ca
 # a save deleted on the card is forgotten, not deleted on the server
 rm "$OUT/rb/saves/nds/Peel Quest (USA).sav"; bs rb sync --saves-only >/dev/null 2>&1
 curl -s "$U/test/state" | grep -q 'Peel Quest (USA).sav' || bad "deleting a save on the card deleted it on the server"
+# choosing games also applies to saves: an unchosen game's save is not pulled to the card
+card rd
+CODE=$(curl -s -XPOST "$U/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
+bs rd pair "$U" "$CODE" >/dev/null 2>&1 || bad "rd: pairing failed: $(st rd)"
+printf 'homesync_games = chosen\n' > "$OUT/rd/banana/settings.conf"
+printf 'gba/Banana Run (USA).gba\n' > "$OUT/rd/banana/homesync-games.txt"
+bs rd sync --saves-only > "$OUT/pick-saves.log" 2>&1 || bad "pick saves: $(tail -3 "$OUT/pick-saves.log")"
+[ -f "$OUT/rd/saves/Banana Run (USA).srm" ] || bad "pick saves: the chosen game's save didn't come"
+[ -e "$OUT/rd/saves/nds/Peel Quest (USA).sav" ] && bad "pick saves: an unchosen game's save came to the card"
 # a system skipped on this handheld: left as it is; a game gone from the server: removed; changed on the card: kept
 printf 'homesync.nds = off\n' > "$OUT/ra/banana/settings.conf"
 curl -s -XPOST "$U/test/delete-rom" -d '{"id": 104}' >/dev/null      # Peel Quest (nds, skipped)

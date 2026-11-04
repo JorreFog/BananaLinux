@@ -57,6 +57,9 @@ set_cfg() {
     sed -i "/^$1 = /d" $CFG
     printf '%s = "%s"\n' "$1" "$2" >> $CFG
 }
+# the saves in the one folder the Home server syncs (saves-flat: a card's core folders migrated once per boot)
+[ -x /usr/libexec/banana/saves-flat ] && /usr/libexec/banana/saves-flat
+[ -f /run/banana/saves-flat ] && set_cfg sort_savefiles_enable false
 # Banana's choices over what RetroArch wrote on a card before they were in retroarch.cfg, once (a change made in
 # RetroArch's menu afterwards is kept): A confirms and B goes back in its menu, F + Start quits with one press, and
 # the N64 core's GLideN64 on its own thread (Super Mario 64 on an RG DS Plus: 40-50 frames a second, 55-60 with it,
@@ -154,22 +157,29 @@ fi
 # global.glslp Banana wrote (its first line) is changed or removed: one saved from RetroArch's own menu stays.
 GP=/data/retroarch/config/global.glslp
 look=$(setting ra_shader)
-case $look in
-lcd) SP=handheld/zfast-lcd.glslp ;;
-crt) SP=crt/zfast-crt.glslp ;;
-sharp) SP=interpolation/sharp-bilinear-simple.glslp ;;
-*) SP= ;;
-esac
-ours() { head -n 1 $GP 2>/dev/null | grep -q '^# Banana'; }
-if [ -n "$SP" ]; then
-    if [ ! -f $GP ] || ours; then
-        mkdir -p ${GP%/*}
-        printf '# Banana: Settings > Other systems > Picture & sound > Shader (%s)\n#reference "/usr/share/libretro/shaders/glsl/%s"\n' "$look" "$SP" > $GP
-        set_cfg video_shader_enable true
+SHADE=/data/banana/.ra-shader
+# Only when Settings' value changed (or on a card from before the marker): a shader picked in RetroArch's own
+# menu is kept from launch to launch, as the comment above says.
+if [ ! -f "$SHADE" ] || [ "$look" != "$(cat "$SHADE" 2>/dev/null)" ]; then
+    case $look in
+    lcd) SP=handheld/zfast-lcd.glslp ;;
+    crt) SP=crt/zfast-crt.glslp ;;
+    sharp) SP=interpolation/sharp-bilinear-simple.glslp ;;
+    *) SP= ;;
+    esac
+    ours() { head -n 1 $GP 2>/dev/null | grep -q '^# Banana'; }
+    if [ -n "$SP" ]; then
+        if [ ! -f $GP ] || ours; then
+            mkdir -p ${GP%/*}
+            printf '# Banana: Settings > Other systems > Picture & sound > Shader (%s)\n#reference "/usr/share/libretro/shaders/glsl/%s"\n' "$look" "$SP" > $GP
+            set_cfg video_shader_enable true
+        fi
+    elif ours; then
+        rm -f $GP
+        set_cfg video_shader_enable false
     fi
-elif ours; then
-    rm -f $GP
-    set_cfg video_shader_enable false
+    printf '%s\n' "$look" > "$SHADE"
+    sync
 fi
 # Settings > Other systems > Picture & sound > Audio latency and VSync: Banana's values written into RetroArch's config at every start
 # (so these two follow Settings: a change made to them in RetroArch's own menu lasts until the game quits)

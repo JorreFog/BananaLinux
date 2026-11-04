@@ -587,6 +587,7 @@ namespace
 	{
 		Conf& c;
 		std::set<std::string> skip;	// system folders this handheld skips (settings: homesync.<system> = off)
+		const std::set<std::string>* chosen = nullptr;	// games chosen for syncing (null: every game)
 		explicit Backend(Conf& conf) : c(conf) {}
 		virtual ~Backend() {}
 		virtual std::vector<std::string> auth() const { return { "Authorization: Bearer " + c.token }; }
@@ -1076,6 +1077,7 @@ namespace
 				{
 					auto ri = romById.find((long long)s->num("rom_id"));
 					if (ri == romById.end() || s->flag("missing_from_fs")) continue;
+					if (chosen && !chosen->count(ri->second.folder + "/" + ri->second.fsName)) continue;	// (not chosen: not pulled)
 					if (!s->str("slot").empty()) continue;	// (another client's versioned slots: left to it)
 					std::string name = s->str("file_name");
 					if (!safeRel(name) || name.find('/') != std::string::npos || stemOf(name) != ri->second.stem) continue;
@@ -1685,11 +1687,12 @@ namespace
 		bool states = get("homesync_states", "off") == "on";
 		std::set<std::string> skip;
 		for (auto& kv : set) if (kv.first.compare(0, 9, "homesync.") == 0 && kv.second == "off") skip.insert(kv.first.substr(9));
-		auto b = backendFor(c);
-		b->skip = skip;
 		bool pick = get("homesync_games", "all") == "chosen";
 		std::set<std::string> chosen;
 		if (pick) { chosen = readChoice(); c.etag.clear(); }	// (the list in full: the choice may have changed since)
+		auto b = backendFor(c);
+		b->skip = skip;
+		b->chosen = pick ? &chosen : nullptr;
 		Awake awake;
 		if (roms) awake.take();
 		status("running 0 0 |" + (c.serverName.empty() ? c.server : c.serverName));
