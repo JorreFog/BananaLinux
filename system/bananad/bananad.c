@@ -2084,8 +2084,9 @@ int main(int argc, char **argv)
 			if (cfg.dim_min > 0 && !dimmed) { double d = cfg.dim_min * 60.0 - (tnow - last_input); if (d > 0 && d < wait) wait = d; }
 		}
 		/* recording: the touchscreen read every 0.2 s, before its buffer of motion can overflow (a touch's own time is
-		 * in its event, so it's recorded when it happened) */
-		if (recst.on && nquiet && wait > 0.2) wait = 0.2;
+		 * in its event, so it's recorded when it happened). Dimmed: the same, so a touch lights the panels again at
+		 * once and not at the next minute's look (only while dimmed in the menu: nothing else wakes bananad for it) */
+		if ((recst.on || dimmed) && nquiet && wait > 0.2) wait = 0.2;
 		if (lid_closed && cfg.lid_sleep && !lid_retry_off) { double d = 5.0 - (tnow - last_input); if (d > 0 && d < wait) wait = d; }
 		if ((save_volume_at > 0 || save_backlight_at > 0) && wait > 0.5) wait = 0.5;
 		if (power_down && wait > 0.1) wait = 0.1;
@@ -2152,7 +2153,10 @@ int main(int argc, char **argv)
 
 		/* idle in the menu (no game running): the panels dim, then it sleeps */
 		game = pid_of("/run/banana/game.pid") != 0;
-		if (recst.on && quiet_scan()) undim();	/* (recording: touches and sticks read, in games too) */
+		/* touches and sticks, recording or not: they count for the idle timers below (a menu used by touch alone, the
+		 * on-screen keyboard, dimmed and slept while touched when only the flight recorder read them, so turning it on
+		 * changed what it recorded); quiet_scan records them only while the recorder is on */
+		if (quiet_scan()) undim();
 		if (recst.on && now >= recst.flush_at) { rec_flush(); recst.flush_at = now + 30; }
 		if (cfg.dim_min > 0 && !dimmed && !game && !lid_closed && now - last_input >= cfg.dim_min * 60.0) dim();
 		/* (not while charging: a sleep would put the charging light out; the menu stays dimmed instead) */
