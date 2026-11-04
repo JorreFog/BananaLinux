@@ -753,8 +753,12 @@ namespace rnds
 		tb.padY = pad;
 		Bitmap& b = tb.bmp;
 		b.alpha = true;
-		b.w = (int)std::ceil(line.width * scale) + 2 * pad;
-		b.h = (int)std::ceil(std::max(baselineCss * scale + desc, asc + desc)) + 2 * pad;
+		// (Banana: a line no screen could show, from a theme's numbers, isn't made: nothing is drawn. Its bitmap asked for
+		// terabytes, and the menu ended on bad_alloc)
+		double bw = std::ceil((double)line.width * scale) + 2.0 * pad, bh = std::ceil(std::max((double)baselineCss * scale + desc, (double)asc + desc)) + 2.0 * pad;
+		if (!(bw > 0 && bh > 0 && bw * bh <= 4096.0 * 4096.0)) return tb;
+		b.w = (int)bw;
+		b.h = (int)bh;
 		b.px.assign((size_t)b.w * b.h, 0);
 
 		float baseline = pad + topFrac + baselineCss * scale;

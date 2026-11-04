@@ -967,6 +967,23 @@ icn() { find "$IX/data/cache/icons" -name "Game.nds*" $1 | wc -l; }
 cp "$IX/roms/nds/B/Game.nds" "$IX/roms/nds/A/Game.nds"; touch -d '2001-01-01' "$IX/roms/nds/A/Game.nds"
 irun "homeid nds; press a; wait 2400; shot a; press right; wait 2400; shot b; press right; wait 2400; shot c; press right; wait 2400; shot d"
 [ "$(icn '! -empty')" = 2 ] || { echo "FAIL: icons: a ROM replaced under its name kept the old one's (no) icon: $(ls -s "$IX/data/cache/icons" | tr '\n' ' ')"; fail=1; }
+# a layout theme's absurd numbers (a text's size and spacing, its lines, a shadow's blur, a list's count) draw
+# nothing much, and never take the menu down (a 1e6 px text asked for terabytes)
+BT2=$OUT/bad-theme.json
+sed -e 's/"text": "{sys.played}", "font": "inter-bold", "size": 20/"text": "{sys.played}", "font": "inter-bold", "size": 1e6/' \
+    -e 's/"text": "{upper(sys.maker)}", "size": 13, "spacing": 2/"text": "{upper(sys.maker)}", "size": "=1e308", "spacing": 1e6, "maxLines": 1e300, "wrap": true/' \
+    -e 's/"blur": 14/"blur": 1e300/' -e 's/"fit": "pixelContain", "x": 320, "y": 150, "w": 128, "h": 128/"fit": "pixelContain", "x": 320, "y": 150, "w": 1e6, "h": 1e6/' \
+    -e 's/"text": "{clock}", "font": "inter-semibold", "size": 15/"text": "{clock}", "font": "inter-semibold", "size": -5/' "$HERE/../system/rootfs/usr/share/banana/themes/canvas.json" > "$BT2"
+[ "$(grep -c '1e6\|1e300' "$BT2")" -ge 3 ] || { echo "FAIL: bad theme: the sed didn't apply"; fail=1; }
+"$HERE/banana-ui" --headless "$OUT/badtheme-" --size 640x480 --assets "$HERE/assets/rnds" --banana "$HERE/assets/banana" \
+    --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" --theme "$BT2" \
+    --script "home 0; wait 300; shot home; press a; wait 300; shot lib; wait 1" 2> "$OUT/badtheme.log" ||
+    { echo "FAIL: a theme's absurd numbers took the menu down (exit $?): $(grep -m1 -i 'terminate\|error' "$OUT/badtheme.log")"; fail=1; }
+BT3=$OUT/bad-range.json
+sed -e 's/"count": 12,/"count": 1e300, "loop": true,/' -e 's/"range": 64/"range": 1e9/' "$HERE/../system/rootfs/usr/share/banana/themes/swiss-poster.json" > "$BT3"
+timeout 60 "$HERE/banana-ui" --headless "$OUT/badrange-" --size 640x480 --assets "$HERE/assets/rnds" --banana "$HERE/assets/banana" \
+    --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" --theme "$BT3" \
+    --script "home 0; wait 300; shot home; wait 1" 2> "$OUT/badrange.log" || { echo "FAIL: a theme's list of 1e300 items took the menu down (exit $?)"; fail=1; }
 # the DS companion's overlay (nds/overlay.h, COMPANION-SPEC section 10) end to end: banana-ui paints the test page
 # while a child plays BananaDS's part (the icon, a tap open, a drag, the page's Back to game), at both panel sizes;
 # the pictures it took are left as <size>-ndsoverlay-{icon,open,drag}.png
