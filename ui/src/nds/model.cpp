@@ -117,4 +117,12 @@ namespace banana::nds
 		for (int i = 0; i < 6; i++) b |= ((ivs[i] >> 1) & 1) << i;
 		return b * 40 / 63 + 30;
 	}
+
+	bool sameArea(const RomData* rom, uint16_t a, uint16_t b)
+	{
+		if (a == b) return true;
+		if (!rom || !a || !b) return false;
+		auto x = rom->zones.find(a), y = rom->zones.find(b);
+		return x != rom->zones.end() && y != rom->zones.end() && !x->second.name.empty() && x->second.name == y->second.name;
+	}
 }

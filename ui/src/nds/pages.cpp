@@ -2052,7 +2052,7 @@ namespace banana::nds
 		if (dt.journey && dt.journey->challenge)
 		{
 			const RouteRecord* rr = nullptr;
-			for (auto& r : dt.journey->routes) if (r.zone == lv.zone) rr = &r;
+			for (auto& r : dt.journey->routes) if (sameArea(dt.rom.get(), r.zone, lv.zone)) rr = &r;
 			box("bubble", 12, y, 616, 44);
 			pixels(PX_SKULL, 7, 26, y + 15, k(), [&](char) { return p.accent; });
 			std::string t;

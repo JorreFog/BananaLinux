@@ -229,6 +229,10 @@ namespace banana::nds
 	struct RouteRecord { uint16_t zone = 0, species = 0; enum Outcome : uint8_t { OPEN, CAUGHT, MISSED } outcome = OPEN; };
 	struct Journey { std::vector<LogEntry> log; bool challenge = false; std::vector<RouteRecord> routes;	// log: oldest first
 		std::vector<Mon> lost; };
+	// challenge mode's "route": two zones are one area when they are the same zone or carry the same place name (a cave's
+	// floors, a route's maps: Gen III keeps Granite Cave 1F/B1F/B2F as maps of one section, the DS games Mt. Coronet's
+	// floors as zones of one name) - one first encounter for the whole area, as a Nuzlocke counts it
+	bool sameArea(const RomData* rom, uint16_t a, uint16_t b);
 
 	// ---- advice (the logic's product, for the pages and the badge) --------------------------------------------
 	struct MoveVerdict { uint16_t move = 0; int quarters = 4; float dmgLo = 0, dmgHi = 0; bool best = false;

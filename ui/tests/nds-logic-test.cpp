@@ -440,8 +440,26 @@ static void testSession(const char* tmp)
 	unlink((std::string(tmp) + "/CPUE-00111-00222.tsv").c_str());
 }
 
+// challenge mode's areas: a cave's floors (one place name, several zones) are one area; other names and unknown zones not
+static void testAreas()
+{
+	FakeRom r;
+	r.zones[0x1807] = { 0x1807, "Granite Cave", {}, {} };
+	r.zones[0x1808] = { 0x1808, "Granite Cave", {}, {} };
+	r.zones[0x0010] = { 0x0010, "Route 106", {}, {} };
+	r.zones[0x0011] = { 0x0011, "", {}, {} };
+	r.zones[0x0012] = { 0x0012, "", {}, {} };
+	CHECK(sameArea(&r, 0x1807, 0x1808));
+	CHECK(sameArea(&r, 0x0010, 0x0010));
+	CHECK(!sameArea(&r, 0x1807, 0x0010));
+	CHECK(!sameArea(&r, 0x0011, 0x0012));		// (no names: zone by zone)
+	CHECK(!sameArea(&r, 0x1807, 0x4444));		// (not in the ROM's zones)
+	CHECK(!sameArea(nullptr, 0x1807, 0x1808));
+}
+
 int main()
 {
+	testAreas();
 	testNewEntries();
 	testDamage();
 	testCatch();

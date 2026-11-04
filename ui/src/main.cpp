@@ -2439,7 +2439,7 @@ int main(int argc, char** argv)
 			mkdir((o.data + "/cache").c_str(), 0755);
 			mkdir((o.data + "/cache/gba-companion").c_str(), 0755);
 			gbaHost = std::make_unique<gba::Host>(companion, o.data + "/cache/gba-companion", o.data + "/cache/gba-companion",
-				getConfValue(o.data + "/settings.conf", "nds_challenge", "off") == "on");
+				getConfValue(o.data + "/settings.conf", "gba_challenge", "off") == "on");	// (its own row: Second screen)
 		}
 		{
 			std::lock_guard<std::mutex> l(worker.uiLock);

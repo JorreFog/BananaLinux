@@ -596,6 +596,9 @@ namespace banana
 			// (gba/host.h: the DS companion's pages for the GBA games, main.cpp reads it at each game's start)
 			add(SS, "gamepad", "Detailed Pokémon pages", "On: the Pokémon companion shows the same pages as the DS one: battle, party, team score, what to catch here, a guide, the map, the Pokédex and a journey log. In Ruby, Sapphire, Emerald, FireRed and LeafGreen and the ROM hacks Glazed, Gaia, Heart & Soul, Lazarus, Seaglass and SoulGold. Off: the simpler party and battle views. Needs the Pokémon companion on.",
 				menu, "gba_companion_pages", { "On", "Off" }, { "on", "off" });
+			// (the DS companion's challenge mode for the GBA games: gba/host.h's Session, read at each game's start)
+			add(SS, "gamepad", "Challenge mode", "For a Nuzlocke-style run: the companion keeps your first encounter in each area and the Pokémon you lost, as the DS one does (Here and Log pages). Needs Detailed Pokémon pages on.",
+				menu, "gba_challenge", { "Off", "On" }, { "off", "on" });
 			add(SS, "gamepad", "Game companion", "Other Game Boy Advance games on the second screen: seven pages about the game as it plays (status, a closer look, the fight, the map, the bag, collectibles, progress), read from the game where it can be and notes where not. Pokémon games keep the Pokémon companion. Needs Second screen on. Inspired by PokeDaisy by Lidor Itzhari.",
 				menu, "game_companion", { "Off", "On" }, { "off", "on" });
 		}

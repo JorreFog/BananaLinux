@@ -197,7 +197,7 @@ namespace banana::nds
 				if (!newEntryKind(*was, l, s, recentWild, k)) continue;
 				add(k, s, (k == LogKind::CATCH ? "Caught " : "Received ") + name(*rom, s));
 				if (jr->challenge && k == LogKind::CATCH)
-					for (auto& r : jr->routes) if (r.zone == l.zone && r.species == s && r.outcome == RouteRecord::OPEN) r.outcome = RouteRecord::CAUGHT;
+					for (auto& r : jr->routes) if (sameArea(rom.get(), r.zone, l.zone) && r.species == s && r.outcome == RouteRecord::OPEN) r.outcome = RouteRecord::CAUGHT;
 			}
 		for (auto& m : l.party)
 			for (auto& o : was->party)
@@ -219,12 +219,12 @@ namespace banana::nds
 		if (jr->challenge && wild && !wasWild && l.battle.foes[0].present && l.zone)
 		{
 			bool have = false;
-			for (auto& r : jr->routes) have |= r.zone == l.zone;
+			for (auto& r : jr->routes) have |= sameArea(rom.get(), r.zone, l.zone);
 			if (!have) { jr->routes.push_back({ l.zone, l.battle.foes[0].mon.species, RouteRecord::OPEN }); dirty = true; }
 		}
 		if (jr->challenge && wasWild && !wild)
 			for (auto& r : jr->routes)
-				if (r.zone == was->zone && r.outcome == RouteRecord::OPEN && !bit(l.dexCaught, r.species - 1)) { r.outcome = RouteRecord::MISSED; dirty = true; }
+				if (sameArea(rom.get(), r.zone, was->zone) && r.outcome == RouteRecord::OPEN && !bit(l.dexCaught, r.species - 1)) { r.outcome = RouteRecord::MISSED; dirty = true; }
 	}
 
 	// ---- the card file: tab-separated lines ---------------------------------------------------------------------
