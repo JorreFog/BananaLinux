@@ -226,7 +226,7 @@ wait_for "starting nds" 30 "the game was started (run-nds)"
 # The VM's keyboard isn't the pad SuperDrastic's F + Start reads, so the game is stopped as a shutdown stops it: a TERM
 # to it (SuperDrastic's runner saves a resume state first, within 5 s)
 sleep 10; shot second-game
-vm 'kill -TERM $(cat /run/banana/game.pid)' || true
+vm 'read G _ < /run/banana/game.pid; kill -TERM $G' || true
 wait_for "game ended" 60 "a TERM ended the DS game and the menu took the panels back"
 sleep 2; shot second-after-game
 # the GBA shelf (RetroArch's launcher): home, the next system, its library, its game

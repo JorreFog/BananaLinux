@@ -60,7 +60,8 @@
 
 ## Next
 
-- [ ] The rest of the Chinese translation (lines added since it was made) and a string extractor for new languages
+- [x] A string extractor for new languages (`tools/lang-extract.py`)
+- [ ] The rest of the Chinese translation (lines added since it was made)
 - [ ] EmulationStation as an alternative frontend
 - [ ] Charging while switched off on the RG DS Plus (#34)
 - [ ] Golden Sun: Dark Dawn's opening flyover at full speed in BananaDS

@@ -30,13 +30,14 @@ namespace banana
 			const uint8_t* c = b.data() + at + 8;
 			if (!memcmp(b.data() + at, "fmt ", 4) && len >= 16)
 			{
+				if (len > b.size() - at - 8) return false;	// (a chunk that says more than the file holds)
 				channels = c[2] | (c[3] << 8);
-				rate = c[4] | (c[5] << 8) | (c[6] << 16) | (c[7] << 24);
+				rate = c[4] | (c[5] << 8) | (c[6] << 16) | ((uint32_t)c[7] << 24);
 				bits = c[14] | (c[15] << 8);
 			}
 			else if (!memcmp(b.data() + at, "data", 4))
 			{
-				if (bits != 16 || channels < 1) return false;
+				if (bits != 16 || channels < 1 || channels > 8 || rate < 8000 || rate > 192000) return false;
 				len = (uint32_t)std::min<size_t>(len, b.size() - at - 8);
 				pcm.resize(len / 2);
 				memcpy(pcm.data(), c, pcm.size() * 2);

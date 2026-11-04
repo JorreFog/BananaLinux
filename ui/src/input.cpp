@@ -137,12 +137,12 @@ namespace banana
 		watch = -1;
 	}
 
-	std::vector<int> Input::fds() const
+	int Input::fds(int* out, int max) const
 	{
-		std::vector<int> r;
-		for (auto& d : devs) r.push_back(d.fd);
-		if (watch >= 0) r.push_back(watch);
-		return r;
+		int n = 0;
+		for (auto& d : devs) if (n < max) out[n++] = d.fd;
+		if (watch >= 0 && n < max) out[n++] = watch;
+		return n;
 	}
 
 	bool Input::hasTouch(int screen) const

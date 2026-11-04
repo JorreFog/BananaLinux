@@ -77,6 +77,10 @@ tests/gamecomp-test: tests/gamecomp-test.cpp src/gamecomp.cpp src/gamecomp.h src
 tests/input-test: tests/input-test.cpp src/input.cpp src/input.h
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/input-test.cpp src/input.cpp
 
+# the menu's WAV reader on theme sounds (tests/run.sh runs it)
+tests/wav-test: tests/wav-test.cpp src/sound.cpp src/sound.h
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/wav-test.cpp -lpthread
+
 install:
 	install -D -m 755 banana-ui $(DESTDIR)/usr/bin/banana-ui
 	install -D -m 755 banana-leaseshim.so $(DESTDIR)/usr/lib/banana/banana-leaseshim.so
@@ -101,7 +105,7 @@ install:
 	touch $(DESTDIR)/usr/share/banana/apps/files/Files.app
 
 clean:
-	rm -f banana-ui banana-leaseshim.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump tests/nds-ram-test tests/nds-logic-test tests/nds-romfile-test
+	rm -f banana-ui banana-leaseshim.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/wav-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump tests/nds-ram-test tests/nds-logic-test tests/nds-romfile-test
 
 .PHONY: host install clean
 

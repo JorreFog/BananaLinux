@@ -6517,9 +6517,12 @@ namespace banana
 			std::string tmp = path + ".part";
 			FILE* f = fopen(tmp.c_str(), "wb");
 			if (!f) return false;
-			fwrite(body.data(), 1, body.size(), f);
-			fclose(f);
-			return rename(tmp.c_str(), path.c_str()) == 0;
+			bool wrote = fwrite(body.data(), 1, body.size(), f) == body.size();
+			wrote &= fflush(f) == 0;
+			wrote &= fsync(fileno(f)) == 0;
+			wrote &= fclose(f) == 0;
+			if (!wrote || rename(tmp.c_str(), path.c_str()) != 0) { unlink(tmp.c_str()); return false; }
+			return true;
 		}
 		const char* const BADGES = "/data/banana/cache/ra-badges";
 		const char* const IC_SAVE[12] = { "##########..", "#..#####.##.", "#..#####..##", "#..#####...#", "#..........#", "#..........#",

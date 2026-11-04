@@ -3,7 +3,6 @@
 # the environment as BANANADS_<KEY> (its docs/SETTINGS.md: render.scale is BANANADS_RENDER_SCALE), over its own
 # file /data/bananads/bananads.conf, so the places and the menu's choices are passed that way.
 #   run-bananads <rom>
-[ -x /usr/bin/bananads ] || { echo "BananaDS isn't installed" >&2; exit 1; }
 D=/data/bananads                       # its settings (bananads.conf) and memory (cpugov/: per-game clocks)
 L=/data/banana/logs/bananads           # its logs, readable on a computer
 mkdir -p $D $L /data/saves/nds /data/states/nds

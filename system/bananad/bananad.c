@@ -253,10 +253,33 @@ static void hooks_run(const char *when)
 	free(list);
 }
 
+/* the pid in a pid file, when that process is still the one the file names: the file may hold "<pid> <starttime>"
+ * (banana-ui's game.pid); without it, a process that started after the file was written is a reused pid */
 static pid_t pid_of(const char *pidfile)
 {
-	int p = read_int(pidfile, 0);
-	return p > 0 && kill(p, 0) == 0 ? p : 0;
+	FILE *f = fopen(pidfile, "r");
+	if (!f) return 0;
+	int p = 0;
+	unsigned long long started = 0;
+	int got = fscanf(f, "%d %llu", &p, &started);
+	fclose(f);
+	if (got < 1 || p <= 0 || kill(p, 0) != 0) return 0;
+	char path[32], buf[1024];
+	snprintf(path, sizeof path, "/proc/%d", p);
+	struct stat pf, df;
+	if (!stat(path, &pf) && !stat(pidfile, &df) &&
+	    (pf.st_mtim.tv_sec > df.st_mtim.tv_sec || (pf.st_mtim.tv_sec == df.st_mtim.tv_sec && pf.st_mtim.tv_nsec > df.st_mtim.tv_nsec)))
+		return 0;	/* started after the file was written: the pid was reused */
+	if (!started) return p;
+	snprintf(path, sizeof path, "/proc/%d/stat", p);
+	f = fopen(path, "r");
+	if (!f || !fgets(buf, sizeof buf, f)) { if (f) fclose(f); return 0; }
+	fclose(f);
+	char *q = strrchr(buf, ')');
+	if (!q) return 0;
+	q += 2;
+	for (int i = 0; i < 19 && *q; i++) { while (*q && *q != ' ') q++; while (*q == ' ') q++; }
+	return strtoull(q, NULL, 10) == started ? p : 0;
 }
 
 /* banana-ui's pid, by its name in /proc */
@@ -711,13 +734,26 @@ static void resume_state_path(const char *emu, const char *rom, char *out, size_
 	snprintf(out, n, "%s/%.*s%s", dir, len, b, ext);
 }
 
-/* a command for RetroArch on its stdin (run-retroarch's pipe, or banana-ui's for the game panel) */
-static void ra_command(const char *c)
+/* a command for RetroArch on its stdin (run-retroarch's pipe, or banana-ui's for the game panel); 0: the pipe is
+ * gone (the game exited) or full for 100 ms */
+static int ra_command(const char *c)
 {
 	int fd = open("/run/banana/retroarch.cmd", O_WRONLY | O_NONBLOCK | O_CLOEXEC);
-	if (fd < 0) return;
-	if (write(fd, c, strlen(c)) < 0) {}
+	if (fd < 0) return 0;
+	size_t n = strlen(c), at = 0;
+	while (at < n) {
+		ssize_t w = write(fd, c + at, n - at);
+		if (w > 0) { at += (size_t)w; continue; }
+		if (w < 0 && errno == EINTR) continue;
+		if (w < 0 && errno == EAGAIN) {
+			struct pollfd p = { fd, POLLOUT, 0 };
+			if (poll(&p, 1, 100) > 0) continue;
+		}
+		close(fd);
+		return 0;
+	}
 	close(fd);
+	return 1;
 }
 
 /* L2, R2, L3 or R3 pressed alone in a RetroArch game: its job's command (Settings > Other systems > Buttons > the system;
@@ -803,10 +839,11 @@ static void sleep_poweroff(pid_t game, pid_t pg, double asleep)
 			}
 			if (slot < 0) slot = 0;
 			if (slot > 997) slot = 997;
-			for (int i = 0; i < slot + 2; i++) { ra_command("STATE_SLOT_MINUS\n"); usleep(100000); }	/* (one a frame or more: each is a press) */
-			ra_command("SAVE_STATE\n");
-			usleep(500000);
-			ra_command("QUIT\n");
+			int ok = 1;
+			for (int i = 0; i < slot + 2 && ok; i++) { ok = ra_command("STATE_SLOT_MINUS\n"); usleep(100000); }	/* (one a frame or more: each is a press) */
+			if (ok) { ok = ra_command("SAVE_STATE\n"); usleep(500000); }
+			if (ok) ra_command("QUIT\n");
+			else sleep_log("RetroArch's command pipe closed: no resume state saved");
 		} else {
 			/* the rest (PortMaster ports, PICO-8): SIGTERM, as a shutdown; no resume state to come back to */
 			kill(grp, SIGCONT);
@@ -1970,6 +2007,7 @@ int main(int argc, char **argv)
 	rec_apply();
 	rec("bananad", "started");
 	signal(SIGCHLD, SIG_DFL);
+	signal(SIGPIPE, SIG_IGN);	/* a game's pipe that closed must not take the daemon with it */
 	struct sigaction sa = { 0 };
 	sa.sa_handler = on_hup;		/* no SA_RESTART: poll() returns, and the loop reloads */
 	sigaction(SIGHUP, &sa, NULL);
