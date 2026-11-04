@@ -176,6 +176,7 @@ namespace banana::nds
 	{
 		bool valid = false;						// the game recognised and the reads checked (checksums)
 		std::string trainerName; uint16_t tid = 0, sid = 0;
+		bool trainerKnown = true;	// false: tid/sid not read yet (the GBA reader has the party before the save)
 		std::vector<Mon> party;
 		Battle battle;
 		uint16_t zone = 0, mapX = 0, mapY = 0;	// where the player is

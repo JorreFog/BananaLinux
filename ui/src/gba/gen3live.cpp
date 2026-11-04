@@ -92,6 +92,7 @@ namespace banana::gba
 		if (!l->valid) return l;
 		l->trainerName = s.player;
 		if (s.tid >= 0) l->tid = (uint16_t)s.tid;
+		l->trainerKnown = s.tid >= 0;
 		if (s.sid >= 0) l->sid = (uint16_t)s.sid;
 		for (const auto& m : s.party) l->party.push_back(toMon(m, t, rom, item, true, species));
 		if (s.inBattle && s.lead.species)
