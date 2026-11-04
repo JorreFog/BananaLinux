@@ -197,6 +197,7 @@ static void testHack(const std::string& dir, const Expect& x, const std::string&
 	// addresses (the party at the one found, the battle flags at gMain + 0x439)
 	{
 		pkmn::Companion c;
+		c.wantExt(true);	// (the save's data asked for too, as the pages do)
 		CHECK(c.open(path));
 		std::string req;
 		for (int i = 0; i < 400 && req.empty(); i++) { req = c.requests(1e9 + i * 300.0); if (req.empty()) usleep(20000); }
@@ -206,6 +207,9 @@ static void testHack(const std::string& dir, const Expect& x, const std::string&
 		snprintf(want, sizeof want, "READ_CORE_MEMORY %x 1\n", x.gMain + 0x439);
 		CHECK(req.find(want) != std::string::npos);
 		CHECK(c.game() && c.game()->party == x.party);
+		// (both save block pointers in one read from the lower: Heart & Soul keeps SaveBlock2's before SaveBlock1's)
+		const uint32_t lo = std::min(x.sb1, x.sb2), d = x.sb1 > x.sb2 ? x.sb1 - x.sb2 : x.sb2 - x.sb1;
+		if (d <= 0x40) { snprintf(want, sizeof want, "READ_CORE_MEMORY %x %u\n", lo, d + 4); CHECK(req.find(want) != std::string::npos); if (req.find(want) == std::string::npos) fprintf(stderr, "  asked: %s", req.c_str()); }
 		if (req.find(want) == std::string::npos) fprintf(stderr, "  companion asked: %s\n", req.c_str());
 	}
 

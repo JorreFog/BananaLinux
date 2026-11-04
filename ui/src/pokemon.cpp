@@ -1244,6 +1244,18 @@ namespace banana::pkmn
 		return true;
 	}
 
+	// the two save block pointers in one read: from the lower one to the end of the higher (the games keep SaveBlock2's
+	// right after SaveBlock1's; Heart & Soul keeps it before: 0x030041d4, 0x030041d8 - read as sb1 + 4 its SB2 was
+	// another block and the save's key with it, the money 3000 shown as 1,382,062,106 on the RG DS Plus 2026-11-04)
+	struct SbPtrs { uint32_t base; int len; uint32_t off1, off2; };
+	static SbPtrs sbPtrs(const GameProfile& g)
+	{
+		const uint32_t d = g.sb2 > g.sb1 ? g.sb2 - g.sb1 : g.sb1 - g.sb2;
+		if (!g.sb2 || d < 4 || d > 0x40) return { g.sb1, 8, 0, 4 };	// (not known near: SB2's after SB1's)
+		const uint32_t lo = std::min(g.sb1, g.sb2);
+		return { lo, (int)d + 4, g.sb1 - lo, g.sb2 - lo };
+	}
+
 	bool parseReply(const std::string& line, uint32_t& addr, std::vector<uint8_t>& bytes)
 	{
 		static const char P[] = "READ_CORE_MEMORY ";
@@ -1422,7 +1434,7 @@ namespace banana::pkmn
 		if (ext)
 		{
 			bool fixed = info->fixedSave;
-			if (!fixed) wants.push_back({ info->sb1, 8, &sbp, false });
+			if (!fixed) wants.push_back({ sbPtrs(*info).base, sbPtrs(*info).len, &sbp, false });
 			uint32_t s1 = fixed ? info->sb1 : sbSeen[0], s2 = fixed ? info->sb2 : sbSeen[1];
 			sbUsed[0] = s1; sbUsed[1] = s2;
 			if (info->mapHeader) wants.push_back({ info->mapHeader, 0x1c, &mh, false });
@@ -1491,9 +1503,10 @@ namespace banana::pkmn
 			s.mapsec = snap.mapsec; s.layout = snap.layout; s.money = snap.money; for (int i = 0; i < 5; i++) s.pockets[i] = snap.pockets[i];
 			s.bag = snap.bag; s.dexOwned = snap.dexOwned; s.dexSeen = snap.dexSeen; s.badges = snap.badges; s.champion = snap.champion; };
 		if (!wantSave) { keep(); return; }
-		if (!info->fixedSave && sbp.size() >= 8)
+		if (!info->fixedSave && sbp.size() >= (size_t)sbPtrs(*info).len)
 		{
-			uint32_t a = le32(sbp.data()), b = le32(sbp.data() + 4);
+			const SbPtrs sp = sbPtrs(*info);
+			uint32_t a = le32(sbp.data() + sp.off1), b = le32(sbp.data() + sp.off2);
 			bool moved = a != sbUsed[0] || b != sbUsed[1];
 			sbSeen[0] = a; sbSeen[1] = b;
 			if (moved) { keep(); nextAt = 0; return; }	// (asked again at once, at the new addresses)
