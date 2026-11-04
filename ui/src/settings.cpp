@@ -1329,18 +1329,10 @@ namespace banana
 		int at = it.at + dir;
 		if (it.key == "language" && n > 1)
 		{
-			// not switched yet: asked first, in both languages (a language picked by mistake can't be read to undo it)
-			langAsk = ((at % n) + n) % n;
-			langYes = false;
+			// a list of the languages (renderLangPick), not one step left or right; the one taken is asked first, in both
+			// languages (a language picked by mistake can't be read to undo it)
 			armed = -1;
-			if (!cjkLoaded && !lang::active())
-			{
-				// the CJK pixel font, which the menu reads only for a language that needs it (main.cpp: with another
-				// language than English it is read already, and setFallbackFont must not replace it: its old font's
-				// destructor waits on the lock setFallbackFont holds): the question shows the picked language's words
-				cjkLoaded = true;
-				if (auto f = rnds::Font::load(assets + "/fonts/fusion-pixel-12px-proportional-zh_hans.ttf")) rnds::setFallbackFont(f, 12, s);
-			}
+			openLangPick(false);
 			return MOVED;
 		}
 		if (it.kind == Item::VOLUME) volPending = false;	// (the level asked for wins over the script's late answer)
@@ -1436,6 +1428,7 @@ namespace banana
 	Settings::Result Settings::press(Key k)
 	{
 		if (hotAsk) return pressHotAsk(k);
+		if (langPick >= 0) return pressLangPick(k);
 		if (page == NETWORKS) return pressNetworks(k);
 		if (page == BLUETOOTH) return pressBluetooth(k);
 		if (page == KEYBOARD) return pressKeyboard(k);
@@ -1611,6 +1604,19 @@ namespace banana
 			int t = askTouch(cx, cy, hotYes);
 			return t < 0 ? NONE : t == 0 ? MOVED : pressHotAsk(Key::A);
 		}
+		if (langPick >= 0)
+		{
+			// the chips (B Back, A OK), and a row: one tap takes it
+			if (downY >= 418 && downY <= 466) return pressLangPick(downX < 320 ? Key::B : Key::A);
+			const int r = langTop + (int)((downY - LANG_Y) / LANG_PITCH);
+			if (downY >= LANG_Y && r >= langTop && r < langTop + LANG_VIS && r < (int)langList.size() &&
+				downY - LANG_Y - (r - langTop) * LANG_PITCH <= LANG_H)
+			{
+				langPick = r;
+				return pressLangPick(Key::A);
+			}
+			return NONE;
+		}
 		if (page == NETWORKS) return touchNetworks(cx, cy);
 		if (page == BLUETOOTH) return touchBluetooth(cx, cy);
 		if (page == KEYBOARD) return touchKeyboard(cx, cy);
@@ -1640,7 +1646,8 @@ namespace banana
 				float ry = SETUP_Y + r * SETUP_PITCH;
 				if (downY < ry || downY > ry + SETUP_H) continue;
 				wpick = r;
-				if (ch[r].act == SA_TZ || ch[r].act == SA_LANG) return pressSetup(downX < 320 ? Key::LEFT : Key::RIGHT);
+				if (ch[r].act == SA_LANG) return pressSetup(Key::A);	// (the list)
+				if (ch[r].act == SA_TZ) return pressSetup(downX < 320 ? Key::LEFT : Key::RIGHT);
 				return pressSetup(Key::A);
 			}
 			return NONE;
@@ -2312,6 +2319,7 @@ namespace banana
 	{
 		marqueeFrame();
 		if (hotAsk) { renderHotAsk(); return; }
+		if (langPick >= 0) { renderLangPick(); return; }
 		if (page == NETWORKS) { renderNetworks(); return; }
 		if (page == BLUETOOTH) { renderBluetooth(); return; }
 		if (page == KEYBOARD) { renderKeyboard(); return; }
@@ -4664,6 +4672,131 @@ namespace banana
 		be->endScreen();
 	}
 
+	// ---- the language list ---------------------------------------------------------------------------------------
+	void Settings::loadCjkFont()
+	{
+		if (cjkLoaded || lang::active()) return;
+		// the CJK pixel font, which the menu reads only for a language that needs it (main.cpp: with another language
+		// than English it is read already, and setFallbackFont must not replace it: its old font's destructor waits on
+		// the lock setFallbackFont holds): the list and the question show each language's own words
+		cjkLoaded = true;
+		if (auto f = rnds::Font::load(assets + "/fonts/fusion-pixel-12px-proportional-zh_hans.ttf")) rnds::setFallbackFont(f, 12, s);
+	}
+
+	void Settings::openLangPick(bool setup)
+	{
+		const Item* it = nullptr;
+		for (auto& x : items) if (x.key == "language") it = &x;
+		if (!it || it->values.empty()) return;
+		// the Item's own order (lang::available's: English, then by code) with each file's translators
+		langList.clear();
+		const auto all = lang::available(assets + "/../lang");
+		for (const auto& code : it->values)
+		{
+			lang::Info in{ code, code, code, "" };
+			for (const auto& a : all) if (a.code == code) in = a;
+			langList.push_back(in);
+		}
+		const int cur = setup ? langAt : it->at;
+		langPick = std::max(0, std::min((int)langList.size() - 1, cur));
+		langTop = std::max(0, std::min(langPick - LANG_VIS / 2, (int)langList.size() - LANG_VIS));
+		langPickSetup = setup;
+		loadCjkFont();
+	}
+
+	Settings::Result Settings::pressLangPick(Key k)
+	{
+		Item* it = nullptr;
+		for (auto& x : items) if (x.key == "language") it = &x;
+		const int n = (int)langList.size();
+		if (!it || n == 0) { langPick = -1; return MOVED; }
+		switch (k)
+		{
+		case Key::UP: case Key::DOWN: case Key::L: case Key::R:
+		{
+			// (no wrap: the ends stay put, as a list's do)
+			int step = k == Key::UP ? -1 : k == Key::DOWN ? 1 : k == Key::L ? -LANG_VIS : LANG_VIS;
+			int to = std::max(0, std::min(n - 1, langPick + step));
+			if (to == langPick) return NONE;
+			langPick = to;
+			if (langPick < langTop) langTop = langPick;
+			if (langPick >= langTop + LANG_VIS) langTop = langPick - LANG_VIS + 1;
+			return MOVED;
+		}
+		case Key::A:
+		{
+			const int took = langPick;
+			langPick = -1;
+			if (langPickSetup) { langAt = took; return MOVED; }	// (the setup's slide: saved with its Next)
+			if (took == it->at) return MOVED;
+			langAsk = took;		// asked first (renderLangAsk), in both languages
+			langYes = false;
+			return MOVED;
+		}
+		case Key::B: case Key::LEFT: langPick = -1; return MOVED;
+		case Key::START:
+			langPick = -1;
+			if (langPickSetup) return MOVED;
+			mOpen = false;
+			return CLOSED;
+		default: return NONE;
+		}
+	}
+
+	// the top panel: the picked language in its own words, in English, and who translated it; the bottom: the list
+	void Settings::renderLangPick()
+	{
+		SPal p = pal(light);
+		const Item* it = nullptr;
+		for (auto& x : items) if (x.key == "language") it = &x;
+		if (!it || langPick >= (int)langList.size()) { langPick = -1; return; }
+		const int cur = langPickSetup ? langAt : it->at;
+		const lang::Info& L = langList[langPick];
+		auto raw = [&](const std::string& t, bool medium, float size, float x, float top, const Color& c, bool measure = false)
+		{
+			rawText = true;
+			float w = text(t, medium, size, x, top, c, false, 0, measure);
+			rawText = false;
+			return w;
+		};
+
+		be->beginScreen(0);
+		box("screen", false, 0, 0, 640, 480);
+		box("hero", false, 18, 20, 604, 436);
+		icon("gear", 50, 56, 3);
+		text("Language", true, 17, 170, 62, p.muted, true, 1.4f);
+		raw(fit(L.name, true, 30, 420), true, 30, 170, 88, p.ink);
+		if (L.nameEn != L.name) raw(L.nameEn, true, 22, 170, 130, p.accent);
+		if (!L.by.empty()) raw(lang::tr("translated by") + " " + L.by, false, 20, 50, 210, p.ink);
+		wrapped("The language of the menu and the settings. Lines not yet translated stay in English.", 20, 50, 250, 540, 4, p.muted);
+		be->endScreen();
+
+		be->beginScreen(1);
+		box("screen", false, 0, 0, 640, 480);
+		for (int r = 0; r < LANG_VIS && langTop + r < (int)langList.size(); r++)
+		{
+			const int v = langTop + r;
+			const float y = LANG_Y + r * LANG_PITCH;
+			const bool on = v == langPick;
+			box(on ? "pick" : "slot", on, 18, y, 604, LANG_H);
+			const Color c = on ? p.onPick : v == cur ? p.accent : p.ink;
+			const lang::Info& x = langList[v];
+			const float ew = x.nameEn == x.name ? 0 : std::min(260.f, raw(x.nameEn, false, 18, 0, 0, c, true));
+			raw(fit(x.name, true, 22, 540 - ew), true, 22, 38, y + 14, c);
+			if (ew > 0) raw(x.nameEn, false, 18, 602 - ew, y + 17, on ? p.onPick : p.muted);
+		}
+		box("bubble", false, 18, 14, 604, 54);
+		text("Language", true, 22, 38, 28, p.ink);
+		std::string count = std::to_string(langPick + 1) + " / " + std::to_string(langList.size());
+		float cw = text(count, true, 17, 0, 0, p.muted, false, 0, true);
+		text(count, true, 17, 602 - cw, 31, p.muted);
+		float bw = faceWidth("B", "Back");
+		face("B", "Back", 18, bw);
+		float aw = faceWidth("A", "OK");
+		face("A", "OK", 622 - aw, aw);
+		be->endScreen();
+	}
+
 	// ---- the language switch, asked first ------------------------------------------------------------------------
 	Settings::Result Settings::pressLangAsk(Key k)
 	{
@@ -5924,7 +6057,7 @@ namespace banana
 			return MOVED;
 		case SA_FINISH: setupDone(); return wizardBoot ? CLOSED : CHANGED;
 		case SA_LANG:
-			if (lg) langAt = (langAt + 1) % (int)lg->values.size();
+			if (lg) openLangPick(true);
 			return MOVED;
 		case SA_TZ:
 			if (tz) { tz->at = (tz->at + 1) % (int)tz->values.size(); save(*tz); }
@@ -5983,8 +6116,8 @@ namespace banana
 			}
 			if (n && ch[wpick].act == SA_LANG && lg)
 			{
-				int m = (int)lg->values.size();
-				langAt = (langAt + d + m) % m;
+				(void)d;
+				openLangPick(true);	// (the list, as A does)
 				return MOVED;
 			}
 			return NONE;
