@@ -131,9 +131,9 @@ fi
 [ -d /data/retroarch/cores ] || mkdir -p /data/retroarch/cores
 # RetroArch's menu in the menu's language (Settings > System > Language): its user_language follows Banana's while it
 # is still the one Banana last set (English at first); one picked in RetroArch's own menu is kept. QA #15: the menu in
-# Chinese, RetroArch's still in English. (RetroArch's numbers: 0 English, 5 Italian, 9 Russian, 12 Simplified Chinese.)
+# Chinese, RetroArch's still in English. (RetroArch's numbers: 0 English, 5 Italian, 23 Finnish, 9 Russian, 12 Simplified Chinese.)
 L=/data/retroarch/.banana-language
-case $(setting language) in it) want=5 ;; ru) want=9 ;; zh-cn) want=12 ;; *) want=0 ;; esac
+case $(setting language) in fi) want=23 ;; it) want=5 ;; ru) want=9 ;; zh-cn) want=12 ;; *) want=0 ;; esac
 have=$(sed -n 's/^user_language = "\(.*\)"/\1/p' $CFG | tail -n 1)
 if [ "$have" = "$(cat $L 2>/dev/null || echo 0)" ] || [ -z "$have" ]; then
     [ "$have" = "$want" ] || set_cfg user_language $want
