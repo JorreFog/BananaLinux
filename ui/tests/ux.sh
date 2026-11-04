@@ -161,12 +161,12 @@ first=$(sed -n 's/.*press left: used, view 0 sys \([0-9]*\).*/\1/p' "$OUT/$size-
 sed -i '/^shelf\./d' "$UXFX/data/settings.conf"
 
 # System > Language (its first row) asks before switching, No first: right then A keeps English; right, down, A
-# switches (the menu starts again: settings result 9, LANGUAGE) to the first language after English, ru
+# switches (the menu starts again: settings result 9, LANGUAGE) to the first language after English, it
 ux_run langask "home 0; press start; press r; press r; press r; press r; press r; press a; press down; press right; shot ux-langask; press a"
 grep -q '^language = ' "$UXFX/data/settings.conf" && { echo "FAIL $size: the language switched without a Yes"; fail=1; }
 ux_check langask "press a: settings result 1"
 ux_run langyes "home 0; press start; press r; press r; press r; press r; press r; press a; press down; press right; press down; press a"
-grep -q '^language = ru' "$UXFX/data/settings.conf" || { echo "FAIL $size: Yes didn't switch the language"; fail=1; }
+grep -q '^language = it' "$UXFX/data/settings.conf" || { echo "FAIL $size: Yes didn't switch the language"; fail=1; }
 sed -i '/^language = /d' "$UXFX/data/settings.conf"
 
 # System > Credits (after About, before Hotkeys: up two from the first row) opens the credits from credits.txt; with no
@@ -204,7 +204,7 @@ ux_run splash-b "splash ux-boot-word 700"
 # (the RG DS Plus adds a note to the Shader rows); "helpcheck" lays each out as the panel does
 HCFX=$OUT/ux-help-fixture-$size
 rm -rf "$HCFX"; "$HERE/tests/fixture.sh" "$HCFX" >/dev/null
-for hl in en zh-cn ru; do
+for hl in en zh-cn ru it; do
     for he in superdrastic bananads; do
         for hb in rgds rgds-plus; do
             touch "$HCFX/data/settings.conf"; sed -i '/^language\b/d; /^nds_emulator\b/d' "$HCFX/data/settings.conf"

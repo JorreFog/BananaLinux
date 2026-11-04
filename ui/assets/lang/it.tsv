@@ -1,0 +1,1550 @@
+# BananaOS translation: Italian (Italiano)
+# Translated by Olympicus.
+# Made by tools/lang-from-docx.py from BananaOS-0_5_0-translation-Olympicus.docx. Columns: part, context, English, translation.
+#: language = Italiano
+#: language-en = Italian
+#: translated-by = Olympicus
+menu		Ready	Pronto
+menu		Fav	Pref.
+menu		Start	Avvia
+menu		Resume	Riprendi
+menu		Back	Indietro
+menu		No games	Nessun gioco
+menu		Starting	Avvio
+menu		Plays	Giocate
+menu		Last played	Ultima partita
+menu		Time	Tempo
+menu		Game	Gioco
+menu		Games	Giochi
+menu		Played	Giocato
+menu		App	App
+menu		{n} game	{n} gioco
+menu		{n} games	{n} giochi
+menu		Last played: {game}	Ultimo giocato: {game}
+menu		Play	Gioca
+menu		No games yet	Ancora nessun gioco
+menu		{unlocked} / {total} achievements	{unlocked} / {total} obiettivi
+menu		Library	Libreria
+menu		Open	Apri
+menu		Favourite	Preferito
+menu		Unfavourite	Rimuovi dai preferiti
+menu		Systems	Sistemi
+menu		Never	Mai
+menu		Sunday	Domenica
+menu		Monday	Lunedì
+menu		Tuesday	Martedì
+menu		Wednesday	Mercoledì
+menu		Thursday	Giovedì
+menu		Friday	Venerdì
+menu		Saturday	Sabato
+menu		Jan	Gen
+menu		Feb	Feb
+menu		Mar	Mar
+menu		Apr	Apr
+menu		May	Mag
+menu		Jun	Giu
+menu		Jul	Lug
+menu		Aug	Ago
+menu		Sep	Set
+menu		Oct	Ott
+menu		Nov	Nov
+menu		Dec	Dic
+menu		Today	Oggi
+menu		Yesterday	Ieri
+menu		Last week	Settimana scorsa
+menu		Favorites	Preferiti
+menu		Collection	Collezione
+menu		Not played yet	Mai giocato
+menu		Can't read the card's games	Impossibile leggere i giochi della scheda
+menu		Nothing here yet	Ancora niente qui
+menu		The BANANA partition needs exFAT	La partizione BANANA richiede exFAT
+menu		Y on a game adds it here	Y su un gioco lo aggiunge qui
+menu		Copy {.ext} files to roms/{folder}	Copia i file {.ext} in roms/{folder}
+menu		Battery nearly empty: {percent}%	Batteria quasi scarica: {percent}%
+menu		Save your game now. At {percent} Banana closes it and shuts down.	Salva ora la partita. A {percent} Banana la chiude e si spegne.
+menu		Battery low: {percent}%	Batteria scarica: {percent}%
+menu		Plug in the charger soon. At {percent} Banana closes the game and shuts down.	Collega presto il caricabatterie. A {percent} Banana chiude il gioco e si spegne.
+menu		Time to find the charger.	È ora di cercare il caricabatterie.
+menu		banana-perf {value}	banana-perf {value}
+menu		Brightness	Luminosità
+menu		Volume	Volume
+menu		Starting...	Avvio...
+menu		%ldh %02ldm	%ldh %02ldm
+menu		Recently played	Giocati di recente
+menu		Search	Cerca
+menu		No games match	Nessun gioco corrisponde
+menu		SELECT searches again	SELECT cerca di nuovo
+menu		Charging	In carica
+menu		Full	Carica
+menu		Favorite	Preferito
+menu		Last played: {sys.resumeTitle}  ·  X to resume	Ultimo giocato: {sys.resumeTitle}  ·  X per riprendere
+menu		Plays: {either(game.plays, '0')}	Giocate: {either(game.plays, '0')}
+menu		Time: {either(game.time, '0m')}	Tempo: {either(game.time, '0m')}
+menu		Options	Opzioni
+menu		--assets {shellQuote} --splash {shellQuote} --banana {shellQuote} --systems {shellQuote} --roms {shellQuote}	--assets {shellQuote} --splash {shellQuote} --banana {shellQuote} --systems {shellQuote} --roms {shellQuote}
+menu		Reading the second SD card	Lettura della seconda scheda SD
+menu		Looking for games	Ricerca dei giochi
+menu		Its games join the list in a moment	I suoi giochi si aggiungono all'elenco tra poco
+menu		The game list is updated in a moment	L'elenco dei giochi si aggiorna tra poco
+menu		The list is updated on the home screen	L'elenco si aggiorna nella schermata iniziale
+settings		1 package	1 pacchetto
+settings		{n} packages	{n} pacchetti
+settings		UTC	UTC
+settings		London, Dublin, Lisbon	Londra, Dublino, Lisbona
+settings		Lagos, Algiers, Kinshasa	Lagos, Algeri, Kinshasa
+settings		Amsterdam, Berlin, Paris, Rome	Amsterdam, Berlino, Parigi, Roma
+settings		Johannesburg, Harare	Johannesburg, Harare
+settings		Athens, Helsinki, Kyiv	Atene, Helsinki, Kiev
+settings		Cairo	Il Cairo
+settings		Istanbul, Riyadh, Nairobi	Istanbul, Riyad, Nairobi
+settings		Moscow	Mosca
+settings		Dubai, Baku	Dubai, Baku
+settings		Karachi, Tashkent, Almaty	Karachi, Tashkent, Almaty
+settings		India, Sri Lanka	India, Sri Lanka
+settings		Bangkok, Jakarta, Hanoi	Bangkok, Giacarta, Hanoi
+settings		Beijing, Singapore, Perth	Pechino, Singapore, Perth
+settings		Tokyo, Seoul	Tokyo, Seul
+settings		Adelaide	Adelaide
+settings		Brisbane, Guam	Brisbane, Guam
+settings		Sydney, Melbourne	Sydney, Melbourne
+settings		Auckland	Auckland
+settings		Honolulu	Honolulu
+settings		Anchorage	Anchorage
+settings		Los Angeles, Tijuana	Los Angeles, Tijuana
+settings		Phoenix, Vancouver, Yukon	Phoenix, Vancouver, Yukon
+settings		Denver	Denver
+settings		Mexico City, Calgary	Città del Messico, Calgary
+settings		Chicago	Chicago
+settings		New York, Toronto	New York, Toronto
+settings		Halifax	Halifax
+settings		Santiago	Santiago
+settings		Buenos Aires, Sao Paulo	Buenos Aires, San Paolo
+settings		Display & sound	Schermo e audio
+settings		Theme	Tema
+settings		ROCKNIXDS Pixel's two palettes, dark or light for daylight; Carts (experimental): your games as cartridges on a shelf, in a clean typeface; or a theme of your own: a .json in banana/themes on the card (banana/themes/README.txt says how).	Le due palette di ROCKNIXDS Pixel, scura o chiara per la luce del giorno; Carts (sperimentale): i tuoi giochi come cartucce su uno scaffale, con un carattere pulito; oppure un tema tuo: un .json in banana/themes sulla scheda (banana/themes/README.txt spiega come).
+settings		Dark	Scuro
+settings		Light	Chiaro
+settings		Carts	Carts
+settings		Accent colour	Colore d'accento
+settings		The colour of the selection, the logo and the boot animation's banana.	Il colore della selezione, del logo e della banana dell'animazione di avvio.
+settings		Yellow	Giallo
+settings		Blue	Blu
+settings		Red	Rosso
+settings		Green	Verde
+settings		Purple	Viola
+settings		Pink	Rosa
+settings		Brightness	Luminosità
+settings		The top screen's backlight. F + volume changes both screens anywhere, in games too.	La retroilluminazione dello schermo superiore. F + volume cambia entrambi gli schermi ovunque, anche nei giochi.
+settings		Motion	Movimento
+settings		The top screen's bob and shine. Off holds it still and saves a little battery.	Il dondolio e il luccichio dello schermo superiore. Disattivo lo tiene fermo e risparmia un po' di batteria.
+settings		On	Attivo
+settings		Off	Disattivo
+settings		Volume	Volume
+settings		The speakers or the headphones, whichever is playing. The volume keys change it anywhere.	Gli altoparlanti o le cuffie, quelli in uso. I tasti del volume lo cambiano ovunque.
+settings		Menu sounds	Suoni del menu
+settings		The menu's clicks, and the cartridge going into the console.	I clic del menu e la cartuccia che entra nella console.
+settings		Battery	Batteria
+settings		The battery on the top screen: its icon, or its icon and how full it is.	La batteria sullo schermo superiore: l'icona, oppure l'icona e quanta ne resta.
+settings		Icon	Icona
+settings		Icon and %	Icona e %
+settings		Clock	Orologio
+settings		How the time on the top screen is written.	Come viene scritta l'ora sullo schermo superiore.
+settings		Boot animation	Animazione di avvio
+settings		The bananas and the cartridge while Banana starts, and backwards when it shuts down. Off goes straight to the menu once it is ready, and straight to black.	Le banane e la cartuccia mentre Banana si avvia, e al contrario quando si spegne. Disattivo va dritto al menu appena è pronto, e dritto al nero.
+settings		Sleep & power	Sospensione e alimentazione
+settings		Sleep when idle	Sospendi se inattivo
+settings		In the menu, after this long with no button pressed. Never while a game is running.	Nel menu, dopo questo tempo senza premere alcun tasto. Mai mentre un gioco è in esecuzione.
+settings		Never	Mai
+settings		5 minutes	5 minuti
+settings		10 minutes	10 minuti
+settings		15 minutes	15 minuti
+settings		30 minutes	30 minuti
+settings		Dim when idle	Abbassa se inattivo
+settings		In the menu, the panels go down to a third after this long with no button pressed, and back at the first press. Never while a game is running.	Nel menu, i pannelli scendono a un terzo della luminosità dopo questo tempo senza premere alcun tasto, e tornano normali alla prima pressione. Mai mentre un gioco è in esecuzione.
+settings		1 minute	1 minuto
+settings		2 minutes	2 minuti
+settings		Closing the lid	Chiusura del coperchio
+settings		Sleep with the lid: the game pauses, opening the lid carries on where you were.	Sospendi con il coperchio: il gioco va in pausa, riaprendolo riprendi da dove eri.
+settings		Sleeps	Sospende
+settings		Does nothing	Non fa nulla
+settings		Waking up	Riattivazione
+settings		Fast: the handheld's parts wake up together. Careful: one after the other, slower but the safest. Banana switches to Careful by itself if a sleep ever fails.	Rapida: le parti della console si riattivano insieme. Cauta: una dopo l'altra, più lenta ma la più sicura. Banana passa da sola a Cauta se una sospensione dovesse mai fallire.
+settings		Fast	Rapida
+settings		Careful	Cauta
+settings		LEDs	LED
+settings		Green, red when the battery is low, blinking red when nearly empty, amber while charging.	Verde, rosso con la batteria scarica, rosso lampeggiante quando è quasi a zero, ambra in carica.
+settings		Bright	Luminosi
+settings		Dim	Attenuati
+settings		Nintendo DS	Nintendo DS
+settings		Emulator	Emulatore
+settings		SuperDrastic: DraStic straight onto both panels, with its own governor. BananaDS: Banana's own emulator (melonDS's core). Both draw 3D with the Gengis Engine at 2x and have their menu on L3; each keeps its own settings below. X on a game in the library picks one for that game alone.	SuperDrastic: DraStic direttamente su entrambi i pannelli, con un proprio governor. BananaDS: l'emulatore di Banana (basato sul core di melonDS). Entrambi disegnano il 3D con il Gengis Engine a 2x e hanno il menu su L3; ognuno mantiene le proprie impostazioni qui sotto. X su un gioco nella libreria ne sceglie uno solo per quel gioco.
+settings		SuperDrastic	SuperDrastic
+settings		BananaDS	BananaDS
+settings		Quick resume	Ripresa rapida
+settings		On: quitting keeps where you are, and the game goes on from there next time (a shutdown too). Off: quitting ends the game, which starts from its title next time.	Attivo: uscendo si conserva il punto in cui sei, e la volta dopo il gioco riparte da lì (anche dopo uno spegnimento). Disattivo: uscendo il gioco termina, e la volta dopo parte dal titolo.
+settings		None	Nessuno
+settings		Crisp	Nitido
+settings		Crisp + DS colours	Nitido + colori DS
+settings		LCD grid	Griglia LCD
+settings		LCD grid + colours	Griglia LCD + colori
+settings		FSR	FSR
+settings		LCD (DS colours)	LCD (colori DS)
+settings		LCD 1x	LCD 1x
+settings		LCD 3x	LCD 3x
+settings		Fast LCD	LCD veloce
+settings		DS colours	Colori DS
+settings		Retro	Retro
+settings		Bevel	Rilievo
+settings		Sharp bilinear	Bilineare nitido
+settings		Sharp + scanlines	Nitido + scanline
+settings		Fast CRT	CRT veloce
+settings		Sharp pixels (integer)	Pixel nitidi (interi)
+settings		Integer fill	Riempimento intero
+settings		LCD grid 2x	Griglia LCD 2x
+settings		Dot (MiZai)	Punti (MiZai)
+settings		Dot (MiZai, RG DS+)	Punti (MiZai, RG DS+)
+settings		Retro tiles	Tessere retro
+settings		DraStic LCD	DraStic LCD
+settings		DraStic LCD + colours	DraStic LCD + colori
+settings		DraStic Quilez	DraStic Quilez
+settings		DraStic sharp	DraStic nitido
+settings		DraStic sharp + colours	DraStic nitido + colori
+settings		DraStic fast LCD	DraStic LCD veloce
+settings		DraStic fast LCD + colours	DraStic LCD veloce + colori
+settings		Sharp pixels: every DS pixel an exact square, no blur (4x4 on the RG DS Plus, 2x2 in a frame on the RG DS). Crisp: exact pixel-area scaling. Grid and LCD: the DS's screen grid. Colours: the DS's own, duller colours. CRT: a TV's scanlines. FSR: smooth edges, the heaviest. None: smooth scaling, no GPU work. Your own: .frag files in banana/shaders (letters, digits and . _ + - in the name).	Pixel nitidi: ogni pixel del DS è un quadrato esatto, senza sfocatura (4x4 sulla RG DS Plus, 2x2 in una cornice sulla RG DS). Nitido: scalatura esatta per area di pixel. Griglia e LCD: la griglia dello schermo del DS. Colori: quelli del DS stesso, più spenti. CRT: le scanline di un televisore. FSR: bordi morbidi, il più pesante. Nessuno: scalatura morbida, nessun lavoro per la GPU. I tuoi: file .frag in banana/shaders (lettere, cifre e . _ + - nel nome).
+settings		Shader	Shader
+settings		3D resolution	Risoluzione 3D
+settings		2x draws the DS's 3D at twice its size on these panels. 1x is the DS's own, the lightest. 3x and 4x (experimental): three or four times (4x is the RG DS Plus panels' own size), the sharpest and the heaviest: a busy 3D scene can drop below full speed.	2x disegna il 3D del DS al doppio delle dimensioni su questi pannelli. 1x è quella del DS, la più leggera. 3x e 4x (sperimentale): tre o quattro volte (4x è la dimensione nativa dei pannelli della RG DS Plus), la più nitida e la più pesante: una scena 3D affollata può scendere sotto la velocità piena.
+settings		Edge marking	Marcatura dei bordi
+settings		The outlines some games draw round their 3D models (Zelda, Kirby, many Pokémon battles). Off leaves them out.	I contorni che alcuni giochi disegnano attorno ai modelli 3D (Zelda, Kirby, molte battaglie Pokémon). Disattivo li esclude.
+settings		Fog	Nebbia
+settings		The distance fog some games draw in 3D. Off leaves it out.	La nebbia di distanza che alcuni giochi disegnano in 3D. Disattivo la esclude.
+settings		Frame pacing	Cadenza dei frame
+settings		Panels runs the DS at the panels' 60 Hz, a new frame every refresh (0.3% fast, the sound matched). DS rate keeps the DS's own 59.83 Hz, a frame shown twice every ~6 s.	Pannelli fa girare il DS ai 60 Hz dei pannelli, con un nuovo frame a ogni aggiornamento (0,3% più veloce, audio adattato). Frequenza DS mantiene i 59,83 Hz del DS, con un frame mostrato due volte ogni ~6 s.
+settings		Panels	Pannelli
+settings		DS rate	Frequenza DS
+settings		CPU clock	Clock CPU
+settings		Saves battery finds the lowest clock each game runs at full speed and remembers it. Always full keeps the top clock.	Risparmio batteria trova il clock più basso con cui ogni gioco gira a piena velocità e lo ricorda. Sempre pieno mantiene il clock massimo.
+settings		Saves battery	Risparmio batteria
+settings		Always full	Sempre pieno
+settings		Timing	Temporizzazione
+settings		Accurate is melonDS's own. Fast lets the two CPUs run longer between meeting (about 10% faster), but it can break a game: Golden Sun: Dark Dawn loses its 3D world.	Preciso è quello di melonDS. Veloce lascia che le due CPU girino più a lungo tra un incontro e l'altro (circa il 10% più veloce), ma può rovinare un gioco: Golden Sun: Dark Dawn perde il suo mondo 3D.
+settings		Accurate	Preciso
+settings		Microphone	Microfono
+settings		How loud a word or a blow must be to reach the game. Off: the game hears nothing from the mic, and the in-game menu's Blow still works for a game that wants one.	Quanto forte deve essere una parola o un soffio per arrivare al gioco. Disattivo: il gioco non sente nulla dal microfono, e il Soffio del menu di gioco funziona comunque per i giochi che lo richiedono.
+settings		Medium	Media
+settings		High	Alta
+settings		Low	Bassa
+settings		2x draws the DS's 3D at twice its size on these panels, at full speed with SuperDrastic.	2x disegna il 3D del DS al doppio delle dimensioni su questi pannelli, a piena velocità con SuperDrastic.
+settings		Other systems	Altri sistemi
+settings		Screen	Schermo
+settings		Which panel the systems other than the DS use (RetroArch). The other one shows the game panel (Second screen), or is switched off.	Quale pannello usano i sistemi diversi dal DS (RetroArch). L'altro mostra il pannello di gioco (Secondo schermo), oppure viene spento.
+settings		Top	Superiore
+settings		Bottom	Inferiore
+settings		Second screen	Secondo schermo
+settings		While a game plays on one screen, the other shows its RetroAchievements and tiles to save, load, open RetroArch's menu, fast forward and quit (by touch when they are on the bottom screen). Off: the other screen stays dark.	Mentre un gioco gira su uno schermo, l'altro mostra i suoi RetroAchievements e i riquadri per salvare, caricare, aprire il menu di RetroArch, avanzare veloce e uscire (al tocco quando sono sullo schermo inferiore). Disattivo: l'altro schermo resta spento.
+settings		Game panel	Pannello di gioco
+settings		Network	Rete
+settings		Wi-Fi	Wi-Fi
+settings		The networks around: A on one joins it, with a password typed on the keyboard here (or by touch).	Le reti nei dintorni: A su una la collega, con una password digitata qui sulla tastiera (o al tocco).
+settings		File sharing	Condivisione file
+settings		System	Sistema
+settings		Time zone	Fuso orario
+settings		The clock's time zone, summer time included, for the menu and the games (a DS game's clock too). The time itself comes from Wi-Fi or the handheld's own clock.	Il fuso orario dell'orologio, ora legale inclusa, per il menu e per i giochi (anche l'orologio di un gioco DS). L'ora stessa viene dal Wi-Fi o dall'orologio della console.
+settings		Update	Aggiornamento
+settings		A new version of Banana, downloaded from GitHub over Wi-Fi or from a package on the card, written to the other slot and run from the next restart; this one stays as it is until then.	Una nuova versione di Banana, scaricata da GitHub via Wi-Fi o da un pacchetto sulla scheda, scritta nell'altro slot e avviata dal prossimo riavvio; questa resta com'è fino ad allora.
+settings		Box art	Copertine
+settings		Covers, title screens, genres and years for your games, from libretro's free collections (no account, Wi-Fi needed). It keeps going in the background; games that already have art are skipped, so running it again only fetches what is new.	Copertine, schermate dei titoli, generi e anni per i tuoi giochi, dalle raccolte libere di libretro (nessun account, serve il Wi-Fi). Prosegue in background; i giochi che hanno già la grafica vengono saltati, quindi rilanciandolo scarica solo ciò che è nuovo.
+settings		Previous version	Versione precedente
+settings		Restarts into the other slot: the version that ran before the last update. Press A twice.	Riavvia nell'altro slot: la versione che girava prima dell'ultimo aggiornamento. Premi A due volte.
+settings		SSH	SSH
+settings		First-time setup	Configurazione iniziale
+settings		The steps from the first boot again: Wi-Fi, the time zone and the RetroAchievements account (ScreenScraper: not available yet).	I passaggi del primo avvio, di nuovo: Wi-Fi, fuso orario e account RetroAchievements (ScreenScraper: non ancora disponibile).
+settings		About	Informazioni
+settings		Restart	Riavvia
+settings		Restarts the handheld. Press A twice.	Riavvia la console. Premi A due volte.
+settings		Shut down	Spegni
+settings		Turns the handheld off. Press A twice. (Or hold the power button.)	Spegne la console. Premi A due volte. (Oppure tieni premuto il tasto di accensione.)
+settings		%.1f GB free of %.1f GB	%.1f GB liberi su %.1f GB
+settings		Connected	Connesso
+settings		Not connected	Non connesso
+settings		Connected: {address}	Connesso: {address}
+settings		Banana {version} (slot {slot}) on the {handheld}.	Banana {version} (slot {slot}) su {handheld}.
+settings		handheld	console
+settings		dev	dev
+settings		Battery {percent}%.	Batteria {percent}%.
+settings		Card: {free space}.	Scheda: {free space}.
+settings		The other slot holds no system.	L'altro slot non contiene alcun sistema.
+settings		Settings	Impostazioni
+settings		%d settings	%d impostazioni
+settings		Choose a group	Scegli un gruppo
+settings		Close	Chiudi
+settings		Open	Apri
+settings		Wi-Fi: {status}. Network, below, joins one; networks can also be written in banana/wifi.conf on a computer (see banana/README.txt).	Wi-Fi: {status}. Rete, qui sotto, ne collega una; le reti si possono anche scrivere in banana/wifi.conf da un computer (vedi banana/README.txt).
+settings		For working on Banana itself: ssh root@{address}, with the public keys in banana/ssh/authorized_keys on the card (no passwords). Files: scp -O (dropbear has no SFTP), or File sharing.	Per lavorare su Banana stesso: ssh root@{address}, con le chiavi pubbliche in banana/ssh/authorized_keys sulla scheda (niente password). File: scp -O (dropbear non ha SFTP), oppure Condivisione file.
+settings		<address>	<address>
+settings		The card on the network: \\{address}\banana in Windows' File Explorer, smb://{address}/banana on a Mac (Finder, Go, Connect to Server). {sharing}	La scheda in rete: \\{address}\banana in Esplora file di Windows, smb://{address}/banana su un Mac (Finder, Vai, Connessione al server). {sharing}
+settings		(Not connected to Wi-Fi now.)	(Not connected to Wi-Fi now.)
+settings		Fetching covers and title screens. The menu shows them as they come, and it carries on if you leave this screen.	Recupero di copertine e schermate dei titoli. Il menu le mostra man mano che arrivano, e prosegue anche se lasci questa schermata.
+settings		Press A again	Premi di nuovo A
+settings		Choose	Scegli
+settings		Back	Indietro
+settings		Confirm	Conferma
+settings		Start	Avvia
+settings		Change	Cambia
+settings		RetroAchievements	RetroAchievements
+settings		RetroAchievements login failed	Accesso a RetroAchievements non riuscito
+settings		Connected to {network} ({address}).	Connesso a {network} ({address}).
+settings		Joined {network}, but it gave the handheld no address.	Collegato a {network}, ma non ha assegnato alcun indirizzo alla console.
+settings		Couldn't join {network}. If the password was wrong, A on it types it again.	Impossibile collegarsi a {network}. Se la password era sbagliata, A su di essa la digita di nuovo.
+settings		Joining {network}...	Collegamento a {network}...
+settings		Connected to {network}	Connesso a {network}
+settings		Password for {network}	Password per {network}
+settings		Shift	Maiusc
+settings		Space	Spazio
+settings		Del	Canc
+settings		Done	Fatto
+settings		Wi-Fi networks	Reti Wi-Fi
+settings		Wi-Fi is off	Il Wi-Fi è spento
+settings		Joining {network}	Collegamento a {network}
+settings		Wi-Fi is switched off. X switches it on and searches.	Il Wi-Fi è spento. X lo accende e cerca.
+settings		Networks	Reti
+settings		Searching...	Ricerca...
+settings		{n} network	{n} rete
+settings		{n} networks	{n} reti
+settings		Joining	Collegamento
+settings		Saved	Salvata
+settings		No networks found. X searches again.	Nessuna rete trovata. X cerca di nuovo.
+settings		Password	Password
+settings		Join	Collega
+settings		{n} character	{n} carattere
+settings		{n} characters	{n} caratteri
+settings		Type here	Scrivi qui
+settings		Delete	Elimina
+settings		Writing the update: {status}	Scrittura dell'aggiornamento: {status}
+settings		Written: restart to run it	Scritto: riavvia per eseguirlo
+settings		Failed	Non riuscito
+settings		Running {version}	In esecuzione: {version}
+settings		Running {version}, slot {slot}	In esecuzione: {version}, slot {slot}
+settings		The new version is being written to the other slot and checked; this one isn't touched. Don't turn the handheld off. It takes a minute or two.	La nuova versione viene scritta nell'altro slot e controllata; questa non viene toccata. Non spegnere la console. Ci vuole un minuto o due.
+settings		The new version is in the other slot and will run from the next restart. A restarts now. If it ever fails to start, Previous version brings this one back.	La nuova versione è nell'altro slot e verrà eseguita dal prossimo riavvio. A riavvia ora. Se non dovesse avviarsi, Versione precedente riporta questa.
+settings		The update wasn't applied: {reason}. This version is untouched.	L'aggiornamento non è stato applicato: {reason}. Questa versione non è stata toccata.
+settings		No update packages found. Put a banana-{board}-<version>.update.tar from a release in banana/updates on the card (File sharing can copy it over Wi-Fi), then come back here.	Nessun pacchetto di aggiornamento trovato. Metti un file banana-{board}-<version>.update.tar da una release in banana/updates sulla scheda (Condivisione file può copiarlo via Wi-Fi), poi torna qui.
+settings		A on a package writes it to the other slot and checks it; the running version stays until the restart. Y deletes the package from the card{on}	A su un pacchetto lo scrive nell'altro slot e lo controlla; la versione in uso resta fino al riavvio. Y elimina il pacchetto dalla scheda{on}
+settings		Update packages	Pacchetti di aggiornamento
+settings		{n} package	{n} pacchetto
+settings		Banana {version}	Banana {version}
+settings		for both handhelds	per entrambe le console
+settings		for the {handheld}	per {handheld}
+settings		not for this handheld	non per questa console
+settings		Nothing in banana/updates on the card.	Niente in banana/updates sulla scheda.
+settings		A Wi-Fi password has 8 to 63 characters; this one has {count}.	Una password Wi-Fi ha da 8 a 63 caratteri; questa ne ha {count}.
+settings		The account's name, as on retroachievements.org.	Il nome dell'account, come su retroachievements.org.
+settings		RetroAchievements password for {name}	Password RetroAchievements per {name}
+settings		The account's name, as on screenscraper.fr.	Il nome dell'account, come su screenscraper.fr.
+settings		ScreenScraper password for {name}	Password ScreenScraper per {name}
+settings		Checking the account {name}...	Verifica dell'account {name}...
+settings		No connection: check Wi-Fi, then try again from the setup	Nessuna connessione: controlla il Wi-Fi, poi riprova dalla configurazione
+settings		Logged in as {name}	Accesso eseguito come {name}
+settings		Logged in as {name} · {score} points	Accesso eseguito come {name} · {score} punti
+settings		Wrong account name or password	Nome account o password errati
+settings		The server said no ({code})	Il server ha rifiutato ({code})
+settings		Account name	Nome account
+settings		Finish	Fine
+settings		Not signed in	Accesso non eseguito
+settings		Your home network: the games' achievements, the clock and the art need it. A picks it from the networks around; the password goes in on the keyboard.	La tua rete di casa: gli obiettivi dei giochi, l'orologio e la grafica ne hanno bisogno. A la sceglie tra le reti vicine; la password si inserisce con la tastiera.
+settings		The clock on the top screen, and the games' own clocks. Left and right change it.	L'orologio sullo schermo superiore e quelli dei giochi. Sinistra e destra lo cambiano.
+settings		Your retroachievements.org account: DraStic and RetroArch unlock achievements with it. A types the name, then the password. Leave it if you have none.	Il tuo account retroachievements.org: DraStic e RetroArch sbloccano gli obiettivi con questo. A digita il nome, poi la password. Lascialo vuoto se non ne hai uno.
+settings		Covers, title screens, genres and years for the games on the card, from libretro's free collections: no account. A starts it (Wi-Fi first); it keeps going while you finish the setup, and the menu shows the art as it comes. Settings > System > Box art runs it again for new games.	Copertine, schermate dei titoli, generi e anni per i giochi sulla scheda, dalle raccolte libere di libretro: nessun account. A lo avvia (prima il Wi-Fi); prosegue mentre finisci la configurazione, e il menu mostra la grafica man mano che arriva. Impostazioni > Sistema > Copertine lo riesegue per i giochi nuovi.
+settings		Everything here is in the settings too (Start in the menu), and this setup is under System > First-time setup. A finishes.	Tutto quello che c'è qui si trova anche nelle impostazioni (Start nel menu), e questa configurazione è in Sistema > Configurazione iniziale. A termina.
+settings		Fetching covers and title screens. It carries on while you finish the setup.	Recupero di copertine e schermate dei titoli. Prosegue mentre finisci la configurazione.
+settings		Welcome to Banana	Benvenuto in Banana
+settings		Skip	Salta
+settings		Next zone	Fuso successivo
+settings		Running	In esecuzione
+settings		Wi-Fi is off: switch it on in Network first.	Il Wi-Fi è spento: accendilo prima in Rete.
+settings		Starting	Avvio
+settings		{found} of {total} found	{found} su {total} trovati
+settings		No connection	Nessuna connessione
+settings		Didn't work	Non ha funzionato
+settings		Not yet	Non ancora
+settings		Save	Salva
+settings		Load	Carica
+settings		Menu	Menu
+settings	Second screen (RetroArch games)	Fast	Veloce
+settings		Quit	Esci
+settings		F + START	F + START
+settings		Latest achievements	Ultimi obiettivi
+settings		None unlocked yet. Good luck!	Nessuno sbloccato per ora. Buona fortuna!
+settings		just now	adesso
+settings		%lld min ago	%lld min fa
+settings		today %H:%M	oggi %H:%M
+settings		Waiting for RetroArch...	In attesa di RetroArch...
+settings		Looking the game up...	Ricerca del gioco...
+settings		This game has no achievements.	Questo gioco non ha obiettivi.
+settings		RetroAchievements is off, or its login failed: check the account in Settings > System > First-time setup.	RetroAchievements è disattivato, oppure l'accesso non è riuscito: controlla l'account in Impostazioni > Sistema > Configurazione iniziale.
+settings		No connection to RetroAchievements: check Wi-Fi.	Nessuna connessione a RetroAchievements: controlla il Wi-Fi.
+settings		Tap a tile, or hold F with the button under it	Tocca un riquadro, oppure tieni premuto F con il tasto sotto di esso
+settings		Hold F with the button under each tile	Tieni premuto F con il tasto sotto ogni riquadro
+settings		the boot partition can't be written	la partizione di avvio non è scrivibile
+settings		can't write extlinux.conf	impossibile scrivere extlinux.conf
+settings		slot {slot} holds no system	lo slot {slot} non contiene alcun sistema
+settings		switched {slot}	passato a {slot}
+settings		no such package: {package}	pacchetto inesistente: {package}
+settings		checking	verifica in corso
+settings		the package can't be unpacked	impossibile estrarre il pacchetto
+settings		the package has no {file}	il pacchetto non contiene {file}
+settings		the package has no device tree	il pacchetto non contiene un device tree
+settings		that is a package for the {package's handheld}, this is the {this handheld}	questo è un pacchetto per {package's handheld}, questa è {this handheld}
+settings		{file} is damaged (its hash is wrong)	{file} è danneggiato (il suo hash non è corretto)
+settings		no partition for slot {slot} ({partition})	nessuna partizione per lo slot {slot} ({partition})
+settings		the system ({size} bytes) doesn't fit the slot ({limit} bytes)	il sistema ({size} byte) non entra nello slot ({limit} byte)
+settings		writing {percent}%	scrittura {percent}%
+settings		writing slot {slot} failed	scrittura dello slot {slot} non riuscita
+settings		verifying	verifica
+settings		slot {slot} reads back wrong	la rilettura dello slot {slot} non corrisponde
+settings		can't write /boot/{slot}/{file}	impossibile scrivere /boot/{slot}/{file}
+settings		/boot/{slot}/{file} reads back wrong	la rilettura di /boot/{slot}/{file} non corrisponde
+settings		done {version}	completato {version}
+settings		With games: on the home row while there is something in it to start. Hidden: never. Always: with nothing in it too (Ports: for PortMaster, which gets ports).	Con giochi: nella riga iniziale finché c'è qualcosa da avviare. Nascosto: mai. Sempre: anche senza nulla dentro (Ports: per PortMaster, che riceve i port).
+settings		With games	Con giochi
+settings		Hidden	Nascosto
+settings		Always	Sempre
+settings		Reykjavik, Accra, Dakar	Reykjavik, Accra, Dakar
+settings		Tehran	Teheran
+settings		Kabul	Kabul
+settings		Kathmandu	Kathmandu
+settings		Dhaka	Dacca
+settings		Yangon	Yangon
+settings		Darwin	Darwin
+settings		Noumea, Solomon Islands	Noumea, Isole Salomone
+settings		Fiji	Figi
+settings		Tonga, Samoa	Tonga, Samoa
+settings		Pago Pago	Pago Pago
+settings		Bogota, Lima, Panama, Winnipeg	Bogotà, Lima, Panama, Winnipeg
+settings		Havana	L'Avana
+settings		Caracas, La Paz, Manaus	Caracas, La Paz, Manaus
+settings		Puerto Rico, Santo Domingo	Porto Rico, Santo Domingo
+settings		St. John's	St. John's
+settings		Fernando de Noronha	Fernando de Noronha
+settings		Azores	Azzorre
+settings		Cape Verde	Capo Verde
+settings		Gamma	Gamma
+settings		Black	Nero
+settings		Grey steps	Gradini di grigio
+settings		Colour bars	Barre di colore
+settings		White	Bianco
+settings		Mid grey	Grigio medio
+settings		None (smooth)	Nessuno (morbido)
+settings		FXAA	FXAA
+settings		{n} (card)	{n} (scheda)
+settings		Text on accent	Testo sul colore d'accento
+settings		The text on the selection's colour. Auto picks dark or light, whichever reads better on the accent.	Il testo sul colore della selezione. Auto sceglie scuro o chiaro, quello che si legge meglio sul colore d'accento.
+settings		Auto	Auto
+settings		Top brightness	Luminosità superiore
+settings		Bottom brightness	Luminosità inferiore
+settings		The bottom screen's backlight. F + volume changes both screens anywhere, in games too.	La retroilluminazione dello schermo inferiore. F + volume cambia entrambi gli schermi ovunque, anche nei giochi.
+settings		Screen colours	Colori dello schermo
+settings		Shown systems	Sistemi visibili
+settings		Which systems are on the home row. Each one: with games (when it has something to start), hidden, or always (with nothing in it too: Ports for PortMaster).	Quali sistemi stanno nella riga iniziale. Ognuno: con giochi (quando ha qualcosa da avviare), nascosto, o sempre (anche senza nulla dentro: Ports per PortMaster).
+settings		Power off after sleeping	Spegni dopo la sospensione
+settings		Asleep this long (not while charging), the game is saved where you are and the handheld turns itself off, so the battery keeps for weeks. Press power to start it again: it goes straight back into the game.	Dopo questo tempo di sospensione (non in carica), la partita viene salvata dove sei e la console si spegne da sola, così la batteria dura settimane. Premi accensione per riavviarla: torna direttamente nel gioco.
+settings		1 hour	1 ora
+settings		2 hours	2 ore
+settings		DS language	Lingua DS
+settings		The language the DS itself is set to: a game that has several starts in it. Both emulators.	La lingua impostata sul DS stesso: un gioco che ne ha diverse parte in quella. Vale per entrambi gli emulatori.
+settings		English	Inglese
+settings		Japanese	Giapponese
+settings		French	Francese
+settings		German	Tedesco
+settings		Italian	Italiano
+settings		Spanish	Spagnolo
+settings		DS name	Nome DS
+settings		The name the DS itself is set to, as on a real one: Mario Kart's records, Pictochat, a game's save. 10 characters at most. Both emulators; empty: Dr DraStic in SuperDrastic, Banana in BananaDS.	Il nome impostato sul DS stesso, come su uno vero: i record di Mario Kart, Pictochat, il salvataggio di un gioco. Massimo 10 caratteri. Vale per entrambi gli emulatori; vuoto: Dr DraStic in SuperDrastic, Banana in BananaDS.
+settings		Low latency (experimental)	Bassa latenza (sperimentale)
+settings		Experimental. On: no frame queue, each frame ready just before the panels' next refresh: a press shows about two refreshes sooner. Run-ahead also runs 1 or 2 frames ahead and back every frame, so the game answers sooner than its own lag; it needs twice the CPU or more (light 2D games at 1x) and turns itself off where it doesn't fit.	Sperimentale. Attivo: nessuna coda di frame, ogni frame è pronto subito prima del prossimo aggiornamento dei pannelli: una pressione si vede circa due aggiornamenti prima. Run-ahead inoltre va avanti di 1 o 2 frame e torna indietro a ogni frame, così il gioco risponde prima del suo stesso lag; serve il doppio della CPU o più (giochi 2D leggeri a 1x) e si disattiva da solo dove non basta.
+settings		Run-ahead 1 frame	Run-ahead 1 frame
+settings		Run-ahead 2 frames	Run-ahead 2 frame
+settings		On: the game hears the real microphone (a blow, a voice; the DS's own games that ask for one). Off: it hears nothing from the mic, and the in-game menu's Blow still works for a game that wants one.	Attivo: il gioco sente il microfono vero (un soffio, una voce; i giochi DS che ne usano uno). Disattivo: non sente nulla dal microfono, e il Soffio del menu di gioco funziona comunque per i giochi che lo richiedono.
+settings		Mic sensitivity	Sensibilità microfono
+settings		How far above the room's noise a word or a blow must be to reach the game. Gate off lets the game hear everything the microphone picks up, its own sound from the speaker included.	Quanto sopra il rumore della stanza deve essere una parola o un soffio per arrivare al gioco. Gate disattivato lascia che il gioco senta tutto ciò che il microfono capta, compreso il suo stesso suono dall'altoparlante.
+settings		Gate off	Gate disattivato
+settings		Reset BananaDS	Ripristina BananaDS
+settings		BananaDS's settings back to Banana's. Saves, save states and each game's clock stay. Press A twice.	Le impostazioni di BananaDS tornano a quelle di Banana. Salvataggi, stati salvati e l'orologio di ogni gioco restano. Premi A due volte.
+settings		Threaded 3D	3D su thread
+settings		On draws the DS's 3D beside the game, the faster way. Off draws it in step with the game: for a game whose 3D shows on the wrong screen or a frame late with it on (the Dragon Quest games).	Attivo disegna il 3D del DS in parallelo al gioco, il modo più veloce. Disattivo lo disegna in sincronia con il gioco: per un gioco il cui 3D, se attivo, appare sullo schermo sbagliato o con un frame di ritardo (i giochi Dragon Quest).
+settings		Experimental. On: no frame queue: each frame goes to the panels at the next refresh it can make, and DraStic starts each frame as late as that allows, so a press shows about two refreshes sooner (the sound a little sooner too). Uneven frames (2x, heavy scenes) can show as small stutters the queue would hide.	Sperimentale. Attivo: nessuna coda di frame: ogni frame va ai pannelli al primo aggiornamento possibile, e DraStic avvia ogni frame il più tardi possibile, così una pressione si vede circa due aggiornamenti prima (anche il suono un po' prima). I frame irregolari (2x, scene pesanti) possono mostrarsi come piccoli scatti che la coda nasconderebbe.
+settings		Reset buttons	Ripristina tasti
+settings		DraStic's buttons back to Banana's, for a button setup gone wrong in DraStic's menu: the pad as printed, F or L3 the menu, R2 save, L2 load, R3 fast forward. (HOME always opens the menu.) Press A twice.	I tasti di DraStic tornano a quelli di Banana, per una configurazione dei tasti andata male nel menu di DraStic: la croce come stampata, F o L3 il menu, R2 salva, L2 carica, R3 avanzamento veloce. (HOME apre sempre il menu.) Premi A due volte.
+settings		Reset DraStic	Ripristina DraStic
+settings		All of DraStic's and SuperDrastic's settings back to Banana's, the buttons too. Saves, save states, cheats and the DS's name and birthday stay. Press A twice.	Tutte le impostazioni di DraStic e SuperDrastic tornano a quelle di Banana, anche i tasti. Salvataggi, stati salvati, trucchi e il nome e il compleanno del DS restano. Premi A due volte.
+settings		Game panel when idle	Pannello di gioco se inattivo
+settings		With a game on the top screen, what the game panel on the bottom one does when nothing has touched it or pressed a button for a while: stays on, dims, or turns off. A touch or any button lights it again.	Con un gioco sullo schermo superiore, cosa fa il pannello di gioco su quello inferiore quando per un po' nulla lo tocca e nessun tasto è premuto: resta acceso, si attenua o si spegne. Un tocco o un tasto qualsiasi lo riaccende.
+settings		Dims	Si attenua
+settings		Turns off	Si spegne
+settings		Stays on	Resta acceso
+settings		Game panel idle time	Tempo di inattività del pannello
+settings		How long the game panel waits, with no touch and no button, before it dims or turns off (Game panel when idle).	Quanto aspetta il pannello di gioco, senza tocchi né tasti, prima di attenuarsi o spegnersi (Pannello di gioco se inattivo).
+settings		After 10 s	Dopo 10 s
+settings		After 30 s	Dopo 30 s
+settings		After 1 minute	Dopo 1 minuto
+settings		Pokémon companion	Compagno Pokémon
+settings		Pokémon Ruby, Sapphire, Emerald, FireRed and LeafGreen (the English releases) on the second screen: the party with levels, HP and moves, and in a battle the foe, its types and how each move does against it. Read from the game as it plays; other games keep the panel as it is. Needs Second screen on. Inspired by PokeDaisy by Lidor Itzhari.	Pokémon Rubino, Zaffiro, Smeraldo, Rosso Fuoco e Verde Foglia (le versioni inglesi) sul secondo schermo: la squadra con livelli, PS e mosse, e in combattimento l'avversario, i suoi tipi e come va ciascuna mossa contro di esso. Letto dal gioco mentre si gioca; gli altri giochi lasciano il pannello com'è. Richiede Secondo schermo attivo. Ispirato a PokeDaisy di Lidor Itzhari.
+settings		Softcore: achievements unlock with save states, rewind and cheats still there. Hardcore: those are locked for the game, and the unlocks count as hardcore on retroachievements.org. RetroArch's own menu changes the same setting.	Softcore: gli obiettivi si sbloccano con stati salvati, riavvolgimento e trucchi ancora disponibili. Hardcore: quelli sono bloccati per il gioco, e gli sblocchi contano come hardcore su retroachievements.org. Anche il menu di RetroArch cambia la stessa impostazione.
+settings		Softcore	Softcore
+settings		Hardcore	Hardcore
+settings		On: quitting keeps where you are, and the game goes on from there next time (RetroArch's automatic save state; not in Hardcore). Off: a game starts from its title.	Attivo: uscendo si conserva il punto in cui sei, e la volta dopo il gioco riparte da lì (lo stato salvato automatico di RetroArch; non in Hardcore). Disattivo: un gioco parte dal titolo.
+settings		A look for the systems RetroArch runs: a handheld's LCD grid, a CRT's scanlines, or sharp pixels at any size. RetroArch's own Shaders menu still picks any of libretro's presets.	Un aspetto per i sistemi che RetroArch esegue: la griglia LCD di una portatile, le scanline di un CRT, o pixel nitidi a qualsiasi dimensione. Il menu Shaders di RetroArch sceglie comunque qualsiasi preset di libretro.
+settings		LCD	LCD
+settings		CRT	CRT
+settings		Sharp pixels	Pixel nitidi
+settings		Audio latency	Latenza audio
+settings		RetroArch's audio buffer. Low is the quickest to react and can crackle on a busy game; Safe has the most margin (and the most delay).	Il buffer audio di RetroArch. Bassa è la più rapida a reagire e può gracchiare con un gioco impegnativo; Sicura ha più margine (e più ritardo).
+settings		Low (32 ms)	Bassa (32 ms)
+settings		Default (64 ms)	Predefinita (64 ms)
+settings		Safe (128 ms)	Sicura (128 ms)
+settings		On waits for the panel's refresh before drawing the next frame, so nothing tears. Off lets a core run as fast as it can; the panel can show a half-drawn frame.	Attivo aspetta l'aggiornamento del pannello prima di disegnare il frame successivo, così non c'è tearing. Disattivo lascia girare un core più veloce che può; il pannello può mostrare un frame disegnato a metà.
+settings		The emulator for GBA games. gpSP: the fastest. mGBA: the most accurate, and the one RetroAchievements accepts for hardcore. Cores downloaded with RetroArch's Core Downloader (its Online Updater) are listed here too.	L'emulatore per i giochi GBA. gpSP: il più veloce. mGBA: il più preciso, e quello che RetroAchievements accetta per l'hardcore. Qui sono elencati anche i core scaricati con il Core Downloader di RetroArch (il suo Online Updater).
+settings		RetroArch hotkeys	Scorciatoie RetroArch
+settings		F + a button in a game: X the menu, Start quits, L and R load and save a state, Y the frame counter, L2 rewind, R2 fast forward. Off: only F + X and F + Start, the two needed to get out, and none bound in RetroArch's own menu either.	F + un tasto in un gioco: X il menu, Start esce, L e R caricano e salvano uno stato, Y il contatore dei frame, L2 riavvolgimento, R2 avanzamento veloce. Disattivo: solo F + X e F + Start, i due necessari per uscire, e nessuna assegnata nemmeno nel menu di RetroArch.
+settings		Reset RetroArch	Ripristina RetroArch
+settings		RetroArch's settings back to Banana's: for a button bound away in RetroArch's menu (an A that does something else, a hotkey on a face button). Its controls, remaps and overrides go to retroarch/backup-<date> on the card. Saves, states, the RetroAchievements account and these settings stay. Press A twice.	Le impostazioni di RetroArch tornano a quelle di Banana: per un tasto riassegnato nel menu di RetroArch (una A che fa altro, una scorciatoia su un tasto frontale). I suoi controlli, rimappature e override vanno in retroarch/backup-<date> sulla scheda. Salvataggi, stati, l'account RetroAchievements e queste impostazioni restano. Premi A due volte.
+settings		Bluetooth	Bluetooth
+settings		Controllers, headphones and speakers. Off (the default) leaves the radio unpowered, which saves battery; Bluetooth devices, below, pairs them. While Bluetooth headphones are connected the sound plays on them.	Controller, cuffie e altoparlanti. Disattivo (predefinito) lascia la radio spenta, il che risparmia batteria; Dispositivi Bluetooth, qui sotto, li associa. Quando delle cuffie Bluetooth sono collegate l'audio esce da quelle.
+settings		Bluetooth devices	Dispositivi Bluetooth
+settings		The devices paired and the ones around: A pairs with one in pairing mode, connects a paired one or disconnects it.	I dispositivi associati e quelli nei dintorni: A si associa a uno in modalità di associazione, ne collega uno associato o lo scollega.
+settings		Bluetooth audio	Audio Bluetooth
+settings		Low latency: aptX, or SBC on headphones without it: the sound as close to the picture as Bluetooth gets, for games. Best quality: LDAC, aptX HD or a richer SBC when the headphones have them, a little later (tens of ms) and a little more battery. Headphones connected now reconnect to take the change.	Bassa latenza: aptX, o SBC su cuffie che non lo hanno: l'audio il più vicino all'immagine che il Bluetooth permetta, per i giochi. Migliore qualità: LDAC, aptX HD o un SBC più ricco quando le cuffie li hanno, un po' più in ritardo (decine di ms) e con un po' più di batteria. Le cuffie collegate ora si ricollegano per applicare la modifica.
+settings		Low latency	Bassa latenza
+settings		Best quality	Migliore qualità
+settings		Sharing login	Accesso alla condivisione
+settings		Name and password: the card asks for the name and password below (Windows refuses a share with no password). Guest: anyone on the network opens it with none; only on a network you trust.	Nome e password: la scheda chiede il nome e la password qui sotto (Windows rifiuta una condivisione senza password). Ospite: chiunque sulla rete la apre senza; solo su una rete di cui ti fidi.
+settings		Name and password	Nome e password
+settings		Guest	Ospite
+settings		Sharing name and password	Nome e password della condivisione
+settings		The language of the menu and the settings. Lines not yet translated stay in English.	La lingua del menu e delle impostazioni. Le righe non ancora tradotte restano in inglese.
+settings		{name} ({English name}): translated by {translator}.	{name} ({English name}): tradotto da {translator}.
+settings		Language	Lingua
+settings		Test versions	Versioni di prova
+settings		Whether Update's check counts test versions (GitHub pre-releases). Every BananaOS release so far is one, so with them left out the check finds nothing until a stable version comes out.	Se il controllo di Aggiornamento conta le versioni di prova (pre-release di GitHub). Ogni release di BananaOS finora lo è, quindi escludendole il controllo non trova nulla finché non esce una versione stabile.
+settings		Included	Incluse
+settings		Left out	Escluse
+settings		Update check	Controllo aggiornamenti
+settings		When asked: GitHub is only asked when you choose Check for updates. Daily: also when Wi-Fi connects, at most once a day, so the Update row says when a new version is out. Nothing is downloaded without you.	Su richiesta: GitHub viene interpellato solo quando scegli Controlla aggiornamenti. Giornaliero: anche quando il Wi-Fi si connette, al massimo una volta al giorno, così la riga Aggiornamento dice quando esce una nuova versione. Senza il tuo consenso non si scarica nulla.
+settings		When asked	Su richiesta
+settings		Daily	Giornaliero
+settings		Box art from	Copertine da
+settings		libretro: libretro's collections. libretro + Twilight: TwilightBoxart (boxart.kirovair.com) for the covers libretro has none of. Twilight first: TwilightBoxart's covers where it has them. TwilightBoxart is asked one game a second.	libretro: le raccolte di libretro. libretro + Twilight: TwilightBoxart (boxart.kirovair.com) per le copertine che libretro non ha. Prima Twilight: le copertine di TwilightBoxart dove le ha. TwilightBoxart viene interpellato un gioco al secondo.
+settings		libretro + Twilight	libretro + Twilight
+settings		Twilight first	Prima Twilight
+settings		Second SD card	Seconda scheda SD
+settings		Games on the card in the second slot (its roms folder, with the same system folders as this card) show up in the library with the others while it's in. exFAT or FAT32.	I giochi sulla scheda nel secondo slot (la sua cartella roms, con le stesse cartelle dei sistemi di questa scheda) compaiono nella libreria insieme agli altri finché è inserita. exFAT o FAT32.
+settings		Show its games	Mostra i suoi giochi
+settings		Reset system settings	Ripristina impostazioni di sistema
+settings		Puts the menu, display, sound, power and network settings back to their defaults, the time zone too (the language stays). Your games, saves and the emulators' settings are untouched. Press A twice.	Riporta le impostazioni di menu, schermo, audio, alimentazione e rete ai valori predefiniti, fuso orario compreso (la lingua resta). I tuoi giochi, i salvataggi e le impostazioni degli emulatori non vengono toccati. Premi A due volte.
+settings		Reset emulator settings	Ripristina impostazioni emulatori
+settings		Puts the emulator choices back to their defaults: the DS emulator, Quick resume, each system's emulator (core), and RetroArch's shader, audio latency, VSync and hotkeys. Your menu settings, saves and games stay. Press A twice.	Riporta le scelte degli emulatori ai valori predefiniti: l'emulatore DS, la Ripresa rapida, l'emulatore (core) di ogni sistema, e shader, latenza audio, VSync e scorciatoie di RetroArch. Le impostazioni del menu, i salvataggi e i giochi restano. Premi A due volte.
+settings		Hotkeys	Scorciatoie
+settings		The buttons that do something everywhere, in the menu and in each emulator.	I tasti che fanno qualcosa ovunque, nel menu e in ogni emulatore.
+settings		Volume keys	Tasti del volume
+settings		Everywhere, in games too: the speakers, or the headphones while they are in.	Ovunque, anche nei giochi: gli altoparlanti, o le cuffie finché sono inserite.
+settings		F + volume	F + volume
+settings		Everywhere, in games too: both screens' backlights together. Each screen's own: Settings > Display & sound.	Ovunque, anche nei giochi: le retroilluminazioni di entrambi gli schermi insieme. Quella di ogni schermo: Impostazioni > Schermo e audio.
+settings		Power	Accensione
+settings		Sleep	Sospensione
+settings		Everywhere: a press sleeps (a game is paused where it is), a press wakes. Closing the lid does the same.	Ovunque: una pressione sospende (un gioco va in pausa dove si trova), una pressione riattiva. Anche chiudere il coperchio fa lo stesso.
+settings		Hold power	Accensione prolungata
+settings		Everywhere: held for 2 seconds. A game running saves first.	Ovunque: tenuto premuto 2 secondi. Un gioco in esecuzione salva prima.
+settings		Menu: START	Menu: START
+settings		In the menu: Settings. Y there: Sleep, Restart and Shut down.	Nel menu: Impostazioni. Y lì: Sospendi, Riavvia e Spegni.
+settings		Menu: SELECT	Menu: SELECT
+settings		Search	Cerca
+settings		In the menu: search every system's games by name.	Nel menu: cerca per nome i giochi di tutti i sistemi.
+settings		Menu: X	Menu: X
+settings		Resume, options	Riprendi, opzioni
+settings		On the home row: the system's last game. On a game: its page (name, box art, emulator, delete).	Sulla riga iniziale: l'ultimo gioco del sistema. Su un gioco: la sua pagina (nome, copertina, emulatore, elimina).
+settings		Menu: L / R	Menu: L / R
+settings		A page	Una pagina
+settings		In a game list or a settings list: five at a time. Up and down too.	In un elenco di giochi o di impostazioni: cinque alla volta. Anche su e giù.
+settings		SuperDrastic: F	SuperDrastic: F
+settings		Its menu	Il suo menu
+settings		DS games in SuperDrastic: save, load, quick settings (volume, brightness), quit. L3 opens it too.	Giochi DS in SuperDrastic: salva, carica, impostazioni rapide (volume, luminosità), esci. Anche L3 lo apre.
+settings		SuperDrastic: F + START	SuperDrastic: F + START
+settings		DS games in SuperDrastic: back to the menu, the spot saved to resume from when Quick resume is on.	Giochi DS in SuperDrastic: torna al menu, con il punto salvato da cui riprendere quando Ripresa rapida è attiva.
+settings		SuperDrastic: R2 / L2	SuperDrastic: R2 / L2
+settings		Save / load state	Salva / carica stato
+settings		DS games in SuperDrastic: DraStic's quick save state, and loading it.	Giochi DS in SuperDrastic: il salvataggio rapido di DraStic, e il suo caricamento.
+settings		SuperDrastic: R3	SuperDrastic: R3
+settings		Fast-forward	Avanzamento veloce
+settings		DS games in SuperDrastic: held, the game runs as fast as it can.	Giochi DS in SuperDrastic: tenuto premuto, il gioco va il più veloce possibile.
+settings		BananaDS: F / L3	BananaDS: F / L3
+settings		DS games in BananaDS: save, load, quick settings, achievements, quit.	Giochi DS in BananaDS: salva, carica, impostazioni rapide, obiettivi, esci.
+settings		BananaDS: F + R	BananaDS: F + R
+settings		Save to slot 1	Salva nello slot 1
+settings		DS games in BananaDS.	Giochi DS in BananaDS.
+settings		BananaDS: F + L	BananaDS: F + L
+settings		Load slot 1	Carica slot 1
+settings		BananaDS: F + START	BananaDS: F + START
+settings		DS games in BananaDS: your spot saved, then back to the menu.	Giochi DS in BananaDS: il tuo punto viene salvato, poi si torna al menu.
+settings		RetroArch: F + X	RetroArch: F + X
+settings		The other systems (RetroArch). Settings > Other systems > RetroArch hotkeys Off leaves this and F + START only.	Gli altri sistemi (RetroArch). Impostazioni > Altri sistemi > Scorciatoie RetroArch su Disattivo lascia solo questa e F + START.
+settings		RetroArch: F + START	RetroArch: F + START
+settings		The other systems (RetroArch): back to the menu.	Gli altri sistemi (RetroArch): torna al menu.
+settings		RetroArch: F + R / F + L	RetroArch: F + R / F + L
+settings		The other systems (RetroArch): the current state slot.	Gli altri sistemi (RetroArch): lo slot di stato corrente.
+settings		RetroArch: F + R2	RetroArch: F + R2
+settings		The other systems (RetroArch): on, and off again.	Gli altri sistemi (RetroArch): attivato, e poi di nuovo disattivato.
+settings		RetroArch: F + L2	RetroArch: F + L2
+settings		Rewind	Riavvolgimento
+settings		The other systems (RetroArch): held, the game runs backwards.	Gli altri sistemi (RetroArch): tenuto premuto, il gioco va all'indietro.
+settings		RetroArch: F + Y	RetroArch: F + Y
+settings		Frame rate	Frequenza dei frame
+settings		The other systems (RetroArch): shown in a corner, or not.	Gli altri sistemi (RetroArch): mostrata in un angolo, oppure no.
+settings		The handheld sleeps, as with a press of the power button; a game running is paused. Press the power button to wake it.	La console va in sospensione, come con una pressione del tasto di accensione; un gioco in esecuzione va in pausa. Premi il tasto di accensione per riattivarla.
+settings		From the theme	Dal tema
+settings		This theme sets its own accent colour. Pick Dark, Light or a theme without one to choose it here.	Questo tema imposta un proprio colore d'accento. Scegli Scuro, Chiaro o un tema senza colore d'accento per sceglierlo qui.
+settings		Name	Nome
+settings		The DS's name	Il nome del DS
+settings		10 characters at most	Massimo 10 caratteri
+settings		DraStic's buttons are Banana's again.	I tasti di DraStic sono di nuovo quelli di Banana.
+settings		Back to Banana's settings.	Tornato alle impostazioni di Banana.
+settings		Couldn't reset: the card may be read-only.	Impossibile ripristinare: la scheda potrebbe essere in sola lettura.
+settings		RetroArch is back to Banana's settings. The old ones are in {out} on the card.	RetroArch è tornato alle impostazioni di Banana. Le vecchie sono in {out} sulla scheda.
+settings		RetroArch couldn't be reset.	Impossibile ripristinare RetroArch.
+settings		Emulator settings reset	Impostazioni emulatori ripristinate
+settings		System settings reset	Impostazioni di sistema ripristinate
+settings		The core choices and RetroArch's options are back to their defaults.	Le scelte dei core e le opzioni di RetroArch sono tornate ai valori predefiniti.
+settings		The menu, display, sound and power settings are back to their defaults.	Le impostazioni di menu, schermo, audio e alimentazione sono tornate ai valori predefiniti.
+settings		Linux {release}.	Linux {release}.
+settings		The two screens rarely show the same white. This corrects one of them towards the other: the same test pattern on both, and red, green, blue, gamma, brightness and black for the one corrected (the handheld has one colour table, so one screen). Now: {c}	I due schermi raramente mostrano lo stesso bianco. Questa impostazione ne corregge uno verso l'altro: lo stesso schema di prova su entrambi, e rosso, verde, blu, gamma, luminosità e nero per quello corretto (la console ha una sola tabella dei colori, quindi un solo schermo). Ora: {c}
+settings		no correction.	nessuna correzione.
+settings		the top screen corrected.	schermo superiore corretto.
+settings		the bottom screen corrected.	schermo inferiore corretto.
+settings		What a computer asks for when it opens the share: name {name}, password {password}. A changes them (they are kept in banana/accounts.conf, which the share never shows).	Ciò che un computer chiede quando apre la condivisione: nome {name}, password {password}. A li cambia (sono conservati in banana/accounts.conf, che la condivisione non mostra mai).
+settings		Anyone on the network can open it with no password (Sharing login): leave it off on networks you don't trust.	Chiunque sulla rete può aprirla senza password (Accesso alla condivisione): lasciala disattivata sulle reti di cui non ti fidi.
+settings		Name {name}, password {password} (Sharing name and password, below).	Nome {name}, password {password} (Nome e password della condivisione, qui sotto).
+settings		Not set	Non impostato
+settings		The pictures didn't come: no connection?	Le immagini non sono arrivate: nessuna connessione?
+settings		Not fetched: {error}.	Non scaricato: {error}.
+settings		no connection	nessuna connessione
+settings		No connection: is Wi-Fi connected?	Nessuna connessione: il Wi-Fi è connesso?
+settings		Nothing in libretro's collection for "{words}". Fewer words, or another spelling (B, then A to type again).	Niente nella raccolta di libretro per "{words}". Meno parole, o un'altra grafia (B, poi A per scrivere di nuovo).
+settings		Couldn't write banana/wifi.conf on the card.	Impossibile scrivere banana/wifi.conf sulla scheda.
+settings		{network} signs in a way the menu can't (a company network, or the old WEP): it can be written in banana/wifi.conf on a computer.	{network} richiede un accesso che il menu non gestisce (una rete aziendale, o il vecchio WEP): si può scrivere in banana/wifi.conf da un computer.
+settings		Password for	Password per
+settings		{name} forgotten: its password is gone from banana/wifi.conf.	{name} dimenticata: la sua password è stata rimossa da banana/wifi.conf.
+settings		A joins the network chosen, with its password typed on the keyboard (or by touch). X searches again, Y forgets a saved network. Passwords are kept in banana/wifi.conf on the card.	A collega la rete scelta, con la password digitata sulla tastiera (o al tocco). X cerca di nuovo, Y dimentica una rete salvata. Le password sono conservate in banana/wifi.conf sulla scheda.
+settings		Every system's games	I giochi di ogni sistema
+settings		No games match	Nessun gioco corrisponde
+settings		{value} game matches	Giochi trovati: {value}
+settings		A types the key, B deletes, X capitals, Y a space, START searches: the games found open as a shelf of their own, first on the shelf. Part of a name is enough; an empty search takes the shelf away.	A digita il tasto, B cancella, X maiuscole, Y uno spazio, START cerca: i giochi trovati si aprono come uno scaffale a sé, per primo. Basta una parte del nome; una ricerca vuota toglie lo scaffale.
+settings		A types the key, B deletes, X capitals, L symbols, Y a space, START joins. Or tap the keys. The password is kept in banana/wifi.conf on the card.	A digita il tasto, B cancella, X maiuscole, L simboli, Y uno spazio, START si collega. Oppure tocca i tasti. La password è conservata in banana/wifi.conf sulla scheda.
+settings		A types the key, B deletes, X capitals, L symbols, Y a space, START when it is typed. Kept in both emulators' settings (DraStic's drastic.cfg, BananaDS's bananads.conf).	A digita il tasto, B cancella, X maiuscole, L simboli, Y uno spazio, START quando hai finito di scrivere. Conservato nelle impostazioni di entrambi gli emulatori (drastic.cfg di DraStic, bananads.conf di BananaDS).
+settings		A types the key, B deletes, X capitals, L symbols, Y a space, START when it is typed. Kept in banana/game-titles.tsv on the card.	A digita il tasto, B cancella, X maiuscole, L simboli, Y uno spazio, START quando hai finito di scrivere. Conservato in banana/game-titles.tsv sulla scheda.
+settings		A types the key, B deletes, X capitals, L symbols, Y a space, START looks. A few words of the name are enough: the closest names come first.	A digita il tasto, B cancella, X maiuscole, L simboli, Y uno spazio, START cerca. Bastano poche parole del nome: i nomi più vicini vengono per primi.
+settings		A types the key, B deletes, X capitals, L symbols, Y a space, START when it is typed. Or tap the keys. Accounts are kept in banana/accounts.conf on the card.	A digita il tasto, B cancella, X maiuscole, L simboli, Y uno spazio, START quando hai finito di scrivere. Oppure tocca i tasti. Gli account sono conservati in banana/accounts.conf sulla scheda.
+settings		Downloading {n}%	Download in corso {n}%
+settings		The check didn't answer.	Il controllo non ha risposto.
+settings		failed: the download stopped	non riuscito: il download si è interrotto
+settings		Checking for updates...	Controllo aggiornamenti...
+settings		Checking the download...	Verifica del download...
+settings		{p}% · {done} of {total} MB	{p}% · {done} di {total} MB
+settings		Cancel	Annulla
+settings		Downloading Banana {version}	Download di Banana {version}
+settings		Downloaded	Scaricato
+settings		Install	Installa
+settings		Install Banana {version}	Installa Banana {version}
+settings		Resume: {done} of {total} MB	Riprendi: {done} di {total} MB
+settings		{n} MB	{n} MB
+settings		Download	Scarica
+settings		Download Banana {version}	Scarica Banana {version}
+settings		Check	Controlla
+settings		Up to date	Aggiornato
+settings		None for this handheld	Nessuna per questa console
+settings		Check for updates	Controlla aggiornamenti
+settings		Newest for the {handheld}: {version} (a test version)	Più recente per {handheld}: {version} (versione di prova)
+settings		Newest for the {handheld}: {version}	Più recente per {handheld}: {version}
+settings		Up to date: {version} is the newest for the {handheld}	Aggiornato: {version} è la più recente per {handheld}
+settings		No release for the {handheld} yet	Ancora nessuna release per {handheld}
+settings		The check failed	Controllo non riuscito
+settings		Asking GitHub which version is the newest for this handheld...	Chiedo a GitHub qual è la versione più recente per questa console...
+settings		Checking the download against the release's SHA-256...	Verifica del download con lo SHA-256 della release...
+settings		Downloading to banana/updates on the card. B goes back and the download carries on (this page shows how far it is); A cancels it, and the next Download carries on from where it stopped.	Download in banana/updates sulla scheda. B torna indietro e il download prosegue (questa pagina mostra a che punto è); A lo annulla, e il prossimo Scarica riprende da dove si era fermato.
+settings		The download failed: {reason}.	Download non riuscito: {reason}.
+settings		The check failed: {reason}.	Controllo non riuscito: {reason}.
+settings		Downloaded and checked against the release's SHA-256. A, then A again, writes it to the other slot; this version stays as it is until the restart.	Scaricato e verificato con lo SHA-256 della release. A, poi di nuovo A, lo scrive nell'altro slot; questa versione resta com'è fino al riavvio.
+settings		A downloads it ({n} MB) to banana/updates on the card and checks it; nothing is installed until you choose Install. X checks again.	A lo scarica ({n} MB) in banana/updates sulla scheda e lo verifica; non viene installato nulla finché non scegli Installa. X controlla di nuovo.
+settings		This handheld has the newest version. A checks again.	Questa console ha la versione più recente. A controlla di nuovo.
+settings		GitHub has no release for this handheld. With Settings > System > Test versions left out, only stable versions count, and there are none yet.	GitHub non ha release per questa console. Con Impostazioni > Sistema > Versioni di prova su Escluse, contano solo le versioni stabili, e per ora non ce ne sono.
+settings		A asks GitHub (Wi-Fi needed) whether a newer version is out for this handheld. Nothing is downloaded until you choose Download.	A chiede a GitHub (serve il Wi-Fi) se è uscita una versione più recente per questa console. Non viene scaricato nulla finché non scegli Scarica.
+settings		RetroAchievements password for	Password RetroAchievements per
+settings		ScreenScraper password for	Password ScreenScraper per
+settings		A name of letters, digits, dots, dashes or underscores, at most 32.	Un nome di lettere, cifre, punti, trattini o trattini bassi, al massimo 32.
+settings		File sharing password for	Password di condivisione file per
+settings		The password can't be empty: Sharing login > Guest is for a share with none.	La password non può essere vuota: Accesso alla condivisione > Ospite serve per una condivisione senza password.
+settings		The DS takes 10 characters at most; this one has {count}.	Il DS accetta al massimo 10 caratteri; questo ne ha {count}.
+settings		Looking in libretro's collection...	Ricerca nella raccolta di libretro...
+settings		The time zone is still UTC, so the clock shows {time}. Left and right pick yours; Finish again to keep UTC.	Il fuso orario è ancora UTC, quindi l'orologio mostra {time}. Sinistra e destra scelgono il tuo; premi di nuovo Fine per tenere UTC.
+settings		Your name on the DS, as a real one asks for it the first time: Mario Kart's records, Pictochat, a game's save. A types it (10 characters at most). Leave it and the emulators use their own.	Il tuo nome sul DS, come lo chiede uno vero la prima volta: i record di Mario Kart, Pictochat, il salvataggio di un gioco. A lo digita (massimo 10 caratteri). Se lo lasci vuoto, gli emulatori usano il proprio.
+settings		Tap a tile; F + X opens RetroArch's menu, F + Start quits	Tocca un riquadro; F + X apre il menu di RetroArch, F + Start esce
+settings		F + X opens RetroArch's menu, F + Start quits	F + X apre il menu di RetroArch, F + Start esce
+settings		{server}'s address couldn't be looked up: is Wi-Fi connected? (Or the network's DNS isn't answering: try again in a minute)	Impossibile risolvere l'indirizzo di {server}: il Wi-Fi è connesso? (Oppure il DNS della rete non risponde: riprova tra un minuto)
+settings		couldn't connect to {server}: is Wi-Fi connected?	impossibile connettersi a {server}: il Wi-Fi è connesso?
+settings		{server} didn't answer in time (a weak Wi-Fi signal?)	{server} non ha risposto in tempo (segnale Wi-Fi debole?)
+settings		the secure connection to {server} failed: is the clock right? (It says {date})	la connessione sicura a {server} non è riuscita: l'orologio è corretto? (Indica {date})
+settings		the connection to {server} broke off	la connessione a {server} si è interrotta
+settings		{server} refused the download (HTTP error)	{server} ha rifiutato il download (errore HTTP)
+settings		the card can't be written (full?)	impossibile scrivere sulla scheda (piena?)
+settings		the file isn't there	il file non c'è
+settings		{file} is damaged in {file}: download it again. (Its SHA-256 starts {hash}; the release's SHA256SUMS file lists the right one.)	{file} è danneggiato in {file}: scaricalo di nuovo. (Il suo SHA-256 inizia con {hash}; il file SHA256SUMS della release elenca quello giusto.)
+settings		there is no newer version to download: Check for updates first	non c'è una versione più recente da scaricare: prima Controlla aggiornamenti
+settings		that check was for the {board}, this is the {board}	quel controllo era per {board}, questa è {board}
+settings		the release's package has an odd name ({file})	il pacchetto della release ha un nome insolito ({file})
+settings		not enough space on the card: the update needs {n} MB free (the download, and its unpacked copy while it installs); there are {n} MB	spazio insufficiente sulla scheda: l'aggiornamento richiede {n} MB liberi (il download e la sua copia estratta durante l'installazione); ce ne sono {n}
+settings		{error} (fetching SHA256SUMS-{board}.txt)	{error} (recupero di SHA256SUMS-{board}.txt)
+settings		the release's SHA256SUMS-{board}.txt doesn't list {file}	il file SHA256SUMS-{board}.txt della release non elenca {file}
+settings		{error}. What came ({n} MB) is kept: Download again carries on from there	{error}. Quanto è arrivato ({n} MB) è conservato: Scarica di nuovo riprende da lì
+settings		the download stopped at {n} of {n} MB: Download again carries on from there	il download si è fermato a {n} di {n} MB: Scarica di nuovo riprende da lì
+settings		the download is damaged: its SHA-256 doesn't match the release's SHA256SUMS, so it was deleted. Download it again	il download è danneggiato: il suo SHA-256 non corrisponde a quello di SHA256SUMS della release, quindi è stato eliminato. Scaricalo di nuovo
+settings		can't move the download into banana/updates	impossibile spostare il download in banana/updates
+settings		Fetching the cover and the title screen...	Recupero della copertina e della schermata del titolo...
+settings		Box art for	Copertina per
+settings		{value} (B works once it has answered.)	{value} (B funziona dopo che ha risposto.)
+settings		libretro's names for the words typed, the closest first. A fetches that game's cover and title screen for this one (over what it had), and every scrape after keeps them. B types other words.	I nomi di libretro per le parole digitate, i più vicini per primi. A scarica la copertina e la schermata del titolo di quel gioco per questo (al posto di quelle che aveva), e ogni scraping successivo le mantiene. B digita altre parole.
+settings		Looking...	Ricerca...
+settings		Use	Usa
+settings		{shader} (not on the card)	{shader} (non presente sulla scheda)
+settings		Wi-Fi is off: switch it on in Settings > Network first.	Il Wi-Fi è spento: accendilo prima in Impostazioni > Rete.
+settings		Box art: the game's name in libretro's collection	Copertina: il nome del gioco nella raccolta di libretro
+settings		The game couldn't be deleted: the card may be read-only.	Impossibile eliminare il gioco: la scheda potrebbe essere in sola lettura.
+settings		This game's name	Nome di questo gioco
+settings		This game's sort title	Titolo di ordinamento di questo gioco
+settings		As in Settings ({setting})	Come nelle Impostazioni ({setting})
+settings		As in Settings: {shader}	Come nelle Impostazioni: {shader}
+settings		As scraped	Come da scraping
+settings		By its name	Dal suo nome
+settings		Sort title	Titolo di ordinamento
+settings		Delete game...	Elimina gioco...
+settings		A again: the game, saves and art	A di nuovo: il gioco, i salvataggi e la grafica
+settings		A again: the game (saves kept)	A di nuovo: il gioco (salvataggi conservati)
+settings		With its saves, states and art	Con salvataggi, stati e grafica
+settings		Keep its saves and art	Conserva salvataggi e grafica
+settings		Fetched	Scaricato
+settings		Find it by name	Trovalo per nome
+settings		This game's emulator	Emulatore di questo gioco
+settings		This game's shader	Shader di questo gioco
+settings		This game's 3D	3D di questo gioco
+settings		This game's microphone	Microfono di questo gioco
+settings		Delete this game	Elimina questo gioco
+settings		This game's box art	Copertina di questo gioco
+settings		SuperDrastic: DraStic onto both panels, the fastest. BananaDS: Banana's own emulator (melonDS's core), the most accurate. The choice is for this game only; the others follow Settings > Nintendo DS > Emulator.	SuperDrastic: DraStic sui due pannelli, il più veloce. BananaDS: l'emulatore di Banana (core di melonDS), il più preciso. La scelta vale solo per questo gioco; gli altri seguono Impostazioni > Nintendo DS > Emulatore.
+settings		The picture's shader for this game only, in either emulator; the others follow Settings > Nintendo DS > Shader. None scales smoothly and costs no GPU work.{PLUS_SHADER_NOTE}	Lo shader dell'immagine solo per questo gioco, in entrambi gli emulatori; gli altri seguono Impostazioni > Nintendo DS > Shader. Nessuno scala in modo morbido e non costa lavoro alla GPU.{PLUS_SHADER_NOTE}
+settings		SuperDrastic (DraStic) only. On draws the DS's 3D beside the game, the faster way; Off draws it in step with the game, for a game whose 3D shows on the wrong screen or a frame late (the Dragon Quest games). The others follow Settings > Nintendo DS > Threaded 3D.	Solo SuperDrastic (DraStic). Attivo disegna il 3D del DS in parallelo al gioco, il modo più veloce; Disattivo lo disegna in sincronia con il gioco, per un gioco il cui 3D appare sullo schermo sbagliato o con un frame di ritardo (i giochi Dragon Quest). Gli altri seguono Impostazioni > Nintendo DS > 3D su thread.
+settings		How loud a word or a blow must be to reach this game, in either emulator: High hears a quiet voice, Low only a loud one, Off none. For a game that needs the microphone (Nintendogs) or one it bothers.	Quanto forte deve essere una parola o un soffio per arrivare a questo gioco, in entrambi gli emulatori: Alta sente una voce bassa, Bassa solo una forte, Disattivo nessuna. Per un gioco che ha bisogno del microfono (Nintendogs) o a cui dà fastidio.
+settings		The name the menu shows for this game. A types it; an empty one goes back to the scraped name. Kept in banana/game-titles.tsv, which scraping the box art again leaves alone.	Il nome che il menu mostra per questo gioco. A lo digita; uno vuoto torna al nome ricavato dallo scraping. Conservato in banana/game-titles.tsv, che un nuovo scraping delle copertine non tocca.
+settings		The library's order goes by this instead of the name: Dragon Quest 04, 05 and 09 keep IV, V and IX in their order. A types it; an empty one sorts by the name again.	L'ordine della libreria segue questo invece del nome: Dragon Quest 04, 05 e 09 mantengono IV, V e IX nel loro ordine. A lo digita; uno vuoto ordina di nuovo per nome.
+settings		Removes this game's file from the card: %s. Left and right choose whether its saves, save states and box art go too, or stay (they come back if you copy the game again). Nothing else is touched: no other game, no BIOS. A asks first; A again deletes.	Rimuove il file di questo gioco dalla scheda: %s. Sinistra e destra scelgono se anche i suoi salvataggi, stati salvati e copertine vanno via, o restano (tornano se copi di nuovo il gioco). Nient'altro viene toccato: nessun altro gioco, nessun BIOS. A chiede prima; A di nuovo elimina.
+settings		For a game the box art scrape got wrong or didn't find (a translation, a hack, another name): A types its name as libretro's collection has it, then you pick the right one from what it finds. Wi-Fi needed.	Per un gioco che lo scraping delle copertine ha sbagliato o non ha trovato (una traduzione, un hack, un altro nome): A digita il suo nome come lo ha la raccolta di libretro, poi scegli quello giusto tra quelli trovati. Serve il Wi-Fi.
+settings		This game	Questo gioco
+settings		Type	Digita
+settings		Find	Trova
+settings		Delete...	Elimina...
+settings		Search games	Cerca giochi
+settings		Type a name	Digita un nome
+settings		Pairing with {name}...	Associazione con {name}...
+settings		Connecting to {name}...	Connessione a {name}...
+settings		Disconnecting {name}...	Disconnessione di {name}...
+settings		Forgetting {name}...	Rimozione di {name}...
+settings		Bluetooth didn't come on: {reason}.	Il Bluetooth non si è acceso: {reason}.
+settings		Paired with {n}.	Associato a {n}.
+settings		Couldn't pair with {n}{reason} Put it in pairing mode again (its manual says how), then A.	Impossibile associare con {n}{reason} Rimettilo in modalità di associazione (il manuale spiega come), poi A.
+settings		Couldn't connect to {n}{reason} Is it on and near the handheld?	Impossibile connettersi a {n}{reason} È acceso e vicino alla console?
+settings		{n} disconnected.	{n} disconnesso.
+settings		Couldn't disconnect {n}{reason}	Impossibile disconnettere {n}{reason}
+settings		{n} forgotten: pair with it again to use it.	{n} rimosso: associalo di nuovo per usarlo.
+settings		Couldn't forget {n}{reason}	Impossibile rimuovere {n}{reason}
+settings		Bluetooth is off	Il Bluetooth è spento
+settings		Nothing connected	Nulla di connesso
+settings		Bluetooth is switched off. X switches it on and searches.	Il Bluetooth è spento. X lo accende e cerca.
+settings		A pairs with the device chosen (put it in pairing mode first), connects a paired one, or disconnects it. X searches again, Y forgets a paired device. Headphones play the sound while they are connected; controllers work in the games.	A si associa al dispositivo scelto (mettilo prima in modalità di associazione), ne connette uno associato o lo disconnette. X cerca di nuovo, Y rimuove un dispositivo associato. Le cuffie riproducono l'audio finché sono connesse; i controller funzionano nei giochi.
+settings		Devices	Dispositivi
+settings		Paired	Associati
+settings		No devices found. X searches again.	Nessun dispositivo trovato. X cerca di nuovo.
+settings		Pair	Associa
+settings		Disconnect	Disconnetti
+settings		Connect	Connetti
+settings		Headphones	Cuffie
+settings		Controller	Controller
+settings		Keyboard	Tastiera
+settings		Mouse	Mouse
+settings		Back to no correction: A keeps that, B goes back to what was kept.	Torna a nessuna correzione: A la conferma, B torna a quella salvata.
+settings		The display refused it: {error}. Nothing was kept.	Lo schermo l'ha rifiutata: {error}. Nulla è stato salvato.
+settings		The card can't be written.	Impossibile scrivere sulla scheda.
+settings		No correction	Nessuna correzione
+settings		The top screen corrected	Schermo superiore corretto
+settings		The bottom screen corrected	Schermo inferiore corretto
+settings		Screen colours  ·  {pattern}  ·  L / R: another pattern	Colori dello schermo  ·  {pattern}  ·  L / R: altro schema
+settings		Make the screen you correct look like the other one. X: no correction.	Fai sembrare lo schermo che correggi uguale all'altro. X: nessuna correzione.
+settings		Correct the top	Correggi il superiore
+settings		Correct the bottom	Correggi l'inferiore
+settings		Keep	Conserva
+settings		3x (experimental)	3x (sperimentale)
+settings		4x (experimental)	4x (sperimentale)
+settings		Game companion	Compagno di gioco
+settings		Other Game Boy Advance games on the second screen: seven pages about the game as it plays (status, a closer look, the fight, the map, the bag, collectibles, progress), read from the game where it can be and notes where not. Pokémon games keep the Pokémon companion. Needs Second screen on. Inspired by PokeDaisy by Lidor Itzhari.	Altri giochi Game Boy Advance sul secondo schermo: sette pagine sul gioco mentre si gioca (stato, uno sguardo da vicino, il combattimento, la mappa, la borsa, oggetti da collezione, progressi), lette dal gioco dove possibile e appunti dove no. I giochi Pokémon mantengono il Compagno Pokémon. Richiede Secondo schermo attivo. Ispirato a PokeDaisy di Lidor Itzhari.
+settings		Screen border	Bordo dello schermo
+settings		On: the black around a game's picture filled with a quiet border in the menu's colours (the theme's), the picture at a sharp whole-number size where that fits. The DS, the N64 and a picture that already fills the screen have none.	Attivo: il nero attorno all'immagine di un gioco viene riempito con un bordo discreto nei colori del menu (quelli del tema), con l'immagine a una dimensione intera nitida dove possibile. Il DS, il N64 e un'immagine che riempie già lo schermo non lo hanno.
+settings		The emulator (RetroArch core) for this system's games: the first is BananaOS's own. Cores downloaded with RetroArch's Core Downloader (its Online Updater) are listed here too.	L'emulatore (core RetroArch) per i giochi di questo sistema: il primo è quello di BananaOS. Qui sono elencati anche i core scaricati con il Core Downloader di RetroArch (il suo Online Updater).
+settings		Home server	Server di casa
+settings		Your games, their box art and your saves from a server at home: Romhost (Homeport's ROM library) or RomM. A opens its page: pairing, Sync now, and what syncs.	I tuoi giochi, le loro copertine e i tuoi salvataggi da un server di casa: Romhost (la libreria di ROM di Homeport) o RomM. A apre la sua pagina: associazione, Sincronizza ora, e cosa si sincronizza.
+settings		Credits	Crediti
+settings		The people who made this version of BananaOS: development, translations, testing and thanks. A opens the list.	Le persone che hanno realizzato questa versione di BananaOS: sviluppo, traduzioni, test e ringraziamenti. A apre l'elenco.
+settings		SuperDrastic: F + SELECT	SuperDrastic: F + SELECT
+settings		Swap the screens	Scambia gli schermi
+settings		DS games in SuperDrastic: the DS's top screen on the bottom panel and its bottom screen on the top one (touch follows it: the RG DS's top touchscreen; on the RG DS Plus no touch while swapped), and back. Kept for each game.	Giochi DS in SuperDrastic: lo schermo superiore del DS sul pannello inferiore e il suo schermo inferiore su quello superiore (il tocco lo segue: il touchscreen superiore della RG DS; sulla RG DS Plus nessun tocco mentre sono scambiati), e viceversa. Conservato per ogni gioco.
+settings		BananaDS: F + SELECT	BananaDS: F + SELECT
+settings		DS games in BananaDS: the DS's top screen on the bottom panel and its bottom screen on the top one (touch follows it: the RG DS's top touchscreen; on the RG DS Plus no touch while swapped), and back. Kept for each game.	Giochi DS in BananaDS: lo schermo superiore del DS sul pannello inferiore e il suo schermo inferiore su quello superiore (il tocco lo segue: il touchscreen superiore della RG DS; sulla RG DS Plus nessun tocco mentre sono scambiati), e viceversa. Conservato per ogni gioco.
+settings		Server	Server
+settings		Sync now	Sincronizza ora
+settings		Copies the server's games (with their covers and names) to the card and syncs the saves both ways. It carries on in the background; the handheld doesn't sleep while games download. Files of your own are never replaced or deleted: only the ones a sync put there.	Copia i giochi del server (con copertine e nomi) sulla scheda e sincronizza i salvataggi in entrambe le direzioni. Prosegue in background; la console non va in sospensione mentre i giochi vengono scaricati. I tuoi file non vengono mai sostituiti né eliminati: solo quelli messi lì da una sincronizzazione.
+settings		Download: the server's games for the systems below come to the card (and leave it when they leave the server). Saves only: the games stay as they are and only the saves sync.	Scarica: i giochi del server per i sistemi qui sotto arrivano sulla scheda (e la lasciano quando lasciano il server). Solo salvataggi: i giochi restano come sono e si sincronizzano solo i salvataggi.
+settings		Saves only	Solo salvataggi
+settings		Save states	Stati salvati
+settings		On: save states sync too, not only the games' own saves (RomM; on Romhost its Devices page decides). Quick-resume states never sync.	Attivo: si sincronizzano anche gli stati salvati, non solo i salvataggi propri dei giochi (RomM; su Romhost decide la sua pagina Dispositivi). Gli stati di ripresa rapida non si sincronizzano mai.
+settings		Auto sync	Sincronizzazione automatica
+settings		Leaving a game: its saves go to the server as you leave it (a few seconds, in the background). And on Wi-Fi: also games and saves whenever Wi-Fi connects. Never while a game runs.	Uscendo da un gioco: i suoi salvataggi vanno al server quando esci (pochi secondi, in background). E con il Wi-Fi: anche giochi e salvataggi ogni volta che il Wi-Fi si connette. Mai mentre un gioco è in esecuzione.
+settings		Leaving a game	Uscendo da un gioco
+settings		And on Wi-Fi	E con il Wi-Fi
+settings		Which systems sync on this handheld. A skipped system's games stay as they are on the card.	Quali sistemi si sincronizzano su questa console. I giochi di un sistema saltato restano come sono sulla scheda.
+settings		Forget this server	Dimentica questo server
+settings		Unpairs the handheld: nothing syncs until it is paired again. The games and saves stay on the card. Press A twice.	Dissocia la console: nulla si sincronizza finché non viene associata di nuovo. I giochi e i salvataggi restano sulla scheda. Premi A due volte.
+settings		Home server systems	Sistemi del server di casa
+settings		Sync: its games and saves sync with the home server. Skip: they stay as they are on this handheld.	Sincronizza: i suoi giochi e salvataggi si sincronizzano con il server di casa. Salta: restano come sono su questa console.
+settings		Sync	Sincronizza
+settings		Unpaired. The games and saves stay on the card.	Dissociata. I giochi e i salvataggi restano sulla scheda.
+settings		OVERFLOW	OVERFLOW
+settings		Mario & Luigi - Partners in Time (Europe) (En,Fr,De,Es,It) (Rev 1).nds	Mario & Luigi - Partners in Time (Europe) (En,Fr,De,Es,It) (Rev 1).nds
+settings		Game page > {value}	Pagina del gioco > {value}
+settings		This game's 3D resolution	Risoluzione 3D di questo gioco
+settings		4x runs hot	4x scalda
+settings		4x runs the handheld hot and drains the battery much faster. When it gets too hot it slows down to cool off, and games can lag. If that happens, switch back to 2x, then restart and let the handheld cool down.	4x fa scaldare la console e scarica la batteria molto più in fretta. Quando diventa troppo calda rallenta per raffreddarsi, e i giochi possono andare a scatti. Se succede, torna a 2x, poi riavvia e lascia raffreddare la console.
+settings		Use 4x?	Usare 4x?
+settings		Use 4x	Usa 4x
+settings		Beta channel on: Check for updates now asks bananaos-cfw.dev for test builds.	Canale beta attivo: Controlla aggiornamenti ora chiede a bananaos-cfw.dev le build di prova.
+settings		wrong password	password errata
+settings		Wrong password: bananaos-cfw.dev refused it. The beta channel stays off.	Password errata: bananaos-cfw.dev l'ha rifiutata. Il canale beta resta disattivato.
+settings		The password couldn't be checked: %s.	Impossibile verificare la password: %s.
+settings		no answer	nessuna risposta
+settings		Beta channel password	Password del canale beta
+settings		Beta channel off: Check for updates asks GitHub again.	Canale beta disattivato: Controlla aggiornamenti chiede di nuovo a GitHub.
+settings		{n} old packages removed from banana/updates.	{n} vecchi pacchetti rimossi da banana/updates.
+settings		Banana {count}'s package deleted from banana/updates.	Pacchetto di Banana {count} eliminato da banana/updates.
+settings		Banana {count}'s package couldn't be deleted.	Impossibile eliminare il pacchetto di Banana {count}.
+settings		Thank you	Grazie
+settings		Change the menu's language?	Cambiare la lingua del menu?
+settings		No, keep it	No, mantienila
+settings		Yes, change it	Sì, cambiala
+settings		The menu starts again in the new language.	Il menu riparte nella nuova lingua.
+settings		Pairing code for	Codice di associazione per
+settings		No Romhost answered. Server address	Nessun Romhost ha risposto. Indirizzo del server
+settings		Romhost or RomM	Romhost o RomM
+settings		Asking {name} for a pairing code...	Richiesta di un codice di associazione a {name}...
+settings		Nothing answers there as a Romhost or RomM server. Check the address (and :port) and that the handheld is on the same network.	Nessuno risponde lì come server Romhost o RomM. Controlla l'indirizzo (e :porta) e che la console sia sulla stessa rete.
+settings		On {hsName}, open {url} (signed in) and enter {code}, then approve this handheld. Waiting...	Su {hsName}, apri {url} (con accesso eseguito) e inserisci {code}, poi approva questa console. In attesa...
+settings		Paired with {ln}. Sync now, below, gets the games and saves.	Associato a {ln}. Sincronizza ora, qui sotto, scarica giochi e salvataggi.
+settings		Pairing didn't work: {ln}.	Associazione non riuscita: {ln}.
+settings		None right now.	Nessuno al momento.
+settings		Tap: back	Tocca: indietro
+settings		%s %s: the title "%s" is too long for its tab (give "tab")	%s %s: il titolo "%s" è troppo lungo per la sua scheda (indica "tab")
+settings		%s %s: a reference page with %zu characters	%s %s: una pagina di riferimento con %zu caratteri
+settings		On the Plus a shader also heats the chip: a heavy 3D game can drop frames after a few minutes. Give such a game None on its own page (X in the library).	Sulla Plus uno shader fa scaldare anche il chip: un gioco 3D pesante può perdere frame dopo qualche minuto. Dai a un gioco simile Nessuno nella sua pagina (X nella libreria).
+settings		VBA Next	VBA Next
+settings		VBA-M	VBA-M
+settings		Meteor	Meteor
+settings		Gambatte	Gambatte
+settings		Gearboy	Gearboy
+settings		TGB Dual	TGB Dual
+settings		NES	NES
+settings		Nestopia UE	Nestopia UE
+settings		Mesen	Mesen
+settings		QuickNES	QuickNES
+settings		Snes9x	Snes9x
+settings		Snes9x 2010	Snes9x 2010
+settings		Snes9x 2005 Plus	Snes9x 2005 Plus
+settings		Snes9x 2005	Snes9x 2005
+settings		Snes9x 2002	Snes9x 2002
+settings		Mesen-S	Mesen-S
+settings		PicoDrive	PicoDrive
+settings		Genesis Plus GX	Genesis Plus GX
+settings		BlastEm	BlastEm
+settings		PCSX ReARMed	PCSX ReARMed
+settings		SwanStation	SwanStation
+settings		Beetle PSX	Beetle PSX
+settings		ParaLLEl N64	ParaLLEl N64
+settings		The picture's shader for this game only, in either emulator; the others follow Settings > Nintendo DS > Shader. None scales smoothly and costs no GPU work.	Lo shader dell'immagine solo per questo gioco, in entrambi gli emulatori; gli altri seguono Impostazioni > Nintendo DS > Shader. Nessuno scala in modo morbido e non costa lavoro alla GPU.
+settings		RetroArch {ra}, updated with BananaOS.	RetroArch {ra}, aggiornato con BananaOS.
+settings		Not paired. A looks for Romhost on the network (Homeport > ROMs > Pair a device shows its code); when none answers, type the address of a Romhost or a RomM server (a name or IP, and :port if it isn't the usual one). RomM then shows a code to enter on its Pair device page.	Non associata. A cerca Romhost sulla rete (Homeport > ROMs > Pair a device ne mostra il codice); se nessuno risponde, digita l'indirizzo di un server Romhost o RomM (un nome o un IP, e :porta se non è quella solita). RomM mostra poi un codice da inserire nella sua pagina Pair device.
+settings		Paired with {n}. A pairs again (another server, or after the handheld was removed there).	Associata a {n}. A associa di nuovo (un altro server, oppure dopo che la console è stata rimossa lì).
+settings		Last sync: {g} files of games down, {rm} removed; saves {up} up, {dn} down{cf}{er}	Ultima sincronizzazione: {g} file di giochi scaricati, {rm} rimossi; salvataggi {up} inviati, {dn} scaricati{cf}{er}
+settings		; {cf} in conflict (on Romhost: decide in Homeport; on RomM the newer won and the other is kept on the card as a .bak)	; {cf} in conflitto (su Romhost: decidi in Homeport; su RomM ha vinto il più recente e l'altro è conservato sulla scheda come .bak)
+settings		. {er} didn't work: {reason}.	. {er} non è riuscito: {reason}.
+settings		The last sync didn't work: {syncLine}.	L'ultima sincronizzazione non è riuscita: {syncLine}.
+settings		Syncing with {homeServer}. It carries on if you leave this screen; the library shows the new games when it's done.	Sincronizzazione con {homeServer}. Prosegue se lasci questa schermata; la libreria mostra i nuovi giochi al termine.
+settings		the server	il server
+settings		Pairing	Associazione
+settings		Not paired	Non associata
+settings		The home server's address: its name or IP, and :port when it isn't the usual (Romhost 8092, RomM 8080 or 80). A types the key, B deletes, L symbols (the dot and colon), START when it is typed.	L'indirizzo del server di casa: il suo nome o IP, e :porta se non è quella solita (Romhost 8092, RomM 8080 o 80). A digita il tasto, B cancella, L simboli (il punto e i due punti), START quando hai finito di scrivere.
+settings		The beta testers' password for BananaOS's test builds. A types the key, B deletes, X capitals, L symbols, Y a space, START checks it with bananaos-cfw.dev. It is kept on the card for the updater only.	La password dei beta tester per le build di prova di BananaOS. A digita il tasto, B cancella, X maiuscole, L simboli, Y uno spazio, START la verifica con bananaos-cfw.dev. Viene conservata sulla scheda solo per l'aggiornatore.
+settings		The code Homeport shows under ROMs > Pair a device (or, for RomM, a client token's pairing code). START when it is typed.	Il codice che Homeport mostra in ROMs > Pair a device (o, per RomM, il codice di associazione di un token client). START quando hai finito di scrivere.
+settings		no reason given	nessun motivo indicato
+settings		Asking the beta server (bananaos-cfw.dev) which test build is the newest for this handheld...	Chiedo al server beta (bananaos-cfw.dev) qual è la build di prova più recente per questa console...
+settings		The beta server has no test build for this handheld.	Il server beta non ha build di prova per questa console.
+settings		A asks the beta server (bananaos-cfw.dev, Wi-Fi needed) whether a newer test build is out for this handheld. Nothing is downloaded until you choose Download.	A chiede al server beta (bananaos-cfw.dev, serve il Wi-Fi) se è uscita una build di prova più recente per questa console. Non viene scaricato nulla finché non scegli Scarica.
+settings		Checking the password with bananaos-cfw.dev...	Verifica della password con bananaos-cfw.dev...
+settings		On: updates come from the beta testers' builds on bananaos-cfw.dev instead of GitHub's releases. A, then A again, turns it off (the password is forgotten), and GitHub is asked again.	Attivo: gli aggiornamenti arrivano dalle build dei beta tester su bananaos-cfw.dev invece che dalle release di GitHub. A, poi di nuovo A, lo disattiva (la password viene dimenticata), e GitHub viene interpellato di nuovo.
+settings		For beta testers: updates from the test builds on bananaos-cfw.dev instead of GitHub's releases. A asks for the beta password (once: it is checked with the site, then kept on the card for the updater only).	Per i beta tester: aggiornamenti dalle build di prova su bananaos-cfw.dev invece che dalle release di GitHub. A chiede la password beta (una volta sola: viene verificata con il sito, poi conservata sulla scheda solo per l'aggiornatore).
+settings		Y again deletes this package from banana/updates on the card (the installed versions aren't touched). Any other button keeps it.	Y di nuovo elimina questo pacchetto da banana/updates sulla scheda (le versioni installate non vengono toccate). Qualsiasi altro tasto lo conserva.
+settings		X again removes {on} ({ob} MB) not newer than the version running now from banana/updates. Any other button keeps them.	X di nuovo rimuove da banana/updates {on} ({ob} MB) non più recenti della versione in uso. Qualsiasi altro tasto li conserva.
+settings		; X removes every package not newer than this version ({on}{ob} MB).	; X rimuove ogni pacchetto non più recente di questa versione ({on}{ob} MB).
+settings		1 package, {value}	1 pacchetto, {value}
+settings		{on} packages,	{on} pacchetti,
+settings		Beta channel	Canale beta
+settings		Checking...	Controllo...
+settings		Press Y again: delete	Premi di nuovo Y: elimina
+settings		Press X again: remove	Premi di nuovo X: rimuovi
+settings		Turn on	Attiva
+settings		Turn off	Disattiva
+settings		Delete!	Elimina!
+settings		Written to the other slot	Scritto nell'altro slot
+settings		The update wasn't installed	L'aggiornamento non è stato installato
+settings		Writing the new version	Scrittura della nuova versione
+settings		Checking what was written	Verifica di quanto scritto
+settings		Unpacking and checking the package	Estrazione e verifica del pacchetto
+settings		Update ready	Aggiornamento pronto
+settings		Update failed	Aggiornamento non riuscito
+settings		Installing update	Installazione dell'aggiornamento
+settings		Don't turn the handheld off	Non spegnere la console
+settings		Don't turn the handheld off. Your games, saves and settings stay; the running version isn't touched until the restart. It takes a minute or two.	Non spegnere la console. I tuoi giochi, salvataggi e impostazioni restano; la versione in uso non viene toccata fino al riavvio. Ci vuole un minuto o due.
+settings		A restarts into the new version now. If it ever fails to start, Settings > System > Previous version brings this one back.	A riavvia ora nella nuova versione. Se non dovesse avviarsi, Impostazioni > Sistema > Versione precedente riporta questa.
+settings		Type the beta password, then START.	Digita la password beta, poi START.
+settings		The password couldn't be passed on ({runDir} can't be written).	Impossibile trasmettere la password ({runDir} non è scrivibile).
+settings		Looking for a home server on the network...	Ricerca di un server di casa sulla rete...
+settings		Not paired yet: Server, above, pairs the handheld.	Non ancora associata: Server, qui sopra, associa la console.
+settings		Syncing	Sincronizzazione
+settings		Didn't all work	Non tutto è riuscito
+settings		Done, conflicts	Fatto, con conflitti
+settings		Pair again	Associa di nuovo
+settings		the update channel changed since the check: Check for updates again	il canale di aggiornamento è cambiato dopo il controllo: Controlla di nuovo gli aggiornamenti
+settings		In use	In uso
+settings		A uses it	A lo usa
+settings		Drawing...	Disegno...
+settings		No picture	Nessuna immagine
+settings		Themes	Temi
+settings		BananaDS only. The size the DS's 3D is drawn at for this game: 1x the DS's own, 2x twice, 3x and 4x (experimental) three and four times, the sharpest and the heaviest (a busy 3D scene can drop below full speed). The others follow Settings > Nintendo DS > 3D resolution.	Solo BananaDS. La dimensione a cui viene disegnato il 3D del DS per questo gioco: 1x quella del DS, 2x il doppio, 3x e 4x (sperimentale) tre e quattro volte, la più nitida e la più pesante (una scena 3D affollata può scendere sotto la velocità piena). Gli altri seguono Impostazioni > Nintendo DS > Risoluzione 3D.
+settings		SLP	SON
+settings		PSN	VEL
+settings		BRN	SCO
+settings		FRZ	GEL
+settings		PAR	PAR
+settings		Weak to	Debole a
+settings		Resists	Resiste a
+settings		Immune to	Immune a
+settings		Party	Squadra
+settings		Battle	Battaglia
+settings		RetroArch can't read the game's memory with this emulator: %s	RetroArch non riesce a leggere la memoria del gioco con questo emulatore: %s
+settings		Waiting for the game...	In attesa del gioco...
+settings		EGG	UOVO
+settings		Lv	Lv
+settings		FNT	KO
+settings		HP	PS
+settings		It's still an egg.	È ancora un uovo.
+settings		Exp	Esp
+settings		Next	Prossimo
+settings		PP	PP
+settings		Pwr	Pot
+settings		Waiting for the battle...	In attesa della battaglia...
+settings		You	Tu
+settings		Foe	Avversario
+settings		no data	nessun dato
+settings	Pokémon types	Normal	Normale
+settings	Pokémon types	Fighting	Lotta
+settings	Pokémon types	Flying	Volante
+settings	Pokémon types	Poison	Veleno
+settings	Pokémon types	Ground	Terra
+settings	Pokémon types	Rock	Roccia
+settings	Pokémon types	Bug	Coleottero
+settings	Pokémon types	Ghost	Spettro
+settings	Pokémon types	Steel	Acciaio
+settings	Pokémon types	Fire	Fuoco
+settings	Pokémon types	Water	Acqua
+settings	Pokémon types	Grass	Erba
+settings	Pokémon types	Electric	Elettro
+settings	Pokémon types	Psychic	Psico
+settings	Pokémon types	Ice	Ghiaccio
+settings	Pokémon types	Dragon	Drago
+settings	Pokémon types	Dark	Buio
+settings		Map	Mappa
+settings		Bag	Borsa
+settings		Dex	Dex
+settings		Guide	Guida
+settings		Reading the save...	Lettura del salvataggio...
+settings		Somewhere unnamed	Un luogo senza nome
+settings		Unknown place	Luogo sconosciuto
+settings		Map %d.%d  ·  x %d, y %d	Mappa %d.%d  ·  x %d, y %d
+settings		This game's region map wasn't found in its ROM.	La mappa della regione di questo gioco non è stata trovata nella sua ROM.
+settings		Tapped: {nm}	Toccato: {nm}
+settings		(no name)	(senza nome)
+settings		Not on the region map here	Non sulla mappa della regione qui
+settings		Tap the map: a place's name	Tocca la mappa: il nome di un luogo
+settings		Tap a square: its name	Tocca un quadrato: il suo nome
+settings		Items	Oggetti
+settings		Key items	Strumenti chiave
+settings		Balls	Ball
+settings		TMs & HMs	MT e MN
+settings		Berries	Bacche
+settings		Nothing here. (A CFRU hack may keep its bag elsewhere: what this shows is FireRed's bag.)	Niente qui. (Un hack CFRU potrebbe tenere la borsa altrove: quella mostrata è la borsa di FireRed.)
+settings		Nothing in this pocket.	Niente in questa tasca.
+settings		Money {money}	Denaro {money}
+settings		Seen	Visti
+settings		Caught	Catturati
+settings		All species (this game keeps its own Pokédex)	Tutte le specie (questo gioco ha un proprio Pokédex)
+settings		Pokédex	Pokédex
+settings		Nothing seen yet.	Ancora nulla di visto.
+settings		Tap one for its entry	Tocca un Pokémon per la sua scheda
+settings		No entry in this game.	Nessuna scheda in questo gioco.
+settings		%s Pokémon  ·  %d.%d m  ·  %d.%d kg	Pokémon %s  ·  %d.%d m  ·  %d.%d kg
+settings		Seen, not caught yet: the entry opens once one is caught.	Visto, non ancora catturato: la scheda si apre dopo la cattura.
+settings		Tap to go back	Tocca per tornare indietro
+settings		Next: {who}, gym {next} of 8	Prossimo: {who}, palestra {next} di 8
+settings		All eight badges: on to the league.	Tutte e otto le medaglie: avanti con la Lega.
+settings		Champion! The story is done; the post-game is yours.	Campione! La storia è finita; il post-game è tuo.
+settings		Next: {goals}, {goals} ({lang})	Prossimo: {goals}, {goals} ({lang})
+settings		Next: the Pokémon League. First, {who} ({lang})	Prossimo: la Lega Pokémon. Prima, {who} ({lang})
+settings		Badges	Medaglie
+settings		No goal read from the save.	Nessun obiettivo letto dal salvataggio.
+settings		Their team	La loro squadra
+settings		Against {lang}	Contro {lang}
+settings		hits {bestQ}	colpisce {bestQ}
+settings		Rock Smash	Spaccaroccia
+settings		Fishing	Pesca
+settings		Wild Pokémon here	Pokémon selvatici qui
+settings		No wild Pokémon on this map.	Nessun Pokémon selvatico su questa mappa.
+settings		Accent: not caught yet	Evidenziato: non ancora catturato
+settings		Reference	Riferimento
+settings		Nothing here right now: this page fills in when the game gets to it.	Niente per ora: questa pagina si riempie quando il gioco ci arriva.
+settings		Status	Stato
+settings		Detail	Dettaglio
+settings		Collect	Raccolta
+settings		Progress	Progressi
+settings		ROXANNE	ROXANNE
+settings		Rustboro City gym	Palestra di Rustboro City
+settings		BRAWLY	BRAWLY
+settings		Dewford Town gym	Palestra di Dewford Town
+settings		WATTSON	WATTSON
+settings		Mauville City gym	Palestra di Mauville City
+settings		FLANNERY	FLANNERY
+settings		Lavaridge Town gym	Palestra di Lavaridge Town
+settings		NORMAN	NORMAN
+settings		Petalburg City gym	Palestra di Petalburg City
+settings		WINONA	WINONA
+settings		Fortree City gym	Palestra di Fortree City
+settings		Tate & Liza	Tate & Liza
+settings		Mossdeep City gym	Palestra di Mossdeep City
+settings		WALLACE	WALLACE
+settings		Sootopolis City gym	Palestra di Sootopolis City
+settings		SIDNEY	SIDNEY
+settings		the Pokémon League	la Lega Pokémon
+settings		PHOEBE	PHOEBE
+settings		GLACIA	GLACIA
+settings		DRAKE	DRAKE
+settings		STEVEN	STEVEN
+settings		Steven, the Champion	Steven, il Campione
+settings		JUAN	JUAN
+settings		Wallace, the Champion	Wallace, il Campione
+settings		BROCK	BROCK
+settings		Pewter City gym	Palestra di Pewter City
+settings		MISTY	MISTY
+settings		Cerulean City gym	Palestra di Cerulean City
+settings		LT. SURGE	LT. SURGE
+settings		Lt. Surge	Lt. Surge
+settings		Vermilion City gym	Palestra di Vermilion City
+settings		ERIKA	ERIKA
+settings		Celadon City gym	Palestra di Celadon City
+settings		KOGA	KOGA
+settings		Fuchsia City gym	Palestra di Fuchsia City
+settings		SABRINA	SABRINA
+settings		Saffron City gym	Palestra di Saffron City
+settings		BLAINE	BLAINE
+settings		Cinnabar Island gym	Palestra di Cinnabar Island
+settings		GIOVANNI	GIOVANNI
+settings		Viridian City gym	Palestra di Viridian City
+settings		LORELEI	LORELEI
+settings		BRUNO	BRUNO
+settings		AGATHA	AGATHA
+settings		LANCE	LANCE
+settings		SEED	SEED
+settings		Seed	Seed
+settings		UNKNOWN	SCONOSCIUTO
+settings		Unknown	Sconosciuto
+settings	Pokémon types	Normal	Normale
+settings	Pokémon types	Fighting	Lotta
+settings	Pokémon types	Flying	Volante
+settings	Pokémon types	Poison	Veleno
+settings	Pokémon types	Ground	Terra
+settings	Pokémon types	Rock	Roccia
+settings	Pokémon types	Bug	Coleottero
+settings	Pokémon types	Ghost	Spettro
+settings	Pokémon types	Steel	Acciaio
+settings	Pokémon types	Fire	Fuoco
+settings	Pokémon types	Water	Acqua
+settings	Pokémon types	Grass	Erba
+settings	Pokémon types	Electric	Elettro
+settings	Pokémon types	Psychic	Psico
+settings	Pokémon types	Ice	Ghiaccio
+settings	Pokémon types	Dragon	Drago
+settings	Pokémon types	Dark	Buio
+settings	Pokémon types	Fairy	Folletto
+settings	Pokémon types	Roxanne	Roxanne
+settings	Pokémon types	Brawly	Brawly
+settings	Pokémon types	Wattson	Wattson
+settings	Pokémon types	Flannery	Flannery
+settings	Pokémon types	Norman	Norman
+settings	Pokémon types	Winona	Winona
+settings	Pokémon types	Wallace	Wallace
+settings	Pokémon types	Sidney	Sidney
+settings	Pokémon types	Phoebe	Phoebe
+settings	Pokémon types	Glacia	Glacia
+settings	Pokémon types	Drake	Drake
+settings	Pokémon types	Juan	Juan
+settings	Pokémon types	Brock	Brock
+settings	Pokémon types	Misty	Misty
+settings	Pokémon types	Erika	Erika
+settings	Pokémon types	Koga	Koga
+settings	Pokémon types	Sabrina	Sabrina
+settings	Pokémon types	Blaine	Blaine
+settings	Pokémon types	Giovanni	Giovanni
+settings	Pokémon types	Lorelei	Lorelei
+settings	Pokémon types	Bruno	Bruno
+settings	Pokémon types	Agatha	Agatha
+settings	Pokémon types	Lance	Lance
+bananads		Today %s	Oggi %s
+bananads		Yesterday %s	Ieri %s
+bananads		No picture in this save	Nessuna immagine in questo salvataggio
+bananads		Empty slot	Slot vuoto
+bananads		Slot %d	Slot %d
+bananads		A: load this save. You can undo it after.	A: carica questo salvataggio. Potrai annullare dopo.
+bananads		Nothing saved here yet	Ancora nulla di salvato qui
+bananads		A: save here (replaces this save)	A: salva qui (sostituisce questo salvataggio)
+bananads		A: save here	A: salva qui
+bananads		THIS SESSION	QUESTA SESSIONE
+bananads		LAST SAVE %s	ULTIMO SALVATAGGIO %s
+bananads		None yet	Ancora nessuno
+bananads		LAST SAVE	ULTIMO SALVATAGGIO
+bananads		this menu	questo menu
+bananads		save to slot 1	salva nello slot 1
+bananads		load slot 1	carica slot 1
+bananads		F + START	F + START
+bananads		save your spot and quit	salva il punto ed esci
+bananads		LATEST ACHIEVEMENTS	ULTIMI OBIETTIVI
+bananads		None unlocked yet. Good luck!	Nessuno sbloccato per ora. Buona fortuna!
+bananads		Resume	Riprendi
+bananads		Save	Salva
+bananads		Load	Carica
+bananads		Quick settings	Impostazioni rapide
+bananads		Restart game	Riavvia gioco
+bananads		Quit game	Esci dal gioco
+bananads		Please wait	Attendere prego
+bananads		One moment...	Un momento...
+bananads		Paused	In pausa
+bananads		or press F / L3	oppure premi F / L3
+bananads		%d slots	%d slot
+bananads		last: slot %d	ultimo: slot %d
+bananads		no saves yet	ancora nessun salvataggio
+bananads		volume, shader, effects	volume, shader, effetti
+bananads		volume, brightness	volume, luminosità
+bananads		from the title screen	dalla schermata del titolo
+bananads		keeps your spot	conserva il tuo punto
+bananads		back to the menu	torna al menu
+bananads		Slot %d of %d	Slot %d di %d
+bananads		Empty	Vuoto
+bananads		changes apply at once	le modifiche si applicano subito
+bananads		Volume	Volume
+bananads		Brightness	Luminosità
+bananads		Microphone	Microfono
+bananads		Test / blow	Prova / soffio
+bananads		Left / right to change, or tap the bar	Sinistra / destra per cambiare, oppure tocca la barra
+bananads		Left / right to change, both screens	Sinistra / destra per cambiare, entrambi gli schermi
+bananads		A live meter of the mic, and a blow for games that ask for one	Un misuratore in tempo reale del microfono, e un soffio per i giochi che lo richiedono
+bananads		Left / right to change: it applies at once, and stays for the next game	Sinistra / destra per cambiare: si applica subito e resta per il gioco successivo
+bananads		Blow on the mic	Soffia nel microfono
+bananads		No microphone found	Nessun microfono trovato
+bananads		Heard!	Sentito!
+bananads		Listening	In ascolto
+bananads		The game hears a word or a blow past the red line (sensitivity: %s).	Il gioco sente una parola o un soffio oltre la linea rossa (sensibilità: %s).
+bananads		The microphone's gate is off, so the game hears everything it picks up.	Il gate del microfono è disattivato, quindi il gioco sente tutto ciò che capta.
+bananads		A: blow for 3 s, for when the real mic isn't picked up	A: soffio per 3 s, per quando il microfono vero non viene rilevato
+bananads		Back	Indietro
+bananads		Select	Seleziona
+bananads		Open	Apri
+bananads		OK	OK
+bananads		Blow for 3 s	Soffia per 3 s
+bananads		D-pad or tap	Croce o tocco
+bananads		Undo last load	Annulla ultimo caricamento
+bananads		Replace slot %d?	Sostituire lo slot %d?
+bananads		The save from %s will be replaced by this one.	Il salvataggio di %s verrà sostituito da questo.
+bananads		Cancel	Annulla
+bananads		Replace	Sostituisci
+bananads		Quit to the menu?	Uscire al menu?
+bananads		Your spot is saved. Next time the game picks up right here.	Il tuo punto è salvato. La prossima volta il gioco riparte da qui.
+bananads		Anything since your last save will be lost.	Tutto ciò che è successo dopo l'ultimo salvataggio andrà perso.
+bananads		Keep playing	Continua a giocare
+bananads		Quit	Esci
+bananads		Restart the game?	Riavviare il gioco?
+bananads		Back to the title screen. Anything since your last save will be lost.	Ritorno alla schermata del titolo. Tutto ciò che è successo dopo l'ultimo salvataggio andrà perso.
+bananads		Restart	Riavvia
+bananads		Saving to slot %d	Salvataggio nello slot %d
+bananads		Undoing the load	Annullamento del caricamento
+bananads		Loading	Caricamento
+bananads		the undo slot	the undo slot
+bananads		the slot	The slot
+bananads		Saving your spot	Salvataggio del tuo punto
+bananads		Restarting	Riavvio
+bananads		Achievement unlocked · %u points	Obiettivo sbloccato · %u punti
+bananads		All achievements unlocked!	Tutti gli obiettivi sbloccati!
+bananads		Leaderboard submitted	Classifica inviata
+bananads		RetroAchievements	RetroAchievements
+bananads		Offline: unlocks will be sent later	Offline: gli sblocchi verranno inviati più tardi
+bananads		Back online, unlocks sent	Di nuovo online, sblocchi inviati
+bananads		This game isn't known to RetroAchievements	Questo gioco non è noto a RetroAchievements
+bananads		Couldn't load the game	Impossibile caricare il gioco
+bananads		%u of %u achievements unlocked	%u di %u obiettivi sbloccati
+bananads		No achievements for this game yet	Ancora nessun obiettivo per questo gioco
+bananads		Logged in as %s · %u points	Accesso eseguito come %s · %u punti
+bananads		Logged in as %s	Accesso eseguito come %s
+bananads		Login expired: enter your password in Settings	Accesso scaduto: inserisci la password in Impostazioni
+bananads		RetroAchievements login failed	Accesso a RetroAchievements non riuscito
+bananads		Check the account in Settings	Controlla l'account in Impostazioni
+bananads		No password: enter it in Settings	Nessuna password: inseriscila in Impostazioni
+bananads		None	Nessuno
+bananads		Crisp	Nitido
+bananads		Crisp + DS colours	Nitido + colori DS
+bananads		LCD grid	Griglia LCD
+bananads		LCD grid + colours	Griglia LCD + colori
+bananads		LCD grid 2x	Griglia LCD 2x
+bananads		FSR	FSR
+bananads		LCD (DS colours)	LCD (colori DS)
+bananads		LCD 1x	LCD 1x
+bananads		LCD 3x	LCD 3x
+bananads		Fast LCD	LCD veloce
+bananads		DS colours	Colori DS
+bananads		Retro	Retro
+bananads		Bevel	Rilievo
+bananads		Sharp bilinear	Bilineare nitido
+bananads		Sharp + scanlines	Nitido + scanline
+bananads		Fast CRT	CRT veloce
+bananads		Integer	Intero
+bananads		Integer fill	Riempimento intero
+bananads		Dot (MiZai)	Punti (MiZai)
+bananads		Dot (MiZai, RG DS+)	Punti (MiZai, RG DS+)
+bananads		Retro tiles	Tessere retro
+bananads		DraStic LCD	DraStic LCD
+bananads		DraStic LCD + colours	DraStic LCD + colori
+bananads		DraStic Quilez	DraStic Quilez
+bananads		DraStic sharp	DraStic nitido
+bananads		DraStic sharp + colours	DraStic nitido + colori
+bananads		DraStic fast LCD	DraStic LCD veloce
+bananads		DraStic fast LCD + colours	DraStic LCD veloce + colori
+bananads		Shader	Shader
+bananads		Edge marking	Edge marking
+bananads		Fog	Fog
+bananads		On	Attivo
+bananads		Off	Disattivo
+bananads		%ldh %02ldm	%ldh %02ldm
+bananads		BUTTONS	TASTI
+bananads		LAST	ULTIMO
+bananads		Cheats	Trucchi
+bananads		%d of %d on	%d di %d attivi
+bananads		None found	Nessuno trovato
+bananads		Action Replay codes for this game: A to see them	Codici Action Replay per questo gioco: A per vederli
+bananads		No cheats for this game yet.	Ancora nessun trucco per questo gioco.
+bananads		In RetroArch: Online Updater > Update Cheats	In RetroArch: Online Updater > Update Cheats
+bananads		(BananaDS finds the game's file there),	(BananaDS vi trova il file del gioco),
+bananads		or put a melonDS .mch file in	oppure metti un file .mch di melonDS in
+bananads		Up / down to pick, L / R a page; some games need a restart for a code to work	Su / giù per scegliere, L / R una pagina; alcuni giochi richiedono un riavvio perché un codice funzioni
+bananads		Hotkeys	Scorciatoie
+bananads		while you play	durante il gioco
+bananads		Starting...	Avvio...
+bananads		Turn off	Disattiva
+bananads		Turn on	Attiva
+bananads		Save and quit	Salva ed esci
+bananads		Quit without saving	Esci senza salvare
+bananads		Quit without saving?	Uscire senza salvare?
+bananads		>> Max	>> Max
+bananads		This menu	Questo menu
+bananads		Save state (slot 1)	Salva stato (slot 1)
+bananads		Load state (slot 1)	Carica stato (slot 1)
+bananads		Fast-forward (held)	Avanzamento veloce (tenuto premuto)
+bananads		Fast-forward on / off	Avanzamento veloce attivo / disattivo
+bananads		Screenshot	Screenshot
+bananads		Save your spot and quit	Salva il punto ed esci
+bananads		3D effects	Effetti 3D
+bananads		FPS counter	Contatore FPS
+bananads		Fast-forward	Avanzamento veloce
+bananads		Edge + fog	Contorni + nebbia
+bananads		Edge only	Solo contorni
+bananads		Fog only	Solo nebbia
+bananads		Max	Max
+bananads		FXAA	FXAA
+bananads		Code {n}	Codice {n}
+bananads		Screenshot saved	Screenshot salvato
+bananads		Screenshot not saved	Screenshot non salvato
+bananads		the card may be full	la scheda potrebbe essere piena
+bananads		, and run-ahead: 1 frame	, e run-ahead: 1 frame
+bananads		, and run-ahead: 2 frames	, e run-ahead: 2 frame
+bananads		Saved to slot %d	Salvato nello slot %d
+bananads		Couldn't save	Impossibile salvare
+bananads		Loaded slot %d	Slot %d caricato
+bananads		Nothing saved in slot %d	Niente salvato nello slot %d
+bananads		Slot %d couldn't be read	Impossibile leggere lo slot %d
+bananads		Couldn't load	Impossibile caricare
+bananads		BananaDS	BananaDS
+bananads		Swap the screens	Scambia gli schermi
+bananads		the touchscreen	il touchscreen
+bananads		the top panel's touchscreen	il touchscreen del pannello superiore
+bananads		Screens swapped	Schermi scambiati
+bananads		Screens back	Schermi ripristinati
+bananads		F + SELECT puts them back	F + SELECT li rimette a posto
+bananads		F + SELECT swaps them again	F + SELECT li scambia di nuovo
+bananads		DSi eMMC CID/CPU	DSi eMMC CID/CPU
+bananads		dsi_nand.bin can't be read	impossibile leggere dsi_nand.bin
+bananads		it needs its nocash footer	richiede il suo footer nocash
+bananads		DSi game: needs a BIOS file	Gioco DSi: serve un file BIOS
+bananads		put bios7.bin in {dir}	metti bios7.bin in {dir}
+bananads		This .cia is encrypted	Questo .cia è cifrato
+bananads		decrypt it on a 3DS (or a PC tool) first	decifralo prima su un 3DS (o con uno strumento per PC)
+superdrastic		Today %s	Oggi %s
+superdrastic		Yesterday %s	Ieri %s
+superdrastic		volume %d >/dev/null 2>&1	volume %d >/dev/null 2>&1
+superdrastic		brightness set all %d >/dev/null 2>&1	brightness set all %d >/dev/null 2>&1
+superdrastic		No picture in this save	Nessuna immagine in questo salvataggio
+superdrastic		Empty slot	Slot vuoto
+superdrastic		Slot %d	Slot %d
+superdrastic		A: load this save. You can undo it after.	A: carica questo salvataggio. Potrai annullare dopo.
+superdrastic		Nothing saved here yet	Ancora nulla di salvato qui
+superdrastic		A: save here (replaces this save)	A: salva qui (sostituisce questo salvataggio)
+superdrastic		A: save here	A: salva qui
+superdrastic		THIS SESSION	QUESTA SESSIONE
+superdrastic		LAST SAVE %s	ULTIMO SALVATAGGIO %s
+superdrastic		None yet	Ancora nessuno
+superdrastic		LAST SAVE	ULTIMO SALVATAGGIO
+superdrastic		LATEST ACHIEVEMENTS	ULTIMI OBIETTIVI
+superdrastic		None unlocked yet. Good luck!	Nessuno sbloccato per ora. Buona fortuna!
+superdrastic		Resume	Riprendi
+superdrastic		Save	Salva
+superdrastic		Load	Carica
+superdrastic		Quick settings	Impostazioni rapide
+superdrastic		DraStic menu	Menu DraStic
+superdrastic		Quit game	Esci dal gioco
+superdrastic		Please wait	Attendere prego
+superdrastic		One moment...	Un momento...
+superdrastic		Paused	In pausa
+superdrastic		or press L3	oppure premi L3
+superdrastic		%d slots	%d slot
+superdrastic		last: slot %d	ultimo: slot %d
+superdrastic		no saves yet	ancora nessun salvataggio
+superdrastic		volume, brightness	volume, luminosità
+superdrastic		cheats, controls	trucchi, comandi
+superdrastic		keeps your spot	conserva il tuo punto
+superdrastic		back to the menu	torna al menu
+superdrastic		Slot %d of %d	Slot %d di %d
+superdrastic		Empty	Vuoto
+superdrastic		changes apply at once	le modifiche si applicano subito
+superdrastic		Volume	Volume
+superdrastic		Brightness	Luminosità
+superdrastic		Microphone	Microfono
+superdrastic		Test / blow	Prova / soffio
+superdrastic		Left / right to change, or tap the bar	Sinistra / destra per cambiare, oppure tocca la barra
+superdrastic		Left / right to change, both screens	Sinistra / destra per cambiare, entrambi gli schermi
+superdrastic		A live meter of the mic, and a blow for games that ask for one	Un misuratore in tempo reale del microfono, e un soffio per i giochi che lo richiedono
+superdrastic		Blow on the mic	Soffia nel microfono
+superdrastic		No microphone found	Nessun microfono trovato
+superdrastic		Heard!	Sentito!
+superdrastic		Listening	In ascolto
+superdrastic		The game hears a blow past the red line (sensitivity: %s).	Il gioco sente un soffio oltre la linea rossa (sensibilità: %s).
+superdrastic		Microphone sensitivity is off in ES, so the game only gets the blow below.	La sensibilità del microfono è disattivata in ES, quindi il gioco riceve solo il soffio qui sotto.
+superdrastic		A: blow for 3 s, for when the real mic isn't picked up	A: soffio per 3 s, per quando il microfono vero non viene rilevato
+superdrastic		Back	Indietro
+superdrastic		Select	Seleziona
+superdrastic		Open	Apri
+superdrastic		OK	OK
+superdrastic		Blow for 3 s	Soffia per 3 s
+superdrastic		D-pad or tap	Croce o tocco
+superdrastic		Undo last load	Annulla ultimo caricamento
+superdrastic		Replace slot %d?	Sostituire lo slot %d?
+superdrastic		The save from %s will be replaced by this one.	Il salvataggio di %s verrà sostituito da questo.
+superdrastic		Cancel	Annulla
+superdrastic		Replace	Sostituisci
+superdrastic		Quit to the menu?	Uscire al menu?
+superdrastic		Your spot is saved. Next time the game picks up right here.	Il tuo punto è salvato. La prossima volta il gioco riparte da qui.
+superdrastic		Anything since your last save will be lost.	Tutto ciò che è successo dopo l'ultimo salvataggio andrà perso.
+superdrastic		Keep playing	Continua a giocare
+superdrastic		Quit	Esci
+superdrastic		Saved to slot %d	Salvato nello slot %d
+superdrastic		Couldn't save	Impossibile salvare
+superdrastic		DraStic's Save state control has no button	Il comando Save state di DraStic non ha nessun tasto
+superdrastic		Back to before the load	Tornato a prima del caricamento
+superdrastic		Loaded slot %d	Slot %d caricato
+superdrastic		Undoing the load	Annullamento del caricamento
+superdrastic		Loading	Caricamento
+superdrastic		Wrong one? Load, then Y undoes it	Quello sbagliato? Carica, poi Y lo annulla
+superdrastic		Couldn't load	Impossibile caricare
+superdrastic		DraStic's Load state control has no button	Il comando Load state di DraStic non ha nessun tasto
+superdrastic		Blowing into the mic...	Soffio nel microfono...
+superdrastic		The game hears it for 3 seconds	Il gioco lo sente per 3 secondi
+superdrastic		Saving your spot	Salvataggio del tuo punto
+superdrastic		Achievement unlocked · %u points	Obiettivo sbloccato · %u punti
+superdrastic		All achievements unlocked!	Tutti gli obiettivi sbloccati!
+superdrastic		Leaderboard submitted	Classifica inviata
+superdrastic		RetroAchievements	RetroAchievements
+superdrastic		offline: unlocks will be sent later	offline: gli sblocchi verranno inviati più tardi
+superdrastic		back online, unlocks sent	di nuovo online, sblocchi inviati
+superdrastic		this ROM isn't recognised	questa ROM non è riconosciuta
+superdrastic		couldn't load the game	impossibile caricare il gioco
+superdrastic		%u of %u unlocked (softcore)	%u di %u sbloccati (softcore)
+superdrastic		no achievements for this game yet	ancora nessun obiettivo per questo gioco
+superdrastic		login expired: re-enter your password in ES	accesso scaduto: reinserisci la password in ES
+superdrastic		RetroAchievements login failed	Accesso a RetroAchievements non riuscito
+superdrastic		check user/password in ES	controlla utente/password in ES
+superdrastic		no password set in ES	nessuna password impostata in ES
+superdrastic		Resumed where you left off	Ripreso da dove avevi lasciato
+superdrastic		Quit with the exit hotkey to save your place again	Esci con la scorciatoia di uscita per salvare di nuovo il tuo punto
+superdrastic		DraStic didn't write the savestate	DraStic non ha scritto lo stato salvato
+superdrastic		DraStic didn't read the savestate	DraStic non ha letto lo stato salvato
+superdrastic		, resuming this session	, resuming this session
+superdrastic		, a resume state exists but isn't loaded	, a resume state exists but isn't loaded
+superdrastic		%ldh %02ldm	%ldh %02ldm
+superdrastic		This menu	Questo menu
+superdrastic		Save state	Salva stato
+superdrastic		Load state	Carica stato
+superdrastic		Fast-forward	Avanzamento veloce
+superdrastic		Swap screens	Scambia schermi
+superdrastic		Save your spot and quit (hold)	Salva il punto ed esci (tieni premuto)
+superdrastic		Quit (hold)	Esci (tieni premuto)
+superdrastic		LAST	ULTIMO
+superdrastic		Hotkeys	Scorciatoie
+superdrastic		while you play	durante il gioco
+superdrastic		Not set	Non impostato
+superdrastic		Starting...	Avvio...
+superdrastic		Microphone sensitivity is off in Settings, so the game only gets the blow below.	La sensibilità del microfono è disattivata in Impostazioni, quindi il gioco riceve solo il soffio qui sotto.
+superdrastic		Save and quit	Salva ed esci
+superdrastic		Quit without saving	Esci senza salvare
+superdrastic		Quit without saving?	Uscire senza salvare?
+superdrastic		Battery %d%%%s	Batteria %d%%%s
+superdrastic		, charging	, in carica
+superdrastic		%sF + SELECT	%sF + SELECT
+superdrastic		Screens swapped	Schermi scambiati
+superdrastic		Screens back	Schermi ripristinati
+superdrastic		F + SELECT puts them back	F + SELECT li rimette a posto
+superdrastic		F + SELECT swaps them again	F + SELECT li scambia di nuovo
+systems		Nintendo DS	Nintendo DS
+systems		Nintendo	Nintendo
+systems		Game Boy Advance	Game Boy Advance
+systems		Game Boy Color	Game Boy Color
+systems		Game Boy	Game Boy
+systems		Nintendo Entertainment System	Nintendo Entertainment System
+systems		Super Nintendo	Super Nintendo
+systems		Mega Drive	Mega Drive
+systems		Sega	Sega
+systems		PlayStation	PlayStation
+systems		Sony	Sony
+systems		Nintendo 64	Nintendo 64
+systems		Döda Kvarter	Döda Kvarter
+systems		ROCKNIXDS	ROCKNIXDS
+systems		Poketool	Poketool
+systems		PICO-8	PICO-8
+systems		Lexaloffle	Lexaloffle
+systems		Ports	Ports
+systems		PortMaster	PortMaster
+systems		Store	Store
+systems		Apps	App
+# (the lines below are a machine-translated draft, not Olympicus's: the first-time setup's slides, Bshare and a few
+# emulator menu rows, which the 0.5.0 document didn't have; for them to check in the next round)
+settings		Achievements	Obiettivi
+settings		Integer	Intero
+settings		the list of covers	l'elenco delle copertine
+settings		OK	OK
+settings		Keep %s	Mantieni %s
+settings		Development	Sviluppo
+settings		Translations	Traduzioni
+settings		Testing	Test
+settings		Thanks	Ringraziamenti
+settings		translated by	tradotto da
+settings		Step {n} of {m}	Passo {n} di {m}
+settings		Welcome to	Benvenuto in
+settings		Welcome	Benvenuto
+settings		All set	Tutto pronto
+settings		Choose a network	Scegli una rete
+settings		Choose another network	Scegli un'altra rete
+settings		Skip for now	Salta per ora
+settings		Test the connection	Prova la connessione
+settings		Test again	Prova di nuovo
+settings		Testing the connection	Prova della connessione
+settings		Looking at the connection	Controllo della connessione
+settings		Looking at the connection...	Controllo della connessione...
+settings		Keep it and go on	Mantieni e continua
+settings		Change the name	Cambia il nome
+settings		Log in	Accedi
+settings		Log in with another account	Accedi con un altro account
+settings		Check the login	Verifica l'accesso
+settings		Check again	Verifica di nuovo
+settings		Checking the login	Verifica dell'accesso
+settings		Try again	Riprova
+settings		Logged in	Accesso effettuato
+settings		Not logged in	Accesso non effettuato
+settings		Login failed	Accesso non riuscito
+settings		No answer	Nessuna risposta
+settings		No answer from the site: no connection, or it is down	Nessuna risposta dal sito: nessuna connessione, o il sito non è attivo
+settings		Asking retroachievements.org...	Richiesta a retroachievements.org...
+settings		Saved (not checked here)	Salvato (non verificato qui)
+settings		Skipped	Saltato
+settings		Start fetching box art	Avvia il download delle copertine
+settings		Fetch again	Scarica di nuovo
+settings		Fetch art for new games	Scarica copertine per i giochi nuovi
+settings		Not fetched	Non scaricato
+settings		Fetching in the background	Download in background
+settings		{have} of {all} games have art	{have} giochi su {all} hanno le copertine
+settings		Connected, address {address}	Connesso, indirizzo {address}
+settings		No connection: no address from the network	Nessuna connessione: nessun indirizzo dalla rete
+settings		Internet	Internet
+settings		No internet: the network doesn't reach it	Nessun internet: la rete non lo raggiunge
+settings		{network} (no internet)	{network} (nessun internet)
+settings		Clock set from the internet	Orologio impostato da internet
+settings		The clock couldn't be set (time server)	Impossibile impostare l'orologio (server dell'ora)
+settings		The menu's language, and the settings' and the emulators' menus. The rest of the setup is in the language picked.	La lingua del menu, delle impostazioni e dei menu degli emulatori. Il resto della configurazione è nella lingua scelta.
+settings		Your home network: achievements, the clock, box art and updates need it. Pick it from the networks around, type its password, and the connection is tested.	La tua rete di casa: obiettivi, orologio, copertine e aggiornamenti ne hanno bisogno. Sceglila tra le reti vicine, scrivi la password e la connessione viene provata.
+settings		Your name on the DS, as a real one asks for it the first time: Mario Kart's records, Pictochat, a game's save. 10 characters at most. Leave it and the emulators use their own.	Il tuo nome sul DS, come lo chiede un DS vero la prima volta: i record di Mario Kart, Pictochat, il salvataggio di un gioco. Al massimo 10 caratteri. Se lo lasci, gli emulatori usano il loro.
+settings		Your retroachievements.org account: DraStic and RetroArch unlock achievements with it. The login is checked with the site. No account? Skip this: it can be added later.	Il tuo account retroachievements.org: DraStic e RetroArch sbloccano gli obiettivi con esso. L'accesso viene verificato con il sito. Nessun account? Salta questo passo: puoi aggiungerlo più tardi.
+settings		Fetching covers and title screens. It carries on in the background while you finish the setup; the menu shows the art as it comes.	Download di copertine e schermate del titolo. Continua in background mentre finisci la configurazione; il menu mostra le immagini man mano che arrivano.
+settings		Covers, title screens, genres and years for the games on the card, from libretro's free collections: no account needed. Settings > System > Box art runs it again for new games.	Copertine, schermate del titolo, generi e anni per i giochi sulla scheda, dalle raccolte gratuite di libretro: nessun account necessario. Impostazioni > Sistema > Copertine lo ripete per i giochi nuovi.
+settings		Everything here is in Settings too (START in the menu), and this setup is under System > First-time setup.	Tutto ciò che c'è qui è anche nelle Impostazioni (START nel menu), e questa configurazione è in Sistema > Prima configurazione.
+settings		The first boot's setup again, a step at a time: Wi-Fi (with a test of the connection), the time zone, the DS's name, the RetroAchievements login and box art. B on its first step comes back here.	La configurazione del primo avvio di nuovo, un passo alla volta: Wi-Fi (con una prova della connessione), il fuso orario, il nome del DS, l'accesso a RetroAchievements e le copertine. B al primo passo torna qui.
+settings		Accept	Accetta
+settings		Decline	Rifiuta
+settings		Location	Posizione
+settings		Usual places	Posti usuali
+settings		Receive	Ricevi
+settings		Quick save	Salvataggio rapido
+settings		Send files	Invia file
+settings		Sending	Invio
+settings		Received files	File ricevuti
+settings		About Bshare	Informazioni su Bshare
+settings		This folder	Questa cartella
+settings		Looking... Open LocalSend on the other device.	Ricerca... Apri LocalSend sull'altro dispositivo.
+settings		An empty folder.	Una cartella vuota.
+settings		Games go into their system's folder, everything else into banana/received.	I giochi vanno nella cartella del loro sistema, tutto il resto in banana/received.
+menu		Open Bshare to accept.	Apri Bshare per accettare.
+menu		In banana/received.	In banana/received.
+menu		Games went into their system's folder.	I giochi sono andati nella cartella del loro sistema.
+menu		Nothing was sent.	Non è stato inviato nulla.
+bananads		or press L3	o premi L3
+bananads		The game hears a blow past the red line (sensitivity: %s).	Il gioco sente un soffio oltre la linea rossa (sensibilità: %s).
