@@ -1150,6 +1150,21 @@ namespace banana::gba
 		// BattlePokemon (1.9 and 1.15 alike up to status1): species, stats, moves 0x0C, IVs, stages, ability 0x20, types
 		// 0x22 (three), PP 0x25, HP 0x2A, level 0x2C, friendship, max HP 0x2E, item 0x30, nickname 0x32, PP bonuses 0x3F,
 		// OT name, experience 0x48, personality 0x4C, status1 0x50 (or all of these 2 bytes on: below)
+		uint32_t expAt(int growth, int n);
+		// an experience a Pokémon of this level can have under some growth rate: at least the least any rate needs for the
+		// level, below the most any rate needs for the next (level 100: at most the most for 100)
+		bool expFitsLevel(uint32_t e, int level)
+		{
+			if (level < 1 || level > 100) return false;
+			uint32_t lo = UINT32_MAX, hi = 0;
+			for (int g = 0; g < 6; g++)
+			{
+				lo = std::min(lo, level <= 1 ? 0u : expAt(g, level));
+				hi = std::max(hi, expAt(g, std::min(level + 1, 100)));
+			}
+			return e >= lo && (level == 100 ? e <= hi : e < hi);
+		}
+
 		bool decodeBattlerExp(const uint8_t* p, pkmn::Mon& m, int maxSpecies)
 		{
 			m = pkmn::Mon();
@@ -1168,11 +1183,19 @@ namespace banana::gba
 			// flipped - and the status from the personality - a burn that wasn't there - on the RG DS Plus 2026-11-04).
 			// The one where the experience (at most 1,640,000 in Gen III's curves) and status1 (bits up to 0xffff) are
 			// possible; the usual place first
-			int s = 0;
-			auto possible = [&](int o) { return le32(p + 0x48 + o) <= 2000000 && le32(p + 0x50 + o) <= 0xffff; };
-			if (!possible(0) && possible(2)) s = 2;
-			m.nick = pkmn::decodeText(p + 0x32 + s, 12);
-			m.ppBonuses = p[0x3f + s];
+			// SoulGold 1.1.4 as read from its RAM in Crystal's first battle (RG DS Plus, 2026-11-04): the nickname 2 bytes on
+			// (0x34) but the OT name, experience, personality and status 4 bytes on (0x42, 0x4c, 0x50, 0x54) - with only 0 or
+			// 2 tried, neither fit and 0 was taken: "ë Chespin" (the u16 before the name) and Sleep on both sides. The
+			// experience must also be one the level can have (between the six growth rates' extremes), not just small.
+			int s = 0, sn = 0;
+			auto possible = [&](int o)
+			{
+				const uint32_t e = le32(p + 0x48 + o);
+				return e <= 2000000 && le32(p + 0x50 + o) <= 0xffff && expFitsLevel(e, m.level);
+			};
+			for (int o : { 0, 2, 4 }) if (possible(o)) { s = o; sn = std::min(o, 2); break; }
+			m.nick = pkmn::decodeText(p + 0x32 + sn, 12);
+			m.ppBonuses = p[0x3f + sn];	// (SoulGold: 0x41, before the OT name at 0x42 - a byte of the OT name gave Tackle 42 PP)
 			m.exp = le32(p + 0x48 + s);
 			m.pid = le32(p + 0x4c + s);
 			m.status = le32(p + 0x50 + s);
