@@ -37,8 +37,11 @@ for dir in "$DATA"/saves/*/; do
                 continue
             fi
         fi
+        # (a backup already there from an earlier move is never overwritten: the new one gets the time in its name)
+        b="$DATA/banana/saves-legacy/$d/$n"
+        [ -e "$b" ] && b="$b.$(date +%Y%m%d-%H%M%S)"
         mkdir -p "$DATA/banana/saves-legacy/$d" 2>/dev/null &&
-            mv -f "$f" "$DATA/banana/saves-legacy/$d/$n" || FAIL=1
+            mv -f "$f" "$b" || FAIL=1
     done
 done
 if [ $FAIL = 0 ]; then

@@ -59,7 +59,7 @@ set_cfg() {
 }
 # the saves in the one folder the Home server syncs (saves-flat: a card's core folders migrated once per boot)
 [ -x /usr/libexec/banana/saves-flat ] && /usr/libexec/banana/saves-flat
-[ -f /run/banana/saves-flat ] && set_cfg sort_savefiles_enable false
+set_cfg sort_savefiles_enable false   # (always: BananaFront reads the same flat folder, whether or not the move finished)
 # Banana's choices over what RetroArch wrote on a card before they were in retroarch.cfg, once (a change made in
 # RetroArch's menu afterwards is kept): A confirms and B goes back in its menu, F + Start quits with one press, and
 # the N64 core's GLideN64 on its own thread (Super Mario 64 on an RG DS Plus: 40-50 frames a second, 55-60 with it,

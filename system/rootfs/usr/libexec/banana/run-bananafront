@@ -45,6 +45,11 @@ if [ "$BANANA_SYSTEM" = gba ]; then
             echo "run-bananafront: the GBA save from $best, now $G/$n.srm (every GBA core)" >&2
     fi
     set -- --save-dir $G "$@"
+else
+    # every other system's saves flat in /data/saves, as RetroArch keeps them now (sort_savefiles_enable false) and
+    # the Home server syncs them: BananaFront's own default is a folder per core (/data/saves/<core>), which
+    # saves-flat has just emptied
+    set -- --save-dir /data/saves "$@"
 fi
 # Settings > Other systems > Audio latency (RetroArch's setting, the same buffer)
 lat=$(setting ra_audio_latency)
