@@ -89,7 +89,7 @@
    "releasedate": "20261006T000000",
    "accent": "#3d6fb8",
    "summary": "A Pokémon bank, save editor, legality checker and trading app, built on PKHeX.Core.",
-   "description": "Formerly Bank & Trade. Reads your game saves (generation 1 to 5), stores Pokémon in boxes of its own, moves them between games, boxes and parties through the bank (they change format only when they move up a generation, as Pal Park and Poké Transfer did), edits Pokémon (or makes new ones), trainers, bags and Pokédexes as PKHeX does, duplicates Pokémon, checks every one with PKHeX's legality analysis, and trades with another handheld over Wi-Fi, in a lobby or a private room. Close the game before you use it. It comes with BananaOS: removing it takes its tile off the menu (your bank stays in apps/bank on the card), installing it puts the tile back.",
+   "description": "Formerly Bank & Trade. Reads your game saves (generation 1 to 5), stores Pokémon in boxes of its own, moves them between games, boxes and parties through the bank (they change format only when they move up a generation, as Pal Park and Poké Transfer did), edits Pokémon (or makes new ones), trainers, bags and Pokédexes as PKHeX does, duplicates Pokémon, checks every one with PKHeX's legality analysis, and trades with another handheld over Wi-Fi, in a lobby or a private room. Close the game before you use it. Your bank, settings and save backups stay in apps/bank on the card, also when the app is removed. It came with BananaOS until 0.5.3 (there, removing it takes its tile off the menu and installing puts it back); from 0.5.3 the Store downloads it onto the Apps shelf.",
    "icon": "apps/bank/icon.png",
    "screenshots": [
     "apps/bank/screen.png"
@@ -104,6 +104,32 @@
    "builtin": {
     "system": "rocknixdsbank",
     "dir": "/usr/share/banana/apps/bank"
+   },
+   "release": {
+    "github": "JorreFog/ROCKNIXDS",
+    "tag_prefix": "bank-v",
+    "asset": "rocknixds-bank-{version}-aarch64.tar.gz"
+   },
+   "package": {
+    "root": "rocknixds-bank",
+    "dest": "/storage/.config/rocknixds/bank",
+    "check": "rocknixds-bank",
+    "executable": [
+     "rocknixds-bank",
+     "createdump"
+    ]
+   },
+   "menu": {
+    "system": "rocknixdsbank",
+    "folder": "/storage/.config/rocknixds/apps/bank",
+    "entry": "Poketool.sh",
+    "banana_run": "/usr/libexec/banana/run-bank",
+    "ports": false,
+    "media": {
+     "image": "media/bank-image.png",
+     "thumbnail": "media/bank-thumb.png",
+     "marquee": "media/bank-marquee.png"
+    }
    }
   },
   {
@@ -132,6 +158,54 @@
    "builtin": {
     "system": "bshare",
     "dir": "/usr/share/banana/apps/bshare"
+   }
+  },
+  {
+   "id": "portmaster",
+   "name": "PortMaster",
+   "tile": "PortMaster",
+   "kind": "app",
+   "developer": "PortMaster",
+   "genre": "Tool",
+   "players": "1",
+   "releasedate": "20261003T000000",
+   "accent": "#3b8fd0",
+   "summary": "Downloads and runs PC and homebrew game ports, on the Ports shelf.",
+   "description": "Gets ports: PC games and homebrew made to run on handhelds (many free, some needing files from a copy of the game you own), downloaded from portmaster.games and started from the Ports shelf. Its entry and the ports it installs go in roms/ports on the card (the banana share's roms\\ports folder), and so does PortMaster itself; it updates itself. Removing it leaves your ports and the runtimes they need (PortMaster/libs), but a port needs PortMaster's folder to start: install it again to play them. Made by the PortMaster team (portmaster.games, MIT licence); it came with BananaOS until 0.5.3.",
+   "icon": "apps/portmaster/icon.png",
+   "screenshots": [
+    "apps/portmaster/screen.png"
+   ],
+   "devices": [
+    "rgds",
+    "rgds-plus"
+   ],
+   "release": {
+    "url": "https://github.com/PortsMaster/PortMaster-GUI/releases/download/2026.10.03-1041/PortMaster.zip",
+    "version": "2026.10.03",
+    "sha256": "6e4fa938c39efdb9237aa9973b3ce3f318242ada171f26cd72511b09e393fdf2",
+    "size": 24131471
+   },
+   "package": {
+    "root": "PortMaster",
+    "dest": "/storage/roms/ports/PortMaster",
+    "check": "PortMaster.sh",
+    "keep": [
+     "libs",
+     "exlibs",
+     "config",
+     "autoinstall",
+     "themes"
+    ],
+    "version_file": "version",
+    "version_match": "^([0-9]+(?:\\.[0-9]+)*)"
+   },
+   "menu": {
+    "system": "ports",
+    "folder": "/storage/roms/ports",
+    "entry": "PortMaster.sh",
+    "launch": "PortMaster.sh",
+    "ports": false
    }
   }
  ]

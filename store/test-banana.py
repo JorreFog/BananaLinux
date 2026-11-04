@@ -7,11 +7,13 @@ a remove leaves the shelf's folder and a port of the same name alone, and that t
 (/data/store/hidden-systems) and an install puts it back.
   python3 store/test-banana.py <rocknixds-store, with BananaOS's patches>"""
 import hashlib
+import io
 import json
 import os
 import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 import zipfile
 
@@ -140,13 +142,63 @@ def main(cli):
         o = run("install", "dodakvarter")
         check(o.strip().splitlines()[-1] == "DONE 0.3.0" and "dodakvarter" not in open(hidden).read().lower(),
               "install takes the hand-written line out")
-        # a system without the app's folder (a build without it): not installed, and not installable
-        os.rename(root + "/usr/share/banana/apps/bank", root + "/usr/share/banana/apps/bank.away")
-        check(row("bank")[5:8] == ["", "", "unavailable"], "Poketool's folder gone: unavailable: %s" % row("bank")[5:8])
-        o = run("install", "bank")
-        check("FAIL" in o and (not os.path.exists(hidden) or "rocknixdsbank" not in open(hidden).read()),
+        # a system without a built-in app's folder and no release of it in the catalog (Bshare): not installed, and
+        # not installable
+        os.rename(root + "/usr/share/banana/apps/bshare", root + "/usr/share/banana/apps/bshare.away")
+        check(row("bshare")[5:8] == ["", "", "unavailable"], "Bshare's folder gone: unavailable: %s" % row("bshare")[5:8])
+        o = run("install", "bshare")
+        check("FAIL" in o and "bshare" not in open(hidden).read().split(),
               "install without its folder fails: " + o.strip().splitlines()[-1])
+        os.rename(root + "/usr/share/banana/apps/bshare.away", root + "/usr/share/banana/apps/bshare")
+        # BananaOS 0.5.3 on: Poketool no longer in the system (no folder), its release in the catalog: downloaded into
+        # /data/store/apps/bank, on the Apps shelf, started by the system's run-bank with that folder; the bank on the
+        # card (/data/apps/bank) is never touched
+        os.makedirs(root + "/data/apps/bank")
+        with open(root + "/data/apps/bank/bank.json", "w") as f:
+            f.write("{}\n")
+        z = os.path.join(t, "dl", "bank-v0.2.0", "rocknixds-bank-0.2.0-aarch64.tar.gz")
+        os.makedirs(os.path.dirname(z))
+        with tarfile.open(z, "w:gz") as tf:
+            for name, body, mode in (("rocknixds-bank/rocknixds-bank", b"elf\n", 0o755), ("rocknixds-bank/VERSION", b"0.2.0\n", 0o644),
+                                     ("rocknixds-bank/ROCKNIXDS Bank.sh", b"#!/bin/bash\nswaymsg\n", 0o755),
+                                     ("rocknixds-bank/media/bank-image.png", open(os.path.join(HERE, "apps/bank/icon.png"), "rb").read(), 0o644)):
+                ti = tarfile.TarInfo(name)
+                ti.size, ti.mode = len(body), mode
+                tf.addfile(ti, io.BytesIO(body))
+        api = os.path.join(t, "api", "JorreFog", "ROCKNIXDS.json")
+        os.makedirs(os.path.dirname(api), exist_ok=True)
+        with open(api, "w") as f:
+            json.dump([{"tag_name": "bank-v0.2.0", "prerelease": True, "body": "Poketool", "assets": [
+                {"name": os.path.basename(z), "size": os.path.getsize(z),
+                 "digest": "sha256:" + hashlib.sha256(open(z, "rb").read()).hexdigest()}]}], f)
+        hidden_before = open(hidden).read()
+        os.rename(root + "/usr/share/banana/apps/bank", root + "/usr/share/banana/apps/bank.away")
+        run("refresh")
+        check(row("bank")[5:8] == ["", "0.2.0", "install"], "no Poketool in the system: 0.2.0 to install: %s" % row("bank")[5:8])
+        o = run("install", "bank")
+        check("FAIL Needs a newer BananaOS" in o and not os.path.exists(root + "/data/store/tiles/Poketool.sh"),
+              "a system without run-bank refuses it: " + o.strip().splitlines()[-1])
+        os.makedirs(root + "/usr/libexec/banana", exist_ok=True)
+        with open(root + "/usr/libexec/banana/run-bank", "w") as f:
+            f.write("#!/bin/sh\n")
+        o = run("install", "bank")
+        check(o.strip().splitlines()[-1] == "DONE 0.2.0", "install Poketool: " + o.strip().splitlines()[-1])
+        bk = root + "/data/store/apps/bank"
+        check(os.path.isfile(bk + "/rocknixds-bank") and os.access(bk + "/rocknixds-bank", os.X_OK), "the app in /data/store/apps/bank")
+        entry = root + "/data/store/tiles/Poketool.sh"
+        text = open(entry).read() if os.path.exists(entry) else ""
+        check("exec /usr/libexec/banana/run-bank '/data/store/apps/bank' \"$@\"" in text and "swaymsg" not in text,
+              "its Apps shelf entry runs the system's run-bank with its folder: " + text.strip().splitlines()[-1:][0] if text else "no entry")
+        gl = open(root + "/data/store/tiles/gamelist.xml").read()
+        check("<path>./Poketool.sh</path>" in gl and "<image>./images/bank-image.png</image>" in gl
+              and os.path.isfile(root + "/data/store/tiles/images/bank-image.png"), "its line and picture on the shelf")
+        check(open(hidden).read() == hidden_before, "hidden-systems left alone")
+        check(row("bank")[5:8] == ["0.2.0", "0.2.0", "installed"], "list: Poketool 0.2.0 installed: %s" % row("bank")[5:8])
+        o = run("remove", "bank")
+        check(o.strip().endswith("DONE") and not os.path.exists(entry) and not os.path.exists(bk), "remove Poketool: entry and app gone")
+        check(open(root + "/data/apps/bank/bank.json").read() == "{}\n", "the bank on the card untouched")
         os.rename(root + "/usr/share/banana/apps/bank.away", root + "/usr/share/banana/apps/bank")
+        check(row("bank")[7:8] == ["installed"], "with its folder back in the system: the built-in one again")
         # the Store's own tile and the Apps shelf are never taken off the menu, whatever a catalog says
         cat = json.load(open(os.path.join(share, "catalog.json")))
         cat["apps"].append({"id": "shelf", "name": "Apps", "builtin": {"system": "storeapps"}})
