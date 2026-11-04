@@ -10,7 +10,7 @@ override LDLIBS += -lpthread
 
 SRC = src/main.cpp src/recorder.cpp src/lang.cpp src/soft.cpp src/kms.cpp src/colors.cpp src/input.cpp src/library.cpp src/sound.cpp src/splash.cpp src/arrival.cpp src/settings.cpp src/settings_pal.cpp src/settings_defaults.cpp src/wifi.cpp src/bluetooth.cpp src/zip.cpp src/zipdir.cpp src/carts.cpp src/cart3d.cpp src/theme.cpp src/pokemon.cpp src/pokemap.cpp src/gamecomp.cpp src/vkbd.cpp src/json.cpp src/expr.cpp src/layout.cpp src/fileops.cpp src/settings_files.cpp src/complink.cpp src/bcomp.c rnds/RndsRaster.cpp rnds/RndsUI.cpp
 # (the DS Pokémon companion: the overlay BananaDS shows, its pages, the ROM reader, the guide data)
-SRC += src/bovl.c src/nds/overlay.cpp src/nds/pages.cpp src/nds/model.cpp src/nds/nitro.cpp src/nds/rom.cpp src/nds/guide.cpp src/nds/ram.cpp src/nds/logic.cpp src/nds/session.cpp src/nds/romfile.cpp
+SRC += src/bovl.c src/nds/overlay.cpp src/nds/pages.cpp src/nds/model.cpp src/nds/nitro.cpp src/nds/rom.cpp src/nds/townmap.cpp src/nds/guide.cpp src/nds/ram.cpp src/nds/logic.cpp src/nds/session.cpp src/nds/romfile.cpp src/gba/gen3live.cpp src/gba/host.cpp src/gba/gen3rom.cpp src/gba/hacks.cpp src/gba/gen3map.cpp src/gba/expansion.cpp
 # (Bshare's pages: its helper, banana-bshare, does the network)
 SRC += src/settings_bshare.cpp
 # (Files' servers: their pages, and the bits of banana-fetch they share with it; no network in banana-ui itself)
@@ -105,7 +105,7 @@ install:
 	touch $(DESTDIR)/usr/share/banana/apps/files/Files.app
 
 clean:
-	rm -f banana-ui banana-leaseshim.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/wav-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump tests/nds-ram-test tests/nds-logic-test tests/nds-romfile-test
+	rm -f banana-ui banana-leaseshim.so banana-scrape banana-sync banana-bshare banana-fetch tests/pokemon-test tests/gamecomp-test tests/input-test tests/wav-test tests/complink-test tests/nds-pages-test tests/nds-rom-test tests/nds-rom-dump tests/nds-ram-test tests/nds-logic-test tests/nds-romfile-test tests/nds-townmap-test tests/gba-live-test tests/gba-pages-test tests/gba-rom-test tests/gba-items-gen tests/soft-base-test tests/gba-exp-test tests/gba-expitems-gen
 
 .PHONY: host install clean
 
@@ -115,20 +115,46 @@ tests/complink-test: tests/complink-test.cpp src/complink.cpp src/complink.h src
 
 # the DS Pokémon companion's ROM reader: its containers and decoders on data made from the documented layouts, and on
 # the player's own ROMs when given a folder of them (tests/run.sh runs the first part)
-NDS_ROM_SRC = src/nds/nitro.cpp src/nds/rom.cpp src/nds/model.cpp
+NDS_ROM_SRC = src/nds/nitro.cpp src/nds/rom.cpp src/nds/townmap.cpp src/nds/model.cpp
 tests/nds-rom-test: tests/nds-rom-test.cpp $(NDS_ROM_SRC) $(wildcard src/nds/*.h)
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/nds-rom-test.cpp $(NDS_ROM_SRC) -lpthread
 # (what the reader makes of a ROM, printed: for looking at by eye; never commit its output, it is the game's data)
 tests/nds-rom-dump: tests/nds-rom-dump.cpp $(NDS_ROM_SRC) $(wildcard src/nds/*.h)
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/nds-rom-dump.cpp $(NDS_ROM_SRC) -lpthread
 # the DS Pokémon companion's ROM file: a game's header from inside a .zip, the wait for run-bananads' unpacked copy
+# the DS companion's region maps (tests/run.sh runs it; give it the ROMs folder, or NDS_ROMS, for the games' own maps)
+tests/nds-townmap-test: tests/nds-townmap-test.cpp $(NDS_ROM_SRC) $(wildcard src/nds/*.h)
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/nds-townmap-test.cpp $(NDS_ROM_SRC) -lpthread
+
 tests/nds-romfile-test: tests/nds-romfile-test.cpp src/nds/romfile.cpp src/nds/romfile.h src/zip.cpp src/zipdir.cpp
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/nds-romfile-test.cpp src/nds/romfile.cpp src/zip.cpp src/zipdir.cpp -lz -lpthread
 # the DS Pokémon companion's guide loader (tests/run.sh runs it)
+# the GBA Pokémon games' ROM data for the DS companion (src/gba/gen3rom.*): tests/gba-rom-test [roms dir [png dir]]
+# (or GBA_ROMS=<dir>: the player's own ROMs; without them the header checks only). tests/gba-items-gen remakes
+# src/gba/gen3items.inc from an Emerald, a FireRed and a HeartGold ROM
+GBA_ROM_SRC = src/gba/gen3rom.cpp src/gba/gen3live.cpp src/gba/hacks.cpp src/gba/expansion.cpp src/gba/gen3map.cpp src/pokemon.cpp src/pokemap.cpp src/zip.cpp src/zipdir.cpp src/nds/nitro.cpp src/nds/model.cpp
+tests/gba-rom-test: tests/gba-rom-test.cpp $(GBA_ROM_SRC) src/gba/gen3rom.h src/gba/gen3live.h src/gba/hacks.h src/gba/gen3items.inc src/gba/gen4names.inc src/pokemon.h src/nds/model.h
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/gba-rom-test.cpp $(GBA_ROM_SRC) -lz -lpthread
+
+tests/gba-items-gen: tests/gba-items-gen.cpp $(NDS_ROM_SRC) src/pokemon.cpp src/pokemap.cpp src/zip.cpp src/zipdir.cpp
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/gba-items-gen.cpp $(NDS_ROM_SRC) src/pokemon.cpp src/pokemap.cpp src/zip.cpp src/zipdir.cpp -lz -lpthread
+
+# the pokeemerald-expansion ROM hacks (src/gba/expansion.*): tests/gba-exp-test [hacks dir] (skips the ROMs it doesn't
+# find); tests/gba-expitems-gen remakes src/gba/expitems.inc from an Emerald ROM
+tests/gba-exp-test: tests/gba-exp-test.cpp $(GBA_ROM_SRC) src/gba/expansion.h src/gba/expitems.inc src/pokemon.h src/nds/model.h
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/gba-exp-test.cpp $(GBA_ROM_SRC) -lz -lpthread
+tests/gba-expitems-gen: tests/gba-expitems-gen.cpp $(GBA_ROM_SRC)
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/gba-expitems-gen.cpp $(GBA_ROM_SRC) -lz -lpthread
+
 tests/guide-test: tests/guide-test.cpp src/nds/guide.cpp src/nds/guide.h src/nds/model.h src/json.cpp
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/guide-test.cpp src/nds/guide.cpp src/json.cpp
 # the DS Pokémon companion's pages on made-up games: every page as a PNG at both sizes, and the touches (tests/run.sh runs it)
-NDS_PAGES_SRC = tests/nds-pages-test.cpp src/nds/pages.cpp src/nds/model.cpp src/settings_pal.cpp src/soft.cpp src/lang.cpp src/theme.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp
+# the DS companion's pages on the five GBA games' ROMs (a look: tests/out/gba-pages; not in run.sh - needs the ROMs)
+GBA_PAGES_SRC = tests/gba-pages-test.cpp src/gba/gen3rom.cpp src/gba/hacks.cpp src/gba/expansion.cpp src/gba/gen3map.cpp src/nds/nitro.cpp src/gba/gen3live.cpp src/pokemon.cpp src/pokemap.cpp src/zip.cpp src/zipdir.cpp src/nds/pages.cpp src/nds/model.cpp src/nds/logic.cpp src/nds/guide.cpp src/json.cpp src/settings_pal.cpp src/soft.cpp src/lang.cpp src/theme.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp
+tests/gba-pages-test: $(GBA_PAGES_SRC) src/nds/pages.h src/nds/model.h src/gba/gen3rom.h src/gba/gen3live.h
+	$(CXX) $(CXXFLAGS) -Isrc $(shell $(PKG_CONFIG) --cflags freetype2) -o $@ $(GBA_PAGES_SRC) $(shell $(PKG_CONFIG) --libs freetype2 zlib) -lpthread
+
+NDS_PAGES_SRC = tests/nds-pages-test.cpp src/nds/pages.cpp src/nds/logic.cpp src/nds/model.cpp src/settings_pal.cpp src/soft.cpp src/lang.cpp src/theme.cpp rnds/RndsRaster.cpp rnds/RndsUI.cpp
 tests/nds-pages-test: $(NDS_PAGES_SRC) tests/nds-fixture.h src/nds/pages.h src/nds/model.h
 	$(CXX) $(CXXFLAGS) -Isrc $(shell $(PKG_CONFIG) --cflags freetype2) -o $@ $(NDS_PAGES_SRC) $(shell $(PKG_CONFIG) --libs freetype2 zlib) -lpthread
 
@@ -137,6 +163,14 @@ tests/nds-pages-test: $(NDS_PAGES_SRC) tests/nds-fixture.h src/nds/pages.h src/n
 NDS_RAM_SRC = src/nds/ram.cpp src/nds/model.cpp src/nds/nitro.cpp
 tests/nds-ram-test: tests/nds-ram-test.cpp $(NDS_RAM_SRC) $(wildcard src/nds/*.h)
 	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/nds-ram-test.cpp $(NDS_RAM_SRC)
+
+# the GBA games' state as the DS companion's (tests/run.sh runs it)
+tests/gba-live-test: tests/gba-live-test.cpp src/gba/gen3live.cpp src/gba/gen3live.h src/pokemon.cpp src/pokemon.h src/pokemap.cpp src/nds/model.h
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/gba-live-test.cpp src/gba/gen3live.cpp src/pokemon.cpp src/pokemap.cpp src/zip.cpp src/zipdir.cpp -lz -lpthread
+
+# the software backend's background copy after invalidate (tests/run.sh runs it)
+tests/soft-base-test: tests/soft-base-test.cpp src/soft.cpp src/soft.h
+	$(CXX) $(CXXFLAGS) -Isrc -o $@ tests/soft-base-test.cpp src/soft.cpp -lpthread
 
 # the DS Pokémon companion's advice (damage, catching, team score, guide progress; tests/run.sh runs it)
 tests/nds-logic-test: tests/nds-logic-test.cpp src/nds/logic.cpp src/nds/session.cpp $(NDS_RAM_SRC) $(wildcard src/nds/*.h)

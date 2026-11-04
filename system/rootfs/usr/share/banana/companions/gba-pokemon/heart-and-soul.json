@@ -1,0 +1,1516 @@
+{
+ "schema": 1,
+ "kind": "nds-pokemon-guide",
+ "game": "heart-and-soul",
+ "code": "BPEE",
+ "title": "Pokemon Heart & Soul (v2.0.6)",
+ "revision": 1,
+ "sources": [
+  "The ROM itself (Heart & Soul 2.0.6, pokeemerald-expansion build): region map section names (each place resolves to a section with maps) and trainer names, teams and levels, read on the PC with throwaway tools",
+  "Heart & Soul 2.0 documentation (pokemonhns-development.github.io/pokehns-expansion-documentation): features, gifts and statics, walkthrough, FAQ, encounters",
+  "GitHub PokemonHnS-Development/pokehns-expansion (release v2.0.6 notes) and pokemonHnS (1.x README)",
+  "retrododo.com (the 2.0 update) and heldgames.com (H&S guide)"
+ ],
+ "places": {
+  "cherrygrove-city": {
+   "name": "Cherrygrove City"
+  },
+  "new-bark-town": {
+   "name": "New Bark Town"
+  },
+  "route-29": {
+   "name": "Route 29"
+  },
+  "route-30": {
+   "name": "Route 30"
+  },
+  "route-31": {
+   "name": "Route 31"
+  },
+  "violet-city": {
+   "name": "Violet City"
+  },
+  "sprout-tower": {
+   "name": "Sprout Tower"
+  },
+  "route-32": {
+   "name": "Route 32"
+  },
+  "ruins-of-alph": {
+   "name": "Ruins of Alph"
+  },
+  "slowpoke-well": {
+   "name": "Slowpoke Well"
+  },
+  "union-cave": {
+   "name": "Union Cave"
+  },
+  "route-33": {
+   "name": "Route 33"
+  },
+  "azalea-town": {
+   "name": "Azalea Town"
+  },
+  "ilex-forest": {
+   "name": "Ilex Forest"
+  },
+  "route-34": {
+   "name": "Route 34"
+  },
+  "goldenrod-city": {
+   "name": "Goldenrod City"
+  },
+  "national-park": {
+   "name": "National Park"
+  },
+  "route-35": {
+   "name": "Route 35"
+  },
+  "route-36": {
+   "name": "Route 36"
+  },
+  "burned-tower": {
+   "name": "Burned Tower"
+  },
+  "route-37": {
+   "name": "Route 37"
+  },
+  "ecruteak-city": {
+   "name": "Ecruteak City"
+  },
+  "cianwood-city": {
+   "name": "Cianwood City"
+  },
+  "route-38": {
+   "name": "Route 38"
+  },
+  "route-39": {
+   "name": "Route 39"
+  },
+  "olivine-city": {
+   "name": "Olivine City"
+  },
+  "route-40": {
+   "name": "Route 40"
+  },
+  "route-41": {
+   "name": "Route 41"
+  },
+  "olivine-lighthouse": {
+   "name": "Olivine Lighthouse"
+  },
+  "rocket-hideout": {
+   "name": "Rocket Hideout"
+  },
+  "route-42": {
+   "name": "Route 42"
+  },
+  "mt-mortar": {
+   "name": "Mt. Mortar"
+  },
+  "mahogany-town": {
+   "name": "Mahogany Town"
+  },
+  "route-43": {
+   "name": "Route 43"
+  },
+  "lake-of-rage": {
+   "name": "Lake of Rage"
+  },
+  "blackthorn-city": {
+   "name": "Blackthorn City"
+  },
+  "route-44": {
+   "name": "Route 44"
+  },
+  "ice-path": {
+   "name": "Ice Path"
+  },
+  "dragons-den": {
+   "name": "Dragon’s Den"
+  },
+  "victory-road": {
+   "name": "Victory Road"
+  },
+  "route-45": {
+   "name": "Route 45"
+  },
+  "route-46": {
+   "name": "Route 46"
+  },
+  "route-27": {
+   "name": "Route 27"
+  },
+  "route-26": {
+   "name": "Route 26"
+  },
+  "tohjo-falls": {
+   "name": "Tohjo Falls"
+  },
+  "indigo-plateau": {
+   "name": "Indigo Plateau"
+  },
+  "s-s-aqua": {
+   "name": "S.S. Aqua"
+  },
+  "vermilion-city": {
+   "name": "Vermilion City"
+  },
+  "route-6": {
+   "name": "Route 6"
+  },
+  "route-11": {
+   "name": "Route 11"
+  },
+  "digletts-cave": {
+   "name": "Diglett’s Cave"
+  },
+  "celadon-city": {
+   "name": "Celadon City"
+  },
+  "cerulean-city": {
+   "name": "Cerulean City"
+  },
+  "route-24": {
+   "name": "Route 24"
+  },
+  "route-25": {
+   "name": "Route 25"
+  },
+  "route-9": {
+   "name": "Route 9"
+  },
+  "route-10": {
+   "name": "Route 10"
+  },
+  "power-plant": {
+   "name": "Power Plant"
+  },
+  "fuchsia-city": {
+   "name": "Fuchsia City"
+  },
+  "route-12": {
+   "name": "Route 12"
+  },
+  "route-13": {
+   "name": "Route 13"
+  },
+  "route-14": {
+   "name": "Route 14"
+  },
+  "route-15": {
+   "name": "Route 15"
+  },
+  "safari-zone-gate": {
+   "name": "Safari Zone Gate"
+  },
+  "saffron-city": {
+   "name": "Saffron City"
+  },
+  "route-5": {
+   "name": "Route 5"
+  },
+  "route-7": {
+   "name": "Route 7"
+  },
+  "route-8": {
+   "name": "Route 8"
+  },
+  "pewter-city": {
+   "name": "Pewter City"
+  },
+  "route-2": {
+   "name": "Route 2"
+  },
+  "route-3": {
+   "name": "Route 3"
+  },
+  "mt-moon": {
+   "name": "Mt. Moon"
+  },
+  "route-4": {
+   "name": "Route 4"
+  },
+  "cinnabar-island": {
+   "name": "Cinnabar Island"
+  },
+  "route-19": {
+   "name": "Route 19"
+  },
+  "route-20": {
+   "name": "Route 20"
+  },
+  "seafoam-islands": {
+   "name": "Seafoam Islands"
+  },
+  "route-21": {
+   "name": "Route 21"
+  },
+  "viridian-city": {
+   "name": "Viridian City"
+  },
+  "route-1": {
+   "name": "Route 1"
+  },
+  "pallet-town": {
+   "name": "Pallet Town"
+  },
+  "route-22": {
+   "name": "Route 22"
+  },
+  "mt-silver": {
+   "name": "Mt. Silver"
+  },
+  "route-28": {
+   "name": "Route 28"
+  },
+  "tin-tower": {
+   "name": "Tin Tower"
+  },
+  "whirl-islands": {
+   "name": "Whirl Islands"
+  },
+  "cerulean-cave": {
+   "name": "Cerulean Cave"
+  },
+  "embedded-tower": {
+   "name": "Embedded Tower"
+  },
+  "sinjoh-ruins": {
+   "name": "Sinjoh Ruins"
+  },
+  "new-sinjoh": {
+   "name": "New Sinjoh"
+  },
+  "viridian-forest": {
+   "name": "Viridian Forest"
+  },
+  "southern-island": {
+   "name": "Southern Island"
+  },
+  "faraway-island": {
+   "name": "Faraway Island"
+  }
+ },
+ "milestones": [
+  {
+   "id": "rival-cherrygrove",
+   "name": "Rival: Cherrygrove City",
+   "kind": "rival",
+   "place": "cherrygrove-city",
+   "level_cap": 5,
+   "foe": [
+    {
+     "name": "???",
+     "ace_level": 5
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "new-bark-town",
+    "route-29",
+    "cherrygrove-city",
+    "route-30",
+    "route-31"
+   ],
+   "tips": "Elm offers Chikorita, Cyndaquil or Totodile; the rival steals the one strong against yours and battles you at Lv 5 in Cherrygrove after the Mr. Pokémon errand.",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "gym-1-falkner",
+   "name": "Gym 1: Falkner",
+   "kind": "gym",
+   "place": "violet-city",
+   "leader": "Falkner",
+   "theme": "flying",
+   "level_cap": 11,
+   "foe": {
+    "name": "FALKNER",
+    "ace_level": 11
+   },
+   "done_when": "badge:1",
+   "opens": [
+    "violet-city",
+    "sprout-tower",
+    "route-32",
+    "ruins-of-alph"
+   ],
+   "badge_note": "Zephyr Badge: Flash (field moves need no move slot here: any Pokémon that can learn the HM uses it). TM32.",
+   "tips": "Flying types: Pidgey, Noctowl (Lv 8-11). Electric, Ice and Rock moves; Geodude and Mareep from Route 32/46 make it easy.",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "team-slowpoke-well",
+   "name": "Team Rocket: Proton in Slowpoke Well",
+   "kind": "team",
+   "place": "slowpoke-well",
+   "level_cap": 15,
+   "foe": [
+    {
+     "name": "PROTON",
+     "ace_level": 15
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "union-cave",
+    "route-33",
+    "azalea-town",
+    "slowpoke-well"
+   ],
+   "tips": "Grunts cut Slowpoke tails; their leader Proton: Koffing, Slowpoke, Houndour (Lv 12-15). Fighting and Psychic moves.",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "gym-2-bugsy",
+   "name": "Gym 2: Bugsy",
+   "kind": "gym",
+   "place": "azalea-town",
+   "leader": "Bugsy",
+   "theme": "bug",
+   "level_cap": 16,
+   "foe": {
+    "name": "BUGSY",
+    "ace_level": 16
+   },
+   "done_when": "badge:2",
+   "opens": [],
+   "badge_note": "Hive Badge: Cut. TM09 Bullet Seed.",
+   "tips": "Bug types: Pineco, Ledian, Scyther (Lv 15-16). Fire, Flying and Rock moves; Scyther takes four times from Rock.",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "rival-azalea",
+   "name": "Rival: Azalea Town",
+   "kind": "rival",
+   "place": "azalea-town",
+   "level_cap": 18,
+   "done_when": "later",
+   "opens": [
+    "ilex-forest",
+    "route-34"
+   ],
+   "tips": "Zubat, Larvitar and the starter's second stage, Lv 15-18. The rival is stored under the player-named placeholder, so the companion can't look this battle up by name; the level is the ROM's.",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "gym-3-whitney",
+   "name": "Gym 3: Whitney",
+   "kind": "gym",
+   "place": "goldenrod-city",
+   "leader": "Whitney",
+   "theme": "normal",
+   "level_cap": 21,
+   "foe": {
+    "name": "WHITNEY",
+    "ace_level": 21
+   },
+   "done_when": "badge:3",
+   "opens": [
+    "goldenrod-city",
+    "national-park",
+    "route-35",
+    "route-36"
+   ],
+   "badge_note": "Plain Badge: Strength. TM45.",
+   "tips": "Normal types: Clefairy, Teddiursa, Miltank (Lv 20-21). Fighting moves; Miltank's Rollout and Milk Drink are the threat: a Fighting type or Machop from the Goldenrod trade.",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "rival-burned-tower",
+   "name": "Rival: Burned Tower",
+   "kind": "rival",
+   "place": "burned-tower",
+   "level_cap": 24,
+   "done_when": "later",
+   "opens": [
+    "route-37",
+    "ecruteak-city",
+    "burned-tower"
+   ],
+   "tips": "Lv 22-24. The legendary beasts wake here: Entei and Raikou start roaming at Lv 40. The rival is stored under the player-named placeholder, so the companion can't look this battle up by name; the level is the ROM's.",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "gym-4-morty",
+   "name": "Gym 4: Morty",
+   "kind": "gym",
+   "place": "ecruteak-city",
+   "leader": "Morty",
+   "theme": "ghost",
+   "level_cap": 25,
+   "foe": {
+    "name": "MORTY",
+    "ace_level": 25
+   },
+   "done_when": "badge:4",
+   "opens": [],
+   "badge_note": "Fog Badge: Surf. TM30.",
+   "tips": "Ghost types: Haunter, Stantler, Misdreavus, Gengar (Lv 23-25). Dark and Ghost moves; Stantler is Normal (Fighting).",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "story-eusine",
+   "name": "Eusine at Cianwood",
+   "kind": "story",
+   "place": "cianwood-city",
+   "level_cap": 27,
+   "foe": [
+    {
+     "name": "EUSINE",
+     "ace_level": 27
+    }
+   ],
+   "done_when": "none",
+   "opens": [
+    "route-38",
+    "route-39",
+    "olivine-city",
+    "route-40",
+    "route-41",
+    "cianwood-city"
+   ],
+   "tips": "Eusine wants Suicune too: Politoed, Hypno, Electrode (Lv 27).",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "gym-5-chuck",
+   "name": "Gym 5: Chuck",
+   "kind": "gym",
+   "place": "cianwood-city",
+   "leader": "Chuck",
+   "theme": "fighting",
+   "level_cap": 31,
+   "foe": [
+    {
+     "name": "CHUCK",
+     "ace_level": 31
+    },
+    {
+     "name": "CHUCK",
+     "ace_level": 36
+    },
+    {
+     "name": "CHUCK",
+     "ace_level": 38
+    }
+   ],
+   "done_when": "badge:5",
+   "opens": [],
+   "badge_note": "Storm Badge: Fly. TM01 Focus Punch.",
+   "tips": "Fighting types: Hitmontop, Primeape, Sudowoodo, Poliwrath (Lv 29-31). Psychic and Flying moves. Gyms 5-7 scale with your badges: the ROM has Chuck at 31, 36 and 38.",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "gym-6-jasmine",
+   "name": "Gym 6: Jasmine",
+   "kind": "gym",
+   "place": "olivine-city",
+   "leader": "Jasmine",
+   "theme": "steel",
+   "level_cap": 36,
+   "foe": [
+    {
+     "name": "JASMINE",
+     "ace_level": 36
+    },
+    {
+     "name": "JASMINE",
+     "ace_level": 38
+    }
+   ],
+   "done_when": "badge:6",
+   "opens": [
+    "olivine-lighthouse"
+   ],
+   "badge_note": "Mineral Badge. TM23 Iron Tail.",
+   "tips": "Steel types: Skarmory, Corsola, Magneton, Scizor, Steelix (Lv 35-36). Fire, Fighting and Ground moves; Scizor takes four times from Fire. Cure Amphy in the lighthouse first (Cianwood's medicine).",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "team-mahogany",
+   "name": "Rocket hideout in Mahogany",
+   "kind": "team",
+   "place": "rocket-hideout",
+   "level_cap": 31,
+   "foe": [
+    {
+     "name": "PETREL",
+     "ace_level": 30
+    },
+    {
+     "name": "ARIANA",
+     "ace_level": 31
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "route-42",
+    "mt-mortar",
+    "mahogany-town",
+    "route-43",
+    "lake-of-rage",
+    "rocket-hideout"
+   ],
+   "tips": "After the red Gyarados at the Lake of Rage, Lance joins you: Petrel (Pineco, Larvitar, Magcargo, Cloyster (Lv 30)), then a double battle beside Lance against Ariana (Arbok, Persian, Vileplume (Lv 30-31)).",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "gym-7-pryce",
+   "name": "Gym 7: Pryce",
+   "kind": "gym",
+   "place": "mahogany-town",
+   "leader": "Pryce",
+   "theme": "ice",
+   "level_cap": 38,
+   "foe": [
+    {
+     "name": "PRYCE",
+     "ace_level": 33
+    },
+    {
+     "name": "PRYCE",
+     "ace_level": 35
+    },
+    {
+     "name": "PRYCE",
+     "ace_level": 38
+    }
+   ],
+   "done_when": "badge:7",
+   "opens": [],
+   "badge_note": "Glacier Badge. TM07. The Radio Tower takeover starts once you hold seven badges.",
+   "tips": "Ice types: Cloyster, Sneasel, Jynx, Dewgong, Mamoswine (Lv 37-38). Fire, Fighting, Rock and Steel moves; Piloswine/Mamoswine fear Water and Grass too.",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "team-radio-tower",
+   "name": "Team Rocket takes the Radio Tower",
+   "kind": "team",
+   "place": "goldenrod-city",
+   "level_cap": 40,
+   "foe": [
+    {
+     "name": "PETREL",
+     "ace_level": 39
+    },
+    {
+     "name": "PROTON",
+     "ace_level": 38
+    },
+    {
+     "name": "ARIANA",
+     "ace_level": 40
+    },
+    {
+     "name": "ARCHER",
+     "ace_level": 40
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Petrel disguised as the director (Forretress, Pupitar, Magcargo, Cloyster (Lv 38-39)), Proton (Muk, Nidoqueen, Weezing, Nidoking, Rhydon (Lv 36-38)), Ariana (Arbok, Persian, Vileplume, Gyarados, Murkrow (Lv 39-40)) and Archer on the top floor (Porygon-Z, Tauros, Gyarados, Houndoom, Slowbro (Lv 38-40)); the rival waits in the Goldenrod underground (Lv 38-40).",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "gym-8-clair",
+   "name": "Gym 8: Clair",
+   "kind": "gym",
+   "place": "blackthorn-city",
+   "leader": "Clair",
+   "theme": "dragon",
+   "level_cap": 45,
+   "foe": {
+    "name": "CLAIR",
+    "ace_level": 45
+   },
+   "done_when": "badge:8",
+   "opens": [
+    "route-44",
+    "ice-path",
+    "blackthorn-city",
+    "dragons-den"
+   ],
+   "badge_note": "Rising Badge. TM02 Dragon Claw.",
+   "tips": "Dragons and Water: Dragonair, Gyarados, Lapras, Dudunsparce, Kingdra (Lv 42-45). Ice, Dragon and Fairy moves; Kingdra is only weak to Dragon and Fairy. Finish the Dragon's Den test for the badge and TM02.",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "rival-victory-road",
+   "name": "Rival: Victory Road",
+   "kind": "rival",
+   "place": "victory-road",
+   "level_cap": 48,
+   "done_when": "later",
+   "opens": [
+    "route-45",
+    "route-46",
+    "route-27",
+    "route-26",
+    "tohjo-falls",
+    "victory-road",
+    "indigo-plateau"
+   ],
+   "tips": "Six Pokémon now, a Tyranitar on top at Lv 48. The rival is stored under the player-named placeholder, so the companion can't look this battle up by name; the level is the ROM's.",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "e4-will",
+   "name": "Elite Four: Will",
+   "kind": "elite4",
+   "place": "indigo-plateau",
+   "leader": "Will",
+   "theme": "psychic",
+   "level_cap": 50,
+   "foe": [
+    {
+     "name": "WILL",
+     "ace_level": 50
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Girafarig, Slowking, Espeon, Slowbro, Xatu (Lv 48-50). Dark, Ghost and Bug moves.",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "e4-koga",
+   "name": "Elite Four: Koga",
+   "kind": "elite4",
+   "place": "indigo-plateau",
+   "leader": "Koga",
+   "theme": "poison",
+   "level_cap": 52,
+   "foe": [
+    {
+     "name": "KOGA",
+     "ace_level": 52
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Ariados, Qwilfish, Muk, Venomoth, Crobat (Lv 50-52). Psychic and Ground moves.",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "e4-bruno",
+   "name": "Elite Four: Bruno",
+   "kind": "elite4",
+   "place": "indigo-plateau",
+   "leader": "Bruno",
+   "theme": "fighting",
+   "level_cap": 54,
+   "foe": [
+    {
+     "name": "BRUNO",
+     "ace_level": 54
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Hitmonchan, Heracross, Hitmonlee, Steelix, Machamp (Lv 52-54). Psychic, Flying and Fairy moves; Steelix wants Fire or Water.",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "e4-karen",
+   "name": "Elite Four: Karen",
+   "kind": "elite4",
+   "place": "indigo-plateau",
+   "leader": "Karen",
+   "theme": "dark",
+   "level_cap": 55,
+   "foe": [
+    {
+     "name": "KAREN",
+     "ace_level": 55
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Umbreon, Gengar, Vileplume, Honchkrow, Houndoom (Lv 53-55). Fighting, Bug and Fairy moves.",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "champion-lance",
+   "name": "Champion Lance",
+   "kind": "champion",
+   "place": "indigo-plateau",
+   "leader": "Lance",
+   "level_cap": 56,
+   "foe": [
+    {
+     "name": "LANCE",
+     "ace_level": 56
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Gyarados, Dragonite, Charizard, Dragonite, Aerodactyl, Dragonite (Lv 54-56). Ice moves (Dragonite takes four times), Rock or Electric for Charizard, Gyarados and Aerodactyl.",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "story-ss-aqua",
+   "name": "To Kanto on the S.S. Aqua",
+   "kind": "story",
+   "place": "s-s-aqua",
+   "done_when": "later",
+   "opens": [
+    "olivine-city",
+    "s-s-aqua",
+    "vermilion-city"
+   ],
+   "tips": "After the league, Elm's ticket gets you on the S.S. Aqua from Olivine to Vermilion. Kanto's wild Pokémon are in the 40s; the leaders can be fought in almost any order.",
+   "quality": "reference-only",
+   "source": "H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "gym-11-lt-surge",
+   "name": "Kanto gym: Lt. Surge",
+   "kind": "gym",
+   "place": "vermilion-city",
+   "leader": "Lt. Surge",
+   "theme": "electric",
+   "level_cap": 60,
+   "foe": {
+    "name": "LTSURGE",
+    "ace_level": 60
+   },
+   "done_when": "badge:11",
+   "opens": [
+    "vermilion-city",
+    "route-6",
+    "route-11",
+    "digletts-cave"
+   ],
+   "badge_note": "Thunder Badge.",
+   "tips": "Electrode, Magnezone, Lanturn, Manectric, Electivire, Raichu (Lv 57-60). Ground moves.",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated) (badge bit: the original games' Kanto order, assumed)"
+  },
+  {
+   "id": "gym-12-erika",
+   "name": "Kanto gym: Erika",
+   "kind": "gym",
+   "place": "celadon-city",
+   "leader": "Erika",
+   "theme": "grass",
+   "level_cap": 62,
+   "foe": {
+    "name": "ERIKA",
+    "ace_level": 62
+   },
+   "done_when": "badge:12",
+   "opens": [
+    "celadon-city"
+   ],
+   "badge_note": "Rainbow Badge.",
+   "tips": "Jumpluff, Roserade, Tangrowth, Venusaur, Victreebel, Bellossom (Lv 60-62). Fire, Flying, Ice and Poison moves.",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated) (badge bit: the original games' Kanto order, assumed)"
+  },
+  {
+   "id": "gym-10-misty",
+   "name": "Kanto gym: Misty",
+   "kind": "gym",
+   "place": "cerulean-city",
+   "leader": "Misty",
+   "theme": "water",
+   "level_cap": 63,
+   "foe": {
+    "name": "MISTY",
+    "ace_level": 63
+   },
+   "done_when": "badge:10",
+   "opens": [
+    "cerulean-city",
+    "route-24",
+    "route-25",
+    "route-9",
+    "route-10",
+    "power-plant"
+   ],
+   "badge_note": "Cascade Badge.",
+   "tips": "Golduck, Quagsire, Vaporeon, Milotic, Lapras, Starmie (Lv 61-63). Electric and Grass moves.",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated) (badge bit: the original games' Kanto order, assumed)"
+  },
+  {
+   "id": "gym-13-janine",
+   "name": "Kanto gym: Janine",
+   "kind": "gym",
+   "place": "fuchsia-city",
+   "leader": "Janine",
+   "theme": "poison",
+   "level_cap": 64,
+   "foe": {
+    "name": "JANINE",
+    "ace_level": 64
+   },
+   "done_when": "badge:13",
+   "opens": [
+    "fuchsia-city",
+    "route-12",
+    "route-13",
+    "route-14",
+    "route-15",
+    "safari-zone-gate"
+   ],
+   "badge_note": "Soul Badge.",
+   "tips": "Weezing, Muk, Swalot, Nidoqueen, Crobat, Venomoth (Lv 61-64). Psychic and Ground moves.",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated) (badge bit: the original games' Kanto order, assumed)"
+  },
+  {
+   "id": "gym-14-sabrina",
+   "name": "Kanto gym: Sabrina",
+   "kind": "gym",
+   "place": "saffron-city",
+   "leader": "Sabrina",
+   "theme": "psychic",
+   "level_cap": 66,
+   "foe": {
+    "name": "SABRINA",
+    "ace_level": 66
+   },
+   "done_when": "badge:14",
+   "opens": [
+    "saffron-city",
+    "route-5",
+    "route-7",
+    "route-8"
+   ],
+   "badge_note": "Marsh Badge.",
+   "tips": "Mr. Mime, Jynx, Slowbro, Wobbuffet, Espeon, Alakazam (Lv 64-66). Dark, Ghost and Bug moves.",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated) (badge bit: the original games' Kanto order, assumed)"
+  },
+  {
+   "id": "gym-9-brock",
+   "name": "Kanto gym: Brock",
+   "kind": "gym",
+   "place": "pewter-city",
+   "leader": "Brock",
+   "theme": "rock",
+   "level_cap": 66,
+   "foe": {
+    "name": "BROCK",
+    "ace_level": 66
+   },
+   "done_when": "badge:9",
+   "opens": [
+    "pewter-city",
+    "route-2",
+    "route-3",
+    "mt-moon",
+    "route-4"
+   ],
+   "badge_note": "Boulder Badge.",
+   "tips": "Golem, Aerodactyl, Kabutops, Omastar, Relicanth, Kleavor (Lv 66). Water and Grass moves (Fighting and Ground for most).",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated) (badge bit: the original games' Kanto order, assumed)"
+  },
+  {
+   "id": "rival-mt-moon",
+   "name": "Rival: Mt. Moon",
+   "kind": "rival",
+   "place": "mt-moon",
+   "level_cap": 64,
+   "done_when": "none",
+   "opens": [],
+   "tips": "All six at Lv 64. The rival is stored under the player-named placeholder, so the companion can't look this battle up by name; the level is the ROM's.",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "gym-15-blaine",
+   "name": "Kanto gym: Blaine",
+   "kind": "gym",
+   "place": "cinnabar-island",
+   "leader": "Blaine",
+   "theme": "fire",
+   "level_cap": 67,
+   "foe": {
+    "name": "BLAINE",
+    "ace_level": 67
+   },
+   "done_when": "badge:15",
+   "opens": [
+    "route-19",
+    "route-20",
+    "seafoam-islands",
+    "cinnabar-island",
+    "route-21"
+   ],
+   "badge_note": "Volcano Badge.",
+   "tips": "Rapidash, Magmortar, Houndoom, Magcargo, Torkoal, Camerupt (Lv 65-67). Water, Ground and Rock moves; he waits on Cinnabar's island once Seafoam is crossed.",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated) (badge bit: the original games' Kanto order, assumed)"
+  },
+  {
+   "id": "gym-16-blue",
+   "name": "Kanto gym: Blue",
+   "kind": "gym",
+   "place": "viridian-city",
+   "leader": "Blue",
+   "level_cap": 69,
+   "foe": {
+    "name": "BLUE",
+    "ace_level": 69
+   },
+   "done_when": "badge:16",
+   "opens": [
+    "viridian-city",
+    "route-1",
+    "pallet-town",
+    "route-22"
+   ],
+   "badge_note": "Earth Badge.",
+   "tips": "Rhyperior, Pidgeot, Machamp, Exeggutor, Tyranitar, Arcanine (Lv 67-69). A mixed team: bring broad coverage. He opens his gym once you hold 15 badges and have talked to him on Cinnabar.",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated) (badge bit: the original games' Kanto order, assumed)"
+  },
+  {
+   "id": "post-giovanni",
+   "name": "Giovanni (Celebi event)",
+   "kind": "postgame",
+   "place": "tohjo-falls",
+   "level_cap": 62,
+   "foe": [
+    {
+     "name": "GIOVANNI",
+     "ace_level": 62
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "With Celebi first in your party, enter the radio room at Tohjo Falls: Kangaskhan, Honchkrow, Nidoqueen, Persian, Ursaluna, Nidoking (Lv 60-62). With Celebi first on Route 22 you see a Giovanni and rival scene instead.",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "post-kimono-girls",
+   "name": "The Kimono Girls",
+   "kind": "postgame",
+   "place": "ecruteak-city",
+   "level_cap": 48,
+   "foe": [
+    {
+     "name": "NAOKO",
+     "ace_level": 48
+    },
+    {
+     "name": "SAYO",
+     "ace_level": 48
+    },
+    {
+     "name": "ZUKI",
+     "ace_level": 48
+    },
+    {
+     "name": "KUNI",
+     "ace_level": 48
+    },
+    {
+     "name": "MIKI",
+     "ace_level": 48
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "Five back-to-back battles with one Eeveelution each at Lv 48; part of what Ho-Oh or Lugia asks for.",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "post-league-rematch",
+   "name": "League rematch",
+   "kind": "postgame",
+   "place": "indigo-plateau",
+   "level_cap": 70,
+   "foe": [
+    {
+     "name": "LANCE",
+     "ace_level": 70
+    },
+    {
+     "name": "WILL",
+     "ace_level": 68
+    },
+    {
+     "name": "KAREN",
+     "ace_level": 69
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "The Elite Four at 68-69 and Lance at 70 (Salamence, Dragonite, Gyarados, Charizard, Aerodactyl, Altaria (Lv 68-70)); the rival waits at the Indigo Plateau at 68.",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "post-red",
+   "name": "Red on Mt. Silver",
+   "kind": "postgame",
+   "place": "mt-silver",
+   "leader": "Red",
+   "level_cap": 93,
+   "foe": [
+    {
+     "name": "RED",
+     "ace_level": 93
+    }
+   ],
+   "done_when": "none",
+   "opens": [
+    "route-28",
+    "mt-silver"
+   ],
+   "tips": "With 16 badges, talk to Oak; Red waits at the summit: Pikachu, Snorlax, Charizard, Venusaur, Blastoise, Espeon (Lv 77-93). A later Red team tops at 95.",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "post-rematches",
+   "name": "Leader rematches",
+   "kind": "postgame",
+   "place": "saffron-city",
+   "level_cap": 73,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Johto leaders return with Lv 63-72 teams; Kanto leaders rematch at the Saffron Dojo for 10 BP each (Lv 70-73 teams).",
+   "quality": "reference-only",
+   "source": "ROM Heart & Soul 2.0.6 trainer table; Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "legend-ho-oh",
+   "name": "Ho-Oh (Tin Tower)",
+   "kind": "legendary",
+   "place": "tin-tower",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [],
+   "tips": "On the roof by day with the Rainbow Wing, after 8 badges, Elm's Master Ball and the Kimono Girls (the statics page says after Dragon's Den or Pewter: unclear). Baoba's question on Route 39 decides: the bird you pick is Lv 50, the other Lv 70.",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "legend-lugia",
+   "name": "Lugia (Whirl Islands)",
+   "kind": "legendary",
+   "place": "whirl-islands",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [],
+   "tips": "In the Whirl Islands chamber with the Silver Wing, under the same rules as Ho-Oh.",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "legend-suicune",
+   "name": "Suicune (Route 25)",
+   "kind": "legendary",
+   "place": "route-25",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Chased through Cianwood, Route 42, Vermilion and Route 14; it waits on Route 25 after you beat Misty.",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "legend-celebi",
+   "name": "Celebi (Ilex Forest)",
+   "kind": "legendary",
+   "place": "ilex-forest",
+   "level_cap": 40,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Kurt checks the GS Ball; take it to the Ilex shrine. The GS Ball comes back after the Kanto Elite Four.",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "legend-mewtwo",
+   "name": "Mewtwo (Cerulean Cave)",
+   "kind": "legendary",
+   "place": "cerulean-cave",
+   "level_cap": 80,
+   "done_when": "none",
+   "opens": [],
+   "tips": "With 16 badges, in Cerulean Cave.",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "legend-hoenn-trio",
+   "name": "Kyogre, Groudon, Rayquaza",
+   "kind": "legendary",
+   "place": "embedded-tower",
+   "level_cap": 70,
+   "done_when": "none",
+   "opens": [],
+   "tips": "With 16 badges: Kyogre in a cave off Route 19, Groudon in a secret Seafoam cave, Rayquaza in the Embedded Tower, all Lv 70.",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "legend-arceus",
+   "name": "Arceus and the Regis (Sinjoh Ruins)",
+   "kind": "legendary",
+   "place": "sinjoh-ruins",
+   "level_cap": 80,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Arceus at Lv 80 in the Sinjoh Ruins, with Regirock, Regice, Registeel, Regigigas, Regieleki and Regidrago at Lv 80.",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  }
+ ],
+ "steps": [
+  {
+   "id": "step-settings",
+   "title": "Challenge settings at the start",
+   "text": "The new-game settings cover the randomizer, Nuzlocke, EXP rate, level caps, shiny odds, IVs, EVs, party size and mono-type; the split and Fairy are toggles too. Some can be eased later at a Pokémon Center, never made harder.",
+   "stage": "rival-cherrygrove",
+   "places": [
+    "new-bark-town"
+   ],
+   "done_when": "party",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "step-no-hm-slots",
+   "title": "HMs need no slots",
+   "text": "Any Pokémon that can learn an HM can use it in the field once you have the badge.",
+   "stage": "gym-1-falkner",
+   "places": [
+    "violet-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "H&S documentation walkthrough (marked outdated)"
+  },
+  {
+   "id": "step-eevee",
+   "title": "Bill's Eevee",
+   "text": "Meet Bill in Ecruteak, then he gives a Lv 20 Eevee in Goldenrod.",
+   "stage": "gym-4-morty",
+   "places": [
+    "goldenrod-city",
+    "ecruteak-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "step-dratini",
+   "title": "Dragon's Den quiz",
+   "text": "The Dragon's Den shrine gives a Lv 15 Dratini; answer all the elder's questions right for a shiny one.",
+   "stage": "gym-8-clair",
+   "places": [
+    "dragons-den"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "step-machine-part",
+   "title": "Restore the Power Plant",
+   "text": "The Machine Part turns up in Cerulean's gym; returning it gives TM25, and Zapdos (Lv 50) appears on Route 10.",
+   "stage": "gym-10-misty",
+   "places": [
+    "cerulean-city",
+    "power-plant"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  }
+ ],
+ "secrets": [
+  {
+   "id": "gift-shuckle",
+   "kind": "gift",
+   "text": "A house in Cianwood lends a Lv 20 Shuckle.",
+   "place": "cianwood-city",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "gift-tyrogue",
+   "kind": "gift",
+   "text": "A Lv 25 Tyrogue in Mt. Mortar.",
+   "place": "mt-mortar",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "gift-tentacool",
+   "kind": "gift",
+   "text": "A Lv 25 Tentacool at the Cianwood Pokémon Center, only if no party member can Surf.",
+   "place": "cianwood-city",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "gift-fossils",
+   "kind": "gift",
+   "text": "The Ruins of Alph revive fossils at Lv 20 (Kabuto at Lv 5).",
+   "place": "ruins-of-alph",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "gift-hoenn-starters",
+   "kind": "gift",
+   "text": "Silph Co. gives the Hoenn starters at Lv 5.",
+   "place": "saffron-city",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "gift-paldean-wooper",
+   "kind": "gift",
+   "text": "Paldean Wooper in New Sinjoh.",
+   "place": "new-sinjoh",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "static-lapras",
+   "kind": "legendary",
+   "text": "A Lv 20 Lapras on Union Cave B2F, at night only.",
+   "place": "union-cave",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "static-gyarados",
+   "kind": "event",
+   "text": "The shiny red Gyarados at Lv 30 at the Lake of Rage.",
+   "place": "lake-of-rage",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "static-snorlax",
+   "kind": "event",
+   "text": "A Lv 50 Snorlax at Vermilion, woken with the radio upgrade.",
+   "place": "vermilion-city",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "static-pichu",
+   "kind": "event",
+   "text": "The spiky-eared Pichu at Lv 35 in Viridian Forest.",
+   "place": "viridian-forest",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "static-birds",
+   "kind": "legendary",
+   "text": "Articuno on Seafoam B1F, Zapdos on Route 10, Moltres in a Mt. Silver room, all Lv 50.",
+   "place": "seafoam-islands",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "static-jirachi",
+   "kind": "legendary",
+   "text": "Jirachi at Lv 50 outside Mt. Moon (re-rolls at night).",
+   "place": "mt-moon",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "static-latis",
+   "kind": "legendary",
+   "text": "With Steven's Eon Ticket (from the Safari Zone), one Lati at Lv 50 on Southern Island; the other roams Kanto at Lv 60.",
+   "place": "southern-island",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "static-mew",
+   "kind": "legendary",
+   "text": "Mew at Lv 50 on Faraway Island; Deoxys at Lv 70 on Birth Island with the Auroraticket from Olivine.",
+   "place": "faraway-island",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "trade-onix",
+   "kind": "trade",
+   "text": "Violet: a Bellsprout for an Onix.",
+   "place": "violet-city",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "trade-machop",
+   "kind": "trade",
+   "text": "Goldenrod: a Drowzee for a Machop (Dept. Store 6F).",
+   "place": "goldenrod-city",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "trade-steelix",
+   "kind": "trade",
+   "text": "Jasmine trades her Steelix 'Rusty' for any Pokémon.",
+   "place": "olivine-city",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "trade-mr-mime",
+   "kind": "trade",
+   "text": "Blackthorn: a Dodrio for a Mr. Mime.",
+   "place": "blackthorn-city",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "trade-pewter",
+   "kind": "trade",
+   "text": "Pewter: Xatu for Haunter and Rhyhorn for Bonsly.",
+   "place": "pewter-city",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "tip-game-corner",
+   "kind": "tip",
+   "text": "The Game Corner has Abra, Clefairy, Dratini, Munchlax and Porygon.",
+   "place": "goldenrod-city",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "tip-diploma",
+   "kind": "tip",
+   "text": "Celadon Mansion awards a diploma for a complete Pokédex.",
+   "place": "celadon-city",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "tip-hoenn-swarms",
+   "kind": "tip",
+   "text": "Each Kanto route has a 5% Hoenn Pokémon in place of swarms; the Hoenn Sound radio raises it.",
+   "place": "route-1",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  }
+ ],
+ "evolutions": [
+  {
+   "id": "evo-kadabra",
+   "species": 64,
+   "name": "Kadabra",
+   "text": "Trade evolutions also work by levelling up while holding the trade item. Kadabra, Machoke, Graveler and Haunter need no item, and the docs don't say how they evolve without a trade (a real trade still works).",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "evo-onix",
+   "species": 95,
+   "name": "Onix",
+   "text": "Level up holding a Metal Coat for Steelix (trade-item rule); the same Metal Coat works for Scyther to Scizor.",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "evo-seadra",
+   "species": 117,
+   "name": "Seadra",
+   "text": "Level up holding a Dragon Scale for Kingdra.",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "evo-slowpoke",
+   "species": 79,
+   "name": "Slowpoke",
+   "text": "Level up holding a King's Rock for Slowking (Poliwhirl: Politoed).",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "evo-porygon",
+   "species": 137,
+   "name": "Porygon",
+   "text": "Level up holding the Up-Grade, then the Dubious Disc for Porygon-Z.",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  }
+ ],
+ "notes": [
+  {
+   "id": "note-version",
+   "kind": "version",
+   "title": "Heart & Soul 2.0",
+   "text": "A Gold/Silver/Crystal remake (and HeartGold/SoulSilver demake) on pokeemerald-expansion: Johto, then the Kanto post-game with all 16 badges. 2.0 was rebuilt from scratch: saves from 1.x don't load. Gen I-III species plus their later evolutions; abilities and items to Gen IX.",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io); GitHub release notes"
+  },
+  {
+   "id": "note-features",
+   "kind": "tip",
+   "title": "Features",
+   "text": "Followers, overworld Pokémon, day and night, all 92 HGSS TMs, the Pokégear with radio and phone rematches, Kurt's Berry Balls, AutoRun and FastSurf, tutors that read the PC, an ability changer at the Saffron Dojo, Battle Frontier and Trainer Hill in Kanto.",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "note-statics-reset",
+   "kind": "tip",
+   "title": "Re-encounters",
+   "text": "Most static Pokémon come back if you run and re-enter; Celebi, Mew and Deoxys don't.",
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  },
+  {
+   "id": "note-roamers",
+   "kind": "roamer",
+   "title": "Entei and Raikou",
+   "text": "Both start roaming Johto at Lv 40 after the Burned Tower; Suicune is the one you chase to Route 25.",
+   "species": [
+    244,
+    243
+   ],
+   "names": [
+    "Entei",
+    "Raikou"
+   ],
+   "quality": "reference-only",
+   "source": "Heart & Soul 2.0 documentation (pokemonhns-development.github.io)"
+  }
+ ]
+}

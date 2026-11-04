@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Validate the DS Pokemon companion's guide data (system/rootfs/usr/share/banana/companions/nds-pokemon/<game>.json).
+"""Validate the Pokemon companions' guide data: the DS games' (system/rootfs/usr/share/banana/companions/nds-pokemon/<game>.json)
+and the GBA games' (.../companions/gba-pokemon/<game>.json, the same schema: the GBA companion reuses the DS pages).
 
-  python3 nds-validate.py                 every nds-pokemon/*.json
+  python3 nds-validate.py                 every nds-pokemon/*.json and gba-pokemon/*.json
   python3 nds-validate.py a.json ...      those files
   -q                                      only failures and the summary
   --stats                                 entry counts per file (and the places whose game id is still unknown)
@@ -21,13 +22,18 @@ Comments (// and /* */) and trailing commas are allowed (ui/src/json.cpp).
 Top level
   schema        1
   kind          "nds-pokemon-guide"
-  game          diamond | pearl | platinum | heartgold | soulsilver | black | white | black2 | white2
-  code          the header's game code: ADAE APAE CPUE IPKE IPGE IRBO IRAO IREO IRDO (must fit game)
+  game          diamond | pearl | platinum | heartgold | soulsilver | black | white | black2 | white2 (nds-pokemon/)
+                ruby | sapphire | emerald | firered | leafgreen (gba-pokemon/, Gen III: national numbers up to 386)
+                the GBA ROM hacks (gba-pokemon/, ui/src/gba/hacks.cpp's keys): glazed | golden-glazed | glazed-unofficial |
+                gaia | heart-and-soul | lazarus | seaglass | soulgold (national numbers up to 1500; names checked to 649)
+  code          the header's game code: ADAE APAE CPUE IPKE IPGE IRBO IRAO IREO IRDO; AXVE AXPE BPEE BPRE BPGE (must fit game);
+                a hack: its base game's (BPEE, Gaia BPRE)
   title         the game's English name ("Pokemon Platinum")
   revision      this data file's revision (integer, bump when you change facts)
   sources       list of the sites/documents the file draws on (a line each); every entry also names its own
   places        { key: { "name": "Oreburgh City", "zone": 169 | null, "zones": [..] } }
-                key: [a-z0-9-]+. name: the place's name as the game shows it (the loader finds the game's zone ids
+                key: [a-z0-9-]+. name: the place's name as the game shows it (Gen III: the region map section's name, upper
+                case as the ROM has it: "ROUTE 101", "MT. MOON", "POKéMON TOWER"; zone = the section's id, MAPSEC) (the loader finds the game's zone ids
                 by this name in the ROM's location names when "zone" is null). zone: the game's own map/zone id when
                 known; null = "id not known yet, resolve by name" (listed by --stats). zones: more ids (interiors).
   milestones    [Milestone] in story order
@@ -45,7 +51,7 @@ Milestone  (gyms, rivals, villain team, Elite Four, champion, post-game; in stor
   place         place key of where it happens
   leader        the person's name (optional)
   theme         the type name (lowercase: normal fighting flying poison ground rock bug ghost steel fire water grass
-                electric psychic ice dragon dark) for gyms and Elite Four members (optional)
+                electric psychic ice dragon dark, and fairy in the hacks that have it) for gyms and Elite Four members (optional)
   level_cap     the highest level among the foe's Pokemon (1-100): a level to compare the player's team with; for a
                 story or legendary step with no trainer it is the level to expect (a legendary's own level); a kind
                 story milestone may leave it out (0 in GuideData)
@@ -57,7 +63,8 @@ Milestone  (gyms, rivals, villain team, Elite Four, champion, post-game; in stor
                 Black 2/White 2), Gen IV's Crasher Wake is "Wake", the Frontier Brains' ROM teams are level 5 (leave
                 ace_level out); a fight with no trainer in the ROM (a wild legend) has no foe;
   trainer_ids   [int] optional: the ROM's own trainer ids when known (wins over "foe")
-  done_when     "badge:N" (N 1-8, 1-16 in HeartGold/SoulSilver: the Nth badge bit is set, Johto first) | "flag:N" (the story flag N, when the RAM workstream
+  done_when     "badge:N" (N 1-8, 1-16 in HeartGold/SoulSilver and the hacks with two regions' gyms: the Nth badge bit is
+                set, the first region's first) | "flag:N" (the story flag N, when the RAM workstream
                 has it) | "party" (the player has a Pokémon: the starter) | "later" (done once any later milestone is) |
                 "none" (no rule: like "later", so an optional fight never holds the story's next goal)
   opens         [place key] the places that become reachable while this is the goal (new ones: the loader adds them
@@ -77,16 +84,30 @@ Note      id, kind exclusive|roamer|grotto|gift|legendary|trade|version|tip, tit
 import json, os, re, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(HERE, "..", "..", "system", "rootfs", "usr", "share", "banana", "companions", "nds-pokemon")
+COMPANIONS = os.path.join(HERE, "..", "..", "system", "rootfs", "usr", "share", "banana", "companions")
+DATA_DIR = os.path.join(COMPANIONS, "nds-pokemon")
+DATA_DIRS = [DATA_DIR, os.path.join(COMPANIONS, "gba-pokemon")]
 
 # game -> (code, generation's dex size, number of badges' region is always 8)
 GAMES = {
     "diamond": ("ADAE", 493), "pearl": ("APAE", 493), "platinum": ("CPUE", 493),
     "heartgold": ("IPKE", 493), "soulsilver": ("IPGE", 493),
     "black": ("IRBO", 649), "white": ("IRAO", 649), "black2": ("IREO", 649), "white2": ("IRDO", 649),
+    # the GBA games (the GBA Pokemon companion, 2026-11-03): Gen III, 386 species
+    "ruby": ("AXVE", 386), "sapphire": ("AXPE", 386), "emerald": ("BPEE", 386),
+    "firered": ("BPRE", 386), "leafgreen": ("BPGE", 386),
+    # the GBA ROM hacks (ui/src/gba/hacks.cpp, the GAMES table in ui/src/nds/guide.cpp): the key is the file's name and its
+    # "game", the code their base game's; their Pokédex can be far bigger (Generation IX species), "top" 1500 as the loader's
+    "glazed": ("BPEE", 1500), "golden-glazed": ("BPEE", 1500), "glazed-unofficial": ("BPEE", 1500),
+    "gaia": ("BPRE", 1500), "heart-and-soul": ("BPEE", 1500), "lazarus": ("BPEE", 1500),
+    "seaglass": ("BPEE", 1500), "soulgold": ("BPEE", 1500),
 }
+HACKS = {"glazed", "golden-glazed", "glazed-unofficial", "gaia", "heart-and-soul", "lazarus", "seaglass", "soulgold"}
+GBA_GAMES = {"ruby", "sapphire", "emerald", "firered", "leafgreen"} | HACKS
+# the games with two regions' gyms: badges 1-16 (Johto's, then Kanto's)
+SIXTEEN_BADGES = {"heartgold", "soulsilver", "glazed", "golden-glazed", "glazed-unofficial", "heart-and-soul"}
 TYPES = {"normal", "fighting", "flying", "poison", "ground", "rock", "bug", "ghost", "steel", "fire", "water",
-         "grass", "electric", "psychic", "ice", "dragon", "dark"}
+         "grass", "electric", "psychic", "ice", "dragon", "dark", "fairy"}
 QUALITY = {"reference-only", "live-verified"}
 MILESTONE_KINDS = {"gym", "rival", "team", "elite4", "champion", "postgame", "legendary", "story"}
 SECRET_KINDS = {"hidden-item", "gift", "event", "trade", "tip", "legendary", "shiny"}
@@ -249,7 +270,7 @@ def check_species(r, where, num, name, top):
     if not is_int(num) or not (1 <= num <= top):
         r.err(where, "species %r must be a national dex number 1-%d" % (num, top))
         return
-    if name is not None and name != _NAMES[num - 1]:
+    if name is not None and num <= len(_NAMES) and name != _NAMES[num - 1]:	# (a hack's later species: not checked)
         r.err(where, "species %d is %s, not %r" % (num, _NAMES[num - 1], name))
 
 
@@ -279,6 +300,10 @@ def validate(path, stats=None):
         r.err(base, "code for %s must be %s, not %r" % (game, code, d.get("code")))
     if base != game + ".json":
         r.err(base, "file must be named %s.json" % game)
+    folder = os.path.basename(os.path.dirname(os.path.abspath(path)))
+    want_dir = "gba-pokemon" if game in GBA_GAMES else "nds-pokemon"
+    if folder in ("nds-pokemon", "gba-pokemon") and folder != want_dir:
+        r.err(base, "%s's guide belongs in %s/" % (game, want_dir))
     check_text(r, base, d, "title", True, 80)
     if not is_int(d.get("revision")) or d["revision"] < 1:
         r.err(base, "revision must be an integer >= 1")
@@ -353,6 +378,8 @@ def validate(path, stats=None):
             used.add(m["place"])
         if m.get("theme") is not None and m["theme"] not in TYPES:
             r.err(w, "theme %r is not a type name" % m.get("theme"))
+        elif m.get("theme") == "fairy" and game not in HACKS:
+            r.err(w, "theme fairy: the original games have no Fairy type (only the hacks)")
         lc = m.get("level_cap")
         if lc is None and m.get("kind") == "story":
             pass	# a story step with no fight has no cap (levelCap 0 in GuideData)
@@ -384,7 +411,7 @@ def validate(path, stats=None):
             last_cap[m.get("kind")] = lc
     if len(set(mids)) != len(mids):
         pass  # reported by check_common
-    want = set(range(1, 17 if game in ("heartgold", "soulsilver") else 9))
+    want = set(range(1, 17 if game in SIXTEEN_BADGES else 9))
     if gyms and gyms != want:
         r.warn(base, "gym badges %s: expected %d-%d" % (sorted(gyms), min(want), max(want)))
     if not any(isinstance(m, dict) and m.get("kind") == "champion" for m in ms):
@@ -499,10 +526,11 @@ def main(argv):
     want_stats = "--stats" in argv
     files = [a for a in argv if not a.startswith("-")]
     if not files:
-        files = sorted(os.path.join(DATA_DIR, f) for f in os.listdir(DATA_DIR) if f.endswith(".json")) \
-            if os.path.isdir(DATA_DIR) else []
+        for dd in DATA_DIRS:
+            if os.path.isdir(dd):
+                files += sorted(os.path.join(dd, f) for f in os.listdir(dd) if f.endswith(".json"))
     if not files:
-        print("no guide files found in %s" % DATA_DIR)
+        print("no guide files found in %s" % " or ".join(DATA_DIRS))
         return 1
     bad, stats = 0, {}
     for p in files:

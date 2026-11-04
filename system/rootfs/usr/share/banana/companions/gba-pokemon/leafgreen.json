@@ -1,0 +1,2828 @@
+{
+ "schema": 1,
+ "kind": "nds-pokemon-guide",
+ "game": "leafgreen",
+ "code": "BPGE",
+ "title": "Pokemon LeafGreen Version",
+ "revision": 1,
+ "sources": [
+  "pret/pokefirered decompilation (GitHub; builds FireRed and LeafGreen): trainer parties, map scripts, hidden items (map.json bg_events), in-game trades, Game Corner prizes, evolutions, wild encounters, roamer.c",
+  "The English ROM itself (BPGE, Rev 1): region map section names and trainer names/levels, read on the PC with ui/src/pokemon.cpp (findTables) - the ground truth for every place name and level cap"
+ ],
+ "places": {
+  "pallet-town": {
+   "name": "Pallet Town"
+  },
+  "route-1": {
+   "name": "Route 1"
+  },
+  "viridian-city": {
+   "name": "Viridian City"
+  },
+  "route-22": {
+   "name": "Route 22"
+  },
+  "pewter-city": {
+   "name": "Pewter City"
+  },
+  "route-2": {
+   "name": "Route 2"
+  },
+  "viridian-forest": {
+   "name": "Viridian Forest"
+  },
+  "mt-moon": {
+   "name": "Mt. Moon"
+  },
+  "route-3": {
+   "name": "Route 3"
+  },
+  "route-4": {
+   "name": "Route 4"
+  },
+  "cerulean-city": {
+   "name": "Cerulean City"
+  },
+  "route-24": {
+   "name": "Route 24"
+  },
+  "route-25": {
+   "name": "Route 25"
+  },
+  "route-5": {
+   "name": "Route 5"
+  },
+  "underground-path": {
+   "name": "Underground Path"
+  },
+  "route-6": {
+   "name": "Route 6"
+  },
+  "vermilion-city": {
+   "name": "Vermilion City"
+  },
+  "s-s-anne": {
+   "name": "S.S. Anne"
+  },
+  "digletts-cave": {
+   "name": "Diglett’s Cave"
+  },
+  "route-11": {
+   "name": "Route 11"
+  },
+  "rock-tunnel": {
+   "name": "Rock Tunnel"
+  },
+  "route-9": {
+   "name": "Route 9"
+  },
+  "route-10": {
+   "name": "Route 10"
+  },
+  "lavender-town": {
+   "name": "Lavender Town"
+  },
+  "pokemon-tower": {
+   "name": "Pokémon Tower"
+  },
+  "celadon-city": {
+   "name": "Celadon City"
+  },
+  "route-8": {
+   "name": "Route 8"
+  },
+  "route-7": {
+   "name": "Route 7"
+  },
+  "rocket-hideout": {
+   "name": "Rocket Hideout"
+  },
+  "route-12": {
+   "name": "Route 12"
+  },
+  "route-16": {
+   "name": "Route 16"
+  },
+  "fuchsia-city": {
+   "name": "Fuchsia City"
+  },
+  "route-13": {
+   "name": "Route 13"
+  },
+  "route-14": {
+   "name": "Route 14"
+  },
+  "route-15": {
+   "name": "Route 15"
+  },
+  "route-17": {
+   "name": "Route 17"
+  },
+  "route-18": {
+   "name": "Route 18"
+  },
+  "safari-zone": {
+   "name": "Safari Zone"
+  },
+  "silph-co": {
+   "name": "Silph Co."
+  },
+  "saffron-city": {
+   "name": "Saffron City"
+  },
+  "cinnabar-island": {
+   "name": "Cinnabar Island"
+  },
+  "route-19": {
+   "name": "Route 19"
+  },
+  "route-20": {
+   "name": "Route 20"
+  },
+  "seafoam-islands": {
+   "name": "Seafoam Islands"
+  },
+  "route-21": {
+   "name": "Route 21"
+  },
+  "pokemon-mansion": {
+   "name": "Pokémon Mansion"
+  },
+  "one-island": {
+   "name": "One Island"
+  },
+  "kindle-road": {
+   "name": "Kindle Road"
+  },
+  "treasure-beach": {
+   "name": "Treasure Beach"
+  },
+  "mt-ember": {
+   "name": "Mt. Ember"
+  },
+  "two-island": {
+   "name": "Two Island"
+  },
+  "cape-brink": {
+   "name": "Cape Brink"
+  },
+  "three-island": {
+   "name": "Three Island"
+  },
+  "bond-bridge": {
+   "name": "Bond Bridge"
+  },
+  "berry-forest": {
+   "name": "Berry Forest"
+  },
+  "three-isle-port": {
+   "name": "Three Isle Port"
+  },
+  "route-23": {
+   "name": "Route 23"
+  },
+  "victory-road": {
+   "name": "Victory Road"
+  },
+  "indigo-plateau": {
+   "name": "Indigo Plateau"
+  },
+  "pokemon-league": {
+   "name": "Pokémon League"
+  },
+  "five-island": {
+   "name": "Five Island"
+  },
+  "four-island": {
+   "name": "Four Island"
+  },
+  "icefall-cave": {
+   "name": "Icefall Cave"
+  },
+  "five-isle-meadow": {
+   "name": "Five Isle Meadow"
+  },
+  "memorial-pillar": {
+   "name": "Memorial Pillar"
+  },
+  "resort-gorgeous": {
+   "name": "Resort Gorgeous"
+  },
+  "water-labyrinth": {
+   "name": "Water Labyrinth"
+  },
+  "lost-cave": {
+   "name": "Lost Cave"
+  },
+  "six-island": {
+   "name": "Six Island"
+  },
+  "dotted-hole": {
+   "name": "Dotted Hole"
+  },
+  "pattern-bush": {
+   "name": "Pattern Bush"
+  },
+  "ruin-valley": {
+   "name": "Ruin Valley"
+  },
+  "water-path": {
+   "name": "Water Path"
+  },
+  "green-path": {
+   "name": "Green Path"
+  },
+  "outcast-island": {
+   "name": "Outcast Island"
+  },
+  "altering-cave": {
+   "name": "Altering Cave"
+  },
+  "seven-island": {
+   "name": "Seven Island"
+  },
+  "trainer-tower": {
+   "name": "Trainer Tower"
+  },
+  "canyon-entrance": {
+   "name": "Canyon Entrance"
+  },
+  "sevault-canyon": {
+   "name": "Sevault Canyon"
+  },
+  "tanoby-ruins": {
+   "name": "Tanoby Ruins"
+  },
+  "rocket-warehouse": {
+   "name": "Rocket Warehouse"
+  },
+  "power-plant": {
+   "name": "Power Plant"
+  },
+  "cerulean-cave": {
+   "name": "Cerulean Cave"
+  },
+  "celadon-dept": {
+   "name": "Celadon Dept."
+  },
+  "tanoby-key": {
+   "name": "Tanoby Key"
+  },
+  "tanoby-chambers": {
+   "name": "Tanoby Ruins"
+  },
+  "navel-rock": {
+   "name": "Navel Rock"
+  },
+  "three-isle-path": {
+   "name": "Three Isle Path"
+  }
+ },
+ "milestones": [
+  {
+   "id": "rival-oaks-lab",
+   "name": "Rival: first battle (Oak's lab)",
+   "kind": "rival",
+   "place": "pallet-town",
+   "level_cap": 5,
+   "foe": {
+    "name": "TERRY",
+    "class": "RIVAL",
+    "ace_level": 5
+   },
+   "done_when": "party",
+   "opens": [
+    "pallet-town",
+    "route-1",
+    "viridian-city"
+   ],
+   "tips": "Your rival picks the starter strong against yours. Both have only Tackle/Scratch and a stat move at Level 5: just attack.",
+   "quality": "reference-only",
+   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h (RIVAL_OAKS_LAB_*; the player-named rival is stored as TERRY)"
+  },
+  {
+   "id": "story-oaks-parcel",
+   "name": "Oak's Parcel and the Pokédex",
+   "kind": "story",
+   "place": "viridian-city",
+   "done_when": "later",
+   "opens": [
+    "viridian-city",
+    "route-22"
+   ],
+   "tips": "The Viridian Mart clerk hands you Oak's Parcel. Take it back to Pallet Town: Oak gives you the Pokédex and five Poké Balls, and the old man in Viridian then shows how to catch.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered ViridianCity_Mart, PalletTown_ProfessorOaksLab scripts"
+  },
+  {
+   "id": "rival-route-22",
+   "name": "Rival: Route 22 (optional)",
+   "kind": "rival",
+   "place": "route-22",
+   "level_cap": 9,
+   "foe": {
+    "name": "TERRY",
+    "class": "RIVAL",
+    "ace_level": 9
+   },
+   "done_when": "none",
+   "opens": [
+    "route-22"
+   ],
+   "tips": "West of Viridian your rival waits with a Pidgey and the starter at 9. It is optional but good experience; there is no gym in Viridian yet.",
+   "quality": "reference-only",
+   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h (RIVAL_ROUTE22_EARLY_*)"
+  },
+  {
+   "id": "gym-1-brock",
+   "name": "Gym 1: Brock",
+   "kind": "gym",
+   "place": "pewter-city",
+   "level_cap": 14,
+   "leader": "Brock",
+   "theme": "rock",
+   "foe": {
+    "name": "BROCK",
+    "class": "LEADER",
+    "ace_level": 14
+   },
+   "badge_note": "Boulder Badge: Flash works in the field (HM05 from Oak's aide on Route 2 once you have 10 species). Gym TM: TM39 Rock Tomb.",
+   "done_when": "badge:1",
+   "opens": [
+    "route-2",
+    "viridian-forest",
+    "pewter-city"
+   ],
+   "tips": "Geodude 12 and Onix 14 (Rock/Ground). Bulbasaur and Squirtle win; Charmander learns Metal Claw at 13, or catch a Mankey on Route 22 or a Butterfree with Confusion in Viridian Forest.",
+   "quality": "reference-only",
+   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h; field moves by badge in src/party_menu.c"
+  },
+  {
+   "id": "team-mt-moon",
+   "name": "Team Rocket in Mt. Moon",
+   "kind": "team",
+   "place": "mt-moon",
+   "level_cap": 13,
+   "done_when": "later",
+   "opens": [
+    "route-3",
+    "mt-moon",
+    "route-4"
+   ],
+   "tips": "Rocket grunts (Pokémon at 11-13) and the Super Nerd Miguel (Grimer, Voltorb, Koffing at 12) guard the fossils on B2F. Pick the Dome Fossil (Kabuto) or Helix Fossil (Omanyte).",
+   "quality": "reference-only",
+   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h (MtMoon_B2F trainers)"
+  },
+  {
+   "id": "rival-cerulean",
+   "name": "Rival: Cerulean City",
+   "kind": "rival",
+   "place": "cerulean-city",
+   "level_cap": 18,
+   "foe": {
+    "name": "TERRY",
+    "class": "RIVAL",
+    "ace_level": 18
+   },
+   "done_when": "later",
+   "opens": [
+    "cerulean-city",
+    "route-24",
+    "route-25"
+   ],
+   "tips": "At Cerulean's north exit: Pidgeotto 17, Abra 16, Rattata 15 and the starter at 18. Then the Nugget Bridge's five trainers and a Rocket.",
+   "quality": "reference-only",
+   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h (RIVAL_CERULEAN_*)"
+  },
+  {
+   "id": "gym-2-misty",
+   "name": "Gym 2: Misty",
+   "kind": "gym",
+   "place": "cerulean-city",
+   "level_cap": 21,
+   "leader": "Misty",
+   "theme": "water",
+   "foe": {
+    "name": "MISTY",
+    "class": "LEADER",
+    "ace_level": 21
+   },
+   "badge_note": "Cascade Badge: Cut works in the field, and traded Pokémon up to Level 30 obey. Gym TM: TM03 Water Pulse.",
+   "done_when": "badge:2",
+   "opens": [
+    "cerulean-city"
+   ],
+   "tips": "Staryu 18 and Starmie 21 (Water/Psychic, fast, Water Pulse). Grass and Electric moves: Bulbasaur, Pikachu from Viridian Forest, Bellsprout on Routes 24-25.",
+   "quality": "reference-only",
+   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h; obedience in src/battle_util.c"
+  },
+  {
+   "id": "story-bill",
+   "name": "Help Bill (Route 25)",
+   "kind": "story",
+   "place": "route-25",
+   "done_when": "later",
+   "opens": [
+    "route-25"
+   ],
+   "tips": "Bill is stuck as a Pokémon in his Sea Cottage at the end of Route 25. Help him and he gives you the S.S. Ticket for the ship in Vermilion.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered Route25_SeaCottage scripts"
+  },
+  {
+   "id": "team-cerulean-house",
+   "name": "The robbed house in Cerulean",
+   "kind": "team",
+   "place": "cerulean-city",
+   "level_cap": 17,
+   "done_when": "later",
+   "opens": [
+    "route-5",
+    "underground-path",
+    "route-6",
+    "vermilion-city"
+   ],
+   "tips": "A Rocket grunt broke into a house; follow him out of the back and beat him (Machop, Drowzee at 17) to get TM28 Dig back. The way south then opens.",
+   "quality": "reference-only",
+   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h; CeruleanCity scripts (TM28)"
+  },
+  {
+   "id": "rival-ss-anne",
+   "name": "Rival: S.S. Anne",
+   "kind": "rival",
+   "place": "s-s-anne",
+   "level_cap": 20,
+   "foe": {
+    "name": "TERRY",
+    "class": "RIVAL",
+    "ace_level": 20
+   },
+   "done_when": "later",
+   "opens": [
+    "s-s-anne"
+   ],
+   "tips": "On the ship's 2nd deck: Pidgeotto 19, Raticate 16, Kadabra 18 and the starter's middle form at 20. The captain then gives you HM01 Cut.",
+   "quality": "reference-only",
+   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h (RIVAL_SS_ANNE_*); SSAnne_CaptainsOffice (HM01)"
+  },
+  {
+   "id": "gym-3-lt-surge",
+   "name": "Gym 3: Lt. Surge",
+   "kind": "gym",
+   "place": "vermilion-city",
+   "level_cap": 24,
+   "leader": "Lt. Surge",
+   "theme": "electric",
+   "foe": {
+    "name": "LT. SURGE",
+    "class": "LEADER",
+    "ace_level": 24
+   },
+   "badge_note": "Thunder Badge: Fly works in the field (HM02 from a girl in a house on Route 16). Gym TM: TM34 Shock Wave.",
+   "done_when": "badge:3",
+   "opens": [
+    "vermilion-city",
+    "digletts-cave",
+    "route-11",
+    "route-2"
+   ],
+   "tips": "Voltorb 21, Pikachu 18, Raichu 24. Ground types are immune to Electric: Diglett from Diglett's Cave just east of Vermilion. Cut the tree in front of the gym; flip the two trash-can switches.",
+   "quality": "reference-only",
+   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h"
+  },
+  {
+   "id": "story-rock-tunnel",
+   "name": "Rock Tunnel to Lavender Town",
+   "kind": "story",
+   "place": "rock-tunnel",
+   "done_when": "later",
+   "opens": [
+    "route-9",
+    "route-10",
+    "rock-tunnel",
+    "lavender-town"
+   ],
+   "tips": "Go north from Cerulean along Route 9 to Rock Tunnel. It is pitch dark without Flash (HM05). Lavender Town waits on the far side.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered RockTunnel map (requires_flash)"
+  },
+  {
+   "id": "rival-pokemon-tower",
+   "name": "Rival: Pokémon Tower",
+   "kind": "rival",
+   "place": "pokemon-tower",
+   "level_cap": 25,
+   "foe": {
+    "name": "TERRY",
+    "class": "RIVAL",
+    "ace_level": 25
+   },
+   "done_when": "later",
+   "opens": [
+    "pokemon-tower"
+   ],
+   "tips": "Your rival waits on the tower's 2nd floor: five Pokémon, the starter at 25. The ghosts above can't be fought until you have the Silph Scope.",
+   "quality": "reference-only",
+   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h (RIVAL_POKEMON_TOWER_*)"
+  },
+  {
+   "id": "gym-4-erika",
+   "name": "Gym 4: Erika",
+   "kind": "gym",
+   "place": "celadon-city",
+   "level_cap": 29,
+   "leader": "Erika",
+   "theme": "grass",
+   "foe": {
+    "name": "ERIKA",
+    "class": "LEADER",
+    "ace_level": 29
+   },
+   "badge_note": "Rainbow Badge: Strength works in the field (HM04 from the Safari Zone warden), and traded Pokémon up to Level 50 obey. Gym TM: TM19 Giga Drain.",
+   "done_when": "badge:4",
+   "opens": [
+    "route-8",
+    "route-7",
+    "celadon-city"
+   ],
+   "tips": "Victreebel 29, Tangela 24, Vileplume 29. Fire, Flying, Ice, Poison and Psychic moves; watch for Sleep Powder and Stun Spore (bring Awakenings).",
+   "quality": "reference-only",
+   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h"
+  },
+  {
+   "id": "team-rocket-hideout",
+   "name": "Rocket Hideout under the Game Corner",
+   "kind": "team",
+   "place": "rocket-hideout",
+   "level_cap": 29,
+   "foe": {
+    "name": "GIOVANNI",
+    "class": "BOSS",
+    "ace_level": 29
+   },
+   "done_when": "later",
+   "opens": [
+    "rocket-hideout"
+   ],
+   "tips": "A poster in Celadon's Game Corner hides the stairs. The Lift Key is on B4F; Giovanni waits at the end with Onix 25, Rhyhorn 24 and Kangaskhan 29 and drops the Silph Scope.",
+   "quality": "reference-only",
+   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h (BOSS_GIOVANNI, RocketHideout_B4F)"
+  },
+  {
+   "id": "story-pokemon-tower",
+   "name": "Free Mr. Fuji (Pokémon Tower)",
+   "kind": "story",
+   "place": "pokemon-tower",
+   "level_cap": 30,
+   "done_when": "later",
+   "opens": [
+    "pokemon-tower",
+    "route-12",
+    "route-16"
+   ],
+   "tips": "With the Silph Scope, the ghost on 6F is Marowak (Level 30; it can't be caught). Three grunts (up to 25) hold Mr. Fuji on 7F; he gives you the Poké Flute, which wakes the Snorlax on Routes 12 and 16.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered PokemonTower_6F (Marowak 30), 7F, MrFujisHouse scripts"
+  },
+  {
+   "id": "gym-5-koga",
+   "name": "Gym 5: Koga",
+   "kind": "gym",
+   "place": "fuchsia-city",
+   "level_cap": 43,
+   "leader": "Koga",
+   "theme": "poison",
+   "foe": {
+    "name": "KOGA",
+    "class": "LEADER",
+    "ace_level": 43
+   },
+   "badge_note": "Soul Badge: Surf works in the field (HM03 in the Safari Zone's secret house). Gym TM: TM06 Toxic.",
+   "done_when": "badge:5",
+   "opens": [
+    "route-13",
+    "route-14",
+    "route-15",
+    "route-17",
+    "route-18",
+    "fuchsia-city",
+    "safari-zone"
+   ],
+   "tips": "Koffing 37 twice, Muk 39, Weezing 43. Psychic moves are best: Koffing and Weezing have Levitate, so Ground moves miss them. The gym's walls are invisible.",
+   "quality": "reference-only",
+   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h"
+  },
+  {
+   "id": "rival-silph",
+   "name": "Rival: Silph Co.",
+   "kind": "rival",
+   "place": "silph-co",
+   "level_cap": 40,
+   "foe": {
+    "name": "TERRY",
+    "class": "RIVAL",
+    "ace_level": 40
+   },
+   "done_when": "later",
+   "opens": [
+    "saffron-city",
+    "silph-co"
+   ],
+   "tips": "On 7F: Pidgeot 37, Alakazam 35 and three more with the starter's final form at 40. Ice, Electric and Rock moves for Pidgeot; Dark, Bug or Ghost for Alakazam.",
+   "quality": "reference-only",
+   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h (RIVAL_SILPH_*)"
+  },
+  {
+   "id": "team-silph-co",
+   "name": "Giovanni at Silph Co.",
+   "kind": "team",
+   "place": "silph-co",
+   "level_cap": 41,
+   "foe": {
+    "name": "GIOVANNI",
+    "class": "BOSS",
+    "ace_level": 41
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Bring the Tea (from an old woman in Celadon) to pass the Saffron guards. Find the Card Key on 5F; Giovanni waits on 11F with Nidorino, Kangaskhan, Rhyhorn and Nidoqueen 41. The president then gives you the Master Ball.",
+   "quality": "reference-only",
+   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h (BOSS_GIOVANNI_2, SilphCo_11F); SilphCo_11F (Master Ball)"
+  },
+  {
+   "id": "gym-6-sabrina",
+   "name": "Gym 6: Sabrina",
+   "kind": "gym",
+   "place": "saffron-city",
+   "level_cap": 43,
+   "leader": "Sabrina",
+   "theme": "psychic",
+   "foe": {
+    "name": "SABRINA",
+    "class": "LEADER",
+    "ace_level": 43
+   },
+   "badge_note": "Marsh Badge: Rock Smash works in the field (HM06 on Kindle Road, One Island), and traded Pokémon up to Level 70 obey. Gym TM: TM04 Calm Mind.",
+   "done_when": "badge:6",
+   "opens": [
+    "saffron-city"
+   ],
+   "tips": "Kadabra 38, Mr. Mime 37, Venomoth 38, Alakazam 43. Bug, Ghost and Dark moves (Bite, Crunch, Shadow Ball); a Snorlax or Kangaskhan takes her Psychic hits well. Teleport tiles lead to her.",
+   "quality": "reference-only",
+   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h"
+  },
+  {
+   "id": "gym-7-blaine",
+   "name": "Gym 7: Blaine",
+   "kind": "gym",
+   "place": "cinnabar-island",
+   "level_cap": 47,
+   "leader": "Blaine",
+   "theme": "fire",
+   "foe": {
+    "name": "BLAINE",
+    "class": "LEADER",
+    "ace_level": 47
+   },
+   "badge_note": "Volcano Badge: Waterfall works in the field (HM07 lies in Icefall Cave after the Hall of Fame). Gym TM: TM38 Fire Blast.",
+   "done_when": "badge:7",
+   "opens": [
+    "route-19",
+    "route-20",
+    "seafoam-islands",
+    "route-21",
+    "cinnabar-island",
+    "pokemon-mansion"
+   ],
+   "tips": "Growlithe 42, Ponyta 40, Rapidash 42, Arcanine 47. Water, Ground and Rock moves. The gym door is locked: the Secret Key is in the Pokémon Mansion's basement. Answer the quiz machines to skip trainers.",
+   "quality": "reference-only",
+   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h"
+  },
+  {
+   "id": "story-sevii-ruby",
+   "name": "One Island: the Ruby for Celio",
+   "kind": "story",
+   "place": "one-island",
+   "done_when": "later",
+   "opens": [
+    "one-island",
+    "kindle-road",
+    "treasure-beach",
+    "mt-ember",
+    "two-island",
+    "cape-brink",
+    "three-island",
+    "bond-bridge",
+    "berry-forest",
+    "three-isle-port"
+   ],
+   "tips": "Bill takes you to One Island. Celio needs a gem for his network machine: go up Kindle Road to Mt. Ember, beat the two Rocket grunts (up to 37), solve the Braille room and take the Ruby. Two and Three Island open on the way.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered OneIsland, MtEmber scripts; ROM BPGE (Mt. Ember grunts)"
+  },
+  {
+   "id": "story-lostelle",
+   "name": "Find Lostelle (Berry Forest)",
+   "kind": "story",
+   "place": "berry-forest",
+   "level_cap": 30,
+   "done_when": "later",
+   "opens": [],
+   "tips": "On Three Island, bikers block the town; beat them. Lostelle, Two Island's girl, is lost in Berry Forest; a wild Hypno (Level 30) attacks you there.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered ThreeIsland_BerryForest (Hypno 30)"
+  },
+  {
+   "id": "legend-moltres",
+   "name": "Moltres (Mt. Ember summit)",
+   "kind": "legendary",
+   "place": "mt-ember",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Moltres waits at Mt. Ember's summit at Level 50 once you can Rock Smash and Strength your way up. Water and Rock moves weaken it; Ultra Balls and a sleep move.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered MtEmber_Summit (setwildbattle SPECIES_MOLTRES, 50)"
+  },
+  {
+   "id": "gym-8-giovanni",
+   "name": "Gym 8: Giovanni",
+   "kind": "gym",
+   "place": "viridian-city",
+   "level_cap": 50,
+   "leader": "Giovanni",
+   "theme": "ground",
+   "foe": {
+    "name": "GIOVANNI",
+    "class": "LEADER",
+    "ace_level": 50
+   },
+   "badge_note": "Earth Badge: every traded Pokémon obeys. Gym TM: TM26 Earthquake.",
+   "done_when": "badge:8",
+   "opens": [
+    "viridian-city"
+   ],
+   "tips": "Ground types: Rhyhorn 45 and 50, Dugtrio 42, Nidoqueen 44, Nidoking 45. Water, Grass and Ice moves; Electric does nothing. The gym opens after the other seven badges.",
+   "quality": "reference-only",
+   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h; ViridianCity_Gym (TM26)"
+  },
+  {
+   "id": "rival-route-22-late",
+   "name": "Rival: Route 22 before the League",
+   "kind": "rival",
+   "place": "route-22",
+   "level_cap": 53,
+   "foe": {
+    "name": "TERRY",
+    "class": "RIVAL",
+    "ace_level": 53
+   },
+   "done_when": "later",
+   "opens": [
+    "route-22",
+    "route-23",
+    "victory-road",
+    "indigo-plateau"
+   ],
+   "tips": "With eight badges your rival waits on Route 22 again: Pidgeot and Alakazam at 47, Rhyhorn, two more at 45 and the starter at 53.",
+   "quality": "reference-only",
+   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h (RIVAL_ROUTE22_LATE_*)"
+  },
+  {
+   "id": "e4-lorelei",
+   "name": "Elite Four: Lorelei",
+   "kind": "elite4",
+   "place": "pokemon-league",
+   "level_cap": 54,
+   "leader": "Lorelei",
+   "theme": "ice",
+   "foe": {
+    "name": "LORELEI",
+    "class": "ELITE FOUR",
+    "ace_level": 54
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Dewgong 52, Cloyster 51, Slowbro 52, Jynx and Lapras 54. Electric, Fighting, Rock and Steel moves; Lapras is tough, so save an Electric attack.",
+   "quality": "reference-only",
+   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h"
+  },
+  {
+   "id": "e4-bruno",
+   "name": "Elite Four: Bruno",
+   "kind": "elite4",
+   "place": "pokemon-league",
+   "level_cap": 56,
+   "leader": "Bruno",
+   "theme": "fighting",
+   "foe": {
+    "name": "BRUNO",
+    "class": "ELITE FOUR",
+    "ace_level": 56
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Two Onix (51, 54), Hitmonchan and Hitmonlee 53, Machamp 56. Water or Grass for the Onix, Psychic and Flying for the rest.",
+   "quality": "reference-only",
+   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h"
+  },
+  {
+   "id": "e4-agatha",
+   "name": "Elite Four: Agatha",
+   "kind": "elite4",
+   "place": "pokemon-league",
+   "level_cap": 58,
+   "leader": "Agatha",
+   "theme": "ghost",
+   "foe": {
+    "name": "AGATHA",
+    "class": "ELITE FOUR",
+    "ace_level": 58
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Gengar 54 and 58, Golbat 54, Haunter 53, Arbok 56. Psychic and Ground moves (but Gengar has Levitate); Ghost and Dark hit the Gengar line too.",
+   "quality": "reference-only",
+   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h"
+  },
+  {
+   "id": "e4-lance",
+   "name": "Elite Four: Lance",
+   "kind": "elite4",
+   "place": "pokemon-league",
+   "level_cap": 60,
+   "leader": "Lance",
+   "theme": "dragon",
+   "foe": {
+    "name": "LANCE",
+    "class": "ELITE FOUR",
+    "ace_level": 60
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Gyarados 56, two Dragonair 54, Aerodactyl 58, Dragonite 60. Ice moves (four times on Dragonite), Electric for Gyarados, Rock or Water for Aerodactyl.",
+   "quality": "reference-only",
+   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h"
+  },
+  {
+   "id": "champion-rival",
+   "name": "Champion: your rival",
+   "kind": "champion",
+   "place": "pokemon-league",
+   "level_cap": 63,
+   "leader": "Rival",
+   "foe": {
+    "name": "TERRY",
+    "class": "CHAMPION",
+    "ace_level": 63
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Pidgeot 59, Alakazam 57, Rhydon 59, two of Gyarados/Arcanine/Exeggutor, and the starter's final form at 63. Cover Rock, Electric, Water and Ice; Alakazam is fast but frail.",
+   "quality": "reference-only",
+   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h (CHAMPION_FIRST_*)"
+  },
+  {
+   "id": "story-national-dex",
+   "name": "National Pokédex",
+   "kind": "story",
+   "place": "pallet-town",
+   "done_when": "none",
+   "opens": [],
+   "tips": "After the Hall of Fame Oak upgrades your Pokédex to the national one once you own 60 species and have been to One Island. Johto Pokémon then appear in the Sevii Islands and Kanto's water.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered PalletTown_ProfessorOaksLab scripts (60, FLAG_WORLD_MAP_ONE_ISLAND)"
+  },
+  {
+   "id": "story-sevii-sapphire",
+   "name": "Sevii Islands 4-7: the Sapphire",
+   "kind": "story",
+   "place": "five-island",
+   "done_when": "none",
+   "opens": [
+    "four-island",
+    "icefall-cave",
+    "five-island",
+    "five-isle-meadow",
+    "memorial-pillar",
+    "resort-gorgeous",
+    "water-labyrinth",
+    "lost-cave",
+    "six-island",
+    "dotted-hole",
+    "pattern-bush",
+    "ruin-valley",
+    "water-path",
+    "green-path",
+    "outcast-island",
+    "altering-cave",
+    "seven-island",
+    "trainer-tower",
+    "canyon-entrance",
+    "sevault-canyon",
+    "tanoby-ruins"
+   ],
+   "tips": "Celio now needs the Sapphire. Visit Four Island (Lorelei; Icefall Cave), find the Rocket Warehouse on Five Island, then the Dotted Hole on Six Island, where the scientist Gideon steals the Sapphire for the Rockets.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered FourIsland, FiveIsland, SixIsland scripts"
+  },
+  {
+   "id": "team-rocket-warehouse",
+   "name": "Rocket Warehouse (Five Island)",
+   "kind": "team",
+   "place": "rocket-warehouse",
+   "level_cap": 55,
+   "foe": [
+    {
+     "name": "ADMIN",
+     "class": "TEAM ROCKET",
+     "ace_level": 55
+    },
+    {
+     "name": "ADMIN",
+     "class": "TEAM ROCKET",
+     "ace_level": 54
+    },
+    {
+     "name": "GIDEON",
+     "ace_level": 46
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "Grunts up to 49, the scientist Gideon (five Electric/Normal Pokémon at 46) and two admins: Muk, Arbok, Vileplume 54, and Golbat, Weezing, Houndoom 55. Ground, Psychic and Water moves cover them.",
+   "quality": "reference-only",
+   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h (FiveIsland_RocketWarehouse)"
+  },
+  {
+   "id": "legend-articuno",
+   "name": "Articuno (Seafoam Islands)",
+   "kind": "legendary",
+   "place": "seafoam-islands",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Push the boulders with Strength to slow the currents, then surf to Articuno on B4F (Level 50). Fire, Rock, Electric and Steel moves; it knows Mist and Agility.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered SeafoamIslands_B4F (setwildbattle SPECIES_ARTICUNO, 50)"
+  },
+  {
+   "id": "legend-zapdos",
+   "name": "Zapdos (Power Plant)",
+   "kind": "legendary",
+   "place": "power-plant",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Surf down Route 10's river to the Power Plant. Zapdos waits deep inside at Level 50; some items there are Electrode (34) in disguise. Rock and Ice moves; a Ground type is immune to its Thunderbolt.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered PowerPlant (Zapdos 50, Electrode 34)"
+  },
+  {
+   "id": "legend-mewtwo",
+   "name": "Mewtwo (Cerulean Cave)",
+   "kind": "legendary",
+   "place": "cerulean-cave",
+   "level_cap": 70,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Cerulean Cave opens once Celio's network is complete (both gems delivered). Mewtwo is on B1F at Level 70: save first, bring many Ultra Balls, or the Master Ball.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered CeruleanCave_B1F (Mewtwo 70), OneIsland_PokemonCenter_1F (FLAG_HIDE_CERULEAN_CAVE_GUARD)"
+  },
+  {
+   "id": "legend-beast",
+   "name": "A roaming legendary beast",
+   "kind": "legendary",
+   "place": "route-1",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [],
+   "tips": "After the National Pokédex one beast roams Kanto's routes at Level 50, chosen by your starter: Raikou for Squirtle, Entei for Bulbasaur, Suicune for Charmander. It flees at once; trap or sleep it.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/roamer.c (species by starter, Level 50)"
+  },
+  {
+   "id": "e4-rematch-lorelei",
+   "name": "Elite Four rematch: Lorelei",
+   "kind": "elite4",
+   "place": "pokemon-league",
+   "level_cap": 66,
+   "leader": "Lorelei",
+   "theme": "ice",
+   "foe": {
+    "name": "LORELEI",
+    "class": "ELITE FOUR",
+    "ace_level": 66
+   },
+   "done_when": "none",
+   "opens": [],
+   "tips": "After the National Pokédex the Elite Four fight with stronger teams (Lorelei's top Pokémon at 66).",
+   "quality": "reference-only",
+   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h (rematch teams)"
+  },
+  {
+   "id": "e4-rematch-bruno",
+   "name": "Elite Four rematch: Bruno",
+   "kind": "elite4",
+   "place": "pokemon-league",
+   "level_cap": 68,
+   "leader": "Bruno",
+   "theme": "fighting",
+   "foe": {
+    "name": "BRUNO",
+    "class": "ELITE FOUR",
+    "ace_level": 68
+   },
+   "done_when": "none",
+   "opens": [],
+   "tips": "After the National Pokédex the Elite Four fight with stronger teams (Bruno's top Pokémon at 68).",
+   "quality": "reference-only",
+   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h (rematch teams)"
+  },
+  {
+   "id": "e4-rematch-agatha",
+   "name": "Elite Four rematch: Agatha",
+   "kind": "elite4",
+   "place": "pokemon-league",
+   "level_cap": 70,
+   "leader": "Agatha",
+   "theme": "ghost",
+   "foe": {
+    "name": "AGATHA",
+    "class": "ELITE FOUR",
+    "ace_level": 70
+   },
+   "done_when": "none",
+   "opens": [],
+   "tips": "After the National Pokédex the Elite Four fight with stronger teams (Agatha's top Pokémon at 70).",
+   "quality": "reference-only",
+   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h (rematch teams)"
+  },
+  {
+   "id": "e4-rematch-lance",
+   "name": "Elite Four rematch: Lance",
+   "kind": "elite4",
+   "place": "pokemon-league",
+   "level_cap": 72,
+   "leader": "Lance",
+   "theme": "dragon",
+   "foe": {
+    "name": "LANCE",
+    "class": "ELITE FOUR",
+    "ace_level": 72
+   },
+   "done_when": "none",
+   "opens": [],
+   "tips": "After the National Pokédex the Elite Four fight with stronger teams (Lance's top Pokémon at 72).",
+   "quality": "reference-only",
+   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h (rematch teams)"
+  },
+  {
+   "id": "champion-rematch",
+   "name": "Champion rematch",
+   "kind": "champion",
+   "place": "pokemon-league",
+   "level_cap": 75,
+   "foe": {
+    "name": "TERRY",
+    "class": "CHAMPION",
+    "ace_level": 75
+   },
+   "done_when": "none",
+   "opens": [],
+   "tips": "The rival's rematch team adds Heracross and Tyranitar; the starter's final form is at 75. Bug, Ground and Fighting moves for Tyranitar, Fire or Flying for Heracross.",
+   "quality": "reference-only",
+   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h (CHAMPION_REMATCH_*)"
+  },
+  {
+   "id": "postgame-trainer-tower",
+   "name": "Trainer Tower (Seven Island)",
+   "kind": "postgame",
+   "place": "trainer-tower",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [],
+   "tips": "A timed climb through floors of preset trainers, alone or in doubles. Beat your best time for prizes from the owner at the top.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered SevenIsland_TrainerTower scripts"
+  }
+ ],
+ "steps": [
+  {
+   "id": "step-starter",
+   "title": "Pick a starter",
+   "text": "Bulbasaur makes the first two gyms easy; Squirtle is solid all game; Charmander struggles early but learns Metal Claw at 13 (good against Brock).",
+   "stage": "rival-oaks-lab",
+   "places": [
+    "pallet-town"
+   ],
+   "done_when": "party",
+   "quality": "reference-only",
+   "source": "pret/pokefirered level_up_learnsets.h"
+  },
+  {
+   "id": "step-viridian-forest",
+   "title": "Catch early helpers",
+   "text": "Viridian Forest has Pikachu (rare) and Caterpie, which becomes Butterfree with Confusion at 10. Routes 22 and 3 have Mankey for Brock.",
+   "stage": "gym-1-brock",
+   "places": [
+    "viridian-forest",
+    "route-22"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokefirered wild_encounters.json"
+  },
+  {
+   "id": "step-flash",
+   "title": "Flash needs ten species",
+   "text": "Oak's aide in the house on Route 2 (east of Viridian Forest's exit, through Diglett's Cave or a Cut tree) gives HM05 Flash once you have caught 10 species. Rock Tunnel is dark without it.",
+   "stage": "story-rock-tunnel",
+   "places": [
+    "route-2"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokefirered Route2_EastBuilding (HM05)"
+  },
+  {
+   "id": "step-diglett",
+   "title": "Diglett's Cave",
+   "text": "Diglett's Cave links Vermilion to Route 2. Diglett is immune to Electric, which makes Lt. Surge easy.",
+   "stage": "gym-3-lt-surge",
+   "places": [
+    "digletts-cave"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokefirered wild_encounters.json"
+  },
+  {
+   "id": "step-itemfinder",
+   "title": "Itemfinder and VS Seeker",
+   "text": "Oak's aide on the 2nd floor of Route 11's gate gives the Itemfinder once you have 30 species. A woman in Vermilion's Pokémon Center gives the VS Seeker, which asks trainers on a route for rematches.",
+   "stage": "gym-3-lt-surge",
+   "places": [
+    "route-11",
+    "vermilion-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokefirered Route11_EastEntrance_2F; event_scripts.s (VSSeekerWoman)"
+  },
+  {
+   "id": "step-celadon",
+   "title": "Celadon Department Store",
+   "text": "TMs on 2F, evolution stones on 4F and drinks on the roof (Fresh Water, Soda Pop, Lemonade). A girl on the roof trades a TM for a drink. The old woman in Celadon Mansion gives the Tea for the Saffron guards.",
+   "stage": "gym-4-erika",
+   "places": [
+    "celadon-city",
+    "celadon-dept"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokefirered CeladonCity_DepartmentStore_*, CeladonCity_Condominiums_1F (ITEM_TEA)"
+  },
+  {
+   "id": "step-silph-scope",
+   "title": "Silph Scope first",
+   "text": "The ghosts in Pokémon Tower can't be fought or caught without the Silph Scope from Giovanni in the Rocket Hideout.",
+   "stage": "team-rocket-hideout",
+   "places": [
+    "rocket-hideout",
+    "pokemon-tower"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokefirered PokemonTower scripts"
+  },
+  {
+   "id": "step-snorlax",
+   "title": "Snorlax with the Poké Flute",
+   "text": "Two sleeping Snorlax block Route 12 and Route 16. Play the Poké Flute to wake them; each is a Level 30 wild battle you can catch.",
+   "stage": "story-pokemon-tower",
+   "places": [
+    "route-12",
+    "route-16"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokefirered Route12, Route16 (setwildbattle SPECIES_SNORLAX, 30)"
+  },
+  {
+   "id": "step-cycling-road",
+   "title": "Cycling Road",
+   "text": "Route 16 to 18 is Cycling Road down to Fuchsia; you need the Bicycle (Cerulean's shop, after the Bike Voucher from the Pokémon Fan Club chairman in Vermilion).",
+   "stage": "gym-5-koga",
+   "places": [
+    "route-16",
+    "route-17",
+    "route-18"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokefirered CeruleanCity_BikeShop, VermilionCity_PokemonFanClub scripts"
+  },
+  {
+   "id": "step-safari",
+   "title": "Safari Zone: Surf and Strength",
+   "text": "Reach the secret house deep in the Safari Zone for HM03 Surf. The Gold Teeth there go back to the warden in Fuchsia, who gives HM04 Strength.",
+   "stage": "gym-5-koga",
+   "places": [
+    "safari-zone",
+    "fuchsia-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokefirered SafariZone_SecretHouse (HM03), FuchsiaCity_WardensHouse (HM04)"
+  },
+  {
+   "id": "step-fly",
+   "title": "Fly from Route 16",
+   "text": "Cut the tree beside Route 16's gate and a girl in the small house gives HM02 Fly (Thunder Badge).",
+   "stage": "gym-5-koga",
+   "places": [
+    "route-16"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokefirered Route16_House (HM02)"
+  },
+  {
+   "id": "step-mansion",
+   "title": "Secret Key in the Pokémon Mansion",
+   "text": "Surf to Cinnabar. Statues in the burned mansion flip switches that open and shut doors; the Secret Key for the gym lies in the basement.",
+   "stage": "gym-7-blaine",
+   "places": [
+    "pokemon-mansion",
+    "cinnabar-island"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokefirered PokemonMansion scripts"
+  },
+  {
+   "id": "step-fossil-revive",
+   "title": "Revive your fossils",
+   "text": "Cinnabar's Pokémon Lab revives the Dome Fossil (Kabuto), Helix Fossil (Omanyte) and Old Amber (Aerodactyl) at Level 5.",
+   "stage": "gym-7-blaine",
+   "places": [
+    "cinnabar-island"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokefirered CinnabarIsland_PokemonLab_ExperimentRoom (givemon ... 5)"
+  },
+  {
+   "id": "step-rock-smash",
+   "title": "Rock Smash on Kindle Road",
+   "text": "A man at the Ember Spa on Kindle Road gives HM06 Rock Smash. Mt. Ember's way to Moltres needs it, plus Strength.",
+   "stage": "story-sevii-ruby",
+   "places": [
+    "kindle-road"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokefirered OneIsland_KindleRoad_EmberSpa (HM06)"
+  },
+  {
+   "id": "step-victory-road",
+   "title": "Victory Road",
+   "text": "Boulder switches (Strength) open the way. The league has a Pokémon Center and Mart at Indigo Plateau, but no healing between the Elite Four.",
+   "stage": "rival-route-22-late",
+   "places": [
+    "victory-road",
+    "indigo-plateau"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokefirered VictoryRoad scripts"
+  },
+  {
+   "id": "step-e4",
+   "title": "Elite Four plan",
+   "text": "Fought in a row: Ice, Fighting, Ghost, Dragon, then your rival. A team near Level 55-60 with Electric, Ice, Psychic and Ground moves and a bag of Full Restores and Revives.",
+   "stage": "e4-lorelei",
+   "places": [
+    "pokemon-league"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "ROM BPGE trainer table; pret/pokefirered src/data/trainers.h"
+  },
+  {
+   "id": "step-waterfall",
+   "title": "Waterfall in Icefall Cave",
+   "text": "HM07 Waterfall is in Icefall Cave on Four Island; help Lorelei with the Rockets there. Waterfall opens the way to the rest of the Sevii Islands' secrets.",
+   "stage": "story-sevii-sapphire",
+   "places": [
+    "icefall-cave",
+    "four-island"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "pret/pokefirered item_ball_scripts.inc (FourIsland_IcefallCave_1F HM07)"
+  },
+  {
+   "id": "step-tanoby",
+   "title": "Tanoby Ruins and Unown",
+   "text": "Seven Tanoby chambers on Seven Island's south coast hold the Unown forms. Solve the boulder puzzle at the Tanoby Key first; that opens all the chambers.",
+   "stage": "story-sevii-sapphire",
+   "places": [
+    "tanoby-ruins",
+    "tanoby-key",
+    "tanoby-chambers"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "pret/pokefirered SevenIsland_TanobyRuins scripts"
+  },
+  {
+   "id": "step-trade-rse",
+   "title": "Trade with Ruby, Sapphire and Emerald",
+   "text": "Once Celio's network is complete, you can trade with Ruby, Sapphire and Emerald: Hoenn Pokémon and the Hoenn starters come from there.",
+   "stage": "story-sevii-sapphire",
+   "places": [
+    "one-island"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "pret/pokefirered OneIsland_PokemonCenter_1F scripts"
+  },
+  {
+   "id": "step-teachy-tv",
+   "title": "Teachy TV and the help system",
+   "text": "After the old man in Viridian shows you how to catch a Pokémon, he gives you the Teachy TV with short lessons. Press L or R in most menus for the game's own help.",
+   "stage": null,
+   "places": [
+    "viridian-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "pret/pokefirered (Teachy TV)"
+  }
+ ],
+ "secrets": [
+  {
+   "id": "hid-pp-up-celadon-city",
+   "kind": "hidden-item",
+   "text": "A hidden PP Up lies here; raises one move's PP for good.",
+   "place": "celadon-city",
+   "x": 55,
+   "y": 20,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-rare-candy-cerulean-city",
+   "kind": "hidden-item",
+   "text": "A hidden Rare Candy lies here; one free level.",
+   "place": "cerulean-city",
+   "x": 18,
+   "y": 7,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-star-piece-resort-gorgeous",
+   "kind": "hidden-item",
+   "text": "A hidden Star Piece lies here; sells for 4,900.",
+   "place": "resort-gorgeous",
+   "x": 40,
+   "y": 12,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-max-revive-fuchsia-city",
+   "kind": "hidden-item",
+   "text": "A hidden Max Revive lies here; revives at full HP.",
+   "place": "fuchsia-city",
+   "x": 33,
+   "y": 26,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-fire-stone-mt-ember",
+   "kind": "hidden-item",
+   "text": "A hidden Fire Stone lies here; evolves Vulpix, Growlithe and Eevee.",
+   "place": "mt-ember",
+   "x": 18,
+   "y": 17,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-big-mushroom-mt-moon",
+   "kind": "hidden-item",
+   "text": "A hidden Big Mushroom lies on B1F; sells for 2,500.",
+   "place": "mt-moon",
+   "condition": "on B1F",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-big-mushroom-mt-moon-2",
+   "kind": "hidden-item",
+   "text": "A hidden Big Mushroom lies on B1F; sells for 2,500.",
+   "place": "mt-moon",
+   "condition": "on B1F",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-big-mushroom-mt-moon-3",
+   "kind": "hidden-item",
+   "text": "A hidden Big Mushroom lies on B1F; sells for 2,500.",
+   "place": "mt-moon",
+   "condition": "on B1F",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-moon-stone-mt-moon",
+   "kind": "hidden-item",
+   "text": "A hidden Moon Stone lies on B2F; evolves Nidorina, Nidorino, Clefairy, Jigglypuff and Skitty.",
+   "place": "mt-moon",
+   "condition": "on B2F",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-sacred-ash-navel-rock",
+   "kind": "hidden-item",
+   "text": "A hidden Sacred Ash lies here; revives the whole party.",
+   "place": "navel-rock",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-star-piece-treasure-beach",
+   "kind": "hidden-item",
+   "text": "A hidden Star Piece lies here; sells for 4,900.",
+   "place": "treasure-beach",
+   "x": 15,
+   "y": 29,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-moon-stone-pokemon-mansion",
+   "kind": "hidden-item",
+   "text": "A hidden Moon Stone lies on 1F; evolves Nidorina, Nidorino, Clefairy, Jigglypuff and Skitty.",
+   "place": "pokemon-mansion",
+   "condition": "on 1F",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-rare-candy-pokemon-mansion",
+   "kind": "hidden-item",
+   "text": "A hidden Rare Candy lies on 3F; one free level.",
+   "place": "pokemon-mansion",
+   "condition": "on 3F",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-big-mushroom-pokemon-tower",
+   "kind": "hidden-item",
+   "text": "A hidden Big Mushroom lies on 5F; sells for 2,500.",
+   "place": "pokemon-tower",
+   "condition": "on 5F",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-soothe-bell-pokemon-tower",
+   "kind": "hidden-item",
+   "text": "A hidden Soothe Bell lies on 7F; raises friendship faster.",
+   "place": "pokemon-tower",
+   "condition": "on 7F",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-max-elixir-power-plant",
+   "kind": "hidden-item",
+   "text": "A hidden Max Elixir lies here; restores all PP of every move.",
+   "place": "power-plant",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-thunder-stone-power-plant",
+   "kind": "hidden-item",
+   "text": "A hidden Thunder Stone lies here; evolves Pikachu and Eevee.",
+   "place": "power-plant",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-pp-up-rocket-hideout",
+   "kind": "hidden-item",
+   "text": "A hidden PP Up lies on B1F; raises one move's PP for good.",
+   "place": "rocket-hideout",
+   "condition": "on B1F",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-nugget-rocket-hideout",
+   "kind": "hidden-item",
+   "text": "A hidden Nugget lies on B3F; sells for 5,000.",
+   "place": "rocket-hideout",
+   "condition": "on B3F",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-leftovers-route-12",
+   "kind": "hidden-item",
+   "text": "A hidden Leftovers lies here; a held item that restores a little HP each turn.",
+   "place": "route-12",
+   "x": 14,
+   "y": 70,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-rare-candy-route-12",
+   "kind": "hidden-item",
+   "text": "A hidden Rare Candy lies here; one free level.",
+   "place": "route-12",
+   "x": 9,
+   "y": 116,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-pp-up-route-13",
+   "kind": "hidden-item",
+   "text": "A hidden PP Up lies here; raises one move's PP for good.",
+   "place": "route-13",
+   "x": 23,
+   "y": 14,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-zinc-route-14",
+   "kind": "hidden-item",
+   "text": "A hidden Zinc lies here; adds Sp. Def effort.",
+   "place": "route-14",
+   "x": 9,
+   "y": 20,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-leftovers-route-16",
+   "kind": "hidden-item",
+   "text": "A hidden Leftovers lies here; a held item that restores a little HP each turn.",
+   "place": "route-16",
+   "x": 31,
+   "y": 13,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-rare-candy-route-17",
+   "kind": "hidden-item",
+   "text": "A hidden Rare Candy lies here; one free level.",
+   "place": "route-17",
+   "x": 18,
+   "y": 83,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-pp-up-route-17",
+   "kind": "hidden-item",
+   "text": "A hidden PP Up lies here; raises one move's PP for good.",
+   "place": "route-17",
+   "x": 4,
+   "y": 68,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-max-revive-route-17",
+   "kind": "hidden-item",
+   "text": "A hidden Max Revive lies here; revives at full HP.",
+   "place": "route-17",
+   "x": 4,
+   "y": 125,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-max-elixir-route-17",
+   "kind": "hidden-item",
+   "text": "A hidden Max Elixir lies here; restores all PP of every move.",
+   "place": "route-17",
+   "x": 14,
+   "y": 157,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-lum-berry-route-23",
+   "kind": "hidden-item",
+   "text": "A hidden Lum Berry lies here; cures any status when held.",
+   "place": "route-23",
+   "x": 3,
+   "y": 18,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-max-elixir-route-23",
+   "kind": "hidden-item",
+   "text": "A hidden Max Elixir lies here; restores all PP of every move.",
+   "place": "route-23",
+   "x": 9,
+   "y": 8,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-rare-candy-route-6",
+   "kind": "hidden-item",
+   "text": "A hidden Rare Candy lies here; one free level.",
+   "place": "route-6",
+   "x": 19,
+   "y": 5,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-lum-berry-route-8",
+   "kind": "hidden-item",
+   "text": "A hidden Lum Berry lies here; cures any status when held.",
+   "place": "route-8",
+   "x": 38,
+   "y": 11,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-rare-candy-route-9",
+   "kind": "hidden-item",
+   "text": "A hidden Rare Candy lies here; one free level.",
+   "place": "route-9",
+   "x": 63,
+   "y": 2,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-leaf-stone-safari-zone",
+   "kind": "hidden-item",
+   "text": "A hidden Leaf Stone lies in the center area; evolves Gloom, Weepinbell, Exeggcute and Nuzleaf.",
+   "place": "safari-zone",
+   "condition": "in the center area",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-nugget-saffron-city",
+   "kind": "hidden-item",
+   "text": "A hidden Nugget lies on 2F; sells for 5,000.",
+   "place": "saffron-city",
+   "condition": "on 2F",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-nugget-seafoam-islands",
+   "kind": "hidden-item",
+   "text": "A hidden Nugget lies on B3F; sells for 5,000.",
+   "place": "seafoam-islands",
+   "condition": "on B3F",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-water-stone-seafoam-islands",
+   "kind": "hidden-item",
+   "text": "A hidden Water Stone lies on B4F; evolves Poliwhirl, Shellder, Staryu, Eevee and Lombre.",
+   "place": "seafoam-islands",
+   "condition": "on B4F",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-hp-up-silph-co",
+   "kind": "hidden-item",
+   "text": "A hidden HP Up lies on 10F; adds HP effort.",
+   "place": "silph-co",
+   "condition": "on 10F",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-protein-silph-co",
+   "kind": "hidden-item",
+   "text": "A hidden Protein lies on 3F; adds Attack effort.",
+   "place": "silph-co",
+   "condition": "on 3F",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-iron-silph-co",
+   "kind": "hidden-item",
+   "text": "A hidden Iron lies on 4F; adds Defense effort.",
+   "place": "silph-co",
+   "condition": "on 4F",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-pp-up-silph-co",
+   "kind": "hidden-item",
+   "text": "A hidden PP Up lies on 5F; raises one move's PP for good.",
+   "place": "silph-co",
+   "condition": "on 5F",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-carbos-silph-co",
+   "kind": "hidden-item",
+   "text": "A hidden Carbos lies on 6F; adds Speed effort.",
+   "place": "silph-co",
+   "condition": "on 6F",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-zinc-silph-co",
+   "kind": "hidden-item",
+   "text": "A hidden Zinc lies on 7F; adds Sp. Def effort.",
+   "place": "silph-co",
+   "condition": "on 7F",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-nugget-silph-co",
+   "kind": "hidden-item",
+   "text": "A hidden Nugget lies on 8F; sells for 5,000.",
+   "place": "silph-co",
+   "condition": "on 8F",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-calcium-silph-co",
+   "kind": "hidden-item",
+   "text": "A hidden Calcium lies on 9F; adds Sp. Atk effort.",
+   "place": "silph-co",
+   "condition": "on 9F",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-star-piece-outcast-island",
+   "kind": "hidden-item",
+   "text": "A hidden Star Piece lies here; sells for 4,900.",
+   "place": "outcast-island",
+   "x": 16,
+   "y": 23,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-pp-up-three-island",
+   "kind": "hidden-item",
+   "text": "A hidden PP Up lies here; raises one move's PP for good.",
+   "place": "three-island",
+   "x": 5,
+   "y": 13,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-lum-berry-berry-forest",
+   "kind": "hidden-item",
+   "text": "A hidden Lum Berry lies here; cures any status when held.",
+   "place": "berry-forest",
+   "x": 8,
+   "y": 5,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-nugget-three-isle-path",
+   "kind": "hidden-item",
+   "text": "A hidden Nugget lies here; sells for 5,000.",
+   "place": "three-isle-path",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-pp-max-cape-brink",
+   "kind": "hidden-item",
+   "text": "A hidden PP Max lies here; raises a move's PP to the maximum.",
+   "place": "cape-brink",
+   "x": 16,
+   "y": 28,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-rare-candy-cape-brink",
+   "kind": "hidden-item",
+   "text": "A hidden Rare Candy lies here; one free level.",
+   "place": "cape-brink",
+   "x": 15,
+   "y": 13,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "gift-magikarp",
+   "kind": "gift",
+   "text": "A salesman in the Pokémon Center at the foot of Mt. Moon (Route 4) sells a Magikarp for 500. It becomes Gyarados at Level 20.",
+   "place": "route-4",
+   "quality": "reference-only",
+   "source": "pret/pokefirered Route4_PokemonCenter_1F (givemon SPECIES_MAGIKARP, 5)"
+  },
+  {
+   "id": "gift-eevee",
+   "kind": "gift",
+   "text": "Enter Celadon Mansion from the back and climb to the roof room: an Eevee (Level 25) sits in a Poké Ball.",
+   "place": "celadon-city",
+   "quality": "reference-only",
+   "source": "pret/pokefirered CeladonCity_Condominiums_RoofRoom (givemon SPECIES_EEVEE, 25)"
+  },
+  {
+   "id": "gift-lapras",
+   "kind": "gift",
+   "text": "On Silph Co. 7F an employee gives you a Lapras (Level 25) after you clear the floor.",
+   "place": "silph-co",
+   "condition": "on 7F",
+   "quality": "reference-only",
+   "source": "pret/pokefirered SilphCo_7F (givemon SPECIES_LAPRAS, 25)"
+  },
+  {
+   "id": "gift-dojo",
+   "kind": "gift",
+   "text": "Beat the Fighting Dojo next to Saffron's gym and take Hitmonlee or Hitmonchan (Level 25); you can only have one.",
+   "place": "saffron-city",
+   "quality": "reference-only",
+   "source": "pret/pokefirered SaffronCity_Dojo (givemon ... 25)"
+  },
+  {
+   "id": "gift-fossils",
+   "kind": "gift",
+   "text": "On Mt. Moon B2F the Super Nerd guards two fossils: Dome (Kabuto) and Helix (Omanyte). You get only one. Cinnabar's lab revives them.",
+   "place": "mt-moon",
+   "condition": "on B2F",
+   "quality": "reference-only",
+   "source": "pret/pokefirered MtMoon_B2F scripts"
+  },
+  {
+   "id": "gift-old-amber",
+   "kind": "gift",
+   "text": "The Pewter Museum's back room (reach it with Cut from the east) gives the Old Amber, which revives into Aerodactyl.",
+   "place": "pewter-city",
+   "condition": "needs Cut",
+   "quality": "reference-only",
+   "source": "pret/pokefirered PewterCity_Museum scripts"
+  },
+  {
+   "id": "gift-togepi-egg",
+   "kind": "gift",
+   "text": "After the National Pokédex, an old man in the Water Labyrinth (Five Island) gives a Togepi Egg if your lead Pokémon is very friendly.",
+   "place": "water-labyrinth",
+   "quality": "reference-only",
+   "source": "pret/pokefirered FiveIsland_WaterLabyrinth (giveegg SPECIES_TOGEPI)"
+  },
+  {
+   "id": "gift-tm-dig",
+   "kind": "gift",
+   "text": "The Rocket grunt behind the robbed house in Cerulean returns TM28 Dig when you beat him.",
+   "place": "cerulean-city",
+   "quality": "reference-only",
+   "source": "pret/pokefirered CeruleanCity scripts (TM28)"
+  },
+  {
+   "id": "gift-tm-psychic",
+   "kind": "gift",
+   "text": "Mr. Psychic's house in Saffron gives TM29 Psychic.",
+   "place": "saffron-city",
+   "quality": "reference-only",
+   "source": "pret/pokefirered SaffronCity_MrPsychicsHouse (TM29)"
+  },
+  {
+   "id": "gift-tm-return",
+   "kind": "gift",
+   "text": "A little girl upstairs in Route 12's north gate gives TM27 Return.",
+   "place": "route-12",
+   "quality": "reference-only",
+   "source": "pret/pokefirered Route12_NorthEntrance_2F (TM27)"
+  },
+  {
+   "id": "gift-exp-share",
+   "kind": "gift",
+   "text": "Oak's aide in Route 15's gate gives the Exp. Share once you own 50 species.",
+   "place": "route-15",
+   "quality": "reference-only",
+   "source": "pret/pokefirered Route15_WestEntrance_2F (ITEM_EXP_SHARE)"
+  },
+  {
+   "id": "gift-amulet-coin",
+   "kind": "gift",
+   "text": "Oak's aide in Route 16's north gate gives the Amulet Coin (double prize money) once you own 40 species.",
+   "place": "route-16",
+   "quality": "reference-only",
+   "source": "pret/pokefirered Route16_NorthEntrance_2F (ITEM_AMULET_COIN)"
+  },
+  {
+   "id": "gift-soothe-bell",
+   "kind": "hidden-item",
+   "text": "A Soothe Bell lies on the top floor of Pokémon Tower (after Mr. Fuji is free).",
+   "place": "pokemon-tower",
+   "condition": "on 7F",
+   "quality": "reference-only",
+   "source": "pret/pokefirered PokemonTower_7F (ITEM_SOOTHE_BELL)"
+  },
+  {
+   "id": "gift-macho-brace",
+   "kind": "gift",
+   "text": "The Macho Brace (double effort points while held) lies in Giovanni's gym in Viridian.",
+   "place": "viridian-city",
+   "quality": "reference-only",
+   "source": "pret/pokefirered ViridianCity_Gym (ITEM_MACHO_BRACE)"
+  },
+  {
+   "id": "item-master-ball",
+   "kind": "gift",
+   "text": "The Silph Co. president on 11F gives you the Master Ball after Giovanni.",
+   "place": "silph-co",
+   "condition": "on 11F",
+   "quality": "reference-only",
+   "source": "pret/pokefirered SilphCo_11F (ITEM_MASTER_BALL)"
+  },
+  {
+   "id": "item-metal-coat",
+   "kind": "hidden-item",
+   "text": "A Metal Coat lies at the Memorial Pillar on Five Island (Onix and Scyther need it for a trade evolution).",
+   "place": "memorial-pillar",
+   "quality": "reference-only",
+   "source": "pret/pokefirered item_ball_scripts.inc (FiveIsland_MemorialPillar_MetalCoat)"
+  },
+  {
+   "id": "item-dragon-scale",
+   "kind": "hidden-item",
+   "text": "A Dragon Scale lies on Six Island's Water Path (Seadra needs it to become Kingdra in a trade).",
+   "place": "water-path",
+   "quality": "reference-only",
+   "source": "pret/pokefirered item_ball_scripts.inc (SixIsland_WaterPath_DragonScale)"
+  },
+  {
+   "id": "item-kings-rock",
+   "kind": "hidden-item",
+   "text": "A King's Rock lies in Sevault Canyon on Seven Island (Poliwhirl and Slowpoke trade evolutions).",
+   "place": "sevault-canyon",
+   "quality": "reference-only",
+   "source": "pret/pokefirered item_ball_scripts.inc (SevenIsland_SevaultCanyon_KingsRock)"
+  },
+  {
+   "id": "item-up-grade",
+   "kind": "hidden-item",
+   "text": "The Up-Grade for Porygon lies in the Rocket Warehouse on Five Island.",
+   "place": "rocket-warehouse",
+   "quality": "reference-only",
+   "source": "pret/pokefirered item_ball_scripts.inc (FiveIsland_RocketWarehouse_UpGrade)"
+  },
+  {
+   "id": "item-sun-stone",
+   "kind": "hidden-item",
+   "text": "A Sun Stone (Gloom to Bellossom, Sunkern to Sunflora) lies in Six Island's Ruin Valley.",
+   "place": "ruin-valley",
+   "quality": "reference-only",
+   "source": "pret/pokefirered item_ball_scripts.inc (SixIsland_RuinValley_SunStone)"
+  },
+  {
+   "id": "tip-tm42",
+   "kind": "gift",
+   "text": "At the Memorial Pillar on Five Island, a mourning man rewards you with TM42 Facade for leaving Lemonade at the pillar.",
+   "place": "memorial-pillar",
+   "quality": "reference-only",
+   "source": "pret/pokefirered FiveIsland_MemorialPillar (TM42)"
+  },
+  {
+   "id": "tip-game-corner",
+   "kind": "tip",
+   "text": "The Game Corner prize room next door trades coins for Pokémon: Abra 120, Clefairy 750, Pinsir 2500, Dratini 4600, Porygon 6500 coins. Buy coins or find them on the floor.",
+   "place": "celadon-city",
+   "quality": "reference-only",
+   "source": "pret/pokefirered CeladonCity_GameCorner_PrizeRoom scripts (.ifdef FIRERED/LEAFGREEN)"
+  },
+  {
+   "id": "trade-mr-mime",
+   "kind": "trade",
+   "text": "A man in the Route 2 house trades his Mr. Mime for an Abra.",
+   "place": "route-2",
+   "quality": "reference-only",
+   "source": "pret/pokefirered Route2_House, src/data/ingame_trades.h"
+  },
+  {
+   "id": "trade-jynx",
+   "kind": "trade",
+   "text": "A Cerulean City house trades a Jynx for your Poliwhirl.",
+   "place": "cerulean-city",
+   "quality": "reference-only",
+   "source": "pret/pokefirered CeruleanCity_House3, ingame_trades.h"
+  },
+  {
+   "id": "trade-farfetchd",
+   "kind": "trade",
+   "text": "A Vermilion house trades a Farfetch'd (holding a Stick) for a Spearow.",
+   "place": "vermilion-city",
+   "quality": "reference-only",
+   "source": "pret/pokefirered VermilionCity_House2, ingame_trades.h"
+  },
+  {
+   "id": "trade-nidoran",
+   "kind": "trade",
+   "text": "At the Underground Path's north entrance (Route 5) a woman trades her Nidoran♂ for your Nidoran♀.",
+   "place": "underground-path",
+   "quality": "reference-only",
+   "source": "pret/pokefirered UndergroundPath_NorthEntrance, ingame_trades.h"
+  },
+  {
+   "id": "trade-nidorina",
+   "kind": "trade",
+   "text": "Route 11's gate (2nd floor) trades a Nidorino for your Nidorina.",
+   "place": "route-11",
+   "quality": "reference-only",
+   "source": "pret/pokefirered Route11_EastEntrance_2F, ingame_trades.h"
+  },
+  {
+   "id": "trade-lickitung",
+   "kind": "trade",
+   "text": "Route 18's gate (2nd floor) trades a Lickitung for your Slowbro.",
+   "place": "route-18",
+   "quality": "reference-only",
+   "source": "pret/pokefirered Route18_EastEntrance_2F, ingame_trades.h"
+  },
+  {
+   "id": "trade-cinnabar",
+   "kind": "trade",
+   "text": "Cinnabar's Pokémon Lab has three trades: Electrode for Raichu, Tangela for Venonat, and Seel for Ponyta.",
+   "place": "cinnabar-island",
+   "quality": "reference-only",
+   "source": "pret/pokefirered CinnabarIsland_PokemonLab_*, ingame_trades.h"
+  },
+  {
+   "id": "event-electrode",
+   "kind": "event",
+   "text": "Several items in the Power Plant are Electrode (Level 34) in disguise.",
+   "place": "power-plant",
+   "quality": "reference-only",
+   "source": "pret/pokefirered PowerPlant (setwildbattle SPECIES_ELECTRODE, 34)"
+  },
+  {
+   "id": "tip-safari",
+   "kind": "tip",
+   "text": "Kanto's Safari Zone has Chansey, Kangaskhan, Tauros, Scyther and Dratini (Super Rod). You throw Safari Balls, bait or rocks; no battling.",
+   "place": "safari-zone",
+   "quality": "reference-only",
+   "source": "pret/pokefirered wild_encounters.json (SAFARI_ZONE_*)"
+  },
+  {
+   "id": "tip-pattern-bush",
+   "kind": "tip",
+   "text": "Pattern Bush on Six Island is the place for Heracross; the Altering Cave there has only Zubat in the English game.",
+   "place": "pattern-bush",
+   "quality": "reference-only",
+   "source": "pret/pokefirered wild_encounters.json"
+  },
+  {
+   "id": "tip-lost-cave",
+   "kind": "tip",
+   "text": "Lost Cave off Resort Gorgeous (Five Island) is a maze of look-alike rooms with Gastly and Haunter. Selphy's butler asks you to find her in it.",
+   "place": "lost-cave",
+   "quality": "reference-only",
+   "source": "pret/pokefirered FiveIsland_LostCave scripts"
+  },
+  {
+   "id": "tip-berry-forest",
+   "kind": "tip",
+   "text": "Berry Forest on Three Island is full of hidden berries; Drowzee and Exeggcute live there.",
+   "place": "berry-forest",
+   "quality": "reference-only",
+   "source": "pret/pokefirered map.json hidden items, wild_encounters.json"
+  },
+  {
+   "id": "tip-cerulean-cave",
+   "kind": "tip",
+   "text": "Cerulean Cave's wild Pokémon are the highest-level in Kanto (Ditto, Electrode, Kadabra, Chansey, Rhydon...).",
+   "place": "cerulean-cave",
+   "quality": "reference-only",
+   "source": "pret/pokefirered wild_encounters.json (CERULEAN_CAVE_*)"
+  },
+  {
+   "id": "tip-dotted-hole",
+   "kind": "event",
+   "text": "Dotted Hole on Six Island: solve its Braille clue (Cut on the right spot) and go down to the Sapphire, where Gideon takes it from you. Catch him at the Rocket Warehouse.",
+   "place": "dotted-hole",
+   "quality": "reference-only",
+   "source": "pret/pokefirered SixIsland_DottedHole scripts"
+  },
+  {
+   "id": "event-navel-birth",
+   "kind": "legendary",
+   "text": "Navel Rock (Ho-Oh and Lugia) and Birth Island (Deoxys) were opened by event tickets (Mystic Ticket, Aurora Ticket); normal play never reaches them.",
+   "place": "navel-rock",
+   "quality": "reference-only",
+   "source": "pret/pokefirered NavelRock, BirthIsland scripts"
+  }
+ ],
+ "evolutions": [
+  {
+   "id": "evo-kadabra",
+   "species": 64,
+   "name": "Kadabra",
+   "text": "Evolves only through a link trade (Game Link Cable or the Wireless Adapter; trades with Ruby, Sapphire and Emerald need Celio's network finished). Abra on Routes 24 and 25 (or the Game Corner) are the start.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h; wild_encounters.json"
+  },
+  {
+   "id": "evo-machoke",
+   "species": 67,
+   "name": "Machoke",
+   "text": "Evolves only through a link trade (Game Link Cable or the Wireless Adapter; trades with Ruby, Sapphire and Emerald need Celio's network finished). Machop in Rock Tunnel, Victory Road and Mt. Ember are the start.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h; wild_encounters.json"
+  },
+  {
+   "id": "evo-graveler",
+   "species": 75,
+   "name": "Graveler",
+   "text": "Evolves only through a link trade (Game Link Cable or the Wireless Adapter; trades with Ruby, Sapphire and Emerald need Celio's network finished). Geodude in Mt. Moon, Rock Tunnel and Victory Road are the start.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h; wild_encounters.json"
+  },
+  {
+   "id": "evo-haunter",
+   "species": 93,
+   "name": "Haunter",
+   "text": "Evolves only through a link trade (Game Link Cable or the Wireless Adapter; trades with Ruby, Sapphire and Emerald need Celio's network finished). Gastly in Pokémon Tower are the start.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h; wild_encounters.json"
+  },
+  {
+   "id": "evo-poliwhirl",
+   "species": 61,
+   "name": "Poliwhirl",
+   "text": "A Water Stone gives Poliwrath; traded holding a King's Rock (Sevault Canyon) it becomes Politoed.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-slowpoke",
+   "species": 79,
+   "name": "Slowpoke",
+   "text": "Level 37 gives Slowbro; traded holding a King's Rock it becomes Slowking. Slowpoke lives on Route 12 and Four Island in LeafGreen.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h; wild_encounters.json"
+  },
+  {
+   "id": "evo-onix",
+   "species": 95,
+   "name": "Onix",
+   "text": "Traded holding a Metal Coat (Memorial Pillar, Five Island) it becomes Steelix.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-scyther",
+   "species": 123,
+   "name": "Scyther",
+   "text": "Traded holding a Metal Coat it becomes Scizor. Scyther is FireRed-only; trade one in.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-seadra",
+   "species": 117,
+   "name": "Seadra",
+   "text": "Traded holding a Dragon Scale (Water Path, Six Island) it becomes Kingdra.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-porygon",
+   "species": 137,
+   "name": "Porygon",
+   "text": "Traded holding the Up-Grade (Rocket Warehouse) it becomes Porygon2.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-eevee",
+   "species": 133,
+   "name": "Eevee",
+   "text": "Fire, Water or Thunder Stone (Celadon Dept. Store 4F) for Flareon, Vaporeon or Jolteon. FireRed/LeafGreen have no clock, so Espeon and Umbreon cannot evolve here: trade Eevee to Ruby/Sapphire/Emerald.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h; src/pokemon.c (the day/night friendship checks are commented out)"
+  },
+  {
+   "id": "evo-golbat",
+   "species": 42,
+   "name": "Golbat",
+   "text": "Evolves into Crobat on a level-up with high friendship (220). The Soothe Bell from Pokémon Tower speeds it up.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-chansey",
+   "species": 113,
+   "name": "Chansey",
+   "text": "Evolves into Blissey with high friendship. Chansey lives in the Safari Zone and Cerulean Cave.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-pichu",
+   "species": 172,
+   "name": "Pichu",
+   "text": "Pichu (from breeding Pikachu) evolves with high friendship; Pikachu then needs a Thunder Stone.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-cleffa",
+   "species": 173,
+   "name": "Cleffa",
+   "text": "Cleffa (breed Clefairy) evolves with high friendship; Clefairy then needs a Moon Stone (Mt. Moon).",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-igglybuff",
+   "species": 174,
+   "name": "Igglybuff",
+   "text": "Igglybuff (breed Jigglypuff) evolves with high friendship; Jigglypuff then needs a Moon Stone.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-togepi",
+   "species": 175,
+   "name": "Togepi",
+   "text": "The Togepi from the Water Labyrinth egg evolves into Togetic with high friendship.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-gloom",
+   "species": 44,
+   "name": "Gloom",
+   "text": "Leaf Stone gives Vileplume, Sun Stone (Ruin Valley) gives Bellossom. Oddish is a FireRed Pokémon: trade it in.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-weepinbell",
+   "species": 70,
+   "name": "Weepinbell",
+   "text": "A Leaf Stone evolves it into Victreebel. Bellsprout lives on Routes 24-25 and others.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-nidorina",
+   "species": 30,
+   "name": "Nidorina",
+   "text": "A Moon Stone evolves it into Nidoqueen; Nidorino likewise becomes Nidoking.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-nidorino",
+   "species": 33,
+   "name": "Nidorino",
+   "text": "A Moon Stone evolves it into Nidoking.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-clefairy",
+   "species": 35,
+   "name": "Clefairy",
+   "text": "A Moon Stone evolves it into Clefable. Mt. Moon has the first stones.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-jigglypuff",
+   "species": 39,
+   "name": "Jigglypuff",
+   "text": "A Moon Stone evolves it into Wigglytuff.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-vulpix",
+   "species": 37,
+   "name": "Vulpix",
+   "text": "A Fire Stone evolves it into Ninetales.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-growlithe",
+   "species": 58,
+   "name": "Growlithe",
+   "text": "A Fire Stone evolves it into Arcanine. Growlithe is FireRed-only: trade it in.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-pikachu",
+   "species": 25,
+   "name": "Pikachu",
+   "text": "A Thunder Stone evolves it into Raichu. Pikachu lives in Viridian Forest and the Power Plant.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-shellder",
+   "species": 90,
+   "name": "Shellder",
+   "text": "A Water Stone evolves it into Cloyster. Shellder is FireRed-only.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-staryu",
+   "species": 120,
+   "name": "Staryu",
+   "text": "A Water Stone evolves it into Starmie.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-exeggcute",
+   "species": 102,
+   "name": "Exeggcute",
+   "text": "A Leaf Stone evolves it into Exeggutor.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-tyrogue",
+   "species": 236,
+   "name": "Tyrogue",
+   "text": "At Level 20: Attack higher than Defense gives Hitmonlee, lower Hitmonchan, equal Hitmontop. Tyrogue comes from breeding a Hitmon (Dojo gift) with Ditto.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-magikarp",
+   "species": 129,
+   "name": "Magikarp",
+   "text": "Level 20 gives Gyarados. The Route 4 salesman sells one for 500.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-dratini",
+   "species": 147,
+   "name": "Dratini",
+   "text": "Level 30 gives Dragonair, Level 55 Dragonite.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-abra",
+   "species": 63,
+   "name": "Abra",
+   "text": "Level 16 gives Kadabra, which then needs a trade.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-machop",
+   "species": 66,
+   "name": "Machop",
+   "text": "Level 28 gives Machoke, which then needs a trade.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-gastly",
+   "species": 92,
+   "name": "Gastly",
+   "text": "Level 25 gives Haunter, which then needs a trade.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-geodude",
+   "species": 74,
+   "name": "Geodude",
+   "text": "Level 25 gives Graveler, which then needs a trade.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-slowbro",
+   "species": 80,
+   "name": "Slowbro",
+   "text": "Slowbro does not evolve; Slowking comes from Slowpoke traded with a King's Rock.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-kabuto",
+   "species": 140,
+   "name": "Kabuto",
+   "text": "Level 40 gives Kabutops; Omanyte becomes Omastar at 40.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-sunkern",
+   "species": 191,
+   "name": "Sunkern",
+   "text": "A Sun Stone evolves it into Sunflora.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-azurill",
+   "species": 298,
+   "name": "Azurill",
+   "text": "Evolves into Marill with high friendship. In Gen III Azurill hatches from any Marill or Azumarill egg (no incense needed); Marill is a LeafGreen catch on the Sevii Islands.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-wooper",
+   "species": 194,
+   "name": "Wooper",
+   "text": "Level 20 gives Quagsire.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-sneasel",
+   "species": 215,
+   "name": "Sneasel",
+   "text": "Sneasel does not evolve in Gen III (Weavile came later). It lives in Icefall Cave.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-murkrow",
+   "species": 198,
+   "name": "Murkrow",
+   "text": "Murkrow does not evolve in Gen III (no Dusk Stone yet).",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-misdreavus",
+   "species": 200,
+   "name": "Misdreavus",
+   "text": "Misdreavus does not evolve in Gen III.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-larvitar",
+   "species": 246,
+   "name": "Larvitar",
+   "text": "Level 30 gives Pupitar, 55 Tyranitar. Larvitar lives in Sevault Canyon on Seven Island (rare).",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  }
+ ],
+ "notes": [
+  {
+   "id": "note-exclusives",
+   "kind": "exclusive",
+   "title": "Only in LeafGreen",
+   "text": "Wild only in LeafGreen: Sandshrew, Sandslash, Vulpix, Bellsprout, Weepinbell, Slowpoke, Slowbro, Staryu, Magmar, Pinsir, Marill, Misdreavus, Sneasel, Remoraid, Mantine. Their evolutions follow.",
+   "species": [
+    27,
+    28,
+    37,
+    69,
+    70,
+    79,
+    80,
+    120,
+    126,
+    127,
+    183,
+    200,
+    215,
+    223,
+    226
+   ],
+   "names": [
+    "Sandshrew",
+    "Sandslash",
+    "Vulpix",
+    "Bellsprout",
+    "Weepinbell",
+    "Slowpoke",
+    "Slowbro",
+    "Staryu",
+    "Magmar",
+    "Pinsir",
+    "Marill",
+    "Misdreavus",
+    "Sneasel",
+    "Remoraid",
+    "Mantine"
+   ],
+   "quality": "reference-only",
+   "source": "pret/pokefirered wild_encounters.json (FireRed vs LeafGreen tables)"
+  },
+  {
+   "id": "note-exclusives-other",
+   "kind": "exclusive",
+   "title": "Trade from FireRed",
+   "text": "Wild only in FireRed: Ekans, Arbok, Oddish, Gloom, Psyduck, Golduck, Growlithe, Shellder, Scyther, Electabuzz, Wooper, Murkrow, Qwilfish, Delibird, Skarmory. Trade for them or their evolutions.",
+   "species": [
+    23,
+    24,
+    43,
+    44,
+    54,
+    55,
+    58,
+    90,
+    123,
+    125,
+    194,
+    198,
+    211,
+    225,
+    227
+   ],
+   "names": [
+    "Ekans",
+    "Arbok",
+    "Oddish",
+    "Gloom",
+    "Psyduck",
+    "Golduck",
+    "Growlithe",
+    "Shellder",
+    "Scyther",
+    "Electabuzz",
+    "Wooper",
+    "Murkrow",
+    "Qwilfish",
+    "Delibird",
+    "Skarmory"
+   ],
+   "quality": "reference-only",
+   "source": "pret/pokefirered wild_encounters.json (FireRed vs LeafGreen tables)"
+  },
+  {
+   "id": "note-legendaries",
+   "kind": "legendary",
+   "title": "Legendaries",
+   "text": "Articuno (Seafoam, 50), Zapdos (Power Plant, 50), Moltres (Mt. Ember, 50), Mewtwo (Cerulean Cave, 70) and one roaming beast (50). Snorlax twice (30). Mew, Lugia, Ho-Oh and Deoxys needed events.",
+   "species": [
+    144,
+    145,
+    146,
+    150
+   ],
+   "names": [
+    "Articuno",
+    "Zapdos",
+    "Moltres",
+    "Mewtwo"
+   ],
+   "quality": "reference-only",
+   "source": "pret/pokefirered setwildbattle scripts, roamer.c"
+  },
+  {
+   "id": "note-roamer",
+   "kind": "roamer",
+   "title": "The roaming beast",
+   "text": "After the National Pokédex one beast roams Kanto: Squirtle's owner gets Raikou, Bulbasaur's Entei, Charmander's Suicune (all Level 50). It moves when you change routes and flees on its first turn.",
+   "species": [
+    243,
+    244,
+    245
+   ],
+   "names": [
+    "Raikou",
+    "Entei",
+    "Suicune"
+   ],
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/roamer.c"
+  },
+  {
+   "id": "note-sevii",
+   "kind": "version",
+   "title": "The Sevii Islands",
+   "text": "New to FireRed/LeafGreen: seven islands south of Kanto. 1-3 come with the main story (after the 7th badge), 4-7 after the Hall of Fame. They hold Johto Pokémon, the Trainer Tower and the Tanoby Ruins.",
+   "place": "one-island",
+   "quality": "reference-only",
+   "source": "pret/pokefirered map scripts"
+  },
+  {
+   "id": "note-network",
+   "kind": "trade",
+   "title": "Celio's network",
+   "text": "Trading with Ruby, Sapphire and Emerald needs both the Ruby (Mt. Ember) and the Sapphire (Dotted Hole, then the Rocket Warehouse) given to Celio on One Island.",
+   "place": "one-island",
+   "quality": "reference-only",
+   "source": "pret/pokefirered OneIsland_PokemonCenter_1F scripts"
+  },
+  {
+   "id": "note-no-clock",
+   "kind": "tip",
+   "title": "No clock",
+   "text": "FireRed and LeafGreen have no real-time clock: no day and night, no berry growth, and no Espeon or Umbreon by evolution.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/pokemon.c (EVO_FRIENDSHIP_DAY/NIGHT commented out)"
+  },
+  {
+   "id": "note-split",
+   "kind": "tip",
+   "title": "Physical or special by type",
+   "text": "In Gen III a move's type decides whether it is physical or special: Fire, Water, Grass, Electric, Ice, Psychic, Dragon and Dark are special; the rest physical.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/battle_script_commands.c"
+  },
+  {
+   "id": "note-gen3-changes",
+   "kind": "tip",
+   "title": "New since Red and Blue",
+   "text": "Abilities, natures, held items, Dark and Steel types, double battles and breeding all work here, so Kanto's old tricks change: Psychic is no longer unbeatable, and Koffing's Levitate dodges Ground.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/battle_util.c"
+  },
+  {
+   "id": "note-hms",
+   "kind": "tip",
+   "title": "HM list",
+   "text": "Cut (S.S. Anne captain), Fly (Route 16 house), Surf (Safari Zone), Strength (Fuchsia warden), Flash (Route 2 aide), Rock Smash (Ember Spa, Kindle Road), Waterfall (Icefall Cave).",
+   "quality": "reference-only",
+   "source": "pret/pokefirered map scripts (giveitem ITEM_HM*)"
+  },
+  {
+   "id": "note-help",
+   "kind": "tip",
+   "title": "In-game help",
+   "text": "Press L or R in most menus for the game's help screen; the Teachy TV shows short lessons. The Vs. Seeker (Vermilion's Pokémon Center) recharges as you walk.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/help_system.c, event_scripts.s"
+  },
+  {
+   "id": "note-game-corner",
+   "kind": "gift",
+   "title": "Game Corner Pokémon",
+   "text": "LeafGreen's prize room offers Abra 120, Clefairy 750, Pinsir 2500, Dratini 4600, Porygon 6500 coins. Coins can be bought or won at the slots.",
+   "place": "celadon-city",
+   "species": [
+    63,
+    35,
+    147,
+    137,
+    127
+   ],
+   "names": [
+    "Abra",
+    "Clefairy",
+    "Dratini",
+    "Porygon",
+    "Pinsir"
+   ],
+   "quality": "reference-only",
+   "source": "pret/pokefirered CeladonCity_GameCorner_PrizeRoom scripts"
+  },
+  {
+   "id": "note-starters",
+   "kind": "gift",
+   "title": "Starters' types",
+   "text": "Bulbasaur (Grass/Poison) becomes Venusaur, Charmander (Fire) Charizard (Fire/Flying), Squirtle (Water) Blastoise. The rival always takes the one with the type edge.",
+   "species": [
+    1,
+    4,
+    7
+   ],
+   "names": [
+    "Bulbasaur",
+    "Charmander",
+    "Squirtle"
+   ],
+   "quality": "reference-only",
+   "source": "pret/pokefirered src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "note-johto",
+   "kind": "version",
+   "title": "Johto Pokémon after the National Dex",
+   "text": "After the National Pokédex, many Johto Pokémon appear: the Sevii Islands' routes, Kanto's water with the Super Rod, and caves. Johto starters and legendaries other than the beasts need trades.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered wild_encounters.json"
+  },
+  {
+   "id": "note-daycare",
+   "kind": "tip",
+   "title": "Two day cares",
+   "text": "The Route 5 day care only raises one Pokémon (it gains experience as you walk). Breeding needs the day care on Four Island, which takes two.",
+   "place": "four-island",
+   "quality": "reference-only",
+   "source": "pret/pokefirered Route5_PokemonDayCare, FourIsland_PokemonDayCare maps; src/daycare.c"
+  },
+  {
+   "id": "note-tutors",
+   "kind": "tip",
+   "title": "Move tutors",
+   "text": "One-time tutors: Mega Punch and Mega Kick (Route 4), Seismic Toss (Pewter Museum), Rock Slide (Rock Tunnel), Substitute (Fuchsia), Double-Edge (Victory Road), Body Slam (Four Island), Explosion (Mt. Ember), Swords Dance (Seven Island) and more.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/scripts/move_tutors.inc"
+  },
+  {
+   "id": "note-ultimate-moves",
+   "kind": "tip",
+   "title": "Frenzy Plant, Blast Burn, Hydro Cannon",
+   "text": "An old woman in the house at Cape Brink (Two Island) teaches Venusaur, Charizard or Blastoise its strongest move if it is your lead and very friendly.",
+   "place": "cape-brink",
+   "species": [
+    3,
+    6,
+    9
+   ],
+   "names": [
+    "Venusaur",
+    "Charizard",
+    "Blastoise"
+   ],
+   "quality": "reference-only",
+   "source": "pret/pokefirered data/scripts/move_tutors.inc (CapeBrinkTutor), src/party_menu.c"
+  },
+  {
+   "id": "note-shiny",
+   "kind": "tip",
+   "title": "Shiny odds",
+   "text": "A wild or gift Pokémon is shiny with a chance of 8 in 65,536 (about 1 in 8,192). Its colours show in battle and on the summary screen.",
+   "quality": "reference-only",
+   "source": "pret/pokeemerald include/constants/pokemon.h (SHINY_ODDS, shared Gen III rule)"
+  },
+  {
+   "id": "note-vs-seeker",
+   "kind": "tip",
+   "title": "Rematches",
+   "text": "The VS Seeker (Vermilion's Pokémon Center) shows which trainers on the current route want a rematch; it recharges as you walk. Rematch teams grow with your progress.",
+   "quality": "reference-only",
+   "source": "pret/pokefirered event_scripts.s (VSSeekerWoman), src/vs_seeker.c"
+  },
+  {
+   "id": "note-trainer-tower",
+   "kind": "tip",
+   "title": "Trainer Tower",
+   "text": "Seven Island's Trainer Tower has eight floors of preset trainers in single, double and knockout modes, timed. It is the postgame's battle facility.",
+   "place": "trainer-tower",
+   "quality": "reference-only",
+   "source": "pret/pokefirered SevenIsland_TrainerTower scripts"
+  }
+ ]
+}

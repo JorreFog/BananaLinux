@@ -59,10 +59,11 @@ namespace banana
 		// the part touched since the last call (empty: none); clears the mark
 		Damage takeDamage(int screen) { Damage d = dmg[screen]; dmg[screen] = Damage(); return d; }
 		// everything again (new scanout buffers): the next frame is drawn in full
-		void invalidate() { for (int s = 0; s < 2; s++) { dmg[s] = { 0, 0, W, H }; last[s].clear(); full[s] = true; } }
+		// (the background copy goes too: it is another screen's draws now - a game's panel, 2026-11-03)
+		void invalidate() { for (int s = 0; s < 2; s++) { dmg[s] = { 0, 0, W, H }; last[s].clear(); full[s] = true; dropBase(s); } }
 		// a screen's pixels to draw on directly (the boot animation): all of it counts as changed, and the engine's
 		// next frame is drawn over all of it
-		uint32_t* canvas(int screen) { dmg[screen] = { 0, 0, W, H }; last[screen].clear(); full[screen] = true; return scr[screen].data(); }
+		uint32_t* canvas(int screen) { dmg[screen] = { 0, 0, W, H }; last[screen].clear(); full[screen] = true; dropBase(screen); return scr[screen].data(); }
 
 		// (touches nothing of the backend's but the new texture: callable from the picture workers)
 		rnds::TexPtr upload(const rnds::Bitmap& b, bool smooth) override;
@@ -123,6 +124,7 @@ namespace banana
 		struct Base { std::vector<uint32_t> px; std::vector<Item> items; size_t n = 0; uint64_t built = 0; size_t hist[8] = {}; unsigned histAt = 0; };
 		Base base[2];
 		void updateBase(const std::vector<Item>& old);
+		void dropBase(int s) { base[s].n = 0; base[s].items.clear(); }
 		uint32_t* tgt = nullptr;	// the pixels drawn on (the screen's, or its background's)
 		Clip opaqueBox(const Item& it) const;
 		uint64_t frameNo = 0;

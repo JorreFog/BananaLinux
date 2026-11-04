@@ -17,17 +17,20 @@
 namespace banana::nds
 {
 	// ---- the games -------------------------------------------------------------------------------------------
-	enum class Gen { IV, V };
-	enum class GameId { DIAMOND, PEARL, PLATINUM, HEARTGOLD, SOULSILVER, BLACK, WHITE, BLACK2, WHITE2, NONE };
+	enum class Gen { III, IV, V };	// (III: the GBA games, through ui/src/gba/: the same pages and logic, 2026-11-03)
+	enum class GameId { DIAMOND, PEARL, PLATINUM, HEARTGOLD, SOULSILVER, BLACK, WHITE, BLACK2, WHITE2,
+		RUBY, SAPPHIRE, EMERALD, FIRERED, LEAFGREEN, HACK, NONE };	// (HACK: a GBA ROM hack, Game::hack says which)	// (the GBA ones last: ids are kept in caches)
 	struct Game
 	{
 		GameId id = GameId::NONE;
 		Gen gen = Gen::IV;
-		std::string code;		// the header's game code (0x0C, 4 letters: CPUE, IPKE, IREO ...)
+		std::string code;		// the header's game code (DS 0x0C, GBA 0xAC; 4 letters: CPUE, IPKE, IREO, BPEE ...)
 		std::string title;		// English name for the companion's header ("Platinum")
 		uint8_t revision = 0;	// header 0x1E
 		bool dsiEnhanced = false;
-		int dexSize = 493;		// 493 (Gen IV), 649 (Gen V)
+		int dexSize = 493;		// 386 (Gen III), 493 (Gen IV), 649 (Gen V); a ROM hack's own
+		bool modern = false;	// Generation VI's type chart (a ROM hack with Fairy): useModernTypeChart
+		std::string hack;		// a GBA ROM hack (GameId::HACK): its key, the guide's file name ("glazed")
 		std::string romHash;	// cache key (the ROM's SHA-1 of the header + ARM9, cheap and unique)
 	};
 	// the game in a ROM header (the first 0x200 bytes); NONE: not one of the nine
@@ -35,7 +38,13 @@ namespace banana::nds
 
 	// ---- types and moves -------------------------------------------------------------------------------------
 	enum Type : uint8_t { NORMAL, FIGHTING, FLYING, POISON, GROUND, ROCK, BUG, GHOST, STEEL, FIRE, WATER, GRASS,
-		ELECTRIC, PSYCHIC, ICE, DRAGON, DARK, NUM_TYPES, NO_TYPE = 255 };	// (the DS games' order: no ??? type here)
+		ELECTRIC, PSYCHIC, ICE, DRAGON, DARK, FAIRY, NUM_TYPES, NO_TYPE = 255 };	// (the DS games' order: no ??? type here;
+	// FAIRY only in GBA ROM hacks with Generation VI's chart: 2026-11-03)
+	// the type chart in use: off (the default) the DS games' and the GBA games'; on Generation VI's (Fairy; Steel no
+	// longer resists Ghost and Dark), for the ROM hacks that have it. Set when a game's data is read (one game at a time)
+	void useModernTypeChart(bool on);
+	bool modernTypeChart();
+	int numTypes();		// the types in the chart in use: 17, or 18 with Fairy
 	int effectiveness(Type atk, Type def1, Type def2);	// in quarters: 0, 1, 2, 4, 8, 16
 	enum class MoveCategory : uint8_t { PHYSICAL, SPECIAL, STATUS };
 	struct MoveData { std::string name; Type type = NORMAL; MoveCategory cat = MoveCategory::STATUS; uint8_t power = 0,
@@ -80,7 +89,29 @@ namespace banana::nds
 		// DUAL_SLOT: the GBA game in slot 2 (1 Ruby 2 Sapphire 3 Emerald 4 FireRed 5 LeafGreen); SWARM: 0 grass 1 surf
 		// 2 fishing; HEADBUTT: the tree kind
 		uint8_t condition = 0; };
-	struct Location { uint16_t id = 0; std::string name; std::vector<Encounter> encounters; };	// by map / zone id
+	// where a zone is on a region map (the Map page, 2026-11-03): its rectangle in the map picture's pixels, and the
+	// zone's own size in tiles, so Live::mapX/mapY puts the marker inside it (a route several squares long). map -1: not
+	// on any region map (a cave the map doesn't show).
+	// Live::mapX/mapY are the overworld's own tile coordinates, not the zone's: the DS games lay their towns and routes
+	// out on one big grid (the "main matrix", 32 x 32 tiles a square) and the player's x/z count from that grid's corner.
+	// So tileX/tileY is the zone's top-left tile on that grid and tilesW/tilesH its size there: the marker is at
+	// x + (mapX - tileX + 0.5) * w / tilesW (clamped to the rectangle), the same for y (townmap.h marker()).
+	// tilesW 0: the zone isn't on the grid (a house, a Pokémon Center, a cave: mapX/mapY count from its own corner):
+	// the marker goes in the rectangle's middle (it is the town's or the place's the zone belongs to)
+	struct MapSpot { int16_t map = -1; float x = 0, y = 0, w = 0, h = 0; uint16_t tilesW = 0, tilesH = 0;
+		uint16_t tileX = 0, tileY = 0; };
+	struct Location { uint16_t id = 0; std::string name; std::vector<Encounter> encounters; MapSpot spot; };	// by map / zone id
+	// a game's own region map (the town map), read from its ROM: the picture, and the places on it as a grid of cells
+	// (a tap names one; the player's place is lit). rgba empty: the cells are drawn as squares instead
+	struct RegionMap
+	{
+		std::string name;						// "Hoenn", "Kanto", "Sevii Islands" ...
+		int w = 0, h = 0;						// the picture (px)
+		std::vector<uint32_t> rgba;				// 0xAARRGGBB, w * h
+		int cellX = 0, cellY = 0, cell = 8;		// where the grid's cell 0,0 is on the picture, a cell's size (px)
+		int gridW = 0, gridH = 0;
+		std::vector<uint16_t> cells;			// gridW * gridH: a place's name id (RomData::locationNames), 0xFFFF none
+	};
 	struct TrainerMon { uint16_t species = 0, item = 0; uint8_t level = 0; uint16_t moves[4] = {}; };
 	struct Trainer { uint16_t id = 0; std::string cls, name; std::vector<TrainerMon> team; bool doubleBattle = false; };
 	struct ItemData { std::string name, description; uint8_t pocket = 0; uint16_t price = 0; };
@@ -98,6 +129,7 @@ namespace banana::nds
 		std::map<uint16_t, Location> zones;		// by the game's zone/map id (encounters)
 		std::map<uint16_t, Trainer> trainers;
 		std::vector<uint16_t> tmMoves;			// TM/HM number-1 -> move
+		std::vector<RegionMap> regionMaps;		// the game's town map(s); zones[...].spot places them (empty: no Map page)
 		// sprites on demand (decoding all is slow): species, female, shiny-agnostic (the palettes are in Sprite)
 		virtual std::shared_ptr<const Sprite> sprite(uint16_t species, bool female = false, uint8_t form = 0) const = 0;
 		virtual ~RomData() = default;
@@ -197,6 +229,10 @@ namespace banana::nds
 	struct RouteRecord { uint16_t zone = 0, species = 0; enum Outcome : uint8_t { OPEN, CAUGHT, MISSED } outcome = OPEN; };
 	struct Journey { std::vector<LogEntry> log; bool challenge = false; std::vector<RouteRecord> routes;	// log: oldest first
 		std::vector<Mon> lost; };
+	// challenge mode's "route": two zones are one area when they are the same zone or carry the same place name (a cave's
+	// floors, a route's maps: Gen III keeps Granite Cave 1F/B1F/B2F as maps of one section, the DS games Mt. Coronet's
+	// floors as zones of one name) - one first encounter for the whole area, as a Nuzlocke counts it
+	bool sameArea(const RomData* rom, uint16_t a, uint16_t b);
 
 	// ---- advice (the logic's product, for the pages and the badge) --------------------------------------------
 	struct MoveVerdict { uint16_t move = 0; int quarters = 4; float dmgLo = 0, dmgHi = 0; bool best = false;

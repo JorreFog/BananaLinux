@@ -25,6 +25,7 @@
 #include "nds/overlay.h"
 #include "nds/pages_page.h"
 #include "nds/session.h"
+#include "gba/host.h"
 #include "nds/rom.h"
 #include "nds/romfile.h"
 #include "nds/guide.h"
@@ -2482,13 +2483,25 @@ int main(int argc, char** argv)
 	auto gamePanel = [&](pid_t pid, int& status, int gameScreen, int cmdFd, int outFd, const std::string& title, const std::string& sysName)
 	{
 		const int panelScreen = 1 - gameScreen;
+		// the GBA Pokémon companion in the DS companion's pages (gba/host.h; settings.conf gba_companion_pages, on unless
+		// "off"): the retail games once their ROM data is read; ROM hacks and the rest keep today's views
+		std::unique_ptr<gba::Host> gbaHost;
+		if (outFd >= 0 && companion.active() && getConfValue(o.data + "/settings.conf", "gba_companion_pages", "on") != "off")
+		{
+			mkdir((o.data + "/cache").c_str(), 0755);
+			mkdir((o.data + "/cache/gba-companion").c_str(), 0755);
+			gbaHost = std::make_unique<gba::Host>(companion, o.data + "/cache/gba-companion", o.data + "/cache/gba-companion",
+				getConfValue(o.data + "/settings.conf", "gba_challenge", "off") == "on");	// (its own row: Second screen)
+		}
 		{
 			std::lock_guard<std::mutex> l(worker.uiLock);
 			settingsView.companion = outFd >= 0 && companion.active() ? &companion : nullptr;
+			settingsView.gbaHost = nullptr;
 			settingsView.gameComp = outFd >= 0 && gameComp.active() ? &gameComp : nullptr;
 			settingsView.link = compLink.open() ? &compLink : nullptr;	// (the emulator's RA block, once it attaches)
 			settingsView.gameRom(gameRomPath);
 			settingsView.gameKeyboard(keysOn ? &vkbd : nullptr);
+			settingsView.gbaHost = gbaHost.get();
 			settingsView.gameOpen(title, sysName, panelScreen, input.hasTouch(panelScreen));
 		}
 		be.invalidate();
@@ -2597,6 +2610,13 @@ int main(int argc, char** argv)
 					input.read(fds[i].fd, [&](const InputEvent& ev)
 					{
 						if (ev.screen != panelScreen) return;	// buttons are the game's; touch only on the panel
+						if (ev.type == InputEvent::TOUCH_MOVE)	// (the GBA companion's pages scroll by drag)
+						{
+							std::lock_guard<std::mutex> l(worker.uiLock);
+							settingsView.gameTouchMove(ev.x, ev.y);
+							want = true;
+							return;
+						}
 						if (ev.type != InputEvent::TOUCH_DOWN && ev.type != InputEvent::TOUCH_UP) return;
 						// a touch on the panel brings a dimmed bottom back (BottomIdle); the game's buttons don't: the
 						// panel dims beside a game being played (a QA tester: "goes back with button input, which
@@ -2621,6 +2641,13 @@ int main(int argc, char** argv)
 					});
 		}
 		if (pidFd >= 0) ::close(pidFd);
+		if (gbaHost)
+		{
+			// (before gbaHost goes: the panel's pages let go of it; the Session saves the journey as it stops)
+			std::lock_guard<std::mutex> l(worker.uiLock);
+			settingsView.gbaRelease();
+			logf("gba companion: %llu states handed to the logic", (unsigned long long)gbaHost->fed);
+		}
 	};
 
 	auto runGame = [&](int game)
@@ -2774,6 +2801,7 @@ int main(int argc, char** argv)
 							logf("nds companion: the unpacked game didn't appear in /data/bananads/unzipped");
 							return d;
 						}
+						nds::useModernTypeChart(false);	// (the DS games: their own chart; a GBA hack may have left Generation VI's on)
 						auto r = nds::loadRom(path, cache, &err, &info);
 						d.rom = r;
 						if (r)

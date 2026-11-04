@@ -364,6 +364,13 @@ namespace banana
 		resolve();
 		std::vector<Item>& old = last[cur];
 		if (!full[cur]) updateBase(old);
+		else
+		{
+			// (a frame drawn in full: the background copy only if this list still starts with its draws, as
+			// updateBase checks for the others - it was used unchecked, and another view's background stood in)
+			Base& b = base[cur];
+			if (b.n && (b.n > items.size() || !std::equal(b.items.begin(), b.items.end(), items.begin()))) dropBase(cur);
+		}
 		tilesX = (W + TW - 1) / TW; tilesY = (H + TH - 1) / TH;
 		dirty.assign((size_t)tilesX * tilesY, 0);
 		bool any = false;

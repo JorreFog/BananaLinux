@@ -1,4 +1,5 @@
 #include "pages.h"
+#include "logic.h"
 #include "../settings_draw.h"
 #include "../lang.h"
 #include <algorithm>
@@ -46,9 +47,9 @@ namespace banana::nds
 		const char* const PX_UP[4] = { "..#..", ".###.", "#####", "....." }, * const PX_DOWN[4] = { "#####", ".###.", "..#..", "....." };
 
 		const uint32_t TYPE_COLORS[NUM_TYPES] = { 0xa8a878, 0xc03028, 0xa890f0, 0xa040a0, 0xe0c068, 0xb8a038, 0xa8b820,
-			0x705898, 0xb8b8d0, 0xf08030, 0x6890f0, 0x78c850, 0xf8d030, 0xf85888, 0x98d8d8, 0x7038f8, 0x705848 };
+			0x705898, 0xb8b8d0, 0xf08030, 0x6890f0, 0x78c850, 0xf8d030, 0xf85888, 0x98d8d8, 0x7038f8, 0x705848, 0xee99ac };
 		const char* const TYPE_NAMES[NUM_TYPES] = { "Normal", "Fighting", "Flying", "Poison", "Ground", "Rock", "Bug",
-			"Ghost", "Steel", "Fire", "Water", "Grass", "Electric", "Psychic", "Ice", "Dragon", "Dark" };
+			"Ghost", "Steel", "Fire", "Water", "Grass", "Electric", "Psychic", "Ice", "Dragon", "Dark", "Fairy" };
 		const uint32_t HP_GREEN = 0x58d068, HP_YELLOW = 0xf8c030, HP_RED = 0xf05848, EXP_BLUE = 0x58a8f8, BADGE_RED = 0xe8433a;
 		const float DEX_ROW = 36;	// the Dex list's rows (CSS px): a finger's width on the RG DS's 4" panels
 		const uint32_t GOOD = 0x58d068, BAD = 0xf06858;
@@ -146,7 +147,7 @@ namespace banana::nds
 	uint32_t typeColor(Type t) { return t < NUM_TYPES ? TYPE_COLORS[t] : 0x808080; }
 	const char* pageName(Page p)
 	{
-		static const char* const n[(int)Page::COUNT] = { "Battle", "Party", "Team", "Here", "Guide", "Dex", "Log" };
+		static const char* const n[(int)Page::COUNT] = { "Battle", "Party", "Team", "Here", "Map", "Guide", "Dex", "Log" };
 		return p < Page::COUNT ? n[(int)p] : "";
 	}
 	uint32_t expForLevel(uint8_t growth, int n)
@@ -905,6 +906,7 @@ namespace banana::nds
 		// touch state; pressed: what the finger is on (shown lit until it lifts or drags)
 		bool down = false, dragging = false, railDrag = false;
 		bool pressed = false; float pressX = 0, pressY = 0, pressW = 0, pressH = 0;
+		float pressUpX = 0, pressUpY = 0;	// (a tap's end, CSS px: for an action that needs where in its area - the Map page)
 		float downX = 0, downY = 0, lastY = 0, startScroll = 0;
 		int dragId = -1;
 		// momentum: where the finger was over the last moments of a drag (ms, y), and the fling it leaves behind (CSS px a
@@ -1009,6 +1011,15 @@ namespace banana::nds
 		void party();
 		void team();
 		void here();
+		void map();
+		// the Map page: the town map's picture as a texture (made again for another map or another game), the map the
+		// player picked (-1: the one they are on), the place a tap named and until when, the last map they were on
+		rnds::TexPtr mapTex;
+		int mapTexOf = -1;
+		const RomData* mapTexRom = nullptr;
+		int mapPick = -1, lastMap = 0;
+		std::string mapTapped;
+		double mapTappedUntil = 0;
 		void guide();
 		void dex();
 		void dexDetail(uint16_t n, float x, float y, float w, float& bottom);
@@ -1040,6 +1051,7 @@ namespace banana::nds
 			case Page::PARTY: party(); break;
 			case Page::TEAM: team(); break;
 			case Page::HERE: here(); break;
+			case Page::MAP: map(); break;
 			case Page::GUIDE: guide(); break;
 			case Page::DEX: dex(); break;
 			default: log(); break;
@@ -1841,6 +1853,135 @@ namespace banana::nds
 	}
 
 	// ---- Here ------------------------------------------------------------------------------------------------------------
+	// the Map page: the game's own town map with the player on it, live (the zone's spot and the tile they stand on);
+	// more than one map (Kanto and the Sevii Islands, Johto and Kanto): chips to pick one; a tap on the map names the
+	// place under it for a few seconds
+	void Pages::Impl::map()
+	{
+		const Live& lv = *dt.live;
+		const RomData& r = *dt.rom;
+		const Location* loc = nullptr;
+		auto z = r.zones.find(lv.zone);
+		if (z != r.zones.end()) loc = &z->second;
+		const bool onMap = loc && loc->spot.map >= 0 && loc->spot.map < (int)r.regionMaps.size();
+		if (onMap) lastMap = loc->spot.map;
+		if (r.regionMaps.empty())
+		{
+			header(tr("Map"), tr("No town map read from this game"), false, true);
+			return;
+		}
+		const int mi = mapPick >= 0 && mapPick < (int)r.regionMaps.size() ? mapPick : (onMap ? loc->spot.map : lastMap);
+		const RegionMap& m = r.regionMaps[std::min<int>(mi, (int)r.regionMaps.size() - 1)];
+		std::string title = loc && !loc->name.empty() ? loc->name : tr("Map");
+		std::string sub = m.name.empty() ? std::string() : m.name;
+		if (!onMap) sub += (sub.empty() ? "" : ", ") + tr("you are inside: the map shows where you were last");
+		header(title, sub, loc && !loc->name.empty(), true, false);
+		// the maps to pick from (one chip per name: a map drawn in layers keeps one)
+		float top = 60;
+		std::vector<int> picks;
+		for (int i = 0; i < (int)r.regionMaps.size(); i++)
+		{
+			bool dup = false;
+			for (int j : picks) dup = dup || r.regionMaps[j].name == r.regionMaps[i].name;
+			if (!dup) picks.push_back(i);
+		}
+		if (picks.size() > 1)
+		{
+			float x = 12;
+			for (int i : picks)
+			{
+				const bool on = r.regionMaps[i].name == m.name;
+				const std::string& nm = r.regionMaps[i].name;
+				float w = measure(nm, true, 13, true) + 24;
+				if (on) box("pick", x, top, w, 28); else box("bubble", x, top, w, 28);
+				text(nm, true, 13, x + 12, top + 6, on ? p.onPick : p.ink, true);
+				const int pickIdx = i;
+				hit(x, top, w, 28, [this, pickIdx, onMap, loc] { mapPick = onMap && loc->spot.map == pickIdx ? -1 : pickIdx; });
+				x += w + 8;
+				if (x > 560) break;
+			}
+			top += 36;
+		}
+		// the picture, as big as the page allows by whole pixels (its own pixels, no smoothing)
+		const float ax = 12, ay = top, aw = 616, ah = 414 - top;
+		box("well", ax, ay, aw, ah);
+		const float devW = X(aw - 8), devH = X(ah - 8);
+		float k = std::floor(std::min(devW / std::max(1, m.w), devH / std::max(1, m.h)));
+		if (k < 1) k = std::min(devW / std::max(1, m.w), devH / std::max(1, m.h));
+		const float dw = m.w * k, dh = m.h * k;
+		const float ox = std::round(X(ax) + (X(aw) - dw) / 2), oy = std::round(X(ay) + (X(ah) - dh) / 2);
+		if (!m.rgba.empty())
+		{
+			if (mapTexOf != mi || mapTexRom != &r || !mapTex)
+			{
+				rnds::Bitmap b;
+				b.w = m.w; b.h = m.h; b.px.resize((size_t)m.w * m.h * 4);
+				for (size_t i = 0; i < m.rgba.size(); i++)
+				{
+					const uint32_t c = m.rgba[i];
+					b.px[i * 4] = c >> 16; b.px[i * 4 + 1] = c >> 8; b.px[i * 4 + 2] = c; b.px[i * 4 + 3] = c >> 24;
+				}
+				mapTex = be->upload(b, false);
+				mapTexOf = mi;
+				mapTexRom = &r;
+			}
+			be->draw(mapTex, ox, oy, dw, dh, Color(1, 1, 1, 1));
+		}
+		else	// (no picture: the squares of the places)
+			for (int y = 0; y < m.gridH; y++)
+				for (int x = 0; x < m.gridW; x++)
+					if (m.cells[(size_t)y * m.gridW + x] != 0xFFFF)
+						be->fill(ox + (m.cellX + x * m.cell) * k + 1, oy + (m.cellY + y * m.cell) * k + 1, m.cell * k - 2, m.cell * k - 2, p.line);
+		// the player: their place lit, the marker on the tile they stand on, pulsing
+		const bool here = onMap && loc->spot.map == mi;
+		const bool sameName = !here && onMap && r.regionMaps[loc->spot.map].name == m.name;	// (another layer of the same map)
+		if (here || sameName || (!onMap && lastMap == mi && loc))
+		{
+			const MapSpot* sp = onMap ? &loc->spot : nullptr;
+			if (sp)
+			{
+				Color lit = p.accent; lit.a = 0.28f;
+				be->fill(ox + sp->x * k, oy + sp->y * k, sp->w * k, sp->h * k, lit);
+				// (model.h MapSpot: the tile counted from the spot's own first tile - the zone's corner on GBA, the
+				// overworld matrix's on DS - and no tile size: its middle)
+				float fx = sp->tilesW ? (lv.mapX - (float)sp->tileX + 0.5f) / sp->tilesW : 0.5f;
+				float fy = sp->tilesH ? (lv.mapY - (float)sp->tileY + 0.5f) / sp->tilesH : 0.5f;
+				fx = std::min(1.0f, std::max(0.0f, fx)); fy = std::min(1.0f, std::max(0.0f, fy));
+				const float px = ox + (sp->x + fx * sp->w) * k, py = oy + (sp->y + fy * sp->h) * k;
+				const float phase = (float)std::fmod(now / 900.0, 1.0);
+				const float r0 = X(7), rp = r0 + X(10) * phase;
+				Color halo = Color::hex(0xe8504a); halo.a = 0.45f * (1 - phase);
+				be->fill(std::round(px - rp), std::round(py - rp), std::round(2 * rp), std::round(2 * rp), halo);
+				be->fill(std::round(px - r0 - X(2)), std::round(py - r0 - X(2)), std::round(2 * r0 + X(4)), std::round(2 * r0 + X(4)), p.ink);
+				be->fill(std::round(px - r0), std::round(py - r0), std::round(2 * r0), std::round(2 * r0), Color::hex(0xe8504a));
+				const double nx = now + 60;
+				if (animNext < 0 || nx < animNext) animNext = nx;
+			}
+		}
+		// a tap: the place under it named for 3 s
+		hit(ax, ay, aw, ah, [this, ox, oy, k, mi]
+		{
+			const RegionMap& mm = dt.rom->regionMaps[mi];
+			const int cx = (int)std::floor((X(pressUpX) - ox) / k - mm.cellX) / std::max(1, mm.cell);
+			const int cy = (int)std::floor((X(pressUpY) - oy) / k - mm.cellY) / std::max(1, mm.cell);
+			mapTapped.clear();
+			if (cx >= 0 && cy >= 0 && cx < mm.gridW && cy < mm.gridH)
+			{
+				const uint16_t id = mm.cells[(size_t)cy * mm.gridW + cx];
+				if (id != 0xFFFF && id < dt.rom->locationNames.size()) mapTapped = dt.rom->locationNames[id];
+			}
+			mapTappedUntil = now + 3000;
+		});
+		if (!mapTapped.empty() && now < mapTappedUntil)
+		{
+			const float w = measure(mapTapped, true, 14, true) + 28;
+			box("bubble", 320 - w / 2, ay + ah - 44, w, 36);
+			text(mapTapped, true, 14, 320 - w / 2 + 14, ay + ah - 36, p.ink, true);
+			const double nx = mapTappedUntil;
+			if (animNext < 0 || nx < animNext) animNext = nx;
+		}
+	}
+
 	void Pages::Impl::here()
 	{
 		const Live& lv = *dt.live;
@@ -1911,7 +2052,7 @@ namespace banana::nds
 		if (dt.journey && dt.journey->challenge)
 		{
 			const RouteRecord* rr = nullptr;
-			for (auto& r : dt.journey->routes) if (r.zone == lv.zone) rr = &r;
+			for (auto& r : dt.journey->routes) if (sameArea(dt.rom.get(), r.zone, lv.zone)) rr = &r;
 			box("bubble", 12, y, 616, 44);
 			pixels(PX_SKULL, 7, 26, y + 15, k(), [&](char) { return p.accent; });
 			std::string t;
@@ -2102,6 +2243,7 @@ namespace banana::nds
 			// without a known stage show as before.
 			auto shown = [&](const GuideStep& s2)
 			{
+				if (stepDone(s2, *dt.live)) return false;	// ("Pick one of five starters" with the starter in the party)
 				if (nextIdx < 0 || s2.stage.empty()) return true;
 				int si = -1;
 				for (size_t i = 0; i < g->milestones.size(); i++) if (g->milestones[i].id == s2.stage) si = (int)i;
@@ -2355,7 +2497,7 @@ namespace banana::nds
 		// what it takes extra damage from (and nothing from)
 		{
 			std::vector<std::pair<Type, int>> weak, immune;
-			for (int a = 0; a < NUM_TYPES; a++)
+			for (int a = 0; a < numTypes(); a++)
 			{
 				int q = effectiveness((Type)a, sp->types[0], sp->types[1]);
 				if (q > 4) weak.push_back({ (Type)a, q });
@@ -2715,7 +2857,7 @@ namespace banana::nds
 		{
 			const auto& h = d->hits[i];
 			auto in = [&](float px, float py) { return px >= h.x && px < h.x + h.w && py >= h.y && py < h.y + h.h; };
-			if (in(cx, cy) && in(d->downX, d->downY)) { auto act = h.act; act(); return Action::REDRAW; }
+			if (in(cx, cy) && in(d->downX, d->downY)) { d->pressUpX = cx; d->pressUpY = cy; auto act = h.act; act(); return Action::REDRAW; }
 		}
 		return was ? Action::REDRAW : Action::NONE;
 	}

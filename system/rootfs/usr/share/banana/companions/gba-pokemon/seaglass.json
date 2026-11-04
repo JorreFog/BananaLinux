@@ -1,0 +1,1247 @@
+{
+ "schema": 1,
+ "kind": "nds-pokemon-guide",
+ "game": "seaglass",
+ "code": "BPEE",
+ "title": "Pokemon Emerald Seaglass (v3.0)",
+ "revision": 1,
+ "sources": [
+  "The ROM itself (Emerald Seaglass 3.0, pokeemerald-expansion based): region map section names (each place resolves to a section with maps) and trainer names, teams and levels, read on the PC with throwaway tools",
+  "pret/pokeemerald: Emerald's story order and fight places, which Seaglass keeps",
+  "pokemonemeraldseaglass.com, PokéHarbor (2024-08) and poke-hack-hub: features, retypes, evolution items",
+  "A fan 'Professor Oak Challenge' guide for Seaglass 3.0 (Google Docs): legendary locations"
+ ],
+ "places": {
+  "route-103": {
+   "name": "Route 103"
+  },
+  "littleroot-town": {
+   "name": "Littleroot Town"
+  },
+  "route-101": {
+   "name": "Route 101"
+  },
+  "oldale-town": {
+   "name": "Oldale Town"
+  },
+  "petalburg-woods": {
+   "name": "Petalburg Woods"
+  },
+  "route-102": {
+   "name": "Route 102"
+  },
+  "petalburg-city": {
+   "name": "Petalburg City"
+  },
+  "route-104": {
+   "name": "Route 104"
+  },
+  "rustboro-city": {
+   "name": "Rustboro City"
+  },
+  "rusturf-tunnel": {
+   "name": "Rusturf Tunnel"
+  },
+  "route-116": {
+   "name": "Route 116"
+  },
+  "dewford-town": {
+   "name": "Dewford Town"
+  },
+  "route-106": {
+   "name": "Route 106"
+  },
+  "granite-cave": {
+   "name": "Granite Cave"
+  },
+  "slateport-city": {
+   "name": "Slateport City"
+  },
+  "route-107": {
+   "name": "Route 107"
+  },
+  "route-108": {
+   "name": "Route 108"
+  },
+  "route-109": {
+   "name": "Route 109"
+  },
+  "route-110": {
+   "name": "Route 110"
+  },
+  "mauville-city": {
+   "name": "Mauville City"
+  },
+  "route-117": {
+   "name": "Route 117"
+  },
+  "verdanturf-town": {
+   "name": "Verdanturf Town"
+  },
+  "mt-chimney": {
+   "name": "Mt. Chimney"
+  },
+  "route-111": {
+   "name": "Route 111"
+  },
+  "route-112": {
+   "name": "Route 112"
+  },
+  "fiery-path": {
+   "name": "Fiery Path"
+  },
+  "route-113": {
+   "name": "Route 113"
+  },
+  "fallarbor-town": {
+   "name": "Fallarbor Town"
+  },
+  "route-114": {
+   "name": "Route 114"
+  },
+  "meteor-falls": {
+   "name": "Meteor Falls"
+  },
+  "lavaridge-town": {
+   "name": "Lavaridge Town"
+  },
+  "jagged-pass": {
+   "name": "Jagged Pass"
+  },
+  "route-119": {
+   "name": "Route 119"
+  },
+  "route-118": {
+   "name": "Route 118"
+  },
+  "fortree-city": {
+   "name": "Fortree City"
+  },
+  "route-120": {
+   "name": "Route 120"
+  },
+  "lilycove-city": {
+   "name": "Lilycove City"
+  },
+  "route-121": {
+   "name": "Route 121"
+  },
+  "safari-zone": {
+   "name": "Safari Zone"
+  },
+  "magma-hideout": {
+   "name": "Magma Hideout"
+  },
+  "route-122": {
+   "name": "Route 122"
+  },
+  "mt-pyre": {
+   "name": "Mt. Pyre"
+  },
+  "aqua-hideout": {
+   "name": "Aqua Hideout"
+  },
+  "mossdeep-city": {
+   "name": "Mossdeep City"
+  },
+  "route-124": {
+   "name": "Route 124"
+  },
+  "seafloor-cavern": {
+   "name": "Seafloor Cavern"
+  },
+  "route-125": {
+   "name": "Route 125"
+  },
+  "route-126": {
+   "name": "Route 126"
+  },
+  "route-127": {
+   "name": "Route 127"
+  },
+  "route-128": {
+   "name": "Route 128"
+  },
+  "shoal-cave": {
+   "name": "Shoal Cave"
+  },
+  "sky-pillar": {
+   "name": "Sky Pillar"
+  },
+  "sootopolis-city": {
+   "name": "Sootopolis City"
+  },
+  "cave-of-origin": {
+   "name": "Cave of Origin"
+  },
+  "route-131": {
+   "name": "Route 131"
+  },
+  "victory-road": {
+   "name": "Victory Road"
+  },
+  "ever-grande-city": {
+   "name": "Ever Grande City"
+  },
+  "battle-frontier": {
+   "name": "Battle Frontier"
+  },
+  "navel-rock": {
+   "name": "Navel Rock"
+  },
+  "route-105": {
+   "name": "Route 105"
+  },
+  "southern-island": {
+   "name": "Southern Island"
+  },
+  "faraway-island": {
+   "name": "Faraway Island"
+  },
+  "birth-island": {
+   "name": "Birth Island"
+  },
+  "pacifidlog-town": {
+   "name": "Pacifidlog Town"
+  },
+  "new-mauville": {
+   "name": "New Mauville"
+  }
+ },
+ "milestones": [
+  {
+   "id": "rival-route-103",
+   "name": "Rival: first battle (Route 103)",
+   "kind": "rival",
+   "place": "route-103",
+   "level_cap": 5,
+   "foe": [
+    {
+     "name": "MAY",
+     "ace_level": 5
+    },
+    {
+     "name": "BRENDAN",
+     "ace_level": 5
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "littleroot-town",
+    "route-101",
+    "oldale-town",
+    "route-103"
+   ],
+   "tips": "May or Brendan (whichever you didn't pick; both are playable since 3.0) uses the starter strong against yours at Lv 5.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+  },
+  {
+   "id": "team-petalburg-woods",
+   "name": "Team Aqua in Petalburg Woods",
+   "kind": "team",
+   "place": "petalburg-woods",
+   "level_cap": 9,
+   "foe": [
+    {
+     "name": "GRUNT",
+     "ace_level": 9
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "route-102",
+    "petalburg-city",
+    "route-104",
+    "petalburg-woods"
+   ],
+   "tips": "A grunt with a Lv 9 Wailmer bothers a Devon researcher. Grass or Electric moves.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+  },
+  {
+   "id": "gym-1-roxanne",
+   "name": "Gym 1: Roxanne",
+   "kind": "gym",
+   "place": "rustboro-city",
+   "leader": "Roxanne",
+   "theme": "rock",
+   "level_cap": 15,
+   "foe": {
+    "name": "ROXANNE",
+    "ace_level": 15
+   },
+   "done_when": "badge:1",
+   "opens": [
+    "rustboro-city"
+   ],
+   "badge_note": "Stone Badge: Cut (Seaglass needs the HM and the badge, not a move slot).",
+   "tips": "Rock types (fossils first): Anorith, Lileep, Nosepass (Lv 12-15). Water, Grass, Fighting and Steel moves; Lileep is Grass/Rock (Ice, Fighting, Bug, Steel).",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+  },
+  {
+   "id": "team-rusturf",
+   "name": "Team Aqua in Rusturf Tunnel",
+   "kind": "team",
+   "place": "rusturf-tunnel",
+   "level_cap": 11,
+   "foe": [
+    {
+     "name": "GRUNT",
+     "ace_level": 11
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "rusturf-tunnel",
+    "route-116"
+   ],
+   "tips": "A grunt with stolen Devon goods: Lv 11 Wailmer. Mr. Briney then sails you to Dewford.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+  },
+  {
+   "id": "rival-rustboro",
+   "name": "Rival: Rustboro City",
+   "kind": "rival",
+   "place": "rustboro-city",
+   "level_cap": 15,
+   "foe": [
+    {
+     "name": "MAY",
+     "ace_level": 15
+    },
+    {
+     "name": "BRENDAN",
+     "ace_level": 15
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Your neighbour's second team, Lv 13-15.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+  },
+  {
+   "id": "gym-2-brawly",
+   "name": "Gym 2: Brawly",
+   "kind": "gym",
+   "place": "dewford-town",
+   "leader": "Brawly",
+   "theme": "fighting",
+   "level_cap": 19,
+   "foe": {
+    "name": "BRAWLY",
+    "ace_level": 19
+   },
+   "done_when": "badge:2",
+   "opens": [
+    "dewford-town",
+    "route-106",
+    "granite-cave"
+   ],
+   "badge_note": "Knuckle Badge: Flash.",
+   "tips": "Fighting types: Makuhita, Meditite, Heracross (Lv 16-19). Psychic, Flying and Fairy moves; Heracross takes four times from Flying.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+  },
+  {
+   "id": "team-museum",
+   "name": "Team Aqua at the Oceanic Museum",
+   "kind": "team",
+   "place": "slateport-city",
+   "level_cap": 15,
+   "foe": [
+    {
+     "name": "GRUNT",
+     "ace_level": 14
+    },
+    {
+     "name": "GRUNT",
+     "ace_level": 15
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "route-107",
+    "route-108",
+    "route-109",
+    "slateport-city"
+   ],
+   "tips": "Two grunts at the museum (the ROM's at 14-15: Lombre and Carvanha). Electric and Grass moves.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+  },
+  {
+   "id": "rival-route-110",
+   "name": "Rival: Route 110",
+   "kind": "rival",
+   "place": "route-110",
+   "level_cap": 20,
+   "foe": [
+    {
+     "name": "MAY",
+     "ace_level": 20
+    },
+    {
+     "name": "BRENDAN",
+     "ace_level": 20
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "route-110",
+    "mauville-city"
+   ],
+   "tips": "Three Pokémon now, the starter's second stage at Lv 20.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+  },
+  {
+   "id": "gym-3-wattson",
+   "name": "Gym 3: Wattson",
+   "kind": "gym",
+   "place": "mauville-city",
+   "leader": "Wattson",
+   "theme": "electric",
+   "level_cap": 24,
+   "foe": {
+    "name": "WATTSON",
+    "ace_level": 24
+   },
+   "done_when": "badge:3",
+   "opens": [
+    "mauville-city",
+    "route-117",
+    "verdanturf-town"
+   ],
+   "badge_note": "Dynamo Badge: Rock Smash.",
+   "tips": "Electric types: Volbeat, Flaaffy, Magneton, Manectric (Lv 20-24). Ground moves above all; Volbeat is Bug (Fire, Flying, Rock).",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+  },
+  {
+   "id": "team-mt-chimney",
+   "name": "Team Magma at Mt. Chimney",
+   "kind": "team",
+   "place": "mt-chimney",
+   "level_cap": 25,
+   "foe": [
+    {
+     "name": "TABITHA",
+     "ace_level": 22
+    },
+    {
+     "name": "MAXIE",
+     "ace_level": 25
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "route-111",
+    "route-112",
+    "fiery-path",
+    "route-113",
+    "fallarbor-town",
+    "route-114",
+    "meteor-falls",
+    "mt-chimney"
+   ],
+   "tips": "Tabitha (Numel, Poochyena, Dunsparce, Houndour (Lv 18-22)) and Maxie (Mightyena, Gligar, Camerupt (Lv 24-25)) at the summit. Water and Ground moves.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+  },
+  {
+   "id": "gym-4-flannery",
+   "name": "Gym 4: Flannery",
+   "kind": "gym",
+   "place": "lavaridge-town",
+   "leader": "Flannery",
+   "theme": "fire",
+   "level_cap": 29,
+   "foe": {
+    "name": "FLANNERY",
+    "ace_level": 29
+   },
+   "done_when": "badge:4",
+   "opens": [
+    "jagged-pass",
+    "lavaridge-town"
+   ],
+   "badge_note": "Heat Badge: Strength.",
+   "tips": "Fire types: Slugma, Flareon, Camerupt, Torkoal (Lv 24-29). Water, Ground and Rock moves; Camerupt takes four times from Water.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+  },
+  {
+   "id": "gym-5-norman",
+   "name": "Gym 5: Norman",
+   "kind": "gym",
+   "place": "petalburg-city",
+   "leader": "Norman",
+   "theme": "normal",
+   "level_cap": 31,
+   "foe": {
+    "name": "NORMAN",
+    "ace_level": 31
+   },
+   "done_when": "badge:5",
+   "opens": [
+    "petalburg-city"
+   ],
+   "badge_note": "Balance Badge: Surf.",
+   "tips": "Normal types: Spinda, Vigoroth, Politoed, Slaking (Lv 27-31). Fighting moves; Politoed is Water (Grass, Electric). Slaking loafs every other turn: protect or switch on its active turns.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+  },
+  {
+   "id": "rival-wally-mauville",
+   "name": "Wally in Mauville",
+   "kind": "rival",
+   "place": "mauville-city",
+   "level_cap": 16,
+   "foe": [
+    {
+     "name": "WALLY",
+     "ace_level": 16
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Wally challenges you outside the gym with his Lv 16 Ralts.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+  },
+  {
+   "id": "team-weather-institute",
+   "name": "Team Aqua at the Weather Institute",
+   "kind": "team",
+   "place": "route-119",
+   "level_cap": 28,
+   "foe": [
+    {
+     "name": "SHELLY",
+     "ace_level": 28
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "route-118",
+    "route-119"
+   ],
+   "tips": "Shelly: Ludicolo, Mightyena (Lv 28). Flying or Poison moves for Ludicolo, Fighting or Fairy for Mightyena.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+  },
+  {
+   "id": "rival-route-119",
+   "name": "Rival: Route 119",
+   "kind": "rival",
+   "place": "route-119",
+   "level_cap": 31,
+   "foe": [
+    {
+     "name": "MAY",
+     "ace_level": 31
+    },
+    {
+     "name": "BRENDAN",
+     "ace_level": 31
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Lv 29-31 team; they give you HM02 Fly afterwards.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+  },
+  {
+   "id": "gym-6-winona",
+   "name": "Gym 6: Winona",
+   "kind": "gym",
+   "place": "fortree-city",
+   "leader": "Winona",
+   "theme": "flying",
+   "level_cap": 33,
+   "foe": {
+    "name": "WINONA",
+    "ace_level": 33
+   },
+   "done_when": "badge:6",
+   "opens": [
+    "fortree-city",
+    "route-120"
+   ],
+   "badge_note": "Feather Badge: Fly.",
+   "tips": "Flying types: Fearow, Tropius, Pelipper, Skarmory, Altaria (Lv 29-33). Electric, Ice and Rock moves; Skarmory is Steel/Flying (Fire, Electric).",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+  },
+  {
+   "id": "rival-lilycove",
+   "name": "Rival: Lilycove City",
+   "kind": "rival",
+   "place": "lilycove-city",
+   "level_cap": 36,
+   "foe": [
+    {
+     "name": "MAY",
+     "ace_level": 36
+    },
+    {
+     "name": "BRENDAN",
+     "ace_level": 36
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "route-121",
+    "lilycove-city",
+    "safari-zone"
+   ],
+   "tips": "Their last team: the final starter stage at Lv 36.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+  },
+  {
+   "id": "team-mt-pyre",
+   "name": "Mt. Pyre and the Magma Hideout",
+   "kind": "team",
+   "place": "magma-hideout",
+   "level_cap": 39,
+   "foe": [
+    {
+     "name": "TABITHA",
+     "ace_level": 33
+    },
+    {
+     "name": "MAXIE",
+     "ace_level": 39
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "route-122",
+    "mt-pyre",
+    "jagged-pass",
+    "magma-hideout"
+   ],
+   "tips": "The orb is taken from Mt. Pyre; in the Magma Hideout Tabitha (Numel, Dodrio, Murkrow, Camerupt (Lv 26-33)) and Maxie (Gliscor, Crobat, Ursaring, Camerupt (Lv 37-39)) wake Groudon. Water moves.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+  },
+  {
+   "id": "team-aqua-hideout",
+   "name": "Team Aqua Hideout",
+   "kind": "team",
+   "place": "aqua-hideout",
+   "level_cap": 34,
+   "foe": [
+    {
+     "name": "MATT",
+     "ace_level": 34
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "aqua-hideout"
+   ],
+   "tips": "Matt: Mightyena, Golbat (Lv 34). Electric moves.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+  },
+  {
+   "id": "gym-7-tate-liza",
+   "name": "Gym 7: Tate & Liza",
+   "kind": "gym",
+   "place": "mossdeep-city",
+   "leader": "Tate & Liza",
+   "theme": "psychic",
+   "level_cap": 42,
+   "foe": {
+    "name": "TATE&LIZA",
+    "ace_level": 42
+   },
+   "done_when": "badge:7",
+   "opens": [],
+   "badge_note": "Mind Badge: Dive.",
+   "tips": "A double battle: Claydol, Mismagius, Lunatone, Solrock (Lv 41-42). Dark, Ghost, Water and Grass moves; Lunatone and Solrock fear Water and Grass.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+  },
+  {
+   "id": "team-space-center",
+   "name": "Team Magma at the Space Center",
+   "kind": "team",
+   "place": "mossdeep-city",
+   "level_cap": 44,
+   "foe": [
+    {
+     "name": "MAXIE",
+     "ace_level": 44
+    },
+    {
+     "name": "TABITHA",
+     "ace_level": 40
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "route-124",
+    "mossdeep-city"
+   ],
+   "tips": "A double battle beside Steven (Metang, Skarmory, Aggron (Lv 42-44)) against Tabitha (Camerupt, Dodrio, Honchkrow (Lv 36-40)) and Maxie (Gliscor, Crobat, Shiftry, Ursaluna, Dodrio, Camerupt (Lv 42-44)).",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+  },
+  {
+   "id": "team-seafloor-cavern",
+   "name": "Seafloor Cavern: Archie",
+   "kind": "team",
+   "place": "seafloor-cavern",
+   "level_cap": 43,
+   "foe": [
+    {
+     "name": "ARCHIE",
+     "ace_level": 43
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "route-125",
+    "route-126",
+    "route-127",
+    "route-128",
+    "shoal-cave",
+    "seafloor-cavern"
+   ],
+   "tips": "Archie: Wailord, Breloom, Crobat, Sharpedo (Lv 41-43). Electric moves for Wailord, Sharpedo and Crobat; Flying or Psychic for Breloom. Shelly's later team in the ROM is Sharpedo, Whiscash (Lv 37).",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+  },
+  {
+   "id": "story-sky-pillar",
+   "name": "Rayquaza at Sky Pillar",
+   "kind": "story",
+   "place": "sky-pillar",
+   "done_when": "later",
+   "opens": [
+    "sootopolis-city",
+    "cave-of-origin",
+    "route-131",
+    "sky-pillar"
+   ],
+   "tips": "With both box legends awake over Sootopolis, climb Sky Pillar to wake Rayquaza and end the storm.",
+   "quality": "reference-only",
+   "source": "pret/pokeemerald story order (Seaglass keeps Emerald's)"
+  },
+  {
+   "id": "gym-8-juan",
+   "name": "Gym 8: Juan",
+   "kind": "gym",
+   "place": "sootopolis-city",
+   "leader": "Juan",
+   "theme": "water",
+   "level_cap": 46,
+   "foe": {
+    "name": "JUAN",
+    "ace_level": 46
+   },
+   "done_when": "badge:8",
+   "opens": [],
+   "badge_note": "Rain Badge: Waterfall.",
+   "tips": "Water types: Starmie, Whiscash, Sealeo, Octillery, Kingdra (Lv 41-46). Electric and Grass moves; Kingdra is Water/Dragon (Dragon, Fairy).",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+  },
+  {
+   "id": "rival-wally",
+   "name": "Wally (Victory Road)",
+   "kind": "rival",
+   "place": "victory-road",
+   "level_cap": 45,
+   "foe": [
+    {
+     "name": "WALLY",
+     "ace_level": 45
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "route-128",
+    "ever-grande-city",
+    "victory-road"
+   ],
+   "tips": "Altaria, Delcatty, Roserade, Magnezone, Gardevoir (Lv 41-45). Fire for Roserade, Ice for Altaria, Steel or Poison for Gardevoir.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+  },
+  {
+   "id": "e4-sidney",
+   "name": "Elite Four: Sidney",
+   "kind": "elite4",
+   "place": "ever-grande-city",
+   "leader": "Sidney",
+   "theme": "dark",
+   "level_cap": 49,
+   "foe": [
+    {
+     "name": "SIDNEY",
+     "ace_level": 49
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Mightyena, Honchkrow, Cacturne, Crawdaunt, Absol (Lv 46-49). Fighting, Bug and Fairy moves.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+  },
+  {
+   "id": "e4-phoebe",
+   "name": "Elite Four: Phoebe",
+   "kind": "elite4",
+   "place": "ever-grande-city",
+   "leader": "Phoebe",
+   "theme": "ghost",
+   "level_cap": 51,
+   "foe": [
+    {
+     "name": "PHOEBE",
+     "ace_level": 51
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Dusclops, Froslass, Mismagius, Banette, Dusknoir (Lv 48-51). Dark and Ghost moves.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+  },
+  {
+   "id": "e4-glacia",
+   "name": "Elite Four: Glacia",
+   "kind": "elite4",
+   "place": "ever-grande-city",
+   "leader": "Glacia",
+   "theme": "ice",
+   "level_cap": 53,
+   "foe": [
+    {
+     "name": "GLACIA",
+     "ace_level": 53
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Dewgong, Glalie, Glaceon, Cloyster, Walrein (Lv 50-53). Fire, Fighting, Rock and Steel moves.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+  },
+  {
+   "id": "e4-drake",
+   "name": "Elite Four: Drake",
+   "kind": "elite4",
+   "place": "ever-grande-city",
+   "leader": "Drake",
+   "theme": "dragon",
+   "level_cap": 55,
+   "foe": [
+    {
+     "name": "DRAKE",
+     "ace_level": 55
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Kingdra, Altaria, Steelix, Flygon, Salamence (Lv 52-55). Ice, Dragon and Fairy moves; Steelix wants Fire or Ground.",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+  },
+  {
+   "id": "champion-wallace",
+   "name": "Champion Wallace",
+   "kind": "champion",
+   "place": "ever-grande-city",
+   "leader": "Wallace",
+   "level_cap": 58,
+   "foe": [
+    {
+     "name": "WALLACE",
+     "ace_level": 58
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Wailord, Tentacruel, Ludicolo, Whiscash, Gyarados, Milotic (Lv 55-58). Electric and Grass moves; Ludicolo and Whiscash need others (Flying/Poison, Grass).",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+  },
+  {
+   "id": "post-wally-rematches",
+   "name": "Post-game: Wally's rematches",
+   "kind": "postgame",
+   "place": "victory-road",
+   "level_cap": 57,
+   "foe": [
+    {
+     "name": "WALLY",
+     "ace_level": 57
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "Wally returns stronger (the ROM has his team at 48, 51, 54 and 57).",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table"
+  },
+  {
+   "id": "post-steven",
+   "name": "Post-game: Steven",
+   "kind": "postgame",
+   "place": "meteor-falls",
+   "level_cap": 78,
+   "foe": [
+    {
+     "name": "STEVEN",
+     "ace_level": 78
+    }
+   ],
+   "done_when": "none",
+   "opens": [
+    "meteor-falls"
+   ],
+   "tips": "Steven in the deep part of Meteor Falls: Skarmory, Claydol, Aggron, Cradily, Armaldo, Metagross (Lv 75-78).",
+   "quality": "reference-only",
+   "source": "ROM Seaglass 3.0 trainer table; pret/pokeemerald story order (Seaglass keeps Emerald's)"
+  },
+  {
+   "id": "post-frontier",
+   "name": "Post-game: Battle Frontier",
+   "kind": "postgame",
+   "place": "battle-frontier",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [
+    "battle-frontier"
+   ],
+   "tips": "A fully working Battle Frontier; an NPC at its entrance edits EVs and IVs.",
+   "quality": "reference-only",
+   "source": "pokemonemeraldseaglass.com; PokéHarbor"
+  },
+  {
+   "id": "legend-mewtwo",
+   "name": "Mewtwo (Granite Cave)",
+   "kind": "legendary",
+   "place": "granite-cave",
+   "level_cap": 80,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Lv 80 in Steven's room in Granite Cave.",
+   "quality": "reference-only",
+   "source": "fan Professor Oak Challenge guide for Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "legend-navel-rock",
+   "name": "Lugia and Ho-Oh (Navel Rock)",
+   "kind": "legendary",
+   "place": "navel-rock",
+   "level_cap": 70,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Lugia on the bottom floor, Ho-Oh on the top; reachable before the Champion. (No level given: cap shown is a guess.)",
+   "quality": "reference-only",
+   "source": "fan Professor Oak Challenge guide for Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "legend-beasts",
+   "name": "Raikou, Entei or Suicune (Shoal Cave)",
+   "kind": "legendary",
+   "place": "shoal-cave",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [],
+   "tips": "One at random at high tide; set the clock to 3-8 AM or PM. They reset after the League. (No level given.)",
+   "quality": "reference-only",
+   "source": "fan Professor Oak Challenge guide for Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "legend-birds",
+   "name": "Articuno, Zapdos or Moltres (Mt. Pyre)",
+   "kind": "legendary",
+   "place": "mt-pyre",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [],
+   "tips": "One at a time at the summit; reset after the League. (No level given.)",
+   "quality": "reference-only",
+   "source": "fan Professor Oak Challenge guide for Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "legend-regis",
+   "name": "Regirock, Regice, Registeel",
+   "kind": "legendary",
+   "place": "route-111",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [
+    "route-105",
+    "route-120"
+   ],
+   "tips": "Regirock on Route 111, Regice on Route 105, Registeel on Route 120. (No level given.)",
+   "quality": "reference-only",
+   "source": "fan Professor Oak Challenge guide for Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "legend-celebi",
+   "name": "Celebi (Route 119)",
+   "kind": "legendary",
+   "place": "route-119",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [],
+   "tips": "A shrine on Route 119, reached with the Acro Bike and a sailor. (No level given.)",
+   "quality": "reference-only",
+   "source": "fan Professor Oak Challenge guide for Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "legend-weather",
+   "name": "Kyogre and Groudon (post-game)",
+   "kind": "legendary",
+   "place": "route-119",
+   "level_cap": 70,
+   "done_when": "none",
+   "opens": [],
+   "tips": "After the League, follow the Weather Institute's reports. (No level given.)",
+   "quality": "reference-only",
+   "source": "fan Professor Oak Challenge guide for Seaglass 3.0 (Google Docs)"
+  }
+ ],
+ "steps": [
+  {
+   "id": "step-book",
+   "title": "Set the difficulty in your room",
+   "text": "The book in your room turns Hard Mode (set style, no items in trainer battles) and the soft level cap (less EXP over the cap) on or off. The GameCube there takes cheat codes.",
+   "stage": "rival-route-103",
+   "places": [
+    "littleroot-town"
+   ],
+   "done_when": "party",
+   "quality": "reference-only",
+   "source": "pokemonemeraldseaglass.com; PokéHarbor"
+  },
+  {
+   "id": "step-linking-cord",
+   "title": "Get a Linking Cord",
+   "text": "Lanette's house on Route 114 gives a Linking Cord for trade evolutions; more are prizes at the Mossdeep pinball.",
+   "stage": "team-mt-chimney",
+   "places": [
+    "route-114"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pokemonemeraldseaglass.com; PokéHarbor"
+  },
+  {
+   "id": "step-wishing-well",
+   "title": "Rustboro wishing well",
+   "text": "Wishing Stars bought in the Rustboro wishing well give random Lv 1 Pokémon.",
+   "stage": "gym-1-roxanne",
+   "places": [
+    "rustboro-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pokemonemeraldseaglass.com; PokéHarbor"
+  },
+  {
+   "id": "step-herb-shop",
+   "title": "Evolution stones in Lavaridge",
+   "text": "The Lavaridge herb shop sells the Leaf, Ice, Shiny and Dawn Stones.",
+   "stage": "gym-4-flannery",
+   "places": [
+    "lavaridge-town"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pokemonemeraldseaglass.com; PokéHarbor"
+  },
+  {
+   "id": "step-z-ring",
+   "title": "Z-Ring from Devon",
+   "text": "Devon gives a Z-Ring; Z-Crystals are sold in a shop.",
+   "stage": "gym-1-roxanne",
+   "places": [
+    "rustboro-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pokemonemeraldseaglass.com; PokéHarbor"
+  }
+ ],
+ "secrets": [
+  {
+   "id": "legend-latis",
+   "kind": "legendary",
+   "text": "With the Eon Ticket: Latias or Latios on Southern Island.",
+   "place": "southern-island",
+   "quality": "reference-only",
+   "source": "fan Professor Oak Challenge guide for Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "legend-mew",
+   "kind": "legendary",
+   "text": "With the Old Sea Map: Mew on Faraway Island.",
+   "place": "faraway-island",
+   "quality": "reference-only",
+   "source": "fan Professor Oak Challenge guide for Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "legend-deoxys",
+   "kind": "legendary",
+   "text": "With the Aurora Ticket: Deoxys on Birth Island.",
+   "place": "birth-island",
+   "quality": "reference-only",
+   "source": "fan Professor Oak Challenge guide for Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "legend-jirachi",
+   "kind": "legendary",
+   "text": "Hold a Wishing Star at the white rock in Mossdeep for Jirachi.",
+   "place": "mossdeep-city",
+   "quality": "reference-only",
+   "source": "fan Professor Oak Challenge guide for Seaglass 3.0 (Google Docs)"
+  },
+  {
+   "id": "tip-safari",
+   "kind": "tip",
+   "text": "The Safari Zone is buggy: save first. Mudkip lives in the south-west, Larvitar and Torchic in the north-west (Mach Bike).",
+   "place": "safari-zone",
+   "quality": "reference-only",
+   "source": "pokemonemeraldseaglass.com; PokéHarbor"
+  },
+  {
+   "id": "tip-scuba",
+   "kind": "tip",
+   "text": "Pacifidlog runs a Scuba Safari.",
+   "place": "pacifidlog-town",
+   "quality": "reference-only",
+   "source": "pokemonemeraldseaglass.com; PokéHarbor"
+  },
+  {
+   "id": "tip-pinball",
+   "kind": "tip",
+   "text": "Pinball tables in Mauville and Mossdeep pay out prizes, Linking Cords among them.",
+   "place": "mauville-city",
+   "quality": "reference-only",
+   "source": "pokemonemeraldseaglass.com; PokéHarbor"
+  },
+  {
+   "id": "tip-magnezone",
+   "kind": "tip",
+   "text": "Magnezone: level Magneton in New Mauville, or use a Thunder Stone.",
+   "place": "new-mauville",
+   "quality": "reference-only",
+   "source": "pokemonemeraldseaglass.com; PokéHarbor"
+  }
+ ],
+ "evolutions": [
+  {
+   "id": "evo-kadabra",
+   "species": 64,
+   "name": "Kadabra",
+   "text": "The Linking Cord evolves it (and the other trade evolutions) without a trade.",
+   "quality": "reference-only",
+   "source": "pokemonemeraldseaglass.com; PokéHarbor"
+  },
+  {
+   "id": "evo-onix",
+   "species": 95,
+   "name": "Onix",
+   "text": "Metal Coat gives Steelix; Scyther takes the Metal Coat for Scizor or the Black Augurite for Kleavor.",
+   "quality": "reference-only",
+   "source": "pokemonemeraldseaglass.com; PokéHarbor"
+  },
+  {
+   "id": "evo-slowpoke",
+   "species": 79,
+   "name": "Slowpoke",
+   "text": "King's Rock gives Slowking (Poliwhirl: Politoed).",
+   "quality": "reference-only",
+   "source": "pokemonemeraldseaglass.com; PokéHarbor"
+  },
+  {
+   "id": "evo-feebas",
+   "species": 349,
+   "name": "Feebas",
+   "text": "A Prism Scale gives Milotic.",
+   "quality": "reference-only",
+   "source": "pokemonemeraldseaglass.com; PokéHarbor"
+  },
+  {
+   "id": "evo-misdreavus",
+   "species": 200,
+   "name": "Misdreavus",
+   "text": "A Dusk Stone gives Mismagius.",
+   "quality": "reference-only",
+   "source": "pokemonemeraldseaglass.com; PokéHarbor"
+  },
+  {
+   "id": "evo-nosepass",
+   "species": 299,
+   "name": "Nosepass",
+   "text": "A Thunder Stone gives Probopass.",
+   "quality": "reference-only",
+   "source": "pokemonemeraldseaglass.com; PokéHarbor"
+  },
+  {
+   "id": "evo-magnemite",
+   "species": 81,
+   "name": "Magnemite",
+   "text": "Magnemite's line: Magneton, then Magnezone by Thunder Stone or levelling in New Mauville.",
+   "quality": "reference-only",
+   "source": "pokemonemeraldseaglass.com; PokéHarbor"
+  },
+  {
+   "id": "evo-happiny",
+   "species": 440,
+   "name": "Happiny",
+   "text": "Friendship gives Chansey from Lv 15.",
+   "quality": "reference-only",
+   "source": "pokemonemeraldseaglass.com; PokéHarbor"
+  },
+  {
+   "id": "evo-pichu",
+   "species": 172,
+   "name": "Pichu",
+   "text": "Since 3.0 a Light Ball works for the Pichu line.",
+   "quality": "reference-only",
+   "source": "pokemonemeraldseaglass.com; PokéHarbor"
+  }
+ ],
+ "notes": [
+  {
+   "id": "note-version",
+   "kind": "version",
+   "title": "Emerald Seaglass 3.0",
+   "text": "Emerald redrawn in a Game Boy Color style with Emerald's story. All Gen I-III species, their later evolutions and a few newer ones; Fairy type and the split. 3.0 adds Brendan and May as playable and new leader sprites.",
+   "quality": "reference-only",
+   "source": "pokemonemeraldseaglass.com; PokéHarbor"
+  },
+  {
+   "id": "note-retypes",
+   "kind": "version",
+   "title": "Retyped Pokémon",
+   "text": "Noctowl Ghost/Flying, Sceptile Grass/Dragon, Octillery Water/Fire, Meganium Grass/Fairy, Typhlosion Fire/Ground, Feraligatr Water/Dark, Blastoise Water/Steel, Hypno Psychic/Dark, Aggron Steel/Dragon, Huntail Water/Dragon, Gorebyss Water/Fairy, Ninjask Bug/Dark.",
+   "quality": "reference-only",
+   "source": "pokemonemeraldseaglass.com; PokéHarbor"
+  },
+  {
+   "id": "note-features",
+   "kind": "tip",
+   "title": "Features",
+   "text": "Followers (can be turned off), DexNav, Box Link (the PC anywhere), HMs without move slots, party Exp. Share, Z-Moves, a shiny charm and a type-effectiveness display.",
+   "quality": "reference-only",
+   "source": "pokemonemeraldseaglass.com; PokéHarbor"
+  }
+ ]
+}

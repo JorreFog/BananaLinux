@@ -26,6 +26,7 @@
 // Data layouts: Bulbapedia's "Pokémon data structure (Generation III)" and "Character encoding (Generation III)".
 #include <array>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -53,7 +54,10 @@ namespace banana::pkmn
 		int size = 0x58;
 		int moves = 0x0c, types = 0x21, pp = 0x24, hp = 0x28, level = 0x2a, maxHp = 0x2c, item = 0x2e, nick = 0x30;
 		int ppBonuses = 0x3b, exp = 0x44, pid = 0x48, status = 0x4c;
+		int stats = 0x02, ivs = 0x14;			// (Attack, Defense, Speed, Sp. Atk, Sp. Def; the IV word as a party slot's)
 		int eggByte = 0x17, eggBit = 0x40;		// (the IV word's egg bit)
+		// a build's own decoder (gba/expansion.cpp: pokeemerald-expansion), used instead of the fields above when set
+		std::function<bool(const uint8_t* p, struct Mon& m, int maxSpecies)> decode;
 	};
 	struct MonLayout
 	{
@@ -61,6 +65,7 @@ namespace banana::pkmn
 		MonCoding coding = MonCoding::ENCRYPTED;
 		uint16_t speciesMask = 0xffff;			// the species' bits in its halfword (a hack may pack more in beside it)
 		BattlerLayout battler;
+		std::function<bool(const uint8_t* p, struct Mon& m)> decode;	// (a build's own, as BattlerLayout::decode)
 	};
 
 	// the base game a game is (or a hack is built on): the save's layout, the region and its goals
@@ -72,6 +77,9 @@ namespace banana::pkmn
 		uint32_t flags; int badge0, clear; uint32_t money, key;
 		uint32_t pocket[5]; int count[5];		// Items, Key Items, Poké Balls, TMs & HMs, Berries
 		uint32_t dexOwned = 0x28;				// owned[52], then seen[52]
+		// (pokeemerald-expansion builds) the player's position in SaveBlock1 (then the map's group and number at + 4), and
+		// the Pokédex there: seen[dexBytes], then caught[dexBytes] at dexSb1 (0: SaveBlock2's at dexOwned)
+		uint32_t pos = 0, dexSb1 = 0; int dexBytes = 0;
 	};
 	// a game, or one release of it: what the companion reads and where. Told by the header's code, and by the ROM's
 	// CRC-32 for a profile that names one (a hack that keeps its base game's code but not its RAM: the one with the
@@ -89,6 +97,12 @@ namespace banana::pkmn
 		SaveLayout save;
 		MonLayout mon;
 	};
+	// a ROM whose RAM and layouts its own code says (gba/expansion.cpp: pokeemerald-expansion builds, "RHHEXP" in the
+	// header): the reader that makes its profile and tables from the whole ROM (false: not one, or not found)
+	using OwnProfileReader = bool (*)(const uint8_t* rom, size_t n, std::shared_ptr<const struct GameProfile>& profile, struct RomTables& t);
+	void setOwnProfileReader(OwnProfileReader f);
+	bool hasOwnProfile(const uint8_t* rom, size_t n);	// (the header says so: wait for the reader)
+
 	// the ROM's first bytes (0xB0 at least); crc: the whole ROM's CRC-32 when known (0 not)
 	const GameProfile* detectGame(const uint8_t* rom, size_t n, uint32_t crc = 0);
 	// the same in a list of one's own (tests)
@@ -111,6 +125,7 @@ namespace banana::pkmn
 		uint8_t types[2] = { 255, 255 };	// in a battle (the battle's own copy); else from the ROM's table
 		bool egg = false;
 		uint32_t pid = 0, exp = 0;			// personality (gender, with the species' ratio), experience points
+		uint32_t otId = 0;					// a party member's original trainer: id | secret id << 16 (shininess)
 		// a party member's (not a battler's): its stats (HP is maxHp), IVs and EVs, friendship, which of the species'
 		// two abilities it has (1 the second)
 		uint16_t stats[5] = {};				// Attack, Defense, Speed, Sp. Atk, Sp. Def (the games' order)
@@ -122,6 +137,12 @@ namespace banana::pkmn
 	bool decodeParty(const uint8_t* p, Mon& m, MonCoding coding = MonCoding::ENCRYPTED);
 	bool decodeParty(const uint8_t* p, Mon& m, const MonLayout& layout);
 	// one battler of the battle's own copy; species above maxSpecies: none
+	// the save's key (gSaveBlock2.encryptionKey) from the words read at SaveBlock2+key (the key, then the words after it)
+	// and the money's 8 bytes (the money, then the coins): the first word as the games keep it, else none when the money
+	// is plain, else the first later word that makes the money (at most 999,999) and the coins (at most 9,999) possible.
+	// pokeemerald-expansion builds move it: SoulGold 1.1.4 at +0xB4 (3000 read as 553,099,489 through +0xAC), Heart &
+	// Soul's money plain (3000 read as 3,579,103,101) - both on the RG DS Plus 2026-11-04. The bag's counts use it too.
+	uint32_t saveKey(const std::vector<uint8_t>& money, const std::vector<uint8_t>& keys);
 	bool decodeBattler(const uint8_t* p, Mon& m, int maxSpecies = 450, const BattlerLayout& layout = BattlerLayout());
 	const char* statusName(uint32_t status);	// "SLP", "PSN", ... or "" (none)
 	const char* natureName(int nature);		// English, by personality % 25 ("" out of range)
@@ -157,6 +178,7 @@ namespace banana::pkmn
 			uint32_t bagPockets = 0;			// the bag where gBagPockets (here) points, its counts not XORed (CFRU's
 												// "Expanded Bag"; 0 the save's own)
 			bool bagUnsure = false;				// the bag perhaps not the save's own, and not found elsewhere either
+			int fairyType = -1;					// the Fairy type's id (CFRU: 23; a hack that renamed ??? to FAIRY: 9); -1 none
 		};
 		Features has;
 		// what the other pages need (empty: not found)
@@ -179,6 +201,7 @@ namespace banana::pkmn
 		std::vector<std::string> leaders;	// has.leadersFromTrainers: the gym leaders, weakest team first (the order they are met)
 		std::vector<int> leaderTypes;		// and the type most of their Pokémon have, over all their battles
 		std::shared_ptr<const std::vector<uint8_t>> rom;	// the whole ROM, for the look-ups below
+		uint32_t crc = 0;					// the whole ROM's CRC-32 (Companion::open works it out once; 0 not known)
 		long dexEntries = -1, wildHeaders = -1, trainers = -1;
 		int dexStride = 32, numTrainers = 0;
 		std::string speciesName(uint16_t i) const;
@@ -208,6 +231,7 @@ namespace banana::pkmn
 		// each map's region map section by group and number (findMapGroups; 255: not known) and, from them and the wild
 		// tables, where a species is met: section, how (as wild()), levels, chance; the commonest first
 		std::vector<std::vector<uint8_t>> mapsecs;
+		std::vector<std::vector<long>> mapHeaders;	// (the same maps' headers in the ROM: their layout, so their size)
 		// the level-up move lists (findLearnsets; -1 not found): the next move a species learns after level (0 none;
 		// its level in lv)
 		long learnsets = -1;
@@ -222,6 +246,14 @@ namespace banana::pkmn
 	// Emerald, FireRed, LeafGreen and hacks that keep the format), found by their shape: t.learnsets
 	void findLearnsets(RomTables& t, const uint8_t* rom, size_t n);
 	RomTables findTables(const uint8_t* rom, size_t n, const GameProfile* game = nullptr);
+
+	// Emerald's own code points at its tables from literal pools, and a ROM hack patched from the English Emerald (the
+	// Glazed releases) moves a table by changing those pointers, its code staying where it was. A table's offset as the
+	// words at Emerald's places say: -1 unless every one of them holds the same ROM pointer (another game, a hack built
+	// from the decompilation, whose code is elsewhere)
+	enum class EmTable { NAT_DEX, WILD, LEARNSETS, DEX_ENTRIES, REGION_MAP, TM_COMPAT, TM_MOVES, EVOLUTIONS, TRAINERS,
+		TRAINER_CLASSES, MOVE_DESC, TYPE_EFFECT, TYPE_NAMES, MAP_GROUPS, ABILITY_DESC, NATURE_NAMES };
+	long emeraldTable(const uint8_t* rom, size_t n, EmTable t);
 
 	// pokemap.cpp: the GBA BIOS's LZ77 (type 0x10) at rom[at]: false when it isn't one, runs past the end or decodes to
 	// more than maxOut; used: the compressed bytes read
@@ -251,13 +283,15 @@ namespace banana::pkmn
 		bool unknownRelease = false;	// a release of the game the companion has no profile for (nothing read)
 		std::string error;			// RetroArch's reply when it had none ("no memory map defined"...)
 		std::vector<Mon> party;
-		bool inBattle = false, doubles = false;
+		bool inBattle = false, doubles = false, trainerBattle = false;	// (trainer: gBattleTypeFlags' TRAINER bit)
 		Mon lead;					// the player's battler (battler 0)
 		std::vector<Mon> foes;		// battler 1 (and 3 in a double battle), still standing
 		std::vector<Mon> foeParty;	// the other side's party (its count and who has fainted)
 		// the save's own data (read while the Map, Bag, Dex or Guide page is open: ext)
 		bool ext = false;
 		std::string player;
+		int tid = -1, sid = -1;			// the player's trainer id and secret id (SaveBlock2 0x0A; -1 not read)
+		long playSeconds = -1;			// play time (SaveBlock2 0x0E: hours u16, minutes, seconds)
 		int group = -1, num = -1, x = 0, y = 0, mapsec = -1;	// where the player is
 		uint32_t layout = 0;		// the map's layout (its size, for the place on the region map)
 		long money = -1;
@@ -283,6 +317,8 @@ namespace banana::pkmn
 		std::string requests(double nowMs);
 		void feed(const char* data, size_t n);	// RetroArch's stdout
 		bool takeChanged() { bool c = changed; changed = false; return c; }
+		// counts the Snapshots that differed from the one before (a reader of its own: takeChanged is the panel's)
+		uint64_t serial() const { return serialNo; }
 		const Snapshot& snapshot() const { return snap; }
 		std::shared_ptr<const RomTables> tables() const;	// null until read
 		// (tests: the ROM's tables from memory)
@@ -294,7 +330,9 @@ namespace banana::pkmn
 		const GameProfile* info = nullptr;
 		bool byCrc = false;			// the profile told by the ROM's CRC-32: nothing read until it is (info till then: a guess)
 		// (the tables, and the profile the whole ROM's CRC-32 tells, from the thread)
-		struct Shared { std::mutex mu; std::shared_ptr<const RomTables> tables; const GameProfile* profile = nullptr; bool ready = false; };
+		struct Shared { std::mutex mu; std::shared_ptr<const RomTables> tables; const GameProfile* profile = nullptr; bool ready = false;
+			std::shared_ptr<const GameProfile> own; };	// (own: a build's profile from its ROM, kept while it is used)
+		std::shared_ptr<const GameProfile> owned;
 		std::shared_ptr<Shared> sh;
 		bool tablesSeen = false;
 		double nextAt = 0, sentAt = 0, errorSince = -1;
@@ -313,6 +351,7 @@ namespace banana::pkmn
 		struct Want { uint32_t addr; int len; std::vector<uint8_t>* into; bool done; };
 		std::vector<Want> wants;
 		bool changed = false;
+		uint64_t serialNo = 0;
 		void finish();
 		void saveData(Snapshot& s);
 	};

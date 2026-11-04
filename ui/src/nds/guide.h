@@ -27,6 +27,7 @@ namespace banana::nds
 	// the file name of a game's guide ("platinum.json"); empty for NONE
 	std::string guideFileName(GameId id);
 	const char* guideDir();		// /usr/share/banana/companions/nds-pokemon, or $BANANA_NDS_GUIDE for tests
+	const char* gbaGuideDir();	// the GBA games' (Gen III): /usr/share/banana/companions/gba-pokemon, or $BANANA_GBA_GUIDE
 
 	// load a file. Returns false (with the reason in *why) when it can't be read or isn't a guide of `expect` (GameId::NONE: any).
 	// On success *why holds a note when entries were skipped ("2 entries skipped: milestones[3] ...") and is empty otherwise.

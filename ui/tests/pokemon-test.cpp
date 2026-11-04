@@ -438,6 +438,33 @@ int main(int argc, char** argv)
 	EQ(std::string(statusName(0x80)), std::string("PSN"));
 	EQ(std::string(statusName(0)), std::string(""));
 
+	// ---- the save's key: as kept, plain, or moved (SoulGold's +0xB4)
+	{
+		auto w32 = [](std::vector<uint8_t>& v, size_t at, uint32_t x) { for (int i = 0; i < 4; i++) v[at + i] = (uint8_t)(x >> (8 * i)); };
+		const uint32_t K = 0x62c24ca2u;
+		std::vector<uint8_t> money(8, 0), keys(0x20, 0);
+		w32(money, 0, 3000 ^ K); w32(money, 4, K & 0xffff);		// (3000, no coins)
+		w32(keys, 0, K);
+		EQ(saveKey(money, keys), K);							// as the games keep it
+		w32(keys, 0, 0x2204264cu); w32(keys, 8, K);
+		EQ(saveKey(money, keys), K);							// two words on
+		w32(money, 0, 3000); w32(money, 4, 0);
+		EQ(saveKey(money, keys), 0u);							// the money plain
+		w32(money, 0, 3000 ^ 0x11111111u);
+		EQ(saveKey(money, keys), 0x2204264cu);					// nothing fits: the word as kept
+		// (no coins read: by the money alone)
+		std::vector<uint8_t> m4(4, 0);
+		w32(m4, 0, 3000 ^ 0x2204264cu);
+		EQ(saveKey(m4, keys), 0x2204264cu);
+		w32(m4, 0, 3000);
+		EQ(saveKey(m4, keys), 0u);
+		// Heart & Soul: the money plain and no coins where Emerald keeps them (a word no key makes 9,999 or less)
+		w32(money, 0, 3000); w32(money, 4, 0x8a3fbeefu);
+		EQ(saveKey(money, keys), 0u);
+		w32(money, 0, 3000 ^ K);
+		EQ(saveKey(money, keys), K);							// (and a key two words on, by the money alone)
+	}
+
 	// ---- the battle's own copy
 	{
 		auto b = battler(277, "TREECKO", 9, 15, 27, GRASS, GRASS, { 1, 43, 71 });
@@ -445,6 +472,14 @@ int main(int argc, char** argv)
 		CHECK(decodeBattler(b.data(), d));
 		EQ(d.species, (uint16_t)277); EQ(d.nick, std::string("TREECKO")); EQ(d.level, (uint8_t)9);
 		EQ(d.hp, (uint16_t)15); EQ(d.maxHp, (uint16_t)27); EQ(d.types[0], (uint8_t)GRASS); EQ(d.moves[2], (uint16_t)71);
+		// the stats at 0x02 and the IV word at 0x14 (HP 31, Attack 20, Speed 10, Sp. Def 0 - as a party slot packs it)
+		auto c = b;
+		c[0x02] = 21; c[0x04] = 19; c[0x0a] = 17;
+		const uint32_t ivw = 31u | 20u << 5 | 10u << 15;
+		for (int i = 0; i < 4; i++) c[0x14 + i] = (uint8_t)(ivw >> (8 * i));
+		CHECK(decodeBattler(c.data(), d));
+		EQ(d.stats[0], (uint16_t)21); EQ(d.stats[1], (uint16_t)19); EQ(d.stats[4], (uint16_t)17);
+		EQ(d.ivs[0], (uint8_t)31); EQ(d.ivs[1], (uint8_t)20); EQ(d.ivs[3], (uint8_t)10); EQ(d.ivs[5], (uint8_t)0);
 		std::vector<uint8_t> z(0x58, 0);
 		CHECK(!decodeBattler(z.data(), d));
 	}

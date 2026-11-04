@@ -125,6 +125,9 @@ namespace banana::pkmn
 			return "";
 		}
 		bool nameChar(uint8_t b) { return b != 0xff && *glyph(b); }
+		// in a table of names: the ligatures too (0x53-0x59: PK, MN and the POKéBLOCK pieces), which ROM hacks use as
+		// symbols of their own (the Glazed releases: 0x57 before a Mega Evolution's name)
+		bool tableChar(uint8_t b) { return nameChar(b) || (b >= 0x53 && b <= 0x59); }
 
 		// a table of fixed-size names: entry 0 is first (its bytes given), then count - 1 names, each a terminated
 		// string of name characters filling no more than its entry
@@ -140,7 +143,7 @@ namespace banana::pkmn
 				{
 					const uint8_t* e = rom + at + i * entry;
 					size_t k = 0;
-					while (k < entry && e[k] != 0xff) { if (!nameChar(e[k])) { ok = false; break; } k++; }
+					while (k < entry && e[k] != 0xff) { if (!tableChar(e[k])) { ok = false; break; } k++; }
 					if (k == 0 || k == entry) ok = false;	// (a name of none, or with no end in its entry)
 				}
 				if (ok) return (long)at;
@@ -216,6 +219,14 @@ namespace banana::pkmn
 		return false;
 	}
 
+	namespace { OwnProfileReader ownReader = nullptr; }
+	void setOwnProfileReader(OwnProfileReader f) { ownReader = f; }
+	bool hasOwnProfile(const uint8_t* h, size_t n)
+	{
+		for (size_t a = 0x100; a + 6 <= n && a < 0x400; a += 2) if (!memcmp(h + a, "RHHEXP", 6)) return ownReader != nullptr;
+		return false;
+	}
+
 	std::string decodeText(const uint8_t* p, size_t max)
 	{
 		std::string s;
@@ -251,6 +262,7 @@ namespace banana::pkmn
 		if (m.species == 0) return false;
 		m.item = le16(part[0] + 2);
 		m.pid = pid;
+		m.otId = otid;
 		m.exp = le32(part[0] + 4);
 		m.ppBonuses = part[0][8];
 		m.friendship = part[0][9];
@@ -272,13 +284,35 @@ namespace banana::pkmn
 
 	bool decodeParty(const uint8_t* p, Mon& m, const MonLayout& L)
 	{
+		if (L.decode) return L.decode(p, m);
 		if (!decodeParty(p, m, L.coding)) return false;
 		m.species &= L.speciesMask;
 		return m.species != 0;
 	}
 
+	uint32_t saveKey(const std::vector<uint8_t>& money, const std::vector<uint8_t>& keys)
+	{
+		uint32_t key = keys.size() >= 4 ? le32(keys.data()) : 0;
+		if (money.size() < 4 || keys.size() < 4) return key;
+		const uint32_t m = le32(money.data());
+		const bool coins = money.size() >= 6;
+		const uint16_t c = coins ? le16(money.data() + 4) : 0;
+		// by the money and the coins, then by the money alone (a build that keeps no coins there: Heart & Soul's word
+		// after the money fits no key, and its money is plain - 3000 read as 1,382,062,106 on the RG DS Plus 2026-11-04)
+		for (int pass = coins ? 0 : 1; pass < 2; pass++)
+		{
+			auto fits = [&](uint32_t k) { return (m ^ k) <= 999999 && (pass || (uint16_t)(c ^ (uint16_t)k) <= 9999); };
+			if (fits(key)) return key;
+			if (fits(0)) return 0;
+			for (size_t o = 4; o + 4 <= keys.size(); o += 4)
+				if (const uint32_t k = le32(keys.data() + o); k && fits(k)) return k;
+		}
+		return key;
+	}
+
 	bool decodeBattler(const uint8_t* p, Mon& m, int maxSpecies, const BattlerLayout& L)
 	{
+		if (L.decode) return L.decode(p, m, maxSpecies);
 		m = Mon();
 		m.species = le16(p);
 		if (m.species == 0 || m.species > maxSpecies) return false;
@@ -292,6 +326,9 @@ namespace banana::pkmn
 		m.ppBonuses = p[L.ppBonuses];
 		m.status = le32(p + L.status);
 		m.egg = p[L.eggByte] & L.eggBit;
+		for (int i = 0; i < 5; i++) m.stats[i] = le16(p + L.stats + 2 * i);
+		const uint32_t iv = le32(p + L.ivs);
+		for (int i = 0; i < 6; i++) m.ivs[i] = (uint8_t)(iv >> (5 * i) & 31);
 		m.exp = le32(p + L.exp);
 		m.pid = le32(p + L.pid);
 		return true;
@@ -522,11 +559,18 @@ namespace banana::pkmn
 			}
 			return k >= len ? -1 : chars;
 		}
+		// a name in a table of names (the ligatures allowed: tableChar)
+		int tableNameAt(const uint8_t* p, size_t len)
+		{
+			size_t k = 0;
+			while (k < len && p[k] != 0xff) { if (!tableChar(p[k])) return -1; k++; }
+			return k == len ? -1 : (int)k;
+		}
 		// a table of names, entry bytes each, from at: how many in a row are names (a blank one ends it unless allowed)
 		int countNames(const uint8_t* rom, size_t n, long at, size_t entry, int max)
 		{
 			int c = 0;
-			while (c < max && at + (c + 1) * entry <= n && nameAt(rom + at + c * entry, entry) > (c == 0 ? -1 : 0)) c++;
+			while (c < max && at + (c + 1) * entry <= n && tableNameAt(rom + at + c * entry, entry) > (c == 0 ? -1 : 0)) c++;
 			return c;
 		}
 		// text with the games' line breaks as spaces, control codes left out
@@ -577,7 +621,7 @@ namespace banana::pkmn
 	{
 		// a CFRU hack, told by its tables (the Fairy type, more than 412 species): what it has beyond FireRed's
 		// (its bag perhaps not the save's: until its own is found, below)
-		void cfru(RomTables& t) { t.has.modernTypes = t.has.ownDex = t.has.leadersFromTrainers = t.has.bagUnsure = true; }
+		void cfru(RomTables& t) { t.has.modernTypes = t.has.ownDex = t.has.leadersFromTrainers = t.has.bagUnsure = true; t.has.fairyType = FAIRY; }
 
 		void fromHeader(RomTables& t, const uint8_t* rom, size_t n)
 		{
@@ -628,7 +672,7 @@ namespace banana::pkmn
 			if (ab >= 0 && nameAt(rom + ab, 32) > 0)
 			{
 				size_t k = nameAt(rom + ab, 32) + 1, e = k;
-				while (e < 32 && rom[ab + e] == 0xff) e++;
+				while (e < 32 && (rom[ab + e] == 0xff || rom[ab + e] == 0)) e++;	// (the first's padding: ends or spaces)
 				if (e < 32 && nameAt(rom + ab + e, e) > 0)
 				{
 					int na = countNames(rom, n, ab, e, 1000);
@@ -746,18 +790,31 @@ namespace banana::pkmn
 				}
 				return;
 			}
-			// Emerald, Ruby, Sapphire: a record a section (x, y, width, height on a 28 x 15 map, the name's pointer)
-			long best = -1; int bestLen = 0;
-			for (size_t a = 0; a + 8 <= n; a += 4)
+			// Emerald, Ruby, Sapphire: a record a section (x, y, width, height on a 28 x 15 map, the name's pointer; a hack
+			// patched from Emerald keeps sections off the map at x = y = 255: the Glazed releases), where Emerald's code
+			// points or the longest run of them
+			auto hidden = [&](size_t r) { return rom[r] == 0xff && rom[r + 1] == 0xff; };
+			// (loose: where Emerald's code points, sections anywhere off the map too: Glazed's Oldale Town at y 48)
+			auto sections = [&](size_t a, bool loose)
 			{
 				int k = 0;
 				for (;; k++)
 				{
 					size_t r = a + k * 8;
-					if (r + 8 > n || rom[r] >= 28 || rom[r + 1] >= 15 || rom[r + 2] == 0 || rom[r + 3] == 0 || rom[r + 2] > 28 || rom[r + 3] > 15) break;
+					if (r + 8 > n || rom[r + 2] == 0 || rom[r + 3] == 0 || rom[r + 2] > 28 || rom[r + 3] > 15) break;
+					if (!loose && !hidden(r) && (rom[r] >= 28 || rom[r + 1] >= 15)) break;
 					long p = romPtr(rom, n, r + 4, 2);
 					if (p < 0 || (!k && sectionName(rom + p, 22) < 2)) break;	// (a few sections have no name)
 				}
+				return k;
+			};
+			long best = -1; int bestLen = 0;
+			long em = emeraldTable(rom, n, EmTable::REGION_MAP);
+			if (em >= 0 && sections((size_t)em, true) >= 60) { best = em; bestLen = sections((size_t)em, true); }
+			const bool fromCode = best >= 0;
+			for (size_t a = 0; !fromCode && a + 8 <= n; a += 4)
+			{
+				int k = sections(a, false);
 				if (k > bestLen) { best = (long)a; bestLen = k; }
 			}
 			if (bestLen < 60) return;
@@ -767,7 +824,7 @@ namespace banana::pkmn
 				const uint8_t* r = rom + best + i * 8;
 				t.mapNames.resize(bestLen);
 				t.mapNames[i] = longText(rom, n, romPtr(rom, n, best + i * 8 + 4), 22);	// (Ruby/Sapphire's town names: "LITTLEROOT{FC 00} TOWN")
-				if (r[0] == 0 && r[1] == 0) continue;	// (sections that aren't on the map: the truck, the Battle Tower...)
+				if ((r[0] == 0 && r[1] == 0) || r[0] >= 28 || r[1] >= 15) continue;	// (sections that aren't on the map: the truck, the Battle Tower...)
 				for (int y = r[1]; y < r[1] + r[3] && y < 15; y++)
 					for (int x = r[0]; x < r[0] + r[2] && x < 28; x++) g.cells[y * 28 + x] = (uint8_t)i;
 			}
@@ -833,6 +890,39 @@ namespace banana::pkmn
 		count = (int)(sizeof GOALS_FR / sizeof GOALS_FR[0]); return GOALS_FR;
 	}
 
+	long emeraldTable(const uint8_t* rom, size_t n, EmTable which)
+	{
+		// (the literal pools that hold each table's address in the English Emerald, found by its addresses there)
+		static const uint32_t SITES[][4] = {
+			{ 0x6d448, 0x6d4bc, 0, 0 },					// NAT_DEX: gSpeciesToNationalPokedexNum
+			{ 0xb4d48, 0xb5438, 0xb54d8, 0xb5560 },		// WILD: gWildMonHeaders
+			{ 0x6930c, 0x693a0, 0x69414, 0x6e1f8 },		// LEARNSETS: gLevelUpLearnsets
+			{ 0xbfa20, 0xbfadc, 0xc02f8, 0xc0328 },		// DEX_ENTRIES: gPokedexEntries
+			{ 0x123b44, 0x123d54, 0x12459c, 0x124654 },	// REGION_MAP: gRegionMapEntries
+			{ 0x6e048, 0x6e060, 0x6e098, 0x6e0b0 },		// TM_COMPAT: gTMHMLearnsets
+			{ 0x1b6d10, 0x1b6d30, 0, 0 },				// TM_MOVES: sTMHMMoves
+			{ 0x6d140, 0x6d190, 0x6d234, 0x6d384 },		// EVOLUTIONS: gEvolutionTable
+			{ 0x3587c, 0x36320, 0x36480, 0x3658c },		// TRAINERS: gTrainers
+			{ 0x183b4, 0x6f0ac, 0x14f5b0, 0x1927f0 },	// TRAINER_CLASSES: gTrainerClassNames
+			{ 0x1c3efc, 0x1d2ac8, 0, 0 },				// MOVE_DESC: gMoveDescriptionPointers
+			{ 0x47134, 0x47274, 0x47348, 0x476ac },		// TYPE_EFFECT: gTypeEffectiveness
+			{ 0x166f4, 0x16730, 0x59c24, 0x14f740 },	// TYPE_NAMES: gTypeNames
+			{ 0x84aa4, 0, 0, 0 },						// MAP_GROUPS: gMapGroups
+			{ 0x1c3078, 0x1c4, 0, 0 },					// ABILITY_DESC: gAbilityDescriptionPointers (and the header's)
+			{ 0x73188, 0x167c7c, 0x1c31e8, 0 },			// NATURE_NAMES: gNatureNamePointers
+		};
+		if (n < 0x1000000 || memcmp(rom + 0xac, "BPEE", 4) != 0) return -1;
+		const uint32_t* site = SITES[(int)which];
+		long at = -1;
+		for (int i = 0; i < 4 && site[i]; i++)
+		{
+			long v = romPtr(rom, n, site[i], 4);
+			if (v < 0 || (at >= 0 && v != at)) return -1;
+			at = v;
+		}
+		return at;
+	}
+
 	void findExtras(RomTables& t, const uint8_t* rom, size_t n, const GameProfile* g)
 	{
 		Family gen = g ? g->family : RUBY_SAPPHIRE;
@@ -860,25 +950,69 @@ namespace banana::pkmn
 		}
 		mapTables(t, rom, n, gen);
 		findRegionMaps(t, rom, n, gen);
-		// species -> national number: a run of u16s 1, 2, 3, ... (Bulbasaur to Celebi keep their numbers)
-		uint8_t seq[58];
-		for (int i = 0; i < 29; i++) { seq[i * 2] = (uint8_t)(i + 1); seq[i * 2 + 1] = 0; }
-		for (const uint8_t* p = rom; (p = (const uint8_t*)memmem(p, n - (p - rom), seq, sizeof seq)); p++)
+		// the type names (7 bytes each, "NORMAL" first, "FIGHT" next): a hack that made ??? (9) its Fairy type names it so
+		if (t.has.fairyType < 0)
 		{
-			size_t a = p - rom;
-			if (a % 2 || a + 2 * (size_t)t.numSpecies > n) continue;
-			t.natDex.assign(1, 0);
-			for (int s = 1; s < t.numSpecies; s++) t.natDex.push_back(le16(rom + a + (s - 1) * 2));
-			for (int s = 1; s < t.numSpecies; s++)
+			std::vector<uint8_t> nm, fi, fa;
+			encName("NORMAL", nm); encName("FIGHT", fi); encName("FAIRY", fa);
+			for (const uint8_t* p = rom; (p = (const uint8_t*)memmem(p, n - (p - rom), nm.data(), nm.size())); p++)
 			{
-				int d = t.natDex[s];
-				if (d <= 0 || d > 2000) continue;
-				if ((int)t.dexSpecies.size() <= d) t.dexSpecies.resize(d + 1, 0);
-				if (!t.dexSpecies[d]) t.dexSpecies[d] = (uint16_t)s;
+				size_t a = p - rom;
+				if (a + 7 * 18 > n || memcmp(rom + a + 7, fi.data(), fi.size())) continue;
+				if (!memcmp(rom + a + 7 * MYSTERY, fa.data(), fa.size())) t.has.fairyType = MYSTERY;
+				break;
 			}
-			break;
+		}
+		// species -> national number: a run of u16s 1, 2, 3, ... (Bulbasaur to Celebi keep their numbers), or where
+		// Emerald's code points (a hack that moved Bulbasaur's kin: Golden Glazed). Of those, the one whose numbers
+		// leave none out up to its highest (a Pokédex order or a regional one has gaps), the longest so: a CFRU hack keeps
+		// its base game's and other orders beside its own
+		{
+			std::vector<size_t> cand;
+			long em = emeraldTable(rom, n, EmTable::NAT_DEX);
+			if (em >= 0) cand.push_back((size_t)em);
+			uint8_t seq[58];
+			for (int i = 0; i < 29; i++) { seq[i * 2] = (uint8_t)(i + 1); seq[i * 2 + 1] = 0; }
+			for (const uint8_t* p = rom; (p = (const uint8_t*)memmem(p, n - (p - rom), seq, sizeof seq)); p++)
+				if ((p - rom) % 2 == 0) cand.push_back((size_t)(p - rom));
+			long best = -1; int bestTop = 0;
+			std::vector<uint8_t> seen;
+			for (size_t a : cand)
+			{
+				if (a + 2 * (size_t)t.numSpecies > n) continue;
+				seen.assign(2001, 0);
+				int top = 0;
+				for (int s = 1; s < t.numSpecies; s++)
+				{
+					int d = le16(rom + a + (s - 1) * 2);
+					if (d > 0 && d <= 2000) { seen[d] = 1; top = std::max(top, d); }
+				}
+				int gaps = 0;
+				for (int d = 1; d <= top; d++) gaps += !seen[d];
+				if (!gaps && top > bestTop) { best = (long)a; bestTop = top; }
+			}
+			const size_t first = em >= 0 ? 1 : 0;	// (none such: the first run, as before)
+			if (best < 0 && cand.size() > first && cand[first] + 2 * (size_t)t.numSpecies <= n) best = (long)cand[first];
+			if (best >= 0)
+			{
+				t.natDex.assign(1, 0);
+				for (int s = 1; s < t.numSpecies; s++) t.natDex.push_back(le16(rom + best + (s - 1) * 2));
+				for (int s = 1; s < t.numSpecies; s++)
+				{
+					int d = t.natDex[s];
+					if (d <= 0 || d > 2000) continue;
+					if ((int)t.dexSpecies.size() <= d) t.dexSpecies.resize(d + 1, 0);
+					if (!t.dexSpecies[d]) t.dexSpecies[d] = (uint16_t)s;
+				}
+			}
 		}
 		// the Pokédex entries: the category name first ("UNKNOWN" for none, "SEED" for Bulbasaur), 32 or 36 bytes each
+		// (Emerald's: where its code points, when that is such a table)
+		{
+			long em = emeraldTable(rom, n, EmTable::DEX_ENTRIES);
+			if (em >= 0 && (size_t)em + 32 * 2 <= n && nameAt(rom + em, 12) > 0 && nameAt(rom + em + 32, 12) > 0 && romPtr(rom, n, (size_t)em + 32 + 16, 2) >= 0)
+			{ t.dexEntries = em; t.dexStride = 32; }
+		}
 		for (const char* pair : { "SEED", "Seed" })
 		{
 			std::vector<uint8_t> seed, unk;
@@ -892,11 +1026,13 @@ namespace banana::pkmn
 			}
 		}
 		// the wild Pokémon: headers of 20 bytes (map group, number, two zeros, four pointers: grass, water, rock smash,
-		// fishing), the longest run of them (a hack may add smaller tables for times of day; those are left out)
-		int best = 0;
-		for (size_t a = 0; a + 20 <= n; a += 4)
+		// fishing), the longest run of them (a hack may add smaller tables for times of day; those are left out). A
+		// map's record may have none of the four (a CFRU hack keeps such: Gaia), not the first, nor one of map 0.0 (the
+		// zeros before a table)
+		// (the records from a; ended: an 0xff after them and one at least with a table)
+		auto wildRun = [&](size_t a, bool& ended)
 		{
-			int k = 0;
+			int k = 0, full = 0;
 			for (;; k++)
 			{
 				size_t r = a + k * 20;
@@ -909,10 +1045,22 @@ namespace banana::pkmn
 					any = true;
 					if (romPtr(rom, n, r + 4 + i * 4, 8) < 0) bad = true;
 				}
-				if (bad || !any) break;
+				if (bad || (!any && (k == 0 || (rom[r] == 0 && rom[r + 1] == 0)))) break;
+				full += any;
 			}
-			if (k > best && a + k * 20 + 1 < n && rom[a + k * 20] == 0xff) { best = k; t.wildHeaders = (long)a; }
-			if (k > 0) a += (k - 1) * 20;
+			ended = a + k * 20 + 1 < n && rom[a + k * 20] == 0xff && full > 0;
+			return k;
+		};
+		int best = 0;
+		bool ended = false;
+		long emWild = emeraldTable(rom, n, EmTable::WILD);
+		if (emWild >= 0) { int k = wildRun((size_t)emWild, ended); if (ended && k >= 20) { t.wildHeaders = emWild; best = k; } }	// (Emerald's code's own)
+		const bool fromCode = best > 0;
+		for (size_t a = 0; !fromCode && a + 20 <= n; a += 4)
+		{
+			int k = wildRun(a, ended);
+			if (ended && k > best) { best = k; t.wildHeaders = (long)a; }
+			if (k > 0) a += (size_t)(k - 1) * 20;
 		}
 		if (best < 20) t.wildHeaders = -1;
 		// each map's region map section (the Dex's "where"): the ROM's map groups, checked against the wild tables
@@ -1103,6 +1251,18 @@ namespace banana::pkmn
 		return true;
 	}
 
+	// the two save block pointers in one read: from the lower one to the end of the higher (the games keep SaveBlock2's
+	// right after SaveBlock1's; Heart & Soul keeps it before: 0x030041d4, 0x030041d8 - read as sb1 + 4 its SB2 was
+	// another block and the save's key with it, the money 3000 shown as 1,382,062,106 on the RG DS Plus 2026-11-04)
+	struct SbPtrs { uint32_t base; int len; uint32_t off1, off2; };
+	static SbPtrs sbPtrs(const GameProfile& g)
+	{
+		const uint32_t d = g.sb2 > g.sb1 ? g.sb2 - g.sb1 : g.sb1 - g.sb2;
+		if (!g.sb2 || d < 4 || d > 0x40) return { g.sb1, 8, 0, 4 };	// (not known near: SB2's after SB1's)
+		const uint32_t lo = std::min(g.sb1, g.sb2);
+		return { lo, (int)d + 4, g.sb1 - lo, g.sb2 - lo };
+	}
+
 	bool parseReply(const std::string& line, uint32_t& addr, std::vector<uint8_t>& bytes)
 	{
 		static const char P[] = "READ_CORE_MEMORY ";
@@ -1169,22 +1329,31 @@ namespace banana::pkmn
 	bool Companion::open(const std::string& rom)
 	{
 		close();
-		std::vector<uint8_t> h = readRom(rom, 0xc0);
+		std::vector<uint8_t> h = readRom(rom, 0x400);
 		info = detectGame(h.data(), h.size());
 		// (a code with releases told by their CRC-32: which one it is once the whole ROM is read, nothing read till then;
 		// a guess meanwhile, which may turn out none of them)
 		byCrc = crcMatters(h.data(), h.size());
+		const bool own = hasOwnProfile(h.data(), h.size());	// (its own profile, from the thread: nothing read till then)
+		if (own && info) byCrc = true;
 		if (byCrc && !info) info = anyWithCode(h.data(), h.size());
 		if (!info) return false;
 		sh = std::make_shared<Shared>();
 		std::shared_ptr<Shared> s = sh;
-		bool crc = byCrc;
-		std::thread([s, rom, h, crc]
+		bool crc = byCrc && !own;
+		std::thread([s, rom, h, crc, own]
 		{
 			setpriority(PRIO_PROCESS, (id_t)syscall(SYS_gettid), 10);	// (this thread only: beside the game starting)
 			std::vector<uint8_t> all = readRom(rom, 32u << 20);
-			const GameProfile* profile = crc ? detectGame(h.data(), h.size(), (uint32_t)crc32(0L, all.data(), (uInt)all.size())) : nullptr;
-			auto t = std::make_shared<RomTables>(findTables(all.data(), all.size(), profile));
+			// the whole ROM's CRC-32, once: for a profile told by it, and kept in the tables (the DS companion's pages tell
+			// the ROM hacks they know by it: gba/hacks.h)
+			const uint32_t romCrc = (uint32_t)crc32(0L, all.data(), (uInt)all.size());
+			const GameProfile* profile = crc ? detectGame(h.data(), h.size(), romCrc) : nullptr;
+			std::shared_ptr<const GameProfile> mine;
+			auto t = std::make_shared<RomTables>();
+			if (!(own && ownReader(all.data(), all.size(), mine, *t))) *t = findTables(all.data(), all.size(), profile);
+			if (own) profile = mine.get();
+			t->crc = romCrc;
 			size_t bytes = all.size();
 			t->rom = std::make_shared<const std::vector<uint8_t>>(std::move(all));
 			fprintf(stderr, "pokemon: %zu species, %zu moves, %zu species types, %zu move records, %zu icons (%zu palette numbers, %zu palettes), "
@@ -1196,6 +1365,7 @@ namespace banana::pkmn
 			std::lock_guard<std::mutex> l(s->mu);
 			s->tables = t;
 			s->profile = profile;
+			s->own = mine;
 			s->ready = true;
 		}).detach();
 		return true;
@@ -1204,6 +1374,7 @@ namespace banana::pkmn
 	void Companion::close()
 	{
 		info = nullptr;
+		owned.reset();
 		byCrc = false;
 		sh.reset();
 		tablesSeen = false;
@@ -1238,7 +1409,7 @@ namespace banana::pkmn
 			if (sh->ready)
 			{
 				tablesSeen = true; changed = true;
-				if (byCrc && sh->profile) { info = sh->profile; byCrc = false; }		// (before any read: nothing to forget)
+				if (byCrc && sh->profile) { info = sh->profile; owned = sh->own; byCrc = false; }		// (before any read: nothing to forget)
 				else if (byCrc) snap.unknownRelease = true;
 			}
 		}
@@ -1270,21 +1441,22 @@ namespace banana::pkmn
 		if (ext)
 		{
 			bool fixed = info->fixedSave;
-			if (!fixed) wants.push_back({ info->sb1, 8, &sbp, false });
+			if (!fixed) wants.push_back({ sbPtrs(*info).base, sbPtrs(*info).len, &sbp, false });
 			uint32_t s1 = fixed ? info->sb1 : sbSeen[0], s2 = fixed ? info->sb2 : sbSeen[1];
 			sbUsed[0] = s1; sbUsed[1] = s2;
-			wants.push_back({ info->mapHeader, 0x1c, &mh, false });
+			if (info->mapHeader) wants.push_back({ info->mapHeader, 0x1c, &mh, false });
 			if (s1 >> 24 == 2 && s2 >> 24 == 2)
 			{
 				const SaveLayout& L = info->save;
-				wants.push_back({ s1, 12, &sb1h, false });
+				wants.push_back({ s1 + L.pos, 12, &sb1h, false });
 				uint32_t b0 = L.pocket[0], b1 = L.pocket[4] + 4 * L.count[4];
 				if (!bagPockets) wants.push_back({ s1 + b0, (int)(b1 - b0), &bagB, false });
-				wants.push_back({ s1 + L.money, 4, &moneyB, false });
-				if (L.key) wants.push_back({ s2 + L.key, 4, &keyB, false });
-				if (!dexOwn) wants.push_back({ s2 + L.dexOwned, (int)DEX_LEN, &dexB, false });
+				wants.push_back({ s1 + L.money, 8, &moneyB, false });	// (the money, then the coins)
+				if (L.key) wants.push_back({ s2 + L.key, 0x20, &keyB, false });	// (the key, and the words after it: see below)
+				if (!dexOwn && L.dexSb1) wants.push_back({ s1 + L.dexSb1, 2 * L.dexBytes, &dexB, false });
+				else if (!dexOwn) wants.push_back({ s2 + L.dexOwned, (int)DEX_LEN, &dexB, false });
 				wants.push_back({ s1 + L.flags + 0x100, 16, &flagB, false });
-				wants.push_back({ s2, 8, &nameB, false });
+				wants.push_back({ s2, 0x12, &nameB, false });	// (the name, then the trainer id at 0x0A and the play time at 0x0E)
 			}
 			// the game's own Pokédex flags (seen, then caught), at a fixed address (a CFRU hack's)
 			if (dexOwn) wants.push_back({ has->dexRam, 2 * dexOwn, &dexB, false });
@@ -1334,13 +1506,14 @@ namespace banana::pkmn
 	void Companion::saveData(Snapshot& s)
 	{
 		// (kept from the last set when this one didn't read them, or read them where the save no longer is)
-		auto keep = [&] { s.ext = snap.ext; s.player = snap.player; s.group = snap.group; s.num = snap.num; s.x = snap.x; s.y = snap.y;
+		auto keep = [&] { s.ext = snap.ext; s.player = snap.player; s.tid = snap.tid; s.sid = snap.sid; s.playSeconds = snap.playSeconds; s.group = snap.group; s.num = snap.num; s.x = snap.x; s.y = snap.y;
 			s.mapsec = snap.mapsec; s.layout = snap.layout; s.money = snap.money; for (int i = 0; i < 5; i++) s.pockets[i] = snap.pockets[i];
 			s.bag = snap.bag; s.dexOwned = snap.dexOwned; s.dexSeen = snap.dexSeen; s.badges = snap.badges; s.champion = snap.champion; };
 		if (!wantSave) { keep(); return; }
-		if (!info->fixedSave && sbp.size() >= 8)
+		if (!info->fixedSave && sbp.size() >= (size_t)sbPtrs(*info).len)
 		{
-			uint32_t a = le32(sbp.data()), b = le32(sbp.data() + 4);
+			const SbPtrs sp = sbPtrs(*info);
+			uint32_t a = le32(sbp.data() + sp.off1), b = le32(sbp.data() + sp.off2);
 			bool moved = a != sbUsed[0] || b != sbUsed[1];
 			sbSeen[0] = a; sbSeen[1] = b;
 			if (moved) { keep(); nextAt = 0; return; }	// (asked again at once, at the new addresses)
@@ -1351,7 +1524,17 @@ namespace banana::pkmn
 		else s.mapsec = -1;
 		if (sb1h.size() >= 12) { s.group = sb1h[4]; s.num = sb1h[5]; s.x = (int16_t)le16(sb1h.data()); s.y = (int16_t)le16(sb1h.data() + 2); }
 		if (nameB.size() >= 8) s.player = decodeText(nameB.data(), 8);
-		uint32_t key = keyB.size() >= 4 ? le32(keyB.data()) : 0;
+		if (nameB.size() >= 0x12)
+		{
+			s.tid = le16(nameB.data() + 0x0A);
+			s.sid = le16(nameB.data() + 0x0C);
+			s.playSeconds = (long)le16(nameB.data() + 0x0E) * 3600 + nameB[0x10] * 60 + nameB[0x11];
+		}
+		// the save's key: the word at SaveBlock2+key as the games keep it, else the first word after it that makes the money
+		// (at most 999,999) and the coins (at most 9,999) possible, else none (the money plain). pokeemerald-expansion builds
+		// move it: SoulGold 1.1.4 keeps it at +0xB4 (3000 read as 553,099,489 through +0xAC), Heart & Soul's money is plain
+		// (3000 read as 3,579,103,101) - both on the RG DS Plus 2026-11-04. The bag's counts use the same key.
+		const uint32_t key = saveKey(moneyB, keyB);
 		if (moneyB.size() >= 4) s.money = (long)(le32(moneyB.data()) ^ key);
 		uint32_t b0 = L.pocket[0];
 		if (bagPockets)
@@ -1396,6 +1579,10 @@ namespace banana::pkmn
 		{
 			if (dexB.size() >= 2 * (size_t)dexOwn) { s.dexSeen.assign(dexB.begin(), dexB.begin() + dexOwn); s.dexOwned.assign(dexB.begin() + dexOwn, dexB.begin() + 2 * dexOwn); }
 		}
+		else if (L.dexSb1 && L.dexBytes > 0)
+		{
+			if (dexB.size() >= 2 * (size_t)L.dexBytes) { s.dexSeen.assign(dexB.begin(), dexB.begin() + L.dexBytes); s.dexOwned.assign(dexB.begin() + L.dexBytes, dexB.begin() + 2 * L.dexBytes); }
+		}
 		else if (dexB.size() >= DEX_LEN) { s.dexOwned.assign(dexB.begin(), dexB.begin() + 52); s.dexSeen.assign(dexB.begin() + 0x34, dexB.begin() + 0x68); }
 		if (flagB.size() >= 16)
 		{
@@ -1438,6 +1625,7 @@ namespace banana::pkmn
 			if (s.inBattle && wantBattle && flags.size() >= 4 && battle.size() >= 4 * BATTLER)
 			{
 				s.doubles = flags[0] & 1;
+				s.trainerBattle = flags[0] & 8;
 				decodeBattler(battle.data(), s.lead, maxSpecies, L.battler);
 				for (int b : { 1, 3 })
 				{
@@ -1451,7 +1639,7 @@ namespace banana::pkmn
 					if (decodeParty(enemy.data() + i * PARTY, m, L)) s.foeParty.push_back(m);
 				}
 			}
-			else if (s.inBattle) { s.lead = snap.lead; s.foes = snap.foes; s.doubles = snap.doubles; s.foeParty = snap.foeParty; }	// (read in the next set)
+			else if (s.inBattle) { s.lead = snap.lead; s.foes = snap.foes; s.doubles = snap.doubles; s.trainerBattle = snap.trainerBattle; s.foeParty = snap.foeParty; }	// (read in the next set)
 			saveData(s);
 			s.error.clear();
 			errorSince = -1;
@@ -1486,7 +1674,7 @@ namespace banana::pkmn
 			k.append(x.dexOwned.begin(), x.dexOwned.end()); k.append(x.dexSeen.begin(), x.dexSeen.end());
 			return k;
 		};
-		if (key(s) != key(snap)) changed = true;
+		if (key(s) != key(snap)) { changed = true; serialNo++; }	// (the play time alone isn't a change)
 		snap = s;
 	}
 }
@@ -1558,7 +1746,8 @@ namespace banana::pkmn
 		bool mapHeaderAt(const uint8_t* rom, size_t n, long off)
 		{
 			if (off < 0 || (size_t)off + 0x1c > n || (off & 3)) return false;
-			for (int k = 0; k < 3; k++) if (romPtr(rom, n, (size_t)off + 4 * k) < 0) return false;
+			// (a hack's map may have no events or no scripts: Gaia's)
+			for (int k = 0; k < 3; k++) if (romPtr(rom, n, (size_t)off + 4 * k) < 0 && (k == 0 || le32(rom + off + 4 * k) != 0)) return false;
 			uint32_t c = le32(rom + off + 12);
 			return c == 0 || (c >= 0x08000000u && c - 0x08000000u < n);
 		}
@@ -1584,17 +1773,34 @@ namespace banana::pkmn
 			long h = romPtr(rom, n, (size_t)grp + 4 * (size_t)num, 0x1c);
 			return h >= 0 && mapHeaderAt(rom, n, h) ? h : -1;
 		};
+		// (a hack's wild tables may name a map or two it took out: Gaia's. Then the table that misses fewest, and no
+		// more than one in 30)
+		const int allowed = (int)maps.size() / 30;
+		size_t found = 0;
+		int fewest = allowed + 1, foundRun = 0;
 		for (size_t a = 0; a + 4 * (size_t)(maxGroup + 1) <= n; a += 4)
 		{
 			// a run of group pointers at least as long as the wild tables need
 			int run = 0;
 			while (a + 4 * (size_t)run + 4 <= n && run < 256 && romPtr(rom, n, a + 4 * (size_t)run) >= 0) run++;
 			if (run <= maxGroup) { a += 4 * (size_t)run; continue; }
-			bool ok = true;
-			for (auto& m : maps) if (headerOf(a, m.first, m.second) < 0) { ok = false; break; }
-			if (!ok) continue;
+			// (group 0 has maps: a pointer just before the table, to something that isn't a group, would otherwise take
+			// the table one group off - FireRed's and LeafGreen's are found so, as every map the wild tables name is
+			// still a header there)
+			if (headerOf(a, 0, 0) < 0) continue;
+			int missed = 0;
+			for (auto& m : maps) if (headerOf(a, m.first, m.second) < 0 && ++missed >= fewest) break;
+			if (missed >= fewest) continue;
+			fewest = missed; found = a; foundRun = run;
+			if (missed == 0) break;
+		}
+		if (fewest <= allowed)
+		{
+			const size_t a = found;
+			const int run = foundRun;
 			// the groups' lengths: map headers until the next group's table starts (or one isn't a header)
 			t.mapsecs.assign((size_t)run, {});
+			t.mapHeaders.assign((size_t)run, {});
 			for (int g = 0; g < run; g++)
 			{
 				long grp = romPtr(rom, n, a + 4 * (size_t)g);
@@ -1605,6 +1811,7 @@ namespace banana::pkmn
 					long h = headerOf(a, g, k);
 					if (h < 0) break;
 					t.mapsecs[g].push_back(rom[h + 0x14]);
+					t.mapHeaders[g].push_back(h);
 				}
 			}
 			return;
@@ -1639,8 +1846,9 @@ namespace banana::pkmn
 {
 	namespace
 	{
-		// a level-up list at off: (move | level << 9) entries, levels not going down, then 0xffff (within 64)
-		bool learnsetAt(const uint8_t* rom, size_t n, long off, size_t numMoves)
+		// a level-up list at off: (move | level << 9) entries, levels not going down, then 0xffff (within 64). loose: a
+		// hack's (the levels in any order, and a filler of no move at level 101 before the end: Gaia's)
+		bool learnsetAt(const uint8_t* rom, size_t n, long off, size_t numMoves, bool loose = false)
 		{
 			if (off < 0 || (off & 1)) return false;
 			int last = 0;
@@ -1650,7 +1858,8 @@ namespace banana::pkmn
 				uint16_t e = le16(rom + off + 2 * k);
 				if (e == 0xffff) return k > 0;
 				int mv = e & 0x1ff, lv = e >> 9;
-				if (!mv || (numMoves && (size_t)mv >= numMoves) || lv < 1 || lv > 100 || lv < last) return false;
+				if (loose && !mv && lv == 101) continue;
+				if (!mv || (numMoves && (size_t)mv >= numMoves) || lv < (loose ? 0 : 1) || lv > 100 || (!loose && lv < last)) return false;	// (loose: 0, on evolving)
 				last = lv;
 			}
 			return false;
@@ -1662,6 +1871,14 @@ namespace banana::pkmn
 		t.learnsets = -1;
 		size_t need = (size_t)std::max(t.numSpecies, 2);
 		size_t numMoves = t.moves.size();
+		// Emerald's own (where its code points: a hack patched from it may have moved it)
+		long em = emeraldTable(rom, n, EmTable::LEARNSETS);
+		if (em >= 0 && (size_t)em + 4 * need <= n)
+		{
+			bool ok = true;
+			for (size_t i = 1; i < need && ok; i++) ok = learnsetAt(rom, n, romPtr(rom, n, (size_t)em + 4 * i, 4), numMoves, true);
+			if (ok) { t.learnsets = em; return; }
+		}
 		for (size_t a = 0; a + 4 * need <= n; a += 4)
 		{
 			// species 0..40 checked first (cheap), then all of them (0 too: its list is a real one in the games, which
@@ -1672,6 +1889,19 @@ namespace banana::pkmn
 			if (!ok) continue;
 			for (size_t i = 41; i < need && ok; i++)
 				ok = learnsetAt(rom, n, romPtr(rom, n, a + 4 * i, 4), numMoves);
+			if (ok) { t.learnsets = (long)a; return; }
+		}
+		// a CFRU hack: species 0's list empty, and its species table longer than the lists' (the names of unused
+		// slots after its last species): the first 412 lists then, Bulbasaur's first move learnt at level 1
+		if (need <= 412) return;
+		for (size_t a = 0; a + 4 * 412 <= n; a += 4)
+		{
+			long z = romPtr(rom, n, a, 2);
+			if (z < 0 || le16(rom + z) != 0xffff) continue;
+			long b = romPtr(rom, n, a + 4, 2);
+			if (b < 0 || (le16(rom + b) >> 9) != 1) continue;
+			bool ok = true;
+			for (size_t i = 1; i < 412 && ok; i++) ok = learnsetAt(rom, n, romPtr(rom, n, a + 4 * i, 4), numMoves, true);
 			if (ok) { t.learnsets = (long)a; return; }
 		}
 	}
@@ -1688,7 +1918,7 @@ namespace banana::pkmn
 		{
 			uint16_t e = le16(r + l + 2 * k);
 			if (e == 0xffff) break;
-			if ((e >> 9) > level) { lv = e >> 9; return e & 0x1ff; }
+			if ((e >> 9) > level && (e >> 9) <= 100 && (e & 0x1ff)) { lv = e >> 9; return e & 0x1ff; }
 		}
 		return 0;
 	}

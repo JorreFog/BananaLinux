@@ -61,6 +61,8 @@ namespace banana::nds
 	// ---- the rest of the advice ------------------------------------------------------------------------------------
 	// the badge bits a milestone's done_when names, and whether it's done
 	bool milestoneDone(const Milestone& m, const Live& live, const GuideData& g, size_t index);
+	// a guide step whose done_when the game shows as done ("party", "badge:N", "flag:N"): not shown any more
+	bool stepDone(const GuideStep& s, const Live& live);
 	// the first milestone not done (nullptr: all done or no guide)
 	const Milestone* nextMilestone(const GuideData& g, const Live& live);
 	// the zones reachable now: everything the milestones up to and including the next one open

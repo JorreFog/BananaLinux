@@ -1,0 +1,1910 @@
+{
+ "schema": 1,
+ "kind": "nds-pokemon-guide",
+ "game": "glazed",
+ "code": "BPEE",
+ "title": "Pokemon Glazed (v8.6.3)",
+ "revision": 1,
+ "sources": [
+  "The ROM itself (Pokemon Glazed (v8.6.3)): region map section names (each place resolves to a section with maps) and trainer names, teams and levels, read on the PC with throwaway tools",
+  "Glazed fan wiki (fanmadepokemonglazed.fandom.com): Tunod, Johto, Rankor, gym, league and legendary pages, read through search-engine extracts (the wiki blocks direct reads)",
+  "nuzlocketracker.pages.dev/guides/glazed and nuzlocked.vercel.app/guides/glazed: encounter order, rival and gym list",
+  "PokéHarbor (pokeharbor.com ?p=1815, ?p=55306), PokeHostel, emulatorhacks.com (Glazed, Golden Glazed and Blazed Glazed change lists), The RPG Spotlight review (2020)"
+ ],
+ "places": {
+  "forest-pass": {
+   "name": "Forest Pass"
+  },
+  "glenwood-town": {
+   "name": "Glenwood Town"
+  },
+  "oceanview-city": {
+   "name": "Oceanview City"
+  },
+  "oceanview-park": {
+   "name": "Oceanview Park"
+  },
+  "haunted-rock": {
+   "name": "Haunted Rock"
+  },
+  "haunted-isle": {
+   "name": "Haunted Isle"
+  },
+  "springside-path": {
+   "name": "Springside Path"
+  },
+  "serenity-isle": {
+   "name": "Serenity Isle"
+  },
+  "seaspray-town": {
+   "name": "Seaspray Town"
+  },
+  "seaspray-bay": {
+   "name": "Seaspray Bay"
+  },
+  "seaspray-dam": {
+   "name": "Seaspray Dam"
+  },
+  "geminite-village": {
+   "name": "Geminite Village"
+  },
+  "geminite-river": {
+   "name": "Geminite River"
+  },
+  "northcoast-town": {
+   "name": "Northcoast Town"
+  },
+  "northcoast-peak": {
+   "name": "Northcoast Peak"
+  },
+  "stormy-city": {
+   "name": "Stormy City"
+  },
+  "tnd-safari-zone": {
+   "name": "Tnd. Safari Zone"
+  },
+  "temporal-tower": {
+   "name": "Temporal Tower"
+  },
+  "temporal-sea": {
+   "name": "Temporal Sea"
+  },
+  "icicle-tunnel": {
+   "name": "Icicle Tunnel"
+  },
+  "blizzard-slopes": {
+   "name": "Blizzard Slopes"
+  },
+  "southerly-city": {
+   "name": "Southerly City"
+  },
+  "sunshore-beach": {
+   "name": "Sunshore Beach"
+  },
+  "darkwood-town": {
+   "name": "Darkwood Town"
+  },
+  "darkwood-grotto": {
+   "name": "Darkwood Grotto"
+  },
+  "fusion-labs": {
+   "name": "Fusion Labs"
+  },
+  "palmtree-resort": {
+   "name": "Palmtree Resort"
+  },
+  "palmtree-park": {
+   "name": "Palmtree Park"
+  },
+  "fusion-co": {
+   "name": "Fusion Co"
+  },
+  "path-of-victory": {
+   "name": "Path of Victory"
+  },
+  "victory-road": {
+   "name": "Victory Road"
+  },
+  "tunod-league": {
+   "name": "Tunod League"
+  },
+  "route-39": {
+   "name": "Route 39"
+  },
+  "route-38": {
+   "name": "Route 38"
+  },
+  "olivine-city": {
+   "name": "Olivine City"
+  },
+  "johto-gatehouse": {
+   "name": "Johto Gatehouse"
+  },
+  "violet-city": {
+   "name": "Violet City"
+  },
+  "route-36": {
+   "name": "Route 36"
+  },
+  "route-37": {
+   "name": "Route 37"
+  },
+  "ecruteak-city": {
+   "name": "Ecruteak City"
+  },
+  "bell-tower": {
+   "name": "Bell Tower"
+  },
+  "brass-tower": {
+   "name": "Brass Tower"
+  },
+  "ruins-of-alph": {
+   "name": "Ruins of Alph"
+  },
+  "route-32": {
+   "name": "Route 32"
+  },
+  "whitewood-city": {
+   "name": "Whitewood City"
+  },
+  "church-of-alpha": {
+   "name": "Church of Alpha"
+  },
+  "azalea-town": {
+   "name": "Azalea Town"
+  },
+  "ilex-forest": {
+   "name": "Ilex Forest"
+  },
+  "slowpoke-well": {
+   "name": "Slowpoke Well"
+  },
+  "goldenrod-city": {
+   "name": "Goldenrod City"
+  },
+  "national-park": {
+   "name": "National Park"
+  },
+  "route-34": {
+   "name": "Route 34"
+  },
+  "route-35": {
+   "name": "Route 35"
+  },
+  "bellchime-trail": {
+   "name": "Bellchime Trail"
+  },
+  "evergreen-town": {
+   "name": "Evergreen Town"
+  },
+  "route-47": {
+   "name": "Route 47"
+  },
+  "route-48": {
+   "name": "Route 48"
+  },
+  "blackthorn-city": {
+   "name": "Blackthorn City"
+  },
+  "dragons-den": {
+   "name": "Dragon‘s Den"
+  },
+  "ice-path": {
+   "name": "Ice Path"
+  },
+  "johto-league": {
+   "name": "Johto League"
+  },
+  "nitro-isle": {
+   "name": "Nitro Isle"
+  },
+  "rankor-port": {
+   "name": "Rankor Port"
+  },
+  "rankor-ferry": {
+   "name": "Rankor Ferry"
+  },
+  "kolo-isle": {
+   "name": "Kolo Isle"
+  },
+  "alpha-isle": {
+   "name": "Alpha Isle"
+  },
+  "reign-isle": {
+   "name": "Reign Isle"
+  },
+  "reefen-isle": {
+   "name": "Reefen Isle"
+  },
+  "olcan-isle": {
+   "name": "Olcan Isle"
+  },
+  "mt-silver": {
+   "name": "Mt. Silver"
+  },
+  "soheals-strait": {
+   "name": "Soheal’s Strait"
+  },
+  "mystery-island": {
+   "name": "Mystery Island"
+  },
+  "whirl-islands": {
+   "name": "Whirl Islands"
+  },
+  "new-island": {
+   "name": "New Island"
+  },
+  "adamant-cave": {
+   "name": "Adamant Cave"
+  },
+  "griseous-cave": {
+   "name": "Griseous Cave"
+  },
+  "spacial-ruins": {
+   "name": "Spacial Ruins"
+  },
+  "embedded-tower": {
+   "name": "Embedded Tower"
+  },
+  "cave-of-regi": {
+   "name": "Cave of Regi"
+  },
+  "peaks-of-alpha": {
+   "name": "Peaks of Alpha"
+  },
+  "route-30": {
+   "name": "Route 30"
+  },
+  "forlorn-cape": {
+   "name": "Forlorn Cape"
+  },
+  "trainer-isle": {
+   "name": "Trainer Isle"
+  }
+ },
+ "milestones": [
+  {
+   "id": "rival-percy-forest-pass",
+   "name": "Rival: Percy (Forest Pass)",
+   "kind": "rival",
+   "place": "forest-pass",
+   "level_cap": 5,
+   "foe": [
+    {
+     "name": "PERCY",
+     "ace_level": 5
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "glenwood-town",
+    "forest-pass"
+   ],
+   "tips": "Percy, a boy with a Cyndaquil, battles you with Cyndaquil (Lv 5). Any of the five starters wins with a level or two on it; heal in Glenwood first.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "rival-chelle-oceanview",
+   "name": "Rival: Chelle (Oceanview City)",
+   "kind": "rival",
+   "place": "oceanview-city",
+   "level_cap": 14,
+   "foe": [
+    {
+     "name": "CHELLE",
+     "ace_level": 14
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "oceanview-city",
+    "oceanview-park"
+   ],
+   "tips": "Chelle (Chikorita) at the Oceanview power plant: Chikorita, Pikachu (Lv 12-14). The red-scarfed Pikachu you met in Forest Pass is fought again here.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed"
+  },
+  {
+   "id": "gym-1-sparky",
+   "name": "Gym 1: Sparky",
+   "kind": "gym",
+   "place": "oceanview-city",
+   "leader": "Sparky",
+   "theme": "electric",
+   "level_cap": 17,
+   "foe": {
+    "name": "SPARKY",
+    "ace_level": 17
+   },
+   "done_when": "badge:1",
+   "opens": [
+    "oceanview-city"
+   ],
+   "badge_note": "Jolt Badge: Cut in the field (the wiki's list).",
+   "tips": "Electric types: Shinx, Flaaffy, Jolteon (Lv 14-17). Ground types shut them out; Riolu's Fighting moves and Turtwig's Grass moves also hold. Shinx is the only Electric starter that struggles.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "team-michael-haunted-rock",
+   "name": "Team Fusion: Michael at Haunted Rock",
+   "kind": "team",
+   "place": "haunted-rock",
+   "level_cap": 25,
+   "foe": [
+    {
+     "name": "MICHAEL",
+     "ace_level": 25
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "haunted-rock",
+    "haunted-isle",
+    "springside-path"
+   ],
+   "tips": "Michael, Team Fusion's head, sends out a single Zoroark (Lv 25). Zoroark is Dark: Fighting and Bug moves hit it hard.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "gym-2-terry",
+   "name": "Gym 2: Terry",
+   "kind": "gym",
+   "place": "serenity-isle",
+   "leader": "Terry",
+   "theme": "ground",
+   "level_cap": 28,
+   "foe": {
+    "name": "TERRY",
+    "ace_level": 28
+   },
+   "done_when": "badge:2",
+   "opens": [
+    "serenity-isle"
+   ],
+   "badge_note": "Dirt Badge.",
+   "tips": "Ground types: Gligar, Vibrava, Phanpy (Lv 25-28). Water and Grass moves work; Gligar and Vibrava ignore Ground moves, so bring Ice or Water for them.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "rival-chelle-seaspray",
+   "name": "Rival: Chelle (Seaspray Town)",
+   "kind": "rival",
+   "place": "seaspray-town",
+   "level_cap": 30,
+   "foe": [
+    {
+     "name": "CHELLE",
+     "ace_level": 30
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "seaspray-town",
+    "seaspray-bay"
+   ],
+   "tips": "Chelle again: Bayleef, Raichu (Lv 27-30). Fire, Flying and Ice moves cover Bayleef.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed"
+  },
+  {
+   "id": "gym-3-flo",
+   "name": "Gym 3: Flo",
+   "kind": "gym",
+   "place": "seaspray-town",
+   "leader": "Flo",
+   "theme": "water",
+   "level_cap": 32,
+   "foe": {
+    "name": "FLO",
+    "ace_level": 32
+   },
+   "done_when": "badge:3",
+   "opens": [
+    "seaspray-town",
+    "seaspray-dam"
+   ],
+   "badge_note": "Crest Badge: Rock Smash (wiki); gym TM03 Water Pulse.",
+   "tips": "Water types: Wartortle, Seadra, Milotic, Kingdra (Lv 30-32). Grass and Electric moves; Kingdra takes neutral damage from both, so hit it hard and fast.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "rival-percy-geminite",
+   "name": "Rival: Percy (Geminite Village)",
+   "kind": "rival",
+   "place": "geminite-village",
+   "level_cap": 30,
+   "foe": [
+    {
+     "name": "PERCY",
+     "ace_level": 30
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "geminite-village",
+    "geminite-river"
+   ],
+   "tips": "Percy: Quilava, Kirlia, Electrike (Lv 25-30).",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed"
+  },
+  {
+   "id": "rival-percy-northcoast",
+   "name": "Rival: Percy (Northcoast Town)",
+   "kind": "rival",
+   "place": "northcoast-town",
+   "level_cap": 33,
+   "foe": [
+    {
+     "name": "PERCY",
+     "ace_level": 33
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "northcoast-town",
+    "northcoast-peak"
+   ],
+   "tips": "Percy at the Northcoast gym: Gardevoir, Quilava, Manectric (Lv 32-33).",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed"
+  },
+  {
+   "id": "gym-4-lief",
+   "name": "Gym 4: Lief",
+   "kind": "gym",
+   "place": "stormy-city",
+   "leader": "Lief",
+   "theme": "grass",
+   "level_cap": 34,
+   "foe": {
+    "name": "LIEF",
+    "ace_level": 34
+   },
+   "done_when": "badge:4",
+   "opens": [
+    "stormy-city"
+   ],
+   "badge_note": "Stem Badge: Strength (wiki); gym TM22 Solar Beam.",
+   "tips": "Grass types: Jumpluff, Tangrowth, Leafeon, Venusaur (Lv 33-34). Fire, Flying and Ice moves; Venusaur is part Poison, so Psychic works on it too.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "rival-chelle-safari",
+   "name": "Rival: Chelle (Tunod Safari Zone)",
+   "kind": "rival",
+   "place": "tnd-safari-zone",
+   "level_cap": 34,
+   "foe": [
+    {
+     "name": "CHELLE",
+     "ace_level": 34
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "tnd-safari-zone"
+   ],
+   "tips": "Chelle: Raichu, Meganium, Parasect, Breloom (Lv 31-34).",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed"
+  },
+  {
+   "id": "rival-cato-1",
+   "name": "Rival: Cato",
+   "kind": "rival",
+   "place": "seaspray-town",
+   "level_cap": 35,
+   "foe": [
+    {
+     "name": "CATO",
+     "ace_level": 35
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Cato (Feraligatr) first fights you near the Seaspray gym: Houndoom, Feraligatr, Porygon2, Espeon (Lv 31-35). Electric and Grass moves on Feraligatr; Fighting on Houndoom and Porygon2.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed (where: tracker; order by level)"
+  },
+  {
+   "id": "team-michael-temporal-tower",
+   "name": "Team Fusion: Michael at Temporal Tower",
+   "kind": "team",
+   "place": "temporal-tower",
+   "level_cap": 36,
+   "foe": [
+    {
+     "name": "MICHAEL",
+     "ace_level": 36
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "temporal-sea",
+    "temporal-tower"
+   ],
+   "tips": "Michael again: Ditto, Zoroark (Lv 36). A Ditto copies your lead, so lead with something that isn't your strongest attacker.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "gym-5-irene",
+   "name": "Gym 5: Irene",
+   "kind": "gym",
+   "place": "northcoast-town",
+   "leader": "Irene",
+   "theme": "ice",
+   "level_cap": 37,
+   "foe": {
+    "name": "IRENE",
+    "ace_level": 37
+   },
+   "done_when": "badge:5",
+   "opens": [
+    "northcoast-town",
+    "icicle-tunnel",
+    "blizzard-slopes"
+   ],
+   "badge_note": "Icicle Badge: Surf (wiki).",
+   "tips": "Ice types: Snorunt, Glaceon, Froslass, Weavile (Lv 35-37). Fire, Fighting, Rock and Steel moves; Froslass is part Ghost, so keep a Dark or Ghost move for it.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "gym-6-ernest",
+   "name": "Gym 6: Ernest",
+   "kind": "gym",
+   "place": "southerly-city",
+   "leader": "Ernest",
+   "theme": "fire",
+   "level_cap": 39,
+   "foe": {
+    "name": "ERNEST",
+    "ace_level": 39
+   },
+   "done_when": "badge:6",
+   "opens": [
+    "southerly-city",
+    "sunshore-beach"
+   ],
+   "badge_note": "Blaze Badge: Fly (wiki).",
+   "tips": "Fire types: Magmortar, Charizard, Typhlosion, Infernape, Blaziken (Lv 37-39), every Fire starter of the earlier games. Water, Ground and Rock moves; Blaziken and Infernape are part Fighting, so Psychic and Flying work on them.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "rival-percy-darkwood",
+   "name": "Rival: Percy (Darkwood Town)",
+   "kind": "rival",
+   "place": "darkwood-town",
+   "level_cap": 41,
+   "foe": [
+    {
+     "name": "PERCY",
+     "ace_level": 41
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "darkwood-town",
+    "darkwood-grotto"
+   ],
+   "tips": "Percy: Gardevoir, Manectric, Quilava, Scraggy, Seadra (Lv 39-41).",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed"
+  },
+  {
+   "id": "team-fusion-labs",
+   "name": "Team Fusion: Fusion Labs",
+   "kind": "team",
+   "place": "fusion-labs",
+   "level_cap": 42,
+   "foe": [
+    {
+     "name": "MICHAEL",
+     "ace_level": 42
+    },
+    {
+     "name": "REGINA",
+     "ace_level": 42
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "palmtree-resort",
+    "palmtree-park",
+    "fusion-labs",
+    "fusion-co"
+   ],
+   "tips": "Team Fusion's lab in the Palmtree Resort: Regina (Zoroark, Ditto, Kecleon, Roserade (Lv 40-42)) and Michael with the three legends he has taken (Dialga, Palkia, Giratina (Lv 42)). Fairy and Dragon moves hurt Dialga, Palkia and Giratina.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "gym-7-nicole",
+   "name": "Gym 7: Nicole",
+   "kind": "gym",
+   "place": "palmtree-resort",
+   "leader": "Nicole",
+   "theme": "rock",
+   "level_cap": 42,
+   "foe": {
+    "name": "NICOLE",
+    "ace_level": 42
+   },
+   "done_when": "badge:7",
+   "opens": [
+    "palmtree-resort"
+   ],
+   "badge_note": "Core Badge: Dive (wiki); gym TM39 Rock Tomb.",
+   "tips": "Rock types: Tyranitar, Rhyperior, Cradily, Shuckle, Aggron (Lv 40-42). Water and Grass moves do the most; Fighting and Ground hit most of them too. Shuckle walls: use special Water or Grass moves.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "gym-8-tyson",
+   "name": "Gym 8: Tyson",
+   "kind": "gym",
+   "place": "darkwood-town",
+   "leader": "Tyson",
+   "theme": "fighting",
+   "level_cap": 46,
+   "foe": {
+    "name": "TYSON",
+    "ace_level": 46
+   },
+   "done_when": "badge:8",
+   "opens": [
+    "darkwood-town"
+   ],
+   "badge_note": "Clobber Badge: Waterfall (wiki; one page puts Waterfall before this gym).",
+   "tips": "Fighting types: Hitmonlee, Scrafty, Gallade, Lucario, Conkeldurr (Lv 43-46). Psychic, Flying and Fairy moves; Gallade is part Psychic (use Dark or Ghost), Lucario is part Steel (use Fire or Ground).",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "rival-chelle-victory",
+   "name": "Rival: Chelle (Path of Victory)",
+   "kind": "rival",
+   "place": "path-of-victory",
+   "level_cap": 44,
+   "foe": [
+    {
+     "name": "CHELLE",
+     "ace_level": 44
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "path-of-victory",
+    "victory-road"
+   ],
+   "tips": "Chelle on the way to the league: Raichu, Meganium, Breloom, Gabite, Parasect (Lv 42-44).",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed"
+  },
+  {
+   "id": "rival-cato-league",
+   "name": "Rival: Cato (Tunod League)",
+   "kind": "rival",
+   "place": "tunod-league",
+   "level_cap": 53,
+   "foe": [
+    {
+     "name": "CATO",
+     "ace_level": 46
+    },
+    {
+     "name": "CATO",
+     "ace_level": 53
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "tunod-league"
+   ],
+   "tips": "Cato's last Tunod battles (Houndoom, Feraligatr, Porygon-Z, Espeon, Gabite (Lv 44-46), then Houndoom, Feraligatr, Porygon-Z, Espeon, Garchomp (Lv 50-53)) come between the eighth badge and the league; level to the low 50s.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed (where: tracker; order by level)"
+  },
+  {
+   "id": "e4-rosaline",
+   "name": "Tunod Elite Four: Rosaline",
+   "kind": "elite4",
+   "place": "tunod-league",
+   "leader": "Rosaline",
+   "level_cap": 48,
+   "foe": [
+    {
+     "name": "ROSALINE",
+     "ace_level": 48
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Colour-themed, not type-themed (pink): Lickitung, Milotic, Slowking, Chansey, Blissey (Lv 46-48). Mostly Normal and Water bulk: Fighting moves and a strong Electric or Grass attacker.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "e4-magnus",
+   "name": "Tunod Elite Four: Magnus",
+   "kind": "elite4",
+   "place": "tunod-league",
+   "leader": "Magnus",
+   "level_cap": 49,
+   "foe": [
+    {
+     "name": "MAGNUS",
+     "ace_level": 49
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Colour-themed, not type-themed (purple): Arbok, Gengar, Mienshao, Sableye, Drapion (Lv 47-49). Poison and Ghost: Psychic, Ground and Dark moves.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "e4-tanya",
+   "name": "Tunod Elite Four: Tanya",
+   "kind": "elite4",
+   "place": "tunod-league",
+   "leader": "Tanya",
+   "level_cap": 52,
+   "foe": [
+    {
+     "name": "TANYA",
+     "ace_level": 52
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Colour-themed, not type-themed (orange): Floatzel, Shedinja, Infernape, Arcanine, Dragonite (Lv 49-52). Fire and Water with a Dragonite: Ice and Rock moves; Shedinja falls to any Fire, Rock, Flying, Ghost or Dark hit.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "e4-gray",
+   "name": "Tunod Elite Four: Gray",
+   "kind": "elite4",
+   "place": "tunod-league",
+   "leader": "Gray",
+   "level_cap": 53,
+   "foe": [
+    {
+     "name": "GRAY",
+     "ace_level": 53
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Colour-themed, not type-themed (grey): Zoroark, Machamp, Mightyena, Aggron, Skarmory (Lv 51-53). Steel, Fighting and Dark: Fire, Ground and Fighting moves.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "champion-blake",
+   "name": "Tunod Champion: Blake",
+   "kind": "champion",
+   "place": "tunod-league",
+   "leader": "Blake",
+   "level_cap": 57,
+   "foe": [
+    {
+     "name": "BLAKE",
+     "ace_level": 57
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Mostly Dark: Snorlax, Honchkrow, Weavile, Umbreon, Houndoom, Darkrai (Lv 53-57). Fighting, Bug and Fairy moves; Snorlax wants a strong Fighting move.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "rival-chelle-route-39",
+   "name": "Rival: Chelle (Route 39)",
+   "kind": "rival",
+   "place": "route-39",
+   "level_cap": 56,
+   "foe": [
+    {
+     "name": "CHELLE",
+     "ace_level": 56
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "route-39",
+    "route-38",
+    "olivine-city",
+    "johto-gatehouse"
+   ],
+   "tips": "Johto starts at Route 39 after the Tunod league. Chelle: Raichu, Meganium, Breloom, Garchomp, Absol, Seadra (Lv 53-56).",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed"
+  },
+  {
+   "id": "gym-9-falkner",
+   "name": "Gym 9: Falkner",
+   "kind": "gym",
+   "place": "violet-city",
+   "leader": "Falkner",
+   "theme": "flying",
+   "level_cap": 57,
+   "foe": {
+    "name": "FALKNER",
+    "ace_level": 57
+   },
+   "done_when": "badge:9",
+   "opens": [
+    "violet-city",
+    "route-36",
+    "route-37",
+    "ecruteak-city"
+   ],
+   "badge_note": "Zephyr Badge: Bounce in the field (wiki); gym TM40 Aerial Ace.",
+   "tips": "Johto gym 1: Gliscor, Gyarados, Salamence, Pidgeot, Pidgeot (Lv 56-57). Electric, Ice and Rock moves; Gliscor takes four times from Ice.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts); nuzlocketracker.pages.dev/guides/glazed"
+  },
+  {
+   "id": "gym-10-morty",
+   "name": "Gym 10: Morty",
+   "kind": "gym",
+   "place": "ecruteak-city",
+   "leader": "Morty",
+   "theme": "ghost",
+   "level_cap": 62,
+   "foe": {
+    "name": "MORTY",
+    "ace_level": 62
+   },
+   "done_when": "badge:10",
+   "opens": [
+    "ecruteak-city",
+    "bell-tower",
+    "brass-tower"
+   ],
+   "badge_note": "Fog Badge.",
+   "tips": "Johto gym 2: Froslass, Sableye, Mismagius, Gengar, Gengar (Lv 60-62). Dark and Ghost moves; Sableye has one weakness (Fairy).",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts); nuzlocketracker.pages.dev/guides/glazed"
+  },
+  {
+   "id": "team-regina-ruins",
+   "name": "Regina's coalition in Johto",
+   "kind": "team",
+   "place": "ruins-of-alph",
+   "level_cap": 52,
+   "foe": [
+    {
+     "name": "REGINA",
+     "ace_level": 52
+    },
+    {
+     "name": "REGINA",
+     "ace_level": 61
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "ruins-of-alph",
+    "route-32"
+   ],
+   "tips": "Regina, Team Fusion's boss, regroups in Johto; her fights in the ROM run Ditto, Zoroark, Kecleon, Miltank, Wobbuffet (Lv 52), then Zoroark, Ditto, Kecleon, Banette, Aggron (Lv 60-61). Ditto and Zoroark copy and disguise: watch what you attack.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts) (places: wiki list; order by level)"
+  },
+  {
+   "id": "gym-11-jasmine",
+   "name": "Gym 11: Jasmine",
+   "kind": "gym",
+   "place": "olivine-city",
+   "leader": "Jasmine",
+   "theme": "steel",
+   "level_cap": 63,
+   "foe": {
+    "name": "JASMINE",
+    "ace_level": 63
+   },
+   "done_when": "badge:11",
+   "opens": [
+    "olivine-city",
+    "whitewood-city",
+    "church-of-alpha"
+   ],
+   "badge_note": "Mineral Badge (her gym opens after the Church of Alpha events in Whitewood City, wiki).",
+   "tips": "Johto gym 3: Aggron, Magnezone, Metagross, Scizor, Steelix (Lv 59-63). Fire, Fighting and Ground moves; Metagross and Scizor also fear Fire.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts); nuzlocketracker.pages.dev/guides/glazed"
+  },
+  {
+   "id": "team-church-of-alpha",
+   "name": "Church of Alpha: Sexton and Pius",
+   "kind": "team",
+   "place": "church-of-alpha",
+   "level_cap": 64,
+   "foe": [
+    {
+     "name": "SEXTON",
+     "ace_level": 63
+    },
+    {
+     "name": "PIUS",
+     "ace_level": 64
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "church-of-alpha"
+   ],
+   "tips": "The Church of Alpha in Whitewood City: Sexton (Milotic, Gardevoir, Pidgeot (Lv 63)) and its leader Pius (Gallade, Absol, Noctowl (Lv 64)). Pius later frees Lugia.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "gym-12-bugsy",
+   "name": "Gym 12: Bugsy",
+   "kind": "gym",
+   "place": "azalea-town",
+   "leader": "Bugsy",
+   "theme": "bug",
+   "level_cap": 66,
+   "foe": {
+    "name": "BUGSY",
+    "ace_level": 66
+   },
+   "done_when": "badge:12",
+   "opens": [
+    "azalea-town",
+    "ilex-forest",
+    "slowpoke-well"
+   ],
+   "badge_note": "Hive Badge.",
+   "tips": "Johto gym 4: Forretress, Pinsir, Yanmega, Armaldo, Scizor (Lv 64-66). Fire, Flying and Rock moves; Forretress and Scizor take four times from Fire.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts); nuzlocketracker.pages.dev/guides/glazed"
+  },
+  {
+   "id": "gym-13-simon",
+   "name": "Gym 13: Simon",
+   "kind": "gym",
+   "place": "goldenrod-city",
+   "leader": "Simon",
+   "theme": "fairy",
+   "level_cap": 63,
+   "foe": {
+    "name": "SIMON",
+    "ace_level": 63
+   },
+   "done_when": "badge:13",
+   "opens": [
+    "goldenrod-city",
+    "national-park",
+    "route-34",
+    "route-35"
+   ],
+   "badge_note": "Plain Badge; gym TM43 Moonblast.",
+   "tips": "Johto gym 5: Clefable, Mawile, Togekiss, Azumarill, Gardevoir (Lv 61-63). The wiki lists Normal, but his team in this ROM is Fairy types: Steel and Poison moves.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts); nuzlocketracker.pages.dev/guides/glazed"
+  },
+  {
+   "id": "gym-14-brian",
+   "name": "Gym 14: Brian",
+   "kind": "gym",
+   "place": "whitewood-city",
+   "leader": "Brian",
+   "theme": "psychic",
+   "level_cap": 68,
+   "foe": {
+    "name": "BRIAN",
+    "ace_level": 68
+   },
+   "done_when": "badge:14",
+   "opens": [
+    "whitewood-city"
+   ],
+   "badge_note": "Psyche Badge; gym TM04 Calm Mind.",
+   "tips": "Johto gym 6: Starmie, Espeon, Gardevoir, Alakazam, Gallade (Lv 65-68). Dark, Ghost and Bug moves.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts); nuzlocketracker.pages.dev/guides/glazed"
+  },
+  {
+   "id": "team-regina-bell-tower",
+   "name": "Regina with Ho-Oh (Bell Tower)",
+   "kind": "team",
+   "place": "bell-tower",
+   "level_cap": 66,
+   "foe": [
+    {
+     "name": "REGINA",
+     "ace_level": 66
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "bell-tower",
+    "bellchime-trail"
+   ],
+   "tips": "Regina on the Bell Tower roof: Ho-Oh, Zoroark, Absol (Lv 50-66). Ho-Oh is Fire/Flying: Rock moves hit it four times.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "gym-15-silver",
+   "name": "Gym 15: Silver",
+   "kind": "gym",
+   "place": "evergreen-town",
+   "leader": "Silver",
+   "theme": "dark",
+   "level_cap": 68,
+   "foe": {
+    "name": "SILVER",
+    "ace_level": 68
+   },
+   "done_when": "badge:15",
+   "opens": [
+    "evergreen-town",
+    "route-47",
+    "route-48"
+   ],
+   "badge_note": "Night Badge; gym TM46 Thief.",
+   "tips": "Johto gym 7: Honchkrow, Weavile, Absol, Umbreon, Hydreigon (Lv 65-68). Fighting, Bug and Fairy moves; Hydreigon takes four times from Fairy.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts); nuzlocketracker.pages.dev/guides/glazed"
+  },
+  {
+   "id": "rival-chelle-evergreen",
+   "name": "Rival: Chelle (Evergreen Town)",
+   "kind": "rival",
+   "place": "evergreen-town",
+   "level_cap": 66,
+   "foe": [
+    {
+     "name": "CHELLE",
+     "ace_level": 66
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Chelle: Breloom, Meganium, Raichu, Garchomp, Absol, Kingdra (Lv 63-66).",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed"
+  },
+  {
+   "id": "gym-16-clair",
+   "name": "Gym 16: Clair",
+   "kind": "gym",
+   "place": "blackthorn-city",
+   "leader": "Clair",
+   "theme": "dragon",
+   "level_cap": 72,
+   "foe": {
+    "name": "CLAIR",
+    "ace_level": 72
+   },
+   "done_when": "badge:16",
+   "opens": [
+    "blackthorn-city",
+    "dragons-den",
+    "ice-path"
+   ],
+   "badge_note": "Rising Badge.",
+   "tips": "Johto gym 8: Garchomp, Druddigon, Salamence, Kingdra, Dragonite (Lv 69-72). Ice, Dragon and Fairy moves; Garchomp and Salamence take four times from Ice.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts); nuzlocketracker.pages.dev/guides/glazed"
+  },
+  {
+   "id": "rival-cato-johto",
+   "name": "Rival: Cato (Ruins of Alph)",
+   "kind": "rival",
+   "place": "ruins-of-alph",
+   "level_cap": 71,
+   "foe": [
+    {
+     "name": "CATO",
+     "ace_level": 71
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Cato returns before the Johto league: Houndoom, Feraligatr, Porygon-Z, Espeon, Salamence, Hydreigon (Lv 68-71).",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed (order by level)"
+  },
+  {
+   "id": "rival-chelle-johto-victory",
+   "name": "Rival: Chelle (Johto Victory Road)",
+   "kind": "rival",
+   "place": "victory-road",
+   "level_cap": 72,
+   "foe": [
+    {
+     "name": "CHELLE",
+     "ace_level": 72
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "victory-road",
+    "johto-league"
+   ],
+   "tips": "Chelle: Breloom, Meganium, Raichu, Garchomp, Absol, Kingdra (Lv 69-72).",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed"
+  },
+  {
+   "id": "e4-johto-ivan",
+   "name": "Johto Elite Four: Ivan",
+   "kind": "elite4",
+   "place": "johto-league",
+   "leader": "Ivan",
+   "theme": "poison",
+   "level_cap": 79,
+   "foe": [
+    {
+     "name": "IVAN",
+     "ace_level": 79
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Muk, Tentacruel, Gengar, Crobat, Seviper (Lv 77-79). Psychic and Ground moves.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "e4-johto-whitney",
+   "name": "Johto Elite Four: Whitney",
+   "kind": "elite4",
+   "place": "johto-league",
+   "leader": "Whitney",
+   "theme": "normal",
+   "level_cap": 80,
+   "foe": [
+    {
+     "name": "WHITNEY",
+     "ace_level": 80
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Ambipom, Lickilicky, Kangaskhan, Blissey, Miltank (Lv 78-80). Fighting moves.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "e4-johto-powell",
+   "name": "Johto Elite Four: Powell",
+   "kind": "elite4",
+   "place": "johto-league",
+   "leader": "Powell",
+   "theme": "electric",
+   "level_cap": 82,
+   "foe": [
+    {
+     "name": "POWELL",
+     "ace_level": 82
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Raichu, Galvantula, Electivire, Jolteon, Ampharos (Lv 79-82). Ground moves; Galvantula also fears Fire and Rock.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "e4-johto-eusine",
+   "name": "Johto Elite Four: Eusine",
+   "kind": "elite4",
+   "place": "johto-league",
+   "leader": "Eusine",
+   "theme": "water",
+   "level_cap": 83,
+   "foe": [
+    {
+     "name": "EUSINE",
+     "ace_level": 83
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Gyarados, Starmie, Swampert, Milotic, Suicune (Lv 80-83). Grass and Electric moves.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "rival-cato-johto-league",
+   "name": "Rival: Cato (Johto League)",
+   "kind": "rival",
+   "place": "johto-league",
+   "level_cap": 79,
+   "foe": [
+    {
+     "name": "CATO",
+     "ace_level": 79
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Cato waits at the Johto league: Houndoom, Feraligatr, Porygon-Z, Espeon, Salamence, Hydreigon (Lv 77-79).",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed"
+  },
+  {
+   "id": "champion-kris",
+   "name": "Johto Champion: Kris",
+   "kind": "champion",
+   "place": "johto-league",
+   "leader": "Kris",
+   "level_cap": 85,
+   "foe": [
+    {
+     "name": "KRIS",
+     "ace_level": 85
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "A mixed team: Heracross, Garchomp, Sceptile, Metagross, Arcanine, Feraligatr (Lv 82-85). Bring Fire for Heracross and Metagross, Ice for Garchomp and Sceptile.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "post-rankor-thor",
+   "name": "Rankor: Thor (Nitro Isle)",
+   "kind": "postgame",
+   "place": "nitro-isle",
+   "leader": "Thor",
+   "level_cap": 82,
+   "foe": [
+    {
+     "name": "THOR",
+     "ace_level": 82
+    }
+   ],
+   "done_when": "none",
+   "opens": [
+    "rankor-port",
+    "rankor-ferry",
+    "nitro-isle",
+    "kolo-isle",
+    "alpha-isle",
+    "reign-isle",
+    "reefen-isle",
+    "olcan-isle"
+   ],
+   "tips": "The Rankor isles have four leaders who each punch your Rankor Ticket (no badges). Thor's logic-puzzle gym, Poison team: Crobat, Weezing, Gengar, Toxicroak, Nidoking and 1 more (Lv 78-82). Psychic and Ground moves.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "post-rankor-ricky",
+   "name": "Rankor: Ricky (Kolo Isle)",
+   "kind": "postgame",
+   "place": "kolo-isle",
+   "leader": "Ricky",
+   "theme": "dragon",
+   "level_cap": 82,
+   "foe": [
+    {
+     "name": "RICKY",
+     "ace_level": 82
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "Dragon types: Salamence, Haxorus, Kingdra, Dragonite, Flygon and 1 more (Lv 80-82). Ice and Fairy moves.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "post-rankor-sora",
+   "name": "Rankor: Sora (Alpha Isle)",
+   "kind": "postgame",
+   "place": "alpha-isle",
+   "leader": "Sora",
+   "theme": "psychic",
+   "level_cap": 84,
+   "foe": [
+    {
+     "name": "SORA",
+     "ace_level": 84
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "Psychic types: Alakazam, Jirachi, Delphox, Slowking, Gallade, Gardevoir (Lv 81-84). Dark, Ghost and Bug moves.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "post-rankor-makunouchi",
+   "name": "Rankor: Makunouchi (Reign Isle)",
+   "kind": "postgame",
+   "place": "reign-isle",
+   "leader": "Makunouchi",
+   "theme": "fighting",
+   "level_cap": 87,
+   "foe": [
+    {
+     "name": "MAKUNOUCHI",
+     "ace_level": 87
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "Fighting types: Blaziken, Conkeldurr, Infernape, Gliscor, Greninja, Machamp (Lv 85-87). Psychic, Flying and Fairy moves.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "post-rankor-tye",
+   "name": "Rival: Tye (Rankor)",
+   "kind": "postgame",
+   "place": "nitro-isle",
+   "level_cap": 76,
+   "foe": [
+    {
+     "name": "TYE",
+     "ace_level": 76
+    },
+    {
+     "name": "TYE",
+     "ace_level": 95
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "Tye, a trainer with all the Eevee forms, fights you around the isles (Nitro Isle, Alpha Isle, the stadium); the first is Vaporeon, Glaceon, Umbreon, Flareon, Leafeon, Jolteon (Lv 75-76) and the last Espeon, Glaceon, Leafeon, Flareon, Vaporeon, Jolteon (Lv 90-95).",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed"
+  },
+  {
+   "id": "post-chelle-olcan",
+   "name": "Rival: Chelle (Olcan Isle)",
+   "kind": "postgame",
+   "place": "olcan-isle",
+   "level_cap": 75,
+   "foe": [
+    {
+     "name": "CHELLE",
+     "ace_level": 75
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "Chelle: Meganium, Kingdra, Garchomp, Absol, Skarmory, Tyranitar (Lv 73-75).",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed"
+  },
+  {
+   "id": "post-rankor-soul",
+   "name": "Rankor Champion: Soul",
+   "kind": "postgame",
+   "place": "rankor-port",
+   "leader": "Soul",
+   "level_cap": 94,
+   "foe": [
+    {
+     "name": "SOUL",
+     "ace_level": 94
+    },
+    {
+     "name": "CHELLE",
+     "ace_level": 87
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "Four punches on the Rankor Ticket open the stadium and its champion Soul: Heracross, Houndoom, Gliscor, Roserade, Empoleon and 1 more (Lv 91-94). Expect a final rival round there first (Chelle at 87).",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts) (the stadium's section: not confirmed)"
+  },
+  {
+   "id": "post-red",
+   "name": "Legendary trainer Red (Mt. Silver)",
+   "kind": "postgame",
+   "place": "mt-silver",
+   "leader": "Red",
+   "level_cap": 100,
+   "foe": [
+    {
+     "name": "RED",
+     "ace_level": 100
+    }
+   ],
+   "done_when": "none",
+   "opens": [
+    "mt-silver"
+   ],
+   "tips": "Red at the top of Mt. Silver, reached from Johto's Victory Road: Pikachu, Lapras, Snorlax, Venusaur, Charizard, Blastoise (Lv 100). Beating him gives the Ruby for Groudon.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts); PokeHostel"
+  },
+  {
+   "id": "post-soheal",
+   "name": "Soheal (Soheal's Strait)",
+   "kind": "postgame",
+   "place": "soheals-strait",
+   "level_cap": 50,
+   "foe": [
+    {
+     "name": "SOHEAL",
+     "ace_level": 50
+    }
+   ],
+   "done_when": "none",
+   "opens": [
+    "soheals-strait",
+    "mystery-island"
+   ],
+   "tips": "After the Tunod league, Soheal (Dragonite, Gliscor, Infernape, Espeon, Lucario, Victini (Lv 50)) guards the way to Mystery Island and the Mega Lucario quest: take the boat from Seaspray.",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "legend-lugia",
+   "name": "Lugia (Whirl Islands)",
+   "kind": "legendary",
+   "place": "whirl-islands",
+   "level_cap": 70,
+   "done_when": "none",
+   "opens": [],
+   "tips": "After Pius frees Lugia, a sailor on Route 40 takes a Diver to the sunken Whirl Islands. (No level found in the sources: the cap shown is a guess at the post-game level.)",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "legend-mewtwo",
+   "name": "Mewtwo (New Island)",
+   "kind": "legendary",
+   "place": "new-island",
+   "level_cap": 70,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Dive at the Olivine dock to reach New Island; a Dragonite on Route 44 hints at it once you have seven Johto badges. (No level found in the sources: the cap shown is a guess at the post-game level.)",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "legend-mew",
+   "name": "Mew (Fusion Labs)",
+   "kind": "legendary",
+   "place": "fusion-labs",
+   "level_cap": 70,
+   "done_when": "none",
+   "opens": [],
+   "tips": "After the Tunod league, the top floor of the Fusion Labs; keep a party slot free. (No level found in the sources: the cap shown is a guess at the post-game level.)",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "legend-dialga",
+   "name": "Dialga (Adamant Cave)",
+   "kind": "legendary",
+   "place": "adamant-cave",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Level 50 in Adamant Cave in the Temporal Sea, with the Adamant Orb from the Fusion Resort penthouse quest.",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "legend-giratina",
+   "name": "Giratina (Griseous Cave)",
+   "kind": "legendary",
+   "place": "griseous-cave",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Level 50 in Griseous Cave off the Haunted Seaway, with the Griseous Orb from the same quest.",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "legend-palkia",
+   "name": "Palkia (Spacial Ruins)",
+   "kind": "legendary",
+   "place": "spacial-ruins",
+   "level_cap": 70,
+   "done_when": "none",
+   "opens": [],
+   "tips": "In the Spacial Ruins south of the Palmtree Resort. (No level found in the sources: the cap shown is a guess at the post-game level.)",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "legend-embedded-trio",
+   "name": "Groudon, Kyogre, Rayquaza (Embedded Tower)",
+   "kind": "legendary",
+   "place": "embedded-tower",
+   "level_cap": 70,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Each needs its jewel: the Ruby from Red (Groudon, first floor), the Sapphire from the Slowpoke Well basement (Kyogre, bottom), the Emerald from Lance's Dragon's Den quest (Rayquaza, top; the hardest). (No level found in the sources: the cap shown is a guess at the post-game level.)",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "legend-celebi",
+   "name": "Celebi (Ilex Forest)",
+   "kind": "legendary",
+   "place": "ilex-forest",
+   "level_cap": 70,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Ilex Forest's shrine after the Johto league. (No level found in the sources: the cap shown is a guess at the post-game level.)",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "legend-regis",
+   "name": "Regirock, Regice, Registeel",
+   "kind": "legendary",
+   "place": "cave-of-regi",
+   "level_cap": 70,
+   "done_when": "none",
+   "opens": [],
+   "tips": "With Waterfall, surf near the Mt. Stratus / Geminite Village entrance to reach the Regi caves. (No level found in the sources: the cap shown is a guess at the post-game level.)",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "legend-lake-trio",
+   "name": "Uxie, Mesprit, Azelf (Peaks of Alpha)",
+   "kind": "legendary",
+   "place": "peaks-of-alpha",
+   "level_cap": 70,
+   "done_when": "none",
+   "opens": [],
+   "tips": "A white stone at the Peaks of Alpha, after beating Soul. (No level found in the sources: the cap shown is a guess at the post-game level.)",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  }
+ ],
+ "steps": [
+  {
+   "id": "step-starter",
+   "title": "Pick one of five starters",
+   "text": "Professor Willow in Glenwood Town offers Turtwig, Chimchar, Piplup, Shinx and Riolu; the other four can be had later. A red-scarfed Pikachu is a forced fight soon after, so Piplup is the hardest start.",
+   "stage": "rival-percy-forest-pass",
+   "places": [
+    "glenwood-town"
+   ],
+   "done_when": "party",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "step-early-team",
+   "title": "Catch Ground or Grass types for Sparky",
+   "text": "Sparky's three Electric types fall to any Ground move; Turtwig or Riolu also do well. Train in Forest Pass and Springside Path.",
+   "stage": "gym-1-sparky",
+   "places": [
+    "forest-pass",
+    "springside-path"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "step-hm-badges",
+   "title": "HMs follow the badges",
+   "text": "On the wiki's list the Tunod badges unlock Cut, (none), Rock Smash, Strength, Surf, Fly, Dive and Waterfall in that order.",
+   "stage": "gym-3-flo",
+   "places": [
+    "seaspray-town"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "step-safari",
+   "title": "Tunod Safari Zone",
+   "text": "The Tunod Safari Zone off Path of Victory has rarer catches; Chelle waits there.",
+   "stage": "rival-chelle-safari",
+   "places": [
+    "tnd-safari-zone"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "nuzlocketracker.pages.dev/guides/glazed"
+  },
+  {
+   "id": "step-fusion",
+   "title": "Climb into Palmtree Resort",
+   "text": "Team Fusion runs its company from the Palmtree Resort; its labs come before the Rock gym in the same town.",
+   "stage": "team-fusion-labs",
+   "places": [
+    "palmtree-resort",
+    "fusion-labs"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "step-tunod-league",
+   "title": "Level to the mid-50s for the Tunod league",
+   "text": "The four colour-themed members run 48-53 and Blake 57. The league is beyond Path of Victory and Victory Road.",
+   "stage": "e4-rosaline",
+   "places": [
+    "path-of-victory",
+    "tunod-league"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams)"
+  },
+  {
+   "id": "step-johto",
+   "title": "Johto opens after the Tunod Champion",
+   "text": "You land on Route 39 near Olivine; the Johto gyms are in the 57-72 range and their order differs from the original games (Falkner, Morty, Jasmine, Bugsy, Simon, Brian, Silver, Clair).",
+   "stage": "rival-chelle-route-39",
+   "places": [
+    "route-39",
+    "olivine-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "ROM glazed trainer table (levels, teams); nuzlocketracker.pages.dev/guides/glazed"
+  },
+  {
+   "id": "step-rankor",
+   "title": "Rankor isles",
+   "text": "After the Johto league the isles between Tunod and Johto open: four leaders, a ticket instead of badges, and a stadium champion at the end.",
+   "stage": "post-rankor-thor",
+   "places": [
+    "rankor-port",
+    "nitro-isle"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  }
+ ],
+ "secrets": [
+  {
+   "id": "gift-togepi",
+   "kind": "gift",
+   "text": "Mr. Pokémon on Route 30 gives a Togepi.",
+   "place": "route-30",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "gift-glaceon",
+   "kind": "gift",
+   "text": "A house in Northcoast Town gives a Glaceon.",
+   "place": "northcoast-town",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "gift-grovyle",
+   "kind": "gift",
+   "text": "The adoption clinic in Stormy City gives a Grovyle.",
+   "place": "stormy-city",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "gift-onix",
+   "kind": "gift",
+   "text": "The Oceanview bed and breakfast gives an Onix.",
+   "place": "oceanview-city",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "gift-eevee",
+   "kind": "gift",
+   "text": "Eevee lives in Palmtree Park; one is also the prize of the lighthouse challenge.",
+   "place": "palmtree-park",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "gift-fossils",
+   "kind": "gift",
+   "text": "The Northcoast museum revives the Dome Fossil (Kabuto) and the Old Amber (Aerodactyl).",
+   "place": "northcoast-town",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "trade-ninetales",
+   "kind": "trade",
+   "text": "A boathouse in Oceanview trades a Ninetales for a Poliwhirl; another Oceanview trade gives a Politoed.",
+   "place": "oceanview-city",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "trade-steelix",
+   "kind": "trade",
+   "text": "A Violet City trade gives an Onix that evolves into Steelix.",
+   "place": "violet-city",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "trade-slowking",
+   "kind": "trade",
+   "text": "Olivine trades a Slowpoke that becomes Slowking.",
+   "place": "olivine-city",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "trade-scizor",
+   "kind": "trade",
+   "text": "Reefen Isle trades a Scyther that becomes Scizor.",
+   "place": "reefen-isle",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "tip-dratini",
+   "kind": "tip",
+   "text": "Dratini, Larvitar, Beldum, Bagon and Gible all appear on Forlorn Cape.",
+   "place": "forlorn-cape",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "tip-unova-starters",
+   "kind": "tip",
+   "text": "Tepig, Snivy and Oshawott are on Reefen Isle; Fennekin, Chespin and Froakie on Reign Isle.",
+   "place": "reefen-isle",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "tip-kanto-starters",
+   "kind": "tip",
+   "text": "Bulbasaur, Charmander and Squirtle can be had in Goldenrod City.",
+   "place": "goldenrod-city",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "tip-trainer-isle",
+   "kind": "tip",
+   "text": "Trainer Isle holds the Battle Tower, doubles and special battles, and leader rematches after the Rankor league.",
+   "place": "trainer-isle",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "legend-darkrai",
+   "kind": "legendary",
+   "text": "After the Cresselia event, Darkrai waits at the VIP villa in the Palmtree Resort.",
+   "place": "palmtree-resort",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "legend-ho-oh",
+   "kind": "legendary",
+   "text": "Ho-Oh can be met at Lv 76-77 late in the game (the wiki names Kolo Isle / Mt. Frozon and the Peaks of Alpha).",
+   "place": "peaks-of-alpha",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "legend-beasts",
+   "kind": "legendary",
+   "text": "The legendary beasts are tied to the Brass Tower (the wiki warns of a glitch there).",
+   "place": "brass-tower",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  }
+ ],
+ "evolutions": [
+  {
+   "id": "evo-riolu",
+   "species": 447,
+   "name": "Riolu",
+   "text": "Evolves into Lucario by friendship, as in the newer games.",
+   "quality": "reference-only",
+   "source": "Blazed Glazed change list (emulatorhacks.com)"
+  },
+  {
+   "id": "evo-poliwhirl",
+   "species": 61,
+   "name": "Poliwhirl",
+   "text": "The Oceanview trade gives a ready Politoed; the hack documents no other way.",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "evo-onix",
+   "species": 95,
+   "name": "Onix",
+   "text": "Violet City's trade Onix becomes Steelix; no other method is documented.",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "evo-scyther",
+   "species": 123,
+   "name": "Scyther",
+   "text": "Reefen Isle's trade gives Scizor.",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "evo-seadra",
+   "species": 117,
+   "name": "Seadra",
+   "text": "A Seadra-for-Fraxure trade gives Kingdra.",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "evo-slowpoke",
+   "species": 79,
+   "name": "Slowpoke",
+   "text": "Level 37 still gives Slowbro; Olivine's trade gives Slowking.",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  }
+ ],
+ "notes": [
+  {
+   "id": "note-regions",
+   "kind": "version",
+   "title": "Three regions",
+   "text": "Tunod is the main region (8 badges and its own league), then Johto (8 more badges in a new order and a second league), then the Rankor isles (4 leaders on a ticket and a champion).",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "note-megas",
+   "kind": "tip",
+   "title": "Mega Evolution",
+   "text": "Late in the game: Venusaur, Charizard, Blastoise, Lucario, Salamence, Absol, Manectric. A Mega here is permanent, learns nothing from TMs or tutors, and the Mega Stone works on all of them (Mega Stone X: Charizard only).",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "note-fairy",
+   "kind": "version",
+   "title": "Fairy type and the split",
+   "text": "The physical/special split and the Fairy type are in, with the newer games' Fairy re-types.",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "note-relearner",
+   "kind": "tip",
+   "title": "Move Relearner",
+   "text": "The Move Relearner takes money instead of Heart Scales; an EV-training dojo exists.",
+   "quality": "reference-only",
+   "source": "Glazed fan wiki (search extracts)"
+  },
+  {
+   "id": "note-version",
+   "kind": "version",
+   "title": "This release",
+   "text": "8.6.3 is the last beta of the original Glazed (Gen I-V species plus some Kalos ones, permanent Megas). The Unofficial 9.x and Golden Glazed builds keep its story and trainers.",
+   "quality": "reference-only",
+   "source": "PokéHarbor ?p=1815; The RPG Spotlight review"
+  }
+ ]
+}

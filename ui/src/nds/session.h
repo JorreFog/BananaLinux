@@ -34,6 +34,9 @@ namespace banana::nds
 		std::function<std::string()> receive;
 		// call from the menu's idle loop (any rate; a set goes out every 250 ms): true when Live/Advice changed
 		bool tick(double nowMs, time_t wall);
+		// the game's state from another reader (the GBA games: ui/src/gba/gen3live.*): the same journey, advice and
+		// notices as tick's, from l. No RAM read of its own then (send/receive unused)
+		bool feed(std::shared_ptr<const Live> l, double nowMs, time_t wall);
 		std::shared_ptr<const Live> live() const { return cur ? cur : rr.live(); }
 		std::shared_ptr<const Advice> advice() const { return adv; }
 		std::shared_ptr<const Journey> journey() const { return std::make_shared<const Journey>(*jr); }	// (a copy: the pages keep it)
@@ -72,6 +75,8 @@ namespace banana::nds
 		bool redo = false;
 		bool searchChecked = false, wasScanning = false;	// (the RAM reader's test flag looked at; a search running)					// (a new season pick: Live and the advice again at the next tick)
 		std::shared_ptr<const Live> cur;	// rr's Live with the picked season	// the play time (s) of the last reading in a wild battle (a catch registers around its end)
+		std::shared_ptr<const Live> fed;	// (feed's last: setSeason works it out again from this)
+		bool apply(std::shared_ptr<const Live> l, double now, time_t wall);
 		void track(const Live& now, time_t wall);
 		void load();
 		void save();
@@ -99,7 +104,10 @@ namespace banana::nds
 		bool take(Snapshot& out);
 		void markSeen(const std::vector<std::string>& ids);
 		void setSeason(int season);
+		// the game's state from another reader (Session::feed on the thread; the newest one only)
+		void feed(std::shared_ptr<const Live> l);
 	private:
+		std::shared_ptr<const Live> feedIn;
 		std::unique_ptr<Session> ss;
 		std::mutex m;
 		std::condition_variable cv;

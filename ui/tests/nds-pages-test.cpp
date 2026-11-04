@@ -203,8 +203,8 @@ static void touchTests(const Ctx& c, int w, int h)
 		CHECK(grab(be, 1) == a, "the shown page unchanged by the warming");
 	}
 	// the tabs: each one's middle (the whole width: Back to game is up in the icon's corner, the top-right one)
-	float cell = (628.0f - 12 - 12) / 7;
-	for (int i = 0; i < 7; i++)
+	float cell = (628.0f - 12 - 12) / (int)Page::COUNT;
+	for (int i = 0; i < (int)Page::COUNT; i++)
 	{
 		CHECK(tap(18 + i * cell + cell / 2, 448) == Pages::Action::REDRAW, "tab %d", i);
 		CHECK(pg.page() == (Page)i, "tab %d gave page %d", i, (int)pg.page());

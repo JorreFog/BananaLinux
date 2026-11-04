@@ -71,7 +71,9 @@ namespace banana::pkmn
 		// ---- Hoenn (Ruby, Sapphire, Emerald)
 		struct Hoenn { size_t pal = 0, tiles = 0, map = 0; int colours = 0; std::vector<uint8_t> t, m; };
 		// tiles at a: 8 bpp, every pixel 0 or 0x70.., the tilemap right after (4-aligned), every tile in it there
-		bool hoennAt(const uint8_t* rom, size_t n, size_t a, Hoenn& h)
+		// (mapAt: the tilemap's own place - a hack patched from Emerald that redrew the map with fewer tiles keeps it where
+		// Emerald's was, its code's pointer: the Glazed releases; 0: right after the tiles, as the games keep it)
+		bool hoennAt(const uint8_t* rom, size_t n, size_t a, Hoenn& h, size_t mapAt = 0)
 		{
 			long s = lzSize(rom, n, a);
 			if (s <= 0 || s % 64 || s < 64 * 100 || s > 64 * 512) return false;
@@ -80,8 +82,9 @@ namespace banana::pkmn
 			int mx = 0;
 			for (uint8_t v : h.t) { if (v && (v < 0x70 || v >= 0xa0)) return false; mx = std::max<int>(mx, v); }
 			if (mx < 0x70) return false;
-			size_t e = (a + used + 3) & ~(size_t)3;
-			if (lzSize(rom, n, e) != 0x1000 || !lz77(rom, n, e, h.m, 0x1000)) return false;
+			size_t e = mapAt ? mapAt : (a + used + 3) & ~(size_t)3;
+			const long ms = lzSize(rom, n, e);	// (64 x 64 tiles; a hack's own may be 64 x 32, enough for the screen)
+			if ((ms != 0x1000 && !(mapAt && ms == 0x800)) || !lz77(rom, n, e, h.m, 0x1000)) return false;
 			size_t nt = h.t.size() / 64;
 			for (uint8_t v : h.m) if (v >= nt) return false;
 			h.colours = ((mx - 0x70) / 16 + 1) * 16;
@@ -241,6 +244,18 @@ namespace banana::pkmn
 			Hoenn h;
 			bool ok = kn && hoennAt(rom, n, kn->a, h);
 			how = ok ? "known place" : "found";
+			// a patched Emerald: where Emerald's code points (the tiles at 0x122e14 and 0x122e24, the tilemap at 0x122e60
+			// and 0x122e70), its tilemap perhaps not after its tiles
+			if (!ok && n >= 0x1000000 && !memcmp(rom + 0xac, "BPEE", 4) && le32(rom + 0x122e14) == le32(rom + 0x122e24) &&
+				le32(rom + 0x122e60) == le32(rom + 0x122e70))
+			{
+				uint32_t tv = le32(rom + 0x122e14), mv = le32(rom + 0x122e60);
+				if (tv >= 0x08000000u && tv - 0x08000000u < n && mv >= 0x08000000u && mv - 0x08000000u < n)
+				{
+					ok = hoennAt(rom, n, tv - 0x08000000u, h, mv - 0x08000000u);
+					if (ok) how = "Emerald's code's";
+				}
+			}
 			for (size_t a = 0; !ok && a + 4 <= n; a += 4)
 				if (rom[a] == 0x10 && hoennAt(rom, n, a, h)) ok = true;
 			if (!ok) return;

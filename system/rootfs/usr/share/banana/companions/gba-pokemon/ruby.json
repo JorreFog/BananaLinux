@@ -1,0 +1,2265 @@
+{
+ "schema": 1,
+ "kind": "nds-pokemon-guide",
+ "game": "ruby",
+ "code": "AXVE",
+ "title": "Pokemon Ruby Version",
+ "revision": 1,
+ "sources": [
+  "pret/pokeruby decompilation (GitHub): trainer parties (src/data/trainers.h, trainer_parties.h), map scripts, hidden items (map.json bg_events), evolutions, wild encounters, roamer.c",
+  "The English ROM itself (AXVE): region map section names and trainer names/levels, read on the PC with ui/src/pokemon.cpp (findTables) - the ground truth for every place name and level cap",
+  "Bulbapedia (bulbapedia.bulbagarden.net): Courtney, Tabitha, Team Magma Hideout pages, read through a web search summary (admin roles per version)"
+ ],
+ "places": {
+  "magma-hideout": {
+   "name": "Magma Hideout"
+  },
+  "route-103": {
+   "name": "Route 103"
+  },
+  "littleroot-town": {
+   "name": "Littleroot Town"
+  },
+  "route-101": {
+   "name": "Route 101"
+  },
+  "oldale-town": {
+   "name": "Oldale Town"
+  },
+  "petalburg-woods": {
+   "name": "Petalburg Woods"
+  },
+  "route-102": {
+   "name": "Route 102"
+  },
+  "petalburg-city": {
+   "name": "Petalburg City"
+  },
+  "route-104": {
+   "name": "Route 104"
+  },
+  "rustboro-city": {
+   "name": "Rustboro City"
+  },
+  "rusturf-tunnel": {
+   "name": "Rusturf Tunnel"
+  },
+  "route-116": {
+   "name": "Route 116"
+  },
+  "dewford-town": {
+   "name": "Dewford Town"
+  },
+  "route-105": {
+   "name": "Route 105"
+  },
+  "route-106": {
+   "name": "Route 106"
+  },
+  "granite-cave": {
+   "name": "Granite Cave"
+  },
+  "route-107": {
+   "name": "Route 107"
+  },
+  "route-108": {
+   "name": "Route 108"
+  },
+  "route-109": {
+   "name": "Route 109"
+  },
+  "slateport-city": {
+   "name": "Slateport City"
+  },
+  "route-110": {
+   "name": "Route 110"
+  },
+  "mauville-city": {
+   "name": "Mauville City"
+  },
+  "route-117": {
+   "name": "Route 117"
+  },
+  "verdanturf-town": {
+   "name": "Verdanturf Town"
+  },
+  "route-111": {
+   "name": "Route 111"
+  },
+  "route-112": {
+   "name": "Route 112"
+  },
+  "route-113": {
+   "name": "Route 113"
+  },
+  "fallarbor-town": {
+   "name": "Fallarbor Town"
+  },
+  "route-114": {
+   "name": "Route 114"
+  },
+  "meteor-falls": {
+   "name": "Meteor Falls"
+  },
+  "mt-chimney": {
+   "name": "Mt. Chimney"
+  },
+  "jagged-pass": {
+   "name": "Jagged Pass"
+  },
+  "lavaridge-town": {
+   "name": "Lavaridge Town"
+  },
+  "fiery-path": {
+   "name": "Fiery Path"
+  },
+  "route-119": {
+   "name": "Route 119"
+  },
+  "route-118": {
+   "name": "Route 118"
+  },
+  "fortree-city": {
+   "name": "Fortree City"
+  },
+  "route-120": {
+   "name": "Route 120"
+  },
+  "route-121": {
+   "name": "Route 121"
+  },
+  "safari-zone": {
+   "name": "Safari Zone"
+  },
+  "lilycove-city": {
+   "name": "Lilycove City"
+  },
+  "route-122": {
+   "name": "Route 122"
+  },
+  "mt-pyre": {
+   "name": "Mt. Pyre"
+  },
+  "route-124": {
+   "name": "Route 124"
+  },
+  "mossdeep-city": {
+   "name": "Mossdeep City"
+  },
+  "route-125": {
+   "name": "Route 125"
+  },
+  "route-127": {
+   "name": "Route 127"
+  },
+  "shoal-cave": {
+   "name": "Shoal Cave"
+  },
+  "seafloor-cavern": {
+   "name": "Seafloor Cavern"
+  },
+  "route-126": {
+   "name": "Route 126"
+  },
+  "route-128": {
+   "name": "Route 128"
+  },
+  "underwater": {
+   "name": "Underwater"
+  },
+  "cave-of-origin": {
+   "name": "Cave Of Origin"
+  },
+  "sootopolis-city": {
+   "name": "Sootopolis City"
+  },
+  "victory-road": {
+   "name": "Victory Road"
+  },
+  "ever-grande-city": {
+   "name": "Ever Grande City"
+  },
+  "sky-pillar": {
+   "name": "Sky Pillar"
+  },
+  "battle-tower": {
+   "name": "Battle Tower"
+  },
+  "sealed-chamber": {
+   "name": "Sealed Chamber"
+  },
+  "route-131": {
+   "name": "Route 131"
+  },
+  "abandoned-ship": {
+   "name": "Abandoned Ship"
+  },
+  "mirage-island": {
+   "name": "Route 130"
+  },
+  "new-mauville": {
+   "name": "New Mauville"
+  },
+  "southern-island": {
+   "name": "Southern Island"
+  }
+ },
+ "milestones": [
+  {
+   "id": "rival-route-103",
+   "name": "Rival: first battle (Route 103)",
+   "kind": "rival",
+   "place": "route-103",
+   "level_cap": 5,
+   "foe": [
+    {
+     "name": "MAY",
+     "ace_level": 5
+    },
+    {
+     "name": "BRENDAN",
+     "ace_level": 5
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "littleroot-town",
+    "route-101",
+    "oldale-town",
+    "route-103"
+   ],
+   "tips": "Your neighbour uses the starter that is strong against yours, at Level 5. Two or three levels on Route 101 or 103 first make it easy; heal at Oldale's Pokémon Center.",
+   "quality": "reference-only",
+   "source": "ROM AXVE trainer table; pret/pokeruby (BRENDAN/MAY_ROUTE_103_*)"
+  },
+  {
+   "id": "team-petalburg-woods",
+   "name": "Team Magma grunt in Petalburg Woods",
+   "kind": "team",
+   "place": "petalburg-woods",
+   "level_cap": 9,
+   "done_when": "later",
+   "opens": [
+    "route-102",
+    "petalburg-city",
+    "route-104",
+    "petalburg-woods"
+   ],
+   "tips": "A lone grunt with a Level 9 Poochyena tries to rob a Devon researcher. Any Pokémon around Level 10 wins; the researcher gives you a Great Ball.",
+   "quality": "reference-only",
+   "source": "ROM AXVE trainer table; pret/pokeruby (Petalburg Woods grunt)"
+  },
+  {
+   "id": "gym-1-roxanne",
+   "name": "Gym 1: Roxanne",
+   "kind": "gym",
+   "place": "rustboro-city",
+   "level_cap": 15,
+   "leader": "Roxanne",
+   "theme": "rock",
+   "foe": {
+    "name": "ROXANNE",
+    "class": "LEADER",
+    "ace_level": 15
+   },
+   "badge_note": "Stone Badge: Cut works in the field (HM01 from the Cutter's house in Rustboro). Gym TM: TM39 Rock Tomb.",
+   "done_when": "badge:1",
+   "opens": [
+    "rustboro-city"
+   ],
+   "tips": "Rock types: Geodude at 14 and Nosepass at 15 with Rock Tomb. Water and Grass moves win (Mudkip, Treecko, Lotad, Shroomish); Torchic needs a partner, or a Fighting move after it evolves.",
+   "quality": "reference-only",
+   "source": "ROM AXVE trainer table; pret/pokeruby; HM checks in src/party_menu.c"
+  },
+  {
+   "id": "team-rusturf-tunnel",
+   "name": "Get the Devon Goods back (Rusturf Tunnel)",
+   "kind": "team",
+   "place": "rusturf-tunnel",
+   "level_cap": 11,
+   "done_when": "later",
+   "opens": [
+    "route-116",
+    "rusturf-tunnel"
+   ],
+   "tips": "The grunt who stole the Devon Goods waits in Rusturf Tunnel east of Rustboro with a Level 11 Poochyena. Mr. Stone then gives you a letter for Steven and the PokéNav.",
+   "quality": "reference-only",
+   "source": "ROM AXVE trainer table; pret/pokeruby (Rusturf Tunnel grunt)"
+  },
+  {
+   "id": "gym-2-brawly",
+   "name": "Gym 2: Brawly",
+   "kind": "gym",
+   "place": "dewford-town",
+   "level_cap": 18,
+   "leader": "Brawly",
+   "theme": "fighting",
+   "foe": {
+    "name": "BRAWLY",
+    "class": "LEADER",
+    "ace_level": 18
+   },
+   "badge_note": "Knuckle Badge: Flash works in the field, and traded Pokémon up to Level 30 obey. Gym TM: TM08 Bulk Up.",
+   "done_when": "badge:2",
+   "opens": [
+    "route-105",
+    "route-106",
+    "dewford-town",
+    "granite-cave",
+    "route-107",
+    "route-108",
+    "route-109"
+   ],
+   "tips": "Fighting types: Machop at 17 and Makuhita at 18 with Bulk Up. Flying (Taillow, Wingull) and Psychic (Kirlia) moves win. Get Flash from the hiker in Granite Cave first to light the cave.",
+   "quality": "reference-only",
+   "source": "ROM AXVE trainer table; pret/pokeruby; obedience in src/battle_util.c"
+  },
+  {
+   "id": "story-granite-cave-steven",
+   "name": "Deliver the letter to Steven (Granite Cave)",
+   "kind": "story",
+   "place": "granite-cave",
+   "done_when": "later",
+   "opens": [
+    "granite-cave"
+   ],
+   "tips": "Mr. Briney sails you to Dewford. Steven waits at the far end of Granite Cave's first floors; the lower floors' cracked tiles need the Mach Bike, but only for items. He gives TM47 Steel Wing.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby GraniteCave_StevensRoom scripts"
+  },
+  {
+   "id": "team-oceanic-museum",
+   "name": "Team Magma at the Oceanic Museum (Slateport)",
+   "kind": "team",
+   "place": "slateport-city",
+   "level_cap": 15,
+   "done_when": "later",
+   "opens": [
+    "slateport-city",
+    "route-110"
+   ],
+   "tips": "Two grunts (Level 14 and 15 Pokémon) corner Captain Stern on the museum's 2nd floor when you bring the Devon Goods. The museum charges a small entry fee.",
+   "quality": "reference-only",
+   "source": "ROM AXVE trainer table; pret/pokeruby (museum grunts)"
+  },
+  {
+   "id": "rival-route-110",
+   "name": "Rival: Route 110",
+   "kind": "rival",
+   "place": "route-110",
+   "level_cap": 20,
+   "foe": [
+    {
+     "name": "MAY",
+     "ace_level": 20
+    },
+    {
+     "name": "BRENDAN",
+     "ace_level": 20
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Three Pokémon, the starter at 20. After the fight the rival gives you the Itemfinder. Cycling Road above the route needs a bike (Rydel's shop in Mauville).",
+   "quality": "reference-only",
+   "source": "ROM AXVE trainer table; pret/pokeruby (*_ROUTE_110_*)"
+  },
+  {
+   "id": "gym-3-wattson",
+   "name": "Gym 3: Wattson",
+   "kind": "gym",
+   "place": "mauville-city",
+   "level_cap": 23,
+   "leader": "Wattson",
+   "theme": "electric",
+   "foe": {
+    "name": "WATTSON",
+    "class": "LEADER",
+    "ace_level": 23
+   },
+   "badge_note": "Dynamo Badge: Rock Smash works in the field (HM06 from a house in Mauville). Gym TM: TM34 Shock Wave.",
+   "done_when": "badge:3",
+   "opens": [
+    "mauville-city",
+    "route-117",
+    "verdanturf-town",
+    "route-111",
+    "route-112",
+    "route-113",
+    "fallarbor-town",
+    "route-114",
+    "meteor-falls"
+   ],
+   "tips": "Electric types: Magnemite 22, Voltorb 20, Magneton 23. Ground moves are the answer (Geodude from Granite Cave, Marshtomp); Magnemite and Magneton are also part Steel.",
+   "quality": "reference-only",
+   "source": "ROM AXVE trainer table; pret/pokeruby"
+  },
+  {
+   "id": "team-mt-chimney",
+   "name": "Stop Team Magma at Mt. Chimney",
+   "kind": "team",
+   "place": "mt-chimney",
+   "level_cap": 25,
+   "foe": [
+    {
+     "name": "TABITHA",
+     "ace_level": 20
+    },
+    {
+     "name": "MAXIE",
+     "ace_level": 25
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "mt-chimney",
+    "jagged-pass",
+    "lavaridge-town",
+    "fiery-path"
+   ],
+   "tips": "Take the cable car up from Route 112 (the Meteor Falls scene sends you there). An admin (Tabitha, Level 20) and then the leader (Maxie, ace at 25) guard the summit machine. Water and Ground moves cover most of it.",
+   "quality": "reference-only",
+   "source": "ROM AXVE trainer table; pret/pokeruby (Mt. Chimney admin and leader teams)"
+  },
+  {
+   "id": "gym-4-flannery",
+   "name": "Gym 4: Flannery",
+   "kind": "gym",
+   "place": "lavaridge-town",
+   "level_cap": 28,
+   "leader": "Flannery",
+   "theme": "fire",
+   "foe": {
+    "name": "FLANNERY",
+    "class": "LEADER",
+    "ace_level": 28
+   },
+   "badge_note": "Heat Badge: Strength works in the field (HM04 in Rusturf Tunnel), and traded Pokémon up to Level 50 obey. Gym TM: TM50 Overheat.",
+   "done_when": "badge:4",
+   "opens": [
+    "lavaridge-town"
+   ],
+   "tips": "Two Slugma at 26 and a Torkoal at 28 with Overheat. Water moves win easily; Rock and Ground also hit hard.",
+   "quality": "reference-only",
+   "source": "ROM AXVE trainer table; pret/pokeruby"
+  },
+  {
+   "id": "gym-5-norman",
+   "name": "Gym 5: Norman (your father)",
+   "kind": "gym",
+   "place": "petalburg-city",
+   "level_cap": 31,
+   "leader": "Norman",
+   "theme": "normal",
+   "foe": {
+    "name": "NORMAN",
+    "class": "LEADER",
+    "ace_level": 31
+   },
+   "badge_note": "Balance Badge: Surf works in the field (HM03 from Wally's father in Petalburg right after). Gym TM: TM42 Facade.",
+   "done_when": "badge:5",
+   "opens": [
+    "petalburg-city"
+   ],
+   "tips": "Slaking 28, Vigoroth 30, Slaking 31. Slaking loafs every other turn (Truant): set up or switch on those turns. Fighting moves (Combusken, Breloom, Makuhita) win.",
+   "quality": "reference-only",
+   "source": "ROM AXVE trainer table; pret/pokeruby"
+  },
+  {
+   "id": "rival-wally-mauville",
+   "name": "Wally in Mauville City",
+   "kind": "rival",
+   "place": "mauville-city",
+   "level_cap": 16,
+   "foe": {
+    "name": "WALLY",
+    "ace_level": 16
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Wally wants to prove himself with his Ralts (Level 16) at the gym door. Any of your Pokémon wins; after this Wally moves to Verdanturf.",
+   "quality": "reference-only",
+   "source": "ROM AXVE trainer table; pret/pokeruby (Wally, Mauville)"
+  },
+  {
+   "id": "team-weather-institute",
+   "name": "Team Magma raid the Weather Institute (Route 119)",
+   "kind": "team",
+   "place": "route-119",
+   "level_cap": 28,
+   "foe": {
+    "name": "COURTNEY",
+    "ace_level": 28
+   },
+   "done_when": "later",
+   "opens": [
+    "route-118",
+    "route-119"
+   ],
+   "tips": "Grunts at 26-28 on both floors, then the admin Courtney with two Level 28 Pokémon. Win and the institute gives you a Castform.",
+   "quality": "reference-only",
+   "source": "ROM AXVE trainer table; pret/pokeruby; Bulbapedia: Courtney (via search)"
+  },
+  {
+   "id": "rival-route-119",
+   "name": "Rival: Route 119",
+   "kind": "rival",
+   "place": "route-119",
+   "level_cap": 31,
+   "foe": [
+    {
+     "name": "MAY",
+     "ace_level": 31
+    },
+    {
+     "name": "BRENDAN",
+     "ace_level": 31
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Three Pokémon with the starter's second form at 31. The rival then hands over HM02 Fly, which needs the Feather Badge.",
+   "quality": "reference-only",
+   "source": "ROM AXVE trainer table; pret/pokeruby (*_ROUTE_119_*); HM02 in Route119 scripts"
+  },
+  {
+   "id": "gym-6-winona",
+   "name": "Gym 6: Winona",
+   "kind": "gym",
+   "place": "fortree-city",
+   "level_cap": 33,
+   "leader": "Winona",
+   "theme": "flying",
+   "foe": {
+    "name": "WINONA",
+    "class": "LEADER",
+    "ace_level": 33
+   },
+   "badge_note": "Feather Badge: Fly works in the field, traded Pokémon up to Level 70 obey. Gym TM: TM40 Aerial Ace. An invisible Kecleon blocks the way until Steven gives you the Devon Scope on Route 120.",
+   "done_when": "badge:6",
+   "opens": [
+    "route-120",
+    "fortree-city",
+    "route-121",
+    "safari-zone"
+   ],
+   "tips": "Swellow 31, Pelipper 30, Skarmory 32, Altaria 33. Electric moves for the birds, Fire for Skarmory, Ice or Rock for Altaria.",
+   "quality": "reference-only",
+   "source": "ROM AXVE trainer table; pret/pokeruby"
+  },
+  {
+   "id": "rival-lilycove",
+   "name": "Rival: Lilycove City",
+   "kind": "rival",
+   "place": "lilycove-city",
+   "level_cap": 34,
+   "foe": [
+    {
+     "name": "MAY",
+     "ace_level": 34
+    },
+    {
+     "name": "BRENDAN",
+     "ace_level": 34
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "route-121",
+    "route-122",
+    "mt-pyre",
+    "lilycove-city"
+   ],
+   "tips": "The last rival fight: four Pokémon, the starter at 34. After it the rival no longer battles you.",
+   "quality": "reference-only",
+   "source": "ROM AXVE trainer table; pret/pokeruby (*_LILYCOVE_*)"
+  },
+  {
+   "id": "story-mt-pyre",
+   "name": "Mt. Pyre summit",
+   "kind": "story",
+   "place": "mt-pyre",
+   "done_when": "later",
+   "opens": [
+    "mt-pyre"
+   ],
+   "tips": "Team Magma grunts block the path to the summit, and the leader takes one of the two orbs kept by the old couple. Follow the trail to the hideout near Lilycove.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby MtPyre_Summit scripts"
+  },
+  {
+   "id": "team-hideout",
+   "name": "Team Magma Hideout (east of Lilycove)",
+   "kind": "team",
+   "place": "magma-hideout",
+   "level_cap": 32,
+   "foe": {
+    "name": "TABITHA",
+    "ace_level": 32
+   },
+   "done_when": "later",
+   "opens": [
+    "magma-hideout",
+    "route-124"
+   ],
+   "tips": "Surf east of Lilycove to the cave. Warp panels lead to the admin (Tabitha, three Pokémon at 32). The leader escapes in the stolen submarine. A Master Ball is on B1F.",
+   "quality": "reference-only",
+   "source": "ROM AXVE trainer table; pret/pokeruby; pret/pokeruby item_ball_scripts.inc (Master Ball)"
+  },
+  {
+   "id": "gym-7-tate-liza",
+   "name": "Gym 7: Tate & Liza",
+   "kind": "gym",
+   "place": "mossdeep-city",
+   "level_cap": 42,
+   "leader": "Tate & Liza",
+   "theme": "psychic",
+   "foe": {
+    "name": "TATE&LIZA",
+    "class": "LEADER",
+    "ace_level": 42
+   },
+   "badge_note": "Mind Badge: Dive works in the field (HM08 from Steven at his house in Mossdeep). Gym TM: TM04 Calm Mind.",
+   "done_when": "badge:7",
+   "opens": [
+    "route-125",
+    "route-127",
+    "mossdeep-city",
+    "shoal-cave"
+   ],
+   "tips": "A double battle with Lunatone and Solrock at 42. Water and Grass moves hit both hard; Surf hits both at once. Watch for Sunny Day and Solar Beam.",
+   "quality": "reference-only",
+   "source": "ROM AXVE trainer table; pret/pokeruby"
+  },
+  {
+   "id": "team-seafloor-cavern",
+   "name": "Seafloor Cavern",
+   "kind": "team",
+   "place": "seafloor-cavern",
+   "level_cap": 43,
+   "foe": [
+    {
+     "name": "COURTNEY",
+     "ace_level": 38
+    },
+    {
+     "name": "MAXIE",
+     "ace_level": 43
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "route-126",
+    "route-128",
+    "seafloor-cavern",
+    "underwater"
+   ],
+   "tips": "Dive on Route 128 to find the cavern. Strength and Rock Smash puzzles lead to the admin (Courtney, 38) and then Maxie (ace at 43) in the deepest room. A Grass or Electric move and Ground/Psychic for Crobat help.",
+   "quality": "reference-only",
+   "source": "ROM AXVE trainer table; pret/pokeruby"
+  },
+  {
+   "id": "legend-groudon",
+   "name": "Groudon (Cave of Origin)",
+   "kind": "legendary",
+   "place": "cave-of-origin",
+   "level_cap": 45,
+   "done_when": "later",
+   "opens": [
+    "sootopolis-city",
+    "cave-of-origin"
+   ],
+   "tips": "After the Seafloor Cavern, Groudon goes to the Cave of Origin under Sootopolis. Steven and Wallace let you in; it waits at the bottom at Level 45. Save first; Ultra Balls and a status move help.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby CaveOfOrigin scripts, static_pokemon.inc"
+  },
+  {
+   "id": "gym-8-wallace",
+   "name": "Gym 8: Wallace",
+   "kind": "gym",
+   "place": "sootopolis-city",
+   "level_cap": 43,
+   "leader": "Wallace",
+   "theme": "water",
+   "foe": {
+    "name": "WALLACE",
+    "class": "LEADER",
+    "ace_level": 43
+   },
+   "badge_note": "Rain Badge: Waterfall works in the field (HM07 lies in the Cave of Origin), and every traded Pokémon obeys. Gym TM: TM03 Water Pulse.",
+   "done_when": "badge:8",
+   "opens": [
+    "sootopolis-city"
+   ],
+   "tips": "Water types: Luvdisc 40, Whiscash 42 (Ground, immune to Electric), Sealeo 40, Seaking 42 and Milotic 43, which can recover. Grass moves hit all but Sealeo (Water/Ice: use Electric or Fighting on it).",
+   "quality": "reference-only",
+   "source": "ROM AXVE trainer table; pret/pokeruby; pret/pokeruby item_ball_scripts.inc (HM07)"
+  },
+  {
+   "id": "rival-wally-victory-road",
+   "name": "Wally at Victory Road",
+   "kind": "rival",
+   "place": "victory-road",
+   "level_cap": 45,
+   "foe": {
+    "name": "WALLY",
+    "ace_level": 45
+   },
+   "done_when": "later",
+   "opens": [
+    "ever-grande-city",
+    "victory-road"
+   ],
+   "tips": "Wally blocks the way in Victory Road with Gardevoir at 45 and Altaria, Delcatty, Roselia and Magneton. Fire beats Roselia, Ice beats Altaria, Ground beats Magneton.",
+   "quality": "reference-only",
+   "source": "ROM AXVE trainer table; pret/pokeruby (Wally, Victory Road)"
+  },
+  {
+   "id": "e4-sidney",
+   "name": "Elite Four: Sidney",
+   "kind": "elite4",
+   "place": "ever-grande-city",
+   "level_cap": 49,
+   "leader": "Sidney",
+   "theme": "dark",
+   "foe": {
+    "name": "SIDNEY",
+    "class": "ELITE FOUR",
+    "ace_level": 49
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Dark types up to Absol 49 (Mightyena, Shiftry, Cacturne, Sharpedo). Fighting and Bug moves; Shiftry and Cacturne fear Fire, Ice and Flying.",
+   "quality": "reference-only",
+   "source": "ROM AXVE trainer table; pret/pokeruby"
+  },
+  {
+   "id": "e4-phoebe",
+   "name": "Elite Four: Phoebe",
+   "kind": "elite4",
+   "place": "ever-grande-city",
+   "level_cap": 51,
+   "leader": "Phoebe",
+   "theme": "ghost",
+   "foe": {
+    "name": "PHOEBE",
+    "class": "ELITE FOUR",
+    "ace_level": 51
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Ghosts: two Dusclops, two Banette, Sableye. Dark and Ghost moves work; Normal and Fighting don't touch them. Sableye has no weakness in Gen III.",
+   "quality": "reference-only",
+   "source": "ROM AXVE trainer table; pret/pokeruby"
+  },
+  {
+   "id": "e4-glacia",
+   "name": "Elite Four: Glacia",
+   "kind": "elite4",
+   "place": "ever-grande-city",
+   "level_cap": 53,
+   "leader": "Glacia",
+   "theme": "ice",
+   "foe": {
+    "name": "GLACIA",
+    "class": "ELITE FOUR",
+    "ace_level": 53
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Ice: Glalie and Sealeo twice, Walrein 53. Fire, Fighting, Rock, Steel and Electric (for Sealeo/Walrein) moves. Hail chips your team.",
+   "quality": "reference-only",
+   "source": "ROM AXVE trainer table; pret/pokeruby"
+  },
+  {
+   "id": "e4-drake",
+   "name": "Elite Four: Drake",
+   "kind": "elite4",
+   "place": "ever-grande-city",
+   "level_cap": 55,
+   "leader": "Drake",
+   "theme": "dragon",
+   "foe": {
+    "name": "DRAKE",
+    "class": "ELITE FOUR",
+    "ace_level": 55
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Dragons: Shelgon, Altaria, two Flygon, Salamence 55. Ice moves are four times as strong on Altaria, Flygon and Salamence.",
+   "quality": "reference-only",
+   "source": "ROM AXVE trainer table; pret/pokeruby"
+  },
+  {
+   "id": "champion-steven",
+   "name": "Champion Steven",
+   "kind": "champion",
+   "place": "ever-grande-city",
+   "level_cap": 58,
+   "leader": "Steven",
+   "theme": "steel",
+   "foe": {
+    "name": "STEVEN",
+    "class": "CHAMPION",
+    "ace_level": 58
+   },
+   "done_when": "later",
+   "opens": [],
+   "tips": "Steel and Rock: Skarmory 57, Claydol 55, Aggron, Cradily, Armaldo 56, Metagross 58. Ground and Water moves hit most; Fire for Skarmory and Metagross, Ice for Claydol.",
+   "quality": "reference-only",
+   "source": "ROM AXVE trainer table; pret/pokeruby"
+  },
+  {
+   "id": "legend-rayquaza",
+   "name": "Rayquaza (Sky Pillar)",
+   "kind": "legendary",
+   "place": "sky-pillar",
+   "level_cap": 70,
+   "done_when": "none",
+   "opens": [],
+   "tips": "After the Hall of Fame, Sky Pillar on Route 131 opens. Climb with the Mach Bike over the cracked floors; Rayquaza waits on top at Level 70.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby static_pokemon.inc, SkyPillar scripts"
+  },
+  {
+   "id": "postgame-battle-tower",
+   "name": "Battle Tower",
+   "kind": "postgame",
+   "place": "battle-tower",
+   "level_cap": 50,
+   "done_when": "none",
+   "opens": [],
+   "tips": "The S.S. Tidal (Slateport or Lilycove) takes you to the Battle Tower after the Hall of Fame. Pick three Pokémon; rounds of seven battles at Level 50 or open level.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby BattleTower scripts"
+  },
+  {
+   "id": "legend-regis",
+   "name": "The three Regis",
+   "kind": "legendary",
+   "place": "sealed-chamber",
+   "level_cap": 40,
+   "done_when": "none",
+   "opens": [],
+   "tips": "Dive on Route 134 to the Sealed Chamber. With Relicanth first and Wailord last in your party the Braille wall opens, and the caves of Regirock (Desert Ruins), Regice (Island Cave) and Registeel (Ancient Tomb) unlock. Each is Level 40.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby SealedChamber, DesertRuins, IslandCave, AncientTomb scripts"
+  },
+  {
+   "id": "legend-roamer",
+   "name": "Roaming Latios",
+   "kind": "legendary",
+   "place": "littleroot-town",
+   "level_cap": 40,
+   "done_when": "none",
+   "opens": [],
+   "tips": "After the Hall of Fame your mother's TV report sets Latios roaming Hoenn at Level 40. It flees on the first turn; trap it (Mean Look, Wobbuffet's Shadow Tag) or put it to sleep.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/roamer.c (species, Level 40)"
+  }
+ ],
+ "steps": [
+  {
+   "id": "step-starter",
+   "title": "Pick a starter on Route 101",
+   "text": "Rescue Professor Birch from a Poochyena and pick Treecko, Torchic or Mudkip from his bag. Mudkip has the easiest first two gyms; Torchic the hardest.",
+   "stage": "rival-route-103",
+   "places": [
+    "route-101",
+    "littleroot-town"
+   ],
+   "done_when": "party",
+   "quality": "reference-only",
+   "source": "pret/pokeruby ProfessorBirchsLab, Route101 scripts"
+  },
+  {
+   "id": "step-wally-ralts",
+   "title": "Help Wally catch Ralts",
+   "text": "In Petalburg your father asks you to go with Wally to Route 102, where he catches a Ralts. You then get your first chance at Poké Balls in the Mart.",
+   "stage": "team-petalburg-woods",
+   "places": [
+    "petalburg-city",
+    "route-102"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokeruby PetalburgCity_Gym, Route102 scripts"
+  },
+  {
+   "id": "step-early-team",
+   "title": "Catch a team for Roxanne",
+   "text": "Good early catches: Seedot on Route 102, Shroomish in Petalburg Woods, Wingull on Route 104. A Water or Grass move makes Roxanne easy.",
+   "stage": "gym-1-roxanne",
+   "places": [
+    "route-102",
+    "petalburg-woods",
+    "route-104"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokeruby wild_encounters.json"
+  },
+  {
+   "id": "step-devon",
+   "title": "Devon Goods, the letter and the PokéNav",
+   "text": "After the Rusturf Tunnel grunt, Mr. Stone (Devon Corp. top floor) gives you the PokéNav and a letter for Steven. Mr. Briney on Route 104 sails you to Dewford.",
+   "stage": "team-rusturf-tunnel",
+   "places": [
+    "rustboro-city",
+    "route-104"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokeruby RustboroCity_DevonCorp scripts"
+  },
+  {
+   "id": "step-exp-share",
+   "title": "Exp. Share from Mr. Stone",
+   "text": "Come back to Devon Corp.'s top floor after delivering the letter: Mr. Stone gives you the Exp. Share. Hold it on a weak Pokémon to train it without battling.",
+   "stage": "team-oceanic-museum",
+   "places": [
+    "rustboro-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokeruby RustboroCity_DevonCorp_3F scripts (ITEM_EXP_SHARE)"
+  },
+  {
+   "id": "step-bike",
+   "title": "Get a bike in Mauville",
+   "text": "Rydel's Cycles gives you a free bike: the Mach Bike (speed, cracked floors, slopes) or the Acro Bike (rails, jumps). You can swap at any time in the shop.",
+   "stage": "gym-3-wattson",
+   "places": [
+    "mauville-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokeruby MauvilleCity_BikeShop scripts"
+  },
+  {
+   "id": "step-meteor-falls",
+   "title": "Meteor Falls and the cable car",
+   "text": "On Route 114 to Meteor Falls you see Team Magma take the meteorite, then follow them through Route 112's cable car up Mt. Chimney.",
+   "stage": "team-mt-chimney",
+   "places": [
+    "route-114",
+    "meteor-falls",
+    "route-112"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokeruby MeteorFalls_1F_1R scripts"
+  },
+  {
+   "id": "step-go-goggles",
+   "title": "Go-Goggles for the desert",
+   "text": "After Flannery, the rival in Lavaridge gives you the Go-Goggles. You need them to cross the sandstorm on Route 111 (desert, fossils, Trapinch).",
+   "stage": "gym-4-flannery",
+   "places": [
+    "lavaridge-town",
+    "route-111"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokeruby LavaridgeTown scripts"
+  },
+  {
+   "id": "step-surf",
+   "title": "Surf, then the sea routes",
+   "text": "Wally's father gives you HM03 Surf in Petalburg right after Norman. Surf opens Route 105-109's water, Route 118 east and the way north.",
+   "stage": "gym-5-norman",
+   "places": [
+    "petalburg-city",
+    "route-118"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokeruby PetalburgCity_WallysHouse scripts (HM03)"
+  },
+  {
+   "id": "step-devon-scope",
+   "title": "Devon Scope for the Kecleon",
+   "text": "An invisible Kecleon blocks Fortree's path. Steven waits on Route 120's bridge and gives you the Devon Scope; use it on the blocked spot (the Kecleon then battles, Level 30).",
+   "stage": "gym-6-winona",
+   "places": [
+    "route-120",
+    "fortree-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokeruby Route120 scripts"
+  },
+  {
+   "id": "step-dive",
+   "title": "Dive and the deep sea",
+   "text": "Steven gives you HM08 Dive at his house in Mossdeep. Dark patches in the sea let you dive: the way to the Seafloor Cavern is on Route 128.",
+   "stage": "gym-7-tate-liza",
+   "places": [
+    "mossdeep-city",
+    "route-128"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokeruby MossdeepCity_StevensHouse scripts (HM08)"
+  },
+  {
+   "id": "step-victory-road",
+   "title": "Victory Road needs Waterfall",
+   "text": "Victory Road and Ever Grande City need Surf, Waterfall, Strength and Rock Smash. Bring a team around Level 50 and many Hyper Potions; there is no healing in the league.",
+   "stage": "rival-wally-victory-road",
+   "places": [
+    "victory-road",
+    "ever-grande-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pret/pokeruby VictoryRoad, EverGrandeCity scripts"
+  },
+  {
+   "id": "step-e4",
+   "title": "The Elite Four in one go",
+   "text": "The Elite Four are fought back to back with no Pokémon Center between them. A healthy level-50+ team with type coverage for Dark, Ghost, Ice and Dragon, plus Full Restores, is the plan.",
+   "stage": "e4-sidney",
+   "places": [
+    "ever-grande-city"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "ROM AXVE trainer table; pret/pokeruby"
+  },
+  {
+   "id": "step-national-dex",
+   "title": "National Pokédex",
+   "text": "After the Hall of Fame, Professor Birch upgrades your Pokédex to the national one once you have seen enough Hoenn Pokémon. Trades with FireRed/LeafGreen (and Colosseum) then fill it.",
+   "stage": "legend-roamer",
+   "places": [
+    "littleroot-town"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "pret/pokeruby ProfessorBirchsLab scripts"
+  },
+  {
+   "id": "step-contests",
+   "title": "Pokémon Contests",
+   "text": "The Contest Halls in Verdanturf, Fallarbor, Slateport and Lilycove take Pokémon with high condition. Feed Pokéblocks made from berries at the Berry Blender. Winning ranks unlocks ribbons and paintings.",
+   "stage": null,
+   "places": [
+    "lilycove-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "pret/pokeruby contest scripts"
+  },
+  {
+   "id": "step-berries",
+   "title": "Plant berries",
+   "text": "Soft soil on routes takes berries. They grow in a few hours and bear several fruit; water them with the Wailmer Pail (from the berry shop on Route 104) for more.",
+   "stage": null,
+   "places": [
+    "route-104"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "pret/pokeruby Route104_PrettyPetalFlowerShop scripts, berry_tree.inc"
+  },
+  {
+   "id": "step-secret-base",
+   "title": "Secret Base",
+   "text": "A boy on Route 111 gives you TM43 Secret Power. Use it on a hollow tree, a bush or a hole in a rock wall to make a base and decorate it; mixing records shares bases.",
+   "stage": null,
+   "places": [
+    "route-111"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "pret/pokeruby Route111 scripts (Secret Power)"
+  },
+  {
+   "id": "step-trick-house",
+   "title": "Trick House on Route 110",
+   "text": "The Trick Master's house on Route 110 sets a new puzzle after each badge. Each finished puzzle gives an item.",
+   "stage": null,
+   "places": [
+    "route-110"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "pret/pokeruby Route110_TrickHouse scripts"
+  },
+  {
+   "id": "step-pokenav",
+   "title": "PokéNav",
+   "text": "The PokéNav from Mr. Stone has the region map, a condition screen for contests and Trainer's Eyes: it marks trainers who want a rematch.",
+   "stage": "team-rusturf-tunnel",
+   "places": [
+    "rustboro-city"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/pokenav*.c"
+  },
+  {
+   "id": "step-weather-legend",
+   "title": "Weather-legend prep",
+   "text": "These legends hit hard and some heal themselves. Bring Ultra Balls, Timer Balls (better each turn) and a Pokémon with a sleep or paralysis move.",
+   "stage": null,
+   "places": [
+    "cave-of-origin"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "pret/pokeruby static wild battles, src/battle_script_commands.c (ball multipliers)"
+  },
+  {
+   "id": "step-sky-pillar",
+   "title": "Rayquaza needs the Mach Bike",
+   "text": "Sky Pillar's upper floors have cracked tiles: ride the Mach Bike over them without stopping. Save before the top.",
+   "stage": "legend-rayquaza",
+   "places": [
+    "sky-pillar",
+    "route-131"
+   ],
+   "done_when": "none",
+   "quality": "reference-only",
+   "source": "pret/pokeruby SkyPillar scripts"
+  }
+ ],
+ "secrets": [
+  {
+   "id": "hid-nugget-fallarbor-town",
+   "kind": "hidden-item",
+   "text": "A hidden Nugget lies here; sells for 5,000.",
+   "place": "fallarbor-town",
+   "x": 2,
+   "y": 15,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokeruby data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-everstone-granite-cave",
+   "kind": "hidden-item",
+   "text": "A hidden Everstone lies on B2F; held, it stops evolution.",
+   "place": "granite-cave",
+   "condition": "on B2F",
+   "quality": "reference-only",
+   "source": "pret/pokeruby data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-everstone-granite-cave-2",
+   "kind": "hidden-item",
+   "text": "A hidden Everstone lies on B2F; held, it stops evolution.",
+   "place": "granite-cave",
+   "condition": "on B2F",
+   "quality": "reference-only",
+   "source": "pret/pokeruby data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-pp-up-lilycove-city",
+   "kind": "hidden-item",
+   "text": "A hidden PP Up lies here; raises one move's PP for good.",
+   "place": "lilycove-city",
+   "x": 61,
+   "y": 7,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokeruby data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-zinc-mt-pyre",
+   "kind": "hidden-item",
+   "text": "A hidden Zinc lies at the summit; adds Sp. Def effort.",
+   "place": "mt-pyre",
+   "condition": "at the summit",
+   "quality": "reference-only",
+   "source": "pret/pokeruby data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-rare-candy-mt-pyre",
+   "kind": "hidden-item",
+   "text": "A hidden Rare Candy lies at the summit; one free level.",
+   "place": "mt-pyre",
+   "condition": "at the summit",
+   "quality": "reference-only",
+   "source": "pret/pokeruby data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-rare-candy-petalburg-city",
+   "kind": "hidden-item",
+   "text": "A hidden Rare Candy lies here; one free level.",
+   "place": "petalburg-city",
+   "x": 11,
+   "y": 29,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokeruby data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-rare-candy-route-108",
+   "kind": "hidden-item",
+   "text": "A hidden Rare Candy lies here; one free level.",
+   "place": "route-108",
+   "x": 38,
+   "y": 14,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokeruby data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-nugget-route-110",
+   "kind": "hidden-item",
+   "text": "A hidden Nugget lies in the Trick House's last room; sells for 5,000.",
+   "place": "route-110",
+   "quality": "reference-only",
+   "source": "pret/pokeruby data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-protein-route-111",
+   "kind": "hidden-item",
+   "text": "A hidden Protein lies here; adds Attack effort.",
+   "place": "route-111",
+   "x": 19,
+   "y": 55,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokeruby data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-rare-candy-route-111",
+   "kind": "hidden-item",
+   "text": "A hidden Rare Candy lies here; one free level.",
+   "place": "route-111",
+   "x": 35,
+   "y": 66,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokeruby data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-carbos-route-114",
+   "kind": "hidden-item",
+   "text": "A hidden Carbos lies here; adds Speed effort.",
+   "place": "route-114",
+   "x": 20,
+   "y": 57,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokeruby data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-black-glasses-route-116",
+   "kind": "hidden-item",
+   "text": "A hidden Black Glasses lies here; a held item that boosts Dark moves.",
+   "place": "route-116",
+   "x": 70,
+   "y": 13,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokeruby data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-iron-route-118",
+   "kind": "hidden-item",
+   "text": "A hidden Iron lies here; adds Defense effort.",
+   "place": "route-118",
+   "x": 31,
+   "y": 13,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokeruby data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-calcium-route-119",
+   "kind": "hidden-item",
+   "text": "A hidden Calcium lies here; adds Sp. Atk effort.",
+   "place": "route-119",
+   "x": 17,
+   "y": 82,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokeruby data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-rare-candy-route-120",
+   "kind": "hidden-item",
+   "text": "A hidden Rare Candy lies here; one free level.",
+   "place": "route-120",
+   "x": 9,
+   "y": 1,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokeruby data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-rare-candy-route-120-2",
+   "kind": "hidden-item",
+   "text": "A hidden Rare Candy lies here; one free level.",
+   "place": "route-120",
+   "x": 0,
+   "y": 86,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokeruby data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-zinc-route-120",
+   "kind": "hidden-item",
+   "text": "A hidden Zinc lies here; adds Sp. Def effort.",
+   "place": "route-120",
+   "x": 24,
+   "y": 42,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokeruby data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-hp-up-route-121",
+   "kind": "hidden-item",
+   "text": "A hidden HP Up lies here; adds HP effort.",
+   "place": "route-121",
+   "x": 23,
+   "y": 10,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokeruby data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-nugget-route-121",
+   "kind": "hidden-item",
+   "text": "A hidden Nugget lies here; sells for 5,000.",
+   "place": "route-121",
+   "x": 58,
+   "y": 3,
+   "grid": "map",
+   "quality": "reference-only",
+   "source": "pret/pokeruby data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-carbos-underwater",
+   "kind": "hidden-item",
+   "text": "A hidden Carbos lies on the sea floor under Route 124 (Dive); adds Speed effort.",
+   "place": "underwater",
+   "condition": "needs Dive",
+   "quality": "reference-only",
+   "source": "pret/pokeruby data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-big-pearl-underwater",
+   "kind": "hidden-item",
+   "text": "A hidden Big Pearl lies on the sea floor under Route 124 (Dive); sells for 3,750.",
+   "place": "underwater",
+   "condition": "needs Dive",
+   "quality": "reference-only",
+   "source": "pret/pokeruby data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-calcium-underwater",
+   "kind": "hidden-item",
+   "text": "A hidden Calcium lies on the sea floor under Route 124 (Dive); adds Sp. Atk effort.",
+   "place": "underwater",
+   "condition": "needs Dive",
+   "quality": "reference-only",
+   "source": "pret/pokeruby data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-iron-underwater",
+   "kind": "hidden-item",
+   "text": "A hidden Iron lies on the sea floor under Route 126 (Dive); adds Defense effort.",
+   "place": "underwater",
+   "condition": "needs Dive",
+   "quality": "reference-only",
+   "source": "pret/pokeruby data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-big-pearl-underwater-2",
+   "kind": "hidden-item",
+   "text": "A hidden Big Pearl lies on the sea floor under Route 126 (Dive); sells for 3,750.",
+   "place": "underwater",
+   "condition": "needs Dive",
+   "quality": "reference-only",
+   "source": "pret/pokeruby data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-star-piece-underwater",
+   "kind": "hidden-item",
+   "text": "A hidden Star Piece lies on the sea floor under Route 127 (Dive); sells for 4,900.",
+   "place": "underwater",
+   "condition": "needs Dive",
+   "quality": "reference-only",
+   "source": "pret/pokeruby data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-hp-up-underwater",
+   "kind": "hidden-item",
+   "text": "A hidden HP Up lies on the sea floor under Route 127 (Dive); adds HP effort.",
+   "place": "underwater",
+   "condition": "needs Dive",
+   "quality": "reference-only",
+   "source": "pret/pokeruby data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "hid-protein-underwater",
+   "kind": "hidden-item",
+   "text": "A hidden Protein lies on the sea floor under Route 128 (Dive); adds Attack effort.",
+   "place": "underwater",
+   "condition": "needs Dive",
+   "quality": "reference-only",
+   "source": "pret/pokeruby data/maps/*/map.json hidden_item events"
+  },
+  {
+   "id": "gift-castform",
+   "kind": "gift",
+   "text": "The Weather Institute gives you a Castform (Level 25) after you drive Team Magma out. Its form follows the weather.",
+   "place": "route-119",
+   "condition": "after the Weather Institute fight",
+   "quality": "reference-only",
+   "source": "pret/pokeruby Route119_WeatherInstitute_2F scripts"
+  },
+  {
+   "id": "gift-wynaut-egg",
+   "kind": "gift",
+   "text": "An old woman by the hot springs in Lavaridge Town gives you an Egg; it hatches into Wynaut.",
+   "place": "lavaridge-town",
+   "quality": "reference-only",
+   "source": "pret/pokeruby LavaridgeTown scripts"
+  },
+  {
+   "id": "gift-beldum",
+   "kind": "gift",
+   "text": "After the Hall of Fame, Steven's house in Mossdeep holds a Poké Ball with a Beldum (Level 5) left for you.",
+   "place": "mossdeep-city",
+   "condition": "after the Hall of Fame",
+   "quality": "reference-only",
+   "source": "pret/pokeruby MossdeepCity_StevensHouse scripts"
+  },
+  {
+   "id": "gift-fossil",
+   "kind": "gift",
+   "text": "In Route 111's desert (Go-Goggles) two fossils lie side by side: Root Fossil (Lileep) and Claw Fossil (Anorith). Taking one makes the other sink. Devon in Rustboro revives it.",
+   "place": "route-111",
+   "condition": "needs the Go-Goggles",
+   "quality": "reference-only",
+   "source": "pret/pokeruby Route111 scripts"
+  },
+  {
+   "id": "gift-exp-share",
+   "kind": "gift",
+   "text": "Mr. Stone gives you the Exp. Share on Devon Corp.'s top floor after Steven gets the letter.",
+   "place": "rustboro-city",
+   "quality": "reference-only",
+   "source": "pret/pokeruby RustboroCity_DevonCorp_3F (ITEM_EXP_SHARE)"
+  },
+  {
+   "id": "gift-soothe-bell",
+   "kind": "gift",
+   "text": "The chairman of the Pokémon Fan Club in Slateport gives a Soothe Bell when your lead is friendly enough. Hold it to raise friendship faster (Golbat, Azurill, Pichu and co.).",
+   "place": "slateport-city",
+   "quality": "reference-only",
+   "source": "pret/pokeruby SlateportCity_PokemonFanClub (ITEM_SOOTHE_BELL)"
+  },
+  {
+   "id": "gift-macho-brace",
+   "kind": "gift",
+   "text": "Beat the Winstrate family four times in a row in their house on Route 111 and they give you the Macho Brace (double effort points, half Speed while held).",
+   "place": "route-111",
+   "quality": "reference-only",
+   "source": "pret/pokeruby Route111_WinstrateFamilysHouse (ITEM_MACHO_BRACE)"
+  },
+  {
+   "id": "gift-kings-rock",
+   "kind": "gift",
+   "text": "A boy in Mossdeep City gives you a King's Rock. Held when traded, it turns Poliwhirl into Politoed and Slowpoke into Slowking.",
+   "place": "mossdeep-city",
+   "quality": "reference-only",
+   "source": "pret/pokeruby MossdeepCity scripts (KingsRockBoy)"
+  },
+  {
+   "id": "gift-sun-stone",
+   "kind": "gift",
+   "text": "A man at the Mossdeep Space Center gives you a Sun Stone (Gloom to Bellossom, Sunkern to Sunflora).",
+   "place": "mossdeep-city",
+   "quality": "reference-only",
+   "source": "pret/pokeruby MossdeepCity_SpaceCenter_1F (ITEM_SUN_STONE)"
+  },
+  {
+   "id": "trade-scanner",
+   "kind": "event",
+   "text": "The Scanner lies in the Abandoned Ship's sunken rooms (Dive). Give it to Captain Stern at Slateport Harbor and pick a Deep Sea Tooth or Deep Sea Scale for Clamperl.",
+   "place": "abandoned-ship",
+   "condition": "needs Dive",
+   "quality": "reference-only",
+   "source": "pret/pokeruby SlateportCity_Harbor (ITEM_DEEP_SEA_TOOTH), AbandonedShip scripts"
+  },
+  {
+   "id": "tip-shard-stones",
+   "kind": "trade",
+   "text": "The treasure hunter's house on Route 124 swaps colored shards for evolution stones: red for Fire, blue for Water, yellow for Thunder, green for Leaf.",
+   "place": "route-124",
+   "quality": "reference-only",
+   "source": "pret/pokeruby Route124_DivingTreasureHuntersHouse scripts"
+  },
+  {
+   "id": "tip-feebas",
+   "kind": "tip",
+   "text": "Feebas only bites on six hidden water tiles of Route 119 (fish with any rod). The tiles change when the trend phrase in Lilycove changes. Raise its Beauty with dry Pokéblocks to evolve it.",
+   "place": "route-119",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/wild_encounter.c (Feebas spots)"
+  },
+  {
+   "id": "tip-mirage-island",
+   "kind": "event",
+   "text": "Mirage Island rises off Route 130 only on days when a random daily number matches one of your Pokémon. It has Wynaut and Liechi Berries; an old man in Pacifidlog says when it can be seen.",
+   "place": "mirage-island",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/field_specials.c (mirage island), MirageIsland map"
+  },
+  {
+   "id": "legend-kecleon",
+   "kind": "event",
+   "text": "The invisible Kecleon on Route 120 (Devon Scope) battle you at Level 30; you can catch them.",
+   "place": "route-120",
+   "quality": "reference-only",
+   "source": "pret/pokeruby Route120 scripts"
+  },
+  {
+   "id": "event-electrode",
+   "kind": "event",
+   "text": "Two Poké Balls in the Magma Hideout are Electrode (Level 30) in disguise.",
+   "place": "magma-hideout",
+   "quality": "reference-only",
+   "source": "pret/pokeruby hideout scripts"
+  },
+  {
+   "id": "event-voltorb",
+   "kind": "event",
+   "text": "New Mauville (Route 110, Basement Key from Wattson) has Electrode and Voltorb disguised as items.",
+   "place": "new-mauville",
+   "quality": "reference-only",
+   "source": "pret/pokeruby NewMauville scripts"
+  },
+  {
+   "id": "tip-shoal-cave",
+   "kind": "tip",
+   "text": "Shoal Cave off Mossdeep changes with the tide every six hours. At low tide collect Shoal Salt and Shoal Shells; four of each make a Shell Bell. Snorunt lives in the ice room.",
+   "place": "shoal-cave",
+   "quality": "reference-only",
+   "source": "pret/pokeruby ShoalCave scripts, wild_encounters.json"
+  },
+  {
+   "id": "tip-safari",
+   "kind": "tip",
+   "text": "The Safari Zone (Route 121) is the only place for Pikachu, Girafarig, Doduo, Phanpy and Heracross in Hoenn. Pokéblock feeders attract Pokémon of one nature.",
+   "place": "safari-zone",
+   "quality": "reference-only",
+   "source": "pret/pokeruby wild_encounters.json (SAFARI_ZONE_*)"
+  },
+  {
+   "id": "tip-bagon",
+   "kind": "tip",
+   "text": "Bagon lives only in a back room of Meteor Falls (needs Surf and Waterfall). Shelgon evolves at 30, Salamence at 50.",
+   "place": "meteor-falls",
+   "quality": "reference-only",
+   "source": "pret/pokeruby wild_encounters.json (METEOR_FALLS_B1F_2R), evolution.h"
+  },
+  {
+   "id": "tip-absol",
+   "kind": "tip",
+   "text": "Absol appears only on Route 120's grass. Chimecho lives at Mt. Pyre's summit; Tropius on Route 119's tall grass.",
+   "place": "route-120",
+   "quality": "reference-only",
+   "source": "pret/pokeruby wild_encounters.json"
+  },
+  {
+   "id": "event-hm-cut",
+   "kind": "gift",
+   "text": "The Cutter's house in Rustboro gives HM01 Cut; it needs the Stone Badge.",
+   "place": "rustboro-city",
+   "quality": "reference-only",
+   "source": "pret/pokeruby RustboroCity_CuttersHouse (HM01)"
+  },
+  {
+   "id": "event-hm-flash",
+   "kind": "gift",
+   "text": "A hiker on Granite Cave's first floor gives HM05 Flash; it needs the Knuckle Badge.",
+   "place": "granite-cave",
+   "quality": "reference-only",
+   "source": "pret/pokeruby GraniteCave_1F (HM05)"
+  },
+  {
+   "id": "event-hm-rock-smash",
+   "kind": "gift",
+   "text": "A man in a Mauville house gives HM06 Rock Smash; it needs the Dynamo Badge.",
+   "place": "mauville-city",
+   "quality": "reference-only",
+   "source": "pret/pokeruby MauvilleCity_House1 (HM06)"
+  },
+  {
+   "id": "event-hm-strength",
+   "kind": "gift",
+   "text": "Once the tunnel is clear, a man in Rusturf Tunnel gives HM04 Strength; it needs the Heat Badge.",
+   "place": "rusturf-tunnel",
+   "quality": "reference-only",
+   "source": "pret/pokeruby RusturfTunnel (HM04)"
+  },
+  {
+   "id": "event-hm-waterfall",
+   "kind": "hidden-item",
+   "text": "HM07 Waterfall lies in an item ball deep in the Cave of Origin, on the way to Groudon.",
+   "place": "cave-of-origin",
+   "condition": "on B3F",
+   "quality": "reference-only",
+   "source": "pret/pokeruby item_ball_scripts.inc (CaveOfOrigin_B3F)"
+  },
+  {
+   "id": "event-master-ball",
+   "kind": "hidden-item",
+   "text": "A Master Ball lies in an item ball on the hideout's B1F. Two other balls are Electrode in disguise.",
+   "place": "magma-hideout",
+   "condition": "on B1F",
+   "quality": "reference-only",
+   "source": "pret/pokeruby item_ball_scripts.inc (Master Ball)"
+  },
+  {
+   "id": "event-southern-island",
+   "kind": "legendary",
+   "text": "Southern Island holds Latias at Level 50, but only with the Eon Ticket from an event; normal play never opens it.",
+   "place": "southern-island",
+   "quality": "reference-only",
+   "source": "pret/pokeruby SouthernIsland scripts"
+  }
+ ],
+ "evolutions": [
+  {
+   "id": "evo-kadabra",
+   "species": 64,
+   "name": "Kadabra",
+   "text": "Evolves only through a link trade over the Game Link Cable (Ruby/Sapphire do not support the Wireless Adapter). Hoenn has Abra in Granite Cave in the wild.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h; wild_encounters.json"
+  },
+  {
+   "id": "evo-machoke",
+   "species": 67,
+   "name": "Machoke",
+   "text": "Evolves only through a link trade over the Game Link Cable (Ruby/Sapphire do not support the Wireless Adapter). Hoenn has Machop on Fiery Path and Jagged Pass (and Route 112) in the wild.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h; wild_encounters.json"
+  },
+  {
+   "id": "evo-graveler",
+   "species": 75,
+   "name": "Graveler",
+   "text": "Evolves only through a link trade over the Game Link Cable (Ruby/Sapphire do not support the Wireless Adapter). Hoenn has Geodude in Granite Cave and on Routes 111 and 114 in the wild.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h; wild_encounters.json"
+  },
+  {
+   "id": "evo-haunter",
+   "species": 93,
+   "name": "Haunter",
+   "text": "Evolves only through a link trade over the Game Link Cable (Ruby/Sapphire do not support the Wireless Adapter). Hoenn has no Gastly; trade one in from FireRed/LeafGreen in the wild.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h; wild_encounters.json"
+  },
+  {
+   "id": "evo-poliwhirl",
+   "species": 61,
+   "name": "Poliwhirl",
+   "text": "A Water Stone gives Poliwrath; trading it while it holds a King's Rock (from a boy in Mossdeep) gives Politoed. Poliwag is not wild in Hoenn.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-slowpoke",
+   "species": 79,
+   "name": "Slowpoke",
+   "text": "Level 37 gives Slowbro; trading it while it holds a King's Rock gives Slowking.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-onix",
+   "species": 95,
+   "name": "Onix",
+   "text": "Evolves into Steelix when traded holding a Metal Coat. A few wild Magnemite and Magneton in New Mauville carry one: take it with Thief or Covet.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-scyther",
+   "species": 123,
+   "name": "Scyther",
+   "text": "Evolves into Scizor when traded holding a Metal Coat.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-seadra",
+   "species": 117,
+   "name": "Seadra",
+   "text": "Evolves into Kingdra when traded holding a Dragon Scale (carried by some wild Horsea and Seadra on Routes 132-134).",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h; wild_encounters.json (Horsea)"
+  },
+  {
+   "id": "evo-porygon",
+   "species": 137,
+   "name": "Porygon",
+   "text": "Evolves into Porygon2 when traded holding an Up-Grade; neither Porygon nor the Up-Grade exists in Hoenn, so both come from FireRed/LeafGreen.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-clamperl",
+   "species": 366,
+   "name": "Clamperl",
+   "text": "Traded holding the Deep Sea Tooth it becomes Huntail; holding the Deep Sea Scale, Gorebyss. Captain Stern gives one of them for the Scanner.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h; SlateportCity_Harbor scripts"
+  },
+  {
+   "id": "evo-feebas",
+   "species": 349,
+   "name": "Feebas",
+   "text": "Evolves into Milotic on a level-up once its Beauty condition is high (170). Raise Beauty with dry, blue-flavoured Pokéblocks; berries like Wepear and Pamtre help.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h (EVO_BEAUTY, 170)"
+  },
+  {
+   "id": "evo-golbat",
+   "species": 42,
+   "name": "Golbat",
+   "text": "Evolves into Crobat on a level-up with high friendship (220). Walking with it, battling and the Soothe Bell raise it.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h (EVO_FRIENDSHIP)"
+  },
+  {
+   "id": "evo-azurill",
+   "species": 298,
+   "name": "Azurill",
+   "text": "Evolves into Marill on a level-up with high friendship. Marill becomes Azumarill at Level 18.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-pichu",
+   "species": 172,
+   "name": "Pichu",
+   "text": "Evolves into Pikachu with high friendship. Pikachu then needs a Thunder Stone.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-igglybuff",
+   "species": 174,
+   "name": "Igglybuff",
+   "text": "Evolves into Jigglypuff with high friendship; a Moon Stone then gives Wigglytuff.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-cleffa",
+   "species": 173,
+   "name": "Cleffa",
+   "text": "Evolves into Clefairy with high friendship; a Moon Stone then gives Clefable.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-togepi",
+   "species": 175,
+   "name": "Togepi",
+   "text": "Evolves into Togetic with high friendship. Togekiss does not exist yet.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-chansey",
+   "species": 113,
+   "name": "Chansey",
+   "text": "Evolves into Blissey on a level-up with high friendship. Chansey is not wild in Hoenn: trade one from FireRed/LeafGreen.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-eevee",
+   "species": 133,
+   "name": "Eevee",
+   "text": "Fire, Water or Thunder Stone for Flareon, Vaporeon, Jolteon. High friendship on a level-up from 12:00 to 23:59 gives Espeon, from 0:00 to 11:59 Umbreon (the game's clock). No Leafeon/Glaceon in Gen III.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h; src/pokemon.c (EVO_FRIENDSHIP_DAY/NIGHT hours)"
+  },
+  {
+   "id": "evo-gloom",
+   "species": 44,
+   "name": "Gloom",
+   "text": "Leaf Stone gives Vileplume; Sun Stone (Mossdeep Space Center) gives Bellossom. Oddish lives on Routes 110, 117, 119-123.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-sunkern",
+   "species": 191,
+   "name": "Sunkern",
+   "text": "A Sun Stone turns it into Sunflora.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-tyrogue",
+   "species": 236,
+   "name": "Tyrogue",
+   "text": "At Level 20: Attack higher than Defense gives Hitmonlee, lower gives Hitmonchan, equal gives Hitmontop.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h (EVO_LEVEL_ATK_*_DEF)"
+  },
+  {
+   "id": "evo-wurmple",
+   "species": 265,
+   "name": "Wurmple",
+   "text": "At Level 7 it becomes Silcoon (then Beautifly) or Cascoon (then Dustox). A hidden personality value decides; you cannot pick.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h (EVO_LEVEL_SILCOON/CASCOON)"
+  },
+  {
+   "id": "evo-nincada",
+   "species": 290,
+   "name": "Nincada",
+   "text": "At Level 20 it becomes Ninjask; if you have a free party slot and a spare Poké Ball, a Shedinja appears in that slot too.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h (EVO_LEVEL_NINJASK/SHEDINJA); src/pokemon.c"
+  },
+  {
+   "id": "evo-lombre",
+   "species": 271,
+   "name": "Lombre",
+   "text": "A Water Stone evolves it into Ludicolo.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-nuzleaf",
+   "species": 274,
+   "name": "Nuzleaf",
+   "text": "A Leaf Stone evolves it into Shiftry.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-skitty",
+   "species": 300,
+   "name": "Skitty",
+   "text": "A Moon Stone evolves it into Delcatty. Moon Stones are found in Meteor Falls.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h; item_ball_scripts.inc"
+  },
+  {
+   "id": "evo-kirlia",
+   "species": 281,
+   "name": "Kirlia",
+   "text": "Level 30 gives Gardevoir. Gallade (Dawn Stone) does not exist in Gen III.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-snorunt",
+   "species": 361,
+   "name": "Snorunt",
+   "text": "Level 42 gives Glalie. Froslass does not exist in Gen III.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-roselia",
+   "species": 315,
+   "name": "Roselia",
+   "text": "Roselia does not evolve in Gen III (no Budew or Roserade yet).",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-dusclops",
+   "species": 356,
+   "name": "Dusclops",
+   "text": "Dusclops does not evolve in Gen III (Dusknoir came later). Duskull evolves into it at 37.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-shelgon",
+   "species": 372,
+   "name": "Shelgon",
+   "text": "Level 50 gives Salamence; Bagon becomes Shelgon at 30.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-metang",
+   "species": 375,
+   "name": "Metang",
+   "text": "Level 45 gives Metagross; Beldum becomes Metang at 20 (Beldum only knows Take Down until then).",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-spheal",
+   "species": 363,
+   "name": "Spheal",
+   "text": "Level 32 gives Sealeo, Level 44 Walrein.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-trapinch",
+   "species": 328,
+   "name": "Trapinch",
+   "text": "Level 35 gives Vibrava, Level 45 Flygon.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-swablu",
+   "species": 333,
+   "name": "Swablu",
+   "text": "Level 35 gives Altaria.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-lileep",
+   "species": 345,
+   "name": "Lileep",
+   "text": "Level 40 gives Cradily. Anorith becomes Armaldo at 40 too.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-magikarp",
+   "species": 129,
+   "name": "Magikarp",
+   "text": "Level 20 gives Gyarados. An old rod in Dewford catches Magikarp right away.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-shroomish",
+   "species": 285,
+   "name": "Shroomish",
+   "text": "Level 23 gives Breloom (Grass/Fighting).",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-makuhita",
+   "species": 296,
+   "name": "Makuhita",
+   "text": "Level 24 gives Hariyama.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-aron",
+   "species": 304,
+   "name": "Aron",
+   "text": "Level 32 gives Lairon, Level 42 Aggron.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-electrike",
+   "species": 309,
+   "name": "Electrike",
+   "text": "Level 26 gives Manectric.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-numel",
+   "species": 322,
+   "name": "Numel",
+   "text": "Level 33 gives Camerupt.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-slakoth",
+   "species": 287,
+   "name": "Slakoth",
+   "text": "Level 18 gives Vigoroth, Level 36 Slaking (Truant: it acts every other turn).",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-ralts",
+   "species": 280,
+   "name": "Ralts",
+   "text": "Level 20 gives Kirlia.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-whismur",
+   "species": 293,
+   "name": "Whismur",
+   "text": "Level 20 gives Loudred, Level 40 Exploud.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-carvanha",
+   "species": 318,
+   "name": "Carvanha",
+   "text": "Level 30 gives Sharpedo.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "evo-wailmer",
+   "species": 320,
+   "name": "Wailmer",
+   "text": "Level 40 gives Wailord, which you need for the Regi puzzle.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  }
+ ],
+ "notes": [
+  {
+   "id": "note-exclusives",
+   "kind": "exclusive",
+   "title": "Only in Ruby",
+   "text": "Found only in this version: Seedot, Nuzleaf, Shiftry, Mawile, Zangoose, Solrock, Groudon.",
+   "species": [
+    273,
+    274,
+    275,
+    303,
+    335,
+    338,
+    383
+   ],
+   "names": [
+    "Seedot",
+    "Nuzleaf",
+    "Shiftry",
+    "Mawile",
+    "Zangoose",
+    "Solrock",
+    "Groudon"
+   ],
+   "quality": "reference-only",
+   "source": "pret/pokeruby wild_encounters.json (Ruby vs Sapphire tables)"
+  },
+  {
+   "id": "note-exclusives-other",
+   "kind": "exclusive",
+   "title": "Trade from Sapphire",
+   "text": "These come only from Sapphire (or Emerald for some): Lotad, Lombre, Ludicolo, Sableye, Seviper, Lunatone, Kyogre.",
+   "species": [
+    270,
+    271,
+    272,
+    302,
+    336,
+    337,
+    382
+   ],
+   "names": [
+    "Lotad",
+    "Lombre",
+    "Ludicolo",
+    "Sableye",
+    "Seviper",
+    "Lunatone",
+    "Kyogre"
+   ],
+   "quality": "reference-only",
+   "source": "pret/pokeruby wild_encounters.json (Ruby vs Sapphire tables)"
+  },
+  {
+   "id": "note-legendaries",
+   "kind": "legendary",
+   "title": "Legendaries in this game",
+   "text": "Groudon (Cave of Origin, 45), Rayquaza (Sky Pillar after the Hall of Fame, 70), the Regis (40), and Latios roaming (40). Kyogre and Jirachi/Deoxys need trades or events.",
+   "species": [
+    383,
+    384,
+    377,
+    378,
+    379
+   ],
+   "names": [
+    "Groudon",
+    "Rayquaza",
+    "Regirock",
+    "Regice",
+    "Registeel"
+   ],
+   "quality": "reference-only",
+   "source": "pret/pokeruby static_pokemon.inc, roamer.c"
+  },
+  {
+   "id": "note-roamer",
+   "kind": "roamer",
+   "title": "Latios roams",
+   "text": "After the Hall of Fame Latios roams Hoenn's routes at Level 40. It changes route whenever you change maps and flees at once; the Pokédex area map shows where it is.",
+   "species": [
+    381
+   ],
+   "names": [
+    "Latios"
+   ],
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/roamer.c, include/constants/species.h (ROAMER_SPECIES)"
+  },
+  {
+   "id": "note-team",
+   "kind": "version",
+   "title": "Your villain team",
+   "text": "Pokemon Ruby Version has Team Magma as the main villains (they want to raise the land). The other team appears too and is beaten by them in the story.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby map scripts (.ifdef SAPPHIRE)"
+  },
+  {
+   "id": "note-clock-battery",
+   "kind": "tip",
+   "title": "The in-game clock",
+   "text": "Berries, tides, Mirage Island and Espeon/Umbreon use the cartridge's real-time clock. On an emulator the clock follows the host; old carts with a dead battery stop berry growth.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/rtc.c"
+  },
+  {
+   "id": "note-trade-frlg",
+   "kind": "trade",
+   "title": "Trading with FireRed and LeafGreen",
+   "text": "After the National Pokédex you can trade with FireRed/LeafGreen (they need the Sevii Islands' network machine first). This is the way to get Kanto and Johto Pokémon and starters.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby cable club scripts; pret/pokefirered OneIsland scripts"
+  },
+  {
+   "id": "note-split",
+   "kind": "tip",
+   "title": "Physical or special by type",
+   "text": "In Gen III a move's type decides whether it is physical or special: Fire, Water, Grass, Electric, Ice, Psychic, Dragon and Dark are special; the rest are physical. A Dark move uses Sp. Atk.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/battle_script_commands.c (IS_TYPE_PHYSICAL)"
+  },
+  {
+   "id": "note-abilities",
+   "kind": "tip",
+   "title": "Abilities and natures are new",
+   "text": "Gen III added abilities and natures. A nature raises one stat by 10% and lowers another; Synchronize (Ralts, Kirlia) in the lead makes wild natures match half of the time.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/wild_encounter.c, src/pokemon.c"
+  },
+  {
+   "id": "note-berry-glitch",
+   "kind": "tip",
+   "title": "Berries never grow?",
+   "text": "Ruby and Sapphire had a clock bug that stopped berry growth a year after the start; the game's 'Berry Program Update' fixes it. Emerald does not have the bug.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/rtc.c, berry_fix"
+  },
+  {
+   "id": "note-hms",
+   "kind": "tip",
+   "title": "HM list",
+   "text": "Cut (Rustboro), Fly (rival, Route 119), Surf (Petalburg), Strength (Rusturf Tunnel), Flash (Granite Cave), Rock Smash (Mauville), Dive (Steven, Mossdeep), Waterfall (Cave of Origin). HM moves can only be removed by the Move Deleter in Lilycove.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby map scripts (giveitem ITEM_HM*)"
+  },
+  {
+   "id": "note-pokeblocks",
+   "kind": "tip",
+   "title": "Pokéblocks and condition",
+   "text": "Pokéblocks raise Cool, Beauty, Cute, Smart and Tough. A Pokémon's Sheen caps how many it eats. Dry (blue) blocks raise Beauty, which Feebas needs.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/pokeblock.c"
+  },
+  {
+   "id": "note-hidden-items",
+   "kind": "tip",
+   "title": "Rare Candies, PP Ups: where",
+   "text": "Hidden items are worth hunting with the Itemfinder from the rival: Rare Candies lie hidden on Routes 108, 111, 120, at Mt. Pyre's summit and in Petalburg City.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby map.json hidden_item events"
+  },
+  {
+   "id": "note-gift-starter",
+   "kind": "gift",
+   "title": "Starters' types",
+   "text": "Treecko (Grass) becomes Sceptile, Torchic (Fire) becomes Blaziken (Fire/Fighting), Mudkip (Water) becomes Swampert (Water/Ground, only weak to Grass).",
+   "species": [
+    252,
+    255,
+    258
+   ],
+   "names": [
+    "Treecko",
+    "Torchic",
+    "Mudkip"
+   ],
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/data/pokemon/evolution.h"
+  },
+  {
+   "id": "note-weather",
+   "kind": "tip",
+   "title": "Weather",
+   "text": "Rain, sun, sandstorm and hail exist from Gen III. Route 120 and 119 rain powers Water moves; Route 111's sandstorm needs the Go-Goggles to cross.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby field_weather constants"
+  },
+  {
+   "id": "note-daycare",
+   "kind": "tip",
+   "title": "Day care",
+   "text": "The day care couple on Route 117 raise two Pokémon and make eggs when they get along. Pokémon in the day care gain a level-worth of experience as you walk, but learn moves silently.",
+   "place": "route-117",
+   "quality": "reference-only",
+   "source": "pret/pokeruby src/daycare.c"
+  },
+  {
+   "id": "note-move-relearner",
+   "kind": "tip",
+   "title": "Moves forgotten and HMs",
+   "text": "The Move Deleter in Lilycove removes HM moves; the Move Maniac in a Fallarbor house teaches a forgotten level-up move for a Heart Scale.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby LilycoveCity_MoveDeletersHouse, Fallarbor move relearner house (ITEM_HEART_SCALE) scripts"
+  },
+  {
+   "id": "note-shiny",
+   "kind": "tip",
+   "title": "Shiny odds",
+   "text": "A wild or gift Pokémon is shiny with a chance of 8 in 65,536 (about 1 in 8,192). Its colours show in battle and on the summary screen.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby include/constants/pokemon.h (SHINY_ODDS 8 of 65536)"
+  },
+  {
+   "id": "note-bikes",
+   "kind": "tip",
+   "title": "Mach or Acro Bike",
+   "text": "Cracked floors (Granite Cave, Sky Pillar) and muddy slopes need the Mach Bike; narrow rails and bunny-hop spots (Route 119, parts of the Safari Zone) need the Acro Bike. Rydel in Mauville swaps them for free.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby MauvilleCity_BikeShop scripts, field_player_avatar.c"
+  },
+  {
+   "id": "note-ss-tidal",
+   "kind": "tip",
+   "title": "S.S. Tidal",
+   "text": "After the Hall of Fame the S.S. Tidal sails between Slateport and Lilycove and to the Battle Tower. A hidden Leftovers lies in its lower deck's trash can.",
+   "place": "slateport-city",
+   "quality": "reference-only",
+   "source": "pret/pokeruby SSTidal maps (hidden ITEM_LEFTOVERS in SSTidalLowerDeck)"
+  },
+  {
+   "id": "note-trade-emerald",
+   "kind": "trade",
+   "title": "Trading with Emerald",
+   "text": "Ruby and Sapphire trade with Emerald and FireRed/LeafGreen over the Game Link Cable. Emerald has both Seedot and Lotad lines and both Mawile and Sableye.",
+   "quality": "reference-only",
+   "source": "pret/pokeruby cable club scripts"
+  }
+ ]
+}

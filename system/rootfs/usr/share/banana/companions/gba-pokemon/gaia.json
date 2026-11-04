@@ -1,0 +1,1236 @@
+{
+ "schema": 1,
+ "kind": "nds-pokemon-guide",
+ "game": "gaia",
+ "code": "BPRE",
+ "title": "Pokemon Gaia (v3.2)",
+ "revision": 1,
+ "sources": [
+  "The ROM itself (Gaia v3.2, FireRed base): region map section names (each place resolves to a section with maps) and trainer names, teams and levels, read on the PC with throwaway tools",
+  "mrwalkthroughs.com/pokemon-gaia: walkthrough parts, Mega Stone list, Pokédex",
+  "pokuniverse.com: Pokémon Gaia game guide (field moves, rival fights)",
+  "The Gaia team's official evolution-changes spreadsheet (docs.google.com, 1kNl2L2t...)",
+  "gamebrew.org: Pokemon Gaia Version (features, v3.2 change list)"
+ ],
+ "places": {
+  "archan-tunnel": {
+   "name": "Archan Tunnel"
+  },
+  "celanto-town": {
+   "name": "Celanto Town"
+  },
+  "celanto-path": {
+   "name": "Celanto Path"
+  },
+  "celanto-grove": {
+   "name": "Celanto Grove"
+  },
+  "archan-town": {
+   "name": "Archan Town"
+  },
+  "seros-village": {
+   "name": "Seros Village"
+  },
+  "seros-path": {
+   "name": "Seros Path"
+  },
+  "wisp-forest": {
+   "name": "Wisp Forest"
+  },
+  "nestpine-town": {
+   "name": "Nestpine Town"
+  },
+  "aerous-road": {
+   "name": "Aerous Road"
+  },
+  "aerous-city": {
+   "name": "Aerous City"
+  },
+  "nestpine-climb": {
+   "name": "Nestpine Climb"
+  },
+  "frostbite-cave": {
+   "name": "Frostbite Cave"
+  },
+  "windmist-summit": {
+   "name": "Windmist Summit"
+  },
+  "windmist-city": {
+   "name": "Windmist City"
+  },
+  "sabulo-cave": {
+   "name": "Sabulo Cave"
+  },
+  "sabulo-island": {
+   "name": "Sabulo Island"
+  },
+  "sabulo-cross": {
+   "name": "Sabulo Cross"
+  },
+  "sabulo-tower": {
+   "name": "Sabulo Tower"
+  },
+  "valoon-town": {
+   "name": "Valoon Town"
+  },
+  "valoon-way": {
+   "name": "Valoon Way"
+  },
+  "valoon-reserve": {
+   "name": "Valoon Reserve"
+  },
+  "telmurk-swamp": {
+   "name": "Telmurk Swamp"
+  },
+  "telmurk-outskirts": {
+   "name": "Telmurk Outskirts"
+  },
+  "telmurk-city": {
+   "name": "Telmurk City"
+  },
+  "telmurk-warehouses": {
+   "name": "Telmurk Warehouses"
+  },
+  "precimos-island": {
+   "name": "Precimos Island"
+  },
+  "precimos-strait": {
+   "name": "Precimos Strait"
+  },
+  "ferre-ruins": {
+   "name": "Ferre Ruins"
+  },
+  "edashore-town": {
+   "name": "Edashore Town"
+  },
+  "edashore-reach": {
+   "name": "Edashore Reach"
+  },
+  "atsail-city": {
+   "name": "Atsail City"
+  },
+  "atsail-bay": {
+   "name": "Atsail Bay"
+  },
+  "apex-temple": {
+   "name": "Apex Temple"
+  },
+  "ignis-roost": {
+   "name": "Ignis Roost"
+  },
+  "ikos-town": {
+   "name": "Ikos Town"
+  },
+  "ikos-canyon": {
+   "name": "Ikos Canyon"
+  },
+  "ikos-ruins": {
+   "name": "Ikos Ruins"
+  },
+  "loamas-town": {
+   "name": "Loamas Town"
+  },
+  "loamas-fields": {
+   "name": "Loamas Fields"
+  },
+  "ignis-valley": {
+   "name": "Ignis Valley"
+  },
+  "ignis-catacombs": {
+   "name": "Ignis Catacombs"
+  },
+  "chamber-of-gaia": {
+   "name": "Chamber of Gaia"
+  },
+  "victory-falls": {
+   "name": "Victory Falls"
+  },
+  "victory-road": {
+   "name": "Victory Road"
+  },
+  "pokemon-league": {
+   "name": "Pokémon League"
+  },
+  "battle-marsh": {
+   "name": "Battle Marsh"
+  },
+  "rimewood-forest": {
+   "name": "Rimewood Forest"
+  },
+  "emerald-peak": {
+   "name": "Emerald Peak"
+  },
+  "cosmic-caverns": {
+   "name": "Cosmic Caverns"
+  },
+  "sharpgust-span": {
+   "name": "Sharpgust Span"
+  },
+  "nemesis-river": {
+   "name": "Nemesis River"
+  }
+ },
+ "milestones": [
+  {
+   "id": "rival-archan-tunnel",
+   "name": "Rival: first battle (Archan Tunnel)",
+   "kind": "rival",
+   "place": "archan-tunnel",
+   "level_cap": 5,
+   "foe": [
+    {
+     "name": "Coulter",
+     "ace_level": 5
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "celanto-town",
+    "celanto-path",
+    "celanto-grove",
+    "archan-town",
+    "archan-tunnel"
+   ],
+   "tips": "Professor Redwood gives Turtwig, Chimchar or Piplup in the Celanto Town library; the rival (default name Coulter) takes the one strong against yours and waits at the tunnel with it at Lv 5. A Clefairy sits in a grotto inside the tunnel.",
+   "quality": "reference-only",
+   "source": "ROM Gaia 3.2 trainer table; mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "gym-1-fernando",
+   "name": "Gym 1: Fernando",
+   "kind": "gym",
+   "place": "seros-village",
+   "leader": "Fernando",
+   "theme": "fairy",
+   "level_cap": 13,
+   "foe": {
+    "name": "Fernando",
+    "ace_level": 13
+   },
+   "done_when": "badge:1",
+   "opens": [
+    "seros-village",
+    "seros-path",
+    "wisp-forest"
+   ],
+   "badge_note": "Mystic Badge; TM Charming Cry. Cut comes from the Day-Care man in Seros.",
+   "tips": "Fairy types: Clefairy, Ralts, Jigglypuff (Lv 11-13). Poison and Steel moves hit them hard; Fire and Steel types resist their Fairy moves. He runs off to Wisp Forest and hands over the badge there.",
+   "quality": "reference-only",
+   "source": "ROM Gaia 3.2 trainer table; mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "rival-nestpine",
+   "name": "Rival at the Nestpine gym",
+   "kind": "rival",
+   "place": "nestpine-town",
+   "level_cap": 23,
+   "foe": [
+    {
+     "name": "Coulter",
+     "ace_level": 22
+    },
+    {
+     "name": "Coulter",
+     "ace_level": 23
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "aerous-road",
+    "aerous-city",
+    "nestpine-climb",
+    "nestpine-town"
+   ],
+   "tips": "At the gym door: Makuhita, Roggenrola, Eevee, Swablu, Monferno (Lv 20-23) (or the Lv 22 version without Eevee). He gives you the EXP Share afterwards.",
+   "quality": "reference-only",
+   "source": "ROM Gaia 3.2 trainer table; pokuniverse.com Gaia game guide"
+  },
+  {
+   "id": "gym-2-aria",
+   "name": "Gym 2: Aria",
+   "kind": "gym",
+   "place": "nestpine-town",
+   "leader": "Aria",
+   "theme": "flying",
+   "level_cap": 23,
+   "foe": {
+    "name": "Aria",
+    "ace_level": 23
+   },
+   "done_when": "badge:2",
+   "opens": [
+    "nestpine-town"
+   ],
+   "badge_note": "Plume Badge (name from one low-quality site).",
+   "tips": "Flying types: Vullaby, Gligar, Chatot (Lv 21-23). Electric, Ice and Rock moves; Gligar takes four times from Ice.",
+   "quality": "reference-only",
+   "source": "ROM Gaia 3.2 trainer table; mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "team-frostbite",
+   "name": "New Elders: Eunice (Frostbite Cave)",
+   "kind": "team",
+   "place": "frostbite-cave",
+   "level_cap": 26,
+   "foe": [
+    {
+     "name": "Eunice",
+     "ace_level": 26
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "frostbite-cave",
+    "windmist-summit"
+   ],
+   "tips": "Elder Knight Eunice guards the Relicanth Tablet: Snover, Froslass, Noctowl, Amaura (Lv 24-26). Fire, Fighting, Rock and Steel moves. Since 3.2 the fight starts when you talk to her or walk past.",
+   "quality": "reference-only",
+   "source": "ROM Gaia 3.2 trainer table; mrwalkthroughs.com/pokemon-gaia; gamebrew.org: Pokemon Gaia"
+  },
+  {
+   "id": "gym-3-nina",
+   "name": "Gym 3: Nina",
+   "kind": "gym",
+   "place": "windmist-city",
+   "leader": "Nina",
+   "theme": "fire",
+   "level_cap": 28,
+   "foe": {
+    "name": "Nina",
+    "ace_level": 28
+   },
+   "done_when": "badge:3",
+   "opens": [
+    "windmist-city"
+   ],
+   "badge_note": "Ember Badge (name unconfirmed).",
+   "tips": "Fire types: Pignite, Magmar, Heatmor, Camerupt (Lv 26-28). Water and Ground moves; Camerupt takes four times from Water.",
+   "quality": "reference-only",
+   "source": "ROM Gaia 3.2 trainer table; mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "team-sabulo",
+   "name": "New Elders: Enoch (Sabulo Cave)",
+   "kind": "team",
+   "place": "sabulo-cave",
+   "level_cap": 32,
+   "foe": [
+    {
+     "name": "Enoch",
+     "ace_level": 32
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "sabulo-island",
+    "sabulo-cross",
+    "sabulo-cave",
+    "sabulo-tower"
+   ],
+   "tips": "Enoch at the cave entrance, after the Tangrowth Tablet: Tyrantrum, Diggersby, Golurk, Aerodactyl (Lv 30-32). Water and Ice moves. Belle then gives the second starter (a Kanto one weak to yours, with its Mega Stone) and, at Sabulo Tower, the Mega Ring; the rival hands you Surf.",
+   "quality": "reference-only",
+   "source": "ROM Gaia 3.2 trainer table; mrwalkthroughs.com/pokemon-gaia; pokuniverse.com Gaia game guide"
+  },
+  {
+   "id": "story-belle",
+   "name": "Belle (Sabulo Tower)",
+   "kind": "story",
+   "place": "sabulo-tower",
+   "level_cap": 32,
+   "foe": [
+    {
+     "name": "Belle",
+     "ace_level": 32
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "Belle tests you before the Mega Ring: Heracross, Manectric, Sableye, Mawile, Audino (Lv 30-32).",
+   "quality": "reference-only",
+   "source": "ROM Gaia 3.2 trainer table; mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "gym-4-vernon",
+   "name": "Gym 4: Vernon",
+   "kind": "gym",
+   "place": "valoon-town",
+   "leader": "Vernon",
+   "theme": "bug",
+   "level_cap": 36,
+   "foe": {
+    "name": "Vernon",
+    "ace_level": 36
+   },
+   "done_when": "badge:4",
+   "opens": [
+    "valoon-way",
+    "valoon-town",
+    "valoon-reserve"
+   ],
+   "badge_note": "Honeycomb Badge.",
+   "tips": "Bug types with a Mega Beedrill: Shuckle, Scizor, Masquerain, Beedrill (Lv 34-36). Fire, Flying and Rock moves; Shuckle and Scizor are walls (Scizor takes four times from Fire).",
+   "quality": "reference-only",
+   "source": "ROM Gaia 3.2 trainer table; mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "rival-telmurk-swamp",
+   "name": "Rival: Telmurk Swamp",
+   "kind": "rival",
+   "place": "telmurk-swamp",
+   "level_cap": 36,
+   "foe": [
+    {
+     "name": "Coulter",
+     "ace_level": 36
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "telmurk-outskirts",
+    "telmurk-swamp",
+    "telmurk-city"
+   ],
+   "tips": "A full team of six: Hariyama, Boldore, Vaporeon, Rotom, Altaria, Infernape (Lv 34-36) (the line-up follows your starter).",
+   "quality": "reference-only",
+   "source": "ROM Gaia 3.2 trainer table; pokuniverse.com Gaia game guide"
+  },
+  {
+   "id": "team-akuto",
+   "name": "Mighty Mightyenas: Boss Akuto",
+   "kind": "team",
+   "place": "telmurk-city",
+   "level_cap": 39,
+   "foe": [
+    {
+     "name": "Boss Akuto",
+     "ace_level": 39
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "telmurk-city",
+    "telmurk-warehouses"
+   ],
+   "tips": "The Telmurk street gang's thugs (Lv 33-37) lead to their boss: Lairon, Bouffalant, Mightyena (Lv 37-39). Fighting and Fairy moves. Akuto gives Fly afterwards.",
+   "quality": "reference-only",
+   "source": "ROM Gaia 3.2 trainer table; pokuniverse.com Gaia game guide"
+  },
+  {
+   "id": "gym-5-sid",
+   "name": "Gym 5: Sid",
+   "kind": "gym",
+   "place": "telmurk-city",
+   "leader": "Sid",
+   "theme": "poison",
+   "level_cap": 42,
+   "foe": {
+    "name": "Sid",
+    "ace_level": 42
+   },
+   "done_when": "badge:5",
+   "opens": [
+    "telmurk-city"
+   ],
+   "badge_note": "Pollution Badge (name unconfirmed); TM Sludge Bomb.",
+   "tips": "Poison types with a Mega Venusaur: Arbok, Drapion, Nidoking, Venusaur (Lv 40-42). Psychic and Ground moves; Drapion is part Dark (Ground only).",
+   "quality": "reference-only",
+   "source": "ROM Gaia 3.2 trainer table; mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "gym-6-will",
+   "name": "Gym 6: Will",
+   "kind": "gym",
+   "place": "precimos-island",
+   "leader": "Will",
+   "theme": "psychic",
+   "level_cap": 44,
+   "foe": {
+    "name": "Will",
+    "ace_level": 44
+   },
+   "done_when": "badge:6",
+   "opens": [
+    "precimos-strait",
+    "precimos-island"
+   ],
+   "badge_note": "Focus Badge (name unconfirmed); TM Calm Mind.",
+   "tips": "Psychic types with a Mega Slowbro: Xatu, Jynx, Exeggutor, Metagross, Slowbro (Lv 42-44). Dark, Ghost and Bug moves; Metagross is part Steel (Fire, Ground).",
+   "quality": "reference-only",
+   "source": "ROM Gaia 3.2 trainer table; mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "rival-precimos",
+   "name": "Rival outside the Precimos hotel",
+   "kind": "rival",
+   "place": "precimos-island",
+   "level_cap": 45,
+   "foe": [
+    {
+     "name": "Coulter",
+     "ace_level": 45
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Hariyama, Gigalith, Vaporeon, Rotom, Altaria, Infernape (Lv 43-45).",
+   "quality": "reference-only",
+   "source": "ROM Gaia 3.2 trainer table; pokuniverse.com Gaia game guide"
+  },
+  {
+   "id": "team-ferre",
+   "name": "New Elders: Ezekiel (Ferre Ruins)",
+   "kind": "team",
+   "place": "ferre-ruins",
+   "level_cap": 45,
+   "foe": [
+    {
+     "name": "Ezekiel",
+     "ace_level": 45
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "ferre-ruins",
+    "edashore-town",
+    "edashore-reach"
+   ],
+   "tips": "Ezekiel on the third floor, over the Lileep Tablet: Skarmory, Doublade, Claydol, Cradily, Aggron (Lv 42-45). Fire and Ground moves; Fighting for Aggron. The Braille door code is 4519.",
+   "quality": "reference-only",
+   "source": "ROM Gaia 3.2 trainer table; mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "gym-7-marina",
+   "name": "Gym 7: Marina",
+   "kind": "gym",
+   "place": "atsail-city",
+   "leader": "Marina",
+   "theme": "water",
+   "level_cap": 48,
+   "foe": {
+    "name": "Marina",
+    "ace_level": 48
+   },
+   "done_when": "badge:7",
+   "opens": [
+    "atsail-city",
+    "atsail-bay"
+   ],
+   "badge_note": "Scale Badge (name unconfirmed).",
+   "tips": "Water types with a Mega Gyarados: Qwilfish, Jellicent, Kingdra, Pelipper, Gyarados (Lv 46-48). Electric moves above all (Gyarados and Pelipper take four times).",
+   "quality": "reference-only",
+   "source": "ROM Gaia 3.2 trainer table; mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "team-morgana-1",
+   "name": "New Elders: Morgana",
+   "kind": "team",
+   "place": "apex-temple",
+   "level_cap": 49,
+   "foe": [
+    {
+     "name": "Morgana",
+     "ace_level": 49
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "apex-temple",
+    "ignis-roost"
+   ],
+   "tips": "The Elder Sage herself: Mismagius, Sigilyph, Drapion, Houndoom, Gengar (Lv 47-49). Dark and Ghost moves; Drapion and Houndoom want Ground.",
+   "quality": "reference-only",
+   "source": "ROM Gaia 3.2 trainer table; mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "rival-ikos",
+   "name": "Rival: Ikos Town",
+   "kind": "rival",
+   "place": "ikos-town",
+   "level_cap": 51,
+   "foe": [
+    {
+     "name": "Coulter",
+     "ace_level": 51
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "ikos-canyon",
+    "ikos-town",
+    "ikos-ruins"
+   ],
+   "tips": "With a Mega Altaria now: Hariyama, Gigalith, Vaporeon, Rotom, Altaria, Infernape (Lv 49-51).",
+   "quality": "reference-only",
+   "source": "ROM Gaia 3.2 trainer table; pokuniverse.com Gaia game guide"
+  },
+  {
+   "id": "gym-8-richter",
+   "name": "Gym 8: Richter",
+   "kind": "gym",
+   "place": "loamas-town",
+   "leader": "Richter",
+   "theme": "ground",
+   "level_cap": 52,
+   "foe": {
+    "name": "Richter",
+    "ace_level": 52
+   },
+   "done_when": "badge:8",
+   "opens": [
+    "loamas-fields",
+    "loamas-town"
+   ],
+   "badge_note": "Tectonic Badge (name unconfirmed).",
+   "tips": "Ground types with a Mega Garchomp: Hippowdon, Gastrodon, Excadrill, Dugtrio, Garchomp (Lv 50-52). Water, Grass and Ice; Garchomp takes four times from Ice.",
+   "quality": "reference-only",
+   "source": "ROM Gaia 3.2 trainer table; mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "team-ignis-finale",
+   "name": "The end of the New Elders (Ignis Valley)",
+   "kind": "team",
+   "place": "ignis-valley",
+   "level_cap": 57,
+   "foe": [
+    {
+     "name": "Eunice",
+     "ace_level": 54
+    },
+    {
+     "name": "Enoch",
+     "ace_level": 54
+    },
+    {
+     "name": "Ezekiel",
+     "ace_level": 54
+    },
+    {
+     "name": "Morgana",
+     "ace_level": 54
+    },
+    {
+     "name": "Morgana",
+     "ace_level": 57
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "ignis-valley",
+    "ignis-catacombs",
+    "chamber-of-gaia"
+   ],
+   "tips": "The three knights again at Lv 52-54, Morgana's own team (Mismagius, Sigilyph, Drapion, Houndoom, Gengar, Salamence (Lv 52-54)), and in the Chamber of Gaia her golems: Regirock, Regice, Registeel (Lv 55) and Regigigas (Lv 57). Fighting, Water and Fire moves; Regigigas is Normal.",
+   "quality": "reference-only",
+   "source": "ROM Gaia 3.2 trainer table; mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "rival-victory-falls",
+   "name": "Rival: Victory Falls",
+   "kind": "rival",
+   "place": "victory-falls",
+   "level_cap": 55,
+   "foe": [
+    {
+     "name": "Coulter",
+     "ace_level": 55
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "victory-falls",
+    "victory-road"
+   ],
+   "tips": "The last rival fight before the climb: Hariyama, Gigalith, Vaporeon, Rotom, Altaria, Infernape (Lv 53-55).",
+   "quality": "reference-only",
+   "source": "ROM Gaia 3.2 trainer table; pokuniverse.com Gaia game guide"
+  },
+  {
+   "id": "e4-nicola",
+   "name": "Elite Four: Nicola",
+   "kind": "elite4",
+   "place": "pokemon-league",
+   "leader": "Nicola",
+   "theme": "electric",
+   "level_cap": 58,
+   "foe": [
+    {
+     "name": "Nicola",
+     "ace_level": 58
+    }
+   ],
+   "done_when": "later",
+   "opens": [
+    "pokemon-league"
+   ],
+   "tips": "Fought in any order; a loss restarts all four. Galvantula, Magnezone, Electivire, Eelektross, Lanturn, Manectric (Lv 56-58). Ground moves (Lanturn and Eelektross: Grass or Ground respectively).",
+   "quality": "reference-only",
+   "source": "ROM Gaia 3.2 trainer table; mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "e4-knight",
+   "name": "Elite Four: Knight",
+   "kind": "elite4",
+   "place": "pokemon-league",
+   "leader": "Knight",
+   "theme": "dark",
+   "level_cap": 58,
+   "foe": [
+    {
+     "name": "Knight",
+     "ace_level": 58
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Fought in any order; a loss restarts all four. Bisharp, Sharpedo, Weavile, Malamar, Honchkrow, Absol (Lv 56-58). Fighting, Bug and Fairy moves.",
+   "quality": "reference-only",
+   "source": "ROM Gaia 3.2 trainer table; mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "e4-kara",
+   "name": "Elite Four: Kara",
+   "kind": "elite4",
+   "place": "pokemon-league",
+   "leader": "Kara",
+   "theme": "fighting",
+   "level_cap": 58,
+   "foe": [
+    {
+     "name": "Kara",
+     "ace_level": 58
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Fought in any order; a loss restarts all four. Mienshao, Hawlucha, Medicham, Scrafty, Lucario, Blaziken (Lv 56-58). Psychic, Flying and Fairy moves.",
+   "quality": "reference-only",
+   "source": "ROM Gaia 3.2 trainer table; mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "e4-leif",
+   "name": "Elite Four: Leif",
+   "kind": "elite4",
+   "place": "pokemon-league",
+   "leader": "Leif",
+   "theme": "grass",
+   "level_cap": 58,
+   "foe": [
+    {
+     "name": "Leif",
+     "ace_level": 58
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "Fought in any order; a loss restarts all four. Ludicolo, Ferrothorn, Whimsicott, Amoonguss, Trevenant, Sceptile (Lv 56-58). Fire, Flying, Ice and Poison moves.",
+   "quality": "reference-only",
+   "source": "ROM Gaia 3.2 trainer table; mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "champion-herschel",
+   "name": "Champion Herschel",
+   "kind": "champion",
+   "place": "pokemon-league",
+   "leader": "Herschel",
+   "level_cap": 60,
+   "foe": [
+    {
+     "name": "Herschel",
+     "ace_level": 60
+    }
+   ],
+   "done_when": "later",
+   "opens": [],
+   "tips": "A mixed team with a Mega Salamence: Wailord, Yanmega, Mamoswine, Tangrowth, Alakazam, Salamence (Lv 58-60). Ice for Salamence and Yanmega, Fire for Mamoswine and Tangrowth, Electric or Grass for Wailord.",
+   "quality": "reference-only",
+   "source": "ROM Gaia 3.2 trainer table; mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "post-akuto",
+   "name": "Post-game: Akuto's rematch",
+   "kind": "postgame",
+   "place": "telmurk-city",
+   "level_cap": 54,
+   "foe": [
+    {
+     "name": "Boss Akuto",
+     "ace_level": 54
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "Mightyena, Scrafty, Staraptor, Bouffalant, Aggron, Mightyena (Lv 52-54).",
+   "quality": "reference-only",
+   "source": "ROM Gaia 3.2 trainer table"
+  },
+  {
+   "id": "post-rematches",
+   "name": "Post-game: leader and league rematches",
+   "kind": "postgame",
+   "place": "battle-marsh",
+   "level_cap": 75,
+   "foe": [
+    {
+     "name": "Herschel",
+     "ace_level": 75
+    }
+   ],
+   "done_when": "none",
+   "opens": [
+    "battle-marsh",
+    "rimewood-forest"
+   ],
+   "tips": "The ROM has Lv 67 teams for all eight leaders, Lv 68 for the Elite Four and Lv 75 for Herschel. The Battle Marsh is a Battle Maison-style facility (three Pokémon at Lv 50, BP prizes, a Focus Sash).",
+   "quality": "reference-only",
+   "source": "ROM Gaia 3.2 trainer table; mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "post-showtan",
+   "name": "Secret trainer Showtan",
+   "kind": "postgame",
+   "place": "aerous-city",
+   "level_cap": 60,
+   "foe": [
+    {
+     "name": "Showtan",
+     "ace_level": 60
+    }
+   ],
+   "done_when": "none",
+   "opens": [],
+   "tips": "Behind the Aerous City museum wall (code 1104): Weedle, Sigilyph, Slowbro, Togekiss, Shuckle, Drapion (Lv 60).",
+   "quality": "reference-only",
+   "source": "ROM Gaia 3.2 trainer table; mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "legend-rayquaza",
+   "name": "Rayquaza (Emerald Peak)",
+   "kind": "legendary",
+   "place": "emerald-peak",
+   "level_cap": 60,
+   "done_when": "none",
+   "opens": [
+    "emerald-peak"
+   ],
+   "tips": "At the top of Emerald Peak. The sources give no level: the cap shown is the post-league level.",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "legend-deoxys",
+   "name": "Deoxys (Cosmic Caverns)",
+   "kind": "legendary",
+   "place": "cosmic-caverns",
+   "level_cap": 60,
+   "done_when": "none",
+   "opens": [
+    "cosmic-caverns"
+   ],
+   "tips": "On B2F of the Cosmic Caverns, through the Strength-puzzle cave south of Edashore Reach. No level in the sources.",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-gaia"
+  }
+ ],
+ "steps": [
+  {
+   "id": "step-starter",
+   "title": "Pick a Sinnoh starter",
+   "text": "Turtwig, Chimchar or Piplup; a Kanto starter (weak to yours, with its Mega Stone) follows on Sabulo Island. Against Fernando's Fairy types, Piplup's Steel moves come later; Chimchar resists Fairy moves, Turtwig has the hardest time.",
+   "stage": "rival-archan-tunnel",
+   "places": [
+    "celanto-town"
+   ],
+   "done_when": "party",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "step-fields",
+   "title": "Field moves",
+   "text": "Cut from the Seros Day-Care man, Surf from the rival in Sabulo Cave, Fly from Akuto, Waterfall from Herschel once Morgana is beaten, Dive on the beach diving tour. Rock Climb exists too.",
+   "stage": "gym-1-fernando",
+   "places": [
+    "seros-village"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "pokuniverse.com Gaia game guide"
+  },
+  {
+   "id": "step-megas",
+   "title": "Collect Mega Stones",
+   "text": "Thirty stones are hidden around Orbtus, many up Rock Climb walls or in grottoes and temples; the Valoon Bug-Catching Contest gives Beedrillite, Pinsirite, Scizorite or Heracronite for winning with that species.",
+   "stage": "gym-4-vernon",
+   "places": [
+    "valoon-town"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "step-league",
+   "title": "Prepare for the league",
+   "text": "The Elite Four run Lv 56-58 with a Mega each, Herschel 58-60. Five items in the bag and a team in the high 50s; the order is yours.",
+   "stage": "e4-nicola",
+   "places": [
+    "victory-road",
+    "pokemon-league"
+   ],
+   "done_when": "later",
+   "quality": "reference-only",
+   "source": "ROM Gaia 3.2 trainer table"
+  }
+ ],
+ "secrets": [
+  {
+   "id": "gift-eevee-egg",
+   "kind": "gift",
+   "text": "Vincent at the Aerous art club gives an Eevee egg.",
+   "place": "aerous-city",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "gift-clefairy",
+   "kind": "gift",
+   "text": "A Lv 5 Clefairy waits in a grotto in Archan Tunnel, with a Soothe Bell nearby.",
+   "place": "archan-tunnel",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "gift-master-ball",
+   "kind": "gift",
+   "text": "Edashore Town gives a Master Ball after the Clefairy puzzle.",
+   "place": "edashore-town",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "gift-leftovers",
+   "kind": "gift",
+   "text": "The Precimos hotel gives Leftovers and the Tablet Idol.",
+   "place": "precimos-island",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "gift-x-scissor",
+   "kind": "gift",
+   "text": "Loamas Town gives TM X-Scissor for a Mareep and Oran Berry errand; Charizardite X comes from Sgt. Stone there.",
+   "place": "loamas-town",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "tip-amulet-coin",
+   "kind": "tip",
+   "text": "Aerous City sells an Amulet Coin for 5000; Sharpedonite is up a Rock Climb wall in the city.",
+   "place": "aerous-city",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "mega-slowbronite",
+   "kind": "tip",
+   "text": "Show a Slowpoke in the Windmist store for Slowbronite.",
+   "place": "windmist-city",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "mega-glalitite",
+   "kind": "hidden-item",
+   "text": "Glalitite lies in Frostbite Cave.",
+   "place": "frostbite-cave",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "mega-gyaradosite",
+   "kind": "hidden-item",
+   "text": "Gyaradosite is on Sharpgust Span.",
+   "place": "sharpgust-span",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "mega-altarianite",
+   "kind": "hidden-item",
+   "text": "Altarianite is in a Nemesis River grotto.",
+   "place": "nemesis-river",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "mega-absolite",
+   "kind": "hidden-item",
+   "text": "Absolite is in a Dive grotto in the Precimos Strait.",
+   "place": "precimos-strait",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "mega-aggronite",
+   "kind": "hidden-item",
+   "text": "Aggronite is in the Atsail Bay temple.",
+   "place": "atsail-bay",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "mega-aerodactylite",
+   "kind": "hidden-item",
+   "text": "Aerodactylite is in a hidden temple on Valoon Way.",
+   "place": "valoon-way",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "mega-garchompite",
+   "kind": "hidden-item",
+   "text": "Garchompite is on Victory Road 2F.",
+   "place": "victory-road",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "mega-ignis",
+   "kind": "hidden-item",
+   "text": "Alakazite and Salamencite are in Ignis Valley; Medichamite and Tyranitarite at Victory Falls.",
+   "place": "ignis-valley",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "mega-lucarionite",
+   "kind": "hidden-item",
+   "text": "Lucarionite is in Ikos Town; Mawilite in the Cosmic Caverns; Ampharosite in the Loamas barn.",
+   "place": "ikos-town",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "event-glaceon",
+   "kind": "event",
+   "text": "The Icy Rock for Glaceon is in Frostbite Cave; the Moss Rock for Leafeon is in Nemesis Cave.",
+   "place": "frostbite-cave",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "event-magnezone",
+   "kind": "event",
+   "text": "Magneton and Nosepass evolve by levelling in the Telmurk warehouse with its generator running.",
+   "place": "telmurk-warehouses",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-gaia"
+  }
+ ],
+ "evolutions": [
+  {
+   "id": "evo-kadabra",
+   "species": 64,
+   "name": "Kadabra",
+   "text": "Level 40 gives Alakazam (no trade).",
+   "quality": "reference-only",
+   "source": "Gaia team's evolution-changes spreadsheet (Google Sheets)"
+  },
+  {
+   "id": "evo-machoke",
+   "species": 67,
+   "name": "Machoke",
+   "text": "Level 42 gives Machamp.",
+   "quality": "reference-only",
+   "source": "Gaia team's evolution-changes spreadsheet (Google Sheets)"
+  },
+  {
+   "id": "evo-graveler",
+   "species": 75,
+   "name": "Graveler",
+   "text": "Level 36 gives Golem.",
+   "quality": "reference-only",
+   "source": "Gaia team's evolution-changes spreadsheet (Google Sheets)"
+  },
+  {
+   "id": "evo-haunter",
+   "species": 93,
+   "name": "Haunter",
+   "text": "Level 40 gives Gengar.",
+   "quality": "reference-only",
+   "source": "Gaia team's evolution-changes spreadsheet (Google Sheets)"
+  },
+  {
+   "id": "evo-boldore",
+   "species": 525,
+   "name": "Boldore",
+   "text": "Level 42 gives Gigalith.",
+   "quality": "reference-only",
+   "source": "Gaia team's evolution-changes spreadsheet (Google Sheets)"
+  },
+  {
+   "id": "evo-gurdurr",
+   "species": 533,
+   "name": "Gurdurr",
+   "text": "Level 42 gives Conkeldurr.",
+   "quality": "reference-only",
+   "source": "Gaia team's evolution-changes spreadsheet (Google Sheets)"
+  },
+  {
+   "id": "evo-onix",
+   "species": 95,
+   "name": "Onix",
+   "text": "Level 40 gives Steelix.",
+   "quality": "reference-only",
+   "source": "Gaia team's evolution-changes spreadsheet (Google Sheets)"
+  },
+  {
+   "id": "evo-clamperl",
+   "species": 366,
+   "name": "Clamperl",
+   "text": "Level 38 gives Huntail; Gorebyss needs the Regal Stone.",
+   "quality": "reference-only",
+   "source": "Gaia team's evolution-changes spreadsheet (Google Sheets)"
+  },
+  {
+   "id": "evo-karrablast",
+   "species": 588,
+   "name": "Karrablast",
+   "text": "Level 36 gives Escavalier; Shelmet becomes Accelgor at 36 too.",
+   "quality": "reference-only",
+   "source": "Gaia team's evolution-changes spreadsheet (Google Sheets)"
+  },
+  {
+   "id": "evo-rhydon",
+   "species": 112,
+   "name": "Rhydon",
+   "text": "Level 55 gives Rhyperior.",
+   "quality": "reference-only",
+   "source": "Gaia team's evolution-changes spreadsheet (Google Sheets)"
+  },
+  {
+   "id": "evo-seadra",
+   "species": 117,
+   "name": "Seadra",
+   "text": "The Regal Stone gives Kingdra (it also makes Politoed, Slowking, Scizor and Milotic).",
+   "quality": "reference-only",
+   "source": "Gaia team's evolution-changes spreadsheet (Google Sheets)"
+  },
+  {
+   "id": "evo-feebas",
+   "species": 349,
+   "name": "Feebas",
+   "text": "The Regal Stone gives Milotic; no beauty needed.",
+   "quality": "reference-only",
+   "source": "Gaia team's evolution-changes spreadsheet (Google Sheets)"
+  },
+  {
+   "id": "evo-electabuzz",
+   "species": 125,
+   "name": "Electabuzz",
+   "text": "A Thunder Stone gives Electivire; a Fire Stone turns Magmar into Magmortar.",
+   "quality": "reference-only",
+   "source": "Gaia team's evolution-changes spreadsheet (Google Sheets)"
+  },
+  {
+   "id": "evo-porygon",
+   "species": 137,
+   "name": "Porygon",
+   "text": "The Up-Grade, used like a stone, gives Porygon2; the Dubious Disc then gives Porygon-Z.",
+   "quality": "reference-only",
+   "source": "Gaia team's evolution-changes spreadsheet (Google Sheets)"
+  },
+  {
+   "id": "evo-dusclops",
+   "species": 356,
+   "name": "Dusclops",
+   "text": "A Dusk Stone gives Dusknoir.",
+   "quality": "reference-only",
+   "source": "Gaia team's evolution-changes spreadsheet (Google Sheets)"
+  },
+  {
+   "id": "evo-eevee",
+   "species": 133,
+   "name": "Eevee",
+   "text": "Moon Stone: Umbreon; Sun Stone: Espeon; Shiny Stone or a Fairy move: Sylveon; Icy Rock (Frostbite Cave): Glaceon; Nemesis Cave: Leafeon.",
+   "quality": "reference-only",
+   "source": "Gaia team's evolution-changes spreadsheet (Google Sheets)"
+  },
+  {
+   "id": "evo-sneasel",
+   "species": 215,
+   "name": "Sneasel",
+   "text": "Level 35 gives Weavile; Gligar becomes Gliscor at 36.",
+   "quality": "reference-only",
+   "source": "Gaia team's evolution-changes spreadsheet (Google Sheets)"
+  },
+  {
+   "id": "evo-happiny",
+   "species": 440,
+   "name": "Happiny",
+   "text": "Level 15 gives Chansey.",
+   "quality": "reference-only",
+   "source": "Gaia team's evolution-changes spreadsheet (Google Sheets)"
+  },
+  {
+   "id": "evo-snorunt",
+   "species": 361,
+   "name": "Snorunt",
+   "text": "Level 30 on the sheet (Glalie); how Froslass is made is not listed.",
+   "quality": "reference-only",
+   "source": "Gaia team's evolution-changes spreadsheet (Google Sheets)"
+  },
+  {
+   "id": "evo-cranidos",
+   "species": 408,
+   "name": "Cranidos",
+   "text": "Fixed in 3.2: it now evolves into Rampardos.",
+   "quality": "reference-only",
+   "source": "gamebrew.org: Pokemon Gaia"
+  }
+ ],
+ "notes": [
+  {
+   "id": "note-engine",
+   "kind": "version",
+   "title": "Gaia 3.2",
+   "text": "A FireRed hack (Orbtus region) with Gen I-VI species, the Fairy type, the physical/special split, Mega Evolution and ORAS move sets. No difficulty setting: it is simply harder. Saves from before 3.0 do not carry over.",
+   "quality": "reference-only",
+   "source": "gamebrew.org: Pokemon Gaia"
+  },
+  {
+   "id": "note-megas",
+   "kind": "tip",
+   "title": "Mega Ring and stones",
+   "text": "The Mega Ring comes from Belle at Sabulo Tower; 30 Mega Stones are hidden around the region. Since 3.2 Mega Glalie has Refrigerate and Mega Ampharos Lightning Rod.",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-gaia; gamebrew.org: Pokemon Gaia"
+  },
+  {
+   "id": "note-features",
+   "kind": "tip",
+   "title": "Features",
+   "text": "Reusable TMs, running shoes indoors, Rock Climb, Dive with underwater maps, hidden grottoes and temples, a Bug-Catching Contest, move tutors, an Ability Pill.",
+   "quality": "reference-only",
+   "source": "gamebrew.org: Pokemon Gaia"
+  },
+  {
+   "id": "note-legends",
+   "kind": "legendary",
+   "title": "Few legendaries",
+   "text": "The Regi trio appears only as ghostly story battles at Apex Temple and in Morgana's team; Rayquaza and Deoxys are the catchable legends. No birds, beasts or Hoenn weather trio.",
+   "place": "apex-temple",
+   "quality": "reference-only",
+   "source": "mrwalkthroughs.com/pokemon-gaia"
+  },
+  {
+   "id": "note-trades",
+   "kind": "trade",
+   "title": "No in-game trades",
+   "text": "None are documented; the trade evolutions all have an in-game method (levels or the Regal Stone).",
+   "quality": "reference-only",
+   "source": "Gaia team's evolution-changes spreadsheet (Google Sheets)"
+  }
+ ]
+}

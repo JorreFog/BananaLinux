@@ -21,3 +21,14 @@ __pycache__/
 *.pyc
 /ui/tests/nds-rom-test
 /ui/tests/nds-rom-dump
+/ui/tests/nds-townmap-test
+/ui/tests/gba-live-test
+/ui/tests/gba-pages-test
+/ui/tests/gba-rom-test
+/ui/tests/gba-items-gen
+/ui/tests/soft-base-test
+/ui/tests/gba-exp-test
+/ui/tests/gba-expitems-gen
+ui/tests/nds-logic-test
+ui/tests/nds-ram-test
+ui/tests/nds-romfile-test
