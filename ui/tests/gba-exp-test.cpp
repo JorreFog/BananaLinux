@@ -284,6 +284,45 @@ static void testHack(const std::string& dir, const Expect& x, const std::string&
 		fprintf(stderr, "\n");
 		for (auto& e : first->encounters) CHECK(e.species && e.species < r.species.size() && !r.species[e.species].name.empty() && e.minLevel >= 1 && e.maxLevel <= 100);
 	}
+	// the Map page: the game's picture (Lazarus, Seaglass kept Emerald's format) or the squares of its places, a map a
+	// region (the Johto builds: Johto, then Kanto), and the starting town's place on its map
+	{
+		const std::string k = x.key;
+		const bool pictured = k == "lazarus" || k == "seaglass";
+		const char* home = k == "lazarus" ? "Acrisia City" : k == "seaglass" ? "Littleroot Town" : "New Bark Town";
+		CHECK(!r.regionMaps.empty());
+		if (!r.regionMaps.empty())
+		{
+			const RegionMap& m0 = r.regionMaps[0];
+			EQ(!m0.rgba.empty(), pictured);
+			if (!pictured) EQ(m0.name, std::string("Johto"));
+			if (k == "heart-and-soul") { EQ(r.regionMaps.size(), (size_t)2); if (r.regionMaps.size() > 1) EQ(r.regionMaps[1].name, std::string("Kanto")); }
+			for (auto& m : r.regionMaps) { CHECK(m.w > 0 && m.h > 0); EQ(m.cells.size(), (size_t)m.gridW * m.gridH); }
+		}
+		const Location* town = nullptr;
+		int onMap = 0;
+		for (auto& z : r.zones) { onMap += z.second.spot.map >= 0; if (!town && z.second.name == home && z.second.spot.map >= 0) town = &z.second; }
+		CHECK(town != nullptr);
+		CHECK(onMap > 150);
+		if (town && (size_t)town->spot.map < r.regionMaps.size())
+		{
+			const RegionMap& m = r.regionMaps[(size_t)town->spot.map];
+			const MapSpot& s = town->spot;
+			EQ((int)s.map, 0);
+			CHECK(s.w >= 8 && s.h >= 8 && s.x >= 0 && s.y >= 0 && s.x + s.w <= m.w && s.y + s.h <= m.h);
+			CHECK(s.tilesW > 0 && s.tilesH > 0);
+			// (the cell under the spot names the town: a tap there says its name)
+			const int cx = (int)((s.x - m.cellX) / m.cell), cy = (int)((s.y - m.cellY) / m.cell);
+			CHECK(cx >= 0 && cy >= 0 && cx < m.gridW && cy < m.gridH);
+			if (cx >= 0 && cy >= 0 && cx < m.gridW && cy < m.gridH)
+			{
+				const uint16_t id = m.cells[(size_t)cy * m.gridW + cx];
+				CHECK(id < r.locationNames.size() && r.locationNames[id] == home);
+			}
+			fprintf(stderr, "  map: %zu region map(s), %s on \"%s\" at %.0f,%.0f (%dx%d tiles); %d zones on a map\n", r.regionMaps.size(), home,
+				m.name.c_str(), s.x, s.y, s.tilesW, s.tilesH, onMap);
+		}
+	}
 	// trainers: the first gym leader
 	const Trainer* leader = nullptr;
 	for (auto& tr : r.trainers) if (tr.second.name == x.firstLeader) { leader = &tr.second; break; }

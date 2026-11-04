@@ -1490,6 +1490,230 @@ namespace banana::gba
 		}
 	}
 
+	// the Map page: the region map's sections (gRegionMapEntries: x, y, width, height and the name, 8 bytes a section,
+	// only those a map uses: the builds keep Emerald's and Kanto's records, some where their own routes now are) as the
+	// grid, and each zone's rectangle on it (its section's) and size in tiles (its map header's layout).
+	//  - A build that kept Emerald's 28 x 15 map and its picture's format (Lazarus, Seaglass): that picture
+	//    (pokemap.cpp found it), one map.
+	//  - One that drew its own (the Johto builds: Johto, Kanto and more regions in one table, their sections on the
+	//    same cells): no picture, the squares of the places, a map a region. A region is the maps joined by their
+	//    connections (walking from one to the next); a map without any (a cave, a house) is the region its warps lead
+	//    to first; a section is its maps' region; regions that share no cells go on one map (islands, a region's far
+	//    corner), named after the region's first town.
+	static void regionMap(const uint8_t* rom, size_t n, const ExpansionLayout& L, const pkmn::RomTables& t,
+		const std::map<uint16_t, std::pair<int, long>>& zoneSec, RomData& out)
+	{
+		out.regionMaps.clear();
+		if (L.mapsecs < 0 || L.numMapsecs <= 0 || (size_t)L.mapsecs + 8 * (size_t)L.numMapsecs > n) return;
+		const int NS = L.numMapsecs;
+		std::vector<int> mapsOf((size_t)NS, 0);
+		for (auto& z : zoneSec) if (z.second.first >= 0 && z.second.first < NS) mapsOf[(size_t)z.second.first]++;
+		auto entry = [&](int i) { return rom + L.mapsecs + 8 * (size_t)i; };
+		auto onMap = [&](int i) { const uint8_t* e = entry(i);
+			return mapsOf[(size_t)i] && e[2] && e[3] && !(e[0] == 0 && e[1] == 0) && e[0] < 64 && e[1] < 64; };
+		int on = 0;
+		for (int i = 0; i < NS; i++) on += onMap(i);
+		if (on < 8) return;	// (no region map to speak of)
+
+		// each section's region (-1: none found; one region when the picture is Emerald's)
+		std::vector<int> secRegion((size_t)NS, -1);
+		int gw0 = 0, gh0 = 0;
+		for (int i = 0; i < NS; i++) if (onMap(i)) { gw0 = std::max(gw0, entry(i)[0] + entry(i)[2]); gh0 = std::max(gh0, entry(i)[1] + entry(i)[3]); }
+		const bool picture = gw0 <= 28 && gh0 <= 15 && !t.mapImages.empty() && !t.mapImages[0].rgba.empty();
+		if (picture)
+			for (int i = 0; i < NS; i++) secRegion[(size_t)i] = onMap(i) ? 0 : -1;
+		else
+		{
+			// the maps: index by zone, their connections and warps
+			std::vector<uint16_t> zones;
+			std::map<uint16_t, int> at;
+			for (auto& z : zoneSec) { at[z.first] = (int)zones.size(); zones.push_back(z.first); }
+			const int NM = (int)zones.size();
+			std::vector<int> up((size_t)NM);
+			for (int i = 0; i < NM; i++) up[(size_t)i] = i;
+			std::function<int(int)> root = [&](int i) { while (up[(size_t)i] != i) i = up[(size_t)i] = up[(size_t)up[(size_t)i]]; return i; };
+			std::vector<bool> outdoor((size_t)NM, false);
+			std::vector<std::vector<int>> warps((size_t)NM);
+			for (int i = 0; i < NM; i++)
+			{
+				const long h = zoneSec.at(zones[(size_t)i]).second;
+				const int sec = zoneSec.at(zones[(size_t)i]).first;
+				const long cn = le32(rom + h + 12) ? ptrAt(rom, n, (size_t)h + 12, 8) : -1;
+				if (cn >= 0 && sec >= 0 && sec < NS && onMap(sec))
+				{
+					const uint32_t count = le32(rom + cn);
+					const long list = count && count < 16 ? ptrAt(rom, n, (size_t)cn + 4, 12 * (size_t)count) : -1;
+					for (uint32_t k = 0; list >= 0 && k < count; k++)
+					{
+						const uint8_t* c = rom + list + 12 * k;
+						auto o = at.find((uint16_t)(c[8] << 8 | c[9]));
+						if (o == at.end() || c[0] < 1 || c[0] > 6) continue;
+						outdoor[(size_t)i] = true;
+						// (only between places next to each other on the map: the road from one region to the next
+						// joins two that are drawn apart)
+						const int os = zoneSec.at(zones[(size_t)o->second]).first;
+						if (os < 0 || os >= NS || !onMap(os)) continue;
+						const uint8_t* a = entry(sec);
+						const uint8_t* b = entry(os);
+						const int dx = std::max({ 0, a[0] - (b[0] + b[2]), b[0] - (a[0] + a[2]) }), dy = std::max({ 0, a[1] - (b[1] + b[3]), b[1] - (a[1] + a[3]) });
+						if (dx > 1 || dy > 1) continue;
+						up[(size_t)root(i)] = root(o->second);
+					}
+				}
+				const long ev = ptrAt(rom, n, (size_t)h + 4, 16);
+				if (ev < 0) continue;
+				const int nw = rom[ev + 1];
+				const long wl = nw ? ptrAt(rom, n, (size_t)ev + 8, 8 * (size_t)nw) : -1;
+				for (int k = 0; wl >= 0 && k < nw; k++)
+				{
+					const uint8_t* w = rom + wl + 8 * k;
+					auto o = at.find((uint16_t)(w[7] << 8 | w[6]));
+					if (o != at.end()) { warps[(size_t)i].push_back(o->second); warps[(size_t)o->second].push_back(i); }
+				}
+			}
+			// every map's region: an outdoor map's own, the others the nearest outdoor one's by warps
+			std::vector<int> region((size_t)NM, -1);
+			std::vector<int> q;
+			for (int i = 0; i < NM; i++) if (outdoor[(size_t)i]) { region[(size_t)i] = root(i); q.push_back(i); }
+			for (size_t qi = 0; qi < q.size(); qi++)
+				for (int j : warps[(size_t)q[qi]])
+					if (region[(size_t)j] < 0) { region[(size_t)j] = region[(size_t)q[qi]]; q.push_back(j); }
+			// each section: the region most of its maps are in (outdoor ones counting first)
+			std::vector<std::map<int, int>> votes((size_t)NS);
+			for (int i = 0; i < NM; i++)
+			{
+				const int sec = zoneSec.at(zones[(size_t)i]).first;
+				if (sec >= 0 && sec < NS && region[(size_t)i] >= 0) votes[(size_t)sec][region[(size_t)i]] += outdoor[(size_t)i] ? 1000 : 1;
+			}
+			for (int i = 0; i < NS; i++)
+			{
+				int best = -1, bestV = 0;
+				for (auto& v : votes[(size_t)i]) if (v.second > bestV) { best = v.first; bestV = v.second; }
+				secRegion[(size_t)i] = onMap(i) ? best : -1;
+			}
+			// the regions onto maps: the biggest first, each on the first map whose cells it doesn't share
+			std::map<int, std::set<int>> cellsOf;
+			for (int i = 0; i < NS; i++)
+				if (secRegion[(size_t)i] >= 0)
+				{
+					const uint8_t* e = entry(i);
+					for (int y = e[1]; y < e[1] + e[3]; y++) for (int x = e[0]; x < e[0] + e[2]; x++) cellsOf[secRegion[(size_t)i]].insert(y * 64 + x);
+				}
+			std::vector<std::pair<int, int>> bySize;
+			for (auto& c : cellsOf) bySize.push_back({ -(int)c.second.size(), c.first });
+			std::sort(bySize.begin(), bySize.end());
+			std::vector<std::set<int>> mapCells;
+			std::map<int, int> mapOfRegion;
+			for (auto& bs : bySize)
+			{
+				const auto& cs = cellsOf[bs.second];
+				int mi = -1;
+				for (size_t k = 0; k < mapCells.size() && mi < 0; k++)
+				{
+					bool clash = false;
+					for (int c : cs) if (mapCells[k].count(c)) { clash = true; break; }
+					if (!clash) mi = (int)k;
+				}
+				// (a few places of their own - a plateau the road reaches, a pass - go with the map they share the
+				// fewest cells with, not on a map of their own)
+				if (mi < 0 && !mapCells.empty() && cs.size() <= 12)
+				{
+					size_t fewest = SIZE_MAX;
+					for (size_t k = 0; k < mapCells.size(); k++)
+					{
+						size_t shared = 0;
+						for (int c : cs) shared += mapCells[k].count(c);
+						if (shared < fewest) { fewest = shared; mi = (int)k; }
+					}
+				}
+				if (mi < 0) { mi = (int)mapCells.size(); mapCells.emplace_back(); }
+				mapCells[(size_t)mi].insert(cs.begin(), cs.end());
+				mapOfRegion[bs.second] = mi;
+			}
+			for (int i = 0; i < NS; i++) if (secRegion[(size_t)i] >= 0) secRegion[(size_t)i] = mapOfRegion[secRegion[(size_t)i]];
+		}
+
+		// the maps: each one's grid (towns, the first sections, over the routes), its size from its own sections
+		int maps = 0;
+		for (int i = 0; i < NS; i++) maps = std::max(maps, secRegion[(size_t)i] + 1);
+		for (int mi = 0; mi < maps; mi++)
+		{
+			RegionMap m;
+			m.cell = 8;
+			int x0 = 64, y0 = 64, x1 = 0, y1 = 0, count = 0;
+			for (int i = 0; i < NS; i++)
+				if (secRegion[(size_t)i] == mi) { const uint8_t* e = entry(i); count++; x0 = std::min<int>(x0, e[0]); y0 = std::min<int>(y0, e[1]); x1 = std::max(x1, e[0] + e[2]); y1 = std::max(y1, e[1] + e[3]); }
+			if (picture) { x0 = 0; y0 = 0; x1 = std::max(x1, 28); y1 = std::max(y1, 15); }
+			else { x0 = std::max(0, x0 - 1); y0 = std::max(0, y0 - 1); x1 += 1; y1 += 1; }	// (a cell around the places)
+			m.gridW = x1; m.gridH = y1;	// (cell 0, 0 kept: a section's x, y is its cell; the picture starts at x0, y0)
+			m.cells.assign((size_t)m.gridW * m.gridH, 0xFFFF);
+			std::string first;
+			for (int i = NS - 1; i >= 0; i--)
+			{
+				if (secRegion[(size_t)i] != mi) continue;
+				const uint8_t* e = entry(i);
+				for (int y = e[1]; y < e[1] + e[3]; y++) for (int x = e[0]; x < e[0] + e[2]; x++) m.cells[(size_t)y * m.gridW + x] = (uint16_t)i;
+			}
+			if (picture)
+			{
+				const auto& im = t.mapImages[0];
+				m.w = im.w; m.h = im.h; m.cellX = im.cellX; m.cellY = im.cellY;
+				m.rgba.resize((size_t)im.w * im.h);
+				for (size_t i = 0; i < m.rgba.size(); i++)
+				{
+					const uint8_t* p = &im.rgba[i * 4];
+					m.rgba[i] = (uint32_t)p[3] << 24 | (uint32_t)p[0] << 16 | (uint32_t)p[1] << 8 | p[2];
+				}
+			}
+			else
+			{
+				m.cellX = -x0 * m.cell; m.cellY = -y0 * m.cell;
+				m.w = (x1 - x0) * m.cell; m.h = (y1 - y0) * m.cell;
+				// (its name: the region's, by its first town as the games' new games start there; else that town's)
+				static const char* const REGIONS[][2] = { { "New Bark Town", "Johto" }, { "Pallet Town", "Kanto" },
+					{ "Littleroot Town", "Hoenn" }, { "Twinleaf Town", "Sinnoh" }, { "Iki Town", "Alola" }, { "Melemele Isle", "Alola" },
+					{ "Sinjoh Ruins", "Sinjoh" }, { "New Sinjoh", "Sinjoh" } };
+				std::string name, town;
+				for (int i = 0; i < NS && name.empty(); i++)
+				{
+					if (secRegion[(size_t)i] != mi || (size_t)i >= out.locationNames.size()) continue;
+					const std::string& nm = out.locationNames[(size_t)i];
+					for (auto& r : REGIONS) if (nm == r[0]) name = r[1];
+					if (town.empty() && (nm.find(" Town") != std::string::npos || nm.find(" City") != std::string::npos)) town = nm;
+				}
+				if (name.empty()) name = !town.empty() ? town : "Map " + std::to_string(mi + 1);
+				for (auto& other : out.regionMaps) if (other.name == name) name += " " + std::to_string(mi + 1);	// (the page's chips are by name)
+				m.name = name;
+			}
+			std::string few;
+			for (int i = 0; count <= 8 && i < NS; i++) if (secRegion[(size_t)i] == mi && (size_t)i < out.locationNames.size()) few += " " + out.locationNames[(size_t)i] + ";";
+			fprintf(stderr, "pokemon: expansion region map %d: %s, %d sections, %d x %d%s%s\n", mi, m.name.c_str(), count, x1 - x0, y1 - y0,
+				picture ? ", the game's picture" : "", few.c_str());
+			out.regionMaps.push_back(std::move(m));
+		}
+
+		// each zone: its section's rectangle on its map, its own size in tiles
+		for (auto& kv : out.zones)
+		{
+			auto zs = zoneSec.find(kv.first);
+			if (zs == zoneSec.end()) continue;
+			const int sec = zs->second.first;
+			if (sec < 0 || sec >= NS || secRegion[(size_t)sec] < 0) continue;	// (a section not on the map: a building, a cave)
+			const RegionMap& rm = out.regionMaps[(size_t)secRegion[(size_t)sec]];
+			const uint8_t* e = entry(sec);
+			MapSpot& s = kv.second.spot;
+			s.map = (int16_t)secRegion[(size_t)sec];
+			s.x = (float)(rm.cellX + e[0] * rm.cell); s.y = (float)(rm.cellY + e[1] * rm.cell);
+			s.w = (float)(e[2] * rm.cell); s.h = (float)(e[3] * rm.cell);
+			const long layout = ptrAt(rom, n, (size_t)zs->second.second, 8);	// (the header's first word: its layout, width and height first)
+			if (layout >= 0)
+			{
+				const uint32_t w = le32(rom + layout), h = le32(rom + layout + 4);
+				if (w && h && w < 1024 && h < 1024) { s.tilesW = (uint16_t)w; s.tilesH = (uint16_t)h; }
+			}
+		}
+	}
+
 	std::shared_ptr<const RomData> readExpansionRomData(const pkmn::RomTables& t, const Game& game)
 	{
 		if (!t.rom) return nullptr;
@@ -1809,6 +2033,7 @@ namespace banana::gba
 			}
 		}
 		// the zones' names: each map's region map section (the map groups, found by their shape against the wild maps)
+		std::map<uint16_t, std::pair<int, long>> zoneSec;	// (each zone's section and map header: the Map page below)
 		if (!out->zones.empty())
 		{
 			int maxGroup = 0;
@@ -1851,9 +2076,11 @@ namespace banana::gba
 						Location& loc = out->zones[z];
 						loc.id = z;
 						if (sec < (int)out->locationNames.size()) loc.name = out->locationNames[sec];
+						zoneSec[z] = { sec, h };
 					}
 				}
 		}
+		regionMap(rom, n, L, t, zoneSec, *out);
 
 		// trainers, by their index (the battle's opponent id)
 		for (int i = 1; L.trainers >= 0 && i < L.numTrainers; i++)
