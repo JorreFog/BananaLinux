@@ -793,7 +793,7 @@ namespace banana
 			}
 		}
 		const char* PW = "Power";
-		add(PW, "moon", "Sleep", "The handheld sleeps, as with a press of the power button; a game running is paused. Press the power button to wake it.", "", "sleep", { "" }, { "" }, Item::ACTION);
+		add(PW, "moon", "Sleep", "The handheld sleeps, as with a press of the power button; a game running is paused. Press the power button to wake it. Press A twice.", "", "sleep", { "" }, { "" }, Item::ACTION);
 		add(PW, "gear", "Restart", "Restarts the handheld. Press A twice.", "", "reboot", { "" }, { "" }, Item::ACTION);
 		add(PW, "gear", "Shut down", "Turns the handheld off. Press A twice. (Or hold the power button.)", "", "poweroff", { "" }, { "" }, Item::ACTION);
 		// the Home server page (Network > Home server)
@@ -1170,7 +1170,7 @@ namespace banana
 				{ "hotkeys_sd", "SuperDrastic hotkeys" },
 				{ "hotkeys_bds", "BananaDS hotkeys" },
 					{ "ra_second", "Second screen", "retroarch_panel" },
-				{ "ra_picture", "Picture & sound", "ra_shader" },
+				{ "ra_picture", "Picture & sound" },	// (a submenu: its shader's "Off" is not the page's state)
 				{ "ra_cores", "Emulators" },
 				{ "net_bt", "Bluetooth", "bluetooth" },
 				{ "net_share", "File sharing", "share" },
@@ -1248,6 +1248,8 @@ namespace banana
 			}
 			if (it.key == "sleep")
 			{
+				// (two presses, like Restart and Shut down: a touch on the empty part of the row must not sleep it)
+				if (armed != sel) { armed = sel; return MOVED; }
 				// bananad's sleep (the power button's): asked for with a file and SIGHUP, the settings closed first
 				armed = -1;
 				const char* req = getenv("BANANA_SLEEP_REQUEST");	// (the test's stand-in for /run/banana/sleep-now)
