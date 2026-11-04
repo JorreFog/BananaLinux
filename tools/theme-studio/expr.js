@@ -203,7 +203,8 @@
   }
   function colorOf(v) {
     if (typeof v === "string") { const p = parseColorText(v); return p === null ? 0xff000000 : p; }
-    return ((0xff000000 | toUint(evNum(v))) >>> 0);
+    const x = evNum(v);	// (as the engine: negative, NaN or past 0xffffffff is black)
+    return x >= 0 && x <= 0xffffffff ? ((0xff000000 | Math.trunc(x)) >>> 0) : 0xff000000;
   }
   function mixColor(a, b, t) {
     t = cmin(1, cmax(0, t));
@@ -465,7 +466,9 @@
     if (f === "lower") return lowerC(S(0));
     if (f === "len") return Array.from(S(0)).length;
     if (f === "substr") {
-      const s = Array.from(S(0)), from = toInt(N(1)), n = v.length > 2 ? toInt(N(2)) : (1 << 30), to = (from + n) | 0;	// (int: wraps)
+      // (as the engine's clampInt: each to +-2^30, NaN the low end; their sum doesn't wrap)
+      const clampI = (d, lo, hi) => (d >= hi ? hi : d > lo ? Math.trunc(d) : lo);
+      const s = Array.from(S(0)), from = clampI(N(1), -(1 << 30), 1 << 30), n = v.length > 2 ? clampI(N(2), -(1 << 30), 1 << 30) : (1 << 30), to = from + n;
       let r = "";
       for (let k = 0; k < s.length; k++) if (k >= from && k < to) r += s[k];
       return r;
