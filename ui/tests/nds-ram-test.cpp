@@ -779,11 +779,50 @@ static void testHgEngineSave()
 	CHECK(!retail.live()->valid || retail.live()->zone != 33);
 }
 
+// a battle whose battle Pokémon never check out (an hg-engine hack's own BattleMon - Origin HeartGold, 2026-11-04 - or
+// a revision not known): the copies are searched for, but not every 30 s for as long as the battle lasts (each search
+// is ~4 s of a core on the handheld); a new battle may search again
+static void testBattleSearchCap()
+{
+	double now = 0;
+	Ram ram;
+	const uint32_t S = 0x0227E118;
+	ptSave(ram, S, 0x02101D40);
+	RamReader rr(game(GameId::PLATINUM, Gen::IV));
+	RamHints h;
+	h.battleSig = { 0x0223B200, 16 };
+	for (int i = 0; i < 16; i++) h.battleBytes.push_back((uint8_t)(0xA0 + i));
+	rr.setHints(h);
+	CHECK(settleLong(rr, ram, now, 4) && ptRead(rr));
+	auto battle = [&](double seconds)
+	{
+		memcpy(ram.at(0x0223B200), h.battleBytes.data(), 16);	// (in a battle; no copies, no battle Pokémon anywhere)
+		p16(ram.at(0x0224A55A), 0x2100);
+		// (the game's RAM changes every frame in a battle - its animations -: so does the save's money here)
+		uint32_t k = 0;
+		for (double end = now + seconds * 1000; now < end; now += 250)
+		{
+			p32(ram.at(S + 0x7C + 0x14), 1000 + (k++ & 1));
+			rr.deliver(ram.answer(rr.wants()), now, 1762000000);
+		}
+		memset(ram.at(0x0223B200), 0, 16);
+		p16(ram.at(0x0224A55A), 0x2800);
+		for (int i = 0; i < 8; i++, now += 250) rr.deliver(ram.answer(rr.wants()), now, 1762000000);
+	};
+	battle(300);	// five minutes
+	const uint32_t first = rr.battleSearches();
+	fprintf(stderr, "a battle that never checks out: %u searches in 5 minutes\n", first);
+	CHECK(first >= 1 && first <= 2);
+	battle(60);		// the next battle searches again
+	CHECK(rr.battleSearches() > first && rr.battleSearches() <= first + 2);
+}
+
 int main(int argc, char** argv)
 {
 	testCrypto();
 	testHackSpecies();
 	testHgEngineSave();
+	testBattleSearchCap();
 	testPlatinum();
 	testBlack2();
 	testDetect();

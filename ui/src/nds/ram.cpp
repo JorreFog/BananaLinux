@@ -306,6 +306,7 @@ namespace banana::nds
 	// the searches' pace: after one found nothing, the next no sooner than this (ms)
 	static const double SCAN_AGAIN_MS = 60000, SCAN_AGAIN_EMPTY_MS = 300000, BATTLE_SCAN_AGAIN_MS = 30000;
 	static const int BATTLE_BAD_SETS = 40;	// (10 s: a battle's first seconds - its intro - may come before its copies)
+	static const int BATTLE_SCANS = 2;		// searches in one battle (the second: the first may come before its copies)
 
 	RamReader::RamReader(const Game& g) : game(g)
 	{
@@ -501,7 +502,7 @@ namespace banana::nds
 		scanAt = RAM_LO;
 		found.clear();
 		foundMons.clear();
-		if (m == SCAN_BATTLE) lastBattleScan = nowMs;
+		if (m == SCAN_BATTLE) { lastBattleScan = nowMs; battleScanCount++; battleScans++; }
 		else if (m == SCAN_SAVE) lastScan = nowMs;
 	}
 
@@ -732,7 +733,7 @@ namespace banana::nds
 		if (h == lastHash && cur->valid)
 		{
 			// (nothing changed: a battle whose copies didn't match still doesn't)
-			if (battleBad > 0 && ++battleBad >= BATTLE_BAD_SETS && checked && nowMs - lastBattleScan >= BATTLE_SCAN_AGAIN_MS) startScan(SCAN_BATTLE, nowMs);
+			if (battleBad > 0 && ++battleBad >= BATTLE_BAD_SETS && checked && battleScans < BATTLE_SCANS && nowMs - lastBattleScan >= BATTLE_SCAN_AGAIN_MS) startScan(SCAN_BATTLE, nowMs);
 			return false;
 		}
 		Live out;
@@ -746,7 +747,7 @@ namespace banana::nds
 		}
 		else if (++bad >= (verdict == EMPTY ? EMPTY_SETS : BAD_SETS)) nextCand(nowMs);
 		// in a battle whose copies don't match the party: they are elsewhere in this revision - look for them
-		if (battleBad >= BATTLE_BAD_SETS && checked && nowMs - lastBattleScan >= BATTLE_SCAN_AGAIN_MS) startScan(SCAN_BATTLE, nowMs);
+		if (battleBad >= BATTLE_BAD_SETS && checked && battleScans < BATTLE_SCANS && nowMs - lastBattleScan >= BATTLE_SCAN_AGAIN_MS) startScan(SCAN_BATTLE, nowMs);
 		if (!ok) return false;
 		lastHash = h;
 		out.valid = true;
@@ -961,7 +962,7 @@ namespace banana::nds
 	void RamReader::battle4(const std::vector<std::vector<uint8_t>>& d, Live& o)
 	{
 		const auto& bm = d[W_BMON];
-		if (!battleOn(d)) { battleBad = 0; return; }
+		if (!battleOn(d)) { battleBad = 0; battleScans = 0; return; }
 		Battle& b = o.battle;
 		Battler slots[4];
 		if (bm.size() == 4 * BMON) for (int i = 0; i < 4; i++) battleMon4(bm.data() + BMON * i, slots[i]);
@@ -1029,7 +1030,7 @@ namespace banana::nds
 		memcpy(battleMons, nextMons, sizeof nextMons);
 		// the battle's copies where this revision keeps them? (the copy of the party starts with its first; our battler
 		// is read in a few sets - the table, its objects, their Pokémon - so it may be missing a little while)
-		if (!on) battleBad = 0;
+		if (!on) { battleBad = 0; battleScans = 0; }
 		else
 		{
 			const std::vector<Mon> ours = partyCopy(Gen::V, d[W_OURS]);
