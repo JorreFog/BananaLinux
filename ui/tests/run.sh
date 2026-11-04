@@ -1143,5 +1143,7 @@ for size in 640x480 1024x768; do
         --script "ndsoverlay" 2> "$OUT/$size-ndsoverlay.log" ||
         { echo "FAIL $size: the DS companion's overlay: $(grep -h 'FAIL\|ndsoverlay:' "$OUT/$size-ndsoverlay.log" | head -2)"; fail=1; }
 done
+# RomM's slotted saves, which the save sync is built on: the stand-in checked against what a real RomM 5.4.1 does
+OUT="$OUT" "$HERE/tests/sync-slots.sh" || fail=1
 [ $fail = 0 ] && echo "banana-ui: all checks passed ($OUT)"
 exit $fail
