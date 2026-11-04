@@ -2437,7 +2437,8 @@ namespace banana
 			}
 			// the name on the left and the value on the right, each in its own box: a long one (a translation) ends in
 			// "..." or, on the picked row, scrolls; the value gets up to 260 px, the name the rest
-			const bool arrows = !v.empty() && !(it.kind == Item::ACTION || it.kind == Item::PAGE || it.kind == Item::INFO);
+			// (no arrows on Language: A opens its list, nothing steps left or right)
+			const bool arrows = !v.empty() && !(it.kind == Item::ACTION || it.kind == Item::PAGE || it.kind == Item::INFO) && it.key != "language";
 			const float vmax = 260, vright = arrows ? 566 : 586;
 			float vw = v.empty() ? 0 : std::min(vmax, text(v, true, 19, 0, 0, p.ink, false, 0, true));
 			float vleft = vright - vw - (arrows ? 2 + std::round(13 / 2.0f + 1) + 10 : 0);
@@ -6310,7 +6311,7 @@ namespace banana
 			float ry = SETUP_Y + r * SETUP_PITCH;
 			box(on ? "pick" : "slot", on, 18, ry, 604, SETUP_H);
 			Color c = ch[r].act == SA_WAIT ? (on ? p.onPick : p.muted) : on ? p.onPick : p.ink;
-			bool valueRow = ch[r].act == SA_TZ || ch[r].act == SA_LANG;
+			bool valueRow = ch[r].act == SA_TZ;	// (the arrows: the language opens a list instead)
 			float lw = text(ch[r].label, true, 20, 40, ry + 17, c);
 			if (ch[r].value.empty()) continue;
 			float room = 560 - lw - 30 - (valueRow ? 44 : 0);
