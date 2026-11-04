@@ -8,13 +8,11 @@ touch /run/banana/powering-off 2>/dev/null
 # BananaDS, SuperDrastic and the ports too, and they write their saves), then the menu; waited for until they are
 # gone, up to 3 s, instead of a second whatever happened
 G= START=; read -r G START 2>/dev/null < /run/banana/game.pid
-if [ -n "$G" ]; then
-    if [ -n "$START" ]; then
-        S=$(awk '{ sub(/^.*\) /, ""); print $20 }' /proc/$G/stat 2>/dev/null)
-        [ "$S" = "$START" ] || G=
-    elif [ /proc/$G -nt /run/banana/game.pid ] 2>/dev/null; then
-        G=      # started after the file was written: a reused pid
-    fi
+# (the start time, when the file has one, tells a reused pid; /proc/<pid>'s file times can't: they are when it was
+# first looked up)
+if [ -n "$G" ] && [ -n "$START" ]; then
+    S=$(awk '{ sub(/^.*\) /, ""); print $20 }' /proc/$G/stat 2>/dev/null)
+    [ "$S" = "$START" ] || G=
 fi
 [ -n "$G" ] && kill -TERM -"$G" 2>/dev/null
 killall -TERM banana-ui retroarch drastic 2>/dev/null

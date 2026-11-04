@@ -15,7 +15,7 @@
 CONF=/data/banana/wifi.conf
 CTRL=/run/wpa_supplicant
 W="wpa_cli -p $CTRL -i wlan0"
-stop() { [ -f "$1" ] || return 0; p=$(cat "$1"); [ -n "$p" ] && [ -d /proc/$p ] && ! [ /proc/$p -nt "$1" ] && kill "$p" 2>/dev/null; rm -f "$1"; }
+stop() { [ -f "$1" ] || return 0; p=$(cat "$1"); [ -n "$p" ] && [ -d /proc/$p ] && kill "$p" 2>/dev/null; rm -f "$1"; }
 # Settings starts up, down and scan in the background, so two can overlap (switched on, then the Networks page
 # straight away): one at a time. A second wpa_supplicant started beside the first fails on the control socket and,
 # leaving, deletes the first one's pid file, after which every scan started a third and found nothing until a

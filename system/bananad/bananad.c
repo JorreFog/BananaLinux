@@ -254,7 +254,7 @@ static void hooks_run(const char *when)
 }
 
 /* the pid in a pid file, when that process is still the one the file names: the file may hold "<pid> <starttime>"
- * (banana-ui's game.pid); without it, a process that started after the file was written is a reused pid */
+ * (banana-ui's game.pid), and a pid whose process started at another time is a reused one; without it, the pid */
 static pid_t pid_of(const char *pidfile)
 {
 	FILE *f = fopen(pidfile, "r");
@@ -264,13 +264,10 @@ static pid_t pid_of(const char *pidfile)
 	int got = fscanf(f, "%d %llu", &p, &started);
 	fclose(f);
 	if (got < 1 || p <= 0 || kill(p, 0) != 0) return 0;
-	char path[32], buf[1024];
-	snprintf(path, sizeof path, "/proc/%d", p);
-	struct stat pf, df;
-	if (!stat(path, &pf) && !stat(pidfile, &df) &&
-	    (pf.st_mtim.tv_sec > df.st_mtim.tv_sec || (pf.st_mtim.tv_sec == df.st_mtim.tv_sec && pf.st_mtim.tv_nsec > df.st_mtim.tv_nsec)))
-		return 0;	/* started after the file was written: the pid was reused */
+	/* (no file-time test: /proc/<pid>'s times are when its inode was first looked up, not the process's start, so a
+	 * live game looked "newer" than its pid file; only the start time in the file can tell a reused pid) */
 	if (!started) return p;
+	char path[32], buf[1024];
 	snprintf(path, sizeof path, "/proc/%d/stat", p);
 	f = fopen(path, "r");
 	if (!f || !fgets(buf, sizeof buf, f)) { if (f) fclose(f); return 0; }
