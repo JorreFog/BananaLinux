@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""What RomM 5.4.1 does with slotted saves, devices and sync negotiation, case by case, as measured on a real 5.4.1
+"""What RomM 5.4.1 does with slotted saves, states, devices and sync negotiation, case by case, as measured on a real 5.4.1
 (MariaDB, the server in Europe/Stockholm). Run against tests/fake-romm.py it shows the stand-in behaves the same;
 run against a real RomM it shows the cases still hold for that server. Python standard library only.
 
-    romm-conformance.py <url> [<tokens.json>]   tokens: {"A": .., "B": .., "C": ..}, client tokens of one user with
-                                                assets.read/write and devices.read/write; without it, minted from
-                                                the stand-in's /test/token
+    romm-conformance.py <url> [<tokens>]        a file, or the JSON itself: {"A": .., "B": .., "C": ..}, client tokens of one user with
+                                                assets.read/write, devices.read/write, platforms.read and roms.read
+                                                (the ROM listing is 403 without the last two); without it, minted
+                                                from the stand-in's /test/token
 Environment: ROMM_TZ, the server's time zone (Europe/Stockholm), which slot versions are named in.
 Each case uses devices and contents of its own (the run's tag in their names), and joins a slot by saying it has the
 head before writing into it, so a real server's earlier saves don't change the outcome. A real server keeps what a
@@ -84,8 +85,8 @@ def ok(st, r, what):
     return r
 
 
-if len(sys.argv) > 2:
-    TOK = json.load(open(sys.argv[2]))
+if len(sys.argv) > 2:       # a file of tokens, or the JSON itself (how sync-slots.sh passes $ROMM_TOKENS)
+    TOK = json.loads(sys.argv[2]) if sys.argv[2].lstrip().startswith("{") else json.load(open(sys.argv[2]))
 else:
     TOK = {n: call("POST", "/test/token", {})[1]["token"] for n in "ABC"}
 
@@ -445,6 +446,25 @@ def version_names_held():
 
 
 @case
+def state_row_and_replacing():
+    """a state's row has no content hash at all, and an upload of the same name replaces it in place: the same id, the
+    old bytes gone, no version kept"""
+    rom, name = ROMS[16], f"Spot {RUN}.state"
+    q = {"rom_id": rom, "emulator": f"s{RUN}"}
+    first = ok(*call("POST", "/api/states", token=TA, query=q, files={"stateFile": (name, f"{RUN} one".encode())}), "state")
+    check("content_hash" not in first, f"an uploaded state's row: {sorted(first)}")
+    tick()
+    data = f"{RUN} two".encode()
+    second = ok(*call("POST", "/api/states", token=TA, query=q, files={"stateFile": (name, data)}), "state again")
+    check(second["id"] == first["id"], f"the same name: id {first['id']}, then {second['id']}")
+    rows = [s for s in ok(*call("GET", "/api/states", token=TA, query={"rom_id": rom}), "states") if s["file_name"] == name]
+    check(len(rows) == 1 and "content_hash" not in rows[0], f"listed after: {rows}")
+    check(rows[0]["updated_at"] == second["updated_at"], f"the upload said {second['updated_at']}, the listing {rows[0]['updated_at']}")
+    content = ok(*call("GET", f"/api/states/{first['id']}/content", token=TA), "content")
+    check(content == data, f"the content after: {content!r}")
+
+
+@case
 def put_without_file():
     """a PUT with no file leaves the save as it was"""
     rom = ROMS[15]
@@ -477,6 +497,31 @@ def delete_in_order():
     complete(TA, r["session_id"])
     acts = [o["action"] for o in r["operations"] if o["rom_id"] == rom and o["slot"] is None]
     check(acts == ["upload"], f"an unslotted save deleted on the server: {acts}")
+
+
+@case
+def device_sync_rows():
+    """device_syncs as listed with device_id: the asking device's own row, is_current once it has reported the head
+    (an upload of its own, or /downloaded), and not on a head another device put there since"""
+    rom = ROMS[3]
+    join(TA, A, rom)
+    ok(*upload(TA, A, rom, f"{RUN} rows A1".encode()), "A's upload")
+
+    def mine(tok, dev):
+        rows = ok(*call("GET", "/api/saves", token=tok, query={"rom_id": rom, "slot": SLOT, "device_id": dev}), "listing")
+        h = max(rows, key=lambda s: (ts(s["updated_at"]), s["id"]))
+        return h, [x for x in h["device_syncs"] if x["device_id"] == dev]
+    h, me = mine(TA, A)
+    check(len(me) == 1 and me[0]["is_current"] is True, f"A's row after its own upload: {me}")
+    h, me = mine(TB, B)
+    check(not me or me[0]["is_current"] is False, f"B's row before it reported the head: {me}")
+    ok(*call("POST", f"/api/saves/{h['id']}/downloaded", {"device_id": B, "content_hash": h["content_hash"]}, token=TB), "downloaded")
+    h, me = mine(TB, B)
+    check(len(me) == 1 and me[0]["is_current"] is True, f"B's row after /downloaded: {me}")
+    tick()
+    ok(*upload(TA, A, rom, f"{RUN} rows A2".encode()), "A's second upload")
+    h2, me = mine(TB, B)
+    check(h2["id"] != h["id"] and (not me or me[0]["is_current"] is False), f"B's row on the head A put there since: {me}")
 
 
 @case

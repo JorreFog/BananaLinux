@@ -14,6 +14,16 @@
 
 namespace bsync
 {
+	// s as one word to sh: in single quotes, a quote in it closed, escaped and opened again
+	inline std::string shellQuote(const std::string& s)
+	{
+		std::string r = "'";
+		for (char c : s) { if (c == '\'') r += "'\\''"; else r += c; }
+		return r + "'";
+	}
+}
+namespace bsync
+{
 	// ---- SHA-1 and MD5 (a file's, streamed) ------------------------------------------------------------------------
 	struct Sha1
 	{

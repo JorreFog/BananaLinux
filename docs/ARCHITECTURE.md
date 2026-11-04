@@ -234,6 +234,65 @@ Starting a game: banana-ui writes the game's pid to `/run/banana/game.pid`, clos
 devices and the sound device, sets the system's clock profile, and runs its `run` command. When the game exits it
 takes the panels back, records the play, and shows the game's library again.
 
+### Saves and a home server
+
+The sync never replaces a save without keeping it: `banana/save-vault` holds a copy of every save it replaced, and on RomM
+what it won't decide alone it holds. A save changed on both sides stays as it is on each until its owner chooses, before
+the game starts or on Settings > Network > Home server > Saves. That page also lists the kept copies, which it can put
+back; nothing on the handheld removes one. All of it goes through `banana-sync` (`saves`, `resolve`, `restore`),
+under `/run/banana/save.lock` and never under a running game. Choosing the server's works with no network, from the
+vault. Keeping the card's is an ordinary sync that knows the choice, so a server that moved meanwhile is held again.
+
+What the sync holds to, whatever happens around it:
+
+- A save gone or blank on the card since it last synced is never put back by itself: the server's copy goes to the
+  vault, the menu asks before the game starts (take the server's, or play without), and the Saves page offers it. A
+  new save written there afterwards (the game started over) is not the old save played on, so it is decided as one
+  that never agreed, at every sync until a version is agreed: the same bytes as the server's agree, anything else is
+  a conflict, both kept, never a version sent over the server's as the newer. On a RomM before 5.4 the card's saves
+  never go up, so only the first half applies: the save is noted on the Saves page, its last good copy in the vault,
+  with nothing fetched to take back. On Romhost, Homeport decides, by its plan.
+- A save put in place takes the quick-resume states that belonged with the old one with it: BananaDS's resume state,
+  and RetroArch's automatic slot (Quick resume) in each core's states folder, or `states/` with sorted states off. Loaded over the new save, one would put
+  the old save's memory back, and the emulator would write that over the new save at its next save, which the sync
+  would then send as the newer. They go before the save changes, so a write that fails costs a resume state at most.
+  A DS game's resume state is also loaded only over the save the game was quit with: as a DS game ends, the menu
+  tells `nds-saves` what the two saves hold (`--played`), and so does bananad when it quits the game itself (Power off
+  after sleeping, a shutdown under the game); at the game's next start `nds-saves` drops the state of the emulator
+  starting when its save is another since (one copied onto the card by hand, or gone) rather than load it. With no
+  record (a card from before this) the state is loaded. File times decide none of this: the handheld's clock is lost
+  with its battery, and the launchers' old rule, a state older than the save dropped, lied with it.
+- A sync of the saves placing one checks that no game is running before each write, and the menu marks a game as
+  starting (`/run/banana/game.starting`) before it waits for the save lock, so a sync that keeps the lock past the
+  2 s the menu gives it leaves that game's save unplaced for the next sync to decide, rather than placing it under an
+  emulator that is reading it. Before the game started again after Power off after sleeping, a sync of other games
+  leaves that one as it is, on any server (`/run/banana/resume-once`, `banana/resume-boot`): its save and its states,
+  the resume state among them, stay as they are on the card. The menu starts no sync after a game whose end is that
+  shutdown.
+- The sync after a game with the server out of reach keeps a copy of the game's save in the vault at once, on any
+  server, and so does an upload that fails. On RomM the save is also left waiting to be sent, which the sync when
+  Wi-Fi comes back sends: under its slot when the card has synced the game before, else under the game's ROM until
+  that sync finds its slot, where it is decided as any save never agreed (the server's own bytes agree, others are a
+  conflict, both kept). A DS pair that can't be brought together has both of its saves kept and is not left waiting:
+  which of the two is the save is settled at the game's next start. A save that waited and was never sent, the server's
+  then taken over it, stays in the vault, said in the sync's log, as nothing else names it.
+- DraStic's and BananaDS's saves not brought together before a sync (both changed, DraStic's unreadable, or a read
+  or a write that failed) leave that game out of that sync, so a save that may be the older of the two is never
+  decided on; a failure is tried again at the next sync. Both changed is settled at the game's next start: the
+  emulator starting plays its own, and the other is kept in the vault (`nds-saves --prefer`).
+- Every file is written beside its name, synced, and renamed over, the folder synced after; the exFAT card doesn't
+  make the rename itself atomic under a power cut, so the journal's recovery puts a whole new file found beside an
+  empty name in place, and the sync's state file is read from its copy beside it when the rename lost it. The record
+  of a recovered install is written before the journal closes it, so a second cut recovers it again. An install stays
+  open in the journal until its agreement is recorded, so a run killed between the two (the menu's last resort when a
+  stop isn't heeded) is agreed at the next start, even when a game was played over the save meanwhile: the game's save
+  is then a change from that version, sent, not a conflict with it. `nds-saves` and
+  the GBA seed in `run-retroarch` sync before their renames the same way, under names of their own, so two writers
+  of one save never meet in one temporary file; those names end `.tmp`, so a cut run's leftover is never taken for a
+  save, and the next run of `nds-saves` or the seed clears it.
+- The pairing is never written back by a sync that outlives a Forget, and a pairing that waited for its code merges
+  what the saves agreed meanwhile instead of writing a stale copy over it.
+
 ## Files' servers: banana-fetch
 
 Files' list has the file servers beside the cards: a NAS's or a computer's shares over SMB, SFTP or FTP, read only

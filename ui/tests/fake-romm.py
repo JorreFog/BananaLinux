@@ -38,7 +38,9 @@ requests wrong: "truncate" (half the body, the whole length announced, the conne
 first byte flipped), "500" (refused before anything is done), "500-after" (done, then answered 500), "slow" (arg
 bytes a second, 1024), "delay" (answered arg seconds late, 1, as it stood when asked: the state may move meanwhile),
 "skew" (the Date header arg seconds off), "replace" (the body swapped for arg: a string as it is, anything else as
-JSON), "raise" (the handler fails, as a bug in the stand-in would); {"clear": true} drops them.
+JSON), "raise" (the handler fails, as a bug in the stand-in would), "409" (an upload refused by the upload guard,
+whatever the slot holds), "409-rewrite" (refused, the slot's head written over in place meanwhile with the bytes arg in
+hex, its id kept), "409-rewrite-nohash" (the same, the head then giving no MD5); {"clear": true} drops them.
 Strict: POST /test/strict {"tokens"} notes, for those tokens, what BananaOS must never send (overwrite=true,
 autocleanup, an upload outside a slot, PUT /api/saves/{id}, /api/saves/delete); GET /test/violations lists them.
 """
@@ -363,10 +365,9 @@ def save_schema(s, kind, dev=None):
          "file_size_bytes": len(s["data"]), "full_path": f"users/1/{kind}/{s['rom_id']}/{name}",
          "download_path": f"/api/{kind}/{s['id']}/content?timestamp={s['updated_at']}&name={urllib.parse.quote(name)}",
          "missing_from_fs": False, "created_at": iso(s["created_at"]), "updated_at": iso(s["updated_at"]),
-         "is_favorite": False, "labels": [], "emulator": s["emulator"], "content_hash": s["content_hash"], "is_public": False,
-         "screenshot": None}
-    if kind == "saves":
-        d.update(slot=s["slot"], origin_device_id=s.get("origin_device_id"), device_syncs=device_syncs(s, dev))
+         "is_favorite": False, "labels": [], "emulator": s["emulator"], "is_public": False, "screenshot": None}
+    if kind == "saves":     # (a state's row has no hash at all)
+        d.update(content_hash=s["content_hash"], slot=s["slot"], origin_device_id=s.get("origin_device_id"), device_syncs=device_syncs(s, dev))
     return d
 
 
@@ -603,6 +604,13 @@ class H(http.server.BaseHTTPRequestHandler):
             try:
                 if fault and fault["kind"] == "500":
                     raise Answer(500, {"detail": "Internal Server Error"})
+                if fault and fault["kind"] in ("409-rewrite", "409-rewrite-nohash"):    # (a refusal, the head's row written over meanwhile: its id kept)
+                    head = max((s for s in S["saves"].values() if s["rom_id"] == int(q["rom_id"]) and s["slot"] == q.get("slot")), key=lambda s: (s["updated_at"], s["id"]))   # (the head, as the listing's newest)
+                    data = bytes.fromhex(fault["arg"])
+                    head.update(data=data, content_hash="" if fault["kind"].endswith("nohash") else md5(data), updated_at=now())
+                    raise Answer(409, {"detail": "Slot has a newer save since your last sync"})
+                if fault and fault["kind"] == "409":    # (the upload guard's refusal, whatever the slot holds)
+                    raise Answer(409, {"detail": "Slot has a newer save since your last sync"})
                 self.tripwires(method, p, q)
                 if fault and fault["kind"] == "raise":
                     raise RuntimeError(f"a fault asked for on {method} {u.path}")

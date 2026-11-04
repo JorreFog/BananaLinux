@@ -42,7 +42,8 @@ int main(int argc, char** argv)
 	std::string conf = d + "/romsync.json", roms = d + "/roms", rom = roms + "/gba/a.gba", once = d + "/resume-once";
 	std::ofstream(conf) << "{\"backend\": \"romm\", \"token\": \"t\"}\n";
 	expect(wanted("quit", "on", conf, roms, rom, once), "RomM, a game on the card: it waits");
-	expect(wanted("both", "", conf, roms, rom, once), "Auto sync both, the setting missing: it waits");
+	expect(wanted("both", "on", conf, roms, rom, once), "Auto sync both: it waits");
+	expect(!wanted("quit", "", conf, roms, rom, once), "Sync before playing not set: off, its default");
 	expect(!wanted("off", "on", conf, roms, rom, once), "Auto sync off");
 	expect(!wanted("quit", "off", conf, roms, rom, once), "Sync before playing off");
 	expect(!wanted("quit", "on", conf, roms, "/run/banana/sd2/roms/gba/a.gba", once), "a game outside the ROMs folder");
@@ -77,6 +78,84 @@ int main(int argc, char** argv)
 	releaseSaves(fd);
 	expect(lockFree(d), "free once let go, a program started meanwhile still running");
 	waitpid(p, nullptr, 0);
+
+	// a mark of a newer save not fetched, left by an earlier game's sync: it says nothing of this game, and a B while
+	// Wi-Fi comes up (before this game's sync has started) asks nothing of it
+	{
+		std::string older = d + "/launch.older";
+		std::ofstream(older) << "";
+		Wait wt;
+		wt.wifi = [] { WifiFacts f; f.operUp = true; return f; };	// (associated, no address yet: coming)
+		wt.begin("/bin/true", rom, d, 0);
+		expect(wt.active() && access(older.c_str(), F_OK) != 0, "an earlier game's mark gone when the wait begins");
+		wt.press('b');
+		std::string l1, l2;
+		expect(!wt.active() && !wt.text(l1, l2), "a B before the sync, a stale mark: no question");
+	}
+	// a press on the question changes what is shown, and the next step says so: the menu redraws on the step's word
+	// alone, and without it the question stayed on the panel while the choice was carried out
+	{
+		std::string tool = d + "/sync-tool";
+		std::ofstream(tool) << "#!/bin/sh\n# the sync before a game: a conflict held, its line in launch.conflict; resolve: settled\n"
+			"case \"$*\" in\n*' resolve '*) exit 0 ;;\n"
+			"*) printf 'conflict\\t5/autosave\\tsaves/gba/a.srm\\t\\taa\\t8192\\tbb\\t8192\\t\\t\\t/v/a.srm\\tboth\\tgba/a.gba\\tboth\\n' > \"$2/launch.conflict\"\n"
+			"   echo 'done 0 0 0 0 1 0|' > \"$2/launch.status\" ;;\nesac\n";
+		chmod(tool.c_str(), 0755);
+		Wait wt;
+		wt.wifi = [] { WifiFacts f; f.operUp = f.hasAddr = true; return f; };
+		double t = 0;
+		wt.begin(tool, rom, d, t);
+		std::string l1, l2;
+		for (int i = 0; i < 200 && !(wt.text(l1, l2) && l2.compare(0, 2, "A:") == 0); i++) { usleep(20000); wt.step(t += 20); }
+		expect(l2.compare(0, 2, "A:") == 0, "the conflict asked about");
+		expect(!wt.step(t += 20), "a step with nothing new says nothing");
+		wt.press('a');
+		expect(wt.active() && wt.step(t += 20), "the step after a press says what is shown changed");
+		for (int i = 0; i < 200 && wt.active(); i++) { usleep(20000); wt.step(t += 20); }
+		expect(!wt.active(), "the choice carried out, the wait over");
+	}
+	// a sync that won't stop (a card too busy to finish placing): a B or the cap doesn't hold the menu's loop while it is
+	// waited for, it is killed with what it started once its grace is over, and the notice that nothing synced is timed
+	// from then, so it is still there to be drawn
+	for (int cap = 0; cap < 2; cap++)
+	{
+		std::string tool = d + "/stuck-tool", kid = d + "/stuck-kid";
+		unlink(kid.c_str());
+		std::ofstream(tool) << "#!/bin/sh\ntrap '' TERM\nsleep 60 & echo $! > '" + kid + "'\nwhile :; do sleep 0.05; done\n";
+		chmod(tool.c_str(), 0755);
+		Wait wt;
+		wt.wifi = [] { WifiFacts f; f.operUp = f.hasAddr = true; return f; };
+		double t = 0;
+		wt.begin(tool, rom, d, t);
+		for (int i = 0; i < 100 && access(kid.c_str(), F_OK) != 0; i++) usleep(20000);
+		int kp = 0;
+		std::ifstream(kid) >> kp;
+		struct timespec t0, t1;
+		clock_gettime(CLOCK_MONOTONIC, &t0);
+		if (cap) wt.step(t += Wait::CAP);
+		else wt.press('b');
+		clock_gettime(CLOCK_MONOTONIC, &t1);
+		double ms = (t1.tv_sec - t0.tv_sec) * 1000.0 + (t1.tv_nsec - t0.tv_nsec) / 1e6;
+		expect(ms < 500 && wt.active(), cap ? "the cap doesn't wait for the sync in the menu's loop" : "a B doesn't wait for the sync in the menu's loop");
+		wt.step(t += 20);
+		wt.step(t += Wait::STOP_GRACE);	// (killed now)
+		for (int i = 0; i < 100 && wt.active(); i++)
+		{
+			usleep(20000);
+			wt.step(t += 20);
+			std::string l1, l2;
+			if (cap && wt.text(l1, l2) && l1 == "Not synced yet") break;
+		}
+		std::string l1, l2;
+		if (cap) expect(wt.active() && wt.text(l1, l2) && l1 == "Not synced yet", "the notice after the cap is still there to be drawn");
+		else expect(!wt.active(), "the game plays once the sync is gone");
+		usleep(100000);
+		// (gone, or a zombie no one reaps: a container's first process may not)
+		std::string stat;
+		std::getline(std::ifstream("/proc/" + std::to_string(kp) + "/stat"), stat);
+		size_t rp = stat.rfind(')');
+		expect(kp > 0 && (kill(kp, 0) != 0 || (rp != std::string::npos && stat.compare(rp + 2, 1, "Z") == 0)), "what the sync started is killed with it");
+	}
 	if (!fails) fprintf(stderr, "gamesync-test: all checks passed\n");
 	return fails ? 1 : 0;
 }

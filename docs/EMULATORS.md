@@ -67,31 +67,56 @@ The launcher runs in its own session (`setsid`), with signals at their defaults 
 Everything under `/usr` is read-only: an emulator that writes next to itself (DraStic) is copied to `/data`
 first by its launcher.
 
-RetroArch keeps a save folder per core (`/data/saves/gpSP`, `/data/saves/mGBA`...), except for the Game Boy
-Advance: every GBA core uses `/data/saves/gba/<game>.srm` (run-retroarch), so a game can switch between gpSP and
-mGBA (Settings > Other systems) with the same save. A game with no save there yet gets a copy of its newest
-non-blank one from a core's folder; those files stay as they were. States stay per core (their formats differ).
+RetroArch and BananaFront keep every system's saves in the one flat `/data/saves` since 0.5.3 (run-retroarch turns
+RetroArch's sorting by core off at every start; `saves-flat`, once a boot, moves what a core's folder from before then
+still holds, the file it replaces kept in `banana/saves-legacy/`), except for the Game Boy Advance: every GBA core uses `/data/saves/gba/<game>.srm` (run-retroarch), so a game can switch between gpSP and
+mGBA or BananaGBA (Settings > Other systems) with the same save. Each writes it as 128 KB, 0xFF past the game's
+data: gpSP always did, and BananaOS's mGBA and BananaGBA, mGBA's fork, carry the same patch to
+(`buildroot/package/libretro-mgba`, `buildroot/package/libretro-bananagba`), because upstream's writes the size the
+game reached in that session, which cut a 128 KB Flash save to 64 KB when the game stayed in its first
+bank, and an 8 KB EEPROM save to 512 bytes when it stayed in its first 512, the rest gone from the file. A game with
+no save there yet gets a copy of its newest non-blank one from a core's folder; those files stay as they were.
+States stay per core (their formats differ).
+RetroArch's automatic slot (`<game>.state.auto`, Quick resume) belongs with the save it was made from: when the home
+server's sync puts another save in place, the automatic states of the game go with the old one, in each GBA core's
+folder for a GBA save, since loading one over the new save would put the old save's memory back and RetroArch would
+write that over the new save at the game's end.
 
 The two DS emulators share their in-game saves: `nds-saves`, run by both launchers before a game (and by the home
 server's sync, before it looks at a DS save and after it puts one in place), writes whichever of DraStic's
 `drastic/backup/<game>.dsv` and BananaDS's `saves/nds/<game>.sav` changed since the two last agreed over the other,
 in its own form. Which one changed is told by content, never by the files' times (the handheld's clock is lost with
 its battery, and a file dated in the future would win every comparison): the MD5 of the raw save the two last held
-is kept in `banana/nds-saves/<game>.md5`. Both changed since (a save edited by hand, a copy that failed): neither is
-touched, the launcher's log says so, and the sync leaves the game alone until one of the two is chosen, by giving
-the other its bytes. With no record yet, the first start after the update goes by the files' times, this once. The
-file replaced is kept in the sync's vault, `banana/save-vault/saves/nds/<game>/`, the same bytes once, never removed
-by Banana; the emulator's quick-resume state goes with it, since it would put the old save's memory back. A `.dsv`
+is kept in `banana/nds-saves/<game>.md5`. Both changed since (one played in each with a copy that failed between, a
+save edited by hand): the emulator starting plays its own and gives the other its bytes, the other's kept in the
+vault, said in the launcher's log; the sync alone never picks, and leaves the game until that start. With no record
+yet, the first start after the update goes by the files' times, this once; a record there but unreadable (a power
+cut while it was written) holds two that differ like both changed, until they agree or a start settles them, which
+writes it again. A save that can't be read is never taken for one that isn't there:
+neither is touched; nor are they when the vault can't keep the one to be replaced, and either failure leaves the
+game out of that sync, tried again at the next. The file replaced is kept in the sync's vault,
+`banana/save-vault/saves/nds/<game>/`, the same bytes once, never removed by Banana; the emulator's quick-resume
+state goes with it, since it would put the old save's memory back, removed before the save changes. Each file is
+written beside its name under a name of nds-saves' own (ending `.tmp`, which nothing counts as a save, and one a
+cut run left cleared by the next), the card synced, then renamed over, so the power going at any point leaves the
+kept copy whole before the save it was kept for changes. A `.dsv`
 is in DeSmuME's format, whether DraStic, DeSmuME or a card scraped under another firmware wrote it:
 the raw save followed by DeSmuME's 122-byte footer (40 bytes from an older DraStic, without its text line), which
 `nds-saves` leaves off for BananaDS when its fields add up: version 0, 20 bytes from the end, and `padded_size`, 36
-bytes from the end, the file less the footer. A `.dsv` whose footer doesn't add up is left as it is, and said.
+bytes from the end, the file less the footer. A `.dsv` whose footer doesn't add up, or whose raw save has a size no DS
+save has (512 bytes to 8 MiB, a power of two), is left as it is, said, and the sync holds the game, saying why on the
+Saves page, with nothing to choose until its owner has looked at the file.
 DraStic also reads a raw save with no footer, which is what it gets back. The home server's sync takes a `.dsv` the
 same way: another device's DraStic save comes in as the raw save. The raw size
 is kept as it is: melonDS sizes the save memory from its game list, not from the file, and quietly cuts short or
 pads with `0xFF` a file of another size. A save under 512 bytes is no save (the smallest, a 4 Kbit EEPROM's, is
 512): it never goes over one with something in it (#96). The emulators' own save states (`.dss`, `.mst`) are not
 shared.
+
+With RomM, states sync only when `homesync_states` is on, and DraStic's (`drastic/savestates`) don't sync at all. A state
+from the server is never put in place by itself: it goes to the vault (`banana/save-vault/states`), because loading one
+puts the game's memory back over a newer battery save. Settings > Network > Home server > Saves can put one back, as a
+choice. Romhost's Homeport decides for itself which states move, and places them.
 
 ## Settings
 

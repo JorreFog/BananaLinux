@@ -770,6 +770,17 @@ static void ra_button(const char *name)	/* (c: a command of up to 38, the newlin
 	fclose(f);
 }
 
+/* a DS game quit by bananad itself, not through the menu (Power off after sleeping, a shutdown under a game): nds-saves
+ * told what its saves hold now, as the menu tells it when a game ends. The game's resume state belongs with those saves,
+ * and the launcher's nds-saves drops it at the next start when the save is another by then (replaced on a PC) */
+static void nds_played(const char *rom)
+{
+	if (!rom[0]) return;
+	const char *tool = getenv("BANANAD_TEST_NDS_SAVES");	/* (sleep-test.sh's stand-in) */
+	char *played[] = { (char *)(tool ? tool : "/usr/libexec/banana/nds-saves"), (char *)rom, "--played", NULL };
+	run(played);
+}
+
 /* waits up to secs for the game to quit, the backlights kept off meanwhile (a display handed back, or banana-ui's
  * modeset, can switch a panel's backlight on again); 1 when it has */
 static int game_gone(pid_t game, double secs)
@@ -855,6 +866,7 @@ static void sleep_poweroff(pid_t game, pid_t pg, double asleep)
 			wait = 10;
 		}
 		if (game_gone(game, wait)) {
+			if (emu && (!strcmp(emu, "superdrastic") || !strcmp(emu, "bananads"))) nds_played(rom);
 			/* SuperDrastic quits after 5 s whether or not DraStic wrote the state, and BananaDS when it can't
 			 * write it: then an older resume state (or none) is all there is, and the next boot mustn't start the
 			 * game from it as if it were this one (review 0.4.3: resume-boot was written either way) */
@@ -1054,8 +1066,11 @@ static void shutdown_now(const char *why)
 	pid_t game = pid_of("/run/banana/game.pid");
 	if (game) {
 		pid_t pg = getpgid(game);
+		char rom[1024] = "";
+		if (pg > 0 && (pgrp_member(pg, "drastic") || pgrp_member(pg, "bananads"))) game_rom(game, rom, sizeof rom);
 		kill(pg > 0 ? -pg : game, SIGTERM);	/* let the emulator write its saves */
 		for (int i = 0; i < 50 && kill(game, 0) == 0; i++) usleep(100000);
+		if (kill(game, 0) != 0) nds_played(rom);
 	}
 	sync();
 	/* busybox init runs /etc/init.d/rcK (unmount, sync) on SIGUSR2 = poweroff */

@@ -177,12 +177,7 @@ static bool stbSize(const std::string& path, int& w, int& h)
 
 // settings.conf: key = value lines, the image's defaults under the card's own (settings_defaults.cpp)
 
-static std::string shellQuote(const std::string& s)
-{
-	std::string r = "'";
-	for (char c : s) { if (c == '\'') r += "'\\''"; else r += c; }
-	return r + "'";
-}
+using gamesync::shellQuote;
 
 static std::string replaceAll(std::string s, const std::string& from, const std::string& to)
 {
@@ -886,8 +881,8 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	gamesync::Wait gate;
 	gamesync::WifiFacts testWifi;
 	const std::string testRun = o.headless + "run";
-	std::string gateRom;
-	auto gamePlays = [&] { if (!gate.active()) logf("game starts: %s", gateRom.c_str()); };
+	std::string gateRom, gateSys;
+	auto gamePlays = [&] { if (!gate.active()) { if (gate.backed()) logf("game not started: %s", gateRom.c_str()); else logf("game starts: %s", gateRom.c_str()); } };
 	gate.wifi = [&] { return testWifi; };
 	gate.log = [](const std::string& s) { logf("%s", s.c_str()); };
 	be.overlay = [&](int screen)
@@ -941,6 +936,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		// gameend: what the menu does when the game last started ends
 		else if (op == "gameend")
 		{
+			if (gamesync::gamePlayed(gateSys, gateRom)) logf("game end: nds-saves told");
 			if (gamesync::syncsAfterGame(conf["homesync_auto"]) && gamesync::syncAfterGame(gamesync::syncTool(), gateRom)) logf("game end: home server sync started");
 		}
 		else if (op == "battery")
@@ -961,7 +957,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			auto it = keys.find(b);
 			if (it == keys.end()) { logf("unknown button %s", b.c_str()); return 2; }
 			if (low.hide(now)) logf("press %s: notice hidden", b.c_str());
-			if (gate.active()) { gate.press(it->second == Key::B); gamePlays(); continue; }
+			if (gate.active()) { gate.press(it->second == Key::B ? 'b' : it->second == Key::A ? 'a' : it->second == Key::X ? 'x' : 0); gamePlays(); continue; }
 			if (!settings.isOpen() && it->second == Key::SELECT) { settings.openSearch(lib.searchQuery()); logf("press select: search open"); continue; }
 			if (!settings.isOpen() && it->second == Key::X && ui.view() == rnds::UI::LIBRARY && ui.gameIndex() >= 0)
 			{
@@ -1486,7 +1482,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			else
 			{
 				logf("launch %d: %s (system %s)", g, lib.gameAt(g).path.c_str(), lib.systemOf(g).id.c_str());
-				gateRom = lib.gameAt(g).path;
+				gateRom = lib.gameAt(g).path; gateSys = lib.systemOf(g).id;
 				if (gamesync::wanted(conf["homesync_auto"], conf["homesync_launch"], o.data + "/romsync.json", o.roms, gateRom, testRun + "/resume-once", gamesync::sd2Roms(testRun)))
 					gate.begin(gamesync::syncTool(), gateRom, testRun, now);
 				unlink((testRun + "/resume-once").c_str());	// (its launcher's to remove)
@@ -1501,7 +1497,7 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 		ui.update(now);
 		if (rearrange(lib, ui)) logf("shelf: %d systems, cursor on %s", lib.systemCount(), lib.shelf(ui.systemIndex()).def.id.c_str());
 	}
-	gate.skip();
+	gate.end();
 	return 0;
 }
 
@@ -2480,10 +2476,11 @@ int main(int argc, char** argv)
 			bool lowWas = low.hide(nowMs()), bsWas = bsNotice.hide(nowMs()), fetchWas = fetchNotice.hide(nowMs());	// (all hidden, whichever showed)
 			if (lowWas || bsWas || fetchWas) dirty = true;
 		}
-		// the sync before a game: the menu is waiting, not listening. B plays now; a press ends a notice
+		// the sync before a game: the menu is waiting, not listening. B plays now, a press ends a notice, and a question
+		// takes A, X and B
 		if (gate.active() && (ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN))
 		{
-			gate.press(ev.type == InputEvent::PRESS && ev.key == Key::B);
+			gate.press(ev.type != InputEvent::PRESS ? 0 : ev.key == Key::B ? 'b' : ev.key == Key::A ? 'a' : ev.key == Key::X ? 'x' : 0);
 			return;
 		}
 		if ((ev.type == InputEvent::PRESS || ev.type == InputEvent::TOUCH_DOWN) && resumeLater.until > 0)
@@ -2976,7 +2973,10 @@ int main(int argc, char** argv)
 		const char* PROGRESS = "/run/banana/ra-progress";	// "<unlocked> <total>", from the emulator (docs/EMULATORS.md)
 		unlink(PROGRESS);
 		// no sync touches the saves while the game has them (a sync of every save still going stops at its next game; one
-		// placing a save, as the sync after the last game may be when it is started again at once, is given 2 s to end)
+		// placing a save, as the sync after the last game may be when it is started again at once, is given 2 s to end).
+		// A sync that keeps the lock past that is told the game is starting all the same (game.pid can only name it once
+		// it runs): a save it was about to place stays unplaced, for the next sync to decide
+		std::ofstream("/run/banana/game.starting") << getpid() << "\n";
 		int saveLock = gamesync::holdSaves("/run/banana", 2000);
 		if (saveLock < 0) logf("game start: another sync is saving");
 		double start = nowMs();
@@ -3019,6 +3019,10 @@ int main(int argc, char** argv)
 			f << pid;
 			if (unsigned long long st = procStart(pid)) f << " " << st;	// (a reused pid is not this game)
 			f << "\n";
+		}
+		unlink("/run/banana/game.starting");
+		if (pid > 0)
+		{
 			if (panel)
 			{
 				gamePanel(pid, status, gameScreen, cmdFd, outFd, lib.gameAt(game).title, sd.name);
@@ -3139,10 +3143,16 @@ int main(int argc, char** argv)
 			if (c >= 0 && ms > 50 && (c - stormIrqs) * 1000 / ms > 20000) disp.stormCheck();	// (calm: ~120 a second)
 		}
 		gameEnded = nowMs();
+		// a DS game: its saves as it left them, told to nds-saves, which drops a resume state the next start finds over
+		// another save (one put there by hand since) instead of loading it
+		if (gamesync::gamePlayed(sd.id, rom)) logf("game end: nds-saves told");
 		// Settings > Network > Home server > Auto sync: the game's save to the server now the game has let go of it
 		// (banana-sync reads the setting too, and does nothing unpaired; beside a sync copying games it takes its turn
 		// over the saves)
-		if (gamesync::syncsAfterGame(settings["homesync_auto"]) && gamesync::syncAfterGame(gamesync::syncTool(), rom))
+		// (not when the game's end is a shutdown, Power off after sleeping: bananad named the game in resume-boot and
+		// turns the handheld off now, which would cut the sync; the game's next start, the resume, sends the save)
+		if (gamesync::syncsAfterGame(settings["homesync_auto"]) && access((o.data + "/resume-boot").c_str(), F_OK) != 0 &&
+			gamesync::syncAfterGame(gamesync::syncTool(), rom))
 			logf("game end: home server sync started");
 		// the menu's clocks only now: the panels opened again and the iris ran at the game's (~1.4 GHz at most on schedutil
 		// otherwise, from the game's end)
@@ -3291,6 +3301,7 @@ int main(int argc, char** argv)
 		{
 			g = gateGame;
 			gateGame = -1;
+			if (gate.backed()) { dirty = true; continue; }
 			runGame(g);
 			continue;
 		}
@@ -3557,7 +3568,7 @@ int main(int argc, char** argv)
 				input.read(p.fd, handle);
 		}
 	}
-	gate.skip();	// (a quit while a game waited: no sync left behind)
+	gate.end();	// (a quit while a game waited: no sync left behind)
 	{
 		std::ofstream f(o.data + "/last-system");
 		f << ui->systemIndex() << "\n";

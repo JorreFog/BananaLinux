@@ -249,6 +249,8 @@ namespace bsync
 			{
 				std::string here = onCard(r);
 				if (here.empty()) continue;	// (not on this card)
+				if (chosen && !chosen->count(r.folder + "/" + r.fsName)) continue;	// (games chosen for syncing, and this not one)
+				if (here == resumeRom && onlyRom != here) { unsure.insert(r.id); say("  not synced, about to start again after Power off after sleeping, its resume state with the save here: %s", here.c_str()); continue; }
 				if (!sys.count(r.folder)) sys[r.folder] = systemSaves(r.folder);
 				const SysSaves& ss = sys[r.folder];
 				std::string stem = stemOf(baseOf(here));
@@ -261,10 +263,15 @@ namespace bsync
 				}
 				std::string rel = ss.rel(stem);
 				if (!onServer.count(r.id) && !stemsHere.count(stem)) continue;	// (no save in play: not hashed)
-				if (ndsDivergedSave(rel))
+				std::string ndsWhy = ndsDivergedWhy(rel);
+				if (!ndsWhy.empty())
 				{
 					unsure.insert(r.id);
-					say("  not synced, DraStic's and BananaDS's saves both changed since they last agreed: %s", here.c_str());
+					say("  not synced, %s: %s", ndsWhyLog(ndsWhy), here.c_str());
+					// (a note for the Saves page, with nothing to choose; gone once the two agree again)
+					SlotNote nt{}; nt.rel = rel; nt.why = ndsWhy; nt.rom = here;
+					nt.localMd5 = hashFile(ROOT + "/" + rel, "md5");
+					c.held[std::to_string(r.id) + "/" + SLOT] = nt;
 					continue;
 				}
 				if (!romMatches(here, r.files, c))
@@ -403,16 +410,16 @@ namespace bsync
 		{
 			std::string err;
 			// (the version first: what is listed for one game's save depends on it)
-			if (!checkVersion(err)) { errors.push_back("saves: " + err); return false; }
+			if (!checkVersion(err)) { errors.push_back("saves: " + err); keepUnsent(errors); return false; }
 			if (beforeGame) status("answered");	// (the menu's wait for a first answer is over: the transfer has its own cap)
 			oneGame = sendOk && !onlyRom.empty();
 			if (!sendOk) addNote(note, "RomM " + c.serverVersion + " only gives saves: update RomM to 5.4 or newer to send this handheld's");
 			// (a RomM before 5.4 has no slots to sync one game's by: its saves all come down, as they did after a game, but
 			// not while a game waits to start, and not for saves it could never take; nothing more is asked of it then)
 			if (!sendOk && (beforeGame || onlyQueued)) return true;
-			// (a path still absolute: the second card's, or an app's. Slots know only the games under the card's ROMs folder)
+			// (a path still absolute: on neither card's ROMs folder, an app's. Slots know only the games under those)
 			if (sendOk && !onlyRom.empty() && onlyRom[0] == '/') return true;
-			if (!list(skip, err)) { errors.push_back("saves: " + err); return false; }
+			if (!list(skip, err)) { errors.push_back("saves: " + err); keepUnsent(errors); return false; }
 			if (!checkDevice(note)) return true;
 			if (!onlyRom.empty() && !sendOk) say("RomM %s: every save synced, not only %s's", c.serverVersion.c_str(), onlyRom.c_str());
 			if (scoped() && sendOk)
@@ -421,7 +428,17 @@ namespace bsync
 				// ones looked at below)
 				std::vector<RommRom> some;
 				for (auto& r : roms)
-					if (onlyQueued ? c.queue.count(std::to_string(r.id) + "/" + SLOT) > 0 : onCard(r) == onlyRom) some.push_back(r);
+				{
+					std::string key = std::to_string(r.id) + "/" + SLOT, here = onlyQueued ? onCard(r) : "";
+					// (one waiting under its ROM, never synced: under its slot from here, decided as any save never agreed)
+					auto qr = here.empty() ? c.queue.end() : c.queue.find("rom:" + here);
+					if (qr != c.queue.end())
+					{
+						if (!c.queue.count(key)) { QueueSt w = qr->second; w.rel.clear(); c.queue[key] = w; }
+						c.queue.erase(qr);
+					}
+					if (onlyQueued ? c.queue.count(key) > 0 : onCard(r) == onlyRom) some.push_back(r);
+				}
 				if (some.empty()) { if (!onlyRom.empty()) addNote(note, "not a game on the server: " + onlyRom); return true; }
 				roms = some;
 				for (auto& r : roms) if (r.folder == "nds" && !onCard(r).empty()) ndsSaves(romPath(onCard(r)));
@@ -431,6 +448,23 @@ namespace bsync
 			bool ok = sendOk ? slots(local, up, down, conflicts, errors, note) : sync("save", local, c.saves, up, down, conflicts, errors, note);
 			if (statesToo) ok &= sync("state", local, c.states, up, down, conflicts, errors, note);
 			return ok;
+		}
+		// the game's save kept, the server out of reach, and left waiting to be sent, which the sync when Wi-Fi comes back
+		// sends: under its slot when this card has synced it before, else under its ROM
+		void keepUnsent(std::vector<std::string>& errors)
+		{
+			Played g;
+			if (!keepPlayed(g, errors)) return;
+			std::string key;
+			for (auto& s : c.slots) if (s.second.rel == g.rel) key = s.first;
+			if (g.ndsHeld || (!key.empty() && c.slots[key].md5 == g.md5)) { say("  kept in the vault, the server out of reach: %s", g.rel.c_str()); return; }
+			// (a game never synced from this card: its slot isn't known until the server is reached, so it waits under its
+			// ROM, which the sync when Wi-Fi comes back looks up)
+			if (key.empty()) key = "rom:" + onlyRom;
+			QueueSt& w = c.queue[key];
+			if (w.md5 != g.md5) w = { g.md5, g.vault, (double)time(nullptr), key.compare(0, 4, "rom:") == 0 ? g.rel : "" };
+			say("  waiting to be sent, the server out of reach (a copy in the vault): %s", g.rel.c_str());
+			saveConf(c);
 		}
 		// ---- RomM's save slots (5.4 and newer): each game's save is the autosave slot of its ROM, a version per change,
 		// shared with the other devices that play it. Which way a save goes is decided here by content alone, from three
@@ -445,12 +479,26 @@ namespace bsync
 		std::vector<long long> sessions;	// negotiation's, completed at the end of the saves
 		std::map<std::string, SlotNote> prior, priorHeld;	// what was held before this run (a conflict's vault copy kept)
 		std::set<std::string> open;	// the games this run couldn't decide: what they had held or waiting is kept
+		// the head is the version the slot last agreed, by MD5 alone (the id stays when a row is written over, so it says
+		// nothing of the bytes; a head with no MD5 is never it). Never for a save lost since: what is here now is a new save
+		bool agreedHead(const std::string& key, const std::string& rel, const Head& h) const
+		{
+			auto si = c.slots.find(key);
+			if (si == c.slots.end() || si->second.rel != rel || si->second.lost || h.hash.empty()) return false;
+			const SlotSt& s = si->second;
+			return h.hash == s.md5 || (!s.wire.empty() && h.hash == s.wire);
+		}
 		// the slot's version both sides now hold (whatever was waiting to be sent for it is done with; wire: the server's
-		// MD5 for it when the card holds it in another form)
+		// MD5 for it when the card holds it in another form). A save that waited and is another version than this one
+		// never reached the server (the server's taken over it, the card's gone): its copy in the vault is the only one
+		// anywhere, said, as nothing names it once it no longer waits (nothing removes a copy from the vault)
 		void agree(const std::string& key, const std::string& md5, const std::string& rel, long long id, const std::string& wire = "")
 		{
 			c.slots[key] = { md5, rel, id, wire };
-			c.queue.erase(key);
+			auto qi = c.queue.find(key);
+			if (qi == c.queue.end()) return;
+			if (qi->second.md5 != md5 && !qi->second.vault.empty() && !dryRun) say("  never sent, kept in the vault: %s", qi->second.vault.c_str());
+			c.queue.erase(qi);
 		}
 		enum class Up { Sent, Same, Held, Format, Failed };
 		// a head this handheld can decide on: its MD5 (asked of the server when the listing has none), a file its system's
@@ -493,9 +541,10 @@ namespace bsync
 		// a head this handheld won't take by itself, held: recorded with why, the server's copy in the vault for its owner
 		// to see (from dl when it has been fetched, else fetched here unless fetch is false: too large, or no checksum to
 		// check it by; kept from the last run while the head is the same). dl is removed
+		std::string romOf(const std::string& rel) const { auto i = canonical.find(rel); return i == canonical.end() ? "" : i->second.romRel; }
 		void hold(const std::string& rel, const std::string& key, const std::string& L, const Head& h, const std::string& why, std::string dl, bool fetch, std::vector<std::string>& errors)
 		{
-			SlotNote nt{ rel, why, L, h.hash, h.device, h.updated, keptBefore(key, h), h.id };
+			SlotNote nt{ rel, why, L, h.hash, h.device, h.updated, keptBefore(key, h), h.id, romOf(rel) };
 			say("  not taken yet, %s: %s", why.c_str(), h.name.c_str());
 			if (nt.vault.empty() && !dryRun)
 			{
@@ -605,7 +654,7 @@ namespace bsync
 			// (no device: no negotiation, which needs one; a dry run: none either, it opens a session)
 			bool ok = c.device.empty() || dryRun || (with.clear(), negotiate(cand, with, err));
 			ok = ok && listHeads(std::vector<long long>(with.begin(), with.end()), heads, err);
-			if (!ok) { errors.push_back("saves: " + err); complete(0, 1); return false; }
+			if (!ok) { errors.push_back("saves: " + err); keepUnsent(errors); complete(0, 1); return false; }
 			std::set<long long> onServer;
 			for (auto& h : heads) onServer.insert(h.first);
 			std::set<std::string> stemsHere;
@@ -642,6 +691,9 @@ namespace bsync
 				n++;
 				status("running " + std::to_string(n) + " " + std::to_string(total) + " Saves|" + baseOf(rel));
 				std::string key = std::to_string(g.rom.id) + "/" + SLOT, p = ROOT + "/" + rel;
+				// (one that waited under its ROM, never synced: under its slot now, whatever this run makes of it)
+				auto qr = c.queue.find("rom:" + g.romRel);
+				if (qr != c.queue.end()) { if (!c.queue.count(key)) { QueueSt w = qr->second; w.rel.clear(); c.queue[key] = w; } c.queue.erase(qr); }
 				if (stopForGame(errors)) { undecided(key); continue; }
 				c.conflicts.erase(key); c.held.erase(key);
 				auto hi = heads.find(g.rom.id);
@@ -653,6 +705,12 @@ namespace bsync
 				bool real = here && !blankSave(bytes, saveFolder(rel));
 				auto si = c.slots.find(key);
 				std::string A = si != c.slots.end() && si->second.rel == rel ? si->second.md5 : "";
+				// (a save gone missing or blank since it was agreed: what is at its path next is a new save, not the agreed
+				// one played on, so it is decided as never agreed: the server's very bytes agree, others are a conflict, both
+				// kept, never a version sent over the server's as the newer. The record stays, marked, until a version is
+				// agreed, so the server's isn't put back by itself and a conflict over it doesn't fall away at the next run)
+				bool lost = real && !A.empty() && si->second.lost;
+				if (lost) A.clear();
 				Look lk = h ? look(*h, g, rel, key, L, errors) : Look::Ok;
 				if (lk == Look::Held) continue;
 				if (lk == Look::Error) { undecided(key); continue; }
@@ -663,11 +721,13 @@ namespace bsync
 				};
 				std::string S = h ? h->hash : "";
 				// (the head as the card took it in its own form, a .dsv as its raw save: the agreed version still)
-				std::string W = si != c.slots.end() && si->second.rel == rel ? si->second.wire : "";
+				std::string W = si != c.slots.end() && si->second.rel == rel && !lost ? si->second.wire : "";
 				bool viaWire = !W.empty() && S == W;
 				if (viaWire) S = A;
 				if (real && L == S)
 				{
+					// (agreed: its last good copy in the vault, as a save sent or taken has, when the agreement is new)
+					if (L != A && !dryRun) vaultGood(rel, bytes);
 					agree(key, L, rel, h->id, viaWire ? W : "");
 					if (!h->current && !c.device.empty() && !dryRun) confirm(*h);
 					continue;
@@ -676,16 +736,36 @@ namespace bsync
 				{
 					// (the emulator's data cleared, perhaps on purpose: never refilled by itself. A save of the game's that
 					// waited to be sent still waits, its copy in the vault named here, so what was played isn't lost with it)
-					std::string why = here ? "blank here since the last sync" : "missing here since the last sync";
+					std::string why = here ? NOTE_BLANK : NOTE_MISSING;
+					si->second.lost = true;
 					auto qi = c.queue.find(key);
-					c.held[key] = { rel, why, L, h ? h->hash : "", h ? h->device : "", h ? h->updated : "", qi == c.queue.end() ? "" : qi->second.vault, h ? h->id : 0 };
+					// (the server's copy in the vault too, once, so its owner can take it back; with none on the server a save
+					// that waited names its own copy, which the page offers as a kept one)
+					if (h) hold(rel, key, L, *h, why, "", true, errors);
+					else c.held[key] = { rel, why, L, "", "", "", qi == c.queue.end() ? "" : qi->second.vault, 0, g.romRel };
 					if (qi != c.queue.end()) open.insert(key);
+					// (counted with the conflicts when the server's is there to take back: the menu asks before a game is
+					// played from nothing over it)
+					if (h && !c.held[key].vault.empty()) conflicts++;
 					say("  %s, left as it is: %s", why.c_str(), rel.c_str());
 					continue;
 				}
 				if (!real) { if (h && download(g, rel, key, L, *h, errors)) { down++; done++; } continue; }
+				// its owner chose the card's over the version they saw: sent as any change (the upload marks that head seen,
+				// which lets it go up with no overwrite asked), and a head that has moved since is held again as what it now is
+				if (h && key == settleKey && prior.count(key) && prior[key].serverMd5 == h->hash && !c.device.empty()) { send(); continue; }
 				if (L == A && !h) continue;	// (gone from the server, deleted there: not sent back until it changes here)
-				if (!A.empty() && L == A) { if (download(g, rel, key, L, *h, errors)) { down++; done++; } continue; }
+				if (!A.empty() && L == A)
+				{
+					// (the mark the menu asks by, before a game plays over a newer save it couldn't have: there from the start,
+					// so a run stopped at the cap leaves it too)
+					size_t before = errors.size();
+					if (beforeGame && !dryRun) writeAtomic(RUN + "/launch.older", "");
+					bool got = download(g, rel, key, L, *h, errors);
+					if (got) { down++; done++; }
+					if (beforeGame && (got || errors.size() == before)) unlink((RUN + "/launch.older").c_str());
+					continue;
+				}
 				if (!h || (!A.empty() && S == A))
 				{
 					if (c.device.empty()) { waiting = true; continue; }
@@ -738,7 +818,7 @@ namespace bsync
 		Both conflict(const Canon& g, const std::string& rel, const std::string& key, const std::string& L, const Head& h, std::vector<std::string>& errors)
 		{
 			if (dryRun) { say("  conflict %s", rel.c_str()); return Both::Held; }
-			SlotNote nt{ rel, "", L, h.hash, h.device, h.updated, keptBefore(key, h), h.id };
+			SlotNote nt{ rel, "", L, h.hash, h.device, h.updated, keptBefore(key, h), h.id, g.romRel };
 			std::string dl = nt.vault.empty() ? RUN + "/sync-dl." + std::to_string(getpid()) : "", e;
 			if (!dl.empty() && !fetchHead(rel, h, dl, errors)) return Both::Failed;
 			bool ok;
@@ -792,7 +872,35 @@ namespace bsync
 			q.url = c.server + "/api/saves?rom_id=" + std::to_string(g.rom.id) + "&slot=" + SLOT + "&" + devQ() + "&emulator=" + urlEsc(g.label) + "&content_hash=" + L;
 			q.fileParts.push_back({ "saveFile", snap });
 			q.partName = baseOf(rel);
+			std::map<long long, Head> now;	// the slot looked at again after a refusal, its head's MD5 asked for when not listed
+			auto relist = [&]
+			{
+				std::string e;
+				now.clear();
+				if (listHeads({ g.rom.id }, now, e) && now.count(g.rom.id))
+				{
+					Head& nh = now[g.rom.id];
+					if (nh.hash.empty()) nh.hash = serverHash("/api/saves", nh);
+					return true;
+				}
+				unlink(snap.c_str());
+				errors.push_back(rel + ": changed on the server meanwhile, next time");
+				return false;
+			};
 			Resp r = http(q);
+			if (r.code == 409)
+			{
+				if (!relist()) return Up::Failed;
+				// (the head still the agreed version: RomM refused for want of this device's record of it, which its
+				// listing said it had. Marked seen and sent once more; refused again, it is held as any other)
+				Head& nh = now[g.rom.id];
+				if (agreedHead(key, rel, nh) && confirm(nh))
+				{
+					say("  refused over the agreed version, marked seen and sent again: %s", rel.c_str());
+					r = http(q);
+					if (r.code == 409 && !relist()) return Up::Failed;
+				}
+			}
 			JPtr j = r.code == 409 ? nullptr : r.json();
 			if (r.code != 409 && ((r.code != 200 && r.code != 201) || !j || !j->isObj()))
 			{
@@ -807,9 +915,6 @@ namespace bsync
 			unlink(snap.c_str());
 			if (r.code == 409)
 			{
-				std::map<long long, Head> now;
-				std::string e;
-				if (!listHeads({ g.rom.id }, now, e) || !now.count(g.rom.id)) { errors.push_back(rel + ": changed on the server meanwhile, next time"); return Up::Failed; }
 				Head& nh = now[g.rom.id];
 				Look lk = look(nh, g, rel, key, L, errors);
 				if (lk == Look::Held) return Up::Format;
@@ -857,17 +962,23 @@ namespace bsync
 			// (a stop waits for the save to be placed and recorded, with DraStic's .dsv in step: from here a game may start,
 			// and one that finds them out of step takes the wrong save)
 			KillHold placing;
+			OpenOp op;
 			Install in = !ok ? (err = "can't read the download", Install::Failed)
 				: (!kept.empty() || md5 != h.hash) && !writeAtomic(dl, data) ? (err = "can't write the download", Install::Failed)
-				: installSave(rel, dl, std::to_string(h.id), err, &L);
+				: installSave(rel, dl, std::to_string(h.id), err, &L, md5 != h.hash ? h.hash : "", &op.id);
+			op.md5 = md5;
 			if (in != Install::Done) unlink(dl.c_str());
 			if (in == Install::Blank) { say("  blank on the server, not taken: %s", baseOf(p).c_str()); return false; }
 			if (in == Install::Failed) { errors.push_back(baseOf(p) + ": " + err); return false; }
+			// (the newer save is in place: the menu's mark of one not fetched goes now, a stop that lands while this is
+			// still being recorded leaving it otherwise, and the game would be asked about as if it played the older)
+			if (beforeGame) unlink((RUN + "/launch.older").c_str());
 			// (DraStic's .dsv brought into step with the DS save just installed, before either emulator starts: nds-saves
 			// sees the .sav changed from what the two last held, and gives DraStic the new one. The file keeps the time
 			// it was written at: a server's time on it would date it ahead of a card clock behind the server's, and
-			// anything deciding by the files' times would then take it for the newer whatever was played since)
-			if (saveFolder(rel) == "nds") ndsSaves(ROMS + "/" + g.romRel);
+			// anything deciding by the files' times would then take it for the newer whatever was played since. The two
+			// not in step after all: not agreed, so the next sync looks again, and holds the game while they differ)
+			if (saveFolder(rel) == "nds" && ndsSaves(romPath(g.romRel)) != 0) { errors.push_back(baseOf(p) + ": DraStic's save isn't in step with it, decided next time"); return false; }
 			// (a game started while the save was placed: it may have read the save before, and go on writing that one.
 			// Not agreed, so the next sync decides again from what it then finds: the same bytes agree, others are a
 			// conflict, held. Agreed, the game's would go up over the version just taken, as the newer)
@@ -875,6 +986,7 @@ namespace bsync
 			agree(key, md5, rel, h.id, md5 != h.hash ? h.hash : "");
 			say("  down %s", p.c_str());
 			saveConf(c);
+			op.close();
 			placing.end();
 			if (!c.device.empty()) confirm(h);
 			saveConf(c);
@@ -897,7 +1009,7 @@ namespace bsync
 			std::string api = forSaves ? "/api/saves" : "/api/states", field = forSaves ? "saveFile" : "stateFile";
 			std::string dev = c.device.empty() ? "" : "device_id=" + urlEsc(c.device);
 			// the server's, per platform
-			struct Srv { long long id, rom; std::string name, hash, updated; };
+			struct Srv { long long id, rom; std::string name, hash, updated; long long size; };
 			std::map<long long, RommRom> romById;
 			for (auto& r : roms) romById[r.id] = r;
 			std::vector<std::pair<JPtr, const RommRom*>> rows;
@@ -950,7 +1062,7 @@ namespace bsync
 					if (stemOf(name) != rom.stem) continue;
 					rel = rom.folder == "nds" ? "states/nds/" + name : "states/" + name;
 				}
-				Srv v{ (long long)s->num("id"), rom.id, name, lower(s->str("content_hash")), s->str("updated_at") };
+				Srv v{ (long long)s->num("id"), rom.id, name, lower(s->str("content_hash")), s->str("updated_at"), (long long)s->num("file_size_bytes") };
 				auto e = srv.find(rel);
 				if (e == srv.end() || e->second.updated < v.updated) srv[rel] = v;
 			}
@@ -960,12 +1072,31 @@ namespace bsync
 					paths.insert(kv.first);
 			for (auto& kv : srv) paths.insert(kv.first);
 			for (auto& kv : state) if (!forSaves || canonical.count(kv.first)) paths.insert(kv.first);
-			int n = 0, total = (int)paths.size();
+			int n = 0, total = (int)paths.size(), keptStates = 0;
 			for (auto& rel : paths)
 			{
 				if (stopForGame(errors)) break;
 				n++;
 				status("running " + std::to_string(n) + " " + std::to_string(total) + (forSaves ? " Saves|" : " States|") + baseOf(rel));
+				// the server's version taken: a save put in place; a state never, only kept in the vault for its owner, since
+				// loading one puts the game's memory back over a newer battery save, and a state only loads in the core and
+				// version that wrote it. RomM gives a state no checksum, so its size is what's checked
+				auto take = [&](SaveSt ns, const auto& s)
+				{
+					if (forSaves) { if (download(api, s, rel, ns, dev, errors)) { state[rel] = ns; down++; } return; }
+					if (dryRun) { say("  keep the server's state %s", rel.c_str()); return; }
+					std::string kept, err, dl = RUN + "/sync-dl." + std::to_string(getpid());
+					bool added = false;
+					if (!fetchTo(c.server + api + "/" + std::to_string(s.id) + "/content", auth(), dl, s.size > 0 ? s.size : -1, "md5", "", err)) { dropDownload(dl); errors.push_back(rel + ": " + err); return; }
+					bool ok = vaultKeep(rel, dl, kept, err, &added);
+					unlink(dl.c_str());
+					if (!ok) { errors.push_back(rel + ": the server's copy can't be kept in the vault: " + err); return; }
+					ns.version = s.id; ns.server = s.updated;
+					state[rel] = ns;
+					if (added) keptStates++;
+					say("  the server's state kept in the vault, not placed: %s", rel.c_str());
+					saveConf(c);
+				};
 				std::string p = ROOT + "/" + rel;
 				bool here = localAll.count(rel) > 0;
 				auto si = srv.find(rel);
@@ -974,23 +1105,42 @@ namespace bsync
 				// (what this path holds back, under the slot's key for a save, the state's name for a state: worked out
 				// again each time the save is looked at, so one settled by hand, or gone, is held no longer)
 				std::string hk = si == srv.end() ? "" : std::to_string(si->second.rom) + (forSaves ? "/" + SLOT : "/state:" + baseOf(rel));
+				if (!forSaves && !settleKey.empty() && hk != settleKey) continue;	// (one state's choice: no other state's sync)
 				SlotNote heldBefore;
 				if (!hk.empty() && c.held.count(hk)) { heldBefore = c.held[hk]; c.held.erase(hk); }
 				if (here && !md5.empty() && blankSave(readFile(p), saveFolder(rel)) && (st == state.end() || st->second.hash != md5))
 				{
-					if (st != state.end()) { say("  blank here since the last sync, left as it is: %s", rel.c_str()); continue; }
+					if (st != state.end())
+					{
+						if (forSaves && !hk.empty()) c.held[hk] = { rel, NOTE_BLANK, md5, si->second.hash, "", si->second.updated, "", si->second.id, romOf(rel) };	// (hk: the server has it)
+						say("  %s, left as it is: %s", NOTE_BLANK, rel.c_str());
+						continue;
+					}
 					if (si == srv.end() || si->second.hash == md5) continue;
 					SaveSt ns; ns.hash = md5;	// (what the download checks it is replacing)
-					if (download(api, si->second, rel, ns, dev, errors)) { state[rel] = ns; down++; }
+					take(ns, si->second);
 					continue;
 				}
 				if (!here)
 				{
-					if (st != state.end()) { state.erase(st); continue; }	// deleted here: forgotten (the server keeps its copy)
-					if (si == srv.end()) continue;
+					// (a state the card doesn't hold: its record stays while the server has it, with no hash for the card,
+					// so a version already in the vault isn't fetched at every sync, and a new one is)
+					if (!forSaves && st != state.end() && si != srv.end() && st->second.version == si->second.id && st->second.server == si->second.updated)
+					{
+						st->second.hash.clear();
+						continue;
+					}
+					// (a save gone from the card since it synced: left as it is, said, never put back by itself; the record
+					// stays, so the next run doesn't take the server's over nothing. The last good copy is in the vault)
+					if (forSaves && st != state.end())
+					{
+						if (!hk.empty()) c.held[hk] = { rel, NOTE_MISSING, "", si->second.hash, "", si->second.updated, "", si->second.id, romOf(rel) };	// (hk: the server has it)
+						say("  %s, left as it is: %s", NOTE_MISSING, rel.c_str());
+						continue;
+					}
+					if (si == srv.end()) { if (st != state.end()) state.erase(st); continue; }
 					if (exists(p)) continue;	// (a file the rules leave out)
-					SaveSt ns;
-					if (download(api, si->second, rel, ns, dev, errors)) { state[rel] = ns; down++; }
+					take(SaveSt(), si->second);
 					continue;
 				}
 				if (md5.empty()) continue;
@@ -1014,35 +1164,65 @@ namespace bsync
 				bool serverChanged = !known || st->second.version != s.id || (st->second.server != s.updated && (s.hash.empty() || s.hash != st->second.hash));
 				if (!s.hash.empty() && s.hash == md5)
 				{
+					// (agreed: its last good copy in the vault, as a save sent or taken has, when the record is new)
+					if (forSaves && (!known || st->second.hash != md5)) vaultGood(rel, readFile(p));
 					state[rel] = { (double)s.id, md5, s.updated };
 					continue;
 				}
 				if (!localChanged && !serverChanged) continue;
 				if (localChanged && !serverChanged) { if (upload(api, field, s.rom, p, rel, md5, state, dev, errors)) up++; continue; }
-				if (!localChanged && serverChanged) { SaveSt ns = st->second; if (download(api, s, rel, ns, dev, errors)) { state[rel] = ns; down++; } continue; }
+				if (!localChanged && serverChanged) { take(st->second, s); continue; }
 				// both changed, or a card that never synced holding another version: held, both kept (the server's copy in
 				// the vault, fetched once while its version is the same), neither sent nor taken until its owner chooses.
 				// Never the newer by the files' times: the card's clock may be years out, and the version it would write
 				// over on the server, or here, is the other's progress
+				// (its owner chose the card's over the version they saw. A state goes up by its name, over the server's, a
+				// copy of which is in the vault; a RomM before 5.4 takes no save from here, so the card's stays unsent and
+				// that server version counts as seen. A version moved since is held again, what it now is)
+				if (hk == settleKey && heldBefore.saveId == s.id && heldBefore.updated == s.updated && !dryRun)
+				{
+					if (!sendOk) { say("  this handheld's kept, not sent: RomM %s takes nothing from here: %s", c.serverVersion.c_str(), rel.c_str()); state[rel] = { (double)s.id, md5, s.updated }; saveConf(c); continue; }
+					// (that upload replaces the server's where it is, so the copy in the vault must really be there)
+					if (heldBefore.vault.empty() || hashFile(heldBefore.vault, "md5") != heldBefore.serverMd5) { errors.push_back(rel + ": the server's copy isn't in the vault, not sent"); c.held[hk] = heldBefore; continue; }
+					// (sent over it, the copy in the vault is the only one of that version anywhere; nothing removes it)
+					if (upload(api, field, s.rom, p, rel, md5, state, dev, errors)) { up++; saveConf(c); }
+					else c.held[hk] = heldBefore;
+					continue;
+				}
 				conflicts++;
 				if (dryRun) { say("  conflict %s", rel.c_str()); continue; }
 				SlotNote nt{ rel, forSaves ? "changed here and on the server" : "a state changed here and on the server", md5, "", "", s.updated, "", s.id };
 				nt.serverMd5 = serverHash(api, s);
-				if (nt.serverMd5.empty()) { errors.push_back(rel + ": the server gives no checksum for its copy"); continue; }
-				if (heldBefore.saveId == s.id && !heldBefore.vault.empty() && exists(heldBefore.vault) && hashFile(heldBefore.vault, "md5") == nt.serverMd5)
+				nt.rom = romOf(rel);
+				if (!forSaves) { auto ri = romById.find(s.rom); if (ri != romById.end()) nt.rom = onCard(ri->second); }
+				// (a failure below keeps what was held: the copy kept, and the note that says so)
+				auto keepNote = [&] { if (!heldBefore.rel.empty()) c.held[hk] = heldBefore; };
+				if (nt.serverMd5.empty() && forSaves) { errors.push_back(rel + ": the server gives no checksum for its copy"); keepNote(); continue; }
+				// (the copy held already, while the server's is that version. A state has no checksum, and an upload of the
+				// same name keeps its id, so its time says so)
+				if (heldBefore.saveId == s.id && !heldBefore.vault.empty() && exists(heldBefore.vault) &&
+					(forSaves ? hashFile(heldBefore.vault, "md5") == nt.serverMd5 : heldBefore.updated == s.updated))
+				{
 					nt.vault = heldBefore.vault;
+					nt.serverMd5 = heldBefore.serverMd5;
+				}
 				if (nt.vault.empty())
 				{
 					std::string e2, dl = RUN + "/sync-dl." + std::to_string(getpid());
-					if (!fetchTo(c.server + api + "/" + std::to_string(s.id) + "/content", auth(), dl, -1, "md5", nt.serverMd5, e2)) { dropDownload(dl); errors.push_back(rel + ": " + e2); continue; }
+					if (!fetchTo(c.server + api + "/" + std::to_string(s.id) + "/content", auth(), dl, !forSaves && s.size > 0 ? s.size : -1, "md5", nt.serverMd5, e2)) { dropDownload(dl); errors.push_back(rel + ": " + e2); keepNote(); continue; }
+					if (!forSaves) nt.serverMd5 = hashFile(dl, "md5");
+					// (the same state on both sides, which only its bytes could say: nothing to hold)
+					if (nt.serverMd5 == md5) { unlink(dl.c_str()); conflicts--; state[rel] = { (double)s.id, md5, s.updated }; saveConf(c); continue; }
 					bool kept = vaultKeep(rel, dl, nt.vault, e2);
 					unlink(dl.c_str());
-					if (!kept) { errors.push_back(rel + ": the server's copy can't be kept in the vault: " + e2); continue; }
+					if (!kept) { errors.push_back(rel + ": the server's copy can't be kept in the vault: " + e2); keepNote(); continue; }
 				}
+				else if (nt.serverMd5 == md5) { conflicts--; state[rel] = { (double)s.id, md5, s.updated }; saveConf(c); continue; }	// (settled by hand)
 				c.held[hk] = nt;
 				say("  conflict, both kept: %s (the server's in the vault)", rel.c_str());
 				saveConf(c);
 			}
+			if (keptStates) addNote(note, std::to_string(keptStates) + (keptStates == 1 ? " state from the server kept in the vault" : " states from the server kept in the vault"));
 			saveConf(c);
 			return true;
 		}
@@ -1090,7 +1270,8 @@ namespace bsync
 			// (fetched to /run first: nothing on the card changes until it is all here and checked)
 			std::string url = c.server + api + "/" + std::to_string(s.id) + "/content" + (api == "/api/saves" && !dev.empty() ? "?" + dev : "");
 			std::string dl = RUN + "/sync-dl." + std::to_string(getpid());
-			Install in = fetchTo(url, auth(), dl, -1, "md5", want, err) ? installSave(rel, dl, std::to_string(s.id), err, &before) : Install::Failed;
+			OpenOp op{ "", want };
+			Install in = fetchTo(url, auth(), dl, -1, "md5", want, err) ? installSave(rel, dl, std::to_string(s.id), err, &before, "", &op.id) : Install::Failed;
 			if (in == Install::Blank) { say("  blank on the server, not taken: %s", baseOf(p).c_str()); return false; }
 			if (in == Install::Failed)
 			{
@@ -1100,12 +1281,13 @@ namespace bsync
 			}
 			// (DraStic's .dsv brought into step with the DS save just installed, before either emulator starts)
 			auto ci = canonical.find(rel);
-			if (ci != canonical.end() && saveFolder(rel) == "nds") ndsSaves(ROMS + "/" + ci->second.romRel);
+			if (ci != canonical.end() && saveFolder(rel) == "nds" && ndsSaves(romPath(ci->second.romRel)) != 0) { errors.push_back(baseOf(p) + ": DraStic's save isn't in step with it, decided next time"); return false; }
 			// (a game started while it was placed: not recorded, so the next sync decides again from what it finds)
 			if (gameRunning()) { errors.push_back(baseOf(p) + ": a game started while it was placed, decided next time"); return false; }
 			st = { (double)s.id, want, s.updated };
 			say("  down %s", p.c_str());
 			saveConf(c);
+			op.close();
 			return true;
 		}
 	};

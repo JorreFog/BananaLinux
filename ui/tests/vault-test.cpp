@@ -92,7 +92,7 @@ static void journal()
 	std::string r = journalRecover(&conf);
 	expect(r.find("unchanged " + a + "\n") != std::string::npos, true, "killed before the install: unchanged");
 	expect(r.find("installed " + b + "\n") != std::string::npos, true, "killed after the install: installed");
-	expect(conf.slots["2/autosave"].md5 == hb && conf.slots["2/autosave"].saveId == 2 && conf.slots["2/autosave"].wire.empty(), true, "an installed save agreed in its slot's record");
+	expect(conf.slots["2/autosave"].md5 == hb && conf.slots["2/autosave"].saveId == 2 && conf.slots["2/autosave"].wire == "x", true, "an installed save agreed in its slot's record, the server's own MD5 for it as its wire");
 	expect(r.find("changed-since " + c + "\n") != std::string::npos, true, "neither: changed since, left as it is");
 	expect(conf.slots["3/autosave"].md5 == hashStr("c before", "md5") && conf.slots["1/autosave"].md5 == "other", true, "the other records as they were");
 	expect(readFile(ROOT + "/" + c) == "c played since", true, "a changed save kept");
@@ -105,6 +105,28 @@ static void journal()
 	{ std::ofstream(journalPath(), std::ios::app) << "begin\t1.2.3\tinstall\tsaves/gba/F"; }
 	journalBegin({ "install", "saves/gba/F.srm", hashStr("f before", "md5"), "6", "x", "v", "f" });
 	expect(journalRecover().find("unchanged saves/gba/F.srm\n") != std::string::npos, true, "a begin after a torn line recovered");
+
+	// the power lost in the rename itself: the new file whole beside the name and nothing under it. Put in place, agreed,
+	// with the record written before the journal closes the operation: a record that can't be written leaves it open
+	const std::string g = "saves/gba/G.srm";
+	std::string hg = hashStr("g after", "md5");
+	writeAtomic(ROOT + "/" + g + ".new", "g after");
+	journalBegin({ "install", g, hashStr("g before", "md5"), "7", hg, "v", hg });
+	Conf c2;
+	c2.slots["7/autosave"] = { hashStr("g before", "md5"), g, 1, "" };
+	expect(journalRecover(&c2, [] { return false; }).find("installed " + g + "\n") != std::string::npos, true, "a rename cut by the power: the new file put in place");
+	expect(readFile(ROOT + "/" + g) == "g after" && !exists(ROOT + "/" + g + ".new") && c2.slots["7/autosave"].md5 == hg && c2.slots["7/autosave"].wire.empty(), true, "in place, the record agreed, no wire for the save's own MD5");
+	expect(journalRecover(&c2).find("installed " + g + "\n") != std::string::npos, true, "the operation left open while the record couldn't be written: recovered again");
+	expect(journalRecover(&c2).find(g) == std::string::npos, true, "then closed");
+	// Romhost's record, by the file: the version in place is the server's, its SHA-1 recorded
+	const std::string rh = "saves/gba/R.srm";
+	put(rh, "r after");
+	journalBegin({ "install", rh, hashStr("r before", "md5"), "9", hashStr("r after", "md5"), "", hashStr("r after", "md5") });
+	Conf c3;
+	c3.backend = "romhost";
+	c3.saves[rh] = { 4, "oldsha1", "" };
+	journalRecover(&c3);
+	expect(c3.saves[rh].version == 9 && c3.saves[rh].hash == hashStr("r after", "sha1"), true, "Romhost's record agreed at the version put in place");
 }
 
 // a download put in place: only over the save the decision was made on; a DS save's quick-resume state, which would
@@ -120,6 +142,34 @@ static void install()
 	expect(installSave(rel, dl, "1", err, &was) == Install::Done && readFile(ROOT + "/" + rel) == "now", true, "the save decided on replaced");
 	expect(!exists(ROOT + "/states/nds/Peel Quest (USA).resume.mst"), true, "the DS quick-resume state gone with the save it belonged to");
 	expect(!exists(dl), true, "the download used up");
+	// RetroArch's automatic state goes the same way, in each GBA core's folder for the GBA's shared save; another
+	// system's of the same name stays
+	unlink((vaultDir() + "/saves/gba").c_str());	// (the file put in the vault's way above)
+	for (const char* d : { "gpSP", "mGBA", "Snes9x" }) put(std::string("states/") + d + "/Banana Run (USA).state.auto", "spot");
+	put("saves/gba/Banana Run (USA).srm", "gba was"); writeAtomic(dl, "gba now");
+	std::string gw = hashStr("gba was", "md5");
+	expect(installSave("saves/gba/Banana Run (USA).srm", dl, "2", err, &gw) == Install::Done, true, "a GBA save replaced");
+	expect(!exists(ROOT + "/states/gpSP/Banana Run (USA).state.auto") && !exists(ROOT + "/states/mGBA/Banana Run (USA).state.auto"), true, "the GBA cores' automatic states gone with the save");
+	expect(exists(ROOT + "/states/Snes9x/Banana Run (USA).state.auto"), true, "another system's state of the same name kept");
+	// a flat save doesn't say its core: the automatic state of that name in any core's folder goes (the DS's stays),
+	// and with sorted states off they are all in states/
+	put("states/Snes9x/Plain Run (USA).state.auto", "spot"); put("states/Gambatte/Plain Run (USA).state.auto", "spot");
+	put("states/Plain Run (USA).state.auto", "spot"); put("states/nds/Plain Run (USA).resume.mst", "spot");
+	put("saves/Plain Run (USA).srm", "snes was"); writeAtomic(dl, "snes now");
+	expect(installSave("saves/Plain Run (USA).srm", dl, "3", err) == Install::Done, true, "a SNES save replaced");
+	expect(!exists(ROOT + "/states/Snes9x/Plain Run (USA).state.auto") && !exists(ROOT + "/states/Gambatte/Plain Run (USA).state.auto") &&
+		!exists(ROOT + "/states/Plain Run (USA).state.auto"), true, "its automatic states gone, sorted or not");
+	expect(exists(ROOT + "/states/nds/Plain Run (USA).resume.mst"), true, "a DS game's resume state of the same name kept");
+	// a run's unfinished copy beside the kept ones is never listed as one
+	{
+		put("banana/save-vault/saves/gba/Half/x.srm.nds-saves.9.tmp", "half");
+		bool listed = false;
+		for (auto& k : vaultList()) if (k.file.find(".tmp") != std::string::npos) listed = true;
+		expect(listed, false, "a run's unfinished copy not listed");
+	}
+	// a save there that can't be read (a folder in its place) isn't taken for none: nothing is written over it
+	mkdirs(ROOT + "/saves/gba/Folder (USA).srm"); writeAtomic(dl, "over a folder");
+	expect(installSave("saves/gba/Folder (USA).srm", dl, "3", err) == Install::Failed && err.find("can't read") != std::string::npos, true, "an unreadable save refused");
 }
 
 // DeSmuME's footer on a DS save (as DraStic writes it; short: an older DraStic's, without the line saying where to
@@ -249,5 +299,36 @@ int main(int argc, char** argv)
 		modes();
 	}
 	if (!fails) fprintf(stderr, "vault-test: all passed\n");
+	// a kept copy put back and cut short by the power: left for the next sync to send, not agreed as a server's version
+	{
+		Conf conf;
+		std::string rel = "saves/Listing/Restored (USA).srm", dl = ROOT + "/run/in.tmp", e;
+		mkdirs(ROOT + "/saves/Listing");
+		put(rel, "before"); std::string hb = hashFile(ROOT + "/" + rel, "md5");
+		conf.slots["3/autosave"] = { hb, rel, 3, "" };
+		put(rel, "restored"); std::string hr = hashFile(ROOT + "/" + rel, "md5");
+		std::string id = journalBegin({ "install", rel, hb, "restore", hr, "", hr });
+		expect(!id.empty(), true, "journalled");
+		journalRecover(&conf);
+		expect(conf.slots["3/autosave"].md5 == hb && conf.slots["3/autosave"].saveId == 3, true, "a restored save stays a change to send");
+	}
+	// what the vault lists, and what counts as a file in it
+	{
+		std::string rel = "saves/Listing/Listed (USA).srm", kept, e;
+		writeAtomic(ROOT + "/in.tmp", "listed bytes");
+		expect(vaultKeep(rel, ROOT + "/in.tmp", kept, e), true, "kept for the listing");
+		writeAtomic(kept + ".new", "unfinished");
+		bool seen = false, partial = false;
+		for (auto& k : vaultList()) { if (k.file == kept) seen = k.rel == rel && k.size == 12; if (k.file == kept + ".new") partial = true; }
+		expect(seen, true, "a kept copy is listed under its save, with its size");
+		expect(partial, false, "an unfinished copy isn't listed");
+		expect(vaultFile(kept).empty(), false, "a kept copy is a vault file");
+		expect(vaultFile(ROOT + "/in.tmp").empty(), true, "a file outside the vault isn't one");
+		expect(vaultFile(vaultDir() + "/../in.tmp").empty(), true, "nor one reached by ..");
+		expect(vaultFile(dirOf(kept)).empty(), true, "nor a folder");
+		unlink((vaultDir() + "/link.sav").c_str());
+		expect(symlink((ROOT + "/in.tmp").c_str(), (vaultDir() + "/link.sav").c_str()) == 0, true, "the link made");
+		expect(vaultFile(vaultDir() + "/link.sav").empty(), true, "nor a link out of it");
+	}
 	return fails ? 1 : 0;
 }

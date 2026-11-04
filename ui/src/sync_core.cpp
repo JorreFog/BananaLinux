@@ -463,7 +463,7 @@ namespace bsync
 		for (auto& kv : j->obj)
 		{
 			const JVal& v = *kv.second;
-			out[kv.first] = { v.str("path"), v.str("why"), v.str("local_md5"), v.str("server_md5"), v.str("device"), v.str("updated_at"), v.str("vault"), (long long)v.num("save_id") };
+			out[kv.first] = { v.str("path"), v.str("why"), v.str("local_md5"), v.str("server_md5"), v.str("device"), v.str("updated_at"), v.str("vault"), (long long)v.num("save_id"), v.str("rom") };
 		}
 	}
 	std::string notesJson(const std::map<std::string, SlotNote>& m)
@@ -475,7 +475,7 @@ namespace bsync
 			const SlotNote& n = kv.second;
 			o += std::string(first ? "\n" : ",\n") + "  " + jsonStr(kv.first) + ": {\"path\": " + jsonStr(n.rel) + (n.why.empty() ? "" : ", \"why\": " + jsonStr(n.why)) +
 				", \"local_md5\": " + jsonStr(n.localMd5) + ", \"save_id\": " + std::to_string(n.saveId) + ", \"server_md5\": " + jsonStr(n.serverMd5) +
-				", \"device\": " + jsonStr(n.device) + ", \"updated_at\": " + jsonStr(n.updated) + ", \"vault\": " + jsonStr(n.vault) + "}";
+				", \"device\": " + jsonStr(n.device) + ", \"updated_at\": " + jsonStr(n.updated) + ", \"vault\": " + jsonStr(n.vault) + (n.rom.empty() ? "" : ", \"rom\": " + jsonStr(n.rom)) + "}";
 			first = false;
 		}
 		return o + (first ? "}" : "\n }");
@@ -485,6 +485,13 @@ namespace bsync
 	{
 		Conf c;
 		JPtr j = banana::readJsonFile(CONF);
+		// (the file gone or unreadable with its new copy whole beside it: the power went in the rename, which this
+		// filesystem doesn't make atomic; the copy was synced before it, so it is the state as it was about to be)
+		if ((!j || !j->isObj()) && exists(CONF + ".new"))
+		{
+			j = banana::readJsonFile(CONF + ".new");
+			if (j && j->isObj() && verbose) fprintf(stderr, "romsync.json read from its copy beside it\n");
+		}
 		if (!j || !j->isObj()) return c;
 		c.backend = j->str("backend", "romhost");
 		c.server = j->str("server"); c.token = j->str("token"); c.name = j->str("name"); c.serverName = j->str("serverName"); c.serverVersion = j->str("serverVersion");
@@ -511,11 +518,11 @@ namespace bsync
 		readSaves(j->get("states"), c.states);
 		c.stateVersion = (int)j->num("stateVersion", 1);
 		if (const JVal* sl = j->get("slots")) if (sl->isObj())
-			for (auto& kv : sl->obj) c.slots[kv.first] = { kv.second->str("md5"), kv.second->str("path"), (long long)kv.second->num("save_id"), kv.second->str("server_md5") };
+			for (auto& kv : sl->obj) c.slots[kv.first] = { kv.second->str("md5"), kv.second->str("path"), (long long)kv.second->num("save_id"), kv.second->str("server_md5"), kv.second->flag("lost") };
 		readNotes(j->get("conflicts"), c.conflicts);
 		readNotes(j->get("held"), c.held);
 		if (const JVal* qu = j->get("queue")) if (qu->isObj())
-			for (auto& kv : qu->obj) c.queue[kv.first] = { kv.second->str("md5"), kv.second->str("vault"), kv.second->num("since") };
+			for (auto& kv : qu->obj) c.queue[kv.first] = { kv.second->str("md5"), kv.second->str("vault"), kv.second->num("since"), kv.second->str("path") };
 		return c;
 	}
 	void takeSaves(Conf& to, const Conf& from)
@@ -527,7 +534,7 @@ namespace bsync
 	{
 	bool writeConf(const Conf& c);
 	}
-	bool saveConf(const Conf& c)
+	static bool writeBack(const Conf& c, bool fresh)
 	{
 		if (dryRun) return true;
 		// (every write under romsync.lock, a run holding both parts included: another run's read, change and write of
@@ -536,16 +543,23 @@ namespace bsync
 		// too whenever it has one: a run over the saves registers it, again when RomM deleted the one held)
 		int lk = open((RUN + "/romsync.lock").c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0644);
 		if (lk >= 0) while (flock(lk, LOCK_EX) != 0 && errno == EINTR) {}
-		if (holdRoms && holdSaves) { bool ok = writeConf(c); if (lk >= 0) close(lk); return ok; }
 		Conf d = loadConf(), w = c;
+		bool same = d.server == c.server && d.backend == c.backend && d.token == c.token;
+		if (fresh)
+		{
+			// (paired again with the same server: what its saves had agreed, held or waiting, and its files, as they are
+			// now, after this pairing's wait for its code; another server's mean nothing here)
+			if (d.server == c.server && d.backend == c.backend) { w.files = d.files; w.gamelist = d.gamelist; takeSaves(w, d); if (w.device.empty()) { w.device = d.device; w.deviceNum = d.deviceNum; } }
+			bool ok = writeConf(w);
+			if (lk >= 0) close(lk);
+			return ok;
+		}
+		// (the card forgotten or paired again meanwhile: this run's state is the old pairing's, and would write that
+		// pairing back; nothing written)
+		if (!same) { if (lk >= 0) close(lk); return false; }
+		if (holdRoms && holdSaves) { bool ok = writeConf(c); if (lk >= 0) close(lk); return ok; }
 		if (!holdRoms)
 		{
-			if (d.server != c.server || d.backend != c.backend || d.token != c.token)
-			{
-				// (the card forgotten or paired again meanwhile: this run's saves mean nothing to that pairing)
-				if (lk >= 0) close(lk);
-				return false;
-			}
 			w = d;
 			takeSaves(w, c);
 			w.last = c.last; w.lastTime = c.lastTime;
@@ -559,6 +573,8 @@ namespace bsync
 		if (lk >= 0) close(lk);
 		return ok;
 	}
+	bool saveConf(const Conf& c) { return writeBack(c, false); }
+	bool savePairing(const Conf& c) { return writeBack(c, true); }
 	namespace
 	{
 	bool writeConf(const Conf& c)
@@ -593,7 +609,7 @@ namespace bsync
 			for (auto& kv : c.slots)
 			{
 				o += std::string(first ? "\n  " : ",\n  ") + jsonStr(kv.first) + ": {\"md5\": " + jsonStr(kv.second.md5) + ", \"save_id\": " + std::to_string(kv.second.saveId) + ", \"path\": " + jsonStr(kv.second.rel) +
-					(kv.second.wire.empty() ? "" : ", \"server_md5\": " + jsonStr(kv.second.wire)) + "}";
+					(kv.second.wire.empty() ? "" : ", \"server_md5\": " + jsonStr(kv.second.wire)) + (kv.second.lost ? ", \"lost\": true" : "") + "}";
 				first = false;
 			}
 			o += first ? "}" : "\n }";
@@ -604,7 +620,8 @@ namespace bsync
 		first = true;
 		for (auto& kv : c.queue)
 		{
-			o += std::string(first ? "\n  " : ",\n  ") + jsonStr(kv.first) + ": {\"md5\": " + jsonStr(kv.second.md5) + ", \"vault\": " + jsonStr(kv.second.vault) + ", \"since\": " + fmtNum(kv.second.since) + "}";
+			o += std::string(first ? "\n  " : ",\n  ") + jsonStr(kv.first) + ": {\"md5\": " + jsonStr(kv.second.md5) + ", \"vault\": " + jsonStr(kv.second.vault) + ", \"since\": " + fmtNum(kv.second.since)
+				+ (kv.second.rel.empty() ? "" : ", \"path\": " + jsonStr(kv.second.rel)) + "}";
 			first = false;
 		}
 		o += first ? "}" : "\n }";
@@ -632,7 +649,14 @@ namespace bsync
 
 	// ---- the saves on the card ----------------------------------------------------------------------------------------
 	// Romhost's rules (saves.py classify): saves/** always, states/** and drastic/savestates/** with states, never
-	// *.bak .new .part .tmp, dot files or quick-resume states (*.resume.*)
+	// *.bak .new .part .tmp, dot files or BananaDS's and DraStic's quick-resume states (*.resume.*). RetroArch's automatic
+	// state isn't left out: that is Romhost's own rule, kept as it is
+	bool workFile(const std::string& name)
+	{
+		for (const char* x : { ".bak", ".new", ".part", ".tmp" })
+			if (name.size() >= strlen(x) && name.compare(name.size() - strlen(x), std::string::npos, x) == 0) return true;
+		return false;
+	}
 	std::string saveKind(const std::string& rel)
 	{
 		std::string name = baseOf(rel);
@@ -644,8 +668,7 @@ namespace bsync
 			if (b == std::string::npos) break;
 			a = b + 1;
 		}
-		for (const char* x : { ".bak", ".new", ".part", ".tmp" })
-			if (name.size() >= strlen(x) && name.compare(name.size() - strlen(x), std::string::npos, x) == 0) return "";
+		if (workFile(name)) return "";
 		if (name.find(".resume.") != std::string::npos) return "";
 		if (rel.compare(0, 6, "saves/") == 0) return "save";
 		if (rel.compare(0, 7, "states/") == 0 || rel.compare(0, 19, "drastic/savestates/") == 0) return "state";
@@ -687,9 +710,11 @@ namespace bsync
 	}
 	// BananaOS: DraStic's .dsv and BananaDS's .sav brought together (nds-saves <rom>), before a sync (the .sav is the one
 	// that syncs) and after a DS save is installed (DraStic's then matches it). Only on the card's own /data (nds-saves
-	// knows no other root). A game whose two saves both changed since they last agreed (exit 3) is noted by its stem:
-	// neither is touched, and the sync leaves the game alone until one of them is chosen
-	std::set<std::string> ndsDiverged;
+	// knows no other root). A game whose two saves both changed since they last agreed (NDS_BOTH_CHANGED), or DraStic's
+	// unreadable (NDS_UNREADABLE), is noted by its stem: neither is touched, and the sync leaves the game alone until the
+	// game's next start brings the two together, or DraStic's can be read. NDS_FAILED, a read or write that failed, is noted the same for this run, as the save to sync may
+	// be the older of the two; the next run tries again
+	std::map<std::string, std::string> ndsDiverged;	// stem -> why (NDS_DIVERGED, NDS_UNREAD, NDS_NOT_BROUGHT)
 	namespace
 	{
 	std::string ndsTool()
@@ -698,14 +723,17 @@ namespace bsync
 		std::string t = tool ? tool : (ROOT == "/data" ? "/usr/libexec/banana/nds-saves" : "");
 		return t.empty() || access(t.c_str(), X_OK) != 0 ? "" : t;
 	}
-	void runNdsSaves(const std::string& tool, const std::string& rom)
+	int runNdsSaves(const std::string& tool, const std::string& rom)
 	{
-		std::string cmd = "'" + tool + "' '";
-		for (char ch : rom) { if (ch == '\'') cmd += "'\\''"; else cmd += ch; }
-		cmd += "' >/dev/null 2>&1";
+		std::string cmd = shellQuote(tool) + " " + shellQuote(rom) + " >/dev/null 2>&1";
 		int st = system(cmd.c_str());
 		std::string stem = stemOf(baseOf(rom));
-		if (WIFEXITED(st) && WEXITSTATUS(st) == 3) ndsDiverged.insert(stem); else ndsDiverged.erase(stem);
+		int code = WIFEXITED(st) ? WEXITSTATUS(st) : -1;
+		if (code == NDS_BOTH_CHANGED) ndsDiverged[stem] = NDS_DIVERGED;
+		else if (code == NDS_UNREADABLE) ndsDiverged[stem] = NDS_UNREAD;
+		else if (code == NDS_FAILED) ndsDiverged[stem] = NDS_NOT_BROUGHT;
+		else ndsDiverged.erase(stem);
+		return code;
 	}
 	}
 	void savesFlatFirst()
@@ -738,31 +766,42 @@ namespace bsync
 		closedir(d);
 		for (auto& g : games) runNdsSaves(t, ROMS + "/nds/" + g + ".nds");
 	}
-	void ndsSaves(const std::string& romPath)
+	int ndsSaves(const std::string& romPath)
 	{
 		std::string t = ndsTool();
-		if (!t.empty()) runNdsSaves(t, romPath);
+		return t.empty() ? 0 : runNdsSaves(t, romPath);
 	}
-	bool ndsDivergedSave(const std::string& rel)
+	std::string ndsDivergedWhy(const std::string& rel)
 	{
-		return rel.compare(0, 10, "saves/nds/") == 0 && ndsDiverged.count(stemOf(baseOf(rel))) > 0;
+		auto i = rel.compare(0, 10, "saves/nds/") == 0 ? ndsDiverged.find(stemOf(baseOf(rel))) : ndsDiverged.end();
+		return i == ndsDiverged.end() ? "" : i->second;
 	}
-	// a game running (bananad's /run/banana/game.pid): its emulator may be writing its save
+	// a game running (bananad's /run/banana/game.pid): its emulator may be writing its save; or one about to start
+	// (/run/banana/game.starting, the menu's pid while it starts a game): its emulator may read the save any moment
 	bool gameRunning()
 	{
+		// game.pid's start time, when it has one, tells a reused pid (a pid file from before it was kept: the pid alone)
+		{
+			int pid = 0;
+			unsigned long long start = 0;
+			std::ifstream(RUN + "/game.pid") >> pid >> start;
+			if (pid > 0 && kill(pid, 0) == 0)
+			{
+				if (!start) return true;
+				std::ifstream f("/proc/" + std::to_string(pid) + "/stat");
+				std::string ln;
+				size_t q = std::getline(f, ln) ? ln.rfind(')') : std::string::npos;
+				if (q != std::string::npos)
+				{
+					std::istringstream in(ln.substr(q + 1));
+					std::string v;
+					for (int i = 0; i < 20 && in >> v; i++) if (i == 19 && strtoull(v.c_str(), nullptr, 10) == start) return true;
+				}
+			}
+		}
 		int pid = 0;
-		unsigned long long start = 0;
-		std::ifstream(RUN + "/game.pid") >> pid >> start;
-		if (pid <= 0 || kill(pid, 0) != 0) return false;
-		if (!start) return true;	// (a pid file from before the start time was kept)
-		std::ifstream f("/proc/" + std::to_string(pid) + "/stat");
-		std::string ln;
-		if (!std::getline(f, ln)) return false;
-		size_t q = ln.rfind(')');
-		if (q == std::string::npos) return false;
-		std::istringstream in(ln.substr(q + 1));
-		std::string v;
-		for (int i = 0; i < 20 && in >> v; i++) if (i == 19) return strtoull(v.c_str(), nullptr, 10) == start;
+		std::ifstream(RUN + "/game.starting") >> pid;
+		if (pid > 0 && kill(pid, 0) == 0) return true;
 		return false;
 	}
 	KillHold::KillHold()

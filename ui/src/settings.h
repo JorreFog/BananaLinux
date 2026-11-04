@@ -244,7 +244,7 @@ namespace banana
 		std::string about, wifiInfo, ip;
 
 		// the Wi-Fi pages: the networks around, and the keyboard for a password (settings-wifi.cpp)
-		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS, PICKGAMES, FILES, BSHARE, SERVERS, SPEAKEREQ } page = LIST;
+		enum Page { LIST, NETWORKS, KEYBOARD, UPDATES, SETUP, GAME, ARTPICK, COLORS, BLUETOOTH, THEMES, CREDITS, PICKGAMES, FILES, BSHARE, SERVERS, SPEAKEREQ, SAVES } page = LIST;
 		// Home server > Choose games: the server's games (banana-sync games), a system at a time, ticked to sync
 		struct PickGame { std::string sys, key, title; long long bytes = 0; bool on = false, there = false; };
 		std::vector<PickGame> pickGames;
@@ -257,6 +257,21 @@ namespace banana
 		bool pollPickGames();
 		Result pressPickGames(Key k);
 		void renderPickGames();
+		// Home server > Saves: each game with a conflict, a held save, or kept copies; what can be done with it (by
+		// banana-sync's saves, resolve and restore)
+		struct SaveAct { std::string label, args; };
+		struct SaveGame { std::string rel, tag, detail; std::vector<SaveAct> acts; };
+		std::vector<SaveGame> saveGames;
+		std::string savesOpen;	// the game open at level 1, by its save: the list is rebuilt after each choice
+		int savesLevel = 0, savesGame = 0, savesSel = 0, savesTop = 0;	// level 0: the games, 1: one game's
+		bool savesBusy = false, savesAct = false;	// savesAct: what is running is a choice, not the list
+		std::string savesMsg;
+		wifi::Job savesJob;
+		void openSaves();
+		void savesRun(const std::string& args, bool act);
+		bool pollSaves();
+		Result pressSaves(Key k);
+		void renderSaves();
 		void savePickGames();
 		std::vector<int> pickList() const;		// the games of the system open (indices into pickGames)
 		void stopSync();
@@ -618,6 +633,9 @@ namespace banana
 		void startSync();
 		void startPairing();
 		void hsRun(const std::string& args);	// banana-sync <args> in the background
+		// banana-sync with this card's root, pairing and settings, then args, as one sh command line (the Sync row's
+		// runs, the Saves page's and the games to choose from all start it so)
+		std::string syncCmd(const std::string& args) const;
 		std::string syncShort() const;		// for the Sync now row: "Not yet", "12 / 300", "Done", "Didn't work"
 		std::string homeServer() const;		// the paired server's name, "" when none
 		mutable std::string hsPaired;

@@ -2,12 +2,24 @@
 // date, and the save lock held for the game's length. The wait is one step at a time, called from the menu's loop with
 // the time, so the menu goes on drawing and reading keys meanwhile.
 #pragma once
+#include "sync_util.h"
 #include <functional>
 #include <string>
 #include <sys/types.h>
+#include <vector>
 
 namespace gamesync
 {
+	using bsync::shellQuote;
+	// a line of banana-sync's output, its fields
+	inline std::vector<std::string> splitTabs(const std::string& ln)
+	{
+		std::vector<std::string> f;
+		size_t a = 0;
+		for (size_t b; (b = ln.find('\t', a)) != std::string::npos; a = b + 1) f.push_back(ln.substr(a, b - a));
+		f.push_back(ln.substr(a));
+		return f;
+	}
 	// what can be read of wlan0 without asking wpa_supplicant
 	struct WifiFacts
 	{
@@ -21,7 +33,7 @@ namespace gamesync
 	Wifi wifiStage(const WifiFacts& f);
 	WifiFacts readWifi(const std::string& run);
 
-	// whether this game waits for a sync: Auto sync on, Sync before playing on, paired with RomM, a game under the card's
+	// whether this game waits for a sync: Auto sync on, Sync before playing on (off when not set), paired with RomM, a game under the card's
 	// ROMs folder or the second SD card's (sd2Roms, "" when it isn't in), and not the game started again after a
 	// power-off, whose resume state belongs to the save on the card
 	bool wanted(const std::string& autoSync, const std::string& beforePlaying, const std::string& conf,
@@ -38,6 +50,10 @@ namespace gamesync
 	bool syncsAfterGame(const std::string& autoSync);
 	// the game's save to the server now the game has let go of it, in the background. False: no banana-sync
 	bool syncAfterGame(const std::string& tool, const std::string& rom);
+	// a DS game over: nds-saves told (--played, in the background) what its saves hold now, which is what the game's
+	// resume state belongs to; a save replaced by hand before the next start then isn't played under that state.
+	// False: not a DS game, or no nds-saves
+	bool gamePlayed(const std::string& system, const std::string& rom);
 
 	class Wait
 	{
@@ -47,30 +63,49 @@ namespace gamesync
 		static constexpr double FIRST_ANSWER = 5000;
 		static constexpr double CAP = 20000;
 		static constexpr double NOTICE = 1500;
+		static constexpr double STOP_GRACE = 3000;		// ms banana-sync is given to finish placing a save, once asked to stop
+		static constexpr double KILL_GRACE = 2000;		// then, killed, to be gone
 
 		std::function<WifiFacts()> wifi;
 		std::function<void(const std::string&)> log;
 
 		void begin(const std::string& tool, const std::string& rom, const std::string& run, double now);
-		bool step(double now);	// true: what is shown changed
-		void skip();			// no more waiting: the game now
-		void press(bool isB);	// a press while it waits: B plays now, anything ends a notice
+		bool step(double now);	// true: what is shown changed, by this step or by a press since the last
+		void skip();			// no more waiting: the game now (once the sync has stopped, which the steps see to)
+		void end();				// the same, waited out here: the menu is ending
+		// a press while it waits ('a', 'b', 'x', or 0 for any other): B plays now (unless a newer save was still coming, which
+		// is then asked about), anything ends a notice; a question takes its own buttons
+		void press(char button);
+		bool backed() { bool b = back; back = false; return b; }	// the owner went back: this game isn't to start
 		bool active() const { return state != IDLE; }
 		// the pop-up's lines (false: nothing shown)
 		bool text(std::string& l1, std::string& l2) const;
 
 	private:
-		enum State { IDLE, WIFI, SYNCING, SHOWING } state = IDLE;
-		std::string tool, rom, status;
+		enum State { IDLE, WIFI, SYNCING, SHOWING, CONFLICT, SETTLING, OLDER, UNSETTLED, STOPPING } state = IDLE;
+		// what follows a stop, once banana-sync is gone: the game (or the question of a newer save not fetched), the
+		// same or else the notice that nothing synced, or the question of a choice not carried out
+		enum After { PLAY, PLAY_OR_NOTICE, UNSETTLE } after = PLAY;
+		double stopAt = 0;
+		bool killed = false;
+		std::string tool, rom, status, older, conflicts, conflictKey;	// (older: launch.older, the sync's mark of a newer save not fetched; conflicts: launch.conflict, what it held for the game)
+		bool back = false;
+		bool serverOnly = false;	// the question is of a save gone or blank here: the server's to take back, or none
 		std::string runDir;
 		double from = 0, asked = 0, until = 0;
-		bool shown = false, answered = false;
+		bool shown = false, answered = false, pressed = false;	// (pressed: a press changed the state, for the next step to tell)
 		pid_t child = -1;
 		std::string line1, line2;
+		void act(char button);
 		void spawn(double now);
-		void stop();
+		void settle(const char* how);
+		std::string heldConflict();
+		void stop(After then, double now);	// asked to stop: what follows at once when it is gone in a few ms, else STOPPING, stepped until it is
+		void stopped(double now);	// gone: its files cleared, then what was to follow
+		void killGroup();
 		void finished(int wstatus, double now);
 		void notice(const std::string& l1, const std::string& l2, double now);
+		bool askIfOlder();	// the sync left launch.older: OLDER
 		void notSynced(double now);
 		void say(const std::string& s) { if (log) log(s); }
 	};

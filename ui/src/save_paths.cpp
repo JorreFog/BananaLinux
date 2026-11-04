@@ -160,6 +160,23 @@ namespace bsync
 		return f[0] == '/' || !safeRel(f) ? "" : f;	// (an absolute folder is an app's)
 	}
 
+	std::string systemOfFolder(const std::string& folder)
+	{
+		std::ifstream f(systemsConf());
+		std::string sys, named;
+		for (std::string ln; std::getline(f, ln);)
+		{
+			ln = trim(ln);
+			if (ln.empty() || ln[0] == '#') continue;
+			if (ln[0] == '[') { sys = ln.size() > 2 && ln.back() == ']' ? ln.substr(1, ln.size() - 2) : ""; continue; }
+			size_t e = ln.find('=');
+			if (!sys.empty() && e != std::string::npos && trim(ln.substr(0, e)) == "folder" && trim(ln.substr(e + 1)) == folder && named.empty()) named = sys;
+		}
+		// (the system of that id, when its folder is its own: a system moved to another folder no longer has this one)
+		if (named.empty() && romFolder(folder) == folder) return folder;
+		return named;
+	}
+
 	std::map<std::string, std::string> romIndex(const std::string& folder)
 	{
 		std::map<std::string, std::string> out;

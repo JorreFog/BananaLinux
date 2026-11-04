@@ -153,10 +153,33 @@ namespace bsync
 	// in another form, a DraStic .dsv taken as its raw save), what this handheld holds back for its owner, a conflict
 	// (both kept, the server's version in the vault) or a save it won't take or send by itself, and the saves waiting
 	// to be sent
-	struct SlotSt { std::string md5, rel; long long saveId = 0; std::string wire; };
-	struct SlotNote { std::string rel, why, localMd5, serverMd5, device, updated, vault; long long saveId = 0; };
+	// (lost: the save went missing or blank here after this version was agreed. What is at its path next is a new save, not
+	// that version played on, whatever happens to it, until a version is agreed again)
+	struct SlotSt { std::string md5, rel; long long saveId = 0; std::string wire; bool lost = false; };
+	// (rom: the game's path under the ROMs folder, which a save's name alone doesn't say: two systems can share one)
+	struct SlotNote { std::string rel, why, localMd5, serverMd5, device, updated, vault; long long saveId = 0; std::string rom = ""; };
+	// a held note's why when it is DraStic's and BananaDS's saves that differ, not the card's and the server's: one of
+	// the two to choose, or DraStic's unreadable (its footer doesn't add up, or a size no DS save has), nothing to choose,
+	// or the two not brought together this time (a read or a write that failed), tried again at the next sync
+	constexpr const char* NDS_DIVERGED = "DraStic's and BananaDS's saves both changed";
+	constexpr const char* NDS_UNREAD = "DraStic's save can't be read";
+	constexpr const char* NDS_NOT_BROUGHT = "DraStic's and BananaDS's saves couldn't be brought together";
+	// a held note's why when the save is gone from the card or blank since it was agreed
+	constexpr const char* NOTE_MISSING = "missing here since the last sync";
+	constexpr const char* NOTE_BLANK = "blank here since the last sync";
+	inline bool lostNote(const SlotNote& n) { return n.why == NOTE_MISSING || n.why == NOTE_BLANK; }
+	// nds-saves' exit codes, as its header lists them
+	constexpr int NDS_BOTH_CHANGED = 3, NDS_UNREADABLE = 5, NDS_FAILED = 6;
+	inline const char* ndsWhyLog(const std::string& why)
+	{
+		return why == NDS_UNREAD ? "DraStic's save can't be read (left for its owner)"
+			: why == NDS_NOT_BROUGHT ? "DraStic's and BananaDS's saves couldn't be brought together (a read or a write failed; tried again next time)"
+			: "DraStic's and BananaDS's saves both changed since they last agreed";
+	}
 	// a save that couldn't be sent (no answer, the server's error): its bytes in the vault, sent by the next sync
-	struct QueueSt { std::string md5, vault; double since = 0; };
+	// a save waiting to be sent, under its slot's key; or, for a game that has none yet (never synced from this card),
+	// under "rom:<its roms-relative path>" with rel, its save's path, until a sync that reaches the server finds its slot
+	struct QueueSt { std::string md5, vault; double since = 0; std::string rel; };
 	struct Conf
 	{
 		std::string backend = "romhost", server, token, device, name, serverName, serverVersion, etag, last;	// serverVersion: RomM's, as its heartbeat says
@@ -175,7 +198,11 @@ namespace bsync
 		bool paired() const { return !server.empty() && !token.empty(); }
 	};
 	Conf loadConf();
+	// written back under romsync.lock, only this run's parts (holdRoms, holdSaves) over the file as it is then. False,
+	// nothing written, when the file was forgotten or paired again meanwhile: this run's state is the old pairing's.
 	bool saveConf(const Conf& c);
+	// a new pairing written whole; the same server's saves part and files taken from the file as it is then
+	bool savePairing(const Conf& c);
 	void takeSaves(Conf& to, const Conf& from);	// the saves' part of the state (saves, states, slots, conflicts, held, queue)
 	// save.lock (one run at a time over the card's saves), waited for up to secs; kept until the run ends
 	bool lockSaves(int secs);
@@ -209,14 +236,24 @@ namespace bsync
 		std::set<std::string> skip;	// system folders this handheld skips (settings: homesync.<system> = off)
 		const std::set<std::string>* chosen = nullptr;	// games chosen for syncing (null: every game)
 		std::set<std::string> ownCovers;	// system folders that make their own covers (systems.conf: covers = own)
+		std::string settleKey;		// resolve: the conflict its owner settled for the card's save, sent or kept as the run decides it
 		std::string onlyRom;		// sync --rom: only that game's save (roms-relative); RomM 5.4 and newer, others every save
 		bool gameStarted = false;
 		bool oneGame = false;	// this run moves one game's save and no other's (--rom alone doesn't say: see saves())
 		bool onlyQueued = false;	// only the saves waiting to be sent (their games'), the same way
 		bool beforeGame = false;	// the sync before a game starts: that game's save or none, never every save
+		// the game started again after Power off after sleeping, not started yet (roms-relative, "" for none): its resume
+		// state belongs with the save on the card, so a sync of other games leaves that one as it is
+		std::string resumeRom;
 		// a game started meanwhile, with this run holding save.lock: its save may be in use and any of the rest may be it,
 		// so a run of more than one game stops where it is (said once). True: leave the rest for the next sync
 		bool stopForGame(std::vector<std::string>& errors);
+		// the sync after a game with the server out of reach: what was played is on the card alone until the next sync,
+		// and a session or a power cut can write over it first, so a copy goes to the vault now, as a failed upload's does.
+		// True when there was a real save to keep; ndsHeld: DraStic's and BananaDS's weren't brought together, so which of
+		// them is the save is its owner's choice
+		struct Played { std::string rel, md5, vault; bool ndsHeld = false; };
+		bool keepPlayed(Played& g, std::vector<std::string>& errors);
 		explicit Backend(Conf& conf) : c(conf) {}
 		virtual ~Backend() {}
 		virtual std::vector<std::string> auth() const { return { "Authorization: Bearer " + c.token }; }
@@ -259,6 +296,8 @@ namespace bsync
 	}
 
 	// ---- the saves on the card ----------------------------------------------------------------------------------------
+	// a file's name as a write in progress leaves it (.bak .new .part .tmp): never a save, nor a copy in the vault
+	bool workFile(const std::string& name);
 	std::string saveKind(const std::string& rel);
 	std::map<std::string, std::string> localSaves(bool states);
 	// saves-flat (system/rootfs/usr/libexec/banana), once a boot as the launchers run it: a save still in a RetroArch
@@ -267,10 +306,13 @@ namespace bsync
 	// save.lock, before anything is decided; BANANA_SAVES_FLAT names another script (the tests')
 	void savesFlatFirst();
 	void ndsSavesFirst();
-	void ndsSaves(const std::string& romPath);
-	// a DS save (saves/nds/<stem>.sav) whose game's two saves, DraStic's and BananaDS's, both changed since they last
-	// agreed, as the last nds-saves run for it found: not synced either way until one of them is chosen
-	bool ndsDivergedSave(const std::string& rel);
+	// nds-saves' exit code: 0 once the two agree (or with no nds-saves to run, off the card); NDS_BOTH_CHANGED,
+	// NDS_UNREADABLE (DraStic's), NDS_FAILED (a read or a write failed)
+	int ndsSaves(const std::string& romPath);
+	// why the DS save at rel (saves/nds/<stem>.sav) isn't synced, as the last nds-saves run for its game found: the
+	// two both changed since they last agreed, DraStic's can't be read, or they couldn't be brought together; the
+	// note's why the Saves page lists. "" when the two are in step
+	std::string ndsDivergedWhy(const std::string& rel);
 	bool gameRunning();
 	// SIGTERM and the like wait while this lives: what must not be left half done by a stop (ended early by end())
 	struct KillHold

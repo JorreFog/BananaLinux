@@ -1,7 +1,8 @@
 #!/bin/sh
 # The DS launchers' file work against a made-up card, no emulator: run-drastic's per-game drastic.cfg lines (#117)
 # and nds-buttons' DraStic controls (#151), taken from the launchers themselves (their functions, not a copy); nds-saves on
-# a made-up data partition (BANANA_ROOT): an empty save never goes over a real one (#96).
+# a made-up data partition (BANANA_ROOT): an empty save never goes over a real one (#96), and a resume state is loaded
+# only over the save the game was quit with.
 #   sh system/tests/launchers-test.sh
 cd "$(dirname "$0")/../.." || exit 1
 R=$PWD L=$PWD/system/rootfs/usr/libexec/banana
@@ -258,5 +259,24 @@ cmp -s "$T/reset/free.cfg" "$T/reset/def.cfg" || check same differs "(the test i
 ( trap "" XFSZ; ulimit -f 4; NDS_RESET_DEF=$T/reset/def.cfg NDS_RESET_CFG=$T/reset/drastic.cfg sh "$L/nds-reset" buttons > /dev/null 2>&1 )
 check "$(wc -c < "$T/reset/drastic.cfg" | tr -d ' ')" "$want" "nds-reset buttons: drastic.cfg not cut short on a full card"
 
+
+echo "nds-saves: a resume state is loaded only over the save the game was quit with (the menu's --played at its end)"
+MST=$D/states/nds/Game.resume.mst DSS=$D/drastic/savestates/Game.resume.dss
+nds() { BANANA_ROOT=$D sh "$L/nds-saves" /roms/nds/Game.nds "$@" > "$T/log"; }
+states() { printf '%s %s' "$( [ -f "$MST" ] && echo mst || echo -)" "$( [ -f "$DSS" ] && echo dss || echo -)"; }
+saves 8192 - x; mkdir -p "$D/states/nds" "$D/drastic/savestates"; : > "$MST"; : > "$DSS"
+nds --played
+check "$(sed 's/ [0-9a-f]\{32\}$/ md5/' "$D/banana/nds-saves/Game.played" | tr '\n' ' ')" "dsv md5 sav md5 " "--played: the raw save each file holds, recorded"
+nds --prefer sav
+check "$(states) $(ls "$D/banana/nds-saves" | grep -c played)" "mst dss 0" "the save as the game left it: BananaDS's state stays, the record taken up"
+nds --played; head -c 8192 /dev/zero | tr '\0' n > "$D/saves/nds/Game.sav"
+nds --prefer sav
+check "$(states) $(grep -c 'resume state dropped' "$T/log")" "- - 1" "the .sav replaced by hand since: BananaDS's state dropped, said (DraStic's goes with the save nds-saves gives it)"
+: > "$MST"; : > "$DSS"; head -c 8192 /dev/zero | tr '\0' m > "$D/saves/nds/Game.sav"
+nds --prefer sav
+check "$(states)" "mst -" "no record of the game's end (a power-off's resume, a card from before): BananaDS's state kept"
+nds --played; head -c 8192 /dev/zero | tr '\0' e > "$D/drastic/backup/Game.dsv"
+nds --prefer dsv
+check "$(states)" "- -" "the .dsv replaced: DraStic's state dropped, and BananaDS's with the save nds-saves gives it"
 echo "launchers-test: $passed passed, $failed failed"
 [ $failed = 0 ]

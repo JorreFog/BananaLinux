@@ -894,7 +894,7 @@ namespace banana
 		}
 		add(HS, "phone", "Save states", "Whether save states sync too.",
 			menu, "homesync_states", { "Off", "On" }, { "off", "on" });
-		items.back().hints = { "Only the games' own saves.", "Save states too (RomM). Quick-resume states never sync." };
+		items.back().hints = { "Only the games' own saves.", "Save states too (RomM; on Romhost its Devices page decides). A state from RomM goes to the vault. Quick-resume states never sync." };
 		add(HS, "phone", "Auto sync", "When syncing happens by itself.",
 			menu, "homesync_auto", { "Off", "Leaving a game", "And on Wi-Fi" }, { "off", "quit", "both" });
 		items.back().hints = { "Only when you choose Sync now.", "After you leave a game, and before one on RomM (B skips the wait).", "Also when Wi-Fi connects. Never while a game runs." };
@@ -906,6 +906,10 @@ namespace banana
 		add(HS, "phone", "Check certificate", "Whether an https server's certificate is checked.",
 			menu, "homesync_tls", { "On", "Off" }, { "on", "off" });
 		items.back().hints = { "Checked, as a browser does.", "Not checked: for a server with its own certificate. Only on a network you trust." };
+		add(HS, "phone", "Sync before playing", "Whether a game's save is brought up to date before it starts.",
+			menu, "homesync_launch", { "Off", "On" }, { "off", "on" });
+		items.back().hints = { "The game starts at once.", "RomM, with Auto sync on. B plays at once." };
+		add(HS, "phone", "Saves", "Conflicts to settle, held saves, and kept copies.", "", "hs_saves", {}, {}, Item::PAGE);
 		add(HS, "phone", "Forget this server", "Unpairs the handheld. Games and saves stay on the card. Press A twice.", "", "hs_forget", { "" }, { "" }, Item::ACTION);
 		{
 			const char* HSS = "Home server systems";
@@ -1319,6 +1323,7 @@ namespace banana
 			if (it.key == "hs_server") { startPairing(); return MOVED; }
 			if (it.key == "hs_sync") { if (syncing()) stopSync(); else startSync(); return MOVED; }
 			if (it.key == "hs_pick") { openPickGames(); return MOVED; }
+			if (it.key == "hs_saves") { openSaves(); return MOVED; }
 			if (it.key == "credits") { openCredits(); return MOVED; }
 			if (it.key == "update") openUpdates(); else if (it.key == "setup") openSetup(false, ""); else openNetworks();
 			return MOVED;
@@ -1521,6 +1526,7 @@ namespace banana
 		if (page == CREDITS) return pressCredits(k);
 		if (page == PICKGAMES) return pressPickGames(k);
 		if (page == FILES) return pressFiles(k);
+		if (page == SAVES) return pressSaves(k);
 		if (langAsk >= 0) return pressLangAsk(k);
 		if (page == BSHARE) return pressBshare(k);
 		if (page == SERVERS) return pressServers(k);
@@ -1708,6 +1714,7 @@ namespace banana
 		if (page == CREDITS) { if (downY >= 418 && downY <= 466 && downX < 320) return pressCredits(Key::B); return NONE; }
 		if (page == PICKGAMES) { if (downY >= 418 && downY <= 466 && downX < 320) return pressPickGames(Key::B); return NONE; }
 		if (page == FILES) return touchFiles(cx, cy);
+		if (page == SAVES) { if (downY >= 418 && downY <= 466 && downX < 320) return pressSaves(Key::B); return NONE; }
 		if (langAsk >= 0 && page == LIST)
 		{
 			// the two buttons (askButtons): No, Yes
@@ -2440,6 +2447,7 @@ namespace banana
 		if (page == CREDITS) { renderCredits(); return; }
 		if (page == PICKGAMES) { renderPickGames(); return; }
 		if (page == FILES) { renderFiles(); return; }
+		if (page == SAVES) { renderSaves(); return; }
 		if (langAsk >= 0) { renderLangAsk(); return; }
 		if (page == BSHARE) { renderBshare(); return; }
 		if (page == SERVERS) { renderServers(); return; }
@@ -2635,6 +2643,7 @@ namespace banana
 		bool scrapeChanged = pollScrape(t);
 		scrapeChanged |= pollSync(t);
 		scrapeChanged |= pollPickGames();
+		scrapeChanged |= pollSaves();
 		bool changed0 = false;
 		if (raCheck)
 		{
@@ -4244,7 +4253,7 @@ namespace banana
 			if (!n || busy) return NONE;
 			// its cover and title screen for this game, over what it had (banana-scrape keeps the match for the
 			// scrapes after)
-			auto q = [](const std::string& s) { std::string r = "'"; for (char c : s) { if (c == '\'') r += "'\\''"; else r += c; } return r + "'"; };
+			auto q = gamesync::shellQuote;
 			std::string sys = gameKey.substr(0, gameKey.find('/'));
 			artMatching = true;
 			message = "Fetching the cover and the title screen...";
@@ -4672,11 +4681,8 @@ namespace banana
 		pickLevel = 0; pickSysSel = 0; pickSel = 0; pickTop = 0; pickDirty = false;
 		pickGames.clear(); pickSys.clear(); pickError.clear();
 		if (!wifiOn()) { pickError = "Wi-Fi is off: switch it on in Network first."; return; }
-		size_t s = data.rfind('/');
-		std::string root = s == std::string::npos || s == 0 ? "/" : data.substr(0, s);
-		auto q = [](const std::string& x) { std::string r = "'"; for (char c : x) { if (c == '\'') r += "'\\''"; else r += c; } return r + "'"; };
 		pickLoading = true;
-		pickJob.start(q(syncTool()) + " --root " + q(root) + " --conf " + q(data + "/romsync.json") + " --settings " + q(data + "/settings.conf") + " games 2>/dev/null", sync);
+		pickJob.start(syncCmd("games") + " 2>/dev/null", sync);
 	}
 
 	bool Settings::pollPickGames()
@@ -4863,6 +4869,176 @@ namespace banana
 		be->endScreen();
 	}
 
+	// ---- Home server > Saves -----------------------------------------------------------------------------------------
+	static std::string saveName(const std::string& path)
+	{
+		size_t s = path.rfind('/');
+		std::string n = s == std::string::npos ? path : path.substr(s + 1);
+		size_t d = n.rfind('.');
+		return d == std::string::npos || d == 0 ? n : n.substr(0, d);
+	}
+	void Settings::savesRun(const std::string& args, bool act)
+	{
+		savesBusy = true; savesAct = act;
+		savesJob.start(syncCmd(args) + " 2>/dev/null", sync);
+	}
+	void Settings::openSaves()
+	{
+		page = SAVES;
+		if (savesBusy) return;	// (a choice still running, left and come back to: its result comes here. A new job would wait for it, the menu frozen)
+		savesLevel = 0; savesGame = 0; savesSel = 0; savesTop = 0;
+		saveGames.clear(); savesMsg.clear();
+		savesRun("saves", false);
+	}
+	bool Settings::pollSaves()
+	{
+		std::string out;
+		if (!savesBusy || !savesJob.take(out)) return false;
+		savesBusy = false;
+		if (savesAct)
+		{
+			// (a choice's one line, the last; then the list again, which shows what came of it)
+			size_t e = out.find_last_not_of('\n'), b = e == std::string::npos ? 0 : out.rfind('\n', e);
+			std::string last = e == std::string::npos ? "" : out.substr(b == std::string::npos ? 0 : b + 1, e - (b == std::string::npos ? 0 : b + 1) + 1);
+			// (banana-sync's reason goes to the log; the list read again shows where the save stands)
+			if (last != "ok") fprintf(stderr, "saves: %s\n", last.empty() ? "no answer" : last.c_str());
+			savesMsg = last == "ok" ? "Done." : "Not done.";
+			savesRun("saves", false);
+			return true;
+		}
+		auto q = gamesync::shellQuote;
+		std::vector<SaveGame> games;
+		auto game = [&](const std::string& rel) -> SaveGame&
+		{
+			for (auto& g : games) if (g.rel == rel) return g;
+			games.push_back({ rel, "", "", {} });
+			return games.back();
+		};
+		auto bytes = [](const std::string& s) { long long b = atoll(s.c_str()); char t[32]; if (b < 0) return std::string("gone"); if (b < 1024) snprintf(t, sizeof t, "%lld bytes", b); else if (b < (1LL << 20)) snprintf(t, sizeof t, "%lld KB", (b + 512) >> 10); else snprintf(t, sizeof t, "%.1f MB", b / 1048576.0); return std::string(t); };
+		std::istringstream in(out);
+		std::string ln;
+		while (std::getline(in, ln))
+		{
+			std::vector<std::string> f = gamesync::splitTabs(ln);
+			if ((f[0] == "conflict" || f[0] == "held") && f.size() >= 14)
+			{
+				SaveGame& g = game(f[2]);
+				const std::string& can = f[11], &kind = f[13];
+				std::string rom = f[12].empty() ? "" : " --rom " + q(f[12]);
+				// (a choice to make outranks being held: a game's two notes share a line here)
+				if (can == "none" && f[0] == "held" && !g.tag.empty()) continue;
+				g.tag = can == "none" && f[0] == "held" ? "Held back" : "Conflict";
+				// (a fixed line by kind; banana-sync's own reason is in its log)
+				if (can == "both") g.detail = "This handheld: " + bytes(f[5]) + ". The server: " + bytes(f[7]) + (f[8].empty() ? "" : ", from " + f[8]) + (f[9].empty() ? "" : ", " + f[9].substr(0, 16)) + ". The one not chosen stays in the vault.";
+				else if (kind == "both") g.detail = "Changed here and on the server. The next sync that reaches the server fetches its copy to choose from.";
+				else if (kind == "gone") g.detail = "Missing or blank here since the last sync. Nothing is put back by itself.";
+				else if (kind == "ds") g.detail = "DraStic's and BananaDS's saves differ. Starting the game brings them together.";
+				else if (kind == "unread") g.detail = "DraStic's save here can't be read. The game isn't synced until it can.";
+				else g.detail = "The server's save is in a format or size this handheld can't use. It stays on the server.";
+				std::vector<SaveAct> acts;
+				if (can == "both") acts.push_back({ "Keep this handheld's", "resolve " + q(f[1]) + " card" + rom });
+				if (can == "both" || can == "server") acts.push_back({ "Use the server's", "resolve " + q(f[1]) + " server" + rom });
+				g.acts.insert(g.acts.begin(), acts.begin(), acts.end());
+			}
+			else if (f[0] == "kept" && f.size() >= 4)
+			{
+				std::string name = f[2].substr(f[2].rfind('/') + 1), when = name.size() > 15 && name[8] == 'T' ? name.substr(0, 4) + "-" + name.substr(4, 2) + "-" + name.substr(6, 2) + " " + name.substr(9, 2) + ":" + name.substr(11, 2) : "Last good";
+				game(f[1]).acts.push_back({ "Restore " + when + " (" + bytes(f[3]) + ")", "restore " + q(f[2]) });
+			}
+		}
+		saveGames = games;
+		fprintf(stderr, "saves: the list read, %zu games\n", saveGames.size());	// (what a test of the page waits for)
+		// (the game open stays the one open: positions move as a game settles, and the next A must not land on another's.
+		// Settled and gone from the list, back to the list)
+		int at = -1;
+		for (size_t i = 0; i < saveGames.size(); i++) if (saveGames[i].rel == savesOpen) at = (int)i;
+		if (savesLevel == 1 && at < 0) savesLevel = 0;
+		if (at >= 0 && savesLevel == 1) savesGame = at;
+		savesGame = std::min(savesGame, std::max(0, (int)saveGames.size() - 1));
+		savesSel = saveGames.empty() ? 0 : std::max(0, std::min(savesSel, (int)saveGames[savesGame].acts.size() - 1));
+		savesTop = std::min(savesTop, savesSel);
+		return true;
+	}
+	Settings::Result Settings::pressSaves(Key k)
+	{
+		const int VIS = 8;
+		if (k == Key::START) { page = LIST; mOpen = false; return CLOSED; }
+		if (k == Key::B)
+		{
+			if (savesLevel == 1) { savesLevel = 0; savesMsg.clear(); return MOVED; }
+			page = LIST;
+			return MOVED;
+		}
+		if (savesBusy || saveGames.empty()) return NONE;
+		int n = savesLevel == 0 ? (int)saveGames.size() : (int)saveGames[savesGame].acts.size();
+		if (n == 0) return NONE;	// (a game held with nothing to choose and no kept copy)
+		int& sel = savesLevel == 0 ? savesGame : savesSel;
+		int to = sel;
+		if (k == Key::UP) to = std::max(0, sel - 1);
+		else if (k == Key::DOWN) to = std::min(n - 1, sel + 1);
+		else if (k == Key::L || k == Key::LEFT) to = std::max(0, sel - (VIS - 1));
+		else if (k == Key::R || k == Key::RIGHT) to = std::min(n - 1, sel + (VIS - 1));
+		else if (k == Key::A)
+		{
+			if (savesLevel == 0) { savesLevel = 1; savesOpen = saveGames[savesGame].rel; savesSel = 0; savesTop = 0; savesMsg.clear(); return MOVED; }
+			if (sel < n) { savesMsg = "Working..."; savesRun(saveGames[savesGame].acts[sel].args, true); }
+			return MOVED;
+		}
+		else return NONE;
+		if (to == sel) return NONE;
+		sel = to;
+		int& top = savesTop;
+		if (sel < top) top = sel;
+		if (sel >= top + VIS) top = sel - VIS + 1;
+		return MOVED;
+	}
+	void Settings::renderSaves()
+	{
+		SPal p = pal(light);
+		const int VIS = 8;
+		bool one = savesLevel == 1 && savesGame < (int)saveGames.size();
+		be->beginScreen(0);
+		box("screen", false, 0, 0, 640, 480);
+		box("hero", false, 18, 20, 604, 436);
+		icon("phone", 50, 56, 3);
+		text("Home server", true, 17, 170, 62, p.muted, true, 1.4f);
+		text("Saves", true, 30, 170, 88, p.ink);
+		std::string help = !savesMsg.empty() ? savesMsg : savesBusy ? "Reading the card..." : saveGames.empty() ? "Nothing here: no conflicts, nothing held, and no kept copies."
+			: one ? (saveGames[savesGame].detail.empty() ? std::string("A puts a kept copy back, and the save it replaces is kept too. The next sync sends it.") : saveGames[savesGame].detail)
+			: "A opens a game. A conflict stays as it is until you settle it: nothing is lost meanwhile.";
+		wrapped(help, 20, 50, 196, 540, 6, p.muted);
+		be->endScreen();
+
+		be->beginScreen(1);
+		box("screen", false, 0, 0, 640, 480);
+		box("bubble", false, 18, 14, 604, 54);
+		text(fit(one ? saveName(saveGames[savesGame].rel) : std::string("Games"), true, 22, 560), true, 22, 38, 28, p.ink);
+		int n = saveGames.empty() ? 0 : one ? (int)saveGames[savesGame].acts.size() : (int)saveGames.size();
+		int sel = one ? savesSel : savesGame;
+		int top = std::max(0, std::min(sel, std::min(savesTop, n - 1)));
+		if (sel >= top + VIS) top = sel - VIS + 1;
+		for (int r = 0; r < VIS && top + r < n; r++)
+		{
+			bool on = top + r == sel;
+			float y = 80 + r * 41;
+			box(on ? "pick" : "slot", on, 18, y, 604, 37);
+			Color c = on ? p.onPick : p.ink;
+			std::string label = one ? saveGames[savesGame].acts[top + r].label : saveName(saveGames[top + r].rel), tag = one ? "" : saveGames[top + r].tag;
+			float tw = tag.empty() ? 0 : text(tag, true, 17, 0, 0, c, false, 0, true);
+			text(fit(label, true, 18, 560 - tw - 24), true, 18, 34, y + 9, c);
+			if (tw > 0) text(tag, true, 17, 606 - tw, y + 10, on ? p.onPick : p.muted);
+		}
+		float bw = faceWidth("B", "Back");
+		face("B", "Back", 18, bw);
+		if (n > 0 && !savesBusy)
+		{
+			std::string aa = one ? "Choose" : "Open";
+			float aw = faceWidth("A", aa);
+			face("A", aa, 622 - aw, aw);
+		}
+		be->endScreen();
+	}
+
 	// ---- the theme gallery ----------------------------------------------------------------------------------------
 	std::string Settings::thumbFile(const std::string& value, bool bottom) const
 	{
@@ -4903,7 +5079,7 @@ namespace banana
 	void Settings::startThumbs()
 	{
 		if (thumbJob.running()) return;
-		auto q = [](const std::string& s) { std::string r = "'"; for (char c : s) { if (c == '\'') r += "'\\''"; else r += c; } return r + "'"; };
+		auto q = gamesync::shellQuote;
 		char exe[4096];
 		ssize_t n = readlink("/proc/self/exe", exe, sizeof exe - 1);
 		if (n <= 0) return;
@@ -5942,7 +6118,7 @@ namespace banana
 			if (a.empty()) { message.clear(); return MOVED; }
 			hsStep = 2;
 			message = "Asking " + a + "...";
-			auto q = [](const std::string& s) { std::string r = "'"; for (char c : s) { if (c == '\'') r += "'\\''"; else r += c; } return r + "'"; };
+			auto q = gamesync::shellQuote;
 			hsJob.start(q(syncTool()) + " probe " + q(a) + " 2>/dev/null", sync);
 			return MOVED;
 		}
@@ -5969,7 +6145,7 @@ namespace banana
 			pw.clear();
 			page = entryBack;
 			if (code.empty()) { hsStep = 0; message.clear(); return MOVED; }
-			auto q = [](const std::string& s) { std::string r = "'"; for (char c : s) { if (c == '\'') r += "'\\''"; else r += c; } return r + "'"; };
+			auto q = gamesync::shellQuote;
 			hsStep = 3;
 			message = "Pairing with " + hsName + "...";
 			std::ofstream("/run/banana/sync.status") << "pairing\n";
@@ -5992,7 +6168,7 @@ namespace banana
 			artWords = trim(pw);
 			pw.clear();
 			if (artWords.empty()) { page = GAME; return MOVED; }
-			auto q = [](const std::string& s) { std::string r = "'"; for (char c : s) { if (c == '\'') r += "'\\''"; else r += c; } return r + "'"; };
+			auto q = gamesync::shellQuote;
 			std::string sys = gameKey.substr(0, gameKey.find('/'));
 			artNames.clear(); asel = atop = 0; artMatching = false;
 			message = "Looking in libretro's collection...";
@@ -6778,13 +6954,17 @@ namespace banana
 	{
 		return gamesync::syncTool();
 	}
+	std::string Settings::syncCmd(const std::string& args) const
+	{
+		size_t s = data.rfind('/');
+		std::string root = s == std::string::npos || s == 0 ? "/" : data.substr(0, s);
+		auto q = gamesync::shellQuote;
+		return q(syncTool()) + " --root " + q(root) + " --conf " + q(data + "/romsync.json") + " --settings " + q(data + "/settings.conf") + " " + args;
+	}
 	void Settings::hsRun(const std::string& args)
 	{
 		// the card's root is the folder above banana/ (/data); the pairing and the settings are banana/'s
-		size_t s = data.rfind('/');
-		std::string root = s == std::string::npos || s == 0 ? "/" : data.substr(0, s);
-		auto q = [](const std::string& x) { std::string r = "'"; for (char c : x) { if (c == '\'') r += "'\\''"; else r += c; } return r + "'"; };
-		std::string cmd = q(syncTool()) + " --root " + q(root) + " --conf " + q(data + "/romsync.json") + " --settings " + q(data + "/settings.conf") + " " + args + " >/dev/null 2>&1";
+		std::string cmd = syncCmd(args) + " >/dev/null 2>&1";
 		pid_t p = fork();
 		if (p == 0)
 		{

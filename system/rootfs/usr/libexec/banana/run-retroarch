@@ -341,11 +341,13 @@ EOF
 fi
 # The Game Boy Advance's saves in one folder for every GBA core, /data/saves/gba/<game>.srm (QA: "would like to be
 # able to use the same save file across both"): RetroArch otherwise keeps a folder per core (sort_savefiles_enable),
-# so a game started in mGBA didn't see its gpSP save. The cores write the same raw save (gpSP pads it to 128 KB with
-# 0xff, mGBA writes the cartridge's size: 512 bytes for a small EEPROM; RetroArch loads the part a core asks for), so
-# one file serves both. A game with no save there yet gets a copy of its newest one from a core's folder (one with
-# data in it: a core that only ever wrote a blank one doesn't win); the core folders' files stay as they were, as
-# backups. States stay per core (their formats differ). What RetroArch saves of the two keys on exit is put back below.
+# so a game started in mGBA didn't see its gpSP save. The cores write the same raw save, 128 KB with 0xff past the
+# game's data (gpSP always did; our mGBA is patched to, where upstream writes the size the game reached that
+# session, which cut a Flash 1M save to 64 KB or an 8 KB EEPROM one to 512 bytes when the game stayed low; RetroArch
+# loads the part a core asks for), so one file serves both. A game with no save there yet gets a copy of its newest
+# one from a core's folder (one with data in it: a core that only ever wrote a blank one doesn't win); the core
+# folders' files stay as they were, as backups. States stay per core (their formats differ). What RetroArch saves of
+# the two keys on exit is put back below.
 GBASAVE=
 if [ "$BANANA_SYSTEM" = gba ]; then
     GBASAVE=/data/saves/gba
@@ -361,7 +363,14 @@ if [ "$BANANA_SYSTEM" = gba ]; then
             if [ -z "$best" ] || [ "$f" -nt "$best" ]; then best=$f; fi
         done
         if [ -n "$best" ]; then
-            cp -p "$best" "$GBASAVE/$n.srm.new" && mv "$GBASAVE/$n.srm.new" "$GBASAVE/$n.srm" && sync
+            # (synced before the rename: a power cut can't leave a half-written save under the name the cores read; the
+            # name beside it ends .tmp, never counted as a save by the sync, and a cut run's is cleared here, one still
+            # running left its own)
+            for f in "$GBASAVE/$n.srm.seed."*.tmp; do
+                p=${f##*.srm.seed.}; p=${p%.tmp}
+                [ -f "$f" ] && [ ! -d "/proc/$p" ] && rm -f "$f"
+            done
+            cp -p "$best" "$GBASAVE/$n.srm.seed.$$.tmp" && sync && mv "$GBASAVE/$n.srm.seed.$$.tmp" "$GBASAVE/$n.srm" && sync
             echo "run-retroarch: the GBA save from $best, now $GBASAVE/$n.srm (every GBA core)" >&2
         fi
     fi

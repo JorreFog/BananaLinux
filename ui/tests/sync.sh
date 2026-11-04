@@ -320,6 +320,23 @@ for v in 5.3.1 development; do
             [ -z "$(ls "$OUT/$cv/saves/gba" | grep '\.bak$')" ] && ls "$OUT/$cv/banana/save-vault/saves/gba/Up (USA)/" 2>/dev/null | grep -q '\.srm$' &&
             python3 -c 'import json,sys; h = json.load(open(sys.argv[1]))["held"]; sys.exit(0 if h["102/autosave"]["path"] == "saves/gba/Up (USA).srm" and h["102/autosave"]["vault"] else 1)' "$OUT/$cv/banana/romsync.json" ||
             bad "RomM 5.3.1: a save changed on both sides: $(cat "$OUT/romm-$v-held.log") $(ls "$OUT/$cv/saves/gba")"
+        # (kept on the Saves page: this RomM takes no save from here, so the card's stays unsent, that version counts as seen,
+        # and the next sync has nothing to hold)
+        [ "$(bs "$cv" resolve 102/autosave card 2>/dev/null | tail -1)" = ok ] && cmp -s "$OUT/$cv/saves/gba/Up (USA).srm" "$OUT/up-$v.srm" ||
+            bad "RomM 5.3.1: keeping this handheld's: $(bs "$cv" saves)"
+        bs "$cv" sync --saves-only > "$OUT/romm-$v-held.log" 2>&1
+        ! grep -q 'conflict, both kept' "$OUT/romm-$v-held.log" && ! bs "$cv" saves | grep -q '^held' || bad "RomM 5.3.1: a kept save held again: $(cat "$OUT/romm-$v-held.log")"
+        # a save gone from the card since it synced: left as it is and said, never put back by itself (its last good copy
+        # is in the vault); its record stays, so the next sync doesn't take the server's over nothing either
+        rm "$OUT/$cv/saves/gba/Down (USA).srm"
+        bs "$cv" sync --saves-only > "$OUT/romm-$v-gone.log" 2>&1; bs "$cv" sync --saves-only >> "$OUT/romm-$v-gone.log" 2>&1
+        [ ! -e "$OUT/$cv/saves/gba/Down (USA).srm" ] && grep -q 'missing here since the last sync, left as it is: saves/gba/Down' "$OUT/romm-$v-gone.log" &&
+            bs "$cv" saves | grep -q "^held	101/autosave	saves/gba/Down (USA).srm	missing here since the last sync" ||
+            bad "RomM 5.3.1: a save gone from the card: $(cat "$OUT/romm-$v-gone.log") $(bs "$cv" saves)"
+        # (blank instead of gone: noted the same, so the Saves page says so)
+        head -c 8192 /dev/zero > "$OUT/$cv/saves/gba/Down (USA).srm"; bs "$cv" sync --saves-only > "$OUT/romm-$v-gone.log" 2>&1
+        bs "$cv" saves | grep -q "^held	101/autosave	saves/gba/Down (USA).srm	blank here since the last sync" || bad "RomM 5.3.1: a blank save not noted: $(bs "$cv" saves)"
+        rm "$OUT/$cv/saves/gba/Down (USA).srm"; bs "$cv" sync --saves-only > "$OUT/romm-$v-gone.log" 2>&1
         # (one game's save, here a game of a system the server has none of: this RomM has no slots to sync it by alone,
         # so every save of every system comes down, as after a game before)
         printf 'gba rom third' > "$LV/gba/Third (USA).gba"; cp "$LV/gba/Third (USA).gba" "$OUT/$cv/roms/gba/"
@@ -460,11 +477,45 @@ if [ -x "$HERE/banana-ui" ]; then
         [ -s "$OUT/ui-$s-top.png" ] || bad "no screenshot $s"
     done
     cmp -s "$OUT/ui-hs-row-top.png" "$OUT/ui-hs-page-top.png" && bad "A on Home server didn't open its page"
+    # Home server > Saves: a game's conflict settled, then a kept copy restored; X deletes nothing
+    : > "$SL"
+    BANANA_SYNC="$HERE/tests/fake-sync.sh" FAKE_SYNC_LOG="$SL" "$HERE/banana-ui" --headless "$OUT/ui-" --size 640x480 --assets "$HERE/assets/rnds" \
+        --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$FX/roms" --data "$FX/data" \
+        --script "home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; press a; press down; press down; press down; press down; press down; press down; press down; press down; press down; press down; press a; wait 300; shot sv-list; press a; wait 100; shot sv-game; press a; wait 300; press down; press down; press x; press x; wait 100; press a; wait 300; shot sv-restored" \
+        2> "$OUT/ui-sv.log" || bad "banana-ui (Saves) exited $?"
+    grep -q "resolve 5/autosave card" "$SL" || bad "Saves: this handheld's not chosen: $(cat "$SL")"
+    [ "$(grep -c "^.* saves" "$SL")" -ge 2 ] || bad "Saves: the list not read again after a choice: $(cat "$SL")"
+    grep -q "restore /v/20261101T100000Z-bb.srm" "$SL" && ! grep -q "drop " "$SL" || bad "Saves: a kept copy not restored, or X deleted one: $(cat "$SL")"
+    cmp -s "$OUT/ui-sv-list-top.png" "$OUT/ui-sv-game-top.png" && bad "Saves: A didn't open a game"
+    # (a game with nothing to choose: every button on it is safe. Two conflicts, the first settled: the next A opens the
+    # list's, never settles the second's. Left during a choice and come back to: no freeze)
+    SAVESCRIPT="home 0; wait 2400; press start; press r; press r; press r; press a; press up; press up; press a; press down; press down; press down; press down; press down; press down; press down; press down; press down; press down; press a; wait 300"
+    uis() { BANANA_SYNC="$HERE/tests/fake-sync.sh" FAKE_SYNC_LOG="$SL" FAKE_SYNC_SAVES=$1 "$HERE/banana-ui" --headless "$OUT/ui-" --size 640x480 --assets "$HERE/assets/rnds" --splash "$HERE/assets/splash" --banana "$HERE/assets/banana" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" --roms "$FX/roms" --data "$FX/data" --script "$SAVESCRIPT; $2" 2> "$OUT/ui-sv.log" || bad "banana-ui (Saves, $1) exited $?"; }
+    : > "$SL"; uis queued "press a; wait 100; press down; press a; press x; press r; press a; wait 100; press b; wait 100"
+    grep -q "resolve\\|restore\\|drop" "$SL" && bad "Saves: a game with no actions ran: $(cat "$SL")"
+    : > "$SL"; uis two "press a; wait 100; press a; wait 300; press a; wait 300"
+    [ "$(grep -c "resolve 5/autosave card" "$SL")" -ge 1 ] && ! grep -q "resolve 6/autosave" "$SL" || bad "Saves: a settled game's page acted on another: $(cat "$SL")"
+    : > "$SL"; uis twokept "press a; wait 100; press a; wait 300; press a; wait 300"
+    grep -q "restore /v/a.srm" "$SL" && ! grep -q "resolve 6/autosave" "$SL" || bad "Saves: the game open changed under a choice: $(cat "$SL")"
+    : > "$SL"; FAKE_SYNC_RESOLVE=slow uis conflict "press a; wait 100; press a; press b; press b; press a; wait 100; wait 2200; wait 300"
+    grep -q "resolve 5/autosave card" "$SL" || bad "Saves: leaving during a choice: $(cat "$SL")"
+    # (a save held for its format, DraStic's and BananaDS's apart, DraStic's unreadable, or gone here: a line of its own
+    # for each, and A on the first three, which have nothing to choose, runs nothing)
+    for k in format ds unread server; do
+        : > "$SL"; uis $k "press a; wait 100; shot sv-$k; press a; wait 300"
+        [ -s "$OUT/ui-sv-$k-top.png" ] || bad "no screenshot sv-$k"
+        [ $k = server ] || ! grep -q "resolve\\|restore" "$SL" || bad "Saves: a $k note with nothing to choose ran: $(cat "$SL")"
+    done
+    grep -q "resolve 5/autosave server" "$SL" || bad "Saves: a save gone here, the server's not taken: $(cat "$SL")"
+    for p in format:ds format:unread ds:unread unread:server ds:server; do
+        cmp -s "$OUT/ui-sv-${p%:*}-top.png" "$OUT/ui-sv-${p#*:}-top.png" && bad "Saves: two kinds of note shown alike (${p%:*}, ${p#*:})"
+    done
 fi
 # ---------------------------------------------------------------- the sync before a game
 if [ -x "$HERE/banana-ui" ]; then
     FX=$OUT/fixture-g; "$HERE/tests/fixture.sh" "$FX" >/dev/null
-    printf 'homesync_auto = quit\n' >> "$FX/data/settings.conf"
+    printf 'homesync_auto = quit\nhomesync_launch = on\n' >> "$FX/data/settings.conf"
     printf '{"backend": "romm", "server": "http://x", "token": "t"}\n' > "$FX/data/romsync.json"
     ROM="$FX/roms/gba/Orchard Tactics.gba"
     SL=$OUT/game-sync.log; PX=$OUT/g-; RUNG=${PX}run; mkdir -p "$RUNG"
@@ -515,6 +566,11 @@ if [ -x "$HERE/banana-ui" ]; then
     has "B, played now" "B while syncing"; has "game starts: $ROM" "B while syncing"; hasnt "Not synced yet" "B while syncing"
     ls "$RUNG" | grep -q '^sync-' && bad "a stopped sync's files left: $(ls "$RUNG")"
     gs silent "wifi coming; launchpath $ROM; wait 500; shot g-wifi; press b; wait 100"
+    # (a mark an earlier game's run left says nothing of this one: a B before this sync starts asks nothing)
+    : > "$RUNG/launch.older"
+    gs silent "wifi coming; launchpath $ROM; wait 500; press b; wait 100"
+    hasnt "newer save couldn't be fetched" "a stale mark, B during the wait for Wi-Fi"; has "game starts: $ROM" "a stale mark, B during the wait for Wi-Fi"
+    gs silent "wifi coming; launchpath $ROM; wait 500; shot g-wifi; press b; wait 100"
     has "B, played now" "B on Wi-Fi"; has "game starts: $ROM" "B on Wi-Fi"; called "B on Wi-Fi"
     cmp -s "$OUT/g-g-wifi-top.png" "$OUT/g-g-sync-top.png" && bad "the wait for Wi-Fi looks like the sync"
     # the pop-up leaves with the wait: the menu as it was
@@ -527,9 +583,47 @@ if [ -x "$HERE/banana-ui" ]; then
     # the signs of Wi-Fi coming up not quite meeting: still waiting, and the sync starts when the address comes
     gs answer "wifi coming; launchpath $ROM; wait 3000; wifi none; wait 3000; wifi online; wait 100; sleep 300; wait 100"
     has "sync before the game: done" "a gap in Wi-Fi coming up"; hasnt "no Wi-Fi" "a gap in Wi-Fi coming up"
-    # a press ends a notice
-    gs conflict "wifi online; launchpath $ROM; sleep 300; wait 100; shot g-conflict; press a; shot g-x"
+    # a conflict held for another reason than the two sides (nothing to choose): a notice, which a press ends
+    FAKE_SYNC_SAVES=none gs conflict "wifi online; launchpath $ROM; sleep 300; wait 100; shot g-conflict; press a; shot g-x"
     has "game starts: $ROM" "a press on the notice"
+    # a conflict: asked before the game, and it waits for the answer however long that takes. B leaves it held
+    gs conflict "wifi online; launchpath $ROM; sleep 300; wait 25000; shot g-ask; press y; wait 100"
+    has "asking about a conflict" "a conflict"; hasnt "game starts" "a conflict unanswered"
+    gs conflict "wifi online; launchpath $ROM; sleep 300; wait 100; press b; wait 100"
+    has "decided later" "a conflict put off"; has "game starts: $ROM" "a conflict put off"; grep -q resolve "$SL" && bad "a conflict put off was settled: $(cat "$SL")"
+    # settled there, then the game
+    gs conflict "wifi online; launchpath $ROM; sleep 300; wait 100; press a; sleep 300; wait 100"
+    grep -q "resolve 5/autosave card" "$SL" || bad "the prompt's A: $(cat "$SL")"; has "settled" "the prompt's A"; has "game starts: $ROM" "the prompt's A"
+    gs conflict "wifi online; launchpath $ROM; sleep 300; wait 100; press x; sleep 300; wait 100"
+    grep -q "resolve 5/autosave server" "$SL" || bad "the prompt's X: $(cat "$SL")"
+    # (it can't be settled: asked, the conflict still held: A plays the card's save, B goes back and no game starts)
+    FAKE_SYNC_RESOLVE=fail gs conflict "wifi online; launchpath $ROM; sleep 300; wait 100; press a; sleep 300; wait 100; shot g-unsettled; press a; wait 100"
+    has "Not settled" "a conflict not settled"; has "not settled" "a conflict not settled"; has "game starts: $ROM" "a conflict not settled"
+    FAKE_SYNC_RESOLVE=fail gs conflict "wifi online; launchpath $ROM; sleep 300; wait 100; press a; sleep 300; wait 100; press b; wait 100"
+    has "Not settled" "back from a conflict not settled"; has "game not started: $ROM" "back from a conflict not settled"; hasnt "game starts" "back from a conflict not settled"
+    # (a choice runs its course: B does nothing, and the cap ends it, which asks the same)
+    FAKE_SYNC_RESOLVE=hang gs conflict "wifi online; launchpath $ROM; sleep 300; wait 100; press a; wait 100; press b; wait 100; wait 20000; sleep 100; wait 1600; wait 100; press a; wait 100"
+    has "Not settled at the cap" "a choice at the cap"; has "game starts: $ROM" "a choice at the cap"; hasnt "played now" "B during a choice"
+    # a save gone or blank here since the last sync, the server's there to take back: asked; A takes it, B plays without
+    FAKE_SYNC_SAVES=server gs conflict "wifi online; launchpath $ROM; sleep 300; wait 100; shot g-gone; press a; sleep 300; wait 100"
+    grep -q "resolve 5/autosave server" "$SL" || bad "the question of a save gone here, A: $(cat "$SL")"; has "game starts: $ROM" "a save gone here, taken back"
+    FAKE_SYNC_SAVES=server gs conflict "wifi online; launchpath $ROM; sleep 300; wait 100; press b; wait 100"
+    has "decided later" "a save gone here, played without"; has "game starts: $ROM" "a save gone here, played without"; grep -q resolve "$SL" && bad "a save gone here, B: settled: $(cat "$SL")"
+    # (decided later: asked again at the next launch)
+    gs conflict "wifi online; launchpath $ROM; sleep 300; wait 100; press b; wait 100; launchpath $ROM; sleep 300; wait 100; press b; wait 100"
+    [ "$(grep -c 'asking about a conflict' "$UL")" = 2 ] || bad "a conflict put off wasn't asked again: $(grep -a 'sync before' "$UL")"
+    # a newer save still coming at the cap: asked too; and at a B, which doesn't play over it unasked
+    gs olderhang "wifi online; launchpath $ROM; sleep 300; wait 6000; sleep 100; wait 14000; sleep 100; wait 100; press a; wait 100"
+    has "couldn't be fetched" "a stop at the cap with a newer save"; has "game starts: $ROM" "a stop at the cap with a newer save"
+    gs olderhang "wifi online; launchpath $ROM; sleep 300; wait 100; press b; wait 100"
+    has "couldn't be fetched" "B with a newer save coming"; hasnt "game starts" "B with a newer save coming"
+    gs olderhang "wifi online; launchpath $ROM; sleep 300; wait 100; press b; wait 100; press a; wait 100"
+    has "game starts: $ROM" "B with a newer save coming, then A"
+    # a newer save on the server that didn't arrive: asked. A plays the older, B goes back and no game starts
+    gs older "wifi online; launchpath $ROM; sleep 300; wait 100; press a; wait 100"
+    has "played on this handheld's older save" "an older save"; has "game starts: $ROM" "an older save"
+    gs older "wifi online; launchpath $ROM; sleep 300; wait 100; press b; wait 100"
+    has "game not started: $ROM" "back from an older save"; hasnt "game starts" "back from an older save"
     # no banana-sync: no wait
     TOOL=$OUT/none gs answer "wifi online; launchpath $ROM; wait 100"
     has "no banana-sync" "no banana-sync"; has "game starts: $ROM" "no banana-sync"
@@ -545,7 +639,7 @@ if [ -x "$HERE/banana-ui" ]; then
     gs answer "wifi coming; launchpath $ROM; wait 3000; wifi online; wait 100; sleep 300; wait 100"
     has "sync before the game: done" "Wi-Fi came"
     # a conflict and a failure are said, and the game starts on the card's save
-    gs conflict "wifi online; launchpath $ROM; sleep 300; wait 1600; wait 100"
+    FAKE_SYNC_SAVES=none gs conflict "wifi online; launchpath $ROM; sleep 300; wait 1600; wait 100"
     has "Save conflict" "a conflict"; has "game starts: $ROM" "a conflict"
     gs fail "wifi online; launchpath $ROM; sleep 300; wait 1600; wait 100"
     has "Not synced yet" "a failed sync"
@@ -556,6 +650,10 @@ if [ -x "$HERE/banana-ui" ]; then
     # the game's end: the exact call
     gs answer "wifi none; launchpath $ROM; wait 100; gameend; sleep 300"
     [ "$(cat "$SL")" = "sync --auto quit --rom $ROM" ] || bad "the sync after a game's call: $(cat "$SL")"
+    # (a DS game's end: nds-saves told what its saves hold now, --played, beside the sync; not for a GBA game, above)
+    NDSROM="$FX/roms/nds/Peel Quest.nds"
+    BANANA_NDS_SAVES=$HERE/tests/fake-sync.sh gs answer "wifi none; launchpath $NDSROM; wait 100; gameend; sleep 300"
+    grep -qx -- "$NDSROM --played" "$SL" && grep -qx -- "sync --auto quit --rom $NDSROM" "$SL" || bad "a DS game's end: $(cat "$SL")"
 fi
 [ $fail = 0 ] && echo "banana-sync: all checks passed"
 exit $fail

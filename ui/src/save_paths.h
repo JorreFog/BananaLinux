@@ -34,6 +34,8 @@ namespace bsync
 	std::string coreFor(const std::string& system, std::string& err);
 	// the system's ROM folder under the roms folder (systems.conf's folder, the id by default)
 	std::string romFolder(const std::string& system);
+	// the other way: the system whose ROM folder that is ("" when none is)
+	std::string systemOfFolder(const std::string& folder);
 	// the ROMs in that folder and the folders below it (media/ and dot folders left out), on the card and then on the
 	// second SD card while it is in: file name -> roms-relative path, the first found when two folders hold the same name
 	std::map<std::string, std::string> romIndex(const std::string& folder);
