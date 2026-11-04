@@ -26,7 +26,7 @@ sleep 3
 dev "$D" "true
   for t in \$(seq 40); do echo '/data/roms/nes/$B' > /run/banana/launch; for i in \$(seq 10); do [ -e /run/banana/game.pid ] && break 2; sleep 0.5; done; done
   [ -e /run/banana/game.pid ] || { echo 'game did not start'; exit 1; }
-  sleep 2; G=\$(cat /run/banana/game.pid); P=
+  sleep 2; G=\$(cut -d' ' -f1 /run/banana/game.pid); P=
   for n in bananads drastic retroarch fake08; do P=\$(pidof \$n | cut -d' ' -f1); [ -n \"\$P\" ] && break; done
   if [ -z \"\$P\" ]; then P=\$G; while c=\$(cat /proc/\$P/task/\$P/children 2>/dev/null | cut -d' ' -f1); [ -n \"\$c\" ]; do P=\$c; done; fi   # else the deepest child of the launcher
   echo \"pid=\$P \$(cat /proc/\$P/comm)\"

@@ -15,6 +15,7 @@
 # The first image build downloads Buildroot (below) and everything it builds: expect an hour or more.
 BUILDROOT_VERSION = 2026.02.3
 BUILDROOT_DIR ?= $(CURDIR)/.buildroot
+ROCKNIXDS_STORE ?=	# (the Store's test: a rocknixds-store checkout with BananaOS's patches)
 OUT ?= $(CURDIR)/output
 BOARDS = rgds rgds-plus universal
 
@@ -45,6 +46,7 @@ test: ui
 	ui/tests/run.sh
 	@if [ -x ui/banana-bshare ]; then sh ui/tests/bshare-test.sh; fi
 	@if [ -x ui/banana-fetch ]; then sh ui/tests/fetch-test.sh; fi
+	@if [ -n "$(ROCKNIXDS_STORE)" ]; then python3 store/test-banana.py "$(ROCKNIXDS_STORE)"; else echo "store test skipped (set ROCKNIXDS_STORE to a rocknixds-store checkout)"; fi
 
 # ui/fuzz: themes, expressions, zips, DS ROM banners and Banana's own files on the card, under libFuzzer, ASan and UBSan
 fuzz:

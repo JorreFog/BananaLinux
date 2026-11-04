@@ -26,6 +26,7 @@
 #include <arpa/inet.h>
 #include <cerrno>
 #include <cstdarg>
+#include <cstdlib>
 #include <ctime>
 #include <dirent.h>
 #include <dlfcn.h>
@@ -679,8 +680,19 @@ namespace
 	bool gameRunning()
 	{
 		int pid = 0;
-		std::ifstream(RUN + "/game.pid") >> pid;
-		return pid > 0 && kill(pid, 0) == 0;
+		unsigned long long start = 0;
+		std::ifstream(RUN + "/game.pid") >> pid >> start;
+		if (pid <= 0 || kill(pid, 0) != 0) return false;
+		if (!start) return true;	// (a pid file from before the start time was kept)
+		std::ifstream f("/proc/" + std::to_string(pid) + "/stat");
+		std::string ln;
+		if (!std::getline(f, ln)) return false;
+		size_t q = ln.rfind(')');
+		if (q == std::string::npos) return false;
+		std::istringstream in(ln.substr(q + 1));
+		std::string v;
+		for (int i = 0; i < 20 && in >> v; i++) if (i == 19) return strtoull(v.c_str(), nullptr, 10) == start;
+		return false;
 	}
 	// downloaded to <dst>.part, checked, renamed. The part file is left for a retry when the connection broke
 	bool fetchTo(const std::string& url, const std::vector<std::string>& headers, const std::string& dst, long long size,

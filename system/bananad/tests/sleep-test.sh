@@ -135,6 +135,18 @@ rm -f /run/banana/game.pid; sleep 0.1
 grep -q 'awake (lid opened)' /data/banana/logs/sleep.log && ok "sleep.log: $(tail -n1 /data/banana/logs/sleep.log | cut -c21-)" || bad "no wake in sleep.log"
 stop
 
+echo "1b. a game.pid whose start time doesn't match is stale: the process is not stopped"
+setsid sleep 600 & STALE=$!; sleep 0.1
+echo "$STALE 1" > /run/banana/game.pid
+start
+echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
+asleep && ok "suspended with only a stale pid" || bad "no suspend"
+[ "$(awk '{print $3}' /proc/$STALE/stat 2>/dev/null)" != T ] && ok "the stale process wasn't stopped" || bad "the stale process was stopped"
+echo 0 > /run/test/lid; wake
+kill $STALE 2>/dev/null || true
+echo $GAME > /run/banana/game.pid
+stop
+
 echo "2. menu asleep, woken with the lid still shut, then opened"
 start
 echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
@@ -329,6 +341,13 @@ ra=$(grep -v AUDIO_REINIT /run/test/retroarch.log 2>/dev/null | tr '\n' ' ')    
     ok "RetroArch: slot 2 down past 0, saved, quit" || bad "retroarch: $ra"
 grep -qx emulator=retroarch /data/banana/resume-boot 2>/dev/null && ok "resume-boot: retroarch" || bad "resume-boot: $(cat /data/banana/resume-boot 2>/dev/null)"
 stop; POWEROFF=0; exec 5>&-; rm -f /run/banana/retroarch.cmd /data/banana/resume-boot; echo 0 > /run/test/lid
+
+echo "11b. SIGPIPE (a RetroArch pipe whose reader closed) must not kill bananad"
+start
+kill -PIPE $BD 2>/dev/null
+sleep 0.2
+if kill -0 $BD 2>/dev/null; then ok "bananad survived SIGPIPE"; else bad "bananad died on SIGPIPE"; start; fi
+stop
 
 echo "12. another program (a port): SIGTERM, no resume-boot"
 setsid sleep 600 & GAME=$!; sleep 0.1; echo $GAME > /run/banana/game.pid
