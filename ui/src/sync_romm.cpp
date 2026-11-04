@@ -29,6 +29,8 @@ namespace bsync
 		{ "g-and-w", "gameandwatch" },
 	};
 	const std::set<std::string> BANANA_FOLDERS = { "nds", "gba", "gbc", "gb", "nes", "snes", "megadrive", "c64", "zxspectrum", "psx", "n64", "gameandwatch" };
+	// one more thing for the sync's note (its last line, and the menu's status when nothing failed)
+	void addNote(std::string& note, const std::string& s) { note += (note.empty() ? "" : "; ") + s; }
 	// a server ROM: its system (our folder), its stem and file name as RomM has them, the file the ROM sync writes for
 	// it (a disc set's .m3u; none for a game the menu can't start), and its files' hashes
 	struct RommRom { long long id; std::string folder, stem, fsName, entry; std::vector<RomFile> files; };
@@ -259,7 +261,7 @@ namespace bsync
 				canonical.erase(rel);
 			}
 			savePathCaches();
-			if (unmatched) note = std::to_string(unmatched) + (unmatched == 1 ? " game" : " games") + " not matched on the server";
+			if (unmatched) addNote(note, std::to_string(unmatched) + (unmatched == 1 ? " game" : " games") + " not matched on the server");
 		}
 		// the same game's save in another folder, kept in the vault, said once, never sent and never removed: a core's
 		// folder from before 0.5.3's flat saves that saves-flat hasn't emptied, and for a GBA game a flat
@@ -295,6 +297,52 @@ namespace bsync
 				if (added) say(d.empty() ? "  an earlier download, kept in the vault, not synced: %s" : "  also here, kept in the vault, not synced: %s", o.c_str());
 			}
 		}
+		// RomM's version as it is now (updated since the pairing, perhaps): before 5.4, whose slots and device sync records
+		// the other clients sync by, saves only come down
+		bool sendOk = true;
+		void checkVersion()
+		{
+			Resp r = call("GET", "/api/heartbeat");
+			JPtr j = r.code == 200 ? r.json() : nullptr;
+			const JVal* sys = j ? j->get("SYSTEM") : nullptr;
+			if (sys && !sys->str("VERSION").empty() && sys->str("VERSION") != c.serverVersion)
+			{
+				c.serverVersion = sys->str("VERSION");
+				c.serverName = "RomM " + c.serverVersion;	// (as pairing names it)
+				saveConf(c);
+			}
+			sendOk = c.serverVersion.empty() || versionAtLeast(c.serverVersion, 5, 4, 0);
+		}
+		// this card's device as RomM has it now: none, or gone (deleted in RomM's web UI) -> registered (again); save sync
+		// switched off for it there -> no saves this run (false)
+		bool checkDevice(std::string& note)
+		{
+			if (!c.device.empty())
+			{
+				Resp r = call("GET", "/api/devices/" + urlEsc(c.device));
+				if (r.code == 200)
+				{
+					JPtr j = r.json();
+					if (j && j->isObj() && !j->flag("sync_enabled", true)) { addNote(note, "save sync is off for this handheld in RomM (Devices)"); return false; }
+					return true;
+				}
+				if (r.code == 403) { addNote(note, "this pairing can't see its RomM device (pair again)"); return true; }
+				if (r.code != 404) return true;	// (the server's trouble: the saves' own calls say it)
+				say("  the device was gone from RomM");
+				c.device.clear();
+			}
+			if (dryRun) { say("  would register as a RomM device"); return true; }
+			std::string e = registerDevice(c);
+			if (!e.empty()) { addNote(note, "not registered as a RomM device (" + e + ")"); return true; }
+			say("  registered as RomM device %s", c.device.c_str());
+			saveConf(c);
+			// (allow_existing may give back a device RomM already had for this handheld, with save sync off for it: read
+			// as the one held is)
+			Resp r = call("GET", "/api/devices/" + urlEsc(c.device));
+			JPtr j = r.code == 200 ? r.json() : nullptr;
+			if (j && j->isObj() && !j->flag("sync_enabled", true)) { addNote(note, "save sync is off for this handheld in RomM (Devices)"); return false; }
+			return true;
+		}
 		// states, still matched by name: states/<rom name>.<ext> (states/nds/... for the DS)
 		bool matchStateRom(const std::string& rel, RommRom& out)
 		{
@@ -328,6 +376,9 @@ namespace bsync
 		{
 			std::string err;
 			if (!list(skip, err)) { errors.push_back("saves: " + err); return false; }
+			checkVersion();
+			if (!sendOk) addNote(note, "RomM " + c.serverVersion + " only gives saves: update RomM to 5.4 or newer to send this handheld's");
+			if (!checkDevice(note)) return true;
 			ndsSavesFirst();
 			auto local = localSaves(statesToo);
 			bool ok = sync("save", local, c.saves, up, down, conflicts, errors, note);
@@ -467,7 +518,7 @@ namespace bsync
 				struct tm tmv = {};
 				time_t srvT = strptime(s.updated.substr(0, 19).c_str(), "%Y-%m-%dT%H:%M:%S", &tmv) ? timegm(&tmv) : 0;
 				std::string stamp = isoNow();
-				if (fileTime(p) >= srvT)
+				if (sendOk && fileTime(p) >= srvT)
 				{
 					// the card's is newer: the server's kept here beside it, then the card's uploaded over it
 					std::string keep = p + ".server-" + stamp + ".bak", e2, want = serverHash(api, s);
@@ -490,6 +541,7 @@ namespace bsync
 		bool upload(const std::string& api, const std::string& field, long long romId, const std::string& p, const std::string& rel,
 			const std::string& md5, std::map<std::string, SaveSt>& state, const std::string& dev, bool overwrite, std::vector<std::string>& errors)
 		{
+			if (!sendOk) return false;	// (an older RomM: kept here, said once in the note)
 			if (dryRun) { say("  upload %s", rel.c_str()); return true; }
 			// a copy of the file as it is now: the emulator can't change what is sent halfway
 			std::string snap = RUN + "/sync-upload." + std::to_string(getpid());

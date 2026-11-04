@@ -18,7 +18,7 @@
 namespace bsync
 {
 	const char* VERSION = "banana-sync 1.0";
-	std::string ROOT = "/data", ROMS, CONF, SETTINGS, SYSTEMS, STATUS = "/run/banana/sync.status", RUN = "/run/banana";
+	std::string ROOT = "/data", ROMS, CONF, SETTINGS, SYSTEMS, STATUS = "/run/banana/sync.status", RUN = "/run/banana", CA;
 	bool dryRun = false, verbose = false;
 	bool tlsVerify = true;	// homesync_tls = off: a Home server's certificate taken unchecked (a name on the LAN, no CA for it)
 
@@ -283,7 +283,7 @@ namespace bsync
 		O_HEADERDATA = 10029, O_CUSTOMREQUEST = 10036, O_MIMEPOST = 10269, O_WRITEFUNCTION = 20011, O_HEADERFUNCTION = 20079,
 		O_XFERINFOFUNCTION = 20219, O_XFERINFODATA = 10057, O_NOPROGRESS = 43, O_TIMEOUT = 13, O_LOW_SPEED_LIMIT = 19,
 		O_LOW_SPEED_TIME = 20, O_CONNECTTIMEOUT = 78, O_NOSIGNAL = 99, O_FOLLOWLOCATION = 52, O_POSTFIELDSIZE_LARGE = 30120,
-		O_HTTPGET = 80, O_SSL_VERIFYPEER = 64, O_SSL_VERIFYHOST = 81, I_RESPONSE_CODE = 0x200002
+		O_HTTPGET = 80, O_CAINFO = 10065, O_SSL_VERIFYPEER = 64, O_SSL_VERIFYHOST = 81, I_RESPONSE_CODE = 0x200002
 	};
 	}
 	std::string urlEsc(const std::string& s)
@@ -368,7 +368,8 @@ namespace bsync
 		if (q.timeout) cu.setopt(h, O_TIMEOUT, q.timeout);
 		else { cu.setopt(h, O_LOW_SPEED_LIMIT, 1024L); cu.setopt(h, O_LOW_SPEED_TIME, 60L); }
 		cu.setopt(h, O_FOLLOWLOCATION, 1L);
-		if (!tlsVerify) { cu.setopt(h, O_SSL_VERIFYPEER, 0L); cu.setopt(h, O_SSL_VERIFYHOST, 0L); }
+		if (!CA.empty()) cu.setopt(h, O_CAINFO, CA.c_str());	// (the owner's own CA, for a server with a certificate it signed)
+		if (!tlsVerify) { cu.setopt(h, O_SSL_VERIFYPEER, 0L); cu.setopt(h, O_SSL_VERIFYHOST, 0L); }	// (a self-signed one, the owner's choice)
 		cu.setopt(h, O_HEADERFUNCTION, onHeader);
 		cu.setopt(h, O_HEADERDATA, &r.hdr);
 		if (q.out) { cu.setopt(h, O_WRITEFUNCTION, onFile); cu.setopt(h, O_WRITEDATA, q.out); }
@@ -404,6 +405,7 @@ namespace bsync
 		if (mime) cu.mimeFree(mime);
 		if (rc != 0)
 		{
+			r.curl = rc;
 			r.err = cu.strerror(rc);
 			if (r.err == "Error")
 			{
@@ -452,7 +454,7 @@ namespace bsync
 		JPtr j = banana::readJsonFile(CONF);
 		if (!j || !j->isObj()) return c;
 		c.backend = j->str("backend", "romhost");
-		c.server = j->str("server"); c.token = j->str("token"); c.name = j->str("name"); c.serverName = j->str("serverName");
+		c.server = j->str("server"); c.token = j->str("token"); c.name = j->str("name"); c.serverName = j->str("serverName"); c.serverVersion = j->str("serverVersion");
 		c.last = j->str("last"); c.lastTime = j->num("lastTime");
 		if (const JVal* d = j->get("device")) { c.deviceNum = d->isNum(); c.device = d->isNum() ? fmtNum(d->n) : d->s; }
 		if (const JVal* st = j->get("state"))
@@ -481,7 +483,7 @@ namespace bsync
 		if (dryRun) return true;
 		std::string o = "{\n \"backend\": " + jsonStr(c.backend) + ",\n \"server\": " + jsonStr(c.server) + ",\n \"token\": " + jsonStr(c.token) +
 			",\n \"device\": " + (c.deviceNum && !c.device.empty() ? c.device : jsonStr(c.device)) + ",\n \"name\": " + jsonStr(c.name) +
-			",\n \"serverName\": " + jsonStr(c.serverName) + ",\n \"last\": " + jsonStr(c.last) + ",\n \"lastTime\": " + fmtNum(c.lastTime) +
+			",\n \"serverName\": " + jsonStr(c.serverName) + ",\n \"serverVersion\": " + jsonStr(c.serverVersion) + ",\n \"last\": " + jsonStr(c.last) + ",\n \"lastTime\": " + fmtNum(c.lastTime) +
 			",\n \"state\": {\"etag\": " + jsonStr(c.etag) + ", \"files\": {";
 		bool first = true;
 		for (auto& kv : c.files) { o += std::string(first ? "\n  " : ",\n  ") + jsonStr(kv.first) + ": " + jsonStr(kv.second); first = false; }
@@ -699,5 +701,54 @@ namespace bsync
 		if (rename(part.c_str(), dst.c_str()) != 0) { err = std::string("rename: ") + strerror(errno); return false; }
 		if (!syncDir(dirOf(dst))) { err = std::string("sync: ") + strerror(errno); return false; }
 		return true;
+	}
+
+	// ---- this card as a RomM device ------------------------------------------------------------------------------------
+	std::string cardId()
+	{
+		std::string p = ROOT + "/banana/sync-id", id = trim(readFile(p));
+		bool ok = id.size() == 12 && id.find_first_not_of("0123456789abcdef") == std::string::npos;
+		if (ok) return id;
+		std::ifstream r("/dev/urandom", std::ios::binary);
+		unsigned char b[6] = {};
+		if (!r.read((char*)b, sizeof b)) return "";
+		char h[13];
+		snprintf(h, sizeof h, "%02x%02x%02x%02x%02x%02x", b[0], b[1], b[2], b[3], b[4], b[5]);
+		mkdirs(dirOf(p));
+		return writeAtomic(p, std::string(h) + "\n") ? h : "";
+	}
+	std::string osVersion()
+	{
+		std::string v = trim(readFile("/etc/banana/version"));
+		return v.empty() ? "unknown" : v;
+	}
+	std::string deviceFields(const Conf& c)
+	{
+		return "\"name\": " + jsonStr(c.name.empty() ? "BananaOS" : c.name) + ", \"platform\": \"BananaOS\", \"client\": \"bananaos\", \"client_version\": " +
+			jsonStr(osVersion()) + ", \"hostname\": " + jsonStr("bananaos-" + cardId()) + ", \"sync_mode\": \"api\"";
+	}
+	std::string registerDevice(Conf& c)
+	{
+		if (cardId().empty()) return "no banana/sync-id";
+		std::string fields = deviceFields(c);
+		Req q; q.headers = { "Authorization: Bearer " + c.token, "Content-Type: application/json" };
+		if (!c.device.empty())
+		{
+			// (the one held: its version and name brought up to date)
+			std::string b = "{" + fields + "}";
+			q.method = "PUT"; q.url = c.server + "/api/devices/" + urlEsc(c.device); q.body = &b;
+			Resp r = http(q);
+			if (r.code == 200) return "";
+			if (r.code != 404) return r.error();
+			c.device.clear();	// (deleted in RomM's web UI: a new one)
+		}
+		// (allow_existing: RomM gives back the device with this hostname and platform, when it has one)
+		std::string b = "{" + fields + ", \"allow_existing\": true}";
+		q.method = "POST"; q.url = c.server + "/api/devices"; q.body = &b;
+		Resp r = http(q);
+		JPtr j = r.code == 200 || r.code == 201 ? r.json() : nullptr;
+		if (!j || !j->isObj() || j->str("device_id").empty()) return r.error();
+		c.device = j->str("device_id"); c.deviceNum = false;
+		return "";
 	}
 }

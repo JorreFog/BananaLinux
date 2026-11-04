@@ -8,17 +8,20 @@
 // the state file, Backend, the saves on the card) in sync_core.h.
 // Usage (the menu runs it; it says how far it got in /run/banana/sync.status, one line):
 //   banana-sync discover                       Romhost servers on the LAN: "ROMHOST\t<url>\t<name>" lines
-//   banana-sync probe <address>                what answers there: "romhost <url> <name>" / "romm <url> <version>" / "none"
+//   banana-sync probe <address>                what answers there: "romhost <url> <name>" / "romm <url> <version>" / "none";
+//                                              an address with no scheme is tried on HTTPS first
 //   banana-sync pair <address> [code]          Romhost: the code from Homeport. RomM: no code = the device flow (the
 //                                              status shows the code to type in RomM: "pair <code> <url>"); a code =
-//                                              a client token's pairing code; rmm_... = a token pasted
+//                                              a client token's pairing code; rmm_... = a token pasted. Whichever,
+//                                              the card is then a RomM device: bananaos-<banana/sync-id>, kept
 //   banana-sync forget                         the pairing (and the sync's state) dropped; the files stay
 //   banana-sync sync [--saves-only] [--auto quit|wifi] [--dry-run]
 //   banana-sync status                         the pairing and the last sync, for a person
 //   banana-sync blank <file> [<folder>]        exit 0 when the save is blank (a core's fresh one); folder: under saves/
 // The card: --root /data (saves/, states/, drastic/), --roms <root>/roms, --conf <root>/banana/romsync.json,
-// --settings <root>/banana/settings.conf (homesync_roms, homesync_roms_to, homesync_states, homesync_auto, homesync_tls,
-// homesync.<system>).
+// --settings <root>/banana/settings.conf (homesync_roms, homesync_roms_to, homesync_states, homesync_auto,
+// homesync.<system>, homesync_ca: a PEM file of the CA that signed an https server's certificate, homesync_tls = off:
+// no certificate checked).
 // The second SD card's roms folder (homesync_roms_to = sd2) is the one <run>/sd2/roms names, as the library's.
 // Each sync's report: <root>/banana/logs/sync.log (the one before: sync.log.1).
 // Rules kept (PROTOCOL.md "What a device sync must do"): only files the sync put there are ever changed or deleted
@@ -27,7 +30,8 @@
 // A save comes down to /run first, is checked against the server's hash and installed through the vault (the save it
 // replaces kept, the install journalled: save_vault.h), after the journal of a run cut short is recovered; a blank
 // save is neither sent nor taken (save_adapt.h). RomM's saves are each game's one save file, the one its emulator
-// reads, for a game whose ROM is the server's by its contents (save_paths.h).
+// reads, for a game whose ROM is the server's by its contents (save_paths.h); a RomM before 5.4 only gives saves, and
+// one that has this handheld's sync switched off gives none.
 #include "json.h"
 #include "save_adapt.h"
 #include "save_vault.h"
@@ -550,22 +554,27 @@ namespace
 		close(s);
 		return out;
 	}
-	// what answers at an address: Romhost's hello, RomM's heartbeat
-	std::string probe(const std::string& addr, std::string& url, std::string& name)
+	// libcurl's codes for an HTTPS server not trusted (CURLE_PEER_FAILED_VERIFICATION) and homesync_ca's file not read
+	// (CURLE_SSL_CACERT_BADFILE)
+	enum { CURL_UNTRUSTED = 60, CURL_BAD_CA = 77 };
+	// what answers at an address: Romhost's hello, RomM's heartbeat. tls: the HTTPS try's CURL_UNTRUSTED or CURL_BAD_CA
+	std::string probe(const std::string& addr, std::string& url, std::string& name, int* tls = nullptr)
 	{
 		std::vector<std::string> tries;
 		std::string a = trim(addr);
 		bool hasPort = a.find(':', a.find("://") == std::string::npos ? 0 : a.find("://") + 3) != std::string::npos;
-		bool scheme = a.find("://") != std::string::npos, tls = lower(a.substr(0, 8)) == "https://";
+		bool scheme = a.find("://") != std::string::npos, https = lower(a.substr(0, 8)) == "https://";
 		if (hasPort || scheme) tries.push_back(normUrl(a, 0));
 		// a bare address: Romhost's port first (the LAN's usual server), then the web ports, and https (443) last (#109);
-		// https typed without a port is that server's 443 alone
-		if (!hasPort && !tls) { tries.push_back(normUrl(a, 8092)); tries.push_back(normUrl(a, 8080)); tries.push_back(normUrl(a, 80)); }
+		// https typed without a port is that server's 443 alone, and an address with a port is taken as typed
+		if (!hasPort && !https) { tries.push_back(normUrl(a, 8092)); tries.push_back(normUrl(a, 8080)); tries.push_back(normUrl(a, 80)); }
 		if (!hasPort && !scheme) tries.push_back(normUrl("https://" + a, 0));
 		for (auto& u : tries)
 		{
 			Req q; q.url = u + "/api/v1/hello"; q.timeout = 5;
 			Resp r = http(q);
+			if (tls && (r.curl == CURL_UNTRUSTED || r.curl == CURL_BAD_CA)) *tls = r.curl;
+			if (r.code == 0) continue;	// (nothing there, on this scheme and port: the heartbeat wouldn't get further)
 			JPtr j = r.code == 200 ? r.json() : nullptr;
 			if (j && j->str("service") == "romhost") { url = u; name = j->str("name"); return "romhost"; }
 			q.url = u + "/api/heartbeat";
@@ -587,12 +596,31 @@ namespace
 	int pair(const std::string& addr, const std::string& codeIn)
 	{
 		std::string url, name;
-		std::string kind = probe(addr, url, name);
+		int tls = 0;
+		std::string kind = probe(addr, url, name, &tls);
+		if (kind == "none" && tls == CURL_BAD_CA)
+		{
+			status("error homesync_ca can't be read");
+			say("homesync_ca: %s can't be read", CA.c_str());
+			return 1;
+		}
+		if (kind == "none" && tls == CURL_UNTRUSTED)
+		{
+			status("error the server's certificate isn't trusted (homesync_ca)");
+			say("the HTTPS server at %s isn't trusted: its CA's certificate as homesync_ca, or homesync_tls = off (not "
+				"recommended: any certificate is then taken), in banana/settings.conf", addr.c_str());
+			return 1;
+		}
 		if (kind == "none") { status("error no server at " + addr); say("no Romhost or RomM answers at %s", addr.c_str()); return 1; }
+		if (!tlsVerify && url.compare(0, 8, "https://") == 0) say("certificate checks are off (homesync_tls)");
+		// (RomM: the card's id, its device's hostname and identifier, before anything is asked: without it every such card
+		// would be one device)
+		if (kind == "romm" && cardId().empty()) { status("error can't write banana/sync-id"); say("can't write %s/banana/sync-id", ROOT.c_str()); return 1; }
 		Conf c = loadConf();
 		std::string code = trim(codeIn), dev = getenv("BANANA_SYNC_NAME") ? getenv("BANANA_SYNC_NAME") : deviceName();
 		Conf n;
 		n.backend = kind; n.server = url; n.serverName = name; n.name = dev;
+		if (kind == "romm" && name.compare(0, 5, "RomM ") == 0) n.serverVersion = name.substr(5);
 		// a new server: a new state (another server's files and versions mean nothing here); the files stay on the card
 		if (c.server == url && c.backend == kind) { n.files = c.files; n.gamelist = c.gamelist; n.saves = c.saves; n.states = c.states; }
 		if (kind == "romhost")
@@ -620,9 +648,8 @@ namespace
 		else
 		{
 			// RomM's device pairing: a code shown here, typed (approved) in RomM's web UI at /pair/device
-			char host[64] = {}; gethostname(host, sizeof host - 1);
-			std::string ident = "bananaos-" + std::string(host[0] ? host : "handheld") + "-" + trim(readFile("/etc/machine-id")).substr(0, 8);
-			std::string b = "{\"client_device_identifier\": " + jsonStr(ident) + ", \"name\": " + jsonStr(dev) + ", \"client\": \"BananaOS\", \"platform\": \"linux\", \"client_version\": \"1.0\", "
+			// (as the device it then registers: RomM makes the device from this when the code is approved)
+			std::string b = "{\"client_device_identifier\": " + jsonStr("bananaos-" + cardId()) + ", " + deviceFields(n) + ", "
 				"\"requested_scopes\": [\"me.read\", \"roms.read\", \"platforms.read\", \"assets.read\", \"assets.write\", \"devices.read\", \"devices.write\"]}";
 			Req q; q.method = "POST"; q.url = url + "/api/auth/device/init"; q.body = &b; q.headers = { "Content-Type: application/json" };
 			Resp r = http(q);
@@ -648,6 +675,13 @@ namespace
 				else if (why != "authorization_pending" && tr.code != 0) { status("error " + (why == "access_denied" ? std::string("refused in RomM") : why == "expired_token" ? std::string("the code ran out") : why)); return 1; }
 			}
 			if (n.token.empty()) { status("error the code ran out"); return 1; }
+		}
+		if (kind == "romm")
+		{
+			// the card as a RomM device, whichever way it paired; re-paired with the same server, the same device
+			if (n.device.empty() && c.server == url && c.backend == kind) n.device = c.device;
+			std::string e = registerDevice(n);
+			if (!e.empty()) say("not registered as a device yet (%s): the next sync tries again", e.c_str());
 		}
 		if (!saveConf(n)) { status("error can't write " + CONF); return 1; }
 		status("paired " + (n.serverName.empty() ? url : n.serverName));
@@ -688,6 +722,7 @@ namespace
 			if (a == "off" || (autoWhy == "wifi" && a != "both")) return 0;
 			if (autoWhy == "quit") savesOnly = true;	// (leaving a game: only the saves, it's quick)
 		}
+		if (!tlsVerify && c.server.compare(0, 8, "https://") == 0) say("certificate checks are off (homesync_tls)");
 		bool roms = !savesOnly && get("homesync_roms", "on") == "on";
 		bool states = get("homesync_states", "off") == "on";
 		std::set<std::string> skip;
@@ -786,10 +821,13 @@ int main(int argc, char** argv)
 		SYSTEMS = e ? e : ROOT == "/data" ? (access("/run/banana/systems.conf", R_OK) == 0 ? "/run/banana/systems.conf" :
 			"/etc/banana/systems.conf") : "";
 	}
+	// an https server's certificate: signed by the owner's own CA (its certificate file, data-relative or absolute), or,
+	// the owner's choice for one of its own making, not checked at all (homesync_tls = off)
 	{
 		auto set = readConf(SETTINGS);
-		auto t = set.find("homesync_tls");
-		tlsVerify = t == set.end() || t->second != "off";
+		CA = set["homesync_ca"];
+		if (!CA.empty() && CA[0] != '/') CA = ROOT + "/" + CA;
+		tlsVerify = set["homesync_tls"] != "off";
 	}
 	if (args.empty()) { fprintf(stderr, "usage: banana-sync discover | probe <address> | pair <address> [code] | forget | sync [--saves-only] [--auto quit|wifi] [--dry-run] | status | games | blank <file> [<folder>]\n"); return 2; }
 	std::string cmd = args[0];

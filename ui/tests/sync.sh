@@ -85,6 +85,48 @@ card rb
 CODE=$(curl -s -XPOST "$U/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
 bs rb pair "$U" "$CODE" >/dev/null 2>&1 || bad "pairing with a client token's code failed: $(st rb)"
 bs rb pair "$U" "WRONGCOD" >/dev/null 2>&1 && bad "a wrong pairing code was taken"
+# each card a RomM device of its own, whichever way it paired (the device flow, a pairing code, a token pasted), as
+# bananaos-<the card's banana/sync-id>; the same device when it pairs again; registered again when deleted in RomM; no
+# saves while RomM has its sync switched off
+mint() { curl -s -XPOST "$U/test/token" -d "${1:-{\}}" | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])'; }
+AT=$(mint)
+devs() { curl -s -H "Authorization: Bearer $AT" "$U/api/devices"; }
+devof() { python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("device") or "")' "$OUT/$1/banana/romsync.json"; }
+dev() { devs | python3 -c 'import json,sys; d = [x for x in json.load(sys.stdin) if x["id"] == sys.argv[1]]; print(" ".join(str(d[0][k]) for k in ("hostname", "client", "platform", "sync_mode")) if d else "none")' "$1"; }
+ndevs() { devs | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))'; }
+DA=$(devof ra); DB=$(devof rb)
+[ "$(dev "$DA")" = "bananaos-$(cat "$OUT/ra/banana/sync-id") bananaos BananaOS api" ] || bad "card A's device (the device flow): $(dev "$DA")"
+[ -n "$DB" ] && [ "$DB" != "$DA" ] && [ "$(dev "$DB")" = "bananaos-$(cat "$OUT/rb/banana/sync-id") bananaos BananaOS api" ] || bad "card B (a pairing code) has no device of its own: $DB $(dev "$DB")"
+card rp; bs rp pair "$U" "$(mint)" >/dev/null 2>&1 || bad "pairing with a pasted token failed: $(st rp)"
+DD=$(devof rp)
+[ -n "$DD" ] && [ "$(dev "$DD")" = "bananaos-$(cat "$OUT/rp/banana/sync-id") bananaos BananaOS api" ] || bad "a pasted token's card has no device: $DD"
+n=$(ndevs); CODE=$(curl -s -XPOST "$U/test/paircode" | python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
+# (named otherwise this time: the device held is brought up to date, which a registration RomM matches by hostname isn't)
+c=$OUT/ra; BANANA_SYNC_NAME="RG DS renamed" "$BIN" --root "$c" --run "$c/run" --status "$c/run/sync.status" pair "$U" "$CODE" >/dev/null 2>&1 || bad "card A pairing again failed: $(st ra)"
+[ "$(devof ra)" = "$DA" ] && [ "$(ndevs)" = "$n" ] || bad "pairing again made another device: $(devof ra), $(ndevs) devices (were $n)"
+devs | grep -q '"name": "RG DS renamed"' || bad "the device held wasn't brought up to date when the card paired again"
+curl -s -XDELETE -H "Authorization: Bearer $AT" "$U/api/devices/$DD" >/dev/null
+bs rp sync --saves-only > "$OUT/romm-dev1.log" 2>&1
+grep -q 'the device was gone from RomM' "$OUT/romm-dev1.log" && grep -q 'registered as RomM device' "$OUT/romm-dev1.log" && [ "$(dev "$(devof rp)")" != none ] || bad "a deleted device wasn't registered again: $(cat "$OUT/romm-dev1.log")"
+curl -s -XPUT -H "Authorization: Bearer $AT" -H 'Content-Type: application/json' -d '{"sync_enabled": false}' "$U/api/devices/$(devof rp)" >/dev/null
+printf 'homesync.nds = off\nhomesync.psx = off\n' > "$OUT/rp/banana/settings.conf"
+bs rp sync > "$OUT/romm-dev2.log" 2>&1
+grep -q 'save sync is off for this handheld in RomM (Devices)' "$OUT/romm-dev2.log" || bad "RomM's sync switched off not said: $(cat "$OUT/romm-dev2.log")"
+has "rp/roms/gba/Banana Run (USA).gba"
+# a token that can't touch devices: paired all the same, its syncs say so and aren't errors
+card rq; bs rq pair "$U" "$(mint '{"scopes": ["me.read", "roms.read", "platforms.read", "assets.read", "assets.write"]}')" > "$OUT/romm-dev3.log" 2>&1 ||
+    bad "a token without the devices scopes didn't pair: $(cat "$OUT/romm-dev3.log")"
+grep -q 'not registered as a device yet' "$OUT/romm-dev3.log" || bad "a pairing without a device not said: $(cat "$OUT/romm-dev3.log")"
+bs rq sync --saves-only > "$OUT/romm-dev4.log" 2>&1 || bad "a sync without a device failed: $(cat "$OUT/romm-dev4.log")"
+grep -q 'not registered as a RomM device' "$OUT/romm-dev4.log" && ! grep -q 'error:' "$OUT/romm-dev4.log" || bad "a sync without a device: $(cat "$OUT/romm-dev4.log")"
+# a dry run registers nothing
+curl -s -XDELETE -H "Authorization: Bearer $AT" "$U/api/devices/$(devof rp)" >/dev/null; n=$(ndevs)
+bs rp sync --saves-only --dry-run > "$OUT/romm-dev5.log" 2>&1
+grep -q 'would register as a RomM device' "$OUT/romm-dev5.log" && ! grep -q 'registered' "$OUT/romm-dev5.log" && [ "$(ndevs)" = "$n" ] || bad "a dry run registered a device: $(ndevs) (were $n) $(cat "$OUT/romm-dev5.log")"
+# a card that can't keep its id (banana/sync-id unwritable): no pairing at all, rather than one device for all of them
+card rw; mkdir "$OUT/rw/banana/sync-id"
+bs rw pair "$U" "$(mint)" >/dev/null 2>&1 && bad "paired without the card's id"
+[ "$(st rw)" = "error can't write banana/sync-id" ] && [ "$(ndevs)" = "$n" ] || bad "no card id: $(st rw), $(ndevs) devices (were $n)"
 # choosing games (homesync_games = chosen): only the chosen game comes, the list says which are chosen and on the card,
 # and un-choosing a game already on the card leaves it there
 card rc
@@ -247,6 +289,66 @@ cp "$OUT/ra/banana/logs/sync.log" "$OUT/sync-log-before"
 bs ra sync --auto quit >/dev/null 2>&1
 cmp -s "$OUT/sync-log-before" "$OUT/ra/banana/logs/sync.log" || bad "an automatic sync that did nothing replaced the last sync's report"
 bs ra forget; [ -f "$OUT/ra/banana/romsync.json" ] && bad "forget left the pairing"
+# RomM on HTTPS (behind a reverse proxy), its certificate from the owner's own CA: found at the plain address, not
+# trusted until homesync_ca names that CA's certificate, then paired and synced
+LT=$OUT/romm-tls-lib; mkdir -p "$LT/gba"; head -c 3000 /dev/urandom > "$LT/gba/Secure Run (USA).gba"
+openssl req -x509 -newkey rsa:2048 -nodes -keyout "$OUT/tls.key" -out "$OUT/tls.pem" -days 2 -subj /CN=127.0.0.1 \
+    -addext "subjectAltName=IP:127.0.0.1" >/dev/null 2>&1 || bad "openssl made no certificate"
+PT=$(port)
+FAKE_ROMM_TLS="$OUT/tls.pem:$OUT/tls.key" python3 "$HERE/tests/fake-romm.py" "$PT" "$LT" 2> "$OUT/fake-romm-tls.log" & PIDS="$PIDS $!"
+for i in $(seq 50); do curl -sk "https://127.0.0.1:$PT/api/heartbeat" >/dev/null && break; sleep 0.1; done
+UT=https://127.0.0.1:$PT
+card rt
+TT=$(curl -sk -XPOST "$UT/test/token" -d '{}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')
+bs rt pair "$UT" "$TT" > "$OUT/romm-tls1.log" 2>&1 && bad "an HTTPS server nothing vouches for was trusted"
+[ "$(st rt)" = "error the server's certificate isn't trusted (homesync_ca)" ] || bad "an untrusted certificate not said: $(st rt) $(cat "$OUT/romm-tls1.log")"
+printf 'homesync_ca = banana/no-such-ca.pem\n' > "$OUT/rt/banana/settings.conf"
+bs rt pair "$UT" "$TT" > "$OUT/romm-tls0.log" 2>&1 && bad "paired with a homesync_ca that isn't there"
+[ "$(st rt)" = "error homesync_ca can't be read" ] || bad "a homesync_ca that isn't there not said: $(st rt) $(cat "$OUT/romm-tls0.log")"
+cp "$OUT/tls.pem" "$OUT/rt/banana/home-ca.pem"; printf 'homesync_ca = banana/home-ca.pem\n' > "$OUT/rt/banana/settings.conf"
+[ "$(bs rt probe "$UT")" = "romm $UT RomM 5.4.1" ] || bad "probe didn't find RomM on HTTPS: $(bs rt probe "$UT")"
+bs rt pair "$UT" "$TT" > "$OUT/romm-tls2.log" 2>&1 || bad "pairing on HTTPS with homesync_ca: $(st rt) $(cat "$OUT/romm-tls2.log")"
+grep -q "\"server\": \"$UT\"" "$OUT/rt/banana/romsync.json" || bad "the HTTPS address not kept: $(grep server "$OUT/rt/banana/romsync.json")"
+bs rt sync > "$OUT/romm-tls3.log" 2>&1 || bad "a sync on HTTPS: $(tail -3 "$OUT/romm-tls3.log")"
+cmp -s "$LT/gba/Secure Run (USA).gba" "$OUT/rt/roms/gba/Secure Run (USA).gba" || bad "a ROM over HTTPS: $(tail -3 "$OUT/romm-tls3.log")"
+grep -q 'registered as RomM device\|error:' "$OUT/romm-tls3.log" && bad "the device on HTTPS: $(cat "$OUT/romm-tls3.log")"
+grep -q 'certificate checks are off' "$OUT/romm-tls3.log" && bad "certificate checks said off while on"
+# a self-signed certificate taken as it is, the owner's choice (homesync_tls = off): paired and synced, and each
+# run says the checks are off
+card ru; printf 'homesync_tls = off\n' > "$OUT/ru/banana/settings.conf"
+bs ru pair "$UT" "$TT" > "$OUT/romm-tls4.log" 2>&1 || bad "pairing with homesync_tls off: $(st ru) $(cat "$OUT/romm-tls4.log")"
+bs ru sync > "$OUT/romm-tls5.log" 2>&1 || bad "a sync with homesync_tls off: $(tail -3 "$OUT/romm-tls5.log")"
+cmp -s "$LT/gba/Secure Run (USA).gba" "$OUT/ru/roms/gba/Secure Run (USA).gba" || bad "a ROM with homesync_tls off: $(tail -3 "$OUT/romm-tls5.log")"
+grep -q 'certificate checks are off (homesync_tls)' "$OUT/romm-tls4.log" && grep -q 'certificate checks are off (homesync_tls)' "$OUT/romm-tls5.log" ||
+    bad "certificate checks off not said"
+# a RomM before 5.4 (whose slots and device records the other clients sync by): saves only come down, and the note
+# says to update it; a development build counts as new
+LV=$OUT/romm-old-lib; mkdir -p "$LV/gba"; printf 'gba rom down' > "$LV/gba/Down (USA).gba"; printf 'gba rom up' > "$LV/gba/Up (USA).gba"
+for v in 5.3.1 development; do
+    p=$(port); cv=rv-$v
+    FAKE_ROMM_VERSION=$v python3 "$HERE/tests/fake-romm.py" "$p" "$LV" 2> "$OUT/fake-romm-$v.log" & PIDS="$PIDS $!"
+    waitport "$p" /api/heartbeat || bad "the fake RomM $v didn't start"
+    t=$(curl -s -XPOST "http://127.0.0.1:$p/test/token" -d '{}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')
+    card "$cv"; bs "$cv" pair "http://127.0.0.1:$p" "$t" >/dev/null 2>&1 && bs "$cv" sync >/dev/null 2>&1 || bad "RomM $v: pairing and the games: $(st "$cv")"
+    curl -s -XPOST "http://127.0.0.1:$p/test/save" -d '{"rom_id": 101, "file_name": "Down (USA).srm", "data": "0102030405"}' >/dev/null
+    mkdir -p "$OUT/$cv/saves/gba"; echo "this handheld's" > "$OUT/$cv/saves/gba/Up (USA).srm"
+    bs "$cv" sync --saves-only > "$OUT/romm-$v.log" 2>&1
+    [ "$(od -An -tx1 "$OUT/$cv/saves/gba/Down (USA).srm" 2>/dev/null | tr -d ' \n')" = 0102030405 ] || bad "RomM $v: the server's save didn't come down: $(cat "$OUT/romm-$v.log")"
+    sent=$(curl -s -H "Authorization: Bearer $t" "http://127.0.0.1:$p/api/saves?rom_id=102" | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')
+    case $v in
+    5.3.1)
+        [ "$sent" = 0 ] || bad "a save was sent to RomM 5.3.1"
+        grep -q 'RomM 5.3.1 only gives saves: update RomM to 5.4 or newer' "$OUT/romm-$v.log" || bad "RomM 5.3.1: not said: $(cat "$OUT/romm-$v.log")"
+        bs "$cv" status | grep -q "paired with RomM 5.3.1" || bad "status: $(bs "$cv" status)"
+        # (RomM updated, or downgraded, since the pairing: the name follows the heartbeat)
+        sed -i 's/"RomM 5.3.1"/"RomM 5.2.0"/; s/"serverVersion": "5.3.1"/"serverVersion": "5.2.0"/' "$OUT/$cv/banana/romsync.json"
+        bs "$cv" sync --saves-only >/dev/null 2>&1
+        bs "$cv" status | grep -q "paired with RomM 5.3.1" || bad "the server's name didn't follow its version: $(bs "$cv" status)" ;;
+    *)
+        [ "$sent" = 1 ] || bad "RomM $v: the save wasn't sent: $(cat "$OUT/romm-$v.log")"
+        grep -q 'only gives saves' "$OUT/romm-$v.log" && bad "RomM $v taken for an old one" ;;
+    esac
+done
 
 # ---------------------------------------------------------------- RomM on https (#109)
 # behind a certificate of its own making (no CA on the handheld for it): https typed is used as it is, the check

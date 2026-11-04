@@ -7,9 +7,9 @@ sync negotiation with its sessions. Python standard library only; the tests' own
 
     fake-romm.py <port> <library dir>      the library: <platform fs_slug>/<rom file or folder>, covers as
                                            <library>/covers/<rom id>.png once /test/cover is called
-FAKE_ROMM_TLS=<cert.pem>:<key.pem> serves https instead (RomM behind a reverse proxy with a certificate of its own).
 Environment: FAKE_ROMM_TZ (the server's own time zone, which slot versions are named in; Europe/Stockholm),
-FAKE_ROMM_MAX_SAVES_PER_SLOT (versions kept per lineage; 50, 0 = no cap), FAKE_ROMM_BIND.
+FAKE_ROMM_MAX_SAVES_PER_SLOT (versions kept per lineage; 50, 0 = no cap), FAKE_ROMM_BIND, FAKE_ROMM_TLS (<cert>:<key>,
+PEM files: served over HTTPS), FAKE_ROMM_VERSION (what the heartbeat says, 5.4.1: the stand-in is 5.4.1 whatever it says).
 
 A request is checked in RomM's order: its fields first (422), then the token's scopes (403), then what it names
 (404), then the rest. A request the stand-in can't handle is answered 500, never left without an answer.
@@ -642,7 +642,7 @@ class H(http.server.BaseHTTPRequestHandler):
 
     def handle_route(self, method, p, q, qa, raw):
         if p == "/api/heartbeat":
-            return self.send(200, {"SYSTEM": {"VERSION": "5.4.1", "GIT_BRANCH": None, "SHOW_SETUP_WIZARD": False}})
+            return self.send(200, {"SYSTEM": {"VERSION": os.environ.get("FAKE_ROMM_VERSION", "5.4.1"), "GIT_BRANCH": None, "SHOW_SETUP_WIZARD": False}})
         if p.startswith("/test/"):
             return self.test_hook(p, raw)
         # ---- pairing (open endpoints)

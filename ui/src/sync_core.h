@@ -21,9 +21,9 @@ namespace bsync
 	using banana::JPtr;
 
 	extern const char* VERSION;
-	extern std::string ROOT, ROMS, CONF, SETTINGS, SYSTEMS, STATUS, RUN;
+	extern std::string ROOT, ROMS, CONF, SETTINGS, SYSTEMS, STATUS, RUN, CA;	// CA: homesync_ca, a PEM file of CA certificates (or "")
 	extern bool dryRun, verbose;
-	extern bool tlsVerify;	// homesync_tls = off: a Home server's certificate taken unchecked
+	extern bool tlsVerify;	// homesync_tls = off: an https server's certificate taken unchecked
 	extern bool logWanted;	// the next line said opens the report on the card, banana/logs/sync.log
 
 	// ---- the status line the menu reads ---------------------------------------------------------------------------
@@ -108,7 +108,8 @@ namespace bsync
 
 	struct Resp
 	{
-		long code = 0;			// 0: no answer (err says why)
+		long code = 0;			// 0: no answer (err says why, curl is libcurl's code)
+		int curl = 0;
 		std::string body, err;
 		std::map<std::string, std::string> hdr;	// lower-case names
 		JPtr json() const { return banana::parseJson(body); }
@@ -144,7 +145,7 @@ namespace bsync
 	struct SaveSt { double version = 0; std::string hash, server; };	// romm: version = the save's id, hash its MD5, server its updated_at
 	struct Conf
 	{
-		std::string backend = "romhost", server, token, device, name, serverName, etag, last;
+		std::string backend = "romhost", server, token, device, name, serverName, serverVersion, etag, last;	// serverVersion: RomM's, as its heartbeat says
 		bool deviceNum = false;	// Romhost's device id is a number
 		std::map<std::string, std::string> files;					// roms-relative path -> the hash it had when written
 		std::map<std::string, std::string> where;					// a file of files' on the second SD card -> "sd2" (absent: this card)
@@ -202,6 +203,31 @@ namespace bsync
 		virtual void report(const Manifest&, int, int, const std::vector<std::string>&, const std::vector<std::string>&) {}
 		virtual bool saves(bool statesToo, int& up, int& down, int& conflicts, std::vector<std::string>& errors, std::string& note) = 0;
 	};
+
+	// ---- this card as a RomM device: banana/sync-id (made once, on the card: the image's machine-id is every card's)
+	// as its hostname bananaos-<id>, by which RomM finds the same device again ---------------------------------------
+	std::string cardId();
+	std::string osVersion();	// /etc/banana/version
+	std::string deviceFields(const Conf& c);	// name, platform, client, client_version, hostname, sync_mode (JSON members)
+	// the card registered: the device held updated (PUT), else one registered (POST, allow_existing); c.device set.
+	// "" when done, else why not
+	std::string registerDevice(Conf& c);
+	// a version such as "5.4.1" (or "v5.4.0-beta.2") at least major.minor.patch; one that isn't a number ("development",
+	// a build from RomM's own branch) counts as new
+	inline bool versionAtLeast(const std::string& v, int major, int minor, int patch)
+	{
+		size_t i = v.size() && (v[0] == 'v' || v[0] == 'V') ? 1 : 0;
+		if (i >= v.size() || !isdigit((unsigned char)v[i])) return true;
+		int got[3] = { 0, 0, 0 };
+		for (int k = 0; k < 3 && i < v.size() && isdigit((unsigned char)v[i]); k++)
+		{
+			while (i < v.size() && isdigit((unsigned char)v[i])) got[k] = got[k] * 10 + (v[i++] - '0');
+			if (i < v.size() && v[i] == '.') i++; else break;
+		}
+		int want[3] = { major, minor, patch };
+		for (int k = 0; k < 3; k++) if (got[k] != want[k]) return got[k] > want[k];
+		return true;
+	}
 
 	// ---- the saves on the card ----------------------------------------------------------------------------------------
 	std::string saveKind(const std::string& rel);
