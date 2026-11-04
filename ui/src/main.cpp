@@ -1402,6 +1402,47 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 	return 0;
 }
 
+// a process's start time (/proc/<pid>/stat field 22): the pid file's second word, so a reused pid is not the game
+static unsigned long long procStart(pid_t pid)
+{
+	char path[32], buf[1024];
+	snprintf(path, sizeof path, "/proc/%d/stat", (int)pid);
+	FILE* f = fopen(path, "r");
+	if (!f || !fgets(buf, sizeof buf, f)) { if (f) fclose(f); return 0; }
+	fclose(f);
+	char* q = strrchr(buf, ')');
+	if (!q) return 0;
+	q += 2;
+	for (int i = 0; i < 19 && *q; i++) { while (*q && *q != ' ') q++; while (*q == ' ') q++; }
+	return strtoull(q, nullptr, 10);
+}
+
+// a command to the non-blocking game-panel pipe: EAGAIN is retried for 200 ms (a loading game isn't reading yet)
+static bool pipeWrite(int fd, const char* p, size_t n)
+{
+	const double until = nowMs() + 200;
+	while (n)
+	{
+		ssize_t w = write(fd, p, n);
+		if (w > 0) { p += w; n -= (size_t)w; continue; }
+		if (w == 0) return false;
+		if (w < 0 && errno == EINTR) continue;
+		if (w < 0 && errno == EAGAIN)
+		{
+			int left = (int)(until - nowMs());
+			if (left > 0)
+			{
+				pollfd pf = { fd, POLLOUT, 0 };
+				int r = poll(&pf, 1, left);
+				if (r < 0 && errno == EINTR) continue;
+				if (r > 0) continue;
+			}
+		}
+		return false;
+	}
+	return true;
+}
+
 // ---- the boot animation and the hand-over to the menu --------------------------------------------------------
 // one frame to the panels, then wait for its flip (or a signal)
 static int gUnsent = 0;	// frames present() refused because a flip was still pending (never shown)
@@ -1633,9 +1674,11 @@ static void playArrival(Display& disp, SoftBackend& be, const Options& o, Input&
 	{
 		double t = nowMs() - t0;
 		if (t >= Arrival::END) break;
-		std::vector<pollfd> fds = { { sig, POLLIN, 0 } };
-		for (int fd : input.fds()) fds.push_back({ fd, POLLIN, 0 });
-		if (poll(fds.data(), fds.size(), 0) > 0)
+		pollfd fds[40];
+		int in[32], ni = input.fds(in, 32), nf = 0;
+		fds[nf++] = { sig, POLLIN, 0 };
+		for (int i = 0; i < ni; i++) fds[nf++] = { in[i], POLLIN, 0 };
+		if (poll(fds, nf, 0) > 0)
 		{
 			if (fds[0].revents & POLLIN)
 			{
@@ -1650,7 +1693,7 @@ static void playArrival(Display& disp, SoftBackend& be, const Options& o, Input&
 				if (interrupted) break;
 				be.invalidate();
 			}
-			for (size_t i = 1; i < fds.size(); i++)
+			for (int i = 1; i < nf; i++)
 				if (fds[i].revents & POLLIN)
 					input.read(fds[i].fd, [&](const InputEvent& ev) { if (ev.type == InputEvent::PRESS && (ev.key == Key::A || ev.key == Key::START)) skip = true; });
 		}
@@ -2173,6 +2216,7 @@ int main(int argc, char** argv)
 
 	Repeat rep;
 	bool dirty = true, quit = false, drawn = false;	// drawn: a frame on the canvas waiting for the flips
+	double dispRetryAt = 0;	// the panels after a game: opened again until they come back
 	bool shuttingDown = false;	// SIGTERM: rcK (a shutdown or a restart), so the shutdown animation plays
 	double gameEnded = -1e9;
 	double quietUntil = 0;	// no frame before this: the last one flipped nothing (see present below)
@@ -2452,7 +2496,7 @@ int main(int argc, char** argv)
 		// the game's end wakes the loop at once (a pidfd is readable then): the 100 ms poll alone kept the menu up to that
 		// much longer before it saw it
 		const int pidFd = (int)syscall(SYS_pidfd_open, pid, 0);
-		bool linkSeen = false;
+		bool linkSeen = false, pipeWarned = false;
 		for (;;)
 		{
 			pid_t w = waitpid(pid, &status, WNOHANG);
@@ -2464,7 +2508,7 @@ int main(int argc, char** argv)
 				// the companion's reads of the game's memory, on RetroArch's stdin beside the tiles' commands
 				std::string r = companion.active() ? companion.requests(t) : gameComp.requests(t);
 				// through the emulator's memory export when it attached to it (BananaFront), else RetroArch's stdin
-				if (!r.empty() && !compLink.send(r) && write(cmdFd, r.data(), r.size()) < 0) {}
+				if (!r.empty() && !compLink.send(r) && !pipeWrite(cmdFd, r.data(), r.size()) && !pipeWarned) { logf("companion: the command pipe is full or closed"); pipeWarned = true; }
 			}
 			if (compLink.attached() != linkSeen)	// (once a game: the log says which way the companion reads)
 			{
@@ -2518,23 +2562,22 @@ int main(int argc, char** argv)
 					snprintf(slotCmd, sizeof slotCmd, "LOAD_STATE_SLOT %d\n", settingsView.gameSlot());
 					const char* c = a == Settings::G_LOADSLOT ? slotCmd : a == Settings::G_SAVE ? "SAVE_STATE\n" : a == Settings::G_LOAD ? "LOAD_STATE\n" :
 						a == Settings::G_MENU ? "MENU_TOGGLE\n" : a == Settings::G_FFWD ? "FAST_FORWARD\n" : a == Settings::G_QUIT ? "QUIT\n" : nullptr;
-					if (c) { logf("game panel: %.*s (panel-tap)", (int)strlen(c) - 1, c); if (write(cmdFd, c, strlen(c)) < 0) {} }
+					if (c) { logf("game panel: %.*s (panel-tap)", (int)strlen(c) - 1, c); if (!pipeWrite(cmdFd, c, strlen(c))) logf("game panel: the command pipe is full or closed: %.*s", (int)strlen(c) - 1, c); }
 				}
 				want = true;
 				logf("panel tap %s %.0f %.0f", w.c_str(), tx, ty);
 			}
-			std::vector<pollfd> fds = { { disp.pollFd(), POLLIN, 0 } };
-			for (int fd : input.fds()) fds.push_back({ fd, POLLIN, 0 });
-			if (outFd >= 0) fds.push_back({ outFd, POLLIN, 0 });
-			if (pidFd >= 0) fds.push_back({ pidFd, POLLIN, 0 });
-			if (poll(fds.data(), fds.size(), compLink.waiting() ? 10 : 100) <= 0) continue;	// (an export's answer is looked for, not signalled)
-			if (pidFd >= 0)
-			{
-				if (fds.back().revents & POLLIN) continue;	// it ended: waitpid above
-				fds.pop_back();
-			}
+			pollfd fds[40];
+			int in[32], ni = input.fds(in, 32), nf = 0;
+			int outAt = -1, pidAt = -1;
+			fds[nf++] = { disp.pollFd(), POLLIN, 0 };
+			for (int i = 0; i < ni; i++) fds[nf++] = { in[i], POLLIN, 0 };
+			if (outFd >= 0) { outAt = nf; fds[nf++] = { outFd, POLLIN, 0 }; }
+			if (pidFd >= 0) { pidAt = nf; fds[nf++] = { pidFd, POLLIN, 0 }; }
+			if (poll(fds, nf, compLink.waiting() ? 10 : 100) <= 0) continue;	// (an export's answer is looked for, not signalled)
+			if (pidAt >= 0 && (fds[pidAt].revents & POLLIN)) continue;	// it ended: waitpid above
 			if (fds[0].revents & POLLIN) disp.handleEvents();
-			if (outFd >= 0 && (fds.back().revents & POLLIN))
+			if (outAt >= 0 && (fds[outAt].revents & POLLIN))
 			{
 				// (drained every time: RetroArch would wait on a full pipe)
 				char buf[16384];
@@ -2548,10 +2591,8 @@ int main(int argc, char** argv)
 						gameComp.feed(buf, (size_t)n);
 					}
 				}
-				fds.pop_back();
 			}
-			else if (outFd >= 0) fds.pop_back();
-			for (size_t i = 1; i < fds.size(); i++)
+			for (int i = 1; i <= ni; i++)
 				if (fds[i].revents & POLLIN)
 					input.read(fds[i].fd, [&](const InputEvent& ev)
 					{
@@ -2575,7 +2616,7 @@ int main(int argc, char** argv)
 						if (c)
 						{
 							logf("game panel: %.*s", (int)strlen(c) - 1, c);
-							if (write(cmdFd, c, strlen(c)) < 0) {}
+							if (!pipeWrite(cmdFd, c, strlen(c))) logf("game panel: the command pipe is full or closed: %.*s", (int)strlen(c) - 1, c);
 						}
 					});
 		}
@@ -2810,7 +2851,10 @@ int main(int argc, char** argv)
 		int status = 0;
 		if (pid > 0)
 		{
-			std::ofstream("/run/banana/game.pid") << pid << "\n";	// bananad: the game to pause before a sleep
+			std::ofstream f("/run/banana/game.pid");	// bananad: the game to pause before a sleep
+			f << pid;
+			if (unsigned long long st = procStart(pid)) f << " " << st;	// (a reused pid is not this game)
+			f << "\n";
 			if (panel)
 			{
 				gamePanel(pid, status, gameScreen, cmdFd, outFd, lib.gameAt(game).title, sd.name);
@@ -2899,6 +2943,7 @@ int main(int argc, char** argv)
 		int openTries = 0;
 		for (; !disp.open(o.top, err) && openTries < 100; openTries++) usleep(50000);
 		if (disp.isOpen()) disp.blank();	// the game's last frame on either panel gone before the menu draws (issue: GBA's bottom UI lingering)
+		else { logf("panels: %s: trying again", err.c_str()); dispRetryAt = nowMs() + 500; }
 		const double opened = nowMs();
 		// the display controller's interrupt storm (from the game's panel, or the lease given back): counted over the
 		// iris instead of a 200 ms wait before it (every game's way back waited for it); the full check only if it storms
@@ -3007,12 +3052,18 @@ int main(int argc, char** argv)
 				std::lock_guard<std::mutex> l(worker.uiLock);
 				welcomeToMenu(disp, be, *ui, settingsView, sound);
 			}
-			for (int fd : input.fds()) input.read(fd, [](const InputEvent&) {});
+			int in[32], ni = input.fds(in, 32);
+			for (int i = 0; i < ni; i++) input.read(in[i], [](const InputEvent&) {});
 			rep.key = Key::NONE;
 			dirty = true;
 			drawn = false;
 		}
 		double now = nowMs();
+		if (!disp.isOpen() && now >= dispRetryAt)
+		{
+			if (disp.open(o.top, err)) { disp.blank(); applyColors("the display came back"); be.invalidate(); dirty = true; drawn = false; dispRetryAt = 0; }
+			else dispRetryAt = now + 500;
+		}
 		{
 			std::lock_guard<std::mutex> l(worker.uiLock);
 			ui->update(now);
@@ -3240,20 +3291,22 @@ int main(int argc, char** argv)
 			if (timeout < 0 || left < timeout) timeout = left;
 		}
 
-		std::vector<pollfd> fds;
-		fds.push_back({ sigPipe[0], POLLIN, 0 });
-		fds.push_back({ worker.wakeFd, POLLIN, 0 });
-		if (roms.fd >= 0) fds.push_back({ roms.fd, POLLIN, 0 });
-		if (launchWatch >= 0) fds.push_back({ launchWatch, POLLIN, 0 });
-		if (uevent >= 0) fds.push_back({ uevent, POLLIN, 0 });
-		if (disp.isOpen()) fds.push_back({ disp.pollFd(), POLLIN, 0 });
-		for (int fd : input.fds()) fds.push_back({ fd, POLLIN, 0 });
-		if (mountsFd >= 0) fds.push_back({ mountsFd, POLLPRI, 0 });
-		int n = poll(fds.data(), fds.size(), timeout);
+		pollfd fds[40];
+		int in[32], ni = input.fds(in, 32), nf = 0;
+		fds[nf++] = { sigPipe[0], POLLIN, 0 };
+		fds[nf++] = { worker.wakeFd, POLLIN, 0 };
+		if (roms.fd >= 0) fds[nf++] = { roms.fd, POLLIN, 0 };
+		if (launchWatch >= 0) fds[nf++] = { launchWatch, POLLIN, 0 };
+		if (uevent >= 0) fds[nf++] = { uevent, POLLIN, 0 };
+		if (disp.isOpen()) fds[nf++] = { disp.pollFd(), POLLIN, 0 };
+		for (int i = 0; i < ni; i++) fds[nf++] = { in[i], POLLIN, 0 };
+		if (mountsFd >= 0) fds[nf++] = { mountsFd, POLLPRI, 0 };
+		int n = poll(fds, nf, timeout);
 		if (n == 0 && !want) dirty = true;	// the engine's next step is due
 		if (n <= 0) continue;
-		for (auto& p : fds)
+		for (int i = 0; i < nf; i++)
 		{
+			auto& p = fds[i];
 			if (p.fd == mountsFd)
 			{
 				if (!(p.revents & (POLLPRI | POLLERR))) continue;

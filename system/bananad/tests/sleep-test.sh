@@ -135,6 +135,18 @@ rm -f /run/banana/game.pid; sleep 0.1
 grep -q 'awake (lid opened)' /data/banana/logs/sleep.log && ok "sleep.log: $(tail -n1 /data/banana/logs/sleep.log | cut -c21-)" || bad "no wake in sleep.log"
 stop
 
+echo "1b. a game.pid whose start time doesn't match is stale: the process is not stopped"
+setsid sleep 600 & STALE=$!; sleep 0.1
+echo "$STALE 1" > /run/banana/game.pid
+start
+echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1
+asleep && ok "suspended with only a stale pid" || bad "no suspend"
+[ "$(awk '{print $3}' /proc/$STALE/stat 2>/dev/null)" != T ] && ok "the stale process wasn't stopped" || bad "the stale process was stopped"
+echo 0 > /run/test/lid; wake
+kill $STALE 2>/dev/null || true
+echo $GAME > /run/banana/game.pid
+stop
+
 echo "2. menu asleep, woken with the lid still shut, then opened"
 start
 echo 1 > /run/test/lid; ev $EV_SW $SW_LID 1

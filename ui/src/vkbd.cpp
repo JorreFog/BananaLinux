@@ -24,6 +24,19 @@ namespace banana
 	{
 		// every key the panel's keyboard sends (its three pages: letters and digits, symbols, and the keys a game
 		// uses: Return, Space, Delete, Escape, the arrows, F1-F12, Ctrl, Tab, Caps Lock)
+		void put(int fd, const input_event& ev)
+		{
+			const char* p = (const char*)&ev;
+			for (size_t n = sizeof ev; n;)
+			{
+				ssize_t w = write(fd, p, n);
+				if (w > 0) { p += w; n -= (size_t)w; continue; }
+				if (w < 0 && errno == EINTR) continue;
+				fprintf(stderr, "banana-ui: virtual keyboard: %s\n", strerror(errno ? errno : EIO));
+				return;
+			}
+		}
+
 		const int KEYS[] = {
 			KEY_LEFTSHIFT, KEY_LEFTCTRL, KEY_ENTER, KEY_BACKSPACE, KEY_ESC, KEY_SPACE, KEY_TAB, KEY_CAPSLOCK,
 			KEY_HOME, KEY_END, KEY_INSERT, KEY_DELETE, KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_PAGEUP, KEY_PAGEDOWN,
@@ -71,7 +84,7 @@ namespace banana
 		ev.type = EV_KEY;
 		ev.code = (unsigned short)code;
 		ev.value = value;
-		if (write(fd, &ev, sizeof ev) < 0) {}
+		put(fd, ev);
 	}
 
 	void VirtualKeyboard::sync()
@@ -80,7 +93,7 @@ namespace banana
 		input_event ev{};
 		ev.type = EV_SYN;
 		ev.code = SYN_REPORT;
-		if (write(fd, &ev, sizeof ev) < 0) {}
+		put(fd, ev);
 	}
 
 	void VirtualKeyboard::tap(int code, bool shift)

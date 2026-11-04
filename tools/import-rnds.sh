@@ -3,14 +3,22 @@
 # frontend draws exactly what ROCKNIXDS Pixel draws. The engine lives in ROCKNIXDS as "new file" sections of
 # dii-ess-aye/es-rgds-rnds.patch; only the ES-independent files are taken (RndsEs and the ES views stay behind).
 #
-#   tools/import-rnds.sh <ROCKNIXDS checkout>
+#   tools/import-rnds.sh [--force] <ROCKNIXDS checkout>
 #
 # Writes ui/rnds/*.{h,cpp} and ui/assets/rnds/ (fonts, icons, sounds, pictures, systems.cfg), puts
 # ui/assets/overrides/ (Banana's logo, tools/make-logo.py) over the result, and records the ROCKNIXDS commit in
 # ui/rnds/UPSTREAM. Banana's boot splash (ui/assets/splash) is its own: tools/make-splash.mjs.
 set -e
-SRC=${1:?usage: import-rnds.sh <ROCKNIXDS checkout>}
+FORCE=0; [ "$1" = --force ] && { FORCE=1; shift; }
+SRC=${1:?usage: import-rnds.sh [--force] <ROCKNIXDS checkout>}
 HERE=$(cd "$(dirname "$0")/.." && pwd)
+# the engine carries Banana's changes (UPSTREAM lists them): an import that would overwrite them is refused
+if [ $FORCE = 0 ]; then
+    if [ -n "$(git -C "$HERE" status --porcelain -- ui/rnds ui/assets/rnds)" ] || grep -q '^Local changes since' "$HERE/ui/rnds/UPSTREAM" 2>/dev/null; then
+        echo "import-rnds: ui/rnds has local changes: carry them into ROCKNIXDS's es-rgds-rnds.patch first, or --force" >&2
+        exit 1
+    fi
+fi
 PATCH=$SRC/dii-ess-aye/es-rgds-rnds.patch
 DARK=$SRC/dii-ess-aye/themes/rocknixds-pixel-dark
 [ -f "$PATCH" ] || { echo "no $PATCH"; exit 1; }

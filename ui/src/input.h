@@ -33,7 +33,7 @@ namespace banana
 		void close();
 		// a device came or went in /dev/input (watched with inotify): open() again to take it
 		bool rescanDue() { bool r = rescan; rescan = false; return r; }
-		std::vector<int> fds() const;
+		int fds(int* out, int max) const;	// the device and watch fds, up to max: no allocation in the frame loop
 		// a touchscreen on that screen (0 top, 1 bottom): the RG DS has one on each, the RG DS Plus only the bottom one
 		bool hasTouch(int screen) const;
 		// read what is waiting on fd; events go to sink

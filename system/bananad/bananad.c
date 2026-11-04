@@ -253,10 +253,33 @@ static void hooks_run(const char *when)
 	free(list);
 }
 
+/* the pid in a pid file, when that process is still the one the file names: the file may hold "<pid> <starttime>"
+ * (banana-ui's game.pid); without it, a process that started after the file was written is a reused pid */
 static pid_t pid_of(const char *pidfile)
 {
-	int p = read_int(pidfile, 0);
-	return p > 0 && kill(p, 0) == 0 ? p : 0;
+	FILE *f = fopen(pidfile, "r");
+	if (!f) return 0;
+	int p = 0;
+	unsigned long long started = 0;
+	int got = fscanf(f, "%d %llu", &p, &started);
+	fclose(f);
+	if (got < 1 || p <= 0 || kill(p, 0) != 0) return 0;
+	char path[32], buf[1024];
+	snprintf(path, sizeof path, "/proc/%d", p);
+	struct stat pf, df;
+	if (!stat(path, &pf) && !stat(pidfile, &df) &&
+	    (pf.st_mtim.tv_sec > df.st_mtim.tv_sec || (pf.st_mtim.tv_sec == df.st_mtim.tv_sec && pf.st_mtim.tv_nsec > df.st_mtim.tv_nsec)))
+		return 0;	/* started after the file was written: the pid was reused */
+	if (!started) return p;
+	snprintf(path, sizeof path, "/proc/%d/stat", p);
+	f = fopen(path, "r");
+	if (!f || !fgets(buf, sizeof buf, f)) { if (f) fclose(f); return 0; }
+	fclose(f);
+	char *q = strrchr(buf, ')');
+	if (!q) return 0;
+	q += 2;
+	for (int i = 0; i < 19 && *q; i++) { while (*q && *q != ' ') q++; while (*q == ' ') q++; }
+	return strtoull(q, NULL, 10) == started ? p : 0;
 }
 
 /* banana-ui's pid, by its name in /proc */

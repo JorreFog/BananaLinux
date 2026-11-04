@@ -4,7 +4,6 @@
 #   run-bananafront <core> <rom>       e.g. run-bananafront gambatte /data/roms/gb/game.gb
 # RetroArch stays installed: Settings > Other systems > the system's frontend (frontend.<system>) picks it back.
 BF=${BANANAFRONT_BIN:-/usr/bin/bananafront}    # (tests: another build)
-[ -x $BF ] || { echo "BananaFront isn't installed" >&2; exit 1; }
 CORE=/usr/lib/libretro/$1_libretro.so
 case $1 in /*) CORE=$1 ;; esac          # (tests: a core by its path)
 ROM=$2

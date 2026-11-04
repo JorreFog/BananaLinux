@@ -56,6 +56,7 @@ set_cfg() {
     grep -qxF "$1 = \"$2\"" $CFG && return
     sed -i "/^$1 = /d" $CFG
     printf '%s = "%s"\n' "$1" "$2" >> $CFG
+    sync    # (a power cut must not leave the card's config half written)
 }
 # Banana's choices over what RetroArch wrote on a card before they were in retroarch.cfg, once (a change made in
 # RetroArch's menu afterwards is kept): A confirms and B goes back in its menu, F + Start quits with one press, and
@@ -429,4 +430,5 @@ else
     one_panel_restore
 fi
 [ -n "$fix_d" ] && sed -i "$fix_d" $CFG && printf '%s' "$fix_l" >> $CFG
+sync    # (the slot, save folder and hotkeys are back on the card before the menu returns)
 exit $S
