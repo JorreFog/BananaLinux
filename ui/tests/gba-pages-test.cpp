@@ -104,7 +104,7 @@ int main(int argc, char** argv)
 		// the first zone with grass encounters: the player is there, a wild one of it in battle
 		auto live = std::make_shared<nds::Live>();
 		live->valid = true;
-		live->trainerName = "JOAR"; live->tid = 12345; live->sid = 54321;
+		live->trainerName = "MAY"; live->tid = 12345; live->sid = 54321;
 		uint16_t zone = 0, wild = 0;
 		for (const auto& z : r->zones)
 			for (const auto& e : z.second.encounters)
