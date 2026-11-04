@@ -283,6 +283,20 @@ namespace banana::pkmn
 		return m.species != 0;
 	}
 
+	uint32_t saveKey(const std::vector<uint8_t>& money, const std::vector<uint8_t>& keys)
+	{
+		uint32_t key = keys.size() >= 4 ? le32(keys.data()) : 0;
+		if (money.size() < 8 || keys.size() < 4) return key;
+		const uint32_t m = le32(money.data());
+		const uint16_t c = le16(money.data() + 4);
+		auto fits = [&](uint32_t k) { return (m ^ k) <= 999999 && (uint16_t)(c ^ (uint16_t)k) <= 9999; };
+		if (fits(key)) return key;
+		if (fits(0)) return 0;
+		for (size_t o = 4; o + 4 <= keys.size(); o += 4)
+			if (const uint32_t k = le32(keys.data() + o); k && fits(k)) return k;
+		return key;
+	}
+
 	bool decodeBattler(const uint8_t* p, Mon& m, int maxSpecies, const BattlerLayout& L)
 	{
 		if (L.decode) return L.decode(p, m, maxSpecies);
@@ -1412,8 +1426,8 @@ namespace banana::pkmn
 				wants.push_back({ s1 + L.pos, 12, &sb1h, false });
 				uint32_t b0 = L.pocket[0], b1 = L.pocket[4] + 4 * L.count[4];
 				if (!bagPockets) wants.push_back({ s1 + b0, (int)(b1 - b0), &bagB, false });
-				wants.push_back({ s1 + L.money, 4, &moneyB, false });
-				if (L.key) wants.push_back({ s2 + L.key, 4, &keyB, false });
+				wants.push_back({ s1 + L.money, 8, &moneyB, false });	// (the money, then the coins)
+				if (L.key) wants.push_back({ s2 + L.key, 0x20, &keyB, false });	// (the key, and the words after it: see below)
 				if (!dexOwn && L.dexSb1) wants.push_back({ s1 + L.dexSb1, 2 * L.dexBytes, &dexB, false });
 				else if (!dexOwn) wants.push_back({ s2 + L.dexOwned, (int)DEX_LEN, &dexB, false });
 				wants.push_back({ s1 + L.flags + 0x100, 16, &flagB, false });
@@ -1490,11 +1504,11 @@ namespace banana::pkmn
 			s.sid = le16(nameB.data() + 0x0C);
 			s.playSeconds = (long)le16(nameB.data() + 0x0E) * 3600 + nameB[0x10] * 60 + nameB[0x11];
 		}
-		uint32_t key = keyB.size() >= 4 ? le32(keyB.data()) : 0;
-		// the money is at most 999,999: a "key" that makes it more, when the plain value is possible, isn't this save's key
-		// (Heart & Soul keeps its money plain: 3000 read as 3,579,103,101 through the word at SaveBlock2+0xAC, on the
-		// RG DS Plus 2026-11-04); then the bag's counts are plain too
-		if (moneyB.size() >= 4 && key && (le32(moneyB.data()) ^ key) > 999999 && le32(moneyB.data()) <= 999999) key = 0;
+		// the save's key: the word at SaveBlock2+key as the games keep it, else the first word after it that makes the money
+		// (at most 999,999) and the coins (at most 9,999) possible, else none (the money plain). pokeemerald-expansion builds
+		// move it: SoulGold 1.1.4 keeps it at +0xB4 (3000 read as 553,099,489 through +0xAC), Heart & Soul's money is plain
+		// (3000 read as 3,579,103,101) - both on the RG DS Plus 2026-11-04. The bag's counts use the same key.
+		const uint32_t key = saveKey(moneyB, keyB);
 		if (moneyB.size() >= 4) s.money = (long)(le32(moneyB.data()) ^ key);
 		uint32_t b0 = L.pocket[0];
 		if (bagPockets)

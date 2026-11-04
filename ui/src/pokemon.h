@@ -137,6 +137,12 @@ namespace banana::pkmn
 	bool decodeParty(const uint8_t* p, Mon& m, MonCoding coding = MonCoding::ENCRYPTED);
 	bool decodeParty(const uint8_t* p, Mon& m, const MonLayout& layout);
 	// one battler of the battle's own copy; species above maxSpecies: none
+	// the save's key (gSaveBlock2.encryptionKey) from the words read at SaveBlock2+key (the key, then the words after it)
+	// and the money's 8 bytes (the money, then the coins): the first word as the games keep it, else none when the money
+	// is plain, else the first later word that makes the money (at most 999,999) and the coins (at most 9,999) possible.
+	// pokeemerald-expansion builds move it: SoulGold 1.1.4 at +0xB4 (3000 read as 553,099,489 through +0xAC), Heart &
+	// Soul's money plain (3000 read as 3,579,103,101) - both on the RG DS Plus 2026-11-04. The bag's counts use it too.
+	uint32_t saveKey(const std::vector<uint8_t>& money, const std::vector<uint8_t>& keys);
 	bool decodeBattler(const uint8_t* p, Mon& m, int maxSpecies = 450, const BattlerLayout& layout = BattlerLayout());
 	const char* statusName(uint32_t status);	// "SLP", "PSN", ... or "" (none)
 	const char* natureName(int nature);		// English, by personality % 25 ("" out of range)

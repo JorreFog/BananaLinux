@@ -171,6 +171,21 @@ static void testHack(const std::string& dir, const Expect& x, const std::string&
 		bt[0x0c] = 33; bt[0x22] = 19; bt[0x23] = 14; bt[0x25] = 35; bt[0x2a] = 50; bt[0x2c] = lv; bt[0x2e] = 60;
 		CHECK(pkmn::decodeBattler(bt.data(), m, 2000, prof->mon.battler));
 		EQ((int)m.types[0], (int)pkmn::FAIRY); EQ((int)m.types[1], (int)pkmn::ELECTRIC); EQ((int)m.hp, 50); EQ((int)m.maxHp, 60); EQ((int)m.level, lv);
+		// the fields after the item where the build keeps them, or 2 bytes on (SoulGold's): the experience, personality,
+		// status and nickname as the RG DS Plus showed them (Chespin Lv 5, 135 exp, personality 0x5e880f10, no status)
+		for (int sh : { 0, 2 })
+		{
+			std::vector<uint8_t> c = bt;
+			auto put32 = [&](int at, uint32_t v) { for (int i = 0; i < 4; i++) c[at + i] = (uint8_t)(v >> (8 * i)); };
+			const uint8_t nick[] = { 0xbd, 0xdc, 0xd9, 0xe7, 0xe4, 0xdd, 0xe2, 0xff };	// "Chespin"
+			if (sh) { c[0x32] = 0x1d; c[0x33] = 0; }
+			memcpy(c.data() + 0x32 + sh, nick, sizeof nick);
+			for (int i = 0; i < 8; i++) c[0x40 + sh + i] = i ? 0xff : 0xbb;		// (the OT name "A")
+			if (sh) { c[0x4a] = 0x24; c[0x4b] = 0x08; }
+			put32(0x48 + sh, 135); put32(0x4c + sh, 0x5e880f10u); put32(0x50 + sh, 0);
+			CHECK(pkmn::decodeBattler(c.data(), m, 2000, prof->mon.battler));
+			EQ((int)m.exp, 135); EQ(m.pid, 0x5e880f10u); EQ((int)m.status, 0); EQ(m.nick, std::string("Chespin"));
+		}
 	}
 	// the profile's save layout: the bag after the PC's items, the Pokédex in SaveBlock1
 	EQ(prof->save.pocket[0], L.pcItemsOffset + 4u * L.pcItemsCount);

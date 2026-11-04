@@ -438,6 +438,23 @@ int main(int argc, char** argv)
 	EQ(std::string(statusName(0x80)), std::string("PSN"));
 	EQ(std::string(statusName(0)), std::string(""));
 
+	// ---- the save's key: as kept, plain, or moved (SoulGold's +0xB4)
+	{
+		auto w32 = [](std::vector<uint8_t>& v, size_t at, uint32_t x) { for (int i = 0; i < 4; i++) v[at + i] = (uint8_t)(x >> (8 * i)); };
+		const uint32_t K = 0x62c24ca2u;
+		std::vector<uint8_t> money(8, 0), keys(0x20, 0);
+		w32(money, 0, 3000 ^ K); w32(money, 4, K & 0xffff);		// (3000, no coins)
+		w32(keys, 0, K);
+		EQ(saveKey(money, keys), K);							// as the games keep it
+		w32(keys, 0, 0x2204264cu); w32(keys, 8, K);
+		EQ(saveKey(money, keys), K);							// two words on
+		w32(money, 0, 3000); w32(money, 4, 0);
+		EQ(saveKey(money, keys), 0u);							// the money plain
+		w32(money, 0, 3000 ^ 0x11111111u);
+		EQ(saveKey(money, keys), 0x2204264cu);					// nothing fits: the word as kept
+		EQ(saveKey(std::vector<uint8_t>(4, 0), keys), 0x2204264cu);	// (no coins read)
+	}
+
 	// ---- the battle's own copy
 	{
 		auto b = battler(277, "TREECKO", 9, 15, 27, GRASS, GRASS, { 1, 43, 71 });

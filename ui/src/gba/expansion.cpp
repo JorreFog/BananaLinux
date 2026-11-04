@@ -1149,7 +1149,7 @@ namespace banana::gba
 		}
 		// BattlePokemon (1.9 and 1.15 alike up to status1): species, stats, moves 0x0C, IVs, stages, ability 0x20, types
 		// 0x22 (three), PP 0x25, HP 0x2A, level 0x2C, friendship, max HP 0x2E, item 0x30, nickname 0x32, PP bonuses 0x3F,
-		// OT name, experience 0x48, personality 0x4C, status1 0x50
+		// OT name, experience 0x48, personality 0x4C, status1 0x50 (or all of these 2 bytes on: below)
 		bool decodeBattlerExp(const uint8_t* p, pkmn::Mon& m, int maxSpecies)
 		{
 			m = pkmn::Mon();
@@ -1163,11 +1163,19 @@ namespace banana::gba
 			m.friendship = p[0x2d];
 			m.maxHp = le16(p + 0x2e);
 			m.item = le16(p + 0x30);
-			m.nick = pkmn::decodeText(p + 0x32, 12);
-			m.ppBonuses = p[0x3f];
-			m.exp = le32(p + 0x48);
-			m.pid = le32(p + 0x4c);
-			m.status = le32(p + 0x50);
+			// the fields after the item: where 1.9 and 1.15 keep them, or 2 bytes on (SoulGold 1.1.4, a 1.15.2 fork with a
+			// 0x98-byte BattlePokemon: a u16 after the item; its personality was read from the experience - the gender
+			// flipped - and the status from the personality - a burn that wasn't there - on the RG DS Plus 2026-11-04).
+			// The one where the experience (at most 1,640,000 in Gen III's curves) and status1 (bits up to 0xffff) are
+			// possible; the usual place first
+			int s = 0;
+			auto possible = [&](int o) { return le32(p + 0x48 + o) <= 2000000 && le32(p + 0x50 + o) <= 0xffff; };
+			if (!possible(0) && possible(2)) s = 2;
+			m.nick = pkmn::decodeText(p + 0x32 + s, 12);
+			m.ppBonuses = p[0x3f + s];
+			m.exp = le32(p + 0x48 + s);
+			m.pid = le32(p + 0x4c + s);
+			m.status = le32(p + 0x50 + s);
 			for (int i = 0; i < 5; i++) m.stats[i] = le16(p + 2 + 2 * i);
 			// the IVs: 5 bits each at 0x14, between the moves and the stat stages (as vanilla's BattlePokemon); they were
 			// left 0 - a wild Rattata showed no IVs and Hidden Power Fighting 30 on the RG DS Plus 2026-11-04
