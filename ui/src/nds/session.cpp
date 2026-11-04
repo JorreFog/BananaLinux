@@ -167,7 +167,9 @@ namespace banana::nds
 	void Session::track(const Live& l, time_t wall)
 	{
 		std::shared_ptr<const Live> was = prev;
-		prev = rr.live();
+		// (this reading as apply() took it: cur. Not rr.live(), the RAM reader's - the same for the DS, but empty for a
+		// fed Session (the GBA host's), so the GBA games' journey and challenge mode never saw a change)
+		prev = cur;
 		if (!was || !was->valid || !l.valid || was->tid != l.tid || was->sid != l.sid) return;
 		// (the catch's Pokédex entry can come a little after the battle's end: the nickname question, the Pokédex page)
 		if (wildBattle(*was) || wildBattle(l)) lastWild = l.playSeconds;
