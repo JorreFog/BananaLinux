@@ -892,6 +892,9 @@ static void suspend_now(const char *why)
 	double asleep = 0, dark_from = 0, led_at = 0;
 	int dark_cap = -1;	/* the battery when the dark state began (a charger that can't keep up: it falls from there) */
 	const char *woke = "?";
+	/* the lid's sleeps ("lid closed", "lid still closed", "lid closed, the download done"): the lid looked at again
+	 * before each suspend, below */
+	int by_lid = !strncmp(why, "lid", 3);
 	/* Power off after sleeping: the wall clock's deadline (it goes on while asleep), from the first real sleep */
 	time_t off_at = 0;
 	for (;;) {
@@ -941,6 +944,18 @@ static void suspend_now(const char *why)
 			if (dark) inputs_grab(0);
 			sleep_poweroff(game, pg, asleep);
 			return;
+		}
+		/* a sleep the lid started: the lid as it is now, just before the suspend. Opened again while the hooks took
+		 * Wi-Fi down (a second or more), its edge has gone by when the SoC suspends, and nothing but the power button
+		 * would wake it, the panels going dark under the user's eyes; its event is drained after the wake, so it is
+		 * read here. Open: awake as from a sleep (the game goes on, the post hooks bring Wi-Fi back) */
+		if (by_lid) {
+			read_lid();
+			if (!lid_closed) {
+				sleep_log("lid opened again before the suspend (%s): awake", why);
+				woke = "lid opened before the suspend";
+				break;
+			}
 		}
 		int secs = (int)(cfg.sleep_check_hours * 3600);
 		if (off_at && (secs <= 0 || off_at - time(NULL) < secs)) secs = (int)(off_at - time(NULL));
