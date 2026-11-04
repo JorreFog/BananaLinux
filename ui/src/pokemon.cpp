@@ -79,6 +79,13 @@ namespace banana::pkmn
 			{ "BPEE", "Pokémon Emerald", 0, EMERALD, 0x020244e9, 0x020244ec, 0x02024084, 0x02022fec, 0x030022c0 + 0x439, 0x02024744, false, 0x03005d8c, 0x03005d90, 0x02037318, SAVE_E, {} },
 			{ "BPRE", "Pokémon FireRed", 0, FIRERED, 0x02024029, 0x02024284, 0x02023be4, 0x02022b4c, 0x030030f0 + 0x439, 0x0202402c, false, 0x03005008, 0x0300500c, 0x02036dfc, SAVE_FR, {} },
 			{ "BPGE", "Pokémon LeafGreen", 0, FIRERED, 0x02024029, 0x02024284, 0x02023be4, 0x02022b4c, 0x030030f0 + 0x439, 0x0202402c, false, 0x03005008, 0x0300500c, 0x02036dfc, SAVE_FR, {} },
+			// the Spanish releases: the same code with the English one's literal pools matched against it (Emerald: the same
+			// addresses; Ruby and Sapphire: the party 0x10 on; FireRed and LeafGreen: gMain and the save pointers 0xb0 back)
+			{ "AXVS", "Pokémon Rubí", 0, RUBY_SAPPHIRE, 0x03004360, 0x03004370, 0x02024a80, 0x020239f8, 0x03001770 + 0x43d, 0x030045d0, true, 0x02025734, 0x02024ea4, 0x0202e828, SAVE_RS, {} },
+			{ "AXPS", "Pokémon Zafiro", 0, RUBY_SAPPHIRE, 0x03004360, 0x03004370, 0x02024a80, 0x020239f8, 0x03001770 + 0x43d, 0x030045d0, true, 0x02025734, 0x02024ea4, 0x0202e828, SAVE_RS, {} },
+			{ "BPES", "Pokémon Esmeralda", 0, EMERALD, 0x020244e9, 0x020244ec, 0x02024084, 0x02022fec, 0x030022c0 + 0x439, 0x02024744, false, 0x03005d8c, 0x03005d90, 0x02037318, SAVE_E, {} },
+			{ "BPRS", "Pokémon Rojo Fuego", 0, FIRERED, 0x02024029, 0x02024284, 0x02023be4, 0x02022b4c, 0x03003040 + 0x439, 0x0202402c, false, 0x03004f58, 0x03004f5c, 0x02036dfc, SAVE_FR, {} },
+			{ "BPGS", "Pokémon Verde Hoja", 0, FIRERED, 0x02024029, 0x02024284, 0x02023be4, 0x02022b4c, 0x03003040 + 0x439, 0x0202402c, false, 0x03004f58, 0x03004f5c, 0x02036dfc, SAVE_FR, {} },
 		};
 		const uint32_t DEX_LEN = 0x68;	// SaveBlock2's Pokédex: owned[52], then seen[52]
 

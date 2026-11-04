@@ -22,7 +22,7 @@ namespace banana::gcomp
 		const char* const PAGE_IDS[NUM_PAGES] = { "status", "detail", "battle", "map", "bag", "collection", "progress" };
 		// the Pokémon companion's games (pokemon.h detectGame: Ruby, Sapphire, Emerald, FireRed, LeafGreen and the hacks
 		// built on them, which keep the code): never the generic companion
-		const char* const POKEMON_CODES[] = { "AXVE", "AXPE", "BPEE", "BPRE", "BPGE" };
+		const char* const POKEMON_CODES[] = { "AXVE", "AXPE", "BPEE", "BPRE", "BPGE", "AXVS", "AXPS", "BPES", "BPRS", "BPGS" };
 		const uint32_t ROM_BASE = 0x08000000, ROM_END = 0x0a000000;
 
 		// the GBA's map (built in: schema 1 and the 505 definitions need no file)
