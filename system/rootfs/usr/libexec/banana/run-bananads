@@ -122,6 +122,10 @@ dsi_arm9() {
     m=$(sed -n 's/^ *core\.arm9_mhz *= *\([0-9][0-9]*\).*/\1/p' "$1" 2>/dev/null | tail -n 1)
     [ "${m:-0}" -ge 133 ] || export BANANADS_CORE_ARM9_MHZ=133
 }
+# the game's own DS CPU speed (its page), $1: over Settings' and over its timing's
+own_arm9() {
+    [ -z "$1" ] || export BANANADS_CORE_ARM9_MHZ="$1"
+}
 t=$(/usr/libexec/banana/nds-game-option nds-per-game-timing.conf "$1")
 case $t in
 accurate) echo "run-bananads: ${1##*/} has its own timing: accurate" >&2; export BANANADS_CORE_SLICE=64 ;;
@@ -132,6 +136,7 @@ fast) echo "run-bananads: ${1##*/} has its own timing: fast" >&2; export BANANAD
 dsi) echo "run-bananads: ${1##*/} has its own timing: fast, DSi CPU" >&2; export BANANADS_CORE_SLICE=auto BANANADS_CORE_CARD_FAST=3
     dsi_arm9 "$C" ;;
 esac
+own_arm9 "$(/usr/libexec/banana/nds-game-option nds-per-game-cpu.conf "$1")"
 # the game's own shader (its page, X in the library: nds-game-shader), for this run only (the environment wins over
 # bananads.conf)
 s=$(/usr/libexec/banana/nds-game-shader "$1")
