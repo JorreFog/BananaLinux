@@ -637,32 +637,39 @@ namespace banana
 	}
 
 	// the shelf's order and the Favorites collection, from the systems' games and the favourites as they are now
-	// a search's words, lower case; a game matches when its name, file name, genre or year has each of them
-	static std::vector<std::string> searchWords(const std::string& q)
+	// a search's words, lower case; a game matches when its name, file name, genre or year has each of them. A short name
+	// people type for a genre the box-art scrape spells out ("Role Playing Game", "Shooter / FPV") also matches by those
+	// words: "rpg" finds a Role Playing Game and Super Mario RPG
+	struct SearchWord { std::string word; std::vector<std::string> genre; };
+
+	static std::vector<SearchWord> searchWords(const std::string& q)
 	{
-		std::vector<std::string> words;
+		std::vector<SearchWord> words;
 		std::istringstream ws(lower(q));
 		for (std::string w; ws >> w;)
 		{
-			// the short names people type for genres the box-art scrape spells out ("Role Playing Game", "Shooter / FPV")
-			if (w == "rpg" || w == "jrpg") { words.push_back("role"); words.push_back("playing"); }
-			else if (w == "fps" || w == "shmup") words.push_back("shoot");
-			else words.push_back(w);
+			SearchWord sw;
+			sw.word = w;
+			if (w == "rpg" || w == "jrpg") sw.genre = { "role", "playing" };
+			else if (w == "fps" || w == "shmup") sw.genre = { "shoot" };
+			words.push_back(sw);
 		}
 		return words;
 	}
 
-	static bool searchMatch(const Game& g, const std::vector<std::string>& words)
+	static bool searchMatch(const Game& g, const std::vector<SearchWord>& words)
 	{
 		if (words.empty()) return false;
 		std::string t = lower(g.title) + " " + lower(g.rel) + " " + lower(g.genre) + " " + g.year;
-		for (auto& w : words) if (t.find(w) == std::string::npos) return false;
+		auto has = [&](const std::string& w) { return t.find(w) != std::string::npos; };
+		for (auto& w : words)
+			if (!has(w.word) && (w.genre.empty() || !std::all_of(w.genre.begin(), w.genre.end(), has))) return false;
 		return true;
 	}
 
 	int Library::countMatches(const std::string& q) const
 	{
-		std::vector<std::string> words = searchWords(q);
+		std::vector<SearchWord> words = searchWords(q);
 		int n = 0;
 		for (auto& sh : shelves)
 			if (!sh.favorites)
@@ -735,7 +742,7 @@ namespace banana
 		// of its words, case aside
 		if (!query.empty())
 		{
-			std::vector<std::string> words = searchWords(query);
+			std::vector<SearchWord> words = searchWords(query);
 			Shelf srch;
 			srch.favorites = srch.search = true;
 			srch.def.id = "search"; srch.def.name = "Search"; srch.def.maker = "\u201c" + query + "\u201d";

@@ -942,6 +942,16 @@ PY
         grep -qF "$want" "$R" || { echo "FAIL: the recorder: no '$want' ($(tr '\n' '|' < "$R"))"; fail=1; }
     done
 fi
+# search: a word with a genre's spelling of its own ("rpg": role playing) finds the genre and a game with the word in its name
+SX=$OUT/search-fx; "$HERE/tests/fixture.sh" "$SX" >/dev/null
+cp "$SX/roms/snes/Super Smoothie World.sfc" "$SX/roms/snes/Super Mario RPG (USA).sfc"
+printf '<gameList><game><path>./Super Smoothie World.sfc</path><name>Super Smoothie World</name><genre>Role Playing Game</genre></game></gameList>\n' > "$SX/roms/snes/gamelist.xml"
+for qn in "rpg:2" "mario rpg:1" "smoothie rpg:1" "shmup:0" "nosuchgame rpg:0"; do
+    q=${qn%:*}
+    "$HERE/banana-ui" --headless "$OUT/search-" --size 640x480 --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+        --roms "$SX/roms" --data "$SX/data" --script "home 0; search $q; press start" 2> "$OUT/search.log" || { echo "FAIL: banana-ui (search $q) exited $?"; fail=1; }
+    grep -q "search \"$q\": shelf 0, ${qn##*:} games" "$OUT/search.log" || { echo "FAIL: search \"$q\" (wanted ${qn##*:}): $(grep 'search "' "$OUT/search.log")"; fail=1; }
+done
 # the DS companion's overlay (nds/overlay.h, COMPANION-SPEC section 10) end to end: banana-ui paints the test page
 # while a child plays BananaDS's part (the icon, a tap open, a drag, the page's Back to game), at both panel sizes;
 # the pictures it took are left as <size>-ndsoverlay-{icon,open,drag}.png
