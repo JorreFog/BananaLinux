@@ -304,6 +304,34 @@ static void testNewEntries()
 // the session over a made-up link answering from a Platinum RAM image: Live, Advice, the journey, seen notices kept
 static void p16(uint8_t* p, uint16_t v) { p[0] = (uint8_t)v; p[1] = (uint8_t)(v >> 8); }
 static void p32(uint8_t* p, uint32_t v) { p16(p, (uint16_t)v); p16(p + 2, (uint16_t)(v >> 16)); }
+// a Session fed its Live (the GBA host's way, gba/host.cpp: no RAM reader of its own), challenge mode on: a wild
+// battle's first encounter on a route is recorded and a fainted party Pokémon counts as lost. The journey compared
+// each reading with the RAM reader's (empty for a fed Session), so nothing was ever recorded for the GBA games (seen on
+// the RG DS Plus 2026-11-04: Emerald, wild Wurmple on Route 101, "0 routes")
+static void testFedSession(const char* tmp)
+{
+	auto r = std::make_shared<FakeRom>(rom(Gen::III));
+	r->game.code = "BPEE";
+	Session s(r, std::make_shared<GuideData>(), tmp);
+	s.setChallenge(true);
+	auto mk = [&](bool wild, uint16_t hp)
+	{
+		auto l = std::make_shared<Live>();
+		l->valid = true; l->tid = 4242; l->sid = 1; l->zone = 0x0010; l->playSeconds = 100;
+		Mon m; m.species = 255; m.pid = 77; m.hp = hp; m.maxHp = 20; m.level = 6; m.nick = "TORCHIC";
+		l->party = { m };
+		if (wild) { l->battle.kind = BattleKind::WILD; l->battle.foes[0].present = true; l->battle.foes[0].mon.species = 265; }
+		return std::shared_ptr<const Live>(l);
+	};
+	double t = 0;
+	s.feed(mk(false, 20), t += 300, 1762000000);
+	s.feed(mk(true, 20), t += 300, 1762000001);
+	CHECK(s.journey() && s.journey()->routes.size() == 1);
+	if (s.journey() && !s.journey()->routes.empty()) CHECK(s.journey()->routes[0].species == 265);
+	s.feed(mk(true, 0), t += 300, 1762000002);
+	CHECK(s.journey() && s.journey()->lost.size() == 1);
+}
+
 static void testSession(const char* tmp)
 {
 	auto r = std::make_shared<FakeRom>(rom(Gen::IV));
@@ -468,6 +496,8 @@ int main()
 	{
 		char tmp[] = "/tmp/nds-logic-test-XXXXXX";
 		if (mkdtemp(tmp)) { testSession(tmp); rmdir(tmp); }
+		char tmp2[] = "/tmp/nds-logic-test-XXXXXX";
+		if (mkdtemp(tmp2)) { testFedSession(tmp2); std::system((std::string("rm -rf ") + tmp2).c_str()); }
 	}
 	if (fails) { fprintf(stderr, "%d failed\n", fails); return 1; }
 	fprintf(stderr, "nds-logic-test: all passed\n");
