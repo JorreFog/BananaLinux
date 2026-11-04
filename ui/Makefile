@@ -33,8 +33,8 @@ banana-scrape: src/scrape.cpp
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $< -lpthread -ldl
 
 # home server sync (Settings > Network > Home server): Romhost and RomM, games, box art and saves
-banana-sync: src/sync.cpp src/sync_util.h src/json.cpp src/json.h
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ src/sync.cpp src/json.cpp -ldl
+banana-sync: src/sync.cpp src/sync_core.cpp src/sync_romm.cpp src/sync_core.h src/sync_romm.h src/sync_util.h src/json.cpp src/json.h
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ src/sync.cpp src/sync_core.cpp src/sync_romm.cpp src/json.cpp -ldl
 
 # Bshare (the shelf's tile): files to and from phones and computers with LocalSend, run by banana-ui while Receive
 # is on or its page is open (settings_bshare.cpp)
