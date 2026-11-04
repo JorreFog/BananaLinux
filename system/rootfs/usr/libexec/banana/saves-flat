@@ -19,6 +19,9 @@ for dir in "$DATA"/saves/*/; do
     [ -d "$dir" ] || continue
     d=${dir%/}; d=${d##*/}
     echo "$IDS" | grep -Fxq "$d" && continue	# (gba, nds, psx... are systems, not cores)
+    # (not a core's save folder: cdata is PICO-8's cart data, which BananaFront and fake-08 read from saves/cdata -
+    # moved flat, a PICO-8 game would start without it)
+    case $d in cdata) continue ;; esac
     # every GBA core's save belongs in the one GBA folder; anything else is a RetroArch system save, flat
     case $d in
     gpSP|mGBA|"VBA Next"|"VBA-M"|Meteor) dest=$DATA/saves/gba ;;
@@ -29,6 +32,12 @@ for dir in "$DATA"/saves/*/; do
         [ -f "$f" ] || continue
         n=${f##*/}
         if [ ! -e "$dest/$n" ] || [ "$f" -nt "$dest/$n" ]; then
+            # (the flat save it replaces is kept too: saves-legacy/replaced/, never overwritten)
+            if [ -e "$dest/$n" ]; then
+                r="$DATA/banana/saves-legacy/replaced/${dest#$DATA/saves}/$n"
+                [ -e "$r" ] && r="$r.$(date +%Y%m%d-%H%M%S)"
+                mkdir -p "${r%/*}" 2>/dev/null && cp -p "$dest/$n" "$r" || { FAIL=1; continue; }
+            fi
             if cp -p "$f" "$dest/$n.new" && mv -f "$dest/$n.new" "$dest/$n"; then
                 :
             else
