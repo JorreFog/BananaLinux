@@ -100,7 +100,10 @@ function png(w, h, rgb) {
 
   for (const size of ["640x480", "1024x768"]) {
     const [W, H] = size.split("x").map(Number);
-    for (const file of THEMES) {
+    for (const file of THEMES) for (let attempt = 0; attempt < 2; attempt++) {
+      // (the screens show the clock: both builds' runs straddling a minute's turn differ by its digits only, so such a
+      // theme is drawn once more; a second difference is a real one)
+      const minute0 = Math.floor(Date.now() / 60000);
       // a fresh library for each, as each native run reads the fixture anew (Y stars a game)
       api.init(W, H, 0); api.host(-1, 0, 0, 1, 0); B.ccall("bt_online", null, ["number"], [0]);
       const dir = "/theme-" + path.basename(file, ".json");
@@ -116,8 +119,8 @@ function png(w, h, rgb) {
       const loadErr = api.load(dir + "/theme.json", 0);
       const shots = api.script(SCRIPT);
       const name = path.relative(ROOT, file) + " @" + size;
-      if (shots.startsWith("error")) { fail(name + ": " + shots); continue; }
-      if (!native) { console.log("  " + name + ": drew " + shots.trim().split("\n").length + " shots" + (loadErr ? " (" + loadErr.trim() + ")" : "")); continue; }
+      if (shots.startsWith("error")) { fail(name + ": " + shots); break; }
+      if (!native) { console.log("  " + name + ": drew " + shots.trim().split("\n").length + " shots" + (loadErr ? " (" + loadErr.trim() + ")" : "")); break; }
       // the native run: a copy of the theme beside its pictures, as the editor's serve.py does
       const nd = path.join(work, path.basename(file, ".json") + "-" + size);
       fs.mkdirSync(nd, { recursive: true });
@@ -128,6 +131,7 @@ function png(w, h, rgb) {
         "--assets", path.join(UI, "assets/rnds"), "--banana", path.join(UI, "assets/banana"),
         "--systems", path.join(ROOT, "system/rootfs/etc/banana/systems.conf"), "--roms", path.join(work, "fx/roms"),
         "--data", path.join(work, "fx/data"), "--theme", path.join(nd, "theme.json"), "--script", SCRIPT], { encoding: "utf8" });
+      const minuteTurned = Math.floor(Date.now() / 60000) !== minute0;
       let worst = 0, where = "";
       for (const shot of shots.trim().split("\n")) {
         for (const s of ["top", "bot"]) {
@@ -138,6 +142,7 @@ function png(w, h, rgb) {
           if (diff > worst) { worst = diff; where = shot + "-" + s; }
         }
       }
+      if (worst && minuteTurned && attempt === 0) { console.log("  " + name + ": the clock's minute turned while drawing: again"); continue; }
       if (worst && process.env.KEEP) {			// KEEP=<dir>: both builds' pictures of the worst shot, to look at
         const shot = where.replace(/-(top|bot)$/, ""), stem = path.join(process.env.KEEP, path.basename(file, ".json") + "-" + size + "-" + shot);
         for (const s of ["top", "bot"]) {
@@ -147,6 +152,7 @@ function png(w, h, rgb) {
       }
       if (worst) fail(name + ": " + worst + " pixels differ from banana-ui's (" + where + ")");
       else console.log("  " + name + ": " + shots.trim().split("\n").length + " shots, the same as banana-ui's");
+      break;
     }
   }
 
