@@ -1,0 +1,75 @@
+diff --git a/bananads/src/frontend_kms.cpp b/bananads/src/frontend_kms.cpp
+index 32608e1..c18d892 100644
+--- a/bananads/src/frontend_kms.cpp
++++ b/bananads/src/frontend_kms.cpp
+@@ -1481,6 +1481,18 @@ static void pad_init(const Config& cfg) {
+         if (t != pad_buttons[i].def) Log(LogLevel::Info, "[input] %s: %s\n", pad_buttons[i].name, v.c_str());
+     }
+ }
++// the left stick as the d-pad: past half its throw radially, split into eight 45-degree octants (tan 22.5 deg ~
++// 41/100), so a circular gate's diagonals (cos 45 deg ~ 71%, or a stick whose left reach is shorter than its right)
++// never fall short of a per-axis threshold and turn into Up or Down alone
++static uint32_t stick_dpad(int64_t x, int64_t y, int64_t half) {
++    const int64_t t = half / 2;
++    if (x * x + y * y < t * t) return 0;
++    const int64_t ax = std::abs(x), ay = std::abs(y);
++    uint32_t b = 0;
++    if (ax * 100 >= ay * 41) b |= x < 0 ? KeyLeft : KeyRight;
++    if (ay * 100 >= ax * 41) b |= y < 0 ? KeyUp : KeyDown;
++    return b;
++}
+ 
+ static std::vector<InputDev> open_inputs(const std::string& touch_name) {
+     std::vector<InputDev> devs;
+@@ -1525,8 +1537,13 @@ static std::vector<InputDev> open_inputs(const std::string& touch_name) {
+             // (and the lid's hall sensor, SW_LID: the DS's lid; HOME, BTN_Z on an adc-keys device of its own: the menu)
+             bool any = bit(abs, ABS_HAT0X) || bit(keys, KEY_VOLUMEUP) || bit(sw, SW_LID) || bit(keys, BTN_Z);
+             if (bit(abs, ABS_X) && bit(abs, ABS_Y)) {
+-                input_absinfo ax{};
++                input_absinfo ax{}, ay{};
+                 ioctl(fd, EVIOCGABS(ABS_X), &ax);
++                ioctl(fd, EVIOCGABS(ABS_Y), &ay);
++                dv.minx = (ax.minimum + ax.maximum) / 2;
++                dv.miny = (ay.minimum + ay.maximum) / 2;
++                dv.x = ax.value - dv.minx;
++                dv.y = ay.value - dv.miny;
+                 dv.stick = (ax.maximum - ax.minimum) / 2;
+                 any = any || dv.stick > 0;
+             }
+@@ -1720,6 +1737,11 @@ static int mh_poll(void* c, bmenu_ev* out) {
+                         }
+                         continue;
+                     }
++                    if (x.type == EV_ABS && d.stick > 0 && (x.code == ABS_X || x.code == ABS_Y)) {
++                        if (x.code == ABS_X) d.x = x.value - d.minx;
++                        else d.y = x.value - d.miny;
++                        continue;
++                    }
+                     if (x.type == EV_ABS && (x.code == ABS_HAT0X || x.code == ABS_HAT0Y)) {
+                         const int neg = x.code == ABS_HAT0X ? BM_LEFT : BM_UP, pos = x.code == ABS_HAT0X ? BM_RIGHT : BM_DOWN;
+                         if (x.value) m->q.push_back({BM_EV_KEY, x.value < 0 ? neg : pos, 1, 0, 0});
+@@ -2582,6 +2604,7 @@ int run_kms(Emu& emu, const Config& cfg) {
+         dp.show_game();
+         dp.icon_plane_menu(false);
+         keys = 0;
++        stick_keys = 0;
+         pad_down = 0;
+         hot = false;
+         home_down = false;
+@@ -2745,12 +2768,9 @@ int run_kms(Emu& emu, const Config& cfg) {
+                         continue;
+                     }
+                     if (x.type == EV_ABS && d.stick > 0 && (x.code == ABS_X || x.code == ABS_Y)) {
+-                        // the left stick as the d-pad: past 60% of its throw (its own bits: the d-pad keeps its own)
+-                        const int t = d.stick * 3 / 5;
+-                        if (x.code == ABS_X)
+-                            stick_keys = (stick_keys & ~(KeyLeft | KeyRight)) | (x.value < -t ? KeyLeft : x.value > t ? KeyRight : 0);
+-                        else
+-                            stick_keys = (stick_keys & ~(KeyUp | KeyDown)) | (x.value < -t ? KeyUp : x.value > t ? KeyDown : 0);
++                        if (x.code == ABS_X) d.x = x.value - d.minx;
++                        else d.y = x.value - d.miny;
++                        stick_keys = stick_dpad(d.x, d.y, d.stick);
+                         continue;
+                     }
+                     if (x.type == EV_ABS && x.code == ABS_HAT0X) {
+
