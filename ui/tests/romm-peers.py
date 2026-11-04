@@ -5,9 +5,12 @@ parameters and file names, and keeps a small state of its own as the real one do
 
     romm-peers.py <url> <token> grout <dir> sync        Grout (NextUI/MinUI) with its GBA saves in <dir>/Saves/GBA as
                                                         "<rom file>.sav"
-    romm-peers.py <url> <token> bananaos <dir> join|upload <rom id> [<file>]
+    romm-peers.py <url> <token> bananaos <dir> join|upload <rom id> [<file> [prune [<label>]]]
                                                         a device that writes as BananaOS's sync will: says it has the
-                                                        slot's head, uploads into the slot; prints the HTTP status
+                                                        slot's head, uploads into the slot (prune: with autocleanup to
+                                                        10, as a client sharing BananaOS's label might, written as
+                                                        <label>, the core's name a card writes its saves with); prints
+                                                        the HTTP status
 Each run prints a JSON summary: uploaded, downloaded, conflicts, skipped (save file names), the session, and
 negotiation's operations as the server gave them.
 
@@ -213,8 +216,10 @@ def bananaos():
         code = call("POST", f"/api/saves/{h['id']}/downloaded", {"device_id": dev, "content_hash": h["content_hash"]})[0] if h else 204
     else:
         data = open(ARGS[2], "rb").read()
-        code, r = call("POST", "/api/saves", query={"rom_id": rid, "slot": "autosave", "device_id": dev, "emulator": "gpSP",
-                                                    "content_hash": md5(data)}, files={"saveFile": (os.path.basename(ARGS[2]), data)})
+        q = {"rom_id": rid, "slot": "autosave", "device_id": dev, "emulator": "gpSP", "content_hash": md5(data)}
+        if ARGS[3:4] == ["prune"]:
+            q.update(autocleanup="true", autocleanup_limit=10, emulator=ARGS[4] if len(ARGS) > 4 else "gpSP")
+        code, r = call("POST", "/api/saves", query=q, files={"saveFile": (os.path.basename(ARGS[2]), data)})
     print(code)
 
 

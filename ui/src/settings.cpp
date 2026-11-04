@@ -2321,7 +2321,7 @@ namespace banana
 				in >> g >> rm >> up >> dn >> cf >> er;
 				std::string why = syncLine.find('|') == std::string::npos ? "" : syncLine.substr(syncLine.find('|') + 1);
 				help = "Last sync: " + std::to_string(g) + " files of games down, " + std::to_string(rm) + " removed; saves " + std::to_string(up) + " up, " + std::to_string(dn) + " down" +
-					(cf ? "; " + std::to_string(cf) + " in conflict (on Romhost: decide in Homeport; on RomM the newer won and the other is kept on the card as a .bak)" : "") +
+					(cf ? "; " + std::to_string(cf) + " in conflict (on RomM both are kept and the save is held: choose on Saves; on Romhost, decide in Homeport)" : "") +
 					(er ? ". " + std::to_string(er) + " didn't work: " + why + "." : why.empty() ? "." : ". " + why + ".");
 			}
 			else if (state == "error") help = "The last sync didn't work: " + syncLine.substr(6) + ".";

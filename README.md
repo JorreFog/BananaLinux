@@ -257,7 +257,7 @@ Press F for the in-game menu; the Anbernic button also opens it. In DS games, bo
 - App Store: install and update Döda Kvarter, Poketool (a Pokémon bank and save editor), PortMaster, GBA DS (dual-screen GBA by kyannon), Bshare (LocalSend) and eReaderDS from the menu.
 - Activity: your play time, a timeline and trends, and what to play next, from a tile on the home row.
 - Search and artwork: search names, genres or years across every system (Select), Recently played and Favorites shelves, box art from libretro or [TwilightBoxart](https://boxart.kirovair.com/), and games on a second SD card on the RG DS Plus.
-- Your library on a home server: sync games, box art and saves with BananaOS's own Romhost or with RomM (Settings › Network › Home server).
+- Your library on a home server: sync games, box art and saves with BananaOS's own Romhost or with RomM (Settings › Network › Home server). How saves are kept safe: [below](#saves-and-a-home-server).
 - Files: copy, move, rename and delete files and folders, and make folders, on the card and the RG DS Plus's second SD card, from a tile on the home screen (it stays open while it copies; Y twice stops). It also gets games from a NAS or a computer over SMB, SFTP or FTP(S): into the folder their type says, or any folder chosen (or made) on either card, or pasted where you want them. A cut download resumes where it stopped, whatever the protocol; zip, 7z and RAR archives are unpacked (multi-volume and password-protected ones as well), and archives already on a card too. Close the lid and the download finishes before the handheld sleeps.
 - File sharing: over Wi-Fi the card is `\\<address>\banana` (log in as `banana` / `linux`). Copied games show up in the menu.
 
@@ -273,6 +273,23 @@ Press F for the in-game menu; the Anbernic button also opens it. In DS games, bo
 | ZX Spectrum | Fuse |
 | PlayStation | PCSX ReARMed |
 | N64 | Mupen64Plus-Next |
+
+### Saves and a home server
+
+*In the next release. In 0.5.0 a save changed on both sides goes to the newer, the other kept on the card as a `.bak`.*
+
+With **RomM 5.4 or newer**, each game's save is its ROM's `autosave` slot, shared with the other devices on your RomM (Grout, other handhelds). Which way a save goes is decided by its contents against the version both sides last had, never by the files' dates, so a handheld whose clock is wrong can't send an old save over a new one.
+
+- **A save is never lost to the sync.** Every save it replaces is kept on the card first, in `banana/save-vault`, and nothing on the server is deleted or written over.
+- **Changed on both sides:** both are kept and the save is held. You are asked before the game starts (this handheld's, the server's, or later), or you choose on Settings › Network › Home server › Saves, which also lists the kept copies, to put back.
+- **A save gone or blank on the card** (an emulator reset, a cleared folder) is never sent and never refilled by itself: you are asked whether to take the server's.
+- **Around a game,** with Auto sync on (Leaving a game, or And on Wi-Fi): its save goes to the server as you leave it, and is kept in the vault at once when the server can't be reached. On RomM it is also brought up to date before the game starts (Sync before playing, off by default): up to 20 s, Wi-Fi coming up included; B plays at once.
+- **DS:** DraStic's and BananaDS's saves are kept in step by their contents; when both changed, the emulator you start plays its own and the other is kept in the vault. A DraStic `.dsv` from another device is taken as the raw save.
+- **Held, not taken:** a save in a format or size this handheld can't use (an N64 standalone emulator's file, a zip, a DS save of no cartridge's size) stays on the server (and in the vault when it could be fetched), and the Saves page says why.
+- **Save states** sync only when you switch them on (Settings › Network › Home server › Save states); a state from the server goes to the vault, never in place of yours.
+- **An older RomM** (before 5.4) only sends saves down, and **Romhost** follows the plan of Homeport (the home server app Romhost is part of), which decides its conflicts.
+
+Back up `saves/`, `states/` and `drastic/` on the card before your first sync with a new server. Nothing on the handheld removes a kept copy; `banana/save-vault` can be cleared by hand.
 
 <a id="themes"></a>
 <img src="docs/img/readme/h-themes.png" width="100%" alt="">
@@ -337,6 +354,8 @@ Known issues from 0.5.0:
 - **4x resolution** heats the handheld in heavy 3D games; use 2x for long sessions.
 - **A DS game can freeze after a very long sleep** (reported after 2 hours with the lid shut): the in-game menu still works and quitting is fine. Being investigated.
 - **Bluetooth headphones** were tested with a SteelSeries headset (and AirPods on an earlier beta); tell us how others do.
+
+Home server saves (the next release): the save sync was tested on PCs against RomM 5.4.1 with Grout's behaviour scripted, and inside the card image in QEMU (power cuts during a sync, the server gone at a game's start). Still to be checked on the handhelds: Grout on a real device, a sync around Power off after sleeping, the wait's timings on real Wi-Fi, and DS saves carried over from another device in real games. Its Chinese lines are for the next translation round.
 
 Not available yet:
 

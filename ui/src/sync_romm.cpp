@@ -803,7 +803,7 @@ namespace bsync
 			}
 			size_t heldSaves = 0;
 			for (auto& kv : c.held) if (slotKey(kv.first)) heldSaves++;
-			if (heldSaves) addNote(note, std::to_string(heldSaves) + (heldSaves == 1 ? " save" : " saves") + " held back (the sync log says why)");
+			if (heldSaves) addNote(note, std::to_string(heldSaves) + (heldSaves == 1 ? " save" : " saves") + " held back (the Saves page says why)");
 			if (waiting) addNote(note, "this handheld's saves are sent once it is a RomM device");
 			if (!c.queue.empty()) addNote(note, std::to_string(c.queue.size()) + (c.queue.size() == 1 ? " save" : " saves") + " waiting to be sent");
 			complete(done, (int)(errors.size() - errs0));

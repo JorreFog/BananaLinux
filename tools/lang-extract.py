@@ -39,7 +39,7 @@ NOT_SHOWN = set("""fprintf printf puts perror syslog mlog SLOG LOG LOGE LOGW LOG
  regcomp fnmatch glob inet_pton setlocale strftime_ mount umount2 ioctl_
  tcp_connect http_get http_post curl_easy_setopt
  assert static_assert
- dsflip_log ralog start_mark memcmp prop setopt set_clock gameOpen bootMark read jsonField jsonObjects
+ dsflip_log ralog start_mark memcmp prop setopt set_clock gameOpen bootMark read jsonField jsonObjects say
  resume_control_button control_button_any control_button_in ctl_keys applyColors give_up tmark mark
  """.split())
 LOG_RE = re.compile(r"\b(?:f?printf\s*\(\s*stderr|LOG\w*|\w*log\w*)\s*\($", re.I)

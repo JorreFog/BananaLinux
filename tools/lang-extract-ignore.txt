@@ -77,3 +77,11 @@ running: {slot}, default: {value}
 # handheld names put into other lines
 RG DS Plus
 RG DS
+# banana-sync's log of the sync before a game: say() is left out, but this one is built first (say(std::string(...) + how))
+# and reaches the extractor as a line of its own
+@~sync before the game: .*
+# banana-sync's commands the Saves page runs, and their arguments
+@~resolve \{f\} .*
+restore {f}
+drop {gamesync}
+--rom {f}

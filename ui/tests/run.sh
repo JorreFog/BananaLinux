@@ -1149,5 +1149,6 @@ for size in 640x480 1024x768; do
 done
 # RomM's slotted saves, which the save sync is built on: the stand-in checked against what a real RomM 5.4.1 does
 OUT="$OUT" "$HERE/tests/sync-slots.sh" || fail=1
+OUT="$OUT" "$HERE/tests/romm-interop.sh" || fail=1
 [ $fail = 0 ] && echo "banana-ui: all checks passed ($OUT)"
 exit $fail

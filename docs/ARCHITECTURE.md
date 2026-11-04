@@ -293,6 +293,46 @@ What the sync holds to, whatever happens around it:
 - The pairing is never written back by a sync that outlives a Forget, and a pairing that waited for its code merges
   what the saves agreed meanwhile instead of writing a stale copy over it.
 
+Around a game, `banana-sync sync --rom <path>` (after a game, and `--auto launch` before one) decides that game's save
+alone, and its states when they are on, except before a game; after a game Romhost and a RomM before 5.4 sync every
+save, and before one nothing. It takes `/run/banana/save.lock` but not `sync.lock`, so it runs beside a sync copying
+games, and each run writes back only the part of `banana/romsync.json` whose lock it holds; it says how far it got in
+`/run/banana/gameend.status`, not on the Home server page, whose Stop is for a sync copying games. A game on the second
+SD card is on the handheld as one on the card is, its save on the card. The menu's side is
+`ui/src/gamesync.cpp`: a wait in its main loop before the game, about 8 s for Wi-Fi coming up, then 5 s for the
+server's first answer in `/run/banana/launch.status` (a `waiting` line there is another sync's lock on the saves,
+which the 5 s don't count), 20 s in all from the wait's start, B plays now, and nothing waited for the game started
+again after a power-off; then `save.lock` held for the game's length, `/run/banana/game.starting` written before the
+wait for it. The wait asks about a conflict (A this handheld's, X the server's, B later), a save gone or blank here with
+the server's to take back (from `/run/banana/launch.conflict`, the Saves page's lines of that game, which the sync before
+it leaves), a newer server save that didn't arrive, and a choice that couldn't be carried out. A stop (B, or the 20 s)
+gives banana-sync 3 s to finish placing a save, then kills it and what it started, the menu drawing meanwhile.
+
+Where each game's save is (`saves/nds`, `saves/gba`, or the flat `saves/` every other RetroArch system's core and
+BananaFront write since 0.5.3) is `ui/src/save_paths.cpp`; before deciding anything the sync runs `saves-flat`, which
+the launchers run once a boot, so a save still in a core's folder from before then is the one synced. The sizes and forms a system's saves come in, a DraStic footer cut, mGBA's clock bytes left
+off, are `ui/src/save_adapt.cpp`.
+
+The tests: `ui/tests/fake-romm.py` stands in for RomM 5.4.1 (slots, devices, negotiation, and `/test/fault` and
+`/test/strict` hooks). `OUT=ui/tests/out ui/tests/sync-slots.sh` checks it against `ui/tests/romm-conformance.py`, cases
+measured on a real 5.4.1, run against a real server too when `ROMM_URL` and `ROMM_TOKENS` (three client tokens of one
+user, as JSON) are set; then `ui/tests/romm-peers.py` (a Grout-style client and one writing as this sync does), the card
+helpers in `ui/tests/sync-card.sh`, and the sync's saves by slot on several cards sharing one stand-in, every card's
+token strict, with the real `nds-saves` on its card. A change to the stand-in's RomM behaviour needs a conformance case
+that passes on a real RomM first; its test hooks (faults, clock, seeds) don't. `OUT=ui/tests/out ui/tests/romm-interop.sh`
+plays the interoperability table through (Grout's stand-in and a BananaOS-label peer, the server's rows recorded around
+every run: none may go or change), on the stand-in or a real RomM; with `GROUT_SRC` (a Grout checkout at the commit in
+`ui/tests/GROUT`) Grout's side is Grout's own sync code, built headless by `tools/grout-peer.sh` from
+`ui/tests/grout-peer/main.go` (Go and the SDL2 development packages). Both read the server through
+`ui/tests/romm-api.py`, which fails on a wrong answer rather than printing nothing. `ui/tests/sync.sh` keeps the ROM
+sync, pairing, TLS, a RomM before 5.4 and Romhost on its own simpler card, and drives the menu's wait before a game
+(its `wifi`, `launchpath` and `gameend` script verbs, `ui/tests/fake-sync.sh` as the sync) and the Saves page;
+`ui/tests/gamesync-test` has the wait's helpers and `ui/tests/vault-test` the vault and the save forms;
+`ui/tests/paths-test.sh` has the save paths;
+`system/tests/launchers-test.sh` runs `nds-saves` on a made-up card. `tools/qemu-sync.sh` (with `tools/qemu-lib.sh`,
+which `qemu-boot.sh` shares) runs an image's own `banana-sync` and `nds-saves` in QEMU against the stand-in or a real
+RomM: pairing, each way, power cuts, a conflict on the prompt and on the Saves page, the server gone.
+
 ## Files' servers: banana-fetch
 
 Files' list has the file servers beside the cards: a NAS's or a computer's shares over SMB, SFTP or FTP, read only
