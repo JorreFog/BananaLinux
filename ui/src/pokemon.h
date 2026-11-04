@@ -54,6 +54,7 @@ namespace banana::pkmn
 		int size = 0x58;
 		int moves = 0x0c, types = 0x21, pp = 0x24, hp = 0x28, level = 0x2a, maxHp = 0x2c, item = 0x2e, nick = 0x30;
 		int ppBonuses = 0x3b, exp = 0x44, pid = 0x48, status = 0x4c;
+		int stats = 0x02, ivs = 0x14;			// (Attack, Defense, Speed, Sp. Atk, Sp. Def; the IV word as a party slot's)
 		int eggByte = 0x17, eggBit = 0x40;		// (the IV word's egg bit)
 		// a build's own decoder (gba/expansion.cpp: pokeemerald-expansion), used instead of the fields above when set
 		std::function<bool(const uint8_t* p, struct Mon& m, int maxSpecies)> decode;

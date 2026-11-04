@@ -290,6 +290,11 @@ namespace banana::nds
 		known = false;
 		return false;
 	}
+	bool stepDone(const GuideStep& s, const Live& live)
+	{
+		bool known;
+		return doneByRule(s.doneWhen, live, known);
+	}
 	bool milestoneDone(const Milestone& m, const Live& live, const GuideData& g, size_t index)
 	{
 		bool known;

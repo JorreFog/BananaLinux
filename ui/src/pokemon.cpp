@@ -299,6 +299,9 @@ namespace banana::pkmn
 		m.ppBonuses = p[L.ppBonuses];
 		m.status = le32(p + L.status);
 		m.egg = p[L.eggByte] & L.eggBit;
+		for (int i = 0; i < 5; i++) m.stats[i] = le16(p + L.stats + 2 * i);
+		const uint32_t iv = le32(p + L.ivs);
+		for (int i = 0; i < 6; i++) m.ivs[i] = (uint8_t)(iv >> (5 * i) & 31);
 		m.exp = le32(p + L.exp);
 		m.pid = le32(p + L.pid);
 		return true;

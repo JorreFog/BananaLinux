@@ -445,6 +445,14 @@ int main(int argc, char** argv)
 		CHECK(decodeBattler(b.data(), d));
 		EQ(d.species, (uint16_t)277); EQ(d.nick, std::string("TREECKO")); EQ(d.level, (uint8_t)9);
 		EQ(d.hp, (uint16_t)15); EQ(d.maxHp, (uint16_t)27); EQ(d.types[0], (uint8_t)GRASS); EQ(d.moves[2], (uint16_t)71);
+		// the stats at 0x02 and the IV word at 0x14 (HP 31, Attack 20, Speed 10, Sp. Def 0 - as a party slot packs it)
+		auto c = b;
+		c[0x02] = 21; c[0x04] = 19; c[0x0a] = 17;
+		const uint32_t ivw = 31u | 20u << 5 | 10u << 15;
+		for (int i = 0; i < 4; i++) c[0x14 + i] = (uint8_t)(ivw >> (8 * i));
+		CHECK(decodeBattler(c.data(), d));
+		EQ(d.stats[0], (uint16_t)21); EQ(d.stats[1], (uint16_t)19); EQ(d.stats[4], (uint16_t)17);
+		EQ(d.ivs[0], (uint8_t)31); EQ(d.ivs[1], (uint8_t)20); EQ(d.ivs[3], (uint8_t)10); EQ(d.ivs[5], (uint8_t)0);
 		std::vector<uint8_t> z(0x58, 0);
 		CHECK(!decodeBattler(z.data(), d));
 	}

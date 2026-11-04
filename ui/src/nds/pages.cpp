@@ -1,4 +1,5 @@
 #include "pages.h"
+#include "logic.h"
 #include "../settings_draw.h"
 #include "../lang.h"
 #include <algorithm>
@@ -2242,6 +2243,7 @@ namespace banana::nds
 			// without a known stage show as before.
 			auto shown = [&](const GuideStep& s2)
 			{
+				if (stepDone(s2, *dt.live)) return false;	// ("Pick one of five starters" with the starter in the party)
 				if (nextIdx < 0 || s2.stage.empty()) return true;
 				int si = -1;
 				for (size_t i = 0; i < g->milestones.size(); i++) if (g->milestones[i].id == s2.stage) si = (int)i;
