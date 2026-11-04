@@ -23,22 +23,26 @@ R="${1%.*}.dsv"
 if [ -s "$R" ] && [ ! -f "$DSV" ] && [ ! -f "$SAV" ]; then
     cp -p "$R" "$DSV" && echo "nds-saves: $G: the save beside the game (ROCKNIX's) taken"
 fi
+# size <file>: its bytes, 0 when there is none
+size() { wc -c 2>/dev/null < "$1" || echo 0; }
 # raw_of_dsv <dsv> <out>: the raw save inside a .dsv, DeSmuME's footer and padding left off; the file as it is
 # when it has no footer (DraStic's own)
 raw_of_dsv() {
     _n=$(wc -c < "$1") || return 1
-    [ "$_n" -gt 122 ] || { cat "$1" > "$2"; return 0; }
-    [ "$(tail -c 16 "$1")" = "|-DESMUME SAVE-|" ] || { cat "$1" > "$2"; return 0; }
+    # (each write checked, and its size: on a full card a copy cut short counted as done and went over the save)
+    [ "$_n" -gt 122 ] || { cat "$1" > "$2" && [ "$(size "$2")" = "$_n" ]; return; }
+    [ "$(tail -c 16 "$1")" = "|-DESMUME SAVE-|" ] || { cat "$1" > "$2" && [ "$(size "$2")" = "$_n" ]; return; }
     # padded_size (u32 LE, 36 bytes from the end) is where DeSmuME put the raw save's end; the fixed 122-byte
     # footer is the fallback when it is missing (od absent) or out of range
     _p=$(od -An -tu4 -j $((_n - 36)) -N 4 "$1" 2>/dev/null | tr -d ' \n')
     case $_p in ''|*[!0-9]*) _p=$((_n - 122)) ;; esac
     { [ "$_p" -gt 0 ] && [ "$_p" -le $((_n - 40)) ]; } || _p=$((_n - 122))
-    head -c "$_p" "$1" > "$2"
+    head -c "$_p" "$1" > "$2" && [ "$(size "$2")" = "$_p" ]
 }
+# keep <file>: <file>.bak, a whole copy or none at all (made beside it and renamed: a copy cut short on a full card
+# never replaces a good backup)
+keep() { cp -p "$1" "$1.bak.new" && [ "$(size "$1.bak.new")" = "$(size "$1")" ] && mv -f "$1.bak.new" "$1.bak" || { rm -f "$1.bak.new"; return 1; }; }
 
-# size <file>: its bytes, 0 when there is none
-size() { wc -c 2>/dev/null < "$1" || echo 0; }
 TO= WHY=newer
 if [ -f "$DSV" ] && { [ ! -f "$SAV" ] || [ "$DSV" -nt "$SAV" ]; }; then TO=sav
 elif [ -f "$SAV" ] && { [ ! -f "$DSV" ] || [ "$SAV" -nt "$DSV" ]; }; then TO=dsv; fi
@@ -53,19 +57,19 @@ elif [ "$TO" = dsv ] && [ "$(size "$SAV")" -lt 512 ] && [ "$(size "$DSV")" -gt 0
 fi
 
 if [ "$TO" = sav ]; then
-    raw_of_dsv "$DSV" "$SAV.new" || exit 0
+    raw_of_dsv "$DSV" "$SAV.new" || { rm -f "$SAV.new"; echo "nds-saves: $G: DraStic's save couldn't be copied (card full?): BananaDS's left as it is" >&2; exit 0; }
     if [ -f "$SAV" ] && cmp -s "$SAV.new" "$SAV"; then rm -f "$SAV.new"; exit 0; fi
-    [ -f "$SAV" ] && cp -p "$SAV" "$SAV.bak"
+    if [ -f "$SAV" ] && ! keep "$SAV"; then rm -f "$SAV.new"; echo "nds-saves: $G: no room for a backup of BananaDS's save: left as it is" >&2; exit 0; fi
     mv -f "$SAV.new" "$SAV" && touch -r "$DSV" "$SAV"
     echo "nds-saves: $G: DraStic's save is $WHY: BananaDS takes it ($(wc -c < "$SAV") bytes)"
 elif [ "$TO" = dsv ]; then
     if [ -f "$DSV" ]; then
-        raw_of_dsv "$DSV" "$DSV.cmp.$$"
-        cmp -s "$DSV.cmp.$$" "$SAV" && { rm -f "$DSV.cmp.$$"; exit 0; }
+        raw_of_dsv "$DSV" "$DSV.cmp.$$" && cmp -s "$DSV.cmp.$$" "$SAV" && { rm -f "$DSV.cmp.$$"; exit 0; }
         rm -f "$DSV.cmp.$$"
-        cp -p "$DSV" "$DSV.bak"
+        keep "$DSV" || { echo "nds-saves: $G: no room for a backup of DraStic's save: left as it is" >&2; exit 0; }
     fi
-    cat "$SAV" > "$DSV.new" && mv -f "$DSV.new" "$DSV" && touch -r "$SAV" "$DSV"
+    { cat "$SAV" > "$DSV.new" && [ "$(size "$DSV.new")" = "$(size "$SAV")" ]; } || { rm -f "$DSV.new"; echo "nds-saves: $G: BananaDS's save couldn't be copied (card full?): DraStic's left as it is" >&2; exit 0; }
+    mv -f "$DSV.new" "$DSV" && touch -r "$SAV" "$DSV"
     echo "nds-saves: $G: BananaDS's save is $WHY: DraStic takes it ($(wc -c < "$DSV") bytes)"
 fi
 exit 0
