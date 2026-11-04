@@ -7028,11 +7028,27 @@ namespace banana
 
 	bool Settings::gbaOn() const { return gbaHost && gbaHost->ready() && companion && companion->active(); }
 
+	std::string Settings::gamePanelView() const
+	{
+		if (!companion || !companion->active()) return "";
+		if (pkView == PK_NDS && gbaPages) return std::string("pages:") + nds::pageName(gbaPages->page());
+		if (pkView == PK_GAME) return "game";
+		return "views:" + std::to_string(pkView);
+	}
+
 	void Settings::gbaShow(int view)
 	{
-		static const nds::Page PAGE[] = { nds::Page::PARTY, nds::Page::BATTLE };
-		const bool mine = view == PK_PARTY || view == PK_BATTLE || view == PK_MON || view == PK_DEX || view == PK_DEXMON || view == PK_GUIDE;
-		if (!gbaOn() || !mine) { pkView = view; return; }
+		// every view of today's has its page (the bag: the party's page, where each member's held item is); only the
+		// tiles (PK_GAME) stay the panel's own
+		if (!gbaOn() || view == PK_GAME) { pkView = view; return; }
+		gbaOpen(view == PK_DEX || view == PK_DEXMON ? nds::Page::DEX : view == PK_GUIDE ? nds::Page::GUIDE :
+			view == PK_MAP ? nds::Page::MAP : view == PK_BATTLE ? nds::Page::BATTLE : nds::Page::PARTY);
+	}
+
+	void Settings::gbaOpen(nds::Page page)
+	{
+		static_assert(GBA_TABS == (int)nds::Page::COUNT + 1, "the tiles' bar: the pages' tabs and Game");
+		if (!gbaOn()) return;
 		if (!gbaPages)
 		{
 			gbaPages = std::make_unique<nds::Pages>(be, gScreen, (int)std::lround(640 * s), (int)std::lround(480 * s), assets, light);
@@ -7042,8 +7058,7 @@ namespace banana
 		}
 		pkView = PK_NDS;
 		companion->wantExt(true);	// (the pages need the save's data from the start: the place, the bag, the Pokédex)
-		gbaPages->show(view == PK_DEX || view == PK_DEXMON ? nds::Page::DEX : view == PK_GUIDE ? nds::Page::GUIDE :
-			view == PK_BATTLE ? PAGE[1] : PAGE[0]);
+		gbaPages->show(page);
 	}
 
 	void Settings::gameTouchMove(float x, float y)
@@ -7083,7 +7098,7 @@ namespace banana
 				if (gbaPages && gbaHost->takeData(d)) gbaPages->setData(d);
 				changed = true;
 			}
-			if (!was && gbaOn() && pkView != PK_GAME && pkView != PK_MAP && pkView != PK_BAG) gbaShow(pkView);	// (its pages take over)
+			if (!was && gbaOn() && pkView != PK_GAME) gbaShow(pkView);	// (its pages take over, from any of today's views)
 			if (gbaPages)
 			{
 				gbaHost->markSeen(gbaPages->takeSeen());
@@ -7239,6 +7254,15 @@ namespace banana
 		if (companion && companion->active())
 		{
 			static const int TAB_VIEW[PK_TABS] = { PK_PARTY, PK_BATTLE, PK_MAP, PK_BAG, PK_DEX, PK_GUIDE, PK_GAME };
+			if (ly >= 424 && gbaOn())
+			{
+				// the tiles' bar with gbaHost's pages: theirs (pokeTabs), each opening its page; Battle only in a battle
+				const int i = (int)std::floor((lx - 18) / (604.0f / GBA_TABS));
+				if (!down && i >= 0 && i < (int)nds::Page::COUNT && ((nds::Page)i != nds::Page::BATTLE || companion->snapshot().inBattle))
+					gbaOpen((nds::Page)i);
+				gDown = gFlash = -1;
+				return G_NONE;
+			}
 			if (ly >= 424)
 			{
 				if (!down)
@@ -7702,6 +7726,23 @@ namespace banana
 		// the tab bar: Party, Battle (in a battle), Map, Bag, Dex, Guide, Game (the panel's tiles and achievements)
 		const pkmn::Snapshot& sn = companion->snapshot();
 		box("bubble", false, 18, 424, 604, 46);
+		if (gbaOn())
+		{
+			// with gbaHost's pages: their tabs (Battle dimmed outside a battle), then Game, this one; today's views have
+			// no way back
+			const float cell = 604.0f / GBA_TABS;
+			for (int i = 0; i < GBA_TABS; i++)
+			{
+				const bool game = i == (int)nds::Page::COUNT, dim = i == (int)nds::Page::BATTLE && !sn.inBattle;
+				const std::string label = game ? "Game" : nds::pageName((nds::Page)i);
+				const float w = text(label, true, 14, 0, 0, p.ink, true, 1.0f, true);
+				const float tx = std::round(18 + i * cell + cell / 2 - w / 2);
+				text(label, true, 14, tx, 438, game ? p.accent : dim ? p.muted : p.ink, true, 1.0f);
+				if (game) be->fill(std::round(X(tx)), std::round(X(458)), std::round(X(w)), std::round(X(3)), p.accent);
+			}
+			for (int i = 0; i < PK_TABS; i++) pkTabW[i] = 0;
+			return;
+		}
 		static const char* const tabs[PK_TABS] = { "Party", "Battle", "Map", "Bag", "Dex", "Guide", "Game" };
 		static const int VIEW[PK_TABS] = { PK_PARTY, PK_BATTLE, PK_MAP, PK_BAG, PK_DEX, PK_GUIDE, PK_GAME };
 		int n = 0;

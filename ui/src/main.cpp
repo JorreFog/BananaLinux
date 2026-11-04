@@ -1280,7 +1280,23 @@ static int runHeadless(const Options& o, Host& lib, const std::string& variant, 
 			float k = o.h / 480.0f;
 			settings.gameTouch(x * k, y * k, true);
 			const Settings::GameAction act = settings.gameTouch(x * k, y * k, false);
-			logf("gtouch %.0f %.0f: action %d keys %d", x, y, (int)act, settings.gameKeysOpen() ? 1 : 0);
+			settings.gameUpdate(now);
+			logf("gtouch %.0f %.0f: action %d keys %d view %s", x, y, (int)act, settings.gameKeysOpen() ? 1 : 0, settings.gamePanelView().c_str());
+		}
+		else if (op == "gbahost")
+		{
+			// gbahost: the GBA companion's pages (gba/host.h) on the open panel's companion, as gamePanel runs them for a
+			// real game; waits (up to 10 s) for its ROM data
+			static std::unique_ptr<gba::Host> host;
+			if (!settings.companion) { logf("gbahost: no companion"); return 2; }
+			settings.gbaRelease();
+			host = std::make_unique<gba::Host>(*settings.companion, o.headless + "gba-state", "", false);
+			mkdir((o.headless + "gba-state").c_str(), 0755);
+			settings.gbaHost = host.get();
+			for (int i = 0; i < 1000 && !host->ready() && !host->failed(); i++) { settings.gameUpdate(now); usleep(10000); }
+			settings.gameUpdate(now);
+			logf("gbahost: %s %s view %s", host->ready() ? "ready" : host->failed() ? "failed" : "timeout", host->title().c_str(),
+				settings.gamePanelView().c_str());
 		}
 		else if (op == "gshot")
 		{

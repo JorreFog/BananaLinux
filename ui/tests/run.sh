@@ -423,6 +423,35 @@ for size in 640x480 1024x768; do
     kcheck "pokefeed .*poke-party.txt: asked 3, party 4, battle 0"
     kcheck "pokefeed .*poke-battle.txt: asked 6, party 4, battle 1, foes 1"
     kcheck "gamepanel .*Peel Quest.nds: companion none"
+    # the GBA companion's pages (gba/host.h) on the player's own Emerald (GBA_ROMS, default ~/gba-companion/roms): once
+    # they show, the panel has no way back to the views they replace. Back to game shows the tiles with the pages' own
+    # tabs, and each of those opens its page (2026-11-04: Map and Bag there opened today's views)
+    EM=$(ls "${GBA_ROMS:-$HOME/gba-companion/roms}"/*Emerald*.gba 2>/dev/null | head -n 1)
+    if [ -n "$EM" ]; then
+        GL=$OUT/$size-gba-pages.log
+        gs="home 0; gamepanel 1 $EM; pokefeed $OUT/poke-party.txt; gbahost; gshot gba-pages"
+        i=0
+        for page in Battle Party Team Here Map Guide Dex Log; do
+            # (the tiles' tab bar: the pages' eight tabs and Game, in nine cells across x 18..622)
+            gs="$gs; gtouch 600 28; gshot gba-game-$i; gtouch $((18 + i * 604 / 9 + 604 / 18)) 447; gshot gba-tab-$page"
+            i=$((i + 1))
+        done
+        "$HERE/banana-ui" --headless "$OUT/$size-" --size $size --assets "$HERE/assets/rnds" --systems "$HERE/../system/rootfs/etc/banana/systems.conf" \
+            --roms "$FX/roms" --data "$FX/data" --script "$gs" 2> "$GL" || { echo "FAIL $size: banana-ui (GBA pages) exited $?"; fail=1; }
+        grep -q "gbahost: ready Emerald view pages:" "$GL" || { echo "FAIL $size: the GBA pages didn't take the panel: $(grep gbahost "$GL")"; fail=1; }
+        grep -q "gtouch 600 28: action 0 keys 0 view game" "$GL" || { echo "FAIL $size: Back to game didn't show the tiles: $(grep -m1 'gtouch 600' "$GL")"; fail=1; }
+        grep "gtouch" "$GL" | grep -q "view views:" && { echo "FAIL $size: a tab opened the views the pages replace: $(grep 'view views:' "$GL" | head -n 3 | tr '\n' ' ')"; fail=1; }
+        i=0
+        for page in Battle Party Team Here Map Guide Dex Log; do
+            # (Battle: dimmed outside a battle, the tap leaves the tiles)
+            want="pages:$page"; [ $page = Battle ] && want=game
+            grep -q "gtouch $((18 + i * 604 / 9 + 604 / 18)) 447: action 0 keys 0 view $want\$" "$GL" ||
+                { echo "FAIL $size: the tiles' $page tab: $(grep "gtouch $((18 + i * 604 / 9 + 604 / 18)) 447" "$GL")"; fail=1; }
+            i=$((i + 1))
+        done
+    else
+        echo "the GBA pages' panel test skipped (no Emerald ROM in GBA_ROMS)"
+    fi
     # the game panel's on-screen keyboard (a computer's game: C64, ZX Spectrum): the Keys tile opens it, a key types,
     # Done brings the tiles back (BANANA_TEST_VKBD: the tile without a /dev/uinput device)
     KK=$OUT/$size-keys.log
