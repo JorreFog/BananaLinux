@@ -286,14 +286,20 @@ namespace banana::pkmn
 	uint32_t saveKey(const std::vector<uint8_t>& money, const std::vector<uint8_t>& keys)
 	{
 		uint32_t key = keys.size() >= 4 ? le32(keys.data()) : 0;
-		if (money.size() < 8 || keys.size() < 4) return key;
+		if (money.size() < 4 || keys.size() < 4) return key;
 		const uint32_t m = le32(money.data());
-		const uint16_t c = le16(money.data() + 4);
-		auto fits = [&](uint32_t k) { return (m ^ k) <= 999999 && (uint16_t)(c ^ (uint16_t)k) <= 9999; };
-		if (fits(key)) return key;
-		if (fits(0)) return 0;
-		for (size_t o = 4; o + 4 <= keys.size(); o += 4)
-			if (const uint32_t k = le32(keys.data() + o); k && fits(k)) return k;
+		const bool coins = money.size() >= 6;
+		const uint16_t c = coins ? le16(money.data() + 4) : 0;
+		// by the money and the coins, then by the money alone (a build that keeps no coins there: Heart & Soul's word
+		// after the money fits no key, and its money is plain - 3000 read as 1,382,062,106 on the RG DS Plus 2026-11-04)
+		for (int pass = coins ? 0 : 1; pass < 2; pass++)
+		{
+			auto fits = [&](uint32_t k) { return (m ^ k) <= 999999 && (pass || (uint16_t)(c ^ (uint16_t)k) <= 9999); };
+			if (fits(key)) return key;
+			if (fits(0)) return 0;
+			for (size_t o = 4; o + 4 <= keys.size(); o += 4)
+				if (const uint32_t k = le32(keys.data() + o); k && fits(k)) return k;
+		}
 		return key;
 	}
 

@@ -1515,8 +1515,10 @@ namespace banana::gba
 		for (int i = 0; i < NS; i++) on += onMap(i);
 		if (on < 8) return;	// (no region map to speak of)
 
-		// each section's region (-1: none found; one region when the picture is Emerald's)
+		// each section's region (-1: none found; one region when the picture is Emerald's), and whether a map of it is
+		// outdoors (joined to another by a connection: drawn over the caves and towers on the same cell)
 		std::vector<int> secRegion((size_t)NS, -1);
+		std::vector<bool> secOutdoor((size_t)NS, true);
 		int gw0 = 0, gh0 = 0;
 		for (int i = 0; i < NS; i++) if (onMap(i)) { gw0 = std::max(gw0, entry(i)[0] + entry(i)[2]); gh0 = std::max(gh0, entry(i)[1] + entry(i)[3]); }
 		const bool picture = gw0 <= 28 && gh0 <= 15 && !t.mapImages.empty() && !t.mapImages[0].rgba.empty();
@@ -1590,6 +1592,7 @@ namespace banana::gba
 				int best = -1, bestV = 0;
 				for (auto& v : votes[(size_t)i]) if (v.second > bestV) { best = v.first; bestV = v.second; }
 				secRegion[(size_t)i] = onMap(i) ? best : -1;
+				secOutdoor[(size_t)i] = bestV >= 1000;
 			}
 			// the regions onto maps: the biggest first, each on the first map whose cells it doesn't share
 			std::map<int, std::set<int>> cellsOf;
@@ -1648,12 +1651,13 @@ namespace banana::gba
 			m.gridW = x1; m.gridH = y1;	// (cell 0, 0 kept: a section's x, y is its cell; the picture starts at x0, y0)
 			m.cells.assign((size_t)m.gridW * m.gridH, 0xFFFF);
 			std::string first;
-			for (int i = NS - 1; i >= 0; i--)
-			{
-				if (secRegion[(size_t)i] != mi) continue;
-				const uint8_t* e = entry(i);
-				for (int y = e[1]; y < e[1] + e[3]; y++) for (int x = e[0]; x < e[0] + e[2]; x++) m.cells[(size_t)y * m.gridW + x] = (uint16_t)i;
-			}
+			for (int pass = 0; pass < 2; pass++)	// (the caves and towers first, the towns and routes over them)
+				for (int i = NS - 1; i >= 0; i--)
+				{
+					if (secRegion[(size_t)i] != mi || secOutdoor[(size_t)i] != (pass == 1)) continue;
+					const uint8_t* e = entry(i);
+					for (int y = e[1]; y < e[1] + e[3]; y++) for (int x = e[0]; x < e[0] + e[2]; x++) m.cells[(size_t)y * m.gridW + x] = (uint16_t)i;
+				}
 			if (picture)
 			{
 				const auto& im = t.mapImages[0];

@@ -452,7 +452,17 @@ int main(int argc, char** argv)
 		EQ(saveKey(money, keys), 0u);							// the money plain
 		w32(money, 0, 3000 ^ 0x11111111u);
 		EQ(saveKey(money, keys), 0x2204264cu);					// nothing fits: the word as kept
-		EQ(saveKey(std::vector<uint8_t>(4, 0), keys), 0x2204264cu);	// (no coins read)
+		// (no coins read: by the money alone)
+		std::vector<uint8_t> m4(4, 0);
+		w32(m4, 0, 3000 ^ 0x2204264cu);
+		EQ(saveKey(m4, keys), 0x2204264cu);
+		w32(m4, 0, 3000);
+		EQ(saveKey(m4, keys), 0u);
+		// Heart & Soul: the money plain and no coins where Emerald keeps them (a word no key makes 9,999 or less)
+		w32(money, 0, 3000); w32(money, 4, 0x8a3fbeefu);
+		EQ(saveKey(money, keys), 0u);
+		w32(money, 0, 3000 ^ K);
+		EQ(saveKey(money, keys), K);							// (and a key two words on, by the money alone)
 	}
 
 	// ---- the battle's own copy

@@ -297,6 +297,15 @@ static void testHack(const std::string& dir, const Expect& x, const std::string&
 			EQ(!m0.rgba.empty(), pictured);
 			if (!pictured) EQ(m0.name, std::string("Johto"));
 			if (k == "heart-and-soul") { EQ(r.regionMaps.size(), (size_t)2); if (r.regionMaps.size() > 1) EQ(r.regionMaps[1].name, std::string("Kanto")); }
+			// (a town over the tower in it: Ecruteak City's cell names the city, not the Burned Tower)
+			if (!pictured)
+			{
+				int city = -1;
+				for (size_t i = 0; i < r.locationNames.size(); i++) if (r.locationNames[i] == "Ecruteak City") city = (int)i;
+				bool named = false;
+				for (uint16_t c : m0.cells) named = named || c == city;
+				CHECK(named);
+			}
 			for (auto& m : r.regionMaps) { CHECK(m.w > 0 && m.h > 0); EQ(m.cells.size(), (size_t)m.gridW * m.gridH); }
 		}
 		const Location* town = nullptr;
