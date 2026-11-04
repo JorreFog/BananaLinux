@@ -15,6 +15,12 @@ ports	run	/bin/sh %ROM%
 psx	ext	chd cue bin iso img mdf pbp m3u
 psx	perf	balanced
 psx	run	/usr/libexec/banana/run-retroarch pcsx_rearmed %ROM%
+rocknixdsbank	ext	app
+rocknixdsbank	folder	/usr/share/banana/apps/bank
+rocknixdsbank	maker	ROCKNIXDS
 rocknixdsbank	name	Bank & Trade
+rocknixdsbank	name	Poketool
+rocknixdsbank	perf	balanced
+rocknixdsbank	run	/usr/libexec/banana/run-bank %ROM%
 snes	ext	sfc smc zip
 snes	perf	balanced

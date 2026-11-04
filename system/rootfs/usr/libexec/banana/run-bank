@@ -3,9 +3,12 @@
 # checks and Wi-Fi trading, on both
 # panels as one window, which SDL's dummy driver puts on them itself (SDL_BANANA_PANELS: Banana's SDL patch), touches
 # on the bottom panel's half. The bank, its settings and the save backups are on the card (/data/apps/bank); saves are
-# found where DraStic, BananaDS and RetroArch keep them.
-#   run-bank [entry]
-APP=/usr/share/banana/apps/bank/rocknixds-bank
+# found where DraStic, BananaDS and RetroArch keep them. The app itself is the Store's (0.5.3 on: its Apps shelf entry
+# runs this with the folder it installed it in, /data/store/apps/bank); before, it came in the image.
+#   run-bank [app folder | entry]
+APP=/data/store/apps/bank
+[ -n "$1" ] && [ -x "$1/rocknixds-bank" ] && APP=$1
+[ -x $APP/rocknixds-bank ] || APP=/usr/share/banana/apps/bank/rocknixds-bank
 D=/data/apps/bank
 mkdir -p $D
 CFG=$D/bank.json

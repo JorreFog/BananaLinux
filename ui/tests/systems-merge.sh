@@ -57,10 +57,20 @@ run = /data/mine/run.sh %ROM%
 EOF
 sh "$M" "$IMG" "$T/old.card" "$T/old.out" "$HIST" 2> "$T/old.err"
 eq old psx run "$(img psx run)"; eq old psx perf "$(img psx perf)"; eq old nds ext "$(img nds ext)"
-eq old rocknixdsbank name "$(img rocknixdsbank name)"; eq old ports always "$(img ports always)"
+eq old ports always "$(img ports always)"
+# (Poketool's tile, which this image no longer has: only old values in the card's section, so not added)
+ids old | grep -qw rocknixdsbank && bad old "the card's leftover [rocknixdsbank] added: $(ids old)"
 eq old mysys name "My System"; eq old mysys run "/data/mine/run.sh %ROM%"
 [ "$(ids old | awk '{print $NF}')" = mysys ] || bad old "the card's own system isn't last: $(ids old)"
 [ -s "$T/old.err" ] && bad old "said something: $(cat "$T/old.err")"
+
+# a full copy of 0.5.2.2's list keeps Poketool's own tile ([rocknixdsbank], gone from 0.5.3: the Store's now): left
+# out; a system the image no longer has with a value of the user's own in it stays
+merge gone '[rocknixdsbank]\nname = Poketool\nmaker = ROCKNIXDS\nfolder = /usr/share/banana/apps/bank\next = app\nrun = /usr/libexec/banana/run-bank %ROM%\nperf = balanced\n[psx]\nperf = performance\n'
+ids gone | grep -qw rocknixdsbank && bad gone "an old image's [rocknixdsbank] added: $(ids gone)"
+eq gone psx perf performance
+merge goneown '[rocknixdsbank]\nname = My bank\nperf = balanced\n'
+eq goneown rocknixdsbank name "My bank"; eq goneown rocknixdsbank perf ""
 
 # "key =" with nothing: the key taken away (the menu's default for it)
 merge emptyval '[psx]\nperf =\n[nds]\nalways = \n'

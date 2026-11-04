@@ -1,0 +1,99 @@
+From 2da0506321dc2cd5122f87549d1554e9cb98be89 Mon Sep 17 00:00:00 2001
+From: JorreFog <JorreFog@users.noreply.github.com>
+Date: Wed, 4 Nov 2026 14:37:38 +0100
+Subject: [PATCH] store: BananaOS's apps from the Store when the system no
+ longer has them
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+BananaOS 0.5.3 stops shipping Poketool and PortMaster (and later Döda
+Kvarter): the user gets them from the Store. A catalog entry keeps its
+"builtin" (the BananaOS versions that still have the app's folder go on
+treating it as their built-in one) and gains a release, a package and a
+menu: on a system without the builtin's folder it is an app like any
+other, downloaded into /data/store/apps and put on the Apps shelf.
+
+"banana_run" in its menu names the system's launcher for it
+(/usr/libexec/banana/run-<name>): the shelf's entry runs that with the
+app's folder, as the system's own tile did (the release's own start
+script is ROCKNIX's). A system without that launcher refuses the install
+("Needs a newer BananaOS").
+---
+ store/device/rocknixds-store | 32 +++++++++++++++++++++++++++++++-
+ 1 file changed, 31 insertions(+), 1 deletion(-)
+
+diff --git a/store/device/rocknixds-store b/store/device/rocknixds-store
+index d46975f..8f342aa 100755
+--- a/store/device/rocknixds-store
++++ b/store/device/rocknixds-store
+@@ -330,6 +330,7 @@ def layout(app, pkg=None):
+         "version_file": "",                                 # a file in it that holds its version (an app that updates
+         "version_match": "",                                # itself): the regex's first group, else the file's text
+         "launch": "",                                       # a script in it the Store writes the tile's entry for
++        "banana_run": "",                                   # BananaOS: its launcher in the system (run-<app> <dest>)
+     }
+     for src in (app.get("package"), app.get("menu"), pkg):
+         if isinstance(src, dict):
+@@ -389,6 +390,11 @@ def builtin(app):
+     system = str(b.get("system", "")).lower()
+     if not re.match(r"^[a-z0-9-]{1,32}$", system) or system in NEVER_HIDDEN:
+         return None
++    # a BananaOS that no longer comes with it (0.5.3 on: the apps are the Store's), when the catalog says where its
++    # releases are: an app like any other, downloaded into /data/store/apps (the BananaOS versions that still have its
++    # folder keep it as their built-in one)
++    if b.get("dir") and not os.path.isdir(ROOT + str(b["dir"])) and (app.get("release") or {}):
++        return None
+     return dict(b, system=system)
+ 
+ 
+@@ -746,6 +752,23 @@ exec %(script)s "$@"
+ """
+ 
+ 
++# BananaOS's entry for an app the system has a launcher for ("banana_run": /usr/libexec/banana/run-<name>): the launcher,
++# given the app's folder
++LAUNCHER_BANANA_RUN = """#!/bin/sh
++# %(name)s, from the Store (written by rocknixds-store: an install or an update writes it again)
++exec %(run)s %(dest)s "$@"
++"""
++BANANA_RUN_RE = re.compile(r"^/usr/libexec/banana/run-[a-z0-9-]{1,32}$")
++
++
++def banana_run(lay):
++    """the system's launcher for the app ("banana_run", BananaOS), or ""; Fail when this system hasn't got it"""
++    run = str(lay.get("banana_run") or "") if BANANA else ""
++    if run and (not BANANA_RUN_RE.match(run) or not os.path.exists(ROOT + run)):
++        raise Fail("Needs a newer BananaOS")
++    return run
++
++
+ # The tile's entry for an app whose own start script lives in its folder ("launch"): it runs that script and gives the
+ # menu its bottom panel back as it was. An app made for ROCKNIX turns the bottom panel off as it leaves (ROCKNIX's
+ # menu has it off); ROCKNIXDS's dual-screen menu has it on.
+@@ -798,7 +821,13 @@ def list_in_menu(app, lay):
+     folder = P(folder)
+     os.makedirs(os.path.join(folder, "images"), exist_ok=True)
+     tmp = os.path.join(folder, entry + ".new")
+-    if lay["launch"]:
++    run = banana_run(lay)
++    if run:
++        # an app the system has its own launcher for (Poketool, Döda Kvarter): that, with the app's folder
++        with open(tmp, "w", encoding="utf-8") as f:
++            f.write(LAUNCHER_BANANA_RUN % {"name": re.sub(r"[\r\n]", " ", app.get("name", app["id"])),
++                                           "run": run, "dest": shq(dest[len(ROOT):] if ROOT else dest)})
++    elif lay["launch"]:
+         with open(tmp, "w", encoding="utf-8") as f:
+             f.write((LAUNCHER_BANANA if BANANA else LAUNCHER) % {
+                 "name": re.sub(r"[\r\n]", " ", app.get("name", app["id"])),
+@@ -1093,6 +1122,7 @@ def install(app_id, version=None):
+                     os.chmod(os.path.join(dp, f), 0o755)
+ 
+         check_idle(lay)
++        banana_run(lay)                                  # (before anything changes: its launcher must be there)
+         step("Installing %s" % v)
+         menu = Menu()
+         menu.off()
+-- 
+2.56.0
+
