@@ -38,7 +38,8 @@ unsafe yt-dlp fallback, and completes the shelf/build integration. It does not s
 
 - RG DS / RG DS Plus: RK3566/RK3568, 1 GB RAM, two 640×480 panels (the Plus scales the UI by 1.6), bottom GT911
   touch, no compositor.
-- Video: H.264/VP9 through the kernel's v4l2m2m decoder; AV1 is refused. 480p is the default; 360p/720p are choices.
+- Video: H.264 through the kernel's v4l2m2m decoder (the RK3566's VPU is hantro's rk3568-vpu); VP9 only where
+  rkvdec binds, which this SoC's kernel is not assumed to do. AV1 is refused. 480p is the default; 360p/720p are choices.
 - The app is launched like a game: the menu drops DRM master, the app takes it, and must drop it and exit cleanly.
   bananad owns sleep and sends SIGSTOP/SIGCONT around suspend.
 - The root is a read-only squashfs; settings, history, cache and logs live on `/data` (exFAT).
@@ -131,7 +132,9 @@ The OS side is a restoration of the earlier `c77a211` integration, not just a pa
 - Restore the media lines in `buildroot/board/rgds/linux-banana.fragment`: `CONFIG_MEDIA_SUPPORT`,
   `CONFIG_MEDIA_CONTROLLER`, the platform/mem2mem/V4L2 H.264 and VP9 bits, `CONFIG_VIDEO_ROCKCHIP_VDEC` and the
   Hantro Rockchip driver. Without them the app installs but every video says "Could not find a valid device".
-  This means a full kernel and image build, and a device check that `v4l2m2m-copy` actually decodes.
+  This means a full kernel and image build, and a device check that `v4l2m2m-copy` actually decodes H.264 — the
+  format the resolver prefers. If the log shows software decoding, the media gate failed even though the image
+  built: the ROCKNIX hantro compatible is `rockchip,rk3568-vpu`, and `dmesg` has to show it bound.
 - Install the binary, `run-bananatube`, and the app folder with `bananatube.gamelist.xml` and the marker. BananaOS's
   library reads an app folder with a `gamelist.xml`, not the Retroid build's `app.json`.
 - Add the `[bananatube]` section to `system/rootfs/etc/banana/systems.conf` and the `bananatube` line with the

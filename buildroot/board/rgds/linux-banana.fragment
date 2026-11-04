@@ -158,10 +158,11 @@ CONFIG_VIRTIO_NET=y
 # CONFIG_SND_SEQUENCER is not set
 # CONFIG_SND_TEST_COMPONENT is not set
 # CONFIG_SND_AUDIO_GRAPH_CARD2_CUSTOM_SAMPLE is not set
-# The RK3568's video unit, for the codec and only the codec. The full media subsystem is left out (no camera,
-# no TV, no radio, no SDR, no USB media, no test drivers): just the H.264/H.265/VP9 stateless decoder that mpv's
-# v4l2m2m-copy drives. Enabled because a dual-screen YouTube client has to decode video, and without it the
-# decoder reports "Could not find a valid device" and every video fails to start.
+# The RK3566/RK3568's video unit, for the codec and only the codec. The full media subsystem is left out (no
+# camera, no TV, no radio, no SDR, no USB media, no test drivers): just the stateless decoders mpv's
+# v4l2m2m-copy drives. On this SoC that is hantro's VPU (rockchip,rk3568-vpu: H.264 and friends); rkvdec is
+# enabled as well, for the kernels and SoCs whose compatible it matches. Enabled because a dual-screen YouTube
+# client has to decode video: without it the decoder reports "Could not find a valid device" and nothing plays.
 CONFIG_MEDIA_SUPPORT=y
 CONFIG_MEDIA_CONTROLLER=y
 CONFIG_MEDIA_PLATFORM_SUPPORT=y
